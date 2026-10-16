@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Installerer «OS» i en ny Debian 12 LXC på Proxmox VE.
-# Kjør på Proxmox-verten som root:
-#   bash -c "$(curl -fsSL https://raw.githubusercontent.com/SebastianKristo/torskenes-verden/main/deploy/proxmox/install.sh)"
+# Kjør på Proxmox-verten som root, fra en lokal kopi av repoet (anbefalt for privat repo):
+#   git clone https://<TOKEN>@github.com/SebastianKristo/torskenes-verden.git && bash torskenes-verden/deploy/proxmox/install.sh
+# Koden kopieres da rett inn i containeren. Uten lokal kopi klones REPO (sett GITHUB_TOKEN for private repo).
 # Alle valg kan overstyres med miljøvariabler, f.eks. CTID=150 STORAGE=local-zfs bash install.sh
 set -euo pipefail
 
@@ -56,7 +57,20 @@ run "apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq
 run "curl -fsSL https://get.docker.com | sh >/dev/null"
 
 c "Henter koden og bygger …"
-run "git clone --depth 1 -b '$BRANCH' '$REPO' /opt/homelab-os"
+SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/../.." 2>/dev/null && pwd || true)"
+if [ -n "$SRC_DIR" ] && [ -f "$SRC_DIR/package.json" ] && [ -f "$SRC_DIR/server/index.js" ]; then
+  TAR=$(mktemp --suffix=.tgz)
+  tar -C "$SRC_DIR" --exclude=node_modules --exclude=data --exclude=.env -czf "$TAR" .
+  pct push "$CTID" "$TAR" /tmp/src.tgz
+  rm -f "$TAR"
+  run "mkdir -p /opt/homelab-os && tar -xzf /tmp/src.tgz -C /opt/homelab-os && rm /tmp/src.tgz"
+else
+  URL="$REPO"
+  [ -n "${GITHUB_TOKEN:-}" ] && URL="${REPO/https:\/\//https://x-access-token:$GITHUB_TOKEN@}"
+  pct exec "$CTID" -- git clone --depth 1 -b "$BRANCH" "$URL" /opt/homelab-os \
+    || die "Kunne ikke klone $REPO. Er repoet privat? Sett GITHUB_TOKEN eller kjør skriptet fra en lokal kopi."
+  run "cd /opt/homelab-os && git remote set-url origin '$REPO'"
+fi
 run "cd /opt/homelab-os && docker compose build -q"
 
 c "Lager .env …"
@@ -84,4 +98,4 @@ CT_IP=$(pct exec "$CTID" -- hostname -I | awk '{print $1}')
 c "Ferdig!"
 echo "  Dashboard:     http://$CT_IP:$PORT"
 echo "  Konfigurasjon: pct enter $CTID → nano /opt/homelab-os/.env → docker compose up -d"
-echo "  Oppdatering:   pct exec $CTID -- bash -c 'cd /opt/homelab-os && git pull && docker compose up -d --build'"
+echo "  Oppdatering:   se «Oppdatere Proxmox-installasjonen» i README"
