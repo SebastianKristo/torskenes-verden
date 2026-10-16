@@ -10,8 +10,8 @@ REPO="${REPO:-https://github.com/SebastianKristo/torskenes-verden.git}"
 BRANCH="${BRANCH:-main}"
 CTID="${CTID:-$(pvesh get /cluster/nextid)}"
 HOSTNAME="${CT_HOSTNAME:-homelab-os}"
-STORAGE="${STORAGE:-local-lvm}"
-TEMPLATE_STORAGE="${TEMPLATE_STORAGE:-local}"
+STORAGE="${STORAGE:-}"            # tom = finn automatisk
+TEMPLATE_STORAGE="${TEMPLATE_STORAGE:-}"
 DISK="${DISK:-8}"
 RAM="${RAM:-1024}"
 CORES="${CORES:-2}"
@@ -25,6 +25,15 @@ die() { printf '\e[1;31m%s\e[0m\n' "$*" >&2; exit 1; }
 
 command -v pct >/dev/null || die "Dette må kjøres på en Proxmox VE-vert."
 [ "$(id -u)" = 0 ] || die "Kjør som root."
+
+# Første aktive lagring som støtter innholdstypen (rootdir for disk, vztmpl for maler).
+pick_storage() { pvesm status -content "$1" 2>/dev/null | awk 'NR>1 && $3=="active" {print $1; exit}'; }
+storage_ok() { pvesm status -content "$2" 2>/dev/null | awk -v s="$1" 'NR>1 && $1==s {f=1} END {exit !f}'; }
+[ -n "$STORAGE" ] || STORAGE=$(pick_storage rootdir)
+[ -n "$TEMPLATE_STORAGE" ] || TEMPLATE_STORAGE=$(pick_storage vztmpl)
+[ -n "$STORAGE" ] && storage_ok "$STORAGE" rootdir || die "Fant ingen lagring for containerdisker ('$STORAGE'). Se 'pvesm status -content rootdir' og sett STORAGE=..."
+[ -n "$TEMPLATE_STORAGE" ] && storage_ok "$TEMPLATE_STORAGE" vztmpl || die "Fant ingen lagring for maler ('$TEMPLATE_STORAGE'). Aktiver 'Container template' på en lagring, eller sett TEMPLATE_STORAGE=..."
+c "Lagring: disk på $STORAGE, mal på $TEMPLATE_STORAGE"
 
 read -rsp "Passord for dashboardet (minst 8 tegn): " APP_PW; echo
 [ ${#APP_PW} -ge 8 ] || die "Passordet er for kort."

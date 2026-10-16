@@ -49,7 +49,7 @@ Alternativt kan du klone repoet og kjøre `bash torskenes-verden/deploy/proxmox/
 
 Uten lokal kopi kloner skriptet `REPO` direkte. `GITHUB_TOKEN` trengs bare hvis repoet blir privat igjen.
 
-Valg kan overstyres med miljøvariabler, for eksempel `CTID=150 STORAGE=local-zfs IP=192.168.1.60/24 GW=192.168.1.1`. Resten av API-nøklene legger du inn etterpå i `/opt/homelab-os/.env`.
+Valg kan overstyres med miljøvariabler, for eksempel `CTID=150 STORAGE=local-zfs` (lagring finnes automatisk ellers) ` IP=192.168.1.60/24 GW=192.168.1.1`. Resten av API-nøklene legger du inn etterpå i `/opt/homelab-os/.env`.
 
 ### Oppdatere Proxmox-installasjonen
 ```bash
