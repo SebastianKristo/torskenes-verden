@@ -28,7 +28,7 @@ MOCK_DATA=1 npm run dev                            # eksempeldata, ingen API-nø
 
 Data (SQLite og opplastinger) ligger i `./data`. Ta backup av den mappen.
 
-Oppdatering: `git pull && docker compose up -d --build`.
+Oppdatering: `git pull && docker compose --profile tunnel up -d --build` (dropp `--profile tunnel` hvis du ikke bruker tunnel).
 
 ## Proxmox (automatisk LXC)
 Kjør på Proxmox-verten som root:
@@ -54,6 +54,14 @@ Valg kan overstyres med miljøvariabler, for eksempel `CTID=150 STORAGE=local-zf
    Lim inn verdien etter `APP_PASSWORD_HASH=` i malen.
 
 Bildet bygges og publiseres til GHCR av `.github/workflows/docker.yml` ved hver push til `main`. Etter første kjøring må pakken settes til *public* under GitHub → Packages, eller så må du logge inn på ghcr.io fra Unraid. Data lagres i `/mnt/user/appdata/homelab-os` og eies av PUID/PGID (som standard 99:100).
+
+## Viktige detaljer for drift
+- **Passord-hashen bruker `:` som skilletegn** (`scrypt:N:r:p:salt:hash`). Docker Compose tolker `$` i `.env`, og det ødela det gamle formatet. Hasher med `$` virker fortsatt, men de bør genereres på nytt hvis de skal leses av Compose.
+- **Rettigheter på `/data`:** containeren starter som root bare for å rette eierskapet på `/data`. Deretter kjører den som `PUID:PGID`. Standard er 1000:1000, og på Unraid 99:100.
+- **Cloudflare Tunnel er valgfritt:** `cloudflared` starter bare med `docker compose --profile tunnel up -d`.
+- **LAN-tilgang:** som standard lytter appen bare på `127.0.0.1`. Sett `BIND_ADDR=0.0.0.0` (og eventuelt `HOST_PORT`) i `.env` for å nå den fra nettverket.
+- **Uten HTTPS** (direkte `http://` på LAN) må `COOKIE_SECURE=false` settes, ellers fungerer ikke innloggingen. Proxmox-skriptet gjør dette automatisk når du ikke oppgir et tunnel-token.
+- **Proxmox-skriptet** hentes fra `main`, så curl-lenken virker først etter merge. Inntil da kan du kopiere `deploy/proxmox/install.sh` til verten og kjøre den med `BRANCH=claude/wizardly-darwin-kr7ay8 bash install.sh`.
 
 ## Integrasjoner
 | Modul | Kilde | Env |

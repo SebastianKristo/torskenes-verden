@@ -21,6 +21,12 @@
 - **Bakgrunnsbilder** hentes fra Wikimedia Commons (`Special:FilePath`). Disse bildene er CC0/PD eller CC BY(-SA). Sjekk krediteringskravet per fil, eller last dem ned til `public/` for egen hosting.
 - **OCR av kvitteringer** (valgfritt i spesifikasjonen) er ikke implementert ennå.
 
+## Distribusjon
+- **Tre måter å kjøre på:** `docker compose` manuelt, `deploy/proxmox/install.sh` (lager en LXC automatisk) og en Unraid-mal (`deploy/unraid/homelab-os.xml`).
+- **Image-registry:** Unraid trenger et ferdigbygd image. GitHub Actions publiserer derfor til `ghcr.io/sebastiankristo/torskenes-verden` (amd64 og arm64). Proxmox bygger lokalt fra kildekoden.
+- **PUID/PGID:** entrypointen bruker `setpriv` (allerede i Debian, ingen ekstra pakke) for å bytte bruker etter å ha rettet eierskapet på `/data`.
+- **Passord-hash med `:`** fordi Compose interpolerer `$` i env-filer.
+
 ## Åpne spørsmål / plassholdere
 - Skole: `MAZEMAP_CAMPUS_ID` og `SCHOOL_URL` står tomme (lenken peker til vilbli.no).
 - NSR-ID-ene (Majorstuen 58381, Amagerveien 6354, Frydenlund 6258, Holbergs plass 63280) er brukt som oppgitt. De kunne ikke verifiseres fra utviklingsmiljøet fordi det ikke hadde nettilgang. Sjekk dem i Entur-geocoderen, og overstyr med `RUTER_ROUTES` eller `STOPS` i `server/integrations.js`.
