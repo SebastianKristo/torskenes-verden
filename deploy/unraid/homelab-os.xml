@@ -1,0 +1,43 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>homelab-os</Name>
+  <Repository>ghcr.io/sebastiankristo/torskenes-verden:latest</Repository>
+  <Registry>https://github.com/SebastianKristo/torskenes-verden/pkgs/container/torskenes-verden</Registry>
+  <Network>bridge</Network>
+  <Shell>sh</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/SebastianKristo/torskenes-verden</Support>
+  <Project>https://github.com/SebastianKristo/torskenes-verden</Project>
+  <Overview>OS – personlig homelab-dashboard med Ruter, vær, timeplan, Trading 212, Home Assistant, økonomi og offentlig CV. Generer APP_PASSWORD_HASH med: docker run --rm ghcr.io/sebastiankristo/torskenes-verden node scripts/hash-password.js 'passord'</Overview>
+  <Category>HomeAutomation: Tools:</Category>
+  <WebUI>http://[IP]:[PORT:3000]/</WebUI>
+  <Icon>https://raw.githubusercontent.com/SebastianKristo/torskenes-verden/main/public/icons/icon-512.png</Icon>
+  <ExtraParams>--restart unless-stopped</ExtraParams>
+  <Config Name="WebUI-port" Target="3000" Default="3000" Mode="tcp" Description="Port for dashboardet" Type="Port" Display="always" Required="true" Mask="false">3000</Config>
+  <Config Name="Data" Target="/data" Default="/mnt/user/appdata/homelab-os" Mode="rw" Description="Database og opplastinger" Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/homelab-os</Config>
+  <Config Name="APP_PASSWORD_HASH" Target="APP_PASSWORD_HASH" Default="" Description="scrypt-hash av passordet (se Overview)" Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="SESSION_SECRET" Target="SESSION_SECRET" Default="" Description="Minst 32 tilfeldige tegn (openssl rand -hex 32)" Type="Variable" Display="always" Required="true" Mask="true"/>
+  <Config Name="COOKIE_SECURE" Target="COOKIE_SECURE" Default="true" Description="Sett false hvis du bruker http uten TLS-proxy/tunnel" Type="Variable" Display="always" Required="false" Mask="false">true</Config>
+  <Config Name="PUID" Target="PUID" Default="99" Type="Variable" Display="advanced" Required="false" Mask="false">99</Config>
+  <Config Name="PGID" Target="PGID" Default="100" Type="Variable" Display="advanced" Required="false" Mask="false">100</Config>
+  <Config Name="TZ" Target="TZ" Default="Europe/Oslo" Type="Variable" Display="advanced" Required="false" Mask="false">Europe/Oslo</Config>
+  <Config Name="USER_NAME" Target="USER_NAME" Default="Benjamin" Type="Variable" Display="always" Required="false" Mask="false">Benjamin</Config>
+  <Config Name="SCHOOL_ICAL_URL" Target="SCHOOL_ICAL_URL" Default="" Description="iCal-URL fra Canvas/Outlook" Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="TRADING212_API_KEY" Target="TRADING212_API_KEY" Default="" Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="HA_URL" Target="HA_URL" Default="http://192.168.1.20:8123" Type="Variable" Display="always" Required="false" Mask="false">http://192.168.1.20:8123</Config>
+  <Config Name="HA_TOKEN" Target="HA_TOKEN" Default="" Description="Long-lived access token" Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="HA_SENSOR_POWER" Target="HA_SENSOR_POWER" Default="sensor.power_now" Type="Variable" Display="advanced" Required="false" Mask="false">sensor.power_now</Config>
+  <Config Name="HA_SENSOR_ENERGY_DAILY" Target="HA_SENSOR_ENERGY_DAILY" Default="sensor.energy_daily" Type="Variable" Display="advanced" Required="false" Mask="false">sensor.energy_daily</Config>
+  <Config Name="HA_SENSOR_PRICE" Target="HA_SENSOR_PRICE" Default="sensor.nordpool_kwh_oslo_nok" Type="Variable" Display="advanced" Required="false" Mask="false">sensor.nordpool_kwh_oslo_nok</Config>
+  <Config Name="NASA_API_KEY" Target="NASA_API_KEY" Default="" Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="MAZEMAP_CAMPUS_ID" Target="MAZEMAP_CAMPUS_ID" Default="" Type="Variable" Display="advanced" Required="false" Mask="false"/>
+  <Config Name="SCHOOL_URL" Target="SCHOOL_URL" Default="https://www.vilbli.no" Type="Variable" Display="advanced" Required="false" Mask="false">https://www.vilbli.no</Config>
+  <Config Name="ENTUR_CLIENT_NAME" Target="ENTUR_CLIENT_NAME" Default="benjamin-homelab" Type="Variable" Display="advanced" Required="false" Mask="false">benjamin-homelab</Config>
+  <Config Name="MET_USER_AGENT" Target="MET_USER_AGENT" Default="homelab-dashboard/1.0 benjamin@kristo.no" Type="Variable" Display="advanced" Required="false" Mask="false">homelab-dashboard/1.0 benjamin@kristo.no</Config>
+  <Config Name="ROUTER_URL" Target="ROUTER_URL" Default="http://192.168.1.1" Type="Variable" Display="advanced" Required="false" Mask="false">http://192.168.1.1</Config>
+  <Config Name="PROXMOX_URL" Target="PROXMOX_URL" Default="https://192.168.1.10:8006" Type="Variable" Display="advanced" Required="false" Mask="false">https://192.168.1.10:8006</Config>
+  <Config Name="PIHOLE_URL" Target="PIHOLE_URL" Default="http://192.168.1.30/admin" Type="Variable" Display="advanced" Required="false" Mask="false">http://192.168.1.30/admin</Config>
+  <Config Name="NAS_URL" Target="NAS_URL" Default="http://192.168.1.40:5000" Type="Variable" Display="advanced" Required="false" Mask="false">http://192.168.1.40:5000</Config>
+  <Config Name="HOMEY_URL" Target="HOMEY_URL" Default="https://my.homey.app" Type="Variable" Display="advanced" Required="false" Mask="false">https://my.homey.app</Config>
+  <Config Name="LABDECK_URL" Target="LABDECK_URL" Default="http://192.168.1.50" Type="Variable" Display="advanced" Required="false" Mask="false">http://192.168.1.50</Config>
+</Container>

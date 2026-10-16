@@ -12,9 +12,10 @@ COPY package.json ./
 COPY server ./server
 COPY public ./public
 COPY scripts ./scripts
-RUN mkdir -p /data && chown node:node /data
-USER node
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN mkdir -p /data
 VOLUME /data
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s CMD node -e "fetch('http://localhost:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["node", "server/index.js"]
