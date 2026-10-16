@@ -1,0 +1,20 @@
+services:
+  os:
+    build: .
+    container_name: homelab-os
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      TZ: Europe/Oslo
+    volumes:
+      - ./data:/data
+    ports:
+      - "127.0.0.1:3000:3000"   # kun lokalt; eksponeres via cloudflared under
+
+  cloudflared:
+    image: cloudflare/cloudflared:2025.10.0
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on: [os]
