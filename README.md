@@ -31,21 +31,25 @@ Data (SQLite og opplastinger) ligger i `./data`. Ta backup av den mappen.
 Oppdatering: `git pull && docker compose --profile tunnel up -d --build` (dropp `--profile tunnel` hvis du ikke bruker tunnel).
 
 ## Proxmox (automatisk LXC)
-Repoet er privat, så skriptet kan ikke hentes med `curl` fra raw.githubusercontent.com (det gir 404). Klon repoet på Proxmox-verten med et GitHub-token og kjør skriptet derfra. Tokenet er en fine-grained PAT med *Contents: read* på dette repoet.
+Kjør på Proxmox-verten som root:
 ```bash
-git clone -b claude/wizardly-darwin-kr7ay8 https://<TOKEN>@github.com/SebastianKristo/torskenes-verden.git
-bash torskenes-verden/deploy/proxmox/install.sh
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/SebastianKristo/torskenes-verden/main/deploy/proxmox/install.sh)"
 ```
-Bytt `-b claude/wizardly-darwin-kr7ay8` med `main` etter merge. Skriptet kopierer koden fra den lokale kopien inn i containeren, så containeren trenger ikke tilgang til GitHub. Det gjør dette:
+Vil du installere fra en annen branch, last ned skriptet derfra og sett `BRANCH`:
+```bash
+curl -fsSL https://raw.githubusercontent.com/SebastianKristo/torskenes-verden/<branch>/deploy/proxmox/install.sh -o install.sh
+BRANCH=<branch> bash install.sh
+```
+Alternativt kan du klone repoet og kjøre `bash torskenes-verden/deploy/proxmox/install.sh`. Da kopieres den lokale koden inn i containeren. Skriptet gjør dette:
 - oppretter en uprivilegert Debian 12-LXC med nesting
 - installerer Docker
 - legger koden i `/opt/homelab-os`
 - spør om passord og eventuelt Cloudflare Tunnel-token
 - skriver `.env` og starter tjenesten
 
-Kjører du skriptet uten lokal kopi, kloner det `REPO` direkte. Da må `GITHUB_TOKEN` være satt for et privat repo.
+Uten lokal kopi kloner skriptet `REPO` direkte. `GITHUB_TOKEN` trengs bare hvis repoet blir privat igjen.
 
-Valg kan overstyres med miljøvariabler, for eksempel `CTID=150 STORAGE=local-zfs IP=192.168.1.60/24 GW=192.168.1.1`. Resten av API-nøklene legger du inn etterpå i `/opt/homelab-os/.env`.
+Valg kan overstyres med miljøvariabler, for eksempel `CTID=150 STORAGE=local-zfs IP=192.168.1.60/24 GW=192.168.1.1`. Lagring finnes automatisk hvis `STORAGE` ikke er satt. Resten av API-nøklene legger du inn etterpå i `/opt/homelab-os/.env`.
 
 ### Oppdatere Proxmox-installasjonen
 ```bash
@@ -65,7 +69,7 @@ pct exec <CTID> -- bash -c 'tar -xzf /tmp/os.tgz -C /opt/homelab-os && cd /opt/h
    ```
    Lim inn verdien etter `APP_PASSWORD_HASH=` i malen.
 
-Bildet bygges og publiseres til GHCR av `.github/workflows/docker.yml` ved hver push til `main`. Etter første kjøring må pakken settes til *public* under GitHub → Packages, eller så må du logge inn på ghcr.io fra Unraid. Data lagres i `/mnt/user/appdata/homelab-os` og eies av PUID/PGID (som standard 99:100).
+Bildet bygges og publiseres til GHCR av `.github/workflows/docker.yml` ved hver push til `main`. Sjekk at pakken også er *public* under GitHub → Packages, ellers må Unraid logge inn på ghcr.io. Data lagres i `/mnt/user/appdata/homelab-os` og eies av PUID/PGID (som standard 99:100).
 
 ## Viktige detaljer for drift
 - **Passord-hashen bruker `:` som skilletegn** (`scrypt:N:r:p:salt:hash`). Docker Compose tolker `$` i `.env`, og det ødela det gamle formatet. Hasher med `$` virker fortsatt, men de bør genereres på nytt hvis de skal leses av Compose.
