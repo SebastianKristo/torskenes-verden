@@ -1,0 +1,52 @@
+// Eksempeldata for utvikling og demo (MOCK_DATA=1). Brukes når eksterne API-er ikke er tilgjengelige.
+import * as real from './integrations.js';
+
+export const { GALLERIES, getTle, getApod, getGallery } = real;
+const at = (min) => new Date(Date.now() + min * 60000).toISOString();
+const todayAt = (h, m) => { const d = new Date(); d.setHours(h, m, 0, 0); return d; };
+const dayAt = (offset, h, m) => { const d = todayAt(h, m); d.setDate(d.getDate() + offset); return d.toISOString(); };
+
+export const getRuter = async () => ({
+  trips: [['Amagerveien', 'Majorstuen', 'T5', 'metro', [3, 11, 19]], ['Frydenlund', 'Majorstuen', '19', 'tram', [2, 7, 14]],
+    ['Majorstuen', 'Amagerveien', 'T5', 'metro', [5, 13, 21]], ['Majorstuen', 'Holbergs plass', '19', 'tram', [4, 9, 16]]]
+    .map(([from, to, line, mode, mins]) => ({ from, to, url: real.ruterUrl(from, to), deps: mins.map((m, i) => ({ line: i === 1 && mode === 'tram' ? (to === 'Majorstuen' ? '12' : '11') : line, mode, time: at(m) })) })),
+  updated: new Date().toISOString(),
+});
+
+export const getWeather = async () => ({
+  place: 'Oslo', temp: 7, feels: 4, wind: 4, precip: 3, symbol: 'lightrain', text: 'Lett regn', kind: 'regn',
+  hours: [7, 7, 6, 6, 5, 5].map((t, i) => ({ label: i ? String((new Date().getHours() + i) % 24).padStart(2, '0') : 'Nå', temp: t, precip: [1.5, 2, 1, 0.5, 0, 0.2][i] })),
+  days: [['Lør', 9, 4], ['Søn', 11, 5], ['Man', 8, 3], ['Tir', 6, 2]].map(([label, max, min]) => ({ label, max, min })),
+});
+
+export const getSchool = async () => {
+  const lessons = [[8, 15, 9, 45, 'Fysikk 2', 'B-204'], [10, 0, 11, 30, 'Matematikk R2', 'A-112'], [12, 15, 13, 45, 'Norsk', 'Aula'], [14, 0, 15, 30, 'Engelsk', 'C-301']];
+  const events = [];
+  for (let d = -20; d < 30; d++) {
+    const day = new Date(); day.setDate(day.getDate() + d);
+    if (day.getDay() === 0 || day.getDay() === 6) continue;
+    for (const [h1, m1, h2, m2, t, room] of lessons) events.push({ title: t, location: room, start: dayAt(d, h1, m1), end: dayAt(d, h2, m2), allDay: false, color: { 'Fysikk 2': '#8fe0b0', 'Matematikk R2': '#9fb4ff', Norsk: '#f3d38a', Engelsk: '#e8a6d8' }[t] });
+  }
+  events.push({ title: 'Innlevering: Historie', location: 'Canvas', start: dayAt(4, 23, 59), end: dayAt(4, 23, 59), allDay: false, color: '#f59a8f', deadline: true });
+  events.push({ title: 'Prøve i engelsk', location: 'Kap. 3–5', start: dayAt(6, 9, 0), end: dayAt(6, 10, 30), allDay: false, color: '#9fb4ff' });
+  events.push({ title: 'Heldagsprøve R2', location: 'Gymsal', start: dayAt(21, 9, 0), end: dayAt(21, 14, 0), allDay: false, color: '#9fb4ff' });
+  events.sort((a, b) => a.start.localeCompare(b.start));
+  return { configured: true, events };
+};
+
+export const getTrading = async () => ({
+  configured: true, currency: 'NOK', total: 48312, ppl: 5340, invested: 42972, free: 0, pplPct: 12.4,
+  positions: [['AAPL', 12840, 2.1], ['NVDA', 15220, 3.4], ['EQNR', 9410, -0.6], ['VUSA', 10842, 0.9]].map(([ticker, value, pct]) => ({ ticker, value, pct, ppl: value * pct / 100 })),
+});
+
+export const getEnergy = async () => {
+  const kwh = [18, 22, 15, 26, 20, 12, 17];
+  return { configured: true, kw: 2.4, price: 1.42, priceUnit: 'NOK/kWh', week: kwh.reduce((a, b) => a + b, 0),
+    days: kwh.map((v, i) => { const d = new Date(); d.setDate(d.getDate() - 6 + i); return { date: d.toLocaleDateString('sv-SE'), label: d.toLocaleDateString('nb-NO', { weekday: 'short' }).replace('.', '').replace(/^./, (c) => c.toUpperCase()), kwh: v }; }) };
+};
+
+export const getHealth = async () => ({
+  services: [['Ruter', 'http://192.168.1.1', 1], ['Home Assistant', 'http://192.168.1.20:8123', 1], ['Proxmox', 'https://192.168.1.10:8006', 1], ['Pi-hole', 'http://192.168.1.30/admin', 1], ['NAS', 'http://192.168.1.40:5000', 0], ['Homey', 'https://my.homey.app', 1], ['LabDeck', 'http://192.168.1.50', 1]]
+    .map(([name, url, up]) => ({ name, url, host: url.replace(/^https?:\/\//, ''), up: !!up, ms: 12, error: up ? undefined : 'ECONNREFUSED' })),
+  checked: new Date().toISOString(),
+});

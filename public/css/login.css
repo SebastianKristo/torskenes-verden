@@ -1,0 +1,16 @@
+.lock{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(ellipse at 50% 30%,#1a1d24,#07080b 70%)}
+.lock-box{width:100%;max-width:360px;display:flex;flex-direction:column;gap:14px;background:rgba(14,17,26,.85);border:1px solid #1f2430;border-radius:28px;padding:32px}
+.lock-title{font-size:28px;font-weight:300}
+.lock-title b{font-weight:700}
+.lock-box input{padding:14px 18px;background:#0b0e15;border:1px solid var(--line);border-radius:999px;color:var(--text);font-size:16px;outline:none}
+.lock-box input:focus{border-color:var(--blue)}
+.lock-btn{padding:14px;border:0;border-radius:999px;background:var(--blue);color:var(--lock);font-weight:600;font-size:15px}
+.lock-btn:disabled{opacity:.6}
+@media (max-width:767px){
+  .lock{place-items:stretch;padding:calc(env(safe-area-inset-top) + 32px) 24px 32px}
+  .lock-box{background:none;border:0;padding:0;justify-content:center;max-width:440px;margin:0 auto}
+  .lock-box .logo{width:52px;height:52px;border-radius:14px}
+  .lock-title{font-size:32px}
+  .lock-box input{padding:16px 20px;font-size:17px;background:rgba(11,14,21,.85)}
+  .lock-btn{padding:16px;font-size:16px}
+}
