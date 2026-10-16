@@ -1,6 +1,7 @@
 services:
   os:
     build: .
+    image: homelab-os:local
     container_name: homelab-os
     restart: unless-stopped
     env_file: .env
@@ -9,9 +10,10 @@ services:
     volumes:
       - ./data:/data
     ports:
-      - "127.0.0.1:3000:3000"   # kun lokalt; eksponeres via cloudflared under
+      - "${BIND_ADDR:-127.0.0.1}:${HOST_PORT:-3000}:3000"   # BIND_ADDR=0.0.0.0 for LAN-tilgang
 
   cloudflared:
+    profiles: [tunnel]   # start med: docker compose --profile tunnel up -d
     image: cloudflare/cloudflared:2025.10.0
     restart: unless-stopped
     command: tunnel --no-autoupdate run
