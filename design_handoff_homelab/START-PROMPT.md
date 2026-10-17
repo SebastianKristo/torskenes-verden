@@ -6,55 +6,69 @@ Lim inn dette i Claude Code, i roten av repoet, med mappen `design_handoff_homel
 
 Du skal bygge videre på Homelab OS, FinansHub og mobilappene. All spesifikasjon ligger i `design_handoff_homelab/`.
 
-1. Les `design_handoff_homelab/PROMPT-CLAUDE-CODE.md` fra start til slutt. Begynn med delen **«Prompt 10 · gjør dette først»**, som har de nyeste endringene. Les deretter `CHANGES-prompt-06.md`, `FINANSHUB-MOBIL.md` og `FINANSHUB-MODULER.md`.
+1. Les `design_handoff_homelab/PROMPT-CLAUDE-CODE.md` fra start til slutt. Begynn med delen **«Prompt 11 · gjør dette først»**, så «Prompt 10», som har de nyeste endringene. Les deretter `CHANGES-prompt-06.md`, `FINANSHUB-MOBIL.md` og `FINANSHUB-MODULER.md`.
 2. Designet ligger som HTML-prototyper i `design/` og er fasiten for utseende og oppførsel. De viktigste for denne runden:
    - `Finn Mobil.dc.html` og `Finn Handler Varianter.dc.html` (#2a er valgt)
    - `FinansHub v2 Moduler.dc.html` (Boliger, kategorier, Finn på PC)
    - `FinansHub v2.dc.html` (Innstillinger → Boliger)
    - `FinansHub Mobil v2.dc.html`
    - `Matplan.dc.html`
+   - `Sporing.dc.html` (ny fane og widget)
+   - `Subscription OS.dc.html` (web og mobil), `Aksjer Mobil.dc.html`, `Homelab v2.dc.html` (Værmelding og Pakker i karusell)
    - `App-ikon.dc.html`
 3. App-ikonet med alle varianter og oppsettet for Xcode og Android ligger i `app-icon/` (se `app-icon/README.md`).
-4. Brukerens ordrette ønsker står i `prompts/prompt-01.md` til `prompt-10.md`. Er noe uklart, gjelder det brukeren skrev.
+4. Brukerens ordrette ønsker står i `prompts/prompt-01.md` til `prompt-11.md`. Er noe uklart, gjelder det brukeren skrev.
 5. Lag en plan med oppgaver før du skriver kode. Gjør én del om gangen og kjør tester og lint etter hver del. Ikke slett data eller migrasjoner som finnes. Legg til nye migrasjoner.
 6. Når du er ferdig: oppdater `CHANGELOG.md`, bygg release-artefaktene (APK og IPA via CI i `ci/`) og oppsummer hva som er gjort og hva som gjenstår.
 
 ---
 
-## Utdrag: Prompt 10
+## Utdrag: Prompt 11 (nyest)
 
-
-Dette er de nyeste endringene. De gjelder foran eldre punkter der de sier noe annet.
-
-
-- Brukerens ordrette ønsker står i `prompts/prompt-10.md`.
-- **Matplan skal ligge i Homelab, ikke i Finans.** I den bygde appen står «Matplan» i sidemenyen i FinansHub, mellom Finn-handler og Innstillinger. Fjern den derfra, og fjern `/finans/matplan`-ruten.
-  - Matplan er en Homelab-fane (`/matplan`) med eget API (`/api/matplan`), ikke `/finans/api/…`.
-  - Det eneste som kobler Matplan til økonomi: ukekostnaden kan trekkes fra kategorien «Mat og dagligvarer». Det skjer på serveren, ikke via FinansHub-grensesnittet.
-  - I mobilappen åpnes Matplan fra profilmenyen → Andre OS, og Finans-fanelinjen skjules der.
-- **Faste retter per ukedag:** når en rett er åpnet i Matplan, finnes «Alltid på» med Ma–Sø. En rett kan være fast på flere dager (f.eks. taco hver fredag, fiskesuppe mandag og torsdag), og hver dag kan ha én fast rett. Faste dager legges på i denne og kommende uker, og AI eller «Lag ny for uka» endrer dem ikke. Lagres i `matplan_fixed(weekday, dish_id, cook_id)`.
-- **«Ny bolig» er flyttet til Innstillinger → Boliger** i FinansHub. Der ligger skjemaet (navn, adresse, type, del med, Opprett) og en liste over boligene, med «Slett» for eiere (to trykk: Slett, så Bekreft sletting). På Boliger-siden er skjemaet byttet ut med knappen «+ Ny bolig i Innstillinger». Deling og tilgang endres fortsatt inne på hver bolig.
-- **Deling av boliger er også flyttet til Innstillinger → Boliger.** Hver bolig har knappen «Deling · N». Den åpner panelet med medlemmer, roller (Eier / Kan redigere / Kan se), fjern eller forlat, og del med en ny bruker.
-- **Oppsett av boligsiden ligger i Innstillinger → Boliger** («Oppsett av boligsiden»). Der er en liste over kortene (Nøkkeltall, Utgifter per måned, Kategorier, Prosjekter, Faste regninger, Legg til utgift, Utgifter) med ↑, ↓ og en vis/skjul-bryter, pluss Nullstill. Boligsiden har **ingen** «Rediger»- eller «Del»-knapp i toppen; deling skjer også bare i innstillingene. Oppsettet lagres per bruker: `user_prefs.boliger_layout = {order:[], hid:[]}`.
-- **Boliger: last opp til valgt bolig, og AI-kategorier med underkategorier (PC og mobil):**
-  - «Legg i bolig» (select på PC, chips på mobil) bestemmer hvilken bolig en utgift, kvittering eller transaksjon havner i. Standard er boligen du står i. Bare boliger der du kan redigere vises.
-  - Kategorier har underkategorier. Standard: Strøm · Vann og avløp · Hage og uteområde (Blomster, Jord og gjødsel, Plen) · Håndverker (Snekker, Elektriker, Rørlegger) · Basseng (Pumpe og filter, Kjemikalier) · Møbler og interiør (Hagemøbler) · Reparasjon · Vaktmester (Snømåking) · Kommunale avgifter · Vedlikehold (Maling og bygg) · Forsikring.
-  - Etter skanning, opplastning eller henting av transaksjon velger AI kategori og underkategori. Passer ingen, **lager AI en ny kategori** (f.eks. «Sikkerhet › Alarm» for Verisure, «Oppvarming › Ved og pellets») **eller en ny underkategori** (f.eks. «Møbler og interiør › Sofa»). Det AI har laget merkes ✦, og brukeren får en melding.
-  - Innstillinger → Boliger → «Kategorier for boliger»: legg til eller fjern kategorier, legg til underkategorier (Enter) eller fjern dem, slå «✦ La AI lage nye kategorier» av og på, og Nullstill. Er bryteren av, velger AI bare blant eksisterende kategorier.
-  - Datamodell: `bolig_category(id, name, color, parent_id NULL, created_by_ai bool)`. Utgiften peker på underkategorien hvis den har en. AI-kallet returnerer `{category, subcategory, is_new}` som strukturert JSON, med listen over eksisterende kategorier i prompten.
-  - Kategorikortet på boligsiden viser fordelingen på underkategorier, og utgiftslisten viser «Kategori › Underkategori».
-- **Finn-handler: detaljside per handel.** Klikk på en handel for å åpne fire kort:
-  - **Annonsen:** lim inn finn.no-lenken. Med «✦ Hent annonsen» henter serveren siden og lagrer tittel, pris, sted, beskrivelse og *alle bildene* lokalt (`finn_ad` + filer under `/data/finn/<finnkode>/`). Kopien beholdes selv om annonsen slettes. Mangler lenken, brukes Finn-koden fra e-postene. Annonsen kan også lastes opp som PDF eller skjermbilde. Henting skjer på serveren (ikke CORS i nettleseren), med rate-limit og respekt for robots.txt; AI trekker ut feltene til strukturert JSON.
-  - **Original kvittering:** legg ved PDF, bilde eller .eml (flere filer), og fjern dem.
-  - **E-poster i handelen:** alle e-poster i Proton Mail (via Bridge, IMAP) som inneholder Finn-koden eller varenavnet og kommer fra FINN, Posten/Bring, Tillit eller motparten, kobles automatisk til handelen og vises kronologisk med en utvidbar tekst. Manuelle .eml-filer kan legges til.
-  - **Bilder:** last opp flere bilder (ved mottak eller før sending), med miniatyrer og fjern.
-  - Listen viser et sammendrag per handel: «5 e-poster · kvittering ✓ · annonse lagret · 3 bilder».
-- **Finn i mobilappens fanelinje (Finans), design 2a (valgt):** standard faner er Oversikt · Liste · **Finn** · Søk · Mer. Finn tar plassen til Budsjett, som er skjult som fane og ligger øverst under Mer. Budsjett kan slås på igjen i navbar-redigeringen. Se `design/Finn Mobil.dc.html` (komponent) og `design/Finn Handler Varianter.dc.html` (#2a).
-  - **Liste:** netto i år med månedsstolper og linjer for kjøpt og solgt, «N på vei» som kort du blar sidelengs i (bilde, beløp, 4 sporingspunkter, «Neste: …»), filteret Alle/Kjøpt/Solgt/Fullført og et rutenett med 2 kolonner (bilde, statuspille, beløp). Søk i toppen.
-  - **Handel:** stort bilde (egne bilder eller bildene fra annonsen; trykk for neste bilde), rolle og Finn-kode, tittel og beløp, oransje statuskort med sporingspunkter, tre fliser: Kvittering (last opp) · Annonse (✦ hent fra Finn) · Bilder (last opp), kvittering i papirstil (varepris, frakt, gebyr, total) og en tidslinje med steg og e-poster (trykk for å åpne; «+ Legg ved e-post»).
-  - Stegene er Betalt → Sendt → Mottatt → Godkjent ved kjøp, og Solgt → Sendt → Levert → Utbetalt ved salg.
-- **Nytt app-ikon (Homelab):** et tak over tre stigende søyler, på oransje gradient. Alle filer og oppsett ligger i `app-icon/` (se `app-icon/README.md` og `design/App-ikon.dc.html`).
-  - iOS: Icon Composer-ikon med Standard, Mørk, Tonet og Klar (Liquid Glass), så ikonet støtter Tilpass på hjem-skjermen.
-  - Android: adaptivt ikon (bakgrunn + forgrunn + **monochrome**), så «Tematiske ikoner» i Material You virker. PWA-manifestet får `maskable` og `monochrome`.
-- **Sidemenyen i FinansHub skal være:** Oversikt, Transaksjoner, AI-søk, Kvitteringer, Budsjett, Faste utgifter, Kontoer, Aksjer, Rapporter, Subscription OS, Boliger, Finn-handler, **Import**, Innstillinger. Import manglet i den bygde appen.
-
+- Brukerens ordrette ønsker står i `prompts/prompt-11.md`. Design: `design/Sporing.dc.html` (variant `page` og `widget`).
+- **Ny fane «Sporing» i Homelab**, både på web (mellom Matplan og Domener) og i mobilappen (Homelab-fanelinjen og en widget på Homelab-hjem, «Pakker på vei»).
+  - **Værmelding er kompakt og like stor som Pakker-kortet:** ikon og temperatur, tilstand, «føles som», høy/lav, en kort linje (vind, nedbør, fukt), 6 timer, nowcast, de neste 3 dagene (ikon, høy/lav, nedbør) og chips for soloppgang, solnedgang, UV og lufttrykk. Resten ligger i nedtrekket «Mer vær ▾».
+- **I nedtrekket «Mer vær» på web-Dashboard** (yr/MET Locationforecast + Nowcast + Sunrise): ikon og temperatur, tilstand, «føles som» og dagens høy/lav, en nowcast-linje («Regnet gir seg rundt 01:00 …»), 8 nøkkeltall (vind med retning og kast, nedbør nå og 24 t, fuktighet med duggpunkt, UV, lufttrykk med trend, sikt, soloppgang med daglengde, solnedgang), 8 timer med ikon, temperatur og nedbørsstolpe i mm, og 6 dager med ikon, min–maks-stolpe og nedbør.
+- **Web-Dashboard:** «Pakker» ligger i en **karusell med Værmelding** nederst til høyre (samme kortstil, sveip/scroll-snap og prikker under som også kan klikkes). Ingen egen pakke-widget øverst til venstre.
+- **Widget** på Dashboard (web) og Homelab-hjem (mobil): opptil 3 aktive pakker med transportørmerke, navn, status, ETA og en fremdriftslinje i 5 steg. Pakker som er klare for henting kommer først. «Åpne sporing ›» går til fanen. På mobil ligger «Pakker» i en **karusell sammen med klokke og vær** øverst på Homelab-hjem: sveip sideveis mellom de to kortene, med prikker under (scroll-snap; native: `TabView(.page)` / `HorizontalPager`). Pakke-kortet viser de 2 viktigste pakkene og åpner Sporing-fanen. Karusellen flyttes og skjules sammen med «Klokke og vær».
+  - **Fanen:**
+    - Feltet «Lim inn sporingsnummer» og et valgfritt navn. Transportøren gjettes ut fra formatet og kan overstyres med chips.
+    - Kilder som kan slås av og på: **Finn** og **E-post (Proton Mail)**, med «Sist sjekket» og «Sjekk nå».
+    - Filteret Aktive / Klar for henting / Utgående / Levert, og kort med steg (Registrert → Hentet → I transport → Klar for henting / Ute for levering → Levert; ved utgående: Registrert → Levert inn → I transport → Ute for levering → Levert).
+    - Trykk på et kort for å se tidslinjen, «Åpne hos transportør ↗», Arkiver og Slett (to trykk).
+    - Nederst en liste over transportørene og om nøkkelen er på plass.
+  - **Transportører:** Posten og Bring (Tracking API), PostNord (Tracking API), DHL (Shipment Tracking – Unified), UPS (OAuth Tracking API), og som reserve **17TRACK** eller AfterShip for FedEx, GLS, DB Schenker, Helthjem, Budbee, Instabox og andre. Nøklene legges inn i Innstillinger → Integrasjoner under en ny gruppe «Sporing», med testknapp som de andre integrasjonene.
+  - **Gjenkjenning av format** (start; må verifiseres): Posten `^[A-Z]{2}\d{9}NO$`, Bring `^70\d{15}$`, PostNord `^00370\d{15}$` / `^[A-Z]{2}\d{9}(SE|DK|FI)$`, DHL `^JJD\d{10,}$` / 10 siffer, UPS `^1Z[0-9A-Z]{16}$`, FedEx 12 eller 15 siffer, GLS 11 siffer. Ellers sendes nummeret til reservetjenesten, som finner transportøren.
+  - **Automatisk innhenting:**
+    - En jobb hvert 15. minutt leser nye e-poster via Proton Mail Bridge (IMAP). Den finner sporingsnumre i ordre- og fraktbekreftelser med regex, pluss AI som reserve, og lagrer butikk og varenavn.
+    - Finn-handler med Fiks ferdig får sporingsnummeret fra Finn-e-posten og kobles til handelen; status vises også i Finn-tidslinjen.
+    - Duplikater slås sammen på sporingsnummer.
+    - Statusen hentes fra transportøren, oftere når en pakke er ute for levering.
+  - **Varsler (push):** «Klar for henting hos …» og «Levert».
+  - **Datamodell:** `shipment(id, tracking_no unique, carrier, name, source enum(finn,email,manual), source_ref, direction enum(in,out), status, eta, pickup_point, archived, created_at)` + `shipment_event(shipment_id, ts, status, location, raw)`.
+- **Brytere for sporingsvarsler:** i Sporing-fanen («Varsler og haptikk») og i mobilappen under Innstillinger → Varsler → Sporing: Nytt sporingsnummer funnet · Ute for levering · Klar for henting · Levert · Forsinket. Standard er alle på, unntatt Forsinket.
+- **Haptisk tilbakemelding i appene:** Innstillinger → App → Haptikk. Hovedbryter, styrke (Lett/Middels/Kraftig), og egne brytere for trykk på knapper og faner, fullført handling, feil og advarsler, og pakke-varsler, pluss en testknapp.
+  - iOS: `UIImpactFeedbackGenerator(.light/.medium/.heavy)` for trykk, `UINotificationFeedbackGenerator` (`.success`/`.error`) for fullført og feil, `UISelectionFeedbackGenerator` for faner og chips. Respekter Systemhaptikk.
+  - Android: `view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK / CONFIRM / REJECT)`. Respekter «Vibrasjon og haptikk».
+  - Capacitor/PWA: `@capacitor/haptics` (`impact`, `notification`, `selectionChanged`), med `navigator.vibrate` som reserve på Android-web.
+- **Søk: vanlig søk før AI ved enkle ord (web og mobil).** Er søket 1–2 ord uten spørsmålsord eller «?» (f.eks. «ica», «proton»), kjøres vanlig søk først. Gir det treff, vises de med «Fant N treff med vanlig søk, så AI ble ikke brukt», og AI kalles ikke. «✦ Spør AI likevel» tvinger AI. Gir vanlig søk ingen treff, går spørsmålet til AI som før. Dette sparer kall og tid.
+- **iOS: sveip fra venstre kant for å gå tilbake**, overalt der det finnes en tilbakepil (til Homelab fra Finans, Domener og andre moduler, fra undersider, Finn-detalj osv.). Etter 90 pt gir det et haptisk tikk, og når du slipper går appen tilbake. Native: `UINavigationController.interactivePopGestureRecognizer` (UIKit) eller `NavigationStack` (SwiftUI). Har du en egen tilbakeknapp, behold gesten med `interactivePopGestureRecognizer.delegate = nil`. Capacitor: `@capacitor/app` + egen kantgest, eller `swipeBackEnabled` i Ionic.
+- **Trading 212 er flyttet til Innstillinger → «Aksjer · Trading 212»** i FinansHub (web): status, Live/Demo, «Synk nå», API-nøkkel og secret ligger der. Aksjer-siden har bare en liten statuslinje («● Trading 212 · Synkronisert · 22:19 · Innstillinger ›») og ingen knapper.
+- **Aksjer (Trading 212) i mobilappene, nytt design:** se `design/Aksjer Mobil.dc.html`. **Følger alltid appens tema:** iOS mørk med Liquid Glass-kort, hvite pilleknapper og dempede pasteller; Android/brettbar med Material You-tokens (følger fargetema, lys/mørk og «Følg systemet»). Den lyse varianten finnes bare som referanse.
+  - **Portefølje:** verdi i dag med endringschip, områdegraf, periodevalg 1D/1U/1M/3M/1Å/Alt og filteret Alle/Aksjer/ETF/Kontanter. «Største posisjoner» er pastellkort du blar sidelengs i, med Kjøp/Selg. «Alle posisjoner» har sparkline og endring. Kontanter og «Transaksjoner ›».
+  - **Aksjedetaljer:** logo, kurs, endring, graf med markør og tooltip, periodevalg, Min posisjon (antall, verdi, snittkurs, avkastning), handler i aksjen og en fast nederste rad med Selg/Kjøp.
+  - **Transaksjoner:** søk, filteret Alle/Kjøp/Salg/Utbytte, gruppert per dag, med status Utført/Venter/Avvist.
+  - Data: Trading 212 Public API (`/equity/portfolio`, `/equity/account/cash`, `/equity/history/orders`, `/history/dividends`); grafdata fra en kursleverandør. Kjøp/Selg åpner Trading 212 (deep link) med mindre ordre-API er slått på for kontoen. Oppsettet ligger i Innstillinger.
+- **Subscription OS, nytt design (web og mobil):** se `design/Subscription OS.dc.html` (`variant="web"` og `variant="mobile"`) og `design/Subscription Varianter.dc.html`.
+  - **Web**, med fanene Oversikt og Kalender:
+    - **Oversikt:** kort med AI-sparing («Spar X kr i måneden»), totalbeløp per måned med trend og årsbeløp, Aktive/Dyreste/Billigste, et banner om kommende trekk og en årsgraf per kategori (stablet, med tooltip for valgt måned). Til høyre «Trekk denne måneden».
+    - **Tabell** med sortering på alle kolonner, status Aktiv / ⚠ Lite brukt / ▲ Pris økt, og «Si opp». «⊕ Nytt abonnement» åpner en rad med tjeneste, plan, beløp, syklus (månedlig, årlig, hvert 2. år) og trekkdag.
+    - Abonnementshelse 0–100 med gauge, og ✦ Forslag.
+    - **Kalender:** måneden med logoer på trekkdagene. Trykk på en dag for å se trekkene, med fordeling per kategori ved siden av.
+  - **Mobil** (følger appens tema: iOS-glass / Material You), med fanene Hjem · Innsikt · Historikk øverst:
+    - **Hjem:** AI-sparing, neste 7 dager med stolper, abonnementssjekk og kommende trekk.
+    - **Innsikt:** per måned (6 mnd), helse-gauge og stripete kategorilinjer.
+    - **Historikk:** Smart sparing-agent med fremdrift og oppgaver du krysser av, og trekk denne måneden.
+  - **«+ Legg til abonnement»:** på web en oransje knapp med meny, på mobil en +-knapp ved tittelen som åpner et panel. Tre valg: **Skriv inn selv** (tjeneste, beløp, syklus, trekkdag) · **Fra kvittering** (✦ AI leser bilde/PDF/e-post og fyller inn) · **Fra transaksjoner** (✦ faste trekk som er sett minst 3 ganger og ikke er registrert, hver med «+ Legg til»). Tilsvarende valg finnes i appens +-meny.
+  - Status «Lite brukt» kommer fra bruksdata (Plex/Jellyfin/kontoinnlogging eller manuelt). «Pris økt» kommer fra sammenligning med forrige trekk.
+- Lenkene til transportørene i prototypen (sporing.posten.no, tracking.bring.com, postnord.no/sporing, dhl.com, ups.com, fedex.com, gls-group.com, dbschenker.com, helthjem.no, budbee, instabox, 17track) må sjekkes før de brukes.
