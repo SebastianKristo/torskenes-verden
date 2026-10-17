@@ -78,6 +78,13 @@ Bildet bygges og publiseres til GHCR av `.github/workflows/docker.yml` ved hver 
 - **LAN-tilgang:** som standard lytter appen bare på `127.0.0.1`. Sett `BIND_ADDR=0.0.0.0` (og eventuelt `HOST_PORT`) i `.env` for å nå den fra nettverket.
 - **Uten HTTPS** (direkte `http://` på LAN) må `COOKIE_SECURE=false` settes, ellers fungerer ikke innloggingen. Proxmox-skriptet gjør dette automatisk når du ikke oppgir et tunnel-token.
 
+## Pålitelig enhet på lokalt nett
+Ved innlogging er «Husk denne enheten på lokalt nett» krysset av som standard. Passordet hoppes da over neste gang, men **bare** når enheten både har en gyldig enhetscookie og kobler til fra en lokal adresse (192.168.x.x, 10.x.x.x eller 172.16–31.x.x).
+- Fra internett kreves alltid passord. Det gjelder også via Cloudflare Tunnel, der `CF-Connecting-IP` inneholder klientens offentlige adresse.
+- **Lås** i menyen pauser enheten til neste innlogging med passord.
+- Under **Innstillinger → Innlogging** kan du slå funksjonen av og på for enheten du bruker, og fjerne andre enheter.
+- ⚠️ **Ikke eksponer porten direkte mot internett** med portviderekobling i ruteren. Bruk Cloudflare Tunnel. Docker kan vise trafikk utenfra med en intern 172.x-adresse, og da vil den bli regnet som lokal.
+
 ## Integrasjoner
 | Modul | Kilde | Env |
 |---|---|---|

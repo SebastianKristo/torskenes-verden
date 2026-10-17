@@ -31,7 +31,11 @@
 - **Innstillinger fra siden:** integrasjonsinnstillinger lagres i databasen (`kv` → `cfg`) og overstyrer env. Hemmeligheter returneres aldri til klienten. Ved lagring tømmes cachen, slik at endringer vises med en gang.
 - **Ruter-strekninger** konfigureres som tekst («Fra (NSR-ID) > Til (NSR-ID)») i stedet for en liste med stopp, fordi dashboardet viser strekninger.
 - **Plakater** lastes direkte fra Sonarr/Radarr sine `remoteUrl`-er (TMDB/TheTVDB). CSP tillater derfor `img-src https:`.
-- **Pålitelig enhet på lokalt nett er ikke implementert.** Funksjonen hopper over passordet, og ble stoppet av sikkerhetssjekken i utviklingsmiljøet. Den venter på eksplisitt godkjenning fra eieren. Hvis den bygges, må LAN-sjekken bruke socket-adressen eller `CF-Connecting-IP`, aldri `X-Forwarded-For`.
+- **Pålitelig enhet på lokalt nett** (godkjent av eieren): passordet hoppes over bare når enheten har en gyldig enhetscookie **og** klientadressen er lokal.
+  - Enhetscookien er tilfeldig, httpOnly og gyldig i 1 år. Databasen lagrer bare en HMAC av den.
+  - Adressen tas fra `CF-Connecting-IP`, som Cloudflare alltid setter og overskriver, eller ellers fra TCP-tilkoblingen. `X-Forwarded-For` brukes aldri.
+  - «Lås» pauser enheten til neste innlogging med passord.
+  - Innlogging uten «Husk denne enheten» fjerner enheten.
 - **Navn:** standard `USER_NAME` er nå Sebastian. CV-ens standardtekst har nøytral e-post.
 
 ## Åpne spørsmål / plassholdere

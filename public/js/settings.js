@@ -4,7 +4,8 @@ import { OPTIONS, srcFor, applyBackground, preloadAll } from './background.js';
 import { SEARCH_STYLES, GWORD, renderTicker, menuLabels } from './extras.js';
 
 const modal = () => document.getElementById('settings');
-const TABS = [['look', 'Utseende', 'Bakgrunn, søkebar, nyhetslinje og kategorier'], ['int', 'Integrasjoner', 'Lagres på serveren. Hemmeligheter vises aldri igjen etter lagring.']];
+const TABS = [['look', 'Utseende', 'Bakgrunn, søkebar, nyhetslinje og kategorier'], ['int', 'Integrasjoner', 'Lagres på serveren. Hemmeligheter vises aldri igjen etter lagring.'], ['login', 'Innlogging', 'Pålitelige enheter på lokalt nett']];
+let devices = null;
 let tab = 'look', cfg = null, cfgErr = null;
 
 // Hvilke data som må hentes på nytt når en integrasjonsgruppe endres.
@@ -54,13 +55,33 @@ function intTab() {
     <div class="muted" style="font-size:12px">Tomme felt bruker verdien fra serverens miljøvariabler (.env).</div>`;
 }
 
+function loginTab() {
+  if (!devices) return '<div class="skeleton" style="min-height:120px"></div>';
+  const d = devices;
+  const when = (t) => new Date(t).toLocaleString('nb-NO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  return `<button class="toggle" data-trust role="switch" aria-checked="${d.trusted}"><i></i><span><b style="font-weight:600">Pålitelig enhet</b><br>
+      <span class="sub">${d.trusted ? 'Denne enheten slipper passord når den er på lokalt nett' : 'Denne enheten må alltid skrive passord'}</span></span></button>
+    <div class="muted" style="font-size:13px;line-height:1.5">Passordet hoppes bare over når enheten har en gyldig enhetscookie <b>og</b> kobler til fra lokalt nett (192.168.x.x, 10.x.x.x, 172.16–31.x.x).
+      Fra internett, også via Cloudflare Tunnel, kreves alltid passord. «Lås» i menyen pauser enheten til neste innlogging med passord.
+      ${d.lan ? '<br><span class="green">Du er på lokalt nett nå.</span>' : '<br>Du er ikke på lokalt nett nå.'}</div>
+    <div class="set-label">Pålitelige enheter</div>
+    ${d.devices.map((x) => `<div class="row"><div><div>${esc(x.name)}${x.current ? ' <span class="badge" style="background:var(--blue)">denne</span>' : ''}</div>
+      <div class="mono muted" style="font-size:12px">Sist brukt ${when(x.lastSeen)}${x.lastIp ? ` · ${esc(x.lastIp)}` : ''}</div></div>
+      <button class="btn" data-dev-del="${x.id}" style="color:var(--red)">Fjern</button></div>`).join('') || '<div class="empty">Ingen pålitelige enheter.</div>'}`;
+}
+
+async function loadDevices() {
+  try { devices = await api('/devices'); } catch { devices = { lan: false, trusted: false, devices: [] }; }
+  if (!modal().hidden && tab === 'login') render();
+}
+
 function render() {
   const [, title, sub] = TABS.find(([k]) => k === tab);
   const scroll = modal().querySelector('.set-body')?.scrollTop ?? 0;
   modal().innerHTML = `<div class="set-box" role="dialog" aria-modal="true" aria-labelledby="set-title">
     <aside class="set-side" role="tablist"><h2>Innstillinger</h2>${TABS.map(([k, n]) => `<button class="set-tab" role="tab" data-tab="${k}" aria-selected="${k === tab}"><i></i>${n}</button>`).join('')}<div class="grow" style="flex:1"></div></aside>
     <div class="set-main"><div class="set-head"><div><div class="t" id="set-title">${title}</div><div class="s">${sub}</div></div><button class="set-close" data-close aria-label="Lukk">×</button></div>
-    <div class="set-body">${tab === 'look' ? lookTab() : intTab()}</div></div></div>`;
+    <div class="set-body">${tab === 'look' ? lookTab() : tab === 'int' ? intTab() : loginTab()}</div></div></div>`;
   modal().querySelector('.set-body').scrollTop = scroll;
 }
 
@@ -97,7 +118,15 @@ export function bindSettings() {
   m.addEventListener('click', async (e) => {
     if (e.target === m || e.target.closest('[data-close]')) return closeSettings();
     const t = e.target.closest('[data-tab]');
-    if (t) { tab = t.dataset.tab; render(); if (tab === 'int' && !cfg) loadCfg(); return; }
+    if (t) { tab = t.dataset.tab; render(); if (tab === 'int' && !cfg) loadCfg(); if (tab === 'login') loadDevices(); return; }
+    if (e.target.closest('[data-trust]')) {
+      const cur = devices?.devices.find((x) => x.current);
+      if (devices?.trusted && cur) await api(`/devices/${cur.id}`, { method: 'DELETE' });
+      else await api('/devices/current', { method: 'POST' });
+      return loadDevices();
+    }
+    const dd = e.target.closest('[data-dev-del]');
+    if (dd && confirm('Fjerne enheten? Den må da logge inn med passord igjen.')) { await api(`/devices/${dd.dataset.devDel}`, { method: 'DELETE' }); return loadDevices(); }
     const bg = e.target.closest('[data-bg]');
     if (bg) {
       store.me.bg = bg.dataset.bg;

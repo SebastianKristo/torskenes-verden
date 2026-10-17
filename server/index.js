@@ -9,7 +9,7 @@ import { join, resolve } from 'node:path';
 import { config } from './config.js';
 import { db, kv, OWNER } from './db.js';
 import { verifyPassword } from './password.js';
-import { createSession, destroySession, sessionUser, requireAuth, clientIp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
+import { createSession, destroySession, sessionUser, rememberDevice, pauseDevice, forgetDevice, currentDeviceId, trustIp, isLan, requireAuth, clientIp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
 import * as integrations from './integrations.js';
 import { cfg, publicConfig, updateConfig } from './settings.js';
 
@@ -57,7 +57,7 @@ app.post('/api/login', async (c) => {
   const ip = clientIp(c);
   const wait = loginBlocked(ip);
   if (wait) return c.json({ error: `For mange forsøk. Prøv igjen om ${Math.ceil(wait / 60)} min.` }, 429);
-  const { password } = await c.req.json().catch(() => ({}));
+  const { password, remember } = await c.req.json().catch(() => ({}));
   if (!config.passwordHash || !verifyPassword(password ?? '', config.passwordHash)) {
     loginFailed(ip);
     await new Promise((r) => setTimeout(r, 400));
@@ -65,10 +65,11 @@ app.post('/api/login', async (c) => {
   }
   loginSucceeded(ip);
   createSession(c);
+  if (remember) rememberDevice(c, OWNER); else forgetDevice(c);
   return c.json({ ok: true });
 });
 
-app.post('/api/logout', (c) => { destroySession(c); return c.json({ ok: true }); });
+app.post('/api/logout', (c) => { pauseDevice(c); destroySession(c); return c.json({ ok: true }); });
 
 /* ---------------- CV (offentlig lesing) ---------------- */
 
@@ -150,6 +151,22 @@ authed.put('/settings/:key', async (c) => {
   return c.json({ ok: true });
 });
 authed.delete('/layouts', (c) => { kv.delPrefix(c.get('user'), 'layout_'); kv.delPrefix(c.get('user'), 'size_'); return c.json({ ok: true }); });
+
+/* --- Pålitelige enheter --- */
+
+authed.get('/devices', (c) => {
+  const cur = currentDeviceId(c), ip = trustIp(c);
+  const list = db.prepare('SELECT id, name, created, last_seen, last_ip FROM devices WHERE user=? ORDER BY last_seen DESC').all(c.get('user'));
+  return c.json({ lan: isLan(ip), trusted: list.some((d) => d.id === cur),
+    devices: list.map((d) => ({ id: d.id.slice(0, 16), name: d.name, created: d.created, lastSeen: d.last_seen, lastIp: d.last_ip, current: d.id === cur })) });
+});
+authed.post('/devices/current', (c) => { rememberDevice(c, c.get('user')); return c.json({ ok: true }); });
+authed.delete('/devices/:id', (c) => {
+  const id = c.req.param('id');
+  const row = /^[a-f0-9]{16}$/.test(id) && db.prepare("SELECT id FROM devices WHERE user=? AND substr(id,1,16)=?").get(c.get('user'), id);
+  if (row) forgetDevice(c, row.id);
+  return c.json({ ok: true });
+});
 
 /* --- Integrasjonsinnstillinger --- */
 
