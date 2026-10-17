@@ -49,7 +49,7 @@ enum DomTab: String, CaseIterable, Identifiable {
 }
 
 /// En innlogget konto. Flere kan være logget inn samtidig; hver har egne data, tokens og varsler.
-struct Account: Codable, Identifiable, Hashable {
+struct LoginAccount: Codable, Identifiable, Hashable {
     var id: String
     var server: String
     var username: String
@@ -68,9 +68,9 @@ struct PendingLogin { let server: String; let username: String; let password: St
 final class Store {
     /* ---------- Kontoer (nøkkelringen) ---------- */
 
-    private(set) var accounts: [Account] = Store.loadAccounts()
+    private(set) var accounts: [LoginAccount] = Store.loadAccounts()
     private(set) var activeId: String? = Keychain.get("active")
-    var account: Account? { accounts.first { $0.id == activeId } ?? accounts.first }
+    var account: LoginAccount? { accounts.first { $0.id == activeId } ?? accounts.first }
     var loggedIn: Bool { account != nil }
     var server: String { account?.server ?? Keychain.get("server") ?? "" }
     var displayName: String {
@@ -167,11 +167,11 @@ final class Store {
 
     private static func start(_ s: String) -> Tab { s == "list" ? .list : s == "budget" ? .budget : .home }
 
-    nonisolated private static func loadAccounts() -> [Account] {
-        if let raw = Keychain.get("accounts"), let d = raw.data(using: .utf8), let list = try? JSONDecoder().decode([Account].self, from: d) { return list }
+    nonisolated private static func loadAccounts() -> [LoginAccount] {
+        if let raw = Keychain.get("accounts"), let d = raw.data(using: .utf8), let list = try? JSONDecoder().decode([LoginAccount].self, from: d) { return list }
         // Eldre versjon: én server og ett token.
         guard let server = Keychain.get("server"), let token = Keychain.get("token") else { return [] }
-        let a = Account(id: UUID().uuidString, server: server, username: "", name: "", role: "admin", token: token, local: "", external: "")
+        let a = LoginAccount(id: UUID().uuidString, server: server, username: "", name: "", role: "admin", token: token, local: "", external: "")
         if let d = try? JSONEncoder().encode([a]) { Keychain.set("accounts", String(data: d, encoding: .utf8)); Keychain.set("active", a.id) }
         Keychain.set("token", nil)
         return [a]
@@ -235,7 +235,7 @@ final class Store {
             self.pending = nil
             Keychain.set("server", srv)
             let same = self.accounts.first { $0.server == srv && $0.username.lowercased() == r.username.lowercased() }
-            let acc = Account(id: same?.id ?? UUID().uuidString, server: srv, username: r.username, name: r.name, role: r.role, token: r.token, local: same?.local ?? "", external: same?.external ?? "")
+            let acc = LoginAccount(id: same?.id ?? UUID().uuidString, server: srv, username: r.username, name: r.name, role: r.role, token: r.token, local: same?.local ?? "", external: same?.external ?? "")
             self.accounts = self.accounts.filter { $0.id != acc.id } + [acc]
             self.addingAccount = false
             self.switchTo(acc.id)
