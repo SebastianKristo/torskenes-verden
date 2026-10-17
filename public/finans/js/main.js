@@ -3,7 +3,7 @@ import { S, onChange, loadBoot, loadAi, toast } from './core.js';
 import * as desktop from './desktop.js';
 import * as mobile from './mobile.js';
 
-const isMobile = () => matchMedia('(max-width: 899px)').matches || (matchMedia('(pointer: coarse)').matches && matchMedia('(max-width: 1100px)').matches);
+const isMobile = () => !new URLSearchParams(location.search).has('desktop') && (matchMedia('(max-width: 899px)').matches || (matchMedia('(pointer: coarse)').matches && matchMedia('(max-width: 1100px)').matches));
 let ui = null;
 
 function pick() {

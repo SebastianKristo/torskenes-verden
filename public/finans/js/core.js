@@ -113,3 +113,25 @@ export const ICONS = {
   up: 'M12 19V5M5 12l7-7 7 7', dn: 'M12 5v14M5 12l7 7 7-7', pie: 'M12 3v9h9A9 9 0 1 1 12 3z',
 };
 export const icon = (k, size = 18, stroke = 'currentColor', w = 2) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICONS[k]}"/></svg>`;
+
+/* ---------- Logoer og AI-sammendrag (✦) ---------- */
+// Logo fra serverens favicon-cache når transaksjonen har et domene, ellers forbokstav i kategorifargen.
+export function logo(t, size = 40, radius = 12) {
+  const name = t?.description ?? t?.merchant ?? t?.name ?? '', color = t?.color ?? '#A0A0AA';
+  const box = `width:${size}px;height:${size}px;border-radius:${radius}px;flex:none`;
+  if (t?.domain) return `<span class="m-logo" style="${box}"><img src="/finans/api/logo/${encodeURIComponent(t.domain)}" alt="" loading="lazy" width="${size - 8}" height="${size - 8}" onerror="this.parentNode.classList.add('err');this.remove()"><i style="color:${color}">${esc(ini(name))}</i></span>`;
+  return `<span class="m-ini" style="${box};background:${rgba(color, 0.18)};color:${color};font-size:${Math.round(size * 0.4)}px">${esc(ini(name))}</span>`;
+}
+export const aiLine = (s, cls = 'ai') => (s ? `<span class="${cls}">✦ ${esc(s)}</span>` : '');
+
+// Mat-API-et ligger utenfor /finans/api.
+export async function matApi(path, opts = {}) {
+  const init = { ...opts, headers: { ...(opts.headers ?? {}) } };
+  if (opts.json !== undefined) { init.body = JSON.stringify(opts.json); init.headers['Content-Type'] = 'application/json'; delete init.json; }
+  const res = await fetch('/mat/api' + path, init);
+  const data = res.headers.get('content-type')?.includes('json') ? await res.json() : null;
+  if (!res.ok) throw new Error(data?.error || `Matplan svarte ${res.status}`);
+  return data;
+}
+ICONS.mat = 'M7 3v8a2 2 0 0 0 2 2v8M5 3v6M9 3v6M17 21V3c-2 0-4 2-4 7v4h4';
+ICONS.close = 'M6 6l12 12M18 6L6 18';
