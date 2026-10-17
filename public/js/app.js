@@ -2,14 +2,17 @@ import { api, esc, isMobile } from './util.js';
 import { store, on, load, mountAll } from './store.js';
 import { setupDnd, resetLayouts } from './dnd.js';
 import { applyBackground, preloadAll } from './background.js';
-import { openSettings, bindSettings } from './settings.js';
+import { openSettings, bindSettings, applyTop } from './settings.js';
 import { bindPopup, bindSearch, menuLabels, toggle } from './extras.js';
 import * as dash from './dash.js';
 import * as study from './study.js';
 import * as space from './space.js';
 import * as net from './net.js';
+import * as home from './home.js';
+import * as mat from './mat.js';
+import * as domains from './domains.js';
 
-const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, nettverk: net.render, mer: net.renderMore };
+const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, hjem: home.render, matplan: mat.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
 const view = document.getElementById('view');
 let route = null, wasMobile = isMobile();
 
@@ -29,9 +32,9 @@ function renderRoute() {
   mountAll(view);
   setupDnd(view);
   // Rom er en underside av «Mer» på mobil.
-  const navKey = isMobile() && (route === 'rom' || route === 'nettverk') ? 'mer' : route;
+  const navKey = isMobile() && ['rom', 'nettverk', 'hjem', 'matplan', 'domener'].includes(route) ? 'mer' : route;
   document.querySelectorAll('[data-r]').forEach((a) => { if (a.dataset.r === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
-  document.title = { dash: 'OS', studie: 'Studie · OS', rom: 'Rom · OS', nettverk: 'Nettverk · OS', mer: 'Mer · OS' }[route];
+  document.title = { dash: 'OS', studie: 'Studie · OS', rom: 'Rom · OS', hjem: 'Hjem · OS', matplan: 'Matplan · OS', domener: 'Domener · OS', nettverk: 'Nettverk · OS', mer: 'Mer · OS' }[route];
 }
 
 function weatherPill() {
@@ -69,7 +72,8 @@ async function main() {
   bindPopup();
   bindSearch();
   setupDnd(document.querySelector('header'));
-  study.bind(view); space.bind(view);
+  study.bind(view); space.bind(view); home.bind(view); mat.bind(view); domains.bind(view);
+  applyTop();
   preloadAll();
   applyBackground();
   renderRoute();

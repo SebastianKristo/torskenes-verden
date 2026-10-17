@@ -47,6 +47,10 @@ export const SCHEMA = [
     ['nasa_key', 'NASA API-nøkkel', e('NASA_API_KEY', 'DEMO_KEY'), true],
     ['sat_group', 'CelesTrak-gruppe', e('SAT_GROUP', 'starlink')],
   ]],
+  ['Cloudflare', [
+    ['cf_token', 'API-token (Zone:Read, DNS:Read, Registrar:Read)', e('CLOUDFLARE_API_TOKEN'), true],
+    ['cf_domain', 'Domene', e('CLOUDFLARE_DOMAIN')],
+  ]],
   ['Søk', [
     ['search_url', 'Søke-URL (søket legges til på slutten)', e('SEARCH_URL', 'https://www.google.com/search?q=')],
   ]],

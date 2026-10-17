@@ -31,6 +31,9 @@ export function renderMore() {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <a class="btn-lg" href="#/rom" style="justify-content:center;padding:14px">Rom ↗</a>
       <a class="btn-lg" href="#/nettverk" style="justify-content:center;padding:14px">Nettverk ↗</a>
+      <a class="btn-lg" href="#/hjem" style="justify-content:center;padding:14px">Hjem ↗</a>
+      <a class="btn-lg" href="#/matplan" style="justify-content:center;padding:14px">Matplan ↗</a>
+      <a class="btn-lg" href="#/domener" style="justify-content:center;padding:14px">Domener ↗</a>
       <a class="btn-lg" href="/cv" target="_blank" style="justify-content:center;padding:14px">CV ↗</a>
       <button class="btn-lg" data-act="settings" style="justify-content:center;padding:14px">Innstillinger</button>
     </div>`;

@@ -4,7 +4,20 @@ import { OPTIONS, srcFor, applyBackground, preloadAll } from './background.js';
 import { SEARCH_STYLES, GWORD, renderTicker, menuLabels } from './extras.js';
 
 const modal = () => document.getElementById('settings');
-const TABS = [['look', 'Utseende', 'Bakgrunn, søkebar, nyhetslinje og kategorier'], ['int', 'Integrasjoner', 'Lagres på serveren. Hemmeligheter vises aldri igjen etter lagring.'], ['login', 'Innlogging', 'Pålitelige enheter på lokalt nett']];
+
+// Topplinje: mellomrom og fanebredde fra Utseende → Topplinje.
+const TOP = [['head', 'hl_head_gap', 'Mellomrom mellom seksjoner', 0, 120, 4, 16], ['tab', 'hl_tab_gap', 'Mellomrom mellom faner', 0, 40, 2, 2], ['pad', 'hl_tab_pad', 'Bredde på faner', 6, 24, 1, 12]];
+export function applyTop() {
+  const t = store.me.top ?? {}, r = document.documentElement.style;
+  r.setProperty('--hl-head-gap', (t.head ?? 16) + 'px');
+  r.setProperty('--hl-tab-gap', (t.tab ?? 2) + 'px');
+  r.setProperty('--hl-tab-pad', (t.pad ?? 12) + 'px');
+}
+const topSliders = () => TOP.map(([k, , label, min, max, step, def]) => {
+  const v = store.me.top?.[k] ?? def;
+  return `<label class="top-range">${label}<input type="range" min="${min}" max="${max}" step="${step}" value="${v}" data-top="${k}"><span class="mono">${v} px</span></label>`;
+}).join('');
+const TABS = [['look', 'Utseende', 'Bakgrunn, topplinje, søkebar, nyhetslinje og kategorier'], ['int', 'Integrasjoner', 'Lagres på serveren. Hemmeligheter vises aldri igjen etter lagring.'], ['login', 'Innlogging', 'Pålitelige enheter på lokalt nett']];
 let devices = null;
 let tab = 'look', cfg = null, cfgErr = null;
 
@@ -35,6 +48,7 @@ function lookTab() {
   return `<div class="set-label">Bakgrunn</div><div class="bg-opts">${opts}</div>
     <div class="muted" style="font-size:13px">«Oslo» bytter mellom bilder av byen hvert 15. sekund${c.oslo?.length ? ` (${c.oslo.length} egne bilder, <button class="btn" data-clear="oslo" style="padding:2px 8px">fjern</button>)` : ''}. «Vær» viser et bilde som passer dagens vær (nå: ${kindName}). Du kan erstatte bildene med egne:</div>
     <div class="chips">${wslots}</div>
+    <div class="set-label">Topplinje</div>${topSliders()}
     <div class="set-label">Søkebar</div><div class="srch-opts">${SEARCH_STYLES.map(srchPreview).join('')}</div>
     ${tog('search', !s.hideSearch, 'Vis søkebar', 'Kan dras mellom avgangene og klokka på dashboardet')}
     <div class="set-label">Nyhetslinje</div>
@@ -172,8 +186,16 @@ export function bindSettings() {
     if (Object.keys(changes).length) saveGroup(form, changes);
     else form.querySelector('[data-status]').textContent = 'Ingen endringer';
   });
+  m.addEventListener('input', (e) => {
+    const k = e.target.dataset?.top;
+    if (!k) return;
+    store.me.top = { ...store.me.top, [k]: +e.target.value };
+    e.target.nextElementSibling.textContent = e.target.value + ' px';
+    applyTop();
+  });
   m.addEventListener('change', async (e) => {
     const t = e.target;
+    if (t.dataset.top) { const [, key] = TOP.find(([k]) => k === t.dataset.top); api(`/settings/${key}`, { method: 'PUT', json: { value: +t.value } }); return; }
     if (t.dataset.slot) {
       const f = t.files[0];
       if (!f) return;

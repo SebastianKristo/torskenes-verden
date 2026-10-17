@@ -14,6 +14,9 @@ import * as integrations from './integrations.js';
 import { cfg, publicConfig, updateConfig } from './settings.js';
 import finansApi from './finans/routes.js';
 import { db as fhDb } from './finans/db.js';
+import homeApi from './home.js';
+import { matApi, matCalendar, startMatScheduler } from './mat.js';
+import domainsApi from './domains.js';
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
 
 const api = process.env.MOCK_DATA === '1' ? await import('./mock.js') : integrations;
@@ -136,6 +139,7 @@ authed.get('/state', (c) => {
     searchStyle: kv.get(u, 'search_style', 'wide'),
     hideSearch: kv.get(u, 'hide_search', false),
     hideNews: kv.get(u, 'hide_news', false),
+    top: { head: kv.get(u, 'hl_head_gap', 16), tab: kv.get(u, 'hl_tab_gap', 2), pad: kv.get(u, 'hl_tab_pad', 12) },
     sizes: Object.fromEntries(db.prepare("SELECT key, value FROM kv WHERE user=? AND key LIKE 'size_%'").all(u).map((r) => [r.key.slice(5), JSON.parse(r.value)])),
     layouts,
   });
@@ -149,6 +153,9 @@ const SETTINGS = {
   search_style: (v) => ['light', 'dark', 'wide', 'wideLight'].includes(v),
   hide_search: (v) => typeof v === 'boolean',
   hide_news: (v) => typeof v === 'boolean',
+  hl_head_gap: (v) => Number.isInteger(v) && v >= 0 && v <= 120,
+  hl_tab_gap: (v) => Number.isInteger(v) && v >= 0 && v <= 40,
+  hl_tab_pad: (v) => Number.isInteger(v) && v >= 6 && v <= 24,
   loan: (v) => v && typeof v === 'object' && ['debt', 'grantMonthly', 'progress'].every((k) => Number.isFinite(v[k])) && typeof v.nextPayout === 'string',
 };
 authed.put('/settings/:key', async (c) => {
@@ -349,6 +356,11 @@ authed.get('/space/gallery/:key', proxy((c) => {
 }));
 
 app.route('/api', authed);
+app.route('/home/api', homeApi);
+app.route('/mat/api', matApi);
+app.route('/domains/api', domainsApi);
+app.get('/mat/calendar.ics', matCalendar);
+if (process.env.NODE_ENV !== 'test') startMatScheduler();
 
 app.onError((err, c) => {
   console.error(err);
