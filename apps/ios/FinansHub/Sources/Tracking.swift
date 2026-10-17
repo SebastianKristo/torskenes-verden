@@ -103,23 +103,29 @@ struct Shipment: Identifiable, Hashable {
 
     init(_ o: [String: Any]) {
         id = JS.str(o, "id") ?? UUID().uuidString
-        trackingNo = JS.str(o, "trackingNo") ?? JS.str(o, "no") ?? ""
-        carrier = JS.str(o, "carrier") ?? "other"
-        let def = Carrier.known.first { $0.id == carrier }
-        carrierName = JS.str(o, "carrierName") ?? def?.name ?? carrier.capitalized
-        carrierIni = JS.str(o, "carrierIni") ?? def?.ini ?? String(carrierName.prefix(2)).uppercased()
+        // Lokale variabler: «??» lager closures, og de kan ikke lese self før alle felt er satt.
+        let no = JS.str(o, "trackingNo") ?? JS.str(o, "no") ?? ""
+        let car = JS.str(o, "carrier") ?? "other"
+        let def = Carrier.known.first { $0.id == car }
+        let cname = JS.str(o, "carrierName") ?? def?.name ?? car.capitalized
+        trackingNo = no
+        carrier = car
+        carrierName = cname
+        carrierIni = JS.str(o, "carrierIni") ?? def?.ini ?? String(cname.prefix(2)).uppercased()
         carrierColor = JS.str(o, "carrierColor") ?? def?.color ?? "#3A4252"
         carrierFg = JS.str(o, "carrierFg") ?? def?.fg ?? "#FFFFFF"
-        name = JS.str(o, "name") ?? "\(carrierName) · \(String(trackingNo.suffix(4)))"
+        name = JS.str(o, "name") ?? "\(cname) · \(String(no.suffix(4)))"
         shop = JS.str(o, "shop") ?? ""
         source = JS.str(o, "source") ?? "manual"
         sourceRef = JS.str(o, "sourceNote") ?? JS.str(o, "sourceRef") ?? ""
-        direction = JS.str(o, "direction") ?? "in"
-        status = JS.str(o, "status") ?? "unknown"
-        statusText = JS.str(o, "statusText") ?? Shipment.statusName[status] ?? "Ukjent status"
-        step = Swift.max(0, Swift.min(4, JS.int(o, "step") ?? Shipment.stepOf(status)))
+        let stat = JS.str(o, "status") ?? "unknown"
+        let dir = JS.str(o, "direction") ?? "in"
+        direction = dir
+        status = stat
+        statusText = JS.str(o, "statusText") ?? Shipment.statusName[stat] ?? "Ukjent status"
+        step = Swift.max(0, Swift.min(4, JS.int(o, "step") ?? Shipment.stepOf(stat)))
         let st = JS.strings(o, "steps")
-        steps = st.count == 5 ? st : (direction == "out" ? Shipment.stepsOut : Shipment.stepsIn)
+        steps = st.count == 5 ? st : (dir == "out" ? Shipment.stepsOut : Shipment.stepsIn)
         eta = JS.str(o, "eta") ?? ""
         pickupPoint = JS.str(o, "pickupPoint") ?? ""
         archived = JS.bool(o, "archived") ?? false
