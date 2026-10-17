@@ -1,20 +1,35 @@
 // FinansHub mobil (PWA). Tema: iOS Liquid Glass på iPhone/iPad, ellers Android Material 3 Expressive.
-// ≥ 600 px (åpen brettbar): navigasjonsrail + to paneler. Henter kun fra /finans/api.
+// ≥ 600 px (åpen brettbar): navigasjonsrail + to paneler. Fanelinja er bare Finans (Hjem/Liste/Budsjett);
+// Matplan, Domener og de andre modulene åpnes fra menyen bak profilbildet og fyller hele skjermen.
 import {
   S, api, esc, n0, n2, sgn, neg, dd, dWeek, dLong, today, monthName, cap, ini, rgba, greet, parseAmount,
-  render, loadBoot, loadSummary, loadTx, loadReceipts, catById, cats, accs, uploadReceipt, icon, logo, aiLine, matApi, conic,
+  render, loadBoot, loadSummary, loadTx, loadReceipts, catById, cats, accs, uploadReceipt, icon, logo, aiLine, conic,
 } from './core.js';
+import { MODS, modView, modLoad, domNav, modBind } from './mobile-mods.js';
+import { settingsView, settingsLoad, settingsBind } from './mobile-set.js';
 
 const u = S.ui;
-const m = { screen: 'hjem', sel: null, budSel: null, rc: null, filter: '', toast: '', theme: null, menu: false, jobs: [], uploading: 0, mat: null, matErr: '', detail: false };
+export const m = {
+  screen: 'hjem', sub: '', sel: null, budSel: null, rc: null, filter: '', toast: '', menu: false, jobs: [], uploading: 0, detail: false,
+  sheet: false, min: false, tabIdx: 0, reveal: false, offline: [], me: null,
+};
 const root = () => document.getElementById('app');
-const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-const theme = () => { try { const t = localStorage.getItem('fh_theme'); if (t === 'ios' || t === 'and') return t; } catch {} return isIOS() ? 'ios' : 'and'; };
-const two = () => matchMedia('(min-width: 600px)').matches;
-const SCREENS = [['hjem', 'Hjem', 'home'], ['liste', 'Liste', 'list'], ['budsjett', 'Budsjett', 'bud'], ['mat', 'Matplan', 'mat']];
-const iosBg = () => { try { return localStorage.getItem('fh_ios_bg') !== '0'; } catch { return true; } };
+export const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+export const theme = () => { try { const t = localStorage.getItem('fh_theme'); if (t === 'ios' || t === 'and') return t; } catch {} return isIOS() ? 'ios' : 'and'; };
+export const two = () => matchMedia('(min-width: 600px)').matches;
+const TABS = [['hjem', 'Hjem', 'home'], ['liste', 'Liste', 'list'], ['budsjett', 'Budsjett', 'bud']];
+const FIN = ['hjem', 'liste', 'budsjett', 'skann', 'opp'];
+export const iosBg = () => { try { return localStorage.getItem('fh_ios_bg') !== '0'; } catch { return true; } };
 const ACTIVE = ['pending', 'processing'];
 const amtC = (v, th) => (v > 0 ? '#9FE3C6' : th === 'and' ? '#F0DFD7' : '#fff');
+
+/* ---------- Valg på denne enheten (localStorage) ---------- */
+const PDEF = { scanTap: 'cam', start: 'hjem', hideAmt: false, appHide: false, lock: false, lockAfter: '5', crop: true, origImg: true, wifi: false, nSub: false, nDom: true, nWeek: false };
+let P = {};
+try { P = JSON.parse(localStorage.getItem('fh_mprefs') || '{}') || {}; } catch { P = {}; }
+export const pref = (k) => P[k] ?? PDEF[k];
+export function setPref(k, v) { P = { ...P, [k]: v }; try { localStorage.setItem('fh_mprefs', JSON.stringify(P)); } catch {} }
+const hide = (txt) => (pref('hideAmt') && !m.reveal ? '••••' : txt);
 
 /* ---------- Byggeklosser ---------- */
 
@@ -33,9 +48,9 @@ function hero(th) {
   if (!s) return `<div class="hero ${th === 'ios' ? 'glass' : ''}"><div class="m-spin"></div></div>`;
   const pct = s.budgetTotal ? Math.min(100, (s.budgetUsed / s.budgetTotal) * 100) : 0;
   return `<div class="hero ${th === 'ios' ? 'glass' : ''}"><div class="lbl">Igjen å bruke${th === 'ios' ? ` i ${monthName(s.month)}` : ''}</div>
-    <div class="amt">${neg(s.left).replace(/,\d\d$/, '')}<small> kr</small></div>
+    <div class="amt" data-mact="reveal">${hide(neg(s.left).replace(/,\d\d$/, ''))}<small> kr</small></div>
     <div class="m-bar"><i style="width:${pct}%;background:#FF8A4C"></i></div>
-    <div class="foot"><span>Brukt ${n0(s.budgetUsed)} kr</span><span>${n0(Math.max(0, s.left) / s.daysLeft)} kr/dag</span></div></div>`;
+    <div class="foot"><span>Brukt ${hide(n0(s.budgetUsed))} kr</span><span>${hide(n0(Math.max(0, s.left) / Math.max(1, s.daysLeft)))} kr/dag</span></div></div>`;
 }
 
 const reviewCta = (th) => {
@@ -59,17 +74,18 @@ function andCards(s) {
   const mx = Math.max(1, ...inn);
   const prev = inn.length > 1 ? inn[inn.length - 2] : null, up = prev === null || s.inn >= prev;
   const pct = s.yearGoal ? Math.min(100, (s.savedYear / s.yearGoal) * 100) : 0;
-  return `<div class="tiles"><div class="tile"><span class="m-row" style="justify-content:space-between">Inn i ${monthName(s.month)}<em class="badge">${up ? '↑' : '↓'}</em></span><b>${n0(s.inn)}</b>
+  return `<div class="tiles"><div class="tile"><span class="m-row" style="justify-content:space-between">Inn i ${monthName(s.month)}<em class="badge">${up ? '↑' : '↓'}</em></span><b>${hide(n0(s.inn))}</b>
       <span class="minibars">${inn.map((v, i) => `<i style="height:${Math.max(8, (v / mx) * 100)}%;${i === inn.length - 1 ? 'background:#9FE3C6' : ''}"></i>`).join('')}</span></div>
-    <div class="tile"><span>Spart i år</span><span class="m-row" style="gap:12px"><span class="cring" style="background:${conic([{ value: pct, color: '#FFB68A' }], 100, 0, '#4A3C33')}"><i>${Math.round(pct)}%</i></span><span style="display:flex;flex-direction:column"><b style="font-size:18px">${n0(s.savedYear)}</b><small>av ${n0(s.yearGoal)}</small></span></span>
+    <div class="tile"><span>Spart i år</span><span class="m-row" style="gap:12px"><span class="cring" style="background:${conic([{ value: pct, color: '#FFB68A' }], 100, 0, '#4A3C33')}"><i>${Math.round(pct)}%</i></span><span style="display:flex;flex-direction:column"><b style="font-size:18px">${hide(n0(s.savedYear))}</b><small>av ${n0(s.yearGoal)}</small></span></span>
       <small>${s.yearGoal ? `${n0(Math.max(0, s.yearGoal - s.savedYear))} kr igjen` : 'Sett et årsmål på desktop'}</small></div></div>`;
 }
 
-const avatar = (st) => `<button class="m-av" data-mact="menu" aria-label="Meny" aria-haspopup="dialog">${esc(ini(st.name))}</button>`;
+export const meName = () => m.me?.name || S.boot?.settings?.name || 'Meg';
+export const avatar = () => `<button class="m-av" data-mact="menu" aria-label="Meny" aria-haspopup="dialog">${esc(ini(meName()))}</button>`;
 
 function home(th) {
   const s = S.summary, st = S.boot.settings;
-  return `<div class="m-row" style="justify-content:space-between;align-items:flex-end;padding:6px 4px 0"><div><div class="hello">${greet()}, ${esc(st.name)}</div><div class="title">${cap(monthName(S.summary?.month ?? today().slice(0, 7)))}</div></div>${avatar(st)}</div>
+  return `<div class="m-row" style="justify-content:space-between;align-items:flex-end;padding:6px 4px 0"><div><div class="hello">${greet()}, ${esc(meName())}</div><div class="title">${cap(monthName(S.summary?.month ?? today().slice(0, 7)))}</div></div>${avatar()}</div>
     ${hero(th)}
     ${jobsPill(th)}
     ${th === 'and' && s ? andCards(s) : ''}
@@ -81,7 +97,7 @@ function home(th) {
 function list(th) {
   const items = S.tx?.items ?? null;
   const chips = [['', 'Alle'], ['ut', 'Utgifter'], ['inn', 'Inntekter']].map(([k, n]) => `<button class="chip" data-filter="${k}" aria-pressed="${m.filter === k}">${n}</button>`).join('');
-  return `<div class="m-row" style="justify-content:space-between;padding:6px 4px 0"><div class="title">Transaksjoner</div>${avatar(S.boot.settings)}</div>
+  return `<div class="m-row" style="justify-content:space-between;padding:6px 4px 0"><div class="title">Transaksjoner</div>${avatar()}</div>
     <form class="search ${th === 'ios' ? 'glass2' : ''}" data-msearch role="search"><span style="opacity:.7">${icon('search', 18)}</span><input class="m-input" name="q" value="${esc(u.q)}" placeholder="Søk i transaksjoner" aria-label="Søk" enterkeyhint="search"></form>
     <div style="display:flex;gap:8px;overflow-x:auto">${chips}</div>
     ${items === null ? '<div class="m-spin"></div>' : groups(items, th) || '<div class="m-empty">Ingen treff.</div>'}`;
@@ -103,7 +119,7 @@ function budget(th) {
   const s = S.summary;
   if (!s) return '<div class="m-spin"></div>';
   const rows = s.budgets.filter((b) => b.budget).sort((a, b) => b.used / b.budget - a.used / a.budget);
-  return `<div class="m-row" style="justify-content:space-between;padding:6px 4px 0"><div class="title">Budsjett</div>${avatar(S.boot.settings)}</div>
+  return `<div class="m-row" style="justify-content:space-between;padding:6px 4px 0"><div class="title">Budsjett</div>${avatar()}</div>
     <div class="bsum ${th === 'ios' ? 'glass' : ''}"><div><span>Budsjett</span><b>${n0(s.budgetTotal)}</b></div><div><span>Brukt</span><b>${n0(s.budgetUsed)}</b></div><div><span>Dager igjen</span><b>${s.daysLeft}</b></div></div>
     ${rows.map((b) => budCard(b, th, s)).join('') || '<div class="m-empty">Ingen budsjett satt. Sett opp på desktop under Budsjett.</div>'}`;
 }
@@ -115,7 +131,8 @@ function uploadScreen(th) {
   const st = (x) => (x.status === 'needs_review' ? ['Klar · trykk for å bekrefte', '#9FE3C6', 100] : x.status === 'booked' ? ['Bokført', '#9FE3C6', 100] : x.status === 'error' ? ['Feil – åpne for å fylle ut', '#FF8A6B', 100] : x.status === 'processing' ? [`Gemini leser … ${x.progress ?? 50} %`, th === 'and' ? '#FFB68A' : '#FF8A4C', x.progress ?? 50] : ['I kø', 'rgba(255,255,255,.55)', 0]);
   return `${th === 'ios' ? '<div class="m-row" style="justify-content:space-between"><a class="back" href="#/hjem">‹ Hjem</a></div><div class="title" style="font-size:28px">Last opp</div>' : '<div class="m-row"><a class="back" href="#/hjem" aria-label="Tilbake">←</a><b style="font-size:22px;font-weight:700;flex:1">Last opp</b></div>'}
     <label class="drop ${th === 'ios' ? 'glass' : ''}"><span class="n">${icon('up', 22)}</span><b>Velg kvitteringer</b><span>Bilder eller PDF – flere om gangen. Gemini leser dem i bakgrunnen. Du kan bruke appen mens du venter.</span><input class="m-file" type="file" accept="image/*,application/pdf" multiple data-mupload></label>
-    <label class="cta ${th === 'ios' ? 'glass2' : ''}" style="cursor:pointer"><span class="n">${icon('scan', 20)}</span><span class="m-grow"><b style="display:block;font-weight:600">Ta bilde</b><span style="font-size:13px;opacity:.75">Bakkamera</span></span><input class="m-file" type="file" accept="image/*" capture="environment" data-mupload></label>
+    <button class="cta ${th === 'ios' ? 'glass2' : ''}" data-mact="cam"><span class="n">${icon('cam', 20)}</span><span class="m-grow"><b style="display:block;font-weight:600">Ta bilde</b><span style="font-size:13px;opacity:.75">Bakkamera</span></span></button>
+    ${m.offline.length ? `<div class="m-empty">${m.offline.length} fil${m.offline.length > 1 ? 'er' : ''} venter på ${pref('wifi') ? 'Wi-Fi' : 'nett'} og lastes opp automatisk.</div>` : ''}
     ${m.uploading ? `<div class="m-empty">Laster opp ${m.uploading} fil${m.uploading > 1 ? 'er' : ''} …</div>` : ''}
     ${j.length ? `<div class="sec">Kø</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${j.map((x) => { const [txt, c, p] = st(x); return `<button class="item job" data-job="${esc(x.id)}"><span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(x.merchant || x.name || 'Kvittering')}</span><span class="m-ell s" style="color:${c}">${txt}</span><span class="m-bar" style="height:4px;margin-top:6px;background:${th === 'ios' ? 'rgba(255,255,255,.12)' : '#31281F'}"><i style="width:${p}%;background:${c}"></i></span></span><span class="m-mono">${x.total != null ? n2(x.total) : ''}</span></button>`; }).join('')}</div>` : ''}`;
 }
@@ -136,39 +153,36 @@ function txDetail(th, t) {
 }
 const selTx = () => { const pool = [...(S.tx?.items ?? []), ...(S.summary?.recent ?? [])]; return pool.find((x) => x.id === m.sel) ?? (two() ? pool[0] : null); };
 
-/* ---------- Matplan ---------- */
-
-const SRC = { gemini: ['Gemini', '#FFB08A', 'rgba(255,122,61,.15)'], hellofresh: ['HelloFresh', '#C2E27A', 'rgba(145,193,30,.18)'], fixed: ['Fast', '#9FE3C6', '#1F3A2F'], own: ['Egen', '#A9C3FF', 'rgba(122,167,255,.15)'] };
-function mat(th) {
-  const w = m.mat, head = `<div class="m-row" style="justify-content:space-between;padding:6px 4px 0"><div class="title">Matplan</div>${avatar(S.boot.settings)}</div>`;
-  if (m.matErr) return `${head}<div class="m-empty">${esc(m.matErr)}</div>`;
-  if (!w) return `${head}<div class="m-spin"></div>`;
-  const td = today();
-  return `${head}
-    <div class="m-row" style="gap:8px;flex-wrap:wrap"><button class="pri-b" data-mat="plan" style="flex:1">✦ Ny ukeplan med Gemini</button></div>
-    <div style="font-size:13px;opacity:.7;padding:0 4px">Ukekost ca. ${n0(w.weekCost ?? 0)} kr · Automatisk hver søndag: ${w.auto ? 'på' : 'av'}</div>
-    <div class="list ${th === 'ios' ? 'glass2' : ''}">${(w.days ?? []).map((d) => { const [n, c, bg] = SRC[d.source] ?? SRC.own; return `<div class="opt-row day${d.date === td ? ' today' : ''}"><span class="m-grow"><span class="s" style="text-transform:capitalize">${esc(d.weekday ?? dWeek(d.date))}${d.cook ? ` · ${esc(d.cook)}` : ''}</span><b class="m-ell" style="display:block;font-weight:500">${esc(d.name || '–')}</b><em class="src" style="color:${c};background:${bg}">${n}${d.fixed ? ' · fast' : ''}</em></span><span class="m-mono" style="opacity:.8">${d.cost ? n0(d.cost) + ' kr' : ''}</span><button class="mini" data-mat="day" data-date="${d.date}" aria-label="Ny rett for dagen">✦</button></div>`; }).join('') || '<div class="m-empty">Ingen plan ennå.</div>'}</div>
-    ${(w.shopping ?? []).length ? `<div class="sec">Handleliste</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${w.shopping.map((x) => `<button class="opt-row" data-shop="${esc(x.id)}"><span class="chk${x.done ? ' on' : ''}">${x.done ? '✓' : ''}</span><span class="m-grow" style="${x.done ? 'text-decoration:line-through;opacity:.5' : ''}">${esc(x.text)}</span></button>`).join('')}</div>` : ''}`;
-}
-
 /* ---------- Meny bak profilbildet ---------- */
 
 function menuSheet(th) {
   if (!m.menu) return '';
-  const st = S.boot.settings, onMat = m.screen === 'mat';
-  const os = [['sub', 'Subscription OS', 'Abonnementer og trekk'], ['dir', 'Delte mapper', 'Felles utgifter'], ['finn', 'Finn-handler', 'Kjøp og salg']];
-  return `<div class="sheet-bg" data-mact="menu"></div><div class="sheet ${th === 'ios' ? 'glass' : ''}" role="dialog" aria-label="Meny">
-    <div class="m-row" style="gap:12px"><span class="m-av">${esc(ini(st.name))}</span><div class="m-grow"><b>${esc(st.name)}</b><div style="font-size:13px;opacity:.65">FinansHub</div></div><button class="mini" data-mact="menu" aria-label="Lukk">${icon('close', 18)}</button></div>
-    <div class="seg"><a href="#/hjem" data-mact="menu" ${onMat ? '' : 'aria-current="true"'}>Finans</a><a href="#/mat" data-mact="menu" ${onMat ? 'aria-current="true"' : ''}>Matplan</a></div>
+  const fin = FIN.includes(m.screen), who = m.me?.username ? `@${esc(m.me.username)}${m.me.role ? ' · ' + esc(m.me.role) : ''}` : 'FinansHub';
+  const row = (href, ic, n, s, on) => `<a class="opt-row${on ? ' on' : ''}" href="${href}" data-mact="menu"><span class="set-ic">${icon(ic, 18)}</span><span class="m-grow"><b style="font-weight:500">${n}</b>${s ? `<br><span style="font-size:13px;opacity:.65">${s}</span>` : ''}</span>${on ? '<span style="color:var(--m-acc)">✓</span>' : '<span style="opacity:.6">›</span>'}</a>`;
+  return `<div class="sheet-bg" data-mact="menu"></div><div class="sheet${two() ? ' left' : ''} ${th === 'ios' ? 'glass' : ''}" role="dialog" aria-label="Meny">
+    <div class="m-row" style="gap:12px"><span class="m-av">${esc(ini(meName()))}</span><div class="m-grow"><b>${esc(meName())}</b><div style="font-size:13px;opacity:.65">${who}</div></div><button class="mini" data-mact="menu" aria-label="Lukk">${icon('close', 18)}</button></div>
+    <div class="list ${th === 'ios' ? 'glass2' : ''}">${row('#/hjem', 'wallet', 'Finans', 'Hjem, liste og budsjett', fin)}</div>
     <div class="sec">Andre OS</div>
-    <div class="list ${th === 'ios' ? 'glass2' : ''}">${os.map(([k, n, s]) => `<a class="opt-row" href="/finans/?desktop=1#/${k}"><span class="m-grow"><b style="font-weight:500">${n}</b><br><span style="font-size:13px;opacity:.65">${s}</span></span><span style="opacity:.6">›</span></a>`).join('')}</div>
-    <div class="list ${th === 'ios' ? 'glass2' : ''}">${th === 'ios' ? `<button class="opt-row" data-mact="iosbg"><span class="m-grow"><b style="font-weight:500">Fargebakgrunn</b></span><span class="sw" role="switch" aria-checked="${iosBg()}"></span></button>` : ''}<a class="opt-row" href="#/meg" data-mact="menu"><span class="m-grow">Innstillinger</span><span style="opacity:.6">›</span></a><button class="opt-row" data-mact="logout"><span class="m-grow" style="color:#FF8A6B">Lås</span></button></div></div>`;
+    <div class="list ${th === 'ios' ? 'glass2' : ''}">${MODS.map(([k, n, s2, ic]) => row('#/' + k, ic, n, s2, m.screen === k)).join('')}</div>
+    <div class="list ${th === 'ios' ? 'glass2' : ''}">${row('#/set', 'gear', 'Innstillinger', '', m.screen === 'set')}<button class="opt-row" data-mact="logout"><span class="set-ic" style="color:#FF8A6B">${icon('key', 18)}</span><span class="m-grow" style="color:#FF8A6B">Lås</span></button></div></div>`;
+}
+
+/* Arket som åpnes når skanneknappen holdes inne (eller trykkes, hvis det er valgt i Innstillinger). */
+function scanSheet(th) {
+  if (!m.sheet) return '';
+  return `<div class="sheet-bg" data-mact="sheet"></div><div class="actsheet ${th === 'ios' ? 'glass' : ''}" role="dialog" aria-label="Legg til kvittering">
+    <div class="list ${th === 'ios' ? 'glass2' : ''}">
+      <button class="opt-row" data-mact="cam"><span class="set-ic">${icon('cam', 18)}</span><span class="m-grow">Ta bilde</span></button>
+      <label class="opt-row"><span class="set-ic">${icon('img', 18)}</span><span class="m-grow">Velg fra Bilder</span><input class="m-file" type="file" accept="image/*" multiple data-mupload></label>
+      <label class="opt-row"><span class="set-ic">${icon('file', 18)}</span><span class="m-grow">Velg fil<br><span style="font-size:12px;opacity:.6">PDF, JPG, HEIC</span></span><input class="m-file" type="file" accept="application/pdf,image/jpeg,image/png,image/heic,image/heif,.heic,.heif" multiple data-mupload></label>
+    </div>
+    <button class="opt-row cancel ${th === 'ios' ? 'glass2' : ''}" data-mact="sheet">Avbryt</button></div>`;
 }
 
 function scanQueue(th) {
   const q = (S.receipts ?? []).filter((r) => ['pending', 'processing', 'needs_review'].includes(r.status));
   return `<div class="title" style="padding:6px 4px 0">Skann</div>
-    <label class="cta ${th === 'ios' ? 'glass' : ''}" style="cursor:pointer"><span class="n">${icon('scan', 20)}</span><span class="m-grow"><b style="display:block;font-weight:600">Ta bilde av kvittering</b><span style="font-size:13px;opacity:.75">Eller velg bilde/PDF</span></span><input class="m-file" type="file" accept="image/*,application/pdf" capture="environment" data-mupload></label>
+    <button class="cta ${th === 'ios' ? 'glass' : ''}" data-scan><span class="n">${icon('scan', 20)}</span><span class="m-grow"><b style="display:block;font-weight:600">Ta bilde av kvittering</b><span style="font-size:13px;opacity:.75">Hold inne for Bilder eller Filer</span></span></button>
     ${q.length ? `<div class="sec">Til gjennomgang</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${q.map((r) => `<button class="item${m.rc === r.id ? ' on' : ''}" data-rc="${r.id}"><span class="m-ini" style="border-radius:10px;background:#ECE8E0 center/cover;${r.thumb ? `background-image:url('${r.thumb}')` : ''}"></span><span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(r.merchant ?? 'Ny kvittering')}</span><span class="m-ell s">${r.status === 'needs_review' ? `${dd(r.date)} · ${esc(r.provider ?? 'manuell')}` : 'Leser …'}</span></span><span class="m-mono">${r.total != null ? n2(r.total) : ''}</span></button>`).join('')}</div>` : '<div class="m-empty">Ingen kvitteringer i køen.</div>'}`;
 }
 
@@ -205,21 +219,6 @@ function backBar(th, title, right = '') {
     : `<div class="m-row"><a class="back" href="#/skann" data-mact="back" aria-label="Tilbake">←</a><b style="font-size:22px;font-weight:700;flex:1">${esc(title)}</b><span style="font-size:14px;color:#D7C2B8">${right}</span></div>`;
 }
 
-function me(th) {
-  const st = S.boot.settings;
-  const sw = (k, label, sub) => `<button class="opt-row" data-mtog="${k}"><span class="m-grow"><b style="font-weight:500">${label}</b>${sub ? `<br><span style="font-size:13px;opacity:.65">${sub}</span>` : ''}</span><span class="sw" role="switch" aria-checked="${!!st[k]}"></span></button>`;
-  const cur = (() => { try { return localStorage.getItem('fh_theme') || 'auto'; } catch { return 'auto'; } })();
-  return `<div class="m-row" style="padding:6px 4px 0;gap:14px"><span class="m-av" style="width:56px;height:56px;font-size:22px">${esc(ini(st.name))}</span><div><div class="title" style="font-size:28px">${esc(st.name)}</div><div style="opacity:.65;font-size:14px">FinansHub · privat</div></div></div>
-    <div class="sec">AI-motor</div>
-    <div class="list ${th === 'ios' ? 'glass2' : ''}">${[['ollama', 'Ollama · lokalt', 'Bildet forlater aldri huset'], ['gemini', 'Gemini · sky', 'Raskest og mest presis']].map(([k, n, s]) => `<button class="opt-row" data-mprov="${k}"><span class="m-grow"><b style="font-weight:500">${n}</b><br><span style="font-size:13px;opacity:.65">${s}</span></span><span style="font-size:20px;color:#FF7A3D">${st.provider === k ? '✓' : ''}</span></button>`).join('')}${sw('fallback', 'Bruk reserve ved feil', '')}</div>
-    <div class="sec">Varsler</div>
-    <div class="list ${th === 'ios' ? 'glass2' : ''}">${sw('n80', 'Budsjett 80 %', '')}${sw('n100', 'Budsjett brukt opp', '')}${sw('nRc', 'Ny kvittering', '')}${sw('autoCat', 'Auto-kategorisering', '')}</div>
-    <div class="sec">Utseende</div>
-    <div class="list ${th === 'ios' ? 'glass2' : ''}">${[['auto', 'Automatisk', isIOS() ? 'iOS' : 'Android'], ['ios', 'iOS · Liquid Glass', ''], ['and', 'Android · Material 3', '']].map(([k, n, s]) => `<button class="opt-row" data-mtheme="${k}"><span class="m-grow"><b style="font-weight:500">${n}</b>${s ? ` <span style="opacity:.6">(${s})</span>` : ''}</span><span style="font-size:20px;color:#FF7A3D">${cur === k ? '✓' : ''}</span></button>`).join('')}</div>
-    <div class="list ${th === 'ios' ? 'glass2' : ''}"><a class="opt-row" href="/finans/api/transactions.csv"><span class="m-grow">Eksporter transaksjoner (CSV)</span><span style="opacity:.6">›</span></a><button class="opt-row" data-mact="logout"><span class="m-grow" style="color:#FF8A6B">Lås</span></button></div>
-    <div style="font-size:12px;opacity:.5;text-align:center;padding:10px">Flere innstillinger finnes i FinansHub på en større skjerm.</div>`;
-}
-
 /* ---------- Detaljpanel (to paneler) ---------- */
 
 function detail(th) {
@@ -234,55 +233,89 @@ function detail(th) {
         <div style="font-size:14px;opacity:.85">${o ? `Over budsjett med ${n0(b.used - b.budget)} kr.` : `${n0(b.budget - b.used)} kr igjen denne måneden.`}</div></div>
       ${items.length ? `<div class="sec">Transaksjoner</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${items.map((t) => txItem(t, th)).join('')}</div>` : ''}`;
   }
-  if (m.screen === 'meg') return `<div class="title" style="font-size:28px">${cap(monthName(S.summary?.month ?? today().slice(0, 7)))}</div>${hero(th)}${reviewCta(th)}`;
-  if (m.screen === 'mat') return `<div class="title" style="font-size:28px">${cap(monthName(today().slice(0, 7)))}</div>${hero(th)}${jobsPill(th)}`;
   if (m.screen === 'opp') return confirmRc(th);
   return txDetail(th, selTx());
 }
 
 /* ---------- Tegning ---------- */
 
+const scanBtn = (th) => th === 'ios'
+  ? `<button class="scanbtn lg" data-scan aria-label="Skann kvittering (hold inne for flere valg)">${icon('scan', 26, 'currentColor', 2.2)}</button>`
+  : `<button class="fab" data-scan aria-label="Skann kvittering (hold inne for flere valg)">${icon('scan', 24, 'currentColor', 2.2)}<span>Skann</span></button>`;
+
+// iOS 26-fanelinje: flytende glasskapsel med en glassmarkør som glir med fjæring mellom fanene.
+function iosTabs(items, cur, extra = '') {
+  const idx = items.findIndex(([k]) => k === cur);
+  if (idx >= 0) m.tabIdx = idx;
+  return `<div class="tabbar${m.min ? ' min' : ''}" data-key="${items.map(([k]) => k).join(',')}${extra ? '+scan' : ''}"><nav class="tabs lg" aria-label="Meny" style="--n:${items.length};--i:${m.tabIdx};--on:${idx < 0 ? 0 : 1}">
+    <span class="mark" aria-hidden="true"></span>${items.map(([k, n, ic], i) => `<a href="#/${k}" data-tab="${k}" ${i === idx ? 'aria-current="page"' : ''}>${icon(ic, 22)}<span>${n}</span></a>`).join('')}</nav>${extra}</div><div class="edge" aria-hidden="true"></div>`;
+}
+const andNav = (items, cur) => `<nav class="navbar" aria-label="Meny">${items.map(([k, n, ic]) => `<a href="#/${k}" ${cur === k ? 'aria-current="page"' : ''}><span>${icon(ic, 22)}</span>${n}</a>`).join('')}</nav>`;
+
 export function draw() {
   const th = theme(), wide = two();
-  const scr = ['hjem', 'liste', 'budsjett', 'mat', 'meg', 'opp', 'skann'].includes(m.screen) ? m.screen : 'hjem';
+  const scr = m.screen;
+  const fin = FIN.includes(scr), mod = !fin;
   const confirmView = scr === 'skann' && m.rc && !wide;
-  const scrs = { hjem: home, liste: list, budsjett: budget, meg: me, mat, opp: uploadScreen };
-  const main = m.detail && !wide && m.sel ? txDetail(th, selTx()) : scrs[scr] ? scrs[scr](th) : confirmView ? confirmRc(th) : scanQueue(th);
-  const navKey = scr === 'skann' || scr === 'opp' ? '' : scr;
-  const scanBtn = `<a class="${th === 'ios' ? 'scanbtn' : 'fab'}" href="#/opp" aria-label="Last opp kvitteringer">${icon('scan', 26, 'currentColor', 2.2)}${th === 'and' ? '<span>Last opp</span>' : ''}</a>`;
-  const nav = th === 'ios'
-    ? `<div class="tabbar"><nav class="tabs" aria-label="Meny">${SCREENS.map(([k, n, ic]) => `<a href="#/${k}" ${navKey === k ? 'aria-current="page"' : ''}>${icon(ic, 22)}${n}</a>`).join('')}</nav>${scanBtn}</div>`
-    : `${scr !== 'skann' && scr !== 'opp' ? scanBtn : ''}<nav class="navbar" aria-label="Meny">${SCREENS.map(([k, n, ic]) => `<a href="#/${k}" ${navKey === k ? 'aria-current="page"' : ''}><span>${icon(ic, 22)}</span>${n}</a>`).join('')}</nav>`;
-  const rail = `<nav class="rail" aria-label="Meny"><a class="r-scan" href="#/opp" aria-label="Last opp">${icon('scan', 24, 'currentColor', 2.2)}</a>
-    ${[...SCREENS, ['skann', 'Skann', 'kv'], ['meg', 'Meg', 'me']].map(([k, n, ic]) => `<a href="#/${k}" ${scr === k ? 'aria-current="page"' : ''}><span>${icon(ic, 22)}</span>${n}</a>`).join('')}</nav>`;
-  root().innerHTML = `<div class="m ${th}${wide ? ' two' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
-    ${rail}<div class="m-scroll">${main}</div><div class="m-detail">${wide ? detail(th) : ''}</div>${nav}
-    ${menuSheet(th)}${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}</div>`;
-  document.querySelector('meta[name=theme-color]')?.setAttribute('content', th === 'ios' ? '#07070A' : '#19120E');
+  const scrs = { hjem: home, liste: list, budsjett: budget, opp: uploadScreen };
+  const main = scr === 'set' ? settingsView(th, m.sub)
+    : mod ? modView(scr, th, m.sub)
+    : m.detail && !wide && m.sel ? txDetail(th, selTx())
+    : scrs[scr] ? scrs[scr](th) : confirmView ? confirmRc(th) : scanQueue(th);
+  const dom = scr === 'dom';
+  const tabs = dom ? domNav() : TABS, curTab = dom ? domNav.cur() : scr;
+  const nav = th === 'ios' ? iosTabs(tabs, curTab, dom ? '' : scanBtn(th)) : `${dom || scr === 'opp' || scr === 'skann' || scr === 'set' ? '' : scanBtn(th)}${andNav(tabs, curTab)}`;
+  const rail = `<nav class="rail" aria-label="Meny">${dom ? '' : `<button class="r-scan" data-scan aria-label="Skann kvittering">${icon('scan', 24, 'currentColor', 2.2)}</button>`}
+    ${tabs.map(([k, n, ic]) => `<a href="#/${k}" ${curTab === k ? 'aria-current="page"' : ''}><span>${icon(ic, 22)}</span>${n}</a>`).join('')}
+    <span style="flex:1"></span><button class="m-av r-av" data-mact="menu" aria-label="Meny: Finans, andre OS og innstillinger" aria-haspopup="dialog">${esc(ini(meName()))}</button></nav>`;
+  root().innerHTML = `<div class="m ${th}${wide ? ' two' : ''}${mod ? ' full' : ''}${dom ? ' dom' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
+    ${rail}<div class="m-scroll">${main}</div><div class="m-detail">${wide && fin ? detail(th) : ''}</div>${nav}
+    ${menuSheet(th)}${scanSheet(th)}${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
+    <input class="m-file" id="m-capture" type="file" accept="image/*" capture="environment" data-mupload data-confirm></div>`;
+  document.querySelector('meta[name=theme-color]')?.setAttribute('content', th === 'ios' ? '#07070A' : dom ? '#1A1114' : '#19120E');
+  // Glassmarkøren glir med fjæring mellom fanene. Fanelinja tegnes på nytt ved hver oppdatering, så animasjonen
+  // (Web Animations) gjenopptas med medgått tid hvis en ny tegning kommer midt i den.
+  const mk = root().querySelector('.tabs .mark');
+  if (mk && !m.min) {
+    const x = mk.offsetLeft, now = performance.now();
+    if (m.markX != null && x !== m.markX) m.markAnim = { from: m.markX, to: x, t0: now };
+    const an = m.markAnim;
+    if (an && an.to === x && now - an.t0 < 450) mk.animate([{ left: `${an.from}px` }, { left: `${x}px` }], { duration: 450, easing: 'cubic-bezier(.3,1.35,.5,1)' }).currentTime = now - an.t0;
+    else m.markAnim = null;
+    m.markX = x;
+  }
 }
 
 let toastT;
-const flash = (t) => { m.toast = t; draw(); clearTimeout(toastT); toastT = setTimeout(() => { m.toast = ''; draw(); }, 1800); };
+export const flash = (t) => { m.toast = t; draw(); clearTimeout(toastT); toastT = setTimeout(() => { m.toast = ''; draw(); }, 1800); };
 
 async function load() {
   try {
-    const jobs = [loadSummary()];
-    if (m.screen === 'liste' || (two() && (m.screen === 'hjem' || m.screen === 'budsjett'))) jobs.push(loadTx());
-    if (m.screen === 'skann' || (two() && m.screen === 'opp')) jobs.push(loadReceipts());
-    if (m.screen === 'mat') jobs.push(loadMat());
-    jobs.push(loadJobs());
+    const jobs = [];
+    if (FIN.includes(m.screen)) {
+      jobs.push(loadSummary());
+      if (m.screen === 'liste' || (two() && (m.screen === 'hjem' || m.screen === 'budsjett'))) jobs.push(loadTx());
+      if (m.screen === 'skann' || (two() && m.screen === 'opp')) jobs.push(loadReceipts());
+      jobs.push(loadJobs());
+    } else if (m.screen === 'set') jobs.push(settingsLoad(m.sub));
+    else jobs.push(modLoad(m.screen, m.sub));
+    // Kontoinfo: /finans/api/me, ellers Homelabs /api/me (samme sesjon). totp brukes i Innstillinger → Sikkerhet.
+    if (!m.me) jobs.push(api('/me').catch(() => fetch('/api/me').then((r) => (r.ok ? r.json() : null))).then((x) => { m.me = x ?? { name: S.boot?.settings?.name }; }).catch(() => { m.me = { name: S.boot?.settings?.name }; }));
     await Promise.all(jobs);
   } catch (e) { flash(e.message); }
   draw();
   poll();
 }
-async function loadMat() {
-  try { m.mat = await matApi('/week'); m.matErr = ''; } catch (e) { m.matErr = 'Matplan er ikke tilgjengelig: ' + e.message; }
-}
 // Jobbkø fra serveren; eldre server uten /receipts/jobs faller tilbake til kvitteringslisten.
 async function loadJobs() {
+  const before = new Map(m.jobs.map((j) => [j.id, j.status]));
   try { m.jobs = await api('/receipts/jobs'); }
   catch { try { await loadReceipts(); } catch {} m.jobs = (S.receipts ?? []).filter((r) => [...ACTIVE, 'needs_review'].includes(r.status)).map((r) => ({ id: r.id, name: r.merchant, merchant: r.merchant, total: r.total, status: r.status, progress: r.status === 'processing' ? 50 : 0 })); }
+  // Lokalt varsel når en kvittering er ferdig lest (Web Push er ikke satt opp; dette virker mens appen er åpen).
+  const done = m.jobs.filter((j) => j.status === 'needs_review' && ACTIVE.includes(before.get(j.id)));
+  if (done.length && S.boot?.settings?.nRc && 'Notification' in window && Notification.permission === 'granted' && document.hidden) {
+    try { new Notification('Kvittering lest', { body: done.map((j) => j.merchant || j.name || 'Kvittering').join(', ') + ' · trykk for å bekrefte', icon: '/assets/finans/icons/icon-192.png' }); } catch {}
+  }
 }
 let pollT;
 function poll() {
@@ -291,54 +324,151 @@ function poll() {
   if (busy) pollT = setTimeout(async () => { try { await loadJobs(); if (m.screen === 'skann' || m.screen === 'opp') await loadReceipts(); } catch {} draw(); poll(); }, 2000);
 }
 
+const ALL = [...FIN, ...MODS.map(([k]) => k), 'set'];
 export function route() {
-  const h = location.hash.replace(/^#\/?/, '').split('/')[0];
-  const map = { ov: 'hjem', tx: 'liste', kv: 'skann', bud: 'budsjett', inn: 'meg' }; // desktop-lenker
-  const next = map[h] ?? (['hjem', 'liste', 'budsjett', 'skann', 'meg', 'mat', 'opp'].includes(h) ? h : 'hjem');
-  if (next !== m.screen) { m.screen = next; m.detail = false; if (next !== 'skann' && next !== 'opp') m.rc = null; window.scrollTo(0, 0); }
+  const parts = location.hash.replace(/^#\/?/, '').split('/');
+  const h = parts[0];
+  const map = { ov: 'hjem', tx: 'liste', kv: 'skann', bud: 'budsjett', inn: 'set', meg: 'set' }; // desktop- og eldre lenker
+  const next = map[h] ?? (ALL.includes(h) ? h : ALL.includes(pref('start')) ? pref('start') : 'hjem');
+  const sub = parts.slice(1).join('/');
+  if (next !== m.screen || sub !== m.sub) { m.screen = next; m.sub = sub; m.detail = false; m.menu = false; m.sheet = false; m.min = false; if (next !== 'skann' && next !== 'opp') m.rc = null; window.scrollTo(0, 0); }
   u.type = m.filter;
   draw();
   load();
 }
 
+/* ---------- Opplasting (med kø uten nett / bare på Wi-Fi) ---------- */
+
+const onWifi = () => { const c = navigator.connection; return !c?.type || c.type === 'wifi' || c.type === 'ethernet'; };
+async function upload(files, { confirm = false } = {}) {
+  if (!files.length) return;
+  m.sheet = false;
+  if (pref('wifi') && !onWifi()) { m.offline.push(...files); if (location.hash !== '#/opp') location.hash = '#/opp'; return flash('Venter på Wi-Fi før opplasting'); }
+  if (!confirm && location.hash !== '#/opp') location.hash = '#/opp';
+  m.uploading = files.length; draw();
+  let first = null;
+  for (const f of files) {
+    try { const r = await uploadReceipt(f, null, { original: pref('origImg') }); first ??= r; }
+    catch (e) {
+      if (e instanceof TypeError || !navigator.onLine) { m.offline.push(f); flash('Uten nett – lastes opp når du er på nett igjen'); }
+      else flash(`${f.name || 'Kvittering'}: ${e.message}`);
+    }
+    m.uploading--; await loadJobs(); draw();
+  }
+  // Ett kamerabilde: gå rett til «Bekreft kvittering» (viser «Leser …» til AI-en er ferdig).
+  if (confirm && first?.id) { m.rc = first.id; await loadReceipts().catch(() => {}); if (location.hash !== '#/skann') location.hash = '#/skann'; else draw(); }
+  else if (two()) await loadReceipts().catch(() => {});
+  draw(); poll();
+}
+function retryOffline() { if (!m.offline.length || !navigator.onLine || (pref('wifi') && !onWifi())) return; const f = m.offline.splice(0); upload(f); }
+
+/* ---------- Kamera (fullskjerm med ramme, utløser, Bilder og Filer) ---------- */
+
+let camEl = null, camStream = null;
+function closeCam() { camStream?.getTracks().forEach((t) => t.stop()); camStream = null; camEl?.remove(); camEl = null; }
+export function openCam() {
+  m.sheet = false;
+  // getUserMedia krever https (eller localhost). Over http på hjemmenettet brukes systemkameraet via filfeltet.
+  if (!navigator.mediaDevices?.getUserMedia || !window.isSecureContext) { document.getElementById('m-capture')?.click(); draw(); return; }
+  closeCam();
+  camEl = document.createElement('div');
+  camEl.className = `cam ${theme()}`;
+  camEl.setAttribute('role', 'dialog'); camEl.setAttribute('aria-label', 'Kamera');
+  camEl.innerHTML = `<video autoplay playsinline muted></video><div class="cam-frame"><i></i><i></i><i></i><i></i></div>
+    <div class="cam-top"><button data-c="close" aria-label="Lukk">${icon('close', 22)}</button><span>Hold kvitteringen innenfor rammen</span></div>
+    <div class="cam-msg" hidden></div>
+    <div class="cam-bar"><label>${icon('img', 22)}<span>Bilder</span><input class="m-file" type="file" accept="image/*" multiple></label>
+      <button class="shutter" data-c="shoot" aria-label="Ta bilde"><i></i></button>
+      <label>${icon('file', 22)}<span>Filer</span><input class="m-file" type="file" accept="application/pdf,image/*,.heic,.heif" multiple></label></div>`;
+  document.body.appendChild(camEl);
+  const video = camEl.querySelector('video'), msg = camEl.querySelector('.cam-msg');
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 3840 }, height: { ideal: 2160 } }, audio: false })
+    .then((st) => { if (!camEl) { st.getTracks().forEach((t) => t.stop()); return; } camStream = st; video.srcObject = st; })
+    .catch(() => { msg.hidden = false; msg.textContent = 'Fikk ikke tilgang til kameraet. Velg fra Bilder eller Filer.'; });
+  camEl.addEventListener('click', (e) => {
+    const c = e.target.closest('[data-c]')?.dataset.c;
+    if (c === 'close') return closeCam();
+    if (c === 'shoot' && video.videoWidth) {
+      const cv = document.createElement('canvas'); cv.width = video.videoWidth; cv.height = video.videoHeight;
+      cv.getContext('2d').drawImage(video, 0, 0);
+      cv.toBlob((b) => { closeCam(); if (b) upload([new File([b], `kvittering-${Date.now()}.jpg`, { type: 'image/jpeg' })], { confirm: true }); }, 'image/jpeg', 0.92);
+    }
+  });
+  camEl.addEventListener('change', (e) => { const f = [...(e.target.files ?? [])]; if (!f.length) return; closeCam(); upload(f); });
+}
+
+function scanTap() {
+  // På PC (mus) brukes filopplasting, ikke kamera.
+  if (!matchMedia('(pointer: coarse)').matches) { location.hash = '#/opp'; return; }
+  if (pref('scanTap') === 'sheet') { m.sheet = true; return draw(); }
+  openCam();
+}
+
 /* ---------- Hendelser ---------- */
 
 const safe = (fn) => async (e) => { try { await fn(e); } catch (err) { flash(err.message); } };
+let globalBound = false, lpTimer = null, lpFired = false, lastY = 0, hiddenAt = 0;
 
-// Filene lastes opp én og én (med nedskalert skann og miniatyr); AI-en leser dem i køen på serveren.
-async function upload(files) {
-  if (!files.length) return;
-  if (location.hash !== '#/opp') location.hash = '#/opp';
-  m.uploading = files.length; draw();
-  for (const f of files) {
-    try { await uploadReceipt(f); } catch (e) { flash(`${f.name}: ${e.message}`); }
-    m.uploading--; await loadJobs(); draw();
-  }
-  if (two()) await loadReceipts();
-  draw(); poll();
+function setMin(on) {
+  if (m.min === on) return;
+  m.min = on;
+  document.querySelector('.m .tabbar')?.classList.toggle('min', on);
+}
+
+function bindGlobal() {
+  if (globalBound) return;
+  globalBound = true;
+  addEventListener('scroll', () => {
+    if (document.documentElement.dataset.ui !== 'mobile' || two()) return;
+    const y = scrollY;
+    if (y > lastY + 6 && y > 80) setMin(true); else if (y < lastY - 6) setMin(false);
+    lastY = y;
+  }, { passive: true });
+  addEventListener('online', retryOffline);
+  navigator.connection?.addEventListener?.('change', retryOffline);
+  // Skjul beløp i appveksleren og lås etter valgt tid i bakgrunnen.
+  document.addEventListener('visibilitychange', () => {
+    if (document.documentElement.dataset.ui !== 'mobile') return;
+    if (document.hidden) { hiddenAt = Date.now(); if (pref('appHide')) { m.blur = true; draw(); } return; }
+    const away = Date.now() - hiddenAt;
+    if (pref('lock') && hiddenAt && away >= +pref('lockAfter') * 60000) { fetch('/api/logout', { method: 'POST' }).finally(() => { location.href = '/login?next=/finans/'; }); return; }
+    if (m.blur) { m.blur = false; draw(); }
+  });
 }
 
 export function bind() {
   const el = root();
+  bindGlobal();
+  // Skanneknappen: trykk = kamera (eller valg), hold inne ~480 ms = arket med Bilder/Filer.
+  el.addEventListener('pointerdown', (e) => {
+    if (!e.target.closest('[data-scan]')) return;
+    lpFired = false; clearTimeout(lpTimer);
+    lpTimer = setTimeout(() => { lpFired = true; m.sheet = true; navigator.vibrate?.(10); draw(); }, 480);
+  });
+  const cancelLp = () => clearTimeout(lpTimer);
+  el.addEventListener('pointerup', cancelLp); el.addEventListener('pointercancel', cancelLp);
+  el.addEventListener('contextmenu', (e) => { if (e.target.closest('[data-scan]')) e.preventDefault(); });
   el.addEventListener('click', safe(async (e) => {
     const t = e.target, d = (s) => t.closest(s);
     let x;
+    if (d('[data-scan]')) { e.preventDefault(); if (lpFired) { lpFired = false; return; } return scanTap(); }
+    // Krympet fanelinje: første trykk utvider den.
+    if (d('.tabbar.min .tabs')) { e.preventDefault(); return setMin(false); }
     if ((x = d('[data-tx]'))) { m.sel = +x.dataset.tx; m.detail = true; window.scrollTo(0, 0); return draw(); }
     if ((x = d('[data-job]'))) { const j = m.jobs.find((y) => y.id === x.dataset.job); if (j && j.status !== 'booked' && !ACTIVE.includes(j.status)) { m.rc = j.id; if (two()) { await loadReceipts(); return draw(); } location.hash = '#/skann'; } return; }
-    if ((x = d('[data-shop]'))) { await matApi(`/shopping/${encodeURIComponent(x.dataset.shop)}/toggle`, { method: 'POST' }); await loadMat(); return draw(); }
-    if ((x = d('[data-mat]'))) { const day = x.dataset.mat === 'day'; flash(day ? 'Gemini foreslår en ny rett …' : 'Gemini lager ukeplan …'); await matApi('/plan', { method: 'POST', json: day ? { scope: 'day', date: x.dataset.date } : { scope: 'week', date: m.mat?.start ?? today() } }); await loadMat(); return flash('Matplan oppdatert'); }
     if ((x = d('[data-rc]'))) { m.rc = x.dataset.rc; return draw(); }
     if ((x = d('[data-bud]'))) { m.budSel = +x.dataset.bud; if (!S.tx) await loadTx(); return draw(); }
     if ((x = d('[data-filter]'))) { m.filter = x.dataset.filter; u.type = m.filter; await loadTx(); return draw(); }
     if ((x = d('[data-mcat]'))) { const r = await api(`/receipts/${m.rc}`, { method: 'PATCH', json: { categoryId: +x.dataset.mcat } }); S.receipts = S.receipts.map((y) => (y.id === r.id ? r : y)); return draw(); }
-    if ((x = d('[data-mtog]'))) { S.boot.settings = await api('/settings', { method: 'PUT', json: { [x.dataset.mtog]: !S.boot.settings[x.dataset.mtog] } }); return draw(); }
-    if ((x = d('[data-mprov]'))) { S.boot.settings = await api('/settings', { method: 'PUT', json: { provider: x.dataset.mprov } }); return draw(); }
-    if ((x = d('[data-mtheme]'))) { try { if (x.dataset.mtheme === 'auto') localStorage.removeItem('fh_theme'); else localStorage.setItem('fh_theme', x.dataset.mtheme); } catch {} return draw(); }
+    if (await modBind(e, t)) return;
+    if (await settingsBind(e, t)) return;
     const act = d('[data-mact]')?.dataset.mact;
     if (act === 'back') { e.preventDefault(); m.rc = null; return draw(); }
     if (act === 'txback') { e.preventDefault(); m.detail = false; return draw(); }
     if (act === 'menu') { m.menu = !m.menu; return draw(); }
-    if (act === 'iosbg') { try { localStorage.setItem('fh_ios_bg', iosBg() ? '0' : '1'); } catch {} return draw(); }
+    if (act === 'sheet') { m.sheet = false; return draw(); }
+    if (act === 'cam') { return openCam(); }
+    if (act === 'reveal') { if (pref('hideAmt')) { m.reveal = !m.reveal; draw(); } return; }
     if (act === 'book' || act === 'reject') {
       await api(`/receipts/${m.rc}/${act}`, { method: 'POST' });
       const nx = (S.receipts ?? []).find((y) => y.id !== m.rc && y.status === 'needs_review');
@@ -350,17 +480,19 @@ export function bind() {
   }));
   el.addEventListener('change', safe(async (e) => {
     const t = e.target;
-    if (t.matches('[data-mupload]')) { await upload([...t.files]); t.value = ''; return; }
+    if (t.matches('[data-mupload]')) { const f = [...t.files]; t.value = ''; await upload(f, { confirm: t.hasAttribute('data-confirm') && f.length === 1 }); return; }
     if (t.dataset.mf) {
       const f = t.dataset.mf;
       const r = await api(`/receipts/${m.rc}`, { method: 'PATCH', json: { [f]: f === 'total' ? parseAmount(t.value) : f === 'accountId' ? +t.value : t.value } });
       S.receipts = S.receipts.map((y) => (y.id === r.id ? r : y)); return draw();
     }
     if (t.dataset.mtxcat) { await api(`/transactions/${t.dataset.mtxcat}`, { method: 'PATCH', json: { categoryId: +t.value } }); await Promise.all([loadTx(), loadSummary()]); return flash('Kategori endret'); }
+    if (await modBind(e, t)) return;
+    await settingsBind(e, t);
   }));
   el.addEventListener('submit', safe(async (e) => {
-    if (!e.target.matches('[data-msearch]')) return;
-    e.preventDefault();
-    u.q = e.target.q.value; await loadTx(); draw();
+    if (e.target.matches('[data-msearch]')) { e.preventDefault(); u.q = e.target.q.value; await loadTx(); return draw(); }
+    if (await modBind(e, e.target)) return;
+    await settingsBind(e, e.target);
   }));
 }

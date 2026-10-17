@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { readFile, writeFile, unlink, mkdir } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { db, OWNER, settings, saveSettings, secret, setSecret, DEFAULT_SETTINGS } from './db.js';
 import { extract, health, providerName } from './ai.js';
@@ -10,10 +11,12 @@ import { parseCsv, PROFILES } from './csv.js';
 import { domainFor, learnDomain, validDomain, logo, heuristic, kick as kickAi, summarizeReceipt } from './enrich.js';
 import { parseFile, readText, rowsToTx } from './importer.js';
 import { parseFinnEmail } from './finn.js';
-import { sessionUser, clientIp, loginBlocked, loginFailed, loginSucceeded } from '../auth.js';
-import { verifyPassword } from '../password.js';
-import { passwordHash } from '../settings.js';
+import { sessionUser, clientIp, verifyLogin, userInfo, listUsers } from '../auth.js';
 import { config } from '../config.js';
+import { kv } from '../db.js';
+import { stocks, resetStocks, t212Configured, t212Base } from './stocks.js';
+import { answer as aiAnswer, suggestions as aiSuggestions } from './search.js';
+import * as backup from './backup.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
 const q = (sql) => db.prepare(sql);
@@ -27,25 +30,42 @@ const hex = (v) => /^#[0-9a-f]{6}$/i.test(v) ? v : null;
 
 /* ---------------- Tilgang ---------------- */
 
-export const SCOPES = ['finance:read', 'finance:write', 'receipts:write'];
+// finance:read/finance:write gir alt; de smale tilgangene gjelder bare sine endepunkter.
+export const SCOPES = ['finance:read', 'finance:write', 'receipts:write', 'read:transactions', 'read:summary', 'read:budget', 'write:transactions'];
+const IMPLIED = { 'read:transactions': 'finance:read', 'read:summary': 'finance:read', 'read:budget': 'finance:read', 'write:transactions': 'finance:write' };
+const EXPIRY = { '30d': 30, '90d': 90, '1y': 365, never: null };
 const tokenKey = (t) => createHmac('sha256', config.sessionSecret || 'dev').update('fh:' + t).digest('hex');
+const newToken = () => 'fh_pat_' + randomBytes(24).toString('base64url'); // 32 tegn etter prefikset
+const TOKEN_RE = /^Bearer\s+(fh_[A-Za-z0-9_-]{20,})$/;
 
+// Regnskapet tilhører husholdningen (admin). Andre brukere får bare tilgang til Delte mapper de er medlem av.
 function access(c) {
-  if (sessionUser(c)) return { user: OWNER, scopes: new Set(SCOPES), session: true };
-  const m = c.req.header('authorization')?.match(/^Bearer\s+(fh_[A-Za-z0-9_-]{20,})$/);
+  const sid = sessionUser(c);
+  if (sid) {
+    const u = userInfo(sid) ?? (sid === OWNER ? { id: OWNER, username: 'eier', role: 'admin', name: settings().name } : null);
+    if (!u) return null;
+    return { user: u.id, info: u, admin: u.role === 'admin', scopes: new Set(SCOPES), session: true };
+  }
+  const m = c.req.header('authorization')?.match(TOKEN_RE);
   if (!m) return null;
   const row = q('SELECT * FROM fh_tokens WHERE id=?').get(tokenKey(m[1]));
   if (!row) return null;
+  if (row.expires && row.expires < Date.now()) return null;
+  const u = userInfo(row.user_id ?? OWNER);
+  if (!u) { q('DELETE FROM fh_tokens WHERE user_id=?').run(row.user_id); return null; } // brukeren er slettet
   q('UPDATE fh_tokens SET last_used=? WHERE id=?').run(Date.now(), row.id);
-  return { user: OWNER, scopes: new Set(row.scopes.split(' ')), session: false };
+  return { user: u.id, info: u, admin: u.role === 'admin', scopes: new Set(row.scopes.split(' ')), session: false, tokenId: row.id };
 }
+const hasScope = (a, s) => a.scopes.has(s) || (IMPLIED[s] && a.scopes.has(IMPLIED[s]));
 
-// For andre moduler (Matplan) som vil godta mobilappens token: true når økt eller token med scope finnes.
-export function bearerOk(c, scope = 'finance:read') { const a = access(c); return !!a && a.scopes.has(scope); }
+// For andre moduler (Matplan, Domener) som vil godta mobilappens token: true når økt eller token med scope finnes.
+export function bearerOk(c, scope = 'finance:read') { const a = access(c); if (a && !c.get('user')) c.set('user', a.user); return !!a && hasScope(a, scope); }
+// Tokens for brukere som slettes (kalles av brukeradministrasjonen; access() rydder også selv).
+export const revokeUserTokens = (userId) => q('DELETE FROM fh_tokens WHERE user_id=?').run(userId).changes;
 
-const need = (scope) => async (c, next) => {
+const need = (...scopes) => async (c, next) => {
   const a = c.get('access');
-  if (!a.scopes.has(scope)) return bad(c, `Tokenet mangler tilgangen ${scope}`, 403);
+  if (!scopes.some((s) => hasScope(a, s))) return bad(c, `Tokenet mangler tilgangen ${scopes[0]}`, 403);
   await next();
 };
 const sessionOnly = async (c, next) => { if (!c.get('access').session) return bad(c, 'Krever innlogging i nettleseren', 403); await next(); };
@@ -197,23 +217,33 @@ async function runQueue() {
     } catch (e) {
       console.warn('[finans] Kvittering', id, e.message);
       q("UPDATE fh_receipts SET status='needs_review', error=?, confidence=0 WHERE id=? AND status='processing'").run(`Kunne ikke leses automatisk: ${e.message}. Fyll ut manuelt.`, id);
+      try { routeTarget(id); } catch { /* mappen kan være slettet */ }
     }
   }
   running = false;
 }
 // Kvitteringer lastet opp fra Subscription OS eller en delt mappe havner også der når AI-en er ferdig.
+// Fra mappe: target «folder:<id>:<bruker-id>». Lastet opp av en bruker uten admin-rolle → status «filed» (bare i mappen,
+// ikke i eierens gjennomgangskø eller regnskap).
 function routeTarget(id) {
   const r = origSelect.get(id);
-  if (!r?.target || r.total == null) return;
-  if (r.target === 'sub' && !q('SELECT 1 FROM fh_subscriptions WHERE name=? AND active=1').get(r.merchant)) {
+  if (!r?.target) return;
+  if (r.target === 'sub' && r.total != null && !q('SELECT 1 FROM fh_subscriptions WHERE name=? AND active=1').get(r.merchant)) {
     q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,domain,ai_short,created) VALUES(?,?,?,?,?,?,?,?,?)')
       .run(r.merchant || 'Ukjent', 'Fra kvittering', r.total, 'monthly', r.date ? shiftDate(r.date, 1) : null, 'Ny', r.domain, r.ai_short, Date.now());
   }
-  const f = r.target.match(/^folder:(\d+)$/);
-  if (f && q('SELECT 1 FROM fh_folders WHERE id=?').get(+f[1]) && !q('SELECT 1 FROM fh_folder_entries WHERE receipt_id=?').get(r.id)) {
-    const owner = q("SELECT name FROM fh_folder_members WHERE folder_id=? ORDER BY role='owner' DESC, id LIMIT 1").get(+f[1])?.name ?? settings().name;
-    q('INSERT INTO fh_folder_entries(folder_id,receipt_id,tx_id,description,date,amount,paid_by,created) VALUES(?,?,?,?,?,?,?,?)')
-      .run(+f[1], r.id, r.transaction_id, r.merchant || 'Kvittering', r.date || today(), r.total, owner, Date.now());
+  const f = r.target.match(/^folder:(\d+)(?::(.+))?$/);
+  if (f && q('SELECT 1 FROM fh_folders WHERE id=?').get(+f[1])) {
+    const uid = f[2] ?? OWNER;
+    const payer = q('SELECT name FROM fh_folder_members WHERE folder_id=? AND user_id=?').get(+f[1], uid)?.name
+      ?? q("SELECT name FROM fh_folder_members WHERE folder_id=? ORDER BY role='owner' DESC, id LIMIT 1").get(+f[1])?.name ?? settings().name;
+    let lines = []; try { lines = JSON.parse(r.extraction ?? 'null')?.lines ?? []; } catch { /* ugyldig */ }
+    const cat = folderCategory(`${r.merchant ?? ''} ${lines.map((l) => l.description).join(' ')}`);
+    if (!q('SELECT 1 FROM fh_folder_entries WHERE receipt_id=?').get(r.id)) {
+      q('INSERT INTO fh_folder_entries(folder_id,receipt_id,tx_id,description,date,amount,paid_by,category,created) VALUES(?,?,?,?,?,?,?,?,?)')
+        .run(+f[1], r.id, r.transaction_id, r.merchant || r.name || 'Kvittering', r.date || today(), r.total ?? 0, payer, cat, Date.now());
+    } else q('UPDATE fh_folder_entries SET description=?, date=?, amount=?, category=COALESCE(category, ?) WHERE receipt_id=?').run(r.merchant || 'Kvittering', r.date || today(), r.total ?? 0, cat, r.id);
+    if (uid !== OWNER && userInfo(uid)?.role !== 'admin') q("UPDATE fh_receipts SET status='filed' WHERE id=? AND status='needs_review'").run(r.id);
   }
 }
 const shiftDate = (iso, months) => { const [y, m, d] = iso.split('-').map(Number); const x = new Date(y, m - 1 + months, Math.min(d, 28)); return x.toLocaleDateString('sv-SE'); };
@@ -227,22 +257,19 @@ setTimeout(() => {
 
 const api = new Hono();
 
-// Innlogging fra de native appene: passord → token med finans-tilganger. Samme rate limiting som nettinnloggingen.
-// Tokenet gir bare tilgang til /finans/api, aldri til resten av homelab.
+// Innlogging fra de native appene: brukernavn + passord (+ TOTP-kode) → token. Rate limiting og 2FA skjer i verifyLogin.
+// Tokenet gir bare tilgang til /finans/api, aldri til resten av homelab. Uten brukernavn gjelder eieren (eldre apper).
 async function tokenLogin(c) {
-  const ip = clientIp(c);
-  const wait = loginBlocked(ip);
-  if (wait) return bad(c, `For mange forsøk. Prøv igjen om ${Math.ceil(wait / 60)} min.`, 429);
   const b = await c.req.json().catch(() => ({}));
-  if (!passwordHash() || !verifyPassword(String(b.password ?? ''), passwordHash())) {
-    loginFailed(ip);
-    await new Promise((r) => setTimeout(r, 400));
-    return bad(c, 'Feil passord', 401);
+  const r = verifyLogin(b.username, b.password, b.code ?? b.totp, clientIp(c));
+  if (!r.ok) {
+    if (r.status === 401 && !r.needsTotp) await new Promise((res) => setTimeout(res, 400));
+    return c.json({ error: r.error, ...(r.needsTotp ? { needsTotp: true } : {}) }, r.status ?? 401);
   }
-  loginSucceeded(ip);
-  const token = 'fh_' + randomBytes(24).toString('base64url');
-  q('INSERT INTO fh_tokens(id,name,scopes,created) VALUES(?,?,?,?)').run(tokenKey(token), str(b.deviceName ?? b.device, 60) || 'Mobilapp', SCOPES.join(' '), Date.now());
-  return c.json({ token, scopes: SCOPES, user: settings().name });
+  const token = newToken();
+  const scopes = r.user.role === 'admin' ? SCOPES : ['finance:read'];
+  q('INSERT INTO fh_tokens(id,name,scopes,created,user_id) VALUES(?,?,?,?,?)').run(tokenKey(token), str(b.deviceName ?? b.device, 60) || 'Mobilapp', scopes.join(' '), Date.now(), r.user.id);
+  return c.json({ token, scopes, user: { id: r.user.id, username: r.user.username, role: r.user.role, name: r.user.name } });
 }
 api.post('/auth/token', tokenLogin);
 api.post('/login', tokenLogin); // alias for mobilappene (Mobil v2)
@@ -257,7 +284,7 @@ api.get('/logo/:domain', async (c) => {
 });
 // Appen logger ut ved å trekke tilbake sitt eget token.
 api.post('/auth/logout', async (c) => {
-  const m = c.req.header('authorization')?.match(/^Bearer\s+(fh_[A-Za-z0-9_-]{20,})$/);
+  const m = c.req.header('authorization')?.match(TOKEN_RE);
   if (m) q('DELETE FROM fh_tokens WHERE id=?').run(tokenKey(m[1]));
   return ok(c);
 });
@@ -266,30 +293,54 @@ api.use('*', async (c, next) => {
   const a = access(c);
   if (!a) return bad(c, 'Ikke innlogget', 401);
   c.set('access', a);
+  c.set('user', a.user);
+  // Brukere uten admin-rolle: bare egne opplysninger og Delte mapper.
+  const path = c.req.path.replace(/^.*?\/finans\/api/, '');
+  if (!a.admin && !/^\/(me|prefs|users|bootstrap|tokens(\/[\w-]+)?|folders(\/.*)?|receipts\/jobs)$/.test(path)) return bad(c, 'Bare administratorer har tilgang til regnskapet. Du ser Delte mapper som er delt med deg.', 403);
   await next();
 });
 const R = need('finance:read'), W = need('finance:write');
 const upload = bodyLimit({ maxSize: Number(process.env.MAX_UPLOAD_MB ?? 15) * 1024 * 1024 + 4096, onError: (c) => bad(c, `Filen er for stor (maks ${process.env.MAX_UPLOAD_MB ?? 15} MB)`, 413) });
 
+const NAV_DEFAULT = ['ov', 'tx', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'imp', 'inn'];
+const navOrder = (uid) => { const saved = kv.get(uid, 'fh_nav', null); if (!Array.isArray(saved)) return NAV_DEFAULT; return [...saved.filter((p) => NAV_DEFAULT.includes(p)), ...NAV_DEFAULT.filter((p) => !saved.includes(p))]; };
+const VERSION = (() => { try { return JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')).version; } catch { return null; } })();
+const meOut = (a) => ({ id: a.user, username: a.info.username, role: a.info.role, name: a.info.name, admin: a.admin, totp: !!a.info.totp, version: VERSION });
+
+api.get('/me', (c) => c.json(meOut(c.get('access'))));
+// Brukere man kan dele mapper med (navn og brukernavn, ingen hemmeligheter).
+api.get('/users', (c) => c.json(listUsers().map((u) => ({ id: u.id, username: u.username, name: u.name, role: u.role }))));
+// Personlige valg i FinansHub: rekkefølgen i sidemenyen.
+api.get('/prefs', (c) => c.json({ nav: navOrder(c.get('user')), navDefault: NAV_DEFAULT }));
+api.put('/prefs', async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  if (b.nav === null) kv.del(c.get('user'), 'fh_nav');
+  else if (Array.isArray(b.nav)) kv.set(c.get('user'), 'fh_nav', [...new Set(b.nav.filter((p) => NAV_DEFAULT.includes(p)))]);
+  return c.json({ nav: navOrder(c.get('user')), navDefault: NAV_DEFAULT });
+});
+
 api.get('/bootstrap', R, (c) => {
   const st = settings();
+  const a = c.get('access');
+  if (!a.admin) return c.json({ restricted: true, me: meOut(a), nav: ['dir'], settings: { name: a.info.name, provider: st.provider, ollamaModel: st.ollamaModel, geminiModel: st.geminiModel, fallback: st.fallback },
+    month: curMonth(), categories: [], accounts: [], rules: [], goals: [], reviewCount: 0, hasData: true, profiles: [], user: a.info.name });
   const cats = q('SELECT * FROM fh_categories ORDER BY sort, id').all();
   const accs = q(`SELECT a.*, a.opening_balance + COALESCE((SELECT SUM(amount) FROM fh_transactions WHERE account_id=a.id),0) AS balance FROM fh_accounts a ORDER BY sort, id`).all();
   const month = curMonth();
   return c.json({
-    settings: { ...st, geminiKeySet: !!secret('geminiKey'), imapPassSet: !!secret('imapPass') }, month, period: period(month), profiles: PROFILES, user: st.name,
+    settings: { ...st, geminiKeySet: !!secret('geminiKey'), imapPassSet: !!secret('imapPass'), t212Set: t212Configured() }, month, period: period(month), profiles: PROFILES, user: st.name,
     categories: cats.map((x) => ({ id: x.id, name: x.name, color: x.color, kind: x.kind })),
     accounts: accs.map((a) => ({ id: a.id, name: a.name, bank: a.bank, type: a.type, last4: a.last4, note: a.note, openingBalance: a.opening_balance / 100, balance: a.balance / 100 })),
     rules: q('SELECT r.*, c.name AS category FROM fh_rules r LEFT JOIN fh_categories c ON c.id=r.category_id ORDER BY priority, id').all().map((r) => ({ id: r.id, pattern: r.pattern, categoryId: r.category_id, category: r.category, priority: r.priority })),
     goals: q('SELECT * FROM fh_goals ORDER BY id').all().map((g) => ({ ...g, saved: g.saved / 100, target: g.target / 100 })),
     reviewCount: q("SELECT COUNT(*) n FROM fh_receipts WHERE status IN ('pending','processing','needs_review')").get().n,
-    hasData: !!q('SELECT 1 FROM fh_transactions LIMIT 1').get(),
+    hasData: !!q('SELECT 1 FROM fh_transactions LIMIT 1').get(), firstRun: backup.needsFirstRun(), me: meOut(a), nav: navOrder(a.user),
   });
 });
 
 /* --- Oversikt --- */
 
-api.get('/summary', R, (c) => {
+api.get('/summary', need('read:summary', 'read:budget'), (c) => {
   const month = /^\d{4}-\d{2}$/.test(c.req.query('month') ?? '') ? c.req.query('month') : curMonth();
   const { from, to } = period(month);
   const cats = catById(), accs = accById();
@@ -362,7 +413,7 @@ function txQuery(c) {
   return { where: w.length ? 'WHERE ' + w.join(' AND ') : '', params: p };
 }
 
-api.get('/transactions', R, (c) => {
+api.get('/transactions', need('read:transactions'), (c) => {
   const { where, params } = txQuery(c);
   const limit = Math.min(2000, +c.req.query('limit') || 500);
   const rows = q(`${TX_SELECT} ${where} ORDER BY t.date DESC, t.id DESC LIMIT ${limit}`).all(...params);
@@ -371,7 +422,7 @@ api.get('/transactions', R, (c) => {
   return c.json({ items: rows.map((t) => txOut(t, cats, accs)), count: total.n, net: total.s / 100 });
 });
 
-api.post('/transactions', W, async (c) => {
+api.post('/transactions', need('write:transactions'), async (c) => {
   const b = await c.req.json();
   const amount = ore(b.amount);
   if (!isDate(b.date) || amount === null || !str(b.description)) return bad(c, 'Dato, beløp og beskrivelse må fylles ut');
@@ -383,7 +434,7 @@ api.post('/transactions', W, async (c) => {
   return c.json(txOut(t));
 });
 
-api.patch('/transactions/:id', W, async (c) => {
+api.patch('/transactions/:id', need('write:transactions'), async (c) => {
   const b = await c.req.json();
   const cur = q('SELECT * FROM fh_transactions WHERE id=?').get(+c.req.param('id'));
   if (!cur) return c.notFound();
@@ -399,7 +450,7 @@ api.patch('/transactions/:id', W, async (c) => {
   return c.json(txOut(q(`${TX_SELECT} WHERE t.id=?`).get(t.id)));
 });
 
-api.delete('/transactions/:id', W, (c) => {
+api.delete('/transactions/:id', need('write:transactions'), (c) => {
   q("UPDATE fh_receipts SET transaction_id=NULL, status=CASE WHEN status='booked' THEN 'needs_review' ELSE status END WHERE transaction_id=?").run(+c.req.param('id'));
   q('DELETE FROM fh_transactions WHERE id=?').run(+c.req.param('id'));
   return ok(c);
@@ -407,7 +458,7 @@ api.delete('/transactions/:id', W, (c) => {
 
 const csvCell = (v) => (/[;"\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
 const nok = (o) => (o / 100).toFixed(2).replace('.', ',');
-api.get('/transactions.csv', R, (c) => {
+api.get('/transactions.csv', need('read:transactions'), (c) => {
   const { where, params } = txQuery(c);
   const cats = catById(), accs = accById();
   const rows = q(`${TX_SELECT} ${where} ORDER BY t.date`).all(...params);
@@ -469,6 +520,12 @@ async function saveReceipt(f, scanFile, thumbFile, acc, target) {
   q("INSERT INTO fh_receipts(id,file,scan,thumb,mime,status,date,account_id,name,target,created) VALUES(?,?,?,?,?,'pending',?,?,?,?,?)")
     .run(id, file, scan, thumb, f.type, today(), acc, str(f.name, 120) || null, target, Date.now());
   queue.push({ id });
+  // Mappe: posten vises med en gang («Gemini leser …») og fylles ut når AI-en er ferdig.
+  const fm = String(target ?? '').match(/^folder:(\d+)(?::(.+))?$/);
+  if (fm) {
+    const payer = q('SELECT name FROM fh_folder_members WHERE folder_id=? AND user_id=?').get(+fm[1], fm[2] ?? OWNER)?.name ?? settings().name;
+    q('INSERT INTO fh_folder_entries(folder_id,receipt_id,description,date,amount,paid_by,category,created) VALUES(?,?,?,?,0,?,?,?)').run(+fm[1], id, str(f.name, 120) || 'Kvittering', today(), payer, folderCategory(f.name), Date.now());
+  }
   return id;
 }
 api.post('/receipts', need('receipts:write'), upload, (c) => receiptUpload(c));
@@ -479,7 +536,13 @@ function jobOut(r) {
   return { id: r.id, name: r.name ?? r.merchant ?? 'Kvittering', status: r.status === 'failed' ? 'error' : r.status, progress, merchant: r.merchant, total: r.total != null ? r.total / 100 : null,
     error: r.error ?? null, thumb: r.thumb ? `/finans/api/receipts/${r.id}/thumb` : null, aiShort: r.ai_short ?? null, created: r.created };
 }
-api.get('/receipts/jobs', R, (c) => c.json(q("SELECT * FROM fh_receipts WHERE created>? AND status<>'rejected' ORDER BY created DESC LIMIT 100").all(Date.now() - 86400_000).map(jobOut)));
+api.get('/receipts/jobs', R, (c) => {
+  const a = c.get('access');
+  // Andre brukere ser bare sine egne opplastinger til delte mapper.
+  const rows = a.admin ? q("SELECT * FROM fh_receipts WHERE created>? AND status<>'rejected' ORDER BY created DESC LIMIT 100").all(Date.now() - 86400_000)
+    : q("SELECT * FROM fh_receipts WHERE created>? AND status<>'rejected' AND target LIKE ? ORDER BY created DESC LIMIT 100").all(Date.now() - 86400_000, `folder:%:${a.user}`);
+  return c.json(rows.map(jobOut));
+});
 const origSelect = q('SELECT * FROM fh_receipts WHERE id=?');
 
 api.get('/receipts', R, (c) => {
@@ -768,24 +831,35 @@ api.put('/settings', W, async (c) => {
 
 api.get('/health/ai', R, async (c) => c.json(await health()));
 
-api.get('/tokens', sessionOnly, (c) => c.json(q('SELECT id, name, scopes, created, last_used FROM fh_tokens ORDER BY created DESC').all().map((t) => ({ ...t, id: t.id.slice(0, 12), scopes: t.scopes.split(' ') }))));
-api.post('/tokens', sessionOnly, async (c) => {
+// Personlige tokens (fh_pat_…): bare hashen lagres, tokenet vises én gang. Hver bruker ser og trekker tilbake sine egne.
+const tokenOut = (t) => ({ id: t.id.slice(0, 12), name: t.name, scopes: t.scopes.split(' '), created: t.created, lastUsed: t.last_used, last_used: t.last_used, expires: t.expires, expired: !!t.expires && t.expires < Date.now() });
+// Økt i nettleseren, eller et token med finance:write (mobilappens innstillinger). Et token kan ikke lage tokens med mer tilgang enn det selv har.
+const tokenAdmin = async (c, next) => { const a = c.get('access'); if (!a.session && !a.scopes.has('finance:write')) return bad(c, 'Krever innlogging i nettleseren eller et token med finance:write', 403); await next(); };
+api.get('/tokens', tokenAdmin, (c) => c.json(q('SELECT * FROM fh_tokens WHERE COALESCE(user_id, ?)=? ORDER BY created DESC').all(OWNER, c.get('user')).map((t) => ({ ...tokenOut(t), current: t.id === c.get('access').tokenId }))));
+api.post('/tokens', tokenAdmin, async (c) => {
   const b = await c.req.json();
-  const scopes = (Array.isArray(b.scopes) ? b.scopes : ['finance:read', 'receipts:write']).filter((s) => SCOPES.includes(s));
+  const a = c.get('access');
+  const scopes = (Array.isArray(b.scopes) ? b.scopes : ['finance:read', 'receipts:write']).filter((x) => SCOPES.includes(x) && (a.session || hasScope(a, x)));
   if (!scopes.length) return bad(c, 'Velg minst én tilgang');
-  const token = 'fh_' + randomBytes(24).toString('base64url');
-  q('INSERT INTO fh_tokens(id,name,scopes,created) VALUES(?,?,?,?)').run(tokenKey(token), str(b.name, 60) || 'Mobil', scopes.join(' '), Date.now());
-  return c.json({ token, scopes }); // vises én gang
+  // expires: '30d' | '90d' | '1y' | 'never', eller expiresDays: 30 | 90 | 365 | null (mobilappen).
+  const days = Object.hasOwn(b, 'expiresDays') ? (b.expiresDays === null ? null : Math.min(3650, Math.max(1, +b.expiresDays || 90))) : Object.hasOwn(EXPIRY, b.expires) ? EXPIRY[b.expires] : 90;
+  const token = newToken();
+  const row = q('INSERT INTO fh_tokens(id,name,scopes,created,user_id,expires) VALUES(?,?,?,?,?,?) RETURNING *').get(tokenKey(token), str(b.name, 60) || 'Token', scopes.join(' '), Date.now(), c.get('user'), days ? Date.now() + days * 86400_000 : null);
+  return c.json({ token, ...tokenOut(row) }); // vises én gang
 });
-api.delete('/tokens/:id', sessionOnly, (c) => { q('DELETE FROM fh_tokens WHERE substr(id,1,12)=?').run(c.req.param('id')); return ok(c); });
+api.delete('/tokens/:id', tokenAdmin, (c) => { q('DELETE FROM fh_tokens WHERE substr(id,1,12)=? AND COALESCE(user_id, ?)=?').run(c.req.param('id'), OWNER, c.get('user')); return ok(c); });
 
 /* --- Subscription OS --- */
 
-const monthlyOre = (s) => (s.cycle === 'yearly' ? s.price / 12 : s.price);
+// Pris lagres per trekk. Hvert 2. år: pris/24 per måned og pris/2 per år.
+const CYCLES = { monthly: 1, yearly: 12, biennial: 24 };
+const cycleIn = (v) => ({ monthly: 'monthly', mnd: 'monthly', yearly: 'yearly', 'år': 'yearly', biennial: 'biennial', '2år': 'biennial' }[v] ?? null);
+const monthlyOre = (s) => s.price / (CYCLES[s.cycle] ?? 1);
 function subOut(s) {
   return { id: s.id, name: s.name, plan: s.plan, price: s.price / 100, cycle: s.cycle, nextDate: s.next_date, usageNote: s.usage_note, lowUse: !!s.low_use,
     active: !!s.active, domain: s.domain || domainFor(s.name), aiShort: s.ai_short || heuristic({ merchant: s.name, category: 'Abonnementer' }).short, txId: s.tx_id,
-    monthly: monthlyOre(s) / 100 };
+    monthly: Math.round(monthlyOre(s)) / 100, yearly: Math.round(monthlyOre(s) * 12) / 100, perLabel: { monthly: '/mnd', yearly: '/år', biennial: '/2 år' }[s.cycle] ?? '/mnd',
+    cycleName: { monthly: 'Månedlig', yearly: 'Årlig', biennial: 'Hvert 2. år' }[s.cycle] ?? 'Månedlig' };
 }
 // Neste trekk kan skrives som dd.mm, dd.mm.åå eller ISO.
 function dateIn(v) {
@@ -805,7 +879,7 @@ api.get('/subscriptions', R, (c) => {
   const rows = q('SELECT * FROM fh_subscriptions ORDER BY active DESC, COALESCE(next_date, \'9999\'), name').all().map(subOut);
   const act = rows.filter((s) => s.active);
   const monthly = act.reduce((a, s) => a + s.monthly, 0);
-  return c.json({ items: rows, monthly: Math.round(monthly * 100) / 100, yearly: Math.round(monthly * 1200) / 100,
+  return c.json({ items: rows, monthly: Math.round(monthly * 100) / 100, yearly: Math.round(act.reduce((a, x) => a + x.yearly, 0) * 100) / 100,
     lowUse: Math.round(act.filter((s) => s.lowUse).reduce((a, s) => a + s.monthly, 0) * 100) / 100 });
 });
 api.post('/subscriptions', W, async (c) => {
@@ -821,7 +895,7 @@ api.post('/subscriptions', W, async (c) => {
   const price = ore(b.price);
   if (!str(b.name) || price === null) return bad(c, 'Tjeneste og pris må fylles ut');
   const s = q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,low_use,domain,created) VALUES(?,?,?,?,?,?,?,?,?) RETURNING *')
-    .get(str(b.name, 80), str(b.plan, 80), Math.abs(price), b.cycle === 'yearly' ? 'yearly' : 'monthly', dateIn(b.nextDate), str(b.usageNote, 80) || 'Ny', b.lowUse ? 1 : 0,
+    .get(str(b.name, 80), str(b.plan, 80), Math.abs(price), cycleIn(b.cycle) ?? 'monthly', dateIn(b.nextDate), str(b.usageNote, 80) || 'Ny', b.lowUse ? 1 : 0,
       validDomain(b.domain) || domainFor(b.name), Date.now());
   return c.json(subOut(s));
 });
@@ -834,7 +908,7 @@ api.patch('/subscriptions/:id', W, async (c) => {
   if (b.name !== undefined) n.name = str(b.name, 80) || cur.name;
   if (b.plan !== undefined) n.plan = str(b.plan, 80);
   if (b.price !== undefined && ore(b.price) !== null) n.price = Math.abs(ore(b.price));
-  if (b.cycle !== undefined) n.cycle = b.cycle === 'yearly' ? 'yearly' : 'monthly';
+  if (b.cycle !== undefined) n.cycle = cycleIn(b.cycle) ?? cur.cycle;
   if (b.nextDate !== undefined) n.next_date = dateIn(b.nextDate);
   if (b.usageNote !== undefined) n.usage_note = str(b.usageNote, 80);
   if (b.lowUse !== undefined) n.low_use = b.lowUse ? 1 : 0;
@@ -846,82 +920,306 @@ api.patch('/subscriptions/:id', W, async (c) => {
 });
 api.delete('/subscriptions/:id', W, (c) => { q('DELETE FROM fh_subscriptions WHERE id=?').run(+c.req.param('id')); return ok(c); });
 
-/* --- Delte mapper --- */
-// Én bruker i homelab: medlemmer er navngitte personer (med valgfri e-post). Saldo = betalt − lik andel.
-// Invitasjon lagrer e-posten som «invitert»; selve utsendingen krever SMTP og er ikke satt opp ennå.
+/* --- Delte mapper (boliger og felles utgifter) --- */
+// Medlemmer er brukere i homelab (user_id) med rolle: owner = Eier, editor = Kan redigere, viewer = Kan se.
+// Eldre mapper kan også ha navngitte personer uten innlogging (user_id null); de kan stå som betaler, men ser ikke mappen.
+// Brukere ser bare mapper de er medlem av. Saldo = betalt − andel (likt delt eller egen fordelingsnøkkel).
 
-function folderOut(f, full = false) {
-  const mem = q('SELECT * FROM fh_folder_members WHERE folder_id=? ORDER BY role=\'owner\' DESC, id').all(f.id);
-  const entries = q('SELECT * FROM fh_folder_entries WHERE folder_id=? ORDER BY date DESC, id DESC').all(f.id);
-  const total = entries.reduce((a, e) => a + e.amount, 0);
-  const out = { id: f.id, name: f.name, members: mem.map((m) => ({ id: m.id, name: m.name, email: m.email, role: m.role, status: m.status })), total: total / 100, count: entries.length };
+export const FOLDER_CATS = [['Strøm', '#F2C14E'], ['Vann og avløp', '#7AA7FF'], ['Hage og uteområde', '#5FD3A8'], ['Håndverker', '#FF7A3D'], ['Basseng', '#4FC3E8'],
+  ['Kommunale avgifter', '#B79CFF'], ['Vedlikehold', '#FFB08A'], ['Forsikring', '#A0A0AA'], ['Dagligvarer', '#C9E265'], ['Annet', '#6E6E78']];
+const FCAT = Object.fromEntries(FOLDER_CATS);
+const FOLDER_TYPES = ['Enebolig', 'Leilighet', 'Hytte', 'Utleie', 'Annet'];
+const ROLES = { owner: 'Eier', editor: 'Kan redigere', viewer: 'Kan se' };
+const ROLE_IN = { Eier: 'owner', 'Kan redigere': 'editor', 'Kan se': 'viewer', owner: 'owner', editor: 'editor', viewer: 'viewer', member: 'editor' };
+const FREQS = ['Månedlig', 'Kvartalsvis', 'Halvårlig', 'Årlig', 'Annenhver måned'];
+export function folderCategory(text) {
+  const s = String(text ?? '');
+  return /basseng|pool|spa\b/i.test(s) ? 'Basseng' : /snekker|bygg|elektriker|rørlegger|maler|håndverk/i.test(s) ? 'Håndverker'
+    : /fjordkraft|tibber|strøm|hafslund|elvia|nettleie/i.test(s) ? 'Strøm' : /vann|avløp/i.test(s) ? 'Vann og avløp'
+    : /plantasjen|mester grønn|blomst|hage|jord|gjødsel|plen|planter/i.test(s) ? 'Hage og uteområde'
+    : /kommun|renovasjon|eiendomsskatt|feiing|avgift/i.test(s) ? 'Kommunale avgifter' : /forsikring|gjensidige|if skade|tryg|fremtind/i.test(s) ? 'Forsikring'
+    : /rema|kiwi|meny|coop|extra|joker|bunnpris|spar\b/i.test(s) ? 'Dagligvarer' : /biltema|jernia|clas ohlson|obs bygg|maxbo|byggmakker|ikea|ved|pellets|maling|vedlikehold/i.test(s) ? 'Vedlikehold' : 'Annet';
+}
+const MONTHS_SHORT = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
+
+const memberOf = (fid, uid) => q('SELECT * FROM fh_folder_members WHERE folder_id=? AND user_id=?').get(fid, uid);
+// Henter mappen og sjekker tilgang. need: 'view' | 'edit' | 'owner'.
+function folderFor(c, need = 'view') {
+  const f = q('SELECT * FROM fh_folders WHERE id=?').get(+c.req.param('id'));
+  if (!f) return { err: c.json({ error: 'Fant ikke mappen' }, 404) };
+  const m = memberOf(f.id, c.get('user'));
+  if (!m) return { err: c.json({ error: 'Fant ikke mappen' }, 404) };
+  if (need === 'edit' && m.role === 'viewer') return { err: bad(c, 'Du har lesetilgang. Be en eier om redigeringstilgang.', 403) };
+  if (need === 'owner' && m.role !== 'owner') return { err: bad(c, 'Bare eiere kan endre deling og innstillinger for mappen', 403) };
+  if (need !== 'view' && !c.get('access').scopes.has('finance:write') && !c.get('access').session) return { err: bad(c, 'Tokenet mangler tilgangen finance:write', 403) };
+  return { f, me: m };
+}
+const displayName = (u) => u?.name || u?.username || 'Ukjent';
+function splitWeights(f, members) {
+  let w = null; try { w = f.split && f.split !== 'equal' ? JSON.parse(f.split) : null; } catch { /* likt */ }
+  return Object.fromEntries(members.map((m) => [m.name, w && Number.isFinite(+w[m.name]) ? Math.max(0, +w[m.name]) : 1]));
+}
+
+// Slettede brukere: navnet beholdes som betaler, men koblingen til kontoen fjernes (og dubletter slås sammen).
+function pruneMembers(fid) {
+  const ids = new Set(listUsers().map((u) => u.id));
+  for (const m of q('SELECT * FROM fh_folder_members WHERE folder_id=? AND user_id IS NOT NULL').all(fid)) {
+    if (ids.has(m.user_id)) continue;
+    if (q('SELECT 1 FROM fh_folder_members WHERE folder_id=? AND name=? AND id<>?').get(fid, m.name, m.id)) q('DELETE FROM fh_folder_members WHERE id=?').run(m.id);
+    else q('UPDATE fh_folder_members SET user_id=NULL WHERE id=?').run(m.id);
+  }
+}
+function folderOut(f, uid, full = false) {
+  pruneMembers(f.id);
+  const mem = q("SELECT * FROM fh_folder_members WHERE folder_id=? ORDER BY role='owner' DESC, id").all(f.id);
+  const me = mem.find((m) => m.user_id === uid);
+  const year = new Date().getFullYear(), ys = `${year}-01-01`;
+  const entries = q('SELECT e.*, p.name AS project FROM fh_folder_entries e LEFT JOIN fh_folder_projects p ON p.id=e.project_id WHERE e.folder_id=? ORDER BY e.date DESC, e.id DESC').all(f.id);
+  const yearRows = entries.filter((e) => e.date >= ys);
+  const yearTotal = yearRows.reduce((a, e) => a + e.amount, 0);
+  const out = { id: f.id, name: f.name, type: f.type, address: f.address, myRole: me ? ROLES[me.role] : null, role: me?.role ?? null,
+    members: mem.map((m) => ({ id: m.id, userId: m.user_id, name: m.name, email: m.email, role: m.role, roleName: ROLES[m.role] ?? 'Kan redigere', you: m.user_id === uid, login: !!m.user_id })),
+    total: entries.reduce((a, e) => a + e.amount, 0) / 100, yearTotal: yearTotal / 100, count: entries.length };
   if (!full) return out;
-  const share = mem.length ? total / mem.length : 0;
-  out.balances = mem.map((m) => ({ name: m.name, paid: entries.filter((e) => e.paid_by === m.name).reduce((a, e) => a + e.amount, 0) / 100,
-    balance: Math.round(entries.filter((e) => e.paid_by === m.name).reduce((a, e) => a + e.amount, 0) - share) / 100 }));
+  out.canEdit = !!me && me.role !== 'viewer';
+  out.isOwner = me?.role === 'owner';
+  out.owners = mem.filter((m) => m.role === 'owner').length;
+  // Fordeling: likt eller egen nøkkel, saldo = betalt − andel.
+  const weights = splitWeights(f, mem), wsum = Object.values(weights).reduce((a, b) => a + b, 0) || 1;
+  const total = entries.reduce((a, e) => a + e.amount, 0);
+  out.split = f.split === 'equal' ? 'equal' : 'custom';
+  out.weights = weights;
+  out.balances = mem.map((m) => {
+    const paid = entries.filter((e) => e.paid_by === m.name).reduce((a, e) => a + e.amount, 0);
+    return { name: m.name, paid: paid / 100, share: Math.round((total * weights[m.name]) / wsum) / 100, balance: Math.round(paid - (total * weights[m.name]) / wsum) / 100 };
+  });
+  // Utgifter per måned i år, delt på kategori.
+  const nowM = new Date().getMonth();
+  out.months = Array.from({ length: nowM + 1 }, (_, i) => {
+    const mm = `${year}-${String(i + 1).padStart(2, '0')}`;
+    const rows = yearRows.filter((e) => e.date.startsWith(mm));
+    const by = {};
+    for (const e of rows) { const k = e.category || 'Annet'; by[k] = (by[k] ?? 0) + e.amount / 100; }
+    return { month: mm, label: MONTHS_SHORT[i], total: rows.reduce((a, e) => a + e.amount, 0) / 100, byCat: by };
+  });
+  const catSum = {};
+  for (const e of yearRows) { const k = e.category || 'Annet'; catSum[k] = (catSum[k] ?? 0) + e.amount / 100; }
+  out.categories = Object.entries(catSum).sort((a, b) => b[1] - a[1]).map(([name, sum]) => ({ name, sum, color: FCAT[name] ?? '#6E6E78', pct: yearTotal ? (sum * 100) / (yearTotal / 100) : 0 }));
+  const strom = (m) => out.months[m]?.byCat['Strøm'] ?? 0;
+  const projects = q('SELECT * FROM fh_folder_projects WHERE folder_id=? ORDER BY id').all(f.id).map((p) => {
+    const spent = entries.filter((e) => e.project_id === p.id).reduce((a, e) => a + e.amount, 0) / 100;
+    const inst = q('SELECT * FROM fh_project_installments WHERE project_id=? ORDER BY sort, id').all(p.id);
+    return { id: p.id, name: p.name, vendor: p.vendor, category: p.category, color: FCAT[p.category] ?? '#FF7A3D', budget: p.budget / 100, spent, used: spent, paid: spent, remaining: p.budget / 100 - spent,
+      installments: inst.map((x) => ({ id: x.id, label: x.label, due: x.due, amount: x.amount / 100, paid: !!x.paid_at, paidAt: x.paid_at })) };
+  });
+  out.projects = projects;
+  out.bills = q('SELECT * FROM fh_folder_bills WHERE folder_id=? ORDER BY id').all(f.id).map((b) => {
+    const last = entries.find((e) => (e.category || 'Annet') === b.category);
+    return { id: b.id, name: b.name, category: b.category, color: FCAT[b.category] ?? '#A0A0AA', freq: b.freq, payer: b.payer, nextDue: b.next_due, last: last ? { amount: last.amount / 100, date: last.date } : null };
+  });
+  const months = nowM + 1;
+  out.kpi = { yearTotal: yearTotal / 100, count: yearRows.length, perMonth: Math.round(yearTotal / months) / 100, months,
+    stromYear: Object.values(out.months).reduce((a, m) => a + (m.byCat['Strøm'] ?? 0), 0), stromNow: strom(nowM), stromPrev: strom(nowM - 1),
+    projectsLeft: projects.reduce((a, p) => a + Math.max(0, p.remaining), 0), projectNames: projects.map((p) => p.name), catCount: out.categories.length };
   out.entries = entries.map((e) => {
-    const t = e.tx_id ? q('SELECT ai_short, domain, merchant, description, amount FROM fh_transactions WHERE id=?').get(e.tx_id) : null;
+    const t = e.tx_id ? q('SELECT ai_short, domain FROM fh_transactions WHERE id=?').get(e.tx_id) : null;
     const r = e.receipt_id ? origSelect.get(e.receipt_id) : null;
     const pending = r && (r.status === 'pending' || r.status === 'processing');
-    return { id: e.id, description: e.description, date: e.date, amount: e.amount / 100, paidBy: e.paid_by, split: e.split === 'equal' ? `Likt på ${mem.length}` : e.split,
-      txId: e.tx_id, receiptId: e.receipt_id, domain: t?.domain || r?.domain || domainFor(e.description),
+    const cat = e.category || 'Annet';
+    return { id: e.id, description: e.description, date: e.date, amount: e.amount / 100, paidBy: e.paid_by, category: cat, color: FCAT[cat] ?? '#6E6E78', project: e.project, projectId: e.project_id,
+      txId: e.tx_id, receiptId: e.receipt_id, pending: !!pending, domain: t?.domain || r?.domain || domainFor(e.description),
       aiShort: pending ? 'Gemini leser kvitteringen …' : t?.ai_short || r?.ai_short || heuristic({ merchant: e.description, amount: -e.amount / 100 }).short };
   });
+  out.catOptions = FOLDER_CATS.map(([n]) => n);
+  out.types = FOLDER_TYPES; out.freqs = FREQS;
   return out;
 }
-const memberNames = (v) => (Array.isArray(v) ? v : String(v ?? '').split(','))
-  .map((x) => String(x).trim()).filter(Boolean).slice(0, 20)
-  .map((x) => /@/.test(x) ? { name: x.split('@')[0].replace(/[._-]+/g, ' ').replace(/(^|\s)\S/g, (m) => m.toUpperCase()).slice(0, 40), email: x.slice(0, 120), status: 'invited' } : { name: x.slice(0, 40), email: null, status: 'active' });
+const fullOut = (c, f) => c.json(folderOut(q('SELECT * FROM fh_folders WHERE id=?').get(f.id), c.get('user'), true));
 
-api.get('/folders', R, (c) => c.json(q('SELECT * FROM fh_folders ORDER BY id').all().map((f) => folderOut(f))));
-api.get('/folders/:id', R, (c) => { const f = q('SELECT * FROM fh_folders WHERE id=?').get(+c.req.param('id')); return f ? c.json(folderOut(f, true)) : c.notFound(); });
-api.post('/folders', W, async (c) => {
+api.get('/folders', (c) => c.json(q('SELECT f.* FROM fh_folders f JOIN fh_folder_members m ON m.folder_id=f.id AND m.user_id=? ORDER BY f.id').all(c.get('user')).map((f) => folderOut(f, c.get('user')))));
+api.get('/folders/:id', (c) => { const { f, err } = folderFor(c); return err ?? fullOut(c, f); });
+api.post('/folders', async (c) => {
+  if (!c.get('access').session && !c.get('access').scopes.has('finance:write')) return bad(c, 'Tokenet mangler tilgangen finance:write', 403);
   const b = await c.req.json();
   if (!str(b.name)) return bad(c, 'Gi mappen et navn');
-  const f = q('INSERT INTO fh_folders(name,created) VALUES(?,?) RETURNING *').get(str(b.name, 60), Date.now());
-  const add = q('INSERT INTO fh_folder_members(folder_id,name,email,role,status) VALUES(?,?,?,?,?)');
-  add.run(f.id, settings().name, null, 'owner', 'active');
-  for (const m of memberNames(b.members ?? b.invite)) if (m.name !== settings().name) add.run(f.id, m.name, m.email, 'member', m.status);
-  return c.json(folderOut(f, true));
+  const type = FOLDER_TYPES.includes(b.type) ? b.type : 'Annet';
+  const me = c.get('access').info;
+  const f = q('INSERT INTO fh_folders(name,type,address,owner_id,created) VALUES(?,?,?,?,?) RETURNING *').get(str(b.name, 60), type, str(b.address, 120), me.id, Date.now());
+  const add = q('INSERT INTO fh_folder_members(folder_id,name,email,role,status,user_id) VALUES(?,?,?,?,?,?)');
+  add.run(f.id, displayName(me), null, 'owner', 'active', me.id);
+  const users = new Map(listUsers().map((u) => [u.id, u]));
+  for (const x of (Array.isArray(b.share) ? b.share : [])) {
+    const id = typeof x === 'object' ? x.userId : x, u = users.get(id);
+    if (u && u.id !== me.id && !memberOf(f.id, u.id)) add.run(f.id, displayName(u), null, ROLE_IN[x.role] ?? 'editor', 'active', u.id);
+  }
+  // Boliger får de vanlige faste regningene som utgangspunkt.
+  if (type !== 'Annet') {
+    const bill = q('INSERT INTO fh_folder_bills(folder_id,name,category,freq) VALUES(?,?,?,?)');
+    for (const [n, cat, fr] of [['Strømleverandør', 'Strøm', 'Månedlig'], ['Kommunen', 'Vann og avløp', 'Kvartalsvis'], ['Kommunen', 'Kommunale avgifter', 'Årlig'], ['Forsikringsselskap', 'Forsikring', 'Årlig']]) bill.run(f.id, n, cat, fr);
+  }
+  return fullOut(c, f);
 });
-api.patch('/folders/:id', W, async (c) => {
+api.patch('/folders/:id', async (c) => {
+  const { f, err } = folderFor(c, 'owner'); if (err) return err;
   const b = await c.req.json();
-  if (str(b.name)) q('UPDATE fh_folders SET name=? WHERE id=?').run(str(b.name, 60), +c.req.param('id'));
-  const f = q('SELECT * FROM fh_folders WHERE id=?').get(+c.req.param('id'));
-  return f ? c.json(folderOut(f, true)) : c.notFound();
+  if (str(b.name)) q('UPDATE fh_folders SET name=? WHERE id=?').run(str(b.name, 60), f.id);
+  if (FOLDER_TYPES.includes(b.type)) q('UPDATE fh_folders SET type=? WHERE id=?').run(b.type, f.id);
+  if (b.address !== undefined) q('UPDATE fh_folders SET address=? WHERE id=?').run(str(b.address, 120), f.id);
+  if (b.split === 'equal') q("UPDATE fh_folders SET split='equal' WHERE id=?").run(f.id);
+  else if (b.split && typeof b.split === 'object') q('UPDATE fh_folders SET split=? WHERE id=?').run(JSON.stringify(Object.fromEntries(Object.entries(b.split).slice(0, 30).map(([k, v]) => [str(k, 40), Math.max(0, Math.min(1000, +v || 0))]))), f.id);
+  return fullOut(c, f);
 });
-api.delete('/folders/:id', W, (c) => { q('DELETE FROM fh_folders WHERE id=?').run(+c.req.param('id')); return ok(c); });
-api.post('/folders/:id/invite', W, async (c) => {
-  const f = q('SELECT * FROM fh_folders WHERE id=?').get(+c.req.param('id'));
-  if (!f) return c.notFound();
+api.delete('/folders/:id', (c) => { const { f, err } = folderFor(c, 'owner'); if (err) return err; q('DELETE FROM fh_folders WHERE id=?').run(f.id); return ok(c); });
+// Del med en bruker (eier). Bakoverkompatibelt: /invite med navn legger til en navngitt person uten innlogging.
+api.post('/folders/:id/members', async (c) => {
+  const { f, err } = folderFor(c, 'owner'); if (err) return err;
   const b = await c.req.json();
-  const add = q('INSERT INTO fh_folder_members(folder_id,name,email,role,status) VALUES(?,?,?,?,?)');
-  for (const m of memberNames(b.emails ?? b.members)) if (!q('SELECT 1 FROM fh_folder_members WHERE folder_id=? AND (name=? OR email=?)').get(f.id, m.name, m.email)) add.run(f.id, m.name, m.email, 'member', m.status);
-  return c.json(folderOut(f, true));
+  const u = listUsers().find((x) => x.id === b.userId || x.username === b.username);
+  if (!u) return bad(c, 'Fant ikke brukeren. Nye brukere legges til av admin under Innstillinger → Innlogging i Homelab.');
+  if (memberOf(f.id, u.id)) return bad(c, `${displayName(u)} har allerede tilgang`);
+  // En navngitt person med samme navn (uten innlogging) kobles til kontoen i stedet for å få en ny rad.
+  const named = q('SELECT id FROM fh_folder_members WHERE folder_id=? AND user_id IS NULL AND lower(name)=lower(?)').get(f.id, displayName(u));
+  if (named) q('UPDATE fh_folder_members SET user_id=?, role=? WHERE id=?').run(u.id, ROLE_IN[b.role] ?? 'editor', named.id);
+  else q("INSERT INTO fh_folder_members(folder_id,name,email,role,status,user_id) VALUES(?,?,?,?,'active',?)").run(f.id, displayName(u), null, ROLE_IN[b.role] ?? 'editor', u.id);
+  return fullOut(c, f);
 });
-api.delete('/folders/:id/members/:mid', W, (c) => { q("DELETE FROM fh_folder_members WHERE id=? AND folder_id=? AND role<>'owner'").run(+c.req.param('mid'), +c.req.param('id')); return ok(c); });
-api.post('/folders/:id/entries', W, async (c) => {
-  const f = q('SELECT * FROM fh_folders WHERE id=?').get(+c.req.param('id'));
-  if (!f) return c.notFound();
+api.patch('/folders/:id/members/:mid', async (c) => {
+  const { f, err } = folderFor(c, 'owner'); if (err) return err;
+  const m = q('SELECT * FROM fh_folder_members WHERE id=? AND folder_id=?').get(+c.req.param('mid'), f.id);
+  if (!m) return c.notFound();
+  const role = ROLE_IN[(await c.req.json()).role];
+  if (!role) return bad(c, 'Ugyldig rolle');
+  if (m.role === 'owner' && role !== 'owner' && q("SELECT count(*) FROM fh_folder_members WHERE folder_id=? AND role='owner'").pluck().get(f.id) < 2) return bad(c, 'Mappen må ha minst én eier');
+  q('UPDATE fh_folder_members SET role=? WHERE id=?').run(role, m.id);
+  return fullOut(c, f);
+});
+// Eier fjerner et medlem, eller et medlem forlater mappen selv.
+api.delete('/folders/:id/members/:mid', (c) => {
+  const { f, me, err } = folderFor(c); if (err) return err;
+  const m = q('SELECT * FROM fh_folder_members WHERE id=? AND folder_id=?').get(+c.req.param('mid'), f.id);
+  if (!m) return c.notFound();
+  if (m.id !== me.id && me.role !== 'owner') return bad(c, 'Bare eiere kan fjerne medlemmer', 403);
+  if (m.role === 'owner' && q("SELECT count(*) FROM fh_folder_members WHERE folder_id=? AND role='owner'").pluck().get(f.id) < 2) return bad(c, 'Den siste eieren kan ikke forlate mappen. Gjør noen andre til eier først, eller slett mappen.');
+  q('DELETE FROM fh_folder_members WHERE id=?').run(m.id);
+  return m.id === me.id ? ok(c) : fullOut(c, f);
+});
+const memberNames = (v) => (Array.isArray(v) ? v : String(v ?? '').split(',')).map((x) => String(x).trim()).filter(Boolean).slice(0, 20);
+api.post('/folders/:id/invite', async (c) => {
+  const { f, err } = folderFor(c, 'owner'); if (err) return err;
   const b = await c.req.json();
-  const owner = q("SELECT name FROM fh_folder_members WHERE folder_id=? ORDER BY role='owner' DESC, id LIMIT 1").get(f.id)?.name ?? settings().name;
+  const users = listUsers();
+  for (const n of memberNames(b.emails ?? b.members)) {
+    const u = users.find((x) => x.username === n.toLowerCase() || x.name.toLowerCase() === n.toLowerCase());
+    if (u ? memberOf(f.id, u.id) : q('SELECT 1 FROM fh_folder_members WHERE folder_id=? AND name=?').get(f.id, n)) continue;
+    q("INSERT INTO fh_folder_members(folder_id,name,email,role,status,user_id) VALUES(?,?,?,'editor','active',?)").run(f.id, u ? displayName(u) : n.slice(0, 40), /@/.test(n) ? n.slice(0, 120) : null, u?.id ?? null);
+  }
+  return fullOut(c, f);
+});
+api.post('/folders/:id/entries', async (c) => {
+  const { f, me, err } = folderFor(c, 'edit'); if (err) return err;
+  const b = await c.req.json();
   const members = new Set(q('SELECT name FROM fh_folder_members WHERE folder_id=?').all(f.id).map((m) => m.name));
-  const paidBy = members.has(b.paidBy) ? b.paidBy : owner;
-  const ins = q('INSERT INTO fh_folder_entries(folder_id,tx_id,description,date,amount,paid_by,created) VALUES(?,?,?,?,?,?,?)');
+  const paidBy = members.has(b.paidBy) ? b.paidBy : me.name;
+  const proj = b.projectId ? q('SELECT * FROM fh_folder_projects WHERE id=? AND folder_id=?').get(+b.projectId, f.id) : null;
+  const catOf = (text) => (FCAT[b.category] ? b.category : proj?.category ?? folderCategory(text));
+  const ins = q('INSERT INTO fh_folder_entries(folder_id,tx_id,description,date,amount,paid_by,category,project_id,created) VALUES(?,?,?,?,?,?,?,?,?)');
   if (b.txId) {
+    if (!c.get('access').admin) return bad(c, 'Bare administratorer kan flytte transaksjoner fra regnskapet', 403);
     const t = q('SELECT * FROM fh_transactions WHERE id=?').get(+b.txId);
     if (!t) return c.notFound();
     if (q('SELECT 1 FROM fh_folder_entries WHERE folder_id=? AND tx_id=?').get(f.id, t.id)) return bad(c, 'Transaksjonen ligger allerede i mappen');
-    ins.run(f.id, t.id, t.merchant || t.description, t.date, Math.abs(t.amount), paidBy, Date.now());
+    ins.run(f.id, t.id, t.merchant || t.description, t.date, Math.abs(t.amount), paidBy, catOf(`${t.merchant ?? ''} ${t.description}`), proj?.id ?? null, Date.now());
   } else {
     const amount = ore(b.amount);
     if (!str(b.description) || amount === null) return bad(c, 'Beskrivelse og beløp må fylles ut');
-    ins.run(f.id, null, str(b.description, 120), isDate(b.date) ? b.date : today(), Math.abs(amount), paidBy, Date.now());
+    ins.run(f.id, null, str(b.description, 120), isDate(b.date) ? b.date : today(), Math.abs(amount), paidBy, catOf(b.description), proj?.id ?? null, Date.now());
   }
-  return c.json(folderOut(f, true));
+  return fullOut(c, f);
 });
-api.post('/folders/:id/receipts', need('receipts:write'), upload, (c) => q('SELECT 1 FROM fh_folders WHERE id=?').get(+c.req.param('id')) ? receiptUpload(c, `folder:${+c.req.param('id')}`) : c.notFound());
-api.delete('/folders/:id/entries/:eid', W, (c) => { q('DELETE FROM fh_folder_entries WHERE id=? AND folder_id=?').run(+c.req.param('eid'), +c.req.param('id')); return ok(c); });
+api.patch('/folders/:id/entries/:eid', async (c) => {
+  const { f, err } = folderFor(c, 'edit'); if (err) return err;
+  const e = q('SELECT * FROM fh_folder_entries WHERE id=? AND folder_id=?').get(+c.req.param('eid'), f.id);
+  if (!e) return c.notFound();
+  const b = await c.req.json();
+  if (FCAT[b.category]) q('UPDATE fh_folder_entries SET category=? WHERE id=?').run(b.category, e.id);
+  if (b.projectId !== undefined) q('UPDATE fh_folder_entries SET project_id=? WHERE id=?').run(q('SELECT id FROM fh_folder_projects WHERE id=? AND folder_id=?').get(+b.projectId, f.id)?.id ?? null, e.id);
+  if (b.paidBy && q('SELECT 1 FROM fh_folder_members WHERE folder_id=? AND name=?').get(f.id, b.paidBy)) q('UPDATE fh_folder_entries SET paid_by=? WHERE id=?').run(b.paidBy, e.id);
+  return fullOut(c, f);
+});
+api.post('/folders/:id/receipts', need('receipts:write'), upload, (c) => {
+  const { f, err } = folderFor(c, 'edit'); if (err) return err;
+  return receiptUpload(c, `folder:${f.id}:${c.get('user')}`);
+});
+api.delete('/folders/:id/entries/:eid', (c) => { const { f, err } = folderFor(c, 'edit'); if (err) return err; q('DELETE FROM fh_folder_entries WHERE id=? AND folder_id=?').run(+c.req.param('eid'), f.id); return fullOut(c, f); });
+
+// Prosjekter (f.eks. basseng med snekker) med budsjett og avdragsplan.
+api.post('/folders/:id/projects', async (c) => {
+  const { f, err } = folderFor(c, 'edit'); if (err) return err;
+  const b = await c.req.json();
+  const budget = ore(b.budget);
+  if (!str(b.name) || budget === null) return bad(c, 'Prosjektet trenger navn og budsjett');
+  const cat = FCAT[b.category] ? b.category : (() => { const k = folderCategory(`${b.name} ${b.vendor ?? ''}`); return ['Annet', 'Vedlikehold', 'Dagligvarer'].includes(k) ? 'Håndverker' : k; })();
+  const p = q('INSERT INTO fh_folder_projects(folder_id,name,vendor,budget,category,created) VALUES(?,?,?,?,?,?) RETURNING id').get(f.id, str(b.name, 80), str(b.vendor, 80) || 'Håndverker', Math.abs(budget), cat, Date.now());
+  const inst = q('INSERT INTO fh_project_installments(project_id,label,due,amount,sort) VALUES(?,?,?,?,?)');
+  (Array.isArray(b.installments) ? b.installments : []).slice(0, 24).forEach((x, i) => { const a = ore(x.amount); if (str(x.label) && a !== null) inst.run(p.id, str(x.label, 80), str(x.due, 30) || null, Math.abs(a), i); });
+  return fullOut(c, f);
+});
+api.patch('/folders/:id/projects/:pid', async (c) => {
+  const { f, err } = folderFor(c, 'edit'); if (err) return err;
+  const p = q('SELECT * FROM fh_folder_projects WHERE id=? AND folder_id=?').get(+c.req.param('pid'), f.id);
+  if (!p) return c.notFound();
+  const b = await c.req.json();
+  q('UPDATE fh_folder_projects SET name=?, vendor=?, budget=?, category=? WHERE id=?').run(str(b.name, 80) || p.name, b.vendor !== undefined ? str(b.vendor, 80) : p.vendor,
+    b.budget !== undefined && ore(b.budget) !== null ? Math.abs(ore(b.budget)) : p.budget, FCAT[b.category] ? b.category : p.category, p.id);
+  return fullOut(c, f);
+});
+api.delete('/folders/:id/projects/:pid', (c) => { const { f, err } = folderFor(c, 'edit'); if (err) return err; q('DELETE FROM fh_folder_projects WHERE id=? AND folder_id=?').run(+c.req.param('pid'), f.id); return fullOut(c, f); });
+api.post('/folders/:id/projects/:pid/installments', async (c) => {
+  const { f, err } = folderFor(c, 'edit'); if (err) return err;
+  const p = q('SELECT * FROM fh_folder_projects WHERE id=? AND folder_id=?').get(+c.req.param('pid'), f.id);
+  if (!p) return c.notFound();
+  const b = await c.req.json(), a = ore(b.amount);
+  if (!str(b.label) || a === null) return bad(c, 'Avdraget trenger navn og beløp');
+  q('INSERT INTO fh_project_installments(project_id,label,due,amount,sort) VALUES(?,?,?,?,(SELECT ifnull(max(sort),0)+1 FROM fh_project_installments WHERE project_id=?))').run(p.id, str(b.label, 80), str(b.due, 30) || null, Math.abs(a), p.id);
+  return fullOut(c, f);
+});
+// «Registrer betalt»: avdraget blir en utgift i mappen, knyttet til prosjektet, betalt av den som trykker.
+api.post('/folders/:id/installments/:iid/pay', (c) => {
+  const { f, me, err } = folderFor(c, 'edit'); if (err) return err;
+  const x = q('SELECT i.*, p.vendor, p.category, p.id AS pid FROM fh_project_installments i JOIN fh_folder_projects p ON p.id=i.project_id WHERE i.id=? AND p.folder_id=?').get(+c.req.param('iid'), f.id);
+  if (!x) return c.notFound();
+  if (x.paid_at) return bad(c, 'Avdraget er allerede registrert som betalt');
+  db.transaction(() => {
+    const e = q('INSERT INTO fh_folder_entries(folder_id,description,date,amount,paid_by,category,project_id,created) VALUES(?,?,?,?,?,?,?,?) RETURNING id')
+      .get(f.id, `${x.vendor} · ${x.label.toLowerCase()}`, today(), x.amount, me.name, x.category, x.pid, Date.now());
+    q('UPDATE fh_project_installments SET paid_at=?, entry_id=? WHERE id=?').run(Date.now(), e.id, x.id);
+  })();
+  return fullOut(c, f);
+});
+api.delete('/folders/:id/installments/:iid', (c) => {
+  const { f, err } = folderFor(c, 'edit'); if (err) return err;
+  q('DELETE FROM fh_project_installments WHERE id=? AND project_id IN (SELECT id FROM fh_folder_projects WHERE folder_id=?)').run(+c.req.param('iid'), f.id);
+  return fullOut(c, f);
+});
+// Faste regninger (strøm, vann, kommunale avgifter …).
+api.post('/folders/:id/bills', async (c) => {
+  const { f, err } = folderFor(c, 'edit'); if (err) return err;
+  const b = await c.req.json();
+  if (!str(b.name)) return bad(c, 'Skriv hvem regningen er fra');
+  q('INSERT INTO fh_folder_bills(folder_id,name,category,freq,payer,next_due) VALUES(?,?,?,?,?,?)').run(f.id, str(b.name, 60), FCAT[b.category] ? b.category : folderCategory(b.name),
+    FREQS.includes(b.freq) ? b.freq : 'Månedlig', str(b.payer, 40) || null, dateIn(b.nextDue) ?? (str(b.nextDue, 20) || null));
+  return fullOut(c, f);
+});
+api.patch('/folders/:id/bills/:bid', async (c) => {
+  const { f, err } = folderFor(c, 'edit'); if (err) return err;
+  const cur = q('SELECT * FROM fh_folder_bills WHERE id=? AND folder_id=?').get(+c.req.param('bid'), f.id);
+  if (!cur) return c.notFound();
+  const b = await c.req.json();
+  q('UPDATE fh_folder_bills SET name=?, category=?, freq=?, payer=?, next_due=? WHERE id=?').run(str(b.name, 60) || cur.name, FCAT[b.category] ? b.category : cur.category,
+    FREQS.includes(b.freq) ? b.freq : cur.freq, b.payer !== undefined ? str(b.payer, 40) || null : cur.payer, b.nextDue !== undefined ? dateIn(b.nextDue) ?? (str(b.nextDue, 20) || null) : cur.next_due, cur.id);
+  return fullOut(c, f);
+});
+api.delete('/folders/:id/bills/:bid', (c) => { const { f, err } = folderFor(c, 'edit'); if (err) return err; q('DELETE FROM fh_folder_bills WHERE id=? AND folder_id=?').run(+c.req.param('bid'), f.id); return fullOut(c, f); });
 
 /* --- Finn-handler --- */
 // Kilde: e-postkvitteringer fra Finn. Automatisk henting via IMAP (innstillingene imapHost/imapUser/imapPass)
@@ -1010,14 +1308,73 @@ api.post('/import', W, upload, async (c) => {
 
 /* --- Data --- */
 
-api.get('/export.json', R, (c) => {
-  const dump = {};
-  for (const t of ['fh_accounts', 'fh_categories', 'fh_transactions', 'fh_budgets', 'fh_recurring', 'fh_rules', 'fh_goals', 'fh_subscriptions', 'fh_folders', 'fh_folder_members', 'fh_folder_entries', 'fh_finn']) dump[t.slice(3)] = q(`SELECT * FROM ${t}`).all();
-  dump.receipts = q('SELECT id, status, provider, model, merchant, date, total, category_id, account_id, transaction_id, created FROM fh_receipts').all();
-  dump.settings = settings();
-  dump.note = 'Beløp er i øre. Kvitteringsbildene ligger i data/receipts på serveren.';
-  return c.body(JSON.stringify(dump, null, 2), 200, { 'Content-Type': 'application/json', 'Content-Disposition': `attachment; filename="finanshub-${today()}.json"` });
+api.get('/export.json', R, (c) => c.body(JSON.stringify(backup.exportJson(), null, 2), 200, { 'Content-Type': 'application/json', 'Content-Disposition': `attachment; filename="finanshub-${today()}.json"` }));
+
+/* --- Aksjer (Trading 212) --- */
+
+api.get('/stocks', R, async (c) => c.json(await stocks({ force: c.req.query('force') === '1' })));
+for (const part of ['summary', 'portfolio', 'orders', 'dividends']) {
+  api.get(`/stocks/${part}`, R, async (c) => { const d = await stocks(); return c.json({ summary: d.summary, portfolio: d.positions, orders: d.orders, dividends: d.dividends }[part] ?? null); });
+}
+api.post('/stocks/sync', W, async (c) => c.json(await stocks({ force: true })));
+api.put('/stocks/config', sessionOnly, async (c) => {
+  const b = await c.req.json();
+  if (b.env === 'live' || b.env === 'demo') saveSettings({ t212Env: b.env });
+  if (typeof b.key === 'string' && b.key.trim()) setSecret('t212Key', b.key.trim());
+  if (typeof b.secret === 'string' && b.secret.trim()) setSecret('t212Secret', b.secret.trim());
+  if (b.clear) { setSecret('t212Key', ''); setSecret('t212Secret', ''); }
+  resetStocks();
+  return c.json({ configured: t212Configured(), env: settings().t212Env, base: t212Base() });
 });
+
+/* --- ✦ AI-søk --- */
+
+api.post('/search/ai', R, async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  const text = str(b.q, 300);
+  if (!text) return c.json({ answer: '', hits: [], suggestions: aiSuggestions() });
+  return c.json({ ...(await aiAnswer(text)), q: text, suggestions: aiSuggestions() });
+});
+api.get('/search/suggestions', R, (c) => c.json(aiSuggestions()));
+
+/* --- Backup og data --- */
+
+api.get('/backup', sessionOnly, async (c) => c.json({ config: backup.smbConfig(), smbclient: await backup.smbAvailable(), running: backup.backupRunning(), nextRun: backup.nextRun(),
+  last: kv.get(OWNER, 'fh_backup_last', null), history: q('SELECT * FROM fh_backups ORDER BY created DESC LIMIT 20').all(), firstRun: backup.needsFirstRun(), counts: backup.currentCounts() }));
+api.get('/backup/export', R, (c) => {
+  const f = c.req.query('format');
+  if (f === 'xlsx') return c.body(backup.exportXlsx(), 200, { 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Content-Disposition': `attachment; filename="finanshub-database-${today()}.xlsx"` });
+  if (f === 'csv') return c.redirect('/finans/api/transactions.csv');
+  return c.body(JSON.stringify(backup.exportJson(), null, 2), 200, { 'Content-Type': 'application/json', 'Content-Disposition': `attachment; filename="finanshub-backup-${today()}.json"` });
+});
+const SMB_KEYS = { on: ['smbOn', Boolean], share: ['smbShare', (v) => backup.normShare(v) ?? ''], dir: ['smbDir', (v) => str(v, 120)], version: ['smbVersion', (v) => (['3.1.1', '3.0', '2.1'].includes(v) ? v : '3.1.1')],
+  user: ['smbUser', (v) => str(v, 80)], domain: ['smbDomain', (v) => str(v, 60) || 'WORKGROUP'], schedule: ['smbSchedule', (v) => (['off', 'daily', 'weekly', 'change'].includes(v) ? v : 'off')],
+  keep: ['smbKeep', (v) => Math.min(90, Math.max(1, +v || 14))], db: ['smbDb', Boolean], receipts: ['smbReceipts', Boolean], settings: ['smbSettings', Boolean], encrypt: ['smbEncrypt', Boolean] };
+api.put('/backup/smb', sessionOnly, async (c) => {
+  const b = await c.req.json();
+  const patch = {};
+  for (const [k, [key, fn]] of Object.entries(SMB_KEYS)) if (b[k] !== undefined) patch[key] = fn(b[k]);
+  if (b.share !== undefined && b.share && !patch.smbShare) return bad(c, 'Ugyldig share. Bruk formen //server/share eller \\\\server\\share');
+  saveSettings(patch);
+  if (typeof b.pw === 'string' && b.pw) setSecret('smbPass', b.pw);
+  if (typeof b.phrase === 'string' && b.phrase) { if (b.phrase.length < 8) return bad(c, 'Passfrasen må ha minst 8 tegn'); setSecret('backupPhrase', b.phrase); }
+  return c.json(backup.smbConfig());
+});
+api.post('/backup/smb/test', sessionOnly, async (c) => c.json(await backup.smbTest()));
+api.post('/backup/run', sessionOnly, async (c) => { const r = await backup.runBackup('manuell'); return r.started ? c.json(r) : bad(c, r.message); });
+api.get('/backup/list', sessionOnly, async (c) => c.json(await backup.smbList()));
+// Gjenoppretting i to steg: klargjør (forhåndsvisning med antall per tabell), deretter gjenopprett.
+api.post('/backup/stage', sessionOnly, bodyLimit({ maxSize: 2 * 1024 * 1024 * 1024, onError: (c) => bad(c, 'Filen er for stor', 413) }), async (c) => {
+  try {
+    if ((c.req.header('content-type') ?? '').includes('multipart')) { const b = await c.req.parseBody(); return c.json(await backup.stage({ file: b.file instanceof File ? b.file : null, phrase: typeof b.phrase === 'string' ? b.phrase : '' })); }
+    const b = await c.req.json(); return c.json(await backup.stage({ remote: str(b.remote, 200), phrase: str(b.phrase, 200) }));
+  } catch (e) { return bad(c, e.message); }
+});
+api.post('/backup/restore', sessionOnly, async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  try { const counts = await backup.restore(str(b.stageId, 60)); resetStocks(); return c.json({ ok: true, counts }); } catch (e) { return bad(c, e.message); }
+});
+api.post('/firstrun', sessionOnly, async (c) => { const b = await c.req.json().catch(() => ({})); backup.finishFirstRun(['empty', 'smb', 'file', 'demo'].includes(b.choice) ? b.choice : 'empty'); return ok(c); });
 
 api.post('/demo', sessionOnly, async (c) => {
   if (q('SELECT 1 FROM fh_transactions LIMIT 1').get()) return bad(c, 'Demodata kan bare lastes inn når det ikke finnes transaksjoner');
@@ -1029,7 +1386,7 @@ api.post('/demo', sessionOnly, async (c) => {
 api.delete('/all', sessionOnly, async (c) => {
   const b = await c.req.json().catch(() => ({}));
   if (b.confirm !== 'SLETT') return bad(c, 'Skriv SLETT for å bekrefte');
-  db.transaction(() => { for (const t of ['fh_folder_entries', 'fh_folder_members', 'fh_folders', 'fh_finn', 'fh_subscriptions', 'fh_receipts', 'fh_transactions', 'fh_budgets', 'fh_recurring', 'fh_goals', 'fh_accounts']) q(`DELETE FROM ${t}`).run(); })();
+  db.transaction(() => { for (const t of ['fh_project_installments', 'fh_folder_projects', 'fh_folder_bills', 'fh_folder_entries', 'fh_folder_members', 'fh_folders', 'fh_finn', 'fh_subscriptions', 'fh_receipts', 'fh_transactions', 'fh_budgets', 'fh_recurring', 'fh_goals', 'fh_accounts']) q(`DELETE FROM ${t}`).run(); })();
   return ok(c);
 });
 

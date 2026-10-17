@@ -25,6 +25,18 @@ CREATE TABLE IF NOT EXISTS devices (
   last_ip TEXT,
   paused INTEGER NOT NULL DEFAULT 0
 );
+CREATE TABLE IF NOT EXISTS users (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  name TEXT NOT NULL DEFAULT '',
+  pw_hash TEXT NOT NULL DEFAULT '',
+  role TEXT NOT NULL DEFAULT 'bruker' CHECK (role IN ('admin','bruker')),
+  totp_secret_enc TEXT,
+  totp_enabled INTEGER NOT NULL DEFAULT 0,
+  totp_last_step INTEGER NOT NULL DEFAULT -1,
+  recovery_hashes TEXT NOT NULL DEFAULT '[]',
+  created INTEGER NOT NULL
+);
 CREATE TABLE IF NOT EXISTS kv (
   user TEXT NOT NULL,
   key TEXT NOT NULL,

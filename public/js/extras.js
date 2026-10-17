@@ -68,8 +68,16 @@ export function bindSearch() {
 
 /* ---------- Nyhetslinje ---------- */
 
+// Hastighet 1–10: én runde tar 350 s / hastighet (standard 5 → 70 s).
+export function applyTicker() {
+  const el = document.getElementById('ticker'), u = store.me.ui ?? {};
+  el.style.setProperty('--news-dur', Math.round(350 / (u.newsSpeed ?? 5)) + 's');
+  el.classList.toggle('no-pause', u.newsPause === false);
+}
+
 export function renderTicker() {
   const el = document.getElementById('ticker');
+  applyTicker();
   const items = store.data.news?.items ?? [];
   el.hidden = store.me.hideNews || !items.length;
   if (el.hidden) return;

@@ -8,15 +8,15 @@ import { randomBytes } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { config } from './config.js';
 import { db, kv, OWNER } from './db.js';
-import { verifyPassword, hashPassword } from './password.js';
-import { createSession, destroySession, sessionUser, rememberDevice, pauseDevice, forgetDevice, currentDeviceId, trustIp, isLan, requireAuth, clientIp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
+import { createSession, destroySession, sessionUser, rememberDevice, pauseDevice, forgetDevice, currentDeviceId, currentSessionId, trustIp, isLan, requireAuth, requireAdmin, clientIp, verifyLogin, createTicket, redeemTicket, userInfo, listUsers, createUser, deleteUser, updateUser, setPassword, checkPassword, isAdmin, startTotpSetup, confirmTotpSetup, disableTotp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
 import * as integrations from './integrations.js';
-import { cfg, publicConfig, updateConfig, passwordHash, setPasswordHash } from './settings.js';
+import { cfg, publicConfig, updateConfig } from './settings.js';
 import finansApi from './finans/routes.js';
 import { db as fhDb } from './finans/db.js';
 import homeApi from './home.js';
 import { matApi, matCalendar, startMatScheduler } from './mat.js';
 import domainsApi from './domains.js';
+import uiApi from './ui.js';
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
 
 const api = process.env.MOCK_DATA === '1' ? await import('./mock.js') : integrations;
@@ -71,20 +71,31 @@ app.get('/healthz', (c) => c.text('ok'));
 
 /* ---------------- Innlogging ---------------- */
 
-app.post('/api/login', async (c) => {
+// Steg 1: brukernavn + passord. Har brukeren 2FA, svarer vi med en kortlivet billett til steg 2.
+// Uten brukernavn logges eieren inn (gamle innloggingssider og skript).
+async function passwordLogin(c) {
   const ip = clientIp(c);
-  const wait = loginBlocked(ip);
-  if (wait) return c.json({ error: `For mange forsøk. Prøv igjen om ${Math.ceil(wait / 60)} min.` }, 429);
-  const { password, remember } = await c.req.json().catch(() => ({}));
-  if (!passwordHash() || !verifyPassword(password ?? '', passwordHash())) {
-    loginFailed(ip);
-    await new Promise((r) => setTimeout(r, 400));
-    return c.json({ error: 'Feil passord' }, 401);
-  }
-  loginSucceeded(ip);
-  createSession(c);
-  if (remember) rememberDevice(c, OWNER); else forgetDevice(c);
-  return c.json({ ok: true });
+  const { username, password, remember } = await c.req.json().catch(() => ({}));
+  const r = verifyLogin(username, password, undefined, ip);
+  if (r.needsTotp) return c.json({ needsTotp: true, ticket: createTicket(r.user.id, remember), username: r.user?.username });
+  if (!r.ok) { if (r.status === 401) await sleep(400); return c.json({ error: r.error }, r.status); }
+  finishLogin(c, r.user.id, remember);
+  return c.json({ ok: true, user: r.user });
+}
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+function finishLogin(c, userId, remember) {
+  createSession(c, userId);
+  if (remember) rememberDevice(c, userId); else forgetDevice(c);
+}
+app.post('/api/auth/login', passwordLogin);
+app.post('/api/login', passwordLogin);
+// Steg 2: 6-sifret kode fra autentiseringsappen eller en gjenopprettingskode.
+app.post('/api/auth/totp', async (c) => {
+  const { ticket, code, remember } = await c.req.json().catch(() => ({}));
+  const r = redeemTicket(ticket, code, clientIp(c));
+  if (!r.ok) { await sleep(400); return c.json({ error: r.error, expired: !!r.expired }, r.status); }
+  finishLogin(c, r.user.id, remember ?? r.remember);
+  return c.json({ ok: true, user: r.user });
 });
 
 app.post('/api/logout', (c) => { pauseDevice(c); destroySession(c); return c.json({ ok: true }); });
@@ -100,21 +111,21 @@ export const CV_DEFAULT = {
 };
 const CV_KEYS = Object.keys(CV_DEFAULT);
 
-app.get('/api/cv', (c) => c.json({ cv: { ...CV_DEFAULT, ...kv.get(OWNER, 'cv', {}) }, canEdit: !!sessionUser(c) }));
+app.get('/api/cv', (c) => c.json({ cv: { ...CV_DEFAULT, ...kv.get(OWNER, 'cv', {}) }, canEdit: isAdmin(sessionUser(c)) }));
 
 /* ---------------- Alt under er innlogget ---------------- */
 
 const authed = new Hono();
 authed.use('*', requireAuth);
 
-authed.put('/cv', async (c) => {
+authed.put('/cv', requireAdmin, async (c) => {
   const body = await c.req.json();
   const cv = {};
   for (const k of CV_KEYS) if (typeof body[k] === 'string') cv[k] = body[k].slice(0, 5000);
   kv.set(OWNER, 'cv', cv);
   return c.json({ cv: { ...CV_DEFAULT, ...cv } });
 });
-authed.delete('/cv', (c) => { kv.del(OWNER, 'cv'); return c.json({ cv: CV_DEFAULT }); });
+authed.delete('/cv', requireAdmin, (c) => { kv.del(OWNER, 'cv'); return c.json({ cv: CV_DEFAULT }); });
 
 const DEFAULT_CATS = [
   { name: 'Mat', color: '#8fe0b0' }, { name: 'Transport', color: '#a8d4fb' }, { name: 'Bolig', color: '#f3d38a' },
@@ -126,7 +137,8 @@ authed.get('/state', (c) => {
   const u = c.get('user');
   const layouts = Object.fromEntries(db.prepare("SELECT key, value FROM kv WHERE user=? AND key LIKE 'layout_%'").all(u).map((r) => [r.key.slice(7), JSON.parse(r.value)]));
   return c.json({
-    user: config.userName,
+    user: userInfo(u)?.name ?? config.userName,
+    me: userInfo(u),
     place: cfg('wx_place'),
     bg: kv.get(u, 'bg', 'mane'),
     bgCustom: kv.get(u, 'bg_custom', {}),
@@ -184,14 +196,51 @@ authed.get('/devices', (c) => {
 });
 authed.put('/password', async (c) => {
   const { current, next } = await c.req.json().catch(() => ({}));
-  const ip = clientIp(c);
-  const wait = loginBlocked(ip);
+  const ip = clientIp(c), wait = loginBlocked(ip);
   if (wait) return c.json({ error: `For mange forsøk. Prøv igjen om ${Math.ceil(wait / 60)} min.` }, 429);
-  if (passwordHash() && !verifyPassword(String(current ?? ''), passwordHash())) { loginFailed(ip); return c.json({ error: 'Nåværende passord er feil' }, 403); }
-  if (typeof next !== 'string' || next.length < 8 || next.length > 200) return c.json({ error: 'Nytt passord må ha minst 8 tegn' }, 400);
+  if (!checkPassword(c.get('user'), current)) { loginFailed(ip); return c.json({ error: 'Nåværende passord er feil' }, 403); }
+  try { setPassword(c.get('user'), next, { keepSession: currentSessionId(c) }); } catch (e) { return c.json({ error: e.message }, e.status ?? 400); }
   loginSucceeded(ip);
-  setPasswordHash(hashPassword(next));
   return c.json({ ok: true });
+});
+
+/* --- Brukere, 2FA og innstillinger per bruker --- */
+
+const fail = (c, e) => c.json({ error: e.message }, e.status ?? 400);
+authed.get('/me', (c) => c.json(userInfo(c.get('user'))));
+// Alle innloggede ser listen (brukes også til deling av mapper); bare admin kan endre den.
+authed.get('/users', (c) => c.json({ me: userInfo(c.get('user')), users: listUsers() }));
+authed.post('/users', requireAdmin, async (c) => {
+  try { return c.json(createUser(await c.req.json().catch(() => ({})))); } catch (e) { return fail(c, e); }
+});
+authed.patch('/users/:id', requireAdmin, async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  try { return c.json(updateUser(c.req.param('id'), { role: b.role, password: b.password, name: b.name, resetTotp: !!b.resetTotp })); } catch (e) { return fail(c, e); }
+});
+authed.delete('/users/:id', requireAdmin, (c) => {
+  try { deleteUser(c.req.param('id'), c.get('user')); return c.json({ ok: true }); } catch (e) { return fail(c, e); }
+});
+authed.post('/auth/totp/setup', (c) => { try { return c.json(startTotpSetup(c.get('user'))); } catch (e) { return fail(c, e); } });
+authed.post('/auth/totp/verify', async (c) => {
+  const { code } = await c.req.json().catch(() => ({}));
+  try { return c.json({ ok: true, recoveryCodes: confirmTotpSetup(c.get('user'), code) }); } catch (e) { return fail(c, e); }
+});
+authed.post('/auth/totp/disable', async (c) => {
+  const ip = clientIp(c), wait = loginBlocked(ip);
+  if (wait) return c.json({ error: `For mange forsøk. Prøv igjen om ${Math.ceil(wait / 60)} min.` }, 429);
+  const b = await c.req.json().catch(() => ({}));
+  try { disableTotp(c.get('user'), b); loginSucceeded(ip); return c.json({ ok: true }); } catch (e) { loginFailed(ip); return fail(c, e); }
+});
+// Fritt innhold per bruker (layout, topplinje, nyhetsbar, rekkefølge i sidemenyen, mobilvalg). PUT fletter toppnivånøkler.
+authed.get('/prefs', (c) => c.json(kv.get(c.get('user'), 'prefs', {})));
+authed.put('/prefs', async (c) => {
+  const b = await c.req.json().catch(() => null);
+  if (!b || typeof b !== 'object' || Array.isArray(b)) return c.json({ error: 'Forventet et objekt' }, 400);
+  const next = { ...kv.get(c.get('user'), 'prefs', {}) };
+  for (const [k, v] of Object.entries(b)) { if (!/^[\w.-]{1,64}$/.test(k)) continue; if (v === null) delete next[k]; else next[k] = v; }
+  if (JSON.stringify(next).length > 64_000) return c.json({ error: 'For mye data' }, 413);
+  kv.set(c.get('user'), 'prefs', next);
+  return c.json(next);
 });
 authed.post('/devices/current', (c) => { rememberDevice(c, c.get('user')); return c.json({ ok: true }); });
 authed.delete('/devices/:id', (c) => {
@@ -204,7 +253,7 @@ authed.delete('/devices/:id', (c) => {
 /* --- Integrasjonsinnstillinger --- */
 
 authed.get('/config', (c) => c.json(publicConfig()));
-authed.put('/config', async (c) => {
+authed.put('/config', requireAdmin, async (c) => {
   try { updateConfig(await c.req.json()); } catch (e) { return c.json({ error: e.message }, 400); }
   return c.json(publicConfig());
 });
@@ -366,6 +415,7 @@ authed.get('/space/gallery/:key', proxy((c) => {
   return api.getGallery(key);
 }));
 
+app.route('/api/ui', uiApi);
 app.route('/api', authed);
 app.route('/home/api', homeApi);
 app.route('/mat/api', matApi);

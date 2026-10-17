@@ -2,6 +2,7 @@
 // Alle beløp lagres som heltall i øre for å unngå avrundingsfeil. Negativt = ut.
 import { copyFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import { db, OWNER, kv } from '../db.js';
 import { config } from '../config.js';
 
@@ -160,7 +161,65 @@ for (const t of ['fh_transactions', 'fh_receipts']) { addCol(t, 'ai_short', 'TEX
 addCol('fh_transactions', 'ai_done', 'INTEGER NOT NULL DEFAULT 0');
 addCol('fh_receipts', 'name', 'TEXT');          // opprinnelig filnavn (opplastingskøen)
 addCol('fh_receipts', 'started', 'INTEGER');    // når AI-en begynte, for fremdrift
-addCol('fh_receipts', 'target', 'TEXT');        // 'sub' | 'folder:<id>' – hva kvitteringen ble lastet opp for
+addCol('fh_receipts', 'target', 'TEXT');        // 'sub' | 'folder:<id>[:<bruker>]' – hva kvitteringen ble lastet opp for
+// Prompt 05: tokens per bruker med utløp, abonnement hvert 2. år, boligmapper med roller, prosjekter og regninger.
+addCol('fh_tokens', 'user_id', 'TEXT');
+addCol('fh_tokens', 'expires', 'INTEGER');      // ms, null = aldri
+addCol('fh_folders', 'type', "TEXT NOT NULL DEFAULT 'Annet'");   // Enebolig | Leilighet | Hytte | Utleie | Annet
+addCol('fh_folders', 'address', "TEXT NOT NULL DEFAULT ''");
+addCol('fh_folders', 'owner_id', 'TEXT');
+addCol('fh_folders', 'split', "TEXT NOT NULL DEFAULT 'equal'");  // 'equal' eller JSON {medlemsnavn: vekt}
+addCol('fh_folder_members', 'user_id', 'TEXT');                   // null = navngitt person uten innlogging
+addCol('fh_folder_entries', 'category', 'TEXT');
+addCol('fh_folder_entries', 'project_id', 'INTEGER');
+db.exec(`
+CREATE TABLE IF NOT EXISTS fh_folder_projects (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  folder_id INTEGER NOT NULL REFERENCES fh_folders(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  vendor TEXT NOT NULL DEFAULT '',
+  budget INTEGER NOT NULL DEFAULT 0,           -- øre
+  category TEXT NOT NULL DEFAULT 'Håndverker',
+  created INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS fh_project_installments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  project_id INTEGER NOT NULL REFERENCES fh_folder_projects(id) ON DELETE CASCADE,
+  label TEXT NOT NULL,
+  due TEXT,                                    -- ISO-dato eller fritekst («ca. 15.12»)
+  amount INTEGER NOT NULL,                     -- øre
+  paid_at INTEGER,
+  entry_id INTEGER REFERENCES fh_folder_entries(id) ON DELETE SET NULL,
+  sort INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS fh_folder_bills (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  folder_id INTEGER NOT NULL REFERENCES fh_folders(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,                          -- leverandør, f.eks. Fjordkraft
+  category TEXT NOT NULL,
+  freq TEXT NOT NULL DEFAULT 'Månedlig',
+  payer TEXT,
+  next_due TEXT
+);
+CREATE TABLE IF NOT EXISTS fh_backups (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  file TEXT NOT NULL,
+  kind TEXT NOT NULL,                          -- smb | json | xlsx
+  size INTEGER,
+  status TEXT NOT NULL,                        -- ok | failed | running
+  error TEXT,
+  created INTEGER NOT NULL
+);
+`);
+// Eldre mapper: eieren er den innloggede eieren, og «member» blir «Kan redigere».
+// Kjøres én gang: bare den første eieren i hver mappe (den som opprettet den) kobles til eier-kontoen.
+if (!kv.get(OWNER, 'fh_mig_05', false)) {
+  db.prepare("UPDATE fh_folder_members SET role='editor' WHERE role='member'").run();
+  db.prepare(`UPDATE fh_folder_members SET user_id=? WHERE user_id IS NULL AND id IN (SELECT min(id) FROM fh_folder_members WHERE role='owner' GROUP BY folder_id)
+    AND NOT EXISTS (SELECT 1 FROM fh_folder_members x WHERE x.folder_id=fh_folder_members.folder_id AND x.user_id=?)`).run(OWNER, OWNER);
+  db.prepare('UPDATE fh_folders SET owner_id=? WHERE owner_id IS NULL').run(OWNER);
+  kv.set(OWNER, 'fh_mig_05', true);
+}
 
 export const DEFAULT_CATEGORIES = [
   ['Mat og dagligvarer', '#FF9F5A', 'expense'], ['Restaurant og kafé', '#F2C14E', 'expense'], ['Transport og lading', '#7AA7FF', 'expense'],
@@ -177,14 +236,39 @@ export const DEFAULT_SETTINGS = {
   geminiModel: process.env.GEMINI_MODEL ?? 'gemini-2.5-flash', minConf: Math.round(Number(process.env.AI_MIN_CONFIDENCE ?? 0.85) * 100),
   autoCat: true, n80: true, n100: true, nRc: true, nFast: true, csvProfile: 'DNB', aiSummaries: true,
   imapHost: '', imapUser: '', imapFolder: 'INBOX',
+  // Aksjer (Trading 212). Nøkkel og secret ligger i hemmelighetene.
+  t212Env: process.env.TRADING212_ENV === 'demo' ? 'demo' : 'live',
+  // AI-søk: embeddings er valgfrie (Ollama-modell, f.eks. nomic-embed-text). Uten dem brukes bare BM25.
+  embedModel: process.env.OLLAMA_EMBED_MODEL ?? '', aiSearchEmbed: false,
+  // Backup til SMB-share. Passord og passfrase ligger i hemmelighetene.
+  smbOn: false, smbShare: process.env.SMB_SHARE ?? '', smbDir: 'finanshub', smbVersion: '3.1.1', smbUser: process.env.SMB_USER ?? '', smbDomain: 'WORKGROUP',
+  smbSchedule: 'off', smbKeep: 14, smbDb: true, smbReceipts: true, smbSettings: true, smbEncrypt: true,
 };
 
 export function settings() { return { ...DEFAULT_SETTINGS, ...kv.get(OWNER, 'fh_settings', {}) }; }
 export function saveSettings(patch) { kv.set(OWNER, 'fh_settings', { ...kv.get(OWNER, 'fh_settings', {}), ...patch }); }
 
-// Hemmeligheter for FinansHub (Gemini-nøkkel) lagres separat og sendes aldri ut.
-export const secret = (k) => kv.get(OWNER, 'fh_secret', {})[k] || process.env[{ geminiKey: 'GEMINI_API_KEY', imapPass: 'FINN_IMAP_PASSWORD' }[k]] || '';
-export function setSecret(k, v) { const s = kv.get(OWNER, 'fh_secret', {}); if (v) s[k] = v; else delete s[k]; kv.set(OWNER, 'fh_secret', s); }
+// Hemmeligheter for FinansHub (Gemini, Trading 212, SMB, IMAP) lagres separat, kryptert med AES-256-GCM, og sendes aldri ut.
+// Nøkkelen avledes fra SECRET_KEY (eller SESSION_SECRET). Byttes den, må hemmelighetene legges inn på nytt.
+const SECRET_ENV = { geminiKey: 'GEMINI_API_KEY', imapPass: 'FINN_IMAP_PASSWORD', t212Key: 'TRADING212_API_KEY', t212Secret: 'TRADING212_API_SECRET', smbPass: 'SMB_PASSWORD', backupPhrase: 'BACKUP_PASSPHRASE' };
+const sealKey = () => createHash('sha256').update('fh-secret:' + (process.env.SECRET_KEY || config.sessionSecret || 'dev')).digest();
+export function seal(text) {
+  const iv = randomBytes(12), c = createCipheriv('aes-256-gcm', sealKey(), iv);
+  const enc = Buffer.concat([c.update(String(text), 'utf8'), c.final()]);
+  return 'enc:' + Buffer.concat([iv, c.getAuthTag(), enc]).toString('base64');
+}
+export function unseal(v) {
+  if (typeof v !== 'string' || !v.startsWith('enc:')) return v ?? '';
+  try {
+    const b = Buffer.from(v.slice(4), 'base64'), d = createDecipheriv('aes-256-gcm', sealKey(), b.subarray(0, 12));
+    d.setAuthTag(b.subarray(12, 28));
+    return Buffer.concat([d.update(b.subarray(28)), d.final()]).toString('utf8');
+  } catch { return ''; }
+}
+export const secret = (k) => unseal(kv.get(OWNER, 'fh_secret', {})[k]) || process.env[SECRET_ENV[k]] || '';
+export function setSecret(k, v) { const s = kv.get(OWNER, 'fh_secret', {}); if (v) s[k] = seal(v); else delete s[k]; kv.set(OWNER, 'fh_secret', s); }
+// Hemmeligheter fra før krypteringen kom inn krypteres ved oppstart.
+{ const s = kv.get(OWNER, 'fh_secret', {}); let ch = false; for (const [k, v] of Object.entries(s)) if (v && !String(v).startsWith('enc:')) { s[k] = seal(v); ch = true; } if (ch) kv.set(OWNER, 'fh_secret', s); }
 
 // Første oppstart: kategorier og regler, og flytt gamle kvitteringer fra den enkle Økonomi-fanen inn som transaksjoner.
 if (!db.prepare('SELECT 1 FROM fh_categories LIMIT 1').get()) {
@@ -220,4 +304,4 @@ function migrateOldReceipts() {
   console.log(`[finans] Flyttet ${old.length} kvitteringer fra den gamle Økonomi-fanen.`);
 }
 
-export { db, OWNER };
+export { db, OWNER, kv };

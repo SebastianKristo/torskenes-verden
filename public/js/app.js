@@ -3,7 +3,8 @@ import { store, on, load, mountAll } from './store.js';
 import { setupDnd, resetLayouts } from './dnd.js';
 import { applyBackground, preloadAll } from './background.js';
 import { openSettings, bindSettings, applyTop } from './settings.js';
-import { bindPopup, bindSearch, menuLabels, toggle } from './extras.js';
+import { bindPopup, bindSearch, menuLabels, toggle, renderTicker } from './extras.js';
+import { applyHead, toggleHeadEdit, uiDefaults } from './topedit.js';
 import * as dash from './dash.js';
 import * as study from './study.js';
 import * as space from './space.js';
@@ -56,6 +57,7 @@ function bindShell() {
     if (act === 'reset-layout') await resetLayouts();
     if (act === 'toggle-search') await toggle('search');
     if (act === 'toggle-news') await toggle('news');
+    if (act === 'head-edit') toggleHeadEdit();
     if (act === 'logout') { await api('/logout', { method: 'POST' }).catch(() => {}); location.href = '/login'; }
   });
   window.addEventListener('hashchange', renderRoute);
@@ -63,7 +65,9 @@ function bindShell() {
 }
 
 async function main() {
-  store.me = await api('/state');
+  const [me, ui] = await Promise.all([api('/state'), api('/ui').catch(() => uiDefaults())]);
+  store.me = me;
+  store.me.ui = { ...uiDefaults(), ...ui };
   document.getElementById('menu-name').textContent = store.me.user;
   document.getElementById('avatar').textContent = store.me.user[0] ?? 'S';
   menuLabels();
@@ -74,6 +78,8 @@ async function main() {
   setupDnd(document.querySelector('header'));
   study.bind(view); space.bind(view); home.bind(view); mat.bind(view); domains.bind(view);
   applyTop();
+  applyHead();
+  renderTicker();
   preloadAll();
   applyBackground();
   renderRoute();

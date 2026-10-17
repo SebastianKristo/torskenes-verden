@@ -4,9 +4,10 @@ import {
   render, toast, loadBoot, loadSummary, loadTx, loadReceipts, loadRecurring, loadReport, loadAi, catById, cats, accs, uploadReceipt,
   smooth, spark, conic, icon, logo, aiLine,
 } from './core.js';
-import { MODULE_PAGES, MODULE_SUB, MODULE_FN, MODULE_LOADERS, bindModules } from './modules.js';
+import { MODULE_PAGES, MODULE_SUB, MODULE_FN, MODULE_LOADERS, bindModules, backupTab, firstRunCard, loadBackup } from './modules.js';
 
 const BASE_PAGES = [['ov', 'Oversikt'], ['tx', 'Transaksjoner'], ['kv', 'Kvitteringer'], ['bud', 'Budsjett'], ['fast', 'Faste utgifter'], ['konto', 'Kontoer'], ['rap', 'Rapporter'], ['inn', 'Innstillinger']];
+const NAV_DEFAULT = ['ov', 'tx', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'imp', 'inn'];
 const PAGES = [...BASE_PAGES, ...MODULE_PAGES];
 const ACC_TYPES = { checking: 'Brukskonto', savings: 'Sparekonto', credit: 'Kredittkort', cash: 'Kontanter' };
 const KINDS = { expense: 'Utgift', income: 'Inntekt', transfer: 'Overføring' };
@@ -22,44 +23,69 @@ const accOpts = (sel, empty) => (empty ? opt('', empty, sel) : '') + accs().map(
 
 /* ===================== Skall ===================== */
 
+// Rekkefølgen i sidemenyen er personlig (lagres på serveren). «Endre» gir dra-og-slipp og ▲▼.
+const navOrder = () => (S.boot.restricted ? ['dir'] : (u.navEdit ?? S.boot.nav ?? NAV_DEFAULT)).filter((p) => PAGES.some(([x]) => x === p));
+function sideNav() {
+  const b = S.boot, edit = !!u.navEdit;
+  const items = navOrder().map((p) => PAGES.find(([x]) => x === p)).map(([p, label], i, all) => {
+    const inner = `${icon(p, 18, 'currentColor')}<span>${label}</span>${p === 'kv' && b.reviewCount && !edit ? `<span class="badge">${b.reviewCount}</span>` : ''}`;
+    if (!edit) return `<a href="#/${p}" ${p === u.page ? 'aria-current="page"' : ''}>${inner}</a>`;
+    return `<div class="nav-edit${u.navDrag === p ? ' dragging' : ''}" draggable="true" data-nav-item="${p}">${inner}<span class="nav-arrows"><button type="button" data-nav-move="${p}:-1" aria-label="Flytt ${label} opp" ${i ? '' : 'disabled'}>▲</button><button type="button" data-nav-move="${p}:1" aria-label="Flytt ${label} ned" ${i < all.length - 1 ? '' : 'disabled'}>▼</button></span></div>`;
+  }).join('');
+  return `<div class="side-head"><span class="side-label" style="padding:0">${b.restricted ? 'Delt med deg' : 'Generelt'}</span>${b.restricted ? '' : `<button class="nav-btn${edit ? ' on' : ''}" data-act="nav-edit" title="Endre rekkefølge">${edit ? 'Ferdig' : 'Endre'}</button>`}</div>
+    <nav class="nav">${items}</nav>
+    ${edit ? '<div class="nav-help">Dra punktene eller bruk pilene.<button data-act="nav-reset">Tilbakestill rekkefølge</button></div>' : ''}`;
+}
+
+// ✦ AI-søk: svar med sammendrag og treff fra transaksjoner, kvitteringer og varelinjer.
+function aiPanel() {
+  const a = u.ai;
+  if (!a) return '';
+  const hits = (a.hits ?? []).map((h) => `<button class="ai-hit" ${h.txId ? `data-open-tx="${h.txId}"` : h.receiptId ? `data-open-rc="${esc(h.receiptId)}"` : ''}><span class="dot" style="background:${esc(h.color ?? '#A0A0AA')}"></span>
+    <span class="grow"><span style="font-weight:500">${esc(h.description)}</span> <span class="note" style="font-size:12.5px">· ${dd(h.date)} · ${esc(h.source)}</span><span class="ai-why">${esc(h.reason ?? '')}</span></span>
+    <span class="mono" style="white-space:nowrap">${h.amount != null ? sgn(h.amount) + ' kr' : '–'}</span></button>`).join('');
+  return `<section class="card ai-panel"><div class="card-h" style="align-items:flex-start"><div style="min-width:0"><div class="ai-k">✦ AI-SØK · ${esc(a.engine ?? (S.boot.settings.provider === 'ollama' ? 'Ollama' : 'Gemini'))}</div>${a.q ? `<div class="ai-q">${esc(a.q)}</div>` : '<div class="ai-q">Spør om økonomien din på vanlig norsk</div>'}</div><button class="x-btn" data-act="ai-close" aria-label="Lukk">×</button></div>
+    ${a.busy ? '<div class="sub" style="font-size:14px"><span class="spin" style="width:14px;height:14px;display:inline-block;vertical-align:-2px;margin-right:8px"></span>Leser transaksjoner, kvitteringer og varelinjer …</div>' : ''}
+    ${a.answer ? `<div class="ai-a">${esc(a.answer)}</div>` : ''}${hits ? `<div class="ai-hits">${hits}</div>` : ''}
+    ${(a.suggestions ?? []).length ? `<div class="ai-sugg">${a.suggestions.map((g) => `<button data-ai-q="${esc(g)}">${esc(g)}</button>`).join('')}</div>` : ''}</section>`;
+}
+
 function shell(content) {
   const b = S.boot, st = b.settings;
   const pg = PAGES.find(([p]) => p === u.page);
   const ai = S.ai, prov = st.provider;
   const aiOk = ai ? (prov === 'ollama' ? ai.ollama.ok : ai.gemini.ok) : null;
-  const navItem = ([p, label]) => `<a href="#/${p}" ${p === u.page ? 'aria-current="page"' : ''}>${icon(p, 18, 'currentColor')}<span>${label}</span>${p === 'kv' && b.reviewCount ? `<span class="badge">${b.reviewCount}</span>` : ''}</a>`;
-  const nav = BASE_PAGES.filter(([p]) => p !== 'inn').map(navItem).join('');
-  const modNav = MODULE_PAGES.map(navItem).join('') + navItem(BASE_PAGES.find(([p]) => p === 'inn'));
+  const me = b.me ?? { name: st.name, role: 'admin' };
+  const aiMode = !!u.aiMode;
   return `<div class="app">
   <aside class="side" aria-label="FinansHub-meny">
     <div class="brand"><div class="brand-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M4 19h16M8 15l4-4 3 3 5-6"/></svg></div><div class="brand-t">Finans<span>Hub</span></div></div>
-    <div class="side-label">Generelt</div>
-    <nav class="nav">${nav}</nav>
-    <div class="side-label">Moduler</div>
-    <nav class="nav">${modNav}</nav>
-    <div class="ai-box"><div class="side-label" style="padding:0">AI-motor</div>
+    ${sideNav()}
+    ${b.restricted ? '' : `<div class="ai-box"><div class="side-label" style="padding:0">AI-motor</div>
       <div style="display:flex;align-items:center;gap:8px;font-weight:600"><span class="ai-dot ${aiOk === null ? 'unk' : aiOk ? '' : 'off'}"></span>${prov === 'ollama' ? 'Ollama · lokalt' : 'Gemini · sky'}</div>
-      <div class="note" style="font-size:12px">${prov === 'ollama' ? `${esc(st.ollamaModel)} · reserve: ${st.fallback ? 'Gemini' : 'ingen'}` : esc(st.geminiModel)}${aiOk === false ? ' · <span class="neg">ikke tilgjengelig</span>' : ''}</div></div>
+      <div class="note" style="font-size:12px">${prov === 'ollama' ? `${esc(st.ollamaModel)} · reserve: ${st.fallback ? 'Gemini' : 'ingen'}` : esc(st.geminiModel)}${aiOk === false ? ' · <span class="neg">ikke tilgjengelig</span>' : ''}</div></div>`}
   </aside>
   <main class="main"><div class="wrap">
     <header class="head">
-      <div><div class="crumb"><span>FinansHub</span><span>›</span><b>${pg[1]}</b></div><h1>${u.page === 'ov' ? `${greet()}, ${esc(st.name)}` : pg[1]}</h1>${MODULE_SUB[u.page] ? `<div class="note" style="font-size:14px;margin-top:4px">${MODULE_SUB[u.page]}</div>` : ''}</div>
+      <div><div class="crumb"><span>FinansHub</span><span>›</span><b>${pg[1]}</b></div><h1>${u.page === 'ov' ? `${greet()}, ${esc(me.name)}` : pg[1]}</h1>${MODULE_SUB[u.page] ? `<div class="note" style="font-size:14px;margin-top:4px">${MODULE_SUB[u.page]}</div>` : ''}</div>
       <div class="head-r">
-        <form class="search" data-form="gsearch" role="search">${icon('search', 17, 'var(--muted)')}<input name="q" value="${esc(u.q)}" placeholder="Søk i transaksjoner …" aria-label="Søk i transaksjoner"><span class="kbd">⌘K</span></form>
-        <a class="icon-btn" href="#/kv" aria-label="Varsler: ${b.reviewCount} kvitteringer til gjennomgang">${icon('bell', 18)}${b.reviewCount ? '<span class="dot"></span>' : ''}</a>
-        <div class="me"><div class="av">${esc(ini(st.name))}</div><div class="me-n"><div>${esc(st.name)}</div><div>Privat</div></div></div>
+        ${b.restricted ? '' : `<form class="search${aiMode ? ' ai' : ''}" data-form="gsearch" role="search">${aiMode ? '<span class="ai-star">✦</span>' : icon('search', 17, 'var(--muted)')}<input name="q" value="${esc(aiMode ? (u.aiDraft ?? '') : u.q)}" placeholder="${aiMode ? 'Spør, f.eks. «strøm i september»' : 'Søk i transaksjoner …'}" aria-label="${aiMode ? 'Spør AI om transaksjoner og kvitteringer' : 'Søk i transaksjoner'}"><button type="button" class="ai-tog" data-act="ai-toggle" aria-pressed="${aiMode}" title="Søk med AI i transaksjoner og kvitteringer">✦ AI</button></form>
+        <a class="icon-btn" href="#/kv" aria-label="Varsler: ${b.reviewCount} kvitteringer til gjennomgang">${icon('bell', 18)}${b.reviewCount ? '<span class="dot"></span>' : ''}</a>`}
+        <div class="me"><div class="av">${esc(ini(me.name))}</div><div class="me-n"><div>${esc(me.name)}</div><div>${me.role === 'admin' ? 'Privat' : 'Delte mapper'}</div></div></div>
         <a class="close" href="/#/dash" aria-label="Tilbake til Hjem" title="Tilbake til Hjem">×</a>
       </div>
     </header>
+    ${aiPanel()}
     ${content}
   </div></main></div>${modalHtml()}`;
 }
 
 /* ===================== Oversikt ===================== */
 
+// Beløpet står alltid på én linje med «kr» rett etter; minigrafen ligger under, ved siden av notatet.
 function kpi(label, iconK, icBg, icFg, value, noteHtml, art) {
   return `<div class="card kpi"><div class="kpi-h"><div><span class="kpi-ic" style="background:${icBg};color:${icFg}">${icon(iconK, 16)}</span><span class="sub">${label}</span></div></div>
-    <div class="kpi-b"><div><div class="big">${value}<small> kr</small></div><div class="note">${noteHtml}</div></div>${art}</div></div>`;
+    <div class="big">${value}<small> kr</small></div><div class="kpi-b"><div class="note">${noteHtml}</div><div class="kpi-art">${art}</div></div></div>`;
 }
 const change = (cur, prev, goodDown) => {
   const p = pctChange(cur, prev);
@@ -100,21 +126,24 @@ const txRow = (t) => `<button class="tx-row" data-open-tx="${t.id}">${logo(t, 38
 
 const paper = (r) => `<span class="paper${r.thumb ? ' img' : ''}" style="${r.thumb ? `background-image:url('${r.thumb}')` : ''}"><i></i><i></i><i></i><i></i></span>`;
 
+const pctOf = (s) => (s.budgetTotal ? Math.min(1, s.budgetUsed / s.budgetTotal) : 0);
+
 function overview() {
   const s = S.summary;
   if (!s) return skel(400);
   const st = S.boot.settings;
   const bal = s.balanceSeries, mxB = Math.max(...bal.map(Math.abs), 1);
-  const saldoBars = bal.slice(-18).map((v) => `<i style="width:3px;height:${Math.max(4, (Math.abs(v) / mxB) * 46)}px"></i>`).join('');
+  const saldoBars = bal.slice(-18).map((v) => `<i style="flex:1 1 0;min-width:0;height:${Math.max(4, (Math.abs(v) / mxB) * 46)}px"></i>`).join('');
   const innSp = spark(s.series.slice(-8).map((r) => r.inn));
   const days = s.dailyOut.slice(-12), mxD = Math.max(...days.map((d) => d.amount), 1);
-  const utBars = days.map((d) => `<i style="width:5px;opacity:.9;height:${Math.max(3, (d.amount / mxD) * 46)}px" title="${dd(d.date)}: ${n0(d.amount)} kr"></i>`).join('');
-  const pct = s.budgetTotal ? Math.min(1, s.budgetUsed / s.budgetTotal) : 0;
+  const utBars = days.map((d) => `<i style="flex:1 1 0;min-width:0;opacity:.9;height:${Math.max(3, (d.amount / mxD) * 46)}px" title="${dd(d.date)}: ${n0(d.amount)} kr"></i>`).join('');
+  const ang = Math.PI * (1 - pctOf(s)), gx = 50 + 40 * Math.cos(ang), gy = 44 - 40 * Math.sin(ang);
+  const pct = pctOf(s);
   const kpis = `<div class="kpis">
     ${kpi('Total saldo', 'wallet', '#2A1A12', '#FFB08A', neg(s.balance), change(bal.at(-1), bal.at(-2)), `<div class="bars">${saldoBars}</div>`)}
-    ${kpi(`Inn i ${monthName(s.month)}`, 'up', '#142032', '#9DBDFF', n2(s.inn), s.lastIncome ? `${esc(s.lastIncome.description)} ${dd(s.lastIncome.date)}` : 'Ingen inntekt registrert', `<svg width="96" height="46" viewBox="0 0 96 46" fill="none" aria-hidden="true"><path d="${innSp.area}" fill="rgba(122,167,255,.16)"/><path d="${innSp.line}" stroke="#7AA7FF" stroke-width="2" stroke-linecap="round"/></svg>`)}
+    ${kpi(`Inn i ${monthName(s.month)}`, 'up', '#142032', '#9DBDFF', n2(s.inn), s.lastIncome ? `${esc(s.lastIncome.description)} ${dd(s.lastIncome.date)}` : 'Ingen inntekt registrert', `<svg width="96" height="46" viewBox="0 0 96 46" fill="none" preserveAspectRatio="none" aria-hidden="true"><path d="${innSp.area}" fill="rgba(122,167,255,.16)"/><path d="${innSp.line}" stroke="#7AA7FF" stroke-width="2" stroke-linecap="round"/></svg>`)}
     ${kpi(`Brukt i ${monthName(s.month)}`, 'dn', '#2A1A12', '#FFB08A', n2(s.ut), change(s.ut, s.prevUt, true), `<div class="bars" style="gap:3px">${utBars}</div>`)}
-    ${kpi('Igjen av budsjett', 'pie', '#13201B', '#9FE3C6', neg(s.left), s.budgetTotal ? `${n0(pct * 100)} % brukt · ${s.daysLeft} dager igjen` : '<a href="#/bud">Sett opp budsjett</a>', `<svg width="96" height="54" viewBox="0 0 100 56" fill="none" aria-hidden="true"><path d="M10 50A40 40 0 0 1 90 50" stroke="#24242A" stroke-width="10" stroke-linecap="round"/><path d="M10 50A40 40 0 0 1 90 50" stroke="${pct >= 1 ? '#FF7A3D' : pct > 0.8 ? '#F2C14E' : '#FF7A3D'}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${pct * 125.7} 200"/><circle cx="50" cy="50" r="5" fill="#F2F2F4"/></svg>`)}
+    ${kpi('Igjen av budsjett', 'pie', '#13201B', '#9FE3C6', neg(s.left), s.budgetTotal ? `${n0(pct * 100)} % brukt · ${s.daysLeft} dager igjen` : '<a href="#/bud">Sett opp budsjett</a>', `<svg width="96" height="46" viewBox="0 0 100 48" fill="none" aria-hidden="true"><path d="M10 44A40 40 0 0 1 90 44" stroke="#24242A" stroke-width="8" stroke-linecap="round"/><path d="M10 44A40 40 0 0 1 90 44" stroke="${pct >= 1 ? '#FF7A3D' : pct > 0.8 ? '#F2C14E' : '#FF7A3D'}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${pct * 125.7} 200"/><circle cx="${gx.toFixed(1)}" cy="${gy.toFixed(1)}" r="3" fill="#F2F2F4"/></svg>`)}
   </div>`;
   const a = accs(), credit = a.find((x) => x.type === 'credit'), main = a.find((x) => x.type === 'checking') ?? a[0];
   const accCard = card(`<div class="card-h"><h2>Kontoer</h2><a class="btn sm pri" href="#/konto">Se alle</a></div>
@@ -133,11 +162,13 @@ function overview() {
     <span class="note" style="display:block;font-size:12px">${dd(r.date)} · ${r.status === 'needs_review' ? esc(r.provider ?? 'manuell') : 'Leser …'}</span>
     <span style="display:block;font-size:12px;color:${r.flag || r.error ? 'var(--acc-l)' : r.status === 'needs_review' ? 'var(--pos)' : 'var(--blue-l)'}">${r.status !== 'needs_review' ? 'Leses av AI …' : r.error ? 'Må fylles ut manuelt' : r.flag ?? 'Alle felt lest sikkert'}</span></span></button>`).join('');
   const up = s.upcoming.slice(0, 4).map((r) => `<div class="kv-line" style="align-items:center"><div><div style="font-weight:500">${esc(r.name)}</div><div class="note" style="font-size:12px">Trekkes ${new Date(r.next + 'T12:00').toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }).replace('.', '')}</div></div><div class="mono" style="font-weight:500">${n0(r.amount)} kr</div></div>`).join('');
-  const actions = [['Skann kvittering', '#2A1A12', '#FFB08A', 'scan', 'href="#/kv"'], ['Ny transaksjon', '#142032', '#9DBDFF', 'plus', 'data-act="add-tx"'], ['Importer CSV', '#13201B', '#9FE3C6', 'down', 'data-act="goto-import"'], ['Rapport', '#221A30', '#C9B6FF', 'rap', 'href="#/rap"']]
+  // På PC lastes kvitteringer opp fra filer (ingen kamera).
+  const actions = `<label class="action" style="background:#2A1A12;color:var(--text);cursor:pointer"><span style="color:#FFB08A">${icon('down', 17)}</span>Last opp kvittering<input type="file" multiple accept="image/*,application/pdf" data-upload hidden></label>`
+    + [['Ny transaksjon', '#142032', '#9DBDFF', 'plus', 'data-act="add-tx"'], ['Importer', '#13201B', '#9FE3C6', 'imp', 'href="#/imp"'], ['Rapport', '#221A30', '#C9B6FF', 'rap', 'href="#/rap"']]
     .map(([n, bg, c, ic, at]) => `<${at.startsWith('href') ? 'a' : 'button'} class="action" ${at} style="background:${bg};color:var(--text)"><span style="color:${c}">${icon(ic, 17)}</span>${n}</${at.startsWith('href') ? 'a' : 'button'}>`).join('');
-  const noData = !S.boot.hasData ? card(`<div class="card-h"><div><h2>Kom i gang</h2><div class="note">Legg til en konto, importer CSV fra nettbanken eller skann en kvittering. Du kan også laste inn demodata for å se hvordan alt ser ut.</div></div>
+  const noData = !S.boot.hasData ? card(`<div class="card-h"><div><h2>Kom i gang</h2><div class="note">Legg til en konto, importer fra nettbanken eller last opp en kvittering. Du kan også laste inn demodata for å se hvordan alt ser ut.</div></div>
     <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn" href="#/konto">Legg til konto</a><button class="btn" data-act="goto-import">Importer CSV</button><button class="btn pri" data-act="demo">Last inn demodata</button></div></div>`, '', 'border-color:#3A2A1C') : '';
-  return `<div style="display:flex;flex-direction:column;gap:18px">${noData}${kpis}
+  return `<div style="display:flex;flex-direction:column;gap:18px">${S.boot.firstRun ? firstRunCard() : noData}${kpis}
     <div class="row-flex">${card(`<div class="card-h"><div><h2>Inn og ut</h2><div class="note" style="font-size:13px">${u.mode === 'year' ? `Akkumulert, ${s.month.slice(0, 4)}` : 'Per måned, siste 12 måneder'}</div></div>
       <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap"><div class="legend"><span><i style="background:var(--warn)"></i>Inn</span><span><i style="background:var(--acc)"></i>Ut</span></div>
       <div class="seg"><button data-mode="month" aria-pressed="${u.mode === 'month'}">Måned</button><button data-mode="year" aria-pressed="${u.mode === 'year'}">År</button></div></div></div>${chart(s)}`, '', 'flex:2 1 560px')}${accCard}</div>
@@ -209,12 +240,12 @@ function receipts() {
   const R = all.find((r) => r.id === u.selRc);
   const qHtml = queue.map((r) => { const [label, bg, fg] = STATUS[r.status]; return `<button class="rq${r.id === u.selRc ? ' sel' : ''}" data-open-rc="${r.id}">${paper(r)}<span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><b class="ell" style="font-weight:600">${esc(r.merchant ?? 'Ny kvittering')}</b><span class="mono">${r.total != null ? n2(r.total) + ' kr' : ''}</span></span><span class="note" style="display:block;font-size:12px">${dd(r.date)} · ${esc(r.provider ?? aiShort)}</span>${aiLine(r.aiShort, 'd-ai ell')}</span><span class="status" style="background:${bg};color:${fg}">${label}</span></button>`; }).join('');
   let panel;
-  if (!R) panel = '<div class="empty" style="padding:80px 20px">Velg en kvittering i køen, eller skann en ny.</div>';
+  if (!R) panel = '<div class="empty" style="padding:80px 20px">Velg en kvittering i køen, eller last opp en ny.</div>';
   else if (R.status === 'pending' || R.status === 'processing') panel = `<div style="padding:80px 20px;display:flex;flex-direction:column;align-items:center;gap:14px" class="sub"><span class="spin"></span>Leser kvitteringen med ${aiShort} …<button class="btn sm ghost" data-act="rc-manual">Fyll ut manuelt i stedet</button></div>`;
   else panel = confirmPanel(R);
   return `<div class="row-flex">
     <div style="flex:1 1 340px;min-width:0;display:flex;flex-direction:column;gap:16px">
-      <label class="drop" data-drop><span class="drop-ic">${icon('scan', 24, 'currentColor')}</span><b style="font-size:15px;font-weight:600">Skann eller last opp kvittering</b><span class="note" style="font-size:13px">Bilde eller PDF · dra hit eller klikk · leses av ${aiShort}</span><input type="file" accept="image/*,application/pdf" capture="environment" multiple data-upload hidden></label>
+      <label class="drop" data-drop><span class="drop-ic">${icon('scan', 24, 'currentColor')}</span><b style="font-size:15px;font-weight:600">Last opp kvitteringer</b><span class="note" style="font-size:13px">Bilder eller PDF · flere filer · dra hit eller klikk · leses av ${aiShort}</span><input type="file" accept="image/*,application/pdf" multiple data-upload hidden></label>
       ${card(`<div class="card-h"><h2 style="font-size:16px">Kø</h2><span class="note" style="font-size:12.5px">${queue.length} til gjennomgang</span></div>${qHtml || '<div class="note">Ingen kvitteringer i køen.</div>'}`, '', 'padding:20px;gap:8px')}
       ${card(`<h2 style="font-size:16px">Bokført</h2><div>${booked.map((r) => `<div class="kv-line" style="font-size:13.5px"><button class="link" style="color:var(--text);text-align:left" data-open-rc="${r.id}">${esc(r.merchant ?? '–')} ${r.aiShort ? `<span class="acc-l" style="font-size:12px">✦ ${esc(r.aiShort)}</span> ` : ''}<span class="muted">· ${dd(r.date)}</span></button><span class="mono" style="color:${r.status === 'rejected' ? 'var(--muted)' : 'var(--text)'}">${r.status === 'rejected' ? 'Avvist' : n2(r.total) + ' kr'}</span></div>`).join('') || '<div class="note">Ingen ennå.</div>'}</div>`, '', 'padding:20px;gap:2px')}
     </div>
@@ -353,7 +384,7 @@ function reports() {
 /* ===================== Innstillinger ===================== */
 
 const SET_TABS = [['gen', 'Generelt', 'Navn, valuta, måned'], ['ai', 'AI-motor', 'Ollama eller Gemini'], ['cat', 'Kategorier', 'Farger og typer'], ['rule', 'Regler', 'Auto-kategorisering'],
-  ['bank', 'Bank og import', 'CSV og PSD2'], ['varsel', 'Varsler', 'Budsjett og kvitteringer'], ['mobil', 'Mobil og tilgang', 'App-tokens og snarveier'], ['data', 'Data', 'Eksport og backup']];
+  ['bank', 'Bank og import', 'CSV og PSD2'], ['varsel', 'Varsler', 'Budsjett og kvitteringer'], ['mobil', 'Mobil og tilgang', 'App-tokens og snarveier'], ['data', 'Backup og data', 'Nedlasting, SMB-share og gjenoppretting']];
 
 function settingsPage() {
   const st = S.boot.settings, t = u.setTab, cur = SET_TABS.find((x) => x[0] === t);
@@ -396,18 +427,20 @@ function settingsPage() {
   else if (t === 'varsel') body = `<div style="display:flex;flex-direction:column;gap:8px">${[['autoCat', 'Auto-kategorisering', 'Bruk regler og AI-forslag'], ['aiSummaries', '✦ AI-sammendrag', 'Kort og lang beskrivelse av hver post, laget i bakgrunnen'], ['n80', 'Varsel ved 80 % av budsjett', 'Per kategori'], ['n100', 'Varsel når budsjett er brukt opp', 'Per kategori'], ['nRc', 'Ny kvittering til gjennomgang', 'Vises som merke i menyen'], ['nFast', 'Påminnelse om faste trekk', 'Dagen før trekkdato']]
     .map(([k2, n, s2]) => `<button class="tog-row" data-tog="${k2}"><span class="grow"><b style="font-weight:500">${n}</b><br><span class="note" style="font-size:12.5px">${s2}</span></span><span class="toggle" role="switch" aria-checked="${!!st[k2]}"></span></button>`).join('')}
     <div class="note" style="font-size:12.5px">Varsler vises i FinansHub og i mobilappen. Push-varsler krever at appen er installert på hjemskjermen.</div></div>`;
-  else if (t === 'mobil') body = `<div style="display:flex;flex-direction:column;gap:12px">
-    <div class="sub" style="font-size:13px">Mobilappen åpnes på <b class="mono">/finans/</b> og kan installeres fra nettleseren (Del → Legg til på Hjem-skjerm). Den bruker samme innlogging og viser bare FinansHub.</div>
-    <div class="sub" style="font-size:13px">Tokens gir tilgang til FinansHub-API-et uten innlogging, f.eks. for en iOS-snarvei som laster opp kvitteringer (<span class="mono">POST /finans/api/receipts</span> med <span class="mono">Authorization: Bearer …</span>). De gir aldri tilgang til resten av homelab.</div>
-    ${(S.tokens ?? []).map((tk) => `<div class="edit-row"><span class="grow"><b style="font-weight:500">${esc(tk.name)}</b><br><span class="note mono" style="font-size:12px">${tk.scopes.join(' · ')} · ${tk.last_used ? 'sist brukt ' + new Date(tk.last_used).toLocaleDateString('nb-NO') : 'aldri brukt'}</span></span><button class="btn sm danger" data-del-token="${tk.id}">Trekk tilbake</button></div>`).join('') || '<div class="note">Ingen tokens.</div>'}
-    <form data-form="token" class="edit-row"><input class="inp" name="name" placeholder="Navn, f.eks. iPhone-snarvei" style="flex:1 1 200px" required>
-      <label class="note"><input type="checkbox" name="read" checked> lese</label><label class="note"><input type="checkbox" name="receipts" checked> laste opp kvitteringer</label><label class="note"><input type="checkbox" name="write"> endre</label><button class="btn sm pri">Lag token</button></form>
-    ${u.msg.token ? `<div class="box" style="flex-direction:column;align-items:stretch"><span class="ok-msg">Kopier tokenet nå – det vises bare én gang:</span><code class="mono" style="word-break:break-all;user-select:all">${esc(u.msg.token)}</code></div>` : ''}</div>`;
-  else if (t === 'data') body = `<div style="display:flex;flex-direction:column;gap:10px">
-    <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn ghost" href="/finans/api/transactions.csv">Eksporter alle transaksjoner (CSV)</a><a class="btn ghost" href="/finans/api/export.json">Full sikkerhetskopi (JSON)</a></div>
-    <div class="note" style="font-size:13px">Database og kvitteringsbilder ligger i <span class="mono">data/</span> på serveren. Ta nattlig kopi av hele mappen (f.eks. med Proxmox Backup eller restic).</div>
-    ${!S.boot.hasData ? '<button class="btn" data-act="demo" style="align-self:flex-start">Last inn demodata</button>' : ''}
-    <button class="btn danger" data-act="wipe" style="align-self:flex-start">Slett alle økonomidata …</button></div>`;
+  else if (t === 'mobil') {
+    const when = (ms) => (ms ? new Date(ms).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric' }) : null);
+    body = `<div style="display:flex;flex-direction:column;gap:12px">
+    <div class="sub" style="font-size:13px">Mobilappen åpnes på <b class="mono">/finans/</b> eller i de native appene, og logger inn med brukernavn og passord (og 2FA-kode hvis det er på).</div>
+    <div class="sub" style="font-size:13px">Personlige tokens gir tilgang til FinansHub-API-et uten innlogging, f.eks. for iOS-snarveien som laster opp kvitteringer (<span class="mono">POST /finans/api/receipts</span>), Home Assistant, Excel Power Query eller skript (<span class="mono">Authorization: Bearer fh_pat_…</span>). De gir aldri tilgang til resten av homelab. Bare hashen lagres.</div>
+    ${(S.tokens ?? []).map((tk) => `<div class="edit-row"><span class="grow"><b style="font-weight:500">${esc(tk.name)}</b>${tk.expired ? ' <span class="pill" style="background:#3A2414;color:var(--acc-l)">utløpt</span>' : ''}<br><span class="note mono" style="font-size:12px">${tk.scopes.join(' · ')}</span><br><span class="note" style="font-size:12px">Laget ${when(tk.created)} · ${tk.lastUsed ? 'sist brukt ' + when(tk.lastUsed) : 'aldri brukt'} · ${tk.expires ? (tk.expired ? 'utløp ' : 'utløper ') + when(tk.expires) : 'utløper aldri'}</span></span><button class="btn sm danger" data-del-token="${tk.id}">Trekk tilbake</button></div>`).join('') || '<div class="note">Ingen tokens.</div>'}
+    <form data-form="token" class="box" style="flex-direction:column;align-items:stretch;gap:12px;padding:16px"><b style="font-weight:600">Nytt token</b>
+      <div class="form-grid"><label class="f">Navn<input class="inp" name="name" placeholder="F.eks. iPhone-snarvei" required></label>
+      <label class="f">Utløper<select class="inp" name="expires">${[['30d', 'Om 30 dager'], ['90d', 'Om 90 dager'], ['1y', 'Om 1 år'], ['never', 'Aldri']].map(([v, l]) => opt(v, l, '90d')).join('')}</select></label></div>
+      <div class="scope-grid">${[['finance:read', 'Lese alt'], ['read:transactions', 'Lese transaksjoner'], ['read:summary', 'Lese oversikt'], ['read:budget', 'Lese budsjett'], ['receipts:write', 'Laste opp kvitteringer'], ['write:transactions', 'Endre transaksjoner'], ['finance:write', 'Endre alt']].map(([v, l]) => `<label class="scope"><input type="checkbox" name="scope" value="${v}" ${['finance:read', 'receipts:write'].includes(v) ? 'checked' : ''}><span><b class="mono" style="font-size:12px;font-weight:500">${v}</b><br><span class="note" style="font-size:12px">${l}</span></span></label>`).join('')}</div>
+      <div><button class="btn sm pri">Lag token</button></div></form>
+    ${u.msg.token ? `<div class="box" style="flex-direction:column;align-items:stretch"><span class="ok-msg">Kopier tokenet nå – det vises bare én gang:</span><div style="display:flex;gap:10px;align-items:center"><code class="mono grow" style="word-break:break-all;user-select:all">${esc(u.msg.token)}</code><button class="btn sm" data-copy="${esc(u.msg.token)}">Kopier</button></div></div>` : ''}</div>`;
+  }
+  else if (t === 'data') body = backupTab();
   return `<div class="row-flex">
     <nav class="card set-nav">${SET_TABS.map(([k2, n, s2]) => `<button data-settab="${k2}" aria-current="${t === k2}"><span>${n}</span><small>${s2}</small></button>`).join('')}</nav>
     ${card(`<div><h2 style="font-size:18px">${cur[1]}</h2><div class="note" style="font-size:13px">${cur[2]}</div></div>${body}${u.msg.set ? `<div class="ok-msg">${esc(u.msg.set)}</div>` : ''}`, '', 'flex:1 1 480px;padding:24px;gap:18px')}
@@ -464,9 +497,12 @@ export function draw() {
 const focusSel = (e) => (e.name ? `[data-form] input[name="${e.name}"]` : e.dataset.txField ? `[data-tx-field="${e.dataset.txField}"]` : e.dataset.rcField ? `[data-rc-field="${e.dataset.rcField}"]` : null);
 
 const LOADERS = { ov: [loadSummary], tx: [loadTx], kv: [loadReceipts], bud: [loadSummary], fast: [loadRecurring], konto: [], rap: [loadReport], inn: [], ...MODULE_LOADERS };
+// Brukere uten admin-rolle har bare Delte mapper.
+const allowed = (p) => !S.boot?.restricted || p === 'dir';
 export async function load(page = u.page) {
   try { await Promise.all(LOADERS[page].map((f) => f())); } catch (e) { toast(e.message); }
   if (page === 'inn' && u.setTab === 'mobil') S.tokens = await api('/tokens').catch(() => []);
+  if (page === 'inn' && u.setTab === 'data') await loadBackup().catch((e) => toast(e.message));
   render();
   schedulePoll();
 }
@@ -480,7 +516,7 @@ export async function refreshAll() { await loadBoot(); await load(); }
 
 export function route() {
   const p = location.hash.replace(/^#\/?/, '').split('/')[0];
-  const next = PAGE_FN[p] ? p : 'ov';
+  const next = PAGE_FN[p] && allowed(p) ? p : S.boot?.restricted ? 'dir' : 'ov';
   if (next !== u.page) { u.page = next; u.msg = {}; window.scrollTo(0, 0); }
   draw();
   load();
@@ -499,6 +535,23 @@ async function uploadFiles(files) {
   }
   location.hash = '#/kv';
   await refreshAll();
+}
+
+async function askAi(text) {
+  const qText = String(text ?? '').trim();
+  u.aiDraft = qText;
+  u.ai = { ...(u.ai ?? {}), q: qText, busy: true, answer: '', hits: [] };
+  render();
+  try { const r = await api('/search/ai', { method: 'POST', json: { q: qText } }); u.ai = { ...r, busy: false }; }
+  catch (e) { u.ai = { q: qText, busy: false, answer: e.message, hits: [], suggestions: u.ai?.suggestions }; }
+  render();
+}
+const saveNav = busyWrap(async (nav) => { const r = await api('/prefs', { method: 'PUT', json: { nav } }); S.boot.nav = r.nav; });
+function moveNav(p, d) {
+  const a = u.navEdit, i = a.indexOf(p), j = i + d;
+  if (i < 0 || j < 0 || j >= a.length) return;
+  [a[i], a[j]] = [a[j], a[i]];
+  render();
 }
 
 export function bind() {
@@ -528,6 +581,9 @@ export function bind() {
     if ((x = d('[data-del-rule]'))) { await api(`/rules/${x.dataset.delRule}`, { method: 'DELETE' }); await loadBoot(); return render(); }
     if ((x = d('[data-del-token]'))) { await api(`/tokens/${x.dataset.delToken}`, { method: 'DELETE' }); u.msg.token = null; return load(); }
     if ((x = d('[data-hov]'))) return;
+    if ((x = d('[data-nav-move]'))) { const [p, dir] = x.dataset.navMove.split(':'); return moveNav(p, +dir); }
+    if ((x = d('[data-ai-q]'))) { u.aiMode = true; return askAi(x.dataset.aiQ); }
+    if ((x = d('[data-copy]'))) { try { await navigator.clipboard.writeText(x.dataset.copy); toast('Kopiert'); } catch { toast('Merk teksten og kopier manuelt'); } return; }
     const act = d('[data-act]')?.dataset.act;
     if (!act) return;
     const sel = S.tx?.items.find((y) => y.id === u.sel);
@@ -570,6 +626,15 @@ export function bind() {
       case 'demo': await api('/demo', { method: 'POST' }); toast('Demodata lastet inn'); return refreshAll();
       case 'wipe': u.add = { type: 'wipe' }; return render();
       case 'print': return window.print();
+      case 'nav-edit': if (u.navEdit) { const nav = u.navEdit; u.navEdit = null; await saveNav(nav); toast('Rekkefølgen er lagret'); } else u.navEdit = [...navOrder()]; return render();
+      case 'nav-reset': u.navEdit = [...(S.boot.navDefault ?? NAV_DEFAULT)]; return render();
+      case 'ai-toggle': {
+        u.aiMode = !u.aiMode;
+        if (u.aiMode && !u.ai) { u.ai = { q: '', suggestions: [] }; render(); u.ai.suggestions = await api('/search/suggestions').catch(() => []); }
+        if (!u.aiMode) u.ai = null;
+        render(); document.querySelector('.search input')?.focus(); return;
+      }
+      case 'ai-close': u.ai = null; u.aiMode = false; return render();
     }
   }));
 
@@ -611,7 +676,9 @@ export function bind() {
     e.preventDefault();
     const v = Object.fromEntries(new FormData(f));
     switch (f.dataset.form) {
-      case 'gsearch': case 'txsearch': u.q = v.q; u.sel = null; if (u.page !== 'tx') { location.hash = '#/tx'; return; } await loadTx(); return render();
+      case 'gsearch': if (u.aiMode) return askAi(v.q);
+      // fallthrough
+      case 'txsearch': u.q = v.q; u.sel = null; if (u.page !== 'tx') { location.hash = '#/tx'; return; } await loadTx(); return render();
       case 'tx': {
         const amt = Math.abs(parseAmount(v.amount) ?? NaN);
         if (!Number.isFinite(amt)) return toast('Ugyldig beløp');
@@ -622,13 +689,30 @@ export function bind() {
       case 'goal': await api(u.add.id ? `/goals/${u.add.id}` : '/goals', { method: u.add.id ? 'PATCH' : 'POST', json: { ...v, saved: parseAmount(v.saved) ?? 0, target: parseAmount(v.target) } }); u.add = null; return refreshAll();
       case 'rec': await api(u.add.id ? `/recurring/${u.add.id}` : '/recurring', { method: u.add.id ? 'PATCH' : 'POST', json: { ...v, amount: parseAmount(v.amount), categoryId: +v.categoryId || null, accountId: +v.accountId || null } }); u.add = null; await loadRecurring(); return render();
       case 'token': {
-        const scopes = [v.read && 'finance:read', v.receipts && 'receipts:write', v.write && 'finance:write'].filter(Boolean);
-        const r = await api('/tokens', { method: 'POST', json: { name: v.name, scopes } });
+        const scopes = new FormData(f).getAll('scope');
+        if (!scopes.length) return toast('Velg minst én tilgang');
+        const r = await api('/tokens', { method: 'POST', json: { name: v.name, scopes, expires: v.expires } });
         u.msg.token = r.token; return load();
       }
       case 'wipe': await api('/all', { method: 'DELETE', json: { confirm: v.confirm } }); u.add = null; toast('Alle økonomidata er slettet'); return refreshAll();
     }
   }));
+
+  // Dra og slipp i sidemenyen (redigeringsmodus).
+  el.addEventListener('dragstart', (e) => { const n = e.target.closest?.('[data-nav-item]'); if (n) { u.navDrag = n.dataset.navItem; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', u.navDrag); } });
+  el.addEventListener('dragover', (e) => {
+    const n = e.target.closest?.('[data-nav-item]');
+    if (!n || !u.navDrag || !u.navEdit) return;
+    e.preventDefault();
+    // Flytt DOM-noden direkte (en full omtegning midt i et drag avbryter draget).
+    const a = u.navEdit, from = a.indexOf(u.navDrag), to = a.indexOf(n.dataset.navItem);
+    if (from < 0 || to < 0 || from === to) return;
+    a.splice(to, 0, a.splice(from, 1)[0]);
+    const src = el.querySelector(`[data-nav-item="${u.navDrag}"]`);
+    if (src) n.parentNode.insertBefore(src, from < to ? n.nextSibling : n);
+  });
+  el.addEventListener('drop', (e) => { if (e.target.closest?.('[data-nav-item]')) e.preventDefault(); });
+  el.addEventListener('dragend', () => { if (u.navDrag) { u.navDrag = null; render(); } });
 
   // Dra og slipp kvitteringer.
   el.addEventListener('dragover', (e) => { const z = e.target.closest('[data-drop]'); if (z) { e.preventDefault(); z.classList.add('over'); } });

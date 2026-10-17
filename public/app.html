@@ -21,18 +21,19 @@
 <div class="bg" aria-hidden="true"><div class="bg-layer"></div><div class="bg-layer"></div></div>
 <div class="shell">
   <header class="top" data-dnd="head">
-    <a class="logo" href="#/dash" aria-label="Til dashboard">OS</a>
-    <nav class="pillnav" aria-label="Hovedmeny" data-dnd="tabs">
+    <a class="logo" href="#/dash" aria-label="Til dashboard" data-hp="logo">OS</a>
+    <nav class="pillnav" aria-label="Hovedmeny" data-dnd="tabs" data-hp="tabs">
       <a href="#/dash" data-r="dash">Dashboard</a><a href="#/studie" data-r="studie">Studie</a><a href="#/rom" data-r="rom">Rom</a><a href="/finans/" data-r="okonomi">Økonomi</a><a href="#/hjem" data-r="hjem">Hjem</a><a href="#/matplan" data-r="matplan">Matplan</a><a href="#/domener" data-r="domener">Domener</a><a href="#/nettverk" data-r="nettverk">Nettverk</a>
     </nav>
-    <a class="pill" id="wx-pill" href="https://www.yr.no" target="_blank" rel="noopener"><b>–°C</b> <span class="muted">laster…</span></a>
-    <div class="profile">
+    <a class="pill" id="wx-pill" data-hp="wx" href="https://www.yr.no" target="_blank" rel="noopener"><b>–°C</b> <span class="muted">laster…</span></a>
+    <div class="profile" data-hp="menu">
       <button class="profile-btn" id="profile-btn" aria-haspopup="menu" aria-expanded="false" aria-label="Profilmeny"><span class="burger"><i></i><i></i><i></i></span><span class="avatar" id="avatar">S</span></button>
       <div class="menu" id="menu" role="menu" hidden>
         <div class="menu-head" id="menu-name">Sebastian</div>
         <button role="menuitem" data-act="settings">Innstillinger</button>
         <button role="menuitem" data-act="toggle-search" id="menu-search">Skjul søkebar</button>
         <button role="menuitem" data-act="toggle-news" id="menu-news">Skjul nyhetslinje</button>
+        <button role="menuitem" data-act="head-edit" class="desk-only">✥ Flytt topplinje</button>
         <button role="menuitem" data-act="reset-layout">↺ Tilbakestill layout</button>
         <a role="menuitem" href="/cv" target="_blank">CV ↗</a>
         <hr>

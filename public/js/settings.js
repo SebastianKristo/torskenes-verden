@@ -1,7 +1,9 @@
 import { esc, api, cssUrl } from './util.js';
 import { store, emit, load } from './store.js';
 import { OPTIONS, srcFor, applyBackground, preloadAll } from './background.js';
-import { SEARCH_STYLES, GWORD, renderTicker, menuLabels } from './extras.js';
+import { SEARCH_STYLES, GWORD, renderTicker, applyTicker, menuLabels } from './extras.js';
+import { toggleHeadEdit, resetHead, setHeadLock, saveUi } from './topedit.js';
+import { loginTab, loadLogin, loginClick, loginSubmit, loginChange } from './settings-login.js';
 
 const modal = () => document.getElementById('settings');
 
@@ -17,8 +19,7 @@ const topSliders = () => TOP.map(([k, , label, min, max, step, def]) => {
   const v = store.me.top?.[k] ?? def;
   return `<label class="top-range">${label}<input type="range" min="${min}" max="${max}" step="${step}" value="${v}" data-top="${k}"><span class="mono">${v} px</span></label>`;
 }).join('');
-const TABS = [['look', 'Utseende', 'Bakgrunn, topplinje, søkebar, nyhetslinje og kategorier'], ['int', 'Integrasjoner', 'Lagres på serveren. Hemmeligheter vises aldri igjen etter lagring.'], ['login', 'Innlogging', 'Pålitelige enheter på lokalt nett']];
-let devices = null;
+const TABS = [['look', 'Utseende', 'Bakgrunn, topplinje, søkebar, nyhetslinje og kategorier'], ['int', 'Integrasjoner', 'Lagres på serveren. Hemmeligheter vises aldri igjen etter lagring.'], ['login', 'Innlogging', 'Brukere, 2FA og pålitelige enheter']];
 let tab = 'look', cfg = null, cfgErr = null;
 
 // Hvilke data som må hentes på nytt når en integrasjonsgruppe endres.
@@ -33,6 +34,8 @@ function srchPreview([k, name]) {
       <div class="bar2" style="width:${wide ? '100%' : '80%'};background:${bar}">${wide ? GWORD : ''}<em></em><s style="background:${btn}"></s></div></div>${name}</button>`;
 }
 
+const speedTxt = (v) => `${v} · ${Math.round(350 / v)} s/runde`;
+
 function lookTab() {
   const s = store.me, c = s.bgCustom, kind = store.data.weather?.kind ?? 'sol';
   const kindName = { sol: 'sol', sky: 'skyet', regn: 'regn' }[kind];
@@ -44,15 +47,22 @@ function lookTab() {
   const wslots = [['sol', 'Sol'], ['sky', 'Skyet'], ['regn', 'Regn']].map(([k, n]) =>
     `<label class="chip" style="cursor:pointer;color:${c['vaer_' + k] ? 'var(--green)' : 'var(--text)'}">${c['vaer_' + k] ? '✓' : '+'} ${n}<input type="file" accept="image/*" data-slot="vaer_${k}" hidden></label>`).join('');
   const cats = s.categories.map((cat, i) => `<div class="cat-edit"><input type="color" value="${cat.color}" data-ci="${i}" data-ck="color" aria-label="Farge"><input class="field" value="${esc(cat.name)}" data-ci="${i}" data-ck="name" aria-label="Navn" style="flex:1"><button class="x" data-cdel="${i}" aria-label="Slett kategori">×</button></div>`).join('');
+  const ui = s.ui ?? {};
   const tog = (key, on, title, sub) => `<button class="toggle" data-toggle="${key}" role="switch" aria-checked="${on}"><i></i><span><b style="font-weight:600">${title}</b><br><span class="sub">${sub}</span></span></button>`;
   return `<div class="set-label">Bakgrunn</div><div class="bg-opts">${opts}</div>
     <div class="muted" style="font-size:13px">«Oslo» bytter mellom bilder av byen hvert 15. sekund${c.oslo?.length ? ` (${c.oslo.length} egne bilder, <button class="btn" data-clear="oslo" style="padding:2px 8px">fjern</button>)` : ''}. «Vær» viser et bilde som passer dagens vær (nå: ${kindName}). Du kan erstatte bildene med egne:</div>
     <div class="chips">${wslots}</div>
     <div class="set-label">Topplinje</div>${topSliders()}
+    ${tog('ui:headLock', ui.headLock, 'Hold alle elementene på samme høyde', 'Logo, faner, vær og meny kan bare flyttes sideveis')}
+    <div class="row-btns"><button class="btn btn-primary" data-hp-edit>✥ Flytt elementer i topplinjen</button><button class="btn" data-hp-reset2>Nullstill plassering</button></div>
     <div class="set-label">Søkebar</div><div class="srch-opts">${SEARCH_STYLES.map(srchPreview).join('')}</div>
     ${tog('search', !s.hideSearch, 'Vis søkebar', 'Kan dras mellom avgangene og klokka på dashboardet')}
     <div class="set-label">Nyhetslinje</div>
     ${tog('news', !s.hideNews, 'Vis siste nytt', 'NRK og VG rett under menyen, oppdateres hvert 5. minutt')}
+    <label class="top-range">Hastighet<input type="range" min="1" max="10" step="1" value="${ui.newsSpeed}" data-news-speed><span class="mono" style="width:120px">${speedTxt(ui.newsSpeed)}</span></label>
+    ${tog('ui:newsPause', ui.newsPause, 'Pause når musepekeren er over', 'Rullingen stopper alltid hvis systemet ber om redusert bevegelse')}
+    <div class="set-label">Domener</div>
+    ${tog('ui:domMap', ui.domMap, 'Vis verdenskart med besøk per land', 'Kartet på Domener-siden fargelegger land etter unike besøkende')}
     <div class="set-label">Kategorier</div>${cats}<button class="btn" data-cadd style="align-self:flex-start">+ Ny kategori</button>`;
 }
 
@@ -69,32 +79,8 @@ function intTab() {
     <div class="muted" style="font-size:12px">Tomme felt bruker verdien fra serverens miljøvariabler (.env).</div>`;
 }
 
-function loginTab() {
-  if (!devices) return '<div class="skeleton" style="min-height:120px"></div>';
-  const d = devices;
-  const when = (t) => new Date(t).toLocaleString('nb-NO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-  return `<button class="toggle" data-trust role="switch" aria-checked="${d.trusted}"><i></i><span><b style="font-weight:600">Pålitelig enhet</b><br>
-      <span class="sub">${d.trusted ? 'Denne enheten slipper passord når den er på lokalt nett' : 'Denne enheten må alltid skrive passord'}</span></span></button>
-    <div class="muted" style="font-size:13px;line-height:1.5">Passordet hoppes bare over når enheten har en gyldig enhetscookie <b>og</b> kobler til fra lokalt nett (192.168.x.x, 10.x.x.x, 172.16–31.x.x).
-      Fra internett, også via Cloudflare Tunnel, kreves alltid passord. «Lås» i menyen pauser enheten til neste innlogging med passord.
-      ${d.lan ? '<br><span class="green">Du er på lokalt nett nå.</span>' : '<br>Du er ikke på lokalt nett nå.'}</div>
-    <div class="set-label">Pålitelige enheter</div>
-    ${d.devices.map((x) => `<div class="row"><div><div>${esc(x.name)}${x.current ? ' <span class="badge" style="background:var(--blue)">denne</span>' : ''}</div>
-      <div class="mono muted" style="font-size:12px">Sist brukt ${when(x.lastSeen)}${x.lastIp ? ` · ${esc(x.lastIp)}` : ''}</div></div>
-      <button class="btn" data-dev-del="${x.id}" style="color:var(--red)">Fjern</button></div>`).join('') || '<div class="empty">Ingen pålitelige enheter.</div>'}
-    <div class="set-label">Bytt passord</div>
-    <form data-pw class="settings-section" style="max-width:420px">
-      <input class="field" type="password" name="current" placeholder="Nåværende passord" autocomplete="current-password">
-      <input class="field" type="password" name="next" placeholder="Nytt passord (minst 8 tegn)" autocomplete="new-password" minlength="8" required>
-      <input class="field" type="password" name="again" placeholder="Gjenta nytt passord" autocomplete="new-password" required>
-      <div style="display:flex;gap:12px;align-items:center"><button class="btn" type="submit" style="color:var(--blue)">Lagre passord</button><span class="muted" data-pw-msg style="font-size:13px"></span></div>
-      <div class="muted" style="font-size:12px">Gjelder både nettsiden og mobilappene. Overstyrer APP_PASSWORD_HASH.</div>
-    </form>`;
-}
-
 async function loadDevices() {
-  try { devices = await api('/devices'); } catch { devices = { lan: false, trusted: false, devices: [] }; }
-  if (!modal().hidden && tab === 'login') render();
+  await loadLogin(() => { if (!modal().hidden && tab === 'login') render(); });
 }
 
 function render() {
@@ -137,27 +123,13 @@ async function saveGroup(form, changes) {
 
 export function bindSettings() {
   const m = modal();
-  m.addEventListener('submit', async (e) => {
-    const f = e.target.closest('[data-pw]');
-    if (!f) return;
-    e.preventDefault();
-    const msg = f.querySelector('[data-pw-msg]'), v = Object.fromEntries(new FormData(f));
-    if (v.next !== v.again) { msg.textContent = 'Passordene er ikke like'; return; }
-    try { await api('/password', { method: 'PUT', json: { current: v.current, next: v.next } }); f.reset(); msg.textContent = 'Passordet er endret ✓'; }
-    catch (err) { msg.textContent = err.message || 'Kunne ikke endre passordet'; }
-  });
+  m.addEventListener('submit', (e) => { if (tab === 'login') loginSubmit(e); });
+  m.addEventListener('change', (e) => { if (tab === 'login') loginChange(e); });
   m.addEventListener('click', async (e) => {
     if (e.target === m || e.target.closest('[data-close]')) return closeSettings();
     const t = e.target.closest('[data-tab]');
     if (t) { tab = t.dataset.tab; render(); if (tab === 'int' && !cfg) loadCfg(); if (tab === 'login') loadDevices(); return; }
-    if (e.target.closest('[data-trust]')) {
-      const cur = devices?.devices.find((x) => x.current);
-      if (devices?.trusted && cur) await api(`/devices/${cur.id}`, { method: 'DELETE' });
-      else await api('/devices/current', { method: 'POST' });
-      return loadDevices();
-    }
-    const dd = e.target.closest('[data-dev-del]');
-    if (dd && confirm('Fjerne enheten? Den må da logge inn med passord igjen.')) { await api(`/devices/${dd.dataset.devDel}`, { method: 'DELETE' }); return loadDevices(); }
+    if (tab === 'login' && await loginClick(e)) return;
     const bg = e.target.closest('[data-bg]');
     if (bg) {
       store.me.bg = bg.dataset.bg;
@@ -171,7 +143,16 @@ export function bindSettings() {
       if (store.me.hideSearch) { store.me.hideSearch = false; api('/settings/hide_search', { method: 'PUT', json: { value: false } }); menuLabels(); }
       emit('route'); render(); return;
     }
+    if (e.target.closest('[data-hp-edit]')) { closeSettings(); toggleHeadEdit(true); return; }
+    if (e.target.closest('[data-hp-reset2]')) { resetHead(); return; }
     const tg = e.target.closest('[data-toggle]');
+    if (tg?.dataset.toggle.startsWith('ui:')) {
+      const k = tg.dataset.toggle.slice(3), v = !store.me.ui[k];
+      if (k === 'headLock') await setHeadLock(v); else await saveUi({ [k]: v });
+      if (k === 'newsPause') applyTicker();
+      if (k === 'domMap') emit('route');
+      render(); return;
+    }
     if (tg) {
       const k = tg.dataset.toggle === 'search' ? 'hideSearch' : 'hideNews';
       store.me[k] = !store.me[k];
@@ -204,6 +185,11 @@ export function bindSettings() {
     else form.querySelector('[data-status]').textContent = 'Ingen endringer';
   });
   m.addEventListener('input', (e) => {
+    if (e.target.matches('[data-news-speed]')) {
+      store.me.ui.newsSpeed = +e.target.value;
+      e.target.nextElementSibling.textContent = speedTxt(+e.target.value);
+      applyTicker(); return;
+    }
     const k = e.target.dataset?.top;
     if (!k) return;
     store.me.top = { ...store.me.top, [k]: +e.target.value };
@@ -212,6 +198,7 @@ export function bindSettings() {
   });
   m.addEventListener('change', async (e) => {
     const t = e.target;
+    if (t.matches('[data-news-speed]')) { saveUi({ newsSpeed: +t.value }); return; }
     if (t.dataset.top) { const [, key] = TOP.find(([k]) => k === t.dataset.top); api(`/settings/${key}`, { method: 'PUT', json: { value: +t.value } }); return; }
     if (t.dataset.slot) {
       const f = t.files[0];

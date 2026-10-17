@@ -1,5 +1,5 @@
 // Felles for Hjem, Matplan og Domener: tilgang (sesjon eller FinansHub-token) og en enkel JSON-AI-kall.
-import { sessionUser } from './auth.js';
+import { sessionUser, isAdmin } from './auth.js';
 import * as fh from './finans/routes.js';
 import { settings, secret } from './finans/db.js';
 
@@ -7,9 +7,13 @@ export const MOCK = process.env.MOCK_DATA === '1';
 export const bad = (c, error, status = 400) => c.json({ error }, status);
 
 // Lesing godtar token med finance:read, endringer krever finance:write.
+// Hjem, Matplan og Domener viser eierens data, så bare administratorer slipper inn.
 export const guard = async (c, next) => {
   const write = c.req.method !== 'GET';
-  if (!sessionUser(c) && !fh.bearerOk?.(c, write ? 'finance:write' : 'finance:read')) return bad(c, 'Ikke innlogget', 401);
+  let id = sessionUser(c);
+  if (!id && fh.bearerOk?.(c, write ? 'finance:write' : 'finance:read')) id = c.get('user');
+  if (!id) return bad(c, 'Ikke innlogget', 401);
+  if (!isAdmin(id)) return bad(c, 'Bare administratorer har tilgang', 403);
   await next();
 };
 

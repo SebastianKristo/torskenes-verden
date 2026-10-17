@@ -8,7 +8,8 @@
     "start": "node server/index.js",
     "dev": "node --watch server/index.js",
     "hash-password": "node scripts/hash-password.js",
-    "test": "node --test \"test/**/*.test.js\""
+    "test": "node --test \"test/**/*.test.js\"",
+    "reset-password": "node scripts/reset-password.js"
   },
   "engines": {
     "node": ">=22"
@@ -16,9 +17,13 @@
   "dependencies": {
     "@hono/node-server": "^2.1.5",
     "better-sqlite3": "^13.0.3",
+    "d3-array": "^3.2.4",
+    "d3-geo": "^3.1.1",
     "hono": "^4.13.13",
     "node-ical": "^0.27.3",
     "satellite.js": "^7.1.0",
-    "undici": "^8.12.2"
+    "topojson-client": "^3.1.0",
+    "undici": "^8.12.2",
+    "world-atlas": "^2.0.2"
   }
 }

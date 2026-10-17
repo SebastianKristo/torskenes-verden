@@ -77,12 +77,16 @@ async function toJpeg(file, max, q) {
   return c.convertToBlob({ type: 'image/jpeg', quality: q });
 }
 // Originalen sendes urørt; i tillegg en ~1600 px JPEG (85 %) til AI-en og et miniatyrbilde.
-export async function uploadReceipt(file, accountId) {
+// original:false (mobilvalget «Lagre originalbildet» av) sender bare den nedskalerte JPEG-en.
+export async function uploadReceipt(file, accountId, { original = true } = {}) {
   const fd = new FormData();
-  fd.append('file', file);
+  let scan = null, thumb = null;
   if (file.type.startsWith('image/')) {
-    try { fd.append('scan', await toJpeg(file, 1600, 0.85), 'scan.jpg'); fd.append('thumb', await toJpeg(file, 240, 0.75), 'thumb.jpg'); } catch { /* HEIC o.l. – serveren bruker originalen */ }
+    try { scan = await toJpeg(file, 1600, 0.85); thumb = await toJpeg(file, 240, 0.75); } catch { /* HEIC o.l. – serveren bruker originalen */ }
   }
+  if (!original && scan) fd.append('file', scan, (file.name || 'kvittering').replace(/\.\w+$/, '') + '.jpg');
+  else { fd.append('file', file); if (scan) fd.append('scan', scan, 'scan.jpg'); }
+  if (thumb) fd.append('thumb', thumb, 'thumb.jpg');
   if (accountId) fd.append('accountId', accountId);
   return api('/receipts', { method: 'POST', body: fd });
 }
@@ -133,6 +137,34 @@ export async function matApi(path, opts = {}) {
   if (!res.ok) throw new Error(data?.error || `Matplan svarte ${res.status}`);
   return data;
 }
+// Domene-API-et (Homelab) ligger også utenfor /finans/api.
+export async function domApi(path, opts = {}) {
+  const init = { ...opts, headers: { ...(opts.headers ?? {}) } };
+  if (opts.json !== undefined) { init.body = JSON.stringify(opts.json); init.headers['Content-Type'] = 'application/json'; delete init.json; }
+  const res = await fetch('/domains/api' + path, init);
+  const data = res.headers.get('content-type')?.includes('json') ? await res.json() : null;
+  if (!res.ok) throw new Error(data?.error || `Domener svarte ${res.status}`);
+  return data;
+}
+Object.assign(ICONS, {
+  globe: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20M2 12h20M12 2a15 15 0 0 1 0 20M12 2a15 15 0 0 0 0 20',
+  sub: 'M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3',
+  dir: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
+  finn: 'M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8zM7.5 7.5h.01',
+  gear: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
+  users: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',
+  shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+  key: 'M15.5 7.5l3 3L22 7l-3-3M15.5 7.5L19 4M11.4 11.6a5.5 5.5 0 1 1-7.8 7.8 5.5 5.5 0 0 1 7.8-7.8zM11.4 11.6L15.5 7.5',
+  look: 'M12 3a9 9 0 1 0 0 18c1 0 1.5-.7 1.5-1.5 0-.9-.8-1.3-.8-2.2 0-.8.7-1.5 1.5-1.5H16a5 5 0 0 0 5-5c0-4.3-4-7.8-9-7.8zM7.5 11.5h.01M10.5 7.5h.01M15 8h.01',
+  cam: 'M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8',
+  srv: 'M4 4h16v6H4zM4 14h16v6H4zM8 7h.01M8 17h.01',
+  db: 'M12 3c4.4 0 8 1.3 8 3s-3.6 3-8 3-8-1.3-8-3 3.6-3 8-3zM4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6',
+  info: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 16v-4M12 8h.01',
+  traf: 'M4 20V14M9 20V9M14 20V12M19 20V5M3 20h18', yt: 'M12 14l4-4M3.5 18a9 9 0 1 1 17 0',
+  req: 'M7 4v16M3 8l4-4 4 4M17 20V4M13 16l4 4 4-4', dl: 'M20 16.6A5 5 0 0 0 18 7h-1.3A8 8 0 1 0 4 15.3M12 12v9M8 17l4 4 4-4',
+  refresh: 'M21 12a9 9 0 1 1-2.6-6.4M21 3v6h-6', img: 'M4 4h16v16H4zM4 16l5-5 4 4 3-3 4 4M15 8h.01', file: 'M14 3H6v18h12V7zM14 3v4h4',
+});
+ICONS.bes = ICONS.users; ICONS.sik = ICONS.shield;
 ICONS.mat = 'M7 3v8a2 2 0 0 0 2 2v8M5 3v6M9 3v6M17 21V3c-2 0-4 2-4 7v4h4';
 ICONS.close = 'M6 6l12 12M18 6L6 18';
 

@@ -62,3 +62,11 @@
 - **Matplan → kalender**: ICS-feed (`/mat/calendar.ics?key=…`) som abonneres i Google Kalender, i stedet for OAuth.
 - **Logoer** hentes via Googles favicon-tjeneste og caches på disk i `data/logos` (30 dager); `/finans/api/logo/:domain` krever ikke innlogging.
 - **Domener** bruker Cloudflare-token (Zone/DNS/Registrar/Analytics: Read) fra Innstillinger, cache 15 min.
+
+## Prompt 05
+- **Stack beholdes** (Node 22 + Hono + SQLite + vanilla JS) i stedet for FastAPI/React fra prompten: alt fungerer allerede, deploy (Docker/Proxmox/Unraid) er etablert, og en omskriving ville ikke gi brukeren noe nytt.
+- **Passord**: scrypt (N=2^16) i stedet for argon2 – Node har ikke innebygd argon2 før v24, og npm-pakken krever native bygging.
+- **Brukere**: én felles brukertabell (admin/bruker). Regnskapet i FinansHub tilhører eieren; andre brukere ser bare Delte mapper de er medlem av. Hjem, Matplan og Domener er kun for administratorer.
+- **2FA**: TOTP (RFC 6238, ±1 vindu) med AES-256-GCM-kryptert hemmelighet og 10 gjenopprettingskoder. Nødreset: `npm run reset-password -- <bruker>`.
+- **AI-søk**: SQLite FTS5 (BM25) + valgfrie embeddings; svar med tall som ikke finnes i treffene forkastes.
+- **Backup**: tar.gz + AES-256-GCM via `smbclient` (gzip i stedet for zstd). Excel skrives med innebygd xlsx-skriver.
