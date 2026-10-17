@@ -474,6 +474,7 @@ struct FinanceTab: View {
         switch tab ?? store.tab {
         case .home: if store.selectedTx != nil { TxDetail(back: true) } else { HomeView() }
         case .list: if store.selectedTx != nil { TxDetail(back: true) } else { ListView() }
+        case .finn: FinnView()
         case .budget: BudgetView()
         case .search: if store.selectedTx != nil { TxDetail(back: true) } else { SearchView() }
         case .more: MoreView()
@@ -494,6 +495,8 @@ struct PadShell: View {
                 ModuleView(module: m, scan: scan, photos: $photos, files: $files).frame(maxWidth: .infinity)
             } else if store.tab == .more {
                 MoreView().frame(maxWidth: .infinity)
+            } else if store.tab == .finn {
+                FinnView().frame(maxWidth: .infinity)
             } else {
                 PadMain().frame(maxWidth: .infinity)
                 Divider().overlay(.white.opacity(0.1))
@@ -509,6 +512,7 @@ struct PadMain: View {
         switch store.tab {
         case .home: HomeView()
         case .list: ListView()
+        case .finn: FinnView()
         case .budget: BudgetView()
         case .search: SearchView()
         case .more: MoreView()
@@ -534,7 +538,7 @@ struct Sidebar: View {
             ScanButton(scan: scan, size: 56)
             if finance {
                 ForEach(store.finTabs) { t in
-                    let on = (store.module == nil && store.tab == t) || (t == .more && store.module?.isFinance == true)
+                    let on = (store.module == nil && store.tab == t) || (t == .more && (store.module?.isFinance == true || (store.module == nil && !store.finTabs.contains(store.tab))))
                     item(t.rawValue, t.icon, on) { store.go(t) }
                 }
             } else {
@@ -594,7 +598,6 @@ struct ModuleView: View {
             case .domains: DomainsView()
             case .sub: SubView()
             case .folders: FoldersView()
-            case .finn: FinnView()
             case .settings: SettingsView()
             }
         }

@@ -48,9 +48,10 @@ enum class Screen(val label: String) {
 
     companion object {
         val FINANCE = setOf(Home, List, Budget, Search, More, Scan, Fast, Accounts, Stocks, Reports, Import, Sub, Folders, Finn)
-        val MORE_PAGES = setOf(Scan, Fast, Accounts, Stocks, Reports, Import, Sub, Folders, Finn)
+        /** Under Mer. Budsjett og Finn er egne faner, men ligger under Mer når de er skjult som fane. */
+        val MORE_PAGES = setOf(Scan, Fast, Accounts, Stocks, Reports, Import, Sub, Folders)
         /** Faner i Finans og på Homelab, med ID-ene som lagres i oppsettet. */
-        val FIN_TAB = mapOf("home" to Home, "list" to List, "bud" to Budget, "ai" to Search, "mer" to More)
+        val FIN_TAB = mapOf("home" to Home, "list" to List, "finn" to Finn, "bud" to Budget, "ai" to Search, "mer" to More)
         val HL_TAB = mapOf("hl" to Homelab, "home" to Home, "dom" to Domains, "mat" to Mat)
     }
 }
@@ -162,6 +163,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var folders by mutableStateOf<List<Folder>?>(null)
     var folder by mutableStateOf<FolderDetail?>(null)
     var finn by mutableStateOf<FinnList?>(null)
+    /** Åpen Finn-handel (id) og detaljene fra GET /finn/:id. */
+    var finnSel by mutableStateOf<Int?>(null)
+    var finnDetail by mutableStateOf<FinnDetail?>(null)
+    var finnBusy by mutableStateOf<String?>(null)
     var tokens by mutableStateOf<List<TokenInfo>?>(null)
     var tokenError by mutableStateOf<String?>(null)
     var newToken by mutableStateOf<String?>(null)
@@ -243,12 +248,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             Screen.Domains -> startLabel
             Screen.Homelab -> if (financeStart) "Finans" else null
             Screen.Home, Screen.List, Screen.Budget, Screen.Search, Screen.More -> if (financeStart || selectedTx != null) null else "Homelab"
+            Screen.Finn -> if (financeStart || finnSel != null) null else "Homelab"
             else -> null
         }
     }
 
     /** Fanenavn fra oppsettet (eget navn eller standard). Nøkler: «fin.<id>» og «hl.<id>». */
-    fun finName(s: Screen): String = Screen.FIN_TAB.entries.firstOrNull { it.value == s }?.key?.let { layout.names["fin.$it"] } ?: s.label
+    fun finName(s: Screen): String = Screen.FIN_TAB.entries.firstOrNull { it.value == s }?.key?.let { layout.names["fin.$it"] } ?: if (s == Screen.Finn) "Finn" else s.label
+    /** Er fanen synlig i fanelinja (Budsjett og Finn vises ellers under Mer)? */
+    fun finTabShown(s: Screen): Boolean = s in finTabs
     fun hlName(s: Screen): String = Screen.HL_TAB.entries.firstOrNull { it.value == s }?.key?.let { layout.names["hl.$it"] } ?: if (s == Screen.Home) "Finans" else s.label
 
     /** Nytt navn på en fane (tomt = standardnavnet). */
@@ -432,7 +440,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 Screen.Mat -> loadWeek()
                 Screen.Sub -> subs = parseSubs(api.get("/subscriptions"))
                 Screen.Folders -> folders = parseFolders(api.get("/folders"))
-                Screen.Finn -> finn = parseFinn(api.get("/finn"))
+                Screen.Finn -> { finn = parseFinn(api.get("/finn")); finnSel?.let { loadFinnDetail(it) } }
                 Screen.Domains -> loadDomains()
                 else -> {}
             }
@@ -451,6 +459,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun navigate(s: Screen, from: Screen?) {
         if (s != screen) { selectedTx = null; folder = null; detail = null; detailTx = null; editing = null; original = null; editHome = false; matFull = false; matDay = null }
+        // Trykk på Finn-fanen fra en åpen handel går tilbake til listen.
+        if (s != screen || s == Screen.Finn) { finnSel = null; finnDetail = null }
         backTo = from?.takeIf { it != s }
         screen = s
         menuOpen = false
@@ -467,11 +477,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             screen == Screen.Settings && settingsPage != null -> settingsPage = null
             screen == Screen.Folders && folder != null -> folder = null
             screen == Screen.Scan && selectedReceipt != null -> selectedReceipt = null
+            screen == Screen.Finn && finnSel != null -> { finnSel = null; finnDetail = null }
             selectedTx != null -> selectedTx = null
             screen == Screen.Domains && domainManager -> domainManager = false
             screen == Screen.Mat && matFull -> matFull = false
             screen == startPage && backTo == null -> return false
-            else -> navigate(backTo ?: if (screen.isMorePage) Screen.More else startPage, null)
+            else -> navigate(backTo ?: if (screen.isMorePage || (screen in setOf(Screen.Finn, Screen.Budget) && !finTabShown(screen))) Screen.More else startPage, null)
         }
         return true
     }
@@ -799,6 +810,80 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /* ---------- Mer ---------- */
 
+    /* ---------- Finn-handler (design 2a) ---------- */
+
+    fun openFinn(id: Int) {
+        finnSel = id
+        finnDetail = finn?.items?.firstOrNull { it.id == id }?.let { FinnDetail(it, null, emptyList(), emptyList(), emptyList(), it.summary, emptyList()) }
+        launch { loadFinnDetail(id) }
+    }
+
+    private suspend fun loadFinnDetail(id: Int) {
+        try { val d = parseFinnDetail(api.get("/finn/$id")); if (finnSel == id) finnDetail = d }
+        catch (e: ApiException) { if (e.status != 404) throw e } // Eldre server uten detaljside: listedataene vises.
+    }
+
+    /**
+     * Laster opp filer til handelen: «receipts» (PDF/bilde/.eml) og «photos» (bilder) går til POST /finn/:id/files med kind,
+     * «emails» (.eml) til POST /finn/:id/emails. Filene ligger i feltet «file», og svaret er hele handelen.
+     */
+    fun finnUpload(kind: String, uris: List<Uri>) {
+        val id = finnSel ?: return
+        if (uris.isEmpty()) return
+        launch {
+            val ctx = getApplication<Application>()
+            finnBusy = kind
+            try {
+                val parts = withContext(Dispatchers.IO) {
+                    uris.mapNotNull { u ->
+                        val name = fileName(u) ?: "fil"
+                        val mime = ctx.contentResolver.getType(u) ?: if (name.endsWith(".eml", true)) "message/rfc822" else "application/octet-stream"
+                        ctx.contentResolver.openInputStream(u)?.use { Api.Part("file", name, mime, it.readBytes()) }
+                    }
+                }
+                val res = if (kind == "emails") api.upload("/finn/$id/emails", parts)
+                    else api.upload("/finn/$id/files", parts + Api.Part.text("kind", if (kind == "photos") "photo" else "receipt"))
+                message = when (kind) {
+                    "photos" -> if (parts.size == 1) "1 bilde lagt til" else "${parts.size} bilder lagt til"
+                    "emails" -> "E-posten er lagt ved"
+                    else -> if (parts.size == 1) "Kvitteringen er lagt ved" else "Kvitteringene er lagt ved"
+                }
+                finnDetail = runCatching { parseFinnDetail(res) }.getOrNull()?.takeIf { it.deal.id == id } ?: finnDetail
+                if (finnDetail?.deal?.id != id) loadFinnDetail(id)
+                runCatching { finn = parseFinn(api.get("/finn")) }
+            } catch (e: ApiException) {
+                message = if (e.status == 404) "Serveren støtter ikke opplasting til Finn-handler ennå. Oppdater homelab." else e.message
+            } finally { finnBusy = null }
+        }
+    }
+
+    fun finnRemove(kind: String, fileId: String) {
+        val id = finnSel ?: return
+        launch {
+            // Kvitteringer og bilder er filer i handelen; e-postene har egen rute.
+            val res = api.delete("/finn/$id/${if (kind == "emails") "emails" else "files"}/" + URLEncoder.encode(fileId, "UTF-8"))
+            finnDetail = runCatching { parseFinnDetail(res) }.getOrNull()?.takeIf { it.deal.id == id } ?: finnDetail
+            if (finnDetail?.deal?.id != id) loadFinnDetail(id)
+        }
+    }
+
+    /** ✦ Hent annonsen fra finn.no (serveren henter tittel, pris, sted, beskrivelse og bildene og lagrer dem). */
+    fun finnFetchAd(url: String? = null) {
+        val id = finnSel ?: return
+        if (finnBusy != null) return
+        launch {
+            finnBusy = "ad"
+            try {
+                val res = api.post("/finn/$id/ad", JSONObject().apply { url?.takeIf { it.isNotBlank() }?.let { put("url", it.trim()) } })
+                finnDetail = runCatching { parseFinnDetail(res) }.getOrNull()?.takeIf { it.deal.id == id } ?: run { loadFinnDetail(id); finnDetail }
+                message = runCatching { JSONObject(res).optStr("message") }.getOrNull()
+                    ?: ("✦ Annonsen er lagret" + (finnDetail?.ad?.images?.size?.takeIf { it > 0 }?.let { " med $it bilder" } ?: ""))
+            } catch (e: ApiException) {
+                message = if (e.status == 404) "Serveren kan ikke hente annonser ennå. Oppdater homelab." else e.message
+            } finally { finnBusy = null }
+        }
+    }
+
     private suspend fun loadMore() {
         runCatching { boot = parseBoot(api.get("/bootstrap")) }
         runCatching { recurring = parseRecurring(api.get("/recurring")) }
@@ -870,6 +955,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Flere filer legges i kø og lastes opp én og én; AI-en leser dem i bakgrunnen på serveren. Uten nett (eller utenfor Wi-Fi) venter de. */
     fun uploadUris(uris: List<Uri>) {
         if (uris.isEmpty()) return
+        // Skann/opplasting inne i en bolig: kvitteringen havner i valgt bolig, og AI velger kategori og underkategori.
+        val bolig = if (screen == Screen.Folders && editing == null) (uploadFolder ?: folder?.folder?.id) else null
+        if (bolig != null) {
+            val name = folders?.firstOrNull { it.id == bolig }?.name ?: folder?.folder?.name ?: "boligen"
+            message = if (uris.size == 1) "Kvitteringen lastes opp til $name" else "${uris.size} kvitteringer lastes opp til $name"
+            uploading += uris.size
+            launch {
+                try {
+                    for (u in uris) {
+                        try { uploadOne(u, "/folders/$bolig/receipts") } catch (e: ApiException) { message = e.message }
+                        finally { uploading = maxOf(0, uploading - 1) }
+                    }
+                } finally { folder?.let { runCatching { folder = parseFolderDetail(api.get("/folders/${it.folder.id}")) } } }
+            }
+            return
+        }
         // Fra «Legg ved kvittering» i skjemaet: bli stående, kvitteringen kobles når den bokføres.
         if (editing != null) message = "Kvitteringen er lagt i opplastingskøen"
         else if (screen != Screen.Scan) this.open(Screen.Scan)
@@ -899,7 +1000,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private suspend fun uploadOne(uri: Uri) {
+    private suspend fun uploadOne(uri: Uri, path: String = "/receipts") {
         val ctx = getApplication<Application>()
         val mime = ctx.contentResolver.getType(uri) ?: "image/jpeg"
         val original = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes() } }
@@ -913,7 +1014,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             scan?.let { parts += Api.Part("scan", "scan.jpg", "image/jpeg", it) }
             scaled(original, 240, 75)?.let { parts += Api.Part("thumb", "thumb.jpg", "image/jpeg", it) }
         }
-        val r = runCatching { parseReceipt(JSONObject(api.upload("/receipts", parts))) }
+        val r = runCatching { parseReceipt(JSONObject(api.upload(path, parts))) }
         r.exceptionOrNull()?.let { if (it is ApiException) throw it }
         loadJobs()
     }
@@ -994,14 +1095,27 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /* ---------- Boliger (delte mapper) ---------- */
 
-    fun openFolder(id: Int?) = launch { folder = if (id == null) null else parseFolderDetail(api.get("/folders/$id")) }
-    fun addFolderEntry(desc: String, amount: String, paidBy: String?) = launch {
+    fun openFolder(id: Int?) = launch { uploadFolder = null; folder = if (id == null) null else parseFolderDetail(api.get("/folders/$id")) }
+    /** Boligkategorier med underkategorier (Innstillinger → Boliger på PC). Tom liste på eldre servere. */
+    var boligCats by mutableStateOf<List<BoligCategory>>(emptyList())
+    /** «Legg i bolig»: målet for skann og opplasting mens man står i Boliger (null = boligen som er åpen). */
+    var uploadFolder by mutableStateOf<Int?>(null)
+
+    fun loadBoligCategories() = launch {
+        boligCats = runCatching { parseBoligCategories(api.get("/boliger/categories")) }.getOrDefault(boligCats)
+    }
+
+    fun addFolderEntry(desc: String, amount: String, paidBy: String?, targetId: Int? = null, categoryId: Int? = null) = launch {
         val f = folder ?: return@launch
+        val id = targetId ?: f.folder.id
         val body = JSONObject().put("description", desc).put("amount", amount.replace(" ", "").replace(',', '.'))
         paidBy?.let { body.put("paidBy", it) }
-        folder = parseFolderDetail(api.post("/folders/${f.folder.id}/entries", body))
+        categoryId?.let { body.put("categoryId", it) }
+        val res = parseFolderDetail(api.post("/folders/$id/entries", body))
+        // Lagt i en annen bolig: den åpne boligen lastes på nytt.
+        folder = if (id == f.folder.id) res else parseFolderDetail(api.get("/folders/${f.folder.id}"))
         folders = parseFolders(api.get("/folders"))
-        message = "Lagt til i ${f.folder.name}"
+        message = "Lagt til i ${res.folder.name}"
     }
 
     /* ---------- Domener ---------- */

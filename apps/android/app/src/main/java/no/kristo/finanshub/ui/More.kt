@@ -121,7 +121,9 @@ private data class MoreTile(val screen: Screen, val sub: String, val badge: Int 
 @Composable
 internal fun MoreScreen(vm: AppViewModel) {
     val b = vm.boot
-    val tiles = listOf(
+    // Budsjett ligger øverst når den ikke er egen fane (standard etter prompt 10); Finn når Finn-fanen er skjult.
+    val tiles = listOfNotNull(
+        MoreTile(Screen.Budget, vm.summary?.let { "${kr(it.left)} igjen" } ?: "Månedsbudsjett").takeIf { !vm.finTabShown(Screen.Budget) },
         MoreTile(Screen.Scan, "${b?.reviewCount ?: 0} til gjennomgang", b?.reviewCount ?: 0),
         MoreTile(Screen.Fast, vm.recurring?.filter { it.active }?.sumOf { it.monthly }?.let { "${kr(it)}/mnd" } ?: "Trekk og regninger"),
         MoreTile(Screen.Accounts, b?.accounts?.sumOf { it.balance }?.let { kr(it) } ?: "Saldo og sparemål"),
@@ -129,7 +131,7 @@ internal fun MoreScreen(vm: AppViewModel) {
         MoreTile(Screen.Reports, "Måned og år"),
         MoreTile(Screen.Sub, vm.subs?.let { "${kr(it.monthly)}/mnd" } ?: "Abonnementer"),
         MoreTile(Screen.Folders, vm.folders?.let { "${it.size} boliger" } ?: "Bolig og felles"),
-        MoreTile(Screen.Finn, vm.finn?.let { "${it.ongoing} pågående" } ?: "Kjøp og salg"),
+        MoreTile(Screen.Finn, vm.finn?.let { "${it.ongoing} pågående" } ?: "Kjøp og salg").takeIf { !vm.finTabShown(Screen.Finn) },
         MoreTile(Screen.Import, "CSV, XLSX, tekst"),
         MoreTile(Screen.Search, "Spør om alt"),
     )

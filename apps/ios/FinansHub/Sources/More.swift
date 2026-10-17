@@ -125,11 +125,13 @@ private struct Loading: View {
 
 private struct MoreTile: Identifiable {
     let module: Module?
+    /// En Finans-fane uten plass i fanelinja (Budsjett, Finn). module og tab nil = AI-søk.
+    var tab: Tab? = nil
     let sub: String
     var badge = 0
-    var id: String { module?.rawValue ?? "search" }
-    var title: String { module?.rawValue ?? "AI-søk" }
-    var icon: String { module?.icon ?? "sparkle.magnifyingglass" }
+    var id: String { module?.rawValue ?? tab?.key ?? "search" }
+    var title: String { module?.rawValue ?? tab?.rawValue ?? "AI-søk" }
+    var icon: String { module?.icon ?? tab?.icon ?? "sparkle.magnifyingglass" }
 }
 
 /// Mer: alt fra FinansHub på nettsiden, som fliser med levende tall.
@@ -139,7 +141,10 @@ struct MoreView: View {
     var body: some View {
         let b = store.boot
         let fast = store.recurring.map { l in l.filter(\.isActive).map(\.monthly).reduce(0, +) }
-        let tiles: [MoreTile] = [
+        // Budsjett og Finn ligger her når de ikke har egen fane (Budsjett øverst).
+        let budget = store.finTabs.contains(.budget) ? nil : MoreTile(module: nil, tab: .budget, sub: store.summary.map { "\(kr(max(0, $0.budgetTotal - $0.budgetUsed))) igjen" } ?? "Måned og kategorier")
+        let finnTile = store.finTabs.contains(.finn) ? nil : MoreTile(module: nil, tab: .finn, sub: store.finn?.ongoing.map { "\($0) pågående" } ?? "Kjøp og salg")
+        let tiles: [MoreTile] = [budget].compactMap { $0 } + [
             MoreTile(module: .upload, sub: "\(b?.reviewCount ?? 0) til gjennomgang", badge: b?.reviewCount ?? 0),
             MoreTile(module: .fast, sub: fast.map { "\(kr($0))/mnd" } ?? "Trekk og regninger"),
             MoreTile(module: .accounts, sub: b.map { kr($0.accounts.map(\.balance).reduce(0, +)) } ?? "Saldo og sparemål"),
@@ -147,7 +152,7 @@ struct MoreView: View {
             MoreTile(module: .reports, sub: "Måned og år"),
             MoreTile(module: .sub, sub: store.subs?.monthly.map { "\(kr($0))/mnd" } ?? "Abonnementer"),
             MoreTile(module: .folders, sub: store.folders.map { "\($0.count) boliger" } ?? "Bolig og felles"),
-            MoreTile(module: .finn, sub: store.finn?.ongoing.map { "\($0) pågående" } ?? "Kjøp og salg"),
+        ] + [finnTile].compactMap { $0 } + [
             MoreTile(module: .imports, sub: "CSV, XLSX, tekst"),
             MoreTile(module: nil, sub: "Spør om alt"),
         ]
@@ -157,7 +162,7 @@ struct MoreView: View {
                 SubLine(text: "Alt fra FinansHub på nettsiden")
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                     ForEach(tiles) { t in
-                        Button { if let m = t.module { store.openSub(m) } else { store.go(.search) } } label: { tile(t) }
+                        Button { if let m = t.module { store.openSub(m) } else { store.go(t.tab ?? .search) } } label: { tile(t) }
                             .buttonStyle(GlassPress())
                     }
                 }

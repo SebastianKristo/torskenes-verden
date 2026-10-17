@@ -91,12 +91,13 @@ data class HomeLayout(
     companion object {
         val SECTIONS = listOf("clock", "search", "links", "os", "srv", "ruter")
         val HL_TABS = listOf("hl", "home", "dom", "mat")
-        val FIN_TABS = listOf("home", "list", "bud", "ai", "mer")
+        val FIN_TABS = listOf("home", "list", "finn", "bud", "ai", "mer")
         /** Kan ikke skjules. */
         val FIXED_HL = setOf("hl", "home")
         val FIXED_FIN = setOf("home", "mer")
         val STARTS = listOf("homelab", "fin-hjem", "fin-liste", "fin-budsjett")
-        val DEFAULT = HomeLayout(SECTIONS, HL_TABS, FIN_TABS, mapOf("srv" to true, "ruter" to true))
+        /** Budsjett er skjult som fane (ligger øverst under Mer) og kan slås på i navbar-redigeringen. */
+        val DEFAULT = HomeLayout(SECTIONS, HL_TABS, FIN_TABS, mapOf("srv" to true, "ruter" to true, "bud" to true))
 
         /** Nye ID-er som ikke finnes i lagret oppsett legges sist; ukjente fjernes. */
         private fun fix(saved: List<String>, all: List<String>) = saved.filter { it in all }.distinct() + all.filter { it !in saved }
@@ -107,9 +108,16 @@ data class HomeLayout(
             o.optJSONObject("hide")?.let { h -> h.keys().forEach { k -> hide[k] = h.optBoolean(k) } }
             val names = mutableMapOf<String, String>()
             o.optJSONObject("names")?.let { n -> n.keys().forEach { k -> n.optString(k).trim().takeIf { it.isNotEmpty() }?.let { names[k] = it.take(30) } } }
+            // Eldre oppsett uten Finn-fanen: Finn tar plassen til Budsjett, og Budsjett skjules (prompt 10).
+            var fin = o.optJSONArray("finTabs").strings().filter { it in FIN_TABS }
+            if (fin.isNotEmpty() && "finn" !in fin) {
+                val at = fin.indexOf("bud").takeIf { it >= 0 } ?: fin.indexOf("ai").takeIf { it >= 0 } ?: fin.size
+                fin = fin.toMutableList().apply { add(at, "finn") }
+                hide["bud"] = true
+            }
             return HomeLayout(
                 fix(o.optJSONArray("sec").strings(), SECTIONS), fix(o.optJSONArray("hlTabs").strings(), HL_TABS),
-                fix(o.optJSONArray("finTabs").strings(), FIN_TABS), hide, names,
+                fix(fin, FIN_TABS), hide, names,
                 o.optString("backStyle").takeIf { it == "arrow" || it == "bar" } ?: "arrow",
                 o.optString("matTheme").takeIf { it in listOf("light", "dark", "system") } ?: "light",
                 o.optString("start").takeIf { it in STARTS },
@@ -195,15 +203,59 @@ data class SubList(val items: List<Sub>, val monthly: Double, val yearly: Double
 data class Member(val id: String, val name: String, val role: String)
 data class Folder(val id: Int, val name: String, val type: String?, val address: String?, val members: List<Member>, val total: Double, val count: Int, val myRole: String?)
 data class Balance(val name: String, val paid: Double, val balance: Double)
-data class Entry(val id: Int, val description: String, val date: String, val amount: Double, val paidBy: String?, val split: String?, val domain: String?, val aiShort: String?, val category: String?)
+data class Entry(val id: Int, val description: String, val date: String, val amount: Double, val paidBy: String?, val split: String?, val domain: String?, val aiShort: String?, val category: String?,
+    val subcategory: String? = null, val aiCategory: Boolean = false) {
+    /** «Kategori › Underkategori», med ✦ når AI har laget kategorien. */
+    val categoryPath: String? get() = category?.let { c -> (if (aiCategory) "✦ " else "") + (subcategory?.let { "$c › $it" } ?: c) }
+}
+/** Boligkategori med underkategorier (GET /finans/api/boliger/categories). */
+data class BoligCategory(val id: Int, val name: String, val color: Long, val ai: Boolean, val children: List<BoligCategory>)
+data class CategoryShare(val name: String, val amount: Double, val children: List<Pair<String, Double>>)
 data class Installment(val label: String, val due: String?, val amount: Double, val paid: Boolean)
 data class Project(val id: Int, val name: String, val vendor: String?, val budget: Double, val spent: Double, val installments: List<Installment>)
 data class Bill(val name: String, val category: String?, val freq: String?, val payer: String?, val lastPaid: String?, val nextDue: String?, val amount: Double?)
-data class FolderDetail(val folder: Folder, val balances: List<Balance>, val entries: List<Entry>, val projects: List<Project>, val bills: List<Bill>, val categories: List<Pair<String, Double>>)
+data class FolderDetail(val folder: Folder, val balances: List<Balance>, val entries: List<Entry>, val projects: List<Project>, val bills: List<Bill>, val categories: List<CategoryShare>)
 
-data class FinnStep(val t: String, val done: Boolean)
-data class FinnDeal(val id: Int, val role: String, val item: String, val counterpart: String?, val date: String, val amount: Double, val steps: List<FinnStep>, val done: Boolean)
+data class FinnStep(val t: String, val done: Boolean, val date: String? = null)
+data class FinnDeal(
+    val id: Int, val role: String, val item: String, val counterpart: String?, val date: String, val amount: Double, val steps: List<FinnStep>, val done: Boolean,
+    /** Finn-koden, forsidebildet (egne bilder eller annonsens), sammendraget («5 e-poster · kvittering ✓ …») og ev. steg 1–4 fra serveren. */
+    val code: String? = null, val image: String? = null, val summary: String? = null, val stage: Int? = null, val next: String? = null,
+    /** Lagret finn.no-lenke til annonsen. */
+    val adUrl: String? = null,
+) {
+    val sold get() = role == "sold"
+    /** Sporingspunktene: Betalt → Sendt → Mottatt → Godkjent ved kjøp, Solgt → Sendt → Levert → Utbetalt ved salg. */
+    val points get() = if (sold) listOf("Solgt", "Sendt", "Levert", "Utbetalt") else listOf("Betalt", "Sendt", "Mottatt", "Godkjent")
+    /** Hvor langt handelen har kommet (1–4). Serverens «stage» brukes hvis den finnes, ellers tolkes stegene. */
+    val level: Int get() {
+        stage?.let { return it.coerceIn(1, 4) }
+        if (done) return 4
+        val ok = steps.filter { it.done }.joinToString(" ") { it.t.lowercase() }
+        return when {
+            Regex("godkjent|utbetalt|fullført").containsMatchIn(ok) -> 4
+            Regex("levert|mottatt|hentet").containsMatchIn(ok) -> 3
+            Regex("sendt|på vei").containsMatchIn(ok) -> 2
+            else -> 1
+        }
+    }
+    val finished get() = level >= 4
+    val nextText: String get() = next ?: if (sold) listOf("Send pakken innen 5 dager", "Venter på levering", "Utbetaling innen 1 dag", "Fullført")[level - 1]
+        else listOf("Venter på at selger sender", "Pakken er på vei til deg", "Godkjenn varen innen 24 t", "Fullført")[level - 1]
+    val status get() = if (finished) "Fullført" else points[level - 1]
+}
 data class FinnList(val items: List<FinnDeal>, val bought: Double, val sold: Double, val ongoing: Int)
+
+data class FinnAd(val url: String?, val title: String?, val price: Double?, val place: String?, val description: String?, val images: List<String>, val saved: String?)
+data class FinnFile(val id: String, val name: String, val mime: String?, val url: String?, val thumb: String?)
+data class FinnMail(val id: String, val date: String?, val from: String?, val subject: String?, val snippet: String?, val body: String?)
+data class FinnLine(val label: String, val amount: Double)
+data class FinnDetail(val deal: FinnDeal, val ad: FinnAd?, val receipts: List<FinnFile>, val emails: List<FinnMail>, val photos: List<FinnFile>, val summary: String?, val lines: List<FinnLine>,
+    /** Kvitteringen: total og «Betalt»/«Utbetalt» fra serveren; annonselenken serveren har funnet i e-postene. */
+    val total: Double? = null, val totalLabel: String? = null, val adUrlGuess: String? = null) {
+    /** Bildene i karusellen: egne bilder først, så annonsens. */
+    val images: List<String> get() = photos.mapNotNull { it.url ?: it.thumb } + (ad?.images ?: emptyList())
+}
 
 data class TokenInfo(val id: String, val name: String, val scopes: List<String>, val created: Long?, val lastUsed: Long?, val expires: Long?)
 
@@ -476,13 +528,27 @@ fun parseFolders(s: String): List<Folder> {
     return a.map(::parseFolder)
 }
 
+fun parseBoligCategories(s: String): List<BoligCategory> {
+    val t = s.trim()
+    val a = if (t.startsWith("[")) JSONArray(t) else JSONObject(t).optJSONArray("items") ?: JSONObject(t).optJSONArray("categories") ?: JSONArray()
+    fun one(o: JSONObject): BoligCategory = BoligCategory(o.optInt("id"), o.optString("name"), color(o.optStr("color")), o.optBoolean("ai", o.optBoolean("createdByAi")),
+        (o.optJSONArray("children") ?: o.optJSONArray("subcategories"))?.map { one(it) } ?: emptyList())
+    return a.map { one(it) }
+}
+
+private fun JSONObject.sumOrAmount(): Double = if (has("sum")) num("sum") else num("amount")
+
 fun parseFolderDetail(s: String): FolderDetail {
     val o = JSONObject(s)
     return FolderDetail(
         parseFolder(o),
         o.optJSONArray("balances")?.map { Balance(it.optString("name"), it.num("paid"), it.num("balance")) } ?: emptyList(),
         o.optJSONArray("entries")?.map {
-            Entry(it.optInt("id"), it.optString("description"), it.optString("date"), it.num("amount"), it.optStr("paidBy"), it.optStr("split"), it.optStr("domain"), it.optStr("aiShort"), it.optStr("category"))
+            // «category» kan være et navn eller «Kategori › Underkategori»; «subcategory» er valgfri.
+            val raw = it.optStr("categoryPath") ?: it.optStr("category") ?: it.optJSONObject("category")?.optStr("name")
+            val parts = raw?.split("›")?.map { p -> p.trim() }?.filter { p -> p.isNotEmpty() } ?: emptyList()
+            Entry(it.optInt("id"), it.optString("description"), it.optString("date"), it.num("amount"), it.optStr("paidBy"), it.optStr("split"), it.optStr("domain"), it.optStr("aiShort"),
+                parts.firstOrNull(), it.optStr("subcategory") ?: parts.getOrNull(1), it.optBoolean("categoryAi", it.optBoolean("aiCategory")))
         } ?: emptyList(),
         o.optJSONArray("projects")?.map { p ->
             Project(p.optInt("id"), p.optString("name"), p.optStr("vendor"), p.num("budget"), p.num("spent"),
@@ -491,17 +557,59 @@ fun parseFolderDetail(s: String): FolderDetail {
         o.optJSONArray("bills")?.map {
             Bill(it.optString("name"), it.optStr("category"), it.optStr("freq"), it.optStr("payer"), it.optStr("lastPaid"), it.optStr("nextDue"), it.optDoubleOrNull("amount"))
         } ?: emptyList(),
-        o.optJSONArray("categories")?.map { (it.optString("name") to it.num("amount")) } ?: emptyList(),
+        // Kategorikortet: {name, sum, subs: [{name, sum}]} (eldre servere: amount og children).
+        o.optJSONArray("categories")?.map { c ->
+            CategoryShare(c.optString("name"), c.sumOrAmount(),
+                (c.optJSONArray("subs") ?: c.optJSONArray("children") ?: c.optJSONArray("subcategories"))?.map { k -> k.optString("name") to k.sumOrAmount() } ?: emptyList())
+        } ?: emptyList(),
     )
+}
+
+/** «summary» er {text, emails, receipts …} fra serveren, eller ren tekst. */
+private fun JSONObject.summaryText(): String? = optJSONObject("summary")?.optStr("text") ?: if (optJSONObject("summary") == null) optStr("summary") else null
+
+internal fun parseFinnDeal(f: JSONObject): FinnDeal {
+    val img = f.optStr("image") ?: f.optStr("cover") ?: f.optStr("thumb")
+        ?: f.optJSONArray("photos")?.optJSONObject(0)?.let { it.optStr("thumb") ?: it.optStr("url") }
+        ?: f.optJSONObject("ad")?.optJSONArray("images")?.optString(0)?.takeIf { it.isNotBlank() }
+    return FinnDeal(f.optInt("id"), f.optString("role"), f.optString("item", f.optString("title")), f.optStr("counterpart"), f.optString("date"), f.num("amount"),
+        f.optJSONArray("steps")?.map { FinnStep(it.optString("t", it.optString("title")), it.optBoolean("done"), it.optStr("date")) } ?: emptyList(), f.optBoolean("done"),
+        f.optStr("code") ?: f.optStr("finnCode") ?: f.optStr("finnkode") ?: f.optStr("order_id"), img,
+        f.summaryText(), f.optIntOrNull("stage")?.takeIf { it in 1..4 }, f.optStr("next"), f.optStr("adUrl"))
 }
 
 fun parseFinn(s: String): FinnList {
     val o = JSONObject(s)
-    val items = o.optJSONArray("items")?.map { f ->
-        FinnDeal(f.getInt("id"), f.optString("role"), f.optString("item"), f.optStr("counterpart"), f.optString("date"), f.num("amount"),
-            f.optJSONArray("steps")?.map { FinnStep(it.optString("t"), it.optBoolean("done")) } ?: emptyList(), f.optBoolean("done"))
-    } ?: emptyList()
+    val items = o.optJSONArray("items")?.map(::parseFinnDeal) ?: emptyList()
     return FinnList(items, o.num("bought"), o.num("sold"), o.optInt("ongoing"))
+}
+
+private fun JSONObject.finnFile(i: Int): FinnFile = FinnFile(optStr("id") ?: "$i", optStr("name") ?: optStr("filename") ?: "fil", optStr("mime"), optStr("url"), optStr("thumb"))
+
+/** GET /finans/api/finn/:id – handelen med annonse, kvitteringer, e-poster og bilder. Ukjente felt hoppes over. */
+fun parseFinnDetail(s: String): FinnDetail {
+    val o = JSONObject(s)
+    val d = o.optJSONObject("deal") ?: o
+    val deal = parseFinnDeal(d)
+    val ad = o.optJSONObject("ad")?.let { a ->
+        FinnAd(a.optStr("url"), a.optStr("title"), a.optDoubleOrNull("price"), a.optStr("place") ?: a.optStr("location"), a.optStr("description"),
+            a.optJSONArray("images")?.let { arr -> (0 until arr.length()).mapNotNull { i -> arr.optString(i).takeIf { it.isNotBlank() } ?: arr.optJSONObject(i)?.optStr("url") } } ?: emptyList(),
+            a.optStr("saved") ?: a.optStr("fetched") ?: a.optStr("created"))
+    }
+    var i = 0
+    val files = { k: String -> o.optJSONArray(k)?.map { it.finnFile(i++) } ?: emptyList() }
+    val receipts = files("receipts")
+    val photos = files("photos")
+    val mails = o.optJSONArray("emails")?.map { m ->
+        FinnMail(m.optStr("id") ?: "${i++}", m.optStr("date"), m.optStr("from"), m.optStr("subject"), m.optStr("snippet"), m.optStr("body") ?: m.optStr("text"))
+    } ?: emptyList()
+    // Kvitteringen: {receipt: {lines: [{l, v}], total, totalLabel}} (eller lines: [{label, amount}]).
+    val rc = o.optJSONObject("receipt")
+    val lines = (o.optJSONArray("lines") ?: rc?.optJSONArray("lines"))?.map {
+        FinnLine(it.optStr("label") ?: it.optStr("l") ?: it.optStr("description") ?: "", if (it.has("amount")) it.num("amount") else it.num("v"))
+    } ?: emptyList()
+    return FinnDetail(deal, ad, receipts, mails, photos, o.summaryText() ?: deal.summary, lines,
+        rc?.optDoubleOrNull("total"), rc?.optStr("totalLabel"), o.optStr("adUrlGuess"))
 }
 
 private fun JSONObject.time(k: String): Long? = when {

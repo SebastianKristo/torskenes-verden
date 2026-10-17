@@ -11,10 +11,63 @@
   "background_color": "#0A0A0C",
   "theme_color": "#0A0A0C",
   "icons": [
-    { "src": "/assets/finans/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/assets/finans/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "/assets/finans/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "/assets/finans/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/finans/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/finans/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/finans/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/finans/icons/icon-monochrome-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "monochrome"
+    },
+    {
+      "src": "/assets/finans/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
   ],
-  "shortcuts": [{ "name": "Skann kvittering", "url": "/finans/#/skann" }],
-  "share_target": { "action": "/finans/share", "method": "POST", "enctype": "multipart/form-data", "params": { "files": [{ "name": "file", "accept": ["image/*", "application/pdf"] }] } }
+  "shortcuts": [
+    {
+      "name": "Skann kvittering",
+      "url": "/finans/#/skann"
+    }
+  ],
+  "share_target": {
+    "action": "/finans/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "file",
+          "accept": [
+            "image/*",
+            "application/pdf"
+          ]
+        }
+      ]
+    }
+  }
 }

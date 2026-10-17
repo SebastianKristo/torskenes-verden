@@ -61,7 +61,7 @@ struct MaterialShell: View {
     }
 
     private var finBar: some View {
-        let cur: Tab = store.module?.isFinance == true ? .more : store.tab
+        let cur: Tab = store.module?.isFinance == true || !store.finTabs.contains(store.tab) ? .more : store.tab
         var items: [(String, String, Bool, () -> Void)] = []
         if store.homeInBar && !store.financeStart { items.append((store.startLabel, "house.fill", false, { store.goStart() })) }
         for t in store.finTabs { items.append((store.tabName(t), t.icon, t == cur, { store.go(t) })) }

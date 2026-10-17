@@ -58,7 +58,7 @@ private val WIDGETS: Map<String, Triple<String, String, ImageVector>> = mapOf(
     "ruter" to Triple("Ruter-avganger", "Neste avganger fra holdeplassen", Icons.Filled.DirectionsBus),
 )
 private val HL_NAMES = mapOf("hl" to "Homelab", "home" to "Finans", "dom" to "Domener", "mat" to "Matplan")
-private val FIN_NAMES = mapOf("home" to "Oversikt", "list" to "Liste", "bud" to "Budsjett", "ai" to "Søk", "mer" to "Mer")
+private val FIN_NAMES = mapOf("home" to "Oversikt", "list" to "Liste", "finn" to "Finn", "bud" to "Budsjett", "ai" to "Søk", "mer" to "Mer")
 
 private fun greeting(): String = when (LocalTime.now().hour) { in 5..9 -> "God morgen"; in 10..17 -> "Hei"; else -> "God kveld" }
 

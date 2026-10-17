@@ -24,8 +24,6 @@ struct Pill: View {
     }
 }
 
-private let blue = Color(hex: "#A9C3FF")
-
 /* ---------------- Subscription OS ---------------- */
 
 private let cycles = [("monthly", "Månedlig"), ("yearly", "Årlig"), ("biennial", "Hvert 2. år")]
@@ -160,7 +158,11 @@ struct FolderDetailView: View {
     @State private var desc = ""
     @State private var amount = ""
     @State private var payer: String? = nil
+    @State private var target: Int? = nil
+    @State private var cat: Int? = nil
     var body: some View {
+        // «Legg i bolig»: bare boliger der du kan redigere. Standard er boligen du står i.
+        let targets = (store.folders ?? []).filter { !$0.readOnly }
         ScrollView {
             VStack(spacing: 12) {
                 ModuleHeader(title: f.name, back: { store.folder = nil }, trailing: {
@@ -186,13 +188,31 @@ struct FolderDetailView: View {
                         Text("Ny utgift").font(.headline)
                         TextField("Beskrivelse", text: $desc).padding(.horizontal, 14).frame(height: 46).glass(16)
                         TextField("Beløp", text: $amount).keyboardType(.decimalPad).padding(.horizontal, 14).frame(height: 46).glass(16)
+                        if targets.count > 1 {
+                            Text("Legg i bolig").font(.footnote).foregroundStyle(.white.opacity(0.65))
+                            Flow(spacing: 8) {
+                                ForEach(targets) { t in
+                                    choice(t.name, (target ?? f.id) == t.id) { target = t.id; store.uploadFolder = t.id }
+                                }
+                            }
+                        }
                         Menu { ForEach(f.members ?? [], id: \.self) { m in Button(m.display) { payer = m.display } } } label: { Label("Betalt av \(payer ?? "meg")", systemImage: "person") }
-                        Button { store.addFolderEntry(desc, amount, paidBy: payer); adding = false; desc = ""; amount = "" } label: {
+                        Text("Kategori").font(.footnote).foregroundStyle(.white.opacity(0.65))
+                        Flow(spacing: 8) {
+                            choice("✦ La AI velge", cat == nil) { cat = nil }
+                            ForEach(store.boligCats) { c in
+                                choice((c.ai ? "✦ " : "") + c.name, cat == c.id) { cat = c.id }
+                                ForEach(c.children) { k in choice("\(c.name) › \(k.name)", cat == k.id) { cat = k.id } }
+                            }
+                        }
+                        Button { store.addFolderEntry(desc, amount, paidBy: payer, targetId: target, categoryId: cat); adding = false; desc = ""; amount = ""; cat = nil } label: {
                             Text("Legg til").fontWeight(.bold).foregroundStyle(Color.ink).frame(maxWidth: .infinity, minHeight: 48)
                         }
                         .buttonStyle(.plain).glass(24, tint: .accent).disabled(desc.isEmpty || amount.isEmpty)
                     }
                     .padding(16).glass(24)
+                    .task { await store.loadBoligCategories() }
+                    Text("Skann her inne legger kvitteringen i boligen du har valgt, og AI velger kategori og underkategori.").font(.caption).foregroundStyle(.white.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading)
                 }
                 if let cats = f.categories, !cats.isEmpty {
                     SectionLabel(text: "Kategorier")
@@ -202,6 +222,11 @@ struct FolderDetailView: View {
                             VStack(alignment: .leading, spacing: 6) {
                                 HStack { Text(c.name ?? "–"); Spacer(); Text("\(n0(c.amount ?? 0)) kr").font(.system(.subheadline, design: .monospaced)) }
                                 Bar(value: (c.amount ?? 0) / Swift.max(1, max), color: .accent)
+                                // Fordeling på underkategorier («Hage og uteområde › Blomster»).
+                                ForEach(Array((c.children ?? []).enumerated()), id: \.offset) { _, k in
+                                    HStack { Text("› \(k.name ?? "–")"); Spacer(); Text("\(n0(k.amount ?? 0)) kr").font(.system(.footnote, design: .monospaced)) }
+                                        .font(.footnote).foregroundStyle(.white.opacity(0.65)).padding(.leading, 12)
+                                }
                             }
                         }
                     }
@@ -258,7 +283,7 @@ struct FolderDetailView: View {
                                 Logo(domain: e.domain, name: e.description ?? "", color: "#FF7A3D", size: 36)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(e.description ?? "–").fontWeight(.medium).lineLimit(1)
-                                    Text([ddmm(e.date), e.paidBy.map { "betalt av \($0)" }, e.split, e.category].compactMap { $0 }.joined(separator: " · ")).font(.footnote).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
+                                    Text([ddmm(e.date), e.paidBy.map { "betalt av \($0)" }, e.split, e.categoryPath].compactMap { $0 }.joined(separator: " · ")).font(.footnote).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
                                     AiLine(text: e.aiShort)
                                 }
                                 Spacer(minLength: 6)
@@ -275,6 +300,13 @@ struct FolderDetailView: View {
     }
 }
 
+private func choice(_ t: String, _ on: Bool, _ act: @escaping () -> Void) -> some View {
+    Button(action: act) {
+        Text(t).font(.subheadline).lineLimit(1).padding(.horizontal, 12).frame(height: 34).foregroundStyle(on ? Color.ink : .white).contentShape(Capsule())
+    }
+    .buttonStyle(.plain).glass(17, tint: on ? .accent : nil)
+}
+
 struct Bar: View {
     let value: Double
     var color: Color = .accent
@@ -289,45 +321,3 @@ struct Bar: View {
     }
 }
 
-/* ---------------- Finn-handler ---------------- */
-
-struct FinnView: View {
-    @Environment(Store.self) private var store
-    var body: some View {
-        ScrollView {
-            VStack(spacing: 12) {
-                ModuleHeader(title: "Finn-handler")
-                if let e = store.moduleError { Empty(text: e) }
-                if let f = store.finn {
-                    HStack(spacing: 10) {
-                        Kpi(label: "Kjøpt i år", value: "\(n0(f.bought ?? 0)) kr", tint: blue)
-                        Kpi(label: "Solgt i år", value: "\(n0(f.sold ?? 0)) kr", tint: .positive)
-                        Kpi(label: "Pågående", value: "\(f.ongoing ?? 0)")
-                    }
-                    if f.items.isEmpty { Empty(text: "Ingen Finn-handler ennå. Lim inn en e-post fra Finn i FinansHub på PC.") }
-                    ForEach(f.items) { d in
-                        let sold = d.role == "sold"
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack(spacing: 10) {
-                                Pill(text: sold ? "Solgt" : "Kjøpt", color: sold ? .positive : blue)
-                                Text(d.item ?? "–").fontWeight(.semibold).lineLimit(1)
-                                Spacer()
-                                Text(n0(d.amount ?? 0)).font(.system(.body, design: .monospaced).weight(.semibold)).foregroundStyle(sold ? Color.positive : .white)
-                            }
-                            Text([d.counterpart, d.date.map { ddmm($0) }].compactMap { $0 }.joined(separator: " · ")).font(.footnote).foregroundStyle(.white.opacity(0.6))
-                            if let steps = d.steps, !steps.isEmpty {
-                                Flow(spacing: 6) {
-                                    ForEach(Array(steps.enumerated()), id: \.offset) { _, st in
-                                        Pill(text: (st.done == true ? "✓ " : "") + (st.t ?? ""), color: st.done == true ? .positive : .white.opacity(0.7))
-                                    }
-                                }
-                            }
-                        }
-                        .padding(16).frame(maxWidth: .infinity, alignment: .leading).glass(24)
-                    }
-                } else if store.moduleError == nil { ProgressView().padding(30) }
-            }
-            .padding(.horizontal, 18).padding(.bottom, 30)
-        }
-    }
-}

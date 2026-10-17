@@ -207,26 +207,49 @@ private fun FolderView(vm: AppViewModel, d: FolderDetail) {
             var desc by remember { mutableStateOf("") }
             var amount by remember { mutableStateOf("") }
             var payer by remember { mutableStateOf<String?>(null) }
+            var target by remember(f.id) { mutableStateOf(f.id) }
+            var cat by remember { mutableStateOf<Int?>(null) }
+            LaunchedEffect(Unit) { vm.loadBoligCategories() }
+            // «Legg i bolig»: bare boliger der du kan redigere. Standard er boligen du står i.
+            val targets = vm.folders.orEmpty().filter { it.myRole != "viewer" && it.myRole != "view" }
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(C.surface1).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Ny utgift", style = MaterialTheme.typography.titleMedium)
                 Field("Beskrivelse", desc) { desc = it }
                 Field("Beløp", amount, number = true) { amount = it }
+                if (targets.size > 1) {
+                    Text("Legg i bolig", color = C.text2, fontSize = 13.sp)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        targets.forEach { t -> FilterChip(selected = target == t.id, onClick = { target = t.id; vm.uploadFolder = t.id }, label = { Text(t.name) }) }
+                    }
+                }
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     f.members.forEach { m -> FilterChip(selected = payer == m.name, onClick = { payer = m.name }, label = { Text("Betalt av ${m.name}") }) }
                 }
-                Button(onClick = { vm.addFolderEntry(desc, amount, payer); adding = false }, enabled = desc.isNotBlank() && amount.isNotBlank(), modifier = Modifier.fillMaxWidth().height(52.dp),
+                Text("Kategori", color = C.text2, fontSize = 13.sp)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FilterChip(selected = cat == null, onClick = { cat = null }, label = { Text("✦ La AI velge") })
+                    vm.boligCats.forEach { c ->
+                        FilterChip(selected = cat == c.id, onClick = { cat = c.id }, label = { Text((if (c.ai) "✦ " else "") + c.name) })
+                        c.children.forEach { k -> FilterChip(selected = cat == k.id, onClick = { cat = k.id }, label = { Text("${c.name} › ${k.name}") }) }
+                    }
+                }
+                Button(onClick = { vm.addFolderEntry(desc, amount, payer, target, cat); adding = false }, enabled = desc.isNotBlank() && amount.isNotBlank(), modifier = Modifier.fillMaxWidth().height(52.dp),
                     shape = RoundedCornerShape(26.dp), colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) { Text("Legg til", fontWeight = FontWeight.Bold) }
-                Text("Kvitteringer kan legges ved via Skann; velg mappen i FinansHub.", color = C.text2, fontSize = 12.sp)
+                Text("Skann her inne legger kvitteringen i boligen du har valgt, og AI velger kategori og underkategori.", color = C.text2, fontSize = 12.sp)
             }
         }
         if (d.categories.isNotEmpty()) item {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 SectionLabel("Kategorier")
-                val max = d.categories.maxOf { it.second }.coerceAtLeast(1.0)
-                d.categories.forEach { (n, a) ->
+                val max = d.categories.maxOf { it.amount }.coerceAtLeast(1.0)
+                d.categories.forEach { c ->
                     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(C.surface1).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Row { Text(n, Modifier.weight(1f)); Text("${n0(a)} kr", fontFamily = Mono) }
-                        LinearProgressIndicator(progress = { (a / max).toFloat() }, Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)), color = C.primary, trackColor = C.surface2)
+                        Row { Text(c.name, Modifier.weight(1f)); Text("${n0(c.amount)} kr", fontFamily = Mono) }
+                        LinearProgressIndicator(progress = { (c.amount / max).toFloat() }, Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)), color = C.primary, trackColor = C.surface2)
+                        // Fordeling på underkategorier («Hage og uteområde › Blomster»).
+                        c.children.forEach { (n, a) ->
+                            Row(Modifier.padding(start = 12.dp)) { Text("› $n", Modifier.weight(1f), color = C.text2, fontSize = 13.sp); Text("${n0(a)} kr", fontFamily = Mono, color = C.text2, fontSize = 13.sp) }
+                        }
                     }
                 }
             }
@@ -279,7 +302,7 @@ private fun FolderView(vm: AppViewModel, d: FolderDetail) {
                         Logo(vm, e.domain, e.description, 0xFFFF7A3D, 36)
                         Column(Modifier.weight(1f)) {
                             Text(e.description, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(listOfNotNull(ddmm(e.date), e.paidBy?.let { "betalt av $it" }, e.split, e.category).joinToString(" · "), color = C.text2, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(listOfNotNull(ddmm(e.date), e.paidBy?.let { "betalt av $it" }, e.split, e.categoryPath).joinToString(" · "), color = C.text2, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             AiLine(e.aiShort)
                         }
                         Text(n2(e.amount), fontFamily = Mono, fontWeight = FontWeight.SemiBold)
@@ -290,42 +313,7 @@ private fun FolderView(vm: AppViewModel, d: FolderDetail) {
     }
 }
 
-/* ---------------- Finn-handler ---------------- */
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-internal fun FinnScreen(vm: AppViewModel) {
-    val f = vm.finn
-    Page {
-        item { ModuleHeader(vm, "Finn-handler") }
-        vm.moduleError?.let { e -> item { Empty(e) } }
-        if (f == null && vm.moduleError == null) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = C.primary) } }
-        if (f != null) {
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Kpi("Kjøpt i år", "${n0(f.bought)} kr", Modifier.weight(1f), RoundedCornerShape(28.dp, 8.dp, 8.dp, 28.dp), tc(0xFF26304A), tc(0xFFA9C3FF))
-                    Kpi("Solgt i år", "${n0(f.sold)} kr", Modifier.weight(1f), RoundedCornerShape(8.dp), C.positiveBg, C.positive)
-                    Kpi("Pågående", "${f.ongoing}", Modifier.weight(1f), RoundedCornerShape(8.dp, 28.dp, 28.dp, 8.dp))
-                }
-            }
-            if (f.items.isEmpty()) item { Empty("Ingen Finn-handler ennå. Lim inn en e-post fra Finn i FinansHub på PC.") }
-            items(f.items, key = { it.id }) { d ->
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(C.surface1).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        val sold = d.role == "sold"
-                        Chip(if (sold) "Solgt" else "Kjøpt", bg = if (sold) C.positiveBg else tc(0xFF26304A), fg = if (sold) C.positive else tc(0xFFA9C3FF))
-                        Text(d.item, Modifier.weight(1f), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(n0(d.amount), fontFamily = Mono, fontWeight = FontWeight.SemiBold, color = if (sold) C.positive else C.text)
-                    }
-                    Text(listOfNotNull(d.counterpart, ddmm(d.date)).joinToString(" · "), color = C.text2, fontSize = 13.sp)
-                    if (d.steps.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        d.steps.forEach { st -> Chip((if (st.done) "✓ " else "") + st.t, bg = if (st.done) C.positiveBg else C.surface2, fg = if (st.done) C.positive else C.text2) }
-                    }
-                }
-            }
-        }
-    }
-}
+/* Finn-handler: se Finn.kt (design 2a). */
 
 /* ---------------- Matplan ---------------- */
 

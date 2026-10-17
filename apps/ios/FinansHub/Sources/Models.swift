@@ -254,11 +254,65 @@ struct Entry: Decodable, Identifiable, Hashable {
     var domain: String?
     var aiShort: String?
     var category: String?
+    var subcategory: String?
+    /// Kategorien er laget av AI (vises med ✦).
+    var aiCategory = false
+    /// «Kategori › Underkategori».
+    var categoryPath: String? { category.map { c in (aiCategory ? "✦ " : "") + (subcategory.map { "\(c) › \($0)" } ?? c) } }
+
+    enum K: String, CodingKey { case id, description, date, amount, paidBy, split, domain, aiShort, category, subcategory, categoryPath, categoryLabel, categoryAi, aiCategory }
+    private struct Named: Decodable { var name: String? }
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        id = (try? c.decode(Int.self, forKey: .id)) ?? 0
+        description = try? c.decode(String.self, forKey: .description)
+        date = try? c.decode(String.self, forKey: .date)
+        amount = try? c.decode(Double.self, forKey: .amount)
+        paidBy = try? c.decode(String.self, forKey: .paidBy)
+        split = try? c.decode(String.self, forKey: .split)
+        domain = try? c.decode(String.self, forKey: .domain)
+        aiShort = try? c.decode(String.self, forKey: .aiShort)
+        // «category» kan være et navn, et objekt eller «Kategori › Underkategori».
+        let raw = (try? c.decode(String.self, forKey: .categoryPath)) ?? (try? c.decode(String.self, forKey: .categoryLabel)) ?? (try? c.decode(String.self, forKey: .category)) ?? (try? c.decode(Named.self, forKey: .category))?.name
+        let parts = (raw ?? "").components(separatedBy: "›").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        category = parts.first
+        subcategory = (try? c.decode(String.self, forKey: .subcategory)) ?? (parts.count > 1 ? parts[1] : nil)
+        aiCategory = (try? c.decode(Bool.self, forKey: .categoryAi)) ?? (try? c.decode(Bool.self, forKey: .aiCategory)) ?? false
+    }
 }
+
+/// Boligkategori med underkategorier (GET /finans/api/boliger/categories).
+struct BoligCategory: Decodable, Identifiable, Hashable {
+    let id: Int
+    var name: String
+    var ai: Bool
+    var children: [BoligCategory]
+    enum K: String, CodingKey { case id, name, ai, createdByAi, children, subcategories }
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        id = (try? c.decode(Int.self, forKey: .id)) ?? 0
+        name = (try? c.decode(String.self, forKey: .name)) ?? ""
+        ai = (try? c.decode(Bool.self, forKey: .ai)) ?? (try? c.decode(Bool.self, forKey: .createdByAi)) ?? false
+        children = (try? c.decode([BoligCategory].self, forKey: .children)) ?? (try? c.decode([BoligCategory].self, forKey: .subcategories)) ?? []
+    }
+}
+struct BoligCats: Decodable { var categories: [BoligCategory] }
 struct Installment: Decodable, Hashable { var label: String?; var due: String?; var amount: Double?; var paid: Bool?; var paidAt: FlexDate?; var isPaid: Bool { paid == true || paidAt?.date != nil } }
 struct Project: Decodable, Hashable { var id: FlexID?; var name: String?; var vendor: String?; var budget: Double?; var spent: Double?; var installments: [Installment]? }
 struct Bill: Decodable, Hashable { var name: String?; var category: String?; var freq: String?; var payer: String?; var lastPaid: String?; var nextDue: String?; var amount: Double? }
-struct CatSum: Decodable, Hashable { var name: String?; var amount: Double? }
+struct CatSum: Decodable, Hashable {
+    var name: String?; var amount: Double?
+    /// Fordeling på underkategorier.
+    var children: [CatSum]?
+    /// Serveren sender {name, sum, subs: [{name, sum}]}; eldre servere amount og children.
+    enum K: String, CodingKey { case name, amount, sum, subs, children, subcategories }
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        name = try? c.decode(String.self, forKey: .name)
+        amount = (try? c.decode(Double.self, forKey: .sum)) ?? (try? c.decode(Double.self, forKey: .amount))
+        children = [K.subs, .children, .subcategories].lazy.compactMap { try? c.decode([CatSum].self, forKey: $0) }.first
+    }
+}
 
 /// Delt mappe (bolig, hytte, felles). Listen og detaljen kommer fra samme form; detaljen har flere felt.
 struct Folder: Decodable, Identifiable, Hashable {
@@ -280,7 +334,16 @@ struct Folder: Decodable, Identifiable, Hashable {
     var readOnly: Bool { access == "viewer" || access == "view" }
 }
 
-struct FinnStep: Decodable, Hashable { var t: String?; var done: Bool? }
+struct FinnStep: Decodable, Hashable {
+    var t: String?; var done: Bool?; var date: String?
+    enum K: String, CodingKey { case t, title, done, date }
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        t = (try? c.decode(String.self, forKey: .t)) ?? (try? c.decode(String.self, forKey: .title))
+        done = try? c.decode(Bool.self, forKey: .done)
+        date = try? c.decode(String.self, forKey: .date)
+    }
+}
 struct FinnDeal: Decodable, Identifiable, Hashable {
     let id: Int
     var role: String?
@@ -290,8 +353,144 @@ struct FinnDeal: Decodable, Identifiable, Hashable {
     var amount: Double?
     var steps: [FinnStep]?
     var done: Bool?
+    /// Finn-koden, forsidebildet (egne bilder eller annonsens), sammendraget og ev. steg 1–4 fra serveren.
+    var code: String?
+    var image: String?
+    var summary: String?
+    var stage: Int?
+    var next: String?
+    /// Lagret finn.no-lenke til annonsen.
+    var adUrl: String?
+
+    enum K: String, CodingKey { case id, role, item, title, counterpart, date, amount, steps, done, code, finnCode, finnkode, order_id, image, cover, thumb, summary, stage, next, adUrl }
+    /// «summary» er {text, emails, receipts …} fra serveren, eller ren tekst.
+    struct SummaryText: Decodable { var text: String? }
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        id = (try? c.decode(Int.self, forKey: .id)) ?? 0
+        role = try? c.decode(String.self, forKey: .role)
+        item = (try? c.decode(String.self, forKey: .item)) ?? (try? c.decode(String.self, forKey: .title))
+        counterpart = try? c.decode(String.self, forKey: .counterpart)
+        date = try? c.decode(String.self, forKey: .date)
+        amount = try? c.decode(Double.self, forKey: .amount)
+        steps = try? c.decode([FinnStep].self, forKey: .steps)
+        done = try? c.decode(Bool.self, forKey: .done)
+        code = [K.code, .finnCode, .finnkode, .order_id].lazy.compactMap { (try? c.decode(FlexID.self, forKey: $0))?.value }.first { !$0.isEmpty }
+        image = [K.image, .cover, .thumb].lazy.compactMap { try? c.decode(String.self, forKey: $0) }.first { !$0.isEmpty }
+        summary = (try? c.decode(String.self, forKey: .summary)) ?? (try? c.decode(SummaryText.self, forKey: .summary))?.text.flatMap { $0.isEmpty ? nil : $0 }
+        adUrl = try? c.decode(String.self, forKey: .adUrl)
+        stage = (try? c.decode(Int.self, forKey: .stage)).flatMap { (1...4).contains($0) ? $0 : nil }
+        next = try? c.decode(String.self, forKey: .next)
+    }
+
+    var sold: Bool { role == "sold" }
+    /// Betalt → Sendt → Mottatt → Godkjent ved kjøp, Solgt → Sendt → Levert → Utbetalt ved salg.
+    var points: [String] { sold ? ["Solgt", "Sendt", "Levert", "Utbetalt"] : ["Betalt", "Sendt", "Mottatt", "Godkjent"] }
+    /// Hvor langt handelen har kommet (1–4): serverens «stage», ellers tolkes stegene.
+    var level: Int {
+        if let stage { return stage }
+        if done == true { return 4 }
+        let ok = (steps ?? []).filter { $0.done == true }.compactMap { $0.t?.lowercased() }.joined(separator: " ")
+        func has(_ words: [String]) -> Bool { words.contains { ok.contains($0) } }
+        if has(["godkjent", "utbetalt", "fullført"]) { return 4 }
+        if has(["levert", "mottatt", "hentet"]) { return 3 }
+        if has(["sendt", "på vei"]) { return 2 }
+        return 1
+    }
+    var finished: Bool { level >= 4 }
+    var status: String { finished ? "Fullført" : points[level - 1] }
+    var nextText: String {
+        next ?? (sold ? ["Send pakken innen 5 dager", "Venter på levering", "Utbetaling innen 1 dag", "Fullført"]
+                      : ["Venter på at selger sender", "Pakken er på vei til deg", "Godkjenn varen innen 24 t", "Fullført"])[level - 1]
+    }
 }
 struct FinnList: Decodable { var items: [FinnDeal]; var bought: Double?; var sold: Double?; var ongoing: Int? }
+
+struct FinnAd: Decodable, Hashable {
+    var url: String?; var title: String?; var price: Double?; var place: String?; var description: String?; var images: [String]; var saved: String?
+    enum K: String, CodingKey { case url, title, price, place, location, description, images, saved, fetched, created }
+    private struct Img: Decodable { var url: String? }
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        url = try? c.decode(String.self, forKey: .url)
+        title = try? c.decode(String.self, forKey: .title)
+        price = try? c.decode(Double.self, forKey: .price)
+        place = (try? c.decode(String.self, forKey: .place)) ?? (try? c.decode(String.self, forKey: .location))
+        description = try? c.decode(String.self, forKey: .description)
+        images = (try? c.decode([String].self, forKey: .images)) ?? ((try? c.decode([Img].self, forKey: .images)) ?? []).compactMap(\.url)
+        saved = (try? c.decode(String.self, forKey: .saved)) ?? (try? c.decode(String.self, forKey: .fetched)) ?? (try? c.decode(String.self, forKey: .created))
+    }
+}
+struct FinnFile: Decodable, Identifiable, Hashable {
+    var id: String; var name: String; var mime: String?; var url: String?; var thumb: String?
+    enum K: String, CodingKey { case id, name, filename, mime, url, thumb }
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        id = (try? c.decode(FlexID.self, forKey: .id))?.value ?? UUID().uuidString
+        name = (try? c.decode(String.self, forKey: .name)) ?? (try? c.decode(String.self, forKey: .filename)) ?? "fil"
+        mime = try? c.decode(String.self, forKey: .mime)
+        url = try? c.decode(String.self, forKey: .url)
+        thumb = try? c.decode(String.self, forKey: .thumb)
+    }
+}
+struct FinnMail: Decodable, Identifiable, Hashable {
+    var id: String; var date: String?; var from: String?; var subject: String?; var snippet: String?; var body: String?
+    enum K: String, CodingKey { case id, date, from, subject, snippet, body, text }
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        id = (try? c.decode(FlexID.self, forKey: .id))?.value ?? UUID().uuidString
+        date = try? c.decode(String.self, forKey: .date)
+        from = try? c.decode(String.self, forKey: .from)
+        subject = try? c.decode(String.self, forKey: .subject)
+        snippet = try? c.decode(String.self, forKey: .snippet)
+        body = (try? c.decode(String.self, forKey: .body)) ?? (try? c.decode(String.self, forKey: .text))
+    }
+}
+struct FinnLine: Decodable, Hashable {
+    var label: String; var amount: Double
+    enum K: String, CodingKey { case label, l, description, amount, v }
+    init(label: String, amount: Double) { self.label = label; self.amount = amount }
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        label = [K.label, .l, .description].lazy.compactMap { try? c.decode(String.self, forKey: $0) }.first ?? ""
+        amount = (try? c.decode(Double.self, forKey: .amount)) ?? (try? c.decode(Double.self, forKey: .v)) ?? 0
+    }
+}
+/// GET /finans/api/finn/:id – handelen med annonse, kvitteringer, e-poster og bilder.
+struct FinnDetail: Decodable {
+    var deal: FinnDeal
+    var ad: FinnAd?
+    var receipts: [FinnFile]
+    var emails: [FinnMail]
+    var photos: [FinnFile]
+    var summary: String?
+    var lines: [FinnLine]
+    /// Kvitteringen: total og «Betalt»/«Utbetalt» fra serveren; annonselenken serveren har funnet i e-postene.
+    var total: Double?
+    var totalLabel: String?
+    var adUrlGuess: String?
+    enum K: String, CodingKey { case deal, ad, receipts, emails, photos, lines, receipt, adUrlGuess }
+    /// {lines: [{l, v}], total, totalLabel}
+    private struct Paper: Decodable { var lines: [FinnLine]?; var total: Double?; var totalLabel: String? }
+    init(deal: FinnDeal) { self.deal = deal; ad = nil; receipts = []; emails = []; photos = []; summary = deal.summary; lines = [] }
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        // Handelen kan ligge under «deal» eller på toppnivå.
+        deal = (try? c.decode(FinnDeal.self, forKey: .deal)) ?? (try FinnDeal(from: d))
+        ad = try? c.decode(FinnAd.self, forKey: .ad)
+        receipts = (try? c.decode([FinnFile].self, forKey: .receipts)) ?? []
+        emails = (try? c.decode([FinnMail].self, forKey: .emails)) ?? []
+        photos = (try? c.decode([FinnFile].self, forKey: .photos)) ?? []
+        summary = deal.summary
+        let paper = try? c.decode(Paper.self, forKey: .receipt)
+        lines = (try? c.decode([FinnLine].self, forKey: .lines)) ?? paper?.lines ?? []
+        total = paper?.total
+        totalLabel = paper?.totalLabel
+        adUrlGuess = try? c.decode(String.self, forKey: .adUrlGuess)
+    }
+    /// Bildene i karusellen: egne bilder først, så annonsens.
+    var images: [String] { photos.compactMap { $0.url ?? $0.thumb } + (ad?.images ?? []) }
+}
 
 struct TokenInfo: Decodable, Identifiable, Hashable {
     let id: FlexID
@@ -511,11 +710,12 @@ struct HomeLayout: Codable, Equatable {
 
     static let sections = ["clock", "search", "links", "os", "srv", "ruter"]
     static let hlAll = ["hl", "home", "dom", "mat"]
-    static let finAll = ["home", "list", "bud", "ai", "mer"]
+    static let finAll = ["home", "list", "finn", "bud", "ai", "mer"]
     /// Kan ikke skjules.
     static let fixedHl: Set<String> = ["hl", "home"]
     static let fixedFin: Set<String> = ["home", "mer"]
-    static let standard = HomeLayout(sec: sections, hlTabs: hlAll, finTabs: finAll, hide: ["srv": true, "ruter": true])
+    /// Budsjett er skjult som fane (ligger øverst under Mer); Finn har tatt plassen (prompt 10).
+    static let standard = HomeLayout(sec: sections, hlTabs: hlAll, finTabs: finAll, hide: ["srv": true, "ruter": true, "bud": true])
 
     func visible(_ id: String) -> Bool { hide[id] != true }
 
@@ -540,7 +740,14 @@ struct HomeLayout: Codable, Equatable {
         guard m["sec"] != nil || m["hlTabs"] != nil || m["finTabs"] != nil else { return nil }
         var hide = HomeLayout.standard.hide
         for (k, v) in (m["hide"] as? [String: Any]) ?? [:] { if let b = v as? Bool { hide[k] = b } }
-        var l = HomeLayout(sec: fix(m["sec"] as? [String], sections), hlTabs: fix(m["hlTabs"] as? [String], hlAll), finTabs: fix(m["finTabs"] as? [String], finAll), hide: hide)
+        // Eldre oppsett uten Finn-fanen: Finn tar plassen til Budsjett, og Budsjett skjules.
+        var fin = ((m["finTabs"] as? [String]) ?? []).filter { finAll.contains($0) }
+        if !fin.isEmpty && !fin.contains("finn") {
+            let at = fin.firstIndex(of: "bud") ?? fin.firstIndex(of: "ai") ?? fin.count
+            fin.insert("finn", at: at)
+            hide["bud"] = true
+        }
+        var l = HomeLayout(sec: fix(m["sec"] as? [String], sections), hlTabs: fix(m["hlTabs"] as? [String], hlAll), finTabs: fix(fin, finAll), hide: hide)
         for (k, v) in (m["names"] as? [String: Any]) ?? [:] {
             if let n = v as? String, !n.trimmingCharacters(in: .whitespaces).isEmpty { l.names[k] = String(n.prefix(30)) }
         }

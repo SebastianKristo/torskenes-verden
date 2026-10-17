@@ -6,12 +6,13 @@ import Network
 
 /// Fanene i Finans. Mer samler resten av sidene fra nettsiden.
 enum Tab: String, CaseIterable, Identifiable {
-    case home = "Oversikt", list = "Liste", budget = "Budsjett", search = "Søk", more = "Mer"
+    case home = "Oversikt", list = "Liste", finn = "Finn", budget = "Budsjett", search = "Søk", more = "Mer"
     var id: String { rawValue }
     var icon: String {
         switch self {
         case .home: "house"
         case .list: "list.bullet"
+        case .finn: "bag"
         case .budget: "chart.pie"
         case .search: "sparkle.magnifyingglass"
         case .more: "square.grid.2x2"
@@ -22,6 +23,7 @@ enum Tab: String, CaseIterable, Identifiable {
         switch self {
         case .home: "home"
         case .list: "list"
+        case .finn: "finn"
         case .budget: "bud"
         case .search: "ai"
         case .more: "mer"
@@ -33,7 +35,7 @@ enum Tab: String, CaseIterable, Identifiable {
 /// Skjermer som fyller hele vinduet: Homelab, sidene under Mer, modulene og innstillinger.
 enum Module: String, CaseIterable, Identifiable {
     case homelab = "Homelab", upload = "Kvitteringer", fast = "Faste utgifter", accounts = "Kontoer", stocks = "Aksjer", reports = "Rapporter", imports = "Import"
-    case mat = "Matplan", domains = "Domener", sub = "Subscription OS", folders = "Boliger", finn = "Finn-handler", settings = "Innstillinger"
+    case mat = "Matplan", domains = "Domener", sub = "Subscription OS", folders = "Boliger", settings = "Innstillinger"
     var id: String { rawValue }
     var icon: String {
         switch self {
@@ -48,12 +50,11 @@ enum Module: String, CaseIterable, Identifiable {
         case .domains: "globe"
         case .sub: "arrow.triangle.2.circlepath"
         case .folders: "folder.badge.person.crop"
-        case .finn: "bag"
         case .settings: "gearshape"
         }
     }
     /// Sider under Mer: fanelinja for Finans vises, med Mer markert.
-    var isFinance: Bool { [.upload, .fast, .accounts, .stocks, .reports, .imports, .sub, .folders, .finn].contains(self) }
+    var isFinance: Bool { [.upload, .fast, .accounts, .stocks, .reports, .imports, .sub, .folders].contains(self) }
     static let others: [Module] = [.mat, .domains]
 }
 
@@ -199,6 +200,14 @@ final class Store {
     var folders: [Folder]?
     var folder: Folder?
     var finn: FinnList?
+    /// Finn: åpen handel (id), detaljen og opplasting/henting som pågår.
+    var finnSel: Int?
+    var finnDetail: FinnDetail?
+    /// receipts | photos | emails | ad mens det lastes opp eller hentes.
+    var finnBusy: String?
+    /// Boliger: kategoriene og «Legg i bolig» (målet for skann mens man står i en bolig; nil = boligen som er åpen).
+    var boligCats: [BoligCategory] = []
+    var uploadFolder: Int?
     var tokens: [TokenInfo]?
     var tokenError: String?
     var newToken: String?
@@ -406,7 +415,7 @@ final class Store {
 
     private func clearData() {
         boot = nil; summary = nil; me = nil; txs = nil; receipts = nil; jobs = []; selectedTx = nil; selectedReceipt = nil
-        week = nil; subs = nil; folders = nil; folder = nil; finn = nil; tokens = nil; domains = nil; analytics = nil; domain = nil
+        week = nil; subs = nil; folders = nil; folder = nil; finn = nil; finnSel = nil; finnDetail = nil; boligCats = []; uploadFolder = nil; tokens = nil; domains = nil; analytics = nil; domain = nil
         mobileHome = nil; homeError = nil; history = []; suggestions = []; todayMeal = nil; domainToday = nil; avatar = nil
         ai = nil; aiHistory = []; aiNote = nil; suggestGroups = []; editing = nil; original = nil; detail = nil; detailTx = nil; matDay = nil
         recurring = nil; stocks = nil; report = nil; importResult = nil; importFiles = []; importText = ""
@@ -496,7 +505,6 @@ final class Store {
             case .mat: try await loadWeek()
             case .sub: subs = try await api.get("/subscriptions")
             case .folders: let list: [Folder] = try await decodeList(api.call("GET", "/folders")); folders = list
-            case .finn: finn = try await api.get("/finn")
             case .domains: try await loadDomains()
             case .settings: break
             }
@@ -511,6 +519,7 @@ final class Store {
         switch t {
         case .home: summary = try await api.get("/summary")
         case .list, .budget: if txs == nil || t == .list { try await loadTx() }
+        case .finn: try await loadFinn()
         case .search: await loadAiHistory(); if suggestGroups.isEmpty { await loadSuggestGroups() }
         case .more: await loadMore()
         }
@@ -525,6 +534,7 @@ final class Store {
     /// Fanebytte i Finans (fanelinja, menyen). Ingen egen tilbakevei.
     func go(_ t: Tab) {
         if t != tab || module != nil { selectedTx = nil }
+        if t == .finn || t != tab { finnSel = nil; finnDetail = nil }
         backTo = nil
         tab = t
         module = nil
@@ -544,6 +554,7 @@ final class Store {
         barMini = false
         if m != .homelab { editHome = false }
         if m != .folders { folder = nil }
+        if m != nil { finnSel = nil; finnDetail = nil }
         guard let m else { return }
         if m == .settings { settingsPage = nil }
         run { try await self.load(m) }
@@ -569,9 +580,12 @@ final class Store {
         if editHome { editHome = false; return }
         if module == .settings, settingsPage != nil { settingsPage = nil; return }
         if module == .folders, folder != nil { folder = nil; return }
+        if finnSel != nil { finnSel = nil; finnDetail = nil; return }
         if module == .upload, selectedReceipt != nil { selectedReceipt = nil; return }
         if selectedTx != nil { selectedTx = nil; return }
-        guard let target = backTo ?? (module?.isFinance == true ? .tab(.more) : nil) else { goStart(); return }
+        // Budsjett og Finn uten egen fane ligger under Mer.
+        let underMore = module?.isFinance == true || (module == nil && !finTabs.contains(tab))
+        guard let target = backTo ?? (underMore ? .tab(.more) : nil) else { goStart(); return }
         switch target {
         case .tab(let t): go(t)
         case .module(let m): open(m)
@@ -599,6 +613,8 @@ final class Store {
             default: return nil
             }
         }
+        // Finn åpnet fra Mer (uten egen fane) har egen tilbakeknapp.
+        if tab == .finn && (finnSel != nil || !finTabs.contains(.finn)) { return nil }
         return financeStart || selectedTx != nil ? nil : "Homelab"
     }
     /// «Knapp i linjen»: Homelab-/Finans-knappen ligger i fanelinja i stedet for pilen øverst.
@@ -1019,6 +1035,8 @@ final class Store {
     /// Flere filer legges i kø og lastes opp én og én; AI-en leser dem i bakgrunnen på serveren.
     func upload(_ files: [Upload]) {
         guard !files.isEmpty else { return }
+        // Skann/opplasting inne i en bolig: kvitteringen havner i valgt bolig, og AI velger kategori og underkategori.
+        if module == .folders, editing == nil, let bolig = uploadFolder ?? folder?.id { uploadToFolder(bolig, files); return }
         // Fra «Legg ved kvittering» i skjemaet: bli stående, kvitteringen kobles når den bokføres.
         if editing != nil { flash("Kvitteringen er lagt i opplastingskøen") } else if module != .upload { openSub(.upload) }
         guard canUpload else { offline += files; flash("\(files.count) kvittering(er) venter på Wi-Fi"); return }
@@ -1071,12 +1089,36 @@ final class Store {
 
     /// Originalen lastes opp (med mindre «Lagre originalbildet» er av), sammen med en 1600 px JPEG til AI-en og et miniatyrbilde.
     private func sendImage(_ image: UIImage) async throws {
+        let parts = imageParts(image)
+        if !parts.isEmpty { try await finishUpload(parts) }
+    }
+
+    private func imageParts(_ image: UIImage) -> [API.Part] {
         let scan = image.scaled(max: 1600).jpegData(compressionQuality: 0.85)
-        guard let file = keepOriginal ? image.jpegData(compressionQuality: 0.92) : (scan ?? image.jpegData(compressionQuality: 0.92)) else { return }
+        guard let file = keepOriginal ? image.jpegData(compressionQuality: 0.92) : (scan ?? image.jpegData(compressionQuality: 0.92)) else { return [] }
         var parts = [API.Part(name: "file", filename: "kvittering.jpg", mime: "image/jpeg", data: file)]
         if let scan { parts.append(.init(name: "scan", filename: "scan.jpg", mime: "image/jpeg", data: scan)) }
         if let t = image.scaled(max: 240).jpegData(compressionQuality: 0.75) { parts.append(.init(name: "thumb", filename: "thumb.jpg", mime: "image/jpeg", data: t)) }
-        try await finishUpload(parts)
+        return parts
+    }
+
+    /// POST /folders/:id/receipts: samme felt som /receipts.
+    private func uploadToFolder(_ id: Int, _ files: [Upload]) {
+        let name = folders?.first(where: { $0.id == id })?.name ?? folder?.name ?? "boligen"
+        flash(files.count == 1 ? "Kvitteringen lastes opp til \(name)" : "\(files.count) kvitteringer lastes opp til \(name)")
+        uploading += files.count
+        Task {
+            for f in files {
+                let parts: [API.Part]
+                switch f {
+                case .image(let img): parts = self.imageParts(img)
+                case .pdf(let d): parts = [API.Part(name: "file", filename: "kvittering.pdf", mime: "application/pdf", data: d)]
+                }
+                do { if !parts.isEmpty { _ = try await self.api.upload("/folders/\(id)/receipts", parts: parts) } } catch { self.message = error.localizedDescription }
+                self.uploading = max(0, self.uploading - 1)
+            }
+            if let open = self.folder?.id, let f = try? await self.api.get("/folders/\(open)", as: Folder.self) { self.folder = f }
+        }
     }
 
     private func finishUpload(_ parts: [API.Part]) async throws {
@@ -1142,18 +1184,118 @@ final class Store {
     /* ---------- Boliger (delte mapper) ---------- */
 
     func openFolder(_ id: Int?) {
+        uploadFolder = nil
         guard let id else { folder = nil; return }
         run { self.folder = try await self.api.get("/folders/\(id)") }
     }
-    func addFolderEntry(_ desc: String, _ amount: String, paidBy: String?) {
+    /// Boligkategorier med underkategorier (Innstillinger → Boliger på PC). Tom liste på eldre servere.
+    func loadBoligCategories() async {
+        // {categories: [...], options, aiNew} (eldre form: [..] eller {items: [..]}).
+        guard let d = try? await api.call("GET", "/boliger/categories") else { return }
+        if let w = try? JSONDecoder().decode(BoligCats.self, from: d) { boligCats = w.categories }
+        else if let list: [BoligCategory] = try? decodeList(d) { boligCats = list }
+    }
+    /// targetId: «Legg i bolig» (nil = boligen som er åpen). categoryId: nil = AI velger kategori og underkategori.
+    func addFolderEntry(_ desc: String, _ amount: String, paidBy: String?, targetId: Int? = nil, categoryId: Int? = nil) {
         guard let f = folder else { return }
+        let id = targetId ?? f.id
         run {
             var body: [String: Any] = ["description": desc, "amount": amount.replacingOccurrences(of: " ", with: "").replacingOccurrences(of: ",", with: ".")]
             if let paidBy { body["paidBy"] = paidBy }
-            let d = try await self.api.call("POST", "/folders/\(f.id)/entries", json: body)
-            self.folder = try JSONDecoder().decode(Folder.self, from: d)
+            if let categoryId { body["categoryId"] = categoryId }
+            let d = try await self.api.call("POST", "/folders/\(id)/entries", json: body)
+            let res = try JSONDecoder().decode(Folder.self, from: d)
+            // Lagt i en annen bolig: den åpne boligen lastes på nytt.
+            if id == f.id { self.folder = res } else { self.folder = try await self.api.get("/folders/\(f.id)") }
             let list: [Folder] = try await self.decodeList(self.api.call("GET", "/folders")); self.folders = list
-            self.flash("Lagt til i \(f.name)")
+            self.flash("Lagt til i \(res.name)")
+        }
+    }
+
+    /* ---------- Finn ---------- */
+
+    func loadFinn() async throws {
+        finn = try await api.get("/finn")
+        if finnSel != nil { await loadFinnDetail() }
+    }
+
+    /// Åpner handelen: listedataene vises med en gang, detaljen (annonse, kvitteringer, e-poster, bilder) hentes etterpå.
+    func openFinn(_ id: Int) {
+        finnSel = id
+        if let d = finn?.items.first(where: { $0.id == id }) { finnDetail = FinnDetail(deal: d) } else { finnDetail = nil }
+        Task { await loadFinnDetail() }
+    }
+
+    /// GET /finn/:id. 404 (eldre server) beholder listedataene.
+    func loadFinnDetail() async {
+        guard let id = finnSel else { return }
+        do {
+            let d = try await api.get("/finn/\(id)", as: FinnDetail.self)
+            if finnSel == id { finnDetail = d }
+        } catch let e as APIError where e.status == 404 {
+        } catch let e as APIError where e.status == 401 && loggedIn && !e.needsTotp {
+            expired()
+        } catch {}
+    }
+
+    /// Svaret fra opplasting, sletting og henting er hele handelen.
+    private func setFinnDetail(_ d: Data, _ id: Int) async {
+        if let full = try? JSONDecoder().decode(FinnDetail.self, from: d), full.deal.id == id {
+            if finnSel == id { finnDetail = full }
+        } else { await loadFinnDetail() }
+    }
+
+    /// kind: receipts | photos | emails. Kvitteringer og bilder går til POST /finn/:id/files med kind (receipt | photo),
+    /// e-poster (.eml) til POST /finn/:id/emails. Filene ligger i feltet «file».
+    func finnUpload(_ kind: String, _ files: [(name: String, mime: String, data: Data)]) {
+        guard let id = finnSel, !files.isEmpty else { return }
+        run {
+            self.finnBusy = kind
+            defer { self.finnBusy = nil }
+            var parts = files.map { API.Part(name: "file", filename: $0.name, mime: $0.mime, data: $0.data) }
+            let d: Data
+            do {
+                if kind == "emails" {
+                    d = try await self.api.upload("/finn/\(id)/emails", parts: parts)
+                } else {
+                    parts.append(.text("kind", kind == "photos" ? "photo" : "receipt"))
+                    d = try await self.api.upload("/finn/\(id)/files", parts: parts)
+                }
+            } catch let e as APIError where e.status == 404 {
+                self.message = "Serveren støtter ikke opplasting til Finn-handler ennå. Oppdater homelab."
+                return
+            }
+            await self.setFinnDetail(d, id)
+            if let f = try? await self.api.get("/finn", as: FinnList.self) { self.finn = f }
+            self.flash(kind == "photos" ? (files.count == 1 ? "1 bilde lagt til" : "\(files.count) bilder lagt til") : kind == "emails" ? "E-posten er lagt ved" : "Kvitteringen er lagt ved")
+        }
+    }
+
+    /// Kvitteringer og bilder er filer i handelen; e-postene har egen rute.
+    func finnRemove(_ kind: String, _ fileId: String) {
+        guard let id = finnSel else { return }
+        run {
+            let d = try await self.api.call("DELETE", "/finn/\(id)/\(kind == "emails" ? "emails" : "files")/\(fileId)")
+            await self.setFinnDetail(d, id)
+        }
+    }
+
+    /// ✦ Hent annonsen (tittel, pris, sted, beskrivelse og bilder). url trengs bare når handelen mangler lenke og Finn-kode.
+    func finnFetchAd(_ url: String? = nil) {
+        guard let id = finnSel, finnBusy == nil else { return }
+        run {
+            self.finnBusy = "ad"
+            defer { self.finnBusy = nil }
+            var body: [String: Any] = [:]
+            if let url, !url.trimmingCharacters(in: .whitespaces).isEmpty { body["url"] = url.trimmingCharacters(in: .whitespaces) }
+            let d: Data
+            do { d = try await self.api.call("POST", "/finn/\(id)/ad", json: body) } catch let e as APIError where e.status == 404 {
+                self.message = "Serveren kan ikke hente annonser ennå. Oppdater homelab."
+                return
+            }
+            await self.setFinnDetail(d, id)
+            let msg = ((try? JSONSerialization.jsonObject(with: d)) as? [String: Any])?["message"] as? String
+            self.flash(msg ?? "✦ Annonsen er lagret")
         }
     }
 

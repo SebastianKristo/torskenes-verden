@@ -105,7 +105,7 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
     val s = vm.screen
     val overlay = vm.original != null || vm.editing != null || vm.detail != null
     // Tilbake: lukker det som er åpent, ellers forrige side. På startsiden uten noe åpent lukkes appen som vanlig.
-    val canBack = overlay || vm.editHome || s != vm.startPage || vm.selectedTx != null || vm.matFull
+    val canBack = overlay || vm.editHome || s != vm.startPage || vm.selectedTx != null || vm.matFull || vm.finnSel != null
     BackHandler(enabled = canBack) { vm.back() }
     // Matplan er en egen flate: ingen fanelinje, skanneknapp eller rail, bare pilen øverst og profilmenyen.
     val matSurface = s == Screen.Mat && !vm.matFull && !overlay
@@ -205,7 +205,8 @@ private fun BottomBar(vm: AppViewModel) {
         s.isFinance -> NavigationBar(containerColor = C.surface1) {
             if (vm.homeInBar && !vm.financeStart) HomeItem(vm)
             vm.finTabs.forEach { t ->
-                val on = s == t || (t == Screen.More && s.isMorePage)
+                // Mer er markert på undersidene, og på Budsjett/Finn når de ikke er egne faner.
+                val on = s == t || (t == Screen.More && (s.isMorePage || (s in setOf(Screen.Budget, Screen.Finn) && s !in vm.finTabs)))
                 NavigationBarItem(selected = on, onClick = { vm.go(t) }, icon = { Icon(screenIcon(t), null) }, label = { Text(vm.finName(t), maxLines = 1, overflow = TextOverflow.Ellipsis) })
             }
         }
@@ -259,7 +260,7 @@ private fun Rail(vm: AppViewModel, scan: ScanActions) {
         Spacer(Modifier.height(8.dp))
         val tabs = if (s.isFinance) vm.finTabs else vm.hlTabs.filter { it != Screen.Homelab }
         tabs.forEach { t ->
-            val on = s == t || (t == Screen.More && s.isMorePage)
+            val on = s == t || (t == Screen.More && (s.isMorePage || (s in setOf(Screen.Budget, Screen.Finn) && s !in vm.finTabs)))
             NavigationRailItem(selected = on, onClick = { vm.go(t) }, icon = { Icon(screenIcon(t), null) }, label = { Text(if (s.isFinance) vm.finName(t) else vm.hlName(t), maxLines = 1, overflow = TextOverflow.Ellipsis) })
         }
         if (s.isMorePage) NavigationRailItem(selected = true, onClick = {}, icon = { Icon(screenIcon(s), null) }, label = { Text(s.label, maxLines = 1, overflow = TextOverflow.Ellipsis) })
