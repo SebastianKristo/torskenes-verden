@@ -99,8 +99,17 @@ function dealView(d) {
     <label class="mf-tile"><span class="i" aria-hidden="true">⎙</span><b>Kvittering</b>${nR ? `<small class="ok">✓ ${nR} lagt ved</small>` : '<small class="acc">Legg ved</small>'}<input type="file" multiple accept="image/*,application/pdf,.eml,message/rfc822" data-mfup="receipt" aria-label="Legg ved kvittering"></label>
     <button class="mf-tile" data-mfa="ad" ${busy ? 'disabled' : ''}><span class="i" aria-hidden="true">▦</span><b>Annonse</b>${busy ? '<small>Henter …</small>' : d.ad ? '<small class="ok">✓ Lagret</small>' : '<small class="acc">✦ Hent fra Finn</small>'}</button>
     <label class="mf-tile"><span class="i" aria-hidden="true">◫</span><b>Bilder</b>${nP ? `<small class="ok">${nP} bilde${nP === 1 ? '' : 'r'}</small>` : '<small class="acc">Legg til</small>'}<input type="file" multiple accept="image/*" data-mfup="photo" aria-label="Legg til bilder"></label></div>`;
-  return `${hero}${title}${status}${tiles}${adBox(d)}${files(d)}${paper(d)}${timeline(d)}
+  return `${hero}${title}${status}${shipBox(d)}${tiles}${adBox(d)}${files(d)}${paper(d)}${timeline(d)}
     <button class="mf-tile" style="align-items:center;color:#FF8A80" data-mfa="del">Slett handelen</button>`;
+}
+
+// Fiks ferdig: sendingen fra Sporing (GET /finn/:id → shipment). Hendelsene ligger også i tidslinjen.
+function shipBox(d) {
+  const sh = d.shipment;
+  if (!sh?.trackingNo) return '';
+  const eta = sh.eta ? (/^\d{4}-\d{2}-\d{2}/.test(sh.eta) ? day(sh.eta, true) : sh.eta) : '';
+  return `<section class="mf-adbox" aria-label="Sending"><div class="t"><b>Sending · ${esc(sh.statusText || 'Sporing')}</b><a href="#/spor" style="color:#FFB08A;font-size:13px">Åpne i Sporing ›</a></div>
+    <small class="mono">${esc(sh.trackingNo)}</small>${[sh.pickupPoint ? `Hentested: ${sh.pickupPoint}` : '', eta ? `${sh.status === 'delivered' ? 'Levert' : 'Ventet'} ${eta}` : ''].filter(Boolean).map((x) => `<small>${esc(x)}</small>`).join('')}</section>`;
 }
 
 function adBox(d) {
@@ -141,7 +150,8 @@ function timeline(d) {
     return { k: 'step', id: `s${i}`, date: st?.date ?? (i ? hit?.date ?? last : d.date), t: s.t, s: i ? 'Steg i handelen' : `${d.role === 'sold' ? 'Solgt til' : 'Kjøpt fra'} ${d.counterpart ?? 'Finn'}`, n: i };
   });
   const ts = (x) => (x.date ? +new Date(String(x.date).length === 10 ? `${x.date}T12:00` : x.date) : 0);
-  const ev = [...steps, ...mails].sort((a, b) => ts(b) - ts(a) || (b.k === 'step') - (a.k === 'step') || (b.n ?? 0) - (a.n ?? 0));
+  const ship = (d.shipment?.events ?? []).map((e, i) => ({ k: 'trk', id: `t${i}`, date: e.ts, t: e.status || 'Sporing', s: ['Sporing', e.location].filter(Boolean).join(' · ') }));
+  const ev = [...steps, ...mails, ...ship].sort((a, b) => ts(b) - ts(a) || (b.k === 'step') - (a.k === 'step') || (b.n ?? 0) - (a.n ?? 0));
   return `<section class="mf-tl" aria-label="Tidslinje"><div class="h"><b>Tidslinje</b><label>${F.busy === 'email' ? 'Legger ved …' : '+ Legg ved e-post'}<input type="file" multiple accept=".eml,message/rfc822" data-mfup="email" aria-label="Legg ved e-post (.eml)"></label></div>
     ${ev.length ? ev.map((x, i) => `<div class="mf-ev${x.k === 'mail' ? ' mail' : ''}${i === 0 ? ' first' : ''}" ${x.k === 'mail' ? `role="button" tabindex="0" data-mfev="${x.id}" aria-expanded="${!!F.open[x.id]}"` : ''}>
       <span class="rail" aria-hidden="true"><i></i>${i < ev.length - 1 ? '<span></span>' : ''}</span>

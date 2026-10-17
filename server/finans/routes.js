@@ -18,8 +18,9 @@ import * as auth from '../auth.js';
 import { config } from '../config.js';
 import { kv } from '../db.js';
 import { stocks, resetStocks, t212Configured, t212Base, cleanCred, testT212 } from './stocks.js';
-import { answer as aiAnswer, plainSearch, suggestionGroups, AiUnavailable } from './search.js';
+import { answer as aiAnswer, plainSearch, suggestionGroups, AiUnavailable, isSimpleQuery } from './search.js';
 import * as backup from './backup.js';
+import * as subsOs from './subs.js';
 import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor } from './boliger.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
@@ -246,8 +247,9 @@ function routeTarget(id) {
   const tm = r.target.match(/^tx:(\d+)$/);
   if (tm) { if (q('SELECT 1 FROM fh_transactions WHERE id=?').get(+tm[1])) q('UPDATE fh_receipts SET transaction_id=? WHERE id=?').run(+tm[1], id); return; }
   if (r.target === 'sub' && r.total != null && !q('SELECT 1 FROM fh_subscriptions WHERE name=? AND active=1').get(r.merchant)) {
-    q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,domain,ai_short,created) VALUES(?,?,?,?,?,?,?,?,?)')
-      .run(r.merchant || 'Ukjent', 'Fra kvittering', r.total, 'monthly', r.date ? shiftDate(r.date, 1) : null, 'Ny', r.domain, r.ai_short, Date.now());
+    q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,domain,ai_short,charge_day,category,created) VALUES(?,?,?,?,?,?,?,?,?,?,?)')
+      .run(r.merchant || 'Ukjent', 'Fra kvittering', r.total, 'monthly', r.date ? shiftDate(r.date, 1) : null, 'Ny', r.domain, r.ai_short,
+        r.date ? +r.date.slice(8, 10) : null, subsOs.categoryFor(r.merchant), Date.now());
   }
   const f = r.target.match(/^folder:(\d+)(?::(.+))?$/);
   if (f && q('SELECT 1 FROM fh_folders WHERE id=?').get(+f[1])) {
@@ -614,9 +616,27 @@ const MIME = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'i
 const asList = (v) => (Array.isArray(v) ? v : v ? [v] : []).filter((x) => x instanceof File);
 // Én eller flere filer. Hver fil blir en jobb i køen; svaret kommer straks (felt fra første kvittering + jobs).
 // scan/thumb (nedskalert av klienten) pares med filene i samme rekkefølge når antallet stemmer.
+// E-post som kvittering (Subscription OS «Fra kvittering»): vedlegget leses hvis det er et bilde eller en PDF, ellers e-postteksten.
+const isMail = (f) => /^(message\/rfc822|text\/plain)$/.test(f.type) || /\.(eml|txt)$/i.test(f.name ?? '');
+async function mailReceipt(f, target) {
+  const buf = Buffer.from(await f.arrayBuffer());
+  if (!/\.eml$/i.test(f.name ?? '') && f.type !== 'message/rfc822') return ingestReceipt({ buffer: buf, mime: 'text/plain', name: f.name, target, source: 'upload' });
+  const { simpleParser } = await import('mailparser');
+  const m = await simpleParser(buf);
+  const att = (m.attachments ?? []).find((a) => MIME[a.contentType]);
+  if (att) return ingestReceipt({ buffer: att.content, mime: att.contentType, name: att.filename || m.subject, meta: { subject: m.subject, from: m.from?.text }, target, source: 'upload' });
+  const text = [`Fra: ${m.from?.text ?? ''}`, `Emne: ${m.subject ?? ''}`, `Dato: ${m.date?.toISOString?.() ?? ''}`, '', m.text || String(m.html || '').replace(/<[^>]+>/g, ' ')].join('\n');
+  return ingestReceipt({ buffer: Buffer.from(text.slice(0, 60000)), mime: 'text/plain', name: m.subject || f.name, meta: { subject: m.subject, from: m.from?.text }, target, source: 'upload' });
+}
 async function receiptUpload(c, target = null) {
   const b = await c.req.parseBody({ all: true });
   const files = asList(b.file).concat(asList(b['file[]']), asList(b.files), asList(b['files[]']));
+  if (target === 'sub' && files.length && files.every((f) => MIME[f.type] || isMail(f))) {
+    const ids = [];
+    for (const f of files) ids.push(MIME[f.type] ? await saveReceipt(f, null, null, null, target) : await mailReceipt(f, target));
+    runQueue();
+    return c.json({ ...receiptOut(origSelect.get(ids[0])), jobs: ids.map((id) => jobOut(origSelect.get(id))) });
+  }
   if (!files.length || files.some((f) => !MIME[f.type])) return bad(c, 'Last opp bilder (JPEG, PNG, WebP, HEIC) eller PDF-er');
   if (files.length > 30) return bad(c, 'Maks 30 filer om gangen');
   const scans = asList(b.scan), thumbs = asList(b.thumb);
@@ -652,7 +672,7 @@ async function saveReceipt(f, scanFile, thumbFile, acc, target) {
   return id;
 }
 // Kvittering fra e-post: vedlegg (eller e-postteksten som .txt) blir en jobb i samme kø som opplastinger.
-export async function ingestReceipt({ buffer, mime, name, meta }) {
+export async function ingestReceipt({ buffer, mime, name, meta, target = null, source = 'email' }) {
   const ext = mime === 'text/plain' ? 'txt' : MIME[mime];
   if (!ext) throw new Error(`Filtypen ${mime} støttes ikke`);
   const id = randomUUID();
@@ -661,8 +681,8 @@ export async function ingestReceipt({ buffer, mime, name, meta }) {
   const file = `${sub}/${id}.${ext}`;
   await writeFile(join(DIR, file), buffer);
   const acc = q('SELECT id FROM fh_accounts ORDER BY sort, id LIMIT 1').get()?.id || null;
-  q("INSERT INTO fh_receipts(id,file,mime,status,date,account_id,name,source,meta,created) VALUES(?,?,?,'pending',?,?,?,'email',?,?)")
-    .run(id, file, mime, today(), acc, str(name, 120) || 'E-post', JSON.stringify(meta ?? {}), Date.now());
+  q("INSERT INTO fh_receipts(id,file,mime,status,date,account_id,name,source,meta,target,created) VALUES(?,?,?,'pending',?,?,?,?,?,?,?)")
+    .run(id, file, mime, today(), acc, str(name, 120) || 'E-post', source, JSON.stringify(meta ?? {}), target, Date.now());
   queue.push({ id });
   runQueue();
   return id;
@@ -1006,7 +1026,20 @@ function subOut(s) {
   return { id: s.id, name: s.name, plan: s.plan, price: s.price / 100, cycle: s.cycle, nextDate: s.next_date, usageNote: s.usage_note, lowUse: !!s.low_use,
     active: !!s.active, domain: s.domain || domainFor(s.name), aiShort: s.ai_short || heuristic({ merchant: s.name, category: 'Abonnementer' }).short, txId: s.tx_id,
     monthly: Math.round(monthlyOre(s)) / 100, yearly: Math.round(monthlyOre(s) * 12) / 100, perLabel: { monthly: '/mnd', yearly: '/år', biennial: '/2 år' }[s.cycle] ?? '/mnd',
-    cycleName: { monthly: 'Månedlig', yearly: 'Årlig', biennial: 'Hvert 2. år' }[s.cycle] ?? 'Månedlig' };
+    cycleName: { monthly: 'Månedlig', yearly: 'Årlig', biennial: 'Hvert 2. år' }[s.cycle] ?? 'Månedlig',
+    status: subsOs.statusOf(s), chargeDay: subsOs.chargeDayOf(s), category: subsOs.categoryFor(s.name, s.category),
+    prevPrice: s.prev_price != null ? s.prev_price / 100 : null, priceChanged: s.price_changed ?? null };
+}
+const dayIn = (v) => { const n = Math.round(+v); return n >= 1 && n <= 31 ? n : null; };
+const catIn = (v) => (subsOs.SUB_CATEGORIES.includes(v) ? v : null);
+// Neste trekk fra trekkdag: denne måneden hvis dagen ikke er passert, ellers neste.
+function nextFromDay(day, cycle = 'monthly') {
+  if (!day) return null;
+  const now = new Date(), t = new Date(now.toDateString());
+  const at = (y, m) => new Date(y, m, Math.min(day, new Date(y, m + 1, 0).getDate()));
+  let d = at(now.getFullYear(), now.getMonth());
+  if (d < t) d = at(now.getFullYear(), now.getMonth() + 1);
+  return d.toLocaleDateString('sv-SE');
 }
 // Neste trekk kan skrives som dd.mm, dd.mm.åå eller ISO.
 function dateIn(v) {
@@ -1023,12 +1056,28 @@ function dateIn(v) {
 }
 
 api.get('/subscriptions', R, (c) => {
-  const rows = q('SELECT * FROM fh_subscriptions ORDER BY active DESC, COALESCE(next_date, \'9999\'), name').all().map(subOut);
+  const raw = subsOs.priceCheck(q('SELECT * FROM fh_subscriptions ORDER BY active DESC, COALESCE(next_date, \'9999\'), name').all());
+  const rows = raw.map(subOut);
   const act = rows.filter((s) => s.active);
   const monthly = act.reduce((a, s) => a + s.monthly, 0);
+  const now = new Date(), year = +c.req.query('year') || now.getFullYear();
+  const ym = (d) => d.toLocaleDateString('sv-SE').slice(0, 7);
+  const month = /^\d{4}-\d{2}$/.test(c.req.query('month') ?? '') ? c.req.query('month') : ym(now);
+  const prevMonth = ym(new Date(+month.slice(0, 4), +month.slice(5, 7) - 2, 1));
+  const sum = (list) => Math.round(list.reduce((a, x) => a + x.amount, 0) * 100) / 100;
+  const thisMonth = subsOs.chargesInMonth(raw, month);
+  // Trend: samme sum som den var ved starten av måneden (uten nye abonnementer og med pris før en økning denne måneden).
+  const mStart = new Date(now.getFullYear(), now.getMonth(), 1), mIso = mStart.toLocaleDateString('sv-SE');
+  const prevMonthly = raw.filter((s) => s.active && s.created < mStart.getTime())
+    .reduce((a, s) => a + (s.prev_price && s.price_changed >= mIso ? s.prev_price : s.price) / (CYCLES[s.cycle] ?? 1), 0) / 100;
   return c.json({ items: rows, monthly: Math.round(monthly * 100) / 100, yearly: Math.round(act.reduce((a, x) => a + x.yearly, 0) * 100) / 100,
-    lowUse: Math.round(act.filter((s) => s.lowUse).reduce((a, s) => a + s.monthly, 0) * 100) / 100 });
+    lowUse: Math.round(act.filter((s) => s.lowUse).reduce((a, s) => a + s.monthly, 0) * 100) / 100,
+    categories: subsOs.SUB_CATEGORIES, year, byMonth: subsOs.byMonth(raw, year), health: subsOs.health(raw), savings: subsOs.savings(raw),
+    prevMonthly: Math.round(prevMonthly * 100) / 100, upcoming: subsOs.upcoming(raw, 7), month, thisMonth, monthTotal: sum(thisMonth), prevMonthTotal: sum(subsOs.chargesInMonth(raw, prevMonth)),
+    today: now.toLocaleDateString('sv-SE') });
 });
+api.get('/subscriptions/candidates', R, (c) => c.json(subsOs.candidates(q('SELECT * FROM fh_subscriptions').all())
+  .map((x) => ({ ...x, domain: x.domain || domainFor(x.merchant) }))));
 api.post('/subscriptions', W, async (c) => {
   const b = await c.req.json();
   if (b.fromTx) { // gjør en transaksjon om til et abonnement
@@ -1039,11 +1088,23 @@ api.post('/subscriptions', W, async (c) => {
       .get(name, str(b.plan, 80), Math.abs(t.amount), 'monthly', shiftDate(t.date, 1), 'Månedlig', t.domain || domainFor(name), t.ai_short, t.id, Date.now());
     return c.json(subOut(s));
   }
+  if (b.fromCandidate) { // ✦ Fra transaksjoner: et fast trekk som ikke er registrert ennå
+    const k = b.fromCandidate, name = str(k.merchant, 80), price = ore(k.amount), cycle = cycleIn(k.cycle) ?? 'monthly';
+    if (!name || price === null) return bad(c, 'Mangler navn eller beløp');
+    const last = isDate(k.lastDate) ? k.lastDate : null;
+    let next = last ? shiftDate(last, CYCLES[cycle]) : null;
+    while (next && next < new Date().toLocaleDateString('sv-SE')) next = shiftDate(next, CYCLES[cycle]);
+    const s = q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,domain,tx_id,charge_day,category,created) VALUES(?,?,?,?,?,?,?,?,?,?,?) RETURNING *')
+      .get(name, str(k.plan, 80), Math.abs(price), cycle, next, `Funnet i banken · ${Math.max(0, Math.round(+k.count) || 0)} trekk`, validDomain(k.domain) || domainFor(name),
+        Number.isInteger(+k.txId) && +k.txId > 0 ? +k.txId : null, last ? +last.slice(8, 10) : null, subsOs.categoryFor(name), Date.now());
+    return c.json(subOut(s));
+  }
   const price = ore(b.price);
   if (!str(b.name) || price === null) return bad(c, 'Tjeneste og pris må fylles ut');
-  const s = q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,low_use,domain,created) VALUES(?,?,?,?,?,?,?,?,?) RETURNING *')
-    .get(str(b.name, 80), str(b.plan, 80), Math.abs(price), cycleIn(b.cycle) ?? 'monthly', dateIn(b.nextDate), str(b.usageNote, 80) || 'Ny', b.lowUse ? 1 : 0,
-      validDomain(b.domain) || domainFor(b.name), Date.now());
+  const cycle = cycleIn(b.cycle) ?? 'monthly', day = dayIn(b.chargeDay);
+  const s = q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,low_use,domain,charge_day,category,created) VALUES(?,?,?,?,?,?,?,?,?,?,?) RETURNING *')
+    .get(str(b.name, 80), str(b.plan, 80), Math.abs(price), cycle, dateIn(b.nextDate) ?? nextFromDay(day, cycle), str(b.usageNote, 80) || 'Ny', b.lowUse ? 1 : 0,
+      validDomain(b.domain) || domainFor(b.name), day, catIn(b.category), Date.now());
   return c.json(subOut(s));
 });
 api.post('/subscriptions/receipts', need('receipts:write'), upload, (c) => receiptUpload(c, 'sub'));
@@ -1055,14 +1116,17 @@ api.patch('/subscriptions/:id', W, async (c) => {
   if (b.name !== undefined) n.name = str(b.name, 80) || cur.name;
   if (b.plan !== undefined) n.plan = str(b.plan, 80);
   if (b.price !== undefined && ore(b.price) !== null) n.price = Math.abs(ore(b.price));
+  if (n.price > cur.price) { n.prev_price = cur.price; n.price_changed = new Date().toLocaleDateString('sv-SE'); } // «Pris økt» også når prisen endres for hånd
+  if (b.chargeDay !== undefined) { n.charge_day = dayIn(b.chargeDay); if (b.nextDate === undefined && n.charge_day) n.next_date = nextFromDay(n.charge_day, n.cycle); }
+  if (b.category !== undefined) n.category = catIn(b.category);
   if (b.cycle !== undefined) n.cycle = cycleIn(b.cycle) ?? cur.cycle;
   if (b.nextDate !== undefined) n.next_date = dateIn(b.nextDate);
   if (b.usageNote !== undefined) n.usage_note = str(b.usageNote, 80);
   if (b.lowUse !== undefined) n.low_use = b.lowUse ? 1 : 0;
   if (b.active !== undefined) n.active = b.active ? 1 : 0;
   if (b.domain !== undefined) { n.domain = validDomain(b.domain); if (n.domain) learnDomain(n.name, n.domain); }
-  const s = q('UPDATE fh_subscriptions SET name=?, plan=?, price=?, cycle=?, next_date=?, usage_note=?, low_use=?, active=?, domain=? WHERE id=? RETURNING *')
-    .get(n.name, n.plan, n.price, n.cycle, n.next_date, n.usage_note, n.low_use, n.active, n.domain, cur.id);
+  const s = q('UPDATE fh_subscriptions SET name=?, plan=?, price=?, cycle=?, next_date=?, usage_note=?, low_use=?, active=?, domain=?, charge_day=?, category=?, prev_price=?, price_changed=? WHERE id=? RETURNING *')
+    .get(n.name, n.plan, n.price, n.cycle, n.next_date, n.usage_note, n.low_use, n.active, n.domain, n.charge_day, n.category, n.prev_price, n.price_changed, cur.id);
   return c.json(subOut(s));
 });
 api.delete('/subscriptions/:id', W, (c) => { q('DELETE FROM fh_subscriptions WHERE id=?').run(+c.req.param('id')); return ok(c); });
@@ -1541,6 +1605,11 @@ api.post('/search/ai', R, async (c) => {
   const plain = plainSearch(text);
   const extra = { q: text, followUps: plain.followUps, suggestions: plain.suggestions, history: aiHistory(uid) };
   if (b.mode === 'plain') return c.json({ ...plain, ...extra });
+  // Enkle ord: vanlig søk først. Gir det treff, brukes ikke AI (sparer kall og tid). force:true tvinger AI.
+  if (!b.force && isSimpleQuery(text) && plain.hits.length) {
+    const n = plain.total ?? plain.hits.length;
+    return c.json({ ...plain, ...extra, mode: 'plain', plainFirst: true, engine: 'Vanlig søk', notice: `Fant ${n} treff med vanlig søk, så AI ble ikke brukt` });
+  }
   try {
     const ai = await aiAnswer(text);
     // Fant AI-søket ingenting, men vanlig søk gjorde det («sist jeg var på …», varelinjer): bruk det.

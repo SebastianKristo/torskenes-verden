@@ -2,6 +2,7 @@
 // Samme mønster som desktop.js: sidene tegnes fra S, hendelser fanges med delegering (data-m*-attributter).
 import { S, api, esc, n0, n2, sgn, dd, today, render, toast, loadBoot, accs, logo, aiLine, ICONS, parseAmount, ini, smooth } from './core.js';
 import { finnPage as finnDesk, loadFinn as loadFinnDesk, bindFinn } from './finn-desktop.js'; // Finn-handler med detaljside
+import { subPage, loadSubs, bindSubs } from './subs-desktop.js'; // Subscription OS: Oversikt og Kalender
 
 Object.assign(ICONS, {
   sub: 'M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3',
@@ -19,40 +20,9 @@ const skel = (h = 160) => `<div class="skel" style="min-height:${h}px"></div>`;
 const kr0 = (v) => `${n0(v)} kr`;
 const modes = (key, cur) => `<div class="mod-modes">${[['new', key === 'dir' ? 'Ny utgift' : 'Nytt abonnement'], ['rc', 'Kvittering'], ['tx', 'Fra transaksjoner']]
   .map(([m, n]) => `<button class="mod-mode" data-mmode="${key}:${m}" aria-pressed="${cur === m}">${n}</button>`).join('')}</div>`;
-const dropRc = (target) => `<label class="mod-drop"><b>Last opp kvitteringer</b><span>Flere filer · AI leser butikk, dato og beløp i bakgrunnen</span><input type="file" multiple accept="image/*,application/pdf" data-mrc="${target}" hidden></label>`;
 const txPick = (target) => S.recentOut ? `<div class="mod-txs">${S.recentOut.map((t) => `<button data-mtx="${target}:${t.id}">${logo(t, 26, 7)}<span class="grow"><span>${esc(t.description)} <span class="muted">· ${dd(t.date)}</span></span>${aiLine(t.aiShort, 'd-ai')}</span><span class="mono">${n2(Math.abs(t.amount))} kr</span><span class="acc-l">+</span></button>`).join('') || '<div class="note" style="padding:12px">Ingen utgifter ennå.</div>'}</div>` : skel(120);
 
-/* ===================== Subscription OS ===================== */
-
-const CYC = [['monthly', 'Månedlig'], ['yearly', 'Årlig'], ['biennial', 'Hvert 2. år']];
-
-function subPage() {
-  const d = S.subs;
-  if (!d) return skel(400);
-  const mode = u.subMode ?? 'new';
-  const rows = d.items.map((s) => {
-    const off = !s.active;
-    const [btn, bg, fg] = off ? ['Sagt opp', '#1B1B20', 'var(--muted)'] : s.lowUse ? ['Si opp', 'rgba(255,122,61,.15)', 'var(--acc-l)'] : ['Aktiv', 'transparent', 'var(--sub)'];
-    return `<div class="sub-row${off ? ' off' : ''}">${logo({ ...s, description: s.name, color: '#A0A0AA' }, 32, 9)}
-      <span class="ell-wrap"><b style="font-weight:500;display:block">${esc(s.name)}</b><span class="note" style="font-size:12px">${esc(s.plan || s.cycleName || 'Månedlig')}</span>${aiLine(s.aiShort, 'd-ai')}</span>
-      <span class="sub sub-next">${s.nextDate ? 'Neste trekk ' + dd(s.nextDate) : '–'}<select class="sel sm" data-msub-cyc="${s.id}" aria-label="Trekk-intervall">${CYC.map(([v, l]) => `<option value="${v}"${s.cycle === v ? ' selected' : ''}>${l}</option>`).join('')}</select></span>
-      <span style="color:${s.lowUse && !off ? 'var(--acc-l)' : 'var(--sub)'}">${esc(s.usageNote || '–')}</span>
-      <span class="sub-price"><b class="mono">${n0(s.price)} kr<small class="muted">${s.perLabel ?? (s.cycle === 'yearly' ? '/år' : '/mnd')}</small></b>${s.cycle !== 'monthly' ? `<small class="muted">≈ ${n0(s.monthly)} kr/mnd</small>` : ''}</span>
-      <span class="sub-btns"><button class="mod-tog" style="background:${bg};color:${fg}" data-msub-tog="${s.id}" title="${off ? 'Aktiver igjen' : s.lowUse ? 'Marker som sagt opp' : 'Marker som sagt opp'}">${btn}</button><button class="x-btn sm" data-msub-low="${s.id}" title="${s.lowUse ? 'Fjern «lite brukt»' : 'Marker som lite brukt'}">${s.lowUse ? '◐' : '○'}</button><button class="x-btn sm" data-msub-del="${s.id}" aria-label="Slett">×</button></span></div>`;
-  }).join('');
-  return `<div class="mod">
-    <div class="mod-kpis">
-      ${card(`<div class="sub">Per måned</div><b class="mono mod-big">${kr0(d.monthly)}</b>`, 'padding:18px')}
-      ${card(`<div class="sub">Per år</div><b class="mono mod-big">${kr0(d.yearly)}</b>`, 'padding:18px')}
-      <section class="card acc-card" style="padding:18px"><div class="acc-l">Lite brukt, kan sies opp</div><b class="mono mod-big">${n0(d.lowUse)} kr/mnd</b></section>
-    </div>
-    <div class="mod-box"><b>Legg til abonnement</b>${modes('sub', mode)}
-      ${mode === 'new' ? `<form class="mod-grid" data-mform="sub"><input class="inp" name="name" placeholder="Tjeneste, f.eks. Disney+" required><input class="inp" name="plan" placeholder="Plan"><select class="inp" name="cycle" aria-label="Trekk-intervall">${CYC.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select><input class="inp" name="price" placeholder="kr per trekk" inputmode="decimal" required><input class="inp" name="nextDate" placeholder="Neste trekk dd.mm"><button class="btn pri">Legg til</button></form>`
-        : mode === 'rc' ? dropRc('sub') : txPick('sub')}
-    </div>
-    ${card(rows || '<div class="empty">Ingen abonnementer ennå. Legg til ett over, eller fra en transaksjon.</div>', 'padding:0;gap:0;overflow:hidden')}
-  </div>`;
-}
+/* ===================== Subscription OS: se subs-desktop.js ===================== */
 
 /* ===================== Delte mapper ===================== */
 
@@ -267,29 +237,43 @@ const PERIODS = [['1m', '1M', 31], ['3m', '3M', 92], ['1y', '1 år', 366], ['all
 const cur$ = (v, c) => `${n2(v)} ${c === 'NOK' || !c ? 'kr' : esc(c)}`;
 const pctTxt = (v) => (v == null || !Number.isFinite(v) ? '–' : `${v >= 0 ? '+' : '−'}${n2(Math.abs(v)).replace(/,00$/, '')} %`);
 
-function aksPage() {
+// Oppsettet (status, Live/Demo, Synk nå, nøkkel og secret) ligger i Innstillinger → «Aksjer · Trading 212».
+export function aksSettings() {
   const d = S.stocks;
-  if (!d) return skel(400);
+  if (!d) return skel(260);
   const st = S.boot.settings;
   const env = d.env ?? st.t212Env ?? 'live';
   const ok = d.configured || d.mock;
   const dot = d.error ? '#FF8A7A' : ok ? '#5FD3A8' : '#6E6E78';
-  const cfgOpen = u.aksCfg ?? !ok;
-  const head = `<div class="card aks-head"><span class="aks-logo">212</span><div class="grow"><div style="font-weight:600">Trading 212 · Invest</div><div class="note" style="font-size:12.5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="dot" style="background:${dot}"></span>${esc(d.status ?? '')}${d.syncedAt ? ` · ${new Date(d.syncedAt).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}` : ''}</div></div>
+  const head = `<div class="aks-head aks-head-set"><span class="aks-logo">212</span><div class="grow"><div style="font-weight:600">Trading 212 · Invest</div><div class="note" style="font-size:12.5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="dot" style="background:${dot}"></span>${esc(d.status ?? '')}${d.syncedAt ? ` · ${new Date(d.syncedAt).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}` : ''}</div></div>
     <div class="seg">${[['live', 'Live'], ['demo', 'Demo']].map(([v, l]) => `<button data-maks-env="${v}" aria-pressed="${env === v}">${l}</button>`).join('')}</div>
-    <button class="btn pri" data-mact="aks-sync" ${ok ? '' : 'disabled'}>Synk nå</button><button class="btn" data-mact="aks-cfg" aria-pressed="${cfgOpen}">API-nøkkel</button></div>`;
+    <button class="btn pri" data-mact="aks-sync" ${ok ? '' : 'disabled'}>Synk nå</button></div>`;
   // Secret-feltet er et tekstfelt med prikker, så passordbehandlere ikke fyller inn innloggingspassordet ditt.
   const t = u.aksTest;
   const testBox = t ? `<div class="aks-test ${t.ok ? 'ok' : 'bad'}" role="status"><b>${t.ok ? '✓ Tilkoblet' : '✕ Feilet'}</b> ${esc(t.message ?? '')}${t.keyLength != null ? `<div class="note" style="font-size:12px">Sendt: nøkkel-ID ${t.keyLength} tegn · secret ${t.secretLength} tegn · ${t.env === 'demo' ? 'Demo' : 'Live'}</div>` : ''}${t.code === 'wrong_env' ? `<button type="button" class="btn" style="margin-top:8px" data-maks-env="${t.suggest}">Bytt til ${t.suggest === 'demo' ? 'Demo' : 'Live'}</button>` : ''}</div>` : '';
-  const cfg = cfgOpen ? `<form class="card" data-mform="aks" style="padding:18px;gap:12px" autocomplete="off">
+  return `<div style="display:flex;flex-direction:column;gap:16px">${head}
+    ${d.error ? `<div class="err-msg">${esc(d.error)}</div>` : ''}
+    <form data-mform="aks" style="display:flex;flex-direction:column;gap:12px" autocomplete="off">
     <div class="form-grid"><label class="f">Nøkkel-ID (API key)<input class="inp mono" name="key" placeholder="${st.t212Set ? 'Lagret · ' + esc(d.keyHint ?? '') : 'f.eks. 35875800ZxYa…'}" autocomplete="off" autocapitalize="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore></label>
     <label class="f">Secret<input class="inp mono aks-secret" name="secret" type="text" placeholder="${st.t212Set ? `•••••••• lagret (${d.secretLength ?? 0} tegn)` : 'Vises bare én gang i Trading 212'}" autocomplete="off" autocapitalize="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore></label>
     <label class="f">Miljø<select class="inp" name="env"><option value="live" ${env === 'live' ? 'selected' : ''}>Live (ekte konto)</option><option value="demo" ${env === 'demo' ? 'selected' : ''}>Demo (praksiskonto)</option></select></label></div>
     <div class="sub" style="font-size:13px;line-height:1.55">Lag nøkkelen på nettsiden til Trading 212 under <b>Innstillinger → API (Beta)</b>, i samme konto (Invest eller Stocks ISA – ikke CFD) og samme miljø som du velger her. Du får en <b>nøkkel-ID</b> og en <b>secret</b>; begge trengs. Slå på lesetilgangene <b>account</b>, <b>portfolio</b>, <b>history:orders</b> og <b>history:dividends</b>. Låser du nøkkelen til IP, må det være homelabens offentlige IP (WAN). Mellomrom, linjeskift og anførselstegn fra liming fjernes automatisk.</div>
     <div class="mono note aks-api">Authorization: Basic base64(KEY:SECRET)<br>GET ${esc(d.base)}/equity/account/summary<br>GET ${esc(d.base)}/equity/portfolio</div>
     ${testBox}
-    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn pri">Lagre og synk</button><button type="button" class="btn" data-mact="aks-test">Test tilkobling</button>${st.t212Set ? '<button type="button" class="btn danger" data-mact="aks-clear">Fjern nøkkel</button>' : ''}</div></form>` : '';
-  if (!d.summary) return `<div class="mod">${head}${cfg}${d.configured ? card(`<div class="empty">${esc(d.error ?? 'Henter data …')}</div>`) : ''}</div>`;
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn pri">Lagre og synk</button><button type="button" class="btn" data-mact="aks-test">Test tilkobling</button>${st.t212Set ? '<button type="button" class="btn danger" data-mact="aks-clear">Fjern nøkkel</button>' : ''}</div></form></div>`;
+}
+export const loadStocksSettings = async () => { if (!S.stocks) await loadStocks(); };
+
+function aksPage() {
+  const d = S.stocks;
+  if (!d) return skel(400);
+  const ok = d.configured || d.mock;
+  const dot = d.error ? '#FF8A7A' : ok ? '#5FD3A8' : '#6E6E78';
+  const state = d.error ? 'Feil ved synk' : ok ? 'Synkronisert' : 'Ikke satt opp';
+  const time = d.syncedAt ? ` · ${new Date(d.syncedAt).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}` : '';
+  // Bare en statuslinje her – oppsettet ligger i Innstillinger.
+  const head = `<a class="aks-status" href="#/inn" data-settab="aks"><span class="dot" style="background:${dot}"></span><span>Trading 212 · ${state}${time}</span><span class="grow"></span><span class="muted">Innstillinger ›</span></a>`;
+  if (!d.summary) return `<div class="mod">${head}${card(`<div class="empty">${d.configured ? esc(d.error ?? 'Henter data …') : 'Trading 212 er ikke satt opp. Legg inn nøkkel og secret i <a href="#/inn" data-settab="aks">Innstillinger → Aksjer · Trading 212</a>.'}</div>`)}</div>`;
   const s = d.summary, c = s.currency;
   const plPct = s.invested ? (s.result / s.invested) * 100 : 0;
   const per = PERIODS.find(([k]) => k === (u.aksPer ?? '3m'));
@@ -313,7 +297,7 @@ function aksPage() {
     <span class="mono r" style="color:${p.pl >= 0 ? 'var(--pos)' : '#FF8A7A'}">${p.pl >= 0 ? '+' : '−'}${n2(Math.abs(p.pl))}<span style="display:block;font-size:12px">${pctTxt(p.plPct)}</span></span><span class="mono r" style="color:${(p.dayPct ?? 0) >= 0 ? 'var(--pos)' : '#FF8A7A'}">${pctTxt(p.dayPct)}</span></div>`; }).join('');
   const divs = (d.dividends ?? []).slice(0, 8).map((x) => `<div class="kv-line"><span>${esc(x.symbol)} <span class="muted" style="font-size:12.5px">· ${dd(x.date)}</span></span><span class="mono pos">${cur$(x.amount, c)}</span></div>`).join('') || '<div class="note">Ingen utbytte ennå.</div>';
   const orders = (d.orders ?? []).slice(0, 8).map((o) => `<div class="kv-line" style="align-items:center"><span style="display:flex;align-items:center;gap:10px"><span class="mtag" style="background:${o.side === 'Kjøp' ? 'rgba(122,167,255,.15)' : '#1F3A2F'};color:${o.side === 'Kjøp' ? '#A9C3FF' : 'var(--pos)'}">${o.side}</span>${esc(o.symbol)} <span class="muted" style="font-size:12.5px">· ${n2(o.quantity).replace(/,00$/, '')} stk · ${dd(o.date)}</span></span><span class="mono">${cur$(o.value, c)}</span></div>`).join('') || '<div class="note">Ingen ordre.</div>';
-  return `<div class="mod">${head}${cfg}${d.error ? `<div class="err-msg">${esc(d.error)} · viser siste kjente data</div>` : ''}
+  return `<div class="mod">${head}${d.error ? `<div class="err-msg">${esc(d.error)} · viser siste kjente data</div>` : ''}
     <div class="mod-kpis">${kpis}</div>
     <div class="row-flex">${card(`<div class="card-h"><div><h2>Porteføljeverdi</h2><div style="font-size:13px;color:${perC}">${perTxt}</div></div><div class="seg">${PERIODS.map(([k2, l]) => `<button data-maks-per="${k2}" aria-pressed="${per[0] === k2}">${l}</button>`).join('')}</div></div>${chart}`, 'flex:2 1 520px;padding:22px;gap:14px')}
       ${card(`<h2>Fordeling</h2><div class="aks-dist">${pos.map((p, i) => `<span style="flex:${p.value / tot} 1 0;background:${PCOL[i % PCOL.length]}"></span>`).join('')}</div><div style="display:flex;flex-direction:column;gap:8px">${pos.map((p, i) => `<div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="width:9px;height:9px;border-radius:3px;background:${PCOL[i % PCOL.length]}"></span><span class="grow ell">${esc(p.name)}</span><span class="mono sub">${n0((p.value / tot) * 100)} %</span></div>`).join('')}</div>`, 'flex:1 1 300px;padding:22px;gap:14px')}</div>
@@ -394,7 +378,6 @@ export const MODULE_FN = { aks: aksPage, sub: subPage, dir: dirPage, finn: finnD
 /* ===================== Lasting ===================== */
 
 const loadRecentOut = async () => { S.recentOut = (await api('/transactions?type=ut&limit=40')).items; };
-const loadSubs = async () => { S.subs = await api('/subscriptions'); };
 async function loadFolders() {
   S.folders = await api('/folders');
   const id = u.dir && S.folders.some((f) => f.id === u.dir) ? u.dir : S.folders[0]?.id;
@@ -410,7 +393,7 @@ const loadFinn = async () => { S.finn = await api('/finn'); };
 const loadStocks = async (force) => { S.stocks = await api(`/stocks${force === true ? '?force=1' : ''}`); };
 export async function loadBackup() { S.backup = await api('/backup'); }
 const recentIfAdmin = async () => { if (!S.boot.restricted) await loadRecentOut(); };
-export const MODULE_LOADERS = { aks: [loadStocks], sub: [loadSubs, loadRecentOut], dir: [loadFolders, loadUsers, recentIfAdmin, loadBolCats], finn: [loadFinnDesk], imp: [] };
+export const MODULE_LOADERS = { aks: [loadStocks], sub: [loadSubs], dir: [loadFolders, loadUsers, recentIfAdmin, loadBolCats], finn: [loadFinnDesk], imp: [] };
 
 /* ===================== Hendelser ===================== */
 
@@ -450,6 +433,7 @@ async function reload() { await Promise.all((MODULE_LOADERS[u.page] ?? []).map((
 
 export function bindModules(el) {
   bindFinn(el);
+  bindSubs(el);
   const wrap = (fn) => async (e) => { try { await fn(e); } catch (err) { toast(err.message); } };
   el.addEventListener('click', wrap(async (e) => {
     const t = e.target, d = (s) => t.closest(s);
@@ -523,7 +507,6 @@ export function bindModules(el) {
       case 'dcat-clear': u.dcat = null; return render();
       case 'split-edit': u.splitEdit = !u.splitEdit; return render();
       case 'aks-sync': { toast('Synkroniserer med Trading 212 …'); await loadStocks(true); return render(); }
-      case 'aks-cfg': u.aksCfg = !(u.aksCfg ?? !(S.stocks?.configured || S.stocks?.mock)); return render();
       case 'aks-test': {
         const f = el.querySelector('[data-mform=aks]'); const v = f ? Object.fromEntries(new FormData(f)) : {};
         u.aksTest = { ok: false, message: 'Tester …' }; render();
@@ -584,7 +567,6 @@ export function bindModules(el) {
     e.preventDefault();
     const v = Object.fromEntries(new FormData(f));
     switch (f.dataset.mform) {
-      case 'sub': await api('/subscriptions', { method: 'POST', json: { ...v, price: parseAmount(v.price) } }); toast('Abonnement lagt til'); return reload();
       case 'folder': { const r = await api('/folders', { method: 'POST', json: { ...v, share: (u.newPick ?? []).map((id) => ({ userId: id, role: 'editor' })) } }); u.dir = r.id; u.newPick = []; toast(r.members.length > 1 ? `${r.name} er opprettet og delt` : `${r.name} er opprettet`); return u.page === 'inn' ? reloadBol() : reload(); }
       case 'entry': {
         const r = await api(`/folders/${target()}/entries`, { method: 'POST', json: { description: v.description, amount: parseAmount(v.amount), date: today(), categoryId: +v.categoryId || null, projectId: +v.projectId || null, paidBy: v.paidBy } });
@@ -603,7 +585,7 @@ export function bindModules(el) {
       case 'aks': {
         await api('/stocks/config', { method: 'PUT', json: { key: v.key, secret: v.secret, env: v.env } }); await loadBoot();
         u.aksTest = await api('/stocks/test', { method: 'POST', json: {} }).catch((err) => ({ ok: false, message: err.message }));
-        toast(u.aksTest.ok ? 'Nøkkelen er lagret og virker' : 'Nøkkelen er lagret, men testen feilet'); if (u.aksTest.ok) u.aksCfg = false; await loadStocks(true); return render();
+        toast(u.aksTest.ok ? 'Nøkkelen er lagret og virker' : 'Nøkkelen er lagret, men testen feilet'); await loadStocks(true); return render();
       }
       case 'smb': {
         const body = { share: v.share, dir: v.dir, version: v.version, user: v.user, domain: v.domain, schedule: v.schedule, keep: +v.keep };

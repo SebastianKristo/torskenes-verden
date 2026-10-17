@@ -2,6 +2,7 @@
 // Hver modul fyller hele skjermen og henter fra sitt eget API. Feiler API-et, vises en lenke til desktop-siden.
 import { api, esc, n0, n2, dd, dWeek, today, icon, logo, aiLine, matApi, domApi, parseAmount, navName } from './core.js';
 import { m, draw, flash, avatar, backBtn } from './mobile.js';
+import { subsLoad, subsView, subsBind } from './mobile-subs.js';
 
 export const MODS = [
   ['mat', 'Matplan', 'Ukemeny, kokk og handleliste', 'mat'],
@@ -10,7 +11,7 @@ export const MODS = [
   ['dir', 'Boliger', 'Utgifter, prosjekter og regninger', 'dir'],
   ['finn', 'Finn-handler', 'Trygg betaling, Fiks ferdig, Tillit', 'finn'],
 ];
-const D = { mat: null, sub: null, dirs: null, dir: {}, finn: null, err: {}, users: null, subAdd: false, subF: { name: '', price: '', cycle: 'monthly', nextDate: '' }, dirAdd: false, dirF: { name: '', type: 'Hytte', address: '' } };
+const D = { mat: null, dirs: null, dir: {}, finn: null, err: {}, users: null, dirAdd: false, dirF: { name: '', type: 'Hytte', address: '' } };
 const desk = { sub: 'sub', dir: 'dir', finn: 'finn', mat: null, dom: null };
 const isIos = (th) => th === 'ios';
 const gl = (th, c = 'glass2') => (isIos(th) ? c : '');
@@ -34,7 +35,7 @@ export async function modLoad(key, sub) {
   D.err[key] = '';
   try {
     if (key === 'mat') D.mat = await matApi('/week');
-    else if (key === 'sub') D.sub = await api('/subscriptions');
+    else if (key === 'sub') await subsLoad();
     else if (key === 'finn') D.finn = await api('/finn');
     else if (key === 'dir') { D.dirs = await api('/folders'); if (sub) { D.dir[sub] = await api(`/folders/${encodeURIComponent(sub)}`); D.users ??= await api('/users').catch(() => []); } }
     else if (key === 'dom') await domLoad();
@@ -46,7 +47,7 @@ export function modView(key, th, sub) {
   if (D.err[key]) return failed(th, key, title);
   if (key === 'mat') return mat(th);
   if (key === 'dom') return domView(th);
-  if (key === 'sub') return subs(th);
+  if (key === 'sub') return subsView();
   if (key === 'finn') return finn(th);
   if (key === 'dir') return sub ? folder(th, sub) : folders(th);
   return '';
@@ -66,33 +67,7 @@ function mat(th) {
     ${(w.shopping ?? []).length ? `${sec('Handleliste')}${listBox(th, w.shopping.map((x) => `<button class="opt-row" data-shop="${esc(x.id)}"><span class="chk${x.done ? ' on' : ''}">${x.done ? '✓' : ''}</span><span class="m-grow" style="${x.done ? 'text-decoration:line-through;opacity:.5' : ''}">${esc(x.text)}</span></button>`).join(''))}` : ''}`;
 }
 
-/* ---------- Subscription OS ---------- */
-
-const CYCLE = { monthly: ['Månedlig', '/mnd'], yearly: ['Årlig', '/år'], biennial: ['Hvert 2. år', '/2 år'] };
-function subs(th) {
-  const s = D.sub;
-  if (!s) return `${head(th, navName('sub', 'Subscription OS'))}<div class="m-spin"></div>`;
-  const items = s.items ?? [];
-  const f = D.subF, cyc = (k, n) => `<button class="chip" type="button" data-subcyc="${k}" aria-pressed="${f.cycle === k}">${n}</button>`;
-  const form = D.subAdd ? `${sec('Nytt abonnement')}<form class="${isIos(th) ? 'list glass2' : 'fields'}" data-subform>
-      <label class="field">${isIos(th) ? '<span>Tjeneste</span>' : 'Tjeneste'}<input name="name" id="m-sub-name" value="${esc(f.name)}" placeholder="f.eks. Disney+" required></label>
-      <label class="field">${isIos(th) ? '<span>kr per trekk</span>' : 'kr per trekk'}<input name="price" id="m-sub-price" value="${esc(f.price)}" inputmode="decimal" class="m-mono" placeholder="149" required></label>
-      <div class="opt-row col"><span style="font-size:13px;opacity:.7">Trekkes</span><div class="schips">${cyc('monthly', 'Månedlig')}${cyc('yearly', 'Årlig')}${cyc('biennial', 'Hvert 2. år')}</div></div>
-      <label class="field">${isIos(th) ? '<span>Neste trekk</span>' : 'Neste trekk'}<input name="nextDate" id="m-sub-next" value="${esc(f.nextDate)}" placeholder="dd.mm"></label>
-      <div style="padding:${isIos(th) ? '10px 12px' : '0'};display:flex;gap:8px"><button class="pri-b" type="submit" style="flex:1">Legg til</button><button class="sec-b" type="button" data-subadd="0" style="flex:1">Avbryt</button></div></form>
-      <div class="snote">2-årige abonnementer regnes om: 1 200 kr hvert 2. år blir 50 kr/mnd og 600 kr/år.</div>` : '';
-  return `${head(th, navName('sub', 'Abonnementer'), D.subAdd ? '' : '<button class="tonal" data-subadd="1">+ Nytt</button>')}
-    ${kpis(th, [['Per måned', `${n0(s.monthly ?? 0)} kr`], ['Per år', `${n0(s.yearly ?? 0)} kr`], ['Lite brukt', `${n0(s.lowUse ?? 0)} kr`, true]])}
-    ${form}
-    ${listBox(th, items.map((x) => {
-      const [cl, per] = CYCLE[x.cycle] ?? CYCLE.monthly;
-      const st = !x.active ? ['Sagt opp', 'off'] : x.lowUse ? ['Si opp', 'warn'] : ['Aktiv', 'ok'];
-      return `<div class="item sub-row${x.active ? '' : ' dim'}">${logo({ ...x, description: x.name }, 40, isIos(th) ? 20 : 12)}
-        <span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(x.name)}${x.plan ? ` <span style="opacity:.6;font-weight:400">· ${esc(x.plan)}</span>` : ''}</span>${aiLine(x.aiShort, 'm-ell ai')}<span class="m-ell s">${cl}${x.nextDate ? ` · neste ${dd(x.nextDate)}` : ''}${x.usageNote ? ` · ${esc(x.usageNote)}` : ''}</span></span>
-        <span style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span class="m-mono" style="font-weight:600">${n0(x.price)} kr<small style="opacity:.6">${per}</small></span><button class="stchip ${st[1]}" data-subtog="${x.id}" aria-label="${x.active ? 'Si opp' : 'Gjenoppta'} ${esc(x.name)}">${st[0]}</button></span></div>`;
-    }).join('') || '<div class="m-empty">Ingen abonnementer ennå. Legg dem til på en større skjerm, eller fra en kvittering.</div>')}
-    <div style="font-size:12px;opacity:.55;text-align:center;padding:4px 10px">Trykk på status for å si opp eller gjenoppta.</div>`;
-}
+/* ---------- Subscription OS: se mobile-subs.js ---------- */
 
 /* ---------- Delte mapper (boliger) ---------- */
 
@@ -310,6 +285,7 @@ function domSik(th, a) {
 /* ---------- Hendelser for modulene. Returnerer true når hendelsen er håndtert. ---------- */
 
 export async function modBind(e, t) {
+  if (await subsBind(e, t)) return true;
   const d = (s) => t.closest?.(s);
   let x;
   if (e.type === 'submit' && (x = d('[data-dirform]'))) {
@@ -345,17 +321,8 @@ export async function modBind(e, t) {
   }
   if (e.type === 'input' && t.id === 'm-dom-name') { dm.add.name = t.value; return true; }
   if (e.type === 'input') {
-    if (t.id === 'm-sub-name') D.subF.name = t.value; else if (t.id === 'm-sub-price') D.subF.price = t.value; else if (t.id === 'm-sub-next') D.subF.nextDate = t.value;
-    else if (d('[data-dirnew]') && t.name) D.dirF[t.name] = t.value; else return false;
+    if (d('[data-dirnew]') && t.name) D.dirF[t.name] = t.value; else return false;
     return true;
-  }
-  if (e.type === 'submit' && (x = d('[data-subform]'))) {
-    e.preventDefault();
-    const f = D.subF, price = parseAmount(f.price);
-    if (!f.name.trim() || !price) { flash('Skriv tjeneste og beløp'); return true; }
-    await api('/subscriptions', { method: 'POST', json: { name: f.name.trim(), price, cycle: f.cycle, nextDate: f.nextDate || null } });
-    D.subAdd = false; D.subF = { name: '', price: '', cycle: 'monthly', nextDate: '' };
-    await modLoad('sub'); flash(`${f.name.trim()} lagt til`); return true;
   }
   if (e.type === 'submit' && (x = d('[data-dirnew]'))) {
     e.preventDefault();
@@ -367,8 +334,6 @@ export async function modBind(e, t) {
   }
   if (e.type !== 'click') return false;
   const fid = m.sub;
-  if ((x = d('[data-subadd]'))) { D.subAdd = x.dataset.subadd === '1'; draw(); return true; }
-  if ((x = d('[data-subcyc]'))) { D.subF.cycle = x.dataset.subcyc; draw(); return true; }
   if ((x = d('[data-diradd]'))) { D.dirAdd = x.dataset.diradd === '1'; draw(); return true; }
   if ((x = d('[data-dirtype]'))) { D.dirF.type = x.dataset.dirtype; draw(); return true; }
   if ((x = d('[data-boltgt]'))) { const [from, to] = x.dataset.boltgt.split(':').map(Number); (D.bolTarget ??= {})[from] = to; draw(); return true; }
@@ -378,13 +343,6 @@ export async function modBind(e, t) {
   if ((x = d('[data-dirpay]'))) { D.dir[fid] = await api(`/folders/${fid}/installments/${x.dataset.dirpay}/pay`, { method: 'POST' }).then((r) => (r?.members ? r : api(`/folders/${fid}`))); flash('Registrert som betalt'); return true; }
   if ((x = d('[data-shop]'))) { await matApi(`/shopping/${encodeURIComponent(x.dataset.shop)}/toggle`, { method: 'POST' }); await modLoad('mat'); draw(); return true; }
   if ((x = d('[data-mat]'))) { const day = x.dataset.mat === 'day'; flash(day ? 'Gemini foreslår en ny rett …' : 'Gemini lager ukeplan …'); await matApi('/plan', { method: 'POST', json: day ? { scope: 'day', date: x.dataset.date } : { scope: 'week', date: D.mat?.start ?? today() } }); await modLoad('mat'); flash('Matplan oppdatert'); return true; }
-  if ((x = d('[data-subtog]'))) {
-    const it = D.sub?.items?.find((y) => String(y.id) === x.dataset.subtog);
-    if (!it) return true;
-    if (it.active && !confirm(`Markere ${it.name} som sagt opp?`)) return true;
-    await api(`/subscriptions/${it.id}`, { method: 'PATCH', json: { active: !it.active } });
-    await modLoad('sub'); flash(it.active ? `${it.name} er sagt opp` : `${it.name} er aktiv igjen`); return true;
-  }
   if ((x = d('[data-dom]'))) {
     const k = x.dataset.dom;
     if (k === 'manage') { dm.manage = true; dm.pick = false; window.scrollTo(0, 0); }

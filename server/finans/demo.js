@@ -28,6 +28,9 @@ export function loadDemo() {
       tx.run(acc.Kredittkort, day(-i, 6), -12900, 'Spotify', 'Spotify', cat('Abonnementer'), Date.now());
       tx.run(acc.Brukskonto, day(-i, 10), -51800, 'Ruter månedskort', 'Ruter månedskort', cat('Transport og lading'), Date.now());
       tx.run(acc.Kredittkort, day(-i, 28), -27900, 'Netflix', 'Netflix', cat('Abonnementer'), Date.now());
+      // Faste trekk som ikke er registrert i Subscription OS («✦ Fra transaksjoner»).
+      tx.run(acc.Kredittkort, day(-i, 3), -12900, 'DISNEY PLUS', 'Disney+', cat('Abonnementer'), Date.now());
+      if (i <= 5) tx.run(acc.Kredittkort, day(-i, 14), -13900, 'GOOGLE *YouTube Premium', 'YouTube Premium', cat('Abonnementer'), Date.now());
       // Kredittkortet betales ned fra brukskontoen hver måned (overføring, telles ikke som utgift).
       const cardSpend = 12900 + 27900 + Math.round((UT[i - 1] * 1000 - 9500 - 129 - 518 - 279) * 100 * 0.45);
       tx.run(acc.Brukskonto, day(-i + 1, 2), -cardSpend, 'Nedbetaling kredittkort', 'Bank Norwegian', cat('Overføring'), Date.now());
@@ -80,6 +83,9 @@ export function loadDemo() {
       sub.run(n, p, v * 100, cyc, x.toLocaleDateString('sv-SE'), use, low, dom, ai, Date.now());
     }
     sub.run('NordVPN', '2-årsplan', 120000, 'biennial', (() => { const x = new Date(now); x.setMonth(x.getMonth() + 14); return x.toLocaleDateString('sv-SE'); })(), 'Ukentlig', 0, 'nordvpn.com', 'VPN, betalt for to år om gangen', Date.now());
+    // Subscription OS: trekkdag fra neste trekk, og Viaplay har økt prisen fra 399 til 449 kr («Pris økt»).
+    q('UPDATE fh_subscriptions SET charge_day=CAST(substr(next_date,9,2) AS INTEGER), created=? WHERE next_date IS NOT NULL').run(Date.now() - 400 * 86400_000);
+    q("UPDATE fh_subscriptions SET prev_price=39900, price_changed=? WHERE name='Viaplay'").run((() => { const x = new Date(now); x.setDate(x.getDate() - 16); return x.toLocaleDateString('sv-SE'); })());
     // Delte mapper: boliger med prosjekter, faste regninger og strøm hver måned (fra designet).
     const users = new Map(db.prepare('SELECT id, username, name FROM users').all().map((u) => [(u.name || u.username).toLowerCase(), u.id]));
     const me = settings().name;

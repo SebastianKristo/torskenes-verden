@@ -4,6 +4,8 @@ import { S, api, esc, n0, ini, icon, loadBoot, loadSummary, hlApi } from './core
 import { m, draw, flash, pref, setPref, theme, iosBg, isIOS, meName, avInner, avatarUrl, loadMe, startScr, backStyle, HLTABS, FINTABS, FIXED_HL, FIXED_FIN, tabName } from './mobile.js';
 import { LAY, saveLayout } from './mobile-hl.js';
 import { SEEDS, MODES } from './mobile-theme.js';
+import { haptic, hpref, setHap, canVibrate, HAP_TYPES } from './mobile-haptics.js';
+import { TR, trkLoad, trkPrefRows, setTrkPref } from './mobile-track.js';
 
 const T = { f: {}, ai: null, bk: null, srch: null, tokens: null, devices: null, newTok: '', nt: { name: '', scopes: ['receipts:write'], exp: '90' }, ping: '', lastSync: null, usage: null };
 const SCOPES = ['receipts:write', 'read:transactions', 'read:summary', 'read:budget', 'write:transactions', 'finance:read'];
@@ -13,6 +15,7 @@ export async function settingsLoad(sub) {
   const jobs = [];
   if (!sub || sub === 'tok') jobs.push(api('/tokens').then((x) => { T.tokens = x; }).catch(() => { T.tokens = T.tokens ?? []; }));
   if (sub === 'sik') jobs.push(fetch('/api/devices').then((r) => (r.ok ? r.json() : null)).then((x) => { T.devices = x; }).catch(() => { T.devices = null; }));
+  if (sub === 'notif' && !TR.data?.prefs) jobs.push(trkLoad().catch(() => {}));
   if (sub === 'data') jobs.push(navigator.storage?.estimate?.().then((x) => { T.usage = x.usage; }).catch(() => {}));
   if (sub === 'bk') jobs.push(api('/backup').then((x) => { T.bk = x; }).catch(() => { T.bk = null; }));
   if (sub === 'sokbar') jobs.push(hlApi('/search/history').then((x) => { T.srch = { suggest: x?.suggest !== false, save: x?.save !== false, n: (x?.items ?? []).length }; }).catch(() => { T.srch = null; }));
@@ -38,7 +41,7 @@ function profile(big = false) {
   const sz = big ? 58 : 44;
   return `<a class="opt-row" href="#/set/konto"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:${sz}px;height:${sz}px;font-size:${big ? 22 : 17}px">${avInner()}</span><span class="m-grow"><b style="font-size:${big ? 19 : 16}px;font-weight:600">${esc(meName())}</b><br><span style="font-size:13px;opacity:.65">${me.username ? `@${esc(me.username)}` : 'FinansHub'}${me.role ? ` · ${esc(me.role)}` : ''} · ${esc(me.serverName || location.host)}</span></span><span style="opacity:.5">›</span></a>`;
 }
-const PAGES = { konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', nav: 'Navigasjonslinje', dom: 'Domener', scan: 'Skanning og AI', notif: 'Varsler', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI-motor', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data' };
+const PAGES = { konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', nav: 'Navigasjonslinje', dom: 'Domener', scan: 'Skanning og AI', notif: 'Varsler', hap: 'Haptikk', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI-motor', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data' };
 const when = (t) => (t ? new Date(t).toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'aldri');
 const aiMode = () => { const st = S.boot?.settings ?? {}; return st.provider === 'gemini' ? 'gemini' : st.fallback ? 'both' : 'ollama'; };
 
@@ -54,7 +57,7 @@ function main() {
   const st = S.boot?.settings ?? {};
   return `${G('', [profile(true)])}
     ${G('Konto', [nav('konto', 'Kontoer og brukere', '1 på enheten', 'users', '#5E8BFF'), nav('sik', 'Sikkerhet', m.me?.totp ? '2FA på' : '', 'shield', '#34C759'), nav('tok', 'API-tokens', T.tokens ? `${T.tokens.length} aktive` : '', 'key', '#FF9F0A')])}
-    ${G('App', [nav('look', 'Utseende', '', 'look', '#BF5AF2'), nav('scan', 'Skanning og AI', pref('scanTap') === 'cam' ? 'Kamera' : 'Vis valg', 'cam', '#FF7A3D'), nav('notif', 'Varsler', st.nRc ? 'På' : '', 'bell', '#FF453A'), nav('sokbar', 'Søkebar', 'Google', 'search', '#0A84FF')])}
+    ${G('App', [nav('look', 'Utseende', '', 'look', '#BF5AF2'), nav('scan', 'Skanning og AI', pref('scanTap') === 'cam' ? 'Kamera' : 'Vis valg', 'cam', '#FF7A3D'), nav('notif', 'Varsler', st.nRc ? 'På' : '', 'bell', '#FF453A'), nav('hap', 'Haptikk', hpref('hap') ? 'På' : 'Av', 'vib', '#FF2D55'), nav('sokbar', 'Søkebar', 'Google', 'search', '#0A84FF')])}
     ${S.boot?.restricted ? '' : G('Finans', [nav('fai', 'AI-motor', st.provider === 'gemini' ? 'Gemini' : st.fallback ? 'Ollama + Gemini' : 'Ollama', 'ai', '#FF7A3D'), nav('kat', 'Kategorier', String((S.boot?.categories ?? []).length), 'cat', '#30D158'), nav('regel', 'Regler', String((S.boot?.rules ?? []).length), 'rule', '#5E5CE6'), nav('bank', 'Bank og import', st.csvProfile ?? '', 'bank', '#0A84FF'), nav('t212', 'Aksjer · Trading 212', st.t212Set ? (st.t212Env === 'demo' ? 'Demo' : 'Live') : 'Ikke koblet', 'aks', '#64D2FF'), nav('bk', 'Backup og data', '', 'backup', '#8E8E93')])}
     ${G('System', [nav('srv', 'Server og synk', '', 'srv', '#64D2FF'), nav('data', 'Data og lagring', '', 'db', '#8E8E93'), nav('om', 'Om FinansHub', VERSION, 'info', '#8E8E93')])}
     ${G('', [btn(`Logg ut ${esc(meName())}`, 'logout', '#FF8A80')])}`;
@@ -128,7 +131,16 @@ const PAGE = {
     const st = S.boot?.settings ?? {};
     const perm = 'Notification' in window ? Notification.permission : 'unsupported';
     return `${G('Send varsel når', [tog('srv:nRc', 'Kvittering er lest', 'Når AI er ferdig og noe må bekreftes', st.nRc), tog('srv:n80', 'Budsjett passerer 80 %', '', st.n80), tog('nSub', 'Abonnement trekkes snart', 'Dagen før trekk', pref('nSub')), tog('nDom', 'Domene eller SSL utløper', '30 og 7 dager før', pref('nDom')), tog('nWeek', 'Ukesoppsummering', 'Søndag kl. 18', pref('nWeek'))],
-      perm === 'denied' ? 'Varsler er blokkert i nettleseren. Tillat dem i nettleserens innstillinger for dette nettstedet.' : perm === 'unsupported' ? 'Denne nettleseren støtter ikke varsler. Legg FinansHub til på Hjem-skjermen, eller bruk de native appene.' : 'Nettappen varsler mens den er åpen i bakgrunnen. Push-varsler når appen er lukket finnes i de native appene.')}`;
+      perm === 'denied' ? 'Varsler er blokkert i nettleseren. Tillat dem i nettleserens innstillinger for dette nettstedet.' : perm === 'unsupported' ? 'Denne nettleseren støtter ikke varsler. Legg FinansHub til på Hjem-skjermen, eller bruk de native appene.' : 'Nettappen varsler mens den er åpen i bakgrunnen. Push-varsler når appen er lukket finnes i de native appene.')}
+      ${G('Sporing', trkPrefRows(), 'Gjelder pakker i Sporing-fanen i Homelab. Standard er alle på, unntatt Forsinket.')}`;
+  },
+
+  hap: () => {
+    const on = hpref('hap');
+    return `${G('', [tog('hap', 'Haptisk tilbakemelding', canVibrate() ? 'Korte vibrasjoner når du trykker, bytter fane og fullfører noe' : 'Denne nettleseren kan ikke vibrere (Safari på iPhone). Valgene brukes av iOS- og Android-appene.', on)])}
+      ${on ? `${G('Styrke', [chips('hapStr', '', [['light', 'Lett'], ['medium', 'Middels'], ['strong', 'Kraftig']], hpref('hapStr'))])}
+      ${G('Bruk haptikk for', HAP_TYPES.map(([k, n]) => tog(k, n, k === 'hapPkg' ? 'Ny pakke, klar for henting og levert' : k === 'hapErr' ? 'Feilmeldinger og sletting' : '', hpref(k))))}
+      ${G('', [btn('Test haptikk', 'haptest')], 'Appene følger systemets innstilling for haptikk (iOS: Systemhaptikk, Android: Vibrasjon og haptikk). I nettleseren brukes navigator.vibrate.')}` : ''}`;
   },
 
   srv: () => `${G('Adresse', [val('Denne økten', esc(location.origin)), btn('Test tilkobling', 'ping')],
@@ -210,9 +222,11 @@ export async function settingsBind(e, t) {
     return false;
   }
   if (e.type !== 'click') return false;
+  if ((x = d('[data-trkpref]'))) { await setTrkPref(x.dataset.trkpref); return true; }
   if ((x = d('[data-stog]'))) {
     const id = x.dataset.stog;
-    if (id === 'iosbg') { try { localStorage.setItem('fh_ios_bg', iosBg() ? '0' : '1'); } catch {} }
+    if (id.startsWith('hap')) { setHap(id, !hpref(id)); if (hpref(id)) haptic(id === 'hapErr' ? 'err' : id === 'hapPkg' ? 'pkg' : 'tap', { force: true }); }
+    else if (id === 'iosbg') { try { localStorage.setItem('fh_ios_bg', iosBg() ? '0' : '1'); } catch {} }
     else if (id.startsWith('srch:')) { const k = id.slice(5); T.srch[k] = !T.srch[k]; await hlApi('/search/settings', { method: 'PUT', json: { suggest: T.srch.suggest, save: T.srch.save } }).catch((err) => flash(err.message)); }
     else if (id.startsWith('srv:')) { const k = id.slice(4); S.boot.settings = await api('/settings', { method: 'PUT', json: { [k]: !S.boot.settings[k] } }); if (S.boot.settings[k]) await askNotify(); }
     else { setPref(id, !pref(id)); if (id.startsWith('n') && pref(id)) await askNotify(); }
@@ -228,11 +242,18 @@ export async function settingsBind(e, t) {
     else if (id === 'ntexp') T.nt.exp = v;
     else if (id === 'minConf' || id === 'csvProfile') S.boot.settings = { ...S.boot.settings, ...(await api('/settings', { method: 'PUT', json: { [id]: id === 'minConf' ? +v : v } })) };
     else if (['catKind', 'ruleCat', 't212Env'].includes(id)) T.f[id] = v;
+    else if (id === 'hapStr') { setHap(id, v); haptic('ok', { force: true }); }
     else setPref(id, v);
     draw(); return true;
   }
   const act = d('[data-sact]')?.dataset.sact;
   if (!act) return false;
+  if (act === 'haptest') {
+    if (!canVibrate() && typeof window.__fhNativeHaptic !== 'function') { flash('Denne nettleseren kan ikke vibrere'); return true; }
+    const seq = HAP_TYPES.filter(([k]) => hpref(k)).map(([, , kind]) => kind);
+    seq.forEach((k, i) => setTimeout(() => haptic(k, { force: true }), i * 450));
+    flash(seq.length ? `Tester: ${HAP_TYPES.filter(([k]) => hpref(k)).map(([, n]) => n.toLowerCase()).join(', ')}` : 'Alle typer er slått av'); return true;
+  }
   if (act === 'logout') { await fetch('/api/logout', { method: 'POST' }); location.href = '/login?next=/finans/'; return true; }
   if (act === 'navmv') {
     const b = d('[data-sact]'), k = b.dataset.k, i = +b.dataset.i, j = +b.dataset.j, a = [...LAY()[k]];

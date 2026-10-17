@@ -3,6 +3,7 @@ import { store, widget, card, refresh, errBox, on } from './store.js';
 import { renderSearch, popHandler } from './extras.js';
 import { hiddenWidgets } from './profile.js';
 import './media.js';
+import { carousel, restoreCarousel, startPackages } from './weather-card.js';
 
 // Snarveiene hentes fra serveren per bruker (/api/state.shortcuts), og deles med mobilappen.
 // Ekte logo (favicon via serveren); lokale adresser slås opp med AI én gang. Uten logo vises forbokstavene i en farge.
@@ -93,17 +94,8 @@ function renderLesson() {
     <div class="bar"><i style="width:${l.pct}%"></i></div></div>`;
 }
 
-export function renderWeather(compact = false) {
-  const w = store.data.weather;
-  if (!w) return store.errors.weather ? errBox('weather', 'Vær') : '<div class="skeleton" style="min-height:200px"></div>';
-  const hours = w.hours.map((h) => `<div class="wx-h"><div class="mono muted" style="font-size:12px">${esc(h.label)}</div><div style="font-size:18px">${h.temp}°</div>${compact ? '' : `<div class="bar"><i style="width:${Math.min(100, h.precip * 40)}%"></i></div>`}</div>`).join('');
-  const head = compact
-    ? `<div class="card-head" style="align-items:flex-end"><div class="wx-now"><div class="wx-temp">${w.temp}°</div><div class="sub" style="font-size:13px;padding-bottom:6px">${esc(w.text)}<br>${w.wind} m/s · ${nb(w.precip, 1)} mm</div></div><a href="https://www.yr.no" target="_blank" rel="noopener" class="sub" style="font-size:12px">yr ↗</a></div>`
-    : `<div class="card-head"><div><div class="card-title">Værmelding</div><div class="card-sub">${esc(w.place)} · fra yr.no</div></div><a href="https://www.yr.no" target="_blank" rel="noopener" class="sub" style="font-size:13px">yr.no ↗</a></div>
-       <div class="wx-now"><div class="wx-temp">${w.temp}°</div><div class="sub" style="padding-bottom:10px">${esc(w.text)} · føles som ${w.feels}°<br>Nedbør ${nb(w.precip, 1)} mm · Vind ${w.wind} m/s</div></div>`;
-  const days = compact ? '' : `<div class="wx-days">${w.days.map((d) => `<div style="display:flex;gap:6px"><span class="muted">${esc(d.label)}</span><b style="font-weight:500">${d.max}° / ${d.min}°</b></div>`).join('')}</div>`;
-  return `${head}<div class="wx-hours">${hours}</div>${days}`;
-}
+// Værmelding + Pakker i karusell (weather-card.js). Beholdt som navn for kompatibilitet.
+export const renderWeather = () => carousel();
 
 /* ---------- Widgets ---------- */
 
@@ -242,12 +234,15 @@ popHandler('pos', (i) => {
     <div class="muted" style="font-size:12px">Andel av porteføljen: ${nb((p.value / t.total) * 100, 1)} %</div>` };
 });
 
-widget('d_weather_m', { cls: 'card glass', render: () => renderWeather(true) });
+// På mobil er karusellen selve kortet (lysbildene har egen kortstil).
+widget('d_weather_m', { cls: 'card wxc-host', render: () => carousel(), mounted: (el) => restoreCarousel(el) });
 
 /* ---------- Side ---------- */
 
 export function render() {
   const n = store.now, mob = isMobile(), hid = hiddenWidgets();
+  startPackages();
+  requestAnimationFrame(() => restoreCarousel());
   // Skjulte widgets tegnes med hidden, så indeksene i lagret rekkefølge ikke forskyves.
   const cardH = (id) => hid.has(id) ? card(id).replace('<section ', '<section hidden ') : card(id);
   const hello = `<div class="hello">
@@ -264,7 +259,7 @@ export function render() {
     <div data-dnd="top" style="display:flex;flex-direction:column;gap:24px">
       <div class="trips" id="trips">${renderTrips()}</div>
       ${store.me.hideSearch ? '' : renderSearch()}
-      <div class="hero">${hello}<section class="card glass weather" id="weather">${renderWeather()}</section></div>
+      <div class="hero">${hello}<div class="weather" id="weather">${carousel()}</div></div>
     </div>
     <div class="grid" data-dnd="dash">${['d_cal', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_links', 'd_upcoming', 'd_media'].map(cardH).join('')}</div></div>`;
 }
@@ -288,7 +283,7 @@ export function tick() {
 }
 
 on('ruter', () => setHtml('trips', renderTrips()));
-on('weather', () => { setHtml('weather', renderWeather()); refresh('d_weather_m'); });
+// Vær og pakker oppdateres i weather-card.js (bare lysbildene, så sveipeposisjonen beholdes).
 on('school', () => { setHtml('lesson', renderLesson()); refresh('d_cal', 'd_agenda'); });
 on('trading', () => refresh('d_trading'));
 on('energy', () => refresh('d_energy'));

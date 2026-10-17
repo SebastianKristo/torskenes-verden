@@ -47,9 +47,9 @@ export async function removeAvatar() {
 
 // Widgets på dashboardet som kan skjules (id → navn). Rekkefølgen styres av dra-og-slipp / ▲▼.
 export const DASH_WIDGETS = [['d_cal', 'Skolekalender'], ['d_agenda', 'Agenda'], ['d_trading', 'Trading 212'], ['d_energy', 'Energi'], ['d_eco', 'Økonomi'], ['d_links', 'Snarveier'], ['d_upcoming', 'Kommer ut'], ['d_media', 'Media']];
-export const MOBILE_WIDGETS = [['d_weather_m', 'Vær'], ['d_agenda', 'I dag'], ['d_trading', 'Trading 212'], ['d_energy', 'Energi'], ['d_eco', 'Økonomi'], ['d_upcoming', 'Kommer ut'], ['d_media', 'Media']];
-export const TABS = [['dash', 'Dashboard'], ['studie', 'Studie'], ['rom', 'Rom'], ['okonomi', 'Økonomi'], ['hjem', 'Hjem'], ['matplan', 'Matplan'], ['domener', 'Domener'], ['nettverk', 'Nettverk']];
-const ADMIN_TABS = ['hjem', 'matplan', 'domener'];
+export const MOBILE_WIDGETS = [['d_weather_m', 'Vær og pakker'], ['d_agenda', 'I dag'], ['d_trading', 'Trading 212'], ['d_energy', 'Energi'], ['d_eco', 'Økonomi'], ['d_upcoming', 'Kommer ut'], ['d_media', 'Media']];
+export const TABS = [['dash', 'Dashboard'], ['studie', 'Studie'], ['rom', 'Rom'], ['okonomi', 'Økonomi'], ['hjem', 'Hjem'], ['matplan', 'Matplan'], ['sporing', 'Sporing'], ['domener', 'Domener'], ['nettverk', 'Nettverk']];
+const ADMIN_TABS = ['hjem', 'matplan', 'sporing', 'domener'];
 export const FIXED_TABS = ['dash'];
 
 const layout = () => (store.me.layout ??= {});

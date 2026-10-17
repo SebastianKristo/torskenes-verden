@@ -10,7 +10,8 @@ import os from 'node:os';
 import { config } from './config.js';
 import { kv, OWNER } from './db.js';
 import { aiJson } from './homeos-common.js';
-import { sessionUser, userInfo, serverName } from './auth.js';
+import { sessionUser, userInfo, serverName, isAdmin } from './auth.js';
+import { packagesFor } from './tracking.js';
 import { bearerOk } from './finans/routes.js';
 import { uiPrefs, saveUiPrefs } from './ui.js';
 import * as integrations from './integrations.js';
@@ -334,12 +335,14 @@ api.get('/mobile/home', authOrToken, async (c) => {
   const [w, ruter, status] = await Promise.all([safe(ext.getWeather), safe(ext.getRuter), serverStatus()]);
   return c.json({
     name: me.name, serverName: me.serverName, avatarUrl: me.avatarUrl, greeting: greetingFor(osloHour()),
-    weather: w && { place: w.place, temp: w.temp, text: w.text, wind: w.wind, max: w.days?.[0]?.max ?? null, min: w.days?.[0]?.min ?? null, code: w.symbol ?? w.kind ?? null },
+    // Samme felter som /api/weather (vind er fortsatt et tall; detaljer i windInfo), pluss de korte navnene appene bruker.
+    weather: w && { ...w, max: w.hi ?? w.days?.[0]?.max ?? null, min: w.lo ?? w.days?.[0]?.min ?? null, code: w.symbol ?? w.kind ?? null },
     shortcuts: shortcutsFor(id),
     ruter: (ruter?.trips ?? []).map((t) => ({ from: t.from, to: t.to, url: t.url, departures: (t.deps ?? []).filter((d) => new Date(d.time) > Date.now() - 60_000).map(depOut) })),
     serverStatus: status,
     layout: layoutOf(id).mobile ?? {},
     search: searchSettings(id),
+    packages: isAdmin(id) ? packagesFor(2) : [], // Sporing (prompt 11): de 2 viktigste pakkene
   });
 });
 

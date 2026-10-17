@@ -72,6 +72,21 @@ export const SCHEMA = [
     ['cf_token', 'Standard-token for Domener (Zone, DNS, Analytics, Registrar og Firewall Services: Read)', e('CLOUDFLARE_API_TOKEN'), true],
     ['cf_domain', 'Første domene (legges inn i Domener ved oppstart)', e('CLOUDFLARE_DOMAIN')],
   ]],
+  ['Sporing', { id: 'tracking', domain: 'posten.no', category: 'Hjem', help: 'Nøkler til transportørenes sporings-API. Uten nøkkel for en transportør brukes 17TRACK som reserve. Pakker kan spores uten nøkler, men da oppdateres ikke statusen automatisk.', guide: [
+    ['Posten og Bring', 'Lag en gratis Mybring-bruker på mybring.com, og hent API-nøkkelen under Mybring → Innstillinger → API. Brukeren er e-postadressen din.'],
+    ['PostNord', 'Registrer deg på developer.postnord.com og lag en API-nøkkel for «Track and Trace».'],
+    ['DHL', 'Lag en app på developer.dhl.com og legg til «Shipment Tracking – Unified». Bruk API Key (ikke secret).'],
+    ['UPS', 'Lag en app på developer.ups.com med produktet «Tracking», og kopier Client ID og Client Secret (OAuth).'],
+    ['17TRACK (reserve)', 'Lag en konto på api.17track.net. Den dekker FedEx, GLS, DB Schenker, Helthjem, Budbee, Instabox og de fleste andre. Gratisplanen har en månedlig kvote.'],
+  ] }, [
+    ['trk_bring_uid', 'Posten/Bring: Mybring-bruker (e-post)', e('BRING_API_UID')],
+    ['trk_bring_key', 'Posten/Bring: API-nøkkel', e('BRING_API_KEY'), true],
+    ['trk_postnord_key', 'PostNord: API-nøkkel', e('POSTNORD_API_KEY'), true],
+    ['trk_dhl_key', 'DHL: API-nøkkel', e('DHL_API_KEY'), true],
+    ['trk_ups_id', 'UPS: Client ID', e('UPS_CLIENT_ID')],
+    ['trk_ups_secret', 'UPS: Client Secret', e('UPS_CLIENT_SECRET'), true],
+    ['trk_17_key', '17TRACK: API-nøkkel (reserve)', e('TRACK17_API_KEY'), true],
+  ]],
   ['Søk', { id: 'search', domain: 'google.com', category: 'Generelt', help: 'Søket legges til på slutten av adressen, for eksempel https://www.google.com/search?q=' }, [
     ['search_url', 'Søke-URL (søket legges til på slutten)', e('SEARCH_URL', 'https://www.google.com/search?q=')],
   ]],

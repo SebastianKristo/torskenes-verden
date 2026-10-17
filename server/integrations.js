@@ -5,6 +5,7 @@ import ical from 'node-ical';
 import { Agent, fetch as undiciFetch } from 'undici';
 import { config } from './config.js';
 import { cached, fetchJson } from './cache.js';
+import { fetchWeather } from './weather.js';
 import { cfg, parseRoutes, groupOf } from './settings.js';
 
 /* ---------------- Ruter / Entur ---------------- */
@@ -95,52 +96,11 @@ export async function getSuggestions(q) {
 
 /* ---------------- Vær / MET ---------------- */
 
-const SYMBOL_NB = [
-  [/thunder/, 'Torden'], [/heavysnow/, 'Kraftig snø'], [/lightsnow/, 'Lett snø'], [/snow/, 'Snø'],
-  [/sleet/, 'Sludd'], [/heavyrain/, 'Kraftig regn'], [/lightrain/, 'Lett regn'], [/rain/, 'Regn'],
-  [/fog/, 'Tåke'], [/partlycloudy/, 'Delvis skyet'], [/fair/, 'Lettskyet'], [/cloudy/, 'Skyet'], [/clearsky/, 'Klarvær'],
-];
-const symbolText = (s = '') => SYMBOL_NB.find(([re]) => re.test(s))?.[1] ?? '–';
-const symbolKind = (s = '') => /rain|sleet|snow|thunder/.test(s) ? 'regn' : /cloudy|fog/.test(s) && !/partly/.test(s) ? 'sky' : 'sol';
-
-// «Føles som» med vindavkjøling (gyldig under 10 °C og over 1,3 m/s).
-const feelsLike = (t, v) => (t <= 10 && v > 1.3) ? 13.12 + 0.6215 * t - 11.37 * (v * 3.6) ** 0.16 + 0.3965 * t * (v * 3.6) ** 0.16 : t;
-
-export const getWeather = () => cached('weather', 15 * 60_000, async () => {
-  const lat = parseFloat(cfg('wx_lat')) || 59.9139, lon = parseFloat(cfg('wx_lon')) || 10.7522, name = cfg('wx_place');
-  const d = await fetchJson(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}`,
-    { headers: { 'User-Agent': config.metUserAgent } });
-  const ts = d.properties.timeseries;
-  const nowIdx = Math.max(0, ts.findIndex((t) => new Date(t.time) > Date.now() - 3600_000));
-  const now = ts[nowIdx];
-  const inst = now.data.instant.details;
-  const next1 = now.data.next_1_hours;
-  const symbol = next1?.summary.symbol_code ?? now.data.next_6_hours?.summary.symbol_code;
-  const hours = ts.slice(nowIdx, nowIdx + 6).map((t, i) => ({
-    time: t.time, label: i === 0 ? 'Nå' : new Date(t.time).toLocaleTimeString('nb-NO', { hour: '2-digit', timeZone: 'Europe/Oslo' }),
-    temp: Math.round(t.data.instant.details.air_temperature), precip: t.data.next_1_hours?.details.precipitation_amount ?? 0,
-    symbol: t.data.next_1_hours?.summary.symbol_code,
-  }));
-  const byDay = new Map();
-  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
-  for (const t of ts) {
-    const day = new Date(t.time).toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
-    if (day <= today) continue;
-    const temp = t.data.instant.details.air_temperature;
-    const e = byDay.get(day) ?? { day, min: temp, max: temp };
-    e.min = Math.min(e.min, temp); e.max = Math.max(e.max, temp);
-    byDay.set(day, e);
-  }
-  const days = [...byDay.values()].slice(0, 4).map((e) => ({
-    label: new Date(e.day + 'T12:00').toLocaleDateString('nb-NO', { weekday: 'short' }).replace('.', '').replace(/^./, (c) => c.toUpperCase()),
-    max: Math.round(e.max), min: Math.round(e.min),
-  }));
-  return {
-    place: name, temp: Math.round(inst.air_temperature), feels: Math.round(feelsLike(inst.air_temperature, inst.wind_speed)),
-    wind: Math.round(inst.wind_speed), precip: next1?.details.precipitation_amount ?? 0,
-    symbol, text: symbolText(symbol), kind: symbolKind(symbol), hours, days, updated: d.properties.meta.updated_at,
-  };
-});
+// Logikken ligger i weather.js (Locationforecast complete + Nowcast + Sunrise). Locationforecast oppdateres
+// omtrent hver time og Nowcast hvert 5. minutt, så 10 minutters cache holder «nå»-linja fersk uten å mase på MET.
+export const getWeather = () => cached('weather', 10 * 60_000, () => fetchWeather({
+  lat: parseFloat(cfg('wx_lat')) || 59.9139, lon: parseFloat(cfg('wx_lon')) || 10.7522, place: cfg('wx_place'), userAgent: config.metUserAgent,
+}));
 
 /* ---------------- Skole / iCal ---------------- */
 

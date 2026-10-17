@@ -321,6 +321,16 @@ function storesNamed(name, txs) {
   return [...by.values()].map((s) => ({ ...s, total: Math.round(s.total * 100) / 100 })).sort((a, b) => (b.last ?? '').localeCompare(a.last ?? ''));
 }
 
+// Enkle søk («ica», «proton», «rema 1000»): 1–2 ord uten «?» eller spørsmålsord. Da prøves vanlig søk før AI.
+const QWORDS = new Set(['hva', 'hvor', 'hvem', 'hvilke', 'hvilken', 'hvilket', 'hvordan', 'hvorfor', 'hvor', 'når', 'naar', 'hvormye', 'sist', 'største', 'storste', 'minste', 'viser', 'vis', 'finn', 'hvem']);
+export function isSimpleQuery(text) {
+  const t = String(text ?? '').trim();
+  if (!t || t.includes('?')) return false;
+  const words = t.split(/\s+/).filter(Boolean);
+  if (words.length > 2) return false;
+  return !words.some((w) => QWORDS.has(fold(w).replace(/[^\p{L}\p{N}]/gu, '')));
+}
+
 export function plainSearch(text, { limit = 30, now = new Date() } = {}) {
   ensureIndex();
   const d = interpret(text, now);

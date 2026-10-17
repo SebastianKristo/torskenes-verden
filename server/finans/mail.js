@@ -207,6 +207,41 @@ async function scanFinnMails(client, folders, finnLink) {
   return linked;
 }
 
+// Sporing: leser nye e-poster i «All Mail» (ellers INBOX) som ligner ordre- eller fraktbekreftelser, og gir dem
+// til onMail(parsed). Første gang de siste 30 dagene, deretter bare nye UID-er. Endrer ingenting i postkassen.
+const SHIP_SUBJECT = ['sendt', 'sporing', 'pakke', 'levering', 'på vei', 'shipped', 'tracking', 'delivery', 'ordre', 'order', 'hentes', 'hentested', 'forsendelse'];
+export async function scanShippingMails(onMail, { max = 150 } = {}) {
+  const c = cfgWith();
+  if (!c.host || !c.user || !c.pass) return { ok: false, scanned: 0, message: 'E-post er ikke satt opp' };
+  let client, scanned = 0, found = 0;
+  try {
+    ({ client } = await connect(c, { allowPin: true }));
+    const folders = (await client.list()).map((f) => f.path);
+    const box = folders.includes('All Mail') ? 'All Mail' : 'INBOX';
+    const state = kv.get(OWNER, 'trk_mail_scan', {});
+    const lock = await client.getMailboxLock(box);
+    try {
+      const mb = client.mailbox, prev = state[box];
+      const fresh = !prev || String(prev.validity) !== String(mb.uidValidity);
+      const crit = { or: SHIP_SUBJECT.map((subject) => ({ subject })) };
+      if (fresh) crit.since = new Date(Date.now() - 30 * 86400_000); else crit.uid = `${prev.lastUid + 1}:*`;
+      const uids = ((await client.search(crit, { uid: true })) || []).filter((u) => fresh || u > prev.lastUid).slice(-max);
+      for (const uid of uids) {
+        try {
+          const msg = await client.fetchOne(String(uid), { source: true }, { uid: true });
+          scanned++; found += (await onMail(await simpleParser(msg.source))) || 0;
+        } catch { /* hopp over én e-post */ }
+      }
+      kv.set(OWNER, 'trk_mail_scan', { ...state, [box]: { validity: String(mb.uidValidity), lastUid: Math.max(prev && !fresh ? prev.lastUid : 0, Number(mb.uidNext ?? 1) - 1, ...uids) } });
+    } finally { lock.release(); }
+    return { ok: true, scanned, found };
+  } catch (e) {
+    return { ok: false, scanned, found, message: mailError(e, c).message };
+  } finally {
+    await client?.logout().catch(() => client?.close());
+  }
+}
+
 let running = false;
 // Én runde: hent e-post fra kvitteringsmappen (og uleste fra Finn-mappen), importer og flytt/merk.
 export async function runMail({ ingest, finn, finnLink } = {}) {

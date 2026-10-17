@@ -355,7 +355,18 @@ export function finnOut(f) {
     done, domain: 'finn.no', code: f.finn_code ?? null, orderId: f.order_id ?? null, tracking: f.tracking ?? null, adUrl: f.ad_url ?? null,
     stage, status: done ? 'Fullført' : names[stage - 1], next: NEXT[f.role === 'sold' ? 'sold' : 'bought'][stage - 1], manualStage: f.stage ?? null,
     track: names.map((t, i) => ({ t, done: i < stage, cur: i === stage - 1 && !done })),
-    cover: coverOf(f), summary: summaryOf(f) };
+    cover: coverOf(f), summary: summaryOf(f), shipment: shipmentOf(f) };
+}
+// Sporing (prompt 11): sendingen til handelen fra Sporing-fanen (hl_shipments), med de siste hendelsene til tidslinjen.
+// Leses direkte fra tabellen for å unngå sirkulær import med server/tracking.js; finnes ikke tabellen ennå, er feltet null.
+const STATUS_NB = { registered: 'Registrert', picked_up: 'Hentet', in_transit: 'I transport', ready_for_pickup: 'Klar for henting', out_for_delivery: 'Ute for levering', delivered: 'Levert', delayed: 'Forsinket', unknown: 'Ukjent status' };
+function shipmentOf(f) {
+  try {
+    const s = q("SELECT id, tracking_no, carrier, status, eta, pickup_point FROM hl_shipments WHERE (source='finn' AND source_ref=?) OR (tracking_no=?) LIMIT 1").get(String(f.id), f.tracking ?? '');
+    if (!s) return null;
+    const events = q('SELECT ts, status, location FROM hl_shipment_events WHERE shipment_id=? ORDER BY ts DESC LIMIT 8').all(s.id);
+    return { id: s.id, trackingNo: s.tracking_no, carrier: s.carrier, status: s.status, statusText: STATUS_NB[s.status] ?? s.status, eta: s.eta, pickupPoint: s.pickup_point, events };
+  } catch { return null; }
 }
 function receiptLines(f) {
   const l = JSON.parse(f.lines || 'null') ?? {}, amt = f.amount / 100;

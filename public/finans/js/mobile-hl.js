@@ -1,15 +1,17 @@
 // Homelab som forside i mobilappen: hilsen, klokke og vær, Google-søk (forslag og historikk), snarveier,
 // «Andre OS» og valgfrie widgets (Serverstatus, Ruter). «Rediger forsiden» fungerer som hjemskjermen på iPhone/Android:
 // widgetene vugger, «−» skjuler, ▲▼ eller dra flytter, «+» åpner galleriet. Oppsettet lagres per bruker (/api/me/layout).
-import { S, esc, n0, ini, icon, hlApi, matApi, domApi, loadSummary } from './core.js';
+import { S, esc, n0, ini, icon, ICONS, hlApi, matApi, domApi, loadSummary } from './core.js';
+import { TR, trkLoad, trkWatch, topPackages, pkgCard } from './mobile-track.js';
 import { m, draw, flash, avInner, avatarUrl, meName, HLTABS, FINTABS, FIXED_HL, FIXED_FIN } from './mobile.js';
 import { c3 } from './mobile-theme.js';
+import { haptic } from './mobile-haptics.js';
 
 /* ---------- Oppsett ---------- */
 
-const DEF = { sec: ['clock', 'search', 'links', 'os', 'srv', 'ruter'], hlTabs: ['hl', 'home', 'dom', 'mat'], finTabs: ['home', 'list', 'finn', 'bud', 'ai', 'mer'], hide: { srv: true, ruter: true, bud: true } };
+const DEF = { sec: ['clock', 'search', 'links', 'os', 'srv', 'ruter'], hlTabs: ['hl', 'home', 'trk', 'dom', 'mat'], finTabs: ['home', 'list', 'finn', 'bud', 'ai', 'mer'], hide: { srv: true, ruter: true, bud: true } };
 const WD = {
-  clock: ['Klokke og vær', 'Tid, temperatur og vind', 'clock'], search: ['Google-søk', 'Søk med forslag og historikk', 'search'],
+  clock: ['Klokke og vær', 'Tid, vær og pakker på vei', 'clock'], search: ['Google-søk', 'Søk med forslag og historikk', 'search'],
   links: ['Snarveier', 'Favorittsider og tjenester på hjemmenettet', 'mer'], os: ['Andre OS', 'Finans, Domener og Matplan', 'konto2'],
   srv: ['Serverstatus', 'CPU, minne, lagring og oppetid', 'srv'], ruter: ['Ruter-avganger', 'Neste avganger i sanntid', 'bus'],
 };
@@ -25,9 +27,12 @@ function norm(v = {}) {
     if (Array.isArray(finTabs) && finTabs.length) { finTabs = [...finTabs]; const i = finTabs.indexOf('bud'); finTabs.splice(i < 0 ? Math.max(0, finTabs.indexOf('ai')) : i, 0, 'finn'); }
     hide.bud = true; delete hide.finn;
   }
+  // Prompt 11: Sporing kommer inn i Homelab-fanelinja foran Domener i lagrede oppsett.
+  let hlTabs = v.hlTabs;
+  if (Array.isArray(hlTabs) && hlTabs.length && !hlTabs.includes('trk')) { hlTabs = [...hlTabs]; const i = hlTabs.indexOf('dom'); hlTabs.splice(i < 0 ? hlTabs.length : i, 0, 'trk'); }
   const names = {};
   if (v.names && typeof v.names === 'object') for (const [k, n] of Object.entries(v.names)) if (typeof n === 'string' && n.trim()) names[k] = n.trim().slice(0, 30);
-  return { sec: fix(v.sec, DEF.sec), hlTabs: fix(v.hlTabs, DEF.hlTabs), finTabs: fix(finTabs, DEF.finTabs), hide, names,
+  return { sec: fix(v.sec, DEF.sec), hlTabs: fix(hlTabs, DEF.hlTabs), finTabs: fix(finTabs, DEF.finTabs), hide, names,
     start: START_KEYS.includes(v.start) ? v.start : undefined, backStyle: v.backStyle === 'bar' ? 'bar' : 'arrow', matTheme: ['light', 'dark', 'system'].includes(v.matTheme) ? v.matTheme : 'light' };
 }
 export const START_KEYS = ['homelab', 'fin-hjem', 'fin-liste', 'fin-budsjett'];
@@ -62,7 +67,7 @@ function move(key, i, j) {
 
 /* ---------- Data ---------- */
 
-const H = { set: { suggest: true, save: true }, data: null, err: '', q: '', open: false, sug: [], hist: null, sel: -1, edit: false, gal: false, dom: null, mat: null, drag: null };
+const H = { set: { suggest: true, save: true }, data: null, err: '', q: '', open: false, sug: [], hist: null, sel: -1, edit: false, gal: false, dom: null, mat: null, drag: null, car: 0, wxMore: false };
 const WXT = { 0: 'Klart', 1: 'Lettskyet', 2: 'Delvis skyet', 3: 'Overskyet', 45: 'Tåke', 48: 'Tåke', 51: 'Yr', 53: 'Yr', 55: 'Yr', 61: 'Lett regn', 63: 'Regn', 65: 'Kraftig regn', 71: 'Lett snø', 73: 'Snø', 75: 'Kraftig snø', 80: 'Regnbyger', 81: 'Regnbyger', 82: 'Kraftige byger', 95: 'Torden' };
 const histLocal = () => { try { return JSON.parse(localStorage.getItem('hl_search_hist') || '[]'); } catch { return []; } };
 const histNorm = (r) => (Array.isArray(r) ? r : r?.items ?? r?.history ?? []).map((x) => (typeof x === 'string' ? x : x?.q ?? x?.query ?? '')).filter(Boolean);
@@ -74,7 +79,7 @@ async function homeData() {
   const now = Date.now();
   return {
     name: me?.name, serverName: null, avatarUrl: me?.avatarUrl ?? null,
-    weather: w ? { place: w.place, temp: w.temp, text: w.text, wind: w.wind, max: w.days?.[0]?.max, min: w.days?.[0]?.min } : null,
+    weather: w ? { ...w, max: w.hi ?? w.days?.[0]?.max, min: w.lo ?? w.days?.[0]?.min } : null,
     shortcuts: (h?.services ?? []).map((s) => ({ name: s.name, url: s.url, local: /\/\/(192\.168|10\.|172\.(1[6-9]|2\d|3[01])\.|localhost)/.test(s.url) })),
     ruter: (r?.trips ?? []).map((t) => ({ from: t.from, to: t.to, departures: (t.deps ?? []).map((x) => ({ line: x.line, color: x.mode === 'tram' ? '#0B91EF' : x.mode === 'bus' ? '#E60000' : '#EC700C', min: Math.max(0, Math.round((new Date(x.time) - now) / 60000)), time: x.time })) })),
     serverStatus: null, fallback: true,
@@ -84,6 +89,8 @@ async function homeData() {
 export async function hlLoad() {
   const jobs = [
     homeData().then((d) => { H.data = d; H.err = ''; if (d?.search) H.set = d.search; if (d?.layout && Object.keys(d.layout).length && !lay.fromServer) { lay = norm(d.layout); lay.fromServer = true; }  if (d?.avatarUrl && m.me) m.me.avatarUrl = d.avatarUrl; if (d?.name && m.me && !m.me.name) m.me.name = d.name; }).catch((e) => { H.err = e.message; }),
+    // Pakkene: /mobile/home.packages når serveren har dem; uansett hentes /tracking for tellere og varsler.
+    trkLoad().then(() => trkWatch()).catch(() => {}),
     hlApi('/search/history').then((r) => { H.hist = histNorm(r); if (r && typeof r.save === 'boolean') H.set = { suggest: r.suggest !== false, save: r.save }; }).catch(() => { H.hist = histLocal(); }),
   ];
   if (!S.boot?.restricted) jobs.push(loadSummary().catch(() => {}));
@@ -106,10 +113,82 @@ const timeTxt = () => new Date().toLocaleTimeString('nb-NO', { hour: '2-digit', 
 const card = (th, inner, cls = '') => `<div class="hcard ${isI(th) ? 'glass2' : ''} ${cls}">${inner}</div>`;
 const isoWeek = (d = new Date()) => { const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day); return Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7); };
 
-function wClock(th) {
+// Ikoner for vær (samme streker som Homelab v2) og symbolkoder fra MET/yr eller WMO-koder fra eldre servere.
+Object.assign(ICONS, {
+  w_sun: 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4',
+  w_moon: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z', w_cloud: 'M7 18a4 4 0 1 1 .9-7.9A5 5 0 0 1 17.6 12 3.5 3.5 0 0 1 17 19H7z',
+  w_part: 'M8 3v1M3.6 5.6l.7.7M2 10h1M12 7.3A4 4 0 0 0 5 9M8 20a4 4 0 1 1 .9-7.9A5 5 0 0 1 18.6 14 3.5 3.5 0 0 1 18 21H8z',
+  w_rain: 'M7 15a4 4 0 1 1 .9-7.9A5 5 0 0 1 17.6 9 3.5 3.5 0 0 1 17 16H7zM8 19l-1 2M12 19l-1 2M16 19l-1 2',
+  w_snow: 'M7 15a4 4 0 1 1 .9-7.9A5 5 0 0 1 17.6 9 3.5 3.5 0 0 1 17 16H7zM8 19h.01M12 21h.01M16 19h.01',
+  w_fog: 'M7 13a4 4 0 1 1 .9-7.9A5 5 0 0 1 17.6 7 3.5 3.5 0 0 1 17 14H7zM4 18h16M6 21h12',
+  w_thunder: 'M7 15a4 4 0 1 1 .9-7.9A5 5 0 0 1 17.6 9 3.5 3.5 0 0 1 17 16h-2M12 14l-2 4h4l-2 4',
+  w_wind: 'M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8', w_drop: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z',
+  w_hum: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11zM9 14h6', w_uv: 'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v2M12 20v2M2 12h2M20 12h2',
+  w_gauge: 'M12 21a9 9 0 1 1 9-9M12 12l4-4', w_eye: 'M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z',
+  w_rise: 'M17 18a5 5 0 0 0-10 0M12 2v7M4.2 10.2l1.4 1.4M1 18h2M21 18h2M18.4 11.6l1.4-1.4M23 22H1M8 6l4-4 4 4',
+  w_set: 'M17 18a5 5 0 0 0-10 0M12 9V2M4.2 10.2l1.4 1.4M1 18h2M21 18h2M18.4 11.6l1.4-1.4M23 22H1M16 5l-4 4-4-4',
+});
+const WMO = (c) => (c == null ? 'part' : c === 0 ? 'sun' : c <= 2 ? 'part' : c === 3 ? 'cloud' : c <= 48 ? 'fog' : c <= 67 || (c >= 80 && c <= 82) ? 'rain' : c <= 77 || c === 85 || c === 86 ? 'snow' : c >= 95 ? 'thunder' : 'cloud');
+function wxIc(x) {
+  if (!x) return 'part';
+  if (['sun', 'moon', 'cloud', 'part', 'rain', 'snow', 'fog', 'thunder'].includes(x.icon)) return x.icon;
+  const s = String(x.symbol ?? x.code ?? '');
+  if (/^\d+$/.test(s)) return WMO(+s);
+  return /thunder/.test(s) ? 'thunder' : /snow|sleet/.test(s) ? 'snow' : /rain/.test(s) ? 'rain' : /fog/.test(s) ? 'fog' : /^cloudy/.test(s) ? 'cloud' : /clearsky_night|fair_night/.test(s) ? 'moon' : /clearsky/.test(s) ? 'sun' : 'part';
+}
+const wi = (x, size = 18) => icon('w_' + wxIc(x), size, 'currentColor', 1.8);
+const deg = (v) => (v == null || Number.isNaN(+v) ? '–' : `${Math.round(v)}°`);
+const mm = (v) => (v ? `${String(Math.round(v * 10) / 10).replace('.', ',')} mm` : '');
+const clockHm = (t) => (t ? new Date(t).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }) : '–');
+const windOf = (w) => (w.wind && typeof w.wind === 'object' ? w.wind : { speed: w.wind ?? w.windInfo?.speed, gust: w.windGust ?? w.windInfo?.gust, dir: w.windDir ?? w.windInfo?.dir, dirText: w.windDirText ?? w.windInfo?.dirText });
+const DIRS = ['nord', 'nordøst', 'øst', 'sørøst', 'sør', 'sørvest', 'vest', 'nordvest'];
+const dirTxt = (wd) => wd.dirText || (wd.dir != null ? `fra ${DIRS[Math.round(((wd.dir % 360) + 360) % 360 / 45) % 8]}` : '');
+const dayLbl = (d, i) => d.label ?? (i === 0 ? 'I dag' : new Date(d.date + 'T12:00').toLocaleDateString('nb-NO', { weekday: 'short' }).replace('.', ''));
+
+// Klokke og vær: kompakt kort like høyt som Pakker. Resten av været ligger i «Mer vær ▾».
+function wWeather(th) {
   const w = H.data?.weather;
-  const wx = w ? `${w.text ?? WXT[w.code] ?? 'Skiftende'}${w.wind != null ? ` · ${Math.round(w.wind)} m/s` : ''}` : H.data ? 'Ingen værdata' : 'Henter vær …';
-  return card(th, `<b class="hclock" data-clock>${timeTxt()}</b><span class="hwx"><b>${w?.temp != null ? Math.round(w.temp) + '°' : '–'}</b><span>${esc(wx)}</span><span class="dim">${esc(w?.place ?? 'Oslo')}${w?.max != null ? ` · ${Math.round(w.max)}° / ${Math.round(w.min)}°` : ''}</span></span>`, 'row');
+  if (!w) return card(th, `<b class="hclock" data-clock>${timeTxt()}</b><span class="hwx"><b>–</b><span>${H.data ? 'Ingen værdata' : 'Henter vær …'}</span></span>`, 'row wxcard');
+  const wd = windOf(w), hi = w.hi ?? w.max, lo = w.lo ?? w.min;
+  const mini = [wd.speed != null ? `Vind ${Math.round(wd.speed)}${wd.gust ? `–${Math.round(wd.gust)}` : ''} m/s` : '', w.precip24 != null ? `nedbør ${mm(w.precip24) || '0 mm'}` : w.precipNow ? `nedbør ${mm(w.precipNow)}` : '', w.humidity != null ? `fukt ${Math.round(w.humidity)} %` : ''].filter(Boolean).join(' · ');
+  const hours = (w.hours ?? []).slice(0, 6), days = (w.days ?? []).slice(1, 4);
+  const chips = [w.sunrise ? ['rise', `Sol opp ${clockHm(w.sunrise)}`] : null, w.sunset ? ['set', `Ned ${clockHm(w.sunset)}`] : null, w.uv != null ? ['uv', `UV ${w.uv}`] : null, w.pressure != null ? ['gauge', `${Math.round(w.pressure)} hPa`] : null].filter(Boolean);
+  const more = H.wxMore ? wxMore(w, wd) : '';
+  return card(th, `<div class="wx-top"><b class="hclock" data-clock>${timeTxt()}</b><span class="wx-now"><span class="wx-ic">${wi(w, 30)}</span><b>${deg(w.temp)}</b></span></div>
+    <div class="wx-cond"><b>${esc(w.text ?? WXT[w.code] ?? 'Skiftende')}</b><span class="dim">${w.feels != null ? `Føles som ${deg(w.feels)} · ` : ''}${hi != null ? `${deg(hi)} / ${deg(lo)}` : ''} · ${esc(w.place ?? 'Oslo')}</span>${mini ? `<span class="dim sm">${esc(mini)}</span>` : ''}</div>
+    ${hours.length ? `<div class="wx-hours">${hours.map((x, i) => `<span><small>${esc(x.t ?? x.label ?? (i ? '' : 'Nå'))}</small>${wi(x, 17)}<b>${deg(x.temp)}</b><small class="mm">${x.mm ? String(Math.round(x.mm * 10) / 10).replace('.', ',') : '–'}</small></span>`).join('')}</div>` : ''}
+    ${w.nowcast?.text ? `<div class="wx-nc">${esc(w.nowcast.text)}</div>` : ''}
+    ${days.length ? `<div class="wx-days">${days.map((x, i) => `<span>${wi(x, 20)}<span class="m-grow"><small class="dl">${esc(dayLbl(x, i + 1))}</small><b>${deg(x.max)} <span class="dim">/ ${deg(x.min)}</span></b><small class="mm">${esc(mm(x.mm) || 'Opphold')}</small></span></span>`).join('')}</div>` : ''}
+    ${chips.length ? `<div class="wx-chips">${chips.map(([k, t]) => `<span>${icon('w_' + k, 13, 'currentColor', 1.8)}${esc(t)}</span>`).join('')}</div>` : ''}
+    ${w.hours || w.days ? `<button class="wx-more" data-hle="wxmore" aria-expanded="${!!H.wxMore}">${H.wxMore ? 'Mindre vær ▴' : 'Mer vær ▾'}</button>` : ''}${more}`, 'wxcard');
+}
+function wxMore(w, wd) {
+  const stats = [
+    ['wind', 'Vind', wd.speed != null ? `${Math.round(wd.speed)} m/s` : '–', [wd.gust ? `kast ${Math.round(wd.gust)}` : '', dirTxt(wd)].filter(Boolean).join(' · ')],
+    ['drop', 'Nedbør', mm(w.precipNow) || '0 mm', w.precip24 != null ? `${mm(w.precip24) || '0 mm'} neste 24 t` : 'nå'],
+    ['hum', 'Fuktighet', w.humidity != null ? `${Math.round(w.humidity)} %` : '–', w.dew != null ? `duggpunkt ${deg(w.dew)}` : ''],
+    ['uv', 'UV-indeks', w.uv != null ? String(w.uv) : '–', w.uvText ?? ''],
+    ['gauge', 'Lufttrykk', w.pressure != null ? `${Math.round(w.pressure)} hPa` : '–', w.pressureTrend ?? ''],
+    ['eye', 'Sikt', w.visibility != null ? String(w.visibility) : '–', ''],
+    ['rise', 'Soloppgang', clockHm(w.sunrise), w.dayLengthText || (w.dayLength ? `${Math.floor(w.dayLength / 60)} t ${w.dayLength % 60} m dag` : '')],
+    ['set', 'Solnedgang', clockHm(w.sunset), ''],
+  ];
+  const hours = (w.hours ?? []).slice(0, 8), mx = Math.max(1, ...hours.map((x) => x.mm ?? 0));
+  const days = (w.days ?? []).slice(0, 6), LO = Math.min(...days.map((d) => d.min ?? 0)), HI = Math.max(...days.map((d) => d.max ?? 0)), span = HI - LO || 1;
+  return `<div class="wx-drop">
+    <div class="wx-stats">${stats.map(([k, l, v, s]) => `<div><span class="dim">${icon('w_' + k, 13, 'currentColor', 1.8)}${esc(l)}</span><b>${esc(v)}</b>${s ? `<small class="dim">${esc(s)}</small>` : ''}</div>`).join('')}</div>
+    ${hours.length ? `<div class="wx-h8"><div class="dim sm wx-lbl"><span>Neste timer</span><span>Nedbør mm</span></div><div class="wx-h8r">${hours.map((x, i) => `<span><small>${esc(x.t ?? x.label ?? (i ? '' : 'Nå'))}</small>${wi(x, 17)}<b>${deg(x.temp)}</b><i style="height:${Math.round(((x.mm ?? 0) / mx) * 22)}px"></i><small class="mm">${x.mm ? String(Math.round(x.mm * 10) / 10).replace('.', ',') : '–'}</small></span>`).join('')}</div></div>` : ''}
+    ${days.length ? `<div class="wx-d6">${days.map((x, i) => `<div><span class="wx-dl">${esc(dayLbl(x, i))}</span>${wi(x, 17)}<span class="dim">${deg(x.min)}</span><span class="wx-rng"><i style="left:${(((x.min ?? LO) - LO) / span) * 100}%;right:${100 - (((x.max ?? HI) - LO) / span) * 100}%"></i></span><b>${deg(x.max)}</b><small class="mm">${esc(mm(x.mm))}</small></div>`).join('')}</div>` : ''}
+  </div>`;
+}
+// Karusellen øverst: Klokke og vær + Pakker, med scroll-snap og prikker. Flyttes og skjules sammen som «Klokke og vær».
+function wClock(th) {
+  const pk = H.data?.packages ?? (TR.data?.items ? topPackages(TR.data.items) : null);
+  const i = H.car ?? 0;
+  return `<div class="hcar"><div class="hcar-track" id="m-hcar">
+      <div class="hcar-item" aria-label="Klokke og vær">${wWeather(th)}</div>
+      <div class="hcar-item" aria-label="Pakker">${pkgCard(th, pk ?? [], { loading: pk === null && !TR.missing && !TR.err, missing: TR.missing })}</div>
+    </div><div class="hcar-dots" role="tablist" aria-label="Kort">${['Klokke og vær', 'Pakker'].map((n, j) => `<button role="tab" data-hcar="${j}" aria-selected="${i === j}" aria-label="${n}"></button>`).join('')}</div></div>`;
 }
 
 function dropItems() {
@@ -205,6 +284,20 @@ export function hlAfterDraw() {
   clearInterval(clockT);
   if (m.screen !== 'hl') return;
   clockT = setInterval(() => { const el = document.querySelector('[data-clock]'); if (el) el.textContent = timeTxt(); else clearInterval(clockT); }, 15000);
+  // Karusellen tegnes på nytt ved hver draw(); behold kortet som var valgt, og oppdater prikkene mens man sveiper.
+  const tr = document.getElementById('m-hcar');
+  if (!tr) return;
+  if (H.car) { tr.style.scrollBehavior = 'auto'; tr.scrollLeft = H.car * tr.clientWidth; tr.style.scrollBehavior = ''; }
+  let raf = 0;
+  tr.addEventListener('scroll', () => {
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(() => {
+      const i = Math.round(tr.scrollLeft / Math.max(1, tr.clientWidth));
+      if (i === H.car) return;
+      H.car = i; haptic('tab');
+      tr.parentElement.querySelectorAll('[data-hcar]').forEach((b, j) => b.setAttribute('aria-selected', String(j === i)));
+    });
+  }, { passive: true });
 }
 
 /* ---------- Søk ---------- */
@@ -301,6 +394,13 @@ export function hlBind(e, t) {
     saveLayout({ sec: [...order, ...lay.sec.filter((id) => !order.includes(id))] });
     return true;
   }
+  if (e.type === 'click' && (x = d('[data-hcar]'))) {
+    e.preventDefault();
+    const tr = document.getElementById('m-hcar'), i = +x.dataset.hcar;
+    if (tr) tr.scrollTo({ left: i * tr.clientWidth, behavior: 'smooth' });
+    return true;
+  }
+  if (e.type === 'click' && d('[data-hle="wxmore"]')) { e.preventDefault(); H.wxMore = !H.wxMore; haptic('tap'); draw(); return true; }
   if (e.type !== 'click' || !(x = d('[data-hle]'))) return false;
   e.preventDefault();
   const k = x.dataset.hle, id = x.dataset.id;

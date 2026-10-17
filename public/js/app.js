@@ -13,8 +13,9 @@ import * as net from './net.js';
 import * as home from './home.js';
 import * as mat from './mat.js';
 import * as domains from './domains.js';
+import * as tracking from './tracking.js';
 
-const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, hjem: home.render, matplan: mat.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
+const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
 const view = document.getElementById('view');
 let route = null, wasMobile = isMobile();
 
@@ -36,9 +37,9 @@ function renderRoute() {
   mountAll(view);
   setupDnd(view);
   // Rom er en underside av «Mer» på mobil.
-  const navKey = isMobile() && ['rom', 'nettverk', 'hjem', 'matplan', 'domener'].includes(route) ? 'mer' : route;
+  const navKey = isMobile() && ['rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'domener'].includes(route) ? 'mer' : route;
   document.querySelectorAll('[data-r]').forEach((a) => { if (a.dataset.r === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
-  document.title = { dash: 'OS', studie: 'Studie · OS', rom: 'Rom · OS', hjem: 'Hjem · OS', matplan: 'Matplan · OS', domener: 'Domener · OS', nettverk: 'Nettverk · OS', mer: 'Mer · OS' }[route];
+  document.title = { dash: 'OS', studie: 'Studie · OS', rom: 'Rom · OS', hjem: 'Hjem · OS', matplan: 'Matplan · OS', sporing: 'Sporing · OS', domener: 'Domener · OS', nettverk: 'Nettverk · OS', mer: 'Mer · OS' }[route];
 }
 
 function weatherPill() {
@@ -82,7 +83,7 @@ async function main() {
   bindPopup();
   bindSearch();
   setupDnd(document.querySelector('header'));
-  study.bind(view); space.bind(view); home.bind(view); mat.bind(view); domains.bind(view);
+  study.bind(view); space.bind(view); home.bind(view); mat.bind(view); tracking.bind(view); domains.bind(view);
   applyTop();
   applyHead();
   renderTicker();

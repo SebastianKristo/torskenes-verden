@@ -4,9 +4,10 @@ import { S, api, esc, n0, n2, sgn, dd, today, monthName, cap, icon, logo, aiLine
 import { m, draw, flash, avatar, backBtn, theme, amtC, openSheet, openCam } from './mobile.js';
 import { c3 } from './mobile-theme.js';
 import { LAY } from './mobile-hl.js';
+import { AK, aksView, aksLoad, aksBind } from './mobile-aks.js';
 
 export const PAGES = ['mer', 'kv', 'fast', 'konto', 'aks', 'rap', 'imp', 'sok'];
-const PG = { rec: null, stocks: null, rep: null, repMode: 'month', sub: null, dirs: null, finn: null, booked: null, aksPer: '1M',
+const PG = { rec: null, stocks: null, rep: null, repMode: 'month', sub: null, dirs: null, finn: null, booked: null,
   imp: { rows: null, files: [], text: '', busy: false, acc: null }, ai: { q: '', r: null, busy: false, hist: null, sugg: null, groups: null, focus: false, aiDown: false, notice: '' }, last: '' };
 const isI = () => theme() === 'ios';
 const gl = (c = 'glass2') => (isI() ? c : '');
@@ -31,12 +32,6 @@ export const R = {
   file: (l, sub, accept, attrs) => `<label class="opt-row"><span class="set-ic">${icon('imp', 18)}</span><span class="m-grow"><b style="font-weight:500;color:var(--m-acc)">${esc(l)}</b><br><span style="font-size:12.5px;opacity:.65">${esc(sub)}</span></span><input class="m-file" type="file" accept="${accept}" multiple ${attrs}></label>`,
 };
 export const G = (t, rows, o = {}) => `${t || o.act ? `<div class="sec phd"><span>${esc(t)}</span>${o.act ? `<button class="pha" ${o.act.attrs}>${esc(o.act.l)}</button>` : ''}</div>` : ''}<div class="list ${gl()}">${rows.filter(Boolean).join('')}</div>${o.note ? `<div class="snote">${esc(o.note)}</div>` : ''}`;
-const spark = (vals) => {
-  if (vals.length < 2) return '';
-  const mx = Math.max(...vals), mn = Math.min(...vals), r = mx - mn || 1;
-  const p = vals.map((v, i) => `${((i / (vals.length - 1)) * 300).toFixed(1)} ${(56 - ((v - mn) / r) * 50).toFixed(1)}`).join(' L');
-  return `<svg viewBox="0 0 300 60" preserveAspectRatio="none" class="pspark" aria-hidden="true"><path d="M${p} L300 60 L0 60 Z" class="ar"/><path d="M${p}" class="ln"/></svg>`;
-};
 
 export function page(o) {
   const th = theme();
@@ -75,7 +70,7 @@ export async function pageLoad(scr) {
   }
   if (scr === 'kv') { j.push(ok(loadReceipts())); const { from, to } = S.boot?.period ?? {}; j.push(ok(api('/transactions?' + new URLSearchParams(from ? { from, to } : {}))).then((r) => { PG.booked = (r?.items ?? []).filter((t) => t.receipt === 'booked'); })); }
   if (scr === 'fast') j.push(ok(api('/recurring')).then((r) => { PG.rec = r ?? []; }));
-  if (scr === 'aks') j.push(api('/stocks').then((r) => { PG.stocks = r; }).catch((e) => { PG.stocks = { error: e.message }; }));
+  if (scr === 'aks') j.push(aksLoad().then(() => { if (AK.d && !AK.d.error) PG.stocks = AK.d; }));
   if (scr === 'rap') j.push(loadRep());
   if (scr === 'sok') {
     j.push(ok(api('/search/history')).then((r) => { PG.ai.hist = (Array.isArray(r) ? r : r?.items ?? []).map((x) => (typeof x === 'string' ? x : x?.q)).filter(Boolean); }));
@@ -144,32 +139,6 @@ function konto() {
       goals.length ? G('Sparemål', goals.map((g) => R.bar(g.name, `${n0(g.saved)} / ${n0(g.target)} kr`, g.target ? (g.saved / g.target) * 100 : 0, g.saved >= g.target ? '#9FE3C6' : 'var(--m-acc)', g.saved >= g.target ? 'Nådd ✓' : `${Math.round(g.target ? (g.saved / g.target) * 100 : 0)} % · ${n0(g.target - g.saved)} kr igjen`))) : ''] });
 }
 
-const PERS = [['1D', 1], ['1U', 7], ['1M', 31], ['1Å', 365], ['Alt', 1e5]];
-function aks() {
-  const d = PG.stocks, back = ['#/mer', 'Tilbake til Mer'];
-  if (!d) return page({ back, title: 'Aksjer', groups: ['<div class="m-spin"></div>'] });
-  if (d.error && !d.summary) return page({ back, title: 'Aksjer', groups: [G('', [R.text(d.error)])] });
-  if (!d.configured && !d.mock) return page({ back, title: 'Aksjer', sub: 'Trading 212', groups: [G('', [R.text('Ikke koblet til. Legg inn API-nøkkel og secret fra Trading 212 (Innstillinger → API (Beta), bare lesetilgang).'), R.link('Koble til Trading 212', '#/set/t212')])] });
-  const s = d.summary ?? {}, pos = d.positions ?? [], cur = stockCur(), val = s.value ?? s.total ?? 0;
-  const days = PERS.find(([k]) => k === PG.aksPer)?.[1] ?? 31, since = new Date(Date.now() - days * 864e5).toLocaleDateString('sv-SE');
-  const hist = (d.history ?? []).filter((h) => h.date >= since).map((h) => h.value);
-  const day = pos.reduce((a, p) => a + (p.dayPct != null ? (p.value * p.dayPct) / 100 : 0), 0);
-  const year = today().slice(0, 4), div = (d.dividends ?? []).filter((x) => String(x.date).startsWith(year));
-  const pc = (v) => `${v < 0 ? '−' : '+'}${Math.abs(v).toLocaleString('nb-NO', { maximumFractionDigits: 1 })} %`;
-  const money = (v) => `${n0(v)} ${cur}`;
-  return page({ back, title: 'Aksjer', sub: `Trading 212 · ${d.env === 'demo' ? 'Demo' : 'Invest'}${d.mock ? ' · eksempeldata' : ''}`,
-    hero: { l: 'Porteføljeverdi', v: money(val), s: s.result != null ? `${sgn(s.result).replace(/,\d\d$/, '')} ${cur} (${pc(s.invested ? (s.result / s.invested) * 100 : 0)}) totalt` : '', spark: spark(hist), chips: PERS.map(([k]) => ({ n: k, on: PG.aksPer === k, attrs: `data-pa="aksper" data-v="${k}"` })) },
-    kpis: [{ l: 'I dag', v: `${day < 0 ? '−' : '+'}${money(Math.abs(day))}`, s: 'Siden åpning', c: day < 0 ? '#FFB08A' : '#9FE3C6' }, { l: 'Kontanter', v: money(s.cash ?? 0), s: 'Ledig å investere' },
-      { l: 'Utbytte i år', v: money(div.reduce((a, x) => a + (x.amount ?? 0), 0)), s: `${div.length} utbetalinger` }, { l: 'Avkastning', v: `${(s.result ?? 0) < 0 ? '−' : '+'}${money(Math.abs(s.result ?? 0))}`, s: 'Siden kjøp', c: (s.result ?? 0) < 0 ? '#FFB08A' : '#9FE3C6' }],
-    groups: [
-      G('Posisjoner', pos.map((p, i) => R.item({ ini: p.symbol, iniStyle: "font-size:10.5px;font-family:var(--mono)", t: p.name, s: `${p.quantity.toLocaleString('nb-NO', { maximumFractionDigits: 4 })} stk · snitt ${n0(p.avg)} · kurs ${n0(p.price)}`, v: money(p.value), vs: `${pc(p.plPct ?? 0)}${p.dayPct != null ? ` · i dag ${pc(p.dayPct)}` : ''}`, vc: (p.pl ?? 0) < 0 ? '#FFB08A' : '#9FE3C6', attrs: `data-pd="pos" data-id="${i}"` })) || [R.text('Ingen posisjoner.')]),
-      pos.length ? G('Fordeling', pos.map((p) => R.bar(p.name, `${Math.round((p.value / (val || 1)) * 100)} %`, (p.value / (val || 1)) * 100, 'var(--m-acc)'))) : '',
-      (d.orders ?? []).length ? G('Ordrer', d.orders.slice(0, 10).map((o) => R.item({ ini: o.side === 'Salg' ? '−' : '+', t: `${o.side} ${o.symbol}`, s: `${dd(o.date)} · ${o.quantity.toLocaleString('nb-NO', { maximumFractionDigits: 4 })} stk à ${n2(o.price)}`, v: money(o.value) }))) : '',
-      (d.dividends ?? []).length ? G('Utbytte', d.dividends.slice(0, 10).map((x) => R.item({ ini: cur, iniStyle: 'font-size:12px', t: x.symbol, s: dd(x.date), v: `+${n2(x.amount)}`, vc: '#9FE3C6' }))) : '',
-      G('', [R.btn('Synk nå', 'data-pa="aksync"')], { note: d.status ? String(d.status) : 'Nøkkel og secret ligger på serveren. Endres under Innstillinger → Aksjer · Trading 212.' }),
-    ] });
-}
-
 function rap() {
   const r = PG.rep, yr = PG.repMode === 'year', back = ['#/mer', 'Tilbake til Mer'];
   if (!r) return page({ back, title: 'Rapporter', groups: ['<div class="m-spin"></div>'] });
@@ -232,6 +201,7 @@ function sok() {
     groups: [
       R.chips('', [chip('ai', '✦ AI'), chip('plain', 'Vanlig søk')]),
       A.notice ? `<div class="snote snotice">${esc(A.notice)}</div>` : '',
+      r?.plainFirst && !A.busy ? `<div class="plainfirst ${gl()}"><span class="m-grow">${esc(r.notice || 'Fant treff med vanlig søk, så AI ble ikke brukt')}</span><button class="pact" data-pa="askai" data-q="${esc(r.q)}">✦ Spør AI likevel</button></div>` : '',
       `<form data-aiform class="list ${gl()} aiform"><label class="opt-row col"><span style="font-size:13px;opacity:.7">${mode === 'ai' ? 'Spørsmål' : 'Søk'}</span><input class="sinp" id="m-aiq" type="search" enterkeyhint="search" autocomplete="off" value="${esc(A.q)}" placeholder="${mode === 'ai' ? 'f.eks. Når kjøpte jeg lyspærer?' : 'f.eks. tomater, Biltema, over 500 kr'}"></label><button type="submit" class="opt-row"><span class="m-grow" style="color:var(--m-acc);font-weight:600">${A.busy ? (mode === 'ai' ? 'Spør AI …' : 'Søker …') : mode === 'ai' ? '✦ Spør AI' : 'Søk'}</span></button></form>`,
       A.busy ? '<div class="m-spin"></div>' : '',
       // Før søk: forslag i tre grupper.
@@ -245,7 +215,7 @@ function sok() {
     ] });
 }
 
-const VIEWS = { mer, kv, fast, konto, aks, rap, imp, sok };
+const VIEWS = { mer, kv, fast, konto, aks: () => aksView(m.sub), rap, imp, sok };
 export function pageView(scr) {
   const html = m.pdet ? detailView() : VIEWS[scr]();
   PG.last = scr;
@@ -268,18 +238,20 @@ async function plainSearch(q) {
     return { mode: 'plain', summary: items.length ? `${items.length} transaksjoner passer.` : 'Fant ingen treff.', hits: items.slice(0, 40).map((x) => ({ type: 'tx', txId: x.id, description: x.description, date: x.date, amount: x.amount, reason: `Butikk · ${x.description}` })) };
   }
 }
-async function ask(q) {
+async function ask(q, { force = false } = {}) {
   q = String(q ?? '').trim();
   if (!q) return;
   const A = PG.ai;
   A.q = q; A.busy = true; A.notice = ''; draw();
-  const useAi = modeOf() === 'ai' && !A.aiDown;
+  const useAi = force || (modeOf() === 'ai' && !A.aiDown);
   try {
     if (useAi) {
       try {
-        const r = await api('/search/ai', { method: 'POST', json: { q } });
+        // Enkle ord (f.eks. «ica», «proton»): serveren prøver vanlig søk først og svarer plainFirst når det gir treff.
+        // «✦ Spør AI likevel» sender force:true.
+        const r = await api('/search/ai', { method: 'POST', json: force ? { q, force: true } : { q } });
         if (r?.aiUnavailable) throw Object.assign(new Error('AI er ikke tilgjengelig'), { ai: true });
-        A.r = { ...r, q, mode: 'ai' };
+        A.r = { ...r, q, mode: r?.plainFirst ? 'plain' : r?.mode ?? 'ai' };
       } catch (e) {
         A.aiDown = true; A.notice = 'AI-motoren svarer ikke nå. Viser vanlig søk i butikk, kategori, notat og varelinjer.';
         A.r = { ...(await plainSearch(q)), q };
@@ -317,11 +289,6 @@ async function rowClick(e, d) {
     } else if (k === 'konto') {
       const a = accs().find((y) => String(y.id) === id);
       await openDetail({ title: a.name, sub: a.bank ?? '', hl: 'Saldo', v: `${a.balance < 0 ? '−' : ''}${kr2(Math.abs(a.balance))}`, vs: 'Startsaldo + transaksjoner', groups: [['Konto', [['Bank', a.bank ?? '–'], ['Kontonummer', a.last4 ? `•••• ${a.last4}` : '–', '', true], ['Startsaldo', kr2(a.openingBalance ?? 0)], ['Notat', a.note || '–']]]] }, { account: a.id, limit: 30 });
-    } else if (k === 'pos') {
-      const p = PG.stocks.positions[+id], cur = stockCur(), val = PG.stocks.summary?.value || 1;
-      await openDetail({ title: p.name, sub: `${p.symbol} · Trading 212`, hl: 'Verdi', v: `${n0(p.value)} ${cur}`, vs: `${sgn(p.pl ?? 0).replace(/,\d\d$/, '')} ${cur} siden kjøp`,
-        groups: [['Posisjon', [['Antall', `${p.quantity.toLocaleString('nb-NO', { maximumFractionDigits: 4 })} stk`], ['Snittkurs', `${n2(p.avg)} ${cur}`], ['Kurs nå', `${n2(p.price)} ${cur}`], ['Kostpris', `${n0(p.quantity * p.avg)} ${cur}`], ['Andel av portefølje', `${Math.round((p.value / val) * 100)} %`]]],
-          ['Utvikling', [['I dag', p.dayPct != null ? `${p.dayPct.toLocaleString('nb-NO', { maximumFractionDigits: 1 })} %` : '–', (p.dayPct ?? 0) < 0 ? '#FFB08A' : '#9FE3C6'], ['Totalt', `${(p.plPct ?? 0).toLocaleString('nb-NO', { maximumFractionDigits: 1 })} %`, (p.pl ?? 0) < 0 ? '#FFB08A' : '#9FE3C6'], ['Valutaeffekt', `${n2(p.fxPl ?? 0)} ${cur}`]]]] });
     } else if (k === 'merch') {
       const n = x.dataset.name, r = (PG.rep?.merchants ?? []).find((y) => y.name === n);
       await openDetail({ title: n, sub: 'Topp butikk', v: `−${kr(r?.amount ?? 0)}`, vs: `${r?.count ?? 0} kjøp`, groups: [] }, { q: word(n), from: PG.rep.from, to: PG.rep.to, limit: 30 });
@@ -333,6 +300,7 @@ async function rowClick(e, d) {
 
 export async function pagesBind(e, t) {
   if (!PAGES.includes(m.screen)) return false;
+  if (m.screen === 'aks' && !m.pdet && await aksBind(e, t)) return true;
   const d = (s) => t.closest?.(s);
   let x;
   if (e.type === 'input') {
@@ -367,6 +335,7 @@ export async function pagesBind(e, t) {
   e.preventDefault();
   if (k === 'merask') { const q = document.getElementById('m-merq')?.value ?? PG.ai.q; location.hash = '#/sok'; ask(q); }
   else if (k === 'ask') { if (m.screen !== 'sok') location.hash = '#/sok'; await ask(pa.dataset.q); }
+  else if (k === 'askai') { await ask(pa.dataset.q, { force: true }); }
   else if (k === 'smode') {
     const v = pa.dataset.v;
     if (v === 'ai' && PG.ai.aiDown) { PG.ai.aiDown = false; } // prøv AI igjen
@@ -379,8 +348,6 @@ export async function pagesBind(e, t) {
   else if (k === 'cam') openCam();
   else if (k === 'fasttog') { const r = PG.rec.find((y) => String(y.id) === pa.dataset.id); await api(`/recurring/${r.id}`, { method: 'PATCH', json: { active: !r.active } }); await pageLoad('fast'); flash(r.active ? `${r.name} er skrudd av` : `${r.name} er skrudd på`); }
   else if (k === 'detect') { const r = await api('/recurring/detect', { method: 'POST' }); await pageLoad('fast'); flash(r.added ? `Fant ${r.added} nye faste trekk` : 'Fant ingen nye faste trekk'); }
-  else if (k === 'aksper') { PG.aksPer = pa.dataset.v; draw(); }
-  else if (k === 'aksync') { flash('Synker med Trading 212 …'); PG.stocks = await api('/stocks/sync', { method: 'POST' }).catch((err) => ({ ...PG.stocks, status: err.message })); flash('Synket med Trading 212'); }
   else if (k === 'rapm') { PG.repMode = pa.dataset.v; PG.rep = null; draw(); await loadRep(); draw(); }
   else if (k === 'impacc') { PG.imp.acc = +pa.dataset.v; draw(); }
   else if (k === 'imptxt') { if (!PG.imp.text.trim() && !PG.imp.files.length) { flash('Lim inn rader eller velg filer først'); return true; } PG.imp.busy = true; draw(); try { PG.imp.rows = (await impPost(false)).rows; } catch (err) { flash(err.message); } PG.imp.busy = false; draw(); }

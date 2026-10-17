@@ -16,6 +16,7 @@ import { db as fhDb } from './finans/db.js';
 import homeApi from './home.js';
 import { matApi, matCalendar, startMatScheduler } from './mat.js';
 import domainsApi from './domains.js';
+import trackingApi, { startTrackingWorker, hasTrackingTest, testTracking } from './tracking.js';
 import uiApi from './ui.js';
 import mobileApi, { meOut, removeAvatar, shortcutsFor, layoutOf } from './mobile.js';
 import { revokeUserTokens } from './finans/routes.js';
@@ -295,6 +296,7 @@ authed.put('/config', requireAdmin, async (c) => {
 // «Test tilkobling»: ett ekte kall via serveren med de lagrede verdiene.
 authed.post('/config/test/:group', requireAdmin, async (c) => {
   const group = c.req.param('group');
+  if (hasTrackingTest(group)) return c.json(await testTracking());
   if (!integrations.hasTest(group)) return c.json({ error: 'Ukjent integrasjon' }, 404);
   return c.json(await integrations.testIntegration(group));
 });
@@ -467,6 +469,7 @@ authed.get('/space/gallery/:key', proxy((c) => {
 }));
 
 app.route('/api/ui', uiApi);
+app.route('/api/tracking', trackingApi); // Sporing (prompt 11): pakker fra Finn, e-post og manuelt
 app.route('/api/matplan', matApi); // samme Matplan-API som /mat/api (prompt 10: Matplan hører til Homelab)
 // Profil, oppsett, søk, mobilforside og widgets: sesjon ELLER FinansHub-token (må stå før /api med requireAuth).
 app.route('/api', mobileApi);
@@ -475,7 +478,7 @@ app.route('/home/api', homeApi);
 app.route('/mat/api', matApi);
 app.route('/domains/api', domainsApi);
 app.get('/mat/calendar.ics', matCalendar);
-if (process.env.NODE_ENV !== 'test') startMatScheduler();
+if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); }
 
 app.onError((err, c) => {
   console.error(err);

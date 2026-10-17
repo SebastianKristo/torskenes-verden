@@ -1,5 +1,6 @@
 // Eksempeldata for utvikling og demo (MOCK_DATA=1). Brukes når eksterne API-er ikke er tilgjengelige.
 import * as real from './integrations.js';
+import { buildWeather } from './weather.js';
 
 export const { GALLERIES, getTle, getApod, getGallery } = real;
 
@@ -19,11 +20,27 @@ export const getRuter = async () => ({
   updated: new Date().toISOString(),
 });
 
-export const getWeather = async () => ({
-  place: 'Oslo', temp: 7, feels: 4, wind: 4, precip: 3, symbol: 'lightrain', text: 'Lett regn', kind: 'regn',
-  hours: [7, 7, 6, 6, 5, 5].map((t, i) => ({ label: i ? String((new Date().getHours() + i) % 24).padStart(2, '0') : 'Nå', temp: t, precip: [1.5, 2, 1, 0.5, 0, 0.2][i] })),
-  days: [['Lør', 9, 4], ['Søn', 11, 5], ['Man', 8, 3], ['Tir', 6, 2]].map(([label, max, min]) => ({ label, max, min })),
-});
+// Demovær: et syntetisk MET-svar (timer de første 60 t, deretter 6-timers steg) kjøres gjennom samme kode som ekte data.
+export function mockForecast(now = Date.now()) {
+  const start = Math.floor(now / 3600_000) * 3600_000, ts = [];
+  for (let h = 0; h < 160; h += h < 60 ? 1 : 6) {
+    const at = start + h * 3600_000, hr = new Date(at).getUTCHours() + 2;
+    const temp = 6 + 3 * Math.sin(((hr - 9) / 24) * 2 * Math.PI) - h / 40;
+    const rain = h < 3 ? [0.6, 0.9, 0.4][h] : h > 70 && h < 90 ? 1.8 / 6 : 0;
+    const sym = rain > 0.15 ? 'lightrain' : (hr % 24 >= 19 || hr % 24 < 8) ? (rain ? 'cloudy' : 'fair_night') : rain ? 'cloudy' : 'partlycloudy_day';
+    const d = { instant: { details: { air_temperature: +temp.toFixed(1), wind_speed: 4.2, wind_speed_of_gust: 9.1, wind_from_direction: 225, relative_humidity: 87,
+      dew_point_temperature: 5, air_pressure_at_sea_level: 1006 - h * 0.6, ultraviolet_index_clear_sky: 0, fog_area_fraction: 4, cloud_area_fraction: 80 } } };
+    if (h < 60) d.next_1_hours = { summary: { symbol_code: sym }, details: { precipitation_amount: +rain.toFixed(1) } };
+    d.next_6_hours = { summary: { symbol_code: h > 70 && h < 90 ? 'rain' : sym.replace('_night', '_day') }, details: { precipitation_amount: +(rain * 6).toFixed(1), air_temperature_max: temp + 1, air_temperature_min: temp - 1 } };
+    ts.push({ time: new Date(at).toISOString(), data: d });
+  }
+  return { properties: { meta: { updated_at: new Date(start).toISOString() }, timeseries: ts } };
+}
+export function mockNowcast(now = Date.now()) {
+  const start = Math.floor(now / 300_000) * 300_000;
+  return { properties: { timeseries: Array.from({ length: 19 }, (_, i) => ({ time: new Date(start + i * 300_000).toISOString(), data: { instant: { details: { precipitation_rate: i < 9 ? 0.8 : 0 } } } })) } };
+}
+export const getWeather = async () => buildWeather({ forecast: mockForecast(), nowcast: mockNowcast(), place: 'Oslo' });
 
 export const getSchool = async () => {
   const lessons = [[8, 15, 9, 45, 'Fysikk 2', 'B-204'], [10, 0, 11, 30, 'Matematikk R2', 'A-112'], [12, 15, 13, 45, 'Norsk', 'Aula'], [14, 0, 15, 30, 'Engelsk', 'C-301']];

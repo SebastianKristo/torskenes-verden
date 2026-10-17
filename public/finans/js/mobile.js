@@ -12,6 +12,9 @@ import { txDetail, editForm, origOverlay, txBind } from './mobile-tx.js';
 import { applyM3, c3 } from './mobile-theme.js';
 import { matView, matLoad, matBind, matDark } from './mobile-mat.js';
 import { finnView, finnLoad, finnBind } from './mobile-finn.js';
+import { trkView, trkLoad, trkBind, trkWatch } from './mobile-track.js';
+import { haptic } from './mobile-haptics.js';
+import { subsBind } from './mobile-subs.js';
 
 const u = S.ui;
 export const m = {
@@ -29,14 +32,14 @@ export const amtC = (v, th) => (v > 0 ? '#9FE3C6' : th === 'and' ? c3('#F0DFD7')
 /* ---------- Skjermer og faner ---------- */
 
 // Faner kan skjules og flyttes i «Rediger forsiden» (LAY.hlTabs / LAY.finTabs).
-export const HLTABS = { hl: ['hl', 'Homelab', 'hlhome'], home: ['hjem', 'Finans', 'fin'], dom: ['dom', 'Domener', 'globe'], mat: ['mat', 'Matplan', 'mat'] };
+export const HLTABS = { hl: ['hl', 'Homelab', 'hlhome'], home: ['hjem', 'Finans', 'fin'], trk: ['spor', 'Sporing', 'box'], dom: ['dom', 'Domener', 'globe'], mat: ['mat', 'Matplan', 'mat'] };
 export const FINTABS = { home: ['hjem', 'Oversikt', 'home'], list: ['liste', 'Liste', 'list'], finn: ['finn', 'Finn', 'finn'], bud: ['budsjett', 'Budsjett', 'bud'], ai: ['sok', 'Søk', 'ai'], mer: ['mer', 'Mer', 'mer'] };
 export const FIXED_HL = ['hl', 'home'], FIXED_FIN = ['home', 'mer'];
 const FINMODS = ['sub', 'dir', 'finn'];
 export const FIN = ['hjem', 'liste', 'budsjett', 'sok', 'skann', 'opp', ...PAGES, ...FINMODS];
 const TWO = ['hjem', 'liste', 'budsjett', 'skann', 'opp', 'sok'];
-const HLG = ['hl', 'set'];
-const ALL = [...new Set([...FIN, 'hl', 'mat', 'dom', 'set'])];
+const HLG = ['hl', 'spor', 'set'];
+const ALL = [...new Set([...FIN, 'hl', 'spor', 'mat', 'dom', 'set'])];
 // Oversikt, Liste og Budsjett bruker egne navn fra Sidemeny; Søk og Mer beholder de korte navnene i fanelinja.
 const RENAME = ['home', 'list', 'bud', 'finn'];
 // Egne navn fra Innstillinger → Utseende → Navigasjonslinje (LAY.names) går foran; tomt felt gir standardnavnet.
@@ -70,7 +73,7 @@ export function backTop(scr = m.screen) {
   if (backStyle() === 'bar') return false;
   if (scr === 'dom') return true; // Abonnementer, Boliger og Finn har egen pil tilbake til Mer
   if (!startFin() && FINMAIN.includes(scr)) return !(m.detail && !two()) && !m.edit && !m.pdet && !(scr === 'finn' && m.sub);
-  if (startFin() && scr === 'hl') return true;
+  if (startFin() && (scr === 'hl' || scr === 'spor')) return true;
   return false;
 }
 const homeLbl = () => (startFin() ? 'Finans' : 'Homelab');
@@ -342,6 +345,7 @@ export function draw() {
   const scrs = { hjem: home, liste: list, budsjett: budget, opp: uploadScreen };
   const main = scr === 'set' ? settingsView(th, m.sub)
     : scr === 'hl' ? hlView(th)
+    : scr === 'spor' ? trkView(th)
     : scr === 'mat' ? matView(th)
     : m.edit && !twoPane ? editForm(th)
     : m.detail && !twoPane && m.sel && FIN.includes(scr) ? txDetail(th, selTx())
@@ -374,7 +378,9 @@ export function draw() {
 }
 
 let toastT;
-export const flash = (t) => { m.toast = t; draw(); clearTimeout(toastT); toastT = setTimeout(() => { m.toast = ''; draw(); }, 1800); };
+// Fullførte handlinger gir en kort «suksess»-vibrasjon; feil kommer via safe() eller haptic('err') der de oppstår.
+const OK_RE = /✓|lagt til|lagret|slettet|bokført|importert|synket|opprettet|oppdatert|er aktiv|sagt opp|arkivert|kopiert/i;
+export const flash = (t, kind) => { m.toast = t; if (kind || OK_RE.test(t)) haptic(kind || 'ok'); draw(); clearTimeout(toastT); toastT = setTimeout(() => { m.toast = ''; draw(); }, 1800); };
 
 export async function loadMe() {
   // Kontoinfo: /finans/api/me, ellers Homelabs /api/me (samme sesjon). avatarUrl og serverName kommer fra Homelab.
@@ -395,6 +401,7 @@ async function load() {
     if (PAGES.includes(scr)) jobs.push(pageLoad(scr, m.sub));
     else if (scr === 'set') jobs.push(settingsLoad(m.sub));
     else if (scr === 'hl') jobs.push(hlLoad());
+    else if (scr === 'spor') jobs.push(trkLoad().then(() => trkWatch()));
     else if (scr === 'mat') jobs.push(matLoad());
     else if (scr === 'finn') jobs.push(finnLoad(m.sub));
     else if (!FIN.includes(scr) || FINMODS.includes(scr)) jobs.push(modLoad(scr, m.sub));
@@ -426,7 +433,7 @@ export function route() {
   const parts = location.hash.replace(/^#\/?/, '').split('/');
   const h = parts[0];
   // Desktop- og eldre lenker
-  const map = { ov: 'hjem', tx: 'liste', bud: 'budsjett', inn: 'set', meg: 'set', homelab: 'hl', ai: 'sok', matplan: 'mat', domener: 'dom', aksjer: 'aks', abonnement: 'sub', mapper: 'dir' };
+  const map = { ov: 'hjem', tx: 'liste', bud: 'budsjett', inn: 'set', meg: 'set', homelab: 'hl', ai: 'sok', matplan: 'mat', domener: 'dom', aksjer: 'aks', abonnement: 'sub', mapper: 'dir', sporing: 'spor', trk: 'spor' };
   const start = startScr();
   let next = map[h] ?? (ALL.includes(h) ? h : start);
   if (S.boot?.restricted && FIN.includes(next) && next !== 'dir') next = next === 'hjem' ? 'hjem' : 'dir';
@@ -567,9 +574,64 @@ function tabUp(e) {
   return true;
 }
 
+/* ---------- Sveip fra venstre kant for å gå tilbake (iOS-stil) ---------- */
+// Virker overalt der det finnes en tilbakepil. Siden følger fingeren, gir et lite haptisk «tikk» etter 90 px,
+// og ved slipp etter 90 px trykkes tilbakepilen (samme vei som et vanlig trykk). Kortere sveip fjærer tilbake.
+const SW_EDGE = 22, SW_GO = 90;
+let sw = null, swUp = 0;
+const BACK_SEL = '.m-scroll .gback, .m-scroll .back, .m-scroll .gtop, .m-scroll .atop, .m-scroll [data-mact="txback"], .m-scroll [data-mact="pdback"], .m-scroll [data-swipeback]';
+function backTarget() {
+  const r = root();
+  if (m.orig || m.menu || m.sheet) return null;
+  return [...r.querySelectorAll(BACK_SEL)].find((x) => x.offsetParent !== null) ?? null;
+}
+function swDown(e) {
+  if ((e.button ?? 0) > 0 || e.clientX > SW_EDGE) return false;
+  const to = backTarget();
+  if (!to) return false;
+  sw = { id: e.pointerId, x0: e.clientX, y0: e.clientY, to, on: false, armed: false, el: root().querySelector('.m-scroll') };
+  return false; // ikke stopp andre handlere før vi vet at det er et sveip
+}
+function swMove(e) {
+  const g = sw;
+  if (!g || e.pointerId !== g.id) return false;
+  const dx = e.clientX - g.x0, dy = e.clientY - g.y0;
+  if (!g.on) {
+    if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) { sw = null; return false; } // vanlig rulling
+    if (dx < 10) return false;
+    g.on = true; clearTimeout(lpTimer); tdrag = null;
+    try { root().setPointerCapture(e.pointerId); } catch {}
+    g.el?.classList.add('swiping');
+  }
+  const x = Math.max(0, dx);
+  if (g.el) g.el.style.transform = `translateX(${x}px)`;
+  root().style.setProperty('--swp', Math.min(1, x / 300).toFixed(3));
+  if (!g.armed && x >= SW_GO) { g.armed = true; haptic('tick'); }
+  else if (g.armed && x < SW_GO) g.armed = false;
+  if (e.cancelable) e.preventDefault();
+  return true;
+}
+function swEnd(e) {
+  const g = sw;
+  if (!g || e.pointerId !== g.id) return false;
+  sw = null;
+  if (!g.on) return false;
+  swUp = Date.now();
+  try { root().releasePointerCapture(e.pointerId); } catch {}
+  const go = g.armed && e.type !== 'pointercancel', el = g.el;
+  root().style.removeProperty('--swp');
+  if (el) {
+    el.classList.remove('swiping'); el.classList.add('swipeend');
+    el.style.transform = go ? `translateX(${innerWidth}px)` : '';
+    setTimeout(() => { el.classList.remove('swipeend'); el.style.transform = ''; }, go ? 160 : 260);
+  }
+  if (go) setTimeout(() => { swUp = 0; g.to.click(); }, 140);
+  return true;
+}
+
 /* ---------- Hendelser ---------- */
 
-const safe = (fn) => async (e) => { try { await fn(e); } catch (err) { flash(err.message); } };
+const safe = (fn) => async (e) => { try { await fn(e); } catch (err) { flash(err.message, 'err'); } };
 let globalBound = false, lpTimer = null, lpFired = false, lastY = 0, hiddenAt = 0;
 
 function setMin(on) {
@@ -606,6 +668,7 @@ export function bind() {
   loadLayout().then(() => { if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch(() => {});
   // Skanneknappen: trykk = kamera (eller valg), hold inne ~480 ms = arket med Bilder/Filer.
   el.addEventListener('pointerdown', (e) => {
+    if (swDown(e)) return;
     if (tabDown(e)) return;
     if (hlBind(e, e.target)) return;
     if (!e.target.closest('[data-scan]')) return;
@@ -619,6 +682,10 @@ export function bind() {
     const t = e.target, d = (s) => t.closest(s);
     let x;
     if (Date.now() - tsup < 400 && d('.tabs')) { e.preventDefault(); e.stopPropagation(); return; }
+    if (Date.now() - swUp < 400) { e.preventDefault(); e.stopPropagation(); return; } // klikket etter et sveip tilbake
+    // Haptikk: faner og chips gir «valg», andre knapper og lenker et lett trykk.
+    if (d('[data-tab], .chip, .hchip, [role="tab"], [role="radio"]')) haptic('tab');
+    else if (d('button, a[href], [role="button"], label.opt-row')) haptic('tap');
     if (d('[data-scan]')) { e.preventDefault(); if (lpFired) { lpFired = false; return; } return scanTap(); }
     // Knapper inne i en klikkbar rad (f.eks. «Bokfør») går foran raden.
     if (d('.pact') && await pagesBind(e, t)) return;
@@ -635,6 +702,7 @@ export function bind() {
     if (await matBind(e, t)) return;
     if (await finnBind(e, t)) return;
     if (hlBind(e, t)) return;
+    if (await trkBind(e, t)) return;
     if (await txBind(e, t)) return;
     if (await pagesBind(e, t)) return;
     if (await modBind(e, t)) return;
@@ -661,7 +729,7 @@ export function bind() {
     }
     if (act === 'logout') { await fetch('/api/logout', { method: 'POST' }); location.href = '/login?next=/finans/'; }
   }));
-  el.addEventListener('input', (e) => { if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
+  el.addEventListener('input', (e) => { if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
   el.addEventListener('change', safe(async (e) => {
     const t = e.target;
     if (t.matches('[data-mupload]')) { const f = [...t.files]; t.value = ''; await upload(f, { confirm: t.hasAttribute('data-confirm') && f.length === 1 }); return; }
@@ -680,6 +748,7 @@ export function bind() {
     if (e.target.matches('[data-msearch]')) { e.preventDefault(); u.q = e.target.q.value; await loadTx(); return draw(); }
     if (await finnBind(e, e.target)) return;
     if (hlBind(e, e.target)) return;
+    if (await trkBind(e, e.target)) return;
     if (await txBind(e, e.target)) return;
     if (await pagesBind(e, e.target)) return;
     if (await modBind(e, e.target)) return;
@@ -688,7 +757,9 @@ export function bind() {
   el.addEventListener('keydown', (e) => { hlBind(e, e.target); });
   el.addEventListener('focusin', (e) => { hlBind(e, e.target); });
   el.addEventListener('focusout', (e) => { hlBind(e, e.target); });
-  el.addEventListener('pointermove', (e) => { if (tabMove(e)) return; hlBind(e, e.target); }, { passive: false });
-  el.addEventListener('pointerup', (e) => { if (tabUp(e)) return; hlBind(e, e.target); });
-  el.addEventListener('pointercancel', (e) => { tabUp(e); });
+  el.addEventListener('pointermove', (e) => { if (swMove(e)) return; if (tabMove(e)) return; hlBind(e, e.target); }, { passive: false });
+  el.addEventListener('pointerup', (e) => { if (swEnd(e)) return; if (tabUp(e)) return; hlBind(e, e.target); });
+  el.addEventListener('pointercancel', (e) => { if (swEnd(e)) return; tabUp(e); });
+  // Hindrer at nettleseren tar over berøringen (og sender pointercancel) mens man sveiper tilbake.
+  el.addEventListener('touchmove', (e) => { if (sw?.on && e.cancelable) e.preventDefault(); }, { passive: false });
 }

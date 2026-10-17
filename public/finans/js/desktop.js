@@ -4,7 +4,7 @@ import {
   render, toast, loadBoot, loadSummary, loadTx, loadReceipts, loadRecurring, loadReport, loadAi, catById, cats, accs, uploadReceipt,
   smooth, spark, conic, icon, logo, aiLine, ICONS,
 } from './core.js';
-import { MODULE_PAGES, MODULE_SUB, MODULE_FN, MODULE_LOADERS, bolSettings, loadBolSettings, bindModules, backupTab, firstRunCard, loadBackup, impPage } from './modules.js';
+import { MODULE_PAGES, MODULE_SUB, MODULE_FN, MODULE_LOADERS, bolSettings, loadBolSettings, bindModules, backupTab, firstRunCard, loadBackup, impPage, aksSettings, loadStocksSettings } from './modules.js';
 
 ICONS.ai = 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z';
 const BASE_PAGES = [['ov', 'Oversikt'], ['tx', 'Transaksjoner'], ['ai', 'AI-søk'], ['kv', 'Kvitteringer'], ['bud', 'Budsjett'], ['fast', 'Faste utgifter'], ['konto', 'Kontoer'], ['rap', 'Rapporter'], ['inn', 'Innstillinger']];
@@ -59,6 +59,7 @@ function aiPanel() {
   return `<section class="card ai-panel"><div class="card-h" style="align-items:flex-start"><div style="min-width:0"><div class="ai-k">✦ AI-SØK · ${esc(a.engine ?? (S.boot.settings.provider === 'ollama' ? 'Ollama' : 'Gemini'))}</div>${a.q ? `<div class="ai-q">${esc(a.q)}</div>` : '<div class="ai-q">Spør om økonomien din på vanlig norsk</div>'}</div><button class="x-btn" data-act="ai-close" aria-label="Lukk">×</button></div>
     ${a.busy ? '<div class="sub" style="font-size:14px"><span class="spin" style="width:14px;height:14px;display:inline-block;vertical-align:-2px;margin-right:8px"></span>Leser transaksjoner, kvitteringer og varelinjer …</div>' : ''}
     ${a.aiUnavailable ? `<div class="ai-note">${esc(a.notice ?? 'AI-motoren svarer ikke, så dette er vanlig søk.')}</div>` : ''}
+    ${a.plainFirst ? `<div class="ai-note ai-plain">${esc(a.notice)} <button class="btn sm ghost" data-act="ai-force">✦ Spør AI likevel</button></div>` : ''}
     ${a.answer ? `<div class="ai-a">${esc(a.answer)}</div>` : ''}${hits ? `<div class="ai-hits">${hits}</div>` : ''}
     ${aiChips(a.q ? 'Prøv også' : '', a.followUps)}${aiChips(a.q ? 'Flere forslag' : '', (a.suggestions ?? []).filter((g) => !(a.followUps ?? []).includes(g)))}</section>`;
 }
@@ -422,7 +423,7 @@ function reports() {
 
 /* ===================== Innstillinger ===================== */
 
-const SET_TABS = [['gen', 'Generelt', 'Navn, valuta, måned'], ['meny', 'Sidemeny', 'Rekkefølge og synlighet'], ['bol', 'Boliger', 'Ny bolig, deling, oppsett og kategorier'], ['imp', 'Import', 'Kontoutskrift, CSV og XLSX'], ['ai', 'AI-motor', 'Ollama eller Gemini'], ['cat', 'Kategorier', 'Farger og typer'], ['rule', 'Regler', 'Auto-kategorisering'],
+const SET_TABS = [['gen', 'Generelt', 'Navn, valuta, måned'], ['meny', 'Sidemeny', 'Rekkefølge og synlighet'], ['bol', 'Boliger', 'Ny bolig, deling, oppsett og kategorier'], ['imp', 'Import', 'Kontoutskrift, CSV og XLSX'], ['ai', 'AI-motor', 'Ollama eller Gemini'], ['aks', 'Aksjer · Trading 212', 'Nøkkel, miljø og synk'], ['cat', 'Kategorier', 'Farger og typer'], ['rule', 'Regler', 'Auto-kategorisering'],
   ['bank', 'Bank og import', 'CSV og PSD2'], ['varsel', 'Varsler', 'Budsjett og kvitteringer'], ['mobil', 'Mobil og tilgang', 'App-tokens og snarveier'], ['data', 'Backup og data', 'Nedlasting, SMB-share og gjenoppretting']];
 
 // Innstillinger → Sidemeny: dra, ▲▼ og bryter for vis/skjul. Endringene lagres med en gang.
@@ -501,6 +502,7 @@ function settingsPage() {
   else if (t === 'meny') body = menuTab();
   else if (t === 'imp') body = impPage();
   else if (t === 'bol') body = bolSettings();
+  else if (t === 'aks') body = aksSettings();
   return `<div class="row-flex">
     <nav class="card set-nav">${tabs.map(([k2, n, s2]) => `<button data-settab="${k2}" aria-current="${t === k2}"><span>${n}</span><small>${s2}</small></button>`).join('')}</nav>
     ${card(`<div><h2 style="font-size:18px">${cur[1]}</h2><div class="note" style="font-size:13px">${cur[2]}</div></div>${body}${u.msg.set ? `<div class="ok-msg">${esc(u.msg.set)}</div>` : ''}`, '', 'flex:1 1 480px;padding:24px;gap:18px')}
@@ -609,6 +611,7 @@ export async function load(page = u.page) {
   try { await Promise.all([loadLayout(), ...LOADERS[page].map((f) => f())]); } catch (e) { toast(e.message); }
   if (page === 'inn' && u.setTab === 'mobil') S.tokens = await api('/tokens').catch(() => []);
   if (page === 'inn' && u.setTab === 'data') await loadBackup().catch((e) => toast(e.message));
+  if (page === 'inn' && u.setTab === 'aks') await loadStocksSettings().catch((e) => toast(e.message));
   if (page === 'inn' && (u.setTab === 'bol' || S.boot?.restricted)) await loadBolSettings().catch((e) => toast(e.message));
   render();
   schedulePoll();
@@ -648,12 +651,12 @@ async function uploadFiles(files) {
   await refreshAll();
 }
 
-async function askAi(text) {
+async function askAi(text, force = false) {
   const qText = String(text ?? '').trim();
   u.aiDraft = qText;
-  u.ai = { ...(u.ai ?? {}), q: qText, busy: true, answer: '', hits: [] };
+  u.ai = { ...(u.ai ?? {}), q: qText, busy: true, answer: '', hits: [], plainFirst: false, notice: null };
   render();
-  try { const r = await api('/search/ai', { method: 'POST', json: { q: qText } }); u.ai = { ...r, busy: false }; if (r.history) S.aiHist = r.history; }
+  try { const r = await api('/search/ai', { method: 'POST', json: { q: qText, ...(force ? { force: true } : {}) } }); u.ai = { ...r, busy: false }; if (r.history) S.aiHist = r.history; }
   catch (e) { u.ai = { q: qText, busy: false, answer: e.message, hits: [], suggestions: u.ai?.suggestions }; }
   render();
 }
@@ -802,6 +805,7 @@ export function bind() {
         render(); document.querySelector('.search input')?.focus(); return;
       }
       case 'ai-close': u.ai = null; u.aiMode = false; return render();
+      case 'ai-force': return askAi(u.ai?.q, true);
     }
   }));
 

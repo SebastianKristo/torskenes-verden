@@ -762,3 +762,75 @@ button.sg-row:hover .sg-btn2{background:#1c2534}
   .bg-opts{grid-template-columns:repeat(2,1fr)}
 }
 @media (max-width:480px){.sg-btn2{height:auto;padding:0;border:0;background:none!important;font-size:0;color:#5b6478}.sg-btn2::after{content:'›';font-size:24px;line-height:1}}
+
+/* ---------- Værmelding + Pakker (karusell) ---------- */
+.wxc{width:100%;display:flex;flex-direction:column;gap:10px;min-width:0}
+.wxc-track{display:flex;gap:16px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;align-items:stretch;border-radius:32px;overscroll-behavior-x:contain}
+.wxc-track::-webkit-scrollbar{display:none}
+.wxc-slide{flex:0 0 100%;scroll-snap-align:center;scroll-snap-stop:always;min-width:0;display:flex}
+.wxc-card.card{flex:1;min-width:0;border-radius:32px;padding:24px;display:flex;flex-direction:column;gap:14px;box-sizing:border-box}
+.wxc-dots{display:flex;justify-content:center;align-items:center;gap:8px}
+.wxc-dots button{width:8px;height:8px;padding:0;border:0;border-radius:4px;background:rgba(255,255,255,.35);cursor:pointer;transition:width .2s,background .2s}
+.wxc-dots button[aria-current=true]{width:22px;background:#eef0f4}
+.wxc-host.card{background:none;border:0;padding:0;box-shadow:none;backdrop-filter:none;-webkit-backdrop-filter:none}
+.wxc-now{display:flex;align-items:center;gap:12px;min-width:0}
+.wxc-temp{font-size:58px;font-weight:300;line-height:1;letter-spacing:-.03em}
+.wxc-cond{display:flex;flex-direction:column;gap:2px;min-width:0;margin-left:2px}
+.wxc-cond b{font-size:16px;font-weight:600}
+.wxc-cond span{font-size:13px;color:#b6bccb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wxc-h6{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.wxc-h8{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
+.wxc-h{background:rgba(7,8,11,.38);border-radius:14px;padding:8px 2px;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.wxc-h>.mono:first-child{font-size:11.5px;color:#8a93a6}
+.wxc-h b{font-size:14.5px;font-weight:600}
+.wxc-mm{font-size:10.5px;color:#a8d4fb;font-family:'JetBrains Mono',monospace;white-space:nowrap}
+.wxc-bar{width:70%;height:22px;display:flex;align-items:flex-end;justify-content:center}
+.wxc-bar i{width:100%;min-height:2px;border-radius:3px}
+.wxc-cast{font-size:13px;color:#a8d4fb;line-height:1.4}
+.wxc-d3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.wxc-d{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:rgba(7,8,11,.38);min-width:0}
+.wxc-d svg{flex:none}
+.wxc-d-t{display:flex;flex-direction:column;gap:1px;min-width:0}
+.wxc-d-t>span{font-size:12.5px;color:#8a93a6}
+.wxc-d-t b{font-size:14.5px;font-weight:600;white-space:nowrap}
+.wxc-d .wxc-mm{margin-left:auto;font-size:11.5px}
+.wxc-chips{display:flex;gap:6px;flex-wrap:wrap}
+.wxc-chip{display:flex;align-items:center;gap:6px;height:30px;padding:0 11px;border-radius:15px;background:rgba(7,8,11,.38);font-size:12.5px;color:#d7dbe4;white-space:nowrap}
+.wxc-btn{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:18px;border:0;background:rgba(255,255,255,.1);color:#eef0f4;cursor:pointer;font-size:13.5px;font-weight:500;font-family:inherit;text-decoration:none}
+.wxc-btn:hover{background:rgba(255,255,255,.16)}
+.wxc-more{display:flex;flex-direction:column;gap:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)}
+.wxc-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.wxc-stat{background:rgba(7,8,11,.38);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.wxc-stat span{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#8a93a6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wxc-stat b{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wxc-sec{display:flex;flex-direction:column;gap:8px}
+.wxc-sec-h{display:flex;justify-content:space-between;font-size:12.5px;color:#8a93a6}
+.wxc-days{display:flex;flex-direction:column}
+.wxc-day{display:grid;grid-template-columns:44px 22px 40px minmax(0,1fr) 32px 52px;align-items:center;gap:8px;padding:7px 0;font-size:14px}
+.wxc-day+.wxc-day{border-top:1px solid rgba(255,255,255,.06)}
+.wxc-range{position:relative;height:6px;border-radius:3px;background:#232938}
+.wxc-range i{position:absolute;top:0;bottom:0;border-radius:3px;background:linear-gradient(90deg,#a8d4fb,#f3b54a)}
+.pk-head{display:flex;align-items:center;gap:10px;font-size:17px}
+.pk-head b{font-weight:600}
+.pk-ic{flex:none;width:34px;height:34px;border-radius:10px;background:rgba(255,154,92,.18);display:grid;place-items:center}
+.pk-row{display:flex;flex-direction:column;gap:9px;padding:12px;border-radius:14px;background:rgba(255,255,255,.05);color:inherit;text-decoration:none;min-width:0}
+.pk-row:hover{background:rgba(255,255,255,.08)}
+.pk-top{display:flex;align-items:center;gap:10px;min-width:0}
+.pk-car{flex:none;border-radius:9px;display:grid;place-items:center;font-size:11px;font-weight:800}
+.pk-txt{flex:1;min-width:0;display:flex;flex-direction:column}
+.pk-txt b{font-size:14.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pk-txt span{font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pk-eta{flex:none;max-width:40%;font-size:12.5px;color:#a8b0c0;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pk-bars{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.pk-bars i{height:4px;border-radius:2px}
+.pk-none{padding:12px;border-radius:14px;background:rgba(255,255,255,.05);font-size:14px;color:#a8b0c0}
+@media (max-width:760px){
+  .wxc-card.card{padding:18px;border-radius:26px}
+  .wxc-track{border-radius:26px}
+  .wxc-temp{font-size:48px}
+  .wxc-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .wxc-h8{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .wxc-d{flex-direction:column;align-items:flex-start;gap:4px;padding:8px 10px}
+  .wxc-d .wxc-mm{margin-left:0}
+  .wxc-day{grid-template-columns:40px 20px 30px minmax(0,1fr) 30px 46px;gap:6px;font-size:13px}
+}

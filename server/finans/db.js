@@ -191,6 +191,11 @@ addCol('fh_folder_entries', 'category', 'TEXT');
 addCol('fh_folder_entries', 'project_id', 'INTEGER');
 // Prompt 06: bankraden slik den kom fra banken (JSON, uendret før navnevasking).
 addCol('fh_transactions', 'raw_bank_row', 'TEXT');
+// Prompt 11: Subscription OS – kategori, trekkdag og forrige pris (for «Pris økt»).
+addCol('fh_subscriptions', 'category', 'TEXT');
+addCol('fh_subscriptions', 'charge_day', 'INTEGER');            // 1–31; ellers dagen i next_date
+addCol('fh_subscriptions', 'prev_price', 'INTEGER');            // øre per trekk før siste prisendring
+addCol('fh_subscriptions', 'price_changed', 'TEXT');            // dato for prisendringen
 db.exec(`
 CREATE TABLE IF NOT EXISTS fh_folder_projects (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
