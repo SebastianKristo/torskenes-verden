@@ -54,3 +54,11 @@
 - NSR-ID-ene (Majorstuen 58381, Amagerveien 6354, Frydenlund 6258, Holbergs plass 63280) er brukt som oppgitt. De kunne ikke verifiseres fra utviklingsmiljøet fordi det ikke hadde nettilgang. Sjekk dem i Entur-geocoderen, og overstyr med `RUTER_ROUTES` eller `STOPS` i `server/integrations.js`.
 - Linjene kommer fra sanntidsdata, så de stemmer automatisk.
 - HA-sensornavn og LabDeck-URL settes i `.env`.
+
+## Prompt 04b
+- **XLSX** leses med en liten innebygd zip/XML-leser i stedet for `xlsx`-pakken (npm-versjonen har kjente sårbarheter).
+- **Finn-handler**: e-poster limes inn og tolkes av AI/regex. IMAP-feltene lagres, men henting er ikke bygget ennå.
+- **Delte mapper**: én bruker; medlemmer er navn/e-post. Invitasjoner sendes ikke på e-post (ingen SMTP).
+- **Matplan → kalender**: ICS-feed (`/mat/calendar.ics?key=…`) som abonneres i Google Kalender, i stedet for OAuth.
+- **Logoer** hentes via Googles favicon-tjeneste og caches på disk i `data/logos` (30 dager); `/finans/api/logo/:domain` krever ikke innlogging.
+- **Domener** bruker Cloudflare-token (Zone/DNS/Registrar/Analytics: Read) fra Innstillinger, cache 15 min.
