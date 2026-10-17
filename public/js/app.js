@@ -30,6 +30,8 @@ function renderRoute() {
   const next = current();
   if (next !== route) window.scrollTo(0, 0);
   route = next;
+  // Bakgrunnsbilde og «Siste nytt» vises bare på dashboardet.
+  document.body.classList.toggle('not-dash', route !== 'dash');
   view.innerHTML = ROUTES[route]();
   mountAll(view);
   setupDnd(view);
@@ -56,6 +58,7 @@ function bindShell() {
     close();
     if (act === 'settings') openSettings();
     if (act === 'layout') openSettings('layout');
+    if (act === 'news-speed') openSettings('look', 'speed');
     if (act === 'reset-layout') await resetLayouts();
     if (act === 'toggle-search') await toggle('search');
     if (act === 'toggle-news') await toggle('news');

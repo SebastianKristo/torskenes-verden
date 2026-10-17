@@ -64,8 +64,16 @@ export async function saveLayout(changes) {
   if (r?.homelab) store.me.layout = r.homelab;
 }
 
-/** Skjuler faner i topplinjen og bunnmenyen. Skjulte sider kan fortsatt åpnes med lenke. */
+const DEF_NAME = Object.fromEntries(TABS);
+/** Navnet brukeren har gitt fanen, eller standardnavnet. */
+export const tabLabel = (id, def = DEF_NAME[id] ?? id) => layout().labels?.[id] || def;
+
+/** Skjuler og gir nytt navn til faner i topplinjen og bunnmenyen. Skjulte sider kan fortsatt åpnes med lenke. */
 export function applyNav() {
   const hid = hiddenTabs();
-  document.querySelectorAll('.pillnav [data-r], .bottomnav [data-r]').forEach((a) => { a.hidden = hid.has(a.dataset.r); });
+  document.querySelectorAll('.pillnav [data-r], .bottomnav [data-r]').forEach((a) => {
+    a.hidden = hid.has(a.dataset.r);
+    a.dataset.def ??= a.textContent;
+    a.textContent = tabLabel(a.dataset.r, a.dataset.def);
+  });
 }

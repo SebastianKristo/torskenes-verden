@@ -64,13 +64,16 @@ async function sendAvatar(c, id) {
 /* ---------------- Oppsett av forside og meny ---------------- */
 
 const ids = (v, max = 60) => Array.isArray(v) && v.length <= max && v.every((x) => typeof x === 'string' && /^[\w.-]{1,40}$/.test(x));
-const navShape = (v) => v && typeof v === 'object' && !Array.isArray(v) && (v.order === undefined || ids(v.order)) && (v.hidden === undefined || ids(v.hidden));
+// Egne navn på faner og menypunkter: { id: navn }, maks 30 tegn. Tomt navn = standardnavnet.
+const labels = (v) => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length <= 40
+  && Object.entries(v).every(([k, n]) => /^[\w.-]{1,40}$/.test(k) && typeof n === 'string' && n.length <= 30 && !/[<>]/.test(n));
+const navShape = (v) => v && typeof v === 'object' && !Array.isArray(v) && (v.order === undefined || ids(v.order)) && (v.hidden === undefined || ids(v.hidden)) && (v.labels === undefined || labels(v.labels));
 const LAYOUT = {
   finNav: navShape,
   mobile: (v) => v && typeof v === 'object' && !Array.isArray(v)
     && ['sec', 'hlTabs', 'finTabs'].every((k) => v[k] === undefined || ids(v[k]))
     && (v.hide === undefined || (v.hide && typeof v.hide === 'object' && !Array.isArray(v.hide) && Object.entries(v.hide).length <= 80 && Object.entries(v.hide).every(([k, b]) => /^[\w.-]{1,40}$/.test(k) && typeof b === 'boolean'))),
-  homelab: (v) => v && typeof v === 'object' && !Array.isArray(v) && (v.hiddenWidgets === undefined || ids(v.hiddenWidgets)) && (v.hiddenTabs === undefined || ids(v.hiddenTabs)),
+  homelab: (v) => v && typeof v === 'object' && !Array.isArray(v) && (v.hiddenWidgets === undefined || ids(v.hiddenWidgets)) && (v.hiddenTabs === undefined || ids(v.hiddenTabs)) && (v.labels === undefined || labels(v.labels)),
 };
 export const layoutOf = (id) => kv.get(id, 'layout', {});
 
@@ -196,6 +199,8 @@ api.put('/me/layout', authOrToken, async (c) => {
     if (v === null) { delete next[k]; continue; }
     if (!LAYOUT[k](v)) return c.json({ error: `Ugyldig verdi for ${k}` }, 400);
     next[k] = { ...(next[k] ?? {}), ...v };
+    // Tomme navn betyr standardnavnet og lagres ikke.
+    if (v.labels) next[k].labels = Object.fromEntries(Object.entries(v.labels).map(([id, n]) => [id, n.trim()]).filter(([, n]) => n));
   }
   kv.set(c.get('user'), 'layout', next);
   return c.json(next);

@@ -25,7 +25,7 @@ export function txDetail(th, t) {
     ${lines.length ? `<div class="sec">Varelinjer</div><div class="list ${isI(th) ? 'glass2' : ''}">${lines.map((l) => `<div class="opt-row" style="justify-content:space-between"><span class="m-ell">${esc(l.description ?? '–')}</span><span class="m-mono">${n2(l.amount)}</span></div>`).join('')}</div>` : ''}
     <div class="sec">Originaler</div>
     <div class="${isI(th) ? 'list glass2' : 'fields'}">${row('Original kvittering', t.receiptId ? 'Vis bilde' : 'Mangler', `data-orig="rc" data-id="${t.id}"`, true)}${row('Original banktransaksjon', t.source === 'manual' || t.source === 'receipt' ? 'Ikke fra bank' : 'Vis', `data-orig="bank" data-id="${t.id}"`, true)}</div>
-    <div class="${isI(th) ? 'list glass2' : 'fields'}">${row('Kategori', esc(t.category))}${row('Konto', esc(t.account))}${row('Dato', dLong(t.date))}${row('Kvittering', rcTxt)}${row('Delt mappe', folderName(t) ? esc(folderName(t)) : '–')}${t.note ? row('Notat', esc(t.note)) : ''}</div>
+    <div class="${isI(th) ? 'list glass2' : 'fields'}">${row('Kategori', esc(t.category))}${row('Konto', esc(t.account))}${row('Dato', dLong(t.date))}${row('Kvittering', rcTxt)}${row('Bolig', folderName(t) ? esc(folderName(t)) : '–')}${t.note ? row('Notat', esc(t.note)) : ''}</div>
     <div class="btn2"><button class="sec-b danger" data-txact="del" data-id="${t.id}">${icon('trash', 18)} Slett</button><button class="pri-b" data-txact="edit" data-id="${t.id}">${icon('edit', 18)} Rediger</button></div>`;
 }
 
@@ -59,7 +59,7 @@ export function editForm(th) {
     ${grp('Kategori', `<div class="opt-row col"><div class="schips">${catList.map((c) => chip('categoryId', c.id, c.name, E.categoryId === c.id)).join('')}</div></div>`)}
     ${grp('Konto', `<div class="opt-row col"><div class="schips">${accs().map((a) => chip('accountId', a.id, a.name, E.accountId === a.id)).join('')}</div></div>`)}
     ${grp('Kvittering', `<div class="opt-row"><span class="m-grow">${rcTxt}</span></div><button type="button" class="opt-row" data-mact="efattach"><span class="m-grow" style="color:var(--m-acc);font-weight:500">Legg ved kvittering</span></button>`)}
-    ${grp('Delt mappe', `<div class="opt-row col"><div class="schips">${chip('folderId', '', 'Ingen', !E.folderId)}${(folders ?? []).map((f) => chip('folderId', f.id, f.name, E.folderId === f.id)).join('')}</div></div>`, 'Utgiften vises også i den delte mappen og fordeles på medlemmene.')}
+    ${grp('Bolig', `<div class="opt-row col"><div class="schips">${chip('folderId', '', 'Ingen', !E.folderId)}${(folders ?? []).map((f) => chip('folderId', f.id, f.name, E.folderId === f.id)).join('')}</div></div>`, 'Utgiften vises også i boligen og fordeles på medlemmene.')}
     ${grp('Notat', isI(th) ? `<label class="field"><input id="m-ef-note" data-efi="note" value="${esc(E.note ?? '')}" placeholder="Valgfritt" style="text-align:left;width:100%"></label>` : `<label class="field">Notat<input id="m-ef-note" data-efi="note" value="${esc(E.note ?? '')}" placeholder="Valgfritt"></label>`)}
     <div class="btn2"><button type="submit" class="pri-b">${E.id ? 'Lagre endringer' : 'Legg til'}</button></div>
     ${E.id ? `<button type="button" class="sec-b danger wide" data-txact="del" data-id="${E.id}">Slett transaksjon</button>` : ''}

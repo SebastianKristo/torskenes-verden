@@ -8,7 +8,7 @@ let tfa = null;           // ventende 2FA-oppsett: { otpauthUrl, secret, qrSvg, 
 let recovery = null;      // gjenopprettingskoder vises én gang etter aktivering
 let off = null;           // skjema for å slå av 2FA: { err }
 let addMsg = null;        // { text, ok }
-let nameEd = null;        // { id, value, err } – «Endre navn» åpent for én bruker
+let nameEd = null;        // { id, value?, err?, ok? } – status for «Lagre navn»
 let avMsg = null;         // feilmelding ved opplasting av profilbilde
 let srvMsg = null;
 let rerender = () => {};
@@ -84,82 +84,118 @@ function offBox() {
     ${off.err ? `<div class="red" style="font-size:13px">${esc(off.err)}</div>` : ''}</form>`;
 }
 
-function userRow(u) {
-  const me = data.me, admin = me?.role === 'admin', self = u.id === me?.id;
-  const admins = data.users.filter((x) => x.role === 'admin').length;
-  const main = u.isMainAdmin || u.id === 'owner';
-  const canDel = admin && !self && !(u.role === 'admin' && admins < 2) && !main;
-  let tfaBtn = '';
-  if (self) tfaBtn = `<button class="pill-btn" data-tfa="${u.totp ? 'off' : 'on'}">${u.totp ? 'Slå av 2FA' : 'Slå på 2FA'}</button>`;
-  else if (admin && u.totp) tfaBtn = `<button class="pill-btn" data-tfa-reset="${esc(u.id)}" title="Nullstill 2FA hvis brukeren har mistet telefonen">Nullstill 2FA</button>`;
-  const roleSel = admin && !self && !main
-    ? `<select class="pill-field sm" data-role="${esc(u.id)}" aria-label="Rolle for ${esc(u.username)}">${['bruker', 'admin'].map((r) => `<option value="${r}"${u.role === r ? ' selected' : ''}>${roleTxt(r)}</option>`).join('')}</select>` : '';
-  const canName = admin || self, editing = nameEd?.id === u.id;
-  const row = `<div class="user-row"><div class="user-ini">${ini(u)}</div>
-    <div style="flex:1 1 120px;min-width:0"><div style="font-weight:600;font-size:14px">${esc(u.name || u.username)} <span class="muted2" style="font-weight:400">· @${esc(u.username)}</span>${self ? ' <span class="badge" style="background:var(--blue)">deg</span>' : ''}</div>
-      <div class="muted2" style="font-size:12px">${roleTxt(u.role)}${main ? ' · hovedadmin' : ''} · 2FA ${u.totp ? 'på' : 'av'}</div></div>
-    ${canName && !editing ? `<button class="pill-btn" data-name-edit="${esc(u.id)}">Endre navn</button>` : ''}${roleSel}${tfaBtn}${canDel ? `<button class="pill-btn danger" data-user-del="${esc(u.id)}" data-name="${esc(u.username)}">Fjern</button>` : ''}</div>`;
-  if (!editing) return row;
-  return row + `<form class="name-form" data-name-form="${esc(u.id)}"><input class="pill-field" name="name" value="${esc(nameEd.value)}" placeholder="Navn" maxlength="60" required aria-label="Nytt navn for ${esc(u.username)}">
-    <button class="pill-btn primary" type="submit">Lagre</button><button class="pill-btn" type="button" data-name-cancel>Avbryt</button>
-    ${nameEd.err ? `<div class="red" style="font-size:13px;flex-basis:100%">${esc(nameEd.err)}</div>` : ''}</form>`;
+const isMain = (u) => u.isMainAdmin || u.id === 'owner';
+const avatar = (u, cls = 'sg-ic') => `<span class="${cls}" style="background:${u.avatarUrl ? '#1d2738' : '#3b6fd6'}">${ini(u)}</span>`;
+const userLine = (u) => `@${u.username} · ${roleTxt(u.role)}${isMain(u) ? ' · hovedadmin' : ''}`;
+
+// Rader i samme stil som resten av innstillingene (se row() i settings.js).
+const navRow = (go, icon, t, s, v = '', vc = '') => `<button type="button" class="sg-row" data-go="${esc(go)}">${icon}<span class="sg-txt"><b>${esc(t)}</b>${s ? `<span>${esc(s)}</span>` : ''}</span>${v ? `<span class="sg-v"${vc ? ` style="color:${vc}"` : ''}>${esc(v)}</span>` : ''}<span class="sg-chev" aria-hidden="true">›</span></button>`;
+const icn = (color, d) => `<span class="sg-ic" style="background:${color}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg></span>`;
+const box = (t, inner, note = '') => `<section class="sg">${t ? `<div class="sg-t">${esc(t)}</div>` : ''}<div class="sg-box">${inner}</div>${note ? `<div class="sg-note">${note}</div>` : ''}</section>`;
+const SHIELD = 'M12 3l8 3v6c0 4.5-3.4 8.3-8 9-4.6-.7-8-4.5-8-9V6z', KEY = 'M14 10a4 4 0 1 0-3.5 4L9 16v2H7v2H4v-3l5.5-5.5A4 4 0 0 1 14 10zM16 8h.01',
+  DEV = 'M4 5h16v11H4zM8 20h8M12 16v4', PLUS = 'M12 5v14M5 12h14', SRV = 'M4 5h16v6H4zM4 13h16v6H4zM8 8h.01M8 16h.01', LOCK = 'M6 11h12v9H6zM8 11V8a4 4 0 0 1 8 0v3';
+const meUser = () => data.users.find((u) => u.id === data.me?.id) ?? data.me ?? {};
+
+function listView() {
+  const d = data.devices, me = data.me, admin = me?.role === 'admin', meU = meUser();
+  return [
+    box('Profil', navRow('me', avatar({ ...meU, avatarUrl: store.me.me?.avatarUrl ?? meU.avatarUrl }), meU.name || meU.username || '', userLine(meU))),
+    box('Sikkerhet', `<button type="button" class="sg-row" data-trust role="switch" aria-checked="${d.trusted}">${icn('#2a9d8f', SHIELD)}<span class="sg-txt"><b>Pålitelig enhet</b><span>${d.trusted ? 'Slipper passord på lokalt nett' : 'Passord kreves alltid'}</span></span><span class="sg-sw"></span></button>
+      ${navRow('devices', icn('#536079', DEV), 'Pålitelige enheter', d.lan ? 'Du er på lokalt nett nå' : 'Du er ikke på lokalt nett nå', String(d.devices.length))}
+      ${navRow('tfa', icn('#7a5af0', LOCK), 'Tofaktor (2FA)', 'Kode fra autentiseringsappen ved innlogging', meU.totp ? 'På' : 'Av', meU.totp ? '#8fe0b0' : '')}
+      ${navRow('pw', icn('#e0a325', KEY), 'Bytt passord', 'Gjelder nettsiden og mobilappene')}`,
+    'Passordet hoppes bare over når enheten har en gyldig enhetscookie <b>og</b> kobler til fra lokalt nett (192.168.x.x, 10.x.x.x, 172.16–31.x.x). Fra internett kreves alltid passord, og kode hvis 2FA er på.'),
+    box('Brukere', data.users.map((u) => navRow(`user:${u.id}`, avatar(u), u.name || u.username, userLine(u), u.totp ? '2FA på' : '2FA av', u.totp ? '#8fe0b0' : '#8a93a6')).join('')
+      + (admin ? `<button type="button" class="sg-row" data-go="add">${icn('#1d2738', PLUS)}<span class="sg-txt"><b style="color:var(--blue)">Legg til bruker</b></span></button>` : ''),
+    `${me ? `Innlogget som ${esc(me.name || me.username)} · ${roleTxt(me.role)}${me.isMainAdmin ? ' · hovedadmin' : ''}. ` : ''}${admin ? 'Admin kan legge til og fjerne brukere. Bruker ser dashbordet og styrer egen 2FA.' : 'Bare administratorer kan legge til brukere.'}`),
+    admin ? box('Server', navRow('server', icn('#3b6fd6', SRV), 'Navn på serveren', 'Vises i menyen og i mobilappen', store.me.serverName ?? '')) : '',
+  ].join('');
 }
 
-function avatarBox() {
+function nameForm(u) {
+  const ed = nameEd?.id === u.id ? nameEd : null;
+  return `<form class="sg" data-name-form="${esc(u.id)}"><div class="sg-t">Navn</div><div class="sg-box">
+      <label class="sg-field"><span>Visningsnavn</span><input name="name" value="${esc(ed?.value ?? u.name ?? '')}" placeholder="Navn" maxlength="60" required></label>
+      <div class="sg-field"><span>Brukernavn</span><span class="mono muted" style="flex:1;text-align:right">@${esc(u.username)}</span></div></div>
+    <div class="sg-acts"><button class="sg-btn pri" type="submit">Lagre navn</button>${ed?.err ? `<span class="red" style="font-size:13px">${esc(ed.err)}</span>` : ed?.ok ? '<span class="green" style="font-size:13px">Lagret ✓</span>' : ''}</div></form>`;
+}
+
+function meView() {
   const me = store.me.me ?? data.me;
-  return `<div class="av-box"><span class="av-big">${me?.avatarUrl ? `<img src="${esc(me.avatarUrl)}" alt="">` : initial(me?.name)}</span>
-    <span style="flex:1;min-width:160px"><b style="display:block;font-weight:600;font-size:15px">Profilbilde</b><span class="muted" style="font-size:12.5px">Vises i topplinjen og i FinansHub-appen. JPG, PNG eller HEIC – beskjæres til et kvadrat.</span>
-      ${avMsg ? `<span class="red" style="display:block;font-size:12.5px">${esc(avMsg)}</span>` : ''}</span>
-    <span style="display:flex;gap:8px;flex-wrap:wrap"><label class="pill-btn primary" style="cursor:pointer">${me?.avatarUrl ? 'Bytt' : 'Last opp'}<input type="file" accept="image/*" data-avatar hidden></label>
-      ${me?.avatarUrl ? '<button class="pill-btn" data-avatar-del>Fjern</button>' : ''}</span></div>`;
+  return `<div class="me-head"><span class="av-big">${me?.avatarUrl ? `<img src="${esc(me.avatarUrl)}" alt="">` : initial(me?.name)}</span>
+      <div class="sg-acts" style="justify-content:center"><label class="sg-btn pri" style="cursor:pointer">${me?.avatarUrl ? 'Bytt bilde' : 'Last opp bilde'}<input type="file" accept="image/*" data-avatar hidden></label>${me?.avatarUrl ? '<button class="sg-btn" data-avatar-del>Fjern</button>' : ''}</div>
+      ${avMsg ? `<span class="red" style="font-size:13px">${esc(avMsg)}</span>` : '<span class="muted" style="font-size:12.5px">Vises i topplinjen og i mobilappen. Beskjæres til et kvadrat.</span>'}</div>
+    ${nameForm(meUser())}`;
 }
 
-function serverBox() {
-  if (data.me?.role !== 'admin') return '';
-  return `<form class="name-form" data-server-form style="margin:0;align-items:center"><span style="font-size:14px;flex:0 0 auto">Navn på serveren</span>
-    <input class="pill-field" name="name" value="${esc(store.me.serverName ?? '')}" maxlength="40" required aria-label="Navn på serveren">
-    <button class="pill-btn" type="submit">Lagre</button>${srvMsg ? `<span class="${srvMsg.ok ? 'green' : 'red'}" style="font-size:13px">${esc(srvMsg.text)}</span>` : ''}</form>`;
+function tfaView() {
+  const u = meUser();
+  if (recovery || tfa || off) return tfaBox() + offBox();
+  return box('Tofaktor', `<div class="sg-row"><span class="sg-txt"><b>2FA er ${u.totp ? 'på' : 'av'}</b><span>${u.totp ? 'Kode fra appen kreves ved innlogging fra internett' : 'Bare passord ved innlogging'}</span></span>
+      <button class="sg-pill${u.totp ? ' danger' : ''}" data-tfa="${u.totp ? 'off' : 'on'}">${u.totp ? 'Slå av' : 'Slå på'}</button></div>`,
+  'Bruk Google Authenticator, Aegis, 1Password eller en annen app som støtter TOTP. Du får 10 gjenopprettingskoder når 2FA slås på.');
 }
 
-export function loginTab() {
-  if (!data) return '<div class="skeleton" style="min-height:120px"></div>';
-  const d = data.devices, me = data.me, admin = me?.role === 'admin';
-  return `<button class="toggle" data-trust role="switch" aria-checked="${d.trusted}"><i></i><span><b style="font-weight:600">Pålitelig enhet</b><br>
-      <span class="sub">${d.trusted ? 'Denne enheten slipper passord når den er på lokalt nett' : 'Denne enheten må alltid skrive passord'}</span></span></button>
-    <div class="muted" style="font-size:13px;line-height:1.5">Passordet hoppes bare over når enheten har en gyldig enhetscookie <b>og</b> kobler til fra lokalt nett (192.168.x.x, 10.x.x.x, 172.16–31.x.x).
-      Fra internett, også via Cloudflare Tunnel, kreves alltid passord – og kode hvis 2FA er på. «Lås» i menyen pauser enheten til neste innlogging med passord.
-      ${d.lan ? '<br><span class="green">Du er på lokalt nett nå.</span>' : '<br>Du er ikke på lokalt nett nå.'}</div>
-    <div class="set-label">Pålitelige enheter</div>
-    ${d.devices.map((x) => `<div class="row"><div><div>${esc(x.name)}${x.current ? ' <span class="badge" style="background:var(--blue)">denne</span>' : ''}</div>
-      <div class="mono muted" style="font-size:12px">Sist brukt ${when(x.lastSeen)}${x.lastIp ? ` · ${esc(x.lastIp)}` : ''}</div></div>
-      <button class="btn" data-dev-del="${x.id}" style="color:var(--red)">Fjern</button></div>`).join('') || '<div class="empty">Ingen pålitelige enheter.</div>'}
+function devicesView() {
+  const d = data.devices;
+  return box('Pålitelige enheter', d.devices.map((x) => `<div class="sg-row">${icn(x.current ? '#3b6fd6' : '#2a3346', DEV)}<span class="sg-txt"><b>${esc(x.name)}${x.current ? ' · denne' : ''}</b><span class="mono">Sist brukt ${when(x.lastSeen)}${x.lastIp ? ` · ${esc(x.lastIp)}` : ''}</span></span>
+      <button class="sg-pill danger" data-dev-del="${x.id}">Fjern</button></div>`).join('') || '<div class="sg-row"><span class="sg-txt"><span>Ingen pålitelige enheter.</span></span></div>',
+  d.lan ? '<span class="green">Du er på lokalt nett nå.</span> «Lås» i menyen pauser enheten til neste innlogging med passord.' : 'Du er ikke på lokalt nett nå, så denne enheten må alltid skrive passord.');
+}
 
-    <div class="set-sep"></div>
-    ${avatarBox()}
-    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap"><b style="font-weight:600;font-size:15px">Brukere</b>
-      ${me ? `<span class="muted" style="font-size:12px">Innlogget som ${esc(me.name || me.username)} · ${roleTxt(me.role)}${me.isMainAdmin ? ' · hovedadmin' : ''}</span>` : ''}</div>
-    ${data.users.map(userRow).join('')}
-    ${tfaBox()}${offBox()}${serverBox()}
-    ${admin ? `<form class="user-add" data-user-add><b style="font-weight:600;font-size:14px">Legg til bruker</b>
-      <div class="user-add-grid">
-        <input class="pill-field" name="username" placeholder="Brukernavn" autocomplete="off" autocapitalize="off" spellcheck="false" required>
-        <input class="pill-field" name="password" type="password" placeholder="Passord" autocomplete="new-password" minlength="8" required>
-        <select class="pill-field" name="role"><option value="bruker">Bruker</option><option value="admin">Admin</option></select>
-      </div>
-      <button class="pill-btn primary" type="submit" style="align-self:flex-start">Legg til</button>
-      ${addMsg ? `<div style="font-size:13px" class="${addMsg.ok ? 'green' : 'red'}">${esc(addMsg.text)}</div>` : ''}
-      <div class="muted" style="font-size:12px">Admin kan legge til og fjerne brukere. Bruker ser dashbordet og kan styre egen 2FA.</div></form>`
-    : '<div class="muted" style="font-size:12px">Bare administratorer kan legge til brukere.</div>'}
+function userView(id) {
+  const u = data.users.find((x) => x.id === id);
+  if (!u) return null;
+  const me = data.me, admin = me?.role === 'admin', self = u.id === me?.id, main = isMain(u);
+  const admins = data.users.filter((x) => x.role === 'admin').length;
+  const canDel = admin && !self && !(u.role === 'admin' && admins < 2) && !main;
+  const roleRow = admin && !self && !main
+    ? `<label class="sg-field"><span>Rolle</span><select data-role="${esc(u.id)}" aria-label="Rolle for ${esc(u.username)}">${['bruker', 'admin'].map((r) => `<option value="${r}"${u.role === r ? ' selected' : ''}>${roleTxt(r)}</option>`).join('')}</select></label>`
+    : `<div class="sg-field"><span>Rolle</span><span style="flex:1;text-align:right">${roleTxt(u.role)}${main ? ' · hovedadmin' : ''}</span></div>`;
+  const tfaRow = `<div class="sg-field"><span>Tofaktor</span><span style="flex:1;text-align:right;color:${u.totp ? '#8fe0b0' : 'var(--muted)'}">${u.totp ? 'På' : 'Av'}</span>${self ? '<button type="button" class="sg-link" data-go="tfa">Endre</button>' : admin && u.totp ? `<button type="button" class="sg-link" data-tfa-reset="${esc(u.id)}">Nullstill</button>` : ''}</div>`;
+  return `<div class="me-head"><span class="av-big">${ini(u)}</span><b style="font-size:20px">${esc(u.name || u.username)}</b><span class="muted">${esc(userLine(u))}</span></div>
+    ${admin || self ? nameForm(u) : ''}
+    ${box('Tilgang', roleRow + tfaRow, main ? 'Hovedadministratoren kan ikke fjernes eller gjøres om til vanlig bruker.' : '')}
+    ${canDel ? `<div class="sg-acts"><button class="sg-btn danger" data-user-del="${esc(u.id)}" data-name="${esc(u.username)}">Fjern ${esc(u.username)}</button></div>` : ''}`;
+}
 
-    <div class="set-sep"></div>
-    <div class="set-label">Bytt passord</div>
-    <form data-pw class="settings-section" style="max-width:420px">
-      <input class="field" type="password" name="current" placeholder="Nåværende passord" autocomplete="current-password">
-      <input class="field" type="password" name="next" placeholder="Nytt passord (minst 8 tegn)" autocomplete="new-password" minlength="8" required>
-      <input class="field" type="password" name="again" placeholder="Gjenta nytt passord" autocomplete="new-password" required>
-      <div style="display:flex;gap:12px;align-items:center"><button class="btn" type="submit" style="color:var(--blue)">Lagre passord</button><span class="muted" data-pw-msg style="font-size:13px"></span></div>
-      <div class="muted" style="font-size:12px">Gjelder både nettsiden og mobilappene. Andre innlogginger for ${esc(me?.username ?? 'deg')} logges ut.</div>
-    </form>`;
+function addView() {
+  return `<form class="sg" data-user-add><div class="sg-t">Ny bruker</div><div class="sg-box">
+      <label class="sg-field"><span>Brukernavn</span><input name="username" placeholder="f.eks. ingrid" autocomplete="off" autocapitalize="off" spellcheck="false" required></label>
+      <label class="sg-field"><span>Passord</span><input name="password" type="password" placeholder="Minst 8 tegn" autocomplete="new-password" minlength="8" required></label>
+      <label class="sg-field"><span>Rolle</span><select name="role"><option value="bruker">Bruker</option><option value="admin">Admin</option></select></label></div>
+    <div class="sg-note">Brukeren kan endre passordet sitt og slå på 2FA etter første innlogging.</div>
+    <div class="sg-acts"><button class="sg-btn pri" type="submit">Legg til bruker</button>${addMsg ? `<span class="${addMsg.ok ? 'green' : 'red'}" style="font-size:13px">${esc(addMsg.text)}</span>` : ''}</div></form>`;
+}
+
+function serverView() {
+  return `<form class="sg" data-server-form><div class="sg-t">Server</div><div class="sg-box">
+      <label class="sg-field"><span>Navn på serveren</span><input name="name" value="${esc(store.me.serverName ?? '')}" maxlength="40" required></label></div>
+    <div class="sg-acts"><button class="sg-btn pri" type="submit">Lagre</button>${srvMsg ? `<span class="${srvMsg.ok ? 'green' : 'red'}" style="font-size:13px">${esc(srvMsg.text)}</span>` : ''}</div></form>`;
+}
+
+function pwView() {
+  return `<form data-pw class="sg"><div class="sg-t">Bytt passord</div><div class="sg-box">
+      <label class="sg-field"><span>Nåværende</span><input type="password" name="current" autocomplete="current-password"></label>
+      <label class="sg-field"><span>Nytt passord</span><input type="password" name="next" placeholder="Minst 8 tegn" autocomplete="new-password" minlength="8" required></label>
+      <label class="sg-field"><span>Gjenta</span><input type="password" name="again" autocomplete="new-password" required></label></div>
+    <div class="sg-note">Gjelder både nettsiden og mobilappene. Andre innlogginger for ${esc(data.me?.username ?? 'deg')} logges ut.</div>
+    <div class="sg-acts"><button class="sg-btn pri" type="submit">Lagre passord</button><span class="muted" data-pw-msg style="font-size:13px"></span></div></form>`;
+}
+
+let goTo = () => {};
+/** Innlogging-fanen: liste eller underside. Svarer { title, sub, html } som de andre fanene. */
+export function loginView(sub, go) {
+  if (go) goTo = go;
+  if (!data) return { html: '<div class="skeleton" style="min-height:200px;border-radius:20px"></div>' };
+  if (sub === 'me') return { title: 'Profil', sub: 'Innlogging', html: meView() };
+  if (sub === 'tfa') return { title: 'Tofaktor (2FA)', sub: 'Innlogging · Sikkerhet', html: tfaView() };
+  if (sub === 'pw') return { title: 'Bytt passord', sub: 'Innlogging · Sikkerhet', html: pwView() };
+  if (sub === 'devices') return { title: 'Pålitelige enheter', sub: 'Innlogging · Sikkerhet', html: devicesView() };
+  if (sub === 'add' && data.me?.role === 'admin') return { title: 'Legg til bruker', sub: 'Innlogging · Brukere', html: addView() };
+  if (sub === 'server' && data.me?.role === 'admin') return { title: 'Server', sub: 'Innlogging', html: serverView() };
+  if (sub?.startsWith('user:')) { const h = userView(sub.slice(5)); if (h) return { title: 'Bruker', sub: 'Innlogging · Brukere', html: h }; }
+  return { html: listView() };
 }
 
 /** Klikk i Innlogging-fanen. Returnerer true hvis klikket ble håndtert. */
@@ -176,14 +212,6 @@ export async function loginClick(e) {
     if (confirm('Fjerne enheten? Den må da logge inn med passord igjen.')) { await api(`/devices/${dd.dataset.devDel}`, { method: 'DELETE' }); await loadLogin(); }
     return true;
   }
-  const ne = t.closest('[data-name-edit]');
-  if (ne) {
-    const u = data.users.find((x) => x.id === ne.dataset.nameEdit);
-    nameEd = { id: u.id, value: u.name || '' }; rerender();
-    setTimeout(() => { const i = document.querySelector('[data-name-form] [name=name]'); i?.focus(); i?.select(); }, 0);
-    return true;
-  }
-  if (t.closest('[data-name-cancel]')) { nameEd = null; rerender(); return true; }
   if (t.closest('[data-avatar-del]')) {
     try { await removeAvatar(); avMsg = null; } catch (err) { avMsg = err.message; }
     await loadLogin(); return true;
@@ -211,7 +239,7 @@ export async function loginClick(e) {
   const del = t.closest('[data-user-del]');
   if (del) {
     if (confirm(`Fjerne brukeren ${del.dataset.name}? Innlogginger, enheter og innstillinger for brukeren slettes.`)) {
-      try { await api(`/users/${del.dataset.userDel}`, { method: 'DELETE' }); } catch (err) { alert(err.message); }
+      try { await api(`/users/${del.dataset.userDel}`, { method: 'DELETE' }); goTo(''); } catch (err) { alert(err.message); }
       await loadLogin();
     }
     return true;
@@ -247,14 +275,14 @@ export async function loginSubmit(e) {
   if (f.matches('[data-name-form]')) {
     e.preventDefault();
     const id = f.dataset.nameForm, name = f.name.value.trim();
-    if (!name) { nameEd = { ...nameEd, err: 'Skriv inn et navn' }; rerender(); return true; }
+    if (!name) { nameEd = { id, value: '', err: 'Skriv inn et navn' }; rerender(); return true; }
     try {
       const u = await api(`/users/${id}`, { method: 'PATCH', json: { displayName: name } });
-      nameEd = null;
+      nameEd = { id, ok: true };
       // Eget navn slår inn med en gang i hilsen og meny.
       if (id === data.me?.id) { store.me.me = { ...store.me.me, name: u.name, displayName: u.name }; store.me.user = u.name; applyProfile(); document.dispatchEvent(new CustomEvent('hl:name')); }
       await loadLogin();
-    } catch (err) { nameEd = { ...nameEd, value: name, err: err.message }; rerender(); }
+    } catch (err) { nameEd = { id, value: name, err: err.message }; rerender(); }
     return true;
   }
   if (f.matches('[data-server-form]')) {

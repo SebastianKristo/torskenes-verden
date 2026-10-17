@@ -192,3 +192,8 @@ export async function hlApi(path, opts = {}) {
   if (!res.ok) { const e = new Error(data?.error || `Homelab svarte ${res.status}`); e.status = res.status; throw e; }
   return data;
 }
+
+// Egne navn på menypunkter fra FinansHub → Innstillinger → Sidemeny. Navnene lagres med desktop-ID-ene,
+// så mobilens skjermnavn oversettes først.
+const NAV_IDS = { hjem: 'ov', home: 'ov', liste: 'tx', list: 'tx', budsjett: 'bud', sok: 'ai' };
+export const navName = (id, def) => (S.navLabels ?? S.boot?.navLabels ?? {})[NAV_IDS[id] ?? id] || def;

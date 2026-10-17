@@ -1,13 +1,13 @@
 // Moduler i mobilappen («Andre OS»): Matplan, Domener, Subscription OS, Delte mapper og Finn-handler.
 // Hver modul fyller hele skjermen og henter fra sitt eget API. Feiler API-et, vises en lenke til desktop-siden.
-import { api, esc, n0, n2, dd, dWeek, today, icon, logo, aiLine, matApi, domApi, parseAmount } from './core.js';
+import { api, esc, n0, n2, dd, dWeek, today, icon, logo, aiLine, matApi, domApi, parseAmount, navName } from './core.js';
 import { m, draw, flash, avatar, backBtn } from './mobile.js';
 
 export const MODS = [
   ['mat', 'Matplan', 'Ukemeny, kokk og handleliste', 'mat'],
   ['dom', 'Domener', 'Trafikk, besøk, ytelse og sikkerhet', 'globe'],
   ['sub', 'Subscription OS', 'Abonnementer og trekk', 'sub'],
-  ['dir', 'Delte mapper', 'Boliger og felles utgifter', 'dir'],
+  ['dir', 'Boliger', 'Utgifter, prosjekter og regninger', 'dir'],
   ['finn', 'Finn-handler', 'Trygg betaling, Fiks ferdig, Tillit', 'finn'],
 ];
 const D = { mat: null, sub: null, dirs: null, dir: {}, finn: null, err: {}, users: null, subAdd: false, subF: { name: '', price: '', cycle: 'monthly', nextDate: '' }, dirAdd: false, dirF: { name: '', type: 'Hytte', address: '' } };
@@ -42,7 +42,7 @@ export async function modLoad(key, sub) {
 }
 
 export function modView(key, th, sub) {
-  const title = MODS.find(([k]) => k === key)?.[1] ?? '';
+  const title = navName(key, MODS.find(([k]) => k === key)?.[1] ?? '');
   if (D.err[key]) return failed(th, key, title);
   if (key === 'mat') return mat(th);
   if (key === 'dom') return domView(th);
@@ -71,7 +71,7 @@ function mat(th) {
 const CYCLE = { monthly: ['Månedlig', '/mnd'], yearly: ['Årlig', '/år'], biennial: ['Hvert 2. år', '/2 år'] };
 function subs(th) {
   const s = D.sub;
-  if (!s) return `${head(th, 'Subscription OS')}<div class="m-spin"></div>`;
+  if (!s) return `${head(th, navName('sub', 'Subscription OS'))}<div class="m-spin"></div>`;
   const items = s.items ?? [];
   const f = D.subF, cyc = (k, n) => `<button class="chip" type="button" data-subcyc="${k}" aria-pressed="${f.cycle === k}">${n}</button>`;
   const form = D.subAdd ? `${sec('Nytt abonnement')}<form class="${isIos(th) ? 'list glass2' : 'fields'}" data-subform>
@@ -81,7 +81,7 @@ function subs(th) {
       <label class="field">${isIos(th) ? '<span>Neste trekk</span>' : 'Neste trekk'}<input name="nextDate" id="m-sub-next" value="${esc(f.nextDate)}" placeholder="dd.mm"></label>
       <div style="padding:${isIos(th) ? '10px 12px' : '0'};display:flex;gap:8px"><button class="pri-b" type="submit" style="flex:1">Legg til</button><button class="sec-b" type="button" data-subadd="0" style="flex:1">Avbryt</button></div></form>
       <div class="snote">2-årige abonnementer regnes om: 1 200 kr hvert 2. år blir 50 kr/mnd og 600 kr/år.</div>` : '';
-  return `${head(th, 'Abonnementer', D.subAdd ? '' : '<button class="tonal" data-subadd="1">+ Nytt</button>')}
+  return `${head(th, navName('sub', 'Abonnementer'), D.subAdd ? '' : '<button class="tonal" data-subadd="1">+ Nytt</button>')}
     ${kpis(th, [['Per måned', `${n0(s.monthly ?? 0)} kr`], ['Per år', `${n0(s.yearly ?? 0)} kr`], ['Lite brukt', `${n0(s.lowUse ?? 0)} kr`, true]])}
     ${form}
     ${listBox(th, items.map((x) => {
@@ -99,22 +99,22 @@ function subs(th) {
 const ROLE = { owner: 'Eier', editor: 'Kan redigere', edit: 'Kan redigere', viewer: 'Kan se', view: 'Kan se', member: 'Medlem' };
 function folders(th) {
   const list = D.dirs;
-  if (!list) return `${head(th, 'Delte mapper')}<div class="m-spin"></div>`;
+  if (!list) return `${head(th, navName('dir', 'Boliger'))}<div class="m-spin"></div>`;
   const f = D.dirF;
-  const form = D.dirAdd ? `${sec('Ny bolig eller delt mappe')}<form class="${isIos(th) ? 'list glass2' : 'fields'}" data-dirnew>
+  const form = D.dirAdd ? `${sec('Ny bolig')}<form class="${isIos(th) ? 'list glass2' : 'fields'}" data-dirnew>
       <label class="field">${isIos(th) ? '<span>Navn</span>' : 'Navn'}<input name="name" value="${esc(f.name)}" placeholder="f.eks. Hytta Geilo" required></label>
       <div class="opt-row col"><span style="font-size:13px;opacity:.7">Type</span><div class="schips">${['Enebolig', 'Leilighet', 'Hytte', 'Utleie', 'Annet'].map((t) => `<button class="chip" type="button" data-dirtype="${t}" aria-pressed="${f.type === t}">${t}</button>`).join('')}</div></div>
       <label class="field">${isIos(th) ? '<span>Adresse</span>' : 'Adresse'}<input name="address" value="${esc(f.address)}" placeholder="Valgfritt"></label>
       <div style="padding:${isIos(th) ? '10px 12px' : '0'};display:flex;gap:8px"><button class="pri-b" type="submit" style="flex:1">Opprett</button><button class="sec-b" type="button" data-diradd="0" style="flex:1">Avbryt</button></div></form>
-      <div class="snote">Del mappen med andre brukere etterpå. Nye brukere legges til av admin i Homelab → Innstillinger → Innlogging.</div>` : '';
-  return `${head(th, 'Delte mapper', D.dirAdd ? '' : '<button class="tonal" data-diradd="1">+ Ny</button>')}
+      <div class="snote">Del boligen med andre brukere etterpå. Nye brukere legges til av admin i Homelab → Innstillinger → Innlogging.</div>` : '';
+  return `${head(th, navName('dir', 'Boliger'), D.dirAdd ? '' : '<button class="tonal" data-diradd="1">+ Ny</button>')}
     <div style="font-size:14px;opacity:.7;padding:0 4px;margin-top:-6px">Utgifter til bolig, hytte og utleie</div>${form}
-    ${list.length ? list.map((f) => `<a class="fold ${gl(th, 'glass')}" href="#/dir/${f.id}"><span class="fold-ic">${icon('dir', 22)}</span><span class="m-grow"><b class="m-ell" style="font-weight:600">${esc(f.name)}</b><span class="m-ell s">${[f.type, f.address].filter(Boolean).map(esc).join(' · ') || `${(f.members ?? []).length} medlemmer`}</span></span><span class="m-mono" style="font-weight:600">${n0(f.total ?? 0)} kr</span></a>`).join('') : '<div class="m-empty">Ingen delte mapper ennå. Opprett en bolig eller mappe i FinansHub på PC.</div>'}`;
+    ${list.length ? list.map((f) => `<a class="fold ${gl(th, 'glass')}" href="#/dir/${f.id}"><span class="fold-ic">${icon('dir', 22)}</span><span class="m-grow"><b class="m-ell" style="font-weight:600">${esc(f.name)}</b><span class="m-ell s">${[f.type, f.address].filter(Boolean).map(esc).join(' · ') || `${(f.members ?? []).length} medlemmer`}</span></span><span class="m-mono" style="font-weight:600">${n0(f.total ?? 0)} kr</span></a>`).join('') : '<div class="m-empty">Ingen boliger ennå. Trykk «+ Ny» for å opprette en.</div>'}`;
 }
 function folder(th, id) {
   const f = D.dir[id];
-  if (!f) return `${head(th, 'Delte mapper')}<div class="m-spin"></div>`;
-  const back = backBtn(th, '#/dir', 'Tilbake til Delte mapper');
+  if (!f) return `${head(th, navName('dir', 'Boliger'))}<div class="m-spin"></div>`;
+  const back = backBtn(th, '#/dir', 'Tilbake til Boliger');
   const role = f.myRole ?? f.role;
   const ro = f.canEdit === false || ['viewer', 'view', 'Kan se'].includes(role);
   const members = f.members ?? [];
@@ -144,15 +144,15 @@ function sharing(th, f) {
   return `${sec('Deling')}${listBox(th, members.map((x) => `<div class="opt-row"><span class="m-av" style="width:34px;height:34px;font-size:14px">${esc((x.name ?? x.username ?? '?').slice(0, 1).toUpperCase())}</span><span class="m-grow">${esc(x.name ?? x.username)}${x.you ? ' <span style="opacity:.6">(deg)</span>' : ''}${x.login === false ? '<br><span style="font-size:12px;opacity:.55">Uten innlogging</span>' : ''}</span>${owner && !x.you ? `<button class="stchip ok" data-dirrole="${x.id}" data-r="${x.role}">${esc(x.roleName ?? ROLE[x.role] ?? x.role)}</button>` : `<span style="opacity:.7;font-size:13px">${esc(x.roleName ?? ROLE[x.role] ?? x.role ?? '')}</span>`}</div>`).join('')
     + (owner && others.length ? `<div class="opt-row col"><span style="font-size:13px;opacity:.7">Del med</span><div class="schips">${others.map((u) => `<button class="chip" data-dirshare="${esc(u.id)}">${esc(u.name ?? u.username)}</button>`).join('')}</div></div>` : ''))}
     <div class="snote">${owner ? 'Trykk på rollen for å bytte mellom Kan se, Kan redigere og Eier. Nye brukere legges til av admin i Homelab.' : 'Bare eiere kan endre deling.'}</div>
-    ${me && !owner ? `<button class="sec-b danger wide" data-dirleave="${me.id}">Forlat mappen</button>` : ''}`;
+    ${me && !owner ? `<button class="sec-b danger wide" data-dirleave="${me.id}">Forlat boligen</button>` : ''}`;
 }
 
 /* ---------- Finn-handler ---------- */
 
 function finn(th) {
   const f = D.finn;
-  if (!f) return `${head(th, 'Finn-handler')}<div class="m-spin"></div>`;
-  return `${head(th, 'Finn-handler')}
+  if (!f) return `${head(th, navName('finn', 'Finn-handler'))}<div class="m-spin"></div>`;
+  return `${head(th, navName('finn', 'Finn-handler'))}
     ${kpis(th, [['Kjøpt i år', `${n0(f.bought ?? 0)} kr`], ['Solgt i år', `${n0(f.sold ?? 0)} kr`], ['Pågående', String(f.ongoing ?? 0)]])}
     ${listBox(th, (f.items ?? []).map((x) => `<div class="item" style="align-items:flex-start">${logo({ domain: 'finn.no', description: 'Finn' }, 40, isIos(th) ? 20 : 12)}<span class="m-grow"><span class="m-row" style="gap:8px"><em class="role ${x.role === 'sold' ? 'sold' : 'bought'}">${x.role === 'sold' ? 'Solgt' : 'Kjøpt'}</em><span class="m-ell" style="font-weight:500">${esc(x.item)}</span></span><span class="m-ell s">${esc(x.counterpart ?? '')}${x.date ? ` · ${dd(x.date)}` : ''}</span>
       <span class="steps">${(x.steps ?? []).map((s) => `<em class="${s.done ? 'done' : ''}">${esc(s.t ?? s.name ?? s.label ?? s)}</em>`).join('')}</span></span><span class="m-mono" style="font-weight:600;color:${x.role === 'sold' ? '#9FE3C6' : 'inherit'}">${x.role === 'sold' ? '+' : '−'}${n0(x.amount)}</span></div>`).join('') || '<div class="m-empty">Ingen Finn-handler ennå. Lim inn Finn-e-poster i FinansHub på PC.</div>')}`;
@@ -272,7 +272,7 @@ export async function modBind(e, t) {
     const amount = parseAmount(v.amount);
     if (!v.description?.trim() || amount === null) { flash('Fyll ut beskrivelse og beløp'); return true; }
     D.dir[x.dataset.dirform] = await api(`/folders/${encodeURIComponent(x.dataset.dirform)}/entries`, { method: 'POST', json: { description: v.description.trim(), amount, paidBy: v.paidBy, date: today() } });
-    flash('Lagt til i mappen'); return true;
+    flash('Lagt til i boligen'); return true;
   }
   if (e.type === 'input') {
     if (t.id === 'm-sub-name') D.subF.name = t.value; else if (t.id === 'm-sub-price') D.subF.price = t.value; else if (t.id === 'm-sub-next') D.subF.nextDate = t.value;
@@ -290,7 +290,7 @@ export async function modBind(e, t) {
   if (e.type === 'submit' && (x = d('[data-dirnew]'))) {
     e.preventDefault();
     const f = D.dirF;
-    if (!f.name.trim()) { flash('Gi mappen et navn'); return true; }
+    if (!f.name.trim()) { flash('Gi boligen et navn'); return true; }
     const r = await api('/folders', { method: 'POST', json: { name: f.name.trim(), type: f.type, address: f.address } });
     D.dirAdd = false; D.dirF = { name: '', type: 'Hytte', address: '' };
     flash(`${r.name} opprettet`); location.hash = `#/dir/${r.id}`; return true;
@@ -303,7 +303,7 @@ export async function modBind(e, t) {
   if ((x = d('[data-dirtype]'))) { D.dirF.type = x.dataset.dirtype; draw(); return true; }
   if ((x = d('[data-dirrole]'))) { const nx = { viewer: 'editor', editor: 'owner', owner: 'viewer' }[x.dataset.r] ?? 'viewer'; D.dir[fid] = await api(`/folders/${fid}/members/${x.dataset.dirrole}`, { method: 'PATCH', json: { role: nx } }); draw(); return true; }
   if ((x = d('[data-dirshare]'))) { D.dir[fid] = await api(`/folders/${fid}/members`, { method: 'POST', json: { userId: x.dataset.dirshare, role: 'viewer' } }); flash('Delt · kan se'); return true; }
-  if ((x = d('[data-dirleave]'))) { if (!confirm('Forlate mappen? Du mister tilgangen til den.')) return true; await api(`/folders/${fid}/members/${x.dataset.dirleave}`, { method: 'DELETE' }); flash('Du forlot mappen'); location.hash = '#/dir'; return true; }
+  if ((x = d('[data-dirleave]'))) { if (!confirm('Forlate boligen? Du mister tilgangen til den.')) return true; await api(`/folders/${fid}/members/${x.dataset.dirleave}`, { method: 'DELETE' }); flash('Du forlot mappen'); location.hash = '#/dir'; return true; }
   if ((x = d('[data-dirpay]'))) { D.dir[fid] = await api(`/folders/${fid}/installments/${x.dataset.dirpay}/pay`, { method: 'POST' }).then((r) => (r?.members ? r : api(`/folders/${fid}`))); flash('Registrert som betalt'); return true; }
   if ((x = d('[data-shop]'))) { await matApi(`/shopping/${encodeURIComponent(x.dataset.shop)}/toggle`, { method: 'POST' }); await modLoad('mat'); draw(); return true; }
   if ((x = d('[data-mat]'))) { const day = x.dataset.mat === 'day'; flash(day ? 'Gemini foreslår en ny rett …' : 'Gemini lager ukeplan …'); await matApi('/plan', { method: 'POST', json: day ? { scope: 'day', date: x.dataset.date } : { scope: 'week', date: D.mat?.start ?? today() } }); await modLoad('mat'); flash('Matplan oppdatert'); return true; }

@@ -3,21 +3,13 @@ import { api, esc } from './util.js';
 import { store } from './store.js';
 import { openSettings } from './settings.js';
 import { drawMap } from './worldmap.js';
+import { SRC } from './settings-domains.js';
 
 const D = (p, o) => api('/../domains/api' + p, o);
 const PERIODS = [['1h', '1t'], ['24h', '24t'], ['7d', '7d'], ['30d', '30d']];
 const PER_TXT = { '1h': 'time', '24h': '24 timer', '7d': '7 dager', '30d': '30 dager' };
 const UNIT_TXT = { '1h': 'minutt', '24h': 'halvtime', '7d': 'time', '30d': 'dag' };
-const SRC = { cloudflare: 'Cloudflare', tunnel: 'Cloudflare Tunnel', plausible: 'Plausible', umami: 'Umami', uptime: 'Bare oppetid og SSL' };
-const HELP = {
-  cloudflare: 'Lag et API-token i Cloudflare med Zone:Read, DNS:Read, Analytics:Read, Registrar:Read og Firewall Services:Read for sonen. Tomt felt bruker standard-tokenet fra Innstillinger → Integrasjoner → Cloudflare.',
-  tunnel: 'Bruk samme token som over. Trafikken hentes fra sonen, filtrert på vertsnavnet (f.eks. home.kristo.no).',
-  plausible: 'Lag en Stats API-nøkkel i Plausible. Gir besøkende, sider, henvisere, land og enheter. Statuskoder og sikkerhet krever Cloudflare.',
-  umami: 'Oppgi adressen til Umami-instansen og en API-nøkkel. Gir besøkende, sider, henvisere, land og enheter.',
-  uptime: 'Ingen token trengs. Homelab sjekker domenet hvert 5. minutt, og leser SSL-sertifikat, DNS og utløpsdato (RDAP).',
-};
-
-const S = { list: null, sel: null, per: '24h', data: new Map(), err: null, adding: false, form: { name: '', source: 'cloudflare', token: '', url: '' }, formErr: '', busy: false };
+const S = { list: null, sel: null, per: '24h', data: new Map(), err: null };
 let liveTimer = null;
 
 /* ---------- Formatering ---------- */
@@ -78,23 +70,10 @@ const bars = (list, valFn, nameFn, max) => {
 function pills() {
   const all = [['*', 'Alle domener', '#a8d4fb'], ...(S.list ?? []).map((x) => [x.name, x.name, '#8fe0b0'])];
   return `<div class="dm-top"><div class="dm-pills">${all.map(([k, n, dot]) => `<button data-dom-sel="${esc(k)}" aria-pressed="${S.sel === k}"><i style="background:${dot}"></i>${esc(n)}</button>`).join('')}
-      <button class="add" data-dom-add>+ Legg til domene</button></div>
+      <button class="add" data-dom-manage title="Legg til og fjern domener i Innstillinger">Administrer domener</button></div>
     <div class="dm-per">${PERIODS.map(([k, n]) => `<button data-dom-per="${k}" aria-pressed="${S.per === k}">${n}</button>`).join('')}<button data-dom-refresh title="Oppdater" aria-label="Oppdater">↻</button></div></div>`;
 }
 
-function addForm() {
-  if (!S.adding) return '';
-  const f = S.form;
-  return card('dm-add', `<div class="dm-h">Nytt domene</div>
-    <form data-dom-form class="dm-form">
-      <label>Domene<input name="name" value="${esc(f.name)}" placeholder="f.eks. kristo.no" class="mono" autocomplete="off" spellcheck="false" required></label>
-      <label>Statistikk fra<select name="source">${Object.entries(SRC).map(([k, n]) => `<option value="${k}"${f.source === k ? ' selected' : ''}>${n}${k === 'cloudflare' ? ' (zone analytics)' : k === 'umami' ? ' (selvhostet)' : ''}</option>`).join('')}</select></label>
-      ${f.source === 'uptime' ? '' : `<label>API-token<input name="token" type="password" placeholder="Lagres kun på serveren" autocomplete="off"></label>`}
-      ${f.source === 'umami' || f.source === 'plausible' ? `<label>Adresse<input name="url" value="${esc(f.url)}" placeholder="${f.source === 'umami' ? 'https://umami.eksempel.no' : 'https://plausible.io'}" autocomplete="off"></label>` : ''}
-      <div class="help">${HELP[f.source]}</div>
-      <div class="acts"><button class="dm-btn pri" type="submit"${S.busy ? ' disabled' : ''}>Legg til</button><button class="dm-btn" type="button" data-dom-add>Avbryt</button><span class="err-t">${esc(S.formErr)}</span></div>
-    </form>`);
-}
 
 function overview() {
   const rows = (S.list ?? []).map((x) => ({ x, d: S.data.get(key(x.name)) }));
@@ -113,7 +92,7 @@ function overview() {
     ['Forespørsler totalt', big(ds.reduce((a, d) => a + (d.requests ?? 0), 0)), 'Siste ' + PER_TXT[S.per]],
     ['Besøkende totalt', big(ds.reduce((a, d) => a + (d.visitors ?? 0), 0)), 'Unike, siste ' + PER_TXT[S.per]],
     ['Neste utløp', next ? `${days(next.sslExpires)} dager` : '–', next ? 'SSL for ' + next.name : '']];
-  return `${S.list.length ? card('dm-tbl', `<div class="dm-tw"><div class="dm-row head">${cols}</div>${tbl}</div>`) : `<div class="dm-card dm-empty">Ingen domener ennå. Trykk «+ Legg til domene».</div>`}
+  return `${S.list.length ? card('dm-tbl', `<div class="dm-tw"><div class="dm-row head">${cols}</div>${tbl}</div>`) : `<div class="dm-card dm-empty">Ingen domener ennå. Legg dem til under Innstillinger → Utseende → Domener. <button class="dm-btn" data-dom-manage>Administrer domener</button></div>`}
     <div class="dm-kpis">${kpis.map(([l, v, s]) => `<div class="dm-card dm-kpi"><span>${l}</span><b>${esc(v)}</b><small>${esc(s)}</small></div>`).join('')}</div>`;
 }
 
@@ -143,7 +122,6 @@ function paintLive(d) { const el = document.getElementById('dm-live'); if (el) e
 
 function one() {
   const d = S.data.get(key(S.sel));
-  const src = S.list.find((x) => x.name === S.sel);
   if (!d) return '<div class="skeleton" style="min-height:420px;border-radius:24px"></div>';
   const ser = d.series ?? [], tot = ser.map((x) => x.requests), cac = ser.map((x) => x.cached), max = Math.max(1, ...tot) * 1.08;
   const p = d.prev ?? {};
@@ -225,15 +203,14 @@ function one() {
         <div class="dm-h" style="font-size:16px;margin-top:6px">DNS-poster</div>
         <div class="dm-dns">${(d.dns ?? []).map((r) => `<div><span class="t">${esc(r.type)}</span><span class="ell">${esc(r.name)}</span><span class="ell muted">${esc(r.content)}</span><span style="color:${r.proxied ? '#f2b56b' : 'var(--muted)'}">${r.proxied ? 'Proxied' : 'Kun DNS'}</span></div>`).join('') || '<div class="dm-empty" style="padding:12px">Ingen DNS-poster</div>'}</div>`)}
       ${card('f1', `<div class="dm-h" style="display:flex;justify-content:space-between;align-items:center">Domene${dnssec == null ? '' : `<span class="dm-pill" style="${dnssec ? '' : 'background:rgba(242,181,107,.12);color:#f2b56b'}">${dnssec ? 'DNSSEC på' : 'DNSSEC av'}</span>`}</div>
-        ${info.map(([l, v, c]) => `<div class="dm-kvr line"><span class="muted">${l}</span><span class="mono sm" style="text-align:right;${c ? `color:${c}` : ''}">${esc(v)}</span></div>`).join('')}
-        <button class="dm-btn danger" data-dom-del="${src?.id ?? ''}">Fjern ${esc(d.name)}</button>`)}
+        ${info.map(([l, v, c]) => `<div class="dm-kvr line"><span class="muted">${l}</span><span class="mono sm" style="text-align:right;${c ? `color:${c}` : ''}">${esc(v)}</span></div>`).join('')}`)}
     </div>`;
 }
 
 function body() {
   if (S.err && !S.list) return `<div class="dm-card dm-warn">${esc(S.err)}</div>`;
   if (!S.list) return `${pills()}<div class="skeleton" style="min-height:320px;border-radius:24px"></div>`;
-  return `${pills()}${addForm()}${S.sel === '*' ? overview() : one()}`;
+  return `${pills()}${S.sel === '*' ? overview() : one()}`;
 }
 
 function paint() {
@@ -264,30 +241,9 @@ export function bind(view) {
     const p = e.target.closest('[data-dom-per]');
     if (p) { S.per = p.dataset.domPer; return loadAll(); }
     if (e.target.closest('[data-dom-refresh]')) { S.list = null; return loadAll(true); }
-    if (e.target.closest('[data-dom-add]')) { S.adding = !S.adding; S.formErr = ''; return paint(); }
+    if (e.target.closest('[data-dom-manage]')) return openSettings('look', 'doms');
     if (e.target.closest('[data-dom-settings]')) return openSettings('int');
-    const del = e.target.closest('[data-dom-del]');
-    if (del && del.dataset.domDel && confirm(`Fjerne ${S.sel}? Statistikk og oppetidshistorikk slettes.`)) {
-      try { await D(`/domains/${del.dataset.domDel}`, { method: 'DELETE' }); S.list = null; S.sel = '*'; S.data.clear(); loadAll(); } catch (err) { alert(err.message); }
-    }
   });
-  view.addEventListener('change', (e) => {
-    const f = e.target.closest('[data-dom-form]');
-    if (!f) return;
-    S.form = { ...S.form, name: f.elements.name.value, url: f.elements.url?.value ?? S.form.url, source: f.elements.source.value };
-    if (e.target.name === 'source') paint();
-  });
-  view.addEventListener('submit', async (e) => {
-    const f = e.target.closest('[data-dom-form]');
-    if (!f) return;
-    e.preventDefault();
-    const body = { name: f.elements.name.value.trim(), source: f.elements.source.value, token: f.elements.token?.value ?? '', url: f.elements.url?.value.trim() ?? '' };
-    S.busy = true; S.formErr = ''; paint();
-    try {
-      const r = await D('/domains', { method: 'POST', json: body });
-      S.adding = false; S.form = { name: '', source: 'cloudflare', token: '', url: '' };
-      S.list = null; S.busy = false;
-      pick(r.name);
-    } catch (err) { S.busy = false; S.formErr = err.message; S.form = { ...S.form, ...body, token: '' }; paint(); }
-  });
+  // Domener lagt til eller fjernet i Innstillinger.
+  document.addEventListener('hl:domains', () => { S.list = null; S.data.clear(); if (document.getElementById('dom-os')) loadAll(); });
 }

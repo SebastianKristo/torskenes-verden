@@ -172,6 +172,8 @@ export function applyTicker() {
   const el = document.getElementById('ticker'), u = store.me.ui ?? {};
   el.style.setProperty('--news-dur', Math.round(350 / (u.newsSpeed ?? 5)) + 's');
   el.classList.toggle('no-pause', u.newsPause === false);
+  const sp = el.querySelector('.ticker-speed .mono');
+  if (sp) sp.textContent = u.newsSpeed ?? 5;
 }
 
 export function renderTicker() {
@@ -182,7 +184,8 @@ export function renderTicker() {
   if (el.hidden) return;
   const list = items.map((n) => `<a href="${esc(n.url)}" target="_blank" rel="noopener"><span class="ticker-src" style="background:${esc(n.color)}">${esc(n.src)}</span><span>${esc(n.title)}</span><span class="mono muted" style="font-size:12px">${hm(new Date(n.date))}</span></a>`).join('');
   // Listen dupliseres så rullingen går sømløst; kopien skjules for skjermlesere.
-  el.innerHTML = `<div class="ticker-label">SISTE NYTT</div><div class="ticker-view"><div class="ticker-track">${list}<span style="display:contents" aria-hidden="true">${list.replace(/<a /g, '<a tabindex="-1" ')}</span></div></div>`;
+  el.innerHTML = `<div class="ticker-label">SISTE NYTT</div><div class="ticker-view"><div class="ticker-track">${list}<span style="display:contents" aria-hidden="true">${list.replace(/<a /g, '<a tabindex="-1" ')}</span></div></div>
+    <button class="ticker-speed" data-act="news-speed" title="Hastighet på nyhetsbaren" aria-label="Hastighet på nyhetsbaren"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-4M3.3 19a10 10 0 1 1 17.4 0"/></svg><span class="mono">${store.me.ui?.newsSpeed ?? 5}</span></button>`;
 }
 
 export function menuLabels() {

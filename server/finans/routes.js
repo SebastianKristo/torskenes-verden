@@ -309,14 +309,15 @@ api.use('*', async (c, next) => {
   c.set('user', a.user);
   // Brukere uten admin-rolle: bare egne opplysninger og Delte mapper.
   const path = c.req.path.replace(/^.*?\/finans\/api/, '');
-  if (!a.admin && !/^\/(me|prefs|users|bootstrap|tokens(\/[\w-]+)?|folders(\/.*)?|receipts\/jobs)$/.test(path)) return bad(c, 'Bare administratorer har tilgang til regnskapet. Du ser Delte mapper som er delt med deg.', 403);
+  if (!a.admin && !/^\/(me|prefs|users|bootstrap|tokens(\/[\w-]+)?|folders(\/.*)?|receipts\/jobs)$/.test(path)) return bad(c, 'Bare administratorer har tilgang til regnskapet. Du ser Boliger som er delt med deg.', 403);
   await next();
 });
 const R = need('finance:read'), W = need('finance:write');
 const upload = bodyLimit({ maxSize: Number(process.env.MAX_UPLOAD_MB ?? 15) * 1024 * 1024 + 4096, onError: (c) => bad(c, `Filen er for stor (maks ${process.env.MAX_UPLOAD_MB ?? 15} MB)`, 413) });
 
 // Sidemenyen: Import ligger nå under Innstillinger, AI-søk har egen side etter Transaksjoner.
-const NAV_DEFAULT = ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'inn'];
+// Matplan er den felles Homelab-komponenten (bare for administratorer, som resten av regnskapet).
+const NAV_DEFAULT = ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'mat', 'inn'];
 const NAV_FIXED = ['ov', 'inn'];
 // Nye sider som ikke finnes i lagret rekkefølge legges sist (AI-søk rett etter Transaksjoner for gamle oppsett).
 const navMerge = (saved) => {
@@ -327,7 +328,11 @@ const navMerge = (saved) => {
 };
 const navOrder = (uid) => navMerge(kv.get(uid, 'fh_nav', null));
 const navHidden = (uid) => (kv.get(uid, 'fh_nav_hidden', []) ?? []).filter((p) => NAV_DEFAULT.includes(p) && !NAV_FIXED.includes(p));
-const prefsOut = (uid) => ({ nav: navOrder(uid), hidden: navHidden(uid), navDefault: NAV_DEFAULT, navFixed: NAV_FIXED });
+// Egne navn på menypunkter (maks 30 tegn). Tomt navn betyr standardnavnet.
+const cleanLabels = (v) => Object.fromEntries(Object.entries(v && typeof v === 'object' && !Array.isArray(v) ? v : {})
+  .filter(([k, n]) => NAV_DEFAULT.includes(k) && typeof n === 'string' && n.trim()).map(([k, n]) => [k, n.replace(/\s+/g, ' ').trim().slice(0, 30)]));
+const navLabels = (uid) => cleanLabels(kv.get(uid, 'fh_nav_labels', {}));
+const prefsOut = (uid) => ({ nav: navOrder(uid), hidden: navHidden(uid), labels: navLabels(uid), navDefault: NAV_DEFAULT, navFixed: NAV_FIXED });
 const VERSION = (() => { try { return JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')).version; } catch { return null; } })();
 // Profilbilde og servernavn kommer fra homelab-brukerne (auth.js); valgfritt så eldre versjoner av den fila virker.
 const serverName = () => auth.serverName?.() ?? kv.get(OWNER, 'server_name', null) ?? 'Homelab';
@@ -348,6 +353,8 @@ api.put('/prefs', async (c) => {
   else if (Array.isArray(b.nav)) kv.set(uid, 'fh_nav', [...new Set(b.nav.filter((p) => NAV_DEFAULT.includes(p)))]);
   if (b.hidden === null) kv.del(uid, 'fh_nav_hidden');
   else if (Array.isArray(b.hidden)) kv.set(uid, 'fh_nav_hidden', [...new Set(b.hidden.filter((p) => NAV_DEFAULT.includes(p) && !NAV_FIXED.includes(p)))]);
+  if (b.labels === null) kv.del(uid, 'fh_nav_labels');
+  else if (b.labels !== undefined) kv.set(uid, 'fh_nav_labels', cleanLabels(b.labels));
   return c.json(prefsOut(uid));
 });
 
@@ -366,7 +373,7 @@ api.get('/bootstrap', R, (c) => {
     rules: q('SELECT r.*, c.name AS category FROM fh_rules r LEFT JOIN fh_categories c ON c.id=r.category_id ORDER BY priority, id').all().map((r) => ({ id: r.id, pattern: r.pattern, categoryId: r.category_id, category: r.category, priority: r.priority })),
     goals: q('SELECT * FROM fh_goals ORDER BY id').all().map((g) => ({ ...g, saved: g.saved / 100, target: g.target / 100 })),
     reviewCount: q("SELECT COUNT(*) n FROM fh_receipts WHERE status IN ('pending','processing','needs_review')").get().n,
-    hasData: !!q('SELECT 1 FROM fh_transactions LIMIT 1').get(), firstRun: backup.needsFirstRun(), me: meOut(a), nav: navOrder(a.user), navHidden: navHidden(a.user), navDefault: NAV_DEFAULT, navFixed: NAV_FIXED,
+    hasData: !!q('SELECT 1 FROM fh_transactions LIMIT 1').get(), firstRun: backup.needsFirstRun(), me: meOut(a), nav: navOrder(a.user), navHidden: navHidden(a.user), navLabels: navLabels(a.user), navDefault: NAV_DEFAULT, navFixed: NAV_FIXED,
   });
 });
 
@@ -477,7 +484,7 @@ function setTxReceipt(txId, receiptId) {
   if (receiptId) q("UPDATE fh_receipts SET transaction_id=?, status='booked' WHERE id=?").run(txId, receiptId);
 }
 const txValidate = (b) => {
-  if (b.folderId !== undefined && b.folderId !== null && b.folderId !== '' && validId('fh_folders', +b.folderId) === undefined) return 'Fant ikke den delte mappen';
+  if (b.folderId !== undefined && b.folderId !== null && b.folderId !== '' && validId('fh_folders', +b.folderId) === undefined) return 'Fant ikke boligen';
   if (b.categoryId && validId('fh_categories', +b.categoryId) === undefined) return 'Ukjent kategori';
   if (b.accountId && validId('fh_accounts', +b.accountId) === undefined) return 'Ukjent konto';
   if (b.receiptId && !q('SELECT 1 FROM fh_receipts WHERE id=?').get(String(b.receiptId))) return 'Fant ikke kvitteringen';
@@ -1055,11 +1062,11 @@ const memberOf = (fid, uid) => q('SELECT * FROM fh_folder_members WHERE folder_i
 // Henter mappen og sjekker tilgang. need: 'view' | 'edit' | 'owner'.
 function folderFor(c, need = 'view') {
   const f = q('SELECT * FROM fh_folders WHERE id=?').get(+c.req.param('id'));
-  if (!f) return { err: c.json({ error: 'Fant ikke mappen' }, 404) };
+  if (!f) return { err: c.json({ error: 'Fant ikke boligen' }, 404) };
   const m = memberOf(f.id, c.get('user'));
-  if (!m) return { err: c.json({ error: 'Fant ikke mappen' }, 404) };
+  if (!m) return { err: c.json({ error: 'Fant ikke boligen' }, 404) };
   if (need === 'edit' && m.role === 'viewer') return { err: bad(c, 'Du har lesetilgang. Be en eier om redigeringstilgang.', 403) };
-  if (need === 'owner' && m.role !== 'owner') return { err: bad(c, 'Bare eiere kan endre deling og innstillinger for mappen', 403) };
+  if (need === 'owner' && m.role !== 'owner') return { err: bad(c, 'Bare eiere kan endre deling og innstillinger for boligen', 403) };
   if (need !== 'view' && !c.get('access').scopes.has('finance:write') && !c.get('access').session) return { err: bad(c, 'Tokenet mangler tilgangen finance:write', 403) };
   return { f, me: m };
 }
@@ -1150,7 +1157,7 @@ api.get('/folders/:id', (c) => { const { f, err } = folderFor(c); return err ?? 
 api.post('/folders', async (c) => {
   if (!c.get('access').session && !c.get('access').scopes.has('finance:write')) return bad(c, 'Tokenet mangler tilgangen finance:write', 403);
   const b = await c.req.json();
-  if (!str(b.name)) return bad(c, 'Gi mappen et navn');
+  if (!str(b.name)) return bad(c, 'Gi boligen et navn');
   const type = FOLDER_TYPES.includes(b.type) ? b.type : 'Annet';
   const me = c.get('access').info;
   const f = q('INSERT INTO fh_folders(name,type,address,owner_id,created) VALUES(?,?,?,?,?) RETURNING *').get(str(b.name, 60), type, str(b.address, 120), me.id, Date.now());
@@ -1208,7 +1215,7 @@ api.delete('/folders/:id/members/:mid', (c) => {
   const m = q('SELECT * FROM fh_folder_members WHERE id=? AND folder_id=?').get(+c.req.param('mid'), f.id);
   if (!m) return c.notFound();
   if (m.id !== me.id && me.role !== 'owner') return bad(c, 'Bare eiere kan fjerne medlemmer', 403);
-  if (m.role === 'owner' && q("SELECT count(*) FROM fh_folder_members WHERE folder_id=? AND role='owner'").pluck().get(f.id) < 2) return bad(c, 'Den siste eieren kan ikke forlate mappen. Gjør noen andre til eier først, eller slett mappen.');
+  if (m.role === 'owner' && q("SELECT count(*) FROM fh_folder_members WHERE folder_id=? AND role='owner'").pluck().get(f.id) < 2) return bad(c, 'Den siste eieren kan ikke forlate boligen. Gjør noen andre til eier først, eller slett boligen.');
   q('DELETE FROM fh_folder_members WHERE id=?').run(m.id);
   return m.id === me.id ? ok(c) : fullOut(c, f);
 });
@@ -1236,7 +1243,7 @@ api.post('/folders/:id/entries', async (c) => {
     if (!c.get('access').admin) return bad(c, 'Bare administratorer kan flytte transaksjoner fra regnskapet', 403);
     const t = q('SELECT * FROM fh_transactions WHERE id=?').get(+b.txId);
     if (!t) return c.notFound();
-    if (q('SELECT 1 FROM fh_folder_entries WHERE folder_id=? AND tx_id=?').get(f.id, t.id)) return bad(c, 'Transaksjonen ligger allerede i mappen');
+    if (q('SELECT 1 FROM fh_folder_entries WHERE folder_id=? AND tx_id=?').get(f.id, t.id)) return bad(c, 'Transaksjonen ligger allerede i boligen');
     ins.run(f.id, t.id, t.merchant || t.description, t.date, Math.abs(t.amount), paidBy, catOf(`${t.merchant ?? ''} ${t.description}`), proj?.id ?? null, Date.now());
   } else {
     const amount = ore(b.amount);

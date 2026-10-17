@@ -16,8 +16,12 @@ export function saveUi(changes) {
 
 const el = (k) => document.querySelector(`header.top [data-hp="${k}"]`);
 
+// Standard: logo til venstre, faner, vær og meny samlet til høyre. Eldre oppsett med egne plasseringer beholder «alt fra venstre».
+export const headAlign = () => ui().headAlign ?? (Object.values(ui().hp ?? {}).some(([x, y]) => x || y) ? 'left' : 'right');
+
 export function applyHead() {
   const { hp, headLock } = ui();
+  document.querySelector('header.top')?.classList.toggle('hp-right', headAlign() === 'right');
   for (const k of PARTS) {
     const e = el(k), [x, y] = hp[k] ?? [0, 0];
     if (e) e.style.transform = x || (!headLock && y) ? `translate(${x}px,${headLock ? 0 : y}px)` : '';
@@ -60,6 +64,7 @@ export function toggleHeadEdit(on = !editing) {
 function drag(e, k) {
   e.preventDefault(); e.stopPropagation();
   const lock = ui().headLock, sx = e.clientX, sy = e.clientY, [ox, oy] = ui().hp[k] ?? [0, 0];
+  ui().headAlign = headAlign(); // låses før plasseringen endres, så oppsettet ikke bytter under dra
   const target = e.currentTarget;
   target.setPointerCapture?.(e.pointerId);
   const mv = (ev) => {
@@ -68,12 +73,19 @@ function drag(e, k) {
   };
   const up = () => {
     target.removeEventListener('pointermove', mv); target.removeEventListener('pointerup', up); target.removeEventListener('pointercancel', up);
-    saveUi({ hp: ui().hp });
+    saveUi({ hp: ui().hp, headAlign: ui().headAlign });
   };
   target.addEventListener('pointermove', mv); target.addEventListener('pointerup', up); target.addEventListener('pointercancel', up);
 }
 
-export function resetHead() { ui().hp = {}; applyHead(); saveUi({ hp: {} }); }
+export function resetHead() { ui().hp = {}; ui().headAlign = 'right'; applyHead(); saveUi({ hp: {}, headAlign: 'right' }); }
+
+/** Bytter mellom «samlet til høyre» og «alt fra venstre». Egne plasseringer nullstilles, siden de er relative til oppsettet. */
+export async function setHeadAlign(a) {
+  ui().hp = {}; ui().headAlign = a; applyHead();
+  await saveUi({ hp: {}, headAlign: a });
+  applyHead();
+}
 
 export async function setHeadLock(on) {
   await saveUi({ headLock: on });

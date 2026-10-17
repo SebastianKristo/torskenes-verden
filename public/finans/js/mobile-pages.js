@@ -1,6 +1,6 @@
 // «Mer» i Finans: alle funksjonene fra FinansHub på nettsiden, tilpasset mobil, i én felles mal
 // (tilbake, tittel og undertekst, hero-kort, nøkkeltall, grupper med rader). Rader åpner en detaljside med feltene og tilhørende transaksjoner.
-import { S, api, esc, n0, n2, sgn, dd, today, monthName, cap, icon, logo, aiLine, loadReceipts, accs } from './core.js';
+import { S, api, esc, n0, n2, sgn, dd, today, monthName, cap, icon, logo, aiLine, loadReceipts, accs, navName } from './core.js';
 import { m, draw, flash, avatar, backBtn, theme, amtC, openSheet, openCam } from './mobile.js';
 import { c3 } from './mobile-theme.js';
 
@@ -100,11 +100,11 @@ function mer() {
     ['aks', 'Aksjer', st ? `${n0(st.value ?? st.total)} ${stockCur()}` : PG.stocks?.configured === false ? 'Ikke koblet til' : '…', 'aks'],
     ['rap', 'Rapporter', 'Måned og år', 'rap'],
     ['sub', 'Subscription OS', PG.sub ? `${kr(PG.sub.monthly ?? 0)}/mnd` : '…', 'sub2'],
-    ['dir', 'Delte mapper', PG.dirs ? `${PG.dirs.length} ${PG.dirs.length === 1 ? 'bolig' : 'boliger'}` : '…', 'dir2'],
+    ['dir', 'Boliger', PG.dirs ? `${PG.dirs.length} ${PG.dirs.length === 1 ? 'bolig' : 'boliger'}` : '…', 'dir2'],
     ['finn', 'Finn-handler', PG.finn ? `${PG.finn.ongoing ?? 0} pågående` : '…', 'finn2'],
     ['imp', 'Import', 'CSV, XLSX, tekst', 'imp'],
     ['sok', 'AI-søk', 'Spør om alt', 'ai'],
-  ].map(([k, l, s, ic, badge]) => ({ href: '#/' + k, l, s, ic, badge }));
+  ].map(([k, l, s, ic, badge]) => ({ href: '#/' + k, l: navName(k, l), s, ic, badge }));
   return page({ title: 'Mer', sub: 'Alt fra FinansHub på nettsiden', tiles,
     groups: [G('✦ Spør AI', [`<form data-pa="merai" class="opt-row col"><span style="font-size:13px;opacity:.7">Søker i transaksjoner, kvitteringer og varelinjer</span><input class="sinp" id="m-merq" type="search" enterkeyhint="search" placeholder="Hvor mye brukte jeg på kaffe?" value="${esc(PG.ai.q)}"></form>`, R.btn('Spør', 'data-pa="merask"')])] });
 }

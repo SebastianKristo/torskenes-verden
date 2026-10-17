@@ -10,8 +10,8 @@ Object.assign(ICONS, {
   aks: 'M3 17l6-6 4 4 8-8M15 7h6v6',
 });
 
-export const MODULE_PAGES = [['aks', 'Aksjer'], ['sub', 'Subscription OS'], ['dir', 'Delte mapper'], ['finn', 'Finn-handler'], ['imp', 'Import']];
-export const MODULE_SUB = { aks: 'Trading 212', sub: 'Abonnementer', dir: 'Boliger og felles utgifter', finn: 'Trygg betaling, Fiks ferdig, Tillit', imp: 'CSV, XLSX og tekst' };
+export const MODULE_PAGES = [['aks', 'Aksjer'], ['sub', 'Subscription OS'], ['dir', 'Boliger'], ['finn', 'Finn-handler'], ['mat', 'Matplan'], ['imp', 'Import']];
+export const MODULE_SUB = { aks: 'Trading 212', sub: 'Abonnementer', dir: 'Utgifter, prosjekter og regninger per bolig', finn: 'Trygg betaling, Fiks ferdig, Tillit', mat: 'Ukemeny, kokker og handleliste', imp: 'CSV, XLSX og tekst' };
 const u = S.ui;
 const card = (inner, style = '') => `<section class="card" style="${style}">${inner}</section>`;
 const skel = (h = 160) => `<div class="skel" style="min-height:${h}px"></div>`;
@@ -74,7 +74,7 @@ function dirPage() {
     return `<button class="dir-card${cur?.id === f.id ? ' on' : ''}" data-mdir="${f.id}"><span class="dir-card-h"><b>${esc(f.name)}</b><span class="mtag">${esc(f.type || 'Mappe')}</span></span>
       <span class="note" style="font-size:12.5px">${others.length ? 'Delt med ' + esc(others.join(', ')) : 'Bare deg'}</span><span class="dir-card-f"><span>Du: ${esc((f.myRole ?? '').toLowerCase())}</span><span class="mono">${kr0(f.yearTotal)} i år</span></span></button>`;
   }).join('');
-  const create = `<form class="dir-new" data-mform="folder"><b>Ny bolig eller delt mappe</b><input class="inp" name="name" placeholder="Navn, f.eks. Hytta Geilo" required>
+  const create = `<form class="dir-new" data-mform="folder"><b>Ny bolig</b><input class="inp" name="name" placeholder="Navn, f.eks. Hytta Geilo" required>
     <input class="inp" name="address" placeholder="Adresse (valgfritt)"><select class="inp" name="type">${optList(TYPES.map((t) => [t, t]), 'Enebolig')}</select>
     ${users.length ? `<span class="note" style="font-size:12px">Del med</span><div class="pick">${users.map((x) => `<button type="button" class="pick-u${pick.includes(x.id) ? ' on' : ''}" data-mpick="${esc(x.id)}">${esc(x.name)}</button>`).join('')}</div>` : '<span class="note" style="font-size:12px">Nye brukere legges til av admin under Innstillinger → Innlogging i Homelab.</span>'}
     <button class="btn pri">Opprett</button></form>`;
@@ -303,7 +303,36 @@ export function firstRunCard() {
     ${S.stage ? stagePreview() : ''}</section>`;
 }
 
-export const MODULE_FN = { aks: aksPage, sub: subPage, dir: dirPage, finn: finnPage, imp: impPage };
+/* ===================== Matplan (felles komponent fra Homelab) ===================== */
+
+// Matplan er samme komponent som Homelab-fanen (public/js/mat.js) og deler data med den.
+// Siden tegnes på nytt ved hver endring i FinansHub, så komponenten monteres én gang i en vedvarende node
+// som flyttes inn i plassholderen etter hver tegning.
+let matHost = null, matState = 'idle';
+const matPage = () => `<div data-mat-slot></div>`;
+export function attachMatplan(el) {
+  const slot = el.querySelector('[data-mat-slot]');
+  if (!slot) return;
+  if (!matHost) { matHost = document.createElement('div'); matHost.className = 'fh-mat'; }
+  slot.replaceWith(matHost);
+  if (matState !== 'idle') return;
+  matState = 'loading';
+  matHost.innerHTML = '<div class="skel" style="min-height:420px"></div>';
+  import('/assets/js/mat.js').then((m) => {
+    if (typeof m.mountMatplan !== 'function') throw new Error('mountMatplan mangler');
+    matHost.innerHTML = '';
+    m.mountMatplan(matHost, { embedded: true });
+    matState = 'ready';
+  }).catch(() => {
+    matState = 'failed';
+    matHost.innerHTML = `<section class="card" style="padding:28px;display:flex;flex-direction:column;gap:10px;align-items:flex-start">
+      <b style="font-size:16px">Matplan er ikke tilgjengelig her ennå</b>
+      <div class="sub" style="font-size:13.5px">Oppdater homelab-serveren for å bruke Matplan i FinansHub. Inntil da finner du den i Homelab.</div>
+      <a class="btn ghost" href="/#/matplan">Åpne Matplan i Homelab</a></section>`;
+  });
+}
+
+export const MODULE_FN = { aks: aksPage, sub: subPage, dir: dirPage, finn: finnPage, mat: matPage, imp: impPage };
 
 /* ===================== Lasting ===================== */
 
@@ -320,7 +349,7 @@ const loadFinn = async () => { S.finn = await api('/finn'); };
 const loadStocks = async (force) => { S.stocks = await api(`/stocks${force === true ? '?force=1' : ''}`); };
 export async function loadBackup() { S.backup = await api('/backup'); }
 const recentIfAdmin = async () => { if (!S.boot.restricted) await loadRecentOut(); };
-export const MODULE_LOADERS = { aks: [loadStocks], sub: [loadSubs, loadRecentOut], dir: [loadFolders, loadUsers, recentIfAdmin], finn: [loadFinn], imp: [] };
+export const MODULE_LOADERS = { aks: [loadStocks], sub: [loadSubs, loadRecentOut], dir: [loadFolders, loadUsers, recentIfAdmin], finn: [loadFinn], mat: [], imp: [] };
 
 /* ===================== Hendelser ===================== */
 
@@ -373,14 +402,14 @@ export function bindModules(el) {
     if ((x = d('[data-msub-low]'))) { const s = S.subs.items.find((y) => y.id === +x.dataset.msubLow); await api(`/subscriptions/${s.id}`, { method: 'PATCH', json: { lowUse: !s.lowUse } }); return reload(); }
     if ((x = d('[data-msub-del]'))) { if (!confirm('Slette abonnementet?')) return; await api(`/subscriptions/${x.dataset.msubDel}`, { method: 'DELETE' }); return reload(); }
     if ((x = d('[data-mdir]'))) { u.dir = +x.dataset.mdir; u.dcat = null; u.shareOpen = false; S.folder = await api(`/folders/${u.dir}`); return render(); }
-    if ((x = d('[data-mentry-del]'))) { if (!confirm('Fjerne posten fra mappen?')) return; S.folder = await api(`/folders/${u.dir}/entries/${x.dataset.mentryDel}`, { method: 'DELETE' }); return reload(); }
+    if ((x = d('[data-mentry-del]'))) { if (!confirm('Fjerne posten fra boligen?')) return; S.folder = await api(`/folders/${u.dir}/entries/${x.dataset.mentryDel}`, { method: 'DELETE' }); return reload(); }
     if ((x = d('[data-mpick]'))) { const id = x.dataset.mpick, p = u.newPick ?? []; u.newPick = p.includes(id) ? p.filter((y) => y !== id) : [...p, id]; return render(); }
     if ((x = d('[data-mdcat]'))) { u.dcat = u.dcat === x.dataset.mdcat ? null : x.dataset.mdcat; return render(); }
     if ((x = d('[data-mpay]'))) { S.folder = await api(`/folders/${u.dir}/installments/${x.dataset.mpay}/pay`, { method: 'POST' }); toast('Registrert som betalt'); return reload(); }
     if ((x = d('[data-mbill-del]'))) { S.folder = await api(`/folders/${u.dir}/bills/${x.dataset.mbillDel}`, { method: 'DELETE' }); return render(); }
     if ((x = d('[data-mrm]'))) {
       const leave = !!x.dataset.leave, m = S.folder.members.find((y) => y.id === +x.dataset.mrm);
-      if (!confirm(leave ? `Forlate «${S.folder.name}»? Du mister tilgangen til mappen.` : `Fjerne ${m?.name} fra «${S.folder.name}»?`)) return;
+      if (!confirm(leave ? `Forlate «${S.folder.name}»? Du mister tilgangen til boligen.` : `Fjerne ${m?.name} fra «${S.folder.name}»?`)) return;
       const r = await api(`/folders/${u.dir}/members/${x.dataset.mrm}`, { method: 'DELETE' });
       if (leave) { u.dir = null; toast(`Du har forlatt ${S.folder.name}`); } else { S.folder = r; toast(`${m?.name} har ikke lenger tilgang`); }
       return reload();

@@ -24,7 +24,8 @@ let lay = norm((() => { try { return JSON.parse(localStorage.getItem('fh_mlayout
 export const LAY = () => lay;
 
 export async function loadLayout() {
-  try { const r = await hlApi('/me/layout'); if (r?.mobile) { lay = { ...norm(r.mobile), fromServer: true }; try { localStorage.setItem('fh_mlayout', JSON.stringify(lay)); } catch {} } } catch { /* eldre server: bare lokalt */ }
+  try { const r = await hlApi('/me/layout'); if (r?.finNav?.labels) S.navLabels = r.finNav.labels;
+    if (r?.mobile) { lay = { ...norm(r.mobile), fromServer: true }; try { localStorage.setItem('fh_mlayout', JSON.stringify(lay)); } catch {} } } catch { /* eldre server: bare lokalt */ }
 }
 let saveT;
 function saveLayout(patch) {
@@ -119,7 +120,7 @@ function wLinks(th) {
 
 function wOs(th) {
   const s = S.summary, rv = (s?.review ?? []).filter((r) => r.status === 'needs_review').length;
-  const fin = S.boot?.restricted ? ['Finans · delte mapper', 'Boliger og felles utgifter', ''] : [`Finans · igjen å bruke${s ? ` i ${new Date(s.month + '-15').toLocaleDateString('nb-NO', { month: 'long' })}` : ''}`, s ? `${n0(s.left)} kr` : '–', rv ? `${rv} kvittering${rv > 1 ? 'er' : ''} til gjennomgang` : 'Alt er gjennomgått'];
+  const fin = S.boot?.restricted ? ['Finans · boliger', 'Utgifter, prosjekter og regninger', ''] : [`Finans · igjen å bruke${s ? ` i ${new Date(s.month + '-15').toLocaleDateString('nb-NO', { month: 'long' })}` : ''}`, s ? `${n0(s.left)} kr` : '–', rv ? `${rv} kvittering${rv > 1 ? 'er' : ''} til gjennomgang` : 'Alt er gjennomgått'];
   const dm = H.dom, mt = H.mat;
   return `<div class="sec">Andre OS</div><div class="hos">
     <a class="hos-fin ${isI(th) ? 'glass2' : ''}" href="#/${S.boot?.restricted ? 'dir' : 'hjem'}"><span class="m-grow"><span class="dim">${esc(fin[0])}</span><b>${esc(fin[1])}</b>${fin[2] ? `<span class="acc">${esc(fin[2])}</span>` : ''}</span><span style="font-size:24px;opacity:.6">›</span></a>

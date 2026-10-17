@@ -4,14 +4,17 @@ import {
   render, toast, loadBoot, loadSummary, loadTx, loadReceipts, loadRecurring, loadReport, loadAi, catById, cats, accs, uploadReceipt,
   smooth, spark, conic, icon, logo, aiLine, ICONS,
 } from './core.js';
-import { MODULE_PAGES, MODULE_SUB, MODULE_FN, MODULE_LOADERS, bindModules, backupTab, firstRunCard, loadBackup, impPage } from './modules.js';
+import { MODULE_PAGES, MODULE_SUB, MODULE_FN, MODULE_LOADERS, attachMatplan, bindModules, backupTab, firstRunCard, loadBackup, impPage } from './modules.js';
 
 ICONS.ai = 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z';
 const BASE_PAGES = [['ov', 'Oversikt'], ['tx', 'Transaksjoner'], ['ai', 'AI-søk'], ['kv', 'Kvitteringer'], ['bud', 'Budsjett'], ['fast', 'Faste utgifter'], ['konto', 'Kontoer'], ['rap', 'Rapporter'], ['inn', 'Innstillinger']];
-const NAV_DEFAULT = ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'inn'];
+const NAV_DEFAULT = ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'mat', 'inn'];
 const NAV_FIXED = ['ov', 'inn'];
 const PAGES = [...BASE_PAGES, ...MODULE_PAGES];
-const pageName = (p) => PAGES.find(([x]) => x === p)?.[1] ?? p;
+const defaultName = (p) => PAGES.find(([x]) => x === p)?.[1] ?? p;
+// Egne navn fra Innstillinger → Sidemeny (finNav.labels i /api/me/layout, ellers FinansHubs prefs).
+const navLabels = () => S.layout?.finNav?.labels ?? S.boot?.navLabels ?? {};
+const pageName = (p) => navLabels()[p] || defaultName(p);
 const ACC_TYPES = { checking: 'Brukskonto', savings: 'Sparekonto', credit: 'Kredittkort', cash: 'Kontanter' };
 const KINDS = { expense: 'Utgift', income: 'Inntekt', transfer: 'Overføring' };
 const root = () => document.getElementById('app');
@@ -41,7 +44,7 @@ function navCfg() {
 const navOrder = () => { if (S.boot.restricted) return ['dir']; const { order, hidden } = navCfg(); return order.filter((p) => !hidden.includes(p)); };
 function sideNav() {
   const b = S.boot;
-  const items = navOrder().map((p) => `<a href="#/${p}" ${p === u.page ? 'aria-current="page"' : ''}>${icon(p, 18, 'currentColor')}<span>${pageName(p)}</span>${p === 'kv' && b.reviewCount ? `<span class="badge">${b.reviewCount}</span>` : ''}</a>`).join('');
+  const items = navOrder().map((p) => `<a href="#/${p}" ${p === u.page ? 'aria-current="page"' : ''}>${icon(p, 18, 'currentColor')}<span>${esc(pageName(p))}</span>${p === 'kv' && b.reviewCount ? `<span class="badge">${b.reviewCount}</span>` : ''}</a>`).join('');
   return `<div class="side-label">${b.restricted ? 'Delt med deg' : 'Generelt'}</div><nav class="nav">${items}</nav>`;
 }
 
@@ -75,11 +78,11 @@ function shell(content) {
   </aside>
   <main class="main"><div class="wrap">
     <header class="head">
-      <div><div class="crumb"><span>FinansHub</span><span>›</span><b>${pg[1]}</b></div><h1>${u.page === 'ov' ? `${greet()}, ${esc(me.name)}` : pg[1]}</h1>${MODULE_SUB[u.page] ? `<div class="note" style="font-size:14px;margin-top:4px">${MODULE_SUB[u.page]}</div>` : ''}</div>
+      <div><div class="crumb"><span>FinansHub</span><span>›</span><b>${esc(pageName(u.page))}</b></div><h1>${u.page === 'ov' ? `${greet()}, ${esc(me.name)}` : esc(pageName(u.page))}</h1>${MODULE_SUB[u.page] ? `<div class="note" style="font-size:14px;margin-top:4px">${MODULE_SUB[u.page]}</div>` : ''}</div>
       <div class="head-r">
         ${b.restricted ? '' : `<form class="search${aiMode ? ' ai' : ''}" data-form="gsearch" role="search">${aiMode ? '<span class="ai-star">✦</span>' : icon('search', 17, 'var(--muted)')}<input name="q" value="${esc(aiMode ? (u.aiDraft ?? '') : u.q)}" placeholder="${aiMode ? 'Spør, f.eks. «strøm i september»' : 'Søk i transaksjoner …'}" aria-label="${aiMode ? 'Spør AI om transaksjoner og kvitteringer' : 'Søk i transaksjoner'}"><button type="button" class="ai-tog" data-act="ai-toggle" aria-pressed="${aiMode}" title="Søk med AI i transaksjoner og kvitteringer">✦ AI</button></form>
         <a class="icon-btn" href="#/kv" aria-label="Varsler: ${b.reviewCount} kvitteringer til gjennomgang">${icon('bell', 18)}${b.reviewCount ? '<span class="dot"></span>' : ''}</a>`}
-        <div class="me"><div class="av">${esc(ini(me.name))}</div><div class="me-n"><div>${esc(me.name)}</div><div>${me.role === 'admin' ? 'Privat' : 'Delte mapper'}</div></div></div>
+        <div class="me"><div class="av">${esc(ini(me.name))}</div><div class="me-n"><div>${esc(me.name)}</div><div>${me.role === 'admin' ? 'Privat' : 'Boliger'}</div></div></div>
         <a class="close" href="/#/dash" aria-label="Tilbake til Hjem" title="Tilbake til Hjem">×</a>
       </div>
     </header>
@@ -232,7 +235,7 @@ function transactions() {
     ${sel.aiLong ? `<div class="ai-card"><b>✦ AI-beskrivelse</b><span>${esc(sel.aiLong)}</span>${sel.lines?.length ? `<div class="ai-lines">${sel.lines.map((l) => `<span><span>${esc(l.description)}</span><span class="mono">${n2(l.amount)}</span></span>`).join('')}</div>` : ''}</div>` : ''}
     <label class="f">Kategori<select class="inp" data-tx-field="categoryId">${opt('', 'Ukategorisert', sel.categoryId)}${catOpts(sel.categoryId)}</select></label>
     <div style="display:flex;gap:10px"><label class="f" style="flex:1">Dato<input class="inp" type="date" data-tx-field="date" value="${sel.date}"></label><label class="f" style="flex:1">Konto<select class="inp" data-tx-field="accountId">${accOpts(sel.accountId, '–')}</select></label></div>
-    <label class="f">Delt mappe<select class="inp" data-tx-field="folderId">${opt('', 'Ingen', sel.folderId)}${(S.txFolders ?? []).map((f) => opt(f.id, f.name, sel.folderId)).join('')}</select></label>
+    <label class="f">Bolig<select class="inp" data-tx-field="folderId">${opt('', 'Ingen', sel.folderId)}${(S.txFolders ?? []).map((f) => opt(f.id, f.name, sel.folderId)).join('')}</select></label>
     <label class="f">Notat<input class="inp" data-tx-field="note" value="${esc(sel.note ?? '')}" placeholder="Legg til notat"></label>
     <div class="box"><span class="muted">Kvittering</span>${sel.receiptId ? `<a href="#/kv" data-open-rc="${sel.receiptId}">${sel.receipt === 'booked' ? 'Vedlagt – vis' : 'Til gjennomgang →'}</a>` : `<label class="link-btn" style="cursor:pointer">Legg ved kvittering<input type="file" accept="image/*,application/pdf" data-attach-rc="${sel.id}" hidden></label>`}</div>
     <div class="orig-links"><button class="orig-link" data-orig="receipt">${icon('kv', 16, 'var(--muted)')}<span class="grow">Original kvittering</span><span class="note">${sel.receiptId ? (sel.receipt === 'booked' ? 'Vedlagt' : 'Til gjennomgang') : 'Ingen'}</span><span class="muted">›</span></button>
@@ -421,13 +424,13 @@ const SET_TABS = [['gen', 'Generelt', 'Navn, valuta, måned'], ['meny', 'Sidemen
 function menuTab() {
   const { order, hidden } = navCfg();
   const rows = order.map((p, i) => {
-    const hid = hidden.includes(p), fixed = NAV_FIXED.includes(p), label = pageName(p);
+    const hid = hidden.includes(p), fixed = NAV_FIXED.includes(p), label = esc(pageName(p)), custom = !!navLabels()[p];
     return `<div class="navcfg${hid ? ' off' : ''}" draggable="true" data-navcfg="${p}">
-      <span class="grip" aria-hidden="true">⋮⋮</span><span class="no mono">${String(i + 1).padStart(2, '0')}</span>${icon(p, 18, 'var(--muted)')}<span class="lbl">${label}</span>
+      <span class="grip" aria-hidden="true">⋮⋮</span><span class="no mono">${String(i + 1).padStart(2, '0')}</span>${icon(p, 18, 'var(--muted)')}<span class="lbl"><input class="navcfg-name" data-navcfg-name="${p}" value="${label}" placeholder="${esc(defaultName(p))}" maxlength="30" aria-label="Navn på ${esc(defaultName(p))}" spellcheck="false">${custom ? `<button type="button" class="navcfg-reset" data-navcfg-reset="${p}" title="Bruk standardnavnet «${esc(defaultName(p))}»" aria-label="Tilbakestill navnet til ${esc(defaultName(p))}">↺</button>` : ''}</span>
       <button type="button" class="mv" data-navcfg-move="${p}:-1" aria-label="Flytt ${label} opp" ${i ? '' : 'disabled'}>▲</button><button type="button" class="mv" data-navcfg-move="${p}:1" aria-label="Flytt ${label} ned" ${i < order.length - 1 ? '' : 'disabled'}>▼</button>
       ${fixed ? '<span class="always">Alltid</span>' : `<button type="button" class="toggle" role="switch" aria-checked="${!hid}" data-navcfg-tog="${p}" aria-label="Vis ${label} i sidemenyen" title="${hid ? 'Skjult' : 'Vises'}"></button>`}</div>`;
   }).join('');
-  return `<div class="sub" style="font-size:13.5px;line-height:1.5;text-wrap:pretty">Dra punktene for å endre rekkefølgen i sidemenyen, eller bruk pilene. Bryteren skjuler eller viser et menypunkt. Endringene lagres med en gang. Skjulte sider kan fortsatt åpnes fra lenker.</div>
+  return `<div class="sub" style="font-size:13.5px;line-height:1.5;text-wrap:pretty">Dra punktene for å endre rekkefølgen i sidemenyen, eller bruk pilene. Klikk på et navn for å gi punktet et eget navn, og ↺ gir standardnavnet tilbake. Bryteren skjuler eller viser et menypunkt. Endringene lagres med en gang. Skjulte sider kan fortsatt åpnes fra lenker.</div>
     <div class="navcfg-list">${rows}</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" data-act="nav-showall">Vis alle</button><button class="btn ghost" data-act="nav-reset">Tilbakestill rekkefølge</button></div>`;
 }
@@ -539,7 +542,7 @@ function modalHtml() {
     <label class="f">Beskrivelse<input class="inp" name="description" required placeholder="F.eks. Rema 1000" autofocus></label>
     <div style="display:flex;gap:10px"><label class="f" style="flex:1">Beløp (kr)<input class="inp hl mono" name="amount" required inputmode="decimal"></label><label class="f" style="flex:1">Dato<input class="inp" type="date" name="date" value="${today()}" required></label></div>
     <div style="display:flex;gap:10px"><label class="f" style="flex:1">Kategori<select class="inp" name="categoryId">${opt('', 'Automatisk (regler)', '')}${catOpts(m.kind === 'inn' ? cats('income')[0]?.id : '')}</select></label><label class="f" style="flex:1">Konto<select class="inp" name="accountId">${accOpts(accs()[0]?.id, '–')}</select></label></div>
-    <div style="display:flex;gap:10px"><label class="f" style="flex:1">Delt mappe<select class="inp" name="folderId">${opt('', 'Ingen', '')}${(S.txFolders ?? []).map((f) => opt(f.id, f.name, '')).join('')}</select></label><label class="f" style="flex:1">Notat<input class="inp" name="note"></label></div>
+    <div style="display:flex;gap:10px"><label class="f" style="flex:1">Bolig<select class="inp" name="folderId">${opt('', 'Ingen', '')}${(S.txFolders ?? []).map((f) => opt(f.id, f.name, '')).join('')}</select></label><label class="f" style="flex:1">Notat<input class="inp" name="note"></label></div>
     <button class="btn pri" style="height:50px;margin-top:4px">Lagre</button></form></div>`;
   if (m.type === 'orig') return origModal(m, close);
   if (m.type === 'acc') { const a = accs().find((x) => x.id === m.id) ?? { type: 'checking' }; return `<div class="modal" data-modal><form data-form="acc"><div class="card-h"><h2 style="font-size:19px">${m.id ? 'Endre konto' : 'Ny konto'}</h2>${close}</div>
@@ -573,6 +576,7 @@ export function draw() {
   const scroll = window.scrollY;
   const focus = document.activeElement?.closest('[data-form] input, [data-tx-field], [data-rc-field]') ? { sel: focusSel(document.activeElement), pos: document.activeElement.selectionStart } : null;
   el.innerHTML = shell(PAGE_FN[u.page]());
+  if (u.page === 'mat') attachMatplan(el);
   window.scrollTo(0, scroll);
   if (focus?.sel) { const f = el.querySelector(focus.sel); if (f) { f.focus(); try { f.setSelectionRange(focus.pos, focus.pos); } catch {} } }
 }
@@ -641,18 +645,33 @@ async function askAi(text) {
   render();
 }
 // Lagrer rekkefølge og skjulte punkter: i /api/me/layout (finNav) når det finnes, og alltid i FinansHubs prefs.
-const saveNavCfg = busyWrap(async (order, hidden) => {
+const saveNavCfg = busyWrap(async (order, hidden, labels = navLabels()) => {
   hidden = hidden.filter((p) => !NAV_FIXED.includes(p));
-  S.layout = S.layout ? { ...S.layout, finNav: { order, hidden } } : S.layout;
-  S.boot.nav = order; S.boot.navHidden = hidden; u.cfgOrder = null;
+  S.layout = S.layout ? { ...S.layout, finNav: { order, hidden, labels } } : S.layout;
+  S.boot.nav = order; S.boot.navHidden = hidden; S.boot.navLabels = labels; u.cfgOrder = null;
   render();
-  const r = await api('/prefs', { method: 'PUT', json: { nav: order, hidden } });
-  S.boot.nav = r.nav; S.boot.navHidden = r.hidden;
+  const r = await api('/prefs', { method: 'PUT', json: { nav: order, hidden, labels } });
+  S.boot.nav = r.nav; S.boot.navHidden = r.hidden; S.boot.navLabels = r.labels ?? labels;
   if (S.layoutOk) {
-    const res = await fetch('/api/me/layout', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ finNav: { order: r.nav, hidden: r.hidden } }) }).catch(() => null);
-    if (res?.ok) S.layout = { ...S.layout, finNav: { order: r.nav, hidden: r.hidden } };
+    const finNav = { order: r.nav, hidden: r.hidden, labels: S.boot.navLabels };
+    const res = await fetch('/api/me/layout', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ finNav }) }).catch(() => null);
+    if (res?.ok) S.layout = { ...S.layout, finNav };
+    // Eldre servere godtar ikke navn i layout: lagre uten, så rekkefølgen og synligheten fortsatt følger brukeren.
+    else if (res?.status === 400) {
+      const res2 = await fetch('/api/me/layout', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ finNav: { order: r.nav, hidden: r.hidden } }) }).catch(() => null);
+      if (res2?.ok) S.layout = { ...S.layout, finNav: { order: r.nav, hidden: r.hidden } };
+    }
   }
 });
+// Eget navn på et menypunkt. Tomt navn eller samme som standard fjerner overstyringen.
+function saveNavLabel(p, name) {
+  const n = String(name ?? '').replace(/\s+/g, ' ').trim().slice(0, 30);
+  const labels = { ...navLabels() };
+  if (!n || n === defaultName(p)) delete labels[p]; else labels[p] = n;
+  if ((labels[p] ?? '') === (navLabels()[p] ?? '')) return;
+  const { order, hidden } = navCfg();
+  return saveNavCfg(order, hidden, labels);
+}
 function moveNav(p, d) {
   const { order, hidden } = navCfg(), a = [...order], i = a.indexOf(p), j = i + d;
   if (i < 0 || j < 0 || j >= a.length) return;
@@ -696,6 +715,7 @@ export function bind() {
     if ((x = d('[data-del-token]'))) { await api(`/tokens/${x.dataset.delToken}`, { method: 'DELETE' }); u.msg.token = null; return load(); }
     if ((x = d('[data-hov]'))) return;
     if ((x = d('[data-navcfg-move]'))) { const [p, dir] = x.dataset.navcfgMove.split(':'); return moveNav(p, +dir); }
+    if ((x = d('[data-navcfg-reset]'))) return saveNavLabel(x.dataset.navcfgReset, '');
     if ((x = d('[data-navcfg-tog]'))) { const p = x.dataset.navcfgTog, { order, hidden } = navCfg(); return saveNavCfg(order, hidden.includes(p) ? hidden.filter((y) => y !== p) : [...hidden, p]); }
     if ((x = d('[data-txkind]'))) { const tx = S.tx?.items.find((y) => y.id === u.sel); if (tx && tx.type !== x.dataset.txkind) return patchTx(tx.id, { type: x.dataset.txkind }); return; }
     if ((x = d('[data-orig]'))) return openOrig(u.sel, x.dataset.orig);
@@ -779,6 +799,7 @@ export function bind() {
 
   el.addEventListener('change', busyWrap(async (e) => {
     const t = e.target;
+    if (t.matches('[data-navcfg-name]')) return saveNavLabel(t.dataset.navcfgName, t.value);
     if (t.matches('[data-upload]')) return uploadFiles([...t.files]);
     if (t.matches('[data-attach-rc]')) {
       const id = +t.dataset.attachRc, f = t.files[0]; t.value = '';
@@ -846,6 +867,15 @@ export function bind() {
     }
   }));
 
+  // Navnefeltet ligger i en rad som kan dras: slå av draget mens man skriver, ellers kan ikke teksten markeres.
+  el.addEventListener('pointerdown', (e) => { const i = e.target.closest?.('[data-navcfg-name]'); if (i) i.closest('[data-navcfg]').draggable = false; });
+  el.addEventListener('focusout', (e) => { const i = e.target.closest?.('[data-navcfg-name]'); if (i) i.closest('[data-navcfg]')?.setAttribute('draggable', 'true'); });
+  el.addEventListener('keydown', (e) => {
+    const i = e.target.closest?.('[data-navcfg-name]');
+    if (!i) return;
+    if (e.key === 'Enter') { e.preventDefault(); i.blur(); }
+    if (e.key === 'Escape') { i.value = pageName(i.dataset.navcfgName); i.blur(); }
+  });
   // Dra og slipp i Innstillinger → Sidemeny. DOM-noden flyttes direkte (en full omtegning midt i et drag avbryter draget).
   el.addEventListener('dragstart', (e) => {
     const n = e.target.closest?.('[data-navcfg]');

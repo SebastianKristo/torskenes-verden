@@ -9,6 +9,8 @@ const xy = (v) => Array.isArray(v) && v.length === 2 && v.every((n) => Number.is
 const VALID = {
   hp: (v) => v && typeof v === 'object' && !Array.isArray(v) && Object.entries(v).every(([k, p]) => PARTS.includes(k) && xy(p)),
   headLock: (v) => typeof v === 'boolean',
+  // 'right' (standard): logo til venstre, faner, vær og meny samlet til høyre. 'left': alt fra venstre.
+  headAlign: (v) => v === 'left' || v === 'right',
   newsSpeed: (v) => Number.isInteger(v) && v >= 1 && v <= 10,
   newsPause: (v) => typeof v === 'boolean',
   domMap: (v) => typeof v === 'boolean',

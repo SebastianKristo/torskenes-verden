@@ -66,6 +66,8 @@ app.post('/finans/share', async (c) => {
   return c.redirect(res.ok ? '/finans/#/skann' : '/finans/#/kv');
 });
 
+// Statiske filer revalideres alltid (304 når de er uendret), så en oppdatering slår inn med en gang.
+app.use('/assets/*', async (c, next) => { await next(); if (c.res.ok) c.header('Cache-Control', 'no-cache'); });
 app.use('/assets/*', serveStatic({ root: './public', rewriteRequestPath: (p) => p.replace(/^\/assets/, '') }));
 app.use('/vendor/satellite/*', serveStatic({ root: './node_modules/satellite.js/dist', rewriteRequestPath: (p) => p.replace(/^\/vendor\/satellite/, '') }));
 app.get('/manifest.webmanifest', async (c) => c.body(await page('manifest.webmanifest'), 200, { 'Content-Type': 'application/manifest+json' }));
@@ -289,6 +291,12 @@ authed.get('/config', (c) => c.json(publicConfig()));
 authed.put('/config', requireAdmin, async (c) => {
   try { updateConfig(await c.req.json()); } catch (e) { return c.json({ error: e.message }, 400); }
   return c.json(publicConfig());
+});
+// «Test tilkobling»: ett ekte kall via serveren med de lagrede verdiene.
+authed.post('/config/test/:group', requireAdmin, async (c) => {
+  const group = c.req.param('group');
+  if (!integrations.TEST_GROUPS.includes(group)) return c.json({ error: 'Ukjent integrasjon' }, 404);
+  return c.json(await integrations.testIntegration(group));
 });
 
 /* --- Filer (kvitteringer og bakgrunner) --- */

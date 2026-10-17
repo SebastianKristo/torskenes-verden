@@ -295,7 +295,11 @@ input[type=date]{color-scheme:dark}
 .navcfg-list{display:flex;flex-direction:column;gap:6px;max-width:560px}
 .navcfg{display:flex;align-items:center;gap:12px;min-height:48px;padding:0 8px 0 12px;border-radius:12px;border:1px solid var(--line);background:var(--inner);cursor:grab;user-select:none}
 .navcfg.dragging{opacity:.4}.navcfg .grip{color:var(--muted);font-size:15px;letter-spacing:-2px}
-.navcfg .no{width:22px;font-size:12px;color:var(--muted)}.navcfg .lbl{flex:1;font-size:14.5px;font-weight:500}
+.navcfg .no{width:22px;font-size:12px;color:var(--muted)}.navcfg .lbl{flex:1;min-width:0;display:flex;align-items:center;gap:6px;font-size:14.5px;font-weight:500}
+.navcfg-name{flex:1;min-width:0;height:34px;padding:0 8px;margin-left:-8px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--text);font:inherit;user-select:text;cursor:text}
+.navcfg-name:hover{border-color:var(--line2)}.navcfg-name:focus{outline:none;border-color:rgba(255,122,61,.55);background:var(--card)}
+.navcfg-reset{flex:none;width:28px;height:28px;border-radius:8px;border:1px solid var(--line2);background:var(--card);color:var(--muted);font-size:14px;padding:0}.navcfg-reset:hover{color:var(--text)}
+.fh-mat{display:block;min-width:0}
 .navcfg.off .lbl,.navcfg.off svg{opacity:.45}
 .navcfg .mv{width:32px;height:32px;border-radius:8px;border:1px solid var(--line2);background:var(--card);color:var(--text2);font-size:11px;padding:0}
 .navcfg .mv:disabled{color:var(--line2)}.navcfg .always{flex:none;width:44px;text-align:center;font-size:11px;color:var(--muted)}

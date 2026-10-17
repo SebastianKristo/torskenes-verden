@@ -351,3 +351,117 @@ export const getNews = () => cached('news', 5 * 60_000, async () => {
   if (!items.length) throw new Error('Fikk ikke hentet nyheter fra NRK eller VG');
   return { items: items.sort((a, b) => b.date.localeCompare(a.date)).slice(0, 24) };
 });
+
+/* ---------------- Test tilkobling (Innstillinger → Integrasjoner) ---------------- */
+
+const TEST_MS = 8000;
+class TestError extends Error {}
+
+// Ett ekte kall mot tjenesten med de lagrede verdiene. Feil gjøres om til en forklaring på norsk.
+async function probe(url, opts = {}, { insecureTls = false } = {}) {
+  let res;
+  try {
+    res = await fetch(url, { ...opts, redirect: 'follow', signal: AbortSignal.timeout(TEST_MS), ...(insecureTls ? { dispatcher: insecure } : {}) });
+  } catch (e) {
+    const host = (() => { try { return new URL(url).host; } catch { return url; } })();
+    const code = e.cause?.code ?? e.code ?? '';
+    if (e.name === 'TimeoutError' || e.name === 'AbortError') throw new TestError(`Ingen svar fra ${host} innen ${TEST_MS / 1000} sekunder.`);
+    if (code === 'ENOTFOUND' || code === 'EAI_AGAIN') throw new TestError(`Fant ikke ${host}. Sjekk adressen, og at serveren har tilgang til nettet (DNS).`);
+    if (code === 'ECONNREFUSED') throw new TestError(`${host} avviste tilkoblingen. Kjører tjenesten, og stemmer porten?`);
+    if (/CERT|SSL|TLS/i.test(code + e.message)) throw new TestError(`Sertifikatfeil mot ${host} (${code || e.message}).`);
+    throw new TestError(`Fikk ikke kontakt med ${host}: ${e.cause?.message ?? e.message}`);
+  }
+  if (res.status === 401 || res.status === 403) throw new TestError(`Nøkkelen eller tokenet ble avvist (${res.status}).`);
+  if (res.status === 404) throw new TestError(`Fant ikke adressen (404). Sjekk URL-en.`);
+  if (res.status === 429) throw new TestError('For mange forespørsler (429). Prøv igjen om litt.');
+  if (!res.ok) throw new TestError(`Tjenesten svarte ${res.status} ${res.statusText}`.trim());
+  return res;
+}
+const need = (v, msg) => { if (!v) throw new TestError(msg); return v; };
+const base = (k) => cfg(k).replace(/\/+$/, '');
+
+const TESTS = {
+  'Vær (MET/Yr)': async () => {
+    const r = await probe(`https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=${(+cfg('wx_lat')).toFixed(4)}&lon=${(+cfg('wx_lon')).toFixed(4)}`, { headers: { 'User-Agent': config.metUserAgent } });
+    const t = (await r.json()).properties?.timeseries?.[0]?.data?.instant?.details?.air_temperature;
+    return `MET svarte · ${t ?? '–'} °C i ${cfg('wx_place') || 'valgt sted'} nå.`;
+  },
+  'Ruter (Entur)': async () => {
+    const routes = parseRoutes(cfg('ruter_routes'));
+    need(routes.length, 'Ingen strekninger er satt opp.');
+    const ids = [...new Set(routes.flatMap((r) => [r.fromId, r.toId]))].slice(0, 8);
+    const q = `{${ids.map((id, i) => `s${i}: stopPlace(id: "NSR:StopPlace:${id}") { name }`).join(' ')}}`;
+    const r = await probe('https://api.entur.io/journey-planner/v3/graphql', { method: 'POST', headers: { 'Content-Type': 'application/json', 'ET-Client-Name': config.enturClient }, body: JSON.stringify({ query: q }) });
+    const data = (await r.json()).data ?? {};
+    const missing = ids.filter((_, i) => !data[`s${i}`]);
+    if (missing.length) throw new TestError(`Entur svarte, men fant ikke stopp ${missing.join(', ')}. Sjekk NSR-ID-ene.`);
+    return `Entur svarte · ${ids.length} stopp funnet: ${ids.map((_, i) => data[`s${i}`].name).join(', ')}.`;
+  },
+  'Kalender / timeplan': async () => {
+    const url = need(cfg('cal_ics'), 'iCal-adressen mangler.');
+    const text = await (await probe(url)).text();
+    if (!/BEGIN:VCALENDAR/.test(text)) throw new TestError('Adressen svarte, men det er ikke en iCal-kalender.');
+    const n = (text.match(/BEGIN:VEVENT/g) ?? []).length;
+    return `Kalenderen svarte · ${n} hendelser.`;
+  },
+  'Home Assistant': async () => {
+    const url = need(base('ha_url'), 'Adressen til Home Assistant mangler.');
+    const token = need(cfg('ha_token'), 'Long-lived token mangler.');
+    const h = { headers: { Authorization: `Bearer ${token}` } };
+    const msg = (await (await probe(`${url}/api/`, h, { insecureTls: true })).json()).message ?? 'svar';
+    const sensor = cfg('ha_sensor_power');
+    if (!sensor) return `Home Assistant svarte (${msg}).`;
+    try {
+      const st = await (await probe(`${url}/api/states/${encodeURIComponent(sensor)}`, h, { insecureTls: true })).json();
+      return `Home Assistant svarte (${msg}) · ${sensor} = ${st.state}${st.attributes?.unit_of_measurement ? ' ' + st.attributes.unit_of_measurement : ''}.`;
+    } catch (e) {
+      if (e instanceof TestError && /404/.test(e.message)) throw new TestError(`Tilkoblet, men fant ikke sensoren ${sensor}.`);
+      throw e;
+    }
+  },
+  Sonarr: () => arrTest('sonarr', 'Sonarr'),
+  Radarr: () => arrTest('radarr', 'Radarr'),
+  'Trading 212': async () => {
+    const key = need(cfg('t212_key'), 'API-nøkkelen mangler.');
+    const cash = await (await probe(`${config.trading212Base}/api/v0/equity/account/cash`, { headers: { Authorization: key } })).json();
+    return `Trading 212 svarte · totalt ${Math.round(cash.total ?? 0).toLocaleString('nb-NO')}.`;
+  },
+  'NASA / CelesTrak': async () => {
+    const a = await (await probe(`https://api.nasa.gov/planetary/apod?api_key=${encodeURIComponent(cfg('nasa_key') || 'DEMO_KEY')}`)).json();
+    const tle = await (await probe(`https://celestrak.org/NORAD/elements/gp.php?GROUP=${encodeURIComponent(cfg('sat_group'))}&FORMAT=tle`, { headers: { 'User-Agent': config.metUserAgent } })).text();
+    const n = Math.floor(tle.trim().split(/\r?\n/).length / 3);
+    if (!n) throw new TestError(`NASA svarte, men CelesTrak-gruppen «${cfg('sat_group')}» er tom.`);
+    return `NASA svarte («${a.title ?? 'dagens bilde'}») · CelesTrak: ${n.toLocaleString('nb-NO')} satellitter.`;
+  },
+  Cloudflare: async () => {
+    const token = need(cfg('cf_token'), 'Standard-tokenet mangler.');
+    const j = await (await probe('https://api.cloudflare.com/client/v4/user/tokens/verify', { headers: { Authorization: `Bearer ${token}` } })).json();
+    if (!j.success) throw new TestError(j.errors?.[0]?.message ?? 'Cloudflare godtok ikke tokenet.');
+    return `Cloudflare godtok tokenet (status ${j.result?.status ?? 'ok'}).`;
+  },
+  'Søk': async () => {
+    const url = cfg('search_url');
+    if (!/^https?:\/\/[^\s]+$/.test(url)) throw new TestError('Søke-URL-en er ugyldig.');
+    await probe(url + encodeURIComponent('homelab'), { headers: { 'User-Agent': 'Mozilla/5.0 (homelab-os)' } });
+    return `Søkemotoren svarte (${new URL(url).host}).`;
+  },
+};
+
+async function arrTest(k, name) {
+  const url = need(base(`${k}_url`), `Adressen til ${name} mangler.`);
+  const key = need(cfg(`${k}_key`), 'API-nøkkelen mangler.');
+  const s = await (await probe(`${url}/api/v3/system/status`, { headers: { 'X-Api-Key': key } }, { insecureTls: true })).json();
+  return `${name} ${s.version ?? ''} svarte.`.replace(/\s+svarte/, ' svarte');
+}
+
+export const TEST_GROUPS = Object.keys(TESTS);
+
+/** Tester én integrasjonsgruppe med de lagrede verdiene. Kaster aldri; svarer { ok, message, ms }. */
+export async function testIntegration(group) {
+  const fn = TESTS[group];
+  if (!fn) return { ok: false, message: 'Ingen test for denne gruppen.', ms: 0 };
+  const t0 = Date.now();
+  if (process.env.MOCK_DATA === '1') return { ok: true, message: 'Demodata (MOCK_DATA=1): ingen ekte kall ble gjort.', ms: 0, mock: true };
+  try { return { ok: true, message: await fn(), ms: Date.now() - t0 }; }
+  catch (e) { return { ok: false, message: e instanceof TestError ? e.message : `Uventet feil: ${e.message}`, ms: Date.now() - t0 }; }
+}

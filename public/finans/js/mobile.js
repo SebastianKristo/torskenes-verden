@@ -3,8 +3,7 @@
 // ≥ 600 px (åpen brettbar): navigasjonsrail + to paneler for Finans (liste/detalj).
 import {
   S, api, esc, n0, n2, sgn, neg, dd, dWeek, today, monthName, cap, ini, greet, parseAmount,
-  loadBoot, loadSummary, loadTx, loadReceipts, cats, accs, uploadReceipt, icon, logo, aiLine, conic,
-} from './core.js';
+  loadBoot, loadSummary, loadTx, loadReceipts, cats, accs, uploadReceipt, icon, logo, aiLine, conic, navName } from './core.js';
 import { MODS, modView, modLoad, domNav, modBind } from './mobile-mods.js';
 import { settingsView, settingsLoad, settingsBind } from './mobile-set.js';
 import { hlView, hlLoad, hlBind, hlAfterDraw, LAY, loadLayout } from './mobile-hl.js';
@@ -36,7 +35,9 @@ export const FIN = ['hjem', 'liste', 'budsjett', 'sok', 'skann', 'opp', ...PAGES
 const TWO = ['hjem', 'liste', 'budsjett', 'skann', 'opp', 'sok'];
 const HLG = ['hl', 'mat', 'set'];
 const ALL = [...new Set([...FIN, 'hl', 'mat', 'dom', 'set'])];
-const tabsOf = (keys, def, fixed) => keys.filter((k) => def[k] && (fixed.includes(k) || !LAY().hide[k])).map((k) => def[k]);
+// Oversikt, Liste og Budsjett bruker egne navn fra Sidemeny; Søk og Mer beholder de korte navnene i fanelinja.
+const RENAME = ['home', 'list', 'bud'];
+const tabsOf = (keys, def, fixed) => keys.filter((k) => def[k] && (fixed.includes(k) || !LAY().hide[k])).map((k) => (def === FINTABS && RENAME.includes(k) ? [def[k][0], navName(k, def[k][1]), def[k][2]] : def[k]));
 export const hlTabs = () => tabsOf(LAY().hlTabs, HLTABS, FIXED_HL);
 export const finTabs = () => tabsOf(LAY().finTabs, FINTABS, FIXED_FIN);
 const finCur = (s) => (s === 'liste' ? 'liste' : s === 'budsjett' ? 'budsjett' : s === 'sok' ? 'sok' : [...PAGES, ...FINMODS].includes(s) ? 'mer' : 'hjem');
@@ -113,7 +114,7 @@ export function backBtn(th, href, label = 'Tilbake', act = '') {
 function home(th) {
   const s = S.summary;
   if (S.boot?.restricted) return `<div class="m-row" style="justify-content:space-between;padding:6px 4px 0"><div class="title">Finans</div>${avatar()}</div>
-    <div class="m-empty">Kontoen din har tilgang til Delte mapper. Regnskapet tilhører eieren av serveren.</div><a class="cta ${th === 'ios' ? 'glass' : ''}" href="#/dir"><span class="m-grow"><b style="font-weight:600">Delte mapper</b></span><span style="opacity:.6">›</span></a>`;
+    <div class="m-empty">Kontoen din har tilgang til Boliger. Regnskapet tilhører eieren av serveren.</div><a class="cta ${th === 'ios' ? 'glass' : ''}" href="#/dir"><span class="m-grow"><b style="font-weight:600">Boliger</b></span><span style="opacity:.6">›</span></a>`;
   return `<div class="m-row" style="justify-content:space-between;align-items:flex-end;padding:6px 4px 0"><div><div class="hello">${greet()}, ${esc(meName())}</div><div class="title">${cap(monthName(S.summary?.month ?? today().slice(0, 7)))}</div></div>${avatar()}</div>
     ${hero(th)}
     ${jobsPill(th)}
