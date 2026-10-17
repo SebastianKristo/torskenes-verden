@@ -119,7 +119,7 @@ export const icon = (k, size = 18, stroke = 'currentColor', w = 2) => `<svg widt
 export function logo(t, size = 40, radius = 12) {
   const name = t?.description ?? t?.merchant ?? t?.name ?? '', color = t?.color ?? '#A0A0AA';
   const box = `width:${size}px;height:${size}px;border-radius:${radius}px;flex:none`;
-  if (t?.domain) return `<span class="m-logo" style="${box}"><img src="/finans/api/logo/${encodeURIComponent(t.domain)}" alt="" loading="lazy" width="${size - 8}" height="${size - 8}" onerror="this.parentNode.classList.add('err');this.remove()"><i style="color:${color}">${esc(ini(name))}</i></span>`;
+  if (t?.domain) return `<span class="m-logo" style="${box}"><img src="/finans/api/logo/${encodeURIComponent(t.domain)}" alt="" loading="lazy" width="${size - 8}" height="${size - 8}"><i style="color:${color}">${esc(ini(name))}</i></span>`;
   return `<span class="m-ini" style="${box};background:${rgba(color, 0.18)};color:${color};font-size:${Math.round(size * 0.4)}px">${esc(ini(name))}</span>`;
 }
 export const aiLine = (s, cls = 'ai') => (s ? `<span class="${cls}">✦ ${esc(s)}</span>` : '');
@@ -135,3 +135,6 @@ export async function matApi(path, opts = {}) {
 }
 ICONS.mat = 'M7 3v8a2 2 0 0 0 2 2v8M5 3v6M9 3v6M17 21V3c-2 0-4 2-4 7v4h4';
 ICONS.close = 'M6 6l12 12M18 6L6 18';
+
+// Logoer som ikke finnes: vis forbokstaven (CSP stopper inline onerror).
+document.addEventListener('error', (e) => { const img = e.target; if (img?.tagName === 'IMG' && img.parentNode?.classList?.contains('m-logo')) { img.parentNode.classList.add('err'); img.remove(); } }, true);

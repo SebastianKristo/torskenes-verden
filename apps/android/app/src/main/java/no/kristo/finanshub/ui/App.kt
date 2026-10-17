@@ -750,7 +750,7 @@ private fun ProfileMenu(vm: AppViewModel) {
     val ctx = LocalContext.current
     var server by remember { mutableStateOf(vm.server) }
     var pw by remember { mutableStateOf("") }
-    val open: (String) -> Unit = { hash -> ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(vm.server.trimEnd('/') + "/finans/#/" + hash))) }
+    val open: (String) -> Unit = { hash -> ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(vm.server.trimEnd('/') + "/finans/?desktop=1#/" + hash))) }
     ModalBottomSheet(onDismissRequest = { vm.menuOpen = false }, containerColor = C.surface1) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp, 0.dp, 20.dp, 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(C.surface2).padding(4.dp)) {
@@ -764,7 +764,7 @@ private fun ProfileMenu(vm: AppViewModel) {
             }
             SectionLabel("Andre OS")
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                listOf("Subscription OS" to "abonnement", "Delte mapper" to "mapper", "Finn-handler" to "finn").forEachIndexed { i, (n, h) ->
+                listOf("Subscription OS" to "sub", "Delte mapper" to "dir", "Finn-handler" to "finn").forEachIndexed { i, (n, h) ->
                     Row(Modifier.fillMaxWidth().clip(itemShape(i, 3)).background(C.surface2).clickable { open(h) }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(n, Modifier.weight(1f)); Icon(Icons.AutoMirrored.Filled.OpenInNew, null, tint = C.text2)
                     }

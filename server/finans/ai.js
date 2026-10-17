@@ -140,3 +140,33 @@ export async function health() {
   }
   return out;
 }
+
+// Generelt tekst → JSON-kall (sammendrag, domenegjetting, Finn-e-post). Gemini først hvis nøkkel finnes, ellers Ollama.
+// Kaster ved feil; kallerne har alltid en heuristisk reserve.
+export async function askJson(prompt, schema, { timeout = 30_000 } = {}) {
+  const st = settings();
+  const order = [...new Set([secret('geminiKey') ? 'gemini' : null, st.provider, st.fallback ? 'ollama' : null].filter(Boolean))];
+  let lastErr;
+  for (const p of order) {
+    try {
+      if (p === 'gemini') {
+        const key = secret('geminiKey');
+        if (!key) throw new Error('Gemini-nøkkel mangler');
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(st.geminiModel)}:generateContent`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, signal: AbortSignal.timeout(timeout),
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, responseMimeType: 'application/json', responseSchema: forGemini(schema) } }),
+        });
+        if (!res.ok) throw new Error(`Gemini svarte ${res.status}`);
+        const d = await res.json();
+        return JSON.parse(d.candidates?.[0]?.content?.parts?.map((x) => x.text ?? '').join('') ?? '');
+      }
+      const res = await fetch(`${st.ollamaUrl.replace(/\/$/, '')}/api/chat`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(timeout),
+        body: JSON.stringify({ model: st.ollamaModel, stream: false, format: forOllama(schema), options: { temperature: 0.2 }, messages: [{ role: 'user', content: prompt }] }),
+      });
+      if (!res.ok) throw new Error(`Ollama svarte ${res.status}`);
+      return JSON.parse((await res.json()).message.content);
+    } catch (e) { lastErr = e; }
+  }
+  throw lastErr ?? new Error('Ingen AI-motor tilgjengelig');
+}

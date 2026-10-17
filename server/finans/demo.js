@@ -48,5 +48,32 @@ export function loadDemo() {
     const rc = q("INSERT INTO fh_receipts(id,status,provider,model,seconds,extraction,merchant,date,total,category_id,account_id,confidence,transaction_id,created) VALUES(?,'needs_review',?,?,?,?,?,?,?,?,?,?,(SELECT id FROM fh_transactions WHERE description=? LIMIT 1),?)");
     rc.run('demo-1', 'ollama', 'qwen2.5vl:7b', 11.4, JSON.stringify({ merchant: 'Clas Ohlson', lines: [{ description: 'Skjøteledning', amount: 199 }, { description: 'Lyspære E27 ×2', amount: 150 }], vat: [{ rate: 25, amount: 69.8 }], confidence: { total: 0.97 } }), 'Clas Ohlson', day(0, 15), 34900, cat('Hjem'), acc.Kredittkort, 0.97, 'Clas Ohlson', Date.now());
     rc.run('demo-2', 'gemini', 'gemini-2.5-flash', 2.1, JSON.stringify({ merchant: 'Circle K Lading', lines: [], vat: [], confidence: { total: 0.72 } }), 'Circle K Lading', day(0, 15), 61240, cat('Transport og lading'), acc.Kredittkort, 0.72, 'Circle K Lading', Date.now() - 1000);
+    q("UPDATE fh_receipts SET ai_short='Skjøteledning og to lyspærer til hjemmet', ai_long='Kjøp hos Clas Ohlson: en skjøteledning og to E27-lyspærer. Kategorisert som hjem.', domain='clasohlson.com' WHERE id='demo-1'").run();
+    q("UPDATE fh_receipts SET ai_short='Hurtiglading av elbil', domain='circlek.no' WHERE id='demo-2'").run();
+    // FinansHub v2: abonnementer, delte mapper og Finn-handler.
+    const sub = q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,low_use,domain,ai_short,created) VALUES(?,?,?,?,?,?,?,?,?,?)');
+    for (const [n, p, v, cyc, nd, use, low, dom, ai] of [['Netflix', 'Standard', 149, 'monthly', 17, 'Sett 2 t siste 30 d', 1, 'netflix.com', 'Strømmetjeneste, månedlig trekk'],
+      ['Spotify', 'Familie', 239, 'monthly', 5, 'Daglig', 0, 'spotify.com', 'Musikkabonnement, familieplan'], ['iCloud+', '200 GB', 39, 'monthly', 12, '86 % brukt', 0, 'apple.com', 'Lagringsplass i iCloud'],
+      ['Proton', 'Mail Plus · EUR 1', 11, 'monthly', 25, 'Ukentlig', 0, 'proton.me', 'Proton Mail Plus, betalt i euro'], ['ChatGPT', 'Plus', 229, 'monthly', 19, 'Ikke åpnet på 26 d', 1, 'openai.com', 'AI-abonnement, lite brukt siste måned'],
+      ['Viaplay', 'Total', 449, 'monthly', 15, 'Sett 1 t siste 30 d', 1, 'viaplay.no', 'Strømmetjeneste, månedlig trekk'], ['Cloudflare', 'Domene', 108, 'yearly', 150, 'Årlig 108 kr', 0, 'cloudflare.com', 'Domenefornyelse'],
+      ['Ruter', '30-dagers', 518, 'monthly', 23, 'Daglig', 0, 'ruter.no', 'Kollektivbillett i Ruter-appen']]) {
+      const x = new Date(now); x.setDate(x.getDate() + nd);
+      sub.run(n, p, v * 100, cyc, x.toLocaleDateString('sv-SE'), use, low, dom, ai, Date.now());
+    }
+    const folder = q('INSERT INTO fh_folders(name,created) VALUES(?,?) RETURNING id');
+    const mem = q('INSERT INTO fh_folder_members(folder_id,name,email,role,status) VALUES(?,?,?,?,?)');
+    const ent = q('INSERT INTO fh_folder_entries(folder_id,description,date,amount,paid_by,created) VALUES(?,?,?,?,?,?)');
+    for (const [name, members, rows] of [['Hytta', ['Sebastian', 'Ingrid', 'Pål'], [['Fjordkraft hytte', 2, 'Sebastian', 1840], ['Ved og pellets · Biltema', -2, 'Pål', 1290], ['Rema 1000 Geilo', -3, 'Ingrid', 946], ['Kommunale avgifter Q3', -15, 'Sebastian', 3420]]],
+      ['Felles husholdning', ['Sebastian', 'Ingrid'], [['Rema 1000 Bislett', 16, 'Sebastian', 386], ['IKEA', 5, 'Ingrid', 1499]]]]) {
+      const id = folder.get(name, Date.now()).id;
+      members.forEach((m, i) => mem.run(id, m, null, i ? 'member' : 'owner', 'active'));
+      for (const [d, dd, who, v] of rows) ent.run(id, d, dd > 0 ? day(0, dd) : day(-1, 28 + dd), v * 100, who, Date.now());
+    }
+    const finn = q('INSERT INTO fh_finn(role,item,counterpart,date,amount,steps,created) VALUES(?,?,?,?,?,?,?)');
+    for (const [role, item, who, dd, v, steps, done] of [['bought', 'Sykkel Trek FX 3', 'selger Kari N.', 12, 4500, ['Trygg betaling', 'Fiks ferdig · sendt', 'Tillit forsikring', 'Ikke mottatt'], 2],
+      ['sold', 'iPhone 13 128 GB', 'kjøper Ola H.', 8, 3200, ['Trygg betaling', 'Fiks ferdig · levert', 'Utbetalt'], 3], ['bought', 'Kontorstol HÅG', 'selger Mona L.', 1, 1200, ['Trygg betaling', 'Fiks ferdig · levert', 'Godkjent'], 3],
+      ['sold', 'PS5-kontroller', 'kjøper Jonas B.', -2, 450, ['Trygg betaling', 'Venter på sending'], 1]]) {
+      finn.run(role, item, who, dd > 0 ? day(0, dd) : day(-1, 28 + dd), v * 100, JSON.stringify(steps.map((t, i) => ({ t, done: i < done }))), Date.now());
+    }
   })();
 }

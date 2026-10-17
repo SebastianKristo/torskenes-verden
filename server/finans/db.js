@@ -98,6 +98,70 @@ CREATE TABLE IF NOT EXISTS fh_tokens (
 );
 `);
 
+// FinansHub v2: abonnementer, delte mapper, Finn-handler.
+db.exec(`
+CREATE TABLE IF NOT EXISTS fh_subscriptions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  plan TEXT NOT NULL DEFAULT '',
+  price INTEGER NOT NULL DEFAULT 0,            -- øre per syklus
+  cycle TEXT NOT NULL DEFAULT 'monthly',       -- monthly | yearly
+  next_date TEXT,
+  usage_note TEXT NOT NULL DEFAULT '',
+  low_use INTEGER NOT NULL DEFAULT 0,
+  active INTEGER NOT NULL DEFAULT 1,           -- 1 aktiv, 0 sagt opp
+  domain TEXT,
+  ai_short TEXT,
+  tx_id INTEGER REFERENCES fh_transactions(id) ON DELETE SET NULL,
+  created INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS fh_folders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  created INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS fh_folder_members (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  folder_id INTEGER NOT NULL REFERENCES fh_folders(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  email TEXT,
+  role TEXT NOT NULL DEFAULT 'member',         -- owner | member
+  status TEXT NOT NULL DEFAULT 'active'        -- active | invited
+);
+CREATE TABLE IF NOT EXISTS fh_folder_entries (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  folder_id INTEGER NOT NULL REFERENCES fh_folders(id) ON DELETE CASCADE,
+  tx_id INTEGER REFERENCES fh_transactions(id) ON DELETE SET NULL,
+  receipt_id TEXT REFERENCES fh_receipts(id) ON DELETE SET NULL,
+  description TEXT NOT NULL,
+  date TEXT NOT NULL,
+  amount INTEGER NOT NULL,                     -- øre, positivt = utgift
+  paid_by TEXT NOT NULL,
+  split TEXT NOT NULL DEFAULT 'equal',
+  created INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS fh_finn (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  role TEXT NOT NULL,                          -- bought | sold
+  item TEXT NOT NULL,
+  counterpart TEXT NOT NULL DEFAULT '',
+  date TEXT NOT NULL,
+  amount INTEGER NOT NULL,                     -- øre
+  steps TEXT NOT NULL DEFAULT '[]',            -- [{t, done}]
+  source TEXT,                                 -- hash av e-posten, hindrer duplikater
+  tx_id INTEGER REFERENCES fh_transactions(id) ON DELETE SET NULL,
+  created INTEGER NOT NULL,
+  UNIQUE(source)
+);
+`);
+// Nye kolonner på eksisterende tabeller (idempotent).
+const addCol = (t, col, def) => { if (!db.prepare(`PRAGMA table_info(${t})`).all().some((c) => c.name === col)) db.exec(`ALTER TABLE ${t} ADD COLUMN ${col} ${def}`); };
+for (const t of ['fh_transactions', 'fh_receipts']) { addCol(t, 'ai_short', 'TEXT'); addCol(t, 'ai_long', 'TEXT'); addCol(t, 'domain', 'TEXT'); }
+addCol('fh_transactions', 'ai_done', 'INTEGER NOT NULL DEFAULT 0');
+addCol('fh_receipts', 'name', 'TEXT');          // opprinnelig filnavn (opplastingskøen)
+addCol('fh_receipts', 'started', 'INTEGER');    // når AI-en begynte, for fremdrift
+addCol('fh_receipts', 'target', 'TEXT');        // 'sub' | 'folder:<id>' – hva kvitteringen ble lastet opp for
+
 export const DEFAULT_CATEGORIES = [
   ['Mat og dagligvarer', '#FF9F5A', 'expense'], ['Restaurant og kafé', '#F2C14E', 'expense'], ['Transport og lading', '#7AA7FF', 'expense'],
   ['Bolig', '#B79CFF', 'expense'], ['Hjem', '#8FD3FF', 'expense'], ['Fritid og hobby', '#5FD3A8', 'expense'], ['Abonnementer', '#FF6B8B', 'expense'],
@@ -111,14 +175,15 @@ export const DEFAULT_SETTINGS = {
   provider: process.env.AI_PROVIDER === 'gemini' ? 'gemini' : 'ollama', fallback: (process.env.AI_FALLBACK ?? 'gemini') !== 'none',
   ollamaUrl: process.env.OLLAMA_URL ?? 'http://192.168.1.30:11434', ollamaModel: process.env.OLLAMA_MODEL ?? 'qwen2.5vl:7b',
   geminiModel: process.env.GEMINI_MODEL ?? 'gemini-2.5-flash', minConf: Math.round(Number(process.env.AI_MIN_CONFIDENCE ?? 0.85) * 100),
-  autoCat: true, n80: true, n100: true, nRc: true, nFast: true, csvProfile: 'DNB',
+  autoCat: true, n80: true, n100: true, nRc: true, nFast: true, csvProfile: 'DNB', aiSummaries: true,
+  imapHost: '', imapUser: '', imapFolder: 'INBOX',
 };
 
 export function settings() { return { ...DEFAULT_SETTINGS, ...kv.get(OWNER, 'fh_settings', {}) }; }
 export function saveSettings(patch) { kv.set(OWNER, 'fh_settings', { ...kv.get(OWNER, 'fh_settings', {}), ...patch }); }
 
 // Hemmeligheter for FinansHub (Gemini-nøkkel) lagres separat og sendes aldri ut.
-export const secret = (k) => kv.get(OWNER, 'fh_secret', {})[k] || process.env[{ geminiKey: 'GEMINI_API_KEY' }[k]] || '';
+export const secret = (k) => kv.get(OWNER, 'fh_secret', {})[k] || process.env[{ geminiKey: 'GEMINI_API_KEY', imapPass: 'FINN_IMAP_PASSWORD' }[k]] || '';
 export function setSecret(k, v) { const s = kv.get(OWNER, 'fh_secret', {}); if (v) s[k] = v; else delete s[k]; kv.set(OWNER, 'fh_secret', s); }
 
 // Første oppstart: kategorier og regler, og flytt gamle kvitteringer fra den enkle Økonomi-fanen inn som transaksjoner.

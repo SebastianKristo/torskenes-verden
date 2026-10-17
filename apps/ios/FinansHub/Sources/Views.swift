@@ -907,8 +907,8 @@ struct ProfileMenu: View {
                 .padding(4).glass(26)
                 SectionLabel(text: "Andre OS")
                 VStack(spacing: 0) {
-                    ForEach([("Subscription OS", "abonnement"), ("Delte mapper", "mapper"), ("Finn-handler", "finn")], id: \.1) { n, h in
-                        Button { if let u = URL(string: store.server + "/finans/#/" + h) { openURL(u) } } label: {
+                    ForEach([("Subscription OS", "sub"), ("Delte mapper", "dir"), ("Finn-handler", "finn")], id: \.1) { n, h in
+                        Button { if let u = URL(string: store.server + "/finans/?desktop=1#/" + h) { openURL(u) } } label: {
                             HStack { Text(n); Spacer(); Image(systemName: "arrow.up.right").foregroundStyle(.white.opacity(0.6)) }.padding(16).contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)

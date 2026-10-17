@@ -7,6 +7,9 @@ import { join, resolve } from 'node:path';
 import { db, OWNER, settings, saveSettings, secret, setSecret, DEFAULT_SETTINGS } from './db.js';
 import { extract, health, providerName } from './ai.js';
 import { parseCsv, PROFILES } from './csv.js';
+import { domainFor, learnDomain, validDomain, logo, heuristic, kick as kickAi, summarizeReceipt } from './enrich.js';
+import { parseFile, readText, rowsToTx } from './importer.js';
+import { parseFinnEmail } from './finn.js';
 import { sessionUser, clientIp, loginBlocked, loginFailed, loginSucceeded } from '../auth.js';
 import { verifyPassword } from '../password.js';
 import { config } from '../config.js';
@@ -36,6 +39,9 @@ function access(c) {
   return { user: OWNER, scopes: new Set(row.scopes.split(' ')), session: false };
 }
 
+// For andre moduler (Matplan) som vil godta mobilappens token: true når økt eller token med scope finnes.
+export function bearerOk(c, scope = 'finance:read') { const a = access(c); return !!a && a.scopes.has(scope); }
+
 const need = (scope) => async (c, next) => {
   const a = c.get('access');
   if (!a.scopes.has(scope)) return bad(c, `Tokenet mangler tilgangen ${scope}`, 403);
@@ -52,10 +58,20 @@ function txOut(t, cats = catById(), accs = accById()) {
   const cat = cats.get(t.category_id), acc = accs.get(t.account_id);
   return { id: t.id, date: t.date, amount: t.amount / 100, description: t.description, merchant: t.merchant, note: t.note, source: t.source,
     categoryId: t.category_id, category: cat?.name ?? 'Ukategorisert', color: cat?.color ?? '#A0A0AA', kind: cat?.kind ?? 'expense',
-    accountId: t.account_id, account: acc?.name ?? '–', receipt: t.receipt_status ?? null, receiptId: t.receipt_id ?? null };
+    accountId: t.account_id, account: acc?.name ?? '–', receipt: t.receipt_status ?? null, receiptId: t.receipt_id ?? null, ...aiOf(t, cat?.name) };
+}
+// ✦-felt: AI-tekst hvis den finnes, ellers heuristikk. Varelinjer fra koblet kvittering.
+function aiOf(t, category) {
+  let lines = [];
+  try { lines = t.receipt_extraction ? (JSON.parse(t.receipt_extraction).lines ?? []).map((l) => ({ description: l.description, amount: l.amount })) : []; } catch { /* ugyldig */ }
+  const name = t.merchant || t.description;
+  const h = (!t.ai_short || !t.ai_long) ? heuristic({ merchant: name, amount: t.amount / 100, lines, category }) : {};
+  return { aiShort: t.ai_short || t.receipt_ai_short || h.short || null, aiLong: t.ai_long || t.receipt_ai_long || h.long || null,
+    domain: t.domain || domainFor(name) || domainFor(t.description), lines, folder: t.folder_name ?? null };
 }
 
-const TX_SELECT = `SELECT t.*, r.status AS receipt_status, r.id AS receipt_id FROM fh_transactions t
+const TX_SELECT = `SELECT t.*, r.status AS receipt_status, r.id AS receipt_id, r.extraction AS receipt_extraction, r.ai_short AS receipt_ai_short, r.ai_long AS receipt_ai_long,
+  (SELECT f.name FROM fh_folder_entries e JOIN fh_folders f ON f.id=e.folder_id WHERE e.tx_id=t.id LIMIT 1) AS folder_name FROM fh_transactions t
   LEFT JOIN fh_receipts r ON r.transaction_id = t.id`;
 
 // Regler: * er jokertegn, ingen skiller på store/små bokstaver. Mønsteret kan starte ved et hvilket som helst ord,
@@ -132,7 +148,9 @@ function receiptOut(r, cats = catById(), accs = accById()) {
     merchant: r.merchant, date: r.date, total: r.total != null ? r.total / 100 : null, categoryId: r.category_id, category: cats.get(r.category_id)?.name ?? null,
     accountId: r.account_id, account: accs.get(r.account_id)?.name ?? null, confidence: r.confidence, flag, error: r.error, mime: r.mime,
     file: r.file ? `/finans/api/receipts/${r.id}/file` : null, thumb: r.thumb ? `/finans/api/receipts/${r.id}/thumb` : null,
-    extraction: ex, match: match ? txOut(match, cats, accs) : null, created: r.created };
+    extraction: ex, match: match ? txOut(match, cats, accs) : null, created: r.created, name: r.name ?? null,
+    aiShort: r.ai_short ?? (r.status === 'pending' || r.status === 'processing' ? 'Gemini leser kvitteringen …' : null), aiLong: r.ai_long ?? null,
+    domain: r.domain || domainFor(r.merchant), target: r.target ?? null };
 }
 
 // Finn banktransaksjon: samme beløp ±1 kr og dato ±3 dager, uten kvittering fra før. Kort-siffer gir forrang.
@@ -156,7 +174,7 @@ async function runQueue() {
     const { id, force } = queue.shift();
     const r = q('SELECT * FROM fh_receipts WHERE id=?').get(id);
     if (!r) continue;
-    q("UPDATE fh_receipts SET status='processing', error=NULL WHERE id=?").run(id);
+    q("UPDATE fh_receipts SET status='processing', error=NULL, started=? WHERE id=?").run(Date.now(), id);
     try {
       const img = await readFile(join(DIR, r.scan ?? r.file));
       const cats = q("SELECT name FROM fh_categories WHERE kind='expense' ORDER BY sort").all().map((x) => x.name);
@@ -172,6 +190,9 @@ async function runQueue() {
          account_id=COALESCE(?, account_id), confidence=?, transaction_id=? WHERE id=? AND status='processing'`)
         .run(res.provider, res.model, res.seconds, JSON.stringify(d), d.merchant, d.date ?? r.date, totalOre, catId,
           acc ?? match?.account_id ?? null, Math.min(d.confidence.total, d.confidence.merchant || 1), match?.id ?? null, id);
+      const sum = await summarizeReceipt(d, catById().get(catId)?.name);
+      q('UPDATE fh_receipts SET ai_short=?, ai_long=?, domain=? WHERE id=?').run(sum.short, sum.long, sum.domain, id);
+      routeTarget(id);
     } catch (e) {
       console.warn('[finans] Kvittering', id, e.message);
       q("UPDATE fh_receipts SET status='needs_review', error=?, confidence=0 WHERE id=? AND status='processing'").run(`Kunne ikke leses automatisk: ${e.message}. Fyll ut manuelt.`, id);
@@ -179,6 +200,22 @@ async function runQueue() {
   }
   running = false;
 }
+// Kvitteringer lastet opp fra Subscription OS eller en delt mappe havner også der når AI-en er ferdig.
+function routeTarget(id) {
+  const r = origSelect.get(id);
+  if (!r?.target || r.total == null) return;
+  if (r.target === 'sub' && !q('SELECT 1 FROM fh_subscriptions WHERE name=? AND active=1').get(r.merchant)) {
+    q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,domain,ai_short,created) VALUES(?,?,?,?,?,?,?,?,?)')
+      .run(r.merchant || 'Ukjent', 'Fra kvittering', r.total, 'monthly', r.date ? shiftDate(r.date, 1) : null, 'Ny', r.domain, r.ai_short, Date.now());
+  }
+  const f = r.target.match(/^folder:(\d+)$/);
+  if (f && q('SELECT 1 FROM fh_folders WHERE id=?').get(+f[1]) && !q('SELECT 1 FROM fh_folder_entries WHERE receipt_id=?').get(r.id)) {
+    const owner = q("SELECT name FROM fh_folder_members WHERE folder_id=? ORDER BY role='owner' DESC, id LIMIT 1").get(+f[1])?.name ?? settings().name;
+    q('INSERT INTO fh_folder_entries(folder_id,receipt_id,tx_id,description,date,amount,paid_by,created) VALUES(?,?,?,?,?,?,?,?)')
+      .run(+f[1], r.id, r.transaction_id, r.merchant || 'Kvittering', r.date || today(), r.total, owner, Date.now());
+  }
+}
+const shiftDate = (iso, months) => { const [y, m, d] = iso.split('-').map(Number); const x = new Date(y, m - 1 + months, Math.min(d, 28)); return x.toLocaleDateString('sv-SE'); };
 // Gjenoppta bilag som ble avbrutt ved omstart.
 setTimeout(() => {
   for (const r of q("SELECT id FROM fh_receipts WHERE status IN ('pending','processing')").all()) queue.push({ id: r.id });
@@ -191,7 +228,7 @@ const api = new Hono();
 
 // Innlogging fra de native appene: passord → token med finans-tilganger. Samme rate limiting som nettinnloggingen.
 // Tokenet gir bare tilgang til /finans/api, aldri til resten av homelab.
-api.post('/auth/token', async (c) => {
+async function tokenLogin(c) {
   const ip = clientIp(c);
   const wait = loginBlocked(ip);
   if (wait) return bad(c, `For mange forsøk. Prøv igjen om ${Math.ceil(wait / 60)} min.`, 429);
@@ -203,8 +240,19 @@ api.post('/auth/token', async (c) => {
   }
   loginSucceeded(ip);
   const token = 'fh_' + randomBytes(24).toString('base64url');
-  q('INSERT INTO fh_tokens(id,name,scopes,created) VALUES(?,?,?,?)').run(tokenKey(token), str(b.deviceName, 60) || 'Mobilapp', SCOPES.join(' '), Date.now());
+  q('INSERT INTO fh_tokens(id,name,scopes,created) VALUES(?,?,?,?)').run(tokenKey(token), str(b.deviceName ?? b.device, 60) || 'Mobilapp', SCOPES.join(' '), Date.now());
   return c.json({ token, scopes: SCOPES, user: settings().name });
+}
+api.post('/auth/token', tokenLogin);
+api.post('/login', tokenLogin); // alias for mobilappene (Mobil v2)
+// Logoer er offentlige favicons og trenger ingen innlogging (de vises også i <img> uten Authorization-header i appene).
+api.get('/logo/:domain', async (c) => {
+  const d = validDomain(c.req.param('domain'));
+  const img = d ? await logo(d) : null;
+  if (!img) return c.body(null, 404, { 'Cache-Control': 'public, max-age=86400' });
+  const type = img[0] === 0x89 ? 'image/png' : img[0] === 0xff ? 'image/jpeg' : img[0] === 0x3c ? 'text/plain' : 'image/x-icon';
+  if (type === 'text/plain') return c.body(null, 404);
+  return c.body(img, 200, { 'Content-Type': type, 'Cache-Control': 'public, max-age=604800', 'X-Content-Type-Options': 'nosniff' });
 });
 // Appen logger ut ved å trekke tilbake sitt eget token.
 api.post('/auth/logout', async (c) => {
@@ -228,7 +276,7 @@ api.get('/bootstrap', R, (c) => {
   const accs = q(`SELECT a.*, a.opening_balance + COALESCE((SELECT SUM(amount) FROM fh_transactions WHERE account_id=a.id),0) AS balance FROM fh_accounts a ORDER BY sort, id`).all();
   const month = curMonth();
   return c.json({
-    settings: { ...st, geminiKeySet: !!secret('geminiKey') }, month, period: period(month), profiles: PROFILES, user: st.name,
+    settings: { ...st, geminiKeySet: !!secret('geminiKey'), imapPassSet: !!secret('imapPass') }, month, period: period(month), profiles: PROFILES, user: st.name,
     categories: cats.map((x) => ({ id: x.id, name: x.name, color: x.color, kind: x.kind })),
     accounts: accs.map((a) => ({ id: a.id, name: a.name, bank: a.bank, type: a.type, last4: a.last4, note: a.note, openingBalance: a.opening_balance / 100, balance: a.balance / 100 })),
     rules: q('SELECT r.*, c.name AS category FROM fh_rules r LEFT JOIN fh_categories c ON c.id=r.category_id ORDER BY priority, id').all().map((r) => ({ id: r.id, pattern: r.pattern, categoryId: r.category_id, category: r.category, priority: r.priority })),
@@ -284,7 +332,13 @@ api.get('/summary', R, (c) => {
     savedYear: (ySum.inn - ySum.ut) / 100, yearGoal: +settings().yearGoal || 0,
     balance: saldo[saldo.length - 1], balanceSeries: saldo, series, lastIncome,
     byCategory: Object.entries(cur.byCat).map(([id, v]) => ({ categoryId: +id || null, category: cats.get(+id)?.name ?? 'Ukategorisert', color: cats.get(+id)?.color ?? '#A0A0AA', amount: v / 100, budget: (bud[id] ?? 0) / 100 })).sort((a, b) => b.amount - a.amount),
-    budgets: Object.entries(bud).map(([id, v]) => ({ categoryId: +id, category: cats.get(+id)?.name, color: cats.get(+id)?.color, budget: v / 100, used: (cur.byCat[id] ?? 0) / 100 })).filter((b) => b.category),
+    budgets: Object.entries(bud).map(([id, v]) => {
+      const st = q("SELECT COUNT(*) n FROM fh_transactions WHERE category_id=? AND amount<0 AND date>=? AND date<?").get(+id, from, to);
+      const top = q("SELECT COALESCE(merchant, description) m, SUM(-amount) s FROM fh_transactions WHERE category_id=? AND amount<0 AND date>=? AND date<? GROUP BY m ORDER BY s DESC LIMIT 1").get(+id, from, to);
+      return { categoryId: +id, category: cats.get(+id)?.name, color: cats.get(+id)?.color, budget: v / 100, used: (cur.byCat[id] ?? 0) / 100,
+        count: st.n, topMerchant: top?.m ?? null, prevUsed: (prev.byCat[id] ?? 0) / 100 };
+    }).filter((b) => b.category),
+    innMonthly: series.slice(-7).map((s) => s.inn),
     recent, review, upcoming: recurring.slice(0, 6),
     dailyOut: (() => { // utgifter per dag i perioden (til søylene i KPI-kortet)
       const rows = q('SELECT date, SUM(-amount) s FROM fh_transactions t LEFT JOIN fh_categories c ON c.id=t.category_id WHERE amount<0 AND COALESCE(c.kind,\'expense\')<>\'transfer\' AND date>=? AND date<? GROUP BY date').all(from, to);
@@ -324,6 +378,7 @@ api.post('/transactions', W, async (c) => {
   const catId = b.categoryId ? +b.categoryId : (settings().autoCat ? ruleFor(desc) : null);
   const t = q("INSERT INTO fh_transactions(account_id,date,amount,description,merchant,category_id,note,source,created) VALUES(?,?,?,?,?,?,?,'manual',?) RETURNING *")
     .get(b.accountId ? +b.accountId : null, b.date, amount, desc, desc, catId, str(b.note, 500), Date.now());
+  kickAi();
   return c.json(txOut(t));
 });
 
@@ -375,6 +430,7 @@ api.post('/import/csv', W, upload, async (c) => {
   let added = 0;
   db.transaction(() => { for (const r of parsed.rows) added += ins.run(accountId, r.date, r.amount, r.description, r.merchant, auto ? ruleFor(r.description) : null, r.external_id, Date.now()).changes; })();
   saveSettings({ csvProfile: profile });
+  kickAi();
   return c.json({ added, duplicates: parsed.rows.length - added, skipped: parsed.skipped.length });
 });
 
@@ -382,10 +438,24 @@ api.post('/import/csv', W, upload, async (c) => {
 
 const MIME = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/heic': 'heic', 'image/heif': 'heif', 'application/pdf': 'pdf' };
 
-api.post('/receipts', need('receipts:write'), upload, async (c) => {
-  const b = await c.req.parseBody();
-  const f = b.file;
-  if (!(f instanceof File) || !MIME[f.type]) return bad(c, 'Last opp et bilde (JPEG, PNG, WebP, HEIC) eller en PDF');
+const asList = (v) => (Array.isArray(v) ? v : v ? [v] : []).filter((x) => x instanceof File);
+// Én eller flere filer. Hver fil blir en jobb i køen; svaret kommer straks (felt fra første kvittering + jobs).
+// scan/thumb (nedskalert av klienten) pares med filene i samme rekkefølge når antallet stemmer.
+async function receiptUpload(c, target = null) {
+  const b = await c.req.parseBody({ all: true });
+  const files = asList(b.file).concat(asList(b['file[]']), asList(b.files), asList(b['files[]']));
+  if (!files.length || files.some((f) => !MIME[f.type])) return bad(c, 'Last opp bilder (JPEG, PNG, WebP, HEIC) eller PDF-er');
+  if (files.length > 30) return bad(c, 'Maks 30 filer om gangen');
+  const scans = asList(b.scan), thumbs = asList(b.thumb);
+  const pair = scans.length === files.length;
+  const acc = +b.accountId || q('SELECT id FROM fh_accounts ORDER BY sort, id LIMIT 1').get()?.id || null;
+  const ids = [];
+  for (const [i, f] of files.entries()) ids.push(await saveReceipt(f, pair ? scans[i] : files.length === 1 ? scans[0] : null, thumbs.length === files.length ? thumbs[i] : files.length === 1 ? thumbs[0] : null, acc, target));
+  runQueue();
+  const first = receiptOut(origSelect.get(ids[0]));
+  return c.json({ ...first, jobs: ids.map((id) => jobOut(origSelect.get(id))) });
+}
+async function saveReceipt(f, scanFile, thumbFile, acc, target) {
   const id = randomUUID();
   const d = new Date(), sub = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}`;
   await mkdir(join(DIR, sub), { recursive: true });
@@ -393,14 +463,22 @@ api.post('/receipts', need('receipts:write'), upload, async (c) => {
   await writeFile(join(DIR, file), Buffer.from(await f.arrayBuffer()));
   // Nettleseren sender en nedskalert JPEG (~1600 px) til AI-en og et lite miniatyrbilde. Originalen lagres urørt.
   let scan = null, thumb = null;
-  if (b.scan instanceof File && b.scan.type === 'image/jpeg') { scan = `${sub}/${id}_scan.jpg`; await writeFile(join(DIR, scan), Buffer.from(await b.scan.arrayBuffer())); }
-  if (b.thumb instanceof File && b.thumb.type === 'image/jpeg') { thumb = `${sub}/${id}_t.jpg`; await writeFile(join(DIR, thumb), Buffer.from(await b.thumb.arrayBuffer())); }
-  const acc = +b.accountId || q('SELECT id FROM fh_accounts ORDER BY sort, id LIMIT 1').get()?.id || null;
-  q("INSERT INTO fh_receipts(id,file,scan,thumb,mime,status,date,account_id,created) VALUES(?,?,?,?,?,'pending',?,?,?)").run(id, file, scan, thumb, f.type, today(), acc, Date.now());
+  if (scanFile?.type === 'image/jpeg') { scan = `${sub}/${id}_scan.jpg`; await writeFile(join(DIR, scan), Buffer.from(await scanFile.arrayBuffer())); }
+  if (thumbFile?.type === 'image/jpeg') { thumb = `${sub}/${id}_t.jpg`; await writeFile(join(DIR, thumb), Buffer.from(await thumbFile.arrayBuffer())); }
+  q("INSERT INTO fh_receipts(id,file,scan,thumb,mime,status,date,account_id,name,target,created) VALUES(?,?,?,?,?,'pending',?,?,?,?,?)")
+    .run(id, file, scan, thumb, f.type, today(), acc, str(f.name, 120) || null, target, Date.now());
   queue.push({ id });
-  runQueue();
-  return c.json(receiptOut(q('SELECT * FROM fh_receipts WHERE id=?').get(id)));
-});
+  return id;
+}
+api.post('/receipts', need('receipts:write'), upload, (c) => receiptUpload(c));
+
+// Opplastingskøen: alt fra siste døgn med fremdrift. AI-en bruker typisk 5–15 s; fremdriften er et estimat.
+function jobOut(r) {
+  const progress = r.status === 'pending' ? 0 : r.status === 'processing' ? Math.min(92, Math.round(((Date.now() - (r.started ?? Date.now())) / 12000) * 90) + 5) : 100;
+  return { id: r.id, name: r.name ?? r.merchant ?? 'Kvittering', status: r.status === 'failed' ? 'error' : r.status, progress, merchant: r.merchant, total: r.total != null ? r.total / 100 : null,
+    error: r.error ?? null, thumb: r.thumb ? `/finans/api/receipts/${r.id}/thumb` : null, aiShort: r.ai_short ?? null, created: r.created };
+}
+api.get('/receipts/jobs', R, (c) => c.json(q("SELECT * FROM fh_receipts WHERE created>? AND status<>'rejected' ORDER BY created DESC LIMIT 100").all(Date.now() - 86400_000).map(jobOut)));
 const origSelect = q('SELECT * FROM fh_receipts WHERE id=?');
 
 api.get('/receipts', R, (c) => {
@@ -450,11 +528,13 @@ api.post('/receipts/:id/book', W, async (c) => {
   let txId = r.transaction_id;
   db.transaction(() => {
     if (txId && q('SELECT 1 FROM fh_transactions WHERE id=?').get(txId)) {
-      q('UPDATE fh_transactions SET category_id=COALESCE(?, category_id), merchant=? WHERE id=?').run(r.category_id, r.merchant, txId);
+      q('UPDATE fh_transactions SET category_id=COALESCE(?, category_id), merchant=?, ai_short=COALESCE(?, ai_short), ai_long=COALESCE(?, ai_long), domain=COALESCE(?, domain), ai_done=1 WHERE id=?')
+        .run(r.category_id, r.merchant, r.ai_short, r.ai_long, r.domain, txId);
     } else {
-      txId = q("INSERT INTO fh_transactions(account_id,date,amount,description,merchant,category_id,source,created) VALUES(?,?,?,?,?,?,'receipt',?) RETURNING id")
-        .get(r.account_id, r.date, -r.total, r.merchant, r.merchant, r.category_id, Date.now()).id;
+      txId = q("INSERT INTO fh_transactions(account_id,date,amount,description,merchant,category_id,source,ai_short,ai_long,domain,ai_done,created) VALUES(?,?,?,?,?,?,'receipt',?,?,?,1,?) RETURNING id")
+        .get(r.account_id, r.date, -r.total, r.merchant, r.merchant, r.category_id, r.ai_short, r.ai_long, r.domain, Date.now()).id;
     }
+    q('UPDATE fh_folder_entries SET tx_id=? WHERE receipt_id=? AND tx_id IS NULL').run(txId, r.id);
     q("UPDATE fh_receipts SET status='booked', transaction_id=? WHERE id=?").run(txId, r.id);
     // Læring: rettet kategori blir en regel for butikken.
     const ex = r.extraction ? JSON.parse(r.extraction) : null;
@@ -672,7 +752,8 @@ const SETTING_KEYS = { name: (v) => str(v, 40) || 'Sebastian', currency: (v) => 
   yearGoal: (v) => Math.max(0, +v || 0), provider: (v) => (v === 'gemini' ? 'gemini' : 'ollama'), fallback: Boolean,
   ollamaUrl: (v) => (/^https?:\/\/\S+$/.test(v) ? v : DEFAULT_SETTINGS.ollamaUrl), ollamaModel: (v) => str(v, 60) || DEFAULT_SETTINGS.ollamaModel,
   geminiModel: (v) => (/^[a-z0-9.\-]{3,60}$/i.test(v) ? v : DEFAULT_SETTINGS.geminiModel), minConf: (v) => Math.min(99, Math.max(50, +v || 85)),
-  autoCat: Boolean, n80: Boolean, n100: Boolean, nRc: Boolean, nFast: Boolean, csvProfile: (v) => (PROFILES.includes(v) ? v : 'DNB') };
+  autoCat: Boolean, n80: Boolean, n100: Boolean, nRc: Boolean, nFast: Boolean, csvProfile: (v) => (PROFILES.includes(v) ? v : 'DNB'),
+  aiSummaries: Boolean, imapHost: (v) => (/^[a-z0-9.-]{0,120}$/i.test(v) ? v : ''), imapUser: (v) => str(v, 120), imapFolder: (v) => str(v, 60) || 'INBOX' };
 
 api.put('/settings', W, async (c) => {
   const b = await c.req.json();
@@ -680,7 +761,8 @@ api.put('/settings', W, async (c) => {
   for (const [k, fn] of Object.entries(SETTING_KEYS)) if (b[k] !== undefined) patch[k] = fn(b[k]);
   saveSettings(patch);
   if (typeof b.geminiKey === 'string' && c.get('access').session) setSecret('geminiKey', b.geminiKey.trim());
-  return c.json({ ...settings(), geminiKeySet: !!secret('geminiKey') });
+  if (typeof b.imapPass === 'string' && c.get('access').session) setSecret('imapPass', b.imapPass);
+  return c.json({ ...settings(), geminiKeySet: !!secret('geminiKey'), imapPassSet: !!secret('imapPass') });
 });
 
 api.get('/health/ai', R, async (c) => c.json(await health()));
@@ -696,11 +778,240 @@ api.post('/tokens', sessionOnly, async (c) => {
 });
 api.delete('/tokens/:id', sessionOnly, (c) => { q('DELETE FROM fh_tokens WHERE substr(id,1,12)=?').run(c.req.param('id')); return ok(c); });
 
+/* --- Subscription OS --- */
+
+const monthlyOre = (s) => (s.cycle === 'yearly' ? s.price / 12 : s.price);
+function subOut(s) {
+  return { id: s.id, name: s.name, plan: s.plan, price: s.price / 100, cycle: s.cycle, nextDate: s.next_date, usageNote: s.usage_note, lowUse: !!s.low_use,
+    active: !!s.active, domain: s.domain || domainFor(s.name), aiShort: s.ai_short || heuristic({ merchant: s.name, category: 'Abonnementer' }).short, txId: s.tx_id,
+    monthly: monthlyOre(s) / 100 };
+}
+// Neste trekk kan skrives som dd.mm, dd.mm.åå eller ISO.
+function dateIn(v) {
+  const t = String(v ?? '').trim();
+  if (!t || t === '–') return null;
+  if (isDate(t)) return t;
+  const m = t.match(/^(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?$/);
+  if (!m) return null;
+  const now = new Date();
+  let y = m[3] ? (m[3].length === 2 ? 2000 + +m[3] : +m[3]) : now.getFullYear();
+  let d = new Date(y, +m[2] - 1, +m[1]);
+  if (!m[3] && d < new Date(now.toDateString())) d = new Date(y + 1, +m[2] - 1, +m[1]);
+  return d.toLocaleDateString('sv-SE');
+}
+
+api.get('/subscriptions', R, (c) => {
+  const rows = q('SELECT * FROM fh_subscriptions ORDER BY active DESC, COALESCE(next_date, \'9999\'), name').all().map(subOut);
+  const act = rows.filter((s) => s.active);
+  const monthly = act.reduce((a, s) => a + s.monthly, 0);
+  return c.json({ items: rows, monthly: Math.round(monthly * 100) / 100, yearly: Math.round(monthly * 1200) / 100,
+    lowUse: Math.round(act.filter((s) => s.lowUse).reduce((a, s) => a + s.monthly, 0) * 100) / 100 });
+});
+api.post('/subscriptions', W, async (c) => {
+  const b = await c.req.json();
+  if (b.fromTx) { // gjør en transaksjon om til et abonnement
+    const t = q('SELECT * FROM fh_transactions WHERE id=?').get(+b.fromTx);
+    if (!t) return c.notFound();
+    const name = t.merchant || t.description;
+    const s = q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,domain,ai_short,tx_id,created) VALUES(?,?,?,?,?,?,?,?,?,?) RETURNING *')
+      .get(name, str(b.plan, 80), Math.abs(t.amount), 'monthly', shiftDate(t.date, 1), 'Månedlig', t.domain || domainFor(name), t.ai_short, t.id, Date.now());
+    return c.json(subOut(s));
+  }
+  const price = ore(b.price);
+  if (!str(b.name) || price === null) return bad(c, 'Tjeneste og pris må fylles ut');
+  const s = q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,low_use,domain,created) VALUES(?,?,?,?,?,?,?,?,?) RETURNING *')
+    .get(str(b.name, 80), str(b.plan, 80), Math.abs(price), b.cycle === 'yearly' ? 'yearly' : 'monthly', dateIn(b.nextDate), str(b.usageNote, 80) || 'Ny', b.lowUse ? 1 : 0,
+      validDomain(b.domain) || domainFor(b.name), Date.now());
+  return c.json(subOut(s));
+});
+api.post('/subscriptions/receipts', need('receipts:write'), upload, (c) => receiptUpload(c, 'sub'));
+api.patch('/subscriptions/:id', W, async (c) => {
+  const cur = q('SELECT * FROM fh_subscriptions WHERE id=?').get(+c.req.param('id'));
+  if (!cur) return c.notFound();
+  const b = await c.req.json();
+  const n = { ...cur };
+  if (b.name !== undefined) n.name = str(b.name, 80) || cur.name;
+  if (b.plan !== undefined) n.plan = str(b.plan, 80);
+  if (b.price !== undefined && ore(b.price) !== null) n.price = Math.abs(ore(b.price));
+  if (b.cycle !== undefined) n.cycle = b.cycle === 'yearly' ? 'yearly' : 'monthly';
+  if (b.nextDate !== undefined) n.next_date = dateIn(b.nextDate);
+  if (b.usageNote !== undefined) n.usage_note = str(b.usageNote, 80);
+  if (b.lowUse !== undefined) n.low_use = b.lowUse ? 1 : 0;
+  if (b.active !== undefined) n.active = b.active ? 1 : 0;
+  if (b.domain !== undefined) { n.domain = validDomain(b.domain); if (n.domain) learnDomain(n.name, n.domain); }
+  const s = q('UPDATE fh_subscriptions SET name=?, plan=?, price=?, cycle=?, next_date=?, usage_note=?, low_use=?, active=?, domain=? WHERE id=? RETURNING *')
+    .get(n.name, n.plan, n.price, n.cycle, n.next_date, n.usage_note, n.low_use, n.active, n.domain, cur.id);
+  return c.json(subOut(s));
+});
+api.delete('/subscriptions/:id', W, (c) => { q('DELETE FROM fh_subscriptions WHERE id=?').run(+c.req.param('id')); return ok(c); });
+
+/* --- Delte mapper --- */
+// Én bruker i homelab: medlemmer er navngitte personer (med valgfri e-post). Saldo = betalt − lik andel.
+// Invitasjon lagrer e-posten som «invitert»; selve utsendingen krever SMTP og er ikke satt opp ennå.
+
+function folderOut(f, full = false) {
+  const mem = q('SELECT * FROM fh_folder_members WHERE folder_id=? ORDER BY role=\'owner\' DESC, id').all(f.id);
+  const entries = q('SELECT * FROM fh_folder_entries WHERE folder_id=? ORDER BY date DESC, id DESC').all(f.id);
+  const total = entries.reduce((a, e) => a + e.amount, 0);
+  const out = { id: f.id, name: f.name, members: mem.map((m) => ({ id: m.id, name: m.name, email: m.email, role: m.role, status: m.status })), total: total / 100, count: entries.length };
+  if (!full) return out;
+  const share = mem.length ? total / mem.length : 0;
+  out.balances = mem.map((m) => ({ name: m.name, paid: entries.filter((e) => e.paid_by === m.name).reduce((a, e) => a + e.amount, 0) / 100,
+    balance: Math.round(entries.filter((e) => e.paid_by === m.name).reduce((a, e) => a + e.amount, 0) - share) / 100 }));
+  out.entries = entries.map((e) => {
+    const t = e.tx_id ? q('SELECT ai_short, domain, merchant, description, amount FROM fh_transactions WHERE id=?').get(e.tx_id) : null;
+    const r = e.receipt_id ? origSelect.get(e.receipt_id) : null;
+    const pending = r && (r.status === 'pending' || r.status === 'processing');
+    return { id: e.id, description: e.description, date: e.date, amount: e.amount / 100, paidBy: e.paid_by, split: e.split === 'equal' ? `Likt på ${mem.length}` : e.split,
+      txId: e.tx_id, receiptId: e.receipt_id, domain: t?.domain || r?.domain || domainFor(e.description),
+      aiShort: pending ? 'Gemini leser kvitteringen …' : t?.ai_short || r?.ai_short || heuristic({ merchant: e.description, amount: -e.amount / 100 }).short };
+  });
+  return out;
+}
+const memberNames = (v) => (Array.isArray(v) ? v : String(v ?? '').split(','))
+  .map((x) => String(x).trim()).filter(Boolean).slice(0, 20)
+  .map((x) => /@/.test(x) ? { name: x.split('@')[0].replace(/[._-]+/g, ' ').replace(/(^|\s)\S/g, (m) => m.toUpperCase()).slice(0, 40), email: x.slice(0, 120), status: 'invited' } : { name: x.slice(0, 40), email: null, status: 'active' });
+
+api.get('/folders', R, (c) => c.json(q('SELECT * FROM fh_folders ORDER BY id').all().map((f) => folderOut(f))));
+api.get('/folders/:id', R, (c) => { const f = q('SELECT * FROM fh_folders WHERE id=?').get(+c.req.param('id')); return f ? c.json(folderOut(f, true)) : c.notFound(); });
+api.post('/folders', W, async (c) => {
+  const b = await c.req.json();
+  if (!str(b.name)) return bad(c, 'Gi mappen et navn');
+  const f = q('INSERT INTO fh_folders(name,created) VALUES(?,?) RETURNING *').get(str(b.name, 60), Date.now());
+  const add = q('INSERT INTO fh_folder_members(folder_id,name,email,role,status) VALUES(?,?,?,?,?)');
+  add.run(f.id, settings().name, null, 'owner', 'active');
+  for (const m of memberNames(b.members ?? b.invite)) if (m.name !== settings().name) add.run(f.id, m.name, m.email, 'member', m.status);
+  return c.json(folderOut(f, true));
+});
+api.patch('/folders/:id', W, async (c) => {
+  const b = await c.req.json();
+  if (str(b.name)) q('UPDATE fh_folders SET name=? WHERE id=?').run(str(b.name, 60), +c.req.param('id'));
+  const f = q('SELECT * FROM fh_folders WHERE id=?').get(+c.req.param('id'));
+  return f ? c.json(folderOut(f, true)) : c.notFound();
+});
+api.delete('/folders/:id', W, (c) => { q('DELETE FROM fh_folders WHERE id=?').run(+c.req.param('id')); return ok(c); });
+api.post('/folders/:id/invite', W, async (c) => {
+  const f = q('SELECT * FROM fh_folders WHERE id=?').get(+c.req.param('id'));
+  if (!f) return c.notFound();
+  const b = await c.req.json();
+  const add = q('INSERT INTO fh_folder_members(folder_id,name,email,role,status) VALUES(?,?,?,?,?)');
+  for (const m of memberNames(b.emails ?? b.members)) if (!q('SELECT 1 FROM fh_folder_members WHERE folder_id=? AND (name=? OR email=?)').get(f.id, m.name, m.email)) add.run(f.id, m.name, m.email, 'member', m.status);
+  return c.json(folderOut(f, true));
+});
+api.delete('/folders/:id/members/:mid', W, (c) => { q("DELETE FROM fh_folder_members WHERE id=? AND folder_id=? AND role<>'owner'").run(+c.req.param('mid'), +c.req.param('id')); return ok(c); });
+api.post('/folders/:id/entries', W, async (c) => {
+  const f = q('SELECT * FROM fh_folders WHERE id=?').get(+c.req.param('id'));
+  if (!f) return c.notFound();
+  const b = await c.req.json();
+  const owner = q("SELECT name FROM fh_folder_members WHERE folder_id=? ORDER BY role='owner' DESC, id LIMIT 1").get(f.id)?.name ?? settings().name;
+  const members = new Set(q('SELECT name FROM fh_folder_members WHERE folder_id=?').all(f.id).map((m) => m.name));
+  const paidBy = members.has(b.paidBy) ? b.paidBy : owner;
+  const ins = q('INSERT INTO fh_folder_entries(folder_id,tx_id,description,date,amount,paid_by,created) VALUES(?,?,?,?,?,?,?)');
+  if (b.txId) {
+    const t = q('SELECT * FROM fh_transactions WHERE id=?').get(+b.txId);
+    if (!t) return c.notFound();
+    if (q('SELECT 1 FROM fh_folder_entries WHERE folder_id=? AND tx_id=?').get(f.id, t.id)) return bad(c, 'Transaksjonen ligger allerede i mappen');
+    ins.run(f.id, t.id, t.merchant || t.description, t.date, Math.abs(t.amount), paidBy, Date.now());
+  } else {
+    const amount = ore(b.amount);
+    if (!str(b.description) || amount === null) return bad(c, 'Beskrivelse og beløp må fylles ut');
+    ins.run(f.id, null, str(b.description, 120), isDate(b.date) ? b.date : today(), Math.abs(amount), paidBy, Date.now());
+  }
+  return c.json(folderOut(f, true));
+});
+api.post('/folders/:id/receipts', need('receipts:write'), upload, (c) => q('SELECT 1 FROM fh_folders WHERE id=?').get(+c.req.param('id')) ? receiptUpload(c, `folder:${+c.req.param('id')}`) : c.notFound());
+api.delete('/folders/:id/entries/:eid', W, (c) => { q('DELETE FROM fh_folder_entries WHERE id=? AND folder_id=?').run(+c.req.param('eid'), +c.req.param('id')); return ok(c); });
+
+/* --- Finn-handler --- */
+// Kilde: e-postkvitteringer fra Finn. Automatisk henting via IMAP (innstillingene imapHost/imapUser/imapPass)
+// er ikke koblet på ennå; inntil videre limes e-posten inn, og AI (med regex-reserve) trekker ut handelen.
+
+function finnOut(f) {
+  const steps = JSON.parse(f.steps || '[]');
+  return { id: f.id, role: f.role, item: f.item, counterpart: f.counterpart, date: f.date, amount: f.amount / 100, steps, txId: f.tx_id,
+    done: steps.length > 0 && steps.every((s) => s.done), domain: 'finn.no' };
+}
+api.get('/finn', R, (c) => {
+  const rows = q('SELECT * FROM fh_finn ORDER BY date DESC, id DESC').all().map(finnOut);
+  const y = String(new Date().getFullYear());
+  const sum = (role) => rows.filter((r) => r.role === role && r.date.startsWith(y)).reduce((a, r) => a + r.amount, 0);
+  return c.json({ items: rows, bought: sum('bought'), sold: sum('sold'), ongoing: rows.filter((r) => !r.done).length,
+    imap: { configured: !!(settings().imapHost && settings().imapUser && secret('imapPass')) } });
+});
+function finnMatch(role, amountOre, date) {
+  const sign = role === 'sold' ? 1 : -1;
+  return q("SELECT id FROM fh_transactions WHERE amount BETWEEN ? AND ? AND date BETWEEN date(?, '-5 days') AND date(?, '+10 days') ORDER BY abs(julianday(date)-julianday(?)) LIMIT 1")
+    .get(sign * amountOre - 100, sign * amountOre + 100, date, date, date)?.id ?? null;
+}
+api.post('/finn', W, async (c) => {
+  const b = await c.req.json();
+  let d;
+  if (str(b.email, 50000)) {
+    try { d = await parseFinnEmail(String(b.email).slice(0, 50000)); } catch (e) { return bad(c, e.message); }
+  } else {
+    d = { role: b.role === 'sold' ? 'sold' : 'bought', item: str(b.item, 120), counterpart: str(b.counterpart, 80), date: isDate(b.date) ? b.date : today(), amount: +String(b.amount ?? '').replace(',', '.'),
+      steps: Array.isArray(b.steps) ? b.steps.slice(0, 8).map((s) => ({ t: str(s.t ?? s, 60), done: !!s.done })) : [{ t: 'Trygg betaling', done: true }] };
+  }
+  if (!d.item || !Number.isFinite(d.amount) || d.amount <= 0) return bad(c, 'Fant ikke gjenstand og beløp');
+  const amountOre = Math.round(d.amount * 100);
+  const source = d.source ?? null;
+  const existing = source ? q('SELECT * FROM fh_finn WHERE source=?').get(source) : null;
+  if (existing) { // samme handel, ny statusmail: oppdater stegene
+    q('UPDATE fh_finn SET steps=? WHERE id=?').run(JSON.stringify(d.steps), existing.id);
+    return c.json(finnOut(q('SELECT * FROM fh_finn WHERE id=?').get(existing.id)));
+  }
+  const f = q('INSERT INTO fh_finn(role,item,counterpart,date,amount,steps,source,tx_id,created) VALUES(?,?,?,?,?,?,?,?,?) RETURNING *')
+    .get(d.role, d.item, d.counterpart ?? '', d.date, amountOre, JSON.stringify(d.steps ?? []), source, finnMatch(d.role, amountOre, d.date), Date.now());
+  return c.json(finnOut(f));
+});
+api.patch('/finn/:id', W, async (c) => {
+  const cur = q('SELECT * FROM fh_finn WHERE id=?').get(+c.req.param('id'));
+  if (!cur) return c.notFound();
+  const b = await c.req.json();
+  const steps = Array.isArray(b.steps) ? JSON.stringify(b.steps.slice(0, 8).map((s) => ({ t: str(s.t, 60), done: !!s.done }))) : cur.steps;
+  q('UPDATE fh_finn SET item=?, counterpart=?, steps=? WHERE id=?').run(b.item !== undefined ? str(b.item, 120) || cur.item : cur.item, b.counterpart !== undefined ? str(b.counterpart, 80) : cur.counterpart, steps, cur.id);
+  return c.json(finnOut(q('SELECT * FROM fh_finn WHERE id=?').get(cur.id)));
+});
+api.delete('/finn/:id', W, (c) => { q('DELETE FROM fh_finn WHERE id=?').run(+c.req.param('id')); return ok(c); });
+
+/* --- Import (XLSX, CSV, tekst) --- */
+// Uten ?commit=1: forhåndsvisning. Med commit: lagres (duplikater hoppes over), AI kategoriserer og beskriver i bakgrunnen.
+
+api.post('/import', W, upload, async (c) => {
+  const b = await c.req.parseBody({ all: true });
+  const files = asList(b.files).concat(asList(b['files[]']), asList(b.file));
+  const text = typeof b.text === 'string' ? b.text : '';
+  if (!files.length && !text.trim()) return bad(c, 'Velg filer eller lim inn tekst');
+  const accountId = +b.accountId || q("SELECT id FROM fh_accounts WHERE type='checking' ORDER BY sort, id LIMIT 1").get()?.id || null;
+  const rows = [], errors = [];
+  let skipped = 0;
+  const take = (cells) => { const r = rowsToTx(cells, accountId ?? 0); rows.push(...r.rows); skipped += r.skipped.length; };
+  for (const f of files.slice(0, 20)) { try { take(await parseFile(f)); } catch (e) { errors.push(e.message); } }
+  if (text.trim()) take(readText(text));
+  if (!rows.length) return bad(c, errors[0] ?? 'Fant ingen rader med dato, tekst og beløp');
+  const cats = catById();
+  const auto = settings().autoCat;
+  const preview = rows.map((r) => {
+    const catId = auto ? (ruleFor(r.raw) ?? ruleFor(r.description)) : null;
+    const dup = !!q('SELECT 1 FROM fh_transactions WHERE external_id=?').get(r.external_id);
+    return { ...r, amount: r.amount / 100, categoryId: catId, category: cats.get(catId)?.name ?? null, domain: domainFor(r.description) ?? domainFor(r.raw),
+      aiShort: heuristic({ merchant: r.raw, amount: r.amount / 100, category: cats.get(catId)?.name }).short, duplicate: dup };
+  });
+  if (c.req.query('commit') !== '1') return c.json({ rows: preview, imported: 0, skipped, errors });
+  if (!accountId) return bad(c, 'Opprett en konto først');
+  const ins = q("INSERT OR IGNORE INTO fh_transactions(account_id,date,amount,description,merchant,category_id,source,external_id,domain,created) VALUES(?,?,?,?,?,?,'import',?,?,?)");
+  let imported = 0;
+  db.transaction(() => { for (const r of preview) imported += ins.run(accountId, r.date, Math.round(r.amount * 100), r.description, r.description, r.categoryId, r.external_id, r.domain, Date.now()).changes; })();
+  kickAi();
+  return c.json({ rows: preview, imported, duplicates: preview.length - imported, skipped, errors });
+});
+
+
 /* --- Data --- */
 
 api.get('/export.json', R, (c) => {
   const dump = {};
-  for (const t of ['fh_accounts', 'fh_categories', 'fh_transactions', 'fh_budgets', 'fh_recurring', 'fh_rules', 'fh_goals']) dump[t.slice(3)] = q(`SELECT * FROM ${t}`).all();
+  for (const t of ['fh_accounts', 'fh_categories', 'fh_transactions', 'fh_budgets', 'fh_recurring', 'fh_rules', 'fh_goals', 'fh_subscriptions', 'fh_folders', 'fh_folder_members', 'fh_folder_entries', 'fh_finn']) dump[t.slice(3)] = q(`SELECT * FROM ${t}`).all();
   dump.receipts = q('SELECT id, status, provider, model, merchant, date, total, category_id, account_id, transaction_id, created FROM fh_receipts').all();
   dump.settings = settings();
   dump.note = 'Beløp er i øre. Kvitteringsbildene ligger i data/receipts på serveren.';
@@ -717,7 +1028,7 @@ api.post('/demo', sessionOnly, async (c) => {
 api.delete('/all', sessionOnly, async (c) => {
   const b = await c.req.json().catch(() => ({}));
   if (b.confirm !== 'SLETT') return bad(c, 'Skriv SLETT for å bekrefte');
-  db.transaction(() => { for (const t of ['fh_receipts', 'fh_transactions', 'fh_budgets', 'fh_recurring', 'fh_goals', 'fh_accounts']) q(`DELETE FROM ${t}`).run(); })();
+  db.transaction(() => { for (const t of ['fh_folder_entries', 'fh_folder_members', 'fh_folders', 'fh_finn', 'fh_subscriptions', 'fh_receipts', 'fh_transactions', 'fh_budgets', 'fh_recurring', 'fh_goals', 'fh_accounts']) q(`DELETE FROM ${t}`).run(); })();
   return ok(c);
 });
 

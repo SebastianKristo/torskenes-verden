@@ -2,10 +2,12 @@
 import {
   S, api, esc, n0, n2, sgn, neg, neg0, k, dd, dLong, today, monthName, cap, shiftMonth, ini, rgba, greet, pctChange, parseAmount,
   render, toast, loadBoot, loadSummary, loadTx, loadReceipts, loadRecurring, loadReport, loadAi, catById, cats, accs, uploadReceipt,
-  smooth, spark, conic, icon,
+  smooth, spark, conic, icon, logo, aiLine,
 } from './core.js';
+import { MODULE_PAGES, MODULE_SUB, MODULE_FN, MODULE_LOADERS, bindModules } from './modules.js';
 
-const PAGES = [['ov', 'Oversikt'], ['tx', 'Transaksjoner'], ['kv', 'Kvitteringer'], ['bud', 'Budsjett'], ['fast', 'Faste utgifter'], ['konto', 'Kontoer'], ['rap', 'Rapporter'], ['inn', 'Innstillinger']];
+const BASE_PAGES = [['ov', 'Oversikt'], ['tx', 'Transaksjoner'], ['kv', 'Kvitteringer'], ['bud', 'Budsjett'], ['fast', 'Faste utgifter'], ['konto', 'Kontoer'], ['rap', 'Rapporter'], ['inn', 'Innstillinger']];
+const PAGES = [...BASE_PAGES, ...MODULE_PAGES];
 const ACC_TYPES = { checking: 'Brukskonto', savings: 'Sparekonto', credit: 'Kredittkort', cash: 'Kontanter' };
 const KINDS = { expense: 'Utgift', income: 'Inntekt', transfer: 'Overføring' };
 const root = () => document.getElementById('app');
@@ -25,19 +27,23 @@ function shell(content) {
   const pg = PAGES.find(([p]) => p === u.page);
   const ai = S.ai, prov = st.provider;
   const aiOk = ai ? (prov === 'ollama' ? ai.ollama.ok : ai.gemini.ok) : null;
-  const nav = PAGES.map(([p, label]) => `<a href="#/${p}" ${p === u.page ? 'aria-current="page"' : ''}>${icon(p, 18, 'currentColor')}<span>${label}</span>${p === 'kv' && b.reviewCount ? `<span class="badge">${b.reviewCount}</span>` : ''}</a>`).join('');
+  const navItem = ([p, label]) => `<a href="#/${p}" ${p === u.page ? 'aria-current="page"' : ''}>${icon(p, 18, 'currentColor')}<span>${label}</span>${p === 'kv' && b.reviewCount ? `<span class="badge">${b.reviewCount}</span>` : ''}</a>`;
+  const nav = BASE_PAGES.filter(([p]) => p !== 'inn').map(navItem).join('');
+  const modNav = MODULE_PAGES.map(navItem).join('') + navItem(BASE_PAGES.find(([p]) => p === 'inn'));
   return `<div class="app">
   <aside class="side" aria-label="FinansHub-meny">
     <div class="brand"><div class="brand-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M4 19h16M8 15l4-4 3 3 5-6"/></svg></div><div class="brand-t">Finans<span>Hub</span></div></div>
     <div class="side-label">Generelt</div>
     <nav class="nav">${nav}</nav>
+    <div class="side-label">Moduler</div>
+    <nav class="nav">${modNav}</nav>
     <div class="ai-box"><div class="side-label" style="padding:0">AI-motor</div>
       <div style="display:flex;align-items:center;gap:8px;font-weight:600"><span class="ai-dot ${aiOk === null ? 'unk' : aiOk ? '' : 'off'}"></span>${prov === 'ollama' ? 'Ollama · lokalt' : 'Gemini · sky'}</div>
       <div class="note" style="font-size:12px">${prov === 'ollama' ? `${esc(st.ollamaModel)} · reserve: ${st.fallback ? 'Gemini' : 'ingen'}` : esc(st.geminiModel)}${aiOk === false ? ' · <span class="neg">ikke tilgjengelig</span>' : ''}</div></div>
   </aside>
   <main class="main"><div class="wrap">
     <header class="head">
-      <div><div class="crumb"><span>FinansHub</span><span>›</span><b>${pg[1]}</b></div><h1>${u.page === 'ov' ? `${greet()}, ${esc(st.name)}` : pg[1]}</h1></div>
+      <div><div class="crumb"><span>FinansHub</span><span>›</span><b>${pg[1]}</b></div><h1>${u.page === 'ov' ? `${greet()}, ${esc(st.name)}` : pg[1]}</h1>${MODULE_SUB[u.page] ? `<div class="note" style="font-size:14px;margin-top:4px">${MODULE_SUB[u.page]}</div>` : ''}</div>
       <div class="head-r">
         <form class="search" data-form="gsearch" role="search">${icon('search', 17, 'var(--muted)')}<input name="q" value="${esc(u.q)}" placeholder="Søk i transaksjoner …" aria-label="Søk i transaksjoner"><span class="kbd">⌘K</span></form>
         <a class="icon-btn" href="#/kv" aria-label="Varsler: ${b.reviewCount} kvitteringer til gjennomgang">${icon('bell', 18)}${b.reviewCount ? '<span class="dot"></span>' : ''}</a>
@@ -88,8 +94,8 @@ function chart(s) {
     <div class="chart-x">${rows.map((r) => `<span>${monthName(r.month, false)}</span>`).join('')}</div></div>`;
 }
 
-const txRow = (t) => `<button class="tx-row" data-open-tx="${t.id}"><span class="ini" style="background:${rgba(t.color, 0.14)};color:${t.color}">${esc(ini(t.description))}</span>
-  <span class="grow"><span class="ell" style="font-weight:500">${esc(t.description)}</span><span class="ell note" style="font-size:12px">${dd(t.date)} · ${esc(t.category)}</span></span>
+const txRow = (t) => `<button class="tx-row" data-open-tx="${t.id}">${logo(t, 38, 12)}
+  <span class="grow"><span class="ell" style="font-weight:500">${esc(t.description)}</span><span class="ell note" style="font-size:12px">${dd(t.date)} · ${esc(t.category)}</span>${aiLine(t.aiShort, 'd-ai ell')}</span>
   <span class="mono" style="font-weight:500;color:${amtColor(t.amount)}">${sgn(t.amount)}</span></button>`;
 
 const paper = (r) => `<span class="paper${r.thumb ? ' img' : ''}" style="${r.thumb ? `background-image:url('${r.thumb}')` : ''}"><i></i><i></i><i></i><i></i></span>`;
@@ -156,14 +162,15 @@ function transactions() {
   const qs = new URLSearchParams({ ...(u.q && { q: u.q }), ...(u.cat && { category: u.cat }), ...(u.acc && { account: u.acc }), ...(u.type && { type: u.type }) });
   const rows = list?.items.map((t) => `<tr data-open-tx="${t.id}" class="${u.sel === t.id ? 'on' : ''}">
     <td class="mono muted" style="white-space:nowrap">${dd(t.date)}</td>
-    <td><div style="display:flex;align-items:center;gap:10px"><span class="ini sm" style="background:${rgba(t.color, 0.14)};color:${t.color}">${esc(ini(t.description))}</span><div><div style="font-weight:500">${esc(t.description)}</div><div class="note" style="font-size:12px">${esc(t.account)}${t.note ? ' · ' + esc(t.note) : ''}</div></div></div></td>
+    <td><div style="display:flex;align-items:center;gap:10px">${logo(t, 30, 9)}<div style="min-width:0"><div style="font-weight:500">${esc(t.description)}</div><div class="note" style="font-size:12px">${esc(t.account)}${t.note ? ' · ' + esc(t.note) : ''}${t.folder ? ' · ' + esc(t.folder) : ''}</div>${aiLine(t.aiShort, 'd-ai ell')}</div></div></td>
     <td><span class="tag"><i style="background:${t.color}"></i>${esc(t.category)}</span></td>
     <td style="font-size:12.5px;color:${t.receipt === 'needs_review' ? 'var(--acc-l)' : 'var(--muted)'}">${t.receipt === 'booked' ? 'Vedlagt' : t.receipt ? 'Til gjennomgang' : '–'}</td>
     <td class="mono" style="white-space:nowrap;font-weight:500;color:${amtColor(t.amount)}">${sgn(t.amount)}</td></tr>`).join('');
   const sel = list?.items.find((t) => t.id === u.sel);
-  const detail = sel ? card(`<div style="display:flex;justify-content:space-between;align-items:flex-start"><span class="ini" style="width:46px;height:46px;border-radius:14px;font-size:17px;background:${rgba(sel.color, 0.14)};color:${sel.color}">${esc(ini(sel.description))}</span><button class="x-btn" data-act="close-sel" aria-label="Lukk">×</button></div>
+  const detail = sel ? card(`<div style="display:flex;justify-content:space-between;align-items:flex-start">${logo(sel, 46, 14)}<button class="x-btn" data-act="close-sel" aria-label="Lukk">×</button></div>
     <div><input class="inp" data-tx-field="description" value="${esc(sel.description)}" aria-label="Beskrivelse" style="font-size:18px;font-weight:600;background:none;border-color:transparent;padding:0;height:auto"><div class="note" style="font-size:13px">${dLong(sel.date)} · ${esc(sel.account)}</div></div>
     <div class="mono" style="font-size:32px;font-weight:600;letter-spacing:-.03em;color:${amtColor(sel.amount)}">${sgn(sel.amount)} <span style="font-size:15px;color:var(--muted);font-weight:400">kr</span></div>
+    ${sel.aiLong ? `<div class="ai-card"><b>✦ AI-beskrivelse</b><span>${esc(sel.aiLong)}</span>${sel.lines?.length ? `<div class="ai-lines">${sel.lines.map((l) => `<span><span>${esc(l.description)}</span><span class="mono">${n2(l.amount)}</span></span>`).join('')}</div>` : ''}</div>` : ''}
     <label class="f">Kategori<select class="inp" data-tx-field="categoryId">${opt('', 'Ukategorisert', sel.categoryId)}${catOpts(sel.categoryId)}</select></label>
     <div style="display:flex;gap:10px"><label class="f" style="flex:1">Dato<input class="inp" type="date" data-tx-field="date" value="${sel.date}"></label><label class="f" style="flex:1">Konto<select class="inp" data-tx-field="accountId">${accOpts(sel.accountId, '–')}</select></label></div>
     <label class="f">Notat<input class="inp" data-tx-field="note" value="${esc(sel.note)}" placeholder="Legg til notat"></label>
@@ -200,7 +207,7 @@ function receipts() {
   const booked = all.filter((r) => r.status === 'booked' || r.status === 'rejected').slice(0, 12);
   if (!u.selRc || !all.find((r) => r.id === u.selRc)) u.selRc = queue[0]?.id ?? null;
   const R = all.find((r) => r.id === u.selRc);
-  const qHtml = queue.map((r) => { const [label, bg, fg] = STATUS[r.status]; return `<button class="rq${r.id === u.selRc ? ' sel' : ''}" data-open-rc="${r.id}">${paper(r)}<span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><b class="ell" style="font-weight:600">${esc(r.merchant ?? 'Ny kvittering')}</b><span class="mono">${r.total != null ? n2(r.total) + ' kr' : ''}</span></span><span class="note" style="display:block;font-size:12px">${dd(r.date)} · ${esc(r.provider ?? aiShort)}</span></span><span class="status" style="background:${bg};color:${fg}">${label}</span></button>`; }).join('');
+  const qHtml = queue.map((r) => { const [label, bg, fg] = STATUS[r.status]; return `<button class="rq${r.id === u.selRc ? ' sel' : ''}" data-open-rc="${r.id}">${paper(r)}<span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><b class="ell" style="font-weight:600">${esc(r.merchant ?? 'Ny kvittering')}</b><span class="mono">${r.total != null ? n2(r.total) + ' kr' : ''}</span></span><span class="note" style="display:block;font-size:12px">${dd(r.date)} · ${esc(r.provider ?? aiShort)}</span>${aiLine(r.aiShort, 'd-ai ell')}</span><span class="status" style="background:${bg};color:${fg}">${label}</span></button>`; }).join('');
   let panel;
   if (!R) panel = '<div class="empty" style="padding:80px 20px">Velg en kvittering i køen, eller skann en ny.</div>';
   else if (R.status === 'pending' || R.status === 'processing') panel = `<div style="padding:80px 20px;display:flex;flex-direction:column;align-items:center;gap:14px" class="sub"><span class="spin"></span>Leser kvitteringen med ${aiShort} …<button class="btn sm ghost" data-act="rc-manual">Fyll ut manuelt i stedet</button></div>`;
@@ -209,7 +216,7 @@ function receipts() {
     <div style="flex:1 1 340px;min-width:0;display:flex;flex-direction:column;gap:16px">
       <label class="drop" data-drop><span class="drop-ic">${icon('scan', 24, 'currentColor')}</span><b style="font-size:15px;font-weight:600">Skann eller last opp kvittering</b><span class="note" style="font-size:13px">Bilde eller PDF · dra hit eller klikk · leses av ${aiShort}</span><input type="file" accept="image/*,application/pdf" capture="environment" multiple data-upload hidden></label>
       ${card(`<div class="card-h"><h2 style="font-size:16px">Kø</h2><span class="note" style="font-size:12.5px">${queue.length} til gjennomgang</span></div>${qHtml || '<div class="note">Ingen kvitteringer i køen.</div>'}`, '', 'padding:20px;gap:8px')}
-      ${card(`<h2 style="font-size:16px">Bokført</h2><div>${booked.map((r) => `<div class="kv-line" style="font-size:13.5px"><button class="link" style="color:var(--text);text-align:left" data-open-rc="${r.id}">${esc(r.merchant ?? '–')} <span class="muted">· ${dd(r.date)}</span></button><span class="mono" style="color:${r.status === 'rejected' ? 'var(--muted)' : 'var(--text)'}">${r.status === 'rejected' ? 'Avvist' : n2(r.total) + ' kr'}</span></div>`).join('') || '<div class="note">Ingen ennå.</div>'}</div>`, '', 'padding:20px;gap:2px')}
+      ${card(`<h2 style="font-size:16px">Bokført</h2><div>${booked.map((r) => `<div class="kv-line" style="font-size:13.5px"><button class="link" style="color:var(--text);text-align:left" data-open-rc="${r.id}">${esc(r.merchant ?? '–')} ${r.aiShort ? `<span class="acc-l" style="font-size:12px">✦ ${esc(r.aiShort)}</span> ` : ''}<span class="muted">· ${dd(r.date)}</span></button><span class="mono" style="color:${r.status === 'rejected' ? 'var(--muted)' : 'var(--text)'}">${r.status === 'rejected' ? 'Avvist' : n2(r.total) + ' kr'}</span></div>`).join('') || '<div class="note">Ingen ennå.</div>'}</div>`, '', 'padding:20px;gap:2px')}
     </div>
     ${card(panel, '', 'flex:2 1 520px;gap:18px')}
   </div>`;
@@ -382,8 +389,11 @@ function settingsPage() {
     <div class="form-grid"><label class="f">CSV-profil${sel('csvProfile', S.boot.profiles.map((p) => [p, p]))}</label><label class="f">Konto<select class="inp" name="accountId" required>${accOpts('', 'Velg konto')}</select></label></div>
     <label class="drop" style="flex-direction:row;justify-content:flex-start;text-align:left;padding:20px"><span class="ini" style="background:var(--inner);color:var(--acc-l)">↑</span><span><b style="font-weight:600">Importer CSV fra nettbanken</b><br><span class="note" style="font-size:12.5px">Duplikater hoppes over automatisk · regler brukes på nye rader</span></span><input type="file" name="file" accept=".csv,text/csv" hidden data-csv></label>
     ${u.msg.csv ? `<div class="${u.msg.csvOk ? 'ok-msg' : 'err-msg'}">${esc(u.msg.csv)}</div>` : ''}
-    <div class="box" style="padding:16px;flex-wrap:wrap"><div><b style="font-weight:600">Open banking (PSD2)</b><div class="note" style="font-size:12.5px">Automatisk henting via Enable Banking · kommer i fase 3</div></div><span class="pill" style="background:var(--line);color:var(--text2);font-weight:400">Ikke koblet</span></div></form>`;
-  else if (t === 'varsel') body = `<div style="display:flex;flex-direction:column;gap:8px">${[['autoCat', 'Auto-kategorisering', 'Bruk regler og AI-forslag'], ['n80', 'Varsel ved 80 % av budsjett', 'Per kategori'], ['n100', 'Varsel når budsjett er brukt opp', 'Per kategori'], ['nRc', 'Ny kvittering til gjennomgang', 'Vises som merke i menyen'], ['nFast', 'Påminnelse om faste trekk', 'Dagen før trekkdato']]
+    <div class="box" style="padding:16px;flex-wrap:wrap"><div><b style="font-weight:600">Open banking (PSD2)</b><div class="note" style="font-size:12.5px">Automatisk henting via Enable Banking · kommer i fase 3</div></div><span class="pill" style="background:var(--line);color:var(--text2);font-weight:400">Ikke koblet</span></div>
+    <div class="box" style="padding:16px;flex-direction:column;align-items:stretch;gap:12px"><div><b style="font-weight:600">Finn-handler via e-post (IMAP)</b><div class="note" style="font-size:12.5px">For å hente Finn-kvitteringer automatisk senere. Inntil videre limes e-postene inn under Finn-handler. Flere filer (XLSX, CSV, tekst) importeres under <a href="#/imp">Import</a>.</div></div>
+      <div class="form-grid"><label class="f">IMAP-server<input class="inp mono" style="font-size:13px" data-set="imapHost" value="${esc(st.imapHost ?? '')}" placeholder="imap.gmail.com"></label><label class="f">Brukernavn<input class="inp" data-set="imapUser" value="${esc(st.imapUser ?? '')}" autocomplete="off"></label>
+      <label class="f">App-passord<input class="inp" type="password" data-set="imapPass" value="" placeholder="${st.imapPassSet ? '•••••••• lagret på serveren' : 'Lagres på serveren'}" autocomplete="off"></label><label class="f">Mappe<input class="inp" data-set="imapFolder" value="${esc(st.imapFolder ?? 'INBOX')}"></label></div></div></form>`;
+  else if (t === 'varsel') body = `<div style="display:flex;flex-direction:column;gap:8px">${[['autoCat', 'Auto-kategorisering', 'Bruk regler og AI-forslag'], ['aiSummaries', '✦ AI-sammendrag', 'Kort og lang beskrivelse av hver post, laget i bakgrunnen'], ['n80', 'Varsel ved 80 % av budsjett', 'Per kategori'], ['n100', 'Varsel når budsjett er brukt opp', 'Per kategori'], ['nRc', 'Ny kvittering til gjennomgang', 'Vises som merke i menyen'], ['nFast', 'Påminnelse om faste trekk', 'Dagen før trekkdato']]
     .map(([k2, n, s2]) => `<button class="tog-row" data-tog="${k2}"><span class="grow"><b style="font-weight:500">${n}</b><br><span class="note" style="font-size:12.5px">${s2}</span></span><span class="toggle" role="switch" aria-checked="${!!st[k2]}"></span></button>`).join('')}
     <div class="note" style="font-size:12.5px">Varsler vises i FinansHub og i mobilappen. Push-varsler krever at appen er installert på hjemskjermen.</div></div>`;
   else if (t === 'mobil') body = `<div style="display:flex;flex-direction:column;gap:12px">
@@ -441,7 +451,7 @@ function modalHtml() {
 
 /* ===================== Tegning og ruting ===================== */
 
-const PAGE_FN = { ov: overview, tx: transactions, kv: receipts, bud: budget, fast: recurring, konto: accounts, rap: reports, inn: settingsPage };
+const PAGE_FN = { ov: overview, tx: transactions, kv: receipts, bud: budget, fast: recurring, konto: accounts, rap: reports, inn: settingsPage, ...MODULE_FN };
 
 export function draw() {
   const el = root();
@@ -453,7 +463,7 @@ export function draw() {
 }
 const focusSel = (e) => (e.name ? `[data-form] input[name="${e.name}"]` : e.dataset.txField ? `[data-tx-field="${e.dataset.txField}"]` : e.dataset.rcField ? `[data-rc-field="${e.dataset.rcField}"]` : null);
 
-const LOADERS = { ov: [loadSummary], tx: [loadTx], kv: [loadReceipts], bud: [loadSummary], fast: [loadRecurring], konto: [], rap: [loadReport], inn: [] };
+const LOADERS = { ov: [loadSummary], tx: [loadTx], kv: [loadReceipts], bud: [loadSummary], fast: [loadRecurring], konto: [], rap: [loadReport], inn: [], ...MODULE_LOADERS };
 export async function load(page = u.page) {
   try { await Promise.all(LOADERS[page].map((f) => f())); } catch (e) { toast(e.message); }
   if (page === 'inn' && u.setTab === 'mobil') S.tokens = await api('/tokens').catch(() => []);
@@ -493,6 +503,7 @@ async function uploadFiles(files) {
 
 export function bind() {
   const el = root();
+  bindModules(el);
   el.addEventListener('click', busyWrap(async (e) => {
     const t = e.target;
     const d = (sel) => t.closest(sel);
@@ -585,7 +596,7 @@ export function bind() {
     if (t.dataset.set) {
       const key = t.dataset.set; let v = t.value;
       if (['monthStart', 'yearGoal', 'minConf'].includes(key)) v = +String(v).replace(/\s/g, '');
-      if (key === 'geminiKey' && !v) return;
+      if ((key === 'geminiKey' || key === 'imapPass') && !v) return;
       await saveSet({ [key]: v }); if (key === 'monthStart') await refreshAll();
       if (key === 'geminiKey') toast('Nøkkelen er lagret på serveren');
       return;
