@@ -132,6 +132,7 @@ docker compose --profile mail up -d
 | Innloggingen ble avvist (AUTHENTICATIONFAILED) | Brukt Proton-passordet i stedet for Bridge-passordet, eller Bridge er logget ut |
 | Tilkoblingen ble nektet | Bridge kjører ikke, eller feil port (1143 i stedet for 143 fra en annen container) |
 | Fant ikke mappen | Mangler `Folders/` foran navnet |
+| Tilkoblingen ble nektet, og loggen viser `libfido2.so.1: cannot open shared object file` | Bridge har oppdatert seg til en versjon som trenger libfido2. Bygg imaget på nytt: `docker compose --profile mail up -d --build protonmail-bridge` |
 | Sertifikatet stemmer ikke / kunne ikke verifiseres | Bridge er satt opp på nytt – glem sertifikatet og test igjen |
 
 - **Duplikater:** hver e-post huskes på `Message-ID` og sha256 av hvert vedlegg (tabellen `fh_mail_imports`), så ingenting importeres to ganger selv om e-posten flyttes tilbake.

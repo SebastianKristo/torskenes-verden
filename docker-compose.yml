@@ -26,7 +26,8 @@ services:
   # Fra appen: vert «protonmail-bridge», port 143 (IMAP, STARTTLS). Portene publiseres IKKE – bare containere i samme compose når den.
   protonmail-bridge:
     profiles: [mail]     # start med: docker compose --profile mail up -d
-    image: shenxn/protonmail-bridge:latest   # bytt gjerne til en fast versjon
+    build: ./deploy/protonmail-bridge       # shenxn/protonmail-bridge + libfido2 (kreves av nyere Bridge)
+    image: homelab-protonmail-bridge:local
     restart: unless-stopped
     volumes:
       - ./proton:/root   # nøkler og cache – ta med i backup
