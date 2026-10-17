@@ -105,3 +105,9 @@ export function parseRoutes(text) {
   return String(text).split(/\r?\n/).map((l) => l.match(/^\s*(.+?)\s*\((?:NSR:StopPlace:)?(\d+)\)\s*(?:>|→|->)\s*(.+?)\s*\((?:NSR:StopPlace:)?(\d+)\)\s*$/))
     .filter(Boolean).map(([, fromName, fromId, toName, toId]) => ({ fromName, fromId, toName, toId }));
 }
+
+// Passord satt i Innstillinger overstyrer APP_PASSWORD_HASH fra miljøet.
+export function passwordHash() {
+  return kv.get(OWNER, 'password_hash', '') || process.env.APP_PASSWORD_HASH || '';
+}
+export function setPasswordHash(hash) { kv.set(OWNER, 'password_hash', hash); }

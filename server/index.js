@@ -8,10 +8,10 @@ import { randomBytes } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { config } from './config.js';
 import { db, kv, OWNER } from './db.js';
-import { verifyPassword } from './password.js';
+import { verifyPassword, hashPassword } from './password.js';
 import { createSession, destroySession, sessionUser, rememberDevice, pauseDevice, forgetDevice, currentDeviceId, trustIp, isLan, requireAuth, clientIp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
 import * as integrations from './integrations.js';
-import { cfg, publicConfig, updateConfig } from './settings.js';
+import { cfg, publicConfig, updateConfig, passwordHash, setPasswordHash } from './settings.js';
 import finansApi from './finans/routes.js';
 import { db as fhDb } from './finans/db.js';
 import homeApi from './home.js';
@@ -76,7 +76,7 @@ app.post('/api/login', async (c) => {
   const wait = loginBlocked(ip);
   if (wait) return c.json({ error: `For mange forsøk. Prøv igjen om ${Math.ceil(wait / 60)} min.` }, 429);
   const { password, remember } = await c.req.json().catch(() => ({}));
-  if (!config.passwordHash || !verifyPassword(password ?? '', config.passwordHash)) {
+  if (!passwordHash() || !verifyPassword(password ?? '', passwordHash())) {
     loginFailed(ip);
     await new Promise((r) => setTimeout(r, 400));
     return c.json({ error: 'Feil passord' }, 401);
@@ -181,6 +181,17 @@ authed.get('/devices', (c) => {
   const list = db.prepare('SELECT id, name, created, last_seen, last_ip FROM devices WHERE user=? ORDER BY last_seen DESC').all(c.get('user'));
   return c.json({ lan: isLan(ip), trusted: list.some((d) => d.id === cur),
     devices: list.map((d) => ({ id: d.id.slice(0, 16), name: d.name, created: d.created, lastSeen: d.last_seen, lastIp: d.last_ip, current: d.id === cur })) });
+});
+authed.put('/password', async (c) => {
+  const { current, next } = await c.req.json().catch(() => ({}));
+  const ip = clientIp(c);
+  const wait = loginBlocked(ip);
+  if (wait) return c.json({ error: `For mange forsøk. Prøv igjen om ${Math.ceil(wait / 60)} min.` }, 429);
+  if (passwordHash() && !verifyPassword(String(current ?? ''), passwordHash())) { loginFailed(ip); return c.json({ error: 'Nåværende passord er feil' }, 403); }
+  if (typeof next !== 'string' || next.length < 8 || next.length > 200) return c.json({ error: 'Nytt passord må ha minst 8 tegn' }, 400);
+  loginSucceeded(ip);
+  setPasswordHash(hashPassword(next));
+  return c.json({ ok: true });
 });
 authed.post('/devices/current', (c) => { rememberDevice(c, c.get('user')); return c.json({ ok: true }); });
 authed.delete('/devices/:id', (c) => {

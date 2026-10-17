@@ -100,7 +100,7 @@ struct API {
         let api = API(base: base, token: nil)
         let body: [String: Any] = ["password": password, "device": device, "deviceName": device]
         let data: Data
-        do { data = try await api.call("POST", "/login", json: body) } catch let e as APIError where e.status == 404 {
+        do { data = try await api.call("POST", "/login", json: body) } catch let e as APIError where e.status == 404 || (e.status == 401 && e.message.contains("Ikke innlogget")) {
             do { data = try await api.call("POST", "/auth/token", json: body) } catch let e2 as APIError where e2.status == 404 {
                 throw APIError(message: "Fant ikke FinansHub på \(base) (404). Sjekk adressen, eller oppdater homelab-serveren.", status: 404)
             }
@@ -115,6 +115,9 @@ struct API {
     static func normalize(_ raw: String) -> String {
         var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         while s.hasSuffix("/") { s.removeLast() }
+        // Fjern sti som «/finans» – appen legger selv til /finans/api.
+        let start = s.range(of: "://")?.upperBound ?? s.startIndex
+        if let slash = s[start...].firstIndex(of: "/") { s = String(s[..<slash]) }
         let lower = s.lowercased()
         if lower.hasPrefix("http://") || lower.hasPrefix("https://") { return s }
         let host = String(lower.split(separator: "/").first ?? "").split(separator: ":").first.map(String.init) ?? ""

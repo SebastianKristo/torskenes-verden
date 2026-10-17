@@ -81,7 +81,15 @@ function loginTab() {
     <div class="set-label">Pålitelige enheter</div>
     ${d.devices.map((x) => `<div class="row"><div><div>${esc(x.name)}${x.current ? ' <span class="badge" style="background:var(--blue)">denne</span>' : ''}</div>
       <div class="mono muted" style="font-size:12px">Sist brukt ${when(x.lastSeen)}${x.lastIp ? ` · ${esc(x.lastIp)}` : ''}</div></div>
-      <button class="btn" data-dev-del="${x.id}" style="color:var(--red)">Fjern</button></div>`).join('') || '<div class="empty">Ingen pålitelige enheter.</div>'}`;
+      <button class="btn" data-dev-del="${x.id}" style="color:var(--red)">Fjern</button></div>`).join('') || '<div class="empty">Ingen pålitelige enheter.</div>'}
+    <div class="set-label">Bytt passord</div>
+    <form data-pw class="settings-section" style="max-width:420px">
+      <input class="field" type="password" name="current" placeholder="Nåværende passord" autocomplete="current-password">
+      <input class="field" type="password" name="next" placeholder="Nytt passord (minst 8 tegn)" autocomplete="new-password" minlength="8" required>
+      <input class="field" type="password" name="again" placeholder="Gjenta nytt passord" autocomplete="new-password" required>
+      <div style="display:flex;gap:12px;align-items:center"><button class="btn" type="submit" style="color:var(--blue)">Lagre passord</button><span class="muted" data-pw-msg style="font-size:13px"></span></div>
+      <div class="muted" style="font-size:12px">Gjelder både nettsiden og mobilappene. Overstyrer APP_PASSWORD_HASH.</div>
+    </form>`;
 }
 
 async function loadDevices() {
@@ -129,6 +137,15 @@ async function saveGroup(form, changes) {
 
 export function bindSettings() {
   const m = modal();
+  m.addEventListener('submit', async (e) => {
+    const f = e.target.closest('[data-pw]');
+    if (!f) return;
+    e.preventDefault();
+    const msg = f.querySelector('[data-pw-msg]'), v = Object.fromEntries(new FormData(f));
+    if (v.next !== v.again) { msg.textContent = 'Passordene er ikke like'; return; }
+    try { await api('/password', { method: 'PUT', json: { current: v.current, next: v.next } }); f.reset(); msg.textContent = 'Passordet er endret ✓'; }
+    catch (err) { msg.textContent = err.message || 'Kunne ikke endre passordet'; }
+  });
   m.addEventListener('click', async (e) => {
     if (e.target === m || e.target.closest('[data-close]')) return closeSettings();
     const t = e.target.closest('[data-tab]');

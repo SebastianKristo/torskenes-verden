@@ -12,6 +12,7 @@ import { parseFile, readText, rowsToTx } from './importer.js';
 import { parseFinnEmail } from './finn.js';
 import { sessionUser, clientIp, loginBlocked, loginFailed, loginSucceeded } from '../auth.js';
 import { verifyPassword } from '../password.js';
+import { passwordHash } from '../settings.js';
 import { config } from '../config.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
@@ -233,7 +234,7 @@ async function tokenLogin(c) {
   const wait = loginBlocked(ip);
   if (wait) return bad(c, `For mange forsøk. Prøv igjen om ${Math.ceil(wait / 60)} min.`, 429);
   const b = await c.req.json().catch(() => ({}));
-  if (!config.passwordHash || !verifyPassword(String(b.password ?? ''), config.passwordHash)) {
+  if (!passwordHash() || !verifyPassword(String(b.password ?? ''), passwordHash())) {
     loginFailed(ip);
     await new Promise((r) => setTimeout(r, 400));
     return bad(c, 'Feil passord', 401);

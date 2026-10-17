@@ -116,7 +116,7 @@ class Api(private val baseUrl: String, private val token: String?) {
             val body = JSONObject().put("password", password).put("device", deviceName).put("deviceName", deviceName)
             val api = Api(baseUrl, null)
             val res = try { api.post("/login", body) } catch (e: ApiException) {
-                if (e.status != 404) throw e
+                if (e.status != 404 && !(e.status == 401 && e.message?.contains("Ikke innlogget") == true)) throw e
                 try { api.post("/auth/token", body) } catch (e2: ApiException) {
                     if (e2.status == 404) throw ApiException("Fant ikke FinansHub på $baseUrl (404). Sjekk adressen, eller oppdater homelab-serveren.", 404)
                     throw e2
@@ -125,9 +125,16 @@ class Api(private val baseUrl: String, private val token: String?) {
             return runCatching { JSONObject(res).getString("token") }.getOrElse { throw ApiException("Uventet svar fra serveren. Er dette riktig adresse?") }
         }
 
+        /** Fjerner sti som «/finans» – appen legger selv til /finans/api. */
+        private fun stripPath(s: String): String {
+            val start = s.indexOf("://").let { if (it >= 0) it + 3 else 0 }
+            val i = s.indexOf('/', start)
+            return if (i >= 0) s.substring(0, i) else s
+        }
+
         /** Legger til skjema når det mangler: http:// for lokale adresser, ellers https://. */
         fun normalizeServer(raw: String): String {
-            val s = raw.trim().trimEnd('/')
+            val s = stripPath(raw.trim().trimEnd('/'))
             if (s.startsWith("http://", true) || s.startsWith("https://", true)) return s
             val host = s.substringBefore('/').substringBefore(':').lowercase()
             val local = host == "localhost" || host.endsWith(".local") || host.endsWith(".lan") || host.endsWith(".home.arpa") ||
