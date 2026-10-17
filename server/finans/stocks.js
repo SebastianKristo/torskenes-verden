@@ -177,7 +177,9 @@ async function fetchAll() {
   try { dividends = normDividends(await call('/history/dividends?limit=50')); } catch (e) { partial = e.message; }
   const hist = snapshot(summary, positions);
   dayChange(positions, hist);
-  return { summary, positions, orders, dividends, history: hist.map((h) => ({ date: h.date, value: h.value })), partial };
+  // Kursserie per aksje fra dagsbildene (mobilappenes aksjegraf). Bygges opp én dag om gangen etter hvert som vi synker.
+  const withHist = positions.map((p) => ({ ...p, history: hist.filter((h) => h.prices?.[p.ticker] != null).map((h) => ({ date: h.date, price: h.prices[p.ticker] })) }));
+  return { summary, positions: withHist, orders, dividends, history: hist.map((h) => ({ date: h.date, value: h.value })), partial };
 }
 
 export async function stocks({ force = false } = {}) {
@@ -216,6 +218,9 @@ function mock() {
     const value = quantity * price, pl = value - quantity * avg;
     return { ticker, symbol: tk(ticker), name, currency: 'NOK', quantity, avg, price, value, pl, plPct: (pl / (quantity * avg)) * 100, fxPl: 0, dayPct };
   });
+  // Demodata: en troverdig kursserie per aksje fra snittkurs til dagens kurs.
+  positions.forEach((p, k) => { p.history = Array.from({ length: 365 }, (_, i) => ({ date: new Date(Date.now() - (364 - i) * 86400_000).toLocaleDateString('sv-SE'),
+    price: Math.round((p.avg + (p.price - p.avg) * (i / 364) + p.avg * 0.06 * Math.sin(i / (7 + k)) * (1 - i / 364)) * 100) / 100 })); });
   const value = positions.reduce((a, p) => a + p.value, 0), invested = positions.reduce((a, p) => a + p.quantity * p.avg, 0);
   const history = Array.from({ length: 365 }, (_, i) => {
     const d = new Date(Date.now() - (364 - i) * 86400_000);
