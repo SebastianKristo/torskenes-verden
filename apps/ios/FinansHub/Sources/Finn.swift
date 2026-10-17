@@ -26,7 +26,7 @@ private func initials(_ s: String) -> String {
 }
 
 /// Fast fargetone per handel når det ikke finnes bilde.
-private func tint(_ id: Int) -> Color {
+private func finnTint(_ id: Int) -> Color {
     let c = ["#3A2F4A", "#1E2A3F", "#3B2E22", "#22362C", "#2C2C33", "#2A3540"]
     return Color(hex: c[((id % c.count) + c.count) % c.count])
 }
@@ -68,7 +68,7 @@ private struct FinnImage: View {
     @State private var img: UIImage?
     var body: some View {
         ZStack {
-            tint(id)
+            finnTint(id)
             if let img {
                 Image(uiImage: img).resizable().scaledToFill()
             } else {

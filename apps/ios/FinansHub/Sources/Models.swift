@@ -476,7 +476,7 @@ struct FinnDetail: Decodable {
     init(from d: Decoder) throws {
         let c = try d.container(keyedBy: K.self)
         // Handelen kan ligge under «deal» eller på toppnivå.
-        deal = (try? c.decode(FinnDeal.self, forKey: .deal)) ?? (try FinnDeal(from: d))
+        deal = try (try? c.decode(FinnDeal.self, forKey: .deal)) ?? FinnDeal(from: d)
         ad = try? c.decode(FinnAd.self, forKey: .ad)
         receipts = (try? c.decode([FinnFile].self, forKey: .receipts)) ?? []
         emails = (try? c.decode([FinnMail].self, forKey: .emails)) ?? []
