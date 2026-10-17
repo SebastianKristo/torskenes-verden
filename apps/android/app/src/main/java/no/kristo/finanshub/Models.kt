@@ -67,6 +67,10 @@ data class MobileHome(
     val name: String?, val serverName: String?, val avatarUrl: String?, val greeting: String?,
     val weather: Weather?, val shortcuts: List<Shortcut>, val ruter: List<RuterLine>, val serverStatus: ServerStatus?,
     val layout: HomeLayout? = null,
+    /** De 2 viktigste pakkene (null = eldre server uten Sporing). */
+    val packages: List<Shipment>? = null,
+    /** Ekstrafeltene i været (MET), lest romslig. */
+    val weatherX: WeatherX? = null,
 )
 
 /** Oppsettet av mobilforsiden (per bruker og enhet): rekkefølge og synlighet for seksjoner og faner. */
@@ -90,7 +94,7 @@ data class HomeLayout(
 
     companion object {
         val SECTIONS = listOf("clock", "search", "links", "os", "srv", "ruter")
-        val HL_TABS = listOf("hl", "home", "dom", "mat")
+        val HL_TABS = listOf("hl", "home", "trk", "dom", "mat")
         val FIN_TABS = listOf("home", "list", "finn", "bud", "ai", "mer")
         /** Kan ikke skjules. */
         val FIXED_HL = setOf("hl", "home")
@@ -115,8 +119,11 @@ data class HomeLayout(
                 fin = fin.toMutableList().apply { add(at, "finn") }
                 hide["bud"] = true
             }
+            // Eldre oppsett uten Sporing: fanen settes inn foran Domener (samme som PWA-en og iOS).
+            var hl = o.optJSONArray("hlTabs").strings().filter { it in HL_TABS }
+            if (hl.isNotEmpty() && "trk" !in hl) hl = hl.toMutableList().apply { add(indexOf("dom").takeIf { it >= 0 } ?: size, "trk") }
             return HomeLayout(
-                fix(o.optJSONArray("sec").strings(), SECTIONS), fix(o.optJSONArray("hlTabs").strings(), HL_TABS),
+                fix(o.optJSONArray("sec").strings(), SECTIONS), fix(hl, HL_TABS),
                 fix(fin, FIN_TABS), hide, names,
                 o.optString("backStyle").takeIf { it == "arrow" || it == "bar" } ?: "arrow",
                 o.optString("matTheme").takeIf { it in listOf("light", "dark", "system") } ?: "light",
@@ -157,6 +164,8 @@ data class AiAnswer(
     val q: String, val answer: String, val hits: List<SearchHit>, val engine: String?, val suggestions: List<String>,
     val followUps: List<String> = emptyList(), val mode: String? = null, val interpreted: String? = null,
     val stores: List<StoreHit> = emptyList(), val aiUnavailable: Boolean = false,
+    /** Vanlig søk ga treff for 1–2 ord, så AI ble ikke brukt («✦ Spør AI likevel» sender force). */
+    val plainFirst: Boolean = false, val notice: String? = null,
 )
 /** Forslagsgrupper til søket (GET /search/suggestions). */
 data class SuggestGroup(val title: String, val items: List<String>)
@@ -252,7 +261,9 @@ data class FinnMail(val id: String, val date: String?, val from: String?, val su
 data class FinnLine(val label: String, val amount: Double)
 data class FinnDetail(val deal: FinnDeal, val ad: FinnAd?, val receipts: List<FinnFile>, val emails: List<FinnMail>, val photos: List<FinnFile>, val summary: String?, val lines: List<FinnLine>,
     /** Kvitteringen: total og «Betalt»/«Utbetalt» fra serveren; annonselenken serveren har funnet i e-postene. */
-    val total: Double? = null, val totalLabel: String? = null, val adUrlGuess: String? = null) {
+    val total: Double? = null, val totalLabel: String? = null, val adUrlGuess: String? = null,
+    /** Fiks ferdig: sendingen fra Sporing (status og hendelser vises i tidslinjen). */
+    val shipment: Shipment? = null) {
     /** Bildene i karusellen: egne bilder først, så annonsens. */
     val images: List<String> get() = photos.mapNotNull { it.url ?: it.thumb } + (ad?.images ?: emptyList())
 }
@@ -375,6 +386,8 @@ fun parseMobileHome(s: String): MobileHome {
         } ?: emptyList(),
         st?.let { ServerStatus(it.optDoubleOrNull("cpu"), it.optDoubleOrNull("mem"), it.optDoubleOrNull("disk"), it.optDoubleOrNull("temp"), it.optStr("uptimeText") ?: when (val u = it.opt("uptime")) { is Number -> uptimeLabel(u.toDouble()); is String -> u; else -> null }) },
         o.optJSONObject("layout")?.let { l -> (l.optJSONObject("mobile") ?: l).takeIf { it.has("sec") }?.let { HomeLayout.from(it) } },
+        packages = o.optJSONArray("packages")?.map(::parseShipment),
+        weatherX = w?.let(::parseWeatherX),
     )
 }
 
@@ -457,6 +470,7 @@ fun parseAi(s: String, q: String): AiAnswer {
         o.optJSONArray("followUps").strings(), o.optStr("mode"), o.opt("interpreted") as? String,
         o.optJSONArray("stores")?.map { StoreHit(it.optString("name"), it.optInt("count"), it.optStr("last")) } ?: emptyList(),
         o.optBoolean("aiUnavailable"),
+        plainFirst = o.optBoolean("plainFirst"), notice = o.optStr("notice"),
     )
 }
 
@@ -609,7 +623,7 @@ fun parseFinnDetail(s: String): FinnDetail {
         FinnLine(it.optStr("label") ?: it.optStr("l") ?: it.optStr("description") ?: "", if (it.has("amount")) it.num("amount") else it.num("v"))
     } ?: emptyList()
     return FinnDetail(deal, ad, receipts, mails, photos, o.summaryText() ?: deal.summary, lines,
-        rc?.optDoubleOrNull("total"), rc?.optStr("totalLabel"), o.optStr("adUrlGuess"))
+        rc?.optDoubleOrNull("total"), rc?.optStr("totalLabel"), o.optStr("adUrlGuess"), o.optJSONObject("shipment")?.let(::parseShipment))
 }
 
 private fun JSONObject.time(k: String): Long? = when {

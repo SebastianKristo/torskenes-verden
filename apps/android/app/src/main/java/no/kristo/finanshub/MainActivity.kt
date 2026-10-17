@@ -41,6 +41,8 @@ class MainActivity : FragmentActivity() {
                 FinansApp(vm, size.widthSizeClass, unlock = ::unlock, onPrivacyChanged = ::applySwitcherPrivacy)
             }
         }
+        // Haptikk går via vinduets rotvisning (følger «Vibrasjon og haptikk» i systemet).
+        Haptics.attach(window.decorView, vm.prefs)
     }
 
     override fun onResume() {

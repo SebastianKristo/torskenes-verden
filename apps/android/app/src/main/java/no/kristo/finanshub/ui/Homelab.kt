@@ -50,14 +50,14 @@ import java.time.format.DateTimeFormatter
 
 /** Widgets på forsiden: navn, beskrivelse og ikon (galleriet «Legg til widget»). */
 private val WIDGETS: Map<String, Triple<String, String, ImageVector>> = mapOf(
-    "clock" to Triple("Klokke og vær", "Tid, temperatur og vind", Icons.Filled.Schedule),
+    "clock" to Triple("Klokke og vær", "Tid, været og pakker på vei (sveip)", Icons.Filled.Schedule),
     "search" to Triple("Google-søk", "Søk med forslag og historikk", Icons.Filled.Search),
     "links" to Triple("Snarveier", "Favorittsider og tjenester på hjemmenettet", Icons.Filled.Apps),
     "os" to Triple("Andre OS", "Finans, Domener og Matplan", Icons.Filled.Widgets),
     "srv" to Triple("Serverstatus", "CPU, minne, lagring og oppetid", Icons.Filled.Dns),
     "ruter" to Triple("Ruter-avganger", "Neste avganger fra holdeplassen", Icons.Filled.DirectionsBus),
 )
-private val HL_NAMES = mapOf("hl" to "Homelab", "home" to "Finans", "dom" to "Domener", "mat" to "Matplan")
+private val HL_NAMES = mapOf("hl" to "Homelab", "home" to "Finans", "trk" to "Sporing", "dom" to "Domener", "mat" to "Matplan")
 private val FIN_NAMES = mapOf("home" to "Oversikt", "list" to "Liste", "finn" to "Finn", "bud" to "Budsjett", "ai" to "Søk", "mer" to "Mer")
 
 private fun greeting(): String = when (LocalTime.now().hour) { in 5..9 -> "God morgen"; in 10..17 -> "Hei"; else -> "God kveld" }
@@ -94,7 +94,7 @@ internal fun HomelabScreen(vm: AppViewModel, twoPane: Boolean) {
             item(key = id) {
                 EditFrame(vm, id, i, sections.size) {
                     when (id) {
-                        "clock" -> ClockWeather(vm)
+                        "clock" -> HomeCarousel(vm)
                         "search" -> GoogleSearch(vm)
                         "links" -> Shortcuts(vm)
                         "os" -> OtherOs(vm, twoPane)
@@ -154,24 +154,6 @@ private fun SmallRound(text: String, enabled: Boolean, onClick: () -> Unit) {
 @Composable
 private fun HCard(content: @Composable ColumnScope.() -> Unit) =
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(C.surface1).padding(18.dp, 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
-
-@Composable
-private fun ClockWeather(vm: AppViewModel) {
-    var now by remember { mutableStateOf(LocalTime.now()) }
-    LaunchedEffect(Unit) { while (true) { now = LocalTime.now(); delay(1000) } }
-    val w = vm.mobileHome?.weather
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(C.surface1).padding(20.dp, 16.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(now.format(DateTimeFormatter.ofPattern("HH:mm")), fontSize = 52.sp, fontWeight = FontWeight.Light, fontFamily = Mono, modifier = Modifier.weight(1f))
-        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            if (w == null) Text("Vær mangler", color = C.text2, fontSize = 13.sp)
-            else {
-                Text(w.temp?.let { "${it.toInt()}°" } ?: "–", fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
-                Text(listOfNotNull(w.text, w.wind?.let { "${it.toInt()} m/s" }).joinToString(" · "), color = C.text2, fontSize = 13.sp)
-                Text("${w.place}${if (w.max != null && w.min != null) " · ${w.max.toInt()}° / ${w.min.toInt()}°" else ""}", color = C.text2, fontSize = 12.sp)
-            }
-        }
-    }
-}
 
 /** Google-søk med nylige søk og forslag i en liste rett under feltet. Adresser åpnes direkte. */
 @Composable

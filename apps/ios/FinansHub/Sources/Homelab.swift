@@ -4,7 +4,7 @@ import SwiftUI
 
 let sectionName = ["clock": "Klokke og vær", "search": "Google-søk", "links": "Snarveier", "os": "Andre OS", "srv": "Serverstatus", "ruter": "Ruter"]
 private let sectionIcon = ["clock": "clock", "search": "magnifyingglass", "links": "square.grid.2x2", "os": "square.stack.3d.up", "srv": "server.rack", "ruter": "tram.fill"]
-private let sectionDesc = ["clock": "Tid, dato og været der du er", "search": "Forslag og historikk mens du skriver", "links": "Snarveiene dine fra Homelab",
+private let sectionDesc = ["clock": "Tid, været der du er og pakker på vei (sveip)", "search": "Forslag og historikk mens du skriver", "links": "Snarveiene dine fra Homelab",
                            "os": "Finans, Domener og Matplan", "srv": "CPU, minne, disk og oppetid", "ruter": "Neste avganger fra holdeplassene dine"]
 
 private func kr(_ v: Double) -> String { "\(neg0(v)) kr" }
@@ -73,7 +73,7 @@ struct HomelabView: View {
 
     @ViewBuilder private func section(_ id: String) -> some View {
         switch id {
-        case "clock": ClockWeather()
+        case "clock": HomeCarousel()
         case "search": GoogleSearch()
         case "links": Shortcuts()
         case "os": OtherOs()
@@ -138,45 +138,6 @@ struct EditFrame<Content: View>: View {
 }
 
 /* ---------------- Widgets ---------------- */
-
-struct ClockWeather: View {
-    @Environment(Store.self) private var store
-    var body: some View {
-        TimelineView(.everyMinute) { ctx in
-            HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(hm(ctx.date)).font(.system(size: 52, weight: .light)).monospacedDigit()
-                    Text(longDate(ctx.date)).font(.subheadline).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
-                }
-                Spacer(minLength: 0)
-                if let w = store.mobileHome?.weather {
-                    VStack(alignment: .trailing, spacing: 4) {
-                        HStack(spacing: 6) {
-                            Image(systemName: weatherIcon(w.text)).symbolRenderingMode(.multicolor).font(.system(size: 24))
-                            Text(w.temp.map { "\(Int($0.rounded()))°" } ?? "–").font(.system(size: 30, weight: .semibold)).monospacedDigit()
-                        }
-                        if let t = w.text, !t.isEmpty { Text(t).font(.footnote).foregroundStyle(.white.opacity(0.8)).lineLimit(1) }
-                        let extra = [w.place, w.max.map { "↑ \(Int($0.rounded()))°" }, w.min.map { "↓ \(Int($0.rounded()))°" }].compactMap { $0 }.filter { !$0.isEmpty }
-                        if !extra.isEmpty { Text(extra.joined(separator: " · ")).font(.caption).foregroundStyle(.white.opacity(0.6)).lineLimit(1) }
-                    }
-                }
-            }
-            .padding(20).frame(maxWidth: .infinity, alignment: .leading).glass(28)
-        }
-    }
-
-    private func weatherIcon(_ text: String?) -> String {
-        let t = (text ?? "").lowercased()
-        if t.contains("torden") { return "cloud.bolt.rain.fill" }
-        if t.contains("snø") || t.contains("sludd") { return "cloud.snow.fill" }
-        if t.contains("regn") || t.contains("byger") { return "cloud.rain.fill" }
-        if t.contains("tåke") { return "cloud.fog.fill" }
-        if t.contains("lettskyet") || t.contains("delvis") || t.contains("halvskyet") { return "cloud.sun.fill" }
-        if t.contains("sky") || t.contains("overskyet") { return "cloud.fill" }
-        if t.contains("sol") || t.contains("klar") { return "sun.max.fill" }
-        return "cloud.sun.fill"
-    }
-}
 
 /// Google-søk: historikk når feltet er tomt, forslag mens man skriver. Adresser åpnes direkte.
 struct GoogleSearch: View {

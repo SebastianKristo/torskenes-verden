@@ -61,6 +61,7 @@ internal fun screenIcon(s: Screen): ImageVector = when (s) {
     Screen.Folders -> Icons.Filled.FolderShared
     Screen.Finn -> Icons.Filled.Storefront
     Screen.Settings -> Icons.Filled.Settings
+    Screen.Tracking -> Icons.Filled.LocalShipping
 }
 internal fun moduleIcon(s: Screen): ImageVector = screenIcon(s)
 
@@ -166,15 +167,16 @@ private fun MainPane(vm: AppViewModel, twoPane: Boolean, scan: ScanActions, onPr
         Screen.Scan -> if (!twoPane && vm.selectedReceipt != null) ReceiptConfirm(vm, back = { vm.selectedReceipt = null }) else ScanQueue(vm, scan.camera, scan.sheet)
         Screen.Fast -> FastScreen(vm)
         Screen.Accounts -> AccountsScreen(vm)
-        Screen.Stocks -> StocksScreen(vm)
+        Screen.Stocks -> StocksMobileScreen(vm)
         Screen.Reports -> ReportsScreen(vm)
         Screen.Import -> ImportScreen(vm)
         Screen.Mat -> MatScreen(vm)
         Screen.Domains -> DomainsScreen(vm, twoPane)
-        Screen.Sub -> SubScreen(vm)
+        Screen.Sub -> SubsMobileScreen(vm)
         Screen.Folders -> FoldersScreen(vm)
         Screen.Finn -> FinnScreen(vm)
         Screen.Settings -> SettingsScreen(vm, onPrivacyChanged)
+        Screen.Tracking -> TrackingScreen(vm)
     }
 }
 
@@ -197,9 +199,9 @@ private fun DetailPane(vm: AppViewModel) {
 private fun BottomBar(vm: AppViewModel) {
     val s = vm.screen
     when {
-        s == Screen.Homelab -> NavigationBar(containerColor = C.surface1) {
+        s == Screen.Homelab || s == Screen.Tracking -> NavigationBar(containerColor = C.surface1) {
             vm.hlTabs.forEach { t ->
-                NavigationBarItem(selected = s == t, onClick = { vm.go(t) }, icon = { Icon(screenIcon(t), null) }, label = { Text(vm.hlName(t), maxLines = 1, overflow = TextOverflow.Ellipsis) })
+                NavigationBarItem(selected = s == t, onClick = { if (s != t) Haptics.select(); vm.go(t) }, icon = { Icon(screenIcon(t), null) }, label = { Text(vm.hlName(t), maxLines = 1, overflow = TextOverflow.Ellipsis) })
             }
         }
         s.isFinance -> NavigationBar(containerColor = C.surface1) {
@@ -207,14 +209,14 @@ private fun BottomBar(vm: AppViewModel) {
             vm.finTabs.forEach { t ->
                 // Mer er markert på undersidene, og på Budsjett/Finn når de ikke er egne faner.
                 val on = s == t || (t == Screen.More && (s.isMorePage || (s in setOf(Screen.Budget, Screen.Finn) && s !in vm.finTabs)))
-                NavigationBarItem(selected = on, onClick = { vm.go(t) }, icon = { Icon(screenIcon(t), null) }, label = { Text(vm.finName(t), maxLines = 1, overflow = TextOverflow.Ellipsis) })
+                NavigationBarItem(selected = on, onClick = { if (!on) Haptics.select(); vm.go(t) }, icon = { Icon(screenIcon(t), null) }, label = { Text(vm.finName(t), maxLines = 1, overflow = TextOverflow.Ellipsis) })
             }
         }
         // Domener: fanelinja byttes ut med Trafikk, Besøk, Ytelse og Sikkerhet.
         s == Screen.Domains -> NavigationBar(containerColor = P.card) {
             if (vm.homeInBar) HomeItem(vm)
             DomTab.entries.forEach { t ->
-                NavigationBarItem(selected = vm.domTab == t, onClick = { vm.domTab = t }, icon = { Icon(domIcons.getValue(t), null) }, label = { Text(t.label, maxLines = 1) },
+                NavigationBarItem(selected = vm.domTab == t, onClick = { if (vm.domTab != t) Haptics.select(); vm.domTab = t }, icon = { Icon(domIcons.getValue(t), null) }, label = { Text(t.label, maxLines = 1) },
                     colors = NavigationBarItemDefaults.colors(indicatorColor = P.hero, selectedIconColor = P.onHero, selectedTextColor = P.accent))
             }
         }
@@ -339,9 +341,10 @@ private fun MenuContent(vm: AppViewModel) {
         MenuRow("Homelab", "Dashbord, søk og snarveier", Icons.Filled.Dashboard, vm.screen == Screen.Homelab, 0, 1) { vm.editHome = false; vm.go(Screen.Homelab) }
         SectionLabel("Andre OS")
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            MenuRow("Finans", "Hjem, liste, budsjett og mer", Icons.Filled.Savings, vm.screen.isFinance, 0, 3) { vm.go(if (vm.financeStart) vm.startPage else Screen.Home) }
-            MenuRow("Matplan", "Ukemeny, kokk og handleliste", Icons.Filled.Restaurant, vm.screen == Screen.Mat, 1, 3) { vm.go(Screen.Mat) }
-            MenuRow("Domener", "Trafikk, besøk, ytelse og sikkerhet", Icons.Filled.Language, vm.screen == Screen.Domains, 2, 3) { vm.go(Screen.Domains) }
+            MenuRow("Finans", "Hjem, liste, budsjett og mer", Icons.Filled.Savings, vm.screen.isFinance, 0, 4) { vm.go(if (vm.financeStart) vm.startPage else Screen.Home) }
+            MenuRow("Matplan", "Ukemeny, kokk og handleliste", Icons.Filled.Restaurant, vm.screen == Screen.Mat, 1, 4) { vm.go(Screen.Mat) }
+            MenuRow("Domener", "Trafikk, besøk, ytelse og sikkerhet", Icons.Filled.Language, vm.screen == Screen.Domains, 2, 4) { vm.go(Screen.Domains) }
+            MenuRow("Sporing", "Pakker på vei, henting og varsler", Icons.Filled.LocalShipping, vm.screen == Screen.Tracking, 3, 4) { vm.go(Screen.Tracking) }
         }
         Spacer(Modifier.height(4.dp))
         MenuRow("Rediger forsiden", "Widgets og fanelinjer", Icons.Filled.Edit, vm.editHome, 0, 1) { vm.go(Screen.Homelab); vm.editHome = true }

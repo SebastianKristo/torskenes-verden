@@ -6,7 +6,7 @@ private let groups: [(String, [(String, String, String)])] = [
     ("Konto", [("accounts", "Kontoer og brukere", "person.2"), ("security", "Sikkerhet", "lock"), ("tokens", "API-tokens", "key")]),
     ("Finans", [("ai", "AI og tolkning", "sparkles"), ("cats", "Kategorier og budsjett", "tag"), ("rules", "Regler", "list.bullet.rectangle"),
                 ("bank", "Bankimport", "building.columns"), ("stocks", "Aksjer · Trading 212", "chart.line.uptrend.xyaxis"), ("backup", "Backup og data", "externaldrive")]),
-    ("App", [("look", "Utseende", "paintpalette"), ("scan", "Skanning og AI", "doc.viewfinder"), ("notify", "Varsler", "bell")]),
+    ("App", [("look", "Utseende", "paintpalette"), ("scan", "Skanning og AI", "doc.viewfinder"), ("notify", "Varsler", "bell"), ("haptics", "Haptikk", "hand.tap")]),
     ("System", [("server", "Server og synk", "server.rack"), ("data", "Data og lagring", "internaldrive"), ("about", "Om FinansHub", "info.circle")]),
 ]
 
@@ -36,6 +36,7 @@ struct SettingsView: View {
                 case "look": LookPage()
                 case "scan": ScanPrefsPage()
                 case "notify": NotifyPage()
+                case "haptics": HapticsPage()
                 case "server": ServerPage()
                 case "data": DataPage()
                 case "ai": AiPage()
@@ -458,6 +459,50 @@ private struct NotifyPage: View {
                 Switch(label: "Ukesoppsummering", sub: "Søndag kl. 18", on: $s.nWeekly)
             }
             Note(text: "Kvittering og budsjett lagres på serveren. Mens appen er åpen vises ferdige kvitteringer i køen med en gang.")
+            Note(text: "Sporing")
+            Card {
+                ForEach(Array(trackingPrefs.enumerated()), id: \.offset) { i, p in
+                    if i > 0 { Sep() }
+                    Switch(label: p.1, sub: p.2, on: Binding(get: { store.tracking?.prefs[p.0] ?? (p.0 != "delayed") }, set: { store.setTrackingPref(p.0, $0) }))
+                }
+            }
+            Note(text: "Lagres på serveren og gjelder også Sporing på web. Varslene vises som lokale varsler når appen henter status; ekte push fra serveren er ikke bygget ennå.")
+        }
+        .onAppear { if store.tracking == nil { Task { await store.pollTracking() } }; LocalNotify.ask() }
+    }
+}
+
+private let trackingPrefs: [(String, String, String?)] = [("found", "Nytt sporingsnummer funnet", "Fra e-post eller Finn"), ("out", "Ute for levering", nil),
+                                                         ("pickup", "Klar for henting", nil), ("delivered", "Levert", nil), ("delayed", "Forsinket", "Av som standard")]
+
+/// Innstillinger → App → Haptikk: hovedbryter, styrke, brytere per type og test.
+private struct HapticsPage: View {
+    @Bindable private var h = Haptics.shared
+    var body: some View {
+        VStack(spacing: 12) {
+            Card { Switch(label: "Haptisk tilbakemelding", sub: "Vibrasjon ved trykk, fullførte handlinger og varsler", on: $h.on) }
+            if h.on {
+                Note(text: "Styrke")
+                Card {
+                    Choice(label: "Lett", on: h.strength == "light") { h.strength = "light"; h.tap() }
+                    Sep()
+                    Choice(label: "Middels", on: h.strength == "medium") { h.strength = "medium"; h.tap() }
+                    Sep()
+                    Choice(label: "Kraftig", on: h.strength == "heavy") { h.strength = "heavy"; h.tap() }
+                }
+                Note(text: "Gi tilbakemelding ved …")
+                Card {
+                    Switch(label: "Trykk på knapper og faner", on: $h.taps)
+                    Sep()
+                    Switch(label: "Fullført handling", sub: "Lagret, bokført, synket", on: $h.done)
+                    Sep()
+                    Switch(label: "Feil og advarsler", on: $h.errors)
+                    Sep()
+                    Switch(label: "Pakke-varsler", sub: "Klar for henting, levert", on: $h.packages)
+                }
+                Card { link("Test haptikk") { h.test() } }
+            }
+            Note(text: "Følger «Systemhaptikk» i iOS-innstillingene (Lyder og haptikk). Er den av, vibrerer ikke appen heller.")
         }
     }
 }

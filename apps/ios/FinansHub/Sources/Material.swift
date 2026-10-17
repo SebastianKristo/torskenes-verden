@@ -47,13 +47,13 @@ struct MaterialShell: View {
                         .shadow(color: .black.opacity(0.35), radius: 8, y: 3)
                         .contentShape(RoundedRectangle(cornerRadius: 16))
                         .onTapGesture { scan.tap() }
-                        .onLongPressGesture(minimumDuration: 0.48) { UIImpactFeedbackGenerator(style: .medium).impactOccurred(); scan.hold() }
+                        .onLongPressGesture(minimumDuration: 0.48) { Haptics.shared.tap(); scan.hold() }
                         .accessibilityLabel("Skann kvittering").accessibilityAddTraits(.isButton)
                         .padding(.trailing, 16).padding(.bottom, 96)
                     }
                 }
-            } else if m == .homelab {
-                HomelabView().safeAreaInset(edge: .bottom) { hlBar }
+            } else if m == .homelab || m == .tracking {
+                Group { if m == .tracking { TrackingView() } else { HomelabView() } }.safeAreaInset(edge: .bottom) { hlBar }
             } else if let m {
                 ModuleView(module: m, scan: scan, photos: $photos, files: $files)
             }
@@ -69,7 +69,7 @@ struct MaterialShell: View {
     }
 
     private var hlBar: some View {
-        M3NavBar(items: store.hlTabs.map { h -> (String, String, Bool, () -> Void) in (store.hlName(h), h.icon, h == .hl, { store.goHl(h) }) }, divider: false)
+        M3NavBar(items: store.hlTabs.map { h -> (String, String, Bool, () -> Void) in (store.hlName(h), h.icon, h == (store.module == .tracking ? HlTab.trk : HlTab.hl), { store.goHl(h) }) }, divider: false)
     }
 
     private var domBar: some View {
@@ -90,7 +90,7 @@ struct M3NavBar: View {
         HStack(spacing: 0) {
             ForEach(Array(items.enumerated()), id: \.offset) { i, it in
                 if divider && i == 1 { Rectangle().fill(.white.opacity(0.16)).frame(width: 1, height: 32) }
-                Button(action: it.3) {
+                Button { if !it.2 { Haptics.shared.select() }; it.3() } label: {
                     VStack(spacing: 4) {
                         Image(systemName: it.1).font(.system(size: 18, weight: .semibold))
                             .foregroundStyle(it.2 ? M3.onPrimaryContainer : M3.onSurfaceVariant)

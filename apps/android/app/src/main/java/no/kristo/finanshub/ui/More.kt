@@ -233,6 +233,13 @@ internal fun SearchScreen(vm: AppViewModel) {
         if (vm.aiBusy) item { Loading() }
         if (r != null && !vm.aiBusy) {
             vm.aiNote?.let { n -> item { Text(n, color = C.accentLight, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 8.dp)) } }
+            if (r.plainFirst) item {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(C.surface1).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(r.notice ?: "Fant ${r.hits.size} treff med vanlig søk, så AI ble ikke brukt", color = C.text, fontSize = 13.sp)
+                    Button(onClick = { keyboard?.hide(); Haptics.tap(); vm.ask(r.q.ifBlank { vm.aiQuery }, force = true) },
+                        colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) { Text("✦ Spør AI likevel", fontWeight = FontWeight.SemiBold) }
+                }
+            }
             item {
                 val plain = r.mode == "plain"
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp, 28.dp, 28.dp, 10.dp)).background(if (plain) C.surface2 else C.heroAi).padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

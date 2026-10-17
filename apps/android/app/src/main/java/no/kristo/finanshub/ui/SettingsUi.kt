@@ -42,6 +42,7 @@ private val groups = listOf(
         Triple("look", "Utseende", Icons.Filled.Palette),
         Triple("scan", "Skanning og AI", Icons.Filled.DocumentScanner),
         Triple("notify", "Varsler", Icons.Filled.Notifications),
+        Triple("haptics", "Haptikk", Icons.Filled.Vibration),
     )),
     SettingsGroup("Finans", listOf(
         Triple("ai", "AI-motor", Icons.Filled.AutoAwesome),
@@ -109,6 +110,7 @@ internal fun SettingsScreen(vm: AppViewModel, onPrivacyChanged: () -> Unit) {
             "look" -> item { LookPage(vm) }
             "scan" -> item { ScanPage(vm) }
             "notify" -> item { NotifyPage(vm) }
+            "haptics" -> item { HapticsPage(vm) }
             "server" -> item { ServerPage(vm) }
             "data" -> item { DataPage(vm) }
             "about" -> item { AboutPage(vm) }
@@ -400,6 +402,40 @@ private fun NotifyPage(vm: AppViewModel) = Pages {
         Toggle("Ukesoppsummering", "Søndag kl. 18", vm.flag(AppPrefs.N_WEEKLY)) { vm.setPref(AppPrefs.N_WEEKLY, it) }
     }
     Note("Kvittering og budsjett lagres også på serveren. Mens appen er åpen vises ferdige kvitteringer i køen med en gang.")
+    LaunchedEffect(Unit) { if (vm.tracking == null) vm.pollTracking() }
+    Section("Sporing") {
+        Group {
+            TRK_PREFS.forEach { (k, l, sub) -> Toggle(l, sub, vm.tracking?.prefs?.get(k) ?: (k != "delayed")) { vm.setTrackingPref(k, it) } }
+        }
+    }
+    Note("Lagres på serveren og gjelder også Sporing på web. Varslene vises som lokale varsler når appen henter status; ekte push fra serveren er ikke bygget ennå.")
+}
+
+/** Innstillinger → App → Haptikk: hovedbryter, styrke, brytere per type og test. */
+@Composable
+private fun HapticsPage(vm: AppViewModel) = Pages {
+    val on = vm.flag(Haptics.ON, true)
+    Group { Toggle("Haptisk tilbakemelding", "Vibrasjon ved trykk, fullførte handlinger og varsler", on) { vm.setPref(Haptics.ON, it) } }
+    if (on) {
+        Section("Styrke") {
+            Group {
+                val st = vm.option(Haptics.STRENGTH, "medium")
+                listOf("light" to "Lett", "medium" to "Middels", "heavy" to "Kraftig").forEach { (k, l) ->
+                    Choice(l, on = st == k) { vm.setPref(Haptics.STRENGTH, k); Haptics.tap() }
+                }
+            }
+        }
+        Section("Gi tilbakemelding ved …") {
+            Group {
+                Toggle("Trykk på knapper og faner", null, vm.flag(Haptics.TAP, true)) { vm.setPref(Haptics.TAP, it) }
+                Toggle("Fullført handling", "Lagret, bokført, synket", vm.flag(Haptics.DONE, true)) { vm.setPref(Haptics.DONE, it) }
+                Toggle("Feil og advarsler", null, vm.flag(Haptics.ERROR, true)) { vm.setPref(Haptics.ERROR, it) }
+                Toggle("Pakke-varsler", "Klar for henting, levert", vm.flag(Haptics.PKG, true)) { vm.setPref(Haptics.PKG, it) }
+            }
+        }
+        FilledTonalButton(onClick = { Haptics.test() }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp)) { Text("Test haptikk") }
+    }
+    Note("Følger «Vibrasjon og haptikk» i Android-innstillingene. Er berøringsvibrasjon av der, vibrerer ikke appen heller.")
 }
 
 @Composable

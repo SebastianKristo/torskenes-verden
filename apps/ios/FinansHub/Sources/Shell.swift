@@ -1,6 +1,7 @@
 import SwiftUI
 import PhotosUI
 import UniformTypeIdentifiers
+import UserNotifications
 
 /* ---------------- Liquid Glass: knapper, fanelinjer og Skann ---------------- */
 
@@ -70,6 +71,7 @@ extension View {
 struct GlassPress: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.scaleEffect(configuration.isPressed ? 1.1 : 1).animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
+            .onChange(of: configuration.isPressed) { _, down in if down { Haptics.shared.tap() } }
     }
 }
 
@@ -116,7 +118,7 @@ struct ScanButton: View {
             .frame(width: size, height: size).contentShape(Circle())
             .glassCircle(tint: .accent)
             .onTapGesture { scan.tap() }
-            .onLongPressGesture(minimumDuration: 0.48) { UIImpactFeedbackGenerator(style: .medium).impactOccurred(); scan.hold() }
+            .onLongPressGesture(minimumDuration: 0.48) { Haptics.shared.tap(); scan.hold() }
             .accessibilityLabel("Skann kvittering")
             .accessibilityHint("Hold inne for å velge fra Bilder eller Filer")
             .accessibilityAddTraits(.isButton)
@@ -134,7 +136,7 @@ struct ScanPill: View {
         .foregroundStyle(.white).padding(.horizontal, 20).frame(height: 58).contentShape(Capsule())
         .glass(29, tint: Color.accent.opacity(0.5))
         .onTapGesture { scan.tap() }
-        .onLongPressGesture(minimumDuration: 0.48) { UIImpactFeedbackGenerator(style: .medium).impactOccurred(); scan.hold() }
+        .onLongPressGesture(minimumDuration: 0.48) { Haptics.shared.tap(); scan.hold() }
         .accessibilityLabel("Skann kvittering")
         .accessibilityHint("Hold inne for å velge fra Bilder eller Filer")
         .accessibilityAddTraits(.isButton)
@@ -167,6 +169,11 @@ struct SystemBar<Content: View>: View {
     let icon: (BarItem) -> String
     @ViewBuilder let content: (BarItem) -> Content
 
+    /// Fanebytte gir et lett valg-tikk (Innstillinger → App → Haptikk).
+    private var picked: Binding<BarItem> {
+        Binding(get: { selection }, set: { v in if v != selection { Haptics.shared.select() }; selection = v })
+    }
+
     var body: some View {
         if #available(iOS 18.0, *) {
             modern.tint(tint).minimizeTabBarOnScroll()
@@ -178,14 +185,14 @@ struct SystemBar<Content: View>: View {
     @available(iOS 18.0, *)
     @ViewBuilder private var modern: some View {
         if let a = action {
-            TabView(selection: $selection) {
+            TabView(selection: picked) {
                 ForEach(items, id: \.self) { it in
                     SwiftUI.Tab(label(it), systemImage: icon(it), value: it) { content(it) }
                 }
                 SwiftUI.Tab(a.title, systemImage: a.icon, value: BarItem.action, role: .search) { Color.clear }
             }
         } else {
-            TabView(selection: $selection) {
+            TabView(selection: picked) {
                 ForEach(items, id: \.self) { it in
                     SwiftUI.Tab(label(it), systemImage: icon(it), value: it) { content(it) }
                 }
@@ -194,7 +201,7 @@ struct SystemBar<Content: View>: View {
     }
 
     private var legacy: some View {
-        TabView(selection: $selection) {
+        TabView(selection: picked) {
             ForEach(items, id: \.self) { it in
                 content(it).tabItem { Label(label(it), systemImage: icon(it)) }.tag(it)
             }
@@ -205,7 +212,7 @@ struct SystemBar<Content: View>: View {
                     .frame(width: 58, height: 58).contentShape(Circle())
                     .glassCircle(tint: a.tint)
                     .onTapGesture { a.tap() }
-                    .onLongPressGesture(minimumDuration: 0.48) { UIImpactFeedbackGenerator(style: .medium).impactOccurred(); (a.hold ?? a.tap)() }
+                    .onLongPressGesture(minimumDuration: 0.48) { Haptics.shared.tap(); (a.hold ?? a.tap)() }
                     .accessibilityLabel(a.title).accessibilityAddTraits(.isButton)
                     .padding(.trailing, 16).padding(.bottom, 60)
             }
@@ -255,11 +262,12 @@ struct FinTabs: View {
 struct HlTabs: View {
     @Environment(Store.self) private var store
     var body: some View {
-        let sel = Binding<BarItem>(get: { .hl(.hl) }, set: { v in if case .hl(let h) = v { store.goHl(h) } })
+        let cur: HlTab = store.module == .tracking ? .trk : .hl
+        let sel = Binding<BarItem>(get: { .hl(cur) }, set: { v in if case .hl(let h) = v, h != cur { store.goHl(h) } })
         SystemBar(items: store.hlTabs.map { BarItem.hl($0) }, selection: sel,
                   label: { it in if case .hl(let h) = it { return store.hlName(h) }; return "" },
                   icon: { it in if case .hl(let h) = it { return h.icon }; return "square" }) { it in
-            if case .hl(.hl) = it { HomelabView() } else { Color.clear }
+            if case .hl(.hl) = it { HomelabView() } else if case .hl(.trk) = it { TrackingView() } else { Color.clear }
         }
     }
 }
@@ -380,8 +388,18 @@ struct RootView: View {
                 ZStack { Rectangle().fill(.ultraThinMaterial); Image(systemName: "lock.fill").font(.largeTitle).foregroundStyle(.white.opacity(0.8)) }.ignoresSafeArea()
             }
         }
+        .edgeSwipeBack(enabled: store.loggedIn && !store.locked && !store.addingAccount && store.canSwipeBack) { store.back() }
         .preferredColorScheme(.dark)
         .tint(.accent)
+        .task(id: store.loggedIn) {
+            // Sporing: henter status hvert 5. minutt mens appen er åpen og gir lokale varsler (ekte push er ikke bygget).
+            UNUserNotificationCenter.current().delegate = NotifyDelegate.shared
+            while store.loggedIn && !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(300))
+                if Task.isCancelled { break }
+                if UIApplication.shared.applicationState == .active { await store.pollTracking() }
+            }
+        }
         .fullScreenCover(isPresented: $showCamera) { CameraView { img in if let img { store.upload(image: img) } }.ignoresSafeArea() }
         .photosPicker(isPresented: $showPhotos, selection: $photoItems, maxSelectionCount: 20, matching: .images)
         .onChange(of: photoItems) { _, items in
@@ -454,7 +472,7 @@ struct PhoneShell: View {
                     DomTabs()
                 } else if m == nil || m?.isFinance == true {
                     FinTabs(scan: scan, photos: $photos, files: $files)
-                } else if m == .homelab {
+                } else if m == .homelab || m == .tracking {
                     HlTabs()
                 } else if let m {
                     ModuleView(module: m, scan: scan, photos: $photos, files: $files)
@@ -543,7 +561,7 @@ struct Sidebar: View {
                 }
             } else {
                 ForEach(store.hlTabs.filter { $0 != .hl }) { t in
-                    let on = (t == .mat && store.module == .mat) || (t == .dom && store.module == .domains)
+                    let on = (t == .mat && store.module == .mat) || (t == .dom && store.module == .domains) || (t == .trk && store.module == .tracking)
                     item(t.label, t.icon, on) { store.goHl(t) }
                 }
             }
@@ -591,14 +609,15 @@ struct ModuleView: View {
                 } else if store.selectedReceipt != nil { ConfirmView(back: true) } else { ScanView(scan: scan.camera, photos: $photos, pdf: $files) }
             case .fast: FastView()
             case .accounts: AccountsView()
-            case .stocks: StocksView()
+            case .stocks: StocksMobileView()
             case .reports: ReportsView()
             case .imports: ImportView()
             case .mat: MatSurface()
             case .domains: DomainsView()
-            case .sub: SubView()
+            case .sub: SubsMobileView()
             case .folders: FoldersView()
             case .settings: SettingsView()
+            case .tracking: TrackingView()
             }
         }
     }
@@ -692,6 +711,8 @@ struct ProfileMenu: View {
                     row("Matplan", "Ukemeny, kokk og handleliste", "fork.knife", store.module == .mat) { store.open(.mat) }
                     Divider().overlay(.white.opacity(0.12))
                     row("Domener", "Trafikk, besøk, ytelse og sikkerhet", "globe", store.module == .domains) { store.open(.domains) }
+                    Divider().overlay(.white.opacity(0.12))
+                    row("Sporing", "Pakker på vei, henting og varsler", "shippingbox", store.module == .tracking) { store.open(.tracking) }
                 }
                 .glass(24)
                 row("Rediger forsiden", "Widgets og fanelinjer", "square.and.pencil", store.editHome) { store.open(.homelab); store.editHome = true }.glass(24)

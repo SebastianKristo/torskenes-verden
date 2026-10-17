@@ -290,6 +290,16 @@ struct SearchView: View {
     /// Svar, butikker, treff (med hvorfor de traff) og «Prøv også» / «Flere forslag» under treffene.
     @ViewBuilder private func results(_ r: AiAnswer) -> some View {
         let plain = r.mode == "plain"
+        if r.plainFirst == true {
+            VStack(alignment: .leading, spacing: 10) {
+                Label(r.notice ?? "Fant \((r.hits ?? []).count) treff med vanlig søk, så AI ble ikke brukt", systemImage: "bolt.horizontal.circle").font(.footnote).foregroundStyle(.white.opacity(0.85))
+                Button { focused = false; Haptics.shared.tap(); store.ask(r.q ?? store.aiQuery, force: true) } label: {
+                    Text("✦ Spør AI likevel").font(.subheadline.weight(.semibold)).foregroundStyle(Color.ink).padding(.horizontal, 16).frame(height: 40).contentShape(Capsule())
+                }
+                .buttonStyle(.plain).glass(20, tint: .accent)
+            }
+            .padding(16).frame(maxWidth: .infinity, alignment: .leading).glass(22)
+        }
         VStack(alignment: .leading, spacing: 6) {
             Text(plain ? "Vanlig søk" : "✦ Svar" + (r.engine.map { " · \($0)" } ?? "")).font(.footnote.weight(.semibold)).foregroundStyle(Color.accentLight)
             Text((r.text ?? "").isEmpty ? "Fant ingen treff. Prøv et butikknavn, en kategori eller en vare fra kvitteringen." : r.text ?? "")

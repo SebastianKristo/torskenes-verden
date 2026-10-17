@@ -35,7 +35,7 @@ enum Tab: String, CaseIterable, Identifiable {
 /// Skjermer som fyller hele vinduet: Homelab, sidene under Mer, modulene og innstillinger.
 enum Module: String, CaseIterable, Identifiable {
     case homelab = "Homelab", upload = "Kvitteringer", fast = "Faste utgifter", accounts = "Kontoer", stocks = "Aksjer", reports = "Rapporter", imports = "Import"
-    case mat = "Matplan", domains = "Domener", sub = "Subscription OS", folders = "Boliger", settings = "Innstillinger"
+    case mat = "Matplan", domains = "Domener", sub = "Subscription OS", folders = "Boliger", settings = "Innstillinger", tracking = "Sporing"
     var id: String { rawValue }
     var icon: String {
         switch self {
@@ -51,6 +51,7 @@ enum Module: String, CaseIterable, Identifiable {
         case .sub: "arrow.triangle.2.circlepath"
         case .folders: "folder.badge.person.crop"
         case .settings: "gearshape"
+        case .tracking: "shippingbox"
         }
     }
     /// Sider under Mer: fanelinja for Finans vises, med Mer markert.
@@ -58,12 +59,12 @@ enum Module: String, CaseIterable, Identifiable {
     static let others: [Module] = [.mat, .domains]
 }
 
-/// Fanene på Homelab: Homelab, Finans, Domener og Matplan.
+/// Fanene på Homelab: Homelab, Finans, Matplan, Sporing og Domener.
 enum HlTab: String, CaseIterable, Identifiable {
-    case hl, home, dom, mat
+    case hl, home, dom, mat, trk
     var id: String { rawValue }
-    var label: String { switch self { case .hl: "Homelab"; case .home: "Finans"; case .dom: "Domener"; case .mat: "Matplan" } }
-    var icon: String { switch self { case .hl: "square.grid.3x3.fill"; case .home: "banknote"; case .dom: "globe"; case .mat: "fork.knife" } }
+    var label: String { switch self { case .hl: "Homelab"; case .home: "Finans"; case .dom: "Domener"; case .mat: "Matplan"; case .trk: "Sporing" } }
+    var icon: String { switch self { case .hl: "square.grid.3x3.fill"; case .home: "banknote"; case .dom: "globe"; case .mat: "fork.knife"; case .trk: "shippingbox" } }
 }
 
 /// Hvor man er: en Finans-fane eller en hel side.
@@ -218,6 +219,29 @@ final class Store {
     var domRange = "24h"
     var moduleError: String?
 
+    /* ---------- Sporing, vær, aksjer og abonnement (prompt 11) ---------- */
+
+    var tracking: TrackingData?
+    /// De 2 viktigste pakkene på Homelab-hjem (fra /mobile/home, oppdateres av Sporing).
+    var homePackages: [Shipment]?
+    var homeWeather: WeatherX?
+    /// Åpen sending (kortet er utvidet med tidslinjen).
+    var trkSel: String?
+    /// active | pickup | out | done
+    var trkFilter = "active"
+    var trkChecking = false
+    var stocksX: StocksX?
+    /// ov | det | tx (Portefølje, Aksjedetaljer, Transaksjoner)
+    var stockScreen = "ov"
+    var stockSel: String?
+    /// Detaljen ble åpnet fra Transaksjoner (tilbake går dit).
+    var stockFrom: String?
+    var subsX: SubsX?
+    /// home | ins | hist
+    var subTab = "home"
+    /// «Fra transaksjoner» i +-panelet (nil = laster).
+    var subCandidates: [SubCandidate]?
+
     /* ---------- Valg (UserDefaults) ---------- */
 
     /// Fargeflekker bak glasset.
@@ -262,7 +286,7 @@ final class Store {
     /// Skann uten nett (eller utenfor Wi-Fi) venter her og lastes opp ved neste synk.
     private(set) var offline: [Upload] = []
 
-    private var api: API { API(base: base.isEmpty ? (account?.server ?? "") : base, token: account?.token) }
+    var api: API { API(base: base.isEmpty ? (account?.server ?? "") : base, token: account?.token) }
 
     init() {
         base = account?.server ?? ""
@@ -302,15 +326,17 @@ final class Store {
         Keychain.set("active", activeId)
     }
 
-    private func run(_ work: @escaping () async throws -> Void) {
+    func run(_ work: @escaping () async throws -> Void) {
         Task {
             do { try await work() } catch let e as APIError where e.status == 401 && loggedIn && !e.needsTotp {
                 expired()
-            } catch { message = error.localizedDescription }
+            } catch { message = error.localizedDescription; Haptics.shared.error() }
         }
     }
 
     func flash(_ text: String) {
+        let bad = ["Kunne ikke", "Fikk ikke", "Feil", "Skriv inn", "Ugyldig"].contains { text.hasPrefix($0) }
+        if bad { Haptics.shared.error() } else { Haptics.shared.success() }
         message = text
         Task { try? await Task.sleep(for: .seconds(2)); if message == text { message = nil } }
     }
@@ -499,14 +525,18 @@ final class Store {
             case .upload: try await loadReceipts(); await loadJobs()
             case .fast: let list: [Recurring] = try await decodeList(api.call("GET", "/recurring")); recurring = list
             case .accounts: boot = try await api.get("/bootstrap")
-            case .stocks: stocks = try await api.get("/stocks", as: Stocks.self)
+            case .stocks:
+                let d = try await api.call("GET", "/stocks")
+                stocks = try? JSONDecoder().decode(Stocks.self, from: d)
+                stocksX = StocksX.parse(d)
             case .reports: try await loadReport()
             case .imports: break
             case .mat: try await loadWeek()
-            case .sub: subs = try await api.get("/subscriptions")
+            case .sub: try await loadSubs()
             case .folders: let list: [Folder] = try await decodeList(api.call("GET", "/folders")); folders = list
             case .domains: try await loadDomains()
             case .settings: break
+            case .tracking: try await loadTracking()
             }
         } catch let e as APIError where e.status == 401 || e.status == 403 || e.status == 404 {
             moduleError = e.status == 404 ? "\(m.rawValue) finnes ikke på serveren ennå. Oppdater homelab." : "\(m.rawValue) er ikke tilgjengelig for denne kontoen (\(e.message))."
@@ -554,6 +584,8 @@ final class Store {
         barMini = false
         if m != .homelab { editHome = false }
         if m != .folders { folder = nil }
+        if m != .tracking { trkSel = nil }
+        if m != .stocks { stockScreen = "ov"; stockSel = nil }
         if m != nil { finnSel = nil; finnDetail = nil }
         guard let m else { return }
         if m == .settings { settingsPage = nil }
@@ -580,6 +612,8 @@ final class Store {
         if editHome { editHome = false; return }
         if module == .settings, settingsPage != nil { settingsPage = nil; return }
         if module == .folders, folder != nil { folder = nil; return }
+        if module == .tracking, trkSel != nil { trkSel = nil; return }
+        if module == .stocks, stockScreen != "ov" { stockScreen = stockScreen == "det" && stockFrom == "tx" ? "tx" : "ov"; stockFrom = nil; return }
         if finnSel != nil { finnSel = nil; finnDetail = nil; return }
         if module == .upload, selectedReceipt != nil { selectedReceipt = nil; return }
         if selectedTx != nil { selectedTx = nil; return }
@@ -609,7 +643,7 @@ final class Store {
         if let m = module {
             switch m {
             case .domains, .mat: return startLabel
-            case .homelab: return financeStart ? "Finans" : nil
+            case .homelab, .tracking: return financeStart ? "Finans" : nil
             default: return nil
             }
         }
@@ -617,6 +651,14 @@ final class Store {
         if tab == .finn && (finnSel != nil || !finTabs.contains(.finn)) { return nil }
         return financeStart || selectedTx != nil ? nil : "Homelab"
     }
+    /// Sveip fra venstre kant går tilbake overalt der det finnes en tilbakepil (ikke på startsiden).
+    var canSwipeBack: Bool {
+        if original != nil || editing != nil || detail != nil || editHome { return true }
+        if let m = module { return m != .homelab || financeStart }
+        if selectedTx != nil || finnSel != nil || !finTabs.contains(tab) { return true }
+        return !financeStart
+    }
+
     /// «Knapp i linjen»: Homelab-/Finans-knappen ligger i fanelinja i stedet for pilen øverst.
     var homeInBar: Bool { layout.backStyle == "bar" }
 
@@ -651,6 +693,7 @@ final class Store {
         case .home: go(Tab.home)
         case .dom: open(.domains)
         case .mat: open(.mat)
+        case .trk: open(.tracking)
         }
     }
 
@@ -720,6 +763,9 @@ final class Store {
         do {
             let d = try await api.callAt("/api", "GET", "/mobile/home")
             mobileHome = try JSONDecoder().decode(MobileHome.self, from: d)
+            let raw = JS.obj(d)
+            homeWeather = JS.dict(raw, "weather").map(WeatherX.init)
+            if raw["packages"] != nil { homePackages = JS.list(raw, "packages").map(Shipment.init) }
             if UserDefaults.standard.string(forKey: layoutKey) == nil, let l = HomeLayout.from(json: ((try? JSONSerialization.jsonObject(with: d)) as? [String: Any])?["layout"]) { layout = l }
         } catch let e as APIError {
             homeError = e.status == 404 ? "Homelab-forsiden finnes ikke på serveren ennå. Oppdater homelab." : (e.status == 401 || e.status == 403) ? "Homelab godtar ikke app-tokenet ennå. Oppdater homelab-serveren." : e.message
@@ -736,6 +782,7 @@ final class Store {
             if let a = try? await api.module("/domains/api", "/\(enc)/analytics?range=today", as: Analytics.self) { domainToday = DomainToday(name: first.name, visitors: a.visitors ?? 0) }
         }
         if avatar == nil { await loadAvatar(me?.avatarUrl ?? mobileHome?.avatarUrl) }
+        await pollTracking()
     }
 
     private var layoutKey: String { "fh_layout_" + (account?.id ?? "") }
@@ -843,7 +890,8 @@ final class Store {
     /* ---------- ✦ AI-søk ---------- */
 
     /// ✦ AI-søk, eller vanlig søk (GET /search) når det er valgt eller AI-motoren er av eller ikke svarer.
-    func ask(_ q: String) {
+    /// force: «✦ Spør AI likevel» (serveren svarer ellers med vanlig søk for 1–2 ord som gir treff).
+    func ask(_ q: String, force: Bool = false) {
         let t = q.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty else { return }
         aiQuery = t
@@ -851,11 +899,13 @@ final class Store {
         aiNote = nil
         run {
             defer { self.aiBusy = false }
-            if self.searchMode == "plain" {
+            if self.searchMode == "plain" && !force {
                 try await self.plainSearch(t)
             } else {
                 do {
-                    let d = try await self.api.callAt("/finans/api", "POST", "/search/ai", json: ["q": t], timeout: 25)
+                    var body: [String: Any] = ["q": t]
+                    if force { body["force"] = true }
+                    let d = try await self.api.callAt("/finans/api", "POST", "/search/ai", json: body, timeout: 25)
                     let r = try JSONDecoder().decode(AiAnswer.self, from: d)
                     if r.aiUnavailable == true {
                         self.aiNote = "AI-motoren er av eller nede. Viser vanlig søk."
@@ -1001,7 +1051,9 @@ final class Store {
         run {
             self.busy = true
             defer { self.busy = false }
-            self.stocks = try JSONDecoder().decode(Stocks.self, from: try await self.api.call("POST", "/stocks/sync"))
+            let d = try await self.api.call("POST", "/stocks/sync")
+            self.stocks = try? JSONDecoder().decode(Stocks.self, from: d)
+            self.stocksX = StocksX.parse(d)
             self.flash("Synket med Trading 212")
         }
     }
@@ -1170,14 +1222,14 @@ final class Store {
         run {
             let p = price.replacingOccurrences(of: " ", with: "").replacingOccurrences(of: ",", with: ".")
             try await self.api.call("POST", "/subscriptions", json: ["name": name, "plan": plan, "price": p, "cycle": cycle, "nextDate": next])
-            self.subs = try await self.api.get("/subscriptions")
+            try await self.loadSubs()
             self.flash("\(name) lagt til")
         }
     }
     func setSubActive(_ s: Sub, _ active: Bool) {
         run {
             try await self.api.call("PATCH", "/subscriptions/\(s.id)", json: ["active": active])
-            self.subs = try await self.api.get("/subscriptions")
+            try await self.loadSubs()
         }
     }
 

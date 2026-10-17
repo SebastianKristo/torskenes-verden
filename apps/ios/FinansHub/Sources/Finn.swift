@@ -557,7 +557,11 @@ private struct FinnDealView: View {
     private func timeline(_ d: FinnDeal, _ det: FinnDetail) -> some View {
         let steps = (d.steps ?? []).filter { $0.done == true }.enumerated().map { k, s in TlEntry(id: "s\(k)", title: s.t ?? "Steg", sub: "Steg fullført", date: s.date, body: nil, mail: false) }
         let mails = det.emails.map { m in TlEntry(id: "m\(m.id)", title: m.subject ?? "(uten emne)", sub: m.from ?? "E-post", date: m.date, body: m.body ?? m.snippet, mail: true) }
-        let tl = (steps + mails).sorted { sortKey($0.date) > sortKey($1.date) }
+        let sh = det.shipment
+        let track = (sh?.events ?? []).enumerated().map { k, e in
+            TlEntry(id: "t\(k)", title: e.status ?? "Sporing", sub: ["Sporing", e.location, k == 0 ? sh?.trackingNo : nil].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "), date: e.date, body: nil, mail: false)
+        }
+        let tl = (steps + mails + track).sorted { sortKey($0.date) > sortKey($1.date) }
         return VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("Tidslinje").font(.system(size: 16, weight: .semibold))

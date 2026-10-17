@@ -457,6 +457,29 @@ struct FinnLine: Decodable, Hashable {
     }
 }
 /// GET /finans/api/finn/:id – handelen med annonse, kvitteringer, e-poster og bilder.
+/// Sendingen i en Finn-handel (GET /finn/:id → shipment). Tidspunkt kan være millisekunder eller ISO-tekst.
+struct FinnShipment: Decodable {
+    struct Ev: Decodable {
+        var date: String?; var status: String?; var location: String?
+        enum K: String, CodingKey { case ts, status, location }
+        init(from d: Decoder) throws {
+            let c = try d.container(keyedBy: K.self)
+            if let n = (try? c.decode(FlexNum.self, forKey: .ts))?.value, n > 1e8 {
+                date = isoDay(Date(timeIntervalSince1970: n > 1e11 ? n / 1000 : n))
+            } else { date = try? c.decode(String.self, forKey: .ts) }
+            status = try? c.decode(String.self, forKey: .status); location = try? c.decode(String.self, forKey: .location)
+        }
+    }
+    var trackingNo: String?; var statusText: String?; var eta: String?; var pickupPoint: String?; var events: [Ev]
+    enum K: String, CodingKey { case trackingNo, statusText, eta, pickupPoint, events }
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        trackingNo = try? c.decode(String.self, forKey: .trackingNo); statusText = try? c.decode(String.self, forKey: .statusText)
+        eta = try? c.decode(String.self, forKey: .eta); pickupPoint = try? c.decode(String.self, forKey: .pickupPoint)
+        events = (try? c.decode([Ev].self, forKey: .events)) ?? []
+    }
+}
+
 struct FinnDetail: Decodable {
     var deal: FinnDeal
     var ad: FinnAd?
@@ -469,7 +492,9 @@ struct FinnDetail: Decodable {
     var total: Double?
     var totalLabel: String?
     var adUrlGuess: String?
-    enum K: String, CodingKey { case deal, ad, receipts, emails, photos, lines, receipt, adUrlGuess }
+    /// Fiks ferdig: sendingen fra Sporing (status og hendelser vises i tidslinjen).
+    var shipment: FinnShipment?
+    enum K: String, CodingKey { case deal, ad, receipts, emails, photos, lines, receipt, adUrlGuess, shipment }
     /// {lines: [{l, v}], total, totalLabel}
     private struct Paper: Decodable { var lines: [FinnLine]?; var total: Double?; var totalLabel: String? }
     init(deal: FinnDeal) { self.deal = deal; ad = nil; receipts = []; emails = []; photos = []; summary = deal.summary; lines = [] }
@@ -487,6 +512,7 @@ struct FinnDetail: Decodable {
         total = paper?.total
         totalLabel = paper?.totalLabel
         adUrlGuess = try? c.decode(String.self, forKey: .adUrlGuess)
+        shipment = try? c.decode(FinnShipment.self, forKey: .shipment)
     }
     /// Bildene i karusellen: egne bilder først, så annonsens.
     var images: [String] { photos.compactMap { $0.url ?? $0.thumb } + (ad?.images ?? []) }
@@ -709,7 +735,7 @@ struct HomeLayout: Codable, Equatable {
     var start: String? = nil
 
     static let sections = ["clock", "search", "links", "os", "srv", "ruter"]
-    static let hlAll = ["hl", "home", "dom", "mat"]
+    static let hlAll = ["hl", "home", "trk", "dom", "mat"]
     static let finAll = ["home", "list", "finn", "bud", "ai", "mer"]
     /// Kan ikke skjules.
     static let fixedHl: Set<String> = ["hl", "home"]
@@ -747,7 +773,10 @@ struct HomeLayout: Codable, Equatable {
             fin.insert("finn", at: at)
             hide["bud"] = true
         }
-        var l = HomeLayout(sec: fix(m["sec"] as? [String], sections), hlTabs: fix(m["hlTabs"] as? [String], hlAll), finTabs: fix(fin, finAll), hide: hide)
+        // Eldre oppsett uten Sporing: fanen settes inn foran Domener (samme som PWA-en).
+        var hl = ((m["hlTabs"] as? [String]) ?? []).filter { hlAll.contains($0) }
+        if !hl.isEmpty && !hl.contains("trk") { hl.insert("trk", at: hl.firstIndex(of: "dom") ?? hl.count) }
+        var l = HomeLayout(sec: fix(m["sec"] as? [String], sections), hlTabs: fix(hl, hlAll), finTabs: fix(fin, finAll), hide: hide)
         for (k, v) in (m["names"] as? [String: Any]) ?? [:] {
             if let n = v as? String, !n.trimmingCharacters(in: .whitespaces).isEmpty { l.names[k] = String(n.prefix(30)) }
         }
@@ -840,6 +869,9 @@ struct AiAnswer: Decodable {
     var summary: String?
     var stores: [StoreHit]?
     var aiUnavailable: Bool?
+    /// Vanlig søk ga treff for 1–2 ord, så AI ble ikke brukt («✦ Spør AI likevel» sender force).
+    var plainFirst: Bool?
+    var notice: String?
     var text: String? { (answer ?? "").isEmpty ? summary : answer }
 }
 struct SuggestGroup: Decodable, Hashable { var title: String; var items: [String] }

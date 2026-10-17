@@ -366,7 +366,11 @@ private fun FinnDealScreen(vm: AppViewModel) {
         // Tidslinje: fullførte steg og e-postene i handelen, nyeste øverst.
         item {
             val tl = (d.steps.filter { it.done }.mapIndexed { k, s -> TlEntry("s$k", s.t, "Steg fullført", s.date, null, false) } +
-                det.emails.map { m -> TlEntry("m${m.id}", m.subject ?: "(uten emne)", m.from ?: "E-post", m.date, m.body ?: m.snippet, true) })
+                det.emails.map { m -> TlEntry("m${m.id}", m.subject ?: "(uten emne)", m.from ?: "E-post", m.date, m.body ?: m.snippet, true) } +
+                (det.shipment?.events ?: emptyList()).mapIndexed { k, e ->
+                    TlEntry("t$k", e.status.ifBlank { "Sporing" }, listOfNotNull("Sporing", e.location.ifBlank { null }, if (k == 0) det.shipment?.trackingNo else null).joinToString(" · "),
+                        e.at?.let { fmtTime(it, "yyyy-MM-dd") } ?: e.raw.ifBlank { null }, null, false)
+                })
                 .sortedByDescending { sortKey(it.date) }
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(C.surface1).padding(16.dp, 18.dp, 16.dp, 4.dp)) {
                 Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {

@@ -40,7 +40,7 @@ enum class Screen(val label: String) {
     Home("Oversikt"), List("Liste"), Budget("Budsjett"), Search("Søk"), More("Mer"),
     Scan("Kvitteringer"), Fast("Faste utgifter"), Accounts("Kontoer"), Stocks("Aksjer"), Reports("Rapporter"), Import("Import"),
     Sub("Subscription OS"), Folders("Boliger"), Finn("Finn-handler"),
-    Mat("Matplan"), Domains("Domener"), Settings("Innstillinger");
+    Mat("Matplan"), Domains("Domener"), Settings("Innstillinger"), Tracking("Sporing");
 
     /** Fanelinja for Finans vises (Mer er markert på undersidene). */
     val isFinance get() = this in FINANCE
@@ -52,7 +52,7 @@ enum class Screen(val label: String) {
         val MORE_PAGES = setOf(Scan, Fast, Accounts, Stocks, Reports, Import, Sub, Folders)
         /** Faner i Finans og på Homelab, med ID-ene som lagres i oppsettet. */
         val FIN_TAB = mapOf("home" to Home, "list" to List, "finn" to Finn, "bud" to Budget, "ai" to Search, "mer" to More)
-        val HL_TAB = mapOf("hl" to Homelab, "home" to Home, "dom" to Domains, "mat" to Mat)
+        val HL_TAB = mapOf("hl" to Homelab, "home" to Home, "trk" to Tracking, "dom" to Domains, "mat" to Mat)
     }
 }
 
@@ -187,6 +187,26 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var aiNote by mutableStateOf<String?>(null)
     var suggestGroups by mutableStateOf<List<SuggestGroup>>(emptyList())
 
+    /* ---------- Sporing, vær, aksjer og abonnement (prompt 11) ---------- */
+
+    var tracking by mutableStateOf<TrackingData?>(null)
+    /** De 2 viktigste pakkene på Homelab-hjem. */
+    var homePackages by mutableStateOf<List<Shipment>?>(null)
+    /** Åpen sending (kortet er utvidet med tidslinjen). */
+    var trkSel by mutableStateOf<String?>(null)
+    /** active | pickup | out | done */
+    var trkFilter by mutableStateOf("active")
+    var trkChecking by mutableStateOf(false)
+    var stocksX by mutableStateOf<StocksX?>(null)
+    /** ov | det | tx (Portefølje, Aksjedetaljer, Transaksjoner) */
+    var stockScreen by mutableStateOf("ov")
+    var stockSel by mutableStateOf<String?>(null)
+    var stockFrom by mutableStateOf<String?>(null)
+    var subsX by mutableStateOf<SubsX?>(null)
+    /** home | ins | hist */
+    var subTab by mutableStateOf("home")
+    var subCandidates by mutableStateOf<List<SubCandidate>?>(null)
+
     /* ---------- Valg (observerbare for Compose) ---------- */
 
     private var prefTick by mutableStateOf(0)
@@ -204,8 +224,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var locked by mutableStateOf(loggedIn && prefs.bool(AppPrefs.LOCK))
     private var backgroundAt: Long? = null
 
-    fun onBackground() { backgroundAt = System.currentTimeMillis() }
+    fun onBackground() { backgroundAt = System.currentTimeMillis(); stopTrackingPoll() }
     fun onForeground() {
+        if (loggedIn) startTrackingPoll()
         val at = backgroundAt ?: return
         backgroundAt = null
         if (loggedIn && prefs.bool(AppPrefs.LOCK) && System.currentTimeMillis() - at >= prefs.int(AppPrefs.LOCK_AFTER, 0) * 60_000L) locked = true
@@ -246,7 +267,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!compact || layout.backStyle != "arrow") return null
         return when (screen) {
             Screen.Domains -> startLabel
-            Screen.Homelab -> if (financeStart) "Finans" else null
+            Screen.Homelab, Screen.Tracking -> if (financeStart) "Finans" else null
             Screen.Home, Screen.List, Screen.Budget, Screen.Search, Screen.More -> if (financeStart || selectedTx != null) null else "Homelab"
             Screen.Finn -> if (financeStart || finnSel != null) null else "Homelab"
             else -> null
@@ -272,8 +293,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun launch(block: suspend () -> Unit) = viewModelScope.launch {
         try { block() } catch (e: ApiException) {
-            if (e.status == 401 && loggedIn && !e.needsTotp) expired() else message = e.message
-        } catch (e: Exception) { message = e.message ?: "Noe gikk galt" }
+            if (e.status == 401 && loggedIn && !e.needsTotp) expired() else { message = e.message; Haptics.error() }
+        } catch (e: Exception) { message = e.message ?: "Noe gikk galt"; Haptics.error() }
+    }
+
+    /** Kort melding med haptikk: feil gir REJECT, ellers CONFIRM. */
+    fun flash(text: String) {
+        if (listOf("Kunne ikke", "Fikk ikke", "Feil", "Skriv inn", "Ugyldig").any { text.startsWith(it) }) Haptics.error() else Haptics.success()
+        message = text
     }
 
     /* ---------- Innlogging og kontoer ---------- */
@@ -435,10 +462,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 Screen.Scan -> { loadReceipts(); loadJobs() }
                 Screen.Fast -> recurring = parseRecurring(api.get("/recurring"))
                 Screen.Accounts -> boot = parseBoot(api.get("/bootstrap"))
-                Screen.Stocks -> stocks = parseStocks(api.get("/stocks"))
+                Screen.Stocks -> { val d = api.get("/stocks"); stocks = runCatching { parseStocks(d) }.getOrNull(); stocksX = parseStocksX(d) }
                 Screen.Reports -> loadReport()
                 Screen.Mat -> loadWeek()
-                Screen.Sub -> subs = parseSubs(api.get("/subscriptions"))
+                Screen.Sub -> loadSubs()
+                Screen.Tracking -> loadTracking()
                 Screen.Folders -> folders = parseFolders(api.get("/folders"))
                 Screen.Finn -> { finn = parseFinn(api.get("/finn")); finnSel?.let { loadFinnDetail(it) } }
                 Screen.Domains -> loadDomains()
@@ -461,6 +489,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (s != screen) { selectedTx = null; folder = null; detail = null; detailTx = null; editing = null; original = null; editHome = false; matFull = false; matDay = null }
         // Trykk på Finn-fanen fra en åpen handel går tilbake til listen.
         if (s != screen || s == Screen.Finn) { finnSel = null; finnDetail = null }
+        if (s != Screen.Tracking) trkSel = null
+        if (s != Screen.Stocks) { stockScreen = "ov"; stockSel = null }
         backTo = from?.takeIf { it != s }
         screen = s
         menuOpen = false
@@ -478,6 +508,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             screen == Screen.Folders && folder != null -> folder = null
             screen == Screen.Scan && selectedReceipt != null -> selectedReceipt = null
             screen == Screen.Finn && finnSel != null -> { finnSel = null; finnDetail = null }
+            screen == Screen.Tracking && trkSel != null -> trkSel = null
+            screen == Screen.Stocks && stockScreen != "ov" -> { stockScreen = if (stockScreen == "det" && stockFrom == "tx") "tx" else "ov"; stockFrom = null }
             selectedTx != null -> selectedTx = null
             screen == Screen.Domains && domainManager -> domainManager = false
             screen == Screen.Mat && matFull -> matFull = false
@@ -537,7 +569,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     suspend fun loadHome() {
         homeError = null
         // Feil her logger aldri ut: finans-tokenet kan være gyldig selv om en eldre server ikke kjenner forsiden.
-        try { mobileHome = parseMobileHome(api.hlGet("/mobile/home")) } catch (e: ApiException) {
+        try { mobileHome = parseMobileHome(api.hlGet("/mobile/home")); mobileHome?.packages?.let { homePackages = it } } catch (e: ApiException) {
             homeError = when (e.status) {
                 404 -> "Homelab-forsiden finnes ikke på serveren ennå. Oppdater homelab."
                 401, 403 -> "Homelab godtar ikke app-tokenet ennå. Oppdater homelab-serveren."
@@ -563,6 +595,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             d.name to a.visitors
         }.getOrNull()
         if (avatar == null) loadAvatar(me?.avatarUrl ?: mobileHome?.avatarUrl)
+        pollTracking()
     }
 
     private fun localLayout(): HomeLayout {
@@ -680,7 +713,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val searchMode: String get() = option(AppPrefs.SEARCH_MODE, "ai")
 
     /** Søk: ✦ AI først (med mindre Vanlig søk er valgt). Er AI av eller nede, brukes vanlig søk med en melding om det. */
-    fun ask(q: String) {
+    /** force: «✦ Spør AI likevel» (serveren svarer ellers med vanlig søk for 1–2 ord som gir treff). */
+    fun ask(q: String, force: Boolean = false) {
         val t = q.trim()
         if (t.isBlank()) return
         aiQuery = t
@@ -688,8 +722,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         aiNote = null
         launch {
             try {
-                ai = if (searchMode == "plain") plainSearch(t) else {
-                    val a = try { parseAi(api.request("POST", "/search/ai", JSONObject().put("q", t), timeout = 25_000), t) } catch (e: ApiException) {
+                ai = if (searchMode == "plain" && !force) plainSearch(t) else {
+                    val body = JSONObject().put("q", t).apply { if (force) put("force", true) }
+                    val a = try { parseAi(api.request("POST", "/search/ai", body, timeout = 25_000), t) } catch (e: ApiException) {
                         if (e.status == 401) throw e
                         null
                     } catch (e: Exception) { null }
@@ -907,7 +942,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun syncStocks() = launch {
         busy = true
-        try { stocks = parseStocks(api.post("/stocks/sync")); message = "Synket med Trading 212" } finally { busy = false }
+        try { val d = api.post("/stocks/sync"); stocks = runCatching { parseStocks(d) }.getOrNull(); stocksX = parseStocksX(d); flash("Synket med Trading 212") } finally { busy = false }
     }
 
     private suspend fun loadReport() { report = parseReport(api.get("/reports?mode=" + if (reportYear) "year" else "month")) }
@@ -1086,11 +1121,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun addSub(name: String, plan: String, price: String, cycle: String, next: String) = launch {
         api.post("/subscriptions", JSONObject().put("name", name).put("plan", plan).put("price", price.replace(" ", "").replace(',', '.')).put("cycle", cycle).put("nextDate", next))
-        subs = parseSubs(api.get("/subscriptions")); message = "$name lagt til"
+        loadSubs(); flash("$name lagt til")
     }
     fun setSubActive(s: Sub, active: Boolean) = launch {
         api.patch("/subscriptions/${s.id}", JSONObject().put("active", active))
-        subs = parseSubs(api.get("/subscriptions"))
+        loadSubs()
     }
 
     /* ---------- Boliger (delte mapper) ---------- */
@@ -1180,6 +1215,166 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun revokeToken(id: String) = launch { api.delete("/tokens/$id"); message = "Token trukket tilbake"; loadTokens() }
+
+    /* ---------- Sporing ---------- */
+
+    suspend fun loadTracking() {
+        val t = parseTracking(api.hlGet("/tracking"))
+        tracking = t
+        notifyTracking(t)
+    }
+
+    /** Henter status i bakgrunnen (forsiden, og hvert 5. minutt mens appen er åpen). Feil vises ikke. */
+    suspend fun pollTracking() {
+        if (!loggedIn || locked) return
+        val t = runCatching { parseTracking(api.hlGet("/tracking", timeout = 15_000)) }.getOrNull() ?: return
+        tracking = t
+        homePackages = t.top(2)
+        notifyTracking(t)
+    }
+
+    private var trackPoll: kotlinx.coroutines.Job? = null
+    /** Startes når appen kommer i forgrunnen og stoppes i bakgrunnen (ekte push fra serveren er ikke bygget). */
+    fun startTrackingPoll() {
+        if (trackPoll?.isActive == true) return
+        trackPoll = viewModelScope.launch { while (true) { delay(300_000); pollTracking() } }
+    }
+    fun stopTrackingPoll() { trackPoll?.cancel(); trackPoll = null }
+
+    fun addTracking(no: String, name: String, carrier: String?, out: Boolean) = launch {
+        val n = no.trim()
+        if (n.isEmpty()) { flash("Skriv inn et sporingsnummer"); return@launch }
+        val body = JSONObject().put("trackingNo", n).put("direction", if (out) "out" else "in")
+        if (name.isNotBlank()) body.put("name", name.trim())
+        if (carrier != null && carrier != "other") body.put("carrier", carrier)
+        val o = JSONObject(api.request("POST", "/tracking", body, prefix = Api.HOMELAB, timeout = 30_000))
+        o.optJSONObject("item")?.let { trkSel = parseShipment(it).id }
+        loadTracking()
+        trkFilter = if (out) "out" else "active"
+        flash(o.optStr("message") ?: "Sendingen spores")
+    }
+
+    fun archiveTracking(s: Shipment, on: Boolean) = launch {
+        api.request("PATCH", "/tracking/${s.id}", JSONObject().put("archived", on), prefix = Api.HOMELAB)
+        if (on) trkSel = null
+        loadTracking()
+        flash(if (on) "${s.name} er arkivert" else "${s.name} er hentet tilbake")
+    }
+
+    fun deleteTracking(s: Shipment) = launch {
+        api.request("DELETE", "/tracking/${s.id}", prefix = Api.HOMELAB)
+        trkSel = null
+        loadTracking()
+        flash("${s.name} er slettet")
+    }
+
+    /** «Sjekk nå»: leser e-post og Finn, og henter status hos transportørene. */
+    fun checkTracking() {
+        if (trkChecking) return
+        trkChecking = true
+        launch {
+            try {
+                val d = api.request("POST", "/tracking/check", prefix = Api.HOMELAB, timeout = 60_000)
+                val o = JSONObject(d)
+                if (o.has("items")) { val t = parseTracking(d); tracking = t; notifyTracking(t) } else loadTracking()
+                flash(o.optStr("message") ?: "Sporing er oppdatert")
+            } finally { trkChecking = false }
+        }
+    }
+
+    fun setTrackingPref(k: String, on: Boolean) {
+        tracking = tracking?.let { it.copy(prefs = it.prefs + (k to on)) }
+        launch { api.hlPut("/tracking/prefs", JSONObject().put(k, on)) }
+    }
+
+    /** k: finn | email */
+    fun setTrackingSource(k: String, on: Boolean) {
+        tracking = tracking?.let { if (k == "finn") it.copy(finn = it.finn.copy(on = on)) else it.copy(email = it.email.copy(on = on)) }
+        launch { api.hlPut("/tracking/sources", JSONObject().put(k, on)) }
+    }
+
+    /** Lokale varsler for nye hendelser (serverens varselliste, ellers statusendringer til «Klar for henting» og «Levert»).
+     *  Første gang huskes bare det som finnes, så det ikke kommer en bølge av gamle varsler. */
+    private fun notifyTracking(t: TrackingData) {
+        val key = "trk_seen_" + (account?.id ?: "")
+        val raw = prefs.str(key, "")
+        val first = raw.isEmpty()
+        val seen = raw.split('\n').filter { it.isNotEmpty() }.toMutableList()
+        val fresh = mutableListOf<Triple<String, String, String>>()
+        t.notices?.reversed()?.forEach { n ->
+            if ("n:${n.id}" in seen) return@forEach
+            seen += "n:${n.id}"
+            val title = mapOf("pickup" to "Klar for henting", "delivered" to "Levert", "out" to "Ute for levering", "delayed" to "Forsinket", "found" to "Ny sending")[n.kind] ?: "Sporing"
+            fresh += Triple(title, n.text, "trk-n-${n.id}")
+        }
+        for (s in t.items) {
+            if (s.archived || !(s.ready || s.done)) continue
+            val k = "s:${s.id}:${s.status}"
+            if (k in seen) continue
+            seen += k
+            if (t.notices != null) continue
+            if (!(t.prefs[if (s.ready) "pickup" else "delivered"] ?: true)) continue
+            fresh += if (s.ready) Triple("Klar for henting", s.name + if (s.pickupPoint.isBlank()) "" else " hos ${s.pickupPoint}", "trk-${s.id}-pickup")
+            else Triple("Levert", "${s.name} er levert", "trk-${s.id}-delivered")
+        }
+        prefs.set(key, seen.takeLast(400).joinToString("\n").ifEmpty { "-" })
+        if (first || fresh.isEmpty()) return
+        fresh.takeLast(3).forEach { Notify.post(getApplication<Application>(), it.first, it.second, it.third) }
+        Haptics.pkg()
+    }
+
+    /* ---------- Subscription OS (nytt design) ---------- */
+
+    suspend fun loadSubs() {
+        val d = api.get("/subscriptions")
+        subs = runCatching { parseSubs(d) }.getOrNull()
+        subsX = parseSubsX(d)
+    }
+
+    fun setSubItemActive(s: SubItem, active: Boolean) = launch {
+        api.patch("/subscriptions/${s.id}", JSONObject().put("active", active))
+        loadSubs()
+        flash(if (active) "${s.name} er aktivert igjen" else "${s.name} er markert som sagt opp")
+    }
+
+    /** «Skriv inn selv»: tjeneste, plan, beløp, syklus og trekkdag. */
+    fun addSubManual(name: String, plan: String, price: String, cycle: String, day: Int?) = launch {
+        val body = JSONObject().put("name", name).put("plan", plan).put("price", price.replace(" ", "").replace(',', '.')).put("cycle", cycle)
+        if (day != null && day in 1..31) {
+            val now = LocalDate.now()
+            var d = now.withDayOfMonth(minOf(day, now.lengthOfMonth()))
+            if (d.isBefore(now)) { val m = now.plusMonths(1); d = m.withDayOfMonth(minOf(day, m.lengthOfMonth())) }
+            body.put("chargeDay", day).put("nextDate", d.toString())
+        }
+        api.post("/subscriptions", body)
+        loadSubs()
+        flash("$name lagt til")
+    }
+
+    /** «Fra transaksjoner»: faste trekk sett minst 3 ganger som ikke er registrert. */
+    fun loadSubCandidates() { subCandidates = null; launch { subCandidates = parseSubCandidates(api.get("/subscriptions/candidates")) } }
+
+    fun addSubCandidate(c: SubCandidate) = launch {
+        api.post("/subscriptions", JSONObject().put("fromCandidate", c.toJson()))
+        subCandidates = subCandidates?.filter { it.key != c.key }
+        loadSubs()
+        flash("${c.merchant} lagt til")
+    }
+
+    /** «Fra kvittering»: ✦ AI leser bildet eller PDF-en og lager abonnementet. */
+    fun uploadSubReceipt(uri: Uri) = launch {
+        busy = true
+        try {
+            val ctx = getApplication<Application>()
+            val mime = ctx.contentResolver.getType(uri) ?: "image/jpeg"
+            val data = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } } ?: throw ApiException("Fikk ikke lest filen")
+            val pdf = mime.contains("pdf")
+            val bytes = if (pdf) data else scaled(data, 2400, 85) ?: data
+            api.upload("/subscriptions/receipts", listOf(Api.Part("file", if (pdf) "kvittering.pdf" else "kvittering.jpg", if (pdf) "application/pdf" else "image/jpeg", bytes)))
+            flash("✦ AI leser kvitteringen. Abonnementet dukker opp om litt.")
+        } finally { busy = false }
+        repeat(4) { delay(5_000); runCatching { loadSubs() } }
+    }
 
     /* ---------- Data og lagring ---------- */
 
