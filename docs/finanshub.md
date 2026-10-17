@@ -137,6 +137,7 @@ docker compose --profile mail up -d
 
 - **Duplikater:** hver e-post huskes på `Message-ID` og sha256 av hvert vedlegg (tabellen `fh_mail_imports`), så ingenting importeres to ganger selv om e-posten flyttes tilbake.
 - **Ved feil:** e-posten blir liggende i mappen og prøves igjen neste runde, og feilen vises under Status. «Kjør nå» starter en runde med en gang.
+- **Finn-e-poster i kvitteringsmappen** (fra finn.no, eller som nevner FINN og Fiks ferdig, Trygg betaling eller Tillit) går automatisk til Finn-handler i stedet for kvitteringskøen.
 - **Finn-handler:** fyll inn en egen Finn-mappe (f.eks. `Folders/Finn`), så leses Finn-e-postene fra samme postkasse inn som handler.
 - **Bridge-data** ligger i `./proton` – ta den med i backupen.
 

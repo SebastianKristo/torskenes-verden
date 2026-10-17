@@ -177,6 +177,13 @@ export async function importMessage(source, { folder, ingest }) {
   return { messageId, imported, skipped, empty: !items.length, meta };
 }
 
+// Finn-e-poster (Trygg betaling, Fiks ferdig, Tillit) som havner i kvitteringsmappen går til Finn-handler i stedet.
+export function looksLikeFinn(parsed) {
+  const from = String(parsed.from?.text ?? '').toLowerCase();
+  const t = `${parsed.subject ?? ''} ${mailText(parsed)}`;
+  return /@(\w+\.)?finn\.no\b/.test(from) || (/\bfinn(\.no)?\b/i.test(t) && /fiks ferdig|trygg betaling|tillit forsikring/i.test(t));
+}
+
 let running = false;
 // Én runde: hent e-post fra kvitteringsmappen (og uleste fra Finn-mappen), importer og flytt/merk.
 export async function runMail({ ingest, finn } = {}) {
@@ -199,7 +206,8 @@ export async function runMail({ ingest, finn } = {}) {
         for (const uid of uids.slice(0, 50)) {
           try {
             const msg = await client.fetchOne(String(uid), { source: true }, { uid: true });
-            if (kind === 'finn') { await finn(mailText(await simpleParser(msg.source))); imported++; }
+            const parsed = kind === 'receipt' && finn ? await simpleParser(msg.source) : null;
+            if (kind === 'finn' || (parsed && looksLikeFinn(parsed))) { await finn(mailText(parsed ?? await simpleParser(msg.source))); imported++; }
             else imported += (await importMessage(msg.source, { folder, ingest })).imported;
             const target = kind === 'receipt' ? c.doneFolder : null;
             if (target && folders.includes(target)) await client.messageMove(String(uid), target, { uid: true });
