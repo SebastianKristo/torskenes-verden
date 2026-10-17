@@ -70,10 +70,23 @@ data class MobileHome(
 )
 
 /** Oppsettet av mobilforsiden (per bruker og enhet): rekkefølge og synlighet for seksjoner og faner. */
-data class HomeLayout(val sec: List<String>, val hlTabs: List<String>, val finTabs: List<String>, val hide: Map<String, Boolean>) {
+data class HomeLayout(
+    val sec: List<String>, val hlTabs: List<String>, val finTabs: List<String>, val hide: Map<String, Boolean>,
+    /** Egne fanenavn. Nøkkel «hl.<id>» eller «fin.<id>», maks 30 tegn. */
+    val names: Map<String, String> = emptyMap(),
+    /** Tilbake til startsiden: «arrow» (pil øverst, standard) eller «bar» (knapp i fanelinja). */
+    val backStyle: String = "arrow",
+    /** Matplan: «light» (matapp-utseendet), «dark» eller «system». */
+    val matTheme: String = "light",
+    /** Startside: «homelab», «fin-hjem», «fin-liste» eller «fin-budsjett». */
+    val start: String? = null,
+) {
     fun visible(id: String) = hide[id] != true
     fun toJson(): JSONObject = JSONObject().put("sec", JSONArray(sec)).put("hlTabs", JSONArray(hlTabs)).put("finTabs", JSONArray(finTabs))
         .put("hide", JSONObject().apply { hide.forEach { (k, v) -> put(k, v) } })
+        .put("names", JSONObject().apply { names.forEach { (k, v) -> put(k, v) } })
+        .put("backStyle", backStyle).put("matTheme", matTheme)
+        .apply { start?.let { put("start", it) } }
 
     companion object {
         val SECTIONS = listOf("clock", "search", "links", "os", "srv", "ruter")
@@ -82,6 +95,7 @@ data class HomeLayout(val sec: List<String>, val hlTabs: List<String>, val finTa
         /** Kan ikke skjules. */
         val FIXED_HL = setOf("hl", "home")
         val FIXED_FIN = setOf("home", "mer")
+        val STARTS = listOf("homelab", "fin-hjem", "fin-liste", "fin-budsjett")
         val DEFAULT = HomeLayout(SECTIONS, HL_TABS, FIN_TABS, mapOf("srv" to true, "ruter" to true))
 
         /** Nye ID-er som ikke finnes i lagret oppsett legges sist; ukjente fjernes. */
@@ -91,9 +105,14 @@ data class HomeLayout(val sec: List<String>, val hlTabs: List<String>, val finTa
             if (o == null) return DEFAULT
             val hide = DEFAULT.hide.toMutableMap()
             o.optJSONObject("hide")?.let { h -> h.keys().forEach { k -> hide[k] = h.optBoolean(k) } }
+            val names = mutableMapOf<String, String>()
+            o.optJSONObject("names")?.let { n -> n.keys().forEach { k -> n.optString(k).trim().takeIf { it.isNotEmpty() }?.let { names[k] = it.take(30) } } }
             return HomeLayout(
                 fix(o.optJSONArray("sec").strings(), SECTIONS), fix(o.optJSONArray("hlTabs").strings(), HL_TABS),
-                fix(o.optJSONArray("finTabs").strings(), FIN_TABS), hide,
+                fix(o.optJSONArray("finTabs").strings(), FIN_TABS), hide, names,
+                o.optString("backStyle").takeIf { it == "arrow" || it == "bar" } ?: "arrow",
+                o.optString("matTheme").takeIf { it in listOf("light", "dark", "system") } ?: "light",
+                o.optString("start").takeIf { it in STARTS },
             )
         }
     }
@@ -124,7 +143,15 @@ data class ImportRow(val date: String, val description: String, val raw: String?
 data class ImportResult(val rows: List<ImportRow>, val imported: Int, val skipped: Int, val errors: List<String>)
 
 data class SearchHit(val type: String, val txId: Int?, val receiptId: String?, val description: String, val date: String?, val amount: Double?, val source: String?, val reason: String?)
-data class AiAnswer(val q: String, val answer: String, val hits: List<SearchHit>, val engine: String?, val suggestions: List<String>)
+data class StoreHit(val name: String, val count: Int, val last: String?)
+/** Svar fra ✦ AI-søk (POST /search/ai) eller vanlig søk (GET /search, mode = «plain»). */
+data class AiAnswer(
+    val q: String, val answer: String, val hits: List<SearchHit>, val engine: String?, val suggestions: List<String>,
+    val followUps: List<String> = emptyList(), val mode: String? = null, val interpreted: String? = null,
+    val stores: List<StoreHit> = emptyList(), val aiUnavailable: Boolean = false,
+)
+/** Forslagsgrupper til søket (GET /search/suggestions). */
+data class SuggestGroup(val title: String, val items: List<String>)
 
 /** Original kvittering og bankrad for en transaksjon. */
 data class ReceiptFile(val id: String, val mime: String?, val fileUrl: String?, val thumbUrl: String?)
@@ -148,9 +175,16 @@ data class TxDraft(
 
 /* ---------------- Moduler ---------------- */
 
-data class Day(val date: String, val weekday: String, val name: String?, val cost: Double?, val source: String?, val cook: String?, val fixed: Boolean)
+data class Day(
+    val date: String, val weekday: String, val name: String?, val cost: Double?, val source: String?, val cook: String?, val fixed: Boolean,
+    val dishId: String? = null, val today: Boolean = false, val tag: String? = null, val bestCook: String? = null, val ingredients: List<String> = emptyList(),
+)
+data class Dish(val id: String, val name: String, val src: String?, val ing: List<String>, val steps: List<String>, val cost: Double, val days: List<Int>)
 data class Shop(val id: String, val text: String, val done: Boolean)
-data class Week(val start: String, val days: List<Day>, val cooks: List<String>, val shopping: List<Shop>, val weekCost: Double, val auto: Boolean)
+data class Week(
+    val start: String, val days: List<Day>, val cooks: List<String>, val shopping: List<Shop>, val weekCost: Double, val auto: Boolean,
+    val end: String? = null, val week: Int? = null, val dishes: List<Dish> = emptyList(),
+)
 
 data class Sub(
     val id: Int, val name: String, val plan: String?, val price: Double, val cycle: String, val nextDate: String?, val usageNote: String?,
@@ -177,7 +211,7 @@ data class TokenInfo(val id: String, val name: String, val scopes: List<String>,
 
 data class DomainRef(val id: String, val name: String, val source: String)
 data class Named(val name: String, val value: Double)
-data class Country(val iso2: String, val name: String, val visitors: Double, val threats: Double)
+data class Country(val iso2: String, val name: String, val visitors: Double, val threats: Double, val iso3n: Int? = null)
 data class Point(val t: String, val requests: Double, val cached: Double, val visitors: Double)
 data class ThreatEvent(val time: String, val action: String, val country: String, val ip: String, val path: String)
 data class DnsRecord(val type: String, val name: String, val content: String, val proxied: Boolean)
@@ -193,6 +227,7 @@ data class Analytics(
     val threatsTotal: Double, val threatTypes: List<Named>, val events: List<ThreatEvent>,
     val sslMode: String?, val alwaysHttps: Boolean?, val minTls: String?, val dnssec: Boolean?, val botFight: Boolean?, val certExpires: String?,
     val topPages: List<Named>, val referrers: List<Named>, val uptime90: List<Double>, val dns: List<DnsRecord>,
+    val registrar: String? = null, val nameServers: List<String> = emptyList(), val source: String? = null,
 )
 
 /* ---------------- Parsing ---------------- */
@@ -367,8 +402,22 @@ fun parseAi(s: String, q: String): AiAnswer {
                 it.optStr("receiptId"), it.optString("description"), it.optStr("date"), it.optDoubleOrNull("amount"), it.optStr("source"), it.optStr("reason"))
         } ?: emptyList(),
         o.optStr("engine"), o.optJSONArray("suggestions").strings(),
+        o.optJSONArray("followUps").strings(), o.optStr("mode"), o.opt("interpreted") as? String,
+        o.optJSONArray("stores")?.map { StoreHit(it.optString("name"), it.optInt("count"), it.optStr("last")) } ?: emptyList(),
+        o.optBoolean("aiUnavailable"),
     )
 }
+
+/** Vanlig søk (GET /search): som AI-svaret, men oppsummeringen ligger i «summary». */
+fun parsePlain(s: String, q: String): AiAnswer {
+    val a = parseAi(s, q)
+    val o = JSONObject(s)
+    return a.copy(answer = a.answer.ifBlank { o.optString("summary") }, mode = a.mode ?: "plain")
+}
+
+fun parseSuggestGroups(s: String): List<SuggestGroup> =
+    JSONObject(s).optJSONArray("groups")?.map { SuggestGroup(it.optString("title"), it.optJSONArray("items").strings().filter(String::isNotBlank)) }
+        ?.filter { it.items.isNotEmpty() } ?: emptyList()
 
 fun parseOriginal(s: String): Original {
     val o = JSONObject(s)
@@ -389,10 +438,19 @@ fun parseWeek(s: String): Week {
     val o = JSONObject(s)
     return Week(
         o.optString("start"),
-        o.optJSONArray("days")?.map { Day(it.getString("date"), it.optString("weekday"), it.optStr("name"), it.optDoubleOrNull("cost"), it.optStr("source"), it.optStr("cook"), it.optBoolean("fixed")) } ?: emptyList(),
+        o.optJSONArray("days")?.map {
+            Day(it.getString("date"), it.optString("weekday"), it.optStr("name"), it.optDoubleOrNull("cost"), it.optStr("source"), it.optStr("cook"), it.optBoolean("fixed"),
+                it.optStr("dishId"), it.optBoolean("today"), it.optStr("tag"), it.optStr("bestCook"), it.optJSONArray("ingredients").strings().filter(String::isNotBlank))
+        } ?: emptyList(),
         o.optJSONArray("cooks").strings(),
         o.optJSONArray("shopping")?.map { Shop(it.optString("id"), it.optString("text"), it.optBoolean("done")) } ?: emptyList(),
         o.num("weekCost"), o.optBoolean("auto"),
+        o.optStr("end"), o.optIntOrNull("week"),
+        o.optJSONArray("dishes")?.map {
+            Dish(it.optString("id"), it.optString("name"), it.optStr("src"), it.optJSONArray("ing").strings().filter(String::isNotBlank),
+                it.optJSONArray("steps").strings().filter(String::isNotBlank), it.num("cost"),
+                it.optJSONArray("days")?.let { a -> (0 until a.length()).map { i -> a.optInt(i) } } ?: emptyList())
+        } ?: emptyList(),
     )
 }
 
@@ -479,7 +537,7 @@ fun parseAnalytics(s: String): Analytics {
         o.optStr("sslExpires"), o.optStr("renews"),
         o.optJSONArray("series")?.map { Point(it.optString("t"), it.num("requests"), it.num("cached"), it.num("visitors")) } ?: emptyList(),
         live.num("visitors"), live.num("requests"), live.num("mb"), live.optJSONArray("spark").doubles(),
-        o.optJSONArray("countries")?.map { Country(it.optString("iso2"), it.optString("name"), it.num("visitors"), it.num("threats")) } ?: emptyList(),
+        o.optJSONArray("countries")?.map { Country(it.optString("iso2"), it.optString("name"), it.num("visitors"), it.num("threats"), it.optIntOrNull("iso3n") ?: it.optStr("iso3n")?.toIntOrNull()) } ?: emptyList(),
         o.named("devices"), o.named("browsers"),
         st.num("2xx"), st.num("3xx"), st.num("4xx"), st.num("5xx"),
         ttfb.num("p50"), ttfb.num("p95"), o.num("originMs"), o.num("errorPct"), o.named("http"), o.named("tls"),
@@ -488,7 +546,9 @@ fun parseAnalytics(s: String): Analytics {
         sec.optStr("sslMode"), sec.optBoolOrNull("alwaysHttps"), sec.optStr("minTls"), sec.optBoolOrNull("dnssec"), sec.optBoolOrNull("botFight"), sec.optStr("certExpires"),
         o.optJSONArray("topPages")?.map { Named(it.optString("path"), it.num("count")) } ?: emptyList(),
         o.optJSONArray("referrers")?.map { Named(it.optString("name"), it.num("count")) } ?: emptyList(),
-        o.optJSONArray("uptime90").doubles(),
+        // null = ingen målinger den dagen → -1
+        o.optJSONArray("uptime90")?.let { u -> (0 until u.length()).map { if (u.isNull(it)) -1.0 else u.optDouble(it, -1.0) } } ?: emptyList(),
         o.optJSONArray("dns")?.map { DnsRecord(it.optString("type"), it.optString("name"), it.optString("content"), it.optBoolean("proxied")) } ?: emptyList(),
+        o.optStr("registrar"), o.optJSONArray("nameServers").strings().filter(String::isNotBlank), o.optStr("source"),
     )
 }

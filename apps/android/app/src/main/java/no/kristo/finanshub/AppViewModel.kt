@@ -171,6 +171,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var domTab by mutableStateOf(DomTab.Traffic)
     var domRange by mutableStateOf("24h")
     var moduleError by mutableStateOf<String?>(null)
+    /** «Administrer domener» er åpen. */
+    var domainManager by mutableStateOf(false)
+    /** Valgt dag i Matplan (indeks 0–6), null = i dag. «Hele uka og alle retter» er åpen. */
+    var matDay by mutableStateOf<Int?>(null)
+    var matFull by mutableStateOf(false)
+    /** Verdenskartet til Domener → Besøk (lastes én gang). */
+    var worldMap by mutableStateOf<List<MapCountry>?>(null)
+    /** Melding over søkeresultatet, f.eks. at AI er av og vanlig søk ble brukt. */
+    var aiNote by mutableStateOf<String?>(null)
+    var suggestGroups by mutableStateOf<List<SuggestGroup>>(emptyList())
 
     /* ---------- Valg (observerbare for Compose) ---------- */
 
@@ -181,6 +191,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setPref(k: String, v: Any) {
         prefs.set(k, v); prefTick++
         if (k == AppPrefs.HIDE_AMOUNTS) Privacy.hidden = v == true
+        if (k == AppPrefs.START) saveLayout(layout.copy(start = startKey(v.toString())))
     }
 
     /* ---------- Lås ---------- */
@@ -210,6 +221,46 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun startScreen() = when (prefs.str(AppPrefs.START, "homelab")) {
         "home" -> Screen.Home; "list" -> Screen.List; "budget" -> Screen.Budget; else -> Screen.Homelab
     }
+
+    /* ---------- Startside og tilbakevei ---------- */
+
+    /** Startsiden som skjerm: Homelab eller en Finans-fane. */
+    val startPage: Screen get() = if (prefTick >= 0) startScreen() else Screen.Homelab
+    /** Finans som startside: appen åpner der, og Homelab og modulene ligger i profilmenyen. */
+    val financeStart: Boolean get() = startPage != Screen.Homelab
+    val startLabel: String get() = if (financeStart) "Finans" else "Homelab"
+    fun goStart() = go(startPage)
+    /** Knapp i fanelinja i stedet for pil øverst. */
+    val homeInBar: Boolean get() = layout.backStyle == "bar"
+
+    /** «‹ Homelab» / «‹ Finans» øverst med profilbildet til høyre på samme rad. null = ingen topprad. */
+    fun topRowTitle(compact: Boolean): String? {
+        if (editing != null || detail != null || original != null || editHome) return null
+        // Matplan er en egen flate uten fanelinje: pilen vises alltid der.
+        if (screen == Screen.Mat) return if (matFull) null else startLabel
+        if (!compact || layout.backStyle != "arrow") return null
+        return when (screen) {
+            Screen.Domains -> startLabel
+            Screen.Homelab -> if (financeStart) "Finans" else null
+            Screen.Home, Screen.List, Screen.Budget, Screen.Search, Screen.More -> if (financeStart || selectedTx != null) null else "Homelab"
+            else -> null
+        }
+    }
+
+    /** Fanenavn fra oppsettet (eget navn eller standard). Nøkler: «fin.<id>» og «hl.<id>». */
+    fun finName(s: Screen): String = Screen.FIN_TAB.entries.firstOrNull { it.value == s }?.key?.let { layout.names["fin.$it"] } ?: s.label
+    fun hlName(s: Screen): String = Screen.HL_TAB.entries.firstOrNull { it.value == s }?.key?.let { layout.names["hl.$it"] } ?: if (s == Screen.Home) "Finans" else s.label
+
+    /** Nytt navn på en fane (tomt = standardnavnet). */
+    fun rename(key: String, name: String) {
+        val n = name.trim()
+        saveLayout(layout.copy(names = if (n.isEmpty()) layout.names - key else layout.names + (key to n.take(30))))
+    }
+    fun setBackStyle(b: String) = saveLayout(layout.copy(backStyle = b))
+    fun setMatTheme(t: String) = saveLayout(layout.copy(matTheme = t))
+
+    private fun startKey(p: String) = when (p) { "home" -> "fin-hjem"; "list" -> "fin-liste"; "budget" -> "fin-budsjett"; else -> "homelab" }
+    private fun startPref(k: String) = when (k) { "fin-hjem" -> "home"; "fin-liste" -> "list"; "fin-budsjett" -> "budget"; else -> "homelab" }
 
     private fun launch(block: suspend () -> Unit) = viewModelScope.launch {
         try { block() } catch (e: ApiException) {
@@ -298,7 +349,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         mobileHome = null; homeError = null; history = emptyList(); suggestions = emptyList(); todayMeal = null; domainToday = null; avatar = null
         ai = null; aiHistory = emptyList(); editing = null; original = null; detail = null; detailTx = null
         recurring = null; stocks = null; report = null; importResult = null; importUris = emptyList(); importText = ""
-        editHome = false
+        editHome = false; domainManager = false; matDay = null; matFull = false; aiNote = null; suggestGroups = emptyList()
         logos.clear()
     }
 
@@ -371,7 +422,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 Screen.Homelab -> loadHome()
                 Screen.Home -> summary = parseSummary(api.get("/summary"))
                 Screen.List, Screen.Budget -> if (txs == null || s == Screen.List) loadTx()
-                Screen.Search -> loadAiHistory()
+                Screen.Search -> { loadAiHistory(); loadSuggestGroups() }
                 Screen.More -> loadMore()
                 Screen.Scan -> { loadReceipts(); loadJobs() }
                 Screen.Fast -> recurring = parseRecurring(api.get("/recurring"))
@@ -399,7 +450,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun open(s: Screen) = navigate(s, screen)
 
     private fun navigate(s: Screen, from: Screen?) {
-        if (s != screen) { selectedTx = null; folder = null; detail = null; detailTx = null; editing = null; original = null; editHome = false }
+        if (s != screen) { selectedTx = null; folder = null; detail = null; detailTx = null; editing = null; original = null; editHome = false; matFull = false; matDay = null }
         backTo = from?.takeIf { it != s }
         screen = s
         menuOpen = false
@@ -417,8 +468,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             screen == Screen.Folders && folder != null -> folder = null
             screen == Screen.Scan && selectedReceipt != null -> selectedReceipt = null
             selectedTx != null -> selectedTx = null
-            screen == Screen.Homelab -> return false
-            else -> navigate(backTo ?: if (screen.isMorePage) Screen.More else Screen.Homelab, null)
+            screen == Screen.Domains && domainManager -> domainManager = false
+            screen == Screen.Mat && matFull -> matFull = false
+            screen == startPage && backTo == null -> return false
+            else -> navigate(backTo ?: if (screen.isMorePage) Screen.More else startPage, null)
         }
         return true
     }
@@ -483,7 +536,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (summary == null) summary = runCatching { parseSummary(api.get("/summary")) }.getOrNull()
         if (prefs.str(AppPrefs.LAYOUT + (account?.id ?: ""), "").isBlank()) {
             val l = mobileHome?.layout ?: runCatching { parseLayout(api.hlGet("/me/layout")) }.getOrNull()
-            if (l != null) layout = l
+            if (l != null) {
+                layout = l
+                l.start?.let { st -> if (startPref(st) != prefs.str(AppPrefs.START, "homelab")) { prefs.set(AppPrefs.START, startPref(st)); prefTick++ } }
+            }
         }
         history = runCatching { parseStrings(api.hlGet("/search/history")) }.getOrDefault(history)
         todayMeal = runCatching {
@@ -609,18 +665,48 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /* ---------- ✦ AI-søk ---------- */
 
+    /** «ai» eller «plain» (Vanlig søk). Lagres per enhet. */
+    val searchMode: String get() = option(AppPrefs.SEARCH_MODE, "ai")
+
+    /** Søk: ✦ AI først (med mindre Vanlig søk er valgt). Er AI av eller nede, brukes vanlig søk med en melding om det. */
     fun ask(q: String) {
         val t = q.trim()
         if (t.isBlank()) return
         aiQuery = t
         aiBusy = true
+        aiNote = null
         launch {
             try {
-                ai = parseAi(api.post("/search/ai", JSONObject().put("q", t)), t)
+                ai = if (searchMode == "plain") plainSearch(t) else {
+                    val a = try { parseAi(api.request("POST", "/search/ai", JSONObject().put("q", t), timeout = 25_000), t) } catch (e: ApiException) {
+                        if (e.status == 401) throw e
+                        null
+                    } catch (e: Exception) { null }
+                    if (a == null || a.aiUnavailable) {
+                        aiNote = "AI-søket er ikke tilgjengelig nå. Viser vanlig søk."
+                        plainSearch(t)
+                    } else a
+                }
                 aiHistory = (listOf(t) + aiHistory.filter { it != t }).take(20)
                 loadAiHistory()
             } finally { aiBusy = false }
         }
+    }
+
+    /** Vanlig søk (GET /search). Eldre servere uten /search: søk i transaksjonene. */
+    private suspend fun plainSearch(q: String): AiAnswer {
+        val enc = URLEncoder.encode(q, "UTF-8")
+        return try { parsePlain(api.get("/search?q=$enc"), q) } catch (e: ApiException) {
+            if (e.status != 404) throw e
+            val list = parseTxList(api.get("/transactions?limit=30&q=$enc"))
+            AiAnswer(q, if (list.isEmpty()) "Ingen treff." else "${list.size} treff i transaksjonene.",
+                list.map { SearchHit("tx", it.id, it.receiptId, it.description, it.date, it.amount, it.source, it.category.takeIf(String::isNotBlank)?.let { c -> "Kategori · $c" }) },
+                null, emptyList(), mode = "plain")
+        }
+    }
+
+    private suspend fun loadSuggestGroups() {
+        if (suggestGroups.isEmpty()) runCatching { parseSuggestGroups(api.get("/search/suggestions")) }.getOrNull()?.let { suggestGroups = it }
     }
 
     private suspend fun loadAiHistory() {
@@ -886,6 +972,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun setCook(date: String, cook: String) = launch { api.matPatch("/day/$date", JSONObject().put("cook", cook)); loadWeek() }
     fun toggleFixed(d: Day) = launch { api.matPatch("/day/${d.date}", JSONObject().put("fixed", !d.fixed)); loadWeek() }
     fun toggleShop(id: String) = launch { api.matPost("/shopping/$id/toggle"); loadWeek() }
+    /** Legger ingrediensene som mangler i handlelisten. */
+    fun addToShop(items: List<String>) = launch {
+        val have = week?.shopping?.map { it.text.lowercase() }?.toSet() ?: emptySet()
+        val add = items.filter { it.lowercase() !in have }
+        for (i in add) api.matPost("/shopping", JSONObject().put("text", i).apply { week?.start?.takeIf(String::isNotBlank)?.let { put("start", it) } })
+        loadWeek()
+        message = if (add.isEmpty()) "Alt står allerede i handlelisten" else "${add.size} lagt i handlelisten"
+    }
 
     /* ---------- Subscription OS ---------- */
 
@@ -927,6 +1021,32 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun pickDomain(name: String) { domain = name; analytics = null; launch { loadAnalytics() } }
     fun setRange(r: String) { domRange = r; launch { loadAnalytics() } }
     fun reloadDomain() = launch { loadDomains(); message = "Oppdatert fra Cloudflare" }
+
+    /** Administrer domener: samme liste som i Homelab. API-token legges inn på web. */
+    fun addDomain(name: String, source: String) = launch {
+        val n = name.trim().lowercase().removePrefix("https://").removePrefix("http://").trimEnd('/')
+        if (n.isBlank()) return@launch
+        api.domPost("/domains", JSONObject().put("name", n).put("source", source))
+        domain = n
+        loadDomains()
+        message = if (source in DOMAIN_NEEDS_TOKEN) "$n lagt til. Legg inn API-token på web." else "$n lagt til"
+    }
+    fun removeDomain(d: DomainRef) = launch {
+        api.domDelete("/domains/" + URLEncoder.encode(d.id, "UTF-8"))
+        if (domain == d.name) { domain = null; analytics = null }
+        loadDomains()
+        message = "${d.name} fjernet"
+    }
+
+    /** Landene til kartet: fra serveren, ellers world-atlas på jsDelivr. */
+    fun loadWorldMap() {
+        if (worldMap != null) return
+        viewModelScope.launch {
+            suspend fun parse(b: ByteArray?) = b?.let { withContext(Dispatchers.Default) { MapCountry.parse(String(it)) } }.orEmpty()
+            val local = parse(runCatching { api.bytes("/domains/api/vendor/countries-110m.json") }.getOrNull())
+            worldMap = local.ifEmpty { parse(runCatching { withContext(Dispatchers.IO) { java.net.URL(WORLD_ATLAS).openStream().use { it.readBytes() } } }.getOrNull()) }
+        }
+    }
 
     /* ---------- API-tokens ---------- */
 

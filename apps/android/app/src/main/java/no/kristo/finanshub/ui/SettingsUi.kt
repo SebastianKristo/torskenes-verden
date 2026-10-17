@@ -312,10 +312,34 @@ private fun TokensPage(vm: AppViewModel) = Pages {
 
 @Composable
 private fun LookPage(vm: AppViewModel) = Pages {
-    Section("Startside") {
+    Section("Oppstart") {
         Group {
-            listOf("homelab" to "Homelab", "home" to "Finans · Oversikt", "list" to "Finans · Liste", "budget" to "Finans · Budsjett").forEach { (k, n) ->
+            listOf("homelab" to "Homelab", "home" to "Finans · Hjem", "list" to "Finans · Liste", "budget" to "Finans · Budsjett").forEach { (k, n) ->
                 Choice(n, on = vm.option(AppPrefs.START, "homelab") == k) { vm.setPref(AppPrefs.START, k) }
+            }
+        }
+        Note("Med Finans som startside åpner appen der, og Homelab og de andre modulene ligger i profilmenyen.")
+    }
+    Section("Tilbake til startsiden") {
+        Group {
+            Choice("Pil øverst", "«‹ ${vm.startLabel}» i Domener, Matplan og Andre OS", on = vm.layout.backStyle == "arrow") { vm.setBackStyle("arrow") }
+            Choice("Knapp i linjen", "${vm.startLabel} helt til venstre i navigasjonslinjen", on = vm.layout.backStyle == "bar") { vm.setBackStyle("bar") }
+        }
+    }
+    Section("Navigasjonslinje") {
+        var open by remember { mutableStateOf(false) }
+        Group {
+            Row(Modifier.fillMaxWidth().clickable { open = !open }.padding(16.dp, 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Endre navn, rekkefølge og skjul faner", Modifier.weight(1f))
+                Icon(if (open) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null, tint = C.text2)
+            }
+        }
+        if (open) NavEditors(vm)
+    }
+    Section("Matplan") {
+        Group {
+            listOf("light" to "Lys", "dark" to "Mørk", "system" to "Som systemet").forEach { (k, n) ->
+                Choice(n, on = vm.layout.matTheme == k) { vm.setMatTheme(k) }
             }
         }
     }

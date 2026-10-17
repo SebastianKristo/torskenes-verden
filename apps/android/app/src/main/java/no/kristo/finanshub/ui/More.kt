@@ -171,12 +171,18 @@ internal fun MoreScreen(vm: AppViewModel) {
     }
 }
 
-/* ---------------- Søk (✦ AI) ---------------- */
+/* ---------------- Søk (✦ AI og vanlig søk) ---------------- */
 
 private val AI_SUGGESTIONS = listOf("Hvor mye har jeg brukt på kaffe?", "Når kjøpte jeg lyspærer?", "Mat i oktober", "Hva har jeg betalt for lading?")
+/** Forslag før søk når serveren ikke har /search/suggestions. */
+private val FALLBACK_GROUPS = listOf(
+    SuggestGroup("Butikker", listOf("Sist jeg var på Rema 1000", "Sist jeg var på Biltema")),
+    SuggestGroup("Varer i kvitteringer", listOf("Kvitteringer med tomater", "Kvitteringer med kaffe")),
+    SuggestGroup("Beløp og perioder", listOf("Over 500 kr i oktober", "Største utgift", "Til gjennomgang")),
+)
 
-/** Søk-fanen: feltet får fokus med en gang, så tastaturet kommer opp. Enter sender spørsmålet. */
-@OptIn(ExperimentalLayoutApi::class)
+/** Søk-fanen: feltet får fokus med en gang, så tastaturet kommer opp. Enter søker. */
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 internal fun SearchScreen(vm: AppViewModel) {
     val focus = remember { FocusRequester() }
@@ -184,42 +190,85 @@ internal fun SearchScreen(vm: AppViewModel) {
     var q by remember { mutableStateOf(vm.aiQuery) }
     LaunchedEffect(Unit) { delay(120); runCatching { focus.requestFocus() }; keyboard?.show() }
     val r = vm.ai
+    val ai = vm.searchMode != "plain"
+    val search: (String) -> Unit = { t -> q = t; keyboard?.hide(); vm.ask(t) }
     Page {
-        item { ModuleHeader(vm, "AI-søk") }
-        item { SubText("${if (vm.boot?.settings?.provider == "gemini") "Gemini" else "Ollama"} · leser også innholdet i kvitteringene") }
+        item { ModuleHeader(vm, "Søk") }
+        item {
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                SegmentedButton(selected = ai, onClick = { vm.setPref(AppPrefs.SEARCH_MODE, "ai") }, shape = SegmentedButtonDefaults.itemShape(0, 2),
+                    colors = SegmentedButtonDefaults.colors(activeContainerColor = C.container, activeContentColor = C.onContainer)) { Text("✦ AI") }
+                SegmentedButton(selected = !ai, onClick = { vm.setPref(AppPrefs.SEARCH_MODE, "plain") }, shape = SegmentedButtonDefaults.itemShape(1, 2),
+                    colors = SegmentedButtonDefaults.colors(activeContainerColor = C.container, activeContentColor = C.onContainer)) { Text("Vanlig søk") }
+            }
+        }
+        item {
+            SubText(if (ai) "${if (vm.boot?.settings?.provider == "gemini") "Gemini" else "Ollama"} · leser også innholdet i kvitteringene. Er AI av, brukes vanlig søk."
+                else "Butikker, kategorier, notater og varelinjene i kvitteringene")
+        }
         item {
             TextField(
-                value = q, onValueChange = { q = it }, placeholder = { Text("f.eks. Når kjøpte jeg lyspærer?") },
-                leadingIcon = { Text("✦", color = C.accentLight, fontSize = 18.sp) }, singleLine = true,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { keyboard?.hide(); vm.ask(q) }),
+                value = q, onValueChange = { q = it }, placeholder = { Text(if (ai) "f.eks. Når kjøpte jeg lyspærer?" else "f.eks. kvitteringer med tomater") },
+                leadingIcon = { if (ai) Text("✦", color = C.accentLight, fontSize = 18.sp) else Icon(Icons.Filled.Search, null, tint = C.text2) }, singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { search(q) }),
                 shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).focusRequester(focus),
                 colors = TextFieldDefaults.colors(focusedContainerColor = C.surface2, unfocusedContainerColor = C.surface2, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
             )
         }
-        item { PrimaryButton(if (vm.aiBusy) "Spør …" else "Spør AI", q.isNotBlank() && !vm.aiBusy) { keyboard?.hide(); vm.ask(q) } }
-        item {
-            Group("Forslag") {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    (r?.suggestions?.takeIf { it.isNotEmpty() } ?: AI_SUGGESTIONS).forEach { t ->
-                        AssistChip(onClick = { q = t; keyboard?.hide(); vm.ask(t) }, label = { Text(t) })
+        item { PrimaryButton(if (vm.aiBusy) "Søker …" else if (ai) "Spør AI" else "Søk", q.isNotBlank() && !vm.aiBusy) { search(q) } }
+        if (r == null && !vm.aiBusy) {
+            // Før søk: forslag i tre grupper.
+            (vm.suggestGroups.ifEmpty { FALLBACK_GROUPS }).forEach { g ->
+                item {
+                    Group(g.title) {
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            g.items.forEach { t -> AssistChip(onClick = { search(t) }, label = { Text(t) }) }
+                        }
                     }
                 }
             }
         }
         if (vm.aiBusy) item { Loading() }
         if (r != null && !vm.aiBusy) {
+            vm.aiNote?.let { n -> item { Text(n, color = C.accentLight, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 8.dp)) } }
             item {
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp, 28.dp, 28.dp, 10.dp)).background(C.heroAi).padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("✦ Svar" + (r.engine?.let { " · $it" } ?: ""), color = C.onContainer, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                    Text(r.answer.ifBlank { "Fant ingen treff. Prøv et butikknavn, en kategori eller en vare fra kvitteringen." }, color = C.onContainer)
+                val plain = r.mode == "plain"
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp, 28.dp, 28.dp, 10.dp)).background(if (plain) C.surface2 else C.heroAi).padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(if (plain) "Vanlig søk · ${r.hits.size} treff" else "✦ Svar" + (r.engine?.let { " · $it" } ?: ""),
+                        color = if (plain) C.text2 else C.onContainer, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                    Text(r.answer.ifBlank { "Fant ingen treff. Prøv et butikknavn, en kategori eller en vare fra kvitteringen." }, color = if (plain) C.text else C.onContainer)
+                }
+            }
+            if (r.stores.isNotEmpty()) item {
+                Group("Butikker") {
+                    r.stores.forEachIndexed { i, st ->
+                        ItemRow(vm, i, r.stores.size, st.name, listOfNotNull("${st.count} kjøp", st.last?.let { "sist ${ddmmyyyy(it)}" }).joinToString(" · "), null,
+                            onClick = { search("Sist jeg var på ${st.name}") })
+                    }
                 }
             }
             if (r.hits.isNotEmpty()) item {
                 Group("Treff") {
                     r.hits.forEachIndexed { i, h ->
-                        ItemRow(vm, i, r.hits.size, h.description, listOfNotNull(h.date?.let(::ddmm), h.source, h.reason).joinToString(" · "),
+                        val sub = listOfNotNull(listOfNotNull(h.date?.let(::ddmm), h.source).joinToString(" · ").ifBlank { null }, h.reason).joinToString("\n")
+                        ItemRow(vm, i, r.hits.size, h.description, sub.ifBlank { null },
                             h.amount?.let { signed(it) }, if ((h.amount ?: 0.0) > 0) C.positive else C.text,
                             onClick = h.txId?.let { id -> { vm.showTx(id, h.description); Unit } })
+                    }
+                }
+            }
+            if (r.followUps.isNotEmpty()) item {
+                Group("Prøv også") {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        r.followUps.forEach { t -> SuggestionChip(onClick = { search(t) }, label = { Text(t) }) }
+                    }
+                }
+            }
+            val more = r.suggestions.ifEmpty { if (r.followUps.isEmpty()) AI_SUGGESTIONS else emptyList() }
+            if (more.isNotEmpty()) item {
+                Group("Flere forslag") {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        more.forEach { t -> AssistChip(onClick = { search(t) }, label = { Text(t) }) }
                     }
                 }
             }
@@ -227,12 +276,12 @@ internal fun SearchScreen(vm: AppViewModel) {
         if (vm.aiHistory.isNotEmpty()) item {
             Group(null) {
                 Row(Modifier.fillMaxWidth().padding(start = 8.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text("Tidligere spørsmål", color = C.primary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    Text("Tidligere søk", color = C.primary, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                     TextButton(onClick = { vm.clearAiHistory() }) { Text("Tøm", color = C.primary) }
                 }
                 val list = vm.aiHistory.take(8)
                 list.forEachIndexed { i, t ->
-                    Row(Modifier.fillMaxWidth().clip(itemShape(i, list.size)).background(C.surface1).clickable { q = t; vm.ask(t) }.padding(16.dp, 12.dp),
+                    Row(Modifier.fillMaxWidth().clip(itemShape(i, list.size)).background(C.surface1).clickable { search(t) }.padding(16.dp, 12.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Icon(Icons.Filled.History, null, tint = C.text2, modifier = Modifier.size(18.dp))
                         Text(t, maxLines = 1, overflow = TextOverflow.Ellipsis)

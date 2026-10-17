@@ -339,21 +339,70 @@ private struct LookPage: View {
     var body: some View {
         @Bindable var s = store
         VStack(spacing: 12) {
-            Card { Switch(label: "Fargebakgrunn", sub: "Fargede lysflekker bak glassflatene", on: $s.colorBg) }
-            SectionLabel(text: "Startside")
-            Card {
-                ForEach(Array([("homelab", "Homelab"), ("home", "Finans · Oversikt"), ("list", "Finans · Liste"), ("budget", "Finans · Budsjett")].enumerated()), id: \.offset) { i, o in
-                    if i > 0 { Sep() }
-                    Choice(label: o.1, on: store.startPage == o.0) { store.startPage = o.0 }
+            Group {
+                SectionLabel(text: "Designstil")
+                Card {
+                    Choice(label: "iOS · Liquid Glass", sub: "Glassflater og systemets fanelinje", on: store.designStyle == "ios") { store.designStyle = "ios" }
+                    Sep()
+                    Choice(label: "Android · Material 3", sub: "Tonale flater, navigasjonslinje med pille og Skann-knapp", on: store.designStyle == "material") { store.designStyle = "material" }
+                }
+                Note(text: "Gjelder bare denne enheten. Data, kontoer og innstillinger er de samme.")
+                if store.designStyle == "ios" { Card { Switch(label: "Fargebakgrunn", sub: "Fargede lysflekker bak glassflatene", on: $s.colorBg) } }
+            }
+            Group {
+                SectionLabel(text: "Oppstart")
+                Card {
+                    ForEach(Array([("homelab", "Homelab"), ("home", "Finans · Hjem"), ("list", "Finans · Liste"), ("budget", "Finans · Budsjett")].enumerated()), id: \.offset) { i, o in
+                        if i > 0 { Sep() }
+                        Choice(label: o.1, on: store.startPage == o.0) { store.startPage = o.0 }
+                    }
+                }
+                Note(text: store.financeStart ? "Appen åpner i Finans. Hjem-knappen går til Finans, og Homelab og de andre modulene ligger bak profilbildet." : "Appen åpner på Homelab.")
+                SectionLabel(text: "Tilbake til startsiden")
+                Card {
+                    Choice(label: "Pil øverst", sub: "«‹ \(store.startLabel)» med profilbildet på samme rad", on: store.layout.backStyle == "arrow") { store.setBackStyle("arrow") }
+                    Sep()
+                    Choice(label: "Knapp i linjen", sub: "\(store.startLabel) som første fane i fanelinja", on: store.layout.backStyle == "bar") { store.setBackStyle("bar") }
                 }
             }
-            Card { Switch(label: "Skjul beløp til jeg trykker", sub: "Beløp vises som prikker til du trykker på saldoen eller øyet", on: $s.hideAmounts) }
-            Note(text: "Fanelinja bruker Liquid Glass på iOS 26 og krymper til en sirkel når du scroller ned.")
-            SectionLabel(text: "Forsiden")
-            Card {
-                link("Rediger forsiden") { store.open(.homelab); store.editHome = true }
-                Sep()
-                link("Tilbakestill forsiden") { store.resetLayout(); store.flash("Forsiden er tilbakestilt") }
+            NavigationBarPrefs()
+            Group {
+                SectionLabel(text: "Matplan")
+                Card {
+                    Choice(label: "Lys", on: store.layout.matTheme == "light") { store.setMatTheme("light") }
+                    Sep()
+                    Choice(label: "Mørk", on: store.layout.matTheme == "dark") { store.setMatTheme("dark") }
+                    Sep()
+                    Choice(label: "Som systemet", on: store.layout.matTheme == "system") { store.setMatTheme("system") }
+                }
+                Card { Switch(label: "Skjul beløp til jeg trykker", sub: "Beløp vises som prikker til du trykker på saldoen eller øyet", on: $s.hideAmounts) }
+                SectionLabel(text: "Forsiden")
+                Card {
+                    link("Rediger forsiden") { store.open(.homelab); store.editHome = true }
+                    Sep()
+                    link("Tilbakestill forsiden") { store.resetLayout(); store.flash("Forsiden er tilbakestilt") }
+                }
+            }
+        }
+    }
+}
+
+/// Utseende → Navigasjonslinje: endre navn, rekkefølge og skjul faner i Homelab og Finans.
+private struct NavigationBarPrefs: View {
+    @Environment(Store.self) private var store
+    var body: some View {
+        VStack(spacing: 12) {
+            SectionLabel(text: "Navigasjonslinje")
+            Text("Endre navn, rekkefølge og skjul faner. Et tomt felt gir standardnavnet.").font(.footnote).foregroundStyle(.white.opacity(0.6))
+                .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 6)
+            SectionLabel(text: "Homelab")
+            NavEditor(list: "hlTabs", ids: store.layout.hlTabs, fixed: HomeLayout.fixedHl, prefix: "hl.",
+                      label: { HlTab(rawValue: $0)?.label ?? $0 }, icon: { HlTab(rawValue: $0)?.icon ?? "square" })
+            SectionLabel(text: "Finans")
+            NavEditor(list: "finTabs", ids: store.layout.finTabs, fixed: HomeLayout.fixedFin, prefix: "fin.",
+                      label: { Tab.from(key: $0)?.rawValue ?? $0 }, icon: { Tab.from(key: $0)?.icon ?? "square" })
+            if store.designStyle == "ios" {
+                Note(text: "På iPhone får fanelinja plass til fire faner pluss Skann. Er alle fem synlige, flyttes Søk til Mer.")
             }
         }
     }

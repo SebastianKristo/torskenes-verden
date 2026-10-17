@@ -330,6 +330,26 @@ private fun RuterCard(lines: List<RuterLine>) {
 
 /* ---------------- Legg til widget og fanelinjer ---------------- */
 
+/** Fanenavn som kan endres. Lagres når feltet mister fokus, ved «Ferdig» og når arket lukkes. */
+@Composable
+private fun TabNameField(vm: AppViewModel, key: String, default: String, on: Boolean, modifier: Modifier) {
+    val saved = vm.layout.names[key] ?: ""
+    var text by remember(key, saved) { mutableStateOf(saved) }
+    val focus = LocalFocusManager.current
+    val latest by rememberUpdatedState(text)
+    fun save(v: String) { if (v.trim() != saved) vm.rename(key, v) }
+    DisposableEffect(key) { onDispose { if (latest.trim() != (vm.layout.names[key] ?: "")) vm.rename(key, latest) } }
+    androidx.compose.foundation.text.BasicTextField(
+        text, { text = it.take(30) }, singleLine = true,
+        textStyle = androidx.compose.ui.text.TextStyle(color = if (on) C.text else C.text2, fontSize = 15.sp),
+        cursorBrush = androidx.compose.ui.graphics.SolidColor(C.primary),
+        keyboardOptions = KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { save(text); focus.clearFocus() }),
+        modifier = modifier.onFocusChanged { if (!it.isFocused) save(text) }.padding(vertical = 8.dp),
+        decorationBox = { inner -> Box { if (text.isEmpty()) Text(default, color = if (on) C.text else C.text2, fontSize = 15.sp); inner() } },
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun WidgetGallery(vm: AppViewModel) {
@@ -352,22 +372,29 @@ internal fun WidgetGallery(vm: AppViewModel) {
                     if (row.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
-            NavEditor(vm, "Navigasjon · Homelab", "hlTabs", vm.layout.hlTabs, HL_NAMES, HomeLayout.FIXED_HL)
-            NavEditor(vm, "Navigasjon · Finans", "finTabs", vm.layout.finTabs, FIN_NAMES, HomeLayout.FIXED_FIN)
+            NavEditors(vm)
             OutlinedButton(onClick = { vm.resetLayout() }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp)) { Text("Tilbakestill") }
         }
     }
 }
 
+/** Navigasjonslinjene i Homelab og Finans: nytt navn (tomt = standard), rekkefølge og skjul. */
 @Composable
-private fun NavEditor(vm: AppViewModel, title: String, key: String, ids: List<String>, names: Map<String, String>, fixed: Set<String>) {
+internal fun NavEditors(vm: AppViewModel) {
+    NavEditor(vm, "Navigasjon · Homelab", "hlTabs", "hl.", vm.layout.hlTabs, HL_NAMES, HomeLayout.FIXED_HL)
+    NavEditor(vm, "Navigasjon · Finans", "finTabs", "fin.", vm.layout.finTabs, FIN_NAMES, HomeLayout.FIXED_FIN)
+    Text("Trykk på et navn for å endre det. Tomt felt gir standardnavnet.", color = C.text2, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 8.dp))
+}
+
+@Composable
+private fun NavEditor(vm: AppViewModel, title: String, key: String, prefix: String, ids: List<String>, names: Map<String, String>, fixed: Set<String>) {
     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
         SectionLabel(title)
         ids.forEachIndexed { i, id ->
             val on = id in fixed || vm.layout.visible(id)
             Row(Modifier.fillMaxWidth().clip(itemShape(i, ids.size)).background(C.surface2).padding(16.dp, 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("${i + 1}", color = C.text2, fontFamily = Mono, fontSize = 13.sp)
-                Text(names[id] ?: id, Modifier.weight(1f), color = if (on) C.text else C.text2)
+                TabNameField(vm, prefix + id, names[id] ?: id, on, Modifier.weight(1f))
                 SmallRound("▲", enabled = i > 0) { vm.move(key, id, -1) }
                 SmallRound("▼", enabled = i < ids.size - 1) { vm.move(key, id, 1) }
                 if (id in fixed) Text("Alltid", color = C.text2, fontSize = 12.sp, modifier = Modifier.padding(start = 6.dp))

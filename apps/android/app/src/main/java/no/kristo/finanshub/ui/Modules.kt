@@ -29,11 +29,12 @@ import no.kristo.finanshub.*
 
 /* ---------------- Felles for modulene ---------------- */
 
-/** Tittel med tilbake til Finans og profilbildet (menyen med Andre OS). */
+/** Tittel med tilbakeknapp og profilbildet (menyen med Andre OS). */
 @Composable
 internal fun ModuleHeader(vm: AppViewModel, title: String, back: (() -> Unit)? = null, actions: @Composable RowScope.() -> Unit = {}) {
     Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilledTonalIconButton(onClick = back ?: { vm.back(); Unit }, modifier = Modifier.size(44.dp)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Tilbake") }
+        // Med toppraden («‹ Homelab») står tilbakeveien der.
+        if (back != null || !LocalTopRow.current) FilledTonalIconButton(onClick = back ?: { vm.back(); Unit }, modifier = Modifier.size(44.dp)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Tilbake") }
         Text(title, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
         actions()
         Avatar(vm)
@@ -336,7 +337,7 @@ internal fun MatScreen(vm: AppViewModel) {
     val w = vm.week
     val today = java.time.LocalDate.now().toString()
     Page {
-        item { ModuleHeader(vm, "Matplan") }
+        item { ModuleHeader(vm, "Hele uka", back = { vm.matFull = false }) }
         vm.moduleError?.let { e -> item { Empty(e) } }
         item {
             Button(onClick = { vm.planWeek() }, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(28.dp),
@@ -375,6 +376,24 @@ internal fun MatScreen(vm: AppViewModel) {
             if (w.shopping.isNotEmpty()) {
                 item { SectionLabel("Handleliste") }
                 item { ShoppingList(vm, w) }
+            }
+            if (w.dishes.isNotEmpty()) {
+                item { SectionLabel("Alle retter") }
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        w.dishes.forEachIndexed { i, dish ->
+                            Row(Modifier.fillMaxWidth().clip(itemShape(i, w.dishes.size)).background(C.surface1).padding(16.dp, 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(dish.name, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(listOfNotNull(if (dish.src == "hellofresh") "HelloFresh" else null, "${dish.ing.size} ingredienser",
+                                        dish.days.takeIf { it.isNotEmpty() }?.joinToString(", ") { listOf("ma", "ti", "on", "to", "fr", "lø", "sø").getOrElse(it) { "?" } }?.let { "Brukes $it" }).joinToString(" · "),
+                                        color = C.text2, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                                if (dish.cost > 0) Text("${n0(dish.cost)} kr", fontFamily = Mono, color = C.text2)
+                            }
+                        }
+                    }
+                }
             }
         }
     }

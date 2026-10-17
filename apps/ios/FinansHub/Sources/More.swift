@@ -206,51 +206,52 @@ struct MoreView: View {
 /* ---------------- Søk (✦ AI) ---------------- */
 
 private let aiSuggestions = ["Hvor mye har jeg brukt på kaffe?", "Når kjøpte jeg lyspærer?", "Mat i oktober", "Hva har jeg betalt for lading?"]
+/// Forslag før søk når serveren ikke sender egne (GET /search/suggestions).
+private let fallbackGroups = [
+    SuggestGroup(title: "Butikker", items: ["Sist jeg var på Biltema", "Alle kjøp på Rema 1000", "Hvor ofte handler jeg på Kiwi?"]),
+    SuggestGroup(title: "Varer i kvitteringer", items: ["Kvitteringer med tomater", "Når kjøpte jeg lyspærer?", "Kaffe i kvitteringene"]),
+    SuggestGroup(title: "Beløp og perioder", items: ["Over 500 kr i oktober", "Største utgift denne måneden", "Til gjennomgang"]),
+]
 
-/// Søk-fanen: feltet får fokus med en gang, så tastaturet kommer opp. Enter sender spørsmålet.
+/// Søk-fanen: ✦ AI eller vanlig søk. Feltet får fokus med en gang, så tastaturet kommer opp. Enter sender spørsmålet.
 struct SearchView: View {
     @Environment(Store.self) private var store
     @State private var q = ""
     @FocusState private var focused: Bool
     var body: some View {
+        @Bindable var s = store
         let r = store.ai
+        let ai = store.searchMode == "ai"
         let provider = store.boot?.settings.provider == "gemini" ? "Gemini" : "Ollama"
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                HStack { Text("Søk").font(.system(size: 34, weight: .bold)); Spacer(); Avatar() }.padding(.top, 6)
-                SubLine(text: "\(provider) · leser også innholdet i kvitteringene")
+                HStack { Text(store.tabName(.search)).font(.system(size: 34, weight: .bold)); Spacer(); Avatar() }.padding(.top, 6)
+                Picker("Søketype", selection: $s.searchMode) {
+                    Text("✦ AI").tag("ai")
+                    Text("Vanlig søk").tag("plain")
+                }
+                .pickerStyle(.segmented)
+                SubLine(text: ai ? "\(provider) · leser også innholdet i kvitteringene" : "Butikker, kategorier, notater og varelinjer i kvitteringene")
                 HStack(spacing: 10) {
-                    Text("✦").font(.system(size: 18)).foregroundStyle(Color.accentLight)
-                    TextField("f.eks. Når kjøpte jeg lyspærer?", text: $q).focused($focused).submitLabel(.search).onSubmit { send(q) }
+                    if ai { Text("✦").font(.system(size: 18)).foregroundStyle(Color.accentLight) } else { Image(systemName: "magnifyingglass").foregroundStyle(.white.opacity(0.6)) }
+                    TextField(ai ? "f.eks. Når kjøpte jeg lyspærer?" : "f.eks. tomater, Biltema, over 500 kr", text: $q).focused($focused).submitLabel(.search).onSubmit { send(q) }
+                        .textInputAutocapitalization(.never)
                     if !q.isEmpty {
                         Button { q = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.white.opacity(0.5)).frame(width: 30, height: 30) }.buttonStyle(.plain).accessibilityLabel("Tøm feltet")
                     }
                 }
                 .padding(.horizontal, 18).frame(height: 56).glass(28)
-                primary(store.aiBusy ? "Spør …" : "Spør AI", enabled: !q.trimmingCharacters(in: .whitespaces).isEmpty && !store.aiBusy) { send(q) }
-                SectionLabel(text: "Forslag")
-                Flow(spacing: 8) {
-                    ForEach((r?.suggestions?.isEmpty == false ? r?.suggestions ?? [] : aiSuggestions), id: \.self) { s in
-                        chip(s, false) { q = s; send(s) }
-                    }
+                primary(store.aiBusy ? "Søker …" : ai ? "Spør AI" : "Søk", enabled: !q.trimmingCharacters(in: .whitespaces).isEmpty && !store.aiBusy) { send(q) }
+                if let n = store.aiNote {
+                    Label(n, systemImage: "info.circle").font(.footnote).foregroundStyle(Color.accentLight)
                 }
                 if store.aiBusy { Loading() }
                 if let r, !store.aiBusy {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("✦ Svar" + (r.engine.map { " · \($0)" } ?? "")).font(.footnote.weight(.semibold)).foregroundStyle(Color.accentLight)
-                        Text((r.answer ?? "").isEmpty ? "Fant ingen treff. Prøv et butikknavn, en kategori eller en vare fra kvitteringen." : r.answer ?? "")
-                    }
-                    .padding(18).frame(maxWidth: .infinity, alignment: .leading).glass(26, tint: Color.accent.opacity(0.25))
-                    let hits = r.hits ?? []
-                    if !hits.isEmpty {
-                        SectionLabel(text: "Treff")
-                        CardList(hits) { h in
-                            Button { if let id = h.txId { focused = false; store.showTx(id, hint: h.description) } } label: {
-                                ItemLine(title: h.description ?? "Treff", sub: [h.date.map { ddmm($0) }, h.source, h.reason].compactMap { $0 }.joined(separator: " · "),
-                                         value: h.amount.map(signed), valueColor: (h.amount ?? 0) > 0 ? .positive : .white, chevron: h.txId != nil)
-                            }
-                            .buttonStyle(.plain).disabled(h.txId == nil)
-                        }
+                    results(r)
+                } else if !store.aiBusy {
+                    ForEach(store.suggestGroups.isEmpty ? fallbackGroups : store.suggestGroups, id: \.title) { g in
+                        SectionLabel(text: g.title)
+                        Flow(spacing: 8) { ForEach(g.items, id: \.self) { x in chip(x, false) { q = x; send(x) } } }
                     }
                 }
                 if !store.aiHistory.isEmpty {
@@ -279,6 +280,42 @@ struct SearchView: View {
             if q.isEmpty { q = store.aiQuery }
             Task { try? await Task.sleep(for: .milliseconds(350)); focused = true }
         }
+    }
+
+    /// Svar, butikker, treff (med hvorfor de traff) og «Prøv også» / «Flere forslag» under treffene.
+    @ViewBuilder private func results(_ r: AiAnswer) -> some View {
+        let plain = r.mode == "plain"
+        VStack(alignment: .leading, spacing: 6) {
+            Text(plain ? "Vanlig søk" : "✦ Svar" + (r.engine.map { " · \($0)" } ?? "")).font(.footnote.weight(.semibold)).foregroundStyle(Color.accentLight)
+            Text((r.text ?? "").isEmpty ? "Fant ingen treff. Prøv et butikknavn, en kategori eller en vare fra kvitteringen." : r.text ?? "")
+        }
+        .padding(18).frame(maxWidth: .infinity, alignment: .leading).glass(26, tint: Color.accent.opacity(0.25))
+        if let st = r.stores, !st.isEmpty {
+            SectionLabel(text: "Butikker med dette navnet")
+            CardList(st) { x in
+                ItemLine(title: x.name ?? "–", sub: [x.count.map { "\($0) kjøp" }, x.last.map { "sist \(ddmm($0))" }].compactMap { $0 }.joined(separator: " · "), value: nil, valueColor: .white, chevron: false)
+            }
+        }
+        let hits = r.hits ?? []
+        if !hits.isEmpty {
+            SectionLabel(text: "Treff (\(hits.count))")
+            CardList(hits) { h in
+                Button { if let id = h.txId { focused = false; store.showTx(id, hint: h.description) } } label: {
+                    // Andre linje: hvorfor det traff («I kvitteringen · Tomater 500 g 24,90 kr»).
+                    let meta = [h.date.map { ddmm($0) }, h.source].compactMap { $0 }.joined(separator: " · ")
+                    ItemLine(title: h.description ?? "Treff", sub: [meta, h.reason ?? ""].filter { !$0.isEmpty }.joined(separator: "\n"),
+                             value: h.amount.map(signed), valueColor: (h.amount ?? 0) > 0 ? .positive : .white, chevron: h.txId != nil)
+                }
+                .buttonStyle(.plain).disabled(h.txId == nil)
+            }
+        }
+        if let f = r.followUps, !f.isEmpty {
+            SectionLabel(text: "Prøv også")
+            Flow(spacing: 8) { ForEach(f, id: \.self) { x in chip(x, false) { q = x; send(x) } } }
+        }
+        let more = (r.suggestions ?? []).filter { !(r.followUps ?? []).contains($0) }
+        SectionLabel(text: "Flere forslag")
+        Flow(spacing: 8) { ForEach(more.isEmpty ? aiSuggestions : more, id: \.self) { x in chip(x, false) { q = x; send(x) } } }
     }
 
     private func send(_ s: String) {

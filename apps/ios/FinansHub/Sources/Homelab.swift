@@ -440,10 +440,10 @@ struct WidgetGallery: View {
                     }
                 }
                 SectionLabel(text: "Fanelinja på Homelab")
-                NavEditor(list: "hlTabs", ids: store.layout.hlTabs, fixed: HomeLayout.fixedHl,
+                NavEditor(list: "hlTabs", ids: store.layout.hlTabs, fixed: HomeLayout.fixedHl, prefix: "hl.",
                           label: { HlTab(rawValue: $0)?.label ?? $0 }, icon: { HlTab(rawValue: $0)?.icon ?? "square" })
                 SectionLabel(text: "Fanelinja i Finans")
-                NavEditor(list: "finTabs", ids: store.layout.finTabs, fixed: HomeLayout.fixedFin,
+                NavEditor(list: "finTabs", ids: store.layout.finTabs, fixed: HomeLayout.fixedFin, prefix: "fin.",
                           label: { Tab.from(key: $0)?.rawValue ?? $0 }, icon: { Tab.from(key: $0)?.icon ?? "square" })
                 Text("Oppsettet lagres for denne brukeren og følger med til andre enheter.").font(.footnote).foregroundStyle(.white.opacity(0.6)).padding(.horizontal, 6)
                 Button { store.resetLayout() } label: { Text("Tilbakestill forsiden").fontWeight(.semibold).frame(maxWidth: .infinity, minHeight: 50) }
@@ -455,12 +455,15 @@ struct WidgetGallery: View {
     }
 }
 
-/// Rekkefølge og synlighet for fanene. Faste faner kan flyttes, men ikke skjules.
-private struct NavEditor: View {
+/// Rekkefølge, navn og synlighet for fanene. Faste faner kan flyttes og få nytt navn, men ikke skjules.
+/// Et tomt navnefelt gir standardnavnet.
+struct NavEditor: View {
     @Environment(Store.self) private var store
     let list: String
     let ids: [String]
     let fixed: Set<String>
+    /// «hl.» eller «fin.»: nøkkelen for egne navn.
+    var prefix = ""
     let label: (String) -> String
     let icon: (String) -> String
     var body: some View {
@@ -469,7 +472,7 @@ private struct NavEditor: View {
                 if i > 0 { Divider().overlay(.white.opacity(0.12)) }
                 HStack(spacing: 10) {
                     Image(systemName: icon(id)).frame(width: 24).foregroundStyle(.white.opacity(0.7))
-                    Text(label(id)).lineLimit(1)
+                    if prefix.isEmpty { Text(label(id)).lineLimit(1) } else { TabNameField(key: prefix + id, placeholder: label(id)) }
                     Spacer()
                     Button { withAnimation { store.move(list, id, -1) } } label: { Image(systemName: "chevron.up").frame(width: 34, height: 34).contentShape(Rectangle()) }
                         .buttonStyle(.plain).disabled(i == 0).opacity(i == 0 ? 0.3 : 1).accessibilityLabel("Flytt \(label(id)) opp")
@@ -485,5 +488,23 @@ private struct NavEditor: View {
             }
         }
         .glass(22)
+    }
+}
+
+/// Navnefelt for en fane: lagres når man trykker Ferdig eller forlater siden.
+struct TabNameField: View {
+    @Environment(Store.self) private var store
+    let key: String
+    let placeholder: String
+    @State private var text = ""
+    @State private var loaded = false
+    var body: some View {
+        TextField(placeholder, text: $text)
+            .submitLabel(.done)
+            .onSubmit { store.rename(key, text) }
+            .onAppear { if !loaded { text = store.layout.names[key] ?? ""; loaded = true } }
+            .onChange(of: text) { _, v in if v.count > 30 { text = String(v.prefix(30)) } }
+            .onDisappear { if (store.layout.names[key] ?? "") != text.trimmingCharacters(in: .whitespaces) { store.rename(key, text) } }
+            .accessibilityLabel("Navn på fanen \(placeholder)")
     }
 }

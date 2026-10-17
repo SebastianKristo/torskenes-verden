@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -47,13 +48,20 @@ internal fun DomainsScreen(vm: AppViewModel, twoPane: Boolean) {
             }
         }
         vm.moduleError?.let { e -> item { Empty(e) } }
-        if (vm.domains?.isEmpty() == true) item { Empty("Ingen domener ennå. Nye domener legges til i Homelab → Domener.") }
+        if (vm.domains?.isEmpty() == true) item {
+            Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text("Ingen domener ennå.", color = P.text2)
+                Button(onClick = { vm.domainManager = true }, shape = RoundedCornerShape(24.dp), colors = ButtonDefaults.buttonColors(containerColor = P.hero, contentColor = P.onHero)) {
+                    Icon(Icons.Filled.Add, null); Spacer(Modifier.width(8.dp)); Text("Legg til domene", fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
         if (a == null && vm.moduleError == null && vm.domains?.isEmpty() != true) item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = P.accent) } }
         if (a != null) {
             if (a.mock) item { Text("Eksempeldata – legg inn Cloudflare-token i Homelab for ekte tall.", color = P.text2, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp)) }
             when (vm.domTab) {
                 DomTab.Traffic -> traffic(vm, a)
-                DomTab.Visits -> visits(a)
+                DomTab.Visits -> visits(vm, a)
                 DomTab.Perf -> perf(a)
                 DomTab.Security -> security(a)
             }
@@ -80,14 +88,18 @@ private fun DomainHeader(vm: AppViewModel) {
             vm.domains?.forEach { d ->
                 DropdownMenuItem(text = { Column { Text(d.name); Text(sourceName(d.source), fontSize = 12.sp, color = C.text2) } }, onClick = { pick = false; vm.pickDomain(d.name) })
             }
+            HorizontalDivider()
+            DropdownMenuItem(text = { Text("Administrer domener", color = P.accent, fontWeight = FontWeight.SemiBold) }, leadingIcon = { Icon(Icons.Filled.Add, null, tint = P.accent) },
+                onClick = { pick = false; vm.domainManager = true })
         }
     }
     }
 }
 
-private fun sourceName(s: String) = when (s) {
-    "cloudflare" -> "Cloudflare zone analytics"; "tunnel" -> "Cloudflare Tunnel"; "plausible" -> "Plausible"; "umami" -> "Umami"; "uptime" -> "Bare oppetid og SSL"; else -> s
-}
+private val statusText = mapOf("active" to "Aktiv", "down" to "Nede", "pending" to "Venter", "unknown" to "Ukjent")
+
+/** Dager til en dato («2026-11-30» eller ISO-tid). */
+private fun daysLeft(d: String?): Long? = runCatching { java.time.temporal.ChronoUnit.DAYS.between(java.time.LocalDate.now(), java.time.LocalDate.parse(d!!.take(10))) }.getOrNull()
 
 private fun bytes(b: Double): String = when {
     b >= 1e9 -> String.format(java.util.Locale("nb", "NO"), "%.1f GB", b / 1e9)
@@ -196,6 +208,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.traffic(vm: AppViewMo
             }
         }
     }
+    item { DomainCard(vm, a) }
     item { Title("Historikk") }
     item { RangeChips(vm, listOf("7d" to "7 d", "30d" to "30 d", "90d" to "90 d", "1y" to "1 år")) }
     item {
@@ -207,7 +220,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.traffic(vm: AppViewMo
     }
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.visits(a: Analytics) {
+private fun androidx.compose.foundation.lazy.LazyListScope.visits(vm: AppViewModel, a: Analytics) {
     item {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Stat("Besøk", count(a.visitors), Modifier.weight(1f), RoundedCornerShape(24.dp, 8.dp, 8.dp, 24.dp))
@@ -215,6 +228,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.visits(a: Analytics) 
             Stat("Land", "${a.countries.size}", Modifier.weight(1f), RoundedCornerShape(8.dp, 24.dp, 24.dp, 8.dp))
         }
     }
+    item { VisitsMap(vm, a) }
     item { Title("Topp land") }
     item { PinkCard { Bars(a.countries.sortedByDescending { it.visitors }.map { Named(flag(it.iso2) + " " + it.name, it.visitors) }) } }
     item { Title("Enheter") }
@@ -249,14 +263,15 @@ private fun androidx.compose.foundation.lazy.LazyListScope.perf(a: Analytics) {
     }
     item { Title("Protokoll") }
     item { PinkCard { Bars(a.http, "%"); HorizontalDivider(color = P.card2); Bars(a.tls, "%") } }
-    item { Title("Oppetid siste 30 dager") }
+    item { Title("Oppetid siste 90 dager") }
     item {
         PinkCard {
-            val days = a.uptime90.takeLast(30)
+            val days = a.uptime90.takeLast(90)
             Text(if (a.uptimePct > 0) pct(a.uptimePct) else "–", fontFamily = Mono, fontSize = 22.sp, color = P.onHero)
             Row(Modifier.fillMaxWidth().height(28.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                days.forEach { u -> Box(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(if (u >= 0.999) C.positive else if (u >= 0.98) tc(0xFFF2C14E) else P.red)) }
+                days.forEach { u -> Box(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(1.dp)).background(if (u < 0) P.card2 else if (u >= 0.999) C.positive else if (u >= 0.98) tc(0xFFF2C14E) else P.red)) }
             }
+            if (days.isNotEmpty()) Row { Text("${days.size} dager siden", color = P.text2, fontSize = 11.sp, modifier = Modifier.weight(1f)); Text("I dag", color = P.text2, fontSize = 11.sp) }
             if (days.isEmpty()) Text("Ingen målinger ennå", color = P.text2, fontSize = 13.sp)
         }
     }
@@ -297,6 +312,115 @@ private fun androidx.compose.foundation.lazy.LazyListScope.security(a: Analytics
             KV("DNSSEC", a.dnssec?.let { if (it) "På" else "Av" } ?: "–", a.dnssec)
             KV("Bot Fight Mode", a.botFight?.let { if (it) "På" else "Av" } ?: "–", a.botFight)
             KV("Sertifikat utløper", (a.certExpires ?: a.sslExpires)?.let { ddmm(it) + "." + it.take(4) } ?: "–")
+        }
+    }
+    item { Title("DNS-poster") }
+    item {
+        PinkCard {
+            if (a.dns.isEmpty()) Text("Ingen DNS-poster", color = P.text2, fontSize = 13.sp)
+            a.dns.forEachIndexed { i, r ->
+                if (i > 0) HorizontalDivider(color = P.card2)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(r.type, fontFamily = Mono, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = P.accent, modifier = Modifier.width(52.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(r.name, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, color = P.onHero)
+                        Text(r.content, fontFamily = Mono, fontSize = 12.sp, color = P.text2, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    }
+                    Chip(if (r.proxied) "Proxy" else "Kun DNS", bg = if (r.proxied) P.hero else P.card2, fg = if (r.proxied) P.onHero else P.text2)
+                }
+            }
+        }
+    }
+}
+
+/** Trafikk → «Domene»: status, kilde, registrar, fornyelse, sertifikat, navnetjenere, IP, TLS og DNSSEC. */
+@Composable
+private fun DomainCard(vm: AppViewModel, a: Analytics) {
+    val src = vm.domains?.firstOrNull { it.name == vm.domain }?.source ?: a.source
+    val left = daysLeft(a.certExpires ?: a.sslExpires)
+    PinkCard {
+        Text("DOMENE", color = P.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
+        KV("Status", statusText[a.status ?: "unknown"] ?: a.status ?: "–", when (a.status) { "active" -> true; "down" -> false; else -> null })
+        KV("Statistikkilde", sourceName(src))
+        KV("Registrar", a.registrar ?: "–")
+        KV("Fornyes", a.renews?.let { ddmm(it) + "." + it.take(4) } ?: "–")
+        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            Text("SSL-sertifikat", Modifier.weight(1f), color = P.text2)
+            Text(left?.let { "$it dager igjen" } ?: "–", fontWeight = FontWeight.Medium, color = when { left == null -> P.onHero; left < 30 -> tc(0xFFF2C14E); else -> C.positive })
+        }
+        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+            Text("Navnetjenere", Modifier.weight(1f), color = P.text2)
+            Column(horizontalAlignment = Alignment.End) {
+                a.nameServers.ifEmpty { listOf("–") }.forEach { Text(it, fontFamily = Mono, fontSize = 13.sp, color = P.onHero, maxLines = 1) }
+            }
+        }
+        KV("IP", a.dns.firstOrNull { it.type == "A" }?.content ?: "–")
+        KV("TLS", a.minTls?.let { "Minst $it" } ?: a.tls.firstOrNull()?.name ?: "–")
+        KV("DNSSEC", a.dnssec?.let { if (it) "På" else "Av" } ?: "–", a.dnssec)
+    }
+}
+
+/** Besøk → verdenskart. Landene lastes én gang (fra serveren, ellers jsDelivr). */
+@Composable
+private fun VisitsMap(vm: AppViewModel, a: Analytics) {
+    LaunchedEffect(Unit) { vm.loadWorldMap() }
+    val map = vm.worldMap
+    val values = remember(a) { a.countries.mapNotNull { c -> c.iso3n?.let { it to (c.name to c.visitors) } }.toMap() }
+    PinkCard {
+        Text("BESØK PER LAND", color = P.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.8.sp)
+        when {
+            map == null -> Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) { Text("Laster kartet …", color = P.text2, fontSize = 13.sp) }
+            map.isEmpty() -> Box(Modifier.fillMaxWidth().height(120.dp), contentAlignment = Alignment.Center) { Text("Kartet kunne ikke lastes.", color = P.text2, fontSize = 13.sp) }
+            else -> {
+                WorldMap(map, values)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("Få", color = P.text2, fontSize = 11.sp)
+                    Box(Modifier.weight(1f).height(6.dp).clip(CircleShape).background(Brush.horizontalGradient(listOf(Color(0xFF4A2433), Color(0xFFFFB1C8)))))
+                    Text("Mange", color = P.text2, fontSize = 11.sp)
+                }
+            }
+        }
+    }
+}
+
+/** Administrer domener: listen med «Fjern» og «Legg til domene» (domene + statistikkilde). Samme liste som i Homelab. */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+internal fun DomainManagerSheet(vm: AppViewModel) {
+    var name by remember { mutableStateOf("") }
+    var source by remember { mutableStateOf("cloudflare") }
+    ModalBottomSheet(onDismissRequest = { vm.domainManager = false }, containerColor = P.card) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp, 0.dp, 20.dp, 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Administrer domener", style = MaterialTheme.typography.titleLarge, color = P.onHero)
+            val list = vm.domains ?: emptyList()
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                if (list.isEmpty()) Text("Ingen domener ennå.", color = P.text2)
+                list.forEachIndexed { i, d ->
+                    Row(Modifier.fillMaxWidth().clip(itemShape(i, list.size)).background(P.card2).padding(16.dp, 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(Icons.Filled.Language, null, tint = P.accent)
+                        Column(Modifier.weight(1f)) {
+                            Text(d.name, fontWeight = FontWeight.SemiBold, color = P.onHero, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(sourceName(d.source), fontSize = 12.sp, color = P.text2)
+                        }
+                        TextButton(onClick = { vm.removeDomain(d) }) { Text("Fjern", color = P.red, fontWeight = FontWeight.SemiBold) }
+                    }
+                }
+            }
+            Text("Legg til domene", color = P.accent, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
+            OutlinedTextField(name, { name = it }, label = { Text("Domene") }, placeholder = { Text("eksempel.no") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Uri),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = P.accent, focusedLabelColor = P.accent, cursorColor = P.accent))
+            Text("Statistikkilde", color = P.text2, fontSize = 13.sp)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                DOMAIN_SOURCES.forEach { (k, n) ->
+                    FilterChip(selected = source == k, onClick = { source = k }, label = { Text(n) },
+                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = P.hero, selectedLabelColor = P.onHero, containerColor = P.card2, labelColor = P.text2))
+                }
+            }
+            Button(onClick = { vm.addDomain(name, source); name = "" }, enabled = name.isNotBlank(), modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = P.accent, contentColor = Color(0xFF3F0D1F))) { Text("Legg til domene", fontWeight = FontWeight.Bold) }
+            Text(if (source in DOMAIN_NEEDS_TOKEN) "Plausible og Umami trenger API-token. Legg det inn i Homelab på web etterpå."
+                else "API-token (Cloudflare) legges inn i Homelab på web. Uten eget token brukes standard-tokenet.", color = P.text2, fontSize = 12.sp)
         }
     }
 }

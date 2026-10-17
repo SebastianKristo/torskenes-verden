@@ -135,7 +135,22 @@ struct MealDay: Decodable, Identifiable, Hashable {
     let source: String?
     let cook: String?
     let fixed: Bool?
+    var dishId: FlexID? = nil
+    var today: Bool? = nil
+    var tag: String? = nil
+    var bestCook: String? = nil
+    var ingredients: [String]? = nil
     var id: String { date }
+}
+
+/// En rett i Matplan (ingredienser og fremgangsmåte).
+struct Dish: Decodable, Identifiable, Hashable {
+    let id: FlexID
+    let name: String
+    var src: String? = nil
+    var ing: [String]? = nil
+    var steps: [String]? = nil
+    var cost: Double? = nil
 }
 
 struct ShopItem: Decodable, Identifiable, Hashable {
@@ -158,6 +173,9 @@ struct Week: Decodable {
     let shopping: [ShopItem]?
     let weekCost: Double?
     let auto: Bool?
+    var end: String? = nil
+    var week: Int? = nil
+    var dishes: [Dish]? = nil
 }
 
 /* ---------- Fleksible typer ---------- */
@@ -289,6 +307,9 @@ struct TokenInfo: Decodable, Identifiable, Hashable {
 /* ---------- Domener ---------- */
 
 struct DomainRef: Decodable, Identifiable, Hashable { var id: FlexID?; let name: String; var source: String?; var key: String { name } }
+
+let domainSources = [("cloudflare", "Cloudflare"), ("tunnel", "Cloudflare Tunnel"), ("plausible", "Plausible"), ("umami", "Umami"), ("uptime", "Bare oppetid og SSL")]
+func sourceName(_ s: String?) -> String { domainSources.first { $0.0 == s }?.1 ?? (s ?? "–") }
 struct NamedVal: Decodable, Hashable {
     var name: String?
     var path: String?
@@ -297,7 +318,7 @@ struct NamedVal: Decodable, Hashable {
     var label: String { name ?? path ?? "–" }
     var value: Double { pct ?? count ?? 0 }
 }
-struct CountryVal: Decodable, Hashable { var iso2: String?; var name: String?; var visitors: Double?; var threats: Double? }
+struct CountryVal: Decodable, Hashable { var iso2: String?; var iso3n: FlexID?; var name: String?; var visitors: Double?; var threats: Double? }
 struct SeriesPoint: Decodable, Hashable { var t: String?; var requests: Double?; var cached: Double?; var visitors: Double? }
 struct LiveNow: Decodable, Hashable { var visitors: Double?; var requests: Double?; var mb: Double?; var spark: [Double]? }
 struct Ttfb: Decodable, Hashable { var p50: Double?; var p95: Double? }
@@ -336,6 +357,10 @@ struct Analytics: Decodable {
     var referrers: [NamedVal]?
     var uptime90: [Double]?
     var dns: [DnsRecord]?
+    var registrar: String?
+    var nameServers: [String]?
+    var source: String?
+    var ip: String?
 }
 
 /* ---------- Formatering (norsk, minus som −) ---------- */
@@ -475,6 +500,14 @@ struct HomeLayout: Codable, Equatable {
     var hlTabs: [String]
     var finTabs: [String]
     var hide: [String: Bool]
+    /// Egne navn på fanene: «hl.dom», «fin.bud» osv. Tomt = standardnavnet.
+    var names: [String: String] = [:]
+    /// Tilbake til startsiden: «arrow» (pil øverst, standard) eller «bar» (knapp i fanelinja).
+    var backStyle = "arrow"
+    /// Matplan: light | dark | system
+    var matTheme = "light"
+    /// Startside: homelab | fin-hjem | fin-liste | fin-budsjett (nil = ikke lagret på serveren)
+    var start: String? = nil
 
     static let sections = ["clock", "search", "links", "os", "srv", "ruter"]
     static let hlAll = ["hl", "home", "dom", "mat"]
@@ -494,7 +527,11 @@ struct HomeLayout: Codable, Equatable {
         return out
     }
 
-    var json: [String: Any] { ["sec": sec, "hlTabs": hlTabs, "finTabs": finTabs, "hide": hide] }
+    var json: [String: Any] {
+        var o: [String: Any] = ["sec": sec, "hlTabs": hlTabs, "finTabs": finTabs, "hide": hide, "names": names, "backStyle": backStyle, "matTheme": matTheme]
+        if let start { o["start"] = start }
+        return o
+    }
 
     /// Fra serveren: {mobile: {...}} eller {sec, hlTabs, finTabs, hide}.
     static func from(json obj: Any?) -> HomeLayout? {
@@ -503,7 +540,14 @@ struct HomeLayout: Codable, Equatable {
         guard m["sec"] != nil || m["hlTabs"] != nil || m["finTabs"] != nil else { return nil }
         var hide = HomeLayout.standard.hide
         for (k, v) in (m["hide"] as? [String: Any]) ?? [:] { if let b = v as? Bool { hide[k] = b } }
-        return HomeLayout(sec: fix(m["sec"] as? [String], sections), hlTabs: fix(m["hlTabs"] as? [String], hlAll), finTabs: fix(m["finTabs"] as? [String], finAll), hide: hide)
+        var l = HomeLayout(sec: fix(m["sec"] as? [String], sections), hlTabs: fix(m["hlTabs"] as? [String], hlAll), finTabs: fix(m["finTabs"] as? [String], finAll), hide: hide)
+        for (k, v) in (m["names"] as? [String: Any]) ?? [:] {
+            if let n = v as? String, !n.trimmingCharacters(in: .whitespaces).isEmpty { l.names[k] = String(n.prefix(30)) }
+        }
+        if let b = m["backStyle"] as? String, ["arrow", "bar"].contains(b) { l.backStyle = b }
+        if let t = m["matTheme"] as? String, ["light", "dark", "system"].contains(t) { l.matTheme = t }
+        if let st = m["start"] as? String, ["homelab", "fin-hjem", "fin-liste", "fin-budsjett"].contains(st) { l.start = st }
+        return l
     }
 }
 
@@ -576,7 +620,23 @@ struct ImportRow: Decodable, Hashable { var date: String?; var description: Stri
 struct ImportResult: Decodable { var rows: [ImportRow]?; var imported: Int?; var skipped: Int?; var errors: [String]? }
 
 struct AiHit: Decodable, Hashable { var type: String?; var txId: Int?; var description: String?; var date: String?; var amount: Double?; var source: String?; var reason: String? }
-struct AiAnswer: Decodable { var q: String?; var answer: String?; var hits: [AiHit]?; var engine: String?; var suggestions: [String]? }
+struct StoreHit: Decodable, Hashable { var name: String?; var count: Int?; var last: String? }
+/// Svar fra ✦ AI-søk (POST /search/ai) eller vanlig søk (GET /search?q=).
+struct AiAnswer: Decodable {
+    var q: String?
+    var answer: String?
+    var hits: [AiHit]?
+    var engine: String?
+    var suggestions: [String]?
+    var followUps: [String]?
+    var mode: String?
+    var summary: String?
+    var stores: [StoreHit]?
+    var aiUnavailable: Bool?
+    var text: String? { (answer ?? "").isEmpty ? summary : answer }
+}
+struct SuggestGroup: Decodable, Hashable { var title: String; var items: [String] }
+struct SuggestGroups: Decodable { var groups: [SuggestGroup] }
 
 /// Original kvittering og bankrad for en transaksjon (GET /transactions/:id/original).
 struct OriginalFile: Hashable { let mime: String?; let fileUrl: String? }

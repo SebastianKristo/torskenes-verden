@@ -18,6 +18,10 @@ extension View {
 
     /// Interaktiv glassknapp med oransje tint (iOS 26), ellers tonet materiale.
     @ViewBuilder func glassCircle(tint: Color) -> some View {
+        if DesignStyle.material { self.background(tint, in: Circle()) } else { glassCircleIOS(tint: tint) }
+    }
+
+    @ViewBuilder private func glassCircleIOS(tint: Color) -> some View {
         #if compiler(>=6.2)
         if #available(iOS 26.0, *) {
             self.glassEffect(.regular.tint(tint).interactive(), in: .circle)
@@ -31,6 +35,10 @@ extension View {
 
     /// Rund glassflate uten tint (tilbake- og hjemknapper): lys kant og diagonal glans som i designet.
     @ViewBuilder func glassRound() -> some View {
+        if DesignStyle.material { self.background(M3.field, in: Circle()) } else { glassRoundIOS() }
+    }
+
+    @ViewBuilder private func glassRoundIOS() -> some View {
         #if compiler(>=6.2)
         if #available(iOS 26.0, *) { self.glassEffect(.regular.interactive(), in: .circle) } else { fallbackRound() }
         #else
@@ -82,10 +90,10 @@ struct HomeGlassButton: View {
     @Environment(Store.self) private var store
     var size: CGFloat = 62
     var body: some View {
-        Button { store.open(.homelab) } label: {
+        Button { store.goStart() } label: {
             Image(systemName: "house.fill").font(.system(size: size * 0.32, weight: .semibold)).foregroundStyle(.white).frame(width: size, height: size).contentShape(Circle())
         }
-        .buttonStyle(GlassPress()).glassRound().accessibilityLabel("Tilbake til Homelab")
+        .buttonStyle(GlassPress()).glassRound().accessibilityLabel("Tilbake til \(store.startLabel)")
     }
 }
 
@@ -133,68 +141,197 @@ struct ScanPill: View {
     }
 }
 
-/// Fanelinja i Finans: husknappen til venstre og en glasskapsel over resten av bredden, med en glassmarkør som glir med fjæring.
-struct FinBar: View {
-    @Environment(Store.self) private var store
-    @Namespace private var ns
+/* ---------------- Fanelinjer ---------------- */
+
+/// Det fanelinja kan vise: en fane, Homelab-/Finans-knappen («Knapp i linjen») eller handlingen i søkeplassen (Skann / Innstillinger).
+enum BarItem: Hashable { case fin(Tab), hl(HlTab), dom(DomTab), home, action }
+
+/// Rund knapp til høyre for fanelinja: Skann i Finans, Innstillinger i Domener.
+struct BarAction {
+    let title: String
+    let icon: String
+    var tint: Color = .accent
+    let tap: () -> Void
+    var hold: (() -> Void)? = nil
+}
+
+/// Systemets fanelinje (TabView). På iOS 26 gir den Liquid Glass med dra-effekt: legg fingeren på linja og dra
+/// glass-markøren mellom fanene. Linja ligger rett over hjemindikatoren. Handlingen (Skann) står i søkeplassen
+/// til høyre i samme rad. På iOS 17 er handlingen en rund knapp over linja.
+struct SystemBar<Content: View>: View {
+    let items: [BarItem]
+    @Binding var selection: BarItem
+    var action: BarAction? = nil
+    var tint: Color = .accentLight
+    let label: (BarItem) -> String
+    let icon: (BarItem) -> String
+    @ViewBuilder let content: (BarItem) -> Content
+
     var body: some View {
-        let current: Tab? = store.module == nil ? store.tab : (store.module?.isFinance == true ? .more : nil)
-        HStack(spacing: 10) {
-            HomeGlassButton()
-            if store.barMini, let c = current {
-                Button { withAnimation(barSpring) { store.barMini = false } } label: {
-                    Image(systemName: c.icon).font(.system(size: 20, weight: .semibold)).foregroundStyle(Color.accentLight).frame(width: 62, height: 62).contentShape(Circle())
+        if #available(iOS 18.0, *) {
+            modern.tint(tint).minimizeTabBarOnScroll()
+        } else {
+            legacy.tint(tint)
+        }
+    }
+
+    @available(iOS 18.0, *)
+    @ViewBuilder private var modern: some View {
+        if let a = action {
+            TabView(selection: $selection) {
+                ForEach(items, id: \.self) { it in
+                    SwiftUI.Tab(label(it), systemImage: icon(it), value: it) { content(it) }
                 }
-                .buttonStyle(GlassPress()).glassRound().accessibilityLabel("Vis fanelinja")
-                Spacer(minLength: 0)
-            } else {
-                HStack(spacing: 0) {
-                    ForEach(store.finTabs) { t in
-                        Button { store.go(t) } label: {
-                            VStack(spacing: 2) {
-                                Image(systemName: t.icon).font(.system(size: 18, weight: .semibold))
-                                Text(t.rawValue).font(.system(size: 10.5, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
-                            }
-                            .foregroundStyle(t == current ? Color.accentLight : .white.opacity(0.85))
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .background { if t == current { Capsule().fill(.white.opacity(0.16)).matchedGeometryEffect(id: "pill", in: ns) } }
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(GlassPress())
-                    }
+                SwiftUI.Tab(a.title, systemImage: a.icon, value: BarItem.action, role: .search) { Color.clear }
+            }
+        } else {
+            TabView(selection: $selection) {
+                ForEach(items, id: \.self) { it in
+                    SwiftUI.Tab(label(it), systemImage: icon(it), value: it) { content(it) }
                 }
-                .padding(5).frame(height: 62).glass(31)
-                .animation(barSpring, value: current)
             }
         }
-        .padding(.horizontal, 14).padding(.bottom, 4)
+    }
+
+    private var legacy: some View {
+        TabView(selection: $selection) {
+            ForEach(items, id: \.self) { it in
+                content(it).tabItem { Label(label(it), systemImage: icon(it)) }.tag(it)
+            }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if let a = action {
+                Image(systemName: a.icon).font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
+                    .frame(width: 58, height: 58).contentShape(Circle())
+                    .glassCircle(tint: a.tint)
+                    .onTapGesture { a.tap() }
+                    .onLongPressGesture(minimumDuration: 0.48) { UIImpactFeedbackGenerator(style: .medium).impactOccurred(); (a.hold ?? a.tap)() }
+                    .accessibilityLabel(a.title).accessibilityAddTraits(.isButton)
+                    .padding(.trailing, 16).padding(.bottom, 60)
+            }
+        }
     }
 }
 
-/// Fanelinja på Homelab: Homelab, Finans, Domener og Matplan (rekkefølgen kan endres).
-struct HlBar: View {
+/// Finans: Oversikt, Liste, Budsjett, Søk og Mer, med Skann i søkeplassen.
+struct FinTabs: View {
     @Environment(Store.self) private var store
-    @Namespace private var ns
+    let scan: ScanActions
+    @Binding var photos: [PhotosPickerItem]
+    @Binding var files: Bool
     var body: some View {
-        let current: HlTab? = store.module == .homelab ? .hl : store.module == .mat ? .mat : store.module == .domains ? .dom : nil
-        HStack(spacing: 0) {
-            ForEach(store.hlTabs) { t in
-                Button { store.goHl(t) } label: {
-                    VStack(spacing: 2) {
-                        Image(systemName: t.icon).font(.system(size: 18, weight: .semibold))
-                        Text(t.label).font(.system(size: 10.5, weight: .semibold)).lineLimit(1)
-                    }
-                    .foregroundStyle(t == current ? Color.accentLight : .white.opacity(0.85))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background { if t == current { Capsule().fill(.white.opacity(0.16)).matchedGeometryEffect(id: "pill", in: ns) } }
-                    .contentShape(Rectangle())
+        let tabs = store.barFinTabs
+        let home = store.homeInBar && !store.financeStart
+        let items: [BarItem] = (home ? [.home] : []) + tabs.map { BarItem.fin($0) }
+        let sel = Binding<BarItem>(
+            get: { .fin(store.barTab(tabs)) },
+            set: { v in
+                switch v {
+                case .fin(let t): store.go(t)
+                case .home: store.goStart()
+                case .action: scan.tap()
+                default: break
                 }
-                .buttonStyle(GlassPress())
-            }
+            })
+        let showScan = store.selectedTx == nil && store.module != .imports && store.module != .upload
+        SystemBar(items: items, selection: sel,
+                  action: showScan ? BarAction(title: "Skann", icon: "doc.viewfinder", tap: scan.tap, hold: scan.hold) : nil,
+                  label: { it in if case .fin(let t) = it { return store.tabName(t) }; return store.startLabel },
+                  icon: { it in if case .fin(let t) = it { return t.icon }; return "house.fill" }) { it in
+            if case .fin(let t) = it {
+                if t == .more, let m = store.module, m.isFinance {
+                    ModuleView(module: m, scan: scan, photos: $photos, files: $files)
+                } else if t == .more, store.module == nil, !tabs.contains(store.tab) {
+                    FinanceTab(tab: store.tab)
+                } else {
+                    FinanceTab(tab: t)
+                }
+            } else { Color.clear }
         }
-        .padding(5).frame(height: 62).glass(31)
-        .animation(barSpring, value: current)
-        .padding(.horizontal, 14).padding(.bottom, 4)
+    }
+}
+
+/// Homelab: Homelab, Finans, Domener og Matplan (rekkefølge, navn og synlighet kan endres).
+struct HlTabs: View {
+    @Environment(Store.self) private var store
+    var body: some View {
+        let sel = Binding<BarItem>(get: { .hl(.hl) }, set: { v in if case .hl(let h) = v { store.goHl(h) } })
+        SystemBar(items: store.hlTabs.map { BarItem.hl($0) }, selection: sel,
+                  label: { it in if case .hl(let h) = it { return store.hlName(h) }; return "" },
+                  icon: { it in if case .hl(let h) = it { return h.icon }; return "square" }) { it in
+            if case .hl(.hl) = it { HomelabView() } else { Color.clear }
+        }
+    }
+}
+
+/// Domener: Trafikk, Besøk, Ytelse og Sikkerhet, med Innstillinger (tannhjul) i søkeplassen.
+struct DomTabs: View {
+    @Environment(Store.self) private var store
+    var body: some View {
+        let home = store.homeInBar
+        let items: [BarItem] = (home ? [.home] : []) + DomTab.allCases.map { BarItem.dom($0) }
+        let sel = Binding<BarItem>(
+            get: { .dom(store.domTab) },
+            set: { v in
+                switch v {
+                case .dom(let t): store.domTab = t
+                case .home: store.goStart()
+                case .action: store.domainManager = true
+                default: break
+                }
+            })
+        SystemBar(items: items, selection: sel,
+                  action: BarAction(title: "Innstillinger", icon: "gearshape", tint: .domPink, tap: { store.domainManager = true }),
+                  tint: .domPink,
+                  label: { it in if case .dom(let t) = it { return t.rawValue }; return store.startLabel },
+                  icon: { it in if case .dom(let t) = it { return t.icon }; return "house.fill" }) { it in
+            if case .dom = it { DomainsView() } else { Color.clear }
+        }
+    }
+}
+
+/// «‹ Homelab» / «‹ Finans» øverst, med profilbildet helt til høyre på samme rad.
+struct TopBackRow: View {
+    @Environment(Store.self) private var store
+    let title: String
+    var light = false
+    var body: some View {
+        HStack(spacing: 10) {
+            Button { store.goStart() } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "chevron.left").font(.system(size: 15, weight: .semibold))
+                    Text(title).font(.system(size: 16, weight: .semibold)).lineLimit(1)
+                }
+                .foregroundStyle(light ? Color(hex: "#1E241C") : .white)
+                .padding(.leading, 12).padding(.trailing, 16).frame(height: 44).contentShape(Capsule())
+            }
+            .buttonStyle(GlassPress())
+            .modifier(BackPillBackground(light: light))
+            .accessibilityLabel("Tilbake til \(title)")
+            Spacer()
+            Avatar().environment(\.inTopRow, true)
+        }
+        .padding(.horizontal, 18).padding(.top, 4).padding(.bottom, 4)
+    }
+}
+
+private struct BackPillBackground: ViewModifier {
+    let light: Bool
+    func body(content: Content) -> some View {
+        if light {
+            content.background(Color.white, in: Capsule()).overlay(Capsule().stroke(Color(hex: "#D9DCD2"), lineWidth: 1))
+        } else {
+            content.glass(22)
+        }
+    }
+}
+
+private struct InTopRowKey: EnvironmentKey { static let defaultValue = false }
+extension EnvironmentValues {
+    /// Profilbildet i toppraden. Andre profilbilder på siden skjules mens toppraden vises.
+    var inTopRow: Bool {
+        get { self[InTopRowKey.self] }
+        set { self[InTopRowKey.self] = newValue }
     }
 }
 
@@ -230,7 +367,8 @@ struct RootView: View {
             } else if hSize == .regular {
                 PadShell(scan: scan, photos: $photoItems, files: $showFiles)
             } else {
-                PhoneShell(scan: scan, photos: $photoItems, files: $showFiles)
+                // Bygges på nytt når designstilen byttes (iOS ↔ Material).
+                PhoneShell(scan: scan, photos: $photoItems, files: $showFiles).id(store.designStyle)
             }
             if store.busy { ProgressView().controlSize(.large).padding(30).glass(20) }
             if let msg = store.message {
@@ -280,13 +418,22 @@ struct RootView: View {
         .sheet(isPresented: Binding(get: { store.gallery }, set: { store.gallery = $0 })) {
             WidgetGallery().presentationDetents([.large]).presentationBackground(.ultraThinMaterial)
         }
+        .sheet(isPresented: Binding(get: { store.domainManager }, set: { store.domainManager = $0 })) {
+            DomainManager().presentationDetents([.medium, .large]).presentationBackground(.ultraThinMaterial)
+        }
+        .sheet(isPresented: Binding(get: { store.matFull }, set: { store.matFull = $0 })) {
+            MatWeekView()
+        }
         .onChange(of: phase) { _, p in
             if p == .background { store.didEnterBackground() } else if p == .active { store.didBecomeActive() }
         }
+        .onAppear { store.compact = hSize != .regular }
+        .onChange(of: hSize) { _, v in store.compact = v != .regular }
     }
 }
 
-/// iPhone: innholdet går helt ut til kanten under en egen glass-fanelinje. Skann flyter over fanelinja til høyre.
+/// iPhone: systemets fanelinje (Liquid Glass) for Homelab, Finans og Domener. Matplan er en egen flate uten fanelinje.
+/// Toppraden med «‹ Homelab» vises over modulene. Material-utseendet har egne fanelinjer (MaterialShell).
 struct PhoneShell: View {
     @Environment(Store.self) private var store
     let scan: ScanActions
@@ -294,25 +441,37 @@ struct PhoneShell: View {
     @Binding var files: Bool
     var body: some View {
         let m = store.module
-        let finance = m == nil || m?.isFinance == true
-        let showScan = finance && store.selectedTx == nil && !(m == nil && store.tab == .search) && m != .imports && m != .upload
-        Group {
-            if let m { ModuleView(module: m, scan: scan, photos: $photos, files: $files) } else { FinanceTab() }
+        let mat = m == .mat
+        let pal = MatPalette.current(store)
+        VStack(spacing: 0) {
+            if let t = store.topRowTitle { TopBackRow(title: t, light: mat && !pal.dark) }
+            Group {
+                if DesignStyle.material {
+                    MaterialShell(scan: scan, photos: $photos, files: $files)
+                } else if mat {
+                    MatSurface()
+                } else if m == .domains {
+                    DomTabs()
+                } else if m == nil || m?.isFinance == true {
+                    FinTabs(scan: scan, photos: $photos, files: $files)
+                } else if m == .homelab {
+                    HlTabs()
+                } else if let m {
+                    ModuleView(module: m, scan: scan, photos: $photos, files: $files)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .safeAreaInset(edge: .bottom) {
-            if finance { FinBar() } else if m == .homelab || m == .mat { HlBar() } else if m == .domains { DomTabBar() }
-        }
-        .overlay(alignment: .bottomTrailing) {
-            if showScan { ScanPill(scan: scan).padding(.trailing, 18).padding(.bottom, 84) }
-        }
+        .background { if mat { pal.bg.ignoresSafeArea() } }
     }
 }
 
-/// Finans-fanene. Trykk på en rad åpner utgiftsdetaljen.
+/// En Finans-fane. Trykk på en rad åpner utgiftsdetaljen.
 struct FinanceTab: View {
     @Environment(Store.self) private var store
+    var tab: Tab? = nil
     var body: some View {
-        switch store.tab {
+        switch tab ?? store.tab {
         case .home: if store.selectedTx != nil { TxDetail(back: true) } else { HomeView() }
         case .list: if store.selectedTx != nil { TxDetail(back: true) } else { ListView() }
         case .budget: BudgetView()
@@ -431,7 +590,7 @@ struct ModuleView: View {
             case .stocks: StocksView()
             case .reports: ReportsView()
             case .imports: ImportView()
-            case .mat: MatView()
+            case .mat: MatSurface()
             case .domains: DomainsView()
             case .sub: SubView()
             case .folders: FoldersView()
@@ -455,7 +614,7 @@ struct ModuleHeader<Trailing: View>: View {
     }
     var body: some View {
         HStack(spacing: 10) {
-            GlassBack { if let back { back() } else { store.back() } }
+            if store.topRowTitle == nil { GlassBack { if let back { back() } else { store.back() } } }
             Text(title).font(.system(size: 28, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7)
             Spacer()
             trailing()
@@ -472,8 +631,12 @@ extension ModuleHeader where Trailing == EmptyView {
 /// Profilbildet (eller initialen): trykk åpner menyen, hold inne for raskt kontobytte.
 struct Avatar: View {
     @Environment(Store.self) private var store
+    @Environment(\.inTopRow) private var inTopRow
     var size: CGFloat = 44
     var body: some View {
+        if store.topRowTitle != nil && !inTopRow { EmptyView() } else { button }
+    }
+    private var button: some View {
         Button { store.menuOpen = true } label: { AvatarImage(size: size) }
             .buttonStyle(.plain).accessibilityLabel("Meny")
             .contextMenu {
@@ -564,32 +727,6 @@ struct ProfileMenu: View {
             .padding(16).contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-    }
-}
-
-/// Domener: fanelinja byttes ut med Trafikk, Besøk, Ytelse og Sikkerhet (rosa aksent), med husknappen til venstre.
-struct DomTabBar: View {
-    @Environment(Store.self) private var store
-    @Namespace private var ns
-    var body: some View {
-        HStack(spacing: 10) {
-            HomeGlassButton()
-            HStack(spacing: 0) {
-                ForEach(DomTab.allCases) { t in
-                    Button { store.domTab = t } label: {
-                        VStack(spacing: 2) { Image(systemName: t.icon).font(.system(size: 19)); Text(t.rawValue).font(.system(size: 10.5, weight: .semibold)).lineLimit(1) }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .foregroundStyle(store.domTab == t ? Color.domPink : .white.opacity(0.85))
-                            .background { if store.domTab == t { Capsule().fill(.white.opacity(0.14)).matchedGeometryEffect(id: "pill", in: ns) } }
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(GlassPress())
-                }
-            }
-            .padding(5).frame(height: 62).glass(31)
-            .animation(barSpring, value: store.domTab)
-        }
-        .padding(.horizontal, 14).padding(.bottom, 4)
     }
 }
 

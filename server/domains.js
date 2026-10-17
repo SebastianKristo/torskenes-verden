@@ -9,6 +9,7 @@ import { db } from './db.js';
 import { cfg } from './settings.js';
 import { cached } from './cache.js';
 import * as auth from './auth.js';
+import * as fh from './finans/routes.js';
 import { guard, MOCK, readJson, str } from './homeos-common.js';
 
 const CF = 'https://api.cloudflare.com/client/v4';
@@ -471,7 +472,8 @@ const api = new Hono();
 // Kartdata og d3-geo leveres herfra (samme opprinnelse, ingen CDN). Registreres før admin-vakten fordi Rom-fanen
 // (som alle innloggede ser) også bruker kartet; filene er åpne biblioteker, men krever likevel innlogging.
 const VENDOR = { 'd3-array.min.js': 'd3-array/dist/d3-array.min.js', 'd3-geo.min.js': 'd3-geo/dist/d3-geo.min.js', 'topojson-client.min.js': 'topojson-client/dist/topojson-client.min.js', 'countries-110m.json': 'world-atlas/countries-110m.json' };
-const loggedIn = (c, next) => (auth.sessionUser(c) ? next() : c.json({ error: 'Ikke innlogget' }, 401));
+// Kartdata: innlogget sesjon eller app-token (finance:read), så mobilappene kan tegne kartet fra egen server.
+const loggedIn = (c, next) => (auth.sessionUser(c) || fh.bearerOk?.(c, 'finance:read') ? next() : c.json({ error: 'Ikke innlogget' }, 401));
 api.get('/vendor/nordic.json', loggedIn, async (c) => c.body(await nordic(), 200, { 'Content-Type': 'application/json', 'Cache-Control': 'private, max-age=604800' }));
 api.get('/vendor/:file', loggedIn, async (c) => {
   const p = VENDOR[c.req.param('file')];

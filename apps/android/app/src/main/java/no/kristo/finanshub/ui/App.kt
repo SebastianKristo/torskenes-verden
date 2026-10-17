@@ -8,6 +8,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -17,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.*
@@ -62,8 +64,9 @@ internal fun screenIcon(s: Screen): ImageVector = when (s) {
 }
 internal fun moduleIcon(s: Screen): ImageVector = screenIcon(s)
 
-/** Navn i Homelab-fanelinja: Finans-fanen heter «Finans» der. */
-private fun hlLabel(s: Screen) = if (s == Screen.Home) "Finans" else s.label
+/** Toppraden «‹ Homelab»/«‹ Finans» vises; da står profilbildet der og ikke i overskriften under. */
+internal val LocalTopRow = staticCompositionLocalOf { false }
+private val LocalInTopRow = staticCompositionLocalOf { false }
 
 private val domIcons: Map<DomTab, ImageVector> = mapOf(
     DomTab.Traffic to Icons.AutoMirrored.Filled.ShowChart, DomTab.Visits to Icons.Filled.Public, DomTab.Perf to Icons.Filled.Speed, DomTab.Security to Icons.Filled.Shield,
@@ -101,12 +104,16 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
     val twoPane = width != WindowWidthSizeClass.Compact
     val s = vm.screen
     val overlay = vm.original != null || vm.editing != null || vm.detail != null
-    // Tilbake: lukker det som er åpent, ellers forrige side. På Homelab uten noe åpent lukkes appen som vanlig.
-    val canBack = overlay || vm.editHome || s != Screen.Homelab || vm.selectedTx != null
+    // Tilbake: lukker det som er åpent, ellers forrige side. På startsiden uten noe åpent lukkes appen som vanlig.
+    val canBack = overlay || vm.editHome || s != vm.startPage || vm.selectedTx != null || vm.matFull
     BackHandler(enabled = canBack) { vm.back() }
+    // Matplan er en egen flate: ingen fanelinje, skanneknapp eller rail, bare pilen øverst og profilmenyen.
+    val matSurface = s == Screen.Mat && !vm.matFull && !overlay
+    val topRow = vm.topRowTitle(!twoPane)
 
+    CompositionLocalProvider(LocalTopRow provides (topRow != null)) {
     Scaffold(
-        containerColor = C.bg,
+        containerColor = if (matSurface) matPalette(vm).bg else C.bg,
         snackbarHost = { SnackbarHost(snack) },
         bottomBar = { if (!twoPane && !overlay) BottomBar(vm) },
         floatingActionButton = {
@@ -115,7 +122,7 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
         },
     ) { pad ->
         Row(Modifier.fillMaxSize().padding(pad)) {
-            if (twoPane) Rail(vm, scan)
+            if (twoPane && s != Screen.Mat) Rail(vm, scan)
             when {
                 vm.original != null -> Box(Modifier.weight(1f).fillMaxHeight()) { OriginalScreen(vm) }
                 vm.editing != null -> Box(Modifier.weight(1f).fillMaxHeight()) { TxEditScreen(vm, vm.editing!!, scan) }
@@ -125,11 +132,18 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
                     Box(Modifier.weight(1f).fillMaxHeight()) { MainPane(vm, true, scan, onPrivacyChanged) }
                     Box(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp)).background(tc(0xFF1E1712))) { DetailPane(vm) }
                 }
-                else -> Box(Modifier.weight(1f).fillMaxHeight()) { MainPane(vm, twoPane, scan, onPrivacyChanged) }
+                matSurface -> Box(Modifier.weight(1f).fillMaxHeight()) { MatSurface(vm) }
+                else -> Column(Modifier.weight(1f).fillMaxHeight()) {
+                    if (topRow != null) TopBackRow(vm, topRow, if (s == Screen.Domains) P.accent else C.text, if (s == Screen.Domains) P.card else C.surface2, null,
+                        Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp))
+                    Box(Modifier.weight(1f).fillMaxWidth()) { MainPane(vm, twoPane, scan, onPrivacyChanged) }
+                }
             }
         }
         if (vm.busy) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = C.primary) }
     }
+    }
+    if (vm.domainManager) DomainManagerSheet(vm)
     if (vm.menuOpen) { if (twoPane) SideMenu(vm) else ProfileSheet(vm) }
     if (vm.widgetGallery) WidgetGallery(vm)
     if (vm.scanSheet) ScanSheet(vm, takePhoto,
@@ -176,28 +190,28 @@ private fun DetailPane(vm: AppViewModel) {
 /* ---------------- Navigasjon ---------------- */
 
 /**
- * Bunnlinja: Homelab-fanene på Homelab og Matplan, Finans-fanene i Finans (med «Homelab» helt til venstre,
- * skilt med en tynn strek) og Trafikk/Besøk/Ytelse/Sikkerhet i Domener.
+ * Bunnlinja: Homelab-fanene på Homelab, Finans-fanene i Finans og Trafikk/Besøk/Ytelse/Sikkerhet i Domener.
+ * Matplan har ingen. Med «Knapp i linjen» står startsiden helt til venstre, skilt med en tynn strek.
  */
 @Composable
 private fun BottomBar(vm: AppViewModel) {
     val s = vm.screen
     when {
-        s == Screen.Homelab || s == Screen.Mat -> NavigationBar(containerColor = C.surface1) {
+        s == Screen.Homelab -> NavigationBar(containerColor = C.surface1) {
             vm.hlTabs.forEach { t ->
-                NavigationBarItem(selected = s == t, onClick = { vm.go(t) }, icon = { Icon(screenIcon(t), null) }, label = { Text(hlLabel(t), maxLines = 1) })
+                NavigationBarItem(selected = s == t, onClick = { vm.go(t) }, icon = { Icon(screenIcon(t), null) }, label = { Text(vm.hlName(t), maxLines = 1, overflow = TextOverflow.Ellipsis) })
             }
         }
         s.isFinance -> NavigationBar(containerColor = C.surface1) {
-            HomeItem(vm)
+            if (vm.homeInBar && !vm.financeStart) HomeItem(vm)
             vm.finTabs.forEach { t ->
                 val on = s == t || (t == Screen.More && s.isMorePage)
-                NavigationBarItem(selected = on, onClick = { vm.go(t) }, icon = { Icon(screenIcon(t), null) }, label = { Text(t.label, maxLines = 1) })
+                NavigationBarItem(selected = on, onClick = { vm.go(t) }, icon = { Icon(screenIcon(t), null) }, label = { Text(vm.finName(t), maxLines = 1, overflow = TextOverflow.Ellipsis) })
             }
         }
         // Domener: fanelinja byttes ut med Trafikk, Besøk, Ytelse og Sikkerhet.
         s == Screen.Domains -> NavigationBar(containerColor = P.card) {
-            HomeItem(vm)
+            if (vm.homeInBar) HomeItem(vm)
             DomTab.entries.forEach { t ->
                 NavigationBarItem(selected = vm.domTab == t, onClick = { vm.domTab = t }, icon = { Icon(domIcons.getValue(t), null) }, label = { Text(t.label, maxLines = 1) },
                     colors = NavigationBarItemDefaults.colors(indicatorColor = P.hero, selectedIconColor = P.onHero, selectedTextColor = P.accent))
@@ -207,10 +221,10 @@ private fun BottomBar(vm: AppViewModel) {
     }
 }
 
-/** «Homelab» helt til venstre i bunnlinja, med en tynn strek mot resten. */
+/** Startsiden («Homelab» eller «Finans») helt til venstre i bunnlinja, med en tynn strek mot resten. */
 @Composable
 private fun RowScope.HomeItem(vm: AppViewModel) {
-    NavigationBarItem(selected = false, onClick = { vm.go(Screen.Homelab) }, icon = { Icon(Icons.Filled.Dashboard, null) }, label = { Text("Homelab", maxLines = 1) })
+    NavigationBarItem(selected = false, onClick = { vm.goStart() }, icon = { Icon(if (vm.financeStart) Icons.Filled.Savings else Icons.Filled.Dashboard, null) }, label = { Text(vm.startLabel, maxLines = 1) })
     Box(Modifier.padding(vertical = 18.dp).width(1.dp).height(36.dp).background(C.outline.copy(alpha = .4f)).align(Alignment.CenterVertically))
 }
 
@@ -235,7 +249,7 @@ private fun Rail(vm: AppViewModel, scan: ScanActions) {
     val s = vm.screen
     NavigationRail(containerColor = C.surface1, header = {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 8.dp)) {
-            FilledTonalIconButton(onClick = { vm.go(Screen.Homelab) }, modifier = Modifier.size(48.dp)) { Icon(Icons.Filled.Dashboard, "Homelab") }
+            FilledTonalIconButton(onClick = { vm.goStart() }, modifier = Modifier.size(48.dp)) { Icon(if (vm.financeStart) Icons.Filled.Savings else Icons.Filled.Dashboard, vm.startLabel) }
             Surface(color = C.primary, contentColor = C.onPrimary, shape = RoundedCornerShape(16.dp),
                 modifier = Modifier.size(56.dp).clip(RoundedCornerShape(16.dp)).combinedClickable(onClickLabel = "Skann kvittering", onLongClickLabel = "Velg fra Bilder eller Filer", onLongClick = scan::hold, onClick = scan::tap)) {
                 Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.DocumentScanner, "Skann") }
@@ -246,7 +260,7 @@ private fun Rail(vm: AppViewModel, scan: ScanActions) {
         val tabs = if (s.isFinance) vm.finTabs else vm.hlTabs.filter { it != Screen.Homelab }
         tabs.forEach { t ->
             val on = s == t || (t == Screen.More && s.isMorePage)
-            NavigationRailItem(selected = on, onClick = { vm.go(t) }, icon = { Icon(screenIcon(t), null) }, label = { Text(if (s.isFinance) t.label else hlLabel(t), maxLines = 1, overflow = TextOverflow.Ellipsis) })
+            NavigationRailItem(selected = on, onClick = { vm.go(t) }, icon = { Icon(screenIcon(t), null) }, label = { Text(if (s.isFinance) vm.finName(t) else vm.hlName(t), maxLines = 1, overflow = TextOverflow.Ellipsis) })
         }
         if (s.isMorePage) NavigationRailItem(selected = true, onClick = {}, icon = { Icon(screenIcon(s), null) }, label = { Text(s.label, maxLines = 1, overflow = TextOverflow.Ellipsis) })
         if (s == Screen.Settings) NavigationRailItem(selected = true, onClick = {}, icon = { Icon(screenIcon(s), null) }, label = { Text(s.label, maxLines = 1, overflow = TextOverflow.Ellipsis) })
@@ -259,6 +273,7 @@ private fun Rail(vm: AppViewModel, scan: ScanActions) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun Avatar(vm: AppViewModel, size: Int = 44) {
+    if (LocalTopRow.current && !LocalInTopRow.current) return
     var quick by remember { mutableStateOf(false) }
     Box {
         Box(
@@ -288,6 +303,24 @@ internal fun AvatarImage(vm: AppViewModel, size: Int, bg: Color = C.container, f
     }
 }
 
+/** «‹ Homelab» / «‹ Finans» øverst, med profilbildet helt til høyre på samme rad. */
+@Composable
+internal fun TopBackRow(vm: AppViewModel, title: String, fg: Color, bg: Color, border: Color?, modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth().padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.height(40.dp).clip(CircleShape).background(bg)
+                .then(if (border != null) Modifier.border(1.dp, border, CircleShape) else Modifier)
+                .clickable(onClickLabel = "Tilbake til $title") { vm.goStart() }.padding(start = 8.dp, end = 16.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, null, tint = fg)
+            Text(title, color = fg, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+        }
+        Spacer(Modifier.weight(1f))
+        CompositionLocalProvider(LocalInTopRow provides true) { Avatar(vm, 40) }
+    }
+}
+
 internal fun host(url: String) = url.removePrefix("https://").removePrefix("http://")
 
 /** Menyen bak profilbildet: Homelab, Andre OS (Finans, Matplan, Domener), Rediger forsiden og Innstillinger. */
@@ -305,7 +338,7 @@ private fun MenuContent(vm: AppViewModel) {
         MenuRow("Homelab", "Dashbord, søk og snarveier", Icons.Filled.Dashboard, vm.screen == Screen.Homelab, 0, 1) { vm.editHome = false; vm.go(Screen.Homelab) }
         SectionLabel("Andre OS")
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            MenuRow("Finans", "Hjem, liste, budsjett og mer", Icons.Filled.Savings, vm.screen.isFinance, 0, 3) { vm.go(Screen.Home) }
+            MenuRow("Finans", "Hjem, liste, budsjett og mer", Icons.Filled.Savings, vm.screen.isFinance, 0, 3) { vm.go(if (vm.financeStart) vm.startPage else Screen.Home) }
             MenuRow("Matplan", "Ukemeny, kokk og handleliste", Icons.Filled.Restaurant, vm.screen == Screen.Mat, 1, 3) { vm.go(Screen.Mat) }
             MenuRow("Domener", "Trafikk, besøk, ytelse og sikkerhet", Icons.Filled.Language, vm.screen == Screen.Domains, 2, 3) { vm.go(Screen.Domains) }
         }

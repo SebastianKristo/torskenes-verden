@@ -16,8 +16,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
@@ -36,9 +38,11 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 /*
- * Farger: designet (1b) er tegnet i én mørk tonal palett fra #FF7A3D. Material You («Følg systemet»)
- * og de andre fargene lages ved å flytte fargetonen på hele paletten, og lys modus speiler lysheten.
- * Semantisk grønn, rød og gul flyttes ikke. Samme regel som prototypen (m3Map).
+ * Farger: designet (1b) er tegnet i én mørk tonal palett fra #FF7A3D. Hver designfarge har en fast rolle
+ * (flate, kort, tekst, primær, container …). Med «Følg systemet» (Android 12+) hentes rollene rett fra
+ * dynamicDarkColorScheme / dynamicLightColorScheme. De andre frøfargene lager rollene i OKLCH: bare kulørtonen
+ * byttes, og hver rolle har egen lyshet og metning i lys og mørk modus (ikke invertering). Statusfarger
+ * (grønn, rød, gul) og Domener-rosa følger ikke aksentfargen.
  */
 
 /** Frøfarger i Innstillinger → Utseende → Farger. «system» = dynamiske farger fra bakgrunnsbildet (Android 12+). */
@@ -54,74 +58,128 @@ val SEEDS: List<Triple<String, String, Long>> = listOf(
 val MODES: List<Pair<String, String>> = listOf("system" to "Følg systemet", "light" to "Lys", "dark" to "Mørk")
 
 private const val BASE_SEED = 0xFFFFB68A
-private val FIXED = setOf(0xFF9FE3C6, 0xFF7BE3A0, 0xFF1F3A2F, 0xFFC9E4D8, 0xFF07301F, 0xFFFF8A80, 0xFFF2B56B, 0xFFF2C14E)
+/** Statusfarger og Domener-rosa: samme kulør uansett frøfarge (lys modus får egne toner). */
+private val FIXED = setOf(
+    0xFF9FE3C6, 0xFF7BE3A0, 0xFF1F3A2F, 0xFFC9E4D8, 0xFF07301F, 0xFFFF8A80, 0xFFF2B56B, 0xFFF2C14E, 0xFFE60000, 0xFF4285F4,
+    0xFF7B2949, 0xFFFFD9E2, 0xFFFFB1C8, 0xFF2A2024, 0xFF3A2C31, 0xFFD5C2C6, 0xFF3A0B07, 0xFF4A1F25,
+)
 
-/** Gjeldende tone (frøfarge og lys/mørk). Leses i komposisjonen, så alt tegnes på nytt når den endres. */
+/** Rollene i paletten: (lyshet, metning) i OKLCH for mørk og lys modus, og kulørforskyvning (tertiær). */
+private enum class Role(val dl: Double, val dc: Double, val ll: Double, val lc: Double, val dh: Double = 0.0) {
+    SURFACE(.17, .012, .985, .006), SURFACE_LOW(.205, .013, .97, .008), SURFACE1(.24, .015, .955, .009),
+    SURFACE2(.285, .017, .935, .011), SURFACE3(.33, .018, .915, .013),
+    PRIMARY(.84, .105, .50, .13), ON_PRIMARY(.32, .08, .995, .0),
+    PRIMARY_CONTAINER(.42, .10, .92, .05), ON_PRIMARY_CONTAINER(.93, .045, .30, .08),
+    SECONDARY_CONTAINER(.42, .04, .92, .03), ON_SECONDARY_CONTAINER(.93, .03, .28, .04),
+    TERTIARY_CONTAINER(.40, .04, .92, .04, 60.0), ON_TERTIARY_CONTAINER(.92, .05, .28, .05, 60.0),
+    ON_SURFACE(.92, .012, .22, .01), ON_SURFACE_VARIANT(.83, .02, .42, .02), OUTLINE(.66, .02, .56, .02),
+    ACCENT(.71, .17, .58, .17),
+}
+
+/** Designfargene og rollene deres. */
+private val ROLE_OF: Map<Long, Role> = mapOf(
+    0xFF19120E to Role.SURFACE, 0xFF1E1712 to Role.SURFACE_LOW, 0xFF261E19 to Role.SURFACE1, 0xFF31281F to Role.SURFACE2, 0xFF3D332C to Role.SURFACE3,
+    0xFFFFB68A to Role.PRIMARY, 0xFFFFB08A to Role.PRIMARY, 0xFF532200 to Role.ON_PRIMARY, 0xFF1A0C04 to Role.ON_PRIMARY,
+    0xFF763300 to Role.PRIMARY_CONTAINER, 0xFF5D4033 to Role.SECONDARY_CONTAINER, 0xFFFFDBC8 to Role.ON_SECONDARY_CONTAINER,
+    0xFF45462A to Role.TERTIARY_CONTAINER, 0xFFE6E6AE to Role.ON_TERTIARY_CONTAINER,
+    0xFFF0DFD7 to Role.ON_SURFACE, 0xFFD7C2B8 to Role.ON_SURFACE_VARIANT, 0xFFA08D83 to Role.OUTLINE, 0xFFFF7A3D to Role.ACCENT,
+)
+
+/** OKLab/OKLCH ↔ sRGB (Björn Ottosson). */
+private object Ok {
+    private fun lin(c: Double) = if (c <= 0.04045) c / 12.92 else Math.pow((c + 0.055) / 1.055, 2.4)
+    private fun gam(c: Double) = if (c <= 0.0031308) 12.92 * c else 1.055 * Math.pow(c, 1 / 2.4) - 0.055
+
+    /** sRGB (0xAARRGGBB) → (L, C, h°). */
+    fun lch(c: Long): DoubleArray {
+        val r = lin(((c shr 16) and 0xFF) / 255.0); val g = lin(((c shr 8) and 0xFF) / 255.0); val b = lin((c and 0xFF) / 255.0)
+        val l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
+        val m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
+        val s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
+        val L = 0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s
+        val A = 1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s
+        val B = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s
+        val h = Math.toDegrees(Math.atan2(B, A))
+        return doubleArrayOf(L, Math.hypot(A, B), if (h < 0) h + 360 else h)
+    }
+
+    private fun rgb(L: Double, C: Double, h: Double): DoubleArray {
+        val a = C * Math.cos(Math.toRadians(h)); val b = C * Math.sin(Math.toRadians(h))
+        val l = Math.pow(L + 0.3963377774 * a + 0.2158037573 * b, 3.0)
+        val m = Math.pow(L - 0.1055613458 * a - 0.0638541728 * b, 3.0)
+        val s = Math.pow(L - 0.0894841775 * a - 1.2914855480 * b, 3.0)
+        return doubleArrayOf(
+            4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+            -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+            -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s,
+        )
+    }
+
+    /** (L, C, h°) → sRGB. Metningen senkes til fargen kan vises (gamut). */
+    fun color(L0: Double, C0: Double, h: Double, alpha: Long = 0xFF): Long {
+        val L = L0.coerceIn(0.0, 1.0)
+        var lo = 0.0; var hi = C0.coerceAtLeast(0.0)
+        fun ok(c: Double) = rgb(L, c, h).all { it >= -0.0005 && it <= 1.0005 }
+        if (!ok(hi)) { repeat(18) { val mid = (lo + hi) / 2; if (ok(mid)) lo = mid else hi = mid }; hi = lo }
+        val v = rgb(L, hi, h)
+        fun ch(x: Double) = (gam(x.coerceIn(0.0, 1.0)) * 255).roundToInt().coerceIn(0, 255).toLong()
+        return (alpha shl 24) or (ch(v[0]) shl 16) or (ch(v[1]) shl 8) or ch(v[2])
+    }
+}
+
+/** Gjeldende tone (frøfarge, lys/mørk og eventuelt systemets dynamiske skjema). Leses i komposisjonen. */
 object Tone {
     var seed by mutableStateOf(BASE_SEED)
     var light by mutableStateOf(false)
+    var dynamic by mutableStateOf<ColorScheme?>(null)
     private val cache = HashMap<Long, Color>()
-    private var cacheSeed = BASE_SEED
-    private var cacheLight = false
+    private var cacheKey: Any? = null
 
     fun map(c: Long): Color {
-        val s = seed
-        val l = light
-        if (s == BASE_SEED && !l) return Color(c)
-        if (s != cacheSeed || l != cacheLight) { cache.clear(); cacheSeed = s; cacheLight = l }
-        return cache.getOrPut(c) { Color(transform(c, s, l)) }
+        val s = seed; val l = light; val d = dynamic
+        if (s == BASE_SEED && !l && d == null) return Color(c)
+        val key = Triple(s, l, d)
+        if (key != cacheKey) { cache.clear(); cacheKey = key }
+        return cache.getOrPut(c) { resolve(c, s, l, d) }
     }
 
-    private fun hsl(c: Long): FloatArray {
-        val r = ((c shr 16) and 0xFF) / 255f
-        val g = ((c shr 8) and 0xFF) / 255f
-        val b = (c and 0xFF) / 255f
-        val mx = max(r, max(g, b))
-        val mn = min(r, min(g, b))
-        val l = (mx + mn) / 2
-        var h = 0f
-        var s = 0f
-        if (mx != mn) {
-            val d = mx - mn
-            s = if (l > .5f) d / (2 - mx - mn) else d / (mx + mn)
-            h = when (mx) {
-                r -> (g - b) / d + (if (g < b) 6 else 0)
-                g -> (b - r) / d + 2
-                else -> (r - g) / d + 4
-            } * 60
+    private fun resolve(c: Long, seed: Long, light: Boolean, d: ColorScheme?): Color {
+        val argb = 0xFF000000 or (c and 0xFFFFFF)
+        val alpha = (c shr 24) and 0xFF
+        val role = if (argb in FIXED) null else ROLE_OF[argb]
+        if (role != null) {
+            if (d != null) return fromScheme(role, d).copy(alpha = alpha / 255f)
+            val sh = Ok.lch(seed)
+            val k = (sh[1] / 0.10).coerceIn(0.5, 1.4) // svake frøfarger gir roligere toner
+            val L = if (light) role.ll else role.dl
+            val C = (if (light) role.lc else role.dc) * k
+            return Color(Ok.color(L, C, sh[2] + role.dh, alpha))
         }
-        return floatArrayOf(h, s, l)
+        // Øvrige designfarger: behold lyshet og metning, flytt kulør (unntatt faste), og egne toner i lys modus.
+        val o = Ok.lch(argb)
+        val fixed = argb in FIXED
+        val h = if (fixed || o[1] < 0.02) o[2] else o[2] + (Ok.lch(seed)[2] - Ok.lch(BASE_SEED)[2])
+        val L = if (!light) o[0] else if (o[0] < 0.5) 0.98 - o[0] * 0.25 else (1.17 - o[0]).coerceIn(0.22, 0.6)
+        return Color(Ok.color(L, o[1], h, alpha))
     }
 
-    private fun fromHsl(h0: Float, s: Float, l: Float): Long {
-        val h = ((h0 % 360) + 360) % 360
-        val a = s * min(l, 1 - l)
-        fun f(n: Int): Float {
-            val k = (n + h / 30) % 12
-            return l - a * max(-1f, min(min(k - 3, 9 - k), 1f))
-        }
-        fun ch(v: Float) = (v * 255).roundToInt().coerceIn(0, 255).toLong()
-        return 0xFF000000 or (ch(f(0)) shl 16) or (ch(f(8)) shl 8) or ch(f(4))
-    }
-
-    private fun transform(c: Long, seed: Long, light: Boolean): Long {
-        val rgb = c and 0xFFFFFF
-        val fix = (0xFF000000 or rgb) in FIXED
-        val dh = hsl(seed)[0] - hsl(BASE_SEED)[0]
-        val hs = hsl(c)
-        var h = hs[0]
-        val s = hs[1]
-        var l = hs[2]
-        if (!fix && s > .12f) h += dh
-        if (light) {
-            l = when {
-                s > .5f && l > .55f -> .36f
-                s > .15f && l > .13f && l < .46f -> .92f - (l - .13f) * .3f
-                else -> (1 - l).coerceIn(.04f, .985f)
-            }
-            if (fix && l < .5f) l = min(l, .32f)
-        }
-        return (c and 0xFF000000) or (fromHsl(h, s, l) and 0xFFFFFF)
+    private fun fromScheme(r: Role, s: ColorScheme): Color = when (r) {
+        Role.SURFACE -> s.surface
+        Role.SURFACE_LOW -> s.surfaceContainerLow
+        Role.SURFACE1 -> s.surfaceContainer
+        Role.SURFACE2 -> s.surfaceContainerHigh
+        Role.SURFACE3 -> s.surfaceContainerHighest
+        Role.PRIMARY, Role.ACCENT -> s.primary
+        Role.ON_PRIMARY -> s.onPrimary
+        Role.PRIMARY_CONTAINER -> s.primaryContainer
+        Role.ON_PRIMARY_CONTAINER -> s.onPrimaryContainer
+        Role.SECONDARY_CONTAINER -> s.secondaryContainer
+        Role.ON_SECONDARY_CONTAINER -> s.onSecondaryContainer
+        Role.TERTIARY_CONTAINER -> s.tertiaryContainer
+        Role.ON_TERTIARY_CONTAINER -> s.onTertiaryContainer
+        Role.ON_SURFACE -> s.onSurface
+        Role.ON_SURFACE_VARIANT -> s.onSurfaceVariant
+        Role.OUTLINE -> s.outline
     }
 }
 
@@ -200,25 +258,30 @@ private val shapes = Shapes(
 
 /**
  * color: system | orange | blue | green | purple | pink | yellow. mode: system | light | dark (standard mørk).
- * «Følg systemet» bruker dynamiske farger (Android 12+): Compose-skjemaet fra dynamicDark/LightColorScheme,
- * og designets egne flater tones etter systemets aksentfarge.
+ * «Følg systemet» bruker dynamiske farger (Android 12+) direkte: både Compose-skjemaet og designets egne flater
+ * hentes fra rollene i dynamicDark/LightColorScheme. Eldre Android faller tilbake til oransje.
  */
 @Composable
 fun FinansTheme(color: String = "system", mode: String = "dark", content: @Composable () -> Unit) {
     val ctx = LocalContext.current
     val light = when (mode) { "light" -> true; "system" -> !isSystemInDarkTheme(); else -> false }
     val dynamic = color == "system" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    // Systemets skjema: lages på nytt når bakgrunnsbildet (og dermed aksentfargen) byttes, fordi aktiviteten da får ny konfigurasjon.
+    val dyn = remember(dynamic, light, ctx) {
+        when {
+            dynamic && light -> dynamicLightColorScheme(ctx)
+            dynamic -> dynamicDarkColorScheme(ctx)
+            else -> null
+        }
+    }
     val seed = when {
-        dynamic -> runCatching { 0xFF000000 or (ctx.getColor(android.R.color.system_accent1_200).toLong() and 0xFFFFFF) }.getOrDefault(BASE_SEED)
+        dyn != null -> 0xFF000000 or (dyn.primary.toArgb().toLong() and 0xFFFFFF)
         else -> SEEDS.firstOrNull { it.first == color }?.third ?: BASE_SEED
     }
     if (Tone.seed != seed) Tone.seed = seed
     if (Tone.light != light) Tone.light = light
-    val scheme = when {
-        dynamic && light -> dynamicLightColorScheme(ctx)
-        dynamic -> dynamicDarkColorScheme(ctx)
-        else -> schemeFromPalette(light)
-    }
+    if (Tone.dynamic != dyn) Tone.dynamic = dyn
+    val scheme = dyn ?: schemeFromPalette(light)
     val view = LocalView.current
     if (!view.isInEditMode) SideEffect {
         (view.context as? Activity)?.window?.let { w ->

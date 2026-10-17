@@ -98,6 +98,11 @@ struct PendingLogin { let server: String; let username: String; let password: St
 
 struct DomainToday { let name: String; let visitors: Double }
 
+/// Designstil per enhet: «ios» (Liquid Glass) eller «material» (Android-utseende, Material 3). Leses av byggeklossene (glass(), Backdrop).
+enum DesignStyle {
+    static var material = UserDefaults.standard.string(forKey: "fh_design") == "material"
+}
+
 @MainActor
 @Observable
 final class Store {
@@ -143,6 +148,13 @@ final class Store {
     var settingsPage: String?
     /// Fanelinja krymper til en sirkel når man scroller ned (iOS 18+).
     var barMini = false
+    /// iPhone (kompakt bredde): toppraden med «‹ Homelab» brukes bare her.
+    var compact = true
+    /// «Administrer domener» (arket bak tannhjulet i Domener).
+    var domainManager = false
+    /// Matplan: valgt dag (indeks 0–6), nil = i dag. «Se hele uka» viser hele uka og alle retter.
+    var matDay: Int?
+    var matFull = false
 
     /* ---------- Homelab ---------- */
 
@@ -164,6 +176,10 @@ final class Store {
     var aiQuery = ""
     var aiBusy = false
     var aiHistory: [String] = []
+    /// Melding når AI-søket falt tilbake til vanlig søk.
+    var aiNote: String?
+    /// Forslag før søk: Butikker, Varer i kvitteringer, Beløp og perioder.
+    var suggestGroups: [SuggestGroup] = []
     var editing: TxDraft?
     var original: Original?
     var originalTab = "receipt"
@@ -201,8 +217,20 @@ final class Store {
     var lockAfter = UserDefaults.standard.integer(forKey: "fh_lock_after") { didSet { UserDefaults.standard.set(lockAfter, forKey: "fh_lock_after") } }
     var hideSwitcher = UserDefaults.standard.bool(forKey: "fh_hide_switcher") { didSet { UserDefaults.standard.set(hideSwitcher, forKey: "fh_hide_switcher") } }
     var hideAmounts = UserDefaults.standard.bool(forKey: "fh_hide_amounts") { didSet { UserDefaults.standard.set(hideAmounts, forKey: "fh_hide_amounts"); Privacy.shared.hidden = hideAmounts } }
-    /// homelab | home | list | budget
-    var startPage = UserDefaults.standard.string(forKey: "fh_start") ?? "homelab" { didSet { UserDefaults.standard.set(startPage, forKey: "fh_start") } }
+    /// homelab | home | list | budget. Lagres også i oppsettet på serveren (layout.mobile.start).
+    var startPage = UserDefaults.standard.string(forKey: "fh_start") ?? "homelab" {
+        didSet {
+            UserDefaults.standard.set(startPage, forKey: "fh_start")
+            var l = layout; l.start = Store.startKey(startPage)
+            if l != layout { saveLayout(l) }
+        }
+    }
+    /// ios | material (per enhet)
+    var designStyle = UserDefaults.standard.string(forKey: "fh_design") ?? "ios" {
+        didSet { UserDefaults.standard.set(designStyle, forKey: "fh_design"); DesignStyle.material = designStyle == "material" }
+    }
+    /// ai | plain
+    var searchMode = UserDefaults.standard.string(forKey: "fh_search_mode") ?? "ai" { didSet { UserDefaults.standard.set(searchMode, forKey: "fh_search_mode") } }
     /// «camera»: trykk åpner kameraet, hold inne viser valg. «choices»: omvendt.
     var scanTap = UserDefaults.standard.string(forKey: "fh_scan_tap") ?? "camera" { didSet { UserDefaults.standard.set(scanTap, forKey: "fh_scan_tap") } }
     var autoCrop = UserDefaults.standard.object(forKey: "fh_auto_crop") as? Bool ?? true { didSet { UserDefaults.standard.set(autoCrop, forKey: "fh_auto_crop") } }
@@ -380,7 +408,7 @@ final class Store {
         boot = nil; summary = nil; me = nil; txs = nil; receipts = nil; jobs = []; selectedTx = nil; selectedReceipt = nil
         week = nil; subs = nil; folders = nil; folder = nil; finn = nil; tokens = nil; domains = nil; analytics = nil; domain = nil
         mobileHome = nil; homeError = nil; history = []; suggestions = []; todayMeal = nil; domainToday = nil; avatar = nil
-        ai = nil; aiHistory = []; editing = nil; original = nil; detail = nil; detailTx = nil
+        ai = nil; aiHistory = []; aiNote = nil; suggestGroups = []; editing = nil; original = nil; detail = nil; detailTx = nil; matDay = nil
         recurring = nil; stocks = nil; report = nil; importResult = nil; importFiles = []; importText = ""
         editHome = false
         logos = [:]
@@ -483,7 +511,7 @@ final class Store {
         switch t {
         case .home: summary = try await api.get("/summary")
         case .list, .budget: if txs == nil || t == .list { try await loadTx() }
-        case .search: await loadAiHistory()
+        case .search: await loadAiHistory(); if suggestGroups.isEmpty { await loadSuggestGroups() }
         case .more: await loadMore()
         }
     }
@@ -543,12 +571,62 @@ final class Store {
         if module == .folders, folder != nil { folder = nil; return }
         if module == .upload, selectedReceipt != nil { selectedReceipt = nil; return }
         if selectedTx != nil { selectedTx = nil; return }
-        let target = backTo ?? (module?.isFinance == true ? .tab(.more) : .module(.homelab))
+        guard let target = backTo ?? (module?.isFinance == true ? .tab(.more) : nil) else { goStart(); return }
         switch target {
         case .tab(let t): go(t)
         case .module(let m): open(m)
         }
     }
+
+    /* ---------- Startside, toppraden og fanelinjene ---------- */
+
+    static func startKey(_ p: String) -> String { ["home": "fin-hjem", "list": "fin-liste", "budget": "fin-budsjett"][p] ?? "homelab" }
+    static func startPage(fromKey k: String) -> String { ["fin-hjem": "home", "fin-liste": "list", "fin-budsjett": "budget"][k] ?? "homelab" }
+
+    /// Finans som startside: appen åpner der, og Homelab ligger bak profilbildet.
+    var financeStart: Bool { startPage != "homelab" }
+    var startTab: Tab { startPage == "list" ? .list : startPage == "budget" ? .budget : .home }
+    var startLabel: String { financeStart ? "Finans" : "Homelab" }
+    func goStart() { if financeStart { go(startTab) } else { open(.homelab) } }
+
+    /// «‹ Homelab» / «‹ Finans» øverst (med profilbildet til høyre på samme rad). nil = ingen topprad.
+    var topRowTitle: String? {
+        guard compact, layout.backStyle == "arrow", editing == nil, detail == nil, original == nil, !editHome else { return nil }
+        if let m = module {
+            switch m {
+            case .domains, .mat: return startLabel
+            case .homelab: return financeStart ? "Finans" : nil
+            default: return nil
+            }
+        }
+        return financeStart || selectedTx != nil ? nil : "Homelab"
+    }
+    /// «Knapp i linjen»: Homelab-/Finans-knappen ligger i fanelinja i stedet for pilen øverst.
+    var homeInBar: Bool { layout.backStyle == "bar" }
+
+    /// Finans-fanene i systemets fanelinje på iPhone: høyst fire, fordi Skann ligger i søkeplassen til høyre.
+    /// Søk faller ut først (det finnes også under Mer), og Oversikt og Mer blir alltid med.
+    var barFinTabs: [Tab] {
+        var t = finTabs
+        let max = homeInBar && !financeStart ? 3 : 4
+        if t.count > max, let i = t.firstIndex(of: .search) { t.remove(at: i) }
+        while t.count > max, let i = t.lastIndex(where: { $0 != .more && $0 != .home }) { t.remove(at: i) }
+        return t
+    }
+    /// Fanen som er markert: sider under Mer, og faner som ikke får plass, markerer Mer.
+    func barTab(_ tabs: [Tab]) -> Tab { module?.isFinance == true || !tabs.contains(tab) ? .more : tab }
+
+    func tabName(_ t: Tab) -> String { layout.names["fin." + t.key] ?? t.rawValue }
+    func hlName(_ h: HlTab) -> String { layout.names["hl." + h.rawValue] ?? h.label }
+    /// Nytt navn på en fane (tomt = standardnavnet). key: «hl.dom», «fin.bud» …
+    func rename(_ key: String, _ name: String) {
+        var l = layout
+        let n = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if n.isEmpty { l.names[key] = nil } else { l.names[key] = String(n.prefix(30)) }
+        saveLayout(l)
+    }
+    func setBackStyle(_ b: String) { var l = layout; l.backStyle = b; saveLayout(l) }
+    func setMatTheme(_ t: String) { var l = layout; l.matTheme = t; saveLayout(l) }
 
     /// Homelab-fane: Homelab, Finans (Oversikt), Domener eller Matplan.
     func goHl(_ h: HlTab) {
@@ -631,7 +709,10 @@ final class Store {
             homeError = e.status == 404 ? "Homelab-forsiden finnes ikke på serveren ennå. Oppdater homelab." : (e.status == 401 || e.status == 403) ? "Homelab godtar ikke app-tokenet ennå. Oppdater homelab-serveren." : e.message
         } catch { homeError = "Uventet svar fra Homelab." }
         if summary == nil { summary = try? await api.get("/summary", as: Summary.self) }
-        if UserDefaults.standard.string(forKey: layoutKey) == nil, let d = try? await api.callAt("/api", "GET", "/me/layout"), let l = HomeLayout.from(json: try? JSONSerialization.jsonObject(with: d)) { layout = l }
+        if UserDefaults.standard.string(forKey: layoutKey) == nil, let d = try? await api.callAt("/api", "GET", "/me/layout"), let l = HomeLayout.from(json: try? JSONSerialization.jsonObject(with: d)) {
+            layout = l
+            if let st = l.start, Store.startPage(fromKey: st) != startPage { startPage = Store.startPage(fromKey: st) }
+        }
         if let d = try? await api.callAt("/api", "GET", "/search/history") { history = parseStrings(d) }
         if let w = try? await api.mat("/week", as: Week.self) { todayMeal = w.days.first { $0.date == isoDay(Date()) }?.name }
         if let d = try? await api.raw("/domains/api", "/domains"), let list: [DomainRef] = try? decodeList(d), let first = list.first {
@@ -745,18 +826,53 @@ final class Store {
 
     /* ---------- ✦ AI-søk ---------- */
 
+    /// ✦ AI-søk, eller vanlig søk (GET /search) når det er valgt eller AI-motoren er av eller ikke svarer.
     func ask(_ q: String) {
         let t = q.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty else { return }
         aiQuery = t
         aiBusy = true
+        aiNote = nil
         run {
             defer { self.aiBusy = false }
-            let d = try await self.api.call("POST", "/search/ai", json: ["q": t])
-            self.ai = try JSONDecoder().decode(AiAnswer.self, from: d)
+            if self.searchMode == "plain" {
+                try await self.plainSearch(t)
+            } else {
+                do {
+                    let d = try await self.api.callAt("/finans/api", "POST", "/search/ai", json: ["q": t], timeout: 25)
+                    let r = try JSONDecoder().decode(AiAnswer.self, from: d)
+                    if r.aiUnavailable == true {
+                        self.aiNote = "AI-motoren er av eller nede. Viser vanlig søk."
+                        try await self.plainSearch(t)
+                    } else { self.ai = r }
+                } catch let e as APIError where e.status == 401 && !e.needsTotp {
+                    throw e
+                } catch {
+                    self.aiNote = "AI-motoren svarte ikke. Viser vanlig søk."
+                    try await self.plainSearch(t)
+                }
+            }
             self.aiHistory = Array(([t] + self.aiHistory.filter { $0 != t }).prefix(20))
             await self.loadAiHistory()
         }
+    }
+
+    /// Vanlig søk i butikknavn, kategorier, notater og varelinjene i kvitteringene.
+    private func plainSearch(_ q: String) async throws {
+        let enc = q.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? q
+        do {
+            ai = try JSONDecoder().decode(AiAnswer.self, from: try await api.call("GET", "/search?q=\(enc)"))
+        } catch let e as APIError where e.status == 404 {
+            // Eldre server uten vanlig søk: søk i transaksjonslisten.
+            let page = try await api.get("/transactions?limit=30&q=\(enc)", as: TxPage.self)
+            ai = AiAnswer(q: q, answer: page.items.isEmpty ? "Fant ingen treff." : "\(page.items.count) treff i transaksjonene.",
+                          hits: page.items.map { AiHit(type: "tx", txId: $0.id, description: $0.description, date: $0.date, amount: $0.amount, source: nil, reason: "Butikk · \($0.description)") },
+                          mode: "plain")
+        }
+    }
+
+    func loadSuggestGroups() async {
+        if let d = try? await api.call("GET", "/search/suggestions"), let g = try? JSONDecoder().decode(SuggestGroups.self, from: d) { suggestGroups = g.groups.filter { !$0.items.isEmpty } }
     }
 
     private func loadAiHistory() async {
@@ -990,6 +1106,21 @@ final class Store {
     func setCook(_ date: String, _ cook: String) { run { try await self.api.matCall("PATCH", "/day/\(date)", json: ["cook": cook]); try await self.loadWeek() } }
     func toggleFixed(_ d: MealDay) { run { try await self.api.matCall("PATCH", "/day/\(d.date)", json: ["fixed": !(d.fixed ?? false)]); try await self.loadWeek() } }
     func toggleShop(_ id: String) { run { try await self.api.matCall("POST", "/shopping/\(id)/toggle"); try await self.loadWeek() } }
+    /// Legger ingrediensene som mangler i handlelisten (ukas retter ligger der fra før).
+    func addToShop(_ items: [String]) {
+        let have = Set((week?.shopping ?? []).map { $0.text.lowercased() })
+        let add = items.filter { !have.contains($0.lowercased()) }
+        guard !add.isEmpty else { flash("Alt ligger allerede i handlelisten"); return }
+        run {
+            for t in add {
+                var j: [String: Any] = ["text": t]
+                if let st = self.week?.start { j["start"] = st }
+                try await self.api.matCall("POST", "/shopping", json: j)
+            }
+            try await self.loadWeek()
+            self.flash("\(add.count) lagt i handlelisten")
+        }
+    }
 
     /* ---------- Subscription OS ---------- */
 
@@ -1042,6 +1173,43 @@ final class Store {
     }
 
     func pickDomain(_ name: String) { domain = name; analytics = nil; run { try await self.loadAnalytics() } }
+
+    /// Samme liste som i Homelab. API-token for Plausible/Umami legges inn på web.
+    func addDomain(_ name: String, source: String) {
+        let n = name.trimmingCharacters(in: .whitespaces).lowercased().replacingOccurrences(of: "https://", with: "").replacingOccurrences(of: "http://", with: "")
+        guard !n.isEmpty else { flash("Skriv domenet"); return }
+        run {
+            self.busy = true
+            defer { self.busy = false }
+            try await self.api.callAt("/domains/api", "POST", "/domains", json: ["name": n, "source": source])
+            self.domain = n
+            try await self.loadDomains()
+            self.flash("\(n) er lagt til")
+        }
+    }
+
+    func removeDomain(_ d: DomainRef) {
+        guard let id = d.id?.value else { return }
+        run {
+            try await self.api.callAt("/domains/api", "DELETE", "/domains/\(id)")
+            if self.domain == d.name { self.domain = nil }
+            try await self.loadDomains()
+            self.flash("\(d.name) er fjernet")
+        }
+    }
+
+    /// Landene til verdenskartet (world-atlas 110m), fra serveren eller jsDelivr som reserve. Hentes én gang.
+    @ObservationIgnored private var mapCache: [MapCountry]?
+    func worldMap() async -> [MapCountry] {
+        if let m = mapCache { return m }
+        var data = try? await api.raw("/domains/api", "/vendor/countries-110m.json")
+        if data.flatMap({ MapCountry.parse($0) })?.isEmpty != false, let u = URL(string: "https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json") {
+            data = try? await URLSession.shared.data(from: u).0
+        }
+        let list = data.flatMap { MapCountry.parse($0) } ?? []
+        if !list.isEmpty { mapCache = list }
+        return list
+    }
     func setRange(_ r: String) { domRange = r; run { try await self.loadAnalytics() } }
     func reloadDomain() { run { try await self.loadDomains(); self.flash("Oppdatert fra Cloudflare") } }
 

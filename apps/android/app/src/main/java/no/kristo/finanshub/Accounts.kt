@@ -94,5 +94,6 @@ class AppPrefs(ctx: Context) {
         const val N_DOMAIN = "n_domain"
         const val N_WEEKLY = "n_weekly"
         const val USE_LOCAL = "use_local"
+        const val SEARCH_MODE = "search_mode"   // ai | plain
     }
 }

@@ -8,16 +8,25 @@ struct DomainsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
+                // Tannhjulet ligger i fanelinja (iPhone); på iPad og i Material-utseendet står det her.
                 ModuleHeader(title: "Domener", trailing: {
                     Button { store.reloadDomain() } label: { Image(systemName: "arrow.clockwise").frame(width: 40, height: 40) }.buttonStyle(.plain).glass(20).foregroundStyle(Color.domPink)
-                    Button { store.openSub(.settings) } label: { Image(systemName: "gearshape").frame(width: 40, height: 40) }.buttonStyle(.plain).glass(20)
+                        .accessibilityLabel("Oppdater")
+                    if hSize == .regular || DesignStyle.material {
+                        Button { store.domainManager = true } label: { Image(systemName: "gearshape").frame(width: 40, height: 40) }.buttonStyle(.plain).glass(20)
+                            .accessibilityLabel("Administrer domener")
+                    }
                 })
                 picker
                 if hSize == .regular {
                     Picker("Fane", selection: Binding(get: { store.domTab }, set: { store.domTab = $0 })) { ForEach(DomTab.allCases) { Text($0.rawValue).tag($0) } }.pickerStyle(.segmented)
                 }
                 if let e = store.moduleError { Empty(text: e) }
-                if store.domains?.isEmpty == true { Empty(text: "Ingen domener ennå. Nye domener legges til i Homelab → Domener.") }
+                if store.domains?.isEmpty == true {
+                    Empty(text: "Ingen domener ennå.")
+                    Button { store.domainManager = true } label: { Text("＋ Legg til domene").fontWeight(.semibold).foregroundStyle(Color.ink).frame(maxWidth: .infinity, minHeight: 50) }
+                        .buttonStyle(.plain).glass(25, tint: .domPink)
+                }
                 if let a = store.analytics {
                     if a.mock == true { Text("Eksempeldata – legg inn Cloudflare-token i Homelab for ekte tall.").font(.caption).foregroundStyle(.white.opacity(0.55)).frame(maxWidth: .infinity, alignment: .leading) }
                     switch store.domTab {
@@ -37,6 +46,8 @@ struct DomainsView: View {
     private var picker: some View {
         Menu {
             ForEach(store.domains ?? [], id: \.name) { d in Button { store.pickDomain(d.name) } label: { Label(d.name, systemImage: d.name == store.domain ? "checkmark" : "globe") } }
+            Divider()
+            Button { store.domainManager = true } label: { Label("Administrer domener", systemImage: "plus") }
         } label: {
             HStack(spacing: 8) {
                 Circle().fill(statusColor(store.analytics?.status)).frame(width: 8, height: 8)
@@ -77,6 +88,7 @@ struct DomainsView: View {
             Kpi(label: "Dataoverføring", value: bytes(a.bytes ?? 0))
             Kpi(label: "Land", value: "\(a.countries?.count ?? 0)")
         }
+        domainCard(a)
         SectionLabel(text: "Historikk")
         ranges([("7d", "7 d"), ("30d", "30 d"), ("90d", "90 d"), ("1y", "1 år")])
         VStack(alignment: .leading, spacing: 8) {
@@ -95,6 +107,7 @@ struct DomainsView: View {
             Kpi(label: "Sidevisninger", value: count(a.pageviews ?? 0))
             Kpi(label: "Land", value: "\(a.countries?.count ?? 0)")
         }
+        VisitsMap(a: a)
         card("Topp land") { Bars(rows: (a.countries ?? []).sorted { ($0.visitors ?? 0) > ($1.visitors ?? 0) }.map { (flag($0.iso2) + " " + ($0.name ?? "–"), $0.visitors ?? 0) }) }
         card("Enheter") { Bars(rows: (a.devices ?? []).map { ($0.label, $0.value) }, percent: true) }
         card("Toppsider") { Bars(rows: (a.topPages ?? []).map { ($0.label, $0.value) }) }
@@ -119,10 +132,10 @@ struct DomainsView: View {
             Divider().overlay(.white.opacity(0.12))
             Bars(rows: (a.tls ?? []).map { ($0.label, $0.value) }, percent: true)
         }
-        card("Oppetid siste 30 dager") {
-            let days = Array((a.uptime90 ?? []).suffix(30))
+        card("Oppetid siste 90 dager") {
+            let days = Array((a.uptime90 ?? []).suffix(90))
             Text((a.uptimePct ?? 0) > 0 ? pct(a.uptimePct ?? 0) : "–").font(.system(.title2, design: .monospaced))
-            HStack(spacing: 2) {
+            HStack(spacing: 1) {
                 ForEach(Array(days.enumerated()), id: \.offset) { _, u in
                     RoundedRectangle(cornerRadius: 2).fill(u >= 0.999 ? Color.positive : u >= 0.98 ? Color(hex: "#F2C14E") : .domRed)
                 }
@@ -164,6 +177,49 @@ struct DomainsView: View {
             kv("DNSSEC", onOff(s?.dnssec), good: s?.dnssec)
             kv("Bot Fight Mode", onOff(s?.botFight), good: s?.botFight)
             kv("Sertifikat utløper", (s?.certExpires ?? a.sslExpires).map { "\(ddmm($0)).\($0.prefix(4))" } ?? "–")
+        }
+        card("DNS-poster") {
+            let recs = a.dns ?? []
+            if recs.isEmpty { Text("Ingen DNS-poster").font(.footnote).foregroundStyle(.white.opacity(0.6)) }
+            ForEach(Array(recs.prefix(30).enumerated()), id: \.offset) { i, r in
+                if i > 0 { Divider().overlay(.white.opacity(0.1)) }
+                HStack(alignment: .top, spacing: 10) {
+                    Text(r.type ?? "–").font(.system(.caption, design: .monospaced).weight(.bold)).foregroundStyle(Color.domPink).frame(width: 52, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(r.name ?? "–").font(.footnote.weight(.semibold)).lineLimit(1)
+                        Text(r.content ?? "").font(.system(.caption, design: .monospaced)).foregroundStyle(.white.opacity(0.65)).lineLimit(2)
+                    }
+                    Spacer(minLength: 4)
+                    Pill(text: r.proxied == true ? "Proxy" : "Kun DNS", color: r.proxied == true ? Color(hex: "#F6A04D") : .white.opacity(0.7))
+                }
+            }
+        }
+    }
+
+    /// «Domene»: status, kilde, registrar, fornyelse, SSL (gult under 30 dager), navnetjenere, IP, TLS og DNSSEC.
+    private func domainCard(_ a: Analytics) -> some View {
+        let src = store.domains?.first { $0.name == store.domain }?.source ?? a.source
+        let cert = a.security?.certExpires ?? a.sslExpires
+        let left = cert.flatMap(parseDay).map { Int(($0.timeIntervalSinceNow / 86400).rounded(.down)) }
+        let statusText = ["active": "Aktiv", "down": "Nede", "pending": "Venter", "unknown": "Ukjent"][a.status ?? "unknown"] ?? (a.status ?? "–")
+        return card("Domene") {
+            kv("Status", statusText, good: a.status == "active" ? true : a.status == "down" ? false : nil)
+            kv("Statistikkilde", sourceName(src))
+            kv("Registrar", a.registrar ?? "–")
+            kv("Fornyes", a.renews.map { "\(ddmm($0)).\($0.prefix(4))" } ?? "–")
+            HStack {
+                Text("SSL-sertifikat").foregroundStyle(.white.opacity(0.65)); Spacer()
+                Text(left.map { "\($0) dager igjen" } ?? "–").fontWeight(.medium).foregroundStyle(left.map { $0 < 30 ? Color(hex: "#F2C14E") : Color.positive } ?? .white)
+            }
+            HStack(alignment: .top) {
+                Text("Navnetjenere").foregroundStyle(.white.opacity(0.65)); Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    ForEach((a.nameServers ?? []).isEmpty ? ["–"] : a.nameServers ?? [], id: \.self) { Text($0).font(.system(.footnote, design: .monospaced)).lineLimit(1) }
+                }
+            }
+            kv("IP", a.ip ?? (a.dns ?? []).first { $0.type == "A" }?.content ?? "–")
+            kv("TLS", a.security?.minTls.map { "Minst \($0)" } ?? (a.tls ?? []).first?.label ?? "–")
+            kv("DNSSEC", onOff(a.security?.dnssec), good: a.security?.dnssec)
         }
     }
 
@@ -258,4 +314,57 @@ func flag(_ iso2: String?) -> String {
         out.unicodeScalars.append(f)
     }
     return out
+}
+
+/// «Administrer domener»: samme liste som i Homelab. API-token for Plausible og Umami legges inn på web.
+struct DomainManager: View {
+    @Environment(Store.self) private var store
+    @State private var name = ""
+    @State private var source = "cloudflare"
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    Text("Administrer domener").font(.title2.weight(.bold))
+                    Spacer()
+                    Button { store.domainManager = false } label: { Text("Ferdig").fontWeight(.semibold).foregroundStyle(Color.domPink).frame(height: 44) }.buttonStyle(.plain)
+                }
+                SectionLabel(text: "Domener")
+                VStack(spacing: 0) {
+                    let list = store.domains ?? []
+                    if list.isEmpty { Text("Ingen domener ennå.").foregroundStyle(.white.opacity(0.6)).padding(16) }
+                    ForEach(Array(list.enumerated()), id: \.element.name) { i, d in
+                        if i > 0 { Divider().overlay(.white.opacity(0.12)) }
+                        HStack(spacing: 12) {
+                            Image(systemName: "globe").foregroundStyle(Color.domPink).frame(width: 24)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(d.name).fontWeight(.semibold).lineLimit(1)
+                                Text(sourceName(d.source)).font(.caption).foregroundStyle(.white.opacity(0.6))
+                            }
+                            Spacer()
+                            Button("Fjern") { store.removeDomain(d) }.font(.subheadline.weight(.semibold)).foregroundStyle(Color.domRed)
+                        }
+                        .padding(.horizontal, 16).padding(.vertical, 12)
+                    }
+                }
+                .glass(22)
+                SectionLabel(text: "Legg til domene")
+                VStack(spacing: 10) {
+                    TextField("eksempel.no", text: $name).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
+                        .padding(.horizontal, 16).frame(height: 50).glass(25)
+                    Picker("Statistikkilde", selection: $source) { ForEach(domainSources, id: \.0) { Text($0.1).tag($0.0) } }
+                        .pickerStyle(.menu).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 8).frame(height: 46).glass(23)
+                    Button { store.addDomain(name, source: source); name = "" } label: {
+                        Text("Legg til domene").fontWeight(.bold).foregroundStyle(Color.ink).frame(maxWidth: .infinity, minHeight: 50)
+                    }
+                    .buttonStyle(.plain).glass(25, tint: .domPink).disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                    Text(source == "plausible" || source == "umami" ? "Plausible og Umami trenger API-token. Legg det inn i Homelab på web etterpå." : "API-token (Cloudflare) legges inn i Homelab på web. Uten eget token brukes standard-tokenet.")
+                        .font(.footnote).foregroundStyle(.white.opacity(0.6))
+                }
+            }
+            .padding(20)
+        }
+        .tint(.domPink)
+        .preferredColorScheme(.dark)
+    }
 }

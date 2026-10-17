@@ -7,6 +7,15 @@ import UniformTypeIdentifiers
 extension View {
     /// iOS 26 Liquid Glass når tilgjengelig, ellers uskarpt materiale med lys kant (samme uttrykk som designet 1a).
     @ViewBuilder func glass(_ radius: CGFloat = 24, tint: Color? = nil) -> some View {
+        if DesignStyle.material { materialSurface(radius, tint: tint) } else { glassIOS(radius, tint: tint) }
+    }
+
+    /// Material 3: tonal flate (kort #261E19), tint som containerfarge.
+    func materialSurface(_ radius: CGFloat, tint: Color?) -> some View {
+        self.background(tint.map { $0.opacity(0.85) } ?? M3.card, in: RoundedRectangle(cornerRadius: Swift.min(radius, 28)))
+    }
+
+    @ViewBuilder private func glassIOS(_ radius: CGFloat, tint: Color?) -> some View {
         #if compiler(>=6.2)
         if #available(iOS 26.0, *) {
             self.glassEffect(tint.map { Glass.regular.tint($0) } ?? .regular, in: .rect(cornerRadius: radius))
@@ -30,8 +39,8 @@ struct Backdrop: View {
     @Environment(Store.self) private var store
     var body: some View {
         ZStack {
-            Color(hex: "#07070A")
-            if store.colorBg {
+            Color(hex: DesignStyle.material ? "#19120E" : "#07070A")
+            if store.colorBg && !DesignStyle.material {
             Circle().fill(Color.accent).frame(width: 300).blur(radius: 90).opacity(0.55).offset(x: -140, y: -220)
             Circle().fill(Color(hex: "#4D6BFF")).frame(width: 260).blur(radius: 90).opacity(0.45).offset(x: 150, y: 80)
             Circle().fill(Color(hex: "#C24E17")).frame(width: 220).blur(radius: 80).opacity(0.4).offset(x: -40, y: 360)
@@ -725,13 +734,19 @@ struct JobQueue: View {
 
 private let sourceLabel = ["gemini": "Gemini", "hellofresh": "HelloFresh", "fixed": "Fast", "own": "Egen"]
 
-struct MatView: View {
+/// «Se hele uka og alle retter»: alle dagene med kokk, Fast og ✦, og handlelisten.
+struct MatWeekView: View {
     @Environment(Store.self) private var store
     var body: some View {
         let today = isoToday()
         ScrollView {
             VStack(spacing: 12) {
-                ModuleHeader(title: "Matplan")
+                HStack {
+                    Text("Hele uka").font(.system(size: 28, weight: .bold))
+                    Spacer()
+                    Button { store.matFull = false } label: { Text("Ferdig").fontWeight(.semibold).foregroundStyle(Color.accentLight).frame(height: 44) }.buttonStyle(.plain)
+                }
+                .padding(.top, 16)
                 if let e = store.moduleError { Empty(text: e) }
                 Button { store.planWeek() } label: { Text("✦ Ny ukeplan med Gemini").fontWeight(.bold).foregroundStyle(Color.ink).frame(maxWidth: .infinity, minHeight: 52) }
                     .buttonStyle(.plain).glass(26, tint: .accent)
@@ -764,11 +779,31 @@ struct MatView: View {
                         .padding(16).glass(22)
                         .overlay(RoundedRectangle(cornerRadius: 22).stroke(d.date == today ? Color.accent : .clear, lineWidth: 1.5))
                     }
+                    let dishes = w.dishes ?? []
+                    if !dishes.isEmpty {
+                        SectionLabel(text: "Alle retter (\(dishes.count))")
+                        VStack(spacing: 0) {
+                            ForEach(Array(dishes.enumerated()), id: \.element.id) { i, d in
+                                if i > 0 { Divider().overlay(.white.opacity(0.12)) }
+                                HStack {
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(d.name).fontWeight(.semibold).lineLimit(1)
+                                        Text("\((d.ing ?? []).count) ingredienser" + (d.src == "hellofresh" ? " · HelloFresh" : "")).font(.caption).foregroundStyle(.white.opacity(0.6))
+                                    }
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 16).padding(.vertical, 11)
+                            }
+                        }
+                        .glass(22)
+                    }
                     if !(w.shopping ?? []).isEmpty { SectionLabel(text: "Handleliste"); ShoppingList() }
                 } else if store.moduleError == nil { ProgressView().padding(30) }
             }
             .padding(.horizontal, 18).padding(.bottom, 30)
         }
+        .background(Backdrop())
+        .preferredColorScheme(.dark)
         .refreshable { try? await store.loadWeek() }
     }
 }

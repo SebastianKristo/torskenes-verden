@@ -77,6 +77,8 @@ class Api(private val baseUrl: String, private val token: String?) {
     suspend fun matPost(path: String, json: JSONObject = JSONObject()) = request("POST", path, json, prefix = MAT)
     suspend fun matPatch(path: String, json: JSONObject) = request("PATCH", path, json, prefix = MAT)
     suspend fun domGet(path: String) = request("GET", path, prefix = DOMAINS)
+    suspend fun domPost(path: String, json: JSONObject) = request("POST", path, json, prefix = DOMAINS)
+    suspend fun domDelete(path: String) = request("DELETE", path, prefix = DOMAINS)
     /** Homelab (/api): forside, søk, oppsett og profilbilde. Godtar finans-tokenet. */
     suspend fun hlGet(path: String, timeout: Int = 10_000) = request("GET", path, prefix = HOMELAB, timeout = timeout)
     suspend fun hlPost(path: String, json: JSONObject = JSONObject()) = request("POST", path, json, prefix = HOMELAB)
