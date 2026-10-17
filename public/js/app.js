@@ -3,6 +3,7 @@ import { store, on, load, mountAll } from './store.js';
 import { setupDnd, resetLayouts } from './dnd.js';
 import { applyBackground, preloadAll } from './background.js';
 import { openSettings, bindSettings } from './settings.js';
+import { bindPopup, bindSearch, menuLabels, toggle } from './extras.js';
 import * as dash from './dash.js';
 import * as study from './study.js';
 import * as space from './space.js';
@@ -49,6 +50,8 @@ function bindShell() {
     close();
     if (act === 'settings') openSettings();
     if (act === 'reset-layout') await resetLayouts();
+    if (act === 'toggle-search') await toggle('search');
+    if (act === 'toggle-news') await toggle('news');
     if (act === 'logout') { await api('/logout', { method: 'POST' }).catch(() => {}); location.href = '/login'; }
   });
   window.addEventListener('hashchange', renderRoute);
@@ -58,9 +61,13 @@ function bindShell() {
 async function main() {
   store.me = await api('/state');
   document.getElementById('menu-name').textContent = store.me.user;
-  document.getElementById('avatar').textContent = store.me.user[0] ?? 'B';
+  document.getElementById('avatar').textContent = store.me.user[0] ?? 'S';
+  menuLabels();
   bindShell();
   bindSettings();
+  bindPopup();
+  bindSearch();
+  setupDnd(document.querySelector('header'));
   study.bind(view); eco.bind(view); space.bind(view);
   preloadAll();
   applyBackground();
@@ -74,6 +81,8 @@ async function main() {
   poll('trading', 60_000);
   poll('energy', 60_000);
   poll('health', 60_000);
+  poll('upcoming', 10 * 60_000);
+  poll('news', 5 * 60_000);
   eco.loadReceipts();
   study.loadStudy();
 

@@ -1,6 +1,7 @@
 import { esc, kr, nb, signed, p2, cap, isoDay, hm, isMobile } from './util.js';
 import { store, widget, card, refresh, errBox, on } from './store.js';
 import { monthReceipts, catColor } from './eco.js';
+import { renderSearch, popHandler } from './extras.js';
 
 export const LINKS = [
   ['NRK', 'https://www.nrk.no', '#f59a8f'], ['VG', 'https://www.vg.no', '#f59a8f'], ['FINN', 'https://www.finn.no', '#a8d4fb'],
@@ -113,7 +114,8 @@ widget('d_cal', { render() {
   for (let i = 0; i < first; i++) cells += '<div class="cal-d blank"></div>';
   for (let d = 1; d <= dim; d++) {
     const ds = [...(dots[d] ?? [])].slice(0, 3).map((c) => `<i style="background:${c}"></i>`).join('');
-    cells += `<div class="cal-d${d === n.getDate() ? ' today' : ''}">${d}<div class="cal-dots">${ds}</div></div>`;
+    const iso = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    cells += `<div class="cal-d${d === n.getDate() ? ' today' : ''}" data-pop="day:${iso}" role="button" tabindex="0" aria-label="${d}. – vis detaljer">${d}<div class="cal-dots">${ds}</div></div>`;
   }
   const s = store.data.school;
   return `<div><div class="card-title">Skolekalender</div><div class="card-sub">${s && !s.configured ? 'iCal er ikke satt opp' : 'Synkronisert via iCal · Canvas'}</div></div>
@@ -124,7 +126,7 @@ widget('d_cal', { render() {
 widget('d_agenda', { cls: 'card', render() {
   const list = upcoming(isMobile() ? 4 : 6);
   return `<div><div class="card-title">${isMobile() ? 'I dag' : 'Agenda'}</div>${isMobile() ? '' : '<div class="card-sub">Kommende fra skolen</div>'}</div>
-    ${list.map((e) => `<div class="row" style="justify-content:flex-start"><span class="dot" style="background:${e.color}"></span><span class="mono sub" style="font-size:13px;width:84px;flex:0 0 auto">${esc(e.when)}</span><span style="flex:1;min-width:0">${esc(e.title)}</span><span class="mono" style="font-size:11px;color:var(--blue)">${e.tag}</span></div>`).join('')
+    ${list.map((e) => `<div class="row" style="justify-content:flex-start" data-pop="ev:${esc(e.start)}|${esc(e.title)}" role="button" tabindex="0"><span class="dot" style="background:${e.color}"></span><span class="mono sub" style="font-size:13px;width:84px;flex:0 0 auto">${esc(e.when)}</span><span style="flex:1;min-width:0">${esc(e.title)}</span><span class="mono" style="font-size:11px;color:var(--blue)">${e.tag}</span></div>`).join('')
     || (store.data.school ? '<div class="empty">Ingen kommende hendelser.</div>' : '')}${errBox('school', 'iCal')}`;
 } });
 
@@ -135,7 +137,7 @@ widget('d_trading', { render() {
   if (!t.configured) return head + '<div class="empty">Legg inn TRADING212_API_KEY på serveren.</div>';
   const cur = t.currency === 'NOK' ? 'kr' : t.currency;
   const day = t.dayChange != null ? `${signed(t.dayChange)} ${cur} (${signed(t.dayPct, 1)} %) i dag · ` : '';
-  const pos = t.positions.map((p) => `<div class="row"><span class="mono" style="font-weight:500">${esc(p.ticker)}</span><span class="mono" style="display:flex;gap:14px;font-size:13px"><span>${nb(p.value)}</span><span class="${p.pct < 0 ? 'red' : 'green'}" style="width:62px;text-align:right">${signed(p.pct, 1)} %</span></span></div>`).join('');
+  const pos = t.positions.map((p, i) => `<div class="row" data-pop="pos:${i}" role="button" tabindex="0"><span class="mono" style="font-weight:500">${esc(p.ticker)}</span><span class="mono" style="display:flex;gap:14px;font-size:13px"><span>${nb(p.value)}</span><span class="${p.pct < 0 ? 'red' : 'green'}" style="width:62px;text-align:right">${signed(p.pct, 1)} %</span></span></div>`).join('');
   return `${head}<div style="display:flex;align-items:flex-start;gap:6px"><div class="big">${nb(t.total)}</div><div class="sub" style="font-size:16px">${esc(cur)}</div></div>
     <div class="mono ${(t.dayChange ?? t.ppl) < 0 ? 'red' : 'green'}" style="font-size:13px">${day}${signed(t.pplPct, 1)} % totalt</div>${pos}${t.stale ? '<div class="empty">Viser sist hentede verdier.</div>' : ''}`;
 } });
@@ -165,6 +167,74 @@ widget('d_links', { render() {
   return `<div><div class="card-title">Snarveier</div><div class="card-sub">Nyheter, AI, skole og nettverk</div></div><div class="tiles">${tiles()}</div>`;
 } });
 
+/* ---------- Kommer ut (Sonarr/Radarr) ---------- */
+
+const dayFmt = (iso) => {
+  if (!iso) return 'overvåkes';
+  const d = new Date(iso), days = Math.round((new Date(isoDay(d)) - new Date(isoDay(store.now))) / 86400000);
+  if (days === 0) return 'i dag';
+  if (days === 1) return 'i morgen';
+  return d.toLocaleDateString('nb-NO', { weekday: 'short', day: '2-digit', month: '2-digit' }).replace(/\.$/, '');
+};
+
+function posters(kind, items) {
+  return `<div class="posters">${items.slice(0, isMobile() ? 6 : 12).map((m, i) => `<button class="poster" data-pop="up:${kind}:${i}">
+    <div class="poster-img" style="${m.img ? `background-image:url('${esc(m.img)}')` : ''}">${m.img ? '' : `<span class="ph">${esc(m.title)}</span>`}<span class="badge" style="${m.date ? '' : 'color:#f3d38a'}">${esc(dayFmt(m.date))}</span></div>
+    <b>${esc(m.title)}</b><span>${esc(m.sub)}</span></button>`).join('')}</div>`;
+}
+
+widget('d_upcoming', { render() {
+  const u = store.data.upcoming;
+  const links = u ? [['Sonarr', u.tv], ['Radarr', u.movies]].filter(([, x]) => x.url).map(([n, x]) => `<a class="btn" href="${esc(x.url)}" target="_blank" rel="noopener">${n} ↗</a>`).join('') : '';
+  const head = `<div class="card-head"><div><div class="card-title">Kommer ut</div><div class="card-sub">Sonarr · Radarr</div></div><div style="display:flex;gap:6px">${links}</div></div>`;
+  if (!u) return head + (errBox('upcoming', 'Sonarr/Radarr') || '<div class="skeleton" style="min-height:160px"></div>');
+  if (!u.tv.configured && !u.movies.configured) return head + '<div class="empty">Legg inn URL og API-nøkkel for Sonarr og Radarr under Innstillinger → Integrasjoner.</div>';
+  const part = (label, x, kind) => !x.configured ? '' : `<div class="section-label">${label}</div>${x.error ? `<div class="err">${esc(x.error)}</div>` : x.items.length ? posters(kind, x.items) : '<div class="empty">Ingenting i perioden.</div>'}`;
+  return head + part('TV-serier', u.tv, 'tv') + part('Filmer', u.movies, 'movies');
+} });
+
+popHandler('up', (key) => {
+  const [kind, i] = key.split(':');
+  const m = store.data.upcoming?.[kind]?.items[+i];
+  if (!m) return null;
+  const when = m.date ? new Date(m.date).toLocaleString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long', hour: kind === 'tv' ? '2-digit' : undefined, minute: kind === 'tv' ? '2-digit' : undefined }) : 'Ingen dato ennå';
+  return { title: m.title, body: `${m.img ? `<img class="popup-poster" src="${esc(m.img)}" alt="">` : ''}
+    <div class="sub">${esc(m.sub)}</div><div class="mono" style="font-size:13px;color:var(--blue)">${esc(cap(when))} · ${esc(m.status)}</div>
+    ${m.overview ? `<div class="sub" style="font-size:14px;line-height:1.5">${esc(m.overview)}</div>` : ''}
+    ${m.url && m.url !== '#' ? `<a class="btn" href="${esc(m.url)}" target="_blank" rel="noopener" style="align-self:flex-start">Åpne i ${kind === 'tv' ? 'Sonarr' : 'Radarr'} ↗</a>` : ''}` };
+});
+
+/* ---------- Popup for kalenderdag, agenda og aksjer ---------- */
+
+const evRow = (e) => `<div class="row" style="justify-content:flex-start"><span class="dot" style="background:${e.color}"></span><span class="mono sub" style="font-size:13px;width:48px;flex:0 0 auto">${e.allDay ? 'hele' : hm(new Date(e.start))}</span><span style="flex:1;min-width:0">${esc(e.title)}</span><span class="muted" style="font-size:12px">${esc(e.location)}</span></div>`;
+
+popHandler('day', (iso) => {
+  const list = events().filter((e) => isoDay(new Date(e.start)) === iso);
+  const d = new Date(iso + 'T12:00');
+  return { title: cap(d.toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' })),
+    body: list.map(evRow).join('') || '<div class="empty">Ingen hendelser</div>' };
+});
+
+popHandler('ev', (key) => {
+  const [start, title] = key.split('|');
+  const e = events().find((x) => x.start === start && x.title === title);
+  if (!e) return null;
+  const s = new Date(e.start), en = new Date(e.end);
+  const campus = store.data.school?.mazemapCampusId;
+  const map = e.location ? `https://use.mazemap.com/#v=1${campus ? `&campusid=${encodeURIComponent(campus)}` : ''}&search=${encodeURIComponent(e.location)}` : null;
+  return { title: e.title, body: `<div class="mono sub" style="font-size:13px">${cap(s.toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' }))}${e.allDay ? '' : ` · ${hm(s)}–${hm(en)}`}</div>
+    ${e.location ? `<div>Rom/sted: <b>${esc(e.location)}</b></div>` : ''}${e.deadline ? '<div style="color:var(--red)">Frist</div>' : ''}
+    ${map ? `<a class="btn" href="${esc(map)}" target="_blank" rel="noopener" style="align-self:flex-start">MazeMap ↗</a>` : ''}` };
+});
+
+popHandler('pos', (i) => {
+  const t = store.data.trading, p = t?.positions[+i];
+  if (!p) return null;
+  return { title: p.ticker, body: `<div class="big">${nb(p.value)} <span class="sub" style="font-size:16px">${esc(t.currency === 'NOK' ? 'kr' : t.currency)}</span></div>
+    <div class="mono ${p.pct < 0 ? 'red' : 'green'}">${signed(p.ppl)} (${signed(p.pct, 1)} %) urealisert</div>
+    <div class="muted" style="font-size:12px">Andel av porteføljen: ${nb((p.value / t.total) * 100, 1)} %</div>` };
+});
+
 widget('d_weather_m', { cls: 'card glass', render: () => renderWeather(true) });
 
 /* ---------- Side ---------- */
@@ -177,13 +247,17 @@ export function render() {
       <div class="clock"><div class="clock-hm" id="clock-hm">${p2(n.getHours())}:${p2(n.getMinutes())}</div><div class="clock-s" id="clock-s">${p2(n.getSeconds())}</div></div>
       <div id="lesson">${renderLesson()}</div></div>`;
   if (mob) {
-    return `${hello}<div class="trips" id="trips">${renderTrips()}</div>
-      <div class="grid" data-dnd="m_home">${['d_weather_m', 'd_agenda', 'd_trading', 'd_energy', 'd_eco'].map(card).join('')}</div>`;
+    return `${hello}<div class="trips" id="trips">${renderTrips()}</div>${store.me.hideSearch ? '' : renderSearch()}
+      <div class="grid" data-dnd="m_home">${['d_weather_m', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_upcoming'].map(card).join('')}</div>`;
   }
+  // Toppområdet kan omorganiseres; søkebaren ligger som standard mellom avganger og klokke.
   return `<div style="display:flex;flex-direction:column;gap:28px">
-    <div class="trips" id="trips">${renderTrips()}</div>
-    <div class="hero">${hello}<section class="card glass weather" id="weather">${renderWeather()}</section></div>
-    <div class="grid" data-dnd="dash">${['d_cal', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_links'].map(card).join('')}</div></div>`;
+    <div data-dnd="top" style="display:flex;flex-direction:column;gap:24px">
+      <div class="trips" id="trips">${renderTrips()}</div>
+      ${store.me.hideSearch ? '' : renderSearch()}
+      <div class="hero">${hello}<section class="card glass weather" id="weather">${renderWeather()}</section></div>
+    </div>
+    <div class="grid" data-dnd="dash">${['d_cal', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_links', 'd_upcoming'].map(card).join('')}</div></div>`;
 }
 
 const setHtml = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
@@ -209,4 +283,5 @@ on('weather', () => { setHtml('weather', renderWeather()); refresh('d_weather_m'
 on('school', () => { setHtml('lesson', renderLesson()); refresh('d_cal', 'd_agenda'); });
 on('trading', () => refresh('d_trading'));
 on('energy', () => refresh('d_energy'));
+on('upcoming', () => refresh('d_upcoming'));
 on('receipts', () => refresh('d_eco'));

@@ -88,9 +88,21 @@ Bildet bygges og publiseres til GHCR av `.github/workflows/docker.yml` ved hver 
 | Energi | Home Assistant REST | `HA_URL`, `HA_TOKEN`, `HA_SENSOR_*` |
 | Starlink | CelesTrak TLE (cache 6 t) + satellite.js i nettleseren | – |
 | APOD / galleri | api.nasa.gov / images-api.nasa.gov | `NASA_API_KEY` |
+| Kommer ut | Sonarr/Radarr `/api/v3/calendar` (cache 10 min) | `SONARR_*`, `RADARR_*` |
+| Nyhetslinje | NRK og VG RSS (cache 5 min) | – |
 | Helsesjekk | HTTP-ping fra serveren (godtar selvsignert TLS) | `ROUTER_URL`, `PROXMOX_URL`, … |
 
 En integrasjon uten konfigurasjon viser en forklaring i kortet sitt i stedet for å feile.
+
+Alle integrasjonene kan også settes opp fra siden under **Innstillinger → Integrasjoner**. Verdier som lagres der, overstyrer `.env` og lagres i databasen. Hemmeligheter (API-nøkler, tokens og iCal-URL) sendes aldri tilbake til nettleseren: feltet viser bare «lagret», og du kan fjerne verdien slik at `.env` brukes igjen.
+
+## Tilpasning
+- **Endre rekkefølge:** dra og slipp elementer i headeren, fanene, toppområdet på dashboardet (avganger, søkebar, klokke/vær) og alle kortrutenett.
+- **Endre størrelse:** dra i det usynlige hjørnet nederst til høyre på et kort (desktop). Bredden snapper til hele kolonner, og høyden er fri. Dobbeltklikk på hjørnet nullstiller kortet. Kortene pakkes tett (masonry), så ulike høyder kan kombineres.
+- **Tilbakestill layout** i profilmenyen nullstiller både rekkefølge og størrelser.
+- **Søkebar:** fire stiler velges under Innstillinger → Utseende. Søkebaren kan skjules fra profilmenyen.
+- **Nyhetslinje:** kan skjules fra profilmenyen. Den stopper ved hover og står stille når «redusert bevegelse» er slått på i systemet.
+- **Popup:** klikk på en kalenderdag, en agenda-rad, en aksje eller en plakat for å se detaljer.
 
 ## Struktur
 ```

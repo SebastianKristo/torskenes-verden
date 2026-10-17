@@ -11,6 +11,7 @@ import { db, kv, OWNER } from './db.js';
 import { verifyPassword } from './password.js';
 import { createSession, destroySession, sessionUser, requireAuth, clientIp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
 import * as integrations from './integrations.js';
+import { cfg, publicConfig, updateConfig } from './settings.js';
 
 const api = process.env.MOCK_DATA === '1' ? await import('./mock.js') : integrations;
 if (api !== integrations) console.warn('[mock] MOCK_DATA=1 – viser eksempeldata.');
@@ -25,10 +26,11 @@ app.use('*', secureHeaders({
     scriptSrc: ["'self'"],
     styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
     fontSrc: ['https://fonts.gstatic.com'],
-    imgSrc: ["'self'", 'data:', 'blob:', 'https://upload.wikimedia.org', 'https://commons.wikimedia.org', 'https://apod.nasa.gov', 'https://images-assets.nasa.gov', 'https://img.youtube.com'],
+    // Plakater fra Sonarr/Radarr kommer fra varierende CDN-er (TheTVDB, TMDB, fanart.tv), så alle https-bilder tillates.
+    imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
     connectSrc: ["'self'"],
     frameAncestors: ["'none'"],
-    formAction: ["'self'"],
+    formAction: ["'self'", 'https:'],
     baseUri: ["'self'"],
   },
   crossOriginEmbedderPolicy: false,
@@ -71,7 +73,7 @@ app.post('/api/logout', (c) => { destroySession(c); return c.json({ ok: true });
 /* ---------------- CV (offentlig lesing) ---------------- */
 
 export const CV_DEFAULT = {
-  name: 'Benjamin Kristoffersen', title: 'Elev · IT og homelab-entusiast', email: 'benjamin@kristo.no', phone: '+47 900 00 000', place: 'Oslo',
+  name: 'Sebastian', title: 'Elev · IT og homelab-entusiast', email: 'navn@eksempel.no', phone: '+47 900 00 000', place: 'Oslo',
   about: 'Elev med stor interesse for nettverk, servere og automatisering. Driver eget homelab med Proxmox, Home Assistant og Pi-hole.',
   work: '2025 – nå | Deltid, Komplett | Kundeservice og produktveiledning\n2024 | Sommerjobb, Oslo kommune | IT-support for skoler',
   edu: '2024 – nå | Videregående, studiespesialisering | Matematikk R2, Fysikk 2\n2021 – 2024 | Ungdomsskole | ',
@@ -106,14 +108,19 @@ authed.get('/state', (c) => {
   const layouts = Object.fromEntries(db.prepare("SELECT key, value FROM kv WHERE user=? AND key LIKE 'layout_%'").all(u).map((r) => [r.key.slice(7), JSON.parse(r.value)]));
   return c.json({
     user: config.userName,
-    place: config.location.name,
+    place: cfg('wx_place'),
     bg: kv.get(u, 'bg', 'mane'),
     bgCustom: kv.get(u, 'bg_custom', {}),
     budget: kv.get(u, 'budget', 8000),
     categories: kv.get(u, 'categories', DEFAULT_CATS),
     loan: kv.get(u, 'loan', DEFAULT_LOAN),
     city: kv.get(u, 'city', 'Oslo'),
-    schoolUrl: config.schoolUrl,
+    schoolUrl: cfg('school_url'),
+    searchUrl: cfg('search_url'),
+    searchStyle: kv.get(u, 'search_style', 'wide'),
+    hideSearch: kv.get(u, 'hide_search', false),
+    hideNews: kv.get(u, 'hide_news', false),
+    sizes: Object.fromEntries(db.prepare("SELECT key, value FROM kv WHERE user=? AND key LIKE 'size_%'").all(u).map((r) => [r.key.slice(5), JSON.parse(r.value)])),
     layouts,
   });
 });
@@ -123,18 +130,34 @@ const SETTINGS = {
   budget: (v) => Number.isFinite(v) && v >= 0,
   city: (v) => typeof v === 'string' && v.length < 40,
   categories: (v) => Array.isArray(v) && v.length <= 20 && v.every((x) => typeof x.name === 'string' && x.name.length <= 30 && /^#[0-9a-f]{6}$/i.test(x.color)),
+  search_style: (v) => ['light', 'dark', 'wide', 'wideLight'].includes(v),
+  hide_search: (v) => typeof v === 'boolean',
+  hide_news: (v) => typeof v === 'boolean',
   loan: (v) => v && typeof v === 'object' && ['debt', 'grantMonthly', 'progress'].every((k) => Number.isFinite(v[k])) && typeof v.nextPayout === 'string',
 };
 authed.put('/settings/:key', async (c) => {
   const key = c.req.param('key');
   const { value } = await c.req.json();
   if (key.startsWith('layout_')) {
-    if (!/^layout_[a-z_]{1,20}$/.test(key) || !Array.isArray(value) || !value.every(Number.isInteger)) return c.json({ error: 'Ugyldig' }, 400);
+    if (!/^layout_[a-z0-9_]{1,20}$/.test(key) || !Array.isArray(value) || !value.every(Number.isInteger)) return c.json({ error: 'Ugyldig' }, 400);
+  } else if (key.startsWith('size_')) {
+    // { indeks: { s: kolonner, h: høyde i px } }
+    const ok = /^size_[a-z0-9_]{1,20}$/.test(key) && value && typeof value === 'object' && Object.entries(value).length <= 40
+      && Object.entries(value).every(([i, v]) => /^\d+$/.test(i) && Number.isInteger(v?.s) && v.s >= 1 && v.s <= 6 && (v.h === 0 || (Number.isInteger(v.h) && v.h >= 120 && v.h <= 4000)));
+    if (!ok) return c.json({ error: 'Ugyldig' }, 400);
   } else if (!SETTINGS[key]?.(value)) return c.json({ error: 'Ugyldig verdi' }, 400);
   kv.set(c.get('user'), key, value);
   return c.json({ ok: true });
 });
-authed.delete('/layouts', (c) => { kv.delPrefix(c.get('user'), 'layout_'); return c.json({ ok: true }); });
+authed.delete('/layouts', (c) => { kv.delPrefix(c.get('user'), 'layout_'); kv.delPrefix(c.get('user'), 'size_'); return c.json({ ok: true }); });
+
+/* --- Integrasjonsinnstillinger --- */
+
+authed.get('/config', (c) => c.json(publicConfig()));
+authed.put('/config', async (c) => {
+  try { updateConfig(await c.req.json()); } catch (e) { return c.json({ error: e.message }, 400); }
+  return c.json(publicConfig());
+});
 
 /* --- Filer (kvitteringer og bakgrunner) --- */
 
@@ -283,6 +306,8 @@ authed.get('/trading', proxy(async () => {
 }));
 authed.get('/energy', proxy(api.getEnergy));
 authed.get('/health', proxy(api.getHealth));
+authed.get('/upcoming', proxy(api.getUpcoming));
+authed.get('/news', proxy(api.getNews));
 authed.get('/space/tle', proxy(api.getTle));
 authed.get('/space/apod', proxy(api.getApod));
 authed.get('/space/gallery/:key', proxy((c) => {

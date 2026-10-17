@@ -30,3 +30,5 @@ export async function fetchJson(url, opts = {}, timeoutMs = 10_000) {
   if (!res.ok) throw new Error(`${new URL(url).host} svarte ${res.status}`);
   return res.json();
 }
+
+export function clearCache() { store.clear(); }

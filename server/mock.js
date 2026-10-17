@@ -9,7 +9,7 @@ const dayAt = (offset, h, m) => { const d = todayAt(h, m); d.setDate(d.getDate()
 export const getRuter = async () => ({
   trips: [['Amagerveien', 'Majorstuen', 'T5', 'metro', [3, 11, 19]], ['Frydenlund', 'Majorstuen', '19', 'tram', [2, 7, 14]],
     ['Majorstuen', 'Amagerveien', 'T5', 'metro', [5, 13, 21]], ['Majorstuen', 'Holbergs plass', '19', 'tram', [4, 9, 16]]]
-    .map(([from, to, line, mode, mins]) => ({ from, to, url: real.ruterUrl(from, to), deps: mins.map((m, i) => ({ line: i === 1 && mode === 'tram' ? (to === 'Majorstuen' ? '12' : '11') : line, mode, time: at(m) })) })),
+    .map(([from, to, line, mode, mins]) => ({ from, to, url: 'https://reise.ruter.no/', deps: mins.map((m, i) => ({ line: i === 1 && mode === 'tram' ? (to === 'Majorstuen' ? '12' : '11') : line, mode, time: at(m) })) })),
   updated: new Date().toISOString(),
 });
 
@@ -50,3 +50,21 @@ export const getHealth = async () => ({
     .map(([name, url, up]) => ({ name, url, host: url.replace(/^https?:\/\//, ''), up: !!up, ms: 12, error: up ? undefined : 'ECONNREFUSED' })),
   checked: new Date().toISOString(),
 });
+
+export const getUpcoming = async () => {
+  const d = (n) => { const x = new Date(); x.setDate(x.getDate() + n); return x.toISOString(); };
+  return {
+    tv: { configured: true, url: 'http://192.168.1.20:8989/calendar', items: [
+      ['Severance', 'S02E09 · The After Hours', 1], ['The Bear', 'S04E01 · Tonnato', 3], ['Shōgun', 'S02E02', 6], ['Slow Horses', 'S05E04', 9],
+    ].map(([title, sub, n]) => ({ kind: 'tv', title, sub, date: d(n), img: null, status: 'kommer', overview: 'Eksempeldata – koble til Sonarr i Innstillinger.', url: '#' })) },
+    movies: { configured: true, url: 'http://192.168.1.20:7878/calendar', items: [
+      ['Dune: Messiah', 'kino · 2026', 5], ['Mickey 17', 'digital · 2025', 12], ['The Batman Part II', 'kino · 2026', null],
+    ].map(([title, sub, n]) => ({ kind: 'movie', title, sub, date: n ? d(n) : null, img: null, status: n ? sub.split(' ')[0] : 'overvåkes', overview: 'Eksempeldata – koble til Radarr i Innstillinger.', url: '#' })) },
+  };
+};
+
+export const getNews = async () => ({ items: [
+  ['NRK', '#0b4ea2', 'Regjeringen legger fram statsbudsjettet for 2027', 12], ['VG', '#c8102e', 'Rekordmange søker seg til IT-utdanning', 25],
+  ['NRK', '#0b4ea2', 'Kraftig regn ventes på Østlandet i helgen', 41], ['VG', '#c8102e', 'Bodø/Glimt klare for nytt europaeventyr', 58],
+  ['NRK', '#0b4ea2', 'Ny T-banetunnel åpner neste år', 73], ['VG', '#c8102e', 'Slik får du billigere strøm i vinter', 95],
+].map(([src, color, title, m]) => ({ src, color, title, url: src === 'NRK' ? 'https://www.nrk.no' : 'https://www.vg.no', date: new Date(Date.now() - m * 60000).toISOString() })) });

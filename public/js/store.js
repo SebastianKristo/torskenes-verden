@@ -43,7 +43,9 @@ export function refresh(...ids) {
     document.querySelectorAll(`[data-w="${id}"]`).forEach((el) => {
       // Ikke tegn på nytt mens brukeren skriver i et felt i kortet.
       if (el.contains(document.activeElement) && /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+      const handle = el.querySelector(':scope > .resize-h');
       el.innerHTML = safe(w);
+      if (handle) el.appendChild(handle);
       w.mounted?.(el);
     });
   }

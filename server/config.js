@@ -18,7 +18,7 @@ export const config = {
   secureCookies: env('COOKIE_SECURE', 'true') !== 'false',
   passwordHash: env('APP_PASSWORD_HASH'),
   sessionSecret: env('SESSION_SECRET'),
-  userName: env('USER_NAME', 'Benjamin'),
+  userName: env('USER_NAME', 'Sebastian'),
   trading212Key: env('TRADING212_API_KEY'),
   trading212Base: env('TRADING212_BASE', 'https://live.trading212.com'),
   ha: {

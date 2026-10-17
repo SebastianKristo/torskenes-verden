@@ -20,17 +20,19 @@
 <body>
 <div class="bg" aria-hidden="true"><div class="bg-layer"></div><div class="bg-layer"></div></div>
 <div class="shell">
-  <header class="top">
+  <header class="top" data-dnd="head">
     <a class="logo" href="#/dash" aria-label="Til dashboard">OS</a>
-    <nav class="pillnav" aria-label="Hovedmeny">
+    <nav class="pillnav" aria-label="Hovedmeny" data-dnd="tabs">
       <a href="#/dash" data-r="dash">Dashboard</a><a href="#/studie" data-r="studie">Studie</a><a href="#/rom" data-r="rom">Rom</a><a href="#/okonomi" data-r="okonomi">Økonomi</a><a href="#/nettverk" data-r="nettverk">Nettverk</a>
     </nav>
     <a class="pill" id="wx-pill" href="https://www.yr.no" target="_blank" rel="noopener"><b>–°C</b> <span class="muted">laster…</span></a>
     <div class="profile">
-      <button class="profile-btn" id="profile-btn" aria-haspopup="menu" aria-expanded="false" aria-label="Profilmeny"><span class="burger"><i></i><i></i><i></i></span><span class="avatar" id="avatar">B</span></button>
+      <button class="profile-btn" id="profile-btn" aria-haspopup="menu" aria-expanded="false" aria-label="Profilmeny"><span class="burger"><i></i><i></i><i></i></span><span class="avatar" id="avatar">S</span></button>
       <div class="menu" id="menu" role="menu" hidden>
-        <div class="menu-head" id="menu-name">Benjamin</div>
+        <div class="menu-head" id="menu-name">Sebastian</div>
         <button role="menuitem" data-act="settings">Innstillinger</button>
+        <button role="menuitem" data-act="toggle-search" id="menu-search">Skjul søkebar</button>
+        <button role="menuitem" data-act="toggle-news" id="menu-news">Skjul nyhetslinje</button>
         <button role="menuitem" data-act="reset-layout">↺ Tilbakestill layout</button>
         <a role="menuitem" href="/cv" target="_blank">CV ↗</a>
         <hr>
@@ -38,11 +40,13 @@
       </div>
     </div>
   </header>
+  <div class="ticker" id="ticker" hidden></div>
   <main id="view"></main>
 </div>
 <nav class="bottomnav" aria-label="Mobilmeny">
   <a href="#/dash" data-r="dash">Hjem</a><a href="#/studie" data-r="studie">Studie</a><a href="#/okonomi" data-r="okonomi">Økonomi</a><a href="#/mer" data-r="mer">Mer</a>
 </nav>
 <div class="modal" id="settings" hidden></div>
+<div class="popup" id="popup" hidden></div>
 </body>
 </html>

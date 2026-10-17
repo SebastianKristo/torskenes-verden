@@ -27,6 +27,13 @@
 - **PUID/PGID:** entrypointen bruker `setpriv` (allerede i Debian, ingen ekstra pakke) for å bytte bruker etter å ha rettet eierskapet på `/data`.
 - **Passord-hash med `:`** fordi Compose interpolerer `$` i env-filer.
 
+## Prompt 03
+- **Innstillinger fra siden:** integrasjonsinnstillinger lagres i databasen (`kv` → `cfg`) og overstyrer env. Hemmeligheter returneres aldri til klienten. Ved lagring tømmes cachen, slik at endringer vises med en gang.
+- **Ruter-strekninger** konfigureres som tekst («Fra (NSR-ID) > Til (NSR-ID)») i stedet for en liste med stopp, fordi dashboardet viser strekninger.
+- **Plakater** lastes direkte fra Sonarr/Radarr sine `remoteUrl`-er (TMDB/TheTVDB). CSP tillater derfor `img-src https:`.
+- **Pålitelig enhet på lokalt nett er ikke implementert.** Funksjonen hopper over passordet, og ble stoppet av sikkerhetssjekken i utviklingsmiljøet. Den venter på eksplisitt godkjenning fra eieren. Hvis den bygges, må LAN-sjekken bruke socket-adressen eller `CF-Connecting-IP`, aldri `X-Forwarded-For`.
+- **Navn:** standard `USER_NAME` er nå Sebastian. CV-ens standardtekst har nøytral e-post.
+
 ## Åpne spørsmål / plassholdere
 - Skole: `MAZEMAP_CAMPUS_ID` og `SCHOOL_URL` står tomme (lenken peker til vilbli.no).
 - NSR-ID-ene (Majorstuen 58381, Amagerveien 6354, Frydenlund 6258, Holbergs plass 63280) er brukt som oppgitt. De kunne ikke verifiseres fra utviklingsmiljøet fordi det ikke hadde nettilgang. Sjekk dem i Entur-geocoderen, og overstyr med `RUTER_ROUTES` eller `STOPS` i `server/integrations.js`.
