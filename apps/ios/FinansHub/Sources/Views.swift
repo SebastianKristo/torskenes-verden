@@ -27,12 +27,15 @@ extension View {
 
 /// Bakgrunn med fargeflekker bak glasset.
 struct Backdrop: View {
+    @Environment(Store.self) private var store
     var body: some View {
         ZStack {
             Color(hex: "#07070A")
+            if store.colorBg {
             Circle().fill(Color.accent).frame(width: 300).blur(radius: 90).opacity(0.55).offset(x: -140, y: -220)
             Circle().fill(Color(hex: "#4D6BFF")).frame(width: 260).blur(radius: 90).opacity(0.45).offset(x: 150, y: 80)
             Circle().fill(Color(hex: "#C24E17")).frame(width: 220).blur(radius: 80).opacity(0.4).offset(x: -40, y: 360)
+            }
         }
         .ignoresSafeArea()
     }
@@ -44,7 +47,7 @@ struct RootView: View {
     @Environment(Store.self) private var store
     @Environment(\.horizontalSizeClass) private var hSize
     @State private var showCamera = false
-    @State private var photoItem: PhotosPickerItem?
+    @State private var photoItems: [PhotosPickerItem] = []
     @State private var showPdf = false
 
     var body: some View {
@@ -56,13 +59,13 @@ struct RootView: View {
                 // iPad: sidefelt + liste + detalj.
                 HStack(spacing: 0) {
                     Sidebar(scan: { showCamera = true })
-                    MainPane(scan: { showCamera = true }, photo: $photoItem, pdf: $showPdf).frame(maxWidth: .infinity)
+                    MainPane(scan: { showCamera = true }, photos: $photoItems, pdf: $showPdf).frame(maxWidth: .infinity)
                     Divider().overlay(.white.opacity(0.1))
                     DetailPane().frame(maxWidth: .infinity)
                 }
             } else {
-                MainPane(scan: { showCamera = true }, photo: $photoItem, pdf: $showPdf)
-                    .safeAreaInset(edge: .bottom) { TabBar(scan: { showCamera = true }) }
+                MainPane(scan: { showCamera = true }, photos: $photoItems, pdf: $showPdf)
+                    .safeAreaInset(edge: .bottom) { if !(store.selectedTx != nil && (store.tab == .home || store.tab == .list)) { TabBar() } }
             }
             if store.busy { ProgressView().controlSize(.large).padding(30).glass(20) }
             if let msg = store.message {
@@ -73,18 +76,30 @@ struct RootView: View {
         .preferredColorScheme(.dark)
         .tint(.accent)
         .fullScreenCover(isPresented: $showCamera) { CameraView { img in if let img { store.upload(image: img) } }.ignoresSafeArea() }
-        .onChange(of: photoItem) { _, item in
-            guard let item else { return }
+        .onChange(of: photoItems) { _, items in
+            guard !items.isEmpty else { return }
             Task {
-                if let d = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: d) { store.upload(image: img) }
-                photoItem = nil
+                var files: [Store.Upload] = []
+                for item in items {
+                    if let d = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: d) { files.append(.image(img)) }
+                }
+                photoItems = []
+                store.upload(files)
             }
         }
-        .fileImporter(isPresented: $showPdf, allowedContentTypes: [.pdf, .image]) { result in
-            guard case .success(let url) = result, url.startAccessingSecurityScopedResource() else { return }
-            defer { url.stopAccessingSecurityScopedResource() }
-            guard let d = try? Data(contentsOf: url) else { return }
-            if url.pathExtension.lowercased() == "pdf" { store.upload(pdf: d) } else if let img = UIImage(data: d) { store.upload(image: img) }
+        .fileImporter(isPresented: $showPdf, allowedContentTypes: [.pdf, .image], allowsMultipleSelection: true) { result in
+            guard case .success(let urls) = result else { return }
+            var files: [Store.Upload] = []
+            for url in urls {
+                guard url.startAccessingSecurityScopedResource() else { continue }
+                defer { url.stopAccessingSecurityScopedResource() }
+                guard let d = try? Data(contentsOf: url) else { continue }
+                if url.pathExtension.lowercased() == "pdf" { files.append(.pdf(d)) } else if let img = UIImage(data: d) { files.append(.image(img)) }
+            }
+            store.upload(files)
+        }
+        .sheet(isPresented: Binding(get: { store.menuOpen }, set: { store.menuOpen = $0 })) {
+            ProfileMenu().presentationDetents([.medium, .large]).presentationBackground(.ultraThinMaterial)
         }
     }
 }
@@ -92,11 +107,10 @@ struct RootView: View {
 /// Flytende fanelinje i glass med egen skanneknapp.
 struct TabBar: View {
     @Environment(Store.self) private var store
-    let scan: () -> Void
     var body: some View {
         HStack(spacing: 10) {
             HStack(spacing: 0) {
-                ForEach([Tab.home, .list, .budget, .me]) { t in
+                ForEach([Tab.home, .list, .budget, .mat]) { t in
                     Button { store.go(t) } label: {
                         VStack(spacing: 2) { Image(systemName: t.icon).font(.system(size: 20)); Text(t.rawValue).font(.system(size: 10.5, weight: .semibold)) }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -106,9 +120,9 @@ struct TabBar: View {
                 }
             }
             .padding(5).frame(height: 64).glass(32)
-            Button(action: scan) { Image(systemName: "doc.viewfinder").font(.system(size: 24, weight: .semibold)).foregroundStyle(.white).frame(width: 64, height: 64) }
+            Button { store.go(.scan) } label: { Image(systemName: "doc.viewfinder").font(.system(size: 24, weight: .semibold)).foregroundStyle(.white).frame(width: 64, height: 64) }
                 .glass(32, tint: .accent)
-                .accessibilityLabel("Skann kvittering")
+                .accessibilityLabel("Last opp kvitteringer")
         }
         .padding(.horizontal, 16).padding(.bottom, 6)
     }
@@ -119,7 +133,7 @@ struct Sidebar: View {
     let scan: () -> Void
     var body: some View {
         VStack(spacing: 18) {
-            Button(action: scan) { Image(systemName: "doc.viewfinder").font(.title2).foregroundStyle(.white).frame(width: 56, height: 56) }.glass(28, tint: .accent)
+            Button { store.go(.scan) } label: { Image(systemName: "doc.viewfinder").font(.title2).foregroundStyle(.white).frame(width: 56, height: 56) }.glass(28, tint: .accent)
             ForEach(Tab.allCases) { t in
                 Button { store.go(t) } label: {
                     VStack(spacing: 4) { Image(systemName: t.icon).font(.title3); Text(t.rawValue).font(.caption.weight(.semibold)) }
@@ -138,15 +152,17 @@ struct MainPane: View {
     @Environment(Store.self) private var store
     @Environment(\.horizontalSizeClass) private var hSize
     let scan: () -> Void
-    @Binding var photo: PhotosPickerItem?
+    @Binding var photos: [PhotosPickerItem]
     @Binding var pdf: Bool
     var body: some View {
         switch store.tab {
-        case .home: HomeView()
-        case .list: ListView()
+        case .home, .list:
+            if hSize != .regular, store.selectedTx != nil { TxDetail(back: true) }
+            else if store.tab == .home { HomeView() } else { ListView() }
         case .budget: BudgetView()
+        case .mat: MatView()
         case .scan:
-            if hSize != .regular, store.selectedReceipt != nil { ConfirmView(back: true) } else { ScanView(scan: scan, photo: $photo, pdf: $pdf) }
+            if hSize != .regular, store.selectedReceipt != nil { ConfirmView(back: true) } else { ScanView(scan: scan, photos: $photos, pdf: $pdf) }
         case .me: MeView()
         }
     }
@@ -159,7 +175,8 @@ struct DetailPane: View {
         case .scan: if store.selectedReceipt != nil { ConfirmView(back: false) } else { Empty(text: "Velg en kvittering.") }
         case .budget: BudgetDetail()
         case .me: ScrollView { Hero().padding(20) }
-        default: TxDetail()
+        case .mat: ScrollView { ShoppingList().padding(20) }
+        default: TxDetail(back: false)
         }
     }
 }
@@ -186,15 +203,42 @@ struct Initial: View {
     }
 }
 
+/// Butikklogo (favicon via serverens cache) på hvit flate; initial når domenet er ukjent.
+struct Logo: View {
+    @Environment(Store.self) private var store
+    let domain: String?
+    let name: String
+    let color: String
+    var size: CGFloat = 40
+    @State private var img: UIImage?
+    var body: some View {
+        Group {
+            if let img {
+                Image(uiImage: img).resizable().scaledToFit().padding(size / 9)
+                    .frame(width: size, height: size).background(.white, in: RoundedRectangle(cornerRadius: size / 4))
+            } else { Initial(text: name, color: color, size: size) }
+        }
+        .task(id: domain) { img = await store.logo(domain) }
+    }
+}
+
+struct AiLine: View {
+    let text: String?
+    var body: some View {
+        if let text, !text.isEmpty { Text("✦ " + text).font(.system(size: 12)).foregroundStyle(Color.accentLight).lineLimit(1) }
+    }
+}
+
 struct TxRow: View {
     let tx: Tx
     var selected = false
     var body: some View {
         HStack(spacing: 12) {
-            Initial(text: tx.description, color: tx.color)
+            Logo(domain: tx.domain, name: tx.description, color: tx.color)
             VStack(alignment: .leading, spacing: 2) {
                 Text(tx.description).fontWeight(.medium).lineLimit(1)
                 Text("\(ddmm(tx.date)) · \(tx.category)").font(.footnote).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
+                AiLine(text: tx.aiShort)
             }
             Spacer(minLength: 8)
             Text(signed(tx.amount)).font(.system(.body, design: .monospaced).weight(.semibold)).foregroundStyle(tx.amount > 0 ? Color.positive : .white)
@@ -281,10 +325,11 @@ struct HomeView: View {
                         Text(monthLabel(store.summary?.month ?? "")).font(.system(size: 34, weight: .bold))
                     }
                     Spacer()
-                    Button { store.go(.me) } label: { Text(initial(store.boot?.settings.name ?? "S")).fontWeight(.semibold).frame(width: 44, height: 44) }.glass(22)
+                    Avatar()
                 }
                 .padding(.horizontal, 4).padding(.top, 6)
                 Hero()
+                UploadPill()
                 ReviewCTA()
                 SectionLabel(text: "Siste")
                 if let r = store.summary?.recent { TxList(items: Array(r.prefix(6))) } else { ProgressView() }
@@ -302,11 +347,12 @@ struct ListView: View {
         ScrollView {
             VStack(spacing: 12) {
                 Text("Transaksjoner").font(.system(size: 34, weight: .bold)).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 6)
-                HStack {
-                    Image(systemName: "magnifyingglass").foregroundStyle(.white.opacity(0.6))
-                    TextField("Søk", text: $s.query).submitLabel(.search).onSubmit { store.search() }
+                HStack(spacing: 10) {
+                    Image(systemName: "magnifyingglass").font(.system(size: 18)).foregroundStyle(.white.opacity(0.6))
+                    TextField("Søk i transaksjoner", text: $s.query).submitLabel(.search).onSubmit { store.search() }
+                        .textInputAutocapitalization(.never)
                 }
-                .padding(.horizontal, 14).frame(height: 44).glass(22)
+                .padding(.horizontal, 16).frame(height: 46).glass(23)
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach([("", "Alle"), ("ut", "Utgifter"), ("inn", "Inntekter")], id: \.0) { k, n in
@@ -340,7 +386,12 @@ struct BudgetView: View {
         ScrollView {
             VStack(spacing: 12) {
                 Text("Budsjett").font(.system(size: 34, weight: .bold)).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 6)
-                Hero()
+                if let s = store.summary {
+                    HStack(spacing: 0) {
+                        stat("Budsjett", n0(s.budgetTotal)); stat("Brukt", n0(s.budgetUsed)); stat("Dager igjen", "\(s.daysLeft)")
+                    }
+                    .padding(.vertical, 14).glass(24)
+                }
                 if rows.isEmpty { Empty(text: "Ingen budsjett satt. Sett opp i FinansHub på nettet.") }
                 ForEach(rows) { b in
                     let over = b.used > b.budget
@@ -356,6 +407,20 @@ struct BudgetView: View {
                                 Capsule().fill(over ? Color.accent : Color(hex: b.color)).frame(width: g.size.width * min(1, b.used / b.budget))
                             }
                         }.frame(height: 8)
+                        let days = Double(max(1, store.summary?.daysLeft ?? 1))
+                        HStack {
+                            Text(over ? "Over med \(n0(b.used - b.budget)) kr" : "\(n0(b.budget - b.used)) kr igjen · \(n0((b.budget - b.used) / days)) kr/dag")
+                                .foregroundStyle(over ? Color.accentLight : .white.opacity(0.7))
+                            Spacer()
+                            Text("\(Int(b.used / b.budget * 100)) % brukt").foregroundStyle(.white.opacity(0.6))
+                        }
+                        .font(.footnote)
+                        let chips = budgetChips(b)
+                        if !chips.isEmpty {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 6) { ForEach(chips, id: \.self) { Text($0).font(.caption).padding(.horizontal, 8).padding(.vertical, 4).background(.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 8)) } }
+                            }
+                        }
                     }
                     .padding(16).glass(22)
                     .overlay(RoundedRectangle(cornerRadius: 22).stroke(store.selectedBudget == b.categoryId ? Color.accent : .clear, lineWidth: 1.5))
@@ -364,6 +429,16 @@ struct BudgetView: View {
             }
             .padding(.horizontal, 18).padding(.bottom, 30)
         }
+    }
+    private func stat(_ k: String, _ v: String) -> some View {
+        VStack(spacing: 2) { Text(k).font(.caption).foregroundStyle(.white.opacity(0.6)); Text(v).font(.system(.headline, design: .monospaced)) }.frame(maxWidth: .infinity)
+    }
+    private func budgetChips(_ b: Budget) -> [String] {
+        var c: [String] = []
+        if let n = b.count, n > 0 { c.append("\(n) kjøp") }
+        if let m = b.topMerchant { c.append("Mest: \(m)") }
+        if let p = b.prevUsed, p > 0 { let d = Int((b.used - p) / p * 100); c.append((d > 0 ? "↑ \(d)" : "↓ \(-d)") + " % mot forrige mnd") }
+        return c
     }
 }
 
@@ -391,23 +466,42 @@ struct BudgetDetail: View {
 
 struct TxDetail: View {
     @Environment(Store.self) private var store
+    var back = false
     var body: some View {
         let pool = (store.txs ?? []) + (store.summary?.recent ?? [])
         if let t = pool.first(where: { $0.id == store.selectedTx }) ?? pool.first {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    if back { Button { store.selectedTx = nil } label: { Label("Tilbake", systemImage: "chevron.left") }.foregroundStyle(Color.accentLight) }
                     HStack(spacing: 14) {
-                        Initial(text: t.description, color: t.color, size: 56)
+                        Logo(domain: t.domain, name: t.description, color: t.color, size: 60)
                         VStack(alignment: .leading) { Text(t.description).font(.title2.weight(.bold)); Text(dayLabel(t.date)).foregroundStyle(.white.opacity(0.7)) }
                     }
                     HStack(alignment: .firstTextBaseline, spacing: 0) {
                         Text(signed(t.amount)).font(.system(size: 40, weight: .semibold, design: .monospaced)).foregroundStyle(t.amount > 0 ? Color.positive : .white)
                         Text(" kr").font(.title3).foregroundStyle(.white.opacity(0.6))
                     }
+                    if let ai = t.aiLong ?? t.aiShort {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("✦ AI-beskrivelse").font(.footnote.weight(.semibold)).foregroundStyle(Color.accentLight)
+                            Text(ai)
+                        }
+                        .padding(18).frame(maxWidth: .infinity, alignment: .leading).glass(24)
+                    }
+                    if let lines = t.lines, !lines.isEmpty {
+                        SectionLabel(text: "Varelinjer")
+                        VStack(spacing: 8) {
+                            ForEach(Array(lines.enumerated()), id: \.offset) { _, l in
+                                HStack { Text(l.description ?? "").lineLimit(2); Spacer(); Text(n2(l.amount)).font(.system(.body, design: .monospaced)) }
+                            }
+                        }
+                        .padding(16).glass(24)
+                    }
                     VStack(spacing: 0) {
                         row("Kategori", t.category); Divider().overlay(.white.opacity(0.12))
                         row("Konto", t.account); Divider().overlay(.white.opacity(0.12))
-                        row("Kvittering", t.receipt == "booked" ? "Vedlagt" : t.receipt == nil ? "–" : "Til gjennomgang")
+                        row("Kvittering", t.receipt == "booked" ? "Vedlagt" : t.receipt == nil ? "–" : "Til gjennomgang"); Divider().overlay(.white.opacity(0.12))
+                        row("Delt mappe", t.folder ?? "–")
                         if !t.note.isEmpty { Divider().overlay(.white.opacity(0.12)); row("Notat", t.note) }
                     }
                     .glass(24)
@@ -430,12 +524,12 @@ struct TxDetail: View {
 struct ScanView: View {
     @Environment(Store.self) private var store
     let scan: () -> Void
-    @Binding var photo: PhotosPickerItem?
+    @Binding var photos: [PhotosPickerItem]
     @Binding var pdf: Bool
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                Text("Skann").font(.system(size: 34, weight: .bold)).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 6)
+                Text("Last opp").font(.system(size: 34, weight: .bold)).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 6)
                 Button(action: scan) {
                     HStack(spacing: 14) {
                         Image(systemName: "camera.fill").foregroundStyle(Color.ink).frame(width: 36, height: 36).background(Color.accent, in: Circle())
@@ -446,10 +540,11 @@ struct ScanView: View {
                 }
                 .buttonStyle(.plain)
                 HStack(spacing: 10) {
-                    PhotosPicker(selection: $photo, matching: .images) { Label("Bilder", systemImage: "photo").frame(maxWidth: .infinity, minHeight: 48) }.glass(24)
+                    PhotosPicker(selection: $photos, maxSelectionCount: 20, matching: .images) { Label("Bilder", systemImage: "photo.on.rectangle").frame(maxWidth: .infinity, minHeight: 48) }.glass(24)
                     Button { pdf = true } label: { Label("Filer", systemImage: "doc").frame(maxWidth: .infinity, minHeight: 48) }.glass(24)
                 }
                 .buttonStyle(.plain)
+                JobQueue()
                 let q = store.receipts ?? []
                 if store.receipts == nil { ProgressView().padding(30) }
                 else if q.isEmpty { Empty(text: "Ingen kvitteringer i køen.") }
@@ -480,7 +575,7 @@ struct ScanView: View {
             }
             .padding(.horizontal, 18).padding(.bottom, 30)
         }
-        .task { try? await store.loadReceipts() }
+        .task { try? await store.loadReceipts(); await store.loadJobs() }
         .refreshable { try? await store.loadReceipts() }
     }
 }
@@ -708,7 +803,7 @@ struct LoginView: View {
             Image(systemName: "chart.line.uptrend.xyaxis").font(.title).foregroundStyle(Color.ink).frame(width: 56, height: 56).background(Color.accent, in: RoundedRectangle(cornerRadius: 18))
             Text("FinansHub").font(.system(size: 34, weight: .bold))
             Text("Logg inn på homelab-serveren din. Appen får bare tilgang til økonomidelen.").foregroundStyle(.white.opacity(0.7))
-            TextField("https://os.dittdomene.no", text: $server).textContentType(.URL).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
+            TextField("192.168.1.20:8080 eller os.dittdomene.no", text: $server).textContentType(.URL).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
                 .padding(.horizontal, 18).frame(height: 54).glass(27)
             SecureField("Passord", text: $password).textContentType(.password).submitLabel(.go).onSubmit(submit)
                 .padding(.horizontal, 18).frame(height: 54).glass(27)
@@ -721,3 +816,212 @@ struct LoginView: View {
     }
     private func submit() { store.login(server: server, password: password) }
 }
+
+/* ---------------- Mobil v2 ---------------- */
+
+struct Avatar: View {
+    @Environment(Store.self) private var store
+    var body: some View {
+        Button { store.menuOpen = true } label: { Text(initial(store.boot?.settings.name ?? "S")).fontWeight(.semibold).frame(width: 44, height: 44) }
+            .buttonStyle(.plain).glass(22).accessibilityLabel("Meny")
+    }
+}
+
+/// Pille på forsiden som viser fremdrift i opplastingskøen.
+struct UploadPill: View {
+    @Environment(Store.self) private var store
+    var body: some View {
+        let active = store.jobs.filter { $0.status == "pending" || $0.status == "processing" }
+        let ready = store.jobs.filter { $0.status == "needs_review" }.count
+        if !active.isEmpty || store.uploading > 0 || ready > 0 {
+            Button { store.go(.scan) } label: {
+                HStack(spacing: 12) {
+                    if !active.isEmpty || store.uploading > 0 { ProgressView() } else { Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.positive) }
+                    Text(label(active, ready)).fontWeight(.medium)
+                    Spacer()
+                    Image(systemName: "chevron.right").foregroundStyle(.white.opacity(0.6))
+                }
+                .padding(.horizontal, 16).padding(.vertical, 12).glass(24)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+    private func label(_ active: [Job], _ ready: Int) -> String {
+        if store.uploading > 0 { return "Laster opp \(store.uploading) fil" + (store.uploading > 1 ? "er" : "") + " …" }
+        if !active.isEmpty {
+            let pct = active.map { $0.progress ?? 0 }.reduce(0, +) / max(1, active.count)
+            return "Gemini leser \(active.count) · \(pct) %"
+        }
+        return "\(ready) klar · trykk for å bekrefte"
+    }
+}
+
+struct JobQueue: View {
+    @Environment(Store.self) private var store
+    var body: some View {
+        let jobs = store.jobs.filter { $0.status != "booked" }
+        if !jobs.isEmpty || store.uploading > 0 {
+            SectionLabel(text: "Kø")
+            VStack(spacing: 0) {
+                if store.uploading > 0 { row("Laster opp \(store.uploading) fil" + (store.uploading > 1 ? "er" : ""), "Sender til serveren …", nil) }
+                ForEach(jobs) { j in
+                    Divider().overlay(.white.opacity(0.12))
+                    Button { store.selectedReceipt = j.id } label: {
+                        switch j.status {
+                        case "pending": row(j.name ?? "Fil", "I kø", nil)
+                        case "processing": row(j.name ?? "Fil", "Gemini leser … \(j.progress ?? 0) %", Double(j.progress ?? 0) / 100)
+                        case "needs_review": row(j.merchant ?? j.name ?? "Kvittering", "Klar · trykk for å bekrefte", nil, ready: true)
+                        case "error": row(j.name ?? "Fil", "Feilet – fyll ut manuelt", nil)
+                        default: row(j.name ?? "Fil", j.status, nil)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .glass(24)
+        }
+    }
+    private func row(_ t: String, _ sub: String, _ p: Double?, ready: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(t).fontWeight(.medium).lineLimit(1)
+            Text(sub).font(.footnote).foregroundStyle(ready ? Color.positive : .white.opacity(0.6))
+            if let p { ProgressView(value: p).tint(Color.accent) }
+        }
+        .padding(.horizontal, 16).padding(.vertical, 12).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+    }
+}
+
+/// Meny bak profilbildet: Finans | Matplan, andre OS, fargebakgrunn og server.
+struct ProfileMenu: View {
+    @Environment(Store.self) private var store
+    @Environment(\.openURL) private var openURL
+    @State private var server = ""
+    @State private var password = ""
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 4) {
+                    seg("Finans", store.tab != .mat) { store.menuOpen = false; store.go(.home) }
+                    seg("Matplan", store.tab == .mat) { store.menuOpen = false; store.go(.mat) }
+                }
+                .padding(4).glass(26)
+                SectionLabel(text: "Andre OS")
+                VStack(spacing: 0) {
+                    ForEach([("Subscription OS", "abonnement"), ("Delte mapper", "mapper"), ("Finn-handler", "finn")], id: \.1) { n, h in
+                        Button { if let u = URL(string: store.server + "/finans/#/" + h) { openURL(u) } } label: {
+                            HStack { Text(n); Spacer(); Image(systemName: "arrow.up.right").foregroundStyle(.white.opacity(0.6)) }.padding(16).contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        if h != "finn" { Divider().overlay(.white.opacity(0.12)) }
+                    }
+                }
+                .glass(24)
+                Toggle("Fargebakgrunn", isOn: Binding(get: { store.colorBg }, set: { store.setColorBg($0) })).padding(.horizontal, 16).padding(.vertical, 10).glass(24)
+                SectionLabel(text: "Server")
+                TextField("Lokal adresse", text: $server).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
+                    .padding(.horizontal, 18).frame(height: 50).glass(25)
+                SecureField("Passord", text: $password).padding(.horizontal, 18).frame(height: 50).glass(25)
+                Button { store.login(server: server, password: password) } label: {
+                    Text("Koble til").fontWeight(.bold).foregroundStyle(Color.ink).frame(maxWidth: .infinity, minHeight: 50)
+                }
+                .buttonStyle(.plain).glass(25, tint: .accent).disabled(server.isEmpty || password.isEmpty)
+                HStack(spacing: 10) {
+                    Button { store.menuOpen = false; store.go(.me) } label: { Text("Innstillinger").frame(maxWidth: .infinity, minHeight: 48) }.buttonStyle(.plain).glass(24)
+                    Button { store.menuOpen = false; store.logout() } label: { Text("Logg ut").foregroundStyle(Color(hex: "#FF8A6B")).frame(maxWidth: .infinity, minHeight: 48) }.buttonStyle(.plain).glass(24)
+                }
+            }
+            .padding(20)
+        }
+        .onAppear { server = store.server }
+        .preferredColorScheme(.dark)
+    }
+    private func seg(_ t: String, _ on: Bool, _ act: @escaping () -> Void) -> some View {
+        Button(action: act) {
+            Text(t).fontWeight(.semibold).foregroundStyle(on ? Color.ink : .white).frame(maxWidth: .infinity, minHeight: 40)
+                .background(on ? Color.accent : .clear, in: Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/* ---------------- Matplan ---------------- */
+
+private let sourceLabel = ["gemini": "Gemini", "hellofresh": "HelloFresh", "fixed": "Fast", "own": "Egen"]
+
+struct MatView: View {
+    @Environment(Store.self) private var store
+    var body: some View {
+        let today = isoToday()
+        ScrollView {
+            VStack(spacing: 12) {
+                HStack {
+                    Text("Matplan").font(.system(size: 34, weight: .bold))
+                    Spacer()
+                    Avatar()
+                }
+                .padding(.top, 6)
+                Button { store.planWeek() } label: { Text("✦ Ny ukeplan med Gemini").fontWeight(.bold).foregroundStyle(Color.ink).frame(maxWidth: .infinity, minHeight: 52) }
+                    .buttonStyle(.plain).glass(26, tint: .accent)
+                if let w = store.week {
+                    Text("Estimert ukekost \(n0(w.weekCost ?? 0)) kr" + ((w.auto ?? false) ? " · automatisk hver søndag" : ""))
+                        .font(.footnote).foregroundStyle(.white.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 6)
+                    ForEach(w.days) { d in
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text(d.weekday ?? ddmm(d.date)).font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.7))
+                                Spacer()
+                                if let src = d.source { Text(sourceLabel[src] ?? src).font(.caption.weight(.semibold)).padding(.horizontal, 8).padding(.vertical, 3).background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 8)) }
+                            }
+                            Text(d.name ?? "Ingen rett ennå").font(.title3.weight(.semibold)).foregroundStyle(d.name == nil ? Color.white.opacity(0.5) : Color.white)
+                            HStack(spacing: 10) {
+                                Menu {
+                                    ForEach(w.cooks ?? [], id: \.self) { c in Button(c) { store.setCook(d.date, c) } }
+                                } label: { Label(d.cook ?? "Velg kokk", systemImage: "person").font(.subheadline) }
+                                if let c = d.cost { Text("\(n0(c)) kr").font(.system(.subheadline, design: .monospaced)).foregroundStyle(.white.opacity(0.7)) }
+                                Spacer()
+                                Button { store.toggleFixed(d) } label: {
+                                    Text("Fast").font(.subheadline.weight(.semibold)).padding(.horizontal, 12).frame(height: 32)
+                                        .foregroundStyle((d.fixed ?? false) ? Color.positive : .white)
+                                        .background(((d.fixed ?? false) ? Color.positive : .white).opacity(0.14), in: Capsule())
+                                }
+                                Button { store.planDay(d.date) } label: { Text("✦").frame(width: 32, height: 32).background(.white.opacity(0.14), in: Circle()) }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(16).glass(22)
+                        .overlay(RoundedRectangle(cornerRadius: 22).stroke(d.date == today ? Color.accent : .clear, lineWidth: 1.5))
+                    }
+                    if !(w.shopping ?? []).isEmpty { SectionLabel(text: "Handleliste"); ShoppingList() }
+                } else { ProgressView().padding(30) }
+            }
+            .padding(.horizontal, 18).padding(.bottom, 30)
+        }
+        .task { if store.week == nil { try? await store.loadWeek() } }
+        .refreshable { try? await store.loadWeek() }
+    }
+}
+
+struct ShoppingList: View {
+    @Environment(Store.self) private var store
+    var body: some View {
+        let items = store.week?.shopping ?? []
+        if items.isEmpty { Empty(text: "Handlelisten er tom.") } else {
+            VStack(spacing: 0) {
+                ForEach(items) { it in
+                    Button { store.toggleShop(it.id) } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: it.done ? "checkmark.circle.fill" : "circle").foregroundStyle(it.done ? Color.accent : .white.opacity(0.6))
+                            Text(it.text).strikethrough(it.done).foregroundStyle(it.done ? Color.white.opacity(0.5) : Color.white)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 16).padding(.vertical, 12).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .glass(24)
+        }
+    }
+}
+
+private func isoToday() -> String { let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; return f.string(from: Date()) }

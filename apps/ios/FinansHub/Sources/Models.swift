@@ -45,6 +45,11 @@ struct Tx: Decodable, Identifiable, Hashable {
     let account: String
     let note: String
     let receipt: String?
+    var aiShort: String? = nil
+    var aiLong: String? = nil
+    var domain: String? = nil
+    var lines: [Line]? = nil
+    var folder: String? = nil
 }
 
 struct TxPage: Decodable { let items: [Tx] }
@@ -70,6 +75,8 @@ struct Receipt: Decodable, Identifiable, Hashable {
     let thumb: String?
     let extraction: Extraction?
     let match: Tx?
+    var aiShort: String? = nil
+    var domain: String? = nil
 }
 
 struct Budget: Decodable, Identifiable, Hashable {
@@ -78,6 +85,9 @@ struct Budget: Decodable, Identifiable, Hashable {
     let color: String
     let budget: Double
     let used: Double
+    var count: Int? = nil
+    var topMerchant: String? = nil
+    var prevUsed: Double? = nil
     var id: Int { categoryId }
 }
 
@@ -96,6 +106,49 @@ struct Summary: Decodable {
     let budgets: [Budget]
     let recent: [Tx]
     let review: [Receipt]
+    var innMonthly: [Double]? = nil
+}
+
+struct Job: Decodable, Identifiable, Hashable {
+    let id: String
+    let name: String?
+    let status: String
+    let progress: Int?
+    let merchant: String?
+    let total: Double?
+}
+
+struct MealDay: Decodable, Identifiable, Hashable {
+    let date: String
+    let weekday: String?
+    let name: String?
+    let cost: Double?
+    let source: String?
+    let cook: String?
+    let fixed: Bool?
+    var id: String { date }
+}
+
+struct ShopItem: Decodable, Identifiable, Hashable {
+    let id: String
+    let text: String
+    let done: Bool
+    enum K: String, CodingKey { case id, text, done }
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        id = (try? c.decode(String.self, forKey: .id)) ?? String((try? c.decode(Int.self, forKey: .id)) ?? 0)
+        text = (try? c.decode(String.self, forKey: .text)) ?? ""
+        done = (try? c.decode(Bool.self, forKey: .done)) ?? false
+    }
+}
+
+struct Week: Decodable {
+    let start: String?
+    let days: [MealDay]
+    let cooks: [String]?
+    let shopping: [ShopItem]?
+    let weekCost: Double?
+    let auto: Bool?
 }
 
 /* ---------- Formatering (norsk, minus som −) ---------- */

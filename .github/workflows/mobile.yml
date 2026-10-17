@@ -49,3 +49,18 @@ jobs:
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
             CODE_SIGNING_ALLOWED=NO build | tail -40
           test ${PIPESTATUS[0]} -eq 0
+      # Usignert .ipa for sideloading: AltStore/SideStore/Sideloadly signerer den med din egen Apple-ID ved installasjon.
+      - name: Bygg usignert .ipa
+        if: matrix.runner == 'macos-26'
+        run: |
+          xcodebuild -project FinansHub.xcodeproj -scheme FinansHub -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build | tail -20
+          test ${PIPESTATUS[0]} -eq 0
+          mkdir -p Payload && cp -R build/Build/Products/Release-iphoneos/FinansHub.app Payload/
+          zip -qry FinansHub-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        if: matrix.runner == 'macos-26'
+        with:
+          name: FinansHub-ios-unsigned
+          path: apps/ios/FinansHub-unsigned.ipa

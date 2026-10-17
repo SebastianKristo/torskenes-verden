@@ -4,14 +4,14 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
-    <!-- Klartekst tillates fordi homelab ofte nås på http://192.168.x.x på lokalt nett. -->
+    <!-- Klartekst og brukerinstallerte CA-er tillates via network_security_config (homelab på http://192.168.x.x). -->
     <application
         android:label="FinansHub"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
         android:theme="@style/Theme.FinansHub"
         android:allowBackup="false"
-        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:supportsRtl="true">
 
         <activity

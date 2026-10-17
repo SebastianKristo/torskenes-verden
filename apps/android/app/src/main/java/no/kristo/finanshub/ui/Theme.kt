@@ -33,6 +33,7 @@ object C {
     val positive = Color(0xFF9FE3C6)
     val positiveBg = Color(0xFF1F3A2F)
     val accent = Color(0xFFFF7A3D)
+    val accentLight = Color(0xFFFFB08A)
     val paper = Color(0xFFECE8E0)
 }
 

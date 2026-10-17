@@ -16,7 +16,6 @@ import androidx.lifecycle.viewModelScope
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -24,7 +23,7 @@ import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.net.URLEncoder
 
-enum class Screen(val label: String) { Home("Hjem"), List("Liste"), Budget("Budsjett"), Scan("Skann"), Me("Meg") }
+enum class Screen(val label: String) { Home("Hjem"), List("Liste"), Budget("Budsjett"), Mat("Matplan"), Scan("Last opp"), Me("Meg") }
 
 class AppViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -52,9 +51,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var selectedReceipt by mutableStateOf<String?>(null)
     var busy by mutableStateOf(false)
     var message by mutableStateOf<String?>(null)
+    var jobs by mutableStateOf<List<Job>>(emptyList())
+    var uploading by mutableStateOf(0)
+    var week by mutableStateOf<Week?>(null)
+    var menuOpen by mutableStateOf(false)
+    private val logos = mutableMapOf<String, Bitmap?>()
 
     private val api get() = Api(server, token)
-    private var pollJob: Job? = null
+    private var pollJob: kotlinx.coroutines.Job? = null
+    private var jobPoll: kotlinx.coroutines.Job? = null
 
     init { if (loggedIn) refresh() }
 
@@ -67,7 +72,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun login(url: String, password: String, onDone: () -> Unit = {}) = launch {
         busy = true
         try {
-            val base = url.trim().let { if (it.startsWith("http")) it else "https://$it" }.trimEnd('/')
+            val base = Api.normalizeServer(url)
             val t = Api.login(base, password, "${Build.MANUFACTURER} ${Build.MODEL}".trim())
             prefs.edit().putString("server", base).putString("token", t).apply()
             server = base; token = t
@@ -82,7 +87,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun clearLogin() {
         prefs.edit().remove("token").apply()
-        token = null; boot = null; summary = null; txs = null; receipts = null
+        token = null; boot = null; summary = null; txs = null; receipts = null; week = null; jobs = emptyList()
     }
 
     fun refresh() = launch {
@@ -90,17 +95,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         summary = parseSummary(api.get("/summary"))
         when (screen) {
             Screen.List, Screen.Budget -> loadTx()
-            Screen.Scan -> loadReceipts()
+            Screen.Scan -> { loadReceipts(); loadJobs() }
+            Screen.Mat -> loadWeek()
             else -> {}
         }
     }
 
     fun go(s: Screen) {
+        if (s != screen) selectedTx = null
         screen = s
         launch {
             when (s) {
                 Screen.List, Screen.Budget -> if (txs == null) loadTx()
-                Screen.Scan -> loadReceipts()
+                Screen.Scan -> { loadReceipts(); loadJobs() }
+                Screen.Mat -> loadWeek()
                 else -> summary = parseSummary(api.get("/summary"))
             }
         }
@@ -161,9 +169,34 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Leser bildet, roterer etter EXIF, lager 1600 px skanneversjon og miniatyr, og laster opp. */
-    fun uploadUri(uri: Uri) = launch {
-        busy = true
-        try {
+    /** Flere filer legges i kø og lastes opp én og én; AI-en leser dem i bakgrunnen på serveren. */
+    fun uploadUris(uris: List<Uri>) {
+        if (uris.isEmpty()) return
+        uploading += uris.size
+        screen = Screen.Scan
+        launch {
+            try {
+                for (u in uris) {
+                    try { uploadOne(u) } catch (e: ApiException) { message = e.message } finally { uploading = maxOf(0, uploading - 1) }
+                }
+            } finally { loadReceipts(); loadJobs() }
+        }
+    }
+
+    suspend fun loadJobs() {
+        jobs = runCatching { parseJobs(api.get("/receipts/jobs")) }.getOrDefault(jobs)
+        if (jobs.any { it.status == "pending" || it.status == "processing" } || uploading > 0) {
+            if (jobPoll?.isActive != true) jobPoll = viewModelScope.launch {
+                delay(2000); jobPoll = null
+                runCatching { loadJobs(); if (jobs.none { it.status == "pending" || it.status == "processing" }) { loadReceipts(); summary = parseSummary(api.get("/summary")) } }
+            }
+        }
+    }
+
+    fun uploadUri(uri: Uri) = uploadUris(listOf(uri))
+
+    private suspend fun uploadOne(uri: Uri) {
+        run {
             val ctx = getApplication<Application>()
             val mime = ctx.contentResolver.getType(uri) ?: "image/jpeg"
             val original = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes() } }
@@ -172,12 +205,39 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 scaled(ctx, original, 1600, 85)?.let { parts += Api.Part("scan", "scan.jpg", "image/jpeg", it) }
                 scaled(ctx, original, 240, 75)?.let { parts += Api.Part("thumb", "thumb.jpg", "image/jpeg", it) }
             }
-            val r = parseReceipt(JSONObject(api.upload("/receipts", parts)))
-            selectedReceipt = r.id
-            screen = Screen.Scan
-            loadReceipts()
-        } finally { busy = false }
+            val r = runCatching { parseReceipt(JSONObject(api.upload("/receipts", parts))) }
+            r.exceptionOrNull()?.let { if (it is ApiException) throw it }
+            r.getOrNull()?.let { if (selectedReceipt == null) selectedReceipt = it.id }
+            loadJobs()
+        }
     }
+
+    suspend fun logo(domain: String?): Bitmap? {
+        if (domain.isNullOrBlank()) return null
+        if (logos.containsKey(domain)) return logos[domain]
+        val b = image("/finans/api/logo/" + URLEncoder.encode(domain, "UTF-8"))
+        logos[domain] = b
+        return b
+    }
+
+    /* ---------- Matplan ---------- */
+
+    suspend fun loadWeek() { week = parseWeek(api.matGet("/week")) }
+
+    fun planWeek() = launch {
+        busy = true
+        try { api.matPost("/plan", JSONObject().put("scope", "week")); loadWeek(); message = "Ny ukeplan klar ✦" } finally { busy = false }
+    }
+
+    fun planDay(date: String) = launch {
+        api.matPost("/plan", JSONObject().put("scope", "day").put("date", date)); loadWeek()
+    }
+
+    fun setCook(date: String, cook: String) = launch { api.matPatch("/day/$date", JSONObject().put("cook", cook)); loadWeek() }
+
+    fun toggleFixed(d: Day) = launch { api.matPatch("/day/${d.date}", JSONObject().put("fixed", !d.fixed)); loadWeek() }
+
+    fun toggleShop(id: String) = launch { api.matPost("/shopping/$id/toggle"); loadWeek() }
 
     suspend fun image(path: String): Bitmap? = runCatching {
         val b = api.bytes(path)

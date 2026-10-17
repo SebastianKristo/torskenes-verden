@@ -3,14 +3,15 @@ import SwiftUI
 import UIKit
 
 enum Tab: String, CaseIterable, Identifiable {
-    case home = "Hjem", list = "Liste", budget = "Budsjett", scan = "Skann", me = "Meg"
+    case home = "Hjem", list = "Liste", budget = "Budsjett", mat = "Matplan", scan = "Last opp", me = "Meg"
     var id: String { rawValue }
     var icon: String {
         switch self {
         case .home: "house"
         case .list: "list.bullet"
         case .budget: "chart.pie"
-        case .scan: "doc.viewfinder"
+        case .mat: "fork.knife"
+        case .scan: "square.and.arrow.up"
         case .me: "person"
         }
     }
@@ -35,6 +36,15 @@ final class Store {
     var selectedReceipt: String?
     var busy = false
     var message: String?
+    var jobs: [Job] = []
+    var uploading = 0
+    var week: Week?
+    var menuOpen = false
+    /// Fargeflekker bak glasset (av/på i profilmenyen).
+    private(set) var colorBg = UserDefaults.standard.object(forKey: "fh_ios_bg") as? Bool ?? true
+    func setColorBg(_ on: Bool) { colorBg = on; UserDefaults.standard.set(on, forKey: "fh_ios_bg") }
+    @ObservationIgnored private var logos: [String: UIImage] = [:]
+    @ObservationIgnored private var polling = false
 
     private var api: API { API(base: server, token: token) }
 
@@ -55,9 +65,7 @@ final class Store {
         run {
             self.busy = true
             defer { self.busy = false }
-            var base = raw.trimmingCharacters(in: .whitespaces)
-            if !base.hasPrefix("http") { base = "https://" + base }
-            while base.hasSuffix("/") { base.removeLast() }
+            let base = API.normalize(raw)
             let t = try await API.login(base: base, password: password, device: UIDevice.current.name)
             Keychain.set("server", base); Keychain.set("token", t)
             self.server = base; self.token = t
@@ -74,7 +82,7 @@ final class Store {
 
     private func clear() {
         Keychain.set("token", nil)
-        token = nil; boot = nil; summary = nil; txs = nil; receipts = nil
+        token = nil; boot = nil; summary = nil; txs = nil; receipts = nil; week = nil; jobs = []
     }
 
     func reload() async throws {
@@ -82,7 +90,8 @@ final class Store {
         summary = try await api.get("/summary")
         switch tab {
         case .list, .budget: try await loadTx()
-        case .scan: try await loadReceipts()
+        case .scan: try await loadReceipts(); await loadJobs()
+        case .mat: try await loadWeek()
         default: break
         }
     }
@@ -90,11 +99,13 @@ final class Store {
     func refresh() { run { try await self.reload() } }
 
     func go(_ t: Tab) {
+        if t != tab { selectedTx = nil }
         tab = t
         run {
             switch t {
             case .list, .budget: if self.txs == nil { try await self.loadTx() }
-            case .scan: try await self.loadReceipts()
+            case .scan: try await self.loadReceipts(); await self.loadJobs()
+            case .mat: try await self.loadWeek()
             default: self.summary = try await self.api.get("/summary")
             }
         }
@@ -158,11 +169,75 @@ final class Store {
         }
     }
 
-    /// Originalen lastes opp urørt, sammen med en 1600 px JPEG til AI-en og et miniatyrbilde.
-    func upload(image: UIImage) {
+    /// Flere filer legges i kø og lastes opp én og én; AI-en leser dem i bakgrunnen på serveren.
+    enum Upload { case image(UIImage), pdf(Data) }
+    func upload(_ files: [Upload]) {
+        guard !files.isEmpty else { return }
+        uploading += files.count
+        tab = .scan
+        Task {
+            for f in files {
+                do {
+                    switch f {
+                    case .image(let img): try await self.sendImage(img)
+                    case .pdf(let d): try await self.finishUpload([API.Part(name: "file", filename: "kvittering.pdf", mime: "application/pdf", data: d)])
+                    }
+                } catch { self.message = error.localizedDescription }
+                self.uploading = max(0, self.uploading - 1)
+            }
+            try? await self.loadReceipts()
+            await self.loadJobs()
+        }
+    }
+    func upload(image: UIImage) { upload([.image(image)]) }
+    func upload(pdf: Data) { upload([.pdf(pdf)]) }
+
+    func loadJobs() async {
+        if let j = try? await api.get("/receipts/jobs", as: [Job].self) { jobs = j }
+        let active = jobs.contains { $0.status == "pending" || $0.status == "processing" }
+        if (active || uploading > 0) && !polling {
+            polling = true
+            Task {
+                try? await Task.sleep(for: .seconds(2))
+                self.polling = false
+                await self.loadJobs()
+                if !self.jobs.contains(where: { $0.status == "pending" || $0.status == "processing" }) {
+                    try? await self.loadReceipts()
+                    self.summary = try? await self.api.get("/summary", as: Summary.self)
+                }
+            }
+        }
+    }
+
+    func logo(_ domain: String?) async -> UIImage? {
+        guard let domain, !domain.isEmpty else { return nil }
+        if let l = logos[domain] { return l }
+        let enc = domain.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? domain
+        let img = await image("/finans/api/logo/\(enc)")
+        if let img { logos[domain] = img }
+        return img
+    }
+
+    /* ---------- Matplan ---------- */
+
+    func loadWeek() async throws { week = try await api.mat("/week", as: Week.self) }
+    func planWeek() {
         run {
             self.busy = true
             defer { self.busy = false }
+            try await self.api.matCall("POST", "/plan", json: ["scope": "week"])
+            try await self.loadWeek()
+            self.flash("Ny ukeplan klar ✦")
+        }
+    }
+    func planDay(_ date: String) { run { try await self.api.matCall("POST", "/plan", json: ["scope": "day", "date": date]); try await self.loadWeek() } }
+    func setCook(_ date: String, _ cook: String) { run { try await self.api.matCall("PATCH", "/day/\(date)", json: ["cook": cook]); try await self.loadWeek() } }
+    func toggleFixed(_ d: MealDay) { run { try await self.api.matCall("PATCH", "/day/\(d.date)", json: ["fixed": !(d.fixed ?? false)]); try await self.loadWeek() } }
+    func toggleShop(_ id: String) { run { try await self.api.matCall("POST", "/shopping/\(id)/toggle"); try await self.loadWeek() } }
+
+    /// Originalen lastes opp urørt, sammen med en 1600 px JPEG til AI-en og et miniatyrbilde.
+    private func sendImage(_ image: UIImage) async throws {
+        do {
             guard let original = image.jpegData(compressionQuality: 0.92) else { return }
             var parts = [API.Part(name: "file", filename: "kvittering.jpg", mime: "image/jpeg", data: original)]
             if let s = image.scaled(max: 1600).jpegData(compressionQuality: 0.85) { parts.append(.init(name: "scan", filename: "scan.jpg", mime: "image/jpeg", data: s)) }
@@ -171,20 +246,10 @@ final class Store {
         }
     }
 
-    func upload(pdf: Data) {
-        run {
-            self.busy = true
-            defer { self.busy = false }
-            try await self.finishUpload([API.Part(name: "file", filename: "kvittering.pdf", mime: "application/pdf", data: pdf)])
-        }
-    }
-
     private func finishUpload(_ parts: [API.Part]) async throws {
         let d = try await api.upload("/receipts", parts: parts)
-        let r = try JSONDecoder().decode(Receipt.self, from: d)
-        selectedReceipt = r.id
-        tab = .scan
-        try await loadReceipts()
+        if selectedReceipt == nil, let r = try? JSONDecoder().decode(Receipt.self, from: d), UIDevice.current.userInterfaceIdiom == .pad { selectedReceipt = r.id }
+        await loadJobs()
     }
 
     func image(_ path: String) async -> UIImage? {

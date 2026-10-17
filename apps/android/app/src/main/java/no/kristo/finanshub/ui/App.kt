@@ -1,7 +1,15 @@
 package no.kristo.finanshub.ui
 
+import android.content.Intent
 import android.graphics.Bitmap
 import android.net.Uri
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -21,6 +29,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
@@ -46,7 +55,7 @@ import java.io.File
 
 private val icons: Map<Screen, ImageVector> = mapOf(
     Screen.Home to Icons.Filled.Home, Screen.List to Icons.AutoMirrored.Filled.List, Screen.Budget to Icons.Filled.PieChart,
-    Screen.Scan to Icons.Filled.DocumentScanner, Screen.Me to Icons.Filled.Person,
+    Screen.Scan to Icons.Filled.CloudUpload, Screen.Me to Icons.Filled.Person, Screen.Mat to Icons.Filled.Restaurant,
 )
 
 @Composable
@@ -59,7 +68,7 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass) {
     // Kamera (bakkamera via systemets kamera-app) og filvelger.
     var photoUri by remember { mutableStateOf<Uri?>(null) }
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok -> if (ok) photoUri?.let(vm::uploadUri) }
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> uri?.let(vm::uploadUri) }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris -> vm.uploadUris(uris) }
     val scan: () -> Unit = {
         val dir = File(ctx.cacheDir, "scans").apply { mkdirs() }
         val f = File(dir, "kvittering-${System.currentTimeMillis()}.jpg")
@@ -75,21 +84,21 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass) {
         snackbarHost = { SnackbarHost(snack) },
         bottomBar = {
             if (!twoPane) NavigationBar(containerColor = C.surface1) {
-                listOf(Screen.Home, Screen.List, Screen.Budget, Screen.Me).forEach { s ->
+                listOf(Screen.Home, Screen.List, Screen.Budget, Screen.Mat).forEach { s ->
                     NavigationBarItem(selected = vm.screen == s, onClick = { vm.go(s) }, icon = { Icon(icons.getValue(s), null) }, label = { Text(s.label) })
                 }
             }
         },
         floatingActionButton = {
-            if (!twoPane && vm.screen != Screen.Scan) ExtendedFloatingActionButton(
-                onClick = scan, containerColor = C.primary, contentColor = C.onPrimary, shape = RoundedCornerShape(20.dp),
-                icon = { Icon(Icons.Filled.DocumentScanner, null) }, text = { Text("Skann", fontWeight = FontWeight.Bold) },
+            if (!twoPane && vm.screen != Screen.Scan && vm.screen != Screen.Mat && vm.selectedTx == null) ExtendedFloatingActionButton(
+                onClick = { vm.go(Screen.Scan) }, containerColor = C.primary, contentColor = C.onPrimary, shape = RoundedCornerShape(20.dp),
+                icon = { Icon(Icons.Filled.DocumentScanner, null) }, text = { Text("Last opp", fontWeight = FontWeight.Bold) },
             )
         },
     ) { pad ->
         Row(Modifier.fillMaxSize().padding(pad)) {
             if (twoPane) NavigationRail(containerColor = C.surface1, header = {
-                FloatingActionButton(onClick = scan, containerColor = C.primary, contentColor = C.onPrimary, shape = RoundedCornerShape(16.dp)) { Icon(Icons.Filled.DocumentScanner, "Skann") }
+                FloatingActionButton(onClick = { vm.go(Screen.Scan) }, containerColor = C.primary, contentColor = C.onPrimary, shape = RoundedCornerShape(16.dp)) { Icon(Icons.Filled.DocumentScanner, "Last opp") }
             }) {
                 Spacer(Modifier.height(8.dp))
                 Screen.entries.forEach { s ->
@@ -102,13 +111,17 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass) {
         }
         if (vm.busy) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = C.primary) }
     }
+    if (vm.menuOpen) ProfileMenu(vm)
 }
 
 @Composable
 private fun MainPane(vm: AppViewModel, twoPane: Boolean, scan: () -> Unit, pick: () -> Unit) {
     when (vm.screen) {
-        Screen.Home -> HomeScreen(vm)
-        Screen.List -> ListScreen(vm, twoPane)
+        Screen.Home, Screen.List -> if (!twoPane && vm.selectedTx != null) {
+            BackHandler { vm.selectedTx = null }
+            TxDetail(vm, back = { vm.selectedTx = null })
+        } else if (vm.screen == Screen.Home) HomeScreen(vm) else ListScreen(vm, twoPane)
+        Screen.Mat -> MatScreen(vm)
         Screen.Budget -> BudgetScreen(vm)
         Screen.Scan -> if (!twoPane && vm.selectedReceipt != null) ReceiptConfirm(vm, back = { vm.selectedReceipt = null }) else ScanQueue(vm, scan, pick)
         Screen.Me -> MeScreen(vm)
@@ -121,7 +134,8 @@ private fun DetailPane(vm: AppViewModel) {
         Screen.Scan -> if (vm.selectedReceipt != null) ReceiptConfirm(vm, back = null) else Empty("Velg en kvittering.")
         Screen.Budget -> BudgetDetail(vm)
         Screen.Me -> Column(Modifier.padding(20.dp)) { Hero(vm) }
-        else -> TxDetail(vm)
+        Screen.Mat -> ShoppingPane(vm)
+        else -> TxDetail(vm, back = null)
     }
 }
 
@@ -147,6 +161,23 @@ private fun Initial(text: String, color: Long, size: Int = 40, shape: RoundedCor
     }
 }
 
+/** Butikklogo (favicon via serverens cache) på hvit flate; initial når domenet er ukjent. */
+@Composable
+private fun Logo(vm: AppViewModel, domain: String?, name: String, color: Long, size: Int = 40, shape: RoundedCornerShape = RoundedCornerShape((size / 4).dp)) {
+    var bmp by remember(domain) { mutableStateOf<Bitmap?>(null) }
+    LaunchedEffect(domain) { bmp = vm.logo(domain) }
+    val b = bmp
+    if (b == null) Initial(name, color, size, shape)
+    else Box(Modifier.size(size.dp).clip(shape).background(Color.White).padding((size / 9).dp), contentAlignment = Alignment.Center) {
+        Image(b.asImageBitmap(), null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
+    }
+}
+
+@Composable
+private fun AiLine(text: String?) {
+    if (!text.isNullOrBlank()) Text("✦ $text", color = C.accentLight, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+}
+
 /** Liste-elementer i M3 Expressive: første og siste har stor runding, de i midten liten. */
 private fun itemShape(i: Int, n: Int) = when {
     n == 1 -> RoundedCornerShape(24.dp)
@@ -156,15 +187,16 @@ private fun itemShape(i: Int, n: Int) = when {
 }
 
 @Composable
-private fun TxRow(t: Tx, shape: RoundedCornerShape, selected: Boolean = false, onClick: () -> Unit) {
+private fun TxRow(vm: AppViewModel, t: Tx, shape: RoundedCornerShape, selected: Boolean = false, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clip(shape).background(if (selected) C.surface3 else C.surface1).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Initial(t.description, t.color)
+        Logo(vm, t.domain, t.description, t.color)
         Column(Modifier.weight(1f)) {
             Text(t.description, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text("${ddmm(t.date)} · ${t.category}", color = C.text2, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            AiLine(t.aiShort)
         }
         Text(signed(t.amount), fontFamily = Mono, fontWeight = FontWeight.SemiBold, color = if (t.amount > 0) C.positive else C.text)
     }
@@ -173,7 +205,7 @@ private fun TxRow(t: Tx, shape: RoundedCornerShape, selected: Boolean = false, o
 @Composable
 private fun TxGroup(list: List<Tx>, vm: AppViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-        list.forEachIndexed { i, t -> TxRow(t, itemShape(i, list.size), vm.selectedTx == t.id) { vm.selectedTx = t.id } }
+        list.forEachIndexed { i, t -> TxRow(vm, t, itemShape(i, list.size), vm.selectedTx == t.id) { vm.selectedTx = t.id } }
     }
 }
 
@@ -229,19 +261,88 @@ private fun HomeScreen(vm: AppViewModel) {
                     Text(monthLabel(s?.month ?: ""), style = MaterialTheme.typography.displaySmall)
                 }
                 IconButton(onClick = { vm.refresh() }) { Icon(Icons.Filled.Refresh, "Oppdater", tint = C.text2) }
-                Box(Modifier.size(44.dp).clip(CircleShape).background(C.container).clickable { vm.go(Screen.Me) }, contentAlignment = Alignment.Center) { Text(initial(name), color = C.onContainer, fontWeight = FontWeight.SemiBold) }
+                Box(Modifier.size(44.dp).clip(CircleShape).background(C.container).clickable { vm.menuOpen = true }, contentAlignment = Alignment.Center) { Text(initial(name), color = C.onContainer, fontWeight = FontWeight.SemiBold) }
             }
         }
         item { Hero(vm) }
         if (s != null) item {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Tile("Inn", n0(s.inn), RoundedCornerShape(24.dp), C.surface2, Modifier.weight(1f))
-                Tile("Spart i år", if (s.yearGoal > 0) "${n0(s.savedYear / s.yearGoal * 100)} %" else n0(s.savedYear), RoundedCornerShape(24.dp, 24.dp, 24.dp, 8.dp), C.surface3, Modifier.weight(1f))
+            Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                InnCard(s, Modifier.weight(1f).fillMaxHeight())
+                SavedCard(s, Modifier.weight(1f).fillMaxHeight())
             }
         }
+        item { UploadPill(vm) }
         item { ReviewCta(vm) }
         item { SectionLabel("Siste") }
         item { s?.recent?.take(6)?.let { TxGroup(it, vm) } ?: Empty("Laster …") }
+    }
+}
+
+/** «Inn i oktober»: pil-badge og sju mini-stolper der siste (denne måneden) er grønn. */
+@Composable
+private fun InnCard(s: Summary, modifier: Modifier) {
+    val bars = (s.innMonthly.ifEmpty { listOf(s.inn) }).takeLast(7)
+    val max = maxOf(1.0, bars.maxOrNull() ?: 1.0)
+    Column(modifier.clip(RoundedCornerShape(28.dp, 10.dp, 28.dp, 28.dp)).background(C.surface2).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Inn i ${monthLabel(s.month).lowercase()}", color = C.text2, fontSize = 13.sp, modifier = Modifier.weight(1f))
+            Box(Modifier.size(24.dp).clip(CircleShape).background(C.positiveBg), contentAlignment = Alignment.Center) { Icon(Icons.Filled.SouthWest, null, tint = C.positive, modifier = Modifier.size(14.dp)) }
+        }
+        Text(n0(s.inn), fontFamily = Mono, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+        Row(Modifier.fillMaxWidth().height(28.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.Bottom) {
+            bars.forEachIndexed { i, v ->
+                Box(Modifier.weight(1f).fillMaxHeight((v / max).toFloat().coerceIn(0.08f, 1f)).clip(RoundedCornerShape(3.dp))
+                    .background(if (i == bars.lastIndex) C.positive else C.surface3))
+            }
+        }
+    }
+}
+
+/** «Spart i år»: konisk ring (58 px) mot årsmålet. */
+@Composable
+private fun SavedCard(s: Summary, modifier: Modifier) {
+    val pct = if (s.yearGoal > 0) (s.savedYear / s.yearGoal).toFloat().coerceIn(0f, 1f) else 0f
+    Column(modifier.clip(RoundedCornerShape(10.dp, 28.dp, 28.dp, 28.dp)).background(C.surface3).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Spart i år", color = C.text2, fontSize = 13.sp)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.size(58.dp), contentAlignment = Alignment.Center) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val w = 8.dp.toPx()
+                    val tl = Offset(w / 2, w / 2); val sz = Size(size.width - w, size.height - w)
+                    drawArc(C.surface1, 0f, 360f, false, tl, sz, style = Stroke(w))
+                    drawArc(C.primary, -90f, 360f * pct, false, tl, sz, style = Stroke(w, cap = StrokeCap.Round))
+                }
+                Text("${(pct * 100).toInt()}%", fontFamily = Mono, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+            }
+            Column {
+                Text(n0(s.savedYear), fontFamily = Mono, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                if (s.yearGoal > 0) Text("av ${n0(s.yearGoal)}", color = C.text2, fontSize = 12.sp)
+            }
+        }
+        if (s.yearGoal > 0) Text("${n0(maxOf(0.0, s.yearGoal - s.savedYear))} kr igjen", color = C.text2, fontSize = 12.sp)
+    }
+}
+
+/** Pille på forsiden som viser fremdrift i opplastingskøen. */
+@Composable
+private fun UploadPill(vm: AppViewModel) {
+    val active = vm.jobs.filter { it.status == "pending" || it.status == "processing" }
+    val ready = vm.jobs.count { it.status == "needs_review" }
+    if (active.isEmpty() && vm.uploading == 0 && ready == 0) return
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(C.surface2).clickable { vm.go(Screen.Scan) }.padding(16.dp, 12.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        if (active.isNotEmpty() || vm.uploading > 0) CircularProgressIndicator(color = C.primary, strokeWidth = 3.dp, modifier = Modifier.size(22.dp))
+        else Icon(Icons.Filled.CheckCircle, null, tint = C.positive)
+        Text(
+            when {
+                vm.uploading > 0 -> "Laster opp ${vm.uploading} fil${if (vm.uploading > 1) "er" else ""} …"
+                active.isNotEmpty() -> "Gemini leser ${active.size} kvittering${if (active.size > 1) "er" else ""} · ${active.map { it.progress }.average().toInt()} %"
+                else -> "$ready klar · trykk for å bekrefte"
+            }, Modifier.weight(1f), fontWeight = FontWeight.Medium,
+        )
+        Icon(Icons.Filled.ChevronRight, null, tint = C.text2)
     }
 }
 
@@ -263,7 +364,7 @@ private fun ListScreen(vm: AppViewModel, twoPane: Boolean) {
                 value = vm.query, onValueChange = { vm.query = it }, placeholder = { Text("Søk i transaksjoner") },
                 leadingIcon = { Icon(Icons.Filled.Search, null) }, singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { vm.search() }),
-                shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp), modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
                 colors = TextFieldDefaults.colors(focusedContainerColor = C.surface2, unfocusedContainerColor = C.surface2, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
             )
         }
@@ -295,10 +396,19 @@ private fun BudgetScreen(vm: AppViewModel) {
     val list = vm.summary?.budgets?.filter { it.budget > 0 }?.sortedByDescending { it.used / it.budget } ?: emptyList()
     Page {
         item { Text("Budsjett", style = MaterialTheme.typography.displaySmall, modifier = Modifier.padding(top = 8.dp)) }
-        item { Hero(vm) }
+        vm.summary?.let { s ->
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Tile("Budsjett", n0(s.budgetTotal), RoundedCornerShape(24.dp, 8.dp, 8.dp, 24.dp), C.surface2, Modifier.weight(1f))
+                    Tile("Brukt", n0(s.budgetUsed), RoundedCornerShape(8.dp), C.surface2, Modifier.weight(1f))
+                    Tile("Dager igjen", "${s.daysLeft}", RoundedCornerShape(8.dp, 24.dp, 24.dp, 8.dp), C.surface2, Modifier.weight(1f))
+                }
+            }
+        }
         if (list.isEmpty()) item { Empty("Ingen budsjett satt. Sett opp i FinansHub på nettet.") }
         items(list, key = { it.categoryId }) { b ->
             val over = b.used > b.budget
+            val days = maxOf(1, vm.summary?.daysLeft ?: 1)
             Column(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(if (vm.selectedBudget == b.categoryId) C.surface3 else C.surface1)
                     .clickable { vm.selectedBudget = b.categoryId }.padding(16.dp),
@@ -310,6 +420,19 @@ private fun BudgetScreen(vm: AppViewModel) {
                 }
                 LinearProgressIndicator(progress = { (b.used / b.budget).toFloat().coerceIn(0f, 1f) }, Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
                     color = if (over) C.accent else Color(b.color), trackColor = C.surface2)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(if (over) "Over med ${n0(b.used - b.budget)} kr" else "${n0(b.budget - b.used)} kr igjen · ${n0((b.budget - b.used) / days)} kr/dag",
+                        color = if (over) C.primary else C.text2, fontSize = 13.sp)
+                    Text("${(b.used / b.budget * 100).toInt()} % brukt", color = C.text2, fontSize = 13.sp)
+                }
+                val chips = buildList {
+                    if (b.count > 0) add("${b.count} kjøp")
+                    b.topMerchant?.let { add("Mest: $it") }
+                    b.prevUsed?.takeIf { it > 0 }?.let { p -> val d = ((b.used - p) / p * 100).toInt(); add((if (d > 0) "↑ $d" else "↓ ${-d}") + " % mot forrige mnd") }
+                }
+                if (chips.isNotEmpty()) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    chips.forEach { Text(it, fontSize = 12.sp, color = C.text2, modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(C.surface2).padding(8.dp, 4.dp)) }
+                }
             }
         }
     }
@@ -334,21 +457,35 @@ private fun BudgetDetail(vm: AppViewModel) {
 }
 
 @Composable
-private fun TxDetail(vm: AppViewModel) {
+private fun TxDetail(vm: AppViewModel, back: (() -> Unit)?) {
     val pool = (vm.txs ?: emptyList()) + (vm.summary?.recent ?: emptyList())
     val t = pool.firstOrNull { it.id == vm.selectedTx } ?: pool.firstOrNull() ?: return Empty("Ingen transaksjon valgt.")
     val cats = vm.boot?.categories ?: emptyList()
     var open by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        if (back != null) FilledTonalIconButton(onClick = back, modifier = Modifier.size(48.dp)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Tilbake") }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            Initial(t.description, t.color, 56, RoundedCornerShape(18.dp))
+            Logo(vm, t.domain, t.description, t.color, 60, RoundedCornerShape(18.dp))
             Column { Text(t.description, style = MaterialTheme.typography.titleLarge); Text(dayLabel(t.date), color = C.text2) }
         }
         Row(verticalAlignment = Alignment.Bottom) {
             Text(signed(t.amount), fontFamily = Mono, fontSize = 40.sp, fontWeight = FontWeight.SemiBold, color = if (t.amount > 0) C.positive else C.text)
             Text(" kr", color = C.text2, fontSize = 18.sp, modifier = Modifier.padding(bottom = 8.dp))
         }
+        (t.aiLong ?: t.aiShort)?.let { txt ->
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp, 28.dp, 28.dp, 10.dp)).background(Color(0xFF763300)).padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("✦ AI-beskrivelse", color = Color(0xFFFFDBC8), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                Text(txt, color = Color(0xFFFFDBC8))
+            }
+        }
+        if (t.lines.isNotEmpty()) {
+            SectionLabel("Varelinjer")
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(C.surface1).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                t.lines.forEach { (d, a) -> Row(Modifier.fillMaxWidth()) { Text(d, Modifier.weight(1f), maxLines = 2); Text(n2(a), fontFamily = Mono) } }
+            }
+        }
         listOf("Kategori" to t.category, "Konto" to t.account, "Kvittering" to when (t.receipt) { "booked" -> "Vedlagt"; null -> "–"; else -> "Til gjennomgang" })
+            .plus(listOf("Delt mappe" to (t.folder ?: "–")))
             .plus(if (t.note.isNotBlank()) listOf("Notat" to t.note) else emptyList())
             .forEach { (k, v) ->
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(C.surface1).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -368,14 +505,35 @@ private fun TxDetail(vm: AppViewModel) {
 private fun ScanQueue(vm: AppViewModel, scan: () -> Unit, pick: () -> Unit) {
     val q = vm.receipts
     Page {
-        item { Text("Skann", style = MaterialTheme.typography.displaySmall, modifier = Modifier.padding(top = 8.dp)) }
+        item { Text("Last opp", style = MaterialTheme.typography.displaySmall, modifier = Modifier.padding(top = 8.dp)) }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = scan, modifier = Modifier.weight(2f).height(64.dp), shape = RoundedCornerShape(28.dp, 8.dp, 8.dp, 28.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) {
                     Icon(Icons.Filled.PhotoCamera, null); Spacer(Modifier.width(8.dp)); Text("Ta bilde", fontWeight = FontWeight.Bold)
                 }
-                OutlinedButton(onClick = pick, modifier = Modifier.weight(1f).height(64.dp), shape = RoundedCornerShape(8.dp, 28.dp, 28.dp, 8.dp)) { Text("Velg fil") }
+                OutlinedButton(onClick = pick, modifier = Modifier.weight(1f).height(64.dp), shape = RoundedCornerShape(8.dp, 28.dp, 28.dp, 8.dp)) { Text("Velg filer") }
+            }
+        }
+        val jobs = vm.jobs.filter { it.status != "booked" }
+        if (jobs.isNotEmpty() || vm.uploading > 0) {
+            item { SectionLabel("Kø") }
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    val n = jobs.size + if (vm.uploading > 0) 1 else 0
+                    if (vm.uploading > 0) JobRow("Laster opp ${vm.uploading} fil${if (vm.uploading > 1) "er" else ""}", "Sender til serveren …", null, itemShape(0, n)) {}
+                    jobs.forEachIndexed { i, j ->
+                        val idx = i + if (vm.uploading > 0) 1 else 0
+                        val (title, sub) = when (j.status) {
+                            "pending" -> j.name to "I kø"
+                            "processing" -> j.name to "Gemini leser … ${j.progress} %"
+                            "needs_review" -> (j.merchant ?: j.name) to "Klar · trykk for å bekrefte"
+                            "error" -> j.name to "Feilet – fyll ut manuelt"
+                            else -> j.name to j.status
+                        }
+                        JobRow(title, sub, j.progress.takeIf { j.status == "processing" }, itemShape(idx, n)) { vm.selectedReceipt = j.id }
+                    }
+                }
             }
         }
         when {
@@ -403,6 +561,15 @@ private fun ScanQueue(vm: AppViewModel, scan: () -> Unit, pick: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun JobRow(title: String, sub: String, progress: Int?, shape: RoundedCornerShape, onClick: () -> Unit) {
+    Column(Modifier.fillMaxWidth().clip(shape).background(C.surface1).clickable(onClick = onClick).padding(16.dp, 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(title, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(sub, color = if (sub.startsWith("Klar")) C.positive else C.text2, fontSize = 13.sp)
+        if (progress != null) LinearProgressIndicator(progress = { progress / 100f }, Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)), color = C.primary, trackColor = C.surface2)
     }
 }
 
@@ -561,12 +728,141 @@ private fun LoginScreen(vm: AppViewModel) {
             Box(Modifier.size(56.dp).clip(RoundedCornerShape(18.dp)).background(C.accent), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Savings, null, tint = Color(0xFF1A0C04)) }
             Text("FinansHub", style = MaterialTheme.typography.displaySmall)
             Text("Logg inn på homelab-serveren din. Appen får bare tilgang til økonomidelen.", color = C.text2)
-            OutlinedTextField(server, { server = it }, label = { Text("Serveradresse") }, placeholder = { Text("https://os.dittdomene.no") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next), shape = RoundedCornerShape(16.dp))
+            OutlinedTextField(server, { server = it }, label = { Text("Serveradresse") }, placeholder = { Text("192.168.1.20:8080") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = ServerKeyboard, shape = RoundedCornerShape(16.dp),
+                supportingText = { Text("F.eks. 192.168.1.20:8080 (http) eller os.dittdomene.no (https)") })
             OutlinedTextField(pw, { pw = it }, label = { Text("Passord") }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Go), keyboardActions = KeyboardActions(onGo = { vm.login(server, pw) }), shape = RoundedCornerShape(16.dp))
             Button(onClick = { vm.login(server, pw) }, enabled = server.isNotBlank() && pw.isNotBlank() && !vm.busy, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(28.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) { Text(if (vm.busy) "Logger inn …" else "Logg inn", fontWeight = FontWeight.Bold) }
         }
+    }
+}
+
+/** Adressefelt: URL-tastatur uten stor forbokstav eller autokorrektur (ødelegger adressen). */
+private val ServerKeyboard = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false, keyboardType = KeyboardType.Uri, imeAction = ImeAction.Next)
+
+/* ---------------- Profilmeny ---------------- */
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProfileMenu(vm: AppViewModel) {
+    val ctx = LocalContext.current
+    var server by remember { mutableStateOf(vm.server) }
+    var pw by remember { mutableStateOf("") }
+    val open: (String) -> Unit = { hash -> ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(vm.server.trimEnd('/') + "/finans/#/" + hash))) }
+    ModalBottomSheet(onDismissRequest = { vm.menuOpen = false }, containerColor = C.surface1) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp, 0.dp, 20.dp, 32.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(C.surface2).padding(4.dp)) {
+                listOf(Screen.Home to "Finans", Screen.Mat to "Matplan").forEach { (sc, label) ->
+                    val on = if (sc == Screen.Mat) vm.screen == Screen.Mat else vm.screen != Screen.Mat
+                    Box(Modifier.weight(1f).clip(RoundedCornerShape(24.dp)).background(if (on) C.container else Color.Transparent)
+                        .clickable { vm.menuOpen = false; vm.go(sc) }.padding(12.dp), contentAlignment = Alignment.Center) {
+                        Text(label, color = if (on) C.onContainer else C.text2, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+            SectionLabel("Andre OS")
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                listOf("Subscription OS" to "abonnement", "Delte mapper" to "mapper", "Finn-handler" to "finn").forEachIndexed { i, (n, h) ->
+                    Row(Modifier.fillMaxWidth().clip(itemShape(i, 3)).background(C.surface2).clickable { open(h) }.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(n, Modifier.weight(1f)); Icon(Icons.AutoMirrored.Filled.OpenInNew, null, tint = C.text2)
+                    }
+                }
+            }
+            SectionLabel("Server")
+            OutlinedTextField(server, { server = it }, label = { Text("Lokal adresse") }, singleLine = true, modifier = Modifier.fillMaxWidth(), keyboardOptions = ServerKeyboard, shape = RoundedCornerShape(16.dp))
+            OutlinedTextField(pw, { pw = it }, label = { Text("Passord") }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Go), shape = RoundedCornerShape(16.dp))
+            Button(onClick = { vm.login(server, pw) { vm.menuOpen = false; vm.message = "Koblet til ${Api.normalizeServer(server)}" } },
+                enabled = server.isNotBlank() && pw.isNotBlank() && !vm.busy, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) { Text("Koble til", fontWeight = FontWeight.Bold) }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { vm.menuOpen = false; vm.go(Screen.Me) }, Modifier.weight(1f), shape = RoundedCornerShape(26.dp)) { Text("Innstillinger") }
+                OutlinedButton(onClick = { vm.menuOpen = false; vm.logout() }, Modifier.weight(1f), shape = RoundedCornerShape(26.dp)) { Text("Logg ut", color = C.primary) }
+            }
+        }
+    }
+}
+
+/* ---------------- Matplan ---------------- */
+
+private val sourceLabel = mapOf("gemini" to "Gemini", "hellofresh" to "HelloFresh", "fixed" to "Fast", "own" to "Egen")
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MatScreen(vm: AppViewModel) {
+    val w = vm.week
+    val today = java.time.LocalDate.now().toString()
+    LaunchedEffect(Unit) { if (vm.week == null) runCatching { vm.loadWeek() }.onFailure { vm.message = it.message } }
+    Page {
+        item {
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Matplan", style = MaterialTheme.typography.displaySmall, modifier = Modifier.weight(1f))
+                Box(Modifier.size(44.dp).clip(CircleShape).background(C.container).clickable { vm.menuOpen = true }, contentAlignment = Alignment.Center) {
+                    Text(initial(vm.boot?.settings?.name ?: ""), color = C.onContainer, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+        item {
+            Button(onClick = { vm.planWeek() }, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(28.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) { Text("✦ Ny ukeplan med Gemini", fontWeight = FontWeight.Bold) }
+        }
+        if (w == null) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = C.primary) } }
+        else {
+            item { Text("Estimert ukekost ${n0(w.weekCost)} kr${if (w.auto) " · automatisk hver søndag" else ""}", color = C.text2, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp)) }
+            items(w.days, key = { it.date }) { d ->
+                var pick by remember { mutableStateOf(false) }
+                Column(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(C.surface1)
+                        .then(if (d.date == today) Modifier.border(2.dp, C.accent, RoundedCornerShape(24.dp)) else Modifier).padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(d.weekday.ifBlank { ddmm(d.date) }, color = C.text2, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                        d.source?.let { Text(sourceLabel[it] ?: it, fontSize = 12.sp, color = C.onContainer, modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(C.container).padding(8.dp, 3.dp)) }
+                    }
+                    Text(d.name ?: "Ingen rett ennå", style = MaterialTheme.typography.titleMedium, color = if (d.name == null) C.text2 else C.text)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box {
+                            AssistChip(onClick = { pick = true }, label = { Text(d.cook ?: "Velg kokk") }, leadingIcon = { Icon(Icons.Filled.Person, null, Modifier.size(16.dp)) })
+                            DropdownMenu(expanded = pick, onDismissRequest = { pick = false }) {
+                                w.cooks.forEach { c -> DropdownMenuItem(text = { Text(c) }, onClick = { pick = false; vm.setCook(d.date, c) }) }
+                            }
+                        }
+                        d.cost?.let { Text("${n0(it)} kr", fontFamily = Mono, color = C.text2) }
+                        Spacer(Modifier.weight(1f))
+                        FilterChip(selected = d.fixed, onClick = { vm.toggleFixed(d) }, label = { Text("Fast") },
+                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = C.positiveBg, selectedLabelColor = C.positive))
+                        FilledTonalIconButton(onClick = { vm.planDay(d.date) }) { Text("✦") }
+                    }
+                }
+            }
+            if (w.shopping.isNotEmpty()) {
+                item { SectionLabel("Handleliste") }
+                item { ShoppingList(vm, w) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ShoppingList(vm: AppViewModel, w: Week) {
+    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        w.shopping.forEachIndexed { i, sh ->
+            Row(Modifier.fillMaxWidth().clip(itemShape(i, w.shopping.size)).background(C.surface1).clickable { vm.toggleShop(sh.id) }.padding(8.dp, 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = sh.done, onCheckedChange = { _ -> vm.toggleShop(sh.id) }, colors = CheckboxDefaults.colors(checkedColor = C.primary, checkmarkColor = C.onPrimary))
+                Text(sh.text, color = if (sh.done) C.text2 else C.text)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ShoppingPane(vm: AppViewModel) {
+    val w = vm.week ?: return Empty("Laster …")
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Handleliste", style = MaterialTheme.typography.headlineMedium)
+        if (w.shopping.isEmpty()) Empty("Handlelisten er tom.") else ShoppingList(vm, w)
     }
 }

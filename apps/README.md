@@ -32,7 +32,29 @@ open FinansHub.xcodeproj
 ```
 Velg ditt team under Signing & Capabilities og kjør appen på telefonen. Liquid Glass krever Xcode 26 og iOS 26.
 
+## Mobil v2 (begge apper)
+- **Profilbildet** åpner en meny: Finans | Matplan, «Andre OS» (Subscription OS, Delte mapper, Finn-handler åpnes i nettleseren), Server-felt for å bytte adresse, Innstillinger og Logg ut. iOS har i tillegg bryteren «Fargebakgrunn» (lagres som `fh_ios_bg`).
+- **Faner:** Hjem, Liste, Budsjett, Matplan. Skanneknappen åpner **Last opp**: velg flere bilder/PDF-er samtidig. Hver fil vises i køen (I kø → «Gemini leser … N %» → «Klar · trykk for å bekrefte»), og en pille på forsiden viser fremdriften. Appen poller `GET /finans/api/receipts/jobs`.
+- **Utgiftsdetalj:** logo, ✦ AI-beskrivelse, varelinjer og metadata (kategori, konto, kvittering, delt mappe).
+- **Budsjett:** budsjett/brukt/dager igjen, og per kategori kr igjen per dag, % brukt, antall kjøp, mest brukte butikk og trend mot forrige måned.
+- **Logoer** hentes fra serverens cache, `/finans/api/logo/<domene>`.
+- **Matplan** leser `/mat/api/week` med samme token.
+
+## Innlogging og lokalt nett
+- Skriver du adressen uten `http://`/`https://`, velger appen `http://` for lokale adresser (192.168.x.x, 10.x, 172.16–31.x, 100.64–127.x, `localhost`, `*.local`, `*.lan` og navn uten punktum) og ellers `https://`.
+- Appen logger inn via `POST /finans/api/login`, og faller tilbake til `/auth/token` på eldre servere. Svarer begge med 404, får du beskjed om å sjekke adressen eller oppdatere homelab.
+- **Android:** `res/xml/network_security_config.xml` tillater klartekst-HTTP (Android 9+ blokkerer det ellers) og brukerinstallerte CA-er (for selvsignerte sertifikater). Adressefeltet bruker URL-tastatur uten stor forbokstav og autokorrektur.
+- **iOS:** `NSAllowsLocalNetworking` og `NSLocalNetworkUsageDescription` er satt. iOS spør om tilgang til lokalt nett første gang.
+
+## iOS: .ipa for sideloading
+Det trengs en Mac med Xcode for å bygge og signere selv. CI lager også en **usignert** `.ipa` (artefakt «FinansHub-ios-unsigned» fra macOS 26-jobben) som kan signeres ved installasjon.
+1. Installer [AltStore](https://altstore.io) eller [SideStore](https://sidestore.io), som fornyer signaturen automatisk, eller [Sideloadly](https://sideloadly.io).
+2. Last ned `FinansHub-unsigned.ipa` fra Actions-kjøringen, og åpne den i AltStore/SideStore/Sideloadly med din Apple-ID.
+3. Med en gratis Apple-ID er signaturen gyldig i 7 dager. AltStore/SideStore fornyer den mens telefonen er på samme nett som AltServer.
+
+Bygg selv i Xcode: `xcodegen generate`, åpne prosjektet, velg ditt personlige team under Signing, og velg **Product → Archive → Distribute App → Custom → Development** for å eksportere en `.ipa`.
+
 ## CI
 `.github/workflows/mobile.yml` bygger APK-en og iOS-appen (simulator) ved hver endring i `apps/`.
 - Last ned APK-en fra Actions-kjøringen (artefakt «FinansHub-android») og installer den direkte.
-- iOS må signeres med egen Apple-konto for å kjøre på en telefon.
+- iOS må signeres med egen Apple-konto for å kjøre på en telefon. Den usignerte `.ipa`-en ligger i artefakten «FinansHub-ios-unsigned».
