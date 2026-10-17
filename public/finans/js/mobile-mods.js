@@ -126,16 +126,31 @@ function folder(th, id) {
     ${bal.length ? `${sec('Saldo')}<div class="bchips" style="padding:0 2px">${bal.map((b) => `<em class="${b.balance >= 0 ? 'pos' : 'negb'}">${esc(b.name)} ${b.balance >= 0 ? '+' : '−'}${n0(Math.abs(b.balance))} kr</em>`).join('')}</div>` : ''}
     ${projects.length ? `${sec('Prosjekter')}${listBox(th, projects.map((p) => { const used = p.used ?? p.paid ?? 0, bud = p.budget ?? 0; return `<div class="opt-row" style="flex-direction:column;align-items:stretch;gap:8px"><span class="m-row" style="justify-content:space-between"><b style="font-weight:500">${esc(p.name)}</b><span class="m-mono">${n0(used)} / ${n0(bud)} kr</span></span>${p.vendor ? `<span class="s" style="opacity:.65;font-size:13px">${esc(p.vendor)}</span>` : ''}<span class="m-bar" style="height:6px;background:rgba(255,255,255,.12)"><i style="width:${bud ? Math.min(100, (used / bud) * 100) : 0}%;background:var(--m-acc)"></i></span><span style="font-size:12.5px;opacity:.65">${used >= bud && bud ? 'Betalt ✓' : `${n0(Math.max(0, bud - used))} kr igjen`}</span>${(p.installments ?? []).map((i) => `<span class="m-row" style="justify-content:space-between;gap:8px;font-size:13.5px"><span class="m-ell">${esc(i.label ?? 'Avdrag')}${i.due ? ` · ${dd(i.due)}` : ''}</span><span class="m-row" style="gap:8px"><span class="m-mono">${n0(i.amount)} kr</span>${i.paid ? '<em class="stchip ok" style="cursor:default">Betalt</em>' : ro ? '<em class="stchip warn" style="cursor:default">Forfaller</em>' : `<button class="stchip warn" data-dirpay="${i.id}">Registrer betalt</button>`}</span></span>`).join('')}</div>`; }).join(''))}` : ''}
     ${bills.length ? `${sec('Faste regninger')}${listBox(th, bills.map((b) => `<div class="opt-row"><span class="m-grow"><b style="font-weight:500">${esc(b.name)}</b><br><span style="font-size:13px;opacity:.65">${[b.freq ?? b.frequency, b.payer ? `betales av ${b.payer}` : ''].filter(Boolean).map(esc).join(' · ')}</span></span><span class="m-mono" style="opacity:.8">${b.nextDue ?? b.next_due ? `neste ${dd(b.nextDue ?? b.next_due)}` : ''}</span></div>`).join(''))}` : ''}
+    ${(f.categories ?? []).length ? `${sec('Kategorier')}${listBox(th, f.categories.map((c) => `<div class="opt-row" style="flex-direction:column;align-items:stretch;gap:6px"><span class="m-row" style="justify-content:space-between;gap:8px"><span class="m-row" style="gap:8px;min-width:0"><i style="width:10px;height:10px;border-radius:50%;flex:none;background:${esc(c.color)}"></i><b class="m-ell" style="font-weight:500">${esc(c.name)}</b></span><span class="m-mono">${n0(c.sum)} kr</span></span>
+      <span class="m-bar" style="height:5px;background:rgba(127,127,127,.18)"><i style="width:${Math.min(100, c.pct ?? 0)}%;background:${esc(c.color)}"></i></span>
+      ${(c.subs ?? []).map((x) => `<span class="m-row" style="justify-content:space-between;gap:8px;font-size:12.5px;opacity:.72;padding-left:18px"><span class="m-ell">${esc(x.name)}</span><span class="m-mono">${n0(x.sum)} kr</span></span>`).join('')}</div>`).join(''))}` : ''}
     ${sec('Utgifter')}
-    ${listBox(th, (f.entries ?? []).map((e) => `<div class="item">${logo(e, 40, isIos(th) ? 20 : 12)}<span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(e.description)}</span>${aiLine(e.aiShort, 'm-ell ai')}<span class="m-ell s">${dd(e.date)}${e.paidBy ? ` · betalt av ${esc(e.paidBy)}` : ''}${e.split ? ` · ${esc(e.split)}` : ''}</span></span><span class="m-mono" style="font-weight:600">${n2(e.amount)}</span></div>`).join('') || '<div class="m-empty">Ingen utgifter ennå.</div>')}
-    ${ro ? '<div class="m-empty">Du har lesetilgang. Be en eier om redigeringstilgang for å legge til utgifter.</div>' : `${sec('Legg til utgift')}
-    <form class="${isIos(th) ? 'list glass2' : 'fields'}" data-dirform="${esc(String(f.id))}">
-      <label class="field">${isIos(th) ? '<span>Beskrivelse</span>' : 'Beskrivelse'}<input name="description" required placeholder="F.eks. Vannregning"></label>
-      <label class="field">${isIos(th) ? '<span>Beløp</span>' : 'Beløp'}<input name="amount" inputmode="decimal" required placeholder="0,00" class="m-mono"></label>
-      <label class="field">${isIos(th) ? '<span>Betalt av</span>' : 'Betalt av'}<select name="paidBy">${members.map((x) => `<option>${esc(x.name ?? x.username)}</option>`).join('')}</select></label>
-      <div style="padding:${isIos(th) ? '10px 12px' : '0'}"><button class="pri-b" type="submit" style="width:100%;height:50px">Legg til</button></div>
-    </form>`}
+    ${listBox(th, (f.entries ?? []).map((e) => `<div class="item">${logo(e, 40, isIos(th) ? 20 : 12)}<span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(e.description)}</span>${aiLine(e.aiShort, 'm-ell ai')}<span class="m-ell s">${e.pending ? '✦ Kategoriseres … · ' : e.categoryLabel ? `<span style="color:${esc(e.color ?? 'inherit')}">${e.aiCategory ? '✦ ' : ''}${esc(e.categoryLabel)}</span> · ` : ''}${dd(e.date)}${e.paidBy ? ` · betalt av ${esc(e.paidBy)}` : ''}${e.split ? ` · ${esc(e.split)}` : ''}</span></span><span class="m-mono" style="font-weight:600">${n2(e.amount)}</span></div>`).join('') || '<div class="m-empty">Ingen utgifter ennå.</div>')}
+    ${ro && !bolEditable().length ? '<div class="m-empty">Du har lesetilgang. Be en eier om redigeringstilgang for å legge til utgifter.</div>' : addForm(th, f, members)}
     ${sharing(th, f)}`;
+}
+// Boliger brukeren kan legge poster i, og hvilken som er valgt («Legg i bolig»). Standard er boligen du står i.
+const bolEditable = () => (D.dirs ?? []).filter((x) => x.role && x.role !== 'viewer');
+const bolTarget = (f) => { const t = D.bolTarget?.[f.id]; return bolEditable().some((x) => x.id === t) ? t : bolEditable().some((x) => x.id === f.id) ? f.id : bolEditable()[0]?.id; };
+function addForm(th, f, members) {
+  const list = bolEditable(), tgt = bolTarget(f), other = tgt !== f.id;
+  const opts = (f.catTree ?? []);
+  const lab = (t) => (isIos(th) ? `<span>${t}</span>` : t);
+  return `${sec('Legg til utgift eller kvittering')}
+    ${list.length > 1 ? `<div class="opt-row col" style="padding:0 2px"><span style="font-size:13px;opacity:.7">Legg i bolig</span><div class="schips">${list.map((x) => `<button class="chip" type="button" data-boltgt="${f.id}:${x.id}" aria-pressed="${x.id === tgt}">${esc(x.name)}</button>`).join('')}</div></div>` : ''}
+    <form class="${isIos(th) ? 'list glass2' : 'fields'}" data-dirform="${esc(String(tgt))}" data-from="${esc(String(f.id))}">
+      <label class="field">${lab('Beskrivelse')}<input name="description" required placeholder="F.eks. Plantasjen, blomster"></label>
+      <label class="field">${lab('Beløp')}<input name="amount" inputmode="decimal" required placeholder="0,00" class="m-mono"></label>
+      <label class="field">${lab('Kategori')}<select name="categoryId"><option value="">✦ AI velger</option>${opts.map((o) => `<option value="${o.id}">${o.sub ? '  ' : ''}${esc(o.label)}</option>`).join('')}</select></label>
+      ${other ? '' : `<label class="field">${lab('Betalt av')}<select name="paidBy">${members.map((x) => `<option>${esc(x.name ?? x.username)}</option>`).join('')}</select></label>`}
+      <div style="padding:${isIos(th) ? '10px 12px' : '0'};display:flex;gap:8px"><button class="pri-b" type="submit" style="flex:1;height:50px">Legg til</button><label class="sec-b" style="flex:1;height:50px;display:flex;align-items:center;justify-content:center;cursor:pointer">Kvittering<input type="file" accept="image/*,application/pdf" multiple hidden data-dirrc="${esc(String(tgt))}" data-from="${esc(String(f.id))}"></label></div>
+    </form>
+    <div class="snote">${other ? `Havner i ${esc(list.find((x) => x.id === tgt)?.name ?? '')}. ` : ''}✦ AI velger kategori og underkategori, og kan lage en ny når ingen passer.</div>`;
 }
 // Deling: eier bytter rolle (Kan se ↔ Kan redigere ↔ Eier) og deler med andre brukere; medlemmer kan forlate mappen.
 function sharing(th, f) {
@@ -302,8 +317,24 @@ export async function modBind(e, t) {
     const v = Object.fromEntries(new FormData(x));
     const amount = parseAmount(v.amount);
     if (!v.description?.trim() || amount === null) { flash('Fyll ut beskrivelse og beløp'); return true; }
-    D.dir[x.dataset.dirform] = await api(`/folders/${encodeURIComponent(x.dataset.dirform)}/entries`, { method: 'POST', json: { description: v.description.trim(), amount, paidBy: v.paidBy, date: today() } });
-    flash('Lagt til i boligen'); return true;
+    const tgt = x.dataset.dirform, from = x.dataset.from ?? tgt;
+    const r = await api(`/folders/${encodeURIComponent(tgt)}/entries`, { method: 'POST', json: { description: v.description.trim(), amount, paidBy: v.paidBy, categoryId: +v.categoryId || null, date: today() } });
+    if (String(tgt) === String(from)) D.dir[from] = r; else D.dir[from] = await api(`/folders/${encodeURIComponent(from)}`);
+    D.dirs = await api('/folders').catch(() => D.dirs);
+    flash(`Lagt til i ${r.name}${v.categoryId ? '' : ' · ✦ AI velger kategori'}`); return true;
+  }
+  if (e.type === 'change' && t.matches?.('[data-dirrc]')) {
+    const files = [...t.files], tgt = t.dataset.dirrc, from = t.dataset.from ?? tgt; t.value = '';
+    if (!files.length) return true;
+    const fd = new FormData();
+    for (const f of files) fd.append('file', f);
+    const r = await api(`/folders/${encodeURIComponent(tgt)}/receipts`, { method: 'POST', body: fd });
+    const n = r.jobs?.length ?? files.length;
+    flash(`${n} kvittering${n === 1 ? '' : 'er'} leses · ✦ AI velger kategori`);
+    // Følg med til AI-en er ferdig, så havner kvitteringen i listen.
+    const poll = async (i) => { if (i > 20 || m.screen !== 'dir') return; D.dir[from] = await api(`/folders/${encodeURIComponent(from)}`).catch(() => D.dir[from]); draw(); const jobs = await api('/receipts/jobs').catch(() => []); if (jobs.some((j) => (r.jobs ?? []).some((y) => y.id === j.id) && ['pending', 'processing'].includes(j.status))) setTimeout(() => poll(i + 1), 2500); };
+    setTimeout(() => poll(0), 2500);
+    return true;
   }
   if (e.type === 'submit' && (x = d('[data-domadd]'))) {
     e.preventDefault();
@@ -340,6 +371,7 @@ export async function modBind(e, t) {
   if ((x = d('[data-subcyc]'))) { D.subF.cycle = x.dataset.subcyc; draw(); return true; }
   if ((x = d('[data-diradd]'))) { D.dirAdd = x.dataset.diradd === '1'; draw(); return true; }
   if ((x = d('[data-dirtype]'))) { D.dirF.type = x.dataset.dirtype; draw(); return true; }
+  if ((x = d('[data-boltgt]'))) { const [from, to] = x.dataset.boltgt.split(':').map(Number); (D.bolTarget ??= {})[from] = to; draw(); return true; }
   if ((x = d('[data-dirrole]'))) { const nx = { viewer: 'editor', editor: 'owner', owner: 'viewer' }[x.dataset.r] ?? 'viewer'; D.dir[fid] = await api(`/folders/${fid}/members/${x.dataset.dirrole}`, { method: 'PATCH', json: { role: nx } }); draw(); return true; }
   if ((x = d('[data-dirshare]'))) { D.dir[fid] = await api(`/folders/${fid}/members`, { method: 'POST', json: { userId: x.dataset.dirshare, role: 'viewer' } }); flash('Delt · kan se'); return true; }
   if ((x = d('[data-dirleave]'))) { if (!confirm('Forlate boligen? Du mister tilgangen til den.')) return true; await api(`/folders/${fid}/members/${x.dataset.dirleave}`, { method: 'DELETE' }); flash('Du forlot mappen'); location.hash = '#/dir'; return true; }

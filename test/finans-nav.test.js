@@ -18,9 +18,10 @@ const call = async (path, method = 'GET', body) => {
   return { status: r.status, body: await r.json().catch(() => null) };
 };
 
-test('Sidemenyen har Matplan og Boliger-ID-en dir som standard', async () => {
+test('Sidemenyen har riktig standard (Import, ingen Matplan) og Boliger-ID-en dir', async () => {
   const r = (await call('/prefs')).body;
-  assert.ok(r.navDefault.includes('mat'));
+  assert.deepEqual(r.navDefault, ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'imp', 'inn']);
+  assert.ok(!r.navDefault.includes('mat'));
   assert.ok(r.navDefault.includes('dir'));
   assert.deepEqual(r.labels, {});
 });
@@ -41,4 +42,12 @@ test('Egne navn lagres, renses og kan tilbakestilles', async () => {
   assert.deepEqual(r2.hidden, ['finn']);
   const r3 = (await call('/prefs', 'PUT', { labels: null })).body;
   assert.deepEqual(r3.labels, {});
+});
+
+test('Lagret sidemeny migreres: Matplan fjernes, Import settes inn før Innstillinger', async () => {
+  const { navMerge } = await import('../server/finans/routes.js');
+  const old = ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'mat', 'inn'];
+  assert.deepEqual(navMerge(old), ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'imp', 'inn']);
+  // Egen rekkefølge beholdes, og nye sider havner etter nærmeste side foran dem.
+  assert.deepEqual(navMerge(['finn', 'ov', 'inn', 'tx', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'mat']).slice(0, 2), ['finn', 'imp']);
 });

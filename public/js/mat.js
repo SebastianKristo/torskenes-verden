@@ -23,7 +23,7 @@ function loadCss() {
   document.head.appendChild(l);
 }
 
-export function mountMatplan(el, { embedded = false, api = '/mat/api' } = {}) {
+export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}) {
   loadCss();
   const S = {
     w: null, err: '', off: 0, open: null, q: '', flt: 'Alle', ed: null, efErr: '', hfOpen: false, hfMsg: '',
@@ -123,12 +123,20 @@ export function mountMatplan(el, { embedded = false, api = '/mat/api' } = {}) {
         <button class="mp-dhead" draggable="true" data-drag="dish:${esc(d.id)}" data-a="toggle" data-id="${esc(d.id)}" aria-expanded="${open || editing}" title="Dra til en dag for å legge den på planen">
           <span class="mp-dinfo"><span class="mp-dtitle"><b>${esc(d.name)}</b>${d.src === 'hellofresh' ? '<span class="mp-hf">HelloFresh</span>' : ''}</span>
             <span class="mp-mute">${d.ing.length} ${d.ing.length === 1 ? 'ingrediens' : 'ingredienser'}</span></span>
-          <span class="mp-dside">${d.days.map((i) => `<span class="mp-chip">${AB[i]}</span>`).join('')}${chev(open || editing)}</span>
+          <span class="mp-dside">${(d.fixedDays ?? []).length ? `<span class="mp-chip mp-chip-fix" title="Alltid på ${(d.fixedDays).map((i) => DAYS[i].toLowerCase()).join(', ')}">Fast</span>` : ''}${d.days.map((i) => `<span class="mp-chip">${AB[i]}</span>`).join('')}${chev(open || editing)}</span>
         </button>
         ${open ? `<div class="mp-dbody">
           <div class="mp-cols">
             <div><div class="mp-lbl">INGREDIENSER</div>${d.ing.length ? `<ul>${d.ing.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>` : '<div class="mp-faint">Ingen ingredienser lagt inn.</div>'}</div>
             <div><div class="mp-lbl">SLIK GJØR DU</div>${d.steps.length ? `<ol>${d.steps.map((i) => `<li>${esc(i)}</li>`).join('')}</ol>` : '<div class="mp-faint">Ingen fremgangsmåte lagt inn.</div>'}</div>
+          </div>
+          <div class="mp-always" role="group" aria-label="Alltid på">
+            <div class="mp-lbl">ALLTID PÅ</div>
+            <div class="mp-row mp-wrap">${AB.map((ab, i) => {
+              const on = (d.fixedDays ?? []).includes(i), other = (w.fixed ?? []).find((f) => f.index === i && f.dishId !== d.id);
+              return `<button class="mp-wd${on ? ' on' : ''}" data-a="always" data-id="${esc(d.id)}" data-wd="${i}" aria-pressed="${on}" title="${on ? `${esc(d.name)} hver ${DAYS[i].toLowerCase()}` : other ? `Erstatter ${esc(other.name)} som fast ${DAYS[i].toLowerCase()}` : `Gjør ${esc(d.name)} fast hver ${DAYS[i].toLowerCase()}`}">${ab}${other && !on ? '<i></i>' : ''}</button>`;
+            }).join('')}</div>
+            <div class="mp-faint">${(d.fixedDays ?? []).length ? `Legges på hver ${(d.fixedDays).map((i) => DAYS[i].toLowerCase()).join(', ')} denne og kommende uker. AI og «Lag ny for uka» endrer ikke faste dager.` : 'Velg dagene retten alltid skal stå på.'}</div>
           </div>
           <div class="mp-row mp-wrap">
             <label class="mp-selwrap"><span class="mp-sr">Legg på dag</span><select data-onday="${esc(d.id)}"><option value="">Legg på dag …</option>${w.days.map((x) => `<option value="${x.date}">${DAYS[x.index]}</option>`).join('')}</select>${chev()}</label>
@@ -253,6 +261,12 @@ export function mountMatplan(el, { embedded = false, api = '/mat/api' } = {}) {
       case 'next': S.off++; return load();
       case 'now': S.off = 0; return load();
       case 'regen': return run(() => call('/plan', { method: 'POST', json: { scope: 'day', date: b.dataset.date } }));
+      case 'always': {
+        const d = w.dishes.find((x) => x.id === b.dataset.id), i = +b.dataset.wd;
+        if (!d) return;
+        const cur = d.fixedDays ?? [], days = cur.includes(i) ? cur.filter((x) => x !== i) : [...cur, i];
+        return run(() => call(`/dishes/${d.id}/fixed`, { method: 'PUT', json: { days, start: w.start } }));
+      }
       case 'fast': {
         const d = dayOf(b.dataset.date);
         if (!d.fixed && !d.dishId) { flash('Velg en rett før du gjør dagen fast.'); return paintStatus(); }

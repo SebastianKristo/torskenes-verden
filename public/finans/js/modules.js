@@ -1,6 +1,7 @@
 // FinansHub v2-moduler i sidemenyen: Subscription OS, Delte mapper, Finn-handler og Import.
 // Samme mønster som desktop.js: sidene tegnes fra S, hendelser fanges med delegering (data-m*-attributter).
 import { S, api, esc, n0, n2, sgn, dd, today, render, toast, loadBoot, accs, logo, aiLine, ICONS, parseAmount, ini, smooth } from './core.js';
+import { finnPage as finnDesk, loadFinn as loadFinnDesk, bindFinn } from './finn-desktop.js'; // Finn-handler med detaljside
 
 Object.assign(ICONS, {
   sub: 'M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3',
@@ -10,8 +11,8 @@ Object.assign(ICONS, {
   aks: 'M3 17l6-6 4 4 8-8M15 7h6v6',
 });
 
-export const MODULE_PAGES = [['aks', 'Aksjer'], ['sub', 'Subscription OS'], ['dir', 'Boliger'], ['finn', 'Finn-handler'], ['mat', 'Matplan'], ['imp', 'Import']];
-export const MODULE_SUB = { aks: 'Trading 212', sub: 'Abonnementer', dir: 'Utgifter, prosjekter og regninger per bolig', finn: 'Trygg betaling, Fiks ferdig, Tillit', mat: 'Ukemeny, kokker og handleliste', imp: 'CSV, XLSX og tekst' };
+export const MODULE_PAGES = [['aks', 'Aksjer'], ['sub', 'Subscription OS'], ['dir', 'Boliger'], ['finn', 'Finn-handler'], ['imp', 'Import']];
+export const MODULE_SUB = { aks: 'Trading 212', sub: 'Abonnementer', dir: 'Utgifter, prosjekter og regninger per bolig', finn: 'Trygg betaling, Fiks ferdig, Tillit', imp: 'CSV, XLSX og tekst' };
 const u = S.ui;
 const card = (inner, style = '') => `<section class="card" style="${style}">${inner}</section>`;
 const skel = (h = 160) => `<div class="skel" style="min-height:${h}px"></div>`;
@@ -61,24 +62,31 @@ const ROLE_N = { owner: 'Eier', editor: 'Kan redigere', viewer: 'Kan se' };
 const short = (n) => esc(String(n ?? '').slice(0, 2).toUpperCase());
 const optList = (list, sel) => list.map(([v, l]) => `<option value="${esc(v)}"${String(v) === String(sel ?? '') ? ' selected' : ''}>${esc(l)}</option>`).join('');
 
+// Boliger der brukeren kan redigere (for «Legg i bolig»), og hvilken bolig nye poster havner i.
+const editable = () => (S.folders ?? []).filter((f) => f.role && f.role !== 'viewer');
+const target = () => (u.bolTarget && editable().some((f) => f.id === u.bolTarget) ? u.bolTarget : u.dir);
+const targetName = () => (S.folders ?? []).find((f) => f.id === target())?.name ?? S.folder?.name ?? '';
+// Kategorivalg: hovedkategorier med underkategoriene rett under («Hage og uteområde › Blomster»).
+const catSelect = (name, opts, sel, first) => `<select class="inp" name="${name}">${first ? `<option value="">${esc(first)}</option>` : ''}${(opts ?? []).map((o) => `<option value="${o.id}"${String(o.id) === String(sel ?? '') ? ' selected' : ''}>${o.sub ? '   ' : ''}${esc(o.label)}</option>`).join('')}</select>`;
+const legg = (cur) => {
+  const list = editable();
+  if (list.length < 2) return '';
+  return `<label class="bol-legg">Legg i bolig<select class="inp" data-mbol-target>${list.map((f) => `<option value="${f.id}"${f.id === target() ? ' selected' : ''}>${esc(f.name)}${f.id === cur.id ? ' (denne)' : ''}</option>`).join('')}</select></label>`;
+};
+const toBolSettings = '<a class="btn ghost" href="#/inn" data-mact="bol-settings">+ Ny bolig i Innstillinger</a>';
+
 function dirPage() {
   const list = S.folders;
   if (!list) return skel(400);
   const cur = S.folder;
   const mode = u.dirMode ?? 'new';
   const me = S.boot.me ?? {};
-  const users = (S.users ?? []).filter((x) => x.id !== me.id);
-  const pick = u.newPick ?? [];
   const cards = list.map((f) => {
     const others = f.members.filter((m) => !m.you).map((m) => m.name);
     return `<button class="dir-card${cur?.id === f.id ? ' on' : ''}" data-mdir="${f.id}"><span class="dir-card-h"><b>${esc(f.name)}</b><span class="mtag">${esc(f.type || 'Mappe')}</span></span>
       <span class="note" style="font-size:12.5px">${others.length ? 'Delt med ' + esc(others.join(', ')) : 'Bare deg'}</span><span class="dir-card-f"><span>Du: ${esc((f.myRole ?? '').toLowerCase())}</span><span class="mono">${kr0(f.yearTotal)} i år</span></span></button>`;
   }).join('');
-  const create = `<form class="dir-new" data-mform="folder"><b>Ny bolig</b><input class="inp" name="name" placeholder="Navn, f.eks. Hytta Geilo" required>
-    <input class="inp" name="address" placeholder="Adresse (valgfritt)"><select class="inp" name="type">${optList(TYPES.map((t) => [t, t]), 'Enebolig')}</select>
-    ${users.length ? `<span class="note" style="font-size:12px">Del med</span><div class="pick">${users.map((x) => `<button type="button" class="pick-u${pick.includes(x.id) ? ' on' : ''}" data-mpick="${esc(x.id)}">${esc(x.name)}</button>`).join('')}</div>` : '<span class="note" style="font-size:12px">Nye brukere legges til av admin under Innstillinger → Innlogging i Homelab.</span>'}
-    <button class="btn pri">Opprett</button></form>`;
-  const left = `<div class="dir-left">${cards || `<div class="card note" style="padding:16px;font-size:13.5px">Ingen boliger er delt med ${esc(me.name ?? 'deg')} ennå.</div>`}${create}</div>`;
+  const left = `<div class="dir-left">${cards || `<div class="card note" style="padding:16px;font-size:13.5px">Ingen boliger er delt med ${esc(me.name ?? 'deg')} ennå.</div>`}${toBolSettings}</div>`;
   if (!cur) return `<div class="dir-layout">${left}</div>`;
 
   const k = cur.kpi;
@@ -91,7 +99,9 @@ function dirPage() {
   const top = cur.months.reduce((a, m) => (m.total > a.total ? m : a), cur.months[0] ?? { total: 0, label: '' });
   const catColor = Object.fromEntries(cur.categories.map((c) => [c.name, c.color]));
   const chart = `<div class="dir-chart">${cur.months.map((m) => `<div class="dir-col" title="${m.label}: ${n0(m.total)} kr"><div class="dir-bar" style="height:${(m.total / mMax) * 100}%">${Object.entries(m.byCat).sort((a, b) => b[1] - a[1]).map(([c, v]) => `<span style="flex:${Math.max(1, Math.round(v))} 1 0;background:${u.dcat && u.dcat !== c ? '#2A2A31' : catColor[c] ?? '#6E6E78'}"></span>`).join('')}</div><span>${m.label}</span></div>`).join('')}</div>`;
-  const catsHtml = cur.categories.map((c) => `<button class="dir-cat${u.dcat === c.name ? ' on' : ''}" data-mdcat="${esc(c.name)}" style="--c:${c.color}"><span class="dir-cat-h"><span><i style="background:${c.color}"></i>${esc(c.name)}</span><span class="mono">${kr0(c.sum)}</span></span><span class="prog"><i style="width:${c.pct}%;background:${c.color}"></i></span></button>`).join('') || '<div class="note">Ingen utgifter i år.</div>';
+  // Kategorier med fordeling på underkategorier.
+  const catsHtml = cur.categories.map((c) => `<div class="dir-catg"><button class="dir-cat${u.dcat === c.name ? ' on' : ''}" data-mdcat="${esc(c.name)}" style="--c:${c.color}"><span class="dir-cat-h"><span><i style="background:${c.color}"></i>${esc(c.name)}</span><span class="mono">${kr0(c.sum)}</span></span><span class="prog"><i style="width:${c.pct}%;background:${c.color}"></i></span></button>
+    ${(c.subs ?? []).length ? `<div class="dir-subs">${c.subs.map((x) => `<span class="dir-sub"><span class="ell">${esc(x.name)}</span><span class="dir-sub-bar"><i style="width:${x.pct}%;background:${c.color}"></i></span><span class="mono">${kr0(x.sum)}</span></span>`).join('')}</div>` : ''}</div>`).join('') || '<div class="note">Ingen utgifter i år.</div>';
   const projects = cur.projects.map((p) => {
     const over = p.remaining < 0;
     return `<div class="dir-proj"><div class="dir-proj-h"><div><b>${esc(p.name)}</b><div class="note" style="font-size:12.5px">${esc(p.vendor)} · ${esc(p.category)}</div></div><div style="text-align:right"><b class="mono">${n0(p.spent)} / ${n0(p.budget)} kr</b><div style="font-size:12px;color:${over ? '#FF8A7A' : 'var(--dim)'}">${over ? `${n0(-p.remaining)} kr over budsjett` : `${n0(p.remaining)} kr gjenstår`}</div></div></div>
@@ -106,41 +116,111 @@ function dirPage() {
   const split = `<div style="display:flex;flex-direction:column;gap:6px;padding-top:6px"><span class="note" style="font-size:12.5px">Fordeling · ${cur.split === 'equal' ? 'likt delt' : 'egen nøkkel'}${cur.isOwner ? ` · <button class="link-btn" data-mact="split-edit">${u.splitEdit ? 'Lukk' : 'Endre'}</button>` : ''}</span>
     <div class="dir-bal">${cur.balances.map((b) => `<span>${esc(b.name)} <b class="mono" style="color:${b.balance >= 0 ? 'var(--pos)' : 'var(--acc-l)'}">${b.balance >= 0 ? '+' : '−'}${n0(Math.abs(b.balance))} kr</b></span>`).join('')}</div>
     ${u.splitEdit ? `<form class="inst-add" data-mform="split">${cur.members.map((m) => `<label class="note" style="font-size:12px;display:flex;flex-direction:column;gap:4px">${esc(m.name)}<input class="inp" name="w:${esc(m.name)}" value="${cur.weights[m.name] ?? 1}" inputmode="decimal" style="width:80px"></label>`).join('')}<button class="btn sm" name="equal" value="1">Likt</button><button class="btn sm pri">Lagre nøkkel</button></form>` : ''}</div>`;
-  // Deling.
-  const acl = cur.members.map((m) => {
-    const lastOwner = m.role === 'owner' && cur.owners <= 1;
-    const editable = cur.isOwner && !m.you;
-    return `<div class="acl"><span class="av-s">${short(m.name)}</span><span class="grow">${esc(m.name)} <span class="muted" style="font-size:12.5px">${m.you ? '(deg)' : m.login ? '' : '(uten innlogging)'}</span></span>
-      ${editable ? `<select class="sel" data-mrole="${m.id}">${optList(Object.entries(ROLE_N), m.role)}</select><button class="x-btn sm" data-mrm="${m.id}" aria-label="Fjern ${esc(m.name)}">×</button>` : `<span class="sub" style="font-size:13px;padding:0 10px">${ROLE_N[m.role] ?? 'Kan redigere'}</span>`}
-      ${m.you && !lastOwner ? `<button class="btn sm" data-mrm="${m.id}" data-leave="1" style="color:var(--acc-l)">Forlat</button>` : ''}</div>`;
-  }).join('');
-  const invOpts = (S.users ?? []).filter((x) => !cur.members.some((m) => m.userId === x.id));
-  const share = u.shareOpen ? `<div class="share-box"><div class="card-h" style="align-items:baseline"><b style="font-size:14px">Deling</b><span class="note" style="font-size:12px">${cur.isOwner ? 'Eiere kan dele, endre tilgang og fjerne medlemmer' : 'Bare eiere kan endre deling'}</span></div>${acl}
-    ${cur.isOwner ? (invOpts.length ? `<form class="share-add" data-mform="share"><select class="inp" name="userId" required><option value="">Velg bruker …</option>${invOpts.map((x) => `<option value="${esc(x.id)}">${esc(x.name)} (${esc(x.username)})</option>`).join('')}</select><select class="inp" name="role">${optList([['editor', 'Kan redigere'], ['viewer', 'Kan se']], 'editor')}</select><button class="btn pri">Del</button></form>` : '<span class="note" style="font-size:12px">Alle brukere har tilgang. Nye brukere legges til av admin under Innstillinger → Innlogging i Homelab.</span>') : ''}</div>` : '';
   const rows = cur.entries.filter((e) => !u.dcat || e.category === u.dcat);
   const listHtml = rows.map((e) => `<div class="dir-row2">${logo({ ...e, color: '#A0A0AA' }, 30, 8)}<span class="grow ell-wrap"><span class="ell" style="display:block">${esc(e.description)}</span>
-    <span class="dir-meta"><span class="mtag" style="background:${e.color}1F;color:${e.color}">${esc(e.category)}</span>${e.project ? `<span class="mtag">${esc(e.project)}</span>` : ''}${dd(e.date)} · betalt av ${esc(e.paidBy)}</span>${aiLine(e.aiShort, 'd-ai')}</span>
+    <span class="dir-meta">${cur.canEdit && !e.pending ? `<label class="mtag mtag-sel" style="background:${e.color}1F;color:${e.color}" title="Endre kategori">${e.aiCategory ? '✦ ' : ''}${esc(e.categoryLabel ?? e.category)}<select data-mentry-cat="${e.id}" aria-label="Kategori for ${esc(e.description)}">${(cur.catTree ?? []).map((o) => `<option value="${o.id}"${o.id === e.categoryId ? ' selected' : ''}>${esc(o.label)}</option>`).join('')}</select></label>`
+      : `<span class="mtag" style="background:${e.color}1F;color:${e.color}">${e.pending ? '✦ Kategoriseres …' : `${e.aiCategory ? '✦ ' : ''}${esc(e.categoryLabel ?? e.category)}`}</span>`}${e.project ? `<span class="mtag">${esc(e.project)}</span>` : ''}${dd(e.date)} · betalt av ${esc(e.paidBy)}</span>${aiLine(e.aiShort, 'd-ai')}</span>
     <b class="mono" style="white-space:nowrap">${e.pending ? '…' : kr0(e.amount)}</b>${cur.canEdit ? `<button class="x-btn sm" data-mentry-del="${e.id}" aria-label="Fjern">×</button>` : ''}</div>`).join('') || '<div class="note" style="padding:18px 0;border-top:1px solid var(--sep)">Ingen utgifter her ennå.</div>';
-  const addBox = cur.canEdit ? `<div class="mod-box"><b>Legg til utgift eller kvittering</b>${modes('dir', mode)}
+  const tgt = target(), other = tgt !== cur.id;
+  const addBox = editable().length ? `<div class="mod-box"><div class="bol-add-h"><b>Legg til utgift eller kvittering</b>${legg(cur)}</div>${modes('dir', mode)}
+    ${other ? `<div class="note" style="font-size:12.5px">Havner i <b style="color:var(--acc-l)">${esc(targetName())}</b>.</div>` : ''}
     ${mode === 'new' ? `<form class="mod-grid" data-mform="entry"><input class="inp" name="description" placeholder="Beskrivelse, f.eks. Plantasjen" required><input class="inp" name="amount" placeholder="Beløp" inputmode="decimal" required>
-      <select class="inp" name="category">${optList([['', 'Kategori: ✦ automatisk'], ...cur.catOptions.map((c) => [c, c])], '')}</select><select class="inp" name="projectId">${optList([['', 'Uten prosjekt'], ...cur.projects.map((p) => [p.id, p.name])], '')}</select>
-      <select class="inp" name="paidBy">${optList(names.map((n) => [n, 'Betalt av ' + n]), cur.members.find((m) => m.you)?.name)}</select><button class="btn pri">Legg til</button></form>`
-      : mode === 'rc' ? `<label class="mod-drop"><b>Last opp kvitteringer og regninger</b><span>Flere filer · AI leser butikk, dato, beløp og kategori i bakgrunnen</span><input type="file" multiple accept="image/*,application/pdf" data-mrc="folder" hidden></label>`
-      : S.boot.restricted ? '<div class="note" style="padding:12px">Transaksjoner fra regnskapet kan bare flyttes hit av en administrator.</div>' : txPick('folder')}</div>`
+      ${catSelect('categoryId', other ? S.bolCats?.options ?? cur.catTree : cur.catTree, '', 'Kategori: ✦ AI velger')}<select class="inp" name="projectId">${optList([['', 'Uten prosjekt'], ...(other ? [] : cur.projects.map((p) => [p.id, p.name]))], '')}</select>
+      ${other ? '' : `<select class="inp" name="paidBy">${optList(names.map((n) => [n, 'Betalt av ' + n]), cur.members.find((m) => m.you)?.name)}</select>`}<button class="btn pri">Legg til</button></form>`
+      : mode === 'rc' ? `<label class="mod-drop"><b>Last opp kvitteringer og regninger</b><span>Flere filer · AI leser butikk, dato og beløp, og velger kategori og underkategori</span><input type="file" multiple accept="image/*,application/pdf" data-mrc="folder" hidden></label>`
+      : S.boot.restricted ? '<div class="note" style="padding:12px">Transaksjoner fra regnskapet kan bare flyttes hit av en administrator.</div>' : txPick('folder')}
+    <div class="note" style="font-size:12px">✦ AI velger kategori og underkategori${S.bolCats?.aiNew === false ? '' : ', og lager en ny når ingen passer'}. Du kan endre den i listen.</div></div>`
     : '<div class="card note" style="padding:12px 14px;font-size:13px">Du har lesetilgang. Be en eier om redigeringstilgang for å legge til utgifter og kvitteringer.</div>';
+  // Kortene i rekkefølgen fra Innstillinger → Boliger → Oppsett av boligsiden.
+  const block = {
+    kpi: `<div class="mod-kpis">${kpis}</div>`,
+    months: card(`<div class="card-h" style="align-items:baseline"><h3>Utgifter per måned</h3><span class="note" style="font-size:12.5px">${top.total ? `Høyeste: ${top.label} · ${kr0(top.total)}` : ''}</span></div>${chart}`, 'flex:2 1 380px;padding:20px;gap:14px'),
+    cats: card(`<div class="card-h" style="align-items:baseline"><h3>Kategorier</h3>${u.dcat ? '<button class="link-btn" data-mact="dcat-clear">Vis alle</button>' : ''}</div><div style="display:flex;flex-direction:column;gap:6px">${catsHtml}</div>`, 'flex:1 1 260px;padding:20px;gap:14px'),
+    projects: card(`<h3>Prosjekter</h3>${projects}${cur.canEdit ? '<form class="inst-add" data-mform="project"><input class="inp" name="name" placeholder="Nytt prosjekt, f.eks. Ny terrasse" required style="flex:2 1 160px"><input class="inp" name="vendor" placeholder="Håndverker"><input class="inp" name="budget" placeholder="Budsjett kr" inputmode="decimal" required><button class="btn pri sm">Legg til</button></form>' : ''}`, 'flex:3 1 380px;padding:20px;gap:14px'),
+    bills: card(`<h3>Faste regninger</h3>${bills || '<div class="note" style="font-size:13.5px">Ingen faste regninger.</div>'}${billAdd}${split}`, 'flex:2 1 260px;padding:20px;gap:10px'),
+    add: addBox,
+    entries: card(`<div class="card-h" style="padding:12px 0"><h3>${esc(u.dcat || 'Alle utgifter')}</h3><span class="note" style="font-size:12.5px">${rows.length} poster · ${kr0(rows.reduce((a, e) => a + e.amount, 0))}</span></div>${listHtml}`, 'padding:8px 20px;gap:0'),
+  };
+  const lay = cur.layout ?? { order: Object.keys(block), hid: [] };
+  const shown = lay.order.filter((id) => block[id] && !lay.hid.includes(id));
+  const PAIRS = [['months', 'cats'], ['projects', 'bills']];
+  const parts = [];
+  for (let i = 0; i < shown.length; i++) {
+    const a = shown[i], b2 = shown[i + 1];
+    if (PAIRS.some(([x, y]) => (a === x && b2 === y) || (a === y && b2 === x))) { parts.push(`<div class="row-flex">${block[a]}${block[b2]}</div>`); i++; }
+    else parts.push(PAIRS.some((pr) => pr.includes(a)) ? `<div class="row-flex">${block[a]}</div>` : block[a]);
+  }
+  const shared = cur.members.filter((m) => !m.you).map((m) => m.name);
   const right = `<div class="dir-main">
-    <div class="card-h" style="align-items:flex-start;flex-wrap:wrap;gap:14px"><div style="min-width:0"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:24px;font-weight:600;letter-spacing:-.02em">${esc(cur.name)}</b><span class="mtag">${esc(cur.type)}</span></div><div class="note" style="font-size:13px;margin-top:4px">${esc(cur.address || '')}</div></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-mact="share-toggle" aria-pressed="${!!u.shareOpen}">Del · ${cur.members.length} ${cur.members.length === 1 ? 'person' : 'personer'}</button>${cur.isOwner ? '<button class="btn danger" data-mact="del-folder">Slett</button>' : ''}</div></div>
-    ${share}
-    <div class="mod-kpis">${kpis}</div>
-    <div class="row-flex">${card(`<div class="card-h" style="align-items:baseline"><h3>Utgifter per måned</h3><span class="note" style="font-size:12.5px">${top.total ? `Høyeste: ${top.label} · ${kr0(top.total)}` : ''}</span></div>${chart}`, 'flex:2 1 380px;padding:20px;gap:14px')}
-      ${card(`<div class="card-h" style="align-items:baseline"><h3>Kategorier</h3>${u.dcat ? '<button class="link-btn" data-mact="dcat-clear">Vis alle</button>' : ''}</div><div style="display:flex;flex-direction:column;gap:4px">${catsHtml}</div>`, 'flex:1 1 240px;padding:20px;gap:14px')}</div>
-    <div class="row-flex">${card(`<h3>Prosjekter</h3>${projects}${cur.canEdit ? '<form class="inst-add" data-mform="project"><input class="inp" name="name" placeholder="Nytt prosjekt, f.eks. Ny terrasse" required style="flex:2 1 160px"><input class="inp" name="vendor" placeholder="Håndverker"><input class="inp" name="budget" placeholder="Budsjett kr" inputmode="decimal" required><button class="btn pri sm">Legg til</button></form>' : ''}`, 'flex:3 1 380px;padding:20px;gap:14px')}
-      ${card(`<h3>Faste regninger</h3>${bills || '<div class="note" style="font-size:13.5px">Ingen faste regninger.</div>'}${billAdd}${split}`, 'flex:2 1 260px;padding:20px;gap:10px')}</div>
-    ${addBox}
-    ${card(`<div class="card-h" style="padding:12px 0"><h3>${esc(u.dcat || 'Alle utgifter')}</h3><span class="note" style="font-size:12.5px">${rows.length} poster · ${kr0(rows.reduce((a, e) => a + e.amount, 0))}</span></div>${listHtml}`, 'padding:8px 20px;gap:0')}
+    <div class="card-h" style="align-items:flex-start;flex-wrap:wrap;gap:14px"><div style="min-width:0"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:24px;font-weight:600;letter-spacing:-.02em">${esc(cur.name)}</b><span class="mtag">${esc(cur.type)}</span></div><div class="note" style="font-size:13px;margin-top:4px">${esc([cur.address, shared.length ? `Delt med ${shared.join(', ')}` : ''].filter(Boolean).join(' · '))}</div></div></div>
+    ${parts.join('\n') || '<div class="card note" style="padding:16px">Alle kortene er skjult. Velg hva som vises under Innstillinger → Boliger → Oppsett av boligsiden.</div>'}
   </div>`;
   return `<div class="dir-layout">${left}${right}</div>`;
+}
+
+/* ===================== Innstillinger → Boliger ===================== */
+
+export async function loadBolSettings() {
+  const [folders, users, cats, layout] = await Promise.all([api('/folders'), api('/users').catch(() => []), api('/boliger/categories'), api('/boliger/layout')]);
+  S.folders = folders; S.users = users; S.bolCats = cats; S.bolLayout = layout;
+}
+const reloadBol = async () => { await loadBolSettings(); render(); };
+
+export function bolSettings() {
+  const list = S.folders, cats = S.bolCats, lay = S.bolLayout;
+  if (!list || !cats || !lay) return skel(360);
+  const me = S.boot.me ?? {};
+  const users = (S.users ?? []).filter((x) => x.id !== me.id);
+  const pick = u.newPick ?? [];
+  // Boligene: deling og sletting (bare eiere, to trykk).
+  const homes = list.map((f) => {
+    const owner = f.role === 'owner', open = u.bolShare === f.id, del = u.bolDel === f.id;
+    const sub = [f.address, `Du: ${(f.myRole ?? '').toLowerCase()}`, `${f.count} ${f.count === 1 ? 'post' : 'poster'}`].filter(Boolean).join(' · ');
+    return `<div class="bol-home${open ? ' open' : ''}"><span class="grow" style="min-width:0"><span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b style="font-weight:600">${esc(f.name)}</b><span class="mtag">${esc(f.type)}</span></span><span class="note" style="display:block;font-size:12.5px;margin-top:3px">${esc(sub)}</span></span>
+      <button class="btn sm${open ? ' on' : ''}" data-bshare="${f.id}" aria-expanded="${open}">Deling · ${f.members.length}</button>${owner ? `<button class="btn sm${del ? ' danger' : ' ghost'}" data-bdel="${f.id}">${del ? 'Bekreft sletting' : 'Slett'}</button>` : ''}</div>
+      ${open ? shareBox(f) : ''}`;
+  }).join('') || '<div class="bol-home note">Ingen boliger ennå.</div>';
+  const create = `<form class="dir-new" data-mform="folder" style="border-style:solid"><b>Ny bolig</b><input class="inp" name="name" placeholder="Navn, f.eks. Hytta Geilo" required>
+    <input class="inp" name="address" placeholder="Adresse (valgfritt)"><select class="inp" name="type">${optList(TYPES.map((t) => [t, t]), 'Enebolig')}</select>
+    ${users.length ? `<span class="note" style="font-size:12px">Del med</span><div class="pick">${users.map((x) => `<button type="button" class="pick-u${pick.includes(x.id) ? ' on' : ''}" data-mpick="${esc(x.id)}">${esc(x.name)}</button>`).join('')}</div>` : '<span class="note" style="font-size:12px">Nye brukere legges til av admin under Innstillinger → Innlogging i Homelab.</span>'}
+    <div><button class="btn pri">Opprett</button></div></form>`;
+  // Oppsett av boligsiden.
+  const names = Object.fromEntries(lay.cards.map((c) => [c.id, c.name]));
+  const layRows = lay.order.map((id, i) => {
+    const hid = lay.hid.includes(id);
+    return `<div class="navcfg${hid ? ' off' : ''}" style="cursor:default"><span class="no mono">${String(i + 1).padStart(2, '0')}</span><span class="lbl">${esc(names[id] ?? id)}</span>
+      <button type="button" class="mv" data-blay-move="${id}:-1" aria-label="Flytt ${esc(names[id])} opp" ${i ? '' : 'disabled'}>↑</button><button type="button" class="mv" data-blay-move="${id}:1" aria-label="Flytt ${esc(names[id])} ned" ${i < lay.order.length - 1 ? '' : 'disabled'}>↓</button>
+      <button type="button" class="toggle" role="switch" aria-checked="${!hid}" data-blay-tog="${id}" aria-label="Vis ${esc(names[id])}"></button></div>`;
+  }).join('');
+  // Kategorier for boliger.
+  const man = cats.canManage;
+  const catRows = cats.categories.map((c) => `<div class="bcat"><div class="bcat-h"><i style="background:${c.color}"></i><b>${esc(c.name)}</b>${c.ai ? '<span class="bcat-ai">✦ AI</span>' : ''}<span class="grow"></span><span class="note mono" style="font-size:12px">${c.count || ''}</span>${man ? `<button class="x-btn sm" data-bcat-del="${c.id}" aria-label="Fjern kategorien ${esc(c.name)}">×</button>` : ''}</div>
+    <div class="bcat-subs">${c.children.map((x) => `<span class="bsub">${x.ai ? '✦ ' : ''}${esc(x.name)}${man ? `<button data-bcat-del="${x.id}" aria-label="Fjern ${esc(x.name)}">×</button>` : ''}</span>`).join('')}${man ? `<input class="bsub-in" data-bcat-sub="${c.id}" placeholder="+ Underkategori" maxlength="40" aria-label="Ny underkategori under ${esc(c.name)}">` : ''}</div></div>`).join('');
+  return `<div class="bol-set">
+    <div class="bol-sec"><div class="set-label">Boligene</div>${homes}</div>
+    ${create}
+    <div class="bol-sec"><div class="card-h" style="align-items:center"><b style="font-size:14px">Oppsett av boligsiden</b><button class="btn sm ghost" data-mact="blay-reset">Nullstill</button></div>
+      <span class="note" style="font-size:12.5px">Velg hvilke kort som vises på hver bolig, og i hvilken rekkefølge. Gjelder alle boligene, bare for deg.</span><div class="navcfg-list">${layRows}</div></div>
+    <div class="bol-sec"><div class="card-h" style="align-items:center"><b style="font-size:14px">Kategorier for boliger</b>${man ? '<button class="btn sm ghost" data-mact="bcat-reset">Nullstill</button>' : ''}</div>
+      <button class="tog-row" data-mact="bcat-ai" ${man ? '' : 'disabled'}><span class="grow"><b style="font-weight:500">✦ La AI lage nye kategorier</b><br><span class="note" style="font-size:12.5px">Når en kvittering, transaksjon eller opplastning ikke passer i noen kategori, lager AI en ny kategori eller underkategori. Av: AI velger bare blant de som finnes.</span></span><span class="toggle" role="switch" aria-checked="${!!cats.aiNew}"></span></button>
+      ${catRows}
+      ${man ? '<form class="bcat-new" data-mform="bcat"><input class="inp" name="name" placeholder="Ny kategori, f.eks. Garasje" maxlength="40" required><button class="btn">Legg til</button></form>' : '<div class="note" style="font-size:12.5px">Bare administratorer og eiere av en bolig kan endre kategoriene.</div>'}
+      <span class="note" style="font-size:12px">✦ viser kategorier og underkategorier som AI har laget. Underkategori legges til med Enter.</span></div>
+    <div class="note" style="font-size:12.5px">Trykk «Deling» på en bolig for å se hvem den er delt med, endre tilgang eller dele den med flere.</div>
+  </div>`;
+}
+function shareBox(f) {
+  const isOwner = f.role === 'owner', owners = f.members.filter((m) => m.role === 'owner').length;
+  const acl = f.members.map((m) => {
+    const lastOwner = m.role === 'owner' && owners <= 1;
+    const edit = isOwner && !m.you;
+    return `<div class="acl"><span class="av-s">${short(m.name)}</span><span class="grow">${esc(m.name)} <span class="muted" style="font-size:12.5px">${m.you ? '(deg)' : m.login ? '' : '(uten innlogging)'}</span></span>
+      ${edit ? `<select class="sel" data-brole="${f.id}:${m.id}" aria-label="Tilgang for ${esc(m.name)}">${optList(Object.entries(ROLE_N), m.role)}</select><button class="x-btn sm" data-brm="${f.id}:${m.id}" aria-label="Fjern ${esc(m.name)}">×</button>` : `<span class="sub" style="font-size:13px;padding:0 10px">${ROLE_N[m.role] ?? 'Kan redigere'}</span>`}
+      ${m.you && !lastOwner ? `<button class="btn sm" data-brm="${f.id}:${m.id}" data-leave="1" style="color:var(--acc-l)">Forlat</button>` : ''}</div>`;
+  }).join('');
+  const inv = (S.users ?? []).filter((x) => !f.members.some((m) => m.userId === x.id));
+  return `<div class="share-box"><div class="card-h" style="align-items:baseline;flex-wrap:wrap;gap:8px"><b style="font-size:14px">Deling · ${esc(f.name)}</b><span class="note" style="font-size:12px">${isOwner ? 'Eiere kan dele, endre tilgang og fjerne medlemmer' : 'Bare eiere kan endre deling'}</span></div>${acl}
+    ${isOwner ? (inv.length ? `<form class="share-add" data-mform="bshare" data-fid="${f.id}"><select class="inp" name="userId" required><option value="">Velg bruker …</option>${inv.map((x) => `<option value="${esc(x.id)}">${esc(x.name)} (${esc(x.username)})</option>`).join('')}</select><select class="inp" name="role">${optList([['editor', 'Kan redigere'], ['viewer', 'Kan se']], 'editor')}</select><button class="btn pri">Del</button></form>` : '<span class="note" style="font-size:12px">Alle brukere har tilgang. Nye brukere legges til av admin under Innstillinger → Innlogging i Homelab.</span>') : ''}</div>`;
 }
 
 /* ===================== Finn-handler ===================== */
@@ -309,36 +389,7 @@ export function firstRunCard() {
     ${S.stage ? stagePreview() : ''}</section>`;
 }
 
-/* ===================== Matplan (felles komponent fra Homelab) ===================== */
-
-// Matplan er samme komponent som Homelab-fanen (public/js/mat.js) og deler data med den.
-// Siden tegnes på nytt ved hver endring i FinansHub, så komponenten monteres én gang i en vedvarende node
-// som flyttes inn i plassholderen etter hver tegning.
-let matHost = null, matState = 'idle';
-const matPage = () => `<div data-mat-slot></div>`;
-export function attachMatplan(el) {
-  const slot = el.querySelector('[data-mat-slot]');
-  if (!slot) return;
-  if (!matHost) { matHost = document.createElement('div'); matHost.className = 'fh-mat'; }
-  slot.replaceWith(matHost);
-  if (matState !== 'idle') return;
-  matState = 'loading';
-  matHost.innerHTML = '<div class="skel" style="min-height:420px"></div>';
-  import('/assets/js/mat.js').then((m) => {
-    if (typeof m.mountMatplan !== 'function') throw new Error('mountMatplan mangler');
-    matHost.innerHTML = '';
-    m.mountMatplan(matHost, { embedded: true });
-    matState = 'ready';
-  }).catch(() => {
-    matState = 'failed';
-    matHost.innerHTML = `<section class="card" style="padding:28px;display:flex;flex-direction:column;gap:10px;align-items:flex-start">
-      <b style="font-size:16px">Matplan er ikke tilgjengelig her ennå</b>
-      <div class="sub" style="font-size:13.5px">Oppdater homelab-serveren for å bruke Matplan i FinansHub. Inntil da finner du den i Homelab.</div>
-      <a class="btn ghost" href="/#/matplan">Åpne Matplan i Homelab</a></section>`;
-  });
-}
-
-export const MODULE_FN = { aks: aksPage, sub: subPage, dir: dirPage, finn: finnPage, mat: matPage, imp: impPage };
+export const MODULE_FN = { aks: aksPage, sub: subPage, dir: dirPage, finn: finnDesk, imp: impPage };
 
 /* ===================== Lasting ===================== */
 
@@ -349,13 +400,17 @@ async function loadFolders() {
   const id = u.dir && S.folders.some((f) => f.id === u.dir) ? u.dir : S.folders[0]?.id;
   u.dir = id;
   S.folder = id ? await api(`/folders/${id}`) : null;
+  // Kategorier AI har laget siden sist: vis en melding én gang.
+  u.seenNotice ??= new Set();
+  for (const n of S.folder?.notices ?? []) { const key = `${n.entryId}:${n.at}`; if (!u.seenNotice.has(key)) { u.seenNotice.add(key); toast(n.text); } }
 }
+const loadBolCats = async () => { S.bolCats = await api('/boliger/categories').catch(() => S.bolCats ?? null); };
 const loadUsers = async () => { S.users = await api('/users').catch(() => []); };
 const loadFinn = async () => { S.finn = await api('/finn'); };
 const loadStocks = async (force) => { S.stocks = await api(`/stocks${force === true ? '?force=1' : ''}`); };
 export async function loadBackup() { S.backup = await api('/backup'); }
 const recentIfAdmin = async () => { if (!S.boot.restricted) await loadRecentOut(); };
-export const MODULE_LOADERS = { aks: [loadStocks], sub: [loadSubs, loadRecentOut], dir: [loadFolders, loadUsers, recentIfAdmin], finn: [loadFinn], mat: [], imp: [] };
+export const MODULE_LOADERS = { aks: [loadStocks], sub: [loadSubs, loadRecentOut], dir: [loadFolders, loadUsers, recentIfAdmin, loadBolCats], finn: [loadFinnDesk], imp: [] };
 
 /* ===================== Hendelser ===================== */
 
@@ -378,10 +433,11 @@ async function preview(commit = false) {
   render();
 }
 
-async function uploadTo(target, files) {
+async function uploadTo(kind, files) {
   const fd = new FormData();
   for (const f of files) fd.append('file', f);
-  const path = target === 'sub' ? '/subscriptions/receipts' : `/folders/${u.dir}/receipts`;
+  // Boliger: kvitteringene havner i boligen valgt under «Legg i bolig».
+  const path = kind === 'sub' ? '/subscriptions/receipts' : `/folders/${target()}/receipts`;
   const r = await api(path, { method: 'POST', body: fd });
   toast(`${r.jobs.length} kvittering${r.jobs.length === 1 ? '' : 'er'} leses i bakgrunnen`);
   // Følg med til AI-en er ferdig, så havner kvitteringen i listen.
@@ -393,6 +449,7 @@ function pollBackup(n = 0) { setTimeout(async () => { if (n > 400) return; await
 async function reload() { await Promise.all((MODULE_LOADERS[u.page] ?? []).map((f) => f())); render(); }
 
 export function bindModules(el) {
+  bindFinn(el);
   const wrap = (fn) => async (e) => { try { await fn(e); } catch (err) { toast(err.message); } };
   el.addEventListener('click', wrap(async (e) => {
     const t = e.target, d = (s) => t.closest(s);
@@ -401,25 +458,48 @@ export function bindModules(el) {
     if ((x = d('[data-mtx]'))) {
       const [k, id] = x.dataset.mtx.split(':');
       if (k === 'sub') { const s = await api('/subscriptions', { method: 'POST', json: { fromTx: +id } }); toast(`${s.name} lagt til som abonnement`); }
-      else { S.folder = await api(`/folders/${u.dir}/entries`, { method: 'POST', json: { txId: +id } }); toast(`Flyttet til ${S.folder.name}`); }
+      else { const r = await api(`/folders/${target()}/entries`, { method: 'POST', json: { txId: +id } }); toast(`Flyttet til ${r.name} · ✦ AI velger kategori`); }
       return reload();
     }
     if ((x = d('[data-msub-tog]'))) { const s = S.subs.items.find((y) => y.id === +x.dataset.msubTog); await api(`/subscriptions/${s.id}`, { method: 'PATCH', json: { active: !s.active } }); return reload(); }
     if ((x = d('[data-msub-low]'))) { const s = S.subs.items.find((y) => y.id === +x.dataset.msubLow); await api(`/subscriptions/${s.id}`, { method: 'PATCH', json: { lowUse: !s.lowUse } }); return reload(); }
     if ((x = d('[data-msub-del]'))) { if (!confirm('Slette abonnementet?')) return; await api(`/subscriptions/${x.dataset.msubDel}`, { method: 'DELETE' }); return reload(); }
-    if ((x = d('[data-mdir]'))) { u.dir = +x.dataset.mdir; u.dcat = null; u.shareOpen = false; S.folder = await api(`/folders/${u.dir}`); return render(); }
+    if ((x = d('[data-mdir]'))) { u.dir = +x.dataset.mdir; u.dcat = null; u.bolTarget = null; S.folder = await api(`/folders/${u.dir}`); return render(); }
+    // Innstillinger → Boliger.
+    if ((x = d('[data-bshare]'))) { const id = +x.dataset.bshare; u.bolShare = u.bolShare === id ? null : id; u.bolDel = null; return render(); }
+    if ((x = d('[data-bdel]'))) {
+      const id = +x.dataset.bdel, f = S.folders.find((y) => y.id === id);
+      if (u.bolDel !== id) { u.bolDel = id; return render(); }
+      await api(`/folders/${id}`, { method: 'DELETE' }); u.bolDel = null; if (u.dir === id) u.dir = null; toast(`${f?.name ?? 'Boligen'} er slettet. Transaksjonene i regnskapet beholdes.`); return reloadBol();
+    }
+    if ((x = d('[data-brm]'))) {
+      const [fid, mid] = x.dataset.brm.split(':').map(Number), f = S.folders.find((y) => y.id === fid), m = f?.members.find((y) => y.id === mid), leave = !!x.dataset.leave;
+      if (!confirm(leave ? `Forlate «${f.name}»? Du mister tilgangen til boligen.` : `Fjerne ${m?.name} fra «${f.name}»?`)) return;
+      await api(`/folders/${fid}/members/${mid}`, { method: 'DELETE' });
+      if (leave) { u.bolShare = null; if (u.dir === fid) u.dir = null; }
+      toast(leave ? `Du har forlatt ${f.name}` : `${m?.name} har ikke lenger tilgang`); return reloadBol();
+    }
+    if ((x = d('[data-blay-move]'))) {
+      const [id, dir] = x.dataset.blayMove.split(':'), o = [...S.bolLayout.order], i = o.indexOf(id), j = i + +dir;
+      if (j < 0 || j >= o.length) return;
+      [o[i], o[j]] = [o[j], o[i]];
+      S.bolLayout = await api('/boliger/layout', { method: 'PUT', json: { order: o, hid: S.bolLayout.hid } }); return render();
+    }
+    if ((x = d('[data-blay-tog]'))) {
+      const id = x.dataset.blayTog, h = S.bolLayout.hid;
+      S.bolLayout = await api('/boliger/layout', { method: 'PUT', json: { order: S.bolLayout.order, hid: h.includes(id) ? h.filter((y) => y !== id) : [...h, id] } }); return render();
+    }
+    if ((x = d('[data-bcat-del]'))) {
+      const id = +x.dataset.bcatDel, all = S.bolCats.categories.flatMap((c) => [c, ...c.children]), c = all.find((y) => y.id === id);
+      const n = c?.count ? ` ${c.count} ${c.count === 1 ? 'post flyttes' : 'poster flyttes'} til ${c.parentId ? 'hovedkategorien' : '«Annet»'}.` : '';
+      if (!confirm(`Fjerne «${c?.name}»?${n}`)) return;
+      S.bolCats = await api(`/boliger/categories/${id}`, { method: 'DELETE' }); return render();
+    }
     if ((x = d('[data-mentry-del]'))) { if (!confirm('Fjerne posten fra boligen?')) return; S.folder = await api(`/folders/${u.dir}/entries/${x.dataset.mentryDel}`, { method: 'DELETE' }); return reload(); }
     if ((x = d('[data-mpick]'))) { const id = x.dataset.mpick, p = u.newPick ?? []; u.newPick = p.includes(id) ? p.filter((y) => y !== id) : [...p, id]; return render(); }
     if ((x = d('[data-mdcat]'))) { u.dcat = u.dcat === x.dataset.mdcat ? null : x.dataset.mdcat; return render(); }
     if ((x = d('[data-mpay]'))) { S.folder = await api(`/folders/${u.dir}/installments/${x.dataset.mpay}/pay`, { method: 'POST' }); toast('Registrert som betalt'); return reload(); }
     if ((x = d('[data-mbill-del]'))) { S.folder = await api(`/folders/${u.dir}/bills/${x.dataset.mbillDel}`, { method: 'DELETE' }); return render(); }
-    if ((x = d('[data-mrm]'))) {
-      const leave = !!x.dataset.leave, m = S.folder.members.find((y) => y.id === +x.dataset.mrm);
-      if (!confirm(leave ? `Forlate «${S.folder.name}»? Du mister tilgangen til boligen.` : `Fjerne ${m?.name} fra «${S.folder.name}»?`)) return;
-      const r = await api(`/folders/${u.dir}/members/${x.dataset.mrm}`, { method: 'DELETE' });
-      if (leave) { u.dir = null; toast(`Du har forlatt ${S.folder.name}`); } else { S.folder = r; toast(`${m?.name} har ikke lenger tilgang`); }
-      return reload();
-    }
     if ((x = d('[data-maks-env]'))) { u.aksTest = null; await api('/stocks/config', { method: 'PUT', json: { env: x.dataset.maksEnv } }); await loadBoot(); await loadStocks(true); return render(); }
     if ((x = d('[data-maks-per]'))) { u.aksPer = x.dataset.maksPer; return render(); }
     if ((x = d('[data-mflag]'))) { const k = x.dataset.mflag; S.backup.config = await api('/backup/smb', { method: 'PUT', json: { [k]: !S.backup.config[k] } }); return render(); }
@@ -436,8 +516,10 @@ export function bindModules(el) {
     }
     if ((x = d('[data-mfinn-del]'))) { if (!confirm('Slette handelen?')) return; await api(`/finn/${x.dataset.mfinnDel}`, { method: 'DELETE' }); return reload(); }
     switch (d('[data-mact]')?.dataset.mact) {
-      case 'del-folder': if (!confirm(`Slette «${S.folder.name}» med alle poster, prosjekter og regninger? Transaksjonene i regnskapet beholdes.`)) return; await api(`/folders/${u.dir}`, { method: 'DELETE' }); u.dir = null; return reload();
-      case 'share-toggle': u.shareOpen = !u.shareOpen; return render();
+      case 'bol-settings': e.preventDefault(); u.setTab = 'bol'; if (location.hash === '#/inn') return render(); location.hash = '#/inn'; return;
+      case 'blay-reset': S.bolLayout = await api('/boliger/layout', { method: 'PUT', json: { reset: true } }); toast('Boligsiden viser alle kortene i standard rekkefølge'); return render();
+      case 'bcat-reset': if (!confirm('Sette tilbake standardkategoriene? Egne og AI-lagde kategorier uten utgifter fjernes. Kategorier som er i bruk beholdes.')) return; S.bolCats = await api('/boliger/categories/reset', { method: 'POST' }); toast('Standardkategoriene er satt tilbake'); return render();
+      case 'bcat-ai': S.bolCats = await api('/boliger/settings', { method: 'PUT', json: { aiNew: !S.bolCats.aiNew } }); return render();
       case 'dcat-clear': u.dcat = null; return render();
       case 'split-edit': u.splitEdit = !u.splitEdit; return render();
       case 'aks-sync': { toast('Synkroniserer med Trading 212 …'); await loadStocks(true); return render(); }
@@ -473,7 +555,9 @@ export function bindModules(el) {
     if (t.matches('[data-mimp-text]')) { S.imp.text = t.value; return preview(); }
     if (t.matches('[data-mimp-acc]')) { u.impAcc = t.value; return; }
     if (t.matches('[data-msub-cyc]')) { await api(`/subscriptions/${t.dataset.msubCyc}`, { method: 'PATCH', json: { cycle: t.value } }); return reload(); }
-    if (t.matches('[data-mrole]')) { S.folder = await api(`/folders/${u.dir}/members/${t.dataset.mrole}`, { method: 'PATCH', json: { role: t.value } }); return render(); }
+    if (t.matches('[data-brole]')) { const [fid, mid] = t.dataset.brole.split(':'); await api(`/folders/${fid}/members/${mid}`, { method: 'PATCH', json: { role: t.value } }); toast('Tilgangen er endret'); return reloadBol(); }
+    if (t.matches('[data-mbol-target]')) { u.bolTarget = +t.value; return render(); }
+    if (t.matches('[data-mentry-cat]')) { S.folder = await api(`/folders/${u.dir}/entries/${t.dataset.mentryCat}`, { method: 'PATCH', json: { categoryId: +t.value } }); return render(); }
     if (t.matches('[data-mbk-file]')) {
       const f = t.files[0]; t.value = '';
       if (!f) return;
@@ -483,6 +567,16 @@ export function bindModules(el) {
       S.stage = await api('/backup/stage', { method: 'POST', body: fd }); return render();
     }
   }));
+  // Underkategori legges til med Enter.
+  el.addEventListener('keydown', wrap(async (e) => {
+    const t = e.target;
+    if (e.key !== 'Enter' || !t.matches('[data-bcat-sub]')) return;
+    e.preventDefault();
+    const name = t.value.trim();
+    if (!name) return;
+    S.bolCats = await api('/boliger/categories', { method: 'POST', json: { name, parentId: +t.dataset.bcatSub } });
+    render(); el.querySelector(`[data-bcat-sub="${t.dataset.bcatSub}"]`)?.focus();
+  }));
   el.addEventListener('input', (e) => { if (e.target.matches('[data-keep]')) { const o = el.querySelector('[data-keep-out]'); if (o) o.textContent = e.target.value; } });
   el.addEventListener('submit', wrap(async (e) => {
     const f = e.target.closest('[data-mform]');
@@ -491,9 +585,13 @@ export function bindModules(el) {
     const v = Object.fromEntries(new FormData(f));
     switch (f.dataset.mform) {
       case 'sub': await api('/subscriptions', { method: 'POST', json: { ...v, price: parseAmount(v.price) } }); toast('Abonnement lagt til'); return reload();
-      case 'folder': { const r = await api('/folders', { method: 'POST', json: { ...v, share: (u.newPick ?? []).map((id) => ({ userId: id, role: 'editor' })) } }); u.dir = r.id; u.newPick = []; toast(r.members.length > 1 ? `${r.name} er opprettet og delt` : `${r.name} er opprettet`); return reload(); }
-      case 'entry': S.folder = await api(`/folders/${u.dir}/entries`, { method: 'POST', json: { ...v, amount: parseAmount(v.amount), date: today(), projectId: +v.projectId || null } }); toast(`Lagt til i ${S.folder.name}`); return reload();
-      case 'share': if (!v.userId) return; S.folder = await api(`/folders/${u.dir}/members`, { method: 'POST', json: v }); toast(`${S.folder.name} er delt`); return render();
+      case 'folder': { const r = await api('/folders', { method: 'POST', json: { ...v, share: (u.newPick ?? []).map((id) => ({ userId: id, role: 'editor' })) } }); u.dir = r.id; u.newPick = []; toast(r.members.length > 1 ? `${r.name} er opprettet og delt` : `${r.name} er opprettet`); return u.page === 'inn' ? reloadBol() : reload(); }
+      case 'entry': {
+        const r = await api(`/folders/${target()}/entries`, { method: 'POST', json: { description: v.description, amount: parseAmount(v.amount), date: today(), categoryId: +v.categoryId || null, projectId: +v.projectId || null, paidBy: v.paidBy } });
+        toast(`Lagt til i ${r.name}${v.categoryId ? '' : ' · ✦ AI velger kategori'}`); return reload();
+      }
+      case 'bshare': if (!v.userId) return; { const r = await api(`/folders/${f.dataset.fid}/members`, { method: 'POST', json: v }); toast(`${r.name} er delt`); } return reloadBol();
+      case 'bcat': S.bolCats = await api('/boliger/categories', { method: 'POST', json: { name: v.name } }); toast(`«${v.name.trim()}» er lagt til`); render(); el.querySelector('[data-mform=bcat] input')?.focus(); return;
       case 'project': S.folder = await api(`/folders/${u.dir}/projects`, { method: 'POST', json: { ...v, budget: parseAmount(v.budget) } }); toast('Prosjekt lagt til'); return render();
       case 'inst': S.folder = await api(`/folders/${u.dir}/projects/${f.dataset.pid}/installments`, { method: 'POST', json: { ...v, amount: parseAmount(v.amount) } }); return render();
       case 'bill': S.folder = await api(`/folders/${u.dir}/bills`, { method: 'POST', json: v }); return render();

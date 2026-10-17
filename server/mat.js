@@ -5,11 +5,12 @@
 //   dishes: [{ id, name, src: 'own'|'hellofresh', ing: [], steps: [], cost }]
 //   cooks:  [{ name, best: [dishId] }]
 //   plan:   { 'YYYY-MM-DD': { dish: id|null, cook, by: 'ai'|'user'|'auto' } }
-//   fixed:  { 0–6 (mandag = 0): { dish: id, cook } }
+//   fixed:  { 0–6 (mandag = 0): { dish: id, cook } } – lagret i SQLite-tabellen matplan_fixed, ikke i kv.
+//           En rett kan være fast på flere ukedager; hver ukedag har høyst én fast rett.
 //   shop:   { mandag: { done: [tekst i små bokstaver], extra: [{ id, text, price, done }] } }
 import { Hono } from 'hono';
 import { randomBytes, timingSafeEqual, createHash } from 'node:crypto';
-import { kv, OWNER } from './db.js';
+import { kv, OWNER, db } from './db.js';
 import { config } from './config.js';
 import { userInfo } from './auth.js';
 import { guard, readJson, bad, str, num, MOCK, aiJson } from './homeos-common.js';
@@ -85,6 +86,21 @@ export function migrate(old) {
   return s;
 }
 
+/* Faste retter per ukedag (prompt 10): egen tabell. cook_id er kokkens navn (kokkene ligger i kv). */
+db.exec(`CREATE TABLE IF NOT EXISTS matplan_fixed (
+  weekday INTEGER PRIMARY KEY CHECK (weekday BETWEEN 0 AND 6),
+  dish_id TEXT NOT NULL,
+  cook_id TEXT
+)`);
+const fixedRows = db.prepare('SELECT weekday, dish_id AS dish, cook_id AS cook FROM matplan_fixed');
+const fixedClear = db.prepare('DELETE FROM matplan_fixed');
+const fixedPut = db.prepare('INSERT INTO matplan_fixed(weekday, dish_id, cook_id) VALUES(?,?,?)');
+const loadFixed = () => Object.fromEntries(fixedRows.all().map((r) => [r.weekday, { dish: r.dish, cook: r.cook ?? null }]));
+const writeFixed = db.transaction((fixed) => {
+  fixedClear.run();
+  for (const [k, f] of Object.entries(fixed ?? {})) if (+k >= 0 && +k < 7 && f?.dish) fixedPut.run(+k, f.dish, f.cook ?? null);
+});
+
 function fresh() {
   if (MOCK) return demo();
   return { v: 2, dishes: [], cooks: [{ name: userInfo(OWNER)?.name || config.userName || 'Admin', best: [] }], plan: {}, fixed: {}, auto: false, lastAuto: '', shop: {} };
@@ -93,22 +109,30 @@ export function state() {
   const raw = kv.get(OWNER, 'mat', null);
   let s = raw ? migrate(raw) : fresh(), dirty = !raw || raw.v !== 2;
   if (!s.calKey) { s.calKey = randomBytes(18).toString('base64url'); dirty = true; }
+  // Engangsmigrering: faste retter flyttes fra kv til matplan_fixed.
+  if (!s.fixedDb) { if (!fixedRows.all().length) writeFixed(s.fixed); s.fixedDb = true; dirty = true; }
+  s.fixed = Object.fromEntries(Object.entries(loadFixed()).filter(([, f]) => s.dishes.some((d) => d.id === f.dish)));
   if (dirty) save(s);
   return s;
 }
-const save = (s) => kv.set(OWNER, 'mat', s);
+const save = (s) => { writeFixed(s.fixed); kv.set(OWNER, 'mat', { ...s, fixed: {} }); };
 
 /* ---------------- Hjelpere ---------------- */
 
 const dishOf = (s, dishId) => s.dishes.find((d) => d.id === dishId) ?? null;
 const dishByName = (s, name) => s.dishes.find((d) => low(d.name) === low(name)) ?? null;
 const bestOf = (s, dishId) => s.cooks.find((c) => c.best.includes(dishId))?.name ?? null;
-// Det som står på en dag: lagret plan, ellers fast rett for ukedagen.
+// Det som står på en dag. Fra og med denne uka går faste retter foran planen (AI og «Lag ny for uka» endrer dem ikke);
+// tidligere uker viser det som faktisk ble planlagt.
+const thisMonday = () => monday(day(new Date()));
 function entry(s, date) {
-  const p = s.plan[date];
-  if (p) return p;
-  const f = s.fixed[wd(date)];
-  return f && dishOf(s, f.dish) ? { dish: f.dish, cook: f.cook ?? bestOf(s, f.dish), by: 'fixed' } : { dish: null, cook: null, by: null };
+  const p = s.plan[date], f = s.fixed[wd(date)];
+  const fx = f && dishOf(s, f.dish) ? f : null;
+  if (fx && (date >= thisMonday() || !p?.dish)) {
+    const cook = p?.dish === fx.dish && p.cook ? p.cook : fx.cook ?? bestOf(s, fx.dish);
+    return { dish: fx.dish, cook, by: 'fixed' };
+  }
+  return p ?? { dish: null, cook: null, by: null };
 }
 const isFixed = (s, date, e = entry(s, date)) => !!e.dish && s.fixed[wd(date)]?.dish === e.dish;
 
@@ -145,6 +169,29 @@ function shopping(s, start) {
   return [...items.values(), ...st.extra.map((x) => ({ ...x, auto: false }))];
 }
 
+const fixedDaysOf = (s, dishId) => Object.entries(s.fixed).filter(([, f]) => f.dish === dishId).map(([k]) => +k).sort((a, b) => a - b);
+
+// Ukekostnaden trekkes fra budsjettet for «Mat og dagligvarer» (på serveren, uten FinansHub-grensesnittet):
+// igjen = budsjett − brukt hittil i måneden − planlagte middager fra i dag til måneden er slutt.
+const FOOD_CAT = 'Mat og dagligvarer';
+export function foodBudget(s, today = day(new Date())) {
+  try {
+    const cat = db.prepare('SELECT id FROM fh_categories WHERE name=?').get(FOOD_CAT);
+    if (!cat) return null;
+    const ms = Math.min(28, Math.max(1, +(kv.get(OWNER, 'fh_settings', {}).monthStart) || 1));
+    const t = parse(today);
+    if (t.getDate() < ms) t.setMonth(t.getMonth() - 1, 1);
+    const month = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}`;
+    const from = `${month}-${String(ms).padStart(2, '0')}`, n = new Date(t.getFullYear(), t.getMonth() + 1, ms, 12), to = day(n);
+    const b = db.prepare("SELECT amount FROM fh_budgets WHERE category_id=? AND month IN (?, 'default') ORDER BY month = 'default'").get(cat.id, month);
+    const used = -(db.prepare('SELECT COALESCE(SUM(amount),0) AS s FROM fh_transactions WHERE category_id=? AND amount<0 AND date>=? AND date<?').get(cat.id, from, to).s) / 100;
+    let planned = 0;
+    for (let d = today; d < to; d = addDays(d, 1)) planned += dishOf(s, entry(s, d).dish)?.cost ?? 0;
+    const budget = b ? b.amount / 100 : null;
+    return { category: FOOD_CAT, month, from, to, budget, used: Math.round(used), planned, left: budget == null ? null : Math.round(budget - used - planned) };
+  } catch { return null; }
+}
+
 function week(s, start) {
   const today = day(new Date()), dates = weekDates(start);
   const days = dates.map((date, i) => {
@@ -163,10 +210,11 @@ function week(s, start) {
   return {
     start, end, week: isoWeek(start), today,
     days,
-    dishes: s.dishes.map((d) => ({ ...d, days: used(d.id) })),
+    dishes: s.dishes.map((d) => ({ ...d, days: used(d.id), fixedDays: fixedDaysOf(s, d.id) })),
     chefs: s.cooks.map((c) => ({ name: c.name, best: c.best.map((x) => dishOf(s, x)).filter(Boolean).map((d) => ({ id: d.id, name: d.name })) })),
     cooks: s.cooks.map((c) => c.name),
-    fixed: Object.entries(s.fixed).map(([i, f]) => ({ weekday: DN[i], index: +i, dishId: f.dish, name: dishOf(s, f.dish)?.name ?? null })).filter((x) => x.name),
+    fixed: Object.entries(s.fixed).map(([i, f]) => ({ weekday: DN[i], index: +i, dishId: f.dish, name: dishOf(s, f.dish)?.name ?? null, cook: f.cook ?? bestOf(s, f.dish) })).filter((x) => x.name).sort((a, b) => a.index - b.index),
+    food: foodBudget(s),
     // Eldre felter (mobil og apper)
     library: s.dishes.filter((d) => d.src !== 'hellofresh').map((d) => ({ id: d.id, name: d.name, cost: d.cost })),
     hellofresh: s.dishes.filter((d) => d.src === 'hellofresh').map((d) => ({ id: d.id, name: d.name, meta: '', cost: d.cost })),
@@ -288,6 +336,7 @@ matApi.post('/plan', async (c) => {
   const b = await readJson(c), s = state();
   const date = isDate(b.date) ? b.date : isDate(b.start) ? b.start : day(new Date()), start = monday(date);
   if (b.scope === 'day') {
+    if (isFixed(s, date)) return reply(c, s, start, { status: `${DN[wd(date)]} er fast (${dishOf(s, entry(s, date).dish)?.name}). Endre «Alltid på» i retten for å bytte.` });
     const d = regenDay(s, date); save(s);
     return reply(c, s, start, { status: d ? `${DN[wd(date)]}: ${d.name}` : 'Legg til flere retter først.' });
   }
@@ -379,6 +428,31 @@ matApi.patch('/dishes/:id', async (c) => {
   Object.assign(d, v);
   save(s);
   return reply(c, s, startOf(c, b), { dish: d });
+});
+
+// «Alltid på» Ma–Sø for en rett: dagene i listen får retten som fast rett (en annen fast rett på samme dag byttes ut),
+// dager som ikke er med lenger mister den. Valgfri kokk per dag: cooks { '4': 'Sebastian' }.
+export function setFixedDays(s, dishId, days, cooks = {}) {
+  const want = new Set((Array.isArray(days) ? days : []).map(Number).filter((x) => Number.isInteger(x) && x >= 0 && x < 7));
+  const replaced = [];
+  for (const [k, f] of Object.entries(s.fixed)) if (f.dish === dishId && !want.has(+k)) delete s.fixed[k];
+  for (const k of want) {
+    const cur = s.fixed[k];
+    if (cur && cur.dish !== dishId) replaced.push({ weekday: DN[k], name: dishOf(s, cur.dish)?.name ?? null });
+    const cook = cooks[k] !== undefined ? (str(cooks[k], 40) || null) : cur?.dish === dishId ? cur.cook : bestOf(s, dishId);
+    s.fixed[k] = { dish: dishId, cook: cook && s.cooks.some((c) => c.name === cook) ? cook : null };
+  }
+  return { days: [...want].sort((a, b) => a - b), replaced };
+}
+matApi.put('/dishes/:id/fixed', async (c) => {
+  const b = await readJson(c), s = state(), d = dishOf(s, c.req.param('id'));
+  if (!d) return bad(c, 'Fant ikke retten', 404);
+  if (!Array.isArray(b.days)) return bad(c, 'days må være en liste med ukedager (0 = mandag)');
+  const r = setFixedDays(s, d.id, b.days, b.cooks && typeof b.cooks === 'object' ? b.cooks : {});
+  save(s);
+  const names = r.days.map((i) => DN[i].toLowerCase());
+  const msg = !r.days.length ? `${d.name} er ikke lenger fast.` : `${d.name} hver ${names.length > 1 ? names.slice(0, -1).join(', ') + ' og ' + names.at(-1) : names[0]}.${r.replaced.length ? ` Erstattet ${r.replaced.map((x) => `${x.name} (${x.weekday.toLowerCase()})`).join(', ')}.` : ''}`;
+  return reply(c, s, startOf(c, b), { status: msg, fixedDays: r.days });
 });
 
 function deleteDish(s, dishId) {

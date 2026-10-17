@@ -184,9 +184,32 @@ export function looksLikeFinn(parsed) {
   return /@(\w+\.)?finn\.no\b/.test(from) || (/\bfinn(\.no)?\b/i.test(t) && /fiks ferdig|trygg betaling|tillit forsikring/i.test(t));
 }
 
+// Kobler e-poster fra FINN, Posten/Bring og Tillit til Finn-handlene (Finn-kode, ordre-/sporingsnummer eller varenavn).
+// Leser «All Mail» hvis Bridge viser den (ellers INBOX), bare nye UID-er siden forrige runde; første gang de siste 120 dagene.
+const FINN_FROM = ['finn.no', 'posten', 'bring', 'tillit'];
+async function scanFinnMails(client, folders, finnLink) {
+  if (!q('SELECT 1 FROM fh_finn LIMIT 1').get()) return 0;
+  const box = folders.includes('All Mail') ? 'All Mail' : 'INBOX';
+  const state = kv.get(OWNER, 'fh_finn_scan', {});
+  const lock = await client.getMailboxLock(box);
+  let linked = 0;
+  try {
+    const mb = client.mailbox, prev = state[box];
+    const fresh = !prev || String(prev.validity) !== String(mb.uidValidity);
+    const crit = { or: FINN_FROM.map((from) => ({ from })) };
+    if (fresh) crit.since = new Date(Date.now() - 120 * 86400_000); else crit.uid = `${prev.lastUid + 1}:*`;
+    const uids = ((await client.search(crit, { uid: true })) || []).filter((u) => fresh || u > prev.lastUid).slice(-200);
+    for (const uid of uids) {
+      try { const msg = await client.fetchOne(String(uid), { source: true }, { uid: true }); linked += finnLink(await simpleParser(msg.source)); } catch { /* hopp over */ }
+    }
+    kv.set(OWNER, 'fh_finn_scan', { ...state, [box]: { validity: String(mb.uidValidity), lastUid: Math.max(prev && !fresh ? prev.lastUid : 0, Number(mb.uidNext ?? 1) - 1, ...uids) } });
+  } finally { lock.release(); }
+  return linked;
+}
+
 let running = false;
 // Én runde: hent e-post fra kvitteringsmappen (og uleste fra Finn-mappen), importer og flytt/merk.
-export async function runMail({ ingest, finn } = {}) {
+export async function runMail({ ingest, finn, finnLink } = {}) {
   if (running) return { ...mailStatus(), busy: true, ok: false, message: 'En henting pågår allerede – vent litt og prøv igjen' };
   const c = cfgWith();
   if (!c.host || !c.user || !c.pass) return { ok: false, message: 'E-post er ikke satt opp' };
@@ -207,7 +230,7 @@ export async function runMail({ ingest, finn } = {}) {
           try {
             const msg = await client.fetchOne(String(uid), { source: true }, { uid: true });
             const parsed = kind === 'receipt' && finn ? await simpleParser(msg.source) : null;
-            if (kind === 'finn' || (parsed && looksLikeFinn(parsed))) { await finn(mailText(parsed ?? await simpleParser(msg.source))); imported++; }
+            if (kind === 'finn' || (parsed && looksLikeFinn(parsed))) { const p = parsed ?? await simpleParser(msg.source); await finn(mailText(p), p); imported++; }
             else imported += (await importMessage(msg.source, { folder, ingest })).imported;
             const target = kind === 'receipt' ? c.doneFolder : null;
             if (target && folders.includes(target)) await client.messageMove(String(uid), target, { uid: true });
@@ -219,10 +242,12 @@ export async function runMail({ ingest, finn } = {}) {
         }
       } finally { lock.release(); }
     }
+    let linked = 0;
+    if (finnLink) { try { linked = await scanFinnMails(client, folders, finnLink); } catch (e) { lastError ??= `Finn-e-poster: ${e.message}`; } }
     const st = mailStatus();
-    setStatus({ lastCheck: Date.now(), imported: (st.imported ?? 0) + imported, lastImported: imported, lastError, unseen: null });
-    const msg = imported ? `${imported} e-post${imported === 1 ? '' : 'er'} importert` : errors ? 'Ingenting importert' : 'Ingen nye e-poster';
-    return { ok: !errors || imported > 0, imported, errors, lastError, message: errors ? `${msg} – ${errors} feilet: ${lastError}` : msg };
+    setStatus({ lastCheck: Date.now(), imported: (st.imported ?? 0) + imported, lastImported: imported, lastError, unseen: null, finnLinked: (st.finnLinked ?? 0) + linked });
+    const msg = (imported ? `${imported} e-post${imported === 1 ? '' : 'er'} importert` : errors ? 'Ingenting importert' : 'Ingen nye e-poster') + (linked ? ` · ${linked} e-post${linked === 1 ? '' : 'er'} koblet til Finn-handler` : '');
+    return { ok: !errors || imported > 0, imported, errors, linked, lastError, message: errors ? `${msg} – ${errors} feilet: ${lastError}` : msg };
   } catch (e) {
     const m = mailError(e, c);
     setStatus({ lastCheck: Date.now(), lastError: m.message });

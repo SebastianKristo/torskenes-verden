@@ -7,7 +7,7 @@ import { c3 } from './mobile-theme.js';
 
 /* ---------- Oppsett ---------- */
 
-const DEF = { sec: ['clock', 'search', 'links', 'os', 'srv', 'ruter'], hlTabs: ['hl', 'home', 'dom', 'mat'], finTabs: ['home', 'list', 'bud', 'ai', 'mer'], hide: { srv: true, ruter: true } };
+const DEF = { sec: ['clock', 'search', 'links', 'os', 'srv', 'ruter'], hlTabs: ['hl', 'home', 'dom', 'mat'], finTabs: ['home', 'list', 'finn', 'bud', 'ai', 'mer'], hide: { srv: true, ruter: true, bud: true } };
 const WD = {
   clock: ['Klokke og vær', 'Tid, temperatur og vind', 'clock'], search: ['Google-søk', 'Søk med forslag og historikk', 'search'],
   links: ['Snarveier', 'Favorittsider og tjenester på hjemmenettet', 'mer'], os: ['Andre OS', 'Finans, Domener og Matplan', 'konto2'],
@@ -18,9 +18,16 @@ function norm(v = {}) {
   const hide = { ...(v.hide && typeof v.hide === 'object' ? v.hide : DEF.hide) };
   // Nye widgets som ikke finnes i et lagret oppsett får standard synlighet.
   DEF.sec.forEach((id) => { if (Array.isArray(v.sec) && !v.sec.includes(id) && DEF.hide[id]) hide[id] = true; });
+  // Prompt 10: Finn tar Budsjetts plass i fanelinja. Et lagret oppsett uten Finn får Finn der Budsjett sto, og Budsjett
+  // skjules én gang (den ligger øverst i Mer og kan slås på igjen i navigasjonsredigeringen).
+  let finTabs = v.finTabs;
+  if (!Array.isArray(finTabs) || !finTabs.includes('finn')) {
+    if (Array.isArray(finTabs) && finTabs.length) { finTabs = [...finTabs]; const i = finTabs.indexOf('bud'); finTabs.splice(i < 0 ? Math.max(0, finTabs.indexOf('ai')) : i, 0, 'finn'); }
+    hide.bud = true; delete hide.finn;
+  }
   const names = {};
   if (v.names && typeof v.names === 'object') for (const [k, n] of Object.entries(v.names)) if (typeof n === 'string' && n.trim()) names[k] = n.trim().slice(0, 30);
-  return { sec: fix(v.sec, DEF.sec), hlTabs: fix(v.hlTabs, DEF.hlTabs), finTabs: fix(v.finTabs, DEF.finTabs), hide, names,
+  return { sec: fix(v.sec, DEF.sec), hlTabs: fix(v.hlTabs, DEF.hlTabs), finTabs: fix(finTabs, DEF.finTabs), hide, names,
     start: START_KEYS.includes(v.start) ? v.start : undefined, backStyle: v.backStyle === 'bar' ? 'bar' : 'arrow', matTheme: ['light', 'dark', 'system'].includes(v.matTheme) ? v.matTheme : 'light' };
 }
 export const START_KEYS = ['homelab', 'fin-hjem', 'fin-liste', 'fin-budsjett'];

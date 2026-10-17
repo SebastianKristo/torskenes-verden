@@ -12,6 +12,7 @@ import { parseCsv, PROFILES } from './csv.js';
 import { domainFor, learnDomain, validDomain, logo, heuristic, kick as kickAi, summarizeReceipt } from './enrich.js';
 import { parseFile, readText, rowsToTx } from './importer.js';
 import { parseFinnEmail } from './finn.js';
+import { mountFinn, linkMail, attachParsed } from './finn-routes.js';
 import { sessionUser, clientIp, verifyLogin, userInfo, listUsers } from '../auth.js';
 import * as auth from '../auth.js';
 import { config } from '../config.js';
@@ -19,6 +20,7 @@ import { kv } from '../db.js';
 import { stocks, resetStocks, t212Configured, t212Base, cleanCred, testT212 } from './stocks.js';
 import { answer as aiAnswer, plainSearch, suggestionGroups, AiUnavailable } from './search.js';
 import * as backup from './backup.js';
+import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor } from './boliger.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
 const q = (sql) => db.prepare(sql);
@@ -253,11 +255,14 @@ function routeTarget(id) {
     const payer = q('SELECT name FROM fh_folder_members WHERE folder_id=? AND user_id=?').get(+f[1], uid)?.name
       ?? q("SELECT name FROM fh_folder_members WHERE folder_id=? ORDER BY role='owner' DESC, id LIMIT 1").get(+f[1])?.name ?? settings().name;
     let lines = []; try { lines = JSON.parse(r.extraction ?? 'null')?.lines ?? []; } catch { /* ugyldig */ }
-    const cat = folderCategory(`${r.merchant ?? ''} ${lines.map((l) => l.description).join(' ')}`);
-    if (!q('SELECT 1 FROM fh_folder_entries WHERE receipt_id=?').get(r.id)) {
-      q('INSERT INTO fh_folder_entries(folder_id,receipt_id,tx_id,description,date,amount,paid_by,category,created) VALUES(?,?,?,?,?,?,?,?,?)')
-        .run(+f[1], r.id, r.transaction_id, r.merchant || r.name || 'Kvittering', r.date || today(), r.total ?? 0, payer, cat, Date.now());
-    } else q('UPDATE fh_folder_entries SET description=?, date=?, amount=?, category=COALESCE(category, ?) WHERE receipt_id=?').run(r.merchant || 'Kvittering', r.date || today(), r.total ?? 0, cat, r.id);
+    // Kategori: heuristikk med en gang, og AI (med kategorilisten, kan lage nye) i bakgrunnen. Eget valg beholdes.
+    const text = `${r.merchant ?? ''} ${r.name ?? ''} ${lines.map((l) => l.description).join(' ')}`;
+    let entry = q('SELECT id FROM fh_folder_entries WHERE receipt_id=?').get(r.id);
+    if (!entry) {
+      entry = q('INSERT INTO fh_folder_entries(folder_id,receipt_id,tx_id,description,date,amount,paid_by,category,created) VALUES(?,?,?,?,?,?,?,?,?) RETURNING id')
+        .get(+f[1], r.id, r.transaction_id, r.merchant || r.name || 'Kvittering', r.date || today(), r.total ?? 0, payer, null, Date.now());
+    } else q('UPDATE fh_folder_entries SET description=?, date=?, amount=? WHERE receipt_id=?').run(r.merchant || 'Kvittering', r.date || today(), r.total ?? 0, r.id);
+    assignCategory(entry.id, text, null);
     if (uid !== OWNER && userInfo(uid)?.role !== 'admin') q("UPDATE fh_receipts SET status='filed' WHERE id=? AND status='needs_review'").run(r.id);
   }
 }
@@ -311,7 +316,7 @@ api.use('*', async (c, next) => {
   c.set('user', a.user);
   // Brukere uten admin-rolle: bare egne opplysninger og Delte mapper.
   const path = c.req.path.replace(/^.*?\/finans\/api/, '');
-  if (!a.admin && !/^\/(me|prefs|users|bootstrap|tokens(\/[\w-]+)?|folders(\/.*)?|receipts\/jobs)$/.test(path)) return bad(c, 'Bare administratorer har tilgang til regnskapet. Du ser Boliger som er delt med deg.', 403);
+  if (!a.admin && !/^\/(me|prefs|users|bootstrap|tokens(\/[\w-]+)?|folders(\/.*)?|boliger(\/.*)?|receipts\/jobs)$/.test(path)) return bad(c, 'Bare administratorer har tilgang til regnskapet. Du ser Boliger som er delt med deg.', 403);
   await next();
 });
 const R = need('finance:read'), W = need('finance:write');
@@ -319,14 +324,19 @@ const upload = bodyLimit({ maxSize: Number(process.env.MAX_UPLOAD_MB ?? 15) * 10
 
 // Sidemenyen: Import ligger nå under Innstillinger, AI-søk har egen side etter Transaksjoner.
 // Matplan er den felles Homelab-komponenten (bare for administratorer, som resten av regnskapet).
-const NAV_DEFAULT = ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'mat', 'inn'];
+const NAV_DEFAULT = ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'imp', 'inn'];
 const NAV_FIXED = ['ov', 'inn'];
-// Nye sider som ikke finnes i lagret rekkefølge legges sist (AI-søk rett etter Transaksjoner for gamle oppsett).
-const navMerge = (saved) => {
-  if (!Array.isArray(saved) || !saved.length) return NAV_DEFAULT;
-  const keep = saved.filter((p) => NAV_DEFAULT.includes(p));
-  if (!keep.includes('ai') && keep.includes('tx')) keep.splice(keep.indexOf('tx') + 1, 0, 'ai');
-  return [...new Set([...keep, ...NAV_DEFAULT.filter((p) => !keep.includes(p))])];
+// Lagret rekkefølge beholdes; sider som er fjernet (f.eks. Matplan, som nå er i Homelab) faller bort, og nye sider
+// (AI-søk, Import) settes inn rett etter nærmeste side som står foran dem i standardrekkefølgen.
+export const navMerge = (saved, def = NAV_DEFAULT) => {
+  if (!Array.isArray(saved) || !saved.length) return [...def];
+  const keep = [...new Set(saved.filter((p) => def.includes(p)))];
+  def.forEach((p, i) => {
+    if (keep.includes(p)) return;
+    const before = def.slice(0, i).reverse().find((x) => keep.includes(x));
+    keep.splice(before ? keep.indexOf(before) + 1 : 0, 0, p);
+  });
+  return keep;
 };
 const navOrder = (uid) => navMerge(kv.get(uid, 'fh_nav', null));
 const navHidden = (uid) => (kv.get(uid, 'fh_nav_hidden', []) ?? []).filter((p) => NAV_DEFAULT.includes(p) && !NAV_FIXED.includes(p));
@@ -477,8 +487,9 @@ function setTxFolder(c, txId, folderId) {
   const t = q('SELECT * FROM fh_transactions WHERE id=?').get(txId);
   const me = c.get('access').info;
   const payer = q('SELECT name FROM fh_folder_members WHERE folder_id=? AND user_id=?').get(folderId, c.get('user'))?.name ?? me?.name ?? 'Meg';
-  q('INSERT INTO fh_folder_entries(folder_id,tx_id,description,date,amount,paid_by,category,created) VALUES(?,?,?,?,?,?,?,?)')
-    .run(folderId, txId, t.merchant || t.description, t.date, Math.abs(t.amount), payer, folderCategory(`${t.merchant ?? ''} ${t.description}`), Date.now());
+  const e = q('INSERT INTO fh_folder_entries(folder_id,tx_id,description,date,amount,paid_by,category,created) VALUES(?,?,?,?,?,?,?,?) RETURNING id')
+    .get(folderId, txId, t.merchant || t.description, t.date, Math.abs(t.amount), payer, null, Date.now());
+  assignCategory(e.id, `${t.merchant ?? ''} ${t.description} ${t.note ?? ''}`, null);
 }
 // Kvittering: kobles til (bokført) eller løses fra (tilbake til gjennomgang).
 function setTxReceipt(txId, receiptId) {
@@ -636,7 +647,7 @@ async function saveReceipt(f, scanFile, thumbFile, acc, target) {
   const fm = String(target ?? '').match(/^folder:(\d+)(?::(.+))?$/);
   if (fm) {
     const payer = q('SELECT name FROM fh_folder_members WHERE folder_id=? AND user_id=?').get(+fm[1], fm[2] ?? OWNER)?.name ?? settings().name;
-    q('INSERT INTO fh_folder_entries(folder_id,receipt_id,description,date,amount,paid_by,category,created) VALUES(?,?,?,?,0,?,?,?)').run(+fm[1], id, str(f.name, 120) || 'Kvittering', today(), payer, folderCategory(f.name), Date.now());
+    q('INSERT INTO fh_folder_entries(folder_id,receipt_id,description,date,amount,paid_by,category,created) VALUES(?,?,?,?,0,?,?,?)').run(+fm[1], id, str(f.name, 120) || 'Kvittering', today(), payer, null, Date.now());
   }
   return id;
 }
@@ -1107,6 +1118,7 @@ function pruneMembers(fid) {
 }
 function folderOut(f, uid, full = false) {
   pruneMembers(f.id);
+  linkLegacy();
   const mem = q("SELECT * FROM fh_folder_members WHERE folder_id=? ORDER BY role='owner' DESC, id").all(f.id);
   const me = mem.find((m) => m.user_id === uid);
   const year = new Date().getFullYear(), ys = `${year}-01-01`;
@@ -1135,23 +1147,33 @@ function folderOut(f, uid, full = false) {
     const mm = `${year}-${String(i + 1).padStart(2, '0')}`;
     const rows = yearRows.filter((e) => e.date.startsWith(mm));
     const by = {};
-    for (const e of rows) { const k = e.category || 'Annet'; by[k] = (by[k] ?? 0) + e.amount / 100; }
+    for (const e of rows) { const k = entryCat(e).category; by[k] = (by[k] ?? 0) + e.amount / 100; }
     return { month: mm, label: MONTHS_SHORT[i], total: rows.reduce((a, e) => a + e.amount, 0) / 100, byCat: by };
   });
-  const catSum = {};
-  for (const e of yearRows) { const k = e.category || 'Annet'; catSum[k] = (catSum[k] ?? 0) + e.amount / 100; }
-  out.categories = Object.entries(catSum).sort((a, b) => b[1] - a[1]).map(([name, sum]) => ({ name, sum, color: FCAT[name] ?? '#6E6E78', pct: yearTotal ? (sum * 100) / (yearTotal / 100) : 0 }));
+  // Kategorikortet: hovedkategoriene, hver med fordeling på underkategorier («Uten underkategori» når posten bare har hovedkategori).
+  const catSum = {}, catMeta = {};
+  for (const e of yearRows) {
+    const ec = entryCat(e), k = ec.category;
+    const g = (catSum[k] ??= { sum: 0, subs: {} });
+    g.sum += e.amount / 100;
+    const sk = ec.subcategory ?? '';
+    g.subs[sk] = (g.subs[sk] ?? 0) + e.amount / 100;
+    catMeta[k] ??= { color: ec.color, id: catPair(ec.categoryId).top?.id ?? null };
+  }
+  out.categories = Object.entries(catSum).sort((a, b) => b[1].sum - a[1].sum).map(([name, g]) => ({ id: catMeta[name].id, name, sum: g.sum, color: catMeta[name].color,
+    pct: yearTotal ? (g.sum * 100) / (yearTotal / 100) : 0,
+    subs: Object.entries(g.subs).filter(([sk]) => sk || Object.keys(g.subs).length > 1).sort((a, b) => b[1] - a[1]).map(([sk, sum]) => ({ name: sk || 'Uten underkategori', sum, pct: g.sum ? (sum * 100) / g.sum : 0 })) }));
   const strom = (m) => out.months[m]?.byCat['Strøm'] ?? 0;
   const projects = q('SELECT * FROM fh_folder_projects WHERE folder_id=? ORDER BY id').all(f.id).map((p) => {
     const spent = entries.filter((e) => e.project_id === p.id).reduce((a, e) => a + e.amount, 0) / 100;
     const inst = q('SELECT * FROM fh_project_installments WHERE project_id=? ORDER BY sort, id').all(p.id);
-    return { id: p.id, name: p.name, vendor: p.vendor, category: p.category, color: FCAT[p.category] ?? '#FF7A3D', budget: p.budget / 100, spent, used: spent, paid: spent, remaining: p.budget / 100 - spent,
+    return { id: p.id, name: p.name, vendor: p.vendor, category: p.category, color: colorOf(p.category) ?? FCAT[p.category] ?? '#FF7A3D', budget: p.budget / 100, spent, used: spent, paid: spent, remaining: p.budget / 100 - spent,
       installments: inst.map((x) => ({ id: x.id, label: x.label, due: x.due, amount: x.amount / 100, paid: !!x.paid_at, paidAt: x.paid_at })) };
   });
   out.projects = projects;
   out.bills = q('SELECT * FROM fh_folder_bills WHERE folder_id=? ORDER BY id').all(f.id).map((b) => {
-    const last = entries.find((e) => (e.category || 'Annet') === b.category);
-    return { id: b.id, name: b.name, category: b.category, color: FCAT[b.category] ?? '#A0A0AA', freq: b.freq, payer: b.payer, nextDue: b.next_due, last: last ? { amount: last.amount / 100, date: last.date } : null };
+    const last = entries.find((e) => entryCat(e).category === b.category);
+    return { id: b.id, name: b.name, category: b.category, color: colorOf(b.category) ?? FCAT[b.category] ?? '#A0A0AA', freq: b.freq, payer: b.payer, nextDue: b.next_due, last: last ? { amount: last.amount / 100, date: last.date } : null };
   });
   const months = nowM + 1;
   out.kpi = { yearTotal: yearTotal / 100, count: yearRows.length, perMonth: Math.round(yearTotal / months) / 100, months,
@@ -1161,17 +1183,21 @@ function folderOut(f, uid, full = false) {
     const t = e.tx_id ? q('SELECT ai_short, domain FROM fh_transactions WHERE id=?').get(e.tx_id) : null;
     const r = e.receipt_id ? origSelect.get(e.receipt_id) : null;
     const pending = r && (r.status === 'pending' || r.status === 'processing');
-    const cat = e.category || 'Annet';
-    return { id: e.id, description: e.description, date: e.date, amount: e.amount / 100, paidBy: e.paid_by, category: cat, color: FCAT[cat] ?? '#6E6E78', project: e.project, projectId: e.project_id,
+    return { id: e.id, description: e.description, date: e.date, amount: e.amount / 100, paidBy: e.paid_by, ...entryCat(e), project: e.project, projectId: e.project_id,
       txId: e.tx_id, receiptId: e.receipt_id, pending: !!pending, domain: t?.domain || r?.domain || domainFor(e.description),
       aiShort: pending ? 'Gemini leser kvitteringen …' : t?.ai_short || r?.ai_short || heuristic({ merchant: e.description, amount: -e.amount / 100 }).short };
   });
-  out.catOptions = FOLDER_CATS.map(([n]) => n);
+  // Hovedkategorier (prosjekter og faste regninger) og hele treet med ID-er (utgifter).
+  out.catOptions = catTree().map((t) => t.name);
+  out.catTree = catOptions();
+  out.layout = layoutFor(uid);
+  out.notices = noticesFor(f.id, Date.now() - 10 * 60_000);
   out.types = FOLDER_TYPES; out.freqs = FREQS;
   return out;
 }
 const fullOut = (c, f) => c.json(folderOut(q('SELECT * FROM fh_folders WHERE id=?').get(f.id), c.get('user'), true));
 
+api.route('/boliger', bolApi);
 api.get('/folders', (c) => c.json(q('SELECT f.* FROM fh_folders f JOIN fh_folder_members m ON m.folder_id=f.id AND m.user_id=? ORDER BY f.id').all(c.get('user')).map((f) => folderOut(f, c.get('user')))));
 api.get('/folders/:id', (c) => { const { f, err } = folderFor(c); return err ?? fullOut(c, f); });
 api.post('/folders', async (c) => {
@@ -1257,18 +1283,23 @@ api.post('/folders/:id/entries', async (c) => {
   const members = new Set(q('SELECT name FROM fh_folder_members WHERE folder_id=?').all(f.id).map((m) => m.name));
   const paidBy = members.has(b.paidBy) ? b.paidBy : me.name;
   const proj = b.projectId ? q('SELECT * FROM fh_folder_projects WHERE id=? AND folder_id=?').get(+b.projectId, f.id) : null;
-  const catOf = (text) => (FCAT[b.category] ? b.category : proj?.category ?? folderCategory(text));
-  const ins = q('INSERT INTO fh_folder_entries(folder_id,tx_id,description,date,amount,paid_by,category,project_id,created) VALUES(?,?,?,?,?,?,?,?,?)');
+  // Kategori: valgt i skjemaet (ID, eller navn fra eldre klienter), ellers prosjektets kategori, ellers heuristikk + AI.
+  const chosen = b.categoryId ? bolCat(+b.categoryId)?.id : b.category ? catTree().find((t) => t.name === b.category)?.id : null;
+  const projCat = !chosen && proj?.category ? catTree().find((t) => t.name === proj.category)?.id : null;
+  const ins = q('INSERT INTO fh_folder_entries(folder_id,tx_id,description,date,amount,paid_by,category,project_id,created) VALUES(?,?,?,?,?,?,?,?,?) RETURNING id');
+  const place = (id, text) => (chosen ? assignCategory(id, text, chosen) : projCat ? assignCategory(id, text, projCat, { ai: false }) : assignCategory(id, text, null));
   if (b.txId) {
     if (!c.get('access').admin) return bad(c, 'Bare administratorer kan flytte transaksjoner fra regnskapet', 403);
     const t = q('SELECT * FROM fh_transactions WHERE id=?').get(+b.txId);
     if (!t) return c.notFound();
     if (q('SELECT 1 FROM fh_folder_entries WHERE folder_id=? AND tx_id=?').get(f.id, t.id)) return bad(c, 'Transaksjonen ligger allerede i boligen');
-    ins.run(f.id, t.id, t.merchant || t.description, t.date, Math.abs(t.amount), paidBy, catOf(`${t.merchant ?? ''} ${t.description}`), proj?.id ?? null, Date.now());
+    const e = ins.get(f.id, t.id, t.merchant || t.description, t.date, Math.abs(t.amount), paidBy, null, proj?.id ?? null, Date.now());
+    place(e.id, `${t.merchant ?? ''} ${t.description} ${t.note ?? ''}`);
   } else {
     const amount = ore(b.amount);
     if (!str(b.description) || amount === null) return bad(c, 'Beskrivelse og beløp må fylles ut');
-    ins.run(f.id, null, str(b.description, 120), isDate(b.date) ? b.date : today(), Math.abs(amount), paidBy, catOf(b.description), proj?.id ?? null, Date.now());
+    const e = ins.get(f.id, null, str(b.description, 120), isDate(b.date) ? b.date : today(), Math.abs(amount), paidBy, null, proj?.id ?? null, Date.now());
+    place(e.id, `${b.description} ${b.note ?? ''}`);
   }
   return fullOut(c, f);
 });
@@ -1277,7 +1308,10 @@ api.patch('/folders/:id/entries/:eid', async (c) => {
   const e = q('SELECT * FROM fh_folder_entries WHERE id=? AND folder_id=?').get(+c.req.param('eid'), f.id);
   if (!e) return c.notFound();
   const b = await c.req.json();
-  if (FCAT[b.category]) q('UPDATE fh_folder_entries SET category=? WHERE id=?').run(b.category, e.id);
+  if (b.categoryId !== undefined || b.category !== undefined) {
+    const cid = b.categoryId ? bolCat(+b.categoryId)?.id : b.category ? catTree().find((t) => t.name === b.category)?.id : null;
+    if (cid) assignCategory(e.id, e.description, cid);
+  }
   if (b.projectId !== undefined) q('UPDATE fh_folder_entries SET project_id=? WHERE id=?').run(q('SELECT id FROM fh_folder_projects WHERE id=? AND folder_id=?').get(+b.projectId, f.id)?.id ?? null, e.id);
   if (b.paidBy && q('SELECT 1 FROM fh_folder_members WHERE folder_id=? AND name=?').get(f.id, b.paidBy)) q('UPDATE fh_folder_entries SET paid_by=? WHERE id=?').run(b.paidBy, e.id);
   return fullOut(c, f);
@@ -1358,59 +1392,40 @@ api.patch('/folders/:id/bills/:bid', async (c) => {
 api.delete('/folders/:id/bills/:bid', (c) => { const { f, err } = folderFor(c, 'edit'); if (err) return err; q('DELETE FROM fh_folder_bills WHERE id=? AND folder_id=?').run(+c.req.param('bid'), f.id); return fullOut(c, f); });
 
 /* --- Finn-handler --- */
-// Kilde: e-postkvitteringer fra Finn. Automatisk henting via IMAP (innstillingene imapHost/imapUser/imapPass)
-// er ikke koblet på ennå; inntil videre limes e-posten inn, og AI (med regex-reserve) trekker ut handelen.
+// Handlene kommer fra Finn-e-poster (IMAP eller innlimt). Detaljsiden med annonse, kvittering, e-poster og bilder ligger i finn-routes.js.
 
-function finnOut(f) {
-  const steps = JSON.parse(f.steps || '[]');
-  return { id: f.id, role: f.role, item: f.item, counterpart: f.counterpart, date: f.date, amount: f.amount / 100, steps, txId: f.tx_id,
-    done: steps.length > 0 && steps.every((s) => s.done), domain: 'finn.no' };
-}
-api.get('/finn', R, (c) => {
-  const rows = q('SELECT * FROM fh_finn ORDER BY date DESC, id DESC').all().map(finnOut);
-  const y = String(new Date().getFullYear());
-  const sum = (role) => rows.filter((r) => r.role === role && r.date.startsWith(y)).reduce((a, r) => a + r.amount, 0);
-  return c.json({ items: rows, bought: sum('bought'), sold: sum('sold'), ongoing: rows.filter((r) => !r.done).length,
-    imap: { configured: !!(settings().imapHost && settings().imapUser && secret('imapPass')) } });
-});
 function finnMatch(role, amountOre, date) {
   const sign = role === 'sold' ? 1 : -1;
   return q("SELECT id FROM fh_transactions WHERE amount BETWEEN ? AND ? AND date BETWEEN date(?, '-5 days') AND date(?, '+10 days') ORDER BY abs(julianday(date)-julianday(?)) LIMIT 1")
     .get(sign * amountOre - 100, sign * amountOre + 100, date, date, date)?.id ?? null;
 }
-api.post('/finn', W, async (c) => {
-  const b = await c.req.json();
-  let d;
-  if (str(b.email, 50000)) {
-    try { d = await parseFinnEmail(String(b.email).slice(0, 50000)); } catch (e) { return bad(c, e.message); }
-  } else {
-    d = { role: b.role === 'sold' ? 'sold' : 'bought', item: str(b.item, 120), counterpart: str(b.counterpart, 80), date: isDate(b.date) ? b.date : today(), amount: +String(b.amount ?? '').replace(',', '.'),
-      steps: Array.isArray(b.steps) ? b.steps.slice(0, 8).map((s) => ({ t: str(s.t ?? s, 60), done: !!s.done })) : [{ t: 'Trygg betaling', done: true }] };
-  }
-  if (!d.item || !Number.isFinite(d.amount) || d.amount <= 0) return bad(c, 'Fant ikke gjenstand og beløp');
-  return c.json(finnOut(saveFinn(d)));
-});
 // Ny handel, eller oppdatering av stegene når samme ordre kommer i en ny statusmail. Brukes også av e-postimporten.
 function saveFinn(d) {
   const amountOre = Math.round(d.amount * 100);
   const source = d.source ?? null;
   const existing = source ? q('SELECT * FROM fh_finn WHERE source=?').get(source) : null;
-  if (existing) { q('UPDATE fh_finn SET steps=? WHERE id=?').run(JSON.stringify(d.steps), existing.id); return q('SELECT * FROM fh_finn WHERE id=?').get(existing.id); }
-  return q('INSERT INTO fh_finn(role,item,counterpart,date,amount,steps,source,tx_id,created) VALUES(?,?,?,?,?,?,?,?,?) RETURNING *')
-    .get(d.role, d.item, d.counterpart ?? '', d.date, amountOre, JSON.stringify(d.steps ?? []), source, finnMatch(d.role, amountOre, d.date), Date.now());
+  if (existing) {
+    q('UPDATE fh_finn SET steps=?, order_id=COALESCE(order_id, ?) WHERE id=?').run(JSON.stringify(d.steps), d.order_id ?? null, existing.id);
+    return q('SELECT * FROM fh_finn WHERE id=?').get(existing.id);
+  }
+  return q('INSERT INTO fh_finn(role,item,counterpart,date,amount,steps,source,tx_id,order_id,created) VALUES(?,?,?,?,?,?,?,?,?,?) RETURNING *')
+    .get(d.role, d.item, d.counterpart ?? '', d.date, amountOre, JSON.stringify(d.steps ?? []), source, finnMatch(d.role, amountOre, d.date), d.order_id ?? null, Date.now());
 }
-async function finnFromMail(text) {
+async function finnFromMail(text, parsed) {
   const d = await parseFinnEmail(String(text).slice(0, 50000));
   if (!d.item || !Number.isFinite(d.amount) || d.amount <= 0) throw new Error('Fant ikke gjenstand og beløp i Finn-e-posten');
-  return saveFinn(d);
+  const f = saveFinn(d);
+  attachParsed(f, parsed);
+  return f;
 }
+mountFinn(api, { R, W, upload, saveFinn });
 
 /* --- Kvitteringer fra e-post (Proton Mail Bridge / IMAP) --- */
 
 const MAIL_KEYS = { mailOn: Boolean, imapHost: (v) => (/^[a-z0-9.\-:]{0,120}$/i.test(String(v).trim()) ? String(v).trim() : ''), imapPort: (v) => Math.min(65535, Math.max(1, +v || 143)),
   imapSecurity: (v) => (['starttls', 'tls', 'none'].includes(v) ? v : 'starttls'), imapUser: (v) => str(v, 120), imapFolder: (v) => str(v, 120) || 'INBOX',
   imapDoneFolder: (v) => str(v, 120), imapPollMinutes: (v) => Math.min(1440, Math.max(1, +v || 10)), imapFinnFolder: (v) => str(v, 120) };
-const mailDeps = { ingest: ingestReceipt, finn: finnFromMail };
+const mailDeps = { ingest: ingestReceipt, finn: finnFromMail, finnLink: linkMail };
 startMailWorker(mailDeps);
 const mailOut = () => ({ config: mailConfig(), status: mailStatus(), recent: recentImports() });
 api.get('/mail/config', R, (c) => c.json(mailOut()));
@@ -1435,15 +1450,7 @@ api.post('/mail/test', sessionOnly, async (c) => {
   return c.json(await testMail(o));
 });
 api.post('/mail/run', sessionOnly, async (c) => c.json(await runMail(mailDeps)));
-api.patch('/finn/:id', W, async (c) => {
-  const cur = q('SELECT * FROM fh_finn WHERE id=?').get(+c.req.param('id'));
-  if (!cur) return c.notFound();
-  const b = await c.req.json();
-  const steps = Array.isArray(b.steps) ? JSON.stringify(b.steps.slice(0, 8).map((s) => ({ t: str(s.t, 60), done: !!s.done }))) : cur.steps;
-  q('UPDATE fh_finn SET item=?, counterpart=?, steps=? WHERE id=?').run(b.item !== undefined ? str(b.item, 120) || cur.item : cur.item, b.counterpart !== undefined ? str(b.counterpart, 80) : cur.counterpart, steps, cur.id);
-  return c.json(finnOut(q('SELECT * FROM fh_finn WHERE id=?').get(cur.id)));
-});
-api.delete('/finn/:id', W, (c) => { q('DELETE FROM fh_finn WHERE id=?').run(+c.req.param('id')); return ok(c); });
+
 
 /* --- Import (XLSX, CSV, tekst) --- */
 // Uten ?commit=1: forhåndsvisning. Med commit: lagres (duplikater hoppes over), AI kategoriserer og beskriver i bakgrunnen.
@@ -1602,7 +1609,7 @@ api.post('/demo', sessionOnly, async (c) => {
 api.delete('/all', sessionOnly, async (c) => {
   const b = await c.req.json().catch(() => ({}));
   if (b.confirm !== 'SLETT') return bad(c, 'Skriv SLETT for å bekrefte');
-  db.transaction(() => { for (const t of ['fh_project_installments', 'fh_folder_projects', 'fh_folder_bills', 'fh_folder_entries', 'fh_folder_members', 'fh_folders', 'fh_finn', 'fh_subscriptions', 'fh_receipts', 'fh_transactions', 'fh_budgets', 'fh_recurring', 'fh_goals', 'fh_accounts']) q(`DELETE FROM ${t}`).run(); })();
+  db.transaction(() => { for (const t of ['fh_project_installments', 'fh_folder_projects', 'fh_folder_bills', 'fh_folder_entries', 'fh_folder_members', 'fh_folders', 'fh_finn_files', 'fh_finn_emails', 'fh_finn_ad', 'fh_finn', 'fh_subscriptions', 'fh_receipts', 'fh_transactions', 'fh_budgets', 'fh_recurring', 'fh_goals', 'fh_accounts']) q(`DELETE FROM ${t}`).run(); })();
   return ok(c);
 });
 

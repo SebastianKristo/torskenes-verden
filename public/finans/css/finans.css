@@ -436,3 +436,29 @@ a.btn{color:var(--text)}a.btn.pri{color:var(--acc-ink)}
 .aks-test{padding:12px 14px;border-radius:10px;font-size:13.5px;line-height:1.5;border:1px solid var(--line,#2A2A31)}
 .aks-test.ok{background:rgba(95,211,168,.1);border-color:rgba(95,211,168,.35)}
 .aks-test.bad{background:rgba(255,138,122,.1);border-color:rgba(255,138,122,.35)}
+
+/* Boliger: underkategorier, «Legg i bolig» og Innstillinger → Boliger */
+.dir-catg{display:flex;flex-direction:column;gap:4px}
+.dir-subs{display:flex;flex-direction:column;gap:3px;padding:0 4px 6px 22px}
+.dir-sub{display:grid;grid-template-columns:minmax(0,1fr) 56px auto;align-items:center;gap:8px;font-size:12px;color:var(--dim)}
+.dir-sub-bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden}.dir-sub-bar i{display:block;height:100%;border-radius:2px;opacity:.75}
+.dir-sub .mono{color:var(--text2);font-size:11.5px}
+.mtag-sel{position:relative;cursor:pointer}.mtag-sel select{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:14px}
+.mtag-sel:focus-within{outline:2px solid rgba(255,122,61,.55);outline-offset:1px}
+.bol-add-h{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}.bol-add-h>b{font-size:14px;font-weight:600}
+.bol-legg{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--dim)}
+.bol-legg .inp{height:36px;min-width:0;border-color:#3A2A20;background:#17110D;color:var(--acc-l);font-weight:500}
+.bol-set{display:flex;flex-direction:column;gap:18px;max-width:640px}
+.bol-sec{display:flex;flex-direction:column;gap:8px}
+.bol-home{display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:14px;background:var(--inner);flex-wrap:wrap}
+.bol-home .btn.on{background:var(--line);border-color:var(--acc)}
+.bcat{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:12px;background:var(--inner)}
+.bcat-h{display:flex;align-items:center;gap:8px}.bcat-h>i{width:10px;height:10px;border-radius:50%;flex:none}.bcat-h b{font-weight:500;font-size:14px}
+.bcat-ai{font-size:11px;padding:2px 7px;border-radius:6px;background:rgba(255,122,61,.14);color:var(--acc-l)}
+.bcat-subs{display:flex;flex-wrap:wrap;gap:6px;padding-left:18px}
+.bsub{display:inline-flex;align-items:center;gap:4px;height:28px;padding:0 4px 0 10px;border-radius:14px;border:1px solid var(--line2);font-size:12.5px;color:var(--text2)}
+.bsub button{width:22px;height:22px;border:0;border-radius:11px;background:transparent;color:var(--muted);font-size:14px;padding:0}.bsub button:hover{color:var(--text);background:var(--line)}
+.bsub-in{height:28px;width:150px;padding:0 10px;border-radius:14px;border:1px dashed var(--line2);background:transparent;color:var(--text);font:inherit;font-size:12.5px}
+.bsub-in:focus{outline:none;border-color:rgba(255,122,61,.55);border-style:solid}
+.bcat-new{display:flex;gap:8px}.bcat-new .inp{flex:1;min-width:0;height:38px}
+.tog-row[disabled]{opacity:.55;cursor:default}

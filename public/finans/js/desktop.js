@@ -4,11 +4,11 @@ import {
   render, toast, loadBoot, loadSummary, loadTx, loadReceipts, loadRecurring, loadReport, loadAi, catById, cats, accs, uploadReceipt,
   smooth, spark, conic, icon, logo, aiLine, ICONS,
 } from './core.js';
-import { MODULE_PAGES, MODULE_SUB, MODULE_FN, MODULE_LOADERS, attachMatplan, bindModules, backupTab, firstRunCard, loadBackup, impPage } from './modules.js';
+import { MODULE_PAGES, MODULE_SUB, MODULE_FN, MODULE_LOADERS, bolSettings, loadBolSettings, bindModules, backupTab, firstRunCard, loadBackup, impPage } from './modules.js';
 
 ICONS.ai = 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z';
 const BASE_PAGES = [['ov', 'Oversikt'], ['tx', 'Transaksjoner'], ['ai', 'AI-søk'], ['kv', 'Kvitteringer'], ['bud', 'Budsjett'], ['fast', 'Faste utgifter'], ['konto', 'Kontoer'], ['rap', 'Rapporter'], ['inn', 'Innstillinger']];
-const NAV_DEFAULT = ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'mat', 'inn'];
+const NAV_DEFAULT = ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'imp', 'inn'];
 const NAV_FIXED = ['ov', 'inn'];
 const PAGES = [...BASE_PAGES, ...MODULE_PAGES];
 const defaultName = (p) => PAGES.find(([x]) => x === p)?.[1] ?? p;
@@ -35,13 +35,14 @@ function navCfg() {
   const def = (S.boot.navDefault ?? NAV_DEFAULT).filter((p) => PAGES.some(([x]) => x === p));
   const fin = S.layout?.finNav;
   const saved = (fin?.order?.length ? fin.order : S.boot.nav) ?? def;
-  const keep = saved.filter((p) => def.includes(p));
-  if (!keep.includes('ai') && keep.includes('tx')) keep.splice(keep.indexOf('tx') + 1, 0, 'ai');
-  const order = [...new Set([...keep, ...def.filter((p) => !keep.includes(p))])];
+  // Fjernede sider faller bort; nye (AI-søk, Import) settes inn etter nærmeste side foran dem i standardrekkefølgen.
+  const keep = [...new Set(saved.filter((p) => def.includes(p)))];
+  def.forEach((p, i) => { if (keep.includes(p)) return; const before = def.slice(0, i).reverse().find((x) => keep.includes(x)); keep.splice(before ? keep.indexOf(before) + 1 : 0, 0, p); });
+  const order = keep;
   const hidden = (fin?.hidden ?? S.boot.navHidden ?? []).filter((p) => order.includes(p) && !NAV_FIXED.includes(p));
   return { order: u.cfgOrder ?? order, hidden };
 }
-const navOrder = () => { if (S.boot.restricted) return ['dir']; const { order, hidden } = navCfg(); return order.filter((p) => !hidden.includes(p)); };
+const navOrder = () => { if (S.boot.restricted) return ['dir', 'inn']; const { order, hidden } = navCfg(); return order.filter((p) => !hidden.includes(p)); };
 function sideNav() {
   const b = S.boot;
   const items = navOrder().map((p) => `<a href="#/${p}" ${p === u.page ? 'aria-current="page"' : ''}>${icon(p, 18, 'currentColor')}<span>${esc(pageName(p))}</span>${p === 'kv' && b.reviewCount ? `<span class="badge">${b.reviewCount}</span>` : ''}</a>`).join('');
@@ -421,7 +422,7 @@ function reports() {
 
 /* ===================== Innstillinger ===================== */
 
-const SET_TABS = [['gen', 'Generelt', 'Navn, valuta, måned'], ['meny', 'Sidemeny', 'Rekkefølge og synlighet'], ['imp', 'Import', 'Kontoutskrift, CSV og XLSX'], ['ai', 'AI-motor', 'Ollama eller Gemini'], ['cat', 'Kategorier', 'Farger og typer'], ['rule', 'Regler', 'Auto-kategorisering'],
+const SET_TABS = [['gen', 'Generelt', 'Navn, valuta, måned'], ['meny', 'Sidemeny', 'Rekkefølge og synlighet'], ['bol', 'Boliger', 'Ny bolig, deling, oppsett og kategorier'], ['imp', 'Import', 'Kontoutskrift, CSV og XLSX'], ['ai', 'AI-motor', 'Ollama eller Gemini'], ['cat', 'Kategorier', 'Farger og typer'], ['rule', 'Regler', 'Auto-kategorisering'],
   ['bank', 'Bank og import', 'CSV og PSD2'], ['varsel', 'Varsler', 'Budsjett og kvitteringer'], ['mobil', 'Mobil og tilgang', 'App-tokens og snarveier'], ['data', 'Backup og data', 'Nedlasting, SMB-share og gjenoppretting']];
 
 // Innstillinger → Sidemeny: dra, ▲▼ og bryter for vis/skjul. Endringene lagres med en gang.
@@ -440,7 +441,10 @@ function menuTab() {
 }
 
 function settingsPage() {
-  const st = S.boot.settings, t = u.setTab, cur = SET_TABS.find((x) => x[0] === t);
+  // Brukere uten admin-rolle ser bare Boliger. Ukjente faner faller tilbake til første fane.
+  const tabs = S.boot.restricted ? SET_TABS.filter(([x]) => x === 'bol') : SET_TABS;
+  if (!tabs.some(([x]) => x === u.setTab)) u.setTab = tabs[0][0];
+  const st = S.boot.settings, t = u.setTab, cur = tabs.find((x) => x[0] === t);
   let body = '';
   const sel = (key, options) => `<select class="inp" data-set="${key}">${options.map(([v, l]) => opt(v, l, st[key])).join('')}</select>`;
   if (t === 'gen') body = `<div class="form-grid">
@@ -496,8 +500,9 @@ function settingsPage() {
   else if (t === 'data') body = backupTab();
   else if (t === 'meny') body = menuTab();
   else if (t === 'imp') body = impPage();
+  else if (t === 'bol') body = bolSettings();
   return `<div class="row-flex">
-    <nav class="card set-nav">${SET_TABS.map(([k2, n, s2]) => `<button data-settab="${k2}" aria-current="${t === k2}"><span>${n}</span><small>${s2}</small></button>`).join('')}</nav>
+    <nav class="card set-nav">${tabs.map(([k2, n, s2]) => `<button data-settab="${k2}" aria-current="${t === k2}"><span>${n}</span><small>${s2}</small></button>`).join('')}</nav>
     ${card(`<div><h2 style="font-size:18px">${cur[1]}</h2><div class="note" style="font-size:13px">${cur[2]}</div></div>${body}${u.msg.set ? `<div class="ok-msg">${esc(u.msg.set)}</div>` : ''}`, '', 'flex:1 1 480px;padding:24px;gap:18px')}
   </div>`;
 }
@@ -581,7 +586,6 @@ export function draw() {
   const scroll = window.scrollY;
   const focus = document.activeElement?.closest('[data-form] input, [data-tx-field], [data-rc-field]') ? { sel: focusSel(document.activeElement), pos: document.activeElement.selectionStart } : null;
   el.innerHTML = shell(PAGE_FN[u.page]());
-  if (u.page === 'mat') attachMatplan(el);
   // E-postimporten (felles med Homelab-innstillingene) monteres i Bank og import.
   const mp = el.querySelector('[data-mailpane]');
   if (mp) { if (mailPaneEl) mp.replaceWith(mailPaneEl); else { mailPaneEl = mp; import('/assets/js/settings-mail.js').then((m) => m.mailPane(mp)).catch(() => { mp.innerHTML = '<div class="note">Kunne ikke laste e-postoppsettet.</div>'; }); } }
@@ -600,11 +604,12 @@ async function loadLayout() {
 }
 const LOADERS = { ov: [loadSummary], tx: [loadTx, loadTxFolders], ai: [loadAiPage], kv: [loadReceipts], bud: [loadSummary], fast: [loadRecurring], konto: [], rap: [loadReport], inn: [], ...MODULE_LOADERS };
 // Brukere uten admin-rolle har bare Delte mapper.
-const allowed = (p) => !S.boot?.restricted || p === 'dir';
+const allowed = (p) => !S.boot?.restricted || p === 'dir' || p === 'inn';
 export async function load(page = u.page) {
   try { await Promise.all([loadLayout(), ...LOADERS[page].map((f) => f())]); } catch (e) { toast(e.message); }
   if (page === 'inn' && u.setTab === 'mobil') S.tokens = await api('/tokens').catch(() => []);
   if (page === 'inn' && u.setTab === 'data') await loadBackup().catch((e) => toast(e.message));
+  if (page === 'inn' && (u.setTab === 'bol' || S.boot?.restricted)) await loadBolSettings().catch((e) => toast(e.message));
   render();
   schedulePoll();
 }
@@ -618,8 +623,8 @@ export async function refreshAll() { await loadBoot(); await load(); }
 
 export function route() {
   let p = location.hash.replace(/^#\/?/, '').split('/')[0];
-  // Import ligger nå under Innstillinger; gamle lenker til #/imp havner der.
-  if (p === 'imp' && allowed('inn')) { u.setTab = 'imp'; history.replaceState(null, '', '#/inn'); p = 'inn'; }
+  // Matplan er en Homelab-fane; gamle lenker til FinansHub-siden sendes dit.
+  if (p === 'mat') { location.replace('/#/matplan'); return; }
   const next = PAGE_FN[p] && allowed(p) ? p : S.boot?.restricted ? 'dir' : 'ov';
   const entered = next !== u.page;
   if (entered) { u.page = next; u.msg = {}; window.scrollTo(0, 0); }

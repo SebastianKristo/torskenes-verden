@@ -239,7 +239,7 @@ export async function buildArchive(c, phrase) {
     entries.push({ name: 'homelab.db', path: snap, tmp: true }); parts.push('database');
   }
   if (c.smbReceipts) {
-    for (const dir of ['receipts', 'uploads']) {
+    for (const dir of ['receipts', 'uploads', 'finn']) {
       const root = join(DATA, dir);
       if (!existsSync(root)) continue;
       const walk = (d) => { for (const f of readdirSync(d, { withFileTypes: true })) { const p = join(d, f.name); if (f.isDirectory()) walk(p); else if (f.isFile()) entries.push({ name: relative(DATA, p).split(sep).join('/'), path: p }); } };
@@ -440,7 +440,7 @@ export async function restore(stageId) {
     }
     // Bildene kopieres på plass (overskriver filer med samme navn).
     let files = 0;
-    for (const dir of ['receipts', 'uploads']) {
+    for (const dir of ['receipts', 'uploads', 'finn']) {
       const src = join(s.root, dir);
       if (!existsSync(src)) continue;
       for (const f of readdirSync(src, { recursive: true, withFileTypes: true })) {

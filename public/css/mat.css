@@ -152,3 +152,11 @@
   .mat .mp-selwrap.mp-small select{min-width:0}
 }
 .mat .mp-more{align-self:flex-start;color:var(--mp-acc-l);padding:0 8px;height:36px}
+
+/* «Alltid på» Ma–Sø (prompt 10) */
+.mat .mp-always{display:flex;flex-direction:column;gap:8px;margin:4px 0 6px}
+.mat .mp-wd{position:relative;min-width:44px;height:38px;padding:0 10px;border-radius:12px;border:1px solid var(--mp-line2);background:transparent;color:var(--mp-txt2, #A9A39B);font-size:14.5px;font-weight:600;cursor:pointer}
+.mat .mp-wd:hover{border-color:var(--mp-acc-bd)}
+.mat .mp-wd.on{border-color:var(--mp-acc-bd);background:var(--mp-acc-bd);color:var(--mp-acc-ll)}
+.mat .mp-wd i{position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:50%;background:var(--mp-acc-l)}
+.mat .mp-chip-fix{background:var(--mp-acc-bd);color:var(--mp-acc-ll)}

@@ -1,5 +1,5 @@
 // Mobil-PWA (prompt 06). Tema: iOS Liquid Glass på iPhone/iPad, ellers Android Material 3 Expressive (med Material You-farger).
-// Appen åpner på Homelab. Finans er et «annet OS» med fanene Oversikt, Liste, Budsjett, Søk og Mer; Matplan og Domener fyller hele skjermen.
+// Appen åpner på Homelab. Finans er et «annet OS» med fanene Oversikt, Liste, Finn, Søk og Mer (Budsjett øverst i Mer); Matplan og Domener fyller hele skjermen.
 // ≥ 600 px (åpen brettbar): navigasjonsrail + to paneler for Finans (liste/detalj).
 import {
   S, api, esc, n0, n2, sgn, neg, dd, dWeek, today, monthName, cap, ini, greet, parseAmount,
@@ -11,6 +11,7 @@ import { PAGES, pageView, pageLoad, pagesBind, pageAfterDraw } from './mobile-pa
 import { txDetail, editForm, origOverlay, txBind } from './mobile-tx.js';
 import { applyM3, c3 } from './mobile-theme.js';
 import { matView, matLoad, matBind, matDark } from './mobile-mat.js';
+import { finnView, finnLoad, finnBind } from './mobile-finn.js';
 
 const u = S.ui;
 export const m = {
@@ -29,7 +30,7 @@ export const amtC = (v, th) => (v > 0 ? '#9FE3C6' : th === 'and' ? c3('#F0DFD7')
 
 // Faner kan skjules og flyttes i «Rediger forsiden» (LAY.hlTabs / LAY.finTabs).
 export const HLTABS = { hl: ['hl', 'Homelab', 'hlhome'], home: ['hjem', 'Finans', 'fin'], dom: ['dom', 'Domener', 'globe'], mat: ['mat', 'Matplan', 'mat'] };
-export const FINTABS = { home: ['hjem', 'Oversikt', 'home'], list: ['liste', 'Liste', 'list'], bud: ['budsjett', 'Budsjett', 'bud'], ai: ['sok', 'Søk', 'ai'], mer: ['mer', 'Mer', 'mer'] };
+export const FINTABS = { home: ['hjem', 'Oversikt', 'home'], list: ['liste', 'Liste', 'list'], finn: ['finn', 'Finn', 'finn'], bud: ['budsjett', 'Budsjett', 'bud'], ai: ['sok', 'Søk', 'ai'], mer: ['mer', 'Mer', 'mer'] };
 export const FIXED_HL = ['hl', 'home'], FIXED_FIN = ['home', 'mer'];
 const FINMODS = ['sub', 'dir', 'finn'];
 export const FIN = ['hjem', 'liste', 'budsjett', 'sok', 'skann', 'opp', ...PAGES, ...FINMODS];
@@ -37,13 +38,14 @@ const TWO = ['hjem', 'liste', 'budsjett', 'skann', 'opp', 'sok'];
 const HLG = ['hl', 'set'];
 const ALL = [...new Set([...FIN, 'hl', 'mat', 'dom', 'set'])];
 // Oversikt, Liste og Budsjett bruker egne navn fra Sidemeny; Søk og Mer beholder de korte navnene i fanelinja.
-const RENAME = ['home', 'list', 'bud'];
+const RENAME = ['home', 'list', 'bud', 'finn'];
 // Egne navn fra Innstillinger → Utseende → Navigasjonslinje (LAY.names) går foran; tomt felt gir standardnavnet.
 export const tabName = (def, k) => LAY().names?.[(def === FINTABS ? 'fin.' : 'hl.') + k] || (def === FINTABS && RENAME.includes(k) ? navName(k, def[k][1]) : def[k][1]);
 const tabsOf = (keys, def, fixed) => keys.filter((k) => def[k] && (fixed.includes(k) || !LAY().hide[k])).map((k) => [def[k][0], tabName(def, k), def[k][2]]);
 export const hlTabs = () => tabsOf(LAY().hlTabs, HLTABS, FIXED_HL);
 export const finTabs = () => tabsOf(LAY().finTabs, FINTABS, FIXED_FIN);
-const finCur = (s) => (s === 'liste' ? 'liste' : s === 'budsjett' ? 'budsjett' : s === 'sok' ? 'sok' : [...PAGES, ...FINMODS].includes(s) ? 'mer' : 'hjem');
+// En skjult fane (f.eks. Budsjett når Finn har tatt plassen) markerer Mer, der den ligger øverst.
+const finCur = (s) => { const c = ['liste', 'budsjett', 'sok', 'finn'].includes(s) ? s : [...PAGES, ...FINMODS].includes(s) ? 'mer' : 'hjem'; return c === 'hjem' || finTabs().some(([k]) => k === c) ? c : 'mer'; };
 
 /* ---------- Valg på denne enheten (localStorage) ---------- */
 const PDEF = { scanTap: 'cam', start: 'hl', hideAmt: false, appHide: false, lock: false, lockAfter: '5', crop: true, origImg: true, wifi: false, nSub: false, nDom: true, nWeek: false, m3Seed: 'sys', m3Mode: 'dark' };
@@ -60,14 +62,14 @@ const START = { homelab: 'hl', 'fin-hjem': 'hjem', 'fin-liste': 'liste', 'fin-bu
 export const startScr = () => START[LAY().start] ?? (['hl', 'hjem', 'liste', 'budsjett'].includes(pref('start')) ? pref('start') : 'hl');
 export const startFin = () => startScr() !== 'hl';
 export const backStyle = () => LAY().backStyle ?? 'arrow';
-const FINMAIN = ['hjem', 'liste', 'budsjett', 'sok', 'mer'];
+const FINMAIN = ['hjem', 'liste', 'budsjett', 'finn', 'sok', 'mer'];
 /** Pil øverst («‹ Homelab»/«‹ Finans») i moduler og Finans-fanene. Matplan har alltid pilen (den har ingen fanelinje). */
 export function backTop(scr = m.screen) {
   if (scr === startScr() || scr === 'set') return false;
   if (scr === 'mat') return true;
   if (backStyle() === 'bar') return false;
   if (scr === 'dom') return true; // Abonnementer, Boliger og Finn har egen pil tilbake til Mer
-  if (!startFin() && FINMAIN.includes(scr)) return !(m.detail && !two()) && !m.edit && !m.pdet;
+  if (!startFin() && FINMAIN.includes(scr)) return !(m.detail && !two()) && !m.edit && !m.pdet && !(scr === 'finn' && m.sub);
   if (startFin() && scr === 'hl') return true;
   return false;
 }
@@ -344,6 +346,7 @@ export function draw() {
     : m.edit && !twoPane ? editForm(th)
     : m.detail && !twoPane && m.sel && FIN.includes(scr) ? txDetail(th, selTx())
     : PAGES.includes(scr) ? pageView(scr, th)
+    : scr === 'finn' ? finnView(th, m.sub)
     : !fin || FINMODS.includes(scr) ? modView(scr, th, m.sub)
     : scrs[scr] ? scrs[scr](th) : confirmView ? confirmRc(th) : scanQueue(th);
   const n = navModel(), dom = scr === 'dom', bt = backTop(scr);
@@ -393,6 +396,7 @@ async function load() {
     else if (scr === 'set') jobs.push(settingsLoad(m.sub));
     else if (scr === 'hl') jobs.push(hlLoad());
     else if (scr === 'mat') jobs.push(matLoad());
+    else if (scr === 'finn') jobs.push(finnLoad(m.sub));
     else if (!FIN.includes(scr) || FINMODS.includes(scr)) jobs.push(modLoad(scr, m.sub));
     if (!m.me) jobs.push(loadMe().catch(() => { m.me = { name: S.boot?.settings?.name }; }));
     await Promise.all(jobs);
@@ -629,6 +633,7 @@ export function bind() {
     if ((x = d('[data-filter]'))) { m.filter = x.dataset.filter; u.type = m.filter; await loadTx(); return draw(); }
     if ((x = d('[data-mcat]'))) { const r = await api(`/receipts/${m.rc}`, { method: 'PATCH', json: { categoryId: +x.dataset.mcat } }); S.receipts = S.receipts.map((y) => (y.id === r.id ? r : y)); return draw(); }
     if (await matBind(e, t)) return;
+    if (await finnBind(e, t)) return;
     if (hlBind(e, t)) return;
     if (await txBind(e, t)) return;
     if (await pagesBind(e, t)) return;
@@ -656,7 +661,7 @@ export function bind() {
     }
     if (act === 'logout') { await fetch('/api/logout', { method: 'POST' }); location.href = '/login?next=/finans/'; }
   }));
-  el.addEventListener('input', (e) => { hlBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
+  el.addEventListener('input', (e) => { if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
   el.addEventListener('change', safe(async (e) => {
     const t = e.target;
     if (t.matches('[data-mupload]')) { const f = [...t.files]; t.value = ''; await upload(f, { confirm: t.hasAttribute('data-confirm') && f.length === 1 }); return; }
@@ -665,6 +670,7 @@ export function bind() {
       const r = await api(`/receipts/${m.rc}`, { method: 'PATCH', json: { [f]: f === 'total' ? parseAmount(t.value) : f === 'accountId' ? +t.value : t.value } });
       S.receipts = S.receipts.map((y) => (y.id === r.id ? r : y)); return draw();
     }
+    if (await finnBind(e, t)) return;
     if (await txBind(e, t)) return;
     if (await pagesBind(e, t)) return;
     if (await modBind(e, t)) return;
@@ -672,6 +678,7 @@ export function bind() {
   }));
   el.addEventListener('submit', safe(async (e) => {
     if (e.target.matches('[data-msearch]')) { e.preventDefault(); u.q = e.target.q.value; await loadTx(); return draw(); }
+    if (await finnBind(e, e.target)) return;
     if (hlBind(e, e.target)) return;
     if (await txBind(e, e.target)) return;
     if (await pagesBind(e, e.target)) return;

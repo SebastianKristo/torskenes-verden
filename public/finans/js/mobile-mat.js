@@ -46,7 +46,7 @@ export function matView() {
     <div class="mp-row3">
       <div class="mp-tile white"><div class="mp-tt"><span>I dag</span><i style="color:var(--mp-red)">●</i></div><div><small>${DN[(tdd.getDay() + 6) % 7]} ${tdd.getDate()}. ${MON[tdd.getMonth()]}</small><b class="mp-clamp">${esc(td.name || 'Ingen rett')}</b></div></div>
       <div class="mp-tile lime"><span>Kokk i dag</span><div><small>Lager middag</small><b class="mp-big">${esc(td.cook || '–')}</b></div></div>
-      <div class="mp-tile cream"><span>Faste dager</span><div><small>Denne uka</small><b class="mp-big">${days.filter((y) => y.fixed).length}<em> av 7</em></b></div></div>
+      <div class="mp-tile cream"><span>Faste dager</span><div><small class="mp-clamp">${esc((w.fixed ?? []).map((f) => `${AB[f.index]} ${f.name}`).join(' · ') || 'Ingen ennå')}</small><b class="mp-big">${(w.fixed ?? []).length}<em> av 7</em></b></div></div>
     </div>
     <div class="mp-days" role="tablist" aria-label="Dager">${days.map((y, i) => `<button class="mp-day" role="tab" data-mp="day" data-i="${i}" aria-selected="${i === sel}">${AB[i]} ${d8(y.date).getDate()}</button>`).join('')}</div>
     <div class="mp-sel">
@@ -55,6 +55,8 @@ export function matView() {
       <div style="flex:1"></div>
       <div class="mp-stats"><div><b>${ing.length}</b><span>Ingredienser</span><i style="background:var(--mp-lime)"></i></div><div><b>${steps.length}</b><span>Steg</span><i style="background:var(--mp-mint)"></i></div><div style="min-width:0"><b class="mp-cook">${esc(x.cook || '–')}</b><span>Kokk</span><i style="background:var(--mp-peach)"></i></div></div>
     </div>
+    ${x.dishId ? `<div class="mp-card pad"><div class="mp-h">Alltid på</div><div class="mp-sub">${(dish.fixedDays ?? []).length ? `${esc(x.name)} legges på hver ${dish.fixedDays.map((i) => DN[i].toLowerCase()).join(', ')}. AI og ny ukeplan endrer ikke faste dager.` : `Velg dagene ${esc(x.name)} alltid skal stå på.`}</div>
+      <div class="mp-days" role="group" aria-label="Alltid på" style="margin-top:10px">${AB.map((ab, i) => { const on = (dish.fixedDays ?? []).includes(i), other = (w.fixed ?? []).find((f) => f.index === i && f.dishId !== dish.id); return `<button class="mp-day" data-mp="always" data-wd="${i}" aria-pressed="${on}" aria-selected="${on}" title="${other && !on ? `Erstatter ${esc(other.name)}` : ''}">${ab}${other && !on ? '·' : ''}</button>`; }).join('')}</div></div>` : ''}
     <div class="mp-card"><div class="mp-ch"><div><div class="mp-h">Ingredienser</div><div class="mp-sub">${ing.length} ${ing.length === 1 ? 'ingrediens' : 'ingredienser'}</div></div><button class="mp-soft" data-mp="toshop" aria-label="Legg i handlelisten">${allIn ? '✓ I listen' : 'Legg i handlelisten'}</button></div>
       ${ing.map((n, i) => `<div class="mp-ing"><span class="mp-ini" style="background:${bg[i % bg.length]}">${esc(ingIni(n))}</span><span class="m-grow">${esc(n)}</span></div>`).join('') || '<div class="mp-sub" style="padding:14px 6px">Ingen ingredienser lagt inn for denne retten.</div>'}</div>
     ${steps.length ? `<div class="mp-card pad"><div class="mp-h">Slik gjør du</div>${steps.map((t, i) => `<div class="mp-step"><span>${i + 1}</span><p>${esc(t)}</p></div>`).join('')}</div>` : ''}
@@ -73,6 +75,14 @@ export async function matBind(e, t) {
   const k = x.dataset.mp, w = M.w;
   if (k === 'theme') { saveLayout({ matTheme: matDark() ? 'light' : 'dark' }); return true; }
   if (k === 'day') { M.sel = +x.dataset.i; draw(); return true; }
+  if (k === 'always') {
+    const day = w?.days?.[M.sel], dish = (w?.dishes ?? []).find((y) => y.id === day?.dishId);
+    if (!dish) return true;
+    const i = +x.dataset.wd, cur = dish.fixedDays ?? [], days = cur.includes(i) ? cur.filter((y) => y !== i) : [...cur, i];
+    try { const r = await matApi(`/dishes/${encodeURIComponent(dish.id)}/fixed`, { method: 'PUT', json: { days, start: w.start } }); if (r?.days) M.w = r; flash(r?.status ?? 'Lagret'); }
+    catch (err) { flash(err.message); }
+    draw(); return true;
+  }
   if (k === 'all') { M.all = !M.all; draw(); return true; }
   if (k === 'shop') { await matApi(`/shopping/${encodeURIComponent(x.dataset.id)}/toggle`, { method: 'POST', json: { start: w?.start } }); await matLoad(); draw(); return true; }
   if (k === 'toshop') {

@@ -467,6 +467,7 @@ authed.get('/space/gallery/:key', proxy((c) => {
 }));
 
 app.route('/api/ui', uiApi);
+app.route('/api/matplan', matApi); // samme Matplan-API som /mat/api (prompt 10: Matplan hører til Homelab)
 // Profil, oppsett, søk, mobilforside og widgets: sesjon ELLER FinansHub-token (må stå før /api med requireAuth).
 app.route('/api', mobileApi);
 app.route('/api', authed);

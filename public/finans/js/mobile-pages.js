@@ -3,6 +3,7 @@
 import { S, api, esc, n0, n2, sgn, dd, today, monthName, cap, icon, logo, aiLine, loadReceipts, accs, navName } from './core.js';
 import { m, draw, flash, avatar, backBtn, theme, amtC, openSheet, openCam } from './mobile.js';
 import { c3 } from './mobile-theme.js';
+import { LAY } from './mobile-hl.js';
 
 export const PAGES = ['mer', 'kv', 'fast', 'konto', 'aks', 'rap', 'imp', 'sok'];
 const PG = { rec: null, stocks: null, rep: null, repMode: 'month', sub: null, dirs: null, finn: null, booked: null, aksPer: '1M',
@@ -96,7 +97,10 @@ const stockCur = () => { const c = PG.stocks?.summary?.currency; return !c || c 
 function mer() {
   const rv = S.boot?.reviewCount ?? (S.summary?.review ?? []).filter((r) => r.status === 'needs_review').length;
   const rec = (PG.rec ?? []).filter((r) => r.active), st = PG.stocks?.summary;
+  // Budsjett ligger øverst når fanen er skjult (Finn har plassen som standard); Finn-flisen bare når Finn-fanen er skjult.
+  const sm = S.summary, budTile = LAY().hide.bud ? [['budsjett', 'Budsjett', sm?.budgetTotal ? `${kr(sm.left ?? 0)} ${(sm.left ?? 0) < 0 ? 'over' : 'igjen'}` : 'Ikke satt opp', 'bud']] : [];
   const tiles = [
+    ...budTile,
     ['kv', 'Kvitteringer', `${rv} til gjennomgang`, 'kv2', rv],
     ['fast', 'Faste utgifter', PG.rec ? `${kr(rec.reduce((a, r) => a + monthly(r), 0))}/mnd` : '…', 'fast2'],
     ['konto', 'Kontoer', kr(accs().reduce((a, x) => a + (x.balance ?? 0), 0)), 'konto2'],
@@ -104,7 +108,7 @@ function mer() {
     ['rap', 'Rapporter', 'Måned og år', 'rap'],
     ['sub', 'Subscription OS', PG.sub ? `${kr(PG.sub.monthly ?? 0)}/mnd` : '…', 'sub2'],
     ['dir', 'Boliger', PG.dirs ? `${PG.dirs.length} ${PG.dirs.length === 1 ? 'bolig' : 'boliger'}` : '…', 'dir2'],
-    ['finn', 'Finn-handler', PG.finn ? `${PG.finn.ongoing ?? 0} pågående` : '…', 'finn2'],
+    ...(LAY().hide.finn ? [['finn', 'Finn-handler', PG.finn ? `${PG.finn.ongoing ?? 0} pågående` : '…', 'finn2']] : []),
     ['imp', 'Import', 'CSV, XLSX, tekst', 'imp'],
     ['sok', 'AI-søk', 'Spør om alt', 'ai'],
   ].map(([k, l, s, ic, badge]) => ({ href: '#/' + k, l: navName(k, l), s, ic, badge }));

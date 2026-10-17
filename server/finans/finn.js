@@ -31,7 +31,8 @@ const iso = (s) => {
 export function regexFinn(mail) {
   const t = mail.replace(/\s+/g, ' ');
   const sold = /(du har solgt|utbetal|kjøper(en)? har betalt|din vare er solgt)/i.test(t);
-  const amount = +(t.match(/(?:totalt|total|beløp|sum|pris)[^\d]{0,20}([\d\s.]+(?:,\d{2})?)\s*(?:kr|nok)/i)?.[1] ?? t.match(/([\d\s.]+(?:,\d{2})?)\s*kr/i)?.[1] ?? '')
+  // Totalbeløpet går foran varepris/pris (kvitteringen lister ofte varepris og frakt før totalen).
+  const amount = +(t.match(/(?:totalt|total)[^\d]{0,20}([\d\s.]+(?:,\d{2})?)\s*(?:kr|nok)/i)?.[1] ?? t.match(/(?:beløp|sum|pris)[^\d]{0,20}([\d\s.]+(?:,\d{2})?)\s*(?:kr|nok)/i)?.[1] ?? t.match(/([\d\s.]+(?:,\d{2})?)\s*kr/i)?.[1] ?? '')
     .replace(/[\s.]/g, '').replace(',', '.');
   const item = t.match(/du har (?:kjøpt|solgt)\s+(.{3,80}?)\s+(?:fra|til|for)\s/i)?.[1]?.trim() ?? t.match(/(?:annonse|gjenstand|vare|kjøpt|solgt)\s*[:–-]\s*([^.\n]{3,80}?)(?:\s{2}|\.|,| for | til |$)/i)?.[1]?.trim();
   const who = t.match(/(selger|kjøper)\s*[:–-]?\s*(\p{Lu}\p{L}+(?:\s\p{Lu}\.?)?)/u);
