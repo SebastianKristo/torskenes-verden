@@ -12,6 +12,9 @@ import { verifyPassword } from './password.js';
 import { createSession, destroySession, sessionUser, rememberDevice, pauseDevice, forgetDevice, currentDeviceId, trustIp, isLan, requireAuth, clientIp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
 import * as integrations from './integrations.js';
 import { cfg, publicConfig, updateConfig } from './settings.js';
+import finansApi from './finans/routes.js';
+import { db as fhDb } from './finans/db.js';
+if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
 
 const api = process.env.MOCK_DATA === '1' ? await import('./mock.js') : integrations;
 if (api !== integrations) console.warn('[mock] MOCK_DATA=1 – viser eksempeldata.');
@@ -44,6 +47,18 @@ const html = (c, body) => c.html(body, 200, { 'Cache-Control': 'no-store' });
 app.get('/', async (c) => sessionUser(c) ? html(c, await page('app.html')) : c.redirect('/login'));
 app.get('/login', async (c) => sessionUser(c) ? c.redirect('/') : html(c, await page('login.html')));
 app.get('/cv', async (c) => html(c, await page('cv.html')));
+// FinansHub: egen fullskjerm-app (desktop og mobil/PWA). API-et har egen tilgangskontroll (sesjon eller token).
+app.get('/finans', (c) => c.redirect('/finans/'));
+app.get('/finans/', async (c) => sessionUser(c) ? html(c, await page('finans/index.html')) : c.redirect('/login?next=/finans/'));
+app.get('/finans/manifest.webmanifest', async (c) => c.body(await page('finans/manifest.webmanifest'), 200, { 'Content-Type': 'application/manifest+json' }));
+app.get('/finans/sw.js', async (c) => c.body(await page('finans/sw.js'), 200, { 'Content-Type': 'text/javascript', 'Cache-Control': 'no-cache' }));
+app.route('/finans/api', finansApi);
+// Del-mål for PWA-en: «Del → FinansHub» fra bilder-appen legger kvitteringen i køen.
+app.post('/finans/share', async (c) => {
+  if (!sessionUser(c)) return c.redirect('/login?next=/finans/');
+  const res = await finansApi.request('/receipts', { method: 'POST', headers: { cookie: c.req.header('cookie') ?? '', 'content-type': c.req.header('content-type') ?? '' }, body: await c.req.arrayBuffer() }, c.env);
+  return c.redirect(res.ok ? '/finans/#/skann' : '/finans/#/kv');
+});
 
 app.use('/assets/*', serveStatic({ root: './public', rewriteRequestPath: (p) => p.replace(/^\/assets/, '') }));
 app.use('/vendor/satellite/*', serveStatic({ root: './node_modules/satellite.js/dist', rewriteRequestPath: (p) => p.replace(/^\/vendor\/satellite/, '') }));

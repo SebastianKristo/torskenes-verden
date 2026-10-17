@@ -83,6 +83,40 @@ Ved innlogging er «Husk denne enheten på lokalt nett» krysset av som standard
 - Under **Innstillinger → Innlogging** kan du slå funksjonen av og på for enheten du bruker, og fjerne andre enheter.
 - ⚠️ **Ikke eksponer porten direkte mot internett** med portviderekobling i ruteren. Bruk Cloudflare Tunnel. Docker kan vise trafikk utenfra med en intern 172.x-adresse, og da vil den bli regnet som lokal.
 
+## FinansHub (Økonomi)
+Økonomi-fanen åpner **FinansHub** på `/finans/` i fullskjerm, uten homelab-headeren. Den runde **×** øverst til høyre tar deg tilbake til Hjem.
+
+| Side | Innhold |
+|---|---|
+| Oversikt | Total saldo, inn, brukt og igjen av budsjett · inn/ut-graf · kontoer · siste transaksjoner · handlinger · budsjett · gjennomgangskø · kommende trekk |
+| Transaksjoner | Søk, filter (konto, type, kategori), detaljpanel (kategori, dato, konto, notat, «Lag regel», slett), ny transaksjon, CSV-eksport |
+| Kvitteringer | Skann/last opp (også dra og slipp), AI-utlesing i kø, bekreft-panel med bankmatch, «Les på nytt» med den andre motoren, avvis, bokfør |
+| Budsjett | Månedsbudsjett per kategori med fargevarsel ved 80 % og over 100 % |
+| Faste utgifter | Abonnementer og regninger, av/på, trekkdager, automatisk oppdagelse fra gjentakende trekk |
+| Kontoer | Kontokort med saldo (startsaldo + transaksjoner) og sparemål |
+| Rapporter | Måned/år, fordeling per kategori, mest brukt hos, månedstabell, CSV og PDF (utskrift) |
+| Innstillinger | Generelt · AI-motor · Kategorier · Regler · Bank og import · Varsler · Mobil og tilgang · Data |
+
+**Kvitteringsflyt:**
+1. Nettleseren sender originalen, en nedskalert JPEG (~1600 px) og et miniatyrbilde.
+2. Serveren leser kvitteringen med **Ollama** (lokalt) eller **Gemini** (sky), med valgfri reserve og ett nytt forsøk ved ugyldig svar.
+3. Regler går foran AI-forslaget for kategori.
+4. Kvitteringen matches mot en banktransaksjon: samme beløp ±1 kr og dato ±3 dager. Har kortet samme fire siste siffer, får det forrang.
+5. Ingenting bokføres uten at du trykker **Bokfør**. Kategorier du retter, blir nye regler.
+6. Går AI-motoren ned, havner kvitteringen i køen med beskjed om å fylles ut manuelt.
+
+**CSV-import:** støtter DNB, Nordea, SpareBank 1, Sbanken og Bank Norwegian. Kolonnene finnes automatisk ut fra overskriftene. Duplikater hoppes over, og butikknavnet ryddes («VARER REMA 1000 MAJORSTUEN» blir «Rema 1000 Majorstuen»).
+
+**Mobil:** `/finans/` kan installeres som egen app (PWA) og viser **bare FinansHub**.
+- På iPhone og iPad brukes iOS-temaet med glassflater (Liquid Glass), flytende fanelinje og egen skanneknapp.
+- På Android brukes Material 3 Expressive med tonale flater, utvidet skanneknapp og navigasjonslinje.
+- Fra 600 px bredde (åpen brettbar eller nettbrett) byttes det til navigasjonsrail med liste til venstre og detaljer til høyre.
+- Temaet kan overstyres under **Meg**.
+
+**Tokens:** en iOS-snarvei eller en annen klient kan laste opp kvitteringer med et token (Innstillinger → Mobil og tilgang), med tilganger som `finance:read`, `receipts:write` og `finance:write`. Tokenet gir aldri tilgang til resten av homelab.
+
+**AI-oppsett (`.env` eller Innstillinger → AI-motor):** `AI_PROVIDER`, `AI_FALLBACK`, `OLLAMA_URL`, `OLLAMA_MODEL`, `GEMINI_API_KEY` og `GEMINI_MODEL`. Gemini-nøkkelen kan også legges inn fra siden. Den lagres på serveren og sendes aldri tilbake til nettleseren. Velger du Ollama uten reserve, forlater ingen kvitteringer hjemmenettet.
+
 ## Integrasjoner
 | Modul | Kilde | Env |
 |---|---|---|
@@ -111,6 +145,8 @@ Alle integrasjonene kan også settes opp fra siden under **Innstillinger → Int
 
 ## Struktur
 ```
-server/   index.js (ruter og API), auth.js, password.js, db.js, integrations.js, mock.js
+server/   index.js (ruter og API), auth.js, password.js, db.js, integrations.js, settings.js, mock.js
+server/finans/  db.js (tabeller), routes.js (/finans/api), ai.js (Ollama/Gemini), csv.js (bankimport), demo.js
 public/   app.html, login.html, cv.html, css/, js/ (én modul per fane), manifest + sw.js
+public/finans/  index.html, css/ (desktop + mobiltemaer), js/ (core, desktop, mobile), manifest + sw.js
 ```

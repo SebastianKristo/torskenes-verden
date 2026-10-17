@@ -1,6 +1,5 @@
 import { esc, kr, nb, signed, p2, cap, isoDay, hm, isMobile } from './util.js';
 import { store, widget, card, refresh, errBox, on } from './store.js';
-import { monthReceipts, catColor } from './eco.js';
 import { renderSearch, popHandler } from './extras.js';
 
 export const LINKS = [
@@ -153,14 +152,16 @@ widget('d_energy', { render() {
     <div class="energy-bars">${e.days.map((d, i) => `<div class="${i === e.days.length - 1 ? 'cur' : ''}"><span class="mono sub" style="font-size:11px">${nb(d.kwh)}</span><i style="height:${(d.kwh / mx) * 80}%"></i><span class="muted" style="font-size:11px">${esc(d.label)}</span></div>`).join('')}</div>`;
 } });
 
+// Økonomi-sammendrag fra FinansHub (/finans/api/summary).
 widget('d_eco', { render() {
-  const me = store.me, list = monthReceipts(new Date());
-  const total = list.reduce((a, r) => a + r.amount, 0);
-  const cats = me.categories.map((c) => ({ ...c, sum: list.filter((r) => r.category === c.name).reduce((a, r) => a + r.amount, 0) })).filter((c) => c.sum > 0);
-  return `<div class="card-head"><div><div class="card-title">Økonomi</div><div class="card-sub">${cap(new Date().toLocaleDateString('nb-NO', { month: 'long' }))}</div></div><a class="btn" href="#/okonomi">Åpne ↗</a></div>
-    <div class="sub"><b class="num" style="color:var(--text)">${kr(total)}</b> av ${kr(me.budget)}</div>
-    <div class="bar"><i style="width:${Math.min(100, me.budget ? (total / me.budget) * 100 : 0)}%"></i></div>
-    ${store.receipts ? cats.map((c) => `<div style="display:flex;align-items:center;gap:10px;font-size:14px"><span style="width:10px;height:10px;border-radius:3px;background:${catColor(c.name)}"></span><span style="flex:1">${esc(c.name)}</span><span class="mono sub">${kr(c.sum)}</span></div>`).join('') || '<div class="empty">Ingen kvitteringer denne måneden.</div>' : ''}`;
+  const f = store.data.finans;
+  const head = `<div class="card-head"><div><div class="card-title">Økonomi</div><div class="card-sub">${cap(new Date().toLocaleDateString('nb-NO', { month: 'long' }))} · FinansHub</div></div><a class="btn" href="/finans/">Åpne ↗</a></div>`;
+  if (!f) return head + (errBox('finans', 'FinansHub') || '<div class="skeleton" style="min-height:120px"></div>');
+  const top = f.byCategory.slice(0, 5);
+  return `${head}<div class="sub"><b class="num" style="color:var(--text)">${kr(f.budgetTotal ? f.budgetUsed : f.ut)}</b> ${f.budgetTotal ? `av ${kr(f.budgetTotal)}` : 'brukt'}</div>
+    <div class="bar"><i style="width:${Math.min(100, f.budgetTotal ? (f.budgetUsed / f.budgetTotal) * 100 : 0)}%"></i></div>
+    ${top.map((c) => `<div style="display:flex;align-items:center;gap:10px;font-size:14px"><span style="width:10px;height:10px;border-radius:3px;background:${esc(c.color)}"></span><span style="flex:1">${esc(c.category)}</span><span class="mono sub">${kr(c.amount)}</span></div>`).join('') || '<div class="empty">Ingen utgifter denne måneden.</div>'}
+    ${f.review.length ? `<a href="/finans/#/kv" class="sub" style="font-size:13px;color:var(--blue)">${f.review.length} kvitteringer til gjennomgang →</a>` : ''}`;
 } });
 
 widget('d_links', { render() {
@@ -284,4 +285,4 @@ on('school', () => { setHtml('lesson', renderLesson()); refresh('d_cal', 'd_agen
 on('trading', () => refresh('d_trading'));
 on('energy', () => refresh('d_energy'));
 on('upcoming', () => refresh('d_upcoming'));
-on('receipts', () => refresh('d_eco'));
+on('finans', () => refresh('d_eco'));

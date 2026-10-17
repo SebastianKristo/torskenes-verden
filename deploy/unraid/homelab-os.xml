@@ -44,4 +44,9 @@
   <Config Name="SONARR_API_KEY" Target="SONARR_API_KEY" Default="" Type="Variable" Display="always" Required="false" Mask="true"></Config>
   <Config Name="RADARR_URL" Target="RADARR_URL" Default="http://192.168.1.20:7878" Type="Variable" Display="advanced" Required="false" Mask="false">http://192.168.1.20:7878</Config>
   <Config Name="RADARR_API_KEY" Target="RADARR_API_KEY" Default="" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="AI_PROVIDER" Target="AI_PROVIDER" Default="ollama" Type="Variable" Display="advanced" Required="false" Mask="false">ollama</Config>
+  <Config Name="OLLAMA_URL" Target="OLLAMA_URL" Default="http://192.168.1.30:11434" Type="Variable" Display="always" Required="false" Mask="false">http://192.168.1.30:11434</Config>
+  <Config Name="OLLAMA_MODEL" Target="OLLAMA_MODEL" Default="qwen2.5vl:7b" Type="Variable" Display="advanced" Required="false" Mask="false">qwen2.5vl:7b</Config>
+  <Config Name="GEMINI_API_KEY" Target="GEMINI_API_KEY" Default="" Type="Variable" Display="always" Required="false" Mask="true"></Config>
+  <Config Name="GEMINI_MODEL" Target="GEMINI_MODEL" Default="gemini-2.5-flash" Type="Variable" Display="advanced" Required="false" Mask="false">gemini-2.5-flash</Config>
 </Container>

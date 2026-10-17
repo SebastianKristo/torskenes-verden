@@ -7,15 +7,16 @@ import { bindPopup, bindSearch, menuLabels, toggle } from './extras.js';
 import * as dash from './dash.js';
 import * as study from './study.js';
 import * as space from './space.js';
-import * as eco from './eco.js';
 import * as net from './net.js';
 
-const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, okonomi: eco.render, nettverk: net.render, mer: net.renderMore };
+const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, nettverk: net.render, mer: net.renderMore };
 const view = document.getElementById('view');
 let route = null, wasMobile = isMobile();
 
 function current() {
   const r = location.hash.replace(/^#\/?/, '');
+  // Økonomi er nå FinansHub, en egen fullskjerm-app.
+  if (r === 'okonomi') { location.replace('/finans/'); return 'dash'; }
   if (r === 'mer' && !isMobile()) return 'nettverk';
   return ROUTES[r] ? r : 'dash';
 }
@@ -30,7 +31,7 @@ function renderRoute() {
   // Rom er en underside av «Mer» på mobil.
   const navKey = isMobile() && (route === 'rom' || route === 'nettverk') ? 'mer' : route;
   document.querySelectorAll('[data-r]').forEach((a) => { if (a.dataset.r === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
-  document.title = { dash: 'OS', studie: 'Studie · OS', rom: 'Rom · OS', okonomi: 'Økonomi · OS', nettverk: 'Nettverk · OS', mer: 'Mer · OS' }[route];
+  document.title = { dash: 'OS', studie: 'Studie · OS', rom: 'Rom · OS', nettverk: 'Nettverk · OS', mer: 'Mer · OS' }[route];
 }
 
 function weatherPill() {
@@ -68,7 +69,7 @@ async function main() {
   bindPopup();
   bindSearch();
   setupDnd(document.querySelector('header'));
-  study.bind(view); eco.bind(view); space.bind(view);
+  study.bind(view); space.bind(view);
   preloadAll();
   applyBackground();
   renderRoute();
@@ -83,7 +84,7 @@ async function main() {
   poll('health', 60_000);
   poll('upcoming', 10 * 60_000);
   poll('news', 5 * 60_000);
-  eco.loadReceipts();
+  poll('finans', 5 * 60_000, '/../finans/api/summary');
   study.loadStudy();
 
   on('weather', () => { weatherPill(); if (store.me.bg === 'vaer') applyBackground(); });
