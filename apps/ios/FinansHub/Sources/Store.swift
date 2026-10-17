@@ -433,7 +433,12 @@ final class Store {
         var m = try? await api.get("/me", as: Me.self)
         // Profilbilde og servernavn kommer fra Homelab hvis FinansHub ikke sender dem.
         if m?.avatarUrl == nil, let hl = try? await api.module("/api", "/me", as: Me.self) {
-            if m == nil { m = hl } else { m?.avatarUrl = hl.avatarUrl; m?.serverName = m?.serverName ?? hl.serverName; m?.displayName = m?.displayName ?? hl.displayName }
+            if var cur = m {
+                cur.avatarUrl = hl.avatarUrl
+                if cur.serverName == nil { cur.serverName = hl.serverName }
+                if cur.displayName == nil { cur.displayName = hl.displayName }
+                m = cur
+            } else { m = hl }
         }
         me = m
         if let m, let a = account, let u = m.username, !u.isEmpty, a.username != u || a.name != (m.label ?? a.name) {
