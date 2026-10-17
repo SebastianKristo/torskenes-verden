@@ -20,3 +20,13 @@ services:
     environment:
       TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on: [os]
+
+  # Proton Mail Bridge: kvitteringer fra e-post inn i FinansHub (Innstillinger → Integrasjoner → Proton Mail).
+  # Krever betalt Proton-plan. Første gang: docker compose --profile mail run --rm protonmail-bridge init  →  login  →  info  →  exit
+  # Fra appen: vert «protonmail-bridge», port 143 (IMAP, STARTTLS). Portene publiseres IKKE – bare containere i samme compose når den.
+  protonmail-bridge:
+    profiles: [mail]     # start med: docker compose --profile mail up -d
+    image: shenxn/protonmail-bridge:latest   # bytt gjerne til en fast versjon
+    restart: unless-stopped
+    volumes:
+      - ./proton:/root   # nøkler og cache – ta med i backup

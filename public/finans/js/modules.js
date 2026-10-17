@@ -198,11 +198,17 @@ function aksPage() {
   const head = `<div class="card aks-head"><span class="aks-logo">212</span><div class="grow"><div style="font-weight:600">Trading 212 · Invest</div><div class="note" style="font-size:12.5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="dot" style="background:${dot}"></span>${esc(d.status ?? '')}${d.syncedAt ? ` · ${new Date(d.syncedAt).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}` : ''}</div></div>
     <div class="seg">${[['live', 'Live'], ['demo', 'Demo']].map(([v, l]) => `<button data-maks-env="${v}" aria-pressed="${env === v}">${l}</button>`).join('')}</div>
     <button class="btn pri" data-mact="aks-sync" ${ok ? '' : 'disabled'}>Synk nå</button><button class="btn" data-mact="aks-cfg" aria-pressed="${cfgOpen}">API-nøkkel</button></div>`;
-  const cfg = cfgOpen ? `<form class="card" data-mform="aks" style="padding:18px;gap:12px"><div class="form-grid"><label class="f">API-nøkkel<input class="inp mono" name="key" placeholder="${st.t212Set ? '•••••••• lagret på serveren' : 'f.eks. 35875800ZxYa…'}" autocomplete="off"></label>
-    <label class="f">API-secret<input class="inp" type="password" name="secret" placeholder="${st.t212Set ? '•••••••• lagret på serveren' : 'Vises bare én gang i Trading 212'}" autocomplete="new-password"></label></div>
-    <div class="sub" style="font-size:13px;line-height:1.5">Lag nøkkelen på nettsiden til Trading 212 under Innstillinger → API (Beta). Velg bare lesetilganger: <b>account</b>, <b>portfolio</b>, <b>history:orders</b> og <b>history:dividends</b>, og lås den gjerne til IP-adressen til homelaben. Nøkkel og secret lagres kryptert på serveren og vises aldri igjen.</div>
-    <div class="mono note aks-api">Authorization: Basic base64(KEY:SECRET)<br>GET ${esc(d.base)}/equity/account/summary<br>GET ${esc(d.base)}/equity/portfolio<br>GET ${esc(d.base)}/equity/history/orders?limit=50<br>GET ${esc(d.base)}/history/dividends?limit=50</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn pri">Lagre og synk</button>${st.t212Set ? '<button type="button" class="btn danger" data-mact="aks-clear">Fjern nøkkel</button>' : ''}</div></form>` : '';
+  // Secret-feltet er et tekstfelt med prikker, så passordbehandlere ikke fyller inn innloggingspassordet ditt.
+  const t = u.aksTest;
+  const testBox = t ? `<div class="aks-test ${t.ok ? 'ok' : 'bad'}" role="status"><b>${t.ok ? '✓ Tilkoblet' : '✕ Feilet'}</b> ${esc(t.message ?? '')}${t.keyLength != null ? `<div class="note" style="font-size:12px">Sendt: nøkkel-ID ${t.keyLength} tegn · secret ${t.secretLength} tegn · ${t.env === 'demo' ? 'Demo' : 'Live'}</div>` : ''}${t.code === 'wrong_env' ? `<button type="button" class="btn" style="margin-top:8px" data-maks-env="${t.suggest}">Bytt til ${t.suggest === 'demo' ? 'Demo' : 'Live'}</button>` : ''}</div>` : '';
+  const cfg = cfgOpen ? `<form class="card" data-mform="aks" style="padding:18px;gap:12px" autocomplete="off">
+    <div class="form-grid"><label class="f">Nøkkel-ID (API key)<input class="inp mono" name="key" placeholder="${st.t212Set ? 'Lagret · ' + esc(d.keyHint ?? '') : 'f.eks. 35875800ZxYa…'}" autocomplete="off" autocapitalize="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore></label>
+    <label class="f">Secret<input class="inp mono aks-secret" name="secret" type="text" placeholder="${st.t212Set ? `•••••••• lagret (${d.secretLength ?? 0} tegn)` : 'Vises bare én gang i Trading 212'}" autocomplete="off" autocapitalize="off" spellcheck="false" data-1p-ignore data-lpignore="true" data-bwignore></label>
+    <label class="f">Miljø<select class="inp" name="env"><option value="live" ${env === 'live' ? 'selected' : ''}>Live (ekte konto)</option><option value="demo" ${env === 'demo' ? 'selected' : ''}>Demo (praksiskonto)</option></select></label></div>
+    <div class="sub" style="font-size:13px;line-height:1.55">Lag nøkkelen på nettsiden til Trading 212 under <b>Innstillinger → API (Beta)</b>, i samme konto (Invest eller Stocks ISA – ikke CFD) og samme miljø som du velger her. Du får en <b>nøkkel-ID</b> og en <b>secret</b>; begge trengs. Slå på lesetilgangene <b>account</b>, <b>portfolio</b>, <b>history:orders</b> og <b>history:dividends</b>. Låser du nøkkelen til IP, må det være homelabens offentlige IP (WAN). Mellomrom, linjeskift og anførselstegn fra liming fjernes automatisk.</div>
+    <div class="mono note aks-api">Authorization: Basic base64(KEY:SECRET)<br>GET ${esc(d.base)}/equity/account/summary<br>GET ${esc(d.base)}/equity/portfolio</div>
+    ${testBox}
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn pri">Lagre og synk</button><button type="button" class="btn" data-mact="aks-test">Test tilkobling</button>${st.t212Set ? '<button type="button" class="btn danger" data-mact="aks-clear">Fjern nøkkel</button>' : ''}</div></form>` : '';
   if (!d.summary) return `<div class="mod">${head}${cfg}${d.configured ? card(`<div class="empty">${esc(d.error ?? 'Henter data …')}</div>`) : ''}</div>`;
   const s = d.summary, c = s.currency;
   const plPct = s.invested ? (s.result / s.invested) * 100 : 0;
@@ -414,7 +420,7 @@ export function bindModules(el) {
       if (leave) { u.dir = null; toast(`Du har forlatt ${S.folder.name}`); } else { S.folder = r; toast(`${m?.name} har ikke lenger tilgang`); }
       return reload();
     }
-    if ((x = d('[data-maks-env]'))) { await api('/stocks/config', { method: 'PUT', json: { env: x.dataset.maksEnv } }); await loadBoot(); await loadStocks(true); return render(); }
+    if ((x = d('[data-maks-env]'))) { u.aksTest = null; await api('/stocks/config', { method: 'PUT', json: { env: x.dataset.maksEnv } }); await loadBoot(); await loadStocks(true); return render(); }
     if ((x = d('[data-maks-per]'))) { u.aksPer = x.dataset.maksPer; return render(); }
     if ((x = d('[data-mflag]'))) { const k = x.dataset.mflag; S.backup.config = await api('/backup/smb', { method: 'PUT', json: { [k]: !S.backup.config[k] } }); return render(); }
     if ((x = d('[data-mremote]'))) {
@@ -436,6 +442,11 @@ export function bindModules(el) {
       case 'split-edit': u.splitEdit = !u.splitEdit; return render();
       case 'aks-sync': { toast('Synkroniserer med Trading 212 …'); await loadStocks(true); return render(); }
       case 'aks-cfg': u.aksCfg = !(u.aksCfg ?? !(S.stocks?.configured || S.stocks?.mock)); return render();
+      case 'aks-test': {
+        const f = el.querySelector('[data-mform=aks]'); const v = f ? Object.fromEntries(new FormData(f)) : {};
+        u.aksTest = { ok: false, message: 'Tester …' }; render();
+        u.aksTest = await api('/stocks/test', { method: 'POST', json: { key: v.key, secret: v.secret, env: v.env } }).catch((err) => ({ ok: false, message: err.message })); return render();
+      }
       case 'aks-clear': if (!confirm('Fjerne nøkkel og secret for Trading 212?')) return; await api('/stocks/config', { method: 'PUT', json: { clear: true } }); await loadBoot(); await loadStocks(); return render();
       case 'bk-run': { await api('/backup/run', { method: 'POST' }); toast('Backup startet'); await loadBackup(); render(); pollBackup(); return; }
       case 'bk-list': S.backupList = { items: [], error: null }; render(); S.backupList = await api('/backup/list'); return render();
@@ -492,8 +503,9 @@ export function bindModules(el) {
         S.folder = await api(`/folders/${u.dir}`, { method: 'PATCH', json: { split: equal ? 'equal' : w } }); u.splitEdit = false; return render();
       }
       case 'aks': {
-        await api('/stocks/config', { method: 'PUT', json: { key: v.key, secret: v.secret } }); await loadBoot();
-        toast('Nøkkelen er lagret på serveren'); u.aksCfg = false; await loadStocks(true); return render();
+        await api('/stocks/config', { method: 'PUT', json: { key: v.key, secret: v.secret, env: v.env } }); await loadBoot();
+        u.aksTest = await api('/stocks/test', { method: 'POST', json: {} }).catch((err) => ({ ok: false, message: err.message }));
+        toast(u.aksTest.ok ? 'Nøkkelen er lagret og virker' : 'Nøkkelen er lagret, men testen feilet'); if (u.aksTest.ok) u.aksCfg = false; await loadStocks(true); return render();
       }
       case 'smb': {
         const body = { share: v.share, dir: v.dir, version: v.version, user: v.user, domain: v.domain, schedule: v.schedule, keep: +v.keep };

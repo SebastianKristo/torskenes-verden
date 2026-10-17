@@ -241,7 +241,7 @@ export function bind(view) {
     const p = e.target.closest('[data-dom-per]');
     if (p) { S.per = p.dataset.domPer; return loadAll(); }
     if (e.target.closest('[data-dom-refresh]')) { S.list = null; return loadAll(true); }
-    if (e.target.closest('[data-dom-manage]')) return openSettings('look', 'doms');
+    if (e.target.closest('[data-dom-manage]')) return openSettings('dom', 'doms');
     if (e.target.closest('[data-dom-settings]')) return openSettings('int');
   });
   // Domener lagt til eller fjernet i Innstillinger.

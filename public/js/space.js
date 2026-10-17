@@ -48,7 +48,13 @@ export function render() {
     ${card('r_starlink')}${card('r_apod')}${GALS.map(([k]) => card('r_gal_' + k)).join('')}</div>`;
 }
 
+// Land og grenser under satellittene (world-atlas 50m, filtrert til Norden på serveren). Norge fremheves.
+const NORWAY_ID = '578';
+let landP = null;
+const loadLand = () => (landP ??= fetch('/domains/api/vendor/nordic.json', { credentials: 'same-origin' }).then((r) => (r.ok ? r.json() : null)).then((d) => { sp.land = d?.countries ?? null; draw(); }).catch(() => null));
+
 async function load() {
+  loadLand();
   if (sp.loaded) { start(); return; }
   sp.loaded = true;
   api('/space/apod').then((a) => { sp.apod = a; }).catch((e) => { sp.apod = { error: e.message }; }).finally(() => refresh('r_apod'));
@@ -108,18 +114,29 @@ function compute() {
 
 function draw() {
   const c = document.getElementById('sat-map');
-  if (!c || !sp.stats) return;
+  if (!c) return;
   const x = c.getContext('2d'), W = (c.width = c.clientWidth * 2), H = (c.height = c.clientHeight * 2);
-  const px = (lon) => ((lon + 2) / 38) * W, py = (lat) => ((74 - lat) / 20) * H;
-  x.fillStyle = '#0b0e15'; x.fillRect(0, 0, W, H);
-  x.strokeStyle = '#1c2230'; x.lineWidth = 1;
-  for (let l = 56; l < 74; l += 2) { x.beginPath(); x.moveTo(0, py(l)); x.lineTo(W, py(l)); x.stroke(); }
-  for (let l = 0; l < 36; l += 4) { x.beginPath(); x.moveTo(px(l), 0); x.lineTo(px(l), H); x.stroke(); }
+  // Lengdegrader krympes med cos(breddegrad) så Norge får riktig form; utsnittet sentreres og fyller kartet.
+  const k = Math.cos((64 * Math.PI) / 180), sx = 38 * k, sy = 20, sc = Math.min(W / sx, H / sy);
+  const ox = (W - sx * sc) / 2, oy = (H - sy * sc) / 2;
+  const px = (lon) => ox + (lon + 2) * k * sc, py = (lat) => oy + (74 - lat) * sc;
+  x.fillStyle = '#0d1016'; x.fillRect(0, 0, W, H);
+  x.strokeStyle = '#1a1e26'; x.lineWidth = 1;
+  for (let l = 50; l < 80; l += 2) { x.beginPath(); x.moveTo(0, py(l)); x.lineTo(W, py(l)); x.stroke(); }
+  for (let l = -20; l < 60; l += 4) { x.beginPath(); x.moveTo(px(l), 0); x.lineTo(px(l), H); x.stroke(); }
+  // Land: Norge litt lysere enn nabolandene, med tynne grenser.
+  for (const ctry of sp.land ?? []) {
+    const no = ctry.id === NORWAY_ID;
+    x.beginPath();
+    for (const ring of ctry.rings) ring.forEach(([lo, la], i) => (i ? x.lineTo(px(lo), py(la)) : x.moveTo(px(lo), py(la))));
+    x.fillStyle = no ? '#232c3b' : '#1a1f28'; x.fill('evenodd');
+    x.strokeStyle = no ? '#4d5b75' : '#2f3746'; x.lineWidth = no ? 2 : 1.4; x.stroke();
+  }
   x.strokeStyle = '#3a4560'; x.setLineDash([8, 8]);
   x.strokeRect(px(NORWAY.lonMin), py(NORWAY.latMax), px(NORWAY.lonMax) - px(NORWAY.lonMin), py(NORWAY.latMin) - py(NORWAY.latMax));
   x.setLineDash([]);
   x.fillStyle = '#a8d4fb';
-  for (const p of sp.stats.pts) { x.beginPath(); x.arc(px(p.lon), py(p.lat), 3.5, 0, 7); x.fill(); }
+  for (const p of sp.stats?.pts ?? []) { x.beginPath(); x.arc(px(p.lon), py(p.lat), 3.5, 0, 7); x.fill(); }
   x.font = '22px Outfit, sans-serif';
   const city = store.me.city in CITIES ? store.me.city : 'Oslo';
   for (const [n, [la, lo]] of Object.entries(CITIES)) {

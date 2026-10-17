@@ -1,9 +1,10 @@
 // Alle kall mot eksterne tjenester. Kjøres kun på serveren; nøkler sendes aldri til nettleseren.
 import ical from 'node-ical';
-import { Agent } from 'undici';
+// undici sin egen fetch må brukes med undici-Agent: Node sin innebygde fetch har en eldre undici og avviser den («invalid onRequestStart method»).
+import { Agent, fetch as undiciFetch } from 'undici';
 import { config } from './config.js';
 import { cached, fetchJson } from './cache.js';
-import { cfg, parseRoutes } from './settings.js';
+import { cfg, parseRoutes, groupOf } from './settings.js';
 
 /* ---------------- Ruter / Entur ---------------- */
 
@@ -188,15 +189,34 @@ export const getSchool = () => cached('school', 15 * 60_000, async () => {
 
 /* ---------------- Trading 212 ---------------- */
 
+// Fjern mellomrom, linjeskift og anførselstegn som følger med ved liming.
+const clean = (v) => String(v ?? '').trim().replace(/^["'`]+|["'`]+$/g, '').replace(/\s+/g, '');
+
+// Nye nøkler (2025+) har Key ID og secret: «Authorization: Basic base64(KEY:SECRET)». Eldre nøkler uten secret sendes som før.
+export function t212Auth() {
+  const key = clean(cfg('t212_key')), secret = clean(cfg('t212_secret'));
+  if (!key) return null;
+  const env = cfg('t212_env') === 'demo' ? 'demo' : 'live';
+  return { base: `https://${env}.trading212.com`, env, headers: { Authorization: secret ? `Basic ${Buffer.from(`${key}:${secret}`).toString('base64')}` : key } };
+}
+
+async function t212Json(a, path) {
+  const res = await fetch(`${a.base}${path}`, { headers: a.headers, signal: AbortSignal.timeout(10_000) });
+  if (res.status === 401) throw new Error(`Trading 212 avviste nøkkelen (401): sjekk Key ID og secret, og at nøkkelen er laget for ${a.env === 'demo' ? 'Demo' : 'Live'}.`);
+  if (res.status === 403) throw new Error('Trading 212: nøkkelen mangler tilgang (403). Gi lesetilgang til account og portfolio.');
+  if (res.status === 429) throw new Error('Trading 212: for mange forespørsler (429). Prøver igjen om litt.');
+  if (!res.ok) throw new Error(`Trading 212 svarte ${res.status}`);
+  return res.json();
+}
+
 export const getTrading = () => cached('t212', 60_000, async () => {
-  const key = cfg('t212_key');
-  if (!key) return { configured: false };
-  const h = { headers: { Authorization: key } };
+  const a = t212Auth();
+  if (!a) return { configured: false };
   // Hent sekvensielt: Trading 212 har strenge rate limits per endepunkt.
-  const cash = await fetchJson(`${config.trading212Base}/api/v0/equity/account/cash`, h);
-  const portfolio = await fetchJson(`${config.trading212Base}/api/v0/equity/portfolio`, h);
+  const cash = await t212Json(a, '/api/v0/equity/account/cash');
+  const portfolio = await t212Json(a, '/api/v0/equity/portfolio');
   let currency = 'NOK';
-  try { currency = (await cached('t212info', 24 * 3600_000, () => fetchJson(`${config.trading212Base}/api/v0/equity/account/info`, h))).currencyCode || currency; } catch {}
+  try { currency = (await cached('t212info', 24 * 3600_000, () => t212Json(a, '/api/v0/equity/account/info'))).currencyCode || currency; } catch {}
   const positions = portfolio.map((p) => {
     const value = p.quantity * p.currentPrice;
     const cost = p.quantity * p.averagePrice;
@@ -270,7 +290,7 @@ export const getHealth = () => cached('health', 30_000, async () => {
   const services = await Promise.all(list.filter(([, u]) => u).map(async ([name, url]) => {
     const t0 = Date.now();
     try {
-      const res = await fetch(url, { method: 'GET', redirect: 'manual', dispatcher: insecure, signal: AbortSignal.timeout(4000) });
+      const res = await undiciFetch(url, { method: 'GET', redirect: 'manual', dispatcher: insecure, signal: AbortSignal.timeout(4000) });
       res.body?.cancel();
       // Ethvert HTTP-svar (også 401/403) betyr at tjenesten lever.
       return { name, url, host: url.replace(/^https?:\/\//, '').replace(/\/$/, ''), up: res.status < 500, status: res.status, ms: Date.now() - t0 };
@@ -327,6 +347,161 @@ export const getUpcoming = () => cached('upcoming', 10 * 60_000, async () => {
   return { tv, movies };
 });
 
+/* ---------------- Media: Plex og Jellyfin ---------------- */
+
+const MEDIA_MS = 8000;
+const ticksToMs = (t) => (Number(t) || 0) / 10_000;      // Jellyfin: 1 tick = 100 ns
+const se = (s, e) => (s != null && e != null ? `S${String(s).padStart(2, '0')}E${String(e).padStart(2, '0')}` : '');
+const plexVer = (v) => String(v || '').split('-')[0].split('.').slice(0, 3).join('.');
+const resLabel = (r) => (!r ? '' : /^\d+$/.test(String(r)) ? `${r}p` : String(r).toUpperCase() === '4K' ? '4K' : String(r));
+
+async function mediaGet(url, headers, as = 'json') {
+  const res = await undiciFetch(url, { headers, dispatcher: insecure, signal: AbortSignal.timeout(MEDIA_MS) });
+  if (res.status === 401 || res.status === 403) throw Object.assign(new Error(`Tokenet ble avvist (${res.status})`), { status: res.status });
+  if (!res.ok) throw Object.assign(new Error(`${new URL(url).host} svarte ${res.status}`), { status: res.status });
+  return as === 'json' ? res.json() : res;
+}
+
+const plexCfg = () => ({ url: cfg('plex_url').replace(/\/+$/, ''), token: cfg('plex_token').trim() });
+const plexH = (token) => ({ 'X-Plex-Token': token, Accept: 'application/json', 'X-Plex-Product': 'Homelab OS', 'X-Plex-Client-Identifier': 'homelab-os' });
+const jfCfg = () => ({ url: cfg('jf_url').replace(/\/+$/, ''), key: cfg('jf_key').trim(), user: cfg('jf_user').trim() });
+const jfH = (key) => ({ Authorization: `MediaBrowser Client="Homelab OS", Device="Server", DeviceId="homelab-os", Version="1.0", Token="${key}"`, 'X-Emby-Token': key, Accept: 'application/json' });
+
+const plexPoster = (thumb) => (thumb ? `/api/media/poster?src=plex&id=${encodeURIComponent(thumb)}` : null);
+const jfPoster = (id) => (id ? `/api/media/poster?src=jellyfin&id=${encodeURIComponent(id)}` : null);
+
+// Servernavn og versjon endres sjelden; hentes separat og caches.
+const plexInfo = () => cached('plex_info', 10 * 60_000, async () => {
+  const { url, token } = plexCfg();
+  const j = (await mediaGet(`${url}/`, plexH(token))).MediaContainer ?? {};
+  return { name: j.friendlyName || 'Plex', version: plexVer(j.version), machineId: j.machineIdentifier };
+});
+const jfInfo = () => cached('jf_info', 10 * 60_000, async () => {
+  const { url, key } = jfCfg();
+  const j = await mediaGet(`${url}/System/Info`, jfH(key));
+  return { name: j.ServerName || 'Jellyfin', version: j.Version || '' };
+});
+
+async function plexNow() {
+  const { url, token } = plexCfg();
+  const list = (await mediaGet(`${url}/status/sessions`, plexH(token))).MediaContainer?.Metadata ?? [];
+  return list.map((m) => {
+    const ep = m.type === 'episode';
+    const trans = !!m.TranscodeSession && m.TranscodeSession.videoDecision === 'transcode';
+    const res = resLabel(m.Media?.[0]?.videoResolution);
+    const dur = Number(m.duration) || 0, pos = Number(m.viewOffset) || 0;
+    return {
+      src: 'plex', kind: m.type, title: ep ? `${m.grandparentTitle} · ${se(m.parentIndex, m.index)}` : m.title,
+      sub: ep ? m.title : m.year ? String(m.year) : '', user: m.User?.title ?? '', device: m.Player?.title || m.Player?.product || '',
+      mode: trans ? 'transcode' : 'direct', quality: res, state: m.Player?.state === 'paused' ? 'paused' : 'playing',
+      pct: dur ? Math.min(100, Math.round((pos / dur) * 100)) : 0, leftMs: Math.max(0, dur - pos),
+      poster: plexPoster(ep ? m.grandparentThumb || m.thumb : m.thumb),
+    };
+  });
+}
+
+async function plexRecent() {
+  const { url, token } = plexCfg();
+  const list = (await mediaGet(`${url}/library/recentlyAdded?X-Plex-Container-Start=0&X-Plex-Container-Size=12`, plexH(token))).MediaContainer?.Metadata ?? [];
+  return list.slice(0, 12).map((m) => {
+    const tv = m.type === 'episode' || m.type === 'season' || m.type === 'show';
+    const title = m.type === 'episode' ? m.grandparentTitle : m.type === 'season' ? m.parentTitle : m.title;
+    const sub = m.type === 'episode' ? `Serie · ${se(m.parentIndex, m.index)}` : m.type === 'season' ? `Serie · ${m.title}` : tv ? 'Serie' : `Film${m.year ? ` · ${m.year}` : ''}`;
+    return { src: 'plex', kind: tv ? 'tv' : 'movie', title: title || m.title, sub, added: m.addedAt ? new Date(m.addedAt * 1000).toISOString() : null,
+      poster: plexPoster(m.type === 'episode' ? m.grandparentThumb || m.parentThumb || m.thumb : m.type === 'season' ? m.parentThumb || m.thumb : m.thumb), url: `${url}/web/index.html` };
+  });
+}
+
+async function jfUserId() {
+  return cached('jf_uid', 10 * 60_000, async () => {
+    const { url, key, user } = jfCfg();
+    const users = await mediaGet(`${url}/Users`, jfH(key));
+    const u = user ? users.find((x) => x.Name?.toLowerCase() === user.toLowerCase()) : users[0];
+    if (!u) throw new Error(`Fant ikke Jellyfin-brukeren «${user}»`);
+    return u.Id;
+  });
+}
+
+async function jfNow() {
+  const { url, key } = jfCfg();
+  const sessions = await mediaGet(`${url}/Sessions?activeWithinSeconds=960`, jfH(key));
+  return sessions.filter((x) => x.NowPlayingItem).map((x) => {
+    const it = x.NowPlayingItem, ep = it.Type === 'Episode';
+    const dur = ticksToMs(it.RunTimeTicks), pos = ticksToMs(x.PlayState?.PositionTicks);
+    const trans = x.PlayState?.PlayMethod === 'Transcode' || (x.TranscodingInfo && x.TranscodingInfo.IsVideoDirect === false);
+    const h = it.Height || it.MediaStreams?.find((m) => m.Type === 'Video')?.Height;
+    return {
+      src: 'jellyfin', kind: it.Type?.toLowerCase(), title: ep ? `${it.SeriesName} · ${se(it.ParentIndexNumber, it.IndexNumber)}` : it.Name,
+      sub: ep ? it.Name : it.ProductionYear ? String(it.ProductionYear) : '', user: x.UserName ?? '', device: x.DeviceName || x.Client || '',
+      mode: trans ? 'transcode' : 'direct', quality: trans && x.TranscodingInfo?.Height ? `${x.TranscodingInfo.Height}p` : h ? (h >= 2000 ? '4K' : `${h}p`) : '',
+      state: x.PlayState?.IsPaused ? 'paused' : 'playing', pct: dur ? Math.min(100, Math.round((pos / dur) * 100)) : 0, leftMs: Math.max(0, dur - pos),
+      poster: jfPoster(ep ? it.SeriesId || it.Id : it.Id),
+    };
+  });
+}
+
+async function jfRecent() {
+  const { url, key } = jfCfg();
+  const uid = await jfUserId();
+  const list = await mediaGet(`${url}/Users/${encodeURIComponent(uid)}/Items/Latest?Limit=12&Fields=ProductionYear,DateCreated`, jfH(key));
+  return list.slice(0, 12).map((it) => {
+    const tv = ['Episode', 'Season', 'Series'].includes(it.Type);
+    const title = it.Type === 'Episode' ? it.SeriesName : it.Type === 'Season' ? it.SeriesName || it.Name : it.Name;
+    const sub = it.Type === 'Episode' ? `Serie · ${se(it.ParentIndexNumber, it.IndexNumber)}` : it.Type === 'Season' ? `Serie · ${it.Name}` : tv ? 'Serie' : `Film${it.ProductionYear ? ` · ${it.ProductionYear}` : ''}`;
+    return { src: 'jellyfin', kind: tv ? 'tv' : 'movie', title, sub, added: it.DateCreated ?? null,
+      poster: jfPoster(it.Type === 'Episode' || it.Type === 'Season' ? it.SeriesId || it.Id : it.Id), url: `${url}/web/#/details?id=${encodeURIComponent(it.Id)}` };
+  });
+}
+
+async function mediaServers() {
+  const p = plexCfg(), j = jfCfg();
+  const out = [];
+  if (p.url && p.token) out.push({ src: 'plex', label: 'Plex', url: `${p.url}/web/index.html`, info: plexInfo().catch(() => null) });
+  if (j.url && j.key) out.push({ src: 'jellyfin', label: 'Jellyfin', url: `${j.url}/web/`, info: jfInfo().catch(() => null) });
+  for (const s of out) { const i = await s.info; s.name = i?.name ?? s.label; s.version = i?.version ?? ''; delete s.info; }
+  return out;
+}
+
+async function collect(kind) {
+  const servers = await mediaServers();
+  const fns = { plex: kind === 'now' ? plexNow : plexRecent, jellyfin: kind === 'now' ? jfNow : jfRecent };
+  const results = await Promise.allSettled(servers.map((s) => fns[s.src]()));
+  const items = [];
+  servers.forEach((s, i) => {
+    const r = results[i];
+    if (r.status === 'fulfilled') { s.ok = true; items.push(...r.value); } else { s.ok = false; s.error = r.reason?.message ?? 'Ukjent feil'; }
+  });
+  return { configured: servers.length > 0, servers, items };
+}
+
+export const getMediaNow = () => cached('media_now', 30_000, () => collect('now'));
+export const getMediaRecent = () => cached('media_recent', 10 * 60_000, async () => {
+  const r = await collect('recent');
+  r.items.sort((a, b) => String(b.added ?? '').localeCompare(String(a.added ?? '')));
+  r.items = r.items.slice(0, 12);
+  return r;
+});
+
+/** Henter en plakat fra Plex/Jellyfin. Tokenet legges på her og når aldri nettleseren. */
+export async function getMediaPoster(src, id) {
+  id = String(id ?? '');
+  if (src === 'plex') {
+    if (!/^\/library\/(metadata|collections)\/\d+\/(thumb|art|poster)(\/\d+)?$/.test(id)) return null;
+    const { url, token } = plexCfg();
+    if (!url || !token) return null;
+    const res = await mediaGet(`${url}/photo/:/transcode?width=300&height=450&minSize=1&upscale=1&url=${encodeURIComponent(id)}`, plexH(token), 'raw');
+    return { type: res.headers.get('content-type') || 'image/jpeg', body: Buffer.from(await res.arrayBuffer()) };
+  }
+  if (src === 'jellyfin') {
+    if (!/^[a-f0-9-]{32,36}$/i.test(id)) return null;
+    const { url, key } = jfCfg();
+    if (!url || !key) return null;
+    const res = await mediaGet(`${url}/Items/${id}/Images/Primary?maxHeight=450&quality=85`, jfH(key), 'raw');
+    return { type: res.headers.get('content-type') || 'image/jpeg', body: Buffer.from(await res.arrayBuffer()) };
+  }
+  return null;
+}
+
 /* ---------------- Nyheter (RSS) ---------------- */
 
 const FEEDS = [['NRK', 'https://www.nrk.no/toppsaker.rss', '#0b4ea2'], ['VG', 'https://www.vg.no/rss/feed/', '#c8102e']];
@@ -361,7 +536,7 @@ class TestError extends Error {}
 async function probe(url, opts = {}, { insecureTls = false } = {}) {
   let res;
   try {
-    res = await fetch(url, { ...opts, redirect: 'follow', signal: AbortSignal.timeout(TEST_MS), ...(insecureTls ? { dispatcher: insecure } : {}) });
+    res = await (insecureTls ? undiciFetch : fetch)(url, { ...opts, redirect: 'follow', signal: AbortSignal.timeout(TEST_MS), ...(insecureTls ? { dispatcher: insecure } : {}) });
   } catch (e) {
     const host = (() => { try { return new URL(url).host; } catch { return url; } })();
     const code = e.cause?.code ?? e.code ?? '';
@@ -421,10 +596,47 @@ const TESTS = {
   },
   Sonarr: () => arrTest('sonarr', 'Sonarr'),
   Radarr: () => arrTest('radarr', 'Radarr'),
+  Plex: async () => {
+    const url = need(base('plex_url'), 'Adressen til Plex mangler.');
+    const token = need(cfg('plex_token').trim(), 'X-Plex-Token mangler.');
+    let j;
+    try { j = (await (await probe(`${url}/`, { headers: plexH(token) }, { insecureTls: true })).json()).MediaContainer ?? {}; }
+    catch (e) { if (e instanceof TestError && /avvist/.test(e.message)) throw new TestError('Tokenet ble avvist (401). Hent et nytt fra «Vis XML».'); throw e; }
+    let n = 0;
+    try { n = ((await (await probe(`${url}/status/sessions`, { headers: plexH(token) }, { insecureTls: true })).json()).MediaContainer?.Metadata ?? []).length; } catch {}
+    return `${j.friendlyName || 'Plex'} ${plexVer(j.version)} svarer · ${n} spiller nå.`.replace(/\s+svarer/, ' svarer');
+  },
+  Jellyfin: async () => {
+    const url = need(base('jf_url'), 'Adressen til Jellyfin mangler.');
+    const key = need(cfg('jf_key').trim(), 'API-nøkkelen mangler.');
+    let j;
+    try { j = await (await probe(`${url}/System/Info`, { headers: jfH(key) }, { insecureTls: true })).json(); }
+    catch (e) { if (e instanceof TestError && /avvist/.test(e.message)) throw new TestError('API-nøkkelen ble avvist (401). Lag en ny under Kontrollpanel → Avansert → API-nøkler.'); throw e; }
+    let n = 0, u = '';
+    try { n = (await (await probe(`${url}/Sessions?activeWithinSeconds=960`, { headers: jfH(key) }, { insecureTls: true })).json()).filter((x) => x.NowPlayingItem).length; } catch {}
+    const user = cfg('jf_user').trim();
+    if (user) {
+      try {
+        const users = await (await probe(`${url}/Users`, { headers: jfH(key) }, { insecureTls: true })).json();
+        u = users.some((x) => x.Name?.toLowerCase() === user.toLowerCase()) ? ` Fant brukeren ${user}.` : ` Fant ikke brukeren «${user}».`;
+      } catch {}
+    }
+    return `${j.ServerName || 'Jellyfin'} ${j.Version || ''} svarer · ${n} spiller nå.${u}`.replace(/\s+svarer/, ' svarer');
+  },
   'Trading 212': async () => {
-    const key = need(cfg('t212_key'), 'API-nøkkelen mangler.');
-    const cash = await (await probe(`${config.trading212Base}/api/v0/equity/account/cash`, { headers: { Authorization: key } })).json();
-    return `Trading 212 svarte · totalt ${Math.round(cash.total ?? 0).toLocaleString('nb-NO')}.`;
+    const a = need(t212Auth(), 'API-nøkkelen (Key ID) mangler.');
+    let res;
+    try { res = await fetch(`${a.base}/api/v0/equity/account/cash`, { headers: a.headers, signal: AbortSignal.timeout(TEST_MS) }); }
+    catch (e) { throw new TestError(`Fikk ikke kontakt med ${new URL(a.base).host}: ${e.cause?.message ?? e.message}`); }
+    const env = a.env === 'demo' ? 'Demo' : 'Live';
+    if (res.status === 401) throw new TestError(clean(cfg('t212_secret'))
+      ? `Nøkkelen ble avvist (401). Sjekk at Key ID og secret hører sammen, og at nøkkelen er laget i ${env} (ikke ${env === 'Live' ? 'Demo' : 'Live'}) og for Invest/ISA, ikke CFD.`
+      : 'Nøkkelen ble avvist (401). Nye Trading 212-nøkler har både Key ID og secret: fyll inn begge.');
+    if (res.status === 403) throw new TestError('Nøkkelen mangler tilgang (403). Gi lesetilgang til account og portfolio, og sjekk eventuell IP-begrensning (serverens offentlige IP).');
+    if (res.status === 429) throw new TestError('For mange forespørsler (429). Vent litt og prøv igjen.');
+    if (!res.ok) throw new TestError(`Trading 212 svarte ${res.status}.`);
+    const cash = await res.json();
+    return `Trading 212 (${env}) svarte · totalt ${Math.round(cash.total ?? 0).toLocaleString('nb-NO')}.`;
   },
   'NASA / CelesTrak': async () => {
     const a = await (await probe(`https://api.nasa.gov/planetary/apod?api_key=${encodeURIComponent(cfg('nasa_key') || 'DEMO_KEY')}`)).json();
@@ -455,10 +667,11 @@ async function arrTest(k, name) {
 }
 
 export const TEST_GROUPS = Object.keys(TESTS);
+export const hasTest = (group) => !!(TESTS[group] ?? TESTS[groupOf(group)?.name]);
 
 /** Tester én integrasjonsgruppe med de lagrede verdiene. Kaster aldri; svarer { ok, message, ms }. */
 export async function testIntegration(group) {
-  const fn = TESTS[group];
+  const fn = TESTS[group] ?? TESTS[groupOf(group)?.name];
   if (!fn) return { ok: false, message: 'Ingen test for denne gruppen.', ms: 0 };
   const t0 = Date.now();
   if (process.env.MOCK_DATA === '1') return { ok: true, message: 'Demodata (MOCK_DATA=1): ingen ekte kall ble gjort.', ms: 0, mock: true };

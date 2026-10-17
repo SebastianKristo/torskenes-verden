@@ -429,3 +429,9 @@ h3{margin:0;font-size:16px;font-weight:600}
 @media (max-width:900px){.dir-layout{grid-template-columns:1fr}.search{width:100%}}
 .seg{flex:none}.seg button{white-space:nowrap}
 a.btn{color:var(--text)}a.btn.pri{color:var(--acc-ink)}
+
+/* Trading 212: secret som tekstfelt med prikker (unngår autofyll fra passordbehandlere) og testresultat */
+.aks-secret:not(:placeholder-shown){-webkit-text-security:disc;text-security:disc}
+.aks-test{padding:12px 14px;border-radius:10px;font-size:13.5px;line-height:1.5;border:1px solid var(--line,#2A2A31)}
+.aks-test.ok{background:rgba(95,211,168,.1);border-color:rgba(95,211,168,.35)}
+.aks-test.bad{background:rgba(255,138,122,.1);border-color:rgba(255,138,122,.35)}

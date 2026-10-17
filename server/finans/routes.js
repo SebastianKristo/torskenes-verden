@@ -5,8 +5,9 @@ import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { readFile, writeFile, unlink, mkdir } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { db, OWNER, settings, saveSettings, secret, setSecret, DEFAULT_SETTINGS } from './db.js';
-import { extract, health, providerName } from './ai.js';
+import { db, OWNER, settings, saveSettings, secret, setSecret, secretSource, DEFAULT_SETTINGS } from './db.js';
+import { extract, extractText, health, providerName } from './ai.js';
+import { mailConfig, mailStatus, testMail, runMail, recentImports, startMailWorker } from './mail.js';
 import { parseCsv, PROFILES } from './csv.js';
 import { domainFor, learnDomain, validDomain, logo, heuristic, kick as kickAi, summarizeReceipt } from './enrich.js';
 import { parseFile, readText, rowsToTx } from './importer.js';
@@ -15,7 +16,7 @@ import { sessionUser, clientIp, verifyLogin, userInfo, listUsers } from '../auth
 import * as auth from '../auth.js';
 import { config } from '../config.js';
 import { kv } from '../db.js';
-import { stocks, resetStocks, t212Configured, t212Base } from './stocks.js';
+import { stocks, resetStocks, t212Configured, t212Base, cleanCred, testT212 } from './stocks.js';
 import { answer as aiAnswer, suggestions as aiSuggestions } from './search.js';
 import * as backup from './backup.js';
 
@@ -181,7 +182,7 @@ function receiptOut(r, cats = catById(), accs = accById()) {
     file: r.file ? `/finans/api/receipts/${r.id}/file` : null, thumb: r.thumb ? `/finans/api/receipts/${r.id}/thumb` : null,
     extraction: ex, match: match ? txOut(match, cats, accs) : null, created: r.created, name: r.name ?? null,
     aiShort: r.ai_short ?? (r.status === 'pending' || r.status === 'processing' ? 'Gemini leser kvitteringen …' : null), aiLong: r.ai_long ?? null,
-    domain: r.domain || domainFor(r.merchant), target: r.target ?? null };
+    domain: r.domain || domainFor(r.merchant), target: r.target ?? null, source: r.source ?? 'upload', ...(r.meta ? { email: (() => { try { const m = JSON.parse(r.meta); return { from: m.from, subject: m.subject, date: m.date }; } catch { return null; } })() } : {}) };
 }
 
 // Finn banktransaksjon: samme beløp ±1 kr og dato ±3 dager, uten kvittering fra før. Kort-siffer gir forrang.
@@ -209,7 +210,8 @@ async function runQueue() {
     try {
       const img = await readFile(join(DIR, r.scan ?? r.file));
       const cats = q("SELECT name FROM fh_categories WHERE kind='expense' ORDER BY sort").all().map((x) => x.name);
-      const res = await extract(img, r.scan ? 'image/jpeg' : r.mime, cats, force);
+      // E-post uten vedlegg lagres som tekst og leses som tekst.
+      const res = r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats) : await extract(img, r.scan ? 'image/jpeg' : r.mime, cats, force);
       const d = res.data;
       const totalOre = d.total != null ? Math.round(d.total * 100) : null;
       const st = settings();
@@ -367,7 +369,7 @@ api.get('/bootstrap', R, (c) => {
   const accs = q(`SELECT a.*, a.opening_balance + COALESCE((SELECT SUM(amount) FROM fh_transactions WHERE account_id=a.id),0) AS balance FROM fh_accounts a ORDER BY sort, id`).all();
   const month = curMonth();
   return c.json({
-    settings: { ...st, geminiKeySet: !!secret('geminiKey'), imapPassSet: !!secret('imapPass'), t212Set: t212Configured() }, month, period: period(month), profiles: PROFILES, user: st.name,
+    settings: { ...st, imapPin: st.imapPin ? { fingerprint: st.imapPin.fingerprint } : null, geminiKeySet: !!secret('geminiKey'), imapPassSet: !!secret('imapPass'), t212Set: t212Configured() }, month, period: period(month), profiles: PROFILES, user: st.name,
     categories: cats.map((x) => ({ id: x.id, name: x.name, color: x.color, kind: x.kind })),
     accounts: accs.map((a) => ({ id: a.id, name: a.name, bank: a.bank, type: a.type, last4: a.last4, note: a.note, openingBalance: a.opening_balance / 100, balance: a.balance / 100 })),
     rules: q('SELECT r.*, c.name AS category FROM fh_rules r LEFT JOIN fh_categories c ON c.id=r.category_id ORDER BY priority, id').all().map((r) => ({ id: r.id, pattern: r.pattern, categoryId: r.category_id, category: r.category, priority: r.priority })),
@@ -638,6 +640,23 @@ async function saveReceipt(f, scanFile, thumbFile, acc, target) {
   }
   return id;
 }
+// Kvittering fra e-post: vedlegg (eller e-postteksten som .txt) blir en jobb i samme kø som opplastinger.
+export async function ingestReceipt({ buffer, mime, name, meta }) {
+  const ext = mime === 'text/plain' ? 'txt' : MIME[mime];
+  if (!ext) throw new Error(`Filtypen ${mime} støttes ikke`);
+  const id = randomUUID();
+  const d = new Date(), sub = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+  await mkdir(join(DIR, sub), { recursive: true });
+  const file = `${sub}/${id}.${ext}`;
+  await writeFile(join(DIR, file), buffer);
+  const acc = q('SELECT id FROM fh_accounts ORDER BY sort, id LIMIT 1').get()?.id || null;
+  q("INSERT INTO fh_receipts(id,file,mime,status,date,account_id,name,source,meta,created) VALUES(?,?,?,'pending',?,?,?,'email',?,?)")
+    .run(id, file, mime, today(), acc, str(name, 120) || 'E-post', JSON.stringify(meta ?? {}), Date.now());
+  queue.push({ id });
+  runQueue();
+  return id;
+}
+
 api.post('/receipts', need('receipts:write'), upload, (c) => receiptUpload(c));
 // Legg ved kvittering på en eksisterende transaksjon. AI-en leser den, og den bekreftes i gjennomgangskøen som vanlig.
 api.post('/transactions/:id/receipt', need('receipts:write'), upload, (c) => {
@@ -942,7 +961,8 @@ api.put('/settings', W, async (c) => {
   saveSettings(patch);
   if (typeof b.geminiKey === 'string' && c.get('access').session) setSecret('geminiKey', b.geminiKey.trim());
   if (typeof b.imapPass === 'string' && c.get('access').session) setSecret('imapPass', b.imapPass);
-  return c.json({ ...settings(), geminiKeySet: !!secret('geminiKey'), imapPassSet: !!secret('imapPass') });
+  const out = settings();
+  return c.json({ ...out, imapPin: out.imapPin ? { fingerprint: out.imapPin.fingerprint } : null, geminiKeySet: !!secret('geminiKey'), imapPassSet: !!secret('imapPass') });
 });
 
 api.get('/health/ai', R, async (c) => c.json(await health()));
@@ -1368,17 +1388,53 @@ api.post('/finn', W, async (c) => {
       steps: Array.isArray(b.steps) ? b.steps.slice(0, 8).map((s) => ({ t: str(s.t ?? s, 60), done: !!s.done })) : [{ t: 'Trygg betaling', done: true }] };
   }
   if (!d.item || !Number.isFinite(d.amount) || d.amount <= 0) return bad(c, 'Fant ikke gjenstand og beløp');
+  return c.json(finnOut(saveFinn(d)));
+});
+// Ny handel, eller oppdatering av stegene når samme ordre kommer i en ny statusmail. Brukes også av e-postimporten.
+function saveFinn(d) {
   const amountOre = Math.round(d.amount * 100);
   const source = d.source ?? null;
   const existing = source ? q('SELECT * FROM fh_finn WHERE source=?').get(source) : null;
-  if (existing) { // samme handel, ny statusmail: oppdater stegene
-    q('UPDATE fh_finn SET steps=? WHERE id=?').run(JSON.stringify(d.steps), existing.id);
-    return c.json(finnOut(q('SELECT * FROM fh_finn WHERE id=?').get(existing.id)));
-  }
-  const f = q('INSERT INTO fh_finn(role,item,counterpart,date,amount,steps,source,tx_id,created) VALUES(?,?,?,?,?,?,?,?,?) RETURNING *')
+  if (existing) { q('UPDATE fh_finn SET steps=? WHERE id=?').run(JSON.stringify(d.steps), existing.id); return q('SELECT * FROM fh_finn WHERE id=?').get(existing.id); }
+  return q('INSERT INTO fh_finn(role,item,counterpart,date,amount,steps,source,tx_id,created) VALUES(?,?,?,?,?,?,?,?,?) RETURNING *')
     .get(d.role, d.item, d.counterpart ?? '', d.date, amountOre, JSON.stringify(d.steps ?? []), source, finnMatch(d.role, amountOre, d.date), Date.now());
-  return c.json(finnOut(f));
+}
+async function finnFromMail(text) {
+  const d = await parseFinnEmail(String(text).slice(0, 50000));
+  if (!d.item || !Number.isFinite(d.amount) || d.amount <= 0) throw new Error('Fant ikke gjenstand og beløp i Finn-e-posten');
+  return saveFinn(d);
+}
+
+/* --- Kvitteringer fra e-post (Proton Mail Bridge / IMAP) --- */
+
+const MAIL_KEYS = { mailOn: Boolean, imapHost: (v) => (/^[a-z0-9.\-:]{0,120}$/i.test(String(v).trim()) ? String(v).trim() : ''), imapPort: (v) => Math.min(65535, Math.max(1, +v || 143)),
+  imapSecurity: (v) => (['starttls', 'tls', 'none'].includes(v) ? v : 'starttls'), imapUser: (v) => str(v, 120), imapFolder: (v) => str(v, 120) || 'INBOX',
+  imapDoneFolder: (v) => str(v, 120), imapPollMinutes: (v) => Math.min(1440, Math.max(1, +v || 10)), imapFinnFolder: (v) => str(v, 120) };
+const mailDeps = { ingest: ingestReceipt, finn: finnFromMail };
+startMailWorker(mailDeps);
+const mailOut = () => ({ config: mailConfig(), status: mailStatus(), recent: recentImports() });
+api.get('/mail/config', R, (c) => c.json(mailOut()));
+api.get('/mail/status', R, (c) => c.json({ status: mailStatus(), recent: recentImports() }));
+api.put('/mail/config', sessionOnly, async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  const patch = {};
+  for (const [k, fn] of Object.entries(MAIL_KEYS)) if (b[k] !== undefined) patch[k] = fn(b[k]);
+  const cur = settings();
+  // Ny vert eller port: det pinnede sertifikatet gjelder ikke lenger.
+  if (b.forgetPin || (patch.imapHost !== undefined && patch.imapHost !== cur.imapHost) || (patch.imapPort !== undefined && patch.imapPort !== cur.imapPort)) patch.imapPin = '';
+  saveSettings(patch);
+  if (typeof b.pass === 'string' && b.pass.trim()) setSecret('imapPass', b.pass.trim());
+  if (b.clearPass) setSecret('imapPass', '');
+  return c.json(mailOut());
 });
+api.post('/mail/test', sessionOnly, async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  const o = {};
+  for (const k of ['host', 'port', 'security', 'user', 'folder', 'doneFolder']) if (b[k] !== undefined && b[k] !== '') o[k] = k === 'port' ? +b[k] : String(b[k]).trim();
+  if (typeof b.pass === 'string' && b.pass.trim()) o.pass = b.pass.trim();
+  return c.json(await testMail(o));
+});
+api.post('/mail/run', sessionOnly, async (c) => c.json(await runMail(mailDeps)));
 api.patch('/finn/:id', W, async (c) => {
   const cur = q('SELECT * FROM fh_finn WHERE id=?').get(+c.req.param('id'));
   if (!cur) return c.notFound();
@@ -1429,19 +1485,31 @@ api.get('/export.json', R, (c) => c.body(JSON.stringify(backup.exportJson(), nul
 
 /* --- Aksjer (Trading 212) --- */
 
-api.get('/stocks', R, async (c) => c.json(await stocks({ force: c.req.query('force') === '1' })));
+// Viser lengde og de fire første tegnene av nøkkel-ID-en (aldri secret), så brukeren kan se hva som faktisk er lagret.
+const t212Info = () => { const k = cleanCred(secret('t212Key')), s = cleanCred(secret('t212Secret'));
+  return { keyHint: k ? `${k.slice(0, 4)}… (${k.length} tegn)` : null, secretLength: s.length, keySource: secretSource('t212Key'), secretSource: secretSource('t212Secret') }; };
+
+api.get('/stocks', R, async (c) => c.json({ ...(await stocks({ force: c.req.query('force') === '1' })), ...(c.get('access')?.session ? t212Info() : {}) }));
 for (const part of ['summary', 'portfolio', 'orders', 'dividends']) {
   api.get(`/stocks/${part}`, R, async (c) => { const d = await stocks(); return c.json({ summary: d.summary, portfolio: d.positions, orders: d.orders, dividends: d.dividends }[part] ?? null); });
 }
 api.post('/stocks/sync', W, async (c) => c.json(await stocks({ force: true })));
 api.put('/stocks/config', sessionOnly, async (c) => {
   const b = await c.req.json();
+  // Miljø og nøkkel lagres sammen: en Live-nøkkel virker bare mot live.trading212.com og omvendt.
   if (b.env === 'live' || b.env === 'demo') saveSettings({ t212Env: b.env });
-  if (typeof b.key === 'string' && b.key.trim()) setSecret('t212Key', b.key.trim());
-  if (typeof b.secret === 'string' && b.secret.trim()) setSecret('t212Secret', b.secret.trim());
+  const key = cleanCred(b.key), sec = cleanCred(b.secret);
+  if (key) setSecret('t212Key', key);
+  if (sec) setSecret('t212Secret', sec);
   if (b.clear) { setSecret('t212Key', ''); setSecret('t212Secret', ''); }
+  if (key || sec || b.clear) kv.set(OWNER, 'fh_t212_auth', 'basic');
   resetStocks();
-  return c.json({ configured: t212Configured(), env: settings().t212Env, base: t212Base() });
+  return c.json({ configured: t212Configured(), env: settings().t212Env, base: t212Base(), ...t212Info() });
+});
+// «Test tilkobling»: tester verdiene i skjemaet (før lagring) eller de lagrede, og forklarer feilen konkret.
+api.post('/stocks/test', sessionOnly, async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  return c.json(await testT212({ key: b.key, secret: b.secret, env: b.env }));
 });
 
 /* --- ✦ AI-søk --- */

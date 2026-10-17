@@ -1,13 +1,11 @@
 // Felles for Hjem, Matplan og Domener: en liten tilstandsholder per side og logoer.
-import { esc } from './util.js';
+import { esc, logoImg } from './util.js';
 
 export const n0 = (v) => Math.round(Math.abs(+v || 0)).toLocaleString('nb-NO');
 export const ddmmyyyy = (d) => (d ? d.split('-').reverse().join('.') : '–');
 
-export function logo(domain, name = '') {
-  if (!domain) return `<span class="logo ini">${esc((name.match(/[\p{L}\p{N}]/u)?.[0] ?? '•').toUpperCase())}</span>`;
-  return `<img class="logo" src="/finans/api/logo/${encodeURIComponent(domain)}" alt="" loading="lazy">`;
-}
+// Logo med forbokstaver bak, så en logo som ikke finnes ikke blir en tom hvit boks.
+export const logo = (domain, name = '') => logoImg(domain, name, 'logo-lg');
 
 // Tegner sidens innhold i #<id> når data kommer, uten å tegne hele visningen på nytt.
 export function page(id, draw) {

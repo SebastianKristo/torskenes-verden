@@ -170,3 +170,10 @@ export async function askJson(prompt, schema, { timeout = 30_000 } = {}) {
   }
   throw lastErr ?? new Error('Ingen AI-motor tilgjengelig');
 }
+
+// Kvittering fra e-posttekst (nettbutikker sender ofte kvitteringen som HTML uten vedlegg). Samme skjema som bildelesingen.
+export async function extractText(text, cats) {
+  const t0 = Date.now();
+  const raw = await askJson(`${PROMPT(cats)}\n\nKvitteringen er en e-post. Les beløp, dato, butikk og varelinjer fra teksten under. Ignorer reklame og bunntekst.\n\n---\n${String(text).slice(0, 15000)}`, SCHEMA, { timeout: 60_000 });
+  return { provider: 'tekst', model: 'e-post', data: validate(raw), seconds: (Date.now() - t0) / 1000 };
+}

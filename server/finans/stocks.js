@@ -2,22 +2,91 @@
 // Autentisering: Authorization: Basic base64(KEY:SECRET). Svarene caches i 60 s (API-et har strenge rate limits),
 // og et dagsbilde av porteføljen lagres slik at vi kan tegne porteføljeverdi over tid og «i dag»-endring per posisjon.
 import { kv, OWNER } from '../db.js';
-import { settings, secret } from './db.js';
+import { settings, secret, secretSource } from './db.js';
 
 const BASE = { live: 'https://live.trading212.com/api/v0', demo: 'https://demo.trading212.com/api/v0' };
 export const t212Base = (env = settings().t212Env) => BASE[env === 'demo' ? 'demo' : 'live'];
-export const t212Configured = () => !!(secret('t212Key') && secret('t212Secret'));
 const MOCK = process.env.MOCK_DATA === '1';
 const TTL = 60_000;
 let cache = null, inflight = null;
 
-async function call(path) {
-  const auth = Buffer.from(`${secret('t212Key')}:${secret('t212Secret')}`).toString('base64');
-  const res = await fetch(t212Base() + path, { headers: { Authorization: `Basic ${auth}`, Accept: 'application/json' }, signal: AbortSignal.timeout(15_000) });
-  if (res.status === 401 || res.status === 403) throw Object.assign(new Error('Trading 212 avviste nøkkelen (sjekk nøkkel, secret og tilganger)'), { status: res.status });
-  if (res.status === 429) throw Object.assign(new Error('Trading 212: for mange kall, prøver igjen om litt'), { status: 429 });
-  if (!res.ok) throw Object.assign(new Error(`Trading 212 svarte ${res.status}`), { status: res.status });
+// Limte verdier har ofte med seg mellomrom, linjeskift, usynlige tegn, anførselstegn eller «Basic »/«Bearer » foran.
+export function cleanCred(v) {
+  let s = String(v ?? '').replace(/[\u200B-\u200D\uFEFF\u00A0]/g, '').trim();
+  for (let i = 0; i < 2; i++) s = s.replace(/^(?:Basic|Bearer)\s+/i, '').replace(/^(['"`«»“”])(.*)\1$/s, '$2').replace(/^["'`“”«](.*)["'`“”»]$/s, '$1').trim();
+  return s.replace(/\s+/g, '');
+}
+// En lagret verdi som ikke kan dekrypteres skal ikke falle tilbake til en (gammel) nøkkel i .env – da blandes nøkkel og secret.
+const val = (k) => (secretSource(k) === 'undecryptable' ? '' : secret(k));
+const creds = () => ({ key: cleanCred(val('t212Key')), secret: cleanCred(val('t212Secret')) });
+export const t212Configured = () => { const c = creds(); return !!(c.key && c.secret); };
+
+// Authorization-headeren: Basic base64(KEY:SECRET) uten linjeskift. Eldre nøkler (uten secret) sendes rått.
+export function t212AuthHeader(key, sec, style = 'basic') {
+  const k = cleanCred(key), s = cleanCred(sec);
+  if (style === 'legacy' || !s) return k;
+  return 'Basic ' + Buffer.from(`${k}:${s}`, 'utf8').toString('base64');
+}
+
+// Hvilken tilgang (scope) et endepunkt krever – brukes i 403-meldingen.
+const SCOPE = [[/^\/equity\/account/, 'account'], [/^\/equity\/portfolio/, 'portfolio'], [/^\/equity\/history\/orders/, 'history:orders'],
+  [/^\/history\/dividends/, 'history:dividends'], [/^\/history\/transactions/, 'history:transactions'], [/^\/equity\/metadata/, 'metadata'], [/^\/equity\/orders/, 'orders:read']];
+export function t212Error(status, path = '', { env = 'live', retryAfter } = {}) {
+  const scope = SCOPE.find(([re]) => re.test(path))?.[1];
+  const other = env === 'demo' ? 'Live' : 'Demo';
+  if (status === 401) return Object.assign(new Error(`Trading 212 avviste nøkkelen (401): nøkkel-ID eller secret er feil, eller nøkkelen er laget for ${other} og ikke ${env === 'demo' ? 'Demo' : 'Live'}. Lim inn begge på nytt, og sjekk at miljøet stemmer.`), { status, code: 'unauthorized' });
+  if (status === 403) return Object.assign(new Error(`Trading 212 nektet tilgang (403)${scope ? ` til «${scope}»` : ''}: nøkkelen mangler denne tilgangen, eller den er låst til en annen IP-adresse enn serverens. Rediger nøkkelen hos Trading 212 og slå på tilgangen${scope ? ` «${scope}»` : 'e'}.`), { status, code: 'forbidden', scope });
+  if (status === 429) return Object.assign(new Error(`Trading 212: for mange kall (429). Vent${retryAfter ? ` ${retryAfter} s` : ' litt'} og prøv igjen.`), { status, code: 'rate_limited' });
+  if (status === 404) return Object.assign(new Error(`Trading 212 fant ikke ${path} (404). Kontotypen (f.eks. CFD) støttes kanskje ikke – API-et virker for Invest og Stocks ISA.`), { status, code: 'not_found' });
+  return Object.assign(new Error(`Trading 212 svarte ${status}`), { status, code: 'http' });
+}
+
+// Prøver Basic-auth først. Ved 401 prøves eldre nøkkelformat (rå nøkkel) én gang, og stilen som virker huskes.
+async function request(path, { key, sec, env, style }) {
+  const res = await fetch(t212Base(env) + path, { headers: { Authorization: t212AuthHeader(key, sec, style), Accept: 'application/json' }, signal: AbortSignal.timeout(15_000) });
+  return res;
+}
+async function call(path, c = null) {
+  const cr = c ?? { ...creds(), env: settings().t212Env };
+  const auth = { key: cr.key, sec: cr.secret, env: cr.env };
+  let style = kv.get(OWNER, 'fh_t212_auth', 'basic');
+  let res = await request(path, { ...auth, style });
+  if (res.status === 401 && style === 'basic') {
+    const legacy = await request(path, { ...auth, style: 'legacy' });
+    if (legacy.ok) { style = 'legacy'; res = legacy; if (!c) kv.set(OWNER, 'fh_t212_auth', 'legacy'); }
+  } else if (res.status === 401 && style === 'legacy') {
+    const basic = await request(path, { ...auth, style: 'basic' });
+    if (basic.ok) { style = 'basic'; res = basic; if (!c) kv.set(OWNER, 'fh_t212_auth', 'basic'); }
+  }
+  if (res.status === 401) console.warn(`[t212] 401 på ${path} (${auth.env}) · nøkkel ${auth.key.length} tegn, secret ${auth.sec.length} tegn`);
+  if (!res.ok) throw t212Error(res.status, path, { env: auth.env, retryAfter: res.headers.get('retry-after') ?? res.headers.get('x-ratelimit-reset') });
   return res.json();
+}
+
+// «Test tilkobling»: henter kontosammendraget med lagrede verdier, eller med verdier fra skjemaet før de lagres.
+// Ved 401 sjekkes også det andre miljøet, så brukeren får vite om nøkkelen hører til Demo i stedet for Live.
+export async function testT212({ key, secret: sec, env } = {}) {
+  const k = cleanCred(key) || creds().key, s = cleanCred(sec) || creds().secret;
+  const e = env === 'demo' || env === 'live' ? env : settings().t212Env;
+  if (MOCK && !k) return { ok: true, env: e, currency: 'NOK', total: 0, message: 'Demodata (MOCK_DATA=1) – ingen ekte kall', mock: true };
+  const broken = ['t212Key', 't212Secret'].filter((x) => secretSource(x) === 'undecryptable');
+  if (broken.length && !cleanCred(key) && !cleanCred(sec)) return { ok: false, env: e, code: 'undecryptable', message: 'Lagret nøkkel/secret kan ikke dekrypteres fordi SECRET_KEY eller SESSION_SECRET er endret. Lim inn nøkkel-ID og secret på nytt.' };
+  if (!k) return { ok: false, env: e, code: 'missing', message: 'Nøkkel-ID mangler.' };
+  if (!s) return { ok: false, env: e, code: 'missing', message: 'Secret mangler. Nye nøkler fra Trading 212 har både nøkkel-ID og secret.' };
+  const lens = { keyLength: k.length, secretLength: s.length };
+  try {
+    let d;
+    try { d = await call('/equity/account/summary', { key: k, secret: s, env: e }); } catch (err) { if (err.status !== 404) throw err; d = await call('/equity/account/cash', { key: k, secret: s, env: e }); }
+    const sum = normSummary(d.totalValue != null || d.investments ? d : null, d);
+    return { ok: true, env: e, currency: sum.currency, total: sum.total, message: `Tilkoblet ${e === 'demo' ? 'Demo' : 'Live'} · ${Math.round(sum.total).toLocaleString('nb-NO')} ${sum.currency}`, ...lens };
+  } catch (err) {
+    if (err.status === 401) {
+      const other = e === 'demo' ? 'live' : 'demo';
+      try { await call('/equity/account/summary', { key: k, secret: s, env: other }); return { ok: false, env: e, code: 'wrong_env', suggest: other, message: `Nøkkelen virker mot ${other === 'demo' ? 'Demo' : 'Live'}, ikke ${e === 'demo' ? 'Demo' : 'Live'}. Bytt miljø og lagre.`, ...lens }; } catch {}
+    }
+    const msg = err.name === 'TimeoutError' ? 'Trading 212 svarte ikke innen 15 s.' : /fetch failed|ENOTFOUND|ECONN/i.test(err.message + (err.cause?.code ?? '')) ? `Fikk ikke kontakt med ${t212Base(e)} (${err.cause?.code ?? 'nettverksfeil'}).` : err.message;
+    return { ok: false, env: e, code: err.code ?? 'network', status: err.status, message: msg, ...lens };
+  }
 }
 const items = (d) => (Array.isArray(d) ? d : Array.isArray(d?.items) ? d.items : []);
 // «AAPL_US_EQ» → AAPL, «EQNRo_EQ» → EQNR (liten bokstav = børs).

@@ -1,14 +1,23 @@
-import { esc, kr, nb, signed, p2, cap, isoDay, hm, isMobile } from './util.js';
+import { esc, kr, nb, signed, p2, cap, isoDay, hm, isMobile, api, logoImg } from './util.js';
 import { store, widget, card, refresh, errBox, on } from './store.js';
 import { renderSearch, popHandler } from './extras.js';
 import { hiddenWidgets } from './profile.js';
+import './media.js';
 
 // Snarveiene hentes fra serveren per bruker (/api/state.shortcuts), og deles med mobilappen.
+// Ekte logo (favicon via serveren); lokale adresser slås opp med AI én gang. Uten logo vises forbokstavene i en farge.
 const TILE_COLORS = ['#f59a8f', '#a8d4fb', '#f3d38a', '#8fe0b0', '#e8a6d8', '#9fb4ff', '#e8b48f'];
-const tileAbbr = (n) => n === 'Home Assistant' ? 'HA' : n.slice(0, 2);
-export const tiles = () => (store.me.shortcuts ?? []).map(({ name, url }, i) =>
-  `<a class="tile" href="${esc(url)}" target="_blank" rel="noopener"><b style="color:${TILE_COLORS[i % TILE_COLORS.length]}">${esc(tileAbbr(name))}</b><span>${esc(name)}</span></a>`).join('')
-  || '<div class="empty">Ingen snarveier. Legg til under Innstillinger → Forside og meny.</div>';
+let resolveAsked = false;
+export const tiles = () => {
+  const list = store.me.shortcuts ?? [];
+  if (!resolveAsked && list.some((s) => s.local && !s.resolved)) {
+    resolveAsked = true;
+    api('/me/shortcuts/resolve', { method: 'POST' }).then((l) => { if (Array.isArray(l)) { store.me.shortcuts = l; refresh('d_links'); refresh('m_links'); } }).catch(() => {});
+  }
+  return list.map(({ name, url, domain }, i) =>
+    `<a class="tile" href="${esc(url)}" target="_blank" rel="noopener" title="${esc(name)}" style="--tc:${TILE_COLORS[i % TILE_COLORS.length]}">${logoImg(domain, name === 'Home Assistant' ? 'HA' : name, 'tile-lg')}<span>${esc(name)}</span></a>`).join('')
+    || '<div class="empty">Ingen snarveier. Legg til under Innstillinger → Startside → Snarveier.</div>';
+};
 
 /* ---------- Skoledata ---------- */
 
@@ -248,7 +257,7 @@ export function render() {
       <div id="lesson">${renderLesson()}</div></div>`;
   if (mob) {
     return `${hello}<div class="trips" id="trips">${renderTrips()}</div>${store.me.hideSearch ? '' : renderSearch()}
-      <div class="grid" data-dnd="m_home">${['d_weather_m', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_upcoming'].map(cardH).join('')}</div>`;
+      <div class="grid" data-dnd="m_home">${['d_weather_m', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_upcoming', 'd_media'].map(cardH).join('')}</div>`;
   }
   // Toppområdet kan omorganiseres; søkebaren ligger som standard mellom avganger og klokke.
   return `<div style="display:flex;flex-direction:column;gap:28px">
@@ -257,7 +266,7 @@ export function render() {
       ${store.me.hideSearch ? '' : renderSearch()}
       <div class="hero">${hello}<section class="card glass weather" id="weather">${renderWeather()}</section></div>
     </div>
-    <div class="grid" data-dnd="dash">${['d_cal', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_links', 'd_upcoming'].map(cardH).join('')}</div></div>`;
+    <div class="grid" data-dnd="dash">${['d_cal', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_links', 'd_upcoming', 'd_media'].map(cardH).join('')}</div></div>`;
 }
 
 const setHtml = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };

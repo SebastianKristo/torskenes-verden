@@ -74,3 +74,18 @@ export const getNews = async () => ({ items: [
   ['NRK', '#0b4ea2', 'Kraftig regn ventes på Østlandet i helgen', 41], ['VG', '#c8102e', 'Bodø/Glimt klare for nytt europaeventyr', 58],
   ['NRK', '#0b4ea2', 'Ny T-banetunnel åpner neste år', 73], ['VG', '#c8102e', 'Slik får du billigere strøm i vinter', 95],
 ].map(([src, color, title, m]) => ({ src, color, title, url: src === 'NRK' ? 'https://www.nrk.no' : 'https://www.vg.no', date: new Date(Date.now() - m * 60000).toISOString() })) });
+
+// Plex og Jellyfin (eksempeldata som i designet).
+const mediaServers = () => [
+  { src: 'plex', label: 'Plex', name: 'Plex', version: '1.41.3', url: 'http://192.168.1.20:32400/web/index.html', ok: true },
+  { src: 'jellyfin', label: 'Jellyfin', name: 'Jellyfin', version: '10.10.3', url: 'http://192.168.1.20:8096/web/', ok: true },
+];
+export const getMediaNow = async () => ({ configured: true, mock: true, servers: mediaServers(), items: [
+  { src: 'plex', kind: 'movie', title: 'Dune: Part Two', sub: '2024', user: 'Ingrid', device: 'Stue-TV', mode: 'direct', quality: '4K', state: 'playing', pct: 62, leftMs: 58 * 60_000, poster: null },
+  { src: 'jellyfin', kind: 'episode', title: 'Severance · S02E05', sub: 'Trojan’s Horse', user: 'Sebastian', device: 'iPhone', mode: 'transcode', quality: '1080p', state: 'paused', pct: 18, leftMs: 41 * 60_000, poster: null },
+] });
+export const getMediaRecent = async () => ({ configured: true, mock: true, servers: mediaServers(), items: [
+  ['Shōgun', 'Serie · S01', 'plex', 'tv'], ['The Brutalist', 'Film · 2024', 'plex', 'movie'], ['Flow', 'Film · 2024', 'jellyfin', 'movie'],
+  ['Slow Horses', 'Serie · S05E02', 'jellyfin', 'tv'], ['Conclave', 'Film · 2024', 'plex', 'movie'], ['Andor', 'Serie · S02E03', 'jellyfin', 'tv'],
+].map(([title, sub, src, kind], i) => ({ src, kind, title, sub, added: new Date(Date.now() - i * 3600_000).toISOString(), poster: null, url: '#' })) });
+export const getMediaPoster = async () => null;

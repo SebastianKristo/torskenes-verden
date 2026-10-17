@@ -12,6 +12,17 @@ export const p2 = (x) => String(x).padStart(2, '0');
 export const cap = (s) => s.replace(/^./, (c) => c.toUpperCase());
 export const isoDay = (d) => d.toLocaleDateString('sv-SE');
 export const hm = (d) => d.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' });
+/**
+ * Logo fra serverens favicon-cache, med forbokstaver bak. Bildet skjules hvis det ikke finnes (CSP stopper inline onerror,
+ * så én felles lytter tar seg av det). cls styrer størrelse/form, se .lg i app.css.
+ */
+export const initials = (n) => (String(n ?? '').match(/[\p{L}\p{N}]/gu) ?? ['•']).slice(0, 2).join('').toUpperCase();
+export const logoImg = (domain, name, cls = '') => `<span class="lg ${cls}${domain ? ' has' : ''}">${domain ? `<img data-lg src="/finans/api/logo/${encodeURIComponent(domain)}" alt="" loading="lazy" decoding="async">` : ''}<i>${esc(initials(name))}</i></span>`;
+if (typeof document !== 'undefined' && !window.__lgErr) {
+  window.__lgErr = true;
+  document.addEventListener('error', (e) => { const t = e.target; if (t?.tagName === 'IMG' && t.hasAttribute('data-lg')) { t.parentElement?.classList.remove('has'); t.remove(); } }, true);
+}
+
 export const parseNum = (v) => parseFloat(String(v).replace(/\s/g, '').replace(',', '.')) || 0;
 
 export async function api(path, opts = {}) {

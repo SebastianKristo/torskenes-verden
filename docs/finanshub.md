@@ -80,6 +80,64 @@ Trykk **✦ AI** i søkefeltet og still et spørsmål:
 - **Oppsett:** nøkkel og secret legges inn på siden og lagres kryptert. Velg *live* eller *demo*.
 - **Data:** kontosammendrag, portefølje, ordrer og utbytte, med cache i 60 s og «Synk nå». Ved feil (for eksempel 429) vises sist gode data.
 - **Graf:** et daglig øyeblikksbilde gir porteføljegrafen og kolonnen «I dag».
+- **Test tilkobling:** kaller `GET /api/v0/equity/account/summary` med verdiene i skjemaet (før du lagrer) og viser valuta og total, eller nøyaktig hva som er galt.
+
+### Hvis Trading 212 avviser nøkkelen
+
+| Melding | Årsak | Løsning |
+|---|---|---|
+| **401** – nøkkel-ID eller secret er feil | Feil eller ufullstendig nøkkel, eller nøkkelen hører til det andre miljøet | Lim inn begge på nytt. Testen sjekker også det andre miljøet og foreslår «Bytt til Demo/Live». |
+| **403** – mangler tilgang til «portfolio» | Tilgangen (scope) er ikke slått på, eller nøkkelen er låst til en annen IP | Rediger nøkkelen hos Trading 212. Bak Cloudflare Tunnel er IP-en homelabens offentlige WAN-IP. |
+| **429** – for mange kall | Rate limit | Vent og prøv igjen; sist gode data vises imens. |
+| Kan ikke dekrypteres | `SECRET_KEY`/`SESSION_SECRET` er byttet etter at nøkkelen ble lagret | Lim inn nøkkel-ID og secret på nytt. |
+
+- **Header:** `Authorization: Basic base64(KEY_ID:SECRET)`. Mellomrom, linjeskift, anførselstegn og et «Basic »-prefiks fra liming fjernes automatisk. Eldre nøkler uten secret prøves med rå nøkkel hvis Basic gir 401.
+- **Konto:** API-et virker for Invest og Stocks ISA, ikke CFD. Lag nøkkelen i samme konto og samme miljø (Live eller Demo) som du velger i skjemaet.
+- **Lagring:** verdier lagret i grensesnittet går foran `TRADING212_API_KEY`/`TRADING212_API_SECRET` i `.env`. Skjemaet viser de fire første tegnene og lengden på det som er lagret, og testen viser lengdene som faktisk ble sendt (aldri selve verdiene).
+
+## <img src="assets/icons/kvittering.svg" width="24" align="top"> Kvitteringer fra e-post (Proton Mail)
+
+FinansHub henter uleste e-poster fra en mappe, lager kvitteringsjobber av vedleggene (PDF, JPG, PNG, HEIC) og sender e-poster uten vedlegg (typisk nettbutikker) til AI-en som ren tekst. Jobbene havner i opplastingskøen og gjennomgangskøen som vanlig, merket med avsender og emne. Ferdige e-poster flyttes til «Lest»-mappen.
+
+Proton Mail har ingen offentlig IMAP-server, så alt går gjennom **Proton Mail Bridge** (krever betalt plan: Mail Plus, Unlimited, Duo, Family eller Business). Oppsettet finnes i **Homelab → Innstillinger → Integrasjoner → Proton Mail** og i **FinansHub → Innstillinger → Bank og import**.
+
+**1. Start Bridge ved siden av FinansHub** (tjenesten ligger i `docker-compose.yml` som profilen `mail`, og portene publiseres ikke):
+```bash
+docker compose --profile mail run --rm protonmail-bridge init
+>>> login      # Proton-adresse, passord og 2FA. Vent til synkroniseringen er ferdig.
+>>> info       # viser brukernavn og Bridge-passord
+>>> exit
+docker compose --profile mail up -d
+```
+
+**2. Finn variablene**
+
+| Felt | Hvor du finner det | Typisk verdi |
+|---|---|---|
+| Vert (`IMAP_HOST`) | Navnet på tjenesten i compose | `protonmail-bridge` (Bridge-appen på samme maskin: `127.0.0.1`) |
+| Port (`IMAP_PORT`) | `info` viser 1143, men imaget videresender den til 143 | `143` fra en annen container, `1143` mot Bridge-appen |
+| Sikkerhet (`IMAP_SECURITY`) | `info` → Security | `starttls` |
+| Brukernavn (`IMAP_USER`) | `info` → Username | `navn@proton.me` |
+| Passord (`IMAP_PASSWORD`) | `info` → Password – **Bridge-passordet, ikke Proton-passordet** | 16 tegn |
+| Mappe (`IMAP_FOLDER`) | Egne mapper heter `Folders/<navn>`, etiketter `Labels/<navn>` | `Folders/Kvitteringer` |
+| Ferdig-mappe (`IMAP_DONE_FOLDER`) | Lag undermappen i Proton | `Folders/Kvitteringer/Lest` |
+| Intervall (`IMAP_POLL_MINUTES`) | | `10` |
+
+**3. Lag et filter i Proton:** mail.proton.me → Innstillinger → Filtre → Legg til filter. For eksempel: emne inneholder «kvittering», «ordre» eller «receipt», eller avsender er butikken → flytt til mappen *Kvitteringer*.
+
+**4. Test tilkobling.** Første gang lagres (pinnes) Bridge sitt selvsignerte sertifikat (SHA-256-fingeravtrykket vises), i stedet for at sertifikatsjekken slås av. Endres sertifikatet senere, avvises tilkoblingen til du trykker «Glem sertifikat» og tester på nytt. Offentlige IMAP-servere med gyldig sertifikat sjekkes på vanlig måte.
+
+| Feil i testen | Betyr |
+|---|---|
+| Innloggingen ble avvist (AUTHENTICATIONFAILED) | Brukt Proton-passordet i stedet for Bridge-passordet, eller Bridge er logget ut |
+| Tilkoblingen ble nektet | Bridge kjører ikke, eller feil port (1143 i stedet for 143 fra en annen container) |
+| Fant ikke mappen | Mangler `Folders/` foran navnet |
+| Sertifikatet stemmer ikke / kunne ikke verifiseres | Bridge er satt opp på nytt – glem sertifikatet og test igjen |
+
+- **Duplikater:** hver e-post huskes på `Message-ID` og sha256 av hvert vedlegg (tabellen `fh_mail_imports`), så ingenting importeres to ganger selv om e-posten flyttes tilbake.
+- **Ved feil:** e-posten blir liggende ulest og feilen vises under Status. «Kjør nå» starter en runde med en gang.
+- **Finn-handler:** fyll inn en egen Finn-mappe (f.eks. `Folders/Finn`), så leses Finn-e-postene fra samme postkasse inn som handler.
+- **Bridge-data** ligger i `./proton` – ta den med i backupen.
 
 ## Subscription OS
 
@@ -107,7 +165,7 @@ En mappe er hovedsakelig et **dashboard for en bolig**: enebolig, leilighet, hyt
 - **Innhold:** kjøpt i år, solgt i år og pågående handler, med steg-chips for hver handel.
 - **Legg inn:** lim inn en Finn-e-post (Trygg betaling, Fiks ferdig, Tillit), eller skriv inn handelen manuelt. AI eller regex leser ut gjenstand, motpart, beløp og status.
 - **Oppdatering:** samme ordrenummer i en senere e-post oppdaterer samme handel.
-- **IMAP:** feltene lagres, men automatisk henting er ikke bygget ennå.
+- **Automatisk:** med en Finn-mappe i e-postoppsettet (se *Kvitteringer fra e-post*) leses Finn-e-postene inn automatisk.
 
 ## Import
 

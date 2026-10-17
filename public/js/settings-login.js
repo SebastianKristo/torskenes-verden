@@ -42,6 +42,10 @@ const when = (t) => new Date(t).toLocaleString('nb-NO', { day: 'numeric', month:
 const roleTxt = (r) => (r === 'admin' ? 'Admin' : 'Bruker');
 const ini = (u) => (u.avatarUrl ? `<img src="${esc(u.avatarUrl)}" alt="">` : esc((u.name || u.username).slice(0, 2).toUpperCase()));
 
+/** Data for Konto- og Brukere-sidene i settings.js: { devices, users, me } eller null før første lasting. */
+export const loginData = () => data;
+export const roleName = roleTxt;
+
 export async function loadLogin(onChange) {
   if (onChange) rerender = onChange;
   const [devices, users] = await Promise.all([
@@ -188,13 +192,13 @@ let goTo = () => {};
 export function loginView(sub, go) {
   if (go) goTo = go;
   if (!data) return { html: '<div class="skeleton" style="min-height:200px;border-radius:20px"></div>' };
-  if (sub === 'me') return { title: 'Profil', sub: 'Innlogging', html: meView() };
-  if (sub === 'tfa') return { title: 'Tofaktor (2FA)', sub: 'Innlogging · Sikkerhet', html: tfaView() };
-  if (sub === 'pw') return { title: 'Bytt passord', sub: 'Innlogging · Sikkerhet', html: pwView() };
-  if (sub === 'devices') return { title: 'Pålitelige enheter', sub: 'Innlogging · Sikkerhet', html: devicesView() };
-  if (sub === 'add' && data.me?.role === 'admin') return { title: 'Legg til bruker', sub: 'Innlogging · Brukere', html: addView() };
-  if (sub === 'server' && data.me?.role === 'admin') return { title: 'Server', sub: 'Innlogging', html: serverView() };
-  if (sub?.startsWith('user:')) { const h = userView(sub.slice(5)); if (h) return { title: 'Bruker', sub: 'Innlogging · Brukere', html: h }; }
+  if (sub === 'me') return { title: 'Profil', sub: 'Navn og profilbilde.', html: meView() };
+  if (sub === 'tfa') return { title: 'Totrinnsbekreftelse', sub: 'Krev en kode fra autentiseringsappen når du logger inn.', html: tfaView() };
+  if (sub === 'pw') return { title: 'Bytt passord', sub: 'Gjelder nettsiden og mobilappene.', html: pwView() };
+  if (sub === 'devices') return { title: 'Pålitelige enheter', sub: 'Enheter som slipper passord på lokalt nett.', html: devicesView() };
+  if (sub === 'add' && data.me?.role === 'admin') return { title: 'Legg til bruker', sub: 'Brukernavn, passord og rolle.', html: addView() };
+  if (sub === 'server' && data.me?.role === 'admin') return { title: 'Server', sub: 'Navnet vises i menyen og i mobilappen.', html: serverView() };
+  if (sub?.startsWith('user:')) { const u = data.users.find((x) => x.id === sub.slice(5)), h = userView(sub.slice(5)); if (h) return { title: u?.name || u?.username || 'Bruker', sub: 'Brukere', html: h }; }
   return { html: listView() };
 }
 

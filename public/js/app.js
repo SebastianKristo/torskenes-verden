@@ -57,8 +57,8 @@ function bindShell() {
     if (!act) return;
     close();
     if (act === 'settings') openSettings();
-    if (act === 'layout') openSettings('layout');
-    if (act === 'news-speed') openSettings('look', 'speed');
+    if (act === 'layout') openSettings('top');
+    if (act === 'news-speed') openSettings('top', 'speed');
     if (act === 'reset-layout') await resetLayouts();
     if (act === 'toggle-search') await toggle('search');
     if (act === 'toggle-news') await toggle('news');

@@ -470,9 +470,9 @@ function settingsPage() {
     <label class="drop" style="flex-direction:row;justify-content:flex-start;text-align:left;padding:20px"><span class="ini" style="background:var(--inner);color:var(--acc-l)">↑</span><span><b style="font-weight:600">Importer CSV fra nettbanken</b><br><span class="note" style="font-size:12.5px">Duplikater hoppes over automatisk · regler brukes på nye rader</span></span><input type="file" name="file" accept=".csv,text/csv" hidden data-csv></label>
     ${u.msg.csv ? `<div class="${u.msg.csvOk ? 'ok-msg' : 'err-msg'}">${esc(u.msg.csv)}</div>` : ''}
     <div class="box" style="padding:16px;flex-wrap:wrap"><div><b style="font-weight:600">Open banking (PSD2)</b><div class="note" style="font-size:12.5px">Automatisk henting via Enable Banking · kommer i fase 3</div></div><span class="pill" style="background:var(--line);color:var(--text2);font-weight:400">Ikke koblet</span></div>
-    <div class="box" style="padding:16px;flex-direction:column;align-items:stretch;gap:12px"><div><b style="font-weight:600">Finn-handler via e-post (IMAP)</b><div class="note" style="font-size:12.5px">For å hente Finn-kvitteringer automatisk senere. Inntil videre limes e-postene inn under Finn-handler. Flere filer (XLSX, CSV, tekst) importeres under <a href="#/imp">Import</a>.</div></div>
-      <div class="form-grid"><label class="f">IMAP-server<input class="inp mono" style="font-size:13px" data-set="imapHost" value="${esc(st.imapHost ?? '')}" placeholder="imap.gmail.com"></label><label class="f">Brukernavn<input class="inp" data-set="imapUser" value="${esc(st.imapUser ?? '')}" autocomplete="off"></label>
-      <label class="f">App-passord<input class="inp" type="password" data-set="imapPass" value="" placeholder="${st.imapPassSet ? '•••••••• lagret på serveren' : 'Lagres på serveren'}" autocomplete="off"></label><label class="f">Mappe<input class="inp" data-set="imapFolder" value="${esc(st.imapFolder ?? 'INBOX')}"></label></div></div></form>`;
+    </form>
+    <div class="box" style="padding:16px;flex-direction:column;align-items:stretch;gap:12px"><div><b style="font-weight:600">Kvitteringer fra e-post (Proton Mail / IMAP)</b><div class="note" style="font-size:12.5px">Vedlegg og e-postkvitteringer hentes automatisk og havner i opplastingskøen. Finn-handler kan bruke samme postkasse med egen mappe.</div></div>
+      <div data-mailpane style="--mp-acc:var(--acc);--mp-acc-ink:var(--on-acc,#1A0C04);--mp-card:var(--inner);--mp-line:var(--line);--mp-field:var(--bg)"></div></div>`;
   else if (t === 'varsel') body = `<div style="display:flex;flex-direction:column;gap:8px">${[['autoCat', 'Auto-kategorisering', 'Bruk regler og AI-forslag'], ['aiSummaries', '✦ AI-sammendrag', 'Kort og lang beskrivelse av hver post, laget i bakgrunnen'], ['n80', 'Varsel ved 80 % av budsjett', 'Per kategori'], ['n100', 'Varsel når budsjett er brukt opp', 'Per kategori'], ['nRc', 'Ny kvittering til gjennomgang', 'Vises som merke i menyen'], ['nFast', 'Påminnelse om faste trekk', 'Dagen før trekkdato']]
     .map(([k2, n, s2]) => `<button class="tog-row" data-tog="${k2}"><span class="grow"><b style="font-weight:500">${n}</b><br><span class="note" style="font-size:12.5px">${s2}</span></span><span class="toggle" role="switch" aria-checked="${!!st[k2]}"></span></button>`).join('')}
     <div class="note" style="font-size:12.5px">Varsler vises i FinansHub og i mobilappen. Push-varsler krever at appen er installert på hjemskjermen.</div></div>`;
@@ -571,12 +571,16 @@ function modalHtml() {
 
 const PAGE_FN = { ov: overview, tx: transactions, ai: aiPage, kv: receipts, bud: budget, fast: recurring, konto: accounts, rap: reports, inn: settingsPage, ...MODULE_FN };
 
+let mailPaneEl = null;
 export function draw() {
   const el = root();
   const scroll = window.scrollY;
   const focus = document.activeElement?.closest('[data-form] input, [data-tx-field], [data-rc-field]') ? { sel: focusSel(document.activeElement), pos: document.activeElement.selectionStart } : null;
   el.innerHTML = shell(PAGE_FN[u.page]());
   if (u.page === 'mat') attachMatplan(el);
+  // E-postimporten (felles med Homelab-innstillingene) monteres i Bank og import.
+  const mp = el.querySelector('[data-mailpane]');
+  if (mp) { if (mailPaneEl) mp.replaceWith(mailPaneEl); else { mailPaneEl = mp; import('/assets/js/settings-mail.js').then((m) => m.mailPane(mp)).catch(() => { mp.innerHTML = '<div class="note">Kunne ikke laste e-postoppsettet.</div>'; }); } }
   window.scrollTo(0, scroll);
   if (focus?.sel) { const f = el.querySelector(focus.sel); if (f) { f.focus(); try { f.setSelectionRange(focus.pos, focus.pos); } catch {} } }
 }

@@ -8,7 +8,8 @@ import { statfsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import os from 'node:os';
 import { config } from './config.js';
-import { kv } from './db.js';
+import { kv, OWNER } from './db.js';
+import { aiJson } from './homeos-common.js';
 import { sessionUser, userInfo, serverName } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { uiPrefs, saveUiPrefs } from './ui.js';
@@ -87,7 +88,48 @@ export const DEFAULT_SHORTCUTS = [
 ].map(([name, url]) => ({ name, url }));
 
 const isLocalUrl = (u) => { try { const h = new URL(u).hostname; return /^(10|127)\.|^192\.168\.|^172\.(1[6-9]|2\d|3[01])\.|\.local$|\.lan$|\.home\.arpa$|^localhost$/.test(h) || !h.includes('.'); } catch { return false; } };
-export const shortcutsFor = (id) => (kv.get(id, 'shortcuts') ?? DEFAULT_SHORTCUTS).map((s) => ({ ...s, local: isLocalUrl(s.url) }));
+const hostOf = (u) => { try { return new URL(u).hostname.replace(/^www\./, '').toLowerCase(); } catch { return ''; } };
+
+// Logoer: offentlige adresser bruker sitt eget domene. Lokale adresser (192.168.x.x, .local) har ikke noe favicon å hente,
+// så navnet slås opp én gang (fast liste, ellers AI) og svaret lagres for alle brukere. Tom streng = ingen logo, vis initialer.
+const KNOWN = { 'home assistant': 'home-assistant.io', proxmox: 'proxmox.com', 'pi-hole': 'pi-hole.net', pihole: 'pi-hole.net', homey: 'homey.app',
+  unraid: 'unraid.net', truenas: 'truenas.com', synology: 'synology.com', plex: 'plex.tv', jellyfin: 'jellyfin.org', sonarr: 'sonarr.tv', radarr: 'radarr.video',
+  portainer: 'portainer.io', grafana: 'grafana.com', unifi: 'ui.com', opnsense: 'opnsense.org', pfsense: 'pfsense.org', nextcloud: 'nextcloud.com',
+  immich: 'immich.app', 'uptime kuma': 'uptime.kuma.pet', prowlarr: 'prowlarr.com', qbittorrent: 'qbittorrent.org', overseerr: 'overseerr.dev', vaultwarden: 'vaultwarden.net' };
+const DOMAIN_RE = /^(?=.{3,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
+const domainCache = () => kv.get(OWNER, 'shortcut_domains', {});
+const nameKey = (n) => String(n).trim().toLowerCase();
+export const shortcutsFor = (id) => {
+  const cache = domainCache();
+  return (kv.get(id, 'shortcuts') ?? DEFAULT_SHORTCUTS).map((s) => {
+    const local = isLocalUrl(s.url), k = nameKey(s.name);
+    const domain = local ? (KNOWN[k] ?? cache[k] ?? null) : hostOf(s.url) || null;
+    return { ...s, local, domain: domain || null, resolved: !local || k in KNOWN || k in cache };
+  });
+};
+
+let resolving = null, aiDownUntil = 0;
+async function resolveDomains(names) {
+  const cache = domainCache(), todo = [...new Set(names.map(nameKey))].filter((k) => k && !(k in KNOWN) && !(k in cache)).slice(0, 20);
+  if (!todo.length || Date.now() < aiDownUntil) return;
+  let found = {};
+  try {
+    const r = await Promise.race([
+      aiJson(`Dette er navn på tjenester som kjører på et lokalt hjemmenettverk (homelab): ${JSON.stringify(todo)}.
+For hvert navn: gi domenet til det offisielle nettstedet for produktet eller programvaren (f.eks. "Proxmox" → "proxmox.com", "Home Assistant" → "home-assistant.io").
+Hvis navnet er en generell enhet eller noe du ikke kjenner sikkert (f.eks. "Ruter", "NAS", "Skriver", "LabDeck"), svar med tom streng. Ikke gjett.`,
+        { type: 'OBJECT', properties: { items: { type: 'ARRAY', items: { type: 'OBJECT', properties: { name: { type: 'STRING' }, domain: { type: 'STRING' } }, required: ['name', 'domain'] } } }, required: ['items'] }),
+      new Promise((_, rej) => setTimeout(() => rej(new Error('AI svarte ikke')), 20_000)),
+    ]);
+    for (const it of r.data?.items ?? []) {
+      const k = nameKey(it.name), d = String(it.domain ?? '').trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '');
+      if (todo.includes(k)) found[k] = DOMAIN_RE.test(d) ? d : '';
+    }
+  } catch { aiDownUntil = Date.now() + 10 * 60_000; return; } // ingen AI nå: prøv igjen om 10 min, initialer vises så lenge
+  // Navn AI-en ikke svarte på lagres som «ingen logo», så de ikke spørres om hver gang.
+  for (const k of todo) if (!(k in found)) found[k] = '';
+  kv.set(OWNER, 'shortcut_domains', { ...domainCache(), ...found });
+}
 
 /* ---------------- Søkehistorikk ---------------- */
 
@@ -207,6 +249,15 @@ api.put('/me/layout', authOrToken, async (c) => {
 });
 
 api.get('/me/shortcuts', authOrToken, (c) => c.json(shortcutsFor(c.get('user'))));
+// Slår opp logo-domener for lokale snarveier (én gang per navn) og svarer med den oppdaterte listen.
+api.post('/me/shortcuts/resolve', authOrToken, async (c) => {
+  const open = shortcutsFor(c.get('user')).filter((s) => !s.resolved).map((s) => s.name);
+  if (open.length) {
+    resolving ??= resolveDomains(open).finally(() => { resolving = null; });
+    await resolving;
+  }
+  return c.json(shortcutsFor(c.get('user')));
+});
 api.put('/me/shortcuts', authOrToken, async (c) => {
   const b = await json(c);
   if (b === null || (Array.isArray(b) && !b.length)) { kv.del(c.get('user'), 'shortcuts'); return c.json(shortcutsFor(c.get('user'))); }

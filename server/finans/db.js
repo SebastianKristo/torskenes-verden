@@ -168,6 +168,23 @@ addCol('fh_tokens', 'expires', 'INTEGER');      // ms, null = aldri
 addCol('fh_folders', 'type', "TEXT NOT NULL DEFAULT 'Annet'");   // Enebolig | Leilighet | Hytte | Utleie | Annet
 addCol('fh_folders', 'address', "TEXT NOT NULL DEFAULT ''");
 addCol('fh_folders', 'owner_id', 'TEXT');
+// Prompt 08: kvitteringer fra e-post.
+addCol('fh_receipts', 'source', "TEXT NOT NULL DEFAULT 'upload'");   // upload | email
+addCol('fh_receipts', 'meta', 'TEXT');                                // JSON: {from, subject, messageId, date}
+db.exec(`CREATE TABLE IF NOT EXISTS fh_mail_imports (
+  id INTEGER PRIMARY KEY,
+  message_id TEXT NOT NULL,
+  sha256 TEXT NOT NULL,                        -- vedlegg, eller teksten når e-posten ikke har vedlegg
+  receipt_id TEXT,
+  folder TEXT,
+  sender TEXT,
+  subject TEXT,
+  received_at INTEGER,
+  status TEXT NOT NULL,                        -- imported | skipped | error
+  error TEXT,
+  created INTEGER NOT NULL,
+  UNIQUE(message_id, sha256)
+)`);
 addCol('fh_folders', 'split', "TEXT NOT NULL DEFAULT 'equal'");  // 'equal' eller JSON {medlemsnavn: vekt}
 addCol('fh_folder_members', 'user_id', 'TEXT');                   // null = navngitt person uten innlogging
 addCol('fh_folder_entries', 'category', 'TEXT');
@@ -237,7 +254,12 @@ export const DEFAULT_SETTINGS = {
   ollamaUrl: process.env.OLLAMA_URL ?? 'http://192.168.1.30:11434', ollamaModel: process.env.OLLAMA_MODEL ?? 'qwen2.5vl:7b',
   geminiModel: process.env.GEMINI_MODEL ?? 'gemini-2.5-flash', minConf: Math.round(Number(process.env.AI_MIN_CONFIDENCE ?? 0.85) * 100),
   autoCat: true, n80: true, n100: true, nRc: true, nFast: true, csvProfile: 'DNB', aiSummaries: true,
-  imapHost: '', imapUser: '', imapFolder: 'INBOX',
+  // Kvitteringer fra e-post (Proton Mail via Bridge, eller vanlig IMAP). Passordet ligger i hemmelighetene (imapPass).
+  mailOn: !!process.env.IMAP_HOST, imapHost: process.env.IMAP_HOST ?? '', imapPort: Number(process.env.IMAP_PORT ?? 143) || 143,
+  imapSecurity: ['starttls', 'tls', 'none'].includes(process.env.IMAP_SECURITY) ? process.env.IMAP_SECURITY : 'starttls',
+  imapUser: process.env.IMAP_USER ?? '', imapFolder: process.env.IMAP_FOLDER ?? 'Folders/Kvitteringer',
+  imapDoneFolder: process.env.IMAP_DONE_FOLDER ?? 'Folders/Kvitteringer/Lest', imapPollMinutes: Number(process.env.IMAP_POLL_MINUTES ?? 10) || 10,
+  imapFinnFolder: process.env.IMAP_FINN_FOLDER ?? '', imapPin: '',
   // Aksjer (Trading 212). Nøkkel og secret ligger i hemmelighetene.
   t212Env: process.env.TRADING212_ENV === 'demo' ? 'demo' : 'live',
   // AI-søk: embeddings er valgfrie (Ollama-modell, f.eks. nomic-embed-text). Uten dem brukes bare BM25.
@@ -256,7 +278,7 @@ export function saveSettings(patch) { kv.set(OWNER, 'fh_settings', { ...kv.get(O
 
 // Hemmeligheter for FinansHub (Gemini, Trading 212, SMB, IMAP) lagres separat, kryptert med AES-256-GCM, og sendes aldri ut.
 // Nøkkelen avledes fra SECRET_KEY (eller SESSION_SECRET). Byttes den, må hemmelighetene legges inn på nytt.
-const SECRET_ENV = { geminiKey: 'GEMINI_API_KEY', imapPass: 'FINN_IMAP_PASSWORD', t212Key: 'TRADING212_API_KEY', t212Secret: 'TRADING212_API_SECRET', smbPass: 'SMB_PASSWORD', backupPhrase: 'BACKUP_PASSPHRASE' };
+const SECRET_ENV = { geminiKey: 'GEMINI_API_KEY', imapPass: ['IMAP_PASSWORD', 'FINN_IMAP_PASSWORD'], t212Key: 'TRADING212_API_KEY', t212Secret: 'TRADING212_API_SECRET', smbPass: 'SMB_PASSWORD', backupPhrase: 'BACKUP_PASSPHRASE' };
 const sealKey = () => createHash('sha256').update('fh-secret:' + (process.env.SECRET_KEY || config.sessionSecret || 'dev')).digest();
 export function seal(text) {
   const iv = randomBytes(12), c = createCipheriv('aes-256-gcm', sealKey(), iv);
@@ -271,7 +293,14 @@ export function unseal(v) {
     return Buffer.concat([d.update(b.subarray(28)), d.final()]).toString('utf8');
   } catch { return ''; }
 }
-export const secret = (k) => unseal(kv.get(OWNER, 'fh_secret', {})[k]) || process.env[SECRET_ENV[k]] || '';
+const envOf = (k) => [SECRET_ENV[k]].flat().map((e) => process.env[e]).find((v) => v) ?? '';
+export const secret = (k) => unseal(kv.get(OWNER, 'fh_secret', {})[k]) || envOf(k) || '';
+// Hvor hemmeligheten kommer fra: 'ui' (lagret og lesbar), 'undecryptable' (lagret, men SECRET_KEY/SESSION_SECRET er endret), 'env' eller null.
+export function secretSource(k) {
+  const v = kv.get(OWNER, 'fh_secret', {})[k];
+  if (v) return unseal(v) ? 'ui' : 'undecryptable';
+  return envOf(k) ? 'env' : null;
+}
 export function setSecret(k, v) { const s = kv.get(OWNER, 'fh_secret', {}); if (v) s[k] = seal(v); else delete s[k]; kv.set(OWNER, 'fh_secret', s); }
 // Hemmeligheter fra før krypteringen kom inn krypteres ved oppstart.
 { const s = kv.get(OWNER, 'fh_secret', {}); let ch = false; for (const [k, v] of Object.entries(s)) if (v && !String(v).startsWith('enc:')) { s[k] = seal(v); ch = true; } if (ch) kv.set(OWNER, 'fh_secret', s); }

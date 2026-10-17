@@ -295,7 +295,7 @@ authed.put('/config', requireAdmin, async (c) => {
 // «Test tilkobling»: ett ekte kall via serveren med de lagrede verdiene.
 authed.post('/config/test/:group', requireAdmin, async (c) => {
   const group = c.req.param('group');
-  if (!integrations.TEST_GROUPS.includes(group)) return c.json({ error: 'Ukjent integrasjon' }, 404);
+  if (!integrations.hasTest(group)) return c.json({ error: 'Ukjent integrasjon' }, 404);
   return c.json(await integrations.testIntegration(group));
 });
 
@@ -448,6 +448,16 @@ authed.get('/energy', proxy(api.getEnergy));
 authed.get('/health', proxy(api.getHealth));
 authed.get('/upcoming', proxy(api.getUpcoming));
 authed.get('/news', proxy(api.getNews));
+// Plex og Jellyfin: «Spilles nå» (30 s) og «Nylig lagt til» (10 min). Plakater hentes via serveren så tokenet aldri når nettleseren.
+authed.get('/media/now', proxy(api.getMediaNow));
+authed.get('/media/recent', proxy(api.getMediaRecent));
+authed.get('/media/poster', async (c) => {
+  try {
+    const img = await api.getMediaPoster(c.req.query('src'), c.req.query('id'));
+    if (!img) return c.notFound();
+    return c.body(img.body, 200, { 'Content-Type': /^image\//.test(img.type) ? img.type : 'image/jpeg', 'Cache-Control': 'private, max-age=86400', 'X-Content-Type-Options': 'nosniff' });
+  } catch (e) { console.warn('[media/poster]', e.message); return c.body(null, 502); }
+});
 authed.get('/space/tle', proxy(api.getTle));
 authed.get('/space/apod', proxy(api.getApod));
 authed.get('/space/gallery/:key', proxy((c) => {

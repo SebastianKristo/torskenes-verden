@@ -467,16 +467,53 @@ async function live(r) {
 /* ---------- Ruter ---------- */
 
 const api = new Hono();
-api.use('*', guard);
 
-// Kartdata og d3-geo leveres herfra (samme opprinnelse, ingen CDN).
+// Kartdata og d3-geo leveres herfra (samme opprinnelse, ingen CDN). Registreres før admin-vakten fordi Rom-fanen
+// (som alle innloggede ser) også bruker kartet; filene er åpne biblioteker, men krever likevel innlogging.
 const VENDOR = { 'd3-array.min.js': 'd3-array/dist/d3-array.min.js', 'd3-geo.min.js': 'd3-geo/dist/d3-geo.min.js', 'topojson-client.min.js': 'topojson-client/dist/topojson-client.min.js', 'countries-110m.json': 'world-atlas/countries-110m.json' };
-api.get('/vendor/:file', async (c) => {
+const loggedIn = (c, next) => (auth.sessionUser(c) ? next() : c.json({ error: 'Ikke innlogget' }, 401));
+api.get('/vendor/nordic.json', loggedIn, async (c) => c.body(await nordic(), 200, { 'Content-Type': 'application/json', 'Cache-Control': 'private, max-age=604800' }));
+api.get('/vendor/:file', loggedIn, async (c) => {
   const p = VENDOR[c.req.param('file')];
   if (!p) return c.notFound();
   const body = await readFile(new URL(`../node_modules/${p}`, import.meta.url));
   return c.body(body, 200, { 'Content-Type': p.endsWith('.json') ? 'application/json' : 'text/javascript', 'Cache-Control': 'private, max-age=604800' });
 });
+
+// Omriss av Norden (world-atlas 50m) for Starlink-kartet på Rom: bare polygoner nær utsnittet, avrundet til 2 desimaler.
+// Svaret er { countries: [{ id, rings: [[[lon,lat],…],…] }] } og beregnes én gang per oppstart (~40 kB i stedet for 750 kB).
+const BOX = { lonMin: -12, lonMax: 44, latMin: 50, latMax: 78 };
+let nordicJson = null;
+async function nordic() {
+  if (nordicJson) return nordicJson;
+  const { feature } = await import('topojson-client');
+  const topo = JSON.parse(await readFile(new URL('../node_modules/world-atlas/countries-50m.json', import.meta.url), 'utf8'));
+  const inBox = ([lon, lat]) => lon >= BOX.lonMin && lon <= BOX.lonMax && lat >= BOX.latMin && lat <= BOX.latMax;
+  const countries = [];
+  for (const f of feature(topo, topo.objects.countries).features) {
+    const polys = f.geometry?.type === 'Polygon' ? [f.geometry.coordinates] : f.geometry?.type === 'MultiPolygon' ? f.geometry.coordinates : [];
+    const rings = [];
+    for (const poly of polys) for (const ring of poly) {
+      if (!ring.some(inBox)) continue;
+      // Ringer som krysser datolinjen (Russland) rulles ut til sammenhengende lengdegrader før klemming.
+      const wraps = ring.some(([lo]) => lo > 170) && ring.some(([lo]) => lo < -170);
+      const out = [];
+      for (const [lonW, lat0] of ring) {
+        const lon0 = wraps && lonW < 0 ? lonW + 360 : lonW;
+        // Klemmes til et romslig område rundt utsnittet, så polygoner som krysser datolinjen (Russland) ikke tegner striper.
+        const lon = Math.min(80, Math.max(-40, lon0)), lat = Math.min(86, Math.max(36, lat0));
+        const pt = [Math.round(lon * 100) / 100, Math.round(lat * 100) / 100], prev = out[out.length - 1];
+        if (!prev || Math.abs(prev[0] - pt[0]) + Math.abs(prev[1] - pt[1]) >= 0.04) out.push(pt); // tynner ut punkter som ikke synes
+      }
+      if (out.length > 3) rings.push(out);
+    }
+    if (rings.length) countries.push({ id: f.id, name: f.properties?.name ?? '', rings });
+  }
+  nordicJson = JSON.stringify({ countries });
+  return nordicJson;
+}
+
+api.use('*', guard);
 
 const isAdmin = (c) => {
   const id = auth.sessionUser(c);
