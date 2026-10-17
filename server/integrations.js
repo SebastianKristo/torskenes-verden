@@ -1,4 +1,5 @@
 // Alle kall mot eksterne tjenester. Kjøres kun på serveren; nøkler sendes aldri til nettleseren.
+import { t212Creds, t212AuthHeader } from './finans/stocks.js';
 import ical from 'node-ical';
 // undici sin egen fetch må brukes med undici-Agent: Node sin innebygde fetch har en eldre undici og avviser den («invalid onRequestStart method»).
 import { Agent, fetch as undiciFetch } from 'undici';
@@ -193,11 +194,11 @@ export const getSchool = () => cached('school', 15 * 60_000, async () => {
 const clean = (v) => String(v ?? '').trim().replace(/^["'`]+|["'`]+$/g, '').replace(/\s+/g, '');
 
 // Nye nøkler (2025+) har Key ID og secret: «Authorization: Basic base64(KEY:SECRET)». Eldre nøkler uten secret sendes som før.
+// Samme nøkkel som FinansHub → Aksjer (se t212Creds): nøkkel, secret og miljø fra én og samme kilde.
 export function t212Auth() {
-  const key = clean(cfg('t212_key')), secret = clean(cfg('t212_secret'));
+  const { key, secret, env } = t212Creds();
   if (!key) return null;
-  const env = cfg('t212_env') === 'demo' ? 'demo' : 'live';
-  return { base: `https://${env}.trading212.com`, env, headers: { Authorization: secret ? `Basic ${Buffer.from(`${key}:${secret}`).toString('base64')}` : key } };
+  return { base: `https://${env}.trading212.com`, env, headers: { Authorization: t212AuthHeader(key, secret) } };
 }
 
 async function t212Json(a, path) {

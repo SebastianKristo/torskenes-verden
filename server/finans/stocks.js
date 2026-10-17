@@ -18,7 +18,23 @@ export function cleanCred(v) {
 }
 // En lagret verdi som ikke kan dekrypteres skal ikke falle tilbake til en (gammel) nøkkel i .env – da blandes nøkkel og secret.
 const val = (k) => (secretSource(k) === 'undecryptable' ? '' : secret(k));
-const creds = () => ({ key: cleanCred(val('t212Key')), secret: cleanCred(val('t212Secret')) });
+// Én felles nøkkel for FinansHub (Aksjer) og Homelab-dashbordet. Nøkkel, secret og miljø tas alltid fra SAMME kilde,
+// slik at en ny nøkkel aldri blandes med en gammel secret (eller en gammel TRADING212_API_KEY i .env uten secret).
+// Rekkefølge: FinansHub-innstillingene → Homelab → Integrasjoner → .env.
+export function t212Creds() {
+  const hl = kv.get(OWNER, 'cfg', {});
+  const fhKey = cleanCred(val('t212Key')), fhSec = cleanCred(val('t212Secret'));
+  const hlKey = cleanCred(hl.t212_key), hlSec = cleanCred(hl.t212_secret);
+  const envKey = cleanCred(process.env.TRADING212_API_KEY), envSec = cleanCred(process.env.TRADING212_API_SECRET);
+  const envEnv = process.env.TRADING212_ENV === 'demo' ? 'demo' : 'live';
+  const src = [
+    fhKey && fhSec && { key: fhKey, secret: fhSec, env: settings().t212Env === 'demo' ? 'demo' : 'live', source: 'finans' },
+    hlKey && hlSec && { key: hlKey, secret: hlSec, env: hl.t212_env === 'demo' ? 'demo' : 'live', source: 'homelab' },
+    envKey && envSec && { key: envKey, secret: envSec, env: envEnv, source: 'env' },
+  ].find(Boolean);
+  return src ?? { key: fhKey || hlKey || envKey, secret: '', env: settings().t212Env === 'demo' ? 'demo' : 'live', source: 'incomplete' };
+}
+const creds = () => { const c = t212Creds(); return { key: c.key, secret: c.secret }; };
 export const t212Configured = () => { const c = creds(); return !!(c.key && c.secret); };
 
 // Authorization-headeren: Basic base64(KEY:SECRET) uten linjeskift. Eldre nøkler (uten secret) sendes rått.
@@ -47,7 +63,7 @@ async function request(path, { key, sec, env, style }) {
   return res;
 }
 async function call(path, c = null) {
-  const cr = c ?? { ...creds(), env: settings().t212Env };
+  const cr = c ?? (() => { const t = t212Creds(); return { key: t.key, secret: t.secret, env: t.env }; })();
   const auth = { key: cr.key, sec: cr.secret, env: cr.env };
   let style = kv.get(OWNER, 'fh_t212_auth', 'basic');
   let res = await request(path, { ...auth, style });
@@ -66,8 +82,10 @@ async function call(path, c = null) {
 // «Test tilkobling»: henter kontosammendraget med lagrede verdier, eller med verdier fra skjemaet før de lagres.
 // Ved 401 sjekkes også det andre miljøet, så brukeren får vite om nøkkelen hører til Demo i stedet for Live.
 export async function testT212({ key, secret: sec, env } = {}) {
-  const k = cleanCred(key) || creds().key, s = cleanCred(sec) || creds().secret;
-  const e = env === 'demo' || env === 'live' ? env : settings().t212Env;
+  // Ny nøkkel fra skjemaet uten ny secret: bruk lagret secret bare hvis den hører til samme nøkkel.
+  const stored = t212Creds(), fk = cleanCred(key), fs = cleanCred(sec);
+  const k = fk || stored.key, s = fs || (!fk || fk === stored.key ? stored.secret : '');
+  const e = env === 'demo' || env === 'live' ? env : (cleanCred(key) ? settings().t212Env : t212Creds().env);
   if (MOCK && !k) return { ok: true, env: e, currency: 'NOK', total: 0, message: 'Demodata (MOCK_DATA=1) – ingen ekte kall', mock: true };
   const broken = ['t212Key', 't212Secret'].filter((x) => secretSource(x) === 'undecryptable');
   if (broken.length && !cleanCred(key) && !cleanCred(sec)) return { ok: false, env: e, code: 'undecryptable', message: 'Lagret nøkkel/secret kan ikke dekrypteres fordi SECRET_KEY eller SESSION_SECRET er endret. Lim inn nøkkel-ID og secret på nytt.' };
