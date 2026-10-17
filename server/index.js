@@ -8,7 +8,7 @@ import { randomBytes } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { config } from './config.js';
 import { db, kv, OWNER } from './db.js';
-import { createSession, destroySession, sessionUser, rememberDevice, pauseDevice, forgetDevice, currentDeviceId, currentSessionId, trustIp, isLan, requireAuth, requireAdmin, clientIp, verifyLogin, createTicket, redeemTicket, userInfo, listUsers, createUser, deleteUser, updateUser, setPassword, checkPassword, isAdmin, startTotpSetup, confirmTotpSetup, disableTotp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
+import { createSession, destroySession, sessionUser, rememberDevice, pauseDevice, forgetDevice, currentDeviceId, currentSessionId, trustIp, isLan, requireAuth, requireAdmin, clientIp, verifyLogin, createTicket, redeemTicket, userInfo, listUsers, createUser, deleteUser, updateUser, setPassword, checkPassword, isAdmin, needsSetup, setupServer, serverName, setServerName, startTotpSetup, confirmTotpSetup, disableTotp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
 import * as integrations from './integrations.js';
 import { cfg, publicConfig, updateConfig } from './settings.js';
 import finansApi from './finans/routes.js';
@@ -17,6 +17,8 @@ import homeApi from './home.js';
 import { matApi, matCalendar, startMatScheduler } from './mat.js';
 import domainsApi from './domains.js';
 import uiApi from './ui.js';
+import mobileApi, { meOut, removeAvatar, shortcutsFor, layoutOf } from './mobile.js';
+import { revokeUserTokens } from './finans/routes.js';
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
 
 const api = process.env.MOCK_DATA === '1' ? await import('./mock.js') : integrations;
@@ -48,6 +50,7 @@ const page = (name) => readFile(join(PUBLIC, name), 'utf8');
 const html = (c, body) => c.html(body, 200, { 'Cache-Control': 'no-store' });
 
 app.get('/', async (c) => sessionUser(c) ? html(c, await page('app.html')) : c.redirect('/login'));
+// /login viser førstegangsoppsettet når det ikke finnes noen brukere (login.js spør /api/setup/status).
 app.get('/login', async (c) => sessionUser(c) ? c.redirect('/') : html(c, await page('login.html')));
 app.get('/cv', async (c) => html(c, await page('cv.html')));
 // FinansHub: egen fullskjerm-app (desktop og mobil/PWA). API-et har egen tilgangskontroll (sesjon eller token).
@@ -98,12 +101,27 @@ app.post('/api/auth/totp', async (c) => {
   return c.json({ ok: true, user: r.user });
 });
 
+/* ---------------- Førstegangsoppsett ---------------- */
+
+app.get('/api/setup/status', (c) => c.json({ needsSetup: needsSetup() }));
+app.post('/api/setup', async (c) => {
+  if (!needsSetup()) return c.json({ error: 'Serveren er allerede satt opp' }, 409);
+  const ip = clientIp(c), wait = loginBlocked(ip);
+  if (wait) return c.json({ error: `For mange forsøk. Prøv igjen om ${Math.ceil(wait / 60)} min.` }, 429);
+  const b = await c.req.json().catch(() => ({}));
+  try {
+    const u = setupServer(b);
+    finishLogin(c, u.id, b.remember !== false);
+    return c.json({ ok: true, user: meOut(u.id) });
+  } catch (e) { loginFailed(ip); return c.json({ error: e.message }, e.status ?? 400); }
+});
+
 app.post('/api/logout', (c) => { pauseDevice(c); destroySession(c); return c.json({ ok: true }); });
 
 /* ---------------- CV (offentlig lesing) ---------------- */
 
 export const CV_DEFAULT = {
-  name: 'Sebastian', title: 'Elev · IT og homelab-entusiast', email: 'navn@eksempel.no', phone: '+47 900 00 000', place: 'Oslo',
+  name: '', title: 'Elev · IT og homelab-entusiast', email: 'navn@eksempel.no', phone: '+47 900 00 000', place: 'Oslo',
   about: 'Elev med stor interesse for nettverk, servere og automatisering. Driver eget homelab med Proxmox, Home Assistant og Pi-hole.',
   work: '2025 – nå | Deltid, Komplett | Kundeservice og produktveiledning\n2024 | Sommerjobb, Oslo kommune | IT-support for skoler',
   edu: '2024 – nå | Videregående, studiespesialisering | Matematikk R2, Fysikk 2\n2021 – 2024 | Ungdomsskole | ',
@@ -111,7 +129,9 @@ export const CV_DEFAULT = {
 };
 const CV_KEYS = Object.keys(CV_DEFAULT);
 
-app.get('/api/cv', (c) => c.json({ cv: { ...CV_DEFAULT, ...kv.get(OWNER, 'cv', {}) }, canEdit: isAdmin(sessionUser(c)) }));
+// Navnet i CV-en er hovedadmins navn til det er endret i CV-en.
+const cvOf = () => { const cv = { ...CV_DEFAULT, ...kv.get(OWNER, 'cv', {}) }; if (!cv.name) cv.name = userInfo(OWNER)?.name ?? ''; return cv; };
+app.get('/api/cv', (c) => c.json({ cv: cvOf(), canEdit: isAdmin(sessionUser(c)) }));
 
 /* ---------------- Alt under er innlogget ---------------- */
 
@@ -123,9 +143,9 @@ authed.put('/cv', requireAdmin, async (c) => {
   const cv = {};
   for (const k of CV_KEYS) if (typeof body[k] === 'string') cv[k] = body[k].slice(0, 5000);
   kv.set(OWNER, 'cv', cv);
-  return c.json({ cv: { ...CV_DEFAULT, ...cv } });
+  return c.json({ cv: cvOf() });
 });
-authed.delete('/cv', requireAdmin, (c) => { kv.del(OWNER, 'cv'); return c.json({ cv: CV_DEFAULT }); });
+authed.delete('/cv', requireAdmin, (c) => { kv.del(OWNER, 'cv'); return c.json({ cv: cvOf() }); });
 
 const DEFAULT_CATS = [
   { name: 'Mat', color: '#8fe0b0' }, { name: 'Transport', color: '#a8d4fb' }, { name: 'Bolig', color: '#f3d38a' },
@@ -137,8 +157,11 @@ authed.get('/state', (c) => {
   const u = c.get('user');
   const layouts = Object.fromEntries(db.prepare("SELECT key, value FROM kv WHERE user=? AND key LIKE 'layout_%'").all(u).map((r) => [r.key.slice(7), JSON.parse(r.value)]));
   return c.json({
-    user: userInfo(u)?.name ?? config.userName,
-    me: userInfo(u),
+    user: userInfo(u)?.name ?? '',
+    me: meOut(u),
+    serverName: serverName(),
+    shortcuts: shortcutsFor(u),
+    layout: layoutOf(u).homelab ?? {},
     place: cfg('wx_place'),
     bg: kv.get(u, 'bg', 'mane'),
     bgCustom: kv.get(u, 'bg_custom', {}),
@@ -207,18 +230,28 @@ authed.put('/password', async (c) => {
 /* --- Brukere, 2FA og innstillinger per bruker --- */
 
 const fail = (c, e) => c.json({ error: e.message }, e.status ?? 400);
-authed.get('/me', (c) => c.json(userInfo(c.get('user'))));
 // Alle innloggede ser listen (brukes også til deling av mapper); bare admin kan endre den.
 authed.get('/users', (c) => c.json({ me: userInfo(c.get('user')), users: listUsers() }));
 authed.post('/users', requireAdmin, async (c) => {
   try { return c.json(createUser(await c.req.json().catch(() => ({})))); } catch (e) { return fail(c, e); }
 });
-authed.patch('/users/:id', requireAdmin, async (c) => {
+// Admin kan endre alle; andre kan bare endre sitt eget visningsnavn.
+authed.patch('/users/:id', async (c) => {
   const b = await c.req.json().catch(() => ({}));
-  try { return c.json(updateUser(c.req.param('id'), { role: b.role, password: b.password, name: b.name, resetTotp: !!b.resetTotp })); } catch (e) { return fail(c, e); }
+  const id = c.req.param('id'), self = id === c.get('user');
+  if (c.get('role') !== 'admin') {
+    if (!self || b.role !== undefined || b.password !== undefined || b.resetTotp) return c.json({ error: 'Du kan bare endre ditt eget navn' }, 403);
+  }
+  try { return c.json(updateUser(id, { role: b.role, password: b.password, name: b.displayName ?? b.name, resetTotp: !!b.resetTotp })); } catch (e) { return fail(c, e); }
+});
+authed.put('/server', requireAdmin, async (c) => {
+  try { return c.json({ serverName: setServerName((await c.req.json().catch(() => ({}))).name) }); } catch (e) { return fail(c, e); }
 });
 authed.delete('/users/:id', requireAdmin, (c) => {
-  try { deleteUser(c.req.param('id'), c.get('user')); return c.json({ ok: true }); } catch (e) { return fail(c, e); }
+  const id = c.req.param('id');
+  try { deleteUser(id, c.get('user')); } catch (e) { return fail(c, e); }
+  removeAvatar(id); revokeUserTokens(id);
+  return c.json({ ok: true });
 });
 authed.post('/auth/totp/setup', (c) => { try { return c.json(startTotpSetup(c.get('user'))); } catch (e) { return fail(c, e); } });
 authed.post('/auth/totp/verify', async (c) => {
@@ -416,6 +449,8 @@ authed.get('/space/gallery/:key', proxy((c) => {
 }));
 
 app.route('/api/ui', uiApi);
+// Profil, oppsett, søk, mobilforside og widgets: sesjon ELLER FinansHub-token (må stå før /api med requireAuth).
+app.route('/api', mobileApi);
 app.route('/api', authed);
 app.route('/home/api', homeApi);
 app.route('/mat/api', matApi);

@@ -37,6 +37,25 @@ export function loadDemo() {
       tx.run(acc.Kredittkort, day(-i, 21), -Math.round(rest * 0.25), 'Peppes Pizza', 'Peppes Pizza', cat('Restaurant og kafé'), Date.now());
       tx.run(acc.Kredittkort, day(-i, 24), -Math.round(rest * 0.2), 'XXL', 'XXL', cat('Fritid og hobby'), Date.now());
     }
+    // Bankrader slik de ser ut i en DNB-/Bank Norwegian-eksport (vises under «Original banktransaksjon»).
+    const accs = Object.fromEntries(q('SELECT id, name, bank FROM fh_accounts').all().map((x) => [x.id, x]));
+    const setRaw = q("UPDATE fh_transactions SET raw_bank_row=?, source='csv', external_id=? WHERE id=?");
+    const mmdd = (iso) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}`;
+    for (const t of q("SELECT * FROM fh_transactions WHERE source='manual'").all()) {
+      const a = accs[t.account_id];
+      if (!a || a.bank === 'Lommebok') continue;
+      const ref = String(80000000 + t.id * 7919).slice(0, 8);
+      const card = a.bank === 'Bank Norwegian';
+      const text = t.amount > 0 ? (/lønn/i.test(t.description) ? 'Lønn 36310 Arbeidsgiver AS' : `Overføring ${t.description}`)
+        : /overføring|nedbetaling/i.test(t.description) ? `Nettbank til: ${t.description}` : /husleie/i.test(t.description) ? 'Avtalegiro Husleie Bislett Eiendom'
+        : `${card ? 'Kortkjøp' : 'Visa 100021 Varekjøp'} ${t.description.toUpperCase()} Dato ${mmdd(t.date)} kl. ${String(9 + (t.id % 11)).padStart(2, '0')}.${String((t.id * 7) % 60).padStart(2, '0')}`;
+      const nb = (v) => (Math.abs(v) / 100).toFixed(2).replace('.', ',');
+      const raw = card ? { TransactionDate: t.date, Text: text, Type: t.amount < 0 ? 'Kjøp' : 'Innbetaling', 'Currency Amount': nb(t.amount), Amount: (t.amount < 0 ? '-' : '') + nb(t.amount) }
+        : { Dato: t.date.split('-').reverse().join('.'), Forklaring: text, Rentedato: t.date.split('-').reverse().join('.'), 'Ut fra konto': t.amount < 0 ? nb(t.amount) : '', 'Inn på konto': t.amount > 0 ? nb(t.amount) : '', Arkivref: ref };
+      for (const k of Object.keys(raw)) if (raw[k] === '') delete raw[k];
+      setRaw.run(JSON.stringify({ bookingDate: card ? t.date : raw.Dato, valueDate: card ? null : raw.Rentedato, description: text, amount: t.amount / 100, archiveReference: card ? null : ref,
+        raw, account: a.name, bank: a.bank, source: `CSV · ${a.bank}`, file: card ? 'transaksjoner.xlsx' : 'Kontoutskrift.csv', importedAt: Date.now() }), `demo:${t.id}`, t.id);
+    }
     const bud = q("INSERT OR REPLACE INTO fh_budgets(category_id,month,amount) VALUES(?, 'default', ?)");
     for (const [c, v] of Object.entries({ 'Mat og dagligvarer': 6000, 'Restaurant og kafé': 1800, 'Transport og lading': 1500, Bolig: 11000, Hjem: 1000, 'Fritid og hobby': 1500, Abonnementer: 750, Skole: 1000 })) bud.run(cat(c), v * 100);
     const rec = q('INSERT INTO fh_recurring(name,amount,interval,day,category_id,account_id) VALUES(?,?,?,?,?,?)');

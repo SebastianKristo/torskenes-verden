@@ -169,4 +169,26 @@ ICONS.mat = 'M7 3v8a2 2 0 0 0 2 2v8M5 3v6M9 3v6M17 21V3c-2 0-4 2-4 7v4h4';
 ICONS.close = 'M6 6l12 12M18 6L6 18';
 
 // Logoer som ikke finnes: vis forbokstaven (CSP stopper inline onerror).
-document.addEventListener('error', (e) => { const img = e.target; if (img?.tagName === 'IMG' && img.parentNode?.classList?.contains('m-logo')) { img.parentNode.classList.add('err'); img.remove(); } }, true);
+document.addEventListener('error', (e) => { const img = e.target; if (img?.tagName === 'IMG' && (img.parentNode?.classList?.contains('m-logo') || img.parentNode?.classList?.contains('hlic'))) { img.parentNode.classList.add('err'); img.remove(); } }, true);
+
+// Mobil (prompt 06): Homelab-fanen, Mer-siden, redigering og originaler.
+Object.assign(ICONS, {
+  hlhome: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z', fin: 'M4 19V5M4 19h16M8 15l4-4 3 3 5-6',
+  ai: 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z', mer: 'M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z',
+  aks: 'M3 17l6-6 4 4 8-8M15 7h6v6', imp: 'M12 3v12M7 10l5 5 5-5M4 21h16', edit: 'M4 20h4L19 9l-4-4L4 16zM14 6l4 4', trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
+  share: 'M12 3v13M7 8l5-5 5 5M5 14v6h14v-6', chev: 'M15 5l-7 7 7 7', clock: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2', bank: 'M3 10l9-6 9 6M5 10v8M19 10v8M9 10v8M15 10v8M3 20h18',
+  hist: 'M12 8v4l3 2M3.5 12a8.5 8.5 0 1 0 2.5-6M3 4v4h4', bus: 'M6 4h12a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM4 11h16M8 21l2-3M16 21l-2-3',
+  cat: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z', rule: 'M4 6h16M4 12h10M4 18h6', backup: 'M12 3c4.4 0 8 1.3 8 3s-3.6 3-8 3-8-1.3-8-3 3.6-3 8-3zM4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6',
+  kv2: 'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6', fast2: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 6v6l4 2', konto2: 'M3 7h18v12H3zM3 11h18M7 15h3',
+  sub2: 'M4 7h16v12H4zM8 3v4M16 3v4M4 11h16', dir2: 'M3 7l2-3h5l2 3h9v12H3zM3 7h18', finn2: 'M12 2l9 5-9 5-9-5zM3 12l9 5 9-5M3 17l9 5 9-5',
+});
+
+// Homelab-API-et (/api) brukes av mobilens Homelab-side. Gir null i stedet for å kaste ved 404 (eldre server).
+export async function hlApi(path, opts = {}) {
+  const init = { ...opts, headers: { ...(opts.headers ?? {}) } };
+  if (opts.json !== undefined) { init.body = JSON.stringify(opts.json); init.headers['Content-Type'] = 'application/json'; delete init.json; }
+  const res = await fetch('/api' + path, init);
+  const data = res.headers.get('content-type')?.includes('json') ? await res.json() : null;
+  if (!res.ok) { const e = new Error(data?.error || `Homelab svarte ${res.status}`); e.status = res.status; throw e; }
+  return data;
+}

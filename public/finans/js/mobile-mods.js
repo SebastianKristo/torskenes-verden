@@ -1,7 +1,7 @@
 // Moduler i mobilappen («Andre OS»): Matplan, Domener, Subscription OS, Delte mapper og Finn-handler.
 // Hver modul fyller hele skjermen og henter fra sitt eget API. Feiler API-et, vises en lenke til desktop-siden.
 import { api, esc, n0, n2, dd, dWeek, today, icon, logo, aiLine, matApi, domApi, parseAmount } from './core.js';
-import { m, draw, flash, avatar } from './mobile.js';
+import { m, draw, flash, avatar, backBtn } from './mobile.js';
 
 export const MODS = [
   ['mat', 'Matplan', 'Ukemeny, kokk og handleliste', 'mat'],
@@ -10,13 +10,15 @@ export const MODS = [
   ['dir', 'Delte mapper', 'Boliger og felles utgifter', 'dir'],
   ['finn', 'Finn-handler', 'Trygg betaling, Fiks ferdig, Tillit', 'finn'],
 ];
-const D = { mat: null, sub: null, dirs: null, dir: {}, finn: null, err: {} };
+const D = { mat: null, sub: null, dirs: null, dir: {}, finn: null, err: {}, users: null, subAdd: false, subF: { name: '', price: '', cycle: 'monthly', nextDate: '' }, dirAdd: false, dirF: { name: '', type: 'Hytte', address: '' } };
 const desk = { sub: 'sub', dir: 'dir', finn: 'finn', mat: null, dom: null };
 const isIos = (th) => th === 'ios';
 const gl = (th, c = 'glass2') => (isIos(th) ? c : '');
 
+// Subscription OS, Delte mapper og Finn-handler ligger under Finans → Mer og får en tilbakeknapp dit.
 function head(th, title, right = '') {
-  return `<div class="m-row" style="justify-content:space-between;padding:6px 4px 0;gap:10px"><div class="title m-ell">${esc(title)}</div><span class="m-row" style="gap:8px">${right}${avatar()}</span></div>`;
+  const back = ['sub', 'dir', 'finn'].includes(m.screen) && !m.sub ? `<div class="m-row">${backBtn(th, '#/mer', 'Tilbake til Mer')}</div>` : '';
+  return `${back}<div class="m-row" style="justify-content:space-between;padding:6px 4px 0;gap:10px"><div class="title m-ell">${esc(title)}</div><span class="m-row" style="gap:8px">${right}${avatar()}</span></div>`;
 }
 function failed(th, key, title) {
   const href = desk[key] ? `/finans/?desktop=1#/${desk[key]}` : key === 'mat' ? '/#/matplan' : '/#/domener';
@@ -34,7 +36,7 @@ export async function modLoad(key, sub) {
     if (key === 'mat') D.mat = await matApi('/week');
     else if (key === 'sub') D.sub = await api('/subscriptions');
     else if (key === 'finn') D.finn = await api('/finn');
-    else if (key === 'dir') { D.dirs = await api('/folders'); if (sub) D.dir[sub] = await api(`/folders/${encodeURIComponent(sub)}`); }
+    else if (key === 'dir') { D.dirs = await api('/folders'); if (sub) { D.dir[sub] = await api(`/folders/${encodeURIComponent(sub)}`); D.users ??= await api('/users').catch(() => []); } }
     else if (key === 'dom') await domLoad();
   } catch (e) { D.err[key] = `${MODS.find(([k]) => k === key)?.[1] ?? 'Modulen'} er ikke tilgjengelig: ${e.message}`; }
 }
@@ -71,8 +73,17 @@ function subs(th) {
   const s = D.sub;
   if (!s) return `${head(th, 'Subscription OS')}<div class="m-spin"></div>`;
   const items = s.items ?? [];
-  return `${head(th, 'Abonnementer')}
+  const f = D.subF, cyc = (k, n) => `<button class="chip" type="button" data-subcyc="${k}" aria-pressed="${f.cycle === k}">${n}</button>`;
+  const form = D.subAdd ? `${sec('Nytt abonnement')}<form class="${isIos(th) ? 'list glass2' : 'fields'}" data-subform>
+      <label class="field">${isIos(th) ? '<span>Tjeneste</span>' : 'Tjeneste'}<input name="name" id="m-sub-name" value="${esc(f.name)}" placeholder="f.eks. Disney+" required></label>
+      <label class="field">${isIos(th) ? '<span>kr per trekk</span>' : 'kr per trekk'}<input name="price" id="m-sub-price" value="${esc(f.price)}" inputmode="decimal" class="m-mono" placeholder="149" required></label>
+      <div class="opt-row col"><span style="font-size:13px;opacity:.7">Trekkes</span><div class="schips">${cyc('monthly', 'Månedlig')}${cyc('yearly', 'Årlig')}${cyc('biennial', 'Hvert 2. år')}</div></div>
+      <label class="field">${isIos(th) ? '<span>Neste trekk</span>' : 'Neste trekk'}<input name="nextDate" id="m-sub-next" value="${esc(f.nextDate)}" placeholder="dd.mm"></label>
+      <div style="padding:${isIos(th) ? '10px 12px' : '0'};display:flex;gap:8px"><button class="pri-b" type="submit" style="flex:1">Legg til</button><button class="sec-b" type="button" data-subadd="0" style="flex:1">Avbryt</button></div></form>
+      <div class="snote">2-årige abonnementer regnes om: 1 200 kr hvert 2. år blir 50 kr/mnd og 600 kr/år.</div>` : '';
+  return `${head(th, 'Abonnementer', D.subAdd ? '' : '<button class="tonal" data-subadd="1">+ Nytt</button>')}
     ${kpis(th, [['Per måned', `${n0(s.monthly ?? 0)} kr`], ['Per år', `${n0(s.yearly ?? 0)} kr`], ['Lite brukt', `${n0(s.lowUse ?? 0)} kr`, true]])}
+    ${form}
     ${listBox(th, items.map((x) => {
       const [cl, per] = CYCLE[x.cycle] ?? CYCLE.monthly;
       const st = !x.active ? ['Sagt opp', 'off'] : x.lowUse ? ['Si opp', 'warn'] : ['Aktiv', 'ok'];
@@ -80,7 +91,7 @@ function subs(th) {
         <span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(x.name)}${x.plan ? ` <span style="opacity:.6;font-weight:400">· ${esc(x.plan)}</span>` : ''}</span>${aiLine(x.aiShort, 'm-ell ai')}<span class="m-ell s">${cl}${x.nextDate ? ` · neste ${dd(x.nextDate)}` : ''}${x.usageNote ? ` · ${esc(x.usageNote)}` : ''}</span></span>
         <span style="display:flex;flex-direction:column;align-items:flex-end;gap:6px"><span class="m-mono" style="font-weight:600">${n0(x.price)} kr<small style="opacity:.6">${per}</small></span><button class="stchip ${st[1]}" data-subtog="${x.id}" aria-label="${x.active ? 'Si opp' : 'Gjenoppta'} ${esc(x.name)}">${st[0]}</button></span></div>`;
     }).join('') || '<div class="m-empty">Ingen abonnementer ennå. Legg dem til på en større skjerm, eller fra en kvittering.</div>')}
-    <div style="font-size:12px;opacity:.55;text-align:center;padding:4px 10px">Trykk på status for å si opp eller gjenoppta. Nye abonnementer legges til i FinansHub på PC.</div>`;
+    <div style="font-size:12px;opacity:.55;text-align:center;padding:4px 10px">Trykk på status for å si opp eller gjenoppta.</div>`;
 }
 
 /* ---------- Delte mapper (boliger) ---------- */
@@ -89,15 +100,23 @@ const ROLE = { owner: 'Eier', editor: 'Kan redigere', edit: 'Kan redigere', view
 function folders(th) {
   const list = D.dirs;
   if (!list) return `${head(th, 'Delte mapper')}<div class="m-spin"></div>`;
-  return `${head(th, 'Delte mapper')}
+  const f = D.dirF;
+  const form = D.dirAdd ? `${sec('Ny bolig eller delt mappe')}<form class="${isIos(th) ? 'list glass2' : 'fields'}" data-dirnew>
+      <label class="field">${isIos(th) ? '<span>Navn</span>' : 'Navn'}<input name="name" value="${esc(f.name)}" placeholder="f.eks. Hytta Geilo" required></label>
+      <div class="opt-row col"><span style="font-size:13px;opacity:.7">Type</span><div class="schips">${['Enebolig', 'Leilighet', 'Hytte', 'Utleie', 'Annet'].map((t) => `<button class="chip" type="button" data-dirtype="${t}" aria-pressed="${f.type === t}">${t}</button>`).join('')}</div></div>
+      <label class="field">${isIos(th) ? '<span>Adresse</span>' : 'Adresse'}<input name="address" value="${esc(f.address)}" placeholder="Valgfritt"></label>
+      <div style="padding:${isIos(th) ? '10px 12px' : '0'};display:flex;gap:8px"><button class="pri-b" type="submit" style="flex:1">Opprett</button><button class="sec-b" type="button" data-diradd="0" style="flex:1">Avbryt</button></div></form>
+      <div class="snote">Del mappen med andre brukere etterpå. Nye brukere legges til av admin i Homelab → Innstillinger → Innlogging.</div>` : '';
+  return `${head(th, 'Delte mapper', D.dirAdd ? '' : '<button class="tonal" data-diradd="1">+ Ny</button>')}
+    <div style="font-size:14px;opacity:.7;padding:0 4px;margin-top:-6px">Utgifter til bolig, hytte og utleie</div>${form}
     ${list.length ? list.map((f) => `<a class="fold ${gl(th, 'glass')}" href="#/dir/${f.id}"><span class="fold-ic">${icon('dir', 22)}</span><span class="m-grow"><b class="m-ell" style="font-weight:600">${esc(f.name)}</b><span class="m-ell s">${[f.type, f.address].filter(Boolean).map(esc).join(' · ') || `${(f.members ?? []).length} medlemmer`}</span></span><span class="m-mono" style="font-weight:600">${n0(f.total ?? 0)} kr</span></a>`).join('') : '<div class="m-empty">Ingen delte mapper ennå. Opprett en bolig eller mappe i FinansHub på PC.</div>'}`;
 }
 function folder(th, id) {
   const f = D.dir[id];
   if (!f) return `${head(th, 'Delte mapper')}<div class="m-spin"></div>`;
-  const back = isIos(th) ? '<a class="back" href="#/dir">‹ Delte mapper</a>' : '<a class="back" href="#/dir" aria-label="Tilbake">←</a>';
+  const back = backBtn(th, '#/dir', 'Tilbake til Delte mapper');
   const role = f.myRole ?? f.role;
-  const ro = role === 'viewer' || role === 'view';
+  const ro = f.canEdit === false || ['viewer', 'view', 'Kan se'].includes(role);
   const members = f.members ?? [];
   const bal = f.balances ?? [];
   const projects = f.projects ?? [], bills = f.bills ?? [];
@@ -105,7 +124,7 @@ function folder(th, id) {
     <div style="font-size:14px;opacity:.7;padding:0 4px">${[f.type, f.address, `${members.length} medlemmer`].filter(Boolean).map(esc).join(' · ')}</div>
     ${kpis(th, [['Totalt', `${n0(f.total ?? 0)} kr`], ['Poster', String(f.count ?? (f.entries ?? []).length)], ...(projects.length ? [['Prosjekter', String(projects.length)]] : [])])}
     ${bal.length ? `${sec('Saldo')}<div class="bchips" style="padding:0 2px">${bal.map((b) => `<em class="${b.balance >= 0 ? 'pos' : 'negb'}">${esc(b.name)} ${b.balance >= 0 ? '+' : '−'}${n0(Math.abs(b.balance))} kr</em>`).join('')}</div>` : ''}
-    ${projects.length ? `${sec('Prosjekter')}${listBox(th, projects.map((p) => { const used = p.used ?? p.paid ?? 0, bud = p.budget ?? 0; return `<div class="opt-row" style="flex-direction:column;align-items:stretch;gap:8px"><span class="m-row" style="justify-content:space-between"><b style="font-weight:500">${esc(p.name)}</b><span class="m-mono">${n0(used)} / ${n0(bud)} kr</span></span>${p.vendor ? `<span class="s" style="opacity:.65;font-size:13px">${esc(p.vendor)}</span>` : ''}<span class="m-bar" style="height:6px;background:rgba(255,255,255,.12)"><i style="width:${bud ? Math.min(100, (used / bud) * 100) : 0}%;background:var(--m-acc)"></i></span></div>`; }).join(''))}` : ''}
+    ${projects.length ? `${sec('Prosjekter')}${listBox(th, projects.map((p) => { const used = p.used ?? p.paid ?? 0, bud = p.budget ?? 0; return `<div class="opt-row" style="flex-direction:column;align-items:stretch;gap:8px"><span class="m-row" style="justify-content:space-between"><b style="font-weight:500">${esc(p.name)}</b><span class="m-mono">${n0(used)} / ${n0(bud)} kr</span></span>${p.vendor ? `<span class="s" style="opacity:.65;font-size:13px">${esc(p.vendor)}</span>` : ''}<span class="m-bar" style="height:6px;background:rgba(255,255,255,.12)"><i style="width:${bud ? Math.min(100, (used / bud) * 100) : 0}%;background:var(--m-acc)"></i></span><span style="font-size:12.5px;opacity:.65">${used >= bud && bud ? 'Betalt ✓' : `${n0(Math.max(0, bud - used))} kr igjen`}</span>${(p.installments ?? []).map((i) => `<span class="m-row" style="justify-content:space-between;gap:8px;font-size:13.5px"><span class="m-ell">${esc(i.label ?? 'Avdrag')}${i.due ? ` · ${dd(i.due)}` : ''}</span><span class="m-row" style="gap:8px"><span class="m-mono">${n0(i.amount)} kr</span>${i.paid ? '<em class="stchip ok" style="cursor:default">Betalt</em>' : ro ? '<em class="stchip warn" style="cursor:default">Forfaller</em>' : `<button class="stchip warn" data-dirpay="${i.id}">Registrer betalt</button>`}</span></span>`).join('')}</div>`; }).join(''))}` : ''}
     ${bills.length ? `${sec('Faste regninger')}${listBox(th, bills.map((b) => `<div class="opt-row"><span class="m-grow"><b style="font-weight:500">${esc(b.name)}</b><br><span style="font-size:13px;opacity:.65">${[b.freq ?? b.frequency, b.payer ? `betales av ${b.payer}` : ''].filter(Boolean).map(esc).join(' · ')}</span></span><span class="m-mono" style="opacity:.8">${b.nextDue ?? b.next_due ? `neste ${dd(b.nextDue ?? b.next_due)}` : ''}</span></div>`).join(''))}` : ''}
     ${sec('Utgifter')}
     ${listBox(th, (f.entries ?? []).map((e) => `<div class="item">${logo(e, 40, isIos(th) ? 20 : 12)}<span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(e.description)}</span>${aiLine(e.aiShort, 'm-ell ai')}<span class="m-ell s">${dd(e.date)}${e.paidBy ? ` · betalt av ${esc(e.paidBy)}` : ''}${e.split ? ` · ${esc(e.split)}` : ''}</span></span><span class="m-mono" style="font-weight:600">${n2(e.amount)}</span></div>`).join('') || '<div class="m-empty">Ingen utgifter ennå.</div>')}
@@ -116,7 +135,16 @@ function folder(th, id) {
       <label class="field">${isIos(th) ? '<span>Betalt av</span>' : 'Betalt av'}<select name="paidBy">${members.map((x) => `<option>${esc(x.name ?? x.username)}</option>`).join('')}</select></label>
       <div style="padding:${isIos(th) ? '10px 12px' : '0'}"><button class="pri-b" type="submit" style="width:100%;height:50px">Legg til</button></div>
     </form>`}
-    ${members.length ? `${sec('Medlemmer')}${listBox(th, members.map((x) => `<div class="opt-row"><span class="m-av" style="width:34px;height:34px;font-size:14px">${esc((x.name ?? x.username ?? '?').slice(0, 1).toUpperCase())}</span><span class="m-grow">${esc(x.name ?? x.username)}${x.status === 'invited' ? ' <span style="opacity:.6">(invitert)</span>' : ''}</span><span style="opacity:.7;font-size:13px">${ROLE[x.role] ?? esc(x.role ?? '')}</span></div>`).join(''))}` : ''}`;
+    ${sharing(th, f)}`;
+}
+// Deling: eier bytter rolle (Kan se ↔ Kan redigere ↔ Eier) og deler med andre brukere; medlemmer kan forlate mappen.
+function sharing(th, f) {
+  const members = f.members ?? [], owner = f.isOwner ?? (f.myRole === 'Eier' || f.role === 'owner'), me = members.find((x) => x.you);
+  const others = (D.users ?? []).filter((u) => !members.some((x) => x.userId === u.id));
+  return `${sec('Deling')}${listBox(th, members.map((x) => `<div class="opt-row"><span class="m-av" style="width:34px;height:34px;font-size:14px">${esc((x.name ?? x.username ?? '?').slice(0, 1).toUpperCase())}</span><span class="m-grow">${esc(x.name ?? x.username)}${x.you ? ' <span style="opacity:.6">(deg)</span>' : ''}${x.login === false ? '<br><span style="font-size:12px;opacity:.55">Uten innlogging</span>' : ''}</span>${owner && !x.you ? `<button class="stchip ok" data-dirrole="${x.id}" data-r="${x.role}">${esc(x.roleName ?? ROLE[x.role] ?? x.role)}</button>` : `<span style="opacity:.7;font-size:13px">${esc(x.roleName ?? ROLE[x.role] ?? x.role ?? '')}</span>`}</div>`).join('')
+    + (owner && others.length ? `<div class="opt-row col"><span style="font-size:13px;opacity:.7">Del med</span><div class="schips">${others.map((u) => `<button class="chip" data-dirshare="${esc(u.id)}">${esc(u.name ?? u.username)}</button>`).join('')}</div></div>` : ''))}
+    <div class="snote">${owner ? 'Trykk på rollen for å bytte mellom Kan se, Kan redigere og Eier. Nye brukere legges til av admin i Homelab.' : 'Bare eiere kan endre deling.'}</div>
+    ${me && !owner ? `<button class="sec-b danger wide" data-dirleave="${me.id}">Forlat mappen</button>` : ''}`;
 }
 
 /* ---------- Finn-handler ---------- */
@@ -246,7 +274,37 @@ export async function modBind(e, t) {
     D.dir[x.dataset.dirform] = await api(`/folders/${encodeURIComponent(x.dataset.dirform)}/entries`, { method: 'POST', json: { description: v.description.trim(), amount, paidBy: v.paidBy, date: today() } });
     flash('Lagt til i mappen'); return true;
   }
+  if (e.type === 'input') {
+    if (t.id === 'm-sub-name') D.subF.name = t.value; else if (t.id === 'm-sub-price') D.subF.price = t.value; else if (t.id === 'm-sub-next') D.subF.nextDate = t.value;
+    else if (d('[data-dirnew]') && t.name) D.dirF[t.name] = t.value; else return false;
+    return true;
+  }
+  if (e.type === 'submit' && (x = d('[data-subform]'))) {
+    e.preventDefault();
+    const f = D.subF, price = parseAmount(f.price);
+    if (!f.name.trim() || !price) { flash('Skriv tjeneste og beløp'); return true; }
+    await api('/subscriptions', { method: 'POST', json: { name: f.name.trim(), price, cycle: f.cycle, nextDate: f.nextDate || null } });
+    D.subAdd = false; D.subF = { name: '', price: '', cycle: 'monthly', nextDate: '' };
+    await modLoad('sub'); flash(`${f.name.trim()} lagt til`); return true;
+  }
+  if (e.type === 'submit' && (x = d('[data-dirnew]'))) {
+    e.preventDefault();
+    const f = D.dirF;
+    if (!f.name.trim()) { flash('Gi mappen et navn'); return true; }
+    const r = await api('/folders', { method: 'POST', json: { name: f.name.trim(), type: f.type, address: f.address } });
+    D.dirAdd = false; D.dirF = { name: '', type: 'Hytte', address: '' };
+    flash(`${r.name} opprettet`); location.hash = `#/dir/${r.id}`; return true;
+  }
   if (e.type !== 'click') return false;
+  const fid = m.sub;
+  if ((x = d('[data-subadd]'))) { D.subAdd = x.dataset.subadd === '1'; draw(); return true; }
+  if ((x = d('[data-subcyc]'))) { D.subF.cycle = x.dataset.subcyc; draw(); return true; }
+  if ((x = d('[data-diradd]'))) { D.dirAdd = x.dataset.diradd === '1'; draw(); return true; }
+  if ((x = d('[data-dirtype]'))) { D.dirF.type = x.dataset.dirtype; draw(); return true; }
+  if ((x = d('[data-dirrole]'))) { const nx = { viewer: 'editor', editor: 'owner', owner: 'viewer' }[x.dataset.r] ?? 'viewer'; D.dir[fid] = await api(`/folders/${fid}/members/${x.dataset.dirrole}`, { method: 'PATCH', json: { role: nx } }); draw(); return true; }
+  if ((x = d('[data-dirshare]'))) { D.dir[fid] = await api(`/folders/${fid}/members`, { method: 'POST', json: { userId: x.dataset.dirshare, role: 'viewer' } }); flash('Delt · kan se'); return true; }
+  if ((x = d('[data-dirleave]'))) { if (!confirm('Forlate mappen? Du mister tilgangen til den.')) return true; await api(`/folders/${fid}/members/${x.dataset.dirleave}`, { method: 'DELETE' }); flash('Du forlot mappen'); location.hash = '#/dir'; return true; }
+  if ((x = d('[data-dirpay]'))) { D.dir[fid] = await api(`/folders/${fid}/installments/${x.dataset.dirpay}/pay`, { method: 'POST' }).then((r) => (r?.members ? r : api(`/folders/${fid}`))); flash('Registrert som betalt'); return true; }
   if ((x = d('[data-shop]'))) { await matApi(`/shopping/${encodeURIComponent(x.dataset.shop)}/toggle`, { method: 'POST' }); await modLoad('mat'); draw(); return true; }
   if ((x = d('[data-mat]'))) { const day = x.dataset.mat === 'day'; flash(day ? 'Gemini foreslår en ny rett …' : 'Gemini lager ukeplan …'); await matApi('/plan', { method: 'POST', json: day ? { scope: 'day', date: x.dataset.date } : { scope: 'week', date: D.mat?.start ?? today() } }); await modLoad('mat'); flash('Matplan oppdatert'); return true; }
   if ((x = d('[data-subtog]'))) {

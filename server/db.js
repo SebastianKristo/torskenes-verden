@@ -72,6 +72,9 @@ CREATE TABLE IF NOT EXISTS tests (
 );
 `);
 
+// Prompt 06: hovedadmin (første bruker / eieren). Visningsnavnet ligger i users.name (display name).
+if (!db.prepare("SELECT 1 FROM pragma_table_info('users') WHERE name='is_main_admin'").get()) db.exec('ALTER TABLE users ADD COLUMN is_main_admin INTEGER NOT NULL DEFAULT 0');
+
 // CV er offentlig og har én eier.
 export const OWNER = 'owner';
 

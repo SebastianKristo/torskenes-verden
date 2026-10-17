@@ -1,9 +1,10 @@
 // Innstillinger i mobilappen: hovedside med gruppene Konto, App og System, og én underside per gruppe.
 // Valg som bare gjelder denne enheten lagres i localStorage (fh_mprefs); AI og varsler for kvitteringer/budsjett på serveren.
-import { S, api, esc, n0, ini, icon, loadBoot, loadSummary } from './core.js';
-import { m, draw, flash, pref, setPref, theme, iosBg, isIOS, meName } from './mobile.js';
+import { S, api, esc, n0, ini, icon, loadBoot, loadSummary, hlApi } from './core.js';
+import { m, draw, flash, pref, setPref, theme, iosBg, isIOS, meName, avInner, avatarUrl, loadMe } from './mobile.js';
+import { SEEDS, MODES } from './mobile-theme.js';
 
-const T = { tokens: null, devices: null, newTok: '', nt: { name: '', scopes: ['receipts:write'], exp: '90' }, ping: '', lastSync: null, usage: null };
+const T = { f: {}, ai: null, bk: null, srch: null, tokens: null, devices: null, newTok: '', nt: { name: '', scopes: ['receipts:write'], exp: '90' }, ping: '', lastSync: null, usage: null };
 const SCOPES = ['receipts:write', 'read:transactions', 'read:summary', 'read:budget', 'write:transactions', 'finance:read'];
 const VERSION = '2.5.0';
 
@@ -12,6 +13,9 @@ export async function settingsLoad(sub) {
   if (!sub || sub === 'tok') jobs.push(api('/tokens').then((x) => { T.tokens = x; }).catch(() => { T.tokens = T.tokens ?? []; }));
   if (sub === 'sik') jobs.push(fetch('/api/devices').then((r) => (r.ok ? r.json() : null)).then((x) => { T.devices = x; }).catch(() => { T.devices = null; }));
   if (sub === 'data') jobs.push(navigator.storage?.estimate?.().then((x) => { T.usage = x.usage; }).catch(() => {}));
+  if (sub === 'bk') jobs.push(api('/backup').then((x) => { T.bk = x; }).catch(() => { T.bk = null; }));
+  if (sub === 'sokbar') jobs.push(hlApi('/search/history').then((x) => { T.srch = { suggest: x?.suggest !== false, save: x?.save !== false, n: (x?.items ?? []).length }; }).catch(() => { T.srch = null; }));
+  if (['fai', 'kat', 'regel', 'bank', 't212'].includes(sub)) jobs.push(loadBoot().catch(() => {}));
   await Promise.all(jobs);
   T.lastSync ??= new Date();
 }
@@ -25,21 +29,22 @@ const tog = (id, label, sub, on) => `<button class="opt-row" data-stog="${id}" r
 const chips = (id, label, opts, cur, multi = false) => `<div class="opt-row col"><span style="font-size:13px;opacity:.7">${label}</span><div class="schips">${opts.map(([k, n]) => { const on = multi ? cur.includes(k) : cur === k; return `<button class="chip" data-schip="${id}" data-v="${esc(k)}" aria-pressed="${on}">${on && !multi ? '✓ ' : ''}${esc(n)}</button>`; }).join('')}</div></div>`;
 const val = (label, v, color = '') => `<div class="opt-row"><span class="m-grow">${label}</span><span class="sval" style="${color ? `color:${color};opacity:1` : ''}">${v}</span></div>`;
 const btn = (label, act, color = 'var(--m-acc)') => `<button class="opt-row" data-sact="${act}"><span class="m-grow" style="color:${color};font-weight:500">${label}</span></button>`;
+const inp = (k, label, v, ph = '', type = 'text') => `<label class="opt-row col"><span style="font-size:13px;opacity:.7">${esc(label)}</span><input class="sinp" id="m-s-${k}" data-sinp="${k}" type="${type}" value="${esc(v ?? '')}" placeholder="${esc(ph)}" autocomplete="off" autocapitalize="off"></label>`;
 const link = (label, href, sub = '') => `<a class="opt-row" href="${href}"><span class="m-grow">${label}${sub ? `<br><span style="font-size:13px;opacity:.65">${sub}</span>` : ''}</span><span style="opacity:.5">›</span></a>`;
 
 function profile(big = false) {
   const me = m.me ?? {};
   const sz = big ? 58 : 44;
-  return `<a class="opt-row" href="#/set/konto"><span class="m-av" style="width:${sz}px;height:${sz}px;font-size:${big ? 22 : 17}px">${esc(ini(meName()))}</span><span class="m-grow"><b style="font-size:${big ? 19 : 16}px;font-weight:600">${esc(meName())}</b><br><span style="font-size:13px;opacity:.65">${me.username ? `@${esc(me.username)}` : 'FinansHub'}${me.role ? ` · ${esc(me.role)}` : ''} · ${esc(location.host)}</span></span><span style="opacity:.5">›</span></a>`;
+  return `<a class="opt-row" href="#/set/konto"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:${sz}px;height:${sz}px;font-size:${big ? 22 : 17}px">${avInner()}</span><span class="m-grow"><b style="font-size:${big ? 19 : 16}px;font-weight:600">${esc(meName())}</b><br><span style="font-size:13px;opacity:.65">${me.username ? `@${esc(me.username)}` : 'FinansHub'}${me.role ? ` · ${esc(me.role)}` : ''} · ${esc(me.serverName || location.host)}</span></span><span style="opacity:.5">›</span></a>`;
 }
-const PAGES = { konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', scan: 'Skanning og AI', notif: 'Varsler', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub' };
+const PAGES = { konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', scan: 'Skanning og AI', notif: 'Varsler', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI-motor', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data' };
 const when = (t) => (t ? new Date(t).toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'aldri');
 const aiMode = () => { const st = S.boot?.settings ?? {}; return st.provider === 'gemini' ? 'gemini' : st.fallback ? 'both' : 'ollama'; };
 
 export function settingsView(th, sub) {
   const page = PAGES[sub] ? sub : '';
   const head = page
-    ? `${th === 'ios' ? '<a class="back pillback glass2" href="#/set">‹ Innstillinger</a>' : '<div class="m-row"><a class="back" href="#/set" aria-label="Tilbake">←</a></div>'}<div class="title" style="font-size:${th === 'ios' ? 30 : 32}px">${PAGES[page]}</div>`
+    ? `<div class="m-row">${th === 'ios' ? `<a class="gback" href="#/set" aria-label="Tilbake til Innstillinger">${icon('chev', 20, 'currentColor', 2.6)}</a>` : '<a class="back" href="#/set" aria-label="Tilbake til Innstillinger">←</a>'}</div><div class="title" style="font-size:${th === 'ios' ? 30 : 32}px">${PAGES[page]}</div>`
     : `<div class="title" style="padding:6px 4px 0">Innstillinger</div>`;
   return `${head}${page ? PAGE[page](th) : main(th)}`;
 }
@@ -48,13 +53,15 @@ function main() {
   const st = S.boot?.settings ?? {};
   return `${G('', [profile(true)])}
     ${G('Konto', [nav('konto', 'Kontoer og brukere', '1 på enheten', 'users', '#5E8BFF'), nav('sik', 'Sikkerhet', m.me?.totp ? '2FA på' : '', 'shield', '#34C759'), nav('tok', 'API-tokens', T.tokens ? `${T.tokens.length} aktive` : '', 'key', '#FF9F0A')])}
-    ${G('App', [nav('look', 'Utseende', '', 'look', '#BF5AF2'), nav('scan', 'Skanning og AI', pref('scanTap') === 'cam' ? 'Kamera' : 'Vis valg', 'cam', '#FF7A3D'), nav('notif', 'Varsler', st.nRc ? 'På' : '', 'bell', '#FF453A')])}
+    ${G('App', [nav('look', 'Utseende', '', 'look', '#BF5AF2'), nav('scan', 'Skanning og AI', pref('scanTap') === 'cam' ? 'Kamera' : 'Vis valg', 'cam', '#FF7A3D'), nav('notif', 'Varsler', st.nRc ? 'På' : '', 'bell', '#FF453A'), nav('sokbar', 'Søkebar', 'Google', 'search', '#0A84FF')])}
+    ${S.boot?.restricted ? '' : G('Finans', [nav('fai', 'AI-motor', st.provider === 'gemini' ? 'Gemini' : st.fallback ? 'Ollama + Gemini' : 'Ollama', 'ai', '#FF7A3D'), nav('kat', 'Kategorier', String((S.boot?.categories ?? []).length), 'cat', '#30D158'), nav('regel', 'Regler', String((S.boot?.rules ?? []).length), 'rule', '#5E5CE6'), nav('bank', 'Bank og import', st.csvProfile ?? '', 'bank', '#0A84FF'), nav('t212', 'Aksjer · Trading 212', st.t212Set ? (st.t212Env === 'demo' ? 'Demo' : 'Live') : 'Ikke koblet', 'aks', '#64D2FF'), nav('bk', 'Backup og data', '', 'backup', '#8E8E93')])}
     ${G('System', [nav('srv', 'Server og synk', '', 'srv', '#64D2FF'), nav('data', 'Data og lagring', '', 'db', '#8E8E93'), nav('om', 'Om FinansHub', VERSION, 'info', '#8E8E93')])}
     ${G('', [btn(`Logg ut ${esc(meName())}`, 'logout', '#FF8A80')])}`;
 }
 
 const PAGE = {
-  konto: () => `${G('På denne enheten', [profile(), val('Status', '✓ Aktiv', '#7BE3A0')],
+  konto: () => `${G('Profilbilde', [`<label class="opt-row"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:44px;height:44px">${avInner()}</span><span class="m-grow" style="color:var(--m-acc);font-weight:500">${avatarUrl() ? 'Bytt profilbilde' : 'Last opp profilbilde'}</span><input class="m-file" type="file" accept="image/*" data-avatar></label>`, avatarUrl() ? btn('Fjern bildet', 'avdel', '#FF8A80') : ''], 'Velg fra Bilder, Filer eller ta et nytt bilde. Samme bilde vises i Homelab.')}
+    ${G('På denne enheten', [profile(), val('Status', '✓ Aktiv', '#7BE3A0')],
     'Nettappen er logget inn med én konto om gangen. Flere kontoer i samme app, og raskt bytte ved å holde inne profilbildet, finnes i iOS- og Android-appene.')}
     ${G('Brukere', [link('Administrer brukere', '/', 'Homelab → Innstillinger → Innlogging')], 'Nye brukere opprettes av admin i Homelab. Hver bruker har egne tokens og varsler.')}
     ${G('', [btn('Logg ut', 'logout', '#FF8A80')])}`,
@@ -85,8 +92,10 @@ const PAGE = {
   look: (th) => {
     const cur = (() => { try { return localStorage.getItem('fh_theme') || 'auto'; } catch { return 'auto'; } })();
     return `${th === 'ios' ? G('Bakgrunn', [tog('iosbg', 'Fargebakgrunn', 'Fargede lysflekker bak glassflatene', iosBg())]) : ''}
+      ${th === 'and' ? `${G('Farger', [chips('m3Seed', 'Fargetema', Object.entries(SEEDS).map(([k, [n]]) => [k, n]), pref('m3Seed'))], '«Følg systemet» bruker Material You-fargen fra telefonen når nettleseren gir tilgang til den (Android 12 og nyere), ellers oransje. Velg en farge for å overstyre.')}
+      ${G('Modus', [chips('m3Mode', 'Lys eller mørk', Object.entries(MODES), pref('m3Mode'))])}` : ''}
       ${G('Tema', [chips('theme', 'Utseende', [['auto', `Automatisk (${isIOS() ? 'iOS' : 'Android'})`], ['ios', 'iOS · Liquid Glass'], ['and', 'Android · Material 3']], cur)])}
-      ${G('Oppstart', [chips('start', 'Startside', [['hjem', 'Hjem'], ['liste', 'Liste'], ['budsjett', 'Budsjett']], pref('start'))])}
+      ${G('Oppstart', [chips('start', 'Startside', [['hl', 'Homelab'], ['hjem', 'Oversikt'], ['liste', 'Liste'], ['budsjett', 'Budsjett']], pref('start'))])}
       ${G('Personvern', [tog('hideAmt', 'Skjul beløp til jeg trykker', 'Viser •••• i stedet for tall på Hjem', pref('hideAmt'))])}`;
   },
 
@@ -109,6 +118,46 @@ const PAGE = {
     ${G('Synk', [btn('Synk nå', 'sync'), `<a class="opt-row" href="/finans/api/transactions.csv" download><span class="m-grow" style="color:var(--m-acc);font-weight:500">Eksporter som CSV</span></a>`],
       'Full backup og Excel-database lages i FinansHub på PC under Innstillinger → Backup og data.')}`,
 
+  sokbar: () => {
+    const x = T.srch;
+    return `${x ? G('Google-søk', [tog('srch:suggest', 'Vis forslag fra Google mens du skriver', '', x.suggest), tog('srch:save', 'Lagre søkehistorikk', `${x.n} søk lagret · deles med Homelab på PC`, x.save)]) : G('', [val('Søkebar', 'Krever nyere server')])}
+      ${G('Historikk', [`<label class="opt-row"><span class="m-grow" style="color:var(--m-acc);font-weight:500">Importer Google-historikk (.json)<br><span style="font-size:12.5px;opacity:.65;color:inherit">Google Takeout → Mine aktiviteter → Søk</span></span><input class="m-file" type="file" accept=".json,application/json" data-takeout></label>`, btn('Tøm søkehistorikk', 'srchclear', '#FF8A80')],
+        'Google gir ikke tilgang til søkehistorikken din via API. Last ned den fra Google Takeout og importer filen her.')}`;
+  },
+  fai: () => {
+    const st = S.boot?.settings ?? {}, f = T.f;
+    return `${G('Motor', [chips('ai', 'Leses av', [['ollama', 'Ollama lokalt'], ['gemini', 'Gemini'], ['both', 'Ollama + Gemini']], aiMode()), chips('minConf', 'Minste sikkerhet', [['75', '0,75'], ['85', '0,85'], ['95', '0,95']], String(st.minConf ?? 85))], 'Under minste sikkerhet markeres kvitteringen «Sjekk beløp».')}
+      ${G('Ollama', [inp('ollamaUrl', 'Adresse', f.ollamaUrl ?? st.ollamaUrl, 'http://192.168.1.40:11434', 'url'), inp('ollamaModel', 'Modell', f.ollamaModel ?? st.ollamaModel, 'qwen2.5vl:7b')])}
+      ${G('Gemini', [inp('geminiModel', 'Modell', f.geminiModel ?? st.geminiModel, 'gemini-2.5-flash'), inp('geminiKey', st.geminiKeySet ? 'API-nøkkel (lagret – skriv for å bytte)' : 'API-nøkkel', f.geminiKey ?? '', '••••••••', 'password')])}
+      ${G('', [btn('Lagre', 'aisave'), btn('Test motor', 'aitest')], T.ai ?? '')}`;
+  },
+  kat: () => {
+    const c = S.boot?.categories ?? [], KIND = { expense: 'Utgift', income: 'Inntekt', transfer: 'Overføring' };
+    return `${G('Kategorier', c.map((x) => `<div class="opt-row"><span style="width:12px;height:12px;border-radius:50%;background:${esc(x.color)};flex:none"></span><span class="m-grow">${esc(x.name)}</span><span class="sval">${KIND[x.kind] ?? ''}</span></div>`))}
+      ${G('Ny kategori', [inp('catName', 'Navn', T.f.catName ?? '', 'f.eks. Hage'), chips('catKind', 'Type', [['expense', 'Utgift'], ['income', 'Inntekt'], ['transfer', 'Overføring']], T.f.catKind ?? 'expense'), btn('Legg til', 'catadd')])}`;
+  },
+  regel: () => {
+    const r = S.boot?.rules ?? [], c = (S.boot?.categories ?? []);
+    return `${G('Auto-kategorisering', r.length ? r.map((x) => `<div class="opt-row"><span class="m-grow m-mono" style="font-size:14px">${esc(x.pattern)}</span><span class="sval">→ ${esc(x.category ?? '')}</span><button class="mini danger" data-sact="ruledel" data-id="${x.id}" aria-label="Slett regelen ${esc(x.pattern)}">${icon('close', 14)}</button></div>`) : [val('Ingen regler ennå', '')], 'Regler går foran AI-forslaget. * matcher hva som helst. Rettelser du gjør blir nye regler.')}
+      ${G('Ny regel', [inp('rulePat', 'Mønster', T.f.rulePat ?? '', 'KIWI*'), chips('ruleCat', 'Kategori', c.map((x) => [String(x.id), x.name]), String(T.f.ruleCat ?? '')), btn('Lagre regel', 'ruleadd')])}`;
+  },
+  bank: () => `${G('CSV-profil', [chips('csvProfile', 'Bank', (S.boot?.profiles ?? ['DNB', 'Nordea', 'SpareBank 1', 'Sbanken', 'Bank Norwegian']).map((p) => [p, p]), S.boot?.settings?.csvProfile ?? 'DNB')], 'Kolonnene finnes automatisk. Profilen brukes når en fil er tvetydig.')}
+    ${G('Open banking', [val('PSD2-kobling', 'Kommer senere')])}
+    ${G('', [link('Importer fil', '#/imp')])}`,
+  t212: () => {
+    const st = S.boot?.settings ?? {};
+    return `${G('API', [inp('t212Key', st.t212Set ? 'API-nøkkel (lagret – skriv for å bytte)' : 'API-nøkkel', T.f.t212Key ?? '', '••••••••', 'password'), inp('t212Secret', 'API-secret', T.f.t212Secret ?? '', '••••••••', 'password'), chips('t212Env', 'Miljø', [['live', 'Live'], ['demo', 'Demo']], T.f.t212Env ?? st.t212Env ?? 'live')],
+      'Lag nøkkelen hos Trading 212 under Innstillinger → API (Beta). Gi bare lesetilgang (account, portfolio, history:orders, history:dividends). Nøkkel og secret lagres bare på serveren.')}
+      ${G('', [btn('Lagre og synk', 't212save'), link('Åpne Aksjer', '#/aks')])}`;
+  },
+  bk: () => {
+    const b = T.bk, c = b?.config ?? {};
+    const SCH = { off: 'Bare manuelt', daily: 'Hver natt kl. 03.00', weekly: 'Hver søndag kl. 03.00', change: 'Etter endringer' };
+    return `${G('Last ned', [`<a class="opt-row" href="/finans/api/backup/export?format=json" download><span class="m-grow" style="color:var(--m-acc);font-weight:500">Full backup (.json)</span></a>`, `<a class="opt-row" href="/finans/api/backup/export?format=xlsx" download><span class="m-grow" style="color:var(--m-acc);font-weight:500">Excel-database (.xlsx)</span></a>`, `<a class="opt-row" href="/finans/api/backup/export?format=csv" download><span class="m-grow" style="color:var(--m-acc);font-weight:500">Bare transaksjoner (CSV)</span></a>`],
+      'JSON-filen er den komplette backupen. Excel-filen har ett ark per tabell.')}
+      ${G('SMB-share', b ? [val('Share', c.share || 'Ikke satt opp', '', true), val('Tidsplan', SCH[c.schedule] ?? c.schedule ?? '–'), val('Behold versjoner', String(c.keep ?? '–')), val('Kryptering', c.encrypt === false ? 'Av' : 'AES-256-GCM'), val('Siste backup', b.last ? `${new Date(b.last.at ?? b.last.created ?? b.last).toLocaleString('nb-NO')}${b.last.status ? ' · ' + b.last.status : ''}` : 'Aldri', b.last?.status === 'ok' ? '#7BE3A0' : ''), c.share ? btn('Kjør backup nå', 'bkrun') : ''] : [val('SMB-share', 'Krever innlogging i nettleseren')], 'Oppsett av sharen og gjenoppretting gjøres i FinansHub på PC.')}
+      ${G('', [link('Åpne Backup og data på PC-visningen', '/finans/?desktop=1#/inn')])}`;
+  },
   om: () => `${G('', [val('Appversjon', `${VERSION} (nettapp)`), val('Server', esc(S.boot?.version ?? m.me?.version ?? '–')), val('Plattform', isIOS() ? 'iOS · nettleser' : /Android/.test(navigator.userAgent) ? 'Android · nettleser' : 'Nettleser')])}
     ${G('', [`<details class="opt-row col"><summary style="color:var(--m-acc);font-weight:500">Personvern</summary><p class="snote" style="padding:6px 0 0">All data ligger på din egen homelab-server. Kvitteringer sendes bare til Gemini hvis du har valgt det som AI-motor; med Ollama blir de på hjemmenettet. Appen sporer ingenting.</p></details>`,
       `<details class="opt-row col"><summary style="color:var(--m-acc);font-weight:500">Lisenser</summary><p class="snote" style="padding:6px 0 0">Geist og Geist Mono (SIL OFL 1.1), Roboto Flex (SIL OFL 1.1). Logoer hentes fra Googles favicon-tjeneste og tilhører sine eiere.</p></details>`])}`,
@@ -124,12 +173,22 @@ export async function settingsBind(e, t) {
   let x;
   if (e.type === 'change' || e.type === 'input') {
     if (t.matches?.('[data-ntname]')) { T.nt.name = t.value; return true; }
+    if (t.dataset?.sinp) { T.f[t.dataset.sinp] = t.value; return true; }
+    if (e.type === 'change' && t.matches?.('[data-avatar]')) { const f = t.files?.[0]; t.value = ''; if (f) await uploadAvatar(f); return true; }
+    if (e.type === 'change' && t.matches?.('[data-takeout]')) {
+      const f = t.files?.[0]; t.value = ''; if (!f) return true;
+      flash('Importerer søkehistorikk …');
+      const r = await fetch('/api/search/history/import', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: await f.text() });
+      const j = await r.json().catch(() => ({}));
+      flash(r.ok ? `${j.imported ?? j.added ?? (j.items ?? []).length} søk importert` : j.error ?? 'Kunne ikke importere'); await settingsLoad('sokbar'); draw(); return true;
+    }
     return false;
   }
   if (e.type !== 'click') return false;
   if ((x = d('[data-stog]'))) {
     const id = x.dataset.stog;
     if (id === 'iosbg') { try { localStorage.setItem('fh_ios_bg', iosBg() ? '0' : '1'); } catch {} }
+    else if (id.startsWith('srch:')) { const k = id.slice(5); T.srch[k] = !T.srch[k]; await hlApi('/search/settings', { method: 'PUT', json: { suggest: T.srch.suggest, save: T.srch.save } }).catch((err) => flash(err.message)); }
     else if (id.startsWith('srv:')) { const k = id.slice(4); S.boot.settings = await api('/settings', { method: 'PUT', json: { [k]: !S.boot.settings[k] } }); if (S.boot.settings[k]) await askNotify(); }
     else { setPref(id, !pref(id)); if (id.startsWith('n') && pref(id)) await askNotify(); }
     draw(); return true;
@@ -140,6 +199,8 @@ export async function settingsBind(e, t) {
     else if (id === 'ai') S.boot.settings = await api('/settings', { method: 'PUT', json: v === 'both' ? { provider: 'ollama', fallback: true } : { provider: v, fallback: false } });
     else if (id === 'ntscope') T.nt.scopes = T.nt.scopes.includes(v) ? T.nt.scopes.filter((s) => s !== v) : [...T.nt.scopes, v];
     else if (id === 'ntexp') T.nt.exp = v;
+    else if (id === 'minConf' || id === 'csvProfile') S.boot.settings = { ...S.boot.settings, ...(await api('/settings', { method: 'PUT', json: { [id]: id === 'minConf' ? +v : v } })) };
+    else if (['catKind', 'ruleCat', 't212Env'].includes(id)) T.f[id] = v;
     else setPref(id, v);
     draw(); return true;
   }
@@ -170,6 +231,38 @@ export async function settingsBind(e, t) {
     try { for (const k of await caches.keys()) await caches.delete(k); } catch {}
     await settingsLoad('data'); flash('Hurtigbuffer tømt'); return true;
   }
+  if (act === 'avdel') { await hlApi('/me/avatar', { method: 'DELETE' }); await loadMe(); flash('Profilbildet er fjernet'); return true; }
+  if (act === 'srchclear') { if (!confirm('Tømme hele søkehistorikken?')) return true; await hlApi('/search/history', { method: 'DELETE' }); await settingsLoad('sokbar'); flash('Søkehistorikken er tømt'); return true; }
+  if (act === 'aisave') {
+    const f = T.f, b = {};
+    for (const k of ['ollamaUrl', 'ollamaModel', 'geminiModel']) if (f[k] !== undefined) b[k] = f[k].trim();
+    if (f.geminiKey) b.geminiKey = f.geminiKey;
+    S.boot.settings = { ...S.boot.settings, ...(await api('/settings', { method: 'PUT', json: b })) };
+    T.f = {}; flash('AI-motor lagret'); return true;
+  }
+  if (act === 'aitest') { T.ai = 'Tester …'; draw(); try { const h = await api('/health/ai'); T.ai = Object.entries(h ?? {}).map(([k, v]) => `${k}: ${typeof v === 'object' ? (v?.ok ? `OK${v.ms ? ` · ${v.ms} ms` : ''}` : v?.error ?? 'ikke svar') : v}`).join(' · '); } catch (err) { T.ai = err.message; } draw(); return true; }
+  if (act === 'catadd') { const n = (T.f.catName ?? '').trim(); if (!n) { flash('Gi kategorien et navn'); return true; } await api('/categories', { method: 'POST', json: { name: n, kind: T.f.catKind ?? 'expense', color: ['#FF9F5A', '#7AA7FF', '#5FD3A8', '#B79CFF', '#F2C14E', '#FF6B8B'][(S.boot?.categories?.length ?? 0) % 6] } }); T.f.catName = ''; await loadBoot(); flash(`${n} lagt til`); return true; }
+  if (act === 'ruleadd') { const p = (T.f.rulePat ?? '').trim(); if (!p || !T.f.ruleCat) { flash('Skriv mønster og velg kategori'); return true; } await api('/rules', { method: 'POST', json: { pattern: p, categoryId: +T.f.ruleCat } }); T.f.rulePat = ''; await loadBoot(); flash('Regel lagret'); return true; }
+  if (act === 'ruledel') { const id = d('[data-id]')?.dataset.id; await api(`/rules/${id}`, { method: 'DELETE' }); await loadBoot(); flash('Regel slettet'); return true; }
+  if (act === 't212save') {
+    const f = T.f;
+    await api('/stocks/config', { method: 'PUT', json: { key: f.t212Key ?? '', secret: f.t212Secret ?? '', env: f.t212Env ?? S.boot?.settings?.t212Env ?? 'live' } });
+    T.f = {}; await loadBoot(); flash('Lagret · synker med Trading 212'); api('/stocks/sync', { method: 'POST' }).catch(() => {}); return true;
+  }
+  if (act === 'bkrun') { const r = await api('/backup/run', { method: 'POST' }); flash(r?.message ?? 'Backup til SMB-share startet'); return true; }
   if (act === 'sync') { await Promise.all([loadBoot(), loadSummary()]); T.lastSync = new Date(); flash('Synket med serveren'); return true; }
   return false;
+}
+
+/* Profilbilde: beskjæres til kvadrat 256 × 256 og lagres som JPEG (kvalitet 0,85). */
+async function uploadAvatar(file) {
+  const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => null);
+  if (!bmp) { flash('Kunne ikke lese bildet'); return; }
+  const z = 256, k = Math.max(z / bmp.width, z / bmp.height), c = document.createElement('canvas');
+  c.width = c.height = z;
+  c.getContext('2d').drawImage(bmp, (z - bmp.width * k) / 2, (z - bmp.height * k) / 2, bmp.width * k, bmp.height * k);
+  const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.85));
+  const fd = new FormData(); fd.append('file', blob, 'avatar.jpg');
+  try { await hlApi('/me/avatar', { method: 'POST', body: fd }); await loadMe(); flash('Profilbilde oppdatert'); }
+  catch (e) { flash(e.message); }
 }

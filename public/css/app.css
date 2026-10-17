@@ -518,3 +518,49 @@ button.dm-row:hover{background:rgba(255,255,255,.03)}
 .dm-dns>div{display:grid;grid-template-columns:64px minmax(0,1fr) minmax(0,1.4fr) 76px;gap:10px;padding:10px 14px;border-bottom:1px solid #232938;font-family:var(--mono);font-size:12.5px}
 .dm-dns>div:last-child{border-bottom:0}.dm-dns .t{color:#a8d4fb}
 @media (max-width:720px){.dm-card{padding:18px;border-radius:20px}.dm-live{font-size:44px}.dm-map{height:220px}.dm-dns>div{grid-template-columns:52px minmax(0,1fr) 64px}.dm-dns>div span:nth-child(3){display:none}}
+
+/* ---------- Prompt 06: profilbilde, skjulte elementer, søkeforslag, tilpass forside ---------- */
+.avatar{overflow:hidden}
+.avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.menu-head{display:flex;flex-direction:column;gap:2px;color:var(--text);font-size:14px;font-weight:600}
+.menu-head span{font-size:12px;font-weight:400;color:var(--muted)}
+.menu-head:empty{display:none}
+.pillnav a[hidden],.bottomnav a[hidden],.grid>[hidden]{display:none!important}
+.sbar{position:relative}
+.sq-drop{position:absolute;left:0;right:0;top:calc(100% + 8px);z-index:30;padding:8px 0;border-radius:24px;background:rgba(18,25,38,.97);color:#eef0f4;border:1px solid #232938;box-shadow:0 18px 40px rgba(0,0,0,.4);text-align:left;backdrop-filter:blur(16px)}
+.sbar.light .sq-drop,.sbar.wideLight .sq-drop{background:#fff;color:#202124;border-color:#e3e5e8}
+.sq-head{display:flex;justify-content:space-between;align-items:center;padding:4px 20px 6px;font-size:12px;color:#8a93a6}
+.sbar.light .sq-head,.sbar.wideLight .sq-head,.sbar.light .sq-empty,.sbar.wideLight .sq-empty{color:#5f6368}
+.sq-head button{border:0;background:none;color:inherit;cursor:pointer;font-size:12px;text-decoration:underline;padding:0}
+.sq-item{display:flex;align-items:center;gap:14px;padding:9px 20px;cursor:pointer}
+.sq-item[aria-selected=true]{background:rgba(127,140,160,.18)}
+.sq-item svg{flex:0 0 auto;stroke:#8a93a6}
+.sbar.light .sq-item svg,.sbar.wideLight .sq-item svg{stroke:#5f6368}
+.sq-t{flex:1;min-width:0;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sq-t b{font-weight:600}
+.sq-del{width:26px;height:26px;border-radius:13px;display:grid;place-items:center;color:#8a93a6;font-size:16px;border:0;background:none;cursor:pointer}
+.sq-del:hover{background:rgba(127,140,160,.18)}
+.sq-empty{padding:8px 20px;font-size:13px;color:#8a93a6}
+.lay-list{display:flex;flex-direction:column;gap:6px}
+.lay-row{display:flex;align-items:center;gap:10px;background:var(--row);border:1px solid var(--line);border-radius:14px;padding:8px 10px 8px 14px}
+.lay-row.off>.lay-name{opacity:.45}
+.lay-row .lay-no{width:20px;font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)}
+.lay-name{flex:1;min-width:0;font-size:14px}
+.lay-btn{width:30px;height:30px;border-radius:50%;border:1px solid #3a4560;background:transparent;color:var(--text);cursor:pointer;font-size:12px;display:grid;place-items:center}
+.lay-btn:disabled{opacity:.3;cursor:default}
+.sw{flex:none;width:46px;height:28px;border-radius:14px;background:#3a4560;padding:3px;display:flex;justify-content:flex-start;border:0;cursor:pointer}
+.sw[aria-checked=true]{background:#34c759;justify-content:flex-end}
+.sw::after{content:'';width:22px;height:22px;border-radius:50%;background:#fff}
+.sw:disabled{opacity:.5;cursor:default}
+.lay-always{font-size:12px;color:var(--muted);width:46px;text-align:center}
+.sc-row{display:flex;gap:8px;align-items:center}
+.sc-row .field{flex:1;min-width:0}
+.av-box{display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:var(--row);border:1px solid var(--line);border-radius:16px;padding:14px}
+.av-big{flex:none;width:64px;height:64px;border-radius:50%;background:var(--blue);color:#07080b;display:grid;place-items:center;font-weight:600;font-size:26px;overflow:hidden}
+.av-big img,.user-ini img{width:100%;height:100%;object-fit:cover}
+.user-ini{overflow:hidden}
+.name-form{display:flex;gap:8px;flex-wrap:wrap;margin:-4px 0 6px}
+.sbar .sq-drop button{height:auto;padding:0;border-radius:0;background:none;color:inherit;font-weight:400;font-size:12px;display:inline-block}
+.sbar .sq-drop .sq-del{width:26px;height:26px;border-radius:13px;display:grid;font-size:16px;color:#8a93a6}
+.sbar .sq-drop .sq-head button{text-decoration:underline}
+[data-dnd="top"]>*:has(.sq-drop:not([hidden])){position:relative;z-index:40}

@@ -48,3 +48,57 @@ form.addEventListener('submit', async (e) => {
 document.getElementById('back').addEventListener('click', () => { ticket = null; err.hidden = true; form.password.value = ''; show('cred'); });
 // Sender automatisk når seks sifre er skrevet inn.
 form.code.addEventListener('input', () => { if (/^\d{6}$/.test(form.code.value.replace(/\s/g, ''))) form.requestSubmit(); });
+
+/* ---------- Førstegangsoppsett (tom server) ---------- */
+
+const setup = document.getElementById('setup');
+const obErr = document.getElementById('ob-err');
+let obStep = 1, userEdited = false;
+
+// Brukernavn foreslås fra navnet: små bokstaver, æ→ae, ø→o, å→a, bare a–z og 0–9.
+export const slug = (s) => String(s).toLowerCase().replace(/æ/g, 'ae').replace(/[øö]/g, 'o').replace(/[åä]/g, 'a')
+  .normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]/g, '').slice(0, 32);
+
+function obShow(step) {
+  obStep = step;
+  for (const el of setup.querySelectorAll('[data-ob]')) el.hidden = +el.dataset.ob !== step;
+  document.getElementById('ob-step').textContent = `Steg ${step} av 2`;
+  document.getElementById('ob-bar2').classList.toggle('on', step === 2);
+  document.getElementById('ob-btn').textContent = step === 1 ? 'Neste' : 'Opprett og logg inn';
+  document.getElementById('ob-back').hidden = step === 1;
+  obErr.hidden = true;
+  if (step === 2) {
+    document.getElementById('ob-hello').textContent = setup.adminName.value.trim();
+    if (!userEdited || !setup.username.value) setup.username.value = slug(setup.adminName.value);
+    (setup.username.value ? setup.password : setup.username).focus();
+  } else setup.adminName.focus();
+}
+const obFail = (msg) => { obErr.textContent = msg; obErr.hidden = false; };
+
+setup.username.addEventListener('input', () => { userEdited = true; });
+document.getElementById('ob-back').addEventListener('click', () => obShow(1));
+setup.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (obStep === 1) {
+    if (!setup.adminName.value.trim()) return obFail('Skriv inn navnet til hovedadmin');
+    return obShow(2);
+  }
+  const u = setup.username.value.trim().toLowerCase();
+  if (!/^[a-z0-9._-]{2,}$/.test(u)) return obFail('Brukernavnet må ha minst 2 tegn og bare inneholde a–z, 0–9, punktum, bindestrek eller understrek');
+  if (setup.password.value.length < 8) return obFail('Passordet må ha minst 8 tegn');
+  if (setup.password.value !== setup.password2.value) return obFail('Passordene er ikke like');
+  const btn = document.getElementById('ob-btn');
+  btn.disabled = true; obErr.hidden = true;
+  try {
+    const { ok, data } = await post('/api/setup', { adminName: setup.adminName.value.trim(), serverName: setup.serverName.value.trim() || 'Homelab', username: u, password: setup.password.value });
+    if (ok) return done();
+    if (data.error === 'Serveren er allerede satt opp') { location.reload(); return; }
+    obFail(data.error || 'Kunne ikke opprette brukeren');
+  } catch { obFail('Fikk ikke kontakt med serveren'); }
+  finally { btn.disabled = false; }
+});
+
+fetch('/api/setup/status').then((r) => r.json()).then((s) => {
+  if (!s.needsSetup) return;
+  form.hidden = true; setup.hidden = false; obShow(1);
+}).catch(() => {});

@@ -52,6 +52,45 @@ export const getRuter = () => cached('ruter', 30_000, async () => {
   return { trips, updated: new Date().toISOString() };
 });
 
+// Avganger fra ett stoppested (mobilwidgeten «Ruter-avganger»). Standard er første «fra»-stopp i strekningene.
+const DEPARTURE_QUERY = `query($id:String!,$n:Int!){
+  stopPlace(id:$id){ name estimatedCalls(numberOfDepartures:$n){ expectedDepartureTime destinationDisplay{frontText} serviceJourney{ line{publicCode transportMode} } } }
+}`;
+export const getDepartures = (stopId) => {
+  const id = String(stopId || parseRoutes(cfg('ruter_routes'))[0]?.fromId || '58381').replace(/\D/g, '');
+  return cached('dep_' + id, 30_000, async () => {
+    const d = await fetchJson('https://api.entur.io/journey-planner/v3/graphql', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'ET-Client-Name': config.enturClient },
+      body: JSON.stringify({ query: DEPARTURE_QUERY, variables: { id: `NSR:StopPlace:${id}`, n: 8 } }),
+    });
+    const sp = d.data?.stopPlace;
+    if (!sp) throw new Error('Fant ikke stoppestedet');
+    return { stop: sp.name, stopId: id, departures: sp.estimatedCalls.map((c) => ({
+      line: c.serviceJourney?.line?.publicCode ?? '', mode: c.serviceJourney?.line?.transportMode ?? 'bus', to: c.destinationDisplay?.frontText ?? '', time: c.expectedDepartureTime })) };
+  });
+};
+
+/* ---------------- Google-søkeforslag ---------------- */
+
+// Proxy mot Google Suggest (nettleseren får ikke kalle Google direkte på grunn av CSP). Svarer [] ved feil.
+const suggestCache = new Map();
+export async function getSuggestions(q) {
+  const key = String(q).trim().toLowerCase().slice(0, 120);
+  if (!key) return [];
+  const hit = suggestCache.get(key);
+  if (hit && hit.exp > Date.now()) return hit.list;
+  let list = [];
+  try {
+    const res = await fetch(`https://suggestqueries.google.com/complete/search?client=chrome&hl=no&ie=utf-8&oe=utf-8&q=${encodeURIComponent(key)}`,
+      { signal: AbortSignal.timeout(2000), headers: { 'User-Agent': 'Mozilla/5.0 (homelab-os)' } });
+    if (res.ok) { const d = JSON.parse(await res.text()); list = (Array.isArray(d?.[1]) ? d[1] : []).filter((x) => typeof x === 'string').slice(0, 8); }
+  } catch { list = []; }
+  if (suggestCache.size > 500) suggestCache.delete(suggestCache.keys().next().value);
+  suggestCache.set(key, { list, exp: Date.now() + 10 * 60_000 });
+  return list;
+}
+
 /* ---------------- Vær / MET ---------------- */
 
 const SYMBOL_NB = [

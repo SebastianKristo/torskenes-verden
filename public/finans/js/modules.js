@@ -165,7 +165,7 @@ function finnPage() {
 
 /* ===================== Import ===================== */
 
-function impPage() {
+export function impPage() {
   const im = S.imp ?? (S.imp = { rows: [], status: 'Lim inn tekst eller velg filer. Flere filer kan velges samtidig.', text: '' });
   const n = im.rows.filter((r) => !r.duplicate).length;
   const accOptions = accs().map((a) => `<option value="${a.id}"${String(a.id) === String(u.impAcc ?? '') ? ' selected' : ''}>${esc(a.name)}</option>`).join('');

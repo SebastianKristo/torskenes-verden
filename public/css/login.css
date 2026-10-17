@@ -24,3 +24,12 @@
 .lock-back{background:none;border:0;color:var(--text-2);font-size:14px;padding:0;cursor:pointer}
 .err{color:var(--red,#f59a8f);font-size:14px}
 .lock-box [hidden]{display:none!important}
+
+.setup-box{max-width:420px;gap:16px}
+.setup-top{display:flex;justify-content:space-between;align-items:center}
+.setup-bar{display:flex;gap:6px}
+.setup-bar span{flex:1;height:4px;border-radius:2px;background:#232938;transition:background .2s}
+.setup-bar span.on{background:var(--blue)}
+.ob-field{display:flex;flex-direction:column;gap:6px;font-size:13px;color:#8a93a6}
+#ob-err{color:#f59a8f;font-size:13px}
+.lock-box[hidden]{display:none}

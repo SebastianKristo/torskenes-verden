@@ -17,22 +17,71 @@ const sidKey = (sid) => createHmac('sha256', config.sessionSecret || 'dev').upda
 export const USERNAME_RE = /^[a-z0-9._-]{2,32}$/i;
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
-// Første oppstart etter oppgradering: eieren blir admin med samme id som før (OWNER), så alle data i kv beholdes.
-// Passordet hentes fra «Bytt passord» (kv) eller APP_PASSWORD_HASH.
+// Første oppstart etter oppgradering: eieren blir hovedadmin med samme id som før (OWNER), så alle data i kv beholdes.
+// Passordet hentes fra «Bytt passord» (kv) eller APP_PASSWORD_HASH. Finnes verken bruker eller passord,
+// er dette en ny server, og /login viser førstegangsoppsettet i stedet (se setupServer).
 function ensureOwner() {
-  if (db.prepare('SELECT 1 FROM users LIMIT 1').get()) return;
-  const name = config.userName || 'Sebastian';
-  db.prepare('INSERT INTO users(id,username,name,pw_hash,role,created) VALUES(?,?,?,?,?,?)')
-    .run(OWNER, name.toLowerCase().replace(/[^a-z0-9._-]/g, '') || 'admin', name, legacyPasswordHash(), 'admin', Date.now());
+  if (db.prepare('SELECT 1 FROM users LIMIT 1').get()) {
+    // Eksisterende installasjon fra før prompt 06: eieren (ellers eldste admin) blir hovedadmin.
+    if (!db.prepare('SELECT 1 FROM users WHERE is_main_admin=1').get()) {
+      const main = db.prepare("SELECT id FROM users WHERE id=?").get(OWNER) ?? db.prepare("SELECT id FROM users WHERE role='admin' ORDER BY created LIMIT 1").get();
+      if (main) db.prepare('UPDATE users SET is_main_admin=1 WHERE id=?').run(main.id);
+    }
+    return;
+  }
+  if (!legacyPasswordHash()) return;
+  const name = config.userName || 'Admin';
+  db.prepare('INSERT INTO users(id,username,name,pw_hash,role,is_main_admin,created) VALUES(?,?,?,?,?,1,?)')
+    .run(OWNER, slugUsername(name) || 'admin', name, legacyPasswordHash(), 'admin', Date.now());
 }
-ensureOwner();
+
+/** Foreslått brukernavn fra et navn: små bokstaver, æ→ae, ø→o, å→a, bare a–z og 0–9. */
+export function slugUsername(name) {
+  return String(name ?? '').toLowerCase().replace(/æ/g, 'ae').replace(/[øö]/g, 'o').replace(/[åä]/g, 'a').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '').slice(0, 32);
+}
+
+export const needsSetup = () => !db.prepare('SELECT 1 FROM users LIMIT 1').get();
+
+/** Servernavnet fra førstegangsoppsettet (vises i menyen og mobilappen). */
+export const serverName = () => kv.get(OWNER, 'server_name', 'Homelab');
+export function setServerName(name) {
+  const n = String(name ?? '').trim().slice(0, 40);
+  if (!n) throw httpError('Skriv inn et navn på serveren', 400);
+  kv.set(OWNER, 'server_name', n);
+  return n;
+}
+
+/**
+ * Førstegangsoppsett: lager hovedadmin (id = OWNER, så eksisterende data i kv beholdes) og lagrer servernavnet.
+ * Virker bare når det ikke finnes noen brukere.
+ */
+export function setupServer({ adminName, serverName: srv, username, password }) {
+  const name = String(adminName ?? '').trim().slice(0, 60);
+  const u = String(username ?? '').trim().toLowerCase();
+  if (!name) throw httpError('Skriv inn navnet til hovedadmin', 400);
+  if (!/^[a-z0-9._-]{2,32}$/.test(u)) throw httpError('Brukernavn: minst 2 tegn, bare a–z, 0–9, punktum, bindestrek og understrek', 400);
+  if (typeof password !== 'string' || password.length < 8 || password.length > 200) throw httpError('Passordet må ha minst 8 tegn', 400);
+  const h = hashPassword(password);
+  const ok = db.transaction(() => {
+    if (!needsSetup()) return false;
+    db.prepare('INSERT INTO users(id,username,name,pw_hash,role,is_main_admin,created) VALUES(?,?,?,?,?,1,?)').run(OWNER, u, name, h, 'admin', Date.now());
+    kv.set(OWNER, 'server_name', String(srv ?? '').trim().slice(0, 40) || 'Homelab');
+    return true;
+  })();
+  if (!ok) throw httpError('Serveren er allerede satt opp', 409);
+  setLegacyPasswordHash(h);
+  return userInfo(OWNER);
+}
 
 const userRow = (id) => db.prepare('SELECT * FROM users WHERE id=?').get(id);
 const userByName = (username) => db.prepare('SELECT * FROM users WHERE username=?').get(String(username ?? '').trim().toLowerCase());
 // Eieren kan mangle hash hvis APP_PASSWORD_HASH ble satt etter første oppstart; da brukes den.
 const hashOf = (u) => u.pw_hash || (u.id === OWNER ? legacyPasswordHash() : '');
 
-const publicUser = (u) => u && { id: u.id, username: u.username, role: u.role, name: u.name || cap(u.username), totp: !!u.totp_enabled };
+const avatarVersion = (id) => kv.get(id, 'avatar_v', 0);
+const publicUser = (u) => u && { id: u.id, username: u.username, role: u.role, name: u.name || cap(u.username), displayName: u.name || cap(u.username),
+  totp: !!u.totp_enabled, isMainAdmin: !!u.is_main_admin, avatarUrl: avatarVersion(u.id) ? `/api/users/${u.id}/avatar?v=${avatarVersion(u.id)}` : null };
+ensureOwner();
 
 /** {id,username,role,name,totp} eller null. */
 export const userInfo = (id) => publicUser(userRow(id)) ?? null;
@@ -59,7 +108,7 @@ export function deleteUser(id, actingId) {
   const u = userRow(id);
   if (!u) throw httpError('Fant ikke brukeren', 404);
   if (id === actingId) throw httpError('Du kan ikke fjerne deg selv', 400);
-  if (id === OWNER) throw httpError('Eieren kan ikke fjernes', 400);
+  if (id === OWNER || u.is_main_admin) throw httpError('Hovedadmin kan ikke fjernes', 400);
   if (u.role === 'admin' && adminCount() < 2) throw httpError('Det må finnes minst én administrator', 400);
   db.transaction(() => {
     for (const t of ['sessions', 'devices', 'kv']) db.prepare(`DELETE FROM ${t} WHERE user=?`).run(id);
@@ -67,16 +116,20 @@ export function deleteUser(id, actingId) {
   })();
 }
 
-export function updateUser(id, { role, password, name, resetTotp }) {
+export function updateUser(id, { role, password, name, displayName, resetTotp }) {
+  name = displayName ?? name;
   const u = userRow(id);
   if (!u) throw httpError('Fant ikke brukeren', 404);
   if (role !== undefined) {
     if (!['admin', 'bruker'].includes(role)) throw httpError('Ugyldig rolle', 400);
-    if (u.role === 'admin' && role !== 'admin' && (adminCount() < 2 || id === OWNER)) throw httpError(id === OWNER ? 'Eieren må være administrator' : 'Det må finnes minst én administrator', 400);
+    if (u.role === 'admin' && role !== 'admin' && (adminCount() < 2 || id === OWNER || u.is_main_admin)) throw httpError(id === OWNER || u.is_main_admin ? 'Hovedadmin må være administrator' : 'Det må finnes minst én administrator', 400);
     db.prepare('UPDATE users SET role=? WHERE id=?').run(role, id);
   }
   if (password !== undefined) setPassword(id, password);
-  if (typeof name === 'string' && name.trim()) db.prepare('UPDATE users SET name=? WHERE id=?').run(name.trim().slice(0, 60), id);
+  if (name !== undefined) {
+    if (typeof name !== 'string' || !name.trim()) throw httpError('Navnet kan ikke være tomt', 400);
+    db.prepare('UPDATE users SET name=? WHERE id=?').run(name.trim().slice(0, 60), id);
+  }
   if (resetTotp) db.prepare("UPDATE users SET totp_enabled=0, totp_secret_enc=NULL, recovery_hashes='[]', totp_last_step=-1 WHERE id=?").run(id);
   return userInfo(id);
 }

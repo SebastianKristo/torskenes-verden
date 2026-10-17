@@ -3,7 +3,7 @@
 // for å lese opplastede filer. Bare første regneark og verdiene brukes; formler og stiler ignoreres.
 import { inflateRawSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
-import { parseAmount, merchantOf } from './csv.js';
+import { parseAmount, merchantOf, bankRow, VALUE_DATE, ARCHIVE_REF } from './csv.js';
 
 /* ---------------- XLSX ---------------- */
 
@@ -133,13 +133,17 @@ const HEAD = {
 // Dato | Forklaring | Rentedato | Ut | Inn.
 export function rowsToTx(rows, accountId = 0) {
   const hi = rows.findIndex((r) => r.some((c) => /^(dato|bokføringsdato|date)$/i.test(String(c).trim())));
-  let ix = { date: 0, text: 1, out: 3, in: 4, amount: -1 };
+  let ix = { date: 0, text: 1, out: 3, in: 4, amount: -1, value: 2, ref: -1 };
+  let headers = ['Dato', 'Forklaring', 'Rentedato', 'Ut fra konto', 'Inn på konto'];
   if (hi > -1) {
-    const head = rows[hi].map((h) => String(h).toLowerCase().trim());
+    headers = rows[hi].map((h) => String(h).trim());
+    const head = headers.map((h) => h.toLowerCase());
     const find = (names) => { for (const n of names) { const i = head.indexOf(n); if (i > -1) return i; } for (const n of names) { const i = head.findIndex((h) => h.includes(n)); if (i > -1) return i; } return -1; };
     ix = Object.fromEntries(Object.entries(HEAD).map(([k, v]) => [k, find(v)]));
     if (ix.out === ix.in) ix.in = -1;
-  } else if (rows[0] && rows[0].length === 3) ix = { date: 0, text: 1, amount: 2, out: -1, in: -1 };
+    ix.value = head.findIndex((h) => VALUE_DATE.includes(h));
+    ix.ref = head.findIndex((h) => ARCHIVE_REF.includes(h));
+  } else if (rows[0] && rows[0].length === 3) { ix = { date: 0, text: 1, amount: 2, out: -1, in: -1, value: -1, ref: -1 }; headers = ['Dato', 'Tekst', 'Beløp']; }
   const seen = new Map(), out = [], skipped = [];
   rows.slice(hi + 1).forEach((c, n) => {
     const date = parseDateFlex(c[ix.date]);
@@ -153,7 +157,8 @@ export function rowsToTx(rows, accountId = 0) {
     if (!date || amount === null || !raw) { if (c.some((x) => String(x).trim())) skipped.push(n + hi + 2); return; }
     const key = `${accountId}|${date}|${amount}|${raw}`;
     const k = (seen.get(key) ?? 0) + 1; seen.set(key, k);
-    out.push({ date, amount, raw: raw.slice(0, 200), description: cleanDescription(raw).slice(0, 120), external_id: 'imp:' + createHash('sha1').update(`${key}|${k}`).digest('hex').slice(0, 24) });
+    out.push({ date, amount, raw: raw.slice(0, 200), description: cleanDescription(raw).slice(0, 120), external_id: 'imp:' + createHash('sha1').update(`${key}|${k}`).digest('hex').slice(0, 24),
+      bank: bankRow(headers, c, ix, { amount: amount / 100 }) });
   });
   return { rows: out, skipped };
 }

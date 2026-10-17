@@ -5,6 +5,7 @@ import { applyBackground, preloadAll } from './background.js';
 import { openSettings, bindSettings, applyTop } from './settings.js';
 import { bindPopup, bindSearch, menuLabels, toggle, renderTicker } from './extras.js';
 import { applyHead, toggleHeadEdit, uiDefaults } from './topedit.js';
+import { applyProfile, applyNav } from './profile.js';
 import * as dash from './dash.js';
 import * as study from './study.js';
 import * as space from './space.js';
@@ -54,6 +55,7 @@ function bindShell() {
     if (!act) return;
     close();
     if (act === 'settings') openSettings();
+    if (act === 'layout') openSettings('layout');
     if (act === 'reset-layout') await resetLayouts();
     if (act === 'toggle-search') await toggle('search');
     if (act === 'toggle-news') await toggle('news');
@@ -61,6 +63,7 @@ function bindShell() {
     if (act === 'logout') { await api('/logout', { method: 'POST' }).catch(() => {}); location.href = '/login'; }
   });
   window.addEventListener('hashchange', renderRoute);
+  document.addEventListener('hl:name', renderRoute); // nytt navn i hilsenen med en gang
   window.addEventListener('resize', () => { if (isMobile() !== wasMobile) { wasMobile = isMobile(); renderRoute(); weatherPill(); } });
 }
 
@@ -68,8 +71,8 @@ async function main() {
   const [me, ui] = await Promise.all([api('/state'), api('/ui').catch(() => uiDefaults())]);
   store.me = me;
   store.me.ui = { ...uiDefaults(), ...ui };
-  document.getElementById('menu-name').textContent = store.me.user;
-  document.getElementById('avatar').textContent = store.me.user[0] ?? 'S';
+  applyProfile();
+  applyNav();
   menuLabels();
   bindShell();
   bindSettings();

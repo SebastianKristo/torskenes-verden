@@ -2,13 +2,16 @@
 import {
   S, api, esc, n0, n2, sgn, neg, neg0, k, dd, dLong, today, monthName, cap, shiftMonth, ini, rgba, greet, pctChange, parseAmount,
   render, toast, loadBoot, loadSummary, loadTx, loadReceipts, loadRecurring, loadReport, loadAi, catById, cats, accs, uploadReceipt,
-  smooth, spark, conic, icon, logo, aiLine,
+  smooth, spark, conic, icon, logo, aiLine, ICONS,
 } from './core.js';
-import { MODULE_PAGES, MODULE_SUB, MODULE_FN, MODULE_LOADERS, bindModules, backupTab, firstRunCard, loadBackup } from './modules.js';
+import { MODULE_PAGES, MODULE_SUB, MODULE_FN, MODULE_LOADERS, bindModules, backupTab, firstRunCard, loadBackup, impPage } from './modules.js';
 
-const BASE_PAGES = [['ov', 'Oversikt'], ['tx', 'Transaksjoner'], ['kv', 'Kvitteringer'], ['bud', 'Budsjett'], ['fast', 'Faste utgifter'], ['konto', 'Kontoer'], ['rap', 'Rapporter'], ['inn', 'Innstillinger']];
-const NAV_DEFAULT = ['ov', 'tx', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'imp', 'inn'];
+ICONS.ai = 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z';
+const BASE_PAGES = [['ov', 'Oversikt'], ['tx', 'Transaksjoner'], ['ai', 'AI-søk'], ['kv', 'Kvitteringer'], ['bud', 'Budsjett'], ['fast', 'Faste utgifter'], ['konto', 'Kontoer'], ['rap', 'Rapporter'], ['inn', 'Innstillinger']];
+const NAV_DEFAULT = ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'inn'];
+const NAV_FIXED = ['ov', 'inn'];
 const PAGES = [...BASE_PAGES, ...MODULE_PAGES];
+const pageName = (p) => PAGES.find(([x]) => x === p)?.[1] ?? p;
 const ACC_TYPES = { checking: 'Brukskonto', savings: 'Sparekonto', credit: 'Kredittkort', cash: 'Kontanter' };
 const KINDS = { expense: 'Utgift', income: 'Inntekt', transfer: 'Overføring' };
 const root = () => document.getElementById('app');
@@ -23,18 +26,23 @@ const accOpts = (sel, empty) => (empty ? opt('', empty, sel) : '') + accs().map(
 
 /* ===================== Skall ===================== */
 
-// Rekkefølgen i sidemenyen er personlig (lagres på serveren). «Endre» gir dra-og-slipp og ▲▼.
-const navOrder = () => (S.boot.restricted ? ['dir'] : (u.navEdit ?? S.boot.nav ?? NAV_DEFAULT)).filter((p) => PAGES.some(([x]) => x === p));
+// Sidemenyen er personlig: rekkefølge og skjulte punkter redigeres i Innstillinger → Sidemeny og lagres i
+// /api/me/layout (finNav), med FinansHubs egne prefs som reserve. Oversikt og Innstillinger kan ikke skjules.
+function navCfg() {
+  const def = (S.boot.navDefault ?? NAV_DEFAULT).filter((p) => PAGES.some(([x]) => x === p));
+  const fin = S.layout?.finNav;
+  const saved = (fin?.order?.length ? fin.order : S.boot.nav) ?? def;
+  const keep = saved.filter((p) => def.includes(p));
+  if (!keep.includes('ai') && keep.includes('tx')) keep.splice(keep.indexOf('tx') + 1, 0, 'ai');
+  const order = [...new Set([...keep, ...def.filter((p) => !keep.includes(p))])];
+  const hidden = (fin?.hidden ?? S.boot.navHidden ?? []).filter((p) => order.includes(p) && !NAV_FIXED.includes(p));
+  return { order: u.cfgOrder ?? order, hidden };
+}
+const navOrder = () => { if (S.boot.restricted) return ['dir']; const { order, hidden } = navCfg(); return order.filter((p) => !hidden.includes(p)); };
 function sideNav() {
-  const b = S.boot, edit = !!u.navEdit;
-  const items = navOrder().map((p) => PAGES.find(([x]) => x === p)).map(([p, label], i, all) => {
-    const inner = `${icon(p, 18, 'currentColor')}<span>${label}</span>${p === 'kv' && b.reviewCount && !edit ? `<span class="badge">${b.reviewCount}</span>` : ''}`;
-    if (!edit) return `<a href="#/${p}" ${p === u.page ? 'aria-current="page"' : ''}>${inner}</a>`;
-    return `<div class="nav-edit${u.navDrag === p ? ' dragging' : ''}" draggable="true" data-nav-item="${p}">${inner}<span class="nav-arrows"><button type="button" data-nav-move="${p}:-1" aria-label="Flytt ${label} opp" ${i ? '' : 'disabled'}>▲</button><button type="button" data-nav-move="${p}:1" aria-label="Flytt ${label} ned" ${i < all.length - 1 ? '' : 'disabled'}>▼</button></span></div>`;
-  }).join('');
-  return `<div class="side-head"><span class="side-label" style="padding:0">${b.restricted ? 'Delt med deg' : 'Generelt'}</span>${b.restricted ? '' : `<button class="nav-btn${edit ? ' on' : ''}" data-act="nav-edit" title="Endre rekkefølge">${edit ? 'Ferdig' : 'Endre'}</button>`}</div>
-    <nav class="nav">${items}</nav>
-    ${edit ? '<div class="nav-help">Dra punktene eller bruk pilene.<button data-act="nav-reset">Tilbakestill rekkefølge</button></div>' : ''}`;
+  const b = S.boot;
+  const items = navOrder().map((p) => `<a href="#/${p}" ${p === u.page ? 'aria-current="page"' : ''}>${icon(p, 18, 'currentColor')}<span>${pageName(p)}</span>${p === 'kv' && b.reviewCount ? `<span class="badge">${b.reviewCount}</span>` : ''}</a>`).join('');
+  return `<div class="side-label">${b.restricted ? 'Delt med deg' : 'Generelt'}</div><nav class="nav">${items}</nav>`;
 }
 
 // ✦ AI-søk: svar med sammendrag og treff fra transaksjoner, kvitteringer og varelinjer.
@@ -75,9 +83,27 @@ function shell(content) {
         <a class="close" href="/#/dash" aria-label="Tilbake til Hjem" title="Tilbake til Hjem">×</a>
       </div>
     </header>
-    ${aiPanel()}
+    ${u.page === 'ai' ? '' : aiPanel()}
     ${content}
   </div></main></div>${modalHtml()}`;
+}
+
+/* ===================== AI-søk (egen side) ===================== */
+
+const AI_SUGG = () => ['Hvor mye har jeg brukt på kaffe?', 'Når kjøpte jeg lyspærer?', `Mat i ${monthName(S.boot.month ?? today().slice(0, 7))}`, 'Hva har jeg betalt for lading?'];
+function aiPage() {
+  const sugg = [...new Set([...AI_SUGG(), ...(S.aiSugg ?? [])])].slice(0, 6);
+  const hist = (S.aiHist ?? []).slice(0, 8);
+  const prov = S.boot.settings.provider === 'ollama' ? 'Ollama · lokalt' : 'Gemini';
+  return `<div class="ai-page">
+    <form class="card ai-ask" data-form="aipage" role="search"><div class="ai-k">✦ AI-SØK · ${prov}</div>
+      <div class="ai-ask-row"><input name="aiq" value="${esc(u.aiPageDraft ?? '')}" placeholder="Spør om alt, f.eks. «hvor mye har jeg brukt på kaffe i år?»" autocomplete="off" aria-label="Spørsmål til AI-søket" data-ai-page-input><button class="btn pri">Spør AI</button></div>
+      <div class="note" style="font-size:13px;text-wrap:pretty">Søker i transaksjoner, kvitteringer og varelinjene som AI har lest av kvitteringsbildene.</div>
+      <div class="ai-sugg">${sugg.map((g) => `<button type="button" data-ai-q="${esc(g)}">${esc(g)}</button>`).join('')}</div></form>
+    ${u.ai?.q ? aiPanel() : ''}
+    ${card(`<div class="card-h"><b style="font-weight:600;font-size:15px">Tidligere spørsmål</b>${hist.length ? '<button class="link-btn" data-act="ai-hist-clear">Tøm</button>' : ''}</div>
+      ${hist.length ? `<div class="ai-hist">${hist.map((h) => `<button data-ai-q="${esc(h)}"><span class="muted">↺</span><span class="ell">${esc(h)}</span></button>`).join('')}</div>` : '<div class="note" style="font-size:13.5px">Ingen spørsmål ennå.</div>'}`, '', 'gap:10px')}
+  </div>`;
 }
 
 /* ===================== Oversikt ===================== */
@@ -201,11 +227,16 @@ function transactions() {
   const detail = sel ? card(`<div style="display:flex;justify-content:space-between;align-items:flex-start">${logo(sel, 46, 14)}<button class="x-btn" data-act="close-sel" aria-label="Lukk">×</button></div>
     <div><input class="inp" data-tx-field="description" value="${esc(sel.description)}" aria-label="Beskrivelse" style="font-size:18px;font-weight:600;background:none;border-color:transparent;padding:0;height:auto"><div class="note" style="font-size:13px">${dLong(sel.date)} · ${esc(sel.account)}</div></div>
     <div class="mono" style="font-size:32px;font-weight:600;letter-spacing:-.03em;color:${amtColor(sel.amount)}">${sgn(sel.amount)} <span style="font-size:15px;color:var(--muted);font-weight:400">kr</span></div>
+    <div style="display:flex;gap:10px;align-items:flex-end"><div class="seg" style="border-radius:10px;flex:none" role="group" aria-label="Type">${[['expense', 'Utgift'], ['income', 'Inntekt']].map(([k2, l]) => `<button type="button" data-txkind="${k2}" aria-pressed="${sel.type === k2}" style="height:38px;padding:0 14px">${l}</button>`).join('')}</div>
+      <label class="f" style="flex:1">Beløp (kr)<input class="inp mono" data-tx-field="amount" inputmode="decimal" value="${n2(Math.abs(sel.amount))}"></label></div>
     ${sel.aiLong ? `<div class="ai-card"><b>✦ AI-beskrivelse</b><span>${esc(sel.aiLong)}</span>${sel.lines?.length ? `<div class="ai-lines">${sel.lines.map((l) => `<span><span>${esc(l.description)}</span><span class="mono">${n2(l.amount)}</span></span>`).join('')}</div>` : ''}</div>` : ''}
     <label class="f">Kategori<select class="inp" data-tx-field="categoryId">${opt('', 'Ukategorisert', sel.categoryId)}${catOpts(sel.categoryId)}</select></label>
     <div style="display:flex;gap:10px"><label class="f" style="flex:1">Dato<input class="inp" type="date" data-tx-field="date" value="${sel.date}"></label><label class="f" style="flex:1">Konto<select class="inp" data-tx-field="accountId">${accOpts(sel.accountId, '–')}</select></label></div>
-    <label class="f">Notat<input class="inp" data-tx-field="note" value="${esc(sel.note)}" placeholder="Legg til notat"></label>
-    <div class="box"><span class="muted">Kvittering</span>${sel.receiptId ? `<a href="#/kv" data-open-rc="${sel.receiptId}">${sel.receipt === 'booked' ? 'Vedlagt – vis' : 'Til gjennomgang →'}</a>` : '<span class="muted">Ingen</span>'}</div>
+    <label class="f">Delt mappe<select class="inp" data-tx-field="folderId">${opt('', 'Ingen', sel.folderId)}${(S.txFolders ?? []).map((f) => opt(f.id, f.name, sel.folderId)).join('')}</select></label>
+    <label class="f">Notat<input class="inp" data-tx-field="note" value="${esc(sel.note ?? '')}" placeholder="Legg til notat"></label>
+    <div class="box"><span class="muted">Kvittering</span>${sel.receiptId ? `<a href="#/kv" data-open-rc="${sel.receiptId}">${sel.receipt === 'booked' ? 'Vedlagt – vis' : 'Til gjennomgang →'}</a>` : `<label class="link-btn" style="cursor:pointer">Legg ved kvittering<input type="file" accept="image/*,application/pdf" data-attach-rc="${sel.id}" hidden></label>`}</div>
+    <div class="orig-links"><button class="orig-link" data-orig="receipt">${icon('kv', 16, 'var(--muted)')}<span class="grow">Original kvittering</span><span class="note">${sel.receiptId ? (sel.receipt === 'booked' ? 'Vedlagt' : 'Til gjennomgang') : 'Ingen'}</span><span class="muted">›</span></button>
+      <button class="orig-link" data-orig="bank">${icon('konto', 16, 'var(--muted)')}<span class="grow">Original banktransaksjon</span><span class="note">${sel.hasBankRow ? 'Fra banken' : sel.source === 'receipt' ? 'Fra kvittering' : 'Lagt inn manuelt'}</span><span class="muted">›</span></button></div>
     <div style="display:flex;gap:10px"><button class="btn ghost" style="flex:1" data-act="make-rule">Lag regel</button><button class="btn danger" style="flex:1" data-act="del-tx">Slett</button></div>
     ${u.msg.rule ? `<div class="ok-msg">${esc(u.msg.rule)}</div>` : ''}`, 'detail') : '';
   return `<div style="display:flex;flex-direction:column;gap:16px">
@@ -383,15 +414,30 @@ function reports() {
 
 /* ===================== Innstillinger ===================== */
 
-const SET_TABS = [['gen', 'Generelt', 'Navn, valuta, måned'], ['ai', 'AI-motor', 'Ollama eller Gemini'], ['cat', 'Kategorier', 'Farger og typer'], ['rule', 'Regler', 'Auto-kategorisering'],
+const SET_TABS = [['gen', 'Generelt', 'Navn, valuta, måned'], ['meny', 'Sidemeny', 'Rekkefølge og synlighet'], ['imp', 'Import', 'Kontoutskrift, CSV og XLSX'], ['ai', 'AI-motor', 'Ollama eller Gemini'], ['cat', 'Kategorier', 'Farger og typer'], ['rule', 'Regler', 'Auto-kategorisering'],
   ['bank', 'Bank og import', 'CSV og PSD2'], ['varsel', 'Varsler', 'Budsjett og kvitteringer'], ['mobil', 'Mobil og tilgang', 'App-tokens og snarveier'], ['data', 'Backup og data', 'Nedlasting, SMB-share og gjenoppretting']];
+
+// Innstillinger → Sidemeny: dra, ▲▼ og bryter for vis/skjul. Endringene lagres med en gang.
+function menuTab() {
+  const { order, hidden } = navCfg();
+  const rows = order.map((p, i) => {
+    const hid = hidden.includes(p), fixed = NAV_FIXED.includes(p), label = pageName(p);
+    return `<div class="navcfg${hid ? ' off' : ''}" draggable="true" data-navcfg="${p}">
+      <span class="grip" aria-hidden="true">⋮⋮</span><span class="no mono">${String(i + 1).padStart(2, '0')}</span>${icon(p, 18, 'var(--muted)')}<span class="lbl">${label}</span>
+      <button type="button" class="mv" data-navcfg-move="${p}:-1" aria-label="Flytt ${label} opp" ${i ? '' : 'disabled'}>▲</button><button type="button" class="mv" data-navcfg-move="${p}:1" aria-label="Flytt ${label} ned" ${i < order.length - 1 ? '' : 'disabled'}>▼</button>
+      ${fixed ? '<span class="always">Alltid</span>' : `<button type="button" class="toggle" role="switch" aria-checked="${!hid}" data-navcfg-tog="${p}" aria-label="Vis ${label} i sidemenyen" title="${hid ? 'Skjult' : 'Vises'}"></button>`}</div>`;
+  }).join('');
+  return `<div class="sub" style="font-size:13.5px;line-height:1.5;text-wrap:pretty">Dra punktene for å endre rekkefølgen i sidemenyen, eller bruk pilene. Bryteren skjuler eller viser et menypunkt. Endringene lagres med en gang. Skjulte sider kan fortsatt åpnes fra lenker.</div>
+    <div class="navcfg-list">${rows}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" data-act="nav-showall">Vis alle</button><button class="btn ghost" data-act="nav-reset">Tilbakestill rekkefølge</button></div>`;
+}
 
 function settingsPage() {
   const st = S.boot.settings, t = u.setTab, cur = SET_TABS.find((x) => x[0] === t);
   let body = '';
   const sel = (key, options) => `<select class="inp" data-set="${key}">${options.map(([v, l]) => opt(v, l, st[key])).join('')}</select>`;
   if (t === 'gen') body = `<div class="form-grid">
-    <label class="f">Visningsnavn<input class="inp" data-set="name" value="${esc(st.name)}"></label>
+    <label class="f">Visningsnavn<input class="inp" data-set="name" value="${esc(st.name)}" placeholder="Navnet til hovedadmin"></label>
     <label class="f">Valuta${sel('currency', [['NOK', 'NOK – norske kroner'], ['EUR', 'EUR – euro'], ['SEK', 'SEK – svenske kroner']])}</label>
     <label class="f">Måneden starter (lønningsdag)<select class="inp" data-set="monthStart">${Array.from({ length: 28 }, (_, i) => opt(i + 1, `${i + 1}. i måneden`, st.monthStart)).join('')}</select></label>
     <label class="f">Sparemål for året (kr)<input class="inp mono" data-set="yearGoal" inputmode="numeric" value="${st.yearGoal}"></label></div>`;
@@ -441,6 +487,8 @@ function settingsPage() {
     ${u.msg.token ? `<div class="box" style="flex-direction:column;align-items:stretch"><span class="ok-msg">Kopier tokenet nå – det vises bare én gang:</span><div style="display:flex;gap:10px;align-items:center"><code class="mono grow" style="word-break:break-all;user-select:all">${esc(u.msg.token)}</code><button class="btn sm" data-copy="${esc(u.msg.token)}">Kopier</button></div></div>` : ''}</div>`;
   }
   else if (t === 'data') body = backupTab();
+  else if (t === 'meny') body = menuTab();
+  else if (t === 'imp') body = impPage();
   return `<div class="row-flex">
     <nav class="card set-nav">${SET_TABS.map(([k2, n, s2]) => `<button data-settab="${k2}" aria-current="${t === k2}"><span>${n}</span><small>${s2}</small></button>`).join('')}</nav>
     ${card(`<div><h2 style="font-size:18px">${cur[1]}</h2><div class="note" style="font-size:13px">${cur[2]}</div></div>${body}${u.msg.set ? `<div class="ok-msg">${esc(u.msg.set)}</div>` : ''}`, '', 'flex:1 1 480px;padding:24px;gap:18px')}
@@ -448,6 +496,39 @@ function settingsPage() {
 }
 
 /* ===================== Modaler ===================== */
+
+// Kvitteringer uten lagret bilde (f.eks. e-postkvitteringer og demodata): tegnes som papirkvittering fra varelinjene AI leste.
+function paperReceipt(r) {
+  const vat = (r.vat ?? []).reduce((a, v) => a + (+v.amount || 0), 0);
+  return `<div class="paper-rc mono"><b>${esc((r.merchant ?? 'Kvittering').toUpperCase())}</b><span class="c">${r.date ? dd(r.date) + '.' + r.date.slice(0, 4) : ''}</span><hr>
+    ${(r.lines ?? []).map((l) => `<span class="ln"><span>${esc(l.description ?? '')}</span><span>${n2(l.amount)}</span></span>`).join('') || '<span class="c">Ingen varelinjer lest</span>'}<hr>
+    <span class="ln tot"><span>TOTAL</span><span>${r.total != null ? n2(r.total) : '–'}</span></span>${vat ? `<span class="ln"><span>herav MVA</span><span>${n2(vat)}</span></span>` : ''}
+    <span class="c" style="margin-top:10px">Ingen bildefil lagret – vist fra AI-utlesingen</span></div>`;
+}
+
+// Originalene bak en transaksjon: kvitteringsbildet/PDF-en med zoom, og bankraden slik den kom fra banken.
+function origModal(m, close) {
+  const o = S.orig?.[m.id], t = S.tx?.items.find((x) => x.id === m.id);
+  const seg = `<div class="seg" style="border-radius:12px" role="tablist">${[['receipt', 'Kvittering'], ['bank', 'Banktransaksjon']].map(([k2, l]) => `<button type="button" role="tab" data-orig-view="${k2}" aria-pressed="${m.view === k2}" style="flex:1;height:38px">${l}</button>`).join('')}</div>`;
+  let body = skel(260);
+  if (o && m.view === 'receipt') {
+    const r = o.receipt;
+    body = !r ? `<div class="empty" style="display:flex;flex-direction:column;gap:12px;align-items:center">Ingen kvittering vedlagt<label class="btn sm" style="cursor:pointer">Legg ved kvittering<input type="file" accept="image/*,application/pdf" data-attach-rc="${m.id}" hidden></label></div>`
+      : !r.fileUrl ? paperReceipt(r)
+      : r.mime === 'application/pdf' ? `<iframe class="orig-pdf" src="${esc(r.fileUrl)}" title="Kvittering (PDF)"></iframe>`
+      : `<div class="orig-img${u.origZoom ? ' zoom' : ''}" data-act="orig-zoom" title="${u.origZoom ? 'Zoom ut' : 'Zoom inn'}"><img src="${esc(r.fileUrl)}" alt="Original kvittering${r.merchant ? ' fra ' + esc(r.merchant) : ''}"></div>`;
+  } else if (o) {
+    const b = o.bankRow;
+    const rows = (pairs) => pairs.filter(([, v]) => v != null && v !== '').map(([k2, v]) => `<div class="kv-line"><span class="sub">${k2}</span><span class="mono" style="text-align:right;word-break:break-word">${esc(v)}</span></div>`).join('');
+    body = !b ? `<div class="empty">${t?.source === 'receipt' ? 'Transaksjonen ble laget fra en kvittering og har ingen bankrad.' : 'Ingen bankrad lagret. Transaksjonen er lagt inn manuelt eller importert før FinansHub tok vare på bankradene.'}</div>`
+      : `<div class="orig-bank">${rows([['Dato', b.bookingDate], ['Rentedato', b.valueDate], ['Forklaring', b.description], [b.amount < 0 ? 'Ut' : 'Inn', n2(Math.abs(b.amount)) + ' kr'], ['Konto', b.account], ['Bank', b.bank], ['Arkivref.', b.archiveReference], ['Kilde', [b.source, b.file].filter(Boolean).join(' · ')], ['Importert', b.importedAt ? new Date(b.importedAt).toLocaleString('nb-NO', { dateStyle: 'short', timeStyle: 'short' }) : null]])}</div>
+        <details class="orig-raw"><summary>Rådata (JSON)</summary><pre class="mono">${esc(JSON.stringify({ bookingDate: b.bookingDate, valueDate: b.valueDate, description: b.description, amount: b.amount, account: b.account, archiveReference: b.archiveReference, source: b.source, raw: b.raw }, null, 2))}</pre></details>`;
+  }
+  const dl = o && m.view === 'receipt' && o.receipt?.fileUrl ? `<a class="btn ghost" href="${esc(o.receipt.fileUrl)}" download>Last ned</a>` : o?.bankRow && m.view === 'bank' ? '<button type="button" class="btn ghost" data-act="orig-dl">Last ned</button>' : '';
+  const share = o && (m.view === 'bank' ? o.bankRow : o.receipt?.fileUrl) && navigator.share ? '<button type="button" class="btn ghost" data-act="orig-share">Del</button>' : '';
+  return `<div class="modal" data-modal><div class="dlg orig-modal" role="dialog" aria-modal="true"><div class="card-h"><div><h2 style="font-size:19px">${m.view === 'bank' ? 'Original banktransaksjon' : 'Original kvittering'}</h2><div class="note" style="font-size:13px">${esc(t?.description ?? '')}${t ? ' · ' + dd(t.date) : ''}</div></div>${close}</div>
+    ${seg}${body}${dl || share ? `<div style="display:flex;gap:10px;justify-content:flex-end">${share}${dl}</div>` : ''}</div></div>`;
+}
 
 function modalHtml() {
   const m = u.add;
@@ -458,8 +539,9 @@ function modalHtml() {
     <label class="f">Beskrivelse<input class="inp" name="description" required placeholder="F.eks. Rema 1000" autofocus></label>
     <div style="display:flex;gap:10px"><label class="f" style="flex:1">Beløp (kr)<input class="inp hl mono" name="amount" required inputmode="decimal"></label><label class="f" style="flex:1">Dato<input class="inp" type="date" name="date" value="${today()}" required></label></div>
     <div style="display:flex;gap:10px"><label class="f" style="flex:1">Kategori<select class="inp" name="categoryId">${opt('', 'Automatisk (regler)', '')}${catOpts(m.kind === 'inn' ? cats('income')[0]?.id : '')}</select></label><label class="f" style="flex:1">Konto<select class="inp" name="accountId">${accOpts(accs()[0]?.id, '–')}</select></label></div>
-    <label class="f">Notat<input class="inp" name="note"></label>
+    <div style="display:flex;gap:10px"><label class="f" style="flex:1">Delt mappe<select class="inp" name="folderId">${opt('', 'Ingen', '')}${(S.txFolders ?? []).map((f) => opt(f.id, f.name, '')).join('')}</select></label><label class="f" style="flex:1">Notat<input class="inp" name="note"></label></div>
     <button class="btn pri" style="height:50px;margin-top:4px">Lagre</button></form></div>`;
+  if (m.type === 'orig') return origModal(m, close);
   if (m.type === 'acc') { const a = accs().find((x) => x.id === m.id) ?? { type: 'checking' }; return `<div class="modal" data-modal><form data-form="acc"><div class="card-h"><h2 style="font-size:19px">${m.id ? 'Endre konto' : 'Ny konto'}</h2>${close}</div>
     <div style="display:flex;gap:10px"><label class="f" style="flex:1">Navn<input class="inp" name="name" required value="${esc(a.name ?? '')}" placeholder="Brukskonto"></label><label class="f" style="flex:1">Bank<input class="inp" name="bank" value="${esc(a.bank ?? '')}" placeholder="DNB"></label></div>
     <div style="display:flex;gap:10px"><label class="f" style="flex:1">Type<select class="inp" name="type">${Object.entries(ACC_TYPES).map(([k2, l]) => opt(k2, l, a.type)).join('')}</select></label><label class="f" style="flex:1">Siste fire siffer<input class="inp mono" name="last4" inputmode="numeric" maxlength="4" value="${esc(a.last4 ?? '')}" placeholder="1234"></label></div>
@@ -484,7 +566,7 @@ function modalHtml() {
 
 /* ===================== Tegning og ruting ===================== */
 
-const PAGE_FN = { ov: overview, tx: transactions, kv: receipts, bud: budget, fast: recurring, konto: accounts, rap: reports, inn: settingsPage, ...MODULE_FN };
+const PAGE_FN = { ov: overview, tx: transactions, ai: aiPage, kv: receipts, bud: budget, fast: recurring, konto: accounts, rap: reports, inn: settingsPage, ...MODULE_FN };
 
 export function draw() {
   const el = root();
@@ -496,11 +578,19 @@ export function draw() {
 }
 const focusSel = (e) => (e.name ? `[data-form] input[name="${e.name}"]` : e.dataset.txField ? `[data-tx-field="${e.dataset.txField}"]` : e.dataset.rcField ? `[data-rc-field="${e.dataset.rcField}"]` : null);
 
-const LOADERS = { ov: [loadSummary], tx: [loadTx], kv: [loadReceipts], bud: [loadSummary], fast: [loadRecurring], konto: [], rap: [loadReport], inn: [], ...MODULE_LOADERS };
+const loadTxFolders = async () => { S.txFolders = await api('/folders').catch(() => []); };
+const loadAiPage = async () => { [S.aiHist, S.aiSugg] = await Promise.all([api('/search/history').catch(() => []), api('/search/suggestions').catch(() => [])]); };
+// Personlig oppsett fra homelab (/api/me/layout). Mangler endepunktet, brukes FinansHubs egne prefs.
+async function loadLayout() {
+  if (S.layout !== undefined) return;
+  try { const r = await fetch('/api/me/layout', { headers: { Accept: 'application/json' } }); S.layout = r.ok && r.headers.get('content-type')?.includes('json') ? await r.json() : null; } catch { S.layout = null; }
+  S.layoutOk = !!S.layout;
+}
+const LOADERS = { ov: [loadSummary], tx: [loadTx, loadTxFolders], ai: [loadAiPage], kv: [loadReceipts], bud: [loadSummary], fast: [loadRecurring], konto: [], rap: [loadReport], inn: [], ...MODULE_LOADERS };
 // Brukere uten admin-rolle har bare Delte mapper.
 const allowed = (p) => !S.boot?.restricted || p === 'dir';
 export async function load(page = u.page) {
-  try { await Promise.all(LOADERS[page].map((f) => f())); } catch (e) { toast(e.message); }
+  try { await Promise.all([loadLayout(), ...LOADERS[page].map((f) => f())]); } catch (e) { toast(e.message); }
   if (page === 'inn' && u.setTab === 'mobil') S.tokens = await api('/tokens').catch(() => []);
   if (page === 'inn' && u.setTab === 'data') await loadBackup().catch((e) => toast(e.message));
   render();
@@ -515,10 +605,14 @@ function schedulePoll() {
 export async function refreshAll() { await loadBoot(); await load(); }
 
 export function route() {
-  const p = location.hash.replace(/^#\/?/, '').split('/')[0];
+  let p = location.hash.replace(/^#\/?/, '').split('/')[0];
+  // Import ligger nå under Innstillinger; gamle lenker til #/imp havner der.
+  if (p === 'imp' && allowed('inn')) { u.setTab = 'imp'; history.replaceState(null, '', '#/inn'); p = 'inn'; }
   const next = PAGE_FN[p] && allowed(p) ? p : S.boot?.restricted ? 'dir' : 'ov';
-  if (next !== u.page) { u.page = next; u.msg = {}; window.scrollTo(0, 0); }
+  const entered = next !== u.page;
+  if (entered) { u.page = next; u.msg = {}; window.scrollTo(0, 0); }
   draw();
+  if (entered && next === 'ai') document.querySelector('[data-ai-page-input]')?.focus();
   load();
 }
 
@@ -542,17 +636,37 @@ async function askAi(text) {
   u.aiDraft = qText;
   u.ai = { ...(u.ai ?? {}), q: qText, busy: true, answer: '', hits: [] };
   render();
-  try { const r = await api('/search/ai', { method: 'POST', json: { q: qText } }); u.ai = { ...r, busy: false }; }
+  try { const r = await api('/search/ai', { method: 'POST', json: { q: qText } }); u.ai = { ...r, busy: false }; if (r.history) S.aiHist = r.history; }
   catch (e) { u.ai = { q: qText, busy: false, answer: e.message, hits: [], suggestions: u.ai?.suggestions }; }
   render();
 }
-const saveNav = busyWrap(async (nav) => { const r = await api('/prefs', { method: 'PUT', json: { nav } }); S.boot.nav = r.nav; });
+// Lagrer rekkefølge og skjulte punkter: i /api/me/layout (finNav) når det finnes, og alltid i FinansHubs prefs.
+const saveNavCfg = busyWrap(async (order, hidden) => {
+  hidden = hidden.filter((p) => !NAV_FIXED.includes(p));
+  S.layout = S.layout ? { ...S.layout, finNav: { order, hidden } } : S.layout;
+  S.boot.nav = order; S.boot.navHidden = hidden; u.cfgOrder = null;
+  render();
+  const r = await api('/prefs', { method: 'PUT', json: { nav: order, hidden } });
+  S.boot.nav = r.nav; S.boot.navHidden = r.hidden;
+  if (S.layoutOk) {
+    const res = await fetch('/api/me/layout', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ finNav: { order: r.nav, hidden: r.hidden } }) }).catch(() => null);
+    if (res?.ok) S.layout = { ...S.layout, finNav: { order: r.nav, hidden: r.hidden } };
+  }
+});
 function moveNav(p, d) {
-  const a = u.navEdit, i = a.indexOf(p), j = i + d;
+  const { order, hidden } = navCfg(), a = [...order], i = a.indexOf(p), j = i + d;
   if (i < 0 || j < 0 || j >= a.length) return;
   [a[i], a[j]] = [a[j], a[i]];
+  return saveNavCfg(a, hidden);
+}
+async function openOrig(id, view) {
+  u.add = { type: 'orig', id, view }; u.origZoom = false; render();
+  S.orig = S.orig ?? {};
+  try { S.orig[id] = await api(`/transactions/${id}/original`); } catch (e) { u.add = null; toast(e.message); }
   render();
 }
+const bankText = (b) => [`Dato: ${b.bookingDate ?? ''}`, b.valueDate ? `Rentedato: ${b.valueDate}` : null, `Forklaring: ${b.description ?? ''}`, `${b.amount < 0 ? 'Ut' : 'Inn'}: ${n2(Math.abs(b.amount))} kr`,
+  b.account ? `Konto: ${b.account}${b.bank ? ' (' + b.bank + ')' : ''}` : null, b.archiveReference ? `Arkivref.: ${b.archiveReference}` : null].filter(Boolean).join('\n');
 
 export function bind() {
   const el = root();
@@ -581,7 +695,11 @@ export function bind() {
     if ((x = d('[data-del-rule]'))) { await api(`/rules/${x.dataset.delRule}`, { method: 'DELETE' }); await loadBoot(); return render(); }
     if ((x = d('[data-del-token]'))) { await api(`/tokens/${x.dataset.delToken}`, { method: 'DELETE' }); u.msg.token = null; return load(); }
     if ((x = d('[data-hov]'))) return;
-    if ((x = d('[data-nav-move]'))) { const [p, dir] = x.dataset.navMove.split(':'); return moveNav(p, +dir); }
+    if ((x = d('[data-navcfg-move]'))) { const [p, dir] = x.dataset.navcfgMove.split(':'); return moveNav(p, +dir); }
+    if ((x = d('[data-navcfg-tog]'))) { const p = x.dataset.navcfgTog, { order, hidden } = navCfg(); return saveNavCfg(order, hidden.includes(p) ? hidden.filter((y) => y !== p) : [...hidden, p]); }
+    if ((x = d('[data-txkind]'))) { const tx = S.tx?.items.find((y) => y.id === u.sel); if (tx && tx.type !== x.dataset.txkind) return patchTx(tx.id, { type: x.dataset.txkind }); return; }
+    if ((x = d('[data-orig]'))) return openOrig(u.sel, x.dataset.orig);
+    if ((x = d('[data-orig-view]'))) { u.add.view = x.dataset.origView; return render(); }
     if ((x = d('[data-ai-q]'))) { u.aiMode = true; return askAi(x.dataset.aiQ); }
     if ((x = d('[data-copy]'))) { try { await navigator.clipboard.writeText(x.dataset.copy); toast('Kopiert'); } catch { toast('Merk teksten og kopier manuelt'); } return; }
     const act = d('[data-act]')?.dataset.act;
@@ -626,8 +744,24 @@ export function bind() {
       case 'demo': await api('/demo', { method: 'POST' }); toast('Demodata lastet inn'); return refreshAll();
       case 'wipe': u.add = { type: 'wipe' }; return render();
       case 'print': return window.print();
-      case 'nav-edit': if (u.navEdit) { const nav = u.navEdit; u.navEdit = null; await saveNav(nav); toast('Rekkefølgen er lagret'); } else u.navEdit = [...navOrder()]; return render();
-      case 'nav-reset': u.navEdit = [...(S.boot.navDefault ?? NAV_DEFAULT)]; return render();
+      case 'nav-showall': return saveNavCfg(navCfg().order, []);
+      case 'nav-reset': await saveNavCfg([...(S.boot.navDefault ?? NAV_DEFAULT)], navCfg().hidden); toast('Standard rekkefølge er satt'); return;
+      case 'ai-hist-clear': S.aiHist = await api('/search/history', { method: 'DELETE' }); return render();
+      case 'orig-zoom': u.origZoom = !u.origZoom; return render();
+      case 'orig-dl': {
+        const b = S.orig?.[u.add.id]?.bankRow; if (!b) return;
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([JSON.stringify(b, null, 2)], { type: 'application/json' })); a.download = `banktransaksjon-${u.add.id}.json`; a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 1000); return;
+      }
+      case 'orig-share': {
+        const o = S.orig?.[u.add.id]; if (!o) return;
+        try {
+          if (u.add.view === 'bank') await navigator.share({ title: 'Banktransaksjon', text: bankText(o.bankRow) });
+          else { const blob = await (await fetch(o.receipt.fileUrl)).blob(); const file = new File([blob], `kvittering.${blob.type.split('/')[1] || 'jpg'}`, { type: blob.type }); await (navigator.canShare?.({ files: [file] }) ? navigator.share({ files: [file], title: 'Kvittering' }) : navigator.share({ title: 'Kvittering', url: new URL(o.receipt.fileUrl, location.href).href })); }
+        } catch (err) { if (err?.name !== 'AbortError') toast('Kunne ikke dele'); }
+        return;
+      }
       case 'ai-toggle': {
         u.aiMode = !u.aiMode;
         if (u.aiMode && !u.ai) { u.ai = { q: '', suggestions: [] }; render(); u.ai.suggestions = await api('/search/suggestions').catch(() => []); }
@@ -646,6 +780,14 @@ export function bind() {
   el.addEventListener('change', busyWrap(async (e) => {
     const t = e.target;
     if (t.matches('[data-upload]')) return uploadFiles([...t.files]);
+    if (t.matches('[data-attach-rc]')) {
+      const id = +t.dataset.attachRc, f = t.files[0]; t.value = '';
+      if (!f) return;
+      const fd = new FormData(); fd.append('file', f);
+      await api(`/transactions/${id}/receipt`, { method: 'POST', body: fd });
+      toast('Kvitteringen er lagt ved og leses av AI'); if (u.add?.type === 'orig') { S.orig[id] = await api(`/transactions/${id}/original`); }
+      await Promise.all([loadTx(), loadBoot()]); return render();
+    }
     if (t.matches('[data-csv]')) {
       const form = t.closest('form');
       const fd = new FormData(form); fd.set('profile', S.boot.settings.csvProfile);
@@ -655,7 +797,12 @@ export function bind() {
       t.value = ''; await loadBoot(); return render();
     }
     if (t.dataset.filter) { u[t.dataset.filter] = t.value; await loadTx(); return render(); }
-    if (t.dataset.txField) { const v = t.value; return patchTx(u.sel, { [t.dataset.txField]: t.dataset.txField === 'categoryId' || t.dataset.txField === 'accountId' ? (+v || null) : v }); }
+    if (t.dataset.txField) {
+      const f = t.dataset.txField, v = t.value, tx = S.tx?.items.find((y) => y.id === u.sel);
+      if (f === 'amount') { const a = parseAmount(v); if (a === null || !Number.isFinite(a)) { toast('Ugyldig beløp'); return render(); } return patchTx(u.sel, { amount: Math.abs(a), type: tx?.type ?? 'expense' }); }
+      if (f === 'description' && !v.trim()) { toast('Beskrivelse må fylles ut'); return render(); }
+      return patchTx(u.sel, { [f]: ['categoryId', 'accountId', 'folderId'].includes(f) ? (+v || null) : v });
+    }
     if (t.dataset.rcField) { const f = t.dataset.rcField; return patchRc(u.selRc, { [f]: f === 'total' ? parseAmount(t.value) : f === 'accountId' ? (+t.value || null) : t.value }); }
     if (t.dataset.budget) { await api('/budgets', { method: 'PUT', json: { categoryId: +t.dataset.budget, amount: parseAmount(t.value) ?? 0 } }); await loadSummary(); return render(); }
     if (t.dataset.set) {
@@ -676,13 +823,14 @@ export function bind() {
     e.preventDefault();
     const v = Object.fromEntries(new FormData(f));
     switch (f.dataset.form) {
+      case 'aipage': u.aiPageDraft = ''; if (!String(v.aiq ?? '').trim()) return; return askAi(v.aiq);
       case 'gsearch': if (u.aiMode) return askAi(v.q);
       // fallthrough
       case 'txsearch': u.q = v.q; u.sel = null; if (u.page !== 'tx') { location.hash = '#/tx'; return; } await loadTx(); return render();
       case 'tx': {
         const amt = Math.abs(parseAmount(v.amount) ?? NaN);
         if (!Number.isFinite(amt)) return toast('Ugyldig beløp');
-        await api('/transactions', { method: 'POST', json: { ...v, amount: u.add.kind === 'inn' ? amt : -amt, categoryId: +v.categoryId || null, accountId: +v.accountId || null } });
+        await api('/transactions', { method: 'POST', json: { ...v, type: u.add.kind === 'inn' ? 'income' : 'expense', amount: amt, categoryId: +v.categoryId || null, accountId: +v.accountId || null, folderId: +v.folderId || null } });
         u.add = null; toast('Transaksjon lagret'); return refreshAll();
       }
       case 'acc': await api(u.add.id ? `/accounts/${u.add.id}` : '/accounts', { method: u.add.id ? 'PATCH' : 'POST', json: { ...v, openingBalance: parseAmount(v.openingBalance) ?? 0 } }); u.add = null; return refreshAll();
@@ -698,21 +846,31 @@ export function bind() {
     }
   }));
 
-  // Dra og slipp i sidemenyen (redigeringsmodus).
-  el.addEventListener('dragstart', (e) => { const n = e.target.closest?.('[data-nav-item]'); if (n) { u.navDrag = n.dataset.navItem; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', u.navDrag); } });
+  // Dra og slipp i Innstillinger → Sidemeny. DOM-noden flyttes direkte (en full omtegning midt i et drag avbryter draget).
+  el.addEventListener('dragstart', (e) => {
+    const n = e.target.closest?.('[data-navcfg]');
+    if (!n) return;
+    u.navDrag = n.dataset.navcfg; u.cfgOrder = [...navCfg().order];
+    e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', u.navDrag);
+    requestAnimationFrame(() => n.classList.add('dragging'));
+  });
   el.addEventListener('dragover', (e) => {
-    const n = e.target.closest?.('[data-nav-item]');
-    if (!n || !u.navDrag || !u.navEdit) return;
+    const n = e.target.closest?.('[data-navcfg]');
+    if (!n || !u.navDrag || !u.cfgOrder) return;
     e.preventDefault();
-    // Flytt DOM-noden direkte (en full omtegning midt i et drag avbryter draget).
-    const a = u.navEdit, from = a.indexOf(u.navDrag), to = a.indexOf(n.dataset.navItem);
+    const a = u.cfgOrder, from = a.indexOf(u.navDrag), to = a.indexOf(n.dataset.navcfg);
     if (from < 0 || to < 0 || from === to) return;
     a.splice(to, 0, a.splice(from, 1)[0]);
-    const src = el.querySelector(`[data-nav-item="${u.navDrag}"]`);
+    const src = el.querySelector(`[data-navcfg="${u.navDrag}"]`);
     if (src) n.parentNode.insertBefore(src, from < to ? n.nextSibling : n);
   });
-  el.addEventListener('drop', (e) => { if (e.target.closest?.('[data-nav-item]')) e.preventDefault(); });
-  el.addEventListener('dragend', () => { if (u.navDrag) { u.navDrag = null; render(); } });
+  el.addEventListener('drop', (e) => { if (e.target.closest?.('[data-navcfg]')) e.preventDefault(); });
+  el.addEventListener('dragend', () => {
+    if (!u.navDrag) return;
+    const order = u.cfgOrder; u.navDrag = null;
+    if (order && order.join() !== (S.boot.nav ?? []).join()) return saveNavCfg(order, navCfg().hidden);
+    u.cfgOrder = null; render();
+  });
 
   // Dra og slipp kvitteringer.
   el.addEventListener('dragover', (e) => { const z = e.target.closest('[data-drop]'); if (z) { e.preventDefault(); z.classList.add('over'); } });

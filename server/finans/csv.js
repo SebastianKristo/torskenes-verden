@@ -11,6 +11,17 @@ const COLS = {
   out: ['ut fra konto', 'ut', 'uttak', 'belastet'],
   in: ['inn på konto', 'inn', 'innskudd', 'godskrevet'],
 };
+// Kolonner som bare tas vare på i den opprinnelige bankraden.
+export const VALUE_DATE = ['rentedato', 'valuteringsdato', 'valutadato', 'valuedate', 'value date'];
+export const ARCHIVE_REF = ['arkivref', 'arkivreferanse', 'arkivref.', 'referanse', 'reference', 'ref'];
+
+// Bankraden slik den kom fra banken: overskrift → celle, pluss felt med faste navn. Lagres uendret i raw_bank_row.
+export function bankRow(headers, cells, ix, extra = {}) {
+  const raw = {};
+  headers.forEach((h, i) => { const v = cells[i]; if (v !== undefined && String(v) !== '') raw[String(h || `Kolonne ${i + 1}`)] = String(v); });
+  const at = (i) => (i > -1 && cells[i] !== undefined && String(cells[i]) !== '' ? String(cells[i]) : null);
+  return { bookingDate: at(ix.date), valueDate: at(ix.value ?? -1), description: at(ix.text), archiveReference: at(ix.ref ?? -1), raw, ...extra };
+}
 
 function splitLine(line, sep) {
   const out = []; let cur = '', q = false;
@@ -56,9 +67,12 @@ export function parseCsv(text, accountId, profile = 'DNB') {
   const lines = text.replace(/^﻿/, '').split(/\r?\n/).filter((l) => l.trim());
   if (lines.length < 2) throw new Error('Filen har ingen rader');
   const sep = [';', '\t', ','].map((s) => [s, lines[0].split(s).length]).sort((a, b) => b[1] - a[1])[0][0];
-  const head = splitLine(lines[0], sep).map((h) => h.toLowerCase().replace(/["']/g, ''));
+  const headers = splitLine(lines[0], sep).map((h) => h.replace(/["']/g, '').trim());
+  const head = headers.map((h) => h.toLowerCase());
   const find = (names) => { for (const n of names) { const i = head.findIndex((h) => h === n); if (i > -1) return i; } for (const n of names) { const i = head.findIndex((h) => h.includes(n)); if (i > -1) return i; } return -1; };
   const ix = Object.fromEntries(Object.entries(COLS).map(([k, v]) => [k, find(v)]));
+  ix.value = head.findIndex((h) => VALUE_DATE.includes(h));
+  ix.ref = head.findIndex((h) => ARCHIVE_REF.includes(h));
   if (ix.date < 0 || ix.text < 0 || (ix.amount < 0 && ix.out < 0 && ix.in < 0)) {
     throw new Error(`Fant ikke kolonnene for dato, tekst og beløp. Overskrifter: ${head.join(', ')}`);
   }
@@ -79,7 +93,8 @@ export function parseCsv(text, accountId, profile = 'DNB') {
     // Stabil ID for duplikatsjekk: samme rad importert to ganger gir samme ID.
     const key = `${accountId}|${date}|${amount}|${desc}`;
     const k = (seen.get(key) ?? 0) + 1; seen.set(key, k);
-    rows.push({ date, amount, description: desc.slice(0, 200), merchant: merchantOf(desc), external_id: 'csv:' + createHash('sha1').update(`${key}|${k}`).digest('hex').slice(0, 24) });
+    rows.push({ date, amount, description: desc.slice(0, 200), merchant: merchantOf(desc), external_id: 'csv:' + createHash('sha1').update(`${key}|${k}`).digest('hex').slice(0, 24),
+      bank: bankRow(headers, c, ix, { amount: amount / 100 }) });
   });
   return { rows, skipped };
 }

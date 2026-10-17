@@ -172,6 +172,8 @@ addCol('fh_folders', 'split', "TEXT NOT NULL DEFAULT 'equal'");  // 'equal' elle
 addCol('fh_folder_members', 'user_id', 'TEXT');                   // null = navngitt person uten innlogging
 addCol('fh_folder_entries', 'category', 'TEXT');
 addCol('fh_folder_entries', 'project_id', 'INTEGER');
+// Prompt 06: bankraden slik den kom fra banken (JSON, uendret før navnevasking).
+addCol('fh_transactions', 'raw_bank_row', 'TEXT');
 db.exec(`
 CREATE TABLE IF NOT EXISTS fh_folder_projects (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -230,7 +232,7 @@ const DEFAULT_RULES = [['REMA*', 'Mat og dagligvarer'], ['KIWI*', 'Mat og daglig
   ['CIRCLE K*', 'Transport og lading'], ['RUTER*', 'Transport og lading'], ['SPOTIFY*', 'Abonnementer'], ['NETFLIX*', 'Abonnementer']];
 
 export const DEFAULT_SETTINGS = {
-  name: 'Sebastian', currency: 'NOK', monthStart: 1, yearGoal: 120000,
+  name: '', currency: 'NOK', monthStart: 1, yearGoal: 120000,
   provider: process.env.AI_PROVIDER === 'gemini' ? 'gemini' : 'ollama', fallback: (process.env.AI_FALLBACK ?? 'gemini') !== 'none',
   ollamaUrl: process.env.OLLAMA_URL ?? 'http://192.168.1.30:11434', ollamaModel: process.env.OLLAMA_MODEL ?? 'qwen2.5vl:7b',
   geminiModel: process.env.GEMINI_MODEL ?? 'gemini-2.5-flash', minConf: Math.round(Number(process.env.AI_MIN_CONFIDENCE ?? 0.85) * 100),
@@ -245,7 +247,11 @@ export const DEFAULT_SETTINGS = {
   smbSchedule: 'off', smbKeep: 14, smbDb: true, smbReceipts: true, smbSettings: true, smbEncrypt: true,
 };
 
-export function settings() { return { ...DEFAULT_SETTINGS, ...kv.get(OWNER, 'fh_settings', {}) }; }
+// Visningsnavnet følger hovedadmin (fra førstegangsoppsettet) til det overstyres under Generelt.
+function mainAdminName() {
+  try { const u = db.prepare("SELECT name, username FROM users ORDER BY is_main_admin DESC, role='admin' DESC, created LIMIT 1").get(); return u ? (u.name || u.username) : null; } catch { return null; }
+}
+export function settings() { const st = { ...DEFAULT_SETTINGS, ...kv.get(OWNER, 'fh_settings', {}) }; if (!st.name) st.name = mainAdminName() || 'Meg'; return st; }
 export function saveSettings(patch) { kv.set(OWNER, 'fh_settings', { ...kv.get(OWNER, 'fh_settings', {}), ...patch }); }
 
 // Hemmeligheter for FinansHub (Gemini, Trading 212, SMB, IMAP) lagres separat, kryptert med AES-256-GCM, og sendes aldri ut.

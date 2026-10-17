@@ -1,6 +1,7 @@
 import { esc, isMobile } from './util.js';
 import { store, widget, card, refresh, errBox, on } from './store.js';
-import { LINKS, tiles } from './dash.js';
+import { tiles } from './dash.js';
+import { tabAllowed } from './profile.js';
 
 widget('n_lab', { render() {
   const h = store.data.health;
@@ -13,9 +14,11 @@ widget('n_lab', { render() {
   return `<div class="card-head"><div class="card-title">Homelab</div>${h ? `<span class="mono sub" style="font-size:12px">${up}/${h.services.length} oppe</span>` : ''}</div>${rows}${errBox('health', 'Helsesjekk')}`;
 } });
 
+// Snarveiene fra brukerens oppsett: nettsider på internett og tjenester på lokalnettet hver for seg.
+const links = (local) => (store.me.shortcuts ?? []).filter((s) => !!s.local === local).map((s) => [s.name, s.url]);
 const group = (name, ls) => `<div class="card-title">${name}</div>${ls.map(([n, u]) => `<a class="row" href="${esc(u)}" target="_blank" rel="noopener"><span>${esc(n)}</span><span class="muted" style="font-size:13px">${esc(u.replace(/https?:\/\/(www\.)?/, ''))} ↗</span></a>`).join('')}`;
-widget('n_news', { render: () => group('Nyheter og handel', LINKS.slice(0, 5)) });
-widget('n_ai', { render: () => group('AI og skole', LINKS.slice(5, 9)) });
+widget('n_news', { render: () => group('Snarveier', links(false)) });
+widget('n_ai', { render: () => group('På lokalnettet', links(true)) });
 
 export function render() {
   return `<div style="display:flex;flex-direction:column;gap:20px"><div class="page-title">Nett<b>verk</b> og lenker</div>
@@ -31,9 +34,7 @@ export function renderMore() {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <a class="btn-lg" href="#/rom" style="justify-content:center;padding:14px">Rom ↗</a>
       <a class="btn-lg" href="#/nettverk" style="justify-content:center;padding:14px">Nettverk ↗</a>
-      <a class="btn-lg" href="#/hjem" style="justify-content:center;padding:14px">Hjem ↗</a>
-      <a class="btn-lg" href="#/matplan" style="justify-content:center;padding:14px">Matplan ↗</a>
-      <a class="btn-lg" href="#/domener" style="justify-content:center;padding:14px">Domener ↗</a>
+      ${[['hjem', 'Hjem'], ['matplan', 'Matplan'], ['domener', 'Domener']].filter(([k]) => tabAllowed(k)).map(([k, n]) => `<a class="btn-lg" href="#/${k}" style="justify-content:center;padding:14px">${n} ↗</a>`).join('')}
       <a class="btn-lg" href="/cv" target="_blank" style="justify-content:center;padding:14px">CV ↗</a>
       <button class="btn-lg" data-act="settings" style="justify-content:center;padding:14px">Innstillinger</button>
     </div>`;

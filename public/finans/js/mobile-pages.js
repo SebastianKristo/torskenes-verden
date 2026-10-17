@@ -1,0 +1,327 @@
+// «Mer» i Finans: alle funksjonene fra FinansHub på nettsiden, tilpasset mobil, i én felles mal
+// (tilbake, tittel og undertekst, hero-kort, nøkkeltall, grupper med rader). Rader åpner en detaljside med feltene og tilhørende transaksjoner.
+import { S, api, esc, n0, n2, sgn, dd, today, monthName, cap, icon, logo, aiLine, loadReceipts, accs } from './core.js';
+import { m, draw, flash, avatar, backBtn, theme, amtC, openSheet, openCam } from './mobile.js';
+import { c3 } from './mobile-theme.js';
+
+export const PAGES = ['mer', 'kv', 'fast', 'konto', 'aks', 'rap', 'imp', 'sok'];
+const PG = { rec: null, stocks: null, rep: null, repMode: 'month', sub: null, dirs: null, finn: null, booked: null, aksPer: '1M',
+  imp: { rows: null, files: [], text: '', busy: false, acc: null }, ai: { q: '', r: null, busy: false, hist: null, sugg: null, focus: false }, last: '' };
+const isI = () => theme() === 'ios';
+const gl = (c = 'glass2') => (isI() ? c : '');
+const kr = (v) => `${n0(v)} kr`, kr2 = (v) => `${n2(v)} kr`;
+const curM = () => S.summary?.month ?? today().slice(0, 7);
+
+/* ---------- Mal ---------- */
+
+export const R = {
+  // Raden kan ha en egen knapp (o.act), så den klikkbare raden er en div med role=button (knapper kan ikke ligge i knapper).
+  item: (o) => `<div class="item prow${o.attrs ? ' tap' : ''}" ${o.attrs ? `role="button" tabindex="0" ${o.attrs}` : ''}>${o.logo ? logo(o.logo, 40, isI() ? 20 : 12) : `<span class="m-ini pini" style="${o.iniStyle ?? ''}">${esc(o.ini ?? (o.t ?? '?').slice(0, 1))}</span>`}
+    <span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(o.t)}</span>${o.s ? `<span class="m-ell s">${esc(o.s)}</span>` : ''}${aiLine(o.ai, 'm-ell ai')}${o.tags?.length ? `<span class="ptags">${o.tags.map((g) => `<em class="${g.k ?? ''}">${esc(g.n)}</em>`).join('')}</span>` : ''}</span>
+    <span class="pv">${o.v ? `<b class="m-mono" style="color:${o.vc ?? 'inherit'}">${esc(o.v)}</b>` : ''}${o.vs ? `<small>${esc(o.vs)}</small>` : ''}${o.act ? `<button class="pact ${o.act.k ?? ''}" ${o.act.attrs}>${esc(o.act.l)}</button>` : ''}</span></div>`,
+  bar: (l, v, pct, c, s = '', sc = '') => `<div class="opt-row col pbar"><span class="m-row" style="justify-content:space-between;gap:10px"><span class="m-ell">${esc(l)}</span><span class="m-mono" style="flex:none">${esc(v)}</span></span><span class="hbar"><i style="width:${Math.max(0, Math.min(100, pct))}%;background:${c}"></i></span>${s ? `<span style="font-size:12.5px;color:${sc || 'inherit'};opacity:${sc ? 1 : 0.65}">${esc(s)}</span>` : ''}</div>`,
+  tog: (l, sub, on, attrs) => `<button class="opt-row" ${attrs} role="switch" aria-checked="${!!on}"><span class="m-grow"><b style="font-weight:500">${esc(l)}</b>${sub ? `<br><span style="font-size:13px;opacity:.65">${esc(sub)}</span>` : ''}</span><span class="sw" aria-checked="${!!on}"></span></button>`,
+  val: (l, v, c = '', mono = false) => `<div class="opt-row"><span class="m-grow" style="opacity:.75">${esc(l)}</span><b class="${mono ? 'm-mono' : ''}" style="font-weight:500;text-align:right;${c ? `color:${c}` : ''}">${esc(v)}</b></div>`,
+  chips: (l, opts) => `<div class="opt-row col">${l ? `<span style="font-size:13px;opacity:.7">${esc(l)}</span>` : ''}<div class="schips">${opts.map((o) => `<button class="chip" ${o.attrs} aria-pressed="${!!o.on}">${o.on && !isI() ? '✓ ' : ''}${esc(o.n)}</button>`).join('')}</div></div>`,
+  inp: (l, id, v, ph = '', extra = '') => `<label class="opt-row col"><span style="font-size:13px;opacity:.7">${esc(l)}</span><input class="sinp" id="${id}" value="${esc(v ?? '')}" placeholder="${esc(ph)}" ${extra}></label>`,
+  btn: (l, attrs, c = 'var(--m-acc)') => `<button class="opt-row" ${attrs}><span class="m-grow" style="color:${c};font-weight:500">${esc(l)}</span></button>`,
+  link: (l, href, c = 'var(--m-acc)', extra = '') => `<a class="opt-row" href="${href}" ${extra}><span class="m-grow" style="color:${c};font-weight:500">${esc(l)}</span></a>`,
+  text: (l) => `<div class="opt-row"><span class="m-grow" style="line-height:1.45">${esc(l)}</span></div>`,
+  file: (l, sub, accept, attrs) => `<label class="opt-row"><span class="set-ic">${icon('imp', 18)}</span><span class="m-grow"><b style="font-weight:500;color:var(--m-acc)">${esc(l)}</b><br><span style="font-size:12.5px;opacity:.65">${esc(sub)}</span></span><input class="m-file" type="file" accept="${accept}" multiple ${attrs}></label>`,
+};
+export const G = (t, rows, o = {}) => `${t || o.act ? `<div class="sec phd"><span>${esc(t)}</span>${o.act ? `<button class="pha" ${o.act.attrs}>${esc(o.act.l)}</button>` : ''}</div>` : ''}<div class="list ${gl()}">${rows.filter(Boolean).join('')}</div>${o.note ? `<div class="snote">${esc(o.note)}</div>` : ''}`;
+const spark = (vals) => {
+  if (vals.length < 2) return '';
+  const mx = Math.max(...vals), mn = Math.min(...vals), r = mx - mn || 1;
+  const p = vals.map((v, i) => `${((i / (vals.length - 1)) * 300).toFixed(1)} ${(56 - ((v - mn) / r) * 50).toFixed(1)}`).join(' L');
+  return `<svg viewBox="0 0 300 60" preserveAspectRatio="none" class="pspark" aria-hidden="true"><path d="M${p} L300 60 L0 60 Z" class="ar"/><path d="M${p}" class="ln"/></svg>`;
+};
+
+export function page(o) {
+  const th = theme();
+  return `${o.back ? `<div class="m-row" style="justify-content:space-between">${backBtn(th, o.back[0], o.back[1], o.back[2] ?? '')}${avatar()}</div>` : ''}
+    <div class="m-row" style="justify-content:space-between;align-items:flex-start;gap:10px;padding:2px 4px 0"><div class="m-grow"><div class="title m-ell">${esc(o.title)}</div>${o.sub ? `<div class="psub">${esc(o.sub)}</div>` : ''}</div>${o.back ? '' : avatar()}</div>
+    ${o.hero?.v ? `<div class="phero ${gl('glass')}"><span>${esc(o.hero.l)}</span><b>${esc(o.hero.v)}</b>${o.hero.s ? `<span>${esc(o.hero.s)}</span>` : ''}${o.hero.spark ?? ''}${o.hero.chips ? `<div class="schips">${o.hero.chips.map((c) => `<button class="hchip" ${c.attrs} aria-pressed="${!!c.on}">${esc(c.n)}</button>`).join('')}</div>` : ''}</div>` : ''}
+    ${o.kpis?.length ? `<div class="pkpis" style="grid-template-columns:${o.kpiCols ?? 'repeat(2,minmax(0,1fr))'}">${o.kpis.map((k) => `<div class="kpi ${gl()}"><span>${esc(k.l)}</span><b class="m-mono" style="color:${k.c ?? 'inherit'}">${esc(k.v)}</b>${k.s ? `<small>${esc(k.s)}</small>` : ''}</div>`).join('')}</div>` : ''}
+    ${o.tiles?.length ? `<div class="ptiles">${o.tiles.map((t) => `<a class="ptile ${gl()}" href="${t.href}"><span class="pti">${icon(t.ic, 22)}${t.badge ? `<em>${t.badge}</em>` : ''}</span><b>${esc(t.l)}</b><span class="m-ell">${esc(t.s ?? '')}</span></a>`).join('')}</div>` : ''}
+    ${(o.groups ?? []).join('')}`;
+}
+
+/* ---------- Detaljside for en rad ---------- */
+
+function detailView() {
+  const D = m.pdet;
+  const list = D.list === undefined ? '<div class="m-spin"></div>' : D.list?.length ? G('Transaksjoner', D.list.map((t) => { m.txCache[t.id] = t; return R.item({ logo: t, t: t.description, s: `${dd(t.date)} · ${t.account} · ${t.category}`, ai: t.aiShort, v: sgn(t.amount), vc: amtC(t.amount, theme()), attrs: `data-tx="${t.id}"` }); }), { note: 'Trykk for å se kvittering, varelinjer og detaljer.' }) : '';
+  return page({ back: ['#', D.backL ?? 'Tilbake', 'pdback'], title: D.title, sub: D.sub, hero: { l: D.hl ?? 'Beløp', v: D.v, s: D.vs },
+    groups: [...(D.groups ?? []).map(([t, rows]) => G(t, rows.map(([k, v, c, mono]) => R.val(k, v, c, mono)))), list] });
+}
+async function openDetail(D, q) {
+  m.pdet = { ...D, backL: D.backL ?? { kv: 'Kvitteringer', fast: 'Faste utgifter', konto: 'Kontoer', aks: 'Aksjer', rap: 'Rapporter', imp: 'Import' }[m.screen] };
+  window.scrollTo(0, 0); draw();
+  if (!q) { m.pdet.list = null; return draw(); }
+  try { const r = await api('/transactions?' + new URLSearchParams(q)); if (m.pdet) m.pdet.list = (r.items ?? []).slice(0, 30); } catch { if (m.pdet) m.pdet.list = null; }
+  draw();
+}
+const word = (s) => String(s ?? '').split(/[\s·]+/).find((w) => w.length >= 3) ?? String(s ?? '');
+
+/* ---------- Lasting ---------- */
+
+export async function pageLoad(scr) {
+  const j = [], ok = (p) => p.catch(() => null);
+  if (scr === 'mer') {
+    j.push(ok(api('/recurring')).then((r) => { PG.rec = r; }), ok(api('/subscriptions')).then((r) => { PG.sub = r; }), ok(api('/folders')).then((r) => { PG.dirs = r; }), ok(api('/finn')).then((r) => { PG.finn = r; }));
+    if (S.boot?.settings?.t212Set || !PG.stocks) j.push(ok(api('/stocks')).then((r) => { PG.stocks = r; }));
+  }
+  if (scr === 'kv') { j.push(ok(loadReceipts())); const { from, to } = S.boot?.period ?? {}; j.push(ok(api('/transactions?' + new URLSearchParams(from ? { from, to } : {}))).then((r) => { PG.booked = (r?.items ?? []).filter((t) => t.receipt === 'booked'); })); }
+  if (scr === 'fast') j.push(ok(api('/recurring')).then((r) => { PG.rec = r ?? []; }));
+  if (scr === 'aks') j.push(api('/stocks').then((r) => { PG.stocks = r; }).catch((e) => { PG.stocks = { error: e.message }; }));
+  if (scr === 'rap') j.push(loadRep());
+  if (scr === 'sok') {
+    j.push(ok(api('/search/history')).then((r) => { PG.ai.hist = (Array.isArray(r) ? r : r?.items ?? []).map((x) => (typeof x === 'string' ? x : x?.q)).filter(Boolean); }));
+    if (!PG.ai.sugg) j.push(ok(api('/search/suggestions')).then((r) => { PG.ai.sugg = Array.isArray(r) ? r : r?.items ?? null; }));
+  }
+  await Promise.all(j);
+}
+async function loadRep() { PG.rep = await api(`/reports?mode=${PG.repMode}&month=${curM()}`).catch(() => null); }
+
+/* ---------- Sider ---------- */
+
+const monthly = (r) => (r.interval === 'yearly' ? r.amount / 12 : r.interval === 'weekly' ? (r.amount * 52) / 12 : r.amount);
+const recWhen = (r) => (r.interval === 'yearly' ? `${r.day}.${String(r.month ?? 1).padStart(2, '0')} hvert år` : r.interval === 'weekly' ? 'Hver uke' : `Den ${r.day}. hver måned`);
+const stockCur = () => { const c = PG.stocks?.summary?.currency; return !c || c === 'NOK' ? 'kr' : c; };
+
+function mer() {
+  const rv = S.boot?.reviewCount ?? (S.summary?.review ?? []).filter((r) => r.status === 'needs_review').length;
+  const rec = (PG.rec ?? []).filter((r) => r.active), st = PG.stocks?.summary;
+  const tiles = [
+    ['kv', 'Kvitteringer', `${rv} til gjennomgang`, 'kv2', rv],
+    ['fast', 'Faste utgifter', PG.rec ? `${kr(rec.reduce((a, r) => a + monthly(r), 0))}/mnd` : '…', 'fast2'],
+    ['konto', 'Kontoer', kr(accs().reduce((a, x) => a + (x.balance ?? 0), 0)), 'konto2'],
+    ['aks', 'Aksjer', st ? `${n0(st.value ?? st.total)} ${stockCur()}` : PG.stocks?.configured === false ? 'Ikke koblet til' : '…', 'aks'],
+    ['rap', 'Rapporter', 'Måned og år', 'rap'],
+    ['sub', 'Subscription OS', PG.sub ? `${kr(PG.sub.monthly ?? 0)}/mnd` : '…', 'sub2'],
+    ['dir', 'Delte mapper', PG.dirs ? `${PG.dirs.length} ${PG.dirs.length === 1 ? 'bolig' : 'boliger'}` : '…', 'dir2'],
+    ['finn', 'Finn-handler', PG.finn ? `${PG.finn.ongoing ?? 0} pågående` : '…', 'finn2'],
+    ['imp', 'Import', 'CSV, XLSX, tekst', 'imp'],
+    ['sok', 'AI-søk', 'Spør om alt', 'ai'],
+  ].map(([k, l, s, ic, badge]) => ({ href: '#/' + k, l, s, ic, badge }));
+  return page({ title: 'Mer', sub: 'Alt fra FinansHub på nettsiden', tiles,
+    groups: [G('✦ Spør AI', [`<form data-pa="merai" class="opt-row col"><span style="font-size:13px;opacity:.7">Søker i transaksjoner, kvitteringer og varelinjer</span><input class="sinp" id="m-merq" type="search" enterkeyhint="search" placeholder="Hvor mye brukte jeg på kaffe?" value="${esc(PG.ai.q)}"></form>`, R.btn('Spør', 'data-pa="merask"')])] });
+}
+
+function kv() {
+  const q = (S.receipts ?? []).filter((r) => r.status === 'needs_review'), st = S.boot?.settings ?? {};
+  const jobs = m.jobs.filter((x) => x.status !== 'booked');
+  return page({ back: ['#/mer', 'Tilbake til Mer'], title: 'Kvitteringer', hero: { l: 'Til gjennomgang', v: String(q.length), s: 'Lest av AI · bekreft før bokføring' },
+    groups: [
+      G('Trenger gjennomgang', q.length ? q.map((r) => { const hi = !r.error && (r.confidence ?? 0) >= (st.minConf ?? 85) / 100 && !r.flag; return R.item({ logo: { description: r.merchant ?? 'Kvittering', domain: r.domain, color: '#FFB08A' }, t: r.merchant ?? 'Ny kvittering', s: `${dd(r.date)} · ${r.provider ?? 'manuell'}${r.confidence != null ? ` · sikkerhet ${String(r.confidence.toFixed(2)).replace('.', ',')}` : ''}`, ai: r.aiShort, tags: [{ n: r.match ? 'Matchet mot kortkjøp' : hi ? 'Klar' : 'Sjekk beløp', k: r.match || hi ? 'ok' : 'warn' }], v: r.total != null ? `−${n2(r.total)}` : '', act: { l: 'Bokfør', attrs: `data-pa="book" data-id="${esc(r.id)}"` }, attrs: `data-rc="${esc(r.id)}"` }); }) : [R.text('Alt er gjennomgått.')]),
+      jobs.length ? G('Opplastingskø', jobs.map((x) => { const run = ['pending', 'processing'].includes(x.status); return R.item({ ini: '↑', t: x.merchant || x.name || 'Kvittering', s: x.status === 'needs_review' ? 'Klar · trykk for å bekrefte' : x.status === 'processing' ? `Gemini leser … ${x.progress ?? 50} %` : x.status === 'error' ? 'Feil – åpne for å fylle ut' : 'I kø', tags: [{ n: x.status === 'needs_review' ? 'Klar' : run ? 'Leses' : x.status === 'error' ? 'Feil' : 'I kø', k: x.status === 'needs_review' ? 'ok' : run ? 'blue' : 'warn' }], attrs: `data-job="${esc(x.id)}"` }); })) : '',
+      G('', [R.btn('Last opp kvittering', 'data-pa="sheet"'), R.btn('Ta bilde', 'data-pa="cam"')]),
+      G(`Bokført i ${monthName(curM())}`, PG.booked === null ? ['<div class="m-spin"></div>'] : PG.booked.length ? PG.booked.slice(0, 20).map((t) => { m.txCache[t.id] = t; return R.item({ logo: t, t: t.description, s: `${dd(t.date)} · ${t.category}`, ai: t.aiShort, v: sgn(t.amount), vc: amtC(t.amount, theme()), attrs: `data-tx="${t.id}"` }); }) : [R.text('Ingen bokførte kvitteringer denne måneden.')]),
+    ] });
+}
+
+function fast() {
+  const list = PG.rec, act = (list ?? []).filter((r) => r.active), sum = act.reduce((a, r) => a + monthly(r), 0);
+  return page({ back: ['#/mer', 'Tilbake til Mer'], title: 'Faste utgifter', kpis: [{ l: 'Per måned', v: kr(sum), s: `${act.length} aktive` }, { l: 'Per år', v: kr(sum * 12), s: 'Med dagens trekk' }],
+    groups: [G('Trekk', list === null ? ['<div class="m-spin"></div>'] : list.length ? list.map((r) => R.item({ logo: { description: r.name, color: r.color }, t: r.name, s: `${recWhen(r)} · ${r.category}`, v: kr(r.amount), vs: r.active ? (r.interval === 'yearly' ? 'per år' : r.interval === 'weekly' ? 'per uke' : 'per mnd') : 'av', vc: r.active ? 'inherit' : 'rgba(127,127,127,.8)',
+      act: { l: r.active ? 'På' : 'Av', k: r.active ? 'on' : 'off', attrs: `data-pa="fasttog" data-id="${r.id}"` }, attrs: `data-pd="fast" data-id="${r.id}"` })) : [R.text('Ingen faste trekk ennå.')], { note: 'Oppdages automatisk fra gjentakende transaksjoner. Skru av det som ikke lenger trekkes.' }),
+      G('', [R.btn('Finn faste trekk automatisk', 'data-pa="detect"')])] });
+}
+
+function konto() {
+  const a = accs(), tot = a.reduce((x, y) => x + (y.balance ?? 0), 0), goals = S.boot?.goals ?? [];
+  const TYPE = { checking: 'Brukskonto', savings: 'Sparekonto', credit: 'Kreditt', cash: 'Kontanter' };
+  return page({ back: ['#/mer', 'Tilbake til Mer'], title: 'Kontoer', hero: { l: 'Total saldo', v: kr(tot), s: `${a.length} kontoer` },
+    groups: [G('Kontoer', a.map((x) => R.item({ ini: x.name.slice(0, 2), iniStyle: 'font-size:13px', t: x.name, s: [x.bank, x.last4 ? `•••• ${x.last4}` : '', TYPE[x.type] ?? ''].filter(Boolean).join(' · '), v: `${x.balance < 0 ? '−' : ''}${n2(x.balance)}`, vc: x.balance < 0 ? '#FFB08A' : 'inherit', attrs: `data-pd="konto" data-id="${x.id}"` }))),
+      goals.length ? G('Sparemål', goals.map((g) => R.bar(g.name, `${n0(g.saved)} / ${n0(g.target)} kr`, g.target ? (g.saved / g.target) * 100 : 0, g.saved >= g.target ? '#9FE3C6' : 'var(--m-acc)', g.saved >= g.target ? 'Nådd ✓' : `${Math.round(g.target ? (g.saved / g.target) * 100 : 0)} % · ${n0(g.target - g.saved)} kr igjen`))) : ''] });
+}
+
+const PERS = [['1D', 1], ['1U', 7], ['1M', 31], ['1Å', 365], ['Alt', 1e5]];
+function aks() {
+  const d = PG.stocks, back = ['#/mer', 'Tilbake til Mer'];
+  if (!d) return page({ back, title: 'Aksjer', groups: ['<div class="m-spin"></div>'] });
+  if (d.error && !d.summary) return page({ back, title: 'Aksjer', groups: [G('', [R.text(d.error)])] });
+  if (!d.configured && !d.mock) return page({ back, title: 'Aksjer', sub: 'Trading 212', groups: [G('', [R.text('Ikke koblet til. Legg inn API-nøkkel og secret fra Trading 212 (Innstillinger → API (Beta), bare lesetilgang).'), R.link('Koble til Trading 212', '#/set/t212')])] });
+  const s = d.summary ?? {}, pos = d.positions ?? [], cur = stockCur(), val = s.value ?? s.total ?? 0;
+  const days = PERS.find(([k]) => k === PG.aksPer)?.[1] ?? 31, since = new Date(Date.now() - days * 864e5).toLocaleDateString('sv-SE');
+  const hist = (d.history ?? []).filter((h) => h.date >= since).map((h) => h.value);
+  const day = pos.reduce((a, p) => a + (p.dayPct != null ? (p.value * p.dayPct) / 100 : 0), 0);
+  const year = today().slice(0, 4), div = (d.dividends ?? []).filter((x) => String(x.date).startsWith(year));
+  const pc = (v) => `${v < 0 ? '−' : '+'}${Math.abs(v).toLocaleString('nb-NO', { maximumFractionDigits: 1 })} %`;
+  const money = (v) => `${n0(v)} ${cur}`;
+  return page({ back, title: 'Aksjer', sub: `Trading 212 · ${d.env === 'demo' ? 'Demo' : 'Invest'}${d.mock ? ' · eksempeldata' : ''}`,
+    hero: { l: 'Porteføljeverdi', v: money(val), s: s.result != null ? `${sgn(s.result).replace(/,\d\d$/, '')} ${cur} (${pc(s.invested ? (s.result / s.invested) * 100 : 0)}) totalt` : '', spark: spark(hist), chips: PERS.map(([k]) => ({ n: k, on: PG.aksPer === k, attrs: `data-pa="aksper" data-v="${k}"` })) },
+    kpis: [{ l: 'I dag', v: `${day < 0 ? '−' : '+'}${money(Math.abs(day))}`, s: 'Siden åpning', c: day < 0 ? '#FFB08A' : '#9FE3C6' }, { l: 'Kontanter', v: money(s.cash ?? 0), s: 'Ledig å investere' },
+      { l: 'Utbytte i år', v: money(div.reduce((a, x) => a + (x.amount ?? 0), 0)), s: `${div.length} utbetalinger` }, { l: 'Avkastning', v: `${(s.result ?? 0) < 0 ? '−' : '+'}${money(Math.abs(s.result ?? 0))}`, s: 'Siden kjøp', c: (s.result ?? 0) < 0 ? '#FFB08A' : '#9FE3C6' }],
+    groups: [
+      G('Posisjoner', pos.map((p, i) => R.item({ ini: p.symbol, iniStyle: "font-size:10.5px;font-family:var(--mono)", t: p.name, s: `${p.quantity.toLocaleString('nb-NO', { maximumFractionDigits: 4 })} stk · snitt ${n0(p.avg)} · kurs ${n0(p.price)}`, v: money(p.value), vs: `${pc(p.plPct ?? 0)}${p.dayPct != null ? ` · i dag ${pc(p.dayPct)}` : ''}`, vc: (p.pl ?? 0) < 0 ? '#FFB08A' : '#9FE3C6', attrs: `data-pd="pos" data-id="${i}"` })) || [R.text('Ingen posisjoner.')]),
+      pos.length ? G('Fordeling', pos.map((p) => R.bar(p.name, `${Math.round((p.value / (val || 1)) * 100)} %`, (p.value / (val || 1)) * 100, 'var(--m-acc)'))) : '',
+      (d.orders ?? []).length ? G('Ordrer', d.orders.slice(0, 10).map((o) => R.item({ ini: o.side === 'Salg' ? '−' : '+', t: `${o.side} ${o.symbol}`, s: `${dd(o.date)} · ${o.quantity.toLocaleString('nb-NO', { maximumFractionDigits: 4 })} stk à ${n2(o.price)}`, v: money(o.value) }))) : '',
+      (d.dividends ?? []).length ? G('Utbytte', d.dividends.slice(0, 10).map((x) => R.item({ ini: cur, iniStyle: 'font-size:12px', t: x.symbol, s: dd(x.date), v: `+${n2(x.amount)}`, vc: '#9FE3C6' }))) : '',
+      G('', [R.btn('Synk nå', 'data-pa="aksync"')], { note: d.status ? String(d.status) : 'Nøkkel og secret ligger på serveren. Endres under Innstillinger → Aksjer · Trading 212.' }),
+    ] });
+}
+
+function rap() {
+  const r = PG.rep, yr = PG.repMode === 'year', back = ['#/mer', 'Tilbake til Mer'];
+  if (!r) return page({ back, title: 'Rapporter', groups: ['<div class="m-spin"></div>'] });
+  const ms = r.months ?? [], cur = ms.find((x) => x.month === curM()) ?? ms[0] ?? { inn: 0, ut: 0 };
+  const inn = yr ? ms.reduce((a, x) => a + x.inn, 0) : cur.inn, ut = yr ? ms.reduce((a, x) => a + x.ut, 0) : cur.ut;
+  const mx = Math.max(1, ...(r.byCategory ?? []).map((c) => c.amount));
+  const lbl = yr ? curM().slice(0, 4) : cap(monthName(curM()));
+  return page({ back, title: 'Rapporter', kpis: [{ l: 'Inn', v: kr(inn), s: lbl, c: '#9FE3C6' }, { l: 'Ut', v: kr(ut), s: lbl }, { l: 'Spart', v: kr(inn - ut), s: 'Inn − ut' }, { l: 'Sparerate', v: `${inn ? Math.round(((inn - ut) / inn) * 100) : 0} %`, s: 'Av inntekt' }],
+    groups: [G('', [R.chips('Periode', [{ n: 'Denne måneden', on: !yr, attrs: 'data-pa="rapm" data-v="month"' }, { n: 'Hittil i år', on: yr, attrs: 'data-pa="rapm" data-v="year"' }])]),
+      G('Per kategori', (r.byCategory ?? []).map((c) => R.bar(c.category, kr(c.amount), (c.amount / mx) * 100, c.color))),
+      (r.merchants ?? []).length ? G('Topp butikker', r.merchants.map((x) => R.item({ logo: { description: x.name }, t: x.name, s: `${x.count} kjøp`, v: `−${n0(x.amount)} kr`, attrs: `data-pd="merch" data-name="${esc(x.name)}"` }))) : '',
+      G('Måned for måned', ms.map((x) => R.item({ ini: cap(monthName(x.month, false)).slice(0, 3), iniStyle: 'font-size:12px', t: cap(monthName(x.month)), s: `Spart ${kr(x.inn - x.ut)}`, v: `+${n0(x.inn)}`, vs: `−${n0(x.ut)}`, vc: '#9FE3C6' }))),
+      G('', [R.link('Eksporter som CSV', `/finans/api/transactions.csv?from=${r.from}&to=${r.to}`, 'var(--m-acc)', 'download'), R.link('Lag PDF-rapport på en større skjerm', '/finans/?desktop=1#/rap')])] });
+}
+
+function imp() {
+  const I = PG.imp, rows = I.rows, a = accs();
+  return page({ back: ['#/mer', 'Tilbake til Mer'], title: 'Import', sub: 'Kontoutskrift fra nettbanken',
+    groups: [
+      G('Last inn', [R.file('Velg filer', '.xlsx, .csv eller .txt · flere samtidig', '.xlsx,.xls,.csv,.txt,text/csv', 'data-pa="impfile"'),
+        `<label class="opt-row col"><span style="font-size:13px;opacity:.7">Eller lim inn tekst</span><textarea class="sinp" id="m-imptxt" rows="4" placeholder="10/10/26  Ruterappen  238,00" style="height:auto;padding:10px 12px;font-family:var(--mono);font-size:13px">${esc(I.text)}</textarea></label>`,
+        a.length > 1 ? R.chips('Konto', a.map((x) => ({ n: x.name, on: (I.acc ?? a[0].id) === x.id, attrs: `data-pa="impacc" data-v="${x.id}"` }))) : '',
+        R.btn(I.busy ? 'Leser …' : 'Les inn tekst', 'data-pa="imptxt"')], { note: 'DNB-format støttes: Dato, Forklaring, Rentedato, Ut, Inn. Tekst som «Visa 100021» og «Varekjøp» fjernes. Den opprinnelige bankraden lagres uendret.' }),
+      rows ? G(`Forhåndsvisning · ${rows.length} poster`, rows.slice(0, 80).map((r) => R.item({ logo: { description: r.description, domain: r.domain }, t: r.description, s: `${dd(r.date)} · ${r.raw ?? ''}`, ai: r.aiShort, tags: [r.category ? { n: r.category } : null, r.duplicate ? { n: 'Finnes fra før', k: 'warn' } : null].filter(Boolean), v: sgn(r.amount), vc: r.amount > 0 ? '#9FE3C6' : 'inherit' })), { act: { l: 'Tøm', attrs: 'data-pa="impclear"' } }) : '',
+      rows ? G('', [R.btn(`Importer ${rows.filter((r) => !r.duplicate).length} poster`, 'data-pa="impgo"')]) : '',
+    ] });
+}
+
+const SUGG = ['Hvor mye har jeg brukt på kaffe?', 'Når kjøpte jeg lyspærer?', `Mat i ${monthName(today().slice(0, 7))}`, 'Hva har jeg betalt for lading?'];
+function sok() {
+  const A = PG.ai, r = A.r;
+  if (PG.last !== 'sok') A.focus = true;
+  const engine = S.boot?.settings?.provider === 'gemini' ? 'Gemini' : 'Ollama';
+  return page({ title: 'AI-søk', sub: `${engine} · leser også innholdet i kvitteringene`,
+    groups: [
+      `<form data-aiform class="list ${gl()} aiform"><label class="opt-row col"><span style="font-size:13px;opacity:.7">Spørsmål</span><input class="sinp" id="m-aiq" type="search" enterkeyhint="search" autocomplete="off" value="${esc(A.q)}" placeholder="f.eks. Når kjøpte jeg lyspærer?"></label><button type="submit" class="opt-row"><span class="m-grow" style="color:var(--m-acc);font-weight:600">${A.busy ? 'Spør AI …' : '✦ Spør AI'}</span></button></form>`,
+      G('Forslag', [R.chips('', (A.sugg?.length ? A.sugg : SUGG).slice(0, 6).map((t) => ({ n: t, on: r?.q === t, attrs: `data-pa="ask" data-q="${esc(t)}"` })))]),
+      A.busy ? '<div class="m-spin"></div>' : '',
+      r ? G('Svar', [R.text(r.answer || 'Fant ingen treff.'), r.engine ? `<div class="opt-row"><span class="snote" style="padding:0">${esc(r.engine)}</span></div>` : '']) : '',
+      r?.hits?.length ? G('Treff', r.hits.map((h) => R.item({ ini: h.type === 'line' ? '≡' : h.type === 'receipt' ? '⧉' : (h.description ?? '?').slice(0, 1), iniStyle: `background:${(h.color ?? '#A0A0AA')}2e;color:${h.color ?? '#A0A0AA'}`, t: h.description ?? '–', s: `${dd(h.date)} · ${h.source ?? ''}`, ai: h.reason ?? h.why ?? '', v: h.amount != null ? sgn(h.amount) : '', vc: (h.amount ?? 0) > 0 ? '#9FE3C6' : 'inherit', attrs: h.txId ? `data-hit="${h.txId}" data-d="${esc(h.description ?? '')}"` : h.receiptId ? `data-rc="${esc(h.receiptId)}"` : '' }))) : '',
+      (A.hist ?? []).length ? G('Tidligere spørsmål', A.hist.slice(0, 8).map((q) => R.item({ ini: '↺', t: q, attrs: `data-pa="ask" data-q="${esc(q)}"` })), { act: { l: 'Tøm', attrs: 'data-pa="aihclear"' } }) : '',
+    ] });
+}
+
+const VIEWS = { mer, kv, fast, konto, aks, rap, imp, sok };
+export function pageView(scr) {
+  const html = m.pdet ? detailView() : VIEWS[scr]();
+  PG.last = scr;
+  return html;
+}
+export function pageAfterDraw() {
+  if (m.screen === 'sok' && PG.ai.focus && !m.pdet && !m.detail) { PG.ai.focus = false; const el = document.getElementById('m-aiq'); if (el && document.activeElement !== el) el.focus({ preventScroll: true }); }
+  if (m.screen !== 'sok') PG.last = m.screen;
+}
+
+/* ---------- Hendelser ---------- */
+
+async function ask(q) {
+  q = String(q ?? '').trim();
+  if (!q) return;
+  const A = PG.ai;
+  A.q = q; A.busy = true; draw();
+  try { A.r = { ...(await api('/search/ai', { method: 'POST', json: { q } })), q }; } catch (e) { A.r = { q, answer: e.message, hits: [] }; }
+  A.busy = false;
+  A.hist = [q, ...(A.hist ?? []).filter((x) => x !== q)].slice(0, 20);
+  if (A.r.suggestions?.length) A.sugg = A.r.suggestions;
+  draw();
+}
+async function impPost(commit) {
+  const I = PG.imp, fd = new FormData();
+  for (const f of I.files) fd.append('files', f);
+  if (I.text.trim()) fd.append('text', I.text);
+  const acc = I.acc ?? accs()[0]?.id; if (acc) fd.append('accountId', acc);
+  return api('/import' + (commit ? '?commit=1' : ''), { method: 'POST', body: fd });
+}
+
+async function rowClick(e, d) {
+  let x;
+  if ((x = d('[data-hit]'))) {
+    e.preventDefault();
+    const id = +x.dataset.hit;
+    if (!m.txCache[id] && ![...(S.tx?.items ?? [])].some((y) => y.id === id)) {
+      try { const r = await api('/transactions?' + new URLSearchParams({ q: word(x.dataset.d), limit: 200 })); for (const y of r.items ?? []) m.txCache[y.id] = y; } catch {}
+    }
+    m.sel = id; m.detail = true; m.edit = null; window.scrollTo(0, 0); draw(); return true;
+  }
+  if ((x = d('[data-pd]'))) {
+    e.preventDefault();
+    const k = x.dataset.pd, id = x.dataset.id;
+    if (k === 'fast') {
+      const r = PG.rec.find((y) => String(y.id) === id);
+      await openDetail({ title: r.name, sub: r.category, v: kr(r.amount), vs: recWhen(r), groups: [['Trekk', [['Trekkdato', recWhen(r)], ['Kategori', r.category], ['Per måned', kr(monthly(r))], ['Per år', kr(monthly(r) * 12)], ['Neste trekk', r.next ? `${dd(r.next)}.${r.next.slice(0, 4)}` : '–'], ['Status', r.active ? 'Aktiv' : 'Av', r.active ? '#9FE3C6' : ''], ['Oppdaget fra', r.detected ? 'Gjentakende transaksjoner' : 'Lagt inn manuelt']]]] }, { q: word(r.name), limit: 30 });
+    } else if (k === 'konto') {
+      const a = accs().find((y) => String(y.id) === id);
+      await openDetail({ title: a.name, sub: a.bank ?? '', hl: 'Saldo', v: `${a.balance < 0 ? '−' : ''}${kr2(Math.abs(a.balance))}`, vs: 'Startsaldo + transaksjoner', groups: [['Konto', [['Bank', a.bank ?? '–'], ['Kontonummer', a.last4 ? `•••• ${a.last4}` : '–', '', true], ['Startsaldo', kr2(a.openingBalance ?? 0)], ['Notat', a.note || '–']]]] }, { account: a.id, limit: 30 });
+    } else if (k === 'pos') {
+      const p = PG.stocks.positions[+id], cur = stockCur(), val = PG.stocks.summary?.value || 1;
+      await openDetail({ title: p.name, sub: `${p.symbol} · Trading 212`, hl: 'Verdi', v: `${n0(p.value)} ${cur}`, vs: `${sgn(p.pl ?? 0).replace(/,\d\d$/, '')} ${cur} siden kjøp`,
+        groups: [['Posisjon', [['Antall', `${p.quantity.toLocaleString('nb-NO', { maximumFractionDigits: 4 })} stk`], ['Snittkurs', `${n2(p.avg)} ${cur}`], ['Kurs nå', `${n2(p.price)} ${cur}`], ['Kostpris', `${n0(p.quantity * p.avg)} ${cur}`], ['Andel av portefølje', `${Math.round((p.value / val) * 100)} %`]]],
+          ['Utvikling', [['I dag', p.dayPct != null ? `${p.dayPct.toLocaleString('nb-NO', { maximumFractionDigits: 1 })} %` : '–', (p.dayPct ?? 0) < 0 ? '#FFB08A' : '#9FE3C6'], ['Totalt', `${(p.plPct ?? 0).toLocaleString('nb-NO', { maximumFractionDigits: 1 })} %`, (p.pl ?? 0) < 0 ? '#FFB08A' : '#9FE3C6'], ['Valutaeffekt', `${n2(p.fxPl ?? 0)} ${cur}`]]]] });
+    } else if (k === 'merch') {
+      const n = x.dataset.name, r = (PG.rep?.merchants ?? []).find((y) => y.name === n);
+      await openDetail({ title: n, sub: 'Topp butikk', v: `−${kr(r?.amount ?? 0)}`, vs: `${r?.count ?? 0} kjøp`, groups: [] }, { q: word(n), from: PG.rep.from, to: PG.rep.to, limit: 30 });
+    }
+    return true;
+  }
+  return false;
+}
+
+export async function pagesBind(e, t) {
+  if (!PAGES.includes(m.screen)) return false;
+  const d = (s) => t.closest?.(s);
+  let x;
+  if (e.type === 'input') {
+    if (t.id === 'm-aiq') { PG.ai.q = t.value; return true; }
+    if (t.id === 'm-merq') { PG.ai.q = t.value; return true; }
+    if (t.id === 'm-imptxt') { PG.imp.text = t.value; return true; }
+    return false;
+  }
+  if (e.type === 'submit') {
+    if (d('[data-aiform]')) { e.preventDefault(); await ask(document.getElementById('m-aiq')?.value); return true; }
+    if (d('[data-pa="merai"]')) { e.preventDefault(); location.hash = '#/sok'; ask(PG.ai.q); return true; }
+    return false;
+  }
+  if (e.type === 'change') {
+    if ((x = d('[data-pa="impfile"]'))) {
+      PG.imp.files = [...x.files]; x.value = '';
+      if (!PG.imp.files.length) return true;
+      PG.imp.busy = true; draw();
+      try { PG.imp.rows = (await impPost(false)).rows; } catch (err) { flash(err.message); }
+      PG.imp.busy = false; draw(); return true;
+    }
+    return false;
+  }
+  if (e.type !== 'click') return false;
+  const pa = d('[data-pa]');
+  if (!pa) {
+    if (d('[data-mact="pdback"]')) { e.preventDefault(); m.pdet = null; draw(); return true; }
+    return rowClick(e, d);
+  }
+  const k = pa.dataset.pa;
+  if (k === 'merai' || k === 'impfile') return false;
+  e.preventDefault();
+  if (k === 'merask') { const q = document.getElementById('m-merq')?.value ?? PG.ai.q; location.hash = '#/sok'; ask(q); }
+  else if (k === 'ask') { if (m.screen !== 'sok') location.hash = '#/sok'; await ask(pa.dataset.q); }
+  else if (k === 'aihclear') { PG.ai.hist = []; api('/search/history', { method: 'DELETE' }).catch(() => {}); draw(); }
+  else if (k === 'book') { await api(`/receipts/${pa.dataset.id}/book`, { method: 'POST' }); await pageLoad('kv'); flash('Bokført ✓'); }
+  else if (k === 'sheet') openSheet();
+  else if (k === 'cam') openCam();
+  else if (k === 'fasttog') { const r = PG.rec.find((y) => String(y.id) === pa.dataset.id); await api(`/recurring/${r.id}`, { method: 'PATCH', json: { active: !r.active } }); await pageLoad('fast'); flash(r.active ? `${r.name} er skrudd av` : `${r.name} er skrudd på`); }
+  else if (k === 'detect') { const r = await api('/recurring/detect', { method: 'POST' }); await pageLoad('fast'); flash(r.added ? `Fant ${r.added} nye faste trekk` : 'Fant ingen nye faste trekk'); }
+  else if (k === 'aksper') { PG.aksPer = pa.dataset.v; draw(); }
+  else if (k === 'aksync') { flash('Synker med Trading 212 …'); PG.stocks = await api('/stocks/sync', { method: 'POST' }).catch((err) => ({ ...PG.stocks, status: err.message })); flash('Synket med Trading 212'); }
+  else if (k === 'rapm') { PG.repMode = pa.dataset.v; PG.rep = null; draw(); await loadRep(); draw(); }
+  else if (k === 'impacc') { PG.imp.acc = +pa.dataset.v; draw(); }
+  else if (k === 'imptxt') { if (!PG.imp.text.trim() && !PG.imp.files.length) { flash('Lim inn rader eller velg filer først'); return true; } PG.imp.busy = true; draw(); try { PG.imp.rows = (await impPost(false)).rows; } catch (err) { flash(err.message); } PG.imp.busy = false; draw(); }
+  else if (k === 'impclear') { PG.imp = { ...PG.imp, rows: null, files: [], text: '' }; draw(); }
+  else if (k === 'impgo') { const r = await impPost(true); PG.imp = { ...PG.imp, rows: null, files: [], text: '' }; flash(`${r.imported} poster importert${r.duplicates ? ` · ${r.duplicates} fantes fra før` : ''} · kategoriseres i bakgrunnen`); }
+  else return false;
+  return true;
+}
+export { c3 };

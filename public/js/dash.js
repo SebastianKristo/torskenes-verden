@@ -1,17 +1,14 @@
 import { esc, kr, nb, signed, p2, cap, isoDay, hm, isMobile } from './util.js';
 import { store, widget, card, refresh, errBox, on } from './store.js';
 import { renderSearch, popHandler } from './extras.js';
+import { hiddenWidgets } from './profile.js';
 
-export const LINKS = [
-  ['NRK', 'https://www.nrk.no', '#f59a8f'], ['VG', 'https://www.vg.no', '#f59a8f'], ['FINN', 'https://www.finn.no', '#a8d4fb'],
-  ['Komplett', 'https://www.komplett.no', '#f3d38a'], ['Yr', 'https://www.yr.no', '#a8d4fb'], ['Canvas', 'https://canvas.instructure.com', '#f3d38a'],
-  ['Claude', 'https://claude.ai', '#e8b48f'], ['ChatGPT', 'https://chatgpt.com', '#8fe0b0'], ['Gemini', 'https://gemini.google.com', '#9fb4ff'],
-  ['Ruter', 'http://192.168.1.1', '#8fe0b0'], ['Home Assistant', 'http://192.168.1.20:8123', '#a8d4fb'], ['Proxmox', 'https://192.168.1.10:8006', '#f3d38a'],
-  ['Homey', 'https://my.homey.app', '#e8a6d8'], ['LabDeck', 'http://192.168.1.50', '#9fb4ff'],
-];
+// Snarveiene hentes fra serveren per bruker (/api/state.shortcuts), og deles med mobilappen.
+const TILE_COLORS = ['#f59a8f', '#a8d4fb', '#f3d38a', '#8fe0b0', '#e8a6d8', '#9fb4ff', '#e8b48f'];
 const tileAbbr = (n) => n === 'Home Assistant' ? 'HA' : n.slice(0, 2);
-export const tiles = () => LINKS.map(([name, url, c]) =>
-  `<a class="tile" href="${esc(url)}" target="_blank" rel="noopener"><b style="color:${c}">${esc(tileAbbr(name))}</b><span>${esc(name)}</span></a>`).join('');
+export const tiles = () => (store.me.shortcuts ?? []).map(({ name, url }, i) =>
+  `<a class="tile" href="${esc(url)}" target="_blank" rel="noopener"><b style="color:${TILE_COLORS[i % TILE_COLORS.length]}">${esc(tileAbbr(name))}</b><span>${esc(name)}</span></a>`).join('')
+  || '<div class="empty">Ingen snarveier. Legg til under Innstillinger → Forside og meny.</div>';
 
 /* ---------- Skoledata ---------- */
 
@@ -241,7 +238,9 @@ widget('d_weather_m', { cls: 'card glass', render: () => renderWeather(true) });
 /* ---------- Side ---------- */
 
 export function render() {
-  const n = store.now, mob = isMobile();
+  const n = store.now, mob = isMobile(), hid = hiddenWidgets();
+  // Skjulte widgets tegnes med hidden, så indeksene i lagret rekkefølge ikke forskyves.
+  const cardH = (id) => hid.has(id) ? card(id).replace('<section ', '<section hidden ') : card(id);
   const hello = `<div class="hello">
       <div class="greet"><span id="greet">${greeting(n.getHours())}</span>, <b>${esc(store.me.user)}</b></div>
       <div class="sub" id="date">${cap(n.toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' }))} · ${esc(store.me.place)}</div>
@@ -249,7 +248,7 @@ export function render() {
       <div id="lesson">${renderLesson()}</div></div>`;
   if (mob) {
     return `${hello}<div class="trips" id="trips">${renderTrips()}</div>${store.me.hideSearch ? '' : renderSearch()}
-      <div class="grid" data-dnd="m_home">${['d_weather_m', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_upcoming'].map(card).join('')}</div>`;
+      <div class="grid" data-dnd="m_home">${['d_weather_m', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_upcoming'].map(cardH).join('')}</div>`;
   }
   // Toppområdet kan omorganiseres; søkebaren ligger som standard mellom avganger og klokke.
   return `<div style="display:flex;flex-direction:column;gap:28px">
@@ -258,7 +257,7 @@ export function render() {
       ${store.me.hideSearch ? '' : renderSearch()}
       <div class="hero">${hello}<section class="card glass weather" id="weather">${renderWeather()}</section></div>
     </div>
-    <div class="grid" data-dnd="dash">${['d_cal', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_links', 'd_upcoming'].map(card).join('')}</div></div>`;
+    <div class="grid" data-dnd="dash">${['d_cal', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_links', 'd_upcoming'].map(cardH).join('')}</div></div>`;
 }
 
 const setHtml = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };

@@ -2,6 +2,12 @@
 import * as real from './integrations.js';
 
 export const { GALLERIES, getTle, getApod, getGallery } = real;
+
+export const getDepartures = async () => ({ stop: 'Bislett', stopId: '6350', departures: [['11', 'tram', 'Majorstuen', 2], ['17', 'tram', 'Rikshospitalet', 4], ['18', 'tram', 'Rikshospitalet', 7], ['11', 'tram', 'Kjelsås', 9], ['17', 'tram', 'Grefsen', 12], ['18', 'tram', 'Ljabru', 15]]
+  .map(([line, mode, to, m]) => ({ line, mode, to, time: at(m) })) });
+
+const SUGG = ['vær', 'vær oslo', 'vg', 'nrk', 'finn.no', 'yr oslo', 'ruter reiseplanlegger', 'proxmox backup', 'home assistant', 'kino oslo', 'komplett', 'oppskrift taco', 'oppskrift pizza', 'kaffe', 'kalender 2026'];
+export const getSuggestions = async (q) => { const k = String(q).trim().toLowerCase(); if (!k) return []; const hits = SUGG.filter((x) => x.startsWith(k)); return [...hits, `${k} åpningstider`, `${k} pris`].slice(0, 6); };
 const at = (min) => new Date(Date.now() + min * 60000).toISOString();
 const todayAt = (h, m) => { const d = new Date(); d.setHours(h, m, 0, 0); return d; };
 const dayAt = (offset, h, m) => { const d = todayAt(h, m); d.setDate(d.getDate() + offset); return d.toISOString(); };

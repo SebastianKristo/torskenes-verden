@@ -149,6 +149,19 @@ export function setupDnd(root) {
   });
 }
 
+/** Gjeldende rekkefølge (indekser) for en gruppe med n elementer, også når lagret rekkefølge mangler noen. */
+export function orderOf(g, n) {
+  const saved = (store.me.layouts[g] ?? []).filter((i) => Number.isInteger(i) && i >= 0 && i < n);
+  return [...new Set([...saved, ...Array.from({ length: n }, (_, i) => i)])];
+}
+
+/** Lagrer ny rekkefølge for en gruppe (fra Innstillinger → Forside og meny) og bruker den med en gang. */
+export function setOrder(g, order) {
+  store.me.layouts[g] = order;
+  document.querySelectorAll(`[data-dnd="${g}"]`).forEach((grid) => applyOrder(grid, order));
+  return api(`/settings/layout_${g}`, { method: 'PUT', json: { value: order } }).catch(() => {});
+}
+
 export async function resetLayouts() {
   await api('/layouts', { method: 'DELETE' });
   store.me.layouts = {};

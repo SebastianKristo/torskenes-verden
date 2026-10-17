@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { kv, OWNER } from './db.js';
 import { config } from './config.js';
+import { userInfo } from './auth.js';
 import { guard, readJson, bad, str, num, MOCK, aiJson } from './homeos-common.js';
 
 const DN = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
@@ -32,9 +33,9 @@ function demo() {
   };
 }
 
-const EMPTY = { people: [config.userName || 'Sebastian'], plan: {}, auto: false, lastAuto: '', fixed: {}, lib: [], hf: [], shopping: {} };
+const EMPTY = { people: [], plan: {}, auto: false, lastAuto: '', fixed: {}, lib: [], hf: [], shopping: {} };
 function state() {
-  const s = kv.get(OWNER, 'mat', null) ?? (MOCK ? demo() : structuredClone(EMPTY));
+  const s = kv.get(OWNER, 'mat', null) ?? (MOCK ? demo() : { ...structuredClone(EMPTY), people: [userInfo(OWNER)?.name || config.userName || 'Admin'] });
   if (!s.calKey) { s.calKey = randomBytes(18).toString('base64url'); kv.set(OWNER, 'mat', s); }
   return s;
 }

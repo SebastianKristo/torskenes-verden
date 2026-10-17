@@ -1,11 +1,16 @@
 // Innstillinger → Innlogging: pålitelig enhet, brukere (admin), tofaktor og bytt passord.
 import { esc, api } from './util.js';
+import { store } from './store.js';
+import { uploadAvatar, removeAvatar, applyProfile, initial } from './profile.js';
 
 let data = null;          // { devices, users, me }
 let tfa = null;           // ventende 2FA-oppsett: { otpauthUrl, secret, qrSvg, err }
 let recovery = null;      // gjenopprettingskoder vises én gang etter aktivering
 let off = null;           // skjema for å slå av 2FA: { err }
 let addMsg = null;        // { text, ok }
+let nameEd = null;        // { id, value, err } – «Endre navn» åpent for én bruker
+let avMsg = null;         // feilmelding ved opplasting av profilbilde
+let srvMsg = null;
 let rerender = () => {};
 
 // Stilene ligger her så modulen er selvstendig (CSP tillater inline-stiler).
@@ -35,7 +40,7 @@ if (!document.getElementById('settings-login-css')) {
 
 const when = (t) => new Date(t).toLocaleString('nb-NO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const roleTxt = (r) => (r === 'admin' ? 'Admin' : 'Bruker');
-const ini = (u) => esc(u.username.slice(0, 2).toUpperCase());
+const ini = (u) => (u.avatarUrl ? `<img src="${esc(u.avatarUrl)}" alt="">` : esc((u.name || u.username).slice(0, 2).toUpperCase()));
 
 export async function loadLogin(onChange) {
   if (onChange) rerender = onChange;
@@ -82,16 +87,38 @@ function offBox() {
 function userRow(u) {
   const me = data.me, admin = me?.role === 'admin', self = u.id === me?.id;
   const admins = data.users.filter((x) => x.role === 'admin').length;
-  const canDel = admin && !self && !(u.role === 'admin' && admins < 2) && u.id !== 'owner';
+  const main = u.isMainAdmin || u.id === 'owner';
+  const canDel = admin && !self && !(u.role === 'admin' && admins < 2) && !main;
   let tfaBtn = '';
   if (self) tfaBtn = `<button class="pill-btn" data-tfa="${u.totp ? 'off' : 'on'}">${u.totp ? 'Slå av 2FA' : 'Slå på 2FA'}</button>`;
   else if (admin && u.totp) tfaBtn = `<button class="pill-btn" data-tfa-reset="${esc(u.id)}" title="Nullstill 2FA hvis brukeren har mistet telefonen">Nullstill 2FA</button>`;
-  const roleSel = admin && !self && u.id !== 'owner'
+  const roleSel = admin && !self && !main
     ? `<select class="pill-field sm" data-role="${esc(u.id)}" aria-label="Rolle for ${esc(u.username)}">${['bruker', 'admin'].map((r) => `<option value="${r}"${u.role === r ? ' selected' : ''}>${roleTxt(r)}</option>`).join('')}</select>` : '';
-  return `<div class="user-row"><div class="user-ini">${ini(u)}</div>
-    <div style="flex:1 1 120px;min-width:0"><div style="font-weight:600;font-size:14px">${esc(u.username)}${self ? ' <span class="badge" style="background:var(--blue)">deg</span>' : ''}</div>
-      <div class="muted2" style="font-size:12px">${roleTxt(u.role)} · 2FA ${u.totp ? 'på' : 'av'}</div></div>
-    ${roleSel}${tfaBtn}${canDel ? `<button class="pill-btn danger" data-user-del="${esc(u.id)}" data-name="${esc(u.username)}">Fjern</button>` : ''}</div>`;
+  const canName = admin || self, editing = nameEd?.id === u.id;
+  const row = `<div class="user-row"><div class="user-ini">${ini(u)}</div>
+    <div style="flex:1 1 120px;min-width:0"><div style="font-weight:600;font-size:14px">${esc(u.name || u.username)} <span class="muted2" style="font-weight:400">· @${esc(u.username)}</span>${self ? ' <span class="badge" style="background:var(--blue)">deg</span>' : ''}</div>
+      <div class="muted2" style="font-size:12px">${roleTxt(u.role)}${main ? ' · hovedadmin' : ''} · 2FA ${u.totp ? 'på' : 'av'}</div></div>
+    ${canName && !editing ? `<button class="pill-btn" data-name-edit="${esc(u.id)}">Endre navn</button>` : ''}${roleSel}${tfaBtn}${canDel ? `<button class="pill-btn danger" data-user-del="${esc(u.id)}" data-name="${esc(u.username)}">Fjern</button>` : ''}</div>`;
+  if (!editing) return row;
+  return row + `<form class="name-form" data-name-form="${esc(u.id)}"><input class="pill-field" name="name" value="${esc(nameEd.value)}" placeholder="Navn" maxlength="60" required aria-label="Nytt navn for ${esc(u.username)}">
+    <button class="pill-btn primary" type="submit">Lagre</button><button class="pill-btn" type="button" data-name-cancel>Avbryt</button>
+    ${nameEd.err ? `<div class="red" style="font-size:13px;flex-basis:100%">${esc(nameEd.err)}</div>` : ''}</form>`;
+}
+
+function avatarBox() {
+  const me = store.me.me ?? data.me;
+  return `<div class="av-box"><span class="av-big">${me?.avatarUrl ? `<img src="${esc(me.avatarUrl)}" alt="">` : initial(me?.name)}</span>
+    <span style="flex:1;min-width:160px"><b style="display:block;font-weight:600;font-size:15px">Profilbilde</b><span class="muted" style="font-size:12.5px">Vises i topplinjen og i FinansHub-appen. JPG, PNG eller HEIC – beskjæres til et kvadrat.</span>
+      ${avMsg ? `<span class="red" style="display:block;font-size:12.5px">${esc(avMsg)}</span>` : ''}</span>
+    <span style="display:flex;gap:8px;flex-wrap:wrap"><label class="pill-btn primary" style="cursor:pointer">${me?.avatarUrl ? 'Bytt' : 'Last opp'}<input type="file" accept="image/*" data-avatar hidden></label>
+      ${me?.avatarUrl ? '<button class="pill-btn" data-avatar-del>Fjern</button>' : ''}</span></div>`;
+}
+
+function serverBox() {
+  if (data.me?.role !== 'admin') return '';
+  return `<form class="name-form" data-server-form style="margin:0;align-items:center"><span style="font-size:14px;flex:0 0 auto">Navn på serveren</span>
+    <input class="pill-field" name="name" value="${esc(store.me.serverName ?? '')}" maxlength="40" required aria-label="Navn på serveren">
+    <button class="pill-btn" type="submit">Lagre</button>${srvMsg ? `<span class="${srvMsg.ok ? 'green' : 'red'}" style="font-size:13px">${esc(srvMsg.text)}</span>` : ''}</form>`;
 }
 
 export function loginTab() {
@@ -108,10 +135,11 @@ export function loginTab() {
       <button class="btn" data-dev-del="${x.id}" style="color:var(--red)">Fjern</button></div>`).join('') || '<div class="empty">Ingen pålitelige enheter.</div>'}
 
     <div class="set-sep"></div>
+    ${avatarBox()}
     <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap"><b style="font-weight:600;font-size:15px">Brukere</b>
-      ${me ? `<span class="muted" style="font-size:12px">Innlogget som ${esc(me.username)} · ${roleTxt(me.role)}</span>` : ''}</div>
+      ${me ? `<span class="muted" style="font-size:12px">Innlogget som ${esc(me.name || me.username)} · ${roleTxt(me.role)}${me.isMainAdmin ? ' · hovedadmin' : ''}</span>` : ''}</div>
     ${data.users.map(userRow).join('')}
-    ${tfaBox()}${offBox()}
+    ${tfaBox()}${offBox()}${serverBox()}
     ${admin ? `<form class="user-add" data-user-add><b style="font-weight:600;font-size:14px">Legg til bruker</b>
       <div class="user-add-grid">
         <input class="pill-field" name="username" placeholder="Brukernavn" autocomplete="off" autocapitalize="off" spellcheck="false" required>
@@ -148,6 +176,18 @@ export async function loginClick(e) {
     if (confirm('Fjerne enheten? Den må da logge inn med passord igjen.')) { await api(`/devices/${dd.dataset.devDel}`, { method: 'DELETE' }); await loadLogin(); }
     return true;
   }
+  const ne = t.closest('[data-name-edit]');
+  if (ne) {
+    const u = data.users.find((x) => x.id === ne.dataset.nameEdit);
+    nameEd = { id: u.id, value: u.name || '' }; rerender();
+    setTimeout(() => { const i = document.querySelector('[data-name-form] [name=name]'); i?.focus(); i?.select(); }, 0);
+    return true;
+  }
+  if (t.closest('[data-name-cancel]')) { nameEd = null; rerender(); return true; }
+  if (t.closest('[data-avatar-del]')) {
+    try { await removeAvatar(); avMsg = null; } catch (err) { avMsg = err.message; }
+    await loadLogin(); return true;
+  }
   const tb = t.closest('[data-tfa]');
   if (tb) {
     recovery = null;
@@ -180,6 +220,12 @@ export async function loginClick(e) {
 }
 
 export async function loginChange(e) {
+  if (e.target.matches('[data-avatar]')) {
+    const f = e.target.files[0]; e.target.value = '';
+    if (!f) return true;
+    try { await uploadAvatar(f); avMsg = null; } catch (err) { avMsg = err.message || 'Kunne ikke laste opp bildet'; }
+    await loadLogin(); return true;
+  }
   const sel = e.target.closest('[data-role]');
   if (!sel) return false;
   try { await api(`/users/${sel.dataset.role}`, { method: 'PATCH', json: { role: sel.value } }); } catch (err) { alert(err.message); }
@@ -197,6 +243,25 @@ export async function loginSubmit(e) {
     try { await api('/password', { method: 'PUT', json: { current: v.current, next: v.next } }); f.reset(); msg.textContent = 'Passordet er endret ✓'; }
     catch (err) { msg.textContent = err.message || 'Kunne ikke endre passordet'; }
     return true;
+  }
+  if (f.matches('[data-name-form]')) {
+    e.preventDefault();
+    const id = f.dataset.nameForm, name = f.name.value.trim();
+    if (!name) { nameEd = { ...nameEd, err: 'Skriv inn et navn' }; rerender(); return true; }
+    try {
+      const u = await api(`/users/${id}`, { method: 'PATCH', json: { displayName: name } });
+      nameEd = null;
+      // Eget navn slår inn med en gang i hilsen og meny.
+      if (id === data.me?.id) { store.me.me = { ...store.me.me, name: u.name, displayName: u.name }; store.me.user = u.name; applyProfile(); document.dispatchEvent(new CustomEvent('hl:name')); }
+      await loadLogin();
+    } catch (err) { nameEd = { ...nameEd, value: name, err: err.message }; rerender(); }
+    return true;
+  }
+  if (f.matches('[data-server-form]')) {
+    e.preventDefault();
+    try { store.me.serverName = (await api('/server', { method: 'PUT', json: { name: f.name.value } })).serverName; srvMsg = { text: 'Lagret ✓', ok: true }; applyProfile(); }
+    catch (err) { srvMsg = { text: err.message, ok: false }; }
+    rerender(); return true;
   }
   if (f.matches('[data-tfa-verify]')) {
     e.preventDefault();

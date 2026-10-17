@@ -18,7 +18,7 @@ export const config = {
   secureCookies: env('COOKIE_SECURE', 'true') !== 'false',
   passwordHash: env('APP_PASSWORD_HASH'),
   sessionSecret: env('SESSION_SECRET'),
-  userName: env('USER_NAME', 'Sebastian'),
+  userName: env('USER_NAME'),
   trading212Key: env('TRADING212_API_KEY'),
   trading212Base: env('TRADING212_BASE', 'https://live.trading212.com'),
   ha: {
@@ -46,5 +46,5 @@ export const config = {
   ].filter(([, url]) => url),
 };
 
-if (!config.passwordHash) console.warn('[config] APP_PASSWORD_HASH mangler – kjør `npm run hash-password`. Innlogging er deaktivert.');
+if (!config.passwordHash) console.warn('[config] APP_PASSWORD_HASH er ikke satt – en tom server viser førstegangsoppsettet på /login.');
 if (!config.sessionSecret || config.sessionSecret.length < 32) console.warn('[config] SESSION_SECRET bør være minst 32 tegn.');

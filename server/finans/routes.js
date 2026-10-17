@@ -12,6 +12,7 @@ import { domainFor, learnDomain, validDomain, logo, heuristic, kick as kickAi, s
 import { parseFile, readText, rowsToTx } from './importer.js';
 import { parseFinnEmail } from './finn.js';
 import { sessionUser, clientIp, verifyLogin, userInfo, listUsers } from '../auth.js';
+import * as auth from '../auth.js';
 import { config } from '../config.js';
 import { kv } from '../db.js';
 import { stocks, resetStocks, t212Configured, t212Base } from './stocks.js';
@@ -79,7 +80,8 @@ function txOut(t, cats = catById(), accs = accById()) {
   const cat = cats.get(t.category_id), acc = accs.get(t.account_id);
   return { id: t.id, date: t.date, amount: t.amount / 100, description: t.description, merchant: t.merchant, note: t.note, source: t.source,
     categoryId: t.category_id, category: cat?.name ?? 'Ukategorisert', color: cat?.color ?? '#A0A0AA', kind: cat?.kind ?? 'expense',
-    accountId: t.account_id, account: acc?.name ?? '–', receipt: t.receipt_status ?? null, receiptId: t.receipt_id ?? null, ...aiOf(t, cat?.name) };
+    accountId: t.account_id, account: acc?.name ?? '–', receipt: t.receipt_status ?? null, receiptId: t.receipt_id ?? null,
+    type: t.amount > 0 ? 'income' : 'expense', folderId: t.folder_id ?? null, hasBankRow: !!t.raw_bank_row, ...aiOf(t, cat?.name) };
 }
 // ✦-felt: AI-tekst hvis den finnes, ellers heuristikk. Varelinjer fra koblet kvittering.
 function aiOf(t, category) {
@@ -92,7 +94,8 @@ function aiOf(t, category) {
 }
 
 const TX_SELECT = `SELECT t.*, r.status AS receipt_status, r.id AS receipt_id, r.extraction AS receipt_extraction, r.ai_short AS receipt_ai_short, r.ai_long AS receipt_ai_long,
-  (SELECT f.name FROM fh_folder_entries e JOIN fh_folders f ON f.id=e.folder_id WHERE e.tx_id=t.id LIMIT 1) AS folder_name FROM fh_transactions t
+  (SELECT f.name FROM fh_folder_entries e JOIN fh_folders f ON f.id=e.folder_id WHERE e.tx_id=t.id LIMIT 1) AS folder_name,
+  (SELECT e.folder_id FROM fh_folder_entries e WHERE e.tx_id=t.id LIMIT 1) AS folder_id FROM fh_transactions t
   LEFT JOIN fh_receipts r ON r.transaction_id = t.id`;
 
 // Regler: * er jokertegn, ingen skiller på store/små bokstaver. Mønsteret kan starte ved et hvilket som helst ord,
@@ -107,6 +110,13 @@ function ruleFor(text) {
   return null;
 }
 const catIdByName = (name) => (name ? q('SELECT id FROM fh_categories WHERE lower(name)=lower(?)').get(name)?.id ?? null : null);
+const accName = (id) => (id ? q('SELECT name, bank FROM fh_accounts WHERE id=?').get(id) : null);
+// Opprinnelig bankrad til raw_bank_row: cellene uendret, pluss konto, bank, kilde og når den ble importert.
+function bankJson(bank, meta) {
+  if (!bank) return null;
+  const a = meta.account;
+  return JSON.stringify({ ...bank, ...meta, account: a?.name ?? null, bank: a?.bank || null, source: bank.source ?? meta.source ?? null, file: bank.file ?? meta.file ?? null });
+}
 
 // Periode for en måned, med valgfri lønningsdag som månedsstart.
 export function period(month) {
@@ -228,6 +238,9 @@ async function runQueue() {
 function routeTarget(id) {
   const r = origSelect.get(id);
   if (!r?.target) return;
+  // «Legg ved kvittering» fra en transaksjon: kvitteringen hører til den, uansett hva bankmatchen fant.
+  const tm = r.target.match(/^tx:(\d+)$/);
+  if (tm) { if (q('SELECT 1 FROM fh_transactions WHERE id=?').get(+tm[1])) q('UPDATE fh_receipts SET transaction_id=? WHERE id=?').run(+tm[1], id); return; }
   if (r.target === 'sub' && r.total != null && !q('SELECT 1 FROM fh_subscriptions WHERE name=? AND active=1').get(r.merchant)) {
     q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,domain,ai_short,created) VALUES(?,?,?,?,?,?,?,?,?)')
       .run(r.merchant || 'Ukjent', 'Fra kvittering', r.total, 'monthly', r.date ? shiftDate(r.date, 1) : null, 'Ny', r.domain, r.ai_short, Date.now());
@@ -302,21 +315,40 @@ api.use('*', async (c, next) => {
 const R = need('finance:read'), W = need('finance:write');
 const upload = bodyLimit({ maxSize: Number(process.env.MAX_UPLOAD_MB ?? 15) * 1024 * 1024 + 4096, onError: (c) => bad(c, `Filen er for stor (maks ${process.env.MAX_UPLOAD_MB ?? 15} MB)`, 413) });
 
-const NAV_DEFAULT = ['ov', 'tx', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'imp', 'inn'];
-const navOrder = (uid) => { const saved = kv.get(uid, 'fh_nav', null); if (!Array.isArray(saved)) return NAV_DEFAULT; return [...saved.filter((p) => NAV_DEFAULT.includes(p)), ...NAV_DEFAULT.filter((p) => !saved.includes(p))]; };
+// Sidemenyen: Import ligger nå under Innstillinger, AI-søk har egen side etter Transaksjoner.
+const NAV_DEFAULT = ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'inn'];
+const NAV_FIXED = ['ov', 'inn'];
+// Nye sider som ikke finnes i lagret rekkefølge legges sist (AI-søk rett etter Transaksjoner for gamle oppsett).
+const navMerge = (saved) => {
+  if (!Array.isArray(saved) || !saved.length) return NAV_DEFAULT;
+  const keep = saved.filter((p) => NAV_DEFAULT.includes(p));
+  if (!keep.includes('ai') && keep.includes('tx')) keep.splice(keep.indexOf('tx') + 1, 0, 'ai');
+  return [...new Set([...keep, ...NAV_DEFAULT.filter((p) => !keep.includes(p))])];
+};
+const navOrder = (uid) => navMerge(kv.get(uid, 'fh_nav', null));
+const navHidden = (uid) => (kv.get(uid, 'fh_nav_hidden', []) ?? []).filter((p) => NAV_DEFAULT.includes(p) && !NAV_FIXED.includes(p));
+const prefsOut = (uid) => ({ nav: navOrder(uid), hidden: navHidden(uid), navDefault: NAV_DEFAULT, navFixed: NAV_FIXED });
 const VERSION = (() => { try { return JSON.parse(readFileSync(new URL('../../package.json', import.meta.url), 'utf8')).version; } catch { return null; } })();
-const meOut = (a) => ({ id: a.user, username: a.info.username, role: a.info.role, name: a.info.name, admin: a.admin, totp: !!a.info.totp, version: VERSION });
+// Profilbilde og servernavn kommer fra homelab-brukerne (auth.js); valgfritt så eldre versjoner av den fila virker.
+const serverName = () => auth.serverName?.() ?? kv.get(OWNER, 'server_name', null) ?? 'Homelab';
+const avatarOf = (a) => a.info.avatarUrl ?? auth.avatarUrl?.(a.user) ?? null;
+const meOut = (a) => ({ id: a.user, username: a.info.username, role: a.info.role, name: a.info.name, admin: a.admin, totp: !!a.info.totp, version: VERSION,
+  isMainAdmin: !!a.info.isMainAdmin, avatarUrl: avatarOf(a), serverName: serverName() });
 
 api.get('/me', (c) => c.json(meOut(c.get('access'))));
 // Brukere man kan dele mapper med (navn og brukernavn, ingen hemmeligheter).
 api.get('/users', (c) => c.json(listUsers().map((u) => ({ id: u.id, username: u.username, name: u.name, role: u.role }))));
 // Personlige valg i FinansHub: rekkefølgen i sidemenyen.
-api.get('/prefs', (c) => c.json({ nav: navOrder(c.get('user')), navDefault: NAV_DEFAULT }));
+// Reserve for /api/me/layout (finNav): rekkefølge og skjulte punkter i sidemenyen.
+api.get('/prefs', (c) => c.json(prefsOut(c.get('user'))));
 api.put('/prefs', async (c) => {
   const b = await c.req.json().catch(() => ({}));
-  if (b.nav === null) kv.del(c.get('user'), 'fh_nav');
-  else if (Array.isArray(b.nav)) kv.set(c.get('user'), 'fh_nav', [...new Set(b.nav.filter((p) => NAV_DEFAULT.includes(p)))]);
-  return c.json({ nav: navOrder(c.get('user')), navDefault: NAV_DEFAULT });
+  const uid = c.get('user');
+  if (b.nav === null) kv.del(uid, 'fh_nav');
+  else if (Array.isArray(b.nav)) kv.set(uid, 'fh_nav', [...new Set(b.nav.filter((p) => NAV_DEFAULT.includes(p)))]);
+  if (b.hidden === null) kv.del(uid, 'fh_nav_hidden');
+  else if (Array.isArray(b.hidden)) kv.set(uid, 'fh_nav_hidden', [...new Set(b.hidden.filter((p) => NAV_DEFAULT.includes(p) && !NAV_FIXED.includes(p)))]);
+  return c.json(prefsOut(uid));
 });
 
 api.get('/bootstrap', R, (c) => {
@@ -334,7 +366,7 @@ api.get('/bootstrap', R, (c) => {
     rules: q('SELECT r.*, c.name AS category FROM fh_rules r LEFT JOIN fh_categories c ON c.id=r.category_id ORDER BY priority, id').all().map((r) => ({ id: r.id, pattern: r.pattern, categoryId: r.category_id, category: r.category, priority: r.priority })),
     goals: q('SELECT * FROM fh_goals ORDER BY id').all().map((g) => ({ ...g, saved: g.saved / 100, target: g.target / 100 })),
     reviewCount: q("SELECT COUNT(*) n FROM fh_receipts WHERE status IN ('pending','processing','needs_review')").get().n,
-    hasData: !!q('SELECT 1 FROM fh_transactions LIMIT 1').get(), firstRun: backup.needsFirstRun(), me: meOut(a), nav: navOrder(a.user),
+    hasData: !!q('SELECT 1 FROM fh_transactions LIMIT 1').get(), firstRun: backup.needsFirstRun(), me: meOut(a), nav: navOrder(a.user), navHidden: navHidden(a.user), navDefault: NAV_DEFAULT, navFixed: NAV_FIXED,
   });
 });
 
@@ -422,38 +454,106 @@ api.get('/transactions', need('read:transactions'), (c) => {
   return c.json({ items: rows.map((t) => txOut(t, cats, accs)), count: total.n, net: total.s / 100 });
 });
 
+// Beløp: med type ('expense' | 'income') er beløpet positivt og fortegnet kommer fra typen; uten type brukes fortegnet som det er.
+function signedAmount(b, fallback = null) {
+  const v = b.amount !== undefined ? ore(b.amount) : null;
+  if (v === null) return b.type && fallback !== null ? (b.type === 'income' ? Math.abs(fallback) : -Math.abs(fallback)) : fallback;
+  return b.type === 'income' ? Math.abs(v) : b.type === 'expense' ? -Math.abs(v) : v;
+}
+const validId = (table, id) => (id ? q(`SELECT id FROM ${table} WHERE id=?`).get(id)?.id ?? undefined : null);
+// Delt mappe for en transaksjon: én post per transaksjon. null fjerner den fra mappen.
+function setTxFolder(c, txId, folderId) {
+  q('DELETE FROM fh_folder_entries WHERE tx_id=?').run(txId);
+  if (!folderId) return;
+  const t = q('SELECT * FROM fh_transactions WHERE id=?').get(txId);
+  const me = c.get('access').info;
+  const payer = q('SELECT name FROM fh_folder_members WHERE folder_id=? AND user_id=?').get(folderId, c.get('user'))?.name ?? me?.name ?? 'Meg';
+  q('INSERT INTO fh_folder_entries(folder_id,tx_id,description,date,amount,paid_by,category,created) VALUES(?,?,?,?,?,?,?,?)')
+    .run(folderId, txId, t.merchant || t.description, t.date, Math.abs(t.amount), payer, folderCategory(`${t.merchant ?? ''} ${t.description}`), Date.now());
+}
+// Kvittering: kobles til (bokført) eller løses fra (tilbake til gjennomgang).
+function setTxReceipt(txId, receiptId) {
+  q("UPDATE fh_receipts SET transaction_id=NULL, status=CASE WHEN status='booked' THEN 'needs_review' ELSE status END WHERE transaction_id=? AND id IS NOT ?").run(txId, receiptId ?? null);
+  if (receiptId) q("UPDATE fh_receipts SET transaction_id=?, status='booked' WHERE id=?").run(txId, receiptId);
+}
+const txValidate = (b) => {
+  if (b.folderId !== undefined && b.folderId !== null && b.folderId !== '' && validId('fh_folders', +b.folderId) === undefined) return 'Fant ikke den delte mappen';
+  if (b.categoryId && validId('fh_categories', +b.categoryId) === undefined) return 'Ukjent kategori';
+  if (b.accountId && validId('fh_accounts', +b.accountId) === undefined) return 'Ukjent konto';
+  if (b.receiptId && !q('SELECT 1 FROM fh_receipts WHERE id=?').get(String(b.receiptId))) return 'Fant ikke kvitteringen';
+  if (b.type !== undefined && !['expense', 'income'].includes(b.type)) return 'Type må være utgift eller inntekt';
+  return null;
+};
+const txById = (id) => txOut(q(`${TX_SELECT} WHERE t.id=?`).get(id));
+
 api.post('/transactions', need('write:transactions'), async (c) => {
   const b = await c.req.json();
-  const amount = ore(b.amount);
+  const amount = signedAmount(b);
   if (!isDate(b.date) || amount === null || !str(b.description)) return bad(c, 'Dato, beløp og beskrivelse må fylles ut');
+  const err = txValidate(b); if (err) return bad(c, err);
   const desc = str(b.description);
   const catId = b.categoryId ? +b.categoryId : (settings().autoCat ? ruleFor(desc) : null);
   const t = q("INSERT INTO fh_transactions(account_id,date,amount,description,merchant,category_id,note,source,created) VALUES(?,?,?,?,?,?,?,'manual',?) RETURNING *")
     .get(b.accountId ? +b.accountId : null, b.date, amount, desc, desc, catId, str(b.note, 500), Date.now());
+  db.transaction(() => { if (b.folderId) setTxFolder(c, t.id, +b.folderId); if (b.receiptId) setTxReceipt(t.id, String(b.receiptId)); })();
   kickAi();
-  return c.json(txOut(t));
+  return c.json(txById(t.id));
 });
 
 api.patch('/transactions/:id', need('write:transactions'), async (c) => {
   const b = await c.req.json();
   const cur = q('SELECT * FROM fh_transactions WHERE id=?').get(+c.req.param('id'));
   if (!cur) return c.notFound();
+  const err = txValidate(b); if (err) return bad(c, err);
+  const amount = signedAmount(b, cur.amount);
   const n = {
-    date: isDate(b.date) ? b.date : cur.date, amount: b.amount !== undefined && ore(b.amount) !== null ? ore(b.amount) : cur.amount,
+    date: isDate(b.date) ? b.date : cur.date, amount: amount ?? cur.amount,
     description: b.description !== undefined ? str(b.description) || cur.description : cur.description,
     category_id: b.categoryId !== undefined ? (b.categoryId ? +b.categoryId : null) : cur.category_id,
     account_id: b.accountId !== undefined ? (b.accountId ? +b.accountId : null) : cur.account_id,
     note: b.note !== undefined ? str(b.note, 500) : cur.note,
   };
-  const t = q('UPDATE fh_transactions SET date=?, amount=?, description=?, category_id=?, account_id=?, note=? WHERE id=? RETURNING *')
-    .get(n.date, n.amount, n.description, n.category_id, n.account_id, n.note, cur.id);
-  return c.json(txOut(q(`${TX_SELECT} WHERE t.id=?`).get(t.id)));
+  // En ny beskrivelse er et nytt butikknavn; AI-teksten lages på nytt.
+  const renamed = n.description !== cur.description;
+  db.transaction(() => {
+    q(`UPDATE fh_transactions SET date=?, amount=?, description=?, category_id=?, account_id=?, note=?${renamed ? ', merchant=?, ai_short=NULL, ai_long=NULL, ai_done=0' : ''} WHERE id=?`)
+      .run(n.date, n.amount, n.description, n.category_id, n.account_id, n.note, ...(renamed ? [n.description] : []), cur.id);
+    if (b.folderId !== undefined) setTxFolder(c, cur.id, b.folderId ? +b.folderId : null);
+    else if (n.amount !== cur.amount || n.date !== cur.date || renamed) q('UPDATE fh_folder_entries SET amount=?, date=?, description=? WHERE tx_id=?').run(Math.abs(n.amount), n.date, n.description, cur.id);
+    if (b.receiptId !== undefined) setTxReceipt(cur.id, b.receiptId ? String(b.receiptId) : null);
+  })();
+  if (renamed) kickAi();
+  return c.json(txById(cur.id));
 });
 
 api.delete('/transactions/:id', need('write:transactions'), (c) => {
-  q("UPDATE fh_receipts SET transaction_id=NULL, status=CASE WHEN status='booked' THEN 'needs_review' ELSE status END WHERE transaction_id=?").run(+c.req.param('id'));
-  q('DELETE FROM fh_transactions WHERE id=?').run(+c.req.param('id'));
+  const id = +c.req.param('id');
+  if (!q('SELECT 1 FROM fh_transactions WHERE id=?').get(id)) return c.notFound();
+  db.transaction(() => {
+    q("UPDATE fh_receipts SET transaction_id=NULL, status=CASE WHEN status='booked' THEN 'needs_review' ELSE status END WHERE transaction_id=?").run(id);
+    q('DELETE FROM fh_folder_entries WHERE tx_id=?').run(id);
+    q('DELETE FROM fh_transactions WHERE id=?').run(id);
+  })();
   return ok(c);
+});
+
+// Originalene bak en transaksjon: kvitteringsbildet/PDF-en og bankraden slik den kom fra banken.
+api.get('/transactions/:id/original', need('read:transactions'), (c) => {
+  const t = q('SELECT * FROM fh_transactions WHERE id=?').get(+c.req.param('id'));
+  if (!t) return c.notFound();
+  const r = q('SELECT id, mime, file, thumb, merchant, date, total, extraction, status FROM fh_receipts WHERE transaction_id=? ORDER BY created DESC LIMIT 1').get(t.id);
+  let ex = null; try { ex = r?.extraction ? JSON.parse(r.extraction) : null; } catch { ex = null; }
+  let bank = null;
+  try { bank = t.raw_bank_row ? JSON.parse(t.raw_bank_row) : null; } catch { bank = null; }
+  const bankRow = bank ? { bookingDate: bank.bookingDate ?? null, valueDate: bank.valueDate ?? null, description: bank.description ?? null, amount: bank.amount ?? t.amount / 100,
+    account: bank.account ?? null, bank: bank.bank ?? null, archiveReference: bank.archiveReference ?? null, source: bank.source ?? t.source, file: bank.file ?? null,
+    importedAt: bank.importedAt ?? null, raw: bank.raw ?? {} } : null;
+  return c.json({
+    receipt: r ? { id: r.id, mime: r.mime, status: r.status, fileUrl: r.file ? `/finans/api/receipts/${r.id}/file` : null, thumbUrl: r.thumb ? `/finans/api/receipts/${r.id}/thumb` : null,
+      merchant: r.merchant, date: r.date, total: r.total != null ? r.total / 100 : null,
+      lines: (ex?.lines ?? []).map((l) => ({ description: l.description, amount: l.amount })), vat: ex?.vat ?? [] } : null,
+    bankRow,
+  });
 });
 
 const csvCell = (v) => (/[;"\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
@@ -478,9 +578,10 @@ api.post('/import/csv', W, upload, async (c) => {
   let parsed;
   try { parsed = parseCsv(await b.file.text(), accountId, profile); } catch (e) { return bad(c, e.message); }
   const auto = settings().autoCat;
-  const ins = q("INSERT OR IGNORE INTO fh_transactions(account_id,date,amount,description,merchant,category_id,source,external_id,created) VALUES(?,?,?,?,?,?,'csv',?,?)");
+  const ins = q("INSERT OR IGNORE INTO fh_transactions(account_id,date,amount,description,merchant,category_id,source,external_id,raw_bank_row,created) VALUES(?,?,?,?,?,?,'csv',?,?,?)");
+  const bankMeta = { account: accName(accountId), source: `CSV · ${profile}`, file: str(b.file.name, 120) || null, importedAt: Date.now() };
   let added = 0;
-  db.transaction(() => { for (const r of parsed.rows) added += ins.run(accountId, r.date, r.amount, r.description, r.merchant, auto ? ruleFor(r.description) : null, r.external_id, Date.now()).changes; })();
+  db.transaction(() => { for (const r of parsed.rows) added += ins.run(accountId, r.date, r.amount, r.description, r.merchant, auto ? ruleFor(r.description) : null, r.external_id, bankJson(r.bank, bankMeta), Date.now()).changes; })();
   saveSettings({ csvProfile: profile });
   kickAi();
   return c.json({ added, duplicates: parsed.rows.length - added, skipped: parsed.skipped.length });
@@ -520,6 +621,8 @@ async function saveReceipt(f, scanFile, thumbFile, acc, target) {
   q("INSERT INTO fh_receipts(id,file,scan,thumb,mime,status,date,account_id,name,target,created) VALUES(?,?,?,?,?,'pending',?,?,?,?,?)")
     .run(id, file, scan, thumb, f.type, today(), acc, str(f.name, 120) || null, target, Date.now());
   queue.push({ id });
+  const tm = String(target ?? '').match(/^tx:(\d+)$/);
+  if (tm) q('UPDATE fh_receipts SET transaction_id=? WHERE id=?').run(+tm[1], id);
   // Mappe: posten vises med en gang («Gemini leser …») og fylles ut når AI-en er ferdig.
   const fm = String(target ?? '').match(/^folder:(\d+)(?::(.+))?$/);
   if (fm) {
@@ -529,6 +632,12 @@ async function saveReceipt(f, scanFile, thumbFile, acc, target) {
   return id;
 }
 api.post('/receipts', need('receipts:write'), upload, (c) => receiptUpload(c));
+// Legg ved kvittering på en eksisterende transaksjon. AI-en leser den, og den bekreftes i gjennomgangskøen som vanlig.
+api.post('/transactions/:id/receipt', need('receipts:write'), upload, (c) => {
+  const id = +c.req.param('id');
+  if (!q('SELECT 1 FROM fh_transactions WHERE id=?').get(id)) return c.notFound();
+  return receiptUpload(c, `tx:${id}`);
+});
 
 // Opplastingskøen: alt fra siste døgn med fremdrift. AI-en bruker typisk 5–15 s; fremdriften er et estimat.
 function jobOut(r) {
@@ -812,7 +921,7 @@ api.get('/reports', R, (c) => {
 
 /* --- Innstillinger, AI og tokens --- */
 
-const SETTING_KEYS = { name: (v) => str(v, 40) || 'Sebastian', currency: (v) => (['NOK', 'EUR', 'SEK'].includes(v) ? v : 'NOK'), monthStart: (v) => Math.min(28, Math.max(1, +v || 1)),
+const SETTING_KEYS = { name: (v) => str(v, 40), currency: (v) => (['NOK', 'EUR', 'SEK'].includes(v) ? v : 'NOK'), monthStart: (v) => Math.min(28, Math.max(1, +v || 1)),
   yearGoal: (v) => Math.max(0, +v || 0), provider: (v) => (v === 'gemini' ? 'gemini' : 'ollama'), fallback: Boolean,
   ollamaUrl: (v) => (/^https?:\/\/\S+$/.test(v) ? v : DEFAULT_SETTINGS.ollamaUrl), ollamaModel: (v) => str(v, 60) || DEFAULT_SETTINGS.ollamaModel,
   geminiModel: (v) => (/^[a-z0-9.\-]{3,60}$/i.test(v) ? v : DEFAULT_SETTINGS.geminiModel), minConf: (v) => Math.min(99, Math.max(50, +v || 85)),
@@ -1284,9 +1393,9 @@ api.post('/import', W, upload, async (c) => {
   const accountId = +b.accountId || q("SELECT id FROM fh_accounts WHERE type='checking' ORDER BY sort, id LIMIT 1").get()?.id || null;
   const rows = [], errors = [];
   let skipped = 0;
-  const take = (cells) => { const r = rowsToTx(cells, accountId ?? 0); rows.push(...r.rows); skipped += r.skipped.length; };
-  for (const f of files.slice(0, 20)) { try { take(await parseFile(f)); } catch (e) { errors.push(e.message); } }
-  if (text.trim()) take(readText(text));
+  const take = (cells, source, file = null) => { const r = rowsToTx(cells, accountId ?? 0); rows.push(...r.rows.map((x) => ({ ...x, bank: { ...x.bank, source, file } }))); skipped += r.skipped.length; };
+  for (const f of files.slice(0, 20)) { try { take(await parseFile(f), /\.xlsx$/i.test(f.name ?? '') ? 'XLSX' : 'CSV', str(f.name, 120) || null); } catch (e) { errors.push(e.message); } }
+  if (text.trim()) take(readText(text), 'Innlimt tekst');
   if (!rows.length) return bad(c, errors[0] ?? 'Fant ingen rader med dato, tekst og beløp');
   const cats = catById();
   const auto = settings().autoCat;
@@ -1298,9 +1407,10 @@ api.post('/import', W, upload, async (c) => {
   });
   if (c.req.query('commit') !== '1') return c.json({ rows: preview, imported: 0, skipped, errors });
   if (!accountId) return bad(c, 'Opprett en konto først');
-  const ins = q("INSERT OR IGNORE INTO fh_transactions(account_id,date,amount,description,merchant,category_id,source,external_id,domain,created) VALUES(?,?,?,?,?,?,'import',?,?,?)");
+  const ins = q("INSERT OR IGNORE INTO fh_transactions(account_id,date,amount,description,merchant,category_id,source,external_id,domain,raw_bank_row,created) VALUES(?,?,?,?,?,?,'import',?,?,?,?)");
+  const bankMeta = { account: accName(accountId), importedAt: Date.now() };
   let imported = 0;
-  db.transaction(() => { for (const r of preview) imported += ins.run(accountId, r.date, Math.round(r.amount * 100), r.description, r.description, r.categoryId, r.external_id, r.domain, Date.now()).changes; })();
+  db.transaction(() => { for (const r of preview) imported += ins.run(accountId, r.date, Math.round(r.amount * 100), r.description, r.description, r.categoryId, r.external_id, r.domain, bankJson(r.bank, bankMeta), Date.now()).changes; })();
   kickAi();
   return c.json({ rows: preview, imported, duplicates: preview.length - imported, skipped, errors });
 });
@@ -1329,11 +1439,22 @@ api.put('/stocks/config', sessionOnly, async (c) => {
 
 /* --- ✦ AI-søk --- */
 
+// Tidligere spørsmål per bruker (maks 20, nyeste først).
+const AI_HIST = 'fh_ai_history';
+const aiHistory = (uid) => (kv.get(uid, AI_HIST, []) ?? []).slice(0, 20);
 api.post('/search/ai', R, async (c) => {
   const b = await c.req.json().catch(() => ({}));
   const text = str(b.q, 300);
   if (!text) return c.json({ answer: '', hits: [], suggestions: aiSuggestions() });
-  return c.json({ ...(await aiAnswer(text)), q: text, suggestions: aiSuggestions() });
+  const uid = c.get('user');
+  if (b.save !== false) kv.set(uid, AI_HIST, [text, ...aiHistory(uid).filter((x) => x.toLowerCase() !== text.toLowerCase())].slice(0, 20));
+  return c.json({ ...(await aiAnswer(text)), q: text, suggestions: aiSuggestions(), history: aiHistory(uid) });
+});
+api.get('/search/history', R, (c) => c.json(aiHistory(c.get('user'))));
+api.delete('/search/history', R, async (c) => {
+  const uid = c.get('user'), one = c.req.query('q');
+  kv.set(uid, AI_HIST, one ? aiHistory(uid).filter((x) => x !== one) : []);
+  return c.json(aiHistory(uid));
 });
 api.get('/search/suggestions', R, (c) => c.json(aiSuggestions()));
 

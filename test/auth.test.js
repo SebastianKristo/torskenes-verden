@@ -6,6 +6,7 @@ import { join } from 'node:path';
 
 process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'hl-auth-'));
 process.env.SESSION_SECRET = 'testsecret-testsecret-testsecret-12';
+process.env.USER_NAME = 'Sebastian';
 process.env.APP_PASSWORD_HASH = (await import('../server/password.js')).hashPassword('eierpassord1');
 const totp = await import('../server/totp.js');
 const auth = await import('../server/auth.js');
@@ -82,10 +83,26 @@ test('rate limiting sperrer etter 5 feil fra samme IP', () => {
   assert.equal(r.status, 429);
 });
 
-test('siste admin og eieren kan ikke fjernes eller degraderes', () => {
-  assert.throws(() => auth.deleteUser('owner', 'u_annen'), /Eieren/);
+test('siste admin og hovedadmin kan ikke fjernes eller degraderes', () => {
+  assert.throws(() => auth.deleteUser('owner', 'u_annen'), /Hovedadmin/);
+  assert.equal(auth.userInfo('owner').isMainAdmin, true);
   assert.throws(() => auth.updateUser('owner', { role: 'bruker' }));
   const a = auth.createUser({ username: 'admin2', password: 'adminpassord', role: 'admin' });
   auth.deleteUser(a.id, 'owner');
   assert.equal(auth.userInfo(a.id), null);
+});
+
+test('brukernavn foreslås fra navnet (æ→ae, ø→o, å→a)', () => {
+  assert.equal(auth.slugUsername('Kari Ødegård'), 'kariodegard');
+  assert.equal(auth.slugUsername('Ærlige Åse-Marie'), 'aerligeasemarie');
+  assert.equal(auth.slugUsername('  '), '');
+});
+
+test('førstegangsoppsett virker bare på en tom server, og visningsnavn kan endres', () => {
+  assert.equal(auth.needsSetup(), false);
+  assert.throws(() => auth.setupServer({ adminName: 'X', username: 'xx', password: 'passord123' }), /allerede satt opp/);
+  const u = auth.createUser({ username: 'navnetest', password: 'passord123' });
+  assert.equal(auth.updateUser(u.id, { displayName: 'Ny Navnesen' }).name, 'Ny Navnesen');
+  assert.throws(() => auth.updateUser(u.id, { displayName: '  ' }), /tomt/);
+  auth.deleteUser(u.id, 'owner');
 });

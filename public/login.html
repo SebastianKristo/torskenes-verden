@@ -17,6 +17,26 @@
 </head>
 <body>
 <div class="lock">
+  <form id="setup" class="lock-box setup-box" hidden novalidate>
+    <div class="setup-top"><div class="logo">OS</div><span class="lock-small" id="ob-step">Steg 1 av 2</span></div>
+    <div class="setup-bar"><span class="on"></span><span id="ob-bar2"></span></div>
+    <div class="step" data-ob="1">
+      <div class="lock-title" style="line-height:1.2">Velkommen til <b>din nye server</b></div>
+      <div class="lock-hint">Først lager vi hovedadministratoren. Navnet vises i hilsenen på forsiden og i menyen, og du kan endre det senere under Innstillinger → Innlogging.</div>
+      <label class="ob-field">Navn på hovedadmin<input name="adminName" placeholder="f.eks. Kari" autocomplete="name" maxlength="60"></label>
+      <label class="ob-field">Navn på serveren<input name="serverName" placeholder="f.eks. Homelab" value="Homelab" maxlength="40"></label>
+    </div>
+    <div class="step" data-ob="2" hidden>
+      <div class="lock-title" style="line-height:1.2">Hei, <b id="ob-hello"></b></div>
+      <div class="lock-hint">Velg brukernavn og passord for innlogging. Tofaktor kan slås på etterpå.</div>
+      <label class="ob-field">Brukernavn<input name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="32"></label>
+      <label class="ob-field">Passord<input type="password" name="password" autocomplete="new-password" placeholder="Minst 8 tegn"></label>
+      <label class="ob-field">Gjenta passord<input type="password" name="password2" autocomplete="new-password"></label>
+    </div>
+    <div class="err" id="ob-err" role="alert" hidden></div>
+    <button type="submit" class="lock-btn" id="ob-btn">Neste</button>
+    <button type="button" class="lock-back" id="ob-back" hidden>← Tilbake</button>
+  </form>
   <form id="login" class="lock-box">
     <div class="logo">OS</div>
     <div class="lock-title">Hei, <b>velkommen hjem</b></div>
