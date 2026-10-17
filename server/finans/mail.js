@@ -187,7 +187,7 @@ export function looksLikeFinn(parsed) {
 let running = false;
 // Én runde: hent e-post fra kvitteringsmappen (og uleste fra Finn-mappen), importer og flytt/merk.
 export async function runMail({ ingest, finn } = {}) {
-  if (running) return { ...mailStatus(), busy: true };
+  if (running) return { ...mailStatus(), busy: true, ok: false, message: 'En henting pågår allerede – vent litt og prøv igjen' };
   const c = cfgWith();
   if (!c.host || !c.user || !c.pass) return { ok: false, message: 'E-post er ikke satt opp' };
   running = true;
@@ -221,7 +221,8 @@ export async function runMail({ ingest, finn } = {}) {
     }
     const st = mailStatus();
     setStatus({ lastCheck: Date.now(), imported: (st.imported ?? 0) + imported, lastImported: imported, lastError, unseen: null });
-    return { ok: true, imported, errors, message: imported ? `${imported} kvittering${imported === 1 ? '' : 'er'} importert` : 'Ingen nye e-poster' };
+    const msg = imported ? `${imported} e-post${imported === 1 ? '' : 'er'} importert` : errors ? 'Ingenting importert' : 'Ingen nye e-poster';
+    return { ok: !errors || imported > 0, imported, errors, lastError, message: errors ? `${msg} – ${errors} feilet: ${lastError}` : msg };
   } catch (e) {
     const m = mailError(e, c);
     setStatus({ lastCheck: Date.now(), lastError: m.message });

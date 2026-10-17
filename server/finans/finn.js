@@ -40,22 +40,23 @@ export function regexFinn(mail) {
   if (/fiks ferdig/i.test(t)) steps.push({ t: /levert|hentet/i.test(t) ? 'Fiks ferdig · levert' : /sendt/i.test(t) ? 'Fiks ferdig · sendt' : 'Fiks ferdig', done: /sendt|levert|hentet/i.test(t) });
   if (/tillit/i.test(t)) steps.push({ t: 'Tillit forsikring', done: true });
   if (/utbetalt/i.test(t)) steps.push({ t: 'Utbetalt', done: true });
-  else if (/godkjent|bekreftet mottatt/i.test(t)) steps.push({ t: 'Godkjent', done: true });
+  else if (/godkjent|(?<!når kjøper(en)? )har bekreftet mottatt/i.test(t)) steps.push({ t: 'Godkjent', done: true });
   else steps.push({ t: sold ? 'Venter på utbetaling' : 'Ikke mottatt', done: false });
   return { role: sold ? 'sold' : 'bought', item: item ?? null, counterpart: who ? `${who[1].toLowerCase()} ${who[2]}` : '', date: iso(t) ?? new Date().toLocaleDateString('sv-SE'),
     amount: Number.isFinite(amount) ? amount : NaN, order_id: t.match(/(?:ordre|handel|referanse)(?:nummer|nr\.?)?\s*[:#]?\s*([A-Z0-9-]{5,})/i)?.[1] ?? null, steps };
 }
 
 export async function parseFinnEmail(mail) {
-  let d;
+  // Regex-uttrekket er alltid med som reserve: felter AI-en mangler eller svarer rart på, fylles fra det.
+  const r = regexFinn(mail);
+  let d = r;
   try {
     const x = await askJson(PROMPT(mail), SCHEMA, { timeout: 45_000 });
-    d = { role: x.role === 'sold' ? 'sold' : 'bought', item: String(x.item ?? '').slice(0, 120), counterpart: String(x.counterpart ?? '').slice(0, 80),
-      date: /^\d{4}-\d{2}-\d{2}$/.test(x.date ?? '') ? x.date : new Date().toLocaleDateString('sv-SE'), amount: +x.amount, order_id: x.order_id ?? null,
-      steps: (x.steps ?? []).slice(0, 8).map((s) => ({ t: String(s.t).slice(0, 60), done: !!s.done })) };
-  } catch {
-    d = regexFinn(mail);
-  }
+    const amount = typeof x.amount === 'number' ? x.amount : +String(x.amount ?? '').replace(/[^\d,.-]/g, '').replace(/\.(?=\d{3}\b)/g, '').replace(',', '.');
+    d = { role: x.role === 'sold' || x.role === 'bought' ? x.role : r.role, item: String(x.item ?? '').slice(0, 120) || r.item, counterpart: String(x.counterpart ?? '').slice(0, 80) || r.counterpart,
+      date: /^\d{4}-\d{2}-\d{2}$/.test(x.date ?? '') ? x.date : r.date, amount: Number.isFinite(amount) && amount > 0 ? amount : r.amount, order_id: x.order_id || r.order_id,
+      steps: Array.isArray(x.steps) && x.steps.length ? x.steps.slice(0, 8).map((s) => ({ t: String(s.t ?? s).slice(0, 60), done: !!s.done })) : r.steps };
+  } catch { /* ingen AI – regex-uttrekket brukes */ }
   if (!d.item) throw new Error('Fant ikke gjenstanden i e-posten');
   // Samme ordrenummer i en senere statusmail oppdaterer samme handel.
   d.source = createHash('sha1').update(d.order_id ? 'o:' + d.order_id : `${d.role}|${d.item}|${d.amount}`).digest('hex').slice(0, 24);
