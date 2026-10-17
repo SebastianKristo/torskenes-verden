@@ -178,7 +178,7 @@ export async function importMessage(source, { folder, ingest }) {
 }
 
 let running = false;
-// Én runde: hent uleste fra kvitteringsmappen (og ev. Finn-mappen), importer og flytt/merk.
+// Én runde: hent e-post fra kvitteringsmappen (og uleste fra Finn-mappen), importer og flytt/merk.
 export async function runMail({ ingest, finn } = {}) {
   if (running) return { ...mailStatus(), busy: true };
   const c = cfgWith();
@@ -192,7 +192,10 @@ export async function runMail({ ingest, finn } = {}) {
     for (const [folder, kind] of jobs) {
       const lock = await client.getMailboxLock(folder);
       try {
-        const uids = (await client.search({ seen: false }, { uid: true })) || [];
+        // Med «Lest»-mappe flyttes ferdige e-poster ut, så alt som ligger i mappen hentes – også e-post du har åpnet.
+        // Duplikater stoppes av fh_mail_imports. Uten ferdig-mappe brukes «ulest» som markør.
+        const all = kind === 'receipt' && folders.includes(c.doneFolder);
+        const uids = (await client.search(all ? { all: true } : { seen: false }, { uid: true })) || [];
         for (const uid of uids.slice(0, 50)) {
           try {
             const msg = await client.fetchOne(String(uid), { source: true }, { uid: true });

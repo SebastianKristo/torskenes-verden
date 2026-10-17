@@ -97,7 +97,7 @@ Trykk **✦ AI** i søkefeltet og still et spørsmål:
 
 ## <img src="assets/icons/kvittering.svg" width="24" align="top"> Kvitteringer fra e-post (Proton Mail)
 
-FinansHub henter uleste e-poster fra en mappe, lager kvitteringsjobber av vedleggene (PDF, JPG, PNG, HEIC) og sender e-poster uten vedlegg (typisk nettbutikker) til AI-en som ren tekst. Jobbene havner i opplastingskøen og gjennomgangskøen som vanlig, merket med avsender og emne. Ferdige e-poster flyttes til «Lest»-mappen.
+FinansHub henter e-postene i en mappe (også de du har åpnet, så lenge «Lest»-mappen finnes; uten den bare uleste), lager kvitteringsjobber av vedleggene (PDF, JPG, PNG, HEIC) og sender e-poster uten vedlegg (typisk nettbutikker) til AI-en som ren tekst. Jobbene havner i opplastingskøen og gjennomgangskøen som vanlig, merket med avsender og emne. Ferdige e-poster flyttes til «Lest»-mappen.
 
 Proton Mail har ingen offentlig IMAP-server, så alt går gjennom **Proton Mail Bridge** (krever betalt plan: Mail Plus, Unlimited, Duo, Family eller Business). Oppsettet finnes i **Homelab → Innstillinger → Integrasjoner → Proton Mail** og i **FinansHub → Innstillinger → Bank og import**.
 
@@ -136,7 +136,7 @@ docker compose --profile mail up -d
 | Sertifikatet stemmer ikke / kunne ikke verifiseres | Bridge er satt opp på nytt – glem sertifikatet og test igjen |
 
 - **Duplikater:** hver e-post huskes på `Message-ID` og sha256 av hvert vedlegg (tabellen `fh_mail_imports`), så ingenting importeres to ganger selv om e-posten flyttes tilbake.
-- **Ved feil:** e-posten blir liggende ulest og feilen vises under Status. «Kjør nå» starter en runde med en gang.
+- **Ved feil:** e-posten blir liggende i mappen og prøves igjen neste runde, og feilen vises under Status. «Kjør nå» starter en runde med en gang.
 - **Finn-handler:** fyll inn en egen Finn-mappe (f.eks. `Folders/Finn`), så leses Finn-e-postene fra samme postkasse inn som handler.
 - **Bridge-data** ligger i `./proton` – ta den med i backupen.
 
