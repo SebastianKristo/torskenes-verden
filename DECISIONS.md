@@ -43,7 +43,8 @@
 - **Beløp lagres i øre (heltall)** for å unngå avrundingsfeil.
 - **Jobbkø:** en enkel kø i prosessen i stedet for ARQ/Redis. Bilag som avbrytes av en omstart, gjenopptas ved oppstart.
 - **Bildebehandling i nettleseren:** EXIF-rotasjon, nedskalering til 1600 px og miniatyrbilde gjøres med canvas før opplasting. Pillow/sharp trengs ikke, og originalen lagres urørt.
-- **Mobilappene er én PWA med to temaer**, ikke native SwiftUI/Compose-apper. Handoffen nevner dette som et alternativ («Alternativt én PWA med to temaer»), og det kan bygges og testes i samme kodebase. Native apper kan komme senere mot det samme `/finans/api` med tokens.
+- **Mobil:** PWA-en med to temaer finnes fortsatt. I tillegg finnes native apper i `apps/`: iOS i SwiftUI og Android i Jetpack Compose. Appene logger inn med passord og får et token med bare finans-tilganger (`POST /finans/api/auth/token`, samme rate limiting som nettinnloggingen).
+- **Få avhengigheter i appene:** Android bruker plattformens HttpURLConnection og org.json, iOS bruker URLSession og Codable. iOS-prosjektet genereres med XcodeGen, så det ikke trengs en `.pbxproj` i repoet. Begge bygges i GitHub Actions.
 - **Mobil-tokens** har egne tilganger (`finance:read`, `finance:write`, `receipts:write`). Tokenet lagres som HMAC og gir ikke tilgang til `/api/*` i homelab.
 - **Den gamle Økonomi-fanen er fjernet.** Eksisterende kvitteringer flyttes automatisk til FinansHub ved første oppstart (bilder kopieres til `data/receipts/migrert/`).
 - **PSD2/Enable Banking (fase 3) og e-postinnboks** er ikke implementert. Innstillingene viser «Ikke koblet».

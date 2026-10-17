@@ -113,6 +113,8 @@ Ved innlogging er «Husk denne enheten på lokalt nett» krysset av som standard
 - Fra 600 px bredde (åpen brettbar eller nettbrett) byttes det til navigasjonsrail med liste til venstre og detaljer til høyre.
 - Temaet kan overstyres under **Meg**.
 
+**Native apper:** se [apps/README.md](apps/README.md). iOS (SwiftUI, Liquid Glass) og Android (Compose, Material 3, støtte for brettbare). Begge logger inn mot `/finans/api` og ser bare FinansHub.
+
 **Tokens:** en iOS-snarvei eller en annen klient kan laste opp kvitteringer med et token (Innstillinger → Mobil og tilgang), med tilganger som `finance:read`, `receipts:write` og `finance:write`. Tokenet gir aldri tilgang til resten av homelab.
 
 **AI-oppsett (`.env` eller Innstillinger → AI-motor):** `AI_PROVIDER`, `AI_FALLBACK`, `OLLAMA_URL`, `OLLAMA_MODEL`, `GEMINI_API_KEY` og `GEMINI_MODEL`. Gemini-nøkkelen kan også legges inn fra siden. Den lagres på serveren og sendes aldri tilbake til nettleseren. Velger du Ollama uten reserve, forlater ingen kvitteringer hjemmenettet.

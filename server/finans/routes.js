@@ -7,7 +7,8 @@ import { join, resolve } from 'node:path';
 import { db, OWNER, settings, saveSettings, secret, setSecret, DEFAULT_SETTINGS } from './db.js';
 import { extract, health, providerName } from './ai.js';
 import { parseCsv, PROFILES } from './csv.js';
-import { sessionUser } from '../auth.js';
+import { sessionUser, clientIp, loginBlocked, loginFailed, loginSucceeded } from '../auth.js';
+import { verifyPassword } from '../password.js';
 import { config } from '../config.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
@@ -187,6 +188,30 @@ setTimeout(() => {
 /* ---------------- Ruter ---------------- */
 
 const api = new Hono();
+
+// Innlogging fra de native appene: passord → token med finans-tilganger. Samme rate limiting som nettinnloggingen.
+// Tokenet gir bare tilgang til /finans/api, aldri til resten av homelab.
+api.post('/auth/token', async (c) => {
+  const ip = clientIp(c);
+  const wait = loginBlocked(ip);
+  if (wait) return bad(c, `For mange forsøk. Prøv igjen om ${Math.ceil(wait / 60)} min.`, 429);
+  const b = await c.req.json().catch(() => ({}));
+  if (!config.passwordHash || !verifyPassword(String(b.password ?? ''), config.passwordHash)) {
+    loginFailed(ip);
+    await new Promise((r) => setTimeout(r, 400));
+    return bad(c, 'Feil passord', 401);
+  }
+  loginSucceeded(ip);
+  const token = 'fh_' + randomBytes(24).toString('base64url');
+  q('INSERT INTO fh_tokens(id,name,scopes,created) VALUES(?,?,?,?)').run(tokenKey(token), str(b.deviceName, 60) || 'Mobilapp', SCOPES.join(' '), Date.now());
+  return c.json({ token, scopes: SCOPES, user: settings().name });
+});
+// Appen logger ut ved å trekke tilbake sitt eget token.
+api.post('/auth/logout', async (c) => {
+  const m = c.req.header('authorization')?.match(/^Bearer\s+(fh_[A-Za-z0-9_-]{20,})$/);
+  if (m) q('DELETE FROM fh_tokens WHERE id=?').run(tokenKey(m[1]));
+  return ok(c);
+});
 
 api.use('*', async (c, next) => {
   const a = access(c);
