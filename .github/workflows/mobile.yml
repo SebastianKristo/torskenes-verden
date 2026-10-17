@@ -47,7 +47,7 @@ jobs:
         run: |
           xcodebuild -project FinansHub.xcodeproj -scheme FinansHub -configuration Debug \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-            CODE_SIGNING_ALLOWED=NO build > build.log 2>&1; s=$?
+            CODE_SIGNING_ALLOWED=NO build > build.log 2>&1 && s=0 || s=$?
           # Vis kompilatorfeilene (ikke bare halen av loggen).
           grep -E ": error: |: fatal error: " build.log | sort -u | head -80 || true
           tail -25 build.log
