@@ -52,13 +52,11 @@ Uten lokal kopi kloner skriptet `REPO` direkte. `GITHUB_TOKEN` trengs bare hvis 
 Valg kan overstyres med miljøvariabler, for eksempel `CTID=150 STORAGE=local-zfs IP=192.168.1.60/24 GW=192.168.1.1`. Lagring finnes automatisk hvis `STORAGE` ikke er satt. Resten av API-nøklene legger du inn etterpå i `/opt/homelab-os/.env`.
 
 ### Oppdatere Proxmox-installasjonen
+Kjør på Proxmox-verten som root. Skriptet trenger ikke git, finner containeren `homelab-os` selv og rører ikke `.env` eller `data/`:
 ```bash
-cd torskenes-verden && git pull
-tar --exclude=node_modules --exclude=data --exclude=.env -czf /tmp/os.tgz .
-pct push <CTID> /tmp/os.tgz /tmp/os.tgz
-pct exec <CTID> -- bash -c 'tar -xzf /tmp/os.tgz -C /opt/homelab-os && cd /opt/homelab-os && docker compose up -d --build'
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/SebastianKristo/torskenes-verden/main/deploy/proxmox/update.sh)"
 ```
-`.env` og `data/` i containeren blir ikke rørt.
+Har containeren et annet navn, kjør med `CTID=<id>` foran (finn ID-en med `pct list`).
 
 ## Unraid
 1. Kopier `deploy/unraid/homelab-os.xml` til `/boot/config/plugins/dockerMan/templates-user/` på Unraid.
