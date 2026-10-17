@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#E9E7E3;font-family:'Geist',system-ui,sans-serif}a{color:#C2410C}a:hover{color:#9A3412}</style>
+</helmet>
+<section style="display:flex;flex-direction:column;gap:28px;padding:56px 56px 0">
+<div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font-size:13px;letter-spacing:.12em;color:#6B6862;font-weight:600">FINN-HANDLER · KOMBINASJON</div><div style="font-size:34px;font-weight:600;letter-spacing:-.02em;color:#1A1917">Det beste fra alle tre</div><div style="font-size:16px;color:#55524D;line-height:1.5;text-wrap:pretty">Netto og kort du blar i fra <a href="#1a">1a</a>, sporingspunktene og tidslinjen fra <a href="#1b">1b</a>, og filteret, rutenettet og kvitteringen fra <a href="#1c">1c</a>. Trykk på en handel for å åpne den.</div></div>
+<div id="2a" style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:10px"><span style="padding:3px 9px;border-radius:7px;background:#1A1917;color:#fff;font-size:13px;font-weight:700">2a</span><b style="font-size:17px;color:#1A1917">Kombinasjon</b></div>
+<div style="display:flex;gap:24px;flex-wrap:wrap">
+<div style="width:390px;height:844px;border-radius:52px;background:#0B0B0E;color:#F4F4F6;overflow:hidden;position:relative;box-shadow:0 30px 70px rgba(0,0,0,.28);display:flex;flex-direction:column"><div style="height:54px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 32px;font-size:15px;font-weight:600"><span>9:41</span><span style="font-size:12px">●●● ▮</span></div>
+<div style="flex:1;overflow-y:auto;scrollbar-width:none;padding:6px 18px 110px;display:flex;flex-direction:column;gap:18px">
+<div style="flex:none;display:flex;justify-content:space-between;align-items:center"><div style="font-size:34px;font-weight:700;letter-spacing:-.03em">Finn</div><span style="width:44px;height:44px;border-radius:22px;background:#1A1A20;display:grid;place-items:center;font-size:18px">⌕</span></div>
+<div style="flex:none;padding:18px;border-radius:24px;background:#16161B;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px"><div style="min-width:0"><div style="font-size:14px;color:#9C9CA6">Netto i år</div><div style="font-size:34px;font-weight:600;letter-spacing:-.03em;font-family:'Geist Mono',monospace;white-space:nowrap;color:{{ sum.netC }}">{{ sum.net }}</div></div><div style="flex:none;display:flex;align-items:flex-end;gap:4px;height:52px"><sc-for list="{{ months }}" as="m"><div style="display:flex;flex-direction:column;align-items:center;gap:4px"><span style="width:12px;height:{{ m.h }};border-radius:4px;background:{{ m.c }}"></span><span style="font-size:9.5px;color:#8E8F99">{{ m.l }}</span></div></sc-for></div></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:#9C9CA6">Kjøpt · {{ sum.nBuy }}</span><b style="font-family:'Geist Mono',monospace;font-size:16px">{{ sum.buy }}</b><span style="height:6px;border-radius:3px;background:#22222A;display:flex"><span style="width:{{ sum.buyW }};background:#8FB3FF;border-radius:3px"></span></span></div><div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:#9C9CA6">Solgt · {{ sum.nSell }}</span><b style="font-family:'Geist Mono',monospace;font-size:16px">{{ sum.sell }}</b><span style="height:6px;border-radius:3px;background:#22222A;display:flex"><span style="width:{{ sum.sellW }};background:#7BE3A0;border-radius:3px"></span></span></div></div></div>
+<div style="flex:none;display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:20px;font-weight:600">{{ sum.nAct }} på vei</b><span style="font-size:13px;color:#9C9CA6">Sveip for flere</span></div>
+<div style="flex:none;display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;margin:0 -18px;padding:0 18px 4px">
+<sc-for list="{{ K.act }}" as="t"><button onClick="{{ t.goK }}" style="flex:none;width:262px;padding:0;border:2px solid {{ t.selK }};border-radius:26px;background:#16161B;color:inherit;cursor:pointer;text-align:left;overflow:hidden;font-family:inherit">
+<div style="height:132px;background:{{ t.tint }};position:relative;display:grid;place-items:center"><span style="font-size:42px;font-weight:700;letter-spacing:-.04em;color:rgba(255,255,255,.22)">{{ t.ini }}</span><span style="position:absolute;top:12px;left:12px;padding:4px 10px;border-radius:12px;background:rgba(0,0,0,.45);font-size:12px;font-weight:600;color:{{ t.col }}">{{ t.role }}</span><span style="position:absolute;top:12px;right:12px;font-family:'Geist Mono',monospace;padding:4px 10px;border-radius:12px;background:rgba(0,0,0,.45);font-size:12.5px;color:#F4F4F6">{{ t.vS }}</span></div>
+<div style="padding:14px 16px 16px;display:flex;flex-direction:column;gap:12px"><b style="font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.item }}</b>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr))"><sc-for list="{{ t.kSteps }}" as="s"><div style="display:flex;flex-direction:column;gap:7px"><div style="display:flex;align-items:center"><span style="flex:none;width:12px;height:12px;border-radius:6px;background:{{ s.dot }};box-shadow:0 0 0 {{ s.ring }} rgba(255,122,61,.25)"></span><span style="flex:1;height:2px;background:{{ s.line }}"></span></div><span style="font-size:11px;color:{{ s.fg }};font-weight:{{ s.fw }}">{{ s.t }}</span></div></sc-for></div>
+<span style="font-size:13px;padding-top:10px;border-top:1px solid #24242C"><span style="color:#9C9CA6">Neste:</span> {{ t.next }}</span></div>
+</button></sc-for></div>
+<div style="flex:none;display:flex;gap:4px;padding:4px;border-radius:16px;background:#16161B"><sc-for list="{{ K.segs }}" as="g"><button onClick="{{ g.go }}" style="flex:1 1 0;min-width:0;height:38px;padding:0 4px;white-space:nowrap;border:0;border-radius:12px;background:{{ g.bg }};color:{{ g.fg }};font-size:13.5px;font-weight:500;cursor:pointer;font-family:inherit">{{ g.n }}</button></sc-for></div>
+<div style="flex:none;display:grid;grid-template-columns:1fr 1fr;gap:10px"><sc-for list="{{ K.grid }}" as="t"><button onClick="{{ t.goK }}" style="padding:0;border:2px solid {{ t.selK }};border-radius:22px;background:#16161B;color:inherit;cursor:pointer;text-align:left;overflow:hidden;font-family:inherit">
+<div style="aspect-ratio:4/3;background:{{ t.tint }};position:relative;display:grid;place-items:center"><span style="font-size:32px;font-weight:700;color:rgba(255,255,255,.2)">{{ t.ini }}</span><span style="position:absolute;top:10px;left:10px;padding:4px 9px;border-radius:10px;background:{{ t.pillBg }};color:{{ t.pillFg }};font-size:11.5px;font-weight:600">{{ t.status }}</span></div>
+<div style="padding:11px 12px 13px;display:flex;flex-direction:column;gap:3px"><b style="font-family:'Geist Mono',monospace;font-size:15px;color:{{ t.col }}">{{ t.vS }}</b><span style="font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.item }}</span><span style="font-size:12px;color:#8E8F99">{{ t.role }} · {{ t.date }}</span></div>
+</button></sc-for></div>
+</div>
+<div style="position:absolute;left:14px;right:14px;bottom:22px;height:66px;border-radius:33px;background:rgba(30,30,36,.92);display:flex;justify-content:space-around;align-items:center;font-size:11px;color:#9C9CA6"><span>Oversikt</span><span>Liste</span><span>Budsjett</span><span style="padding:8px 14px;border-radius:20px;background:#FF7A3D;color:#1A0C04;font-weight:600">Finn</span><span>Søk</span><span>Mer</span></div>
+</div>
+
+<div style="width:390px;height:844px;border-radius:52px;background:#0B0B0E;color:#F4F4F6;overflow:hidden;position:relative;box-shadow:0 30px 70px rgba(0,0,0,.28)">
+<div style="height:300px;background:{{ D.tint }};position:relative;display:grid;place-items:center"><span style="font-size:96px;font-weight:700;letter-spacing:-.05em;color:rgba(255,255,255,.18)">{{ D.ini }}</span>
+<div style="position:absolute;top:54px;left:18px;right:18px;display:flex;justify-content:space-between"><span style="width:44px;height:44px;border-radius:22px;background:rgba(0,0,0,.4);backdrop-filter:blur(12px);display:grid;place-items:center;font-size:20px">‹</span><span style="width:44px;height:44px;border-radius:22px;background:rgba(0,0,0,.4);backdrop-filter:blur(12px);display:grid;place-items:center;font-size:16px">↗</span></div>
+<div style="position:absolute;bottom:40px;left:18px;right:18px;display:flex;gap:6px;align-items:center"><sc-for list="{{ D.thumbs }}" as="g"><span style="flex:none;width:{{ g.w }};height:6px;border-radius:3px;background:{{ g.c }}"></span></sc-for><span style="flex:1"></span><span style="padding:4px 10px;border-radius:12px;background:rgba(0,0,0,.45);font-size:12px">{{ D.imgs }} bilder</span></div></div>
+<div style="position:absolute;top:272px;left:0;right:0;bottom:0;border-radius:30px 30px 0 0;background:#0B0B0E;padding:22px 18px 34px;display:flex;flex-direction:column;gap:16px;overflow-y:auto;scrollbar-width:none">
+<div style="flex:none;display:flex;flex-direction:column;gap:6px"><span style="align-self:flex-start;padding:4px 10px;border-radius:10px;background:{{ D.roleBg }};color:{{ D.col }};font-size:12.5px;font-weight:600">{{ D.role }} · Finn-kode {{ D.code }}</span><b style="font-size:26px;font-weight:600;letter-spacing:-.02em;line-height:1.15">{{ D.item }}</b><div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><span style="min-width:0;font-size:14px;color:#9C9CA6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ D.whoL }} {{ D.who }} · {{ D.date }}</span><span style="flex:none;white-space:nowrap;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;color:{{ D.col }}">{{ D.vS }}</span></div></div>
+<div style="flex:none;padding:18px;border-radius:24px;background:linear-gradient(160deg,#2A1A10,#1A1210);border:1px solid #3A2A20;display:flex;flex-direction:column;gap:14px">
+<div><div style="font-size:13px;color:#FFB08A;letter-spacing:.06em">STATUS</div><div style="font-size:26px;font-weight:600;letter-spacing:-.02em;margin-top:2px">{{ D.status }}</div><div style="font-size:14px;color:#E8D3C6;margin-top:4px">{{ D.next }}</div></div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr))"><sc-for list="{{ D.kSteps }}" as="s"><div style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;align-items:center"><span style="flex:none;width:14px;height:14px;border-radius:7px;background:{{ s.dot }};box-shadow:0 0 0 {{ s.ring }} rgba(255,122,61,.25)"></span><span style="flex:1;height:3px;background:{{ s.line }}"></span></div><span style="font-size:11.5px;color:{{ s.fg }};font-weight:{{ s.fw }}">{{ s.t }}</span></div></sc-for></div></div>
+<div style="flex:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px"><sc-for list="{{ D.att }}" as="a"><div style="padding:14px 12px;border-radius:18px;background:#16161B;display:flex;flex-direction:column;gap:6px"><span style="font-size:18px">{{ a.ic }}</span><b style="font-size:13.5px;font-weight:600">{{ a.t }}</b><span style="font-size:12px;color:{{ a.c }}">{{ a.s }}</span></div></sc-for></div>
+<div style="flex:none;border-radius:22px;background:#F4F1EA;color:#1C1B19;padding:18px 20px;display:flex;flex-direction:column;gap:10px;font-family:'Geist Mono',monospace">
+<div style="display:flex;justify-content:space-between;font-size:12px;color:#77736B;letter-spacing:.06em"><span>KVITTERING · {{ D.code }}</span><span>{{ D.date }}.2026</span></div>
+<div style="border-top:1.5px dashed #CFC9BD"></div>
+<sc-for list="{{ D.lines }}" as="l"><div style="display:flex;justify-content:space-between;gap:10px;font-size:14px"><span style="color:#55524C">{{ l.l }}</span><span>{{ l.v }}</span></div></sc-for>
+<div style="border-top:1.5px dashed #CFC9BD"></div>
+<div style="display:flex;justify-content:space-between;font-size:17px;font-weight:600"><span>{{ D.totL }}</span><span>{{ D.tot }}</span></div></div>
+<div style="flex:none;border-radius:22px;background:#16161B;padding:18px 16px 4px;display:flex;flex-direction:column"><div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:12px"><b style="font-size:16px;font-weight:600">Tidslinje</b><span style="font-size:12px;color:#FFB08A">✦ steg og e-poster</span></div>
+<sc-for list="{{ D.tl }}" as="e"><div style="display:flex;gap:14px"><div style="flex:none;width:14px;display:flex;flex-direction:column;align-items:center"><span style="width:12px;height:12px;border-radius:6px;margin-top:4px;background:{{ e.dot }};border:2px solid {{ e.bd }}"></span><span style="flex:1;width:2px;background:#24242C;margin:3px 0"></span></div><div style="flex:1;min-width:0;padding-bottom:14px"><div style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:14px;font-weight:{{ e.fw }};min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ e.t }}</b><span style="flex:none;font-size:12px;color:#8E8F99;font-family:'Geist Mono',monospace">{{ e.date }}</span></div><span style="font-size:12.5px;color:#9C9CA6">{{ e.s }}</span></div></div></sc-for></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section style="display:flex;flex-direction:column;gap:28px;padding:56px">
+<div style="display:flex;flex-direction:column;gap:6px;max-width:900px"><div style="font-size:13px;letter-spacing:.12em;color:#6B6862;font-weight:600">FINN-HANDLER · NYTT DESIGN</div><div style="font-size:34px;font-weight:600;letter-spacing:-.02em;color:#1A1917">Tre retninger for mobilappen</div><div style="font-size:16px;color:#55524D;line-height:1.5;text-wrap:pretty">Hver variant viser listen og én handel. Trykk på en handel i listen for å åpne den i telefonen ved siden av. Samme data og funksjoner som i dag: steg, annonse, original kvittering, e-poster og bilder.</div></div>
+<div style="display:flex;flex-wrap:wrap;gap:56px;align-items:flex-start">
+
+<div id="1a" style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:10px"><span style="padding:3px 9px;border-radius:7px;background:#1A1917;color:#fff;font-size:13px;font-weight:700">1a</span><b style="font-size:17px;color:#1A1917">Galleri</b><span style="font-size:14px;color:#6B6862">Store bilder fra annonsen, kort du blar i</span></div>
+<div style="display:flex;gap:24px;flex-wrap:wrap">
+<div style="width:390px;height:844px;border-radius:52px;background:#0B0B0E;color:#F4F4F6;overflow:hidden;position:relative;box-shadow:0 30px 70px rgba(0,0,0,.28);display:flex;flex-direction:column">
+<div style="height:54px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 32px;font-size:15px;font-weight:600"><span>9:41</span><span style="font-size:12px">●●● ▮</span></div>
+<div style="flex:1;overflow-y:auto;scrollbar-width:none;padding:6px 18px 110px;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:34px;font-weight:700;letter-spacing:-.03em">Finn</div><span style="width:44px;height:44px;border-radius:22px;background:#1A1A20;display:grid;place-items:center;font-size:18px">⌕</span></div>
+<div style="padding:18px;border-radius:24px;background:#16161B;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:14px;color:#9C9CA6">Netto i år</span><span style="font-size:13px;color:#7BE3A0">{{ sum.netTxt }}</span></div>
+<div style="font-size:38px;font-weight:600;letter-spacing:-.03em;font-family:'Geist Mono',monospace;color:{{ sum.netC }}">{{ sum.net }}</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:#9C9CA6">Kjøpt · {{ sum.nBuy }}</span><b style="font-family:'Geist Mono',monospace;font-size:16px">{{ sum.buy }}</b><span style="height:6px;border-radius:3px;background:#22222A;display:flex"><span style="width:{{ sum.buyW }};background:#8FB3FF;border-radius:3px"></span></span></div><div style="display:flex;flex-direction:column;gap:6px"><span style="font-size:12.5px;color:#9C9CA6">Solgt · {{ sum.nSell }}</span><b style="font-family:'Geist Mono',monospace;font-size:16px">{{ sum.sell }}</b><span style="height:6px;border-radius:3px;background:#22222A;display:flex"><span style="width:{{ sum.sellW }};background:#7BE3A0;border-radius:3px"></span></span></div></div>
+</div>
+<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font-size:20px;font-weight:600">Pågående</b><span style="font-size:13px;color:#9C9CA6">{{ sum.nAct }} handler</span></div>
+<div style="flex:none;display:flex;gap:12px;overflow-x:auto;scrollbar-width:none;margin:0 -18px;padding:0 18px 4px">
+<sc-for list="{{ act }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.goA }}" style="flex:none;width:236px;padding:0;border:2px solid {{ t.selA }};border-radius:26px;background:#16161B;color:inherit;cursor:pointer;text-align:left;overflow:hidden;font-family:inherit">
+<div style="height:150px;background:{{ t.tint }};position:relative;display:grid;place-items:center"><span style="font-size:44px;font-weight:700;letter-spacing:-.04em;color:rgba(255,255,255,.22)">{{ t.ini }}</span><span style="position:absolute;top:12px;left:12px;padding:4px 10px;border-radius:12px;background:rgba(0,0,0,.45);font-size:12px;font-weight:600;color:{{ t.col }}">{{ t.role }}</span><span style="position:absolute;bottom:12px;right:12px;padding:3px 9px;border-radius:10px;background:rgba(0,0,0,.45);font-size:11.5px;color:#D9D9DF">{{ t.imgs }} bilder</span></div>
+<div style="padding:14px 16px 16px;display:flex;flex-direction:column;gap:8px"><b style="font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.item }}</b><div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:'Geist Mono',monospace;font-size:15px;color:{{ t.col }}">{{ t.vS }}</span><span style="font-size:12.5px;color:#9C9CA6">{{ t.status }}</span></div><span style="height:5px;border-radius:3px;background:#26262E;display:flex"><span style="width:{{ t.pct }};background:#FF7A3D;border-radius:3px"></span></span></div>
+</button></sc-for></div>
+<b style="font-size:20px;font-weight:600">Fullført</b>
+<div style="display:flex;flex-direction:column;gap:2px;border-radius:22px;background:#16161B;padding:6px">
+<sc-for list="{{ done }}" as="t"><button onClick="{{ t.goA }}" style="display:flex;align-items:center;gap:14px;padding:10px;border:0;border-radius:16px;background:{{ t.selAbg }};color:inherit;cursor:pointer;text-align:left;font-family:inherit"><span style="flex:none;width:52px;height:52px;border-radius:14px;background:{{ t.tint }};display:grid;place-items:center;font-weight:700;color:rgba(255,255,255,.35)">{{ t.ini }}</span><span style="flex:1;min-width:0"><b style="display:block;font-size:15.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.item }}</b><span style="font-size:13px;color:#9C9CA6">{{ t.role }} · {{ t.date }}</span></span><span style="font-family:'Geist Mono',monospace;font-size:14.5px;color:{{ t.col }}">{{ t.vS }}</span></button></sc-for></div>
+</div>
+<div style="position:absolute;left:14px;right:14px;bottom:22px;height:66px;border-radius:33px;background:rgba(30,30,36,.92);display:flex;justify-content:space-around;align-items:center;font-size:11px;color:#9C9CA6"><span>Oversikt</span><span>Liste</span><span>Budsjett</span><span style="padding:8px 14px;border-radius:20px;background:#2A1A10;color:#FFB08A;font-weight:600">Finn</span><span>Søk</span><span>Mer</span></div>
+</div>
+
+<div style="width:390px;height:844px;border-radius:52px;background:#0B0B0E;color:#F4F4F6;overflow:hidden;position:relative;box-shadow:0 30px 70px rgba(0,0,0,.28)">
+<div style="height:340px;background:{{ A.tint }};position:relative;display:grid;place-items:center"><span style="font-size:96px;font-weight:700;letter-spacing:-.05em;color:rgba(255,255,255,.18)">{{ A.ini }}</span>
+<div style="position:absolute;top:54px;left:18px;right:18px;display:flex;justify-content:space-between"><span style="width:44px;height:44px;border-radius:22px;background:rgba(0,0,0,.4);backdrop-filter:blur(12px);display:grid;place-items:center;font-size:20px">‹</span><span style="width:44px;height:44px;border-radius:22px;background:rgba(0,0,0,.4);backdrop-filter:blur(12px);display:grid;place-items:center;font-size:16px">↗</span></div>
+<span style="position:absolute;bottom:40px;right:18px;padding:5px 11px;border-radius:12px;background:rgba(0,0,0,.45);font-size:12.5px">1 / {{ A.imgs }}</span></div>
+<div style="position:absolute;top:310px;left:0;right:0;bottom:0;border-radius:30px 30px 0 0;background:#0B0B0E;padding:22px 20px 30px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;scrollbar-width:none">
+<div style="display:flex;flex-direction:column;gap:6px"><span style="align-self:flex-start;padding:4px 10px;border-radius:10px;background:{{ A.roleBg }};color:{{ A.col }};font-size:12.5px;font-weight:600">{{ A.role }} · Finn-kode {{ A.code }}</span><b style="font-size:26px;font-weight:600;letter-spacing:-.02em;line-height:1.15">{{ A.item }}</b><div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><span style="min-width:0;font-size:14px;color:#9C9CA6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ A.whoL }} {{ A.who }} · {{ A.date }}</span><span style="flex:none;white-space:nowrap;font-family:'Geist Mono',monospace;font-size:22px;font-weight:600;color:{{ A.col }}">{{ A.vS }}</span></div></div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px"><sc-for list="{{ A.steps }}" as="s"><div style="display:flex;flex-direction:column;gap:7px"><span style="height:6px;border-radius:3px;background:{{ s.bar }}"></span><span style="font-size:11.5px;color:{{ s.fg }};font-weight:{{ s.fw }}">{{ s.t }}</span></div></sc-for></div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px"><sc-for list="{{ A.att }}" as="a"><div style="padding:14px 12px;border-radius:18px;background:#16161B;display:flex;flex-direction:column;gap:8px"><span style="font-size:18px">{{ a.ic }}</span><b style="font-size:13.5px;font-weight:600">{{ a.t }}</b><span style="font-size:12px;color:{{ a.c }}">{{ a.s }}</span></div></sc-for></div>
+<div style="display:flex;flex-direction:column;gap:2px"><div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:6px"><b style="font-size:17px;font-weight:600">E-poster</b><span style="font-size:12.5px;color:#FFB08A">✦ fra Proton Mail</span></div>
+<sc-for list="{{ A.mails }}" as="e"><div style="display:flex;gap:12px;padding:11px 0;border-top:1px solid #1E1E24"><span style="flex:none;width:34px;height:34px;border-radius:17px;background:#1E1E24;display:grid;place-items:center;font-size:13px;font-weight:600">{{ e.ini }}</span><span style="flex:1;min-width:0"><span style="display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ e.sub }}</span><span style="font-size:12.5px;color:#9C9CA6">{{ e.from }} · {{ e.date }}</span></span></div></sc-for></div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="1b" style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:10px"><span style="padding:3px 9px;border-radius:7px;background:#1A1917;color:#fff;font-size:13px;font-weight:700">1b</span><b style="font-size:17px;color:#1A1917">Sporing</b><span style="font-size:14px;color:#6B6862">Som pakkesporing: hvor er handelen nå</span></div>
+<div style="display:flex;gap:24px;flex-wrap:wrap">
+<div style="width:390px;height:844px;border-radius:52px;background:#F4F2EE;color:#17161A;overflow:hidden;position:relative;box-shadow:0 30px 70px rgba(0,0,0,.2);display:flex;flex-direction:column">
+<div style="height:54px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 32px;font-size:15px;font-weight:600"><span>9:41</span><span style="font-size:12px">●●● ▮</span></div>
+<div style="flex:1;overflow-y:auto;scrollbar-width:none;padding:6px 16px 110px;display:flex;flex-direction:column;gap:14px">
+<div style="padding:0 4px"><div style="font-size:15px;color:#6E6B66">Finn-handler</div><div style="font-size:32px;font-weight:600;letter-spacing:-.03em;line-height:1.1;margin-top:4px">{{ sum.nAct }} på vei</div></div>
+<sc-for list="{{ act }}" as="t"><button onClick="{{ t.goB }}" style="display:flex;flex-direction:column;gap:16px;padding:18px;border:2px solid {{ t.selB }};border-radius:26px;background:#fff;color:inherit;cursor:pointer;text-align:left;font-family:inherit;box-shadow:0 1px 2px rgba(0,0,0,.04)">
+<div style="display:flex;align-items:center;gap:12px"><span style="flex:none;width:46px;height:46px;border-radius:14px;background:{{ t.tint }};display:grid;place-items:center;font-weight:700;color:rgba(255,255,255,.55)">{{ t.ini }}</span><span style="flex:1;min-width:0"><b style="display:block;font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.item }}</b><span style="font-size:13px;color:#6E6B66">{{ t.role }} · {{ t.who }}</span></span><span style="font-family:'Geist Mono',monospace;font-size:15px;font-weight:600">{{ t.vS }}</span></div>
+<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr))"><sc-for list="{{ t.steps }}" as="s"><div style="display:flex;flex-direction:column;align-items:flex-start;gap:8px"><div style="display:flex;align-items:center;width:100%"><span style="flex:none;width:14px;height:14px;border-radius:7px;background:{{ s.dot }};box-shadow:0 0 0 {{ s.ring }} rgba(255,122,61,.22)"></span><span style="flex:1;height:3px;background:{{ s.line }}"></span></div><span style="font-size:11.5px;color:{{ s.fgL }};font-weight:{{ s.fw }}">{{ s.t }}</span></div></sc-for></div>
+<div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px solid #EFEDE9"><span style="font-size:13.5px"><span style="color:#6E6B66">Neste:</span> {{ t.next }}</span><span style="color:#B0ADA7">›</span></div>
+</button></sc-for>
+<div style="padding:4px 4px 0;font-size:15px;font-weight:600">Fullført</div>
+<div style="border-radius:22px;background:#fff;padding:4px 16px"><sc-for list="{{ done }}" as="t"><button onClick="{{ t.goB }}" style="display:flex;align-items:center;gap:12px;width:100%;padding:13px 0;border:0;border-top:{{ t.btB }};background:transparent;color:inherit;cursor:pointer;text-align:left;font-family:inherit"><span style="flex:none;width:22px;height:22px;border-radius:11px;background:#1F8F55;color:#fff;display:grid;place-items:center;font-size:12px">✓</span><span style="flex:1;min-width:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.item }}</span><span style="font-family:'Geist Mono',monospace;font-size:14px;color:#6E6B66">{{ t.vS }}</span></button></sc-for></div>
+</div>
+<div style="position:absolute;left:14px;right:14px;bottom:22px;height:66px;border-radius:33px;background:rgba(255,255,255,.92);box-shadow:0 8px 24px rgba(0,0,0,.08);display:flex;justify-content:space-around;align-items:center;font-size:11px;color:#6E6B66"><span>Oversikt</span><span>Liste</span><span>Budsjett</span><span style="padding:8px 14px;border-radius:20px;background:#17161A;color:#fff;font-weight:600">Finn</span><span>Søk</span><span>Mer</span></div>
+</div>
+
+<div style="width:390px;height:844px;border-radius:52px;background:#F4F2EE;color:#17161A;overflow:hidden;position:relative;box-shadow:0 30px 70px rgba(0,0,0,.2);display:flex;flex-direction:column">
+<div style="height:54px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 32px;font-size:15px;font-weight:600"><span>9:41</span><span style="font-size:12px">●●● ▮</span></div>
+<div style="flex:1;overflow-y:auto;scrollbar-width:none;padding:4px 16px 30px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:10px"><span style="width:44px;height:44px;border-radius:22px;background:#fff;display:grid;place-items:center;font-size:20px">‹</span><span style="flex:1"></span><span style="width:44px;height:44px;border-radius:22px;background:#fff;display:grid;place-items:center;font-size:15px">↗</span></div>
+<div style="padding:22px;border-radius:28px;background:#17161A;color:#fff;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="padding:4px 10px;border-radius:10px;background:rgba(255,255,255,.12);font-size:12.5px">{{ B.role }} · {{ B.code }}</span><span style="font-family:'Geist Mono',monospace;font-size:17px">{{ B.vS }}</span></div>
+<div><div style="font-size:14px;color:#B9B7B2">{{ B.item }}</div><div style="font-size:30px;font-weight:600;letter-spacing:-.02em;margin-top:4px">{{ B.status }}</div><div style="font-size:14px;color:#FFB08A;margin-top:6px">{{ B.next }}</div></div>
+<span style="height:6px;border-radius:3px;background:rgba(255,255,255,.12);display:flex"><span style="width:{{ B.pct }};background:#FF7A3D;border-radius:3px"></span></span>
+</div>
+<div style="border-radius:24px;background:#fff;padding:18px 18px 8px;display:flex;flex-direction:column"><b style="font-size:16px;font-weight:600;padding-bottom:10px">Tidslinje</b>
+<sc-for list="{{ B.tl }}" as="e"><div style="display:flex;gap:14px"><div style="flex:none;width:14px;display:flex;flex-direction:column;align-items:center"><span style="width:12px;height:12px;border-radius:6px;margin-top:4px;background:{{ e.dot }};border:2px solid {{ e.bd }}"></span><span style="flex:1;width:2px;background:#EFEDE9;margin:3px 0"></span></div><div style="flex:1;min-width:0;padding-bottom:16px"><div style="display:flex;justify-content:space-between;gap:8px"><b style="font-size:14.5px;font-weight:{{ e.fw }};color:{{ e.fg }}">{{ e.t }}</b><span style="flex:none;font-size:12.5px;color:#9A978F;font-family:'Geist Mono',monospace">{{ e.date }}</span></div><span style="font-size:13px;color:#6E6B66">{{ e.s }}</span></div></div></sc-for></div>
+<div style="flex:none;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none"><sc-for list="{{ B.att }}" as="a"><span style="flex:none;display:flex;align-items:center;gap:8px;height:46px;padding:0 16px;border-radius:23px;background:#fff;font-size:14px;font-weight:500">{{ a.ic }} {{ a.t }} <span style="color:{{ a.cB }}">{{ a.s }}</span></span></sc-for></div>
+</div>
+</div>
+</div>
+</div>
+
+<div id="1c" style="display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:10px"><span style="padding:3px 9px;border-radius:7px;background:#1A1917;color:#fff;font-size:13px;font-weight:700">1c</span><b style="font-size:17px;color:#1A1917">Rutenett og kvittering</b><span style="font-size:14px;color:#6B6862">Markedsplass-rutenett, detaljside som en kvittering</span></div>
+<div style="display:flex;gap:24px;flex-wrap:wrap">
+<div style="width:390px;height:844px;border-radius:52px;background:#101114;color:#F2F2F4;overflow:hidden;position:relative;box-shadow:0 30px 70px rgba(0,0,0,.28);display:flex;flex-direction:column">
+<div style="height:54px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 32px;font-size:15px;font-weight:600"><span>9:41</span><span style="font-size:12px">●●● ▮</span></div>
+<div style="flex:1;overflow-y:auto;scrollbar-width:none;padding:6px 16px 110px;display:flex;flex-direction:column;gap:16px">
+<div style="flex:none;display:flex;justify-content:space-between;align-items:flex-end;gap:12px;padding:0 4px"><div style="min-width:0"><div style="font-size:14px;color:#8E8F99">Finn · netto i år</div><div style="font-size:32px;font-weight:600;letter-spacing:-.03em;font-family:'Geist Mono',monospace;white-space:nowrap;color:{{ sum.netC }}">{{ sum.net }}</div></div><div style="flex:none;display:flex;align-items:flex-end;gap:4px;height:52px"><sc-for list="{{ months }}" as="m"><div style="display:flex;flex-direction:column;align-items:center;gap:4px"><span style="width:12px;height:{{ m.h }};border-radius:4px;background:{{ m.c }}"></span><span style="font-size:9.5px;color:#8E8F99">{{ m.l }}</span></div></sc-for></div></div>
+<div style="flex:none;display:flex;gap:4px;padding:4px;border-radius:16px;background:#1A1B20"><sc-for list="{{ segs }}" as="g"><button onClick="{{ g.go }}" style="flex:1 1 0;min-width:0;height:38px;padding:0 4px;white-space:nowrap;border:0;border-radius:12px;background:{{ g.bg }};color:{{ g.fg }};font-size:13.5px;font-weight:500;cursor:pointer;font-family:inherit">{{ g.n }}</button></sc-for></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><sc-for list="{{ grid }}" as="t"><button onClick="{{ t.goC }}" style="padding:0;border:2px solid {{ t.selC }};border-radius:22px;background:#1A1B20;color:inherit;cursor:pointer;text-align:left;overflow:hidden;font-family:inherit">
+<div style="aspect-ratio:1;background:{{ t.tint }};position:relative;display:grid;place-items:center"><span style="font-size:38px;font-weight:700;color:rgba(255,255,255,.2)">{{ t.ini }}</span><span style="position:absolute;top:10px;left:10px;padding:4px 9px;border-radius:10px;background:{{ t.pillBg }};color:{{ t.pillFg }};font-size:11.5px;font-weight:600">{{ t.status }}</span></div>
+<div style="padding:12px 12px 14px;display:flex;flex-direction:column;gap:3px"><b style="font-family:'Geist Mono',monospace;font-size:16px;color:{{ t.col }}">{{ t.vS }}</b><span style="font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.item }}</span><span style="font-size:12px;color:#8E8F99">{{ t.role }} · {{ t.date }}</span></div>
+</button></sc-for></div>
+</div>
+<div style="position:absolute;left:14px;right:14px;bottom:22px;height:66px;border-radius:33px;background:rgba(28,29,34,.94);display:flex;justify-content:space-around;align-items:center;font-size:11px;color:#8E8F99"><span>Oversikt</span><span>Liste</span><span>Budsjett</span><span style="padding:8px 14px;border-radius:20px;background:#FF7A3D;color:#1A0C04;font-weight:600">Finn</span><span>Søk</span><span>Mer</span></div>
+</div>
+
+<div style="width:390px;height:844px;border-radius:52px;background:#101114;color:#F2F2F4;overflow:hidden;position:relative;box-shadow:0 30px 70px rgba(0,0,0,.28);display:flex;flex-direction:column">
+<div style="height:54px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 32px;font-size:15px;font-weight:600"><span>9:41</span><span style="font-size:12px">●●● ▮</span></div>
+<div style="flex:1;overflow-y:auto;scrollbar-width:none;padding:4px 16px 30px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center;gap:12px"><span style="width:44px;height:44px;border-radius:22px;background:#1A1B20;display:grid;place-items:center;font-size:20px">‹</span><span style="flex:1;min-width:0"><b style="display:block;font-size:17px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ C.item }}</b><span style="font-size:13px;color:#8E8F99">{{ C.role }} · {{ C.whoL }} {{ C.who }}</span></span></div>
+<div style="flex:none;display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px"><sc-for list="{{ C.imgsL }}" as="g"><span style="flex:none;width:118px;height:118px;border-radius:18px;background:{{ C.tint }};display:grid;place-items:center;font-size:12px;color:rgba(255,255,255,.45)">{{ g }}</span></sc-for></div>
+<div style="border-radius:22px;background:#F4F1EA;color:#1C1B19;padding:20px 20px 18px;display:flex;flex-direction:column;gap:10px;font-family:'Geist Mono',monospace">
+<div style="display:flex;justify-content:space-between;font-size:12px;color:#77736B;letter-spacing:.06em"><span>FINN · {{ C.code }}</span><span>{{ C.date }}.2026</span></div>
+<div style="border-top:1.5px dashed #CFC9BD"></div>
+<sc-for list="{{ C.lines }}" as="l"><div style="display:flex;justify-content:space-between;gap:10px;font-size:14px"><span style="color:#55524C">{{ l.l }}</span><span>{{ l.v }}</span></div></sc-for>
+<div style="border-top:1.5px dashed #CFC9BD"></div>
+<div style="display:flex;justify-content:space-between;font-size:17px;font-weight:600"><span>{{ C.totL }}</span><span>{{ C.tot }}</span></div>
+<div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:4px"><sc-for list="{{ C.steps }}" as="s"><span style="padding:4px 9px;border-radius:8px;font-size:11.5px;background:{{ s.cBg }};color:{{ s.cFg }}">{{ s.mark }} {{ s.t }}</span></sc-for></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px"><sc-for list="{{ C.att }}" as="a"><div style="padding:14px 12px;border-radius:18px;background:#1A1B20;display:flex;flex-direction:column;gap:6px;align-items:flex-start"><span style="font-size:18px">{{ a.ic }}</span><b style="font-size:13.5px;font-weight:600">{{ a.t }}</b><span style="font-size:12px;color:{{ a.c }}">{{ a.s }}</span></div></sc-for></div>
+<div style="border-radius:22px;background:#1A1B20;padding:6px 16px"><sc-for list="{{ C.mails }}" as="e"><div style="display:flex;gap:12px;align-items:center;padding:12px 0;border-top:{{ e.bt }}"><span style="flex:none;font-family:'Geist Mono',monospace;font-size:12px;color:#8E8F99;width:40px">{{ e.date }}</span><span style="flex:1;min-width:0"><span style="display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ e.sub }}</span><span style="font-size:12px;color:#8E8F99">{{ e.from }}</span></span></div></sc-for></div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+<div style="font-size:15px;color:#55524D;max-width:900px;line-height:1.5">Bildene er plassholdere i fargen til varen. I appen er det bildene fra annonsen og dine egne bilder. Si hvilken variant du vil ha, eller hva du vil kombinere, for eksempel listen fra <a href="#1a">1a</a> og detaljsiden fra <a href="#1c">1c</a>.</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const FT=[
+ ['Kjøpt','iPhone 14 Pro 256 GB','Ola N.','02.10',6500,2,'#3A2F4A',6],
+ ['Solgt','PS5 + 2 kontroller','Jonas B.','14.10',4800,1,'#1E2A3F',5],
+ ['Kjøpt','Sofabord eik','Per L.','15.10',900,1,'#3B2E22',3],
+ ['Solgt','Sykkel Trek FX3','Kari H.','24.09',4200,4,'#22362C',4],
+ ['Kjøpt','HÅG Capisco kontorstol','Mona L.','01.09',1200,4,'#2C2C33',4],
+ ['Solgt','iPad Air 4','Lars M.','18.08',3900,4,'#2A3540',5]];
+const STB=['Betalt','Sendt','Mottatt','Godkjent'],STS=['Solgt','Sendt','Levert','Utbetalt'];
+const NEXT={Kjøpt:['Venter på at selger sender','Pakken er på vei til deg','Godkjenn varen innen 24 t','Fullført'],Solgt:['Send pakken innen 5 dager','Venter på levering','Utbetaling innen 1 dag','Fullført']};
+const ini=s=>s.split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+const kr=v=>Math.round(v).toLocaleString('nb-NO');
+const mails=t=>{const [role,item,who,date,,done]=t,[d,m]=date.split('.').map(Number),dt=k=>String(d+k).padStart(2,'0')+'.'+String(m).padStart(2,'0'),o=[];
+  if(role==='Kjøpt'){o.push(['FINN.no','Kvittering: du har betalt for «'+item+'»',dt(0)],[who+' via FINN','Takk! Sender i morgen',dt(0)]);if(done>=2)o.push(['Posten Bring','Pakken din er på vei',dt(1)]);if(done>=3)o.push(['Posten Bring','Pakken kan hentes',dt(2)]);if(done>=4)o.push(['FINN.no','Handelen er fullført',dt(3)])}
+  else{o.push(['FINN.no','«'+item+'» er solgt med Trygg betaling',dt(0)],['FINN.no','Fraktetikett er klar',dt(0)]);if(done>=2)o.push(['Posten Bring','Pakken er sendt',dt(1)]);if(done>=3)o.push(['Posten Bring','Pakken er levert',dt(2)]);if(done>=4)o.push(['FINN.no','Utbetaling er på vei',dt(3)])}
+  return o.map(([from,sub,date])=>({from,sub,date,ini:from.slice(0,1)}))};
+class Component extends DCLogic {
+  state={a:0,b:0,c:1,seg:'Alle',d:0,segK:'Alle'};
+  renderVals(){const s=this.state;
+    const T=FT.map((t,i)=>{const [role,item,who,date,v,done,tint,imgs]=t,st=role==='Kjøpt'?STB:STS,col=role==='Kjøpt'?'#8FB3FF':'#7BE3A0',fin=done>=4,status=fin?'Fullført':st[done-1];
+      return{i,role,item,who,date,v,tint,imgs,ini:ini(item),col,fin,status,vS:(role==='Solgt'?'+':'−')+kr(v)+' kr',pct:(done/4*100)+'%',next:NEXT[role][done-1],code:String(345678000+i*7919),
+        steps:st.map((n,j)=>({t:n,done:j<done,cur:j===done-1&&!fin})),
+        goA:()=>this.setState({a:i}),goB:()=>this.setState({b:i}),goC:()=>this.setState({c:i}),
+        selA:s.a===i?'#FF7A3D':'transparent',selAbg:s.a===i?'#24242C':'transparent',selB:s.b===i?'#17161A':'transparent',selC:s.c===i?'#FF7A3D':'transparent',
+        pillBg:fin?'rgba(0,0,0,.5)':'#FF7A3D',pillFg:fin?'#D9D9DF':'#1A0C04'}});
+    const act=T.filter(t=>!t.fin),done=T.filter(t=>t.fin).map((t,k)=>({...t,btB:k?'1px solid #EFEDE9':'0'}));
+    const buy=T.filter(t=>t.role==='Kjøpt').reduce((a,t)=>a+t.v,0),sell=T.filter(t=>t.role==='Solgt').reduce((a,t)=>a+t.v,0),net=sell-buy,mx=Math.max(buy,sell);
+    const sum={net:(net>=0?'+':'−')+kr(Math.abs(net))+' kr',netC:net>=0?'#7BE3A0':'#F2F2F4',netTxt:'↑ '+T.length+' handler',buy:kr(buy)+' kr',sell:kr(sell)+' kr',buyW:buy/mx*100+'%',sellW:sell/mx*100+'%',nBuy:T.filter(t=>t.role==='Kjøpt').length,nSell:T.filter(t=>t.role==='Solgt').length,nAct:act.length};
+    const att=(t,dark)=>[{ic:'🧾',t:'Kvittering',s:'Original ✓',c:dark?'#7BE3A0':'#1F8F55'},{ic:'✉',t:'E-poster',s:mails(FT[t.i]).length+' koblet',c:dark?'#9C9CA6':'#6E6B66'},{ic:'▦',t:'Annonse',s:t.imgs+' bilder lagret',c:dark?'#FFB08A':'#C2410C'}];
+    const tA=T[s.a],tB=T[s.b],tC=T[s.c];
+    const A={...tA,roleBg:tA.role==='Kjøpt'?'rgba(143,179,255,.14)':'rgba(123,227,160,.14)',whoL:tA.role==='Kjøpt'?'Fra':'Til',steps:tA.steps.map(x=>({t:x.t,bar:x.done?'#FF7A3D':'#26262E',fg:x.done?'#F4F4F6':'#6E6E78',fw:x.cur?600:400})),att:att(tA,true).map(a=>({...a,ic:a.ic==='🧾'?'⎙':a.ic})),mails:mails(FT[s.a]).slice(-3).reverse()};
+    T.forEach(t=>t.steps=t.steps.map((x,j,arr)=>({...x,dot:x.done?(x.cur?'#FF7A3D':'#17161A'):'#DDD9D2',ring:x.cur?'5px':'0',line:j===arr.length-1?'transparent':(arr[j+1].done?'#17161A':'#DDD9D2'),fgL:x.done?'#17161A':'#A09D96',fw:x.cur?600:400})));
+    const ml=mails(FT[s.b]);const tl=[...tB.steps.filter(x=>x.done).map((x,j)=>({t:x.t,s:j===0?(tB.role==='Kjøpt'?'Trygg betaling · '+kr(tB.v)+' kr':'Kjøper '+tB.who+' har betalt'):'Steg fullført',date:ml[Math.min(j*2,ml.length-1)].date,k:j})),...ml.map(e=>({t:e.sub,s:e.from,date:e.date,mail:true}))].sort((a,b)=>b.date.localeCompare(a.date));
+    const B={...tB,status:tB.fin?'Fullført':tB.steps.find(x=>x.cur).t,tl:tl.map((e,j)=>({...e,dot:j===0?'#FF7A3D':e.mail?'#fff':'#17161A',bd:j===0?'#FF7A3D':e.mail?'#C9C5BD':'#17161A',fw:e.mail?400:600,fg:'#17161A'})),att:att(tB,false).map(a=>({...a,ic:a.ic==='🧾'?'⎙':a.ic,cB:a.c}))};
+    const fee=tC.role==='Kjøpt'?[{l:'Varepris',v:kr(tC.v)+' kr'},{l:'Frakt · Fiks ferdig',v:'99 kr'},{l:'Servicegebyr',v:kr(Math.round(tC.v*.03))+' kr'}]:[{l:'Salgspris',v:kr(tC.v)+' kr'},{l:'Frakt betalt av kjøper',v:'0 kr'},{l:'Gebyr',v:'0 kr'}];
+    const totC=tC.role==='Kjøpt'?tC.v+99+Math.round(tC.v*.03):tC.v;
+    const C={...tC,whoL:tC.role==='Kjøpt'?'fra':'til',imgsL:Array.from({length:tC.imgs},(_,k)=>'Bilde '+(k+1)),lines:fee,totL:tC.role==='Kjøpt'?'Betalt':'Utbetalt',tot:kr(totC)+' kr',
+      steps:tC.steps.map(x=>({t:x.t,mark:x.done?'✓':'○',cBg:x.done?'#1C1B19':'transparent',cFg:x.done?'#F4F1EA':'#8C877D'})),att:att(tC,true),mails:mails(FT[s.c]).reverse().map((e,k)=>({...e,bt:k?'1px solid #26272D':'0'}))};
+    const segs=['Alle','Kjøpt','Solgt','Pågående'].map(n=>({n,bg:s.seg===n?'#F2F2F4':'transparent',fg:s.seg===n?'#101114':'#B7B8C1',go:()=>this.setState({seg:n})}));
+    const grid=T.filter(t=>s.seg==='Alle'||(s.seg==='Pågående'?!t.fin:t.role===s.seg));
+    const months=[['J',1200],['A',3900],['S',5400],['O',12200]].map(([l,v],k)=>({l,h:Math.round(v/12200*30+4)+'px',c:k===3?'#FF7A3D':'#33343C'}));
+    const kS=t=>t.steps.map((x,j,arr)=>({t:x.t,dot:x.done?(x.cur?'#FF7A3D':'#F4F4F6'):'#3A3A44',ring:x.cur?'5px':'0',line:j===arr.length-1?'transparent':(arr[j+1].done?'#F4F4F6':'#3A3A44'),fg:x.done?'#F4F4F6':'#6E6E78',fw:x.cur?600:400}));
+    const kT=T.map(t=>({...t,kSteps:kS(t),goK:()=>this.setState({d:t.i}),selK:s.d===t.i?'#FF7A3D':'transparent'}));
+    const K={act:kT.filter(t=>!t.fin),segs:['Alle','Kjøpt','Solgt','Fullført'].map(n=>({n,bg:s.segK===n?'#F4F4F6':'transparent',fg:s.segK===n?'#0B0B0E':'#B7B8C1',go:()=>this.setState({segK:n})})),grid:kT.filter(t=>s.segK==='Alle'||(s.segK==='Fullført'?t.fin:t.role===s.segK))};
+    const tD=kT[s.d],mlD=mails(FT[s.d]),feeD=tD.role==='Kjøpt'?[{l:'Varepris',v:kr(tD.v)+' kr'},{l:'Frakt · Fiks ferdig',v:'99 kr'},{l:'Servicegebyr',v:kr(Math.round(tD.v*.03))+' kr'}]:[{l:'Salgspris',v:kr(tD.v)+' kr'},{l:'Frakt betalt av kjøper',v:'0 kr'},{l:'Gebyr',v:'0 kr'}];
+    const tlD=[...tD.steps.filter(x=>x.done).map((x,j)=>({t:x.t,s:'Steg fullført',date:mlD[Math.min(j*2,mlD.length-1)].date})),...mlD.map(e=>({t:e.sub,s:e.from,date:e.date,mail:true}))].sort((a,b)=>b.date.localeCompare(a.date));
+    const D={...tD,roleBg:tD.role==='Kjøpt'?'rgba(143,179,255,.14)':'rgba(123,227,160,.14)',whoL:tD.role==='Kjøpt'?'Fra':'Til',status:tD.fin?'Fullført':tD.steps.find(x=>x.cur).t,next:tD.fin?'Alt er i orden, og kvitteringen er lagret.':tD.next,
+      thumbs:Array.from({length:tD.imgs},(_,k)=>({w:k===0?'22px':'6px',c:k===0?'#F4F4F6':'rgba(255,255,255,.4)'})),att:att(tD,true).map(a=>({...a,ic:a.ic==='🧾'?'⎙':a.ic})),lines:feeD,totL:tD.role==='Kjøpt'?'Betalt':'Utbetalt',tot:kr(tD.role==='Kjøpt'?tD.v+99+Math.round(tD.v*.03):tD.v)+' kr',
+      tl:tlD.map((e,j)=>({...e,dot:j===0?'#FF7A3D':e.mail?'#0B0B0E':'#F4F4F6',bd:j===0?'#FF7A3D':e.mail?'#4A4A54':'#F4F4F6',fw:e.mail?400:600}))};
+    return{sum,act,done,A,B,C,segs,grid,months,K,D};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500;600&amp;display=swap">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<style>body{margin:0;background:#0A0A0C}a{color:#FFB08A}a:hover{color:#FFD2BC}*{box-sizing:border-box}input,select,button{font:inherit}select option{background:#141418;color:#F2F2F4}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;flex-wrap:wrap;background:#0A0A0C;color:#F2F2F4;font-family:Geist,system-ui,sans-serif;font-size:14px;line-height:1.45">
+
+<aside style="flex:0 0 248px;max-width:100%;min-height:100vh;position:sticky;top:0;align-self:flex-start;padding:24px 16px;background:#0F0F12;border-right:1px solid #1E1E23;display:flex;flex-direction:column;gap:22px">
+<div style="display:flex;align-items:center;gap:10px;padding:0 8px">
+<div style="width:36px;height:36px;border-radius:11px;background:#FF7A3D;display:grid;place-items:center;color:#1A0C04"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5"></path><path d="M4 19h16"></path><path d="M8 15l4-4 3 3 5-6"></path></svg></div>
+<div style="font-size:19px;font-weight:700;letter-spacing:-.02em">Finans<span style="font-weight:400;color:#8C8C96">Hub</span></div>
+</div>
+<div style="padding:0 10px;font-size:11px;color:#8C8C96;text-transform:uppercase;letter-spacing:.1em">Generelt</div>
+<nav style="display:flex;flex-direction:column;gap:2px;margin-top:-14px">
+<sc-for list="{{ nav }}" as="n" hint-placeholder-count="8">
+<button onClick="{{ n.go }}" draggable="{{ navEdit }}" onDragStart="{{ n.dStart }}" onDragOver="{{ n.dOver }}" onDrop="{{ n.dDrop }}" onDragEnd="{{ n.dEnd }}" style="display:flex;align-items:center;gap:12px;min-height:42px;padding:0 12px;border-radius:11px;border:0;box-shadow:{{ n.sh }};opacity:{{ n.op }};cursor:{{ n.cur }};text-align:left;font-weight:500;font-size:14.5px;background:{{ n.bg }};color:{{ n.fg }}">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{ n.ic }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ n.icon }}"></path></svg>
+<span style="flex:1">{{ n.label }}</span>
+<sc-if value="{{ n.badge }}" hint-placeholder-val="{{ false }}"><span style="min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:#FF7A3D;color:#1A0C04;font-size:11.5px;font-weight:700;display:grid;place-items:center">{{ n.badge }}</span></sc-if>
+<sc-if value="{{ navEdit }}" hint-placeholder-val="{{ false }}"><span style="display:flex;gap:2px"><span onClick="{{ n.up }}" role="button" aria-label="Flytt opp" style="width:22px;height:22px;border-radius:6px;display:grid;place-items:center;color:#8C8C96;font-size:11px;background:#1B1B20">▲</span><span onClick="{{ n.down }}" role="button" aria-label="Flytt ned" style="width:22px;height:22px;border-radius:6px;display:grid;place-items:center;color:#8C8C96;font-size:11px;background:#1B1B20">▼</span></span></sc-if>
+</button>
+</sc-for>
+</nav>
+<sc-if value="{{ navEdit }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:8px;margin-top:-12px;padding:0 10px;font-size:12px;color:#8C8C96">Dra punktene eller bruk pilene.<button onClick="{{ navReset }}" style="align-self:flex-start;background:none;border:0;padding:0;color:#FFB08A;cursor:pointer;font-size:12px">Tilbakestill rekkefølge</button></div></sc-if>
+<div style="margin-top:auto;padding:14px;border:1px solid #24242A;border-radius:16px;background:#141418;display:flex;flex-direction:column;gap:6px">
+<div style="font-size:11px;color:#8C8C96;text-transform:uppercase;letter-spacing:.1em">AI-motor</div>
+<div style="display:flex;align-items:center;gap:8px;font-weight:600"><span style="width:8px;height:8px;border-radius:4px;background:#5FD3A8;box-shadow:0 0 0 4px rgba(95,211,168,.15)"></span>{{ aiName }}</div>
+<div style="font-size:12px;color:#8C8C96">{{ aiSub }}</div>
+</div>
+</aside>
+
+<main style="flex:1 1 560px;min-width:0;padding:22px 32px 48px">
+<div style="max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:22px">
+
+<header style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding-bottom:18px;border-bottom:1px solid #1E1E23">
+<div><div style="display:flex;gap:8px;font-size:13px;color:#8C8C96"><span>FinansHub</span><span>›</span><span style="color:#F2F2F4">{{ crumb }}</span></div><h1 style="margin:2px 0 0;font-size:28px;font-weight:600;letter-spacing:-.03em">{{ pageTitle }}</h1></div>
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+<form onSubmit="{{ srch.submit }}" style="display:flex;align-items:center;gap:10px;height:44px;width:380px;max-width:100%;margin:0;padding:0 5px 0 14px;border-radius:12px;border:1px solid {{ srch.bd }};background:#141418"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8C8C96" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg><input value="{{ srch.v }}" onChange="{{ srch.on }}" placeholder="{{ srch.ph }}" style="flex:1;min-width:0;background:none;border:0;outline:none;color:#F2F2F4"><button type="button" onClick="{{ srch.toggle }}" title="Søk med AI i transaksjoner og kvitteringer" style="flex:none;white-space:nowrap;height:32px;padding:0 10px;border-radius:8px;border:1px solid {{ srch.tbd }};background:{{ srch.tbg }};color:{{ srch.tfg }};font-size:12.5px;font-weight:600;cursor:pointer">✦ AI</button></form>
+<button onClick="{{ goKv }}" aria-label="Varsler" style="position:relative;width:44px;height:44px;border-radius:12px;border:1px solid #24242A;background:#141418;color:#F2F2F4;cursor:pointer;display:grid;place-items:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"></path></svg><span style="position:absolute;top:10px;right:11px;width:8px;height:8px;border-radius:4px;background:#FF7A3D;border:2px solid #141418"></span></button>
+<div style="display:flex;align-items:center;gap:10px;padding-left:4px"><div style="width:40px;height:40px;border-radius:50%;background:#FFB08A;color:#1A0C04;display:grid;place-items:center;font-weight:700">S</div><div style="line-height:1.2"><div style="font-weight:600">{{ userName }}</div><div style="font-size:12px;color:#8C8C96">Privat</div></div></div>
+<sc-if value="{{ hasClose }}"><button onClick="{{ close }}" aria-label="Tilbake til Hjem" style="width:44px;height:44px;border-radius:50%;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;font-size:22px;line-height:1;cursor:pointer;margin-left:6px">×</button></sc-if>
+</div>
+</header>
+
+<sc-if value="{{ ai.open }}"><section style="background:#141418;border:1px solid #24242A;border-radius:20px;border-color:#3A2A20;padding:20px 22px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div style="min-width:0"><div style="font-size:12px;color:#FFB08A;font-weight:600;letter-spacing:.04em">✦ AI-SØK · {{ ai.engine }}</div><div style="font-size:17px;font-weight:600;margin-top:4px;text-wrap:pretty">{{ ai.q }}</div></div><button onClick="{{ ai.close }}" aria-label="Lukk" style="flex:none;width:34px;height:34px;border-radius:10px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;cursor:pointer;font-size:18px">×</button></div>
+<sc-if value="{{ ai.busy }}"><div style="font-size:14px;color:#B9B9C2">Leser transaksjoner, kvitteringer og varelinjer …</div></sc-if>
+<sc-if value="{{ ai.done }}"><div style="font-size:15px;line-height:1.55;color:#F2F2F4;text-wrap:pretty;max-width:820px">{{ ai.answer }}</div>
+<sc-if value="{{ ai.hasHits }}"><div style="display:flex;flex-direction:column;border:1px solid #24242A;border-radius:14px;overflow:hidden"><sc-for list="{{ ai.hits }}" as="r"><button onClick="{{ r.open }}" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:0;border-bottom:1px solid #1E1E23;background:transparent;color:#F2F2F4;cursor:pointer;text-align:left"><span style="flex:none;width:8px;height:8px;border-radius:4px;background:{{ r.c }}"></span><span style="flex:1;min-width:0"><span style="font-weight:500">{{ r.desc }}</span> <span style="color:#8C8C96;font-size:12.5px">· {{ r.date }} · {{ r.src }}</span><span style="display:block;font-size:12.5px;color:#FFB08A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.why }}</span></span><span style="font-family:'Geist Mono',monospace;white-space:nowrap">{{ r.amt }}</span></button></sc-for></div></sc-if>
+</sc-if>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ ai.sugg }}" as="g"><button onClick="{{ g.go }}" style="height:32px;padding:0 12px;border-radius:16px;border:1px solid #2A2A31;background:#0F0F12;color:#B9B9C2;cursor:pointer;font-size:13px">{{ g.t }}</button></sc-for></div>
+</section></sc-if>
+
+<sc-if value="{{ isOv }}">
+<div style="display:flex;flex-direction:column;gap:18px">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px">
+<div style="background:#141418;border:1px solid #24242A;border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:10px"><span style="width:30px;height:30px;border-radius:9px;background:#2A1A12;color:#FFB08A;display:grid;place-items:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 7l12-4v4"></path></svg></span><span style="color:#B9B9C2">Total saldo</span></div><span style="color:#8C8C96;letter-spacing:2px">···</span></div>
+<div style="font-family:'Geist Mono',monospace;font-size:27px;font-weight:600;letter-spacing:-.03em;white-space:nowrap">{{ kSaldo }}<span style="font-size:14px;color:#8C8C96;font-weight:400"> kr</span></div>
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px"><div style="min-width:0;font-size:12.5px;color:#9FE3C6">↗ 4,2 % <span style="color:#8C8C96">mot september</span></div>
+<div style="flex:0 0 96px;display:flex;align-items:flex-end;gap:2px;height:46px;overflow:hidden"><sc-for list="{{ kSaldoBars }}" as="b"><span style="flex:1 1 0;min-width:0;border-radius:2px;background:#FF7A3D;height:{{ b }}"></span></sc-for></div></div>
+</div>
+<div style="background:#141418;border:1px solid #24242A;border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:10px"><span style="width:30px;height:30px;border-radius:9px;background:#142032;color:#9DBDFF;display:grid;place-items:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 19V5M5 12l7-7 7 7"></path></svg></span><span style="color:#B9B9C2">Inn i oktober</span></div><span style="color:#8C8C96;letter-spacing:2px">···</span></div>
+<div style="font-family:'Geist Mono',monospace;font-size:27px;font-weight:600;letter-spacing:-.03em;white-space:nowrap">{{ kInn }}<span style="font-size:14px;color:#8C8C96;font-weight:400"> kr</span></div>
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px"><div style="min-width:0;font-size:12.5px;color:#8C8C96">Lønn mottatt 12. okt</div>
+<svg width="96" height="46" viewBox="0 0 96 46" fill="none" preserveAspectRatio="none" style="flex:0 0 96px;display:block"><path d="{{ kInnArea }}" fill="rgba(122,167,255,.16)"></path><path d="{{ kInnLine }}" stroke="#7AA7FF" stroke-width="2" stroke-linecap="round"></path></svg></div>
+</div>
+<div style="background:#141418;border:1px solid #24242A;border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:10px"><span style="width:30px;height:30px;border-radius:9px;background:#2A1A12;color:#FFB08A;display:grid;place-items:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12l7 7 7-7"></path></svg></span><span style="color:#B9B9C2">Brukt i oktober</span></div><span style="color:#8C8C96;letter-spacing:2px">···</span></div>
+<div style="font-family:'Geist Mono',monospace;font-size:27px;font-weight:600;letter-spacing:-.03em;white-space:nowrap">{{ kUt }}<span style="font-size:14px;color:#8C8C96;font-weight:400"> kr</span></div>
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px"><div style="min-width:0;font-size:12.5px;color:#9FE3C6">↘ 8 % <span style="color:#8C8C96">mot september</span></div>
+<div style="flex:0 0 96px;display:flex;align-items:flex-end;gap:3px;height:46px;overflow:hidden"><sc-for list="{{ kUtBars }}" as="b"><span style="flex:1 1 0;min-width:0;border-radius:2px;background:#FF7A3D;opacity:.9;height:{{ b }}"></span></sc-for></div></div>
+</div>
+<div style="background:#141418;border:1px solid #24242A;border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;align-items:center;gap:10px"><span style="width:30px;height:30px;border-radius:9px;background:#13201B;color:#9FE3C6;display:grid;place-items:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v9h9A9 9 0 1 1 12 3z"></path></svg></span><span style="color:#B9B9C2">Igjen av budsjett</span></div><span style="color:#8C8C96;letter-spacing:2px">···</span></div>
+<div style="font-family:'Geist Mono',monospace;font-size:27px;font-weight:600;letter-spacing:-.03em;white-space:nowrap">{{ kIgjen }}<span style="font-size:14px;color:#8C8C96;font-weight:400"> kr</span></div>
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px"><div style="min-width:0;font-size:12.5px;color:#8C8C96">{{ kIgjenNote }}</div>
+<svg width="96" height="46" viewBox="0 0 100 48" fill="none" style="flex:0 0 96px;display:block"><path d="M10 44A40 40 0 0 1 90 44" stroke="#24242A" stroke-width="8" stroke-linecap="round"></path><path d="M10 44A40 40 0 0 1 90 44" stroke="#FF7A3D" stroke-width="8" stroke-linecap="round" stroke-dasharray="{{ gaugeDash }}"></path><circle cx="{{ gaugeX }}" cy="{{ gaugeY }}" r="3" fill="#F2F2F4"></circle></svg></div>
+</div>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:16px">
+<section style="flex:2 1 560px;min-width:0;background:#141418;border:1px solid #24242A;border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px"><div><h2 style="margin:0;font-size:17px;font-weight:600">Inn og ut</h2><div style="font-size:13px;color:#8C8C96">Per måned, 2026</div></div>
+<div style="display:flex;align-items:center;gap:16px"><div style="display:flex;gap:14px;font-size:13px;color:#B9B9C2"><span style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#F2C14E"></span>Inn</span><span style="display:flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;background:#FF7A3D"></span>Ut</span></div>
+<div style="display:flex;padding:3px;border-radius:11px;background:#0F0F12;border:1px solid #24242A"><sc-for list="{{ chartModes }}" as="c"><button onClick="{{ c.go }}" style="padding:6px 12px;border-radius:8px;border:0;cursor:pointer;font-size:13px;background:{{ c.bg }};color:{{ c.fg }}">{{ c.name }}</button></sc-for></div></div></div>
+<div style="position:relative;height:230px;margin-top:6px">
+<div style="position:absolute;inset:0 0 24px 44px;display:flex;flex-direction:column;justify-content:space-between"><sc-for list="{{ yTicks }}" as="y"><div style="position:relative;border-top:1px dashed #24242A"><span style="position:absolute;left:-44px;top:-9px;font-size:11px;color:#8C8C96;font-family:'Geist Mono',monospace">{{ y }}</span></div></sc-for></div>
+<svg viewBox="0 0 600 200" preserveAspectRatio="none" style="position:absolute;left:44px;right:0;top:0;width:calc(100% - 44px);height:calc(100% - 24px);overflow:visible"><defs><linearGradient id="gi" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F2C14E" stop-opacity=".22"></stop><stop offset="1" stop-color="#F2C14E" stop-opacity="0"></stop></linearGradient><linearGradient id="gu" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF7A3D" stop-opacity=".18"></stop><stop offset="1" stop-color="#FF7A3D" stop-opacity="0"></stop></linearGradient></defs><path d="{{ cInnArea }}" fill="url(#gi)"></path><path d="{{ cUtArea }}" fill="url(#gu)"></path><path d="{{ cInnLine }}" fill="none" stroke="#F2C14E" stroke-width="2.5" vector-effect="non-scaling-stroke"></path><path d="{{ cUtLine }}" fill="none" stroke="#FF7A3D" stroke-width="2.5" vector-effect="non-scaling-stroke"></path></svg>
+<div style="position:absolute;left:44px;right:0;top:0;bottom:24px;display:flex"><sc-for list="{{ hovs }}" as="h"><div onMouseEnter="{{ h.enter }}" style="flex:1;position:relative;cursor:crosshair"><sc-if value="{{ h.on }}"><div style="position:absolute;left:50%;top:0;bottom:0;border-left:1px dashed #3A3A42"></div><span style="position:absolute;left:calc(50% - 6px);top:{{ h.ti }};width:12px;height:12px;border-radius:50%;background:#F2C14E;border:3px solid #141418"></span><span style="position:absolute;left:calc(50% - 6px);top:{{ h.tu }};width:12px;height:12px;border-radius:50%;background:#FF7A3D;border:3px solid #141418"></span><div style="position:absolute;left:{{ h.tl }};top:8px;width:150px;padding:10px 12px;border-radius:12px;background:#1B1B20;border:1px solid #2A2A31;box-shadow:0 10px 30px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:4px;font-size:12.5px;z-index:2"><b style="font-weight:600">{{ h.full }}</b><span style="display:flex;justify-content:space-between"><span style="color:#B9B9C2">● Inn</span><span style="font-family:'Geist Mono',monospace">{{ h.inn }}</span></span><span style="display:flex;justify-content:space-between"><span style="color:#B9B9C2">● Ut</span><span style="font-family:'Geist Mono',monospace">{{ h.ut }}</span></span></div></sc-if></div></sc-for></div>
+<div style="position:absolute;left:44px;right:0;bottom:0;display:flex"><sc-for list="{{ hovs }}" as="h"><div style="flex:1;text-align:center;font-size:12px;color:#8C8C96">{{ h.l }}</div></sc-for></div>
+</div>
+</section>
+
+<section style="flex:1 1 320px;min-width:0;background:#141418;border:1px solid #24242A;border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;font-size:17px;font-weight:600">Kontoer</h2><button onClick="{{ goKonto }}" style="height:34px;padding:0 14px;border-radius:10px;border:0;background:#FF7A3D;color:#1A0C04;font-weight:600;cursor:pointer">Se alle</button></div>
+<div style="position:relative;height:200px">
+<div style="position:absolute;left:14px;right:14px;top:0;height:150px;border-radius:18px;background:#1B1B20;border:1px solid #2A2A31;padding:16px;display:flex;justify-content:space-between"><span style="display:flex"><span style="width:22px;height:22px;border-radius:50%;background:#EB001B"></span><span style="width:22px;height:22px;border-radius:50%;background:#F79E1B;margin-left:-8px;opacity:.9"></span></span><span style="font-family:'Geist Mono',monospace;font-size:13px;color:#B9B9C2">•••• 4821</span></div>
+<div style="position:absolute;left:0;right:0;top:48px;height:150px;border-radius:18px;background:linear-gradient(135deg,#FF8A4C,#C24E17);padding:18px;display:flex;flex-direction:column;justify-content:space-between;color:#1A0C04;box-shadow:0 16px 40px rgba(255,122,61,.18)"><div style="display:flex;justify-content:space-between;align-items:flex-start"><b style="font-size:20px;font-style:italic;letter-spacing:.02em">VISA</b><span style="font-family:'Geist Mono',monospace;font-size:13px">•••• 9384</span></div><div><div style="font-size:12px;opacity:.75">Kredittkort · brukt</div><div style="font-family:'Geist Mono',monospace;font-size:22px;font-weight:600">3 210,00 kr</div></div></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:2px"><sc-for list="{{ accMini }}" as="a"><div style="display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid #1E1E23"><span style="color:#B9B9C2">{{ a.n }}</span><span style="font-family:'Geist Mono',monospace;font-weight:500">{{ a.bal }}</span></div></sc-for></div>
+</section>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+<section style="flex:1.3 1 380px;min-width:0;background:#141418;border:1px solid #24242A;border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:6px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h2 style="margin:0;font-size:17px;font-weight:600">Siste transaksjoner</h2><button onClick="{{ goTx }}" style="border:0;background:none;color:#FFB08A;cursor:pointer;font-size:13px">Se alle →</button></div>
+<sc-for list="{{ recent }}" as="t" hint-placeholder-count="6"><button onClick="{{ t.open }}" style="display:flex;align-items:center;gap:12px;padding:10px 6px;border:0;border-radius:12px;background:transparent;color:#F2F2F4;cursor:pointer;text-align:left" style-hover="background:#1B1B20"><span style="width:38px;height:38px;flex:none;border-radius:12px;background:{{ t.cbg }};color:{{ t.c }};display:grid;place-items:center;font-weight:700">{{ t.ini }}</span><span style="flex:1;min-width:0"><span style="display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.desc }}</span><span style="display:block;font-size:12px;color:#8C8C96">{{ t.dd }} · {{ t.cat }}</span><span style="display:block;font-size:12px;color:#FFB08A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">✦ {{ t.ai }}</span></span><span style="font-family:'Geist Mono',monospace;font-weight:500;color:{{ t.ac }}">{{ t.amt }}</span></button></sc-for>
+</section>
+
+<div style="flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:16px">
+<section style="background:#141418;border:1px solid #24242A;border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:14px">
+<h2 style="margin:0;font-size:17px;font-weight:600">Handlinger</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><sc-for list="{{ actions }}" as="a"><button onClick="{{ a.go }}" style="display:flex;flex-direction:column;align-items:flex-start;gap:16px;padding:14px;border-radius:16px;border:1px solid #24242A;background:{{ a.bg }};color:#F2F2F4;cursor:pointer;text-align:left"><span style="width:32px;height:32px;border-radius:10px;background:rgba(0,0,0,.25);color:{{ a.c }};display:grid;place-items:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ a.icon }}"></path></svg></span><span style="font-weight:500">{{ a.name }}</span></button></sc-for></div>
+</section>
+<section style="background:#141418;border:1px solid #24242A;border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;font-size:17px;font-weight:600">Budsjett</h2><button onClick="{{ goBud }}" style="border:0;background:none;color:#FFB08A;cursor:pointer;font-size:13px">Endre →</button></div>
+<div style="display:flex;height:10px;border-radius:5px;overflow:hidden;gap:2px"><sc-for list="{{ budStack }}" as="b"><span style="background:{{ b.c }};width:{{ b.w }}"></span></sc-for></div>
+<sc-for list="{{ budTop }}" as="b"><div style="display:flex;flex-direction:column;gap:5px"><div style="display:flex;justify-content:space-between;font-size:13px"><span style="display:flex;align-items:center;gap:8px"><span style="width:8px;height:8px;border-radius:50%;background:{{ b.c }}"></span>{{ b.name }}</span><span style="font-family:'Geist Mono',monospace;color:{{ b.tc }}">{{ b.used }} / {{ b.total }}</span></div><div style="height:6px;border-radius:3px;background:#24242A;overflow:hidden"><div style="height:100%;width:{{ b.w }};background:{{ b.bar }};border-radius:3px"></div></div></div></sc-for>
+</section>
+</div>
+
+<div style="flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:16px">
+<section style="background:#141418;border:1px solid #3A2A1C;border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;font-size:17px;font-weight:600">Trenger gjennomgang</h2><span style="padding:2px 9px;border-radius:7px;background:#3A2414;color:#FFB08A;font-size:12px;font-weight:600">{{ reviewCount }} nye</span></div>
+<sc-for list="{{ review }}" as="r"><button onClick="{{ r.open }}" style="display:flex;gap:12px;align-items:center;padding:12px;border-radius:14px;border:0;background:#1B1B20;color:#F2F2F4;cursor:pointer;text-align:left"><span style="width:34px;height:42px;flex:none;border-radius:5px;background:#ECE8E0;display:flex;flex-direction:column;gap:3px;padding:7px 5px"><span style="height:2px;background:#B9B4A8"></span><span style="height:2px;width:70%;background:#B9B4A8"></span><span style="height:2px;background:#B9B4A8"></span><span style="height:2px;width:45%;background:#B9B4A8"></span></span><span style="flex:1;min-width:0"><span style="display:flex;justify-content:space-between;gap:8px"><b style="font-weight:600">{{ r.store }}</b><span style="font-family:'Geist Mono',monospace">{{ r.total }}</span></span><span style="display:block;font-size:12px;color:#8C8C96">{{ r.dd }} · {{ r.src }}</span><span style="display:block;font-size:12px;color:#FFB08A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">✦ {{ r.ai }}</span><span style="display:block;font-size:12px;color:{{ r.fc }}">{{ r.flag }}</span></span></button></sc-for>
+<sc-if value="{{ reviewEmpty }}"><div style="font-size:13px;color:#8C8C96">Alt er gjennomgått.</div></sc-if>
+</section>
+<section style="background:#141418;border:1px solid #24242A;border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:2px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h2 style="margin:0;font-size:17px;font-weight:600">Kommende trekk</h2><button onClick="{{ goFast }}" style="border:0;background:none;color:#FFB08A;cursor:pointer;font-size:13px">Alle →</button></div>
+<sc-for list="{{ upcoming }}" as="u"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-top:1px solid #1E1E23"><div><div style="font-weight:500">{{ u.name }}</div><div style="font-size:12px;color:#8C8C96">{{ u.when }}</div></div><div style="font-family:'Geist Mono',monospace;font-weight:500">{{ u.amt }}</div></div></sc-for>
+</section>
+</div>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isTx }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+<div style="display:flex;align-items:center;gap:10px;height:44px;flex:1 1 260px;padding:0 14px;border-radius:12px;border:1px solid #24242A;background:#141418"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8C8C96" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg><input value="{{ gq }}" onChange="{{ onGq }}" placeholder="Søk etter butikk eller beskrivelse" style="flex:1;min-width:0;background:none;border:0;outline:none;color:#F2F2F4"></div>
+<select value="{{ txAcc }}" onChange="{{ onTxAcc }}" style="height:44px;padding:0 14px;border-radius:12px;border:1px solid #24242A;background:#141418;color:#F2F2F4"><option value="">Alle kontoer</option><sc-for list="{{ accNames }}" as="a"><option value="{{ a }}">{{ a }}</option></sc-for></select>
+<select value="{{ txType }}" onChange="{{ onTxType }}" style="height:44px;padding:0 14px;border-radius:12px;border:1px solid #24242A;background:#141418;color:#F2F2F4"><option value="">Inn og ut</option><option value="inn">Kun inn</option><option value="ut">Kun ut</option></select>
+<button onClick="{{ exportCsv }}" style="height:44px;padding:0 16px;border-radius:12px;border:1px solid #24242A;background:#141418;color:#F2F2F4;cursor:pointer;font-weight:500">Eksporter CSV</button>
+<button onClick="{{ openAdd }}" style="height:44px;padding:0 18px;border-radius:12px;border:0;background:#FF7A3D;color:#1A0C04;cursor:pointer;font-weight:600">+ Ny transaksjon</button>
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ catChips }}" as="c"><button onClick="{{ c.go }}" style="display:flex;align-items:center;gap:7px;height:34px;padding:0 13px;border-radius:999px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:#F2F2F4;cursor:pointer;font-size:13px"><span style="width:8px;height:8px;border-radius:50%;background:{{ c.c }}"></span>{{ c.name }}</button></sc-for></div>
+<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+<section style="flex:2 1 600px;min-width:0;background:#141418;border:1px solid #24242A;border-radius:20px;padding:10px 22px 16px">
+<div style="display:flex;justify-content:space-between;padding:12px 0;font-size:13px;color:#8C8C96"><span>{{ txCount }} transaksjoner</span><span>Netto <b style="font-family:'Geist Mono',monospace;color:#F2F2F4;font-weight:500">{{ txNet }}</b></span></div>
+<div style="overflow-x:auto"><table style="width:100%;min-width:620px;border-collapse:collapse;font-size:13.5px">
+<thead><tr style="color:#8C8C96;text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.07em"><th style="padding:8px 8px 8px 0;font-weight:500">Dato</th><th style="padding:8px;font-weight:500">Beskrivelse</th><th style="padding:8px;font-weight:500">Kategori</th><th style="padding:8px;font-weight:500">Kvittering</th><th style="padding:8px 0;font-weight:500;text-align:right">Beløp</th></tr></thead>
+<tbody><sc-for list="{{ txRows }}" as="t" hint-placeholder-count="10"><tr onClick="{{ t.open }}" style="border-top:1px solid #1E1E23;cursor:pointer;background:{{ t.sel }}">
+<td style="padding:12px 8px 12px 0;color:#8C8C96;white-space:nowrap;font-family:'Geist Mono',monospace">{{ t.dd }}</td>
+<td style="padding:12px 8px"><div style="display:flex;align-items:center;gap:10px"><span style="width:30px;height:30px;flex:none;border-radius:9px;background:{{ t.cbg }};color:{{ t.c }};display:grid;place-items:center;font-weight:700;font-size:12px">{{ t.ini }}</span><div><div style="font-weight:500">{{ t.desc }}</div><div style="font-size:12px;color:#8C8C96">{{ t.acc }}</div><div style="display:block;font-size:12px;color:#FFB08A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">✦ {{ t.ai }}</div></div></div></td>
+<td style="padding:12px 8px"><span style="display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:7px;background:#1E1E23;color:#D6D6DC;font-size:12.5px;white-space:nowrap"><span style="width:7px;height:7px;border-radius:50%;background:{{ t.c }}"></span>{{ t.cat }}</span></td>
+<td style="padding:12px 8px;color:{{ t.rcc }};font-size:12.5px">{{ t.rc }}</td>
+<td style="padding:12px 0;text-align:right;white-space:nowrap;font-family:'Geist Mono',monospace;font-weight:500;color:{{ t.ac }}">{{ t.amt }}</td>
+</tr></sc-for></tbody></table></div>
+<sc-if value="{{ txEmpty }}"><div style="padding:40px 0;text-align:center;color:#8C8C96">Ingen transaksjoner matcher filteret.</div></sc-if>
+</section>
+<sc-if value="{{ sel.has }}"><section style="flex:1 1 320px;min-width:0;position:sticky;top:20px;background:#141418;border:1px solid #24242A;border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;justify-content:space-between;align-items:flex-start"><span style="width:46px;height:46px;border-radius:14px;background:{{ sel.cbg }};color:{{ sel.c }};display:grid;place-items:center;font-weight:700;font-size:17px">{{ sel.ini }}</span><button onClick="{{ closeSel }}" style="width:34px;height:34px;border-radius:50%;border:1px solid #24242A;background:#1B1B20;color:#B9B9C2;cursor:pointer;font-size:17px">×</button></div>
+<div><div style="font-size:18px;font-weight:600">{{ sel.desc }}</div><div style="font-size:13px;color:#8C8C96">{{ sel.full }} · {{ sel.acc }}</div></div>
+<div style="font-family:'Geist Mono',monospace;font-size:32px;font-weight:600;letter-spacing:-.03em;color:{{ sel.ac }}">{{ sel.amt }} <span style="font-size:15px;color:#8C8C96;font-weight:400">kr</span></div>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">Kategori<select value="{{ sel.cat }}" onChange="{{ sel.onCat }}" style="height:44px;padding:0 12px;border-radius:11px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4"><sc-for list="{{ catNames }}" as="c"><option value="{{ c }}">{{ c }}</option></sc-for></select></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">Notat<input value="{{ sel.note }}" onChange="{{ sel.onNote }}" placeholder="Legg til notat" style="height:44px;padding:0 12px;border-radius:11px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;outline:none"></label>
+<div style="display:flex;justify-content:space-between;padding:12px 14px;border-radius:12px;background:#1B1B20;font-size:13px"><span style="color:#8C8C96">Kvittering</span><span style="color:{{ sel.rcc }}">{{ sel.rc }}</span></div>
+<div style="display:flex;gap:10px"><button onClick="{{ sel.makeRule }}" style="flex:1;height:44px;border-radius:11px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;cursor:pointer">Lag regel</button><button onClick="{{ sel.del }}" style="flex:1;height:44px;border-radius:11px;border:1px solid #4A2A20;background:#24140E;color:#FFB08A;cursor:pointer">Slett</button></div>
+<sc-if value="{{ ruleMsg }}"><div style="font-size:12.5px;color:#9FE3C6">{{ ruleMsg }}</div></sc-if>
+</section></sc-if>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isKv }}">
+<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+<div style="flex:1 1 340px;min-width:0;display:flex;flex-direction:column;gap:16px">
+<label style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:28px 20px;border-radius:20px;border:1.5px dashed #3A3A42;background:#141418;cursor:pointer;text-align:center"><span style="width:52px;height:52px;border-radius:16px;background:#FF7A3D;color:#1A0C04;display:grid;place-items:center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M8 12h8"></path></svg></span><b style="font-size:15px;font-weight:600">Skann eller last opp kvittering</b><span style="font-size:13px;color:#8C8C96">Bilde eller PDF · leses av {{ aiShort }}</span><input type="file" accept="image/*,application/pdf" capture="environment" onChange="{{ onUpload }}" style="display:none"></label>
+<section style="background:#141418;border:1px solid #24242A;border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><h2 style="margin:0;font-size:16px;font-weight:600">Kø</h2><span style="font-size:12.5px;color:#8C8C96">{{ reviewCount }} til gjennomgang</span></div>
+<sc-for list="{{ queue }}" as="r"><button onClick="{{ r.open }}" style="display:flex;gap:12px;align-items:center;padding:12px;border-radius:14px;border:1px solid {{ r.bd }};background:#1B1B20;color:#F2F2F4;cursor:pointer;text-align:left"><span style="width:34px;height:42px;flex:none;border-radius:5px;background-color:#ECE8E0;background-image:{{ r.img }};background-size:cover;background-position:center"></span><span style="flex:1;min-width:0"><span style="display:flex;justify-content:space-between;gap:8px"><b style="font-weight:600">{{ r.store }}</b><span style="font-family:'Geist Mono',monospace">{{ r.total }}</span></span><span style="display:block;font-size:12px;color:#8C8C96">{{ r.dd }} · {{ r.src }}</span><span style="display:block;font-size:12px;color:#FFB08A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">✦ {{ r.ai }}</span></span><span style="padding:3px 8px;border-radius:7px;font-size:11.5px;font-weight:600;background:{{ r.sbg }};color:{{ r.sc }};white-space:nowrap">{{ r.status }}</span></button></sc-for>
+<sc-if value="{{ queueEmpty }}"><div style="font-size:13px;color:#8C8C96;padding:6px 0">Ingen kvitteringer i køen.</div></sc-if>
+</section>
+<section style="background:#141418;border:1px solid #24242A;border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:2px">
+<h2 style="margin:0 0 8px;font-size:16px;font-weight:600">Bokført</h2>
+<sc-for list="{{ booked }}" as="r"><div style="display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid #1E1E23;font-size:13.5px"><span>{{ r.store }} <span style="color:#FFB08A;font-size:12px">✦ {{ r.ai }}</span> <span style="color:#8C8C96">· {{ r.dd }}</span></span><span style="font-family:'Geist Mono',monospace;color:{{ r.c }}">{{ r.total }}</span></div></sc-for>
+</section>
+</div>
+<section style="flex:2 1 520px;min-width:0;background:#141418;border:1px solid #24242A;border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:18px">
+<sc-if value="{{ rc.none }}"><div style="padding:80px 20px;text-align:center;color:#8C8C96">Velg en kvittering i køen, eller last opp en ny.</div></sc-if>
+<sc-if value="{{ rc.busy }}"><div style="padding:80px 20px;display:flex;flex-direction:column;align-items:center;gap:14px;color:#B9B9C2"><span style="width:42px;height:42px;border-radius:50%;border:3px solid #24242A;border-top-color:#FF7A3D"></span>Leser kvitteringen med {{ aiShort }} …</div></sc-if>
+<sc-if value="{{ rc.show }}">
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px"><div><h2 style="margin:0;font-size:18px;font-weight:600">Bekreft kvittering</h2><div style="font-size:13px;color:#8C8C96">Lest av {{ rc.src }} · {{ rc.time }}</div></div><span style="display:flex;align-items:center;gap:6px;padding:5px 11px;border-radius:999px;background:{{ rc.cbg }};color:{{ rc.cc }};font-size:12.5px;font-weight:600"><span style="width:7px;height:7px;border-radius:50%;background:{{ rc.cc }}"></span>{{ rc.conf }}</span></div>
+<div style="display:flex;flex-wrap:wrap;gap:18px">
+<div style="flex:1 1 220px;min-height:300px;border-radius:16px;background-color:#ECE8E0;background-image:{{ rc.img }};background-size:cover;background-position:center;position:relative;padding:22px;display:flex;flex-direction:column;gap:8px;color:#3A362E;font-family:'Geist Mono',monospace;font-size:12px">
+<sc-if value="{{ rc.paper }}"><div style="text-align:center;font-weight:600;font-size:14px;padding:4px;outline:2px solid #FF7A3D;outline-offset:2px;border-radius:4px">{{ rc.store }}</div><div style="text-align:center">Org.nr 912 345 678</div><div style="border-top:1px dashed #B9B4A8;margin:6px 0"></div><sc-for list="{{ rc.lines }}" as="l"><div style="display:flex;justify-content:space-between"><span>{{ l.d }}</span><span>{{ l.a }}</span></div></sc-for><div style="border-top:1px dashed #B9B4A8;margin:6px 0"></div><div style="display:flex;justify-content:space-between;font-weight:600;font-size:14px;outline:2px solid #FF7A3D;outline-offset:2px;border-radius:4px;padding:2px 4px"><span>TOTAL</span><span>{{ rc.totalStr }}</span></div><div style="display:flex;justify-content:space-between"><span>herav mva 25 %</span><span>{{ rc.vat }}</span></div></sc-if>
+</div>
+<div style="flex:1 1 260px;display:flex;flex-direction:column;gap:12px">
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">Butikk<input value="{{ rc.store }}" onChange="{{ rc.onStore }}" style="height:46px;padding:0 13px;border-radius:12px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;outline:none"></label>
+<div style="display:flex;gap:10px"><label style="flex:1;display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">Dato<input type="date" value="{{ rc.date }}" onChange="{{ rc.onDate }}" style="height:46px;padding:0 12px;border-radius:12px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;color-scheme:dark"></label><label style="flex:1;display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">Total (kr)<input value="{{ rc.totalIn }}" onChange="{{ rc.onTotal }}" inputmode="decimal" style="height:46px;padding:0 13px;border-radius:12px;border:1.5px solid #FF7A3D;background:#1B1B20;color:#F2F2F4;outline:none;font-family:'Geist Mono',monospace"></label></div>
+<div style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">Kategori<div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ rc.cats }}" as="c"><button onClick="{{ c.go }}" aria-pressed="{{ c.on }}" style="height:34px;padding:0 12px;border-radius:999px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:{{ c.fg }};cursor:pointer;font-size:12.5px">{{ c.name }}</button></sc-for></div></div>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">Konto<select value="{{ rc.acc }}" onChange="{{ rc.onAcc }}" style="height:46px;padding:0 12px;border-radius:12px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4"><sc-for list="{{ accNames }}" as="a"><option value="{{ a }}">{{ a }}</option></sc-for></select></label>
+<div style="display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:14px;background:#13201B;border:1px solid #1F3A2F"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9FE3C6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"></path><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"></path></svg><div style="font-size:13px"><div style="color:#9FE3C6;font-weight:600">{{ rc.match }}</div><div style="color:#B9B9C2">{{ rc.matchSub }}</div></div></div>
+</div>
+</div>
+<div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap"><button onClick="{{ rc.reprocess }}" style="height:48px;padding:0 18px;border-radius:12px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;cursor:pointer">Les på nytt med {{ rc.other }}</button><button onClick="{{ rc.reject }}" style="height:48px;padding:0 20px;border-radius:12px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;cursor:pointer">Avvis</button><button onClick="{{ rc.book }}" style="height:48px;padding:0 28px;border-radius:12px;border:0;background:#FF7A3D;color:#1A0C04;font-weight:600;cursor:pointer">Bokfør</button></div>
+</sc-if>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{ isBud }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<section style="background:#141418;border:1px solid #24242A;border-radius:20px;padding:24px;display:flex;flex-wrap:wrap;gap:28px;align-items:center">
+<div style="width:150px;height:150px;border-radius:50%;background:{{ budRing }};display:grid;place-items:center;flex:none"><div style="width:118px;height:118px;border-radius:50%;background:#141418;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-family:'Geist Mono',monospace;font-size:26px;font-weight:600">{{ budPct }}</span><span style="font-size:12px;color:#8C8C96">brukt</span></div></div>
+<div style="flex:1 1 300px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:18px">
+<div><div style="font-size:13px;color:#8C8C96">Budsjett oktober</div><div style="font-family:'Geist Mono',monospace;font-size:24px;font-weight:600">{{ budTotal }}</div></div>
+<div><div style="font-size:13px;color:#8C8C96">Brukt</div><div style="font-family:'Geist Mono',monospace;font-size:24px;font-weight:600;color:#FFB08A">{{ budUsed }}</div></div>
+<div><div style="font-size:13px;color:#8C8C96">Igjen</div><div style="font-family:'Geist Mono',monospace;font-size:24px;font-weight:600;color:#9FE3C6">{{ budLeft }}</div></div>
+<div><div style="font-size:13px;color:#8C8C96">Per dag resten av måneden</div><div style="font-family:'Geist Mono',monospace;font-size:24px;font-weight:600">{{ budDay }}</div></div>
+</div>
+</section>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+<sc-for list="{{ budCards }}" as="b" hint-placeholder-count="8"><div style="background:#141418;border:1px solid {{ b.bd }};border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="display:flex;align-items:center;gap:10px;font-weight:600"><span style="width:30px;height:30px;border-radius:9px;background:{{ b.cbg }};color:{{ b.c }};display:grid;place-items:center;font-size:13px;font-weight:700">{{ b.ini }}</span>{{ b.name }}</span><span style="font-size:12px;color:{{ b.sc }}">{{ b.status }}</span></div>
+<div style="font-family:'Geist Mono',monospace;font-size:22px;font-weight:600">{{ b.used }} <span style="font-size:13px;color:#8C8C96;font-weight:400">av {{ b.total }} kr</span></div>
+<div style="height:8px;border-radius:4px;background:#24242A;overflow:hidden"><div style="height:100%;width:{{ b.w }};background:{{ b.bar }};border-radius:4px"></div></div>
+<label style="display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12.5px;color:#8C8C96">Månedsbudsjett<input value="{{ b.raw }}" onChange="{{ b.on }}" inputmode="numeric" style="width:110px;height:38px;padding:0 10px;border-radius:10px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;text-align:right;font-family:'Geist Mono',monospace;outline:none"></label>
+</div></sc-for>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isAks }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="background:#141418;border:1px solid #24242A;border-radius:20px;padding:14px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+<span style="flex:none;width:40px;height:40px;border-radius:11px;background:#F2F2F4;color:#0A0A0C;display:grid;place-items:center;font-weight:700;font-size:12px;font-family:'Geist Mono',monospace">212</span>
+<div style="flex:1 1 200px;min-width:0"><div style="font-weight:600">Trading 212 · Invest</div><div style="font-size:12.5px;color:#8C8C96;display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="width:7px;height:7px;border-radius:4px;background:{{ aks.dot }}"></span>{{ aks.status }}</div></div>
+<div style="display:flex;padding:3px;border-radius:11px;background:#0F0F12;border:1px solid #24242A"><sc-for list="{{ aks.envs }}" as="e"><button onClick="{{ e.go }}" style="padding:6px 12px;border-radius:8px;border:0;cursor:pointer;font-size:13px;background:{{ e.bg }};color:{{ e.fg }}">{{ e.n }}</button></sc-for></div>
+<button onClick="{{ aks.sync }}" style="flex:none;white-space:nowrap;height:38px;padding:0 14px;border-radius:10px;border:0;background:#FF7A3D;color:#1A0C04;font-weight:600;cursor:pointer">Synk nå</button>
+<button onClick="{{ aks.toggleCfg }}" style="flex:none;white-space:nowrap;height:38px;padding:0 14px;border-radius:10px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;cursor:pointer">API-nøkkel</button>
+</div>
+<sc-if value="{{ aks.cfg }}"><div style="background:#141418;border:1px solid #24242A;border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:12px">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px"><label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">API-nøkkel<input value="{{ aks.key }}" onChange="{{ aks.onKey }}" placeholder="f.eks. 35875800ZxYa…" style="height:40px;padding:0 12px;border-radius:10px;border:1px solid #2A2A31;background:#0A0A0C;color:#F2F2F4;min-width:0"></label><label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">API-secret<input type="password" value="{{ aks.secret }}" onChange="{{ aks.onSecret }}" placeholder="Vises bare én gang i Trading 212" style="height:40px;padding:0 12px;border-radius:10px;border:1px solid #2A2A31;background:#0A0A0C;color:#F2F2F4;min-width:0"></label></div>
+<div style="font-size:13px;color:#B9B9C2;line-height:1.5;text-wrap:pretty">Lag nøkkelen på nettsiden til Trading 212 under Innstillinger → API (Beta). Velg bare lesetilganger: <b style="font-weight:600">account</b>, <b style="font-weight:600">portfolio</b>, <b style="font-weight:600">history:orders</b> og <b style="font-weight:600">history:dividends</b>, og lås den gjerne til IP-adressen til homelaben. Nøkkel og secret lagres kun på serveren.</div>
+<div style="font-family:'Geist Mono',monospace;font-size:12px;color:#8C8C96;line-height:1.7;padding:10px 12px;border-radius:10px;background:#0A0A0C;border:1px solid #1E1E23">Authorization: Basic base64(KEY:SECRET)<br>GET {{ aks.base }}/equity/account/summary<br>GET {{ aks.base }}/equity/portfolio<br>GET {{ aks.base }}/equity/history/orders?limit=50<br>GET {{ aks.base }}/history/dividends?limit=50</div>
+</div></sc-if>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:16px"><sc-for list="{{ aks.kpi }}" as="k" hint-placeholder-count="4"><div style="background:#141418;border:1px solid #24242A;border-radius:20px;padding:18px 20px;display:flex;flex-direction:column;gap:6px"><div style="color:#B9B9C2">{{ k.l }}</div><div style="font-family:'Geist Mono',monospace;font-size:25px;font-weight:600;letter-spacing:-.03em;white-space:nowrap;color:{{ k.c }}">{{ k.v }}</div><div style="font-size:12.5px;color:#8C8C96">{{ k.s }}</div></div></sc-for></div>
+<div style="display:flex;flex-wrap:wrap;gap:16px">
+<section style="flex:2 1 520px;min-width:0;background:#141418;border:1px solid #24242A;border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><h2 style="margin:0;font-size:17px;font-weight:600">Porteføljeverdi</h2><div style="font-size:13px;color:{{ aks.perC }}">{{ aks.perTxt }}</div></div><div style="display:flex;padding:3px;border-radius:11px;background:#0F0F12;border:1px solid #24242A"><sc-for list="{{ aks.periods }}" as="p"><button onClick="{{ p.go }}" style="padding:6px 12px;border-radius:8px;border:0;cursor:pointer;font-size:13px;background:{{ p.bg }};color:{{ p.fg }}">{{ p.n }}</button></sc-for></div></div>
+<svg viewBox="0 0 600 180" preserveAspectRatio="none" style="width:100%;height:200px;display:block"><path d="M0 45H600M0 90H600M0 135H600" stroke="#1E1E23"></path><path d="{{ aks.area }}" fill="rgba(95,211,168,.12)"></path><path d="{{ aks.line }}" fill="none" stroke="#5FD3A8" stroke-width="2" vector-effect="non-scaling-stroke"></path></svg>
+</section>
+<section style="flex:1 1 300px;min-width:0;background:#141418;border:1px solid #24242A;border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:14px">
+<h2 style="margin:0;font-size:17px;font-weight:600">Fordeling</h2>
+<div style="display:flex;height:12px;border-radius:6px;overflow:hidden;gap:2px"><sc-for list="{{ aks.pos }}" as="p"><span style="flex:{{ p.w }} 1 0;background:{{ p.c }}"></span></sc-for></div>
+<div style="display:flex;flex-direction:column;gap:8px"><sc-for list="{{ aks.pos }}" as="p"><div style="display:flex;align-items:center;gap:10px;font-size:13.5px"><span style="width:9px;height:9px;border-radius:3px;background:{{ p.c }}"></span><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span><span style="font-family:'Geist Mono',monospace;color:#B9B9C2">{{ p.pct }}</span></div></sc-for></div>
+</section>
+</div>
+<section style="background:#141418;border:1px solid #24242A;border-radius:20px;padding:8px 0;overflow-x:auto">
+<div style="min-width:720px">
+<div style="display:grid;grid-template-columns:minmax(0,2fr) 90px 110px 110px 130px 120px 80px;gap:12px;padding:12px 22px;font-size:12px;color:#8C8C96;text-transform:uppercase;letter-spacing:.06em"><span>Posisjon</span><span style="text-align:right">Antall</span><span style="text-align:right">Snittkurs</span><span style="text-align:right">Kurs</span><span style="text-align:right">Verdi</span><span style="text-align:right">Avkastning</span><span style="text-align:right">I dag</span></div>
+<sc-for list="{{ aks.pos }}" as="p" hint-placeholder-count="6"><div style="display:grid;grid-template-columns:minmax(0,2fr) 90px 110px 110px 130px 120px 80px;gap:12px;align-items:center;padding:11px 22px;border-top:1px solid #1E1E23;font-size:14px"><span style="display:flex;align-items:center;gap:10px;min-width:0"><span style="flex:none;width:36px;height:36px;border-radius:10px;background:{{ p.cbg }};color:{{ p.c }};display:grid;place-items:center;font-size:10.5px;font-weight:700;font-family:'Geist Mono',monospace">{{ p.tk }}</span><span style="min-width:0"><span style="display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span><span style="font-size:12px;color:#8C8C96">{{ p.t212 }}</span></span></span><span style="text-align:right;font-family:'Geist Mono',monospace">{{ p.qty }}</span><span style="text-align:right;font-family:'Geist Mono',monospace;color:#B9B9C2">{{ p.avg }}</span><span style="text-align:right;font-family:'Geist Mono',monospace">{{ p.px }}</span><b style="text-align:right;font-family:'Geist Mono',monospace;font-weight:600">{{ p.val }}</b><span style="text-align:right;font-family:'Geist Mono',monospace;color:{{ p.plC }}">{{ p.pl }}<span style="display:block;font-size:12px">{{ p.plP }}</span></span><span style="text-align:right;font-family:'Geist Mono',monospace;color:{{ p.dC }}">{{ p.d }}</span></div></sc-for>
+</div>
+</section>
+<div style="display:flex;flex-wrap:wrap;gap:16px">
+<section style="flex:1 1 320px;min-width:0;background:#141418;border:1px solid #24242A;border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:4px"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px"><h2 style="margin:0;font-size:17px;font-weight:600">Utbytte</h2><span style="font-size:13px;color:#8C8C96">{{ aks.divSum }} i år</span></div><sc-for list="{{ aks.divs }}" as="d"><div style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #1E1E23"><span>{{ d.tk }} <span style="color:#8C8C96;font-size:12.5px">· {{ d.date }}</span></span><span style="font-family:'Geist Mono',monospace;color:#9FE3C6">{{ d.v }}</span></div></sc-for></section>
+<section style="flex:1 1 320px;min-width:0;background:#141418;border:1px solid #24242A;border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:4px"><h2 style="margin:0 0 8px;font-size:17px;font-weight:600">Siste ordre</h2><sc-for list="{{ aks.orders }}" as="o"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid #1E1E23"><span style="display:flex;align-items:center;gap:10px"><span style="font-size:12px;font-weight:600;padding:2px 8px;border-radius:6px;background:{{ o.bg }};color:{{ o.fg }}">{{ o.side }}</span>{{ o.tk }} <span style="color:#8C8C96;font-size:12.5px">· {{ o.qty }} stk · {{ o.date }}</span></span><span style="font-family:'Geist Mono',monospace">{{ o.v }}</span></div></sc-for></section>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isOs }}"><dc-import name="FinansHub v2 Moduler" embedded="{{ true }}" start-page="{{ osPage }}" on-add-bolig="{{ goBolSet }}" hint-size="100%,600px"></dc-import></sc-if>
+<sc-if value="{{ isFast }}">
+<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+<section style="flex:2 1 520px;min-width:0;background:#141418;border:1px solid #24242A;border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:4px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><h2 style="margin:0;font-size:17px;font-weight:600">Abonnementer og regninger</h2><span style="font-size:12.5px;color:#8C8C96">Oppdaget fra gjentakende trekk</span></div>
+<sc-for list="{{ recRows }}" as="r"><div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-top:1px solid #1E1E23;opacity:{{ r.op }}"><span style="width:38px;height:38px;flex:none;border-radius:12px;background:{{ r.cbg }};color:{{ r.c }};display:grid;place-items:center;font-weight:700">{{ r.ini }}</span><div style="flex:1;min-width:0"><div style="font-weight:500">{{ r.name }}</div><div style="font-size:12px;color:#8C8C96">{{ r.cat }} · {{ r.when }}</div></div><span style="font-family:'Geist Mono',monospace;font-weight:500">{{ r.amt }}</span><button onClick="{{ r.toggle }}" aria-label="Aktiv" style="width:44px;height:26px;border-radius:13px;border:0;background:{{ r.tbg }};position:relative;cursor:pointer;flex:none"><span style="position:absolute;top:3px;left:{{ r.tl }};width:20px;height:20px;border-radius:50%;background:#F2F2F4"></span></button></div></sc-for>
+</section>
+<div style="flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:16px">
+<section style="background:#141418;border:1px solid #24242A;border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:6px"><div style="font-size:13px;color:#8C8C96">Faste utgifter per måned</div><div style="font-family:'Geist Mono',monospace;font-size:30px;font-weight:600">{{ recSum }} <span style="font-size:14px;color:#8C8C96;font-weight:400">kr</span></div><div style="font-size:12.5px;color:#8C8C96">{{ recYear }} kr i året · {{ recCount }} aktive</div></section>
+<section style="background:#141418;border:1px solid #24242A;border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:12px"><div style="display:flex;justify-content:space-between"><b style="font-weight:600">Oktober</b><span style="font-size:12.5px;color:#8C8C96">trekkdager</span></div>
+<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center"><sc-for list="{{ wd }}" as="d"><span style="font-size:11px;color:#8C8C96">{{ d }}</span></sc-for><sc-for list="{{ cal }}" as="c"><span style="aspect-ratio:1;border-radius:9px;display:grid;place-items:center;font-size:12.5px;background:{{ c.bg }};color:{{ c.fg }};font-weight:{{ c.fw }}">{{ c.n }}</span></sc-for></div></section>
+</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ isKonto }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px"><sc-for list="{{ accCards }}" as="a"><div style="display:flex;flex-direction:column;gap:12px">
+<div style="height:170px;border-radius:20px;background:{{ a.face }};padding:20px;display:flex;flex-direction:column;justify-content:space-between;color:{{ a.ink }};border:1px solid {{ a.bd }}"><div style="display:flex;justify-content:space-between"><b style="font-weight:600">{{ a.bank }}</b><span style="font-family:'Geist Mono',monospace;font-size:13px">{{ a.l4 }}</span></div><div><div style="font-size:12.5px;opacity:.8">{{ a.n }}</div><div style="font-family:'Geist Mono',monospace;font-size:24px;font-weight:600">{{ a.bal }}</div></div></div>
+<div style="display:flex;justify-content:space-between;font-size:13px;color:#8C8C96;padding:0 4px"><span>{{ a.type }}</span><span>{{ a.extra }}</span></div>
+</div></sc-for></div>
+<section style="background:#141418;border:1px solid #24242A;border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:16px"><h2 style="margin:0;font-size:17px;font-weight:600">Sparemål</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px"><sc-for list="{{ goals }}" as="g"><div style="padding:16px;border-radius:16px;background:#1B1B20;display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between"><b style="font-weight:600">{{ g.name }}</b><span style="font-size:12.5px;color:#8C8C96">{{ g.pct }}</span></div><div style="font-family:'Geist Mono',monospace;font-size:18px">{{ g.saved }} <span style="font-size:12.5px;color:#8C8C96">/ {{ g.goal }}</span></div><div style="height:8px;border-radius:4px;background:#24242A;overflow:hidden"><div style="height:100%;width:{{ g.w }};background:{{ g.c }}"></div></div></div></sc-for></div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{ isRap }}">
+<div style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px"><div style="display:flex;padding:3px;border-radius:12px;background:#141418;border:1px solid #24242A"><sc-for list="{{ rapModes }}" as="c"><button onClick="{{ c.go }}" style="padding:8px 16px;border-radius:9px;border:0;cursor:pointer;background:{{ c.bg }};color:{{ c.fg }}">{{ c.name }}</button></sc-for></div><div style="display:flex;gap:10px"><button onClick="{{ exportCsv }}" style="height:42px;padding:0 16px;border-radius:12px;border:1px solid #24242A;background:#141418;color:#F2F2F4;cursor:pointer">CSV</button><button onClick="{{ printPdf }}" style="height:42px;padding:0 16px;border-radius:12px;border:0;background:#FF7A3D;color:#1A0C04;font-weight:600;cursor:pointer">PDF-rapport</button></div></div>
+<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+<section style="flex:1 1 380px;min-width:0;background:#141418;border:1px solid #24242A;border-radius:20px;padding:22px;display:flex;flex-wrap:wrap;gap:24px;align-items:center">
+<div style="width:180px;height:180px;border-radius:50%;background:{{ donut }};display:grid;place-items:center;flex:none"><div style="width:120px;height:120px;border-radius:50%;background:#141418;display:flex;flex-direction:column;align-items:center;justify-content:center"><span style="font-size:12px;color:#8C8C96">Utgifter</span><span style="font-family:'Geist Mono',monospace;font-size:19px;font-weight:600">{{ rapTotal }}</span></div></div>
+<div style="flex:1 1 180px;display:flex;flex-direction:column;gap:9px"><sc-for list="{{ legend }}" as="l"><div style="display:flex;align-items:center;gap:10px;font-size:13px"><span style="width:10px;height:10px;border-radius:3px;background:{{ l.c }}"></span><span style="flex:1">{{ l.name }}</span><span style="color:#8C8C96">{{ l.pct }}</span><span style="font-family:'Geist Mono',monospace;width:80px;text-align:right">{{ l.sum }}</span></div></sc-for></div>
+</section>
+<section style="flex:1 1 300px;min-width:0;background:#141418;border:1px solid #24242A;border-radius:20px;padding:22px;display:flex;flex-direction:column;gap:12px"><h2 style="margin:0;font-size:17px;font-weight:600">Mest brukt hos</h2>
+<sc-for list="{{ topM }}" as="m"><div style="display:flex;flex-direction:column;gap:5px"><div style="display:flex;justify-content:space-between;font-size:13.5px"><span>{{ m.name }} <span style="color:#8C8C96">· {{ m.n }} kjøp</span></span><span style="font-family:'Geist Mono',monospace">{{ m.sum }}</span></div><div style="height:6px;border-radius:3px;background:#24242A;overflow:hidden"><div style="height:100%;width:{{ m.w }};background:#FF7A3D;border-radius:3px"></div></div></div></sc-for>
+</section>
+</div>
+<section style="background:#141418;border:1px solid #24242A;border-radius:20px;padding:10px 22px 16px;overflow-x:auto"><table style="width:100%;min-width:520px;border-collapse:collapse;font-size:13.5px"><thead><tr style="color:#8C8C96;text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.07em"><th style="padding:12px 0;font-weight:500">Måned</th><th style="padding:12px 8px;font-weight:500;text-align:right">Inn</th><th style="padding:12px 8px;font-weight:500;text-align:right">Ut</th><th style="padding:12px 8px;font-weight:500;text-align:right">Netto</th><th style="padding:12px 0;font-weight:500;text-align:right">Sparerate</th></tr></thead><tbody><sc-for list="{{ monthRows }}" as="m"><tr style="border-top:1px solid #1E1E23;font-family:'Geist Mono',monospace"><td style="padding:11px 0;font-family:Geist,sans-serif">{{ m.l }}</td><td style="padding:11px 8px;text-align:right">{{ m.inn }}</td><td style="padding:11px 8px;text-align:right">{{ m.ut }}</td><td style="padding:11px 8px;text-align:right;color:{{ m.c }}">{{ m.net }}</td><td style="padding:11px 0;text-align:right;color:#8C8C96">{{ m.rate }}</td></tr></sc-for></tbody></table></section>
+</div>
+</sc-if>
+
+<sc-if value="{{ isAiPg }}"><div style="display:flex;flex-direction:column;gap:16px;max-width:980px">
+<form onSubmit="{{ ai.pgSubmit }}" style="background:#141418;border:1px solid #24242A;border-radius:20px;padding:20px 22px;display:flex;flex-direction:column;gap:14px;margin:0">
+<div style="font-size:12px;color:#FFB08A;font-weight:600;letter-spacing:.04em">✦ AI-SØK · {{ aiName }}</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap"><input value="{{ ai.pgV }}" onChange="{{ ai.pgOn }}" placeholder="Spør om alt, f.eks. «hvor mye har jeg brukt på kaffe i år?»" autocomplete="off" style="flex:1;min-width:220px;height:52px;padding:0 16px;border-radius:14px;border:1px solid #5A3A26;background:#0F0F12;color:#F2F2F4;font:inherit;font-size:16px;outline:none"><button type="submit" style="height:52px;padding:0 22px;border-radius:14px;border:0;background:#FF7A3D;color:#1A0C04;font-weight:600;font-size:15px;cursor:pointer;white-space:nowrap">Spør AI</button></div>
+<div style="font-size:13px;color:#8C8C96;text-wrap:pretty">Søker i transaksjoner, kvitteringer og varelinjene som AI har lest av kvitteringsbildene.</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ ai.allSugg }}" as="g"><button type="button" onClick="{{ g.go }}" style="height:32px;padding:0 12px;border-radius:16px;border:1px solid #2A2A31;background:#0F0F12;color:#B9B9C2;cursor:pointer;font-size:13px">{{ g.t }}</button></sc-for></div>
+</form>
+<sc-if value="{{ ai.pgOpen }}"><section style="background:#141418;border:1px solid #24242A;border-radius:20px;border-color:#3A2A20;padding:20px 22px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><div style="min-width:0"><div style="font-size:12px;color:#FFB08A;font-weight:600;letter-spacing:.04em">✦ AI-SØK · {{ ai.engine }}</div><div style="font-size:17px;font-weight:600;margin-top:4px;text-wrap:pretty">{{ ai.q }}</div></div><button onClick="{{ ai.close }}" aria-label="Lukk" style="flex:none;width:34px;height:34px;border-radius:10px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;cursor:pointer;font-size:18px">×</button></div>
+<sc-if value="{{ ai.busy }}"><div style="font-size:14px;color:#B9B9C2">Leser transaksjoner, kvitteringer og varelinjer …</div></sc-if>
+<sc-if value="{{ ai.done }}"><div style="font-size:15px;line-height:1.55;color:#F2F2F4;text-wrap:pretty;max-width:820px">{{ ai.answer }}</div>
+<sc-if value="{{ ai.hasHits }}"><div style="display:flex;flex-direction:column;border:1px solid #24242A;border-radius:14px;overflow:hidden"><sc-for list="{{ ai.hits }}" as="r"><button onClick="{{ r.open }}" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border:0;border-bottom:1px solid #1E1E23;background:transparent;color:#F2F2F4;cursor:pointer;text-align:left"><span style="flex:none;width:8px;height:8px;border-radius:4px;background:{{ r.c }}"></span><span style="flex:1;min-width:0"><span style="font-weight:500">{{ r.desc }}</span> <span style="color:#8C8C96;font-size:12.5px">· {{ r.date }} · {{ r.src }}</span><span style="display:block;font-size:12.5px;color:#FFB08A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.why }}</span></span><span style="font-family:'Geist Mono',monospace;white-space:nowrap">{{ r.amt }}</span></button></sc-for></div></sc-if>
+</sc-if>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ ai.sugg }}" as="g"><button onClick="{{ g.go }}" style="height:32px;padding:0 12px;border-radius:16px;border:1px solid #2A2A31;background:#0F0F12;color:#B9B9C2;cursor:pointer;font-size:13px">{{ g.t }}</button></sc-for></div>
+</section></sc-if>
+<div style="background:#141418;border:1px solid #24242A;border-radius:20px;padding:20px 22px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><b style="font-weight:600;font-size:15px">Tidligere spørsmål</b><sc-if value="{{ ai.hasHist }}"><button onClick="{{ ai.clearHist }}" style="border:0;background:none;color:#8C8C96;cursor:pointer;font-size:13px;text-decoration:underline">Tøm</button></sc-if></div>
+<sc-if value="{{ ai.noHist }}"><div style="font-size:13.5px;color:#8C8C96">Ingen spørsmål ennå.</div></sc-if>
+<sc-for list="{{ ai.hist }}" as="h"><button onClick="{{ h.go }}" style="display:flex;align-items:center;gap:12px;min-height:40px;padding:0 4px;border:0;border-top:1px solid #1E1E23;background:none;color:#F2F2F4;cursor:pointer;text-align:left;font-size:14px"><span style="color:#8C8C96">↺</span><span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ h.t }}</span></button></sc-for>
+</div>
+</div></sc-if>
+
+<sc-if value="{{ isInn }}">
+<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+<nav style="flex:0 0 220px;max-width:100%;background:#141418;border:1px solid #24242A;border-radius:20px;padding:10px;display:flex;flex-direction:column;gap:2px"><sc-for list="{{ setTabs }}" as="t"><button onClick="{{ t.go }}" style="display:flex;flex-direction:column;align-items:flex-start;padding:10px 12px;border-radius:11px;border:0;cursor:pointer;text-align:left;background:{{ t.bg }};color:#F2F2F4"><span style="font-weight:500">{{ t.name }}</span><span style="font-size:12px;color:#8C8C96">{{ t.sub }}</span></button></sc-for></nav>
+<section style="flex:1 1 480px;min-width:0;background:#141418;border:1px solid #24242A;border-radius:20px;padding:24px;display:flex;flex-direction:column;gap:18px">
+<div><h2 style="margin:0;font-size:18px;font-weight:600">{{ setTitle }}</h2><div style="font-size:13px;color:#8C8C96">{{ setSub }}</div></div>
+
+<sc-if value="{{ stGen }}"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">Visningsnavn<input value="{{ sv.name }}" onChange="{{ son.name }}" style="height:46px;padding:0 13px;border-radius:12px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;outline:none"></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">Valuta<select value="{{ sv.currency }}" onChange="{{ son.currency }}" style="height:46px;padding:0 12px;border-radius:12px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4"><option value="NOK">NOK – norske kroner</option><option value="EUR">EUR – euro</option><option value="SEK">SEK – svenske kroner</option></select></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">Måneden starter (lønningsdag)<select value="{{ sv.monthStart }}" onChange="{{ son.monthStart }}" style="height:46px;padding:0 12px;border-radius:12px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4"><option value="1">1. i måneden</option><option value="12">12. i måneden</option><option value="20">20. i måneden</option></select></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">Sparemål for året (kr)<input value="{{ sv.yearGoal }}" onChange="{{ son.yearGoal }}" inputmode="numeric" style="height:46px;padding:0 13px;border-radius:12px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;outline:none;font-family:'Geist Mono',monospace"></label>
+</div></sc-if>
+
+<sc-if value="{{ stMeny }}"><div style="display:flex;flex-direction:column;gap:14px">
+<div style="font-size:13.5px;color:#B9B9C2;line-height:1.5;text-wrap:pretty">Dra punktene for å endre rekkefølgen i sidemenyen, eller bruk pilene. Klikk på navnet for å gi det nytt navn (tomt felt gir standardnavnet). Bryteren skjuler eller viser et menypunkt. Endringene lagres med en gang.</div>
+<div style="display:flex;flex-direction:column;gap:6px;max-width:520px">
+<sc-for list="{{ navCfg }}" as="n" hint-placeholder-count="8">
+<div draggable="true" onDragStart="{{ n.dStart }}" onDragOver="{{ n.dOver }}" onDrop="{{ n.dDrop }}" onDragEnd="{{ n.dEnd }}" style="display:flex;align-items:center;gap:12px;min-height:48px;padding:0 8px 0 12px;border-radius:12px;border:1px solid #24242A;background:#1B1B20;box-shadow:{{ n.sh }};opacity:{{ n.op }};cursor:grab">
+<span style="color:#6E6E78;font-size:15px;letter-spacing:-2px;user-select:none">⋮⋮</span>
+<span style="width:22px;font-family:'Geist Mono',monospace;font-size:12px;color:#6E6E78">{{ n.no }}</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8C8C96" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ n.icon }}"></path></svg>
+<input value="{{ n.label }}" placeholder="{{ n.def }}" onChange="{{ n.onName }}" draggable="false" onDragStart="{{ n.noDrag }}" aria-label="Navn på menypunkt" style="flex:1;min-width:0;height:36px;padding:0 10px;margin-left:-10px;border-radius:8px;border:1px solid transparent;background:transparent;outline:none;color:#F2F2F4;font:inherit;font-size:14.5px;font-weight:500;opacity:{{ n.lbOp }};cursor:text" style-focus="border-color:#3A3A42;background:#0F0F12">
+<button onClick="{{ n.up }}" aria-label="Flytt opp" style="width:32px;height:32px;border-radius:8px;border:1px solid #2A2A31;background:#141418;color:{{ n.upC }};cursor:pointer;font-size:11px">▲</button>
+<button onClick="{{ n.down }}" aria-label="Flytt ned" style="width:32px;height:32px;border-radius:8px;border:1px solid #2A2A31;background:#141418;color:{{ n.downC }};cursor:pointer;font-size:11px">▼</button>
+<sc-if value="{{ n.canHide }}"><button onClick="{{ n.tog }}" title="{{ n.hidTxt }}" aria-label="Vis eller skjul i sidemenyen" style="flex:none;width:44px;height:26px;border-radius:13px;border:0;background:{{ n.track }};padding:3px;display:flex;justify-content:{{ n.just }};cursor:pointer"><span style="width:20px;height:20px;border-radius:50%;background:#fff"></span></button></sc-if><sc-if value="{{ n.fixed }}"><span style="flex:none;width:44px;text-align:center;font-size:11px;color:#6E6E78">Alltid</span></sc-if>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><button onClick="{{ navResetNames }}" style="height:40px;padding:0 16px;border-radius:10px;border:1px solid #2A2A31;background:transparent;color:#F2F2F4;cursor:pointer;font-size:13.5px">Standardnavn</button><button onClick="{{ navShowAll }}" style="height:40px;padding:0 16px;border-radius:10px;border:1px solid #2A2A31;background:transparent;color:#F2F2F4;cursor:pointer;font-size:13.5px">Vis alle</button><button onClick="{{ navReset }}" style="height:40px;padding:0 16px;border-radius:10px;border:1px solid #2A2A31;background:transparent;color:#F2F2F4;cursor:pointer;font-size:13.5px">Tilbakestill rekkefølge</button></div>
+</div></sc-if>
+<sc-if value="{{ stImp }}"><dc-import name="FinansHub v2 Moduler" embedded="{{ true }}" start-page="imp" hint-size="100%,600px"></dc-import></sc-if>
+
+<sc-if value="{{ stAi }}"><div style="display:flex;flex-direction:column;gap:14px">
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px"><sc-for list="{{ provOpts }}" as="p"><button onClick="{{ p.go }}" style="display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:16px;border-radius:16px;border:1.5px solid {{ p.bd }};background:#1B1B20;color:#F2F2F4;cursor:pointer;text-align:left"><span style="display:flex;align-items:center;gap:8px;font-weight:600"><span style="width:16px;height:16px;border-radius:50%;border:2px solid {{ p.bd }};display:grid;place-items:center"><span style="width:6px;height:6px;border-radius:50%;background:{{ p.dot }}"></span></span>{{ p.name }}</span><span style="font-size:12.5px;color:#8C8C96">{{ p.sub }}</span></button></sc-for></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px">
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">Ollama-adresse<input value="{{ sv.ollamaUrl }}" onChange="{{ son.ollamaUrl }}" style="height:46px;padding:0 13px;border-radius:12px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;outline:none;font-family:'Geist Mono',monospace;font-size:13px"></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">Ollama-modell<select value="{{ sv.ollamaModel }}" onChange="{{ son.ollamaModel }}" style="height:46px;padding:0 12px;border-radius:12px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4"><option value="qwen2.5vl:7b">qwen2.5vl:7b</option><option value="gemma3:12b">gemma3:12b</option><option value="llama3.2-vision:11b">llama3.2-vision:11b</option><option value="minicpm-v">minicpm-v</option></select></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">Gemini-modell<input value="{{ sv.geminiModel }}" onChange="{{ son.geminiModel }}" style="height:46px;padding:0 13px;border-radius:12px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;outline:none;font-family:'Geist Mono',monospace;font-size:13px"></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">Gemini API-nøkkel<input type="password" value="{{ sv.geminiKey }}" onChange="{{ son.geminiKey }}" placeholder="Lagres på serveren" style="height:46px;padding:0 13px;border-radius:12px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;outline:none"></label>
+</div>
+<label style="display:flex;flex-direction:column;gap:8px;font-size:12.5px;color:#8C8C96">Minste sikkerhet før bilaget merkes «Sjekk» · <b style="color:#F2F2F4;font-family:'Geist Mono',monospace">{{ sv.minConf }} %</b><input type="range" min="50" max="99" value="{{ sv.minConf }}" onChange="{{ son.minConf }}" style="accent-color:#FF7A3D"></label>
+<button onClick="{{ son.testAi }}" style="align-self:flex-start;height:42px;padding:0 16px;border-radius:11px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;cursor:pointer">Test tilkobling</button>
+<sc-if value="{{ aiTest }}"><div style="font-size:13px;color:#9FE3C6">{{ aiTest }}</div></sc-if>
+</div></sc-if>
+
+<sc-if value="{{ stCat }}"><div style="display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{ catEdit }}" as="c"><div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:#1B1B20"><input type="color" value="{{ c.c }}" onChange="{{ c.onColor }}" style="width:30px;height:30px;border:0;background:none;padding:0;cursor:pointer"><input value="{{ c.name }}" onChange="{{ c.onName }}" style="flex:1;min-width:0;height:36px;padding:0 10px;border-radius:9px;border:1px solid #2A2A31;background:#141418;color:#F2F2F4;outline:none"><span style="font-size:12px;color:#8C8C96;width:80px">{{ c.kind }}</span><button onClick="{{ c.del }}" aria-label="Slett" style="width:36px;height:36px;border-radius:9px;border:0;background:transparent;color:#8C8C96;cursor:pointer;font-size:17px">×</button></div></sc-for>
+<button onClick="{{ addCat }}" style="align-self:flex-start;height:42px;padding:0 16px;border-radius:11px;border:1px dashed #3A3A42;background:transparent;color:#F2F2F4;cursor:pointer">+ Ny kategori</button>
+</div></sc-if>
+
+<sc-if value="{{ stRule }}"><div style="display:flex;flex-direction:column;gap:8px">
+<div style="font-size:13px;color:#B9B9C2">Regler går foran AI-forslaget. Bruk * som jokertegn.</div>
+<sc-for list="{{ ruleEdit }}" as="r"><div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#1B1B20;flex-wrap:wrap"><input value="{{ r.p }}" onChange="{{ r.onP }}" style="flex:1 1 140px;height:38px;padding:0 10px;border-radius:9px;border:1px solid #2A2A31;background:#141418;color:#F2F2F4;outline:none;font-family:'Geist Mono',monospace;font-size:13px"><span style="color:#8C8C96">→</span><select value="{{ r.c }}" onChange="{{ r.onC }}" style="flex:1 1 180px;height:38px;padding:0 10px;border-radius:9px;border:1px solid #2A2A31;background:#141418;color:#F2F2F4"><sc-for list="{{ catNames }}" as="c"><option value="{{ c }}">{{ c }}</option></sc-for></select><button onClick="{{ r.del }}" aria-label="Slett" style="width:36px;height:36px;border-radius:9px;border:0;background:transparent;color:#8C8C96;cursor:pointer;font-size:17px">×</button></div></sc-for>
+<button onClick="{{ addRule }}" style="align-self:flex-start;height:42px;padding:0 16px;border-radius:11px;border:1px dashed #3A3A42;background:transparent;color:#F2F2F4;cursor:pointer">+ Ny regel</button>
+</div></sc-if>
+
+<sc-if value="{{ stBank }}"><div style="display:flex;flex-direction:column;gap:14px">
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96;max-width:320px">CSV-profil<select value="{{ sv.csvProfile }}" onChange="{{ son.csvProfile }}" style="height:46px;padding:0 12px;border-radius:12px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4"><option value="DNB">DNB</option><option value="Nordea">Nordea</option><option value="SpareBank 1">SpareBank 1</option><option value="Sbanken">Sbanken</option><option value="Bank Norwegian">Bank Norwegian</option></select></label>
+<label style="display:flex;align-items:center;gap:14px;padding:20px;border-radius:16px;border:1.5px dashed #3A3A42;cursor:pointer"><span style="width:40px;height:40px;border-radius:12px;background:#1B1B20;display:grid;place-items:center;color:#FFB08A">↑</span><span><b style="font-weight:600">Importer CSV fra nettbanken</b><br><span style="font-size:12.5px;color:#8C8C96">Duplikater hoppes over automatisk</span></span><input type="file" accept=".csv,text/csv" onChange="{{ onCsv }}" style="display:none"></label>
+<sc-if value="{{ csvMsg }}"><div style="font-size:13px;color:#9FE3C6">{{ csvMsg }}</div></sc-if>
+<div style="padding:16px;border-radius:16px;background:#1B1B20;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><div><b style="font-weight:600">Open banking (PSD2)</b><div style="font-size:12.5px;color:#8C8C96">Automatisk henting via Enable Banking · kommer i fase 3</div></div><span style="padding:4px 10px;border-radius:7px;background:#24242A;color:#B9B9C2;font-size:12px">Ikke koblet</span></div>
+</div></sc-if>
+
+<sc-if value="{{ stBol }}"><dc-import name="FinansHub v2 Moduler" embedded="{{ true }}" start-page="boladm" hint-size="100%,420px"></dc-import></sc-if>
+
+<sc-if value="{{ stVarsel }}"><div style="display:flex;flex-direction:column;gap:8px"><sc-for list="{{ toggles }}" as="t"><button onClick="{{ t.go }}" style="display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:14px;border:0;background:#1B1B20;color:#F2F2F4;cursor:pointer;text-align:left"><span style="flex:1"><b style="font-weight:500">{{ t.name }}</b><br><span style="font-size:12.5px;color:#8C8C96">{{ t.sub }}</span></span><span style="width:44px;height:26px;border-radius:13px;background:{{ t.bg }};position:relative;flex:none"><span style="position:absolute;top:3px;left:{{ t.l }};width:20px;height:20px;border-radius:50%;background:#F2F2F4"></span></span></button></sc-for></div></sc-if>
+
+<sc-if value="{{ stData }}"><div style="display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:14px 16px;border-radius:16px;background:{{ bk.stBg }};border:1px solid {{ bk.stBd }}"><span style="flex:none;width:10px;height:10px;border-radius:5px;background:{{ bk.stDot }}"></span><div style="flex:1 1 220px;min-width:0"><div style="font-weight:600">{{ bk.stTitle }}</div><div style="font-size:12.5px;color:#B9B9C2">{{ bk.stSub }}</div></div><button onClick="{{ bk.runNow }}" style="height:44px;padding:0 18px;border-radius:11px;border:0;background:#FF7A3D;color:#1A0C04;font-weight:600;cursor:pointer">{{ bk.runLabel }}</button></div>
+
+<div style="display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:16px;border:1px solid #24242A;background:#101013"><div style="font-size:12px;font-weight:600;color:#8C8C96;text-transform:uppercase;letter-spacing:.08em">Last ned</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap"><button onClick="{{ bk.dlJson }}" style="height:44px;padding:0 16px;border-radius:11px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;cursor:pointer">Full backup (.json)</button><button onClick="{{ bk.dlXlsx }}" style="height:44px;padding:0 16px;border-radius:11px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;cursor:pointer">Excel-database (.xlsx)</button><button onClick="{{ exportCsv }}" style="height:44px;padding:0 16px;border-radius:11px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;cursor:pointer">Bare transaksjoner (CSV)</button></div>
+<div style="font-size:12.5px;color:#8C8C96;line-height:1.5;text-wrap:pretty">JSON-filen er den komplette backupen og brukes til gjenoppretting. Excel-filen har ett ark per tabell (Info, Kontoer, Kategorier, Transaksjoner, Kvitteringer, Varelinjer, Budsjett, Faste_utgifter, Aksjer, Utbytte, Ordre, Regler) med ID-kolonner som kobler arkene sammen, filter på overskriftene og beløp som tall.</div></div>
+
+<div style="display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:16px;border:1px solid #24242A;background:#101013"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div style="font-size:12px;font-weight:600;color:#8C8C96;text-transform:uppercase;letter-spacing:.08em">SMB-share</div><button onClick="{{ bk.toggleOn }}" style="display:flex;align-items:center;gap:10px;background:none;border:0;color:#F2F2F4;cursor:pointer;padding:0;font-size:13.5px"><span style="width:38px;height:22px;border-radius:11px;background:{{ bk.onBg }};position:relative"><span style="position:absolute;top:3px;left:{{ bk.onX }};width:16px;height:16px;border-radius:8px;background:#F2F2F4"></span></span>{{ bk.onTxt }}</button></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:10px">
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96;min-width:0">Share<input value="{{ bk.c.host }}" onChange="{{ bk.on.host }}" placeholder="\\192.168.1.20\backup" style="height:44px;padding:0 12px;border-radius:11px;border:1px solid #2A2A31;background:#0F0F12;color:#F2F2F4;min-width:0;outline:none;font-family:'Geist Mono',monospace;font-size:13px"></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96;min-width:0">Mappe på sharen<input value="{{ bk.c.dir }}" onChange="{{ bk.on.dir }}" placeholder="finanshub" style="height:44px;padding:0 12px;border-radius:11px;border:1px solid #2A2A31;background:#0F0F12;color:#F2F2F4;min-width:0;outline:none"></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96;min-width:0">SMB-versjon<select value="{{ bk.c.ver }}" onChange="{{ bk.on.ver }}" style="height:44px;padding:0 12px;border-radius:11px;border:1px solid #2A2A31;background:#0F0F12;color:#F2F2F4;min-width:0;outline:none"><option value="3.1.1">SMB 3.1.1</option><option value="3.0">SMB 3.0</option><option value="2.1">SMB 2.1</option></select></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96;min-width:0">Brukernavn<input value="{{ bk.c.user }}" onChange="{{ bk.on.user }}" autocomplete="off" style="height:44px;padding:0 12px;border-radius:11px;border:1px solid #2A2A31;background:#0F0F12;color:#F2F2F4;min-width:0;outline:none"></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96;min-width:0">Passord<input type="password" value="{{ bk.c.pw }}" onChange="{{ bk.on.pw }}" autocomplete="new-password" placeholder="Lagres kryptert på serveren" style="height:44px;padding:0 12px;border-radius:11px;border:1px solid #2A2A31;background:#0F0F12;color:#F2F2F4;min-width:0;outline:none"></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96;min-width:0">Domene / arbeidsgruppe<input value="{{ bk.c.dom }}" onChange="{{ bk.on.dom }}" placeholder="WORKGROUP" style="height:44px;padding:0 12px;border-radius:11px;border:1px solid #2A2A31;background:#0F0F12;color:#F2F2F4;min-width:0;outline:none"></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96;min-width:0">Tidsplan<select value="{{ bk.c.sched }}" onChange="{{ bk.on.sched }}" style="height:44px;padding:0 12px;border-radius:11px;border:1px solid #2A2A31;background:#0F0F12;color:#F2F2F4;min-width:0;outline:none"><option value="off">Bare manuelt</option><option value="daily">Hver natt kl. 03.00</option><option value="weekly">Hver søndag kl. 03.00</option><option value="change">Etter hver endring (maks 1 per time)</option></select></label>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96;min-width:0">Behold versjoner · <b style="color:#F2F2F4;font-family:'Geist Mono',monospace">{{ bk.c.keep }}</b><input type="range" min="3" max="90" value="{{ bk.c.keep }}" onChange="{{ bk.on.keep }}" style="height:44px;accent-color:#FF7A3D"></label>
+</div>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ bk.flags }}" as="f"><button onClick="{{ f.go }}" style="display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border-radius:10px;border:1px solid {{ f.bd }};background:{{ f.bg }};color:#F2F2F4;cursor:pointer;font-size:13px"><span style="width:16px;height:16px;border-radius:5px;border:1px solid #3A3A42;display:grid;place-items:center;font-size:11px;color:#FF7A3D">{{ f.mark }}</span>{{ f.n }}</button></sc-for></div>
+<sc-if value="{{ bk.c.enc }}"><label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96;min-width:0">Passfrase for kryptering (AES-256)<input type="password" value="{{ bk.c.phrase }}" onChange="{{ bk.on.phrase }}" placeholder="Trengs for å gjenopprette – skriv den ned" style="height:44px;padding:0 12px;border-radius:11px;border:1px solid #2A2A31;background:#0F0F12;color:#F2F2F4;min-width:0;outline:none"></label></sc-if>
+<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button onClick="{{ bk.test }}" style="height:44px;padding:0 16px;border-radius:11px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;cursor:pointer">Test tilkobling</button><button onClick="{{ bk.save }}" style="height:44px;padding:0 16px;border-radius:11px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;cursor:pointer">Lagre</button><span style="font-size:13px;color:{{ bk.msgC }}">{{ bk.msg }}</span></div>
+<div style="font-family:'Geist Mono',monospace;font-size:12px;color:#8C8C96;padding:10px 12px;border-radius:10px;background:#0A0A0C;border:1px solid #1E1E23;word-break:break-all">{{ bk.path }}</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:16px;border:1px solid #24242A;background:#101013"><div style="font-size:12px;font-weight:600;color:#8C8C96;text-transform:uppercase;letter-spacing:.08em">Backuper på sharen</div>
+<div style="display:flex;flex-direction:column;border:1px solid #24242A;border-radius:12px;overflow:hidden"><sc-for list="{{ bk.hist }}" as="r" hint-placeholder-count="4"><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid #1E1E23;font-size:13.5px"><span style="width:8px;height:8px;border-radius:4px;background:{{ r.c }}"></span><span style="flex:1 1 200px;min-width:0"><span style="font-family:'Geist Mono',monospace;font-size:12.5px">{{ r.file }}</span><span style="display:block;font-size:12px;color:#8C8C96">{{ r.when }} · {{ r.kind }} · {{ r.size }} · {{ r.status }}</span></span><sc-if value="{{ r.ok }}"><button onClick="{{ r.restore }}" style="height:32px;padding:0 12px;border-radius:9px;border:1px solid #2A2A31;background:transparent;color:#F2F2F4;cursor:pointer;font-size:12.5px">Gjenopprett</button></sc-if></div></sc-for></div></div>
+
+<div style="display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:16px;border:1px solid #24242A;background:#101013"><div style="font-size:12px;font-weight:600;color:#8C8C96;text-transform:uppercase;letter-spacing:.08em">Gjenopprett / ny installasjon</div>
+<div style="font-size:13px;color:#B9B9C2;line-height:1.5;text-wrap:pretty">En ny installasjon spør ved første oppstart: start tom, hent fra SMB-share eller last opp en backupfil. Her kan du gjøre det samme manuelt. Både .json-backup og Excel-databasen kan importeres.</div>
+<label style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:20px;border-radius:12px;border:1.5px dashed #3A3A42;cursor:pointer;text-align:center"><b style="font-weight:600">Velg backupfil</b><span style="font-size:12px;color:#8C8C96">.json eller .xlsx fra FinansHub</span><input type="file" accept=".json,.xlsx,application/json" onChange="{{ bk.onFile }}" style="display:none"></label>
+<sc-if value="{{ bk.imp }}"><div style="display:flex;flex-direction:column;gap:12px;padding:14px;border-radius:12px;border:1px solid #3A2A20;background:#17110D">
+<div><b style="font-weight:600">{{ bk.impName }}</b><div style="font-size:12.5px;color:#B9B9C2">{{ bk.impSub }}</div></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px"><sc-for list="{{ bk.impCounts }}" as="k"><div style="padding:10px 12px;border-radius:10px;background:#0F0F12;border:1px solid #24242A"><div style="font-family:'Geist Mono',monospace;font-size:18px;font-weight:600">{{ k.v }}</div><div style="font-size:12px;color:#8C8C96">{{ k.l }}</div></div></sc-for></div>
+<div style="display:flex;padding:3px;border-radius:11px;background:#0F0F12;border:1px solid #24242A;align-self:flex-start"><sc-for list="{{ bk.modes }}" as="m"><button onClick="{{ m.go }}" style="padding:6px 12px;border-radius:8px;border:0;cursor:pointer;font-size:13px;background:{{ m.bg }};color:{{ m.fg }}">{{ m.n }}</button></sc-for></div>
+<div style="display:flex;gap:10px;flex-wrap:wrap"><button onClick="{{ bk.apply }}" style="height:44px;padding:0 18px;border-radius:11px;border:0;background:#FF7A3D;color:#1A0C04;font-weight:600;cursor:pointer">Importer</button><button onClick="{{ bk.cancel }}" style="height:44px;padding:0 16px;border-radius:11px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;cursor:pointer">Avbryt</button></div>
+</div></sc-if>
+</div>
+
+<button onClick="{{ resetAll }}" style="align-self:flex-start;height:44px;padding:0 16px;border-radius:11px;border:1px solid #4A2A20;background:#24140E;color:#FFB08A;cursor:pointer">Tilbakestill demo-data</button>
+</div></sc-if>
+</section>
+</div>
+</sc-if>
+
+</div>
+</main>
+
+<sc-if value="{{ addOpen }}"><div onClick="{{ closeAdd }}" style="position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.6);backdrop-filter:blur(6px);display:grid;place-items:center;padding:24px"><form onClick="{{ stop }}" onSubmit="{{ saveAdd }}" style="width:100%;max-width:460px;background:#141418;border:1px solid #2A2A31;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:14px;box-shadow:0 30px 80px rgba(0,0,0,.5)">
+<div style="display:flex;justify-content:space-between;align-items:center"><h2 style="margin:0;font-size:19px;font-weight:600">Ny transaksjon</h2><button type="button" onClick="{{ closeAdd }}" style="width:34px;height:34px;border-radius:50%;border:1px solid #24242A;background:#1B1B20;color:#B9B9C2;cursor:pointer">×</button></div>
+<div style="display:flex;padding:3px;border-radius:12px;background:#0F0F12;border:1px solid #24242A"><sc-for list="{{ fTypes }}" as="t"><button type="button" onClick="{{ t.go }}" style="flex:1;height:38px;border-radius:9px;border:0;cursor:pointer;background:{{ t.bg }};color:{{ t.fg }}">{{ t.name }}</button></sc-for></div>
+<label style="display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">Beskrivelse<input required value="{{ f.desc }}" onChange="{{ f.onDesc }}" placeholder="F.eks. Rema 1000" style="height:46px;padding:0 13px;border-radius:12px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;outline:none"></label>
+<div style="display:flex;gap:10px"><label style="flex:1;display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">Beløp (kr)<input required value="{{ f.amount }}" onChange="{{ f.onAmount }}" inputmode="decimal" style="height:46px;padding:0 13px;border-radius:12px;border:1.5px solid #FF7A3D;background:#1B1B20;color:#F2F2F4;outline:none;font-family:'Geist Mono',monospace"></label><label style="flex:1;display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">Dato<input type="date" value="{{ f.date }}" onChange="{{ f.onDate }}" style="height:46px;padding:0 12px;border-radius:12px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4;color-scheme:dark"></label></div>
+<div style="display:flex;gap:10px"><label style="flex:1;display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">Kategori<select value="{{ f.cat }}" onChange="{{ f.onCat }}" style="height:46px;padding:0 12px;border-radius:12px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4"><sc-for list="{{ catNames }}" as="c"><option value="{{ c }}">{{ c }}</option></sc-for></select></label><label style="flex:1;display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:#8C8C96">Konto<select value="{{ f.acc }}" onChange="{{ f.onAcc }}" style="height:46px;padding:0 12px;border-radius:12px;border:1px solid #2A2A31;background:#1B1B20;color:#F2F2F4"><sc-for list="{{ accNames }}" as="a"><option value="{{ a }}">{{ a }}</option></sc-for></select></label></div>
+<button type="submit" style="height:50px;border-radius:13px;border:0;background:#FF7A3D;color:#1A0C04;font-weight:600;cursor:pointer;margin-top:4px">Lagre</button>
+</form></div></sc-if>
+
+<sc-if value="{{ toast }}"><div style="position:fixed;left:50%;bottom:28px;transform:translateX(-50%);z-index:70;padding:12px 18px;border-radius:12px;background:#F2F2F4;color:#0A0A0C;font-weight:500;box-shadow:0 12px 30px rgba(0,0,0,.4)">{{ toast }}</div></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;startPage&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;ov&quot;,&quot;tx&quot;,&quot;kv&quot;,&quot;bud&quot;,&quot;fast&quot;,&quot;konto&quot;,&quot;aks&quot;,&quot;rap&quot;,&quot;inn&quot;],&quot;default&quot;:&quot;ov&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;onClose&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
+const CATS0=[['Mat og dagligvarer','#FF9F5A','Utgift'],['Restaurant og kafé','#F2C14E','Utgift'],['Transport og lading','#7AA7FF','Utgift'],['Bolig','#B79CFF','Utgift'],['Hjem','#8FD3FF','Utgift'],['Fritid og hobby','#5FD3A8','Utgift'],['Abonnementer','#FF6B8B','Utgift'],['Skole','#C9E265','Utgift'],['Inntekt','#9FE3C6','Inntekt'],['Sparing','#A0A0AA','Overføring']].map(([name,c,kind])=>({name,c,kind}));
+const ACC=[{n:'Brukskonto',bank:'DNB',l4:'4821',bal:12480.5,type:'Brukskonto',extra:'Hovedkonto'},{n:'Kredittkort',bank:'Bank Norwegian',l4:'9384',bal:-3210,type:'Kredittkort',extra:'Ramme 20 000 kr'},{n:'Sparekonto',bank:'DNB',l4:'1177',bal:84950,type:'Sparekonto',extra:'3,9 % rente'},{n:'Kontanter',bank:'Lommebok',l4:'',bal:650,type:'Kontanter',extra:'Manuell'}];
+const TX0=[[1,'2026-10-16','REMA 1000 Bislett','Brukskonto','Mat og dagligvarer',-386.5,'Vedlagt'],[2,'2026-10-15','Clas Ohlson','Kredittkort','Hjem',-349,'Til gjennomgang'],[3,'2026-10-15','Circle K Lading','Kredittkort','Transport og lading',-612.4,'Til gjennomgang'],[4,'2026-10-14','Fjordkraft strøm sept.','Brukskonto','Bolig',-1284,'PDF'],[5,'2026-10-13','Kaffebrenneriet','Kredittkort','Restaurant og kafé',-89,''],[6,'2026-10-12','Lønn','Brukskonto','Inntekt',41200,''],[7,'2026-10-11','Overføring sparekonto','Brukskonto','Sparing',-5000,''],[8,'2026-10-10','Ruter månedskort','Brukskonto','Transport og lading',-518,'Vedlagt'],[9,'2026-10-09','Akademika','Kredittkort','Skole',-649,'Vedlagt'],[10,'2026-10-08','Kiwi Majorstuen','Brukskonto','Mat og dagligvarer',-512.3,''],[11,'2026-10-06','Spotify','Kredittkort','Abonnementer',-129,''],[12,'2026-10-05','Peppes Pizza','Kredittkort','Restaurant og kafé',-436,'Vedlagt'],[13,'2026-10-03','XXL','Kredittkort','Fritid og hobby',-620,'Vedlagt'],[14,'2026-10-02','Meny Bislett','Brukskonto','Mat og dagligvarer',-874.9,''],[15,'2026-10-01','Husleie','Brukskonto','Bolig',-9500,''],[16,'2026-09-28','Netflix','Kredittkort','Abonnementer',-279,''],[17,'2026-09-20','REMA 1000','Brukskonto','Mat og dagligvarer',-3920,''],[18,'2026-09-12','Lønn','Brukskonto','Inntekt',41200,'']].map(([id,date,desc,acc,cat,amount,rc])=>({id,date,desc,acc,cat,amount,rc,note:''}));
+const RC0=[{id:'r1',store:'Clas Ohlson',date:'2026-10-15',total:349,cat:'Hjem',acc:'Kredittkort',src:'Ollama',conf:.97,status:'review',txId:2},{id:'r2',store:'Circle K Lading',date:'2026-10-15',total:612.4,cat:'Transport og lading',acc:'Kredittkort',src:'Gemini',conf:.72,status:'review',txId:3},{id:'r3',store:'REMA 1000 Bislett',date:'2026-10-16',total:386.5,cat:'Mat og dagligvarer',acc:'Brukskonto',src:'Ollama',conf:.95,status:'booked'},{id:'r4',store:'Akademika',date:'2026-10-09',total:649,cat:'Skole',acc:'Kredittkort',src:'Ollama',conf:.93,status:'booked'}];
+const BUD0={'Mat og dagligvarer':6000,'Restaurant og kafé':1800,'Transport og lading':1500,'Bolig':11000,'Hjem':1000,'Fritid og hobby':1500,'Abonnementer':750,'Skole':1000};
+const REC0=[['Husleie',9500,1,'Bolig'],['Spotify',129,6,'Abonnementer'],['Ruter månedskort',518,10,'Transport og lading'],['Mobilabonnement',399,20,'Abonnementer'],['Innboforsikring',214,25,'Bolig'],['Netflix',279,28,'Abonnementer'],['Treningssenter',549,1,'Fritid og hobby']].map(([name,amount,day,cat],i)=>({id:i+1,name,amount,day,cat,active:true}));
+const SET0={name:'Sebastian',currency:'NOK',monthStart:'12',yearGoal:'120000',provider:'ollama',ollamaUrl:'http://192.168.1.30:11434',ollamaModel:'qwen2.5vl:7b',geminiModel:'gemini-2.5-flash',geminiKey:'',fallback:true,minConf:85,n80:true,n100:true,nRc:true,nFast:true,autoCat:true,csvProfile:'DNB',cats:CATS0,rules:[['REMA*','Mat og dagligvarer'],['KIWI*','Mat og dagligvarer'],['CIRCLE K*','Transport og lading'],['RUTER*','Transport og lading'],['SPOTIFY','Abonnementer']]};
+const IC={ai:'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z',sub:'M4 7h16v12H4zM8 3v4M16 3v4M4 11h16',dir:'M3 6h6l2 2h10v11H3zM9 14h6',finn:'M3 7l9-4 9 4-9 4zM3 12l9 4 9-4M3 17l9 4 9-4',imp:'M12 3v12M7 10l5 5 5-5M4 21h16',ov:'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z',tx:'M7 4L3 8l4 4M3 8h14M17 12l4 4-4 4M21 16H7',kv:'M5 3h14v18l-3-2-2 2-2-2-2 2-2-2-3 2zM9 8h6M9 12h6',bud:'M12 3v9h9A9 9 0 1 1 12 3zM15 3.5A9 9 0 0 1 20.5 9H15z',fast:'M12 7v5l3 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z',konto:'M3 7h16a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2zM3 7l12-4v4M17 13h.01',rap:'M4 20V10M10 20V4M16 20v-7M22 20H2',aks:'M3 17l6-6 4 4 8-8M15 7h6v6',inn:'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M14 4v4M8 10v4M16 16v4'};
+const PAGES=[['ov','Oversikt'],['tx','Transaksjoner'],['ai','AI-søk'],['kv','Kvitteringer'],['bud','Budsjett'],['fast','Faste utgifter'],['konto','Kontoer'],['aks','Aksjer'],['rap','Rapporter'],['sub','Subscription OS'],['dir','Boliger'],['finn','Finn-handler'],['imp','Import'],['inn','Innstillinger']];
+const MN=['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt'],MNF=['Januar','Februar','Mars','April','Mai','Juni','Juli','August','September','Oktober'];
+const INN=[41.2,41.2,43,41.2,41.2,62.5,41.2,41.2,41.2],UT=[36.8,33.1,38.4,31.9,35.2,44.7,39.9,34.6,32.8];
+const AISUM=[[/rema|kiwi|meny|coop/i,'Ukehandel: ferskvarer, meieri og brød'],[/clas/i,'Skjøteledning og to lyspærer til hjemmet'],[/circle|lading/i,'Hurtiglading av elbil, ca. 41 kWh'],[/fjordkraft|strøm/i,'Strømregning for forrige måned'],[/kaffe/i,'Kaffe og bakst'],[/lønn|lånekass/i,'Utbetaling fra Lånekassen / lønn'],[/ruter/i,'Kollektivbillett i Ruter-appen'],[/akademika/i,'Pensumbok til studiet'],[/proton/i,'Proton Mail Plus, betalt i euro'],[/biltema/i,'Ved og pellets til hytta'],[/vipps/i,'Vipps-overføring til privatperson'],[/netflix|viaplay/i,'Strømmetjeneste, månedlig trekk'],[/spotify/i,'Musikkabonnement, familieplan'],[/icloud/i,'Lagringsplass i iCloud'],[/chatgpt/i,'AI-abonnement, lite brukt siste måned'],[/cloudflare/i,'Domenefornyelse arildkrist.com'],[/ikea/i,'Møbler og interiør'],[/elkjøp|power/i,'Elektronikk med garanti'],[/finn/i,'Finn-handel med Trygg betaling'],[/leses av ai|img_|\.(jpg|png|pdf)/i,'Gemini leser kvitteringen …']];
+const POS=[['VUSA','Vanguard S&P 500 UCITS ETF','VUSAl_EQ',42.5,920.4,1084.2,.4,'#5FD3A8'],['NVDA','NVIDIA','NVDA_US_EQ',12,1180,1932.6,2.1,'#9FE3C6'],['AAPL','Apple','AAPL_US_EQ',8,1985,2462.1,-.6,'#7AA7FF'],['MSFT','Microsoft','MSFT_US_EQ',3.2,4120,5210.8,.9,'#B79CFF'],['NOVO','Novo Nordisk B','NOVOBc_EQ',10,1050,742.3,-1.8,'#FFB08A'],['EQNR','Equinor ADR','EQNR_US_EQ',25,268,252.4,.3,'#F2C14E']];
+const T212CASH=3412.8,DIVS=[['VUSA','25.09.2026',96.4],['MSFT','12.09.2026',23.1],['EQNR','29.08.2026',41.2],['AAPL','14.08.2026',18.42],['VUSA','26.06.2026',91.8]],ORD=[['Kjøp','NVDA',2,'10.10.2026',3810.2],['Kjøp','VUSA',2.5,'01.10.2026',2702],['Salg','TSLA',4,'22.09.2026',9480],['Kjøp','NOVO',5,'03.09.2026',3790.5]];
+const LINES=[[/rema/i,['Lettmelk 1 l','Grovbrød','Kyllingfilet 400 g','Bananer','Evergood kaffe 250 g']],[/kiwi/i,['Pasta','Tomatsaus','Kjøttdeig 400 g','Lettmelk 1 l']],[/meny/i,['Laks 500 g','Jasminris','Brokkoli','Friele kaffe 500 g','Bringebær']],[/clas/i,['Skjøteledning 5 m','LED-pære E27 2-pk']],[/circle/i,['Hurtiglading 41 kWh']],[/akademika/i,['Campbell Biology, 12. utg.']],[/peppes/i,['Pizza Large','Brus 1,5 l']],[/xxl/i,['Løpesko Asics Gel','Treningstights']],[/kaffebrenneriet/i,['Cappuccino','Kanelbolle']],[/fjordkraft/i,['Strøm sept. 412 kWh','Nettleie']],[/ruter/i,['30-dagersbillett sone 1']],[/spotify/i,['Premium Family']],[/netflix/i,['Standard med reklame + ekstra medlem']]];
+const lines=s=>((LINES.find(([r])=>r.test(s||''))||[0,[]])[1]);
+const STOP=new Set('hvor mye har jeg brukt på kjøpt når hva siste og til for med kr den det som en et i av fra alle mine min mitt meg denne dette totalt sum vis finn hvilke hvilken handlet betalt'.split(' '));
+const MONTHS={januar:'01',februar:'02',mars:'03',april:'04',mai:'05',juni:'06',juli:'07',august:'08',september:'09',oktober:'10',november:'11',desember:'12'};
+const aiSum=s=>((AISUM.find(([r])=>r.test(s||''))||[0,'Ingen beskrivelse ennå'])[1]);
+const n2=v=>Math.abs(v).toLocaleString('nb-NO',{minimumFractionDigits:2,maximumFractionDigits:2});
+const n0=v=>Math.round(v).toLocaleString('nb-NO');
+const sgn=v=>(v<0?'−':'+')+n2(v);
+const dd=d=>{const [y,m,x]=d.split('-');return x+'.'+m};
+const full=d=>new Date(d+'T12:00').toLocaleDateString('nb-NO',{day:'numeric',month:'long',year:'numeric'});
+const hex2=(h,a)=>{const n=parseInt(h.slice(1),16);return `rgba(${n>>16},${n>>8&255},${n&255},${a})`};
+const smooth=(pts)=>pts.reduce((s,[x,y],i,a)=>{if(!i)return `M${x} ${y}`;const [px,py]=a[i-1];const cx=(px+x)/2;return s+` C${cx} ${py} ${cx} ${y} ${x} ${y}`},'');
+class Component extends DCLogic {
+  constructor(p){super(p);let sv={};try{sv=JSON.parse(localStorage.getItem('fh_v2')||'{}')}catch(e){}
+    this.state={navNames:(()=>{try{return JSON.parse(localStorage.getItem('fh_nav_names')||'{}')}catch(e){return{}}})(),navHidden:(()=>{try{return JSON.parse(localStorage.getItem('fh_nav_hidden')||'[]')}catch(e){return[]}})(),aiHist:(()=>{try{return JSON.parse(localStorage.getItem('fh_ai_hist')||'[]')}catch(e){return[]}})(),page:this.props.startPage||'ov',tx:sv.tx||TX0,rc:sv.rc||RC0,bud:sv.bud||BUD0,rec:sv.rec||REC0,set:{...SET0,...(sv.set||{})},gq:'',cat:'',txAcc:'',txType:'',sel:null,selRc:'r1',add:false,f:null,hov:9,mode:'Måned',rap:'Måned',setTab:'gen',toast:'',ruleMsg:'',csvMsg:'',aiTest:'',aiMode:false,aiText:'',aiQ:'',aiBusy:false,aiRes:null,navOrder:JSON.parse(localStorage.getItem('fh_nav_order')||'[]'),navEdit:false,navDrag:null,navOver:null,bk:{cfg:{on:true,host:'\\\\192.168.1.20\\backup',dir:'finanshub',ver:'3.1.1',user:'backup',pw:'',dom:'WORKGROUP',sched:'daily',keep:30,enc:true,phrase:'',imgs:true,xlsx:true,...JSON.parse(localStorage.getItem('fh_backup')||'{}')},busy:false,msg:'',msgOk:true,imp:null,mode:'replace',hist:[['2026-10-17T03:00','Planlagt','4,8 MB','ok'],['2026-10-16T03:00','Planlagt','4,7 MB','ok'],['2026-10-15T03:00','Planlagt','4,7 MB','ok'],['2026-10-14T03:00','Planlagt','–','Feilet: share utilgjengelig (NAS i dvale)']]},t212:{env:'live',key:'',secret:'',cfg:false,synced:'17.10.2026 kl. 16.20',per:'6M'}}}
+  componentDidUpdate(){const s=this.state;localStorage.setItem('fh_v2',JSON.stringify({tx:s.tx,rc:s.rc.map(r=>({...r,img:r.img&&r.img.startsWith('blob')?null:r.img})),bud:s.bud,rec:s.rec,set:s.set}))}
+  flash(t){this.setState({toast:t});clearTimeout(this._t);this._t=setTimeout(()=>this.setState({toast:''}),2200)}
+  backupObj(){const s=this.state,ls={};Object.keys(localStorage).filter(k=>/^(fh_|hl_)/.test(k)&&!/users|trusted|auth|^fh_v2$|^fh_backup$/.test(k)).forEach(k=>ls[k]=localStorage.getItem(k));
+    return{format:'finanshub-backup',version:2,created:new Date().toISOString(),app:'FinansHub v2',counts:{transaksjoner:s.tx.length,kvitteringer:s.rc.length,budsjettposter:Object.keys(s.bud).length,faste_utgifter:s.rec.length,kategorier:s.set.cats.length,regler:s.set.rules.length},data:{tx:s.tx,rc:s.rc.map(r=>({...r,img:null})),bud:s.bud,rec:s.rec,set:{...s.set,geminiKey:''}},storage:ls}}
+  xlsxBook(){const s=this.state,X=XLSX.utils,wb=X.book_new(),cats=s.set.cats,pad=(p,i)=>p+String(i+1).padStart(3,'0');
+    const cid=n=>{const i=cats.findIndex(c=>c.name===n);return i<0?'':pad('KAT',i)},aid=n=>{const i=ACC.findIndex(a=>a.n===n);return i<0?'':pad('KTO',i)},D=d=>{if(!d)return null;const [y,m,x]=d.split('-').map(Number);return new Date(y,m-1,x)};
+    const rcBy={};s.rc.forEach(r=>{if(r.txId)rcBy[r.txId]=r.id});
+    const add=(name,rows,money=[])=>{const ws=X.json_to_sheet(rows,{dateNF:'yyyy-mm-dd'});const keys=Object.keys(rows[0]||{});
+      ws['!cols']=keys.map(k=>({wch:Math.min(44,Math.max(k.length,...rows.map(r=>r[k] instanceof Date?10:String(r[k]??'').length))+2)}));
+      if(rows.length)ws['!autofilter']={ref:ws['!ref']};
+      keys.forEach((k,ci)=>{if(!money.includes(k))return;rows.forEach((_,ri)=>{const c=ws[X.encode_cell({r:ri+1,c:ci})];if(c&&c.t==='n')c.z='#,##0.00'})});
+      X.book_append_sheet(wb,ws,name)};
+    const tx=[...s.tx].sort((a,b)=>a.date.localeCompare(b.date)||a.id-b.id);
+    add('Info',[['Database','FinansHub v2'],['Eksportert',new Date().toLocaleString('nb-NO')],['Format','finanshub-xlsx v2 · kan importeres i en ny installasjon'],['Valuta',s.set.currency],['Bruker',s.set.name],['Transaksjoner',tx.length],['Kvitteringer',s.rc.length],['Nøkler','tx_id, kvittering_id, konto_id og kategori_id kobler arkene sammen']].map(([felt,verdi])=>({felt,verdi})));
+    add('Kontoer',ACC.map((a,i)=>({konto_id:pad('KTO',i),navn:a.n,bank:a.bank,type:a.type,siste_fire:a.l4||'',saldo:a.bal,merknad:a.extra||''})),['saldo']);
+    add('Kategorier',cats.map((c,i)=>({kategori_id:pad('KAT',i),navn:c.name,type:c.type,farge:c.c})));
+    add('Transaksjoner',tx.map(t=>({tx_id:t.id,dato:D(t.date),maaned:t.date.slice(0,7),beskrivelse:t.desc,konto_id:aid(t.acc),konto:t.acc,kategori_id:cid(t.cat),kategori:t.cat,belop:t.amount,retning:t.amount>=0?'Inn':'Ut',kvittering_id:rcBy[t.id]||'',kvittering_status:t.rc||'',ai_beskrivelse:aiSum(t.desc),notat:t.note||''})),['belop']);
+    add('Kvitteringer',s.rc.map(r=>({kvittering_id:r.id,dato:D(r.date),butikk:r.store,total:r.total,kategori_id:cid(r.cat),kategori:r.cat,konto_id:aid(r.acc),konto:r.acc,tx_id:r.txId||'',lest_av:r.src,sikkerhet:r.conf,status:r.status})),['total']);
+    const vl=[];tx.forEach(t=>lines(t.desc).forEach((v,j)=>vl.push({linje_id:t.id+'-'+(j+1),tx_id:t.id,kvittering_id:rcBy[t.id]||'',dato:D(t.date),butikk:t.desc,vare:v})));add('Varelinjer',vl);
+    add('Budsjett',Object.keys(s.bud).map(k=>({kategori_id:cid(k),kategori:k,maanedsbudsjett:+s.bud[k],brukt_oktober:-s.tx.filter(t=>t.cat===k&&t.date.startsWith('2026-10')&&t.amount<0).reduce((a,t)=>a+t.amount,0)})),['maanedsbudsjett','brukt_oktober']);
+    add('Faste_utgifter',s.rec.map(r=>({id:r.id,navn:r.name,belop:r.amount,trekkdag:r.day,kategori_id:cid(r.cat),kategori:r.cat,aktiv:r.active?'Ja':'Nei'})),['belop']);
+    add('Aksjer',POS.map(([tk,name,t212,qty,avg,px])=>({ticker:tk,navn:name,t212_ticker:t212,antall:qty,snittkurs:avg,kurs:px,verdi:+(qty*px).toFixed(2),avkastning:+(qty*(px-avg)).toFixed(2)})),['snittkurs','kurs','verdi','avkastning']);
+    add('Utbytte',DIVS.map(([tk,d,v])=>{const [x,m,y]=d.split('.');return{ticker:tk,dato:new Date(+y,+m-1,+x),belop:v}}),['belop']);
+    add('Ordre',ORD.map(([side,tk,qty,d,v])=>{const [x,m,y]=d.split('.');return{type:side,ticker:tk,antall:qty,dato:new Date(+y,+m-1,+x),belop:v}}),['belop']);
+    add('Regler',s.set.rules.map(([m,c],i)=>({regel_id:i+1,monster:m,kategori:c})));
+    return wb}
+  async readBackup(e){const f=e.target.files[0];e.target.value='';if(!f)return;
+    try{let data,storage={},kind;
+      if(/\.xlsx$/i.test(f.name)){if(!window.XLSX)throw new Error('Excel-biblioteket er ikke lastet');const wb=XLSX.read(await f.arrayBuffer(),{cellDates:true}),S=n=>wb.Sheets[n]?XLSX.utils.sheet_to_json(wb.Sheets[n]):[];
+        const ds=v=>v instanceof Date?v.getFullYear()+'-'+String(v.getMonth()+1).padStart(2,'0')+'-'+String(v.getDate()).padStart(2,'0'):String(v||'');
+        const bud={};S('Budsjett').forEach(r=>bud[r.kategori]=+r.maanedsbudsjett||0);
+        data={tx:S('Transaksjoner').map(r=>({id:+r.tx_id||Date.now()+Math.random(),date:ds(r.dato),desc:r.beskrivelse||'',acc:r.konto||'',cat:r.kategori||'',amount:+r.belop||0,rc:r.kvittering_status||'',note:r.notat||''})),
+          rc:S('Kvitteringer').map(r=>({id:String(r.kvittering_id),date:ds(r.dato),store:r.butikk,total:+r.total||0,cat:r.kategori,acc:r.konto,src:r.lest_av||'Import',conf:+r.sikkerhet||1,status:r.status||'booked',txId:r.tx_id?+r.tx_id:undefined})),
+          bud,rec:S('Faste_utgifter').map(r=>({id:+r.id,name:r.navn,amount:+r.belop||0,day:+r.trekkdag||1,cat:r.kategori,active:r.aktiv!=='Nei'})),
+          set:{rules:S('Regler').map(r=>[r.monster,r.kategori])}};
+        const cats=S('Kategorier');if(cats.length)data.set.cats=cats.map(c=>({name:c.navn,type:c.type,c:c.farge}));kind='Excel-database';
+      }else{const j=JSON.parse(await f.text());if(j.format!=='finanshub-backup')throw new Error('Ikke en FinansHub-backup');data=j.data;storage=j.storage||{};kind='JSON-backup v'+j.version+' · laget '+new Date(j.created).toLocaleString('nb-NO')}
+      this.setState(s=>({bk:{...s.bk,imp:{name:f.name,kind,data,storage}}}))
+    }catch(err){this.flash('Kunne ikke lese filen: '+err.message)}}
+  aiAnswer(q){const s=this.state,ql=q.toLowerCase();let mon=null;Object.entries(MONTHS).forEach(([k,v])=>{if(ql.includes(k))mon=v});
+    const toks=ql.replace(/[?.,!«»"]/g,' ').split(/\s+/).filter(w=>w.length>2&&!STOP.has(w)&&!MONTHS[w]).map(w=>w.replace(/(er|ene|en|et|a)$/,'').slice(0,6)).filter(w=>w.length>2);
+    const rcBy={};s.rc.forEach(r=>{if(r.txId)rcBy[r.txId]=r});
+    const hits=[];s.tx.forEach(t=>{if(mon&&t.date.slice(5,7)!==mon)return;const L=lines(t.desc),hay=[t.desc,t.cat,aiSum(t.desc)].join(' ').toLowerCase();
+      const li=L.find(l=>toks.some(w=>l.toLowerCase().includes(w)));const m=!toks.length||toks.some(w=>hay.includes(w))||li;
+      if(m)hits.push({id:t.id,desc:t.desc,date:t.date.split('-').reverse().join('.'),cat:t.cat,amount:t.amount,amt:sgn(t.amount)+' kr',src:L.length?'transaksjon + kvittering':'transaksjon',why:li?'Varelinje på kvitteringen: '+li:'✦ '+aiSum(t.desc)})});
+    if(!toks.length&&!mon)return{answer:'Skriv hva du leter etter, f.eks. en butikk, en vare eller en kategori.',hits:[]};
+    if(!hits.length)return{answer:'Fant ingenting som passer «'+q+'» i transaksjoner, kvitteringer eller varelinjer. Prøv et butikknavn, en vare eller en kategori.',hits:[]};
+    const out=hits.filter(h=>h.amount<0),sum=-out.reduce((a,h)=>a+h.amount,0),inn=hits.filter(h=>h.amount>0).reduce((a,h)=>a+h.amount,0);
+    const by={};out.forEach(h=>by[h.desc]=(by[h.desc]||0)-h.amount);const top=Object.entries(by).sort((a,b)=>b[1]-a[1])[0];
+    const dates=hits.map(h=>h.date),li=hits.filter(h=>h.why.startsWith('Varelinje'));
+    let a='Fant '+hits.length+' treff'+(mon?' i '+Object.keys(MONTHS).find(k=>MONTHS[k]===mon):'')+', fra '+dates[dates.length-1]+' til '+dates[0]+'. ';
+    if(sum)a+='Til sammen '+n2(sum)+' kr ut'+(top&&out.length>1?', mest hos '+top[0]+' ('+n2(top[1])+' kr)':'')+'. ';
+    if(inn)a+='Inn: '+n2(inn)+' kr. ';
+    if(li.length)a+='Varen står på kvitteringene fra '+[...new Set(li.map(h=>h.desc))].join(', ')+', så beløpet over gjelder hele handelen, ikke bare varen.';
+    return{answer:a.trim(),hits:hits.slice(0,8)}}
+  dl(name,txt,type){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([txt],{type}));a.download=name;a.click()}
+  renderVals(){
+    const s=this.state,st=s.set,cats=st.cats,CC={};cats.forEach(c=>CC[c.name]=c.c);const col=c=>CC[c]||'#A0A0AA';
+    const go=p=>()=>this.setState({page:p});
+    const okt=s.tx.filter(t=>t.date.startsWith('2026-10'));
+    const innO=okt.filter(t=>t.amount>0).reduce((a,t)=>a+t.amount,0),utO=-okt.filter(t=>t.amount<0&&t.cat!=='Sparing').reduce((a,t)=>a+t.amount,0);
+    const spent={};okt.forEach(t=>{if(t.amount<0)spent[t.cat]=(spent[t.cat]||0)-t.amount});
+    const budSum=Object.values(s.bud).reduce((a,b)=>a+(+b||0),0),budUsed=Object.keys(s.bud).reduce((a,k)=>a+(spent[k]||0),0),left=budSum-budUsed;
+    const reviewList=s.rc.filter(r=>r.status==='review'||r.status==='busy');
+    const saldo=ACC.reduce((a,x)=>a+x.bal,0);
+    const ini=t=>t.replace(/[^A-Za-zÆØÅæøå0-9]/g,'').slice(0,1).toUpperCase();
+    const txv=t=>({...t,ai:aiSum(t.desc),dd:dd(t.date),full:full(t.date),c:col(t.cat),cbg:hex2(col(t.cat),.14),ini:ini(t.desc),amt:sgn(t.amount),ac:t.amount>0?'#9FE3C6':'#F2F2F4',rcc:t.rc==='Til gjennomgang'?'#FFB08A':'#8C8C96',rc:t.rc||'–'});
+    // chart
+    const inn=[...INN,innO/1000],ut=[...UT,utO/1000],W=600,H=200,mx=70;
+    const pts=a=>a.map((v,i)=>[i*W/9,H-v/mx*H]);
+    const pi=pts(inn),pu=pts(ut);
+    const hovs=MN.map((l,i)=>({l,full:MNF[i]+' 2026',inn:n0(inn[i]*1000)+' kr',ut:n0(ut[i]*1000)+' kr',on:s.hov===i,ti:`calc(${(1-inn[i]/mx)*100}% - 6px)`,tu:`calc(${(1-ut[i]/mx)*100}% - 6px)`,tl:i>6?'calc(50% - 162px)':'calc(50% + 12px)',enter:()=>this.setState({hov:i})}));
+    const sp=[30,34,31,38,36,42,40,48].map((v,i)=>[i*96/7,46-v/50*42]);const spl=smooth(sp);
+    const pct=Math.min(1,budUsed/budSum);
+    // tx page
+    const q=s.gq.toLowerCase();
+    const rows=[...s.tx].sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id).filter(t=>(!s.cat||t.cat===s.cat)&&(!s.txAcc||t.acc===s.txAcc)&&(!s.txType||(s.txType==='inn'?t.amount>0:t.amount<0))&&(!q||t.desc.toLowerCase().includes(q)));
+    const selT=s.tx.find(t=>t.id===s.sel);
+    const updTx=(id,p)=>this.setState({tx:s.tx.map(t=>t.id===id?{...t,...p}:t)});
+    const sel=selT?{has:true,...txv(selT),onCat:e=>updTx(selT.id,{cat:e.target.value}),onNote:e=>updTx(selT.id,{note:e.target.value}),del:()=>this.setState({tx:s.tx.filter(t=>t.id!==selT.id),sel:null}),makeRule:()=>{const p=selT.desc.split(' ')[0].toUpperCase()+'*';this.setState({set:{...st,rules:[...st.rules,[p,selT.cat]]},ruleMsg:`Regel lagt til: ${p} → ${selT.cat}`})}}:{has:false};
+    // receipts
+    const R=s.rc.find(r=>r.id===s.selRc);
+    const updRc=p=>this.setState({rc:s.rc.map(r=>r.id===R.id?{...r,...p}:r)});
+    const other=st.provider==='ollama'?'Gemini':'Ollama';
+    const rcV=!R||R.status==='booked'||R.status==='rejected'?{none:true}:R.status==='busy'?{busy:true}:{show:true,src:R.src,time:R.src==='Gemini'?'2,1 s':'11,4 s',conf:R.conf>=st.minConf/100?'Høy sikkerhet':'Sjekk beløp',cbg:R.conf>=st.minConf/100?'#13201B':'#2A1A10',cc:R.conf>=st.minConf/100?'#9FE3C6':'#FFB08A',img:R.img?`url(${R.img})`:'none',paper:!R.img,store:R.store,date:R.date,totalIn:String(R.total).replace('.',','),totalStr:n2(R.total),vat:n2(R.total*.2),acc:R.acc,
+      lines:[['Vare 1',R.total*.46],['Vare 2',R.total*.31],['Vare 3',R.total*.23]].map(([d,a])=>({d,a:n2(a)})),
+      cats:cats.filter(c=>c.kind==='Utgift').map(c=>({name:c.name,on:R.cat===c.name,bg:R.cat===c.name?'#FF7A3D':'#1B1B20',fg:R.cat===c.name?'#1A0C04':'#F2F2F4',bd:R.cat===c.name?'#FF7A3D':'#2A2A31',go:()=>updRc({cat:c.name})})),
+      match:R.txId?'Matchet mot kortkjøp':'Ingen bankmatch ennå',matchSub:R.txId?`${dd(R.date)} · −${n2(R.total)} kr · ${R.acc}`:'Bokføres som ny transaksjon',other,
+      onStore:e=>updRc({store:e.target.value}),onDate:e=>updRc({date:e.target.value}),onTotal:e=>updRc({total:parseFloat(e.target.value.replace(',','.'))||0}),onAcc:e=>updRc({acc:e.target.value}),
+      reprocess:()=>{updRc({status:'busy'});setTimeout(()=>this.setState(x=>({rc:x.rc.map(r=>r.id===R.id?{...r,status:'review',src:other,conf:.96}:r)})),1400)},
+      reject:()=>{updRc({status:'rejected'});this.flash('Kvittering avvist')},
+      book:()=>{let tx=s.tx;if(R.txId)tx=tx.map(t=>t.id===R.txId?{...t,rc:'Vedlagt',cat:R.cat,amount:-R.total}:t);else tx=[...tx,{id:Date.now(),date:R.date,desc:R.store,acc:R.acc,cat:R.cat,amount:-R.total,rc:'Vedlagt',note:''}];const nx=s.rc.find(r=>r.id!==R.id&&r.status==='review');this.setState({tx,rc:s.rc.map(r=>r.id===R.id?{...r,status:'booked'}:r),selRc:nx?nx.id:null});this.flash('Bokført ✓')}};
+    const stat={review:['Gjennomgå','#3A2414','#FFB08A'],busy:['Leser …','#142032','#9DBDFF']};
+    // budget
+    const budCards=Object.keys(s.bud).map(k=>{const u=spent[k]||0,b=+s.bud[k]||0,over=u>b,r=b?u/b:0;return{name:k,ini:ini(k),c:col(k),cbg:hex2(col(k),.14),used:n0(u),total:n0(b),raw:String(s.bud[k]),w:Math.min(100,r*100)+'%',bar:over?'#FF7A3D':r>.8?'#F2C14E':col(k),bd:over?'#4A2A20':'#24242A',status:over?`Over med ${n0(u-b)} kr`:r>.8?'Nær grensen':`${n0(b-u)} kr igjen`,sc:over?'#FFB08A':r>.8?'#F2C14E':'#8C8C96',on:e=>this.setState({bud:{...s.bud,[k]:e.target.value.replace(/\D/g,'')}})}});
+    let acc=0;const ring='conic-gradient('+Object.keys(s.bud).map(k=>{const v=(spent[k]||0)/Math.max(budSum,budUsed)*360;const a0=acc;acc+=v;return `${col(k)} ${a0}deg ${acc}deg`}).join(',')+`,#24242A ${acc}deg 360deg)`;
+    // recurring
+    const act=s.rec.filter(r=>r.active),recSum=act.reduce((a,r)=>a+r.amount,0),days={};act.forEach(r=>days[r.day]=1);
+    const cal=[];for(let i=0;i<3;i++)cal.push({n:'',bg:'transparent',fg:'#F2F2F4',fw:400});for(let d=1;d<=31;d++)cal.push({n:d,bg:d===17?'#F2F2F4':days[d]?hex2('#FF7A3D',.2):'#1B1B20',fg:d===17?'#0A0A0C':days[d]?'#FFB08A':'#B9B9C2',fw:days[d]||d===17?700:400});
+    // reports
+    const per=s.rap==='Måned'?okt:s.tx;const byC={};per.forEach(t=>{if(t.amount<0&&t.cat!=='Sparing')byC[t.cat]=(byC[t.cat]||0)-t.amount});
+    const tot=Object.values(byC).reduce((a,b)=>a+b,0)||1;let a2=0;const ent=Object.entries(byC).sort((a,b)=>b[1]-a[1]);
+    const donut='conic-gradient('+ent.map(([k,v])=>{const a0=a2;a2+=v/tot*360;return `${col(k)} ${a0}deg ${a2-1}deg,#141418 ${a2-1}deg ${a2}deg`}).join(',')+')';
+    const byM={};per.forEach(t=>{if(t.amount<0&&t.cat!=='Sparing'){const m=t.desc.split(' ').slice(0,2).join(' ');byM[m]=byM[m]||[0,0];byM[m][0]-=t.amount;byM[m][1]++}});
+    const topE=Object.entries(byM).sort((a,b)=>b[1][0]-a[1][0]).slice(0,6),topMax=topE[0]?topE[0][1][0]:1;
+    // settings
+    const setS=(k,v)=>this.setState({set:{...st,[k]:v}});
+    const son={};['name','currency','monthStart','yearGoal','ollamaUrl','ollamaModel','geminiModel','geminiKey','minConf','csvProfile'].forEach(k=>son[k]=e=>setS(k,e.target.value));
+    son.testAi=()=>{this.setState({aiTest:'Tester …'});setTimeout(()=>this.setState({aiTest:st.provider==='ollama'?`Ollama svarte på ${st.ollamaUrl} · ${st.ollamaModel} lastet (demo)`:`Gemini svarte · ${st.geminiModel} (demo)`}),900)};
+    const ST=[['gen','Generelt','Navn, valuta, måned'],['meny','Sidemeny','Rekkefølge og synlighet'],['bol','Boliger','Ny bolig og sletting'],['imp','Import','Kontoutskrift, CSV og XLSX'],['ai','AI-motor','Ollama eller Gemini'],['cat','Kategorier','Farger og typer'],['rule','Regler','Auto-kategorisering'],['bank','Bank og import','CSV og PSD2'],['varsel','Varsler','Budsjett og kvitteringer'],['data','Backup og data','SMB-share, Excel og gjenoppretting']];
+    const cs=ST.find(x=>x[0]===s.setTab);
+    const f=s.f||{};const setF=p=>this.setState({f:{...f,...p}});
+    const csvTxt=()=>'Dato;Beskrivelse;Konto;Kategori;Beløp;Kvittering\n'+s.tx.map(t=>[t.date,t.desc,t.acc,t.cat,String(t.amount).replace('.',','),t.rc].join(';')).join('\n');
+    const NN=s.navNames||{},PN=k=>((NN[k]||'').trim()||(PAGES.find(p=>p[0]===k)||[k,k])[1]);const pg0=PAGES.find(p=>p[0]===s.page),pg=[pg0[0],PN(pg0[0])];
+    return {
+      ...(()=>{const keys=PAGES.map(p=>p[0]).filter(k=>k!=='imp'),hidN=s.navHidden||[],saveHid=a=>{localStorage.setItem('fh_nav_hidden',JSON.stringify(a));this.setState({navHidden:a})},saved=(s.navOrder||[]).filter(k=>keys.includes(k)),order=[...saved,...keys.filter(k=>!saved.includes(k))],ed=!!s.navEdit;
+        const save=o=>{localStorage.setItem('fh_nav_order',JSON.stringify(o));this.setState({navOrder:o})},move=(from,to)=>{if(to<0||to>=order.length||from===to)return;const o=[...order];const [x]=o.splice(from,1);o.splice(to,0,x);save(o)};
+        return{navEdit:ed,navEditTxt:ed?'Ferdig':'Endre',navEditBg:ed?'#FF7A3D':'transparent',navEditFg:ed?'#1A0C04':'#8C8C96',navEditBd:ed?'#FF7A3D':'#2A2A31',
+          navEditToggle:()=>this.setState({navEdit:!ed,navDrag:null,navOver:null}),navReset:()=>{localStorage.removeItem('fh_nav_order');this.setState({navOrder:[]})},navShowAll:()=>saveHid([]),navResetNames:()=>{localStorage.removeItem('fh_nav_names');this.setState({navNames:{}})},
+          nav:order.filter(k=>!hidN.includes(k)).map((k,i)=>{const label=PN(k),over=ed&&s.navOver===i&&s.navDrag!==null&&s.navDrag!==i;return{label,icon:IC[k],badge:k==='kv'&&reviewList.length?reviewList.length:false,
+            bg:s.page===k?'#1E1E23':ed?'#141418':'transparent',fg:s.page===k?'#F2F2F4':'#A0A0AA',ic:s.page===k?'#FF7A3D':'#8C8C96',go:ed?()=>{}:go(k),
+            cur:ed?'grab':'pointer',op:ed&&s.navDrag===i?.4:1,sh:over?(s.navDrag<i?'inset 0 -2px 0 #FF7A3D':'inset 0 2px 0 #FF7A3D'):'none',
+            dStart:e=>{if(!ed)return e.preventDefault();e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',k);this.setState({navDrag:i})},
+            dOver:e=>{if(!ed)return;e.preventDefault();if(s.navOver!==i)this.setState({navOver:i})},
+            dDrop:e=>{if(!ed)return;e.preventDefault();const from=this.state.navDrag;this.setState({navDrag:null,navOver:null});if(from!==null)move(from,i)},
+            dEnd:()=>this.setState({navDrag:null,navOver:null}),
+            up:e=>{e.stopPropagation();move(i,i-1)},down:e=>{e.stopPropagation();move(i,i+1)}}}),
+          navCfg:order.map((k,i)=>{const hid=hidN.includes(k),fixed=k==='ov'||k==='inn',over=s.cfgOver===i&&s.cfgDrag!=null&&s.cfgDrag!==i;return{no:String(i+1).padStart(2,'0'),label:PN(k),noDrag:e=>{e.preventDefault();e.stopPropagation()},def:PAGES.find(p=>p[0]===k)[1],onName:e=>{const nn={...(this.state.navNames||{}),[k]:e.target.value};localStorage.setItem('fh_nav_names',JSON.stringify(nn));this.setState({navNames:nn})},icon:IC[k],
+            op:s.cfgDrag===i?.4:1,sh:over?(s.cfgDrag<i?'inset 0 -2px 0 #FF7A3D':'inset 0 2px 0 #FF7A3D'):'none',upC:i===0?'#3A3A42':'#B9B9C2',downC:i===order.length-1?'#3A3A42':'#B9B9C2',
+            dStart:e=>{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',k);this.setState({cfgDrag:i})},
+            dOver:e=>{e.preventDefault();if(s.cfgOver!==i)this.setState({cfgOver:i})},
+            dDrop:e=>{e.preventDefault();const from=this.state.cfgDrag;this.setState({cfgDrag:null,cfgOver:null});if(from!=null)move(from,i)},
+            dEnd:()=>this.setState({cfgDrag:null,cfgOver:null}),
+            up:()=>move(i,i-1),down:()=>move(i,i+1),canHide:!fixed,fixed,hidTxt:hid?'Skjult':'Vises',lbOp:hid?.45:1,track:hid?'#2A2A31':'#FF7A3D',just:hid?'flex-start':'flex-end',tog:()=>saveHid(hid?hidN.filter(x=>x!==k):[...hidN,k])}})}})(),
+      crumb:pg[1],pageTitle:s.page==='ov'?`God morgen, ${st.name}`:pg[1],userName:st.name,hasClose:!!this.props.onClose,close:()=>this.props.onClose&&this.props.onClose(),
+      aiName:st.provider==='ollama'?'Ollama · lokalt':'Gemini · sky',aiSub:st.provider==='ollama'?`${st.ollamaModel} · reserve: ${st.fallback?'Gemini':'ingen'}`:st.geminiModel,aiShort:st.provider==='ollama'?'Ollama':'Gemini',
+      isOs:['sub','dir','finn'].includes(s.page),isAiPg:s.page==='ai',osPage:s.page,isOv:s.page==='ov',isTx:s.page==='tx',isKv:s.page==='kv',isBud:s.page==='bud',isFast:s.page==='fast',isKonto:s.page==='konto',isRap:s.page==='rap',isInn:s.page==='inn',
+      goTx:go('tx'),goKv:go('kv'),goBud:go('bud'),goFast:go('fast'),goKonto:go('konto'),
+      gq:s.gq,onGq:e=>this.setState({gq:e.target.value,page:s.page==='ov'?'tx':s.page}),
+      ...(()=>{const ask=q=>{q=(q||'').trim();if(!q)return;const hh=[q,...(this.state.aiHist||[]).filter(x=>x!==q)].slice(0,20);localStorage.setItem('fh_ai_hist',JSON.stringify(hh));this.setState({aiHist:hh,aiPgText:'',aiQ:q,aiBusy:true,aiRes:null,aiText:q});clearTimeout(this._ai);this._ai=setTimeout(()=>this.setState({aiBusy:false,aiRes:this.aiAnswer(q)}),900)};
+        const r=s.aiRes,sug=['Hvor mye har jeg brukt på kaffe?','Når kjøpte jeg lyspærer?','Mat i oktober','Hva har jeg betalt for lading?'];
+        return{srch:{v:s.aiMode?s.aiText:s.gq,ph:s.aiMode?'Spør AI, f.eks. «hvor mye har jeg brukt på kaffe?»':'Søk i transaksjoner …',bd:s.aiMode?'#5A3A26':'#24242A',tbg:s.aiMode?'#FF7A3D':'transparent',tfg:s.aiMode?'#1A0C04':'#B9B9C2',tbd:s.aiMode?'#FF7A3D':'#2A2A31',
+          on:e=>s.aiMode?this.setState({aiText:e.target.value}):this.setState({gq:e.target.value,page:s.page==='ov'?'tx':s.page}),
+          toggle:()=>this.setState({aiMode:!s.aiMode}),submit:e=>{e.preventDefault();if(s.aiMode)ask(s.aiText)}},
+        ai:{open:!!s.aiQ&&s.page!=='ai',pgOpen:!!s.aiQ,pgV:s.aiPgText||'',pgOn:e=>this.setState({aiPgText:e.target.value}),pgSubmit:e=>{e.preventDefault();ask(s.aiPgText)},
+          hist:(s.aiHist||[]).slice(0,8).map(t=>({t,go:()=>ask(t)})),hasHist:!!(s.aiHist||[]).length,noHist:!(s.aiHist||[]).length,clearHist:()=>{localStorage.removeItem('fh_ai_hist');this.setState({aiHist:[]})},allSugg:sug.map(t=>({t,go:()=>ask(t)})),q:s.aiQ,busy:s.aiBusy,done:!!r,engine:st.provider==='ollama'?'Ollama · lokalt':'Gemini',answer:r?r.answer:'',hasHits:!!(r&&r.hits.length),
+          hits:r?r.hits.map(t=>({...t,c:col(t.cat),open:()=>this.setState({page:'tx',sel:t.id})})):[],close:()=>this.setState({aiQ:'',aiRes:null}),
+          sugg:sug.filter(x=>x!==s.aiQ).map(t=>({t,go:()=>{this.setState({aiMode:true});ask(t)}}))}}})(),
+      ...(()=>{const K=s.bk,c=K.cfg,up=p=>this.setState({bk:{...K,...p}}),setC=p=>this.setState({bk:{...K,cfg:{...c,...p}}});
+        const last=K.hist.find(r=>r[3]==='ok'),fmt=w=>{const d=new Date(w);return d.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit',year:'numeric'})+' kl. '+d.toLocaleTimeString('nb-NO',{hour:'2-digit',minute:'2-digit'})};
+        const fname=w=>'finanshub-'+w.replace(/:/g,'').slice(0,15)+(c.enc?'.fhb':'.json');
+        const nextTxt={off:'Neste: bare manuelt',daily:'Neste: i natt kl. 03.00',weekly:'Neste: søndag kl. 03.00',change:'Neste: etter neste endring'}[c.sched];
+        const im=K.imp,cnt=im?[['Transaksjoner',im.data.tx?.length||0],['Kvitteringer',im.data.rc?.length||0],['Budsjettposter',Object.keys(im.data.bud||{}).length],['Faste utgifter',im.data.rec?.length||0],['Regler',im.data.set?.rules?.length||0],['Andre innstillinger',Object.keys(im.storage||{}).length]]:[];
+        return{bk:{stBg:c.on?'rgba(95,211,168,.08)':'#141418',stBd:c.on?'rgba(95,211,168,.3)':'#24242A',stDot:K.busy?'#F2C14E':c.on?'#5FD3A8':'#6E6E78',
+          stTitle:K.busy?'Tar backup …':c.on&&last?'Siste backup '+fmt(last[0]):'Automatisk backup er av',stSub:c.on?(c.host+'\\'+c.dir+' · '+nextTxt+' · beholder '+c.keep+' versjoner'):'Slå på SMB-share under for å ta backup automatisk',
+          runLabel:K.busy?'Jobber …':'Ta backup nå',
+          runNow:()=>{if(K.busy)return;if(!c.on){this.dl('finanshub-backup.json',JSON.stringify(this.backupObj(),null,2),'application/json');return}
+            up({busy:true});setTimeout(()=>{const w=new Date().toISOString().slice(0,16),kb=JSON.stringify(this.backupObj()).length/1024,size=c.imgs?(kb/1024+4.6).toFixed(1).replace('.',',')+' MB':Math.max(1,Math.round(kb))+' kB';
+              this.setState(s=>({bk:{...s.bk,busy:false,hist:[[w,'Manuell',size,'ok'],...s.bk.hist].slice(0,c.keep)}}));this.flash('Backup lagret på '+c.host+'\\'+c.dir)},1400)},
+          dlJson:()=>{this.dl('finanshub-backup-'+new Date().toISOString().slice(0,10)+'.json',JSON.stringify(this.backupObj(),null,2),'application/json');this.flash('Backup lastet ned')},
+          dlXlsx:()=>{if(!window.XLSX)return this.flash('Excel-biblioteket laster fortsatt …');XLSX.writeFile(this.xlsxBook(),'finanshub-database-'+new Date().toISOString().slice(0,10)+'.xlsx');this.flash('Excel-database lastet ned')},
+          c,on:Object.fromEntries(['host','dir','ver','user','pw','dom','sched','keep','phrase'].map(k=>[k,e=>setC({[k]:k==='keep'?+e.target.value:e.target.value})])),
+          toggleOn:()=>setC({on:!c.on}),onBg:c.on?'#FF7A3D':'#2A2A31',onX:c.on?'19px':'3px',onTxt:c.on?'På':'Av',
+          flags:[['enc','Krypter backup'],['imgs','Ta med kvitteringsbilder'],['xlsx','Legg også Excel-database i mappen']].map(([k,n])=>({n,mark:c[k]?'✓':'',bd:c[k]?'#5A3A26':'#2A2A31',bg:c[k]?'#1E1510':'transparent',go:()=>setC({[k]:!c[k]})})),
+          test:()=>{up({msg:'Kobler til '+c.host+' …',msgOk:true});setTimeout(()=>this.setState(s=>({bk:{...s.bk,msg:/^\\\\[^\\]+\\[^\\]+/.test(c.host)?'Tilkoblet med SMB '+c.ver+' som '+c.user+'. Skrivetilgang til \\'+c.dir+' OK (demo)':'Ugyldig adresse. Bruk formatet \\\\server\\share',msgOk:/^\\\\[^\\]+\\[^\\]+/.test(c.host)}})),900)},
+          save:()=>{const {pw,phrase,...rest}=c;localStorage.setItem('fh_backup',JSON.stringify(rest));up({msg:'Lagret. Passord og passfrase sendes til serveren og lagres ikke i nettleseren.',msgOk:true})},
+          msg:K.msg,msgC:K.msgOk?'#9FE3C6':'#FF8A7A',path:'mount -t cifs '+c.host.replace(/\\/g,'/')+' /mnt/backup -o vers='+c.ver+',username='+c.user+(c.dom?',domain='+c.dom:'')+' → /mnt/backup/'+c.dir+'/'+fname(new Date().toISOString().slice(0,16)),
+          hist:K.hist.map(([w,kind,size,st])=>({file:fname(w)+(c.xlsx&&st==='ok'?' + .xlsx':''),when:fmt(w),kind,size,status:st==='ok'?'OK':st,ok:st==='ok',c:st==='ok'?'#5FD3A8':'#FF8A7A',
+            restore:()=>up({imp:{name:fname(w),kind:'Fra SMB-share · '+fmt(w),...(b=>({data:b.data,storage:b.storage}))(this.backupObj())}})})),
+          onFile:e=>this.readBackup(e),imp:!!im,impName:im?im.name:'',impSub:im?im.kind:'',impCounts:cnt.map(([l,v])=>({l,v})),
+          modes:[['replace','Erstatt alt'],['merge','Slå sammen']].map(([k,n])=>({n,bg:K.mode===k?'#24242A':'transparent',fg:K.mode===k?'#F2F2F4':'#8C8C96',go:()=>up({mode:k})})),
+          cancel:()=>up({imp:null}),
+          apply:()=>{const d=im.data;Object.entries(im.storage||{}).forEach(([k,v])=>localStorage.setItem(k,v));
+            const set={...s.set,...(d.set||{}),geminiKey:s.set.geminiKey};
+            if(K.mode==='replace')this.setState({tx:d.tx||s.tx,rc:d.rc||s.rc,bud:d.bud&&Object.keys(d.bud).length?d.bud:s.bud,rec:d.rec&&d.rec.length?d.rec:s.rec,set,bk:{...K,imp:null}});
+            else{const ids=new Set(s.tx.map(t=>t.id)),rids=new Set(s.rc.map(r=>r.id));this.setState({tx:[...s.tx,...(d.tx||[]).filter(t=>!ids.has(t.id))],rc:[...s.rc,...(d.rc||[]).filter(r=>!rids.has(r.id))],bud:{...s.bud,...(d.bud||{})},rec:s.rec,set:{...s.set,rules:[...s.set.rules,...((d.set&&d.set.rules)||[]).filter(r=>!s.set.rules.some(x=>x[0]===r[0]))]},bk:{...K,imp:null}})}
+            this.flash('Data importert fra '+im.name)}}}})(),
+      ...(()=>{const T=s.t212,up=p=>this.setState({t212:{...T,...p}});
+        const pos=POS.map(([tk,name,t212,qty,avg,px,d,c])=>({tk,name,t212,qty,avg,px,d,c,val:qty*px,cost:qty*avg}));
+        const inv=pos.reduce((a,p)=>a+p.val,0),cost=pos.reduce((a,p)=>a+p.cost,0),pl=inv-cost,day=pos.reduce((a,p)=>a+p.val*p.d/100,0),tot=inv+T212CASH;
+        const N=260,ser=Array.from({length:N},(_,i)=>tot*(.8+.2*i/(N-1))+Math.sin(i/7)*tot*.018+Math.sin(i/23)*tot*.03*(1-i/N)+Math.cos(i*1.7)*tot*.004);ser[N-1]=tot;
+        const nP={'1M':22,'6M':130,'1Å':260}[T.per],sl=ser.slice(-nP),mn=Math.min(...sl),mx=Math.max(...sl),pts=sl.map((v,i)=>[i/(sl.length-1)*600,170-(v-mn)/(mx-mn||1)*150]);
+        const line='M'+pts.map(p=>p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' L'),chg=sl[sl.length-1]-sl[0],chgP=chg/sl[0]*100;
+        const pct=v=>(v>=0?'+':'−')+Math.abs(v).toLocaleString('nb-NO',{maximumFractionDigits:2,minimumFractionDigits:1})+' %',G='#9FE3C6',Rd='#FF8A7A';
+        const live=T.env==='live';
+        return{isAks:s.page==='aks',aks:{dot:'#5FD3A8',status:(live?'Live-konto':'Demo-konto (paper trading)')+' · synket '+T.synced+' · lesetilgang',base:'https://'+T.env+'.trading212.com/api/v0',
+          envs:[['live','Live'],['demo','Demo']].map(([k,n])=>({n,bg:T.env===k?'#24242A':'transparent',fg:T.env===k?'#F2F2F4':'#8C8C96',go:()=>up({env:k})})),
+          cfg:T.cfg,toggleCfg:()=>up({cfg:!T.cfg}),key:T.key,secret:T.secret,onKey:e=>up({key:e.target.value}),onSecret:e=>up({secret:e.target.value}),
+          sync:()=>{const d=new Date();up({synced:'i dag kl. '+d.toLocaleTimeString('nb-NO',{hour:'2-digit',minute:'2-digit'})});this.flash('Hentet portefølje, kontanter, ordre og utbytte fra Trading 212')},
+          kpi:[{l:'Porteføljeverdi',v:n2(tot)+' kr',s:'Investert '+n0(inv)+' kr + kontanter',c:'#F2F2F4'},{l:'Avkastning totalt',v:sgn(pl)+' kr',s:pct(pl/cost*100)+' på '+n0(cost)+' kr investert',c:pl>=0?G:Rd},{l:'I dag',v:sgn(day)+' kr',s:pct(day/inv*100),c:day>=0?G:Rd},{l:'Ledig kontanter',v:n2(T212CASH)+' kr',s:'Klar til investering',c:'#F2F2F4'}],
+          periods:['1M','6M','1Å'].map(n=>({n,bg:T.per===n?'#24242A':'transparent',fg:T.per===n?'#F2F2F4':'#8C8C96',go:()=>up({per:n})})),
+          line,area:line+' L600 180 L0 180 Z',perTxt:sgn(chg)+' kr ('+pct(chgP)+') siste '+{'1M':'måned','6M':'6 måneder','1Å':'år'}[T.per],perC:chg>=0?G:Rd,
+          pos:pos.sort((a,b)=>b.val-a.val).map(p=>({tk:p.tk,name:p.name,t212:p.t212,c:p.c,cbg:hex2(p.c,.14),w:Math.round(p.val),pct:(p.val/inv*100).toFixed(1).replace('.',',')+' %',qty:p.qty.toLocaleString('nb-NO'),avg:n2(p.avg),px:n2(p.px),val:n2(p.val)+' kr',pl:sgn(p.val-p.cost),plP:pct((p.px/p.avg-1)*100),plC:p.px>=p.avg?G:Rd,d:pct(p.d),dC:p.d>=0?G:Rd})),
+          divs:DIVS.map(([tk,date,v])=>({tk,date,v:'+'+n2(v)+' kr'})),divSum:n2(DIVS.reduce((a,d)=>a+d[2],0))+' kr',
+          orders:ORD.map(([side,tk,qty,date,v])=>({side,tk,qty:String(qty).replace('.',','),date,v:n2(v)+' kr',bg:side==='Kjøp'?'rgba(95,211,168,.14)':'rgba(255,138,122,.14)',fg:side==='Kjøp'?G:Rd}))}}})(),
+      kSaldo:n2(saldo),kInn:n2(innO),kUt:n2(utO),kIgjen:n2(left),kIgjenNote:`${Math.round(pct*100)} % brukt · 14 dager igjen`,
+      kSaldoBars:[60,72,64,80,70,86,78,90,74,94,82,88,76,92,84,96,88,100].map(v=>v+'%'),
+      kUtBars:[40,70,30,90,55,35,80,45,100,60,25,75].map(v=>v+'%'),
+      kInnLine:spl,kInnArea:spl+' L96 46 L0 46 Z',gaugeDash:`${Math.min(pct,1)*125.7} 200`,gaugeX:50-40*Math.cos(Math.PI*Math.min(pct,1)),gaugeY:44-40*Math.sin(Math.PI*Math.min(pct,1)),
+      chartModes:['Måned','År'].map(name=>({name,bg:s.mode===name?'#24242A':'transparent',fg:s.mode===name?'#F2F2F4':'#8C8C96',go:()=>this.setState({mode:name})})),
+      yTicks:['70k','52k','35k','17k','0'],cInnLine:smooth(pi),cUtLine:smooth(pu),cInnArea:smooth(pi)+` L${W} ${H} L0 ${H} Z`,cUtArea:smooth(pu)+` L${W} ${H} L0 ${H} Z`,hovs,
+      accMini:ACC.map(a=>({n:a.n,bal:(a.bal<0?'−':'')+n2(a.bal)+' kr'})),
+      recent:[...s.tx].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6).map(t=>({...txv(t),open:()=>this.setState({page:'tx',sel:t.id})})),
+      actions:[['Last opp kvittering','#2A1A12','#FFB08A','M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M8 12h8',go('kv')],['Ny transaksjon','#142032','#9DBDFF','M12 5v14M5 12h14',()=>this.setState({page:'tx',add:true,f:{type:'ut',desc:'',amount:'',date:'2026-10-17',cat:'Mat og dagligvarer',acc:'Brukskonto'}})],['Importer CSV','#13201B','#9FE3C6','M12 3v12M7 10l5 5 5-5M5 21h14',()=>this.setState({page:'inn',setTab:'bank'})],['Rapport','#221A30','#C9B6FF','M4 20V10M10 20V4M16 20v-7',go('rap')]].map(([name,bg,c,icon,g])=>({name,bg,c,icon,go:g})),
+      budStack:Object.keys(s.bud).map(k=>({c:col(k),w:((spent[k]||0)/budSum*100)+'%'})),
+      budTop:Object.keys(s.bud).filter(k=>k!=='Bolig').slice(0,4).map(k=>{const u=spent[k]||0,b=+s.bud[k]||1,o=u>b;return{name:k,c:col(k),used:n0(u),total:n0(b),w:Math.min(100,u/b*100)+'%',bar:o?'#FF7A3D':col(k),tc:o?'#FFB08A':'#8C8C96'}}),
+      reviewCount:reviewList.length,reviewEmpty:!reviewList.length,
+      review:reviewList.map(r=>({ai:r.status==='busy'?'Gemini leser kvitteringen …':aiSum(r.store),store:r.store,total:n2(r.total)+' kr',dd:dd(r.date),src:r.src,flag:r.status==='busy'?'Leser …':r.conf>=st.minConf/100?'Alle felt lest sikkert':'Sjekk beløp – uklart bilde',fc:r.conf>=st.minConf/100?'#9FE3C6':'#FFB08A',open:()=>this.setState({page:'kv',selRc:r.id})})),
+      upcoming:act.filter(r=>r.day>17).sort((a,b)=>a.day-b.day).concat(act.filter(r=>r.day<=17).sort((a,b)=>a.day-b.day)).slice(0,4).map(r=>({name:r.name,when:r.day>17?`Trekkes ${r.day}. okt`:`Trekkes ${r.day}. nov`,amt:n0(r.amount)+' kr'})),
+      accNames:ACC.map(a=>a.n),catNames:cats.map(c=>c.name),txAcc:s.txAcc,onTxAcc:e=>this.setState({txAcc:e.target.value}),txType:s.txType,onTxType:e=>this.setState({txType:e.target.value}),
+      catChips:[{name:'Alle',c:'#F2F2F4',k:''},...cats.map(c=>({name:c.name,c:c.c,k:c.name}))].map(c=>({...c,bg:s.cat===c.k?'#24242A':'transparent',bd:s.cat===c.k?'#3A3A42':'#24242A',go:()=>this.setState({cat:c.k})})),
+      txRows:rows.map(t=>({...txv(t),sel:s.sel===t.id?'#1B1B20':'transparent',open:()=>this.setState({sel:s.sel===t.id?null:t.id,ruleMsg:''})})),txCount:rows.length,txEmpty:!rows.length,txNet:sgn(rows.reduce((a,t)=>a+t.amount,0))+' kr',
+      sel,closeSel:()=>this.setState({sel:null}),ruleMsg:s.ruleMsg,
+      openAdd:()=>this.setState({add:true,f:{type:'ut',desc:'',amount:'',date:'2026-10-17',cat:'Mat og dagligvarer',acc:'Brukskonto'}}),addOpen:s.add,closeAdd:()=>this.setState({add:false}),stop:e=>e.stopPropagation(),
+      fTypes:[['ut','Utgift'],['inn','Inntekt']].map(([k,name])=>({name,bg:f.type===k?'#24242A':'transparent',fg:f.type===k?'#F2F2F4':'#8C8C96',go:()=>setF({type:k,cat:k==='inn'?'Inntekt':'Mat og dagligvarer'})})),
+      f:{...f,onDesc:e=>setF({desc:e.target.value}),onAmount:e=>setF({amount:e.target.value}),onDate:e=>setF({date:e.target.value}),onCat:e=>setF({cat:e.target.value}),onAcc:e=>setF({acc:e.target.value})},
+      saveAdd:e=>{e.preventDefault();const v=parseFloat(String(f.amount).replace(/\s/g,'').replace(',','.'))||0;this.setState({tx:[...s.tx,{id:Date.now(),date:f.date,desc:f.desc,acc:f.acc,cat:f.cat,amount:f.type==='inn'?v:-v,rc:'',note:''}],add:false});this.flash('Transaksjon lagret')},
+      exportCsv:()=>this.dl('finanshub-transaksjoner.csv',csvTxt(),'text/csv'),exportJson:()=>this.dl('finanshub-backup.json',JSON.stringify({tx:s.tx,bud:s.bud,rec:s.rec,set:{...st,geminiKey:''}},null,2),'application/json'),printPdf:()=>window.print(),
+      resetAll:()=>{localStorage.removeItem('fh_v2');this.setState({tx:TX0,rc:RC0,bud:BUD0,rec:REC0,set:SET0});this.flash('Demo-data tilbakestilt')},
+      queue:s.rc.filter(r=>r.status==='review'||r.status==='busy').map(r=>({ai:r.status==='busy'?'Gemini leser kvitteringen …':aiSum(r.store),store:r.store,total:n2(r.total)+' kr',dd:dd(r.date),src:r.src,img:r.img?`url(${r.img})`:'none',status:stat[r.status][0],sbg:stat[r.status][1],sc:stat[r.status][2],bd:s.selRc===r.id?'#FF7A3D':'transparent',open:()=>this.setState({selRc:r.id})})),
+      queueEmpty:!reviewList.length,
+      booked:s.rc.filter(r=>r.status==='booked'||r.status==='rejected').map(r=>({ai:aiSum(r.store),store:r.store,dd:dd(r.date),total:r.status==='rejected'?'Avvist':n2(r.total)+' kr',c:r.status==='rejected'?'#8C8C96':'#F2F2F4'})),
+      onUpload:e=>{const file=e.target.files[0];if(!file)return;const id='r'+Date.now(),img=file.type.startsWith('image')?URL.createObjectURL(file):null,src=st.provider==='ollama'?'Ollama':'Gemini';
+        this.setState({rc:[{id,store:'Ny kvittering',date:'2026-10-17',total:0,cat:'Mat og dagligvarer',acc:'Brukskonto',src,conf:0,status:'busy',img},...s.rc],selRc:id});
+        setTimeout(()=>this.setState(x=>({rc:x.rc.map(r=>r.id===id?{...r,status:'review',store:'KIWI Bislett',total:247.8,conf:.91}:r)})),1800)},
+      rc:rcV,
+      budRing:ring,budPct:Math.round(budUsed/budSum*100)+' %',budTotal:n0(budSum)+' kr',budUsed:n0(budUsed)+' kr',budLeft:n0(left)+' kr',budDay:n0(Math.max(0,left)/14)+' kr',budCards,
+      recRows:s.rec.map(r=>({name:r.name,cat:r.cat,c:col(r.cat),cbg:hex2(col(r.cat),.14),ini:ini(r.name),when:`Månedlig · ${r.day}.`,amt:n0(r.amount)+' kr',op:r.active?1:.45,tbg:r.active?'#FF7A3D':'#2A2A31',tl:r.active?'21px':'3px',toggle:()=>this.setState({rec:s.rec.map(x=>x.id===r.id?{...x,active:!x.active}:x)})})),
+      recSum:n0(recSum),recYear:n0(recSum*12),recCount:act.length,wd:['M','T','O','T','F','L','S'],cal,
+      accCards:ACC.map((a,i)=>({...a,l4:a.l4?'•••• '+a.l4:'',bal:(a.bal<0?'−':'')+n2(a.bal)+' kr',face:['linear-gradient(135deg,#2A2A31,#17171B)','linear-gradient(135deg,#FF8A4C,#C24E17)','linear-gradient(135deg,#1F3A2F,#13201B)','#1B1B20'][i],ink:i===1?'#1A0C04':'#F2F2F4',bd:i===1?'transparent':'#2A2A31'})),
+      goals:[['Bufferkonto',52000,60000,'#5FD3A8'],['Sommer 2027',8400,20000,'#7AA7FF'],['Ny PC',24550,40000,'#FF7A3D']].map(([name,a,b,c])=>({name,saved:n0(a)+' kr',goal:n0(b)+' kr',pct:Math.round(a/b*100)+' %',w:a/b*100+'%',c})),
+      rapModes:['Måned','År'].map(name=>({name,bg:s.rap===name?'#24242A':'transparent',fg:s.rap===name?'#F2F2F4':'#8C8C96',go:()=>this.setState({rap:name})})),
+      donut,rapTotal:n0(tot)+' kr',legend:ent.map(([k,v])=>({name:k,c:col(k),sum:n0(v),pct:Math.round(v/tot*100)+' %'})),
+      topM:topE.map(([name,[v,n]])=>({name,n,sum:n0(v)+' kr',w:v/topMax*100+'%'})),
+      monthRows:MN.map((l,i)=>({l:MNF[i],inn:n0(inn[i]*1000),ut:n0(ut[i]*1000),net:(inn[i]>=ut[i]?'+':'−')+n0(Math.abs(inn[i]-ut[i])*1000),c:inn[i]>=ut[i]?'#9FE3C6':'#FFB08A',rate:Math.round((inn[i]-ut[i])/inn[i]*100)+' %'})).reverse(),
+      setTabs:ST.map(([k,name,sub])=>({name,sub,bg:s.setTab===k?'#1E1E23':'transparent',go:()=>this.setState({setTab:k})})),setTitle:cs[1],setSub:cs[2],
+      stGen:s.setTab==='gen',stMeny:s.setTab==='meny',stImp:s.setTab==='imp',stAi:s.setTab==='ai',stCat:s.setTab==='cat',stRule:s.setTab==='rule',stBank:s.setTab==='bank',stVarsel:s.setTab==='varsel',stBol:s.setTab==='bol',goBolSet:()=>this.setState({page:'inn',setTab:'bol'}),stData:s.setTab==='data',
+      sv:st,son,aiTest:s.aiTest,
+      provOpts:[['ollama','Ollama · lokalt','Bildet forlater aldri huset'],['gemini','Gemini · sky','Raskest og mest presis']].map(([k,name,sub])=>({name,sub,bd:st.provider===k?'#FF7A3D':'#2A2A31',dot:st.provider===k?'#FF7A3D':'transparent',go:()=>setS('provider',k)})),
+      catEdit:cats.map((c,i)=>({...c,onColor:e=>setS('cats',cats.map((x,j)=>j===i?{...x,c:e.target.value}:x)),onName:e=>setS('cats',cats.map((x,j)=>j===i?{...x,name:e.target.value}:x)),del:()=>setS('cats',cats.filter((x,j)=>j!==i))})),
+      addCat:()=>setS('cats',[...cats,{name:'Ny kategori',c:'#8FD3FF',kind:'Utgift'}]),
+      ruleEdit:st.rules.map(([p,c],i)=>({p,c,onP:e=>setS('rules',st.rules.map((r,j)=>j===i?[e.target.value,r[1]]:r)),onC:e=>setS('rules',st.rules.map((r,j)=>j===i?[r[0],e.target.value]:r)),del:()=>setS('rules',st.rules.filter((r,j)=>j!==i))})),
+      addRule:()=>setS('rules',[...st.rules,['BUTIKK*','Mat og dagligvarer']]),
+      onCsv:e=>{const file=e.target.files[0];if(!file)return;file.text().then(t=>this.setState({csvMsg:`${file.name}: ${Math.max(0,t.split('\n').length-1)} rader lest med ${st.csvProfile}-profil (demo – importeres på serveren)`}))},csvMsg:s.csvMsg,
+      toggles:[['fallback','Bruk Gemini som reserve','Når Ollama er utilgjengelig eller usikker'],['autoCat','Auto-kategorisering','Bruk regler og AI-forslag'],['n80','Varsel ved 80 % av budsjett','Per kategori'],['n100','Varsel når budsjett er brukt opp','Per kategori'],['nRc','Ny kvittering til gjennomgang','Push til mobil'],['nFast','Påminnelse om faste trekk','Dagen før trekkdato']].map(([k,name,sub])=>({name,sub,bg:st[k]?'#FF7A3D':'#2A2A31',l:st[k]?'21px':'3px',go:()=>setS(k,!st[k])})),
+      toast:s.toast
+    };
+  }
+}
+</script>
+</body>
+</html>

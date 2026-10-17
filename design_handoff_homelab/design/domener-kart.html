@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Besøk per land</title>
+<script src="https://unpkg.com/d3@7.9.0/dist/d3.min.js" integrity="sha384-CjloA8y00+1SDAUkjs099PVfnY2KmDC2BZnws9kh8D/lX1s46w6EPhpXdqMfjK6i" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/topojson-client@3.1.0/dist/topojson-client.min.js" integrity="sha384-Ukv1p/xTma6P4/2bY5KzWBw+ydSpXmhCMtyciIQVDJ1RmOxtCYNMF1uXT9T63H67" crossorigin="anonymous"></script>
+<style>
+html,body{margin:0;height:100%;background:transparent;overflow:hidden;color:#eef0f4;font-family:'Outfit',system-ui,sans-serif}
+svg{display:block}
+#tip{position:absolute;pointer-events:none;padding:7px 11px;border-radius:10px;background:rgba(10,12,18,.94);border:1px solid #2c3446;font-size:13px;display:none;white-space:nowrap}
+#tip b{font-weight:600}
+#msg{position:absolute;inset:0;display:grid;place-items:center;font-size:13px;color:#8a93a6}
+</style>
+</head>
+<body>
+<svg id="m"></svg>
+<div id="tip"></div>
+<div id="msg">Laster kart …</div>
+<script>
+let world=null;
+const tip=document.getElementById('tip'),msg=document.getElementById('msg');
+fetch('https://cdn.jsdelivr.net/npm/world-atlas@2.0.2/countries-110m.json').then(r=>r.json()).then(t=>{world=topojson.feature(t,t.objects.countries);msg.remove();draw()}).catch(()=>{msg.textContent='Kunne ikke laste kartdata'});
+function data(){try{return JSON.parse(decodeURIComponent(location.hash.slice(1)))}catch(e){return{c:[]}}}
+function draw(){
+  if(!world)return;
+  const W=innerWidth,H=innerHeight,svg=d3.select('#m').attr('width',W).attr('height',H);svg.selectAll('*').remove();
+  const feats=world.features.filter(f=>f.id!=='010');
+  const proj=d3.geoNaturalEarth1().fitExtent([[2,2],[W-2,H-2]],{type:'FeatureCollection',features:feats}),path=d3.geoPath(proj);
+  const D=data(),by=new Map((D.c||[]).map(([id,n,v])=>[id,{n,v}])),max=d3.max(D.c||[],d=>d[2])||1;
+  const col=d3.scaleSequentialLog([1,Math.max(2,max)],d3.interpolateRgb(D.lo||'#24406b',D.hi||'#a8d4fb'));const EMP=D.empty||'#1d2738',STK=D.stroke||'#0b0e15';
+  svg.append('g').selectAll('path').data(feats).join('path')
+    .attr('d',path).attr('fill',f=>by.has(f.id)?col(Math.max(1,by.get(f.id).v)):EMP)
+    .attr('stroke',STK).attr('stroke-width',.5).style('cursor','default')
+    .on('pointerdown',function(e,f){svg.selectAll('path').attr('stroke',STK).attr('stroke-width',.5);show(this,e,f)})
+    .on('pointermove',function(e,f){if(e.pointerType==='mouse')show(this,e,f)})
+    .on('pointerleave',function(e){if(e.pointerType==='mouse'){d3.select(this).attr('stroke',STK).attr('stroke-width',.5);tip.style.display='none'}});
+  function show(el,e,f){if(!e.clientX)return;(function(){d3.select(this).attr('stroke','#eef0f4').attr('stroke-width',1).raise();const x=by.get(f.id);
+      tip.style.display='block';tip.innerHTML='<b>'+(x?x.n:f.properties.name)+'</b> · '+(x?x.v.toLocaleString('nb-NO')+' besøk':'ingen besøk');
+      tip.style.left=Math.max(4,Math.min(e.clientX+14,W-tip.offsetWidth-6))+'px';tip.style.top=Math.min(e.clientY+14,H-36)+'px'}).call(el)}
+}
+addEventListener('resize',draw);addEventListener('hashchange',draw);
+</script>
+</body>
+</html>

@@ -1,0 +1,135 @@
+# Kopier til .github/workflows/release.yml
+# Bygger APK (Android) og IPA (iOS) og legger dem i en GitHub Release når en tag v* pushes.
+# Stier (android/, ios/App/App.xcworkspace, skjema "App") er satt for et Capacitor-prosjekt. Juster ved native SwiftUI/Compose.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versjon (f.eks. 1.4.0)'
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  VERSION: ${{ github.event.inputs.version || github.ref_name }}
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17, cache: gradle }
+      - name: Bygg web og synk Capacitor
+        run: |
+          npm ci
+          npm run build
+          npx cap sync android
+      - name: Hent keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > android/app/release.keystore
+      - name: Bygg APK
+        working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          V="${VERSION#v}"
+          ./gradlew assembleRelease bundleRelease \
+            -PversionName="$V" -PversionCode=${{ github.run_number }} \
+            -Pandroid.injected.signing.store.file=$PWD/app/release.keystore \
+            -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
+          mkdir -p ../dist
+          cp app/build/outputs/apk/release/app-release.apk ../dist/FinansHub-$V.apk
+          cp app/build/outputs/bundle/release/app-release.aab ../dist/FinansHub-$V.aab
+      - uses: actions/upload-artifact@v4
+        with: { name: android, path: dist/* }
+
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: maxim-lobanov/setup-xcode@v1
+        with: { xcode-version: latest-stable }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - name: Bygg web og synk Capacitor
+        run: |
+          npm ci
+          npm run build
+          npx cap sync ios
+      - name: Sett versjon
+        working-directory: ios/App
+        run: |
+          V="${VERSION#v}"
+          agvtool new-marketing-version "$V"
+          agvtool new-version -all ${{ github.run_number }}
+      - name: Usignert IPA (for AltStore/SideStore/Sideloadly)
+        working-directory: ios/App
+        run: |
+          V="${VERSION#v}"
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
+            -sdk iphoneos -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build
+          mkdir -p Payload ../../dist
+          cp -R build/Build/Products/Release-iphoneos/App.app Payload/FinansHub.app
+          zip -qr ../../dist/FinansHub-$V-unsigned.ipa Payload
+      - name: Signert IPA (hopper over hvis sertifikat mangler)
+        if: ${{ env.HAS_CERT == 'true' }}
+        env:
+          HAS_CERT: ${{ secrets.IOS_CERT_P12_BASE64 != '' }}
+        working-directory: ios/App
+        run: |
+          V="${VERSION#v}"
+          KC=$RUNNER_TEMP/build.keychain-db; KP=$(uuidgen)
+          echo "${{ secrets.IOS_CERT_P12_BASE64 }}" | base64 -d > $RUNNER_TEMP/cert.p12
+          echo "${{ secrets.IOS_PROFILE_BASE64 }}" | base64 -d > $RUNNER_TEMP/profile.mobileprovision
+          security create-keychain -p "$KP" $KC
+          security set-keychain-settings -lut 3600 $KC
+          security unlock-keychain -p "$KP" $KC
+          security import $RUNNER_TEMP/cert.p12 -P "${{ secrets.IOS_CERT_PASSWORD }}" -A -t cert -f pkcs12 -k $KC
+          security set-key-partition-list -S apple-tool:,apple: -k "$KP" $KC
+          security list-keychain -d user -s $KC
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp $RUNNER_TEMP/profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+          sed "s/__TEAM_ID__/${{ secrets.IOS_TEAM_ID }}/" ../../ci/ExportOptions.plist > $RUNNER_TEMP/ExportOptions.plist
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release \
+            -archivePath $RUNNER_TEMP/App.xcarchive DEVELOPMENT_TEAM=${{ secrets.IOS_TEAM_ID }} archive
+          xcodebuild -exportArchive -archivePath $RUNNER_TEMP/App.xcarchive \
+            -exportOptionsPlist $RUNNER_TEMP/ExportOptions.plist -exportPath $RUNNER_TEMP/export
+          cp $RUNNER_TEMP/export/*.ipa ../../dist/FinansHub-$V.ipa
+          security delete-keychain $KC
+      - uses: actions/upload-artifact@v4
+        with: { name: ios, path: dist/* }
+
+  release:
+    needs: [android, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: dist, merge-multiple: true }
+      - name: Sjekksummer
+        working-directory: dist
+        run: sha256sum * > SHA256SUMS.txt
+      - name: Installasjonsveiledning
+        run: |
+          cat > notes.md <<'EOF'
+          ## Installer
+          **Android:** last ned `FinansHub-*.apk`, tillat «Installer ukjente apper» for nettleseren, og åpne filen.
+          **iPhone:** åpne `FinansHub-*-unsigned.ipa` i AltStore, SideStore eller Sideloadly. Er det en signert `FinansHub-*.ipa`, kan den installeres direkte på registrerte enheter.
+          EOF
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: FinansHub ${{ env.VERSION }}
+          body_path: notes.md
+          generate_release_notes: true
+          files: dist/*

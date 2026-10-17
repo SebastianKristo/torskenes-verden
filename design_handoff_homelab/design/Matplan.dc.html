@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
+<style>a{color:#F59A62}a:hover{color:#FFB27F}</style>
+</helmet>
+<div style="background:#111113;color:#F4F1EC;font-family:'Geist',system-ui,sans-serif;border-radius:28px;padding:clamp(20px,3vw,36px);display:flex;flex-direction:column;gap:30px;color-scheme:dark">
+
+<div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:20px">
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="font-size:14px;font-weight:500;color:#9A958F;letter-spacing:.06em">{{ weekLbl }}</div>
+<sc-if value="{{ showTitle }}" hint-placeholder-val="{{ true }}"><h1 style="margin:0;font-size:clamp(44px,6vw,68px);font-weight:700;letter-spacing:-.035em;line-height:1">Matplan</h1></sc-if>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+<button onClick="{{ toggleAuto }}" style="height:50px;padding:0 20px 0 14px;border-radius:14px;border:1px solid #2A2A2C;background:#18181A;color:#F4F1EC;cursor:pointer;font-size:16.5px;font-weight:500;display:flex;align-items:center;gap:12px;font-family:inherit"><span style="width:42px;height:26px;border-radius:13px;background:{{ autoTrack }};padding:3px;display:flex;justify-content:{{ autoJust }};transition:background .2s"><span style="width:20px;height:20px;border-radius:50%;background:#fff"></span></span>Ny plan hver søndag</button>
+<div style="position:relative">
+<button onClick="{{ toggleCal }}" style="height:50px;padding:0 20px;border-radius:14px;border:1px solid #2A2A2C;background:#18181A;color:#F4F1EC;cursor:pointer;font-size:16.5px;font-weight:500;font-family:inherit">Abonner i kalender</button>
+<sc-if value="{{ calOpen }}"><div style="position:absolute;right:0;top:58px;z-index:20;width:min(360px,86vw);padding:18px;border-radius:18px;background:#1C1C1E;border:1px solid #2E2E30;box-shadow:0 20px 50px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:12px">
+<b style="font-size:16px;font-weight:600">Kalenderfeed</b>
+<div style="font-size:14px;color:#9A958F;line-height:1.45">Legg til adressen i Google Kalender (Andre kalendere → Fra nettadresse) eller Apple Kalender. Feeden oppdateres når planen endres.</div>
+<div style="display:flex;gap:8px"><input readonly="readonly" value="{{ feedUrl }}" style="flex:1;min-width:0;height:42px;padding:0 12px;border-radius:10px;border:1px solid #2E2E30;background:#111113;color:#F4F1EC;font-size:13.5px;font-family:ui-monospace,monospace"><button onClick="{{ copyFeed }}" style="height:42px;padding:0 14px;border-radius:10px;border:0;background:#F4F1EC;color:#111113;font-weight:600;cursor:pointer;font-family:inherit">{{ copyTxt }}</button></div>
+<button onClick="{{ dlIcs }}" style="height:42px;border-radius:10px;border:1px solid #2E2E30;background:transparent;color:#F4F1EC;cursor:pointer;font-size:14.5px;font-family:inherit">Last ned .ics for uka</button>
+</div></sc-if>
+</div>
+<button onClick="{{ ai }}" style="height:50px;padding:0 22px;border-radius:14px;border:0;background:#F07A3A;color:#1A0C04;cursor:pointer;font-size:16.5px;font-weight:600;opacity:{{ aiOp }};font-family:inherit">{{ aiTxt }}</button>
+</div>
+</div>
+
+<sc-if value="{{ hasStatus }}"><div style="align-self:flex-start;padding:10px 16px;border-radius:12px;background:#21170F;border:1px solid #4A2614;color:#FFB27F;font-size:14.5px">{{ status }}</div></sc-if>
+
+<div style="display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start">
+
+<div style="flex:1 1 620px;min-width:0;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+<h2 style="margin:0;font-size:27px;font-weight:600;letter-spacing:-.01em;margin-right:6px">{{ secT }}</h2>
+<button onClick="{{ prevWeek }}" aria-label="Forrige uke" style="width:40px;height:40px;border-radius:12px;border:1px solid #2A2A2C;background:#18181A;color:#F4F1EC;cursor:pointer;font-size:18px">‹</button>
+<button onClick="{{ nextWeek }}" aria-label="Neste uke" style="width:40px;height:40px;border-radius:12px;border:1px solid #2A2A2C;background:#18181A;color:#F4F1EC;cursor:pointer;font-size:18px">›</button>
+<sc-if value="{{ notThisWeek }}"><button onClick="{{ thisWeek }}" style="height:40px;padding:0 14px;border-radius:12px;border:0;background:transparent;color:#F59A62;cursor:pointer;font-size:15px;font-family:inherit">I dag</button></sc-if>
+<div style="flex:1"></div>
+<button onClick="{{ shuffle }}" style="height:42px;padding:0 16px;border-radius:12px;border:1px solid #2A2A2C;background:#18181A;color:#F4F1EC;cursor:pointer;font-size:16px;font-family:inherit">Lag ny for uka</button>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px">
+<sc-for list="{{ dayCards }}" as="d" hint-placeholder-count="7">
+<div onDragOver="{{ d.over }}" onDragLeave="{{ d.leave }}" onDrop="{{ d.drop }}" style="min-height:236px;padding:20px;border-radius:20px;background:{{ d.bg }};border:1px solid {{ d.bd }};display:flex;flex-direction:column;gap:6px;transition:border-color .15s,background .15s">
+<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+<div><div style="font-size:14.5px;font-weight:600;letter-spacing:.06em;color:{{ d.dayC }}">{{ d.day }}</div><div style="font-size:14.5px;color:#8E8A85;margin-top:2px">{{ d.date }}</div></div>
+<button onClick="{{ d.regen }}" title="Foreslå en annen rett" aria-label="Foreslå en annen rett" style="width:32px;height:32px;margin:-4px -6px 0 0;border-radius:10px;border:0;background:transparent;color:#F07A3A;cursor:pointer;font-size:18px" style-hover="background:#21170F">✦</button>
+</div>
+<sc-if value="{{ d.has }}"><button draggable="true" onDragStart="{{ d.dragStart }}" onClick="{{ d.open }}" title="Dra for å flytte, klikk for oppskrift" style="margin-top:12px;padding:0;border:0;background:transparent;color:#F4F1EC;text-align:left;font-size:23px;font-weight:600;line-height:1.22;letter-spacing:-.01em;cursor:grab;font-family:inherit;text-wrap:pretty">{{ d.dish }}</button></sc-if>
+<sc-if value="{{ d.empty }}"><div style="margin-top:12px;font-size:17px;color:#6B6763;line-height:1.35">Ingen rett ennå. Dra en rett hit eller trykk ✦.</div></sc-if>
+<sc-if value="{{ d.hasTag }}"><div style="font-size:15px;color:#F59A62">{{ d.tag }}</div></sc-if>
+<div style="flex:1;min-height:12px"></div>
+<div style="display:flex;align-items:center;gap:8px;min-width:0">
+<div style="position:relative;flex:1 1 auto;min-width:0;max-width:170px"><select value="{{ d.cook }}" onChange="{{ d.onCook }}" aria-label="Kokk" style="appearance:none;-webkit-appearance:none;display:block;width:100%;height:42px;padding:0 34px 0 16px;overflow:hidden;white-space:nowrap;border-radius:21px;border:1px solid #2E2E30;background:#202022;color:#F4F1EC;font-size:16px;cursor:pointer;font-family:inherit;text-overflow:ellipsis"><sc-for list="{{ d.cooks }}" as="o"><option value="{{ o }}">{{ o }}</option></sc-for></select><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F4F1EC" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;right:13px;top:14px;pointer-events:none"><path d="M6 9l6 6 6-6"></path></svg></div>
+<div style="flex:1 0 0"></div><button onClick="{{ d.toggleFast }}" title="Samme rett denne dagen hver uke" style="flex:none;height:42px;padding:0 14px;border-radius:21px;border:1px solid {{ d.fastBd }};background:{{ d.fastBg }};color:{{ d.fastFg }};cursor:pointer;font-size:15.5px;font-weight:500;font-family:inherit">Fast</button>
+</div>
+</div>
+</sc-for>
+</div>
+<div style="font-size:15px;color:#8E8A85;padding:0 4px">Hver middag ligger i kalenderfeeden kl. 17:00 med kokken i beskrivelsen. Dra retter fra listen til en dag, eller dra en rett mellom dager for å bytte.</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start;margin-top:12px">
+<div style="padding:24px;border-radius:22px;background:#19191B;border:1px solid #262628;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><b style="font-size:19px;font-weight:600">HelloFresh denne uka</b><button onClick="{{ toggleHf }}" style="height:42px;padding:0 16px;border-radius:12px;border:1px solid #2E2E30;background:#18181A;color:#F4F1EC;cursor:pointer;font-size:15.5px;font-weight:500;font-family:inherit">{{ hfBtn }}</button></div>
+<div style="font-size:15px;color:#9A958F;line-height:1.45;text-wrap:pretty">HelloFresh har ikke åpent API. Lim inn ukesmenyen, én rett per linje, så havner rettene i listen.</div>
+<sc-if value="{{ hfOpen }}"><div style="display:flex;flex-direction:column;gap:10px"><textarea value="{{ hfTxt }}" onChange="{{ onHf }}" rows="5" placeholder="Kremet kyllinggryte med ris&#10;Teriyakilaks med sesamris&#10;Halloumiburger" style="padding:12px 14px;border-radius:12px;border:1px solid #2E2E30;background:#111113;color:#F4F1EC;font-size:15px;line-height:1.5;font-family:inherit;resize:vertical"></textarea><div><button onClick="{{ hfAdd }}" style="height:42px;padding:0 18px;border-radius:12px;border:0;background:#F4F1EC;color:#111113;font-weight:600;cursor:pointer;font-size:15px;font-family:inherit">Legg til retter</button></div></div></sc-if>
+<sc-if value="{{ hasHfMsg }}"><div style="font-size:14px;color:#7FD08A">{{ hfMsg }}</div></sc-if>
+</div>
+
+<div style="padding:24px;border-radius:22px;background:#19191B;border:1px solid #262628;display:flex;flex-direction:column;gap:14px">
+<div><b style="font-size:19px;font-weight:600">Kokker</b><div style="font-size:15px;color:#9A958F;line-height:1.45;margin-top:6px;text-wrap:pretty">Hvem er best på hva? Kokken settes automatisk når en av rettene deres havner på planen.</div></div>
+<sc-for list="{{ cookCards }}" as="c" hint-placeholder-count="2">
+<div style="padding:16px;border-radius:16px;background:#202022;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:17.5px;font-weight:600">{{ c.n }}</b><button onClick="{{ c.rm }}" aria-label="Fjern kokk" title="Fjern kokk" style="width:30px;height:30px;border-radius:8px;border:0;background:transparent;color:#8E8A85;cursor:pointer;font-size:17px">×</button></div>
+<sc-if value="{{ c.hasBest }}"><div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ c.best }}" as="b"><span style="display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 6px 0 12px;border-radius:10px;background:#3A2216;color:#F59A62;font-size:15px;font-weight:500">★ {{ b.n }}<button onClick="{{ b.rm }}" aria-label="Fjern" style="width:22px;height:22px;border:0;border-radius:6px;background:transparent;color:#F59A62;cursor:pointer;font-size:14px;padding:0">×</button></span></sc-for></div></sc-if>
+<div style="position:relative;align-self:flex-start;max-width:100%"><select value="" onChange="{{ c.onAdd }}" aria-label="Best på" style="appearance:none;-webkit-appearance:none;height:38px;min-width:220px;max-width:100%;padding:0 38px 0 14px;border-radius:12px;border:1px solid #2E2E30;background:#19191B;color:#F4F1EC;font-size:14.5px;cursor:pointer;font-family:inherit"><option value="">+ Best på …</option><sc-for list="{{ c.opts }}" as="o"><option value="{{ o }}">{{ o }}</option></sc-for></select><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F4F1EC" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;right:14px;top:12px;pointer-events:none"><path d="M6 9l6 6 6-6"></path></svg></div>
+</div>
+</sc-for>
+<form onSubmit="{{ addCook }}" style="margin:0;display:flex;gap:8px"><input value="{{ newCook }}" onChange="{{ onNewCook }}" placeholder="+ Legg til kokk" style="flex:1;min-width:0;height:46px;padding:0 16px;border-radius:14px;border:1px solid #2A2A2C;background:transparent;color:#F4F1EC;font-size:15.5px;font-family:inherit"><sc-if value="{{ hasNewCook }}"><button type="submit" style="height:46px;padding:0 16px;border-radius:14px;border:0;background:#F4F1EC;color:#111113;font-weight:600;cursor:pointer;font-family:inherit">Legg til</button></sc-if></form>
+</div>
+</div>
+</div>
+
+<div style="flex:1 1 380px;max-width:560px;min-width:0;padding:24px;border-radius:24px;background:#19191B;border:1px solid #262628;display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><div style="font-size:27px;font-weight:600;letter-spacing:-.01em">Retter <span style="font-size:19px;color:#6B6763;font-weight:500">{{ dishCount }}</span></div><button onClick="{{ newDish }}" style="height:44px;padding:0 16px;border-radius:12px;border:1px solid #2E2E30;background:#18181A;color:#F4F1EC;cursor:pointer;font-size:16px;font-weight:500;font-family:inherit">+ Ny rett</button></div>
+
+<sc-if value="{{ newOpen }}"><div style="padding:16px;border-radius:16px;background:#202022;display:flex;flex-direction:column;gap:10px">
+<b style="font-size:16px;font-weight:600">Ny rett</b>
+<input value="{{ ef.n }}" onChange="{{ efOn.n }}" placeholder="Navn, f.eks. Fiskegrateng" style="height:44px;padding:0 14px;border-radius:12px;border:1px solid #2E2E30;background:#111113;color:#F4F1EC;font-size:15.5px;font-family:inherit">
+<textarea value="{{ ef.ing }}" onChange="{{ efOn.ing }}" rows="4" placeholder="Ingredienser, én per linje" style="padding:12px 14px;border-radius:12px;border:1px solid #2E2E30;background:#111113;color:#F4F1EC;font-size:15px;line-height:1.5;font-family:inherit;resize:vertical"></textarea>
+<textarea value="{{ ef.steps }}" onChange="{{ efOn.steps }}" rows="3" placeholder="Slik gjør du, ett steg per linje" style="padding:12px 14px;border-radius:12px;border:1px solid #2E2E30;background:#111113;color:#F4F1EC;font-size:15px;line-height:1.5;font-family:inherit;resize:vertical"></textarea>
+<label style="display:flex;align-items:center;gap:10px;font-size:15px;color:#B9B4AE;cursor:pointer"><input type="checkbox" checked="{{ ef.hf }}" onChange="{{ efOn.hf }}" style="width:18px;height:18px;accent-color:#F07A3A">Fra HelloFresh</label>
+<sc-if value="{{ hasEfErr }}"><div style="font-size:14px;color:#F59A8F">{{ efErr }}</div></sc-if>
+<div style="display:flex;gap:8px"><button onClick="{{ efSave }}" style="height:42px;padding:0 18px;border-radius:12px;border:0;background:#F4F1EC;color:#111113;font-weight:600;cursor:pointer;font-family:inherit">Lagre</button><button onClick="{{ efCancel }}" style="height:42px;padding:0 16px;border-radius:12px;border:0;background:transparent;color:#B9B4AE;cursor:pointer;font-family:inherit">Avbryt</button></div>
+</div></sc-if>
+
+<input value="{{ q }}" onChange="{{ onQ }}" placeholder="Søk i retter og ingredienser" style="height:52px;padding:0 18px;border-radius:14px;border:1px solid #2A2A2C;background:#111113;color:#F4F1EC;font-size:17px;font-family:inherit">
+<div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ filters }}" as="f"><button onClick="{{ f.go }}" style="height:40px;padding:0 16px;border-radius:20px;border:1px solid {{ f.bd }};background:{{ f.bg }};color:{{ f.fg }};cursor:pointer;font-size:15.5px;font-weight:500;font-family:inherit">{{ f.n }}</button></sc-for></div>
+
+<div style="display:flex;flex-direction:column">
+<sc-for list="{{ dishRows }}" as="r" hint-placeholder-count="6">
+<div style="border-top:1px solid #262628">
+<button draggable="true" onDragStart="{{ r.drag }}" onClick="{{ r.toggle }}" title="Dra til en dag for å legge den på planen" style="width:100%;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 4px;border:0;background:transparent;color:#F4F1EC;cursor:pointer;text-align:left;font-family:inherit">
+<span style="min-width:0;display:flex;flex-direction:column;gap:3px"><span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><b style="font-size:18px;font-weight:600">{{ r.n }}</b><sc-if value="{{ r.hf }}"><span style="padding:2px 8px;border-radius:6px;background:#1E3321;color:#7FD08A;font-size:12.5px;font-weight:500">HelloFresh</span></sc-if></span><span style="font-size:15px;color:#8E8A85">{{ r.ingN }}</span></span>
+<span style="flex:none;display:flex;align-items:center;gap:6px"><sc-for list="{{ r.days }}" as="x"><span style="padding:3px 8px;border-radius:7px;background:#3A2216;color:#F59A62;font-size:13.5px;font-weight:600">{{ x }}</span></sc-for><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B6763" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-left:6px;transform:{{ r.rot }};transition:transform .2s"><path d="M6 9l6 6 6-6"></path></svg></span>
+</button>
+<sc-if value="{{ r.open }}"><div style="padding:0 4px 20px;display:flex;flex-direction:column;gap:18px">
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:20px">
+<div><div style="font-size:13.5px;font-weight:500;color:#8E8A85;letter-spacing:.08em;margin-bottom:8px">INGREDIENSER</div><sc-if value="{{ r.hasIng }}"><ul style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:5px;font-size:16px;line-height:1.35"><sc-for list="{{ r.ing }}" as="i"><li>{{ i }}</li></sc-for></ul></sc-if><sc-if value="{{ r.noIng }}"><div style="font-size:15px;color:#6B6763">Ingen ingredienser lagt inn.</div></sc-if></div>
+<div><div style="font-size:13.5px;font-weight:500;color:#8E8A85;letter-spacing:.08em;margin-bottom:8px">SLIK GJØR DU</div><sc-if value="{{ r.hasSteps }}"><ol style="margin:0;padding-left:22px;display:flex;flex-direction:column;gap:5px;font-size:16px;line-height:1.35"><sc-for list="{{ r.steps }}" as="t"><li>{{ t }}</li></sc-for></ol></sc-if><sc-if value="{{ r.noSteps }}"><div style="font-size:15px;color:#6B6763">Ingen fremgangsmåte lagt inn.</div></sc-if></div>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px"><div style="font-size:13.5px;font-weight:500;color:#8E8A85;letter-spacing:.08em">ALLTID PÅ</div><div style="display:flex;flex-wrap:wrap;gap:6px"><sc-for list="{{ r.always }}" as="a"><button onClick="{{ a.go }}" title="{{ a.t }}" style="min-width:48px;height:40px;padding:0 12px;border-radius:20px;border:1px solid {{ a.bd }};background:{{ a.bg }};color:{{ a.fg }};cursor:pointer;font-size:15px;font-weight:600;font-family:inherit">{{ a.l }}</button></sc-for></div><div style="font-size:14px;color:#77726C;line-height:1.4">{{ r.alwaysNote }}</div></div>
+<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+<div style="position:relative"><select value="" onChange="{{ r.onDay }}" aria-label="Legg på dag" style="appearance:none;-webkit-appearance:none;height:46px;padding:0 40px 0 16px;border-radius:12px;border:1px solid #2E2E30;background:#202022;color:#F4F1EC;font-size:16px;cursor:pointer;font-family:inherit"><option value="">Legg på dag …</option><sc-for list="{{ dayOpts }}" as="o"><option value="{{ o.v }}">{{ o.l }}</option></sc-for></select><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F4F1EC" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="position:absolute;right:14px;top:16px;pointer-events:none"><path d="M6 9l6 6 6-6"></path></svg></div>
+<button onClick="{{ r.edit }}" style="height:46px;padding:0 14px;border-radius:12px;border:0;background:transparent;color:#F4F1EC;cursor:pointer;font-size:16px;font-family:inherit">Rediger</button>
+<button onClick="{{ r.del }}" style="height:46px;padding:0 14px;border-radius:12px;border:0;background:transparent;color:#9A958F;cursor:pointer;font-size:16px;font-family:inherit">Slett rett</button>
+</div>
+</div></sc-if>
+<sc-if value="{{ r.editing }}"><div style="padding:0 4px 18px;display:flex;flex-direction:column;gap:10px">
+<input value="{{ ef.n }}" onChange="{{ efOn.n }}" placeholder="Navn" style="height:44px;padding:0 14px;border-radius:12px;border:1px solid #2E2E30;background:#111113;color:#F4F1EC;font-size:15.5px;font-family:inherit">
+<textarea value="{{ ef.ing }}" onChange="{{ efOn.ing }}" rows="5" placeholder="Ingredienser, én per linje" style="padding:12px 14px;border-radius:12px;border:1px solid #2E2E30;background:#111113;color:#F4F1EC;font-size:15px;line-height:1.5;font-family:inherit;resize:vertical"></textarea>
+<textarea value="{{ ef.steps }}" onChange="{{ efOn.steps }}" rows="4" placeholder="Slik gjør du, ett steg per linje" style="padding:12px 14px;border-radius:12px;border:1px solid #2E2E30;background:#111113;color:#F4F1EC;font-size:15px;line-height:1.5;font-family:inherit;resize:vertical"></textarea>
+<label style="display:flex;align-items:center;gap:10px;font-size:15px;color:#B9B4AE;cursor:pointer"><input type="checkbox" checked="{{ ef.hf }}" onChange="{{ efOn.hf }}" style="width:18px;height:18px;accent-color:#F07A3A">Fra HelloFresh</label>
+<sc-if value="{{ hasEfErr }}"><div style="font-size:14px;color:#F59A8F">{{ efErr }}</div></sc-if>
+<div style="display:flex;gap:8px"><button onClick="{{ efSave }}" style="height:42px;padding:0 18px;border-radius:12px;border:0;background:#F4F1EC;color:#111113;font-weight:600;cursor:pointer;font-family:inherit">Lagre</button><button onClick="{{ efCancel }}" style="height:42px;padding:0 16px;border-radius:12px;border:0;background:transparent;color:#B9B4AE;cursor:pointer;font-family:inherit">Avbryt</button></div>
+</div></sc-if>
+</div>
+</sc-for>
+<sc-if value="{{ noDishes }}"><div style="padding:22px 4px;border-top:1px solid #262628;font-size:15.5px;color:#8E8A85">Ingen retter passer søket.</div></sc-if>
+</div>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;embedded&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const DAYS=['Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Lørdag','Søndag'],AB=['Ma','Ti','On','To','Fr','Lø','Sø'],MON=['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
+const KEY='hl_matplan';
+const DISH0=[
+ {n:'Fiskesuppe',src:'Egen',ing:['600 g torsk og laks','2 gulrøtter','1 purre','3 dl matfløte','1 l fiskekraft'],steps:['Kok opp kraft og fløte.','Ha i grønnsakene og kok i 5 minutter.','Legg i fisken og trekk i 4 minutter.']},
+ {n:'Spaghetti bolognese',src:'Egen',ing:['400 g kjøttdeig','1 løk','2 fedd hvitløk','1 boks hakkede tomater','2 ss tomatpuré','400 g spaghetti'],steps:['Brun kjøttdeig med løk og hvitløk.','Ha i tomater og puré, og småkok i 20 minutter.','Kok spaghetti og server med sausen.']},
+ {n:'Kyllingwok',src:'Egen',ing:['500 g kyllingfilet','1 pose wokgrønnsaker','2 ss soyasaus','1 ss sweet chili','Ris'],steps:['Kok risen.','Stek kyllingen i strimler.','Ha i grønnsaker og saus, og wok i 3 minutter.']},
+ {n:'Fiskeboller i hvit saus',src:'Egen',ing:['1 boks fiskeboller','3 ss smør','3 ss hvetemel','Poteter'],steps:['Kok potetene.','Lag hvit saus av smør, mel og kraften fra boksen.','Varm fiskebollene i sausen.']},
+ {n:'Taco',src:'Egen',ing:['400 g kjøttdeig','Tacokrydder','Tortillalefser','Mais','Agurk og tomat','Rømme','Revet ost'],steps:['Brun kjøttdeigen, tilsett krydder og vann.','Kutt grønnsakene.','Sett alt på bordet.']},
+ {n:'Pizza',src:'Egen',ing:['Pizzadeig','Tomatsaus','Mozzarella','Skinke','Paprika'],steps:['Kjevle ut deigen.','Ha på saus og fyll.','Stek på 250 °C i 12 minutter.']},
+ {n:'Ovnsbakt laks med poteter',src:'Egen',ing:['4 laksefileter','800 g småpoteter','1 brokkoli','Sitron','Olivenolje'],steps:['Del potetene og stek dem på 220 °C i 20 minutter.','Legg på laks og brokkoli.','Stek videre i 12 minutter.']},
+ {n:'Kremet kyllinggryte med ris',src:'HelloFresh',ing:['Kyllinglår','Matfløte','Paprika','Jasminris'],steps:['Kok risen.','Brun kyllingen.','Ha i paprika og fløte, og la det småkoke.']}];
+const COOK0=[{n:'Sebastian',best:['Taco','Spaghetti bolognese']},{n:'Ingrid',best:['Fiskesuppe','Ovnsbakt laks med poteter']},{n:'Pål',best:['Pizza']}];
+const SEED=[['Kyllingwok','Sebastian'],['Kremet kyllinggryte med ris','Ingrid'],['Ovnsbakt laks med poteter','Ingrid'],['Fiskesuppe','Ingrid'],['Taco','Sebastian',1],['Fiskesuppe','Ingrid'],['Ovnsbakt laks med poteter','Ingrid']].map(([d,c,f])=>({d,c,f:!!f}));
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const monday=off=>{const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7)+off*7);return d};
+const weekNo=d=>{const t=new Date(d);t.setDate(t.getDate()+3-((t.getDay()+6)%7));const y=new Date(t.getFullYear(),0,4);return 1+Math.round(((t-y)/864e5-3+((y.getDay()+6)%7))/7)};
+const gen=n=>/s$/i.test(n)?n+"'":n+'s';
+const lines=t=>String(t||'').split('\n').map(x=>x.trim()).filter(Boolean);
+
+class Component extends DCLogic {
+  constructor(p){super(p);let sv=null;try{sv=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){}
+    if(!sv||!sv.dishes)sv={dishes:DISH0,cooks:COOK0,fixed:{4:{d:'Taco',c:'Sebastian'}},weeks:{[iso(monday(0))]:SEED},auto:false};
+    this.state={...sv,off:0,open:'Taco',q:'',flt:'Alle',ed:null,ef:{n:'',ing:'',steps:'',hf:false},efErr:'',hfOpen:false,hfTxt:'',hfMsg:'',cal:false,copied:false,status:'',busy:false,drop:null,newCook:''}}
+  componentDidMount(){this._doc=e=>{if(this.state.cal&&!e.target.closest('[data-mp-cal]'))this.setState({cal:false})};document.addEventListener('dragend',this._de=()=>this.state.drop!=null&&this.setState({drop:null}))}
+  componentWillUnmount(){document.removeEventListener('dragend',this._de);clearTimeout(this._st)}
+  save(p){this.setState(p,()=>{const s=this.state;try{localStorage.setItem(KEY,JSON.stringify({dishes:s.dishes,cooks:s.cooks,fixed:s.fixed,weeks:s.weeks,auto:s.auto}))}catch(e){}})}
+  wk(s=this.state){const k=iso(monday(s.off));const n=Math.max(1,s.cooks.length);const ex=s.weeks[k];if(ex&&s.off>=0)return{k,days:ex.map((x,i)=>{const f=s.fixed[i];return f&&!x.f?{d:f.d,c:f.c,f:true}:x})};return{k,days:ex||DAYS.map((_,i)=>{const f=s.fixed[i];return{d:f?f.d:null,c:f?f.c:((s.cooks[i%n]||{}).n||''),f:!!f}})}}
+  saveDays(nd){const s=this.state,{k}=this.wk();const fixed={...s.fixed};nd.forEach((x,i)=>{if(x.f&&x.d)fixed[i]={d:x.d,c:x.c}});this.save({weeks:{...s.weeks,[k]:nd},fixed})}
+  setDay(i,patch){const{days}=this.wk();this.saveDays(days.map((x,j)=>j===i?{...x,...patch}:x))}
+  bestOf(n){const c=this.state.cooks.find(c=>c.best.includes(n));return c&&c.n}
+  place(i,n){const b=this.bestOf(n);this.setDay(i,{d:n,...(b?{c:b}:{})})}
+  flash(t){this.setState({status:t});clearTimeout(this._st);this._st=setTimeout(()=>this.setState({status:''}),5000)}
+  plan(names){const s=this.state,{days}=this.wk();const prev=(s.weeks[iso(monday(s.off-1))]||[]).map(x=>x.d);
+    const used=new Set(days.filter(x=>x.f).map(x=>x.d));
+    const pool=s.dishes.map(d=>d.n).sort(()=>Math.random()-.5).sort((a,b)=>(prev.includes(a)?1:0)-(prev.includes(b)?1:0));
+    const cnt={};s.cooks.forEach(c=>cnt[c.n]=0);days.filter(x=>x.f).forEach(x=>cnt[x.c]=(cnt[x.c]||0)+1);let n=0;
+    const nd=days.map((x,i)=>{if(x.f)return x;let d=names&&names[i]&&s.dishes.some(y=>y.n===names[i])&&!used.has(names[i])?names[i]:null;
+      if(!d)d=pool.find(p=>!used.has(p))||pool[i%Math.max(1,pool.length)]||null;if(!d)return x;used.add(d);n++;
+      let c=this.bestOf(d);if(!c)c=Object.keys(cnt).sort((a,b)=>cnt[a]-cnt[b])[0]||x.c;cnt[c]=(cnt[c]||0)+1;return{d,c,f:false}});
+    this.saveDays(nd);return n}
+  async ai(){if(this.state.busy)return;this.setState({busy:true,status:'Lager ukeplan …'});let names=null;
+    try{if(window.claude&&window.claude.complete){const s=this.state,{days}=this.wk();
+      const r=await window.claude.complete('Lag en middagsplan for mandag til søndag for en norsk husstand. Velg bare fra disse rettene: '+s.dishes.map(d=>d.n).join(', ')+'. Faste dager som må beholdes: '+(days.map((x,i)=>x.f?DAYS[i]+' = '+x.d:null).filter(Boolean).join(', ')||'ingen')+'. Varier mellom fisk og kjøtt og unngå samme rett to ganger hvis det går. Svar bare med en JSON-liste med 7 rettnavn i rekkefølge.');
+      const m=String(r).match(/\[[\s\S]*\]/);if(m)names=JSON.parse(m[0])}}catch(e){}
+    if(!names)await new Promise(r=>setTimeout(r,900));
+    const n=this.plan(names);this.setState({busy:false});this.flash('Ny plan for uke '+weekNo(monday(this.state.off))+': '+n+' retter valgt, faste dager er beholdt.')}
+  ics(){const s=this.state,{days}=this.wk(),m=monday(s.off),pad=n=>String(n).padStart(2,'0');
+    let o='BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Homelab//Matplan//NO\r\nX-WR-CALNAME:Middag\r\n';
+    days.forEach((x,i)=>{if(!x.d)return;const d=new Date(m);d.setDate(m.getDate()+i);const ds=d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate());
+      o+='BEGIN:VEVENT\r\nUID:'+ds+'-middag@homelab\r\nDTSTART;TZID=Europe/Oslo:'+ds+'T170000\r\nDTEND;TZID=Europe/Oslo:'+ds+'T180000\r\nSUMMARY:'+x.d+'\r\nDESCRIPTION:Kokk: '+x.c+'\r\nEND:VEVENT\r\n'});
+    o+='END:VCALENDAR\r\n';const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([o],{type:'text/calendar'}));a.download='matplan-uke-'+weekNo(m)+'.ics';document.body.appendChild(a);a.click();a.remove()}
+  efSave(){const s=this.state,f=s.ef,n=f.n.trim();if(!n)return this.setState({efErr:'Skriv et navn på retten.'});
+    const isNew=s.ed==='__new',old=isNew?null:s.ed;if(s.dishes.some(d=>d.n.toLowerCase()===n.toLowerCase()&&d.n!==old))return this.setState({efErr:n+' finnes allerede.'});
+    const dish={n,ing:lines(f.ing),steps:lines(f.steps),src:f.hf?'HelloFresh':'Egen'};
+    if(isNew)return this.save({dishes:[...s.dishes,dish],ed:null,open:n,efErr:''});
+    const rn=x=>x===old?n:x;const weeks={};Object.entries(s.weeks).forEach(([k,a])=>weeks[k]=a.map(y=>({...y,d:rn(y.d)})));const fixed={};Object.entries(s.fixed).forEach(([k,v])=>fixed[k]={...v,d:rn(v.d)});
+    this.save({dishes:s.dishes.map(d=>d.n===old?dish:d),weeks,fixed,cooks:s.cooks.map(c=>({...c,best:c.best.map(rn)})),ed:null,open:n,efErr:''})}
+  delDish(n){const s=this.state;const weeks={};Object.entries(s.weeks).forEach(([k,a])=>weeks[k]=a.map(y=>y.d===n?{...y,d:null,f:false}:y));const fixed={};Object.entries(s.fixed).forEach(([k,v])=>{if(v.d!==n)fixed[k]=v});
+    this.save({dishes:s.dishes.filter(d=>d.n!==n),weeks,fixed,cooks:s.cooks.map(c=>({...c,best:c.best.filter(b=>b!==n)})),open:null});this.flash(n+' er slettet.')}
+  renderVals(){
+    const s=this.state,{k,days}=this.wk(),m=monday(s.off),todayK=iso(new Date());
+    const dates=DAYS.map((_,i)=>{const d=new Date(m);d.setDate(m.getDate()+i);return d}),end=dates[6];
+    const range=m.getMonth()===end.getMonth()?m.getDate()+'.–'+end.getDate()+'. '+MON[m.getMonth()]:m.getDate()+'. '+MON[m.getMonth()]+'–'+end.getDate()+'. '+MON[end.getMonth()];
+    const cookNames=s.cooks.map(c=>c.n);
+    const dayCards=days.map((x,i)=>{const isT=iso(dates[i])===todayK,dish=s.dishes.find(d=>d.n===x.d);
+      const b=x.d?(s.cooks.find(c=>c.n===x.c&&c.best.includes(x.d))||s.cooks.find(c=>c.best.includes(x.d))):null;
+      const tag=b?'★ '+gen(b.n)+' beste':dish&&dish.src==='HelloFresh'?'HelloFresh':'';
+      return{day:DAYS[i].toUpperCase(),date:(isT?'I dag · ':'')+dates[i].getDate()+'. '+MON[dates[i].getMonth()],dayC:isT?'#F59A62':'#F4F1EC',
+        bd:s.drop===i?'#F07A3A':isT?'rgba(240,122,58,.75)':'#262628',bg:s.drop===i?'#21170F':'#19191B',
+        has:!!x.d,empty:!x.d,dish:x.d||'',hasTag:!!tag,tag,cook:x.c,cooks:cookNames.includes(x.c)||!x.c?cookNames:[x.c,...cookNames],
+        onCook:e=>this.setDay(i,{c:e.target.value}),
+        fastBg:x.f?'#4A2614':'transparent',fastFg:x.f?'#FFB27F':'#77726C',fastBd:x.f?'#4A2614':'#2A2A2C',
+        toggleFast:()=>{if(x.f){const f={...s.fixed};delete f[i];this.save({fixed:f,weeks:{...s.weeks,[k]:days.map((y,j)=>j===i?{...y,f:false}:y)}})}else if(x.d)this.setDay(i,{f:true});else this.flash('Velg en rett før du gjør dagen fast.')},
+        regen:()=>{const inW=new Set(days.map(y=>y.d));const all=s.dishes.map(d=>d.n),opts=all.filter(n=>!inW.has(n)),pool=opts.length?opts:all.filter(n=>n!==x.d);if(pool.length)this.place(i,pool[Math.floor(Math.random()*pool.length)])},
+        open:()=>this.setState({open:x.d,ed:null,flt:'Alle',q:''}),
+        dragStart:e=>{e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','day:'+i)},
+        over:e=>{e.preventDefault();if(this.state.drop!==i)this.setState({drop:i})},
+        leave:e=>{if(!e.currentTarget.contains(e.relatedTarget)&&this.state.drop===i)this.setState({drop:null})},
+        drop:e=>{e.preventDefault();const t=e.dataTransfer.getData('text/plain');this.setState({drop:null});
+          if(t.startsWith('dish:'))this.place(i,t.slice(5));
+          else if(t.startsWith('day:')){const j=+t.slice(4);if(j===i)return;const nd=days.map(y=>({...y}));nd[i]={...days[i],d:days[j].d,c:days[j].c};nd[j]={...days[j],d:days[i].d,c:days[i].c};this.saveDays(nd)}}}});
+    const q=s.q.trim().toLowerCase(),inWeek=n=>days.map((x,i)=>x.d===n?AB[i]:null).filter(Boolean);
+    const list=s.dishes.filter(d=>(!q||d.n.toLowerCase().includes(q)||d.ing.some(i=>i.toLowerCase().includes(q)))&&(s.flt==='Alle'||(s.flt==='På planen'&&inWeek(d.n).length)||(s.flt==='Ikke brukt'&&!inWeek(d.n).length)||(s.flt==='HelloFresh'&&d.src==='HelloFresh')));
+    const dishRows=list.map(d=>{const open=s.open===d.n,ed=s.ed===d.n;
+      const alw=DAYS.map((_,i)=>!!(s.fixed[i]&&s.fixed[i].d===d.n)),nA=alw.filter(Boolean).length;
+      const always=AB.map((l,i)=>{const on=alw[i],other=s.fixed[i]&&s.fixed[i].d!==d.n?s.fixed[i].d:'';return{l,bg:on?'#4A2614':'transparent',fg:on?'#FFB27F':other?'#5E5A55':'#B9B4AE',bd:on?'#7A3A1C':'#2E2E30',t:on?'Alltid '+d.n+' på '+DAYS[i].toLowerCase()+'. Trykk for å fjerne.':other?DAYS[i]+' er fast med '+other+'. Trykk for å bytte.':'Gjør '+d.n+' fast på '+DAYS[i].toLowerCase(),
+        go:()=>{const fixed={...s.fixed};const cur=days[i]||{};let nd;if(on){delete fixed[i];nd=days.map((y,j)=>j===i?{...y,f:false}:y)}else{const c=this.bestOf(d.n)||cur.c||((s.cooks[0]||{}).n||'');fixed[i]={d:d.n,c};nd=days.map((y,j)=>j===i?{d:d.n,c,f:true}:y)}
+          this.save({fixed,weeks:{...s.weeks,[k]:nd}});this.flash(on?d.n+' er ikke lenger fast på '+DAYS[i].toLowerCase()+'.':d.n+' legges alltid på '+DAYS[i].toLowerCase()+'. Gjelder denne og kommende uker.')}}});
+      return{always,alwaysNote:nA?d.n+' legges automatisk på '+DAYS.filter((_,i)=>alw[i]).map(x=>x.toLowerCase()).join(', ').replace(/, ([^,]*)$/,' og $1')+' hver uke. AI og «Lag ny for uka» endrer ikke disse dagene.':'Velg dager der denne retten alltid skal stå, for eksempel taco hver fredag.',n:d.n,hf:d.src==='HelloFresh',ingN:d.ing.length+(d.ing.length===1?' ingrediens':' ingredienser'),days:inWeek(d.n),rot:open||ed?'rotate(180deg)':'none',
+      open:open&&!ed,editing:ed,ing:d.ing,hasIng:d.ing.length>0,noIng:!d.ing.length,steps:d.steps,hasSteps:d.steps.length>0,noSteps:!d.steps.length,
+      toggle:()=>this.setState({open:open?null:d.n,ed:null}),drag:e=>{e.dataTransfer.effectAllowed='copy';e.dataTransfer.setData('text/plain','dish:'+d.n)},
+      onDay:e=>{const v=e.target.value;if(v!==''){this.place(+v,d.n);this.flash(d.n+' er lagt på '+DAYS[+v].toLowerCase()+'.')}},
+      edit:()=>this.setState({ed:d.n,efErr:'',ef:{n:d.n,ing:d.ing.join('\n'),steps:d.steps.join('\n'),hf:d.src==='HelloFresh'}}),del:()=>this.delDish(d.n)}});
+    const cookCards=s.cooks.map((c,ci)=>{const upd=best=>this.save({cooks:s.cooks.map((y,j)=>j===ci?{...y,best}:y)});return{n:c.n,hasBest:c.best.length>0,
+      best:c.best.map(b=>({n:b,rm:()=>upd(c.best.filter(x=>x!==b))})),opts:s.dishes.map(d=>d.n).filter(n=>!c.best.includes(n)),
+      onAdd:e=>{const v=e.target.value;if(v)upd([...c.best,v])},
+      rm:()=>{const rest=s.cooks.filter((_,j)=>j!==ci);const alt=(rest[0]||{}).n||'';const weeks={};Object.entries(s.weeks).forEach(([kk,a])=>weeks[kk]=a.map(y=>y.c===c.n?{...y,c:alt}:y));this.save({cooks:rest,weeks})}}});
+    const efOn=Object.fromEntries(['n','ing','steps'].map(f=>[f,e=>this.setState({ef:{...this.state.ef,[f]:e.target.value},efErr:''})]));efOn.hf=e=>this.setState({ef:{...this.state.ef,hf:e.target.checked}});
+    return{weekLbl:('Uke '+weekNo(m)+' · '+range).toUpperCase(),showTitle:!this.props.embedded,secT:s.off===0?'Denne uka':s.off===1?'Neste uke':s.off===-1?'Forrige uke':'Uke '+weekNo(m),
+      notThisWeek:s.off!==0,prevWeek:()=>this.setState({off:s.off-1}),nextWeek:()=>this.setState({off:s.off+1}),thisWeek:()=>this.setState({off:0}),
+      autoTrack:s.auto?'#F07A3A':'#3A3A3C',autoJust:s.auto?'flex-end':'flex-start',toggleAuto:()=>{this.save({auto:!s.auto});this.flash(s.auto?'Automatisk ukeplan er slått av.':'En ny plan lages hver søndag kl. 18:00 for uka etter.')},
+      calOpen:s.cal,toggleCal:()=>this.setState({cal:!s.cal,copied:false}),feedUrl:'webcal://homelab.local/matplan.ics',copyTxt:s.copied?'Kopiert':'Kopier',
+      copyFeed:()=>{try{navigator.clipboard.writeText('webcal://homelab.local/matplan.ics')}catch(e){}this.setState({copied:true})},dlIcs:()=>this.ics(),
+      ai:()=>this.ai(),aiTxt:s.busy?'Lager plan …':'✦ Ny ukeplan med AI',aiOp:s.busy?.7:1,shuffle:()=>{const n=this.plan(null);this.flash(n+' dager har fått nye retter.')},
+      hasStatus:!!s.status,status:s.status,dayCards,
+      toggleHf:()=>this.setState({hfOpen:!s.hfOpen,hfMsg:''}),hfBtn:s.hfOpen?'Lukk':'Lim inn ukesmeny',hfOpen:s.hfOpen,hfTxt:s.hfTxt,onHf:e=>this.setState({hfTxt:e.target.value}),
+      hfAdd:()=>{const have=new Set(s.dishes.map(d=>d.n.toLowerCase()));const add=[];lines(s.hfTxt).map(l=>l.replace(/^[-•*\d.)\s]+/,'').trim()).filter(Boolean).forEach(n=>{if(!have.has(n.toLowerCase())){have.add(n.toLowerCase());add.push({n,ing:[],steps:[],src:'HelloFresh'})}});
+        this.save({dishes:[...s.dishes,...add],hfTxt:'',hfOpen:false,hfMsg:add.length?add.length+(add.length===1?' rett':' retter')+' lagt til fra HelloFresh.':'Ingen nye retter. Alle fantes fra før.',flt:add.length?'HelloFresh':s.flt})},
+      hasHfMsg:!!s.hfMsg,hfMsg:s.hfMsg,cookCards,newCook:s.newCook,hasNewCook:!!s.newCook.trim(),onNewCook:e=>this.setState({newCook:e.target.value}),
+      addCook:e=>{e.preventDefault();const n=s.newCook.trim();if(!n||s.cooks.some(c=>c.n.toLowerCase()===n.toLowerCase()))return;this.save({cooks:[...s.cooks,{n,best:[]}],newCook:''})},
+      dishCount:s.dishes.length,newDish:()=>this.setState({ed:'__new',open:null,efErr:'',ef:{n:'',ing:'',steps:'',hf:false}}),newOpen:s.ed==='__new',
+      ef:s.ef,efOn,efSave:()=>this.efSave(),efCancel:()=>this.setState({ed:null,efErr:''}),hasEfErr:!!s.efErr,efErr:s.efErr,
+      q:s.q,onQ:e=>this.setState({q:e.target.value}),
+      filters:['Alle','På planen','Ikke brukt','HelloFresh'].map(f=>{const on=s.flt===f;return{n:f,bg:on?'#F4F1EC':'transparent',fg:on?'#111113':'#F4F1EC',bd:on?'#F4F1EC':'#2A2A2C',go:()=>this.setState({flt:f})}}),
+      dishRows,noDishes:!dishRows.length,dayOpts:DAYS.map((l,i)=>({v:String(i),l}))}
+  }
+}
+</script>
+</body>
+</html>

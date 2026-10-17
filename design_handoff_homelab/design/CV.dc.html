@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#f4f3f0;color:#16181d;font-family:'Outfit',sans-serif}a{color:#16181d}a:hover{color:#3b6fa8}*{box-sizing:border-box}*{scrollbar-width:none;-ms-overflow-style:none}*::-webkit-scrollbar{display:none;width:0;height:0}input,textarea,button{font-family:inherit}</style>
+</helmet>
+<div style="max-width:820px;margin:0 auto;padding:56px 24px 80px;display:flex;flex-direction:column;gap:36px">
+<sc-if value="{{ canEdit }}"><div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+<a href="Homelab v2.dc.html" style="padding:10px 18px;border-radius:999px;border:1px solid #d6d3cc;text-decoration:none;font-size:14px">← Dashboard</a>
+<button onClick="{{ toggle }}" style="padding:10px 18px;border-radius:999px;border:0;background:#16181d;color:#f4f3f0;cursor:pointer;font-size:14px">{{ editLabel }}</button>
+<sc-if value="{{ editing }}"><button onClick="{{ reset }}" style="padding:10px 18px;border-radius:999px;border:1px solid #d6d3cc;background:none;cursor:pointer;font-size:14px">Tilbakestill</button></sc-if>
+</div></sc-if>
+
+<sc-if value="{{ view }}" hint-placeholder-val="{{ true }}">
+<header style="display:flex;flex-direction:column;gap:8px">
+<div style="font-size:52px;font-weight:300;line-height:1.05">{{ cv.name }}</div>
+<div style="font-size:20px;color:#5b5f69">{{ cv.title }}</div>
+<div style="display:flex;gap:16px;flex-wrap:wrap;font-size:14px;color:#5b5f69;font-family:'JetBrains Mono',monospace"><span>{{ cv.email }}</span><span>{{ cv.phone }}</span><span>{{ cv.place }}</span></div>
+</header>
+<p style="font-size:18px;line-height:1.6;margin:0;text-wrap:pretty">{{ cv.about }}</p>
+<sc-for list="{{ sections }}" as="s" hint-placeholder-count="3"><section style="display:flex;flex-direction:column;gap:16px">
+<div style="font-size:12px;letter-spacing:.12em;color:#8a8d95;font-family:'JetBrains Mono',monospace;border-bottom:1px solid #d6d3cc;padding-bottom:8px">{{ s.label }}</div>
+<sc-for list="{{ s.items }}" as="i"><div style="display:grid;grid-template-columns:140px minmax(0,1fr);gap:16px"><div style="font-size:14px;color:#8a8d95;font-family:'JetBrains Mono',monospace">{{ i.when }}</div><div><div style="font-size:17px;font-weight:600">{{ i.what }}</div><div style="font-size:15px;color:#5b5f69;line-height:1.5">{{ i.desc }}</div></div></div></sc-for>
+</section></sc-for>
+<section style="display:flex;flex-direction:column;gap:14px"><div style="font-size:12px;letter-spacing:.12em;color:#8a8d95;font-family:'JetBrains Mono',monospace;border-bottom:1px solid #d6d3cc;padding-bottom:8px">FERDIGHETER</div>
+<div style="display:flex;flex-wrap:wrap;gap:8px"><sc-for list="{{ skills }}" as="k"><span style="padding:6px 14px;border-radius:999px;background:#e8e6e1;font-size:14px">{{ k }}</span></sc-for></div></section>
+</sc-if>
+
+<sc-if value="{{ editing }}">
+<div style="display:flex;flex-direction:column;gap:12px">
+<sc-for list="{{ fields }}" as="f"><label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#8a8d95;font-family:'JetBrains Mono',monospace">{{ f.label }}<textarea value="{{ f.value }}" onChange="{{ f.set }}" rows="{{ f.rows }}" style="padding:12px 14px;border:1px solid #d6d3cc;border-radius:12px;background:#fff;font-size:15px;color:#16181d;resize:vertical;font-family:'Outfit',sans-serif"></textarea></label></sc-for>
+<div style="font-size:13px;color:#8a8d95">Erfaring/utdanning: én linje per punkt, format «År | Tittel | Beskrivelse». Ferdigheter: kommaseparert.</div>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const DEF={name:'Benjamin Kristoffersen',title:'Elev · IT og homelab-entusiast',email:'benjamin@kristo.no',phone:'+47 900 00 000',place:'Oslo',about:'Elev med stor interesse for nettverk, servere og automatisering. Driver eget homelab med Proxmox, Home Assistant og Pi-hole.',work:'2025 – nå | Deltid, Komplett | Kundeservice og produktveiledning\n2024 | Sommerjobb, Oslo kommune | IT-support for skoler',edu:'2024 – nå | Videregående, studiespesialisering | Matematikk R2, Fysikk 2\n2021 – 2024 | Ungdomsskole | ',skills:'Linux, Proxmox, Docker, Home Assistant, Nettverk, Python, Norsk, Engelsk'};
+const parse=t=>t.split('\n').filter(Boolean).map(l=>{const [when,what,desc]=l.split('|').map(x=>(x||'').trim());return{when,what,desc}});
+class Component extends DCLogic {
+  state={editing:false,cv:{...DEF,...JSON.parse(localStorage.getItem('hl_cv')||'{}')}};
+  set(k,v){const cv={...this.state.cv,[k]:v};this.setState({cv});localStorage.setItem('hl_cv',JSON.stringify(cv))}
+  renderVals(){
+    const {cv,editing}=this.state,canEdit=sessionStorage.getItem('hl_auth')==='1';
+    const F=[['name','Navn',1],['title','Tittel',1],['email','E-post',1],['phone','Telefon',1],['place','Sted',1],['about','Om meg',4],['work','Erfaring',5],['edu','Utdanning',4],['skills','Ferdigheter',2]];
+    return {cv,canEdit,editing:canEdit&&editing,view:!(canEdit&&editing),editLabel:editing?'Ferdig':'Rediger CV',
+      toggle:()=>this.setState({editing:!editing}),
+      reset:()=>{localStorage.removeItem('hl_cv');this.setState({cv:{...DEF}})},
+      sections:[{label:'ERFARING',items:parse(cv.work)},{label:'UTDANNING',items:parse(cv.edu)}],
+      skills:cv.skills.split(',').map(s=>s.trim()).filter(Boolean),
+      fields:F.map(([k,label,rows])=>({label,rows,value:cv[k],set:e=>this.set(k,e.target.value)}))};
+  }
+}
+</script>
+</body>
+</html>

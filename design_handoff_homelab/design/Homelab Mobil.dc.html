@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#000;color:#eef0f4;font-family:'Outfit',sans-serif;-webkit-tap-highlight-color:transparent}a{color:#eef0f4;text-decoration:none}a:hover{color:#a8d4fb}*{box-sizing:border-box}*{scrollbar-width:none;-ms-overflow-style:none}*::-webkit-scrollbar{display:none;width:0;height:0}input,select,button{font-family:inherit}</style>
+</helmet>
+<div style="max-width:440px;margin:0 auto;min-height:100vh;position:relative;background-color:#1a1d25;background-image:{{ bg }};background-size:cover;background-position:center 30%;background-attachment:fixed">
+<sc-if value="{{ locked }}" hint-placeholder-val="{{ true }}">
+<form onSubmit="{{ login }}" style="min-height:100vh;display:flex;flex-direction:column;justify-content:center;gap:14px;padding:32px 24px">
+<div style="width:52px;height:52px;border-radius:14px;background:#fff;color:#07080b;display:grid;place-items:center;font-family:'JetBrains Mono',monospace;font-weight:500">OS</div>
+<div style="font-size:32px;font-weight:300">Hei, <b style="font-weight:700">velkommen hjem</b></div>
+<input type="password" placeholder="Passord" value="{{ pw }}" onChange="{{ setPw }}" style="padding:16px 20px;background:rgba(11,14,21,.85);border:1px solid #232938;border-radius:999px;color:#eef0f4;font-size:17px;outline:none">
+<sc-if value="{{ pwError }}"><div style="color:#f59a8f;font-size:14px">Feil passord</div></sc-if>
+<button type="submit" style="padding:16px;border:0;border-radius:999px;background:#a8d4fb;color:#07080b;font-weight:600;font-size:16px">Lås opp</button>
+</form>
+</sc-if>
+<sc-if value="{{ unlocked }}">
+<div style="padding:calc(env(safe-area-inset-top) + 20px) 16px 120px;display:flex;flex-direction:column;gap:14px">
+<header style="display:flex;justify-content:space-between;align-items:center">
+<div style="width:40px;height:40px;border-radius:12px;background:#fff;color:#07080b;display:grid;place-items:center;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500">OS</div>
+<div style="display:flex;gap:8px"><button onClick="{{ cycleBg }}" style="height:40px;padding:0 14px;border-radius:999px;border:1px solid #232938;background:rgba(10,12,18,.7);color:#eef0f4;font-size:13px">{{ bgName }}</button><button onClick="{{ logout }}" style="height:40px;padding:0 14px;border-radius:999px;border:1px solid #232938;background:rgba(10,12,18,.7);color:#eef0f4;font-size:13px">Lås</button></div>
+</header>
+
+<sc-if value="{{ isHome }}">
+<div style="padding:8px 4px 4px"><div style="font-size:26px;font-weight:300">{{ greeting }}, <b style="font-weight:700">Benjamin</b></div><div style="font-size:14px;color:#b6bccb">{{ dateStr }}</div>
+<div style="display:flex;align-items:flex-start;gap:4px;margin-top:8px"><div style="font-size:76px;font-weight:300;line-height:1.05;letter-spacing:-2px">{{ timeStr }}</div><div style="font-size:16px;color:#b6bccb;margin-top:10px">{{ secStr }}</div></div>
+<sc-if value="{{ lesson.has }}"><div style="display:flex;flex-direction:column;gap:8px;max-width:100%;padding:14px 16px;border-radius:20px;background:rgba(10,12,18,.55);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.06)">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span style="font-size:11px;font-family:'JetBrains Mono',monospace;padding:2px 8px;border-radius:6px;background:#a8d4fb;color:#07080b;font-weight:500">{{ lesson.label }}</span><span style="font-size:12px;color:#b6bccb;font-family:'JetBrains Mono',monospace">{{ lesson.time }}</span></div>
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px"><div><div style="font-size:20px;font-weight:600">{{ lesson.subj }}</div><div style="font-size:13px;color:#b6bccb">Rom {{ lesson.room }} · {{ lesson.left }}</div></div>
+<a href="{{ lesson.map }}" target="_blank" style="flex:0 0 auto;padding:8px 14px;border-radius:999px;background:#111522;border:1px solid #232938;font-size:13px">MazeMap ↗</a></div>
+<div style="height:4px;border-radius:2px;background:#232938;overflow:hidden"><div style="height:100%;width:{{ lesson.pct }};background:#a8d4fb"></div></div>
+</div></sc-if>
+<sc-if value="{{ lesson.none }}"><div style="font-size:14px;color:#b6bccb">Ingen flere timer i dag</div></sc-if></div>
+<div style="display:flex;gap:10px;overflow-x:auto;margin:0 -16px;padding:0 16px 4px;scroll-snap-type:x mandatory">
+<sc-for list="{{ trips }}" as="t" hint-placeholder-count="4"><a href="{{ t.url }}" target="_blank" style="flex:0 0 auto;scroll-snap-align:start;min-width:200px;padding:12px 14px;border-radius:20px;background:rgba(10,12,18,.55);backdrop-filter:blur(12px);display:flex;flex-direction:column;gap:6px"><div style="font-size:12px;color:#b6bccb">{{ t.from }} → <b style="color:#eef0f4">{{ t.to }}</b></div><div style="display:flex;gap:10px"><sc-for list="{{ t.deps }}" as="d"><div style="display:flex;gap:4px;align-items:baseline"><span style="font-size:10px;font-family:'JetBrains Mono',monospace;padding:1px 5px;border-radius:5px;background:{{ d.c }};color:#07080b">{{ d.line }}</span><span style="font-size:17px;font-weight:300">{{ d.min }}</span></div></sc-for></div></a></sc-for>
+</div>
+<div data-dnd="m_home" style="display:flex;flex-direction:column;gap:14px">
+<section style="background:rgba(40,44,52,.55);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.08);border-radius:28px;padding:20px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:flex-end"><div style="display:flex;align-items:flex-end;gap:12px"><div style="font-size:56px;font-weight:300;line-height:1">7°</div><div style="font-size:13px;color:#b6bccb;padding-bottom:6px">Lett regn<br>4 m/s · 3 mm</div></div><a href="https://www.yr.no" target="_blank" style="font-size:12px;color:#b6bccb">yr ↗</a></div>
+<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px"><sc-for list="{{ hours }}" as="w"><div style="background:rgba(7,8,11,.45);border-radius:14px;padding:8px 2px;text-align:center"><div style="font-size:11px;color:#8a93a6">{{ w.h }}</div><div style="font-size:15px">{{ w.t }}</div></div></sc-for></div>
+</section>
+<section style="background:rgba(12,15,24,.94);border-radius:28px;padding:20px;display:flex;flex-direction:column;gap:10px">
+<div style="font-size:17px;font-weight:600">I dag</div>
+<sc-for list="{{ events }}" as="e" hint-placeholder-count="4"><div style="display:flex;gap:10px;align-items:center;padding:12px;border-radius:14px;background:#111522"><span style="width:8px;height:8px;border-radius:50%;background:{{ e.c }}"></span><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#b6bccb;width:72px">{{ e.when }}</span><span style="flex:1;font-size:14px">{{ e.title }}</span></div></sc-for>
+</section>
+<section style="background:rgba(12,15,24,.94);border-radius:28px;padding:20px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;justify-content:space-between"><div style="font-size:17px;font-weight:600">Trading 212</div><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#8fe0b0">+1,8 %</span></div>
+<div style="font-size:40px;font-weight:300">48 312 <span style="font-size:15px;color:#b6bccb">kr</span></div>
+<sc-for list="{{ stocks }}" as="s"><div style="display:flex;justify-content:space-between;padding:10px 12px;border-radius:12px;background:#111522;font-size:14px"><span style="font-family:'JetBrains Mono',monospace">{{ s.t }}</span><span style="font-family:'JetBrains Mono',monospace;color:{{ s.c }}">{{ s.p }}</span></div></sc-for>
+</section>
+<section style="background:rgba(12,15,24,.94);border-radius:28px;padding:20px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between"><div style="font-size:17px;font-weight:600">Energi</div><div style="font-size:13px;color:#b6bccb">2,4 kW nå · 1,42 kr</div></div>
+<div style="display:flex;align-items:flex-end;gap:6px;height:100px"><sc-for list="{{ energy }}" as="b"><div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end"><div style="width:100%;height:{{ b.h }};background:{{ b.c }};border-radius:6px"></div><div style="font-size:10px;color:#8a93a6">{{ b.d }}</div></div></sc-for></div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{ isStudy }}">
+<div style="font-size:32px;font-weight:300;padding:8px 4px">Stu<b style="font-weight:700">die</b></div>
+<div data-dnd="m_study" style="display:flex;flex-direction:column;gap:14px">
+<section style="background:rgba(12,15,24,.94);border-radius:28px;padding:20px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+<sc-for list="{{ studyLinks }}" as="l"><a href="{{ l.url }}" target="_blank" style="aspect-ratio:1;border-radius:18px;background:#111522;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;text-align:center;padding:6px"><b style="font-size:20px;font-weight:600;color:#a8d4fb">{{ l.ab }}</b><span style="font-size:11px;color:#b6bccb">{{ l.name }}</span></a></sc-for>
+</section>
+<section style="background:rgba(12,15,24,.94);border-radius:28px;padding:20px;display:flex;flex-direction:column;gap:8px">
+<div style="display:flex;justify-content:space-between;align-items:flex-end"><div style="font-size:17px;font-weight:600">Karakterer</div><div style="font-size:13px;color:#b6bccb">Snitt <b style="font-size:24px;font-weight:300;color:#eef0f4">4,8</b></div></div>
+<sc-for list="{{ grades }}" as="g"><div style="display:flex;justify-content:space-between;align-items:center;padding:12px;border-radius:12px;background:#111522"><div><div style="font-size:14px">{{ g.f }}</div><div style="font-size:11px;color:#8a93a6;font-family:'JetBrains Mono',monospace">{{ g.t }}</div></div><b style="font-size:22px;font-weight:500">{{ g.g }}</b></div></sc-for>
+</section>
+<section style="background:rgba(12,15,24,.94);border-radius:28px;padding:20px;display:flex;flex-direction:column;gap:8px">
+<div style="font-size:17px;font-weight:600">Kommende prøver</div>
+<sc-for list="{{ tests }}" as="t"><div style="display:flex;gap:12px;padding:12px;border-radius:12px;background:#111522"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#a8d4fb;width:70px">{{ t.d }}</span><div><div style="font-size:14px">{{ t.t }}</div><div style="font-size:11px;color:#8a93a6">{{ t.n }}</div></div></div></sc-for>
+</section>
+<section style="background:rgba(12,15,24,.94);border-radius:28px;padding:20px;display:flex;flex-direction:column;gap:8px">
+<div style="font-size:17px;font-weight:600">Studielån</div>
+<div style="font-size:36px;font-weight:300">46 120 kr</div>
+<div style="height:8px;border-radius:4px;background:#111522;overflow:hidden"><div style="height:100%;width:62%;background:#f3d38a"></div></div>
+<div style="font-size:13px;color:#b6bccb">Stipend 3 860 kr/mnd · neste 15. nov</div>
+</section>
+</div>
+</sc-if>
+
+<sc-if value="{{ isEco }}">
+<div style="font-size:32px;font-weight:300;padding:8px 4px">Øko<b style="font-weight:700">nomi</b></div>
+<section style="background:rgba(12,15,24,.94);border-radius:28px;padding:20px;display:flex;flex-direction:column;gap:10px">
+<div style="font-size:14px;color:#b6bccb"><b style="font-size:38px;font-weight:300;color:#eef0f4">{{ totalStr }}</b> av {{ budgetStr }}</div>
+<div style="height:10px;border-radius:5px;background:#111522;overflow:hidden"><div style="height:100%;width:{{ budgetPct }};background:#a8d4fb"></div></div>
+<div style="display:flex;gap:6px;overflow-x:auto;margin:4px -20px 0;padding:0 20px"><sc-for list="{{ catTotals }}" as="c"><button onClick="{{ c.pick }}" style="flex:0 0 auto;padding:8px 12px;border-radius:999px;border:1px solid {{ c.border }};background:#111522;color:#eef0f4;font-size:13px;display:flex;gap:6px;align-items:center"><span style="width:8px;height:8px;border-radius:2px;background:{{ c.color }}"></span>{{ c.name }} <span style="color:#8a93a6">{{ c.sum }}</span></button></sc-for></div>
+</section>
+<input placeholder="Søk butikk…" value="{{ q }}" onChange="{{ setQ }}" style="padding:14px 18px;background:rgba(11,14,21,.9);border:1px solid #232938;border-radius:999px;color:#eef0f4;outline:none;font-size:16px">
+<section style="background:rgba(12,15,24,.94);border-radius:28px;padding:12px;display:flex;flex-direction:column;gap:8px">
+<sc-for list="{{ receipts }}" as="r" hint-placeholder-count="5"><div style="display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px;border-radius:16px;background:#111522">
+<div style="width:44px;height:44px;border-radius:12px;background:#1a1f2e url({{ r.img }}) center/cover;display:grid;place-items:center;font-size:9px;color:#6b7385;font-family:'JetBrains Mono',monospace">{{ r.ext }}</div>
+<div style="min-width:0"><input value="{{ r.store }}" onChange="{{ r.setStore }}" style="background:none;border:0;color:#eef0f4;font-size:15px;width:100%;outline:none;padding:0"><select value="{{ r.cat }}" onChange="{{ r.setCat }}" style="background:none;border:0;color:{{ r.color }};font-size:12px;padding:0"><sc-for list="{{ catNames }}" as="n"><option value="{{ n }}">{{ n }}</option></sc-for></select></div>
+<input value="{{ r.amount }}" onChange="{{ r.setAmount }}" inputmode="decimal" style="width:76px;background:#0b0e15;color:#eef0f4;border:1px solid #232938;border-radius:10px;padding:10px 8px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:15px">
+</div></sc-for>
+</section>
+<button onClick="{{ exportCsv }}" style="padding:14px;border-radius:999px;border:1px solid #232938;background:rgba(10,12,18,.8);color:#eef0f4;font-size:15px">Eksporter CSV</button>
+<label style="position:fixed;right:max(20px,calc(50% - 200px));bottom:calc(env(safe-area-inset-bottom) + 96px);width:60px;height:60px;border-radius:50%;background:#a8d4fb;color:#07080b;display:grid;place-items:center;font-size:30px;box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:5">+<input type="file" accept="image/*" capture="environment" multiple onChange="{{ upload }}" style="display:none"></label>
+</sc-if>
+
+<sc-if value="{{ isMore }}">
+<div style="font-size:32px;font-weight:300;padding:8px 4px">Snar<b style="font-weight:700">veier</b></div>
+<section style="background:rgba(12,15,24,.94);border-radius:28px;padding:20px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+<sc-for list="{{ links }}" as="l"><a href="{{ l.url }}" target="_blank" style="aspect-ratio:1;border-radius:16px;background:#111522;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center"><b style="font-size:17px;font-weight:600;color:{{ l.c }}">{{ l.ab }}</b><span style="font-size:10px;color:#b6bccb">{{ l.name }}</span></a></sc-for>
+</section>
+<section style="background:rgba(12,15,24,.94);border-radius:28px;padding:20px;display:flex;flex-direction:column;gap:8px">
+<div style="font-size:17px;font-weight:600">Homelab</div>
+<sc-for list="{{ services }}" as="s"><a href="{{ s.url }}" target="_blank" style="display:flex;justify-content:space-between;align-items:center;padding:14px;border-radius:14px;background:#111522"><span style="display:flex;gap:10px;align-items:center"><span style="width:8px;height:8px;border-radius:50%;background:#8fe0b0"></span>{{ s.name }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#8a93a6">{{ s.ip }}</span></a></sc-for>
+</section>
+<div style="display:flex;gap:10px"><a href="CV.dc.html" style="flex:1;padding:14px;border-radius:999px;border:1px solid #232938;background:rgba(10,12,18,.8);text-align:center">CV ↗</a><a href="Homelab v2.dc.html" style="flex:1;padding:14px;border-radius:999px;border:1px solid #232938;background:rgba(10,12,18,.8);text-align:center">Desktop ↗</a></div>
+</sc-if>
+</div>
+
+<nav style="position:fixed;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom) + 16px);width:calc(100% - 32px);max-width:408px;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:6px;border-radius:999px;background:rgba(10,12,18,.82);backdrop-filter:blur(20px);border:1px solid #232938;z-index:6">
+<sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4"><button onClick="{{ t.go }}" style="height:52px;border-radius:999px;border:0;background:{{ t.bg }};color:{{ t.fg }};font-size:14px;font-weight:500">{{ t.name }}</button></sc-for>
+</nav>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:402,&quot;height&quot;:874}}">
+const CATS={Mat:'#8fe0b0',Transport:'#a8d4fb',Bolig:'#f3d38a',Fritid:'#e8a6d8',Skole:'#9fb4ff',Annet:'#8a93a6'};
+const SEED=[{id:1,store:'Rema 1000',date:'14.10.2026',cat:'Mat',amount:'412'},{id:2,store:'Ruter månedskort',date:'01.10.2026',cat:'Transport',amount:'518'},{id:3,store:'Akademika',date:'05.10.2026',cat:'Skole',amount:'649'},{id:4,store:'Kiwi',date:'10.10.2026',cat:'Mat',amount:'287'},{id:5,store:'Kino',date:'11.10.2026',cat:'Fritid',amount:'175'},{id:6,store:'Husleie-andel',date:'01.10.2026',cat:'Bolig',amount:'3500'}];
+const L=[['NRK','https://www.nrk.no','#f59a8f'],['VG','https://www.vg.no','#f59a8f'],['FINN','https://www.finn.no','#a8d4fb'],['Komplett','https://www.komplett.no','#f3d38a'],['Yr','https://www.yr.no','#a8d4fb'],['Canvas','https://canvas.instructure.com','#f3d38a'],['Claude','https://claude.ai','#e8b48f'],['ChatGPT','https://chatgpt.com','#8fe0b0'],['Gemini','https://gemini.google.com','#9fb4ff'],['Ruter','http://192.168.1.1','#8fe0b0'],['HA','http://192.168.1.20:8123','#a8d4fb'],['Proxmox','https://192.168.1.10:8006','#f3d38a'],['Homey','https://my.homey.app','#e8a6d8'],['LabDeck','http://192.168.1.50','#9fb4ff']];
+const FP=f=>'https://commons.wikimedia.org/wiki/Special:FilePath/'+encodeURIComponent(f)+'?width=1200';
+const OSLO=['Oslo_Opera_House_-_2025.jpg','Panorama_taken_from_top_of_the_Oslo_Opera_House_(Operahuset)_(29585739880).jpg','Oslo_Opera_House_seen_from_Langkaia.JPG'].map(FP);
+const BGS={mane:['Måne','https://upload.wikimedia.org/wikipedia/commons/e/e1/FullMoon2010.jpg'],jorda:['Jorda','https://upload.wikimedia.org/wikipedia/commons/9/97/The_Earth_seen_from_Apollo_17.jpg'],saturn:['Saturn','https://upload.wikimedia.org/wikipedia/commons/c/c7/Saturn_during_Equinox.jpg'],oslo:['Oslo',null],vaer:['Vær',FP('Raindrops_on_a_window.jpg')],ingen:['Ingen','']};
+
+const TT=[['08:15','09:45','Fysikk 2','B-204','Lab B'],['10:00','11:30','Matematikk R2','A-112',''],['12:15','13:45','Norsk','Aula','Fremføring'],['14:00','15:30','Engelsk','C-301','']];
+const lessonNow=n=>{const m=n.getHours()*60+n.getMinutes(),t=s=>{const[a,b]=s.split(':');return a*60+ +b};
+  const cur=TT.find(l=>m>=t(l[0])&&m<t(l[1])),nxt=TT.find(l=>t(l[0])>m),l=cur||nxt;
+  if(!l)return{has:false,none:true};const [s,e,subj,room,note]=l;
+  return{has:true,none:false,label:cur?'NÅ':'NESTE',subj,room,time:s+'–'+e,note,left:cur?(t(e)-m)+' min igjen':'starter om '+(t(s)-m)+' min',pct:cur?((m-t(s))/(t(e)-t(s))*100)+'%':'0%',
+    map:'https://use.mazemap.com/#v=1&search='+encodeURIComponent(room)}};
+
+const STOPS={Majorstuen:['58381',10.71634,59.929213],Amagerveien:['6354',10.660875,59.952497],Frydelund:['6258',10.733173,59.920864,'Frydenlund'],'Holbergs plass':['63280',10.73548,59.91795]};
+const ruterUrl=(a,b)=>{const f=STOPS[a],t=STOPS[b],q=(p,s,n)=>p+'Id=__NSR-StopPlace-'+s[0]+'__&'+p+'Type=__STOP_PLACE__&'+p+'Name=__'+encodeURIComponent(s[3]||n)+'__&'+p+'Longitude='+s[1]+'&'+p+'Latitude='+s[2];return 'https://reise.ruter.no/?'+q('from',f,a)+'&'+q('to',t,b)};
+class Component extends DCLogic {
+  state={locked:sessionStorage.getItem('hl_auth')!=='1',pw:'',pwError:false,now:new Date(),tab:'home',filter:'',q:'',bgChoice:localStorage.getItem('hl_bg')||'mane',receipts:JSON.parse(localStorage.getItem('hl_receipts')||'null')||SEED};
+  componentDidMount(){this.pre=[...OSLO,...Object.values(BGS).map(b=>b[1]).filter(Boolean)].map(u=>{const i=new Image();i.src=u;return i});this.t=setInterval(()=>this.setState({now:new Date()}),1000);this.setupDnd()}
+  componentDidUpdate(){this.setupDnd()}
+  componentWillUnmount(){clearInterval(this.t)}
+  setupDnd(){document.querySelectorAll('[data-dnd]').forEach(g=>{const key='hl_order_'+g.dataset.dnd,kids=[...g.children],saved=JSON.parse(localStorage.getItem(key)||'null');
+    kids.forEach((el,i)=>{if(el.dataset.dndI)return;el.dataset.dndI=i;el.style.order=saved&&saved.indexOf(i)>-1?saved.indexOf(i):i;let timer,startY;
+      el.addEventListener('touchstart',e=>{startY=e.touches[0].clientY;timer=setTimeout(()=>{this.drag=el;el.style.transform='scale(.97)';el.style.opacity='.7';navigator.vibrate&&navigator.vibrate(20)},450)},{passive:true});
+      el.addEventListener('touchmove',e=>{if(!this.drag){if(Math.abs(e.touches[0].clientY-startY)>8)clearTimeout(timer);return}e.preventDefault();const y=e.touches[0].clientY,sorted=[...g.children].sort((a,b)=>a.style.order-b.style.order);
+        const tgt=sorted.find(k=>{const r=k.getBoundingClientRect();return y>r.top&&y<r.bottom});if(tgt&&tgt!==this.drag){const f=sorted.indexOf(this.drag),t=sorted.indexOf(tgt);sorted.splice(f,1);sorted.splice(t,0,this.drag);sorted.forEach((k,j)=>k.style.order=j)}},{passive:false});
+      el.addEventListener('touchend',()=>{clearTimeout(timer);if(this.drag){this.drag.style.transform='';this.drag.style.opacity='';localStorage.setItem(key,JSON.stringify([...g.children].sort((a,b)=>a.style.order-b.style.order).map(k=>+k.dataset.dndI)));this.drag=null}});
+    })})}
+  save(r){this.setState({receipts:r});try{localStorage.setItem('hl_receipts',JSON.stringify(r))}catch(e){}}
+  upd(id,k,v){this.save(this.state.receipts.map(r=>r.id===id?{...r,[k]:v}:r))}
+  renderVals(){
+    const s=this.state,n=s.now,h=n.getHours(),p2=x=>String(x).padStart(2,'0');
+    const fmt=v=>Math.round(v).toLocaleString('nb-NO')+' kr',num=v=>parseFloat(String(v).replace(',','.'))||0;
+    const total=s.receipts.reduce((a,r)=>a+num(r.amount),0),budget=num(localStorage.getItem('hl_budget')||8000);
+    const custom=JSON.parse(localStorage.getItem('hl_bgc')||'{}');
+    const bk=BGS[s.bgChoice]?s.bgChoice:'mane',img=bk==='oslo'?(custom.oslo||OSLO[Math.floor(n.getTime()/15000)%OSLO.length]):bk==='vaer'?(custom.vaer_regn||BGS.vaer[1]):BGS[bk][1];
+    const list=s.receipts.filter(r=>(!s.filter||r.cat===s.filter)&&r.store.toLowerCase().includes(s.q.toLowerCase()));
+    const en=[18,22,15,26,20,12,17];
+    const ln=lessonNow(n);
+    return {
+      lesson:ln,
+      locked:s.locked,unlocked:!s.locked,pw:s.pw,pwError:s.pwError,
+      bg:img?`linear-gradient(180deg,rgba(7,8,11,.2),rgba(7,8,11,.85) 60%),url(${img})`:'none',
+      bgName:BGS[bk][0],cycleBg:()=>{const ks=Object.keys(BGS),k=ks[(ks.indexOf(bk)+1)%ks.length];localStorage.setItem('hl_bg',k);this.setState({bgChoice:k})},
+      setPw:e=>this.setState({pw:e.target.value,pwError:false}),
+      login:e=>{e.preventDefault();if(s.pw==='homelab'){sessionStorage.setItem('hl_auth','1');this.setState({locked:false,pw:''})}else this.setState({pwError:true})},
+      logout:()=>{sessionStorage.removeItem('hl_auth');this.setState({locked:true})},
+      tabs:[['home','Hjem'],['study','Studie'],['eco','Økonomi'],['more','Mer']].map(([k,name])=>({name,bg:s.tab===k?'#fff':'transparent',fg:s.tab===k?'#07080b':'#eef0f4',go:()=>{this.setState({tab:k});window.scrollTo(0,0)}})),
+      isHome:s.tab==='home',isStudy:s.tab==='study',isEco:s.tab==='eco',isMore:s.tab==='more',
+      greeting:h<10?'God morgen':h<18?'Hei':'God kveld',
+      dateStr:n.toLocaleDateString('nb-NO',{weekday:'long',day:'numeric',month:'long'}).replace(/^./,c=>c.toUpperCase())+' · Oslo',
+      timeStr:p2(h)+':'+p2(n.getMinutes()),secStr:p2(n.getSeconds()),
+      trips:[['Amagerveien','Majorstuen',[['T5',3],['T5',11],['T5',19]]],['Frydelund','Majorstuen',[['19',2],['12',7],['19',14]]],['Majorstuen','Amagerveien',[['T5',5],['T5',13],['T5',21]]],['Majorstuen','Holbergs plass',[['19',4],['11',9],['19',16]]]].map(([from,to,ds])=>({from,to,url:ruterUrl(from,to),deps:ds.map(([line,mm])=>{const m=(mm-(n.getMinutes()%8)+8)%30||1;return{line,min:m<=1?'nå':m+'m',c:line[0]==='T'?'#f3d38a':'#a8d4fb'}})})),
+      hours:[['Nå','7°'],['15','7°'],['16','6°'],['17','6°'],['18','5°'],['19','5°']].map(([h,t])=>({h,t})),
+      events:[{when:'10:15',title:'Matematikk R2',c:'#9fb4ff'},{when:'12:30',title:'Norsk – fremføring',c:'#f3d38a'},{when:'Tir 23:59',title:'Innlevering: Historie',c:'#f59a8f'},{when:'Tor 09:00',title:'Prøve i engelsk',c:'#9fb4ff'}],
+      stocks:[['AAPL','+2,1 %'],['NVDA','+3,4 %'],['EQNR','-0,6 %'],['VUSA','+0,9 %']].map(([t,p])=>({t,p,c:p[0]==='-'?'#f59a8f':'#8fe0b0'})),
+      energy:['F','L','S','M','T','O','T'].map((d,i)=>({d,h:(en[i]/26*90)+'%',c:i===6?'#a8d4fb':'#232c40'})),
+      studyLinks:[['Canvas','https://canvas.instructure.com'],['Notion','https://www.notion.so'],['Skolen','https://www.vilbli.no'],['Visma','https://www.vismaskole.no'],['NDLA','https://ndla.no'],['Lånekassen','https://lanekassen.no']].map(([name,url])=>({name,url,ab:name.slice(0,2)})),
+      grades:[['Matematikk R2',5,'4, 5, 5'],['Fysikk 2',4,'4, 4, 5'],['Norsk',5,'5, 5'],['Engelsk',6,'6, 5'],['Historie',4,'4, 3, 5']].map(([f,g,t])=>({f,g,t})),
+      tests:[['Tor 23.10','Prøve i engelsk','Kap. 3–5'],['Tir 28.10','Innlevering historie','Canvas, 23:59'],['Fre 07.11','Heldagsprøve R2','Integrasjon']].map(([d,t,n])=>({d,t,n})),
+      totalStr:fmt(total),budgetStr:fmt(budget),budgetPct:Math.min(100,total/budget*100)+'%',
+      catTotals:Object.keys(CATS).map(c=>({name:c,color:CATS[c],sum:fmt(s.receipts.filter(r=>r.cat===c).reduce((a,r)=>a+num(r.amount),0)),border:s.filter===c?CATS[c]:'#232938',pick:()=>this.setState({filter:s.filter===c?'':c})})),
+      catNames:Object.keys(CATS),q:s.q,setQ:e=>this.setState({q:e.target.value}),
+      receipts:list.map(r=>({...r,ext:r.img?'':'KVT',img:r.img||'',color:CATS[r.cat],setStore:e=>this.upd(r.id,'store',e.target.value),setCat:e=>this.upd(r.id,'cat',e.target.value),setAmount:e=>this.upd(r.id,'amount',e.target.value)})),
+      upload:e=>{[...e.target.files].forEach(f=>{const rd=new FileReader();rd.onload=()=>this.save([{id:Date.now()+Math.random(),store:f.name.replace(/\.[^.]+$/,''),date:new Date().toLocaleDateString('nb-NO'),cat:'Annet',amount:'0',img:rd.result},...this.state.receipts]);rd.readAsDataURL(f)});e.target.value=''},
+      exportCsv:()=>{const csv='Dato;Butikk;Kategori;Beløp\n'+s.receipts.map(r=>[r.date,r.store,r.cat,r.amount].join(';')).join('\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv'}));a.download='kvitteringer.csv';a.click()},
+      links:L.map(([name,url,c])=>({name,url,c,ab:name.slice(0,2)})),
+      services:[['Ruter','192.168.1.1','http://192.168.1.1'],['Home Assistant','.20:8123','http://192.168.1.20:8123'],['Proxmox','.10:8006','https://192.168.1.10:8006'],['Homey','my.homey.app','https://my.homey.app'],['LabDeck','192.168.1.50','http://192.168.1.50'],['Pi-hole','.30/admin','http://192.168.1.30/admin'],['NAS','.40:5000','http://192.168.1.40:5000']].map(([name,ip,url])=>({name,ip,url}))
+    };
+  }
+}
+</script>
+</body>
+</html>

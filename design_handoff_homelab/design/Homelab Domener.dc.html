@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#07080b;color:#eef0f4;font-family:'Outfit',sans-serif}a{color:#eef0f4;text-decoration:none}a:hover{color:#a8d4fb}*{box-sizing:border-box}input,select,button{font-family:inherit}</style>
+</helmet>
+<div style="display:flex;flex-direction:column;gap:22px;color:#eef0f4;font-family:'Outfit',sans-serif">
+
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+<div style="display:flex;gap:6px;flex-wrap:wrap;padding:5px;border:1px solid #232938;border-radius:999px;background:rgba(10,12,18,.7)">
+<sc-for list="{{ pills }}" as="p" hint-placeholder-count="3"><button onClick="{{ p.go }}" style="display:flex;align-items:center;gap:8px;height:38px;padding:0 16px;border-radius:999px;border:0;background:{{ p.bg }};color:{{ p.fg }};cursor:pointer;font-size:14px;white-space:nowrap"><span style="width:7px;height:7px;border-radius:4px;background:{{ p.dot }}"></span>{{ p.n }}</button></sc-for>
+
+</div>
+<div style="display:flex;align-items:center;gap:6px;padding:4px;border:1px solid #232938;border-radius:12px;background:rgba(10,12,18,.7)"><sc-for list="{{ periods }}" as="p"><button onClick="{{ p.go }}" style="height:30px;padding:0 12px;border-radius:8px;border:0;background:{{ p.bg }};color:{{ p.fg }};cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:12px">{{ p.n }}</button></sc-for></div>
+</div>
+
+
+
+<sc-if value="{{ isAll }}">
+<section style="background:rgba(18,25,38,.86);border-radius:24px;padding:10px 0;overflow-x:auto">
+<div style="min-width:860px">
+<div style="display:grid;grid-template-columns:minmax(0,1.6fr) 110px 120px 110px 90px 100px 120px 110px;gap:12px;padding:12px 24px;font-size:12px;color:#8a93a6;text-transform:uppercase;letter-spacing:.06em"><span>Domene</span><span>Status</span><span style="text-align:right">Forespørsler</span><span style="text-align:right">Besøkende</span><span style="text-align:right">Bufret</span><span style="text-align:right">Oppetid</span><span>SSL utløper</span><span>Fornyes</span></div>
+<sc-for list="{{ allRows }}" as="r" hint-placeholder-count="3"><button onClick="{{ r.go }}" style="display:grid;width:100%;grid-template-columns:minmax(0,1.6fr) 110px 120px 110px 90px 100px 120px 110px;gap:12px;align-items:center;padding:14px 24px;border:0;border-top:1px solid #232938;background:transparent;color:#eef0f4;cursor:pointer;text-align:left;font-size:14px"><span style="min-width:0"><span style="display:block;font-family:'JetBrains Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</span><span style="font-size:12px;color:#8a93a6">{{ r.src }}</span></span><span style="display:flex;align-items:center;gap:7px;font-size:13px;color:{{ r.stC }}"><span style="width:7px;height:7px;border-radius:4px;background:{{ r.stC }}"></span>{{ r.st }}</span><span style="text-align:right;font-family:'JetBrains Mono',monospace">{{ r.req }}</span><span style="text-align:right;font-family:'JetBrains Mono',monospace">{{ r.vis }}</span><span style="text-align:right;font-family:'JetBrains Mono',monospace">{{ r.cache }}</span><span style="text-align:right;font-family:'JetBrains Mono',monospace;color:{{ r.upC }}">{{ r.up }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:{{ r.certC }}">{{ r.cert }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:13px;color:#8a93a6">{{ r.exp }}</span></button></sc-for>
+</div>
+</section>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:14px"><sc-for list="{{ allKpi }}" as="k"><div style="background:rgba(18,25,38,.86);border-radius:20px;padding:18px 20px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;color:#8a93a6">{{ k.l }}</span><b style="font-size:28px;font-weight:600;letter-spacing:-.02em;white-space:nowrap">{{ k.v }}</b><span style="font-size:12px;color:#8a93a6">{{ k.s }}</span></div></sc-for></div>
+</sc-if>
+
+<sc-if value="{{ isOne }}">
+<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap"><div><div style="font-size:26px;font-weight:600;font-family:'JetBrains Mono',monospace;letter-spacing:-.02em">{{ d.name }}</div><div style="font-size:13px;color:#8a93a6">{{ d.sub }}</div></div><span style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:rgba(143,224,176,.12);color:#8fe0b0;font-size:13px"><span style="width:7px;height:7px;border-radius:4px;background:#8fe0b0"></span>{{ d.badge }}</span></div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:14px">
+<sc-for list="{{ kpi }}" as="k" hint-placeholder-count="5"><div style="background:rgba(18,25,38,.86);border-radius:20px;padding:16px 18px 10px;display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:13px;color:#8a93a6">{{ k.l }}</span><b style="font-size:27px;font-weight:600;letter-spacing:-.02em;white-space:nowrap">{{ k.v }}</b><span style="font-size:12px;color:{{ k.dc }}">{{ k.d }}</span><svg viewBox="0 0 100 30" preserveAspectRatio="none" style="width:100%;height:34px;display:block;margin-top:6px"><path d="{{ k.area }}" fill="{{ k.fill }}"></path><path d="{{ k.line }}" fill="none" stroke="{{ k.c }}" stroke-width="1.5" vector-effect="non-scaling-stroke"></path></svg></div></sc-for>
+</div>
+
+<div style="display:flex;flex-wrap:wrap;gap:14px">
+<section style="flex:3 1 520px;min-width:0;background:rgba(18,25,38,.86);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap"><div style="font-size:18px;font-weight:600">Trafikk <span style="font-size:13px;font-weight:400;color:#8a93a6">{{ trafficSub }}</span></div><div style="display:flex;gap:14px;font-size:12.5px;color:#8a93a6"><span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:#a8d4fb"></span>Totalt</span><span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:#7fe0d0"></span>Bufret</span></div></div>
+<div style="display:flex;gap:8px"><div style="display:flex;flex-direction:column;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#6b7385;padding-bottom:18px;text-align:right"><sc-for list="{{ yTicks }}" as="t"><span>{{ t }}</span></sc-for></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px"><svg viewBox="0 0 600 220" preserveAspectRatio="none" style="width:100%;height:240px;display:block"><path d="M0 55H600M0 110H600M0 165H600" stroke="#232938"></path><path d="{{ tArea }}" fill="rgba(168,212,251,.14)"></path><path d="{{ tLine }}" fill="none" stroke="#a8d4fb" stroke-width="2" vector-effect="non-scaling-stroke"></path><path d="{{ cLine }}" fill="none" stroke="#7fe0d0" stroke-width="1.6" vector-effect="non-scaling-stroke"></path></svg>
+<div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#6b7385"><sc-for list="{{ xTicks }}" as="t"><span>{{ t }}</span></sc-for></div></div></div>
+</section>
+<section style="flex:1 1 260px;min-width:0;background:rgba(18,25,38,.86);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:center"><div style="font-size:18px;font-weight:600">Sanntid</div><span style="display:flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:rgba(143,224,176,.12);color:#8fe0b0;font-size:12px"><span style="width:6px;height:6px;border-radius:3px;background:#8fe0b0"></span>Live</span></div>
+<div><div style="font-size:54px;font-weight:600;line-height:1;letter-spacing:-.03em">{{ live }}</div><div style="font-size:13px;color:#8a93a6;margin-top:4px">besøkende akkurat nå</div></div>
+<div style="display:flex;align-items:flex-end;gap:2px;height:56px"><sc-for list="{{ liveBars }}" as="b"><span style="flex:1 1 0;min-width:0;height:{{ b }};border-radius:2px;background:#5b8fd6"></span></sc-for></div>
+<div style="display:flex;flex-direction:column"><sc-for list="{{ livePaths }}" as="p"><div style="display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-top:1px solid #232938;font-size:13.5px"><span style="font-family:'JetBrains Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.n }}</span><span style="font-family:'JetBrains Mono',monospace;color:#8a93a6">{{ p.v }}</span></div></sc-for></div>
+</section>
+</div>
+
+<div style="font-size:20px;font-weight:500;margin-top:6px">Publikum</div>
+<div style="display:flex;flex-wrap:wrap;gap:14px">
+<sc-if value="{{ showMap }}"><section style="flex:2 1 460px;min-width:0;background:rgba(18,25,38,.86);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><div style="font-size:18px;font-weight:600">Besøk per land <span style="font-size:13px;font-weight:400;color:#8a93a6">Unike besøkende · {{ mapSub }}</span></div><span style="font-size:12.5px;color:#8a93a6">{{ mapCount }}</span></div>
+<iframe src="domener-kart.html#{{ mapHash }}" title="Verdenskart over besøk" style="width:100%;height:340px;border:0;display:block;background:transparent" allowtransparency="true"></iframe>
+<div style="display:flex;align-items:center;gap:10px;font-size:12px;color:#8a93a6"><span>Færre</span><span style="width:120px;height:6px;border-radius:3px;background:linear-gradient(90deg,#24406b,#a8d4fb)"></span><span>Flere</span><span style="margin-left:auto;display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:3px;background:#1d2738"></span>Ingen besøk</span></div>
+</section></sc-if>
+<section style="flex:1 1 260px;min-width:0;background:rgba(18,25,38,.86);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:10px">
+<div style="font-size:18px;font-weight:600">Topp land <span style="font-size:13px;font-weight:400;color:#8a93a6">Unike besøkende</span></div>
+<sc-for list="{{ countries }}" as="c"><div style="display:flex;flex-direction:column;gap:6px;padding:6px 0"><div style="display:flex;justify-content:space-between;gap:10px;font-size:14px"><span>{{ c.n }}</span><span style="font-family:'JetBrains Mono',monospace;color:#8a93a6">{{ c.v }}</span></div><div style="height:4px;border-radius:2px;background:#1d2738"><div style="height:100%;width:{{ c.w }};border-radius:2px;background:#5b8fd6"></div></div></div></sc-for>
+</section>
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px">
+<section style="background:rgba(18,25,38,.86);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:16px">
+<div style="font-size:18px;font-weight:600">Enheter</div>
+<div style="display:flex;height:12px;border-radius:6px;overflow:hidden;gap:2px"><sc-for list="{{ devices }}" as="x"><span style="flex:{{ x.f }} 1 0;background:{{ x.c }}"></span></sc-for></div>
+<div style="display:flex;flex-direction:column;gap:8px"><sc-for list="{{ devices }}" as="x"><div style="display:flex;align-items:center;gap:10px;font-size:14px"><span style="width:9px;height:9px;border-radius:3px;background:{{ x.c }}"></span><span style="flex:1">{{ x.n }}</span><span style="font-family:'JetBrains Mono',monospace;color:#8a93a6">{{ x.v }}</span></div></sc-for></div>
+</section>
+<section style="background:rgba(18,25,38,.86);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:8px">
+<div style="font-size:18px;font-weight:600;margin-bottom:8px">Nettlesere</div>
+<sc-for list="{{ browsers }}" as="x"><div style="display:flex;align-items:center;gap:10px;font-size:14px;padding:4px 0"><span style="flex:1">{{ x.n }}</span><span style="font-family:'JetBrains Mono',monospace;color:#8a93a6">{{ x.v }}</span></div></sc-for>
+</section>
+</div>
+
+<div style="font-size:20px;font-weight:500;margin-top:6px">Ytelse og sikkerhet</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px">
+<section style="background:rgba(18,25,38,.86);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:12px">
+<div style="font-size:18px;font-weight:600">Statuskoder <span style="font-size:13px;font-weight:400;color:#8a93a6">{{ statusSub }}</span></div>
+<div style="display:flex;height:8px;border-radius:4px;overflow:hidden;gap:1px"><sc-for list="{{ status }}" as="x"><span style="flex:{{ x.f }} 1 0;min-width:2px;background:{{ x.c }}"></span></sc-for></div>
+<sc-for list="{{ status }}" as="x"><div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #232938;font-size:14px"><span style="width:8px;height:8px;border-radius:4px;background:{{ x.c }}"></span><span style="flex:1">{{ x.n }}</span><span style="font-family:'JetBrains Mono',monospace;color:#8a93a6;font-size:13px">{{ x.p }}</span><span style="width:90px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:13px">{{ x.v }}</span></div></sc-for>
+</section>
+<section style="background:rgba(18,25,38,.86);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:12px">
+<div style="font-size:18px;font-weight:600">Ytelse <span style="font-size:13px;font-weight:400;color:#8a93a6">Tid til første byte</span></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px"><sc-for list="{{ perf }}" as="x"><div><div style="font-size:12.5px;color:#8a93a6">{{ x.l }}</div><b style="font-size:24px;font-weight:600;letter-spacing:-.02em">{{ x.v }}</b></div></sc-for></div>
+<svg viewBox="0 0 300 80" preserveAspectRatio="none" style="width:100%;height:80px;display:block"><path d="{{ p95Line }}" fill="none" stroke="#f2b56b" stroke-width="1.5" vector-effect="non-scaling-stroke"></path><path d="{{ p50Line }}" fill="none" stroke="#a8d4fb" stroke-width="1.5" vector-effect="non-scaling-stroke"></path></svg>
+<div style="display:flex;gap:14px;font-size:12px;color:#8a93a6"><span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:#a8d4fb"></span>p50</span><span style="display:flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:4px;background:#f2b56b"></span>p95</span></div>
+</section>
+<section style="background:rgba(18,25,38,.86);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:10px">
+<div style="font-size:18px;font-weight:600">Sikkerhet <span style="font-size:13px;font-weight:400;color:#8a93a6">{{ secSub }}</span></div>
+<sc-for list="{{ sec }}" as="x"><div style="display:flex;flex-direction:column;gap:6px;padding:6px 0"><div style="display:flex;justify-content:space-between;gap:10px;font-size:14px"><span>{{ x.n }}</span><span style="font-family:'JetBrains Mono',monospace;color:#8a93a6">{{ x.v }}</span></div><div style="height:4px;border-radius:2px;background:#1d2738"><div style="height:100%;width:{{ x.w }};border-radius:2px;background:#5b8fd6"></div></div></div></sc-for>
+</section>
+</div>
+
+<div style="font-size:20px;font-weight:500;margin-top:6px">Innhold</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:14px">
+<section style="background:rgba(18,25,38,.86);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:10px">
+<div style="font-size:18px;font-weight:600">Topp sider <span style="font-size:13px;font-weight:400;color:#8a93a6">Sidevisninger</span></div>
+<sc-for list="{{ pages }}" as="x"><div style="display:flex;flex-direction:column;gap:6px;padding:6px 0"><div style="display:flex;justify-content:space-between;gap:10px;font-size:14px"><span style="font-family:'JetBrains Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ x.n }}</span><span style="font-family:'JetBrains Mono',monospace;color:#8a93a6">{{ x.v }}</span></div><div style="height:4px;border-radius:2px;background:#1d2738"><div style="height:100%;width:{{ x.w }};border-radius:2px;background:#5b8fd6"></div></div></div></sc-for>
+</section>
+<section style="background:rgba(18,25,38,.86);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:10px">
+<div style="font-size:18px;font-weight:600">Topp henvisere <span style="font-size:13px;font-weight:400;color:#8a93a6">Besøk</span></div>
+<sc-for list="{{ refs }}" as="x"><div style="display:flex;flex-direction:column;gap:6px;padding:6px 0"><div style="display:flex;justify-content:space-between;gap:10px;font-size:14px"><span>{{ x.n }}</span><span style="font-family:'JetBrains Mono',monospace;color:#8a93a6">{{ x.v }}</span></div><div style="height:4px;border-radius:2px;background:#1d2738"><div style="height:100%;width:{{ x.w }};border-radius:2px;background:#5b8fd6"></div></div></div></sc-for>
+</section>
+</div>
+
+<div style="font-size:20px;font-weight:500;margin-top:6px">Infrastruktur</div>
+<div style="display:flex;flex-wrap:wrap;gap:14px">
+<section style="flex:2 1 460px;min-width:0;background:rgba(18,25,38,.86);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><div style="font-size:18px;font-weight:600">Oppetid <span style="font-size:13px;font-weight:400;color:#8a93a6">Siste 90 dager</span></div><span style="padding:3px 10px;border-radius:999px;background:rgba(143,224,176,.12);color:#8fe0b0;font-family:'JetBrains Mono',monospace;font-size:12.5px">{{ upPct }}</span></div>
+<div style="display:flex;gap:2px;height:44px"><sc-for list="{{ upDays }}" as="u"><span title="{{ u.t }}" style="flex:1 1 0;min-width:0;border-radius:2px;background:{{ u.c }}"></span></sc-for></div>
+<div style="display:flex;justify-content:space-between;gap:10px;font-size:12px;color:#8a93a6;flex-wrap:wrap"><span>90 dager siden</span><span>{{ upNote }}</span><span>I dag</span></div>
+<div style="font-size:16px;font-weight:600;margin-top:6px">DNS-poster</div>
+<div style="display:flex;flex-direction:column;border:1px solid #232938;border-radius:14px;overflow:hidden"><sc-for list="{{ dns }}" as="r"><div style="display:grid;grid-template-columns:64px minmax(0,1fr) minmax(0,1.4fr) 76px;gap:10px;padding:10px 14px;border-bottom:1px solid #232938;font-family:'JetBrains Mono',monospace;font-size:12.5px"><span style="color:#a8d4fb">{{ r.t }}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ r.n }}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#8a93a6">{{ r.c }}</span><span style="color:{{ r.pc }}">{{ r.p }}</span></div></sc-for></div>
+</section>
+<section style="flex:1 1 280px;min-width:0;background:rgba(18,25,38,.86);border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:4px">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px"><div style="font-size:18px;font-weight:600">Domene</div><span style="padding:3px 10px;border-radius:999px;background:{{ d.dnssecBg }};color:{{ d.dnssecC }};font-size:12px">{{ d.dnssec }}</span></div>
+<sc-for list="{{ info }}" as="x"><div style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid #232938;font-size:14px"><span style="color:#8a93a6">{{ x.l }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:13px;text-align:right;color:{{ x.c }}">{{ x.v }}</span></div></sc-for>
+
+</section>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1200,&quot;height&quot;:1600},&quot;defaultPeriod&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;1t&quot;,&quot;24t&quot;,&quot;7d&quot;,&quot;30d&quot;],&quot;default&quot;:&quot;24t&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;liveUpdate&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const DOM0=[
+ {name:'kristo.no',src:'Cloudflare',scale:1,reg:'Domeneshop AS',exp:'14.03.2027',ns:'Cloudflare (ns1 / ns2)',ip:'104.21.48.17',tls:'TLS 1.3',cert:'09.01.2027',dnssec:true,pages:['/','/tjenester','/om-oss','/kontakt','/prosjekter/kystveien','/blogg/vinterdekk-2026'],
+  dns:[['A','kristo.no','104.21.48.17',1],['AAAA','kristo.no','2606:4700:3036::6815',1],['CNAME','www','kristo.no',1],['MX','kristo.no','10 mx.domeneshop.no',0],['TXT','kristo.no','v=spf1 include:_spf.domeneshop.no ~all',0]]},
+ {name:'arildkrist.com',src:'Cloudflare',scale:.16,reg:'Cloudflare Registrar',exp:'14.03.2027',ns:'Cloudflare (ns1 / ns2)',ip:'104.21.7.92',tls:'TLS 1.3',cert:'22.12.2026',dnssec:true,pages:['/','/cv','/prosjekter','/kontakt'],
+  dns:[['A','arildkrist.com','104.21.7.92',1],['CNAME','www','arildkrist.com',1],['CNAME','home','tunnel.cfargotunnel.com',1],['TXT','arildkrist.com','google-site-verification=…',0]]},
+ {name:'home.kristo.no',src:'Cloudflare Tunnel',scale:.02,reg:'Domeneshop AS (via kristo.no)',exp:'14.03.2027',ns:'Cloudflare',ip:'Tunnel · 192.168.1.20',tls:'TLS 1.3 · Access',cert:'09.01.2027',dnssec:true,pages:['/','/finans','/matplan','/api/kvittering'],
+  dns:[['CNAME','home','8f2c…cfargotunnel.com',1],['CNAME','finans.home','8f2c…cfargotunnel.com',1]]}];
+const hash=s=>{let h=2166136261;for(const c of s)h=Math.imul(h^c.charCodeAt(0),16777619);return h>>>0};
+const rng=a=>()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+const nb=v=>Math.round(v).toLocaleString('nb-NO');
+const big=v=>v>=1e6?(v/1e6).toLocaleString('nb-NO',{maximumFractionDigits:2})+' M':v>=1e5?(v/1e3).toLocaleString('nb-NO',{maximumFractionDigits:0})+' k':nb(v);
+const bytes=b=>b>=1e9?(b/1e9).toLocaleString('nb-NO',{maximumFractionDigits:1})+' GB':(b/1e6).toLocaleString('nb-NO',{maximumFractionDigits:0})+' MB';
+const pc=(v,d=1)=>v.toLocaleString('nb-NO',{minimumFractionDigits:d,maximumFractionDigits:d})+' %';
+const path=(a,w,h,max,pad=4)=>{const m=max||Math.max(...a,1);return'M'+a.map((v,i)=>(i/(a.length-1)*w).toFixed(1)+' '+(h-pad-(v/m)*(h-pad*2)).toFixed(1)).join(' L')};
+const PER={'1t':{n:60,hours:1},'24t':{n:48,hours:24},'7d':{n:84,hours:168},'30d':{n:60,hours:720}};
+const SRC_HELP={Cloudflare:'Lag et API-token i Cloudflare med Zone:Read, Analytics:Read og DNS:Read for sonen. Trafikk, land, statuskoder, sikkerhet og DNS hentes fra GraphQL Analytics API.',
+ 'Cloudflare Tunnel':'Bruk samme token som over. Trafikk hentes fra sonen, og tunnelstatus fra cloudflared på homelaben.',
+ Plausible:'Lag en Stats API-nøkkel i Plausible. Gir besøkende, sider, henvisere, land og enheter. Statuskoder og sikkerhet krever Cloudflare.',
+ Umami:'Oppgi adressen til Umami-instansen og en API-nøkkel. Gir besøkende, sider, henvisere, land og enheter.',
+ 'Overvåking':'Ingen token trengs. Homelab pinger domenet hvert minutt og sjekker SSL-sertifikat, DNS og utløpsdato via WHOIS.'};
+function stats(d,per){
+  const P=PER[per],r=rng(hash(d.name+per)),now=new Date(),endH=now.getHours()+now.getMinutes()/60;
+  const curve=h=>{h=((h%24)+24)%24;return .28+.72*Math.exp(-Math.pow((h-14)/4.6,2))+.18*Math.exp(-Math.pow((h-21)/2,2))};
+  const base=82000*d.scale,tot=[],cac=[];
+  for(let i=0;i<P.n;i++){const h=endH-P.hours+(i+1)*P.hours/P.n;const day=Math.floor(h/24);const wk=per==='30d'||per==='7d'?(1-.12*((((day%7)+7)%7)>4)):1;
+    const c=per==='30d'?.62*wk:curve(h)*wk;const v=base*(P.hours/P.n)*c*(.9+.2*r());tot.push(v);cac.push(v*(.84+.06*r()))}
+  const req=tot.reduce((a,v)=>a+v,0),cached=cac.reduce((a,v)=>a+v,0),vis=req*.039,thr=req*.00237;
+  return{P,r,tot,cac,req,cached,vis,thr,bytes:req*31200,cacheP:cached/req*100}}
+class Component extends DCLogic {
+  constructor(p){super(p);let saved=null;try{saved=JSON.parse(localStorage.getItem('hl_domains')||'null')}catch(e){}
+    this.state={doms:saved&&saved.length?saved:DOM0,sel:localStorage.getItem('hl_dom_sel')||'kristo.no',per:p.defaultPeriod||'24t',adding:false,nf:{name:'',src:'Cloudflare',token:''},nfErr:'',tick:0}}
+  norm(list){return list.map(x=>{if(x.dns)return x;const n=x.name,r=rng(hash(n));return{name:n,src:x.src||'Overvåking',scale:+(0.03+r()*.3).toFixed(3),reg:'Hentes fra WHOIS …',exp:'01.06.2027',ns:(x.src||'').startsWith('Cloudflare')?'Cloudflare':'Hentes …',ip:'Hentes …',tls:'TLS 1.3',cert:'01.01.2027',dnssec:false,pages:['/','/om','/kontakt'],dns:[['A',n,'Hentes fra DNS …',0]]}})}
+  reload(){let v=null;try{v=JSON.parse(localStorage.getItem('hl_domains')||'null')}catch(e){}if(!Array.isArray(v)||!v.length)return;const doms=this.norm(v);const sel=doms.some(x=>x.name===this.state.sel)||this.state.sel==='all'?this.state.sel:doms[0].name;localStorage.setItem('hl_domains',JSON.stringify(doms));this.setState({doms,sel})}
+  componentDidUpdate(pp){if(pp.domVer!==this.props.domVer)this.reload()}
+  componentDidMount(){if(!localStorage.getItem('hl_domains'))localStorage.setItem('hl_domains',JSON.stringify(this.state.doms));else this.reload();this._iv=setInterval(()=>{if(this.props.liveUpdate!==false)this.setState(s=>({tick:s.tick+1}))},3000)}
+  componentWillUnmount(){clearInterval(this._iv)}
+  save(doms,sel){localStorage.setItem('hl_domains',JSON.stringify(doms));if(sel)localStorage.setItem('hl_dom_sel',sel);this.setState(sel?{doms,sel}:{doms})}
+  renderVals(){
+    const s=this.state,doms=s.doms,isAll=s.sel==='*',d=doms.find(x=>x.name===s.sel)||doms[0];
+    const pick=k=>()=>{localStorage.setItem('hl_dom_sel',k);this.setState({sel:k})};
+    const dayMs=864e5,days=str=>{const [dd,mm,yy]=str.split('.').map(Number);return Math.round((new Date(yy,mm-1,dd)-new Date())/dayMs)};
+    const upFor=dm=>{const r=rng(hash(dm.name+'up'));return Array.from({length:90},()=>{const x=r();return x<.006?'down':x<.03?'warn':'ok'})};
+    const upPctOf=u=>100-(u.filter(x=>x==='down').length*.9+u.filter(x=>x==='warn').length*.06)/90;
+    const vals={
+      pills:[{n:'Alle domener',k:'*'},...doms.map(x=>({n:x.name,k:x.name}))].map(p=>({n:p.n,bg:s.sel===p.k?'#fff':'transparent',fg:s.sel===p.k?'#07080b':'#eef0f4',dot:p.k==='*'?'#a8d4fb':'#8fe0b0',go:pick(p.k)})),
+      periods:['1t','24t','7d','30d'].map(n=>({n,bg:s.per===n?'#1d2738':'transparent',fg:s.per===n?'#eef0f4':'#8a93a6',go:()=>this.setState({per:n})})),
+      adding:s.adding,toggleAdd:()=>this.setState({adding:!s.adding,nfErr:''}),nf:s.nf,nfErr:s.nfErr,nfHelp:SRC_HELP[s.nf.src],
+      nfOn:Object.fromEntries(['name','src','token'].map(k=>[k,e=>this.setState({nf:{...s.nf,[k]:e.target.value},nfErr:''})])),
+      addDomain:()=>{const n=s.nf.name.trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
+        if(!/^([a-z0-9-]+\.)+[a-z]{2,}$/.test(n))return this.setState({nfErr:'Skriv et gyldig domene, f.eks. eksempel.no'});
+        if(doms.some(x=>x.name===n))return this.setState({nfErr:n+' er allerede lagt til'});
+        const r=rng(hash(n)),nd={name:n,src:s.nf.src,scale:+(0.03+r()*.3).toFixed(3),reg:'Hentes fra WHOIS …',exp:'01.06.2027',ns:s.nf.src.startsWith('Cloudflare')?'Cloudflare':'Hentes …',ip:'Hentes …',tls:'TLS 1.3',cert:'01.01.2027',dnssec:false,pages:['/','/om','/kontakt'],dns:[['A',n,'Hentes fra DNS …',0]]};
+        this.save([...doms,nd],n);this.setState({adding:false,nf:{name:'',src:'Cloudflare',token:''}})},
+      isAll,isOne:!isAll};
+    if(isAll){
+      const rows=doms.map(x=>{const st=stats(x,s.per),u=upFor(x),up=upPctOf(u),cd=days(x.cert);return{x,st,up,cd}});
+      Object.assign(vals,{
+        allRows:rows.map(({x,st,up,cd})=>({name:x.name,src:x.src,st:'Aktiv',stC:'#8fe0b0',req:big(st.req),vis:big(st.vis),cache:pc(st.cacheP),up:pc(up,2),upC:up>99.9?'#8fe0b0':'#f2b56b',cert:x.cert+' · '+cd+' d',certC:cd<30?'#f59a8f':cd<60?'#f2b56b':'#eef0f4',exp:x.exp,go:pick(x.name)})),
+        allKpi:[{l:'Domener',v:String(doms.length),s:doms.filter(x=>x.src.startsWith('Cloudflare')).length+' via Cloudflare'},{l:'Forespørsler totalt',v:big(rows.reduce((a,r)=>a+r.st.req,0)),s:'Siste '+s.per},{l:'Besøkende totalt',v:big(rows.reduce((a,r)=>a+r.st.vis,0)),s:'Unike, siste '+s.per},{l:'Neste utløp',v:(()=>{const m=[...rows].sort((a,b)=>a.cd-b.cd)[0];return m?m.cd+' dager':'–'})(),s:(()=>{const m=[...rows].sort((a,b)=>a.cd-b.cd)[0];return m?'SSL for '+m.x.name:''})()}]});
+      return vals}
+    const st=stats(d,s.per),r=st.r,P=st.P,max=Math.max(...st.tot)*1.08;
+    const sp=(a,c)=>{const l=path(a,100,30);return{line:l,area:l+' L100 30 L0 30 Z',c,fill:c+'22'}};
+    const jit=(a,k,amp=.25)=>a.map(v=>v*k*(1-amp/2+amp*r()));
+    const dl=(v,good=true)=>{const up=v>=0;return{d:(up?'+':'−')+pc(Math.abs(v))+' mot forrige',dc:(up===good)?'#8fe0b0':'#f59a8f'}};
+    const now=new Date(),fmtT=dt=>s.per==='30d'||s.per==='7d'?dt.toLocaleDateString('nb-NO',{day:'2-digit',month:'2-digit'}):dt.toLocaleTimeString('nb-NO',{hour:'2-digit',minute:'2-digit'});
+    const xT=Array.from({length:7},(_,i)=>fmtT(new Date(now-(P.hours*36e5)*(1-i/6))));
+    const yT=[max,max*.75,max*.5,max*.25,0].map(v=>big(v));
+    const tl=path(st.tot,600,220,max,0),u=upFor(d),incidents=u.filter(x=>x!=='ok').length;
+    const thrA=st.tot.map((v,i)=>v*.0024*(r()<.06?3+r()*3:.6+r()*.8));
+    const live=Math.max(1,Math.round(128*d.scale*(.88+.24*Math.abs(Math.sin(s.tick*1.7+hash(d.name)%7)))));
+    const lr=rng(hash(d.name)+s.tick);
+    const certD=days(d.cert),expD=days(d.exp);
+    const share=(list,total,col)=>{const mx=list[0][1];return list.map(([n,f])=>({n,v:nb(total*f),w:(f/mx*100)+'%',c:col}))};
+    const pageW=[.32,.16,.09,.07,.05,.035,.03,.02];
+    const refs=[['google.com',.4],['Direkte',.31],['linkedin.com',.087],['bing.com',.04],['facebook.com',.031],['finn.no',.018]];
+    const status=[['2xx',96.6,'#8fe0b0'],['3xx',2.89,'#a8d4fb'],['4xx',1.41,'#f2b56b'],['5xx',.1,'#f59a8f']];
+    const secL=[['Bot-trafikk',.47],['SQL-injeksjon',.21],['Skanning av sårbarheter',.17],['XSS-forsøk',.09],['Rate limiting',.06]];
+    const p50=Array.from({length:48},()=>38+r()*10+(r()<.08?14:0)),p95=p50.map(v=>v*3.6+r()*40);
+    Object.assign(vals,{
+      d:{name:d.name,sub:'Siste '+{'1t':'time','24t':'24 timer','7d':'7 dager','30d':'30 dager'}[s.per]+' · '+d.src+' · oppdatert '+now.toLocaleTimeString('nb-NO',{hour:'2-digit',minute:'2-digit'}),badge:d.src.startsWith('Cloudflare')?'Beskyttet':'Overvåket',
+        dnssec:d.dnssec?'DNSSEC på':'DNSSEC av',dnssecBg:d.dnssec?'rgba(143,224,176,.12)':'rgba(242,181,107,.12)',dnssecC:d.dnssec?'#8fe0b0':'#f2b56b'},
+      kpi:[{l:'Forespørsler',v:big(st.req),...dl(8.2-r()*6),...sp(st.tot,'#a8d4fb')},{l:'Unike besøkende',v:nb(st.vis),...dl(6.8-r()*5),...sp(jit(st.tot,.039),'#a8d4fb')},{l:'Data levert',v:bytes(st.bytes),...dl(4.1-r()*4),...sp(jit(st.tot,31200),'#7fe0d0')},
+        {l:'Bufret andel',v:pc(st.cacheP),...dl(1.5-r()*2),...sp(st.cac.map((v,i)=>v/st.tot[i]),'#8fe0b0')},{l:'Trusler blokkert',v:nb(st.thr),...dl(14.6-r()*20,false),...sp(thrA,'#f59a8f')}],
+      trafficSub:'Forespørsler per '+{'1t':'minutt','24t':'halvtime','7d':'2 timer','30d':'12 timer'}[s.per],tLine:tl,tArea:tl+' L600 220 L0 220 Z',cLine:path(st.cac,600,220,max,0),xTicks:xT,yTicks:yT,
+      live:String(live),liveBars:Array.from({length:30},()=>(25+lr()*75)+'%'),livePaths:[['/',.48],['/tjenester',.18],['/kontakt',.09]].map(([n,f],i)=>({n:d.pages[i]||n,v:String(Math.max(0,Math.round(live*f)))})),
+      ...(()=>{const C=d.name.startsWith('home.')?[['578','Norge',.97],['752','Sverige',.02],['208','Danmark',.01]]:[['578','Norge',.62],['752','Sverige',.084],['840','USA',.08],['208','Danmark',.043],['276','Tyskland',.032],['826','Storbritannia',.022],['528','Nederland',.017],['246','Finland',.014],['250','Frankrike',.011],['616','Polen',.009],['724','Spania',.008],['124','Canada',.007],['380','Italia',.006],['356','India',.005],['392','Japan',.004],['036','Australia',.003],['076','Brasil',.003],['156','Kina',.002],['710','Sør-Afrika',.001]];
+        const rows=C.map(([id,n,f])=>[id,n,Math.max(1,Math.round(st.vis*f))]);
+        return{countries:share(C.slice(0,7).map(c=>[c[1],c[2]]),st.vis),mapHash:encodeURIComponent(JSON.stringify({c:rows})),mapCount:rows.length+' land',mapSub:'siste '+s.per,showMap:this.props.showMap!==false&&localStorage.getItem('hl_dom_map')!=='0'}})(),
+      devices:[['Mobil',58,'#a8d4fb'],['Desktop',38,'#7fe0d0'],['Nettbrett',4,'#f2b56b']].map(([n,f,c])=>({n,f,c,v:f+' %'})),
+      browsers:[['Safari',41],['Chrome',39],['Firefox',9],['Edge',7],['Andre',4]].map(([n,f])=>({n,v:f+' %'})),
+      statusSub:nb(st.req)+' svar',status:status.map(([n,p,c])=>({n,c,f:Math.max(p,.6),p:pc(p,p<1?1:2).replace(/,00 %$/,' %'),v:nb(st.req*p/100)})),
+      perf:[{l:'Median',v:Math.round(42*(1+d.scale*.05))+' ms'},{l:'95. persentil',v:'186 ms'},{l:'Fra opprinnelse',v:'312 ms'},{l:'Bufret andel',v:pc(st.cacheP)}],
+      p50Line:path(p50,300,80,Math.max(...p95)),p95Line:path(p95,300,80,Math.max(...p95)),
+      secSub:nb(st.thr)+' blokkert',sec:share(secL,st.thr),
+      pages:d.pages.map((n,i)=>[n,pageW[i]||.015]).map(([n,f],i,a)=>({n,v:nb(st.req*.012*f),w:(f/a[0][1]*100)+'%'})),
+      refs:share(refs,st.vis),
+      upPct:pc(upPctOf(u),2),upNote:incidents?incidents+' hendelser · siste for '+(90-u.lastIndexOf(u.filter(x=>x!=='ok').pop()))+' dager siden':'Ingen hendelser',
+      upDays:u.map((x,i)=>({c:x==='down'?'#f59a8f':x==='warn'?'#f2b56b':'#5fbf86',t:new Date(Date.now()-(89-i)*dayMs).toLocaleDateString('nb-NO')+' · '+(x==='down'?'Nede ca. 13 min':x==='warn'?'Treg respons':'OK')})),
+      dns:(d.dns||[]).map(([t,n,c,p])=>({t,n,c,p:p?'Proxied':'Kun DNS',pc:p?'#f2b56b':'#8a93a6'})),
+      info:[{l:'Registrar',v:d.reg},{l:'Utløper',v:d.exp+' · '+expD+' d',c:expD<30?'#f59a8f':'#eef0f4'},{l:'Navnetjenere',v:d.ns},{l:'A-post',v:d.ip},{l:'SSL',v:'Gyldig · '+d.tls,c:'#8fe0b0'},{l:'Sertifikat utløper',v:d.cert+' · '+certD+' d',c:certD<30?'#f59a8f':certD<60?'#f2b56b':'#eef0f4'},{l:'Statistikk fra',v:d.src}].map(x=>({c:'#eef0f4',...x})),
+      canRemove:doms.length>1,removeDomain:()=>{const nd=doms.filter(x=>x.name!==d.name);this.save(nd,'*')}});
+    return vals}
+}
+</script>
+</body>
+</html>
