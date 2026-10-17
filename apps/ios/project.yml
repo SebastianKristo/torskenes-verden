@@ -6,8 +6,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.10"
-    MARKETING_VERSION: "1.0"
-    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "3.0"
+    CURRENT_PROJECT_VERSION: "3"
     DEVELOPMENT_TEAM: ""
 targets:
   FinansHub:
@@ -29,6 +29,7 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_NSCameraUsageDescription: "Kameraet brukes til å ta bilde av kvitteringer."
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Velg kvitteringsbilder fra biblioteket."
+        INFOPLIST_KEY_NSFaceIDUsageDescription: "Face ID brukes til å låse opp FinansHub."
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: "FinansHub kobler til homelab-serveren din på lokalt nett."
     info:
       path: FinansHub/Info.plist

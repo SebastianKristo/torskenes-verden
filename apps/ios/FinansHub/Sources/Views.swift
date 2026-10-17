@@ -41,146 +41,6 @@ struct Backdrop: View {
     }
 }
 
-/* ---------------- Rot ---------------- */
-
-struct RootView: View {
-    @Environment(Store.self) private var store
-    @Environment(\.horizontalSizeClass) private var hSize
-    @State private var showCamera = false
-    @State private var photoItems: [PhotosPickerItem] = []
-    @State private var showPdf = false
-
-    var body: some View {
-        ZStack {
-            Backdrop()
-            if !store.loggedIn {
-                LoginView()
-            } else if hSize == .regular {
-                // iPad: sidefelt + liste + detalj.
-                HStack(spacing: 0) {
-                    Sidebar(scan: { showCamera = true })
-                    MainPane(scan: { showCamera = true }, photos: $photoItems, pdf: $showPdf).frame(maxWidth: .infinity)
-                    Divider().overlay(.white.opacity(0.1))
-                    DetailPane().frame(maxWidth: .infinity)
-                }
-            } else {
-                MainPane(scan: { showCamera = true }, photos: $photoItems, pdf: $showPdf)
-                    .safeAreaInset(edge: .bottom) { if !(store.selectedTx != nil && (store.tab == .home || store.tab == .list)) { TabBar() } }
-            }
-            if store.busy { ProgressView().controlSize(.large).padding(30).glass(20) }
-            if let msg = store.message {
-                VStack { Spacer(); Text(msg).font(.subheadline.weight(.semibold)).padding(.horizontal, 18).padding(.vertical, 12).glass(16).padding(.bottom, 110) }
-                    .transition(.opacity).onTapGesture { store.message = nil }
-            }
-        }
-        .preferredColorScheme(.dark)
-        .tint(.accent)
-        .fullScreenCover(isPresented: $showCamera) { CameraView { img in if let img { store.upload(image: img) } }.ignoresSafeArea() }
-        .onChange(of: photoItems) { _, items in
-            guard !items.isEmpty else { return }
-            Task {
-                var files: [Store.Upload] = []
-                for item in items {
-                    if let d = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: d) { files.append(.image(img)) }
-                }
-                photoItems = []
-                store.upload(files)
-            }
-        }
-        .fileImporter(isPresented: $showPdf, allowedContentTypes: [.pdf, .image], allowsMultipleSelection: true) { result in
-            guard case .success(let urls) = result else { return }
-            var files: [Store.Upload] = []
-            for url in urls {
-                guard url.startAccessingSecurityScopedResource() else { continue }
-                defer { url.stopAccessingSecurityScopedResource() }
-                guard let d = try? Data(contentsOf: url) else { continue }
-                if url.pathExtension.lowercased() == "pdf" { files.append(.pdf(d)) } else if let img = UIImage(data: d) { files.append(.image(img)) }
-            }
-            store.upload(files)
-        }
-        .sheet(isPresented: Binding(get: { store.menuOpen }, set: { store.menuOpen = $0 })) {
-            ProfileMenu().presentationDetents([.medium, .large]).presentationBackground(.ultraThinMaterial)
-        }
-    }
-}
-
-/// Flytende fanelinje i glass med egen skanneknapp.
-struct TabBar: View {
-    @Environment(Store.self) private var store
-    var body: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 0) {
-                ForEach([Tab.home, .list, .budget, .mat]) { t in
-                    Button { store.go(t) } label: {
-                        VStack(spacing: 2) { Image(systemName: t.icon).font(.system(size: 20)); Text(t.rawValue).font(.system(size: 10.5, weight: .semibold)) }
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .foregroundStyle(store.tab == t ? Color.accentLight : .white.opacity(0.85))
-                            .background(store.tab == t ? Color.white.opacity(0.16) : .clear, in: Capsule())
-                    }
-                }
-            }
-            .padding(5).frame(height: 64).glass(32)
-            Button { store.go(.scan) } label: { Image(systemName: "doc.viewfinder").font(.system(size: 24, weight: .semibold)).foregroundStyle(.white).frame(width: 64, height: 64) }
-                .glass(32, tint: .accent)
-                .accessibilityLabel("Last opp kvitteringer")
-        }
-        .padding(.horizontal, 16).padding(.bottom, 6)
-    }
-}
-
-struct Sidebar: View {
-    @Environment(Store.self) private var store
-    let scan: () -> Void
-    var body: some View {
-        VStack(spacing: 18) {
-            Button { store.go(.scan) } label: { Image(systemName: "doc.viewfinder").font(.title2).foregroundStyle(.white).frame(width: 56, height: 56) }.glass(28, tint: .accent)
-            ForEach(Tab.allCases) { t in
-                Button { store.go(t) } label: {
-                    VStack(spacing: 4) { Image(systemName: t.icon).font(.title3); Text(t.rawValue).font(.caption.weight(.semibold)) }
-                        .frame(width: 70, height: 56)
-                        .foregroundStyle(store.tab == t ? Color.accentLight : .white.opacity(0.85))
-                        .background(store.tab == t ? Color.white.opacity(0.16) : .clear, in: RoundedRectangle(cornerRadius: 16))
-                }
-            }
-            Spacer()
-        }
-        .padding(.vertical, 20).frame(width: 96).glass(0)
-    }
-}
-
-struct MainPane: View {
-    @Environment(Store.self) private var store
-    @Environment(\.horizontalSizeClass) private var hSize
-    let scan: () -> Void
-    @Binding var photos: [PhotosPickerItem]
-    @Binding var pdf: Bool
-    var body: some View {
-        switch store.tab {
-        case .home, .list:
-            if hSize != .regular, store.selectedTx != nil { TxDetail(back: true) }
-            else if store.tab == .home { HomeView() } else { ListView() }
-        case .budget: BudgetView()
-        case .mat: MatView()
-        case .scan:
-            if hSize != .regular, store.selectedReceipt != nil { ConfirmView(back: true) } else { ScanView(scan: scan, photos: $photos, pdf: $pdf) }
-        case .me: MeView()
-        }
-    }
-}
-
-struct DetailPane: View {
-    @Environment(Store.self) private var store
-    var body: some View {
-        switch store.tab {
-        case .scan: if store.selectedReceipt != nil { ConfirmView(back: false) } else { Empty(text: "Velg en kvittering.") }
-        case .budget: BudgetDetail()
-        case .me: ScrollView { Hero().padding(20) }
-        case .mat: ScrollView { ShoppingList().padding(20) }
-        default: TxDetail(back: false)
-        }
-    }
-}
-
 /* ---------------- Byggeklosser ---------------- */
 
 struct Empty: View {
@@ -210,7 +70,7 @@ struct Logo: View {
     let name: String
     let color: String
     var size: CGFloat = 40
-    @State private var img: UIImage?
+    @State private var img: UIImage? = nil
     var body: some View {
         Group {
             if let img {
@@ -295,7 +155,7 @@ struct ReviewCTA: View {
     var body: some View {
         let q = (store.summary?.review ?? []).filter { $0.status == "needs_review" }
         if !q.isEmpty {
-            Button { store.go(.scan) } label: {
+            Button { store.open(.upload) } label: {
                 HStack(spacing: 14) {
                     Text("\(q.count)").fontWeight(.bold).foregroundStyle(Color.ink).frame(width: 36, height: 36).background(Color.accent, in: Circle())
                     VStack(alignment: .leading, spacing: 2) {
@@ -321,14 +181,18 @@ struct HomeView: View {
             VStack(spacing: 14) {
                 HStack(alignment: .bottom) {
                     VStack(alignment: .leading) {
-                        Text("Hei, \(store.boot?.settings.name ?? "")").font(.subheadline).foregroundStyle(.white.opacity(0.7))
+                        Text("Hei, \(store.displayName)").font(.subheadline).foregroundStyle(.white.opacity(0.7))
                         Text(monthLabel(store.summary?.month ?? "")).font(.system(size: 34, weight: .bold))
                     }
                     Spacer()
+                    if store.hideAmounts {
+                        Button { Privacy.shared.hidden.toggle() } label: { Image(systemName: Privacy.shared.hidden ? "eye" : "eye.slash").frame(width: 44, height: 44) }
+                            .buttonStyle(.plain).glass(22).accessibilityLabel(Privacy.shared.hidden ? "Vis beløp" : "Skjul beløp")
+                    }
                     Avatar()
                 }
                 .padding(.horizontal, 4).padding(.top, 6)
-                Hero()
+                Hero().onTapGesture { if store.hideAmounts { Privacy.shared.hidden.toggle() } }
                 UploadPill()
                 ReviewCTA()
                 SectionLabel(text: "Siste")
@@ -346,7 +210,7 @@ struct ListView: View {
         @Bindable var s = store
         ScrollView {
             VStack(spacing: 12) {
-                Text("Transaksjoner").font(.system(size: 34, weight: .bold)).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 6)
+                HStack { Text("Transaksjoner").font(.system(size: 34, weight: .bold)); Spacer(); Avatar() }.padding(.top, 6)
                 HStack(spacing: 10) {
                     Image(systemName: "magnifyingglass").font(.system(size: 18)).foregroundStyle(.white.opacity(0.6))
                     TextField("Søk i transaksjoner", text: $s.query).submitLabel(.search).onSubmit { store.search() }
@@ -385,7 +249,7 @@ struct BudgetView: View {
         let rows = (store.summary?.budgets ?? []).filter { $0.budget > 0 }.sorted { $0.used / $0.budget > $1.used / $1.budget }
         ScrollView {
             VStack(spacing: 12) {
-                Text("Budsjett").font(.system(size: 34, weight: .bold)).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 6)
+                HStack { Text("Budsjett").font(.system(size: 34, weight: .bold)); Spacer(); Avatar() }.padding(.top, 6)
                 if let s = store.summary {
                     HStack(spacing: 0) {
                         stat("Budsjett", n0(s.budgetTotal)); stat("Brukt", n0(s.budgetUsed)); stat("Dager igjen", "\(s.daysLeft)")
@@ -529,7 +393,10 @@ struct ScanView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                Text("Last opp").font(.system(size: 34, weight: .bold)).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 6)
+                ModuleHeader(title: "Last opp")
+                if !store.offline.isEmpty {
+                    Text("\(store.offline.count) venter på nett\(store.wifiOnly ? " (bare Wi-Fi)" : "") · lastes opp ved neste synk").font(.footnote).foregroundStyle(.white.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading)
+                }
                 Button(action: scan) {
                     HStack(spacing: 14) {
                         Image(systemName: "camera.fill").foregroundStyle(Color.ink).frame(width: 36, height: 36).background(Color.accent, in: Circle())
@@ -583,7 +450,7 @@ struct ScanView: View {
 struct Thumb: View {
     @Environment(Store.self) private var store
     let path: String?
-    @State private var img: UIImage?
+    @State private var img: UIImage? = nil
     var body: some View {
         RoundedRectangle(cornerRadius: 10).fill(Color.paper).frame(width: 40, height: 40)
             .overlay { if let img { Image(uiImage: img).resizable().scaledToFill() } }
@@ -598,7 +465,7 @@ struct ConfirmView: View {
     @State private var merchant = ""
     @State private var total = ""
     @State private var date = Date()
-    @State private var img: UIImage?
+    @State private var img: UIImage? = nil
 
     var body: some View {
         if let r = store.receipts?.first(where: { $0.id == store.selectedReceipt }) {
@@ -741,91 +608,7 @@ struct Flow: Layout {
     }
 }
 
-struct MeView: View {
-    @Environment(Store.self) private var store
-    var body: some View {
-        ScrollView {
-            if let st = store.boot?.settings {
-                VStack(spacing: 12) {
-                    HStack(spacing: 14) {
-                        Text(initial(st.name)).font(.title2.weight(.semibold)).frame(width: 56, height: 56).glass(28)
-                        VStack(alignment: .leading) { Text(st.name).font(.system(size: 28, weight: .bold)); Text(store.server.replacingOccurrences(of: "https://", with: "")).font(.subheadline).foregroundStyle(.white.opacity(0.65)) }
-                        Spacer()
-                    }
-                    .padding(.top, 6)
-                    SectionLabel(text: "AI-motor")
-                    VStack(spacing: 0) {
-                        choice("Ollama · lokalt", "Bildet forlater aldri huset", st.provider == "ollama") { store.save("provider", "ollama") }
-                        Divider().overlay(.white.opacity(0.12))
-                        choice("Gemini · sky", "Raskest og mest presis", st.provider == "gemini") { store.save("provider", "gemini") }
-                        Divider().overlay(.white.opacity(0.12))
-                        toggle("Bruk reserve ved feil", st.fallback) { store.save("fallback", $0) }
-                    }
-                    .glass(24)
-                    SectionLabel(text: "Varsler og regler")
-                    VStack(spacing: 0) {
-                        toggle("Budsjett 80 %", st.n80) { store.save("n80", $0) }
-                        Divider().overlay(.white.opacity(0.12))
-                        toggle("Budsjett brukt opp", st.n100) { store.save("n100", $0) }
-                        Divider().overlay(.white.opacity(0.12))
-                        toggle("Ny kvittering", st.nRc) { store.save("nRc", $0) }
-                        Divider().overlay(.white.opacity(0.12))
-                        toggle("Auto-kategorisering", st.autoCat) { store.save("autoCat", $0) }
-                    }
-                    .glass(24)
-                    Button { store.logout() } label: { Text("Logg ut").fontWeight(.semibold).foregroundStyle(Color(hex: "#FF8A6B")).frame(maxWidth: .infinity, minHeight: 52) }
-                        .buttonStyle(.plain).glass(26)
-                    Text("Flere innstillinger finnes i FinansHub på nettet.").font(.caption).foregroundStyle(.white.opacity(0.5))
-                }
-                .padding(.horizontal, 18).padding(.bottom, 30)
-            }
-        }
-    }
-    private func choice(_ t: String, _ s: String, _ on: Bool, _ act: @escaping () -> Void) -> some View {
-        Button(action: act) {
-            HStack { VStack(alignment: .leading) { Text(t).fontWeight(.medium); Text(s).font(.footnote).foregroundStyle(.white.opacity(0.6)) }; Spacer(); if on { Image(systemName: "checkmark").foregroundStyle(Color.accent) } }
-                .padding(.horizontal, 16).padding(.vertical, 12).contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-    private func toggle(_ t: String, _ on: Bool, _ set: @escaping (Bool) -> Void) -> some View {
-        Toggle(t, isOn: Binding(get: { on }, set: set)).padding(.horizontal, 16).padding(.vertical, 8)
-    }
-}
-
-struct LoginView: View {
-    @Environment(Store.self) private var store
-    @State private var server = ""
-    @State private var password = ""
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Spacer()
-            Image(systemName: "chart.line.uptrend.xyaxis").font(.title).foregroundStyle(Color.ink).frame(width: 56, height: 56).background(Color.accent, in: RoundedRectangle(cornerRadius: 18))
-            Text("FinansHub").font(.system(size: 34, weight: .bold))
-            Text("Logg inn på homelab-serveren din. Appen får bare tilgang til økonomidelen.").foregroundStyle(.white.opacity(0.7))
-            TextField("192.168.1.20:8080 eller os.dittdomene.no", text: $server).textContentType(.URL).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
-                .padding(.horizontal, 18).frame(height: 54).glass(27)
-            SecureField("Passord", text: $password).textContentType(.password).submitLabel(.go).onSubmit(submit)
-                .padding(.horizontal, 18).frame(height: 54).glass(27)
-            Button(action: submit) { Text(store.busy ? "Logger inn …" : "Logg inn").fontWeight(.bold).foregroundStyle(Color.ink).frame(maxWidth: .infinity, minHeight: 54) }
-                .buttonStyle(.plain).glass(27, tint: .accent).disabled(server.isEmpty || password.isEmpty || store.busy)
-            Spacer()
-        }
-        .padding(24).frame(maxWidth: 480)
-        .onAppear { server = store.server }
-    }
-    private func submit() { store.login(server: server, password: password) }
-}
-
 /* ---------------- Mobil v2 ---------------- */
-
-struct Avatar: View {
-    @Environment(Store.self) private var store
-    var body: some View {
-        Button { store.menuOpen = true } label: { Text(initial(store.boot?.settings.name ?? "S")).fontWeight(.semibold).frame(width: 44, height: 44) }
-            .buttonStyle(.plain).glass(22).accessibilityLabel("Meny")
-    }
-}
 
 /// Pille på forsiden som viser fremdrift i opplastingskøen.
 struct UploadPill: View {
@@ -834,7 +617,7 @@ struct UploadPill: View {
         let active = store.jobs.filter { $0.status == "pending" || $0.status == "processing" }
         let ready = store.jobs.filter { $0.status == "needs_review" }.count
         if !active.isEmpty || store.uploading > 0 || ready > 0 {
-            Button { store.go(.scan) } label: {
+            Button { store.open(.upload) } label: {
                 HStack(spacing: 12) {
                     if !active.isEmpty || store.uploading > 0 { ProgressView() } else { Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.positive) }
                     Text(label(active, ready)).fontWeight(.medium)
@@ -891,59 +674,6 @@ struct JobQueue: View {
     }
 }
 
-/// Meny bak profilbildet: Finans | Matplan, andre OS, fargebakgrunn og server.
-struct ProfileMenu: View {
-    @Environment(Store.self) private var store
-    @Environment(\.openURL) private var openURL
-    @State private var server = ""
-    @State private var password = ""
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(spacing: 4) {
-                    seg("Finans", store.tab != .mat) { store.menuOpen = false; store.go(.home) }
-                    seg("Matplan", store.tab == .mat) { store.menuOpen = false; store.go(.mat) }
-                }
-                .padding(4).glass(26)
-                SectionLabel(text: "Andre OS")
-                VStack(spacing: 0) {
-                    ForEach([("Subscription OS", "sub"), ("Delte mapper", "dir"), ("Finn-handler", "finn")], id: \.1) { n, h in
-                        Button { if let u = URL(string: store.server + "/finans/?desktop=1#/" + h) { openURL(u) } } label: {
-                            HStack { Text(n); Spacer(); Image(systemName: "arrow.up.right").foregroundStyle(.white.opacity(0.6)) }.padding(16).contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        if h != "finn" { Divider().overlay(.white.opacity(0.12)) }
-                    }
-                }
-                .glass(24)
-                Toggle("Fargebakgrunn", isOn: Binding(get: { store.colorBg }, set: { store.setColorBg($0) })).padding(.horizontal, 16).padding(.vertical, 10).glass(24)
-                SectionLabel(text: "Server")
-                TextField("Lokal adresse", text: $server).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
-                    .padding(.horizontal, 18).frame(height: 50).glass(25)
-                SecureField("Passord", text: $password).padding(.horizontal, 18).frame(height: 50).glass(25)
-                Button { store.login(server: server, password: password) } label: {
-                    Text("Koble til").fontWeight(.bold).foregroundStyle(Color.ink).frame(maxWidth: .infinity, minHeight: 50)
-                }
-                .buttonStyle(.plain).glass(25, tint: .accent).disabled(server.isEmpty || password.isEmpty)
-                HStack(spacing: 10) {
-                    Button { store.menuOpen = false; store.go(.me) } label: { Text("Innstillinger").frame(maxWidth: .infinity, minHeight: 48) }.buttonStyle(.plain).glass(24)
-                    Button { store.menuOpen = false; store.logout() } label: { Text("Logg ut").foregroundStyle(Color(hex: "#FF8A6B")).frame(maxWidth: .infinity, minHeight: 48) }.buttonStyle(.plain).glass(24)
-                }
-            }
-            .padding(20)
-        }
-        .onAppear { server = store.server }
-        .preferredColorScheme(.dark)
-    }
-    private func seg(_ t: String, _ on: Bool, _ act: @escaping () -> Void) -> some View {
-        Button(action: act) {
-            Text(t).fontWeight(.semibold).foregroundStyle(on ? Color.ink : .white).frame(maxWidth: .infinity, minHeight: 40)
-                .background(on ? Color.accent : .clear, in: Capsule())
-        }
-        .buttonStyle(.plain)
-    }
-}
-
 /* ---------------- Matplan ---------------- */
 
 private let sourceLabel = ["gemini": "Gemini", "hellofresh": "HelloFresh", "fixed": "Fast", "own": "Egen"]
@@ -954,12 +684,8 @@ struct MatView: View {
         let today = isoToday()
         ScrollView {
             VStack(spacing: 12) {
-                HStack {
-                    Text("Matplan").font(.system(size: 34, weight: .bold))
-                    Spacer()
-                    Avatar()
-                }
-                .padding(.top, 6)
+                ModuleHeader(title: "Matplan")
+                if let e = store.moduleError { Empty(text: e) }
                 Button { store.planWeek() } label: { Text("✦ Ny ukeplan med Gemini").fontWeight(.bold).foregroundStyle(Color.ink).frame(maxWidth: .infinity, minHeight: 52) }
                     .buttonStyle(.plain).glass(26, tint: .accent)
                 if let w = store.week {
@@ -992,11 +718,10 @@ struct MatView: View {
                         .overlay(RoundedRectangle(cornerRadius: 22).stroke(d.date == today ? Color.accent : .clear, lineWidth: 1.5))
                     }
                     if !(w.shopping ?? []).isEmpty { SectionLabel(text: "Handleliste"); ShoppingList() }
-                } else { ProgressView().padding(30) }
+                } else if store.moduleError == nil { ProgressView().padding(30) }
             }
             .padding(.horizontal, 18).padding(.bottom, 30)
         }
-        .task { if store.week == nil { try? await store.loadWeek() } }
         .refreshable { try? await store.loadWeek() }
     }
 }

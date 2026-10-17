@@ -5,8 +5,12 @@ import Security
 struct APIError: LocalizedError {
     let message: String
     let status: Int
+    /// Innloggingen krever en 6-sifret kode (2FA).
+    var needsTotp = false
     var errorDescription: String? { message }
 }
+
+struct LoginResult { let token: String; let username: String; let name: String; let role: String }
 
 struct API {
     let base: String
@@ -14,9 +18,9 @@ struct API {
 
     private func url(_ path: String, prefix: String = "/finans/api") -> URL { URL(string: base.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + prefix + path)! }
 
-    private func send(_ req: URLRequest) async throws -> Data {
+    private func send(_ req: URLRequest, timeout: TimeInterval = 30) async throws -> Data {
         var r = req
-        r.timeoutInterval = 30
+        r.timeoutInterval = timeout
         r.setValue("application/json", forHTTPHeaderField: "Accept")
         if let token { r.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
         let data: Data, res: URLResponse
@@ -36,8 +40,8 @@ struct API {
         }
         let code = (res as? HTTPURLResponse)?.statusCode ?? 0
         if code >= 400 {
-            let msg = (try? JSONSerialization.jsonObject(with: data) as? [String: Any])?["error"] as? String
-            throw APIError(message: msg ?? "Feil \(code)", status: code)
+            let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+            throw APIError(message: (obj?["error"] as? String) ?? "Feil \(code)", status: code, needsTotp: (obj?["needsTotp"] as? Bool) ?? false)
         }
         return data
     }
@@ -55,6 +59,21 @@ struct API {
             r.httpBody = try JSONSerialization.data(withJSONObject: json)
         }
         return try await send(r)
+    }
+
+    /// GET mot en annen modul, f.eks. /domains/api.
+    func module<T: Decodable>(_ prefix: String, _ path: String, as: T.Type = T.self, timeout: TimeInterval = 30) async throws -> T {
+        try JSONDecoder().decode(T.self, from: try await send(URLRequest(url: url(path, prefix: prefix)), timeout: timeout))
+    }
+
+    /// Rådata fra en annen modul (for lister som kan ha to former).
+    func raw(_ prefix: String, _ path: String) async throws -> Data {
+        try await send(URLRequest(url: url(path, prefix: prefix)))
+    }
+
+    /// Svarer serveren i det hele tatt (også med en feilkode)? Brukes for å velge lokal eller ekstern adresse.
+    func reachable(timeout: TimeInterval = 1.5) async -> Bool {
+        do { _ = try await send(URLRequest(url: url("/me")), timeout: timeout); return true } catch let e as APIError { return e.status > 0 } catch { return false }
     }
 
     func mat<T: Decodable>(_ path: String, as: T.Type = T.self) async throws -> T {
@@ -94,13 +113,17 @@ struct API {
         return try await send(r)
     }
 
-    /// Bytter passord mot et token som bare gir tilgang til FinansHub.
-    /// Prøver /login først og faller tilbake til /auth/token på eldre servere.
-    static func login(base: String, password: String, device: String) async throws -> String {
+    /// Bytter brukernavn + passord (+ 2FA-kode) mot et token med finans-tilgang.
+    /// Kaster APIError(needsTotp: true) når serveren ber om koden.
+    /// Prøver /login først og faller tilbake til /auth/token på eldre servere (bare passord).
+    static func login(base: String, username: String, password: String, code: String?, device: String) async throws -> LoginResult {
         let api = API(base: base, token: nil)
-        let body: [String: Any] = ["password": password, "device": device, "deviceName": device]
+        var body: [String: Any] = ["password": password, "device": device, "deviceName": device]
+        let user = username.trimmingCharacters(in: .whitespaces)
+        if !user.isEmpty { body["username"] = user }
+        if let code, !code.isEmpty { body["code"] = code.trimmingCharacters(in: .whitespaces) }
         let data: Data
-        do { data = try await api.call("POST", "/login", json: body) } catch let e as APIError where e.status == 404 || (e.status == 401 && e.message.contains("Ikke innlogget")) {
+        do { data = try await api.call("POST", "/login", json: body) } catch let e as APIError where !e.needsTotp && (e.status == 404 || (e.status == 401 && e.message.contains("Ikke innlogget"))) {
             do { data = try await api.call("POST", "/auth/token", json: body) } catch let e2 as APIError where e2.status == 404 {
                 throw APIError(message: "Fant ikke FinansHub på \(base) (404). Sjekk adressen, eller oppdater homelab-serveren.", status: 404)
             }
@@ -108,7 +131,17 @@ struct API {
         guard let obj = try JSONSerialization.jsonObject(with: data) as? [String: Any], let t = obj["token"] as? String else {
             throw APIError(message: "Uventet svar fra serveren", status: 0)
         }
-        return t
+        let u = obj["user"] as? [String: Any]
+        let uname = (u?["username"] as? String) ?? user
+        let name = (u?["name"] as? String) ?? (obj["user"] as? String) ?? uname
+        return LoginResult(token: t, username: uname, name: name.isEmpty ? "FinansHub" : name, role: (u?["role"] as? String) ?? "admin")
+    }
+
+    static func isLocal(_ host: String) -> Bool {
+        let p = host.split(separator: ".").compactMap { Int($0) }
+        let ip = p.count == 4
+        return host == "localhost" || host.hasSuffix(".local") || host.hasSuffix(".lan") || host.hasSuffix(".home.arpa") || !host.contains(".")
+            || (ip && (p[0] == 10 || p[0] == 127 || (p[0] == 192 && p[1] == 168) || (p[0] == 172 && (16...31).contains(p[1])) || (p[0] == 100 && (64...127).contains(p[1]))))
     }
 
     /// Legger til skjema når det mangler: http:// for lokale adresser, ellers https://.
@@ -120,12 +153,9 @@ struct API {
         if let slash = s[start...].firstIndex(of: "/") { s = String(s[..<slash]) }
         let lower = s.lowercased()
         if lower.hasPrefix("http://") || lower.hasPrefix("https://") { return s }
+        if s.isEmpty { return s }
         let host = String(lower.split(separator: "/").first ?? "").split(separator: ":").first.map(String.init) ?? ""
-        let p = host.split(separator: ".").compactMap { Int($0) }
-        let ip = p.count == 4
-        let local = host == "localhost" || host.hasSuffix(".local") || host.hasSuffix(".lan") || host.hasSuffix(".home.arpa") || !host.contains(".")
-            || (ip && (p[0] == 10 || p[0] == 127 || (p[0] == 192 && p[1] == 168) || (p[0] == 172 && (16...31).contains(p[1])) || (p[0] == 100 && (64...127).contains(p[1]))))
-        return (local ? "http://" : "https://") + s
+        return (isLocal(host) ? "http://" : "https://") + s
     }
 }
 

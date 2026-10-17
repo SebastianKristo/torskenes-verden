@@ -8,7 +8,10 @@ struct FinansHubApp: App {
         WindowGroup {
             RootView()
                 .environment(store)
-                .task { if store.loggedIn { try? await store.reload() } }
+                .task {
+                    if store.locked { store.unlock() }
+                    if store.loggedIn { try? await store.reload() }
+                }
         }
     }
 }

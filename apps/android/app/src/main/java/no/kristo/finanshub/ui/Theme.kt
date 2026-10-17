@@ -6,6 +6,9 @@ import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -35,6 +38,22 @@ object C {
     val accent = Color(0xFFFF7A3D)
     val accentLight = Color(0xFFFFB08A)
     val paper = Color(0xFFECE8E0)
+}
+
+// Domener: rosa tonal palett (designet 1b, Cloudflare-statistikk).
+object P {
+    val hero = Color(0xFF7B2949)
+    val onHero = Color(0xFFFFD9E2)
+    val accent = Color(0xFFFFB1C8)
+    val card = Color(0xFF2A2024)
+    val card2 = Color(0xFF3A2C31)
+    val text2 = Color(0xFFD5C2C6)
+    val red = Color(0xFFFF8A80)
+}
+
+/** «Skjul beløp til jeg trykker»: formaterte beløp vises som prikker mens dette er på. */
+object Privacy {
+    var hidden by mutableStateOf(false)
 }
 
 private val scheme = darkColorScheme(
@@ -68,10 +87,18 @@ fun FinansTheme(content: @Composable () -> Unit) = MaterialTheme(colorScheme = s
 /* ---------- Formatering (norsk, minus som −) ---------- */
 
 private val nb = Locale("nb", "NO")
-fun n2(v: Double): String = NumberFormat.getNumberInstance(nb).apply { minimumFractionDigits = 2; maximumFractionDigits = 2 }.format(kotlin.math.abs(v)).replace(' ', ' ')
-fun n0(v: Double): String = NumberFormat.getNumberInstance(nb).apply { maximumFractionDigits = 0 }.format(kotlin.math.abs(v)).replace(' ', ' ')
-fun signed(v: Double) = (if (v < 0) "−" else "+") + n2(v)
-fun neg0(v: Double) = (if (v < 0) "−" else "") + n0(v)
+private const val MASK = "•••"
+fun n2(v: Double): String = if (Privacy.hidden) MASK else NumberFormat.getNumberInstance(nb).apply { minimumFractionDigits = 2; maximumFractionDigits = 2 }.format(kotlin.math.abs(v)).replace(' ', ' ')
+fun n0(v: Double): String = if (Privacy.hidden) MASK else NumberFormat.getNumberInstance(nb).apply { maximumFractionDigits = 0 }.format(kotlin.math.abs(v)).replace(' ', ' ')
+fun signed(v: Double) = if (Privacy.hidden) MASK else (if (v < 0) "−" else "+") + n2(v)
+/** Tall som ikke er beløp (besøk, forespørsler) skjules aldri. */
+fun count(v: Double): String = when {
+    v >= 1_000_000 -> String.format(nb, "%.1f mill.", v / 1_000_000)
+    v >= 10_000 -> String.format(nb, "%.1f k", v / 1000)
+    else -> NumberFormat.getNumberInstance(nb).apply { maximumFractionDigits = 0 }.format(v).replace('\u00A0', ' ').replace('\u202F', ' ')
+}
+fun pct(v: Double) = String.format(nb, "%.1f %%", v)
+fun neg0(v: Double) = if (Privacy.hidden) MASK else (if (v < 0) "−" else "") + n0(v)
 fun ddmm(d: String?) = if (d == null || d.length < 10) "–" else "${d.substring(8, 10)}.${d.substring(5, 7)}"
 fun dayLabel(d: String): String = runCatching {
     LocalDate.parse(d).format(DateTimeFormatter.ofPattern("EEEE d. MMM", nb)).replaceFirstChar { it.uppercase() }
