@@ -1,4 +1,27 @@
-# FinansHub – native apper
+<p align="center"><img src="../docs/assets/finanshub.svg" width="96" alt="FinansHub"></p>
+
+<h1 align="center">FinansHub – native apper</h1>
+
+<p align="center">
+  <a href="https://github.com/SebastianKristo/torskenes-verden/actions/workflows/mobile.yml"><img src="https://github.com/SebastianKristo/torskenes-verden/actions/workflows/mobile.yml/badge.svg" alt="Mobilapper"></a>
+  <img src="https://img.shields.io/badge/iOS-17%2B%20%C2%B7%20Liquid%20Glass%20p%C3%A5%2026-000000?logo=apple&logoColor=white" alt="iOS 17+">
+  <img src="https://img.shields.io/badge/Android-Material%203%20Expressive-3DDC84?logo=android&logoColor=white" alt="Android">
+</p>
+
+<p align="center"><a href="../README.md">← Til hovedsiden</a></p>
+
+<img src="../docs/images/mobil-ios.webp" alt="iPhone">
+<img src="../docs/images/mobil-android.webp" alt="Android">
+<img src="../docs/images/mobil-brettbar.webp" alt="Brettbar">
+
+<sub>Skjermbildene er fra web-appen (PWA) med eksempeldata. De native appene følger samme design.</sub>
+
+## Last ned
+
+| Plattform | Fil | Slik installerer du |
+|---|---|---|
+| <img src="../docs/assets/icons/mobil.svg" width="20"> Android | `FinansHub-android` (APK) | Åpne siste kjøring under [Actions → Mobilapper](https://github.com/SebastianKristo/torskenes-verden/actions/workflows/mobile.yml), last ned artefakten, pakk ut og åpne `.apk` på telefonen. Du må tillate «ukjente apper». |
+| <img src="../docs/assets/icons/mobil.svg" width="20"> iOS | `FinansHub-ios-unsigned` (.ipa) | Signer og installer med AltStore, SideStore eller Sideloadly, se [iOS: .ipa for sideloading](#ios-ipa-for-sideloading). |
 
 Begge appene er rene FinansHub-klienter. De snakker bare med `/finans/api/*` på homelab-serveren og viser ingenting fra resten av siden.
 

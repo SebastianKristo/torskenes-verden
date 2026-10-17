@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320">
+  <defs>
+    <radialGradient id="g1" cx="0.85" cy="0.1" r="0.6">
+      <stop offset="0" stop-color="#FF7A3D" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#FF7A3D" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="g2" cx="0.1" cy="1" r="0.6">
+      <stop offset="0" stop-color="#5B8CFF" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#5B8CFF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="line" x1="0" x2="1">
+      <stop offset="0" stop-color="#a8d4fb"/>
+      <stop offset="1" stop-color="#FF7A3D"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="320" rx="28" fill="#07080b"/>
+  <rect width="1280" height="320" rx="28" fill="url(#g1)"/>
+  <rect width="1280" height="320" rx="28" fill="url(#g2)"/>
+  <rect x="0.5" y="0.5" width="1279" height="319" rx="27.5" fill="none" stroke="#ffffff" stroke-opacity="0.08"/>
+
+  <!-- OS-logo -->
+  <rect x="72" y="92" width="136" height="136" rx="30" fill="#ffffff"/>
+  <text x="140" y="178" text-anchor="middle" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="56" font-weight="700" fill="#07080b">OS</text>
+
+  <text x="248" y="150" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="64" font-weight="700" fill="#F2F2F4" letter-spacing="-1.5">Homelab OS</text>
+  <text x="250" y="196" font-family="system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="26" fill="#A0A0AA">Dashboard · FinansHub · iOS og Android</text>
+  <rect x="250" y="222" width="300" height="4" rx="2" fill="url(#line)"/>
+
+  <!-- FinansHub-ikon -->
+  <g transform="translate(1046 62) scale(0.3)">
+    <rect width="512" height="512" rx="112" fill="#0A0A0C"/>
+    <rect x="96" y="96" width="320" height="320" rx="88" fill="#FF7A3D"/>
+    <g fill="none" stroke="#1A0C04" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"><path d="M176 336V176M176 336h176M216 288l48-48 36 36 52-64"/></g>
+  </g>
+  <!-- Små kort -->
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15">
+    <rect x="890" y="250" width="132" height="36" rx="18" fill="#ffffff" fill-opacity="0.07" stroke="#ffffff" stroke-opacity="0.1"/>
+    <text x="956" y="273" text-anchor="middle" fill="#a8d4fb">selvhostet</text>
+    <rect x="1034" y="250" width="92" height="36" rx="18" fill="#ffffff" fill-opacity="0.07" stroke="#ffffff" stroke-opacity="0.1"/>
+    <text x="1080" y="273" text-anchor="middle" fill="#9FE3C6">2FA</text>
+    <rect x="1138" y="250" width="80" height="36" rx="18" fill="#ffffff" fill-opacity="0.07" stroke="#ffffff" stroke-opacity="0.1"/>
+    <text x="1178" y="273" text-anchor="middle" fill="#FFB08A">✦ AI</text>
+  </g>
+</svg>

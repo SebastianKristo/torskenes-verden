@@ -1,154 +1,247 @@
-# OS – personlig homelab-dashboard
+<p align="center">
+  <img src="docs/assets/banner.svg" alt="Homelab OS – Dashboard, FinansHub og mobilapper" width="100%">
+</p>
 
-Et passordbeskyttet dashboard for homelab og hverdag (Ruter-avganger, timeplan, vær, Trading 212, energi, økonomi, Starlink og NASA), med mobil-PWA og en offentlig CV på `/cv`. Begrunnelsen for arkitekturen står i [DECISIONS.md](DECISIONS.md).
+<p align="center">
+  <a href="https://github.com/SebastianKristo/torskenes-verden/actions/workflows/docker.yml"><img src="https://github.com/SebastianKristo/torskenes-verden/actions/workflows/docker.yml/badge.svg" alt="Docker-image"></a>
+  <a href="https://github.com/SebastianKristo/torskenes-verden/actions/workflows/mobile.yml"><img src="https://github.com/SebastianKristo/torskenes-verden/actions/workflows/mobile.yml/badge.svg" alt="Mobilapper"></a>
+  <img src="https://img.shields.io/badge/node-%E2%89%A522-339933?logo=node.js&logoColor=white" alt="Node 22+">
+  <img src="https://img.shields.io/badge/database-SQLite-003B57?logo=sqlite&logoColor=white" alt="SQLite">
+  <img src="https://img.shields.io/badge/iOS-SwiftUI-F05138?logo=swift&logoColor=white" alt="SwiftUI">
+  <img src="https://img.shields.io/badge/Android-Compose-3DDC84?logo=android&logoColor=white" alt="Jetpack Compose">
+  <img src="https://img.shields.io/badge/spr%C3%A5k-norsk-BA0C2F" alt="Norsk">
+</p>
 
-| Rute | Tilgang |
-|---|---|
-| `/login` | offentlig |
-| `/` med `#/dash`, `#/studie`, `#/rom`, `#/okonomi`, `#/nettverk` (`#/mer` på mobil) | innlogget |
-| `/cv` | offentlig lesing, redigering når innlogget |
+<p align="center">
+  <b>Et selvhostet «operativsystem» for hjemmet</b>: et dashboard for hverdagen, en komplett økonomiapp med AI-lesing av kvitteringer, og native apper for iPhone, Android og brettbare telefoner. Alt kjører på din egen server, og nøklene forlater den aldri.
+</p>
 
-## Kom i gang lokalt
+<p align="center">
+  <a href="#-kom-i-gang">Kom i gang</a> ·
+  <a href="#-funksjoner">Funksjoner</a> ·
+  <a href="#-skjermbilder">Skjermbilder</a> ·
+  <a href="#-dokumentasjon">Dokumentasjon</a> ·
+  <a href="apps/README.md">Mobilapper</a>
+</p>
+
+<p align="center">
+  <img src="docs/images/hero.webp" alt="Homelab-dashboardet, FinansHub og mobilappen" width="100%">
+</p>
+
+---
+
+## ✨ Funksjoner
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+### <img src="docs/assets/icons/dashboard.svg" width="26" align="top"> Homelab-dashboard
+Ruter-avganger i sanntid, vær fra yr, skoletime og kalender fra iCal, Trading 212, strøm fra Home Assistant, «Kommer ut» fra Sonarr og Radarr, og en nyhetslinje fra NRK og VG. Kortene kan flyttes og endre størrelse, og topplinjen kan dras fritt.
+
+</td>
+<td width="50%" valign="top">
+
+### <img src="docs/assets/icons/finans.svg" width="26" align="top"> FinansHub
+Transaksjoner, budsjett, faste utgifter, kontoer og rapporter. Kvitteringer leses av **Ollama** (lokalt) eller **Gemini** og matches mot banken. Ingenting bokføres før du trykker «Bokfør».
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+### <img src="docs/assets/icons/ai.svg" width="26" align="top"> ✦ AI-søk og sammendrag
+Spør på vanlig norsk, for eksempel «hvor mye brukte jeg på strøm i september?». Søket går gjennom transaksjoner, kvitteringer og varelinjer. Svaret viser hvilke poster det bygger på, og tall som ikke finnes i dataene blir forkastet.
+
+</td>
+<td valign="top">
+
+### <img src="docs/assets/icons/aksjer.svg" width="26" align="top"> Aksjer, abonnementer og bolig
+Portefølje, ordrer og utbytte fra **Trading 212**. **Subscription OS** samler abonnementer (månedlig, årlig og hvert 2. år). **Delte mapper** er et dashboard per bolig med prosjekter, avdrag, regninger og fordeling mellom brukere.
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+### <img src="docs/assets/icons/hjem.svg" width="26" align="top"> Hjem · <img src="docs/assets/icons/mat.svg" width="26" align="top"> Matplan · <img src="docs/assets/icons/domene.svg" width="26" align="top"> Domener
+Boligverdi, lån og inventar med garanti. Matplan med AI-forslag, faste retter, kokker, handleliste og kalenderfeed. Domenestatistikk fra Cloudflare, Plausible eller Umami med verdenskart, sikkerhet og oppetid.
+
+</td>
+<td valign="top">
+
+### <img src="docs/assets/icons/mobil.svg" width="26" align="top"> Mobilapper
+Native **SwiftUI** (iOS 26 Liquid Glass) og **Jetpack Compose** (Material 3 Expressive), med to paneler på brettbare. Har kamera som åpner med én gang, opplastingskø, flere kontoer og biometrisk lås. Finnes også som PWA.
+
+</td>
+</tr>
+<tr>
+<td valign="top">
+
+### <img src="docs/assets/icons/sikkerhet.svg" width="26" align="top"> Brukere og tofaktor
+Flere brukere med rollene admin og bruker, innlogging med brukernavn og **TOTP-2FA** med gjenopprettingskoder. Pålitelige enheter slipper passord bare på lokalt nett. API-tokens har egne tilganger og utløp.
+
+</td>
+<td valign="top">
+
+### <img src="docs/assets/icons/backup.svg" width="26" align="top"> Backup og gjenoppretting
+Full backup som JSON, en Excel-database med ett ark per tabell, eller CSV. Automatisk og kryptert backup (AES-256-GCM) til en **SMB-share**, med versjoner. En ny installasjon kan hentes rett fra backupen.
+
+</td>
+</tr>
+</table>
+
+## 🚀 Kom i gang
+
+**Prøv lokalt med eksempeldata.** Ingen API-nøkler trengs:
+
 ```bash
+git clone https://github.com/SebastianKristo/torskenes-verden.git && cd torskenes-verden
 npm install
 cp .env.example .env
 npm run hash-password -- 'velg-et-godt-passord'   # lim linja inn i .env
 echo "SESSION_SECRET=$(openssl rand -hex 32)" >> .env
-echo "COOKIE_SECURE=false" >> .env                 # kun lokalt uten HTTPS
-MOCK_DATA=1 npm run dev                            # eksempeldata, ingen API-nøkler nødvendig
+echo "COOKIE_SECURE=false" >> .env                 # bare lokalt uten HTTPS
+MOCK_DATA=1 npm run dev
 ```
-Åpne http://localhost:3000.
 
-## Deploy på homelab (Docker + Cloudflare Tunnel)
-1. Lag en LXC/VM med Docker på Proxmox og klon repoet.
-2. Fyll ut `.env`. Alle nøkler blir værende på serveren.
-3. I Cloudflare Zero Trust går du til **Networks → Tunnels → Create tunnel**. Kopier tokenet til `CLOUDFLARE_TUNNEL_TOKEN` og legg til en public hostname, for eksempel `os.dittdomene.no`, som peker på `http://os:3000`.
-4. Kjør `docker compose --profile tunnel up -d --build`. Uten `--profile tunnel` startes bare appen, og du kan sette `BIND_ADDR=0.0.0.0` i `.env` for LAN-tilgang.
-5. Anbefalt: under **Access → Applications** lager du en app for `os.dittdomene.no` med en policy for e-posten din. Legg til en bypass-policy for stien `/cv*` og for `/assets/*`, slik at CV-en forblir offentlig.
+Åpne <http://localhost:3000> og logg inn som `sebastian` (eller `USER_NAME` med små bokstaver).
 
-Data (SQLite og opplastinger) ligger i `./data`. Ta backup av den mappen.
+**Installer på homelab.** Velg én av disse:
 
-Oppdatering: `git pull && docker compose --profile tunnel up -d --build` (dropp `--profile tunnel` hvis du ikke bruker tunnel).
-
-## Proxmox (automatisk LXC)
-Kjør på Proxmox-verten som root:
-```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/SebastianKristo/torskenes-verden/main/deploy/proxmox/install.sh)"
-```
-Vil du installere fra en annen branch, last ned skriptet derfra og sett `BRANCH`:
-```bash
-curl -fsSL https://raw.githubusercontent.com/SebastianKristo/torskenes-verden/<branch>/deploy/proxmox/install.sh -o install.sh
-BRANCH=<branch> bash install.sh
-```
-Alternativt kan du klone repoet og kjøre `bash torskenes-verden/deploy/proxmox/install.sh`. Da kopieres den lokale koden inn i containeren. Skriptet gjør dette:
-- oppretter en uprivilegert Debian 12-LXC med nesting
-- installerer Docker
-- legger koden i `/opt/homelab-os`
-- spør om passord og eventuelt Cloudflare Tunnel-token
-- skriver `.env` og starter tjenesten
-
-Uten lokal kopi kloner skriptet `REPO` direkte. `GITHUB_TOKEN` trengs bare hvis repoet blir privat igjen.
-
-Valg kan overstyres med miljøvariabler, for eksempel `CTID=150 STORAGE=local-zfs IP=192.168.1.60/24 GW=192.168.1.1`. Lagring finnes automatisk hvis `STORAGE` ikke er satt. Resten av API-nøklene legger du inn etterpå i `/opt/homelab-os/.env`.
-
-### Oppdatere Proxmox-installasjonen
-Kjør på Proxmox-verten som root. Skriptet trenger ikke git, finner containeren `homelab-os` selv og rører ikke `.env` eller `data/`:
-```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/SebastianKristo/torskenes-verden/main/deploy/proxmox/update.sh)"
-```
-Har containeren et annet navn, kjør med `CTID=<id>` foran (finn ID-en med `pct list`).
-
-## Unraid
-1. Kopier `deploy/unraid/homelab-os.xml` til `/boot/config/plugins/dockerMan/templates-user/` på Unraid.
-2. Gå til **Docker → Add Container** og velg `homelab-os` som mal.
-3. Generer passord-hashen:
-   ```bash
-   docker run --rm ghcr.io/sebastiankristo/torskenes-verden node scripts/hash-password.js 'passord'
-   ```
-   Lim inn verdien etter `APP_PASSWORD_HASH=` i malen.
-
-Bildet bygges og publiseres til GHCR av `.github/workflows/docker.yml` ved hver push til `main`. Sjekk at pakken også er *public* under GitHub → Packages, ellers må Unraid logge inn på ghcr.io. Data lagres i `/mnt/user/appdata/homelab-os` og eies av PUID/PGID (som standard 99:100).
-
-## Viktige detaljer for drift
-- **Passord-hashen bruker `:` som skilletegn** (`scrypt:N:r:p:salt:hash`). Docker Compose tolker `$` i `.env`, og det ødela det gamle formatet. Hasher med `$` virker fortsatt, men de bør genereres på nytt hvis de skal leses av Compose.
-- **Rettigheter på `/data`:** containeren starter som root bare for å rette eierskapet på `/data`. Deretter kjører den som `PUID:PGID`. Standard er 1000:1000, og på Unraid 99:100.
-- **Cloudflare Tunnel er valgfritt:** `cloudflared` starter bare med `docker compose --profile tunnel up -d`.
-- **LAN-tilgang:** som standard lytter appen bare på `127.0.0.1`. Sett `BIND_ADDR=0.0.0.0` (og eventuelt `HOST_PORT`) i `.env` for å nå den fra nettverket.
-- **Uten HTTPS** (direkte `http://` på LAN) må `COOKIE_SECURE=false` settes, ellers fungerer ikke innloggingen. Proxmox-skriptet gjør dette automatisk når du ikke oppgir et tunnel-token.
-
-## Pålitelig enhet på lokalt nett
-Ved innlogging er «Husk denne enheten på lokalt nett» krysset av som standard. Passordet hoppes da over neste gang, men **bare** når enheten både har en gyldig enhetscookie og kobler til fra en lokal adresse (192.168.x.x, 10.x.x.x eller 172.16–31.x.x).
-- Fra internett kreves alltid passord. Det gjelder også via Cloudflare Tunnel, der `CF-Connecting-IP` inneholder klientens offentlige adresse.
-- **Lås** i menyen pauser enheten til neste innlogging med passord.
-- Under **Innstillinger → Innlogging** kan du slå funksjonen av og på for enheten du bruker, og fjerne andre enheter.
-- ⚠️ **Ikke eksponer porten direkte mot internett** med portviderekobling i ruteren. Bruk Cloudflare Tunnel. Docker kan vise trafikk utenfra med en intern 172.x-adresse, og da vil den bli regnet som lokal.
-
-## FinansHub (Økonomi)
-Økonomi-fanen åpner **FinansHub** på `/finans/` i fullskjerm, uten homelab-headeren. Den runde **×** øverst til høyre tar deg tilbake til Hjem.
-
-| Side | Innhold |
-|---|---|
-| Oversikt | Total saldo, inn, brukt og igjen av budsjett · inn/ut-graf · kontoer · siste transaksjoner · handlinger · budsjett · gjennomgangskø · kommende trekk |
-| Transaksjoner | Søk, filter (konto, type, kategori), detaljpanel (kategori, dato, konto, notat, «Lag regel», slett), ny transaksjon, CSV-eksport |
-| Kvitteringer | Skann/last opp (også dra og slipp), AI-utlesing i kø, bekreft-panel med bankmatch, «Les på nytt» med den andre motoren, avvis, bokfør |
-| Budsjett | Månedsbudsjett per kategori med fargevarsel ved 80 % og over 100 % |
-| Faste utgifter | Abonnementer og regninger, av/på, trekkdager, automatisk oppdagelse fra gjentakende trekk |
-| Kontoer | Kontokort med saldo (startsaldo + transaksjoner) og sparemål |
-| Rapporter | Måned/år, fordeling per kategori, mest brukt hos, månedstabell, CSV og PDF (utskrift) |
-| Innstillinger | Generelt · AI-motor · Kategorier · Regler · Bank og import · Varsler · Mobil og tilgang · Data |
-
-**Kvitteringsflyt:**
-1. Nettleseren sender originalen, en nedskalert JPEG (~1600 px) og et miniatyrbilde.
-2. Serveren leser kvitteringen med **Ollama** (lokalt) eller **Gemini** (sky), med valgfri reserve og ett nytt forsøk ved ugyldig svar.
-3. Regler går foran AI-forslaget for kategori.
-4. Kvitteringen matches mot en banktransaksjon: samme beløp ±1 kr og dato ±3 dager. Har kortet samme fire siste siffer, får det forrang.
-5. Ingenting bokføres uten at du trykker **Bokfør**. Kategorier du retter, blir nye regler.
-6. Går AI-motoren ned, havner kvitteringen i køen med beskjed om å fylles ut manuelt.
-
-**CSV-import:** støtter DNB, Nordea, SpareBank 1, Sbanken og Bank Norwegian. Kolonnene finnes automatisk ut fra overskriftene. Duplikater hoppes over, og butikknavnet ryddes («VARER REMA 1000 MAJORSTUEN» blir «Rema 1000 Majorstuen»).
-
-**Mobil:** `/finans/` kan installeres som egen app (PWA) og viser **bare FinansHub**.
-- På iPhone og iPad brukes iOS-temaet med glassflater (Liquid Glass), flytende fanelinje og egen skanneknapp.
-- På Android brukes Material 3 Expressive med tonale flater, utvidet skanneknapp og navigasjonslinje.
-- Fra 600 px bredde (åpen brettbar eller nettbrett) byttes det til navigasjonsrail med liste til venstre og detaljer til høyre.
-- Temaet kan overstyres under **Meg**.
-
-**Native apper:** se [apps/README.md](apps/README.md). iOS (SwiftUI, Liquid Glass) og Android (Compose, Material 3, støtte for brettbare). Begge logger inn mot `/finans/api` og ser bare FinansHub.
-
-**Tokens:** en iOS-snarvei eller en annen klient kan laste opp kvitteringer med et token (Innstillinger → Mobil og tilgang), med tilganger som `finance:read`, `receipts:write` og `finance:write`. Tokenet gir aldri tilgang til resten av homelab.
-
-**AI-oppsett (`.env` eller Innstillinger → AI-motor):** `AI_PROVIDER`, `AI_FALLBACK`, `OLLAMA_URL`, `OLLAMA_MODEL`, `GEMINI_API_KEY` og `GEMINI_MODEL`. Gemini-nøkkelen kan også legges inn fra siden. Den lagres på serveren og sendes aldri tilbake til nettleseren. Velger du Ollama uten reserve, forlater ingen kvitteringer hjemmenettet.
-
-## Integrasjoner
-| Modul | Kilde | Env |
+| | Metode | Kommando / fremgangsmåte |
 |---|---|---|
-| Avganger | Entur Journey Planner v3 (`trip`) | `ENTUR_CLIENT_NAME`, `RUTER_ROUTES` |
-| Vær | MET Locationforecast 2.0 | `MET_USER_AGENT`, `LAT`/`LON` |
-| Timeplan, kalender, agenda, prøver | iCal fra Canvas/Outlook (cache 15 min) | `SCHOOL_ICAL_URL`, `MAZEMAP_CAMPUS_ID` |
-| Trading 212 | `/equity/account/cash` + `/equity/portfolio` (cache 60 s) | `TRADING212_API_KEY` |
-| Energi | Home Assistant REST | `HA_URL`, `HA_TOKEN`, `HA_SENSOR_*` |
-| Starlink | CelesTrak TLE (cache 6 t) + satellite.js i nettleseren | – |
-| APOD / galleri | api.nasa.gov / images-api.nasa.gov | `NASA_API_KEY` |
-| Kommer ut | Sonarr/Radarr `/api/v3/calendar` (cache 10 min) | `SONARR_*`, `RADARR_*` |
-| Nyhetslinje | NRK og VG RSS (cache 5 min) | – |
-| Helsesjekk | HTTP-ping fra serveren (godtar selvsignert TLS) | `ROUTER_URL`, `PROXMOX_URL`, … |
+| <img src="docs/assets/icons/nettverk.svg" width="22"> | **Proxmox (anbefalt)** | Kjør på Proxmox-verten som root:<br>`bash -c "$(curl -fsSL https://raw.githubusercontent.com/SebastianKristo/torskenes-verden/main/deploy/proxmox/install.sh)"` |
+| <img src="docs/assets/icons/docker.svg" width="22"> | **Docker Compose** | `docker compose --profile tunnel up -d --build` |
+| <img src="docs/assets/icons/backup.svg" width="22"> | **Unraid** | Mal i [`deploy/unraid/homelab-os.xml`](deploy/unraid/homelab-os.xml), med image fra GHCR |
 
-En integrasjon uten konfigurasjon viser en forklaring i kortet sitt i stedet for å feile.
+Hele fremgangsmåten, med Cloudflare Tunnel og Access, oppdatering og feilsøking, står i **[docs/installasjon.md](docs/installasjon.md)**.
 
-Alle integrasjonene kan også settes opp fra siden under **Innstillinger → Integrasjoner**. Verdier som lagres der, overstyrer `.env` og lagres i databasen. Hemmeligheter (API-nøkler, tokens og iCal-URL) sendes aldri tilbake til nettleseren: feltet viser bare «lagret», og du kan fjerne verdien slik at `.env` brukes igjen.
+> [!TIP]
+> Oppdater en Proxmox-installasjon med
+> `bash -c "$(curl -fsSL https://raw.githubusercontent.com/SebastianKristo/torskenes-verden/main/deploy/proxmox/update.sh)"`.
+> Skriptet trenger ikke git, og rører ikke `.env` eller `data/`.
 
-## Tilpasning
-- **Endre rekkefølge:** dra og slipp elementer i headeren, fanene, toppområdet på dashboardet (avganger, søkebar, klokke/vær) og alle kortrutenett.
-- **Endre størrelse:** dra i det usynlige hjørnet nederst til høyre på et kort (desktop). Bredden snapper til hele kolonner, og høyden er fri. Dobbeltklikk på hjørnet nullstiller kortet. Kortene pakkes tett (masonry), så ulike høyder kan kombineres.
-- **Tilbakestill layout** i profilmenyen nullstiller både rekkefølge og størrelser.
-- **Søkebar:** fire stiler velges under Innstillinger → Utseende. Søkebaren kan skjules fra profilmenyen.
-- **Nyhetslinje:** kan skjules fra profilmenyen. Den stopper ved hover og står stille når «redusert bevegelse» er slått på i systemet.
-- **Popup:** klikk på en kalenderdag, en agenda-rad, en aksje eller en plakat for å se detaljer.
+## 📸 Skjermbilder
 
-## Struktur
+<details open>
+<summary><b>Homelab</b></summary>
+<br>
+
+| Dashboard | Domener |
+|---|---|
+| <img src="docs/images/homelab-dashboard.webp" alt="Dashboard"> | <img src="docs/images/homelab-domener.webp" alt="Domener"> |
+| **Hjem (Home OS)** | **Matplan** |
+| <img src="docs/images/homelab-hjem.webp" alt="Hjem"> | <img src="docs/images/homelab-matplan.webp" alt="Matplan"> |
+| **Studie** | **Innlogging, brukere og 2FA** |
+| <img src="docs/images/homelab-studie.webp" alt="Studie"> | <img src="docs/images/homelab-innlogging.webp" alt="Innlogging"> |
+
+</details>
+
+<details open>
+<summary><b>FinansHub</b></summary>
+<br>
+
+| Oversikt | ✦ AI-søk |
+|---|---|
+| <img src="docs/images/finanshub-oversikt.webp" alt="Oversikt"> | <img src="docs/images/finanshub-ai-sok.webp" alt="AI-søk"> |
+| **Kvitteringer** | **Aksjer (Trading 212)** |
+| <img src="docs/images/finanshub-kvitteringer.webp" alt="Kvitteringer"> | <img src="docs/images/finanshub-aksjer.webp" alt="Aksjer"> |
+| **Delte mapper (bolig)** | **Subscription OS** |
+| <img src="docs/images/finanshub-delte-mapper.webp" alt="Delte mapper"> | <img src="docs/images/finanshub-abonnementer.webp" alt="Abonnementer"> |
+| **Budsjett** | **Backup og data** |
+| <img src="docs/images/finanshub-budsjett.webp" alt="Budsjett"> | <img src="docs/images/finanshub-backup.webp" alt="Backup"> |
+
+</details>
+
+<details open>
+<summary><b>Mobil</b></summary>
+<br>
+
+**iPhone: Liquid Glass**
+<img src="docs/images/mobil-ios.webp" alt="iOS: Hjem, Liste, Budsjett og meny">
+
+**Android: Material 3 Expressive**
+<img src="docs/images/mobil-android.webp" alt="Android: Hjem, Budsjett, Domener og meny">
+
+**Moduler: Domener, Matplan, Abonnementer og Innstillinger**
+<img src="docs/images/mobil-moduler.webp" alt="Moduler på iPhone">
+
+**Brettbar: navigasjonsrail og to paneler**
+<img src="docs/images/mobil-brettbar.webp" alt="Brettbar">
+
+</details>
+
+> Skjermbildene er tatt med `MOCK_DATA=1`, så alle tall og navn er eksempeldata.
+
+## 📚 Dokumentasjon
+
+| | Side | Innhold |
+|---|---|---|
+| <img src="docs/assets/icons/docker.svg" width="22"> | [Installasjon](docs/installasjon.md) | Lokalt, Docker, Cloudflare Tunnel/Access, Proxmox, Unraid, oppdatering, feilsøking |
+| <img src="docs/assets/icons/api.svg" width="22"> | [Konfigurasjon](docs/konfigurasjon.md) | Alle miljøvariabler og innstillingene i grensesnittet |
+| <img src="docs/assets/icons/dashboard.svg" width="22"> | [Homelab](docs/homelab.md) | Faner, widgets, topplinje, nyhetslinje, layout, Hjem, Matplan, Domener |
+| <img src="docs/assets/icons/finans.svg" width="22"> | [FinansHub](docs/finanshub.md) | Sider, kvitteringsflyt, AI, import, aksjer, abonnementer, delte mapper, Finn |
+| <img src="docs/assets/icons/sikkerhet.svg" width="22"> | [Sikkerhet](docs/sikkerhet.md) | Brukere, roller, 2FA, pålitelige enheter, tokens, hemmeligheter |
+| <img src="docs/assets/icons/backup.svg" width="22"> | [Backup](docs/backup.md) | Eksport, SMB-share, kryptering, gjenoppretting, ny installasjon |
+| <img src="docs/assets/icons/api.svg" width="22"> | [API](docs/api.md) | Alle endepunkter, autentisering og eksempler (iOS-snarvei, curl) |
+| <img src="docs/assets/icons/mobil.svg" width="22"> | [Mobilapper](apps/README.md) | Bygg, innlogging, sideloading av IPA, APK |
+| <img src="docs/assets/icons/studie.svg" width="22"> | [Utvikling](docs/utvikling.md) | Arkitektur, mappestruktur, tester, CI, eksempeldata |
+| <img src="docs/assets/icons/nettverk.svg" width="22"> | [Beslutninger](DECISIONS.md) | Hvorfor ting er laget som de er |
+
+## 🧱 Teknologi
+
+```mermaid
+flowchart LR
+  subgraph Klienter
+    B[Nettleser<br/>Homelab + FinansHub]
+    P[PWA /finans/]
+    I[iOS-app<br/>SwiftUI]
+    A[Android-app<br/>Compose]
+  end
+  subgraph Server["Homelab-server (Docker / LXC)"]
+    H[Hono på Node 22]
+    D[(SQLite<br/>better-sqlite3)]
+    F[/data: kvitteringer,<br/>logoer, bakgrunner/]
+  end
+  subgraph Eksternt
+    AI[Ollama lokalt<br/>eller Gemini]
+    X[Entur · MET · iCal · HA<br/>Sonarr/Radarr · T212<br/>Cloudflare · NASA · RSS]
+    S[(SMB-share<br/>backup)]
+  end
+  B & P -- sesjonscookie --> H
+  I & A -- Bearer-token --> H
+  H --- D & F
+  H --> AI & X
+  H -- smbclient --> S
+  CF[Cloudflare Tunnel<br/>+ Access] -.-> H
 ```
-server/   index.js (ruter og API), auth.js, password.js, db.js, integrations.js, settings.js, mock.js
-server/finans/  db.js (tabeller), routes.js (/finans/api), ai.js (Ollama/Gemini), csv.js (bankimport), demo.js
-public/   app.html, login.html, cv.html, css/, js/ (én modul per fane), manifest + sw.js
-public/finans/  index.html, css/ (desktop + mobiltemaer), js/ (core, desktop, mobile), manifest + sw.js
+
+- **Server:** Node 22, [Hono](https://hono.dev), better-sqlite3, node-ical, undici, satellite.js og d3-geo. Ingen byggesteg.
+- **Nettleser:** vanilla ES-moduler, med egne temaer for desktop, iOS (Liquid Glass) og Android (Material 3).
+- **Mobil:** SwiftUI med iOS 17+ og Liquid Glass på iOS 26, Kotlin og Jetpack Compose med Material 3.
+- **Drift:** Docker med PUID/PGID, Cloudflare Tunnel, Proxmox-skript, Unraid-mal, og et image på GHCR fra GitHub Actions.
+
+## 🗂️ Struktur
+
 ```
+server/            Hono-app: innlogging, homelab-API, integrasjoner, Hjem/Matplan/Domener
+server/finans/     FinansHub: database, API, AI, import, søk, aksjer, backup
+public/            Homelab-grensesnittet (app.html, js/, css/) og CV
+public/finans/     FinansHub: desktop og mobil-PWA
+apps/android/      Native Android-app (Kotlin, Compose)
+apps/ios/          Native iOS-app (SwiftUI, XcodeGen)
+deploy/            Proxmox-skript og Unraid-mal
+docs/              Dokumentasjon, skjermbilder og ikoner
+test/              node --test
+```
+
+## 🛡️ Kort om sikkerhet
+
+- Bare `/login`, `/cv` og statiske filer er offentlige. Resten krever innlogging.
+- Passord hashes med scrypt. TOTP-hemmeligheter og API-nøkler lagres kryptert, og nøkler sendes aldri tilbake til nettleseren.
+- Bruk Cloudflare Tunnel i stedet for portviderekobling. Detaljene står i [docs/sikkerhet.md](docs/sikkerhet.md).
+
+---
+
+<p align="center"><sub>Bygget med Node, SQLite og mye kaffe ☕</sub></p>
