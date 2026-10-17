@@ -1,7 +1,8 @@
 // Innstillinger i mobilappen: hovedside med gruppene Konto, App og System, og én underside per gruppe.
 // Valg som bare gjelder denne enheten lagres i localStorage (fh_mprefs); AI og varsler for kvitteringer/budsjett på serveren.
 import { S, api, esc, n0, ini, icon, loadBoot, loadSummary, hlApi } from './core.js';
-import { m, draw, flash, pref, setPref, theme, iosBg, isIOS, meName, avInner, avatarUrl, loadMe } from './mobile.js';
+import { m, draw, flash, pref, setPref, theme, iosBg, isIOS, meName, avInner, avatarUrl, loadMe, startScr, backStyle, HLTABS, FINTABS, FIXED_HL, FIXED_FIN, tabName } from './mobile.js';
+import { LAY, saveLayout } from './mobile-hl.js';
 import { SEEDS, MODES } from './mobile-theme.js';
 
 const T = { f: {}, ai: null, bk: null, srch: null, tokens: null, devices: null, newTok: '', nt: { name: '', scopes: ['receipts:write'], exp: '90' }, ping: '', lastSync: null, usage: null };
@@ -37,7 +38,7 @@ function profile(big = false) {
   const sz = big ? 58 : 44;
   return `<a class="opt-row" href="#/set/konto"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:${sz}px;height:${sz}px;font-size:${big ? 22 : 17}px">${avInner()}</span><span class="m-grow"><b style="font-size:${big ? 19 : 16}px;font-weight:600">${esc(meName())}</b><br><span style="font-size:13px;opacity:.65">${me.username ? `@${esc(me.username)}` : 'FinansHub'}${me.role ? ` · ${esc(me.role)}` : ''} · ${esc(me.serverName || location.host)}</span></span><span style="opacity:.5">›</span></a>`;
 }
-const PAGES = { konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', scan: 'Skanning og AI', notif: 'Varsler', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI-motor', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data' };
+const PAGES = { konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', nav: 'Navigasjonslinje', dom: 'Domener', scan: 'Skanning og AI', notif: 'Varsler', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI-motor', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data' };
 const when = (t) => (t ? new Date(t).toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'aldri');
 const aiMode = () => { const st = S.boot?.settings ?? {}; return st.provider === 'gemini' ? 'gemini' : st.fallback ? 'both' : 'ollama'; };
 
@@ -91,13 +92,33 @@ const PAGE = {
 
   look: (th) => {
     const cur = (() => { try { return localStorage.getItem('fh_theme') || 'auto'; } catch { return 'auto'; } })();
-    return `${th === 'ios' ? G('Bakgrunn', [tog('iosbg', 'Fargebakgrunn', 'Fargede lysflekker bak glassflatene', iosBg())]) : ''}
-      ${th === 'and' ? `${G('Farger', [chips('m3Seed', 'Fargetema', Object.entries(SEEDS).map(([k, [n]]) => [k, n]), pref('m3Seed'))], '«Følg systemet» bruker Material You-fargen fra telefonen når nettleseren gir tilgang til den (Android 12 og nyere), ellers oransje. Velg en farge for å overstyre.')}
+    const st = { hl: 'homelab', hjem: 'fin-hjem', liste: 'fin-liste', budsjett: 'fin-budsjett' }[startScr()] ?? 'homelab';
+    return `${G('Designstil', [chips('theme', 'Utseende på denne enheten', [['auto', `Automatisk (${isIOS() ? 'iOS' : 'Android'})`], ['ios', 'iOS · Liquid Glass'], ['and', 'Android · Material 3']], cur)],
+        'Samme skjermer, data, kontoer og innstillinger i begge stilene. Valget gjelder bare denne enheten, og du bytter tilbake her.')}
+      ${th === 'ios' ? G('Bakgrunn', [tog('iosbg', 'Fargebakgrunn', 'Fargede lysflekker bak glassflatene', iosBg())]) : ''}
+      ${th === 'and' ? `${G('Farger', [chips('m3Seed', 'Fargetema', Object.entries(SEEDS).map(([k, [n]]) => [k, n]), pref('m3Seed'))], '«Følg systemet» bruker Material You-fargen fra telefonen når nettleseren gir tilgang til den (Android 12 og nyere), ellers oransje. Fargene regnes ut i OKLCH med faste toner per rolle. Grønt, rødt og Domener-rosa følger ikke aksentfargen.')}
       ${G('Modus', [chips('m3Mode', 'Lys eller mørk', Object.entries(MODES), pref('m3Mode'))])}` : ''}
-      ${G('Tema', [chips('theme', 'Utseende', [['auto', `Automatisk (${isIOS() ? 'iOS' : 'Android'})`], ['ios', 'iOS · Liquid Glass'], ['and', 'Android · Material 3']], cur)])}
-      ${G('Oppstart', [chips('start', 'Startside', [['hl', 'Homelab'], ['hjem', 'Oversikt'], ['liste', 'Liste'], ['budsjett', 'Budsjett']], pref('start'))])}
+      ${G('Oppstart', [chips('startL', 'Startside', [['homelab', 'Homelab'], ['fin-hjem', 'Finans · Hjem'], ['fin-liste', 'Finans · Liste'], ['fin-budsjett', 'Finans · Budsjett']], st)],
+        st === 'homelab' ? 'Appen åpner på Homelab. Finans, Matplan og Domener ligger bak profilbildet.' : 'Appen åpner i Finans, og hjem-knappen går til Finans. Homelab og de andre modulene ligger bak profilbildet.')}
+      ${G('Navigasjonslinje', [chips('backStyle', 'Tilbake til startsiden', [['arrow', 'Pil øverst'], ['bar', 'Knapp i linjen']], backStyle()), nav('nav', 'Endre navn, rekkefølge og skjul faner', '', 'list', '#5E5CE6')],
+        '«Pil øverst» viser «‹ Homelab» eller «‹ Finans» øverst i moduler som Domener og Matplan, med profilbildet på samme rad.')}
+      ${G('Matplan', [chips('matTheme', 'Utseende', [['light', 'Lys'], ['dark', 'Mørk'], ['system', 'Følg systemet']], LAY().matTheme ?? 'light')], 'Du kan også bytte med ☾ / ☀ øverst i Matplan.')}
       ${G('Personvern', [tog('hideAmt', 'Skjul beløp til jeg trykker', 'Viser •••• i stedet for tall på Hjem', pref('hideAmt'))])}`;
   },
+
+  nav: (th) => {
+    const L = LAY();
+    const rows = (key, def, fixed, pre) => L[key].map((id, i, a) => {
+      const hid = !!L.hide[id] && !fixed.includes(id), def0 = def[id][1];
+      return `<div class="opt-row navrow"><input class="sinp navname" data-navname="${pre}.${id}" value="${esc(L.names?.[`${pre}.${id}`] ?? '')}" placeholder="${esc(def0)}" maxlength="30" aria-label="Navn på ${esc(def0)}" style="opacity:${hid ? 0.45 : 1}">
+        <button class="mini" data-sact="navmv" data-k="${key}" data-i="${i}" data-j="${i - 1}" aria-label="Flytt ${esc(def0)} opp" ${i ? '' : 'disabled style="opacity:.3"'}>▲</button><button class="mini" data-sact="navmv" data-k="${key}" data-i="${i}" data-j="${i + 1}" aria-label="Flytt ${esc(def0)} ned" ${i < a.length - 1 ? '' : 'disabled style="opacity:.3"'}>▼</button>
+        ${fixed.includes(id) ? '<span class="sval" style="width:51px;text-align:center">Alltid</span>' : `<button class="swb" data-sact="navtog" data-id="${id}" role="switch" aria-checked="${!hid}" aria-label="Vis ${esc(def0)}"><span class="sw" aria-checked="${!hid}"></span></button>`}</div>`;
+    }).join('');
+    return `${G('Homelab', [rows('hlTabs', HLTABS, FIXED_HL, 'hl')])}${G('Finans', [rows('finTabs', FINTABS, FIXED_FIN, 'fin')], 'Et tomt navn gir standardnavnet. Endringene gjelder iPhone, Android og brettbar, og lagres på kontoen din.')}
+      ${G('', [btn('Tilbakestill navigasjon', 'navreset', '#FF8A80')])}`;
+  },
+
+  dom: () => `${G('Domener', [link('Administrer domener', '#/dom/admin', 'Legg til eller fjern domener'), link('Åpne Domener', '#/dom')], 'Listen deles med Homelab på PC. API-token per domene legges inn på web: Homelab → Innstillinger → Domener.')}`,
 
   scan: () => `${G('Skanneknappen', [chips('scanTap', 'Trykk på skann', [['cam', 'Åpne kamera'], ['sheet', 'Vis valg']], pref('scanTap'))], 'Hold inne skanneknappen for å velge fra Bilder eller Filer.')}
     ${G('Bilde', [tog('crop', 'Beskjær automatisk', 'Hold kvitteringen innenfor rammen i kameraet', pref('crop')), tog('origImg', 'Lagre originalbildet', 'Lagres sammen med kvitteringen på serveren', pref('origImg')), tog('wifi', 'Last opp bare på Wi-Fi', 'Ellers settes filer i kø', pref('wifi'))])}
@@ -173,6 +194,10 @@ export async function settingsBind(e, t) {
   let x;
   if (e.type === 'change' || e.type === 'input') {
     if (t.matches?.('[data-ntname]')) { T.nt.name = t.value; return true; }
+    if (t.dataset?.navname) {
+      if (e.type === 'change') { const names = { ...(LAY().names ?? {}) }; const v = t.value.trim().slice(0, 30); if (v) names[t.dataset.navname] = v; else delete names[t.dataset.navname]; saveLayout({ names }, false); flash(v ? `Kalt «${v}»` : 'Standardnavn'); }
+      return true;
+    }
     if (t.dataset?.sinp) { T.f[t.dataset.sinp] = t.value; return true; }
     if (e.type === 'change' && t.matches?.('[data-avatar]')) { const f = t.files?.[0]; t.value = ''; if (f) await uploadAvatar(f); return true; }
     if (e.type === 'change' && t.matches?.('[data-takeout]')) {
@@ -196,6 +221,8 @@ export async function settingsBind(e, t) {
   if ((x = d('[data-schip]'))) {
     const id = x.dataset.schip, v = x.dataset.v;
     if (id === 'theme') { try { if (v === 'auto') localStorage.removeItem('fh_theme'); else localStorage.setItem('fh_theme', v); } catch {} }
+    else if (id === 'startL') { saveLayout({ start: v }, false); setPref('start', { homelab: 'hl', 'fin-hjem': 'hjem', 'fin-liste': 'liste', 'fin-budsjett': 'budsjett' }[v]); }
+    else if (id === 'backStyle' || id === 'matTheme') saveLayout({ [id]: v }, false);
     else if (id === 'ai') S.boot.settings = await api('/settings', { method: 'PUT', json: v === 'both' ? { provider: 'ollama', fallback: true } : { provider: v, fallback: false } });
     else if (id === 'ntscope') T.nt.scopes = T.nt.scopes.includes(v) ? T.nt.scopes.filter((s) => s !== v) : [...T.nt.scopes, v];
     else if (id === 'ntexp') T.nt.exp = v;
@@ -207,6 +234,13 @@ export async function settingsBind(e, t) {
   const act = d('[data-sact]')?.dataset.sact;
   if (!act) return false;
   if (act === 'logout') { await fetch('/api/logout', { method: 'POST' }); location.href = '/login?next=/finans/'; return true; }
+  if (act === 'navmv') {
+    const b = d('[data-sact]'), k = b.dataset.k, i = +b.dataset.i, j = +b.dataset.j, a = [...LAY()[k]];
+    if (j < 0 || j >= a.length) return true;
+    const [y] = a.splice(i, 1); a.splice(j, 0, y); saveLayout({ [k]: a }); return true;
+  }
+  if (act === 'navtog') { const id = d('[data-sact]').dataset.id, h = { ...LAY().hide }; h[id] = !h[id]; saveLayout({ hide: h }); return true; }
+  if (act === 'navreset') { saveLayout({ hlTabs: [], finTabs: [], names: {}, hide: Object.fromEntries(Object.entries(LAY().hide).filter(([k]) => !HLTABS[k] && !FINTABS[k])) }); flash('Navigasjonen er tilbakestilt'); return true; }
   if (act === 'copy') { try { await navigator.clipboard.writeText(T.newTok); flash('Token kopiert'); } catch { flash('Marker og kopier tokenet manuelt'); } return true; }
   if (act === 'revoke') {
     const tk = T.tokens?.find((y) => y.id === x?.dataset?.id || y.id === d('[data-id]')?.dataset.id);

@@ -18,8 +18,12 @@ function norm(v = {}) {
   const hide = { ...(v.hide && typeof v.hide === 'object' ? v.hide : DEF.hide) };
   // Nye widgets som ikke finnes i et lagret oppsett får standard synlighet.
   DEF.sec.forEach((id) => { if (Array.isArray(v.sec) && !v.sec.includes(id) && DEF.hide[id]) hide[id] = true; });
-  return { sec: fix(v.sec, DEF.sec), hlTabs: fix(v.hlTabs, DEF.hlTabs), finTabs: fix(v.finTabs, DEF.finTabs), hide };
+  const names = {};
+  if (v.names && typeof v.names === 'object') for (const [k, n] of Object.entries(v.names)) if (typeof n === 'string' && n.trim()) names[k] = n.trim().slice(0, 30);
+  return { sec: fix(v.sec, DEF.sec), hlTabs: fix(v.hlTabs, DEF.hlTabs), finTabs: fix(v.finTabs, DEF.finTabs), hide, names,
+    start: START_KEYS.includes(v.start) ? v.start : undefined, backStyle: v.backStyle === 'bar' ? 'bar' : 'arrow', matTheme: ['light', 'dark', 'system'].includes(v.matTheme) ? v.matTheme : 'light' };
 }
+export const START_KEYS = ['homelab', 'fin-hjem', 'fin-liste', 'fin-budsjett'];
 let lay = norm((() => { try { return JSON.parse(localStorage.getItem('fh_mlayout') || '{}'); } catch { return {}; } })());
 export const LAY = () => lay;
 
@@ -28,12 +32,19 @@ export async function loadLayout() {
     if (r?.mobile) { lay = { ...norm(r.mobile), fromServer: true }; try { localStorage.setItem('fh_mlayout', JSON.stringify(lay)); } catch {} } } catch { /* eldre server: bare lokalt */ }
 }
 let saveT;
-function saveLayout(patch) {
+// Lagres per bruker (/api/me/layout.mobile). Eldre servere som avviser de nye feltene får dem uten.
+export function saveLayout(patch, redraw = true) {
   lay = { ...norm({ ...lay, ...patch }), fromServer: true };
   try { localStorage.setItem('fh_mlayout', JSON.stringify(lay)); } catch {}
   clearTimeout(saveT);
-  saveT = setTimeout(() => hlApi('/me/layout', { method: 'PUT', json: { mobile: norm(lay) } }).catch(() => {}), 400);
-  draw();
+  saveT = setTimeout(() => {
+    const full = norm(lay); if (!full.start) delete full.start;
+    hlApi('/me/layout', { method: 'PUT', json: { mobile: full } }).catch(() => {
+      const { sec, hlTabs, finTabs, hide } = full;
+      return hlApi('/me/layout', { method: 'PUT', json: { mobile: { sec, hlTabs, finTabs, hide } } }).catch(() => {});
+    });
+  }, 400);
+  if (redraw) draw();
 }
 function move(key, i, j) {
   const a = [...lay[key]];
@@ -297,7 +308,7 @@ export function hlBind(e, t) {
     move('sec', lay.sec.indexOf(id), lay.sec.indexOf(vis[j]));
   } else if (k === 'mv') move(x.dataset.k, +x.dataset.i, +x.dataset.j);
   else if (k === 'tog') saveLayout({ hide: { ...lay.hide, [id]: !lay.hide[id] } });
-  else if (k === 'reset') { lay = norm({}); saveLayout({}); flash('Forsiden er tilbakestilt'); }
+  else if (k === 'reset') { lay = norm({ start: lay.start, backStyle: lay.backStyle, matTheme: lay.matTheme }); saveLayout({}); flash('Forsiden er tilbakestilt'); }
   return true;
 }
 export { c3 };

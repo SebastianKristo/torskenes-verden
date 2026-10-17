@@ -161,7 +161,8 @@ function finn(th) {
 /* ---------- Domener (Cloudflare): faner Trafikk · Besøk · Ytelse · Sikkerhet ---------- */
 
 const DOMTABS = [['dom/traf', 'Trafikk', 'traf'], ['dom/bes', 'Besøk', 'bes'], ['dom/yt', 'Ytelse', 'yt'], ['dom/sik', 'Sikkerhet', 'sik']];
-const dm = { list: null, sel: null, per: '24h', hist: '7d', pick: false, data: {} };
+const dm = { list: null, sel: null, per: '24h', hist: '7d', pick: false, data: {}, manage: false, add: { name: '', source: 'cloudflare' } };
+const DSRC = { cloudflare: 'Cloudflare', tunnel: 'Cloudflare Tunnel', plausible: 'Plausible', umami: 'Umami', uptime: 'Bare oppetid og SSL' };
 try { dm.sel = localStorage.getItem('hl_dom_sel'); } catch {}
 const tabOf = () => (DOMTABS.some(([k]) => k === `dom/${m.sub}`) ? m.sub : 'traf');
 export const domNav = () => DOMTABS;
@@ -199,13 +200,26 @@ const path = (a, w, h) => { if (!a?.length) return ''; const mx = Math.max(...a,
 const bars = (a) => { const mx = Math.max(1, ...a); return `<div class="dbars" style="gap:${a.length > 40 ? 1 : 3}px">${a.map((v, i) => `<i style="height:${Math.max(3, (v / mx) * 100)}%;opacity:${i === a.length - 1 ? 1 : 0.72}"></i>`).join('')}</div>`; };
 const shareRows = (th, rows, total, name = 'name', val = 'visitors') => { const mx = Math.max(1, ...rows.map((r) => r[val] ?? r.count ?? 0)); return listBox(th, rows.map((r) => { const v = r[val] ?? r.count ?? 0; return `<div class="opt-row share"><span class="m-grow"><span class="m-row" style="justify-content:space-between"><span class="m-ell">${esc(r[name] ?? r.path ?? r.name)}</span><span class="m-mono" style="opacity:.85">${nbx(v)}</span></span><span class="sbar"><i style="width:${(v / mx) * 100}%"></i></span></span></div>`; }).join('') || '<div class="m-empty">Ingen data.</div>'); };
 
+function domManage(th) {
+  const f = dm.add;
+  return `<div class="m-row" style="justify-content:space-between;padding:6px 4px 0"><div class="title" style="font-size:${isIos(th) ? 30 : 32}px">Domener</div><button class="tonal" data-dom="mclose">Ferdig</button></div>
+    ${sec('Dine domener')}${listBox(th, (dm.list ?? []).map((d) => `<div class="opt-row"><span class="m-grow">${esc(d.name)}<br><span style="font-size:12px;opacity:.6">${esc(DSRC[d.source] ?? d.source ?? '')}${d.hasToken ? ' · eget token' : ''}</span></span><button class="mini danger" data-dom="rm" data-id="${esc(d.id)}" data-name="${esc(d.name)}">Fjern</button></div>`).join('') || '<div class="m-empty">Ingen domener ennå.</div>')}
+    ${sec('Legg til domene')}<form class="list ${gl(th)}" data-domadd><label class="opt-row col"><span style="font-size:13px;opacity:.7">Domene</span><input class="sinp" name="name" id="m-dom-name" value="${esc(f.name)}" placeholder="eksempel.no" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off"></label>
+      <div class="opt-row col"><span style="font-size:13px;opacity:.7">Statistikkilde</span><div class="chips">${Object.entries(DSRC).map(([k, n]) => `<button type="button" class="chip" data-dom="src" data-v="${k}" aria-pressed="${f.source === k}">${n}</button>`).join('')}</div></div>
+      <button class="opt-row" type="submit"><span class="m-grow" style="color:var(--m-acc);font-weight:600">Legg til domene</span></button></form>
+    <div class="snote" style="padding:0 6px">Listen er den samme som i Homelab. Cloudflare bruker standard-tokenet fra Integrasjoner; eget API-token per domene legges inn på web (Homelab → Innstillinger → Domener).</div>`;
+}
+
 function domView(th) {
+  if (dm.manage || m.sub === 'admin') return domManage(th);
   const pickBtn = `<button class="dpick ${gl(th)}" data-dom="pick" aria-expanded="${dm.pick}">${esc(dm.sel ?? 'Domene')} <span style="opacity:.6">▾</span></button>`;
-  const right = `<button class="mini" data-dom="refresh" aria-label="Oppdater">${icon('refresh', 18)}</button><a class="mini" href="#/set" aria-label="Innstillinger">${icon('gear', 18)}</a>`;
+  // iPhone: tannhjulet ligger i fanelinjen (samme plass som Skann i Finans), ikke øverst.
+  const right = `<button class="mini" data-dom="refresh" aria-label="Oppdater">${icon('refresh', 18)}</button>${isIos(th) ? '' : `<a class="mini" href="#/set/dom" aria-label="Innstillinger">${icon('gear', 18)}</a>`}`;
+  const manageRow = `<button class="opt-row" data-dom="manage"><span class="m-grow" style="color:var(--m-acc);font-weight:600">＋ Administrer domener</span></button>`;
   const top = `<div class="m-row" style="justify-content:space-between;padding:6px 4px 0;gap:8px">${pickBtn}<span class="m-row" style="gap:8px">${right}${avatar()}</span></div>
-    ${dm.pick ? listBox(th, (dm.list ?? []).map((d) => `<button class="opt-row" data-dom="sel" data-name="${esc(d.name)}"><span class="m-grow">${esc(d.name)}<br><span style="font-size:12px;opacity:.6">${esc({ cloudflare: 'Cloudflare', tunnel: 'Cloudflare Tunnel', plausible: 'Plausible', umami: 'Umami', uptime: 'Bare oppetid og SSL' }[d.source] ?? d.source ?? '')}</span></span>${d.name === dm.sel ? '<span style="color:var(--m-acc)">✓</span>' : ''}</button>`).join('') + '<div style="font-size:12px;opacity:.55;padding:10px 16px">Domener legges til i Homelab → Domener.</div>') : ''}`;
+    ${dm.pick ? listBox(th, (dm.list ?? []).map((d) => `<button class="opt-row" data-dom="sel" data-name="${esc(d.name)}"><span class="m-grow">${esc(d.name)}<br><span style="font-size:12px;opacity:.6">${esc(DSRC[d.source] ?? d.source ?? '')}</span></span>${d.name === dm.sel ? '<span style="color:var(--m-acc)">✓</span>' : ''}</button>`).join('') + manageRow) : ''}`;
   if (!dm.list) return `${top}<div class="m-spin"></div>`;
-  if (!dm.list.length) return `${top}<div class="m-empty">Ingen domener lagt til. Legg dem til i Homelab → Domener.</div>`;
+  if (!dm.list.length) return `${top}<div class="m-empty">Ingen domener lagt til ennå.</div>${listBox(th, manageRow)}`;
   const a = dm.data[`${dm.sel}|${dm.per}`];
   if (!a) return `${top}<div class="m-spin"></div>`;
   const tab = tabOf();
@@ -228,11 +242,27 @@ function domTraf(th, a) {
     <div class="dcards">${[['Besøk', nbx(a.visitors), 'bes', '#FF9EBE', 'dom/bes'], ['Forespørsler', nbx(a.requests), 'req', '#8AB4F8', 'dom/yt'], ['Dataoverføring', `${mb} ${unit}`, 'dl', '#F2B56B', 'dom/yt'], ['Land', String((a.countries ?? []).length), 'globe', '#7BE3A0', 'dom/bes']].map(([l, v, ic, c, go]) => `<a class="dcard ${gl(th)}" href="#/${go}"><span style="color:${c}">${icon(ic, 18)}</span><span class="l">${l}</span><b class="m-mono">${v}</b></a>`).join('')}</div>
     <div class="sec">Historikk</div>
     ${chipRow([['7d', '7 d'], ['30d', '30 d'], ['90d', '90 d'], ['1y', '1 år']], dm.hist, 'hist')}
-    ${h ? [['Besøk', ser.map((x) => x.visitors ?? 0)], ['Forespørsler', ser.map((x) => x.requests ?? 0)]].map(([l, arr]) => `<div class="dchart ${gl(th)}"><div class="m-row" style="justify-content:space-between"><span style="opacity:.75">${l}</span><b class="m-mono">${nbx(arr.reduce((x, y) => x + y, 0))}</b></div>${bars(arr)}</div>`).join('') : '<div class="m-spin"></div>'}`;
+    ${h ? [['Besøk', ser.map((x) => x.visitors ?? 0)], ['Forespørsler', ser.map((x) => x.requests ?? 0)]].map(([l, arr]) => `<div class="dchart ${gl(th)}"><div class="m-row" style="justify-content:space-between"><span style="opacity:.75">${l}</span><b class="m-mono">${nbx(arr.reduce((x, y) => x + y, 0))}</b></div>${bars(arr)}</div>`).join('') : '<div class="m-spin"></div>'}
+    ${domCard(th, a)}`;
+}
+const dLong = (v) => (v && /^\d{4}-\d{2}-\d{2}/.test(v) ? `${v.slice(8, 10)}.${v.slice(5, 7)}.${v.slice(0, 4)}` : '–');
+const daysTo = (v) => (v ? Math.round((new Date(String(v).slice(0, 10) + 'T12:00:00') - Date.now()) / 864e5) : null);
+function domCard(th, a) {
+  const STAT = { active: ['Aktiv', '#7BE3A0'], down: ['Nede', '#FF8A80'], pending: ['Venter', '#F2B56B'] }[a.status] ?? ['Ukjent', 'inherit'];
+  const cert = a.sslExpires ?? a.security?.certExpires, cd = daysTo(cert);
+  const ip = (a.dns ?? []).find((r) => r.type === 'A')?.content ?? (a.dns ?? []).find((r) => r.type === 'AAAA')?.content;
+  const tls = a.tls?.[0]?.name ?? (a.security?.minTls ? `TLS ${a.security.minTls}+` : null);
+  const yes = (v) => (v === true ? 'På' : v === false ? 'Av' : '–');
+  const src = dm.list?.find((d) => d.name === dm.sel)?.source;
+  const rows = [['Status', `<b style="color:${STAT[1]};font-weight:600">● ${STAT[0]}</b>`], ['Statistikkilde', esc(DSRC[src] ?? src ?? '–')], ['Registrar', esc(a.registrar ?? '–')],
+    ['Fornyes', dLong(a.renews)], ['SSL-sertifikat', cert ? `<span style="color:${cd != null && cd < 30 ? '#F2B56B' : 'inherit'}">${dLong(String(cert))} · ${cd} dager igjen</span>` : '–'],
+    ['Navnetjenere', (a.nameServers ?? []).map(esc).join('<br>') || '–'], ['IP', ip ? `<span class="m-mono" style="font-size:13px">${esc(ip)}</span>` : '–'], ['TLS', esc(tls ?? '–')], ['DNSSEC', yes(a.security?.dnssec)]];
+  return `${sec('Domene')}${listBox(th, rows.map(([k, v]) => `<div class="opt-row"><span style="opacity:.7;flex:none">${k}</span><span class="m-grow" style="text-align:right">${v}</span></div>`).join(''))}`;
 }
 function domBes(th, a) {
   const dev = a.devices ?? [], colors = ['#FF9EBE', '#8AB4F8', '#F2B56B', '#7BE3A0'];
   return `${kpis(th, [['Besøk', nbx(a.visitors)], ['Sidevisninger', nbx(a.pageviews)], ['Land', String((a.countries ?? []).length)]])}
+    ${sec('Verdenskart')}<div class="dchart ${gl(th)} dmapbox"><div class="dmap" data-dmap aria-label="Besøk per land"></div><span style="font-size:12px;opacity:.6">Trykk på et land for å se antall besøk.</span></div>
     ${sec('Topp land')}${shareRows(th, (a.countries ?? []).slice(0, 8), a.visitors)}
     ${dev.length ? `${sec('Enheter')}<div class="dchart ${gl(th)}"><div class="stack">${dev.map((d, i) => `<i style="width:${d.pct}%;background:${colors[i % 4]}"></i>`).join('')}</div><div class="legend">${dev.map((d, i) => `<span><i style="background:${colors[i % 4]}"></i>${esc(d.name)} ${pct(d.pct)}</span>`).join('')}</div></div>` : ''}
     ${sec('Toppsider')}${shareRows(th, (a.topPages ?? []).slice(0, 8), 0, 'path', 'count')}
@@ -243,12 +273,12 @@ function domYt(th, a) {
   const st = a.statusCodes ?? (typeof a.status === 'object' ? a.status : {}), tot = Object.values(st).reduce((x, y) => x + (Number(y) || 0), 0) || 1;
   const [mb, unit] = bytes(a.bytes);
   const SC = [['2xx', 'OK', '#7BE3A0'], ['3xx', 'Videresendt', '#8AB4F8'], ['4xx', 'Ikke funnet o.l.', '#F2B56B'], ['5xx', 'Serverfeil', '#FF8A80']];
-  const up = (a.uptime90 ?? []).slice(-30);
+  const up = (a.uptime90 ?? []).slice(-90);
   return `<div class="dchart ${gl(th)}"><div class="m-row" style="justify-content:space-between"><span style="opacity:.75">Bufret</span><b class="m-mono" style="font-size:24px">${pct(a.cachedPct)}</b></div><span class="sbar" style="height:10px"><i style="width:${Math.min(100, a.cachedPct ?? 0)}%"></i></span><span style="font-size:13px;opacity:.65">av ${mb} ${unit} levert fra Cloudflare-kanten</span></div>
     <div class="dcards">${[['Median TTFB', `${Math.round(a.ttfb?.p50 ?? 0)} ms`, 'Fra kanten'], ['95. persentil', `${Math.round(a.ttfb?.p95 ?? 0)} ms`, 'De tregeste 5 %'], ['Fra opprinnelse', a.originMs != null ? `${Math.round(a.originMs)} ms` : '–', 'Når cache bommer'], ['Feilrate', pct(a.errorPct), '5xx']].map(([l, v, s2]) => `<div class="dcard ${gl(th)}"><span class="l">${l}</span><b class="m-mono">${v}</b><span style="font-size:12px;opacity:.6">${s2}</span></div>`).join('')}</div>
     ${sec('Statuskoder')}${listBox(th, SC.map(([k, n, c]) => { const v = Number(st[k]) || 0; return `<div class="opt-row share"><span class="m-grow"><span class="m-row" style="justify-content:space-between"><span><b style="color:${c};font-weight:600">${k}</b> <span style="opacity:.65">${n}</span></span><span class="m-mono">${pct((v / tot) * 100)}</span></span><span class="sbar"><i style="width:${Math.max(1, (v / tot) * 100)}%;background:${c}"></i></span></span></div>`; }).join(''))}
     ${(a.http ?? []).length || (a.tls ?? []).length ? `${sec('Protokoller')}${listBox(th, [...(a.http ?? []), ...(a.tls ?? [])].map((x) => `<div class="opt-row"><span class="m-grow">${esc(x.name)}</span><span class="m-mono">${pct(x.pct)}</span></div>`).join(''))}` : ''}
-    ${up.length ? `${sec('Oppetid siste 30 dager')}<div class="dchart ${gl(th)}"><div class="upt">${up.map((v) => `<i style="background:${v >= 0.999 ? '#7BE3A0' : v >= 0.98 ? '#F2B56B' : '#FF8A80'}" title="${pct(v * 100)}"></i>`).join('')}</div><span style="font-size:13px;opacity:.65">${pct(a.uptimePct ?? (up.reduce((x, y) => x + y, 0) / up.length) * 100)} oppetid</span></div>` : ''}`;
+    ${up.length ? `${sec(`Oppetid siste ${up.length} dager`)}<div class="dchart ${gl(th)}"><div class="upt">${up.map((v) => `<i style="background:${v >= 0.999 ? '#7BE3A0' : v >= 0.98 ? '#F2B56B' : '#FF8A80'}" title="${pct(v * 100)}"></i>`).join('')}</div><span style="font-size:13px;opacity:.65">${pct(a.uptimePct ?? (up.reduce((x, y) => x + y, 0) / up.length) * 100)} oppetid</span></div>` : ''}`;
 }
 function domSik(th, a) {
   const t = a.threats ?? {}, s = a.security ?? {};
@@ -258,6 +288,7 @@ function domSik(th, a) {
     ${(t.types ?? []).length ? `${sec('Typer')}${shareRows(th, t.types, 0, 'name', 'count')}` : ''}
     ${sec('Siste hendelser')}${listBox(th, (t.events ?? []).slice(0, 10).map((e) => `<div class="opt-row"><em class="role ${e.action === 'Blokkert' ? 'blk' : 'chl'}">${esc(e.action)}</em><span class="m-grow"><span class="m-ell">${esc(e.path ?? '/')}</span><span class="m-ell" style="font-size:12px;opacity:.6">${esc([e.country, e.ip].filter(Boolean).join(' · '))}</span></span><span style="font-size:12px;opacity:.6">${e.time ? new Date(e.time).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }) : ''}</span></div>`).join('') || '<div class="m-empty">Ingen hendelser.</div>')}
     ${byC.length ? `${sec('Trusler per land')}${shareRows(th, byC, 0, 'name', 'threats')}` : ''}
+    ${sec('DNS-poster')}${listBox(th, (a.dns ?? []).map((r) => `<div class="opt-row"><em class="role dns">${esc(r.type)}</em><span class="m-grow" style="min-width:0"><span class="m-ell">${esc(r.name)}</span><span class="m-ell m-mono" style="font-size:12px;opacity:.65">${esc(r.content)}</span></span><span style="font-size:12px;flex:none;color:${r.proxied ? '#F2B56B' : 'inherit'};opacity:${r.proxied ? 1 : 0.6}">${r.proxied ? 'Proxy' : 'Kun DNS'}</span></div>`).join('') || '<div class="m-empty">Ingen DNS-poster.</div>')}
     ${sec('Innstillinger')}${listBox(th, [['SSL-modus', esc(s.sslMode ?? '–')], ['Alltid HTTPS', yes(s.alwaysHttps)], ['Minimum TLS', esc(s.minTls ?? '–')], ['DNSSEC', yes(s.dnssec)], ['Bot Fight Mode', yes(s.botFight)], ['Sertifikat utløper', s.certExpires ? dd(String(s.certExpires).slice(0, 10)) + '.' + String(s.certExpires).slice(0, 4) : '–']].map(([k, v]) => `<div class="opt-row"><span class="m-grow" style="opacity:.75">${k}</span><b style="font-weight:500">${v}</b></div>`).join(''))}`;
 }
 
@@ -274,6 +305,14 @@ export async function modBind(e, t) {
     D.dir[x.dataset.dirform] = await api(`/folders/${encodeURIComponent(x.dataset.dirform)}/entries`, { method: 'POST', json: { description: v.description.trim(), amount, paidBy: v.paidBy, date: today() } });
     flash('Lagt til i boligen'); return true;
   }
+  if (e.type === 'submit' && (x = d('[data-domadd]'))) {
+    e.preventDefault();
+    const name = String(new FormData(x).get('name') ?? '').trim().toLowerCase();
+    if (!name) { flash('Skriv et domene, f.eks. eksempel.no'); return true; }
+    await domApi('/domains', { method: 'POST', json: { name, source: dm.add.source } });
+    dm.add = { name: '', source: dm.add.source }; dm.sel = name; await domLoad(true); flash(`${name} er lagt til`); return true;
+  }
+  if (e.type === 'input' && t.id === 'm-dom-name') { dm.add.name = t.value; return true; }
   if (e.type === 'input') {
     if (t.id === 'm-sub-name') D.subF.name = t.value; else if (t.id === 'm-sub-price') D.subF.price = t.value; else if (t.id === 'm-sub-next') D.subF.nextDate = t.value;
     else if (d('[data-dirnew]') && t.name) D.dirF[t.name] = t.value; else return false;
@@ -316,7 +355,16 @@ export async function modBind(e, t) {
   }
   if ((x = d('[data-dom]'))) {
     const k = x.dataset.dom;
-    if (k === 'pick') dm.pick = !dm.pick;
+    if (k === 'manage') { dm.manage = true; dm.pick = false; window.scrollTo(0, 0); }
+    else if (k === 'mclose') { dm.manage = false; if (m.sub === 'admin') { location.hash = '#/dom'; return true; } }
+    else if (k === 'src') { dm.add.source = x.dataset.v; }
+    else if (k === 'rm') {
+      if (!confirm(`Fjerne ${x.dataset.name} fra Domener? Statistikken slutter å hentes.`)) return true;
+      await domApi(`/domains/${encodeURIComponent(x.dataset.id)}`, { method: 'DELETE' });
+      if (dm.sel === x.dataset.name) dm.sel = null;
+      await domLoad(true); flash(`${x.dataset.name} er fjernet`);
+    }
+    else if (k === 'pick') dm.pick = !dm.pick;
     else if (k === 'sel') { dm.sel = x.dataset.name; dm.pick = false; try { localStorage.setItem('hl_dom_sel', dm.sel); } catch {} draw(); await modLoad('dom'); }
     else if (k === 'per') { dm.per = x.dataset.v; draw(); await modLoad('dom'); }
     else if (k === 'hist') { dm.hist = x.dataset.v; draw(); await modLoad('dom'); }
@@ -324,4 +372,15 @@ export async function modBind(e, t) {
     draw(); return true;
   }
   return false;
+}
+
+/* Verdenskartet tegnes etter hver tegning av Besøk-fanen (rosa skala). */
+export function modAfterDraw(th) {
+  const el = document.querySelector('[data-dmap]');
+  if (!el) return;
+  const a = dm.data[`${dm.sel}|${dm.per}`];
+  const lt = th === 'and' && m.light;
+  import('/assets/js/worldmap.js').then(({ drawMap }) => drawMap(el, a?.countries ?? [], {
+    lo: lt ? '#F2C4D3' : '#4a2433', hi: lt ? '#8A4E61' : '#FFB1C8', empty: lt ? '#EBDDE1' : th === 'and' ? '#3A2F33' : '#2A2228', stroke: lt ? '#FFFFFF' : th === 'and' ? '#1A1114' : '#141016', tap: true,
+  })).catch(() => { el.innerHTML = '<div class="wm-msg">Kunne ikke laste kartet.</div>'; });
 }

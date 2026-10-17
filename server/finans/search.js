@@ -206,12 +206,20 @@ function numbersOk(answer, allowed) {
   return nums.every((n) => { const v = parseFloat(norm(n)); return !Number.isFinite(v) || allowed.some((a) => Math.abs(a - v) < 0.6); });
 }
 
+// Når AI-motoren nettopp har feilet, hopper vi rett til vanlig søk i noen minutter i stedet for å vente på tidsavbrudd hver gang.
+let aiDownUntil = 0;
+export const aiDown = () => Date.now() < aiDownUntil;
+export const markAiDown = (ms = 3 * 60_000) => { aiDownUntil = Date.now() + ms; };
+
+// Kaster AiUnavailable når motoren er nede eller ikke svarer; da bruker kallet vanlig søk.
+export class AiUnavailable extends Error {}
 export async function answer(text) {
+  if (aiDown()) throw new AiUnavailable('AI-motoren svarte ikke nylig');
   const r = await search(text);
   const fallback = heuristicAnswer(text, r);
   const st = settings();
   const engine = secret('geminiKey') ? 'Gemini' : st.provider === 'ollama' ? 'Ollama' : 'Gemini';
-  if (!r.all) return { answer: fallback, hits: r.hits, engine: 'Uten AI', facts: r.facts };
+  if (!r.all) return { answer: fallback, hits: r.hits, engine: 'Uten AI', facts: r.facts, empty: true };
   const ctx = r.hits.map((h, i) => `[${i + 1}] ${h.source}: ${h.description} · ${dd(h.date)} · ${h.amount != null ? kr(h.amount) + ' kr' : 'ukjent beløp'}${h.category ? ' · ' + h.category : ''}`).join('\n');
   const prompt = `Du er en presis norsk økonomiassistent. Svar på spørsmålet KUN ut fra grunnlaget under. Skriv 1–3 korte setninger på norsk bokmål.
 Bruk bare tall som står i grunnlaget eller i fasiten. Finn aldri på beløp. Vis til treff med [n]. Hvis grunnlaget ikke holder, si det.
@@ -226,8 +234,9 @@ ${ctx}`;
     const allowed = [r.facts.outSum, r.facts.inSum, r.facts.count, r.hits.length, ...r.hits.flatMap((h, i) => [Math.abs(h.amount ?? 0), i + 1, +h.date?.slice(0, 4), +h.date?.slice(5, 7), +h.date?.slice(8, 10)]), ...[...String(text).matchAll(/\d+/g)].map((m) => +m[0])].filter(Number.isFinite);
     if (a && numbersOk(a, allowed)) return { answer: a, hits: r.hits, engine, facts: r.facts };
     return { answer: fallback, hits: r.hits, engine: `${engine} (kontrollert – tall fra systemet)`, facts: r.facts };
-  } catch {
-    return { answer: fallback, hits: r.hits, engine: 'Uten AI (motoren svarte ikke)', facts: r.facts };
+  } catch (e) {
+    markAiDown();
+    throw new AiUnavailable(e.message);
   }
 }
 
@@ -236,4 +245,199 @@ export function suggestions() {
   const topCat = q(`SELECT c.name FROM fh_transactions t JOIN fh_categories c ON c.id=t.category_id WHERE c.kind='expense' AND t.date>=date('now','-90 days') GROUP BY c.id ORDER BY sum(-t.amount) DESC LIMIT 1`).pluck().get();
   const topMerchant = q(`SELECT coalesce(merchant, description) FROM fh_transactions WHERE amount<0 AND date>=date('now','-90 days') GROUP BY coalesce(merchant, description) ORDER BY count(*) DESC LIMIT 1`).pluck().get();
   return [`Hvor mye brukte jeg på strøm i ${prev}?`, topCat && `Hva brukte jeg på ${topCat.toLowerCase()} i år?`, topMerchant && `Hvor ofte handlet jeg på ${topMerchant}?`, 'Hvilke kvitteringer har melk?', 'Hvor mye fikk jeg inn forrige måned?'].filter(Boolean).slice(0, 5);
+}
+
+/* ---------------- Vanlig søk (uten AI) ----------------
+   Brukes når AI er av eller ikke svarer, og fra mobilens «Vanlig søk». Forstår:
+   «sist jeg var på X», «kvitteringer med tomater», månedsnavn, «over 500 kr», «største utgift», «til gjennomgang».
+   Hvert treff sier hvorfor det traff (Butikk · …, I kvitteringen · …, Kategori · …). */
+
+// Små bokstaver og uten aksenter (é→e, å→a), samme som FTS-indeksen (remove_diacritics 2). æ og ø beholdes.
+export const fold = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').normalize('NFC');
+
+// Enkel norsk stemming: tomat/tomater/tomatene → tomat, eple/epler/eplene → epl, bananen → banan.
+const SUFFIX = ['heten', 'ene', 'ane', 'ers', 'ens', 'ets', 'er', 'ar', 'en', 'et', 'a', 'e', 's'];
+export function stem(w) {
+  const x = fold(w);
+  if (x.length <= 3) return x;
+  for (const s of SUFFIX) if (x.endsWith(s) && x.length - s.length >= 3) return x.slice(0, -s.length);
+  return x;
+}
+
+const PLAIN_STOP = new Set([...STOP, 'kvittering', 'kvitteringer', 'kvitteringen', 'kvitteringene', 'vare', 'varer', 'varen', 'varene', 'inneholder', 'innhold',
+  'sist', 'siste', 'gang', 'gangen', 'var', 'handlet', 'kjøpte', 'hos', 'butikk', 'butikker', 'butikken', 'over', 'under', 'største', 'dyreste', 'gjennomgang',
+  'ubekreftet', 'ubekreftede', 'datoen', 'dato', 'når', 'noen', 'kalt', 'heter', 'navn', 'navnet', 'om', 'se', 'alt', 'hele', 'mer', 'enn', 'minst', 'mindre', 'høyeste']);
+
+const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Ord i teksten som begynner med stammen (ordgrense foran).
+const wordHit = (text, st) => new RegExp(`(^|[^\\p{L}\\p{N}])${escRe(st)}`, 'u').test(fold(text));
+const amountOf = (s) => Number(String(s).replace(/[\s ]/g, '').replace(/\.(?=\d{3}\b)/g, '').replace(',', '.'));
+
+export function interpret(text, now = new Date()) {
+  const raw = String(text ?? '').trim(), t = raw.toLowerCase();
+  const pq = parseQuery(raw, now);
+  const out = { month: pq.label ?? undefined, from: pq.from, to: pq.to };
+  const store = t.match(/\bsist(?:e gang)?\s+(?:jeg\s+)?(?:var|handlet|kjøpte\s+noe|handla)\s+(?:på|hos|i)\s+(.+?)(?:[?.!,]|\s+(?:og|i\s+(?:år|fjor|\p{L}+\s*\d{0,4}))\b|$)/u)
+    ?? t.match(/\b(?:butikker?)\s+(?:kalt|som heter|med navnet)\s+(.+?)(?:[?.!,]|\s+og\b|$)/u);
+  if (store) out.store = store[1].replace(/\s+(?:og|finn|se)\b.*$/u, '').trim();
+  const item = t.match(/\b(?:kvitteringer?|kvitteringen|varer?|varelinjer?)\s+(?:med|som\s+inneholder|som\s+har|der\s+det\s+er)\s+(.+?)(?:[?.!,]|\s+(?:i|over|under|fra|på|hos)\s|$)/u)
+    ?? t.match(/\bsist(?:e gang)?\s+(?:jeg\s+)?kjøpte\s+(?!noe\b)(.+?)(?:[?.!,]|\s+(?:i|på|hos)\s|$)/u);
+  if (item && !out.store) out.item = item[1].trim();
+  const over = t.match(/\b(?:over|mer enn|minst)\s+(\d[\d\s.,]*)\s*(?:kr|kroner|,-)?/u);
+  if (over) out.minAmount = amountOf(over[1]);
+  const under = t.match(/\b(?:under|mindre enn)\s+(\d[\d\s.,]*)\s*(?:kr|kroner|,-)?/u);
+  if (under) out.maxAmount = amountOf(under[1]);
+  if (/\b(største|dyreste|høyeste)\b/u.test(t)) out.largest = true;
+  if (/\b(til gjennomgang|gjennomgang|ubekreftet|ubekreftede|må bekreftes)\b/u.test(t)) out.review = true;
+  // Resten er fritekst (butikk, vare, kategori, notat).
+  const skip = new Set([...(out.store ? fold(out.store).split(/\s+/) : []), ...(out.item ? fold(out.item).split(/\s+/) : [])]);
+  out.words = pq.words.filter((w) => !PLAIN_STOP.has(w) && !skip.has(fold(w)) && !/^\d/.test(w));
+  return out;
+}
+
+const txRows = () => q(`SELECT t.id, t.date, t.amount, t.description, t.merchant, t.note, t.ai_short, c.name AS category, c.kind AS ckind, c.color
+  FROM fh_transactions t LEFT JOIN fh_categories c ON c.id=t.category_id`).all();
+const receiptRows = () => q("SELECT id, merchant, date, total, status, extraction, transaction_id FROM fh_receipts WHERE status NOT IN ('rejected')").all().map((r) => {
+  let lines = [];
+  try { lines = JSON.parse(r.extraction ?? 'null')?.lines ?? []; } catch { /* ugyldig */ }
+  return { ...r, lines: lines.filter((l) => l?.description) };
+});
+const nameOf = (t) => t.merchant || t.description;
+const txHit = (t, reason) => ({ type: 'tx', id: String(t.id), txId: t.id, receiptId: null, description: nameOf(t), date: t.date, amount: t.amount / 100, reason, source: 'Transaksjon', category: t.category ?? 'Ukategorisert', color: t.color ?? '#A0A0AA' });
+const lineText = (l) => `${l.description}${l.amount != null ? ` ${kr(l.amount)} kr` : ''}`;
+const inPeriod = (it, d) => !d.from || (it.date && it.date >= d.from && it.date < d.to);
+const amountOk = (amt, d) => (d.minAmount == null || Math.abs(amt) >= d.minAmount) && (d.maxAmount == null || Math.abs(amt) <= d.maxAmount);
+
+function storesNamed(name, txs) {
+  const st = fold(name).split(/\s+/).filter(Boolean).map(stem);
+  const by = new Map();
+  for (const t of txs) {
+    const n = nameOf(t);
+    if (!st.every((s) => wordHit(n, s))) continue;
+    const cur = by.get(n) ?? { name: n, count: 0, last: null, total: 0 };
+    cur.count++; if (!cur.last || t.date > cur.last) cur.last = t.date; if (t.amount < 0) cur.total += -t.amount / 100;
+    by.set(n, cur);
+  }
+  return [...by.values()].map((s) => ({ ...s, total: Math.round(s.total * 100) / 100 })).sort((a, b) => (b.last ?? '').localeCompare(a.last ?? ''));
+}
+
+export function plainSearch(text, { limit = 30, now = new Date() } = {}) {
+  ensureIndex();
+  const d = interpret(text, now);
+  const txs = txRows(), rcs = receiptRows();
+  let hits = [], stores, summary = '';
+  const per = d.month ? ` i ${d.month}` : '';
+
+  if (d.store) {
+    stores = storesNamed(d.store, txs);
+    const names = new Set(stores.map((s) => s.name));
+    hits = txs.filter((t) => names.has(nameOf(t)) && inPeriod(t, d) && amountOk(t.amount / 100, d)).sort((a, b) => b.date.localeCompare(a.date)).map((t) => txHit(t, `Butikk · ${nameOf(t)}`));
+    if (!hits.length) summary = `Fant ingen kjøp hos «${d.store}»${per}.`;
+    else {
+      const last = hits[0];
+      summary = `Sist du var på ${last.description} var ${dd(last.date)} (${kr(last.amount)} kr).`;
+      if (stores.length > 1) summary += ` Fant ${stores.length} butikker med navnet: ${stores.slice(0, 4).map((s) => `${s.name} (${s.count} kjøp, sist ${dd(s.last)})`).join(', ')}.`;
+      else summary += ` ${stores[0].count} kjøp totalt, ${kr(stores[0].total)} kr.`;
+    }
+  } else if (d.item) {
+    const st = fold(d.item).split(/\s+/).filter(Boolean).map(stem);
+    for (const r of rcs) {
+      if (!inPeriod(r, d)) continue;
+      r.lines.forEach((l, i) => {
+        if (!st.every((s) => wordHit(l.description, s)) || !amountOk(l.amount ?? 0, d)) return;
+        hits.push({ type: 'line', id: `${r.id}:${i}`, txId: r.transaction_id, receiptId: r.id, description: l.description, date: r.date, amount: l.amount != null ? -Math.abs(l.amount) : null,
+          reason: `I kvitteringen · ${lineText(l)}`, source: `Varelinje · ${r.merchant ?? 'kvittering'}`, store: r.merchant ?? null, color: '#FFB08A' });
+      });
+    }
+    hits.sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
+    const rcCount = new Set(hits.map((h) => h.receiptId)).size;
+    summary = hits.length ? `Fant «${d.item}» i ${rcCount} kvittering${rcCount === 1 ? '' : 'er'}${per}. Sist ${dd(hits[0].date)}${hits[0].store ? ` hos ${hits[0].store}` : ''}.`
+      : `Fant ingen kvitteringer med «${d.item}»${per}. Varelinjer finnes bare for kvitteringer som er lest av AI-en.`;
+  } else if (d.review) {
+    hits = rcs.filter((r) => ['needs_review', 'pending', 'processing'].includes(r.status) && inPeriod(r, d)).map((r) => ({ type: 'receipt', id: r.id, txId: r.transaction_id, receiptId: r.id,
+      description: r.merchant ?? 'Kvittering', date: r.date, amount: r.total != null ? -r.total / 100 : null, reason: r.status === 'needs_review' ? 'Til gjennomgang · venter på at du bekrefter' : 'Til gjennomgang · AI-en leser fortsatt', source: 'Kvittering', color: '#9DBDFF' }));
+    summary = hits.length ? `${hits.length} kvittering${hits.length === 1 ? '' : 'er'} venter på gjennomgang${per}.` : 'Ingen kvitteringer venter på gjennomgang.';
+  } else {
+    const st = d.words.map(stem).filter((s) => s.length >= 2);
+    for (const t of txs) {
+      if (!inPeriod(t, d) || !amountOk(t.amount / 100, d) || t.ckind === 'transfer') continue;
+      if (!st.length) { if (d.from || d.minAmount != null || d.maxAmount != null || d.largest) hits.push(txHit(t, d.largest ? `Største utgift${per}` : d.minAmount != null ? `Beløp · ${kr(t.amount / 100)} kr` : `I perioden ${d.month}`)); continue; }
+      const n = nameOf(t);
+      let reason = null;
+      if (st.every((s) => wordHit(n, s))) reason = `Butikk · ${n}`;
+      else if (t.description && t.description !== n && st.every((s) => wordHit(t.description, s))) reason = `Bankteksten · ${t.description.slice(0, 60)}`;
+      else if (t.category && st.every((s) => wordHit(t.category, s))) reason = `Kategori · ${t.category}`;
+      else if (t.note && st.every((s) => wordHit(t.note, s))) reason = `Notat · ${t.note.slice(0, 60)}`;
+      else if (t.ai_short && st.every((s) => wordHit(t.ai_short, s))) reason = `Beskrivelse · ${t.ai_short.slice(0, 60)}`;
+      if (reason) hits.push(txHit(t, reason));
+    }
+    if (st.length) for (const r of rcs) {
+      if (!inPeriod(r, d)) continue;
+      r.lines.forEach((l, i) => {
+        if (!st.every((s) => wordHit(l.description, s)) || !amountOk(l.amount ?? 0, d)) return;
+        hits.push({ type: 'line', id: `${r.id}:${i}`, txId: r.transaction_id, receiptId: r.id, description: l.description, date: r.date, amount: l.amount != null ? -Math.abs(l.amount) : null,
+          reason: `I kvitteringen · ${lineText(l)}`, source: `Varelinje · ${r.merchant ?? 'kvittering'}`, store: r.merchant ?? null, color: '#FFB08A' });
+      });
+    }
+    if (d.largest) hits = hits.filter((h) => (h.amount ?? 0) < 0).sort((a, b) => a.amount - b.amount);
+    else hits.sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '') || Math.abs(b.amount ?? 0) - Math.abs(a.amount ?? 0));
+    const txOnly = hits.filter((h) => h.type === 'tx'), out = txOnly.filter((h) => h.amount < 0).reduce((a, h) => a - h.amount, 0);
+    if (!hits.length) summary = `Fant ingen treff${per}. Prøv butikknavnet, en vare fra kvitteringen eller en kategori.`;
+    else if (d.largest) summary = `Største utgift${per} var ${hits[0].description} ${dd(hits[0].date)} på ${kr(hits[0].amount)} kr.`;
+    else summary = `${hits.length} treff${per}${txOnly.length ? `, ${kr(out)} kr brukt på ${txOnly.length} transaksjon${txOnly.length === 1 ? '' : 'er'}` : ''}.`;
+  }
+
+  const total = hits.length;
+  hits = hits.slice(0, limit);
+  const interpreted = Object.fromEntries(Object.entries({ store: d.store, item: d.item, month: d.month, minAmount: d.minAmount, maxAmount: d.maxAmount, largest: d.largest, review: d.review, words: d.words?.length ? d.words : undefined }).filter(([, v]) => v !== undefined && v !== false));
+  return { mode: 'plain', query: String(text ?? ''), interpreted, summary, answer: summary, total, hits, ...(stores ? { stores } : {}), followUps: followUps(d, hits, now), suggestions: flatSuggestions(String(text ?? '')) };
+}
+
+const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+// «Prøv også»: oppfølgingsspørsmål ut fra hva som ble søkt på og hva som traff. Alle kan tolkes av vanlig søk.
+function followUps(d, hits, now) {
+  const prevM = MONTHS[(now.getMonth() + 11) % 12], curM = MONTHS[now.getMonth()];
+  const out = [];
+  const topStore = (() => { const c = new Map(); for (const h of hits) { const s = h.type === 'tx' ? h.description : h.store; if (s) c.set(s, (c.get(s) ?? 0) + 1); } return [...c].sort((a, b) => b[1] - a[1])[0]?.[0]; })();
+  if (d.store) {
+    out.push(`${cap(d.store)} i ${curM}`, `Største utgift hos ${d.store}`, `${cap(d.store)} over 500 kr`);
+    const rc = hits.find((h) => h.txId) && q('SELECT extraction FROM fh_receipts WHERE transaction_id=? LIMIT 1').pluck().get(hits[0].txId);
+    try { const l = JSON.parse(rc ?? 'null')?.lines?.[0]?.description; if (l) out.push(`Kvitteringer med ${fold(l).split(/\s+/)[0]}`); } catch { /* ugyldig */ }
+  } else if (d.item) {
+    out.push(`Sist jeg kjøpte ${d.item}`, `Kvitteringer med ${d.item} i ${prevM}`);
+    if (topStore) out.push(`Sist jeg var på ${topStore}`);
+  } else if (d.review) {
+    out.push(`Største utgift i ${curM}`, `Kvitteringer med melk`);
+  } else {
+    if (topStore) out.push(`Sist jeg var på ${topStore}`);
+    const cat = hits.find((h) => h.type === 'tx' && h.category && h.category !== 'Ukategorisert')?.category;
+    if (cat) out.push(`${cat} i ${d.month ?? curM}`);
+    if (!d.largest) out.push(`Største utgift i ${d.month ?? curM}`);
+    if (d.minAmount == null) out.push(`Over 500 kr i ${d.month ?? prevM}`);
+    if (!d.review) out.push('Til gjennomgang');
+  }
+  return [...new Set(out)].slice(0, 5);
+}
+
+// Forslag i tre grupper, bygd fra egne data (faller tilbake til faste eksempler i en tom database).
+export function suggestionGroups(now = new Date()) {
+  ensureIndex();
+  const curM = MONTHS[now.getMonth()], prevM = MONTHS[(now.getMonth() + 11) % 12];
+  const stores = q(`SELECT coalesce(merchant, description) n FROM fh_transactions WHERE amount<0 AND date>=date('now','-180 days') GROUP BY n ORDER BY count(*) DESC, max(date) DESC LIMIT 4`).pluck().all();
+  const freq = new Map();
+  for (const r of receiptRows()) for (const l of r.lines) {
+    const w = fold(l.description).replace(/[^\p{L}\s]/gu, ' ').split(/\s+/).find((x) => x.length >= 3 && !PLAIN_STOP.has(x));
+    if (w) freq.set(w, (freq.get(w) ?? 0) + 1);
+  }
+  const items = [...freq].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([w]) => w);
+  const review = q("SELECT count(*) FROM fh_receipts WHERE status='needs_review'").pluck().get();
+  return [
+    { title: 'Butikker', items: (stores.length ? stores : ['Rema 1000', 'Biltema']).map((s) => `Sist jeg var på ${s}`) },
+    { title: 'Varer i kvitteringer', items: (items.length ? items : ['melk', 'tomater']).map((w) => `Kvitteringer med ${w}`) },
+    { title: 'Beløp og perioder', items: [`Største utgift i ${curM}`, `Over 500 kr i ${prevM}`, `Alt i ${prevM}`, ...(review ? ['Til gjennomgang'] : [])] },
+  ];
+}
+function flatSuggestions(exclude = '') {
+  const ex = fold(exclude).trim();
+  return [...new Set([...suggestionGroups().flatMap((g) => g.items), ...suggestions()])].filter((s) => fold(s) !== ex).slice(0, 8);
 }

@@ -57,9 +57,13 @@ function aiPanel() {
     <span class="mono" style="white-space:nowrap">${h.amount != null ? sgn(h.amount) + ' kr' : '–'}</span></button>`).join('');
   return `<section class="card ai-panel"><div class="card-h" style="align-items:flex-start"><div style="min-width:0"><div class="ai-k">✦ AI-SØK · ${esc(a.engine ?? (S.boot.settings.provider === 'ollama' ? 'Ollama' : 'Gemini'))}</div>${a.q ? `<div class="ai-q">${esc(a.q)}</div>` : '<div class="ai-q">Spør om økonomien din på vanlig norsk</div>'}</div><button class="x-btn" data-act="ai-close" aria-label="Lukk">×</button></div>
     ${a.busy ? '<div class="sub" style="font-size:14px"><span class="spin" style="width:14px;height:14px;display:inline-block;vertical-align:-2px;margin-right:8px"></span>Leser transaksjoner, kvitteringer og varelinjer …</div>' : ''}
+    ${a.aiUnavailable ? `<div class="ai-note">${esc(a.notice ?? 'AI-motoren svarer ikke, så dette er vanlig søk.')}</div>` : ''}
     ${a.answer ? `<div class="ai-a">${esc(a.answer)}</div>` : ''}${hits ? `<div class="ai-hits">${hits}</div>` : ''}
-    ${(a.suggestions ?? []).length ? `<div class="ai-sugg">${a.suggestions.map((g) => `<button data-ai-q="${esc(g)}">${esc(g)}</button>`).join('')}</div>` : ''}</section>`;
+    ${aiChips(a.q ? 'Prøv også' : '', a.followUps)}${aiChips(a.q ? 'Flere forslag' : '', (a.suggestions ?? []).filter((g) => !(a.followUps ?? []).includes(g)))}</section>`;
 }
+const aiChips = (title, list) => ((list ?? []).length ? `${title ? `<div class="ai-k" style="margin-top:2px">${title}</div>` : ''}<div class="ai-sugg">${list.map((g) => `<button data-ai-q="${esc(g)}">${esc(g)}</button>`).join('')}</div>` : '');
+// /search/suggestions svarer {groups, items}; eldre servere svarer med en liste.
+const suggList = (r) => (Array.isArray(r) ? r : r?.items ?? []);
 
 function shell(content) {
   const b = S.boot, st = b.settings;
@@ -587,7 +591,7 @@ export function draw() {
 const focusSel = (e) => (e.name ? `[data-form] input[name="${e.name}"]` : e.dataset.txField ? `[data-tx-field="${e.dataset.txField}"]` : e.dataset.rcField ? `[data-rc-field="${e.dataset.rcField}"]` : null);
 
 const loadTxFolders = async () => { S.txFolders = await api('/folders').catch(() => []); };
-const loadAiPage = async () => { [S.aiHist, S.aiSugg] = await Promise.all([api('/search/history').catch(() => []), api('/search/suggestions').catch(() => [])]); };
+const loadAiPage = async () => { [S.aiHist, S.aiSugg] = await Promise.all([api('/search/history').catch(() => []), api('/search/suggestions').then(suggList).catch(() => [])]); };
 // Personlig oppsett fra homelab (/api/me/layout). Mangler endepunktet, brukes FinansHubs egne prefs.
 async function loadLayout() {
   if (S.layout !== undefined) return;
@@ -788,7 +792,7 @@ export function bind() {
       }
       case 'ai-toggle': {
         u.aiMode = !u.aiMode;
-        if (u.aiMode && !u.ai) { u.ai = { q: '', suggestions: [] }; render(); u.ai.suggestions = await api('/search/suggestions').catch(() => []); }
+        if (u.aiMode && !u.ai) { u.ai = { q: '', suggestions: [] }; render(); u.ai.suggestions = await api('/search/suggestions').then(suggList).catch(() => []); }
         if (!u.aiMode) u.ai = null;
         render(); document.querySelector('.search input')?.focus(); return;
       }

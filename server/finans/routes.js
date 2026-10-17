@@ -17,7 +17,7 @@ import * as auth from '../auth.js';
 import { config } from '../config.js';
 import { kv } from '../db.js';
 import { stocks, resetStocks, t212Configured, t212Base, cleanCred, testT212 } from './stocks.js';
-import { answer as aiAnswer, suggestions as aiSuggestions } from './search.js';
+import { answer as aiAnswer, plainSearch, suggestionGroups, AiUnavailable } from './search.js';
 import * as backup from './backup.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
@@ -1517,13 +1517,32 @@ api.post('/stocks/test', sessionOnly, async (c) => {
 // Tidligere spørsmål per bruker (maks 20, nyeste først).
 const AI_HIST = 'fh_ai_history';
 const aiHistory = (uid) => (kv.get(uid, AI_HIST, []) ?? []).slice(0, 20);
+const flatSugg = () => suggestionGroups().flatMap((g) => g.items);
+// Vanlig søk: butikk, varelinjer i kvitteringer, kategori, notat, måned, beløp, «største», «til gjennomgang». Ingen AI.
+api.get('/search', R, (c) => {
+  const text = str(c.req.query('q'), 300);
+  if (!text) return c.json({ mode: 'plain', query: '', summary: '', hits: [], followUps: [], suggestions: flatSugg(), groups: suggestionGroups() });
+  return c.json(plainSearch(text));
+});
+// ✦ AI-søk. Er motoren av eller nede, svares det med vanlig søk og aiUnavailable:true i stedet for en feil.
 api.post('/search/ai', R, async (c) => {
   const b = await c.req.json().catch(() => ({}));
   const text = str(b.q, 300);
-  if (!text) return c.json({ answer: '', hits: [], suggestions: aiSuggestions() });
+  if (!text) return c.json({ answer: '', hits: [], followUps: [], suggestions: flatSugg(), groups: suggestionGroups() });
   const uid = c.get('user');
   if (b.save !== false) kv.set(uid, AI_HIST, [text, ...aiHistory(uid).filter((x) => x.toLowerCase() !== text.toLowerCase())].slice(0, 20));
-  return c.json({ ...(await aiAnswer(text)), q: text, suggestions: aiSuggestions(), history: aiHistory(uid) });
+  const plain = plainSearch(text);
+  const extra = { q: text, followUps: plain.followUps, suggestions: plain.suggestions, history: aiHistory(uid) };
+  if (b.mode === 'plain') return c.json({ ...plain, ...extra });
+  try {
+    const ai = await aiAnswer(text);
+    // Fant AI-søket ingenting, men vanlig søk gjorde det («sist jeg var på …», varelinjer): bruk det.
+    if (ai.empty && plain.hits.length) return c.json({ ...plain, ...extra, engine: 'Vanlig søk' });
+    return c.json({ mode: 'ai', ...ai, ...extra, interpreted: plain.interpreted });
+  } catch (e) {
+    if (!(e instanceof AiUnavailable)) throw e;
+    return c.json({ ...plain, ...extra, aiUnavailable: true, engine: 'Vanlig søk', notice: 'AI-motoren svarer ikke, så dette er vanlig søk.' });
+  }
 });
 api.get('/search/history', R, (c) => c.json(aiHistory(c.get('user'))));
 api.delete('/search/history', R, async (c) => {
@@ -1531,7 +1550,8 @@ api.delete('/search/history', R, async (c) => {
   kv.set(uid, AI_HIST, one ? aiHistory(uid).filter((x) => x !== one) : []);
   return c.json(aiHistory(uid));
 });
-api.get('/search/suggestions', R, (c) => c.json(aiSuggestions()));
+// { groups:[{title, items}], items:[…] } – items er den flate listen (bakoverkompatibel med eldre klienter).
+api.get('/search/suggestions', R, (c) => { const groups = suggestionGroups(); return c.json({ groups, items: groups.flatMap((g) => g.items) }); });
 
 /* --- Backup og data --- */
 

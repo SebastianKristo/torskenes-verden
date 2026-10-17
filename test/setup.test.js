@@ -40,6 +40,16 @@ test('tom server ber om oppsett, og oppsettet logger inn hovedadmin', async () =
   assert.deepEqual(lay.mobile.hide, { links: true });
   assert.deepEqual(lay.homelab.hiddenWidgets, ['d_links']);
   assert.equal((await put({ ukjent: 1 })).status, 400);
+  // Mobil: egne navn, rekkefølge, startside, tilbake-stil og Matplan-tema.
+  const mob = await (await put({ mobile: { names: { bud: ' Penger ', liste: '' }, order: { fin: ['ov', 'liste'] }, start: 'fin-hjem', backStyle: 'arrow', matTheme: 'dark' } })).json();
+  assert.deepEqual(mob.mobile.names, { bud: 'Penger' });
+  assert.deepEqual(mob.mobile.order, { fin: ['ov', 'liste'] });
+  assert.equal(mob.mobile.start, 'fin-hjem');
+  assert.equal(mob.mobile.matTheme, 'dark');
+  assert.deepEqual(mob.mobile.hide, { links: true });
+  assert.equal((await put({ mobile: { start: 'meny' } })).status, 400);
+  assert.equal((await put({ mobile: { backStyle: 'knapp' } })).status, 400);
+  assert.equal((await put({ mobile: { names: { bud: 'x'.repeat(31) } } })).status, 400);
 
   // Søkehistorikk: nyeste først, uten duplikater.
   await post('/api/search/history', { q: 'vær oslo' }, cookie);

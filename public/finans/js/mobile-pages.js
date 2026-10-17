@@ -6,7 +6,7 @@ import { c3 } from './mobile-theme.js';
 
 export const PAGES = ['mer', 'kv', 'fast', 'konto', 'aks', 'rap', 'imp', 'sok'];
 const PG = { rec: null, stocks: null, rep: null, repMode: 'month', sub: null, dirs: null, finn: null, booked: null, aksPer: '1M',
-  imp: { rows: null, files: [], text: '', busy: false, acc: null }, ai: { q: '', r: null, busy: false, hist: null, sugg: null, focus: false }, last: '' };
+  imp: { rows: null, files: [], text: '', busy: false, acc: null }, ai: { q: '', r: null, busy: false, hist: null, sugg: null, groups: null, focus: false, aiDown: false, notice: '' }, last: '' };
 const isI = () => theme() === 'ios';
 const gl = (c = 'glass2') => (isI() ? c : '');
 const kr = (v) => `${n0(v)} kr`, kr2 = (v) => `${n2(v)} kr`;
@@ -78,7 +78,10 @@ export async function pageLoad(scr) {
   if (scr === 'rap') j.push(loadRep());
   if (scr === 'sok') {
     j.push(ok(api('/search/history')).then((r) => { PG.ai.hist = (Array.isArray(r) ? r : r?.items ?? []).map((x) => (typeof x === 'string' ? x : x?.q)).filter(Boolean); }));
-    if (!PG.ai.sugg) j.push(ok(api('/search/suggestions')).then((r) => { PG.ai.sugg = Array.isArray(r) ? r : r?.items ?? null; }));
+    if (!PG.ai.groups) j.push(ok(api('/search/suggestions')).then((r) => {
+      if (Array.isArray(r?.groups)) PG.ai.groups = r.groups.filter((g) => g?.items?.length);
+      else if (Array.isArray(r) && r.length) PG.ai.groups = [{ title: 'Forslag', items: r }, ...localGroups().slice(1)];
+    }));
   }
   await Promise.all(j);
 }
@@ -192,18 +195,49 @@ function imp() {
 }
 
 const SUGG = ['Hvor mye har jeg brukt på kaffe?', 'Når kjøpte jeg lyspærer?', `Mat i ${monthName(today().slice(0, 7))}`, 'Hva har jeg betalt for lading?'];
+// Søkemodus lagres på enheten. Er AI av eller nede, brukes vanlig søk automatisk.
+const modeOf = () => { try { return localStorage.getItem('fh_search_mode') === 'plain' ? 'plain' : 'ai'; } catch { return 'ai'; } };
+const setMode = (v) => { try { localStorage.setItem('fh_search_mode', v); } catch {} };
+// Forslag før søk, i tre grupper. Serveren (GET /search/suggestions) kan sende egne grupper; ellers lages de her.
+function localGroups() {
+  const recent = [...new Set((S.summary?.recent ?? []).map((t) => String(t.description ?? '').split(/\s+/).slice(0, 2).join(' ')).filter(Boolean))].slice(0, 3);
+  const month = monthName(today().slice(0, 7));
+  return [
+    { title: 'Butikker', items: (recent.length ? recent : ['Biltema', 'Rema 1000']).map((n) => `Sist jeg var på ${n}`).concat(['Alle kjøp på Circle K']) },
+    { title: 'Varer i kvitteringer', items: ['Kvitteringer med tomater', 'Når kjøpte jeg lyspærer?', 'Kvitteringer med melk', 'Hva har jeg kjøpt av kaffe?'] },
+    { title: 'Beløp og perioder', items: [`Mat i ${month}`, 'Over 500 kr', 'Største utgift', 'Til gjennomgang'] },
+  ];
+}
+const groupsOf = () => (PG.ai.groups?.length ? PG.ai.groups : localGroups());
+const allSugg = () => groupsOf().flatMap((g) => g.items);
+function hitRow(h) {
+  const ini = h.type === 'line' ? '≡' : h.type === 'receipt' ? '⧉' : (h.description ?? '?').slice(0, 1);
+  return R.item({ ini, iniStyle: `background:${(h.color ?? '#A0A0AA')}2e;color:${h.color ?? '#A0A0AA'}`, t: h.description ?? '–', s: [h.date ? dd(h.date) : '', h.source ?? ''].filter(Boolean).join(' · '),
+    ai: h.reason ?? h.why ?? '', v: h.amount != null ? sgn(h.amount) : '', vc: (h.amount ?? 0) > 0 ? '#9FE3C6' : 'inherit',
+    attrs: h.txId ? `data-hit="${h.txId}" data-d="${esc(h.description ?? '')}"` : h.receiptId ? `data-rc="${esc(h.receiptId)}"` : '' });
+}
 function sok() {
-  const A = PG.ai, r = A.r;
+  const A = PG.ai, r = A.r, mode = A.aiDown ? 'plain' : modeOf();
   if (PG.last !== 'sok') A.focus = true;
   const engine = S.boot?.settings?.provider === 'gemini' ? 'Gemini' : 'Ollama';
-  return page({ title: 'AI-søk', sub: `${engine} · leser også innholdet i kvitteringene`,
+  const chip = (k, n) => ({ n, on: mode === k, attrs: `data-pa="smode" data-v="${k}"` });
+  const chipsOf = (list) => R.chips('', list.map((t) => ({ n: t, on: r?.q === t, attrs: `data-pa="ask" data-q="${esc(t)}"` })));
+  const follow = r ? (r.followUps?.length ? r.followUps : []) : [];
+  const more = r ? (r.suggestions?.length ? r.suggestions : allSugg()).filter((t) => t !== r.q && !follow.includes(t)).slice(0, 8) : [];
+  return page({ title: 'Søk', sub: mode === 'ai' ? `✦ AI · ${engine} · leser også innholdet i kvitteringene` : 'Vanlig søk · butikk, kategori, notat og varelinjer',
     groups: [
-      `<form data-aiform class="list ${gl()} aiform"><label class="opt-row col"><span style="font-size:13px;opacity:.7">Spørsmål</span><input class="sinp" id="m-aiq" type="search" enterkeyhint="search" autocomplete="off" value="${esc(A.q)}" placeholder="f.eks. Når kjøpte jeg lyspærer?"></label><button type="submit" class="opt-row"><span class="m-grow" style="color:var(--m-acc);font-weight:600">${A.busy ? 'Spør AI …' : '✦ Spør AI'}</span></button></form>`,
-      G('Forslag', [R.chips('', (A.sugg?.length ? A.sugg : SUGG).slice(0, 6).map((t) => ({ n: t, on: r?.q === t, attrs: `data-pa="ask" data-q="${esc(t)}"` })))]),
+      R.chips('', [chip('ai', '✦ AI'), chip('plain', 'Vanlig søk')]),
+      A.notice ? `<div class="snote snotice">${esc(A.notice)}</div>` : '',
+      `<form data-aiform class="list ${gl()} aiform"><label class="opt-row col"><span style="font-size:13px;opacity:.7">${mode === 'ai' ? 'Spørsmål' : 'Søk'}</span><input class="sinp" id="m-aiq" type="search" enterkeyhint="search" autocomplete="off" value="${esc(A.q)}" placeholder="${mode === 'ai' ? 'f.eks. Når kjøpte jeg lyspærer?' : 'f.eks. tomater, Biltema, over 500 kr'}"></label><button type="submit" class="opt-row"><span class="m-grow" style="color:var(--m-acc);font-weight:600">${A.busy ? (mode === 'ai' ? 'Spør AI …' : 'Søker …') : mode === 'ai' ? '✦ Spør AI' : 'Søk'}</span></button></form>`,
       A.busy ? '<div class="m-spin"></div>' : '',
-      r ? G('Svar', [R.text(r.answer || 'Fant ingen treff.'), r.engine ? `<div class="opt-row"><span class="snote" style="padding:0">${esc(r.engine)}</span></div>` : '']) : '',
-      r?.hits?.length ? G('Treff', r.hits.map((h) => R.item({ ini: h.type === 'line' ? '≡' : h.type === 'receipt' ? '⧉' : (h.description ?? '?').slice(0, 1), iniStyle: `background:${(h.color ?? '#A0A0AA')}2e;color:${h.color ?? '#A0A0AA'}`, t: h.description ?? '–', s: `${dd(h.date)} · ${h.source ?? ''}`, ai: h.reason ?? h.why ?? '', v: h.amount != null ? sgn(h.amount) : '', vc: (h.amount ?? 0) > 0 ? '#9FE3C6' : 'inherit', attrs: h.txId ? `data-hit="${h.txId}" data-d="${esc(h.description ?? '')}"` : h.receiptId ? `data-rc="${esc(h.receiptId)}"` : '' }))) : '',
-      (A.hist ?? []).length ? G('Tidligere spørsmål', A.hist.slice(0, 8).map((q) => R.item({ ini: '↺', t: q, attrs: `data-pa="ask" data-q="${esc(q)}"` })), { act: { l: 'Tøm', attrs: 'data-pa="aihclear"' } }) : '',
+      // Før søk: forslag i tre grupper.
+      !r && !A.busy ? groupsOf().map((g) => G(g.title, [chipsOf(g.items.slice(0, 6))])).join('') : '',
+      r ? G(r.mode === 'plain' ? 'Resultat' : 'Svar', [R.text(r.answer || r.summary || (r.hits?.length ? `${r.hits.length} treff` : 'Fant ingen treff.')), r.engine ? `<div class="opt-row"><span class="snote" style="padding:0">${esc(r.engine)}</span></div>` : '']) : '',
+      r?.stores?.length ? G('Butikker med det navnet', r.stores.map((st) => R.item({ ini: (st.name ?? '?').slice(0, 1), t: st.name, s: `${st.count ?? 0} kjøp${st.last ? ` · sist ${dd(st.last)}` : ''}` }))) : '',
+      r?.hits?.length ? G('Treff', r.hits.slice(0, 40).map(hitRow)) : '',
+      follow.length ? G('Prøv også', [chipsOf(follow.slice(0, 6))]) : '',
+      more.length ? G('Flere forslag', [chipsOf(more)]) : '',
+      (A.hist ?? []).length ? G('Tidligere søk', A.hist.slice(0, 8).map((q) => R.item({ ini: '↺', t: q, attrs: `data-pa="ask" data-q="${esc(q)}"` })), { act: { l: 'Tøm', attrs: 'data-pa="aihclear"' } }) : '',
     ] });
 }
 
@@ -220,15 +254,36 @@ export function pageAfterDraw() {
 
 /* ---------- Hendelser ---------- */
 
+// Vanlig søk: GET /search. Eldre servere uten /search får et enkelt søk i transaksjonene.
+async function plainSearch(q) {
+  try { return { ...(await api('/search?q=' + encodeURIComponent(q))), mode: 'plain' }; }
+  catch (e) {
+    if (!/404|Not Found/i.test(e.message)) throw e;
+    const t = await api('/transactions?q=' + encodeURIComponent(q));
+    const items = t?.items ?? [];
+    return { mode: 'plain', summary: items.length ? `${items.length} transaksjoner passer.` : 'Fant ingen treff.', hits: items.slice(0, 40).map((x) => ({ type: 'tx', txId: x.id, description: x.description, date: x.date, amount: x.amount, reason: `Butikk · ${x.description}` })) };
+  }
+}
 async function ask(q) {
   q = String(q ?? '').trim();
   if (!q) return;
   const A = PG.ai;
-  A.q = q; A.busy = true; draw();
-  try { A.r = { ...(await api('/search/ai', { method: 'POST', json: { q } })), q }; } catch (e) { A.r = { q, answer: e.message, hits: [] }; }
+  A.q = q; A.busy = true; A.notice = ''; draw();
+  const useAi = modeOf() === 'ai' && !A.aiDown;
+  try {
+    if (useAi) {
+      try {
+        const r = await api('/search/ai', { method: 'POST', json: { q } });
+        if (r?.aiUnavailable) throw Object.assign(new Error('AI er ikke tilgjengelig'), { ai: true });
+        A.r = { ...r, q, mode: 'ai' };
+      } catch (e) {
+        A.aiDown = true; A.notice = 'AI-motoren svarer ikke nå. Viser vanlig søk i butikk, kategori, notat og varelinjer.';
+        A.r = { ...(await plainSearch(q)), q };
+      }
+    } else A.r = { ...(await plainSearch(q)), q };
+  } catch (e) { A.r = { q, answer: e.message, hits: [] }; }
   A.busy = false;
   A.hist = [q, ...(A.hist ?? []).filter((x) => x !== q)].slice(0, 20);
-  if (A.r.suggestions?.length) A.sugg = A.r.suggestions;
   draw();
 }
 async function impPost(commit) {
@@ -308,6 +363,12 @@ export async function pagesBind(e, t) {
   e.preventDefault();
   if (k === 'merask') { const q = document.getElementById('m-merq')?.value ?? PG.ai.q; location.hash = '#/sok'; ask(q); }
   else if (k === 'ask') { if (m.screen !== 'sok') location.hash = '#/sok'; await ask(pa.dataset.q); }
+  else if (k === 'smode') {
+    const v = pa.dataset.v;
+    if (v === 'ai' && PG.ai.aiDown) { PG.ai.aiDown = false; } // prøv AI igjen
+    setMode(v); PG.ai.notice = ''; draw();
+    if (PG.ai.r?.q) await ask(PG.ai.r.q);
+  }
   else if (k === 'aihclear') { PG.ai.hist = []; api('/search/history', { method: 'DELETE' }).catch(() => {}); draw(); }
   else if (k === 'book') { await api(`/receipts/${pa.dataset.id}/book`, { method: 'POST' }); await pageLoad('kv'); flash('Bokført ✓'); }
   else if (k === 'sheet') openSheet();

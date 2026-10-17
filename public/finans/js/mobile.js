@@ -4,12 +4,13 @@
 import {
   S, api, esc, n0, n2, sgn, neg, dd, dWeek, today, monthName, cap, ini, greet, parseAmount,
   loadBoot, loadSummary, loadTx, loadReceipts, cats, accs, uploadReceipt, icon, logo, aiLine, conic, navName } from './core.js';
-import { MODS, modView, modLoad, domNav, modBind } from './mobile-mods.js';
+import { MODS, modView, modLoad, domNav, modBind, modAfterDraw } from './mobile-mods.js';
 import { settingsView, settingsLoad, settingsBind } from './mobile-set.js';
 import { hlView, hlLoad, hlBind, hlAfterDraw, LAY, loadLayout } from './mobile-hl.js';
 import { PAGES, pageView, pageLoad, pagesBind, pageAfterDraw } from './mobile-pages.js';
 import { txDetail, editForm, origOverlay, txBind } from './mobile-tx.js';
 import { applyM3, c3 } from './mobile-theme.js';
+import { matView, matLoad, matBind, matDark } from './mobile-mat.js';
 
 const u = S.ui;
 export const m = {
@@ -33,11 +34,13 @@ export const FIXED_HL = ['hl', 'home'], FIXED_FIN = ['home', 'mer'];
 const FINMODS = ['sub', 'dir', 'finn'];
 export const FIN = ['hjem', 'liste', 'budsjett', 'sok', 'skann', 'opp', ...PAGES, ...FINMODS];
 const TWO = ['hjem', 'liste', 'budsjett', 'skann', 'opp', 'sok'];
-const HLG = ['hl', 'mat', 'set'];
+const HLG = ['hl', 'set'];
 const ALL = [...new Set([...FIN, 'hl', 'mat', 'dom', 'set'])];
 // Oversikt, Liste og Budsjett bruker egne navn fra Sidemeny; Søk og Mer beholder de korte navnene i fanelinja.
 const RENAME = ['home', 'list', 'bud'];
-const tabsOf = (keys, def, fixed) => keys.filter((k) => def[k] && (fixed.includes(k) || !LAY().hide[k])).map((k) => (def === FINTABS && RENAME.includes(k) ? [def[k][0], navName(k, def[k][1]), def[k][2]] : def[k]));
+// Egne navn fra Innstillinger → Utseende → Navigasjonslinje (LAY.names) går foran; tomt felt gir standardnavnet.
+export const tabName = (def, k) => LAY().names?.[(def === FINTABS ? 'fin.' : 'hl.') + k] || (def === FINTABS && RENAME.includes(k) ? navName(k, def[k][1]) : def[k][1]);
+const tabsOf = (keys, def, fixed) => keys.filter((k) => def[k] && (fixed.includes(k) || !LAY().hide[k])).map((k) => [def[k][0], tabName(def, k), def[k][2]]);
 export const hlTabs = () => tabsOf(LAY().hlTabs, HLTABS, FIXED_HL);
 export const finTabs = () => tabsOf(LAY().finTabs, FINTABS, FIXED_FIN);
 const finCur = (s) => (s === 'liste' ? 'liste' : s === 'budsjett' ? 'budsjett' : s === 'sok' ? 'sok' : [...PAGES, ...FINMODS].includes(s) ? 'mer' : 'hjem');
@@ -50,6 +53,28 @@ if (P.start === 'hjem' && !P.startV2) { P.start = 'hl'; P.startV2 = 1; } // Home
 export const pref = (k) => P[k] ?? PDEF[k];
 export function setPref(k, v) { P = { ...P, [k]: v, startV2: 1 }; try { localStorage.setItem('fh_mprefs', JSON.stringify(P)); } catch {} }
 export const hide = (txt) => (pref('hideAmt') && !m.reveal ? '••••' : txt);
+
+/* ---------- Startside og vei tilbake ---------- */
+// Startside lagres per bruker (LAY.start). Med Finans som startside går «hjem» til Finans, og Homelab ligger i profilmenyen.
+const START = { homelab: 'hl', 'fin-hjem': 'hjem', 'fin-liste': 'liste', 'fin-budsjett': 'budsjett' };
+export const startScr = () => START[LAY().start] ?? (['hl', 'hjem', 'liste', 'budsjett'].includes(pref('start')) ? pref('start') : 'hl');
+export const startFin = () => startScr() !== 'hl';
+export const backStyle = () => LAY().backStyle ?? 'arrow';
+const FINMAIN = ['hjem', 'liste', 'budsjett', 'sok', 'mer'];
+/** Pil øverst («‹ Homelab»/«‹ Finans») i moduler og Finans-fanene. Matplan har alltid pilen (den har ingen fanelinje). */
+export function backTop(scr = m.screen) {
+  if (scr === startScr() || scr === 'set') return false;
+  if (scr === 'mat') return true;
+  if (backStyle() === 'bar') return false;
+  if (scr === 'dom') return true; // Abonnementer, Boliger og Finn har egen pil tilbake til Mer
+  if (!startFin() && FINMAIN.includes(scr)) return !(m.detail && !two()) && !m.edit && !m.pdet;
+  if (startFin() && scr === 'hl') return true;
+  return false;
+}
+const homeLbl = () => (startFin() ? 'Finans' : 'Homelab');
+function topRow(th) {
+  return `<div class="toprow"><a class="${th === 'ios' ? 'gtop' : 'atop'}" href="#/${startScr()}" aria-label="Tilbake til ${homeLbl()}">${th === 'ios' ? icon('chev', 18, 'currentColor', 2.6) : '←'}<span>${homeLbl()}</span></a><span class="m-grow"></span>${avatar('topav')}</div>`;
+}
 
 /* ---------- Byggeklosser ---------- */
 
@@ -243,9 +268,12 @@ function menuSheet(th) {
   const others = MODS.filter(([k]) => k === 'mat' || k === 'dom');
   return `<div class="sheet-bg" data-mact="menu"></div><div class="sheet${two() ? ' left' : ''} ${th === 'ios' ? 'glass' : ''}" role="dialog" aria-label="Meny">
     <div class="m-row" style="gap:12px"><span class="m-av${avatarUrl() ? ' img' : ''}">${avInner()}</span><div class="m-grow"><b>${esc(meName())}</b><div style="font-size:13px;opacity:.65">${who}</div></div><button class="mini" data-mact="menu" aria-label="Lukk">${icon('close', 18)}</button></div>
-    <div class="list ${th === 'ios' ? 'glass2' : ''}">${row('#/hl', 'hlhome', 'Homelab', 'Dashbord, søk og snarveier', scr === 'hl')}</div>
-    <div class="sec">Andre OS</div>
-    <div class="list ${th === 'ios' ? 'glass2' : ''}">${row('#/hjem', 'wallet', 'Finans', 'Hjem, liste, budsjett og mer', FIN.includes(scr))}${others.map(([k, n, s2, ic]) => row('#/' + k, ic, n, s2, scr === k)).join('')}</div>
+    ${(() => {
+      // Startsiden står øverst; resten ligger under «Andre OS».
+      const hl = row('#/hl', 'hlhome', 'Homelab', 'Dashbord, søk og snarveier', scr === 'hl'), fin = row(`#/${startFin() ? startScr() : 'hjem'}`, 'wallet', 'Finans', 'Hjem, liste, budsjett og mer', FIN.includes(scr));
+      const rest = others.map(([k, n, s2, ic]) => row('#/' + k, ic, n, s2, scr === k)).join('');
+      return `<div class="list ${th === 'ios' ? 'glass2' : ''}">${startFin() ? fin : hl}</div><div class="sec">Andre OS</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${startFin() ? hl : fin}${rest}</div>`;
+    })()}
     <div class="list ${th === 'ios' ? 'glass2' : ''}">${row('#/hl', 'edit', 'Rediger forsiden', '', false, 'edithome')}${row('#/set', 'gear', 'Innstillinger', '', scr === 'set')}<button class="opt-row" data-mact="logout"><span class="set-ic" style="color:#FF8A6B">${icon('key', 18)}</span><span class="m-grow" style="color:#FF8A6B">Lås</span></button></div></div>`;
 }
 
@@ -263,34 +291,42 @@ function scanSheet(th) {
 
 /* ---------- Navigasjon ---------- */
 
-const group = (scr) => (scr === 'dom' ? 'dom' : HLG.includes(scr) ? 'hl' : 'fin');
+const group = (scr) => (scr === 'dom' ? 'dom' : scr === 'mat' ? 'mat' : HLG.includes(scr) ? 'hl' : 'fin');
 
 function navModel() {
   const scr = m.screen, g = group(scr);
-  if (g === 'dom') return { tabs: domNav(), cur: domNav.cur(), home: true, scan: false };
-  if (g === 'hl') return { tabs: hlTabs(), cur: scr, home: false, scan: false };
-  return { tabs: finTabs(), cur: finCur(scr), home: true, scan: !['skann', 'opp'].includes(scr) && !m.edit && !(m.detail && !two()) && !m.pdet };
+  // Hjem-knapp i linjen bare med «Knapp i linjen», og ikke når man allerede er på startsiden.
+  const home = backStyle() === 'bar' && scr !== startScr() && !(g === 'hl' && !startFin());
+  if (g === 'mat') return { tabs: [], cur: '', home: false, scan: false, none: true };
+  if (g === 'dom') return { tabs: domNav(), cur: domNav.cur(), home, scan: false, gear: true };
+  if (g === 'hl') return { tabs: hlTabs(), cur: scr, home, scan: false };
+  return { tabs: finTabs(), cur: finCur(scr), home, scan: !['skann', 'opp'].includes(scr) && !m.edit && !(m.detail && !two()) && !m.pdet };
 }
 
-const homeLbl = 'Til Homelab';
-// iOS 26: fanelinje i full bredde, rund glassknapp med hus til venstre og en flytende «Skann»-pille over til høyre.
+const homeAria = () => `Til ${homeLbl()}`;
+// iOS 26: kapsel med glassmarkør som kan dras mellom fanene. Til høyre i samme rad: rund oransje glassknapp for Skann
+// (Finans) eller tannhjul (Domener). Med «Knapp i linjen» står en rund husknapp til venstre.
 function iosNav(n) {
+  if (n.none) return '';
   const idx = n.tabs.findIndex(([k]) => k === n.cur);
   if (idx >= 0) m.tabIdx = idx;
-  return `<div class="tabbar${m.min ? ' min' : ''}${n.home ? ' hashome' : ''}" data-key="${n.tabs.map(([k]) => k).join(',')}${n.home ? '+h' : ''}">
-    ${n.home ? `<a class="hbtn lg" href="#/hl" aria-label="${homeLbl}">${icon('hlhome', 24)}</a>` : ''}
-    <nav class="tabs lg" aria-label="Faner" style="--n:${n.tabs.length};--i:${m.tabIdx};--on:${idx < 0 ? 0 : 1}">
-    <span class="mark" aria-hidden="true"></span>${n.tabs.map(([k, nm, ic], i) => `<a href="#/${k}" data-tab="${k}" ${i === idx ? 'aria-current="page"' : ''}>${icon(ic, 23)}<span>${nm}</span></a>`).join('')}</nav>
-    ${n.scan ? `<button class="scanpill lg" data-scan aria-label="Skann kvittering (hold inne for Bilder og Filer)">${icon('scan', 24, 'currentColor', 2.2)}<span>Skann</span></button>` : ''}</div><div class="edge" aria-hidden="true"></div>`;
+  const side = n.scan ? `<button class="scanbtn lg" data-scan aria-label="Skann kvittering (hold inne for Bilder og Filer)">${icon('scan', 26, 'currentColor', 2.2)}</button>`
+    : n.gear ? `<a class="scanbtn lg gear" href="#/set/dom" aria-label="Domeneinnstillinger">${icon('gear', 24, 'currentColor', 2)}</a>` : '';
+  return `<div class="tabbar${m.min ? ' min' : ''}${n.home ? ' hashome' : ''}${side ? ' hasside' : ''}" data-key="${n.tabs.map(([k]) => k).join(',')}${n.home ? '+h' : ''}">
+    ${n.home ? `<a class="hbtn lg" href="#/${startScr()}" aria-label="${homeAria()}">${icon(startFin() ? 'fin' : 'hlhome', 24)}</a>` : ''}
+    <nav class="tabs lg" aria-label="Faner" data-tabdrag style="--n:${n.tabs.length};--i:${m.tabIdx};--on:${idx < 0 ? 0 : 1}">
+    <span class="mark" aria-hidden="true"></span>${n.tabs.map(([k, nm, ic], i) => `<a href="#/${k}" data-tab="${k}" draggable="false" ${i === idx ? 'aria-current="page"' : ''}>${icon(ic, 23)}<span>${esc(nm)}</span></a>`).join('')}</nav>
+    ${side}</div><div class="edge" aria-hidden="true"></div>`;
 }
 function andNav(n) {
+  if (n.none) return '';
   return `${n.scan ? `<button class="fab" data-scan aria-label="Skann kvittering (hold inne for Bilder og Filer)">${icon('scan', 24, 'currentColor', 2.2)}<span>Skann</span></button>` : ''}
-    <nav class="navbar" aria-label="Faner">${n.home ? `<a class="hl" href="#/hl" aria-label="${homeLbl}"><span>${icon('hlhome', 20)}</span>Homelab</a><i class="nsep" aria-hidden="true"></i>` : ''}${n.tabs.map(([k, nm, ic]) => `<a href="#/${k}" data-tab="${k}" ${n.cur === k ? 'aria-current="page"' : ''}><span>${icon(ic, 22)}</span>${nm}</a>`).join('')}</nav>`;
+    <nav class="navbar" aria-label="Faner">${n.home ? `<a class="hl" href="#/${startScr()}" aria-label="${homeAria()}"><span>${icon(startFin() ? 'fin' : 'hlhome', 20)}</span>${homeLbl()}</a><i class="nsep" aria-hidden="true"></i>` : ''}${n.tabs.map(([k, nm, ic]) => `<a href="#/${k}" data-tab="${k}" ${n.cur === k ? 'aria-current="page"' : ''}><span>${icon(ic, 22)}</span>${esc(nm)}</a>`).join('')}</nav>`;
 }
 function rail(n) {
-  return `<nav class="rail" aria-label="Faner">${n.home ? `<a class="r-home" href="#/hl" aria-label="${homeLbl}">${icon('hlhome', 22)}</a>` : ''}
+  return `<nav class="rail" aria-label="Faner">${n.home ? `<a class="r-home" href="#/${startScr()}" aria-label="${homeAria()}">${icon(startFin() ? 'fin' : 'hlhome', 22)}</a>` : ''}
     ${n.scan ? `<button class="r-scan" data-scan aria-label="Skann kvittering">${icon('scan', 24, 'currentColor', 2.2)}</button>` : ''}
-    ${n.tabs.map(([k, nm, ic]) => `<a href="#/${k}" data-tab="${k}" ${n.cur === k ? 'aria-current="page"' : ''}><span>${icon(ic, 22)}</span>${nm}</a>`).join('')}
+    ${n.tabs.map(([k, nm, ic]) => `<a href="#/${k}" data-tab="${k}" ${n.cur === k ? 'aria-current="page"' : ''}><span>${icon(ic, 22)}</span>${esc(nm)}</a>`).join('')}
     <span style="flex:1"></span><button class="m-av r-av${avatarUrl() ? ' img' : ''}" data-mact="menu" aria-label="Meny: Homelab, andre OS og innstillinger" aria-haspopup="dialog">${avInner()}</button></nav>`;
 }
 
@@ -304,22 +340,23 @@ export function draw() {
   const scrs = { hjem: home, liste: list, budsjett: budget, opp: uploadScreen };
   const main = scr === 'set' ? settingsView(th, m.sub)
     : scr === 'hl' ? hlView(th)
+    : scr === 'mat' ? matView(th)
     : m.edit && !twoPane ? editForm(th)
     : m.detail && !twoPane && m.sel && FIN.includes(scr) ? txDetail(th, selTx())
     : PAGES.includes(scr) ? pageView(scr, th)
     : !fin || FINMODS.includes(scr) ? modView(scr, th, m.sub)
     : scrs[scr] ? scrs[scr](th) : confirmView ? confirmRc(th) : scanQueue(th);
-  const n = navModel(), dom = scr === 'dom';
+  const n = navModel(), dom = scr === 'dom', bt = backTop(scr);
   const nav = th === 'ios' ? iosNav(n) : andNav(n);
   // Bevar fokus og markør i et felt når skjermen tegnes på nytt (f.eks. søk mens forslag kommer inn).
   const ae = document.activeElement, keep = ae?.id && root().contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
-  root().innerHTML = `<div class="m ${th}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'hl' ? ' hlp' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
-    ${rail(n)}<div class="m-scroll">${main}</div><div class="m-detail">${twoPane ? detail(th) : ''}</div>${nav}
+  root().innerHTML = `<div class="m ${th}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() && scr !== 'mat' ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
+    ${rail(n)}<div class="m-scroll">${bt ? topRow(th) : ''}${main}</div><div class="m-detail">${twoPane ? detail(th) : ''}</div>${nav}
     ${menuSheet(th)}${scanSheet(th)}${origOverlay(th)}${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
     <input class="m-file" id="m-capture" type="file" accept="image/*" capture="environment" data-mupload data-confirm></div>`;
   if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', th === 'ios' ? '#07070A' : getComputedStyle(root().firstElementChild).backgroundColor || '#19120E');
-  hlAfterDraw(); pageAfterDraw();
+  hlAfterDraw(); pageAfterDraw(); if (scr === 'dom') modAfterDraw(th);
   // Glassmarkøren glir med fjæring mellom fanene. Fanelinja tegnes på nytt ved hver oppdatering, så animasjonen
   // (Web Animations) gjenopptas med medgått tid hvis en ny tegning kommer midt i den.
   const mk = root().querySelector('.tabs .mark');
@@ -327,7 +364,7 @@ export function draw() {
     const x = mk.offsetLeft, now = performance.now();
     if (m.markX != null && x !== m.markX) m.markAnim = { from: m.markX, to: x, t0: now };
     const an = m.markAnim;
-    if (an && an.to === x && now - an.t0 < 450) mk.animate([{ left: `${an.from}px` }, { left: `${x}px` }], { duration: 450, easing: 'cubic-bezier(.3,1.35,.5,1)' }).currentTime = now - an.t0;
+    if (an && an.to === x && now - an.t0 < 500) mk.animate([{ left: `${an.from}px` }, { left: `${x}px` }], { duration: 500, easing: 'cubic-bezier(.3,1.35,.5,1)' }).currentTime = now - an.t0;
     else m.markAnim = null;
     m.markX = x;
   }
@@ -355,6 +392,7 @@ async function load() {
     if (PAGES.includes(scr)) jobs.push(pageLoad(scr, m.sub));
     else if (scr === 'set') jobs.push(settingsLoad(m.sub));
     else if (scr === 'hl') jobs.push(hlLoad());
+    else if (scr === 'mat') jobs.push(matLoad());
     else if (!FIN.includes(scr) || FINMODS.includes(scr)) jobs.push(modLoad(scr, m.sub));
     if (!m.me) jobs.push(loadMe().catch(() => { m.me = { name: S.boot?.settings?.name }; }));
     await Promise.all(jobs);
@@ -385,7 +423,7 @@ export function route() {
   const h = parts[0];
   // Desktop- og eldre lenker
   const map = { ov: 'hjem', tx: 'liste', bud: 'budsjett', inn: 'set', meg: 'set', homelab: 'hl', ai: 'sok', matplan: 'mat', domener: 'dom', aksjer: 'aks', abonnement: 'sub', mapper: 'dir' };
-  const start = ALL.includes(pref('start')) ? pref('start') : 'hl';
+  const start = startScr();
   let next = map[h] ?? (ALL.includes(h) ? h : start);
   if (S.boot?.restricted && FIN.includes(next) && next !== 'dir') next = next === 'hjem' ? 'hjem' : 'dir';
   const sub = parts.slice(1).join('/');
@@ -468,6 +506,63 @@ function scanTap() {
 }
 export const openSheet = () => { m.sheet = true; draw(); };
 
+/* ---------- iOS: dra glassmarkøren mellom fanene (Liquid Glass) ---------- */
+// Etter 6 px fanges pekeren, og linsen følger fingeren uten overgang: løftet (scale 1.18/1.22), lysere kant og glans,
+// strekkes etter farten og gummibånd ved kantene. Ved slipp snapper den til nærmeste fane med fjæring, og klikket stoppes.
+let tdrag = null, tsup = 0;
+function tabDown(e) {
+  const nav = e.target.closest?.('.tabs.lg[data-tabdrag]');
+  if (!nav || m.min || (e.button ?? 0) > 0) return false;
+  const links = [...nav.querySelectorAll('a[data-tab]')], mk = nav.querySelector('.mark');
+  if (links.length < 2 || !mk) return false;
+  const r = nav.getBoundingClientRect(), pad = 5, cw = (r.width - pad * 2) / links.length;
+  tdrag = { nav, mk, links, sx: e.clientX, lx: e.clientX, id: e.pointerId, cw, pad, moved: false, x: mk.offsetLeft, over: -1 };
+  return true;
+}
+function tabMove(e) {
+  const d = tdrag;
+  if (!d || e.pointerId !== d.id) return false;
+  if (!d.moved) {
+    if (Math.abs(e.clientX - d.sx) < 6) return true;
+    d.moved = true;
+    try { d.nav.setPointerCapture(e.pointerId); } catch {}
+    d.mk.getAnimations?.().forEach((a) => a.cancel());
+    d.nav.classList.add('drag'); d.nav.parentElement.classList.add('drag');
+  }
+  const r = d.nav.getBoundingClientRect(), lo = d.pad, hi = r.width - d.pad - d.cw, raw = e.clientX - r.left - d.cw / 2;
+  const x = raw < lo ? lo - (lo - raw) * 0.25 : raw > hi ? hi + (raw - hi) * 0.25 : raw;
+  const v = e.clientX - d.lx;
+  d.lx = e.clientX; d.x = Math.max(lo, Math.min(hi, x));
+  d.mk.style.left = `${x}px`; d.mk.style.width = `${d.cw}px`;
+  d.mk.style.setProperty('--sx', (1.18 + Math.min(0.12, Math.abs(v) / 40)).toFixed(3));
+  d.mk.style.setProperty('--sy', (1.22 - Math.min(0.1, Math.abs(v) / 60)).toFixed(3));
+  const i = Math.max(0, Math.min(d.links.length - 1, Math.round((d.x - lo) / d.cw)));
+  if (i !== d.over) { if (d.over >= 0) navigator.vibrate?.(4); d.over = i; d.links.forEach((a, j) => a.classList.toggle('lens', j === i)); }
+  if (e.cancelable) e.preventDefault();
+  return true;
+}
+function tabUp(e) {
+  const d = tdrag;
+  if (!d || e.pointerId !== d.id) return false;
+  tdrag = null;
+  try { d.nav.releasePointerCapture(e.pointerId); } catch {}
+  if (!d.moved) return true;
+  tsup = Date.now();
+  navigator.vibrate?.(8);
+  const i = Math.max(0, Math.min(d.links.length - 1, Math.round((d.x - d.pad) / d.cw))), a = d.links[i];
+  d.nav.classList.remove('drag'); d.nav.parentElement.classList.remove('drag'); d.links.forEach((y) => y.classList.remove('lens'));
+  const to = d.pad + i * d.cw;
+  if (e.type === 'pointercancel' || location.hash === a.getAttribute('href')) {
+    d.mk.animate([{ left: `${d.x}px` }, { left: `${to}px` }], { duration: 500, easing: 'cubic-bezier(.3,1.35,.5,1)' }).onfinish = () => { d.mk.style.left = ''; d.mk.style.width = ''; };
+    d.mk.style.left = `${to}px`;
+    return true;
+  }
+  m.markX = d.x; m.markAnim = null; // draw() fjærer markøren fra slippunktet til fanen
+  if (a.dataset.tab === 'sok') { history.pushState(null, '', '#/sok'); route(); document.getElementById('m-aiq')?.focus(); }
+  else location.hash = a.getAttribute('href');
+  return true;
+}
+
 /* ---------- Hendelser ---------- */
 
 const safe = (fn) => async (e) => { try { await fn(e); } catch (err) { flash(err.message); } };
@@ -507,6 +602,7 @@ export function bind() {
   loadLayout().then(() => { if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch(() => {});
   // Skanneknappen: trykk = kamera (eller valg), hold inne ~480 ms = arket med Bilder/Filer.
   el.addEventListener('pointerdown', (e) => {
+    if (tabDown(e)) return;
     if (hlBind(e, e.target)) return;
     if (!e.target.closest('[data-scan]')) return;
     lpFired = false; clearTimeout(lpTimer);
@@ -518,6 +614,7 @@ export function bind() {
   el.addEventListener('click', safe(async (e) => {
     const t = e.target, d = (s) => t.closest(s);
     let x;
+    if (Date.now() - tsup < 400 && d('.tabs')) { e.preventDefault(); e.stopPropagation(); return; }
     if (d('[data-scan]')) { e.preventDefault(); if (lpFired) { lpFired = false; return; } return scanTap(); }
     // Knapper inne i en klikkbar rad (f.eks. «Bokfør») går foran raden.
     if (d('.pact') && await pagesBind(e, t)) return;
@@ -531,6 +628,7 @@ export function bind() {
     if ((x = d('[data-bud]'))) { m.budSel = +x.dataset.bud; if (!S.tx) await loadTx(); return draw(); }
     if ((x = d('[data-filter]'))) { m.filter = x.dataset.filter; u.type = m.filter; await loadTx(); return draw(); }
     if ((x = d('[data-mcat]'))) { const r = await api(`/receipts/${m.rc}`, { method: 'PATCH', json: { categoryId: +x.dataset.mcat } }); S.receipts = S.receipts.map((y) => (y.id === r.id ? r : y)); return draw(); }
+    if (await matBind(e, t)) return;
     if (hlBind(e, t)) return;
     if (await txBind(e, t)) return;
     if (await pagesBind(e, t)) return;
@@ -583,6 +681,7 @@ export function bind() {
   el.addEventListener('keydown', (e) => { hlBind(e, e.target); });
   el.addEventListener('focusin', (e) => { hlBind(e, e.target); });
   el.addEventListener('focusout', (e) => { hlBind(e, e.target); });
-  el.addEventListener('pointermove', (e) => { hlBind(e, e.target); });
-  el.addEventListener('pointerup', (e) => { hlBind(e, e.target); });
+  el.addEventListener('pointermove', (e) => { if (tabMove(e)) return; hlBind(e, e.target); }, { passive: false });
+  el.addEventListener('pointerup', (e) => { if (tabUp(e)) return; hlBind(e, e.target); });
+  el.addEventListener('pointercancel', (e) => { tabUp(e); });
 }

@@ -1,43 +1,93 @@
 // Android-farger (Material You) og lys/mørk modus for mobil-PWA-en.
-// Alle Android-farger i mobile.css er skrevet som var(--m3-XXXXXX, #XXXXXX). Her regnes de om fra én frøfarge
-// ved å flytte fargetonen; semantisk grønn, rød og gul flyttes ikke. Lys modus speiler lysheten.
+// Alle Android-farger i mobile.css er skrevet som var(--m3-XXXXXX, #XXXXXX). Her regnes de om fra én frøfarge i OKLCH:
+// hver farge har en fast rolle (overflate, tekst, primær, container …) med egen tone i mørk og lys modus. Bare kulørtonen
+// følger aksentfargen; lys modus bruker egne toner per rolle (ikke invertering). Statusfarger (grønn, rød, gul, blå)
+// og Domener-rosa følger ikke aksentfargen.
 // «Følg systemet» prøver CSS-fargen AccentColor (systemets aksentfarge) og faller tilbake til oransje.
 
 export const SEEDS = { sys: ['Følg systemet', null], orange: ['Oransje', '#FFB68A'], blue: ['Blå', '#A8C7FA'], green: ['Grønn', '#8CD5B0'], purple: ['Lilla', '#D0BCFF'], pink: ['Rosa', '#FFB1C8'], yellow: ['Gul', '#E9C46A'] };
 export const MODES = { sys: 'Følg systemet', light: 'Lys', dark: 'Mørk' };
 
-// Fargene i Android-temaet (fra designet). Fargene i FIX endrer ikke tone (grønn = inn, rød = feil, gul = advarsel).
-const ALL = ['#19120E', '#F0DFD7', '#D7C2B8', '#5D4033', '#FFDBC8', '#763300', '#FFB68A', '#261E19', '#1F3A2F', '#9FE3C6', '#3D332C', '#45462A', '#E6E6AE', '#31281F', '#532200',
-  '#ECE8E0', '#3A362E', '#FF7A3D', '#B9B4A8', '#A08D83', '#C9E4D8', '#1A0C04', '#FFB08A', '#3A2F29', '#FF8A80', '#07301F', '#3A2F33', '#FFB1C8', '#2F2529', '#D5C2C6', '#7B2949',
-  '#FFD9E2', '#7BE3A0', '#2A2024', '#F2B56B', '#3A3631', '#121110', '#2A211B', '#55524D', '#0C0806', '#1F1712', '#F4F2EF', '#D9D5CF', '#1E1712', '#4A3C33', '#52443C', '#1A1114',
-  '#F2DEE2', '#3A2C31', '#3B0A1E', '#A9C3FF', '#FF8A6B', '#FF8A4C', '#C2E27A'];
-const FIX = ['#9FE3C6', '#7BE3A0', '#1F3A2F', '#C9E4D8', '#07301F', '#FF8A80', '#F2B56B', '#FF8A6B', '#A9C3FF', '#C2E27A'];
+/* ---------- OKLCH ⇄ sRGB ---------- */
 
-const hsl = (hx) => {
-  const r = parseInt(hx.slice(1, 3), 16) / 255, g = parseInt(hx.slice(3, 5), 16) / 255, b = parseInt(hx.slice(5, 7), 16) / 255;
-  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 2;
-  let h = 0, s = 0;
-  if (mx !== mn) { const d = mx - mn; s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn); h = (mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4) * 60; }
-  return [h, s, l];
+const toLin = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+const toSrgb = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
+function oklch(hex) {
+  const [r, g, b] = [1, 3, 5].map((i) => toLin(parseInt(hex.slice(i, i + 2), 16) / 255));
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
+  const L = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s;
+  const A = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s;
+  const B = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
+  return [L, Math.hypot(A, B), ((Math.atan2(B, A) * 180) / Math.PI + 360) % 360];
+}
+function rgb(L, C, H) {
+  const h = (H * Math.PI) / 180, A = C * Math.cos(h), B = C * Math.sin(h);
+  const l = (L + 0.3963377774 * A + 0.2158037573 * B) ** 3;
+  const m = (L - 0.1055613458 * A - 0.0638541728 * B) ** 3;
+  const s = (L - 0.0894841775 * A - 1.291485548 * B) ** 3;
+  return [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s];
+}
+// Reduserer kroma til fargen er innenfor sRGB (beholder lyshet og kulør).
+function hex(L, C, H) {
+  L = Math.max(0, Math.min(1, L));
+  let lo = 0, hi = C, c = rgb(L, C, H);
+  if (c.some((v) => v < -1e-4 || v > 1.0001)) {
+    for (let i = 0; i < 18; i++) { const mid = (lo + hi) / 2; if (rgb(L, mid, H).some((v) => v < -1e-4 || v > 1.0001)) hi = mid; else lo = mid; }
+    c = rgb(L, lo, H);
+  }
+  return '#' + c.map((v) => Math.round(Math.max(0, Math.min(1, toSrgb(Math.max(0, v)))) * 255).toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+
+/* ---------- Roller ---------- */
+
+// Familier: p = primær (frøfargens kulør), s = sekundær (lav kroma), t = tertiær (kulør + 60°),
+// n = nøytral, v = nøytral variant, k = Domener-rosa (fast kulør), x = status (fast kulør og kroma).
+// Tallet er tonen (0–100) i lys modus. Mørk modus bruker designets egen lyshet, så oransje gir nøyaktig designet.
+const ROLE = {
+  // Overflater og tekst
+  '0C0806': ['n', 100], '121110': ['n', 99], '19120E': ['n', 98], '1E1712': ['n', 96], '1F1712': ['n', 96], '261E19': ['n', 94], '2A211B': ['n', 93],
+  '31281F': ['n', 91], '3A2F29': ['n', 89], '3D332C': ['v', 87], '3A3631': ['n', 88], '3A362E': ['n', 88], '4A3C33': ['v', 84], '52443C': ['v', 80],
+  '55524D': ['n', 70], 'A08D83': ['v', 50], 'B9B4A8': ['n', 45], 'D7C2B8': ['v', 30], 'D9D5CF': ['n', 30], 'F0DFD7': ['n', 10], 'ECE8E0': ['n', 12], 'F4F2EF': ['n', 8],
+  // Primær
+  'FFB68A': ['p', 40], 'FFB08A': ['p', 42], 'FF8A4C': ['p', 50], 'FF7A3D': ['p', 52], '532200': ['p', 100], '1A0C04': ['p', 100], '763300': ['p', 90], 'FFDBC8': ['p', 12],
+  // Sekundær og tertiær
+  '5D4033': ['s', 90], '45462A': ['t', 90], 'E6E6AE': ['t', 12],
+  // Domener-rosa
+  '7B2949': ['k', 90], 'FFD9E2': ['k', 12], 'FFB1C8': ['k', 42], '3B0A1E': ['k', 100], '2A2024': ['k', 94], '3A2F33': ['k', 90], '2F2529': ['k', 92],
+  '3A2C31': ['k', 89], '1A1114': ['k', 97], 'D5C2C6': ['k', 30], 'F2DEE2': ['k', 10],
+  // Status (grønn = inn, rød = feil, gul = advarsel, blå = info)
+  '9FE3C6': ['x', 40], '7BE3A0': ['x', 42], '1F3A2F': ['x', 90], 'C9E4D8': ['x', 20], '07301F': ['x', 95], 'FF8A80': ['x', 45], 'F2B56B': ['x', 48],
+  'FF8A6B': ['x', 48], 'A9C3FF': ['x', 45], 'C2E27A': ['x', 45],
 };
-const hex = (h, s, l) => {
-  h = ((h % 360) + 360) % 360;
-  const k = (n) => (n + h / 30) % 12, a = s * Math.min(l, 1 - l), f = (n) => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
-  return '#' + [f(0), f(8), f(4)].map((x) => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
-};
+const [, BASE_C, BASE_H] = oklch('#FFB68A');
+// M3-tone (CIELAB L*) → OKLCH-lyshet: L = ∛Y.
+const okL = (tone) => { const f = (tone + 16) / 116, Y = tone > 8 ? f ** 3 : tone / 903.3; return Math.cbrt(Y); };
+// Kroma i lys modus: sterkest midt på toneskalaen, svak ved ytterpunktene (som M3-tonepaletter).
+const lightC = (base, tone) => base * Math.max(0.22, 1 - Math.abs(tone - 48) / 58);
+
 function palette(seed, light) {
-  const dh = hsl(seed)[0] - hsl('#FFB68A')[0];
-  return ALL.map((x) => {
-    let [h, s, l] = hsl(x);
-    const fix = FIX.includes(x);
-    if (!fix && s > 0.12) h += dh;
-    if (light) {
-      if (s > 0.5 && l > 0.55) l = 0.36;
-      else if (s > 0.15 && l > 0.13 && l < 0.46) l = 0.92 - (l - 0.13) * 0.3;
-      else l = Math.max(0.04, Math.min(0.985, 1 - l));
-      if (fix && l < 0.5) l = Math.min(l, 0.32);
+  const [, sC, sH] = oklch(seed);
+  const dh = sH - BASE_H, pC = Math.max(0.06, Math.min(0.17, sC)), kC = Math.max(0.5, Math.min(1.25, sC / BASE_C));
+  return Object.entries(ROLE).map(([h, [fam, tone]]) => {
+    const [L, C, H] = oklch('#' + h);
+    let out;
+    if (!light) {
+      // Mørk: designets lyshet. Bare kuløren roteres (og nøytrale får en svak tone av frøfargen).
+      // Med oransje frø (dh = 0, kC = 1) blir fargene nøyaktig som i designet.
+      if (fam === 'k' || fam === 'x' || (Math.abs(dh) < 1 && Math.abs(kC - 1) < 0.02)) out = '#' + h;
+      else out = hex(L, fam === 'p' ? C * kC : C, H + dh);
+    } else {
+      const T = okL(tone);
+      if (fam === 'n') out = hex(T, tone > 95 ? 0.006 : 0.012, sH);
+      else if (fam === 'v') out = hex(T, 0.03, sH);
+      else if (fam === 'p') out = hex(T, lightC(Math.min(0.2, pC * 1.5), tone), sH);
+      else if (fam === 's') out = hex(T, lightC(0.05, tone), sH);
+      else if (fam === 't') out = hex(T, lightC(0.07, tone), H + dh);
+      else out = hex(T, lightC(Math.max(0.08, C), tone), H); // k og x: fast kulør
     }
-    return `--m3-${x.slice(1)}:${hex(h, s, l)}`;
+    return `--m3-${h}:${out}`;
   }).join(';');
 }
 
@@ -71,5 +121,6 @@ export function applyM3(on, seedKey = 'sys', mode = 'dark', redraw = () => {}) {
   el.textContent = `:root{${palette(seed, light)}}`;
   return light;
 }
+export const paletteFor = palette; // for tester
 /** var(--m3-XXXXXX,#XXXXXX) for inline-stiler i Android-temaet. */
 export const c3 = (h) => `var(--m3-${h.slice(1).toUpperCase()},${h})`;

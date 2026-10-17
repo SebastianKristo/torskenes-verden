@@ -69,11 +69,19 @@ const ids = (v, max = 60) => Array.isArray(v) && v.length <= max && v.every((x) 
 const labels = (v) => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length <= 40
   && Object.entries(v).every(([k, n]) => /^[\w.-]{1,40}$/.test(k) && typeof n === 'string' && n.length <= 30 && !/[<>]/.test(n));
 const navShape = (v) => v && typeof v === 'object' && !Array.isArray(v) && (v.order === undefined || ids(v.order)) && (v.hidden === undefined || ids(v.hidden)) && (v.labels === undefined || labels(v.labels));
+const MOBILE_START = ['homelab', 'fin-hjem', 'fin-liste', 'fin-budsjett'];
 const LAYOUT = {
   finNav: navShape,
+  // Mobil: forside (sec), faner (hlTabs/finTabs), skjult (hide), egne navn (names), rekkefølge (order: liste eller {linje: liste}),
+  // startside, tilbake-stil og Matplan-tema.
   mobile: (v) => v && typeof v === 'object' && !Array.isArray(v)
     && ['sec', 'hlTabs', 'finTabs'].every((k) => v[k] === undefined || ids(v[k]))
-    && (v.hide === undefined || (v.hide && typeof v.hide === 'object' && !Array.isArray(v.hide) && Object.entries(v.hide).length <= 80 && Object.entries(v.hide).every(([k, b]) => /^[\w.-]{1,40}$/.test(k) && typeof b === 'boolean'))),
+    && (v.hide === undefined || (v.hide && typeof v.hide === 'object' && !Array.isArray(v.hide) && Object.entries(v.hide).length <= 80 && Object.entries(v.hide).every(([k, b]) => /^[\w.-]{1,40}$/.test(k) && typeof b === 'boolean')))
+    && (v.names === undefined || labels(v.names))
+    && (v.order === undefined || ids(v.order) || (v.order && typeof v.order === 'object' && !Array.isArray(v.order) && Object.keys(v.order).length <= 10 && Object.entries(v.order).every(([k, o]) => /^[\w.-]{1,40}$/.test(k) && ids(o))))
+    && (v.start === undefined || MOBILE_START.includes(v.start))
+    && (v.backStyle === undefined || ['arrow', 'bar'].includes(v.backStyle))
+    && (v.matTheme === undefined || ['light', 'dark', 'system'].includes(v.matTheme)),
   homelab: (v) => v && typeof v === 'object' && !Array.isArray(v) && (v.hiddenWidgets === undefined || ids(v.hiddenWidgets)) && (v.hiddenTabs === undefined || ids(v.hiddenTabs)) && (v.labels === undefined || labels(v.labels)),
 };
 export const layoutOf = (id) => kv.get(id, 'layout', {});
@@ -242,7 +250,7 @@ api.put('/me/layout', authOrToken, async (c) => {
     if (!LAYOUT[k](v)) return c.json({ error: `Ugyldig verdi for ${k}` }, 400);
     next[k] = { ...(next[k] ?? {}), ...v };
     // Tomme navn betyr standardnavnet og lagres ikke.
-    if (v.labels) next[k].labels = Object.fromEntries(Object.entries(v.labels).map(([id, n]) => [id, n.trim()]).filter(([, n]) => n));
+    for (const f of ['labels', 'names']) if (v[f]) next[k][f] = Object.fromEntries(Object.entries(v[f]).map(([id, n]) => [id, n.trim()]).filter(([, n]) => n));
   }
   kv.set(c.get('user'), 'layout', next);
   return c.json(next);
