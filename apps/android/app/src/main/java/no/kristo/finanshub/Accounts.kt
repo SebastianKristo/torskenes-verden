@@ -79,7 +79,10 @@ class AppPrefs(ctx: Context) {
         const val LOCK_AFTER = "lock_after"     // minutter: 0, 1, 5, 15
         const val HIDE_SWITCHER = "hide_switcher"
         const val HIDE_AMOUNTS = "hide_amounts"
-        const val START = "start"               // home | list | budget
+        const val START = "start"               // homelab | home | list | budget
+        const val COLOR = "m3_seed"             // system | orange | blue | green | purple | pink | yellow
+        const val MODE = "m3_mode"              // system | light | dark
+        const val LAYOUT = "layout_"            // + konto-ID: oppsettet av mobilforsiden (per bruker og enhet)
         const val SCAN_TAP = "scan_tap"         // camera | choices
         const val AUTO_CROP = "auto_crop"
         const val KEEP_ORIGINAL = "keep_original"

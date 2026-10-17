@@ -52,13 +52,19 @@ struct API {
 
     @discardableResult
     func call(_ method: String, _ path: String, json: [String: Any]? = nil) async throws -> Data {
-        var r = URLRequest(url: url(path))
+        try await callAt("/finans/api", method, path, json: json)
+    }
+
+    /// Kall mot en annen modul, f.eks. Homelab (/api) for forside, søk, oppsett og profilbilde.
+    @discardableResult
+    func callAt(_ prefix: String, _ method: String, _ path: String, json: [String: Any]? = nil, timeout: TimeInterval = 30) async throws -> Data {
+        var r = URLRequest(url: url(path, prefix: prefix))
         r.httpMethod = method
         if let json {
             r.setValue("application/json", forHTTPHeaderField: "Content-Type")
             r.httpBody = try JSONSerialization.data(withJSONObject: json)
         }
-        return try await send(r)
+        return try await send(r, timeout: timeout)
     }
 
     /// GET mot en annen modul, f.eks. /domains/api.
@@ -94,19 +100,27 @@ struct API {
         return try await send(URLRequest(url: full))
     }
 
-    struct Part { let name: String; let filename: String; let mime: String; let data: Data }
+    /// Fil i et skjema. Uten filnavn sendes den som et vanlig tekstfelt.
+    struct Part {
+        let name: String; let filename: String; let mime: String; let data: Data
+        static func text(_ name: String, _ value: String) -> Part { Part(name: name, filename: "", mime: "", data: Data(value.utf8)) }
+    }
 
-    /// Multipart: original + nedskalert JPEG til AI + miniatyrbilde.
-    func upload(_ path: String, parts: [Part]) async throws -> Data {
+    /// Multipart: filer (f.eks. original + nedskalert JPEG + miniatyr) og tekstfelt.
+    func upload(_ path: String, parts: [Part], prefix: String = "/finans/api") async throws -> Data {
         let boundary = "FinansHub-\(UUID().uuidString)"
         var body = Data()
         for p in parts {
-            body.append("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(p.name)\"; filename=\"\(p.filename)\"\r\nContent-Type: \(p.mime)\r\n\r\n".data(using: .utf8)!)
+            if p.filename.isEmpty {
+                body.append("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(p.name)\"\r\n\r\n".data(using: .utf8)!)
+            } else {
+                body.append("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(p.name)\"; filename=\"\(p.filename)\"\r\nContent-Type: \(p.mime)\r\n\r\n".data(using: .utf8)!)
+            }
             body.append(p.data)
             body.append("\r\n".data(using: .utf8)!)
         }
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
-        var r = URLRequest(url: url(path))
+        var r = URLRequest(url: url(path, prefix: prefix))
         r.httpMethod = "POST"
         r.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         r.httpBody = body

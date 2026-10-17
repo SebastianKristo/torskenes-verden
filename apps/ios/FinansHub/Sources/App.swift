@@ -18,13 +18,15 @@ struct FinansHubApp: App {
 
 /// Systemkameraet (bakkamera) for å ta bilde av kvitteringer.
 struct CameraView: UIViewControllerRepresentable {
+    /// Frontkamera (profilbilde).
+    var front = false
     let done: (UIImage?) -> Void
     @Environment(\.dismiss) private var dismiss
 
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let p = UIImagePickerController()
         p.sourceType = UIImagePickerController.isSourceTypeAvailable(.camera) ? .camera : .photoLibrary
-        if p.sourceType == .camera { p.cameraDevice = .rear }
+        if p.sourceType == .camera { p.cameraDevice = front && UIImagePickerController.isCameraDeviceAvailable(.front) ? .front : .rear }
         p.delegate = context.coordinator
         return p
     }

@@ -4,6 +4,13 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// Versjon kan overstyres fra CI: ./gradlew assembleRelease -PversionName=4.1 -PversionCode=41
+val appVersionName = providers.gradleProperty("versionName").orNull?.takeIf { it.isNotBlank() } ?: "4.0"
+val appVersionCode = providers.gradleProperty("versionCode").orNull?.toIntOrNull() ?: 4
+
+// Signering for utgivelser: brukes bare når CI sender inn android.injected.signing.* (keystore fra secrets).
+val signStore = providers.gradleProperty("android.injected.signing.store.file").orNull?.takeIf { it.isNotBlank() }
+
 android {
     namespace = "no.kristo.finanshub"
     compileSdk = 35
@@ -12,15 +19,26 @@ android {
         applicationId = "no.kristo.finanshub"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "3.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
+    }
+
+    signingConfigs {
+        if (signStore != null) {
+            create("release") {
+                storeFile = file(signStore)
+                storePassword = providers.gradleProperty("android.injected.signing.store.password").orNull
+                keyAlias = providers.gradleProperty("android.injected.signing.key.alias").orNull
+                keyPassword = providers.gradleProperty("android.injected.signing.key.password").orNull
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            // Signer med egen nøkkel for distribusjon; debug-bygget fra CI kan installeres direkte.
-            signingConfig = signingConfigs.getByName("debug")
+            // Egen nøkkel når den sendes inn, ellers debug-nøkkelen (så bygget fortsatt kan installeres direkte).
+            signingConfig = signingConfigs.getByName(if (signStore != null) "release" else "debug")
         }
     }
     compileOptions {

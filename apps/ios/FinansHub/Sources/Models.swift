@@ -27,11 +27,16 @@ struct Account: Decodable, Identifiable, Hashable {
     let balance: Double
 }
 
+struct Goal: Decodable, Hashable { var id: Int?; var name: String?; var saved: Double?; var target: Double?; var color: String? }
+struct Rule: Decodable, Hashable { var id: Int?; var pattern: String?; var category: String? }
+
 struct Boot: Decodable {
     let settings: Settings
     let categories: [Category]
     let accounts: [Account]
     let reviewCount: Int
+    var goals: [Goal]? = nil
+    var rules: [Rule]? = nil
 }
 
 struct Tx: Decodable, Identifiable, Hashable {
@@ -50,6 +55,10 @@ struct Tx: Decodable, Identifiable, Hashable {
     var domain: String? = nil
     var lines: [Line]? = nil
     var folder: String? = nil
+    var folderId: Int? = nil
+    var accountId: Int? = nil
+    var receiptId: FlexID? = nil
+    var merchant: String? = nil
 }
 
 struct TxPage: Decodable { let items: [Tx] }
@@ -181,11 +190,16 @@ private func parseIsoDay(_ s: String) -> Date? { let f = DateFormatter(); f.date
 struct Me: Decodable {
     var username: String?
     var name: String?
+    var displayName: String?
     var role: String?
     var totp: Bool?
     var totpEnabled: Bool?
     var version: String?
+    var avatarUrl: String?
+    var serverName: String?
+    var isMainAdmin: Bool?
     var twoFactor: Bool? { totp ?? totpEnabled }
+    var label: String? { displayName ?? name }
 }
 
 struct Sub: Decodable, Identifiable, Hashable {
@@ -382,4 +396,253 @@ extension Color {
     /// Domener: mørkt glass med rosa aksent.
     static let domPink = Color(hex: "#FF9EBE")
     static let domRed = Color(hex: "#FF8A80")
+}
+
+
+/* ---------- Tall og tekst som kan komme i flere former ---------- */
+
+/// Tall som kan komme som tall eller tekst.
+struct FlexNum: Decodable, Hashable {
+    let value: Double?
+    init(from d: Decoder) throws {
+        let c = try d.singleValueContainer()
+        if let n = try? c.decode(Double.self) { value = n } else if let s = try? c.decode(String.self) { value = Double(s.replacingOccurrences(of: ",", with: ".")) } else { value = nil }
+    }
+}
+
+/* ---------- Homelab (mobil forside) ---------- */
+
+struct Weather: Decodable, Hashable {
+    var place: String?; var temp: Double?; var text: String?; var wind: Double?; var max: Double?; var min: Double?
+    enum K: String, CodingKey { case place, temp, text, wind, max, min }
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        place = try? c.decode(String.self, forKey: .place); text = try? c.decode(String.self, forKey: .text)
+        temp = (try? c.decode(FlexNum.self, forKey: .temp))?.value; wind = (try? c.decode(FlexNum.self, forKey: .wind))?.value
+        max = (try? c.decode(FlexNum.self, forKey: .max))?.value; min = (try? c.decode(FlexNum.self, forKey: .min))?.value
+    }
+}
+
+struct Shortcut: Decodable, Hashable {
+    var name: String; var url: String; var local: Bool
+    enum K: String, CodingKey { case name, url, local }
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        name = (try? c.decode(String.self, forKey: .name)) ?? ""; url = (try? c.decode(String.self, forKey: .url)) ?? ""; local = (try? c.decode(Bool.self, forKey: .local)) ?? false
+    }
+}
+
+struct Departure: Decodable, Hashable {
+    var line: String; var color: String?; var min: Int?; var time: String?
+    enum K: String, CodingKey { case line, color, min, time }
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        line = (try? c.decode(FlexID.self, forKey: .line))?.value ?? ""
+        color = try? c.decode(String.self, forKey: .color); time = try? c.decode(String.self, forKey: .time)
+        min = (try? c.decode(FlexNum.self, forKey: .min))?.value.map { Int($0) }
+    }
+}
+
+struct RuterLine: Decodable, Hashable {
+    var from: String; var to: String; var departures: [Departure]
+    enum K: String, CodingKey { case from, to, departures }
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        from = (try? c.decode(String.self, forKey: .from)) ?? ""; to = (try? c.decode(String.self, forKey: .to)) ?? ""
+        departures = (try? c.decode([Departure].self, forKey: .departures)) ?? []
+    }
+}
+
+struct ServerStatus: Decodable, Hashable {
+    var cpu: Double?; var mem: Double?; var disk: Double?; var temp: Double?; var uptimeText: String?
+    enum K: String, CodingKey { case cpu, mem, disk, temp, uptime, uptimeText }
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        cpu = (try? c.decode(FlexNum.self, forKey: .cpu))?.value; mem = (try? c.decode(FlexNum.self, forKey: .mem))?.value
+        disk = (try? c.decode(FlexNum.self, forKey: .disk))?.value; temp = (try? c.decode(FlexNum.self, forKey: .temp))?.value
+        if let t = try? c.decode(String.self, forKey: .uptimeText) { uptimeText = t }
+        else if let t = try? c.decode(String.self, forKey: .uptime) { uptimeText = t }
+        else if let sec = (try? c.decode(FlexNum.self, forKey: .uptime))?.value {
+            let dd = Int(sec / 86400), hh = Int(sec.truncatingRemainder(dividingBy: 86400) / 3600)
+            uptimeText = dd > 0 ? "\(dd) d \(hh) t" : "\(hh) t"
+        } else { uptimeText = nil }
+    }
+}
+
+/// Oppsettet av mobilforsiden (per bruker og enhet): rekkefølge og synlighet for widgets og faner.
+struct HomeLayout: Codable, Equatable {
+    var sec: [String]
+    var hlTabs: [String]
+    var finTabs: [String]
+    var hide: [String: Bool]
+
+    static let sections = ["clock", "search", "links", "os", "srv", "ruter"]
+    static let hlAll = ["hl", "home", "dom", "mat"]
+    static let finAll = ["home", "list", "bud", "ai", "mer"]
+    /// Kan ikke skjules.
+    static let fixedHl: Set<String> = ["hl", "home"]
+    static let fixedFin: Set<String> = ["home", "mer"]
+    static let standard = HomeLayout(sec: sections, hlTabs: hlAll, finTabs: finAll, hide: ["srv": true, "ruter": true])
+
+    func visible(_ id: String) -> Bool { hide[id] != true }
+
+    /// Nye ID-er som ikke finnes i lagret oppsett legges sist; ukjente fjernes.
+    static func fix(_ saved: [String]?, _ all: [String]) -> [String] {
+        var out: [String] = []
+        for x in saved ?? [] where all.contains(x) && !out.contains(x) { out.append(x) }
+        for x in all where !out.contains(x) { out.append(x) }
+        return out
+    }
+
+    var json: [String: Any] { ["sec": sec, "hlTabs": hlTabs, "finTabs": finTabs, "hide": hide] }
+
+    /// Fra serveren: {mobile: {...}} eller {sec, hlTabs, finTabs, hide}.
+    static func from(json obj: Any?) -> HomeLayout? {
+        guard let o = obj as? [String: Any] else { return nil }
+        let m = (o["mobile"] as? [String: Any]) ?? o
+        guard m["sec"] != nil || m["hlTabs"] != nil || m["finTabs"] != nil else { return nil }
+        var hide = HomeLayout.standard.hide
+        for (k, v) in (m["hide"] as? [String: Any]) ?? [:] { if let b = v as? Bool { hide[k] = b } }
+        return HomeLayout(sec: fix(m["sec"] as? [String], sections), hlTabs: fix(m["hlTabs"] as? [String], hlAll), finTabs: fix(m["finTabs"] as? [String], finAll), hide: hide)
+    }
+}
+
+struct MobileHome: Decodable {
+    var name: String?; var serverName: String?; var avatarUrl: String?; var greeting: String?
+    var weather: Weather?; var shortcuts: [Shortcut]; var ruter: [RuterLine]; var serverStatus: ServerStatus?
+    enum K: String, CodingKey { case name, serverName, avatarUrl, greeting, weather, shortcuts, ruter, serverStatus }
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        name = try? c.decode(String.self, forKey: .name); serverName = try? c.decode(String.self, forKey: .serverName)
+        avatarUrl = try? c.decode(String.self, forKey: .avatarUrl); greeting = try? c.decode(String.self, forKey: .greeting)
+        weather = try? c.decode(Weather.self, forKey: .weather); serverStatus = try? c.decode(ServerStatus.self, forKey: .serverStatus)
+        shortcuts = (try? c.decode([Shortcut].self, forKey: .shortcuts)) ?? []
+        ruter = (try? c.decode([RuterLine].self, forKey: .ruter)) ?? []
+    }
+}
+
+/// Liste med tekster: ["…"], [{q}] eller {items|suggestions|history: […]}.
+func parseStrings(_ d: Data) -> [String] {
+    let obj = try? JSONSerialization.jsonObject(with: d)
+    let arr: [Any] = (obj as? [Any]) ?? ((obj as? [String: Any]).flatMap { ($0["items"] ?? $0["suggestions"] ?? $0["history"]) as? [Any] }) ?? []
+    return arr.compactMap { v -> String? in
+        if let s = v as? String { return s }
+        if let o = v as? [String: Any] { return (o["q"] ?? o["query"] ?? o["text"]) as? String }
+        if let a = v as? [Any] { return a.first as? String }
+        return nil
+    }.filter { !$0.isEmpty }
+}
+
+/* ---------- Mer: sidene fra nettsiden ---------- */
+
+struct Recurring: Decodable, Identifiable, Hashable {
+    let id: Int
+    var name: String
+    var amount: Double
+    var interval: String?
+    var day: Int?
+    var active: Bool?
+    var category: String?
+    var next: String?
+    var isActive: Bool { active ?? true }
+    /// Omregnet til per måned.
+    var monthly: Double {
+        let a = abs(amount)
+        switch interval ?? "monthly" {
+        case "yearly", "year", "annual": return a / 12
+        case "weekly", "week": return a * 52 / 12
+        case "quarterly": return a / 3
+        default: return a
+        }
+    }
+}
+
+struct StockSummary: Decodable, Hashable { var total: Double?; var invested: Double?; var value: Double?; var result: Double?; var cash: Double?; var realized: Double? }
+struct Position: Decodable, Hashable { var ticker: String?; var symbol: String?; var name: String?; var quantity: Double?; var avg: Double?; var price: Double?; var value: Double?; var pl: Double?; var plPct: Double?; var dayPct: Double? }
+struct HistPoint: Decodable, Hashable { var date: String?; var value: Double? }
+struct StockOrder: Decodable, Hashable { var symbol: String?; var side: String?; var quantity: Double?; var value: Double?; var price: Double?; var date: String? }
+struct Dividend: Decodable, Hashable { var symbol: String?; var amount: Double?; var date: String? }
+struct Stocks: Decodable {
+    var configured: Bool?; var status: String?; var error: String?; var env: String?; var mock: Bool?
+    var summary: StockSummary?; var positions: [Position]?; var history: [HistPoint]?; var orders: [StockOrder]?; var dividends: [Dividend]?
+}
+
+struct CatAmount: Decodable, Hashable { var category: String?; var color: String?; var amount: Double? }
+struct MerchantAmount: Decodable, Hashable { var name: String?; var amount: Double?; var count: Int? }
+struct MonthInOut: Decodable, Hashable { var month: String?; var inn: Double?; var ut: Double? }
+struct Report: Decodable { var mode: String?; var total: Double?; var byCategory: [CatAmount]?; var merchants: [MerchantAmount]?; var months: [MonthInOut]? }
+
+struct ImportRow: Decodable, Hashable { var date: String?; var description: String?; var raw: String?; var amount: Double?; var category: String?; var domain: String?; var aiShort: String?; var duplicate: Bool? }
+struct ImportResult: Decodable { var rows: [ImportRow]?; var imported: Int?; var skipped: Int?; var errors: [String]? }
+
+struct AiHit: Decodable, Hashable { var type: String?; var txId: Int?; var description: String?; var date: String?; var amount: Double?; var source: String?; var reason: String? }
+struct AiAnswer: Decodable { var q: String?; var answer: String?; var hits: [AiHit]?; var engine: String?; var suggestions: [String]? }
+
+/// Original kvittering og bankrad for en transaksjon (GET /transactions/:id/original).
+struct OriginalFile: Hashable { let mime: String?; let fileUrl: String? }
+struct BankRowInfo: Hashable { let rows: [DetailRow]; let raw: String }
+struct Original: Hashable {
+    let receipt: OriginalFile?
+    let bank: BankRowInfo?
+    static func parse(_ d: Data) -> Original {
+        let o = (try? JSONSerialization.jsonObject(with: d)) as? [String: Any] ?? [:]
+        let r = o["receipt"] as? [String: Any]
+        let b = o["bankRow"] as? [String: Any]
+        var bank: BankRowInfo? = nil
+        if let b {
+            func s(_ k: String) -> String? { (b[k] as? String).flatMap { $0.isEmpty ? nil : $0 } }
+            var rows: [DetailRow] = []
+            rows.append(DetailRow(k: "Dato", v: ddmmyyyy(s("bookingDate"))))
+            rows.append(DetailRow(k: "Rentedato", v: ddmmyyyy(s("valueDate"))))
+            if let x = s("description") { rows.append(DetailRow(k: "Forklaring", v: x)) }
+            if let a = (b["amount"] as? NSNumber)?.doubleValue { rows.append(DetailRow(k: a < 0 ? "Ut" : "Inn", v: "\(n2(a)) kr")) }
+            if let x = s("account") { rows.append(DetailRow(k: "Konto", v: x)) }
+            if let x = s("source") { rows.append(DetailRow(k: "Bank", v: x)) }
+            if let x = s("archiveReference") { rows.append(DetailRow(k: "Arkivref.", v: x)) }
+            let rawObj = b["raw"]
+            var raw = ""
+            if let t = rawObj as? String { raw = t }
+            else if let rawObj, JSONSerialization.isValidJSONObject(rawObj), let j = try? JSONSerialization.data(withJSONObject: rawObj, options: [.prettyPrinted, .sortedKeys]) { raw = String(data: j, encoding: .utf8) ?? "" }
+            if raw.isEmpty, let j = try? JSONSerialization.data(withJSONObject: b, options: [.prettyPrinted, .sortedKeys]) { raw = String(data: j, encoding: .utf8) ?? "" }
+            bank = BankRowInfo(rows: rows, raw: raw)
+        }
+        return Original(receipt: r.map { OriginalFile(mime: $0["mime"] as? String, fileUrl: ($0["fileUrl"] ?? $0["file"]) as? String) }, bank: bank)
+    }
+}
+
+/// En rad på en Mer-side åpner en detaljside med felt og tilhørende transaksjoner.
+struct DetailRow: Hashable { let k: String; let v: String }
+struct DetailGroup: Hashable { let title: String; let rows: [DetailRow] }
+struct DetailInfo: Hashable {
+    let title: String
+    var sub: String? = nil
+    var value: String? = nil
+    var valueSub: String? = nil
+    var groups: [DetailGroup] = []
+    var txQuery: String? = nil
+}
+
+/// Skjema for ny eller endret transaksjon.
+struct TxDraft: Hashable {
+    var id: Int?
+    var income: Bool
+    var description: String
+    var amount: String
+    var date: Date
+    var categoryId: Int?
+    var accountId: Int?
+    var folderId: Int?
+    var note: String
+    var receipt: String?
+}
+
+func ddmmyyyy(_ d: String?) -> String {
+    guard let d, d.count >= 10 else { return "–" }
+    let c = Array(d)
+    return "\(c[8])\(c[9]).\(c[5])\(c[6]).\(c[0])\(c[1])\(c[2])\(c[3])"
+}
+
+func longDate(_ d: Date = Date()) -> String {
+    let f = DateFormatter(); f.locale = Locale(identifier: "nb_NO"); f.dateFormat = "EEEE d. MMMM"
+    return f.string(from: d).capitalized(with: Locale(identifier: "nb_NO"))
 }

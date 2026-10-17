@@ -10,6 +10,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
+import android.provider.OpenableColumns
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -27,15 +28,31 @@ import org.json.JSONObject
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.net.URLEncoder
+import java.time.LocalDate
 import java.util.UUID
 
-/** Finans-fanene (Hjem, Liste, Budsjett), opplasting, modulene under «Andre OS» og innstillinger. */
+/**
+ * Skjermer. Homelab er forsiden; Finans (Oversikt, Liste, Budsjett, Søk, Mer) og sidene under Mer er «Andre OS»
+ * sammen med Matplan og Domener.
+ */
 enum class Screen(val label: String) {
-    Home("Hjem"), List("Liste"), Budget("Budsjett"), Scan("Last opp"),
-    Mat("Matplan"), Domains("Domener"), Sub("Subscription OS"), Folders("Delte mapper"), Finn("Finn-handler"),
-    Settings("Innstillinger");
+    Homelab("Homelab"),
+    Home("Oversikt"), List("Liste"), Budget("Budsjett"), Search("Søk"), More("Mer"),
+    Scan("Kvitteringer"), Fast("Faste utgifter"), Accounts("Kontoer"), Stocks("Aksjer"), Reports("Rapporter"), Import("Import"),
+    Sub("Subscription OS"), Folders("Boliger"), Finn("Finn-handler"),
+    Mat("Matplan"), Domains("Domener"), Settings("Innstillinger");
 
-    val isFinance get() = this == Home || this == List || this == Budget || this == Scan
+    /** Fanelinja for Finans vises (Mer er markert på undersidene). */
+    val isFinance get() = this in FINANCE
+    val isMorePage get() = this in MORE_PAGES
+
+    companion object {
+        val FINANCE = setOf(Home, List, Budget, Search, More, Scan, Fast, Accounts, Stocks, Reports, Import, Sub, Folders, Finn)
+        val MORE_PAGES = setOf(Scan, Fast, Accounts, Stocks, Reports, Import, Sub, Folders, Finn)
+        /** Faner i Finans og på Homelab, med ID-ene som lagres i oppsettet. */
+        val FIN_TAB = mapOf("home" to Home, "list" to List, "bud" to Budget, "ai" to Search, "mer" to More)
+        val HL_TAB = mapOf("hl" to Homelab, "home" to Home, "dom" to Domains, "mat" to Mat)
+    }
 }
 
 enum class DomTab(val label: String) { Traffic("Trafikk"), Visits("Besøk"), Perf("Ytelse"), Security("Sikkerhet") }
@@ -57,7 +74,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val account: UserAccount? get() = accounts.firstOrNull { it.id == activeId } ?: accounts.firstOrNull()
     val loggedIn get() = account != null
     val server: String get() = account?.server ?: store.lastServer()
-    val displayName: String get() = me?.name?.takeIf { it.isNotBlank() } ?: account?.name?.takeIf { it.isNotBlank() } ?: boot?.settings?.name ?: ""
+    val displayName: String get() = me?.name?.takeIf { it.isNotBlank() } ?: mobileHome?.name?.takeIf { it.isNotBlank() }
+        ?: account?.name?.takeIf { it.isNotBlank() } ?: boot?.settings?.name ?: ""
 
     /** Adressen som faktisk brukes (lokal hjemme, ellers ekstern/standard). */
     var base by mutableStateOf(account?.server ?: "")
@@ -74,6 +92,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /* ---------- App-tilstand ---------- */
 
     var screen by mutableStateOf(startScreen())
+        private set
+    /** Hvor tilbakeknappen fører (null = standard for skjermen). */
+    private var backTo: Screen? = null
     var boot by mutableStateOf<Boot?>(null)
     var summary by mutableStateOf<Summary?>(null)
     var me by mutableStateOf<Me?>(null)
@@ -93,6 +114,46 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var menuOpen by mutableStateOf(false)
     var scanSheet by mutableStateOf(false)
     var settingsPage by mutableStateOf<String?>(null)
+
+    /* ---------- Homelab (forsiden) ---------- */
+
+    var mobileHome by mutableStateOf<MobileHome?>(null)
+    var homeError by mutableStateOf<String?>(null)
+    var layout by mutableStateOf(HomeLayout.DEFAULT)
+        private set
+    var editHome by mutableStateOf(false)
+    var widgetGallery by mutableStateOf(false)
+    var history by mutableStateOf<List<String>>(emptyList())
+    var suggestions by mutableStateOf<List<String>>(emptyList())
+    var todayMeal by mutableStateOf<String?>(null)
+    var domainToday by mutableStateOf<Pair<String, Double>?>(null)
+    var avatar by mutableStateOf<Bitmap?>(null)
+        private set
+    private var suggestJob: kotlinx.coroutines.Job? = null
+
+    /* ---------- Finans: søk, redigering og originaler ---------- */
+
+    var ai by mutableStateOf<AiAnswer?>(null)
+    var aiQuery by mutableStateOf("")
+    var aiBusy by mutableStateOf(false)
+    var aiHistory by mutableStateOf<List<String>>(emptyList())
+    var editing by mutableStateOf<TxDraft?>(null)
+    var original by mutableStateOf<Original?>(null)
+    var originalTab by mutableStateOf("receipt")
+    var originalTxId by mutableStateOf<Int?>(null)
+    var detail by mutableStateOf<DetailInfo?>(null)
+    var detailTx by mutableStateOf<List<Tx>?>(null)
+
+    /* ---------- Mer ---------- */
+
+    var recurring by mutableStateOf<List<Recurring>?>(null)
+    var stocks by mutableStateOf<Stocks?>(null)
+    var stockPeriod by mutableStateOf("1M")
+    var report by mutableStateOf<Report?>(null)
+    var reportYear by mutableStateOf(false)
+    var importUris by mutableStateOf<List<Uri>>(emptyList())
+    var importText by mutableStateOf("")
+    var importResult by mutableStateOf<ImportResult?>(null)
 
     /* ---------- Moduler ---------- */
 
@@ -142,10 +203,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         Privacy.hidden = prefs.bool(AppPrefs.HIDE_AMOUNTS)
+        layout = localLayout()
         if (loggedIn) refresh()
     }
 
-    private fun startScreen() = when (prefs.str(AppPrefs.START, "home")) { "list" -> Screen.List; "budget" -> Screen.Budget; else -> Screen.Home }
+    private fun startScreen() = when (prefs.str(AppPrefs.START, "homelab")) {
+        "home" -> Screen.Home; "list" -> Screen.List; "budget" -> Screen.Budget; else -> Screen.Homelab
+    }
 
     private fun launch(block: suspend () -> Unit) = viewModelScope.launch {
         try { block() } catch (e: ApiException) {
@@ -190,6 +254,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         base = account?.server ?: ""
         menuOpen = false
         screen = startScreen()
+        backTo = null
+        layout = localLayout()
         refresh()
     }
 
@@ -214,6 +280,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             activeId = next?.id
             clearData()
             base = next?.server ?: ""
+            layout = localLayout()
             if (next != null) refresh()
         }
         store.save(accounts, activeId)
@@ -228,6 +295,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun clearData() {
         boot = null; summary = null; me = null; txs = null; receipts = null; jobs = emptyList(); selectedTx = null; selectedReceipt = null
         week = null; subs = null; folders = null; folder = null; finn = null; tokens = null; domains = null; analytics = null; domain = null
+        mobileHome = null; homeError = null; history = emptyList(); suggestions = emptyList(); todayMeal = null; domainToday = null; avatar = null
+        ai = null; aiHistory = emptyList(); editing = null; original = null; detail = null; detailTx = null
+        recurring = null; stocks = null; report = null; importResult = null; importUris = emptyList(); importText = ""
+        editHome = false
         logos.clear()
     }
 
@@ -263,25 +334,50 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun refresh() = launch {
         resolveBase()
         boot = parseBoot(api.get("/bootstrap"))
-        summary = parseSummary(api.get("/summary"))
-        me = runCatching { parseMe(api.get("/me")) }.getOrNull()
-        val m = me
+        summary = runCatching { parseSummary(api.get("/summary")) }.getOrNull() ?: summary
+        loadMe()
+        lastSync = System.currentTimeMillis()
+        if (offline.isNotEmpty() && canUpload()) { val q = offline; offline = emptyList(); uploadUris(q) }
+        loadFor(screen)
+        if (screen != Screen.Homelab) launch { loadHome() }
+    }
+
+    private suspend fun loadMe() {
+        val fin = runCatching { parseMe(api.get("/me")) }.getOrNull()
+        // Profilbilde og servernavn kommer fra Homelab hvis FinansHub ikke sender dem.
+        val hl = if (fin?.avatarUrl == null) runCatching { parseMe(api.hlGet("/me")) }.getOrNull() else null
+        val m = when {
+            fin == null -> hl
+            hl == null -> fin
+            else -> fin.copy(avatarUrl = hl.avatarUrl, serverName = fin.serverName ?: hl.serverName, isMainAdmin = fin.isMainAdmin || hl.isMainAdmin)
+        }
+        me = m
         val a = account
         if (m != null && a != null && (a.name != m.name || a.username != m.username) && m.username.isNotBlank()) {
             accounts = accounts.map { if (it.id == a.id) it.copy(name = m.name, username = m.username, role = m.role) else it }
             store.save(accounts, activeId)
         }
-        lastSync = System.currentTimeMillis()
-        if (offline.isNotEmpty() && canUpload()) { val q = offline; offline = emptyList(); uploadUris(q) }
-        loadFor(screen)
+        loadAvatar(m?.avatarUrl ?: mobileHome?.avatarUrl)
+    }
+
+    private suspend fun loadAvatar(url: String?) {
+        avatar = if (url.isNullOrBlank()) null else image(url)
     }
 
     private suspend fun loadFor(s: Screen) {
         moduleError = null
         try {
             when (s) {
-                Screen.List, Screen.Budget -> loadTx()
+                Screen.Homelab -> loadHome()
+                Screen.Home -> summary = parseSummary(api.get("/summary"))
+                Screen.List, Screen.Budget -> if (txs == null || s == Screen.List) loadTx()
+                Screen.Search -> loadAiHistory()
+                Screen.More -> loadMore()
                 Screen.Scan -> { loadReceipts(); loadJobs() }
+                Screen.Fast -> recurring = parseRecurring(api.get("/recurring"))
+                Screen.Accounts -> boot = parseBoot(api.get("/bootstrap"))
+                Screen.Stocks -> stocks = parseStocks(api.get("/stocks"))
+                Screen.Reports -> loadReport()
                 Screen.Mat -> loadWeek()
                 Screen.Sub -> subs = parseSubs(api.get("/subscriptions"))
                 Screen.Folders -> folders = parseFolders(api.get("/folders"))
@@ -296,14 +392,35 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun go(s: Screen) {
-        if (s != screen) { selectedTx = null; folder = null }
+    /** Fanebytte (fanelinje, meny): ingen egen tilbakevei. */
+    fun go(s: Screen) = navigate(s, null)
+
+    /** Underside (f.eks. fra Mer): tilbakeknappen fører hit igjen. */
+    fun open(s: Screen) = navigate(s, screen)
+
+    private fun navigate(s: Screen, from: Screen?) {
+        if (s != screen) { selectedTx = null; folder = null; detail = null; detailTx = null; editing = null; original = null; editHome = false }
+        backTo = from?.takeIf { it != s }
         screen = s
         menuOpen = false
-        launch {
-            if (s == Screen.Home) summary = parseSummary(api.get("/summary"))
-            else if ((s != Screen.List && s != Screen.Budget) || txs == null) loadFor(s)
+        launch { loadFor(s) }
+    }
+
+    /** Tilbake: lukker det som er åpent, ellers til forrige side (undersider av Mer → Mer, Finans og moduler → Homelab). */
+    fun back(): Boolean {
+        when {
+            original != null -> original = null
+            editing != null -> editing = null
+            detail != null -> { detail = null; detailTx = null }
+            editHome -> editHome = false
+            screen == Screen.Settings && settingsPage != null -> settingsPage = null
+            screen == Screen.Folders && folder != null -> folder = null
+            screen == Screen.Scan && selectedReceipt != null -> selectedReceipt = null
+            selectedTx != null -> selectedTx = null
+            screen == Screen.Homelab -> return false
+            else -> navigate(backTo ?: if (screen.isMorePage) Screen.More else Screen.Homelab, null)
         }
+        return true
     }
 
     suspend fun loadTx() {
@@ -351,6 +468,310 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         boot = parseBoot(api.get("/bootstrap"))
     }
 
+    /* ---------- Homelab: forside, søk og oppsett ---------- */
+
+    suspend fun loadHome() {
+        homeError = null
+        // Feil her logger aldri ut: finans-tokenet kan være gyldig selv om en eldre server ikke kjenner forsiden.
+        try { mobileHome = parseMobileHome(api.hlGet("/mobile/home")) } catch (e: ApiException) {
+            homeError = when (e.status) {
+                404 -> "Homelab-forsiden finnes ikke på serveren ennå. Oppdater homelab."
+                401, 403 -> "Homelab godtar ikke app-tokenet ennå. Oppdater homelab-serveren."
+                else -> e.message
+            }
+        }
+        if (summary == null) summary = runCatching { parseSummary(api.get("/summary")) }.getOrNull()
+        if (prefs.str(AppPrefs.LAYOUT + (account?.id ?: ""), "").isBlank()) {
+            val l = mobileHome?.layout ?: runCatching { parseLayout(api.hlGet("/me/layout")) }.getOrNull()
+            if (l != null) layout = l
+        }
+        history = runCatching { parseStrings(api.hlGet("/search/history")) }.getOrDefault(history)
+        todayMeal = runCatching {
+            val w = parseWeek(api.matGet("/week"))
+            w.days.firstOrNull { it.date == LocalDate.now().toString() }?.name
+        }.getOrNull()
+        domainToday = runCatching {
+            val d = parseDomains(api.domGet("/domains")).firstOrNull() ?: return@runCatching null
+            val a = parseAnalytics(api.domGet("/" + URLEncoder.encode(d.name, "UTF-8") + "/analytics?range=today"))
+            d.name to a.visitors
+        }.getOrNull()
+        if (avatar == null) loadAvatar(me?.avatarUrl ?: mobileHome?.avatarUrl)
+    }
+
+    private fun localLayout(): HomeLayout {
+        val raw = prefs.str(AppPrefs.LAYOUT + (account?.id ?: ""), "")
+        return if (raw.isBlank()) HomeLayout.DEFAULT else runCatching { HomeLayout.from(JSONObject(raw)) }.getOrDefault(HomeLayout.DEFAULT)
+    }
+
+    /** Lagres lokalt (per bruker og enhet) og på serveren. */
+    fun saveLayout(l: HomeLayout) {
+        layout = l
+        prefs.set(AppPrefs.LAYOUT + (account?.id ?: ""), l.toJson().toString())
+        viewModelScope.launch { runCatching { api.hlPut("/me/layout", JSONObject().put("mobile", l.toJson())) } }
+    }
+
+    fun setHidden(id: String, hidden: Boolean) = saveLayout(layout.copy(hide = layout.hide + (id to hidden)))
+
+    /** Flytter en seksjon eller fane ett hakk opp (-1) eller ned (+1). */
+    fun move(list: String, id: String, dir: Int) {
+        fun mv(l: List<String>): List<String> {
+            val i = l.indexOf(id)
+            val j = i + dir
+            if (i < 0 || j < 0 || j >= l.size) return l
+            return l.toMutableList().also { val t = it[i]; it[i] = it[j]; it[j] = t }
+        }
+        saveLayout(when (list) {
+            "sec" -> layout.copy(sec = mv(layout.sec))
+            "hlTabs" -> layout.copy(hlTabs = mv(layout.hlTabs))
+            else -> layout.copy(finTabs = mv(layout.finTabs))
+        })
+    }
+
+    fun resetLayout() = saveLayout(HomeLayout.DEFAULT)
+
+    /** Faner som vises (skjulte fjernes, faste kan ikke skjules). */
+    val hlTabs: List<Screen> get() = layout.hlTabs.filter { it in HomeLayout.FIXED_HL || layout.visible(it) }.mapNotNull { Screen.HL_TAB[it] }
+    val finTabs: List<Screen> get() = layout.finTabs.filter { it in HomeLayout.FIXED_FIN || layout.visible(it) }.mapNotNull { Screen.FIN_TAB[it] }
+
+    /** Google-forslag mens man skriver (150 ms debounce, via serveren). */
+    fun suggest(q: String) {
+        suggestJob?.cancel()
+        if (q.isBlank()) { suggestions = emptyList(); return }
+        suggestJob = viewModelScope.launch {
+            delay(150)
+            suggestions = runCatching { parseStrings(api.hlGet("/search/suggest?q=" + URLEncoder.encode(q, "UTF-8"), timeout = 3000)).take(8) }.getOrDefault(emptyList())
+        }
+    }
+
+    /** Returnerer adressen som skal åpnes: adresser (f.eks. vg.no) åpnes direkte, resten søkes på Google. */
+    fun googleUrl(q: String): String {
+        val t = q.trim()
+        val looksLikeUrl = t.startsWith("http://") || t.startsWith("https://") || (!t.contains(' ') && Regex("""^[\w-]+(\.[\w-]+)+(:\d+)?(/\S*)?$""").matches(t))
+        if (t.isNotBlank()) viewModelScope.launch {
+            runCatching { api.hlPost("/search/history", JSONObject().put("q", t)) }
+            history = (listOf(t) + history.filter { it != t }).take(100)
+        }
+        suggestions = emptyList()
+        return when {
+            t.startsWith("http://") || t.startsWith("https://") -> t
+            looksLikeUrl -> "https://$t"
+            else -> "https://www.google.com/search?q=" + URLEncoder.encode(t, "UTF-8")
+        }
+    }
+
+    fun removeHistory(q: String) = launch {
+        history = history.filter { it != q }
+        api.hlDelete("/search/history/" + URLEncoder.encode(q, "UTF-8").replace("+", "%20"))
+    }
+
+    fun clearHistory() = launch { history = emptyList(); api.hlDelete("/search/history"); message = "Søkehistorikken er tømt" }
+
+    /* ---------- Profilbilde ---------- */
+
+    /** Beskjæres til kvadrat, skaleres til 256 × 256 og lagres som JPEG (kvalitet 0,85). */
+    fun uploadAvatar(uri: Uri) = launch {
+        busy = true
+        try {
+            val ctx = getApplication<Application>()
+            val data = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes() } }
+            val jpeg = withContext(Dispatchers.Default) { squareJpeg(data, 256, 85) } ?: run { message = "Kunne ikke lese bildet"; return@launch }
+            api.upload("/me/avatar", listOf(Api.Part("file", "avatar.jpg", "image/jpeg", jpeg)), prefix = Api.HOMELAB)
+            avatar = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size)
+            loadMe()
+            message = "Profilbildet er oppdatert"
+        } finally { busy = false }
+    }
+
+    fun removeAvatar() = launch {
+        api.hlDelete("/me/avatar")
+        avatar = null
+        loadMe()
+        message = "Profilbildet er fjernet"
+    }
+
+    private fun squareJpeg(data: ByteArray, size: Int, quality: Int): ByteArray? = runCatching {
+        val bmp = BitmapFactory.decodeByteArray(data, 0, data.size) ?: return null
+        val rot = rotation(data)
+        val side = minOf(bmp.width, bmp.height)
+        val m = Matrix().apply { postScale(size.toFloat() / side, size.toFloat() / side); postRotate(rot) }
+        val out = Bitmap.createBitmap(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, m, true)
+        ByteArrayOutputStream().use { o -> out.compress(Bitmap.CompressFormat.JPEG, quality, o); o.toByteArray() }
+    }.getOrNull()
+
+    private fun rotation(data: ByteArray): Float = runCatching {
+        when (ExifInterface(data.inputStream()).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+            ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+            ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+            else -> 0f
+        }
+    }.getOrDefault(0f)
+
+    /* ---------- ✦ AI-søk ---------- */
+
+    fun ask(q: String) {
+        val t = q.trim()
+        if (t.isBlank()) return
+        aiQuery = t
+        aiBusy = true
+        launch {
+            try {
+                ai = parseAi(api.post("/search/ai", JSONObject().put("q", t)), t)
+                aiHistory = (listOf(t) + aiHistory.filter { it != t }).take(20)
+                loadAiHistory()
+            } finally { aiBusy = false }
+        }
+    }
+
+    private suspend fun loadAiHistory() {
+        runCatching { parseStrings(api.get("/search/history")) }.getOrNull()?.let { aiHistory = it.take(20) }
+    }
+
+    fun clearAiHistory() = launch { aiHistory = emptyList(); runCatching { api.delete("/search/history") } }
+
+    /** Åpner transaksjonen fra et treff (søk, Mer-detaljer). hint = beskrivelsen, brukes til å finne den i listen. */
+    fun showTx(id: Int, hint: String? = null) = launch {
+        val known = txs?.any { it.id == id } == true || summary?.recent?.any { it.id == id } == true || detailTx?.any { it.id == id } == true
+        if (!known) {
+            val found = runCatching { parseTxOne(api.get("/transactions/$id")) }.getOrNull()
+                ?: hint?.let { h -> runCatching { parseTxList(api.get("/transactions?limit=50&q=" + URLEncoder.encode(h, "UTF-8"))) }.getOrNull()?.firstOrNull { it.id == id } }
+            found?.let { t -> txs = (txs ?: emptyList()).filter { it.id != t.id } + t }
+        }
+        selectedTx = id
+    }
+
+    /** Alle transaksjoner som er lastet (liste, siste, detaljlister). */
+    val txPool: List<Tx> get() = (txs ?: emptyList()) + (summary?.recent ?: emptyList()) + (detailTx ?: emptyList())
+
+    /* ---------- Transaksjoner: legg til, rediger, slett ---------- */
+
+    fun newTx() {
+        if (folders == null) launch { folders = runCatching { parseFolders(api.get("/folders")) }.getOrNull() }
+        editing = TxDraft(null, false, "", "", LocalDate.now().toString(), null, boot?.accounts?.firstOrNull()?.id, null, "", null)
+    }
+
+    fun editTx(t: Tx) {
+        if (folders == null) launch { folders = runCatching { parseFolders(api.get("/folders")) }.getOrNull() }
+        editing = TxDraft(t.id, t.amount > 0, t.description, String.format(java.util.Locale("nb", "NO"), "%.2f", kotlin.math.abs(t.amount)), t.date, t.categoryId, t.accountId,
+            t.folderId ?: folders?.firstOrNull { it.name == t.folder }?.id, t.note, t.receipt)
+    }
+
+    fun saveTx(d: TxDraft) {
+        val a = d.amount.replace(" ", "").replace(" ", "").replace(',', '.').toDoubleOrNull()
+        if (d.description.isBlank() || a == null || a == 0.0) { message = "Skriv beskrivelse og beløp"; return }
+        if (!Regex("""^\d{4}-\d{2}-\d{2}$""").matches(d.date)) { message = "Dato må skrives som ÅÅÅÅ-MM-DD"; return }
+        launch {
+            busy = true
+            try {
+                val body = JSONObject().put("type", if (d.income) "income" else "expense").put("description", d.description.trim())
+                    .put("amount", kotlin.math.abs(a)).put("date", d.date).put("note", d.note)
+                    .put("categoryId", d.categoryId ?: JSONObject.NULL).put("accountId", d.accountId ?: JSONObject.NULL).put("folderId", d.folderId ?: JSONObject.NULL)
+                val res = if (d.id == null) api.post("/transactions", body) else api.patch("/transactions/${d.id}", body)
+                val id = parseTxOne(res)?.id ?: d.id
+                editing = null
+                loadTx()
+                summary = parseSummary(api.get("/summary"))
+                if (id != null) selectedTx = id
+                message = if (d.id == null) "Transaksjon lagt til" else "Endringer lagret"
+            } finally { busy = false }
+        }
+    }
+
+    fun deleteTx(id: Int) = launch {
+        api.delete("/transactions/$id")
+        editing = null
+        selectedTx = null
+        txs = txs?.filter { it.id != id }
+        summary = parseSummary(api.get("/summary"))
+        message = "Transaksjonen er slettet"
+    }
+
+    /* ---------- Original kvittering og banktransaksjon ---------- */
+
+    fun openOriginal(txId: Int, tab: String) = launch {
+        originalTab = tab
+        originalTxId = txId
+        original = parseOriginal(api.get("/transactions/$txId/original"))
+    }
+
+    suspend fun bytes(path: String): ByteArray? = runCatching { api.bytes(path) }.getOrNull()
+
+    /** Lagrer en midlertidig kopi og åpner delingsarket. */
+    fun shareFile(name: String, mime: String, data: ByteArray) {
+        val ctx = getApplication<Application>()
+        val f = File(File(ctx.cacheDir, "scans").apply { mkdirs() }, name).apply { writeBytes(data) }
+        val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", f)
+        val send = Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        ctx.startActivity(Intent.createChooser(send, "Del").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+
+    /** «Last ned»: skriver filen dit brukeren valgte i Filer. */
+    fun writeTo(uri: Uri, data: ByteArray) = launch {
+        withContext(Dispatchers.IO) { getApplication<Application>().contentResolver.openOutputStream(uri)?.use { it.write(data) } }
+        message = "Lagret"
+    }
+
+    /* ---------- Mer ---------- */
+
+    private suspend fun loadMore() {
+        runCatching { boot = parseBoot(api.get("/bootstrap")) }
+        runCatching { recurring = parseRecurring(api.get("/recurring")) }
+        runCatching { subs = parseSubs(api.get("/subscriptions")) }
+        runCatching { folders = parseFolders(api.get("/folders")) }
+        runCatching { finn = parseFinn(api.get("/finn")) }
+        runCatching { stocks = parseStocks(api.get("/stocks")) }
+    }
+
+    fun openDetail(info: DetailInfo) {
+        detail = info
+        detailTx = null
+        val q = info.txQuery ?: return
+        launch { detailTx = parseTxList(api.get("/transactions?limit=30&q=" + URLEncoder.encode(q, "UTF-8"))) }
+    }
+
+    fun setRecurringActive(r: Recurring, active: Boolean) = launch {
+        api.patch("/recurring/${r.id}", JSONObject().put("active", active))
+        recurring = parseRecurring(api.get("/recurring"))
+    }
+
+    fun syncStocks() = launch {
+        busy = true
+        try { stocks = parseStocks(api.post("/stocks/sync")); message = "Synket med Trading 212" } finally { busy = false }
+    }
+
+    private suspend fun loadReport() { report = parseReport(api.get("/reports?mode=" + if (reportYear) "year" else "month")) }
+    fun pickReportYear(y: Boolean) { reportYear = y; report = null; launch { loadReport() } }
+
+    /** Kontoutskrift: filer (CSV, XLSX, tekst) og/eller innlimt tekst → forhåndsvisning → importer. */
+    fun runImport(commit: Boolean) = launch {
+        val ctx = getApplication<Application>()
+        if (importUris.isEmpty() && importText.isBlank()) { message = "Velg filer eller lim inn tekst"; return@launch }
+        busy = true
+        try {
+            val parts = mutableListOf<Api.Part>()
+            withContext(Dispatchers.IO) {
+                importUris.forEach { u ->
+                    val name = fileName(u) ?: "kontoutskrift.csv"
+                    val mime = ctx.contentResolver.getType(u) ?: "application/octet-stream"
+                    ctx.contentResolver.openInputStream(u)?.use { parts += Api.Part("files", name, mime, it.readBytes()) }
+                }
+            }
+            if (importText.isNotBlank()) parts += Api.Part.text("text", importText)
+            val r = parseImport(api.upload("/import" + if (commit) "?commit=1" else "", parts))
+            importResult = r
+            if (commit) {
+                message = "${r.imported} poster importert"
+                importUris = emptyList(); importText = ""; importResult = null
+                txs = null
+                summary = parseSummary(api.get("/summary"))
+            }
+        } finally { busy = false }
+    }
+
+    fun fileName(u: Uri): String? = runCatching {
+        getApplication<Application>().contentResolver.query(u, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+    }.getOrNull()
+
     /* ---------- Opplasting ---------- */
 
     private fun canUpload(): Boolean {
@@ -363,7 +784,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Flere filer legges i kø og lastes opp én og én; AI-en leser dem i bakgrunnen på serveren. Uten nett (eller utenfor Wi-Fi) venter de. */
     fun uploadUris(uris: List<Uri>) {
         if (uris.isEmpty()) return
-        screen = Screen.Scan
+        // Fra «Legg ved kvittering» i skjemaet: bli stående, kvitteringen kobles når den bokføres.
+        if (editing != null) message = "Kvitteringen er lagt i opplastingskøen"
+        else if (screen != Screen.Scan) this.open(Screen.Scan)
         if (!canUpload()) { offline = offline + uris; message = "${uris.size} kvittering(er) venter på Wi-Fi"; return }
         uploading += uris.size
         launch {
@@ -417,6 +840,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         return b
     }
 
+    /** Favicon for en snarvei (Googles favicon-tjeneste, som i designet). */
+    suspend fun favicon(url: String): Bitmap? {
+        val host = runCatching { Uri.parse(url).host }.getOrNull() ?: return null
+        val key = "fav:$host"
+        if (logos.containsKey(key)) return logos[key]
+        val b = runCatching {
+            withContext(Dispatchers.IO) {
+                val c = java.net.URL("https://www.google.com/s2/favicons?sz=64&domain=" + URLEncoder.encode(host, "UTF-8")).openConnection() as java.net.HttpURLConnection
+                c.connectTimeout = 4000; c.readTimeout = 4000
+                try { c.inputStream.use { it.readBytes() } } finally { c.disconnect() }
+            }.let { BitmapFactory.decodeByteArray(it, 0, it.size) }
+        }.getOrNull()
+        logos[key] = b
+        return b
+    }
+
     suspend fun image(path: String): Bitmap? = runCatching {
         val b = api.bytes(path)
         withContext(Dispatchers.Default) { BitmapFactory.decodeByteArray(b, 0, b.size) }
@@ -428,12 +867,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         var sample = 1
         while (maxOf(opts.outWidth, opts.outHeight) / (sample * 2) >= max) sample *= 2
         val bmp = BitmapFactory.decodeByteArray(data, 0, data.size, BitmapFactory.Options().apply { inSampleSize = sample }) ?: return null
-        val rot = when (ExifInterface(data.inputStream()).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)) {
-            ExifInterface.ORIENTATION_ROTATE_90 -> 90f
-            ExifInterface.ORIENTATION_ROTATE_180 -> 180f
-            ExifInterface.ORIENTATION_ROTATE_270 -> 270f
-            else -> 0f
-        }
+        val rot = rotation(data)
         val s = minOf(1f, max.toFloat() / maxOf(bmp.width, bmp.height))
         val m = Matrix().apply { postScale(s, s); postRotate(rot) }
         val out = Bitmap.createBitmap(bmp, 0, 0, bmp.width, bmp.height, m, true)
@@ -464,7 +898,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         subs = parseSubs(api.get("/subscriptions"))
     }
 
-    /* ---------- Delte mapper ---------- */
+    /* ---------- Boliger (delte mapper) ---------- */
 
     fun openFolder(id: Int?) = launch { folder = if (id == null) null else parseFolderDetail(api.get("/folders/$id")) }
     fun addFolderEntry(desc: String, amount: String, paidBy: String?) = launch {
@@ -531,11 +965,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 append('﻿').append("Dato;Beskrivelse;Beløp;Kategori;Konto;Notat\r\n")
                 all.forEach { t -> append(listOf(t.date, esc(t.description), t.amount.toString().replace('.', ','), esc(t.category), esc(t.account), esc(t.note)).joinToString(";")).append("\r\n") }
             }
-            val ctx = getApplication<Application>()
-            val f = withContext(Dispatchers.IO) { File(File(ctx.cacheDir, "scans").apply { mkdirs() }, "finanshub-transaksjoner.csv").apply { writeText(csv) } }
-            val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", f)
-            val send = Intent(Intent.ACTION_SEND).setType("text/csv").putExtra(Intent.EXTRA_STREAM, uri).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            ctx.startActivity(Intent.createChooser(send, "Eksporter som CSV").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            shareFile("finanshub-transaksjoner.csv", "text/csv", csv.toByteArray())
         } finally { busy = false }
     }
 }

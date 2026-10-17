@@ -1,11 +1,15 @@
 package no.kristo.finanshub.ui
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,6 +43,14 @@ private val groups = listOf(
         Triple("scan", "Skanning og AI", Icons.Filled.DocumentScanner),
         Triple("notify", "Varsler", Icons.Filled.Notifications),
     )),
+    SettingsGroup("Finans", listOf(
+        Triple("ai", "AI-motor", Icons.Filled.AutoAwesome),
+        Triple("cats", "Kategorier", Icons.Filled.Category),
+        Triple("rules", "Regler", Icons.Filled.Tune),
+        Triple("bank", "Bank og import", Icons.Filled.AccountBalance),
+        Triple("stocks", "Aksjer · Trading 212", Icons.AutoMirrored.Filled.ShowChart),
+        Triple("backup", "Backup og data", Icons.Filled.Backup),
+    )),
     SettingsGroup("System", listOf(
         Triple("server", "Server og synk", Icons.Filled.Dns),
         Triple("data", "Data og lagring", Icons.Filled.Storage),
@@ -61,9 +73,7 @@ internal fun SettingsScreen(vm: AppViewModel, onPrivacyChanged: () -> Unit) {
                 item {
                     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(C.container).clickable { vm.settingsPage = "accounts" }.padding(18.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        Box(Modifier.size(56.dp).clip(CircleShape).background(C.primary), contentAlignment = Alignment.Center) {
-                            Text(initial(vm.displayName.ifBlank { "S" }), color = C.onPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                        }
+                        AvatarImage(vm, 56, C.primary, C.onPrimary)
                         Column(Modifier.weight(1f)) {
                             Text(vm.displayName, color = C.onContainer, style = MaterialTheme.typography.titleLarge)
                             Text("${vm.account?.username?.ifBlank { null } ?: "–"} · ${vm.me?.role ?: vm.account?.role ?: ""}", color = C.onContainer.copy(alpha = .8f), fontSize = 13.sp)
@@ -77,7 +87,9 @@ internal fun SettingsScreen(vm: AppViewModel, onPrivacyChanged: () -> Unit) {
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             g.items.forEachIndexed { i, (k, label, icon) ->
-                                Row(Modifier.fillMaxWidth().clip(itemShape(i, g.items.size)).background(C.surface1).clickable { vm.settingsPage = k; if (k == "tokens") vm.loadTokens() }.padding(16.dp),
+                                Row(Modifier.fillMaxWidth().clip(itemShape(i, g.items.size)).background(C.surface1).clickable {
+                                    when (k) { "bank" -> vm.open(Screen.Import); else -> { vm.settingsPage = k; if (k == "tokens") vm.loadTokens() } }
+                                }.padding(16.dp),
                                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                                     Icon(icon, null, tint = C.primary)
                                     Text(label, Modifier.weight(1f))
@@ -100,6 +112,11 @@ internal fun SettingsScreen(vm: AppViewModel, onPrivacyChanged: () -> Unit) {
             "server" -> item { ServerPage(vm) }
             "data" -> item { DataPage(vm) }
             "about" -> item { AboutPage(vm) }
+            "ai" -> item { AiPage(vm) }
+            "cats" -> item { CategoriesPage(vm) }
+            "rules" -> item { RulesPage(vm) }
+            "stocks" -> item { StocksPrefsPage(vm) }
+            "backup" -> item { BackupPage(vm) }
         }
     }
 }
@@ -148,6 +165,32 @@ private fun homelab(vm: AppViewModel) = vm.base.trimEnd('/') + "/"
 
 @Composable
 private fun AccountsPage(vm: AppViewModel) = Pages {
+    val ctx = LocalContext.current
+    var shot by remember { mutableStateOf<android.net.Uri?>(null) }
+    val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(vm::uploadAvatar) }
+    val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(vm::uploadAvatar) }
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok -> if (ok) shot?.let(vm::uploadAvatar) }
+    Section("Profilbilde") {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(C.surface1).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                AvatarImage(vm, 64)
+                Column(Modifier.weight(1f)) {
+                    Text(vm.displayName, fontWeight = FontWeight.SemiBold)
+                    Text("Vises i menyknappen i Homelab og i appen. Beskjæres til 256 × 256.", color = C.text2, fontSize = 12.sp)
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilledTonalButton(onClick = { pickPhoto.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, shape = RoundedCornerShape(18.dp)) { Text("Bilder") }
+                FilledTonalButton(onClick = { pickFile.launch(arrayOf("image/*")) }, shape = RoundedCornerShape(18.dp)) { Text("Filer") }
+                FilledTonalButton(onClick = {
+                    val f = java.io.File(java.io.File(ctx.cacheDir, "scans").apply { mkdirs() }, "profil-${System.currentTimeMillis()}.jpg")
+                    val u = androidx.core.content.FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", f)
+                    shot = u; camera.launch(u)
+                }, shape = RoundedCornerShape(18.dp)) { Text("Ta bilde") }
+            }
+            if (vm.avatar != null) TextButton(onClick = { vm.removeAvatar() }) { Text("Fjern bildet", color = C.red) }
+        }
+    }
     Note("Hver konto har egne data, tokens og varsler. Bytt raskt ved å holde inne profilbildet.")
     Group {
         vm.accounts.forEach { a ->
@@ -271,15 +314,32 @@ private fun TokensPage(vm: AppViewModel) = Pages {
 private fun LookPage(vm: AppViewModel) = Pages {
     Section("Startside") {
         Group {
-            listOf("home" to "Hjem", "list" to "Liste", "budget" to "Budsjett").forEach { (k, n) ->
-                Choice(n, on = vm.option(AppPrefs.START, "home") == k) { vm.setPref(AppPrefs.START, k) }
+            listOf("homelab" to "Homelab", "home" to "Finans · Oversikt", "list" to "Finans · Liste", "budget" to "Finans · Budsjett").forEach { (k, n) ->
+                Choice(n, on = vm.option(AppPrefs.START, "homelab") == k) { vm.setPref(AppPrefs.START, k) }
             }
         }
     }
     Group {
         Toggle("Skjul beløp til jeg trykker", "Beløp vises som prikker til du trykker på saldoen eller øyet", vm.flag(AppPrefs.HIDE_AMOUNTS)) { vm.setPref(AppPrefs.HIDE_AMOUNTS, it) }
     }
-    Note("Fargebakgrunn (lysflekker bak glasset) finnes i iPhone-appen. Android bruker Material 3 Expressive med tonal palett fra #FF7A3D.")
+    Section("Farger") {
+        Group {
+            SEEDS.forEach { (k, n, c) ->
+                Row(Modifier.fillMaxWidth().clickable { vm.setPref(AppPrefs.COLOR, k) }.padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Box(Modifier.size(24.dp).clip(CircleShape).background(if (k == "system") C.primary else androidx.compose.ui.graphics.Color(c)))
+                    Column(Modifier.weight(1f)) {
+                        Text(n)
+                        if (k == "system") Text(if (android.os.Build.VERSION.SDK_INT >= 31) "Material You: fargene fra bakgrunnsbildet" else "Krever Android 12 – bruker oransje", color = C.text2, fontSize = 12.sp)
+                    }
+                    RadioButton(selected = vm.option(AppPrefs.COLOR, "system") == k, onClick = { vm.setPref(AppPrefs.COLOR, k) }, colors = RadioButtonDefaults.colors(selectedColor = C.primary))
+                }
+            }
+        }
+    }
+    Section("Lys eller mørk") {
+        Group { MODES.forEach { (k, n) -> Choice(n, on = vm.option(AppPrefs.MODE, "dark") == k) { vm.setPref(AppPrefs.MODE, k) } } }
+    }
+    Note("Fargebakgrunn (lysflekker bak glasset) finnes i iPhone-appen.")
 }
 
 @Composable
@@ -371,4 +431,72 @@ private fun AboutPage(vm: AppViewModel) = Pages {
     Section("Lisenser") {
         Note("Jetpack Compose, Material 3, AndroidX Biometric og Security Crypto (Apache 2.0).")
     }
+}
+
+
+/* ---------------- Finans ---------------- */
+
+@Composable
+private fun AiPage(vm: AppViewModel) = Pages {
+    val st = vm.boot?.settings
+    Group {
+        Choice("Ollama lokalt", "Bildet forlater aldri huset", st?.provider == "ollama" && st?.fallback != true) { vm.saveSetting("provider", "ollama"); vm.saveSetting("fallback", false) }
+        Choice("Gemini", "Raskest og mest presis", st?.provider == "gemini") { vm.saveSetting("provider", "gemini"); vm.saveSetting("fallback", false) }
+        Choice("Ollama + Gemini", "Lokalt først, Gemini som reserve", st?.provider == "ollama" && st?.fallback == true) { vm.saveSetting("provider", "ollama"); vm.saveSetting("fallback", true) }
+    }
+    Group {
+        Info("Minimum sikkerhet", "${st?.minConf ?: 85} %")
+        Toggle("Kategoriser automatisk", "Regler først, deretter AI", st?.autoCat == true) { vm.saveSetting("autoCat", it) }
+    }
+    Note("Nøkler og modeller for Ollama og Gemini legges inn i FinansHub på PC. De lagres bare på serveren.")
+}
+
+@Composable
+private fun CategoriesPage(vm: AppViewModel) = Pages {
+    val cats = vm.boot?.categories.orEmpty()
+    if (cats.isEmpty()) Note("Ingen kategorier.") else Group {
+        cats.forEach { c ->
+            Row(Modifier.fillMaxWidth().padding(16.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(Modifier.size(14.dp).clip(CircleShape).background(androidx.compose.ui.graphics.Color(c.color)))
+                Text(c.name, Modifier.weight(1f))
+                Text(when (c.kind) { "income" -> "Inntekt"; "transfer" -> "Overføring"; else -> "Utgift" }, color = C.text2, fontSize = 13.sp)
+            }
+        }
+    }
+    Note("Nye kategorier, farger og budsjett settes i FinansHub på PC.")
+}
+
+@Composable
+private fun RulesPage(vm: AppViewModel) = Pages {
+    val rules = vm.boot?.rules.orEmpty()
+    if (rules.isEmpty()) Note("Ingen regler ennå. Regler lages når du retter en kategori, eller i FinansHub på PC.") else Group {
+        rules.forEach { r -> Info(r.pattern, r.category ?: "–") }
+    }
+    Note("* kan brukes som jokertegn og treffer starten på et hvilket som helst ord.")
+}
+
+@Composable
+private fun StocksPrefsPage(vm: AppViewModel) = Pages {
+    LaunchedEffect(Unit) { if (vm.stocks == null) vm.syncStocks() }
+    val s = vm.stocks
+    Group {
+        Info("Status", if (s == null) "–" else if (s.configured) "Koblet til" else if (s.mock) "Eksempeldata" else "Ikke koblet til")
+        Info("Miljø", when (s?.env) { "demo" -> "Demo"; null -> "–"; else -> "Live" })
+        s?.status?.let { Info("Siste synk", it) }
+    }
+    Button(onClick = { vm.open(Screen.Stocks) }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) { Text("Åpne Aksjer", fontWeight = FontWeight.Bold) }
+    Note("Lag nøkkelen hos Trading 212 under Innstillinger → API (Beta), med bare lesetilgang. Nøkkel og secret legges inn i FinansHub på PC og lagres kun på serveren.")
+}
+
+@Composable
+private fun BackupPage(vm: AppViewModel) = Pages {
+    val uri = LocalUriHandler.current
+    Group {
+        Row(Modifier.fillMaxWidth().clickable { vm.exportCsv() }.padding(16.dp, 14.dp)) { Text("Eksporter transaksjoner som CSV", Modifier.weight(1f)); Icon(Icons.Filled.IosShare, null, tint = C.text2) }
+        Row(Modifier.fillMaxWidth().clickable { runCatching { uri.openUri(vm.base.trimEnd('/') + "/finans/?desktop=1#/inn") } }.padding(16.dp, 14.dp)) {
+            Text("Full backup, Excel og SMB-share", Modifier.weight(1f)); Icon(Icons.Filled.OpenInBrowser, null, tint = C.text2)
+        }
+    }
+    Note("Full backup (.json), Excel-databasen og backup til SMB-share settes opp i FinansHub på PC under Innstillinger → Backup og data.")
 }

@@ -6,8 +6,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.10"
-    MARKETING_VERSION: "3.0"
-    CURRENT_PROJECT_VERSION: "3"
+    MARKETING_VERSION: "4.0"
+    CURRENT_PROJECT_VERSION: "4"
     DEVELOPMENT_TEAM: ""
 targets:
   FinansHub:
@@ -36,3 +36,6 @@ targets:
       properties:
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+        # «Last ned» lagrer kvitteringer i appens mappe, som vises i Filer → På min iPhone → FinansHub.
+        UIFileSharingEnabled: true
+        LSSupportsOpeningDocumentsInPlace: true

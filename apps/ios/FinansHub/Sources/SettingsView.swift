@@ -1,7 +1,11 @@
 import SwiftUI
+import PhotosUI
+import UniformTypeIdentifiers
 
 private let groups: [(String, [(String, String, String)])] = [
     ("Konto", [("accounts", "Kontoer og brukere", "person.2"), ("security", "Sikkerhet", "lock"), ("tokens", "API-tokens", "key")]),
+    ("Finans", [("ai", "AI og tolkning", "sparkles"), ("cats", "Kategorier og budsjett", "tag"), ("rules", "Regler", "list.bullet.rectangle"),
+                ("bank", "Bankimport", "building.columns"), ("stocks", "Aksjer · Trading 212", "chart.line.uptrend.xyaxis"), ("backup", "Backup og data", "externaldrive")]),
     ("App", [("look", "Utseende", "paintpalette"), ("scan", "Skanning og AI", "doc.viewfinder"), ("notify", "Varsler", "bell")]),
     ("System", [("server", "Server og synk", "server.rack"), ("data", "Data og lagring", "internaldrive"), ("about", "Om FinansHub", "info.circle")]),
 ]
@@ -34,10 +38,15 @@ struct SettingsView: View {
                 case "notify": NotifyPage()
                 case "server": ServerPage()
                 case "data": DataPage()
+                case "ai": AiPage()
+                case "cats": CategoriesPage()
+                case "rules": RulesPage()
+                case "stocks": StocksPrefsPage()
+                case "backup": BackupPage()
                 default: AboutPage()
                 }
             }
-            .padding(.horizontal, 18).padding(.bottom, 30)
+            .padding(.horizontal, 18).padding(.bottom, 40)
         }
     }
 
@@ -45,7 +54,7 @@ struct SettingsView: View {
         VStack(spacing: 12) {
             Button { store.settingsPage = "accounts" } label: {
                 HStack(spacing: 14) {
-                    Text(initial(store.displayName.isEmpty ? "S" : store.displayName)).font(.title2.weight(.bold)).foregroundStyle(Color.ink).frame(width: 56, height: 56).background(Color.accent, in: Circle())
+                    AvatarImage(size: 56, tint: .accent)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(store.displayName).font(.title3.weight(.bold))
                         Text("\(store.account?.username ?? "–") · \(store.me?.role ?? store.account?.role ?? "")").font(.footnote).foregroundStyle(.white.opacity(0.7))
@@ -62,7 +71,10 @@ struct SettingsView: View {
                 VStack(spacing: 0) {
                     ForEach(Array(g.1.enumerated()), id: \.offset) { i, item in
                         if i > 0 { Divider().overlay(.white.opacity(0.12)) }
-                        Button { store.settingsPage = item.0; if item.0 == "tokens" { store.loadTokens() } } label: {
+                        Button {
+                            if item.0 == "bank" { store.openSub(.imports) } else { store.settingsPage = item.0 }
+                            if item.0 == "tokens" { store.loadTokens() }
+                        } label: {
                             HStack(spacing: 14) {
                                 Image(systemName: item.2).frame(width: 24).foregroundStyle(Color.accent)
                                 Text(item.1)
@@ -143,8 +155,34 @@ private func link(_ label: String, _ act: @escaping () -> Void) -> some View {
 
 private struct AccountsPage: View {
     @Environment(Store.self) private var store
+    @State private var photo: PhotosPickerItem?
+    @State private var camera = false
+    @State private var files = false
     var body: some View {
         VStack(spacing: 12) {
+            SectionLabel(text: "Profilbilde")
+            VStack(spacing: 14) {
+                HStack(spacing: 16) {
+                    AvatarImage(size: 72, tint: .accent)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(store.displayName).font(.headline)
+                        Text("Vises i appen og i Homelab. Beskjæres til et kvadrat.").font(.caption).foregroundStyle(.white.opacity(0.6))
+                    }
+                    Spacer(minLength: 0)
+                }
+                HStack(spacing: 8) {
+                    PhotosPicker(selection: $photo, matching: .images) { avatarButton("Bilder", "photo.on.rectangle") }
+                    Button { files = true } label: { avatarButton("Filer", "folder") }
+                    Button { camera = true } label: { avatarButton("Ta bilde", "camera") }
+                }
+                .buttonStyle(.plain)
+                if store.avatar != nil {
+                    Button { store.removeAvatar() } label: { Text("Fjern bildet").font(.subheadline.weight(.semibold)).foregroundStyle(Color.domRed).frame(maxWidth: .infinity, minHeight: 40) }
+                        .buttonStyle(.plain)
+                }
+            }
+            .padding(16).glass(24)
+            SectionLabel(text: "Kontoer")
             Note(text: "Hver konto har egne data, tokens og varsler. Bytt raskt ved å holde inne profilbildet.")
             Card {
                 ForEach(Array(store.accounts.enumerated()), id: \.element.id) { i, a in
@@ -170,6 +208,25 @@ private struct AccountsPage: View {
             }
             Note(text: "Nye brukere opprettes av admin i Homelab → Innstillinger → Innlogging.")
         }
+        .onChange(of: photo) { _, item in
+            guard let item else { return }
+            Task {
+                if let d = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: d) { store.uploadAvatar(img) }
+                photo = nil
+            }
+        }
+        .fileImporter(isPresented: $files, allowedContentTypes: [.image]) { result in
+            guard case .success(let url) = result else { return }
+            let scoped = url.startAccessingSecurityScopedResource()
+            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+            if let d = try? Data(contentsOf: url), let img = UIImage(data: d) { store.uploadAvatar(img) }
+        }
+        .fullScreenCover(isPresented: $camera) { CameraView(front: true) { img in if let img { store.uploadAvatar(img) } }.ignoresSafeArea() }
+    }
+
+    private func avatarButton(_ label: String, _ icon: String) -> some View {
+        VStack(spacing: 4) { Image(systemName: icon); Text(label).font(.caption.weight(.semibold)) }
+            .frame(maxWidth: .infinity, minHeight: 54).contentShape(RoundedRectangle(cornerRadius: 18)).glass(18)
     }
 }
 
@@ -285,13 +342,19 @@ private struct LookPage: View {
             Card { Switch(label: "Fargebakgrunn", sub: "Fargede lysflekker bak glassflatene", on: $s.colorBg) }
             SectionLabel(text: "Startside")
             Card {
-                ForEach(Array([("home", "Hjem"), ("list", "Liste"), ("budget", "Budsjett")].enumerated()), id: \.offset) { i, o in
+                ForEach(Array([("homelab", "Homelab"), ("home", "Finans · Oversikt"), ("list", "Finans · Liste"), ("budget", "Finans · Budsjett")].enumerated()), id: \.offset) { i, o in
                     if i > 0 { Sep() }
                     Choice(label: o.1, on: store.startPage == o.0) { store.startPage = o.0 }
                 }
             }
             Card { Switch(label: "Skjul beløp til jeg trykker", sub: "Beløp vises som prikker til du trykker på saldoen eller øyet", on: $s.hideAmounts) }
-            Note(text: "Fanelinja bruker Liquid Glass på iOS 26 og krymper når du scroller ned.")
+            Note(text: "Fanelinja bruker Liquid Glass på iOS 26 og krymper til en sirkel når du scroller ned.")
+            SectionLabel(text: "Forsiden")
+            Card {
+                link("Rediger forsiden") { store.open(.homelab); store.editHome = true }
+                Sep()
+                link("Tilbakestill forsiden") { store.resetLayout(); store.flash("Forsiden er tilbakestilt") }
+            }
         }
     }
 }
@@ -427,6 +490,126 @@ private struct AboutPage: View {
             Note(text: "Appen snakker bare med din egen homelab-server. Tokenet lagres i nøkkelringen, og passordet lagres ikke. Ingen data sendes til tredjeparter fra appen.")
             SectionLabel(text: "Lisenser")
             Note(text: "Bygget med SwiftUI og Apples rammeverk. Ingen tredjepartsbiblioteker.")
+        }
+    }
+}
+
+/* ---------------- Finans ---------------- */
+
+private struct AiPage: View {
+    @Environment(Store.self) private var store
+    var body: some View {
+        let st = store.boot?.settings
+        VStack(spacing: 12) {
+            SectionLabel(text: "AI-motor (på serveren)")
+            Card {
+                Choice(label: "Ollama lokalt", sub: "Bildet forlater aldri huset", on: st?.provider == "ollama" && st?.fallback != true) { store.save("provider", "ollama"); store.save("fallback", false) }
+                Sep()
+                Choice(label: "Gemini", sub: "Raskest og mest presis", on: st?.provider == "gemini") { store.save("provider", "gemini"); store.save("fallback", false) }
+                Sep()
+                Choice(label: "Ollama + Gemini", sub: "Lokalt først, Gemini som reserve", on: st?.provider == "ollama" && st?.fallback == true) { store.save("provider", "ollama"); store.save("fallback", true) }
+            }
+            Card { Switch(label: "Kategoriser automatisk", sub: "AI foreslår kategori for nye transaksjoner", on: Binding(get: { st?.autoCat ?? true }, set: { store.save("autoCat", $0) })) }
+            SectionLabel(text: "Krav til sikkerhet")
+            Card {
+                ForEach(Array([70, 80, 85, 90, 95].enumerated()), id: \.offset) { i, v in
+                    if i > 0 { Sep() }
+                    Choice(label: "\(v) %", sub: v == 85 ? "Standard" : nil, on: (st?.minConf ?? 85) == v) { store.save("minConf", v) }
+                }
+            }
+            Note(text: "Kvitteringer under grensen må sjekkes før de bokføres. API-nøkler for Gemini legges inn i FinansHub på PC.")
+        }
+    }
+}
+
+private struct CategoriesPage: View {
+    @Environment(Store.self) private var store
+    var body: some View {
+        let cats = store.boot?.categories ?? []
+        let budgets = store.summary?.budgets ?? []
+        VStack(spacing: 12) {
+            ForEach([("expense", "Utgifter"), ("income", "Inntekter")], id: \.0) { kind, title in
+                let list = cats.filter { $0.kind == kind }
+                if !list.isEmpty {
+                    SectionLabel(text: title)
+                    Card {
+                        ForEach(Array(list.enumerated()), id: \.element.id) { i, c in
+                            if i > 0 { Sep() }
+                            HStack(spacing: 12) {
+                                Circle().fill(Color(hex: c.color)).frame(width: 12, height: 12)
+                                Text(c.name)
+                                Spacer()
+                                if let b = budgets.first(where: { $0.categoryId == c.id }), b.budget > 0 {
+                                    Text("\(n0(b.budget)) kr/mnd").font(.system(.footnote, design: .monospaced)).foregroundStyle(.white.opacity(0.65))
+                                }
+                            }
+                            .padding(.horizontal, 16).padding(.vertical, 13)
+                        }
+                    }
+                }
+            }
+            if cats.isEmpty { Note(text: "Ingen kategorier ennå.") }
+            Note(text: "Nye kategorier, farger og budsjettbeløp endres i FinansHub på PC under Innstillinger → Kategorier.")
+        }
+    }
+}
+
+private struct RulesPage: View {
+    @Environment(Store.self) private var store
+    var body: some View {
+        let rules = store.boot?.rules ?? []
+        VStack(spacing: 12) {
+            Note(text: "Regler setter kategori automatisk når beskrivelsen inneholder teksten.")
+            if rules.isEmpty { Note(text: "Ingen regler ennå.") } else {
+                Card {
+                    ForEach(Array(rules.enumerated()), id: \.offset) { i, r in
+                        if i > 0 { Sep() }
+                        Row(label: r.pattern ?? "–", value: r.category ?? "–")
+                    }
+                }
+            }
+            Note(text: "Regler lages og endres i FinansHub på PC under Innstillinger → Regler, eller når du endrer kategori på en transaksjon.")
+        }
+    }
+}
+
+private struct StocksPrefsPage: View {
+    @Environment(Store.self) private var store
+    var body: some View {
+        let st = store.stocks
+        VStack(spacing: 12) {
+            Card {
+                Row(label: "Status", value: st == nil ? "–" : (st?.configured == true ? "Koblet til" : st?.mock == true ? "Demodata" : "Ikke koblet til"))
+                Sep()
+                Row(label: "Miljø", value: st?.env ?? "–")
+                if let e = st?.error, !e.isEmpty { Sep(); Row(label: "Feil", value: e) }
+            }
+            Card {
+                link("Åpne Aksjer") { store.openSub(.stocks) }
+                Sep()
+                link("Synk nå") { store.syncStocks() }
+            }
+            Note(text: "API-nøkkel og secret fra Trading 212 (bare lesetilgang) legges inn i FinansHub på PC og lagres bare på serveren.")
+        }
+    }
+}
+
+private struct BackupPage: View {
+    @Environment(Store.self) private var store
+    @Environment(\.openURL) private var openURL
+    @State private var csv: URL?
+    var body: some View {
+        VStack(spacing: 12) {
+            Card {
+                if let csv {
+                    ShareLink(item: csv) { HStack { Text("Del CSV-filen"); Spacer(); Image(systemName: "square.and.arrow.up") }.padding(16).contentShape(Rectangle()) }
+                } else {
+                    Button { Task { csv = await store.exportCsv() } } label: { HStack { Text("Eksporter transaksjoner som CSV"); Spacer(); Image(systemName: "tablecells") }.padding(16).contentShape(Rectangle()) }.buttonStyle(.plain)
+                }
+                Sep()
+                link("Backup i FinansHub på PC") { if let u = URL(string: store.base + "/finans/?desktop=1") { openURL(u) } }
+            }
+            Note(text: "Full backup, gjenoppretting og Excel-database lages i FinansHub på PC under Innstillinger → Backup og data.")
         }
     }
 }

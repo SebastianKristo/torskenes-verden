@@ -10,7 +10,7 @@ struct DomainsView: View {
             VStack(spacing: 12) {
                 ModuleHeader(title: "Domener", trailing: {
                     Button { store.reloadDomain() } label: { Image(systemName: "arrow.clockwise").frame(width: 40, height: 40) }.buttonStyle(.plain).glass(20).foregroundStyle(Color.domPink)
-                    Button { store.open(.settings) } label: { Image(systemName: "gearshape").frame(width: 40, height: 40) }.buttonStyle(.plain).glass(20)
+                    Button { store.openSub(.settings) } label: { Image(systemName: "gearshape").frame(width: 40, height: 40) }.buttonStyle(.plain).glass(20)
                 })
                 picker
                 if hSize == .regular {

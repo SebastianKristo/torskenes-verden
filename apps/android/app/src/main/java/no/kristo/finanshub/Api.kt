@@ -77,6 +77,11 @@ class Api(private val baseUrl: String, private val token: String?) {
     suspend fun matPost(path: String, json: JSONObject = JSONObject()) = request("POST", path, json, prefix = MAT)
     suspend fun matPatch(path: String, json: JSONObject) = request("PATCH", path, json, prefix = MAT)
     suspend fun domGet(path: String) = request("GET", path, prefix = DOMAINS)
+    /** Homelab (/api): forside, søk, oppsett og profilbilde. Godtar finans-tokenet. */
+    suspend fun hlGet(path: String, timeout: Int = 10_000) = request("GET", path, prefix = HOMELAB, timeout = timeout)
+    suspend fun hlPost(path: String, json: JSONObject = JSONObject()) = request("POST", path, json, prefix = HOMELAB)
+    suspend fun hlPut(path: String, json: JSONObject) = request("PUT", path, json, prefix = HOMELAB)
+    suspend fun hlDelete(path: String) = request("DELETE", path, prefix = HOMELAB)
 
     suspend fun bytes(path: String): ByteArray = withContext(Dispatchers.IO) {
         val conn = URL(baseUrl.trimEnd('/') + path).openConnection() as HttpURLConnection
@@ -87,10 +92,10 @@ class Api(private val baseUrl: String, private val token: String?) {
         } } finally { conn.disconnect() }
     }
 
-    /** Multipart-opplasting: original + nedskalert JPEG til AI + miniatyrbilde. */
-    suspend fun upload(path: String, parts: List<Part>): String = withContext(Dispatchers.IO) {
+    /** Multipart-opplasting: filer (f.eks. original + nedskalert JPEG + miniatyr) og tekstfelt (Part uten filnavn). */
+    suspend fun upload(path: String, parts: List<Part>, prefix: String = FINANS): String = withContext(Dispatchers.IO) {
         val boundary = "----FinansHub" + UUID.randomUUID().toString().replace("-", "")
-        val conn = url(path, FINANS).openConnection() as HttpURLConnection
+        val conn = url(path, prefix).openConnection() as HttpURLConnection
         try { net {
             conn.requestMethod = "POST"
             conn.doOutput = true
@@ -101,8 +106,12 @@ class Api(private val baseUrl: String, private val token: String?) {
             val out = ByteArrayOutputStream()
             for (p in parts) {
                 out.write("--$boundary\r\n".toByteArray())
-                out.write("Content-Disposition: form-data; name=\"${p.name}\"; filename=\"${p.filename}\"\r\n".toByteArray())
-                out.write("Content-Type: ${p.mime}\r\n\r\n".toByteArray())
+                if (p.filename.isEmpty()) {
+                    out.write("Content-Disposition: form-data; name=\"${p.name}\"\r\n\r\n".toByteArray())
+                } else {
+                    out.write("Content-Disposition: form-data; name=\"${p.name}\"; filename=\"${p.filename}\"\r\n".toByteArray())
+                    out.write("Content-Type: ${p.mime}\r\n\r\n".toByteArray())
+                }
                 out.write(p.data)
                 out.write("\r\n".toByteArray())
             }
@@ -113,12 +122,18 @@ class Api(private val baseUrl: String, private val token: String?) {
         } } finally { conn.disconnect() }
     }
 
-    data class Part(val name: String, val filename: String, val mime: String, val data: ByteArray)
+    data class Part(val name: String, val filename: String, val mime: String, val data: ByteArray) {
+        companion object {
+            /** Vanlig tekstfelt i skjemaet. */
+            fun text(name: String, value: String) = Part(name, "", "", value.toByteArray())
+        }
+    }
 
     companion object {
         const val FINANS = "/finans/api"
         const val MAT = "/mat/api"
         const val DOMAINS = "/domains/api"
+        const val HOMELAB = "/api"
 
         /**
          * Bytter brukernavn + passord (+ 2FA-kode) mot et token med finans-tilgang.

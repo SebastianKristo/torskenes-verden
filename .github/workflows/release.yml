@@ -1,0 +1,159 @@
+# Bygger mobilappene og legger APK og IPA i en GitHub Release.
+# Start: push en tag (git tag v1.4.0 && git push origin v1.4.0), eller kjør manuelt under Actions → Release.
+#
+# Valgfrie secrets (uten dem lages likevel installerbare filer, se release-teksten):
+#   ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD
+#   IOS_CERT_P12_BASE64, IOS_CERT_PASSWORD, IOS_PROFILE_BASE64, IOS_TEAM_ID
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Versjon (f.eks. v1.4.0)'
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ github.event.inputs.version || github.ref_name }}
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Bygg APK
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          V="${TAG#v}"
+          mkdir -p ../../dist
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            ./gradlew --no-daemon assembleRelease \
+              -PversionName="$V" -PversionCode=${{ github.run_number }} \
+              -Pandroid.injected.signing.store.file="$RUNNER_TEMP/release.keystore" \
+              -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
+              -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+              -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
+            cp app/build/outputs/apk/release/app-release.apk "../../dist/FinansHub-$V.apk"
+            rm -f "$RUNNER_TEMP/release.keystore"
+          else
+            # Uten egen nøkkel: debug-signert APK. Kan installeres, men en senere versjon
+            # må avinstallere den gamle først, siden nøkkelen er ny for hvert bygg.
+            ./gradlew --no-daemon assembleDebug -PversionName="$V" -PversionCode=${{ github.run_number }}
+            cp app/build/outputs/apk/debug/app-debug.apk "../../dist/FinansHub-$V-debug.apk"
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: dist/*
+
+  ios:
+    runs-on: macos-26
+    defaults:
+      run:
+        working-directory: apps/ios
+    steps:
+      - uses: actions/checkout@v4
+      - name: Installer XcodeGen og generer prosjekt
+        run: brew install xcodegen && xcodegen generate
+      - name: Usignert IPA (AltStore, SideStore, Sideloadly)
+        run: |
+          V="${TAG#v}"
+          xcodebuild -project FinansHub.xcodeproj -scheme FinansHub -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
+            MARKETING_VERSION="$V" CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build | tail -20
+          test ${PIPESTATUS[0]} -eq 0
+          mkdir -p Payload ../../dist
+          cp -R build/Build/Products/Release-iphoneos/FinansHub.app Payload/
+          zip -qry "../../dist/FinansHub-$V-unsigned.ipa" Payload
+      - name: Signert IPA (bare med sertifikat i secrets)
+        env:
+          CERT_B64: ${{ secrets.IOS_CERT_P12_BASE64 }}
+          CERT_PASSWORD: ${{ secrets.IOS_CERT_PASSWORD }}
+          PROFILE_B64: ${{ secrets.IOS_PROFILE_BASE64 }}
+          TEAM_ID: ${{ secrets.IOS_TEAM_ID }}
+        run: |
+          if [ -z "$CERT_B64" ] || [ -z "$PROFILE_B64" ] || [ -z "$TEAM_ID" ]; then echo "Ingen sertifikat – hopper over signert IPA."; exit 0; fi
+          V="${TAG#v}"
+          KC="$RUNNER_TEMP/build.keychain-db"; KP=$(uuidgen)
+          echo "$CERT_B64" | base64 -d > "$RUNNER_TEMP/cert.p12"
+          echo "$PROFILE_B64" | base64 -d > "$RUNNER_TEMP/profile.mobileprovision"
+          security create-keychain -p "$KP" "$KC"
+          security set-keychain-settings -lut 3600 "$KC"
+          security unlock-keychain -p "$KP" "$KC"
+          security import "$RUNNER_TEMP/cert.p12" -P "$CERT_PASSWORD" -A -t cert -f pkcs12 -k "$KC"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KP" "$KC"
+          security list-keychain -d user -s "$KC"
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp "$RUNNER_TEMP/profile.mobileprovision" ~/Library/MobileDevice/Provisioning\ Profiles/
+          sed "s/__TEAM_ID__/$TEAM_ID/" ../../.github/ios-ExportOptions.plist > "$RUNNER_TEMP/ExportOptions.plist"
+          xcodebuild -project FinansHub.xcodeproj -scheme FinansHub -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/FinansHub.xcarchive" \
+            MARKETING_VERSION="$V" CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            DEVELOPMENT_TEAM="$TEAM_ID" archive | tail -20
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/FinansHub.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" | tail -20
+          cp "$RUNNER_TEMP"/export/*.ipa "../../dist/FinansHub-$V.ipa"
+          security delete-keychain "$KC"
+          rm -f "$RUNNER_TEMP/cert.p12" "$RUNNER_TEMP/profile.mobileprovision"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: dist/*
+
+  release:
+    needs: [android, ios]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Sjekksummer
+        working-directory: dist
+        run: sha256sum * > SHA256SUMS.txt
+      - name: Release-tekst
+        run: |
+          PREV=$(git describe --tags --abbrev=0 "${TAG}^" 2>/dev/null || true)
+          {
+            echo "## Installer"
+            echo ""
+            echo "**Android:** last ned \`FinansHub-*.apk\`, tillat «Installer ukjente apper» for nettleseren eller filbehandleren, og åpne filen."
+            if ls dist/*-debug.apk >/dev/null 2>&1; then
+              echo "> Denne APK-en er debug-signert fordi release-nøkkelen ikke er satt opp. Avinstaller forrige versjon før du installerer denne."
+            fi
+            echo ""
+            echo "**iPhone:** åpne \`FinansHub-*-unsigned.ipa\` i [AltStore](https://altstore.io), [SideStore](https://sidestore.io) eller [Sideloadly](https://sideloadly.io). En signert \`FinansHub-*.ipa\` (hvis den finnes) kan installeres direkte på registrerte enheter."
+            echo ""
+            echo "Sjekk filene mot \`SHA256SUMS.txt\`."
+            echo ""
+            echo "## Endringer"
+            if [ -n "$PREV" ]; then git log --pretty='- %s' "$PREV..${GITHUB_SHA}"; else git log --pretty='- %s' -30 "${GITHUB_SHA}"; fi
+          } > notes.md
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          name: Homelab OS ${{ env.TAG }}
+          body_path: notes.md
+          files: dist/*

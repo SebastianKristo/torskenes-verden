@@ -155,7 +155,7 @@ struct ReviewCTA: View {
     var body: some View {
         let q = (store.summary?.review ?? []).filter { $0.status == "needs_review" }
         if !q.isEmpty {
-            Button { store.open(.upload) } label: {
+            Button { store.openSub(.upload) } label: {
                 HStack(spacing: 14) {
                     Text("\(q.count)").fontWeight(.bold).foregroundStyle(Color.ink).frame(width: 36, height: 36).background(Color.accent, in: Circle())
                     VStack(alignment: .leading, spacing: 2) {
@@ -198,8 +198,9 @@ struct HomeView: View {
                 SectionLabel(text: "Siste")
                 if let r = store.summary?.recent { TxList(items: Array(r.prefix(6))) } else { ProgressView() }
             }
-            .padding(.horizontal, 18).padding(.bottom, 30)
+            .padding(.horizontal, 18).padding(.bottom, 110)
         }
+        .tracksScroll(store)
         .refreshable { try? await store.reload() }
     }
 }
@@ -210,7 +211,16 @@ struct ListView: View {
         @Bindable var s = store
         ScrollView {
             VStack(spacing: 12) {
-                HStack { Text("Transaksjoner").font(.system(size: 34, weight: .bold)); Spacer(); Avatar() }.padding(.top, 6)
+                HStack(spacing: 10) {
+                    Text("Transaksjoner").font(.system(size: 34, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7)
+                    Spacer()
+                    Button { store.newTx() } label: {
+                        Image(systemName: "plus").font(.system(size: 17, weight: .semibold)).foregroundStyle(.white).frame(width: 44, height: 44).contentShape(Circle())
+                    }
+                    .buttonStyle(GlassPress()).glassRound().accessibilityLabel("Ny transaksjon")
+                    Avatar()
+                }
+                .padding(.top, 6)
                 HStack(spacing: 10) {
                     Image(systemName: "magnifyingglass").font(.system(size: 18)).foregroundStyle(.white.opacity(0.6))
                     TextField("Søk i transaksjoner", text: $s.query).submitLabel(.search).onSubmit { store.search() }
@@ -237,8 +247,9 @@ struct ListView: View {
                     }
                 } else { ProgressView().padding(30) }
             }
-            .padding(.horizontal, 18).padding(.bottom, 30)
+            .padding(.horizontal, 18).padding(.bottom, 110)
         }
+        .tracksScroll(store)
         .refreshable { try? await store.loadTx() }
     }
 }
@@ -291,8 +302,10 @@ struct BudgetView: View {
                     .onTapGesture { store.selectedBudget = b.categoryId; if store.txs == nil { store.search() } }
                 }
             }
-            .padding(.horizontal, 18).padding(.bottom, 30)
+            .padding(.horizontal, 18).padding(.bottom, 110)
         }
+        .tracksScroll(store)
+        .refreshable { try? await store.reload() }
     }
     private func stat(_ k: String, _ v: String) -> some View {
         VStack(spacing: 2) { Text(k).font(.caption).foregroundStyle(.white.opacity(0.6)); Text(v).font(.system(.headline, design: .monospaced)) }.frame(maxWidth: .infinity)
@@ -331,12 +344,14 @@ struct BudgetDetail: View {
 struct TxDetail: View {
     @Environment(Store.self) private var store
     var back = false
+    @State private var confirm = false
     var body: some View {
-        let pool = (store.txs ?? []) + (store.summary?.recent ?? [])
-        if let t = pool.first(where: { $0.id == store.selectedTx }) ?? pool.first {
+        let pool = store.txPool
+        if let t = pool.first(where: { $0.id == store.selectedTx }) ?? (back ? nil : pool.first) {
+            let hasReceipt = t.receiptId != nil || (t.receipt != nil && t.receipt != "")
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    if back { Button { store.selectedTx = nil } label: { Label("Tilbake", systemImage: "chevron.left") }.foregroundStyle(Color.accentLight) }
+                    if back { HStack { GlassBack { store.back() }; Spacer(); Avatar() } }
                     HStack(spacing: 14) {
                         Logo(domain: t.domain, name: t.description, color: t.color, size: 60)
                         VStack(alignment: .leading) { Text(t.description).font(.title2.weight(.bold)); Text(dayLabel(t.date)).foregroundStyle(.white.opacity(0.7)) }
@@ -350,7 +365,7 @@ struct TxDetail: View {
                             Text("✦ AI-beskrivelse").font(.footnote.weight(.semibold)).foregroundStyle(Color.accentLight)
                             Text(ai)
                         }
-                        .padding(18).frame(maxWidth: .infinity, alignment: .leading).glass(24)
+                        .padding(18).frame(maxWidth: .infinity, alignment: .leading).glass(24, tint: Color.accent.opacity(0.25))
                     }
                     if let lines = t.lines, !lines.isEmpty {
                         SectionLabel(text: "Varelinjer")
@@ -361,11 +376,21 @@ struct TxDetail: View {
                         }
                         .padding(16).glass(24)
                     }
+                    SectionLabel(text: "Originaler")
                     VStack(spacing: 0) {
+                        original("Original kvittering", hasReceipt ? (t.receipt == "booked" || t.receiptId != nil ? "Bilde eller PDF" : "Til gjennomgang") : "Ingen vedlagt", "doc.text.image", enabled: hasReceipt) {
+                            store.openOriginal(t.id, "receipt")
+                        }
+                        Divider().overlay(.white.opacity(0.12))
+                        original("Banktransaksjon", "Slik den kom fra banken", "building.columns", enabled: true) { store.openOriginal(t.id, "bank") }
+                    }
+                    .glass(24)
+                    VStack(spacing: 0) {
+                        row("Dato", ddmmyyyy(t.date)); Divider().overlay(.white.opacity(0.12))
                         row("Kategori", t.category); Divider().overlay(.white.opacity(0.12))
                         row("Konto", t.account); Divider().overlay(.white.opacity(0.12))
                         row("Kvittering", t.receipt == "booked" ? "Vedlagt" : t.receipt == nil ? "–" : "Til gjennomgang"); Divider().overlay(.white.opacity(0.12))
-                        row("Delt mappe", t.folder ?? "–")
+                        row("Bolig", t.folder ?? "–")
                         if !t.note.isEmpty { Divider().overlay(.white.opacity(0.12)); row("Notat", t.note) }
                     }
                     .glass(24)
@@ -375,13 +400,35 @@ struct TxDetail: View {
                         Text("Endre kategori").fontWeight(.semibold).frame(maxWidth: .infinity, minHeight: 50)
                     }
                     .glass(25)
+                    HStack(spacing: 10) {
+                        Button { store.editTx(t) } label: { Label("Rediger", systemImage: "pencil").fontWeight(.semibold).frame(maxWidth: .infinity, minHeight: 50).contentShape(Capsule()) }
+                            .buttonStyle(.plain).glass(25)
+                        Button { confirm = true } label: { Label("Slett", systemImage: "trash").fontWeight(.semibold).foregroundStyle(Color.domRed).frame(maxWidth: .infinity, minHeight: 50).contentShape(Capsule()) }
+                            .buttonStyle(.plain).glass(25)
+                    }
                 }
-                .padding(20)
+                .padding(20).padding(.bottom, 20)
             }
+            .confirmationDialog("Slette transaksjonen?", isPresented: $confirm, titleVisibility: .visible) {
+                Button("Slett", role: .destructive) { store.deleteTx(t.id) }
+                Button("Avbryt", role: .cancel) {}
+            } message: { Text("Den forsvinner fra liste, rapporter, budsjett og AI-søk.") }
         } else { Empty(text: "Ingen transaksjon valgt.") }
     }
     private func row(_ k: String, _ v: String) -> some View {
         HStack { Text(k).foregroundStyle(.white.opacity(0.65)); Spacer(); Text(v).fontWeight(.medium) }.padding(.horizontal, 16).padding(.vertical, 14)
+    }
+    private func original(_ title: String, _ sub: String, _ icon: String, enabled: Bool, _ act: @escaping () -> Void) -> some View {
+        Button(action: act) {
+            HStack(spacing: 12) {
+                Image(systemName: icon).foregroundStyle(Color.accentLight).frame(width: 36, height: 36).background(.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 11))
+                VStack(alignment: .leading, spacing: 2) { Text(title).fontWeight(.medium); Text(sub).font(.footnote).foregroundStyle(.white.opacity(0.6)) }
+                Spacer()
+                Image(systemName: "chevron.right").foregroundStyle(.white.opacity(0.45))
+            }
+            .padding(.horizontal, 16).padding(.vertical, 12).contentShape(Rectangle())
+        }
+        .buttonStyle(.plain).disabled(!enabled).opacity(enabled ? 1 : 0.55)
     }
 }
 
@@ -393,7 +440,7 @@ struct ScanView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                ModuleHeader(title: "Last opp")
+                ModuleHeader(title: "Kvitteringer")
                 if !store.offline.isEmpty {
                     Text("\(store.offline.count) venter på nett\(store.wifiOnly ? " (bare Wi-Fi)" : "") · lastes opp ved neste synk").font(.footnote).foregroundStyle(.white.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -473,7 +520,7 @@ struct ConfirmView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
-                        if back { Button { store.selectedReceipt = nil } label: { Label("Tilbake", systemImage: "chevron.left") }.foregroundStyle(Color.accentLight) }
+                        if back { GlassBack { store.selectedReceipt = nil } }
                         Spacer()
                         if let i = queue.firstIndex(where: { $0.id == r.id }) { Text("\(i + 1) av \(queue.count)").foregroundStyle(.white.opacity(0.7)) }
                     }
@@ -617,7 +664,7 @@ struct UploadPill: View {
         let active = store.jobs.filter { $0.status == "pending" || $0.status == "processing" }
         let ready = store.jobs.filter { $0.status == "needs_review" }.count
         if !active.isEmpty || store.uploading > 0 || ready > 0 {
-            Button { store.open(.upload) } label: {
+            Button { store.openSub(.upload) } label: {
                 HStack(spacing: 12) {
                     if !active.isEmpty || store.uploading > 0 { ProgressView() } else { Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.positive) }
                     Text(label(active, ready)).fontWeight(.medium)

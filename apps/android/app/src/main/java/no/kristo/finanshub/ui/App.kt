@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -26,7 +27,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -36,9 +39,32 @@ import androidx.core.content.FileProvider
 import no.kristo.finanshub.*
 import java.io.File
 
-private val tabIcons: Map<Screen, ImageVector> = mapOf(
-    Screen.Home to Icons.Filled.Home, Screen.List to Icons.AutoMirrored.Filled.List, Screen.Budget to Icons.Filled.PieChart,
-)
+/** Ikon per skjerm (faner, rail og meny). */
+internal fun screenIcon(s: Screen): ImageVector = when (s) {
+    Screen.Homelab -> Icons.Filled.Dashboard
+    Screen.Home -> Icons.Filled.Home
+    Screen.List -> Icons.AutoMirrored.Filled.List
+    Screen.Budget -> Icons.Filled.PieChart
+    Screen.Search -> Icons.Filled.AutoAwesome
+    Screen.More -> Icons.Filled.GridView
+    Screen.Scan -> Icons.Filled.Receipt
+    Screen.Fast -> Icons.Filled.Repeat
+    Screen.Accounts -> Icons.Filled.AccountBalance
+    Screen.Stocks -> Icons.AutoMirrored.Filled.ShowChart
+    Screen.Reports -> Icons.Filled.BarChart
+    Screen.Import -> Icons.Filled.FileUpload
+    Screen.Mat -> Icons.Filled.Restaurant
+    Screen.Domains -> Icons.Filled.Language
+    Screen.Sub -> Icons.Filled.Autorenew
+    Screen.Folders -> Icons.Filled.FolderShared
+    Screen.Finn -> Icons.Filled.Storefront
+    Screen.Settings -> Icons.Filled.Settings
+}
+internal fun moduleIcon(s: Screen): ImageVector = screenIcon(s)
+
+/** Navn i Homelab-fanelinja: Finans-fanen heter «Finans» der. */
+private fun hlLabel(s: Screen) = if (s == Screen.Home) "Finans" else s.label
+
 private val domIcons: Map<DomTab, ImageVector> = mapOf(
     DomTab.Traffic to Icons.AutoMirrored.Filled.ShowChart, DomTab.Visits to Icons.Filled.Public, DomTab.Perf to Icons.Filled.Speed, DomTab.Security to Icons.Filled.Shield,
 )
@@ -74,70 +100,67 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
 
     val twoPane = width != WindowWidthSizeClass.Compact
     val s = vm.screen
-    BackHandler(enabled = !s.isFinance || s == Screen.Scan) {
-        when {
-            s == Screen.Settings && vm.settingsPage != null -> vm.settingsPage = null
-            s == Screen.Folders && vm.folder != null -> vm.folder = null
-            else -> vm.go(Screen.Home)
-        }
-    }
+    val overlay = vm.original != null || vm.editing != null || vm.detail != null
+    // Tilbake: lukker det som er åpent, ellers forrige side. På Homelab uten noe åpent lukkes appen som vanlig.
+    val canBack = overlay || vm.editHome || s != Screen.Homelab || vm.selectedTx != null
+    BackHandler(enabled = canBack) { vm.back() }
+
     Scaffold(
         containerColor = C.bg,
         snackbarHost = { SnackbarHost(snack) },
-        bottomBar = {
-            if (!twoPane) when {
-                s == Screen.Home || s == Screen.List || s == Screen.Budget -> NavigationBar(containerColor = C.surface1) {
-                    listOf(Screen.Home, Screen.List, Screen.Budget).forEach { t ->
-                        NavigationBarItem(selected = s == t, onClick = { vm.go(t) }, icon = { Icon(tabIcons.getValue(t), null) }, label = { Text(t.label) })
-                    }
-                }
-                // Domener: fanelinja byttes ut med Trafikk, Besøk, Ytelse og Sikkerhet.
-                s == Screen.Domains -> NavigationBar(containerColor = P.card) {
-                    DomTab.entries.forEach { t ->
-                        NavigationBarItem(selected = vm.domTab == t, onClick = { vm.domTab = t }, icon = { Icon(domIcons.getValue(t), null) }, label = { Text(t.label) },
-                            colors = NavigationBarItemDefaults.colors(indicatorColor = P.hero, selectedIconColor = P.onHero, selectedTextColor = P.accent))
-                    }
-                }
-                else -> {}
-            }
-        },
+        bottomBar = { if (!twoPane && !overlay) BottomBar(vm) },
         floatingActionButton = {
-            if (!twoPane && (s == Screen.Home || s == Screen.List || s == Screen.Budget) && vm.selectedTx == null) ScanFab(scan)
+            val fab = s.isFinance && s != Screen.Search && s != Screen.Import && vm.selectedTx == null && !overlay
+            if (!twoPane && fab) ScanFab(scan)
         },
     ) { pad ->
         Row(Modifier.fillMaxSize().padding(pad)) {
             if (twoPane) Rail(vm, scan)
             when {
-                s.isFinance -> {
+                vm.original != null -> Box(Modifier.weight(1f).fillMaxHeight()) { OriginalScreen(vm) }
+                vm.editing != null -> Box(Modifier.weight(1f).fillMaxHeight()) { TxEditScreen(vm, vm.editing!!, scan) }
+                vm.detail != null -> Box(Modifier.weight(1f).fillMaxHeight()) { DetailScreen(vm, vm.detail!!) }
+                twoPane && s in setOf(Screen.Home, Screen.List, Screen.Budget, Screen.Search, Screen.Scan) -> {
                     // Liste til venstre, detaljer til høyre når skjermen er bred (åpen brettbar).
-                    Box(Modifier.weight(1f).fillMaxHeight()) { MainPane(vm, twoPane, scan) }
-                    if (twoPane) Box(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp)).background(Color(0xFF1E1712))) { DetailPane(vm) }
+                    Box(Modifier.weight(1f).fillMaxHeight()) { MainPane(vm, true, scan, onPrivacyChanged) }
+                    Box(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(topStart = 28.dp, bottomStart = 28.dp)).background(tc(0xFF1E1712))) { DetailPane(vm) }
                 }
-                // Modulene fyller hele skjermen.
-                else -> Box(Modifier.weight(1f).fillMaxHeight()) { ModulePane(vm, twoPane, onPrivacyChanged) }
+                else -> Box(Modifier.weight(1f).fillMaxHeight()) { MainPane(vm, twoPane, scan, onPrivacyChanged) }
             }
         }
         if (vm.busy) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = C.primary) }
     }
     if (vm.menuOpen) { if (twoPane) SideMenu(vm) else ProfileSheet(vm) }
+    if (vm.widgetGallery) WidgetGallery(vm)
     if (vm.scanSheet) ScanSheet(vm, takePhoto,
         photos = { photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
         files = { files.launch(arrayOf("application/pdf", "image/jpeg", "image/heic", "image/heif", "image/png")) })
 }
 
 @Composable
-private fun MainPane(vm: AppViewModel, twoPane: Boolean, scan: ScanActions) {
-    when (vm.screen) {
-        Screen.Home, Screen.List -> if (!twoPane && vm.selectedTx != null) {
-            BackHandler { vm.selectedTx = null }
-            TxDetail(vm, back = { vm.selectedTx = null })
-        } else if (vm.screen == Screen.Home) HomeScreen(vm) else ListScreen(vm, twoPane)
+private fun MainPane(vm: AppViewModel, twoPane: Boolean, scan: ScanActions, onPrivacyChanged: () -> Unit) {
+    val s = vm.screen
+    // Telefon: trykk på en rad åpner utgiftsdetaljen over listen.
+    if (!twoPane && s.isFinance && s != Screen.Scan && vm.selectedTx != null) { TxDetail(vm, back = { vm.selectedTx = null }); return }
+    when (s) {
+        Screen.Homelab -> HomelabScreen(vm, twoPane)
+        Screen.Home -> HomeScreen(vm)
+        Screen.List -> ListScreen(vm, twoPane)
         Screen.Budget -> BudgetScreen(vm)
-        Screen.Scan -> if (!twoPane && vm.selectedReceipt != null) {
-            BackHandler { vm.selectedReceipt = null }
-            ReceiptConfirm(vm, back = { vm.selectedReceipt = null })
-        } else ScanQueue(vm, scan.camera, scan.sheet)
-        else -> {}
+        Screen.Search -> SearchScreen(vm)
+        Screen.More -> MoreScreen(vm)
+        Screen.Scan -> if (!twoPane && vm.selectedReceipt != null) ReceiptConfirm(vm, back = { vm.selectedReceipt = null }) else ScanQueue(vm, scan.camera, scan.sheet)
+        Screen.Fast -> FastScreen(vm)
+        Screen.Accounts -> AccountsScreen(vm)
+        Screen.Stocks -> StocksScreen(vm)
+        Screen.Reports -> ReportsScreen(vm)
+        Screen.Import -> ImportScreen(vm)
+        Screen.Mat -> MatScreen(vm)
+        Screen.Domains -> DomainsScreen(vm, twoPane)
+        Screen.Sub -> SubScreen(vm)
+        Screen.Folders -> FoldersScreen(vm)
+        Screen.Finn -> FinnScreen(vm)
+        Screen.Settings -> SettingsScreen(vm, onPrivacyChanged)
     }
 }
 
@@ -146,24 +169,50 @@ private fun DetailPane(vm: AppViewModel) {
     when (vm.screen) {
         Screen.Scan -> if (vm.selectedReceipt != null) ReceiptConfirm(vm, back = null) else Empty("Velg en kvittering.")
         Screen.Budget -> BudgetDetail(vm)
-        else -> TxDetail(vm, back = null)
-    }
-}
-
-@Composable
-private fun ModulePane(vm: AppViewModel, twoPane: Boolean, onPrivacyChanged: () -> Unit) {
-    when (vm.screen) {
-        Screen.Mat -> MatScreen(vm)
-        Screen.Domains -> DomainsScreen(vm, twoPane)
-        Screen.Sub -> SubScreen(vm)
-        Screen.Folders -> FoldersScreen(vm)
-        Screen.Finn -> FinnScreen(vm)
-        Screen.Settings -> SettingsScreen(vm, onPrivacyChanged)
-        else -> {}
+        else -> if (vm.selectedTx == null && vm.screen == Screen.Search) Empty("Velg et treff.") else TxDetail(vm, back = null)
     }
 }
 
 /* ---------------- Navigasjon ---------------- */
+
+/**
+ * Bunnlinja: Homelab-fanene på Homelab og Matplan, Finans-fanene i Finans (med «Homelab» helt til venstre,
+ * skilt med en tynn strek) og Trafikk/Besøk/Ytelse/Sikkerhet i Domener.
+ */
+@Composable
+private fun BottomBar(vm: AppViewModel) {
+    val s = vm.screen
+    when {
+        s == Screen.Homelab || s == Screen.Mat -> NavigationBar(containerColor = C.surface1) {
+            vm.hlTabs.forEach { t ->
+                NavigationBarItem(selected = s == t, onClick = { vm.go(t) }, icon = { Icon(screenIcon(t), null) }, label = { Text(hlLabel(t), maxLines = 1) })
+            }
+        }
+        s.isFinance -> NavigationBar(containerColor = C.surface1) {
+            HomeItem(vm)
+            vm.finTabs.forEach { t ->
+                val on = s == t || (t == Screen.More && s.isMorePage)
+                NavigationBarItem(selected = on, onClick = { vm.go(t) }, icon = { Icon(screenIcon(t), null) }, label = { Text(t.label, maxLines = 1) })
+            }
+        }
+        // Domener: fanelinja byttes ut med Trafikk, Besøk, Ytelse og Sikkerhet.
+        s == Screen.Domains -> NavigationBar(containerColor = P.card) {
+            HomeItem(vm)
+            DomTab.entries.forEach { t ->
+                NavigationBarItem(selected = vm.domTab == t, onClick = { vm.domTab = t }, icon = { Icon(domIcons.getValue(t), null) }, label = { Text(t.label, maxLines = 1) },
+                    colors = NavigationBarItemDefaults.colors(indicatorColor = P.hero, selectedIconColor = P.onHero, selectedTextColor = P.accent))
+            }
+        }
+        else -> {}
+    }
+}
+
+/** «Homelab» helt til venstre i bunnlinja, med en tynn strek mot resten. */
+@Composable
+private fun RowScope.HomeItem(vm: AppViewModel) {
+    NavigationBarItem(selected = false, onClick = { vm.go(Screen.Homelab) }, icon = { Icon(Icons.Filled.Dashboard, null) }, label = { Text("Homelab", maxLines = 1) })
+    Box(Modifier.padding(vertical = 18.dp).width(1.dp).height(36.dp).background(C.outline.copy(alpha = .4f)).align(Alignment.CenterVertically))
+}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -179,38 +228,34 @@ private fun ScanFab(scan: ScanActions) {
     }
 }
 
-/** Brettbar: navigasjonsrail med skanneknappen øverst og profilbildet nederst til venstre. */
+/** Brettbar: navigasjonsrail med Homelab-knapp og Skann øverst, fanene, og profilbildet nederst til venstre. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun Rail(vm: AppViewModel, scan: ScanActions) {
+    val s = vm.screen
     NavigationRail(containerColor = C.surface1, header = {
-        Surface(color = C.primary, contentColor = C.onPrimary, shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.padding(top = 8.dp).size(56.dp).clip(RoundedCornerShape(16.dp)).combinedClickable(onLongClick = scan::hold, onClick = scan::tap)) {
-            Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.DocumentScanner, "Skann") }
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 8.dp)) {
+            FilledTonalIconButton(onClick = { vm.go(Screen.Homelab) }, modifier = Modifier.size(48.dp)) { Icon(Icons.Filled.Dashboard, "Homelab") }
+            Surface(color = C.primary, contentColor = C.onPrimary, shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.size(56.dp).clip(RoundedCornerShape(16.dp)).combinedClickable(onClickLabel = "Skann kvittering", onLongClickLabel = "Velg fra Bilder eller Filer", onLongClick = scan::hold, onClick = scan::tap)) {
+                Box(contentAlignment = Alignment.Center) { Icon(Icons.Filled.DocumentScanner, "Skann") }
+            }
         }
     }) {
         Spacer(Modifier.height(8.dp))
-        listOf(Screen.Home, Screen.List, Screen.Budget).forEach { t ->
-            NavigationRailItem(selected = vm.screen == t, onClick = { vm.go(t) }, icon = { Icon(tabIcons.getValue(t), null) }, label = { Text(t.label) })
+        val tabs = if (s.isFinance) vm.finTabs else vm.hlTabs.filter { it != Screen.Homelab }
+        tabs.forEach { t ->
+            val on = s == t || (t == Screen.More && s.isMorePage)
+            NavigationRailItem(selected = on, onClick = { vm.go(t) }, icon = { Icon(screenIcon(t), null) }, label = { Text(if (s.isFinance) t.label else hlLabel(t), maxLines = 1, overflow = TextOverflow.Ellipsis) })
         }
-        if (vm.screen == Screen.Scan) NavigationRailItem(selected = true, onClick = {}, icon = { Icon(Icons.Filled.CloudUpload, null) }, label = { Text("Last opp") })
-        if (!vm.screen.isFinance) NavigationRailItem(selected = true, onClick = {}, icon = { Icon(moduleIcon(vm.screen), null) }, label = { Text(vm.screen.label, maxLines = 1, overflow = TextOverflow.Ellipsis) })
+        if (s.isMorePage) NavigationRailItem(selected = true, onClick = {}, icon = { Icon(screenIcon(s), null) }, label = { Text(s.label, maxLines = 1, overflow = TextOverflow.Ellipsis) })
+        if (s == Screen.Settings) NavigationRailItem(selected = true, onClick = {}, icon = { Icon(screenIcon(s), null) }, label = { Text(s.label, maxLines = 1, overflow = TextOverflow.Ellipsis) })
         Spacer(Modifier.weight(1f))
         Box(Modifier.padding(bottom = 16.dp)) { Avatar(vm) }
     }
 }
 
-internal fun moduleIcon(s: Screen): ImageVector = when (s) {
-    Screen.Mat -> Icons.Filled.Restaurant
-    Screen.Domains -> Icons.Filled.Language
-    Screen.Sub -> Icons.Filled.Autorenew
-    Screen.Folders -> Icons.Filled.FolderShared
-    Screen.Finn -> Icons.Filled.Storefront
-    Screen.Settings -> Icons.Filled.Settings
-    else -> Icons.Filled.Home
-}
-
-/** Profilbildet: trykk åpner menyen, hold inne for raskt kontobytte. */
+/** Profilbilde (eller initial): trykk åpner menyen, hold inne for raskt kontobytte. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun Avatar(vm: AppViewModel, size: Int = 44) {
@@ -220,7 +265,7 @@ internal fun Avatar(vm: AppViewModel, size: Int = 44) {
             Modifier.size(size.dp).clip(CircleShape).background(C.container)
                 .combinedClickable(onClickLabel = "Meny", onLongClickLabel = "Bytt konto", onLongClick = { if (vm.accounts.size > 1) quick = true else vm.menuOpen = true }, onClick = { vm.menuOpen = true }),
             contentAlignment = Alignment.Center,
-        ) { Text(initial(vm.displayName.ifBlank { "S" }), color = C.onContainer, fontWeight = FontWeight.SemiBold, fontSize = (size * 0.38).sp) }
+        ) { AvatarImage(vm, size) }
         DropdownMenu(expanded = quick, onDismissRequest = { quick = false }) {
             vm.accounts.forEach { a ->
                 DropdownMenuItem(
@@ -233,49 +278,64 @@ internal fun Avatar(vm: AppViewModel, size: Int = 44) {
     }
 }
 
+/** Selve bildet: opplastet profilbilde, ellers initialen. */
+@Composable
+internal fun AvatarImage(vm: AppViewModel, size: Int, bg: Color = C.container, fg: Color = C.onContainer) {
+    val b = vm.avatar
+    if (b != null) Image(b.asImageBitmap(), "Profilbilde", contentScale = ContentScale.Crop, modifier = Modifier.size(size.dp).clip(CircleShape))
+    else Box(Modifier.size(size.dp).clip(CircleShape).background(bg), contentAlignment = Alignment.Center) {
+        Text(initial(vm.displayName.ifBlank { "•" }), color = fg, fontWeight = FontWeight.SemiBold, fontSize = (size * 0.38).sp)
+    }
+}
+
 internal fun host(url: String) = url.removePrefix("https://").removePrefix("http://")
 
-/** Innholdet i menyen bak profilbildet: Finans, Andre OS og Innstillinger. */
+/** Menyen bak profilbildet: Homelab, Andre OS (Finans, Matplan, Domener), Rediger forsiden og Innstillinger. */
 @Composable
 private fun MenuContent(vm: AppViewModel) {
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp, 0.dp, 20.dp, 32.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(vertical = 8.dp)) {
-            Box(Modifier.size(52.dp).clip(CircleShape).background(C.container), contentAlignment = Alignment.Center) {
-                Text(initial(vm.displayName.ifBlank { "S" }), color = C.onContainer, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-            }
+            AvatarImage(vm, 52)
             Column(Modifier.weight(1f)) {
                 Text(vm.displayName, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("${vm.account?.username?.ifBlank { null } ?: "konto"} · ${vm.me?.role ?: vm.account?.role ?: ""} · ${host(vm.base)}", color = C.text2, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${vm.account?.username?.ifBlank { null } ?: "konto"} · ${vm.me?.role ?: vm.account?.role ?: ""} · ${vm.me?.serverName ?: vm.mobileHome?.serverName ?: host(vm.base)}",
+                    color = C.text2, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
-        MenuRow("Finans", Icons.Filled.Savings, vm.screen.isFinance, 0, 1) { vm.go(Screen.Home) }
+        MenuRow("Homelab", "Dashbord, søk og snarveier", Icons.Filled.Dashboard, vm.screen == Screen.Homelab, 0, 1) { vm.editHome = false; vm.go(Screen.Homelab) }
         SectionLabel("Andre OS")
-        val mods = listOf(Screen.Mat, Screen.Domains, Screen.Sub, Screen.Folders, Screen.Finn)
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            mods.forEachIndexed { i, m -> MenuRow(m.label, moduleIcon(m), vm.screen == m, i, mods.size) { vm.go(m) } }
+            MenuRow("Finans", "Hjem, liste, budsjett og mer", Icons.Filled.Savings, vm.screen.isFinance, 0, 3) { vm.go(Screen.Home) }
+            MenuRow("Matplan", "Ukemeny, kokk og handleliste", Icons.Filled.Restaurant, vm.screen == Screen.Mat, 1, 3) { vm.go(Screen.Mat) }
+            MenuRow("Domener", "Trafikk, besøk, ytelse og sikkerhet", Icons.Filled.Language, vm.screen == Screen.Domains, 2, 3) { vm.go(Screen.Domains) }
         }
+        Spacer(Modifier.height(4.dp))
+        MenuRow("Rediger forsiden", "Widgets og fanelinjer", Icons.Filled.Edit, vm.editHome, 0, 1) { vm.go(Screen.Homelab); vm.editHome = true }
         if (vm.accounts.size > 1) {
             SectionLabel("Kontoer")
             Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 vm.accounts.forEachIndexed { i, a ->
-                    MenuRow("${a.name.ifBlank { a.username.ifBlank { "Konto" } }} · ${host(a.server)}", Icons.Filled.AccountCircle, a.id == vm.activeId, i, vm.accounts.size) { if (a.id != vm.activeId) vm.switchTo(a.id) }
+                    MenuRow("${a.name.ifBlank { a.username.ifBlank { "Konto" } }} · ${host(a.server)}", null, Icons.Filled.AccountCircle, a.id == vm.activeId, i, vm.accounts.size) { if (a.id != vm.activeId) vm.switchTo(a.id) }
                 }
             }
         }
         Spacer(Modifier.height(4.dp))
-        MenuRow("Innstillinger", Icons.Filled.Settings, vm.screen == Screen.Settings, 0, 2) { vm.settingsPage = null; vm.go(Screen.Settings) }
-        MenuRow("Legg til konto", Icons.Filled.PersonAdd, false, 1, 2) { vm.menuOpen = false; vm.addingAccount = true }
+        MenuRow("Innstillinger", null, Icons.Filled.Settings, vm.screen == Screen.Settings, 0, 2) { vm.settingsPage = null; vm.open(Screen.Settings) }
+        MenuRow("Legg til konto", null, Icons.Filled.PersonAdd, false, 1, 2) { vm.menuOpen = false; vm.addingAccount = true }
     }
 }
 
 @Composable
-private fun MenuRow(label: String, icon: ImageVector, on: Boolean, i: Int, n: Int, onClick: () -> Unit) {
+internal fun MenuRow(label: String, sub: String?, icon: ImageVector, on: Boolean, i: Int, n: Int, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clip(itemShape(i, n)).background(if (on) C.container else C.surface2).clickable(onClick = onClick).padding(16.dp, 14.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Icon(icon, null, tint = if (on) C.onContainer else C.text2)
-        Text(label, Modifier.weight(1f), color = if (on) C.onContainer else C.text, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Column(Modifier.weight(1f)) {
+            Text(label, color = if (on) C.onContainer else C.text, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            sub?.let { Text(it, color = if (on) C.onContainer.copy(alpha = .8f) else C.text2, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        }
     }
 }
 
@@ -302,9 +362,9 @@ private fun ScanSheet(vm: AppViewModel, camera: () -> Unit, photos: () -> Unit, 
     ModalBottomSheet(onDismissRequest = { vm.scanSheet = false }, containerColor = C.surface1) {
         Column(Modifier.fillMaxWidth().padding(20.dp, 0.dp, 20.dp, 32.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text("Legg til kvittering", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp))
-            MenuRow("Ta bilde", Icons.Filled.PhotoCamera, false, 0, 3) { vm.scanSheet = false; camera() }
-            MenuRow("Velg fra Bilder", Icons.Filled.PhotoLibrary, false, 1, 3) { vm.scanSheet = false; photos() }
-            MenuRow("Velg fil (PDF, JPG, HEIC)", Icons.Filled.Description, false, 2, 3) { vm.scanSheet = false; files() }
+            MenuRow("Ta bilde", null, Icons.Filled.PhotoCamera, false, 0, 3) { vm.scanSheet = false; camera() }
+            MenuRow("Velg fra Bilder", null, Icons.Filled.PhotoLibrary, false, 1, 3) { vm.scanSheet = false; photos() }
+            MenuRow("Velg fil (PDF, JPG, HEIC)", null, Icons.Filled.Description, false, 2, 3) { vm.scanSheet = false; files() }
             Spacer(Modifier.height(10.dp))
             OutlinedButton(onClick = { vm.scanSheet = false }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp)) { Text("Avbryt") }
             Text("Filene legges i opplastingskøen, og Gemini leser dem i bakgrunnen.", color = C.text2, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp, start = 8.dp))
@@ -315,7 +375,7 @@ private fun ScanSheet(vm: AppViewModel, camera: () -> Unit, photos: () -> Unit, 
 @Composable
 private fun LockScreen(vm: AppViewModel, unlock: () -> Unit) {
     Column(Modifier.fillMaxSize().background(C.bg).padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterVertically)) {
-        Box(Modifier.size(72.dp).clip(RoundedCornerShape(24.dp)).background(C.accent), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Lock, null, tint = Color(0xFF1A0C04), modifier = Modifier.size(32.dp)) }
+        Box(Modifier.size(72.dp).clip(RoundedCornerShape(24.dp)).background(C.accent), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Lock, null, tint = tc(0xFF1A0C04), modifier = Modifier.size(32.dp)) }
         Text("FinansHub er låst", style = MaterialTheme.typography.headlineMedium)
         Text(vm.displayName, color = C.text2)
         Button(onClick = unlock, modifier = Modifier.fillMaxWidth().widthIn(max = 360.dp).height(56.dp), shape = RoundedCornerShape(28.dp),

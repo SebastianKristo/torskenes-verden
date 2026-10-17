@@ -13,13 +13,20 @@ data class Settings(
     val n80: Boolean, val n100: Boolean, val nRc: Boolean, val minConf: Int,
 )
 
-data class Boot(val settings: Settings, val categories: List<Category>, val accounts: List<Account>, val reviewCount: Int)
+data class Goal(val id: Int, val name: String, val saved: Double, val target: Double, val color: Long)
+data class Rule(val id: Int, val pattern: String, val category: String?)
+
+data class Boot(
+    val settings: Settings, val categories: List<Category>, val accounts: List<Account>, val reviewCount: Int,
+    val goals: List<Goal> = emptyList(), val rules: List<Rule> = emptyList(), val restricted: Boolean = false,
+)
 
 data class Tx(
     val id: Int, val date: String, val amount: Double, val description: String, val category: String, val categoryId: Int?,
     val color: Long, val account: String, val note: String, val receipt: String?,
     val aiShort: String? = null, val aiLong: String? = null, val domain: String? = null,
     val lines: List<Pair<String, Double>> = emptyList(), val folder: String? = null,
+    val folderId: Int? = null, val accountId: Int? = null, val receiptId: String? = null, val merchant: String? = null, val source: String? = null,
 )
 
 data class Budget(
@@ -43,8 +50,101 @@ data class Summary(
     val innMonthly: List<Double> = emptyList(),
 )
 
-/** Innlogget bruker på serveren (GET /finans/api/me). */
-data class Me(val username: String, val name: String, val role: String, val totp: Boolean?, val version: String?)
+/** Innlogget bruker på serveren (GET /finans/api/me eller /api/me). */
+data class Me(
+    val username: String, val name: String, val role: String, val totp: Boolean?, val version: String?,
+    val avatarUrl: String? = null, val serverName: String? = null, val isMainAdmin: Boolean = false,
+)
+
+/* ---------------- Homelab (mobil forside) ---------------- */
+
+data class Weather(val place: String, val temp: Double?, val text: String?, val wind: Double?, val max: Double?, val min: Double?, val code: Int?)
+data class Shortcut(val name: String, val url: String, val local: Boolean)
+data class Departure(val line: String, val color: Long?, val min: Int?, val time: String?)
+data class RuterLine(val from: String, val to: String, val departures: List<Departure>)
+data class ServerStatus(val cpu: Double?, val mem: Double?, val disk: Double?, val temp: Double?, val uptime: String?)
+data class MobileHome(
+    val name: String?, val serverName: String?, val avatarUrl: String?, val greeting: String?,
+    val weather: Weather?, val shortcuts: List<Shortcut>, val ruter: List<RuterLine>, val serverStatus: ServerStatus?,
+    val layout: HomeLayout? = null,
+)
+
+/** Oppsettet av mobilforsiden (per bruker og enhet): rekkefølge og synlighet for seksjoner og faner. */
+data class HomeLayout(val sec: List<String>, val hlTabs: List<String>, val finTabs: List<String>, val hide: Map<String, Boolean>) {
+    fun visible(id: String) = hide[id] != true
+    fun toJson(): JSONObject = JSONObject().put("sec", JSONArray(sec)).put("hlTabs", JSONArray(hlTabs)).put("finTabs", JSONArray(finTabs))
+        .put("hide", JSONObject().apply { hide.forEach { (k, v) -> put(k, v) } })
+
+    companion object {
+        val SECTIONS = listOf("clock", "search", "links", "os", "srv", "ruter")
+        val HL_TABS = listOf("hl", "home", "dom", "mat")
+        val FIN_TABS = listOf("home", "list", "bud", "ai", "mer")
+        /** Kan ikke skjules. */
+        val FIXED_HL = setOf("hl", "home")
+        val FIXED_FIN = setOf("home", "mer")
+        val DEFAULT = HomeLayout(SECTIONS, HL_TABS, FIN_TABS, mapOf("srv" to true, "ruter" to true))
+
+        /** Nye ID-er som ikke finnes i lagret oppsett legges sist; ukjente fjernes. */
+        private fun fix(saved: List<String>, all: List<String>) = saved.filter { it in all }.distinct() + all.filter { it !in saved }
+
+        fun from(o: JSONObject?): HomeLayout {
+            if (o == null) return DEFAULT
+            val hide = DEFAULT.hide.toMutableMap()
+            o.optJSONObject("hide")?.let { h -> h.keys().forEach { k -> hide[k] = h.optBoolean(k) } }
+            return HomeLayout(
+                fix(o.optJSONArray("sec").strings(), SECTIONS), fix(o.optJSONArray("hlTabs").strings(), HL_TABS),
+                fix(o.optJSONArray("finTabs").strings(), FIN_TABS), hide,
+            )
+        }
+    }
+}
+
+/* ---------------- Mer: sidene fra nettsiden ---------------- */
+
+data class Recurring(val id: Int, val name: String, val amount: Double, val interval: String?, val day: Int?, val active: Boolean, val category: String?, val next: String?) {
+    /** Omregnet til per måned. */
+    val monthly: Double get() = kotlin.math.abs(amount) * when (interval) { "yearly", "year", "annual" -> 1.0 / 12; "weekly", "week" -> 52.0 / 12; "quarterly" -> 1.0 / 3; else -> 1.0 }
+}
+
+data class StockSummary(val total: Double, val invested: Double, val value: Double, val result: Double, val cash: Double, val realized: Double)
+data class Position(val ticker: String, val symbol: String, val name: String, val quantity: Double, val avg: Double, val price: Double, val value: Double, val pl: Double, val plPct: Double, val dayPct: Double)
+data class StockOrder(val symbol: String, val side: String, val quantity: Double, val value: Double, val price: Double, val date: String)
+data class Dividend(val symbol: String, val amount: Double, val date: String)
+data class Stocks(
+    val configured: Boolean, val status: String?, val env: String?, val summary: StockSummary?, val positions: List<Position>,
+    val history: List<Pair<String, Double>>, val orders: List<StockOrder>, val dividends: List<Dividend>, val mock: Boolean,
+)
+
+data class CatAmount(val category: String, val color: Long, val amount: Double)
+data class MerchantAmount(val name: String, val amount: Double, val count: Int)
+data class MonthInOut(val month: String, val inn: Double, val ut: Double)
+data class Report(val mode: String, val total: Double, val byCategory: List<CatAmount>, val merchants: List<MerchantAmount>, val months: List<MonthInOut>)
+
+data class ImportRow(val date: String, val description: String, val raw: String?, val amount: Double, val category: String?, val domain: String?, val aiShort: String?, val duplicate: Boolean)
+data class ImportResult(val rows: List<ImportRow>, val imported: Int, val skipped: Int, val errors: List<String>)
+
+data class SearchHit(val type: String, val txId: Int?, val receiptId: String?, val description: String, val date: String?, val amount: Double?, val source: String?, val reason: String?)
+data class AiAnswer(val q: String, val answer: String, val hits: List<SearchHit>, val engine: String?, val suggestions: List<String>)
+
+/** Original kvittering og bankrad for en transaksjon. */
+data class ReceiptFile(val id: String, val mime: String?, val fileUrl: String?, val thumbUrl: String?)
+data class BankRow(
+    val bookingDate: String?, val valueDate: String?, val description: String?, val amount: Double?, val account: String?,
+    val archiveReference: String?, val source: String?, val raw: String?, val json: String,
+)
+data class Original(val receipt: ReceiptFile?, val bankRow: BankRow?)
+
+/** En rad på en Mer-side som åpner en detaljside med felt og tilhørende transaksjoner. */
+data class DetailInfo(
+    val title: String, val sub: String?, val value: String?, val valueSub: String?,
+    val groups: List<Pair<String, List<Pair<String, String>>>>, val txQuery: String? = null,
+)
+
+/** Skjema for ny eller endret transaksjon. */
+data class TxDraft(
+    val id: Int?, val income: Boolean, val description: String, val amount: String, val date: String,
+    val categoryId: Int?, val accountId: Int?, val folderId: Int?, val note: String, val receipt: String?,
+)
 
 /* ---------------- Moduler ---------------- */
 
@@ -119,6 +219,9 @@ fun parseBoot(s: String): Boot {
         o.optJSONArray("categories")?.map { Category(it.getInt("id"), it.optString("name"), color(it.optString("color")), it.optString("kind")) } ?: emptyList(),
         o.optJSONArray("accounts")?.map { Account(it.getInt("id"), it.optString("name"), it.optString("type"), it.optStr("last4"), it.num("balance")) } ?: emptyList(),
         o.optInt("reviewCount"),
+        o.optJSONArray("goals")?.map { Goal(it.optInt("id"), it.optString("name"), it.num("saved"), it.num("target"), color(it.optString("color", "#5FD3A8"))) } ?: emptyList(),
+        o.optJSONArray("rules")?.map { Rule(it.optInt("id"), it.optString("pattern"), it.optStr("category")) } ?: emptyList(),
+        o.optBoolean("restricted"),
     )
 }
 
@@ -128,7 +231,10 @@ fun parseTx(o: JSONObject) = Tx(
     o.getInt("id"), o.optString("date"), o.num("amount"), o.optString("description"), o.optString("category"), o.optIntOrNull("categoryId"),
     color(o.optString("color")), o.optString("account"), o.optString("note"), o.optStr("receipt"),
     o.optStr("aiShort"), o.optStr("aiLong"), o.optStr("domain"), lines(o.optJSONArray("lines")), o.optStr("folder"),
+    o.optIntOrNull("folderId"), o.optIntOrNull("accountId"), o.optStr("receiptId"), o.optStr("merchant"), o.optStr("source"),
 )
+
+fun parseTxOne(s: String): Tx? = runCatching { JSONObject(s).let { o -> parseTx(o.optJSONObject("tx") ?: o) } }.getOrNull()
 
 fun parseTxList(s: String): List<Tx> = JSONObject(s).optJSONArray("items")?.map(::parseTx) ?: emptyList()
 
@@ -161,9 +267,122 @@ fun parseJobs(s: String): List<Job> = JSONArray(s).map {
 }
 
 fun parseMe(s: String): Me {
+    val o = JSONObject(s).let { it.optJSONObject("user") ?: it }
+    return Me(o.optString("username"), o.optStr("name") ?: o.optStr("displayName") ?: o.optString("username"), o.optString("role", "bruker"),
+        o.optBoolOrNull("totp") ?: o.optBoolOrNull("totpEnabled"), o.optStr("version"),
+        o.optStr("avatarUrl"), o.optStr("serverName"), o.optBoolean("isMainAdmin"))
+}
+
+fun parseMobileHome(s: String): MobileHome {
     val o = JSONObject(s)
-    return Me(o.optString("username"), o.optString("name", o.optString("username")), o.optString("role", "bruker"),
-        o.optBoolOrNull("totp") ?: o.optBoolOrNull("totpEnabled"), o.optStr("version"))
+    val w = o.optJSONObject("weather")
+    val st = o.optJSONObject("serverStatus")
+    return MobileHome(
+        o.optStr("name"), o.optStr("serverName"), o.optStr("avatarUrl"), o.optStr("greeting"),
+        w?.let { Weather(it.optString("place", "Oslo"), it.optDoubleOrNull("temp"), it.optStr("text"), it.optDoubleOrNull("wind"), it.optDoubleOrNull("max"), it.optDoubleOrNull("min"), it.optIntOrNull("code")) },
+        o.optJSONArray("shortcuts")?.map { Shortcut(it.optString("name"), it.optString("url"), it.optBoolean("local")) } ?: emptyList(),
+        o.optJSONArray("ruter")?.map { r ->
+            RuterLine(r.optString("from"), r.optString("to"), r.optJSONArray("departures")?.map {
+                Departure(it.optString("line"), it.optStr("color")?.let(::color), it.optIntOrNull("min"), it.optStr("time"))
+            } ?: emptyList())
+        } ?: emptyList(),
+        st?.let { ServerStatus(it.optDoubleOrNull("cpu"), it.optDoubleOrNull("mem"), it.optDoubleOrNull("disk"), it.optDoubleOrNull("temp"), it.optStr("uptimeText") ?: when (val u = it.opt("uptime")) { is Number -> uptimeLabel(u.toDouble()); is String -> u; else -> null }) },
+        o.optJSONObject("layout")?.let { l -> (l.optJSONObject("mobile") ?: l).takeIf { it.has("sec") }?.let { HomeLayout.from(it) } },
+    )
+}
+
+/** Oppetid i sekunder → «23 d 4 t». */
+fun uptimeLabel(sec: Double): String {
+    val d = (sec / 86400).toInt()
+    val h = ((sec % 86400) / 3600).toInt()
+    return if (d > 0) "$d d $h t" else "$h t ${((sec % 3600) / 60).toInt()} min"
+}
+
+/** Google-forslag: ["…"] eller {items|suggestions: […]}; historikk: ["…"] eller [{q}] eller {items: […]}. */
+fun parseStrings(s: String): List<String> {
+    val t = s.trim()
+    val a = when {
+        t.startsWith("[") -> JSONArray(t)
+        else -> JSONObject(t).let { it.optJSONArray("items") ?: it.optJSONArray("suggestions") ?: it.optJSONArray("history") ?: JSONArray() }
+    }
+    return (0 until a.length()).mapNotNull { i ->
+        when (val v = a.opt(i)) {
+            is String -> v
+            is JSONObject -> v.optStr("q") ?: v.optStr("query") ?: v.optStr("text")
+            is JSONArray -> v.optString(0)
+            else -> null
+        }?.takeIf { it.isNotBlank() }
+    }
+}
+
+fun parseLayout(s: String): HomeLayout? = runCatching { JSONObject(s).optJSONObject("mobile")?.let { HomeLayout.from(it) } }.getOrNull()
+
+fun parseRecurring(s: String): List<Recurring> {
+    val t = s.trim()
+    val a = if (t.startsWith("[")) JSONArray(t) else JSONObject(t).optJSONArray("items") ?: JSONArray()
+    return a.map { Recurring(it.optInt("id"), it.optString("name"), it.num("amount"), it.optStr("interval"), it.optIntOrNull("day"), it.optBoolean("active", true), it.optStr("category"), it.optStr("next")) }
+}
+
+fun parseStocks(s: String): Stocks {
+    val o = JSONObject(s)
+    val sm = o.optJSONObject("summary")
+    return Stocks(
+        o.optBoolean("configured", sm != null), o.optStr("status") ?: o.optStr("error"), o.optStr("env"),
+        sm?.let { StockSummary(it.num("total"), it.num("invested"), it.num("value"), it.num("result"), it.num("cash"), it.num("realized")) },
+        (o.optJSONArray("positions") ?: o.optJSONArray("portfolio"))?.map {
+            Position(it.optString("ticker"), it.optStr("symbol") ?: it.optString("ticker"), it.optStr("name") ?: it.optString("ticker"), it.num("quantity"), it.num("avg"), it.num("price"),
+                it.num("value"), it.num("pl"), it.num("plPct"), it.num("dayPct"))
+        } ?: emptyList(),
+        o.optJSONArray("history")?.map { it.optString("date") to it.num("value") } ?: emptyList(),
+        o.optJSONArray("orders")?.map { StockOrder(it.optStr("symbol") ?: it.optString("ticker"), it.optString("side"), it.num("quantity"), it.num("value"), it.num("price"), it.optString("date")) } ?: emptyList(),
+        o.optJSONArray("dividends")?.map { Dividend(it.optStr("symbol") ?: it.optString("ticker"), it.num("amount"), it.optString("date")) } ?: emptyList(),
+        o.optBoolean("mock"),
+    )
+}
+
+fun parseReport(s: String): Report {
+    val o = JSONObject(s)
+    return Report(
+        o.optString("mode", "month"), o.num("total"),
+        o.optJSONArray("byCategory")?.map { CatAmount(it.optString("category"), color(it.optString("color")), it.num("amount")) } ?: emptyList(),
+        o.optJSONArray("merchants")?.map { MerchantAmount(it.optString("name"), it.num("amount"), it.optInt("count")) } ?: emptyList(),
+        o.optJSONArray("months")?.map { MonthInOut(it.optString("month"), it.num("inn"), it.num("ut")) } ?: emptyList(),
+    )
+}
+
+fun parseImport(s: String): ImportResult {
+    val o = JSONObject(s)
+    return ImportResult(
+        o.optJSONArray("rows")?.map { ImportRow(it.optString("date"), it.optString("description"), it.optStr("raw"), it.num("amount"), it.optStr("category"), it.optStr("domain"), it.optStr("aiShort"), it.optBoolean("duplicate")) } ?: emptyList(),
+        o.optInt("imported"), o.optInt("skipped"), o.optJSONArray("errors").strings(),
+    )
+}
+
+fun parseAi(s: String, q: String): AiAnswer {
+    val o = JSONObject(s)
+    return AiAnswer(
+        o.optStr("q") ?: q, o.optString("answer"),
+        o.optJSONArray("hits")?.map {
+            SearchHit(it.optString("type", "tx"), it.optIntOrNull("txId") ?: (if (it.optString("type", "tx") == "tx") it.optIntOrNull("id") else null),
+                it.optStr("receiptId"), it.optString("description"), it.optStr("date"), it.optDoubleOrNull("amount"), it.optStr("source"), it.optStr("reason"))
+        } ?: emptyList(),
+        o.optStr("engine"), o.optJSONArray("suggestions").strings(),
+    )
+}
+
+fun parseOriginal(s: String): Original {
+    val o = JSONObject(s)
+    val r = o.optJSONObject("receipt")
+    val b = o.optJSONObject("bankRow")
+    return Original(
+        r?.let { ReceiptFile(it.optString("id"), it.optStr("mime"), it.optStr("fileUrl") ?: it.optStr("file"), it.optStr("thumbUrl") ?: it.optStr("thumb")) },
+        b?.let {
+            val raw = it.opt("raw")
+            BankRow(it.optStr("bookingDate"), it.optStr("valueDate"), it.optStr("description"), it.optDoubleOrNull("amount"), it.optStr("account"),
+                it.optStr("archiveReference"), it.optStr("source"),
+                when (raw) { is String -> raw; is JSONObject -> raw.toString(2); is JSONArray -> raw.toString(2); else -> null }, it.toString(2))
+        },
+    )
 }
 
 fun parseWeek(s: String): Week {

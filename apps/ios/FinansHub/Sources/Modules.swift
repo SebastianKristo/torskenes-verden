@@ -63,7 +63,7 @@ struct SubView: View {
             }
             .padding(.horizontal, 18).padding(.bottom, 30)
         }
-        .refreshable { store.open(.sub) }
+        .refreshable { await store.reloadModule() }
     }
 
     private var form: some View {
@@ -114,7 +114,7 @@ struct SubView: View {
     }
 }
 
-/* ---------------- Delte mapper (bolig-dashboard) ---------------- */
+/* ---------------- Boliger (delte mapper) ---------------- */
 
 private let roleLabel = ["owner": "Eier", "editor": "Kan redigere", "edit": "Kan redigere", "viewer": "Kan se", "view": "Kan se", "member": "Medlem"]
 
@@ -124,11 +124,11 @@ struct FoldersView: View {
         if let f = store.folder { FolderDetailView(f: f) } else {
             ScrollView {
                 VStack(spacing: 12) {
-                    ModuleHeader(title: "Delte mapper")
+                    ModuleHeader(title: "Boliger")
                     Text("Boliger, hytter og felles utgifter. Brukere ser bare mapper de er medlem av.").font(.footnote).foregroundStyle(.white.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading)
                     if let e = store.moduleError { Empty(text: e) }
                     if let list = store.folders {
-                        if list.isEmpty { Empty(text: "Ingen delte mapper ennå. Opprett en i FinansHub på PC.") }
+                        if list.isEmpty { Empty(text: "Ingen boliger ennå. Opprett en i FinansHub på PC.") }
                         ForEach(list) { f in
                             Button { store.openFolder(f.id) } label: {
                                 HStack(spacing: 14) {

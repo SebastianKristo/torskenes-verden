@@ -67,12 +67,12 @@ private fun DomainHeader(vm: AppViewModel) {
     Column {
     ModuleHeader(vm, "Domener", actions = {
         IconButton(onClick = { vm.reloadDomain() }) { Icon(Icons.Filled.Refresh, "Oppdater", tint = P.accent) }
-        IconButton(onClick = { vm.settingsPage = null; vm.go(Screen.Settings) }) { Icon(Icons.Filled.Settings, "Innstillinger", tint = P.text2) }
+        IconButton(onClick = { vm.settingsPage = null; vm.open(Screen.Settings) }) { Icon(Icons.Filled.Settings, "Innstillinger", tint = P.text2) }
     })
     Spacer(Modifier.height(8.dp))
     Box {
         Row(Modifier.clip(RoundedCornerShape(20.dp)).background(P.card).clickable { pick = true }.padding(16.dp, 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(Modifier.size(8.dp).clip(CircleShape).background(when (vm.analytics?.status) { null, "active" -> C.positive; "pending", "unknown" -> Color(0xFFF2C14E); else -> P.red }))
+            Box(Modifier.size(8.dp).clip(CircleShape).background(when (vm.analytics?.status) { null, "active" -> C.positive; "pending", "unknown" -> tc(0xFFF2C14E); else -> P.red }))
             Text(vm.domain ?: "Velg domene", fontWeight = FontWeight.SemiBold, color = P.onHero)
             Icon(Icons.Filled.ExpandMore, null, tint = P.text2)
         }
@@ -255,7 +255,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.perf(a: Analytics) {
             val days = a.uptime90.takeLast(30)
             Text(if (a.uptimePct > 0) pct(a.uptimePct) else "–", fontFamily = Mono, fontSize = 22.sp, color = P.onHero)
             Row(Modifier.fillMaxWidth().height(28.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                days.forEach { u -> Box(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(if (u >= 0.999) C.positive else if (u >= 0.98) Color(0xFFF2C14E) else P.red)) }
+                days.forEach { u -> Box(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(2.dp)).background(if (u >= 0.999) C.positive else if (u >= 0.98) tc(0xFFF2C14E) else P.red)) }
             }
             if (days.isEmpty()) Text("Ingen målinger ennå", color = P.text2, fontSize = 13.sp)
         }
@@ -277,7 +277,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.security(a: Analytics
             if (a.events.isEmpty()) Text("Ingen hendelser", color = P.text2, fontSize = 13.sp)
             a.events.take(10).forEach { e ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Chip(e.action, bg = if (e.action == "Blokkert") Color(0xFF4A1F25) else Color(0xFF4A3A1F), fg = if (e.action == "Blokkert") P.red else Color(0xFFF2C14E))
+                    Chip(e.action, bg = if (e.action == "Blokkert") tc(0xFF4A1F25) else tc(0xFF4A3A1F), fg = if (e.action == "Blokkert") P.red else tc(0xFFF2C14E))
                     Column(Modifier.weight(1f)) {
                         Text(e.path.ifBlank { "/" }, fontFamily = Mono, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text("${flag(e.country)} ${e.ip} · ${e.time.takeLast(8).take(5)}", color = P.text2, fontSize = 12.sp)

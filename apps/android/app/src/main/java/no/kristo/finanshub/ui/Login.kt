@@ -52,7 +52,7 @@ internal fun LoginScreen(vm: AppViewModel) {
                     }
                 }
                 Box(Modifier.size(56.dp).clip(RoundedCornerShape(18.dp)).background(C.accent), contentAlignment = Alignment.Center) {
-                    Icon(if (p != null) Icons.Filled.Security else Icons.Filled.Savings, null, tint = Color(0xFF1A0C04))
+                    Icon(if (p != null) Icons.Filled.Security else Icons.Filled.Savings, null, tint = tc(0xFF1A0C04))
                 }
                 if (p == null) {
                     Text(if (vm.addingAccount) "Legg til konto" else "FinansHub", style = MaterialTheme.typography.displaySmall)

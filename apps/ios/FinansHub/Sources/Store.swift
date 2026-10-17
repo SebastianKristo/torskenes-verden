@@ -4,26 +4,46 @@ import UIKit
 import LocalAuthentication
 import Network
 
-/// Fanene i Finans. Matplan og de andre modulene ligger i menyen bak profilbildet («Andre OS»).
+/// Fanene i Finans. Mer samler resten av sidene fra nettsiden.
 enum Tab: String, CaseIterable, Identifiable {
-    case home = "Hjem", list = "Liste", budget = "Budsjett"
+    case home = "Oversikt", list = "Liste", budget = "Budsjett", search = "Søk", more = "Mer"
     var id: String { rawValue }
     var icon: String {
         switch self {
         case .home: "house"
         case .list: "list.bullet"
         case .budget: "chart.pie"
+        case .search: "sparkle.magnifyingglass"
+        case .more: "square.grid.2x2"
         }
     }
+    /// ID-en som lagres i oppsettet (finTabs).
+    var key: String {
+        switch self {
+        case .home: "home"
+        case .list: "list"
+        case .budget: "bud"
+        case .search: "ai"
+        case .more: "mer"
+        }
+    }
+    static func from(key: String) -> Tab? { allCases.first { $0.key == key } }
 }
 
-/// Skjermer som fyller hele vinduet: opplastingskøen, modulene og innstillinger.
+/// Skjermer som fyller hele vinduet: Homelab, sidene under Mer, modulene og innstillinger.
 enum Module: String, CaseIterable, Identifiable {
-    case upload = "Last opp", mat = "Matplan", domains = "Domener", sub = "Subscription OS", folders = "Delte mapper", finn = "Finn-handler", settings = "Innstillinger"
+    case homelab = "Homelab", upload = "Kvitteringer", fast = "Faste utgifter", accounts = "Kontoer", stocks = "Aksjer", reports = "Rapporter", imports = "Import"
+    case mat = "Matplan", domains = "Domener", sub = "Subscription OS", folders = "Boliger", finn = "Finn-handler", settings = "Innstillinger"
     var id: String { rawValue }
     var icon: String {
         switch self {
-        case .upload: "square.and.arrow.up"
+        case .homelab: "square.grid.3x3.fill"
+        case .upload: "doc.text.viewfinder"
+        case .fast: "repeat"
+        case .accounts: "building.columns"
+        case .stocks: "chart.line.uptrend.xyaxis"
+        case .reports: "chart.bar"
+        case .imports: "square.and.arrow.down"
         case .mat: "fork.knife"
         case .domains: "globe"
         case .sub: "arrow.triangle.2.circlepath"
@@ -32,8 +52,21 @@ enum Module: String, CaseIterable, Identifiable {
         case .settings: "gearshape"
         }
     }
-    static let others: [Module] = [.mat, .domains, .sub, .folders, .finn]
+    /// Sider under Mer: fanelinja for Finans vises, med Mer markert.
+    var isFinance: Bool { [.upload, .fast, .accounts, .stocks, .reports, .imports, .sub, .folders, .finn].contains(self) }
+    static let others: [Module] = [.mat, .domains]
 }
+
+/// Fanene på Homelab: Homelab, Finans, Domener og Matplan.
+enum HlTab: String, CaseIterable, Identifiable {
+    case hl, home, dom, mat
+    var id: String { rawValue }
+    var label: String { switch self { case .hl: "Homelab"; case .home: "Finans"; case .dom: "Domener"; case .mat: "Matplan" } }
+    var icon: String { switch self { case .hl: "square.grid.3x3.fill"; case .home: "banknote"; case .dom: "globe"; case .mat: "fork.knife" } }
+}
+
+/// Hvor man er: en Finans-fane eller en hel side.
+enum Place: Equatable { case tab(Tab), module(Module) }
 
 enum DomTab: String, CaseIterable, Identifiable {
     case traffic = "Trafikk", visits = "Besøk", perf = "Ytelse", security = "Sikkerhet"
@@ -63,6 +96,8 @@ struct LoginAccount: Codable, Identifiable, Hashable {
 
 struct PendingLogin { let server: String; let username: String; let password: String }
 
+struct DomainToday { let name: String; let visitors: Double }
+
 @MainActor
 @Observable
 final class Store {
@@ -74,7 +109,8 @@ final class Store {
     var loggedIn: Bool { account != nil }
     var server: String { account?.server ?? Keychain.get("server") ?? "" }
     var displayName: String {
-        if let n = me?.name, !n.isEmpty { return n }
+        if let n = me?.label, !n.isEmpty { return n }
+        if let n = mobileHome?.name, !n.isEmpty { return n }
         if let a = account, !a.name.isEmpty { return a.name }
         return boot?.settings.name ?? ""
     }
@@ -88,6 +124,7 @@ final class Store {
 
     var tab: Tab = .home
     var module: Module?
+    @ObservationIgnored private var backTo: Place?
     var boot: Boot?
     var summary: Summary?
     var me: Me?
@@ -104,6 +141,42 @@ final class Store {
     var uploading = 0
     var menuOpen = false
     var settingsPage: String?
+    /// Fanelinja krymper til en sirkel når man scroller ned (iOS 18+).
+    var barMini = false
+
+    /* ---------- Homelab ---------- */
+
+    var mobileHome: MobileHome?
+    var homeError: String?
+    private(set) var layout: HomeLayout = .standard
+    var editHome = false
+    var gallery = false
+    var history: [String] = []
+    var suggestions: [String] = []
+    var todayMeal: String?
+    var domainToday: DomainToday?
+    private(set) var avatar: UIImage?
+    @ObservationIgnored private var suggestTask: Task<Void, Never>?
+
+    /* ---------- Finans: søk, redigering, originaler og Mer ---------- */
+
+    var ai: AiAnswer?
+    var aiQuery = ""
+    var aiBusy = false
+    var aiHistory: [String] = []
+    var editing: TxDraft?
+    var original: Original?
+    var originalTab = "receipt"
+    var detail: DetailInfo?
+    var detailTx: [Tx]?
+    var recurring: [Recurring]?
+    var stocks: Stocks?
+    var stockPeriod = "1M"
+    var report: Report?
+    var reportYear = false
+    var importFiles: [(name: String, data: Data)] = []
+    var importText = ""
+    var importResult: ImportResult?
 
     var week: Week?
     var subs: SubList?
@@ -128,7 +201,8 @@ final class Store {
     var lockAfter = UserDefaults.standard.integer(forKey: "fh_lock_after") { didSet { UserDefaults.standard.set(lockAfter, forKey: "fh_lock_after") } }
     var hideSwitcher = UserDefaults.standard.bool(forKey: "fh_hide_switcher") { didSet { UserDefaults.standard.set(hideSwitcher, forKey: "fh_hide_switcher") } }
     var hideAmounts = UserDefaults.standard.bool(forKey: "fh_hide_amounts") { didSet { UserDefaults.standard.set(hideAmounts, forKey: "fh_hide_amounts"); Privacy.shared.hidden = hideAmounts } }
-    var startPage = UserDefaults.standard.string(forKey: "fh_start") ?? "home" { didSet { UserDefaults.standard.set(startPage, forKey: "fh_start") } }
+    /// homelab | home | list | budget
+    var startPage = UserDefaults.standard.string(forKey: "fh_start") ?? "homelab" { didSet { UserDefaults.standard.set(startPage, forKey: "fh_start") } }
     /// «camera»: trykk åpner kameraet, hold inne viser valg. «choices»: omvendt.
     var scanTap = UserDefaults.standard.string(forKey: "fh_scan_tap") ?? "camera" { didSet { UserDefaults.standard.set(scanTap, forKey: "fh_scan_tap") } }
     var autoCrop = UserDefaults.standard.object(forKey: "fh_auto_crop") as? Bool ?? true { didSet { UserDefaults.standard.set(autoCrop, forKey: "fh_auto_crop") } }
@@ -155,9 +229,10 @@ final class Store {
 
     init() {
         base = account?.server ?? ""
-        tab = Store.start(startPage)
+        applyStart()
         locked = loggedIn && lockEnabled
         Privacy.shared.hidden = hideAmounts
+        layout = localLayout()
         monitor.pathUpdateHandler = { [weak self] path in
             let wifi = path.usesInterfaceType(.wifi) || path.usesInterfaceType(.wiredEthernet)
             Task { @MainActor in self?.onWifi = wifi }
@@ -165,7 +240,15 @@ final class Store {
         monitor.start(queue: DispatchQueue(label: "finanshub.net"))
     }
 
-    private static func start(_ s: String) -> Tab { s == "list" ? .list : s == "budget" ? .budget : .home }
+    /// Startsiden: Homelab (standard) eller en av Finans-fanene.
+    private func applyStart() {
+        switch startPage {
+        case "list": module = nil; tab = .list
+        case "budget": module = nil; tab = .budget
+        case "home": module = nil; tab = .home
+        default: module = .homelab; tab = .home
+        }
+    }
 
     nonisolated private static func loadAccounts() -> [LoginAccount] {
         if let raw = Keychain.get("accounts"), let d = raw.data(using: .utf8), let list = try? JSONDecoder().decode([LoginAccount].self, from: d) { return list }
@@ -251,8 +334,9 @@ final class Store {
         clearData()
         base = account?.server ?? ""
         menuOpen = false
-        module = nil
-        tab = Store.start(startPage)
+        backTo = nil
+        applyStart()
+        layout = localLayout()
         refresh()
     }
 
@@ -280,6 +364,7 @@ final class Store {
             activeId = accounts.first?.id
             clearData()
             base = account?.server ?? ""
+            layout = localLayout()
             if loggedIn { refresh() }
         }
         saveAccounts()
@@ -294,6 +379,10 @@ final class Store {
     private func clearData() {
         boot = nil; summary = nil; me = nil; txs = nil; receipts = nil; jobs = []; selectedTx = nil; selectedReceipt = nil
         week = nil; subs = nil; folders = nil; folder = nil; finn = nil; tokens = nil; domains = nil; analytics = nil; domain = nil
+        mobileHome = nil; homeError = nil; history = []; suggestions = []; todayMeal = nil; domainToday = nil; avatar = nil
+        ai = nil; aiHistory = []; editing = nil; original = nil; detail = nil; detailTx = nil
+        recurring = nil; stocks = nil; report = nil; importResult = nil; importFiles = []; importText = ""
+        editHome = false
         logos = [:]
     }
 
@@ -330,25 +419,47 @@ final class Store {
     func reload() async throws {
         await resolveBase()
         boot = try await api.get("/bootstrap")
-        summary = try await api.get("/summary")
-        me = try? await api.get("/me", as: Me.self)
-        if let m = me, let a = account, let u = m.username, !u.isEmpty, a.username != u || a.name != (m.name ?? a.name) {
-            var n = a; n.username = u; n.name = m.name ?? a.name; n.role = m.role ?? a.role
-            accounts = accounts.map { $0.id == n.id ? n : $0 }
-            saveAccounts()
-        }
+        summary = try? await api.get("/summary", as: Summary.self)
+        await loadMe()
         lastSync = Date()
         if !offline.isEmpty, canUpload { let q = offline; offline = []; upload(q) }
-        if let m = module { try await load(m) } else if tab != .home { try await loadTx() }
+        if let m = module { try await load(m) } else { try await loadTab(tab) }
+        if module != .homelab { Task { await self.loadHome() } }
     }
 
     func refresh() { run { try await self.reload() } }
+
+    private func loadMe() async {
+        var m = try? await api.get("/me", as: Me.self)
+        // Profilbilde og servernavn kommer fra Homelab hvis FinansHub ikke sender dem.
+        if m?.avatarUrl == nil, let hl = try? await api.module("/api", "/me", as: Me.self) {
+            if m == nil { m = hl } else { m?.avatarUrl = hl.avatarUrl; m?.serverName = m?.serverName ?? hl.serverName; m?.displayName = m?.displayName ?? hl.displayName }
+        }
+        me = m
+        if let m, let a = account, let u = m.username, !u.isEmpty, a.username != u || a.name != (m.label ?? a.name) {
+            var n = a; n.username = u; n.name = m.label ?? a.name; n.role = m.role ?? a.role
+            accounts = accounts.map { $0.id == n.id ? n : $0 }
+            saveAccounts()
+        }
+        await loadAvatar(m?.avatarUrl ?? mobileHome?.avatarUrl)
+    }
+
+    private func loadAvatar(_ url: String?) async {
+        guard let url, !url.isEmpty else { avatar = nil; return }
+        avatar = await image(url)
+    }
 
     private func load(_ m: Module) async throws {
         moduleError = nil
         do {
             switch m {
+            case .homelab: await loadHome()
             case .upload: try await loadReceipts(); await loadJobs()
+            case .fast: let list: [Recurring] = try await decodeList(api.call("GET", "/recurring")); recurring = list
+            case .accounts: boot = try await api.get("/bootstrap")
+            case .stocks: stocks = try await api.get("/stocks", as: Stocks.self)
+            case .reports: try await loadReport()
+            case .imports: break
             case .mat: try await loadWeek()
             case .sub: subs = try await api.get("/subscriptions")
             case .folders: let list: [Folder] = try await decodeList(api.call("GET", "/folders")); folders = list
@@ -363,30 +474,85 @@ final class Store {
         }
     }
 
+    private func loadTab(_ t: Tab) async throws {
+        switch t {
+        case .home: summary = try await api.get("/summary")
+        case .list, .budget: if txs == nil || t == .list { try await loadTx() }
+        case .search: await loadAiHistory()
+        case .more: await loadMore()
+        }
+    }
+
     /// Lister kan komme som [..] eller {items: [..]}.
     private func decodeList<T: Decodable>(_ d: Data) throws -> [T] {
         if let list = try? JSONDecoder().decode([T].self, from: d) { return list }
         return try JSONDecoder().decode(ItemsWrap<T>.self, from: d).items
     }
 
+    /// Fanebytte i Finans (fanelinja, menyen). Ingen egen tilbakevei.
     func go(_ t: Tab) {
-        if t != tab { selectedTx = nil }
+        if t != tab || module != nil { selectedTx = nil }
+        backTo = nil
         tab = t
         module = nil
         menuOpen = false
-        run {
-            if t == .home { self.summary = try await self.api.get("/summary") }
-            else if self.txs == nil { try await self.loadTx() }
-        }
+        editHome = false
+        detail = nil
+        barMini = false
+        run { try await self.loadTab(t) }
     }
 
+    /// Hel side (Homelab, modul, innstillinger). nil = Finans-fanene.
     func open(_ m: Module?) {
+        backTo = nil
         menuOpen = false
+        if m != module { selectedTx = nil; detail = nil; editing = nil; original = nil }
         module = m
+        barMini = false
+        if m != .homelab { editHome = false }
         if m != .folders { folder = nil }
         guard let m else { return }
         if m == .settings { settingsPage = nil }
         run { try await self.load(m) }
+    }
+
+    /// Underside (f.eks. fra Mer): tilbakeknappen fører hit igjen.
+    func openSub(_ m: Module) {
+        let from = place
+        open(m)
+        backTo = from
+    }
+
+    /// Dra ned for å oppdatere på en hel side.
+    func reloadModule() async { if let m = module { try? await load(m) } }
+
+    var place: Place { module.map { .module($0) } ?? .tab(tab) }
+
+    /// Tilbake: lukker det som er åpent, ellers til forrige side (undersider av Mer → Mer, resten → Homelab).
+    func back() {
+        if original != nil { original = nil; return }
+        if editing != nil { editing = nil; return }
+        if detail != nil { detail = nil; detailTx = nil; return }
+        if editHome { editHome = false; return }
+        if module == .settings, settingsPage != nil { settingsPage = nil; return }
+        if module == .folders, folder != nil { folder = nil; return }
+        if module == .upload, selectedReceipt != nil { selectedReceipt = nil; return }
+        if selectedTx != nil { selectedTx = nil; return }
+        let target = backTo ?? (module?.isFinance == true ? .tab(.more) : .module(.homelab))
+        switch target {
+        case .tab(let t): go(t)
+        case .module(let m): open(m)
+        }
+    }
+
+    /// Homelab-fane: Homelab, Finans (Oversikt), Domener eller Matplan.
+    func goHl(_ h: HlTab) {
+        switch h {
+        case .hl: open(.homelab)
+        case .home: go(Tab.home)
+        case .dom: open(.domains)
+        case .mat: open(.mat)
+        }
     }
 
     func loadTx() async throws {
@@ -447,6 +613,283 @@ final class Store {
         }
     }
 
+    /* ---------- Homelab: forside, søk og oppsett ---------- */
+
+    func loadHome() async {
+        homeError = nil
+        // Feil her logger aldri ut: finans-tokenet kan være gyldig selv om en eldre server ikke kjenner forsiden.
+        do {
+            let d = try await api.callAt("/api", "GET", "/mobile/home")
+            mobileHome = try JSONDecoder().decode(MobileHome.self, from: d)
+            if UserDefaults.standard.string(forKey: layoutKey) == nil, let l = HomeLayout.from(json: ((try? JSONSerialization.jsonObject(with: d)) as? [String: Any])?["layout"]) { layout = l }
+        } catch let e as APIError {
+            homeError = e.status == 404 ? "Homelab-forsiden finnes ikke på serveren ennå. Oppdater homelab." : (e.status == 401 || e.status == 403) ? "Homelab godtar ikke app-tokenet ennå. Oppdater homelab-serveren." : e.message
+        } catch { homeError = "Uventet svar fra Homelab." }
+        if summary == nil { summary = try? await api.get("/summary", as: Summary.self) }
+        if UserDefaults.standard.string(forKey: layoutKey) == nil, let d = try? await api.callAt("/api", "GET", "/me/layout"), let l = HomeLayout.from(json: try? JSONSerialization.jsonObject(with: d)) { layout = l }
+        if let d = try? await api.callAt("/api", "GET", "/search/history") { history = parseStrings(d) }
+        if let w = try? await api.mat("/week", as: Week.self) { todayMeal = w.days.first { $0.date == isoDay(Date()) }?.name }
+        if let d = try? await api.raw("/domains/api", "/domains"), let list: [DomainRef] = try? decodeList(d), let first = list.first {
+            let enc = first.name.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? first.name
+            if let a = try? await api.module("/domains/api", "/\(enc)/analytics?range=today", as: Analytics.self) { domainToday = DomainToday(name: first.name, visitors: a.visitors ?? 0) }
+        }
+        if avatar == nil { await loadAvatar(me?.avatarUrl ?? mobileHome?.avatarUrl) }
+    }
+
+    private var layoutKey: String { "fh_layout_" + (account?.id ?? "") }
+
+    private func localLayout() -> HomeLayout {
+        guard let raw = UserDefaults.standard.string(forKey: layoutKey), let d = raw.data(using: .utf8), let obj = try? JSONSerialization.jsonObject(with: d) else { return .standard }
+        return HomeLayout.from(json: obj) ?? .standard
+    }
+
+    /// Lagres lokalt (per bruker og enhet) og på serveren.
+    func saveLayout(_ l: HomeLayout) {
+        layout = l
+        if let d = try? JSONSerialization.data(withJSONObject: l.json) { UserDefaults.standard.set(String(data: d, encoding: .utf8), forKey: layoutKey) }
+        let body: [String: Any] = ["mobile": l.json]
+        Task { _ = try? await self.api.callAt("/api", "PUT", "/me/layout", json: body) }
+    }
+
+    func setHidden(_ id: String, _ hidden: Bool) { var l = layout; l.hide[id] = hidden; saveLayout(l) }
+
+    /// Flytter en widget eller fane ett hakk opp (-1) eller ned (+1). list: sec | hlTabs | finTabs.
+    func move(_ list: String, _ id: String, _ dir: Int) {
+        var l = layout
+        func mv(_ a: inout [String]) {
+            guard let i = a.firstIndex(of: id) else { return }
+            let j = i + dir
+            guard j >= 0, j < a.count else { return }
+            a.swapAt(i, j)
+        }
+        switch list {
+        case "sec": mv(&l.sec)
+        case "hlTabs": mv(&l.hlTabs)
+        default: mv(&l.finTabs)
+        }
+        saveLayout(l)
+    }
+
+    func resetLayout() { saveLayout(.standard) }
+
+    /// Synlige faner (faste kan ikke skjules).
+    var finTabs: [Tab] { layout.finTabs.filter { HomeLayout.fixedFin.contains($0) || layout.visible($0) }.compactMap(Tab.from(key:)) }
+    var hlTabs: [HlTab] { layout.hlTabs.filter { HomeLayout.fixedHl.contains($0) || layout.visible($0) }.compactMap { HlTab(rawValue: $0) } }
+
+    /// Google-forslag mens man skriver (150 ms debounce, via serveren).
+    func suggest(_ q: String) {
+        suggestTask?.cancel()
+        let t = q.trimmingCharacters(in: .whitespaces)
+        guard !t.isEmpty else { suggestions = []; return }
+        suggestTask = Task {
+            try? await Task.sleep(for: .milliseconds(150))
+            if Task.isCancelled { return }
+            let enc = t.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? t
+            if let d = try? await api.callAt("/api", "GET", "/search/suggest?q=\(enc)", timeout: 3), !Task.isCancelled { suggestions = Array(parseStrings(d).prefix(8)) }
+        }
+    }
+
+    /// Adressen som skal åpnes: adresser (f.eks. vg.no) åpnes direkte, resten søkes på Google. Lagres i historikken.
+    func googleURL(_ q: String) -> URL? {
+        let t = q.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return nil }
+        history = [t] + history.filter { $0 != t }
+        suggestions = []
+        Task { _ = try? await self.api.callAt("/api", "POST", "/search/history", json: ["q": t]) }
+        if t.hasPrefix("http://") || t.hasPrefix("https://") { return URL(string: t) }
+        if !t.contains(" "), t.range(of: #"^[\w-]+(\.[\w-]+)+(:\d+)?(/\S*)?$"#, options: .regularExpression) != nil { return URL(string: "https://" + t) }
+        let enc = t.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? t
+        return URL(string: "https://www.google.com/search?q=" + enc)
+    }
+
+    func removeHistory(_ q: String) {
+        history.removeAll { $0 == q }
+        let enc = q.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? q
+        Task { _ = try? await self.api.callAt("/api", "DELETE", "/search/history/\(enc)") }
+    }
+
+    func clearHistory() {
+        history = []
+        Task { _ = try? await self.api.callAt("/api", "DELETE", "/search/history") }
+        flash("Søkehistorikken er tømt")
+    }
+
+    /* ---------- Profilbilde ---------- */
+
+    /// Beskjæres til kvadrat, skaleres til 256 × 256 og lagres som JPEG (kvalitet 0,85).
+    func uploadAvatar(_ img: UIImage) {
+        run {
+            self.busy = true
+            defer { self.busy = false }
+            guard let jpeg = img.squared(256).jpegData(compressionQuality: 0.85) else { return }
+            _ = try await self.api.upload("/me/avatar", parts: [API.Part(name: "file", filename: "avatar.jpg", mime: "image/jpeg", data: jpeg)], prefix: "/api")
+            self.avatar = UIImage(data: jpeg)
+            await self.loadMe()
+            self.flash("Profilbildet er oppdatert")
+        }
+    }
+
+    func removeAvatar() {
+        run {
+            try await self.api.callAt("/api", "DELETE", "/me/avatar")
+            self.avatar = nil
+            await self.loadMe()
+            self.flash("Profilbildet er fjernet")
+        }
+    }
+
+    /* ---------- ✦ AI-søk ---------- */
+
+    func ask(_ q: String) {
+        let t = q.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return }
+        aiQuery = t
+        aiBusy = true
+        run {
+            defer { self.aiBusy = false }
+            let d = try await self.api.call("POST", "/search/ai", json: ["q": t])
+            self.ai = try JSONDecoder().decode(AiAnswer.self, from: d)
+            self.aiHistory = Array(([t] + self.aiHistory.filter { $0 != t }).prefix(20))
+            await self.loadAiHistory()
+        }
+    }
+
+    private func loadAiHistory() async {
+        if let d = try? await api.call("GET", "/search/history") { let list = parseStrings(d); if !list.isEmpty || aiHistory.isEmpty { aiHistory = Array(list.prefix(20)) } }
+    }
+
+    func clearAiHistory() { aiHistory = []; Task { _ = try? await self.api.call("DELETE", "/search/history") } }
+
+    /// Alle transaksjoner som er lastet (liste, siste, detaljlister).
+    var txPool: [Tx] { (txs ?? []) + (summary?.recent ?? []) + (detailTx ?? []) }
+
+    /// Åpner transaksjonen fra et treff (søk, Mer-detaljer). hint = beskrivelsen, brukes til å finne den.
+    func showTx(_ id: Int, hint: String? = nil) {
+        detail = nil
+        run {
+            if !self.txPool.contains(where: { $0.id == id }), let hint, let e = hint.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+               let page = try? await self.api.get("/transactions?limit=50&q=\(e)", as: TxPage.self), let t = page.items.first(where: { $0.id == id }) {
+                self.txs = (self.txs ?? []).filter { $0.id != id } + [t]
+            }
+            self.selectedTx = id
+        }
+    }
+
+    /* ---------- Transaksjoner: legg til, rediger, slett ---------- */
+
+    func newTx() {
+        if folders == nil { run { let list: [Folder] = try await self.decodeList(self.api.call("GET", "/folders")); self.folders = list } }
+        editing = TxDraft(id: nil, income: false, description: "", amount: "", date: Date(), categoryId: nil, accountId: boot?.accounts.first?.id, folderId: nil, note: "", receipt: nil)
+    }
+
+    func editTx(_ t: Tx) {
+        if folders == nil { run { let list: [Folder] = try await self.decodeList(self.api.call("GET", "/folders")); self.folders = list } }
+        let amount = String(format: "%.2f", abs(t.amount)).replacingOccurrences(of: ".", with: ",")
+        editing = TxDraft(id: t.id, income: t.amount > 0, description: t.description, amount: amount, date: parseDay(t.date) ?? Date(), categoryId: t.categoryId,
+                          accountId: t.accountId, folderId: t.folderId ?? folders?.first(where: { $0.name == t.folder })?.id, note: t.note, receipt: t.receipt)
+    }
+
+    func saveTx(_ d: TxDraft) {
+        let a = Double(d.amount.replacingOccurrences(of: " ", with: "").replacingOccurrences(of: "\u{00a0}", with: "").replacingOccurrences(of: ",", with: "."))
+        guard !d.description.trimmingCharacters(in: .whitespaces).isEmpty, let a, a != 0 else { flash("Skriv beskrivelse og beløp"); return }
+        run {
+            self.busy = true
+            defer { self.busy = false }
+            let body: [String: Any] = ["type": d.income ? "income" : "expense", "description": d.description.trimmingCharacters(in: .whitespaces), "amount": abs(a),
+                                       "date": isoDay(d.date), "note": d.note, "categoryId": orNull(d.categoryId), "accountId": orNull(d.accountId), "folderId": orNull(d.folderId)]
+            let res: Data
+            if let id = d.id { res = try await self.api.call("PATCH", "/transactions/\(id)", json: body) } else { res = try await self.api.call("POST", "/transactions", json: body) }
+            let id = ((try? JSONSerialization.jsonObject(with: res)) as? [String: Any]).flatMap { ($0["id"] as? Int) ?? (($0["tx"] as? [String: Any])?["id"] as? Int) } ?? d.id
+            self.editing = nil
+            try await self.loadTx()
+            self.summary = try? await self.api.get("/summary", as: Summary.self)
+            if let id { self.selectedTx = id }
+            self.flash(d.id == nil ? "Transaksjon lagt til" : "Endringer lagret")
+        }
+    }
+
+    func deleteTx(_ id: Int) {
+        run {
+            try await self.api.call("DELETE", "/transactions/\(id)")
+            self.editing = nil
+            self.selectedTx = nil
+            self.txs = self.txs?.filter { $0.id != id }
+            self.summary = try? await self.api.get("/summary", as: Summary.self)
+            self.flash("Transaksjonen er slettet")
+        }
+    }
+
+    /* ---------- Original kvittering og banktransaksjon ---------- */
+
+    func openOriginal(_ txId: Int, _ tab: String) {
+        originalTab = tab
+        run { self.original = Original.parse(try await self.api.call("GET", "/transactions/\(txId)/original")) }
+    }
+
+    func bytes(_ path: String) async -> Data? { try? await api.bytes(path) }
+
+    /// «Last ned»: lagres i appens mappe, som vises i Filer → På min iPhone → FinansHub.
+    func saveToFiles(_ data: Data, name: String) {
+        guard let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        do { try data.write(to: dir.appendingPathComponent(name)); flash("Lagret i Filer → FinansHub") } catch { message = error.localizedDescription }
+    }
+
+    /* ---------- Mer ---------- */
+
+    private func loadMore() async {
+        if let b = try? await api.get("/bootstrap", as: Boot.self) { boot = b }
+        if let d = try? await api.call("GET", "/recurring"), let list: [Recurring] = try? decodeList(d) { recurring = list }
+        if let s = try? await api.get("/subscriptions", as: SubList.self) { subs = s }
+        if let d = try? await api.call("GET", "/folders"), let list: [Folder] = try? decodeList(d) { folders = list }
+        if let f = try? await api.get("/finn", as: FinnList.self) { finn = f }
+        if let s = try? await api.get("/stocks", as: Stocks.self) { stocks = s }
+    }
+
+    func openDetail(_ info: DetailInfo) {
+        detail = info
+        detailTx = nil
+        guard let q = info.txQuery, let e = q.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else { return }
+        run { self.detailTx = (try await self.api.get("/transactions?limit=30&q=\(e)", as: TxPage.self)).items }
+    }
+
+    func setRecurring(_ r: Recurring, active: Bool) {
+        run {
+            try await self.api.call("PATCH", "/recurring/\(r.id)", json: ["active": active])
+            let list: [Recurring] = try await self.decodeList(self.api.call("GET", "/recurring"))
+            self.recurring = list
+        }
+    }
+
+    func syncStocks() {
+        run {
+            self.busy = true
+            defer { self.busy = false }
+            self.stocks = try JSONDecoder().decode(Stocks.self, from: try await self.api.call("POST", "/stocks/sync"))
+            self.flash("Synket med Trading 212")
+        }
+    }
+
+    private func loadReport() async throws { report = try await api.get("/reports?mode=" + (reportYear ? "year" : "month"), as: Report.self) }
+    func pickReportYear(_ y: Bool) { reportYear = y; report = nil; run { try await self.loadReport() } }
+
+    /// Kontoutskrift: filer (CSV, XLSX, tekst) og/eller innlimt tekst → forhåndsvisning → importer.
+    func runImport(commit: Bool) {
+        guard !importFiles.isEmpty || !importText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { flash("Velg filer eller lim inn tekst"); return }
+        run {
+            self.busy = true
+            defer { self.busy = false }
+            var parts = self.importFiles.map { API.Part(name: "files", filename: $0.name, mime: "application/octet-stream", data: $0.data) }
+            if !self.importText.isEmpty { parts.append(.text("text", self.importText)) }
+            let r = try JSONDecoder().decode(ImportResult.self, from: try await self.api.upload("/import" + (commit ? "?commit=1" : ""), parts: parts))
+            self.importResult = r
+            if commit {
+                self.flash("\(r.imported ?? 0) poster importert")
+                self.importFiles = []; self.importText = ""; self.importResult = nil; self.txs = nil
+                self.summary = try? await self.api.get("/summary", as: Summary.self)
+            }
+        }
+    }
+
     /* ---------- Opplasting ---------- */
 
     enum Upload { case image(UIImage), pdf(Data) }
@@ -455,7 +898,8 @@ final class Store {
     /// Flere filer legges i kø og lastes opp én og én; AI-en leser dem i bakgrunnen på serveren.
     func upload(_ files: [Upload]) {
         guard !files.isEmpty else { return }
-        module = .upload
+        // Fra «Legg ved kvittering» i skjemaet: bli stående, kvitteringen kobles når den bokføres.
+        if editing != nil { flash("Kvitteringen er lagt i opplastingskøen") } else if module != .upload { openSub(.upload) }
         guard canUpload else { offline += files; flash("\(files.count) kvittering(er) venter på Wi-Fi"); return }
         uploading += files.count
         Task {
@@ -559,7 +1003,7 @@ final class Store {
         }
     }
 
-    /* ---------- Delte mapper ---------- */
+    /* ---------- Boliger (delte mapper) ---------- */
 
     func openFolder(_ id: Int?) {
         guard let id else { folder = nil; return }
@@ -643,6 +1087,12 @@ final class Store {
 /// Liste pakket som {items: [..]}.
 struct ItemsWrap<T: Decodable>: Decodable { let items: [T] }
 
+/// nil blir JSON null.
+func orNull(_ v: Any?) -> Any { v ?? NSNull() }
+
+func isoDay(_ d: Date) -> String { let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"; return f.string(from: d) }
+func parseDay(_ s: String) -> Date? { let f = DateFormatter(); f.locale = Locale(identifier: "en_US_POSIX"); f.dateFormat = "yyyy-MM-dd"; return f.date(from: String(s.prefix(10))) }
+
 extension UIImage {
     /// Tegner bildet på nytt, noe som også retter orienteringen fra kameraet.
     func scaled(max: CGFloat) -> UIImage {
@@ -651,5 +1101,16 @@ extension UIImage {
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
         return UIGraphicsImageRenderer(size: target, format: format).image { _ in draw(in: CGRect(origin: .zero, size: target)) }
+    }
+
+    /// Midtstilt kvadrat i side × side punkter (profilbilde).
+    func squared(_ side: CGFloat) -> UIImage {
+        let s = Swift.max(side / size.width, side / size.height)
+        let w = size.width * s, h = size.height * s
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        return UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format).image { _ in
+            draw(in: CGRect(x: (side - w) / 2, y: (side - h) / 2, width: w, height: h))
+        }
     }
 }

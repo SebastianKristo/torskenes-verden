@@ -33,7 +33,7 @@ import no.kristo.finanshub.*
 @Composable
 internal fun ModuleHeader(vm: AppViewModel, title: String, back: (() -> Unit)? = null, actions: @Composable RowScope.() -> Unit = {}) {
     Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilledTonalIconButton(onClick = back ?: { vm.go(Screen.Home) }, modifier = Modifier.size(44.dp)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, if (back != null) "Tilbake" else "Til Finans") }
+        FilledTonalIconButton(onClick = back ?: { vm.back(); Unit }, modifier = Modifier.size(44.dp)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Tilbake") }
         Text(title, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
         actions()
         Avatar(vm)
@@ -81,7 +81,7 @@ internal fun SubScreen(vm: AppViewModel) {
                     Kpi("Per år", "${n0(s.yearly)} kr", Modifier.weight(1f), RoundedCornerShape(8.dp, 28.dp, 28.dp, 8.dp))
                 }
             }
-            item { Kpi("Lite brukt, kan sies opp", "${n0(s.lowUse)} kr/mnd", Modifier.fillMaxWidth(), RoundedCornerShape(28.dp), Color(0xFF3A2416), C.accentLight) }
+            item { Kpi("Lite brukt, kan sies opp", "${n0(s.lowUse)} kr/mnd", Modifier.fillMaxWidth(), RoundedCornerShape(28.dp), tc(0xFF3A2416), C.accentLight) }
         }
         if (adding) item {
             var name by remember { mutableStateOf("") }
@@ -125,7 +125,7 @@ internal fun SubScreen(vm: AppViewModel) {
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(n0(sub.price), fontFamily = Mono, fontWeight = FontWeight.SemiBold)
                                 Chip(if (!sub.active) "Sagt opp" else if (sub.lowUse) "Si opp" else "Aktiv",
-                                    bg = if (!sub.active) C.surface3 else if (sub.lowUse) Color(0xFF3A2416) else C.positiveBg,
+                                    bg = if (!sub.active) C.surface3 else if (sub.lowUse) tc(0xFF3A2416) else C.positiveBg,
                                     fg = if (!sub.active) C.text2 else if (sub.lowUse) C.accentLight else C.positive)
                             }
                             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
@@ -140,7 +140,7 @@ internal fun SubScreen(vm: AppViewModel) {
     }
 }
 
-/* ---------------- Delte mapper (bolig-dashboard) ---------------- */
+/* ---------------- Boliger (delte mapper) ---------------- */
 
 private val roleLabel = mapOf("owner" to "Eier", "editor" to "Kan redigere", "edit" to "Kan redigere", "viewer" to "Kan se", "view" to "Kan se", "member" to "Medlem")
 
@@ -150,11 +150,11 @@ internal fun FoldersScreen(vm: AppViewModel) {
     if (d != null) { FolderView(vm, d); return }
     val list = vm.folders
     Page {
-        item { ModuleHeader(vm, "Delte mapper") }
+        item { ModuleHeader(vm, "Boliger") }
         item { Text("Boliger, hytter og felles utgifter. Brukere ser bare mapper de er medlem av.", color = C.text2, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp)) }
         vm.moduleError?.let { e -> item { Empty(e) } }
         if (list == null && vm.moduleError == null) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = C.primary) } }
-        if (list != null && list.isEmpty()) item { Empty("Ingen delte mapper ennå. Opprett en i FinansHub på PC.") }
+        if (list != null && list.isEmpty()) item { Empty("Ingen boliger ennå. Opprett en i FinansHub på PC.") }
         if (list != null) items(list, key = { it.id }) { f ->
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(C.surface1).clickable { vm.openFolder(f.id) }.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -197,7 +197,7 @@ private fun FolderView(vm: AppViewModel, d: FolderDetail) {
                 SectionLabel("Fordeling")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     d.balances.forEach { b ->
-                        Chip("${b.name} ${if (b.balance >= 0) "+" else "−"}${n0(b.balance)} kr", bg = if (b.balance >= 0) C.positiveBg else Color(0xFF3A2416), fg = if (b.balance >= 0) C.positive else C.accentLight)
+                        Chip("${b.name} ${if (b.balance >= 0) "+" else "−"}${n0(b.balance)} kr", bg = if (b.balance >= 0) C.positiveBg else tc(0xFF3A2416), fg = if (b.balance >= 0) C.positive else C.accentLight)
                     }
                 }
             }
@@ -302,7 +302,7 @@ internal fun FinnScreen(vm: AppViewModel) {
         if (f != null) {
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Kpi("Kjøpt i år", "${n0(f.bought)} kr", Modifier.weight(1f), RoundedCornerShape(28.dp, 8.dp, 8.dp, 28.dp), Color(0xFF26304A), Color(0xFFA9C3FF))
+                    Kpi("Kjøpt i år", "${n0(f.bought)} kr", Modifier.weight(1f), RoundedCornerShape(28.dp, 8.dp, 8.dp, 28.dp), tc(0xFF26304A), tc(0xFFA9C3FF))
                     Kpi("Solgt i år", "${n0(f.sold)} kr", Modifier.weight(1f), RoundedCornerShape(8.dp), C.positiveBg, C.positive)
                     Kpi("Pågående", "${f.ongoing}", Modifier.weight(1f), RoundedCornerShape(8.dp, 28.dp, 28.dp, 8.dp))
                 }
@@ -312,7 +312,7 @@ internal fun FinnScreen(vm: AppViewModel) {
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(C.surface1).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         val sold = d.role == "sold"
-                        Chip(if (sold) "Solgt" else "Kjøpt", bg = if (sold) C.positiveBg else Color(0xFF26304A), fg = if (sold) C.positive else Color(0xFFA9C3FF))
+                        Chip(if (sold) "Solgt" else "Kjøpt", bg = if (sold) C.positiveBg else tc(0xFF26304A), fg = if (sold) C.positive else tc(0xFFA9C3FF))
                         Text(d.item, Modifier.weight(1f), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(n0(d.amount), fontFamily = Mono, fontWeight = FontWeight.SemiBold, color = if (sold) C.positive else C.text)
                     }

@@ -58,7 +58,7 @@ import java.io.File
 
 @Composable
 internal fun Page(content: LazyListScopeContent) {
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 120.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 180.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
 }
 internal typealias LazyListScopeContent = androidx.compose.foundation.lazy.LazyListScope.() -> Unit
 
@@ -151,7 +151,7 @@ internal fun ReviewCta(vm: AppViewModel) {
     val q = vm.summary?.review?.filter { it.status == "needs_review" } ?: return
     if (q.isEmpty()) return
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(C.container).clickable { vm.go(Screen.Scan) }.padding(16.dp, 16.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(C.container).clickable { vm.open(Screen.Scan) }.padding(16.dp, 16.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Box(Modifier.size(36.dp).clip(RoundedCornerShape(12.dp)).background(C.primary), contentAlignment = Alignment.Center) { Text("${q.size}", color = C.onPrimary, fontWeight = FontWeight.ExtraBold) }
@@ -249,7 +249,7 @@ internal fun UploadPill(vm: AppViewModel) {
     val ready = vm.jobs.count { it.status == "needs_review" }
     if (active.isEmpty() && vm.uploading == 0 && ready == 0) return
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(C.surface2).clickable { vm.go(Screen.Scan) }.padding(16.dp, 12.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(C.surface2).clickable { vm.open(Screen.Scan) }.padding(16.dp, 12.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         if (active.isNotEmpty() || vm.uploading > 0) CircularProgressIndicator(color = C.primary, strokeWidth = 3.dp, modifier = Modifier.size(22.dp))
@@ -277,7 +277,14 @@ internal fun Tile(label: String, value: String, shape: RoundedCornerShape, bg: C
 internal fun ListScreen(vm: AppViewModel, twoPane: Boolean) {
     val txs = vm.txs
     Page {
-        item { Text("Transaksjoner", style = MaterialTheme.typography.displaySmall, modifier = Modifier.padding(top = 8.dp)) }
+        item {
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Transaksjoner", style = MaterialTheme.typography.displaySmall, modifier = Modifier.weight(1f))
+                FilledTonalButton(onClick = { vm.newTx() }, shape = RoundedCornerShape(20.dp)) { Icon(Icons.Filled.Add, null); Spacer(Modifier.width(4.dp)); Text("Ny") }
+                Spacer(Modifier.width(8.dp))
+                Avatar(vm)
+            }
+        }
         item {
             TextField(
                 value = vm.query, onValueChange = { vm.query = it }, placeholder = { Text("Søk i transaksjoner") },
@@ -314,7 +321,12 @@ internal fun ListScreen(vm: AppViewModel, twoPane: Boolean) {
 internal fun BudgetScreen(vm: AppViewModel) {
     val list = vm.summary?.budgets?.filter { it.budget > 0 }?.sortedByDescending { it.used / it.budget } ?: emptyList()
     Page {
-        item { Text("Budsjett", style = MaterialTheme.typography.displaySmall, modifier = Modifier.padding(top = 8.dp)) }
+        item {
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Budsjett", style = MaterialTheme.typography.displaySmall, modifier = Modifier.weight(1f))
+                Avatar(vm)
+            }
+        }
         vm.summary?.let { s ->
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -377,11 +389,14 @@ internal fun BudgetDetail(vm: AppViewModel) {
 
 @Composable
 internal fun TxDetail(vm: AppViewModel, back: (() -> Unit)?) {
-    val pool = (vm.txs ?: emptyList()) + (vm.summary?.recent ?: emptyList())
-    val t = pool.firstOrNull { it.id == vm.selectedTx } ?: pool.firstOrNull() ?: return Empty("Ingen transaksjon valgt.")
-    val cats = vm.boot?.categories ?: emptyList()
-    var open by remember { mutableStateOf(false) }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    val pool = vm.txPool
+    val t = pool.firstOrNull { it.id == vm.selectedTx } ?: (if (back == null) pool.firstOrNull() else null)
+        ?: return Column(Modifier.fillMaxSize().padding(20.dp)) {
+            if (back != null) FilledTonalIconButton(onClick = back, modifier = Modifier.size(48.dp)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Tilbake") }
+            Empty(if (vm.selectedTx != null) "Laster transaksjonen …" else "Ingen transaksjon valgt.")
+        }
+    var confirm by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp, 20.dp, 20.dp, 120.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         if (back != null) FilledTonalIconButton(onClick = back, modifier = Modifier.size(48.dp)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Tilbake") }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             Logo(vm, t.domain, t.description, t.color, 60, RoundedCornerShape(18.dp))
@@ -392,9 +407,9 @@ internal fun TxDetail(vm: AppViewModel, back: (() -> Unit)?) {
             Text(" kr", color = C.text2, fontSize = 18.sp, modifier = Modifier.padding(bottom = 8.dp))
         }
         (t.aiLong ?: t.aiShort)?.let { txt ->
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp, 28.dp, 28.dp, 10.dp)).background(Color(0xFF763300)).padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("✦ AI-beskrivelse", color = Color(0xFFFFDBC8), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                Text(txt, color = Color(0xFFFFDBC8))
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp, 28.dp, 28.dp, 10.dp)).background(C.heroAi).padding(18.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("✦ AI-beskrivelse", color = C.onContainer, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+                Text(txt, color = C.onContainer)
             }
         }
         if (t.lines.isNotEmpty()) {
@@ -403,20 +418,38 @@ internal fun TxDetail(vm: AppViewModel, back: (() -> Unit)?) {
                 t.lines.forEach { (d, a) -> Row(Modifier.fillMaxWidth()) { Text(d, Modifier.weight(1f), maxLines = 2); Text(n2(a), fontFamily = Mono) } }
             }
         }
-        listOf("Kategori" to t.category, "Konto" to t.account, "Kvittering" to when (t.receipt) { "booked" -> "Vedlagt"; null -> "–"; else -> "Til gjennomgang" })
-            .plus(listOf("Delt mappe" to (t.folder ?: "–")))
+        SectionLabel("Originaler")
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            OriginalRow("Original kvittering", if (t.receipt == null) "Ingen vedlagt" else "Bilde eller PDF", Icons.Filled.Receipt, itemShape(0, 2)) { vm.openOriginal(t.id, "receipt") }
+            OriginalRow("Original banktransaksjon", "Slik posten kom fra banken", Icons.Filled.AccountBalance, itemShape(1, 2)) { vm.openOriginal(t.id, "bank") }
+        }
+        val info = listOf("Kategori" to t.category, "Konto" to t.account, "Dato" to ddmmyyyy(t.date),
+            "Kvittering" to when (t.receipt) { "booked" -> "Vedlagt"; null -> "–"; else -> "Til gjennomgang" }, "Bolig" to (t.folder ?: "–"))
             .plus(if (t.note.isNotBlank()) listOf("Notat" to t.note) else emptyList())
-            .forEach { (k, v) ->
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(C.surface1).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            info.forEachIndexed { i, (k, v) ->
+                Row(Modifier.fillMaxWidth().clip(itemShape(i, info.size)).background(C.surface1).padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(k, color = C.text2); Text(v, fontWeight = FontWeight.Medium)
                 }
             }
-        Box {
-            OutlinedButton(onClick = { open = true }, shape = RoundedCornerShape(16.dp), modifier = Modifier.fillMaxWidth()) { Text("Endre kategori") }
-            DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-                cats.forEach { c -> DropdownMenuItem(text = { Text(c.name) }, onClick = { open = false; vm.setTxCategory(t.id, c.id) }) }
-            }
         }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { vm.editTx(t) }, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(26.dp, 8.dp, 8.dp, 26.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) { Icon(Icons.Filled.Edit, null); Spacer(Modifier.width(6.dp)); Text("Rediger", fontWeight = FontWeight.Bold) }
+            OutlinedButton(onClick = { confirm = true }, modifier = Modifier.weight(1f).height(52.dp), shape = RoundedCornerShape(8.dp, 26.dp, 26.dp, 8.dp)) { Text("Slett", color = C.red) }
+        }
+    }
+    if (confirm) AlertDialog(onDismissRequest = { confirm = false }, title = { Text("Slette transaksjonen?") }, text = { Text("Den forsvinner fra liste, rapporter, budsjett og AI-søk.") },
+        confirmButton = { TextButton(onClick = { confirm = false; vm.deleteTx(t.id) }) { Text("Slett", color = C.red) } },
+        dismissButton = { TextButton(onClick = { confirm = false }) { Text("Avbryt") } })
+}
+
+@Composable
+private fun OriginalRow(title: String, sub: String, icon: ImageVector, shape: RoundedCornerShape, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clip(shape).background(C.surface1).clickable(onClick = onClick).padding(16.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Icon(icon, null, tint = C.primary)
+        Column(Modifier.weight(1f)) { Text(title, fontWeight = FontWeight.Medium); Text(sub, color = C.text2, fontSize = 13.sp) }
+        Icon(Icons.Filled.ChevronRight, null, tint = C.text2)
     }
 }
 
@@ -424,7 +457,7 @@ internal fun TxDetail(vm: AppViewModel, back: (() -> Unit)?) {
 internal fun ScanQueue(vm: AppViewModel, scan: () -> Unit, pick: () -> Unit) {
     val q = vm.receipts
     Page {
-        item { Text("Last opp", style = MaterialTheme.typography.displaySmall, modifier = Modifier.padding(top = 8.dp)) }
+        item { ModuleHeader(vm, "Kvitteringer") }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(onClick = scan, modifier = Modifier.weight(2f).height(64.dp), shape = RoundedCornerShape(28.dp, 8.dp, 8.dp, 28.dp),
