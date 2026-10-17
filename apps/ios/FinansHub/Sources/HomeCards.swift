@@ -110,39 +110,57 @@ private func mmText(_ v: Double) -> String { String(format: v < 10 ? "%.1f" : "%
 struct ClockWeather: View {
     @Environment(Store.self) private var store
     var body: some View {
-        let x = store.homeWeather
-        let w = store.mobileHome?.weather
-        TimelineView(.everyMinute) { ctx in
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .center, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(JS.fmt(ctx.date, "HH:mm")).font(.system(size: 46, weight: .light)).monospacedDigit()
-                        Text(longDate(ctx.date)).font(.subheadline).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
-                    }
-                    Spacer(minLength: 0)
-                    if x != nil || w != nil {
-                        VStack(alignment: .trailing, spacing: 2) {
-                            HStack(spacing: 6) {
-                                Image(systemName: weatherSymbol(x?.symbol ?? "", text: x?.text ?? w?.text ?? "")).symbolRenderingMode(.multicolor).font(.system(size: 24))
-                                Text(degText(x?.temp ?? w?.temp)).font(.system(size: 30, weight: .semibold)).monospacedDigit()
-                            }
-                            let t = x?.text ?? w?.text ?? ""
-                            if !t.isEmpty { Text(t).font(.footnote).foregroundStyle(.white.opacity(0.8)).lineLimit(1) }
-                            let extra: [String] = [x?.feels.map { "Føles \(degText($0))" }, (x?.hi ?? w?.max).map { "↑ \(degText($0))" }, (x?.lo ?? w?.min).map { "↓ \(degText($0))" }].compactMap { $0 }
-                            if !extra.isEmpty { Text(extra.joined(separator: " · ")).font(.caption).foregroundStyle(.white.opacity(0.6)).lineLimit(1) }
-                        }
-                    }
-                }
-                if let x { details(x) }
-                Spacer(minLength: 0)
+        TimelineView(.everyMinute) { ctx in card(ctx.date) }
+    }
+
+    // Delt opp i små funksjoner – ett stort uttrykk gir «unable to type-check this expression in reasonable time».
+    private func card(_ date: Date) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            header(date)
+            if let x = store.homeWeather { details(x) }
+            Spacer(minLength: 0)
+        }
+        .padding(18).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).glass(28)
+    }
+
+    private func header(_ date: Date) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(JS.fmt(date, "HH:mm")).font(.system(size: 46, weight: .light)).monospacedDigit()
+                Text(longDate(date)).font(.subheadline).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
             }
-            .padding(18).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).glass(28)
+            Spacer(minLength: 0)
+            tempBlock
+        }
+    }
+
+    private var stateText: String { store.homeWeather?.text ?? store.mobileHome?.weather?.text ?? "" }
+    private var extraText: String {
+        let x = store.homeWeather, w = store.mobileHome?.weather
+        var parts: [String] = []
+        if let f = x?.feels { parts.append("Føles \(degText(f))") }
+        if let hi = x?.hi ?? w?.max { parts.append("↑ \(degText(hi))") }
+        if let lo = x?.lo ?? w?.min { parts.append("↓ \(degText(lo))") }
+        return parts.joined(separator: " · ")
+    }
+    private var symbolName: String { weatherSymbol(store.homeWeather?.symbol ?? "", text: stateText) }
+    private var tempText: String { degText(store.homeWeather?.temp ?? store.mobileHome?.weather?.temp) }
+
+    @ViewBuilder private var tempBlock: some View {
+        if store.homeWeather != nil || store.mobileHome?.weather != nil {
+            VStack(alignment: .trailing, spacing: 2) {
+                HStack(spacing: 6) {
+                    Image(systemName: symbolName).symbolRenderingMode(.multicolor).font(.system(size: 24))
+                    Text(tempText).font(.system(size: 30, weight: .semibold)).monospacedDigit()
+                }
+                if !stateText.isEmpty { Text(stateText).font(.footnote).foregroundStyle(.white.opacity(0.8)).lineLimit(1) }
+                if !extraText.isEmpty { Text(extraText).font(.caption).foregroundStyle(.white.opacity(0.6)).lineLimit(1) }
+            }
         }
     }
 
     @ViewBuilder private func details(_ x: WeatherX) -> some View {
-        let line: [String] = [x.wind.map { "Vind \(Int($0.rounded())) m/s" + (x.windDir.isEmpty ? "" : " \(x.windDir)") + (x.gust.map { " (kast \(Int($0.rounded())))" } ?? "") },
-                    x.precip24.map { "Nedbør \(mmText($0)) mm" }, x.humidity.map { "Fukt \(Int($0.rounded())) %" }].compactMap { $0 }
+        let line = shortLine(x)
         if !line.isEmpty { Text(line.joined(separator: " · ")).font(.caption).foregroundStyle(.white.opacity(0.7)).lineLimit(1).minimumScaleFactor(0.8) }
         if !x.hours.isEmpty {
             HStack(spacing: 0) {
@@ -175,10 +193,7 @@ struct ClockWeather: View {
                 }
             }
         }
-        let chipList: [(String, String)?] = [x.sunrise.map { ("sunrise", JS.fmt($0, "HH:mm")) }, x.sunset.map { ("sunset", JS.fmt($0, "HH:mm")) },
-                     x.uv.map { ("sun.max", "UV \(Int($0.rounded()))") },
-                     x.pressure.map { ("gauge.with.dots.needle.33percent", "\(Int($0.rounded())) hPa" + (x.pressureTrend == "Stigende" ? " ↑" : x.pressureTrend == "Synkende" ? " ↓" : "")) }]
-        let chips = chipList.compactMap { $0 }
+        let chips = chipItems(x)
         if !chips.isEmpty {
             HStack(spacing: 6) {
                 ForEach(chips, id: \.0) { icon, t in
@@ -188,6 +203,31 @@ struct ClockWeather: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+    }
+
+    private func shortLine(_ x: WeatherX) -> [String] {
+        var parts: [String] = []
+        if let v = x.wind {
+            var s = "Vind \(Int(v.rounded())) m/s"
+            if !x.windDir.isEmpty { s += " \(x.windDir)" }
+            if let g = x.gust { s += " (kast \(Int(g.rounded())))" }
+            parts.append(s)
+        }
+        if let p = x.precip24 { parts.append("Nedbør \(mmText(p)) mm") }
+        if let h = x.humidity { parts.append("Fukt \(Int(h.rounded())) %") }
+        return parts
+    }
+
+    private func chipItems(_ x: WeatherX) -> [(String, String)] {
+        var out: [(String, String)] = []
+        if let d = x.sunrise { out.append(("sunrise", JS.fmt(d, "HH:mm"))) }
+        if let d = x.sunset { out.append(("sunset", JS.fmt(d, "HH:mm"))) }
+        if let u = x.uv { out.append(("sun.max", "UV \(Int(u.rounded()))")) }
+        if let p = x.pressure {
+            let trend = x.pressureTrend == "Stigende" ? " ↑" : (x.pressureTrend == "Synkende" ? " ↓" : "")
+            out.append(("gauge.with.dots.needle.33percent", "\(Int(p.rounded())) hPa" + trend))
+        }
+        return out
     }
 }
 
