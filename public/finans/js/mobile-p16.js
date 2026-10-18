@@ -4,7 +4,7 @@
 import { FT, famTabs, personCard, healthView } from './mobile-p17.js';
 const famTop = () => (paper() ? '' : famTabs()); // Papir: fanene ligger i fanelinja nederst
 import { api, esc, n0, ini, hlApi, dd, today, cap } from './core.js';
-import { m, draw, flash } from './mobile.js';
+import { m, draw, flash, domOk } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { fourth, fabStyle } from './mobile-paper3.js';
 import { hlData, ruterUrl } from './mobile-hl.js';
@@ -49,17 +49,19 @@ export const TB = {
 export const TB_ICONS = ['☑', '⌂', 'kr', '◐', '◎', '▣', '⌕', '⇆', '◉', '☼', '▤', '↗', '↻', '♥', '★', '✦', '◔', '≡', '⇄', '▢', '✉', '♪', '⚑'];
 const defItems = () => ['hjem', 'finans', 'mat', 'auto', ...(fabStyle() === 'float' ? ['sok'] : []), 'mer'].map((id) => ({ id }));
 export const tbItems = () => {
-  const v = (L.tabBar?.items ?? defItems()).filter((x) => TB[x.id] && x.id !== 'mer');
+  // ISO2: Domener bare for admin. En lagret Domener-fane filtreres bort for andre (og «auto» når Sporing alt ligger der).
+  const all = L.tabBar?.items ?? defItems(), dOk = domOk(), hasSpor = all.some((x) => x.id === 'sporing');
+  const v = all.filter((x) => TB[x.id] && x.id !== 'mer' && (dOk || (x.id !== 'domener' && !(x.id === 'auto' && hasSpor))));
   return [...v.slice(0, 5), { id: 'mer', ...(L.tabBar?.items ?? []).find((x) => x.id === 'mer') }];
 };
 const routeOf = (id) => (id === 'auto' ? fourth() : TB[id][0]);
-const autoLbl = () => (fourth() === 'spor' ? ['Sporing', '▣'] : ['Domener', '◎']);
+const autoLbl = () => (fourth() === 'spor' || !domOk() ? ['Sporing', '▣'] : ['Domener', '◎']);
 /** Hovedlinja i Papir: [rute, navn, ikon]. Hjem vises bare på Hjem (pila øverst til venstre går hjem). */
 export function mainTabs(scr) {
   return tbItems().map((x) => {
     const [, n0_, ic0] = TB[x.id], [an, ai] = x.id === 'auto' ? autoLbl() : [n0_, ic0];
     return [routeOf(x.id), x.label || an, x.icon || ai];
-  }).filter(([k]) => k !== 'hl' || scr === 'hl');
+  }).filter(([k]) => (k !== 'hl' || scr === 'hl') && (k !== 'dom' || domOk()));
 }
 
 export const TBE = { open: false };
@@ -86,7 +88,7 @@ function tbRows() {
   }).join('');
 }
 function tbAdd() {
-  const used = new Set(tbItems().map((x) => x.id)), free = Object.keys(TB).filter((k) => !used.has(k) && !(k === 'auto' && (used.has('domener') || used.has('sporing'))));
+  const used = new Set(tbItems().map((x) => x.id)), free = Object.keys(TB).filter((k) => !used.has(k) && !(k === 'auto' && (used.has('domener') || used.has('sporing'))) && (domOk() || (k !== 'domener' && k !== 'auto')));
   if (tbItems().length >= 6) return '<div class="pp-mut">Fanelinja har plass til 6 faner. Fjern en for å legge til en ny.</div>';
   return `<div class="p16-chips">${free.map((k) => `<button class="p16-chip" data-p16="tbadd" data-k="${k}">+ ${esc(TB[k][1])}</button>`).join('')}</div>`;
 }

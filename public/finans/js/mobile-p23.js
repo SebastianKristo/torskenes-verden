@@ -6,6 +6,7 @@ import { S, api, hlApi, esc, n0, n2, dd, today, parseAmount, loadReceipts, loadB
 import { m, draw, flash, loadJobs, ACTIVE_JOBS, retryUpload } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { logo } from './mobile-p20.js';
+import { canSrv } from './mobile-p17.js';
 
 const root = () => document.getElementById('app');
 const lab = (t, r = '') => `<span class="p23-lab"><span>${t}</span>${r ? `<span>${r}</span>` : ''}</span>`;
@@ -410,16 +411,19 @@ const THEN = [['next', 'Prøv neste motor'], ['ocr', 'Bruk lokal OCR'], ['queue'
 const lsTo = () => { try { return JSON.parse(localStorage.getItem('papir_ai_to') || 'null'); } catch { return null; } };
 export const aiTo = () => ({ ...TO_DEF, ...(lsTo() ?? {}), ...(S.boot?.settings?.aiTimeouts ?? {}) });
 export function aiTimeoutsView() {
-  const T = aiTo(), ret = +T.retries || 0;
-  const r = (k, n, s, v, c = 'var(--pp-ink)') => `<button class="opt-row p17-row" data-p23="ato" data-k="${k}"><span class="m-grow p17-rt"><b>${esc(n)}</b><small>${esc(s)}</small></span><span class="sval" style="color:${c};opacity:1;font-weight:700">${esc(v)}</span><span class="p17-chev" aria-hidden="true">›</span></button>`;
-  return `<span class="pp-lab p17-gl">TIDSGRENSER</span><div class="list p17-list p23-to">
-    ${[['gemini', 'Gemini', 'Les kvitteringer'], ['groq', 'Groq', 'AI-søk og kategorier'], ['roboflow', 'Roboflow', 'Strekkoder'], ['ollama', 'Ollama (lokal)', 'Reserve på hjemmeserveren']].map(([k, n, s]) => r(k, n, `${s} · trykk for å endre`, `${T[k]} s`)).join('')}
+  const T = aiTo(), ret = +T.retries || 0, ed = canSrv();
+  // ISO2: tidsgrensene er serveroppsett. Andre enn admin ser dem skrivebeskyttet (uten trykk og pil).
+  const r = (k, n, s, v, c = 'var(--pp-ink)') => ed ? `<button class="opt-row p17-row" data-p23="ato" data-k="${k}"><span class="m-grow p17-rt"><b>${esc(n)}</b><small>${esc(s)}</small></span><span class="sval" style="color:${c};opacity:1;font-weight:700">${esc(v)}</span><span class="p17-chev" aria-hidden="true">›</span></button>`
+    : `<div class="opt-row p17-row p23-ro"><span class="m-grow p17-rt"><b>${esc(n)}</b><small>${esc(s)}</small></span><span class="sval" style="color:${c};opacity:1;font-weight:700">${esc(v)}</span></div>`;
+  return `<span class="pp-lab p17-gl">TIDSGRENSER${ed ? '' : ' · SKRIVEBESKYTTET'}</span><div class="list p17-list p23-to">
+    ${[['gemini', 'Gemini', 'Les kvitteringer'], ['groq', 'Groq', 'AI-søk og kategorier'], ['roboflow', 'Roboflow', 'Strekkoder'], ['ollama', 'Ollama (lokal)', 'Reserve på hjemmeserveren']].map(([k, n, s]) => r(k, n, ed ? `${s} · trykk for å endre` : s, `${T[k]} s`)).join('')}
     ${r('retries', 'Nye forsøk', 'Før den gir opp en motor', ret === 0 ? 'Ingen' : `${ret} ${ret === 1 ? 'gang' : 'ganger'}`)}
     ${r('onTimeout', 'Ved tidsavbrudd', 'Hva som skjer når grensen er nådd', (THEN.find(([k]) => k === T.onTimeout) ?? THEN[0])[1], 'var(--pp-lab)')}</div>
-    <div class="snote">Når en motor ikke svarer innen grensen, prøver serveren på nytt med 1 s, 2 s og 4 s pause. Køen viser hvilken motor som svarte for sent.</div>`;
+    <div class="snote">${ed ? '' : '🔒 Settes opp av administrator. '}Når en motor ikke svarer innen grensen, prøver serveren på nytt med 1 s, 2 s og 4 s pause. Køen viser hvilken motor som svarte for sent.</div>`;
 }
 let toT = null;
 async function toBind(x) {
+  if (!canSrv()) { flash('Settes opp av administrator'); return true; }
   const T = aiTo(), k = x.dataset.k;
   if (k === 'retries') T.retries = ((+T.retries || 0) + 1) % 4;
   else if (k === 'onTimeout') T.onTimeout = THEN[(THEN.findIndex(([v]) => v === T.onTimeout) + 1) % THEN.length][0];

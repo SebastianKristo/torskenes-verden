@@ -48,6 +48,8 @@ export const amtC = (v, th) => (v > 0 ? '#9FE3C6' : th === 'and' ? c3('#F0DFD7')
 /* ---------- Skjermer og faner ---------- */
 
 // Faner kan skjules og flyttes i «Rediger forsiden» (LAY.hlTabs / LAY.finTabs).
+// ISO2: Domener er fortsatt bare for admin. Rollen fra /api/me, ellers canEditServer fra /bootstrap (= admin).
+export const domOk = () => (m.me?.role ? m.me.role === 'admin' : S.boot?.canEditServer !== false);
 export const HLTABS = { hl: ['hl', 'Homelab', 'hlhome'], home: ['hjem', 'Finans', 'fin'], trk: ['spor', 'Sporing', 'box'], dom: ['dom', 'Domener', 'globe'], mat: ['mat', 'Mat', 'mat'] };
 export const FINTABS = { home: ['hjem', 'Oversikt', 'home'], list: ['liste', 'Liste', 'list'], finn: ['finn', 'Finn', 'finn'], bud: ['budsjett', 'Budsjett', 'bud'], ai: ['sok', 'Søk', 'ai'], mer: ['mer', 'Mer', 'mer'] };
 export const FIXED_HL = ['hl', 'home'], FIXED_FIN = ['home', 'mer'];
@@ -60,7 +62,7 @@ const ALL = [...new Set([...FIN, 'hl', 'spor', 'mat', 'dom', 'set', 'media', 'ny
 const RENAME = ['home', 'list', 'bud', 'finn'];
 // Egne navn fra Innstillinger → Utseende → Navigasjonslinje (LAY.names) går foran; tomt felt gir standardnavnet.
 export const tabName = (def, k) => LAY().names?.[(def === FINTABS ? 'fin.' : 'hl.') + k] || (def === FINTABS && RENAME.includes(k) ? navName(k, def[k][1]) : def[k][1]);
-const tabsOf = (keys, def, fixed) => keys.filter((k) => def[k] && (fixed.includes(k) || !LAY().hide[k])).map((k) => [def[k][0], tabName(def, k), def[k][2]]);
+const tabsOf = (keys, def, fixed) => keys.filter((k) => def[k] && (fixed.includes(k) || !LAY().hide[k]) && (def[k][0] !== 'dom' || domOk())).map((k) => [def[k][0], tabName(def, k), def[k][2]]);
 export const hlTabs = () => tabsOf(LAY().hlTabs, HLTABS, FIXED_HL);
 export const finTabs = () => tabsOf(LAY().finTabs, FINTABS, FIXED_FIN);
 // En skjult fane (f.eks. Budsjett når Finn har tatt plassen) markerer Mer, der den ligger øverst.
@@ -161,8 +163,6 @@ export function backBtn(th, href, label = 'Tilbake', act = '') {
 
 function home(th) {
   const s = S.summary;
-  if (S.boot?.restricted) return `<div class="m-row" style="justify-content:space-between;padding:6px 4px 0"><div class="title">Finans</div>${avatar()}</div>
-    <div class="m-empty">Kontoen din har tilgang til Boliger. Regnskapet tilhører eieren av serveren.</div><a class="cta ${th === 'ios' ? 'glass' : ''}" href="#/dir"><span class="m-grow"><b style="font-weight:600">Boliger</b></span><span style="opacity:.6">›</span></a>`;
   return `<div class="m-row" style="justify-content:space-between;align-items:flex-end;padding:6px 4px 0"><div><div class="hello">${greet()}, ${esc(meName())}</div><div class="title">${cap(monthName(S.summary?.month ?? today().slice(0, 7)))}</div></div>${avatar()}</div>
     ${hero(th)}
     ${jobsPill(th)}
@@ -318,7 +318,7 @@ function menuSheet(th) {
   if (!m.menu) return '';
   const scr = m.screen, who = m.me?.username ? `@${esc(m.me.username)}${m.me.role ? ' · ' + esc(m.me.role) : ''}` : esc(m.me?.serverName ?? 'Homelab');
   const row = (href, ic, n, s, on, act = 'menu') => `<a class="opt-row${on ? ' on' : ''}" href="${href}" data-mact="${act}"><span class="set-ic">${icon(ic, 18)}</span><span class="m-grow"><b style="font-weight:500">${n}</b>${s ? `<br><span style="font-size:13px;opacity:.65">${s}</span>` : ''}</span>${on ? '<span style="color:var(--m-acc)">✓</span>' : '<span style="opacity:.6">›</span>'}</a>`;
-  const others = MODS.filter(([k]) => k === 'mat' || k === 'dom');
+  const others = MODS.filter(([k]) => k === 'mat' || (k === 'dom' && domOk()));
   return `<div class="sheet-bg" data-mact="menu"></div><div class="sheet${two() ? ' left' : ''} ${th === 'ios' ? 'glass' : ''}" role="dialog" aria-label="Meny">
     <div class="m-row" style="gap:12px"><span class="m-av${avatarUrl() ? ' img' : ''}">${avInner()}</span><div class="m-grow"><b>${esc(meName())}</b><div style="font-size:13px;opacity:.65">${who}</div></div><button class="mini" data-mact="menu" aria-label="Lukk">${icon('close', 18)}</button></div>
     ${(() => {
@@ -393,12 +393,12 @@ export function draw() {
   const vkChanged = P23.leave(vk);
   const fad = pp && scr === 'finn' && /^ad\/\d+/.test(m.sub ?? '');
   m.light = pp ? applyPaper(paperDark()) : applyM3(th === 'and', pref('m3Seed'), pref('m3Mode'), () => draw(), pref('pageColors') !== 'per');
-  const fin = FIN.includes(scr), twoPane = wide && TWO.includes(scr) && !(S.boot?.restricted);
+  const fin = FIN.includes(scr), twoPane = wide && TWO.includes(scr);
   const confirmView = scr === 'skann' && m.rc && !wide;
   const scrs = { hjem: home, liste: list, budsjett: budget, opp: uploadScreen };
   const plain = !m.detail && !m.edit;
   const ppMain = !pp ? null : scr === 'hl' ? paperHome() : m.detail && !m.edit && m.sel != null && ['liste', 'sok', 'hjem'].includes(scr) ? paperTx(m.sel)
-    : scr === 'hjem' && !S.boot?.restricted && plain ? paperFin() : scr === 'mer' ? paperMer()
+    : scr === 'hjem' && plain ? paperFin() : scr === 'mer' ? paperMer()
     : scr === 'bd' ? P24.bdView() : scr === 'fmer' ? finMerGrid() : scr === 'kv' && plain ? P23.kvView() : fad ? P23.finnAdView() : scr === 'sok' && plain ? paperSearch() : scr === 'liste' && plain ? paperList() : scr === 'finn' && !m.sub ? paperFinn() : scr === 'spor' ? paperTrk() : scr === 'dir' ? bolView() : scr === 'avg' ? P24.ruterView() : scr === 'fam' ? P22.famView22() : null;
   const main = scr === 'vaer' ? wxView() : scr === 'nyheter' ? newsView() : scr === 'huske' ? (pp ? P22.huske22() : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Huskeliste</div></div>' + huskeView()) : !pp && scr === 'avg' ? avgView() : !pp && scr === 'fam' ? famView()
     : scr === 'media' ? (pp ? '' : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Media</div></div>') + mediaView()
@@ -458,8 +458,7 @@ export async function loadMe() {
 async function load() {
   try {
     const jobs = [], scr = m.screen;
-    const restricted = S.boot?.restricted;
-    if (FIN.includes(scr) && !restricted) {
+    if (FIN.includes(scr)) {
       if (!FINMODS.includes(scr)) jobs.push(loadSummary());
       if (scr === 'liste' || (two() && (scr === 'hjem' || scr === 'budsjett'))) jobs.push(loadTx());
       if (scr === 'skann' || scr === 'kv' || (two() && scr === 'opp')) jobs.push(loadReceipts());
@@ -526,7 +525,7 @@ export function route() {
   const start = startScr();
   let next = map[h] ?? (ALL.includes(h) ? h : start);
   if (next === 'fmer' && !paper()) next = 'mer';
-  if (S.boot?.restricted && FIN.includes(next) && next !== 'dir') next = next === 'hjem' ? 'hjem' : 'dir';
+  if (!domOk() && (next === 'dom' || (next === 'set' && parts[1] === 'dom'))) { next = next === 'dom' ? 'hl' : 'set'; if (location.hash !== `#/${next}`) { history.replaceState(null, '', `#/${next}`); parts.length = 1; } }
   const sub = parts.slice(1).join('/');
   if (next !== m.screen || sub !== m.sub) {
     if (next !== m.screen) { edReset(); if (next === 'vaer') WX.from = m.screen; m.edit = null; m.pdet = null; if (next === 'dom') m.domFrom = m.screen === 'dom' ? m.domFrom : m.screen; if (next === 'set') m.setFrom = m.screen === 'set' ? m.setFrom : m.screen; }

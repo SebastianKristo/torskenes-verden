@@ -1,7 +1,7 @@
 // Innstillinger i mobilappen: hovedside med gruppene Konto, App og System, og én underside per gruppe.
 // Valg som bare gjelder denne enheten lagres i localStorage (fh_mprefs); AI og varsler for kvitteringer/budsjett på serveren.
 import { S, api, esc, n0, ini, icon, loadBoot, loadSummary, hlApi } from './core.js';
-import { m, draw, flash, pref, setPref, theme, iosBg, isIOS, meName, avInner, avatarUrl, loadMe, startScr, HLTABS, FINTABS, FIXED_HL, FIXED_FIN, tabName } from './mobile.js';
+import { m, draw, flash, pref, setPref, theme, iosBg, isIOS, meName, avInner, avatarUrl, loadMe, startScr, domOk, HLTABS, FINTABS, FIXED_HL, FIXED_FIN, tabName } from './mobile.js';
 import { LAY, saveLayout } from './mobile-hl.js';
 import { SEEDS, MODES } from './mobile-theme.js';
 import { haptic, hpref, setHap, canVibrate, HAP_TYPES } from './mobile-haptics.js';
@@ -13,7 +13,7 @@ import * as P23 from './mobile-p23.js';
 import * as P24 from './mobile-p24.js';
 import { row, grp } from './mobile-p17.js';
 import { haSection } from './mobile-p22.js';
-import { p17SetMain, p17Modules, p17AiExtra, p17Varsler, aiLoad, notifyLoad, NT } from './mobile-p17.js';
+import { p17SetMain, p17Modules, p17AiExtra, p17Varsler, aiLoad, notifyLoad, NT, canSrv, ADMIN_NOTE } from './mobile-p17.js';
 
 const T = { f: {}, ai: null, bk: null, srch: null, tokens: null, devices: null, newTok: '', nt: { name: '', scopes: ['receipts:write'], exp: '90' }, ping: '', lastSync: null, usage: null };
 const SCOPES = ['receipts:write', 'read:transactions', 'read:summary', 'read:budget', 'write:transactions', 'finance:read'];
@@ -86,7 +86,7 @@ function main() {
   return `${paper() ? paperTop() : ''}${G('', [profile(true)])}
     ${G('Konto', [nav('konto', 'Kontoer og brukere', '1 på enheten', 'users', '#5E8BFF'), nav('sik', 'Sikkerhet', m.me?.totp ? '2FA på' : '', 'shield', '#34C759'), nav('tok', 'API-tokens', T.tokens ? `${T.tokens.length} aktive` : '', 'key', '#FF9F0A')])}
     ${G('App', [nav('look', 'Utseende', '', 'look', '#BF5AF2'), nav('scan', 'Skanning og AI', pref('scanTap') === 'cam' ? 'Kamera' : 'Vis valg', 'cam', '#FF7A3D'), nav('notif', 'Varsler', st.nRc ? 'På' : '', 'bell', '#FF453A'), nav('hap', 'Haptikk', hpref('hap') ? 'På' : 'Av', 'vib', '#FF2D55'), nav('sokbar', 'Søkebar', 'Google', 'search', '#0A84FF')])}
-    ${S.boot?.restricted ? '' : G('Finans', [nav('fai', 'AI-motor', st.provider === 'gemini' ? 'Gemini' : st.fallback ? 'Ollama + Gemini' : 'Ollama', 'ai', '#FF7A3D'), nav('kat', 'Kategorier', String((S.boot?.categories ?? []).length), 'cat', '#30D158'), nav('regel', 'Regler', String((S.boot?.rules ?? []).length), 'rule', '#5E5CE6'), nav('bank', 'Bank og import', st.csvProfile ?? '', 'bank', '#0A84FF'), nav('t212', 'Aksjer · Trading 212', st.t212Set ? (st.t212Env === 'demo' ? 'Demo' : 'Live') : 'Ikke koblet', 'aks', '#64D2FF'), nav('bk', 'Backup og data', '', 'backup', '#8E8E93')])}
+    ${G('Finans', [nav('fai', 'AI-motor', !canSrv() ? ADMIN_NOTE : st.provider === 'gemini' ? 'Gemini' : st.fallback ? 'Ollama + Gemini' : 'Ollama', 'ai', '#FF7A3D'), nav('kat', 'Kategorier', String((S.boot?.categories ?? []).length), 'cat', '#30D158'), nav('regel', 'Regler', String((S.boot?.rules ?? []).length), 'rule', '#5E5CE6'), nav('bank', 'Bank og import', st.csvProfile ?? '', 'bank', '#0A84FF'), nav('t212', 'Aksjer · Trading 212', st.t212Set ? (st.t212Env === 'demo' ? 'Demo' : 'Live') : 'Ikke koblet', 'aks', '#64D2FF'), nav('bk', 'Backup og data', '', 'backup', '#8E8E93')])}
     ${G('System', [nav('srv', 'Server og synk', '', 'srv', '#64D2FF'), nav('data', 'Data og lagring', '', 'db', '#8E8E93'), nav('om', 'Om FinansHub', VERSION, 'info', '#8E8E93')])}
     ${G('', [btn(`Logg ut ${esc(meName())}`, 'logout', '#FF8A80')])}`;
 }
@@ -158,6 +158,7 @@ const PAGE = {
   nav: (th) => {
     const L = LAY();
     const rows = (key, def, fixed, pre) => L[key].map((id, i, a) => {
+      if (def[id]?.[0] === 'dom' && !domOk()) return '';
       const hid = !!L.hide[id] && !fixed.includes(id), def0 = def[id][1];
       return `<div class="opt-row navrow"><input class="sinp navname" data-navname="${pre}.${id}" value="${esc(L.names?.[`${pre}.${id}`] ?? '')}" placeholder="${esc(def0)}" maxlength="30" aria-label="Navn på ${esc(def0)}" style="opacity:${hid ? 0.45 : 1}">
         <button class="mini" data-sact="navmv" data-k="${key}" data-i="${i}" data-j="${i - 1}" aria-label="Flytt ${esc(def0)} opp" ${i ? '' : 'disabled style="opacity:.3"'}>▲</button><button class="mini" data-sact="navmv" data-k="${key}" data-i="${i}" data-j="${i + 1}" aria-label="Flytt ${esc(def0)} ned" ${i < a.length - 1 ? '' : 'disabled style="opacity:.3"'}>▼</button>
@@ -205,6 +206,13 @@ const PAGE = {
   },
   fai: () => {
     const st = S.boot?.settings ?? {}, f = T.f;
+    // ISO2: serveroppsettet er skrivebeskyttet for andre enn admin. Ollama-adresse, nøkler og «Test motor» vises ikke.
+    if (!canSrv()) {
+      const MODE = { ollama: 'Ollama lokalt', gemini: 'Gemini', groq: 'Groq', both: 'Ollama + Gemini' };
+      return `${G('Motor', [val('Hovedmotor', esc(MODE[aiMode()] ?? '–')), val('Minste sikkerhet', `0,${String(st.minConf ?? 85).padStart(2, '0')}`)], `🔒 ${ADMIN_NOTE}. Under minste sikkerhet markeres kvitteringen «Sjekk beløp».`)}
+      ${paper() ? P23.aiTimeoutsView() : ''}
+      ${p17AiExtra()}`;
+    }
     return `${G('Motor', [chips('ai', 'Hovedmotor', [['ollama', 'Ollama lokalt'], ['gemini', 'Gemini'], ['groq', 'Groq'], ['both', 'Ollama + Gemini']], aiMode()), chips('minConf', 'Minste sikkerhet', [['75', '0,75'], ['85', '0,85'], ['95', '0,95']], String(st.minConf ?? 85))], 'Under minste sikkerhet markeres kvitteringen «Sjekk beløp».')}
       ${G('Ollama', [inp('ollamaUrl', 'Adresse', f.ollamaUrl ?? st.ollamaUrl, 'http://192.168.1.40:11434', 'url'), inp('ollamaModel', 'Modell', f.ollamaModel ?? st.ollamaModel, 'qwen2.5vl:7b')])}
       ${G('Gemini', [inp('geminiModel', 'Modell', f.geminiModel ?? st.geminiModel, 'gemini-2.5-flash'), inp('geminiKey', st.geminiKeySet ? 'API-nøkkel (lagret – skriv for å bytte)' : 'API-nøkkel', f.geminiKey ?? '', '••••••••', 'password')])}
@@ -236,7 +244,7 @@ const PAGE = {
     const SCH = { off: 'Bare manuelt', daily: 'Hver natt kl. 03.00', weekly: 'Hver søndag kl. 03.00', change: 'Etter endringer' };
     return `${G('Last ned', [`<a class="opt-row" href="/finans/api/backup/export?format=json" download><span class="m-grow" style="color:var(--m-acc);font-weight:500">Full backup (.json)</span></a>`, `<a class="opt-row" href="/finans/api/backup/export?format=xlsx" download><span class="m-grow" style="color:var(--m-acc);font-weight:500">Excel-database (.xlsx)</span></a>`, `<a class="opt-row" href="/finans/api/backup/export?format=csv" download><span class="m-grow" style="color:var(--m-acc);font-weight:500">Bare transaksjoner (CSV)</span></a>`],
       'JSON-filen er den komplette backupen. Excel-filen har ett ark per tabell.')}
-      ${G('SMB-share', b ? [val('Share', c.share || 'Ikke satt opp', '', true), val('Tidsplan', SCH[c.schedule] ?? c.schedule ?? '–'), val('Behold versjoner', String(c.keep ?? '–')), val('Kryptering', c.encrypt === false ? 'Av' : 'AES-256-GCM'), val('Siste backup', b.last ? `${new Date(b.last.at ?? b.last.created ?? b.last).toLocaleString('nb-NO')}${b.last.status ? ' · ' + b.last.status : ''}` : 'Aldri', b.last?.status === 'ok' ? '#7BE3A0' : ''), c.share ? btn('Kjør backup nå', 'bkrun') : ''] : [val('SMB-share', 'Krever innlogging i nettleseren')], 'Oppsett av sharen og gjenoppretting gjøres i FinansHub på PC.')}
+      ${b && b.canSmb === false ? G('SMB-share', [val('Backup av hele serveren', ADMIN_NOTE)], 'Du kan laste ned og gjenopprette dine egne data. Backup av hele databasen til SMB-sharen gjøres av hovedadministratoren.') : G('SMB-share', b ? [val('Share', c.share || 'Ikke satt opp', '', true), val('Tidsplan', SCH[c.schedule] ?? c.schedule ?? '–'), val('Behold versjoner', String(c.keep ?? '–')), val('Kryptering', c.encrypt === false ? 'Av' : 'AES-256-GCM'), val('Siste backup', b.last ? `${new Date(b.last.at ?? b.last.created ?? b.last).toLocaleString('nb-NO')}${b.last.status ? ' · ' + b.last.status : ''}` : 'Aldri', b.last?.status === 'ok' ? '#7BE3A0' : ''), c.share ? btn('Kjør backup nå', 'bkrun') : ''] : [val('SMB-share', 'Krever innlogging i nettleseren')], 'Oppsett av sharen og gjenoppretting gjøres i FinansHub på PC.')}
       ${G('', [link('Åpne Backup og data på PC-visningen', '/finans/?desktop=1#/inn')])}`;
   },
   om: () => `${G('', [val('Appversjon', `${VERSION} (nettapp)`), val('Server', esc(S.boot?.version ?? m.me?.version ?? '–')), val('Plattform', isIOS() ? 'iOS · nettleser' : /Android/.test(navigator.userAgent) ? 'Android · nettleser' : 'Nettleser')])}

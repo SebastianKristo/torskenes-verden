@@ -2,7 +2,7 @@
 // Finans-fanelinja og Mer-rutenettet, Finans → Søk med ✦ AI, transaksjonsdetaljer med original kvittering,
 // kvitteringsbanneret, Finn «På vei» og arket «Ny sending» i Sporing. Valgene lagres per bruker i /api/me/layout.
 import { S, api, esc, n0, ini, hlApi, dd, cats, uploadReceipt } from './core.js';
-import { m, draw, flash } from './mobile.js';
+import { m, draw, flash, domOk } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { TR, trkLoad, carOf, normNo, detectLocal } from './mobile-track.js';
 import { hlData } from './mobile-hl.js';
@@ -56,7 +56,7 @@ export function onWay() {
   return list.filter((p) => WAY.includes(p.status)).length;
 }
 /** Fjerde fane: «Automatisk» er Domener, men Sporing når minst én pakke er på vei. */
-export const fourth = () => { const f = fourthPref(); return f === 'sporing' ? 'spor' : f === 'domener' ? 'dom' : onWay() > 0 ? 'spor' : 'dom'; };
+export const fourth = () => { if (!domOk()) return 'spor'; const f = fourthPref(); return f === 'sporing' ? 'spor' : f === 'domener' ? 'dom' : onWay() > 0 ? 'spor' : 'dom'; };
 
 /* ---------- Tilpass hver side: hold inne → vugging, ▲ ▼ og − ---------- */
 
@@ -431,7 +431,7 @@ export function navSettings() {
   const last = fk[fk.length - 1];
   return `<span class="pp-lab">FANELINJE</span><div class="pp-card pp-tight">
       ${row('data-ppset="fab"', 'Skanneknapp', fabStyle() === 'float' ? 'Flyter over linjen, søk ligger i linjen' : 'Ligger i linjen som +', fabStyle() === 'float' ? 'Flytende ›' : 'I linjen ›')}
-      ${row('data-ppset="t4"', 'Fjerde fane', f4 === 'auto' ? `Domener, eller Sporing når pakker er på vei (nå: ${cur === 'spor' ? `Sporing, ${n} på vei` : 'Domener'})` : `Alltid ${f4 === 'sporing' ? 'Sporing' : 'Domener'}`, `${f4 === 'auto' ? 'Automatisk' : f4 === 'sporing' ? 'Sporing' : 'Domener'} ›`)}</div>
+      ${!domOk() ? '' : row('data-ppset="t4"', 'Fjerde fane', f4 === 'auto' ? `Domener, eller Sporing når pakker er på vei (nå: ${cur === 'spor' ? `Sporing, ${n} på vei` : 'Domener'})` : `Alltid ${f4 === 'sporing' ? 'Sporing' : 'Domener'}`, `${f4 === 'auto' ? 'Automatisk' : f4 === 'sporing' ? 'Sporing' : 'Domener'} ›`)}</div>
     <span class="pp-lab">FINANS · FANELINJE OG MER</span><div class="pp-card pp-tight">${fin}
       ${row('data-ppset="finrm"', 'Fjern fra fanelinjen', 'Trykk for å flytte siste fane til Mer', fk.length > 1 ? `Fjern ${FT[last][1]}` : '–', 'lab')}
       ${row('data-ppset="finreset"', 'Tilbakestill', 'Oversikt, Liste, Finn, Søk', 'Nullstill')}</div>`;

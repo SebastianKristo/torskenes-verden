@@ -3,7 +3,7 @@
 // «Rediger bolig» med hold inne), søk og ✦ AI-søk i Innstillinger, alle integrasjoner via /api/integrations og
 // ikoner i Nyhetsleser som <img>. Endepunktene kommer fra serveren i samme prompt; mangler de (404), faller vi tilbake.
 import { api, esc, n0, ini, hlApi } from './core.js';
-import { m, draw, flash } from './mobile.js';
+import { m, draw, flash, domOk } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { AV, avgLoad, BO, bolLoad, heroBg, setTabBar } from './mobile-p16.js';
 import { DEP, depKey, depStatus, stopList, modeName, delayOf } from './mobile-p21.js';
@@ -120,8 +120,9 @@ const IDX = [
 const INTEG_IDX = [['ha', 'Home Assistant', 'home ha assistant'], ['google', 'Google Kalender', 'kalender bursdag google oauth'], ['ai', 'AI (Gemini)', 'gemini groq ollama ai nøkkel'], ['t212', 'Trading 212', 'aksje'], ['bank', 'Bank', 'bank import'], ['imap', 'Kvitteringer på e-post (IMAP)', 'epost mail kvittering imap'],
   ['entur', 'Entur', 'ruter buss trikk avgang'], ['mybring', 'Mybring', 'posten bring pakke sporing'], ['postnord', 'PostNord', 'pakke sporing post'], ['parcelsapp', 'ParcelsApp', 'pakke sporing reserve'], ['cloudflare', 'Cloudflare', 'domene domener'], ['finn', 'Finn', 'finn annonse'],
   ['met', 'MET / Yr', 'vær yr'], ['map', 'Kart', 'kart maptiler stadia'], ['icons', 'Ikoner', 'ikon iconify'], ['photos', 'Unsplash / Pexels', 'bilde foto bakgrunn']];
-const index = () => [...IDX.map(([id, t, p, h, k]) => ({ id, title: t, path: p, href: h, kw: k })),
-  ...(IG.list ?? INTEG_IDX.map(([id, name, kw]) => ({ id, name, kw }))).map((x) => ({ id: `integ:${x.id}`, title: x.name, path: `Integrasjoner · ${x.name}`, href: `#/set/integ/${x.id}`, kw: `${x.kw ?? ''} ${x.group ?? ''} ${(x.fields ?? []).map((f) => f.label).join(' ')}` }))];
+// ISO2: uten admin tas Domener (og Cloudflare) ut av søket.
+const index = () => [...IDX.map(([id, t, p, h, k]) => ({ id, title: t, path: p, href: h, kw: domOk() ? k : k.replace(/\s*domener/g, '') })),
+  ...(IG.list ?? INTEG_IDX.filter(([id]) => id !== 'cloudflare' || domOk()).map(([id, name, kw]) => ({ id, name, kw }))).map((x) => ({ id: `integ:${x.id}`, title: x.name, path: `Integrasjoner · ${x.name}`, href: `#/set/integ/${x.id}`, kw: `${x.kw ?? ''} ${x.group ?? ''} ${(x.fields ?? []).map((f) => f.label).join(' ')}` }))];
 const norm = (s) => String(s ?? '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '');
 function localHits(q) {
   const w = norm(q).split(/\s+/).filter((x) => x.length > 1);
@@ -169,15 +170,15 @@ export async function integLoad24(force = false) {
   if (IG.miss || (!force && Date.now() - IG.t < 15000)) return;
   IG.t = Date.now();
   try { const r = await hlApi('/integrations'); IG.list = Array.isArray(r) ? r : r?.items ?? []; IG.err = ''; }
-  catch (e) { if (e.status === 404) IG.miss = true; else IG.err = e.status === 403 ? 'Bare administrator kan endre integrasjonene.' : e.message; }
+  catch (e) { if (e.status === 404) IG.miss = true; else IG.err = e.message; }
 }
 const ST = { ok: ['● Tilkoblet', 'var(--pp-pos)'], missing: ['Ikke satt opp', 'var(--pp-mut)'], error: ['● Feil', 'var(--pp-lab)'] };
 /** Innstillinger → Integrasjoner. old = den gamle siden (HA-tilkobling), brukes når serveren mangler endepunktet. */
 export function integPage24(old, haSync, sub = '') {
-  if (IG.miss || (!IG.list && !isAdmin())) return old;
+  if (IG.miss) return old;
   if (!IG.list) { if (!IG.t) integLoad24().then(draw).catch(() => {}); return IG.err ? `<div class="snote" style="color:var(--pp-lab)">${esc(IG.err)}</div>` : '<div class="m-spin"></div>'; }
   const want = sub || null;
-  const groups = IG.list.map((g) => {
+  const one = (g) => {
     const [st, sc] = ST[g.status] ?? ST.missing, t = IG.test[g.id];
     const rows = (g.fields ?? []).map((f) => {
       const k = `${g.id}:${f.key}`, open = IG.open === k;
@@ -189,7 +190,13 @@ export function integPage24(old, haSync, sub = '') {
     });
     if (g.canTest) rows.push(`<button class="opt-row p17-row" data-p24="igtest" data-id="${esc(g.id)}"><span class="m-grow p17-rt"><b style="color:var(--pp-lab)">Test tilkobling</b>${t ? `<small>${esc(t)}</small>` : ''}</span></button>`);
     return `<div class="p24-igg${want === g.id ? ' hit' : ''}" id="ig-${esc(g.id)}"><span class="pp-lab p17-gl p24-igh"><span>${esc(String(g.name).toUpperCase())}</span><span style="color:${sc}">${st}</span></span><div class="list p17-list">${rows.join('')}</div></div>`;
-  }).join('');
+  };
+  // ISO2: «Dine integrasjoner» (scope personal, egne verdier for hver bruker) først, «Server (administrator)» under.
+  // Servergruppene sender serveren bare til admin. Grupper uten scope (eldre server) regnes som personlige.
+  const mine = IG.list.filter((g) => g.scope !== 'server'), srv = IG.list.filter((g) => g.scope === 'server');
+  const head = (t, s) => `<div class="p24-igsec"><b class="pp-serif">${t}</b><span class="pp-mut">${s}</span></div>`;
+  const groups = (mine.length ? head('Dine integrasjoner', 'Bare du ser og bruker disse verdiene') + mine.map(one).join('') : '')
+    + (srv.length ? head('Server (administrator)', 'Felles for alle brukere på serveren') + srv.map(one).join('') : '');
   if (want) setTimeout(() => document.getElementById(`ig-${want}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 80);
   return `${groups || '<div class="snote">Ingen integrasjoner.</div>'}${IG.err ? `<div class="snote" style="color:var(--pp-lab)">${esc(IG.err)}</div>` : ''}
     <div class="snote">Hemmelige verdier lagres kryptert på serveren og vises bare som «•••• lagret».</div>${haSync || ''}`;
@@ -477,7 +484,7 @@ async function saveEdit() {
 }
 // Domene-pillen (Finans + Boliger-profilen): besøk i dag, antall domener og status. Oppdateres hvert 5. minutt.
 export function domPill() {
-  if (!profRoot() || m.screen !== 'dir' || m.sub) return '';
+  if (!profRoot() || m.screen !== 'dir' || m.sub || !domOk()) return '';
   if (Date.now() - BE.domT > 5 * 60000) {
     BE.domT = Date.now();
     hlApi('/domains/summary').then((r) => { BE.dom = r; }).catch(() => { const d = hlDom(); BE.dom = d ? { visitsToday: d.visitors, domains: d.n, status: d.up === false ? 'error' : 'ok' } : BE.dom; }).finally(() => { if (m.screen === 'dir') draw(); });

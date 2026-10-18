@@ -3,7 +3,7 @@
 // Posisjon og Bolig på Hjem, Familie med fanene Kart, Soner og Helse, Yr mot Storm, dra for å oppdatere og sanntid
 // via én felles WebSocket (/api/ws). Alt tåler en eldre server: data som mangler vises som en forklaring, ikke en feil.
 import { S, api, esc, n0, ini, hlApi, icon } from './core.js';
-import { m, draw, flash, meName, avInner, avatarUrl, route, isIOS } from './mobile.js';
+import { m, draw, flash, meName, avInner, avatarUrl, route, isIOS, domOk } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { iconColor, iconInk, FM, famLoad, BO, bolLoad, bolUpload } from './mobile-p16.js';
 import { listShareLine } from './mobile-p21.js';
@@ -122,20 +122,24 @@ export const row = (href, label, sub, val, ic, key, attr = '') => {
 };
 export const grp = (t, rows) => `${t ? `<span class="pp-lab p17-gl">${esc(t)}</span>` : ''}<div class="list p17-list">${rows.filter(Boolean).join('')}</div>`;
 const ENG = { ollama: 'Ollama', gemini: 'Gemini', groq: 'Groq' };
+// ISO2: serveroppsettet i FinansHub (AI-motorer, modeller, nøkler, tidsgrenser, OCR, SMB) kan bare admin endre.
+// canEditServer kommer i /bootstrap og /settings. Eldre server uten feltet: rollen avgjør.
+export const canSrv = () => S.boot?.canEditServer ?? S.boot?.settings?.canEditServer ?? (m.me?.role ? m.me.role === 'admin' : true);
+export const ADMIN_NOTE = 'Settes opp av administrator';
 export function p17SetMain(T = {}) {
   const me = m.me ?? {}, st = S.boot?.settings ?? {}, fk = (() => { try { return (JSON.parse(localStorage.getItem('fh_p15') || '{}').finTabs ?? []).length || 4; } catch { return 4; } })();
   const prof = `<a class="pp-card p17-prof" href="#/set/konto"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:56px;height:56px;font-size:22px">${avInner()}</span><span class="m-grow p17-rt"><b class="pp-serif" style="font-size:21px">${esc(meName())}</b><small>${me.username ? `@${esc(me.username)}` : ''}${me.role ? ` · ${me.role === 'admin' ? 'Admin' : 'Bruker'}` : ''}</small><small>${esc(me.serverName || location.host)}</small></span><span class="p17-chev" aria-hidden="true">›</span></a>`;
   const t212 = st.t212Set ? 'Tilkoblet' : 'Ikke satt opp';
   return `${prof}
     ${grp('KONTO', [row('#/set/konto', 'Kontoer og brukere', '', '', 'users', 'konto'), row('#/set/sik', 'Sikkerhet', me.totp ? '2FA på' : '2FA av', '', 'shield', 'sik'), row('#/set/tok', 'API-tokens', T.tokens ? `${T.tokens.length} aktive` : '', '', 'key', 'tok')])}
-    ${S.boot?.restricted ? '' : grp('FINANS', [row('#/set/fai', 'AI og tolkning', [ENG[st.provider] ?? 'Ollama', st.groqKeySet ? 'Groq' : '', st.roboflowKeySet ? 'Roboflow' : '', st.geminiKeySet && st.provider !== 'gemini' ? 'Gemini' : ''].filter(Boolean).join(' · '), '', 'ai', 'fai'),
+    ${grp('FINANS', [row('#/set/fai', 'AI og tolkning', canSrv() ? [ENG[st.provider] ?? 'Ollama', st.groqKeySet ? 'Groq' : '', st.roboflowKeySet ? 'Roboflow' : '', st.geminiKeySet && st.provider !== 'gemini' ? 'Gemini' : ''].filter(Boolean).join(' · ') : ADMIN_NOTE, '', 'ai', 'fai'),
       row('#/set/kat', 'Kategorier og budsjett', `${(S.boot?.categories ?? []).length} kategorier`, '', 'cat', 'kat'), row('#/set/regel', 'Regler', `${(S.boot?.rules ?? []).length} regler`, '', 'rule', 'regel'),
       row('#/set/bank', 'Bankimport', 'DNB · CSV · ✦ AI', '', 'bank', 'bank'), row('#/set/t212', 'Aksjer · Trading 212', t212, '', 'aks', 't212'), row('#/set/fanelinje', 'Fanelinje og Mer i Finans', `${fk} faner`, '', 'list', 'fanelinje'), row('#/sub', 'Subscription OS', 'Abonnementer og AI-sparing', '', 'sub', 'sub')])}
     ${grp(appName().toUpperCase(), [row('', 'Navn på appen', '', appName(), 'home', 'appnavn', 'data-p17="nm"'), row('', 'App-ikon', '', ICONS.find(([k]) => k === appIcon())?.[1] ?? '', 'img', 'appikon', 'data-p17="ic"'),
       // Prompt 25: Fanelinje-stil. Trykk bytter mellom Tekst, Bare ikoner og Ikoner + navn på valgt (lagres i navStyle).
       row('', 'Fanelinje-stil', P25.NAV_STYLES.find(([k]) => k === P25.navStyle())[2], P25.navStyleName(), 'list', 'navstil', 'data-p25="nscycle"'),
-      row('#/set/fanelinje', 'Fanelinje i Hjem', 'Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen', '', 'list', 'hjemnav'), row('#/set/mod', 'Moduler', 'Sporing, Domener, Mat, Nyheter', '', 'globe', 'mod'), row('#/nyheter', 'Nyhetsleser', 'Kilder og AI', '', 'look', 'rss')])}
-    ${grp('APP', [row('#/set/look', 'Utseende og fanelinje', 'Papir · bakgrunn · ikonfarger', '', 'look', 'look'), row('#/set/varsler', 'Varsler og haptikk', NT.d ? (NT.d.on === false ? 'Av' : 'På') : '', '', 'bell', 'varsler'), row('#/set/integ', 'Integrasjoner', 'Home Assistant', '', 'home', 'integ')])}
+      row('#/set/fanelinje', 'Fanelinje i Hjem', 'Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen', '', 'list', 'hjemnav'), row('#/set/mod', 'Moduler', domOk() ? 'Sporing, Domener, Mat, Nyheter' : 'Sporing, Mat, Nyheter', '', 'globe', 'mod'), row('#/nyheter', 'Nyhetsleser', 'Kilder og AI', '', 'look', 'rss')])}
+    ${grp('APP', [row('#/set/look', 'Utseende og fanelinje', 'Papir · bakgrunn · ikonfarger', '', 'look', 'look'), row('#/set/varsler', 'Varsler og haptikk', NT.d ? (NT.d.on === false ? 'Av' : 'På') : '', '', 'bell', 'varsler'), row('#/set/integ', 'Integrasjoner', canSrv() ? 'Dine og serverens' : 'Plex, kalender, sporing, IMAP …', '', 'home', 'integ')])}
     ${grp('', [`<button class="opt-row p17-row" data-sact="logout"><span class="m-grow" style="color:var(--pp-lab);font-weight:700">Logg ut</span></button>`])}
     <span class="p17-ver">${esc(appName())} ${VERSION} · Papir</span>`;
 }
@@ -143,7 +147,7 @@ export function p17SetMain(T = {}) {
 export function p17Modules() {
   const M = [['#/spor', 'Sporing', 'Pakker fra e-post og Finn', 'globe'], ['#/dom', 'Domener', 'Cloudflare-statistikk', 'globe'], ['#/mat', 'Mat', 'Ukeplan og oppskrifter', 'home'], ['#/nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag', 'look'],
     ['#/huske', 'Huskeliste', 'Egne og delte lister', 'list'], ['#/fam', 'Familie og kart', 'Posisjon, soner og helse', 'users'], ['#/avg', 'Avganger', 'Sanntid fra Entur', 'globe'], ['#/vaer', 'Vær', 'MET og Yr mot Storm', 'look']];
-  return grp('MODULER', M.map(([h, n, s, ic]) => row(h, n, s, '', ic, `mod-${n}`))) + '<div class="snote">Modulene kan også legges i fanelinja under Fanelinje i Hjem.</div>';
+  return grp('MODULER', M.filter(([h]) => h !== '#/dom' || domOk()).map(([h, n, s, ic]) => row(h, n, s, '', ic, `mod-${n}`))) + '<div class="snote">Modulene kan også legges i fanelinja under Fanelinje i Hjem.</div>';
 }
 
 /* ---------- AI og tolkning: hvem gjør hva, lokal OCR-reserve og logg ---------- */
@@ -160,6 +164,16 @@ export function p17AiExtra() {
   const inp = (k, label, ph, type = 'text', val = '') => `<label class="opt-row col"><span style="font-size:13px;opacity:.7">${esc(label)}</span><input class="sinp" data-p17in="ai:${k}" type="${type}" value="${esc(f[k] ?? val)}" placeholder="${esc(ph)}" autocomplete="off" autocapitalize="off"></label>`;
   const tg = (k, n, s, on) => `<button class="opt-row" data-p17="aitog" data-k="${k}" role="switch" aria-checked="${!!on}"><span class="m-grow"><b style="font-weight:500">${n}</b><br><span style="font-size:13px;opacity:.65">${s}</span></span><span class="sw" aria-hidden="true" aria-checked="${!!on}"></span></button>`;
   const log = AI17.log;
+  const logView = log ? `<div class="sec">AI-logg</div><div class="list">${log.length ? log.slice(0, 20).map((x) => `<div class="opt-row"><span class="m-grow"><b style="font-weight:500">${esc(x.task ?? '')} · ${esc(x.engine ?? '')}</b><br><span style="font-size:12px;opacity:.65">${esc(x.model ?? '')}${x.ms != null ? ` · ${n0(x.ms)} ms` : ''}${x.error ? ` · ${esc(x.error)}` : ''}</span></span><span class="sval" style="color:${x.status === 'ok' ? 'var(--pp-pos)' : 'var(--pp-lab)'};opacity:1">${esc(x.status ?? '')}</span></div>`).join('') : '<div class="opt-row"><span class="m-grow pp-mut">Ingen AI-kall ennå.</span></div>'}</div>` : '';
+  // ISO2: vanlige brukere ser hvem som gjør hva og OCR-valgene, men kan ikke endre dem. Nøkler, modeller og tester vises ikke.
+  if (!canSrv()) {
+    const name = (e) => ENGINES.find(([k]) => k === e)?.[1] ?? e;
+    const ro = (n, v) => `<div class="opt-row"><span class="m-grow">${esc(n)}</span><span class="sval">${esc(v)}</span></div>`;
+    return `<div class="sec">Hvem gjør hva</div><div class="list p17-ro">${TASKS.map(([k, n, def]) => ro(n, name(tk[k] ?? def))).join('')}</div>
+      <div class="sec">Lokal OCR-reserve</div><div class="list p17-ro">${ro('Lokal OCR-reserve', st.ocrFallback !== false ? 'På' : 'Av')}${ro('Bruk ved lav AI-sikkerhet', st.ocrLowConf ? 'På' : 'Av')}</div>
+      <div class="snote p17-adm">🔒 ${ADMIN_NOTE}. AI-motorer, modeller, nøkler og tidsgrenser er felles for hele serveren.</div>
+      ${logView}`;
+  }
   return `<div class="sec">Hvem gjør hva</div><div class="list">${TASKS.map(([k, n, def]) => `<div class="opt-row col"><span style="font-weight:600">${n}</span>${sel(k, def)}</div>`).join('')}</div>
     <div class="snote">Feiler motoren, prøves neste automatisk. Hvert kall logges.</div>
     <div class="sec">Groq</div><div class="list">${inp('groqKey', st.groqKeySet ? 'API-nøkkel (lagret – skriv for å bytte)' : 'API-nøkkel (gsk_…)', '••••••••', 'password')}${inp('groqModel', 'Modell', 'llama-3.3-70b-versatile', 'text', st.groqModel ?? '')}
@@ -169,7 +183,7 @@ export function p17AiExtra() {
     <div class="sec">Lokal OCR-reserve</div><div class="list">${tg('ocrFallback', 'Lokal OCR-reserve', 'Tesseract leser kvitteringen uten nett hvis AI feiler', st.ocrFallback !== false)}${tg('ocrLowConf', 'Bruk ved lav AI-sikkerhet', `Sammenlign med lokal OCR under ${st.minConf ?? 85} %`, !!st.ocrLowConf)}</div>
     <div class="list">${['groq', 'gemini', 'ollama'].map((e) => `<button class="opt-row" data-p17="aitest" data-k="${e}"><span class="m-grow" style="color:var(--m-acc);font-weight:500">Test ${ENG[e]}</span></button>`).join('')}<button class="opt-row" data-p17="rftest"><span class="m-grow" style="color:var(--m-acc);font-weight:500">Test Roboflow</span></button><button class="opt-row" data-p17="aisave"><span class="m-grow" style="color:var(--m-acc);font-weight:700">Lagre nøkler og modeller</span></button></div>
     ${AI17.msg ? `<div class="snote">${esc(AI17.msg)}</div>` : ''}
-    ${log ? `<div class="sec">AI-logg</div><div class="list">${log.length ? log.slice(0, 20).map((x) => `<div class="opt-row"><span class="m-grow"><b style="font-weight:500">${esc(x.task ?? '')} · ${esc(x.engine ?? '')}</b><br><span style="font-size:12px;opacity:.65">${esc(x.model ?? '')}${x.ms != null ? ` · ${n0(x.ms)} ms` : ''}${x.error ? ` · ${esc(x.error)}` : ''}</span></span><span class="sval" style="color:${x.status === 'ok' ? 'var(--pp-pos)' : 'var(--pp-lab)'};opacity:1">${esc(x.status ?? '')}</span></div>`).join('') : '<div class="opt-row"><span class="m-grow pp-mut">Ingen AI-kall ennå.</span></div>'}</div>` : ''}`;
+    ${logView}`;
 }
 
 /* ---------- Varsler og haptikk (GET/PUT /api/me/notify, egen lyd) ---------- */

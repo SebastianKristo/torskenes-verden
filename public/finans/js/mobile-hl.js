@@ -3,7 +3,7 @@
 // widgetene vugger, «−» skjuler, ▲▼ eller dra flytter, «+» åpner galleriet. Oppsettet lagres per bruker (/api/me/layout).
 import { S, esc, n0, ini, icon, ICONS, hlApi, matApi, domApi, loadSummary, greet } from './core.js';
 import { TR, trkLoad, trkWatch, topPackages, pkgCard } from './mobile-track.js';
-import { m, draw, flash, avInner, avatarUrl, meName, HLTABS, FINTABS, FIXED_HL, FIXED_FIN } from './mobile.js';
+import { m, draw, flash, avInner, avatarUrl, meName, HLTABS, FINTABS, FIXED_HL, FIXED_FIN, domOk } from './mobile.js';
 import { c3 } from './mobile-theme.js';
 import { haptic } from './mobile-haptics.js';
 import { classicBand } from './mobile-paper.js';
@@ -101,8 +101,9 @@ export async function hlLoad() {
     trkLoad().then(() => trkWatch()).catch(() => {}),
     hlApi('/search/history').then((r) => { H.hist = histNorm(r); if (r && typeof r.save === 'boolean') H.set = { suggest: r.suggest !== false, save: r.save }; }).catch(() => { H.hist = histLocal(); }),
   ];
-  if (!S.boot?.restricted) jobs.push(loadSummary().catch(() => {}));
-  jobs.push(domApi('/domains').then(async (l) => {
+  jobs.push(loadSummary().catch(() => {}));
+  if (!domOk()) H.dom = null; // ISO2: Domener bare for admin
+  else jobs.push(domApi('/domains').then(async (l) => {
     const list = Array.isArray(l) ? l : l?.items ?? [];
     if (!list.length) { H.dom = { n: 0 }; return; }
     let sel = list[0].name; try { const s = localStorage.getItem('hl_dom_sel'); if (list.some((d) => d.name === s)) sel = s; } catch {}
@@ -202,11 +203,11 @@ function wLinks(th) {
 
 function wOs(th) {
   const s = S.summary, rv = (s?.review ?? []).filter((r) => r.status === 'needs_review').length;
-  const fin = S.boot?.restricted ? ['Finans · boliger', 'Utgifter, prosjekter og regninger', ''] : [`Finans · igjen å bruke${s ? ` i ${new Date(s.month + '-15').toLocaleDateString('nb-NO', { month: 'long' })}` : ''}`, s ? `${n0(s.left)} kr` : '–', rv ? `${rv} kvittering${rv > 1 ? 'er' : ''} til gjennomgang` : 'Alt er gjennomgått'];
+  const fin = [`Finans · igjen å bruke${s ? ` i ${new Date(s.month + '-15').toLocaleDateString('nb-NO', { month: 'long' })}` : ''}`, s ? `${n0(s.left)} kr` : '–', rv ? `${rv} kvittering${rv > 1 ? 'er' : ''} til gjennomgang` : 'Alt er gjennomgått'];
   const dm = H.dom, mt = H.mat;
   return `<div class="sec">Andre OS</div><div class="hos">
-    <a class="hos-fin ${isI(th) ? 'glass2' : ''}" href="#/${S.boot?.restricted ? 'dir' : 'hjem'}"><span class="m-grow"><span class="dim">${esc(fin[0])}</span><b>${esc(fin[1])}</b>${fin[2] ? `<span class="acc">${esc(fin[2])}</span>` : ''}</span><span style="font-size:24px;opacity:.6">›</span></a>
-    ${dm !== null ? `<a class="${isI(th) ? 'glass2' : ''}" href="#/dom"><span class="dim">Domener</span><b>${dm?.visitors != null ? n0(dm.visitors) : dm ? dm.n : '…'}</b><span class="dim sm">${dm?.visitors != null ? `besøk i dag · ${dm.up === false ? 'sjekk status' : 'alle oppe'}` : dm?.n === 0 ? 'Ingen domener ennå' : 'domener'}</span></a>` : ''}
+    <a class="hos-fin ${isI(th) ? 'glass2' : ''}" href="#/hjem"><span class="m-grow"><span class="dim">${esc(fin[0])}</span><b>${esc(fin[1])}</b>${fin[2] ? `<span class="acc">${esc(fin[2])}</span>` : ''}</span><span style="font-size:24px;opacity:.6">›</span></a>
+    ${dm != null && domOk() ? `<a class="${isI(th) ? 'glass2' : ''}" href="#/dom"><span class="dim">Domener</span><b>${dm?.visitors != null ? n0(dm.visitors) : dm ? dm.n : '…'}</b><span class="dim sm">${dm?.visitors != null ? `besøk i dag · ${dm.up === false ? 'sjekk status' : 'alle oppe'}` : dm?.n === 0 ? 'Ingen domener ennå' : 'domener'}</span></a>` : ''}
     ${mt !== null ? `<a class="${isI(th) ? 'glass2' : ''}" href="#/mat"><span class="dim">Mat</span><b class="m-ell">${esc(mt?.name ?? (mt ? 'Ingen plan' : '…'))}</b><span class="dim sm">i dag · uke ${mt?.week ?? isoWeek()}</span></a>` : ''}
   </div>`;
 }
@@ -240,6 +241,7 @@ function gallery(th) {
   if (!H.gal) return '';
   const tr = (on) => `<span class="sw" aria-checked="${on}"></span>`;
   const rows = (key, def, fixed) => lay[key].map((id, i, a) => {
+    if (def[id]?.[0] === 'dom' && !domOk()) return '';
     const hid = !!lay.hide[id], fx = fixed.includes(id);
     return `<div class="opt-row"><span class="m-grow" style="opacity:${hid ? 0.5 : 1}">${def[id][1]}</span>
       <button class="mini" data-hle="mv" data-k="${key}" data-i="${i}" data-j="${i - 1}" aria-label="Flytt opp" ${i ? '' : 'disabled style="opacity:.3"'}>▲</button><button class="mini" data-hle="mv" data-k="${key}" data-i="${i}" data-j="${i + 1}" aria-label="Flytt ned" ${i < a.length - 1 ? '' : 'disabled style="opacity:.3"'}>▼</button>

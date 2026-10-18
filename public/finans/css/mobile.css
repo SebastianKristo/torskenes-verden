@@ -2825,3 +2825,11 @@ img.p23-ic,span.p24-img{background:none!important;-webkit-mask:none!important;ma
   .m.vaer .p17-cmpin{width:min(520px,46%);max-height:none;margin:calc(env(safe-area-inset-top) + 60px) 16px 16px auto;border-radius:28px;box-shadow:0 30px 80px -20px rgba(0,0,0,.6);padding-bottom:30px}
 }
 @keyframes p25side{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
+/* ISO2: «Dine integrasjoner» og «Server (administrator)», og skrivebeskyttet serveroppsett for vanlige brukere */
+.m .p24-igsec{display:flex;flex-direction:column;gap:2px;margin:18px 4px 2px}
+.m .p24-igsec:first-child{margin-top:22px}
+.m .p24-igsec b{font-size:20px;font-weight:600}
+.m .p24-igsec .pp-mut{font-size:12.5px}
+.m .p17-ro .sval,.m .p23-ro .sval{opacity:.75}
+.m .p23-ro{cursor:default}
+.m .p17-adm{font-weight:500}

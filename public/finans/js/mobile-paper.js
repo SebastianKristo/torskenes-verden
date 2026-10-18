@@ -4,7 +4,7 @@
 // Alle eksisterende sider tegnes i Papir ved at Android-fargerollene (--m3-*) får papirfarger (se mobile-theme.js).
 // Her ligger skallet (fotovindu og fanelinje), Papir-forsiden, Finans-oversikten, Mer, Media og nyhetsleseren.
 import { S, esc, n0, hlApi, ini, today, greet } from './core.js';
-import { m, draw, flash, pref, setPref, meName, avInner, avatarUrl, openSheet, upload, ACTIVE_JOBS, startScr } from './mobile.js';
+import { m, draw, flash, pref, setPref, meName, avInner, avatarUrl, openSheet, upload, ACTIVE_JOBS, startScr, domOk } from './mobile.js';
 import { hlData, hlDom, ruterUrl } from './mobile-hl.js';
 import { TR, active, badge, carName } from './mobile-track.js';
 import { pkgLogo, pkgTitle, pkgMore } from './mobile-p21.js';
@@ -300,7 +300,7 @@ export function paperHome() {
   const minis = [
     ['FINANS', s ? n0(s.left) : '–', rv ? `${rv} kvittering${rv > 1 ? 'er' : ''}` : 'igjen å bruke', rv ? 'lab' : 'mut', '#/hjem', '20px'],
     ['MAT', mt?.name || 'Ingen rett', mt?.cook ? `${mt.cook} lager` : '', 'mut', '#/mat', '16px'],
-    fourth() === 'spor' ? ['DOMENER', dom?.visitors != null ? n0(dom.visitors) : dom?.total != null ? String(dom.total) : '–', dom ? (dom.down ? `${dom.down} nede` : 'alle oppe') : '', dom?.down ? 'lab' : 'pos', '#/dom', '20px']
+    fourth() === 'spor' && domOk() ? ['DOMENER', dom?.visitors != null ? n0(dom.visitors) : dom?.total != null ? String(dom.total) : '–', dom ? (dom.down ? `${dom.down} nede` : 'alle oppe') : '', dom?.down ? 'lab' : 'pos', '#/dom', '20px']
       : ['SPORING', String(onWay() || active(TR.data?.items ?? []).length || 0), onWay() ? 'på vei' : 'ingen på vei', onWay() ? 'lab' : 'mut', '#/spor', '20px'],
   ];
   // Hold inne et kort for å flytte eller skjule det (Søk, Pakker, Avganger, Snarveier, Siste nytt).
@@ -354,8 +354,8 @@ export function paperMer() {
   // Prompt 24 (claude-code-mer-lik.md): ett kort, rekkefølge og tekster som i designet. Det som allerede ligger i
   // fanelinja tas ut. I profilene Finans + Boliger og Boliger-profil står Hjem øverst.
   const n = onWay(), inBar = new Set(mainTabs('mer').map(([k]) => k));
-  const mod = inBar.has('spor') ? ['dom', 'Domener', 'Trafikk, besøk og oppetid'] : ['spor', 'Sporing', n ? `${n} pakke${n === 1 ? '' : 'r'} på vei` : 'Pakker og sendinger'];
-  const rows = [...(P24.profRoot() ? [['hl', 'Hjem', 'Pakker, avganger og widgets']] : []), mod, ['bd', 'Bursdager', 'Hvem har bursdag snart'], ['huske', 'Huskeliste', 'Oppgaver og widgets'], ['fam', 'Familie og kart', 'Posisjon, soner og helse'],
+  const mod = inBar.has('spor') ? (domOk() ? ['dom', 'Domener', 'Trafikk, besøk og oppetid'] : null) : ['spor', 'Sporing', n ? `${n} pakke${n === 1 ? '' : 'r'} på vei` : 'Pakker og sendinger'];
+  const rows = [...(P24.profRoot() ? [['hl', 'Hjem', 'Pakker, avganger og widgets']] : []), ...(mod ? [mod] : []), ['bd', 'Bursdager', 'Hvem har bursdag snart'], ['huske', 'Huskeliste', 'Oppgaver og widgets'], ['fam', 'Familie og kart', 'Posisjon, soner og helse'],
     ['media', 'Media', 'Spilles nå og historikk'], ['hjem', 'Finans', 'Oversikt, liste, Finn og mer'], ['nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag'], ['set', 'Innstillinger', 'Tema, bakgrunn og konto']]
     .filter(([k]) => k === 'hl' || k === 'set' || !inBar.has(k));
   // Prompt 25: ikon til venstre (40-boks med strekikon i fargene fra ikonpaletten).
@@ -372,7 +372,7 @@ const ago = (iso) => { if (!iso) return ''; const s = (Date.now() - new Date(iso
 export function mediaView() {
   const M = P.media;
   if (!M) return '<div class="m-spin"></div>';
-  if (!M.configured && !M.now.length && !M.hist.length) return '<div class="pp-card"><div class="pp-mut">Plex eller Jellyfin er ikke satt opp. Legg dem inn i Homelab → Innstillinger → Integrasjoner.</div></div>';
+  if (!M.configured && !M.now.length && !M.hist.length) return '<div class="pp-card pp-col"><b>Ikke satt opp</b><span class="pp-mut">Koble til din egen Plex eller Jellyfin.</span><a class="pp-btn ink" href="#/set/integ/plex" style="align-self:flex-start">Sett opp under Integrasjoner</a></div>';
   const now = M.now;
   return `<div class="pp-card pp-saldo"><span class="pp-lab">SPILLES NÅ</span><b class="pp-serif pp-huge" style="font-size:40px">${now.length ? `${now.length} ${now.length === 1 ? 'strøm' : 'strømmer'}` : 'Ingenting'}</b>
       <span class="pp-mut">${esc(now.map((x) => `${x.user || 'Ukjent'} · ${x.title}`).join(' · ') || 'Ingen spiller noe akkurat nå')}</span></div>
