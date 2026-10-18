@@ -23,6 +23,9 @@ const ago = (ts) => {
 const kmh = (ms) => (ms == null ? null : Math.round(ms * 3.6));
 const me = () => S.d?.members.find((m) => m.self);
 const person = (id) => S.d?.members.find((m) => m.userId === id);
+// Brukerskille (prompt 21): deling er av som standard. Andre vises bare når de deler med deg; soner tilhører den som lagde dem.
+const sharesWithMe = (m) => !m.self && m.sharing === 'on';
+const myZone = (z) => (z.mine ?? (z.createdBy == null || z.createdBy === me()?.userId)) !== false;
 const avatar = (m, cls = '') => `<span class="fam-av ${cls} s-${esc(m.sharing)}">${m.avatarUrl ? `<img src="${esc(m.avatarUrl)}" alt="">` : esc(initials(m.name))}</span>`;
 
 /* ---------------- Leaflet ---------------- */
@@ -44,25 +47,38 @@ function loadLeaflet() {
 }
 
 // Kartfliser går via serverens proxy og cache (/tiles), aldri direkte mot OSM-flisserverne (prompt 20).
-// Stilen følger temaet: mørk i «Nåværende», lys med sepia i Vindu og papir (CSS i family.css).
+// Prompt 21: standard er Kartverket topo (gratis, uten nøkkel). Mørkt tema bruker samme topo-fliser med et mørkt
+// CSS-filter (darkFilter), Vindu og papir får paperFilter. CARTO brukes bare når serveren sier det (og den er satt opp).
+const TOPO_ATTR = '© <a href="https://www.kartverket.no/" target="_blank" rel="noopener">Kartverket</a>';
 const TILE_FALLBACK = {
-  tiles: Object.fromEntries(['voyager', 'dark', 'light', 'topo'].map((k) => [k, `/tiles/${k}/{z}/{x}/{y}{r}.png`])),
-  attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-bidragsytere © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>',
-  default: 'voyager', maxZoom: 19,
+  tiles: { topo: '/tiles/topo/{z}/{x}/{y}.png' }, attributions: { topo: TOPO_ATTR }, maxZooms: { topo: 18 },
+  default: 'topo', dark: 'topo', paper: 'topo', maxZoom: 18,
+  paperFilter: 'sepia(.25) saturate(.8)', darkFilter: 'invert(1) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.6)',
 };
+const CARTO = new Set(['voyager', 'dark', 'light']);
 let mapCfg = null;
-const loadMapCfg = () => (mapCfg ??= api('/config/map').then((c) => (c?.tiles ? { ...TILE_FALLBACK, ...c, tiles: { ...TILE_FALLBACK.tiles, ...c.tiles } } : TILE_FALLBACK)).catch(() => TILE_FALLBACK));
+const loadMapCfg = () => (mapCfg ??= api('/config/map').then((c) => (c?.tiles ? { ...TILE_FALLBACK, ...c, tiles: { ...TILE_FALLBACK.tiles, ...c.tiles }, attributions: { ...TILE_FALLBACK.attributions, ...(c.attributions ?? {}) }, maxZooms: { ...TILE_FALLBACK.maxZooms, ...(c.maxZooms ?? {}) } } : TILE_FALLBACK)).catch(() => TILE_FALLBACK));
 const greyTile = (dark) => 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="${dark ? '#2a2b2e' : '#e4e0d6'}"/></svg>`);
-const tileStyle = () => (document.documentElement.dataset.hl === '2c' ? 'light' : 'dark');
+const isDarkUi = () => document.documentElement.dataset.hl !== '2c';
+/** Stilen for temaet. En eldre server (uten darkFilter) sier fortsatt CARTO, som nå krever nøkkel: da brukes topo. */
+function tileStyle(cfg) {
+  const s = isDarkUi() ? cfg.dark ?? cfg.default : cfg.default;
+  if (!cfg.tiles[s] || (CARTO.has(s) && !cfg.darkFilter)) return 'topo';
+  return s;
+}
 
 async function addTiles(m) {
   const cfg = await loadMapCfg();
   if (map !== m) return; // kartet ble byttet mens konfigen ble hentet
-  const style = tileStyle(), maxZoom = cfg.maxZoom ?? 19;
+  const style = tileStyle(cfg), dark = isDarkUi(), maxZoom = cfg.maxZooms?.[style] ?? cfg.maxZoom ?? 18;
   // detectRetina henter selv flisene ett zoomnivå opp på skjermer med høy tetthet, så {r} (@2x) droppes for å unngå dobbel oppskalering.
-  const url = String(cfg.tiles[style] ?? cfg.tiles[cfg.default] ?? TILE_FALLBACK.tiles[style]).replace('{r}', '');
+  const url = String(cfg.tiles[style] ?? TILE_FALLBACK.tiles.topo).replace('{r}', '');
   m.getContainer().dataset.tiles = style;
-  L.tileLayer(url, { maxZoom, detectRetina: true, crossOrigin: true, errorTileUrl: greyTile(style === 'dark'), attribution: cfg.attribution ?? TILE_FALLBACK.attribution }).addTo(m);
+  // Mørke CARTO-fliser er mørke fra før; lyse fliser (topo m.fl.) får filteret fra konfigen.
+  const filter = dark ? (style === 'dark' ? '' : cfg.darkFilter ?? TILE_FALLBACK.darkFilter) : cfg.paperFilter ?? TILE_FALLBACK.paperFilter;
+  const pane = m.getPane('tilePane');
+  if (pane) pane.style.filter = filter || 'none';
+  L.tileLayer(url, { maxZoom, maxNativeZoom: maxZoom, detectRetina: true, crossOrigin: true, errorTileUrl: greyTile(dark), attribution: cfg.attributions?.[style] ?? (style === 'topo' ? TOPO_ATTR : cfg.attribution) ?? TOPO_ATTR }).addTo(m);
 }
 
 function setupMap() {
@@ -79,7 +95,7 @@ function setupMap() {
 }
 
 function fitAll() {
-  const pts = (S.d?.members ?? []).filter((m) => m.last).map((m) => [m.last.lat, m.last.lon]);
+  const pts = (S.d?.members ?? []).filter((m) => m.last && (m.self || sharesWithMe(m))).map((m) => [m.last.lat, m.last.lon]);
   if (pts.length > 1) map.fitBounds(pts, { padding: [40, 40], maxZoom: 15 });
   else if (pts.length) map.setView(pts[0], 14);
 }
@@ -95,7 +111,7 @@ function drawMap() {
     L.circleMarker([S.track[0].lat, S.track[0].lon], { radius: 4, color: '#b23a2a', fillColor: '#fff', fillOpacity: 1, weight: 2 }).addTo(layers.track);
   }
   for (const m of S.d.members) {
-    if (!m.last) continue;
+    if (!m.last || !(m.self || sharesWithMe(m))) continue;
     const icon = L.divIcon({ className: 'fam-pin-wrap', html: `<div class="fam-pin${m.userId === S.sel ? ' on' : ''}">${avatar(m)}</div>`, iconSize: [44, 44], iconAnchor: [22, 22] });
     const mk = L.marker([m.last.lat, m.last.lon], { icon, title: m.name }).addTo(layers.people);
     mk.on('click', () => select(m.userId));
@@ -113,7 +129,7 @@ async function load() {
   try {
     S.d = await api('/family');
     S.err = null;
-    if (!S.sel) S.sel = (S.d.members.find((m) => !m.self && m.last) ?? me())?.userId ?? null;
+    if (!S.sel) S.sel = (S.d.members.find((m) => sharesWithMe(m) && m.last) ?? me())?.userId ?? null;
   } catch (e) { S.err = e.message; }
   paint();
   if (S.sel) loadTrack();
@@ -144,10 +160,10 @@ function select(id) {
 function memberRow(m) {
   const l = m.last, sp = kmh(l?.speed);
   const status = m.sharing !== 'on' ? `<span class="fam-tag warn">${SHARE[m.sharing]}</span>` : m.precision === 'approx' ? '<span class="fam-tag">Omtrentlig</span>' : '';
-  const where = l ? (l.place ? `Hos ${esc(l.place)}` : l.approx ? 'Omtrentlig posisjon' : `${l.lat.toFixed(4)}, ${l.lon.toFixed(4)}`) : m.sharing === 'on' ? 'Ingen posisjon ennå' : 'Deling er pauset';
+  const where = l ? (l.place ? `Hos ${esc(l.place)}` : l.approx ? 'Omtrentlig posisjon' : `${l.lat.toFixed(4)}, ${l.lon.toFixed(4)}`) : m.sharing === 'on' ? 'Ingen posisjon ennå' : m.sharing === 'paused' ? 'Deling er pauset' : 'Deler ikke posisjon';
   return `<button type="button" class="fam-person${m.userId === S.sel ? ' on' : ''}" data-fam-sel="${esc(m.userId)}">
     ${avatar(m, 'lg')}
-    <span class="fam-pmain"><span class="fam-pname"><b>${esc(m.name)}${m.self ? ' <i>(deg)</i>' : ''}</b>${status}</span><span class="fam-sub">@${esc(m.username)} · ${where}</span>
+    <span class="fam-pmain"><span class="fam-pname"><b>${esc(m.name)}${m.self ? ' <i>(deg)</i>' : ''}</b>${status}</span><span class="fam-sub">${m.username ? `@${esc(m.username)} · ` : ''}${where}</span>
       ${l ? `<span class="fam-sens">
         <span title="Sist sett">◷ ${ago(l.ts)}</span>
         ${l.activity ? `<span>${ACT[l.activity] ?? esc(l.activity)}</span>` : ''}
@@ -200,23 +216,33 @@ function healthCard() {
 
 function healthAll() {
   const keep = S.sel;
-  const cards = (S.d?.members ?? []).map((m) => { S.sel = m.userId; return healthCard(); }).join('');
+  const list = (S.d?.members ?? []).filter((m) => m.self || (m.health && m.sharing !== 'off' && m.sharing !== 'paused'));
+  const cards = list.map((m) => { S.sel = m.userId; return healthCard(); }).join('') + (list.some((m) => !m.self) ? '' : '<section class="card fam-card"><div class="fam-empty fam-none"><b>Ingen deler helse med deg ennå</b>Helsedeling er av som standard.</div></section>');
   S.sel = keep;
   return `<div class="fam-hgrid">${cards}</div>
     <div class="fam-note">Apple Health og Health Connect kan bare leses av appen på telefonen. Homelab-appen sender et sammendrag hit hvert 15. minutt, og bare det personen har valgt å dele.</div>`;
 }
 
+function peopleCard() {
+  const all = S.d?.members ?? [], self = all.filter((m) => m.self), others = all.filter(sharesWithMe);
+  const empty = others.length ? '' : `<div class="fam-empty fam-none"><b>Ingen deler posisjon med deg ennå</b>
+    Deling er av som standard. Når noen i familien slår på deling, vises de her og på kartet.</div>`;
+  return `<section class="card fam-card"><div class="fam-h"><span class="fam-k">Familien</span><span class="fam-sub">${others.length ? `${others.length} deler med deg` : 'Ingen deler med deg'}</span></div>
+    <div class="fam-people">${[...self, ...others].map(memberRow).join('')}</div>${empty}</section>`;
+}
+
 function zonesCard() {
-  const z = S.d?.zones ?? [], others = (S.d?.members ?? []).filter((m) => !m.self);
+  const z = S.d?.zones ?? [], others = (S.d?.members ?? []).filter(sharesWithMe);
   return `<section class="card fam-card"><div class="fam-h"><span class="fam-k">Soner</span>
       <button type="button" class="fam-btn${S.picking ? ' pri' : ''}" data-fam-act="pick">${S.picking ? 'Trykk på kartet …' : '+ Ny sone'}</button></div>
     ${z.length ? z.map((x) => `<div class="fam-zone">
       <div class="fam-zrow"><span class="fam-dot" style="background:${esc(x.color)}"></span><b>${esc(x.name)}</b><span class="fam-sub">${nb(x.radius)} m</span>
-        <button type="button" class="fam-link" data-fam-zedit="${x.id}">Endre</button></div>
+        ${myZone(x) ? `<button type="button" class="fam-link" data-fam-zedit="${x.id}">Endre</button>` : `<span class="fam-sub">Fra ${esc(person(x.createdBy)?.name ?? 'familien')}</span>`}</div>
+      ${myZone(x) ? `<label class="fam-sw fam-zshare"><input type="checkbox" data-fam-zshare="${x.id}" ${x.shared ? 'checked' : ''}><span>Del med familien</span></label>` : ''}
       ${others.length ? `<div class="fam-notify">${others.map((m) => { const n = x.notify?.[m.userId] ?? {}; return `<div class="fam-nrow"><span>${esc(m.name)}</span>
         <button type="button" class="fam-chip${n.enter ? ' on' : ''}" data-fam-notify="${x.id}" data-u="${esc(m.userId)}" data-k="enter">Kommer</button>
         <button type="button" class="fam-chip${n.leave ? ' on' : ''}" data-fam-notify="${x.id}" data-u="${esc(m.userId)}" data-k="leave">Forlater</button></div>`; }).join('')}</div>` : ''}
-    </div>`).join('') : '<div class="fam-empty">Ingen soner ennå. Trykk «+ Ny sone» og så på kartet.</div>'}
+    </div>`).join('') : '<div class="fam-empty">Ingen soner ennå. Trykk «+ Ny sone» og så på kartet. Sonene dine er private til du slår på «Del med familien».</div>'}
   </section>`;
 }
 
@@ -232,7 +258,7 @@ function privacyCard() {
   if (!p) return '';
   const seg = (k, opts) => `<div class="fam-seg">${opts.map(([v, t]) => `<button type="button" class="${p[k] === v ? 'on' : ''}" data-fam-pref="${k}" data-v="${v}">${t}</button>`).join('')}</div>`;
   const hs = [['steps', 'Skritt'], ['restingHr', 'Hvilepuls'], ['hr', 'Puls'], ['sleep', 'Søvn'], ['activeKcal', 'Aktive kalorier'], ['week', 'Siste 7 dager']];
-  return `<section class="card fam-card"><div class="fam-h"><span class="fam-k">Min deling</span><span class="fam-sub">${p.sharing === 'on' ? 'De andre ser deg' : p.sharing === 'paused' ? 'De andre ser at du har pauset' : 'Deling er av, og sporet ditt er slettet'}</span></div>
+  return `<section class="card fam-card"><div class="fam-h"><span class="fam-k">Min deling</span><span class="fam-sub">${p.sharing === 'on' ? 'De andre ser deg' : p.sharing === 'paused' ? 'De andre ser at du har pauset' : 'Av som standard. Ingen ser posisjonen eller helsen din'}</span></div>
     ${seg('sharing', [['on', 'Deler'], ['paused', 'Pause'], ['off', 'Av']])}
     ${seg('precision', [['exact', 'Nøyaktig'], ['approx', 'Omtrentlig (~1 km)']])}
     <label class="fam-sw"><input type="checkbox" data-fam-here ${S.sharingHere ? 'checked' : ''} ${p.sharing !== 'on' ? 'disabled' : ''}><span>Del posisjon fra denne nettleseren mens siden er åpen</span></label>
@@ -249,6 +275,7 @@ function zoneSheet() {
     <label class="fam-f"><span>Navn</span><input data-fam-z="name" value="${esc(z.name)}" placeholder="f.eks. Hjem, Skole, Jobb" maxlength="60"></label>
     <label class="fam-f"><span>Radius · <b data-fam-rv>${nb(z.radius)} m</b></span><input type="range" min="50" max="2000" step="25" value="${z.radius}" data-fam-z="radius"></label>
     <div class="fam-f"><span>Farge</span><div class="fam-colors">${COLORS.map((c) => `<button type="button" class="fam-col${z.color === c ? ' on' : ''}" style="background:${c}" data-fam-col="${c}" aria-label="Farge ${c}"></button>`).join('')}</div></div>
+    <label class="fam-sw fam-zshare"><input type="checkbox" data-fam-z="shared" ${z.shared ? 'checked' : ''}><span>Del med familien</span></label>
     <div class="fam-sheetbtns">${z.id ? '<button type="button" class="fam-btn danger" data-fam-act="zdel">Slett</button>' : ''}<button type="button" class="fam-btn pri" data-fam-act="zsave">Lagre</button></div>
   </div>`;
 }
@@ -267,8 +294,7 @@ function body() {
   const side = S.tab === 'soner'
     ? `<div class="fam-side">${zonesCard()}</div>`
     : `<div class="fam-side">${personCard()}
-      <section class="card fam-card"><div class="fam-h"><span class="fam-k">Familien</span><span class="fam-sub">${S.d.members.filter((m) => m.last).length} av ${S.d.members.length} synlige</span></div>
-        <div class="fam-people">${S.d.members.map(memberRow).join('')}</div></section></div>`;
+      ${peopleCard()}</div>`;
   const row3 = S.tab === 'soner' ? '' : `<div class="fam-row3">${eventsCard()}${privacyCard()}</div>`;
   return `${tabs()}<div class="fam-grid">${mapCard}${side}${row3}</div>`;
 }
@@ -355,7 +381,7 @@ function bind(h) {
       case 'ping': {
         const m = person(S.sel);
         try { await api(`/family/ping/${encodeURIComponent(S.sel)}`, { method: 'POST' }); toast(`Ber ${m?.name ?? 'telefonen'} spille av lyd`); }
-        catch (er) { toast(/404|finnes ikke|Not Found/i.test(er.message) ? 'Serveren støtter ikke «Spill av lyd» ennå' : er.message); }
+        catch (er) { toast(er.status === 403 ? 'Slå på deling av din posisjon for å spille av lyd hos andre' : /404|finnes ikke|Not Found/i.test(er.message) ? 'Serveren støtter ikke «Spill av lyd» ennå' : er.message); }
         return;
       }
       case 'zclose': S.zoneDraft = null; return paint();
@@ -365,7 +391,7 @@ function bind(h) {
         S.zoneDraft = null; return load();
       }
       case 'zsave': {
-        const z = S.zoneDraft, payload = { name: z.name.trim(), lat: z.lat, lon: z.lon, radius: +z.radius, color: z.color };
+        const z = S.zoneDraft, payload = { name: z.name.trim(), lat: z.lat, lon: z.lon, radius: +z.radius, color: z.color, shared: !!z.shared };
         if (!payload.name) return toast('Gi sonen et navn');
         try { await api(z.id ? `/family/zones/${z.id}` : '/family/zones', { method: z.id ? 'PATCH' : 'POST', json: payload }); } catch (er) { return toast(er.message); }
         S.zoneDraft = null; toast('Sonen er lagret'); return load();
@@ -375,11 +401,20 @@ function bind(h) {
   h.addEventListener('input', (e) => {
     const k = e.target.dataset.famZ;
     if (!k || !S.zoneDraft) return;
-    S.zoneDraft[k] = k === 'radius' ? +e.target.value : e.target.value;
+    S.zoneDraft[k] = k === 'radius' ? +e.target.value : k === 'shared' ? e.target.checked : e.target.value;
     if (k === 'radius') { const v = h.querySelector('[data-fam-rv]'); if (v) v.textContent = `${nb(+e.target.value)} m`; drawMap(); }
   });
   h.addEventListener('change', (e) => {
     if (e.target.matches('[data-fam-here]')) { if (e.target.checked) startHere(); else stopHere(); }
+    const zs = e.target.closest('[data-fam-zshare]');
+    if (zs) {
+      const z = S.d.zones.find((x) => x.id === +zs.dataset.famZshare);
+      if (!z) return;
+      const want = zs.checked;
+      api(`/family/zones/${z.id}`, { method: 'PATCH', json: { shared: want } })
+        .then((r) => { Object.assign(z, r?.id ? r : { shared: want }); toast(want ? `«${z.name}» deles med familien` : `«${z.name}» er privat`); })
+        .catch((er) => { zs.checked = !want; toast(er.message); });
+    }
   });
 }
 
@@ -402,6 +437,6 @@ export function render() {
     try { L = await loadLeaflet(); } catch (e) { S.err = e.message; }
     await load();
   });
-  return `<div class="fam-top"><div class="os-title">Famil<b>ie</b></div><div class="fam-sub">Posisjon, soner og helse for alle som bruker appen</div></div>
+  return `<div class="fam-top"><div class="os-title">Famil<b>ie</b></div><div class="fam-sub">Posisjon, soner og helse fra dem som deler med deg. Deling er av som standard.</div></div>
     <div id="fam" class="fam">${body()}</div><div id="fam-toast" class="fam-toast" role="status" aria-live="polite" hidden></div>`;
 }

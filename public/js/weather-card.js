@@ -1,6 +1,7 @@
 // Værmelding og Pakker i én karusell (Dashboard på PC og «Vær» på mobil).
 // Karusellen tegnes én gang; bare innholdet i hvert lysbilde byttes ved oppdatering, så sveipeposisjonen beholdes.
 import { esc, nb } from './util.js';
+import { pkgLogo, pkgTitle, moreText } from './pkglogo.js';
 import { store, load, on } from './store.js';
 
 const WI = {
@@ -83,16 +84,6 @@ export function weatherCard() {
 
 /* ---------- Pakker (fra Sporing) ---------- */
 
-const CARRIERS = {
-  posten: ['P', '#E32D22', '#fff'], bring: ['B', '#7BC144', '#0f2a05'], postnord: ['PN', '#00A0D6', '#fff'], dhl: ['DHL', '#FFCC00', '#D40511'],
-  ups: ['UPS', '#351C15', '#FFB500'], fedex: ['FX', '#4D148C', '#fff'], gls: ['GLS', '#061AB1', '#FFD100'], helthjem: ['HH', '#1E2B57', '#fff'],
-  budbee: ['BB', '#3BDBB2', '#0c2b23'], instabox: ['IB', '#E5007E', '#fff'], schenker: ['DB', '#E00000', '#fff'],
-};
-const carrierBadge = (p, size = 30) => {
-  const [ini, bg, fg] = CARRIERS[p.carrier] ?? [(p.carrierName ?? '?').slice(0, 2).toUpperCase(), '#3a4256', '#eef0f4'];
-  return `<span class="pk-car" style="width:${size}px;height:${size}px;background:${bg};color:${fg}">${esc(ini)}${p.carrierLogo ? `<img class="trk-logo" src="${esc(p.carrierLogo)}" alt="" loading="lazy">` : ''}</span>`;
-};
-
 export function packagesCard() {
   const d = store.data.trackw;
   const all = (d?.items ?? []).filter((p) => !p.archived && p.status !== 'delivered');
@@ -104,13 +95,13 @@ export function packagesCard() {
     const st = p.step ?? 0, fin = p.status === 'delivered';
     const bars = [0, 1, 2, 3, 4].map((j) => `<i style="background:${fin ? '#8fe0b0' : j <= st ? (j === st ? '#ff7a3d' : '#eef0f4') : 'rgba(255,255,255,.16)'}"></i>`).join('');
     const eta = ready(p) && p.pickupPoint ? p.pickupPoint : p.eta ?? '';
-    return `<a class="pk-row" href="#/sporing" aria-label="${esc(p.name || p.trackingNo)}">
-      <span class="pk-top">${carrierBadge(p)}<span class="pk-txt"><b>${esc(p.name || p.shop || p.trackingNo)}</b><span style="color:${ready(p) ? '#ffb08a' : fin ? '#8fe0b0' : '#eef0f4'}">${esc(p.statusText ?? '')}</span></span>
+    return `<a class="pk-row" href="#/sporing" aria-label="${esc(pkgTitle(p))}">
+      <span class="pk-top">${pkgLogo(p, 36)}<span class="pk-txt"><b>${esc(pkgTitle(p))}</b><span style="color:${ready(p) ? '#ffb08a' : fin ? '#8fe0b0' : '#eef0f4'}">${esc(p.statusText ?? '')}</span></span>
       <span class="pk-eta">${esc(eta)}</span></span><span class="pk-bars">${bars}</span></a>`;
   }).join('');
   return `<div class="card-head" style="align-items:center"><div class="pk-head"><span class="pk-ic">${svg('box', 18, '#ffb08a', 1.9)}</span><b>Pakker</b></div><span class="sub" style="font-size:13.5px">${esc(count)}</span></div>
     ${list || `<div class="pk-none">Ingen pakker på vei.</div>`}
-    <span style="flex:1"></span><a class="wxc-btn" href="#/sporing">Åpne sporing ›</a>`;
+    <span style="flex:1"></span><a class="wxc-btn" href="#/sporing">${esc(moreText((d?.count?.active ?? all.length) - rows.length + 1) || 'Åpne sporing')} ›</a>`;
 }
 
 /* ---------- Karusellen ---------- */

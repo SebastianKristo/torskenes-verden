@@ -142,3 +142,16 @@ html[data-hl="2c"] .trk-selbar{background:#1b1a17;color:#f3efe6;border-color:#1b
 html[data-hl="2c"] .trk-selbar .trk-btn{background:transparent;color:#f3efe6;border-color:rgba(243,239,230,.35)}
 html[data-hl="2c"] .trk-selbar .trk-link{color:#f3efe6}
 .trk-selbar b{margin-right:auto;font-size:14px}
+/* Prompt 21: felles pakkelogo (pkglogo.js). Butikk, så fraktselskap, så bokstav; lite fraktmerke nede til høyre. */
+.pkl{position:relative;flex:none;width:var(--s);height:var(--s);border-radius:calc(var(--s) * .27);box-sizing:border-box;display:grid;place-items:center;background:var(--c);color:var(--fg);font-weight:800;font-size:calc(var(--s) * .3);line-height:1}
+.pkl.has{background:#fff;border:1px solid rgba(255,255,255,.14)}
+html[data-hl="2c"] .pkl.has{border-color:#d8d1c2}
+.pkl i{font-style:normal}
+.pkl.has i{visibility:hidden}
+.pkl-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:14%;box-sizing:border-box;border-radius:inherit;background:#fff}
+.pkl-img.full{padding:0;object-fit:cover}
+.pkl-car{position:absolute;right:-5px;bottom:-5px;width:18px;height:18px;box-sizing:border-box;border-radius:50%;border:2px solid #fff;background:#fff;object-fit:contain;box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.pkl-car.full{object-fit:cover}
+.trk-selb .pkl{transition:box-shadow .15s}
+.trk-selb:hover .pkl{box-shadow:0 0 0 2px var(--blue,#7aa7ff)}
+html[data-hl="2c"] .trk-selb:hover .pkl{box-shadow:0 0 0 2px #1b1a17}

@@ -3,7 +3,7 @@
 // overgang; uskarphet og mørklegging kommer fra brukerens valg (--bg-blur / --bg-dim).
 import { store } from './store.js';
 import { cssUrl } from './util.js';
-import { bgState, bgKnown, resolveBg, legacyToType, setBgFromLayout, particles } from './bgsvc.js';
+import { FALLBACK_GRAD, bgState, bgKnown, resolveBg, legacyToType, setBgFromLayout, particles } from './bgsvc.js';
 
 let front = 0, current = null, timer = null;
 
@@ -38,9 +38,11 @@ export async function applyBackground(force = false) {
   }
   const t = bgState().type;
   const host = document.querySelector('.bg');
-  if (t === 'none') { show(null); particles(host, null); return; }
+  if (t === 'none') { if (host) host.style.background = ''; show(null); particles(host, null); return; }
   const e = await resolveBg(t, force);
   await show(e.url);
+  // Ingen bilder lastet: rolig gradient (fra serveren eller reserven), ikke en tegning.
+  if (host) host.style.background = e.url ? '' : e.r?.gradient || FALLBACK_GRAD;
   host?.classList.toggle('bg-light', e.r?.theme_hint === 'light');
   particles(host, e.url ? e.r?.particles ?? null : null);
   // Vær og planeter («hver time») sjekkes hvert 10. minutt.

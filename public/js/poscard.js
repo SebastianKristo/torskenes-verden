@@ -71,13 +71,16 @@ function person(p) {
 
 function body() {
   ensure();
-  const list = store.data.positions;
+  let list = store.data.positions;
   const head = '<div class="pos-head"><span class="pos-lab">POSISJON · FAMILIE</span><span class="pos-more">kart ›</span></div>';
   if (!list) return head + (store.errors.positions ? `<div class="pos-empty">Familie: ${esc(store.errors.positions)}</div>` : '<div class="skeleton" style="min-height:84px"></div>');
   if (!list.length) return head + '<div class="pos-empty">Ingen i familien ennå.</div>';
+  // Prompt 21: bare du selv og de som deler med deg. Deler ingen, sies det tydelig.
+  const none = !list.some((p) => !p.self && p.status !== 'off') ? '<div class="pos-empty">Ingen deler posisjon med deg ennå.</div>' : '';
+  list = list.filter((p) => p.self || p.status !== 'off');
   const shown = list.length > MAX ? list.slice(0, MAX - 1) : list;
   const extra = list.length - shown.length;
-  return head + `<div class="pos-grid">${shown.map(person).join('')}${extra ? `<div class="pos-p pos-plus"><span class="pos-av">+${extra}</span><span class="pos-t"><b>Flere</b><span>Åpne Familie</span></span></div>` : ''}</div>`;
+  return head + `<div class="pos-grid">${shown.map(person).join('')}${extra ? `<div class="pos-p pos-plus"><span class="pos-av">+${extra}</span><span class="pos-t"><b>Flere</b><span>Åpne Familie</span></span></div>` : ''}</div>${none}`;
 }
 
 // Hele kortet er en lenke til Familie (kartfanen er standard der).

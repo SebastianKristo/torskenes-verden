@@ -167,7 +167,7 @@ function accessTab(cur, meta) {
   }).join('');
   const role = u.bolInvRole ?? 'editor';
   const invite = cur.isOwner ? `<div class="card bol2-card"><h3 class="bol2-h">Inviter</h3><form class="bol2-inv" data-mform="bol2-invite"><input class="inp" name="who" placeholder="Brukernavn eller navn" required list="bol2-users">
-      <datalist id="bol2-users">${(S.users ?? []).filter((x) => !cur.members.some((m) => m.userId === x.id)).map((x) => `<option value="${esc(x.username)}">${esc(x.name ?? x.username)}</option>`).join('')}</datalist>
+      <datalist id="bol2-users">${(S.users ?? []).filter((x) => !cur.members.some((m) => m.userId === x.id)).map((x) => `<option value="${esc(x.username || x.displayName || x.name || '')}">${esc(x.displayName ?? x.name ?? x.username ?? '')}</option>`).join('')}</datalist>
       <div class="bol2-seg">${Object.entries(ROLE_TXT).map(([k, [n]]) => `<button type="button" class="${k === role ? 'on' : ''}" data-bol2-irole="${k}">${n}</button>`).join('')}</div>
       <div class="note" style="font-size:12.5px">${ROLE_TXT[role][1]}.</div><button class="btn pri bol2-wide">Send invitasjon</button></form></div>` : '';
   const sw = (k, on, t, s) => `<label class="bol2-tog"><span><b>${t}</b><span class="note">${s}</span></span><input type="checkbox" data-bol2-meta="${k}"${on ? ' checked' : ''}${cur.isOwner ? '' : ' disabled'}><i></i></label>`;
@@ -355,7 +355,7 @@ function shareBox(f) {
   }).join('');
   const inv = (S.users ?? []).filter((x) => !f.members.some((m) => m.userId === x.id));
   return `<div class="share-box"><div class="card-h" style="align-items:baseline;flex-wrap:wrap;gap:8px"><b style="font-size:14px">Deling · ${esc(f.name)}</b><span class="note" style="font-size:12px">${isOwner ? 'Eiere kan dele, endre tilgang og fjerne medlemmer' : 'Bare eiere kan endre deling'}</span></div>${acl}
-    ${isOwner ? (inv.length ? `<form class="share-add" data-mform="bshare" data-fid="${f.id}"><select class="inp" name="userId" required><option value="">Velg bruker …</option>${inv.map((x) => `<option value="${esc(x.id)}">${esc(x.name)} (${esc(x.username)})</option>`).join('')}</select><select class="inp" name="role">${optList([['editor', 'Kan redigere'], ['viewer', 'Kan se']], 'editor')}</select><button class="btn pri">Del</button></form>` : '<span class="note" style="font-size:12px">Alle brukere har tilgang. Nye brukere legges til av admin under Innstillinger → Innlogging i Homelab.</span>') : ''}</div>`;
+    ${isOwner ? (inv.length ? `<form class="share-add" data-mform="bshare" data-fid="${f.id}"><select class="inp" name="userId" required><option value="">Velg bruker …</option>${inv.map((x) => `<option value="${esc(x.id)}">${esc(x.name ?? x.displayName)}${x.username ? ` (${esc(x.username)})` : ''}</option>`).join('')}</select><select class="inp" name="role">${optList([['editor', 'Kan redigere'], ['viewer', 'Kan se']], 'editor')}</select><button class="btn pri">Del</button></form>` : '<span class="note" style="font-size:12px">Alle brukere har tilgang. Nye brukere legges til av admin under Innstillinger → Innlogging i Homelab.</span>') : ''}</div>`;
 }
 
 /* ===================== Finn-handler ===================== */
@@ -869,10 +869,11 @@ export function bindModules(el) {
       case 'bol2-invite': {
         const who = String(v.who ?? '').trim(), role = u.bolInvRole ?? 'editor';
         if (!who) return;
-        const usr = (S.users ?? []).find((x) => x.username === who.toLowerCase() || String(x.name ?? '').toLowerCase() === who.toLowerCase());
+        // Vanlige brukere får ikke brukernavnet til andre (prompt 21): match også på visningsnavn.
+        const usr = (S.users ?? []).find((x) => (x.username && x.username === who.toLowerCase()) || [x.name, x.displayName].some((n) => n && String(n).toLowerCase() === who.toLowerCase()));
         if (usr) S.folder = await api(`/folders/${u.dir}/members`, { method: 'POST', json: { userId: usr.id, role } });
         else S.folder = await api(`/folders/${u.dir}/invite`, { method: 'POST', json: { members: [who] } });
-        toast(`${usr ? (usr.name ?? usr.username) : who} har fått tilgang`); return reload();
+        toast(`${usr ? (usr.displayName ?? usr.name ?? usr.username) : who} har fått tilgang`); return reload();
       }
       case 'invite': if (!v.emails.trim()) return; S.folder = await api(`/folders/${u.dir}/invite`, { method: 'POST', json: v }); return reload();
       case 'finn': { const r = await api('/finn', { method: 'POST', json: v }); toast(`${r.item} lagt til`); return reload(); }

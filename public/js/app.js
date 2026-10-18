@@ -18,6 +18,7 @@ import * as tracking from './tracking.js';
 import * as family from './family.js';
 import * as tasks from './tasks.js';
 import './finpreload.js';
+import { logout, noteUser } from './usercache.js';
 import { loadAppIdentity, appName } from './appicon.js';
 import { loadHlTheme, applyHlTheme, is2c, setHlTheme, pwHeader, paintPhoto, bindPhoto } from './hltheme.js';
 
@@ -98,7 +99,7 @@ function bindShell() {
     if (act === 'toggle-search') await toggle('search');
     if (act === 'toggle-news') await toggle('news');
     if (act === 'head-edit') toggleHeadEdit();
-    if (act === 'logout') { await api('/logout', { method: 'POST' }).catch(() => {}); location.href = '/login'; }
+    if (act === 'logout') await logout();
   });
   window.addEventListener('hashchange', renderRoute);
   document.addEventListener('hl:theme', () => { route = null; renderRoute(); weatherPill(); });
@@ -110,6 +111,7 @@ function bindShell() {
 async function main() {
   const [me, ui] = await Promise.all([api('/state'), api('/ui').catch(() => uiDefaults()), loadHlTheme(), loadAppIdentity()]);
   store.me = me;
+  noteUser(me?.me?.id); // kontobytte: tøm den forrige brukerens cacher
   store.me.ui = { ...uiDefaults(), ...ui };
   applyHlTheme();
   applyProfile();

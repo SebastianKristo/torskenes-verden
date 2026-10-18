@@ -408,7 +408,7 @@ html[data-hl="2c"] .bg{display:none!important}
 /* Fotovinduet går kant i kant, mens innholdet står i samme spalte som resten av siden. */
 html[data-hl="2c"] .pw{height:var(--pw-h);margin:0 calc(50% - 50vw);padding:24px calc(50vw - 50%) 46px;background:#5d7690}
 html[data-hl="2c"] .pw-low{padding-bottom:30px}
-html[data-hl="2c"] .pw-img{position:absolute!important;inset:0;z-index:0!important;background:linear-gradient(170deg,#7d93aa,#4a5f76) center 40%/cover no-repeat;transition:background-image .4s}
+html[data-hl="2c"] .pw-img{position:absolute!important;inset:0;z-index:0!important;background:linear-gradient(170deg,#4a5a6a,#2a3440 60%,#1d242c) center 40%/cover no-repeat;transition:background-image .4s}
 html[data-hl="2c"] .pw-img::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.25),transparent 35%,rgba(0,0,0,.45))}
 html[data-hl="2c"] .pw-kick{font:italic 400 17px var(--serif)}
 html[data-hl="2c"] .pw-low .pw-title{font:500 clamp(36px,4.4vw,56px)/1 var(--serif);letter-spacing:-.02em;margin-top:6px}
@@ -652,3 +652,8 @@ html[data-hl="2c"] .bgc-img i{background:var(--ink);color:var(--pp)}
 html[data-hl="2c"] .bgc small{color:var(--ink2)}
 html[data-hl="2c"] .bg-chips .chip[aria-pressed=true]{background:var(--ink);color:var(--pp);border-color:var(--ink)}
 html[data-hl="2c"] .bg-range input[type=range]{accent-color:var(--ink)}
+
+/* Prompt 21: pakkerader med logo (pkglogo.js) */
+html[data-hl="2c"] .p-pk.p-pk-l{flex-direction:row;align-items:center;gap:12px}
+html[data-hl="2c"] .p-pk-t{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+html[data-hl="2c"] .p-pk-t b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

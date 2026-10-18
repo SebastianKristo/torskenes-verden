@@ -1,4 +1,5 @@
 import { loadAppIdentity } from './appicon.js';
+import { noteUser } from './usercache.js';
 
 const form = document.getElementById('login');
 const err = document.getElementById('err');
@@ -10,7 +11,8 @@ const show = (step) => {
 };
 const fail = (msg) => { err.textContent = msg; err.hidden = false; };
 
-function done() {
+function done(user) {
+  noteUser(user?.id);
   const next = new URLSearchParams(location.search).get('next');
   location.href = next && /^\/[^/\\]/.test(next) ? next : '/';
 }
@@ -34,12 +36,12 @@ form.addEventListener('submit', async (e) => {
         form.code.value = ''; show('code');
         return;
       }
-      if (ok) return done();
+      if (ok) return done(data.user);
       fail(data.error || 'Feil brukernavn eller passord');
       form.password.select();
     } else {
       const { ok, data } = await post('/api/auth/totp', { ticket, code: form.code.value.trim(), remember: form.remember.checked });
-      if (ok) return done();
+      if (ok) return done(data.user);
       fail(data.error || 'Feil kode. Prøv igjen.');
       if (data.expired) { ticket = null; form.password.value = ''; show('cred'); } else form.code.select();
     }
@@ -93,7 +95,7 @@ setup.addEventListener('submit', async (e) => {
   btn.disabled = true; obErr.hidden = true;
   try {
     const { ok, data } = await post('/api/setup', { adminName: setup.adminName.value.trim(), serverName: setup.serverName.value.trim() || 'Homelab', username: u, password: setup.password.value });
-    if (ok) return done();
+    if (ok) return done(data.user);
     if (data.error === 'Serveren er allerede satt opp') { location.reload(); return; }
     obFail(data.error || 'Kunne ikke opprette brukeren');
   } catch { obFail('Fikk ikke kontakt med serveren'); }

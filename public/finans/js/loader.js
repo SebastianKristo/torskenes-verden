@@ -4,6 +4,8 @@
 (function () {
   var h = document.documentElement;
   var q = location.search;
+  // Hent oversikten (/finans/api/bootstrap) parallelt med at modulene lastes; core.js loadBoot() bruker svaret (prompt 21).
+  try { window.__fhBoot = fetch('/finans/api/bootstrap', { credentials: 'same-origin' }); window.__fhBoot.catch(function () {}); } catch (e) { window.__fhBoot = null; }
   var mobile = q.indexOf('desktop') < 0 && (matchMedia('(max-width: 899px)').matches || (matchMedia('(pointer: coarse)').matches && matchMedia('(max-width: 1100px)').matches));
   if (mobile) return;
   var t = 'cur';

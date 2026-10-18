@@ -3,7 +3,8 @@
 import { esc, api, cssUrl, logoImg, initials, backdropClick } from './util.js';
 import { store, emit, load } from './store.js';
 import { applyBackground } from './background.js';
-import { BG_TYPES, PLANETS, bgState, saveBg, resolveBg, cachedBg, creditOf, typeToLegacy } from './bgsvc.js';
+import { logout } from './usercache.js';
+import { BG_TYPES, PLANETS, FALLBACK_GRAD, bgState, saveBg, resolveBg, cachedBg, creditOf, typeToLegacy } from './bgsvc.js';
 import { SEARCH_STYLES, GWORD, renderTicker, applyTicker, menuLabels, loadHistory, searchState, setHistory } from './extras.js';
 import { DASH_WIDGETS, MOBILE_WIDGETS, TABS as NAV_TABS, FIXED_TABS, hiddenWidgets, hiddenTabs, tabAllowed, saveLayout, applyNav } from './profile.js';
 import { orderOf, setOrder } from './dnd.js';
@@ -144,7 +145,7 @@ function loadBgPreviews(force) {
 function bgCard([k, name, desc], cur) {
   const p = bgPrev?.[k], e = cachedBg(k);
   const url = k === 'none' ? null : (k === cur && e?.url) || p?.image_url;
-  const style = url ? `background-image:${safeUrl(url)}` : `background:${p?.gradient || 'linear-gradient(170deg,#7d93aa,#4a5f76)'}`;
+  const style = url ? `background-image:${safeUrl(url)}` : `background:${p?.gradient || FALLBACK_GRAD}`;
   const empty = k === 'custom' && !url ? '<em>Last opp et bilde</em>' : '';
   return `<button type="button" class="bgc" data-bgtype="${k}" aria-pressed="${cur === k}"><span class="bgc-img" style="${esc(style)}">${empty}${cur === k ? '<i>✓</i>' : ''}</span>
     <b>${esc(name)}</b><small>${esc(desc)}</small></button>`;
@@ -186,7 +187,7 @@ function lookView() {
   const s = store.me, sq = searchState();
   if (!sub) return { groups: [
     { ...group('Tema', [{ html: themeCards(), q: `tema ${THEMES.map((t) => t[1]).join(' ')} papir vindu` }], 'Byttet skjer med en gang og lagres på brukeren din. Alt virker likt i begge temaene.'), cls: 'sg-theme' },
-    group('Bakgrunn', [row({ t: 'Bakgrunnsbilde', s: hlTheme() === '2c' ? 'Vises i fotovinduet øverst på Dashboard.' : 'Vises bare på Dashboard. De andre sidene har en rolig, mørk bakgrunn.', v: BGN[bgState().type] ?? 'Oslo', k: 'vær planeter jorda månen jupiter mars oslo uskarphet mørklegging', go: 'look|bg' })]),
+    group('Bakgrunn', [row({ t: 'Bakgrunnsbilde', s: hlTheme() === '2c' ? 'Vises i fotovinduet øverst på Dashboard.' : 'Vises bare på Dashboard. De andre sidene har en rolig, mørk bakgrunn.', v: BGN[bgState().type] ?? 'Oslo', k: 'vær planeter jorda månen jupiter mars saturn oslo uskarphet mørklegging', go: 'look|bg' })]),
     group('Søkebar', [
       row({ t: 'Vis søkebar', s: 'Kan dras mellom avgangene og klokka.', tog: !s.hideSearch, act: 'data-toggle="search"' }),
       row({ t: 'Stil', v: SRN[s.searchStyle] ?? 'Lys', go: 'look|style' }),
@@ -397,9 +398,12 @@ function mailVal() {
   if (mail.lastError || mail.error) return '!Feil ved henting';
   return mail.folder || mail.config?.folder || 'Satt opp';
 }
-const warnCount = () => (cfg ? cfg.filter((g) => valOf(g).startsWith('!')).length : 0) + (mailVal().startsWith('!') ? 1 : 0);
+// Prompt 21: /api/config er serveroppsett. Vanlige brukere får bare tomme, låste grupper (restricted), så fanen er låst for dem.
+const cfgLocked = () => !isAdmin() || (Array.isArray(cfg) && cfg.length > 0 && cfg.every((g) => g.restricted));
+const warnCount = () => cfgLocked() ? 0 : (cfg ? cfg.filter((g) => valOf(g).startsWith('!')).length : 0) + (mailVal().startsWith('!') ? 1 : 0);
 
 function intView() {
+  if (cfgLocked()) return { groups: [group('Integrasjoner', [row({ t: 'Låst', s: 'Integrasjonene er serveroppsett. Bare administratorer kan se og endre adresser og API-nøkler.', v: 'Bare admin' })])] };
   if (cfgErr) return { html: `<div class="err">${esc(cfgErr)}</div>` };
   if (!cfg) return { html: '<div class="skeleton" style="min-height:240px;border-radius:18px"></div>' };
   if (!sub) {
@@ -585,6 +589,7 @@ function enter() {
 }
 
 async function loadCfg() {
+  if (!isAdmin()) { cfg = []; cfgErr = null; if (!modal().hidden) render(); return; } // låst for vanlige brukere
   try { cfg = await api('/config'); cfgErr = null; } catch (e) { cfgErr = e.message; }
   if (!modal().hidden) render();
 }
@@ -621,8 +626,7 @@ async function signOut(forget) {
     const d = await api('/devices').catch(() => null), cur = d?.devices?.find((x) => x.current);
     if (cur) await api(`/devices/${cur.id}`, { method: 'DELETE' }).catch(() => {});
   }
-  await api('/logout', { method: 'POST' }).catch(() => {});
-  location.href = '/login';
+  await logout();
 }
 
 export function bindSettings() {

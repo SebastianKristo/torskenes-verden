@@ -55,4 +55,6 @@ export function mountAll(root) {
   root.querySelectorAll('[data-w]').forEach((el) => widgets.get(el.dataset.w)?.mounted?.(el));
 }
 
-export const errBox = (key, label) => store.errors[key] ? `<div class="err">${label}: ${store.errors[key].replace(/[<>&]/g, '')}</div>` : '';
+// Manglende tilgang (vanlig bruker, prompt 21) er ikke en feil: vises dempet uten rød farge.
+export const errBox = (key, label) => !store.errors[key] ? '' : /Bare administratorer|Ingen tilgang|Forbidden|Feil 403/i.test(store.errors[key])
+  ? `<div class="empty">${store.errors[key].replace(/[<>&]/g, '')}</div>` : `<div class="err">${label}: ${store.errors[key].replace(/[<>&]/g, '')}</div>`;

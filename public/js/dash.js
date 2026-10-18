@@ -4,6 +4,7 @@ import { renderSearch, popHandler } from './extras.js';
 import { hiddenWidgets } from './profile.js';
 import './media.js';
 import './poscard.js';
+import { pkgLogo, pkgTitle, moreText } from './pkglogo.js';
 import { carousel, restoreCarousel, startPackages } from './weather-card.js';
 import { is2c, pwCredit, pwImg } from './hltheme.js';
 
@@ -75,41 +76,104 @@ function ruterColor(d) {
   return [RUTER[k], '#fff'];
 }
 
+// Prompt 21: trykk på en avgang som har stopp (serveren sender stops fra Entur) for å se holdeplassene på turen.
+// Bare én er åpen om gangen; trykk igjen lukker. Eldre servere uten stops: avgangen er en vanlig lenke som før.
+const depUi = { open: null, all: false, fresh: false };
+const MODE_NB = { tram: 'Trikk', bus: 'Buss', metro: 'T-bane', rail: 'Tog', water: 'Båt', coach: 'Buss', ferry: 'Båt' };
+const modeName = (d) => d.modeName ?? (/^(Trikk|Buss|T-bane|Tog|Båt)$/.test(d.mode ?? '') ? d.mode : MODE_NB[String(d.mode ?? '').toLowerCase()] ?? '');
+const depKey = (trip, d) => `${trip.from}|${trip.to}|${d.line}|${d.aimed ?? d.time}`;
+const stopTime = (x) => { const t = x.time ?? x.expected ?? x.aimed; return t ? hm(new Date(t)) : ''; };
+
+function depStatus(d) {
+  if (d.status) return d.status;
+  const late = Number.isFinite(+d.delayMin) ? +d.delayMin : d.aimed && d.time ? Math.round((new Date(d.time) - new Date(d.aimed)) / 60000) : null;
+  return late == null ? '' : late > 0 ? `${late} min forsinket` : 'i rute';
+}
+
+function depPanel(trip, d, m) {
+  const [bg, fg] = ruterColor(d), st = d.stops ?? [];
+  const status = depStatus(d), late = /forsinket/.test(status);
+  const sub = [modeName(d), d.platform ? `plattform ${d.platform}` : '', status].filter(Boolean);
+  const subHtml = sub.map((x) => (x === status && late ? `<span class="dx-late">${esc(x)}</span>` : esc(x))).join(' · ');
+  const n = st.length, many = n > 6 && !depUi.all;
+  const rows = (many ? [...st.slice(0, 2), null, ...st.slice(-2)] : st).map((x, j, arr) => {
+    if (!x) return `<button type="button" class="dx-stop dx-more" data-dep-all><span class="dx-rail" style="--lc:${bg}"><i class="lt"></i><i class="gap"></i><i class="lb"></i></span><span class="dx-n">· · · ${n - 4} stopp</span></button>`;
+    const first = j === 0, last = j === arr.length - 1;
+    return `<div class="dx-stop${first || last ? ' end' : ''}"><span class="dx-rail" style="--lc:${bg}"><i class="lt"${first ? ' hidden' : ''}></i><i class="dot${first ? ' fill' : ''}"></i><i class="lb"${last ? ' hidden' : ''}></i></span><span class="dx-n">${esc(x.name)}${x.platform && first ? ` <small>${esc(x.platform)}</small>` : ''}</span><span class="dx-t">${esc(stopTime(x))}</span></div>`;
+  }).join('');
+  const url = d.ruterUrl || trip.url || 'https://ruter.no/reiseplanlegger/';
+  return `<div class="dx${depUi.fresh ? ' dx-in' : ''}"><div class="dx-in-w">
+    <div class="dx-top"><span class="dx-line" style="background:${bg};color:${fg}">${esc(d.line)}</span><span class="dx-h"><b>${esc(d.to ?? trip.to)}</b><span>${subHtml}</span></span>
+      <span class="dx-m"><b>${m <= 0 ? 'nå' : `${m} min`}</b><span>${esc(hm(new Date(d.time)))}</span></span></div>
+    ${rows ? `<div class="dx-stops">${rows}</div>` : ''}
+    <a class="dx-ruter" href="${esc(url)}" target="_blank" rel="noopener">Åpne i Ruter ›</a></div></div>`;
+}
+
 function renderTrips() {
   const r = store.data.ruter;
   if (!r) return store.errors.ruter ? errBox('ruter', 'Ruter') : '<div class="trip"><div class="skeleton"></div></div>'.repeat(4);
   const t = store.now.getTime();
-  // Vindu og papir: strekning i serif og linjene som ramme-merker i blekk.
-  if (is2c()) {
-    return r.trips.map((trip) => {
-      const deps = trip.deps.map((d) => {
-        const m = Math.round((new Date(d.time) - t) / 60000);
-        const [bg, fg] = ruterColor(d);
-        return m < -1 ? '' : `<span class="p-dep"><span class="p-line" style="background:${bg};color:${fg};border-color:${bg}">${esc(d.line)}</span>${m <= 0 ? 'nå' : `${m} min`}</span>`;
-      }).join('');
-      return `<a class="p-trip" href="${esc(trip.url)}" target="_blank" rel="noopener"><div class="p-trip-n">${esc(trip.from)} → ${esc(trip.to)}</div>
-        <div class="p-deps">${deps || `<span class="p-mute">${trip.error ? 'Ingen sanntid' : 'Ingen avganger'}</span>`}</div></a>`;
-    }).join('');
-  }
-  return r.trips.map((trip) => {
+  const paper = is2c();
+  const out = r.trips.map((trip) => {
+    let panel = '';
+    const hasStops = trip.deps.some((d) => d.stops?.length);
     const deps = trip.deps.map((d) => {
       const m = Math.round((new Date(d.time) - t) / 60000);
       if (m < -1) return '';
+      const k = depKey(trip, d), open = depUi.open === k && d.stops?.length;
+      if (open) panel = depPanel(trip, d, m);
+      const attrs = d.stops?.length ? ` role="button" tabindex="0" data-dep-open="${esc(k)}" aria-expanded="${!!open}"` : '';
+      if (paper) {
+        const [bg, fg] = ruterColor(d);
+        return `<span class="p-dep${open ? ' on' : ''}"${attrs}><span class="p-line" style="background:${bg};color:${fg};border-color:${bg}">${esc(d.line)}</span>${m <= 0 ? 'nå' : `${m} min`}</span>`;
+      }
       const min = m <= 0 ? 'nå' : isMobile() ? `${m}m` : `${m} min`;
       const c = /metro/.test(d.mode) ? '#f3d38a' : '#a8d4fb';
-      return `<span class="dep"><span class="badge" style="background:${c}">${esc(d.line)}</span><span class="dep-min">${min}</span></span>`;
+      return `<span class="dep${open ? ' on' : ''}"${attrs}><span class="badge" style="background:${c}">${esc(d.line)}</span><span class="dep-min">${min}</span></span>`;
     }).join('');
-    return `<a class="trip" href="${esc(trip.url)}" target="_blank" rel="noopener">
-      <div class="trip-name">${esc(trip.from)} → <b>${esc(trip.to)}</b></div>
-      <div class="deps">${deps || `<span class="muted">${trip.error ? 'Ingen sanntid' : 'Ingen avganger'}</span>`}</div></a>`;
+    const none = `<span class="${paper ? 'p-mute' : 'muted'}">${trip.error ? 'Ingen sanntid' : 'Ingen avganger'}</span>`;
+    // Med stopp er ikke hele raden en lenke (avgangene er knapper); strekningen lenker fortsatt til Ruter.
+    if (paper) {
+      const name = `${esc(trip.from)} → ${esc(trip.to)}`;
+      return hasStops
+        ? `<div class="p-trip"><a class="p-trip-n" href="${esc(trip.url)}" target="_blank" rel="noopener">${name}</a><div class="p-deps">${deps || none}</div>${panel}</div>`
+        : `<a class="p-trip" href="${esc(trip.url)}" target="_blank" rel="noopener"><div class="p-trip-n">${name}</div><div class="p-deps">${deps || none}</div></a>`;
+    }
+    const name = `${esc(trip.from)} → <b>${esc(trip.to)}</b>`;
+    return hasStops
+      ? `<div class="trip${panel ? ' trip-open' : ''}"><a class="trip-name" href="${esc(trip.url)}" target="_blank" rel="noopener">${name}</a><div class="deps">${deps || none}</div>${panel}</div>`
+      : `<a class="trip" href="${esc(trip.url)}" target="_blank" rel="noopener"><div class="trip-name">${name}</div><div class="deps">${deps || none}</div></a>`;
   }).join('');
+  depUi.fresh = false;
+  return out;
 }
+
+function toggleDep(k) {
+  depUi.fresh = depUi.open !== k;
+  depUi.open = depUi.open === k ? null : k;
+  depUi.all = false;
+  setHtml('trips', renderTrips());
+  [...document.querySelectorAll('#trips [data-dep-open]')].find((x) => x.dataset.depOpen === k)?.focus({ preventScroll: true });
+}
+document.addEventListener('click', (e) => {
+  const all = e.target.closest?.('#trips [data-dep-all]');
+  if (all) { depUi.all = true; return setHtml('trips', renderTrips()); }
+  const b = e.target.closest?.('#trips [data-dep-open]');
+  if (b) { e.preventDefault(); toggleDep(b.dataset.depOpen); }
+});
+document.addEventListener('keydown', (e) => {
+  const b = (e.key === 'Enter' || e.key === ' ') && e.target.closest?.('#trips [data-dep-open]');
+  if (b) { e.preventDefault(); toggleDep(b.dataset.depOpen); }
+});
+
+// Prompt 21: trading, skole og media er admin-data; vanlige brukere får {configured:false, restricted:true}.
+const ADMIN_ONLY = 'Bare tilgjengelig for administrator.';
 
 function greeting(h) { return (h < 5 ? 'God natt' : h < 10 ? 'God morgen' : h < 12 ? 'God formiddag' : h < 18 ? 'God ettermiddag' : h < 23 ? 'God kveld' : 'God natt'); }
 
 function renderLesson() {
   const s = store.data.school;
-  if (s && !s.configured) return '<div class="empty">Legg inn SCHOOL_ICAL_URL for timeplan.</div>';
+  if (s && !s.configured) return `<div class="empty">${s.restricted ? ADMIN_ONLY : 'Legg inn SCHOOL_ICAL_URL for timeplan.'}</div>`;
   if (!s) return store.errors.school ? errBox('school', 'Timeplan') : '';
   const l = lessonNow();
   if (!l) return '<div class="sub" style="font-size:14px">Ingen flere timer i dag</div>';
@@ -141,7 +205,7 @@ widget('d_cal', { render() {
     cells += `<div class="cal-d${d === n.getDate() ? ' today' : ''}" data-pop="day:${iso}" role="button" tabindex="0" aria-label="${d}. – vis detaljer">${d}<div class="cal-dots">${ds}</div></div>`;
   }
   const s = store.data.school;
-  return `<div><div class="card-title">Skolekalender</div><div class="card-sub">${s && !s.configured ? 'iCal er ikke satt opp' : 'Synkronisert via iCal · Canvas'}</div></div>
+  return `<div><div class="card-title">Skolekalender</div><div class="card-sub">${s && !s.configured ? (s.restricted ? 'Bare for administrator' : 'iCal er ikke satt opp') : 'Synkronisert via iCal · Canvas'}</div></div>
     <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600"><span>${cap(n.toLocaleDateString('nb-NO', { month: 'long' }))}</span><span class="muted" style="font-weight:400">${y}</span></div>
     <div class="cal">${['M', 'T', 'O', 'T', 'F', 'L', 'S'].map((d) => `<div class="cal-wd">${d}</div>`).join('')}${cells}</div>${errBox('school', 'iCal')}`;
 } });
@@ -157,7 +221,7 @@ widget('d_trading', { render() {
   const t = store.data.trading;
   const head = '<div><div class="card-title">Trading 212</div><div class="card-sub">Portefølje</div></div>';
   if (!t) return head + (errBox('trading', 'Trading 212') || '<div class="skeleton" style="min-height:120px"></div>');
-  if (!t.configured) return head + '<div class="empty">Legg inn TRADING212_API_KEY på serveren.</div>';
+  if (!t.configured) return head + `<div class="empty">${t.restricted ? ADMIN_ONLY : 'Legg inn TRADING212_API_KEY på serveren.'}</div>`;
   const cur = t.currency === 'NOK' ? 'kr' : t.currency;
   const day = t.dayChange != null ? `${signed(t.dayChange)} ${cur} (${signed(t.dayPct, 1)} %) i dag · ` : '';
   const pos = t.positions.map((p, i) => `<div class="row" data-pop="pos:${i}" role="button" tabindex="0"><span class="mono" style="font-weight:500">${esc(p.ticker)}</span><span class="mono" style="display:flex;gap:14px;font-size:13px"><span>${nb(p.value)}</span><span class="${p.pct < 0 ? 'red' : 'green'}" style="width:62px;text-align:right">${signed(p.pct, 1)} %</span></span></div>`).join('');
@@ -272,7 +336,7 @@ const pdate = (n) => cap(n.toLocaleDateString('nb-NO', { weekday: 'long', day: '
 widget('p_school', { cls: 'p-sec', render() {
   const s = store.data.school;
   let now = '';
-  if (s && !s.configured) now = '<div class="p-mute">Legg inn SCHOOL_ICAL_URL for timeplan.</div>';
+  if (s && !s.configured) now = `<div class="p-mute">${s.restricted ? ADMIN_ONLY : 'Legg inn SCHOOL_ICAL_URL for timeplan.'}</div>`;
   else if (!s) now = errBox('school', 'Timeplan');
   else {
     const l = lessonNow();
@@ -307,9 +371,11 @@ widget('p_pk', { cls: 'p-sec', render() {
   const d = store.data.trackw;
   const all = (d?.items ?? []).filter((p) => !p.archived && p.status !== 'delivered');
   const ready = (p) => p.status === 'ready_for_pickup';
-  const rows = [...all].sort((a, b) => ready(b) - ready(a) || (b.step ?? 0) - (a.step ?? 0)).slice(0, 3).map((p) => `<a class="p-pk" href="#/sporing"><b>${esc(p.name || p.shop || p.trackingNo)}</b>
-    <span class="${ready(p) ? 'p-acc' : 'p-mute'}">${esc(p.statusText ?? '')}${ready(p) && p.pickupPoint ? ` · ${esc(p.pickupPoint)}` : p.eta ? ` · ${esc(p.eta)}` : ''}</span></a>`).join('');
-  return lab(`PAKKER${all.length ? ` · ${all.length} PÅ VEI` : ''}`) + (rows || `<div class="p-mute" style="padding:9px 0">${d ? 'Ingen pakker på vei.' : ''}</div>`) + '<a class="p-u p-more" href="#/sporing">Åpne sporing ›</a>';
+  const top = [...all].sort((a, b) => ready(b) - ready(a) || (b.step ?? 0) - (a.step ?? 0)).slice(0, 3);
+  const rows = top.map((p) => `<a class="p-pk p-pk-l" href="#/sporing">${pkgLogo(p, 40)}<span class="p-pk-t"><b>${esc(pkgTitle(p))}</b>
+    <span class="${ready(p) ? 'p-acc' : 'p-mute'}">${esc(p.statusText ?? '')}${ready(p) && p.pickupPoint ? ` · ${esc(p.pickupPoint)}` : p.eta ? ` · ${esc(p.eta)}` : ''}</span></span></a>`).join('');
+  const more = moreText((d?.count?.active ?? all.length) - top.length + 1);
+  return lab(`PAKKER${all.length ? ` · ${all.length} PÅ VEI` : ''}`) + (rows || `<div class="p-mute" style="padding:9px 0">${d ? 'Ingen pakker på vei.' : ''}</div>`) + `<a class="p-u p-more" href="#/sporing">${more ? `${esc(more)} · ` : ''}Åpne sporing ›</a>`;
 } });
 
 widget('p_play', { cls: 'p-sec', render() {
@@ -317,14 +383,14 @@ widget('p_play', { cls: 'p-sec', render() {
   const left = (ms) => { const m = Math.round((ms || 0) / 60000); return m >= 60 ? `${Math.floor(m / 60)} t ${m % 60} min igjen` : `${m} min igjen`; };
   const rows = items.slice(0, 3).map((n) => `<div class="p-play"><span class="p-poster" style="${n.poster ? `background-image:url('${esc(n.poster)}')` : ''}">${n.poster ? '' : esc(String(n.title).charAt(0).toUpperCase())}</span>
     <div><div class="p-play-t">${esc(n.title)}</div><div class="p-mute">${esc([n.user, n.src === 'jellyfin' ? 'Jellyfin' : 'Plex', left(n.leftMs)].filter(Boolean).join(' · '))}</div></div></div>`).join('');
-  const empty = !now ? '' : now.configured === false ? 'Legg inn Plex eller Jellyfin under Innstillinger → Integrasjoner.' : 'Ingen spiller noe akkurat nå.';
+  const empty = !now ? '' : now.configured === false ? (now.restricted ? ADMIN_ONLY : 'Legg inn Plex eller Jellyfin under Innstillinger → Integrasjoner.') : 'Ingen spiller noe akkurat nå.';
   return lab('SPILLES NÅ') + (rows || `<div class="p-mute" style="padding:9px 0">${empty}</div>`);
 } });
 
 widget('p_money', { cls: 'p-sec', render() {
   const t = store.data.trading, f = store.data.finans;
   const cur = t?.currency === 'NOK' || !t?.currency ? 'kr' : t.currency;
-  const tr = !t ? '<div class="skeleton" style="min-height:60px"></div>' : !t.configured ? '<div class="p-mute">Ikke koblet</div>'
+  const tr = !t ? '<div class="skeleton" style="min-height:60px"></div>' : !t.configured ? `<div class="p-mute">${t.restricted ? 'Bare for administrator' : 'Ikke koblet'}</div>`
     : `<div class="p-big">${nb(t.total)} ${esc(cur)}</div>${t.dayChange != null ? `<div class="${t.dayChange < 0 ? 'p-neg' : 'p-pos'}">${signed(t.dayChange)} ${esc(cur)} (${signed(t.dayPct, 1)} %)</div>` : `<div class="${t.pplPct < 0 ? 'p-neg' : 'p-pos'}">${signed(t.pplPct, 1)} % totalt</div>`}`;
   const month = cap(store.now.toLocaleDateString('nb-NO', { month: 'long' }));
   const fh = !f ? (errBox('finans', 'FinansHub') || '<div class="skeleton" style="min-height:60px"></div>')

@@ -2,18 +2,20 @@
 // Valget og visningen (uskarphet, mørklegging, animasjon) lagres per bruker i /api/me/layout (bgType, bgPlanet, …) og deles
 // med mobilappene. Bildet kommer fra GET /api/background (serveren laster ned, skalerer og cacher). Finnes ikke den
 // tjenesten (eldre server), brukes /api/photo-window som reserve. Feiler alle bildene, vises gradienten.
+// Bildene er alltid ekte fotografier (Wikimedia Commons / NASA); ingenting tegnes eller genereres i nettleseren.
 import { api } from './util.js';
 
 export const BG_TYPES = [
   ['weather', 'Vær', 'Følger været ute, dag og natt'],
-  ['planets', 'Planeter', 'Jorda, Månen, Jupiter og Mars fra NASA'],
+  ['planets', 'Planeter', 'Jorda, Månen, Jupiter, Mars og Saturn fra NASA'],
   ['oslo', 'Oslo', 'Byen fra lufta'],
   ['custom', 'Eget bilde', 'Ditt opplastede bilde'],
   ['none', 'Ingen', 'Bare fargeovergang'],
 ];
-export const PLANETS = [['auto', 'Bytt automatisk'], ['earth', 'Jorda'], ['moon', 'Månen'], ['jupiter', 'Jupiter'], ['mars', 'Mars']];
+export const PLANETS = [['auto', 'Bytt automatisk'], ['earth', 'Jorda'], ['moon', 'Månen'], ['jupiter', 'Jupiter'], ['mars', 'Mars'], ['saturn', 'Saturn']];
 const TYPES = BG_TYPES.map((t) => t[0]);
-export const FALLBACK_GRAD = 'linear-gradient(170deg,#7d93aa,#4a5f76)';
+// Reserven når ingen bilder lastes (prompt 21): en rolig gradient, aldri en tegnet planet.
+export const FALLBACK_GRAD = 'linear-gradient(170deg,#4a5a6a,#2a3440 60%,#1d242c)';
 
 // Standardvalg. 'cur' (eldre «Ingen bilde» i Vindu og papir) leses som 'none'.
 const bg = { type: 'oslo', planet: 'auto', rotate: 'daily', blur: 0, dim: 0, animate: true };
@@ -37,8 +39,8 @@ export function setBgFromLayout(l = {}) {
 }
 
 /** Klassisk tema lagrer i tillegg et eldre valg (store.me.bg); oversett mellom dem. */
-export const legacyToType = (k) => ({ mane: ['planets', 'moon'], jorda: ['planets', 'earth'], saturn: ['planets', 'auto'], oslo: ['oslo'], vaer: ['weather'], egen: ['custom'], ingen: ['none'] }[k] ?? null);
-export const typeToLegacy = (t, planet) => (t === 'weather' ? 'vaer' : t === 'planets' ? (planet === 'earth' ? 'jorda' : 'mane') : t === 'oslo' ? 'oslo' : t === 'custom' ? 'egen' : 'ingen');
+export const legacyToType = (k) => ({ mane: ['planets', 'moon'], jorda: ['planets', 'earth'], saturn: ['planets', 'saturn'], oslo: ['oslo'], vaer: ['weather'], egen: ['custom'], ingen: ['none'] }[k] ?? null);
+export const typeToLegacy = (t, planet) => (t === 'weather' ? 'vaer' : t === 'planets' ? (planet === 'earth' ? 'jorda' : planet === 'saturn' ? 'saturn' : 'mane') : t === 'oslo' ? 'oslo' : t === 'custom' ? 'egen' : 'ingen');
 
 /** Lagrer endringer (patch med bgType/bgPlanet/…). photo speiles for eldre klienter. */
 export async function saveBg(patch) {

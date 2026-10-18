@@ -36,3 +36,12 @@ html[data-hl="2c"] .tk-card{background:#fff;border-radius:20px;border:0}
 .tk-empty{padding:20px 4px;font-size:14px;color:var(--t-mut);line-height:1.5}
 .tk-btn{margin-top:10px;height:36px;padding:0 16px;border-radius:18px;border:1px solid var(--t-line);background:transparent;color:var(--t-ink);font-weight:600;cursor:pointer}
 .tk-foot{font-size:12px;color:var(--t-mut);padding:4px}
+/* Prompt 21: eier, «Delt med …» og «Del liste». */
+.tk-own{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:16px;background:var(--t-card)}
+.tk-own .tk-main{padding:0}
+.tk-own b{font-size:14px;font-weight:700}
+.tk-own .tk-btn{margin:0;flex:none}
+.tk-share{display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:16px;border:1px solid var(--t-line);background:var(--t-card)}
+.tk-btn.pri{background:var(--t-ink);color:var(--t-bg);border-color:var(--t-ink)}
+.tk-share .tk-btn{margin:0}
+.tk-shd{font-size:11px;opacity:.65;margin-left:-2px}

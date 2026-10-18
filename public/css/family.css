@@ -15,7 +15,7 @@ html[data-hl="2c"] .fam{--f-ink:#1b1a17;--f-mute:#6b665c;--f-faint:#8f897c;--f-l
 /* Flisene kommer fra /tiles i riktig stil (dark/light), så de inverteres ikke lenger. Papir får et varmt sepiaskjær. */
 .fam-map{background:#2a2b2e}
 html[data-hl="2c"] .fam-map{background:#e4e0d6}
-html[data-hl="2c"] .fam-map .leaflet-tile-pane{filter:sepia(.25) saturate(.8)}
+/* Filteret på flisene (paperFilter/darkFilter fra /api/config/map) settes i family.js. */
 .fam-map .leaflet-control-attribution{font-size:10.5px;background:rgba(255,255,255,.8)}
 .fam-card{gap:12px}
 .fam-h{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
@@ -139,3 +139,7 @@ html[data-hl="2c"] .pos-host{--pos-ring:var(--pp);--pos-lab:var(--acc);--pos-mut
 .pos-t span{font-size:12px;color:var(--pos-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pos-empty{font-size:13px;color:var(--pos-mut)}
 html[data-hl="2c"] .p-sec.pos-host{padding-bottom:16px;margin-bottom:6px;border-bottom:1px solid var(--rule)}
+/* Prompt 21: tom tilstand når ingen deler med deg, og «Del med familien» på soner. */
+.fam-none{padding:12px 2px 2px}
+.fam-none b{display:block;color:var(--f-ink,inherit);font-weight:600;margin-bottom:4px}
+.fam-zshare{margin:8px 0 2px 22px}

@@ -67,7 +67,22 @@ export function toast(text) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 2400);
 }
 
-export async function loadBoot() { S.boot = await api('/bootstrap'); S.ui.month ??= S.boot.month; }
+// loader.js starter /bootstrap parallelt med at modulene lastes (prompt 21); svaret brukes én gang hvis det er gyldig.
+async function earlyBoot() {
+  const p = window.__fhBoot;
+  window.__fhBoot = null;
+  if (!p) return null;
+  try {
+    const r = await p;
+    return r && r.ok && r.headers.get('content-type')?.includes('json') ? await r.json() : null;
+  } catch { return null; }
+}
+export async function loadBoot() {
+  S.boot = (await earlyBoot()) ?? await api('/bootstrap');
+  S.ui.month ??= S.boot.month;
+  // Kontobytte: tøm den forrige brukerens cacher. Dynamisk import, så appskallet virker uten nett (sw.js cacher bare /assets/finans/).
+  if (S.boot.me?.id) import('../../js/usercache.js').then((m) => m.noteUser(S.boot.me.id)).catch(() => {});
+}
 export async function loadSummary() { S.summary = await api('/summary?month=' + (S.ui.month ?? '')); }
 export async function loadTx() {
   const u = S.ui, p = new URLSearchParams();

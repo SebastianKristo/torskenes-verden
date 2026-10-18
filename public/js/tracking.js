@@ -1,4 +1,5 @@
 // Sporing: pakker fra Finn-handler, e-post og manuelt innlimte nummer. Data og status kommer fra /api/tracking.
+import { pkgLogo, pkgTitle } from './pkglogo.js';
 import { api, esc, hm } from './util.js';
 import { openSettings } from './settings.js';
 import { is2c } from './hltheme.js';
@@ -55,7 +56,7 @@ function card(t) {
   const tl = t.events.map((e, j) => `<div class="trk-ev${j ? '' : ' now'}"><div class="trk-ev-l"><i></i><em></em></div><div class="trk-ev-b"><div><b>${esc(e.status)}</b><span>${esc(evTime(e.ts))}</span></div>${e.location ? `<small>${esc(e.location)}</small>` : ''}</div></div>`).join('');
   return `<div class="trk-card${ready ? ' ready' : ''}${S.sel.has(t.id) ? ' picked' : ''}">
     <button class="trk-head" data-trk-open="${t.id}" aria-expanded="${open}">
-      <span class="trk-row"><span class="trk-selb${S.sel.has(t.id) ? ' on' : ''}" data-trk-selb="${t.id}" role="checkbox" aria-checked="${S.sel.has(t.id)}" title="Velg for arkivering eller sletting">${badge(t.carrierColor, t.carrierFg, t.carrierIni, 'lg', t.carrierLogo)}<i>✓</i></span><span class="trk-tt"><b>${esc(t.name)}</b><small>${esc(t.carrierName)} · <span class="trk-mono">${esc(t.trackingNo)}</span></small></span>
+      <span class="trk-row"><span class="trk-selb${S.sel.has(t.id) ? ' on' : ''}" data-trk-selb="${t.id}" role="checkbox" aria-checked="${S.sel.has(t.id)}" title="Velg for arkivering eller sletting">${pkgLogo(t, 44)}<i>✓</i></span><span class="trk-tt"><b>${esc(pkgTitle(t))}</b><small>${esc(t.carrierName)} · <span class="trk-mono">${esc(t.trackingNo)}</span></small></span>
         <span class="trk-src" style="background:${sbg};color:${sfg}">${esc(src)}</span></span>
       <span class="trk-st"><span><b style="color:${stC}">${esc(t.statusText)}</b><small>${esc(etaText(t))}</small></span>${t.direction === 'out' ? '<em>Utgående</em>' : ''}</span>
       <span class="trk-steps">${steps}</span>
@@ -304,14 +305,14 @@ export function bind(view) {
       try {
         const r = await T(`/${t.id}`, { method: 'PATCH', json: { archived: !t.archived } });
         S.d.items = S.d.items.map((x) => (x.id === t.id ? r.item : x));
-        flash(r.item.archived ? `${t.name} er arkivert` : `${t.name} er aktiv igjen`);
+        flash(r.item.archived ? `${pkgTitle(t)} er arkivert` : `${pkgTitle(t)} er aktiv igjen`);
       } catch (err) { flash(err.message, true); }
       return paint();
     }
     if ((b = el('[data-trk-del]'))) {
       const t = item(b.dataset.trkDel);
       if (S.delArm !== t.id) { S.delArm = t.id; return paint(); }
-      try { await T(`/${t.id}`, { method: 'DELETE' }); S.d.items = S.d.items.filter((x) => x.id !== t.id); Object.assign(S, { delArm: null, open: null }); flash(`${t.name} er slettet`); } catch (err) { flash(err.message, true); }
+      try { await T(`/${t.id}`, { method: 'DELETE' }); S.d.items = S.d.items.filter((x) => x.id !== t.id); Object.assign(S, { delArm: null, open: null }); flash(`${pkgTitle(t)} er slettet`); } catch (err) { flash(err.message, true); }
       return paint();
     }
   });
