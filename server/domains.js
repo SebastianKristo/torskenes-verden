@@ -596,3 +596,20 @@ export function domainOverview() {
 }
 
 export default api;
+
+/**
+ * Domene-pillen på Boliger (prompt 24): besøk i dag summert over alle domenene, antall domener og samlet status.
+ * status: 'error' når et domene er nede, 'warn' når statistikk mangler/feiler eller et sertifikat utløper innen 30 dager.
+ * Caches i 5 minutter (analysen per domene har sin egen 5-minutterscache).
+ */
+export function domainSummary() {
+  return cached('domsum', 5 * 60_000, async () => {
+    const rows = listRows();
+    const parts = await Promise.all(rows.map((r) => cached(`dom:${r.id}:${r.source}:today`, 5 * 60_000, () => analytics(r, 'today')).catch((e) => ({ error: e.message }))));
+    const o = domainOverview();
+    const visitsToday = parts.reduce((a, p) => a + (Number.isFinite(p?.visitors) ? p.visitors : 0), 0);
+    const failed = parts.filter((p) => p?.error).length;
+    const status = o.down > 0 ? 'error' : failed || o.expiringSoon.length ? 'warn' : 'ok';
+    return { visitsToday, domains: rows.length, status, up: o.up, down: o.down, expiringSoon: o.expiringSoon.length, failed, updatedAt: new Date().toISOString(), ...(MOCK ? { mock: true } : {}) };
+  });
+}

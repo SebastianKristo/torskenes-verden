@@ -341,3 +341,21 @@ export function upcomingOf(out, { days = 90, today = new Date() } = {}) {
   return rows.map((r) => ({ ...r, days: Math.round((new Date(r.date + 'T00:00').getTime() - t0) / DAY) }))
     .filter((r) => r.days <= days).sort((a, b) => a.date.localeCompare(b.date));
 }
+
+/* ---------- Bakgrunn per bolig (prompt 24) ---------- */
+// fh_folders.background: 'color' | 'preset:stromstad' | 'upload:<versjon>'. Tom (NULL) = standard: Strømstad-bildet når
+// «Strømstad» står i navnet eller adressen, ellers farge. Opplastede bilder ligger i DATA_DIR/boliger/<id>/bg.jpg,
+// skalert til maks 1200 px med ImageMagick når det finnes (ellers lagres bildet slik klienten sendte det).
+if (!q('PRAGMA table_info(fh_folders)').all().some((c) => c.name === 'background')) db.exec('ALTER TABLE fh_folders ADD COLUMN background TEXT');
+
+export const BG_PRESETS = { stromstad: { label: 'Strømstad', url: '/assets/boliger/stromstad.webp', jpg: '/assets/boliger/stromstad.jpg' } };
+const BG_RE = /^(color|preset:[a-z0-9-]{1,30}|upload:[a-f0-9]{8,32})$/;
+export const validBackground = (v) => typeof v === 'string' && BG_RE.test(v) && (!v.startsWith('preset:') || !!BG_PRESETS[v.slice(7)]);
+export const defaultBackground = (f) => (/str[øo]mstad/i.test(`${f.name ?? ''} ${f.address ?? ''}`) ? 'preset:stromstad' : 'color');
+/** {background, backgroundUrl, backgroundJpgUrl} for en bolig. */
+export function backgroundOf(f) {
+  const bg = f.background && validBackground(f.background) ? f.background : defaultBackground(f);
+  if (bg.startsWith('preset:')) { const p = BG_PRESETS[bg.slice(7)]; return { background: bg, backgroundUrl: p.url, backgroundJpgUrl: p.jpg, backgroundDefault: !f.background }; }
+  if (bg.startsWith('upload:')) return { background: bg, backgroundUrl: `/finans/api/folders/${f.id}/bg?v=${bg.slice(7)}`, backgroundJpgUrl: `/finans/api/folders/${f.id}/bg?v=${bg.slice(7)}`, backgroundDefault: false };
+  return { background: 'color', backgroundUrl: null, backgroundJpgUrl: null, backgroundDefault: !f.background };
+}

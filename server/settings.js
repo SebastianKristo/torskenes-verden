@@ -50,6 +50,16 @@ export const SCHEMA = [
     ['ha_sensor_energy', 'Energisensor (daglig)', e('HA_SENSOR_ENERGY_DAILY', 'sensor.energy_daily')],
     ['ha_sensor_price', 'Strømpris-sensor', e('HA_SENSOR_PRICE', 'sensor.nordpool_kwh_oslo_nok')],
   ]],
+  // Prompt 24: Bursdager. OAuth-klienten (type «Web application») lages i Google Cloud Console; hver bruker logger inn selv.
+  ['Google Kalender', { id: 'google', domain: 'calendar.google.com', category: 'Hjem', help: 'Brukes av Bursdager. Lag en OAuth-klient (Web application) i Google Cloud Console → APIs & Services → Credentials, slå på Google Calendar API, og legg inn omdirigerings-URI-en https://<din adresse>/api/birthdays/google/callback.', guide: [
+    ['Lag klienten', 'console.cloud.google.com → APIs & Services → Credentials → Create credentials → OAuth client ID → Web application.'],
+    ['Omdirigering', 'Under «Authorized redirect URIs»: https://<din adresse>/api/birthdays/google/callback. Tomt felt for omdirigerings-URI her betyr at serveren bruker adressen den blir nådd på.'],
+    ['Samtykke', 'OAuth consent screen: legg til scopene calendar.events og calendar.readonly, og legg brukerne inn som testbrukere til appen er publisert.'],
+  ] }, [
+    ['googleClientId', 'Klient-ID', e('GOOGLE_CLIENT_ID')],
+    ['googleClientSecret', 'Klienthemmelighet', e('GOOGLE_CLIENT_SECRET'), true],
+    ['googleRedirectUri', 'Omdirigerings-URI (valgfri)', e('GOOGLE_REDIRECT_URI')],
+  ]],
   ['Sonarr', { id: 'sonarr', domain: 'sonarr.tv', category: 'Media', help: 'API-nøkkelen finner du i Sonarr under Settings → General → Security → API Key.' }, [
     ['sonarr_url', 'URL', e('SONARR_URL', 'http://192.168.1.20:8989')],
     ['sonarr_key', 'API-nøkkel', e('SONARR_API_KEY'), true],
@@ -171,6 +181,8 @@ const VALID = {
   jf_user: (v) => /^[\p{L}\p{N} ._@-]{1,64}$/u.test(v),
   sat_group: (v) => /^[a-z0-9-]{1,30}$/i.test(v),
   ruter_routes: (v) => parseRoutes(v).length > 0,
+  googleRedirectUri: (v) => /^https?:\/\/[^\s]+\/api\/birthdays\/google\/callback$/.test(v),
+  googleClientId: (v) => /^[\w.-]{8,200}$/.test(v),
 };
 const isUrl = (v) => /^https?:\/\/[^\s]+$/.test(v);
 

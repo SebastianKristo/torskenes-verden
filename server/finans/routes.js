@@ -26,7 +26,7 @@ import { stocks, resetStocks, t212Configured, t212Base, cleanCred, testT212 } fr
 import { answer as aiAnswer, plainSearch, suggestionGroups, AiUnavailable, isSimpleQuery } from './search.js';
 import * as backup from './backup.js';
 import * as subsOs from './subs.js';
-import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor, upcomingOf } from './boliger.js';
+import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor, upcomingOf, backgroundOf, validBackground } from './boliger.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
 const q = (sql) => db.prepare(sql);
@@ -1600,7 +1600,7 @@ function folderOut(f, uid, full = false) {
     members: mem.map((m) => ({ id: m.id, userId: m.user_id, name: m.name, email: m.email, role: m.role, roleName: ROLES[m.role] ?? 'Kan redigere', you: m.user_id === uid, login: !!m.user_id })),
     total: entries.reduce((a, e) => a + e.amount, 0) / 100, yearTotal: yearTotal / 100, count: entries.length,
     budget: f.budget == null ? null : f.budget / 100, color: f.color ?? null, autoCat: f.auto_cat !== 0, notify: f.notify !== 0,
-    review: entries.filter((e) => e.status === 'review').length };
+    review: entries.filter((e) => e.status === 'review').length, ...backgroundOf(f) };
   if (!full) return out;
   out.canEdit = !!me && me.role !== 'viewer';
   out.isOwner = me?.role === 'owner';
@@ -1716,9 +1716,77 @@ api.patch('/folders/:id', async (c) => {
   }
   if (b.autoCat !== undefined) q('UPDATE fh_folders SET auto_cat=? WHERE id=?').run(b.autoCat ? 1 : 0, f.id);
   if (b.notify !== undefined) q('UPDATE fh_folders SET notify=? WHERE id=?').run(b.notify ? 1 : 0, f.id);
+  // Prompt 24: bakgrunn 'color' | 'preset:stromstad' | 'upload:<versjon>' (må være lastet opp med PUT /folders/:id/bg). null = standard.
+  if (b.background !== undefined) {
+    if (b.background !== null && !validBackground(b.background)) return bad(c, "Bakgrunn må være 'color', 'preset:stromstad' eller 'upload:<id>'");
+    if (typeof b.background === 'string' && b.background.startsWith('upload:') && kv.get(OWNER, `fh_bg_${f.id}`, null) !== b.background.slice(7)) return bad(c, 'Fant ikke det opplastede bildet. Last opp med PUT /folders/:id/bg.');
+    q('UPDATE fh_folders SET background=? WHERE id=?').run(b.background, f.id);
+  }
   if (b.split === 'equal') q("UPDATE fh_folders SET split='equal' WHERE id=?").run(f.id);
   else if (b.split && typeof b.split === 'object') q('UPDATE fh_folders SET split=? WHERE id=?').run(JSON.stringify(Object.fromEntries(Object.entries(b.split).slice(0, 30).map(([k, v]) => [str(k, 40), Math.max(0, Math.min(1000, +v || 0))]))), f.id);
   return fullOut(c, f);
+});
+// Bakgrunnsbilde per bolig (prompt 24): multipart (file/image/photo), image/* eller JSON {image: base64/data-URL}.
+// Skaleres til maks 1200 px og lagres i DATA_DIR/boliger/<id>/bg.jpg. Eier laster opp; alle medlemmer kan hente det.
+const BOLIG_BG_MAX = 12 * 1024 * 1024;
+const bgFile = (id) => join(config.dataDir, 'boliger', String(Number(id)), 'bg.jpg');
+const bgKind = (b) => (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff ? 'image/jpeg' : b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) ? 'image/png'
+  : b.subarray(0, 4).toString() === 'RIFF' && b.subarray(8, 12).toString() === 'WEBP' ? 'image/webp' : null);
+let magickCmd;
+async function magick() {
+  if (magickCmd !== undefined) return magickCmd;
+  const { execFile } = await import('node:child_process');
+  for (const cmd of ['magick', 'convert']) {
+    if (await new Promise((r) => execFile(cmd, ['-version'], { timeout: 5000 }, (e) => r(!e)))) return (magickCmd = cmd);
+  }
+  return (magickCmd = null);
+}
+async function shrinkBg(buf) {
+  const cmd = await magick();
+  if (!cmd) return buf;
+  const { spawn } = await import('node:child_process');
+  return new Promise((resolve) => {
+    const p = spawn(cmd, ['-', '-auto-orient', '-resize', '1200x1200>', '-strip', '-quality', '82', 'jpg:-'], { timeout: 30_000 });
+    const out = [];
+    p.stdout.on('data', (d) => out.push(d));
+    p.on('error', () => resolve(buf));
+    p.on('close', (code) => { const r = Buffer.concat(out); resolve(code === 0 && bgKind(r) ? r : buf); });
+    p.stdin.on('error', () => {});
+    p.stdin.end(buf);
+  });
+}
+api.put('/folders/:id/bg', bodyLimit({ maxSize: BOLIG_BG_MAX * 1.4, onError: (c) => bad(c, 'Bildet er for stort (maks 12 MB)', 413) }), async (c) => {
+  const { f, err } = folderFor(c, 'owner'); if (err) return err;
+  let buf = null;
+  const type = c.req.header('content-type') ?? '';
+  if (/multipart\/form-data/i.test(type)) {
+    const form = await c.req.parseBody().catch(() => ({}));
+    const file = form.file ?? form.image ?? form.photo;
+    if (file instanceof File) buf = Buffer.from(await file.arrayBuffer());
+    else if (typeof file === 'string') buf = Buffer.from(file.replace(/^data:image\/[\w+.-]+;base64,/, ''), 'base64');
+  } else if (/^image\//i.test(type)) buf = Buffer.from(await c.req.arrayBuffer());
+  else {
+    const b = await c.req.json().catch(() => ({}));
+    const raw = b.image ?? b.photo ?? b.data;
+    if (typeof raw === 'string') buf = Buffer.from(raw.replace(/^data:image\/[\w+.-]+;base64,/, ''), 'base64');
+  }
+  if (!buf?.length) return bad(c, 'Mangler bilde (multipart «file», image/* eller JSON {image: base64})');
+  if (buf.length > BOLIG_BG_MAX) return bad(c, 'Bildet er for stort (maks 12 MB)', 413);
+  if (!bgKind(buf)) return bad(c, 'Bruk et JPEG-, PNG- eller WebP-bilde');
+  const out = await shrinkBg(buf);
+  await mkdir(join(config.dataDir, 'boliger', String(f.id)), { recursive: true });
+  await writeFile(bgFile(f.id), out);
+  const v = randomBytes(6).toString('hex');
+  kv.set(OWNER, `fh_bg_${f.id}`, v);
+  q('UPDATE fh_folders SET background=? WHERE id=?').run(`upload:${v}`, f.id);
+  return c.json({ ok: true, bytes: out.length, resized: out !== buf, ...backgroundOf(q('SELECT * FROM fh_folders WHERE id=?').get(f.id)) });
+});
+api.get('/folders/:id/bg', async (c) => {
+  const { f, err } = folderFor(c); if (err) return err;
+  try {
+    const b = await readFile(bgFile(f.id));
+    return c.body(b, 200, { 'Content-Type': bgKind(b) ?? 'image/jpeg', 'Cache-Control': 'private, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff' });
+  } catch { return c.json({ error: 'Ingen bakgrunnsbilde' }, 404); }
 });
 api.delete('/folders/:id', (c) => { const { f, err } = folderFor(c, 'owner'); if (err) return err; q('DELETE FROM fh_folders WHERE id=?').run(f.id); return ok(c); });
 // Del med en bruker (eier). Bakoverkompatibelt: /invite med navn legger til en navngitt person uten innlogging.

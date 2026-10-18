@@ -67,6 +67,9 @@ export function defaultZoneIcon(name) {
   if (/^(mormor|morfar|farmor|farfar|besteforeldre)/.test(n)) return 'heart';
   return 'pin';
 }
+// Prompt 24: én person = én oppføring. Hver posisjon får enhets-ID (fra appen, ellers avledet av enhetsnavnet) og plattform.
+if (!db.prepare('PRAGMA table_info(family_pos)').all().some((c) => c.name === 'device_id')) db.exec('ALTER TABLE family_pos ADD COLUMN device_id TEXT');
+if (!db.prepare('PRAGMA table_info(family_pos)').all().some((c) => c.name === 'platform')) db.exec('ALTER TABLE family_pos ADD COLUMN platform TEXT');
 db.transaction(() => { for (const z of db.prepare('SELECT id, name FROM family_zone WHERE icon IS NULL').all()) db.prepare('UPDATE family_zone SET icon=? WHERE id=?').run(defaultZoneIcon(z.name), z.id); })();
 
 /* ---------------- Innstillinger per bruker ---------------- */
@@ -142,7 +145,38 @@ function cleanPoint(p, now = Date.now()) {
     charging: typeof p.charging === 'boolean' ? (p.charging ? 1 : 0) : null,
     activity: ACTIVITIES.includes(p.activity) ? p.activity : null,
     device: typeof p.device === 'string' && p.device.trim() ? p.device.trim().replace(/[\u0000-\u001f<>]/g, '').slice(0, 60) : null,
+    deviceId: typeof p.deviceId === 'string' && /^[\w.:-]{1,64}$/.test(p.deviceId) ? p.deviceId : null,
+    platform: PLATFORMS.includes(p.platform) ? p.platform : null,
   };
+}
+
+/* ---------------- Enheter (prompt 24) ---------------- */
+
+const PLATFORMS = ['ios', 'ipados', 'android', 'web', 'watchos', 'wearos'];
+const SOURCE_WINDOW = 5 * 60_000;
+// Enhets-ID: fra appen (deviceId), ellers avledet av enhetsnavnet, så eldre apper også grupperes riktig.
+const devKey = (r) => r.device_id || (r.device ? `n:${String(r.device).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50)}` : 'ukjent');
+// «iPhone · iOS 18.1» → «iPhone», «SM-S921B» beholdes.
+const devName = (r) => (r.device ? String(r.device).split(' · ')[0] : 'Ukjent enhet');
+const devPlatform = (r) => r.platform ?? (/\biOS\b|iPhone|iPad/i.test(r.device ?? '') ? (/iPad/i.test(r.device ?? '') ? 'ipados' : 'ios') : r.device ? 'android' : null);
+/** Siste posisjon per enhet (nyeste først). */
+function deviceRows(user) {
+  const out = new Map();
+  for (const r of q('SELECT * FROM family_pos WHERE user=? AND ts>=? ORDER BY ts DESC LIMIT 5000').all(user, Date.now() - POS_KEEP)) if (!out.has(devKey(r))) out.set(devKey(r), r);
+  return [...out.values()];
+}
+const manualSource = (user) => { const v = kv.get(user, 'family_source', null); return typeof v === 'string' ? v : null; };
+/** Kildeenheten: valgt manuelt, ellers lavest accuracy blant enhetene de siste 5 minuttene, ellers den nyeste. */
+export function pickSource(rows, manual = null, now = Date.now()) {
+  if (!rows.length) return null;
+  if (manual) { const m = rows.find((r) => devKey(r) === manual); if (m) return m; }
+  const fresh = rows.filter((r) => now - r.ts <= SOURCE_WINDOW);
+  if (fresh.length) return [...fresh].sort((a, b) => (a.acc ?? Infinity) - (b.acc ?? Infinity) || b.ts - a.ts)[0];
+  return rows.reduce((a, b) => (b.ts > a.ts ? b : a));
+}
+function devicesOut(rows, src, exact) {
+  return rows.map((r) => ({ id: devKey(r), name: devName(r), platform: devPlatform(r), battery: r.battery ?? null, lastSeen: r.ts,
+    accuracy: r.acc == null ? null : exact ? r.acc : Math.max(r.acc, 1000), isSource: !!src && devKey(r) === devKey(src) }));
 }
 
 const zones = () => q('SELECT * FROM family_zone ORDER BY id').all();
@@ -207,7 +241,7 @@ function prune() {
 
 /* ---------------- Utdata med personvern ---------------- */
 
-const lastPos = (user) => q('SELECT * FROM family_pos WHERE user=? ORDER BY ts DESC LIMIT 1').get(user);
+const lastPos = (user) => pickSource(deviceRows(user), manualSource(user));
 function posOut(r, exact, viewer) {
   if (!r) return null;
   const inZone = (viewer ? zonesFor(viewer) : []).find((z) => dist(r, z) <= z.radius);
@@ -234,10 +268,14 @@ function memberOut(u, viewer) {
   const visible = self || pr.sharing === 'on';
   const share = self ? Object.fromEntries(HEALTH_KEYS.map((k) => [k, true])) : pr.shareHealth;
   const healthOn = self || (pr.sharing === 'on' && HEALTH_KEYS.some((k) => k !== 'week' && share[k]));
+  const exact = self || pr.precision === 'exact';
+  const rows = visible ? deviceRows(u.id) : [], src = visible ? pickSource(rows, manualSource(u.id)) : null;
+  const devices = devicesOut(rows, src, exact);
   return {
     userId: u.id, name: u.displayName ?? u.name, username: u.username, avatarUrl: u.avatarUrl ?? null, photoUrl: photoUrlFor(viewer, u.id, u.avatarUrl ?? null), photoOverride: hasPhoto(viewer, u.id), self, color: colorOf(u.id),
     sharing: pr.sharing, precision: pr.precision,
-    last: visible ? posOut(lastPos(u.id), self || pr.precision === 'exact', viewer) : null,
+    last: visible ? posOut(src, exact, viewer) : null,
+    devices, sourceDevice: src ? devKey(src) : null, deviceCount: devices.length, sourceMode: self ? (manualSource(u.id) ? 'manual' : 'auto') : undefined,
     health: healthOn ? healthOut(u.id, share) : null,
   };
 }
@@ -248,7 +286,7 @@ const visibleUsers = (viewer) => listUsers().filter((u) => u.id === viewer || pr
 // Tre familiemedlemmer som beveger seg rundt i Oslo, så kart, spor, soner og hendelser kan vises uten telefoner.
 
 const MOCKS = [
-  { id: 'mock-ingrid', username: 'ingrid', name: 'Ingrid', home: [59.9275, 10.7160], route: [[59.9275, 10.7160], [59.9220, 10.7340], [59.9139, 10.7522], [59.9110, 10.7610]], activity: 'driving', speed: 11, battery: 64, charging: false, sharing: 'on', precision: 'exact', color: '#2f5d8a' },
+  { id: 'mock-ingrid', username: 'ingrid', name: 'Ingrid', home: [59.9275, 10.7160], route: [[59.9275, 10.7160], [59.9220, 10.7340], [59.9139, 10.7522], [59.9110, 10.7610]], activity: 'driving', speed: 11, battery: 64, charging: false, sharing: 'on', precision: 'exact', color: '#2f5d8a', devices: [['iPhone 15 Pro', 'ios', 64, 40_000], ['Galaxy S24', 'android', 54, 12 * 60_000]] },
   { id: 'mock-jonas', username: 'jonas', name: 'Jonas', home: [59.9275, 10.7160], route: [[59.9330, 10.7110], [59.9360, 10.7230], [59.9395, 10.7310]], activity: 'cycling', speed: 5.2, battery: 22, charging: false, sharing: 'on', precision: 'approx', color: '#2f7a4f' },
   { id: 'mock-mormor', username: 'mormor', name: 'Mormor', home: [59.9500, 10.7650], route: [[59.9500, 10.7650]], activity: 'still', speed: 0, battery: 91, charging: true, sharing: 'paused', precision: 'exact', color: '#a8456b' },
 ];
@@ -265,9 +303,12 @@ function mockMember(m, viewer) {
   const now = Date.now(), [lat, lon] = mockAt(m, now);
   const raw = { ts: now - 40_000, lat, lon, acc: m.activity === 'still' ? 12 : 8, speed: m.speed, heading: 75, alt: 40, battery: m.battery, charging: m.charging ? 1 : 0, activity: m.activity };
   const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(now - (6 - i) * DAY).toISOString().slice(0, 10); return { date: d, steps: 4200 + ((i * 1777 + m.id.length * 991) % 7400), sleepMin: 380 + ((i * 37) % 90), activeKcal: 260 + ((i * 53) % 340), restingHr: 56 + (i % 5) }; });
+  const exact = m.precision === 'exact';
+  const devs = (m.devices ?? [['iPhone', 'ios']]).map(([name, platform, bat, ago], i) => ({ id: `${m.id}-${i}`, name, platform, battery: bat ?? m.battery, lastSeen: now - (ago ?? 40_000), accuracy: exact ? (i ? 25 : raw.acc) : 1000, isSource: i === 0 }));
   return {
     userId: m.id, name: m.name, username: m.username, avatarUrl: null, photoUrl: photoUrlFor(viewer, m.id, null), photoOverride: hasPhoto(viewer, m.id), self: false, color: m.color, sharing: m.sharing, precision: m.precision, mock: true,
-    last: m.sharing === 'on' ? posOut(raw, m.precision === 'exact', viewer) : null,
+    last: m.sharing === 'on' ? posOut(raw, exact, viewer) : null,
+    devices: m.sharing === 'on' ? devs : [], sourceDevice: m.sharing === 'on' ? devs[0].id : null, deviceCount: m.sharing === 'on' ? devs.length : 0,
     health: { today: { ...days[6], hr: 72 }, week: days, updatedAt: now - 9 * 60_000 },
   };
 }
@@ -385,6 +426,7 @@ async function positionRow(m, now = Date.now()) {
     id: m.userId, userId: m.userId, navn, name: m.name, farge: m.color, bilde: m.photoUrl ?? m.avatarUrl ?? null, photoUrl: m.photoUrl ?? m.avatarUrl ?? null, initialer: m.self ? 'Du' : initials(m.name),
     sone, aktivitet: akt, sted: status === 'off' ? null : sted, oppdatert: last?.ts ? new Date(last.ts).toISOString() : null, oppdatertMs: last?.ts ?? null,
     status, linje2, self: !!m.self, sharing: m.sharing, ...(m.mock ? { mock: true } : {}),
+    devices: m.devices ?? [], sourceDevice: m.sourceDevice ?? null, deviceCount: m.deviceCount ?? 0, enheter: (m.deviceCount ?? 0) > 1 ? `${m.deviceCount} enheter` : null,
   };
 }
 
@@ -468,15 +510,16 @@ api.get('/vendor/:file', async (c) => {
 
 api.post('/location', async (c) => {
   const me = c.get('user'), b = await body(c), pr = prefsOf(me);
-  const pts = (Array.isArray(b.points) ? b.points : [b]).slice(0, 500).map((p) => cleanPoint(p)).filter(Boolean).sort((a, b) => a.ts - b.ts);
+  const top = { device: b.device, deviceId: b.deviceId, platform: b.platform };
+  const pts = (Array.isArray(b.points) ? b.points : [b]).slice(0, 500).map((p) => cleanPoint({ ...top, ...p })).filter(Boolean).sort((a, b) => a.ts - b.ts);
   if (!pts.length) return bad(c, 'Ugyldig posisjon (lat/lon mangler eller er utenfor gyldig område)');
   // Pause eller av (standard): ingenting lagres, og ingen hendelser lages.
   if (pr.sharing !== 'on') return c.json({ ok: true, stored: 0, sharing: pr.sharing, events: [] });
-  const ins = q('INSERT INTO family_pos(user, ts, lat, lon, acc, speed, heading, alt, battery, charging, activity, device) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)');
+  const ins = q('INSERT INTO family_pos(user, ts, lat, lon, acc, speed, heading, alt, battery, charging, activity, device, device_id, platform) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
   const events = [];
   db.transaction(() => {
     for (const p of pts) {
-      ins.run(me, p.ts, p.lat, p.lon, p.acc, p.speed, p.heading, p.alt, p.battery, p.charging, p.activity, p.device);
+      ins.run(me, p.ts, p.lat, p.lon, p.acc, p.speed, p.heading, p.alt, p.battery, p.charging, p.activity, p.device, p.deviceId, p.platform);
       events.push(...zoneEvents(me, p));
     }
   })();
@@ -515,7 +558,13 @@ api.get('/track/:userId', (c) => {
   const pr = m ? { sharing: m.sharing, precision: m.precision } : prefsOf(id);
   const self = id === me;
   if (!self && pr.sharing !== 'on') return c.json({ userId: id, sharing: pr.sharing, points: [] });
-  let pts = m ? mockTrack(m, hours) : q('SELECT ts, lat, lon, speed FROM family_pos WHERE user=? AND ts>=? ORDER BY ts').all(id, Date.now() - hours * 3_600_000);
+  let pts = m ? mockTrack(m, hours) : q('SELECT ts, lat, lon, speed, device, device_id FROM family_pos WHERE user=? AND ts>=? ORDER BY ts').all(id, Date.now() - hours * 3_600_000);
+  // Flere enheter: sporet kommer fra kildeenheten (ellers hopper linjen mellom telefonene).
+  if (!m) {
+    const src = lastPos(id), keys = new Set(pts.map(devKey));
+    if (src && keys.size > 1) pts = pts.filter((p) => devKey(p) === devKey(src));
+    pts = pts.map(({ ts, lat, lon, speed }) => ({ ts, lat, lon, speed }));
+  }
   if (!self && pr.precision === 'approx') {
     // Grove punkter: avrundet, uten fart, og bare ett punkt per rute på ~1 km.
     const seen = new Set();
@@ -542,6 +591,16 @@ api.put('/me', async (c) => {
   if ((next.sharing !== cur.sharing || next.precision !== cur.precision) && (next.sharing === 'on' || cur.sharing === 'on')) broadcast('family', { kind: 'sharing', userId: me, sharing: next.sharing }, others);
   if (b.color !== undefined && next.sharing === 'on') broadcast('family', { kind: 'color', userId: me, color: colorOf(me) }, others);
   return c.json({ me: { userId: me, ...prefsOf(me), color: colorOf(me) } });
+});
+
+// Kildeenhet (prompt 24): {deviceId} velger enheten posisjonen hentes fra, null = Automatisk.
+api.put('/me/source', async (c) => {
+  const me = c.get('user'), b = await body(c);
+  const id = b.deviceId ?? null;
+  if (id !== null && (typeof id !== 'string' || !deviceRows(me).some((r) => devKey(r) === id))) return bad(c, 'Ukjent enhet');
+  if (id === null) kv.del(me, 'family_source'); else kv.set(me, 'family_source', id);
+  const rows = deviceRows(me), src = pickSource(rows, manualSource(me));
+  return c.json({ sourceDevice: src ? devKey(src) : null, sourceMode: id ? 'manual' : 'auto', devices: devicesOut(rows, src, true) });
 });
 
 function zoneInput(b, partial = false) {
@@ -601,6 +660,9 @@ api.put('/zones/:id/notify', async (c) => {
 });
 
 // Helse: bare feltene brukeren deler lagres. Én rad per dato; «week» kan fylle inn de siste dagene.
+// Prompt 24: flere enheter (Apple Health og Health Connect) sender hver sin dagssum. Skritt, søvn og aktive kalorier slås
+// sammen med høyeste verdi per dag, ikke summen, så de ikke telles dobbelt. Puls er siste verdi.
+const hi = (col) => `CASE WHEN excluded.${col} IS NULL THEN ${col} WHEN ${col} IS NULL THEN excluded.${col} ELSE MAX(${col}, excluded.${col}) END`;
 api.post('/health', async (c) => {
   const me = c.get('user'), b = await body(c), share = prefsOf(me).shareHealth;
   const day = (r) => {
@@ -616,8 +678,8 @@ api.post('/health', async (c) => {
   const rows = [day(b), ...(share.week && Array.isArray(b.week) ? b.week.slice(0, 31).map(day) : [])].filter(Boolean);
   if (!rows.length) return bad(c, 'Mangler dato (YYYY-MM-DD)');
   const ins = q(`INSERT INTO family_health(user, date, steps, resting_hr, hr, sleep_min, active_kcal, updated) VALUES(?,?,?,?,?,?,?,?)
-    ON CONFLICT(user, date) DO UPDATE SET steps=COALESCE(excluded.steps, steps), resting_hr=COALESCE(excluded.resting_hr, resting_hr), hr=COALESCE(excluded.hr, hr),
-      sleep_min=COALESCE(excluded.sleep_min, sleep_min), active_kcal=COALESCE(excluded.active_kcal, active_kcal), updated=excluded.updated`);
+    ON CONFLICT(user, date) DO UPDATE SET steps=${hi('steps')}, resting_hr=COALESCE(excluded.resting_hr, resting_hr), hr=COALESCE(excluded.hr, hr),
+      sleep_min=${hi('sleep_min')}, active_kcal=${hi('active_kcal')}, updated=excluded.updated`);
   db.transaction(() => { for (const r of rows) ins.run(me, r.date, r.steps, r.resting_hr, r.hr, r.sleep_min, r.active_kcal, Date.now()); })();
   // Felt brukeren ikke deler lenger, fjernes fra lagrede dager.
   const off = [['steps', 'steps'], ['restingHr', 'resting_hr'], ['hr', 'hr'], ['sleep', 'sleep_min'], ['activeKcal', 'active_kcal']].filter(([k]) => !share[k]).map(([, col]) => `${col}=NULL`);

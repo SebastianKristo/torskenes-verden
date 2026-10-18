@@ -18,7 +18,9 @@ await mkdir(SOUNDS_DIR, { recursive: true });
 
 export const BUILTIN_SOUNDS = [['klokke', 'Klokke'], ['pling', 'Pling'], ['papir', 'Papir'], ['dobbel', 'Dobbel'], ['dyp', 'Dyp']];
 const SOUND_IDS = [...BUILTIN_SOUNDS.map(([id]) => id), 'egen', 'stille'];
-const GROUPS = ['pakker', 'finans', 'familie', 'reise', 'haptikk'];
+const GROUPS = ['pakker', 'finans', 'familie', 'reise', 'haptikk', 'birthdays'];
+// Visningsnavn i Innstillinger → Varsler. Prompt 24: «Bursdager» (påminnelse kl. 09:00, N dager før).
+export const GROUP_LABELS = { pakker: 'Pakker', finans: 'Finans', familie: 'Familie', reise: 'Reise', haptikk: 'Haptikk', birthdays: 'Bursdager' };
 const DEFAULT_NOTIFY = { on: true, quietOn: true, quietFrom: '22:00', quietTo: '07:00', sound: 'klokke', volume: 70, groups: Object.fromEntries(GROUPS.map((g) => [g, true])) };
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -33,6 +35,7 @@ export function notifyOf(id) {
     sound: SOUND_IDS.includes(s.sound) && (s.sound !== 'egen' || custom) ? s.sound : DEFAULT_NOTIFY.sound,
     volume: Number.isInteger(s.volume) && s.volume >= 0 && s.volume <= 100 ? s.volume : DEFAULT_NOTIFY.volume,
     groups: Object.fromEntries(GROUPS.map((g) => [g, typeof s.groups?.[g] === 'boolean' ? s.groups[g] : true])),
+    groupList: GROUPS.map((id) => ({ id, label: GROUP_LABELS[id] })),
     customSound: custom ? { name: custom.name, type: custom.type, size: custom.size, url: `/api/me/notify/sound?v=${custom.v}` } : null,
     sounds: [...BUILTIN_SOUNDS.map(([id, name]) => ({ id, name, url: `/assets/sounds/${id}.wav` })), { id: 'egen', name: 'Egen lyd', url: custom ? `/api/me/notify/sound?v=${custom.v}` : null }, { id: 'stille', name: 'Stille', url: null }],
   };

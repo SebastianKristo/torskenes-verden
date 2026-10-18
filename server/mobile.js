@@ -22,6 +22,7 @@ import { weatherFull, searchPlaces, DEFAULT_PLACES, weatherCompare, PLACES as WX
 import { appMeta } from './notify.js';
 import { nextTasks } from './tasks.js';
 import * as integrations from './integrations.js';
+import { widgetOut as birthdaysWidget } from './birthdays.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const ext = MOCK ? await import('./mock.js') : integrations;
@@ -128,7 +129,31 @@ const SCALAR = {
   bgAnimate: (v) => typeof v === 'boolean',
   // Prompt 23: rekkefølgen på kortene på Abonnementer → Hjem (hold inne og dra). Bare kjente id-er, uten duplikater.
   subHomeOrder: (v) => Array.isArray(v) && v.length >= 1 && v.length <= SUB_HOME_CARDS.length && new Set(v).size === v.length && v.every((x) => SUB_HOME_CARDS.includes(x)),
+  // Prompt 24: profiler (Innstillinger → PROFIL). Et ferdig oppsett av startside og faner, synket mellom enheter.
+  // Egne endringer i startRoute/homeNav/finNav etter valg gjør profilen til «custom» (Egendefinert).
+  profile: (v) => PROFILE_IDS.includes(v),
+  startRoute: (v) => typeof v === 'string' && /^[a-z0-9-]{1,30}(\/[a-z0-9-]{1,30}){0,2}$/.test(v),
+  homeNav: (v) => Array.isArray(v) && v.length >= 1 && v.length <= 6 && new Set(v).size === v.length && v.every((x) => TAB_IDS.includes(x)),
+  appIcon: (v) => typeof v === 'string' && /^[\w.-]{1,40}$/.test(v),
+  appName: (v) => typeof v === 'string' && v.trim().length >= 1 && v.trim().length <= 20 && !/[<>\u0000-\u001f]/.test(v),
 };
+// finNav som liste (prompt 24): fanene i Finans i profilen. Lagres som finNavList, så sidemenyen på desktop (finNav-objektet
+// {order, hidden, labels}) beholdes uendret. GET /api/me/layout svarer med finNav = listen og finSideNav = objektet.
+const FIN_NAV_IDS = ['oversikt', 'liste', 'finn', 'sok', 'budsjett', 'kvitteringer', 'aksjer', 'abonnementer', 'kontoer', 'boliger', 'mer'];
+const finNavList = (v) => Array.isArray(v) && v.length >= 1 && v.length <= 6 && new Set(v).size === v.length && v.every((x) => FIN_NAV_IDS.includes(x));
+export const PROFILES = {
+  standard: { startRoute: 'hjem', homeNav: ['hjem', 'finans', 'mat', 'mer'], finNav: ['oversikt', 'liste', 'finn', 'sok'] },
+  finans_boliger: { startRoute: 'finans/boliger', homeNav: ['finans'], finNav: ['boliger', 'sok', 'liste', 'oversikt', 'kvitteringer'] },
+  boliger: { startRoute: 'finans/boliger', homeNav: ['finans', 'domener'], finNav: ['boliger', 'kvitteringer', 'oversikt', 'sok'] },
+};
+const PROFILE_IDS = [...Object.keys(PROFILES), 'custom'];
+const sameList = (a, b) => Array.isArray(a) && Array.isArray(b) && a.length === b.length && a.every((x, i) => x === b[i]);
+/** Profilfeltene med standardverdier: valgt profil, eller Standard. */
+export function profileOf(id) {
+  const l = layoutOf(id), p = PROFILES[l.profile] ?? PROFILES.standard;
+  return { profile: PROFILE_IDS.includes(l.profile) ? l.profile : 'standard', startRoute: l.startRoute ?? p.startRoute, homeNav: l.homeNav ?? p.homeNav,
+    finNav: l.finNavList ?? (l.profile && PROFILES[l.profile] ? p.finNav : l.finTabs ?? p.finNav), appIcon: l.appIcon ?? null, appName: l.appName ?? null, finSideNav: l.finNav ?? null };
+}
 const SUB_HOME_CARDS = ['ai', 'next7', 'check', 'list'];
 const BG_TYPES = ['weather', 'planets', 'oslo', 'custom', 'none', 'cur'];
 export const TAB_IDS = ['hjem', 'finans', 'mat', 'sporing', 'domener', 'sok', 'mer', 'vaer', 'nyheter', 'familie', 'avganger', 'aksjer', 'boliger', 'abonnementer', 'media', 'huske'];
@@ -299,13 +324,26 @@ api.delete('/me/avatar', authOrToken, async (c) => {
 api.get('/users/:id/avatar', authOrToken, (c) => sendAvatar(c, c.req.param('id')));
 
 // Lagret oppsett med standardverdiene for utseendet fylt inn (de avhenger av om installasjonen er ny, se designOf).
-api.get('/me/layout', authOrToken, (c) => { const id = c.get('user'); return c.json({ ...layoutOf(id), ...designOf(id) }); });
+api.get('/me/layout', authOrToken, (c) => { const id = c.get('user'); const { finNavList: _l, ...l } = layoutOf(id); return c.json({ ...l, ...designOf(id), ...profileOf(id) }); });
 api.put('/me/layout', authOrToken, async (c) => {
   const b = await json(c);
   if (!b || typeof b !== 'object' || Array.isArray(b)) return c.json({ error: 'Forventet et objekt' }, 400);
   const next = { ...layoutOf(c.get('user')) };
+  // Profil først: ferdig oppsett av startRoute, homeNav og finNav. Felt som sendes i samme kall overstyrer.
+  if (b.profile !== undefined && b.profile !== null) {
+    if (!SCALAR.profile(b.profile)) return c.json({ error: 'Ugyldig verdi for profile' }, 400);
+    const p = PROFILES[b.profile];
+    if (p) Object.assign(next, { startRoute: p.startRoute, homeNav: [...p.homeNav], finNavList: [...p.finNav] });
+  }
+  const custom = ['startRoute', 'homeNav', 'finNav'].some((k) => b[k] !== undefined && !(k === 'finNav' && !Array.isArray(b[k]) && b[k] !== null));
   for (const [k, v] of Object.entries(b)) {
     if (!LAYOUT[k] && !SCALAR[k]) return c.json({ error: `Ukjent nøkkel ${k}` }, 400);
+    if (k === 'finNav' && (Array.isArray(v) || v === null)) {
+      if (v === null) { delete next.finNavList; continue; }
+      if (!finNavList(v)) return c.json({ error: 'Ugyldig verdi for finNav' }, 400);
+      next.finNavList = v; continue;
+    }
+    if (k === 'appName' && typeof v === 'string') { if (!SCALAR.appName(v)) return c.json({ error: 'Navnet på appen må være 1–20 tegn' }, 400); next.appName = v.trim().replace(/\s+/g, ' '); continue; }
     if (v === null) { delete next[k]; continue; }
     if (SCALAR[k]) {
       if (!SCALAR[k](v)) return c.json({ error: `Ugyldig verdi for ${k}` }, 400);
@@ -321,9 +359,19 @@ api.put('/me/layout', authOrToken, async (c) => {
     // Tomme navn betyr standardnavnet og lagres ikke.
     for (const f of ['labels', 'names']) if (v[f]) next[k][f] = Object.fromEntries(Object.entries(v[f]).map(([id, n]) => [id, n.trim()]).filter(([, n]) => n));
   }
+  // Egne endringer i fanene eller startsiden: «Egendefinert», med mindre de er lik den valgte profilen.
+  if (custom) {
+    const p = PROFILES[next.profile ?? 'standard'];
+    const same = p && (next.startRoute ?? p.startRoute) === p.startRoute && sameList(next.homeNav ?? p.homeNav, p.homeNav) && sameList(next.finNavList ?? p.finNav, p.finNav);
+    if (!same) next.profile = 'custom';
+  }
   kv.set(c.get('user'), 'layout', next);
-  return c.json(next);
+  const { finNavList: _l, finNav: _side, ...rest } = next;
+  return c.json({ ...rest, ...profileOf(c.get('user')) });
 });
+// Ferdige profiler (Innstillinger → PROFIL): Standard, Finans + Boliger og Boliger-profil.
+api.get('/me/profiles', authOrToken, (c) => c.json({ ...PROFILES, current: profileOf(c.get('user')).profile,
+  labels: { standard: 'Standard', finans_boliger: 'Finans + Boliger', boliger: 'Boliger-profil', custom: 'Egendefinert' } }));
 
 // Værappen i mobilappene: MET/yr (Open-Meteo som reserve), cachet i 10 minutter. ?place=<id> (egne steder også), eller ?lat=&lon=&name=.
 api.get('/weather/full', authOrToken, async (c) => {
@@ -530,6 +578,7 @@ api.get('/mobile/home', authOrToken, async (c) => {
     design: designOf(id),
     app: appMeta(), // navn og ikon på appen (prompt 17)
     tasks: nextTasks(id, 3), // Huskeliste-widget (prompt 17): de tre neste oppgavene brukeren selv ser (prompt 21)
+    birthdays: (() => { try { return birthdaysWidget(id); } catch { return null; } })(), // «BURSDAGER · NESTE» (prompt 24)
   });
 });
 
@@ -710,7 +759,9 @@ api.get('/mobile/widgets', authOrToken, async (c) => {
     dueSoon: (det?.bills ?? []).filter((b) => b.nextDue).sort((a, b) => String(a.nextDue).localeCompare(String(b.nextDue))).slice(0, 3)
       .map((b) => ({ title: b.name, amount: b.last?.amount ?? null, date: b.nextDue, color: b.color ?? null })) };
 
-  return c.json({ updatedAt: new Date().toISOString(), weather, packages, budget, finance, nextCharge, stocks, domains, matplan, finn: finnW, boliger });
+  let birthdays = null;
+  try { birthdays = birthdaysWidget(id); } catch { birthdays = null; }
+  return c.json({ updatedAt: new Date().toISOString(), weather, packages, budget, finance, nextCharge, stocks, domains, matplan, finn: finnW, boliger, birthdays });
 });
 
 export default api;
