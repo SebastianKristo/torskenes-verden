@@ -45,7 +45,8 @@ internal fun ModuleHeader(vm: AppViewModel, title: String, back: (() -> Unit)? =
 internal fun Kpi(label: String, value: String, modifier: Modifier, shape: RoundedCornerShape = RoundedCornerShape(24.dp), bg: Color = C.surface2, fg: Color = C.text, sub: String? = null) {
     Column(modifier.clip(shape).background(bg).padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(label, color = fg.copy(alpha = .75f), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(value, fontFamily = Mono, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = fg, maxLines = 1, softWrap = false)
+        // Hele tallet vises: teksten krymper i stedet for å kuttes eller få «…».
+        FitText(value, fg, 20.sp, FontWeight.SemiBold, family = Mono)
         sub?.let { Text(it, color = fg.copy(alpha = .7f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
     }
 }

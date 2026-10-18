@@ -159,8 +159,9 @@ private fun StockOverview(vm: AppViewModel, x: StocksX?, range: String, onRange:
     var seg by remember { mutableStateOf("Alle") }
     val trade = rememberTrade(vm)
     Page {
-        item { ModuleHeader(vm, "Aksjer", actions = { IconButton(onClick = { vm.syncStocks() }) { Icon(Icons.Filled.Sync, "Synk nå", tint = C.primary) } }) }
-        if (x != null) item {
+        // Papir: tittelen står i bildeheaderen, og innstillingene for aksjer ligger under Innstillinger.
+        if (!vm.paper) item { ModuleHeader(vm, "Aksjer", actions = { IconButton(onClick = { vm.syncStocks() }) { Icon(Icons.Filled.Sync, "Synk nå", tint = C.primary) } }) }
+        if (x != null && !vm.paper) item {
             val ok = x.error.isBlank() && (x.configured || x.mock)
             val whenText = x.syncedAt?.let { fmtTime(it, if (it.atZone(ZoneId.systemDefault()).toLocalDate() == LocalDate.now()) "HH:mm" else "dd.MM HH:mm") }
             Row(Modifier.fillMaxWidth().clickable { vm.settingsPage = "stocks"; vm.open(Screen.Settings); vm.settingsPage = "stocks" }.padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -189,7 +190,7 @@ private fun StockOverview(vm: AppViewModel, x: StocksX?, range: String, onRange:
                     Chip(if (x.mock || x.env.equals("demo", true)) "Demo" else "Live", C.surface2, C.text)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(krs(x.total), fontSize = 32.sp, fontWeight = FontWeight.SemiBold, fontFamily = Mono, maxLines = 1)
+                    FitText(krs(x.total), C.text, 32.sp, FontWeight.SemiBold, Modifier.weight(1f, fill = false), family = Mono)
                     ch?.let { c -> Text("${chg(c)} ${if (range == "1D") "i dag" else RANGES.first { it.first == range }.second.lowercase()}", color = if (c < 0) down else up, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.clip(CircleShape).background(if (c < 0) down.copy(alpha = .16f) else C.positiveBg).padding(8.dp, 4.dp)) }
                 }
@@ -197,7 +198,8 @@ private fun StockOverview(vm: AppViewModel, x: StocksX?, range: String, onRange:
                 RangePicker(range, onRange)
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     listOf(Triple("Avkastning", (if (x.result < 0) "−" else "+") + krs(kotlin.math.abs(x.result)), if (x.result < 0) down else up), Triple("Investert", krs(x.invested), C.text), Triple("Kontanter", krs(x.cash), C.text))
-                        .forEach { (l, v, c) -> Column(Modifier.weight(1f)) { Text(l, color = C.text2, fontSize = 11.sp); Text(v, color = c, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1) } }
+                        // Hele tallet vises: teksten krymper i stedet for å kuttes.
+                        .forEach { (l, v, c) -> Column(Modifier.weight(1f)) { Text(l, color = C.text2, fontSize = 11.sp, maxLines = 1); FitText(v, c, 13.sp, FontWeight.SemiBold) } }
                 }
             }
         }

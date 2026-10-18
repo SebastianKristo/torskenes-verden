@@ -173,6 +173,7 @@ internal fun PRow(title: String, sub: String?, value: String = "›", valueColor
 /** Hvilken fanelinje som vises: «main», «fin» (Finans) eller «dom» (Domener). */
 private fun paperBar(vm: AppViewModel): String = when {
     vm.screen == Screen.Domains && vm.paperPage == null -> "dom"
+    vm.screen == Screen.Sub && vm.paperPage == null && vm.selectedTx == null -> "sub"
     vm.paperFin -> "fin"
     else -> "main"
 }
@@ -268,17 +269,18 @@ internal fun PaperApp(
     // Ekstra luft nederst i listene: plass til fanelinja (telefon) og den flytende skanneknappen.
     val navBottom = if (wide) 12.dp - PAPER_BAR + navInset + (if (float) 70.dp else 0.dp) else barBottom - 12.dp + (if (float) 70.dp else 0.dp)
     val bar = paperBar(vm)
-    val pageKey = "${vm.screen}-${vm.paperPage}-${vm.selectedTx}-${vm.domSection}"
+    val pageKey = "${vm.screen}-${vm.paperPage}-${vm.selectedTx}-${vm.domSection}-${vm.settingsPage}-${vm.subTab}-${vm.bolTab}"
     val meter = remember(pageKey) { ScrollMeter() }
     val onTap: () -> Unit = {
         when {
             bar == "dom" -> vm.domainManager = true
+            bar == "sub" -> vm.subAdding = true
             vm.screen == Screen.Tracking && bar == "main" -> vm.trkAddOpen = true
             else -> { vm.scanTarget = if (vm.screen == Screen.Mat) "recipe" else "receipt"; vm.scanSheet = true }
         }
     }
     val onHold: () -> Unit = {
-        if (bar != "dom") {
+        if (bar != "dom" && bar != "sub") {
             vm.scanTarget = if (vm.screen == Screen.Mat) "recipe" else "receipt"
             holdFiles.launch(arrayOf("image/*", "application/pdf"))
         }
@@ -294,7 +296,8 @@ internal fun PaperApp(
                         .nestedScroll(meter).clip(if (meter.y > 1f) TopCut(23.dp) else RectangleShape),
                     contentAlignment = Alignment.TopCenter,
                 ) {
-                    Box(Modifier.fillMaxHeight().widthIn(max = if (!wide) 10_000.dp else if (home) 960.dp else 720.dp)) {
+                    // Ny side åpner alltid helt øverst: alt innhold (og rulleposisjonen) bygges på nytt ved hvert sidebytte.
+                    Box(Modifier.fillMaxHeight().widthIn(max = if (!wide) 10_000.dp else if (home) 960.dp else 720.dp)) { key(pageKey) {
                         when {
                             vm.original != null -> PaneBox(navBottom) { OriginalScreen(vm) }
                             vm.editing != null -> PaneBox(navBottom) { TxEditScreen(vm, vm.editing!!, scan) }
@@ -302,7 +305,7 @@ internal fun PaperApp(
                             vm.paperPage == "mer" -> PaperMore(vm, navBottom)
                             vm.paperPage == "fmer" -> PaperFinMoreGrid(vm, navBottom, wide)
                             vm.paperPage == "fsok" && vm.selectedTx == null -> PaperFinSearch(vm, navBottom)
-                            vm.paperPage == "set" -> PaperSettings(vm, navBottom)
+                            vm.paperPage == "set" -> PaperSettings16(vm, navBottom)
                             vm.paperPage == "media" -> PaperMedia(vm, navBottom)
                             vm.selectedTx != null && (s.isFinance || vm.paperPage == "fsok") -> PaperTxDetail(vm, navBottom, takePhoto, pickFiles)
                             s == Screen.Homelab -> PaperHome(vm, navBottom, wide)
@@ -313,9 +316,12 @@ internal fun PaperApp(
                             // Toppkortet (domenevelger og periode) overlapper bildeheaderen; resten er egne kort på papiret.
                             s == Screen.Domains -> Box(Modifier.fillMaxSize().padding(bottom = PAPER_BAR + navBottom)) { DomainsScreen(vm, false, section = vm.domSection, paper = true) }
                             s == Screen.Mat && !vm.matFull -> MatSurface(vm, paper = true)
+                            // Verdikortet ligger delvis oppe i bildeheaderen, som på Sporing.
+                            s == Screen.Stocks -> Box(Modifier.fillMaxSize().padding(bottom = PAPER_BAR + navBottom)) { MainPane(vm, false, scan, onPrivacyChanged) }
+                            s == Screen.Folders -> PaperBoliger(vm, navBottom) { vm.scanTarget = "receipt"; vm.scanSheet = true }
                             else -> PaneBox(navBottom) { MainPane(vm, false, scan, onPrivacyChanged) }
                         }
-                    }
+                    } }
                 }
             }
             if (wide) {
@@ -323,7 +329,7 @@ internal fun PaperApp(
             } else {
                 PaperNav(vm, bar, float, Modifier.align(Alignment.BottomCenter).padding(start = 12.dp, end = 12.dp, bottom = barBottom), onTap, onHold)
             }
-            if (float) PaperFab(vm, bar,
+            if (float && bar != "sub") PaperFab(vm, bar,
                 Modifier.align(Alignment.BottomEnd).padding(end = if (wide) 24.dp else 18.dp, bottom = if (wide) navInset + 24.dp else barBottom + 62.dp + 14.dp), onTap, onHold)
             vm.plusHint?.let { h ->
                 Box(Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = if (wide) navInset + 96.dp else barBottom + (if (float) 146.dp else 72.dp)).clip(RoundedCornerShape(12.dp)).background(p.ink).padding(12.dp, 8.dp)) {
@@ -347,13 +353,19 @@ internal fun PaperApp(
             if (vm.busy) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) }
             if (vm.newsOpen) NewsReader(vm)
             if (vm.weatherOpen) WeatherApp(vm)
+            if (vm.ruterOpen) RuterPage(vm)
+            if (vm.familyOpen) FamilyScreen(vm)
         }
     }
+    if (vm.tabEdit) TabBarEditor(vm)
     if (vm.scanSheet) PaperScanSheet(vm, takePhoto, pickPhotos, pickFiles)
     if (vm.trkSettings) PaperTrackSettings(vm)
     if (vm.trkAddOpen) NewShipmentSheet(vm)
     if (vm.domainManager) DomainManagerSheet(vm)
 }
+
+/** Pakker og Avganger side om side på Fold: samme høyde. */
+private val FOLD_CARD = 176.dp
 
 /** Høyden fanelinja tar nederst (62 dp linje + 12 dp marg + litt luft), så innholdet stopper over den. */
 internal val PAPER_BAR = 82.dp
@@ -387,10 +399,7 @@ private fun Hero(vm: AppViewModel, home: Boolean, wide: Boolean, toggleMenu: () 
                     ) { Text("‹ ${backLabel(vm)}", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1) }
                     Spacer(Modifier.weight(1f))
                 }
-                if (home) Box(
-                    Modifier.height(34.dp).clip(CircleShape).background(Color(0x8C1B1A17)).clickable(onClickLabel = "Velg bakgrunn", onClick = toggleMenu).padding(horizontal = 12.dp),
-                    contentAlignment = Alignment.Center,
-                ) { Text("${photoName(vm.photoKind)} ▾", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1) }
+                // Bakgrunnsvelgeren ligger nå i Innstillinger → Bakgrunn på Hjem; profilbildet åpner Innstillinger → Profil.
                 Box(
                     Modifier.size(38.dp).clip(CircleShape).background(Color(0xFFF3EFE6)).clickable(onClickLabel = "Innstillinger") { vm.openPaperPage("set") }
                         .semantics { contentDescription = "Innstillinger" },
@@ -488,7 +497,8 @@ private fun PaperNav(vm: AppViewModel, bar: String, float: Boolean, modifier: Mo
     val cur = navCurrent(vm, bar)
     val tabs = navTabs(vm, bar, float)
     Row(
-        modifier.fillMaxWidth().height(62.dp).shadow(16.dp, CircleShape).clip(CircleShape).background(p.nav).padding(horizontal = 8.dp),
+        modifier.fillMaxWidth().height(62.dp).shadow(16.dp, CircleShape).clip(CircleShape).background(p.nav)
+            .longPressEdit(bar == "main") { Haptics.tap(); vm.tabEdit = true }.padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         tabs.forEach { t ->
@@ -502,7 +512,7 @@ private fun PaperNav(vm: AppViewModel, bar: String, float: Boolean, modifier: Mo
                 Text(t.label, color = if (on) p.navActInk else p.navInk, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Clip)
             }
         }
-        if (!float) ScanPress(vm, bar, Modifier.padding(start = 4.dp), 46.dp, CircleShape, onTap, onHold) { Text("+", color = p.onLab, fontSize = 22.sp) }
+        if (!float || bar == "sub") ScanPress(vm, bar, Modifier.padding(start = 4.dp), 46.dp, CircleShape, onTap, onHold) { Text("+", color = p.onLab, fontSize = 22.sp) }
     }
 }
 
@@ -581,12 +591,12 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
                 // Viktigste pakke (klar for henting først).
                 "h2" -> {
                     val pk = (vm.homePackages ?: emptyList()).sortedByDescending { it.ready }.firstOrNull()
-                    if (pk == null) PCard(onClick = { vm.paperTab("trk") }) { Text("Ingen pakker på vei.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(16.dp, 14.dp)) }
-                    else PCard(onClick = { vm.paperTab("trk") }) {
+                    // På Fold står pakkekortet ved siden av Avganger og er like høyt.
+                    val cardMod = if (wide) Modifier.height(FOLD_CARD) else Modifier
+                    if (pk == null) PCard(cardMod, onClick = { vm.paperTab("trk") }) { Text("Ingen pakker på vei.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(16.dp, 14.dp)) }
+                    else PCard(cardMod, onClick = { vm.paperTab("trk") }) {
                         Row(Modifier.padding(14.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                            Box(Modifier.size(52.dp).clip(RoundedCornerShape(14.dp)).background(Color(pk.carrierColor)), contentAlignment = Alignment.Center) {
-                                Text(pk.carrierIni, color = Color(pk.carrierFg), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp)
-                            }
+                            CarrierBadge(pk.carrierIni, pk.carrierColor, pk.carrierFg, 52)
                             Column(Modifier.weight(1f)) {
                                 PLabel(if (pk.ready) "Hent i dag" else pk.statusText.ifBlank { "På vei" })
                                 PSerif(pk.name.ifBlank { pk.shop.ifBlank { pk.trackingNo } }, 20.sp, maxLines = 1)
@@ -599,8 +609,9 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
                 }
                 "h3" -> {
                     val lines = h?.ruter ?: emptyList()
-                    if (lines.isNotEmpty()) PaperRuter(lines) { openLink(ctx, ruterLink(lines.firstOrNull()?.from)) }
-                    else PCard { Text("Ingen avganger. Legg inn holdeplass i Homelab.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(16.dp, 14.dp)) }
+                    // Trykk åpner Avganger (egen side med flere avganger, detaljer og egne stopp).
+                    if (lines.isNotEmpty()) PaperRuter(lines, if (wide) Modifier.height(FOLD_CARD) else Modifier) { vm.openRuter() }
+                    else PCard(if (wide) Modifier.height(FOLD_CARD) else Modifier, onClick = { vm.openRuter() }) { Text("Ingen avganger ennå. Trykk for å legge til en holdeplass.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(16.dp, 14.dp)) }
                 }
                 "hm" -> PaperMinis(vm)
                 "h5" -> PaperNewsCard(vm)
@@ -645,7 +656,7 @@ private fun PaperSearch(vm: AppViewModel) {
             Modifier.fillMaxWidth().height(46.dp).shadow(12.dp, CircleShape).clip(CircleShape).background(p.card).padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text("⌕", color = p.mut, fontSize = 16.sp)
+            GoogleG(18.dp)
             BasicTextField(
                 q, { q = it; vm.suggest(it) }, singleLine = true,
                 textStyle = TextStyle(color = p.ink, fontSize = 14.5.sp, fontFamily = PaperFonts.sans),
@@ -665,11 +676,11 @@ private fun PaperSearch(vm: AppViewModel) {
 }
 
 @Composable
-private fun PaperRuter(lines: List<RuterLine>, onClick: () -> Unit) {
+private fun PaperRuter(lines: List<RuterLine>, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val p = PaperPal.current
     val rows = lines.flatMap { l -> l.departures.map { d -> l to d } }.sortedBy { (_, d) -> d.min ?: Int.MAX_VALUE }.take(3)
     val stop = lines.map { it.from }.distinct().joinToString(" · ")
-    PCard(onClick = onClick) {
+    PCard(modifier, onClick = onClick) {
         Column(Modifier.padding(16.dp, 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.Bottom) {
                 PLabel("Avganger · $stop", modifier = Modifier.weight(1f))
@@ -847,6 +858,9 @@ private fun PaperMore(vm: AppViewModel, navBottom: Dp) {
                 val rows: List<Triple<String, String, () -> Unit>> = listOf(
                     if (vm.tab4 == "sporing") Triple("Domener", "Trafikk, besøk og oppetid", { vm.domSection = "oversikt"; vm.openFromMer(Screen.Domains) })
                     else Triple("Sporing", if (onWay > 0) "$onWay pakker på vei" else "Pakker og sendinger", { vm.openFromMer(Screen.Tracking) }),
+                    Triple("Familie og kart", "Hvor alle er, soner og helse", { vm.openFamily() }),
+                    Triple("Avganger", "Ruter i sanntid og egne stopp", { vm.openRuter() }),
+                    Triple("Vær", "Steder og varsel fra MET (yr.no)", { vm.openWeather() }),
                     Triple("Media", "Spilles nå og historikk", { vm.openPaperPage("media") }),
                     Triple("Finans", "Oversikt, liste, Finn og mer", { vm.paperTab("fin") }),
                     Triple("Nyhetsleser", "RSS med ✦ AI-sammendrag", { vm.openNews() }),

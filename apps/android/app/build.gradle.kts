@@ -79,4 +79,7 @@ dependencies {
     // Hjemskjerm-widgets (Glance) og henting av widgetdata hvert 15. minutt.
     implementation("androidx.glance:glance-appwidget:1.1.1")
     implementation("androidx.work:work-runtime-ktx:2.10.0")
+    // Familie: kart med OpenStreetMap-fliser, og helse fra Health Connect.
+    implementation("org.osmdroid:osmdroid-android:6.1.20")
+    implementation("androidx.health.connect:connect-client:1.1.0-alpha07")
 }

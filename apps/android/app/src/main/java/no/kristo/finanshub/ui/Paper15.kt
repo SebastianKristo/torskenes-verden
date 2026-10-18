@@ -109,7 +109,7 @@ data class PSec(val key: String, val label: String, val full: Boolean = false)
 
 /** Dempet vugging: ±0,2° med periode 0,6 s (ease-in-out), annenhver i motsatt fase. */
 @Composable
-private fun wobbleAngle(on: Boolean, index: Int): Float {
+internal fun wobbleAngle(on: Boolean, index: Int): Float {
     if (!on) return 0f
     val t = rememberInfiniteTransition(label = "vugge")
     val a by t.animateFloat(
@@ -120,7 +120,7 @@ private fun wobbleAngle(on: Boolean, index: Int): Float {
 }
 
 @Composable
-private fun EditDot(text: String, enabled: Boolean, onClick: () -> Unit) {
+internal fun EditDot(text: String, enabled: Boolean, onClick: () -> Unit) {
     val p = PaperPal.current
     Box(
         Modifier.size(30.dp).shadow(4.dp, CircleShape).clip(CircleShape).background(if (enabled) p.ink else p.ink.copy(alpha = .35f))
@@ -267,14 +267,21 @@ internal fun navTabs(vm: AppViewModel, bar: String, float: Boolean): List<NavTab
             l += NavTab("fmer", "Mer", "⋯") { vm.paperFinTab("fmer") }
             l
         }
+        // Abonnementer: Hjem, Innsikt og Historikk i linja (i stedet for faner øverst). + er en rød sirkel.
+        "sub" -> listOf(Triple("home", "Hjem", "⌂"), Triple("ins", "Innsikt", "◔"), Triple("hist", "Historikk", "↻"))
+            .map { (k, n, ic) -> NavTab(k, n, ic) { vm.subTab = k } }
         else -> buildList {
+            // Én linje, satt opp av brukeren (hold inne på linja eller via Innstillinger). «Hjem» kommer bare på Hjem.
             if (home) add(NavTab("hjem", "Hjem", "⌂") { vm.paperTab("hjem") })
-            add(NavTab("fin", "Finans", "kr") { vm.paperTab("fin") })
-            add(NavTab("mat", "Mat", "◐") { vm.paperTab("mat") })
-            if (vm.tab4 == "sporing") add(NavTab("trk", "Sporing", "▣") { vm.paperTab("trk") })
-            else add(NavTab("dom", "Domener", "◎") { vm.paperTab("dom") })
-            if (float) add(NavTab("sok", "Søk", "⌕") { vm.paperTab("sok") })
-            add(NavTab("mer", "Mer", "⋯") { vm.paperTab("mer") })
+            vm.tabBarItems().forEach { t ->
+                if (t.id == "sok" && !float) return@forEach
+                // Uten egen oppsett følger fjerde fane «Automatisk» (Domener, eller Sporing når pakker er på vei).
+                val id = if (vm.tabBar.isEmpty() && t.id == "domener" && vm.tab4 == "sporing") "sporing" else t.id
+                val def = MAIN_TABS.firstOrNull { it.id == id } ?: t
+                val label = if (id == t.id) t.label else def.label
+                val icon = if (id == t.id) t.icon else def.icon
+                add(NavTab(navKey(id), label, icon) { vm.mainTab(id) })
+            }
         }
     }
 }
@@ -282,6 +289,9 @@ internal fun navTabs(vm: AppViewModel, bar: String, float: Boolean): List<NavTab
 private fun finIcon(k: String) = when (k) {
     "oversikt" -> "◎"; "liste" -> "≡"; "finn" -> "⇄"; "sok" -> "⌕"; "budsjett" -> "◔"; "kvitt" -> "▤"; "aksjer" -> "↗"; "abo" -> "↻"; "kontoer" -> "▥"; "boliger" -> "⌂"; else -> "•"
 }
+
+/** Nøkkelen fanen har i navCurrent (de gamle nøklene for Finans, Domener og Sporing). */
+internal fun navKey(id: String): String = when (id) { "finans" -> "fin"; "domener" -> "dom"; "sporing" -> "trk"; else -> id }
 
 /** Hvilken fane som er markert. */
 internal fun navCurrent(vm: AppViewModel, bar: String): String = when (bar) {
@@ -291,7 +301,12 @@ internal fun navCurrent(vm: AppViewModel, bar: String): String = when (bar) {
         vm.paperPage == "fmer" || vm.paperFromFinMer -> "fmer"
         else -> vm.paperFinTabs.firstOrNull { finTabScreen(it) == vm.screen } ?: "fmer"
     }
+    "sub" -> vm.subTab
     else -> when {
+        vm.paperPage == "media" -> "media"
+        vm.paperFromMer && vm.screen == Screen.Stocks && vm.tabBarItems().any { it.id == "aksjer" } -> "aksjer"
+        vm.paperFromMer && vm.screen == Screen.Folders && vm.tabBarItems().any { it.id == "boliger" } -> "boliger"
+        vm.paperFromMer && vm.screen == Screen.Sub && vm.tabBarItems().any { it.id == "abonnementer" } -> "abonnementer"
         vm.paperPage != null || vm.paperFromMer -> "mer"
         vm.screen == Screen.Homelab -> "hjem"
         vm.screen == Screen.Mat -> "mat"
@@ -309,17 +324,17 @@ internal fun ScanPress(vm: AppViewModel, bar: String, modifier: Modifier, size: 
     val scope = rememberCoroutineScope()
     var pressed by remember { mutableStateOf(false) }
     val trk = vm.screen == Screen.Tracking && bar == "main"
-    val label = when { bar == "dom" -> "Legg til domene"; trk -> "Ny sending"; bar == "fin" -> "Legg til kvittering"; vm.screen == Screen.Mat -> "Skann oppskrift"; else -> "Skann" }
+    val label = when { bar == "dom" -> "Legg til domene"; bar == "sub" -> "Legg til abonnement"; trk -> "Ny sending"; bar == "fin" -> "Legg til kvittering"; vm.screen == Screen.Mat -> "Skann oppskrift"; else -> "Skann" }
     Box(
         modifier.size(size).scale(if (pressed) 0.9f else 1f).clip(shape).background(p.lab)
-            .semantics { contentDescription = if (trk || bar == "dom") label else "$label. Trykk for valg, hold inne for å laste opp." }
+            .semantics { contentDescription = if (trk || bar == "dom" || bar == "sub") label else "$label. Trykk for valg, hold inne for å laste opp." }
             .pointerInput(bar, trk) {
                 detectTapGestures(onPress = {
                     pressed = true
                     var long = false
                     val job = scope.launch {
                         delay(450)
-                        if (bar == "dom" || trk) return@launch
+                        if (bar == "dom" || bar == "sub" || trk) return@launch
                         long = true
                         pressed = false
                         Haptics.tap()

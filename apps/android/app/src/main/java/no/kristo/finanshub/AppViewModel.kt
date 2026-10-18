@@ -247,6 +247,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         Privacy.hidden = prefs.bool(AppPrefs.HIDE_AMOUNTS)
         layout = localLayout()
         loadLocalLayout15()
+        loadLocalLayout16()
         if (loggedIn) refresh()
     }
 
@@ -1238,7 +1239,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /* ---------- Boliger (delte mapper) ---------- */
 
-    fun openFolder(id: Int?) = launch { uploadFolder = null; folder = if (id == null) null else parseFolderDetail(api.get("/folders/$id")) }
+    fun openFolder(id: Int?) = launch {
+        uploadFolder = null
+        if (id == null) { folder = null; folderExtra = null; return@launch }
+        val raw = api.get("/folders/$id")
+        folder = parseFolderDetail(raw)
+        folderExtra = runCatching { parseFolderExtra(raw) }.getOrNull()
+    }
+    /** Kommende forfall og kvitteringer i boligen (nyere server). */
+    var folderExtra by mutableStateOf<FolderExtra?>(null)
+        private set
     /** Boligkategorier med underkategorier (Innstillinger → Boliger på PC). Tom liste på eldre servere. */
     var boligCats by mutableStateOf<List<BoligCategory>>(emptyList())
     /** «Legg i bolig»: målet for skann og opplasting mens man står i Boliger (null = boligen som er åpen). */
@@ -1578,6 +1588,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Rekkefølgen på Sporing og onboarding følger brukeren, så de leses hver gang.
         if (x.trkOrder.isNotEmpty()) trkOrder = normalizeTrkOrder(x.trkOrder)
         applyLayout15(raw)
+        applyLayout16(raw)
         val obKey = AppPrefs.ONBOARDED + (account?.id ?: "")
         onboardNeeded = x.onboarded == false && !prefs.bool(obKey)
         if (prefs.bool(AppPrefs.DESIGN_SYNCED)) return
@@ -2287,7 +2298,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         weatherPlace = place
         weatherError = null
         launch {
-            try { weatherFull = parseWeatherFull(api.hlGet("/weather/full?place=$place", timeout = 15_000)) }
+            try { weatherFull = parseWeatherFull(api.hlGet("/weather/full?place=" + URLEncoder.encode(place, "UTF-8"), timeout = 15_000)) }
             catch (e: ApiException) { weatherError = if (e.status == 404) "Værappen trenger en nyere Homelab-server." else e.message }
         }
     }
@@ -2309,5 +2320,291 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun pickDomainPaper(name: String) { domAll = false; pickDomain(name) }
     fun setRangePaper(r: String) { domAllStats = emptyMap(); setRange(r); if (domAll) showAllDomains() }
-}
 
+    /* ---------- Prompt 16: fanelinja, ikonfarger, vær-steder, avganger, Boliger og Familie ---------- */
+
+    /** Papir-hovedlinja slik brukeren har satt den opp (tom = standard). «Hjem» kommer bare på Hjem, og bare én linje vises. */
+    var tabBar by mutableStateOf<List<TabItem>>(emptyList())
+        private set
+    var tabEdit by mutableStateOf(false)
+    fun tabBarItems(): List<TabItem> = tabBar.ifEmpty {
+        MAIN_TABS_DEFAULT.map { id -> if (id == "domener" && tab4 == "sporing") "sporing" else id }.mapNotNull { id -> MAIN_TABS.firstOrNull { it.id == id } }
+    }
+    fun saveTabBar(list: List<TabItem>) {
+        val v = list.distinctBy { it.id }.filter { t -> MAIN_TABS.any { it.id == t.id } }.let { l -> l.filter { it.id != "mer" } + (l.firstOrNull { it.id == "mer" } ?: MAIN_TABS.first { it.id == "mer" }) }.take(6)
+        tabBar = v
+        Haptics.select()
+        prefs.set(AppPrefs.TAB_BAR + (account?.id ?: ""), JSONArray().apply { v.forEach { put(it.toJson()) } }.toString())
+        viewModelScope.launch { runCatching { api.hlPut("/me/layout", JSONObject().put("tabBar", JSONObject().put("items", JSONArray().apply { v.forEach { put(it.toJson()) } }))) } }
+    }
+    fun resetTabBar() {
+        tabBar = emptyList()
+        prefs.set(AppPrefs.TAB_BAR + (account?.id ?: ""), "")
+        viewModelScope.launch { runCatching { api.hlPut("/me/layout", JSONObject().put("tabBar", JSONObject().put("items", JSONArray()))) } }
+    }
+
+    /** Fargetema for ikonene i Innstillinger («standard» er dagens farger). */
+    val iconTheme: String get() = option(AppPrefs.ICON_THEME, "standard")
+    fun updateIconTheme(v: String) {
+        setPref(AppPrefs.ICON_THEME, v)
+        viewModelScope.launch { runCatching { api.hlPut("/me/layout", JSONObject().put("iconTheme", v)) } }
+    }
+
+    fun applyLayout16(raw: String) {
+        val l = runCatching { parseLayout16(raw) }.getOrNull() ?: return
+        if (l.tabBar.isNotEmpty()) tabBar = l.tabBar
+        l.iconTheme?.let { prefs.set(AppPrefs.ICON_THEME, it); prefTick++ }
+    }
+    fun loadLocalLayout16() {
+        prefs.str(AppPrefs.TAB_BAR + (account?.id ?: ""), "").takeIf { it.isNotBlank() }?.let { raw ->
+            runCatching { tabBar = parseLayout16(JSONObject().put("tabBar", JSONObject().put("items", JSONArray(raw))).toString()).tabBar }
+        }
+    }
+
+    /* Vær: egne steder (søk, legg til, fjern). Data fra MET/yr.no via serveren. */
+    var wxPlaces by mutableStateOf<List<WxPlace>>(emptyList())
+        private set
+    var wxSearch by mutableStateOf<List<WxPlace>>(emptyList())
+        private set
+    var wxSearchBusy by mutableStateOf(false)
+        private set
+    var wxPlacesSheet by mutableStateOf(false)
+    fun loadWxPlaces() = launch {
+        wxPlaces = runCatching { parseWxPlaces(api.hlGet("/weather/places")) }.getOrNull()
+            ?: WX_PLACES.map { (id, n) -> WxPlace(id, n, 0.0, 0.0, "") }
+    }
+    private var wxSearchJob: kotlinx.coroutines.Job? = null
+    fun searchWxPlaces(q: String) {
+        wxSearchJob?.cancel()
+        if (q.trim().length < 2) { wxSearch = emptyList(); return }
+        wxSearchJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(250)
+            wxSearchBusy = true
+            try { wxSearch = runCatching { parseWxPlaces(api.hlGet("/weather/search?q=" + URLEncoder.encode(q.trim(), "UTF-8"))) }.getOrDefault(emptyList()) }
+            finally { wxSearchBusy = false }
+        }
+    }
+    fun addWxPlace(p: WxPlace) = launch {
+        val body = JSONObject().put("name", p.name).put("lat", p.lat).put("lon", p.lon).put("region", p.region)
+        val r = runCatching { api.hlPost("/weather/places", body) }.getOrNull()
+        wxPlaces = runCatching { parseWxPlaces(api.hlGet("/weather/places")) }.getOrNull() ?: (wxPlaces + p)
+        wxSearch = emptyList()
+        flash(if (r != null) "${p.name} er lagt til" else "Kunne ikke lagre ${p.name}")
+        wxPlaces.lastOrNull { it.name == p.name }?.let { loadWeatherAt(it) }
+    }
+    fun removeWxPlace(id: String) = launch {
+        runCatching { api.hlDelete("/weather/places/" + URLEncoder.encode(id, "UTF-8")) }
+        wxPlaces = wxPlaces.filter { it.id != id }
+        if (weatherPlace == id) wxPlaces.firstOrNull()?.let { loadWeatherAt(it) }
+    }
+    /** Været for et sted: kjente steder med ID, egne steder med koordinater. */
+    fun loadWeatherAt(p: WxPlace) = loadWeather(p.id)
+
+    /* Avganger: egen side i nyhetsleser-stil. Egne stopp med ekte sanntid fra Entur. */
+    var ruterOpen by mutableStateOf(false)
+    var myStops by mutableStateOf<List<StopRef>>(emptyList())
+        private set
+    var stopDeps by mutableStateOf<Map<String, StopDeps>>(emptyMap())
+        private set
+    var stopSel by mutableStateOf<String?>(null)
+    var stopEdit by mutableStateOf(false)
+    var stopAddOpen by mutableStateOf(false)
+    var stopSearch by mutableStateOf<List<StopRef>>(emptyList())
+        private set
+    var stopSearchBusy by mutableStateOf(false)
+        private set
+    var stopsError by mutableStateOf<String?>(null)
+        private set
+    private var ruterJob: kotlinx.coroutines.Job? = null
+    fun openRuter() {
+        ruterOpen = true
+        stopEdit = false
+        ruterJob?.cancel()
+        ruterJob = viewModelScope.launch {
+            loadStopsNow()
+            // Sanntid: nye tider hvert 30. sekund mens siden er åpen.
+            while (ruterOpen) { kotlinx.coroutines.delay(30_000); if (ruterOpen) refreshDeps() }
+        }
+    }
+    fun closeRuter() { ruterOpen = false; stopEdit = false; ruterJob?.cancel() }
+    private suspend fun loadStopsNow() {
+        stopsError = null
+        try {
+            myStops = parseStopList(api.hlGet("/me/stops"))
+            if (stopSel == null || myStops.none { it.id == stopSel }) stopSel = myStops.firstOrNull()?.id
+            refreshDeps()
+        } catch (e: ApiException) {
+            stopsError = if (e.status == 404) "Avganger med egne stopp trenger en nyere Homelab-server." else e.message
+        }
+    }
+    private suspend fun refreshDeps() {
+        val out = stopDeps.toMutableMap()
+        for (st in myStops) {
+            runCatching { parseStopDeps(api.hlGet("/ruter/departures?stop=" + URLEncoder.encode(st.id, "UTF-8") + "&n=20", timeout = 12_000)) }
+                .getOrNull()?.let { out[st.id] = it.copy(stop = it.stop.copy(name = st.name.ifBlank { it.stop.name })) }
+        }
+        stopDeps = out
+    }
+    fun refreshStops() = launch { refreshDeps() }
+    private var stopSearchJob: kotlinx.coroutines.Job? = null
+    fun searchStops(q: String) {
+        stopSearchJob?.cancel()
+        if (q.trim().length < 2) { stopSearch = emptyList(); return }
+        stopSearchJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(250)
+            stopSearchBusy = true
+            try { stopSearch = runCatching { parseStopList(api.hlGet("/ruter/search?q=" + URLEncoder.encode(q.trim(), "UTF-8"))) }.getOrDefault(emptyList()) }
+            finally { stopSearchBusy = false }
+        }
+    }
+    private fun saveStops(list: List<StopRef>) {
+        myStops = list
+        viewModelScope.launch { runCatching { api.hlPut("/me/stops", JSONObject().put("stops", JSONArray().apply { list.forEach { put(it.toJson()) } })) } }
+    }
+    fun addStop(st: StopRef) {
+        if (myStops.any { it.id == st.id }) { stopSel = st.id; stopAddOpen = false; return }
+        saveStops(myStops + st)
+        stopSel = st.id
+        stopAddOpen = false
+        stopSearch = emptyList()
+        Haptics.success()
+        launch { refreshDeps() }
+    }
+    fun removeStop(id: String) { saveStops(myStops.filter { it.id != id }); if (stopSel == id) stopSel = myStops.firstOrNull()?.id; Haptics.select() }
+    fun moveStop(id: String, dir: Int) {
+        val l = myStops.toMutableList()
+        val i = l.indexOfFirst { it.id == id }
+        val j = i + dir
+        if (i < 0 || j !in l.indices) return
+        val t = l[i]; l[i] = l[j]; l[j] = t
+        saveStops(l)
+        Haptics.select()
+    }
+
+    fun loadFolders() = launch { folders = parseFolders(api.get("/folders")) }
+
+    /** En fane i Papir-hovedlinja (ID-ene i layout.tabBar). */
+    fun mainTab(id: String) {
+        when (id) {
+            "finans" -> paperTab("fin")
+            "mat" -> paperTab("mat")
+            "domener" -> paperTab("dom")
+            "sporing" -> paperTab("trk")
+            "sok" -> paperTab("sok")
+            "mer" -> paperTab("mer")
+            "familie" -> openFamily()
+            "avganger" -> openRuter()
+            "vaer" -> openWeather()
+            "nyheter" -> openNews()
+            "aksjer" -> { paperPage = null; openFromMer(Screen.Stocks) }
+            "boliger" -> { paperPage = null; openFromMer(Screen.Folders) }
+            "abonnementer" -> { paperPage = null; openFromMer(Screen.Sub) }
+            "media" -> openPaperPage("media")
+            else -> paperTab("hjem")
+        }
+        Haptics.select()
+    }
+
+    /* Boliger i Papir: valgt bolig og søk i utgiftene. */
+    var bolSearch by mutableStateOf("")
+    var bolTab by mutableStateOf("oversikt")
+
+    /* Abonnementer: «+» i fanelinja åpner legg til-arket. */
+    var subAdding by mutableStateOf(false)
+
+    /* Familie og kart: posisjon, soner, hendelser, personvern og helse. */
+    var familyOpen by mutableStateOf(false)
+    var family by mutableStateOf<Family?>(null)
+        private set
+    var familyError by mutableStateOf<String?>(null)
+        private set
+    var famSel by mutableStateOf<String?>(null)
+    var famTrack by mutableStateOf<List<TrackPt>>(emptyList())
+        private set
+    /** Ny sone: punktet brukeren trykket på i kartet. */
+    var famZoneDraft by mutableStateOf<Pair<Double, Double>?>(null)
+    var famZoneEdit by mutableStateOf<FamZone?>(null)
+    var famPrivacy by mutableStateOf(false)
+    var famTab by mutableStateOf("kart")
+    private var famJob: kotlinx.coroutines.Job? = null
+    private var famSeen = mutableSetOf<String>()
+    private val appCtx: Context get() = getApplication<Application>()
+
+    fun openFamily() {
+        familyOpen = true
+        menuOpen = false
+        famJob?.cancel()
+        famJob = viewModelScope.launch {
+            loadFamilyNow(first = true)
+            while (familyOpen) { kotlinx.coroutines.delay(30_000); if (familyOpen) loadFamilyNow(first = false) }
+        }
+    }
+    fun closeFamily() { familyOpen = false; famJob?.cancel(); famZoneDraft = null; famZoneEdit = null }
+    fun loadFamily() = launch { loadFamilyNow(first = false) }
+    private suspend fun loadFamilyNow(first: Boolean) {
+        try {
+            val f = parseFamily(api.hlGet("/family", timeout = 12_000))
+            family = f
+            familyError = null
+            f.me?.let { me ->
+                no.kristo.finanshub.family.FamilyPrefs.setSharing(appCtx, me.sharing == "on")
+                no.kristo.finanshub.family.FamilyPrefs.setPrecise(appCtx, me.precision != "approx")
+            }
+            // Varsel for hendelser (kom til / forlot en sone) som ikke er vist før.
+            val fresh = f.events.filter { it.id !in famSeen }
+            if (!first) for (e in fresh) {
+                val who = f.members.firstOrNull { it.userId == e.userId }?.name?.split(' ')?.firstOrNull() ?: "Noen"
+                val zone = e.zoneName ?: f.zones.firstOrNull { it.id == e.zoneId }?.name ?: "sonen"
+                Notify.post(appCtx, "Familie", if (e.kind == "leave") "$who forlot $zone" else "$who kom til $zone", "fam-${e.id}")
+            }
+            famSeen.addAll(f.events.map { it.id })
+            if (famSel == null) famSel = f.members.firstOrNull { it.last != null }?.userId
+            famSel?.let { loadTrack(it) }
+        } catch (e: ApiException) {
+            familyError = if (e.status == 404) "Familie trenger en nyere Homelab-server." else e.message
+        }
+    }
+    fun famSelect(userId: String) { famSel = userId; Haptics.select(); launch { loadTrack(userId) } }
+    private suspend fun loadTrack(userId: String) {
+        famTrack = runCatching { parseTrack(api.hlGet("/family/track/" + URLEncoder.encode(userId, "UTF-8") + "?hours=24")) }.getOrDefault(emptyList())
+    }
+    /** «on», «paused» eller «off». Tjenesten i bakgrunnen startes eller stoppes med en gang. */
+    fun famSetSharing(v: String) = launch {
+        api.hlPut("/family/me", JSONObject().put("sharing", v))
+        no.kristo.finanshub.family.FamilyPrefs.setSharing(appCtx, v == "on")
+        no.kristo.finanshub.family.FamilyService.sync(appCtx)
+        loadFamilyNow(first = false)
+        flash(when (v) { "on" -> "Deling er på"; "paused" -> "Delingen er satt på pause"; else -> "Deling er slått av" })
+    }
+    fun famSetPrecision(v: String) = launch {
+        api.hlPut("/family/me", JSONObject().put("precision", v))
+        no.kristo.finanshub.family.FamilyPrefs.setPrecise(appCtx, v != "approx")
+        no.kristo.finanshub.family.FamilyService.sync(appCtx)
+        loadFamilyNow(first = false)
+    }
+    /** Helsefeltene som deles. Sammendraget sendes hvert 15. minutt (WorkManager). */
+    fun famSetHealth(keys: Set<String>) = launch {
+        val sh = JSONObject().apply { HEALTH_KEYS.forEach { (k, _) -> put(k, k in keys) } }
+        api.hlPut("/family/me", JSONObject().put("shareHealth", sh))
+        no.kristo.finanshub.family.FamilyPrefs.setHealth(appCtx, keys)
+        if (keys.isEmpty()) no.kristo.finanshub.family.HealthSync.cancel(appCtx)
+        else { no.kristo.finanshub.family.HealthSync.schedule(appCtx); no.kristo.finanshub.family.HealthSync.now(appCtx) }
+        loadFamilyNow(first = false)
+    }
+    fun famSaveZone(id: String?, name: String, lat: Double, lon: Double, radius: Double, colorHex: String) = launch {
+        val body = JSONObject().put("name", name.ifBlank { "Sone" }).put("lat", lat).put("lon", lon).put("radius", radius).put("color", colorHex)
+        if (id == null) api.hlPost("/family/zones", body) else api.request("PATCH", "/family/zones/" + URLEncoder.encode(id, "UTF-8"), body, prefix = Api.HOMELAB)
+        famZoneDraft = null; famZoneEdit = null
+        loadFamilyNow(first = false)
+        flash("Sonen er lagret")
+    }
+    fun famDeleteZone(id: String) = launch {
+        api.hlDelete("/family/zones/" + URLEncoder.encode(id, "UTF-8"))
+        famZoneEdit = null
+        loadFamilyNow(first = false)
+    }
+    fun famZoneNotify(zoneId: String, userId: String, enter: Boolean, leave: Boolean) = launch {
+        api.hlPut("/family/zones/" + URLEncoder.encode(zoneId, "UTF-8") + "/notify", JSONObject().put("userId", userId).put("enter", enter).put("leave", leave))
+        loadFamilyNow(first = false)
+    }
+}

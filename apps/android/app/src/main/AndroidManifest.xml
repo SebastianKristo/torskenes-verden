@@ -6,6 +6,23 @@
     <!-- Lokale varsler fra Sporing (Android 13+ spør brukeren). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <!-- Familie: deling av posisjon (også i bakgrunnen, som forgrunnstjeneste med varsel). -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-feature android:name="android.hardware.location.gps" android:required="false" />
+    <!-- Familie: helse fra Health Connect (bare lesing, bare det brukeren velger å dele). -->
+    <uses-permission android:name="android.permission.health.READ_STEPS" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_RESTING_HEART_RATE" />
+    <uses-permission android:name="android.permission.health.READ_SLEEP" />
+    <uses-permission android:name="android.permission.health.READ_ACTIVE_CALORIES_BURNED" />
+
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+    </queries>
 
     <!-- Klartekst og brukerinstallerte CA-er tillates via network_security_config (homelab på http://192.168.x.x). -->
     <application
@@ -51,6 +68,33 @@
                 <data android:mimeType="image/*" />
             </intent-filter>
         </activity>
+
+        <!-- Familie: posisjonsdeling i bakgrunnen. -->
+        <service
+            android:name=".family.FamilyService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
+        <!-- Health Connect: personvernforklaringen (Android 13 og eldre). -->
+        <activity
+            android:name=".family.HealthRationaleActivity"
+            android:exported="true"
+            android:theme="@style/Theme.FinansHub">
+            <intent-filter>
+                <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
+            </intent-filter>
+        </activity>
+        <!-- Health Connect: personvernforklaringen (Android 14+). -->
+        <activity-alias
+            android:name=".family.HealthPermissionUsage"
+            android:exported="true"
+            android:targetActivity=".family.HealthRationaleActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
 
         <!-- «Rediger widget» for One UI-widgetene: navn under widgeten av/på. -->
         <activity

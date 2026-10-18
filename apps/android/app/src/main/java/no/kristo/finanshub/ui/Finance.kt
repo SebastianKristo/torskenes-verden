@@ -173,7 +173,11 @@ internal fun HomeScreen(vm: AppViewModel) {
         item {
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.Bottom) {
                 Column(Modifier.weight(1f)) {
-                    Text("${greetingFor()}, $name", color = C.text2, fontSize = 16.sp)
+                    // Finans viser profilbilde og @brukernavn, ikke fullt navn.
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        AvatarImage(vm, 24)
+                        Text("@${vm.account?.username?.ifBlank { null } ?: name.split(' ').first().lowercase()}", color = C.text2, fontSize = 15.sp, maxLines = 1)
+                    }
                     Text(monthLabel(s?.month ?: ""), style = MaterialTheme.typography.displaySmall)
                 }
                 if (vm.flag(AppPrefs.HIDE_AMOUNTS)) IconButton(onClick = { Privacy.hidden = !Privacy.hidden }) {

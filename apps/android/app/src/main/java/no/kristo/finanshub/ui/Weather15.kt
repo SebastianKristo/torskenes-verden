@@ -92,6 +92,8 @@ internal fun WeatherApp(vm: AppViewModel) {
     val state = rememberLazyListState()
     val fade by remember { derivedStateOf { if (state.firstVisibleItemIndex > 0) 1f else (state.firstVisibleItemScrollOffset / 260f).coerceIn(0f, 1f) } }
     var mode by remember { mutableStateOf("temp") }
+    LaunchedEffect(Unit) { if (vm.wxPlaces.isEmpty()) vm.loadWxPlaces(); state.scrollToItem(0) }
+    if (vm.wxPlacesSheet) WxPlacesSheet(vm)
     val kind = w?.kind ?: "cloudy"
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(sky(kind)))) {
         if (kind == "clear") Box(Modifier.fillMaxWidth().height(260.dp).background(Brush.radialGradient(listOf(Color(0x66FFE7A0), Color.Transparent), center = Offset(820f, 40f), radius = 700f)))
@@ -121,15 +123,19 @@ internal fun WeatherApp(vm: AppViewModel) {
                 }
                 item {
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        WX_PLACES.forEach { (id, n) ->
-                            val on = vm.weatherPlace == id
-                            Box(Modifier.height(36.dp).clip(CircleShape).background(if (on) Color.White else glass).clickable { Haptics.select(); vm.loadWeather(id) }.padding(horizontal = 16.dp),
-                                contentAlignment = Alignment.Center) { Text(n, color = if (on) Color(0xFF1B2A40) else Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp) }
+                        // Egne steder (søk, legg til og fjern under «+ Sted»). Eldre server: de fire faste byene.
+                        val places = vm.wxPlaces.ifEmpty { WX_PLACES.map { (id, n) -> WxPlace(id, n, 0.0, 0.0, "") } }
+                        places.forEach { pl ->
+                            val on = vm.weatherPlace == pl.id
+                            Box(Modifier.height(36.dp).clip(CircleShape).background(if (on) Color.White else glass).clickable { Haptics.select(); vm.loadWeatherAt(pl) }.padding(horizontal = 16.dp),
+                                contentAlignment = Alignment.Center) { Text(pl.name, color = if (on) Color(0xFF1B2A40) else Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, maxLines = 1) }
                         }
+                        Box(Modifier.height(36.dp).clip(CircleShape).background(glass).clickable { Haptics.select(); vm.wxPlacesSheet = true }.padding(horizontal = 16.dp),
+                            contentAlignment = Alignment.Center) { Text("+ Sted", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp) }
                     }
                 }
                 item {
-                    Text("Data: Open-Meteo${if (w.mock) " (eksempeldata)" else ""} · Se også yr.no ↗", color = dim, fontSize = 12.sp, textAlign = TextAlign.Center,
+                    Text("Data: MET Norge${if (w.mock) " (eksempeldata)" else ""} · Se også yr.no ↗", color = dim, fontSize = 12.sp, textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth().clickable { openLink(ctx, w.yrUrl ?: "https://www.yr.no/nb") }.padding(8.dp))
                 }
             }

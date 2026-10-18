@@ -107,6 +107,8 @@ class AppPrefs(ctx: Context) {
         const val FIN_TABS = "fin_tabs_"        // + konto-ID: fanene i Finans-linja (opptil 4)
         const val FOURTH_TAB = "fourth_tab"     // auto | domener | sporing
         const val FAB_STYLE = "fab_style"       // float | inline
+        const val TAB_BAR = "tab_bar_"          // + konto-ID: Papir-hovedlinja (layout.tabBar.items)
+        const val ICON_THEME = "icon_theme"     // standard | varm | kjolig | mono | fargerik
         const val ONBOARDED = "onboarded_"      // + konto-ID: onboardingen i Papir er fullført på denne enheten
     }
 }

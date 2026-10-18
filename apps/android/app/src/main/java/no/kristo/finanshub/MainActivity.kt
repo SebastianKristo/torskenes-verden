@@ -47,6 +47,9 @@ class MainActivity : FragmentActivity() {
         Haptics.attach(window.decorView, vm.prefs)
         // Widgetene: henting hvert 15. minutt, og ferske data når appen åpnes.
         no.kristo.finanshub.widget.WidgetSync.schedule(this)
+        // Familie: deling i bakgrunnen og helsesammendraget fortsetter etter omstart av appen.
+        runCatching { no.kristo.finanshub.family.FamilyService.sync(this) }
+        if (no.kristo.finanshub.family.FamilyPrefs.health(this).isNotEmpty()) runCatching { no.kristo.finanshub.family.HealthSync.schedule(this) }
         intent?.data?.let(vm::deepLink)
     }
 

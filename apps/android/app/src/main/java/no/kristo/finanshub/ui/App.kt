@@ -172,6 +172,9 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
     if (vm.widgetGallery) WidgetGallery(vm)
     if (vm.scanSheet) ScanSheet(vm, takePhoto, photos = pickPhotos, files = pickFiles)
     if (vm.newsOpen) NewsReader(vm)
+    if (vm.weatherOpen) WeatherApp(vm)
+    if (vm.ruterOpen) RuterPage(vm)
+    if (vm.familyOpen) FamilyScreen(vm)
 }
 
 @Composable
@@ -355,19 +358,22 @@ private fun MenuContent(vm: AppViewModel) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.padding(vertical = 8.dp)) {
             AvatarImage(vm, 52)
             Column(Modifier.weight(1f)) {
-                Text(vm.displayName, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("${vm.account?.username?.ifBlank { null } ?: "konto"} · ${vm.me?.role ?: vm.account?.role ?: ""} · ${vm.me?.serverName ?: vm.mobileHome?.serverName ?: host(vm.base)}",
+                // Brukerchipen: @brukernavn, ikke fullt navn.
+                Text("@${vm.account?.username?.ifBlank { null } ?: "konto"}", style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${vm.me?.role ?: vm.account?.role ?: ""} · ${vm.me?.serverName ?: vm.mobileHome?.serverName ?: host(vm.base)}",
                     color = C.text2, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         MenuRow("Homelab", "Dashbord, søk og snarveier", Icons.Filled.Dashboard, vm.screen == Screen.Homelab, 0, 1) { vm.editHome = false; vm.go(Screen.Homelab) }
         SectionLabel("Andre OS")
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            MenuRow("Finans", "Hjem, liste, budsjett og mer", Icons.Filled.Savings, vm.screen.isFinance, 0, 5) { vm.go(if (vm.financeStart) vm.startPage else Screen.Home) }
-            MenuRow("Mat", "Ukemeny, oppskrifter og handleliste", Icons.Filled.Restaurant, vm.screen == Screen.Mat, 1, 5) { vm.go(Screen.Mat) }
-            MenuRow("Domener", "Trafikk, besøk, ytelse og sikkerhet", Icons.Filled.Language, vm.screen == Screen.Domains, 2, 5) { vm.go(Screen.Domains) }
-            MenuRow("Sporing", "Pakker på vei, henting og varsler", Icons.Filled.LocalShipping, vm.screen == Screen.Tracking, 3, 5) { vm.go(Screen.Tracking) }
-            MenuRow("Nyhetsleser", "RSS med ✦ AI-sammendrag", Icons.Filled.Newspaper, vm.newsOpen, 4, 5) { vm.openNews() }
+            MenuRow("Finans", "Hjem, liste, budsjett og mer", Icons.Filled.Savings, vm.screen.isFinance, 0, 7) { vm.go(if (vm.financeStart) vm.startPage else Screen.Home) }
+            MenuRow("Mat", "Ukemeny, oppskrifter og handleliste", Icons.Filled.Restaurant, vm.screen == Screen.Mat, 1, 7) { vm.go(Screen.Mat) }
+            MenuRow("Domener", "Trafikk, besøk, ytelse og sikkerhet", Icons.Filled.Language, vm.screen == Screen.Domains, 2, 7) { vm.go(Screen.Domains) }
+            MenuRow("Sporing", "Pakker på vei, henting og varsler", Icons.Filled.LocalShipping, vm.screen == Screen.Tracking, 3, 7) { vm.go(Screen.Tracking) }
+            MenuRow("Nyhetsleser", "RSS med ✦ AI-sammendrag", Icons.Filled.Newspaper, vm.newsOpen, 4, 7) { vm.openNews() }
+            MenuRow("Familie og kart", "Posisjon, soner og helse", Icons.Filled.MyLocation, vm.familyOpen, 5, 7) { vm.menuOpen = false; vm.openFamily() }
+            MenuRow("Avganger", "Ruter i sanntid og egne stopp", Icons.Filled.DirectionsBus, vm.ruterOpen, 6, 7) { vm.menuOpen = false; vm.openRuter() }
         }
         Spacer(Modifier.height(4.dp))
         MenuRow("Rediger forsiden", "Widgets og fanelinjer", Icons.Filled.Edit, vm.editHome, 0, 1) { vm.go(Screen.Homelab); vm.editHome = true }

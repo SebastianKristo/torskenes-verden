@@ -48,7 +48,6 @@ private fun SCard(content: @Composable ColumnScope.() -> Unit) =
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SubsMobileScreen(vm: AppViewModel) {
-    var adding by remember { mutableStateOf(false) }
     var month by remember { mutableStateOf<Int?>(null) }
     var done by remember { mutableStateOf(vm.prefs.str("subs_done", "").split('\n').filter { it.isNotBlank() }.toSet()) }
     val toggle: (String) -> Unit = { id ->
@@ -58,12 +57,13 @@ internal fun SubsMobileScreen(vm: AppViewModel) {
     }
     val x = vm.subsX
     Page {
-        item {
+        // Papir: Hjem, Innsikt og Historikk ligger i fanelinja nederst, med + som rød sirkel.
+        if (!vm.paper) item {
             ModuleHeader(vm, "Subscription OS", actions = {
-                FilledTonalIconButton(onClick = { Haptics.tap(); adding = true }) { Icon(Icons.Filled.Add, "Legg til abonnement") }
+                FilledTonalIconButton(onClick = { Haptics.tap(); vm.subAdding = true }) { Icon(Icons.Filled.Add, "Legg til abonnement") }
             })
         }
-        item {
+        if (!vm.paper) item {
             Row(Modifier.fillMaxWidth().clip(CircleShape).background(C.surface1).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 listOf(Triple("home", "Hjem", Icons.Filled.Home), Triple("ins", "Innsikt", Icons.Filled.BarChart), Triple("hist", "Historikk", Icons.Filled.History)).forEach { (k, n, ic) ->
                     val on = vm.subTab == k
@@ -127,7 +127,7 @@ internal fun SubsMobileScreen(vm: AppViewModel) {
             }
         }
     }
-    if (adding) ModalBottomSheet(onDismissRequest = { adding = false }, containerColor = C.surface1) { AddSubSheet(vm) { adding = false } }
+    if (vm.subAdding) ModalBottomSheet(onDismissRequest = { vm.subAdding = false }, containerColor = C.surface1) { AddSubSheet(vm) { vm.subAdding = false } }
 }
 
 private fun whenText(date: String): String {
@@ -189,7 +189,9 @@ private fun SavingsCard(vm: AppViewModel, x: SubsX) {
         Text(x.suggestions.firstOrNull()?.text ?: x.healthText.ifBlank { "Alle abonnementene ser ut til å være i bruk." }, color = fg.copy(alpha = .85f), fontSize = 13.sp, maxLines = 3)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("${kr0(x.monthly)}/mnd · ${kr0(x.yearly)}/år", color = fg, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            if (x.suggestions.isNotEmpty()) Button(onClick = { Haptics.select(); vm.subTab = "hist" }, colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) {
+            // På det mørke AI-kortet i Papir: lys knapp med mørk tekst, så den alltid synes.
+            if (x.suggestions.isNotEmpty()) Button(onClick = { Haptics.select(); vm.subTab = "hist" }, colors = if (Tone.paper) ButtonDefaults.buttonColors(containerColor = Color(0xFFF3EFE6), contentColor = Color(0xFF1B1A17))
+                else ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) {
                 Text("Gå gjennom ${x.suggestions.size} forslag", fontSize = 13.sp)
             }
         }

@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -48,8 +49,30 @@ import java.time.format.DateTimeFormatter
 /** Transportørmerket: initialer på merkefargen. */
 @Composable
 internal fun CarrierBadge(ini: String, color: Long, fg: Long, size: Int = 40) {
-    Box(Modifier.size(size.dp).clip(RoundedCornerShape((size * 0.28f).dp)).background(Color(color)), contentAlignment = Alignment.Center) {
-        Text(ini, color = Color(fg), fontWeight = FontWeight.Black, fontSize = (size * if (ini.length > 2) 0.28f else 0.36f).sp, maxLines = 1)
+    // Standardmerker for de vanligste: Posten (rød med posthorn-ring), PostNord (blå ordmerke), DHL (gul med røde striper)
+    // og Helthjem (lilla ordmerke). Andre får initialer på merkefargen.
+    when (ini.uppercase()) {
+        "P" -> Box(Modifier.size(size.dp).clip(RoundedCornerShape((size * 0.28f).dp)).background(Color(0xFFE32D22)), contentAlignment = Alignment.Center) {
+            Box(Modifier.size((size * 0.62f).dp).clip(CircleShape).border((size * 0.07f).dp, Color.White, CircleShape), contentAlignment = Alignment.Center) {
+                Text("P", color = Color.White, fontWeight = FontWeight.Black, fontSize = (size * 0.32f).sp, maxLines = 1)
+            }
+        }
+        "PN" -> Box(Modifier.size(size.dp).clip(RoundedCornerShape((size * 0.28f).dp)).background(Color(0xFF00A0D6)), contentAlignment = Alignment.Center) {
+            Text("postnord", color = Color.White, fontWeight = FontWeight.Bold, fontSize = (size * 0.2f).sp, maxLines = 1, letterSpacing = (-0.3).sp)
+        }
+        "DHL" -> Box(Modifier.size(size.dp).clip(RoundedCornerShape((size * 0.28f).dp)).background(Color(0xFFFFCC00)), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy((size * 0.03f).dp)) {
+                Box(Modifier.width((size * 0.7f).dp).height((size * 0.05f).dp).background(Color(0xFFD40511)))
+                Text("DHL", color = Color(0xFFD40511), fontWeight = FontWeight.Black, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, fontSize = (size * 0.3f).sp, maxLines = 1)
+                Box(Modifier.width((size * 0.7f).dp).height((size * 0.05f).dp).background(Color(0xFFD40511)))
+            }
+        }
+        "HH" -> Box(Modifier.size(size.dp).clip(RoundedCornerShape((size * 0.28f).dp)).background(Color(0xFF2E2A6B)), contentAlignment = Alignment.Center) {
+            Text("helthjem", color = Color.White, fontWeight = FontWeight.Bold, fontSize = (size * 0.19f).sp, maxLines = 1, letterSpacing = (-0.3).sp)
+        }
+        else -> Box(Modifier.size(size.dp).clip(RoundedCornerShape((size * 0.28f).dp)).background(Color(color)), contentAlignment = Alignment.Center) {
+            Text(ini, color = Color(fg), fontWeight = FontWeight.Black, fontSize = (size * if (ini.length > 2) 0.28f else 0.36f).sp, maxLines = 1)
+        }
     }
 }
 

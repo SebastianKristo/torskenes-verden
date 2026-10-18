@@ -562,7 +562,7 @@ private fun parseMembers(a: JSONArray?) = a?.map { Member(it.optString("id"), it
 
 fun parseFolder(o: JSONObject) = Folder(
     o.getInt("id"), o.optString("name"), o.optStr("type"), o.optStr("address"), parseMembers(o.optJSONArray("members")),
-    o.num("total"), o.optInt("count"), o.optStr("myRole") ?: o.optStr("role"),
+    (if (o.has("total")) o.num("total") else o.num("yearTotal")), o.optInt("count"), o.optStr("myRole") ?: o.optStr("role"),
 )
 
 fun parseFolders(s: String): List<Folder> {
