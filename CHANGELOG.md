@@ -2,6 +2,34 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.12.0] – 18.10.2026 · prompt 20
+- **Logobibliotek:** 368 norske butikker, kjeder og tjenester, sortert i 15 kategorier, følger med i serveren. 343 av dem har ferdig nedlastet logo, så logoene vises uten oppslag på nett.
+  - Banktekster som `VIPPS*KIWI 123`, `KLARNA*KOMPLETT.NO`, `IZ *RUTER` og `ELKJOP STORO` gjenkjennes.
+  - Coop Extra, Coop Obs, Coop Prix og Coop Mega har hver sin farge.
+  - Logoene oppdateres hver måned med workflowen «Logoer».
+  - Nye endepunkter: `/finans/api/logos/registry`, `/finans/api/logos/file/:id` og `/finans/api/logos/match`.
+- **Kartet virker igjen:**
+  - Kartflisene går gjennom serveren (`/tiles/...`) med cache i 30 dager. Det gamle oppsettet ga «403 Access blocked» fra OpenStreetMap på web.
+  - Kartet bruker CARTO i lyst og mørkt tema og en lys sepiavariant i Papir. Kartverket topo er også valgbart.
+  - MapTiler og Stadia kan legges inn under Integrasjoner → Kart.
+- **Android:** kartet krasjet ikke lenger når Kart eller Familie åpnes.
+  - Feil i kartvisningen, i bakgrunnstjenesten for posisjon og ved Health Connect-kall på hovedtråden ga krasj. Alle tre er rettet.
+  - Hvis kartet likevel feiler, vises «Kartet kunne ikke lastes» med «Prøv igjen».
+- **Helse og posisjon:**
+  - Ny meny under Innstillinger → App, med hovedbryter, «Be om tilgang», bryter per datatype og valg for posisjonsdeling.
+  - Onboardingen spør om Apple Health (iOS) eller Health Connect (Android). Etter det står appen under Helse → Apper.
+  - Når hovedbryteren slås av, slettes helsedataene dine på serveren.
+- **Posisjonskortet på Hjem** har nytt design på web, i PWA, på iOS og på Android:
+  - «Du» står først og bare én gang.
+  - Hver person har egen farge, to bokstaver og en statusprikk.
+  - Kortet viser sonen, «Går · Bislett», strøket (via Nominatim) eller «Sist sett 14:32». Aldri «Ukjent sted».
+- **Finans-flisene** har hver sin farge. Hold inne for å endre rekkefølge. Rekkefølgen synkes mellom enhetene.
+- **Andre endringer:**
+  - Papir-lasteskjerm når Økonomi åpnes fra Hjem på web.
+  - Ikonene i bunnmenyen er sentrert mot teksten.
+  - Google-«G» i søkefeltet.
+  - «+ Stopp» i Ruter er lesbar over bildet.
+
 ## [4.11.0] – 18.10.2026 · prompt 18–19
 - **Dynamiske bakgrunner (prompt 19), på web og i appene.** Velg i Innstillinger → Utseende → Bakgrunn:
   - **Vær:** bakgrunnen følger været der du er, med Oslo som reserve. Værdata kommer fra MET, med egen variant for dag og natt og diskret regn og snø.
