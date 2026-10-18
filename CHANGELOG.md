@@ -2,6 +2,17 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.18.0] – 18.10.2026 · alt individuelt per bruker
+- **Hver bruker har sine egne data, også andre admins.** Bare Boliger deles, og bare med dem du inviterer.
+  - **FinansHub:** eget regnskap for hver bruker. Gjelder kontoer, transaksjoner, kvitteringer, budsjett, faste utgifter, abonnementer, Finn, AI-søk og -logg, e-postimport, Trading 212, innstillinger og backup av egne data.
+  - **Egne integrasjoner:** Plex/Jellyfin, Sonarr/Radarr, kalender, Trading 212, e-post (IMAP), Mybring/PostNord/ParcelsApp og Finn. Integrasjoner viser «Dine integrasjoner» og «Server (administrator)».
+  - **Sporing, Mat og Hjem** er per bruker. Varsler og sanntid går bare til den som eier dataene.
+  - **Serveroppsett** kan bare admin endre: AI-motorer, nøkler, Home Assistant, Cloudflare/Domener, Entur, kart og SMB-backup. Andre ser «Settes opp av administrator». Alle kan likevel bruke AI-motorene.
+  - **Eksisterende data** tilhører eieren av serveren. Ingenting er slettet. Andre brukere starter med tomt regnskap.
+- **PostNord uten nøkkel:** sporingslenke til postnord.no/pakkesporing, og status hentes fra PostNords offentlige sporing. Det er ikke et offisielt API. Reserven er ParcelsApp.
+- **AI-tidsgrense på serveren:** serverdelen av 30 s-rettelsen er nå med. Ollama-svaret strømmer inn mens det skrives, og AI-søk kjøres som jobb.
+- **Ta backup før du oppdaterer serveren.** Databasen bygges om for per-bruker-data.
+
 ## [4.17.0] – 18.10.2026 · prompt 25
 - **AI-søket stopper ikke lenger etter 30 s.** Søket venter så lenge tidsgrensen du har satt for motoren, også i Android-appen, iOS-appen og på serveren. Har du satt Ollama til 60 s, venter søket opptil 60 s.
   - Ollama strømmer svaret og holder modellen lastet i 10 minutter, så den ikke må lastes på nytt mellom hvert søk.
