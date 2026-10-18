@@ -7,6 +7,27 @@ export const { GALLERIES, getTle, getApod, getGallery } = real;
 export const getDepartures = async () => ({ stop: 'Bislett', stopId: '6350', departures: [['11', 'tram', 'Majorstuen', 2], ['17', 'tram', 'Rikshospitalet', 4], ['18', 'tram', 'Rikshospitalet', 7], ['11', 'tram', 'Kjelsås', 9], ['17', 'tram', 'Grefsen', 12], ['18', 'tram', 'Ljabru', 15]]
   .map(([line, mode, to, m]) => real.withLineColor({ line, mode, to, time: at(m) })) });
 
+// Stopp og avganger for Avganger-siden (eksempeldata).
+const MOCK_STOPS = [['NSR:StopPlace:58381', 'Amagerveien', 'Oslo', ['bus']], ['NSR:StopPlace:6350', 'Bislett', 'Oslo', ['tram']], ['NSR:StopPlace:58366', 'Jernbanetorget', 'Oslo', ['metro', 'tram', 'bus']],
+  ['NSR:StopPlace:58404', 'Majorstuen', 'Oslo', ['metro', 'tram', 'bus']], ['NSR:StopPlace:59872', 'Oslo S', 'Oslo', ['rail']], ['NSR:StopPlace:58293', 'Nationaltheatret', 'Oslo', ['metro', 'rail', 'tram']],
+  ['NSR:StopPlace:4000', 'Aker brygge', 'Oslo', ['water', 'tram', 'bus']], ['NSR:StopPlace:3990', 'Frydenlund', 'Oslo', ['tram']]].map(([id, name, locality, modes]) => ({ id, name, locality, modes }));
+export const searchStops = async (q) => { const t = String(q ?? '').trim().toLowerCase(); return t.length < 2 ? [] : MOCK_STOPS.filter((s) => s.name.toLowerCase().includes(t)); };
+export const stopIdOf = real.stopIdOf;
+export const getStopDepartures = async (stop, n = 20) => {
+  const id = real.stopIdOf(stop); if (!id) throw new Error('Ugyldig stopp-ID');
+  const s = MOCK_STOPS.find((x) => x.id === id) ?? { id, name: 'Stopp ' + id.split(':').pop(), modes: ['bus'] };
+  const lines = { metro: [['5', 'Vestli'], ['3', 'Mortensrud'], ['2', 'Ellingsrudåsen']], tram: [['19', 'Majorstuen'], ['12', 'Kjelsås'], ['11', 'Ljabru']], bus: [['45', 'Majorstuen'], ['20', 'Skøyen'], ['31', 'Fornebu']], rail: [['L2', 'Ski'], ['R11', 'Eidsvoll']], water: [['B9', 'Nesodden']] };
+  const pool = s.modes.flatMap((m) => (lines[m] ?? lines.bus).map(([line, to]) => ({ line, to, mode: m })));
+  const now = Date.now(), calls = [];
+  for (let i = 0; i < Math.min(40, +n || 20); i++) {
+    const p = pool[i % pool.length], aimed = new Date(now + (2 + i * 3 + (i % 2)) * 60000), delay = i % 4 === 1 ? 2 : 0;
+    calls.push({ aimedDepartureTime: aimed.toISOString(), expectedDepartureTime: new Date(aimed.getTime() + delay * 60000).toISOString(), realtime: i % 5 !== 4, cancellation: i === 7,
+      quay: { publicCode: String(1 + (i % 2)) }, destinationDisplay: { frontText: p.to }, situations: i === 3 ? [{ summary: [{ value: 'Forsinkelser på grunn av vegarbeid', language: 'no' }] }] : [],
+      serviceJourney: { line: { publicCode: p.line, transportMode: p.mode, presentation: null } } });
+  }
+  return real.stopDeparturesOut({ id: s.id, name: s.name, estimatedCalls: calls }, now);
+};
+
 const SUGG = ['vær', 'vær oslo', 'vg', 'nrk', 'finn.no', 'yr oslo', 'ruter reiseplanlegger', 'proxmox backup', 'home assistant', 'kino oslo', 'komplett', 'oppskrift taco', 'oppskrift pizza', 'kaffe', 'kalender 2026'];
 export const getSuggestions = async (q, { withError = false } = {}) => { const k = String(q).trim().toLowerCase(); const list = !k ? [] : [...SUGG.filter((x) => x.startsWith(k)), `${k} åpningstider`, `${k} pris`].slice(0, 6); return withError ? { items: list } : list; };
 const at = (min) => new Date(Date.now() + min * 60000).toISOString();

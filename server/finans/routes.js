@@ -6,7 +6,7 @@ import { readFile, writeFile, unlink, mkdir } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { db, OWNER, settings, saveSettings, secret, setSecret, secretSource, DEFAULT_SETTINGS } from './db.js';
-import { extract, extractText, health, providerName } from './ai.js';
+import { extract, extractText, health, providerName, testEngine, testRoboflow, ENGINES } from './ai.js';
 import { sniffMime, isHeic, scanLog, scanLogOf } from './scan.js';
 import { mailConfig, mailStatus, testMail, runMail, recentImports, startMailWorker } from './mail.js';
 import { parseCsv, PROFILES } from './csv.js';
@@ -23,7 +23,7 @@ import { stocks, resetStocks, t212Configured, t212Base, cleanCred, testT212 } fr
 import { answer as aiAnswer, plainSearch, suggestionGroups, AiUnavailable, isSimpleQuery } from './search.js';
 import * as backup from './backup.js';
 import * as subsOs from './subs.js';
-import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor } from './boliger.js';
+import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor, upcomingOf } from './boliger.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
 const q = (sql) => db.prepare(sql);
@@ -406,7 +406,7 @@ api.get('/bootstrap', R, (c) => {
   const accs = q(`SELECT a.*, a.opening_balance + COALESCE((SELECT SUM(amount) FROM fh_transactions WHERE account_id=a.id),0) AS balance FROM fh_accounts a ORDER BY sort, id`).all();
   const month = curMonth();
   return c.json({
-    settings: { ...st, imapPin: st.imapPin ? { fingerprint: st.imapPin.fingerprint } : null, geminiKeySet: !!secret('geminiKey'), imapPassSet: !!secret('imapPass'), t212Set: t212Configured() }, month, period: period(month), profiles: PROFILES, user: st.name,
+    settings: { ...st, imapPin: st.imapPin ? { fingerprint: st.imapPin.fingerprint } : null, geminiKeySet: !!secret('geminiKey'), groqKeySet: !!secret('groqKey'), roboflowKeySet: !!secret('roboflowKey'), imapPassSet: !!secret('imapPass'), t212Set: t212Configured() }, month, period: period(month), profiles: PROFILES, user: st.name,
     categories: cats.map((x) => ({ id: x.id, name: x.name, color: x.color, kind: x.kind })),
     accounts: accs.map((a) => ({ id: a.id, name: a.name, bank: a.bank, type: a.type, last4: a.last4, note: a.note, openingBalance: a.opening_balance / 100, balance: a.balance / 100 })),
     rules: q('SELECT r.*, c.name AS category FROM fh_rules r LEFT JOIN fh_categories c ON c.id=r.category_id ORDER BY priority, id').all().map((r) => ({ id: r.id, pattern: r.pattern, categoryId: r.category_id, category: r.category, priority: r.priority })),
@@ -855,8 +855,8 @@ api.post('/receipts/:id/reprocess', W, (c) => {
   if (!r) return c.notFound();
   const p = c.req.query('provider');
   q("UPDATE fh_receipts SET status='pending', candidate=NULL WHERE id=?").run(r.id);
-  scanLog(r.id, 'les-på-nytt', ['ollama', 'gemini'].includes(p) ? providerName(p) : 'valgt motor');
-  queue.push({ id: r.id, force: ['ollama', 'gemini'].includes(p) ? p : undefined });
+  scanLog(r.id, 'les-på-nytt', ENGINES.includes(p) ? providerName(p) : 'valgt motor');
+  queue.push({ id: r.id, force: ENGINES.includes(p) ? p : undefined });
   runQueue();
   return c.json(receiptOut(origSelect.get(r.id)));
 });
@@ -1109,9 +1109,11 @@ api.get('/reports', R, (c) => {
 /* --- Innstillinger, AI og tokens --- */
 
 const SETTING_KEYS = { name: (v) => str(v, 40), currency: (v) => (['NOK', 'EUR', 'SEK'].includes(v) ? v : 'NOK'), monthStart: (v) => Math.min(28, Math.max(1, +v || 1)),
-  yearGoal: (v) => Math.max(0, +v || 0), provider: (v) => (v === 'gemini' ? 'gemini' : 'ollama'), fallback: Boolean,
+  yearGoal: (v) => Math.max(0, +v || 0), provider: (v) => (ENGINES.includes(v) ? v : 'ollama'), fallback: Boolean,
   ollamaUrl: (v) => (/^https?:\/\/\S+$/.test(v) ? v : DEFAULT_SETTINGS.ollamaUrl), ollamaModel: (v) => str(v, 60) || DEFAULT_SETTINGS.ollamaModel,
-  geminiModel: (v) => (/^[a-z0-9.\-]{3,60}$/i.test(v) ? v : DEFAULT_SETTINGS.geminiModel), minConf: (v) => Math.min(99, Math.max(50, +v || 85)),
+  geminiModel: (v) => (/^[a-z0-9.\-]{3,60}$/i.test(v) ? v : DEFAULT_SETTINGS.geminiModel),
+  groqModel: (v) => (/^[a-z0-9./_:\-]{2,80}$/i.test(String(v)) ? String(v) : ''), groqVisionModel: (v) => (/^[a-z0-9./_:\-]{2,80}$/i.test(String(v)) ? String(v) : ''),
+  roboflowWorkflow: (v) => (/^[a-z0-9._\-/]{0,120}$/i.test(String(v)) ? String(v) : ''), minConf: (v) => Math.min(99, Math.max(50, +v || 85)),
   autoCat: Boolean, n80: Boolean, n100: Boolean, nRc: Boolean, nFast: Boolean, csvProfile: (v) => (PROFILES.includes(v) ? v : 'DNB'),
   aiSummaries: Boolean, imapHost: (v) => (/^[a-z0-9.-]{0,120}$/i.test(v) ? v : ''), imapUser: (v) => str(v, 120), imapFolder: (v) => str(v, 60) || 'INBOX' };
 
@@ -1121,12 +1123,17 @@ api.put('/settings', W, async (c) => {
   for (const [k, fn] of Object.entries(SETTING_KEYS)) if (b[k] !== undefined) patch[k] = fn(b[k]);
   saveSettings(patch);
   if (typeof b.geminiKey === 'string' && c.get('access').session) setSecret('geminiKey', b.geminiKey.trim());
+  // Nye nøkler (Groq, Roboflow): bare fra en økt i nettleseren, aldri fra et app-token. Tom streng sletter.
+  for (const k of ['groqKey', 'roboflowKey']) if (typeof b[k] === 'string' && c.get('access').session) setSecret(k, b[k].trim());
   if (typeof b.imapPass === 'string' && c.get('access').session) setSecret('imapPass', b.imapPass);
   const out = settings();
-  return c.json({ ...out, imapPin: out.imapPin ? { fingerprint: out.imapPin.fingerprint } : null, geminiKeySet: !!secret('geminiKey'), imapPassSet: !!secret('imapPass') });
+  return c.json({ ...out, imapPin: out.imapPin ? { fingerprint: out.imapPin.fingerprint } : null, geminiKeySet: !!secret('geminiKey'), groqKeySet: !!secret('groqKey'), roboflowKeySet: !!secret('roboflowKey'), imapPassSet: !!secret('imapPass') });
 });
 
 api.get('/health/ai', R, async (c) => c.json(await health()));
+// «Test tilkobling» per motor (ollama | gemini | groq) og for Roboflow-nøkkelen.
+api.post('/ai/test', R, async (c) => { const b = await c.req.json().catch(() => ({})); return c.json(await testEngine(String(b.provider ?? settings().provider))); });
+api.post('/ai/roboflow/test', R, async (c) => c.json(await testRoboflow()));
 
 // Personlige tokens (fh_pat_…): bare hashen lagres, tokenet vises én gang. Hver bruker ser og trekker tilbake sine egne.
 const tokenOut = (t) => ({ id: t.id.slice(0, 12), name: t.name, scopes: t.scopes.split(' '), created: t.created, lastUsed: t.last_used, last_used: t.last_used, expires: t.expires, expired: !!t.expires && t.expires < Date.now() });
@@ -1479,6 +1486,10 @@ function folderOut(f, uid, full = false) {
   out.catOptions = catTree().map((t) => t.name);
   out.catTree = catOptions();
   out.layout = layoutFor(uid);
+  out.upcoming = upcomingOf(out);
+  // Kvitteringer i boligen (nyeste først), med bilde via boligens egen rute så også de som bare har Boliger-tilgang ser dem.
+  out.receipts = out.entries.filter((e) => e.receiptId).map((e) => ({ entryId: e.id, receiptId: e.receiptId, description: e.description, date: e.date, amount: e.amount, pending: e.pending,
+    category: e.categoryLabel ?? e.category, color: e.color, thumbUrl: `/finans/api/folders/${f.id}/receipts/${e.receiptId}/thumb`, fileUrl: `/finans/api/folders/${f.id}/receipts/${e.receiptId}/file` }));
   out.notices = noticesFor(f.id, Date.now() - 10 * 60_000);
   out.types = FOLDER_TYPES; out.freqs = FREQS;
   return out;
@@ -1608,6 +1619,17 @@ api.post('/folders/:id/receipts', need('receipts:write'), upload, (c) => {
   const { f, err } = folderFor(c, 'edit'); if (err) return err;
   return receiptUpload(c, `folder:${f.id}:${c.get('user')}`);
 });
+// Kvitteringsbilde i en bolig: bare kvitteringer som er koblet til en post i boligen, og bare for medlemmer.
+for (const kind of ['thumb', 'file']) {
+  api.get(`/folders/:id/receipts/:rid/${kind}`, (c) => {
+    const { f, err } = folderFor(c); if (err) return err;
+    const rid = +c.req.param('rid');
+    if (!q('SELECT 1 FROM fh_folder_entries WHERE folder_id=? AND receipt_id=?').get(f.id, rid)) return c.notFound();
+    const r = origSelect.get(rid);
+    if (!r) return c.notFound();
+    return kind === 'thumb' ? sendFile(c, r.thumb || r.file, r.thumb ? 'image/jpeg' : r.mime) : sendFile(c, r.file, r.mime);
+  });
+}
 api.delete('/folders/:id/entries/:eid', (c) => { const { f, err } = folderFor(c, 'edit'); if (err) return err; q('DELETE FROM fh_folder_entries WHERE id=? AND folder_id=?').run(+c.req.param('eid'), f.id); return fullOut(c, f); });
 
 // Prosjekter (f.eks. basseng med snekker) med budsjett og avdragsplan.
@@ -1874,7 +1896,8 @@ api.post('/search/ai', R, async (c) => {
     return c.json({ mode: 'ai', ...ai, ...extra, interpreted: plain.interpreted });
   } catch (e) {
     if (!(e instanceof AiUnavailable)) throw e;
-    return c.json({ ...plain, ...extra, aiUnavailable: true, engine: 'Vanlig søk', notice: 'AI-motoren svarer ikke, så dette er vanlig søk.' });
+    // Årsaken vises (f.eks. «Gemini: nøkkelen er ugyldig · Ollama kan ikke nås»), ellers ser det bare ut som at AI ikke virker.
+    return c.json({ ...plain, ...extra, aiUnavailable: true, aiError: e.message, engine: 'Vanlig søk', notice: `AI-motoren svarte ikke (${e.message.slice(0, 220)}), så dette er vanlig søk.` });
   }
 });
 api.get('/search/history', R, (c) => c.json(aiHistory(c.get('user'))));

@@ -3,7 +3,7 @@
 // 2) Svar: språkmodellen får treffene og ferdig utregnede summer, og må vise til treffene. Tall i svaret som ikke finnes
 //    i grunnlaget gjør at svaret forkastes og det regelbaserte sammendraget brukes i stedet – modellen får ikke finne på tall.
 import { db, settings, secret } from './db.js';
-import { askJson } from './ai.js';
+import { textJson } from './ai.js';
 
 const q = (sql) => db.prepare(sql);
 db.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS fh_fts USING fts5(kind UNINDEXED, ref UNINDEXED, text, tokenize = 'unicode61 remove_diacritics 2');
@@ -208,18 +208,17 @@ function numbersOk(answer, allowed) {
 }
 
 // Når AI-motoren nettopp har feilet, hopper vi rett til vanlig søk i noen minutter i stedet for å vente på tidsavbrudd hver gang.
-let aiDownUntil = 0;
+let aiDownUntil = 0, aiDownWhy = '';
 export const aiDown = () => Date.now() < aiDownUntil;
-export const markAiDown = (ms = 3 * 60_000) => { aiDownUntil = Date.now() + ms; };
+export const markAiDown = (ms = 90_000, why = '') => { aiDownUntil = Date.now() + ms; aiDownWhy = why; };
 
 // Kaster AiUnavailable når motoren er nede eller ikke svarer; da bruker kallet vanlig søk.
 export class AiUnavailable extends Error {}
 export async function answer(text) {
-  if (aiDown()) throw new AiUnavailable('AI-motoren svarte ikke nylig');
+  if (aiDown()) throw new AiUnavailable(`svarte ikke for under 90 sekunder siden${aiDownWhy ? ': ' + aiDownWhy : ''}`);
   const r = await search(text);
   const fallback = heuristicAnswer(text, r);
-  const st = settings();
-  const engine = secret('geminiKey') ? 'Gemini' : st.provider === 'ollama' ? 'Ollama' : 'Gemini';
+  let engine = 'AI';
   if (!r.all) return { answer: fallback, hits: r.hits, engine: 'Uten AI', facts: r.facts, empty: true };
   const ctx = r.hits.map((h, i) => `[${i + 1}] ${h.source}: ${h.description} · ${dd(h.date)} · ${h.amount != null ? kr(h.amount) + ' kr' : 'ukjent beløp'}${h.category ? ' · ' + h.category : ''}`).join('\n');
   const prompt = `Du er en presis norsk økonomiassistent. Svar på spørsmålet KUN ut fra grunnlaget under. Skriv 1–3 korte setninger på norsk bokmål.
@@ -230,13 +229,15 @@ Fasit (regnet ut av systemet): periode=${r.facts.period ?? 'alle'}; antall trans
 Grunnlag:
 ${ctx}`;
   try {
-    const res = await askJson(prompt, { type: 'object', properties: { answer: { type: 'string' } }, required: ['answer'] }, { timeout: 12_000 });
+    const out = await textJson(prompt, { type: 'object', properties: { answer: { type: 'string' } }, required: ['answer'] }, { timeout: 20_000 });
+    engine = out.provider;
+    const res = out.data;
     const a = String(res?.answer ?? '').trim().slice(0, 800);
     const allowed = [r.facts.outSum, r.facts.inSum, r.facts.count, r.hits.length, ...r.hits.flatMap((h, i) => [Math.abs(h.amount ?? 0), i + 1, +h.date?.slice(0, 4), +h.date?.slice(5, 7), +h.date?.slice(8, 10)]), ...[...String(text).matchAll(/\d+/g)].map((m) => +m[0])].filter(Number.isFinite);
     if (a && numbersOk(a, allowed)) return { answer: a, hits: r.hits, engine, facts: r.facts };
     return { answer: fallback, hits: r.hits, engine: `${engine} (kontrollert – tall fra systemet)`, facts: r.facts };
   } catch (e) {
-    markAiDown();
+    markAiDown(90_000, e.message);
     throw new AiUnavailable(e.message);
   }
 }

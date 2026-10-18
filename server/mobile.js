@@ -18,7 +18,7 @@ import { matApi } from './mat.js';
 import { domainOverview } from './domains.js';
 import { readBg, weatherImages, weatherKind, planetsToday, osloImages, apodImage } from './bg.js';
 import { uiPrefs, saveUiPrefs } from './ui.js';
-import { weatherFull } from './weather-full.js';
+import { weatherFull, searchPlaces, DEFAULT_PLACES } from './weather-full.js';
 import * as integrations from './integrations.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
@@ -108,7 +108,16 @@ const SCALAR = {
   finTabs: (v) => Array.isArray(v) && v.length >= 1 && v.length <= 4 && new Set(v).size === v.length && v.every((x) => FIN_TABS.includes(x)),
   fourthTab: (v) => ['auto', 'domener', 'sporing'].includes(v),
   fab: (v) => ['float', 'inline'].includes(v),
+  // Prompt 16: Papir-hovedlinjen (opptil 6 faner med eget navn og ikon) og fargetema for ikonene i Innstillinger.
+  tabBar: (v) => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).every((k) => k === 'items') && Array.isArray(v.items) && v.items.length >= 1 && v.items.length <= 6
+    && new Set(v.items.map((x) => x?.id)).size === v.items.length
+    && v.items.every((x) => x && typeof x === 'object' && TAB_IDS.includes(x.id) && Object.keys(x).every((f) => ['id', 'label', 'icon'].includes(f))
+      && (x.label === undefined || (typeof x.label === 'string' && x.label.length <= 24)) && (x.icon === undefined || (typeof x.icon === 'string' && /^[\w.-]{1,40}$/.test(x.icon)))),
+  iconTheme: (v) => ICON_THEMES.includes(v),
 };
+export const TAB_IDS = ['hjem', 'finans', 'mat', 'sporing', 'domener', 'sok', 'mer', 'vaer', 'nyheter', 'familie', 'avganger', 'aksjer', 'boliger', 'abonnementer', 'media'];
+export const TAB_BAR_DEFAULT = { items: [{ id: 'hjem', label: 'Hjem', icon: 'house' }, { id: 'finans', label: 'Finans', icon: 'wallet' }, { id: 'mat', label: 'Mat', icon: 'fork.knife' }, { id: 'domener', label: 'Domener', icon: 'globe' }, { id: 'sok', label: 'Søk', icon: 'magnifyingglass' }, { id: 'mer', label: 'Mer', icon: 'ellipsis' }] };
+const ICON_THEMES = ['standard', 'varm', 'kjolig', 'mono', 'fargerik'];
 const cardIds = (a) => Array.isArray(a) && a.length <= 40 && a.every((x) => typeof x === 'string' && /^[\w.-]{1,40}$/.test(x));
 const FIN_TABS = ['oversikt', 'liste', 'finn', 'sok', 'budsjett', 'kvitteringer', 'aksjer', 'abonnementer', 'kontoer', 'boliger'];
 const FIN_TABS_DEFAULT = ['oversikt', 'liste', 'finn', 'sok'];
@@ -294,10 +303,47 @@ api.put('/me/layout', authOrToken, async (c) => {
   return c.json(next);
 });
 
-// Værappen i mobilappene (prompt 15): Open-Meteo, cachet i 10 minutter.
+// Værappen i mobilappene: MET/yr (Open-Meteo som reserve), cachet i 10 minutter. ?place=<id> (egne steder også), eller ?lat=&lon=&name=.
 api.get('/weather/full', authOrToken, async (c) => {
   const q = c.req.query();
-  return c.json(await weatherFull({ place: q.place, lat: q.lat, lon: q.lon, name: typeof q.name === 'string' ? q.name.slice(0, 60) : undefined }));
+  const own = q.place ? placesOf(c.get('user')).find((x) => x.id === q.place) : null;
+  const src = q.source === 'open-meteo' ? 'open-meteo' : 'met';
+  if (own) return c.json(await weatherFull({ lat: own.lat, lon: own.lon, name: own.name, source: src }).then((w) => ({ ...w, place: { ...w.place, id: own.id, name: own.name, region: own.region } })));
+  return c.json(await weatherFull({ place: q.place, lat: q.lat, lon: q.lon, name: typeof q.name === 'string' ? q.name.slice(0, 60) : undefined, source: src }));
+});
+
+// Steder i værappen, per bruker: standard Oslo, Bergen, Trondheim og Tromsø. Søk via Kartverket (Open-Meteo som reserve).
+const placesOf = (u) => { const v = kv.get(u, 'wx_places', null); return Array.isArray(v) ? v : DEFAULT_PLACES; };
+const coord = (v, lim) => { const n = Number(v); return Number.isFinite(n) && Math.abs(n) <= lim ? Math.round(n * 1e4) / 1e4 : null; };
+api.get('/weather/places', authOrToken, (c) => c.json(placesOf(c.get('user'))));
+api.get('/weather/search', authOrToken, async (c) => {
+  try { return c.json(await searchPlaces(c.req.query('q'))); } catch (e) { return c.json({ error: `Stedssøket svarte ikke (${e.message})` }, 502); }
+});
+api.post('/weather/places', authOrToken, async (c) => {
+  const b = await json(c) ?? {};
+  const name = String(b.name ?? '').trim().slice(0, 60), lat = coord(b.lat, 90), lon = coord(b.lon, 180);
+  if (!name || lat == null || lon == null) return c.json({ error: 'Trenger navn, lat og lon' }, 400);
+  const list = placesOf(c.get('user'));
+  if (list.length >= 20) return c.json({ error: 'Maks 20 steder' }, 400);
+  const dup = list.find((x) => Math.abs(x.lat - lat) < 0.01 && Math.abs(x.lon - lon) < 0.01);
+  if (dup) return c.json(list);
+  const id = `p${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+  const next = [...list, { id, name, lat, lon, region: String(b.region ?? '').trim().slice(0, 60) }];
+  kv.set(c.get('user'), 'wx_places', next);
+  return c.json(next, 201);
+});
+api.delete('/weather/places/:id', authOrToken, (c) => {
+  const next = placesOf(c.get('user')).filter((x) => x.id !== c.req.param('id'));
+  kv.set(c.get('user'), 'wx_places', next);
+  return c.json(next);
+});
+api.put('/weather/places/order', authOrToken, async (c) => {
+  const ids = (await json(c))?.ids;
+  if (!Array.isArray(ids)) return c.json({ error: 'Trenger ids' }, 400);
+  const list = placesOf(c.get('user')), pos = new Map(ids.map((id, i) => [String(id), i]));
+  const next = [...list].sort((a, b) => (pos.get(a.id) ?? 999) - (pos.get(b.id) ?? 999));
+  kv.set(c.get('user'), 'wx_places', next);
+  return c.json(next);
 });
 
 api.get('/me/shortcuts', authOrToken, (c) => c.json(shortcutsFor(c.get('user'))));
@@ -402,16 +448,48 @@ api.get('/widgets/ruter', authOrToken, async (c) => {
   } catch (e) { return c.json({ error: e.message }, 502); }
 });
 
+// Avganger (prompt 16): søk i Entur, egne stopp per bruker og avganger med sanntid fra hvert stopp.
+api.get('/ruter/search', authOrToken, async (c) => {
+  try { return c.json(await ext.searchStops(c.req.query('q'))); } catch (e) { return c.json({ error: `Entur svarte ikke (${e.message})` }, 502); }
+});
+api.get('/ruter/departures', authOrToken, async (c) => {
+  try { return c.json(await ext.getStopDepartures(c.req.query('stop'), c.req.query('n'))); } catch (e) { return c.json({ error: e.message }, /Ugyldig/.test(e.message) ? 400 : 502); }
+});
+async function stopsOf(u) {
+  const v = kv.get(u, 'ruter_stops', null);
+  if (Array.isArray(v)) return v;
+  const d = await safe(ext.getDepartures);
+  return d?.stopId ? [{ id: `NSR:StopPlace:${String(d.stopId).replace(/\D/g, '')}`, name: d.stop }] : [];
+}
+api.get('/me/stops', authOrToken, async (c) => c.json(await stopsOf(c.get('user'))));
+api.put('/me/stops', authOrToken, async (c) => {
+  const b = await json(c) ?? {};
+  if (!Array.isArray(b.stops)) return c.json({ error: 'Trenger stops' }, 400);
+  const seen = new Set(), out = [];
+  for (const x of b.stops.slice(0, 12)) {
+    const id = ext.stopIdOf(x?.id);
+    if (!id || seen.has(id)) continue;
+    seen.add(id); out.push({ id, name: String(x.name ?? '').trim().slice(0, 60) || id });
+  }
+  kv.set(c.get('user'), 'ruter_stops', out);
+  return c.json(out);
+});
+const homeStops = async (u) => Promise.all((await stopsOf(u)).slice(0, 6).map(async (s) => {
+  const d = await safe(() => ext.getStopDepartures(s.id, 6));
+  return { id: s.id, name: s.name, departures: (d?.departures ?? []).filter((x) => !x.cancelled).slice(0, 4), error: d ? undefined : 'Ingen sanntid akkurat nå' };
+}));
+
 // Alt mobilforsiden i appene trenger, i ett kall.
 api.get('/mobile/home', authOrToken, async (c) => {
   const id = c.get('user'), me = meOut(id);
-  const [w, ruter, status] = await Promise.all([safe(ext.getWeather), safe(ext.getRuter), serverStatus()]);
+  const [w, ruter, status, stops] = await Promise.all([safe(ext.getWeather), safe(ext.getRuter), serverStatus(), homeStops(id).catch(() => [])]);
   return c.json({
     name: me.name, serverName: me.serverName, avatarUrl: me.avatarUrl, greeting: greetingFor(osloHour()),
     // Samme felter som /api/weather (vind er fortsatt et tall; detaljer i windInfo), pluss de korte navnene appene bruker.
     weather: w && { ...w, lat: w.lat ?? config.location.lat, lon: w.lon ?? config.location.lon, max: w.hi ?? w.days?.[0]?.max ?? null, min: w.lo ?? w.days?.[0]?.min ?? null, code: w.symbol ?? w.kind ?? null },
     shortcuts: shortcutsFor(id),
     ruter: (ruter?.trips ?? []).map((t) => ({ from: t.from, to: t.to, url: t.url, departures: (t.deps ?? []).filter((d) => new Date(d.time) > Date.now() - 60_000).map(depOut) })),
+    stops, // brukerens egne stopp med sanntid (prompt 16)
     serverStatus: status,
     layout: layoutOf(id).mobile ?? {},
     search: searchSettings(id),
@@ -430,7 +508,8 @@ export const designOf = (id) => {
   const trk = (l.trkOrder ?? []).filter((x) => TRK_CARDS.includes(x));
   return { design: l.design ?? 'v2', compactNav: !!l.compactNav, hlTheme: l.hlTheme ?? (fresh ? '2c' : 'cur'), mobileDesign: l.mobileDesign ?? (fresh ? 'papir' : 'klassisk'),
     paperMode: l.paperMode ?? 'auto', photo: l.photo ?? (fresh ? 'oslo' : 'cur'), onboarded: l.onboarded ?? !fresh, trkOrder: [...trk, ...TRK_CARDS.filter((x) => !trk.includes(x))],
-    pages: l.pages ?? {}, finTabs: l.finTabs ?? FIN_TABS_DEFAULT, fourthTab: l.fourthTab ?? 'auto', fab: l.fab ?? 'float' };
+    pages: l.pages ?? {}, finTabs: l.finTabs ?? FIN_TABS_DEFAULT, fourthTab: l.fourthTab ?? 'auto', fab: l.fab ?? 'float',
+    tabBar: l.tabBar ?? null, tabBarDefault: TAB_BAR_DEFAULT, iconTheme: l.iconTheme ?? 'standard' };
 };
 
 const PHOTOS = join(config.dataDir, 'photo-window');

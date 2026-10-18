@@ -90,6 +90,57 @@ export const getDepartures = (stopId) => {
   });
 };
 
+// Søk etter stoppesteder (Entur geocoder). Svarer [{ id:'NSR:StopPlace:…', name, locality, modes }].
+const CAT_MODE = { metroStation: 'metro', onstreetTram: 'tram', tramStation: 'tram', onstreetBus: 'bus', busStation: 'bus', railStation: 'rail', ferryStop: 'water', harbourPort: 'water', airport: 'air' };
+export async function searchStops(q) {
+  const t = String(q ?? '').trim().slice(0, 80);
+  if (t.length < 2) return [];
+  return cached('stops_' + t.toLowerCase(), 24 * 3600_000, async () => {
+    const d = await fetchJson(`https://api.entur.io/geocoder/v1/autocomplete?text=${encodeURIComponent(t)}&layers=venue&size=12&lang=no`,
+      { headers: { 'ET-Client-Name': config.enturClient, Accept: 'application/json' } }, 6000);
+    return (d.features ?? []).filter((f) => /^NSR:StopPlace:\d+$/.test(f.properties?.id ?? '')).map((f) => ({
+      id: f.properties.id, name: f.properties.name, locality: f.properties.locality ?? f.properties.county ?? '',
+      modes: [...new Set((f.properties.category ?? []).map((c) => CAT_MODE[c]).filter(Boolean))],
+    }));
+  });
+}
+
+// Avganger med detaljer fra ett stopp (Avganger-siden og brukerens egne stopp): planlagt og forventet tid, sanntid,
+// plattform, innstilt og avviksmeldinger.
+const STOP_QUERY = `query($id:String!,$n:Int!){
+  stopPlace(id:$id){ id name estimatedCalls(numberOfDepartures:$n, timeRange:86400){
+    aimedDepartureTime expectedDepartureTime realtime cancellation
+    quay{ publicCode name }
+    destinationDisplay{ frontText }
+    situations{ summary{ value language } }
+    serviceJourney{ line{ publicCode transportMode presentation{ colour textColour } } }
+  } }
+}`;
+export const stopIdOf = (v) => { const s = String(v ?? '').trim(); const m = s.match(/^(?:NSR:StopPlace:)?(\d{1,9})$/); return m ? `NSR:StopPlace:${m[1]}` : null; };
+export function stopDeparturesOut(sp, now = Date.now()) {
+  return { stop: { id: sp.id, name: sp.name }, departures: (sp.estimatedCalls ?? []).map((c) => {
+    const line = c.serviceJourney?.line ?? {}, exp = c.expectedDepartureTime ?? c.aimedDepartureTime;
+    const sit = (c.situations ?? []).map((x) => (x.summary ?? []).find((y) => /no|nob/.test(y.language ?? ''))?.value ?? x.summary?.[0]?.value).filter(Boolean);
+    return { line: line.publicCode ?? '', to: c.destinationDisplay?.frontText ?? '', ...lineColor(line.transportMode, line.publicCode, line.presentation),
+      aimed: c.aimedDepartureTime, expected: exp, time: exp, minutes: Math.max(0, Math.round((Date.parse(exp) - now) / 60000)),
+      delay: c.aimedDepartureTime && exp ? Math.round((Date.parse(exp) - Date.parse(c.aimedDepartureTime)) / 60000) : 0,
+      realtime: !!c.realtime, cancelled: !!c.cancellation, platform: c.quay?.publicCode || null, situation: sit[0] ?? null };
+  }) };
+}
+export const getStopDepartures = (stop, n = 20) => {
+  const id = stopIdOf(stop);
+  if (!id) return Promise.reject(new Error('Ugyldig stopp-ID'));
+  const count = Math.min(40, Math.max(1, +n || 20));
+  return cached(`stopdep_${id}_${count}`, 20_000, async () => {
+    const d = await fetchJson('https://api.entur.io/journey-planner/v3/graphql', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'ET-Client-Name': config.enturClient },
+      body: JSON.stringify({ query: STOP_QUERY, variables: { id, n: count } }),
+    });
+    if (!d.data?.stopPlace) throw new Error('Fant ikke stoppestedet');
+    return stopDeparturesOut(d.data.stopPlace);
+  });
+};
+
 /* ---------------- Google-søkeforslag ---------------- */
 
 // Proxy mot Google Suggest (nettleseren får ikke kalle Google direkte på grunn av CSP). Svarer [] ved feil.

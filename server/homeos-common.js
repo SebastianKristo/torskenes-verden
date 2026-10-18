@@ -1,7 +1,7 @@
 // Felles for Hjem, Matplan og Domener: tilgang (sesjon eller FinansHub-token) og en enkel JSON-AI-kall.
 import { sessionUser, isAdmin } from './auth.js';
 import * as fh from './finans/routes.js';
-import { settings, secret } from './finans/db.js';
+import { textJson } from './finans/ai.js';
 
 export const MOCK = process.env.MOCK_DATA === '1';
 export const bad = (c, error, status = 400) => c.json({ error }, status);
@@ -24,40 +24,11 @@ export async function readJson(c) {
 export const str = (v, max = 120) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 export const num = (v) => { const n = typeof v === 'number' ? v : parseFloat(String(v ?? '').replace(/\s/g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0; };
 
-// Tekst → JSON med FinansHubs valgte motor (Gemini eller Ollama), med den andre som reserve.
-export async function aiJson(prompt, schema) {
-  const st = settings();
-  const order = [...new Set([st.provider, ...(st.fallback ? [st.provider === 'ollama' ? 'gemini' : 'ollama'] : [])])];
-  let last;
-  for (const p of order) {
-    try {
-      if (p === 'gemini') {
-        const key = secret('geminiKey');
-        if (!key) throw new Error('Gemini-nøkkel mangler');
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(st.geminiModel)}:generateContent`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, signal: AbortSignal.timeout(60_000),
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.7, responseMimeType: 'application/json', responseSchema: schema } }),
-        });
-        if (!res.ok) throw new Error(`Gemini svarte ${res.status}`);
-        const d = await res.json();
-        return { provider: 'Gemini', data: JSON.parse(d.candidates?.[0]?.content?.parts?.map((x) => x.text ?? '').join('') ?? '') };
-      }
-      const res = await fetch(`${st.ollamaUrl.replace(/\/$/, '')}/api/chat`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(120_000),
-        body: JSON.stringify({ model: st.ollamaModel, stream: false, format: lower(schema), options: { temperature: 0.7 }, messages: [{ role: 'user', content: prompt }] }),
-      });
-      if (!res.ok) throw new Error(`Ollama svarte ${res.status}`);
-      return { provider: 'Ollama', data: JSON.parse((await res.json()).message.content) };
-    } catch (e) { last = e; }
-  }
-  throw last ?? new Error('Ingen AI-motor');
-}
-
-// Gemini bruker OBJECT/STRING, Ollama vanlig JSON Schema.
-function lower(s) {
-  if (Array.isArray(s)) return s.map(lower);
-  if (!s || typeof s !== 'object') return s;
-  return Object.fromEntries(Object.entries(s).map(([k, v]) => [k, k === 'type' ? String(v).toLowerCase() : lower(v)]));
+// Tekst → JSON med FinansHubs valgte motor (Ollama, Gemini eller Groq), med de andre som reserve.
+// Samme vei som FinansHub (modelloppslag, «nede»-vakt og feilmelding fra hver motor). Svarer { provider, data }.
+export async function aiJson(prompt, schema, { timeout = 60_000, temperature = 0.7 } = {}) {
+  const r = await textJson(prompt, schema, { timeout, temperature });
+  return { provider: r.provider, model: r.model, data: r.data };
 }
 
 // Butikk → domene for logoer.

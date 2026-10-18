@@ -20,6 +20,7 @@ import trackingApi, { startTrackingWorker, hasTrackingTest, testTracking } from 
 import uiApi from './ui.js';
 import mobileApi, { meOut, removeAvatar, shortcutsFor, layoutOf, authOrToken, designOf } from './mobile.js';
 import rssApi, { startRssWorker } from './rss.js';
+import familyApi from './family.js';
 import { revokeUserTokens } from './finans/routes.js';
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
 
@@ -479,6 +480,7 @@ app.route('/api/tracking', trackingApi); // Sporing (prompt 11): pakker fra Finn
 app.route('/api/matplan', matApi); // samme Matplan-API som /mat/api (prompt 10: Matplan hører til Homelab)
 // Profil, oppsett, søk, mobilforside og widgets: sesjon ELLER FinansHub-token (må stå før /api med requireAuth).
 app.route('/api/rss', rssApi); // Nyhetsleser (prompt 13): RSS/Atom med ✦ AI-sammendrag og -kategorisering
+app.route('/api/family', familyApi); // Familie og kart (prompt 16): posisjon, soner, varsler og helse
 app.route('/api', mobileApi);
 app.route('/api', authed);
 app.route('/home/api', homeApi);

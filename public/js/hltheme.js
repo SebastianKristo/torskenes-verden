@@ -185,6 +185,7 @@ const HEAD = {
   hjem: () => ['Home Assistant', 'Hjem'],
   matplan: () => [`Uke ${weekNo()}`, 'Mat'],
   sporing: () => ['Pakker og sendinger', 'Sporing'],
+  familie: () => ['Posisjon, soner og helse', 'Familie'],
   domener: () => ['Trafikk, oppetid og sikkerhet', 'Domener'],
   nettverk: () => ['Nettverk og lenker', 'Nettverk'],
   mer: () => ['Alle sider', 'Mer'],

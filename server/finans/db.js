@@ -259,7 +259,7 @@ export const DEFAULT_SETTINGS = {
   name: '', currency: 'NOK', monthStart: 1, yearGoal: 120000,
   provider: process.env.AI_PROVIDER === 'gemini' ? 'gemini' : 'ollama', fallback: (process.env.AI_FALLBACK ?? 'gemini') !== 'none',
   ollamaUrl: process.env.OLLAMA_URL ?? 'http://192.168.1.30:11434', ollamaModel: process.env.OLLAMA_MODEL ?? 'qwen2.5vl:7b',
-  geminiModel: process.env.GEMINI_MODEL ?? 'gemini-2.5-flash', minConf: Math.round(Number(process.env.AI_MIN_CONFIDENCE ?? 0.85) * 100),
+  geminiModel: process.env.GEMINI_MODEL ?? 'gemini-flash-latest', groqModel: process.env.GROQ_MODEL ?? '', groqVisionModel: process.env.GROQ_VISION_MODEL ?? '', roboflowWorkflow: process.env.ROBOFLOW_WORKFLOW ?? '', minConf: Math.round(Number(process.env.AI_MIN_CONFIDENCE ?? 0.85) * 100),
   autoCat: true, n80: true, n100: true, nRc: true, nFast: true, csvProfile: 'DNB', aiSummaries: true,
   // Kvitteringer fra e-post (Proton Mail via Bridge, eller vanlig IMAP). Passordet ligger i hemmelighetene (imapPass).
   mailOn: !!process.env.IMAP_HOST, imapHost: process.env.IMAP_HOST ?? '', imapPort: Number(process.env.IMAP_PORT ?? 143) || 143,
@@ -285,7 +285,7 @@ export function saveSettings(patch) { kv.set(OWNER, 'fh_settings', { ...kv.get(O
 
 // Hemmeligheter for FinansHub (Gemini, Trading 212, SMB, IMAP) lagres separat, kryptert med AES-256-GCM, og sendes aldri ut.
 // Nøkkelen avledes fra SECRET_KEY (eller SESSION_SECRET). Byttes den, må hemmelighetene legges inn på nytt.
-const SECRET_ENV = { geminiKey: 'GEMINI_API_KEY', imapPass: ['IMAP_PASSWORD', 'FINN_IMAP_PASSWORD'], t212Key: 'TRADING212_API_KEY', t212Secret: 'TRADING212_API_SECRET', smbPass: 'SMB_PASSWORD', backupPhrase: 'BACKUP_PASSPHRASE' };
+const SECRET_ENV = { geminiKey: 'GEMINI_API_KEY', groqKey: 'GROQ_API_KEY', roboflowKey: 'ROBOFLOW_API_KEY', imapPass: ['IMAP_PASSWORD', 'FINN_IMAP_PASSWORD'], t212Key: 'TRADING212_API_KEY', t212Secret: 'TRADING212_API_SECRET', smbPass: 'SMB_PASSWORD', backupPhrase: 'BACKUP_PASSPHRASE' };
 const sealKey = () => createHash('sha256').update('fh-secret:' + (process.env.SECRET_KEY || config.sessionSecret || 'dev')).digest();
 export function seal(text) {
   const iv = randomBytes(12), c = createCipheriv('aes-256-gcm', sealKey(), iv);
