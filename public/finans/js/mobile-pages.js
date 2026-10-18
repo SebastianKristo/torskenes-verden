@@ -1,7 +1,7 @@
 // «Mer» i Finans: alle funksjonene fra FinansHub på nettsiden, tilpasset mobil, i én felles mal
 // (tilbake, tittel og undertekst, hero-kort, nøkkeltall, grupper med rader). Rader åpner en detaljside med feltene og tilhørende transaksjoner.
 import { S, api, esc, n0, n2, sgn, dd, today, monthName, cap, icon, logo, aiLine, loadReceipts, accs, navName } from './core.js';
-import { m, draw, flash, avatar, backBtn, theme, amtC, openSheet, openCam } from './mobile.js';
+import { m, draw, flash, avatar, backBtn, theme, amtC, openSheet, openCam, upqList } from './mobile.js';
 import { c3 } from './mobile-theme.js';
 import { LAY } from './mobile-hl.js';
 import { AK, aksView, aksLoad, aksBind } from './mobile-aks.js';
@@ -35,8 +35,8 @@ export const G = (t, rows, o = {}) => `${t || o.act ? `<div class="sec phd"><spa
 
 export function page(o) {
   const th = theme();
-  return `${o.back ? `<div class="m-row" style="justify-content:space-between">${backBtn(th, o.back[0], o.back[1], o.back[2] ?? '')}${avatar()}</div>` : ''}
-    <div class="m-row" style="justify-content:space-between;align-items:flex-start;gap:10px;padding:2px 4px 0"><div class="m-grow"><div class="title m-ell">${esc(o.title)}</div>${o.sub ? `<div class="psub">${esc(o.sub)}</div>` : ''}</div>${o.back ? '' : avatar()}</div>
+  return `${o.back ? `<div class="m-row pg-top" style="justify-content:space-between">${backBtn(th, o.back[0], o.back[1], o.back[2] ?? '')}${avatar()}</div>` : ''}
+    <div class="m-row pg-title" style="justify-content:space-between;align-items:flex-start;gap:10px;padding:2px 4px 0"><div class="m-grow"><div class="title m-ell">${esc(o.title)}</div>${o.sub ? `<div class="psub">${esc(o.sub)}</div>` : ''}</div>${o.back ? '' : avatar()}</div>
     ${o.hero?.v ? `<div class="phero ${gl('glass')}"><span>${esc(o.hero.l)}</span><b>${esc(o.hero.v)}</b>${o.hero.s ? `<span>${esc(o.hero.s)}</span>` : ''}${o.hero.spark ?? ''}${o.hero.chips ? `<div class="schips">${o.hero.chips.map((c) => `<button class="hchip" ${c.attrs} aria-pressed="${!!c.on}">${esc(c.n)}</button>`).join('')}</div>` : ''}</div>` : ''}
     ${o.kpis?.length ? `<div class="pkpis" style="grid-template-columns:${o.kpiCols ?? 'repeat(2,minmax(0,1fr))'}">${o.kpis.map((k) => `<div class="kpi ${gl()}"><span>${esc(k.l)}</span><b class="m-mono" style="color:${k.c ?? 'inherit'}">${esc(k.v)}</b>${k.s ? `<small>${esc(k.s)}</small>` : ''}</div>`).join('')}</div>` : ''}
     ${o.tiles?.length ? `<div class="ptiles">${o.tiles.map((t) => `<a class="ptile ${gl()}" href="${t.href}"><span class="pti">${icon(t.ic, 22)}${t.badge ? `<em>${t.badge}</em>` : ''}</span><b>${esc(t.l)}</b><span class="m-ell">${esc(t.s ?? '')}</span></a>`).join('')}</div>` : ''}
@@ -116,6 +116,7 @@ function kv() {
   const jobs = m.jobs.filter((x) => x.status !== 'booked');
   return page({ back: ['#/mer', 'Tilbake til Mer'], title: 'Kvitteringer', hero: { l: 'Til gjennomgang', v: String(q.length), s: 'Lest av AI · bekreft før bokføring' },
     groups: [
+      upqList(theme(), true),
       G('Trenger gjennomgang', q.length ? q.map((r) => { const hi = !r.error && (r.confidence ?? 0) >= (st.minConf ?? 85) / 100 && !r.flag; return R.item({ logo: { description: r.merchant ?? 'Kvittering', domain: r.domain, color: '#FFB08A' }, t: r.merchant ?? 'Ny kvittering', s: `${dd(r.date)} · ${r.provider ?? 'manuell'}${r.confidence != null ? ` · sikkerhet ${String(r.confidence.toFixed(2)).replace('.', ',')}` : ''}`, ai: r.aiShort, tags: [{ n: r.match ? 'Matchet mot kortkjøp' : hi ? 'Klar' : 'Sjekk beløp', k: r.match || hi ? 'ok' : 'warn' }], v: r.total != null ? `−${n2(r.total)}` : '', act: { l: 'Bokfør', attrs: `data-pa="book" data-id="${esc(r.id)}"` }, attrs: `data-rc="${esc(r.id)}"` }); }) : [R.text('Alt er gjennomgått.')]),
       jobs.length ? G('Opplastingskø', jobs.map((x) => { const run = ['pending', 'processing'].includes(x.status); return R.item({ ini: '↑', t: x.merchant || x.name || 'Kvittering', s: x.status === 'needs_review' ? 'Klar · trykk for å bekrefte' : x.status === 'processing' ? `Gemini leser … ${x.progress ?? 50} %` : x.status === 'error' ? 'Feil – åpne for å fylle ut' : 'I kø', tags: [{ n: x.status === 'needs_review' ? 'Klar' : run ? 'Leses' : x.status === 'error' ? 'Feil' : 'I kø', k: x.status === 'needs_review' ? 'ok' : run ? 'blue' : 'warn' }], attrs: `data-job="${esc(x.id)}"` }); })) : '',
       G('', [R.btn('Last opp kvittering', 'data-pa="sheet"'), R.btn('Ta bilde', 'data-pa="cam"')]),

@@ -4,6 +4,7 @@
 import {
   S, api, esc, n0, n2, sgn, neg, dd, dWeek, today, monthName, cap, ini, greet, parseAmount,
   loadBoot, loadSummary, loadTx, loadReceipts, cats, accs, uploadReceipt, icon, logo, aiLine, conic, navName } from './core.js';
+import * as UPQ from './mobile-upq.js';
 import { MODS, modView, modLoad, domNav, modBind, modAfterDraw } from './mobile-mods.js';
 import { settingsView, settingsLoad, settingsBind } from './mobile-set.js';
 import { hlView, hlLoad, hlBind, hlAfterDraw, LAY, loadLayout } from './mobile-hl.js';
@@ -208,6 +209,20 @@ async function reanalyze(id, engine = 'gemini') {
   } catch (err) { flash(err?.message && !/import|module|fetch/i.test(err.message) ? err.message : 'Ny analyse er ikke tilgjengelig på denne serveren ennå.'); }
 }
 
+/* ---------- Venter på opplasting (prompt 18) ---------- */
+// Filene ligger i IndexedDB (mobile-upq.js) og lastes opp av seg selv når nettet er tilbake.
+const kb = (n) => (n > 1e6 ? `${(n / 1e6).toFixed(1).replace('.', ',')} MB` : `${Math.max(1, Math.round(n / 1e3))} kB`);
+export function upqList(th, compact = false) {
+  const q = m.offline;
+  if (!q.length) return '';
+  const why = (x) => (x.error ? `Feilet: ${x.error}` : x.reason === 'wifi' ? 'Venter på Wi-Fi' : 'Venter på nett');
+  if (compact) return `<a class="upq-banner ${th === 'ios' ? 'glass2' : ''}" href="#/opp"><span class="upq-dot"></span><span class="m-grow"><b>${q.length} kvittering${q.length > 1 ? 'er' : ''} venter på opplasting</b><span>${navigator.onLine ? 'Trykk for å se køen' : 'Lastes opp når du er på nett igjen'}</span></span><span style="opacity:.6">›</span></a>`;
+  return `<div class="sec">Venter på opplasting · ${q.length}</div><div class="list upq ${th === 'ios' ? 'glass2' : ''}">${q.map((x) => `<div class="item upq-it"><span class="m-ini upq-ic">↑</span><span class="m-grow" style="min-width:0"><span class="m-ell" style="font-weight:500">${esc(x.name)}</span><span class="m-ell s">${esc(why(x))} · ${kb(x.size)}${x.tries ? ` · ${x.tries} forsøk` : ''}</span></span><button class="upq-b" data-mact="upq-retry" data-id="${esc(x.id)}">Prøv igjen</button><button class="upq-b x" data-mact="upq-del" data-id="${esc(x.id)}" aria-label="Fjern fra køen">Fjern</button></div>`).join('')}</div>
+    ${q.length > 1 ? `<button class="sec-b upq-all" data-mact="upq-all">Last opp alle nå</button>` : ''}`;
+}
+export async function refreshQueue() { try { m.offline = await UPQ.queued(); } catch { /* beholder forrige liste */ } }
+async function sendOne(f) { const r = await uploadReceipt(f, null, { original: pref('origImg') }); return r; }
+
 /* ---------- Last opp (kø i bakgrunnen) ---------- */
 
 function uploadScreen(th) {
@@ -216,7 +231,7 @@ function uploadScreen(th) {
   return `<div class="m-row">${backBtn(th, '#/kv', 'Tilbake til Kvitteringer')}<b class="ptitle">Last opp</b></div>
     <label class="drop ${th === 'ios' ? 'glass' : ''}"><span class="n">${icon('up', 22)}</span><b>Velg kvitteringer</b><span>Bilder eller PDF – flere om gangen. Gemini leser dem i bakgrunnen. Du kan bruke appen mens du venter.</span><input class="m-file" type="file" accept="image/*,application/pdf" multiple data-mupload></label>
     <button class="cta ${th === 'ios' ? 'glass2' : ''}" data-mact="cam"><span class="n">${icon('cam', 20)}</span><span class="m-grow"><b style="display:block;font-weight:600">Ta bilde</b><span style="font-size:13px;opacity:.75">Bakkamera</span></span></button>
-    ${m.offline.length ? `<div class="m-empty">${m.offline.length} fil${m.offline.length > 1 ? 'er' : ''} venter på ${pref('wifi') ? 'Wi-Fi' : 'nett'} og lastes opp automatisk.</div>` : ''}
+    ${upqList(th)}
     ${m.uploading ? `<div class="m-empty">Laster opp ${m.uploading} fil${m.uploading > 1 ? 'er' : ''} …</div>` : ''}
     ${j.length ? `<div class="sec">Kø</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${j.map((x) => { const [txt, c, p] = st(x); return `<button class="item job" data-job="${esc(x.id)}"><span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(x.merchant || x.name || 'Kvittering')}</span><span class="m-ell s" style="color:${c}">${txt}</span><span class="m-bar" style="height:4px;margin-top:6px;background:${th === 'ios' ? 'rgba(255,255,255,.12)' : c3('#31281F')}"><i style="width:${p}%;background:${c}"></i></span></span><span class="m-mono">${x.total != null ? n2(x.total) : ''}</span></button>`; }).join('')}</div>` : ''}
     ${j.filter((x) => x.canReanalyze ?? x.status === 'error').map((x) => reBtn(th, x, `${x.merchant || x.name || 'Kvittering'}${x.status === 'error' ? ' · mislyktes' : ' · usikker'}`)).join('')}`;
@@ -228,7 +243,7 @@ function scanQueue(th) {
   const q = (S.receipts ?? []).filter((r) => ['pending', 'processing', 'needs_review'].includes(r.status));
   return `<div class="m-row">${backBtn(th, '#/kv', 'Tilbake til Kvitteringer')}<b class="ptitle">Skann</b></div>
     <button class="cta ${th === 'ios' ? 'glass' : ''}" data-scan><span class="n">${icon('scan', 20)}</span><span class="m-grow"><b style="display:block;font-weight:600">Ta bilde av kvittering</b><span style="font-size:13px;opacity:.75">Hold inne for Bilder eller Filer</span></span></button>
-    ${q.length ? `<div class="sec">Til gjennomgang</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${q.map((r) => `<button class="item${m.rc === r.id ? ' on' : ''}" data-rc="${r.id}"><span class="m-ini" style="border-radius:10px;background:#ECE8E0 center/cover;${r.thumb ? `background-image:url('${r.thumb}')` : ''}"></span><span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(r.merchant ?? 'Ny kvittering')}</span><span class="m-ell s">${r.status === 'needs_review' ? `${dd(r.date)} · ${esc(r.provider ?? 'manuell')}` : 'Leser …'}</span></span><span class="m-mono">${r.total != null ? n2(r.total) : ''}</span></button>`).join('')}</div>` : '<div class="m-empty">Ingen kvitteringer i køen.</div>'}`;
+    ${q.length ? `<div class="sec">Til gjennomgang</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${q.map((r) => `<button class="item${m.rc === r.id ? ' on' : ''}" data-rc="${r.id}">${r.thumb ? `<span class="m-ini" style="border-radius:10px;background:#ECE8E0 center/cover;background-image:url('${r.thumb}')"></span>` : logo({ ...r, description: r.merchant ?? 'Kvittering' }, 40, 10)}<span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(r.merchant ?? 'Ny kvittering')}</span><span class="m-ell s">${r.status === 'needs_review' ? `${dd(r.date)} · ${esc(r.provider ?? 'manuell')}` : 'Leser …'}</span></span><span class="m-mono">${r.total != null ? n2(r.total) : ''}</span></button>`).join('')}</div>` : '<div class="m-empty">Ingen kvitteringer i køen.</div>'}`;
 }
 
 function confirmRc(th) {
@@ -510,14 +525,15 @@ const onWifi = () => { const c = navigator.connection; return !c?.type || c.type
 export async function upload(files, { confirm = false, stay = false } = {}) {
   if (!files.length) return;
   m.sheet = false;
-  if (pref('wifi') && !onWifi()) { m.offline.push(...files); if (location.hash !== '#/opp') location.hash = '#/opp'; return flash('Venter på Wi-Fi før opplasting'); }
+  if (pref('wifi') && !onWifi()) { for (const f of files) await UPQ.enqueue(f, 'wifi'); await refreshQueue(); if (location.hash !== '#/opp') location.hash = '#/opp'; else draw(); return flash('Venter på Wi-Fi før opplasting'); }
   if (!confirm && !stay && location.hash !== '#/opp') location.hash = '#/opp';
   m.uploading = files.length; draw();
   let first = null;
   for (const f of files) {
-    try { const r = await uploadReceipt(f, null, { original: pref('origImg') }); first ??= r; }
+    try { const r = await sendOne(f); first ??= r; }
     catch (e) {
-      if (e instanceof TypeError || !navigator.onLine) { m.offline.push(f); flash('Uten nett – lastes opp når du er på nett igjen'); }
+      // Uten nett, tapt forbindelse eller serverfeil: legg den i «Venter på opplasting» i stedet for å miste den.
+      if (UPQ.transient(e)) { await UPQ.enqueue(f, navigator.onLine ? 'server' : 'offline'); await refreshQueue(); flash(navigator.onLine ? 'Serveren svarte ikke – lagt i «Venter på opplasting»' : 'Uten nett – lastes opp når du er på nett igjen'); }
       else flash(`${f.name || 'Kvittering'}: ${e.message}`);
     }
     m.uploading--; await loadJobs(); draw();
@@ -527,7 +543,15 @@ export async function upload(files, { confirm = false, stay = false } = {}) {
   else if (two()) await loadReceipts().catch(() => {});
   draw(); poll();
 }
-function retryOffline() { if (!m.offline.length || !navigator.onLine || (pref('wifi') && !onWifi())) return; const f = m.offline.splice(0); upload(f); }
+async function retryOffline(ids = null, force = false) {
+  await refreshQueue();
+  if (!m.offline.length || !navigator.onLine || (!force && pref('wifi') && !onWifi())) return draw();
+  const r = await UPQ.flush(sendOne, ids);
+  await refreshQueue();
+  if (r.done) { flash(`${r.done} kvittering${r.done > 1 ? 'er' : ''} lastet opp`); await loadJobs().catch(() => {}); poll(); }
+  else if (r.failed && force) flash(m.offline.find((x) => x.error)?.error ?? 'Fikk ikke lastet opp');
+  draw();
+}
 
 /* ---------- Kamera (fullskjerm med ramme, utløser, Bilder og Filer) ---------- */
 
@@ -704,8 +728,11 @@ function bindGlobal() {
     if (y > lastY + 6 && y > 80) setMin(true); else if (y < lastY - 6) setMin(false);
     lastY = y;
   }, { passive: true });
-  addEventListener('online', retryOffline);
-  navigator.connection?.addEventListener?.('change', retryOffline);
+  addEventListener('online', () => retryOffline());
+  navigator.connection?.addEventListener?.('change', () => retryOffline());
+  // Køen fra forrige gang (appen ble lukket uten nett), og et nytt forsøk hvert minutt så lenge noe venter.
+  refreshQueue().then(() => { if (m.offline.length) { draw(); retryOffline(); } });
+  setInterval(() => { if (m.offline.length && navigator.onLine) retryOffline(); }, 60_000);
   // Skjul beløp i appveksleren og lås etter valgt tid i bakgrunnen.
   document.addEventListener('visibilitychange', () => {
     if (document.documentElement.dataset.ui !== 'mobile') return;
@@ -714,6 +741,7 @@ function bindGlobal() {
     if (pref('lock') && hiddenAt && away >= +pref('lockAfter') * 60000) { fetch('/api/logout', { method: 'POST' }).finally(() => { location.href = '/login?next=/finans/'; }); return; }
     if (m.blur) { m.blur = false; draw(); }
     if (paper() && m.screen === 'hjem') rcCount(true).then(draw).catch(() => {});
+    retryOffline(); // tilbake i appen: prøv køen igjen
   });
   addEventListener('keydown', (e) => { if (e.key === 'Escape' && m.orig) { m.orig = null; draw(); } });
 }
@@ -803,6 +831,9 @@ export function bind() {
     if (act === 'edithome') { m.menu = false; return; } // hlBind tar resten etter at Homelab er åpnet
     if (act === 'sheet') { m.sheet = false; return draw(); }
     if (act === 'cam') { return openCam(); }
+    if (act === 'upq-retry') { e.preventDefault(); return retryOffline([d('[data-mact]').dataset.id], true); }
+    if (act === 'upq-all') { e.preventDefault(); return retryOffline(null, true); }
+    if (act === 'upq-del') { e.preventDefault(); await UPQ.remove(d('[data-mact]').dataset.id); await refreshQueue(); return draw(); }
     if (act === 'reveal') { if (pref('hideAmt')) { m.reveal = !m.reveal; draw(); } return; }
     if (act === 'book' || act === 'reject') {
       await api(`/receipts/${m.rc}/${act}`, { method: 'POST' });

@@ -1948,3 +1948,20 @@ a.wx-r{color:inherit;text-decoration:none}
 @media (min-width:600px){.p17-ppl{grid-template-columns:repeat(3,minmax(0,1fr))}.p17-sens{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .m.papir .p17-ftabs{background:var(--pp-card);border-radius:999px;padding:4px;box-shadow:0 10px 30px -14px rgba(0,0,0,.35);border:0}
 .m.papir .p17-ftabs button{border-radius:999px!important}
+
+/* Prompt 18: i Papir med fotovindu står tittel og «‹ tilbake» i vinduet – ikke vis dem en gang til inne på siden.
+   På bekreft-kvittering beholdes pila (tilbake til køen), men den dobbelte tittelen skjules. */
+.m.papir.ph .m-scroll>.pg-top,.m.papir.ph .m-scroll>.pg-title{display:none}
+.m.papir.ph .m-scroll>.m-row:first-child>.ptitle{display:none}
+.m.papir.ph .m-scroll>.m-row:first-child:has(>.ptitle):not(:has(>.back,>.gback,span:not(:empty))){display:none}
+
+/* Venter på opplasting (prompt 18) */
+.upq-banner{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:18px;background:var(--pp-card,rgba(255,255,255,.06));border:1px solid var(--pp-line,rgba(255,255,255,.12));color:inherit;text-decoration:none;margin:4px 0}
+.upq-banner b{display:block;font-weight:600;font-size:15px}.upq-banner span span,.upq-banner .m-grow>span{display:block;font-size:13px;opacity:.7}
+.upq-dot{width:10px;height:10px;border-radius:50%;background:#e0a23a;flex:none;box-shadow:0 0 0 4px rgba(224,162,58,.2)}
+.upq-it{display:flex;align-items:center;gap:10px}
+.upq-ic{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:rgba(224,162,58,.16);color:#c98a1f;flex:none;font-weight:700}
+.upq-b{height:32px;padding:0 12px;border-radius:99px;border:1px solid currentColor;background:none;color:inherit;font:600 12.5px/1 inherit;opacity:.85;flex:none;cursor:pointer}
+.upq-b.x{border-color:transparent;opacity:.6}
+.upq-all{width:100%;margin-top:8px}
+.m.papir .upq-banner{background:var(--pp-card);border-color:var(--pp-line);color:var(--pp-ink)}
