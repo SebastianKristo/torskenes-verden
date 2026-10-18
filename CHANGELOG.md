@@ -2,6 +2,32 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.13.0] – 18.10.2026 · brukerskille og prompt 21
+- **Android krasjet ved oppstart:** appen krasjet hver gang den ble åpnet, sannsynligvis siden 4.11.0. Oppstartskoden brukte deler av appen som ikke var klare ennå. Dette er rettet.
+- **Brukerskille:** hver bruker ser bare sine egne data. Unntakene er det som deles i FinansHub (Boliger og Delte mapper) og det du selv velger å dele.
+  - **Admin-data:** Trading 212, skolekalenderen, Plex/Jellyfin og Integrasjoner vises bare for admin. Vanlige brukere ser ikke adresser, nøkler eller URL-er.
+  - **Huskeliste:** hver liste har en eier. Eieren kan dele listen med utvalgte personer («Del liste»), og den du deler med kan forlate listen. Sanntidsoppdateringer går bare til dem som har tilgang.
+  - **Familie:** deling er av som standard. Alle må slå på deling av posisjon på nytt etter oppdateringen.
+    - Du ser bare dem som deler med deg.
+    - Helse vises aldri når delingen er av.
+    - Soner er dine egne til du slår på «Del med familien», og bare eieren kan endre dem.
+  - **Boliger:** kvitteringer en bruker laster opp til en bolig, vises ikke for admin hvis admin ikke er medlem av boligen. Bare admin kan endre bolig-kategorier.
+  - **Filer:** en fil kan bare hentes av den som eier den, og av admin.
+  - **Brukerliste:** vanlige brukere ser bare navn og bilde av andre, ikke brukernavn eller rolle.
+  - **Web og PWA:** ved utlogging og bytte av bruker tømmes cachene. Opplastingskøen for kvitteringer er nå per bruker.
+  - **iOS og Android:**
+    - Widgetene, opplastingskøen og innstillingene for familie og helse lagres per konto.
+    - Posisjon og helse sendes bare for kontoen som har slått på deling.
+- **Bakgrunner med ekte foto** (prompt 21): Oslo, Vær nå og Planeter er fotografier fra Wikimedia Commons og NASA, ikke tegninger. Planeter viser nå Jorda, Månen, Jupiter, Mars og Saturn. Fotoene følger med i serveren, og kildene er kreditert.
+- **Kart:** Kartverket topo er standard. CARTO viste «API KEY REQUIRED».
+- **Familie i appene:** fanelinjen nederst viser Kart, Soner, Helse og Mer.
+- **Avganger:** trykk på en avgang for å se holdeplassene på turen, med plattform, forsinkelse og «Åpne i Ruter ›».
+- **Pakker:** pakkekortet viser butikkens logo med et lite merke for fraktselskapet. Tittelen er varen eller butikken, ikke sporingsnummeret, og antallet vises som «+N pakker ›».
+- **Hjem-widgets:** hold inne for å flytte dem. Siden åpnes ikke lenger ved et langt trykk, og et trykk mens du redigerer gjør ingenting. Finans-flisene kan dras på samme måte, og redigeringslinjen er en hvit pille.
+- **Kvitteringer:** streken over køen er borte.
+- **Finans-flisene:** fargene er justert.
+- **Logoer:** flere alias, blant annet Tv2, Squarespace og «Claue». Admin kan velge domene for en logo selv.
+
 ## [4.12.0] – 18.10.2026 · prompt 20
 - **Logobibliotek:** 368 norske butikker, kjeder og tjenester, sortert i 15 kategorier, følger med i serveren. 343 av dem har ferdig nedlastet logo, så logoene vises uten oppslag på nett.
   - Banktekster som `VIPPS*KIWI 123`, `KLARNA*KOMPLETT.NO`, `IZ *RUTER` og `ELKJOP STORO` gjenkjennes.
