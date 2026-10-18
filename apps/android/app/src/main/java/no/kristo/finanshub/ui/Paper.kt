@@ -176,6 +176,9 @@ private fun paperBar(vm: AppViewModel): String = when {
     vm.screen == Screen.Domains && vm.paperPage == null -> "dom"
     vm.screen == Screen.Sub && vm.paperPage == null && vm.selectedTx == null -> "sub"
     vm.paperFin -> "fin"
+    // Prompt 23: «Mer» følger modulen. En Finans-underside (Aksjer, Kvitteringer, Boliger …) viser Finans-fanene, også når
+    // den ble åpnet fra appens Mer, og «Mer» åpner da Finans → Mer. Unntak: siden er selv en fane i hovedlinja.
+    vm.paperPage == null && vm.screen.isFinance && navCurrent(vm, "main") !in setOf("aksjer", "boliger", "abonnementer") -> "fin"
     else -> "main"
 }
 
@@ -246,7 +249,10 @@ internal fun PaperApp(
     val s = vm.screen
     val overlay = vm.original != null || vm.editing != null || vm.detail != null
     val home = s == Screen.Homelab && vm.paperPage == null && !overlay
-    BackHandler(enabled = !home || vm.newsOpen || vm.photoMenu || vm.trkEdit || vm.editPage != null) {
+    // Prompt 23: tilbake (knapp og sveip) går gjennom Nav23Back, som viser forrige side bak under sveipet.
+    val backEnabled = !home || vm.newsOpen || vm.photoMenu || vm.trkEdit || vm.editPage != null
+    val backLocal = vm.photoMenu || vm.trkEdit || vm.editPage != null
+    val onBack: () -> Unit = {
         when {
             vm.photoMenu -> vm.photoMenu = false
             vm.editPage != null -> vm.editPage = null
@@ -254,6 +260,7 @@ internal fun PaperApp(
             else -> vm.back()
         }
     }
+    val (nav, holder) = rememberNav23()
     val scan = ScanActions(takePhoto, { vm.scanSheet = true }, true)
     val ownPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(vm::uploadPhoto) }
     // Hold inne på +: filvelgeren åpnes direkte, og filene havner i køen i arket.
@@ -271,8 +278,11 @@ internal fun PaperApp(
     // Ekstra luft nederst i listene: plass til fanelinja (telefon) og den flytende skanneknappen.
     val navBottom = if (wide) 12.dp - PAPER_BAR + navInset + (if (float) 70.dp else 0.dp) else barBottom - 12.dp + (if (float) 70.dp else 0.dp)
     val bar = paperBar(vm)
-    val pageKey = "${vm.screen}-${vm.paperPage}-${vm.selectedTx}-${vm.domSection}-${vm.settingsPage}-${vm.subTab}-${vm.bolTab}"
-    val meter = remember(pageKey) { ScrollMeter() }
+    val pageKey = paperPageKey(vm)
+    // Prompt 23: scrollposisjonen huskes per side (tilbake gjenoppretter, nye sider åpner øverst).
+    val scrollKey = navScrollKey(vm, pageKey)
+    nav.enter(scrollKey, vm.navBackSeq, holder)
+    val meter = nav.meter(scrollKey)
     val onTap: () -> Unit = {
         when {
             bar == "dom" -> vm.domainManager = true
@@ -291,6 +301,7 @@ internal fun PaperApp(
     }
 
     CompositionLocalProvider(LocalTopRow provides true) {
+      Nav23Back(vm, nav, backEnabled, p.bg, preview = !backLocal, onBack = onBack) {
         Box(Modifier.fillMaxSize().background(p.bg)) {
             Column(Modifier.fillMaxSize()) {
                 Hero(vm, home, wide) { vm.photoMenu = !vm.photoMenu; if (vm.photoMenu) vm.loadPhotoThumbs() }
@@ -303,7 +314,7 @@ internal fun PaperApp(
                     // Ny side åpner alltid helt øverst: alt innhold (og rulleposisjonen) bygges på nytt ved hvert sidebytte.
                     // Dra for å oppdatere: fra toppen når siden står øverst (ca. 70 dp), så hentes siden på nytt.
                     PullToRefreshBox(isRefreshing = vm.pullRefreshing, onRefresh = { vm.pullRefresh() }, modifier = Modifier.fillMaxHeight()) {
-                    Box(Modifier.fillMaxHeight().widthIn(max = if (!wide) 10_000.dp else if (home) 960.dp else 720.dp)) { key(pageKey) {
+                    Box(Modifier.fillMaxHeight().widthIn(max = if (!wide) 10_000.dp else if (home) 960.dp else 720.dp)) { key(pageKey) { holder.SaveableStateProvider(scrollKey) {
                         when {
                             vm.original != null -> PaneBox(navBottom) { OriginalScreen(vm) }
                             vm.editing != null -> PaneBox(navBottom) { TxEditScreen(vm, vm.editing!!, scan) }
@@ -323,15 +334,16 @@ internal fun PaperApp(
                             s == Screen.Domains -> Box(Modifier.fillMaxSize().padding(bottom = PAPER_BAR + navBottom)) { DomainsScreen(vm, false, section = vm.domSection, paper = true) }
                             s == Screen.Mat && !vm.matFull -> MatSurface(vm, paper = true)
                             // Verdikortet ligger delvis oppe i bildeheaderen, som på Sporing.
+                            s == Screen.Stocks && vm.stockScreen == "ov" -> PaperStocks23(vm, navBottom)
                             s == Screen.Stocks -> Box(Modifier.fillMaxSize()) { MainPane(vm, false, scan, onPrivacyChanged) }
                             s == Screen.Folders -> PaperBoliger(vm, navBottom) { vm.scanTarget = "receipt"; vm.scanSheet = true }
                             // Innstillinger i Papir: aldri den klassiske skjermen.
                             s == Screen.Settings -> PaperSettings17(vm, navBottom, onPrivacyChanged)
                             // Kvitteringer i Papir (prompt 18). Bekreftelsen av én kvittering bruker fortsatt den felles skjermen.
-                            s == Screen.Scan && vm.selectedReceipt == null -> PaperReceipts(vm, navBottom, takePhoto, pickFiles)
-                            else -> PaneBox(navBottom) { MainPane(vm, false, scan, onPrivacyChanged) }
+                            s == Screen.Scan && vm.selectedReceipt == null -> PaperReceipts23(vm, navBottom, takePhoto, pickPhotos, pickFiles)
+                            else -> PaneBox(navBottom, pullUp = s in PAPER_PULL_UP) { MainPane(vm, false, scan, onPrivacyChanged) }
                         }
-                    } }
+                    } } }
                     }
                 }
             }
@@ -340,7 +352,7 @@ internal fun PaperApp(
             } else {
                 PaperNav(vm, bar, float, Modifier.align(Alignment.BottomCenter).padding(start = 12.dp, end = 12.dp, bottom = barBottom), onTap, onHold)
             }
-            if (float && bar != "sub") PaperFab(vm, bar,
+            if (float && bar != "sub" && !noScanHere(vm)) PaperFab(vm, bar,
                 Modifier.align(Alignment.BottomEnd).padding(end = if (wide) 24.dp else 18.dp, bottom = if (wide) navInset + 24.dp else barBottom + 62.dp + 14.dp), onTap, onHold)
             vm.plusHint?.let { h ->
                 Box(Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = if (wide) navInset + 96.dp else barBottom + (if (float) 146.dp else 72.dp)).clip(RoundedCornerShape(12.dp)).background(p.ink).padding(12.dp, 8.dp)) {
@@ -368,7 +380,10 @@ internal fun PaperApp(
             if (vm.familyOpen) FamilyScreen(vm)
             if (vm.tasksOpen) TasksScreen(vm)
             if (vm.compareOpen) CompareScreen(vm)
+            // Prompt 23 (MOD): Finn-annonsen i fullskjerm (egen BackHandler, så tilbake lukker den uten forhåndsvisning).
+            if (vm.m23.finnAdFor != null) FinnAdScreen23(vm)
         }
+      }
     }
     if (vm.tabEdit) TabBarEditor(vm)
     if (vm.scanSheet) PaperScanSheet(vm, takePhoto, pickPhotos, pickFiles)
@@ -388,9 +403,11 @@ internal val PAPER_BAR = 82.dp
 
 /** De vanlige skjermene i Papir: plass til fanelinjen nederst. */
 @Composable
-private fun PaneBox(navBottom: Dp, content: @Composable () -> Unit) {
+private fun PaneBox(navBottom: Dp, pullUp: Boolean = false, content: @Composable () -> Unit) {
     // Innholdet går helt ned og scroller bak fanelinja og den røde +-knappen (listene har egen luft nederst).
-    Box(Modifier.fillMaxSize().padding(top = 23.dp)) { content() }
+    // Prompt 23: Finans-undersider der første element er et kort, legger kortet 23 dp opp i toppbildet som de andre sidene.
+    if (pullUp) Box(Modifier.fillMaxSize().pullUp(24.dp)) { content() }
+    else Box(Modifier.fillMaxSize().padding(top = 23.dp)) { content() }
 }
 
 /** Fotovinduet: bilde (Oslo, Vær nå, Planeter, eget) eller gradient, med hilsen eller sidetittel nederst. */
@@ -533,7 +550,7 @@ private fun PaperNav(vm: AppViewModel, bar: String, float: Boolean, modifier: Mo
                 Text(t.label, color = if (on) p.navActInk else p.navInk, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Clip)
             }
         }
-        if (!float || bar == "sub") ScanPress(vm, bar, Modifier.padding(start = 4.dp), 46.dp, CircleShape, onTap, onHold) { Text("+", color = p.onLab, fontSize = 22.sp) }
+        if ((!float || bar == "sub") && !noScanHere(vm)) ScanPress(vm, bar, Modifier.padding(start = 4.dp), 46.dp, CircleShape, onTap, onHold) { Text("+", color = p.onLab, fontSize = 22.sp) }
     }
 }
 

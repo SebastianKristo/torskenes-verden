@@ -601,11 +601,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (s == Screen.Homelab || s == Screen.Mat || s == Screen.Tracking || s == Screen.Domains) paperFin = false
         if (s != Screen.Finn) finnEdit = null
         trkEdit = false
-        launch { loadFor(s) }
+        // Prompt 23: forhåndsvisningen av tilbake (previewBack) kjører navigasjonen på prøve uten å hente data.
+        if (!navDry) launch { loadFor(s) }
     }
 
     /** Tilbake: lukker det som er åpent, ellers til forrige side (undersider av Mer → Mer, Finans og moduler → Homelab). */
     fun back(): Boolean {
+        if (!navDry) navBackSeq++
         when {
             newsOpen -> { if (newsSettings) newsSettings = false else newsOpen = false }
             original != null -> original = null
@@ -3402,6 +3404,44 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             message = if (e.status == 501) "Strekkodelesing er ikke satt opp på serveren (Roboflow). Skriv inn eller lim inn nummeret." else e.message
         } finally { barcodeBusy = false }
     }
+
+    /* ---------- Prompt 23 (MOD): Abonnementer, Finn-annonse, ikoner i Nyhetsleser, AI-tidsgrenser (Mod23.kt) ---------- */
+    /** Tilstanden for prompt 23-modulene. Kallene ligger som utvidelser i Mod23.kt; api og launch er private, så de deles her. */
+    val m23 = Mod23State()
+    internal suspend fun <T> api23(f: suspend Api.() -> T): T = api.f()
+    internal fun launch23(block: suspend () -> Unit) = launch(block)
+
+    /* ---------- Prompt 23 (NAV): sveip tilbake med forrige side bak, scrollposisjon per side (Nav23.kt) ---------- */
+    /** true mens previewBack kjører back() på prøve: ingen lasting og ingen telling. */
+    private var navDry = false
+    /** Øker ved hvert ekte back(). Nav23 skiller slik tilbake fra ny side (scrollposisjonen huskes bare ved tilbake). */
+    var navBackSeq by mutableStateOf(0)
+        private set
+
+    /**
+     * Hvor tilbake fører, uten å gå dit: back() kjøres i et eget Compose-snapshot som kastes etterpå,
+     * og read() leser tilstanden slik den ville blitt. null når tilbake ikke gjør noe (rotsiden).
+     */
+    fun <T> previewBack(read: () -> T): T? {
+        val savedBackTo = backTo
+        val snap = androidx.compose.runtime.snapshots.Snapshot.takeMutableSnapshot()
+        navDry = true
+        return try {
+            snap.enter { if (back()) read() else null }
+        } catch (_: Exception) {
+            null
+        } finally {
+            navDry = false
+            backTo = savedBackTo
+            snap.dispose()
+        }
+    }
+
+    /** Kall mot serveren og bakgrunnsjobber for Nav23/Receipts23 (api og launch er private). */
+    internal suspend fun <T> apiNav(f: suspend Api.() -> T): T = api.f()
+    internal fun launchNav(block: suspend () -> Unit) = launch(block)
+    /** Kvitteringer i Papir (Receipts23.kt): bokførte, åpen rad og «Klar» som er sett. */
+    val rc23 = no.kristo.finanshub.ui.Receipts23State()
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.

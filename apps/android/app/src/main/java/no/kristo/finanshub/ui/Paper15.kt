@@ -452,7 +452,7 @@ internal fun PaperRail(vm: AppViewModel, bar: String, float: Boolean, modifier: 
                 }
             }
         }
-        if (!float) ScanPress(vm, bar, Modifier, 56.dp, RoundedCornerShape(18.dp), onTap, onHold) { Text("+", color = p.onLab, fontSize = 22.sp) }
+        if (!float && !noScanHere(vm)) ScanPress(vm, bar, Modifier, 56.dp, RoundedCornerShape(18.dp), onTap, onHold) { Text("+", color = p.onLab, fontSize = 22.sp) }
     }
 }
 

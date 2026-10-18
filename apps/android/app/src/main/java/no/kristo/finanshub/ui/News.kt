@@ -69,13 +69,8 @@ internal fun NewsReader(vm: AppViewModel) {
                 ) { Text("⚙", color = p.ink, fontSize = 18.sp) }
             }
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 18.dp), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                cats.forEach { c ->
-                    val on = vm.newsCat == c.id
-                    Column(Modifier.width(IntrinsicSize.Max).clickable(role = Role.Tab) { vm.loadNews(c.id) }.padding(top = 6.dp)) {
-                        Text(c.name, color = if (on) p.ink else p.mut, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.padding(bottom = 8.dp))
-                        Box(Modifier.fillMaxWidth().height(2.dp).background(if (on) p.ink else Color.Transparent))
-                    }
-                }
+                // Prompt 23: ikon ved hver fane (følger tekstfargen).
+                cats.forEach { c -> NewsTab23(vm, c, vm.newsCat == c.id, p) { vm.loadNews(c.id) } }
             }
             Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
             LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(18.dp, 16.dp, 18.dp, 40.dp)) {
@@ -112,6 +107,7 @@ internal fun NewsReader(vm: AppViewModel) {
             }
         }
         if (vm.newsSettings) NewsSettings(vm, p, cats)
+        if (vm.m23.icPickFor != null) IconPicker23(vm, p, cats)
     }
 }
 
@@ -137,6 +133,7 @@ private fun NewsSettings(vm: AppViewModel, p: PaperPal, cats: List<NewsCategory>
                 NewsToggle("✦ AI-sammendrag", "Lager en kort ingress over de viktigste sakene øverst.", d?.aiSummary ?: true, p, false) { vm.setNewsSetting("aiSummary", it) }
                 NewsToggle("✦ AI-kategorisering", "Setter kategori per sak når kilden står på Auto.", d?.aiCategorize ?: true, p, true) { vm.setNewsSetting("aiCategorize", it) }
             }
+            NewsIconsSection23(vm, p, cats)
             Row(verticalAlignment = Alignment.Bottom) {
                 PLabel("Adresser · ${d?.feeds?.size ?: 0}", p.lab, modifier = Modifier.weight(1f))
                 Text("Trykk på kategorien for å endre", color = p.mut, fontSize = 12.sp)

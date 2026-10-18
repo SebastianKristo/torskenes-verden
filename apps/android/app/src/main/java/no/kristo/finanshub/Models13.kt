@@ -14,6 +14,8 @@ data class NewsCategory(val id: String, val name: String)
 data class NewsData(
     val items: List<NewsItem>, val feeds: List<NewsFeed>, val aiSummary: Boolean, val aiCategorize: Boolean,
     val digest: String?, val digestAt: String?, val categories: List<NewsCategory>,
+    /** Prompt 23: ikon per fane (ic, '' = ingen), kilden (std | ai | pick), «Vis ikoner» og serverens standardikoner. */
+    val ic: Map<String, String> = emptyMap(), val icSrc: Map<String, String> = emptyMap(), val icOn: Boolean = true, val iconDefaults: Map<String, String> = emptyMap(),
 )
 
 /** Kategoriene i leseren når serveren ikke sender egne. */
@@ -32,6 +34,8 @@ fun parseNewsItem(o: JSONObject) = NewsItem(
 
 fun parseNewsItems(a: JSONArray?): List<NewsItem> = a?.map(::parseNewsItem) ?: emptyList()
 
+private fun strMap(o: JSONObject?): Map<String, String> = o?.keys()?.asSequence()?.associateWith { o.optString(it) } ?: emptyMap()
+
 fun parseNews(s: String): NewsData {
     val o = JSONObject(s)
     val st = o.optJSONObject("settings")
@@ -44,6 +48,7 @@ fun parseNews(s: String): NewsData {
         st?.optBoolean("aiSummary", true) ?: true, st?.optBoolean("aiCategorize", true) ?: true,
         dg?.optStr("text") ?: (o.opt("digest") as? String), dg?.optStr("at"),
         o.optJSONArray("categories")?.map { NewsCategory(it.optString("id"), it.optString("name")) }?.takeIf { it.isNotEmpty() } ?: NEWS_CATS,
+        strMap(st?.optJSONObject("ic")), strMap(st?.optJSONObject("icSrc")), st?.optBoolean("icOn", true) ?: true, strMap(o.optJSONObject("iconDefaults")),
     )
 }
 

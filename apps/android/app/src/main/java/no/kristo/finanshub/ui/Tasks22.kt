@@ -98,7 +98,7 @@ private fun haTime(iso: String?): String = iso?.let { runCatching { Instant.pars
 
 /** «SYNK MED HOME ASSISTANT»: bryter, én rad per liste (trykk for å velge todo.*-entitet) og «↻ Synk nå». */
 @Composable
-internal fun TasksHaSection(vm: AppViewModel, lists: List<TaskList>) {
+internal fun TasksHaSection(vm: AppViewModel, lists: List<TaskList>, pad: androidx.compose.ui.unit.Dp = 16.dp) {
     val p = PaperPal.current
     val ha = vm.tasksHa ?: return
     var pick by remember { mutableStateOf<TaskList?>(null) }
@@ -109,7 +109,7 @@ internal fun TasksHaSection(vm: AppViewModel, lists: List<TaskList>) {
         ha.status == "ok" -> "Synket"
         else -> "Kobler til …"
     }
-    Column(Modifier.padding(horizontal = 16.dp).padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(Modifier.padding(horizontal = pad).padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.Bottom) {
             Text("SYNK MED HOME ASSISTANT", color = p.lab, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.26.sp, modifier = Modifier.weight(1f))
             Text(st, color = if (ha.status == "error" && ha.enabled) p.lab else p.mut, fontSize = 12.sp)

@@ -48,6 +48,9 @@ private fun SCard(content: @Composable ColumnScope.() -> Unit) =
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SubsMobileScreen(vm: AppViewModel) {
+    // Prompt 23: Papir bruker den nøyaktige kopien av Subscription OS (Subs23.kt). Her ligger den i PaneBox (23 dp toppmarg),
+    // så den løftes 23 dp for å overlappe toppbildet. Ruter Paper.kt direkte til PaperSubs23, brukes lift = 0.
+    if (vm.paper) { PaperSubs23(vm, WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding(), lift = 23.dp); return }
     var month by remember { mutableStateOf<Int?>(null) }
     // Per konto (prompt 21): avkrysningene tilhører brukeren, ikke telefonen.
     val doneKey = "subs_done" + (vm.account?.id ?: "")

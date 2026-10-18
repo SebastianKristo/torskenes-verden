@@ -311,7 +311,8 @@ internal fun PaperFinn(vm: AppViewModel, navBottom: Dp, wide: Boolean = false) {
         items(rows.size) { r ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 rows[r].forEach { d ->
-                    FinnCard(vm, d, Modifier.weight(1f)) { openLink(ctx, d.adUrl ?: d.code?.takeIf { c -> c.all(Char::isDigit) }?.let { "https://www.finn.no/recommerce/forsale/item/$it" } ?: "https://www.finn.no/") }
+                    // Prompt 23: trykk åpner annonsen i appen (FinnAd23), ikke på finn.no.
+                    FinnCard(vm, d, Modifier.weight(1f)) { vm.openFinnAd23(d.id) }
                 }
                 repeat(cols - rows[r].size) { Spacer(Modifier.weight(1f)) }
             }

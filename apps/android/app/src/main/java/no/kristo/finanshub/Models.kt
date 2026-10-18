@@ -34,7 +34,7 @@ data class Budget(
     val count: Int = 0, val topMerchant: String? = null, val prevUsed: Double? = null,
 )
 
-data class Job(val id: String, val name: String, val status: String, val progress: Int, val merchant: String?, val total: Double?)
+data class Job(val id: String, val name: String, val status: String, val progress: Int, val merchant: String?, val total: Double?, val statusText: String? = null)
 
 data class Receipt(
     val id: String, val status: String, val provider: String?, val seconds: Double?, val merchant: String?, val date: String?,
@@ -386,7 +386,7 @@ fun parseSummary(s: String): Summary {
 }
 
 fun parseJobs(s: String): List<Job> = JSONArray(s).map {
-    Job(it.getString("id"), it.optString("name", "Fil"), it.optString("status"), it.optInt("progress"), it.optStr("merchant"), it.optDoubleOrNull("total"))
+    Job(it.getString("id"), it.optString("name", "Fil"), it.optString("status"), it.optInt("progress"), it.optStr("merchant"), it.optDoubleOrNull("total"), it.optStr("statusText"))
 }
 
 fun parseMe(s: String): Me {

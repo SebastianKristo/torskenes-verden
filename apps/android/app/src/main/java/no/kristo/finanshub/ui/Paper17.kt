@@ -57,7 +57,7 @@ internal val PAPER_SET_TITLES = mapOf(
     "accounts" to "Kontoer og brukere", "security" to "Sikkerhet", "tokens" to "API-tokens", "ai" to "AI og tolkning",
     "cats" to "Kategorier og budsjett", "rules" to "Regler", "stocks" to "Aksjer · Trading 212", "fin" to "Fanelinje og Mer i Finans",
     "modules" to "Moduler", "look" to "Utseende og fanelinje", "notify" to "Varsler og haptikk", "haptics" to "Haptikk",
-    "scan" to "Skanning", "server" to "Server og synk", "data" to "Data og lagring", "backup" to "Backup og data", "about" to "Om appen", "healthpos" to "Helse og posisjon",
+    "scan" to "Skanning", "server" to "Server og synk", "data" to "Data og lagring", "backup" to "Backup og data", "about" to "Om appen", "healthpos" to "Helse og posisjon", "integ" to "Integrasjoner",
 )
 
 /**
@@ -82,7 +82,8 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
             "accounts" -> item { AccountsPage(vm) }
             "security" -> item { SecurityPage(vm, onPrivacyChanged) }
             "tokens" -> item { TokensPage(vm) }
-            "ai" -> item { AiPage(vm) }
+            "ai" -> { item { AiPage(vm) }; item { AiTimeouts23(vm) } }
+            "integ" -> item { IntegrationsPage23(vm) }
             "cats" -> item { CategoriesPage(vm) }
             "rules" -> item { RulesPage(vm) }
             "stocks" -> item { StocksPrefsPage(vm) }
@@ -139,6 +140,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
     group("App") { i ->
         SetRow(vm, i(), Icons.Filled.Palette, "Utseende og fanelinje", "Papir ${when (vm.paperMode) { "mork" -> "mørk"; "lys" -> "lys"; else -> "· følger systemet" }} · bakgrunn · ikonfarger") { vm.settingsPage = "look" }
         SetRow(vm, i(), Icons.Filled.Notifications, "Varsler og haptikk", "Lyd, stille timer og test", top = true) { vm.settingsPage = "notify" }
+        SetRow(vm, i(), Icons.Filled.Home, "Integrasjoner", "Home Assistant", top = true) { vm.settingsPage = "integ" }
         SetRow(vm, i(), Icons.Filled.MonitorHeart, "Helse og posisjon", "Health Connect, typer og posisjonsdeling", top = true) { vm.settingsPage = "healthpos" }
         SetRow(vm, i(), Icons.Filled.DocumentScanner, "Skanning", "Kamera, beskjæring og opplasting", top = true) { vm.settingsPage = "scan" }
         SetRow(vm, i(), Icons.Filled.Dns, "Server og synk", "Lokal og ekstern adresse", top = true) { vm.settingsPage = "server" }
