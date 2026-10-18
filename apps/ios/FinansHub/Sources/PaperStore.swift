@@ -85,7 +85,7 @@ extension Store {
     /* ---------- Papir-navigasjon ---------- */
 
     /// Finans i Papir har egen fanelinje: Oversikt, Liste, Finn og Mer.
-    nonisolated static let paperFinTabs = ["finans", "fliste", "finn", "fmer", "fsok", "ftx", "abo", "aksjer", "boliger"]
+    nonisolated static let paperFinTabs = ["finans", "fliste", "finn", "fmer", "fsok", "ftx", "abo", "aksjer", "boliger", "kvitt"]
     /// Domener i Papir: Oversikt, Publikum, Ytelse og Infra.
     nonisolated static let paperDomTabs = ["domener", "dpub", "dytl", "dinf"]
 
@@ -127,6 +127,8 @@ extension Store {
         case "fliste": go(.list)
         case "finn": go(.finn)
         case "aksjer": Task { await self.loadStocksQuiet() }
+        // Prompt 23: Kvitteringer i Papir (Receipts23.swift) laster selv.
+        case "kvitt": break
         case "boliger": Task { await self.loadBoligerList() }
         case "familie": Task { await FamilyModel.shared.load(self) }
         case "avg": Task { await RuterModel.shared.load(self) }
@@ -162,6 +164,7 @@ extension Store {
         if paperTab == "huske" { paperGo("mer"); return }
         if paperTab == "boliger" && folder != nil { folder = nil; return }
         if (paperTab == "aksjer" && !finNav.contains("aksjer")) || (paperTab == "boliger" && !finNav.contains("boliger")) { paperGo("fmer"); return }
+        if paperTab == "kvitt" && !finNav.contains("kvitteringer") { paperGo("fmer"); return }
         paperGo("hjem")
     }
 
@@ -182,6 +185,9 @@ extension Store {
     /// En hel side fra den klassiske appen (Domener, Aksjer, Abonnementer, Boliger, Innstillinger …).
     func paperOpen(_ m: Module) {
         if paperTapBlocked { return }
+        // Prompt 23: Kvitteringer og Aksjer er Papir-sider med toppbilde (ikke sidene fra den klassiske appen).
+        if m == .upload { paperGo("kvitt"); return }
+        if m == .stocks { paperGo("aksjer"); return }
         paperFin = nil
         openSub(m)
     }
@@ -209,6 +215,7 @@ extension Store {
         if paperTab == "boliger" && folder != nil { folder = nil; return }
         if paperTab.hasPrefix("innst-") || paperTab == "profil" { paperGo("innst"); return }
         if paperTab == "huske" { paperGo("mer"); return }
+        if nav23SubOfFinMore { paperGo("fmer"); return }
         if paperFin != nil { paperFin = nil; go(.home); return }
         if paperTrackFull { paperTrackFull = false; return }
         if paperClassic != nil { back(); return }
@@ -229,6 +236,7 @@ extension Store {
         newsOpen || dishSel != nil || paperInner || paperFin != nil || paperTrackFull || paperClassic != nil || paperInDomains
             || paperTab == "ftx" || paperEditPage != nil || (paperTab == "abo" && !finNav.contains("abonnementer"))
             || paperTab.hasPrefix("innst-") || paperTab == "profil" || paperTab == "huske" || (paperTab == "boliger" && folder != nil)
+            || nav23SubOfFinMore
     }
 
     /// Oversikt og kontoer til Papir-Finans (uten feilmelding når serveren ikke svarer).

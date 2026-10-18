@@ -37,6 +37,7 @@ struct NewsReaderView: View {
                 .presentationBackground(p.bg)
         }
         .task { if store.news == nil { await store.loadNews() } }
+        .task { await NewsIcons23.shared.load(store) }
     }
 
     private func header(_ d: NewsData) -> some View {
@@ -73,7 +74,8 @@ struct NewsReaderView: View {
                 ForEach(d.categories) { c in
                     let on = store.newsCat == c.id
                     Button { store.setNewsCat(c.id) } label: {
-                        Text(c.name).font(PF.ui(14, .semibold)).foregroundStyle(on ? p.ink : p.mut)
+                        // Prompt 23: ikon ved navnet (følger tekstfargen), se News23.swift.
+                        NewsTabLabel23(cat: c, color: on ? p.ink : p.mut)
                             .padding(.top, 6).padding(.bottom, 10)
                             .overlay(alignment: .bottom) { Rectangle().fill(on ? p.ink : Color.clear).frame(height: 2) }
                     }
@@ -124,6 +126,7 @@ struct NewsSourcesSheet: View {
     @Environment(\.paper) private var p
     @Environment(\.dismiss) private var dismiss
     @State private var url = ""
+    @State private var iconFor: NewsCategory? = nil
 
     var body: some View {
         let d = store.news ?? NewsData()
@@ -143,6 +146,7 @@ struct NewsSourcesSheet: View {
                     toggle("✦ AI-kategorisering", "Setter kategori per sak når kilden står på Auto.", d.aiCategorize) { store.setNewsSetting("aiCategorize", $0) }
                 }
                 .background(p.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                NewsIconSection23(cats: d.categories) { c in iconFor = c }
                 HStack(alignment: .firstTextBaseline) {
                     PLabel(text: "Adresser · \(d.feeds.count)")
                     Spacer()
@@ -176,6 +180,11 @@ struct NewsSourcesSheet: View {
         }
         .background(p.bg)
         .environment(\.colorScheme, p.dark ? .dark : .light)
+        .sheet(item: $iconFor) { c in
+            NewsIconPicker23(cat: c).environment(\.paper, p)
+                .presentationDetents([.fraction(0.86), .large])
+                .presentationBackground(p.bg)
+        }
     }
 
     private func add() {

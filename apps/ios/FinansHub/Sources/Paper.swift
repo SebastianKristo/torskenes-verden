@@ -159,7 +159,8 @@ struct PaperShell: View {
             let wide = g.size.width >= 600
             let bottom = Swift.max(12, g.safeAreaInsets.bottom - 8)
             let showBar = !store.newsOpen && store.dishSel == nil
-            let fab = showBar && store.fabMode == "float" && store.paperTab != "abo" && store.paperTab != "familie"
+            // Prompt 23: ingen skann-knapp på Aksjer.
+            let fab = showBar && store.fabMode == "float" && store.paperTab != "abo" && store.paperTab != "familie" && !store.nav23NoScan
             ZStack(alignment: wide ? .topLeading : .bottom) {
                 p.bg.ignoresSafeArea()
                 VStack(spacing: 0) {
@@ -384,7 +385,7 @@ struct PaperTabBar: View {
         } else {
             HStack(spacing: 2) {
                 ForEach(tabs, id: \.0) { t in tab(t.0, t.1, t.2, on: cur == t.0) }
-                if (!floating && store.paperTab != "familie") || store.paperTab == "abo" {
+                if (!floating && store.paperTab != "familie" && !store.nav23NoScan) || store.paperTab == "abo" {
                     PaperPlusButton(label: plusLabel, tap: plusTap, hold: plusHold)
                         .padding(.leading, 4)
                 }
@@ -456,6 +457,8 @@ struct PaperTabBar: View {
             return
         }
         if id == "mer" && store.paperTab == "familie" { store.paperMainTab("mer"); return }
+        // Prompt 23: «Mer» på en Finans-underside åpner Finans → Mer (ikke den globale Mer, og ikke tilbake).
+        if id == "fmer" && store.paperInFinance { store.nav23FinMore(); return }
         if on {
             if store.paperInner || store.paperFin != nil || store.paperClassic != nil { store.paperBack() }
             return
@@ -780,7 +783,8 @@ struct PaperPage: View {
         case "innst": PaperSettings17()
         case "huske": PaperTasksView()
         case "domener", "dpub", "dytl", "dinf": PaperDomains()
-        case "aksjer": PaperStocks()
+        case "aksjer": Stocks23Page()
+        case "kvitt": Receipts23Page()
         case "boliger": PaperBoliger()
         case "familie": FamilyView()
         case "avg": PaperDepartures()
@@ -963,6 +967,9 @@ struct PaperHero: View {
         case "fliste": return "\(monthName()) · alle kontoer"
         case "finn": return "Kjøp og salg"
         case "fmer": return "Alt fra FinansHub på nettsiden"
+        case "kvitt":
+            let n = store.reviewCount ?? 0
+            return n > 0 ? "\(n) til gjennomgang" : "Kø og bokført"
         case "fsok": return "Transaksjoner, kvitteringer og varelinjer"
         case "ftx": return "Transaksjon"
         case "abo": return "Abonnementer, kalender og AI-sparing"
@@ -987,6 +994,7 @@ struct PaperHero: View {
         case "fliste": return "Liste"
         case "finn": return "Finn"
         case "fmer": return "Mer"
+        case "kvitt": return "Kvitteringer"
         case "fsok": return "Søk"
         case "ftx": return "Detaljer"
         case "abo": return "Subscription OS"

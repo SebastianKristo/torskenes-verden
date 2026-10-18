@@ -186,6 +186,22 @@ struct PaperFinn: View {
             }
         }
         .task { if store.finn == nil { try? await store.loadFinn() } }
+        // Prompt 23: et trykk på kortet åpner annonsen i appen (FinnAd23.swift), ikke på finn.no. ✎ åpner redigeringen.
+        .fullScreenCover(isPresented: Binding(get: { FinnAd23Model.shared.openId != nil }, set: { if !$0 { FinnAd23Model.shared.openId = nil } })) {
+            if let id = FinnAd23Model.shared.openId, let d = all.first(where: { $0.id == id }) {
+                FinnAd23View(deal: d) { openEdit(d) }
+                    .environment(\.paper, p)
+            } else {
+                Color.clear.onAppear { FinnAd23Model.shared.openId = nil }
+            }
+        }
+    }
+
+    /// ✎ i annonsen: lukk den og åpne den gamle redigeringen under rutenettet.
+    private func openEdit(_ d: FinnDeal) {
+        FinnAd23Model.shared.openId = nil
+        editId = d.id
+        store.openFinn(d.id)
     }
 
     private func toggleEdit(_ d: FinnDeal) {
@@ -333,11 +349,9 @@ struct PaperFinnCard: View {
         return p.line
     }
 
-    /// Annonsen på finn.no (åpnes i Finn-appen når den finnes).
+    /// Prompt 23: annonsen åpnes i appen (bilder, info, Fiks ferdig, e-poster og meldinger), ikke på finn.no.
     private func openAd() {
-        if let u = d.adUrl, !u.isEmpty { store.openLink(u); return }
-        if let c = d.code, !c.isEmpty, c.allSatisfy(\.isNumber) { store.openLink("https://www.finn.no/recommerce/forsale/item/\(c)"); return }
-        store.flash("Handelen har ingen annonse ennå. Trykk ✎ for å legge inn lenken.")
+        FinnAd23Model.shared.open(d.id, store)
     }
 }
 

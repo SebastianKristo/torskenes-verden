@@ -598,6 +598,7 @@ struct PaperSettings17: View {
             group("App", 2, [
                 PaperLinkRow(name: "Utseende og fanelinje", sub: themeSub, icon: "paintpalette") { store.paperGo("innst-ut") },
                 PaperLinkRow(name: "Varsler og haptikk", sub: NotifyModel.shared.on ? "På · \(NotifyModel.sounds.first { $0.0 == NotifyModel.shared.sound }?.1 ?? "")" : "Av", icon: "bell") { store.paperGo("innst-varsler") },
+                PaperLinkRow(name: "Integrasjoner", sub: "Home Assistant og synk av lister", icon: "point.3.connected.trianglepath.dotted") { store.paperGo("innst-integ") },
                 PaperLinkRow(name: "Helse og posisjon", sub: HealthSync.shared.master ? "Apple Health er på · posisjon og bakgrunn" : "Apple Health er av · posisjon og bakgrunn", icon: "heart.text.square") { store.paperGo("innst-helse") },
                 PaperLinkRow(name: "Avansert", sub: "Skanning, widgets, server og data", icon: "gearshape.2") { store.paperGo("innst-avansert") },
             ])
@@ -701,6 +702,7 @@ struct PaperSettingsSub: View {
             case "sik": SettingsSubpage(page: "security")
             case "api": SettingsSubpage(page: "tokens")
             case "ai": PaperAiSettings()
+            case "integ": PaperIntegrations23()
             case "kat": SettingsSubpage(page: "cats")
             case "regler": SettingsSubpage(page: "rules")
             case "aksjer": SettingsSubpage(page: "stocks")
@@ -726,6 +728,7 @@ struct PaperSettingsSub: View {
         "sik": ("Sikkerhet", "2FA, Face ID og enheter"),
         "api": ("API-tokens", "Snarveier og integrasjoner"),
         "ai": ("AI og tolkning", "Motorer, roller og sikkerhet"),
+        "integ": ("Integrasjoner", "Home Assistant og synk"),
         "kat": ("Kategorier og budsjett", "Farger og budsjett per måned"),
         "regler": ("Regler", "Tekst inneholder … → kategori"),
         "aksjer": ("Aksjer · Trading 212", "Nøkkel, miljø og synk"),
@@ -943,6 +946,8 @@ struct PaperAiSettings: View {
                     }
                 }
             }
+            // Prompt 23: tidsgrense per motor, nye forsøk og hva som skjer ved tidsavbrudd (AiTimeouts23.swift).
+            AiTimeouts23()
             PLabel(text: "Hvem gjør hva").padding(.leading, 4).padding(.top, 14)
             PCard(padding: 0) {
                 VStack(spacing: 0) {

@@ -1278,7 +1278,8 @@ final class Store {
         // Skann/opplasting inne i en bolig: kvitteringen havner i valgt bolig, og AI velger kategori og underkategori.
         if module == .folders || paperTab == "boliger", editing == nil, let bolig = uploadFolder ?? folder?.id { uploadToFolder(bolig, files); return }
         // Fra «Legg ved kvittering» i skjemaet: bli stående, kvitteringen kobles når den bokføres.
-        if editing != nil { flash("Kvitteringen er lagt i opplastingskøen") } else if module != .upload { openSub(.upload) }
+        // Prompt 23: i Papir havner kvitteringen i KØ på Kvitteringer-siden (Receipts23.swift).
+        if editing != nil { flash("Kvitteringen er lagt i opplastingskøen") } else if paper { if paperTab != "kvitt" { paperGo("kvitt") } } else if module != .upload { openSub(.upload) }
         guard canUpload else {
             for f in files { enqueuePending(f, folder: nil, error: "Venter på Wi-Fi") }
             flash("\(files.count) kvittering(er) venter på Wi-Fi")

@@ -542,6 +542,7 @@ extension Store {
         case "ftx": return "Liste"
         case "abo": return finNav.contains("abonnementer") ? "Hjem" : "Mer"
         case "aksjer": return finNav.contains("aksjer") ? "Hjem" : "Mer"
+        case "kvitt": return finNav.contains("kvitteringer") ? "Hjem" : "Mer"
         case "boliger": return folder != nil ? "Boliger" : (finNav.contains("boliger") ? "Hjem" : "Mer")
         case "profil": return "Alle innstillinger"
         case "huske": return "Mer"

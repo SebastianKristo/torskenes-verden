@@ -372,7 +372,7 @@ struct RootView: View {
         if store.scanTarget == "recipe" { store.scanRecipe(files) } else {
             store.upload(files)
             // Papir: filene havner i køen i Skann-arket.
-            if store.paper && !files.isEmpty { store.paperScanOpen = true }
+            if store.paper && !files.isEmpty && store.paperTab != "kvitt" { store.paperScanOpen = true }
         }
         store.scanTarget = "receipt"
     }
