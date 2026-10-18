@@ -193,6 +193,10 @@ struct HealthPosSettings20: View {
                         await h.syncNow(store.api)
                     }
                 }
+                if let why = HealthDiag25.problem(lastError: h.lastError) {
+                    HealthDivider20()
+                    HealthDiagRow25(text: why)
+                }
             }
         }
         .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
