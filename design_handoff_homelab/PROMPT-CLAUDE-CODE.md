@@ -879,3 +879,93 @@ Sammenlign alltid med `design/FinansHub Mobil v2.dc.html`. Designet er fasiten.
   - **Innstillinger:** tema (Papir lys/mørk, eller tilbake til Klassisk), bakgrunn og nyhetsleser.
 - **Felles nyhetsleser:** `design/Nyhetsleser.dc.html` (variant web/mobil) brukes både i Papir-appen og i Homelab v2 på nett, der du trykker «SISTE NYTT ›» i nyhetsbaren. Kilder og AI-valg lagres samlet (`hl_rss`).
 - Alle funksjonene fra den klassiske appen skal finnes i Papir. Undersidene i prototypen viser oppsettet, og innholdet hentes fra de samme API-ene.
+- **Ingen hjem-knapp i fanelinjen utenfor startsiden.** I Finans, Mat, Domener og de andre modulene går brukeren tilbake til startsiden med pila øverst til venstre. Valget «Knapp i linjen» er fjernet. I Papir vises fanen «Hjem» bare på Hjem.
+- **Papir → Finans** har sin egen fanelinje med Oversikt, Liste, Finn, Mer og + (Legg til kvittering).
+  - **Liste:** søk med ✦ AI og kategorifiltre (Alle, Til gjennomgang og kategorier), netto for utvalget, og et trykk åpner detaljer med original kvittering og bankutskrift.
+  - **Mer:** Budsjett, Kvitteringer, Faste trekk, Kontoer, Aksjer, Abonnementer, Boliger, Import, Rapporter og Innstillinger.
+  - **+:** kamera og filer med kø.
+  - Pila øverst til venstre går til Homelab-startsiden.
+- **+-knappen (Papir):** et trykk åpner valgarket (Kamera / Bilder eller filer). Holder brukeren inne i 450 ms, åpnes filvelgeren direkte for opplasting, med haptisk tikk og en kort hint-boble. Filene havner i køen i arket.
+- **Papir → Finans → Finn:**
+  - **Netto i år:** kortet viser stolper for kjøpt og solgt.
+  - **Filtre:** Alle, På vei, Kjøpt, Solgt og Fullført, med antall.
+  - **«+ Legg til kjøp eller salg»:** brukeren velger type og fyller inn Finn-lenke (AI henter tittel, pris, tekst og bilder), tittel, pris og selger eller kjøper.
+  - **Hver handel:** viser steg-linje og neste handling. Et trykk åpner redigering av tittel, pris og person, valg av status (Betalt, Sendt, Mottatt, Godkjent eller Solgt, Sendt, Levert, Utbetalt), opplasting av kvittering og bilder, «Annonse ↗», Lagre og Slett.
+  - **Visning:** et rutenett med to kort i bredden. Hvert kort har bilde fra annonsen (eller første opplastede bilde), statusmerke, steg-linje, pris, tittel og rolle. Et trykk på kortet åpner annonsen på finn.no (dyplenke til Finn-appen). ✎ øverst til høyre åpner redigering under rutenettet.
+- **Papir → Sporing:**
+  - **Faner øverst:** Aktive, Klar for henting, På vei, Registrert, Levert og Alle, med antall.
+  - **Pakkekort:** et trykk åpner sporingen hos transportøren.
+  - **Legg til:** et felt for sporingsnummer der transportøren gjenkjennes.
+  - **⚙ «Varsler og kilder»:** varsler for ny pakke, klar for henting, ute for levering, forsinket og levert. Kildene er E-post (Proton), Finn og automatisk arkivering av leverte. Valgene lagres per bruker.
+- **Fanelinjen i Papir (rettet etter skjermbilde fra iPhone):**
+  - **Plassering:** linjen ligger lavere, 12 pt over safe area-bunnen (`bottom: max(12px, env(safe-area-inset-bottom) - 8px)`), ikke flytende høyt oppe.
+  - **Fordeling:** fanene fordeles jevnt (`flex:1`, aktiv fane `flex:none`), og +-knappen står rett etter Mer med 4 pt avstand. Bruk ikke `justify-content:space-between`.
+  - **Innholdet:** stopper over linjen (padding-bottom = høyden på linjen + bunnmarg), så ingenting, for eksempel nyhetskilder, synes under eller bak linjen.
+  - **«Ikke innlogget»-toasten** skal ligge over fanelinjen, ikke midt i innholdet. Den skal heller ikke vises når brukeren er innlogget.
+- **Bakgrunnsvelger på Hjem (Papir):**
+  - **Egen meny:** lag en egen dropdown-komponent som i designet: papirfarget panel (#f3efe6) med radius 18, skygge og bilderuter 30×30 med radius 8. Hver rad har navn og undertekst, ✓ på valgt rad og «+ Eget bilde» nederst. **Ikke bruk** iOS UIMenu/`.contextMenu` eller Android DropdownMenu/PopupMenu. Panelet åpnes under pillen med fade og skalering fra 0,96, og lukkes når brukeren trykker utenfor.
+  - **Bildene virker ikke i appen.** Last ned og cache dem lokalt, og bruk ikke Wikimedia `Special:FilePath`-lenker direkte, siden de redirecter og blokkeres av ATS/hotlink. Serveren laster ned én gang til `/media/bg/` og leverer dem via API-et med cache.
+    - **Oslo:** et fast lokalt bilde.
+    - **Vær nå:** velger bilde ut fra værkoden fra MET/Yr (klart, skyet, regn, snø, tåke, natt), oppdatert hver time.
+    - **Planeter:** dagens NASA APOD-bilde, eller et planetbilde hvis APOD er en video. Hentes én gang i døgnet med API-nøkkelen fra Integrasjoner.
+    - **Eget bilde:** lastes opp til serveren og synkes mellom enheter.
+  - **Lesbarhet og feil:** bildet får mørk toning øverst og nederst (`linear-gradient(180deg,rgba(0,0,0,.25),transparent 35%,rgba(0,0,0,.45))`), så teksten alltid er lesbar. Hvis et bilde ikke laster, vises gradienten, og det kommer en liten feilmelding i loggen.
+- **Bakgrunnsvelger (Papir Hjem):** bruk en egen dropdown, ikke native `<select>`/UIMenu/Spinner. Valgene er Nåværende, Oslo, Vær nå, Planeter og Eget bilde, hver med miniatyr, undertekst og ✓.
+  - **Bildene:** last dem ned på serveren og server dem lokalt (`/assets/bg/…`), ikke hotlink til Wikimedia.
+  - **Vær nå:** bytter mellom klart, skyet og regn ut fra Open-Meteos `weather_code`.
+  - **Planeter:** roterer daglig.
+  - **Når et bilde feiler:** prøv neste i settet. Hvis alle feiler, vis gradienten og «Fikk ikke lastet bildet · trykk for å prøve igjen».
+- **Sporing:** vis transportørens logo (PostNord, Posten, Bring, DHL, Helthjem, UPS, GLS, Instabox, Budbee) på hvert pakkekort og i Hjem-kortet. Logoene ligger i `/assets/carriers/*.svg`, og fallback er initialer på merkefarge.
+
+## Homelab web, tema «Vindu og papir» (2c), fullført
+- Se `design/Homelab Papir Web.dc.html`. Layouten er flytende: maks 1440 px og sentrert, sidemarg `clamp(16px,3vw,44px)`, og spaltene bruker `repeat(auto-fit,minmax(320px,1fr))`. Ingen faste bredder, så profil og meny holder seg alltid inne på siden.
+- **Topplinje:** logo, faner (rulles sideveis ved behov), egen bakgrunnsvelger (Oslo / Vær nå / Planeter / Ingen bilde) og profilmeny (Innstillinger, Bytt tema, Logg ut).
+- **Sider:** Dashboard, Studie, Rom, Økonomi, Hjem, Mat, Sporing, Domener og Nettverk, alle i avisstil.
+  - **Mat:** dagens rett i limegrønt, ukeplan med ★ for faste retter, oppskriftsmapper med bilder, og knappene Skann/Importer.
+  - **Sporing:** faner, pakkekort med logo, felt for sporingsnummer, og varsler og kilder.
+- Dashboardet har en høy bildeheader. De andre sidene har en lav header (240 px) med sidetittel.
+
+## Standardtema, innlogging og onboarding (18.10.2026)
+- **Nye installasjoner:** Papir er standard. På nett brukes Homelab «Vindu og papir» (`hl_theme` = `2c` når ingen verdi er satt), og på mobil Papir (`mobTheme` = `Papir`). Eksisterende valg beholdes.
+- **Innlogging i Papir (mobil):**
+  - Fotoheader, deretter feltene Server, Brukernavn og Passord som understrekede felter, Logg inn, og Face ID / fingeravtrykk.
+  - Deretter 2FA-steg med sekssifret kode og «Husk denne enheten i 30 dager».
+- **Onboarding (første gang etter innlogging, 3 steg):**
+  1. Velg design: Papir lys, Papir mørk eller Klassisk.
+  2. Velg bakgrunn på Hjem.
+  3. Varsler og tilgang: varsler, kamera, biometri og haptikk.
+  Alt kan endres senere. «Logg ut» ligger under Innstillinger → Konto.
+- **Mørk Papir, rettede fargekomboer:**
+  - **Fanelinje:** mørk (#2a2821), aktiv fane lys (#ece7dc) med mørk tekst, inaktive faner #a39d90.
+  - **+-knapp:** #f08a76 med mørk ikonfarge.
+  - **Rullegardiner:** bruker mørk flate, ikke lyst papir.
+  - **Dempet tekst:** #a39d90 (≥4,5:1 mot #14130f).
+- **Homelab web, fanen Økonomi:** åpner FinansHub direkte i fullskjerm (samme som i det klassiske temaet). Ingen mellomside. Lukk/tilbake i FinansHub går til Homelab. Penger-kortene på Dashboard åpner også FinansHub.
+- **Papir web, Rom:** samme innhold og datakilder som i det klassiske temaet.
+  - **Starlink:** CelesTrak TLE + satellite.js, med antall over Norge og over horisonten fra valgt by, by-velger, liste over de som står høyest på himmelen, og et kart over Norden tegnet på papirfarge (Norge uthevet, røde prikker for satellittene, oppdateres hvert 3. sekund).
+  - **NASA:** APOD med bilde og tekst, og gallerier fra NASA Image Library (Mars, Webb og Hubble).
+- **Papir web, Domener:** `design/Homelab Domener Papir.dc.html` har samme funksjoner som den klassiske Domener-siden (alle domener eller ett av gangen, perioder, statistikk, verdenskart, enheter, oppetid og hendelser) i papirfarger. Kartet bruker lo #eadfca og hi #b23a2a.
+- **Finn → detaljvisning av en handel (web), rettet etter skjermbilde:**
+  - **Feilen:** tittel og kortoverskrifter arvet tekstfargen fra papirtemaet og ble mørke på mørk bakgrunn. Sett tekstfarge eksplisitt på panelet og på alle overskrifter (`color: var(--ink)` fra panelets eget tema), aldri `inherit` fra siden rundt.
+  - **Ny layout:** header med rolle, Finn-kode, stor tittel, beløp og motpart. Under den en statuslinje med stegene som segmenter. To kolonner: Annonsen (bilder i rutenett, tittel, pris, sted og beskrivelse) til venstre, og Kvittering, Bilder og E-poster til høyre.
+  - **E-postlisten:** høyst 420 px høy med egen scroll, så 43 e-poster ikke skyver resten ut av syne.
+- **FinansHub web, innholdsbredde:** innholdet starter rett ved sidemenyen. Bruk `max-width:1760px; margin:0`, ikke sentrert `margin:0 auto` med 1320 px, og sidepadding `clamp(16px,2.4vw,40px)`. Det gir ikke noe tomrom til venstre på brede skjermer.
+- **Sporing, endre rekkefølge (iOS og Android):** et langt trykk (500 ms) på et kort setter siden i redigeringsmodus. Kortene vugger, hvert kort får ▲/▼, og øverst vises en «Ferdig»-linje. Kortene er Legg til + kilder, Sendinger, Varsler og Transportører. Rekkefølgen lagres per bruker (`trk_order`) med en haptisk tikk ved hvert flytt. I appen bør man også kunne dra kortene med UICollectionView/LazyColumn reorder.
+- **Finn-handler (web), valgt design 2a** (se `design/Finn Handler Web Varianter.dc.html#2a`, bygget inn i FinansHub v2 → Finn-handler):
+  - **Toppstripe:** «Trenger deg nå» (første handel som venter på brukeren, med knapp) og KPI-ene Kjøpt i år, Solgt i år og Pågående.
+  - **Filtre:** Alle, Trenger handling, På vei, Kjøpt, Solgt og Fullført, med antall.
+  - **Kortene:** gruppert under TRENGER HANDLING, PÅ VEI og FULLFØRT, i et rutenett (`auto-fill, minmax(250px,1fr)`). Hvert kort har bilde fra annonsen, rollemerke, beløp på bildet, tittel, tidslinje med prikker for stegene, neste steg, dato, motpart og vedlegg. Kort som trenger handling har oransje ramme.
+  - **Et trykk på kortet** åpner detaljvisningen under rutenettet.
+  - Tavle og Liste kan komme som alternative visninger senere.
+- **Subscription OS, rediger og legg til (web og mobil):**
+  - **Åpne redigering:** trykk på et abonnement (tabellrad, «Endre», raden i «Neste trekk» eller i historikken). «Skriv inn selv» åpner det samme arket tomt.
+  - **Felter:** logo (last opp, eller «✦ Finn logo med AI» som slår opp tjenestens domene og henter logo, med opplasting som fallback), navn, pris, plan, kategori, hvor ofte (månedlig, årlig, hvert 2. år), faktureringsdato som dag + måned (vist som «Neste trekk 21. oktober, deretter hvert år») og status. Knappene er Lagre og Slett.
+  - **Datamodell:** `subscription(name, plan, price, cycle, bill_day, bill_month, category, status, logo_url)`.
+- **Søkefelt med ✦ AI (FinansHub web):** feltet er en pille (høyde 44, radius 22), og AI-knappen inni er også en pille (høyde 34, radius 17, 5 px innrykk fra høyre kant), så formene følger hverandre. Bruk samme radius i alle temaer.
+- **Papir mobil, Domener:** egen fanelinje med Oversikt, Publikum, Ytelse og Infra (og + Legg til domene). Alle bruker samme komponent som web (`Homelab Domener Papir`, prop `section` = oversikt/publikum/ytelse/infra), så all statistikken er med.
+  - **Oversikt:** domenevelger, periode, KPI-er, trafikkgraf og sanntid.
+  - **Publikum:** verdenskart, topp land, enheter, nettlesere, topp sider og henvisere.
+  - **Ytelse:** statuskoder, TTFB og sikkerhet.
+  - **Infra:** oppetid i 90 dager, DNS-poster og domeneinfo.
+  - Pila øverst går tilbake dit brukeren kom fra (Hjem eller Mer).
+- **FinansHub web, sidemeny:** «Import» skal ikke ligge i sidemenyen (GENERELT). All import (bank, Excel/CSV, Finn-e-poster, Finn-lenker) ligger bare under Innstillinger → Import. Fjern `imp` fra listen over menyelementer og fra «Sidemeny»-innstillingen. Lenker som peker til import, skal åpne Innstillinger → Import.

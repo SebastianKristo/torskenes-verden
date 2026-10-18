@@ -7,6 +7,7 @@
 </head>
 <body>
 <x-dc>
+<helmet><style>@keyframes trkWigA{0%,100%{transform:rotate(-.6deg)}50%{transform:rotate(.6deg)}}@keyframes trkWigB{0%,100%{transform:rotate(.6deg)}50%{transform:rotate(-.6deg)}}</style></helmet>
 <div style="display:flex;flex-direction:column;gap:20px;color:#eef0f4;min-width:0;height:100%;box-sizing:border-box">
 <sc-if value="{{ isWidget }}">
 <div style="height:{{ wH }};box-sizing:border-box;padding:{{ wPad }};border-radius:{{ wR }};background:{{ wBg }};backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:12px;min-width:0">
@@ -29,7 +30,10 @@
 <sc-if value="{{ isPage }}">
 <sc-if value="{{ isWeb }}"><div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap"><div style="font-size:40px;font-weight:300">Spor<b style="font-weight:700">ing</b></div><div style="font-size:15px;color:#a8b0c0">{{ sumTxt }}</div></div></sc-if>
 <sc-if value="{{ isMob }}"><div style="display:flex;flex-direction:column;gap:4px;padding:0 4px"><div style="font-size:32px;font-weight:700;letter-spacing:-.02em">Sporing</div><div style="font-size:14px;color:#a8b0c0">{{ sumTxt }}</div></div></sc-if>
-
+<sc-if value="{{ ro.on }}"><div style="order:-1;position:sticky;top:8px;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px 10px 16px;border-radius:16px;background:#eef0f4;color:#0c1119;box-shadow:0 10px 30px rgba(0,0,0,.4)"><span style="font-size:14px;font-weight:600">Flytt kortene med ▲ ▼</span><button onClick="{{ ro.done }}" style="height:34px;padding:0 16px;border-radius:17px;border:0;background:#0c1119;color:#eef0f4;cursor:pointer;font-weight:700;font-family:inherit">Ferdig</button></div></sc-if>
+<sc-if value="{{ ro.off }}"><div style="order:-1;font-size:12px;color:#8a93a6;padding:0 4px">Hold inne et kort for å endre rekkefølgen</div></sc-if>
+<div onPointerDown="{{ ro.down }}" onPointerUp="{{ ro.up }}" onPointerLeave="{{ ro.up }}" style="order:{{ ro.o.A }};display:flex;flex-direction:column;gap:12px;position:relative;animation:{{ ro.animA }};transform-origin:50% 50%">
+<sc-if value="{{ ro.on }}"><div style="position:absolute;top:-10px;right:-6px;z-index:3;display:flex;gap:4px"><button onClick="{{ ro.upA }}" aria-label="Flytt opp" style="width:34px;height:34px;border-radius:17px;border:0;background:#eef0f4;color:#0c1119;cursor:pointer;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,.35)">▲</button><button onClick="{{ ro.dnA }}" aria-label="Flytt ned" style="width:34px;height:34px;border-radius:17px;border:0;background:#eef0f4;color:#0c1119;cursor:pointer;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,.35)">▼</button></div></sc-if>
 <div style="padding:16px;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:12px">
 <div style="display:flex;gap:8px;flex-wrap:wrap"><input value="{{ add.no }}" onChange="{{ add.onNo }}" onKeyDown="{{ add.key }}" placeholder="Lim inn sporingsnummer" style="flex:2 1 220px;min-width:0;height:46px;padding:0 16px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.28);color:#eef0f4;font-size:16px;font-family:'Geist Mono',ui-monospace,monospace;outline:none"><input value="{{ add.name }}" onChange="{{ add.onName }}" onKeyDown="{{ add.key }}" placeholder="Navn (valgfritt)" style="flex:1 1 150px;min-width:0;height:46px;padding:0 16px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.28);color:#eef0f4;font-size:16px;font-family:inherit;outline:none"><button onClick="{{ add.go }}" style="flex:none;height:46px;padding:0 22px;border-radius:14px;border:0;background:#ff7a3d;color:#1a0c04;font-size:15.5px;font-weight:600;cursor:pointer;font-family:inherit">Spor</button></div>
 <sc-if value="{{ add.has }}"><div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;color:#a8b0c0">{{ add.hint }}</span><div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none"><sc-for list="{{ add.cars }}" as="c"><button onClick="{{ c.go }}" style="flex:none;display:flex;align-items:center;gap:7px;height:34px;padding:0 12px 0 5px;border-radius:17px;border:1px solid {{ c.bd }};background:{{ c.bg }};color:#eef0f4;cursor:pointer;font-size:13px;white-space:nowrap;font-family:inherit"><span style="width:24px;height:24px;border-radius:12px;background:{{ c.c }};color:{{ c.fg }};display:grid;place-items:center;font-size:9.5px;font-weight:800">{{ c.ini }}</span>{{ c.n }}</button></sc-for></div></div></sc-if>
@@ -38,7 +42,10 @@
 <span style="flex:1"></span><span style="font-size:12.5px;color:#8a93a6">{{ syncTxt }}</span><button onClick="{{ sync }}" style="height:34px;padding:0 14px;border-radius:17px;border:0;background:rgba(255,255,255,.1);color:#eef0f4;cursor:pointer;font-size:13px;font-weight:500;white-space:nowrap;font-family:inherit">{{ syncBtn }}</button>
 </div>
 </div>
+</div>
 
+<div onPointerDown="{{ ro.down }}" onPointerUp="{{ ro.up }}" onPointerLeave="{{ ro.up }}" style="order:{{ ro.o.B }};display:flex;flex-direction:column;gap:12px;position:relative;animation:{{ ro.animB }};transform-origin:50% 50%">
+<sc-if value="{{ ro.on }}"><div style="position:absolute;top:-10px;right:-6px;z-index:3;display:flex;gap:4px"><button onClick="{{ ro.upB }}" aria-label="Flytt opp" style="width:34px;height:34px;border-radius:17px;border:0;background:#eef0f4;color:#0c1119;cursor:pointer;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,.35)">▲</button><button onClick="{{ ro.dnB }}" aria-label="Flytt ned" style="width:34px;height:34px;border-radius:17px;border:0;background:#eef0f4;color:#0c1119;cursor:pointer;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,.35)">▼</button></div></sc-if>
 <div style="display:flex;gap:4px;padding:4px;border-radius:16px;background:rgba(255,255,255,.05);max-width:560px"><sc-for list="{{ segs }}" as="g"><button onClick="{{ g.go }}" style="flex:1 1 0;min-width:0;height:38px;padding:0 6px;border:0;border-radius:12px;background:{{ g.bg }};color:{{ g.fg }};cursor:pointer;font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:inherit">{{ g.n }}</button></sc-for></div>
 
 <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr));gap:14px;align-items:start">
@@ -57,15 +64,22 @@
 </div></sc-for>
 </div>
 <sc-if value="{{ none }}"><div style="padding:22px;border-radius:20px;background:rgba(255,255,255,.05);font-size:14.5px;color:#a8b0c0">Ingen sendinger her.</div></sc-if>
+</div>
 
+<div onPointerDown="{{ ro.down }}" onPointerUp="{{ ro.up }}" onPointerLeave="{{ ro.up }}" style="order:{{ ro.o.C }};display:flex;flex-direction:column;gap:12px;position:relative;animation:{{ ro.animC }};transform-origin:50% 50%">
+<sc-if value="{{ ro.on }}"><div style="position:absolute;top:-10px;right:-6px;z-index:3;display:flex;gap:4px"><button onClick="{{ ro.upC }}" aria-label="Flytt opp" style="width:34px;height:34px;border-radius:17px;border:0;background:#eef0f4;color:#0c1119;cursor:pointer;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,.35)">▲</button><button onClick="{{ ro.dnC }}" aria-label="Flytt ned" style="width:34px;height:34px;border-radius:17px;border:0;background:#eef0f4;color:#0c1119;cursor:pointer;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,.35)">▼</button></div></sc-if>
 <div style="padding:16px 18px;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:2px">
 <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;padding-bottom:6px"><b style="font-size:16px;font-weight:600">Varsler og haptikk</b><span style="font-size:12.5px;color:#8a93a6">Lagres på denne enheten</span></div>
 <sc-for list="{{ togs }}" as="o"><button onClick="{{ o.go }}" style="display:flex;align-items:center;gap:14px;width:100%;padding:11px 0;border:0;border-top:{{ o.bt }};background:transparent;color:inherit;cursor:pointer;text-align:left;font-family:inherit"><span style="flex:1;min-width:0"><span style="display:block;font-size:14.5px;font-weight:500">{{ o.n }}</span><span style="display:block;font-size:12.5px;color:#8a93a6">{{ o.s }}</span></span><span style="flex:none;width:46px;height:28px;border-radius:14px;background:{{ o.tr }};padding:3px;display:flex;justify-content:{{ o.j }};transition:background .2s"><span style="width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3)"></span></span></button></sc-for>
 </div>
+</div>
 
+<div onPointerDown="{{ ro.down }}" onPointerUp="{{ ro.up }}" onPointerLeave="{{ ro.up }}" style="order:{{ ro.o.D }};display:flex;flex-direction:column;gap:12px;position:relative;animation:{{ ro.animD }};transform-origin:50% 50%">
+<sc-if value="{{ ro.on }}"><div style="position:absolute;top:-10px;right:-6px;z-index:3;display:flex;gap:4px"><button onClick="{{ ro.upD }}" aria-label="Flytt opp" style="width:34px;height:34px;border-radius:17px;border:0;background:#eef0f4;color:#0c1119;cursor:pointer;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,.35)">▲</button><button onClick="{{ ro.dnD }}" aria-label="Flytt ned" style="width:34px;height:34px;border-radius:17px;border:0;background:#eef0f4;color:#0c1119;cursor:pointer;font-size:14px;box-shadow:0 4px 12px rgba(0,0,0,.35)">▼</button></div></sc-if>
 <div style="padding:16px 18px;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:6px">
 <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap"><b style="font-size:16px;font-weight:600">Transportører</b><span style="font-size:12.5px;color:#8a93a6">Nøkler legges inn i Innstillinger → Integrasjoner</span></div>
 <sc-for list="{{ conns }}" as="c"><div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-top:{{ c.bt }}"><span style="flex:none;width:30px;height:30px;border-radius:9px;background:{{ c.c }};color:{{ c.fg }};display:grid;place-items:center;font-size:10px;font-weight:800">{{ c.ini }}</span><span style="flex:1;min-width:0"><span style="display:block;font-size:14px;font-weight:500">{{ c.n }}</span><span style="display:block;font-size:12.5px;color:#8a93a6">{{ c.s }}</span></span><span style="flex:none;font-size:12.5px;color:{{ c.vc }}">{{ c.v }}</span></div></sc-for>
+</div>
 </div>
 </sc-if>
 <sc-if value="{{ hasToast }}"><div style="position:sticky;bottom:{{ toastB }};align-self:center;padding:11px 18px;border-radius:20px;background:#eef0f4;color:#0c1119;font-size:14px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.35);text-align:center;max-width:100%">{{ toast }}</div></sc-if>
@@ -111,7 +125,12 @@ class Component extends DCLogic {
   hap(k){try{if(window.__fhHaptic)return window.__fhHaptic(k);if(this.state.nt.hap&&navigator.vibrate)navigator.vibrate(k==='err'?[20,50,20]:[10,40,16])}catch(e){}}
   flash(t){this.hap(/^(Skriv|Sendingen spores)/.test(t)?'err':'ok');this.setState({toast:t});clearTimeout(this._t);this._t=setTimeout(()=>this.setState({toast:''}),2400)}
   set(items){this.setState({items});save(items)}
-  renderVals(){const s=this.state,p=this.props,variant=p.variant||'page',mob=!!p.mobile;
+  roVals(){const s=this.state,O=s.trkOrder||(()=>{try{return JSON.parse(localStorage.getItem('trk_order')||'null')}catch(e){return null}})()||['A','B','C','D'],on=!!s.trkEdit;
+    const mv=(id,d)=>()=>{const a=[...O],i=a.indexOf(id),j=i+d;if(j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];try{localStorage.setItem('trk_order',JSON.stringify(a))}catch(e){}try{navigator.vibrate&&navigator.vibrate(8)}catch(e){}this.setState({trkOrder:a})};
+    const r={on,off:!on,o:{},done:()=>this.setState({trkEdit:false}),
+      down:e=>{if(on||e.target.closest('input,button,a,label'))return;clearTimeout(this._lp);this._lp=setTimeout(()=>{try{navigator.vibrate&&navigator.vibrate(15)}catch(er){}this.setState({trkEdit:true})},500)},up:()=>clearTimeout(this._lp)};
+    ['A','B','C','D'].forEach((id,n)=>{r.o[id]=String(O.indexOf(id));r['anim'+id]=on?((n%2?'trkWigB':'trkWigA')+' .28s ease-in-out infinite'):'none';r['up'+id]=mv(id,-1);r['dn'+id]=mv(id,1)});return r}
+  renderVals(){const s=this.state,p=this.props,variant=p.variant||'page',mob=!!p.mobile,ro=this.roVals();
     const shown=s.items.filter(t=>(t.src!=='Finn'||s.src.finn)&&(t.src!=='E-post'||s.src.mail));
     const act=shown.filter(t=>t.st<4&&!t.arch),pickN=act.filter(t=>t.st===3&&!t.out).length,done=shown.filter(t=>t.st>=4||t.arch);
     const view=t=>{const C=CM[t.car]||CM.other,L=t.out?STO:ST,fin=t.st>=4,ready=t.st===3&&!t.out&&t.pick,open=s.open===t.id;
@@ -126,7 +145,7 @@ class Component extends DCLogic {
         toggle:()=>this.setState({open:open?null:t.id}),archTxt:t.arch?'Flytt tilbake':'Arkiver',arch:()=>{this.set(s.items.map(x=>x.id===t.id?{...x,arch:!x.arch}:x));this.flash(t.arch?t.name+' er aktiv igjen':t.name+' er arkivert')},
         delTxt:s.delArm===t.id?'Bekreft sletting':'Slett',del:()=>{if(s.delArm!==t.id)return this.setState({delArm:t.id});this.set(s.items.filter(x=>x.id!==t.id));this.setState({delArm:null,open:null});this.flash(t.name+' er slettet')}}};
     const actV=act.map(view).sort((a,b)=>(b.st===3)-(a.st===3)||b.st-a.st);
-    const base={isWidget:variant==='widget',isMini:variant==='mini',isPage:variant==='page',isWeb:!mob,isMob:mob,wR:p.card?'32px':mob?'24px':'20px',wPad:p.card?'26px':'18px',wBg:p.card?'rgba(40,44,52,.55)':'rgba(14,18,26,.62)',wH:p.card?'100%':'auto',open:()=>p.onOpen&&p.onOpen(),toast:s.toast,hasToast:!!s.toast,toastB:mob?'110px':'24px',
+    const base={isWidget:variant==='widget',isMini:variant==='mini',ro,isPage:variant==='page',isWeb:!mob,isMob:mob,wR:p.card?'32px':mob?'24px':'20px',wPad:p.card?'26px':'18px',wBg:p.card?'rgba(40,44,52,.55)':'rgba(14,18,26,.62)',wH:p.card?'100%':'auto',open:()=>p.onOpen&&p.onOpen(),toast:s.toast,hasToast:!!s.toast,toastB:mob?'110px':'24px',
       w:{count:act.length?act.length+' på vei'+(pickN?' · '+pickN+' klar':''):'',rows:actV.slice(0,3),mini:actV.slice(0,2),none:!act.length}};
     if(variant!=='page')return base;
     const segN={Aktive:act,'Klar for henting':act.filter(t=>t.st===3&&!t.out),Utgående:shown.filter(t=>t.out&&t.st<4),Levert:done};
