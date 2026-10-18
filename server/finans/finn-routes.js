@@ -602,7 +602,7 @@ export function splitMbox(text) {
 
 // Én e-post: handelsmail fra FINN oppretter eller oppdaterer handelen; andre (Posten/Bring, Tillit, motparten) kobles
 // til handlene de passer til. Svarer 'added' | 'linked' | 'skipped'.
-async function importOne(source, finnFromMail, origin) {
+async function importOne(source, finnFromMail, origin, touched) {
   const p = await simpleParser(source);
   const m = asMail(p);
   if (!m.subject && !m.text) return 'skipped';
@@ -612,16 +612,39 @@ async function importOne(source, finnFromMail, origin) {
     try {
       const f = await finnFromMail(m.text, p);
       if (origin !== 'imap') q("UPDATE fh_finn_emails SET source=? WHERE finn_id=? AND message_id=? AND source='imap'").run(origin, f.id, String(m.messageId || `${m.subject}|${m.date}`).slice(0, 300));
+      touched?.add(f.id);
       return f.id > before ? 'added' : 'linked';
     } catch { /* ikke en handel (f.eks. en statusmail uten beløp) – prøv å koble den */ }
   }
   let n = 0;
-  for (const f of matchDeals(m)) if (attachMail(f, { ...m, messageId: m.messageId || `${origin}:${m.subject}:${m.date}` }, origin)) n++;
+  for (const f of matchDeals(m)) if (attachMail(f, { ...m, messageId: m.messageId || `${origin}:${m.subject}:${m.date}` }, origin)) { n++; touched?.add(f.id); }
   return n ? 'linked' : 'skipped';
 }
 
+// Etter en e-postimport: hent annonsen fra finn.no for handlene som har Finn-kode, men ingen lagret annonse ennå.
+// Samme regler som «Hent annonse» (robots.txt og 8 s mellom hvert kall), høyst 40 per import.
+async function fetchMissingAds(me, ids) {
+  const want = [...ids].map((id) => q('SELECT * FROM fh_finn WHERE id=?').get(id))
+    .filter((f) => f && !q('SELECT 1 FROM fh_finn_ad WHERE finn_id=?').get(f.id) && (f.finn_code || f.ad_url)).slice(0, 40);
+  if (!want.length) return;
+  me.phase = 'ads'; me.total += want.length;
+  for (const f of want) {
+    try {
+      if (!(MOCK && !doFetch.mocked)) { const w = lastFetch + MIN_GAP - Date.now(); if (w > 0) await sleep(w); }
+      const ad = await fetchAd(f, f.ad_url || null);
+      if (/^Finn-annonse \d+$/.test(f.item)) q('UPDATE fh_finn SET item=? WHERE id=?').run(str(ad.title, 120) || f.item, f.id);
+      me.ads = (me.ads ?? 0) + 1;
+      me.items.push({ id: f.id, code: f.finn_code, title: ad.title, images: ad.images?.length ?? 0, status: 'ok' });
+    } catch (e) {
+      me.items.push({ id: f.id, code: f.finn_code, status: 'error', error: e.message });
+      me.errors.push(`Annonse ${f.finn_code ?? f.id}: ${e.message}`);
+    }
+    me.done++;
+  }
+}
+
 let job = null;
-const jobOut = () => (job ? { kind: job.kind, running: job.running, total: job.total, done: job.done, added: job.added, linked: job.linked, skipped: job.skipped, errors: job.errors.slice(-20), message: job.message ?? null, items: job.items ?? [], started: job.started, finished: job.finished ?? null } : { running: false });
+const jobOut = () => (job ? { kind: job.kind, running: job.running, total: job.total, done: job.done, added: job.added, linked: job.linked, skipped: job.skipped, ads: job.ads ?? 0, phase: job.phase ?? null, errors: job.errors.slice(-20), message: job.message ?? null, items: job.items ?? [], started: job.started, finished: job.finished ?? null } : { running: false });
 function startJob(kind, total, work) {
   job = { kind, running: true, total, done: 0, added: 0, linked: 0, skipped: 0, errors: [], items: [], started: Date.now() };
   const me = job;
@@ -654,6 +677,7 @@ export function mountFinnImport(api, { R, W, upload, finnFromMail }) {
   api.post('/finn/import/eml', W, upload, async (c) => {
     if (busy(c)) return busy(c);
     const b = await c.req.parseBody({ all: true });
+    const fetchAds = b.fetchAds !== '0' && b.fetchAds !== 'false';
     const files = [b.file, b.files, b['files[]']].flat().filter((x) => x instanceof File && x.size > 0);
     if (!files.length) return bad(c, 'Velg .eml-, .mbox- eller .zip-filer');
     const sources = [], errors = [];
@@ -661,19 +685,25 @@ export function mountFinnImport(api, { R, W, upload, finnFromMail }) {
     if (!sources.length) return bad(c, errors[0] ?? 'Fant ingen e-poster i filene');
     const me = startJob('eml', sources.length, async (me) => {
       me.errors.push(...errors);
-      for (const s of sources.slice(0, 2000)) { try { tally(me, await importOne(s, finnFromMail, 'eml')); } catch (e) { me.done++; me.errors.push(e.message); } }
+      const touched = new Set();
+      for (const s of sources.slice(0, 2000)) { try { tally(me, await importOne(s, finnFromMail, 'eml', touched)); } catch (e) { me.done++; me.errors.push(e.message); } }
+      if (fetchAds) await fetchMissingAds(me, touched);
+      if (me.ads) me.message = `${me.added} nye handler · ${me.linked} oppdatert · ${me.ads} annonse${me.ads === 1 ? '' : 'r'} hentet fra finn.no${me.errors.length ? ` · ${me.errors.length} feil` : ''}`;
     });
     return waitJob(c, me);
   });
 
   api.post('/finn/import/mail', W, async (c) => {
     if (busy(c)) return busy(c);
+    const fetchAds = (await c.req.json().catch(() => ({}))).fetchAds !== false;
     const me = startJob('mail', 0, async (me) => {
       const r = await (mailFetcher ?? (async () => (await import('./mail.js')).fetchAllFinnMails()))();
       if (!r.ok) { me.message = r.message; me.errors.push(r.message); return; }
       me.total = r.sources.length;
-      for (const s of r.sources) { try { tally(me, await importOne(s, finnFromMail, 'imap')); } catch (e) { me.done++; me.errors.push(e.message); } }
-      me.message = `Fant ${r.sources.length} Finn-e-post${r.sources.length === 1 ? '' : 'er'} · ${me.added} nye handler · ${me.linked} oppdatert`;
+      const touched = new Set();
+      for (const s of r.sources) { try { tally(me, await importOne(s, finnFromMail, 'imap', touched)); } catch (e) { me.done++; me.errors.push(e.message); } }
+      if (fetchAds) await fetchMissingAds(me, touched);
+      me.message = `Fant ${r.sources.length} Finn-e-post${r.sources.length === 1 ? '' : 'er'} · ${me.added} nye handler · ${me.linked} oppdatert${me.ads ? ` · ${me.ads} annonse${me.ads === 1 ? '' : 'r'} hentet fra finn.no` : ''}`;
     });
     return waitJob(c, me);
   });

@@ -5,7 +5,7 @@ import { m, draw, flash, avatar, backBtn } from './mobile.js';
 import { subsLoad, subsView, subsBind } from './mobile-subs.js';
 
 export const MODS = [
-  ['mat', 'Matplan', 'Ukemeny, kokk og handleliste', 'mat'],
+  ['mat', 'Mat', 'Ukemeny, kokk og handleliste', 'mat'],
   ['dom', 'Domener', 'Trafikk, besøk, ytelse og sikkerhet', 'globe'],
   ['sub', 'Subscription OS', 'Abonnementer og trekk', 'sub'],
   ['dir', 'Boliger', 'Utgifter, prosjekter og regninger', 'dir'],
@@ -58,9 +58,9 @@ export function modView(key, th, sub) {
 const SRC = { gemini: ['Gemini', '#FFB08A', 'rgba(255,122,61,.15)'], hellofresh: ['HelloFresh', '#C2E27A', 'rgba(145,193,30,.18)'], fixed: ['Fast', '#9FE3C6', '#1F3A2F'], own: ['Egen', '#A9C3FF', 'rgba(122,167,255,.15)'] };
 function mat(th) {
   const w = D.mat;
-  if (!w) return `${head(th, 'Matplan')}<div class="m-spin"></div>`;
+  if (!w) return `${head(th, 'Mat')}<div class="m-spin"></div>`;
   const td = today();
-  return `${head(th, 'Matplan')}
+  return `${head(th, 'Mat')}
     <div class="m-row" style="gap:8px;flex-wrap:wrap"><button class="pri-b" data-mat="plan" style="flex:1">✦ Ny ukeplan med Gemini</button></div>
     <div style="font-size:13px;opacity:.7;padding:0 4px">Ukekost ca. ${n0(w.weekCost ?? 0)} kr · Automatisk hver søndag: ${w.auto ? 'på' : 'av'}</div>
     ${listBox(th, (w.days ?? []).map((d) => { const [n, c, bg] = SRC[d.source] ?? SRC.own; return `<div class="opt-row day${d.date === td ? ' today' : ''}"><span class="m-grow"><span class="s" style="text-transform:capitalize">${esc(d.weekday ?? dWeek(d.date))}${d.cook ? ` · ${esc(d.cook)}` : ''}</span><b class="m-ell" style="display:block;font-weight:500">${esc(d.name || '–')}</b><em class="src" style="color:${c};background:${bg}">${n}${d.fixed ? ' · fast' : ''}</em></span><span class="m-mono" style="opacity:.8">${d.cost ? n0(d.cost) + ' kr' : ''}</span><button class="mini" data-mat="day" data-date="${d.date}" aria-label="Ny rett for dagen">✦</button></div>`; }).join('') || '<div class="m-empty">Ingen plan ennå.</div>')}
@@ -343,7 +343,7 @@ export async function modBind(e, t) {
   if ((x = d('[data-dirleave]'))) { if (!confirm('Forlate boligen? Du mister tilgangen til den.')) return true; await api(`/folders/${fid}/members/${x.dataset.dirleave}`, { method: 'DELETE' }); flash('Du forlot mappen'); location.hash = '#/dir'; return true; }
   if ((x = d('[data-dirpay]'))) { D.dir[fid] = await api(`/folders/${fid}/installments/${x.dataset.dirpay}/pay`, { method: 'POST' }).then((r) => (r?.members ? r : api(`/folders/${fid}`))); flash('Registrert som betalt'); return true; }
   if ((x = d('[data-shop]'))) { await matApi(`/shopping/${encodeURIComponent(x.dataset.shop)}/toggle`, { method: 'POST' }); await modLoad('mat'); draw(); return true; }
-  if ((x = d('[data-mat]'))) { const day = x.dataset.mat === 'day'; flash(day ? 'Gemini foreslår en ny rett …' : 'Gemini lager ukeplan …'); await matApi('/plan', { method: 'POST', json: day ? { scope: 'day', date: x.dataset.date } : { scope: 'week', date: D.mat?.start ?? today() } }); await modLoad('mat'); flash('Matplan oppdatert'); return true; }
+  if ((x = d('[data-mat]'))) { const day = x.dataset.mat === 'day'; flash(day ? 'Gemini foreslår en ny rett …' : 'Gemini lager ukeplan …'); await matApi('/plan', { method: 'POST', json: day ? { scope: 'day', date: x.dataset.date } : { scope: 'week', date: D.mat?.start ?? today() } }); await modLoad('mat'); flash('Mat oppdatert'); return true; }
   if ((x = d('[data-dom]'))) {
     const k = x.dataset.dom;
     if (k === 'manage') { dm.manage = true; dm.pick = false; window.scrollTo(0, 0); }

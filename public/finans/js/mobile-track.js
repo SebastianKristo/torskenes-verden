@@ -32,6 +32,7 @@ const CM = Object.fromEntries(CAR.map((c) => [c.id, c]));
 const CDOM = { posten: 'posten.no', bring: 'bring.no', postnord: 'postnord.no', dhl: 'dhl.com', ups: 'ups.com', fedex: 'fedex.com', gls: 'gls-group.eu', schenker: 'dbschenker.com', helthjem: 'helthjem.no', budbee: 'budbee.com', instabox: 'instabox.io', other: '17track.net' };
 const cLogo = (id) => `https://www.google.com/s2/favicons?domain=${CDOM[id] ?? CDOM.other}&sz=128`;
 const carOf = (id) => CM[id] ?? CM.other;
+export const carName = (id) => carOf(id).name;
 const normNo = (no) => String(no ?? '').replace(/[\s-]+/g, '').toUpperCase();
 const detectLocal = (no) => CAR.find((c) => c.id !== 'other' && c.re.some((r) => r.test(no)))?.id ?? 'other';
 

@@ -12,7 +12,7 @@ import { haptic } from './mobile-haptics.js';
 const DEF = { sec: ['clock', 'search', 'links', 'os', 'srv', 'ruter'], hlTabs: ['hl', 'home', 'trk', 'dom', 'mat'], finTabs: ['home', 'list', 'finn', 'bud', 'ai', 'mer'], hide: { srv: true, ruter: true, bud: true } };
 const WD = {
   clock: ['Klokke og vær', 'Tid, vær og pakker på vei', 'clock'], search: ['Google-søk', 'Søk med forslag og historikk', 'search'],
-  links: ['Snarveier', 'Favorittsider og tjenester på hjemmenettet', 'mer'], os: ['Andre OS', 'Finans, Domener og Matplan', 'konto2'],
+  links: ['Snarveier', 'Favorittsider og tjenester på hjemmenettet', 'mer'], os: ['Andre OS', 'Finans, Domener og Mat', 'konto2'],
   srv: ['Serverstatus', 'CPU, minne, lagring og oppetid', 'srv'], ruter: ['Ruter-avganger', 'Neste avganger i sanntid', 'bus'],
 };
 const fix = (a, d) => { a = (Array.isArray(a) ? a : []).filter((x) => d.includes(x)); return [...new Set([...a, ...d.filter((x) => !a.includes(x))])]; };
@@ -41,7 +41,8 @@ export const LAY = () => lay;
 
 export async function loadLayout() {
   try { const r = await hlApi('/me/layout'); if (r?.finNav?.labels) S.navLabels = r.finNav.labels;
-    if (r?.mobile) { lay = { ...norm(r.mobile), fromServer: true }; try { localStorage.setItem('fh_mlayout', JSON.stringify(lay)); } catch {} } } catch { /* eldre server: bare lokalt */ }
+    if (r?.mobile) { lay = { ...norm(r.mobile), fromServer: true }; try { localStorage.setItem('fh_mlayout', JSON.stringify(lay)); } catch {} }
+    return r; } catch { /* eldre server: bare lokalt */ return null; }
 }
 let saveT;
 // Lagres per bruker (/api/me/layout.mobile). Eldre servere som avviser de nye feltene får dem uten.
@@ -68,6 +69,12 @@ function move(key, i, j) {
 /* ---------- Data ---------- */
 
 const H = { set: { suggest: true, save: true }, data: null, err: '', q: '', open: false, sug: [], hist: null, sel: -1, edit: false, gal: false, dom: null, mat: null, drag: null, car: 0 };
+// Papir (mobile-paper.js) bruker de samme dataene.
+export const hlData = () => H.data;
+export const hlDom = () => H.dom;
+// Dyplenker (prompt 13): temperaturen åpner Yr for stedet, Ruter-kortet åpner Ruter (universal link, åpner appen hvis den finnes).
+export const yrUrl = (w) => (w?.lat != null && w?.lon != null ? `https://www.yr.no/nb/v%C3%A6rvarsel/daglig-tabell/${(+w.lat).toFixed(4)},${(+w.lon).toFixed(4)}` : `https://www.yr.no/nb/s%C3%B8k?q=${encodeURIComponent(w?.place || 'Oslo')}`);
+export const ruterUrl = (from) => (from ? `https://ruter.no/reise/?from=${encodeURIComponent(from)}` : 'https://reise.ruter.no/');
 const WXT = { 0: 'Klart', 1: 'Lettskyet', 2: 'Delvis skyet', 3: 'Overskyet', 45: 'Tåke', 48: 'Tåke', 51: 'Yr', 53: 'Yr', 55: 'Yr', 61: 'Lett regn', 63: 'Regn', 65: 'Kraftig regn', 71: 'Lett snø', 73: 'Snø', 75: 'Kraftig snø', 80: 'Regnbyger', 81: 'Regnbyger', 82: 'Kraftige byger', 95: 'Torden' };
 const histLocal = () => { try { return JSON.parse(localStorage.getItem('hl_search_hist') || '[]'); } catch { return []; } };
 const histNorm = (r) => (Array.isArray(r) ? r : r?.items ?? r?.history ?? []).map((x) => (typeof x === 'string' ? x : x?.q ?? x?.query ?? '')).filter(Boolean);
@@ -88,7 +95,7 @@ async function homeData() {
 
 export async function hlLoad() {
   const jobs = [
-    homeData().then((d) => { H.data = d; H.err = ''; if (d?.search) H.set = d.search; if (d?.layout && Object.keys(d.layout).length && !lay.fromServer) { lay = norm(d.layout); lay.fromServer = true; }  if (d?.avatarUrl && m.me) m.me.avatarUrl = d.avatarUrl; if (d?.name && m.me && !m.me.name) m.me.name = d.name; }).catch((e) => { H.err = e.message; }),
+    homeData().then((d) => { H.data = d; H.err = ''; if (d?.design) window.dispatchEvent(new CustomEvent('fh-design', { detail: d.design })); if (d?.search) H.set = d.search; if (d?.layout && Object.keys(d.layout).length && !lay.fromServer) { lay = norm(d.layout); lay.fromServer = true; }  if (d?.avatarUrl && m.me) m.me.avatarUrl = d.avatarUrl; if (d?.name && m.me && !m.me.name) m.me.name = d.name; }).catch((e) => { H.err = e.message; }),
     // Pakkene: /mobile/home.packages når serveren har dem; uansett hentes /tracking for tellere og varsler.
     trkLoad().then(() => trkWatch()).catch(() => {}),
     hlApi('/search/history').then((r) => { H.hist = histNorm(r); if (r && typeof r.save === 'boolean') H.set = { suggest: r.suggest !== false, save: r.save }; }).catch(() => { H.hist = histLocal(); }),
@@ -153,7 +160,7 @@ function wWeather(th) {
   const sub = [w.feels != null ? `Føles ${deg(w.feels)}` : '', hi != null ? `${deg(hi)} / ${deg(lo)}` : ''].filter(Boolean).join(' · ');
   const hours = (w.hours ?? []).slice(0, 6);
   return card(th, `<div class="wx-top"><span class="wx-l"><b class="hclock" data-clock>${timeTxt()}</b><span class="dim wx-date">${esc(date)}</span></span>
-      <span class="wx-r"><span class="wx-now"><span class="wx-ic">${wi(w, 26)}</span><b>${deg(w.temp)}</b></span><span class="wx-cnd">${esc(w.text ?? WXT[w.code] ?? 'Skiftende')}</span><span class="dim">${esc(sub)}</span></span></div>
+      <a class="wx-r" href="${esc(yrUrl(w))}" target="_blank" rel="noopener" aria-label="Åpne været i Yr"><span class="wx-now"><span class="wx-ic">${wi(w, 26)}</span><b>${deg(w.temp)}</b></span><span class="wx-cnd">${esc(w.text ?? WXT[w.code] ?? 'Skiftende')}</span><span class="dim">${esc(sub)}</span></a></div>
     ${wind ? `<div class="dim wx-wind">${icon('w_wind', 13, 'currentColor', 1.8)}<span class="m-ell">${esc(wind)} · ${esc(w.place ?? 'Oslo')}</span></div>` : ''}
     ${hours.length ? `<div class="wx-hours">${hours.map((x, i) => `<span><small>${esc(x.t ?? x.label ?? (i ? '' : 'Nå'))}</small>${wi(x, 16)}<b>${deg(x.temp)}</b><small class="mm">${x.mm ? String(Math.round(x.mm * 10) / 10).replace('.', ',') : ''}</small></span>`).join('')}</div>` : ''}`, 'wxcard');
 }
@@ -198,7 +205,7 @@ function wOs(th) {
   return `<div class="sec">Andre OS</div><div class="hos">
     <a class="hos-fin ${isI(th) ? 'glass2' : ''}" href="#/${S.boot?.restricted ? 'dir' : 'hjem'}"><span class="m-grow"><span class="dim">${esc(fin[0])}</span><b>${esc(fin[1])}</b>${fin[2] ? `<span class="acc">${esc(fin[2])}</span>` : ''}</span><span style="font-size:24px;opacity:.6">›</span></a>
     ${dm !== null ? `<a class="${isI(th) ? 'glass2' : ''}" href="#/dom"><span class="dim">Domener</span><b>${dm?.visitors != null ? n0(dm.visitors) : dm ? dm.n : '…'}</b><span class="dim sm">${dm?.visitors != null ? `besøk i dag · ${dm.up === false ? 'sjekk status' : 'alle oppe'}` : dm?.n === 0 ? 'Ingen domener ennå' : 'domener'}</span></a>` : ''}
-    ${mt !== null ? `<a class="${isI(th) ? 'glass2' : ''}" href="#/mat"><span class="dim">Matplan</span><b class="m-ell">${esc(mt?.name ?? (mt ? 'Ingen plan' : '…'))}</b><span class="dim sm">i dag · uke ${mt?.week ?? isoWeek()}</span></a>` : ''}
+    ${mt !== null ? `<a class="${isI(th) ? 'glass2' : ''}" href="#/mat"><span class="dim">Mat</span><b class="m-ell">${esc(mt?.name ?? (mt ? 'Ingen plan' : '…'))}</b><span class="dim sm">i dag · uke ${mt?.week ?? isoWeek()}</span></a>` : ''}
   </div>`;
 }
 
@@ -222,8 +229,8 @@ function wSrv(th) {
 function wRuter(th) {
   const r = H.data?.ruter ?? [];
   const rows = r.flatMap((x) => (x.departures ?? []).slice(0, 2).map((d) => ({ ...d, to: d.to ?? x.to }))).sort((a, b) => (a.min ?? 99) - (b.min ?? 99)).slice(0, 4);
-  return card(th, `<div class="hhead"><b>Ruter${r[0]?.from ? ` · ${esc(r[0].from)}` : ''}</b><span class="dim">Sanntid</span></div>
-    ${rows.length ? rows.map((d) => `<div class="hdep"><span class="hline" style="background:${esc(d.color ?? '#0B91EF')}">${esc(d.line)}</span><span class="m-ell m-grow">${esc(d.to)}</span><b>${d.min != null ? (d.min <= 0 ? 'nå' : `${d.min} min`) : esc(d.time ?? '')}</b></div>`).join('') : `<div class="dim" style="padding:6px 0">${H.data ? 'Ingen avganger. Sett opp strekninger i Homelab → Innstillinger.' : 'Henter avganger …'}</div>`}`);
+  return card(th, `<a class="hlink-card" href="${esc(ruterUrl(r[0]?.from))}" target="_blank" rel="noopener" aria-label="Åpne i Ruter"><div class="hhead"><b>Ruter${r[0]?.from ? ` · ${esc(r[0].from)}` : ''}</b><span class="dim">Sanntid ›</span></div>
+    ${rows.length ? rows.map((d) => `<div class="hdep"><span class="hline" style="background:${esc(d.color ?? '#0B91EF')}">${esc(d.line)}</span><span class="m-ell m-grow">${esc(d.to)}</span><b>${d.min != null ? (d.min <= 0 ? 'nå' : `${d.min} min`) : esc(d.time ?? '')}</b></div>`).join('') : `<div class="dim" style="padding:6px 0">${H.data ? 'Ingen avganger. Sett opp strekninger i Homelab → Innstillinger.' : 'Henter avganger …'}</div>`}</a>`);
 }
 const RENDER = { clock: wClock, search: wSearch, links: wLinks, os: wOs, srv: wSrv, ruter: wRuter };
 

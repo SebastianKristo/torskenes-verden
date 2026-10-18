@@ -100,3 +100,31 @@ test('annonselenker: ny handel med tittel, pris og bilder; feil lenke rapportere
   assert.equal((await call('/finn/import/links', 'POST', { text: 'ingen lenker' })).status, 400);
   F._setFetch(null);
 });
+
+test('e-post kobles til annonse som allerede er importert, og annonsen hentes for nye handler', async () => {
+  const html = (code, name) => `<html><head><script type="application/ld+json">{"@type":"Product","name":"${name}","description":"Fin.","offers":{"price":"900"}}</script></head><body>finn.no/recommerce/forsale/item/${code}</body></html>`;
+  const hits = [];
+  F._setFetch(async (u) => {
+    const url = String(u); hits.push(url);
+    if (url.endsWith('/robots.txt')) return new Response('User-agent: *\nDisallow: /search\n');
+    if (url.includes('/item/476377764')) return new Response(html('476377764', 'Sofabord i eik'), { headers: { 'content-type': 'text/html' } });
+    if (url.includes('/item/488800222')) return new Response(html('488800222', 'Lampe Le Klint'), { headers: { 'content-type': 'text/html' } });
+    return new Response('nei', { status: 404 });
+  }, 0);
+  const before = (await call('/finn')).body.items.length;
+  const fd = new FormData();
+  fd.append('file', new File([eml('FINN.no <noreply@finn.no>', 'Du har solgt Sofabord i eik', 'Du har solgt Sofabord i eik til kjøper Per.\nFinn-kode: 476377764\nSalgspris: 1 150,00 kr\nTotalt: 1 150,00 kr\nTrygg betaling', 'sofa1')], 'sofa.eml'));
+  fd.append('file', new File([eml('FINN.no <noreply@finn.no>', 'Kvittering: du har betalt for «Lampe Le Klint»', 'Du har kjøpt Lampe Le Klint fra selger Eva via Fiks ferdig.\nFinn-kode: 488800222\nTotalt: 950,00 kr', 'lampe1')], 'lampe.eml'));
+  const r = await call('/finn/import/eml', 'POST', fd);
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual([r.body.added, r.body.linked], [1, 1], JSON.stringify(r.body));
+  const list = (await call('/finn')).body.items;
+  assert.equal(list.length, before + 1);
+  const sofa = list.filter((x) => x.item === 'Sofabord i eik');
+  assert.equal(sofa.length, 1, 'samme handel, ikke en ny');
+  assert.equal(sofa[0].amount, 1150);
+  // Lampen var ny: annonsen hentes fra finn.no etter importen.
+  assert.ok(hits.some((u) => u.includes('/item/488800222')), hits.join('\n'));
+  assert.equal(r.body.ads, 1);
+  F._setFetch(null);
+});

@@ -14,7 +14,7 @@ import { domainFor, learnDomain, validDomain, logo, heuristic, kick as kickAi, s
 import { parseFile } from './importer.js';
 import { importRows, splitRows, listTemplates, deleteTemplate } from './import-templates.js';
 import { parseFinnEmail } from './finn.js';
-import { mountFinn, mountFinnImport, linkMail, attachParsed } from './finn-routes.js';
+import { mountFinn, mountFinnImport, linkMail, attachParsed, codesIn } from './finn-routes.js';
 import { sessionUser, clientIp, verifyLogin, userInfo, listUsers } from '../auth.js';
 import * as auth from '../auth.js';
 import { config } from '../config.js';
@@ -1569,6 +1569,15 @@ function saveFinn(d) {
   const amountOre = Math.round(d.amount * 100);
   const source = d.source ?? null;
   const existing = source ? q('SELECT * FROM fh_finn WHERE source=?').get(source) : null;
+  // Annonsen er allerede importert fra en lenke (samme Finn-kode, uten e-post): e-posten fyller inn handelen
+  // i stedet for å lage en ny, så annonse, bilder og e-poster havner på samme sted.
+  const byCode = !existing && d.finn_code ? q("SELECT * FROM fh_finn WHERE finn_code=? AND (source IS NULL OR source LIKE 'ad:%') ORDER BY id LIMIT 1").get(d.finn_code) : null;
+  if (byCode) {
+    q(`UPDATE fh_finn SET role=?, item=CASE WHEN item='' OR item LIKE 'Finn-annonse %' THEN ? ELSE item END, counterpart=CASE WHEN counterpart='' THEN ? ELSE counterpart END,
+       date=?, amount=?, steps=?, source=COALESCE(?, source), order_id=COALESCE(order_id, ?), tx_id=COALESCE(tx_id, ?) WHERE id=?`)
+      .run(d.role, d.item, d.counterpart ?? '', d.date, amountOre, JSON.stringify(d.steps ?? []), source, d.order_id ?? null, finnMatch(d.role, amountOre, d.date), byCode.id);
+    return q('SELECT * FROM fh_finn WHERE id=?').get(byCode.id);
+  }
   if (existing) {
     q('UPDATE fh_finn SET steps=?, order_id=COALESCE(order_id, ?) WHERE id=?').run(JSON.stringify(d.steps), d.order_id ?? null, existing.id);
     return q('SELECT * FROM fh_finn WHERE id=?').get(existing.id);
@@ -1579,7 +1588,7 @@ function saveFinn(d) {
 async function finnFromMail(text, parsed) {
   const d = await parseFinnEmail(String(text).slice(0, 50000));
   if (!d.item || !Number.isFinite(d.amount) || d.amount <= 0) throw new Error('Fant ikke gjenstand og beløp i Finn-e-posten');
-  const f = saveFinn(d);
+  const f = saveFinn({ ...d, finn_code: d.finn_code ?? codesIn(`${parsed?.subject ?? ''}\n${text}`).code ?? null });
   attachParsed(f, parsed);
   return f;
 }

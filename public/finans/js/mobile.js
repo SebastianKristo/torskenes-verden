@@ -9,12 +9,13 @@ import { settingsView, settingsLoad, settingsBind } from './mobile-set.js';
 import { hlView, hlLoad, hlBind, hlAfterDraw, LAY, loadLayout } from './mobile-hl.js';
 import { PAGES, pageView, pageLoad, pagesBind, pageAfterDraw } from './mobile-pages.js';
 import { txDetail, editForm, origOverlay, txBind } from './mobile-tx.js';
-import { applyM3, c3 } from './mobile-theme.js';
+import { applyM3, applyPaper, c3 } from './mobile-theme.js';
 import { matView, matLoad, matBind, matDark } from './mobile-mat.js';
 import { finnView, finnLoad, finnBind } from './mobile-finn.js';
 import { trkView, trkLoad, trkBind, trkWatch } from './mobile-track.js';
 import { haptic } from './mobile-haptics.js';
 import { subsBind } from './mobile-subs.js';
+import { paper, paperDark, paperHero, paperNav, paperScanSheet, paperHome, paperFin, paperMer, mediaView, mediaLoad, newsView, newsLoad, paperBind, photoLoad, takeDesign, paperState } from './mobile-paper.js';
 
 const u = S.ui;
 export const m = {
@@ -23,23 +24,23 @@ export const m = {
 };
 const root = () => document.getElementById('app');
 export const isIOS = () => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-export const theme = () => { try { const t = localStorage.getItem('fh_theme'); if (t === 'ios' || t === 'and') return t; } catch {} return isIOS() ? 'ios' : 'and'; };
+export const theme = () => { if (paper()) return 'and'; try { const t = localStorage.getItem('fh_theme'); if (t === 'ios' || t === 'and') return t; } catch {} return isIOS() ? 'ios' : 'and'; };
 export const two = () => matchMedia('(min-width: 600px)').matches;
-export const iosBg = () => { try { return localStorage.getItem('fh_ios_bg') !== '0'; } catch { return true; } };
+export const iosBg = () => { if (paper()) return false; try { return localStorage.getItem('fh_ios_bg') !== '0'; } catch { return true; } };
 const ACTIVE = ['pending', 'processing'];
 export const amtC = (v, th) => (v > 0 ? '#9FE3C6' : th === 'and' ? c3('#F0DFD7') : 'inherit');
 
 /* ---------- Skjermer og faner ---------- */
 
 // Faner kan skjules og flyttes i «Rediger forsiden» (LAY.hlTabs / LAY.finTabs).
-export const HLTABS = { hl: ['hl', 'Homelab', 'hlhome'], home: ['hjem', 'Finans', 'fin'], trk: ['spor', 'Sporing', 'box'], dom: ['dom', 'Domener', 'globe'], mat: ['mat', 'Matplan', 'mat'] };
+export const HLTABS = { hl: ['hl', 'Homelab', 'hlhome'], home: ['hjem', 'Finans', 'fin'], trk: ['spor', 'Sporing', 'box'], dom: ['dom', 'Domener', 'globe'], mat: ['mat', 'Mat', 'mat'] };
 export const FINTABS = { home: ['hjem', 'Oversikt', 'home'], list: ['liste', 'Liste', 'list'], finn: ['finn', 'Finn', 'finn'], bud: ['budsjett', 'Budsjett', 'bud'], ai: ['sok', 'Søk', 'ai'], mer: ['mer', 'Mer', 'mer'] };
 export const FIXED_HL = ['hl', 'home'], FIXED_FIN = ['home', 'mer'];
 const FINMODS = ['sub', 'dir', 'finn'];
 export const FIN = ['hjem', 'liste', 'budsjett', 'sok', 'skann', 'opp', ...PAGES, ...FINMODS];
 const TWO = ['hjem', 'liste', 'budsjett', 'skann', 'opp', 'sok'];
 const HLG = ['hl', 'spor', 'set'];
-const ALL = [...new Set([...FIN, 'hl', 'spor', 'mat', 'dom', 'set'])];
+const ALL = [...new Set([...FIN, 'hl', 'spor', 'mat', 'dom', 'set', 'media', 'nyheter'])];
 // Oversikt, Liste og Budsjett bruker egne navn fra Sidemeny; Søk og Mer beholder de korte navnene i fanelinja.
 const RENAME = ['home', 'list', 'bud', 'finn'];
 // Egne navn fra Innstillinger → Utseende → Navigasjonslinje (LAY.names) går foran; tomt felt gir standardnavnet.
@@ -51,7 +52,7 @@ export const finTabs = () => tabsOf(LAY().finTabs, FINTABS, FIXED_FIN);
 const finCur = (s) => { const c = ['liste', 'budsjett', 'sok', 'finn'].includes(s) ? s : [...PAGES, ...FINMODS].includes(s) ? 'mer' : 'hjem'; return c === 'hjem' || finTabs().some(([k]) => k === c) ? c : 'mer'; };
 
 /* ---------- Valg på denne enheten (localStorage) ---------- */
-const PDEF = { scanTap: 'cam', start: 'hl', hideAmt: false, appHide: false, lock: false, lockAfter: '5', crop: true, origImg: true, wifi: false, nSub: false, nDom: true, nWeek: false, m3Seed: 'sys', m3Mode: 'dark', pageColors: 'same' };
+const PDEF = { scanTap: 'cam', start: 'hl', hideAmt: false, appHide: false, lock: false, lockAfter: '5', crop: true, origImg: true, wifi: false, nSub: false, nDom: true, nWeek: false, m3Seed: 'sys', m3Mode: 'dark', pageColors: 'same', mDesign: 'klassisk', paperMode: 'auto', photo: 'cur' };
 let P = {};
 try { P = JSON.parse(localStorage.getItem('fh_mprefs') || '{}') || {}; } catch { P = {}; }
 if (P.start === 'hjem' && !P.startV2) { P.start = 'hl'; P.startV2 = 1; } // Homelab er ny standard startside
@@ -293,7 +294,7 @@ function menuSheet(th) {
       const rest = others.map(([k, n, s2, ic]) => row('#/' + k, ic, n, s2, scr === k)).join('');
       return `<div class="list ${th === 'ios' ? 'glass2' : ''}">${startFin() ? fin : hl}</div><div class="sec">Andre OS</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${startFin() ? hl : fin}${rest}</div>`;
     })()}
-    <div class="list ${th === 'ios' ? 'glass2' : ''}">${row('#/hl', 'edit', 'Rediger forsiden', '', false, 'edithome')}${row('#/set', 'gear', 'Innstillinger', '', scr === 'set')}<button class="opt-row" data-mact="logout"><span class="set-ic" style="color:#FF8A6B">${icon('key', 18)}</span><span class="m-grow" style="color:#FF8A6B">Lås</span></button></div></div>`;
+    <div class="list ${th === 'ios' ? 'glass2' : ''}">${row('#/hl', 'edit', 'Rediger forsiden', '', false, 'edithome')}${row('#/nyheter', 'hist', 'Nyhetsleser', 'Siste nytt fra kildene dine', scr === 'nyheter')}${row('#/set', 'gear', 'Innstillinger', '', scr === 'set')}<button class="opt-row" data-mact="logout"><span class="set-ic" style="color:#FF8A6B">${icon('key', 18)}</span><span class="m-grow" style="color:#FF8A6B">Lås</span></button></div></div>`;
 }
 
 /* Arket som åpnes når skanneknappen holdes inne (eller trykkes, hvis det er valgt i Innstillinger). */
@@ -352,12 +353,15 @@ function rail(n) {
 /* ---------- Tegning ---------- */
 
 export function draw() {
-  const th = theme(), wide = two(), scr = m.screen;
-  m.light = applyM3(th === 'and', pref('m3Seed'), pref('m3Mode'), () => draw(), pref('pageColors') !== 'per');
+  const pp = paper(), th = theme(), wide = two() && !pp, scr = m.screen;
+  m.light = pp ? applyPaper(paperDark()) : applyM3(th === 'and', pref('m3Seed'), pref('m3Mode'), () => draw(), pref('pageColors') !== 'per');
   const fin = FIN.includes(scr), twoPane = wide && TWO.includes(scr) && !(S.boot?.restricted);
   const confirmView = scr === 'skann' && m.rc && !wide;
   const scrs = { hjem: home, liste: list, budsjett: budget, opp: uploadScreen };
-  const main = scr === 'set' ? settingsView(th, m.sub)
+  const ppMain = !pp ? null : scr === 'hl' ? paperHome() : scr === 'hjem' && !S.boot?.restricted && !m.detail && !m.edit ? paperFin() : scr === 'mer' ? paperMer() : null;
+  const main = scr === 'nyheter' ? newsView()
+    : scr === 'media' ? (pp ? '' : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Media</div></div>') + mediaView()
+    : ppMain ?? (scr === 'set' ? settingsView(th, m.sub)
     : scr === 'hl' ? hlView(th)
     : scr === 'spor' ? trkView(th)
     : scr === 'mat' ? matView(th)
@@ -366,17 +370,17 @@ export function draw() {
     : PAGES.includes(scr) ? pageView(scr, th)
     : scr === 'finn' ? finnView(th, m.sub)
     : !fin || FINMODS.includes(scr) ? modView(scr, th, m.sub)
-    : scrs[scr] ? scrs[scr](th) : confirmView ? confirmRc(th) : scanQueue(th);
-  const n = navModel(), dom = scr === 'dom', bt = backTop(scr);
-  const nav = th === 'ios' ? iosNav(n) : andNav(n);
+    : scrs[scr] ? scrs[scr](th) : confirmView ? confirmRc(th) : scanQueue(th));
+  const n = navModel(), dom = scr === 'dom', bt = !pp && backTop(scr), hero = pp && scr !== 'nyheter';
+  const nav = scr === 'nyheter' ? '' : pp ? paperNav(scr) : th === 'ios' ? iosNav(n) : andNav(n);
   // Bevar fokus og markør i et felt når skjermen tegnes på nytt (f.eks. søk mens forslag kommer inn).
   const ae = document.activeElement, keep = ae?.id && root().contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
-  root().innerHTML = `<div class="m ${th}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
-    ${rail(n)}<div class="m-scroll">${bt ? topRow(th) : ''}${main}</div><div class="m-detail">${twoPane ? detail(th) : ''}</div>${nav}
-    ${menuSheet(th)}${scanSheet(th)}${origOverlay(th)}${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
+  root().innerHTML = `<div class="m ${th}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
+    ${pp ? '' : rail(n)}${hero ? paperHero(scr) : ''}<div class="m-scroll">${bt ? topRow(th) : ''}${main}</div><div class="m-detail">${twoPane ? detail(th) : ''}</div>${nav}
+    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() : ''}${origOverlay(th)}${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
     <input class="m-file" id="m-capture" type="file" accept="image/*" capture="environment" data-mupload data-confirm></div>`;
   if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
-  document.querySelector('meta[name=theme-color]')?.setAttribute('content', th === 'ios' ? '#07070A' : getComputedStyle(root().firstElementChild).backgroundColor || '#19120E');
+  document.querySelector('meta[name=theme-color]')?.setAttribute('content', pp ? (m.light ? '#f3efe6' : '#14130f') : th === 'ios' ? '#07070A' : getComputedStyle(root().firstElementChild).backgroundColor || '#19120E');
   hlAfterDraw(); pageAfterDraw(); if (scr === 'dom') modAfterDraw(th);
   // Glassmarkøren glir med fjæring mellom fanene. Fanelinja tegnes på nytt ved hver oppdatering, så animasjonen
   // (Web Animations) gjenopptas med medgått tid hvis en ny tegning kommer midt i den.
@@ -417,8 +421,15 @@ async function load() {
     else if (scr === 'hl') jobs.push(hlLoad());
     else if (scr === 'spor') jobs.push(trkLoad().then(() => trkWatch()));
     else if (scr === 'mat') jobs.push(matLoad());
+    else if (scr === 'media') jobs.push(mediaLoad());
+    else if (scr === 'nyheter') jobs.push(newsLoad());
     else if (scr === 'finn') jobs.push(finnLoad(m.sub));
-    else if (!FIN.includes(scr) || FINMODS.includes(scr)) jobs.push(modLoad(scr, m.sub));
+    else if ((!FIN.includes(scr) || FINMODS.includes(scr)) && !['media', 'nyheter'].includes(scr)) jobs.push(modLoad(scr, m.sub));
+    if (paper()) {
+      jobs.push(photoLoad().then(() => draw()).catch(() => {}));
+      if (scr === 'hl') jobs.push(matLoad().catch(() => {}), loadSummary().catch(() => {}), newsLoad().catch(() => {}));
+      if (scr === 'mer' || scr === 'hjem') jobs.push(loadSummary().catch(() => {}));
+    }
     if (!m.me) jobs.push(loadMe().catch(() => { m.me = { name: S.boot?.settings?.name }; }));
     await Promise.all(jobs);
   } catch (e) { flash(e.message); }
@@ -447,14 +458,14 @@ export function route() {
   const parts = location.hash.replace(/^#\/?/, '').split('/');
   const h = parts[0];
   // Desktop- og eldre lenker
-  const map = { ov: 'hjem', tx: 'liste', bud: 'budsjett', inn: 'set', meg: 'set', homelab: 'hl', ai: 'sok', matplan: 'mat', domener: 'dom', aksjer: 'aks', abonnement: 'sub', mapper: 'dir', sporing: 'spor', trk: 'spor' };
+  const map = { ov: 'hjem', tx: 'liste', bud: 'budsjett', inn: 'set', meg: 'set', homelab: 'hl', ai: 'sok', matplan: 'mat', domener: 'dom', aksjer: 'aks', abonnement: 'sub', mapper: 'dir', sporing: 'spor', trk: 'spor', news: 'nyheter', nyhetsleser: 'nyheter', rss: 'nyheter' };
   const start = startScr();
   let next = map[h] ?? (ALL.includes(h) ? h : start);
   if (S.boot?.restricted && FIN.includes(next) && next !== 'dir') next = next === 'hjem' ? 'hjem' : 'dir';
   const sub = parts.slice(1).join('/');
   if (next !== m.screen || sub !== m.sub) {
     if (next !== m.screen) { m.edit = null; m.pdet = null; }
-    m.screen = next; m.sub = sub; m.detail = false; m.menu = false; m.sheet = false; m.min = false; m.orig = null;
+    m.screen = next; m.sub = sub; m.detail = false; m.menu = false; m.sheet = false; m.min = false; m.orig = null; paperState.scan = false; paperState.open = paperState.open && next === 'hl';
     if (next !== 'skann' && next !== 'opp') m.rc = null;
     window.scrollTo(0, 0);
   }
@@ -679,7 +690,8 @@ function bindGlobal() {
 export function bind() {
   const el = root();
   bindGlobal();
-  loadLayout().then(() => { if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch(() => {});
+  addEventListener('fh-design', (e) => { const was = pref('mDesign'); takeDesign(e.detail); if (pref('mDesign') !== was) draw(); });
+  loadLayout().then((r) => { takeDesign(r); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch(() => {});
   // Skanneknappen: trykk = kamera (eller valg), hold inne ~480 ms = arket med Bilder/Filer.
   el.addEventListener('pointerdown', (e) => {
     if (swDown(e)) return;
@@ -714,6 +726,7 @@ export function bind() {
     if ((x = d('[data-bud]'))) { m.budSel = +x.dataset.bud; if (!S.tx) await loadTx(); return draw(); }
     if ((x = d('[data-filter]'))) { m.filter = x.dataset.filter; u.type = m.filter; await loadTx(); return draw(); }
     if ((x = d('[data-mcat]'))) { const r = await api(`/receipts/${m.rc}`, { method: 'PATCH', json: { categoryId: +x.dataset.mcat } }); S.receipts = S.receipts.map((y) => (y.id === r.id ? r : y)); return draw(); }
+    if (await paperBind(e, t)) return;
     if (await matBind(e, t)) return;
     if (await finnBind(e, t)) return;
     if (hlBind(e, t)) return;
@@ -744,7 +757,7 @@ export function bind() {
     }
     if (act === 'logout') { await fetch('/api/logout', { method: 'POST' }); location.href = '/login?next=/finans/'; }
   }));
-  el.addEventListener('input', (e) => { if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
+  el.addEventListener('input', (e) => { paperBind(e, e.target); matBind(e, e.target); if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
   el.addEventListener('change', safe(async (e) => {
     const t = e.target;
     if (t.matches('[data-mupload]')) { const f = [...t.files]; t.value = ''; await upload(f, { confirm: t.hasAttribute('data-confirm') && f.length === 1 }); return; }
@@ -753,6 +766,8 @@ export function bind() {
       const r = await api(`/receipts/${m.rc}`, { method: 'PATCH', json: { [f]: f === 'total' ? parseAmount(t.value) : f === 'accountId' ? +t.value : t.value } });
       S.receipts = S.receipts.map((y) => (y.id === r.id ? r : y)); return draw();
     }
+    if (await paperBind(e, t)) return;
+    if (await matBind(e, t)) return;
     if (await finnBind(e, t)) return;
     if (await txBind(e, t)) return;
     if (await pagesBind(e, t)) return;
@@ -761,6 +776,8 @@ export function bind() {
   }));
   el.addEventListener('submit', safe(async (e) => {
     if (e.target.matches('[data-msearch]')) { e.preventDefault(); u.q = e.target.q.value; await loadTx(); return draw(); }
+    if (await paperBind(e, e.target)) return;
+    if (await matBind(e, e.target)) return;
     if (await finnBind(e, e.target)) return;
     if (hlBind(e, e.target)) return;
     if (await trkBind(e, e.target)) return;

@@ -132,3 +132,32 @@ export function applyM3(on, seedKey = 'sys', mode = 'dark', redraw = () => {}, s
 export const paletteFor = palette; // for tester
 /** var(--m3-XXXXXX,#XXXXXX) for inline-stiler i Android-temaet. */
 export const c3 = (h) => `var(--m3-${h.slice(1).toUpperCase()},${h})`;
+
+/* ---------- Papir (prompt 13) ---------- */
+// Papir bruker ikke Material You. Hver Android-rolle får en papirfarge, så alle sider (som tegnes med Android-oppsettet)
+// blir lyst papir eller kveldspapir. I tillegg settes --pp-* for Papir-skallet og de nye kortene.
+export const PAPER = {
+  light: { bg: '#f3efe6', card: '#ffffff', surf2: '#ebe5d8', line: '#d8d1c2', mut: '#8f897c', mut2: '#6b665c', ink: '#1b1a17', lab: '#b23a2a', onLab: '#ffffff', labC: '#f3e3d9', onLabC: '#7a2814', pos: '#2f7a4f', posC: '#dfe9e1', onPosC: '#1f4d3a', warn: '#a86a10', blue: '#2f5d8a', lime: '#5a7a10', limeC: '#eef2d6', onLimeC: '#3d4a10', nav: '#1b1a17', navInk: '#a39e92', navAct: '#f3efe6', navActInk: '#1b1a17' },
+  dark: { bg: '#14130f', card: '#211f19', surf2: '#2a2820', line: '#34322a', mut: '#8a8578', mut2: '#b5ae9f', ink: '#ece7dc', lab: '#e8705c', onLab: '#14130f', labC: '#3a2418', onLabC: '#f2b8a6', pos: '#7fcf9a', posC: '#17271e', onPosC: '#c9e4d8', warn: '#f2b56b', blue: '#8fb3dc', lime: '#c2e27a', limeC: '#2c3216', onLimeC: '#d4f25a', nav: '#ece7dc', navInk: '#5e594f', navAct: '#14130f', navActInk: '#ece7dc' },
+};
+const X_PAPER = { '9FE3C6': 'pos', '7BE3A0': 'pos', '1F3A2F': 'posC', 'C9E4D8': 'onPosC', '07301F': 'posC', FF8A80: 'lab', FF8A6B: 'lab', F2B56B: 'warn', A9C3FF: 'blue', C2E27A: 'lime' };
+function paperRole(h, c) {
+  const [fam, tone] = ROLE[h];
+  if (fam === 'x') return c[X_PAPER[h]] ?? c.ink;
+  if (fam === 'p') return tone >= 100 ? c.onLab : tone >= 85 ? c.labC : tone <= 15 ? c.onLabC : c.lab;
+  if (fam === 't') return tone >= 85 ? c.limeC : c.onLimeC;
+  if (fam === 's') return c.surf2;
+  return tone >= 96 ? c.bg : tone >= 94 ? c.card : tone >= 87 ? c.surf2 : tone >= 78 ? c.line : tone >= 40 ? c.mut : tone >= 25 ? c.mut2 : c.ink;
+}
+/** Setter papirfargene (lys eller mørk) på alle --m3-*-rollene og --pp-*-tokenene. */
+export function applyPaper(dark) {
+  const c = PAPER[dark ? 'dark' : 'light'], k2 = 'paper' + dark;
+  let el = document.getElementById('fh-m3');
+  if (el && key === k2) return !dark;
+  key = k2;
+  if (!el) { el = document.createElement('style'); el.id = 'fh-m3'; document.head.appendChild(el); }
+  const roles = Object.keys(ROLE).map((h) => `--m3-${h}:${paperRole(K_SAME[h] ?? h, c)}`).join(';');
+  const pp = Object.entries(c).map(([n, v]) => `--pp-${n}:${v}`).join(';');
+  el.textContent = `:root{${roles};${pp}}`;
+  return !dark;
+}

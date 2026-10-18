@@ -134,7 +134,7 @@ export async function matApi(path, opts = {}) {
   if (opts.json !== undefined) { init.body = JSON.stringify(opts.json); init.headers['Content-Type'] = 'application/json'; delete init.json; }
   const res = await fetch('/mat/api' + path, init);
   const data = res.headers.get('content-type')?.includes('json') ? await res.json() : null;
-  if (!res.ok) throw new Error(data?.error || `Matplan svarte ${res.status}`);
+  if (!res.ok) throw new Error(data?.error || `Mat svarte ${res.status}`);
   return data;
 }
 // Domene-API-et (Homelab) ligger også utenfor /finans/api.
