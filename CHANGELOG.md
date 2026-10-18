@@ -2,6 +2,33 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.16.0] – 18.10.2026 · prompt 24
+- **Bursdager (ny):** finnes på web, i appene og i PWA.
+  - Viser neste bursdag, søk, en liste per måned med alder og dager igjen, og legg til, rediger og slett.
+  - Kobles til Google Kalender (innlogging, egen kalender, bursdager fra kontakter) og Home Assistant (import og synk begge veier).
+  - Påminnelse kl. 09:00.
+  - Widgets: på Hjem, på iOS (liten, medium og låseskjerm) og på Android (Material You).
+- **Samsung-widgets:** egne widgets for Samsung-telefoner i samme størrelse som Samsungs Vær-widget (134 × 155 dp, radius 20). Gjelder Skann, Huskeliste, Bursdager, Sporing, Avganger og Saldo.
+- **Lik layout på iOS og Android:** Ruter-visningen og Mer-menyen er bygd likt etter designet.
+  - Ruter har ingen fanelinje eller logo.
+  - Fanelinje-ikonene har riktig størrelse og høyde.
+- **Familie:**
+  - Én person vises én gang, selv med flere telefoner («· 2 enheter»). Du velger selv hvilken enhet posisjonen skal komme fra.
+  - Helsedata telles ikke dobbelt.
+  - iPhone og iPad bruker Apple Maps igjen.
+- **Profiler** under Innstillinger → Profil: Standard, Finans + Boliger og Boliger-profil.
+  - «Finans + Boliger» åpner rett i Boliger, og Hjem ligger under Mer.
+  - Boliger viser domene-statistikk øverst.
+- **Boliger:**
+  - Toppbildet følger valgt bolig, og Strømstad-bildet følger med som valg.
+  - Hold inne på en bolig for å redigere navn, adresse, budsjett, farge og bakgrunn.
+- **Innstillinger:**
+  - Søk og ✦ AI-søk.
+  - Alle integrasjoner er samlet under Integrasjoner, med status, redigering og test. Hemmelige verdier lagres kryptert på serveren.
+- **App-ikon og app-navn kan byttes på Android** (activity-alias). Navnet vises også inne i appen.
+- **Pakker-widgeten vises alltid på Hjem.** Nye widgets legges til uten å fjerne noe.
+- **Nyhetsleser:** ikonene vises med en gang.
+
 ## [4.15.0] – 18.10.2026 · prompt 23
 - **Sveip tilbake viser forrige side:** når du sveiper fra venstre kant, ligger forrige side bak med parallakse og slør. Den er aldri svart. Android bruker Predictive Back, og PWA har samme gest.
 - **Scrollposisjonen huskes:** går du inn i en underside og tilbake, havner du der du var. Nye undersider åpner øverst.
