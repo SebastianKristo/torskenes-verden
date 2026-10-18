@@ -54,10 +54,10 @@ jobs:
             cp app/build/outputs/apk/release/app-release.apk "../../dist/FinansHub-$V.apk"
             rm -f "$RUNNER_TEMP/release.keystore"
           else
-            # Uten egen nøkkel: debug-signert APK. Kan installeres, men en senere versjon
-            # må avinstallere den gamle først, siden nøkkelen er ny for hvert bygg.
-            ./gradlew --no-daemon assembleDebug -PversionName="$V" -PversionCode=${{ github.run_number }}
-            cp app/build/outputs/apk/debug/app-debug.apk "../../dist/FinansHub-$V-debug.apk"
+            # Uten egen nøkkel: release-bygg signert med den faste sideload-nøkkelen i repoet,
+            # så nye versjoner kan installeres rett over den forrige.
+            ./gradlew --no-daemon assembleRelease -PversionName="$V" -PversionCode=$((1000 + ${{ github.run_number }}))
+            cp app/build/outputs/apk/release/app-release.apk "../../dist/FinansHub-$V.apk"
           fi
       - uses: actions/upload-artifact@v4
         with:
@@ -150,9 +150,7 @@ jobs:
             echo "## Installer"
             echo ""
             echo "**Android:** last ned \`FinansHub-*.apk\`, tillat «Installer ukjente apper» for nettleseren eller filbehandleren, og åpne filen."
-            if ls dist/*-debug.apk >/dev/null 2>&1; then
-              echo "> Denne APK-en er debug-signert fordi release-nøkkelen ikke er satt opp. Avinstaller forrige versjon før du installerer denne."
-            fi
+            echo "> Fra 4.6.1 er APK-en signert med en fast nøkkel, så senere versjoner installeres rett over. Kommer du fra 4.6.0 eller eldre, må du avinstallere én siste gang."
             echo ""
             echo "**iPhone:** åpne \`FinansHub-*-unsigned.ipa\` i [AltStore](https://altstore.io), [SideStore](https://sidestore.io) eller [Sideloadly](https://sideloadly.io). En signert \`FinansHub-*.ipa\` (hvis den finnes) kan installeres direkte på registrerte enheter."
             echo ""

@@ -24,6 +24,14 @@ android {
     }
 
     signingConfigs {
+        // Fast nøkkel for sideloading (apps/android/signing/sideload.jks). Alle bygg uten egen release-nøkkel signeres
+        // med den, så en ny APK kan installeres over den forrige uten å avinstallere først.
+        create("sideload") {
+            storeFile = rootProject.file("signing/sideload.jks")
+            storePassword = "finanshub-sideload"
+            keyAlias = "finanshub"
+            keyPassword = "finanshub-sideload"
+        }
         if (signStore != null) {
             create("release") {
                 storeFile = file(signStore)
@@ -35,10 +43,13 @@ android {
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("sideload")
+        }
         release {
             isMinifyEnabled = false
-            // Egen nøkkel når den sendes inn, ellers debug-nøkkelen (så bygget fortsatt kan installeres direkte).
-            signingConfig = signingConfigs.getByName(if (signStore != null) "release" else "debug")
+            // Egen nøkkel når den sendes inn, ellers den faste sideload-nøkkelen.
+            signingConfig = signingConfigs.getByName(if (signStore != null) "release" else "sideload")
         }
     }
     compileOptions {
