@@ -19,7 +19,7 @@
     {"id":"europris","navn":"Europris","domene":"europris.no","alias":["europris","europris as","europris.no"],"kategori":"Dagligvare","orgnr":"","farge":"#004C97","fil":"europris.png","kilde":"html-icon","hentet":"2026-10-18"},
     {"id":"normal","navn":"Normal","domene":"normal.no","alias":["normal","normal norge","normal as","normal.no"],"kategori":"Dagligvare","orgnr":"","farge":"#E4003B","fil":"normal.png","kilde":"html-icon","hentet":"2026-10-18"},
     {"id":"nille","navn":"Nille","domene":"nille.no","alias":["nille","nille as","nille.no"],"kategori":"Dagligvare","orgnr":"","farge":"#D6001C","fil":"nille.png","kilde":"manifest","hentet":"2026-10-18"},
-    {"id":"lidl","navn":"Lidl","domene":"lidl.com","alias":["lidl","lidl norge","lidl.com"],"kategori":"Dagligvare","orgnr":"","farge":"#0050AA","fil":"lidl.png","kilde":"manifest","hentet":"2026-10-18"},
+    {"id":"lidl","navn":"Lidl","domene":"lidl.com","alias":["lidl","lidl norge","lidl.com"],"kategori":"Dagligvare","orgnr":"","farge":"#0050AA","fil":"lidl.png","kilde":"apple-touch-icon","hentet":"2026-10-18"},
     {"id":"matkroken","navn":"Matkroken","domene":"matkroken.no","alias":["matkroken","matkroken as","matkroken.no"],"kategori":"Dagligvare","orgnr":"","farge":"#E30613","fil":"matkroken.png","kilde":"","hentet":""},
     {"id":"hellofresh","navn":"HelloFresh","domene":"hellofresh.no","alias":["hellofresh","hello fresh","hellofresh.no"],"kategori":"Dagligvare","orgnr":"","farge":"#7AB800","fil":"hellofresh.png","kilde":"html-icon","hentet":"2026-10-18"},
     {"id":"adams-matkasse","navn":"Adams Matkasse","domene":"adamsmatkasse.no","alias":["adams matkasse","adams matkasse as","adamsmatkasse.no"],"kategori":"Dagligvare","orgnr":"","farge":"#E2492F","fil":"adams-matkasse.png","kilde":"html-icon","hentet":"2026-10-18"},
@@ -370,7 +370,7 @@
     {"id":"outland","navn":"Outland","domene":"outland.no","alias":["outland","outland.no"],"kategori":"Bøker, gaver og annet","orgnr":"","farge":"#1A1A1A","fil":"outland.png","kilde":"apple-touch-icon","hentet":"2026-10-18"},
     {"id":"odeon-kino","navn":"Odeon Kino","domene":"odeonkino.no","alias":["odeon kino","odeon","odeonkino.no"],"kategori":"Bøker, gaver og annet","orgnr":"","farge":"#7A1F3D","fil":"odeon-kino.png","kilde":"google","hentet":"2026-10-18"},
     {"id":"tusenfryd","navn":"Tusenfryd","domene":"tusenfryd.no","alias":["tusenfryd","tusenfryd.no"],"kategori":"Bøker, gaver og annet","orgnr":"","farge":"#E30613","fil":"tusenfryd.png","kilde":"html-icon","hentet":"2026-10-18"},
-    {"id":"gls","navn":"GLS","domene":"gls-group.com","alias":["gls","gls norge","gls group","gls-group.com"],"kategori":"Offentlig og frakt","orgnr":"","farge":"#172154","fil":"","kilde":"","hentet":""},
+    {"id":"gls","navn":"GLS","domene":"gls-group.com","alias":["gls","gls norge","gls group","gls-group.com"],"kategori":"Offentlig og frakt","orgnr":"","farge":"#172154","fil":"gls.png","kilde":"html-icon","hentet":"2026-10-18"},
     {"id":"porterbuddy","navn":"Porterbuddy","domene":"porterbuddy.com","alias":["porterbuddy","porterbuddy.com"],"kategori":"Offentlig og frakt","orgnr":"","farge":"#5B2D90","fil":"","kilde":"","hentet":""}
   ]
 }
