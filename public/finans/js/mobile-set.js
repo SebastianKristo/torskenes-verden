@@ -64,12 +64,12 @@ export function settingsView(th, sub) {
 }
 
 // Papir: tema, bakgrunn og nyhetsleser øverst (Mobil Papir App → Innstillinger), resten som før.
-const PHOTO_N = { cur: 'Nåværende', oslo: 'Oslo', weather: 'Vær nå', planets: 'Planeter', custom: 'Eget bilde' };
+const PHOTO_N = { cur: 'Ingen', oslo: 'Oslo', weather: 'Vær', planets: 'Planeter', custom: 'Eget bilde' };
 function paperTop() {
   const md = pref('paperMode'), r = (k, n, s2) => `<button class="opt-row" data-sact="ppmode" data-v="${k}"><span class="m-grow"><b style="font-weight:600">${n}</b><br><span style="font-size:13px;opacity:.65">${s2}</span></span><span class="sval" style="${md === k ? 'color:var(--pp-pos);opacity:1;font-weight:600' : ''}">${md === k ? '✓ Valgt' : ''}</span></button>`;
   return `${G('Tema', [r('lys', 'Papir · lys', 'Lyst papir og svart fanelinje'), r('mork', 'Papir · mørk', 'Kveldspapir og lys fanelinje'), r('auto', 'Papir · følg systemet', 'Lys om dagen, mørk når telefonen er mørk'),
     `<button class="opt-row" data-sact="design" data-v="klassisk"><span class="m-grow"><b style="font-weight:600">Klassisk (Liquid Glass / Material You)</b><br><span style="font-size:13px;opacity:.65">Bytt tilbake til det forrige mobildesignet</span></span><span class="sval" style="color:var(--pp-lab);opacity:1;font-weight:600">Bytt ›</span></button>`])}
-    ${G('Tilpass', [nav('profil', 'Profil', m.me?.username ? `@${m.me.username}` : '', 'users', '#5E8BFF'), nav('bakgrunn', 'Bakgrunn på Hjem', PHOTO_N[pref('photo')] ?? 'Nåværende', 'look', '#FF9F0A'), nav('fanelinje', 'Fanelinje', 'Faner, navn og ikoner', 'list', '#5E5CE6'), link('<b style="font-weight:600">Nyhetsleser</b>', '#/nyheter', 'Kilder, kategorier og AI')])}
+    ${G('Tilpass', [nav('profil', 'Profil', m.me?.username ? `@${m.me.username}` : '', 'users', '#5E8BFF'), nav('bakgrunn', 'Bakgrunn på Hjem', PHOTO_N[pref('photo')] ?? 'Ingen', 'look', '#FF9F0A'), nav('fanelinje', 'Fanelinje', 'Faner, navn og ikoner', 'list', '#5E5CE6'), link('<b style="font-weight:600">Nyhetsleser</b>', '#/nyheter', 'Kilder, kategorier og AI')])}
     <div class="sec">Ikonfarger</div>${iconThemeRow()}
 `;
 }
@@ -97,7 +97,7 @@ const PAGE = {
       ${G('', [nav('konto', 'Kontoer og brukere', '', 'users', '#5E8BFF'), nav('sik', 'Sikkerhet', me.totp ? '2FA på' : '', 'shield', '#34C759')])}
       ${G('', [btn('Logg ut', 'logout', '#b23a2a')])}`;
   },
-  bakgrunn: () => `${photoChoices()}<div class="snote">Bakgrunnen vises øverst på Hjem. «Vær nå» følger været, og «Planeter» er NASAs bilde for dagen. Bildene lastes ned av serveren din.</div>`,
+  bakgrunn: () => `${photoChoices()}<div class="snote">Bakgrunnen vises øverst på Hjem, i Papir og klassisk. «Vær» følger været der du er (MET), «Planeter» viser Jorda, Månen, Jupiter og Mars fra NASA, og «Oslo» er Oslo fra luften. Bildene lastes ned og skaleres av serveren din, og appen lagrer dem for bruk uten nett. «Kun på Wi-Fi» finnes i de native appene.</div>`,
   fanelinje: () => `<div class="sec">Hovedlinja</div>${tabEditor()}<div class="pp-col pp-navset" style="gap:8px">${navSettings()}</div>`,
   konto: () => `${G('Profilbilde', [`<label class="opt-row"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:44px;height:44px">${avInner()}</span><span class="m-grow" style="color:var(--m-acc);font-weight:500">${avatarUrl() ? 'Bytt profilbilde' : 'Last opp profilbilde'}</span><input class="m-file" type="file" accept="image/*" data-avatar></label>`, avatarUrl() ? btn('Fjern bildet', 'avdel', '#FF8A80') : ''], 'Velg fra Bilder, Filer eller ta et nytt bilde. Samme bilde vises i Homelab.')}
     ${G('På denne enheten', [profile(), val('Status', '✓ Aktiv', '#7BE3A0')],

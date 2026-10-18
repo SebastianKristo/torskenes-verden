@@ -60,7 +60,7 @@ export const finTabs = () => tabsOf(LAY().finTabs, FINTABS, FIXED_FIN);
 const finCur = (s) => { const c = ['liste', 'budsjett', 'sok', 'finn'].includes(s) ? s : [...PAGES, ...FINMODS].includes(s) ? 'mer' : 'hjem'; return c === 'hjem' || finTabs().some(([k]) => k === c) ? c : 'mer'; };
 
 /* ---------- Valg på denne enheten (localStorage) ---------- */
-const PDEF = { scanTap: 'cam', start: 'hl', hideAmt: false, appHide: false, lock: false, lockAfter: '5', crop: true, origImg: true, wifi: false, nSub: false, nDom: true, nWeek: false, m3Seed: 'sys', m3Mode: 'dark', pageColors: 'same', mDesign: 'klassisk', paperMode: 'auto', photo: 'cur' };
+const PDEF = { scanTap: 'cam', start: 'hl', hideAmt: false, appHide: false, lock: false, lockAfter: '5', crop: true, origImg: true, wifi: false, nSub: false, nDom: true, nWeek: false, m3Seed: 'sys', m3Mode: 'dark', pageColors: 'same', mDesign: 'klassisk', paperMode: 'auto', photo: 'cur', bgBlur: 0, bgDim: 0, bgAnimate: true, bgPlanet: 'auto', bgRotate: 'daily' };
 let P = {};
 try { P = JSON.parse(localStorage.getItem('fh_mprefs') || '{}') || {}; } catch { P = {}; }
 if (P.start === 'hjem' && !P.startV2) { P.start = 'hl'; P.startV2 = 1; } // Homelab er ny standard startside

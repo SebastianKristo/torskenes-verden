@@ -15,13 +15,14 @@ import { SB } from './mobile-subs.js';
 import { aksTitle } from './mobile-aks.js';
 import { setTitle } from './mobile-set.js';
 import { appName, huskeWidget, posWidget, bolWidget, scanCtx, homeUpload } from './mobile-p17.js';
+import { bgFetch, bgLayers, bgControls, saveBg, takeBg, bgSet } from './mobile-bg.js';
 
 /* ---------- Valg (per bruker i /api/me/layout, med lokal kopi) ---------- */
 
 export const paper = () => pref('mDesign') === 'papir';
 export const paperDark = () => { const v = pref('paperMode'); return v === 'mork' || (v === 'auto' && !!matchMedia('(prefers-color-scheme: dark)').matches); };
-const PHOTOS = [['cur', 'Nåværende'], ['oslo', 'Oslo'], ['weather', 'Vær nå'], ['planets', 'Planeter']];
-const PHOTO_SUB = { cur: 'Mørk gradient', oslo: 'Bilde av Oslo', weather: 'Følger været nå', planets: 'Ny planet hver dag (NASA)', custom: 'Ditt eget bilde' };
+const PHOTOS = [['weather', 'Vær'], ['planets', 'Planeter'], ['oslo', 'Oslo'], ['cur', 'Ingen']];
+const PHOTO_SUB = { cur: 'Bare mørk gradient', oslo: 'Oslo fra luften', weather: 'Følger været der du er (MET)', planets: 'Jorda, Månen, Jupiter og Mars (NASA)', custom: 'Ditt eget bilde' };
 const WX_NB = { clear: 'klart', klart: 'klart', cloudy: 'skyet', sky: 'skyet', rain: 'regn', regn: 'regn', snow: 'snø', fog: 'tåke', night: 'natt' };
 export const photoKind = () => pref('photo') || 'cur';
 
@@ -37,6 +38,7 @@ export function takeDesign(r) {
   if (r.mobileDesign === 'papir' || r.mobileDesign === 'klassisk') setPref('mDesign', r.mobileDesign);
   if (['auto', 'lys', 'mork'].includes(r.paperMode)) setPref('paperMode', r.paperMode);
   if (['cur', 'oslo', 'weather', 'planets', 'custom'].includes(r.photo)) setPref('photo', r.photo);
+  takeBg(r);
 }
 
 /* ---------- Fotovindu ---------- */
@@ -49,15 +51,14 @@ const FALLBACK = {
   planets: 'linear-gradient(170deg,#05060d 0%,#141a33 100%)',
   custom: 'linear-gradient(170deg,#4a5a6a,#2a3440 60%,#1d242c)',
 };
-// Mørk toning øverst og nederst, så teksten i fotovinduet alltid er lesbar.
-const OV = 'linear-gradient(180deg,rgba(0,0,0,.25),rgba(0,0,0,0) 35%,rgba(0,0,0,.45))';
 
 // Bildene kommer fra serveren (/api/bg/…, lastet ned og cachet der), med reservebilder i «fallbacks».
 // Hvert bilde prøves i rekkefølge; feiler alle, vises gradienten og «Fikk ikke lastet bildet · trykk for å prøve igjen».
 export async function photoLoad(kind = photoKind(), force = false) {
   if (kind === 'cur') { P.photo.cur = { url: null, gradient: FALLBACK.cur, t: Date.now() }; return; }
   if (!force && P.photo[kind]?.t > Date.now() - 10 * 60000) return;
-  try { const r = await hlApi(`/photo-window?kind=${kind}`); P.photo[kind] = { ...r, t: Date.now() }; }
+  // Felles bakgrunnstjeneste (/api/background); eldre servere: /api/photo-window (se mobile-bg.js).
+  try { const r = await bgFetch(kind); P.photo[kind] = { ...r, t: Date.now() }; }
   catch { P.photo[kind] = { url: null, gradient: FALLBACK[kind], t: Date.now() }; }
   await probe(kind, force);
 }
@@ -77,12 +78,21 @@ function probe(kind, force) {
     next(0);
   });
 }
-const bgOf = (kind) => {
-  const u = P.img[kind];
-  if (u) return `background-image:${OV},url('${esc(u)}')`;
-  return `background-image:${OV},${P.photo[kind]?.gradient || FALLBACK[kind] || FALLBACK.cur}`;
-};
-const thumbOf = (kind) => { const u = P.img[kind]; return u ? `background-image:url('${esc(u)}')` : `background-image:${P.photo[kind]?.gradient || FALLBACK[kind]}`; };
+// Fotovinduet tegnes som lag (bilde med uskarphet/papirfilter, mørklegging, scrim, tekstur og partikler), se mobile-bg.js.
+const bgOf = (kind) => bgLayers({ img: P.img[kind], gradient: P.photo[kind]?.gradient || FALLBACK[kind] || FALLBACK.cur,
+  particles: P.photo[kind]?.particles, papir: true, hint: heroHint(kind) });
+// theme_hint gjelder bildet, eller serverens gradient når bildet mangler; reservegradientene er mørke.
+export const heroHint = (kind = photoKind()) => (P.photo[kind]?.hint === 'light' && (P.img[kind] || P.photo[kind]?.gradient) ? 'light' : 'dark');
+/** Klassisk Hjem: samme bakgrunn som et bånd bak hilsenen (null ved «Ingen»). */
+export function classicBand() {
+  const kind = photoKind();
+  if (kind === 'cur') return null;
+  if (!P.photo[kind] && !P.band) { P.band = true; photoLoad(kind).then(draw).catch(() => {}).finally(() => { P.band = false; }); }
+  const p = P.photo[kind], img = P.img[kind];
+  const credit = p?.credit && img ? `<span class="p19-cr">${p.creditUrl ? `<a href="${esc(p.creditUrl)}" target="_blank" rel="noopener" style="color:inherit">${esc(p.credit)}</a>` : esc(p.credit)}</span>` : '';
+  return { cls: ` p19-band${heroHint(kind) === 'light' ? ' hint-light' : ''}`,
+    html: bgLayers({ img, gradient: p?.gradient || FALLBACK[kind] || FALLBACK.cur, particles: p?.particles, papir: false, hint: heroHint(kind) }) + credit };
+}
 
 /* ---------- Skall: fotovindu og fanelinje ---------- */
 
@@ -139,27 +149,35 @@ export function paperHero(scr) {
   // Bakgrunnsvelgeren ligger under Innstillinger → Bakgrunn. Profilbildet åpner Innstillinger → Profil.
   // I Finans vises profilbildet og @brukernavn, ikke fullt navn.
   const un = m.me?.username, fin = ctxOf(scr) === 'fin';
-  return `<header class="pp-hero${home ? ' home' : ''}${heroBg(scr) ? ' own' : ''}" style="${heroBg(scr) ?? bgOf(kind)}">
+  const own = heroBg(scr);
+  return `<header class="pp-hero${home ? ' home' : ''}${own ? ' own' : ''}${!own && heroHint(kind) === 'light' ? ' hint-light' : ''}" style="${own ?? ''}">${own ? '' : bgOf(kind)}
     <div class="pp-top">${backBtn}<span class="m-grow"></span>
       <a class="pp-av${avatarUrl() ? ' img' : ''}${fin && un ? ' chip' : ''}" href="#/set/profil" aria-label="Profil">${fin && un ? `<span class="pp-avi">${avInner()}</span><span class="pp-un">@${esc(un)}</span>` : avInner()}</a></div>
     ${failNote}
     <div class="pp-bottom"><div class="m-grow"><div class="pp-kick">${esc(kicker)}</div><h1 class="pp-title${home ? ' big' : ''}">${ttl}</h1></div>
       ${home && w ? `<a class="pp-temp" href="#/vaer" aria-label="Åpne værvisningen"><b>${w.temp != null ? Math.round(w.temp) + '°' : '–'}</b><span>${esc(w.text ?? '')}${w.updated ? ` · ${esc(new Date(w.updated).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }))}` : ''} ›</span></a>` : ''}</div>
-    ${P.photo[kind]?.credit && home ? `<span class="pp-credit">${esc(P.photo[kind].credit)}</span>` : ''}
+    ${P.photo[kind]?.credit && home && P.img[kind] ? (P.photo[kind].creditUrl ? `<a class="pp-credit" href="${esc(P.photo[kind].creditUrl)}" target="_blank" rel="noopener">${esc(P.photo[kind].credit)}</a>` : `<span class="pp-credit">${esc(P.photo[kind].credit)}</span>`) : ''}
   </header>`;
 }
 
 /** Innstillinger → Bakgrunn: valgene som en liste (samme bilder og feilmeldinger som før). */
 export function photoChoices() {
   const kind = photoKind();
-  if (!P.choicesLoaded) { P.choicesLoaded = true; Promise.all(PHOTOS.map(([q]) => photoLoad(q))).then(draw).catch(() => {}); }
+  if (!P.choicesLoaded) { P.choicesLoaded = true; Promise.all([...PHOTOS.map(([q]) => photoLoad(q)), photoLoad('custom')]).then(draw).catch(() => {}); }
   const sub = (k) => {
     if (P.fail[k]) return 'Fikk ikke lastet bildet · trykk for å prøve igjen';
     if (k === 'weather') { const sy = WX_NB[P.photo.weather?.symbol] ?? WX_NB[String(P.photo.weather?.symbol ?? '').split('_')[0]]; return `${PHOTO_SUB.weather}${sy ? ` · ${sy}` : ''}`; }
     return PHOTO_SUB[k];
   };
-  return `<div class="pp-card p16-photos">${PHOTOS.map(([k, n]) => `<button role="menuitemradio" aria-checked="${kind === k}" data-pp="setphoto" data-k="${k}"><span class="pp-th" style="${thumbOf(k)}"></span><span class="m-grow pp-mi"><span>${n}</span><small class="${P.fail[k] ? 'bad' : ''}">${esc(sub(k))}</small></span><span class="pp-ck">${kind === k ? '✓' : ''}</span></button>`).join('')}
-    <label class="pp-own"><span class="pp-th dash">+</span><span class="m-grow pp-mi"><span>Eget bilde</span><small>${kind === 'custom' ? 'Valgt' : 'Last opp fra Bilder eller Filer'}</small></span><span class="pp-ck">${kind === 'custom' ? '✓' : ''}</span><input class="m-file" type="file" accept="image/jpeg,image/png,image/webp" data-ppfile></label></div>`;
+  // Forhåndsvisning av hver type som kort (med samme filtre som fotovinduet), og valgene under.
+  const card = (k, n) => `<button class="p19-prev" role="radio" aria-checked="${kind === k}" data-pp="setphoto" data-k="${k}">
+      <span class="p19-th">${bgLayers({ img: P.img[k], gradient: P.photo[k]?.gradient || FALLBACK[k], particles: null, papir: true, hint: P.photo[k]?.hint })}<span class="p19-ck">${kind === k ? '✓' : ''}</span></span>
+      <span class="p19-n">${n}</span><small class="${P.fail[k] ? 'bad' : ''}">${esc(sub(k))}</small></button>`;
+  return `<div class="p19-grid" role="radiogroup" aria-label="Bakgrunn">${PHOTOS.map(([k, n]) => card(k, n)).join('')}
+    <label class="p19-prev own" aria-checked="${kind === 'custom'}"><span class="p19-th">${kind === 'custom' && P.img.custom ? bgLayers({ img: P.img.custom, papir: true }) : '<span class="p19-plus">+</span>'}<span class="p19-ck">${kind === 'custom' ? '✓' : ''}</span></span>
+      <span class="p19-n">Eget bilde</span><small>${kind === 'custom' ? 'Valgt · trykk for å bytte' : 'Last opp fra Bilder eller Filer'}</small><input class="m-file" type="file" accept="image/jpeg,image/png,image/webp" data-ppfile></label></div>
+    ${kind === 'cur' ? '' : bgControls(kind)}
+    ${P.photo[kind]?.credit && P.img[kind] ? `<div class="snote">Foto: ${P.photo[kind].creditUrl ? `<a href="${esc(P.photo[kind].creditUrl)}" target="_blank" rel="noopener">${esc(P.photo[kind].credit)}</a>` : esc(P.photo[kind].credit)}</div>` : ''}`;
 }
 
 // Fanelinja: jevnt fordelte faner (aktiv fane har ikon og egen bredde). Hjem vises bare på Hjem; ellers går pila
@@ -397,7 +415,7 @@ export async function paperBind(e, t) {
   if (e.type === 'change') {
     if (t.matches?.('[data-ppfile]')) {
       const f = t.files?.[0]; t.value = ''; if (!f) return true;
-      try { await uploadPhoto(f); setPref('photo', 'custom'); P.open = false; flash('Bakgrunnen er lagret'); } catch (err) { flash(err.message); }
+      try { await uploadPhoto(f); await probe('custom', true); saveDesign({ photo: 'custom', bgType: 'custom' }, false); P.open = false; flash('Bakgrunnen er lagret'); } catch (err) { flash(err.message); }
       draw(); return true;
     }
     if (t.matches?.('[data-ppquick]')) {
@@ -412,6 +430,14 @@ export async function paperBind(e, t) {
       const files = [...t.files]; t.value = ''; return recipeUpload(files);
     }
     return false;
+  }
+  // Sliderne for uskarphet og mørklegging: tall og fotovindu oppdateres mens man drar, lagres etter en kort pause.
+  if (e.type === 'input' && t.matches?.('[data-bgr]')) {
+    const key = t.dataset.bgr, v = +t.value;
+    saveBg({ [key]: v });
+    const lab = document.querySelector(`[data-bgv="${key}"]`); if (lab) lab.textContent = `${v} ${key === 'bgBlur' ? 'px' : '%'}`;
+    clearTimeout(P.bgT); P.bgT = setTimeout(draw, 250);
+    return true;
   }
   if (e.type === 'input') { if (t.closest?.('[data-ppform=feed]')) { P.nf = t.value; return true; } return false; }
   if (e.type === 'submit') {
@@ -441,8 +467,11 @@ export async function paperBind(e, t) {
   if (x.tagName !== 'LABEL') e.preventDefault();
   const k = x.dataset.pp;
   if (k === 'photo') { P.open = !P.open; if (P.open) Promise.all(PHOTOS.map(([q]) => photoLoad(q))).then(draw); draw(); return true; }
-  if (k === 'setphoto') { const kk = x.dataset.k, retry = P.fail[kk]; P.open = false; saveDesign({ photo: kk }, false); draw(); await photoLoad(kk, retry); draw(); return true; }
+  if (k === 'setphoto') { const kk = x.dataset.k, retry = P.fail[kk]; P.open = false; saveDesign({ photo: kk, bgType: kk }, false); draw(); await photoLoad(kk, retry); draw(); return true; }
   if (k === 'retry') { await photoLoad(photoKind(), true); draw(); return true; }
+  if (k === 'bgplanet') { saveBg({ bgPlanet: x.dataset.v }); P.photo.planets = null; await photoLoad('planets', true); draw(); return true; }
+  if (k === 'bgrot') { saveBg({ bgRotate: x.dataset.v }); draw(); return true; }
+  if (k === 'bganim') { saveBg({ bgAnimate: !bgSet().animate }); draw(); return true; }
   if (k === 'scan') { P.scan = true; draw(); return true; }
   if (k === 'scanx') { if (Date.now() - (P.scanAt ?? 0) < 700) return true; P.scan = false; P.qShow = false; draw(); return true; } // fingeren som holdt inne, slippes over bakgrunnen
   if (k === 'newsback') { history.length > 1 ? history.back() : (location.hash = '#/mer'); return true; }

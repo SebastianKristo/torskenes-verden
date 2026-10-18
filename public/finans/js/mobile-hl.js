@@ -6,6 +6,7 @@ import { TR, trkLoad, trkWatch, topPackages, pkgCard } from './mobile-track.js';
 import { m, draw, flash, avInner, avatarUrl, meName, HLTABS, FINTABS, FIXED_HL, FIXED_FIN } from './mobile.js';
 import { c3 } from './mobile-theme.js';
 import { haptic } from './mobile-haptics.js';
+import { classicBand } from './mobile-paper.js';
 
 /* ---------- Oppsett ---------- */
 
@@ -254,7 +255,8 @@ function gallery(th) {
 export function hlView(th) {
   const now = new Date(), name = H.data?.name || meName();
   const vis = lay.sec.filter((id) => !lay.hide[id]);
-  const head = `<div class="hlhead"><div class="m-grow"><span class="dim" style="text-transform:capitalize">${now.toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' })}</span><div class="title hlgreet"><span>${greetTxt(now.getHours())},</span><span>${esc(name)}</span></div></div>
+  const band = H.edit ? null : classicBand(); // Prompt 19: valgt bakgrunn som bånd bak hilsenen
+  const head = `<div class="hlhead${band?.cls ?? ''}">${band?.html ?? ''}<div class="m-grow"><span class="dim" style="text-transform:capitalize">${now.toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' })}</span><div class="title hlgreet"><span>${greetTxt(now.getHours())},</span><span>${esc(name)}</span></div></div>
     ${H.edit ? `<span class="m-row" style="gap:8px"><button class="gbtn sm" data-hle="gal" aria-label="Legg til widget" aria-expanded="${H.gal}">${icon('plus', 20, 'currentColor', 2.4)}</button><button class="donebtn" data-hle="done">Ferdig</button></span>`
       : `<button class="m-av hlav${avatarUrl() ? ' img' : ''}" data-mact="menu" aria-label="Profil og meny" aria-haspopup="dialog">${avInner()}</button>`}</div>`;
   const body = vis.map((id, i) => `<div class="wg${H.edit ? ` jig${i % 2 ? ' alt' : ''}` : ''}" data-wg="${id}">${H.edit ? `<div class="wg-ov" data-wgdrag="${id}" aria-hidden="true"></div><button class="wg-rm" data-hle="rm" data-id="${id}" aria-label="Fjern ${WD[id][0]}">−</button><span class="wg-mv"><button data-hle="mvsec" data-id="${id}" data-d="-1" aria-label="Flytt ${WD[id][0]} opp">▲</button><button data-hle="mvsec" data-id="${id}" data-d="1" aria-label="Flytt ${WD[id][0]} ned">▼</button></span>` : ''}${RENDER[id](th)}</div>`).join('');

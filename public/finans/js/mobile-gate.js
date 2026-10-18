@@ -119,13 +119,15 @@ function bindGate() {
 
 async function loadThumbs() {
   G.thumbs ??= {};
-  await Promise.all(['oslo', 'weather', 'planets'].map(async (k) => { try { const r = await (await fetch(`/api/photo-window?kind=${k}`)).json(); if (r?.url) G.thumbs[k] = r.url; } catch {} }));
+  // Prompt 19: forhåndsvisningene fra bakgrunnstjenesten; eldre servere: photo-window per type.
+  try { const r = await fetch(`/api/background/previews?w=${Math.round(Math.min(800, innerWidth * 2))}`); if (r.ok) { const d = await r.json(); for (const k of ['oslo', 'weather', 'planets']) if (d?.[k]?.image_url) G.thumbs[k] = d[k].image_url; } } catch {}
+  await Promise.all(['oslo', 'weather', 'planets'].filter((k) => !G.thumbs[k]).map(async (k) => { try { const r = await (await fetch(`/api/photo-window?kind=${k}`)).json(); if (r?.url) G.thumbs[k] = r.url; } catch {} }));
   if (G.step === 'onb') mount();
 }
 
 async function finish() {
   const pick = G.pick ?? 'lys', photo = G.photo ?? 'oslo';
-  const patch = { onboarded: true, mobileDesign: pick === 'klassisk' ? 'klassisk' : 'papir', photo, ...(pick !== 'klassisk' ? { paperMode: pick } : {}) };
+  const patch = { onboarded: true, mobileDesign: pick === 'klassisk' ? 'klassisk' : 'papir', photo, bgType: photo, ...(pick !== 'klassisk' ? { paperMode: pick } : {}) };
   G.busy = true; mount();
   await fetch('/api/me/layout', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) }).catch(() => {});
   // mobile.js tar valgene (design, bakgrunn, lås og haptikk) inn i sine lokale innstillinger og tegner på nytt.
@@ -143,6 +145,6 @@ export function showOnboarding(layout) {
   G.step = 'onb'; G.ob = 0; G.layout = layout; G.pick = layout?.mobileDesign === 'klassisk' ? 'klassisk' : layout?.paperMode === 'mork' ? 'mork' : 'lys'; G.photo = layout?.photo && layout.photo !== 'custom' ? layout.photo : 'oslo';
   G.perm = { push: 'Notification' in window && Notification.permission === 'granted', cam: false, hap: true, bio: false };
   fetch('/api/me').then((r) => (r.ok ? r.json() : null)).then((me) => { if (me && G.step === 'onb') { G.layout = { ...(G.layout ?? {}), name: me.displayName || me.name || '' }; mount(); } }).catch(() => {});
-  fetch('/api/photo-window?kind=oslo').then((r) => r.json()).then((r) => { if (r?.url) { G.bg = r.url; try { localStorage.setItem('fh_gate_bg', r.url); } catch {} mount(); } }).catch(() => {});
+  fetch(`/api/background?type=oslo&w=${Math.round(Math.min(1600, innerWidth * 2))}&dpr=1`).then((r) => (r.ok ? r.json().then((d) => ({ url: d?.image_url })) : fetch('/api/photo-window?kind=oslo').then((x) => x.json()))).then((r) => { if (r?.url) { G.bg = r.url; try { localStorage.setItem('fh_gate_bg', r.url); } catch {} mount(); } }).catch(() => {});
   mount();
 }
