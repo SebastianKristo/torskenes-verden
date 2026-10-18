@@ -317,6 +317,20 @@ export async function extract(image, mime, cats, force, { log = () => {} } = {})
   throw lastErr ?? new Error('Ingen AI-motor tilgjengelig');
 }
 
+/** Les en kvittering med lokal OCR (Tesseract) direkte, f.eks. på eldre kvitteringer som AI ikke klarte. */
+export async function extractOcr(image, mime) {
+  const t0 = Date.now();
+  try {
+    const data = validate(await ocrReceipt(image, mime));
+    data.needs_review = true;
+    logAi({ task: 'receipts', engine: 'tesseract', model: 'tesseract-nor', promptLen: image.length, ms: Date.now() - t0, status: 'manuell' });
+    return { provider: 'tesseract', model: 'tesseract-nor', data, seconds: (Date.now() - t0) / 1000 };
+  } catch (e) {
+    logAi({ task: 'receipts', engine: 'tesseract', model: 'tesseract-nor', promptLen: image.length, ms: Date.now() - t0, status: e.missing ? 'mangler' : 'feil', error: e.message });
+    throw e;
+  }
+}
+
 // «Bruk ved lav AI-sikkerhet»: les også med lokal OCR. Er totalen lik, økes sikkerheten litt; mangler AI totalen, brukes OCR-ens.
 async function lowConfCheck(res, image, mime, st, log) {
   if (!st.ocrLowConf || !ocrEnabled(st) || res.data.confidence.total >= st.minConf / 100) return res;

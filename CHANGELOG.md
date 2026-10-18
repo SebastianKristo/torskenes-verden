@@ -2,6 +2,17 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.10.1] – 18.10.2026
+- **Lokal OCR leser butikk og dato bedre:**
+  - Kjente kjeder (REMA 1000, KIWI, Coop, MENY, Circle K, Elkjøp og mange flere) gjenkjennes hvor som helst på kvitteringen.
+  - Ellers brukes linja over adressen, og gateadressen hoppes over. Navnet slås opp i Enhetsregisteret ut fra org.nr.
+  - Datoen leses med vanlige OCR-feil (O/0, l/1) og med månedsnavn som «18. okt». Datoer som «best før», garanti og retur ignoreres.
+  - Datoer fram i tid eller eldre enn fem år avvises.
+- **Lokal OCR på tidligere kvitteringer:**
+  - Hver kvittering har knappen «Les med lokal OCR», som viser resultatet side om side med det forrige før du velger.
+  - Køen har «Les N som AI ikke klarte, med lokal OCR», som leser alle med feil eller manglende butikk eller beløp.
+  - Finnes på web og i PWA-en (`POST /finans/api/receipts/:id/reanalyze {engine:'tesseract'}` og `POST /finans/api/receipts/ocr`).
+
 ## [4.10.0] – 18.10.2026 · prompt 16–17
 - **Papir på alle skjermer i appene.** Innstillinger er gruppert som i designet: profil, Konto, Finans, appnavn og App, med Logg ut nederst.
 - **Navn og ikon på appen:** velg et eget navn, for eksempel «Torskenes Verden», og et av tre nye ikoner (Hus, Monogram eller Fire rom).

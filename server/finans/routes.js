@@ -6,7 +6,7 @@ import { readFile, writeFile, unlink, mkdir } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { db, OWNER, settings, saveSettings, secret, setSecret, secretSource, DEFAULT_SETTINGS } from './db.js';
-import { extract, extractText, health, providerName, testEngine, testRoboflow, ENGINES, TASKS, aiLog, barcode } from './ai.js';
+import { extract, extractText, extractOcr, health, providerName, testEngine, testRoboflow, ENGINES, TASKS, aiLog, barcode } from './ai.js';
 import { sniffMime, isHeic, scanLog, scanLogOf } from './scan.js';
 import { mailConfig, mailStatus, testMail, runMail, recentImports, startMailWorker } from './mail.js';
 import { parseCsv, PROFILES } from './csv.js';
@@ -194,12 +194,14 @@ function receiptOut(r, cats = catById(), accs = accById()) {
 // «✦ Analyser på nytt med Gemini»: når lesingen feilet, var usikker (under minConf) eller Ollama var usikker.
 // Krever Gemini-nøkkel; ellers sier reanalyzeReason hva som mangler.
 function reanalyzeInfo(r, st = settings()) {
-  if (!r.file || ['booked', 'rejected', 'pending', 'processing'].includes(r.status)) return { canReanalyze: false };
+  if (!r.file || ['booked', 'rejected', 'pending', 'processing'].includes(r.status)) return { canReanalyze: false, canOcr: false };
+  // Lokal OCR kan alltid prøves på bilder (også når AI-svaret var bra, f.eks. for å sammenligne).
+  const ocr = { canOcr: r.mime !== 'text/plain' };
   const unsure = (r.confidence ?? 0) < st.minConf / 100;
   const needs = r.status === 'failed' || !!r.error || unsure;
-  if (!needs) return { canReanalyze: false };
-  if (!secret('geminiKey')) return { canReanalyze: false, reanalyzeReason: 'Legg inn en Gemini-nøkkel under Innstillinger → AI-motor for å analysere på nytt.' };
-  return { canReanalyze: true, ...(r.candidate ? { reanalyzePending: true } : {}) };
+  if (!needs) return { canReanalyze: false, ...ocr };
+  if (!secret('geminiKey')) return { canReanalyze: false, ...ocr, reanalyzeReason: 'Legg inn en Gemini-nøkkel under Innstillinger → AI-motor for å analysere på nytt.' };
+  return { canReanalyze: true, ...ocr, ...(r.candidate ? { reanalyzePending: true } : {}) };
 }
 
 // Finn banktransaksjon: samme beløp ±1 kr og dato ±3 dager, uten kvittering fra før. Kort-siffer gir forrang.
@@ -871,9 +873,12 @@ api.post('/receipts/:id/reanalyze', W, async (c) => {
   if (!r) return c.notFound();
   if (['booked', 'rejected'].includes(r.status)) return bad(c, 'Kvitteringen er allerede bokført eller avvist');
   if (r.status === 'pending' || r.status === 'processing') return bad(c, 'Kvitteringen leses fortsatt');
-  if (!secret('geminiKey')) return bad(c, 'Legg inn en Gemini-nøkkel under Innstillinger → AI-motor for å analysere på nytt.');
+  const engine = (await c.req.json().catch(() => ({}))).engine === 'tesseract' ? 'tesseract' : 'gemini';
+  const label = engine === 'tesseract' ? 'Lokal OCR' : 'Gemini';
+  if (engine === 'gemini' && !secret('geminiKey')) return bad(c, 'Legg inn en Gemini-nøkkel under Innstillinger → AI-motor for å analysere på nytt.');
+  if (engine === 'tesseract' && r.mime === 'text/plain') return bad(c, 'Lokal OCR leser bare bilder og PDF, ikke e-posttekst');
   const log = (step, detail) => scanLog(r.id, step, detail);
-  log('reanalyse', 'Gemini, originalfilen');
+  log('reanalyse', `${label}, originalfilen`);
   let ex = null; try { ex = JSON.parse(r.extraction ?? 'null'); } catch { /* ugyldig */ }
   const previous = readOut({ merchant: r.merchant, date: r.date, total: r.total != null ? r.total / 100 : null, lines: ex?.lines, confidence: r.confidence,
     engine: r.provider ? providerName(r.provider) : null, model: r.model, category: catById().get(r.category_id)?.name, error: r.error });
@@ -881,16 +886,17 @@ api.post('/receipts/:id/reanalyze', W, async (c) => {
   try {
     const img = await readFile(join(DIR, r.file));
     const cats = q("SELECT name FROM fh_categories WHERE kind='expense' ORDER BY sort").all().map((x) => x.name);
-    res = r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats) : await extract(img, r.mime, cats, 'gemini', { log });
+    res = engine === 'tesseract' ? await extractOcr(img, r.mime)
+      : r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats) : await extract(img, r.mime, cats, 'gemini', { log });
   } catch (e) {
-    log('feil', `Gemini: ${e.message}`);
-    return bad(c, `Gemini kunne ikke lese kvitteringen: ${e.message}`, 502);
+    log('feil', `${label}: ${e.message}`);
+    return bad(c, `${label} kunne ikke lese kvitteringen: ${e.message}`, e.missing ? 501 : 502);
   }
   const d = res.data;
   const candidateId = randomUUID();
   q('UPDATE fh_receipts SET candidate=? WHERE id=?').run(JSON.stringify({ id: candidateId, at: Date.now(), provider: res.provider === 'tekst' ? 'gemini' : res.provider, model: res.model, seconds: res.seconds, data: d }), r.id);
   log('reanalyse-ferdig', `${d.merchant ?? 'ukjent butikk'} · ${d.total ?? '–'} kr · sikkerhet ${Math.round((d.confidence.total ?? 0) * 100)} %`);
-  return c.json({ previous, result: readOut({ ...d, confidence: Math.min(d.confidence.total, d.confidence.merchant || 1), engine: 'Gemini', model: res.model, category: d.suggested_category }), candidateId });
+  return c.json({ previous, result: readOut({ ...d, confidence: Math.min(d.confidence.total, d.confidence.merchant || 1), engine: label, model: res.model, category: d.suggested_category }), candidateId });
 });
 api.post('/receipts/:id/reanalyze/apply', W, async (c) => {
   const r = origSelect.get(c.req.param('id'));
@@ -900,6 +906,18 @@ api.post('/receipts/:id/reanalyze/apply', W, async (c) => {
   if (!cand || cand.id !== b.candidateId) return bad(c, 'Resultatet er utløpt. Analyser på nytt.');
   if (b.keep === 'new') {
     if (['booked', 'rejected'].includes(r.status)) return bad(c, 'Kvitteringen er allerede bokført eller avvist');
+    await applyCandidate(r, cand);
+    scanLog(r.id, 'reanalyse-valgt', `${cand.provider === 'tesseract' ? 'Lokal OCR' : 'Gemini'}-resultatet beholdes`);
+  } else {
+    q('UPDATE fh_receipts SET candidate=NULL WHERE id=?').run(r.id);
+    scanLog(r.id, 'reanalyse-valgt', 'forrige resultat beholdes');
+  }
+  return c.json(receiptOut(origSelect.get(r.id)));
+});
+
+// Tar et lest resultat i bruk på kvitteringen: felt, kategori, bankmatch og sammendrag. Status blir alltid «til gjennomgang».
+async function applyCandidate(r, cand) {
+  {
     const d = cand.data, st = settings();
     const totalOre = d.total != null ? Math.round(d.total * 100) : null;
     const catId = (st.autoCat && ruleFor(d.merchant)) || catIdByName(d.suggested_category) || r.category_id;
@@ -912,12 +930,35 @@ api.post('/receipts/:id/reanalyze/apply', W, async (c) => {
         acc ?? match?.account_id ?? null, Math.min(d.confidence.total, d.confidence.merchant || 1), match?.id ?? r.transaction_id ?? null, r.id);
     try { const sum = await summarizeReceipt(d, catById().get(catId)?.name); q('UPDATE fh_receipts SET ai_short=?, ai_long=?, domain=? WHERE id=?').run(sum.short, sum.long, sum.domain, r.id); } catch { /* sammendraget er valgfritt */ }
     try { routeTarget(r.id); } catch { /* mappen kan være slettet */ }
-    scanLog(r.id, 'reanalyse-valgt', 'Gemini-resultatet beholdes');
-  } else {
-    q('UPDATE fh_receipts SET candidate=NULL WHERE id=?').run(r.id);
-    scanLog(r.id, 'reanalyse-valgt', 'forrige resultat beholdes');
   }
-  return c.json(receiptOut(origSelect.get(r.id)));
+}
+
+// «Les med lokal OCR» på flere kvitteringer: de som feilet (eller de valgte). Resultatet tas i bruk med en gang
+// og havner til gjennomgang, siden det ikke finnes noe tidligere svar å sammenligne med.
+api.get('/receipts/ocr', R, (c) => c.json({ count: q(`SELECT count(*) FROM fh_receipts WHERE status IN ('needs_review','failed') AND file IS NOT NULL AND COALESCE(mime,'') <> 'text/plain'
+  AND (error IS NOT NULL OR merchant IS NULL OR total IS NULL)`).pluck().get() }));
+api.post('/receipts/ocr', W, async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  const ids = Array.isArray(b.ids) ? b.ids.map(String).slice(0, 200) : null;
+  const rows = ids ? ids.map((id) => origSelect.get(id)).filter(Boolean)
+    // Standard: kvitteringer til gjennomgang som AI ikke klarte (feilmelding, eller mangler butikk eller beløp).
+    : q(`SELECT id FROM fh_receipts WHERE status IN ('needs_review','failed') AND file IS NOT NULL AND COALESCE(mime,'') <> 'text/plain'
+         AND (error IS NOT NULL OR merchant IS NULL OR total IS NULL) ORDER BY created DESC LIMIT 200`).all().map((x) => origSelect.get(x.id)).filter(Boolean);
+  const out = { done: 0, failed: 0, skipped: 0, errors: [] };
+  for (const r of rows) {
+    if (!r.file || r.mime === 'text/plain' || ['booked', 'rejected', 'pending', 'processing'].includes(r.status)) { out.skipped++; continue; }
+    try {
+      const res = await extractOcr(await readFile(join(DIR, r.file)), r.mime);
+      await applyCandidate(r, { provider: res.provider, model: res.model, seconds: res.seconds, data: res.data });
+      scanLog(r.id, 'ocr', `Lokal OCR: ${res.data.merchant ?? 'ukjent butikk'} · ${res.data.total ?? '–'} kr`);
+      out.done++;
+    } catch (e) {
+      out.failed++; out.errors.push(`${r.merchant ?? r.id}: ${e.message}`);
+      if (e.missing) { out.errors = ['Tesseract er ikke installert på serveren. Oppdater Docker-imaget.']; break; }
+    }
+  }
+  out.message = `${out.done} kvittering${out.done === 1 ? '' : 'er'} lest med lokal OCR${out.failed ? ` · ${out.failed} feilet` : ''}${out.skipped ? ` · ${out.skipped} hoppet over` : ''}`;
+  return c.json(out);
 });
 
 api.delete('/receipts/:id', W, async (c) => {

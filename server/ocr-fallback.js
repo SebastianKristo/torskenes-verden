@@ -85,22 +85,98 @@ function findOrg(text) {
   for (const re of [RE_ORG, RE_ORG_LOOSE]) for (const m of text.matchAll(re)) { const nr = m[1] + m[2] + m[3]; if (mod11Ok(nr)) return nr; }
   return null;
 }
-function findDate(text) {
-  const iso = text.match(RE_ISO);
-  if (iso && +iso[2] >= 1 && +iso[2] <= 12 && +iso[3] >= 1 && +iso[3] <= 31) return `${iso[1]}-${iso[2]}-${iso[3]}`;
-  for (const [, d, mo, y0] of text.matchAll(RE_DATE)) {
-    const y = y0.length === 2 ? 2000 + +y0 : +y0;
-    const dt = new Date(Date.UTC(y, +mo - 1, +d));
-    if (y >= 2000 && y <= 2100 && dt.getUTCMonth() === +mo - 1 && dt.getUTCDate() === +d) return dt.toISOString().slice(0, 10);
-  }
-  return null;
+// Tesseract leser ofte O som 0, l/I/| som 1 og S som 5 i tall. Rett det bare der tegnet står mellom sifre og skilletegn.
+const fixDigits = (t) => t.replace(/(?<=[\d./:-])[Oo]|[Oo](?=[\d./:-])/g, '0').replace(/(?<=[\d./:-])[lI|]|[lI|](?=[\d./:-])/g, '1');
+const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, mai: 5, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, okt: 10, oct: 10, nov: 11, des: 12, dec: 12 };
+const RE_DMY = /(?<!\d)(\d{1,2})\s?[./-]\s?(\d{1,2})\s?[./-]\s?(\d{4}|\d{2})(?![\d.,])/g;
+const RE_YMD = /(?<!\d)(20\d{2})[./-](\d{1,2})[./-](\d{1,2})(?!\d)/g;
+const RE_MON = /(?<!\d)(\d{1,2})\.?\s*(jan|feb|mar|apr|mai|may|jun|jul|aug|sep|okt|oct|nov|des|dec)[a-zæøå]*\.?\s*(\d{4}|\d{2})?(?!\d)/gi;
+const DATE_KEY = /dato|date|kj[øo]pt|tid|time|kvittering/i;
+const NOT_DATE_KEY = /best\s*f[øo]r|holdbar|utl[øo]p|gyldig|forfall|garanti|retur/i;
+
+function validDate(y, mo, d, now) {
+  if (y < 100) y += 2000;
+  const dt = new Date(Date.UTC(y, mo - 1, d));
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
+  // Ikke fram i tid (én dags slingring) og ikke eldre enn fem år.
+  if (dt.getTime() > now + 86_400_000 || dt.getTime() < now - 5 * 365 * 86_400_000) return null;
+  return dt.toISOString().slice(0, 10);
 }
-function findStore(text) {
-  for (const line of text.split('\n').slice(0, 6)) {
-    const t = line.replace(/^[\s*\-=#]+|[\s*\-=#]+$/g, '');
-    if (t.length >= 3 && (t.match(/\p{L}/gu) ?? []).length >= 3 && !/\d{1,2}[./-]\d{1,2}[./-]\d{2,4}/.test(t)) return t.slice(0, 60);
+/** Alle datoer i teksten med poeng: «Dato»-linjer og klokkeslett teller opp, «best før» og garanti teller ned. */
+export function findDate(text, now = Date.now()) {
+  const lines = fixDigits(String(text ?? '')).split('\n');
+  const cands = [];
+  lines.forEach((line, i) => {
+    const near = `${lines[i - 1] ?? ''} ${line}`;
+    let bonus = (DATE_KEY.test(line) ? 3 : DATE_KEY.test(near) ? 1 : 0) + (/\b\d{1,2}[:.]\d{2}(?::\d{2})?\b/.test(line.replace(RE_DMY, '')) ? 2 : 0) - (NOT_DATE_KEY.test(near) ? 6 : 0);
+    const add = (iso) => iso && cands.push({ iso, score: bonus, i });
+    for (const m of line.matchAll(RE_YMD)) add(validDate(+m[1], +m[2], +m[3], now));
+    for (const m of line.matchAll(RE_DMY)) add(validDate(+m[3], +m[2], +m[1], now));
+    for (const m of line.matchAll(RE_MON)) add(validDate(m[3] ? +m[3] : new Date(now).getUTCFullYear(), MONTHS[m[2].toLowerCase().slice(0, 3)], +m[1], now));
+  });
+  if (!cands.length) return null;
+  cands.sort((a, b) => b.score - a.score || a.i - b.i);
+  return cands[0].iso;
+}
+
+// Kjente kjeder: gjenkjennes hvor som helst i teksten (også når logoen er lest som rot).
+const CHAINS = [
+  [/rema\s*1\s*0\s*0\s*0|\brema\b/i, 'REMA 1000'], [/\bkiwi\b/i, 'KIWI'], [/\bmeny\b/i, 'MENY'], [/coop\s*extra|\bextra\b/i, 'Coop Extra'],
+  [/coop\s*mega/i, 'Coop Mega'], [/coop\s*prix/i, 'Coop Prix'], [/coop\s*obs|\bobs\b/i, 'Coop Obs'], [/\bcoop\b/i, 'Coop'], [/\bspar\b/i, 'SPAR'],
+  [/\bjoker\b/i, 'Joker'], [/bunnpris/i, 'Bunnpris'], [/\bnærbutikken\b/i, 'Nærbutikken'], [/oda\.com|\boda\b/i, 'Oda'], [/\bvinmonopolet\b/i, 'Vinmonopolet'],
+  [/circle\s*k/i, 'Circle K'], [/\besso\b/i, 'Esso'], [/\buno-?x\b/i, 'Uno-X'], [/\bshell\b/i, 'Shell'], [/\bst1\b/i, 'St1'], [/\bysp?\b/i, null],
+  [/elkj[øo]p/i, 'Elkjøp'], [/power\b/i, 'POWER'], [/\bxxl\b/i, 'XXL'], [/clas\s*ohlson/i, 'Clas Ohlson'], [/\bbiltema\b/i, 'Biltema'], [/\bjula\b/i, 'Jula'],
+  [/\bikea\b/i, 'IKEA'], [/\bjysk\b/i, 'JYSK'], [/\bnormal\b/i, 'Normal'], [/\bvita\b/i, 'Vita'], [/\bapotek\s*1\b/i, 'Apotek 1'], [/vitusapotek/i, 'Vitusapotek'],
+  [/boots\s*apotek/i, 'Boots apotek'], [/\bh\s*&\s*m\b/i, 'H&M'], [/\bcubus\b/i, 'Cubus'], [/\bkappahl\b/i, 'KappAhl'], [/\bnille\b/i, 'Nille'],
+  [/\bsports?\s*1\b/i, 'Sport 1'], [/\bintersport\b/i, 'Intersport'], [/\bmax\s*bo\b|\bmaxbo\b/i, 'Maxbo'], [/\bobs\s*bygg\b/i, 'Obs Bygg'],
+  [/\bmonter\b/i, 'Monter'], [/\bbyggmakker\b/i, 'Byggmakker'], [/\bplantasjen\b/i, 'Plantasjen'], [/\bnarvesen\b/i, 'Narvesen'], [/7-?eleven/i, '7-Eleven'],
+  [/\bdeli\s*de\s*luca\b/i, 'Deli de Luca'], [/\bmcdonald/i, "McDonald's"], [/\bburger\s*king\b/i, 'Burger King'], [/\bpeppes\b/i, 'Peppes Pizza'],
+  [/\bstarbucks\b/i, 'Starbucks'], [/espresso\s*house/i, 'Espresso House'], [/kaffebrenneriet/i, 'Kaffebrenneriet'], [/\bruter\b/i, 'Ruter'], [/\bvy\b/i, 'Vy'],
+  [/\bflytoget\b/i, 'Flytoget'], [/\bnorli\b/i, 'Norli'], [/\bark\s*bokhandel|\bark\b/i, 'Ark'], [/\bfinn\.no\b/i, 'FINN'],
+];
+const NOT_STORE = /kvittering|velkommen|takk\s*for|salg|tlf|telefon|www\.|https?:|e-?post|org\.?\s*n|foretaksreg|kasse|kasserer|betjent|dato|tid\b|bong|ref\.|terminal|bax|visa|mastercard|^\s*nr\b|mva|\bkopi\b/i;
+const ADDRESS = /\b\d{4}\s+[A-ZÆØÅ][A-Za-zÆØÅæøå-]{2,}/;  // postnummer + sted
+const tidy = (t) => {
+  t = t.replace(/[^\p{L}\p{N}&'.\- ]/gu, ' ').replace(/\s{2,}/g, ' ').trim();
+  // STORE BOKSTAVER → Vanlig skrift (men behold korte forkortelser som AS, XXL).
+  if (t === t.toUpperCase() && t.length > 4) t = t.toLowerCase().replace(/(^|[\s-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase()).replace(/\b(As|Asa|Da|Ans)\b/g, (m) => m.toUpperCase());
+  return t.slice(0, 60);
+};
+const letterRatio = (t) => ((t.match(/\p{L}/gu) ?? []).length) / Math.max(1, t.replace(/\s/g, '').length);
+const goodStoreLine = (t) => t.length >= 3 && t.length <= 42 && letterRatio(t) >= 0.6 && (t.match(/\p{L}/gu) ?? []).length >= 3 && !NOT_STORE.test(t) && !/\d{1,2}[./-]\d{1,2}[./-]\d{2,4}/.test(t);
+
+export function findStore(text) {
+  const t = String(text ?? '');
+  for (const [re, name] of CHAINS) if (name && re.test(t)) return name;
+  const lines = t.split('\n').map((l) => l.replace(/^[\s*\-=#_~|]+|[\s*\-=#_~|]+$/g, '').trim()).filter(Boolean);
+  const head = lines.slice(0, 12);
+  // Linja over adressen (postnummer + sted) eller over org.nr./telefon er som regel butikknavnet.
+  const anchor = head.findIndex((l) => ADDRESS.test(l) || /org\.?\s*n|foretaksreg|tlf|telefon/i.test(l));
+  for (let i = anchor - 1; i >= 0 && anchor > 0; i--) {
+    // Hopp over gateadressen (ord + husnummer, f.eks. «Vulkan 5» eller «Storgata 12B»).
+    if (goodStoreLine(head[i]) && !/\d{2,}/.test(head[i].replace(/1000/, '')) && !/\s\d{1,4}\s?[a-zA-Z]?$/.test(head[i])) return tidy(head[i]);
   }
-  return null;
+  const first = head.find(goodStoreLine);
+  return first ? tidy(first) : null;
+}
+
+// Brønnøysundregistrene (åpent API): org.nr. → navn. Brukes bare når kjeden ikke ble gjenkjent.
+const brregCache = new Map();
+export async function brregName(org) {
+  if (!org || !/^\d{9}$/.test(org)) return null;
+  if (brregCache.has(org)) return brregCache.get(org);
+  let name = null;
+  try {
+    const r = await fetch(`https://data.brreg.no/enhetsregisteret/api/enheter/${org}`, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(4000) });
+    if (r.ok) name = (await r.json())?.navn ?? null;
+    if (!name) {
+      const u = await fetch(`https://data.brreg.no/enhetsregisteret/api/underenheter/${org}`, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(4000) });
+      if (u.ok) name = (await u.json())?.navn ?? null;
+    }
+  } catch { /* uten nett: bruk teksten */ }
+  if (name) name = tidy(name.replace(/\s+(AS|ASA|DA|ANS|SA|NUF)$/i, ''));
+  brregCache.set(org, name);
+  return name;
 }
 
 /**
@@ -116,7 +192,7 @@ export function parseReceiptText(text) {
     merchant, org_number: findOrg(t), date, total, currency: 'NOK',
     vat: vatAmount != null ? [{ rate: vatRate, amount: vatAmount }] : [],
     lines: [], payment_method: /kort|bankaxept|visa|mastercard/i.test(t) ? 'kort' : null, card_last4: null, suggested_category: null,
-    confidence: { merchant: merchant ? 0.4 : 0, date: date ? 0.6 : 0, total: Math.min(conf, 0.8) },
+    confidence: { merchant: merchant ? (CHAINS.some(([re, n]) => n && re.test(t)) ? 0.75 : 0.4) : 0, date: date ? 0.6 : 0, total: Math.min(conf, 0.8) },
     needs_review: true, raw_text: t.slice(0, 5000),
   };
 }
@@ -145,7 +221,13 @@ export async function ocrReceipt(image, mime) {
     const text = await run('tesseract', [input, 'stdout', '-l', 'nor+eng', '--oem', '1', '--psm', '4', '-c', 'preserve_interword_spaces=1'], { timeout: 60_000 })
       .catch(() => run('tesseract', [input, 'stdout', '-l', 'eng', '--psm', '4'], { timeout: 60_000 }));
     if (!String(text).trim()) throw new Error('Fant ingen tekst i bildet');
-    return { ...parseReceiptText(text), engineVersion: tl.tesseract };
+    const out = parseReceiptText(text);
+    // Ukjent kjede, men gyldig org.nr.: slå opp navnet i Enhetsregisteret.
+    if (out.org_number && !CHAINS.some(([re, n]) => n && re.test(text))) {
+      const name = await brregName(out.org_number);
+      if (name) { out.merchant = name; out.confidence.merchant = 0.7; }
+    }
+    return { ...out, engineVersion: tl.tesseract };
   } finally {
     await rm(dir, { recursive: true, force: true }).catch(() => {});
   }

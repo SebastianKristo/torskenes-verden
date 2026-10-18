@@ -40,7 +40,7 @@ test('OCR-reserve: totalbeløp etter prioritet, org.nr med MOD11, dato og MVA', 
   assert.equal(OCR.toAmount('1 234,50'), 1234.5);
   assert.equal(OCR.toAmount('99,-'), 99);
   const r = OCR.parseReceiptText('REMA 1000 MAJORSTUEN\nOrg.nr 914 769 159 MVA\n14.10.26 12:31\nMelk 22,90\nTotal 70,00\nSUM 62,80\nÅ BETALE 62,80\nMVA 15% 8,19\nBankAxept');
-  assert.equal(r.merchant, 'REMA 1000 MAJORSTUEN');
+  assert.equal(r.merchant, 'REMA 1000'); // kjente kjeder får fast navn
   assert.equal(r.org_number, '914769159');
   assert.equal(r.date, '2026-10-14');
   assert.equal(r.total, 62.8);
@@ -156,4 +156,20 @@ test('kvittering: når alle motorer feiler og Tesseract mangler, beholdes AI-fei
   } finally { f.restore(); AI._resetAi(); }
   const log = await F('/ai/log?limit=3');
   assert.ok(log.body.items.some((l) => l.engine === 'tesseract' && l.status === 'mangler'));
+});
+
+test('OCR: butikk over adressen, gateadresse hoppes over, dato med O/0-feil og «best før» ignoreres', () => {
+  const now = Date.UTC(2026, 9, 18);
+  const a = OCR.parseReceiptText('@@ %%\nMathallen Bakeri\nVulkan 5\n0178 OSLO\nTlf 22 11 22 33\nBest før 01.01.2027\n17/1O/26 09:41\nÅ BETALE 145,00');
+  assert.equal(a.merchant, 'Mathallen Bakeri');
+  assert.equal(OCR.findDate('Best før 20.10.2026\nDato: 14.1O.2026 14:22', now), '2026-10-14');
+  assert.equal(OCR.findDate('18. okt 2026 kl 08.12', now), '2026-10-18');
+  assert.equal(OCR.findStore('|||\nBAKER HANSEN\nStorgata 12B\n0155 Oslo'), 'Baker Hansen');
+});
+
+test('Lokal OCR på eldre kvitteringer: 501 uten Tesseract, og masse-endepunktet svarer', async () => {
+  OCR._setTools({ tesseract: null, magick: null, zbar: null });
+  const b = await F('/receipts/ocr', 'POST', {});
+  assert.equal(b.status, 200);
+  assert.equal(typeof b.body.message, 'string');
 });

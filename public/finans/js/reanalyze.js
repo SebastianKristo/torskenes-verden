@@ -2,13 +2,16 @@
 // Brukes av desktop (bekreftelsessiden og køen) og PWA-en. Brukeren velger hvilket resultat som beholdes.
 import { api, esc, n2, dd } from './core.js';
 
-/** Knappen, eller en deaktivert knapp med årsak når Gemini ikke er satt opp. Tom streng når den ikke trengs. */
+/** Knappene: «✦ Analyser på nytt med Gemini» (når det trengs) og «Les med lokal OCR» (Tesseract, uten AI).
+ *  Gemini-knappen er deaktivert med årsak når Gemini ikke er satt opp. Tom streng når ingen trengs. */
 export function reanalyzeBtn(r, cls = 'btn ghost', style = '') {
   if (!r) return '';
   const st = style ? ` style="${esc(style)}"` : '';
-  if (r.canReanalyze) return `<button type="button" class="${cls} ra-btn"${st} data-reanalyze="${esc(r.id)}">✦ Analyser på nytt med Gemini</button>`;
-  if (r.reanalyzeReason) return `<button type="button" class="${cls} ra-btn"${st} disabled title="${esc(r.reanalyzeReason)}">✦ Analyser på nytt med Gemini</button>`;
-  return '';
+  let out = '';
+  if (r.canReanalyze) out += `<button type="button" class="${cls} ra-btn"${st} data-reanalyze="${esc(r.id)}">✦ Analyser på nytt med Gemini</button>`;
+  else if (r.reanalyzeReason) out += `<button type="button" class="${cls} ra-btn"${st} disabled title="${esc(r.reanalyzeReason)}">✦ Analyser på nytt med Gemini</button>`;
+  if (r.canOcr) out += `<button type="button" class="${cls} ra-btn"${st} data-reanalyze="${esc(r.id)}" data-engine="tesseract" title="Leser bildet lokalt på serveren med Tesseract, uten AI">Les med lokal OCR</button>`;
+  return out;
 }
 
 /** Klikk på [data-reanalyze] innenfor root åpner dialogen. onDone(kvittering) kalles når et valg er gjort.
@@ -18,7 +21,7 @@ export function bindReanalyze(root, onDone) {
     const b = e.target.closest?.('[data-reanalyze]');
     if (!b || b.disabled || b.getAttribute('aria-disabled') === 'true') return;
     e.preventDefault(); e.stopImmediatePropagation();
-    openReanalyze(b.dataset.reanalyze, { onDone });
+    openReanalyze(b.dataset.reanalyze, { onDone, engine: b.dataset.engine === 'tesseract' ? 'tesseract' : 'gemini' });
   });
 }
 
@@ -69,13 +72,17 @@ function column(x, other, title, isNew) {
 }
 
 /** Åpner dialogen og starter analysen. Returnerer et løfte med kvitteringen etter valget (eller null ved avbryt). */
-export function openReanalyze(id, { onDone } = {}) {
+export function openReanalyze(id, { onDone, engine = 'gemini' } = {}) {
+  const ocr = engine === 'tesseract', name = ocr ? 'Lokal OCR' : 'Gemini';
+  const title = ocr ? 'Les med lokal OCR' : '✦ Analyser på nytt med Gemini';
+  const sub = ocr ? 'Originalbildet leses på serveren med Tesseract, uten AI og uten at noe sendes ut. Du velger selv hvilket resultat som beholdes.' : 'Originalbildet sendes til Gemini. Du velger selv hvilket resultat som beholdes.';
+  const loading = ocr ? 'Tesseract leser kvitteringen …' : 'Gemini leser kvitteringen …';
   if (!document.getElementById('ra-css')) { const s = document.createElement('style'); s.id = 'ra-css'; s.textContent = CSS; document.head.appendChild(s); }
   const ov = document.createElement('div');
   ov.className = 'ra-ov';
-  ov.innerHTML = `<div class="ra-box" role="dialog" aria-modal="true" aria-label="Analyser på nytt med Gemini"><h3>✦ Analyser på nytt med Gemini</h3>
-    <div class="ra-sub">Originalbildet sendes til Gemini. Du velger selv hvilket resultat som beholdes.</div>
-    <div class="ra-body"><div class="ra-load"><span class="ra-spin"></span>Gemini leser kvitteringen …</div></div>
+  ov.innerHTML = `<div class="ra-box" role="dialog" aria-modal="true" aria-label="${esc(title)}"><h3>${esc(title)}</h3>
+    <div class="ra-sub">${esc(sub)}</div>
+    <div class="ra-body"><div class="ra-load"><span class="ra-spin"></span>${esc(loading)}</div></div>
     <div class="ra-act"><button type="button" data-ra="cancel">Avbryt</button></div></div>`;
   document.body.appendChild(ov);
   let busy = true, data = null, resolve;
@@ -99,12 +106,12 @@ export function openReanalyze(id, { onDone } = {}) {
   });
   async function run() {
     busy = true;
-    body.innerHTML = '<div class="ra-load"><span class="ra-spin"></span>Gemini leser kvitteringen …</div>';
+    body.innerHTML = `<div class="ra-load"><span class="ra-spin"></span>${esc(loading)}</div>`;
     act.innerHTML = '<button type="button" data-ra="cancel">Avbryt</button>';
     try {
-      data = await api(`/receipts/${encodeURIComponent(id)}/reanalyze`, { method: 'POST', json: { engine: 'gemini' } });
-      body.innerHTML = `<div class="ra-cols">${column(data.previous, data.result, 'Forrige', false)}${column(data.result, data.previous, 'Gemini', true)}</div>`;
-      act.innerHTML = '<button type="button" data-ra="old">Behold forrige</button><button type="button" class="pri" data-ra="new">Bruk Gemini-resultatet</button>';
+      data = await api(`/receipts/${encodeURIComponent(id)}/reanalyze`, { method: 'POST', json: { engine } });
+      body.innerHTML = `<div class="ra-cols">${column(data.previous, data.result, 'Forrige', false)}${column(data.result, data.previous, name, true)}</div>`;
+      act.innerHTML = `<button type="button" data-ra="old">Behold forrige</button><button type="button" class="pri" data-ra="new">Bruk ${ocr ? 'OCR' : 'Gemini'}-resultatet</button>`;
     } catch (err) {
       body.innerHTML = `<div class="ra-err" style="padding:12px 0">${esc(err.message)}</div>`;
       act.innerHTML = '<button type="button" data-ra="cancel">Lukk</button><button type="button" class="pri" data-ra="retry">Prøv igjen</button>';

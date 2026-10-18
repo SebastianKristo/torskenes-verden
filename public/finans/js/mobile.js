@@ -198,11 +198,13 @@ function budget(th) {
 // Serveren sier fra med canReanalyze; eldre servere: vis knappen ved feil eller lav sikkerhet.
 const canRe = (R, high) => (R.canReanalyze ?? (!!R.error || R.status === 'error' || !high)) && !['booked', 'pending', 'processing'].includes(R.status);
 const reBtn = (th, R, sub = R.reason) => `<button class="rean ${th === 'ios' ? 'glass2' : ''}" data-reanalyze="${esc(R.id)}"><span>✦</span><span class="m-grow">Analyser på nytt med Gemini${sub ? `<small>${esc(sub)}</small>` : ''}</span><span style="opacity:.6">›</span></button>`;
+// «Les med lokal OCR» (Tesseract på serveren, uten AI). Vises på kvitteringer serveren sier kan leses (canOcr).
+const ocrBtn = (th, R, sub = 'Uten AI · leses på serveren med Tesseract') => (R.canOcr ? `<button class="rean ${th === 'ios' ? 'glass2' : ''}" data-reanalyze="${esc(R.id)}" data-engine="tesseract"><span>⌗</span><span class="m-grow">Les med lokal OCR${sub ? `<small>${esc(sub)}</small>` : ''}</span><span style="opacity:.6">›</span></button>` : '');
 // Dialogen (side om side, «Behold») ligger i reanalyze.js, som også brukes på desktop.
-async function reanalyze(id) {
+async function reanalyze(id, engine = 'gemini') {
   try {
     const mod = await import('./reanalyze.js');
-    await mod.openReanalyze(id, { onDone: async () => { await Promise.all([loadReceipts().catch(() => {}), loadJobs().catch(() => {})]); draw(); } });
+    await mod.openReanalyze(id, { engine, onDone: async () => { await Promise.all([loadReceipts().catch(() => {}), loadJobs().catch(() => {})]); draw(); } });
   } catch (err) { flash(err?.message && !/import|module|fetch/i.test(err.message) ? err.message : 'Ny analyse er ikke tilgjengelig på denne serveren ennå.'); }
 }
 
@@ -249,7 +251,7 @@ function confirmRc(th) {
     ${paper}
     <div class="conf"><span>${R.provider && R.provider !== 'Manuell' ? `Lest av ${esc(R.provider)}${R.seconds ? ` · ${n2(R.seconds).replace(/0$/, '')} s` : ''}` : 'Manuell utfylling'}</span><span style="color:${high ? '#9FE3C6' : '#FFB08A'};font-weight:600">● ${R.error ? 'Fyll ut' : high ? 'Høy sikkerhet' : 'Sjekk beløp'}</span></div>
     ${R.error ? `<div style="font-size:13px;color:#FFB08A;padding:0 6px">${esc(R.error)}</div>` : ''}
-    ${canRe(R, high) ? reBtn(th, R) : ''}
+    ${canRe(R, high) ? reBtn(th, R) : ''}${!['booked', 'pending', 'processing'].includes(R.status) ? ocrBtn(th, R) : ''}
     ${fields}
     <div style="display:flex;flex-wrap:wrap;gap:8px">${catChips}</div>
     <div class="m-match ${R.match ? '' : 'none'}"><b style="font-weight:600;${R.match ? 'color:#9FE3C6' : ''}">${R.match ? 'Matchet mot kortkjøp' : 'Ingen bankmatch'}</b><br><span style="opacity:.8">${R.match ? `${dd(R.match.date)} · ${sgn(R.match.amount)} kr · ${esc(R.match.account)}` : 'Bokføres som ny transaksjon'}</span></div>
@@ -771,7 +773,7 @@ export function bind() {
     // Søk-fanen: bytt skjerm i samme trykk, så tastaturet kommer opp med en gang (iOS krever brukerhandling).
     if ((x = d('[data-tab="sok"]'))) { e.preventDefault(); history.pushState(null, '', '#/sok'); route(); (document.getElementById('pp-fsq') ?? document.getElementById('m-aiq'))?.focus(); return; }
     if ((x = d('[data-tx]'))) { m.sel = +x.dataset.tx; m.edit = null; m.detail = true; window.scrollTo(0, 0); if (paper()) txLoad(m.sel).then(draw).catch(() => {}); return draw(); }
-    if ((x = d('[data-reanalyze]'))) { e.preventDefault(); return reanalyze(x.dataset.reanalyze); }
+    if ((x = d('[data-reanalyze]'))) { e.preventDefault(); return reanalyze(x.dataset.reanalyze, x.dataset.engine === 'tesseract' ? 'tesseract' : 'gemini'); }
     if ((x = d('[data-job]'))) { const j = m.jobs.find((y) => y.id === x.dataset.job); if (j && j.status !== 'booked' && !ACTIVE.includes(j.status)) { m.rc = j.id; if (two()) { await loadReceipts(); return draw(); } location.hash = '#/skann'; } return; }
     if ((x = d('[data-rc]'))) { m.rc = x.dataset.rc; if (m.screen !== 'skann') { location.hash = '#/skann'; return; } return draw(); }
     if ((x = d('[data-bud]'))) { m.budSel = +x.dataset.bud; if (!S.tx) await loadTx(); return draw(); }

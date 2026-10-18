@@ -334,7 +334,7 @@ function receipts() {
   return `<div class="row-flex">
     <div style="flex:1 1 340px;min-width:0;display:flex;flex-direction:column;gap:16px">
       <label class="drop" data-drop><span class="drop-ic">${icon('scan', 24, 'currentColor')}</span><b style="font-size:15px;font-weight:600">Last opp kvitteringer</b><span class="note" style="font-size:13px">Bilder eller PDF · flere filer · dra hit eller klikk · leses av ${aiShort}</span><input type="file" accept="image/*,application/pdf" multiple data-upload hidden></label>
-      ${card(`<div class="card-h"><h2 style="font-size:16px">Kø</h2><span class="note" style="font-size:12.5px">${queue.length} til gjennomgang</span></div>${qHtml || '<div class="note">Ingen kvitteringer i køen.</div>'}`, '', 'padding:20px;gap:8px')}
+      ${card(`<div class="card-h"><h2 style="font-size:16px">Kø</h2><span class="note" style="font-size:12.5px">${queue.length} til gjennomgang</span></div>${qHtml || '<div class="note">Ingen kvitteringer i køen.</div>'}${(() => { const n = queue.filter((r) => r.canOcr && (r.error || r.merchant == null || r.total == null)).length; return n ? `<button class="btn ghost sm" style="align-self:flex-start;margin-top:4px" data-act="rc-ocr-all" title="Leser bildene lokalt på serveren med Tesseract, uten AI">Les ${n} som AI ikke klarte, med lokal OCR</button>` : ''; })()}`, '', 'padding:20px;gap:8px')}
       ${card(`<h2 style="font-size:16px">Bokført</h2><div>${booked.map((r) => `<div class="kv-line" style="font-size:13.5px"><button class="link" style="color:var(--text);text-align:left" data-open-rc="${r.id}">${esc(r.merchant ?? '–')} ${r.aiShort ? `<span class="acc-l" style="font-size:12px">✦ ${esc(r.aiShort)}</span> ` : ''}<span class="muted">· ${dd(r.date)}</span></button><span class="mono" style="color:${r.status === 'rejected' ? 'var(--muted)' : 'var(--text)'}">${r.status === 'rejected' ? 'Avvist' : n2(r.total) + ' kr'}</span></div>`).join('') || '<div class="note">Ingen ennå.</div>'}</div>`, '', 'padding:20px;gap:2px')}
     </div>
     ${card(panel, '', 'flex:2 1 520px;gap:18px')}
@@ -372,7 +372,7 @@ function confirmPanel(R) {
     ${log}
     <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
       ${done ? `<button class="btn ghost" data-act="rc-delete">Slett kvittering</button>${R.file ? `<a class="btn" href="${R.file}" target="_blank">Åpne original ↗</a>` : ''}`
-        : `${R.file && !(other === 'gemini' && R.canReanalyze) ? `<button class="btn ghost" style="height:48px" data-act="rc-reprocess" data-prov="${other}">Les på nytt med ${other === 'gemini' ? 'Gemini' : 'Ollama'}</button>` : ''}<button class="btn ghost" style="height:48px" data-act="rc-reject">Avvis</button><button class="btn pri" style="height:48px;padding:0 28px" data-act="rc-book">Bokfør</button>`}
+        : `${R.file && !(other === 'gemini' && R.canReanalyze) ? `<button class="btn ghost" style="height:48px" data-act="rc-reprocess" data-prov="${other}">Les på nytt med ${other === 'gemini' ? 'Gemini' : 'Ollama'}</button>` : ''}${R.canOcr && !(R.canReanalyze || R.reanalyzeReason) ? `<button class="btn ghost" style="height:48px" data-reanalyze="${esc(R.id)}" data-engine="tesseract" title="Leser bildet lokalt med Tesseract, uten AI">Les med lokal OCR</button>` : ''}<button class="btn ghost" style="height:48px" data-act="rc-reject">Avvis</button><button class="btn pri" style="height:48px;padding:0 28px" data-act="rc-book">Bokfør</button>`}
     </div>`;
 }
 
@@ -833,6 +833,12 @@ export function bind() {
       }
       case 'rc-book': await api(`/receipts/${R.id}/book`, { method: 'POST' }); toast('Bokført ✓'); { const nx = S.receipts.find((y) => y.id !== R.id && y.status === 'needs_review'); u.selRc = nx?.id ?? null; } return refreshAll();
       case 'rc-reject': await api(`/receipts/${R.id}/reject`, { method: 'POST' }); toast('Kvittering avvist'); u.selRc = null; return refreshAll();
+      case 'rc-ocr-all': {
+        t.disabled = true; t.textContent = 'Leser med lokal OCR …';
+        const r = await api('/receipts/ocr', { method: 'POST', json: {} });
+        toast(r.errors?.length && !r.done ? r.errors[0] : r.message);
+        return refreshAll();
+      }
       case 'rc-reprocess': await api(`/receipts/${R.id}/reprocess?provider=${t.closest('[data-prov]').dataset.prov}`, { method: 'POST' }); return refreshAll();
       case 'rc-manual': await api(`/receipts/${R.id}`, { method: 'PATCH', json: { merchant: R.merchant ?? '' } }); S.receipts = S.receipts.map((y) => (y.id === R.id ? { ...y, status: 'needs_review', error: 'Fylles ut manuelt.' } : y)); return render();
       case 'rc-delete': if (!confirm('Slette kvitteringen og bildet? Transaksjonen beholdes.')) return; await api(`/receipts/${R.id}`, { method: 'DELETE' }); u.selRc = null; return refreshAll();
