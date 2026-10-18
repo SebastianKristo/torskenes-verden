@@ -48,11 +48,11 @@ function navCfg() {
   const hidden = (fin?.hidden ?? S.boot.navHidden ?? []).filter((p) => order.includes(p) && !NAV_FIXED.includes(p));
   return { order: u.cfgOrder ?? order, hidden };
 }
-const navOrder = () => { if (S.boot.restricted) return ['dir', 'inn']; const { order, hidden } = navCfg(); return order.filter((p) => !hidden.includes(p)); };
+const navOrder = () => { const { order, hidden } = navCfg(); return order.filter((p) => !hidden.includes(p)); };
 function sideNav() {
   const b = S.boot;
   const items = navOrder().map((p) => `<a href="#/${p}" title="${esc(pageName(p))}" ${p === u.page ? 'aria-current="page"' : ''}>${icon(p, 18, 'currentColor')}<span>${esc(pageName(p))}</span>${p === 'kv' && b.reviewCount ? `<span class="badge">${b.reviewCount}</span>` : ''}</a>`).join('');
-  return `<div class="side-label">${b.restricted ? 'Delt med deg' : 'Generelt'}</div><nav class="nav">${items}</nav>`;
+  return `<div class="side-label">Generelt</div><nav class="nav">${items}</nav>`;
 }
 
 // ✦ AI-søk: svar med sammendrag og treff fra transaksjoner, kvitteringer og varelinjer.
@@ -146,7 +146,7 @@ function shell(content) {
   <aside class="side" aria-label="FinansHub-meny">
     <div class="brand"><div class="brand-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M4 19h16M8 15l4-4 3 3 5-6"/></svg></div><div class="brand-t">Finans<span>Hub</span></div></div>
     ${sideNav()}
-    ${b.restricted ? '' : `<div class="ai-box"><div class="side-label" style="padding:0">AI-motor</div>
+    ${`<div class="ai-box"><div class="side-label" style="padding:0">AI-motor</div>
       <div style="display:flex;align-items:center;gap:8px;font-weight:600"><span class="ai-dot ${aiOk === null ? 'unk' : aiOk ? '' : 'off'}"></span>${prov === 'ollama' ? 'Ollama · lokalt' : 'Gemini · sky'}</div>
       <div class="note" style="font-size:12px">${prov === 'ollama' ? `${esc(st.ollamaModel)} · reserve: ${st.fallback ? 'Gemini' : 'ingen'}` : esc(st.geminiModel)}${aiOk === false ? ' · <span class="neg">ikke tilgjengelig</span>' : ''}</div></div>`}
   </aside>
@@ -154,7 +154,7 @@ function shell(content) {
     <header class="head">
       <div style="display:flex;gap:14px;align-items:flex-start"><button class="side-tog" data-act="compact-nav" aria-label="${compactNav() ? 'Vis hele sidemenyen' : 'Kompakt sidemeny'}" title="${compactNav() ? 'Vis hele sidemenyen' : 'Kompakt sidemeny'}" aria-pressed="${compactNav()}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 5h16v14H4zM9 5v14"/></svg></button><div><div class="crumb"><span>FinansHub</span><span>›</span><b>${esc(pageName(u.page))}</b></div><h1>${u.page === 'ov' ? `${greet()}, ${esc(String(me.name ?? '').split(/\s+/)[0] || '@' + (me.username ?? ''))}` : esc(pageName(u.page))}</h1>${MODULE_SUB[u.page] ? `<div class="note" style="font-size:14px;margin-top:4px">${MODULE_SUB[u.page]}</div>` : ''}</div></div>
       <div class="head-r">
-        ${b.restricted ? '' : `<form class="search${aiMode ? ' ai' : ''}" data-form="gsearch" role="search">${aiMode ? '<span class="ai-star">✦</span>' : icon('search', 17, 'var(--muted)')}<input name="q" value="${esc(aiMode ? (u.aiDraft ?? '') : u.q)}" placeholder="${aiMode ? 'Spør, f.eks. «strøm i september»' : 'Søk i transaksjoner …'}" aria-label="${aiMode ? 'Spør AI om transaksjoner og kvitteringer' : 'Søk i transaksjoner'}"><button type="button" class="ai-tog" data-act="ai-toggle" aria-pressed="${aiMode}" title="Søk med AI i transaksjoner og kvitteringer">✦ AI</button></form>
+        ${`<form class="search${aiMode ? ' ai' : ''}" data-form="gsearch" role="search">${aiMode ? '<span class="ai-star">✦</span>' : icon('search', 17, 'var(--muted)')}<input name="q" value="${esc(aiMode ? (u.aiDraft ?? '') : u.q)}" placeholder="${aiMode ? 'Spør, f.eks. «strøm i september»' : 'Søk i transaksjoner …'}" aria-label="${aiMode ? 'Spør AI om transaksjoner og kvitteringer' : 'Søk i transaksjoner'}"><button type="button" class="ai-tog" data-act="ai-toggle" aria-pressed="${aiMode}" title="Søk med AI i transaksjoner og kvitteringer">✦ AI</button></form>
         <a class="icon-btn" href="#/kv" aria-label="Varsler: ${b.reviewCount} kvitteringer til gjennomgang">${icon('bell', 18)}${b.reviewCount ? '<span class="dot"></span>' : ''}</a>`}
         <a class="me" href="#/inn" title="${esc(me.name ?? '')}"><div class="av">${me.avatarUrl ? `<img src="${esc(me.avatarUrl)}" alt="">` : esc(ini(me.username ?? me.name))}</div><div class="me-n"><div>${esc(String(me.name ?? me.username ?? 'Meg').trim().split(/\s+/)[0])}</div><div>@${esc(me.username ?? 'meg')} · ${me.role === 'admin' ? 'Admin' : 'Bruker'}</div></div></a>
         <a class="close" href="/#/dash" aria-label="Tilbake til Hjem" title="Tilbake til Hjem">×</a>
@@ -504,15 +504,18 @@ const AI_TO_DEF = { gemini: 20, groq: 15, roboflow: 15, ollama: 45, retries: 0, 
 const AI_TO_STEPS = [5, 10, 15, 20, 30, 45, 60, 90, 120];
 const AI_TO_THEN = [['next', 'Prøv neste motor'], ['ocr', 'Bruk lokal OCR'], ['queue', 'Legg i kø og prøv senere']];
 const aiTo = (st) => ({ ...AI_TO_DEF, ...(st.aiTimeouts ?? {}) });
-function timeoutsBox(st) {
-  const to = aiTo(st);
+// ISO2: serveroppsett (AI-motorer, modeller, nøkler, tidsgrenser, SMB) kan bare endres av admin (bootstrap.canEditServer).
+const canSrv = () => S.boot?.canEditServer !== false;
+const SRV_NOTE = '<div class="note" style="font-size:12.5px">Settes opp av administrator.</div>';
+function timeoutsBox(st, ro = false) {
+  const to = aiTo(st), dis = ro ? ' disabled' : '';
   const steps = (v) => (AI_TO_STEPS.includes(v) ? AI_TO_STEPS : [...AI_TO_STEPS, v].sort((a, b) => a - b));
   const eng = [['gemini', 'Gemini', 'Les kvitteringer'], ['groq', 'Groq', 'AI-søk og kategorier'], ['roboflow', 'Roboflow', 'Strekkoder'], ['ollama', 'Ollama (lokal)', 'Reserve på hjemmeserveren']]
-    .map(([k2, n, sd]) => `<label class="f">${n} · <span class="note" style="font-size:12px">${sd}</span><select class="inp" data-ai-to="${k2}">${steps(to[k2]).map((v) => opt(v, `${v} s`, to[k2])).join('')}</select></label>`).join('');
-  return `<div class="box" style="flex-direction:column;align-items:stretch;gap:10px;padding:16px"><div><b style="font-weight:600">Tidsgrenser</b><div class="note" style="font-size:12.5px">Hvor lenge hver motor får før den regnes som tidsavbrutt. Køen viser hvilken motor som ikke svarte.</div></div>
+    .map(([k2, n, sd]) => `<label class="f">${n} · <span class="note" style="font-size:12px">${sd}</span><select class="inp" data-ai-to="${k2}"${dis}>${steps(to[k2]).map((v) => opt(v, `${v} s`, to[k2])).join('')}</select></label>`).join('');
+  return `<div class="box" style="flex-direction:column;align-items:stretch;gap:10px;padding:16px"><div><b style="font-weight:600">Tidsgrenser</b><div class="note" style="font-size:12.5px">Hvor lenge hver motor får før den regnes som tidsavbrutt. Køen viser hvilken motor som ikke svarte.${ro ? ' Settes opp av administrator.' : ''}</div></div>
     <div class="form-grid">${eng}
-      <label class="f">Nye forsøk · <span class="note" style="font-size:12px">Før den gir opp en motor (venter 1, 2 og 4 s)</span><select class="inp" data-ai-to="retries">${[0, 1, 2, 3].map((v) => opt(v, v === 0 ? 'Ingen' : v === 1 ? '1 gang' : `${v} ganger`, to.retries)).join('')}</select></label>
-      <label class="f">Ved tidsavbrudd · <span class="note" style="font-size:12px">Når grensen er nådd</span><select class="inp" data-ai-to="onTimeout">${AI_TO_THEN.map(([v, l]) => opt(v, l, to.onTimeout)).join('')}</select></label></div>
+      <label class="f">Nye forsøk · <span class="note" style="font-size:12px">Før den gir opp en motor (venter 1, 2 og 4 s)</span><select class="inp" data-ai-to="retries"${dis}>${[0, 1, 2, 3].map((v) => opt(v, v === 0 ? 'Ingen' : v === 1 ? '1 gang' : `${v} ganger`, to.retries)).join('')}</select></label>
+      <label class="f">Ved tidsavbrudd · <span class="note" style="font-size:12px">Når grensen er nådd</span><select class="inp" data-ai-to="onTimeout"${dis}>${AI_TO_THEN.map(([v, l]) => opt(v, l, to.onTimeout)).join('')}</select></label></div>
     ${u.msg.aiTo ? `<span class="err-msg" style="font-size:12.5px">${esc(u.msg.aiTo)}</span>` : ''}</div>`;
 }
 
@@ -638,19 +641,40 @@ function menuTab() {
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost" data-act="nav-showall">Vis alle</button><button class="btn ghost" data-act="nav-reset">Tilbakestill rekkefølge</button></div>`;
 }
 
+const aiLogBox = () => {
+  if (!S.aiLog) api('/ai/log').then((r) => { S.aiLog = r.items ?? []; render(); }).catch(() => { S.aiLog = []; });
+  return `<div class="box" style="flex-direction:column;align-items:stretch;gap:8px;padding:16px"><div style="display:flex;align-items:center;gap:10px"><b style="font-weight:600;flex:1">AI-logg · siste kall</b><button class="btn sm ghost" data-act="ai-log">Oppdater</button></div>
+        ${S.aiLog?.length ? `<div style="overflow-x:auto"><table class="tbl" style="font-size:12.5px;width:100%"><thead><tr><th>Tid</th><th>Oppgave</th><th>Motor</th><th>Modell</th><th>ms</th><th>Status</th></tr></thead><tbody>${S.aiLog.map((l) => `<tr><td class="mono">${new Date(l.ts).toLocaleString('nb-NO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</td><td>${esc(l.task ?? '')}</td><td>${esc(l.engine ?? '')}</td><td class="mono">${esc(l.model ?? '')}</td><td class="mono">${l.ms ?? ''}</td><td style="color:${l.status === 'ok' ? 'var(--pos)' : 'var(--neg)'}" title="${esc(l.error ?? '')}">${esc(l.status ?? '')}${l.error ? ` · ${esc(l.error.slice(0, 80))}` : ''}</td></tr>`).join('')}</tbody></table></div>` : `<div class="note" style="font-size:12.5px">${S.aiLog ? 'Ingen AI-kall ennå.' : 'Laster …'}</div>`}</div>`;
+};
+// Vanlige brukere: AI-oppsettet vises skrivebeskyttet (motorer, hvem gjør hva, tidsgrenser), og loggen viser egne kall.
+function aiReadOnly(st) {
+  const ai = S.ai, PROV = { ollama: 'Ollama · lokalt', gemini: 'Gemini · sky', groq: 'Groq · sky' };
+  const ENG = { gemini: 'Gemini', groq: 'Groq', ollama: 'Ollama (lokalt)', roboflow: 'Roboflow + zbar', zbar: 'Bare zbar (lokalt)' };
+  const model = st.provider === 'gemini' ? st.geminiModel : st.provider === 'groq' ? st.groqModel : st.ollamaModel;
+  const row = (k2, v) => `<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--line)"><span class="note">${esc(k2)}</span><b style="font-weight:500;text-align:right" class="mono">${esc(v ?? '–')}</b></div>`;
+  const tasks = (ai?.tasks ?? [{ id: 'receipts', name: 'Les kvitteringer', engine: 'gemini' }, { id: 'search', name: 'AI-søk', engine: 'groq' }, { id: 'categorize', name: 'Kategorisering', engine: 'groq' }, { id: 'barcode', name: 'Strekkoder', engine: 'roboflow' }])
+    .map((tk) => row(tk.name, ENG[st.aiTasks?.[tk.id] ?? tk.engine] ?? (st.aiTasks?.[tk.id] ?? tk.engine)));
+  return `<div class="box" style="flex-direction:column;align-items:stretch;gap:6px;padding:16px"><div><b style="font-weight:600">AI-motorer</b>${SRV_NOTE}</div>
+      ${row('Hovedmotor', PROV[st.provider] ?? st.provider)}${row('Modell', model || '–')}${row('Reserve', st.fallback ? 'På' : 'Av')}${row('Minste sikkerhet', `${st.minConf} %`)}</div>
+    <div class="box" style="flex-direction:column;align-items:stretch;gap:6px;padding:16px"><div><b style="font-weight:600">Hvem gjør hva</b>${SRV_NOTE}</div>${tasks.join('')}</div>
+    ${timeoutsBox(st, true)}
+    ${aiLogBox()}`;
+}
+
 function settingsPage() {
-  // Brukere uten admin-rolle ser bare Boliger. Ukjente faner faller tilbake til første fane.
-  const tabs = S.boot.restricted ? SET_TABS.filter(([x]) => x === 'bol') : SET_TABS;
+  // ISO2: alle roller har hele FinansHub. Ukjente faner faller tilbake til første fane.
+  const tabs = SET_TABS;
   if (u.setTab === 'bank') u.setTab = 'imp'; // «Bank og import» er slått sammen med Import (prompt 12)
   if (!tabs.some(([x]) => x === u.setTab)) u.setTab = tabs[0][0];
   const st = S.boot.settings, t = u.setTab, cur = tabs.find((x) => x[0] === t);
   let body = '';
   const sel = (key, options) => `<select class="inp" data-set="${key}">${options.map(([v, l]) => opt(v, l, st[key])).join('')}</select>`;
   if (t === 'gen') body = `<div class="form-grid">
-    <label class="f">Visningsnavn<input class="inp" data-set="name" value="${esc(st.name)}" placeholder="Navnet til hovedadmin"></label>
+    <label class="f">Visningsnavn<input class="inp" data-set="name" value="${esc(st.name)}" placeholder="Navnet ditt"></label>
     <label class="f">Valuta${sel('currency', [['NOK', 'NOK – norske kroner'], ['EUR', 'EUR – euro'], ['SEK', 'SEK – svenske kroner']])}</label>
     <label class="f">Måneden starter (lønningsdag)<select class="inp" data-set="monthStart">${Array.from({ length: 28 }, (_, i) => opt(i + 1, `${i + 1}. i måneden`, st.monthStart)).join('')}</select></label>
     <label class="f">Sparemål for året (kr)<input class="inp mono" data-set="yearGoal" inputmode="numeric" value="${st.yearGoal}"></label></div>`;
+  else if (t === 'ai' && !canSrv()) body = aiReadOnly(st);
   else if (t === 'ai') {
     const ai = S.ai;
     const models = ai?.ollama?.models?.length ? ai.ollama.models : ['qwen2.5vl:7b', 'gemma3:12b', 'llama3.2-vision:11b', 'minicpm-v'];
@@ -682,9 +706,7 @@ function settingsPage() {
       <button class="tog-row" data-tog="fallback"><span class="grow"><b style="font-weight:500">Bruk de andre motorene som reserve</b><br><span class="note" style="font-size:12.5px">Når hovedmotoren er utilgjengelig eller usikker. Slå av for å holde alt lokalt.</span></span><span class="toggle" role="switch" aria-checked="${!!st.fallback}"></span></button>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn ghost" data-act="test-ai">Test tilkobling</button>${['ollama', 'gemini', 'groq'].map((k2) => `<button class="btn ghost" data-test-engine="${k2}">Test ${k2 === 'groq' ? 'Groq' : k2 === 'gemini' ? 'Gemini' : 'Ollama'}</button>`).join('')}<button class="btn ghost" data-act="test-roboflow">Test Roboflow</button>${u.msg.ai ? `<span class="${u.msg.aiOk ? 'ok-msg' : 'err-msg'}">${esc(u.msg.ai)}</span>` : ''}</div>
       <div class="note" style="font-size:12.5px">Med Gemini sendes bildet til Google. På gratisnivået kan Google bruke data til å forbedre tjenestene – sjekk vilkårene.</div>
-      <div class="box" style="flex-direction:column;align-items:stretch;gap:8px;padding:16px"><div style="display:flex;align-items:center;gap:10px"><b style="font-weight:600;flex:1">AI-logg · siste kall</b><button class="btn sm ghost" data-act="ai-log">Oppdater</button></div>
-        ${S.aiLog?.length ? `<div style="overflow-x:auto"><table class="tbl" style="font-size:12.5px;width:100%"><thead><tr><th>Tid</th><th>Oppgave</th><th>Motor</th><th>Modell</th><th>ms</th><th>Status</th></tr></thead><tbody>${S.aiLog.map((l) => `<tr><td class="mono">${new Date(l.ts).toLocaleString('nb-NO', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })}</td><td>${esc(l.task ?? '')}</td><td>${esc(l.engine ?? '')}</td><td class="mono">${esc(l.model ?? '')}</td><td class="mono">${l.ms ?? ''}</td><td style="color:${l.status === 'ok' ? 'var(--pos)' : 'var(--neg)'}" title="${esc(l.error ?? '')}">${esc(l.status ?? '')}${l.error ? ` · ${esc(l.error.slice(0, 80))}` : ''}</td></tr>`).join('')}</tbody></table></div>` : `<div class="note" style="font-size:12.5px">${S.aiLog ? 'Ingen AI-kall ennå.' : 'Laster …'}</div>`}</div>`;
-    if (!S.aiLog) api('/ai/log').then((r) => { S.aiLog = r.items ?? []; render(); }).catch(() => { S.aiLog = []; });
+      ${aiLogBox()}`;
   } else if (t === 'cat') body = `<div style="display:flex;flex-direction:column;gap:8px">${cats().map((c) => `<div class="edit-row"><input type="color" value="${c.color}" data-cat-field="color" data-id="${c.id}" aria-label="Farge"><input class="inp grow" value="${esc(c.name)}" data-cat-field="name" data-id="${c.id}" aria-label="Navn" style="flex:1 1 160px">
       <select class="inp" data-cat-field="kind" data-id="${c.id}" style="width:140px">${Object.entries(KINDS).map(([k2, l]) => opt(k2, l, c.kind)).join('')}</select><button class="del" data-del-cat="${c.id}" aria-label="Slett">×</button></div>`).join('')}
     <button class="add" data-act="add-cat">+ Ny kategori</button><div class="note" style="font-size:12.5px">Overføringer (f.eks. til sparekonto) telles verken som inntekt eller utgift.</div></div>`;
@@ -825,15 +847,15 @@ async function loadLayout() {
   S.layoutOk = !!S.layout;
 }
 const LOADERS = { ov: [loadSummary], tx: [loadTx, loadTxFolders], ai: [loadAiPage], kv: [loadReceipts], bud: [loadSummary], fast: [loadRecurring], konto: [], rap: [loadReport], inn: [], ...MODULE_LOADERS };
-// Brukere uten admin-rolle har bare Delte mapper.
-const allowed = (p) => !S.boot?.restricted || p === 'dir' || p === 'inn';
+// ISO2: alle roller har hele FinansHub (eget regnskap per bruker).
+const allowed = () => true;
 export async function load(page = u.page) {
   try { await Promise.all([loadLayout(), ...LOADERS[page].map((f) => f())]); } catch (e) { toast(e.message); }
   if (page === 'inn' && u.setTab === 'mobil') S.tokens = await api('/tokens').catch(() => []);
   if (page === 'inn' && u.setTab === 'data') await loadBackup().catch((e) => toast(e.message));
   if (page === 'inn' && u.setTab === 'aks') await loadStocksSettings().catch((e) => toast(e.message));
   if (page === 'inn' && (u.setTab === 'imp' || u.setTab === 'bank')) await loadImpTpl();
-  if (page === 'inn' && (u.setTab === 'bol' || S.boot?.restricted)) await loadBolSettings().catch((e) => toast(e.message));
+  if (page === 'inn' && u.setTab === 'bol') await loadBolSettings().catch((e) => toast(e.message));
   render();
   schedulePoll();
 }
@@ -854,13 +876,13 @@ function takeJump() {
 }
 let scrollMem = null; // lages først når desktop-visningen er i bruk
 export function route() {
-  if (takeJump() && allowed('inn') && !S.boot?.restricted) { u.setTab = 'look'; if (!location.hash.startsWith('#/inn')) { location.replace('#/inn'); } }
+  if (takeJump()) { u.setTab = 'look'; if (!location.hash.startsWith('#/inn')) { location.replace('#/inn'); } }
   let p = location.hash.replace(/^#\/?/, '').split('/')[0];
   // Matplan er en Homelab-fane; gamle lenker til FinansHub-siden sendes dit.
   if (p === 'mat') { location.replace('/#/matplan'); return; }
   // Gamle lenker til Import-siden åpner Innstillinger → Import.
   if (p === 'imp') { u.setTab = 'imp'; location.replace('#/inn'); return; }
-  const next = PAGE_FN[p] && allowed(p) ? p : S.boot?.restricted ? 'dir' : 'ov';
+  const next = PAGE_FN[p] && allowed(p) ? p : 'ov';
   const entered = next !== u.page;
   if (entered) { u.page = next; u.msg = {}; }
   if (next !== 'inn') { try { sessionStorage.removeItem('fh_jump'); } catch {} } // hoppet gjelder bare rett etter byttet

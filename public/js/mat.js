@@ -52,7 +52,7 @@ export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}
     if (res.status === 401 && !embedded) { location.href = '/login'; throw new Error('Ikke innlogget'); }
     const ct = res.headers.get('content-type') ?? '';
     const data = ct.includes('json') ? await res.json().catch(() => ({})) : await res.blob();
-    if (!res.ok) throw new Error(data?.error || (res.status === 403 ? 'Mat er bare tilgjengelig for administratorer.' : `Feil ${res.status}`));
+    if (!res.ok) throw new Error(data?.error || (res.status === 403 ? 'Ingen tilgang' : `Feil ${res.status}`));
     return data;
   }
 

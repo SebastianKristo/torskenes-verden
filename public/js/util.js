@@ -11,6 +11,8 @@ export const signed = (v, d = 0) => (v >= 0 ? '+' : '−') + nb(Math.abs(v), d);
 export const p2 = (x) => String(x).padStart(2, '0');
 export const cap = (s) => s.replace(/^./, (c) => c.toUpperCase());
 export const isoDay = (d) => d.toLocaleDateString('sv-SE');
+// ISO2: integrasjonene er personlige. Uten eget oppsett: kort tekst med lenke til Innstillinger → Integrasjoner.
+export const NOT_SET_UP = 'Ikke satt opp · <a href="#" class="set-link" data-act="integrations">Sett opp under Integrasjoner</a>';
 export const hm = (d) => d.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' });
 /**
  * Logo fra serverens favicon-cache, med forbokstaver bak. Bildet skjules hvis det ikke finnes (CSP stopper inline onerror,

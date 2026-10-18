@@ -25,7 +25,7 @@ export function appView(h) {
       `<div class="sg-row ai-name"><input data-app-name value="${esc(name)}" maxlength="40" placeholder="Homelab" aria-label="Navn på appen" ${can ? '' : 'disabled'}>
         <button type="button" class="ai-save" data-app-act="save" ${can && !S.busy && name.trim() && name.trim() !== appName() ? '' : 'disabled'}>${S.busy ? 'Lagrer …' : 'Lagre'}</button></div>`,
       `<div class="sg-row ai-sugg">${SUGGEST.map((n) => `<button type="button" class="sg-pill${appName() === n ? ' on' : ''}" data-app-sugg="${esc(n)}" ${can ? '' : 'disabled'}>${esc(n)}</button>`).join('')}</div>`,
-    ], S.err ? `<span class="red">${esc(S.err)}</span>` : S.msg ? `<span class="green">${esc(S.msg)}</span>` : can ? 'Vises på Hjem, i innloggingen, i varsler og i fanen i nettleseren. Gjelder alle brukerne på serveren.' : 'Bare administratorer kan endre navnet.'),
+    ], S.err ? `<span class="red">${esc(S.err)}</span>` : S.msg ? `<span class="green">${esc(S.msg)}</span>` : can ? 'Vises på Hjem, i innloggingen, i varsler og i fanen i nettleseren. Gjelder alle brukerne på serveren.' : 'Settes opp av administrator. Gjelder alle brukerne på serveren.'),
     h.group('App-ikon', [
       `<div class="ai-icons">${ICONS.map(([k, n]) => `<button type="button" class="ai-icon${appIcon() === k ? ' on' : ''}" data-app-icon="${k}" aria-pressed="${appIcon() === k}" ${can ? '' : 'disabled'}>${preview(k, name)}<span>${esc(n)}</span></button>`).join('')}</div>`,
     ], 'På iPhone finnes hvert ikon i standard, mørk og tonet variant, og på Android som tematisk (Material You) ikon. Velg ikonet i appens innstillinger på telefonen. Her settes ikonet for nettleseren og PWA-en.'),

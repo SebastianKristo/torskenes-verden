@@ -67,7 +67,7 @@ async function loadCals() {
   }
   if (S.d?.ha && S.d.ha.allowed !== false && !S.hacals && !S.local) {
     try { const r = await api('/birthdays/ha/calendars'); S.hacals = (Array.isArray(r) ? r : r.items ?? r.calendars ?? []).map((c) => (typeof c === 'string' ? { id: c, name: c } : { id: c.entity_id ?? c.entityId ?? c.id, name: c.entity_id ?? c.entityId ?? c.id })); S.haErr = null; }
-    catch (e) { S.hacals = []; S.haErr = e.status === 403 ? 'Bare administrator kan koble til Home Assistant.' : e.status === 404 ? null : e.message; }
+    catch (e) { S.hacals = []; S.haErr = e.status === 403 ? 'Home Assistant settes opp av administrator.' : e.status === 404 ? null : e.message; }
     paint();
   }
 }
@@ -154,21 +154,20 @@ function calendars() {
       ${tog(g.writeNew !== false, 'data-bd-gtog="writeNew"', 'Skriv nye bursdager til Google', 'Årlig heldagshendelse med påminnelse')}
       ${tog(g.contacts !== false, 'data-bd-gtog="contacts"', 'Hent bursdager fra Google-kontakter', 'Fra kontaktlisten din')}
       <div class="bd-gb"><button type="button" class="bd-btn bd-grow lab" data-bd-act="gsync"${S.busy === 'gsync' ? ' disabled' : ''}>${S.busy === 'gsync' ? 'Synker …' : '↻ Synk nå'}</button><button type="button" class="bd-btn" data-bd-act="glogout">Logg ut</button></div>`
-    : g.configured === false ? `<span class="bd-note">Google Kalender er ikke satt opp ennå. ${isAdmin() ? 'Legg inn klient-ID og hemmelighet under Innstillinger → Integrasjoner → Google Kalender.' : 'En administrator må legge inn klient-ID og hemmelighet under Innstillinger → Integrasjoner.'}</span>`
+    : g.configured === false ? `<span class="bd-note">Google Kalender er ikke satt opp ennå. ${isAdmin() ? 'Legg inn klient-ID og hemmelighet under Innstillinger → Integrasjoner → Google Kalender.' : 'Settes opp av administrator.'}</span>`
     : `<button type="button" class="bd-glogin" data-bd-act="glogin"${S.busy === 'glogin' ? ' disabled' : ''}>${G_SVG}${S.busy === 'glogin' ? 'Kobler til …' : 'Logg inn med Google'}</button>`;
-  const hst = ha.allowed === false ? 'Bare for administrator' : ha.entityId ? `${ha.entityId}${ha.syncedAt ? ` · importert ${hmTxt(ha.syncedAt)}` : ''}` : 'Velg kalender og importer';
+  const hst = ha.entityId ? `${ha.entityId}${ha.syncedAt ? ` · importert ${hmTxt(ha.syncedAt)}` : ''}` : 'Velg kalender og importer';
   const ents = S.hacals ?? [];
-  const haBody = ha.allowed === false ? '<span class="bd-note">Home Assistant er serveroppsett. Bare administratorer kan importere fra og skrive til Home Assistant.</span>'
-    : S.haErr ? `<span class="bd-note">${esc(S.haErr)}</span>`
+  const haBody = S.haErr ? `<span class="bd-note">${esc(S.haErr)}</span>`
     : `<span class="bd-lbl">Kalender i Home Assistant</span><div class="bd-chips">${ents.length ? ents.map((c) => chip(ha.entityId === c.id, `data-bd-haent="${esc(c.id)}"`, c.name, 'mono')).join('') : `<span class="bd-note">${S.hacals ? 'Fant ingen calendar.*-enheter.' : 'Henter kalendere …'}</span>`}</div>
       ${ha.entityId ? tog(!!ha.twoWay, 'data-bd-hatog="twoWay"', 'Synk to veier', 'Nye bursdager her legges også i Home Assistant') : ''}
       <button type="button" class="bd-btn pri" data-bd-act="haimp"${S.busy === 'haimp' || !ha.entityId ? ' disabled' : ''}>${S.busy === 'haimp' ? 'Importerer …' : ha.syncedAt ? '↻ Importer på nytt' : 'Importer fra Home Assistant'}</button>`;
   return `<div class="bd-card bd-cals">
     <div class="bd-ch"><span class="bd-ci g">${G_SVG}</span><span class="bd-grow"><b>Google Kalender</b><span class="${g.connected ? 'pos' : ''}">${esc(gst)}</span>${g.error ? `<span class="err">${esc(g.error)}</span>` : ''}</span></div>
     ${gOn}
-    <div class="bd-hr"></div>
-    <div class="bd-ch"><span class="bd-ci ha">${HA_SVG}</span><span class="bd-grow"><b>Home Assistant</b><span class="${ha.entityId ? 'pos' : ''}">${esc(hst)}</span>${ha.error && ha.allowed !== false ? `<span class="err">${esc(ha.error)}</span>` : ''}</span></div>
-    ${haBody}
+    ${ha.allowed === false ? '' : `<div class="bd-hr"></div>
+    <div class="bd-ch"><span class="bd-ci ha">${HA_SVG}</span><span class="bd-grow"><b>Home Assistant</b><span class="${ha.entityId ? 'pos' : ''}">${esc(hst)}</span>${ha.error ? `<span class="err">${esc(ha.error)}</span>` : ''}</span></div>
+    ${haBody}`}
   </div>`;
 }
 

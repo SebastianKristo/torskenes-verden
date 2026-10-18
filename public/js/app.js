@@ -98,6 +98,7 @@ function bindShell() {
     if (!act) return;
     close();
     if (act === 'settings') openSettings();
+    if (act === 'integrations') { e.preventDefault(); openSettings('int'); }
     if (act === 'hl-theme') await setHlTheme(is2c() ? 'cur' : '2c');
     if (act === 'layout') openSettings('top');
     if (act === 'news-speed') openSettings('top', 'speed');

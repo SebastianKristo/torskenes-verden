@@ -49,12 +49,12 @@ export async function removeAvatar() {
 export const DASH_WIDGETS = [['d_cal', 'Skolekalender'], ['d_agenda', 'Agenda'], ['d_trading', 'Trading 212'], ['d_energy', 'Energi'], ['d_eco', 'Økonomi'], ['d_links', 'Snarveier'], ['d_upcoming', 'Kommer ut'], ['d_media', 'Media'], ['d_media_hist', 'Mediehistorikk'], ['d_pos', 'Posisjon · familie'], ['d_bday', 'Bursdager · neste']];
 export const MOBILE_WIDGETS = [['d_weather_m', 'Vær og pakker'], ['d_agenda', 'I dag'], ['d_trading', 'Trading 212'], ['d_energy', 'Energi'], ['d_eco', 'Økonomi'], ['d_upcoming', 'Kommer ut'], ['d_media', 'Media'], ['d_media_hist', 'Mediehistorikk'], ['d_pos', 'Posisjon · familie'], ['d_bday', 'Bursdager · neste']];
 export const TABS = [['dash', 'Dashboard'], ['studie', 'Studie'], ['rom', 'Rom'], ['okonomi', 'Økonomi'], ['hjem', 'Hjem'], ['matplan', 'Mat'], ['sporing', 'Sporing'], ['familie', 'Familie'], ['domener', 'Domener'], ['nettverk', 'Nettverk'], ['huskeliste', 'Huskeliste'], ['bursdager', 'Bursdager']];
-const ADMIN_TABS = ['hjem', 'matplan', 'sporing', 'domener'];
+// ISO2: Hjem, Mat og Sporing har egne data per bruker; bare Domener er for administratorer.
+const ADMIN_TABS = ['domener'];
 export const FIXED_TABS = ['dash'];
 
 const layout = () => (store.me.layout ??= {});
 export const hiddenWidgets = () => new Set(layout().hiddenWidgets ?? []);
-// Hjem, Matplan og Domener viser eierens data og er bare for administratorer.
 export const hiddenTabs = () => new Set([...(layout().hiddenTabs ?? []), ...(store.me.me?.role === 'admin' ? [] : ADMIN_TABS)].filter((k) => !FIXED_TABS.includes(k)));
 export const tabAllowed = (k) => store.me.me?.role === 'admin' || !ADMIN_TABS.includes(k);
 

@@ -125,7 +125,7 @@ function usersView() {
     ...d.users.map((u) => row({ t: u.name || u.username, img: u.id === meId ? store.me.me?.avatarUrl ?? u.avatarUrl : u.avatarUrl, ini: initials(u.name || u.username), ic: u.id === meId ? '#3b6fd6' : '#2a3346',
       s: `@${u.username} · ${roleName(u.role)}${u.isMainAdmin || u.id === 'owner' ? ' · hovedadmin' : ''}${u.totp ? ' · 2FA på' : ''}`, k: 'bruker 2FA rolle', btn: 'Administrer', go: `users|user:${u.id}` })),
     admin ? row({ t: 'Ny bruker', s: 'Brukernavn, passord og rolle.', btn: 'Legg til', go: 'users|add' }) : null,
-  ], admin ? 'Admin kan legge til og fjerne brukere. Bruker ser dashbordet og styrer egen totrinnsbekreftelse.' : 'Bare administratorer kan legge til brukere.')] };
+  ], admin ? 'Admin kan legge til og fjerne brukere. Bruker ser dashbordet og styrer egen totrinnsbekreftelse.' : 'Brukere legges til av administrator. Du styrer egen totrinnsbekreftelse.')] };
 }
 
 /* ---------- Utseende ---------- */
@@ -400,37 +400,38 @@ function mailVal() {
   if (mail.lastError || mail.error) return '!Feil ved henting';
   return mail.folder || mail.config?.folder || 'Satt opp';
 }
-// Prompt 21: /api/config er serveroppsett. Vanlige brukere får bare tomme, låste grupper (restricted), så fanen er låst for dem.
-const cfgLocked = () => !isAdmin() || (Array.isArray(cfg) && cfg.length > 0 && cfg.every((g) => g.restricted));
-const warnCount = () => cfgLocked() ? 0 : (cfg ? cfg.filter((g) => valOf(g).startsWith('!')).length : 0) + (mailVal().startsWith('!') ? 1 : 0) + integCount(cfg);
+// ISO2: alle får sine egne personlige grupper (scope 'personal') med egne verdier; servergruppene (scope 'server') bare admin.
+const isPersonal = (g) => g?.scope === 'personal';
+const canEdit = (g) => isPersonal(g) || isAdmin();
+const warnCount = () => (cfg ? cfg.filter((g) => valOf(g).startsWith('!')).length : 0) + (mailVal().startsWith('!') ? 1 : 0) + integCount(cfg);
 
 function intView() {
-  if (cfgLocked()) return { groups: [group('Integrasjoner', [row({ t: 'Låst', s: 'Integrasjonene er serveroppsett. Bare administratorer kan se og endre adresser og API-nøkler.', v: 'Bare admin' })])] };
   if (cfgErr) return { html: `<div class="err">${esc(cfgErr)}</div>` };
   if (!cfg) return { html: '<div class="skeleton" style="min-height:240px;border-radius:18px"></div>' };
   if (!sub) {
     const res = Object.values(tests), ok = res.filter((t) => t.st === 'ok').length, bad = res.filter((t) => t.st === 'err').length, run = res.some((t) => t.st === 'run');
-    const byCat = new Map();
-    for (const g of cfg) { const m = metaOf(g); if (!byCat.has(m.cat)) byCat.set(m.cat, []); byCat.get(m.cat).push(g); }
-    const cats = [...byCat.keys()].sort((a, b) => (CAT_ORDER.indexOf(a) + 99) % 99 - (CAT_ORDER.indexOf(b) + 99) % 99);
+    const byCat = (gs) => { const m = new Map(); for (const g of gs) { const c = metaOf(g).cat; if (!m.has(c)) m.set(c, []); m.get(c).push(g); } return m; };
+    const catSort = (a, b) => (CAT_ORDER.indexOf(a) + 99) % 99 - (CAT_ORDER.indexOf(b) + 99) % 99;
     const intRow = (g) => {
       const m = metaOf(g), v = valOf(g), warn = v.startsWith('!'), t = testState(g.name);
       return row({ t: m.name, s: m.s, k: g.fields.map((f) => f.label).join(' '), logo: m.domain, ini: m.name, v: t?.v ?? (warn ? v.slice(1) : v), vc: t?.vc ?? (warn ? '#f3b54a' : undefined), btn: 'Oppsett', go: 'int|cfg:' + g.name });
     };
     const mv = mailVal(), mailRow = row({ t: 'Proton Mail', s: 'Kvitteringer fra e-post via Bridge', logo: 'proton.me', v: mv.replace(/^!/, ''), vc: mv.startsWith('!') ? '#f3b54a' : undefined, btn: 'Oppsett', go: 'int|mail' });
+    const mineBy = byCat(cfg.filter(isPersonal)), srvBy = byCat(cfg.filter((g) => !isPersonal(g)));
+    const extraRows = (scope) => integRows(cfg, row, scope);
+    const mineRows = [...[...mineBy.keys()].sort(catSort).flatMap((c) => mineBy.get(c).map(intRow)), mailRow, ...extraRows('personal')];
+    const srvRows = isAdmin() ? [...[...srvBy.keys()].sort(catSort).flatMap((c) => srvBy.get(c).map(intRow)), ...extraRows('server')] : [];
     return { groups: [
-      isAdmin() ? group('Tilkoblinger', [row({ t: run ? 'Tester …' : 'Test alle tilkoblinger', s: res.length ? `${ok} OK · ${bad} feilet` : 'Sjekker adresse, nøkkel og svar fra hver tjeneste.', btn: run ? 'Tester …' : 'Test alle', act: 'data-test-all', disabled: run })]) : null,
-      ...cats.map((c) => group(c, [...byCat.get(c).map(intRow), c === 'Økonomi' ? mailRow : null], c === 'Smarthjem' ? NOTES['Home Assistant'] : '')),
-      byCat.has('Økonomi') ? null : group('Økonomi', [mailRow]),
-      ((r) => (r.length ? group('Flere integrasjoner', r, 'Google Kalender, AI, bank, e-post, pakkesporing og mer. Hemmeligheter lagres kryptert på serveren og vises aldri igjen.') : null))(integRows(cfg, row)),
-      group('', [], isAdmin() ? 'Tomme felt bruker verdien fra serverens miljøvariabler (.env). Hemmeligheter vises aldri igjen etter lagring.' : 'Bare administratorer kan endre integrasjonene.'),
+      group('Tilkoblinger', [row({ t: run ? 'Tester …' : 'Test alle tilkoblinger', s: res.length ? `${ok} OK · ${bad} feilet` : 'Sjekker adresse, nøkkel og svar fra hver tjeneste.', btn: run ? 'Tester …' : 'Test alle', act: 'data-test-all', disabled: run })]),
+      group('Dine integrasjoner', mineRows, 'Bare du ser og bruker disse verdiene. Hemmeligheter lagres kryptert på serveren og vises aldri igjen.'),
+      srvRows.length ? group('Server (administrator)', srvRows, 'Gjelder hele serveren. Tomme felt bruker verdien fra serverens miljøvariabler (.env).') : null,
     ].filter(Boolean) };
   }
   if (sub === 'mail') return { title: 'Proton Mail', sub: 'Integrasjoner · Kvitteringer fra e-post via Bridge', html: '<div data-mail-host></div>', mount: mountMail };
   if (sub.startsWith('i24:')) { const v = integSub(sub.slice(4), note); if (v) return v; sub = null; return intView(); }
   const gname = sub.slice(4), g = cfg.find((x) => x.name === gname);
   if (!g) { sub = null; return intView(); }
-  const m = metaOf(g), t = tests[g.name], msg = cfgMsg[g.name], ro = !isAdmin();
+  const m = metaOf(g), t = tests[g.name], msg = cfgMsg[g.name], ro = !canEdit(g);
   const fields = g.fields.map((f) => f.type === 'textarea'
     ? `<label class="sg-field area"><span>${esc(f.label)}</span><textarea name="${f.key}" rows="5" spellcheck="false"${ro ? ' readonly' : ''}>${esc(f.value)}</textarea></label>`
     : `<label class="sg-field"><span>${esc(f.label)}</span><input name="${f.key}" type="${f.type}" value="${esc(f.value)}" placeholder="${f.secret ? (f.set ? '•••••••• lagret' : 'ikke satt') : esc(f.placeholder ?? '')}" autocomplete="off" spellcheck="false"${ro ? ' readonly' : ''}>${f.secret && f.set && !ro ? `<button type="button" class="sg-link red" data-clear-secret="${f.key}">Fjern</button>` : ''}</label>`).join('');
@@ -440,7 +441,7 @@ function intView() {
   const haTodo = g.name === 'Home Assistant' && !ro ? '<section class="sg"><h3 class="sg-h">Huskeliste</h3><div data-mount-host></div></section>' : '';
   return { mount: haTodo ? mountHaTodo : undefined, title: m.name, sub: `Integrasjoner · ${m.s}`, html: `${head}<form class="sg" data-group="${esc(g.name)}"><h3 class="sg-t">Oppsett</h3><div class="sg-box">${fields}</div>
       ${NOTES[g.name] ? note(NOTES[g.name]) : typeof g.help === 'string' && g.help.trim() && !/```|\n\n/.test(g.help) ? note(esc(g.help)) : ''}</form>
-      ${ro ? note('Bare administratorer kan endre og teste integrasjonene.') : `<div class="sg-acts"><button class="sg-btn pri" data-test="${esc(g.name)}"${t?.st === 'run' ? ' disabled' : ''}>${t?.st === 'run' ? 'Tester …' : 'Test tilkobling'}</button>
+      ${ro ? note('Settes opp av administrator.') : `<div class="sg-acts"><button class="sg-btn pri" data-test="${esc(g.name)}"${t?.st === 'run' ? ' disabled' : ''}>${t?.st === 'run' ? 'Tester …' : 'Test tilkobling'}</button>
         <span class="${msg ? (msg.ok ? 'green' : 'red') : 'muted'}" style="font-size:13px">${esc(msg?.text ?? 'Endringer lagres automatisk')}</span></div>`}${res}${haTodo}${guideHtml(g)}` };
 }
 
@@ -612,7 +613,6 @@ function enter() {
 }
 
 async function loadCfg() {
-  if (!isAdmin()) { cfg = []; cfgErr = null; if (!modal().hidden) render(); return; } // låst for vanlige brukere
   try { cfg = await api('/config'); cfgErr = null; } catch (e) { cfgErr = e.message; }
   if (!modal().hidden) render();
 }
@@ -677,7 +677,7 @@ export function bindSettings() {
     if (await integClick(e, render)) return;
     const tb = e.target.closest('[data-test]');
     if (tb) { e.preventDefault(); return runTest(tb.dataset.test); }
-    if (e.target.closest('[data-test-all]')) { if (cfg) await Promise.all(cfg.map((x) => runTest(x.name))); return; }
+    if (e.target.closest('[data-test-all]')) { if (cfg) await Promise.all(cfg.filter(canEdit).map((x) => runTest(x.name))); return; }
     const cs = e.target.closest('[data-clear-secret]');
     if (cs) {
       e.preventDefault();
@@ -836,9 +836,9 @@ export function bindSettings() {
     if (t.matches('[data-tab-label]')) { await saveLabels(t.dataset.tabLabel, t.value); return; }
     if (integChange(e, render)) return;
     const form = t.closest('[data-group]');
-    if (form && cfg && isAdmin()) {
+    if (form && cfg) {
       const g = cfg.find((x) => x.name === form.dataset.group), f = g?.fields.find((x) => x.key === t.name);
-      if (!f) return;
+      if (!f || !canEdit(g)) return;
       const v = t.value;
       if (f.secret ? !v : v === f.value) return;
       saveGroup(g.name, { [f.key]: v }); return;

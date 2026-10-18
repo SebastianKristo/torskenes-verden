@@ -1,4 +1,4 @@
-import { esc, kr, nb, signed, p2, cap, isoDay, hm, isMobile, api, logoImg } from './util.js';
+import { esc, kr, nb, signed, p2, cap, isoDay, hm, isMobile, api, logoImg, NOT_SET_UP } from './util.js';
 import { store, widget, card, refresh, errBox, on, load } from './store.js';
 import { renderSearch, popHandler } from './extras.js';
 import { hiddenWidgets } from './profile.js';
@@ -167,14 +167,13 @@ document.addEventListener('keydown', (e) => {
   if (b) { e.preventDefault(); toggleDep(b.dataset.depOpen); }
 });
 
-// Prompt 21: trading, skole og media er admin-data; vanlige brukere får {configured:false, restricted:true}.
-const ADMIN_ONLY = 'Bare tilgjengelig for administrator.';
+// ISO2: trading, skole og media bruker brukerens egne integrasjoner; uten oppsett {configured:false}.
 
 function greeting(h) { return (h < 5 ? 'God natt' : h < 10 ? 'God morgen' : h < 12 ? 'God formiddag' : h < 18 ? 'God ettermiddag' : h < 23 ? 'God kveld' : 'God natt'); }
 
 function renderLesson() {
   const s = store.data.school;
-  if (s && !s.configured) return `<div class="empty">${s.restricted ? ADMIN_ONLY : 'Legg inn SCHOOL_ICAL_URL for timeplan.'}</div>`;
+  if (s && !s.configured) return `<div class="empty">${NOT_SET_UP}</div>`;
   if (!s) return store.errors.school ? errBox('school', 'Timeplan') : '';
   const l = lessonNow();
   if (!l) return '<div class="sub" style="font-size:14px">Ingen flere timer i dag</div>';
@@ -206,7 +205,7 @@ widget('d_cal', { render() {
     cells += `<div class="cal-d${d === n.getDate() ? ' today' : ''}" data-pop="day:${iso}" role="button" tabindex="0" aria-label="${d}. – vis detaljer">${d}<div class="cal-dots">${ds}</div></div>`;
   }
   const s = store.data.school;
-  return `<div><div class="card-title">Skolekalender</div><div class="card-sub">${s && !s.configured ? (s.restricted ? 'Bare for administrator' : 'iCal er ikke satt opp') : 'Synkronisert via iCal · Canvas'}</div></div>
+  return `<div><div class="card-title">Skolekalender</div><div class="card-sub">${s && !s.configured ? 'iCal er ikke satt opp' : 'Synkronisert via iCal · Canvas'}</div></div>
     <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600"><span>${cap(n.toLocaleDateString('nb-NO', { month: 'long' }))}</span><span class="muted" style="font-weight:400">${y}</span></div>
     <div class="cal">${['M', 'T', 'O', 'T', 'F', 'L', 'S'].map((d) => `<div class="cal-wd">${d}</div>`).join('')}${cells}</div>${errBox('school', 'iCal')}`;
 } });
@@ -222,7 +221,7 @@ widget('d_trading', { render() {
   const t = store.data.trading;
   const head = '<div><div class="card-title">Trading 212</div><div class="card-sub">Portefølje</div></div>';
   if (!t) return head + (errBox('trading', 'Trading 212') || '<div class="skeleton" style="min-height:120px"></div>');
-  if (!t.configured) return head + `<div class="empty">${t.restricted ? ADMIN_ONLY : 'Legg inn TRADING212_API_KEY på serveren.'}</div>`;
+  if (!t.configured) return head + `<div class="empty">${NOT_SET_UP}</div>`;
   const cur = t.currency === 'NOK' ? 'kr' : t.currency;
   const day = t.dayChange != null ? `${signed(t.dayChange)} ${cur} (${signed(t.dayPct, 1)} %) i dag · ` : '';
   const pos = t.positions.map((p, i) => `<div class="row" data-pop="pos:${i}" role="button" tabindex="0"><span class="mono" style="font-weight:500">${esc(p.ticker)}</span><span class="mono" style="display:flex;gap:14px;font-size:13px"><span>${nb(p.value)}</span><span class="${p.pct < 0 ? 'red' : 'green'}" style="width:62px;text-align:right">${signed(p.pct, 1)} %</span></span></div>`).join('');
@@ -278,7 +277,7 @@ widget('d_upcoming', { render() {
   const links = u ? [['Sonarr', u.tv], ['Radarr', u.movies]].filter(([, x]) => x.url).map(([n, x]) => `<a class="btn" href="${esc(x.url)}" target="_blank" rel="noopener">${n} ↗</a>`).join('') : '';
   const head = `<div class="card-head"><div><div class="card-title">Kommer ut</div><div class="card-sub">Sonarr · Radarr</div></div><div style="display:flex;gap:6px">${links}</div></div>`;
   if (!u) return head + (errBox('upcoming', 'Sonarr/Radarr') || '<div class="skeleton" style="min-height:160px"></div>');
-  if (!u.tv.configured && !u.movies.configured) return head + '<div class="empty">Legg inn URL og API-nøkkel for Sonarr og Radarr under Innstillinger → Integrasjoner.</div>';
+  if (!u.tv.configured && !u.movies.configured) return head + `<div class="empty">${NOT_SET_UP}</div>`;
   const part = (label, x, kind) => !x.configured ? '' : `<div class="section-label">${label}</div>${x.error ? `<div class="err">${esc(x.error)}</div>` : x.items.length ? posters(kind, x.items) : '<div class="empty">Ingenting i perioden.</div>'}`;
   return head + part('TV-serier', u.tv, 'tv') + part('Filmer', u.movies, 'movies');
 } });
@@ -337,7 +336,7 @@ const pdate = (n) => cap(n.toLocaleDateString('nb-NO', { weekday: 'long', day: '
 widget('p_school', { cls: 'p-sec', render() {
   const s = store.data.school;
   let now = '';
-  if (s && !s.configured) now = `<div class="p-mute">${s.restricted ? ADMIN_ONLY : 'Legg inn SCHOOL_ICAL_URL for timeplan.'}</div>`;
+  if (s && !s.configured) now = `<div class="p-mute">${NOT_SET_UP}</div>`;
   else if (!s) now = errBox('school', 'Timeplan');
   else {
     const l = lessonNow();
@@ -384,14 +383,14 @@ widget('p_play', { cls: 'p-sec', render() {
   const left = (ms) => { const m = Math.round((ms || 0) / 60000); return m >= 60 ? `${Math.floor(m / 60)} t ${m % 60} min igjen` : `${m} min igjen`; };
   const rows = items.slice(0, 3).map((n) => `<div class="p-play"><span class="p-poster" style="${n.poster ? `background-image:url('${esc(n.poster)}')` : ''}">${n.poster ? '' : esc(String(n.title).charAt(0).toUpperCase())}</span>
     <div><div class="p-play-t">${esc(n.title)}</div><div class="p-mute">${esc([n.user, n.src === 'jellyfin' ? 'Jellyfin' : 'Plex', left(n.leftMs)].filter(Boolean).join(' · '))}</div></div></div>`).join('');
-  const empty = !now ? '' : now.configured === false ? (now.restricted ? ADMIN_ONLY : 'Legg inn Plex eller Jellyfin under Innstillinger → Integrasjoner.') : 'Ingen spiller noe akkurat nå.';
+  const empty = !now ? '' : now.configured === false ? NOT_SET_UP : 'Ingen spiller noe akkurat nå.';
   return lab('SPILLES NÅ') + (rows || `<div class="p-mute" style="padding:9px 0">${empty}</div>`);
 } });
 
 widget('p_money', { cls: 'p-sec', render() {
   const t = store.data.trading, f = store.data.finans;
   const cur = t?.currency === 'NOK' || !t?.currency ? 'kr' : t.currency;
-  const tr = !t ? '<div class="skeleton" style="min-height:60px"></div>' : !t.configured ? `<div class="p-mute">${t.restricted ? 'Bare for administrator' : 'Ikke koblet'}</div>`
+  const tr = !t ? '<div class="skeleton" style="min-height:60px"></div>' : !t.configured ? `<div class="p-mute">${NOT_SET_UP}</div>`
     : `<div class="p-big">${nb(t.total)} ${esc(cur)}</div>${t.dayChange != null ? `<div class="${t.dayChange < 0 ? 'p-neg' : 'p-pos'}">${signed(t.dayChange)} ${esc(cur)} (${signed(t.dayPct, 1)} %)</div>` : `<div class="${t.pplPct < 0 ? 'p-neg' : 'p-pos'}">${signed(t.pplPct, 1)} % totalt</div>`}`;
   const month = cap(store.now.toLocaleDateString('nb-NO', { month: 'long' }));
   const fh = !f ? (errBox('finans', 'FinansHub') || '<div class="skeleton" style="min-height:60px"></div>')

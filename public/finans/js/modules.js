@@ -319,7 +319,7 @@ function addBoxHtml(cur) {
       ${catSelect('categoryId', other ? S.bolCats?.options ?? cur.catTree : cur.catTree, '', 'Kategori: ✦ AI velger')}<select class="inp" name="projectId">${optList([['', 'Uten prosjekt'], ...(other ? [] : cur.projects.map((p) => [p.id, p.name]))], '')}</select>
       ${other ? '' : `<select class="inp" name="paidBy">${optList(names.map((n) => [n, 'Betalt av ' + n]), cur.members.find((m) => m.you)?.name)}</select>`}<button class="btn pri">Legg til</button></form>`
       : mode === 'rc' ? `<label class="mod-drop"><b>Last opp kvitteringer og regninger</b><span>Flere filer · AI leser butikk, dato og beløp, og velger kategori</span><input type="file" multiple accept="image/*,application/pdf" data-mrc="folder" hidden></label>`
-      : S.boot.restricted ? '<div class="note" style="padding:12px">Transaksjoner fra regnskapet kan bare flyttes hit av en administrator.</div>' : txPick('folder')}`;
+      : txPick('folder')}`;
 }
 function projectsTab(cur) {
   const list = cur.projects.map((p) => {
@@ -585,9 +585,11 @@ function stagePreview() {
     <div style="display:flex;gap:10px"><button class="btn pri" data-mact="bk-restore">Gjenopprett</button><button class="btn" data-mact="bk-cancel">Avbryt</button></div></div>`;
 }
 
+// ISO2: SMB-backup av hele databasen er bare for hovedadmin (canSmb). Alle kan laste ned og gjenopprette sine egne data.
 export function backupTab() {
   const b = S.backup;
   if (!b) return skel(300);
+  if (b.canSmb === false || !b.config) return ownBackupTab();
   const c = b.config;
   const last = b.history?.find((h) => h.status === 'ok');
   const failed = b.history?.[0]?.status === 'failed' ? b.history[0] : null;
@@ -624,11 +626,25 @@ export function backupTab() {
     <button class="btn danger" data-act="wipe" style="align-self:flex-start">Slett alle økonomidata …</button></div>`;
 }
 
+const downloadBox = () => `<div class="mod-box"><div class="set-label">Last ned</div><div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn" href="/finans/api/backup/export?format=json">Full backup (.json)</a><a class="btn" href="/finans/api/backup/export?format=xlsx">Excel-database (.xlsx)</a><a class="btn" href="/finans/api/transactions.csv">Bare transaksjoner (CSV)</a></div>
+      <div class="note" style="font-size:12.5px;line-height:1.5">JSON-filen er den komplette backupen av ditt regnskap i FinansHub og brukes til gjenoppretting. Excel-filen har ett ark per tabell med ID-kolonner som kobler arkene sammen. CSV-en bruker semikolon og UTF-8 med BOM.</div></div>`;
+function ownBackupTab() {
+  return `<div style="display:flex;flex-direction:column;gap:18px">
+    ${downloadBox()}
+    <div class="mod-box"><div class="set-label">Gjenopprett</div>
+      <div class="sub" style="font-size:13px;line-height:1.5">Last opp en .json-backup eller Excel-databasen du har lastet ned herfra. Du ser antall rader per tabell før noe endres, og bare dine egne data berøres.</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label class="btn" style="cursor:pointer">Velg backupfil …<input type="file" accept=".json,.xlsx,application/json" data-mbk-file hidden></label></div>
+      ${stagePreview()}</div>
+    <div class="mod-box"><div class="set-label">Backup til SMB-share</div><div class="note" style="font-size:12.5px">Backup av hele serveren settes opp av administrator.</div></div>
+    ${!S.boot.hasData ? '<button class="btn" data-act="demo" style="align-self:flex-start">Last inn demodata</button>' : ''}
+    <button class="btn danger" data-act="wipe" style="align-self:flex-start">Slett alle økonomidata …</button></div>`;
+}
+
 // Første oppstart (tom database): start tom, hent fra SMB-share eller last opp en backupfil.
 export function firstRunCard() {
   return `<section class="card first-run"><div><h2>Velkommen til FinansHub</h2><div class="note">Dette ser ut som en ny installasjon. Hvordan vil du begynne?</div></div>
     <div class="fr-opts"><button class="fr-opt" data-mact="fr-empty"><b>Start tom</b><span>Legg til kontoer og importer fra nettbanken selv</span></button>
-      <button class="fr-opt" data-mact="fr-smb"><b>Hent fra SMB-share</b><span>Gjenopprett en backup fra NAS-en</span></button>
+      ${(S.backup ? S.backup.canSmb !== false : S.boot?.me?.isMainAdmin !== false) ? '<button class="fr-opt" data-mact="fr-smb"><b>Hent fra SMB-share</b><span>Gjenopprett en backup fra NAS-en</span></button>' : ''}
       <label class="fr-opt"><b>Last opp backupfil</b><span>.json, .xlsx eller .tar.gz.enc</span><input type="file" accept=".json,.xlsx,.gz,.enc,application/json" data-mbk-file data-first hidden></label>
       <button class="fr-opt" data-act="demo"><b>Se demodata</b><span>Utforsk med eksempeldata først</span></button></div>
     ${S.stage ? stagePreview() : ''}</section>`;
@@ -653,8 +669,7 @@ const loadUsers = async () => { S.users = await api('/users').catch(() => []); }
 const loadFinn = async () => { S.finn = await api('/finn'); };
 const loadStocks = async (force) => { S.stocks = await api(`/stocks${force === true ? '?force=1' : ''}`); };
 export async function loadBackup() { S.backup = await api('/backup'); }
-const recentIfAdmin = async () => { if (!S.boot.restricted) await loadRecentOut(); };
-export const MODULE_LOADERS = { aks: [loadStocks], sub: [loadSubs], dir: [loadFolders, loadUsers, recentIfAdmin, loadBolCats], finn: [loadFinnDesk], imp: [loadImpTpl] };
+export const MODULE_LOADERS = { aks: [loadStocks], sub: [loadSubs], dir: [loadFolders, loadUsers, loadRecentOut, loadBolCats], finn: [loadFinnDesk], imp: [loadImpTpl] };
 
 /* ===================== Hendelser ===================== */
 

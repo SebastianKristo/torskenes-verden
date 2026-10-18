@@ -1,5 +1,5 @@
 // Dashbord-kort «Media»: Plex og Jellyfin (spilles nå + nylig lagt til). Data og plakater går via serveren.
-import { esc } from './util.js';
+import { esc, NOT_SET_UP } from './util.js';
 import { store, widget, refresh, errBox, on, load } from './store.js';
 
 const SRC = { plex: { name: 'Plex', bg: '#e5a00d', fg: '#1a1200', domain: 'plex.tv' }, jellyfin: { name: 'Jellyfin', bg: '#7b4fd6', fg: '#fff', domain: 'jellyfin.org' } };
@@ -53,7 +53,7 @@ widget('d_media', { render() {
   const sub = servers.length ? servers.map((s) => s.name).join(' · ') + (now?.mock ? ' · eksempeldata' : '') : 'Plex · Jellyfin';
   const head = `<div class="card-head"><div><div class="card-title">Media</div><div class="card-sub">${esc(sub)}</div></div><div class="media-chips">${servers.map(serverChip).join('')}</div></div>`;
   if (!now && !rec) return head + (errBox('media_now', 'Media') || '<div class="skeleton" style="min-height:160px"></div>');
-  if (!(now ?? rec).configured) return head + `<div class="empty">${(now ?? rec).restricted ? 'Bare tilgjengelig for administrator.' : 'Legg inn Plex eller Jellyfin under Innstillinger → Integrasjoner → Media.'}</div>`;
+  if (!(now ?? rec).configured) return head + `<div class="empty">${NOT_SET_UP}</div>`;
   const down = servers.filter((s) => s.ok === false).map((s) => `<div class="err">${esc(s.name)}: ${esc(s.error ?? 'utilgjengelig')}</div>`).join('');
   const items = now?.items ?? [];
   const nowHtml = `<div class="section-label">Spilles nå · ${items.length}</div>
@@ -86,7 +86,7 @@ widget('d_media_hist', { cls: 'card span2', render() {
   const n = h?.items?.length ?? 0;
   const head = `<div class="card-head"><div><div class="card-title">Mediehistorikk</div><div class="card-sub">${n ? `${n} siste avspillinger · ` : ''}Plex og Jellyfin${h?.mock ? ' · eksempeldata' : ''}</div></div></div>`;
   if (!h) return head + (errBox('media_history', 'Mediehistorikk') || '<div class="skeleton" style="min-height:200px"></div>');
-  if (!h.configured) return head + `<div class="empty">${h.restricted ? 'Bare tilgjengelig for administrator.' : 'Legg inn Plex eller Jellyfin under Innstillinger → Integrasjoner → Media.'}</div>`;
+  if (!h.configured) return head + `<div class="empty">${NOT_SET_UP}</div>`;
   const down = (h.servers ?? []).filter((s) => s.ok === false).map((s) => `<div class="err">${esc(s.name)}: ${esc(s.error ?? 'utilgjengelig')}</div>`).join('');
   return head + down + (n ? `<div class="mh-row">${h.items.map(histCard).join('')}</div>` : '<div class="empty">Ingen avspillinger ennå.</div>');
 } });

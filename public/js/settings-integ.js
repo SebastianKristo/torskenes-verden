@@ -1,17 +1,16 @@
 // Integrasjoner fra /api/integrations (prompt 24): integrasjonene som ikke allerede har en gruppe i /api/config
 // (Google Kalender, AI, Bank, IMAP, Mybring, PostNord, ParcelsApp, Finn, Ikoner …) vises under «Flere integrasjoner»,
 // med status, felt som kan redigeres, Test tilkobling og Fjern verdi. Hemmeligheter vises bare som «•••• lagret».
-// Bare admin. Eldre server (404) eller vanlig bruker (403): ingenting legges til, og alt annet er som før.
+// ISO2: alle får sine egne personlige integrasjoner (scope 'personal'); servergruppene (scope 'server') kommer bare til admin.
+// Eldre server (404): ingenting legges til, og alt annet er som før.
 import { api, esc } from './util.js';
-import { store } from './store.js';
 
 let list = null, loading = false;
 const msg = {}, test = {};
-const isAdmin = () => store.me?.me?.role === 'admin';
 const DOMAIN = { ha: 'home-assistant.io', homeassistant: 'home-assistant.io', google: 'calendar.google.com', gcal: 'calendar.google.com', ai: 'gemini.google.com', gemini: 'gemini.google.com', t212: 'trading212.com', trading212: 'trading212.com', bank: 'sparebank1.no', imap: 'proton.me', entur: 'entur.org', mybring: 'bring.no', bring: 'bring.no', postnord: 'postnord.no', parcelsapp: 'parcelsapp.com', cloudflare: 'cloudflare.com', finn: 'finn.no', met: 'yr.no', map: 'maptiler.com', kart: 'maptiler.com', icons: 'iconify.design', ikoner: 'iconify.design', unsplash: 'unsplash.com', pexels: 'pexels.com', photos: 'unsplash.com' };
 
 export async function loadInteg(rerender) {
-  if (!isAdmin() || loading || list) return;
+  if (loading || list) return;
   loading = true;
   try { const r = await api('/integrations'); list = Array.isArray(r) ? r : r.items ?? r.integrations ?? []; } catch { list = []; }
   loading = false;
@@ -32,9 +31,10 @@ const statusTxt = (it) => {
   return it.status === 'ok' ? ['Tilkoblet', undefined] : it.status === 'error' ? ['Feil', '#f59a8f'] : ['Mangler oppsett', '#f3b54a'];
 };
 
-/** Rader til listen under Integrasjoner. */
-export function integRows(cfg, row) {
-  return extra(cfg).map((it) => {
+const scopeOf = (it) => (it.scope === 'personal' ? 'personal' : 'server');
+/** Rader til listen under Integrasjoner (scope: 'personal' | 'server' | utelatt = alle). */
+export function integRows(cfg, row, scope) {
+  return extra(cfg).filter((it) => !scope || scopeOf(it) === scope).map((it) => {
     const [v, vc] = statusTxt(it);
     return row({ t: it.name, s: it.group ?? '', k: (it.fields ?? []).map((f) => f.label).join(' '), logo: it.domain ?? DOMAIN[String(it.id).toLowerCase()] ?? null, ini: it.name, v, vc, btn: 'Oppsett', go: `int|i24:${it.id}` });
   });
