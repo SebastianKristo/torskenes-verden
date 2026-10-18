@@ -26,6 +26,9 @@ targets:
       properties:
         com.apple.security.application-groups:
           - group.no.kristo.finanshub
+        # Familie: helsesammendrag fra Apple Helse (bare det brukeren velger å dele).
+        com.apple.developer.healthkit: true
+        com.apple.developer.healthkit.access: []
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: no.kristo.finanshub
@@ -41,6 +44,10 @@ targets:
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Velg kvitteringsbilder fra biblioteket."
         INFOPLIST_KEY_NSFaceIDUsageDescription: "Face ID brukes til å låse opp FinansHub."
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: "FinansHub kobler til homelab-serveren din på lokalt nett."
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Posisjonen din deles med familien i Familie og kart når du har slått på deling."
+        INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription: "Med «Alltid» oppdateres posisjonen din for familien også når appen er lukket, og du får varsler når noen kommer til eller forlater en sone."
+        INFOPLIST_KEY_NSMotionUsageDescription: "Aktivitet (går, sykler, kjører) vises for familien sammen med posisjonen din."
+        INFOPLIST_KEY_NSHealthShareUsageDescription: "Skritt, puls, søvn og aktive kalorier deles med familien bare hvis du velger det under Familie → Helse."
     info:
       path: FinansHub/Info.plist
       properties:
@@ -63,6 +70,9 @@ targets:
           - Newsreader-Italic.ttf
           - Newsreader-Medium.ttf
           - Newsreader-Regular.ttf
+        # Familie: posisjon i bakgrunnen og helsesammendrag omtrent hvert 15. minutt.
+        UIBackgroundModes: [location, fetch, processing]
+        BGTaskSchedulerPermittedIdentifiers: [no.kristo.finanshub.health, no.kristo.finanshub.family]
         # Deep links fra widgetene: finanshub://<side>
         CFBundleURLTypes:
           - CFBundleURLName: no.kristo.finanshub

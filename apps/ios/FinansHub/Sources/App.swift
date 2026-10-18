@@ -4,6 +4,13 @@ import UIKit
 @main
 struct FinansHubApp: App {
     @State private var store = Store()
+    @Environment(\.scenePhase) private var phase
+
+    init() {
+        // Bakgrunnsoppgavene (helse og familie) må registreres før appen er ferdig startet.
+        HealthSync.registerBackground()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -12,8 +19,22 @@ struct FinansHubApp: App {
                 .task {
                     if store.locked { store.unlock() }
                     if store.loggedIn { try? await store.reload() }
+                    if store.loggedIn { await familyWake() }
                 }
         }
+        .onChange(of: phase) { _, p in
+            if p == .active && store.loggedIn { Task { await familyWake() } }
+        }
+    }
+
+    /// Familie: fortsett delingen (hvis den er på), send helsesammendraget og hent nye sonevarsler.
+    @MainActor private func familyWake() async {
+        // Bakgrunnsbildet: prøv igjen hvis det feilet, og «Vær nå» følger været.
+        if store.photoFailed || store.photoImage == nil || store.photo == "weather" { await store.loadPhotoWindow() }
+        FamilyLocation.shared.resume(store)
+        HealthSync.schedule()
+        await HealthSync.shared.syncNow(store.api)
+        await FamilyModel.shared.pollEvents(store.api)
     }
 }
 

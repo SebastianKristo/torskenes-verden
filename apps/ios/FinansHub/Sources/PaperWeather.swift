@@ -167,7 +167,8 @@ extension Store {
         weatherBusy = true
         defer { weatherBusy = false }
         do {
-            let d = try await api.callAt("/api", "GET", "/weather/full?place=\(weatherPlace)", timeout: 20)
+            let q = weatherPlaceObj?.query ?? "place=\(weatherPlace)"
+            let d = try await api.callAt("/api", "GET", "/weather/full?\(q)&source=met", timeout: 20)
             weatherFull = WeatherFull(JS.obj(d))
         } catch let e as APIError {
             message = e.status == 404 ? "Værappen finnes ikke på serveren ennå. Oppdater homelab." : e.message
@@ -197,7 +198,6 @@ struct PaperWeatherView: View {
     @State private var compact = false
     @State private var sheetDay: String?
 
-    private static let places = [("oslo", "Oslo"), ("bergen", "Bergen"), ("trondheim", "Trondheim"), ("tromso", "Tromsø")]
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -213,10 +213,10 @@ struct PaperWeatherView: View {
                         WxMoonTile(w: w)
                         tiles(w)
                         Button { store.openLink(w.yrUrl) } label: {
-                            Text("Data: Open-Meteo · Se også yr.no ↗").font(PF.ui(12.5, .semibold)).foregroundStyle(.white.opacity(0.85)).padding(.vertical, 10)
+                            Text("Data: MET Norge · Åpne i yr.no ↗").font(PF.ui(12.5, .semibold)).foregroundStyle(.white.opacity(0.85)).padding(.vertical, 10)
                         }
                         .buttonStyle(.plain)
-                        if w.mock { Text("Eksempeldata – serveren fikk ikke kontakt med Open-Meteo.").font(PF.ui(11.5)).foregroundStyle(.white.opacity(0.7)) }
+                        if w.mock { Text("Eksempeldata – serveren fikk ikke kontakt med MET.").font(PF.ui(11.5)).foregroundStyle(.white.opacity(0.7)) }
                     } else {
                         ProgressView().tint(.white).padding(.top, 160)
                     }
@@ -230,7 +230,7 @@ struct PaperWeatherView: View {
             }
             .refreshable { await store.loadWeatherFull(force: true) }
             topBar
-            VStack { Spacer(); placeBar }
+            VStack { Spacer(); WxPlaceBar() }
         }
         .foregroundStyle(.white)
         .environment(\.colorScheme, .dark)
@@ -420,21 +420,6 @@ struct PaperWeatherView: View {
         return v >= 10 ? "Helt klar sikt." : v >= 4 ? "God sikt." : "Nedsatt sikt."
     }
 
-    private var placeBar: some View {
-        HStack(spacing: 6) {
-            ForEach(PaperWeatherView.places, id: \.0) { id, name in
-                let on = store.weatherPlace == id
-                Button { store.setWeatherPlace(id) } label: {
-                    Text(name).font(PF.ui(13, .semibold)).foregroundStyle(on ? Color(hex: "#1b2a40") : .white).padding(.horizontal, 12).frame(height: 34)
-                        .background(on ? Color.white : Color.white.opacity(0.16), in: Capsule())
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(6)
-        .background(.ultraThinMaterial, in: Capsule())
-        .padding(.bottom, 18)
-    }
 }
 
 private struct WxDayRef: Identifiable { let id: String }

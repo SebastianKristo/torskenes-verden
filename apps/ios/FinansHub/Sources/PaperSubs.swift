@@ -8,13 +8,12 @@ private let monthShortP = ["Jan", "Feb", "Mar", "Apr", "Mai", "Jun", "Jul", "Aug
 struct PaperSubs: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
-    @State private var adding = false
     @State private var month: Int?
     @State private var done: Set<String> = Set(UserDefaults.standard.stringArray(forKey: "fh_subs_done") ?? [])
 
     var body: some View {
+        // Hjem, Innsikt og Historikk ligger i fanelinja nederst, med den røde +-sirkelen for å legge til.
         VStack(spacing: 10) {
-            tabs
             if let x = store.subsX {
                 switch store.subTab {
                 case "ins": insights(x)
@@ -26,35 +25,12 @@ struct PaperSubs: View {
             }
         }
         .task { if store.subsX == nil { try? await store.loadSubs() } }
-        .sheet(isPresented: $adding) {
+        .sheet(isPresented: Binding(get: { store.subAdding }, set: { store.subAdding = $0 })) {
             SubAddSheet().presentationDetents([.medium, .large]).presentationBackground(.ultraThinMaterial).preferredColorScheme(.dark)
         }
         .sheet(isPresented: Binding(get: { store.subEdit != nil || store.subNew }, set: { if !$0 { store.subEdit = nil; store.subNew = false } })) {
             SubEditSheet(item: store.subEdit).presentationDetents([.large]).presentationBackground(.ultraThinMaterial).preferredColorScheme(.dark)
         }
-    }
-
-    private var tabs: some View {
-        HStack(spacing: 4) {
-            ForEach([("home", "Hjem"), ("ins", "Innsikt"), ("hist", "Historikk")], id: \.0) { k, n in
-                let on = store.subTab == k
-                Button { Haptics.shared.select(); store.subTab = k } label: {
-                    Text(n).font(PF.ui(13.5, .semibold)).foregroundStyle(on ? p.bg : p.mut)
-                        .frame(maxWidth: .infinity, minHeight: 38)
-                        .background(on ? p.ink : Color.clear, in: Capsule())
-                        .contentShape(Capsule())
-                }
-                .buttonStyle(.plain)
-            }
-            Button { Haptics.shared.tap(); adding = true } label: {
-                Text("+").font(.system(size: 20, weight: .semibold)).foregroundStyle(p.onLab).frame(width: 38, height: 38).background(p.lab, in: Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Legg til abonnement")
-        }
-        .padding(4)
-        .background(p.card, in: Capsule())
-        .shadow(color: .black.opacity(0.12), radius: 15, y: 10)
     }
 
     /* ---------- Hjem ---------- */
@@ -94,8 +70,8 @@ struct PaperSubs: View {
                 .font(PF.ui(13)).foregroundStyle(.white.opacity(0.8)).lineLimit(3)
             if !x.suggestions.isEmpty {
                 Button { Haptics.shared.select(); store.subTab = "hist" } label: {
-                    Text("Gå gjennom \(x.suggestions.count) forslag ›").font(PF.ui(13, .bold)).foregroundStyle(Color(hex: "#1b1a17")).padding(.horizontal, 14).frame(height: 34)
-                        .background(Color(hex: "#f3efe6"), in: Capsule())
+                    Text("Gå gjennom \(x.suggestions.count) forslag ›").font(PF.ui(13, .bold)).foregroundStyle(.white).padding(.horizontal, 14).frame(height: 34)
+                        .background(Color(hex: "#b23a2a"), in: Capsule())
                 }
                 .buttonStyle(.plain)
                 .padding(.top, 2)

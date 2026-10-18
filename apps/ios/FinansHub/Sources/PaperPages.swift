@@ -48,7 +48,7 @@ struct PaperHome: View {
                 Text(more > 0 ? "\(more) til ›" : "›").font(PF.ui(13)).foregroundStyle(p.mut)
             }
             .padding(.horizontal, 14).padding(.vertical, 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -58,7 +58,7 @@ struct PaperHome: View {
         let lines = store.mobileHome?.ruter ?? []
         if let first = lines.first {
             let deps = Array(lines.flatMap { l in l.departures.map { (l.to, $0) } }.prefix(4))
-            Button { store.openURL(store.ruterURL(first.from)) } label: {
+            Button { store.paperGo("avg") } label: {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .firstTextBaseline) {
                         PLabel(text: "Avganger · \(first.from)")
@@ -71,11 +71,11 @@ struct PaperHome: View {
                     }
                 }
                 .padding(.horizontal, 16).padding(.vertical, 14)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
             .buttonStyle(.plain)
-            .accessibilityHint("Åpner Ruter")
+            .accessibilityHint("Åpner avgangene")
         }
     }
 
@@ -180,7 +180,7 @@ struct PaperSearch: View {
         let items = empty ? Array(store.history.prefix(5)) : Array(store.suggestions.prefix(6))
         VStack(spacing: 0) {
             HStack(spacing: 10) {
-                Text("⌕").font(PF.ui(17)).foregroundStyle(p.mut)
+                GoogleG(size: 17)
                 TextField("Søk på Google", text: $q)
                     .font(PF.ui(14.5)).foregroundStyle(p.ink)
                     .keyboardType(.webSearch).submitLabel(.search).textInputAutocapitalization(.never).autocorrectionDisabled()
@@ -260,9 +260,13 @@ struct PaperCarrierBadge: View {
     var size: CGFloat = 42
     var radius: CGFloat = 12
     var body: some View {
-        Text(s.carrierIni).font(PF.ui(size > 46 ? 13 : 12, .heavy)).foregroundStyle(Color(hex: s.carrierFg))
-            .frame(width: size, height: size)
-            .background(Color(hex: s.carrierColor), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        if CarrierMark.known(s.carrier) {
+            CarrierMark(carrier: s.carrier, size: size, radius: radius)
+        } else {
+            Text(s.carrierIni).font(PF.ui(size > 46 ? 13 : 12, .heavy)).foregroundStyle(Color(hex: s.carrierFg))
+                .frame(width: size, height: size)
+                .background(Color(hex: s.carrierColor), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+        }
     }
 }
 
@@ -414,11 +418,14 @@ struct PaperLinkRow: Identifiable {
     let sub: String
     var value: String = "›"
     var valueColor: Color? = nil
+    /// SF Symbol i en farget rute (fargen følger ikontemaet i Innstillinger → Utseende).
+    var icon: String? = nil
     let act: () -> Void
 }
 
 struct PaperLinkList: View {
     @Environment(\.paper) private var p
+    @Environment(Store.self) private var store
     let rows: [PaperLinkRow]
     var body: some View {
         VStack(spacing: 0) {
@@ -426,6 +433,11 @@ struct PaperLinkList: View {
                 if i > 0 { Rectangle().fill(p.line).frame(height: 1) }
                 Button(action: r.act) {
                     HStack(spacing: 10) {
+                        if let ic = r.icon {
+                            Image(systemName: ic).font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
+                                .frame(width: 30, height: 30)
+                                .background(PaperIconTheme.color(store.iconTheme, i), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        }
                         VStack(alignment: .leading, spacing: 2) {
                             Text(r.name).font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
                             if !r.sub.isEmpty { Text(r.sub).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(2) }
@@ -712,15 +724,18 @@ struct PaperMore: View {
         // Den modulen som ikke står i fanelinjen (Domener eller Sporing), ligger her.
         let fourth = store.paperTab4
         var rows: [PaperLinkRow] = []
-        if fourth != "domener" { rows.append(PaperLinkRow(name: "Domener", sub: "Trafikk, besøk og oppetid") { store.paperOpenDomains(from: "mer") }) }
-        if fourth != "sporing" { rows.append(PaperLinkRow(name: "Sporing", sub: store.paperOnWay > 0 ? "\(store.paperOnWay) på vei" : "Pakker, varsler og kilder") { store.paperGo("sporing") }) }
-        rows.append(PaperLinkRow(name: "Aksjer", sub: "Trading 212") { store.paperFinGo("aksjer") })
-        rows.append(PaperLinkRow(name: "Abonnementer", sub: "Subscription OS") { store.paperGo("abo") })
-        rows.append(PaperLinkRow(name: "Boliger", sub: "Utgifter, prosjekter og regninger") { store.paperFinGo("boliger") })
-        rows.append(PaperLinkRow(name: "Finn", sub: "Kjøp og salg") { store.paperGo("finn") })
-        rows.append(PaperLinkRow(name: "Værmelding", sub: "Timer, 7 dager og forhold") { store.openWeather() })
-        rows.append(PaperLinkRow(name: "Nyhetsleser", sub: "RSS med ✦ AI-sammendrag") { store.openNews() })
-        rows.append(PaperLinkRow(name: "Innstillinger", sub: "Tema, fanelinje, bakgrunn og konto") { store.paperGo("innst") })
+        let inBar = Set(store.mainTabs(floating: store.fabMode == "float", onHome: true).map(\.0))
+        if fourth != "domener" || !inBar.contains("domener") { rows.append(PaperLinkRow(name: "Domener", sub: "Trafikk, besøk og oppetid", icon: "globe") { store.paperOpenDomains(from: "mer") }) }
+        if fourth != "sporing" || !inBar.contains("sporing") { rows.append(PaperLinkRow(name: "Sporing", sub: store.paperOnWay > 0 ? "\(store.paperOnWay) på vei" : "Pakker, varsler og kilder", icon: "shippingbox") { store.paperGo("sporing") }) }
+        rows.append(PaperLinkRow(name: "Familie og kart", sub: "Posisjon, soner og helse", icon: "person.2") { store.paperGo("familie") })
+        rows.append(PaperLinkRow(name: "Avganger", sub: "Ruter i sanntid", icon: "tram") { store.paperGo("avg") })
+        rows.append(PaperLinkRow(name: "Aksjer", sub: "Trading 212", icon: "chart.line.uptrend.xyaxis") { store.paperFinGo("aksjer") })
+        rows.append(PaperLinkRow(name: "Abonnementer", sub: "Subscription OS", icon: "repeat") { store.paperGo("abo") })
+        rows.append(PaperLinkRow(name: "Boliger", sub: "Utgifter, prosjekter og regninger", icon: "building.2") { store.paperFinGo("boliger") })
+        rows.append(PaperLinkRow(name: "Finn", sub: "Kjøp og salg", icon: "arrow.left.arrow.right") { store.paperGo("finn") })
+        rows.append(PaperLinkRow(name: "Værmelding", sub: "Timer, 7 dager og egne steder", icon: "cloud.sun") { store.openWeather() })
+        rows.append(PaperLinkRow(name: "Nyhetsleser", sub: "RSS med ✦ AI-sammendrag", icon: "newspaper") { store.openNews() })
+        rows.append(PaperLinkRow(name: "Innstillinger", sub: "Profil, tema, fanelinje og konto", icon: "gearshape") { store.paperGo("innst") })
         return PaperLinkList(rows: rows).padding(.top, -8)
     }
 }
@@ -733,29 +748,60 @@ struct PaperSettings: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            group("Tema", [
-                PaperLinkRow(name: "Papir · lys", sub: "Lyst papir og svart fanelinje", value: store.paperMode == "lys" ? "✓ Valgt" : "", valueColor: p.pos) { store.setPaperMode("lys") },
-                PaperLinkRow(name: "Papir · mørk", sub: "Kveldspapir og lys fanelinje", value: store.paperMode == "mork" ? "✓ Valgt" : "", valueColor: p.pos) { store.setPaperMode("mork") },
-                PaperLinkRow(name: "Papir · følg systemet", sub: "Lys om dagen, mørk når iPhone er i mørk modus", value: store.paperMode == "auto" ? "✓ Valgt" : "", valueColor: p.pos) { store.setPaperMode("auto") },
-                PaperLinkRow(name: "Klassisk (Liquid Glass)", sub: "Bytt tilbake til det forrige mobildesignet", value: "Bytt ›", valueColor: p.lab) { store.setMobileDesign("klassisk") },
-            ])
-            group("Fanelinje", [
+            profileCard
+            group("Utseende", [
+                PaperLinkRow(name: "Tema og bakgrunn", sub: themeSub, icon: "paintpalette") { store.paperGo("innst-ut") },
+                PaperLinkRow(name: "Fanelinje", sub: "Fjern faner, endre navn og bytt ikon · eller hold inne på linja", icon: "dock.rectangle") { store.tabBarEditing = true },
                 PaperLinkRow(name: "Skanneknapp", sub: store.fabMode == "float" ? "Flyter over linjen, søk ligger i linjen" : "Ligger i linjen som +",
-                             value: store.fabMode == "float" ? "Flytende ›" : "I linjen ›") { store.setFabMode(store.fabMode == "float" ? "inline" : "float") },
-                PaperLinkRow(name: "Fjerde fane", sub: fourthSub, value: fourthName + " ›") { cycleFourth() },
+                             value: store.fabMode == "float" ? "Flytende ›" : "I linjen ›", icon: "doc.viewfinder") { store.setFabMode(store.fabMode == "float" ? "inline" : "float") },
+                PaperLinkRow(name: "Fjerde fane", sub: fourthSub, value: fourthName + " ›", icon: "square.grid.2x2") { cycleFourth() },
             ])
             finNavGroup
-            group("Forside", [
-                PaperLinkRow(name: "Bakgrunn", sub: photoName, value: "Endre ›") { store.paperGo("hjem"); store.paperBgOpen = true },
-                PaperLinkRow(name: "Nyhetsleser", sub: "Kilder, kategorier og AI", value: "Åpne ›") { store.openNews() },
+            group("Moduler", [
+                PaperLinkRow(name: "Familie og helse", sub: "Deling av posisjon, personvern og Apple Helse", icon: "person.2") { store.paperGo("innst-fam") },
+                PaperLinkRow(name: "Nyhetsleser", sub: "Kilder, kategorier og AI", value: "Åpne ›", icon: "newspaper") { store.openNews() },
+                PaperLinkRow(name: "Værsteder", sub: "Legg til, fjern og søk etter steder", value: "Åpne ›", icon: "cloud.sun") { store.openWeather() },
+                PaperLinkRow(name: "Avganger", sub: "Stopp fra Ruter og Entur", value: "Åpne ›", icon: "tram") { store.paperGo("avg") },
+                PaperLinkRow(name: "Aksjer · Trading 212", sub: "Nøkkel, miljø og synk", icon: "chart.line.uptrend.xyaxis") { store.paperOpen(.settings); store.settingsPage = "stocks" },
             ])
-            group("Konto", [
-                PaperLinkRow(name: store.displayName.isEmpty ? "Konto" : store.displayName, sub: accountSub, value: "") {},
-                PaperLinkRow(name: "Alle innstillinger", sub: "Sikkerhet, varsler, skanning, haptikk, widgets og server") { store.paperOpen(.settings) },
-                PaperLinkRow(name: "Lås appen", sub: "Face ID / kode", value: store.lockEnabled ? "På" : "Av", valueColor: store.lockEnabled ? p.pos : p.mut) { store.lockEnabled.toggle() },
-                PaperLinkRow(name: "Logg ut", sub: "Du må logge inn igjen med 2FA", value: "Logg ut", valueColor: p.lab) { store.logout() },
+            group("Sikkerhet", [
+                PaperLinkRow(name: "Lås appen", sub: "Face ID / kode", value: store.lockEnabled ? "På" : "Av", valueColor: store.lockEnabled ? p.pos : p.mut, icon: "faceid") { store.lockEnabled.toggle() },
+                PaperLinkRow(name: "Avanserte innstillinger", sub: "Sikkerhet, varsler, skanning, haptikk, widgets og server", icon: "gearshape.2") { store.paperOpen(.settings) },
+                PaperLinkRow(name: "Logg ut", sub: "Du må logge inn igjen med 2FA", value: "Logg ut", valueColor: p.lab, icon: "rectangle.portrait.and.arrow.right") { store.logout() },
             ])
         }
+    }
+
+    private var themeSub: String {
+        let m = store.paperMode == "lys" ? "Papir lys" : store.paperMode == "mork" ? "Papir mørk" : "Følger systemet"
+        let t = PaperIconTheme.themes.first { $0.0 == store.iconTheme }?.1 ?? "Standard"
+        return "\(m) · \(photoName) · ikoner: \(t)"
+    }
+
+    private var profileCard: some View {
+        Button { store.paperGo("profil") } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle().fill(p.popSel)
+                    if let a = store.avatar {
+                        Image(uiImage: a).resizable().scaledToFill().clipShape(Circle())
+                    } else {
+                        Text(String(store.displayName.prefix(1)).uppercased()).font(PF.serif(22, medium: true)).foregroundStyle(p.ink)
+                    }
+                }
+                .frame(width: 54, height: 54)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(store.displayName.isEmpty ? "Konto" : store.displayName).font(PF.serif(20, medium: true)).foregroundStyle(p.ink).lineLimit(1)
+                    Text(accountSub).font(PF.ui(12.5)).foregroundStyle(p.mut)
+                }
+                Spacer()
+                Text("Profil ›").font(PF.ui(13, .semibold)).foregroundStyle(p.mut)
+            }
+            .padding(14)
+            .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 8)
     }
 
     private var fourthName: String {

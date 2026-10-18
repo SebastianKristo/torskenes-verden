@@ -168,9 +168,9 @@ extension Store {
         switch page {
         case "budsjett": paperGo("finans"); paperOpenFin(.budget)
         case "kvitt": paperGo("finans"); paperOpen(.upload)
-        case "aksjer": paperGo("finans"); paperOpen(.stocks)
+        case "aksjer": paperGo("aksjer")
         case "kontoer": paperGo("finans"); paperOpen(.accounts)
-        case "boliger": paperGo("finans"); paperOpen(.folders)
+        case "boliger": folder = nil; paperGo("boliger")
         default: paperGo(page)
         }
     }
@@ -260,8 +260,15 @@ struct PaperCardStack: View {
                     if seg.full {
                         ForEach(seg.keys, id: \.self) { k in cardView(k, cur.visible, keys) }
                     } else {
-                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 12, alignment: .top), GridItem(.flexible(), spacing: 12, alignment: .top)], spacing: 12) {
-                            ForEach(seg.keys, id: \.self) { k in cardView(k, cur.visible, keys) }
+                        // To og to kort ved siden av hverandre, like høye (f.eks. Pakker og Avganger på Fold/iPad).
+                        ForEach(pairs(seg.keys), id: \.self) { pair in
+                            HStack(alignment: .top, spacing: 12) {
+                                ForEach(pair, id: \.self) { k in
+                                    cardView(k, cur.visible, keys).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                                }
+                                if pair.count == 1 { Color.clear.frame(maxWidth: .infinity) }
+                            }
+                            .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
@@ -269,6 +276,10 @@ struct PaperCardStack: View {
                 ForEach(cur.visible, id: \.self) { k in cardView(k, cur.visible, keys) }
             }
         }
+    }
+
+    private func pairs(_ keys: [String]) -> [[String]] {
+        stride(from: 0, to: keys.count, by: 2).map { i in Array(keys[i..<Swift.min(i + 2, keys.count)]) }
     }
 
     /// Kort på rad som ikke går over hele bredden, samles i ett rutenett.
@@ -452,7 +463,7 @@ struct PaperRail: View {
     private func item(_ id: String, _ name: String, _ icon: String, on: Bool) -> some View {
         Button { tapTab(id, on) } label: {
             VStack(spacing: 3) {
-                Text(icon).font(PF.serif(17, medium: true))
+                PaperTabIcon(icon: icon, size: 16)
                 Text(name).font(PF.ui(11.5, .semibold)).lineLimit(1).minimumScaleFactor(0.7)
             }
             .foregroundStyle(on ? p.navActInk : p.navInk)
@@ -499,7 +510,10 @@ extension Store {
         case "innst": return "Mer"
         case "ftx": return "Liste"
         case "abo": return finNav.contains("abonnementer") ? "Hjem" : "Mer"
-        default: return "Hjem"
+        case "aksjer": return finNav.contains("aksjer") ? "Hjem" : "Mer"
+        case "boliger": return folder != nil ? "Boliger" : (finNav.contains("boliger") ? "Hjem" : "Mer")
+        case "profil": return "Innstillinger"
+        default: return paperTab.hasPrefix("innst-") ? "Innstillinger" : "Hjem"
         }
     }
 }

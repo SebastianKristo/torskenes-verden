@@ -334,6 +334,25 @@ final class Store {
     /// «Ny sending»-arket (den flytende knappen på Sporing).
     var trackAddOpen = false
 
+    /* ---------- Papir, prompt 16 ---------- */
+
+    /// Hovedfanelinjen i Papir (layout.tabBar): fanene, navnene og ikonene brukeren har valgt. Tom = standard.
+    var tabBarItems: [PaperTabItem] = PaperTabItem.loadLocal() {
+        didSet { PaperTabItem.saveLocal(tabBarItems) }
+    }
+    /// Arket for å redigere fanelinjen (hold inne på linjen, eller Innstillinger → Fanelinje).
+    var tabBarEditing = false
+    /// Fargetema for ikonene i Innstillinger: standard | varm | kjolig | mono | fargerik
+    var iconTheme = UserDefaults.standard.string(forKey: "fh_icon_theme") ?? "standard" {
+        didSet { UserDefaults.standard.set(iconTheme, forKey: "fh_icon_theme") }
+    }
+    /// Legg til abonnement (den røde +-sirkelen i fanelinja på Subscription OS).
+    var subAdding = false
+    /// Værstedene til brukeren (/api/weather/places). Standard: Oslo, Bergen, Trondheim og Tromsø.
+    var weatherPlaces: [WxPlace] = WxPlace.loadLocal() {
+        didSet { WxPlace.saveLocal(weatherPlaces) }
+    }
+
     /// Ingen kontoer og ikke noe eldre token: appen er nyinstallert.
     nonisolated static var freshInstall: Bool {
         if UserDefaults.standard.object(forKey: "fh_installed_before") != nil { return false }
@@ -682,7 +701,7 @@ final class Store {
     }
 
     /// Lister kan komme som [..] eller {items: [..]}.
-    private func decodeList<T: Decodable>(_ d: Data) throws -> [T] {
+    func decodeList<T: Decodable>(_ d: Data) throws -> [T] {
         if let list = try? JSONDecoder().decode([T].self, from: d) { return list }
         return try JSONDecoder().decode(ItemsWrap<T>.self, from: d).items
     }
@@ -1216,7 +1235,7 @@ final class Store {
     func upload(_ files: [Upload]) {
         guard !files.isEmpty else { return }
         // Skann/opplasting inne i en bolig: kvitteringen havner i valgt bolig, og AI velger kategori og underkategori.
-        if module == .folders, editing == nil, let bolig = uploadFolder ?? folder?.id { uploadToFolder(bolig, files); return }
+        if module == .folders || paperTab == "boliger", editing == nil, let bolig = uploadFolder ?? folder?.id { uploadToFolder(bolig, files); return }
         // Fra «Legg ved kvittering» i skjemaet: bli stående, kvitteringen kobles når den bokføres.
         if editing != nil { flash("Kvitteringen er lagt i opplastingskøen") } else if module != .upload { openSub(.upload) }
         guard canUpload else { offline += files; flash("\(files.count) kvittering(er) venter på Wi-Fi"); return }
@@ -1283,7 +1302,7 @@ final class Store {
     }
 
     /// POST /folders/:id/receipts: samme felt som /receipts.
-    private func uploadToFolder(_ id: Int, _ files: [Upload]) {
+    func uploadToFolder(_ id: Int, _ files: [Upload]) {
         let name = folders?.first(where: { $0.id == id })?.name ?? folder?.name ?? "boligen"
         flash(files.count == 1 ? "Kvitteringen lastes opp til \(name)" : "\(files.count) kvitteringer lastes opp til \(name)")
         uploading += files.count

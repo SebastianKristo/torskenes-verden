@@ -159,7 +159,7 @@ struct PaperShell: View {
             let wide = g.size.width >= 600
             let bottom = Swift.max(12, g.safeAreaInsets.bottom - 8)
             let showBar = !store.newsOpen && store.dishSel == nil
-            let fab = showBar && store.fabMode == "float"
+            let fab = showBar && store.fabMode == "float" && store.paperTab != "abo"
             ZStack(alignment: wide ? .topLeading : .bottom) {
                 p.bg.ignoresSafeArea()
                 VStack(spacing: 0) {
@@ -217,6 +217,12 @@ struct PaperShell: View {
             PaperNewShipmentSheet()
                 .environment(\.paper, p)
                 .presentationDetents([.medium, .large])
+                .presentationBackground(p.bg)
+        }
+        .sheet(isPresented: Binding(get: { store.tabBarEditing }, set: { store.tabBarEditing = $0 })) {
+            PaperTabBarEditor()
+                .environment(\.paper, p)
+                .presentationDetents([.large])
                 .presentationBackground(p.bg)
         }
         .fullScreenCover(isPresented: Binding(get: { store.weatherOpen }, set: { store.weatherOpen = $0 })) {
@@ -325,6 +331,8 @@ struct PaperTabBar: View {
 
     private var tabs: [(String, String, String)] {
         if store.paperInDomains { return [("domener", "Oversikt", "◎"), ("dpub", "Publikum", "◍"), ("dytl", "Ytelse", "⚡"), ("dinf", "Infra", "▤")] }
+        // Subscription OS: Hjem, Innsikt og Historikk i linja (med den røde +-sirkelen).
+        if store.paperTab == "abo" { return [("abo:home", "Hjem", "house"), ("abo:ins", "Innsikt", "chart.bar"), ("abo:hist", "Historikk", "clock")] }
         var t: [(String, String, String)] = []
         if store.paperInFinance {
             for f in store.finNavItems { t.append((f.page, f.name, f.icon)) }
@@ -332,27 +340,25 @@ struct PaperTabBar: View {
             t.append(("fmer", "Mer", "⋯"))
             return t
         }
-        if current == "hjem" { t.append(("hjem", "Hjem", "⌂")) }
-        t.append(("finans", "Finans", "kr"))
-        t.append(("mat", "Mat", "◐"))
-        if store.paperTab4 == "sporing" { t.append(("sporing", "Sporing", "▣")) } else { t.append(("domener", "Domener", "◎")) }
-        if floating { t.append(("fsok", "Søk", "⌕")) }
-        t.append(("mer", "Mer", "⋯"))
-        return t
+        return store.mainTabs(floating: floating, onHome: store.paperTab == "hjem" && store.paperClassic == nil)
     }
 
     private var current: String {
         if store.paperInDomains { return store.paperTab }
+        if store.paperTab == "abo" { return "abo:" + store.subTab }
         if store.paperInFinance {
             let c = store.paperFinCurrent
             let ids = tabs.map(\.0)
             return ids.contains(c) ? c : "fmer"
         }
-        if store.paperTab == "innst" || store.paperClassic != nil { return "mer" }
-        // Sporing ligger i Mer når fjerde fane er Domener.
-        if store.paperTab == "sporing" && store.paperTab4 != "sporing" { return "mer" }
-        return store.paperTab
+        if store.paperTab == "innst" || store.paperTab == "profil" || store.paperTab.hasPrefix("innst-") || store.paperClassic != nil { return "mer" }
+        // Sider som ikke står i linja (f.eks. Sporing når fjerde fane er Domener) markerer Mer.
+        let ids = store.mainTabs(floating: floating, onHome: store.paperTab == "hjem").map(\.0)
+        return ids.contains(store.paperTab) ? store.paperTab : "mer"
     }
+
+    /// Hovedlinja kan redigeres (hold inne); Finans-, Domener- og abonnementslinjene følger siden.
+    private var editable: Bool { !store.paperInFinance && !store.paperInDomains && store.paperTab != "abo" }
 
     var body: some View {
         let cur = current
@@ -361,7 +367,7 @@ struct PaperTabBar: View {
         } else {
             HStack(spacing: 2) {
                 ForEach(tabs, id: \.0) { t in tab(t.0, t.1, t.2, on: cur == t.0) }
-                if !floating {
+                if !floating || store.paperTab == "abo" {
                     PaperPlusButton(label: plusLabel, tap: plusTap, hold: plusHold)
                         .padding(.leading, 4)
                 }
@@ -370,11 +376,17 @@ struct PaperTabBar: View {
             .frame(height: 62)
             .background(p.nav, in: Capsule())
             .shadow(color: .black.opacity(0.35), radius: 15, y: 10)
+            .simultaneousGesture(LongPressGesture(minimumDuration: 0.6).onEnded { _ in
+                guard editable else { return }
+                Haptics.shared.tick()
+                store.tabBarEditing = true
+            })
             .padding(.horizontal, 12)
         }
     }
 
     private var plusLabel: String {
+        if store.paperTab == "abo" { return "Legg til abonnement" }
         if store.paperInDomains { return "Legg til domene" }
         if store.paperInFinance { return "Legg til kvittering" }
         return store.paperTab == "mat" ? "Skann oppskrift" : "Skann"
@@ -382,12 +394,14 @@ struct PaperTabBar: View {
 
     private func plusTap() {
         Haptics.shared.tap()
+        if store.paperTab == "abo" { store.subAdding = true; return }
         if store.paperInDomains { store.domainManager = true; return }
         store.paperScanOpen = true
     }
 
     private func plusHold() {
         Haptics.shared.tick()
+        if store.paperTab == "abo" { store.subAdding = true; return }
         if store.paperInDomains { store.domainManager = true; return }
         store.scanTarget = store.paperTab == "mat" ? "recipe" : "receipt"
         store.paperHint = "Velg filer å laste opp"
@@ -401,7 +415,7 @@ struct PaperTabBar: View {
     private func tab(_ id: String, _ name: String, _ icon: String, on: Bool) -> some View {
         Button { tapTab(id, on: on) } label: {
             HStack(spacing: 7) {
-                if on { Text(icon).font(PF.serif(16, medium: true)) }
+                if on { PaperTabIcon(icon: icon) }
                 Text(name).font(PF.ui(12.5, .semibold)).lineLimit(1).minimumScaleFactor(0.75)
             }
             .foregroundStyle(on ? p.navActInk : p.navInk)
@@ -418,11 +432,17 @@ struct PaperTabBar: View {
     }
 
     private func tapTab(_ id: String, on: Bool) {
+        if id.hasPrefix("abo:") {
+            Haptics.shared.select()
+            store.subTab = String(id.dropFirst(4))
+            return
+        }
         if on {
             if store.paperInner || store.paperFin != nil || store.paperClassic != nil { store.paperBack() }
             return
         }
         if id == "domener" && !store.paperInDomains { store.paperOpenDomains(from: "hjem"); return }
+        if !store.paperInFinance && !store.paperInDomains { store.paperMainTab(id); return }
         store.paperFinGo(id)
     }
 }
@@ -702,6 +722,8 @@ struct PaperPage: View {
             }
             .coordinateSpace(name: "ppage")
             .scrollIndicators(.hidden)
+            // Ny side (eller ny bolig, transaksjon …) åpner alltid helt øverst.
+            .id(pageKey)
             .onPreferenceChange(PaperScrollKey.self) { v in
                 let s = v < -1
                 if s != scrolled { scrolled = s }
@@ -718,6 +740,10 @@ struct PaperPage: View {
         .ignoresSafeArea(edges: .top)
     }
 
+    private var pageKey: String {
+        "\(store.paperTab)|\(store.paperTxId ?? 0)|\(store.folder?.id ?? 0)|\(store.subTab)"
+    }
+
     @ViewBuilder private var page: some View {
         switch store.paperTab {
         case "finans": PaperFinance()
@@ -732,6 +758,13 @@ struct PaperPage: View {
         case "mer": PaperMore()
         case "innst": PaperSettings()
         case "domener", "dpub", "dytl", "dinf": PaperDomains()
+        case "aksjer": PaperStocks()
+        case "boliger": PaperBoliger()
+        case "familie": FamilyView()
+        case "avg": PaperDepartures()
+        case "profil": PaperProfile()
+        case "innst-ut": PaperLookSettings()
+        case "innst-fam": FamilySettingsView()
         default: PaperHome()
         }
     }
@@ -787,7 +820,11 @@ struct PaperHero: View {
     }
 
     @ViewBuilder private var background: some View {
-        if let img = store.photoImage, store.photo != "cur" {
+        if store.paperTab == "avg" {
+            RuterHeroArt()
+        } else if store.paperTab == "familie" {
+            FamilyHeroArt()
+        } else if let img = store.photoImage, store.photo != "cur" {
             // Overlay på en tom flate: bildet fyller vinduet uten å gjøre siden bredere.
             Color.clear.overlay { Image(uiImage: img).resizable().scaledToFill() }.clipped()
         } else {
@@ -829,8 +866,9 @@ struct PaperHero: View {
                 pill("‹ \(store.paperUpLabel)") { store.paperUp() }
             }
             Spacer()
-            if home { pill("\(bgName) ▾") { Haptics.shared.select(); store.paperBgOpen.toggle() } }
-            Button { store.paperGo("innst") } label: {
+            // Finans viser @brukernavn ved profilbildet (ikke fullt navn). Bakgrunnen velges under Innstillinger → Utseende.
+            if store.paperInFinance, let u = store.account?.username, !u.isEmpty { pill("@\(u)") { store.paperGo("profil") } }
+            Button { store.paperGo("profil") } label: {
                 ZStack {
                     Circle().fill(Color(hex: "#f3efe6"))
                     if let a = store.avatar {
@@ -919,7 +957,7 @@ struct PaperHero: View {
         case "sporing": return "Pakker og sendinger"
         case "mer": return "Alle moduler"
         case "innst": return "Konto og utseende"
-        default: return ""
+        default: return store.paper16Kicker ?? ""
         }
     }
 
@@ -943,7 +981,7 @@ struct PaperHero: View {
         case "sporing": return "Sporing"
         case "mer": return "Mer"
         case "innst": return "Innstillinger"
-        default: return ""
+        default: return store.paper16Title ?? ""
         }
     }
 }

@@ -359,6 +359,16 @@ struct CatSum: Decodable, Hashable {
     }
 }
 
+/// Kommende regning eller avdrag i en bolig.
+struct BoligUpcoming: Decodable, Hashable {
+    var kind: String?; var title: String?; var sub: String?; var amount: Double?; var date: String?; var days: Int?; var color: String?
+}
+/// Kvittering lagret i en bolig (miniatyr og original hentes med token).
+struct BoligReceipt: Decodable, Hashable {
+    var entryId: Int?; var receiptId: Int?; var description: String?; var date: String?; var amount: Double?; var pending: Bool?; var category: String?
+    var thumbUrl: String?; var fileUrl: String?
+}
+
 /// Delt mappe (bolig, hytte, felles). Listen og detaljen kommer fra samme form; detaljen har flere felt.
 struct Folder: Decodable, Identifiable, Hashable {
     let id: Int
@@ -375,6 +385,10 @@ struct Folder: Decodable, Identifiable, Hashable {
     var projects: [Project]?
     var bills: [Bill]?
     var categories: [CatSum]?
+    /// Prompt 16: listen gir yearTotal; detaljen gir kommende forfall og kvitteringene.
+    var yearTotal: Double?
+    var upcoming: [BoligUpcoming]?
+    var receipts: [BoligReceipt]?
     var access: String? { myRole ?? role }
     var readOnly: Bool { access == "viewer" || access == "view" }
 }

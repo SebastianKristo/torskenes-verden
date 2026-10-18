@@ -386,7 +386,9 @@ struct CarrierBadge: View {
     @State private var img: UIImage? = nil
     var body: some View {
         Group {
-            if let img {
+            if let c = carrier, CarrierMark.known(c) {
+                CarrierMark(carrier: c, size: size, radius: size * 0.28)
+            } else if let img {
                 Image(uiImage: img).resizable().scaledToFit().padding(size / 8)
                     .frame(width: size, height: size).background(.white, in: RoundedRectangle(cornerRadius: size * 0.28))
             } else {
