@@ -46,12 +46,15 @@ export function usableKeys(now = Date.now()) {
  * fetch mot Gemini med nøkkelrotasjon. init.headers får x-goog-api-key. Ved kvote- eller nøkkelfeil prøves neste nøkkel.
  * Returnerer Response (også en feilende, når alle nøklene er brukt opp) med res.geminiKeyId satt.
  */
-export async function geminiFetch(url, init = {}) {
-  const keys = usableKeys();
+export async function geminiFetch(url, { startKey = null, ...init } = {}) {
+  // Prompt 23: startKey = begynn på denne nøkkelen (neste nøkkel etter et tidsavbrudd). Nettverksfeil får geminiKeyId.
+  const all = usableKeys(), from = startKey ? all.findIndex((k) => k.id === startKey) : 0;
+  const keys = from > 0 ? all.slice(from) : all;
   if (!keys.length) throw Object.assign(new Error('Gemini-nøkkel mangler (Innstillinger → AI og tolkning)'), { noRetry: true });
   let last = null;
   for (const k of keys) {
-    const res = await fetch(url, { ...init, headers: { ...(init.headers ?? {}), 'x-goog-api-key': k.key } });
+    let res;
+    try { res = await fetch(url, { ...init, headers: { ...(init.headers ?? {}), 'x-goog-api-key': k.key } }); } catch (e) { e.geminiKeyId = k.id; throw e; }
     res.geminiKeyId = k.id;
     if (res.ok) { setStatus(k.id, { until: 0, reason: null, lastOk: Date.now() }); return res; }
     if (!isQuota(res.status, '')) {

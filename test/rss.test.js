@@ -105,7 +105,7 @@ test('✦ AI-sammendrag lages ved oppfrisking og kan slås av', async () => {
   assert.match(r.body.digest.text, /Østlandet/);
   assert.match((await R('/')).body.digest.text, /statsbudsjettet/);
   const s = await R('/settings', 'PUT', { aiSummary: false });
-  assert.deepEqual(s.body, { aiSummary: false, aiCategorize: true });
+  assert.deepEqual({ aiSummary: s.body.aiSummary, aiCategorize: s.body.aiCategorize }, { aiSummary: false, aiCategorize: true });
   assert.equal((await R('/')).body.digest, null);
   await R('/settings', 'PUT', { aiSummary: true });
 });

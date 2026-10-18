@@ -83,6 +83,70 @@ export const TASKS = {
   categorize: { name: 'Kategorisering', engine: 'groq' },
   barcode: { name: 'Strekkoder', engine: 'roboflow' },
 };
+/* ---------------- Tidsgrenser (prompt 23) ---------------- */
+// settings.aiTimeouts = { gemini, groq, roboflow, ollama (sekunder, 5–120), retries (0–3), onTimeout: 'next' | 'ocr' | 'queue' }.
+// Hvert kall avbrytes med AbortSignal.timeout per motor. Ved tidsavbrudd: nye forsøk med 1 s, 2 s, 4 s ventetid, deretter
+// onTimeout: next = neste Gemini-nøkkel, så Groq, så Ollama, så lokal OCR; ocr = lokal OCR med en gang; queue = tilbake i køen.
+export const TIMEOUT_STEPS = [5, 10, 15, 20, 30, 45, 60, 90, 120];
+export const ON_TIMEOUT = ['next', 'ocr', 'queue'];
+const envOllama = Number(process.env.OLLAMA_TIMEOUT);
+export const AI_TIMEOUT_DEFAULTS = { gemini: 20, groq: 15, roboflow: 15, ollama: Number.isFinite(envOllama) && envOllama >= 5 ? Math.min(120, Math.round(envOllama)) : 45, retries: 0, onTimeout: 'next' };
+const TIMEOUT_ENGINES = ['gemini', 'groq', 'roboflow', 'ollama'];
+/** Validerer (og fletter inn i base): sekunder 5–120 (heltall), retries 0–3, onTimeout fra listen. Ugyldige verdier beholder base. */
+export function cleanAiTimeouts(v, base = AI_TIMEOUT_DEFAULTS) {
+  const out = { ...AI_TIMEOUT_DEFAULTS, ...(base ?? {}) };
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return out;
+  for (const k of TIMEOUT_ENGINES) if (v[k] !== undefined && v[k] !== null && Number.isFinite(+v[k])) out[k] = Math.min(120, Math.max(5, Math.round(+v[k])));
+  if (v.retries !== undefined && Number.isFinite(+v.retries)) out.retries = Math.min(3, Math.max(0, Math.round(+v.retries)));
+  const ot = v.onTimeout ?? v.on_timeout;
+  if (ON_TIMEOUT.includes(ot)) out.onTimeout = ot;
+  return out;
+}
+export const aiTimeoutsOf = (st = settings()) => cleanAiTimeouts(st.aiTimeouts, AI_TIMEOUT_DEFAULTS);
+// Tester: scale < 1 gjør tidsgrensene og ventetidene kortere (1 s → scale·1000 ms).
+export const _aiTest = { scale: 1 };
+const engineMs = (p, st) => aiTimeoutsOf(st)[p] * 1000 * _aiTest.scale;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const engineLabel = (p, keyLabel) => (p === 'gemini' && keyLabel ? `Gemini (${keyLabel})` : providerName(p));
+/** «✦ Gemini svarte ikke innen 20 s · prøver Groq …» */
+export const timeoutText = (p, secs, then) => `✦ ${providerName(p)} svarte ikke innen ${secs} s${then ? ` · ${then}` : ''}`;
+// Rekkefølgen etter et tidsavbrudd med «neste motor»: de som gjenstår i ordren, så alle andre som er satt opp (Gemini → Groq → Ollama).
+// Uten reserve («hold alt lokalt») legges ingen nye motorer til; da gjelder bare resten av ordren og lokal OCR.
+const CHAIN = ['gemini', 'groq', 'ollama'];
+const nextChain = (order, st = settings()) => [...order, ...(st.fallback ? CHAIN.filter((p) => configured(p)) : [])].filter((p, i, a) => a.indexOf(p) === i).sort((a, b) => CHAIN.indexOf(a) - CHAIN.indexOf(b));
+// Etter et tidsavbrudd: resten av listen byttes ut med kjeden (Gemini → Groq → Ollama) uten motorene som allerede er prøvd.
+const afterTimeout = (list, idx, st) => { const tried = list.slice(0, idx + 1); list.splice(idx + 1, Infinity, ...nextChain(list.slice(idx + 1), st).filter((x) => !tried.includes(x))); };
+
+/**
+ * Kjører call(ms, startKey) for motoren p med tidsgrense, nye forsøk ved tidsavbrudd (1 s, 2 s, 4 s) og, for Gemini med
+ * onTimeout=next, neste nøkkel. status(text, {timeoutEngine}) får hver hendelse. Feilen etter siste forsøk har timeout=true.
+ */
+async function runEngine(p, st, call, { status = () => {}, onTimeout, task = 'receipts' } = {}) {
+  const t = aiTimeoutsOf(st), mode = onTimeout ?? t.onTimeout;
+  let startKey = null;
+  for (;;) {
+    let err;
+    for (let i = 0; ; i++) {
+      try { return await call(engineMs(p, st), startKey); } catch (e) {
+        if (!e.timeout) throw e;
+        Object.assign(e, { timeoutEngine: p, timeoutSecs: t[p] });
+        if (i >= t.retries) { err = e; break; }
+        const wait = 1000 * 2 ** i;
+        status(timeoutText(p, t[p], `nytt forsøk om ${wait / 1000} s …`), { timeoutEngine: p });
+        await sleep(wait * _aiTest.scale);
+      }
+    }
+    if (p !== 'gemini' || mode !== 'next') throw err;
+    // Gemini: neste nøkkel etter den som ikke svarte.
+    const keys = usableKeys(), at = Math.max(0, keys.findIndex((k) => k.id === (err.keyId ?? startKey ?? keys[0]?.id)));
+    const next = keys[at + 1];
+    if (!next) throw err;
+    logAi({ task, engine: 'gemini', model: null, ms: t.gemini * 1000, status: 'tidsavbrudd', error: `Nøkkel «${keys[at]?.label ?? '?'}» svarte ikke innen ${t.gemini} s`, timeoutEngine: 'gemini' });
+    status(timeoutText('gemini', t.gemini, `prøver ${engineLabel('gemini', next.label)} …`), { timeoutEngine: 'gemini' });
+    startKey = next.id;
+  }
+}
+
 export const taskEngines = (st = settings()) => Object.fromEntries(Object.entries(TASKS).map(([k, t]) => [k, st.aiTasks?.[k] ?? t.engine]));
 
 /* ---------------- ai_log: hvert kall, så feil kan feilsøkes ---------------- */
@@ -90,15 +154,16 @@ export const taskEngines = (st = settings()) => Object.fromEntries(Object.entrie
 db.exec(`CREATE TABLE IF NOT EXISTS ai_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, task TEXT, engine TEXT, model TEXT,
   prompt_len INTEGER, ms INTEGER, status TEXT, error TEXT)`);
-const insLog = db.prepare('INSERT INTO ai_log(ts,task,engine,model,prompt_len,ms,status,error) VALUES(?,?,?,?,?,?,?,?)');
+if (!db.prepare('PRAGMA table_info(ai_log)').all().some((c) => c.name === 'timeout_engine')) db.exec('ALTER TABLE ai_log ADD COLUMN timeout_engine TEXT'); // prompt 23
+const insLog = db.prepare('INSERT INTO ai_log(ts,task,engine,model,prompt_len,ms,status,error,timeout_engine) VALUES(?,?,?,?,?,?,?,?,?)');
 let logCount = 0;
-export function logAi({ task = 'text', engine, model = null, promptLen = 0, ms = 0, status = 'ok', error = null }) {
+export function logAi({ task = 'text', engine, model = null, promptLen = 0, ms = 0, status = 'ok', error = null, timeoutEngine = null }) {
   try {
-    insLog.run(Date.now(), task, engine, model, promptLen, Math.round(ms), status, error ? String(error).slice(0, 500) : null);
+    insLog.run(Date.now(), task, engine, model, promptLen, Math.round(ms), status, error ? String(error).slice(0, 500) : null, timeoutEngine);
     if (++logCount % 200 === 0) db.prepare('DELETE FROM ai_log WHERE id <= (SELECT max(id) - 2000 FROM ai_log)').run();
   } catch (e) { console.warn('[ai] logg', e.message); }
 }
-export const aiLog = (limit = 50) => db.prepare('SELECT ts, task, engine, model, prompt_len AS promptLen, ms, status, error FROM ai_log ORDER BY id DESC LIMIT ?').all(Math.min(500, Math.max(1, limit)));
+export const aiLog = (limit = 50) => db.prepare('SELECT ts, task, engine, model, prompt_len AS promptLen, ms, status, error, timeout_engine AS timeoutEngine FROM ai_log ORDER BY id DESC LIMIT ?').all(Math.min(500, Math.max(1, limit)));
 export const GEMINI_DEFAULT = 'gemini-flash-latest';
 export const GROQ_DEFAULT = 'llama-3.3-70b-versatile';
 export const GROQ_VISION_DEFAULT = 'meta-llama/llama-4-scout-17b-16e-instruct';
@@ -126,7 +191,7 @@ export function engineOrder(st = settings(), { force = null, skipDown = true, ta
 
 // Nettverksfeil («fetch failed») sier lite; ta med årsaken (ECONNREFUSED, tidsavbrudd …).
 const netErr = (name, url, e) => {
-  if (e.name === 'TimeoutError' || e.name === 'AbortError') return Object.assign(new Error(`${name} svarte ikke innen tidsfristen`), { noRetry: true, net: true });
+  if (e.name === 'TimeoutError' || e.name === 'AbortError') return Object.assign(new Error(`${name} svarte ikke innen tidsfristen`), { noRetry: true, net: true, timeout: true });
   const code = e.cause?.code || e.cause?.message || e.message;
   return Object.assign(new Error(`${name} kan ikke nås${url ? ` på ${url}` : ''} (${code})`), { noRetry: true, net: true });
 };
@@ -192,7 +257,7 @@ export function pickGemini(names, want = '') {
   const rank = (n) => (n === GEMINI_DEFAULT ? 1000 : 0) + ver(n) * 10 + (/flash/.test(n) ? 5 : 0) - (/lite/.test(n) ? 3 : 0) - (/preview/.test(n) ? 2 : 0);
   return pool.sort((a, b) => rank(b) - rank(a))[0] ?? null;
 }
-async function geminiGenerate(parts, { schema, timeout, temperature, model }) {
+async function geminiGenerate(parts, { schema, timeout, temperature, model, startKey = null }) {
   if (!hasGemini()) throw Object.assign(new Error('Gemini-nøkkel mangler (Innstillinger → AI-motor)'), { noRetry: true });
   const want = model || GEMINI_DEFAULT;
   let m = geminiResolved[want] ?? want;
@@ -202,9 +267,9 @@ async function geminiGenerate(parts, { schema, timeout, temperature, model }) {
     let res;
     // geminiFetch prøver reservenøklene når en nøkkel har brukt opp kvoten (429) eller er ugyldig.
     try { res = await geminiFetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(timeout),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(timeout), startKey,
       body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature, responseMimeType: 'application/json', ...(schema ? { responseSchema: forGemini(schema) } : {}), ...think } }),
-    }); } catch (e) { throw netErr('Gemini', null, e); }
+    }); } catch (e) { throw Object.assign(netErr('Gemini', null, e), { keyId: e.geminiKeyId ?? startKey }); }
     if (res.ok) {
       const d = await res.json();
       const text = d.candidates?.[0]?.content?.parts?.filter((x) => !x.thought).map((x) => x.text ?? '').join('') ?? '';
@@ -243,19 +308,19 @@ async function groqChat(content, schema, { timeout, temperature, model }) {
 
 /* ---------------- Kvitteringer (bilde → JSON) ---------------- */
 
-async function ollama(image, mime, cats, st) {
+async function ollama(image, mime, cats, st, ms = engineMs('ollama', st)) {
   if (mime === 'application/pdf') throw Object.assign(new Error('Ollama kan ikke lese PDF'), { noRetry: true });
   if (mime === 'image/heic' || mime === 'image/heif') throw Object.assign(new Error('Ollama kan ikke lese HEIC-bilder (bruk Gemini, eller last opp som JPEG)'), { noRetry: true });
   return (await ollamaChat(st, [{ role: 'user', content: PROMPT(cats), images: [image.toString('base64')] }], SCHEMA,
-    { timeout: Number(process.env.OLLAMA_TIMEOUT ?? 120) * 1000, temperature: 0 })).data;
+    { timeout: ms, temperature: 0 })).data;
 }
-async function gemini(image, mime, cats, st) {
-  return (await geminiGenerate([{ inline_data: { mime_type: mime, data: image.toString('base64') } }, { text: PROMPT(cats) }], { schema: SCHEMA, timeout: 60_000, temperature: 0, model: st.geminiModel })).data;
+async function gemini(image, mime, cats, st, ms = engineMs('gemini', st), startKey = null) {
+  return (await geminiGenerate([{ inline_data: { mime_type: mime, data: image.toString('base64') } }, { text: PROMPT(cats) }], { schema: SCHEMA, timeout: ms, temperature: 0, model: st.geminiModel, startKey })).data;
 }
-async function groq(image, mime, cats, st) {
+async function groq(image, mime, cats, st, ms = engineMs('groq', st)) {
   if (!/^image\/(jpe?g|png|webp|gif)$/.test(mime)) throw Object.assign(new Error('Groq kan bare lese JPEG, PNG og WebP'), { noRetry: true });
   return (await groqChat([{ type: 'text', text: PROMPT(cats) }, { type: 'image_url', image_url: { url: `data:${mime};base64,${image.toString('base64')}` } }], SCHEMA,
-    { timeout: 60_000, temperature: 0, model: st.groqVisionModel || GROQ_VISION_DEFAULT })).data;
+    { timeout: ms, temperature: 0, model: st.groqVisionModel || GROQ_VISION_DEFAULT })).data;
 }
 
 const PROVIDERS = { ollama, gemini, groq };
@@ -264,58 +329,76 @@ const modelOf = (p, st) => (p === 'gemini' ? (geminiResolved[st.geminiModel || G
 // Leser kvitteringen med valgt motor (eller tvunget motor ved «Les på nytt»), med reserve og ett nytt forsøk.
 // HEIC går rett til Gemini når nøkkelen finnes (Ollama og Groq kan ikke lese det). log(steg, detalj) får hvert forsøk.
 // Feilmeldingen tar med årsaken fra hver motor, ikke bare den siste.
-export async function extract(image, mime, cats, force, { log = () => {} } = {}) {
+export async function extract(image, mime, cats, force, { log = () => {}, status = () => {}, onTimeout } = {}) {
   const st = settings();
+  const mode = onTimeout ?? aiTimeoutsOf(st).onTimeout;
   let order = engineOrder(st, { force, task: 'receipts' });
   // Roboflow (valgfritt): finn kvitteringen i bildet og beskjær før AI/OCR leser den.
   if (!force && /^image\/(jpe?g|png|webp)$/.test(mime)) {
-    const crop = await roboflowCrop(image, mime, st).catch((e) => { log('roboflow', `hoppet over: ${e.message}`); return null; });
+    const crop = await roboflowCrop(image, mime, st).catch((e) => { log('roboflow', `hoppet over: ${e.timeout ? `svarte ikke innen ${aiTimeoutsOf(st).roboflow} s` : e.message}`); return null; });
     if (crop) { log('roboflow', `kvitteringen funnet og beskåret (${Math.round(crop.box.confidence * 100)} %)`); image = crop.image; }
   }
   if (!force && (mime === 'image/heic' || mime === 'image/heif') && hasGemini()) order = ['gemini', ...order];
-  let lastErr;
+  let lastErr, timedOut = null, ocrNow = false;
   const errors = [];
-  for (const p of [...new Set(order)]) {
+  const done = (r) => (timedOut ? { ...r, timeoutEngine: timedOut.engine } : r);
+  const onStatus = (text, info) => { log('tidsavbrudd', text); status(text, info); };
+  const list = [...new Set(order)];
+  for (let idx = 0; idx < list.length && !ocrNow; idx++) {
+    const p = list[idx];
     for (let attempt = 0; attempt < 2; attempt++) {
       const t0 = Date.now();
       try {
         log('ai', `${providerName(p)} (${modelOf(p, st)})${attempt ? ', nytt forsøk' : ''}`);
-        const raw = await PROVIDERS[p](image, mime, cats, st);
+        const raw = await runEngine(p, st, (ms, key) => PROVIDERS[p](image, mime, cats, st, ms, key), { status: onStatus, onTimeout: mode, task: 'receipts' });
         const data = validate(raw);
-        logAi({ task: 'receipts', engine: p, model: modelOf(p, st), promptLen: image.length, ms: Date.now() - t0, status: data.confidence.total < st.minConf / 100 ? 'lav-sikkerhet' : 'ok' });
+        logAi({ task: 'receipts', engine: p, model: modelOf(p, st), promptLen: image.length, ms: Date.now() - t0, status: data.confidence.total < st.minConf / 100 ? 'lav-sikkerhet' : 'ok', timeoutEngine: timedOut?.engine ?? null });
         // Lav sikkerhet hos primærmotoren: prøv reserven hvis den finnes.
         if (!force && p === order[0] && st.fallback && data.confidence.total < st.minConf / 100 && order.length > 1 && attempt === 0) {
           lastErr = new Error('Lav sikkerhet'); lastErr.partial = { provider: p, model: modelOf(p, st), data, seconds: (Date.now() - t0) / 1000 };
           break;
         }
-        return await lowConfCheck({ provider: p, model: modelOf(p, st), data, seconds: (Date.now() - t0) / 1000 }, image, mime, st, log);
+        return done(await lowConfCheck({ provider: p, model: modelOf(p, st), data, seconds: (Date.now() - t0) / 1000 }, image, mime, st, log));
       } catch (e) {
         lastErr = e;
-        logAi({ task: 'receipts', engine: p, model: modelOf(p, st), promptLen: image.length, ms: Date.now() - t0, status: 'feil', error: e.message });
+        logAi({ task: 'receipts', engine: p, model: modelOf(p, st), promptLen: image.length, ms: Date.now() - t0, status: e.timeout ? 'tidsavbrudd' : 'feil', error: e.message, timeoutEngine: e.timeout ? p : null });
         markDown(p, e);
         log('ai-feil', `${providerName(p)}: ${e.message}`);
+        if (e.timeout) {
+          const secs = e.timeoutSecs ?? aiTimeoutsOf(st)[p];
+          timedOut = { engine: p, secs };
+          errors.push(`${providerName(p)}: svarte ikke innen tidsfristen (${secs} s)`);
+          if (mode === 'queue' && !force) throw Object.assign(new Error(timeoutText(p, secs)), { queue: true, timeout: true, timeoutEngine: p, timeoutSecs: secs });
+          if (mode === 'ocr' && !force) { ocrNow = true; onStatus(timeoutText(p, secs, 'prøver lokal OCR …'), { timeoutEngine: p }); break; }
+          // Neste motor: resten av rekkefølgen, så alle andre som er satt opp (Gemini → Groq → Ollama), så lokal OCR.
+          if (!force) afterTimeout(list, idx, st);
+          const nx = list.slice(idx + 1).find((x) => !isDown(x)) ?? list[idx + 1];
+          onStatus(timeoutText(p, secs, nx ? `prøver ${providerName(nx)} …` : !force && ocrEnabled(st) ? 'prøver lokal OCR …' : null), { timeoutEngine: p });
+          break;
+        }
         if (attempt === 1 || e.noRetry || /mangler|kan ikke|svarte 4/.test(e.message)) { errors.push(`${providerName(p)}: ${e.message}`); break; } // ikke vits å prøve igjen
       }
     }
   }
-  if (lastErr?.partial) return lowConfCheck(lastErr.partial, image, mime, st, log);
-  // Alle AI-motorene feilet: lokal OCR-reserve (Tesseract) hvis den er på og installert.
+  if (lastErr?.partial) return done(await lowConfCheck(lastErr.partial, image, mime, st, log));
+  // Alle AI-motorene feilet: lokal OCR-reserve (Tesseract) hvis den er på og installert, eller med en gang ved onTimeout=ocr.
   const why = errors.length > 1 ? errors.join(' · ') : (lastErr?.message ?? 'Ingen AI-motor tilgjengelig');
-  if (!force && ocrEnabled(st)) {
+  if (!force && (ocrEnabled(st) || ocrNow)) {
     const t0 = Date.now();
     try {
-      log('ocr', 'AI feilet, prøver lokal OCR (Tesseract)');
+      log('ocr', timedOut ? `${providerName(timedOut.engine)} svarte ikke innen ${timedOut.secs} s, prøver lokal OCR (Tesseract)` : 'AI feilet, prøver lokal OCR (Tesseract)');
       const data = validate(await ocrReceipt(image, mime));
       data.needs_review = true;
-      logAi({ task: 'receipts', engine: 'tesseract', model: 'tesseract-nor', promptLen: image.length, ms: Date.now() - t0 });
-      return { provider: 'tesseract', model: 'tesseract-nor', data, seconds: (Date.now() - t0) / 1000, aiError: why };
+      logAi({ task: 'receipts', engine: 'tesseract', model: 'tesseract-nor', promptLen: image.length, ms: Date.now() - t0, timeoutEngine: timedOut?.engine ?? null });
+      return done({ provider: 'tesseract', model: 'tesseract-nor', data, seconds: (Date.now() - t0) / 1000, aiError: why });
     } catch (e) {
-      logAi({ task: 'receipts', engine: 'tesseract', model: 'tesseract-nor', promptLen: image.length, ms: Date.now() - t0, status: e.missing ? 'mangler' : 'feil', error: e.message });
+      logAi({ task: 'receipts', engine: 'tesseract', model: 'tesseract-nor', promptLen: image.length, ms: Date.now() - t0, status: e.missing ? 'mangler' : 'feil', error: e.message, timeoutEngine: timedOut?.engine ?? null });
       log('ocr-feil', e.message);
-      if (!e.missing) throw new Error(`${why} · Lokal OCR: ${e.message}`);
+      if (!e.missing) throw Object.assign(new Error(`${why} · Lokal OCR: ${e.message}`), { timeoutEngine: timedOut?.engine ?? null });
     }
   }
-  if (errors.length > 1) throw new Error(errors.join(' · '));
+  if (errors.length > 1) throw Object.assign(new Error(errors.join(' · ')), { timeoutEngine: timedOut?.engine ?? null });
+  if (lastErr && timedOut) lastErr.timeoutEngine = timedOut.engine;
   throw lastErr ?? new Error('Ingen AI-motor tilgjengelig');
 }
 
@@ -353,20 +436,27 @@ async function lowConfCheck(res, image, mime, st, log) {
 /* ---------------- Tekst → JSON (sammendrag, søk, Mat, RSS, Finn …) ---------------- */
 
 // Valgt motor først, så reservene. Svarer { provider, model, data }. Feilen sier hva hver motor svarte.
-export async function textJson(prompt, schema, { timeout = 30_000, temperature = 0.2, force = null, task = 'text' } = {}) {
+export async function textJson(prompt, schema, { timeout = 30_000, temperature = 0.2, force = null, task = 'text', status = () => {} } = {}) {
+  // timeout er beholdt for eldre kallere; tidsgrensen per motor kommer nå fra Innstillinger → AI → Tidsgrenser (prompt 23).
+  void timeout;
   const st = settings();
   const errors = [];
-  for (const p of engineOrder(st, { force, task: TASKS[task] ? task : null })) {
+  const list = engineOrder(st, { force, task: TASKS[task] ? task : null });
+  for (let idx = 0; idx < list.length; idx++) {
+    const p = list[idx];
     const t0 = Date.now();
+    const model = p === 'groq' ? (st.groqModel || GROQ_DEFAULT) : p === 'gemini' ? (st.geminiModel || GEMINI_DEFAULT) : (st.ollamaTextModel || st.ollamaModel);
     try {
-      const r = p === 'gemini' ? await geminiGenerate([{ text: prompt }], { schema, timeout, temperature, model: st.geminiModel })
-        : p === 'groq' ? await groqChat(prompt, schema, { timeout, temperature, model: st.groqModel || GROQ_DEFAULT })
-        : await ollamaChat(st, [{ role: 'user', content: prompt }], schema, { timeout, temperature, model: st.ollamaTextModel || st.ollamaModel });
+      const r = await runEngine(p, st, (ms, startKey) => (p === 'gemini' ? geminiGenerate([{ text: prompt }], { schema, timeout: ms, temperature, model: st.geminiModel, startKey })
+        : p === 'groq' ? groqChat(prompt, schema, { timeout: ms, temperature, model: st.groqModel || GROQ_DEFAULT })
+        : ollamaChat(st, [{ role: 'user', content: prompt }], schema, { timeout: ms, temperature, model: st.ollamaTextModel || st.ollamaModel })), { status, task, onTimeout: 'next' });
       logAi({ task, engine: p, model: r.model, promptLen: prompt.length, ms: Date.now() - t0 });
       return { provider: providerName(p), engine: p, model: r.model, data: r.data };
     } catch (e) {
-      logAi({ task, engine: p, model: p === 'groq' ? (st.groqModel || GROQ_DEFAULT) : p === 'gemini' ? (st.geminiModel || GEMINI_DEFAULT) : st.ollamaModel, promptLen: prompt.length, ms: Date.now() - t0, status: errKind(e), error: e.message });
-      markDown(p, e); errors.push(`${providerName(p)}: ${e.message}`);
+      logAi({ task, engine: p, model, promptLen: prompt.length, ms: Date.now() - t0, status: errKind(e), error: e.message, timeoutEngine: e.timeout ? p : null });
+      markDown(p, e); errors.push(`${providerName(p)}: ${e.timeout ? `svarte ikke innen tidsfristen (${e.timeoutSecs ?? aiTimeoutsOf(st)[p]} s)` : e.message}`);
+      // Tidsavbrudd: neste motor, også når reserve er av (gjelder ikke «Test tilkobling», som tvinger én motor).
+      if (e.timeout && !force) afterTimeout(list, idx, st);
     }
   }
   const err = new Error(errors.length ? errors.join(' · ') : 'Ingen AI-motor tilgjengelig');
@@ -465,7 +555,7 @@ export async function roboflowDetect(image, model, { timeout = 15_000 } = {}) {
 async function roboflowCrop(image, mime, st) {
   const model = roboflowModelOf(st);
   if (!secret('roboflowKey') || !model || !(await ocrTools()).magick) return null;
-  const { predictions, ms } = await roboflowDetect(image, model);
+  const { predictions, ms } = await roboflowDetect(image, model, { timeout: engineMs('roboflow', st) });
   const box = predictions.find((p) => /receipt|kvittering|bong/i.test(p.class ?? '')) ?? predictions[0];
   logAi({ task: 'receipts', engine: 'roboflow', model, promptLen: image.length, ms, status: box ? 'ok' : 'ingen-treff' });
   if (!box || box.confidence < 0.4) return null;
@@ -485,7 +575,7 @@ export async function barcode(image, mime) {
   const bcModel = String(st.roboflowBarcodeModel || '').split('/').filter(Boolean).slice(-2).join('/');
   if (secret('roboflowKey') && bcModel) {
     try {
-      const { predictions } = await roboflowDetect(image, bcModel);
+      const { predictions } = await roboflowDetect(image, bcModel, { timeout: engineMs('roboflow', st) });
       engine = 'roboflow+zbar';
       for (const p of predictions.slice(0, 6)) {
         const crop = await cropImage(image, mime, { ...p, width: p.width * 1.15, height: p.height * 1.3 });

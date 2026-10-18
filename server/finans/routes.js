@@ -6,7 +6,7 @@ import { readFile, writeFile, unlink, mkdir } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { db, OWNER, settings, saveSettings, secret, setSecret, secretSource, DEFAULT_SETTINGS } from './db.js';
-import { extract, extractText, extractOcr, health, providerName, testEngine, testRoboflow, ENGINES, TASKS, aiLog, barcode } from './ai.js';
+import { extract, extractText, extractOcr, health, providerName, testEngine, testRoboflow, ENGINES, TASKS, aiLog, barcode, aiTimeoutsOf, cleanAiTimeouts, AI_TIMEOUT_DEFAULTS, TIMEOUT_STEPS, ON_TIMEOUT, _aiTest } from './ai.js';
 import { hasGemini, listKeysOut, addKey, removeKey, renameKey, orderKeys, resetKey, testKey } from './gemini-keys.js';
 import { ollamaModels, startPull, pullStatus, deleteModel } from './ollama-models.js';
 import { sniffMime, isHeic, scanLog, scanLogOf } from './scan.js';
@@ -30,6 +30,10 @@ import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catB
 
 const DIR = resolve(config.dataDir, 'receipts');
 const q = (sql) => db.prepare(sql);
+// Prompt 23: tidsavbrudd i kvitteringskøen. timeout_engine = motoren som ikke svarte, retry_at = når jobben prøves igjen (onTimeout=queue).
+for (const [col, def] of [['timeout_engine', 'TEXT'], ['retry_at', 'INTEGER'], ['retry_n', 'INTEGER NOT NULL DEFAULT 0']]) {
+  if (!db.prepare('PRAGMA table_info(fh_receipts)').all().some((c) => c.name === col)) db.exec(`ALTER TABLE fh_receipts ADD COLUMN ${col} ${def}`);
+}
 const ok = (c) => c.json({ ok: true });
 const bad = (c, msg, code = 400) => c.json({ error: msg }, code);
 const today = () => new Date().toLocaleDateString('sv-SE');
@@ -190,7 +194,7 @@ function receiptOut(r, cats = catById(), accs = accById()) {
     file: r.file ? `/finans/api/receipts/${r.id}/file` : null, thumb: r.thumb ? `/finans/api/receipts/${r.id}/thumb` : null,
     extraction: ex, match: match ? txOut(match, cats, accs) : null, created: r.created, name: r.name ?? null,
     aiShort: r.ai_short ?? (r.status === 'pending' || r.status === 'processing' ? `${providerName(st.provider)} leser kvitteringen …` : null), aiLong: r.ai_long ?? null,
-    ...reanalyzeInfo(r, st), log: scanLogOf(r),
+    ...reanalyzeInfo(r, st), log: scanLogOf(r), timeoutEngine: r.timeout_engine ?? null, retryAt: r.retry_at ?? null,
     domain: r.domain || domainFor(r.merchant), target: r.target ?? null, source: r.source ?? 'upload', ...(r.meta ? { email: (() => { try { const m = JSON.parse(r.meta); return { from: m.from, subject: m.subject, date: m.date }; } catch { return null; } })() } : {}) };
 }
 
@@ -242,8 +246,10 @@ async function runQueue() {
     const { id, force } = queue.shift();
     const r = q('SELECT * FROM fh_receipts WHERE id=?').get(id);
     if (!r) continue;
-    q("UPDATE fh_receipts SET status='processing', error=NULL, started=? WHERE id=?").run(Date.now(), id);
+    q("UPDATE fh_receipts SET status='processing', error=NULL, started=?, retry_at=NULL WHERE id=?").run(Date.now(), id);
     const log = (step, detail) => scanLog(id, step, detail);
+    // «✦ Gemini svarte ikke innen 20 s · prøver Groq …» vises i køen (aiShort/statusText i /receipts/jobs).
+    const status = (text, info = {}) => q("UPDATE fh_receipts SET ai_short=?, timeout_engine=COALESCE(?, timeout_engine) WHERE id=? AND status='processing'").run(text, info.timeoutEngine ?? null, id);
     try {
       const rel = r.scan ?? r.file;
       let img;
@@ -253,8 +259,11 @@ async function runQueue() {
       if (isHeic(mime)) log('heic', hasGemini() ? 'HEIC uten JPEG-kopi fra klienten: sendes til Gemini, som kan lese HEIC' : 'HEIC uten JPEG-kopi og uten Gemini-nøkkel: Ollama kan ikke lese HEIC');
       const cats = q("SELECT name FROM fh_categories WHERE kind='expense' ORDER BY sort").all().map((x) => x.name);
       // E-post uten vedlegg lagres som tekst og leses som tekst.
-      const res = r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats) : await extract(img, mime, cats, force, { log });
+      // Etter tre runder i køen gjelder «neste motor», så jobben ikke venter for alltid.
+      const onTimeout = (r.retry_n ?? 0) >= QUEUE_MAX ? 'next' : undefined;
+      const res = r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats) : await extract(img, mime, cats, force, { log, status, onTimeout });
       const d = res.data;
+      if (res.timeoutEngine) q('UPDATE fh_receipts SET timeout_engine=? WHERE id=?').run(res.timeoutEngine, id);
       log('lest-ut', `${providerName(res.provider)} · ${d.merchant ?? 'ukjent butikk'} · ${d.total ?? '–'} kr · sikkerhet ${Math.round((d.confidence.total ?? 0) * 100)} % · ${res.seconds?.toFixed?.(1) ?? '?'} s`);
       const totalOre = d.total != null ? Math.round(d.total * 100) : null;
       const st = settings();
@@ -272,6 +281,8 @@ async function runQueue() {
       routeTarget(id);
       log('lagret', 'klar til gjennomgang');
     } catch (e) {
+      if (e.queue) { queueLater(id, e, r); continue; }
+      if (e.timeoutEngine) q('UPDATE fh_receipts SET timeout_engine=? WHERE id=?').run(e.timeoutEngine, id);
       console.warn('[finans] Kvittering', id, e.message);
       log('feil', e.message);
       q("UPDATE fh_receipts SET status='needs_review', error=?, confidence=0 WHERE id=? AND status='processing'").run(`Kunne ikke leses automatisk: ${e.message}. Fyll ut manuelt.`, id);
@@ -313,9 +324,27 @@ function routeTarget(id) {
   }
 }
 const shiftDate = (iso, months) => { const [y, m, d] = iso.split('-').map(Number); const x = new Date(y, m - 1 + months, Math.min(d, 28)); return x.toLocaleDateString('sv-SE'); };
-// Gjenoppta bilag som ble avbrutt ved omstart.
+// onTimeout=queue: jobben legges tilbake som «pending» med retry_at og prøves igjen senere (5, 10, 20 min; maks tre runder).
+const QUEUE_MAX = 3;
+const hm = (ms) => new Date(ms).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Oslo' });
+function scheduleRetry(id, at) {
+  setTimeout(() => {
+    if (q("SELECT 1 FROM fh_receipts WHERE id=? AND status='pending'").get(id) && !queue.some((x) => x.id === id)) { queue.push({ id }); runQueue(); }
+  }, Math.max(0, at - Date.now())).unref?.();
+}
+function queueLater(id, e, r) {
+  const n = (r.retry_n ?? 0) + 1;
+  const at = Date.now() + 5 * 60_000 * 2 ** (n - 1) * _aiTest.scale;
+  const text = `${e.message} · lagt i kø, prøver igjen kl. ${hm(at)}`;
+  q("UPDATE fh_receipts SET status='pending', retry_at=?, retry_n=?, timeout_engine=?, ai_short=?, started=NULL WHERE id=? AND status='processing'").run(at, n, e.timeoutEngine ?? null, text, id);
+  scanLog(id, 'kø', text);
+  scheduleRetry(id, at);
+}
+// Gjenoppta bilag som ble avbrutt ved omstart. Bilag som venter på et nytt forsøk (retry_at), tas når tiden er inne.
 setTimeout(() => {
-  for (const r of q("SELECT id FROM fh_receipts WHERE status IN ('pending','processing')").all()) queue.push({ id: r.id });
+  for (const r of q("SELECT id, retry_at FROM fh_receipts WHERE status IN ('pending','processing')").all()) {
+    if (r.retry_at && r.retry_at > Date.now()) scheduleRetry(r.id, r.retry_at); else queue.push({ id: r.id });
+  }
   runQueue();
 }, 2000).unref?.();
 
@@ -430,7 +459,7 @@ api.get('/bootstrap', R, (c) => {
   const accs = q(`SELECT a.*, a.opening_balance + COALESCE((SELECT SUM(amount) FROM fh_transactions WHERE account_id=a.id),0) AS balance FROM fh_accounts a ORDER BY sort, id`).all();
   const month = curMonth();
   return c.json({
-    settings: { ...st, imapPin: st.imapPin ? { fingerprint: st.imapPin.fingerprint } : null, geminiKeySet: !!hasGemini(), groqKeySet: !!secret('groqKey'), roboflowKeySet: !!secret('roboflowKey'), imapPassSet: !!secret('imapPass'), t212Set: t212Configured() }, month, period: period(month), profiles: PROFILES, user: st.name,
+    settings: { ...st, aiTimeouts: aiTimeoutsOf(st), imapPin: st.imapPin ? { fingerprint: st.imapPin.fingerprint } : null, geminiKeySet: !!hasGemini(), groqKeySet: !!secret('groqKey'), roboflowKeySet: !!secret('roboflowKey'), imapPassSet: !!secret('imapPass'), t212Set: t212Configured() }, month, period: period(month), profiles: PROFILES, user: st.name,
     categories: cats.map((x) => ({ id: x.id, name: x.name, color: x.color, kind: x.kind })),
     accounts: accs.map((a) => ({ id: a.id, name: a.name, bank: a.bank, type: a.type, last4: a.last4, note: a.note, openingBalance: a.opening_balance / 100, balance: a.balance / 100 })),
     rules: q('SELECT r.*, c.name AS category FROM fh_rules r LEFT JOIN fh_categories c ON c.id=r.category_id ORDER BY priority, id').all().map((r) => ({ id: r.id, pattern: r.pattern, categoryId: r.category_id, category: r.category, priority: r.priority })),
@@ -789,7 +818,10 @@ api.post('/transactions/:id/receipt', need('receipts:write'), upload, (c) => {
 function jobOut(r) {
   const progress = r.status === 'pending' ? 0 : r.status === 'processing' ? Math.min(92, Math.round(((Date.now() - (r.started ?? Date.now())) / 12000) * 90) + 5) : 100;
   return { id: r.id, name: r.name ?? r.merchant ?? 'Kvittering', status: r.status === 'failed' ? 'error' : r.status, progress, merchant: r.merchant, total: r.total != null ? r.total / 100 : null,
-    error: r.error ?? null, thumb: r.thumb ? `/finans/api/receipts/${r.id}/thumb` : null, aiShort: r.ai_short ?? null, created: r.created, ...reanalyzeInfo(r) };
+    error: r.error ?? null, thumb: r.thumb ? `/finans/api/receipts/${r.id}/thumb` : null, aiShort: r.ai_short ?? null, created: r.created, ...reanalyzeInfo(r),
+    // Prompt 23: motoren som ikke svarte innen tidsgrensen, når jobben prøves igjen, og statusteksten i køen.
+    timeoutEngine: r.timeout_engine ?? null, retryAt: r.retry_at ?? null,
+    statusText: r.status === 'pending' || r.status === 'processing' ? (r.ai_short ?? `${providerName(settings().provider)} leser kvitteringen …`) : null };
 }
 api.get('/receipts/jobs', R, (c) => {
   const a = c.get('access');
@@ -1187,6 +1219,8 @@ const SETTING_KEYS = { name: (v) => str(v, 40), currency: (v) => (['NOK', 'EUR',
   // Lokal OCR-reserve: null = følg OCR_FALLBACK. ocrLowConf = les også lokalt når AI er usikker.
   ocrFallback: (v) => (v === null ? null : !!v), ocrLowConf: Boolean,
   autoCat: Boolean, n80: Boolean, n100: Boolean, nRc: Boolean, nFast: Boolean, csvProfile: (v) => (PROFILES.includes(v) ? v : 'DNB'),
+  // Prompt 23: tidsgrenser per motor (5–120 s), nye forsøk (0–3) og hva som skjer ved tidsavbrudd. Flettes med lagret verdi.
+  aiTimeouts: (v) => cleanAiTimeouts(v, aiTimeoutsOf()),
   aiSummaries: Boolean, imapHost: (v) => (/^[a-z0-9.-]{0,120}$/i.test(v) ? v : ''), imapUser: (v) => str(v, 120), imapFolder: (v) => str(v, 60) || 'INBOX' };
 
 api.put('/settings', W, async (c) => {
@@ -1198,9 +1232,15 @@ api.put('/settings', W, async (c) => {
   // Nye nøkler (Groq, Roboflow): bare fra en økt i nettleseren, aldri fra et app-token. Tom streng sletter.
   for (const k of ['groqKey', 'roboflowKey']) if (typeof b[k] === 'string' && c.get('access').session) setSecret(k, b[k].trim());
   if (typeof b.imapPass === 'string' && c.get('access').session) setSecret('imapPass', b.imapPass);
-  const out = settings();
-  return c.json({ ...out, imapPin: out.imapPin ? { fingerprint: out.imapPin.fingerprint } : null, geminiKeySet: !!hasGemini(), groqKeySet: !!secret('groqKey'), roboflowKeySet: !!secret('roboflowKey'), imapPassSet: !!secret('imapPass') });
+  return c.json(settingsOut());
 });
+// Samme innstillinger som i /bootstrap (prompt 23: også for appene, som leser aiTimeouts her). Hemmeligheter sendes aldri ut.
+function settingsOut() {
+  const out = settings();
+  return { ...out, aiTimeouts: aiTimeoutsOf(out), aiTimeoutOptions: { steps: TIMEOUT_STEPS, retries: [0, 1, 2, 3], onTimeout: ON_TIMEOUT, defaults: AI_TIMEOUT_DEFAULTS },
+    imapPin: out.imapPin ? { fingerprint: out.imapPin.fingerprint } : null, geminiKeySet: !!hasGemini(), groqKeySet: !!secret('groqKey'), roboflowKeySet: !!secret('roboflowKey'), imapPassSet: !!secret('imapPass') };
+}
+api.get('/settings', R, (c) => c.json(settingsOut()));
 
 api.get('/health/ai', R, async (c) => c.json(await health()));
 // «Test tilkobling» per motor (ollama | gemini | groq) og for Roboflow-nøkkelen.

@@ -56,6 +56,11 @@ addCol('fh_finn', 'tracking', 'TEXT');    // sporingsnummer (kobler Posten/Bring
 addCol('fh_finn', 'ad_url', 'TEXT');
 addCol('fh_finn', 'stage', 'INTEGER');    // manuelt steg 1–4 (null = beregnes fra stegene og e-postene)
 addCol('fh_finn', 'lines', 'TEXT');       // JSON {price, shipping, fee} i kroner, fra kvitteringsmailen
+// Prompt 23: annonsen i appen. attrs = [{label, value}] (tilstand, merke, modell …), removed = annonsen er borte fra finn.no
+// (kopien beholdes). ad_tried = når annonsen sist ble forsøkt hentet automatisk, så den bare hentes én gang.
+addCol('fh_finn_ad', 'attrs', "TEXT NOT NULL DEFAULT '[]'");
+addCol('fh_finn_ad', 'removed', 'INTEGER NOT NULL DEFAULT 0');
+addCol('fh_finn', 'ad_tried', 'INTEGER');
 
 /* ---------------- Steg ---------------- */
 
@@ -170,7 +175,8 @@ const textOf = (html) => decode(String(html).replace(/<(script|style|noscript)[\
 
 // Strukturert uttrekk uten AI: JSON-LD (Product), Open Graph og bilde-URL-er fra finncdn.
 export function parseAdHtml(html, url) {
-  const out = { title: null, price: null, place: null, description: null, images: [], code: url?.match(/(?:item\/|finnkode=)(\d{6,12})/)?.[1] ?? null };
+  const out = { title: null, price: null, place: null, description: null, images: [], attrs: [], code: url?.match(/(?:item\/|finnkode=)(\d{6,12})/)?.[1] ?? null };
+  const attr = (label, value) => { const l = str(decode(label), 40), v = str(decode(String(value ?? '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' '), 120); if (l && v && !out.attrs.some((a) => a.label.toLowerCase() === l.toLowerCase())) out.attrs.push({ label: l, value: v }); };
   for (const m of html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
     let j; try { j = JSON.parse(m[1]); } catch { continue; }
     for (const o of [j, ...(Array.isArray(j) ? j : []), ...(j['@graph'] ?? [])].flat()) {
@@ -181,6 +187,12 @@ export function parseAdHtml(html, url) {
       if (off?.price != null) out.price ??= num(off.price);
       const imgs = Array.isArray(o.image) ? o.image : o.image ? [o.image] : [];
       out.images.push(...imgs.map((x) => (typeof x === 'string' ? x : x?.url)).filter(Boolean));
+      const cond = off?.itemCondition ?? o.itemCondition;
+      if (cond) attr('Tilstand', CONDITION[String(cond).split('/').pop()] ?? String(cond).split('/').pop());
+      if (o.brand) attr('Merke', typeof o.brand === 'string' ? o.brand : o.brand.name);
+      if (o.model) attr('Modell', typeof o.model === 'string' ? o.model : o.model.name);
+      if (o.color) attr('Farge', o.color);
+      for (const ap of Array.isArray(o.additionalProperty) ? o.additionalProperty : []) if (ap?.name) attr(ap.name, ap.value);
       const a = off?.availableAtOrFrom?.address ?? o.address ?? off?.seller?.address;
       if (a) out.place ??= [a.addressLocality, a.addressRegion].filter(Boolean).join(', ') || null;
     }
@@ -190,6 +202,9 @@ export function parseAdHtml(html, url) {
   out.description ??= meta('og:description') ? decode(meta('og:description')) : null;
   for (const m of html.matchAll(/<meta[^>]+property=["']og:image["'][^>]*content=["']([^"']+)["']/gi)) out.images.push(decode(m[1]));
   for (const m of html.matchAll(/https:\/\/images\.finncdn\.no\/[^\s"'<>)]+?\.(?:jpe?g|png|webp)/gi)) out.images.push(m[0]);
+  // Spesifikasjonene på siden (<dt>Tilstand</dt><dd>Pent brukt</dd> …).
+  for (const m of html.matchAll(/<dt[^>]*>([\s\S]{1,120}?)<\/dt>\s*<dd[^>]*>([\s\S]{1,400}?)<\/dd>/gi)) if (out.attrs.length < 20) attr(m[1].replace(/<[^>]+>/g, ' ').trim(), m[2]);
+  out.attrs = out.attrs.slice(0, 20);
   if (out.price == null) { const t = textOf(html); out.price = num(t.match(/(?:pris|til salgs)\s*:?\s*([\d\s.]{3,})\s*kr/i)?.[1]); out.place ??= t.match(/(?:sted|område|lokasjon)\s*:?\s*([^\n]{3,60})/i)?.[1]?.trim() ?? null; }
   // Samme bilde i flere størrelser: behold én per filnavn, største først (finncdn har størrelsen i stien).
   const seen = new Map();
@@ -198,6 +213,7 @@ export function parseAdHtml(html, url) {
   return out;
 }
 
+const CONDITION = { NewCondition: 'Ny', UsedCondition: 'Brukt', RefurbishedCondition: 'Overhalt', DamagedCondition: 'Skadet' };
 const AD_SCHEMA = { type: 'object', properties: { title: { type: 'string' }, price: { type: 'number', nullable: true }, place: { type: 'string', nullable: true }, description: { type: 'string', nullable: true } }, required: ['title'] };
 async function aiAd(text) {
   try {
@@ -238,7 +254,9 @@ async function mockAd(f) {
     await writeFile(join(ROOT, rel), svg);
     files.push(rel);
   }
-  return { title: f.item, price: f.amount / 100, place: 'Bislett, Oslo', description: `${f.item} i god stand. Lite brukt, ingen riper. Selges fordi jeg har fått ny. Kan sendes med Fiks ferdig.`, images: files };
+  const brand = f.item.split(/\s+/)[0];
+  return { title: f.item, price: f.amount / 100, place: 'Bislett, Oslo', description: `${f.item} i god stand. Lite brukt, ingen riper. Selges fordi jeg har fått ny. Kan sendes med Fiks ferdig.`, images: files,
+    attrs: [{ label: 'Tilstand', value: 'Pent brukt' }, { label: 'Merke', value: brand }, { label: 'Modell', value: f.item.slice(brand.length).trim() || f.item }, { label: 'Fiks ferdig', value: 'Ja, kan sendes' }] };
 }
 
 export async function fetchAd(f, rawUrl) {
@@ -257,12 +275,16 @@ export async function fetchAd(f, rawUrl) {
     try { r = await doFetch(url, { headers: { 'user-agent': UA, accept: 'text/html' }, redirect: 'follow', signal: AbortSignal.timeout(15000) }); }
     catch { throw Object.assign(new Error('Fikk ikke kontakt med finn.no'), { status: 502 }); }
     if (r.url && !FINN_HOST.test(new URL(r.url).hostname)) throw Object.assign(new Error('finn.no sendte videre til en annen side'), { status: 502 });
-    if (r.status === 404 || r.status === 410) throw Object.assign(new Error('Annonsen finnes ikke lenger på finn.no. Last opp en PDF eller et skjermbilde hvis du har det.'), { status: 404 });
+    if (r.status === 404 || r.status === 410) {
+      // Annonsen er fjernet: behold den lagrede kopien og merk den som fjernet.
+      if (q('SELECT 1 FROM fh_finn_ad WHERE finn_id=?').get(f.id)) { q('UPDATE fh_finn_ad SET removed=1 WHERE finn_id=?').run(f.id); return { removed: true, kept: true }; }
+      throw Object.assign(new Error('Annonsen finnes ikke lenger på finn.no. Last opp en PDF eller et skjermbilde hvis du har det.'), { status: 404, removed: true });
+    }
     if (!r.ok) throw Object.assign(new Error(`finn.no svarte ${r.status}`), { status: 502 });
     const html = (await r.text()).slice(0, 3_000_000);
     const parsed = parseAdHtml(html, url);
     const ai = await aiAd(textOf(html));
-    ad = { title: ai?.title ?? parsed.title, price: ai?.price ?? parsed.price, place: ai?.place ?? parsed.place, description: ai?.description ?? parsed.description, code: parsed.code };
+    ad = { title: ai?.title ?? parsed.title, price: ai?.price ?? parsed.price, place: ai?.place ?? parsed.place, description: ai?.description ?? parsed.description, code: parsed.code, attrs: parsed.attrs };
     if (!ad.title) throw Object.assign(new Error('Fant ikke annonsen på siden'), { status: 422 });
     ad.images = await downloadImages(f, parsed.images);
     lastFetch = Date.now(); // pausen regnes fra siste kall mot finn.no
@@ -270,12 +292,12 @@ export async function fetchAd(f, rawUrl) {
   const code = ad.code ?? url?.match(/(?:item\/|finnkode=)(\d{6,12})/)?.[1] ?? f.finn_code;
   // Gamle annonsebilder fjernes først når de nye er på plass.
   const old = q('SELECT images FROM fh_finn_ad WHERE finn_id=?').get(f.id);
-  q(`INSERT INTO fh_finn_ad(finn_id,url,code,title,price,place,description,images,source,fetched) VALUES(?,?,?,?,?,?,?,?,'fetch',?)
+  q(`INSERT INTO fh_finn_ad(finn_id,url,code,title,price,place,description,images,source,fetched,attrs,removed) VALUES(?,?,?,?,?,?,?,?,'fetch',?,?,0)
      ON CONFLICT(finn_id) DO UPDATE SET url=excluded.url, code=excluded.code, title=excluded.title, price=excluded.price, place=excluded.place,
-       description=excluded.description, images=excluded.images, source='fetch', fetched=excluded.fetched`)
-    .run(f.id, url, code, ad.title, ad.price != null ? Math.round(ad.price * 100) : null, ad.place, ad.description, JSON.stringify(ad.images), Date.now());
+       description=excluded.description, images=excluded.images, source='fetch', fetched=excluded.fetched, attrs=excluded.attrs, removed=0`)
+    .run(f.id, url, code, ad.title, ad.price != null ? Math.round(ad.price * 100) : null, ad.place, ad.description, JSON.stringify(ad.images), Date.now(), JSON.stringify(ad.attrs ?? []));
   for (const rel of JSON.parse(old?.images ?? '[]')) if (!ad.images.includes(rel)) await unlink(abs(rel)).catch(() => {});
-  q('UPDATE fh_finn SET ad_url=?, finn_code=COALESCE(finn_code, ?) WHERE id=?').run(url, code, f.id);
+  q('UPDATE fh_finn SET ad_url=?, finn_code=COALESCE(finn_code, ?), ad_tried=? WHERE id=?').run(url, code, Date.now(), f.id);
   return ad;
 }
 
@@ -385,6 +407,54 @@ function receiptLines(f) {
   if (fee != null) lines.push({ l: 'Servicegebyr', v: fee });
   return { lines, totalLabel: 'Betalt', total: amt };
 }
+/* ---------------- Annonsen, e-poster og meldinger i appen (prompt 23) ---------------- */
+
+const attrsOf = (ad) => { try { const a = JSON.parse(ad?.attrs ?? '[]'); return Array.isArray(a) ? a.filter((x) => x && x.label && x.value) : []; } catch { return []; } };
+/** GET /finn/:id/ad: { title, price, description, attrs:[{label,value}], images:[url], url, fetchedAt, removed } (+ place, code, source). */
+export function adOut(f) {
+  const ad = q('SELECT * FROM fh_finn_ad WHERE finn_id=?').get(f.id);
+  if (!ad) return null;
+  return { title: ad.title ?? null, price: ad.price != null ? ad.price / 100 : null, description: ad.description ?? null, attrs: attrsOf(ad),
+    images: JSON.parse(ad.images || '[]').map((_, i) => `/finans/api/finn/${f.id}/img/${i}`), url: ad.url ?? f.ad_url ?? adUrlFor(f),
+    fetchedAt: ad.fetched ? new Date(ad.fetched).toISOString() : null, removed: !!ad.removed, place: ad.place ?? null, code: ad.code ?? f.finn_code ?? null, source: ad.source ?? 'fetch' };
+}
+const emailRow = (e) => ({ id: e.id, from: e.sender, subject: e.subject, date: e.date, snippet: String(e.body ?? '').replace(/\s+/g, ' ').trim().slice(0, 160) });
+export const emailsOf = (f) => q('SELECT * FROM fh_finn_emails WHERE finn_id=? ORDER BY date DESC, id DESC').all(f.id).map(emailRow);
+
+// Finn har ikke åpent chat-API. Meldingene hentes fra e-postvarslene («Du har fått en ny melding», «… via FINN»), og
+// «Åpne i Finn» dyplenker til samtalen (lenken i varselet, ellers innboksen på finn.no).
+const CHAT_MAIL = /ny melding|nye meldinger|sendt deg en melding|har svart (?:deg|på)|melding fra|du sendte en melding|din melding til|new message/i;
+const CHAT_FROM = /melding(?:er)?@finn|via finn|meldinger@/i;
+const BOILER = /^(?:du har fått (?:en )?ny(?:e)? melding|svar på meldingen|svar i finn|åpne (?:i )?finn|les og svar|logg inn|hilsen|vennlig hilsen finn|med vennlig hilsen|finn\.no|denne e-posten|du mottar|endre varsler|avslutt varsler|https?:\/\/)/i;
+const CHAT_LINK = /https:\/\/(?:www\.)?finn\.no\/(?:messages|meldinger)[^\s"'<>)]*/i;
+export const CHAT_INBOX = 'https://www.finn.no/messages';
+export function messageOf(e) {
+  const subj = String(e.subject ?? ''), body = String(e.body ?? ''), from = String(e.sender ?? '');
+  if (!CHAT_MAIL.test(`${subj}\n${body.slice(0, 400)}`) && !CHAT_FROM.test(from)) return null;
+  const me = /du sendte en melding|din melding til|kopi av meldingen din/i.test(`${subj}\n${body.slice(0, 400)}`);
+  // Sitert tekst («…» eller "…") er selve meldingen; ellers linjene som ikke er standardtekst fra FINN.
+  const quoted = body.match(/[«"“]([^»"”]{2,1000})[»"”]/)?.[1];
+  const lines = body.split(/\r?\n/).map((l) => l.replace(/^>\s?/, '').trim()).filter((l) => l && !BOILER.test(l) && !/skrev:$|wrote:$/i.test(l) && !/^(?:fra|til|emne|sendt):/i.test(l));
+  const text = str((quoted ?? lines.join('\n')).replace(/[ \t]+/g, ' '), 1000);
+  if (!text) return null;
+  return { id: e.id, from: me ? 'me' : 'them', text, time: e.date ?? null };
+}
+export function messagesOf(f) {
+  const rows = q('SELECT * FROM fh_finn_emails WHERE finn_id=? ORDER BY date, id').all(f.id);
+  const items = rows.map(messageOf).filter(Boolean);
+  const chatUrl = rows.map((e) => String(e.body ?? '').match(CHAT_LINK)?.[0]).filter(Boolean).pop() ?? CHAT_INBOX;
+  return { items, chatUrl };
+}
+// Hentes én gang (når handelen får lenke/kode og ingen kopi finnes). Senere kun med «Hent på nytt».
+async function ensureAd(f) {
+  if (q('SELECT 1 FROM fh_finn_ad WHERE finn_id=?').get(f.id) || f.ad_tried) return;
+  q('UPDATE fh_finn SET ad_tried=? WHERE id=?').run(Date.now(), f.id);
+  const emails = q('SELECT subject, body FROM fh_finn_emails WHERE finn_id=?').all(f.id);
+  if (!adUrlFor(f, emails) && !(MOCK && !doFetch.mocked)) return;
+  // Ventetid (429) eller ingen kontakt (502): prøv igjen neste gang annonsen åpnes. Andre feil (fjernet, robots.txt) huskes.
+  await fetchAd(f).catch((e) => { console.warn('[finn] annonse', f.id, e.message); if (e.status === 429 || e.status === 502) q('UPDATE fh_finn SET ad_tried=NULL WHERE id=?').run(f.id); });
+}
+
 export function finnFull(f) {
   const base = finnOut(f);
   const ad = q('SELECT * FROM fh_finn_ad WHERE finn_id=?').get(f.id);
@@ -395,11 +465,11 @@ export function finnFull(f) {
   return { ...base,
     ad: ad || adFile ? { url: ad?.url ?? f.ad_url ?? null, code: ad?.code ?? f.finn_code ?? null, title: ad?.title ?? null, price: ad?.price != null ? ad.price / 100 : null, place: ad?.place ?? null,
       description: ad?.description ?? null, images: ad ? JSON.parse(ad.images).map((_, i) => `/finans/api/finn/${f.id}/ad/img/${i}`) : [], source: ad?.source ?? 'upload',
-      fetched: ad?.fetched ?? adFile?.created ?? null, file: adFile ? { id: adFile.id, name: adFile.name, mime: adFile.mime, url: fileUrl(f, adFile) } : null } : null,
+      fetched: ad?.fetched ?? adFile?.created ?? null, fetchedAt: ad?.fetched ? new Date(ad.fetched).toISOString() : null, attrs: attrsOf(ad), removed: !!ad?.removed, file: adFile ? { id: adFile.id, name: adFile.name, mime: adFile.mime, url: fileUrl(f, adFile) } : null } : null,
     adUrlGuess: adUrlFor(f, emails.map((e) => ({ subject: e.subject, body: e.body }))),
     receipts: files.filter((x) => x.kind === 'receipt').map((x) => ({ id: x.id, name: x.name, mime: x.mime, size: x.size, url: fileUrl(f, x), created: x.created })),
     photos: files.filter((x) => x.kind === 'photo').map((x) => ({ id: x.id, name: x.name, url: fileUrl(f, x), thumb: fileUrl(f, x) })),
-    emails, receipt: receiptLines(f) };
+    emails, receipt: receiptLines(f), ...(({ items, chatUrl }) => ({ messages: items, chatUrl }))(messagesOf(f)) };
 }
 
 /* ---------------- Demodata ---------------- */
@@ -420,10 +490,14 @@ async function ensureDemo() {
     const mails = g.role === 'bought'
       ? [['FINN.no <noreply@finn.no>', `Kvittering: du har betalt for «${g.item}»`, 0, `Du har kjøpt ${g.item} fra ${g.counterpart} via Fiks ferdig.\nFinn-kode: ${code}\nVarepris: ${Math.round(g.amount / 100 - 99 - Math.round(g.amount / 100 * 0.03))} kr\nFrakt (Fiks ferdig): 99 kr\nServicegebyr: ${Math.round(g.amount / 100 * 0.03)} kr\nTotalt: ${amt} kr\nBeløpet holdes av FINN til du har godkjent varen.`],
         [`${who} via FINN <melding@finn.no>`, 'Takk! Sender i morgen', 0, 'Hei! Takk for handelen. Jeg sender pakken i morgen formiddag.'],
+        ['FINN.no <meldinger@finn.no>', 'Du sendte en melding', 0, `Kopi av meldingen din til ${who}:\n«Hei! Supert, gleder meg. Gi beskjed når den er sendt.»\nSe samtalen: https://www.finn.no/messages/conversation/demo-${g.id}`],
+        ['FINN.no <meldinger@finn.no>', 'Du har fått en ny melding', 1, `Du har fått en ny melding fra ${who}:\n«Nå er pakken levert på Posten. Sporingsnummer kommer på e-post.»\nSvar på meldingen i FINN: https://www.finn.no/messages/conversation/demo-${g.id}`],
         ...(done >= 2 ? [['Posten Bring <sporing@posten.no>', 'Pakken din er på vei', 1, `Sporingsnummer: ${track}. Pakken er sendt og er på vei til deg.`]] : []),
         ...(done >= 3 ? [['Posten Bring <sporing@posten.no>', 'Pakken kan hentes', 2, `Sporingsnummer: ${track}. Pakken ligger klar på hentestedet.`], ['FINN.no <noreply@finn.no>', 'Handelen er fullført', 3, 'Du har godkjent varen. Pengene er utbetalt til selger.']] : [])]
       : [['FINN.no <noreply@finn.no>', `«${g.item}» er solgt med Trygg betaling`, 0, `Du har solgt ${g.item} til ${g.counterpart}. Finn-kode: ${code}\nSalgspris: ${amt} kr\nKjøper har betalt. Send varen innen 5 dager.`],
         ['FINN.no <noreply@finn.no>', 'Fraktetikett er klar', 0, 'Etiketten er lagt ved som PDF. Lever pakken på et Posten-utleveringssted.'],
+        ['FINN.no <meldinger@finn.no>', 'Du har fått en ny melding', 0, `Du har fått en ny melding fra ${who}:\n«Hei! Kan du sende den i dag? Betalt nå.»\nSvar på meldingen i FINN: https://www.finn.no/messages/conversation/demo-${g.id}`],
+        ['FINN.no <meldinger@finn.no>', 'Du sendte en melding', 0, `Kopi av meldingen din til ${who}:\n«Takk! Sender i ettermiddag.»`],
         ...(done >= 2 ? [['Posten Bring <sporing@posten.no>', 'Pakken er sendt', 1, `Sporingsnummer: ${track}. Pakken er registrert hos Posten.`]] : []),
         ...(done >= 3 ? [['Posten Bring <sporing@posten.no>', 'Pakken er levert', 2, `Sporingsnummer: ${track}. Pakken er hentet av mottaker.`], ['FINN.no <noreply@finn.no>', 'Utbetaling er på vei', 3, `${amt} kr er utbetalt til kontoen din.`]] : [])];
     for (const [j, [from, subject, k, text]] of mails.entries()) attachMail(g, { messageId: `<demo-${g.id}-${j}@finn.no>`, date: dt(k), from, subject, text }, 'imap');
@@ -508,6 +582,10 @@ export function mountFinn(api, { R, W, upload, saveFinn }) {
     q('UPDATE fh_finn SET item=?, counterpart=?, steps=?, ad_url=?, finn_code=?, stage=?, amount=?, role=?, date=? WHERE id=?')
       .run(b.item !== undefined ? str(b.item, 120) || cur.item : cur.item, b.counterpart !== undefined ? str(b.counterpart, 80) : cur.counterpart, steps, adUrl, code ?? codeFromUrl, stage,
         amt != null ? Math.round(amt * 100) : cur.amount, role, date, cur.id);
+    // Lenket til en annonse (ny lenke eller kode): hent annonsen én gang hvis den ikke er lagret.
+    if ((adUrl && adUrl !== cur.ad_url) || (code && code !== cur.finn_code)) {
+      if (!q('SELECT 1 FROM fh_finn_ad WHERE finn_id=?').get(cur.id)) { q('UPDATE fh_finn SET ad_tried=NULL WHERE id=?').run(cur.id); await ensureAd(q('SELECT * FROM fh_finn WHERE id=?').get(cur.id)); }
+    }
     return c.json(finnFull(q('SELECT * FROM fh_finn WHERE id=?').get(cur.id)));
   });
 
@@ -538,13 +616,36 @@ export function mountFinn(api, { R, W, upload, saveFinn }) {
     q('DELETE FROM fh_finn_ad WHERE finn_id=?').run(f.id);
     return c.json(finnFull(f));
   });
-  api.get('/finn/:id/ad/img/:n', R, async (c) => {
+  const adImg = async (c) => {
     const imgs = JSON.parse(q('SELECT images FROM fh_finn_ad WHERE finn_id=?').pluck().get(+c.req.param('id')) ?? '[]');
     const rel = imgs[+c.req.param('n')];
     if (!rel) return c.notFound();
     try { return c.body(await readFile(abs(rel)), 200, { 'Content-Type': MIME_OF[extname(rel)] ?? 'application/octet-stream', 'Cache-Control': 'private, max-age=86400', 'X-Content-Type-Options': 'nosniff', ...(rel.endsWith('.svg') ? { 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'" } : {}) }); }
     catch { return c.notFound(); }
+  };
+  api.get('/finn/:id/ad/img/:n', R, adImg);
+  // Prompt 23: annonsen i appen. Bildene også på /finn/:id/img/:n.
+  api.get('/finn/:id/img/:n', R, adImg);
+  api.get('/finn/:id/ad', R, async (c) => {
+    const f = deal(c);
+    if (!f) return c.notFound();
+    await ensureAd(f);
+    const ad = adOut(q('SELECT * FROM fh_finn WHERE id=?').get(f.id));
+    return ad ? c.json(ad) : c.json({ error: 'Annonsen er ikke lagret ennå', url: adUrlFor(f) }, 404);
   });
+  api.post('/finn/:id/ad/refresh', W, async (c) => {
+    const f = deal(c);
+    if (!f) return c.notFound();
+    const b = await c.req.json().catch(() => ({}));
+    try { await fetchAd(f, str(b.url, 500) || null); } catch (e) { return bad(c, e.message, e.status ?? 400); }
+    return c.json(adOut(q('SELECT * FROM fh_finn WHERE id=?').get(f.id)));
+  });
+  api.get('/finn/:id/emails', R, (c) => { const f = deal(c); return f ? c.json(emailsOf(f)) : c.notFound(); });
+  api.get('/finn/:id/emails/:eid', R, (c) => {
+    const e = q('SELECT * FROM fh_finn_emails WHERE id=? AND finn_id=?').get(+c.req.param('eid'), +c.req.param('id'));
+    return e ? c.json({ ...emailRow(e), body: e.body ?? '', text: e.body ?? '', source: e.source }) : c.notFound();
+  });
+  api.get('/finn/:id/messages', R, (c) => { const f = deal(c); return f ? c.json(messagesOf(f)) : c.notFound(); });
 
   // Filer: kind=receipt (PDF/bilde/.eml), photo (bilder) eller ad (annonsen som PDF/skjermbilde). Flere filer i feltet «file».
   api.post('/finn/:id/files', W, upload, async (c) => {

@@ -126,7 +126,10 @@ const SCALAR = {
   bgDim: (v) => Number.isInteger(v) && v >= 0 && v <= 60,
   bgWifiOnly: (v) => typeof v === 'boolean',
   bgAnimate: (v) => typeof v === 'boolean',
+  // Prompt 23: rekkefølgen på kortene på Abonnementer → Hjem (hold inne og dra). Bare kjente id-er, uten duplikater.
+  subHomeOrder: (v) => Array.isArray(v) && v.length >= 1 && v.length <= SUB_HOME_CARDS.length && new Set(v).size === v.length && v.every((x) => SUB_HOME_CARDS.includes(x)),
 };
+const SUB_HOME_CARDS = ['ai', 'next7', 'check', 'list'];
 const BG_TYPES = ['weather', 'planets', 'oslo', 'custom', 'none', 'cur'];
 export const TAB_IDS = ['hjem', 'finans', 'mat', 'sporing', 'domener', 'sok', 'mer', 'vaer', 'nyheter', 'familie', 'avganger', 'aksjer', 'boliger', 'abonnementer', 'media', 'huske'];
 export const TAB_BAR_DEFAULT = { items: [{ id: 'hjem', label: 'Hjem', icon: 'house' }, { id: 'finans', label: 'Finans', icon: 'wallet' }, { id: 'mat', label: 'Mat', icon: 'fork.knife' }, { id: 'domener', label: 'Domener', icon: 'globe' }, { id: 'sok', label: 'Søk', icon: 'magnifyingglass' }, { id: 'mer', label: 'Mer', icon: 'ellipsis' }] };

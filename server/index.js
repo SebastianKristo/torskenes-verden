@@ -21,6 +21,7 @@ import uiApi from './ui.js';
 import backgroundApi, { hasBackgroundTest, testBackgrounds } from './background.js';
 import mobileApi, { meOut, removeAvatar, shortcutsFor, layoutOf, authOrToken, designOf } from './mobile.js';
 import rssApi, { startRssWorker } from './rss.js';
+import iconsApi from './icons.js';
 import familyApi from './family.js';
 import tilesApi, { hasMapTest, testMap } from './tiles.js';
 import tasksApi from './tasks.js';
@@ -519,6 +520,7 @@ app.route('/api/tracking', trackingApi); // Sporing (prompt 11): pakker fra Finn
 app.route('/api/matplan', matApi); // samme Matplan-API som /mat/api (prompt 10: Matplan hører til Homelab)
 // Profil, oppsett, søk, mobilforside og widgets: sesjon ELLER FinansHub-token (må stå før /api med requireAuth).
 app.route('/api/rss', rssApi); // Nyhetsleser (prompt 13): RSS/Atom med ✦ AI-sammendrag og -kategorisering
+app.route('/api/icons', iconsApi); // Ikoner (prompt 23): Iconify-søk, SVG cachet på disk og ✦ AI-forslag
 // Kartfliser (prompt 20): /tiles/:style/:z/:x/:y.png og /api/config/map, sesjon eller app-token (header eller ?token=).
 app.route('/', tilesApi);
 app.route('/api/family', familyApi); // Familie og kart (prompt 16): posisjon, soner, varsler og helse

@@ -7,6 +7,7 @@ import { db, kv } from './db.js';
 import { config } from './config.js';
 import { aiJson } from './homeos-common.js';
 import { authOrToken } from './mobile.js';
+import { ICON_DEFAULTS, validId as validIconId } from './icons.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const REFRESH_MS = 10 * 60_000;
@@ -57,7 +58,34 @@ const DEFAULT_FEEDS = [
 
 /* ---------------- Innstillinger ---------------- */
 
-const settingsOf = (user) => ({ aiSummary: true, aiCategorize: true, ...kv.get(user, 'hl_rss', {}) });
+const settingsOf = (user) => ({ aiSummary: true, aiCategorize: true, ic: {}, icSrc: {}, icOn: true, ...kv.get(user, 'hl_rss', {}) });
+
+// Prompt 23: ikoner på fanene. ic = {fane: 'prefix:name' | ''} ('' = ingen ikon), icSrc = {fane: 'std'|'ai'|'pick'}, icOn = vis ikoner.
+// Nøkkelen er kategori-id-en (siste, norge …) eller fanenavnet; maks 40 faner. Mangler fanen i ic, gjelder standardikonet.
+const IC_SRC = ['std', 'ai', 'pick'];
+const tabKey = (k) => typeof k === 'string' && k.trim().length >= 1 && k.length <= 40;
+const plainObj = (v) => v && typeof v === 'object' && !Array.isArray(v);
+function cleanIcons(b) {
+  const out = {};
+  if (b.ic !== undefined) {
+    if (!plainObj(b.ic) || Object.keys(b.ic).length > 40) return { error: 'Ugyldige ikoner' };
+    for (const [k, v] of Object.entries(b.ic)) if (!tabKey(k) || typeof v !== 'string' || (v !== '' && !validIconId(v))) return { error: `Ugyldig ikon for ${k}` };
+    out.ic = { ...b.ic };
+  }
+  if (b.icSrc !== undefined) {
+    if (!plainObj(b.icSrc) || Object.keys(b.icSrc).length > 40) return { error: 'Ugyldig ikonkilde' };
+    const src = {};
+    for (const [k, v] of Object.entries(b.icSrc)) {
+      const x = v === 'user' ? 'pick' : v; // designet skriver «user» for eget valg
+      if (!tabKey(k) || !IC_SRC.includes(x)) return { error: `Ugyldig ikonkilde for ${k}` };
+      src[k] = x;
+    }
+    out.icSrc = src;
+  }
+  if (b.icOn !== undefined) { if (typeof b.icOn !== 'boolean') return { error: 'icOn må være true eller false' }; out.icOn = b.icOn; }
+  return { out };
+}
+const settingsOut = (s) => ({ aiSummary: !!s.aiSummary, aiCategorize: !!s.aiCategorize, ic: s.ic ?? {}, icSrc: s.icSrc ?? {}, icOn: s.icOn !== false });
 
 function ensureFeeds(user) {
   if (kv.get(user, 'rss_seeded', false)) return;
@@ -284,7 +312,7 @@ api.get('/', async (c) => {
   if (cat !== 'siste' && !CAT_IDS.includes(cat)) return c.json({ error: 'Ukjent kategori' }, 400);
   return c.json({
     items: latest(user, { cat, feed: c.req.query('feed') || null, limit }),
-    feeds: feedsOf(user), settings: { aiSummary: !!s.aiSummary, aiCategorize: !!s.aiCategorize },
+    feeds: feedsOf(user), settings: settingsOut(s), iconDefaults: ICON_DEFAULTS,
     digest: s.aiSummary ? (({ text, at }) => (text ? { text, at } : null))(kv.get(user, 'rss_digest', {}) ?? {}) : null,
     categories: CATEGORIES,
     updatedAt: (() => { const t = db.prepare('SELECT MAX(last_fetch) AS t FROM rss_feed WHERE user=?').get(user)?.t; return t ? new Date(t).toISOString() : null; })(),
@@ -341,10 +369,14 @@ api.delete('/feeds/:id', (c) => {
 api.put('/settings', async (c) => {
   const user = c.get('user'), b = await json(c), next = settingsOf(user);
   for (const k of ['aiSummary', 'aiCategorize']) if (typeof b[k] === 'boolean') next[k] = b[k];
-  kv.set(user, 'hl_rss', { aiSummary: next.aiSummary, aiCategorize: next.aiCategorize });
-  if (next.aiCategorize) aiCategorize(user).catch(() => {});
-  if (next.aiSummary) makeDigest(user).catch(() => {});
-  return c.json({ aiSummary: next.aiSummary, aiCategorize: next.aiCategorize });
+  const ic = cleanIcons(b);
+  if (ic.error) return c.json({ error: ic.error }, 400);
+  Object.assign(next, ic.out);
+  // Hele hl_rss beholdes (også felt fra eldre/nyere klienter), bare de kjente feltene overskrives.
+  kv.set(user, 'hl_rss', { ...kv.get(user, 'hl_rss', {}), ...settingsOut(next) });
+  if (typeof b.aiCategorize === 'boolean' && next.aiCategorize) aiCategorize(user).catch(() => {});
+  if (typeof b.aiSummary === 'boolean' && next.aiSummary) makeDigest(user).catch(() => {});
+  return c.json(settingsOut(next));
 });
 
 api.post('/refresh', async (c) => {
