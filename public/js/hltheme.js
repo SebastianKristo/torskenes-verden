@@ -167,6 +167,7 @@ const HEAD = {
   sporing: () => ['Pakker og sendinger', 'Sporing'],
   familie: () => ['Posisjon, soner og helse', 'Familie'],
   huskeliste: () => ['Delt med familien', 'Huskeliste'],
+  bursdager: () => ['Familie og venner', 'Bursdager'],
   domener: () => ['Trafikk, oppetid og sikkerhet', 'Domener'],
   nettverk: () => ['Nettverk og lenker', 'Nettverk'],
   mer: () => ['Alle sider', 'Mer'],

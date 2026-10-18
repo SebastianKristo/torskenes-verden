@@ -32,7 +32,7 @@ export function renderMore() {
   return `<div class="page-title">Snar<b>veier</b></div>
     <div class="grid" data-dnd="m_more">${card('m_links')}${card('n_lab')}</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      ${['rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'domener'].filter((k) => tabAllowed(k)).map((k) => `<a class="btn-lg" href="#/${k}" style="justify-content:center;padding:14px">${esc(tabLabel(k))} ↗</a>`).join('')}
+      ${['rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'bursdager', 'domener'].filter((k) => tabAllowed(k)).map((k) => `<a class="btn-lg" href="#/${k}" style="justify-content:center;padding:14px">${esc(tabLabel(k))} ↗</a>`).join('')}
       <a class="btn-lg" href="/cv" target="_blank" style="justify-content:center;padding:14px">CV ↗</a>
       <button class="btn-lg" data-act="settings" style="justify-content:center;padding:14px">Innstillinger</button>
     </div>`;

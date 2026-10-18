@@ -234,3 +234,15 @@ html[data-hl="2c"] .fam{--f-card:#fff;--f-bg:#f3efe6}
 .mono{font-family:'IBM Plex Mono',ui-monospace,monospace}
 @media (max-width:900px){.fam-mapcol .fam-mapcard{min-height:420px;flex:none}}
 @media (max-width:480px){.fam-tb{padding:0 14px;font-size:13.5px}}
+
+/* Prompt 24: én person = én oppføring. Enhetene i personkortet, med valg av kilde for deg selv. */
+.fam-devs{display:flex;flex-direction:column;border-radius:14px;background:var(--f-chip);padding:4px 12px 6px}
+.fam-devh{font:600 10.5px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;color:var(--f-mute);padding:8px 0 4px}
+.fam-dev{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:6px 0;border:0;border-top:1px solid var(--f-line);background:transparent;color:var(--f-ink);text-align:left;font:inherit}
+.fam-devh+.fam-dev{border-top:0}
+button.fam-dev{cursor:pointer}
+.fam-dev b{font-size:14px;font-weight:600}
+.fam-dev .fam-sub{font-size:12px}
+.fam-dev-ic{flex:none;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--f-line);font-size:14px}
+.fam-dev-r{flex:none;width:20px;height:20px;border-radius:10px;border:2px solid var(--f-line)}
+.fam-dev-r.on{border:6px solid var(--f-ink)}

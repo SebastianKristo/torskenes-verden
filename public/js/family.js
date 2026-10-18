@@ -157,6 +157,8 @@ function drawMap() {
 async function load() {
   try {
     S.d = await api('/family');
+    // Prompt 24: én person = én oppføring, selv om personen er logget inn på flere enheter (eldre server kan gi duplikater).
+    if (Array.isArray(S.d?.members)) { const seen = new Set(); S.d.members = S.d.members.filter((m) => !seen.has(m.userId) && seen.add(m.userId)); }
     S.err = null;
     if (!S.sel) S.sel = (S.d.members.find((m) => sharesWithMe(m) && m.last) ?? me())?.userId ?? null;
   } catch (e) { S.err = e.message; }
@@ -186,14 +188,34 @@ function select(id) {
 
 /* ---------------- Visning ---------------- */
 
+// Enhetene til en person (prompt 24): «iPhone 15 Pro · 82 % · nå». Du velger selv hvilken enhet som er kilden («Automatisk» som standard).
+const DEV_SVG = (d) => `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+const devIc = (d) => { const k = `${d.platform ?? ''} ${d.name ?? ''}`; return DEV_SVG(/watch|klokke/i.test(k) ? 'M8 6h8v12H8zM9 6l1-4h4l1 4M9 18l1 4h4l1-4' : /ipad|tablet|nettbrett/i.test(k) ? 'M5 3h14v18H5zM11 18h2' : 'M7 2h10v20H7zM11 18h2'); };
+const devCount = (m) => m.deviceCount ?? (Array.isArray(m.devices) ? m.devices.length : 0);
+function devicesCard(m) {
+  const list = Array.isArray(m.devices) ? m.devices : [];
+  if (list.length < 2 && !m.self) return '';
+  if (!list.length) return '';
+  const manual = m.sourceManual ?? m.sourceMode === 'manual' ?? false;
+  const line = (d) => [d.battery != null ? `${Math.round(d.battery)} %` : null, d.lastSeen ? ago(d.lastSeen) : null].filter(Boolean).join(' · ');
+  const isSrc = (d) => d.isSource || d.id === (m.sourceDevice?.id ?? m.sourceDevice);
+  const rows = list.map((d) => {
+    const on = manual && isSrc(d), inner = `<span class="fam-dev-ic" aria-hidden="true">${devIc(d)}</span><span class="fam-pmain"><b>${esc(d.name || 'Enhet')}</b><span class="fam-sub">${esc(line(d))}${isSrc(d) ? ' · brukes nå' : ''}</span></span>${m.self ? `<span class="fam-dev-r${on ? ' on' : ''}" aria-hidden="true"></span>` : ''}`;
+    return m.self ? `<button type="button" class="fam-dev" data-fam-src="${esc(d.id)}" aria-pressed="${on}">${inner}</button>` : `<div class="fam-dev">${inner}</div>`;
+  }).join('');
+  const auto = m.self ? `<button type="button" class="fam-dev" data-fam-src="" aria-pressed="${!manual}"><span class="fam-dev-ic" aria-hidden="true">${DEV_SVG('M12 3v4M12 17v4M3 12h4M17 12h4M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z')}</span><span class="fam-pmain"><b>Automatisk</b><span class="fam-sub">Nyeste og mest nøyaktige posisjon</span></span><span class="fam-dev-r${manual ? '' : ' on'}" aria-hidden="true"></span></button>` : '';
+  return `<div class="fam-devs"><span class="fam-devh">ENHETER · ${list.length}</span>${auto}${rows}</div>`;
+}
+
 function memberRow(m) {
   const l = m.last, sp = kmh(l?.speed);
   const status = m.sharing !== 'on' ? `<span class="fam-tag warn">${SHARE[m.sharing]}</span>` : m.precision === 'approx' ? '<span class="fam-tag">Omtrentlig</span>' : '';
   const where = l ? (l.place ? `Hos ${esc(l.place)}` : l.approx ? 'Omtrentlig posisjon' : `${l.lat.toFixed(4)}, ${l.lon.toFixed(4)}`) : m.sharing === 'on' ? 'Ingen posisjon ennå' : m.sharing === 'paused' ? 'Deling er pauset' : 'Deler ikke posisjon';
+  const nDev = devCount(m);
   const bat = l?.battery != null ? `<span class="fam-pbat"><b class="${l.battery < 20 && !l.charging ? 'low' : ''}">${Math.round(l.battery)} %</b><span>${esc(ago(l.ts))}</span></span>` : '';
   return `<button type="button" class="fam-person${m.userId === S.sel ? ' on' : ''}" data-fam-sel="${esc(m.userId)}">
     ${avatar(m, 'lg', true)}
-    <span class="fam-pmain"><span class="fam-pname"><b>${esc(m.name)}${m.self ? ' <i>(deg)</i>' : ''}</b>${status}</span><span class="fam-sub">${m.username ? `@${esc(m.username)} · ` : ''}${where}</span>
+    <span class="fam-pmain"><span class="fam-pname"><b>${esc(m.name)}${m.self ? ' <i>(deg)</i>' : ''}</b>${status}</span><span class="fam-sub">${m.username ? `@${esc(m.username)} · ` : ''}${where}${nDev > 1 ? ` · ${nDev} enheter` : ''}</span>
       ${l ? `<span class="fam-sens">
         <span title="Sist sett">◷ ${ago(l.ts)}</span>
         ${l.activity ? `<span>${ACT[l.activity] ?? esc(l.activity)}</span>` : ''}
@@ -237,6 +259,7 @@ function personCard() {
       ${cell('Koordinater', l.approx ? 'Omtrentlig' : `${l.lat.toFixed(4)}, ${l.lon.toFixed(4)}`)}
       ${zone ? cell('Sone', esc(zone.name)) : ''}
     </div>
+    ${devicesCard(m)}
     <div class="fam-pbtns"><a class="fam-btn" href="${esc(nav)}" target="_blank" rel="noopener">Veibeskrivelse</a>${m.self ? '' : `<button type="button" class="fam-btn" data-fam-act="ping">Spill av lyd</button>`}</div>
   </section>`;
 }
@@ -470,6 +493,11 @@ function bind(h) {
     if (!t) return;
     if (t.dataset.famTab) { S.tab = t.dataset.famTab; if (S.tab !== 'soner') S.picking = false; return paint(); }
     if (t.dataset.famSel) return select(t.dataset.famSel);
+    if (t.dataset.famSrc !== undefined) {
+      try { await api('/family/me/source', { method: 'PUT', json: { deviceId: t.dataset.famSrc || null } }); toast(t.dataset.famSrc ? 'Kilden er valgt' : 'Automatisk valg av enhet'); }
+      catch (er) { return toast(er.status === 404 ? 'Serveren støtter ikke valg av enhet ennå' : er.message); }
+      return load();
+    }
     if (t.dataset.famPref) return savePref({ [t.dataset.famPref]: t.dataset.v });
     if (t.dataset.famHealth) { const cur = S.d.me.shareHealth ?? {}; return savePref({ shareHealth: { [t.dataset.famHealth]: !cur[t.dataset.famHealth] } }); }
     if (t.dataset.famCol) { S.zoneDraft.color = t.dataset.famCol; return paint(); }

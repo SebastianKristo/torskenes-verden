@@ -2,7 +2,7 @@
 // både i Homelab v2 og i «Vindu og papir» (2c): import('/assets/js/news.js').then((m) => m.openNews()).
 // Kilder og ✦ AI-valg lagres på serveren (/api/rss), så de er de samme i Papir-appen og PWA-en.
 import { api, esc, backdropClick } from './util.js';
-import { ICON_LIBS, iconHtml, searchIcons, suggestIcon, keywordFor } from './icons.js';
+import { ICON_LIBS, iconHtml, searchIcons, suggestIcon, keywordFor, preloadIcons } from './icons.js';
 
 const CSS_ID = 'news-css';
 const ensureCss = () => {
@@ -19,6 +19,12 @@ const ensureCss = () => {
 const CAT_NAME = { auto: 'Auto', siste: 'Siste', norge: 'Norge', verden: 'Verden', okonomi: 'Økonomi', sport: 'Sport', teknologi: 'Teknologi', kultur: 'Kultur' };
 // Standardikonene på fanene (Nyhetsleser.dc.html). Serveren sender de samme som iconDefaults.
 const IC_DEF = { siste: 'lucide:zap', norge: 'lucide:mountain-snow', verden: 'lucide:globe', okonomi: 'lucide:trending-up', sport: 'lucide:trophy', teknologi: 'lucide:cpu', kultur: 'lucide:drama' };
+// Prompt 24: faneikonene forhåndslastes (standard, lagrede og serverens), så de vises med en gang leseren åpnes.
+const icIds = (d) => { const s = d?.settings ?? {}, loc = 'icOn' in s ? null : readLocal(); return [...Object.values(d?.iconDefaults ?? IC_DEF), ...Object.values(('icOn' in s ? s.ic : loc?.ic) ?? {})]; };
+export async function preloadNewsIcons() {
+  preloadIcons(icIds(null));
+  try { return await preloadIcons(icIds(await api('/rss?limit=1'))); } catch { return []; }
+}
 const IC_LOCAL = 'hl_rss_ic'; // bare reserve når serveren ikke lagrer ikonene ennå
 const readLocal = () => { try { return JSON.parse(localStorage.getItem(IC_LOCAL) || 'null'); } catch { return null; } };
 const writeLocal = (v) => { try { localStorage.setItem(IC_LOCAL, JSON.stringify(v)); } catch { /* privat modus */ } };
@@ -74,7 +80,7 @@ export function openNews(opts = {}) {
     catch (e) { error = e.message || 'Kunne ikke hente nyheter'; }
     if (n !== seq || !el.isConnected) return;
     st.error = error;
-    if (data) st.data = data;
+    if (data) { st.data = data; preloadIcons(icIds(data)); }
     render();
   }
 

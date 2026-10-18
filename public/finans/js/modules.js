@@ -109,6 +109,54 @@ const inReview = (e) => e.pending || e.status === 'review' || e.review === true;
 const avColor = (n) => BOL_COLORS[[...String(n ?? '')].reduce((a, ch) => a + ch.charCodeAt(0), 0) % BOL_COLORS.length];
 const ini2 = (n) => esc(String(n ?? '?').trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '?');
 const topCats = (cur) => (cur.catTree ?? []).filter((o) => !o.sub);
+// Prompt 24: bakgrunn per bolig: 'color' | 'preset:stromstad' | 'upload:<id>'. Boliger med «Strømstad» i navn eller adresse
+// får Strømstad-bildet når bakgrunn ikke er satt. Serveren sender backgroundUrl; ellers bygges adressen her.
+const STROMSTAD = '/assets/boliger/stromstad.webp';
+const bgKey = (f) => f?.background || metaAll()[f?.id]?.background || (/str[øo]mstad/i.test(`${f?.name ?? ''} ${f?.address ?? ''}`) ? 'preset:stromstad' : 'color');
+const bgUrlOf = (f, key = bgKey(f)) => (key === 'preset:stromstad' ? STROMSTAD : key.startsWith('upload:') ? (f?.background === key && f?.backgroundUrl) || `/finans/api/folders/${f.id}/bg?v=${encodeURIComponent(key.slice(7))}` : key.startsWith('data:') || key.startsWith('blob:') ? key : '');
+// Enkle anførselstegn: verdien brukes inne i style="…".
+const cssU = (url) => `url('${String(url).replace(/["'()\\\s]/g, encodeURIComponent)}')`;
+const heroBg = (url, c) => (url ? `linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.15) 40%,rgba(0,0,0,.55)),${cssU(url)} center / cover no-repeat` : '');
+const ED_COLORS = ['#2f6b45', '#2b5d8a', '#b23a2a', '#a8661a', '#7a3b6b', '#2e6f75', '#5c5850'];
+// «Rediger bolig» (Boliger.dc.html): forhåndsvisning, navn, adresse, budsjett, farge, bakgrunn, Lagre og Slett bolig (to trykk).
+function editHomeSheet() {
+  const E = u.bolEd;
+  if (!E) return '';
+  const f = (S.folders ?? []).find((x) => x.id === E.id) ?? {}, url = E.preview || bgUrlOf({ ...f, background: E.bg }, E.bg);
+  const prev = url ? `linear-gradient(180deg,rgba(0,0,0,.1),rgba(0,0,0,.5)),${cssU(url)} center / cover` : `linear-gradient(150deg,${E.color},color-mix(in oklab,${E.color} 70%,#000))`;
+  const own = E.bg.startsWith('upload:') || E.preview ? [[E.bg, 'Eget bilde', E.preview || bgUrlOf({ ...f, background: E.bg }, E.bg)]] : f.background?.startsWith('upload:') ? [[f.background, 'Eget bilde', bgUrlOf(f, f.background)]] : [];
+  const opts = [['color', 'Farge', ''], ['preset:stromstad', 'Strømstad', STROMSTAD], ...own];
+  const last = (S.folders ?? []).length <= 1;
+  return `<div class="bol2-modal" data-bol2-back><div class="bol2-sheet bol2-ed" role="dialog" aria-modal="true" aria-label="Rediger bolig">
+    <div class="bol2-sheet-h"><div><div class="bol2-kick">FINANS · BOLIGER</div><h3>Rediger bolig</h3></div><button type="button" class="x-btn" data-bol2-act="close" aria-label="Lukk">×</button></div>
+    <div class="bol2-ed-prev" style="background:${prev}" data-bol2-edprev>${esc(E.name || 'Bolig')}</div>
+    <label class="bol2-f">Navn<input class="inp" data-bol2-ed="name" value="${esc(E.name)}" maxlength="60"></label>
+    <label class="bol2-f">Adresse<input class="inp" data-bol2-ed="address" value="${esc(E.address)}" maxlength="120"></label>
+    <label class="bol2-f">Budsjett per måned (kr)<input class="inp mono" data-bol2-ed="budget" inputmode="numeric" value="${esc(E.budget)}" placeholder="Ikke satt"></label>
+    <div class="bol2-f">Farge<div class="bol2-sw">${ED_COLORS.map((c) => `<button type="button" style="background:${c}" class="${c === E.color ? 'on' : ''}" data-bol2-edc="${c}" aria-label="Farge ${c}"></button>`).join('')}<label class="bol2-swc" title="Egen farge"><input type="color" data-bol2-ed="color" value="${esc(/^#[0-9a-f]{6}$/i.test(E.color) ? E.color : '#2f6b45')}" aria-label="Egen farge"></label></div></div>
+    <div class="bol2-f">Bakgrunn<div class="bol2-bgs">${opts.map(([k, n, img]) => `<button type="button" class="bol2-bgo${E.bg === k ? ' on' : ''}" data-bol2-edbg="${esc(k)}"><span style="background:${img ? `${cssU(img)} center / cover` : E.color}"></span><b>${n}</b></button>`).join('')}
+      <label class="bol2-bgo up"><span>+</span><b>${E.busy ? 'Laster opp …' : 'Last opp'}</b><input type="file" accept="image/*" data-bol2-edup hidden></label></div></div>
+    <div class="bol2-sheet-b col"><button type="button" class="btn pri" data-bol2-act="ed-save"${E.busy ? ' disabled' : ''}>Lagre</button>
+      <button type="button" class="btn bol2-del" data-bol2-act="ed-del"${last ? ' disabled' : ''}>${last ? 'Kan ikke slette siste bolig' : u.bolEdDel ? `Trykk igjen for å slette ${esc(E.name)}` : 'Slett bolig'}</button></div>
+  </div></div>`;
+}
+function openEdit(id) {
+  const f = (S.folders ?? []).find((x) => x.id === id);
+  if (!f) return;
+  const det = S.folder?.id === id ? S.folder : f, m = bolMeta(det);
+  u.bolEd = { id, name: det.name ?? '', address: det.address ?? '', budget: m.budget ?? '', color: m.color, bg: bgKey(det), preview: null, file: null };
+  u.bolEdDel = false;
+  render();
+}
+/** Skalerer bildet til maks 1200 px bredde og gjør det om til JPEG. */
+async function scaleBg(file, W = 1200) {
+  let src;
+  try { src = await createImageBitmap(file); } catch { src = await new Promise((ok, bad) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => bad(new Error('Kunne ikke lese bildet')); i.src = URL.createObjectURL(file); }); }
+  const k = Math.min(1, W / src.width), c = document.createElement('canvas');
+  c.width = Math.round(src.width * k); c.height = Math.round(src.height * k);
+  c.getContext('2d').drawImage(src, 0, 0, c.width, c.height);
+  return new Promise((ok) => c.toBlob(ok, 'image/jpeg', 0.85));
+}
 
 function bolTile(cur, e, sz = 44) {
   if (e.receiptId) return `<span class="bol2-tile" style="width:${sz}px;height:${sz}px"><img src="/finans/api/folders/${cur.id}/receipts/${e.receiptId}/thumb" alt="" loading="lazy"></span>`;
@@ -191,7 +239,7 @@ function dirPage() {
   const pills = list.map((f) => {
     const on = cur?.id === f.id, m = bolMeta(f);
     const v = on && cur.months?.length ? `${kr0(cur.months[cur.months.length - 1].total)} i ${monName.slice(0, 3)}` : `${kr0(f.yearTotal)} i år`;
-    return `<button class="bol2-pill${on ? ' on' : ''}" data-mdir="${f.id}" role="tab" aria-selected="${on}"><span class="bol2-ini" style="background:${m.color}">${esc(f.name.slice(0, 1).toUpperCase())}</span><span class="bol2-pill-t"><b>${esc(f.name)}</b><small>${v}</small></span></button>`;
+    return `<button class="bol2-pill${on ? ' on' : ''}" data-mdir="${f.id}" data-bol2-hold="${f.isOwner || f.role === 'owner' ? f.id : ''}" role="tab" aria-selected="${on}" title="${f.isOwner || f.role === 'owner' ? 'Hold inne for å redigere' : ''}"><span class="bol2-ini" style="background:${m.color}">${esc(f.name.slice(0, 1).toUpperCase())}</span><span class="bol2-pill-t"><b>${esc(f.name)}</b><small>${v}</small></span></button>`;
   }).join('');
   const sumAll = `${list.length} bolig${list.length === 1 ? '' : 'er'} · ${kr0(list.reduce((a, f) => a + (f.yearTotal ?? 0), 0))} i år`;
   const top = `<div class="bol2-top"><div class="bol2-pills" role="tablist" aria-label="Boliger">${pills}<button class="bol2-pill add" data-bol2-act="new-home">+ Ny bolig</button></div><span class="note bol2-sum">${sumAll}</span></div>`;
@@ -207,8 +255,10 @@ function dirPage() {
   const counts = { ut: cur.entries.length, pr: cur.projects.length, rg: (cur.upcoming ?? []).filter((x) => x.days <= 14).length || cur.bills.length, acc: cur.members.length };
   const tabs = `<nav class="bol2-tabs" role="tablist" aria-label="Boligmeny">${BOL_TABS2.map(([k, n]) => `<button role="tab" aria-selected="${tab === k}" class="${tab === k ? 'on' : ''}" data-mbol-tab="${k}">${n}${counts[k] ? ` · ${counts[k]}` : ''}${k === 'ut' && rvN ? '<i class="bol2-dot"></i>' : ''}</button>`).join('')}</nav>`;
 
-  const hero = `<div class="bol2-hero" style="--hc:${meta.color}">
-    <div class="bol2-hero-h"><span class="bol2-ini lg">${esc(cur.name.slice(0, 1).toUpperCase())}</span><div class="grow" style="min-width:0"><div class="bol2-hero-n">${esc(cur.name)}</div><div class="bol2-hero-a">${esc(cur.address || cur.type || 'Bolig')}</div></div><span class="bol2-hero-m">${monName[0].toUpperCase() + monName.slice(1)}</span></div>
+  // Prompt 24: bolig-kortet viser bakgrunnsbildet (Strømstad eller eget) med mørk gradient; ✎ åpner «Rediger bolig».
+  const lf = list.find((f) => f.id === cur.id) ?? {}, hb = heroBg(bgUrlOf({ ...lf, ...cur, background: cur.background ?? lf.background, backgroundUrl: cur.backgroundUrl ?? lf.backgroundUrl }));
+  const hero = `<div class="bol2-hero${hb ? ' img' : ''}" style="--hc:${meta.color}${hb ? `;background:${hb}` : ''}">
+    <div class="bol2-hero-h"><span class="bol2-ini lg">${esc(cur.name.slice(0, 1).toUpperCase())}</span><div class="grow" style="min-width:0"><div class="bol2-hero-n">${esc(cur.name)}</div><div class="bol2-hero-a">${esc(cur.address || cur.type || 'Bolig')}</div></div><span class="bol2-hero-m">${monName[0].toUpperCase() + monName.slice(1)}</span>${cur.isOwner ? '<button class="bol2-edit" data-bol2-act="edit-home" aria-label="Rediger bolig" title="Rediger bolig">✎</button>' : ''}</div>
     <div class="bol2-hero-l">Brukt denne måneden</div>
     <div class="bol2-hero-v"><span>${kr0(spent)}</span>${dl !== null && prev ? `<span class="bol2-hero-d">${dl >= 0 ? '▲' : '▼'} ${Math.abs(dl)} % fra ${MONTHS_LONG[(monthIdx + 11) % 12]}</span>` : ''}</div>
     ${bud ? `<div class="bol2-bar"><i style="width:${pct}%"></i></div><div class="bol2-hero-f"><span>av ${kr0(bud)} i budsjett</span><b>${spent > bud ? `${kr0(spent - bud)} over` : `${kr0(bud - spent)} igjen`}</b></div>`
@@ -257,7 +307,7 @@ function dirPage() {
       <div class="bol2-col">${histCard}${recentCard2}${cur.projects.length ? projMini(cur).replace('flex:3 1 340px;', '') : ''}${shareCard}</div></div>`;
   }
   const addSheet = u.bolAdd ? `<div class="bol2-modal" data-bol2-back><div class="bol2-sheet" role="dialog" aria-modal="true" aria-label="Ny utgift"><div class="bol2-sheet-h"><div><div class="bol2-kick">${esc(cur.name.toUpperCase())}</div><h3>Ny utgift</h3></div><button class="x-btn" data-bol2-act="close" aria-label="Lukk">×</button></div>${addBoxHtml(cur)}</div></div>` : '';
-  return `<div class="bol2" data-bol-drop>${top}${tabs}${body}${detailSheet(cur)}${addSheet}${newHomeSheet()}
+  return `<div class="bol2" data-bol-drop>${top}${tabs}${body}${detailSheet(cur)}${addSheet}${newHomeSheet()}${editHomeSheet()}
     ${cur.canEdit ? '<div class="bol-dropover" aria-hidden="true"><b>Slipp kvitteringene her</b><span>✦ AI leser butikk, dato og beløp, og velger kategori</span></div>' : ''}</div>`;
 }
 function addBoxHtml(cur) {
@@ -643,6 +693,7 @@ async function uploadTo(kind, files) {
 function pollBackup(n = 0) { setTimeout(async () => { if (n > 400) return; await loadBackup().catch(() => {}); if (S.ui.page === 'inn') render(); if (S.backup?.running) pollBackup(n + 1); }, 3000); }
 async function reload() { await Promise.all((MODULE_LOADERS[u.page] ?? []).map((f) => f())); render(); }
 
+let holdFired = false;
 export function bindModules(el) {
   bindFinn(el);
   bindSubs(el);
@@ -650,19 +701,40 @@ export function bindModules(el) {
   el.addEventListener('click', wrap(async (e) => {
     const t = e.target, d = (s) => t.closest(s);
     let x;
+    // Klikket etter «hold inne» på en bolig skal ikke også bytte bolig.
+    if (holdFired) { holdFired = false; if (d('[data-mdir]') || !d('.bol2-modal')) return; }
     // Boliger (nytt design): ark, godkjenning, kategorivalg og Tilgang.
-    if ((x = d('[data-bol2-back]')) && t === x) { u.bolSel = null; u.bolAdd = false; u.bolNew = false; u.bolDelE = null; return render(); }
+    if ((x = d('[data-bol2-back]')) && t === x) { u.bolSel = null; u.bolAdd = false; u.bolNew = false; u.bolDelE = null; u.bolEd = null; return render(); }
     if ((x = d('[data-bol2-open]'))) { u.bolSel = +x.dataset.bol2Open; u.bolDelE = null; return render(); }
     if ((x = d('[data-bol2-cat]'))) { const [eid, cid] = x.dataset.bol2Cat.split(':').map(Number); S.folder = await api(`/folders/${u.dir}/entries/${eid}`, { method: 'PATCH', json: { categoryId: cid } }); return render(); }
     if ((x = d('[data-bol2-ok]'))) { const eid = +x.dataset.bol2Ok; S.folder = await api(`/folders/${u.dir}/entries/${eid}`, { method: 'PATCH', json: { status: 'ok' } }); if (u.bolSel === eid) u.bolSel = null; toast(`Lagret i ${S.folder.name}`); return render(); }
     if ((x = d('[data-bol2-del]'))) { const eid = +x.dataset.bol2Del; if (u.bolDelE !== eid) { u.bolDelE = eid; return render(); } S.folder = await api(`/folders/${u.dir}/entries/${eid}`, { method: 'DELETE' }); u.bolSel = null; u.bolDelE = null; toast('Utgiften er slettet'); return reload(); }
     if ((x = d('[data-bol2-irole]'))) { u.bolInvRole = x.dataset.bol2Irole; return render(); }
+    if ((x = d('[data-bol2-edc]')) && u.bolEd) { u.bolEd.color = x.dataset.bol2Edc; return render(); }
+    if ((x = d('[data-bol2-edbg]')) && u.bolEd) { u.bolEd.bg = x.dataset.bol2Edbg; if (!u.bolEd.bg.startsWith('upload:')) u.bolEd.preview = null; return render(); }
     if ((x = d('[data-bol2-color]'))) { await setBolMeta(S.folder, { color: x.dataset.bol2Color }); return render(); }
     if ((x = d('[data-bol2-view]'))) { u.bolView = x.dataset.bol2View; return render(); }
     if ((x = d('[data-bol2-fcat]'))) { u.bolTab = 'ut'; u.dcat = x.dataset.bol2Fcat; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
     if ((x = d('[data-bol2-act]'))) {
       const a = x.dataset.bol2Act;
-      if (a === 'close') { u.bolSel = null; u.bolAdd = false; u.bolNew = false; u.bolDelE = null; return render(); }
+      if (a === 'close') { u.bolSel = null; u.bolAdd = false; u.bolNew = false; u.bolDelE = null; u.bolEd = null; return render(); }
+      if (a === 'edit-home') return openEdit(S.folder.id);
+      if (a === 'ed-save') {
+        const E = u.bolEd; if (!E || E.busy) return;
+        const patch = { name: E.name.trim() || undefined, address: E.address.trim(), budget: E.budget === '' ? null : +String(E.budget).replace(/\D/g, '') || null, color: E.color, background: E.bg };
+        E.busy = true; render();
+        try {
+          await setBolMeta({ id: E.id, isOwner: true }, patch);
+          const all = metaAll(); if (all[E.id]) { all[E.id].background = E.bg; try { localStorage.setItem(META_KEY, JSON.stringify(all)); } catch { /* privat modus */ } }
+        } finally { E.busy = false; }
+        u.bolEd = null; toast(`Lagret ${patch.name ?? 'bolig'}`); return reload();
+      }
+      if (a === 'ed-del') {
+        const E = u.bolEd; if (!E || (S.folders ?? []).length <= 1) return;
+        if (!u.bolEdDel) { u.bolEdDel = true; return render(); }
+        await api(`/folders/${E.id}`, { method: 'DELETE' }); u.bolEd = null; u.bolEdDel = false; if (u.dir === E.id) u.dir = null; u.bolTab = 'ov';
+        toast(`${E.name} er slettet. Transaksjonene i regnskapet beholdes.`); return reload();
+      }
       if (a === 'new-home') { u.bolNew = true; render(); el.querySelector('[data-mform=folder] input')?.focus(); return; }
       if (a === 'new-entry') { u.bolAdd = true; u.dirMode = 'new'; render(); el.querySelector('.bol2-sheet [data-mform=entry] input')?.focus(); return; }
       if (a === 'mail') { e.preventDefault(); u.setTab = 'imp'; location.hash = '#/inn'; return; }
@@ -801,7 +873,44 @@ export function bindModules(el) {
     }
   }));
   // Escape lukker arkene i Boliger.
-  if (!bindModules.esc) { bindModules.esc = true; document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && (u.bolSel || u.bolAdd || u.bolNew)) { u.bolSel = null; u.bolAdd = false; u.bolNew = false; render(); } }); }
+  if (!bindModules.esc) { bindModules.esc = true; document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && (u.bolSel || u.bolAdd || u.bolNew || u.bolEd)) { u.bolSel = null; u.bolAdd = false; u.bolNew = false; u.bolEd = null; render(); } }); }
+  // Prompt 24: «Rediger bolig»: felt oppdateres uten å tegne arket på nytt (markøren beholdes), bilde lastes opp og skaleres.
+  el.addEventListener('input', (e) => {
+    const k = e.target.dataset?.bol2Ed;
+    if (!k || !u.bolEd) return;
+    u.bolEd[k] = k === 'budget' ? e.target.value.replace(/[^0-9]/g, '') : e.target.value;
+    if (k === 'name') { const pv = el.querySelector('[data-bol2-edprev]'); if (pv) pv.textContent = e.target.value || 'Bolig'; }
+    if (k === 'color') render();
+  });
+  el.addEventListener('change', wrap(async (e) => {
+    const inp = e.target.closest?.('[data-bol2-edup]');
+    if (!inp || !u.bolEd) return;
+    const file = inp.files?.[0]; inp.value = '';
+    if (!file) return;
+    const E = u.bolEd, blob = await scaleBg(file);
+    E.preview = URL.createObjectURL(blob); E.busy = true; render();
+    try {
+      const fd = new FormData(); fd.append('file', blob, 'bg.jpg');
+      const r = await api(`/folders/${E.id}/bg`, { method: 'PUT', body: fd });
+      E.bg = r?.background || 'upload:' + (r?.id ?? Date.now());
+      const f = (S.folders ?? []).find((y) => y.id === E.id); if (f) { f.background = E.bg; f.backgroundUrl = r?.backgroundUrl ?? null; }
+      toast('Bildet er lastet opp');
+    } catch (er) { E.preview = null; toast(er.status === 404 ? 'Serveren støtter ikke egne bilder ennå' : er.message); }
+    finally { E.busy = false; render(); }
+  }));
+  // Hold inne 0,5 s på en bolig (eller høyreklikk) for å redigere den. Avbrytes hvis pekeren flyttes mer enn 10 px.
+  let holdT = null, holdXY = null;
+  const holdEnd = () => { clearTimeout(holdT); holdT = null; };
+  el.addEventListener('pointerdown', (e) => {
+    const p = e.target.closest?.('[data-bol2-hold]');
+    holdFired = false;
+    if (!p || !p.dataset.bol2Hold || e.button > 0) return;
+    holdXY = [e.clientX, e.clientY]; holdEnd();
+    holdT = setTimeout(() => { holdT = null; holdFired = true; openEdit(+p.dataset.bol2Hold); }, 500);
+  });
+  el.addEventListener('pointermove', (e) => { if (holdT && holdXY && Math.hypot(e.clientX - holdXY[0], e.clientY - holdXY[1]) > 10) holdEnd(); });
+  el.addEventListener('pointerup', holdEnd); el.addEventListener('pointercancel', holdEnd);
+  el.addEventListener('contextmenu', (e) => { const p = e.target.closest?.('[data-bol2-hold]'); if (!p || !p.dataset.bol2Hold) return; e.preventDefault(); holdEnd(); openEdit(+p.dataset.bol2Hold); });
   // Underkategori legges til med Enter.
   el.addEventListener('keydown', wrap(async (e) => {
     const t = e.target;

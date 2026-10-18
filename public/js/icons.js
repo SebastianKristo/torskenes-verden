@@ -1,5 +1,5 @@
 // Ikoner fra Iconify (prompt 23). Serveren er en mellomvei med disk-cache: /api/icons/search, /api/icons/:prefix/:name.svg
-// og /api/icons/suggest. Ikonene vises som CSS-maske i tekstfargen (currentColor); emoji- og flaggsett vises i egne farger.
+// og /api/icons/suggest. Ikonene vises som inline SVG i tekstfargen (currentColor); emoji- og flaggsett som <img> i egne farger.
 // Svarer serveren 404 (eldre versjon), går søk og SVG direkte mot api.iconify.design, og AI-forslaget bruker ordlisten under.
 import { api } from './util.js';
 
@@ -25,14 +25,41 @@ export const iconUrl = (id) => {
   return direct ? `https://api.iconify.design/${p}/${n}.svg` : `/api/icons/${encodeURIComponent(p)}/${encodeURIComponent(n)}.svg`;
 };
 
-/** Et ikon som <span>: maske i tekstfargen, eller bildet selv for emoji- og flaggsett. */
+// Prompt 24: ikke CSS-maske (nettleseren tegnet dem ikke før fanen ble tegnet på nytt). Ensfargede ikoner tegnes som
+// inline SVG i currentColor (følger tekstfargen), emoji- og flaggsett som <img>. SVG-ene hentes én gang og caches i minnet;
+// preloadIcons() henter dem på forhånd, så de vises med en gang.
+const svgCache = new Map(), pending = new Map();
+const cleanSvg = (svg) => String(svg).trim().replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<foreignObject[\s\S]*?<\/foreignObject>/gi, '')
+  .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*')/gi, '').replace(/(href\s*=\s*["'])\s*javascript:[^"']*/gi, '$1#');
+const sized = (svg, size) => svg.replace(/^<svg\b([^>]*)>/i, (m, a) => `<svg${a.replace(/\s(width|height)\s*=\s*("[^"]*"|'[^']*')/gi, '')} width="${size}" height="${size}" aria-hidden="true" focusable="false">`);
+
+/** Henter SVG-en for et ensfarget ikon (caches). Gir teksten, eller '' hvis den ikke finnes. */
+export function loadIconSvg(id) {
+  if (!valid(id) || isColorIcon(id)) return Promise.resolve('');
+  if (svgCache.has(id)) return Promise.resolve(svgCache.get(id));
+  if (pending.has(id)) return pending.get(id);
+  const pr = useDirect().then(() => fetch(iconUrl(id))).then((r) => (r.ok ? r.text() : '')).catch(() => '')
+    .then((t) => { const svg = /^\s*<svg[\s>]/i.test(t) ? cleanSvg(t) : ''; svgCache.set(id, svg); pending.delete(id); fill(id); return svg; });
+  pending.set(id, pr);
+  return pr;
+}
+/** Forhåndslaster ikonene (f.eks. alle faneikonene ved oppstart). */
+export const preloadIcons = (ids) => Promise.all([...new Set(ids ?? [])].filter(valid).map((id) => (isColorIcon(id) ? new Promise((ok) => { const i = new Image(); i.onload = i.onerror = ok; i.src = iconUrl(id); }) : loadIconSvg(id))));
+// Plassholdere som venter på SVG-en fylles når den kommer.
+function fill(id) {
+  const svg = svgCache.get(id);
+  document.querySelectorAll(`span[data-ico="${CSS.escape(id)}"]`).forEach((el) => { if (svg) el.innerHTML = sized(svg, el.dataset.sz || 16); el.removeAttribute('data-ico'); });
+}
+
+/** Et ikon: inline SVG i tekstfargen, eller <img> for emoji- og flaggsett. */
 export function iconHtml(id, size = 16, cls = 'ico') {
   if (!valid(id)) return '';
-  const u = iconUrl(id).replace(/["'()\s]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')}`);
-  const style = isColorIcon(id)
-    ? `background:url('${u}') center / contain no-repeat`
-    : `background:currentColor;-webkit-mask:url('${u}') center / contain no-repeat;mask:url('${u}') center / contain no-repeat`;
-  return `<span class="${cls}" aria-hidden="true" style="flex:none;display:inline-block;width:${size}px;height:${size}px;${style}"></span>`;
+  const box = `flex:none;display:inline-grid;place-items:center;width:${size}px;height:${size}px;line-height:0`;
+  if (isColorIcon(id)) return `<img class="${cls}" src="${iconUrl(id).replace(/"/g, '%22')}" alt="" aria-hidden="true" width="${size}" height="${size}" decoding="async" style="${box};object-fit:contain">`;
+  const svg = svgCache.get(id);
+  if (svg) return `<span class="${cls}" aria-hidden="true" style="${box}">${sized(svg, size)}</span>`;
+  loadIconSvg(id);
+  return `<span class="${cls}" aria-hidden="true" data-ico="${id}" data-sz="${size}" style="${box}"></span>`;
 }
 
 /** Søk i Iconify. Gir { icons: ['prefix:name'], total }. */

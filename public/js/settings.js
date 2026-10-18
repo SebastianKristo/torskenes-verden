@@ -13,6 +13,7 @@ import { loginView, loadLogin, loginClick, loginSubmit, loginChange, loginData, 
 import { domainsPane, loadDomains, domainsClick, domainsChange, domainsSubmit, domainCount } from './settings-domains.js';
 import { loadNotify, notifyView, notifyClick, notifyChange, notifyInput } from './settings-notify.js';
 import { loadApp, appView, appClick, appInput, appKey } from './settings-app.js';
+import { loadInteg, integRows, integSub, integClick, integChange, integCount } from './settings-integ.js';
 import { themeCards, setHlTheme, hlTheme, THEMES, uploadCustomPhoto } from './hltheme.js';
 import { mountHa } from './tasks-ha.js';
 
@@ -75,7 +76,7 @@ const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app'
 // Hvilken fane en underside hører til, så «go('tfa')» virker uansett hvor den kalles fra.
 const SUB_TAB = { me: 'konto', tfa: 'konto', pw: 'konto', devices: 'konto', server: 'konto', add: 'users', bg: 'look', style: 'look', hist: 'look', cats: 'look',
   tabs: 'top', head: 'top', speed: 'top', dash: 'top', mob: 'top', sc: 'top', doms: 'dom', mail: 'int' };
-const subTab = (sub) => SUB_TAB[sub] ?? (sub?.startsWith('cfg:') ? 'int' : sub?.startsWith('user:') ? 'users' : null);
+const subTab = (sub) => SUB_TAB[sub] ?? (sub?.startsWith('cfg:') || sub?.startsWith('i24:') ? 'int' : sub?.startsWith('user:') ? 'users' : null);
 const tabOf = (k) => TABS.find(([id]) => id === k) ?? TABS[0];
 
 let tab = 'konto', sub = null, cfg = null, cfgErr = null, sqMsg = '', q = '', mail = null;
@@ -401,7 +402,7 @@ function mailVal() {
 }
 // Prompt 21: /api/config er serveroppsett. Vanlige brukere får bare tomme, låste grupper (restricted), så fanen er låst for dem.
 const cfgLocked = () => !isAdmin() || (Array.isArray(cfg) && cfg.length > 0 && cfg.every((g) => g.restricted));
-const warnCount = () => cfgLocked() ? 0 : (cfg ? cfg.filter((g) => valOf(g).startsWith('!')).length : 0) + (mailVal().startsWith('!') ? 1 : 0);
+const warnCount = () => cfgLocked() ? 0 : (cfg ? cfg.filter((g) => valOf(g).startsWith('!')).length : 0) + (mailVal().startsWith('!') ? 1 : 0) + integCount(cfg);
 
 function intView() {
   if (cfgLocked()) return { groups: [group('Integrasjoner', [row({ t: 'Låst', s: 'Integrasjonene er serveroppsett. Bare administratorer kan se og endre adresser og API-nøkler.', v: 'Bare admin' })])] };
@@ -421,10 +422,12 @@ function intView() {
       isAdmin() ? group('Tilkoblinger', [row({ t: run ? 'Tester …' : 'Test alle tilkoblinger', s: res.length ? `${ok} OK · ${bad} feilet` : 'Sjekker adresse, nøkkel og svar fra hver tjeneste.', btn: run ? 'Tester …' : 'Test alle', act: 'data-test-all', disabled: run })]) : null,
       ...cats.map((c) => group(c, [...byCat.get(c).map(intRow), c === 'Økonomi' ? mailRow : null], c === 'Smarthjem' ? NOTES['Home Assistant'] : '')),
       byCat.has('Økonomi') ? null : group('Økonomi', [mailRow]),
+      ((r) => (r.length ? group('Flere integrasjoner', r, 'Google Kalender, AI, bank, e-post, pakkesporing og mer. Hemmeligheter lagres kryptert på serveren og vises aldri igjen.') : null))(integRows(cfg, row)),
       group('', [], isAdmin() ? 'Tomme felt bruker verdien fra serverens miljøvariabler (.env). Hemmeligheter vises aldri igjen etter lagring.' : 'Bare administratorer kan endre integrasjonene.'),
     ].filter(Boolean) };
   }
   if (sub === 'mail') return { title: 'Proton Mail', sub: 'Integrasjoner · Kvitteringer fra e-post via Bridge', html: '<div data-mail-host></div>', mount: mountMail };
+  if (sub.startsWith('i24:')) { const v = integSub(sub.slice(4), note); if (v) return v; sub = null; return intView(); }
   const gname = sub.slice(4), g = cfg.find((x) => x.name === gname);
   if (!g) { sub = null; return intView(); }
   const m = metaOf(g), t = tests[g.name], msg = cfgMsg[g.name], ro = !isAdmin();
@@ -601,6 +604,7 @@ function enter() {
   const reload = () => { if (!modal().hidden) render(); };
   if ((tab === 'int' || q) && !cfg) loadCfg();
   if (tab === 'int' && !mail) loadMail();
+  if (tab === 'int' || q) loadInteg(reload);
   if (tab === 'konto' || tab === 'users' || q) loadLogin(reload);
   if (tab === 'dom' || q) loadDomains(reload);
   if (tab === 'varsel' || q) loadNotify(reload);
@@ -670,6 +674,7 @@ export function bindSettings() {
     if (await appClick(e)) return;
 
     /* Integrasjoner */
+    if (await integClick(e, render)) return;
     const tb = e.target.closest('[data-test]');
     if (tb) { e.preventDefault(); return runTest(tb.dataset.test); }
     if (e.target.closest('[data-test-all]')) { if (cfg) await Promise.all(cfg.map((x) => runTest(x.name))); return; }
@@ -788,7 +793,7 @@ export function bindSettings() {
       saveShortcuts(list); return;
     }
     // Enter i et integrasjonsfelt lagrer feltet (change-hendelsen gjør selve lagringen).
-    if (e.target.closest('[data-group]')) { e.preventDefault(); document.activeElement?.blur?.(); }
+    if (e.target.closest('[data-group],[data-i24]')) { e.preventDefault(); document.activeElement?.blur?.(); }
   });
 
   let qTimer = null;
@@ -829,6 +834,7 @@ export function bindSettings() {
     if (await notifyChange(e)) return;
     if (t.matches('[data-news-speed]')) { saveUi({ newsSpeed: +t.value }); return; }
     if (t.matches('[data-tab-label]')) { await saveLabels(t.dataset.tabLabel, t.value); return; }
+    if (integChange(e, render)) return;
     const form = t.closest('[data-group]');
     if (form && cfg && isAdmin()) {
       const g = cfg.find((x) => x.name === form.dataset.group), f = g?.fields.find((x) => x.key === t.name);

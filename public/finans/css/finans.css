@@ -942,3 +942,22 @@ html[data-theme=lys] .bol2-modal{background:rgba(28,27,25,.35)}
 /* Kontoer: brukskontoens kort følger temaets bankkort (card2) i de nye temaene, med lesbar tekst. */
 :root{--accf-check:linear-gradient(135deg,#2A2A31,#17171B);--accf-check-ink:#F2F2F4}
 html[data-v3]{--accf-check:var(--card2);--accf-check-ink:var(--card2-ink)}
+
+/* Prompt 24: bakgrunn per bolig og «Rediger bolig» (Boliger.dc.html). */
+.bol2-hero.img{background-color:#2b2b2b}
+.bol2-hero.img .bol2-hero-n,.bol2-hero.img .bol2-hero-v,.bol2-hero.img .bol2-hero-a{text-shadow:0 2px 10px rgba(0,0,0,.35)}
+.bol2-edit{flex:none;width:34px;height:34px;border-radius:17px;border:0;background:rgba(255,255,255,.2);color:#fff;cursor:pointer;font-size:15px;display:grid;place-items:center}
+.bol2-edit:hover{background:rgba(255,255,255,.3)}
+.bol2-pill{touch-action:manipulation;-webkit-touch-callout:none;user-select:none}
+.bol2-ed{max-height:calc(100dvh - 40px);overflow-y:auto}
+.bol2-ed-prev{height:120px;border-radius:20px;display:flex;align-items:flex-end;padding:14px;color:#fff;font:500 26px var(--font-d);text-shadow:0 2px 10px rgba(0,0,0,.4);flex:none}
+.bol2-swc{position:relative;width:34px;height:34px;border-radius:50%;background:conic-gradient(#f44,#fd0,#4c4,#0cf,#44f,#c4f,#f44);cursor:pointer}
+.bol2-swc input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;border:0;padding:0}
+.bol2-bgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.bol2-bgo{display:flex;flex-direction:column;gap:5px;padding:0;border:0;background:transparent;color:var(--text);cursor:pointer;font:inherit;text-align:left}
+.bol2-bgo>span{aspect-ratio:16/10;border-radius:12px;display:block;outline-offset:2px}
+.bol2-bgo.on>span{outline:2px solid var(--text)}
+.bol2-bgo.up>span{border:1.5px dashed var(--line);display:grid;place-items:center;font-size:20px;color:var(--muted)}
+.bol2-bgo b{font-size:12px;font-weight:600}
+.bol2-sheet-b.col{grid-template-columns:1fr}
+.bol2-sheet-b .btn:disabled{opacity:.55;cursor:default}

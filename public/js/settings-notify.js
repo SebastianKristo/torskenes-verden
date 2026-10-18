@@ -6,10 +6,10 @@ import { api, esc } from './util.js';
 
 export const SOUNDS = [['klokke', 'Klokke'], ['pling', 'Pling'], ['papir', 'Papir'], ['dobbel', 'Dobbel'], ['dyp', 'Dyp'], ['egen', 'Egen lyd'], ['stille', 'Stille']];
 const GROUPS = [['pakker', 'Pakker', 'Ny pakke, klar for henting, ute for levering og levert'], ['finans', 'Finans og hjem', 'Kvitteringer til gjennomgang, faste trekk og boliger'],
-  ['familie', 'Familie', 'Når noen kommer til eller forlater en sone'], ['reise', 'Reise og vær', 'Avvik på avganger og farevarsler'], ['haptikk', 'Haptikk', 'Vibrasjon sammen med varslene (mobil)']];
+  ['familie', 'Familie', 'Når noen kommer til eller forlater en sone'], ['reise', 'Reise og vær', 'Avvik på avganger og farevarsler'], ['birthdays', 'Bursdager', 'Påminnelse kl. 09:00 før bursdager'], ['haptikk', 'Haptikk', 'Vibrasjon sammen med varslene (mobil)']];
 const PKG = [['found', 'Ny pakke funnet', 'Fra Finn eller e-post'], ['pickup', 'Klar for henting', 'Med hentested og frist'], ['out', 'Ute for levering', 'Når budet er på vei'],
   ['delayed', 'Forsinket', 'Når ETA passeres eller transportøren melder avvik'], ['delivered', 'Levert', '']];
-const DEF = { on: true, quietFrom: '22:00', quietTo: '07:00', quietOn: true, sound: 'pling', volume: 70, groups: { pakker: true, finans: true, familie: true, reise: true, haptikk: true }, customSound: null };
+const DEF = { on: true, quietFrom: '22:00', quietTo: '07:00', quietOn: true, sound: 'pling', volume: 70, groups: { pakker: true, finans: true, familie: true, reise: true, birthdays: true, haptikk: true }, customSound: null };
 
 const S = { n: null, pkg: null, err: null, msg: '', busy: false };
 let rerender = () => {};

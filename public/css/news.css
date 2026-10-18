@@ -64,7 +64,7 @@ body.nw-open { overflow: hidden; }
 .nw-add button:disabled { opacity: .6; cursor: progress; }
 
 
-/* Ikoner på fanene og ikonvelger (prompt 23). Ikonene er masker i currentColor, så de følger tekstfargen på fanen. */
+/* Ikoner på fanene og ikonvelger (prompt 23/24). Ikonene er inline SVG i currentColor (ikke CSS-maske), så de følger tekstfargen på fanen og vises med en gang. */
 .nw-tabs button { display: flex; align-items: center; gap: 6px; }
 .nw-link { border: 0; background: transparent; color: var(--lab); cursor: pointer; font: 700 12.5px Manrope, system-ui, sans-serif; padding: 0; }
 .nw-link:disabled { opacity: .7; cursor: progress; }

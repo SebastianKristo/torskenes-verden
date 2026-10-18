@@ -16,8 +16,10 @@ const NAV_NEVER = ['imp'];
 const NAV_FIXED = ['ov', 'inn'];
 const PAGES = [...BASE_PAGES, ...MODULE_PAGES];
 const defaultName = (p) => PAGES.find(([x]) => x === p)?.[1] ?? p;
-// Egne navn fra Innstillinger → Sidemeny (finNav.labels i /api/me/layout, ellers FinansHubs prefs).
-const navLabels = () => S.layout?.finNav?.labels ?? S.boot?.navLabels ?? {};
+// Egne navn fra Innstillinger → Sidemeny (finSideNav.labels i /api/me/layout, ellers FinansHubs prefs).
+// Prompt 24: sidemenyobjektet heter finSideNav; finNav er nå fanelisten i mobilprofilene (en liste). Eldre servere: finNav som objekt.
+const sideCfg = () => S.layout?.finSideNav ?? (S.layout?.finNav && !Array.isArray(S.layout.finNav) ? S.layout.finNav : null);
+const navLabels = () => sideCfg()?.labels ?? S.boot?.navLabels ?? {};
 const pageName = (p) => navLabels()[p] || defaultName(p);
 const ACC_TYPES = { checking: 'Brukskonto', savings: 'Sparekonto', credit: 'Kredittkort', cash: 'Kontanter' };
 const KINDS = { expense: 'Utgift', income: 'Inntekt', transfer: 'Overføring' };
@@ -34,10 +36,10 @@ const accOpts = (sel, empty) => (empty ? opt('', empty, sel) : '') + accs().map(
 /* ===================== Skall ===================== */
 
 // Sidemenyen er personlig: rekkefølge og skjulte punkter redigeres i Innstillinger → Sidemeny og lagres i
-// /api/me/layout (finNav), med FinansHubs egne prefs som reserve. Oversikt og Innstillinger kan ikke skjules.
+// /api/me/layout (finSideNav), med FinansHubs egne prefs som reserve. Oversikt og Innstillinger kan ikke skjules.
 function navCfg() {
   const def = (S.boot.navDefault ?? NAV_DEFAULT).filter((p) => PAGES.some(([x]) => x === p) && !NAV_NEVER.includes(p));
-  const fin = S.layout?.finNav;
+  const fin = sideCfg();
   const saved = (fin?.order?.length ? fin.order : S.boot.nav) ?? def;
   // Fjernede sider faller bort; nye (AI-søk, Import) settes inn etter nærmeste side foran dem i standardrekkefølgen.
   const keep = [...new Set(saved.filter((p) => def.includes(p)))];
@@ -879,22 +881,22 @@ async function askAi(text, force = false) {
   catch (e) { u.ai = { q: qText, busy: false, answer: e.message, hits: [], suggestions: u.ai?.suggestions }; }
   render();
 }
-// Lagrer rekkefølge og skjulte punkter: i /api/me/layout (finNav) når det finnes, og alltid i FinansHubs prefs.
+// Lagrer rekkefølge og skjulte punkter: i /api/me/layout (finSideNav) når det finnes, og alltid i FinansHubs prefs.
 const saveNavCfg = busyWrap(async (order, hidden, labels = navLabels()) => {
   hidden = hidden.filter((p) => !NAV_FIXED.includes(p));
-  S.layout = S.layout ? { ...S.layout, finNav: { order, hidden, labels } } : S.layout;
+  S.layout = S.layout ? { ...S.layout, finSideNav: { order, hidden, labels } } : S.layout;
   S.boot.nav = order; S.boot.navHidden = hidden; S.boot.navLabels = labels; u.cfgOrder = null;
   render();
   const r = await api('/prefs', { method: 'PUT', json: { nav: order, hidden, labels } });
   S.boot.nav = r.nav; S.boot.navHidden = r.hidden; S.boot.navLabels = r.labels ?? labels;
   if (S.layoutOk) {
-    const finNav = { order: r.nav, hidden: r.hidden, labels: S.boot.navLabels };
-    const res = await fetch('/api/me/layout', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ finNav }) }).catch(() => null);
-    if (res?.ok) S.layout = { ...S.layout, finNav };
+    const finSideNav = { order: r.nav, hidden: r.hidden, labels: S.boot.navLabels };
+    const res = await fetch('/api/me/layout', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ finSideNav }) }).catch(() => null);
+    if (res?.ok) S.layout = { ...S.layout, finSideNav };
     // Eldre servere godtar ikke navn i layout: lagre uten, så rekkefølgen og synligheten fortsatt følger brukeren.
     else if (res?.status === 400) {
-      const res2 = await fetch('/api/me/layout', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ finNav: { order: r.nav, hidden: r.hidden } }) }).catch(() => null);
-      if (res2?.ok) S.layout = { ...S.layout, finNav: { order: r.nav, hidden: r.hidden } };
+      const res2 = await fetch('/api/me/layout', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ finSideNav: { order: r.nav, hidden: r.hidden } }) }).catch(() => null);
+      if (res2?.ok) S.layout = { ...S.layout, finSideNav: { order: r.nav, hidden: r.hidden } };
     }
   }
 });

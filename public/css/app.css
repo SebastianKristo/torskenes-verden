@@ -951,3 +951,4 @@ html[data-hl="2c"] .dx{--dx-ink:#1b1a17;--dx-mut:#6b665c;--dx-lab:#b23a2a;--dx-c
 @media (prefers-reduced-motion:reduce){.dx.dx-in{animation:none}}
 .sbar-g{flex:none;width:20px;height:20px;display:block}
 .card-head .card-link{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--text-2);text-decoration:none;white-space:nowrap}.card-head .card-link:hover{color:var(--text)}
+.sg-fhelp{font-size:12px;color:var(--text-2);padding:0 16px 10px;line-height:1.45}
