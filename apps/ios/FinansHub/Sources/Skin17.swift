@@ -24,3 +24,20 @@ extension View {
         )
     }
 }
+
+extension View {
+    /// Fargeskjema for klassiske skjermer og ark: Papirets lys/mørk inne i Papir, ellers mørkt som før.
+    func skinScheme() -> some View {
+        preferredColorScheme(PaperSkin.palette.map { $0.dark ? ColorScheme.dark : ColorScheme.light } ?? ColorScheme.dark)
+    }
+    /// Bakgrunn for ark: papir inne i Papir, ellers glass (ultraThinMaterial).
+    func skinSheetBackground() -> some View {
+        presentationBackground(skinSheetStyle())
+    }
+}
+
+/// Egen funksjon så uttrykket over holder seg enkelt for kompilatoren.
+func skinSheetStyle() -> AnyShapeStyle {
+    if let p = PaperSkin.palette { return AnyShapeStyle(p.bg) }
+    return AnyShapeStyle(Material.ultraThinMaterial)
+}

@@ -86,6 +86,7 @@ targets:
     platform: iOS
     sources:
       - FinansHubWidgets/Sources
+      - FinansHubWidgets/Resources
       - Shared
     entitlements:
       path: FinansHubWidgets/FinansHubWidgets.entitlements

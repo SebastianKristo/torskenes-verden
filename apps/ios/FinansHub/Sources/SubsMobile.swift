@@ -288,10 +288,10 @@ struct SubsMobileView: View {
         .tracksScroll(store)
         .refreshable { await store.reloadModule() }
         .sheet(isPresented: $adding) {
-            SubAddSheet().presentationDetents([.medium, .large]).presentationBackground(.ultraThinMaterial)
+            SubAddSheet().presentationDetents([.medium, .large]).skinSheetBackground()
         }
         .sheet(isPresented: Binding(get: { store.subEdit != nil || store.subNew }, set: { if !$0 { store.subEdit = nil; store.subNew = false } })) {
-            SubEditSheet(item: store.subEdit).presentationDetents([.large]).presentationBackground(.ultraThinMaterial)
+            SubEditSheet(item: store.subEdit).presentationDetents([.large]).skinSheetBackground()
         }
     }
 
@@ -328,7 +328,7 @@ struct SubsMobileView: View {
                 Text("\(flagged.count) abonnement\(flagged.count == 1 ? "" : "er") trenger en titt · spar opptil \(krs(x.saveMonthly))/mnd").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.75))
                 ForEach(flagged) { s in
                     HStack(spacing: 12) {
-                        Logo(domain: s.domain, name: s.name, color: "#FF7A3D", size: 34)
+                        Logo(domain: s.domain, name: s.name, color: "#FF7A3D", size: 34, logoUrl: s.logoUrl)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(s.name).fontWeight(.medium).lineLimit(1)
                             Text(s.status == "price_up" ? "▲ Pris økt" : "⚠ Lite brukt").font(.caption).foregroundStyle(s.status == "price_up" ? Color(hex: "#FF8A80") : .accentLight)
@@ -411,7 +411,7 @@ struct SubsMobileView: View {
     private func subRow(_ s: SubItem) -> some View {
         let pill: (String, Color) = !s.active ? ("Sagt opp", .white.opacity(0.6)) : s.status == "price_up" ? ("▲ Pris økt", Color(hex: "#FF8A80")) : s.status == "low_use" ? ("⚠ Lite brukt", .accentLight) : ("Aktiv", .positive)
         return HStack(spacing: 12) {
-            Logo(domain: s.domain, name: s.name, color: "#FF7A3D", size: 36)
+            Logo(domain: s.domain, name: s.name, color: "#FF7A3D", size: 36, logoUrl: s.logoUrl)
             VStack(alignment: .leading, spacing: 2) {
                 Text(s.name + (s.plan.isEmpty ? "" : " · \(s.plan)")).fontWeight(.medium).lineLimit(1)
                 Text([s.cycleName, s.nextDate.isEmpty ? nil : "Neste \(ddmm(s.nextDate))", s.category].compactMap { $0 }.joined(separator: " · ")).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).lineLimit(1)
@@ -604,7 +604,7 @@ struct SubAddSheet: View {
             }
             .padding(20)
         }
-        .preferredColorScheme(.dark)
+        .skinScheme()
         .fileImporter(isPresented: $files, allowedContentTypes: [.pdf, .jpeg, .png, .heic, .image]) { r in
             guard case .success(let url) = r, url.startAccessingSecurityScopedResource() else { return }
             defer { url.stopAccessingSecurityScopedResource() }
@@ -764,7 +764,7 @@ struct SubEditSheet: View {
                     field("Plan (valgfritt)", $plan, .default)
                 }
                 Picker("Kategori", selection: $category) { ForEach(SubEditSheet.cats + extraCat, id: \.self) { Text($0).tag($0) } }
-                    .pickerStyle(.menu).tint(.white)
+                    .pickerStyle(.menu).tint(Color.skinFg)
                     .padding(.horizontal, 10).frame(maxWidth: .infinity, minHeight: 46, alignment: .leading).glass(16)
                 Text("Hvor ofte").font(.footnote.weight(.semibold)).foregroundStyle(Color.skinFg.opacity(0.7))
                 Picker("Hvor ofte", selection: $cycle) {
@@ -776,9 +776,9 @@ struct SubEditSheet: View {
                 Text("Faktureringsdato").font(.footnote.weight(.semibold)).foregroundStyle(Color.skinFg.opacity(0.7))
                 HStack(spacing: 10) {
                     Picker("Dag", selection: $day) { ForEach(1...31, id: \.self) { Text("\($0).").tag($0) } }
-                        .pickerStyle(.menu).tint(.white).padding(.horizontal, 10).frame(maxWidth: .infinity, minHeight: 46).glass(16)
+                        .pickerStyle(.menu).tint(Color.skinFg).padding(.horizontal, 10).frame(maxWidth: .infinity, minHeight: 46).glass(16)
                     Picker("Måned", selection: $month) { ForEach(1...12, id: \.self) { Text(SubEditSheet.months[$0 - 1]).tag($0) } }
-                        .pickerStyle(.menu).tint(.white).padding(.horizontal, 10).frame(maxWidth: .infinity, minHeight: 46).glass(16)
+                        .pickerStyle(.menu).tint(Color.skinFg).padding(.horizontal, 10).frame(maxWidth: .infinity, minHeight: 46).glass(16)
                         .disabled(cycle == "monthly").opacity(cycle == "monthly" ? 0.5 : 1)
                 }
                 Text(nextText).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.65))
@@ -804,7 +804,7 @@ struct SubEditSheet: View {
             }
             .padding(20)
         }
-        .preferredColorScheme(.dark)
+        .skinScheme()
         .onAppear(perform: fill)
         .onChange(of: logo) { _, it in
             guard let it else { return }
@@ -832,7 +832,7 @@ struct SubEditSheet: View {
                 if let logoImg {
                     Image(uiImage: logoImg).resizable().scaledToFit().padding(6).frame(width: 52, height: 52).background(.white, in: RoundedRectangle(cornerRadius: 13))
                 } else {
-                    Logo(domain: item?.domain, name: name.isEmpty ? "?" : name, color: "#FF7A3D", size: 52)
+                    Logo(domain: item?.domain, name: name.isEmpty ? "?" : name, color: "#FF7A3D", size: 52, logoUrl: item?.logoUrl)
                 }
             }
             VStack(alignment: .leading, spacing: 6) {

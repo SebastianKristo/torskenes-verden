@@ -471,13 +471,13 @@ struct RootView: View {
             Button("Avbryt", role: .cancel) {}
         } message: { Text("Filene legges i opplastingskøen, og Gemini leser dem i bakgrunnen.") }
         .sheet(isPresented: Binding(get: { store.menuOpen }, set: { store.menuOpen = $0 })) {
-            ProfileMenu().presentationDetents([.medium, .large]).presentationBackground(.ultraThinMaterial)
+            ProfileMenu().presentationDetents([.medium, .large]).skinSheetBackground()
         }
         .sheet(isPresented: Binding(get: { store.gallery }, set: { store.gallery = $0 })) {
-            WidgetGallery().presentationDetents([.large]).presentationBackground(.ultraThinMaterial)
+            WidgetGallery().presentationDetents([.large]).skinSheetBackground()
         }
         .sheet(isPresented: Binding(get: { store.domainManager }, set: { store.domainManager = $0 })) {
-            DomainManager().presentationDetents([.medium, .large]).presentationBackground(.ultraThinMaterial)
+            DomainManager().presentationDetents([.medium, .large]).skinSheetBackground()
         }
         .sheet(isPresented: Binding(get: { store.matFull }, set: { store.matFull = $0 })) {
             MatWeekView()
@@ -785,7 +785,7 @@ struct ProfileMenu: View {
             }
             .padding(20)
         }
-        .preferredColorScheme(.dark)
+        .skinScheme()
     }
     private func row(_ t: String, _ sub: String?, _ icon: String, _ on: Bool, _ act: @escaping () -> Void) -> some View {
         Button(action: act) {

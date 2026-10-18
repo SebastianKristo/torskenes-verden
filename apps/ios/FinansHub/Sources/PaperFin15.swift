@@ -15,6 +15,7 @@ struct PaperTxData {
     var account = ""
     var amount: Double = 0
     var color = "#6b665c"
+    var domain: String?
     var aiSummary = ""
     var hasReceipt = false
     /// attached | needs_review | missing
@@ -37,6 +38,7 @@ struct PaperTxData {
         account = JS.str(o, "account") ?? ""
         amount = JS.num(o, "amount") ?? 0
         color = JS.str(o, "color") ?? "#6b665c"
+        domain = JS.str(o, "domain")
         if let r = JS.dict(o, "receipt") {
             hasReceipt = true
             receiptStatus = JS.str(r, "status") ?? "attached"
@@ -113,8 +115,7 @@ struct PaperTxDetailView: View {
     private func head(_ d: PaperTxData) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
-                Text(String(d.merchant.prefix(1)).uppercased()).font(PF.ui(14, .heavy)).foregroundStyle(.white)
-                    .frame(width: 46, height: 46).background(Color(hex: d.color), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+                PaperLogo(domain: d.domain, name: d.merchant, color: d.color, size: 46, radius: 13)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(d.merchant).font(PF.serif(22, medium: true)).foregroundStyle(p.ink).lineLimit(2)
                     Text([d.category, dmy(d.date), d.account].filter { !$0.isEmpty }.joined(separator: " · ")).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(2)

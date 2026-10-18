@@ -1,6 +1,7 @@
 import SwiftUI
 import WidgetKit
 import AppIntents
+import UIKit
 
 /* ---------------- Widgets (design/Widgets.dc.html → 1a) ---------------- */
 
@@ -153,8 +154,14 @@ private struct WBadge: View {
     let carrier: String
     var size: CGFloat = 28
     var body: some View {
-        Text(carrierIni[carrier] ?? "17").font(.system(size: size * 0.36, weight: .heavy)).foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.5)
-            .frame(width: size, height: size).background(hexColor(carrierColors[carrier] ?? "#3A4252"), in: RoundedRectangle(cornerRadius: size * 0.28))
+        // Ekte logo fra widget-ressursene (samme bilder som i appen), ellers initialer på merkefargen.
+        if let img = UIImage(named: "Carrier-" + carrier) {
+            Image(uiImage: img).resizable().scaledToFill()
+                .frame(width: size, height: size).clipShape(RoundedRectangle(cornerRadius: size * 0.28))
+        } else {
+            Text(carrierIni[carrier] ?? "17").font(.system(size: size * 0.36, weight: .heavy)).foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.5)
+                .frame(width: size, height: size).background(hexColor(carrierColors[carrier] ?? "#3A4252"), in: RoundedRectangle(cornerRadius: size * 0.28))
+        }
     }
 }
 

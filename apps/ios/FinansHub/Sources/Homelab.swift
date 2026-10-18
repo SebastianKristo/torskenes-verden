@@ -441,7 +441,7 @@ struct WidgetGallery: View {
             }
             .padding(20)
         }
-        .preferredColorScheme(.dark)
+        .skinScheme()
     }
 }
 

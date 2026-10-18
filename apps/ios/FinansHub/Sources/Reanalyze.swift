@@ -92,7 +92,7 @@ struct ReanalyzeButton: View {
         .glass(compact ? 17 : 25)
         .disabled(busy)
         .sheet(item: $shown) { r in
-            ReanalyzeCompare(result: r).presentationDetents([.large]).presentationBackground(.ultraThinMaterial)
+            ReanalyzeCompare(result: r).presentationDetents([.large]).skinSheetBackground()
         }
     }
 

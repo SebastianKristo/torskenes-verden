@@ -68,7 +68,7 @@ struct PaperDomains: View {
             }
         }
         .sheet(isPresented: Binding(get: { store.domainManager }, set: { store.domainManager = $0 })) {
-            DomainManager().presentationDetents([.large]).presentationBackground(.ultraThinMaterial)
+            DomainManager().presentationDetents([.large]).skinSheetBackground()
         }
     }
 

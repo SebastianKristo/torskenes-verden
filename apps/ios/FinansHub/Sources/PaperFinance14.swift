@@ -129,8 +129,7 @@ struct PaperFinList: View {
     private func row(_ t: Tx) -> some View {
         Button { store.openPaperTx(t.id) } label: {
             HStack(spacing: 12) {
-                Text(String((t.merchant ?? t.description).prefix(1)).uppercased()).font(PF.ui(11, .heavy)).foregroundStyle(.white)
-                    .frame(width: 38, height: 38).background(Color(hex: t.color), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                PaperLogo(domain: t.domain, name: t.merchant ?? t.description, color: t.color, size: 38, radius: 11)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(t.merchant ?? t.description).font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink).lineLimit(1)
                     Text(sub(t)).font(PF.ui(12)).foregroundStyle(PaperFinList.needsReview(t) ? p.lab : p.mut).lineLimit(1)

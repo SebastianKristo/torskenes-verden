@@ -102,7 +102,13 @@ struct DomainToday { let name: String; let visitors: Double }
 
 /// Designstil per enhet: «ios» (Liquid Glass) eller «material» (Android-utseende, Material 3). Leses av byggeklossene (glass(), Backdrop).
 enum DesignStyle {
-    static var material = UserDefaults.standard.string(forKey: "fh_design") == "material"
+    /// Brukerens valg i Klassisk (iOS-glass eller Material).
+    static var materialChoice = UserDefaults.standard.string(forKey: "fh_design") == "material"
+    /// Material-farger brukes aldri inne i Papir; der gjelder Papir-paletten på alle skjermer.
+    static var material: Bool {
+        get { PaperSkin.palette == nil && materialChoice }
+        set { materialChoice = newValue }
+    }
 }
 
 @MainActor
@@ -421,8 +427,9 @@ final class Store {
     @ObservationIgnored private var polling = false
     @ObservationIgnored private let monitor = NWPathMonitor()
     private(set) var onWifi = true
-    /// Skann uten nett (eller utenfor Wi-Fi) venter her og lastes opp ved neste synk.
-    private(set) var offline: [Upload] = []
+    /// «Venter på opplasting»: kvitteringer som ikke kom fram. Lagres på disk (UploadQueue18.swift) og lastes opp når nettet er tilbake.
+    var pendingUploads: [PendingUpload] = PendingQueue.load()
+    @ObservationIgnored var pendingBusy = false
 
     var api: API { API(base: base.isEmpty ? (account?.server ?? "") : base, token: account?.token) }
 
@@ -434,7 +441,12 @@ final class Store {
         layout = localLayout()
         monitor.pathUpdateHandler = { [weak self] path in
             let wifi = path.usesInterfaceType(.wifi) || path.usesInterfaceType(.wiredEthernet)
-            Task { @MainActor in self?.onWifi = wifi }
+            let up = path.status == .satisfied
+            Task { @MainActor in
+                self?.onWifi = wifi
+                // Nettet er tilbake: last opp det som venter.
+                if up { await self?.flushPending() }
+            }
         }
         monitor.start(queue: DispatchQueue(label: "finanshub.net"))
     }
@@ -630,7 +642,7 @@ final class Store {
         summary = try? await api.get("/summary", as: Summary.self)
         await loadMe()
         lastSync = Date()
-        if !offline.isEmpty, canUpload { let q = offline; offline = []; upload(q) }
+        if !pendingUploads.isEmpty { Task { await self.flushPending() } }
         if let m = module { try await load(m) } else { try await loadTab(tab) }
         if module != .homelab { Task { await self.loadHome() } }
     }
@@ -1238,6 +1250,9 @@ final class Store {
 
     enum Upload { case image(UIImage), pdf(Data) }
     private var canUpload: Bool { !wifiOnly || onWifi }
+    var canUploadNow: Bool { canUpload }
+    /// Samme deler som en vanlig opplasting (original, JPEG til AI-en og miniatyr). Brukes av køen.
+    func uploadParts(_ image: UIImage) -> [API.Part] { imageParts(image) }
 
     /// Flere filer legges i kø og lastes opp én og én; AI-en leser dem i bakgrunnen på serveren.
     func upload(_ files: [Upload]) {
@@ -1246,7 +1261,11 @@ final class Store {
         if module == .folders || paperTab == "boliger", editing == nil, let bolig = uploadFolder ?? folder?.id { uploadToFolder(bolig, files); return }
         // Fra «Legg ved kvittering» i skjemaet: bli stående, kvitteringen kobles når den bokføres.
         if editing != nil { flash("Kvitteringen er lagt i opplastingskøen") } else if module != .upload { openSub(.upload) }
-        guard canUpload else { offline += files; flash("\(files.count) kvittering(er) venter på Wi-Fi"); return }
+        guard canUpload else {
+            for f in files { enqueuePending(f, folder: nil, error: "Venter på Wi-Fi") }
+            flash("\(files.count) kvittering(er) venter på Wi-Fi")
+            return
+        }
         uploading += files.count
         Task {
             for f in files {
@@ -1255,9 +1274,13 @@ final class Store {
                     case .image(let img): try await self.sendImage(img)
                     case .pdf(let d): try await self.finishUpload([API.Part(name: "file", filename: "kvittering.pdf", mime: "application/pdf", data: d)])
                     }
-                } catch let e as APIError where e.status == 0 {
-                    self.offline.append(f) // uten nett: prøv igjen ved neste synk
-                    self.message = e.message
+                } catch let e as APIError where e.status == 0 || e.status >= 500 {
+                    // Uten nett, tapt forbindelse eller serverfeil: legg i «Venter på opplasting».
+                    self.enqueuePending(f, folder: nil, error: e.message)
+                    self.flash("Ingen forbindelse – kvitteringen venter på opplasting")
+                } catch let e as URLError {
+                    self.enqueuePending(f, folder: nil, error: e.localizedDescription)
+                    self.flash("Ingen forbindelse – kvitteringen venter på opplasting")
                 } catch { self.message = error.localizedDescription }
                 self.uploading = max(0, self.uploading - 1)
             }
@@ -1321,7 +1344,10 @@ final class Store {
                 case .image(let img): parts = self.imageParts(img)
                 case .pdf(let d): parts = [API.Part(name: "file", filename: "kvittering.pdf", mime: "application/pdf", data: d)]
                 }
-                do { if !parts.isEmpty { _ = try await self.api.upload("/folders/\(id)/receipts", parts: parts) } } catch { self.message = error.localizedDescription }
+                do { if !parts.isEmpty { _ = try await self.api.upload("/folders/\(id)/receipts", parts: parts) } }
+                catch let e as APIError where e.status == 0 || e.status >= 500 { self.enqueuePending(f, folder: id, error: e.message) }
+                catch let e as URLError { self.enqueuePending(f, folder: id, error: e.localizedDescription) }
+                catch { self.message = error.localizedDescription }
                 self.uploading = max(0, self.uploading - 1)
             }
             if let open = self.folder?.id, let f = try? await self.api.get("/folders/\(open)", as: Folder.self) { self.folder = f }

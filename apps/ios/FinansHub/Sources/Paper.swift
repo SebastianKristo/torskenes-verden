@@ -518,6 +518,8 @@ struct PaperScanSheet: View {
             }
             ForEach(jobs) { j in queueRow(j) }
         }
+        // Kvitteringer som ikke kom fram (uten nett eller serverfeil) venter her og lastes opp av seg selv.
+        PendingUploadsList()
     }
 
     private func queueRow(_ j: Job) -> some View {

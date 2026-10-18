@@ -26,10 +26,10 @@ struct PaperSubs: View {
         }
         .task { if store.subsX == nil { try? await store.loadSubs() } }
         .sheet(isPresented: Binding(get: { store.subAdding }, set: { store.subAdding = $0 })) {
-            SubAddSheet().presentationDetents([.medium, .large]).presentationBackground(.ultraThinMaterial).preferredColorScheme(.dark)
+            SubAddSheet().presentationDetents([.medium, .large]).skinSheetBackground().skinScheme()
         }
         .sheet(isPresented: Binding(get: { store.subEdit != nil || store.subNew }, set: { if !$0 { store.subEdit = nil; store.subNew = false } })) {
-            SubEditSheet(item: store.subEdit).presentationDetents([.large]).presentationBackground(.ultraThinMaterial).preferredColorScheme(.dark)
+            SubEditSheet(item: store.subEdit).presentationDetents([.large]).skinSheetBackground().skinScheme()
         }
     }
 
@@ -89,7 +89,7 @@ struct PaperSubs: View {
                 if i > 0 { Rectangle().fill(p.line).frame(height: 1) }
                 Button { if let s = r.3 { store.subEdit = s } } label: {
                     HStack(spacing: 12) {
-                        Logo(domain: r.3?.domain, name: r.0, color: "#b23a2a", size: 34)
+                        Logo(domain: r.3?.domain, name: r.0, color: "#b23a2a", size: 34, logoUrl: r.3?.logoUrl)
                         VStack(alignment: .leading, spacing: 1) {
                             Text(r.0).font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink).lineLimit(1)
                             Text(r.1).font(PF.ui(12)).foregroundStyle(p.mut)
@@ -111,7 +111,7 @@ struct PaperSubs: View {
         let pill: (String, Color) = !s.active ? ("Sagt opp", p.mut) : s.status == "price_up" ? ("▲ Pris økt", p.lab) : s.status == "low_use" ? ("⚠ Lite brukt", p.lab) : ("Aktiv", p.pos)
         return Button { Haptics.shared.tap(); store.subEdit = s } label: {
             HStack(spacing: 12) {
-                Logo(domain: s.domain, name: s.name, color: "#b23a2a", size: 36)
+                Logo(domain: s.domain, name: s.name, color: "#b23a2a", size: 36, logoUrl: s.logoUrl)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(s.name + (s.plan.isEmpty ? "" : " · \(s.plan)")).font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink).lineLimit(1)
                     Text([s.cycleName, s.nextDate.isEmpty ? nil : "Neste \(ddmm(s.nextDate))", s.category].compactMap { $0 }.joined(separator: " · "))

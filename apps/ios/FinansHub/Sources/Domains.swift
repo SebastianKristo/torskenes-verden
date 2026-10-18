@@ -369,6 +369,6 @@ struct DomainManager: View {
             .padding(20)
         }
         .tint(.domPink)
-        .preferredColorScheme(.dark)
+        .skinScheme()
     }
 }

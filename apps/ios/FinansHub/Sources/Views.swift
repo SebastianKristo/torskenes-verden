@@ -87,6 +87,8 @@ struct Logo: View {
     let name: String
     let color: String
     var size: CGFloat = 40
+    /// Egen logo (abonnementer: opplastet eller funnet med ✦ AI). Brukes før faviconet.
+    var logoUrl: String? = nil
     @State private var img: UIImage? = nil
     var body: some View {
         Group {
@@ -95,7 +97,11 @@ struct Logo: View {
                     .frame(width: size, height: size).background(.white, in: RoundedRectangle(cornerRadius: size / 4))
             } else { Initial(text: name, color: color, size: size) }
         }
-        .task(id: domain) { img = await store.logo(domain) }
+        .task(id: (logoUrl ?? "") + "|" + (domain ?? "")) { await load() }
+    }
+    private func load() async {
+        if let u = logoUrl, !u.isEmpty, let i = await store.image(u) { img = i; return }
+        img = await store.logo(domain)
     }
 }
 
@@ -458,9 +464,7 @@ struct ScanView: View {
         ScrollView {
             VStack(spacing: 12) {
                 ModuleHeader(title: "Kvitteringer")
-                if !store.offline.isEmpty {
-                    Text("\(store.offline.count) venter på nett\(store.wifiOnly ? " (bare Wi-Fi)" : "") · lastes opp ved neste synk").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading)
-                }
+                PendingUploadsList()
                 Button(action: scan) {
                     HStack(spacing: 14) {
                         Image(systemName: "camera.fill").foregroundStyle(Color.ink).frame(width: 36, height: 36).background(Color.accent, in: Circle())
@@ -830,7 +834,7 @@ struct MatWeekView: View {
             .padding(.horizontal, 18).padding(.bottom, 30)
         }
         .background(Backdrop())
-        .preferredColorScheme(.dark)
+        .skinScheme()
         .refreshable { try? await store.loadWeek() }
     }
 }

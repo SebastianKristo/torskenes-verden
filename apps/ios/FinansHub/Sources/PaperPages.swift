@@ -351,8 +351,7 @@ struct PaperFinance: View {
         ForEach(list) { t in
             Button { store.openPaperTx(t.id) } label: {
                 HStack(spacing: 12) {
-                    Text(initial(t.merchant ?? t.description)).font(PF.ui(11, .heavy)).foregroundStyle(.white)
-                        .frame(width: 38, height: 38).background(Color(hex: t.color), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                    PaperLogo(domain: t.domain, name: t.merchant ?? t.description, color: t.color, size: 38, radius: 11)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(t.merchant ?? t.description).font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink).lineLimit(1)
                         Text("\(t.category) · \(shortDate(t.date))").font(PF.ui(12)).foregroundStyle(p.mut).lineLimit(1)
@@ -914,5 +913,40 @@ struct PaperSettings: View {
             PLabel(text: t).padding(.top, 10).padding(.leading, 4)
             PaperLinkList(rows: rows)
         }
+    }
+}
+
+
+/// Butikklogo i Papir: favicon via serveren (/finans/api/logo, åpen og bufret) på hvit flate, ellers forbokstav på kategorifargen.
+/// Har abonnementet en egen logo (logoUrl, opplastet eller funnet med AI), brukes den først.
+struct PaperLogo: View {
+    @Environment(Store.self) private var store
+    let domain: String?
+    let name: String
+    let color: String
+    var size: CGFloat = 38
+    var radius: CGFloat = 11
+    var logoUrl: String? = nil
+    @State private var img: UIImage? = nil
+
+    var body: some View {
+        ZStack {
+            if let img {
+                RoundedRectangle(cornerRadius: radius, style: .continuous).fill(Color.white)
+                Image(uiImage: img).resizable().scaledToFit().padding(size / 8)
+            } else {
+                RoundedRectangle(cornerRadius: radius, style: .continuous).fill(Color(hex: color))
+                Text(String(name.trimmingCharacters(in: .whitespaces).prefix(1)).uppercased())
+                    .font(PF.ui(size > 42 ? 14 : 11, .heavy)).foregroundStyle(.white)
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
+        .task(id: (logoUrl ?? "") + "|" + (domain ?? "")) { await load() }
+    }
+
+    private func load() async {
+        if let u = logoUrl, !u.isEmpty, let i = await store.image(u) { img = i; return }
+        img = await store.logo(domain)
     }
 }
