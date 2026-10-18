@@ -1,9 +1,13 @@
 // Sporing: pakker fra Finn-handler, e-post og manuelt innlimte nummer. Data og status kommer fra /api/tracking.
 import { api, esc, hm } from './util.js';
 import { openSettings } from './settings.js';
+import { is2c } from './hltheme.js';
 
 const T = (p, o) => api('/tracking' + p, o);
 const SEGS = ['Aktive', 'Klar for henting', 'Utgående', 'Levert'];
+// Vindu og papir har flere faner (som i «Homelab Papir Web»).
+const SEGS_2C = ['Aktive', 'Klar for henting', 'På vei', 'Registrert', 'Levert', 'Alle'];
+const segs = () => (is2c() ? SEGS_2C : SEGS);
 const TOGS = [['found', 'Nytt sporingsnummer funnet', 'Fra Finn eller e-post'], ['out', 'Ute for levering', 'Varsel når sjåføren er på vei'], ['pickup', 'Klar for henting', 'Med hentested og frist'],
   ['delivered', 'Levert', ''], ['delayed', 'Forsinket', 'Når ETA passeres eller transportøren melder avvik']];
 // Hva hver transportør trenger. 17TRACK er reserven for alle uten egen klient.
@@ -81,11 +85,41 @@ function addHint() {
 function lists() {
   const items = S.d?.items ?? [];
   const act = items.filter((t) => !isDone(t));
-  return { act, Aktive: act, 'Klar for henting': act.filter(isPick), Utgående: act.filter((t) => t.direction === 'out'), Levert: items.filter(isDone) };
+  return { act, Aktive: act, 'Klar for henting': act.filter(isPick), Utgående: act.filter((t) => t.direction === 'out'), Levert: items.filter(isDone),
+    'På vei': act.filter((t) => !isPick(t) && (t.step ?? 0) > 0), Registrert: act.filter((t) => !isPick(t) && !(t.step > 0)), Alle: items };
+}
+
+// Vindu og papir: faner og sporingsfelt på én linje, kort i rutenett, og «Varsler og kilder» og transportører i spalter under.
+function body2c() {
+  const d = S.d, L = lists(), seg = L[S.seg] ?? L.Aktive;
+  const rank = (t) => (isPick(t) ? 0 : t.status === 'out_for_delivery' ? 1 : isDone(t) ? 3 : 2);
+  const shown = [...seg].sort((a, b) => rank(a) - rank(b) || b.step - a.step);
+  const tabs = SEGS_2C.map((n) => `<button role="tab" aria-selected="${S.seg === n}" class="${S.seg === n ? 'on' : ''}" data-trk-seg="${esc(n)}">${esc(n)} <span>${L[n].length}</span></button>`).join('');
+  const hapOn = (() => { try { return localStorage.getItem('hl_track_hap') !== '0'; } catch { return true; } })();
+  const notif = [['found', 'Varsel: ny pakke funnet', 'Fra Finn eller e-post'], ['pickup', 'Varsel: klar for henting', 'Med hentested og frist'], ['out', 'Varsel: ute for levering', 'Når budet er på vei'],
+    ['delayed', 'Varsel: forsinket', 'Når ETA passeres eller transportøren melder avvik'], ['delivered', 'Varsel: levert', '']].map(([k, n, sub]) => [`data-trk-tog="${k}"`, n, sub, !!d.prefs[k]]);
+  const src = (k) => d.sources?.[k]?.on !== false && (k !== 'autoArchive' || d.sources?.[k]?.on === true);
+  const nF = d.items.filter((t) => t.source === 'finn').length, nM = d.items.filter((t) => t.source === 'email').length;
+  const kilder = [['email', 'Kilde: e-post (Proton)', `${nM} funnet i innboksen`], ['finn', 'Kilde: Finn-handler', `${nF} fra handler`], ['autoArchive', 'Arkiver leverte automatisk', 'Leverte pakker flyttes til arkivet']]
+    .map(([k, n, sub]) => [`data-trk-src="${k}"`, n, sub, src(k)]);
+  const rows = [...notif, ...kilder, ['data-trk-tog="hap"', 'Haptisk tilbakemelding', 'Vibrasjon på denne enheten', hapOn]]
+    .map(([a, n, sub, on]) => `<button class="trk-tog" ${a} aria-pressed="${on}"><span><b>${esc(n)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>${sw(on)}</button>`).join('');
+  const conf = (id) => d.carriers.find((c) => c.id === id) ?? {};
+  const conns = KEYS.map(([id, n, sub]) => { const c = conf(id); return `<div class="trk-conn">${badge(c.color, c.fg, c.ini, 'md', c.logo)}<span><b>${esc(n)}</b><small>${esc(sub)}</small></span><em class="${c.configured ? 'ok' : 'miss'}">${c.configured ? 'Tilkoblet' : 'Mangler nøkkel'}</em></div>`; }).join('');
+  const last = d.lastRun ? `Sist sjekket ${hm(new Date(d.lastRun))}` : 'Ikke sjekket ennå';
+  return `<div class="p-trk-bar"><div class="p-trk-tabs" role="tablist">${tabs}</div>
+      <div class="p-trk-add"><input name="trk-no" value="${esc(S.no)}" placeholder="Legg til sporingsnummer" autocomplete="off" spellcheck="false" aria-label="Sporingsnummer"><button class="trk-go" data-trk-add ${S.adding ? 'disabled' : ''}>${S.adding ? 'Sporer …' : 'Spor'}</button></div></div>
+    <div class="trk-guess">${addHint()}</div>
+    ${shown.length ? `<div class="trk-grid">${shown.map(card).join('')}</div>` : '<div class="trk-empty">Ingen pakker her.</div>'}
+    <div class="p-trk-cols">
+      <div class="trk-panel"><div class="trk-ph"><b>VARSLER OG KILDER</b><small>${esc(last)} · <button class="trk-link" data-trk-check ${S.busy ? 'disabled' : ''}>${S.busy ? 'Sjekker …' : 'Sjekk nå'}</button></small></div>${rows}</div>
+      <div class="trk-panel"><div class="trk-ph"><b>TRANSPORTØRER</b><button class="trk-link" data-trk-keys>Nøkler i Innstillinger ›</button></div>${conns}</div>
+    </div>`;
 }
 
 function body() {
   if (!S.d) return S.err ? `<div class="trk-empty">${esc(S.err)}</div>` : '<div class="trk-empty">Henter sendinger …</div>';
+  if (is2c()) return body2c();
   const d = S.d, L = lists(), seg = L[S.seg] ?? L.Aktive;
   const rank = (t) => (isPick(t) ? 0 : t.status === 'out_for_delivery' ? 1 : 2);
   const shown = S.seg === 'Levert' ? seg : [...seg].sort((a, b) => rank(a) - rank(b) || b.step - a.step);
@@ -110,7 +144,7 @@ function body() {
     <div class="trk-guess">${addHint()}</div>
     <div class="trk-srcs">${srcs}<span class="trk-sp"></span><span class="trk-sync">${esc(last)}</span><button class="trk-btn" data-trk-check ${S.busy ? 'disabled' : ''}>${S.busy ? 'Sjekker …' : 'Sjekk nå'}</button></div>
   </div>
-  <div class="trk-segs" role="tablist">${SEGS.map((n) => `<button role="tab" aria-selected="${S.seg === n}" class="${S.seg === n ? 'on' : ''}" data-trk-seg="${esc(n)}">${esc(n)} ${L[n].length}</button>`).join('')}</div>
+  <div class="trk-segs" role="tablist">${segs().map((n) => `<button role="tab" aria-selected="${S.seg === n}" class="${S.seg === n ? 'on' : ''}" data-trk-seg="${esc(n)}">${esc(n)} ${L[n].length}</button>`).join('')}</div>
   ${shown.length ? `<div class="trk-grid">${shown.map(card).join('')}</div>` : '<div class="trk-empty">Ingen sendinger her.</div>'}
   <div class="trk-side">
     <div class="trk-panel"><div class="trk-ph"><b>Varsler og haptikk</b><small>Varsler lagres på serveren · haptikk på denne enheten</small></div>${togs}</div>
@@ -202,8 +236,8 @@ export function bind(view) {
     if ((b = el('[data-trk-seg]'))) { Object.assign(S, { seg: b.dataset.trkSeg, open: null, delArm: null }); return paint(); }
     if ((b = el('[data-trk-open]'))) { const id = +b.dataset.trkOpen; Object.assign(S, { open: S.open === id ? null : id, delArm: null }); return paint(); }
     if ((b = el('[data-trk-src]'))) {
-      const k = b.dataset.trkSrc, on = S.d.sources[k]?.on === false;
-      try { S.d.sources = (await T('/sources', { method: 'PUT', json: { [k]: on } })).sources; flash(`${k === 'finn' ? 'Finn' : 'E-post'} er ${on ? 'slått på' : 'slått av'} som kilde`); } catch (err) { flash(err.message, true); }
+      const k = b.dataset.trkSrc, on = k === 'autoArchive' ? S.d.sources[k]?.on !== true : S.d.sources[k]?.on === false;
+      try { S.d.sources = (await T('/sources', { method: 'PUT', json: { [k]: on } })).sources; flash(k === 'autoArchive' ? `Automatisk arkivering er ${on ? 'slått på' : 'slått av'}` : `${k === 'finn' ? 'Finn' : 'E-post'} er ${on ? 'slått på' : 'slått av'} som kilde`); } catch (err) { flash(err.message, true); }
       return paint();
     }
     if ((b = el('[data-trk-tog]'))) {

@@ -23,7 +23,7 @@ export function ruterUrl(r) {
 
 const TRIP_QUERY = `query($from:String!,$to:String!,$n:Int!){
   trip(from:{place:$from},to:{place:$to},numTripPatterns:$n,modes:{accessMode:foot,egressMode:foot}){
-    tripPatterns{ legs{ mode expectedStartTime fromPlace{name} line{publicCode transportMode} } }
+    tripPatterns{ legs{ mode expectedStartTime fromPlace{name} line{publicCode transportMode presentation{colour textColour}} } }
   }
 }`;
 
@@ -37,13 +37,28 @@ async function enturTrip(r, count) {
   for (const p of data.data?.trip?.tripPatterns ?? []) {
     const leg = p.legs.find((l) => l.line);
     if (!leg) continue;
-    deps.push({ line: leg.line.publicCode, mode: leg.line.transportMode || leg.mode, time: leg.expectedStartTime });
+    deps.push(withLineColor({ line: leg.line.publicCode, mode: leg.line.transportMode || leg.mode, time: leg.expectedStartTime }, leg.line.presentation));
   }
   // Fjern duplikater og behold de første.
   const seen = new Set();
   return deps.filter((d) => !seen.has(d.line + d.time) && seen.add(d.line + d.time))
     .sort((a, b) => a.time.localeCompare(b.time)).slice(0, count);
 }
+
+// Linjefarger (prompt 14): Entur sin presentation.colour/textColour når linjen har det, ellers Ruters standardfarger
+// per transportmiddel. Regionbusser (tresifret linjenummer) er grønne.
+export const RUTER_COLORS = { metro: '#EC700C', tram: '#0B91EF', bus: '#E60000', regionalbus: '#75A300', coach: '#75A300', water: '#682C88', rail: '#003087' };
+const hex = (v) => (/^#?[0-9a-f]{6}$/i.test(String(v ?? '')) ? `#${String(v).replace('#', '').toUpperCase()}` : null);
+const lum = (h) => { const n = parseInt(h.slice(1), 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
+export function lineColor(mode, line, presentation) {
+  const m = String(mode ?? 'bus').toLowerCase();
+  const fallback = m === 'bus' && /^\d{3}/.test(String(line ?? '')) ? RUTER_COLORS.regionalbus : RUTER_COLORS[m] ?? RUTER_COLORS.bus;
+  const color = hex(presentation?.colour) ?? fallback;
+  const textColor = hex(presentation?.textColour) ?? (lum(color) > 0.6 ? '#1B1A17' : '#FFFFFF');
+  const mo = m === 'regionalbus' || m === 'coach' ? 'bus' : m;
+  return { color, textColor, mode: ['metro', 'tram', 'bus', 'water', 'rail'].includes(mo) ? mo : 'bus' };
+}
+export const withLineColor = (d, presentation) => ({ ...d, ...lineColor(d.mode, d.line, presentation) });
 
 export const getRuter = () => cached('ruter', 30_000, async () => {
   const count = Math.min(10, Math.max(1, parseInt(cfg('ruter_count'), 10) || 3));
@@ -57,7 +72,7 @@ export const getRuter = () => cached('ruter', 30_000, async () => {
 
 // Avganger fra ett stoppested (mobilwidgeten «Ruter-avganger»). Standard er første «fra»-stopp i strekningene.
 const DEPARTURE_QUERY = `query($id:String!,$n:Int!){
-  stopPlace(id:$id){ name estimatedCalls(numberOfDepartures:$n){ expectedDepartureTime destinationDisplay{frontText} serviceJourney{ line{publicCode transportMode} } } }
+  stopPlace(id:$id){ name estimatedCalls(numberOfDepartures:$n){ expectedDepartureTime destinationDisplay{frontText} serviceJourney{ line{publicCode transportMode presentation{colour textColour}} } } }
 }`;
 export const getDepartures = (stopId) => {
   const id = String(stopId || parseRoutes(cfg('ruter_routes'))[0]?.fromId || '58381').replace(/\D/g, '');
@@ -70,7 +85,8 @@ export const getDepartures = (stopId) => {
     const sp = d.data?.stopPlace;
     if (!sp) throw new Error('Fant ikke stoppestedet');
     return { stop: sp.name, stopId: id, departures: sp.estimatedCalls.map((c) => ({
-      line: c.serviceJourney?.line?.publicCode ?? '', mode: c.serviceJourney?.line?.transportMode ?? 'bus', to: c.destinationDisplay?.frontText ?? '', time: c.expectedDepartureTime })) };
+      line: c.serviceJourney?.line?.publicCode ?? '', mode: c.serviceJourney?.line?.transportMode ?? 'bus', to: c.destinationDisplay?.frontText ?? '', time: c.expectedDepartureTime }))
+      .map((d, i) => withLineColor(d, sp.estimatedCalls[i].serviceJourney?.line?.presentation)) };
   });
 };
 

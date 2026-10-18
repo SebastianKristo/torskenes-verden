@@ -10,6 +10,7 @@ const sp = { sats: null, err: null, stats: null, timer: null, apod: null, gal: {
 widget('r_starlink', { cls: 'card space-grid', render() {
   const s = sp.stats, city = store.me.city in CITIES ? store.me.city : 'Oslo';
   const v = (x) => (s ? x : '…');
+  if (is2c()) return paperStarlink(s, city);
   const list = (s?.top ?? []).map((p) => `<div class="row mono" style="padding:8px 12px;border-radius:12px;font-size:13px"><span>${esc(p.name)}${p.visible ? ' <span style="color:var(--yellow)">★</span>' : ''}</span><span class="sub">${p.el}° høyde · ${p.az}° retning</span></div>`).join('');
   return `<div style="display:flex;flex-direction:column;gap:16px">
       <div><div class="card-title">Starlink over Norge</div><div class="card-sub">Beregnet fra CelesTrak-banedata · oppdatert ${s ? s.time.toLocaleTimeString('nb-NO') : 'laster…'}</div></div>
@@ -25,6 +26,26 @@ widget('r_starlink', { cls: 'card space-grid', render() {
       ${sp.err ? `<div class="err">Kunne ikke hente banedata fra CelesTrak. ${esc(sp.err)}</div>` : ''}
     </div><canvas class="sat-map" id="sat-map" aria-label="Kart over satellitter over Norge"></canvas>`;
 }, mounted: () => draw() });
+
+// Vindu og papir: tallene i store serif-sifre til venstre, kartet over Norden til høyre (som i «Homelab Papir Web»).
+function paperStarlink(s, city) {
+  const v = (x) => (s ? x : '…');
+  const list = (s?.top ?? []).map((p) => `<div class="p-sat"><b>${esc(p.name)}${p.visible ? ' ★' : ''}</b><span>${p.el}° høyde · ${p.az}° retning</span></div>`).join('')
+    || (s ? '<div class="p-mute" style="padding:8px 0">Ingen over 10° akkurat nå.</div>' : '');
+  return `<div class="p-sl">
+      <div class="p-lab">STARLINK OVER NORGE · OPPDATERT ${s ? s.time.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '…'}</div>
+      <div class="p-sl-k"><div><div class="p-sl-n">${v(s?.over)}</div><div class="p-mute">over Norge geografisk</div></div>
+        <div><div class="p-sl-n">${v(s?.up)}</div><div class="p-mute">over horisonten (&gt;10°) fra ${esc(city)}</div></div></div>
+      <div class="p-cities">${Object.keys(CITIES).map((c) => `<button data-city="${c}" aria-pressed="${c === city}">${c}</button>`).join('')}</div>
+      ${s ? `<div class="p-mute">${s.dark ? `<b style="color:var(--acc)">${s.visible}</b> synlige fra bakken nå (solbelyst satellitt, mørk himmel) ★` : 'For lyst til å se satellitter nå (sola er over −6°).'}</div>` : ''}
+      <div class="p-lab" style="margin-top:6px">HØYEST PÅ HIMMELEN NÅ</div>
+      <div id="sat-list">${list}</div>
+      <div class="p-mute">Totalt ${v(s?.total)} Starlink-satellitter i bane. <a class="p-u" href="https://www.n2yo.com/passes/?s=44238" target="_blank" rel="noopener">Synlige passeringer ↗</a></div>
+      ${sp.err ? `<div class="p-acc">Kunne ikke hente banedata fra CelesTrak. ${esc(sp.err)}</div>` : ''}
+    </div>
+    <div class="p-slmap"><div class="p-lab">KART · SATELLITTER OVER NORDEN</div><canvas class="sat-map" id="sat-map" aria-label="Kart over satellitter over Norden"></canvas>
+      <div class="p-leg"><span><i style="background:#b23a2a"></i>Starlink</span><span><i style="background:#1b1a17"></i>By</span><span>Oppdateres hvert 3. sekund</span></div></div>`;
+}
 
 widget('r_apod', { cls: 'card space-grid', render() {
   const a = sp.apod;
@@ -43,20 +64,10 @@ for (const [k, name] of GALS) widget('r_gal_' + k, { render() {
   return `<div class="card-title">${name}</div><div class="hscroll">${items.map((i) => `<a class="gal-item" href="${esc(i.url)}" target="_blank" rel="noopener"><div style="background-image:url('${esc(i.img)}')"></div><span>${esc(i.title)}</span><span class="mono muted" style="font-size:11px">${esc(i.date)}</span></a>`).join('') || '<div class="gal-item"><div></div></div>'.repeat(4)}</div>`;
 } });
 
-// Vindu og papir: dagens NASA-bilde som fotovindu øverst, med tittelen på bildet.
-widget('r_pw', { cls: 'pw pw-rom', render() {
-  const a = sp.apod, img = a?.media_type === 'image' ? a.url : a?.thumbnail_url;
-  return `<div class="pw-apod${img ? ' on' : ''}" style="${img ? `background-image:url('${esc(img)}')` : ''}"></div>
-    <div class="pw-bottom"><div><div class="pw-kicker">NASA · DAGENS ROMBILDE${a?.date ? ` · ${esc(a.date)}` : ''}</div><div class="pw-title">Satellitt og teleskop</div>
-    ${a?.title ? `<div class="pw-date">${esc(a.title)}${a.copyright ? ` · © ${esc(a.copyright)}` : ''}</div>` : ''}</div></div>`;
-} });
-
 export function render() {
   load();
-  if (is2c()) {
-    return `<div class="p-dash">${card('r_pw')}<div class="p-paper p-rom">
-      ${card('r_starlink')}${card('r_apod')}<div class="p-gal">${GALS.map(([k]) => card('r_gal_' + k)).join('')}</div></div></div>`;
-  }
+  // Vindu og papir: fotovinduet med tittelen lager app.js (pwHeader), resten står i spalter på papiret.
+  if (is2c()) return `<div class="p-rom">${card('r_starlink')}${card('r_apod')}<div class="p-gal">${GALS.map(([k]) => card('r_gal_' + k)).join('')}</div></div>`;
   return `<div style="display:flex;flex-direction:column;gap:20px"><div class="page-title">Satellitt <b>og teleskop</b></div>
     ${card('r_starlink')}${card('r_apod')}${GALS.map(([k]) => card('r_gal_' + k)).join('')}</div>`;
 }
@@ -70,7 +81,7 @@ async function load() {
   loadLand();
   if (sp.loaded) { start(); return; }
   sp.loaded = true;
-  api('/space/apod').then((a) => { sp.apod = a; }).catch((e) => { sp.apod = { error: e.message }; }).finally(() => refresh('r_apod', 'r_pw'));
+  api('/space/apod').then((a) => { sp.apod = a; }).catch((e) => { sp.apod = { error: e.message }; }).finally(() => refresh('r_apod'));
   for (const [k] of GALS) api('/space/gallery/' + k).then((d) => { sp.gal[k] = d.items; refresh('r_gal_' + k); }).catch(() => {});
   try {
     const [sat, tle] = await Promise.all([import('/vendor/satellite/index.js'), api('/space/tle')]);
@@ -134,7 +145,7 @@ function draw() {
   const ox = (W - sx * sc) / 2, oy = (H - sy * sc) / 2;
   const px = (lon) => ox + (lon + 2) * k * sc, py = (lat) => oy + (74 - lat) * sc;
   // Papirfarger i Vindu og papir, ellers mørkt kart.
-  const P = is2c() ? { bg: '#ebe5d8', grid: '#e0d9ca', no: '#d8d1c2', land: '#e3ddcf', noLine: '#6b665c', line: '#b9b2a3', box: '#8f897c', dot: '#1b1a17', city: '#1b1a17', sel: '#b23a2a' }
+  const P = is2c() ? { bg: '#ebe5d8', grid: '#e0d9ca', no: '#d8d1c2', land: '#e3ddcf', noLine: '#6b665c', line: '#b9b2a3', box: '#8f897c', dot: '#b23a2a', city: '#1b1a17', sel: '#1b1a17' }
     : { bg: '#0d1016', grid: '#1a1e26', no: '#232c3b', land: '#1a1f28', noLine: '#4d5b75', line: '#2f3746', box: '#3a4560', dot: '#a8d4fb', city: '#eef0f4', sel: '#f3d38a' };
   x.fillStyle = P.bg; x.fillRect(0, 0, W, H);
   x.strokeStyle = P.grid; x.lineWidth = 1;

@@ -4,6 +4,7 @@ import { store } from './store.js';
 import { openSettings } from './settings.js';
 import { drawMap } from './worldmap.js';
 import { SRC } from './settings-domains.js';
+import { is2c } from './hltheme.js';
 
 const D = (p, o) => api('/../domains/api' + p, o);
 const PERIODS = [['1h', '1t'], ['24h', '24t'], ['7d', '7d'], ['30d', '30d']];
@@ -219,7 +220,8 @@ function paint() {
   el.innerHTML = body();
   const m = document.getElementById('dm-map');
   const d = S.sel !== '*' && S.data.get(key(S.sel));
-  if (m && d) drawMap(m, d.countries ?? []);
+  // Vindu og papir: kartet i papirfarger (fra #eadfca for få til #b23a2a for mange).
+  if (m && d) drawMap(m, d.countries ?? [], is2c() ? { lo: '#eadfca', hi: '#b23a2a', empty: '#e3ddcf', stroke: '#ffffff' } : {});
 }
 
 export function render() {

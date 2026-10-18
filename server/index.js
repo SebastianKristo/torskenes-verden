@@ -18,7 +18,7 @@ import { matApi, matCalendar, startMatScheduler } from './mat.js';
 import domainsApi from './domains.js';
 import trackingApi, { startTrackingWorker, hasTrackingTest, testTracking } from './tracking.js';
 import uiApi from './ui.js';
-import mobileApi, { meOut, removeAvatar, shortcutsFor, layoutOf, authOrToken } from './mobile.js';
+import mobileApi, { meOut, removeAvatar, shortcutsFor, layoutOf, authOrToken, designOf } from './mobile.js';
 import rssApi, { startRssWorker } from './rss.js';
 import { revokeUserTokens } from './finans/routes.js';
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
@@ -166,6 +166,7 @@ authed.get('/state', (c) => {
     serverName: serverName(),
     shortcuts: shortcutsFor(u),
     layout: layoutOf(u).homelab ?? {},
+    design: designOf(u),
     place: cfg('wx_place'),
     bg: kv.get(u, 'bg', 'mane'),
     bgCustom: kv.get(u, 'bg_custom', {}),

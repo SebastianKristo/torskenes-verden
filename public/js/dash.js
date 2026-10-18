@@ -4,7 +4,7 @@ import { renderSearch, popHandler } from './extras.js';
 import { hiddenWidgets } from './profile.js';
 import './media.js';
 import { carousel, restoreCarousel, startPackages } from './weather-card.js';
-import { is2c, pwBgSel, pwCredit, pwOverlay } from './hltheme.js';
+import { is2c, pwCredit, pwImg } from './hltheme.js';
 
 // Snarveiene hentes fra serveren per bruker (/api/state.shortcuts), og deles med mobilappen.
 // Ekte logo (favicon via serveren); lokale adresser slås opp med AI én gang. Uten logo vises forbokstavene i en farge.
@@ -62,6 +62,18 @@ export function upcoming(n = 5) {
 
 /* ---------- Topp: avganger, klokke, vær ---------- */
 
+// Ruters egne linjefarger: fra Entur når serveren sender dem (color/textColor), ellers etter transportmiddel og linjenummer.
+const RUTER = { metro: '#EC700C', tram: '#0B91EF', bus: '#E60000', regional: '#75A300', water: '#682C88', rail: '#003087' };
+function ruterColor(d) {
+  const okHex = (c) => (/^#?[0-9a-f]{6}$/i.test(c ?? '') ? (c[0] === '#' ? c : '#' + c) : null);
+  if (okHex(d.color)) return [okHex(d.color), okHex(d.textColor) ?? '#fff'];
+  const m = String(d.mode ?? '').toLowerCase(), n = String(d.line ?? '');
+  const k = /metro|subway/.test(m) || /^T?\d$/.test(n) && /metro/.test(m) ? 'metro'
+    : /tram/.test(m) ? 'tram' : /water|ferry|boat/.test(m) ? 'water' : /rail|train/.test(m) ? 'rail'
+    : /^[1-5]$/.test(n) ? 'metro' : /^1[1-9]$/.test(n) ? 'tram' : /^B\d/i.test(n) ? 'water' : /^(R|L|F)\d/i.test(n) ? 'rail' : /^\d{3}/.test(n) ? 'regional' : 'bus';
+  return [RUTER[k], '#fff'];
+}
+
 function renderTrips() {
   const r = store.data.ruter;
   if (!r) return store.errors.ruter ? errBox('ruter', 'Ruter') : '<div class="trip"><div class="skeleton"></div></div>'.repeat(4);
@@ -71,7 +83,8 @@ function renderTrips() {
     return r.trips.map((trip) => {
       const deps = trip.deps.map((d) => {
         const m = Math.round((new Date(d.time) - t) / 60000);
-        return m < -1 ? '' : `<span class="p-dep"><span class="p-line">${esc(d.line)}</span>${m <= 0 ? 'nå' : `${m} min`}</span>`;
+        const [bg, fg] = ruterColor(d);
+        return m < -1 ? '' : `<span class="p-dep"><span class="p-line" style="background:${bg};color:${fg};border-color:${bg}">${esc(d.line)}</span>${m <= 0 ? 'nå' : `${m} min`}</span>`;
       }).join('');
       return `<a class="p-trip" href="${esc(trip.url)}" target="_blank" rel="noopener"><div class="p-trip-n">${esc(trip.from)} → ${esc(trip.to)}</div>
         <div class="p-deps">${deps || `<span class="p-mute">${trip.error ? 'Ingen sanntid' : 'Ingen avganger'}</span>`}</div></a>`;
@@ -325,13 +338,12 @@ widget('p_links', { cls: 'p-sec', render() {
 
 function photoWindow(n) {
   const w = store.data.weather;
-  return `<section class="pw pw-dash">${pwOverlay()}
-    ${pwBgSel()}
+  return `<section class="pw pw-dash">${pwImg()}
     <div class="pw-bottom">
       <div><div class="pw-date" id="date">${pdate(n)}</div><div class="pw-hello"><span id="greet">${greeting(n.getHours())}</span>, ${esc(store.me.user)}</div></div>
-      <div class="pw-wx"><div class="pw-temp" id="pw-temp">${w ? `${w.temp}°` : '–°'}</div><div class="pw-cond"><span id="pw-cond">${w ? esc(w.text) : ''}</span>${w ? ' · ' : ''}<span id="clock-hm">${p2(n.getHours())}:${p2(n.getMinutes())}</span></div></div>
+      <a class="pw-wx" href="${esc(w?.lat != null ? `https://www.yr.no/nb/v%C3%A6rvarsel/daglig-tabell/${w.lat},${w.lon}` : 'https://www.yr.no')}" target="_blank" rel="noopener"><div class="pw-temp" id="pw-temp">${w ? `${w.temp}°` : '–°'}</div><div class="pw-cond"><span id="pw-cond">${w ? esc(w.text) : ''}</span>${w ? ' · ' : ''}<span id="clock-hm">${p2(n.getHours())}:${p2(n.getMinutes())}</span> ›</div></a>
     </div>
-    <div class="pw-credit">${esc(pwCredit())}</div></section>`;
+    <div class="pw-credit">${esc(pwCredit())}</div><button type="button" class="pw-fail" hidden>Fikk ikke lastet bildet · trykk for å prøve igjen</button></section>`;
 }
 
 function render2c(n, cardH) {

@@ -135,7 +135,9 @@ test('/api/mobile/home har de 5 nyeste sakene', async () => {
   assert.equal(r.status, 200);
   assert.equal(r.body.news.length, 5);
   assert.ok(r.body.news.every((n) => n.title && n.url && n.feed && n.published));
-  assert.equal(r.body.design.mobileDesign, 'klassisk');
+  // Tom database = ny installasjon: Papir er standard (prompt 14).
+  assert.equal(r.body.design.mobileDesign, 'papir');
+  assert.equal(r.body.design.onboarded, false);
 });
 
 test('layout godtar tema- og designvalg og avviser ukjente verdier', async () => {
@@ -150,12 +152,15 @@ test('layout godtar tema- og designvalg og avviser ukjente verdier', async () =>
   assert.equal(g.body.design, 'glod');
   assert.equal(g.body.photo, 'oslo');
   await M('/me/layout', 'PUT', { design: null });
-  assert.equal((await M('/me/layout')).body.design, undefined);
+  assert.equal((await M('/me/layout')).body.design, 'v2', 'standardverdien fylles inn');
 });
 
 test('fotovindu: Oslo, vær, planeter med reserve og eget bilde', async () => {
   const oslo = await M('/photo-window?kind=oslo');
-  assert.equal(oslo.body.url, '/assets/img/oslo.svg');
+  assert.equal(oslo.body.url, '/api/bg/oslo.jpg');
+  const img = await mobile.request('/bg/oslo.jpg', { headers: { authorization: H.authorization } });
+  assert.equal(img.status, 200);
+  assert.equal(img.headers.get('content-type'), 'image/jpeg');
   const w = await M('/photo-window?kind=weather');
   assert.equal(w.status, 200);
   assert.match(w.body.gradient, /^linear-gradient/);

@@ -24,7 +24,9 @@ export const CARRIERS = [
 // Domenet brukes til logoen (offentlig favicon via /finans/api/logo/<domene>, samme kilde som i designet).
 const DOMAIN = { posten: 'posten.no', bring: 'bring.no', postnord: 'postnord.no', dhl: 'dhl.com', ups: 'ups.com', fedex: 'fedex.com', gls: 'gls-group.eu',
   schenker: 'dbschenker.com', helthjem: 'helthjem.no', budbee: 'budbee.com', instabox: 'instabox.io', other: '17track.net' };
-for (const c of CARRIERS) { c.domain = DOMAIN[c.id]; c.logo = `/finans/api/logo/${DOMAIN[c.id]}`; }
+// Logoene ligger lokalt i public/carriers (prompt 14): enkle merke-SVG-er i transportørens farger, offentlige under /assets/carriers/.
+// Klientene viser initialer på merkefargen hvis bildet ikke laster.
+for (const c of CARRIERS) { c.domain = DOMAIN[c.id]; c.logo = `/assets/carriers/${c.id}.svg`; c.favicon = `/finans/api/logo/${DOMAIN[c.id]}`; }
 export const CARRIER = Object.fromEntries(CARRIERS.map((c) => [c.id, c]));
 
 export const normNo = (no) => String(no ?? '').replace(/[\s-]+/g, '').toUpperCase();

@@ -14,7 +14,7 @@ import * as home from './home.js';
 import * as mat from './mat.js';
 import * as domains from './domains.js';
 import * as tracking from './tracking.js';
-import { loadHlTheme, applyHlTheme, is2c, pickPw } from './hltheme.js';
+import { loadHlTheme, applyHlTheme, is2c, setHlTheme, pwHeader, paintPhoto, bindPhoto } from './hltheme.js';
 
 const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
 const view = document.getElementById('view');
@@ -34,14 +34,16 @@ function renderRoute() {
   route = next;
   // Bakgrunnsbilde og «Siste nytt» vises bare på dashboardet.
   document.body.classList.toggle('not-dash', route !== 'dash');
-  // Vindu og papir: Dashboard og Rom har et fotovindu øverst som topplinjen ligger oppå.
-  document.body.classList.toggle('pw-on', is2c() && (route === 'dash' || route === 'rom'));
+  // Vindu og papir: alle sider har et fotovindu øverst som topplinjen ligger oppå (høyt på Dashboard, lavt ellers).
+  document.body.classList.toggle('pw-on', is2c());
+  document.body.classList.toggle('pw-low', is2c() && route !== 'dash');
   document.body.dataset.route = route;
   // Nyhetsbaren kan ligge inne i visningen (Vindu og papir); flytt den ut før visningen tegnes på nytt.
   const tk = document.getElementById('ticker');
   if (tk && view.contains(tk)) document.querySelector('header.top').after(tk);
-  view.innerHTML = ROUTES[route]();
+  view.innerHTML = (is2c() ? pwHeader(route) : '') + ROUTES[route]();
   placeTicker();
+  paintPhoto();
   mountAll(view);
   setupDnd(view);
   // Rom er en underside av «Mer» på mobil.
@@ -76,12 +78,11 @@ function bindShell() {
   document.addEventListener('click', (e) => { if (!menu.contains(e.target)) close(); });
   document.addEventListener('click', async (e) => {
     if (e.target.closest('.ticker-label')) { e.preventDefault(); openNewsReader(); return; }
-    const pw = e.target.closest('[data-pw-bg]');
-    if (pw) { await pickPw(pw.dataset.pwBg, applyBackground); renderRoute(); return; }
     const act = e.target.closest('[data-act]')?.dataset.act;
     if (!act) return;
     close();
     if (act === 'settings') openSettings();
+    if (act === 'hl-theme') await setHlTheme(is2c() ? 'cur' : '2c');
     if (act === 'layout') openSettings('top');
     if (act === 'news-speed') openSettings('top', 'speed');
     if (act === 'reset-layout') await resetLayouts();
@@ -105,6 +106,7 @@ async function main() {
   applyNav();
   menuLabels();
   bindShell();
+  bindPhoto();
   bindSettings();
   bindPopup();
   bindSearch();

@@ -10,12 +10,13 @@ import os from 'node:os';
 import { config } from './config.js';
 import { kv, OWNER } from './db.js';
 import { aiJson } from './homeos-common.js';
-import { sessionUser, userInfo, serverName, isAdmin } from './auth.js';
+import { sessionUser, userInfo, serverName, isAdmin, installKind } from './auth.js';
 import { packagesFor } from './tracking.js';
 import { newsFor } from './rss.js';
 import finansApi, { bearerOk } from './finans/routes.js';
 import { matApi } from './mat.js';
 import { domainOverview } from './domains.js';
+import { readBg, weatherImages, weatherKind, planetsToday, osloImages, apodImage } from './bg.js';
 import { uiPrefs, saveUiPrefs } from './ui.js';
 import * as integrations from './integrations.js';
 
@@ -96,7 +97,11 @@ const SCALAR = {
   mobileDesign: (v) => ['klassisk', 'papir'].includes(v),
   paperMode: (v) => ['auto', 'lys', 'mork'].includes(v),
   photo: (v) => PHOTO_KINDS.includes(v),
+  onboarded: (v) => typeof v === 'boolean',
+  // Rekkefølgen på kortene i Sporing (prompt 14): Legg til + kilder, Sendinger, Varsler og Transportører.
+  trkOrder: (v) => Array.isArray(v) && v.length <= TRK_CARDS.length && new Set(v).size === v.length && v.every((x) => TRK_CARDS.includes(x)),
 };
+const TRK_CARDS = ['add', 'shipments', 'notify', 'carriers'];
 const PHOTO_KINDS = ['cur', 'oslo', 'weather', 'planets', 'custom'];
 export const layoutOf = (id) => kv.get(id, 'layout', {});
 
@@ -219,7 +224,7 @@ export async function serverStatus() {
 const MODE_COLOR = { metro: '#EC700C', tram: '#0B91EF', bus: '#E60000', rail: '#003087', water: '#682C88', coach: '#75A300' };
 const minsTo = (iso) => Math.max(0, Math.round((new Date(iso) - Date.now()) / 60000));
 const hhmm = (iso) => new Date(iso).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Oslo' });
-const depOut = (d) => ({ line: d.line, mode: d.mode, color: MODE_COLOR[d.mode] ?? MODE_COLOR.bus, min: minsTo(d.time), time: hhmm(d.time), to: d.to });
+const depOut = (d) => ({ line: d.line, mode: d.mode, color: d.color ?? MODE_COLOR[d.mode] ?? MODE_COLOR.bus, textColor: d.textColor ?? '#FFFFFF', min: minsTo(d.time), minutes: minsTo(d.time), time: hhmm(d.time), to: d.to });
 
 const greetingFor = (h) => (h < 10 ? 'God morgen' : h < 18 ? 'Hei' : 'God kveld');
 const osloHour = () => +new Date().toLocaleString('en-GB', { hour: '2-digit', hour12: false, timeZone: 'Europe/Oslo' }).slice(0, 2);
@@ -253,7 +258,8 @@ api.delete('/me/avatar', authOrToken, async (c) => {
 // Andre brukeres bilder (brukerlisten, delte mapper). Bare for innloggede.
 api.get('/users/:id/avatar', authOrToken, (c) => sendAvatar(c, c.req.param('id')));
 
-api.get('/me/layout', authOrToken, (c) => c.json(layoutOf(c.get('user'))));
+// Lagret oppsett med standardverdiene for utseendet fylt inn (de avhenger av om installasjonen er ny, se designOf).
+api.get('/me/layout', authOrToken, (c) => { const id = c.get('user'); return c.json({ ...layoutOf(id), ...designOf(id) }); });
 api.put('/me/layout', authOrToken, async (c) => {
   const b = await json(c);
   if (!b || typeof b !== 'object' || Array.isArray(b)) return c.json({ error: 'Forventet et objekt' }, 400);
@@ -397,7 +403,10 @@ api.get('/mobile/home', authOrToken, async (c) => {
 /** Valgt utseende med standardverdier: FinansHub-tema, Homelab-tema, mobildesign, papirmodus og fotovindu. */
 export const designOf = (id) => {
   const l = layoutOf(id);
-  return { design: l.design ?? 'v2', compactNav: !!l.compactNav, hlTheme: l.hlTheme ?? 'cur', mobileDesign: l.mobileDesign ?? 'klassisk', paperMode: l.paperMode ?? 'auto', photo: l.photo ?? 'cur' };
+  const fresh = installKind() === 'papir';
+  const trk = (l.trkOrder ?? []).filter((x) => TRK_CARDS.includes(x));
+  return { design: l.design ?? 'v2', compactNav: !!l.compactNav, hlTheme: l.hlTheme ?? (fresh ? '2c' : 'cur'), mobileDesign: l.mobileDesign ?? (fresh ? 'papir' : 'klassisk'),
+    paperMode: l.paperMode ?? 'auto', photo: l.photo ?? (fresh ? 'oslo' : 'cur'), onboarded: l.onboarded ?? !fresh, trkOrder: [...trk, ...TRK_CARDS.filter((x) => !trk.includes(x))] };
 };
 
 const PHOTOS = join(config.dataDir, 'photo-window');
@@ -416,27 +425,45 @@ function weatherGradient(symbol = '') {
   return 'linear-gradient(170deg, #3d7cc9 0%, #7fb2e5 55%, #f4d9a6 100%)';
 }
 
+// Fotovinduet (prompt 14): alle bilder leveres fra serveren under /api/bg/ (se bg.js). url er førstevalget og fallbacks
+// prøves etter tur hvis det ikke laster. Gradienten vises bak bildet og er reserven når ingenting laster.
+const SHADE = 'linear-gradient(180deg,rgba(0,0,0,.25),transparent 35%,rgba(0,0,0,.45))';
+const SPACE_GRADIENT = 'linear-gradient(170deg, #05060d 0%, #141a33 100%)';
+const OSLO_GRADIENT = 'linear-gradient(170deg, #f2b36b 0%, #d7766a 45%, #4a3a5e 100%)';
+const WEATHER_TEXT = { clear: 'klart', cloudy: 'skyet', rain: 'regn', snow: 'snø', fog: 'tåke', night: 'natt' };
+const photoOut = (kind, list, extra) => ({ kind, url: list[0] ?? null, fallbacks: list.slice(1), shade: SHADE, ...extra });
+
 api.get('/photo-window', authOrToken, async (c) => {
   const id = c.get('user');
   let kind = c.req.query('kind') || designOf(id).photo;
   if (!PHOTO_KINDS.includes(kind)) return c.json({ error: 'Ukjent fotovindu' }, 400);
   if (kind === 'custom') {
     const v = kv.get(id, 'photo_v', 0);
-    if (v) return c.json({ kind, url: `/api/me/photo-window?v=${v}`, credit: 'Eget bilde', gradient: CUR_GRADIENT });
+    if (v) return c.json(photoOut(kind, [`/api/me/photo-window?v=${v}`, ...osloImages()], { credit: 'Eget bilde', gradient: CUR_GRADIENT }));
     kind = 'cur'; // ikke lastet opp ennå
   }
   if (kind === 'planets') {
     const a = await safe(ext.getApod);
-    if (a && a.media_type === 'image' && a.url) return c.json({ kind, url: a.hdurl && !MOCK ? a.hdurl : a.url, credit: `NASA APOD · ${a.title ?? ''}${a.copyright ? ` · © ${String(a.copyright).trim()}` : ''}`.trim(), gradient: 'linear-gradient(170deg, #05060d 0%, #141a33 100%)' });
-    if (a?.thumbnail_url) return c.json({ kind, url: a.thumbnail_url, credit: `NASA APOD · ${a.title ?? ''}`, gradient: 'linear-gradient(170deg, #05060d 0%, #141a33 100%)' });
-    return c.json({ kind, url: '/assets/img/planets.svg', credit: 'Illustrasjon · NASA APOD svarte ikke', gradient: 'linear-gradient(170deg, #05060d 0%, #141a33 100%)' });
+    // Første henting av dagens bilde venter høyst 6 s; ellers vises et planetbilde, og APOD er klart neste gang.
+    const apod = MOCK ? null : await Promise.race([apodImage(a), new Promise((r) => setTimeout(() => r(null), 6000).unref?.())]);
+    if (apod) return c.json(photoOut(kind, [apod, ...planetsToday()], { credit: `NASA APOD · ${a.title ?? ''}${a.copyright ? ` · © ${String(a.copyright).trim()}` : ''}`.trim(), gradient: SPACE_GRADIENT }));
+    return c.json(photoOut(kind, planetsToday(), { credit: a?.media_type === 'video' ? 'Planeter · dagens APOD er en video' : 'Planeter', gradient: SPACE_GRADIENT }));
   }
-  if (kind === 'oslo') return c.json({ kind, url: '/assets/img/oslo.svg', credit: 'Oslo · illustrasjon', gradient: 'linear-gradient(170deg, #f2b36b 0%, #d7766a 45%, #4a3a5e 100%)' });
+  if (kind === 'oslo') return c.json(photoOut(kind, osloImages(), { credit: 'Oslo · Operaen og Bjørvika', gradient: OSLO_GRADIENT }));
   if (kind === 'weather') {
     const w = await safe(ext.getWeather);
-    return c.json({ kind, url: null, credit: w ? `Vær nå · ${w.text ?? ''} ${w.temp != null ? Math.round(w.temp) + '°' : ''}`.trim() : 'Vær nå', gradient: weatherGradient(w?.symbol ?? ''), symbol: w?.symbol ?? null });
+    const sym = w?.symbol ?? '';
+    return c.json(photoOut(kind, weatherImages(sym), { credit: w ? `Vær nå · ${w.text ?? WEATHER_TEXT[weatherKind(sym)]} ${w.temp != null ? Math.round(w.temp) + '°' : ''}`.trim() : 'Vær nå',
+      gradient: weatherGradient(sym), symbol: sym || null, weather: weatherKind(sym) }));
   }
-  return c.json({ kind: 'cur', url: null, credit: '', gradient: CUR_GRADIENT });
+  return c.json({ kind: 'cur', url: null, fallbacks: [], credit: '', gradient: CUR_GRADIENT });
+});
+
+// Selve bildene. Krever innlogging (sesjon eller app-token) som resten av fotovinduet; kan caches i en dag.
+api.get('/bg/:file', authOrToken, async (c) => {
+  const f = await readBg(c.req.param('file'));
+  if (!f) return c.json({ error: 'Fant ikke bildet' }, 404);
+  return c.body(f.body, 200, { 'Content-Type': f.type, 'Cache-Control': `private, max-age=${f.bundled ? 86400 : 604800}`, 'X-Content-Type-Options': 'nosniff' });
 });
 
 api.get('/me/photo-window', authOrToken, async (c) => {

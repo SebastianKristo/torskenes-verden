@@ -6,6 +6,7 @@
 //   Ekte push er ikke bygget: appene og nettsiden viser varslene lokalt når de henter /api/tracking.
 import { Hono } from 'hono';
 import { db, kv, OWNER } from './db.js';
+import { sessionUser } from './auth.js';
 import { guard, readJson, bad, str, MOCK, aiJson } from './homeos-common.js';
 import { scanShippingMails, mailConfig, mailText } from './finans/mail.js';
 import { stageOf } from './finans/finn-routes.js';
@@ -47,17 +48,20 @@ const q = (sql) => db.prepare(sql);
 const now = () => Date.now();
 const ACTIVE = ['registered', 'picked_up', 'in_transit', 'ready_for_pickup', 'out_for_delivery', 'delayed', 'unknown'];
 const PREF_DEFAULT = { found: true, out: true, pickup: true, delivered: true, delayed: false };
-const prefs = () => ({ ...PREF_DEFAULT, ...kv.get(OWNER, 'trk_prefs', {}) });
-const sources = () => ({ finn: { on: true, lastCheck: null }, email: { on: true, lastCheck: null }, ...kv.get(OWNER, 'trk_sources', {}) });
+// Varselvalgene er per bruker (prompt 14). Hovedadminens valg (OWNER) er utgangspunktet for brukere som ikke har lagret egne.
+const prefs = (uid = OWNER) => ({ ...PREF_DEFAULT, ...kv.get(OWNER, 'trk_prefs', {}), ...(uid !== OWNER ? kv.get(uid, 'trk_prefs', {}) : {}) });
+// Kildene (e-post, Finn) styrer den felles innhentingen og er derfor felles. autoArchive: leverte pakker arkiveres etter 3 dager.
+const sources = () => ({ finn: { on: true, lastCheck: null }, email: { on: true, lastCheck: null }, autoArchive: { on: false }, ...kv.get(OWNER, 'trk_sources', {}) });
+const uidOf = (c) => sessionUser(c) ?? c.get('user') ?? OWNER;
 const setSource = (k, patch) => { const s = sources(); s[k] = { ...s[k], ...patch }; kv.set(OWNER, 'trk_sources', s); };
 
 /* ---------------- Varsler ---------------- */
 
 // Varsler lagres som en kort liste (de 30 siste). Klientene viser dem lokalt (web Notification, lokalt varsel i appene).
 function notify(kind, text, shipmentId) {
-  const p = prefs();
+  // Alle varsler lagres; hver bruker ser bare de typene de har slått på (listOut).
   const key = { found: 'found', out_for_delivery: 'out', ready_for_pickup: 'pickup', delivered: 'delivered', delayed: 'delayed' }[kind];
-  if (!key || !p[key]) return;
+  if (!key) return;
   const list = kv.get(OWNER, 'trk_notices', []);
   list.unshift({ id: `${now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, ts: now(), kind: key, text, shipmentId });
   kv.set(OWNER, 'trk_notices', list.slice(0, 30));
@@ -216,6 +220,7 @@ export function checkAll({ force = false } = {}) {
       .filter((r) => force || !r.checked_at || now() - r.checked_at >= (['out_for_delivery', 'ready_for_pickup'].includes(r.status) ? 14 * 60_000 : 55 * 60_000));
     let updated = 0;
     for (const r of due.slice(0, 40)) if (await refresh(r)) updated++;
+    if (sources().autoArchive?.on) q("UPDATE hl_shipments SET archived=1 WHERE archived=0 AND status='delivered' AND updated_at < ?").run(now() - 3 * 86400_000);
     kv.set(OWNER, 'trk_last_run', now());
     return { found, updated, mail };
   })().finally(() => { running = null; });
@@ -259,17 +264,18 @@ export async function testTracking() {
 const api = new Hono();
 api.use('*', guard);
 
-const listOut = () => {
+const listOut = (uid = OWNER) => {
   const items = q('SELECT * FROM hl_shipments ORDER BY archived, updated_at DESC').all().map(view);
+  const p = prefs(uid);
   return {
-    items, sources: sources(), prefs: prefs(), notices: kv.get(OWNER, 'trk_notices', []).slice(0, 20), lastRun: kv.get(OWNER, 'trk_last_run', null),
+    items, sources: sources(), prefs: p, notices: kv.get(OWNER, 'trk_notices', []).filter((n) => p[n.kind] !== false).slice(0, 20), lastRun: kv.get(OWNER, 'trk_last_run', null),
     carriers: CARRIERS.map((c) => ({ id: c.id, name: c.name, ini: c.ini, color: c.color, fg: c.fg, logo: c.logo, configured: isConfigured(c.id) })),
     counts: { active: items.filter((s) => !s.archived && s.status !== 'delivered').length, pickup: items.filter((s) => !s.archived && s.status === 'ready_for_pickup' && s.direction === 'in').length,
       delivered: items.filter((s) => s.archived || s.status === 'delivered').length },
   };
 };
 
-api.get('/', (c) => c.json(listOut()));
+api.get('/', (c) => c.json(listOut(uidOf(c))));
 api.get('/widget', (c) => c.json({ items: activeShipments(3).map(brief), count: listOut().counts }));
 api.get('/detect', (c) => { const no = normNo(c.req.query('no')); const id = no ? detect(no) : 'other'; return c.json({ carrier: id, name: CARRIER[id].name, configured: isConfigured(id) }); });
 
@@ -305,19 +311,20 @@ api.delete('/:id', (c) => {
 api.post('/check', async (c) => {
   const r = await checkAll({ force: true });
   const msg = r.found ? `✦ Fant ${r.found} nytt sporingsnummer${r.found === 1 ? '' : ''} · ${r.updated} oppdatert` : r.mail && !r.mail.ok ? `E-post: ${r.mail.message}` : `Alt er oppdatert. Ingen nye sporingsnumre${r.updated ? ` · ${r.updated} oppdatert` : ''}.`;
-  return c.json({ ...listOut(), message: msg });
+  return c.json({ ...listOut(uidOf(c)), message: msg });
 });
 
 api.put('/prefs', async (c) => {
   const b = await readJson(c);
   const p = Object.fromEntries(Object.keys(PREF_DEFAULT).filter((k) => k in b).map((k) => [k, !!b[k]]));
-  kv.set(OWNER, 'trk_prefs', { ...prefs(), ...p });
-  return c.json({ prefs: prefs() });
+  const uid = uidOf(c);
+  kv.set(uid, 'trk_prefs', { ...prefs(uid), ...p });
+  return c.json({ prefs: prefs(uid) });
 });
 
 api.put('/sources', async (c) => {
   const b = await readJson(c);
-  for (const k of ['finn', 'email']) if (k in b) setSource(k, { on: !!(typeof b[k] === 'object' ? b[k].on : b[k]) });
+  for (const k of ['finn', 'email', 'autoArchive']) if (k in b) setSource(k, { on: !!(b[k] && typeof b[k] === 'object' ? b[k].on : b[k]) });
   return c.json({ sources: sources() });
 });
 

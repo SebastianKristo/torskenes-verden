@@ -81,6 +81,10 @@ const hashOf = (u) => u.pw_hash || (u.id === OWNER ? legacyPasswordHash() : '');
 const avatarVersion = (id) => kv.get(id, 'avatar_v', 0);
 const publicUser = (u) => u && { id: u.id, username: u.username, role: u.role, name: u.name || cap(u.username), displayName: u.name || cap(u.username),
   totp: !!u.totp_enabled, isMainAdmin: !!u.is_main_admin, avatarUrl: avatarVersion(u.id) ? `/api/users/${u.id}/avatar?v=${avatarVersion(u.id)}` : null };
+// Standardtema (prompt 14): en ny installasjon (tom database) får Papir på nett og mobil og onboarding etter første
+// innlogging. Eksisterende installasjoner beholder «Nåværende» og «Klassisk». Avgjøres én gang, før eieren opprettes.
+if (!kv.get(OWNER, 'install_kind')) kv.set(OWNER, 'install_kind', db.prepare('SELECT 1 FROM users LIMIT 1').get() ? 'legacy' : 'papir');
+export const installKind = () => kv.get(OWNER, 'install_kind', 'legacy');
 ensureOwner();
 
 /** {id,username,role,name,totp} eller null. */
