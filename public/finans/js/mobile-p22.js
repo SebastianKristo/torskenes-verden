@@ -292,7 +292,7 @@ export async function haLoad(force = false) {
   try { HA.d = await hlApi('/tasks/ha'); HA.err = ''; } catch (e) { if (e.status === 404) HA.miss = true; else HA.err = e.status === 403 ? '' : e.message; if (e.status === 403) HA.miss = true; }
 }
 const HA_ST = (d) => (!d?.enabled ? 'Av' : d.status === 'connecting' ? 'Kobler til …' : d.status === 'error' ? 'Feil · prøv igjen' : d.syncedAt ? `Synket ${hm(d.syncedAt)}` : 'Kobler til …');
-function haSection() {
+export function haSection() {
   if (!isAdmin() || HA.miss || !HK.d || HK.local) return '';
   const d = HA.d, on = !!d?.enabled, lists = HK.d.lists ?? [], maps = d?.maps ?? [];
   const ent = (id) => maps.find((x) => String(x.listId) === String(id))?.entityId ?? null;
@@ -305,7 +305,7 @@ function haSection() {
     <span class="pp-mut" style="font-size:12px;line-height:1.45;padding:0 4px">Trykk på en liste for å velge hvilken HA-liste den skal kobles til. Endringer i appen og i Home Assistant (også fra Assist og stemmestyring) synkes begge veier.</span></div>`;
 }
 function haSheet() {
-  if (HA.pick == null || m.screen !== 'huske') return '';
+  if (HA.pick == null || !(m.screen === 'huske' || (m.screen === 'set' && m.sub === 'integ'))) return '';
   const l = (HK.d?.lists ?? []).find((x) => String(x.id) === String(HA.pick)), cur = (HA.d?.maps ?? []).find((x) => String(x.listId) === String(HA.pick))?.entityId ?? null;
   const ents = HA.d?.entities ?? [];
   return `<div class="sheet-bg" data-h22="pickx"></div><div class="pp-sheet" role="dialog" aria-label="Koble ${esc(l?.name ?? '')}"><span class="pp-grab"></span><div class="pp-sh">Koble «${esc(l?.name ?? '')}»</div>

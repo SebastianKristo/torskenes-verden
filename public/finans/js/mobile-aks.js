@@ -157,6 +157,59 @@ function txs() {
     <div id="m-aktx">${[...by].map(([dt, l]) => `<div class="ak-h">${esc(dayTitle(String(dt)))}</div><div class="ak-card">${l.map(txRow).join('')}</div>`).join('') || '<div class="m-empty">Ingen transaksjoner.</div>'}</div>`;
 }
 
+
+/* ---------- Papir: nøyaktig etter Aksjer Mobil.dc.html (theme="papir", hide-head) ---------- */
+// Rekkefølge: verdikort (Live, verdi, dagsendring, graf, periode), synk-linje, 2×2 nøkkelkort, filter, største
+// posisjoner (karusell), alle posisjoner, kontanter, fordeling og utbytte. Ingen skanneknapp på denne siden.
+const AKC = ['#5FD3A8', '#9FE3C6', '#7AA7FF', '#B79CFF', '#FFB08A', '#F2C14E'];
+const tint = (i) => `color-mix(in oklab,${AKC[i % AKC.length]} 30%,var(--pp-card))`;
+const nf = (v) => n0(v), nf2 = (v) => n2(v);
+const sg = (v) => `${(v ?? 0) >= 0 ? '+' : '−'}${nf2(Math.abs(v ?? 0))}`;
+const hm = (t) => (t ? new Date(t).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }) : '–');
+function overview23() {
+  const d = AK.d, pos = d.positions ?? [], s = d.summary ?? {};
+  const P = pos.map((p, i) => ({ ...p, i, typ: isEtf(p) ? 'ETF' : 'Aksjer', _day: p.dayPct != null ? (p.value * p.dayPct) / (100 + p.dayPct) : 0, _cost: (p.avg ?? 0) * (p.quantity ?? 0) || (p.value - (p.pl ?? 0)) }));
+  const cash = s.cash ?? 0, inv = P.reduce((a, x) => a + x.value, 0) || s.value || 0, totV = s.total ?? inv + cash;
+  const cost = P.reduce((a, x) => a + x._cost, 0) || inv, dayV = P.reduce((a, x) => a + x._day, 0), plV = P.reduce((a, x) => a + (x.pl ?? 0), 0) || inv - cost;
+  const segN = { all: 'Alle', stock: 'Aksjer', etf: 'ETF', cash: 'Kontanter' }[AK.seg];
+  const vis = AK.seg === 'cash' ? [] : P.filter((x) => AK.seg === 'all' || x.typ === segN);
+  const hist = series(d.history, days()), vals = hist.map((h) => h.value), g = path(vals.length ? vals : [totV, totV], 330, 130, 8);
+  const live = d.env !== 'demo', syncAt = hm(d.syncedAt);
+  const up = (v) => (v ?? 0) >= 0, cUp = 'var(--pp-pos)', cDn = 'var(--pp-lab)';
+  const chBg = (v) => (up(v) ? 'color-mix(in oklab,var(--pp-pos) 14%,transparent)' : 'color-mix(in oklab,var(--pp-lab) 12%,transparent)');
+  const dPct = inv ? (dayV / inv) * 100 : 0;
+  const kpi = [['Porteføljeverdi', `${nf2(totV)} kr`, `Investert ${nf(inv)} kr + kontanter`, 'var(--pp-ink)'], ['Avkastning totalt', `${sg(plV)} kr`, `${sg(cost ? (plV / cost) * 100 : 0)} % på ${nf(cost)} kr`, up(plV) ? cUp : cDn],
+    ['I dag', `${sg(dayV)} kr`, `${sg(dPct)} %`, up(dayV) ? cUp : cDn], ['Ledig kontanter', `${nf2(cash)} kr`, 'Klar til investering', 'var(--pp-ink)']];
+  const top = [...vis].sort((a, b) => b.value - a.value).slice(0, 3);
+  const pch = (x) => { const v = x.dayPct ?? x.plPct ?? 0; return { t: `${sg(v)} %`, c: up(v) ? cUp : cDn, bg: chBg(v) }; };
+  const ini = (x) => esc(String(x.symbol ?? x.ticker ?? '').slice(0, 2));
+  const divs = d.dividends ?? [], divSum = divs.reduce((a, o) => a + (o.amount ?? 0), 0);
+  const alloc = [...P].sort((a, b) => b.value - a.value);
+  return `<div class="ak23">
+    <div class="ak23-v"><div class="ak23-r"><span class="ak23-m" style="font-size:13.5px">Verdi i dag</span><span class="ak23-env">${live ? 'Live' : 'Demo'}</span></div>
+      <div class="ak23-big"><b>${nf(totV)} kr</b><span style="background:${chBg(dayV)};color:${up(dayV) ? cUp : cDn}">${sg(dPct)} % i dag</span></div>
+      <svg viewBox="0 0 330 130" width="100%" height="130" preserveAspectRatio="none" style="display:block" role="img" aria-label="Utvikling ${esc(perTxt())}"><defs><linearGradient id="akg23" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--pp-pos);stop-opacity:.4"/><stop offset="1" style="stop-color:var(--pp-pos);stop-opacity:0"/></linearGradient></defs><path d="${g.area}" fill="url(#akg23)"/><path d="${g.d}" fill="none" style="stroke:var(--pp-pos)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/></svg>
+      <div class="ak23-rg" role="tablist" aria-label="Periode">${RG.map(([k]) => `<button role="tab" data-ak="per" data-v="${k}" aria-selected="${AK.per === k}">${k}</button>`).join('')}</div></div>
+    <button class="ak23-sync" data-ak="sync"><span style="background:${live || d.configured ? cUp : cDn}"></span><span class="ak23-m">${live ? 'Live-konto' : 'Demo-konto (paper trading)'} · synket ${d.syncedAt && new Date(d.syncedAt).toDateString() === new Date().toDateString() ? 'i dag ' : ''}kl. ${syncAt} · lesetilgang${d.mock ? ' · eksempeldata' : ''}</span><b>${AK.busy ? 'Synker …' : `↻ ${syncAt}`}</b></button>
+    <div class="ak23-kpi">${kpi.map(([l, v, sub, c]) => `<div><span class="ak23-m">${l}</span><b style="color:${c}">${esc(v)}</b><span class="ak23-m" style="font-size:11.5px">${esc(sub)}</span></div>`).join('')}</div>
+    <div class="ak23-seg">${SEG.map(([k, n]) => `<button data-ak="seg" data-v="${k}" aria-pressed="${AK.seg === k}">${n}</button>`).join('')}</div>
+    ${top.length ? `<div class="ak23-h"><b>Største posisjoner</b><span class="ak23-m">${P.length} totalt</span></div>
+    <div class="ak23-tops">${top.map((x) => { const c = pch(x), t = tickerOf(x); return `<div class="ak23-top" style="background:${tint(x.i)}"><span class="ak23-deco"></span>
+      <a class="ak23-ta" href="#/aks/${encodeURIComponent(t)}"><span class="ak23-ini" style="background:var(--pp-card)">${ini(x)}</span><span style="min-width:0"><b>${esc(x.symbol)}</b><span class="ak23-m m-ell" style="font-size:12px;display:block">${esc(x.name)}</span></span></a>
+      <div style="position:relative"><b class="ak23-tv">${nf(x.value)} kr</b><div class="ak23-tq"><span>${qty(x.quantity)} stk</span><span style="background:var(--pp-bg);color:${c.c}">${c.t}</span></div></div>
+      <div class="ak23-bs"><button data-ak="buy" data-t="${esc(t)}">Kjøp</button><button data-ak="sell" data-t="${esc(t)}">Selg</button></div></div>`; }).join('')}</div>` : ''}
+    ${AK.seg === 'cash' ? '' : `<div class="ak23-h"><b>Alle posisjoner</b><a class="ak23-tx" href="#/aks/tx">Transaksjoner ›</a></div>
+    <div class="ak23-list">${vis.map((x) => { const c = pch(x), v = posSeries(x).vals, sp = path(v, 80, 30, 3); return `<a class="ak23-row" href="#/aks/${encodeURIComponent(tickerOf(x))}"><span class="ak23-ini" style="width:40px;height:40px;border-radius:20px;background:${tint(x.i)}">${ini(x)}</span><span style="flex:1 1 auto;min-width:0"><b style="display:block;font-size:15px;font-weight:600">${esc(x.symbol)}</b><span class="ak23-m m-ell" style="display:block;font-size:12.5px">${esc(x.name)}</span></span>
+      <svg viewBox="0 0 80 30" width="64" height="26" style="flex:none" aria-hidden="true"><path d="${sp.d}" fill="none" stroke="${c.c}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span style="flex:none;text-align:right"><b class="ak23-num" style="display:block;font-size:14.5px">${nf(x.value)} kr</b><span class="ak23-chip" style="background:${c.bg};color:${c.c}">${c.t}</span></span></a>`; }).join('') || '<div class="ak23-m" style="padding:12px 4px">Ingen posisjoner her.</div>'}</div>`}
+    ${AK.seg === 'all' || AK.seg === 'cash' ? `<div class="ak23-cash"><span class="ak23-m" style="font-size:14px">Kontanter</span><b class="ak23-num" style="font-size:15px">${nf(cash)} kr</b></div>` : ''}
+    ${alloc.length ? `<b class="ak23-t">Fordeling</b><div class="ak23-al"><div class="ak23-bar">${alloc.map((x) => `<span style="flex:${Math.round(x.value)} 1 0;background:${AKC[x.i % AKC.length]}"></span>`).join('')}</div>
+      <div class="ak23-leg">${alloc.map((x) => `<div><span style="background:${AKC[x.i % AKC.length]}"></span><span class="m-ell" style="flex:1;min-width:0">${esc(x.symbol)}</span><b class="ak23-num" style="font-size:12.5px">${inv ? ((x.value / inv) * 100).toFixed(1).replace('.', ',') : '0'} %</b></div>`).join('')}</div></div>` : ''}
+    ${divs.length ? `<div class="ak23-h"><b>Utbytte</b><span class="ak23-m">${nf2(divSum)} kr i år</span></div><div class="ak23-div">${divs.slice(0, 6).map((o, j) => { const pi = Math.max(0, P.findIndex((x) => x.symbol === o.symbol || x.ticker === o.ticker)); return `<div style="border-top:${j ? '1px solid var(--pp-line)' : '0'}"><span class="ak23-ini" style="width:34px;height:34px;border-radius:17px;font-size:11.5px;background:${tint(pi)}">${esc(String(o.symbol ?? '').slice(0, 2))}</span><span style="flex:1;min-width:0"><b style="display:block;font-size:14.5px;font-weight:600">${esc(o.symbol)}</b><span class="ak23-m" style="font-size:12px">${esc(String(o.date ?? '').split('-').reverse().join('.'))}</span></span><b class="ak23-num" style="font-size:14px;color:${cUp}">+${nf2(o.amount)} kr</b></div>`; }).join('')}</div>` : ''}
+    ${d.status || d.error ? `<div class="snote">${esc(d.error ?? d.status)}</div>` : ''}
+  </div>`;
+}
+
 /* ---------- Visning og hendelser ---------- */
 
 /** Toppbildet i Papir for en aksje: navnet og tickeren. */
@@ -172,7 +225,7 @@ export function aksView(sub) {
   if (!d) return wrap(`${head('Aksjer', '', back)}<div class="m-spin"></div>`);
   if (d.error && !d.summary) return wrap(`${head('Aksjer', '', back)}<div class="ak-card"><div class="ak-row"><span class="m-grow">${esc(d.error)}</span></div></div><a class="ak-pill lg" href="#/set/t212" style="align-self:flex-start">Innstillinger · Trading 212</a>`);
   if (!d.configured && !d.mock) return wrap(`${head('Aksjer', 'Trading 212', back)}<div class="ak-card"><div class="ak-row"><span class="m-grow">Ikke koblet til. Legg inn API-nøkkel og secret fra Trading 212 (Innstillinger → API (Beta), bare lesetilgang).</span></div></div><a class="ak-pill lg" href="#/set/t212" style="align-self:flex-start">Koble til Trading 212</a>`);
-  return wrap(sub === 'tx' ? txs() : sub ? detail(decodeURIComponent(sub)) : overview());
+  return wrap(sub === 'tx' ? txs() : sub ? detail(decodeURIComponent(sub)) : paper() ? overview23() : overview());
 }
 
 export async function aksBind(e, t) {

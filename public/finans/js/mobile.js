@@ -17,13 +17,14 @@ import { matView, matLoad, matBind, matDark } from './mobile-mat.js';
 import { finnView, finnLoad, finnBind } from './mobile-finn.js';
 import { trkView, trkLoad, trkBind, trkWatch } from './mobile-track.js';
 import { haptic } from './mobile-haptics.js';
-import { subsBind } from './mobile-subs.js';
+import { subsBind, soDown, soMove, soUp } from './mobile-subs.js';
 import { paper, paperDark, paperHero, paperNav, paperScanSheet, paperHome, paperFin, paperMer, mediaView, mediaLoad, newsView, newsLoad, paperBind, photoLoad, takeDesign, paperState, paperDown, paperUp, paperMove } from './mobile-paper.js';
 import { paperList, paperFinn, paperFinnSheet, paperFinnLoad, paperFinnBind, paperTrk, paperTrkSheet, paperTrkBind } from './mobile-paper2.js';
 import { take15, edDown, edMove, edUp, edClick, edReset, paperSearch, fsBind, paperTx, txLoad, txBind15, finMerGrid, fmerLoad, rcCount, recentLoad, newShipSheet, nsBind, navSetBind, fabStyle } from './mobile-paper3.js';
 import { wxView, wxLoad, wxBind, wxBindScroll, WX, wxAfterDraw, wxPlaces } from './mobile-wx.js';
 import { wx22Down, wx22Move, wx22Up } from './mobile-wx22.js';
 import * as P22 from './mobile-p22.js';
+import * as P23 from './mobile-p23.js';
 import { HK, p17Bind, p17Sheets, huskeView, tasksLoad, posWidget, bolWidgetLoad, appLoad, applyIcon, ptrBind, wsConnect, onRealtime } from './mobile-p17.js';
 import { trkDown, trkMove, trkUp } from './mobile-paper2.js';
 import { take16, p16Bind, p16Pointer, p16Move, p16Up, tabSheet, avgView, avgLoad, avgSheet, famView, famLoad, famSheet, famAfterDraw, bolView, bolLoad, AV, BO } from './mobile-p16.js';
@@ -384,6 +385,11 @@ function rail(n) {
 
 export function draw() {
   const pp = paper(), th = theme(), wide = two() && !pp, scr = m.screen;
+  // Nye sider åpner øverst; går man tilbake, gjenopprettes posisjonen (prompt 23). Den forrige siden flyttes ut av #app
+  // og ligger ferdig tegnet bak, så sveip tilbake viser den.
+  const vk = [scr, m.sub, m.detail ? m.sel : '', m.edit ? 'e' : '', m.rc ?? '', m.pdet ?? '', BO.tab, m.vk ?? ''].join('|');
+  const vkChanged = P23.leave(vk);
+  const fad = pp && scr === 'finn' && /^ad\/\d+/.test(m.sub ?? '');
   m.light = pp ? applyPaper(paperDark()) : applyM3(th === 'and', pref('m3Seed'), pref('m3Mode'), () => draw(), pref('pageColors') !== 'per');
   const fin = FIN.includes(scr), twoPane = wide && TWO.includes(scr) && !(S.boot?.restricted);
   const confirmView = scr === 'skann' && m.rc && !wide;
@@ -391,7 +397,7 @@ export function draw() {
   const plain = !m.detail && !m.edit;
   const ppMain = !pp ? null : scr === 'hl' ? paperHome() : m.detail && !m.edit && m.sel != null && ['liste', 'sok', 'hjem'].includes(scr) ? paperTx(m.sel)
     : scr === 'hjem' && !S.boot?.restricted && plain ? paperFin() : scr === 'mer' ? paperMer()
-    : scr === 'fmer' ? finMerGrid() : scr === 'sok' && plain ? paperSearch() : scr === 'liste' && plain ? paperList() : scr === 'finn' && !m.sub ? paperFinn() : scr === 'spor' ? paperTrk() : scr === 'dir' ? bolView() : scr === 'avg' ? avgView() : scr === 'fam' ? P22.famView22() : null;
+    : scr === 'fmer' ? finMerGrid() : scr === 'kv' && plain ? P23.kvView() : fad ? P23.finnAdView() : scr === 'sok' && plain ? paperSearch() : scr === 'liste' && plain ? paperList() : scr === 'finn' && !m.sub ? paperFinn() : scr === 'spor' ? paperTrk() : scr === 'dir' ? bolView() : scr === 'avg' ? avgView() : scr === 'fam' ? P22.famView22() : null;
   const main = scr === 'vaer' ? wxView() : scr === 'nyheter' ? newsView() : scr === 'huske' ? (pp ? P22.huske22() : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Huskeliste</div></div>' + huskeView()) : !pp && scr === 'avg' ? avgView() : !pp && scr === 'fam' ? famView()
     : scr === 'media' ? (pp ? '' : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Media</div></div>') + mediaView()
     : ppMain ?? (scr === 'set' ? settingsView(th, m.sub)
@@ -404,20 +410,19 @@ export function draw() {
     : scr === 'finn' ? finnView(th, m.sub)
     : !fin || FINMODS.includes(scr) ? modView(scr, th, m.sub)
     : scrs[scr] ? scrs[scr](th) : confirmView ? confirmRc(th) : scanQueue(th));
-  const n = navModel(), dom = scr === 'dom', bt = !pp && backTop(scr) && scr !== 'vaer', hero = pp && scr !== 'nyheter' && scr !== 'vaer';
-  const nav = scr === 'nyheter' || scr === 'vaer' ? '' : pp ? (scr === 'huske' ? P22.huskeNav(paperNav(scr)) + P22.huskeDock() : paperNav(scr)) : th === 'ios' ? iosNav(n) : andNav(n);
+  const n = navModel(), dom = scr === 'dom', bt = !pp && backTop(scr) && scr !== 'vaer', hero = pp && scr !== 'nyheter' && scr !== 'vaer' && !fad;
+  const nav = scr === 'nyheter' || scr === 'vaer' || fad ? '' : pp ? (scr === 'huske' ? P22.huskeNav(paperNav(scr)) + P22.huskeDock() : paperNav(scr)) : th === 'ios' ? iosNav(n) : andNav(n);
   // Bevar fokus og markør i et felt når skjermen tegnes på nytt (f.eks. søk mens forslag kommer inn).
   const ae = document.activeElement, keep = ae?.id && root().contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
-  root().innerHTML = `<div class="m ${th}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}${fabStyle() === 'float' ? ' flyt' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${scr === 'vaer' ? ' vaer' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
+  root().innerHTML = `<div class="m ${th}${fad ? ' p23-fad' : ''}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}${fabStyle() === 'float' ? ' flyt' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${scr === 'vaer' ? ' vaer' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
     ${pp ? '' : rail(n)}${hero ? paperHero(scr) : ''}<div class="m-scroll">${bt ? topRow(th) : ''}${main}</div><div class="m-detail">${twoPane ? detail(th) : ''}</div>${nav}
     ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() : ''}${avgSheet()}${pp ? "" : famSheet()}${p17Sheets()}${p21Sheets(HK)}${P22.p22Sheets()}${origOverlay(th)}${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
     <input class="m-file" id="m-capture" type="file" accept="image/*" capture="environment" data-mupload data-confirm></div>`;
   if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', pp ? (m.light ? '#f3efe6' : '#14130f') : th === 'ios' ? '#07070A' : getComputedStyle(root().firstElementChild).backgroundColor || '#19120E');
   hlAfterDraw(); pageAfterDraw(); if (scr === 'dom') modAfterDraw(th); if (scr === 'fam') { if (pp) P22.famAfterDraw22(); else famAfterDraw(); } wxAfterDraw(); P22.afterDraw(scr, pp);
-  // Nye sider åpner alltid helt øverst: også undersider i Innstillinger, kvittering, detaljer, Avganger, Vær og Nyhetsleser.
-  const vk = [scr, m.sub, m.detail ? m.sel : '', m.edit ? 'e' : '', m.rc ?? '', m.pdet ?? '', BO.tab, m.vk ?? ''].join('|');
-  if (vk !== m.lastVk) { m.lastVk = vk; window.scrollTo(0, 0); root().querySelector('.m-scroll')?.scrollTo?.(0, 0); }
+  if (fad) P23.finnAdAfterDraw();
+  P23.arrive(vk, vkChanged);
   // Glassmarkøren glir med fjæring mellom fanene. Fanelinja tegnes på nytt ved hver oppdatering, så animasjonen
   // (Web Animations) gjenopptas med medgått tid hvis en ny tegning kommer midt i den.
   const mk = root().querySelector('.tabs .mark');
@@ -456,7 +461,7 @@ async function load() {
       jobs.push(loadJobs());
     }
     if (PAGES.includes(scr)) jobs.push(pageLoad(scr, m.sub));
-    else if (scr === 'set') jobs.push(settingsLoad(m.sub));
+    else if (scr === 'set') jobs.push(settingsLoad(m.sub), ...(m.sub === 'integ' ? [P23.integLoad().catch(() => {})] : []));
     else if (scr === 'hl') jobs.push(hlLoad());
     else if (scr === 'spor') jobs.push(trkLoad().then(() => trkWatch()));
     else if (scr === 'mat') jobs.push(matLoad());
@@ -467,6 +472,7 @@ async function load() {
     else if (scr === 'fam') jobs.push(famLoad());
     else if (scr === 'huske') jobs.push(tasksLoad(true));
     else if (scr === 'dir' && paper()) jobs.push(bolLoad(m.sub));
+    else if (scr === 'finn' && paper() && /^ad\/\d+/.test(m.sub ?? '')) jobs.push(P23.finnAdLoad(+m.sub.split('/')[1]));
     else if (scr === 'finn') jobs.push(paper() && !m.sub ? paperFinnLoad() : finnLoad(m.sub));
     else if (scr === 'fmer') jobs.push(loadSummary().catch(() => {}), fmerLoad().catch(() => {}));
     else if ((!FIN.includes(scr) || FINMODS.includes(scr)) && !['media', 'nyheter', 'vaer'].includes(scr)) jobs.push(modLoad(scr, m.sub));
@@ -519,7 +525,6 @@ export function route() {
     p20Screen(next);
     m.screen = next; m.sub = sub; m.detail = false; m.menu = false; m.sheet = false; m.min = false; m.orig = null; paperState.scan = false; paperState.open = paperState.open && next === 'hl';
     if (next !== 'skann' && next !== 'opp') m.rc = null;
-    window.scrollTo(0, 0);
   }
   u.type = m.filter;
   draw();
@@ -550,6 +555,7 @@ export async function upload(files, { confirm = false, stay = false } = {}) {
   else if (two()) await loadReceipts().catch(() => {});
   draw(); poll();
 }
+export const retryUpload = (ids) => retryOffline(ids, true);
 async function retryOffline(ids = null, force = false) {
   await refreshQueue();
   if (!m.offline.length || !navigator.onLine || (!force && pref('wifi') && !onWifi())) return draw();
@@ -661,59 +667,23 @@ function tabUp(e) {
 }
 
 /* ---------- Sveip fra venstre kant for å gå tilbake (iOS-stil) ---------- */
-// Virker overalt der det finnes en tilbakepil. Siden følger fingeren, gir et lite haptisk «tikk» etter 90 px,
-// og ved slipp etter 90 px trykkes tilbakepilen (samme vei som et vanlig trykk). Kortere sveip fjærer tilbake.
-const SW_EDGE = 22, SW_GO = 90;
-let sw = null, swUp = 0;
+// Prompt 23: forrige side ligger ferdig tegnet bak (mobile-p23.js) med parallakse og slør. Virker der det finnes en
+// tilbakepil, men ikke på rotsidene (hovedfanene).
 const BACK_SEL = '.pp-hero .pp-back, .m-scroll .gback, .m-scroll .back, .m-scroll .gtop, .m-scroll .atop, .m-scroll [data-mact="txback"], .m-scroll [data-mact="pdback"], .m-scroll [data-swipeback]';
 function backTarget() {
   const r = root();
   if (m.orig || m.menu || m.sheet) return null;
-  return [...r.querySelectorAll(BACK_SEL)].find((x) => x.offsetParent !== null) ?? null;
+  return [...r.querySelectorAll(BACK_SEL)].find((x) => x.offsetParent !== null || getComputedStyle(x).position === 'fixed') ?? null;
 }
-function swDown(e) {
-  if ((e.button ?? 0) > 0 || e.clientX > SW_EDGE) return false;
-  const to = backTarget();
-  if (!to) return false;
-  sw = { id: e.pointerId, x0: e.clientX, y0: e.clientY, to, on: false, armed: false, el: root().querySelector('.m-scroll') };
-  return false; // ikke stopp andre handlere før vi vet at det er et sveip
+// Når sveipet tar over, avbrytes lange trykk, dra-og-slipp og karuseller som fikk samme pekerhendelse.
+function cancelOthers(e) {
+  clearTimeout(lpTimer); tdrag = null;
+  const c = { type: 'pointercancel', pointerId: e.pointerId, clientX: e.clientX, clientY: e.clientY, target: e.target, button: 0, preventDefault() {}, stopPropagation() {} };
+  for (const f of [dragEnd, (x) => wx22Up(x, wxPlaces()), P22.up, paperUp, edUp, p16Up, trkUp, p20Up]) { try { f(c); } catch { /* hver modul rydder selv */ } }
 }
-function swMove(e) {
-  const g = sw;
-  if (!g || e.pointerId !== g.id) return false;
-  const dx = e.clientX - g.x0, dy = e.clientY - g.y0;
-  if (!g.on) {
-    if (Math.abs(dy) > 12 && Math.abs(dy) > Math.abs(dx)) { sw = null; return false; } // vanlig rulling
-    if (dx < 10) return false;
-    g.on = true; clearTimeout(lpTimer); tdrag = null;
-    try { root().setPointerCapture(e.pointerId); } catch {}
-    g.el?.classList.add('swiping');
-  }
-  const x = Math.max(0, dx);
-  if (g.el) g.el.style.transform = `translateX(${x}px)`;
-  root().style.setProperty('--swp', Math.min(1, x / 300).toFixed(3));
-  if (!g.armed && x >= SW_GO) { g.armed = true; haptic('tick'); }
-  else if (g.armed && x < SW_GO) g.armed = false;
-  if (e.cancelable) e.preventDefault();
-  return true;
-}
-function swEnd(e) {
-  const g = sw;
-  if (!g || e.pointerId !== g.id) return false;
-  sw = null;
-  if (!g.on) return false;
-  swUp = Date.now();
-  try { root().releasePointerCapture(e.pointerId); } catch {}
-  const go = g.armed && e.type !== 'pointercancel', el = g.el;
-  root().style.removeProperty('--swp');
-  if (el) {
-    el.classList.remove('swiping'); el.classList.add('swipeend');
-    el.style.transform = go ? `translateX(${innerWidth}px)` : '';
-    setTimeout(() => { el.classList.remove('swipeend'); el.style.transform = ''; }, go ? 160 : 260);
-  }
-  if (go) setTimeout(() => { swUp = 0; g.to.click(); }, 140);
-  return true;
-}
+const swDown = (e) => P23.swDown(e, backTarget());
+const swMove = (e) => P23.swMove(e, cancelOthers);
+const swEnd = (e) => P23.swEnd(e);
 
 /* ---------- Hendelser ---------- */
 
@@ -769,12 +739,13 @@ export function bind() {
   }).catch(() => {});
   // Skanneknappen: trykk = kamera (eller valg), hold inne ~480 ms = arket med Bilder/Filer.
   el.addEventListener('pointerdown', (e) => {
+    swDown(e); // sveip tilbake fra kanten ser hendelsen først, men stopper ingen andre før den tar over
+    if (soDown(e)) return;
     p20Down(e); edDown(e); // først: nullstiller også «klikket etter et langt trykk»
     if (paper()) { p16Pointer(e); trkDown(e); }
     if (m.screen === 'vaer' && wx22Down(e, wxPlaces())) return;
     if (P22.down(e)) return;
     if (paperDown(e)) return;
-    if (swDown(e)) return;
     if (tabDown(e)) return;
     if (hlBind(e, e.target)) return;
     if (!e.target.closest('[data-scan]')) return;
@@ -783,16 +754,17 @@ export function bind() {
   });
   const cancelLp = () => clearTimeout(lpTimer);
   el.addEventListener('pointerup', cancelLp); el.addEventListener('pointercancel', cancelLp);
-  el.addEventListener('pointerup', (e) => { dragEnd(e); wx22Up(e, wxPlaces()); P22.up(e); paperUp(e); edUp(e); p16Up(e); trkUp(e); p20Up(e); }); el.addEventListener('pointercancel', (e) => { dragEnd(e); wx22Up(e, wxPlaces()); P22.up(e); paperUp(e); edUp(e); p16Up(e); trkUp(e); p20Up(e); });
+  el.addEventListener('pointerup', (e) => { soUp(e); dragEnd(e); wx22Up(e, wxPlaces()); P22.up(e); paperUp(e); edUp(e); p16Up(e); trkUp(e); p20Up(e); }); el.addEventListener('pointercancel', (e) => { soUp(e); dragEnd(e); wx22Up(e, wxPlaces()); P22.up(e); paperUp(e); edUp(e); p16Up(e); trkUp(e); p20Up(e); });
   el.addEventListener('dragover', (e) => { if (e.target.closest('[data-p16drop]')) e.preventDefault(); });
   el.addEventListener('drop', safe(async (e) => { await p16Bind(e, e.target); }));
-  el.addEventListener('contextmenu', (e) => { if (e.target.closest('[data-ppplus], [data-edk], [data-pk], [data-fmk]')) e.preventDefault(); });
+  el.addEventListener('contextmenu', (e) => { if (e.target.closest('[data-ppplus], [data-edk], [data-pk], [data-fmk], [data-sk]')) e.preventDefault(); });
   el.addEventListener('contextmenu', (e) => { if (e.target.closest('[data-scan]')) e.preventDefault(); });
   el.addEventListener('click', safe(async (e) => {
     const t = e.target, d = (s) => t.closest(s);
     let x;
     if (Date.now() - tsup < 400 && d('.tabs')) { e.preventDefault(); e.stopPropagation(); return; }
-    if (Date.now() - swUp < 400) { e.preventDefault(); e.stopPropagation(); return; } // klikket etter et sveip tilbake
+    if (P23.swGuard()) { e.preventDefault(); e.stopPropagation(); return; } // klikket etter et sveip tilbake
+    if (await P23.bind(e, t)) return;
     if (paper() && m.screen === 'spor' && await paperTrkBind(e, t)) return; // velg flere pakker går foran tilpass siden
     if (paper() && p20Click(e, t)) return; // Finans-flisene (flytt) og Posisjon-kortet
     if (paper() && edClick(e, t)) return; // tilpass siden: ▲ ▼ −, Ferdig, og klikket etter et langt trykk
@@ -857,10 +829,10 @@ export function bind() {
     }
     if (act === 'logout') { await logout(); }
   }));
-  el.addEventListener('input', (e) => { P22.bind(e, e.target); p17Bind(e, e.target); p16Bind(e, e.target); wxBind(e, e.target); if (paper()) { paperFinnBind(e, e.target); paperTrkBind(e, e.target); nsBind(e, e.target); fsBind(e, e.target); } paperBind(e, e.target); matBind(e, e.target); if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
+  el.addEventListener('input', (e) => { P23.bind(e, e.target); P22.bind(e, e.target); p17Bind(e, e.target); p16Bind(e, e.target); wxBind(e, e.target); if (paper()) { paperFinnBind(e, e.target); paperTrkBind(e, e.target); nsBind(e, e.target); fsBind(e, e.target); } paperBind(e, e.target); matBind(e, e.target); if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
   el.addEventListener('change', safe(async (e) => {
     const t = e.target;
-    if (t.matches('[data-mupload]')) { const f = [...t.files]; t.value = ''; await upload(f, { confirm: t.hasAttribute('data-confirm') && f.length === 1 }); return; }
+    if (t.matches('[data-mupload]')) { const f = [...t.files]; t.value = ''; await upload(f, { confirm: t.hasAttribute('data-confirm') && f.length === 1, stay: t.hasAttribute('data-stay') }); return; }
     if (t.dataset.mf) {
       const f = t.dataset.mf;
       const r = await api(`/receipts/${m.rc}`, { method: 'PATCH', json: { [f]: f === 'total' ? parseAmount(t.value) : f === 'accountId' ? +t.value : t.value } });
@@ -881,6 +853,7 @@ export function bind() {
   }));
   el.addEventListener('submit', safe(async (e) => {
     if (e.target.matches('[data-msearch]')) { e.preventDefault(); u.q = e.target.q.value; await loadTx(); return draw(); }
+    if (await P23.bind(e, e.target)) return;
     if (await P22.bind(e, e.target)) return;
     if (await wxBind(e, e.target)) return;
     if (await p17Bind(e, e.target)) return;
@@ -900,9 +873,9 @@ export function bind() {
   el.addEventListener('keydown', (e) => { hlBind(e, e.target); });
   el.addEventListener('focusin', (e) => { hlBind(e, e.target); });
   el.addEventListener('focusout', (e) => { hlBind(e, e.target); });
-  el.addEventListener('pointermove', (e) => { if (dragMove(e)) return; if (wx22Move(e)) return; if (P22.move(e)) return; p20Move(e); paperMove(e); edMove(e); p16Move(e); trkMove(e); if (swMove(e)) return; if (tabMove(e)) return; hlBind(e, e.target); }, { passive: false });
+  el.addEventListener('pointermove', (e) => { if (swMove(e)) return; if (soMove(e)) return; if (dragMove(e)) return; if (wx22Move(e)) return; if (P22.move(e)) return; p20Move(e); paperMove(e); edMove(e); p16Move(e); trkMove(e); if (tabMove(e)) return; hlBind(e, e.target); }, { passive: false });
   el.addEventListener('pointerup', (e) => { if (swEnd(e)) return; if (tabUp(e)) return; hlBind(e, e.target); });
   el.addEventListener('pointercancel', (e) => { if (swEnd(e)) return; tabUp(e); });
   // Hindrer at nettleseren tar over berøringen (og sender pointercancel) mens man sveiper tilbake.
-  el.addEventListener('touchmove', (e) => { if (sw?.on && e.cancelable) e.preventDefault(); }, { passive: false });
+  el.addEventListener('touchmove', (e) => { if (P23.swOn() && e.cancelable) e.preventDefault(); }, { passive: false });
 }

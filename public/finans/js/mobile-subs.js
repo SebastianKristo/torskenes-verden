@@ -2,7 +2,7 @@
 // Faner øverst: Hjem · Innsikt · Historikk. «+» åpner et ark med Skriv inn selv / Fra kvittering / Fra transaksjoner.
 // Data fra /finans/api/subscriptions. Feltene categories, byMonth, health, savings og upcoming kommer fra FINANS;
 // mangler de (eldre server), regnes et enklere bilde ut her fra abonnementene.
-import { api, esc, n0, dd, today, icon, ICONS, logo, parseAmount, navName } from './core.js';
+import { api, hlApi, esc, n0, dd, today, icon, ICONS, logo, parseAmount, navName } from './core.js';
 import { m, draw, flash, avatar, backBtn, theme } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { paper } from './mobile-paper.js';
@@ -23,8 +23,53 @@ const kr = (v) => `${n0(v)} kr`;
 const isI = () => theme() === 'ios';
 
 export async function subsLoad() {
+  if (!SO.loaded) { SO.loaded = true; hlApi('/me/layout').then((r) => { if (Array.isArray(r?.subHomeOrder)) { SO.o = r.subHomeOrder; draw(); } }).catch(() => {}); }
   try { SB.d = await api('/subscriptions'); SB.err = ''; } catch (e) { SB.err = e.message; }
 }
+
+/* ---------- Hold inne og dra for å endre rekkefølgen på Hjem (prompt 23) ---------- */
+// Hold inne 0,45 s på et kort → redigering: stiplet ramme, kortet som dras forstørres litt, og pillen
+// «Dra for å flytte · Tilbakestill · Ferdig» øverst. Trykk inne i kortene er blokkert mens du redigerer.
+// Lagres per bruker i /api/me/layout (subHomeOrder), med lokal kopi i sub_home_order.
+const SO_D = ['ai', 'next7', 'check', 'list'];
+export const SO = { o: (() => { try { return JSON.parse(localStorage.getItem('sub_home_order') || 'null'); } catch { return null; } })(), on: false, drag: null, t: null, fired: false, x: 0, y: 0, loaded: false, at: 0 };
+const soOrder = () => { const o = (SO.o ?? SO_D).filter((k) => SO_D.includes(k)); return [...o, ...SO_D.filter((k) => !o.includes(k))]; };
+let soSaveT;
+function soSave(o) {
+  SO.o = o;
+  try { localStorage.setItem('sub_home_order', JSON.stringify(o)); } catch {}
+  navigator.vibrate?.(6);
+  clearTimeout(soSaveT);
+  soSaveT = setTimeout(() => hlApi('/me/layout', { method: 'PUT', json: { subHomeOrder: o } }).catch(() => {}), 500);
+}
+const soHome = () => m.screen === 'sub' && !m.sub && SB.tab === 'home' && !SB.ed && !SB.sheet;
+export function soDown(e) {
+  if (!soHome()) return false;
+  const c = e.target.closest?.('[data-sk]');
+  if (!c || e.target.closest('[data-soc]')) return false;
+  if (SO.on) { SO.drag = c.dataset.sk; c.classList.add('drag'); return true; }
+  clearTimeout(SO.t); SO.fired = false; SO.x = e.clientX; SO.y = e.clientY;
+  SO.t = setTimeout(() => { SO.fired = true; SO.at = Date.now(); navigator.vibrate?.(15); haptic('tick'); SO.on = true; SO.drag = c.dataset.sk; draw(); }, 450);
+  return false;
+}
+export function soMove(e) {
+  if (SO.t && !SO.on && (Math.abs(e.clientX - SO.x) > 8 || Math.abs(e.clientY - SO.y) > 8)) { clearTimeout(SO.t); SO.t = null; }
+  const d = SO.drag;
+  if (!d || !SO.on) return false;
+  if (e.cancelable) e.preventDefault();
+  const el = document.elementFromPoint(e.clientX, e.clientY), w = el?.closest?.('#app [data-sk]'), to = w?.dataset.sk;
+  if (!to || to === d) return true;
+  const ord = soOrder(), o = ord.filter((x) => x !== d), i = ord.indexOf(d), j = ord.indexOf(to);
+  o.splice(o.indexOf(to) + (j > i ? 1 : 0), 0, d);
+  soSave(o); draw();
+  return true;
+}
+export function soUp() {
+  clearTimeout(SO.t); SO.t = null;
+  if (SO.drag) { SO.drag = null; draw(); return true; }
+  return false;
+}
+const soAttr = (k) => `data-sk="${k}" style="order:${soOrder().indexOf(k)}"`;
 
 /* ---------- Avledede tall (server først, ellers lokalt) ---------- */
 
@@ -103,17 +148,23 @@ function home() {
   const sv = savings(), up = upcoming(7), wk = up.reduce((a, u) => a + (u.amount ?? u.x.price), 0);
   const bars = Array.from({ length: 14 }, (_, i) => { const d = new Date(Date.now() + Math.floor(i / 2) * 864e5).toLocaleDateString('sv-SE'); const v = i % 2 ? 0 : up.filter((u) => u.date === d).reduce((a, u) => a + (u.amount ?? 0), 0); return v; });
   const bmx = Math.max(1, ...bars);
-  const low = act().filter((x) => ['low_use', 'price_up'].includes(statusOf(x)));
+  const low = act().filter((x) => ['low_use', 'price_up'].includes(statusOf(x))), pu = act().filter((x) => statusOf(x) === 'price_up').length;
+  const nAi = sv.suggestions?.length ?? low.length;
   const all = [...items()].sort((a, b) => (b.active - a.active) || String(a.nextDate ?? '9999').localeCompare(String(b.nextDate ?? '9999')));
-  return `${sv.monthly > 0 ? `<div class="sb-hero"><span class="sb-k">✦ AI-SPARING</span><div class="sb-big">Spar ${kr(sv.monthly)}<br>i måneden</div><div class="sb-hs">AI fant ${sv.suggestions?.length ?? low.length} abonnement${(sv.suggestions?.length ?? low.length) === 1 ? '' : 'er'} å se på.</div><button class="sb-pill" data-sb="tab" data-v="hist">Gå gjennom</button></div>` : ''}
-    ${card(`<div class="sb-wk"><div><span class="sb-dim">Neste 7 dager</span><b class="sb-wkv">${kr(wk)}</b><span class="sb-dim">${up.length} trekk</span></div><div class="sb-bars" aria-hidden="true">${bars.map((v, i) => `<i style="height:${v ? Math.max(8, (v / bmx) * 56) : 4}px" class="${v ? 'on' : ''}${i % 2 ? ' gap' : ''}"></i>`).join('')}</div></div>`)}
-    ${low.length ? card(`<div class="sb-chk"><span class="sb-crown">♛</span><div class="m-grow"><b>Abonnementssjekk</b><span class="sb-dim">Gå gjennom før fornyelse</span></div></div><div class="sb-chk2"><span><b>${low.length} abonnement${low.length > 1 ? 'er' : ''}</b> trenger en titt · spar opptil <span class="sb-acc">${kr(low.reduce((a, x) => a + per(x), 0))}</span></span><span class="sb-avs">${low.slice(0, 4).map((x) => lg(x, 26)).join('')}</span></div>`) : ''}
-    ${up.length ? `<div class="sec">Kommende trekk</div>${card(up.slice(0, 4).map((u) => row(u.x, `<b class="m-mono">${kr(u.amount ?? u.x.price)}</b>`, whenTxt(u.date))).join(''))}` : ''}
-    <div class="sec">Alle abonnementer · ${kr(SB.d?.monthly ?? 0)}/mnd</div>
+  const num = ['', 'én', 'to', 'tre', 'fire', 'fem'];
+  const cls = (k) => `sb-blk${SO.on ? ' so-ed' : ''}${SO.drag === k ? ' drag' : ''}`;
+  const blocks = {
+    ai: `<div class="${cls('ai')} sb-hero" ${soAttr('ai')}><span class="sb-k">✦ AI-SPARING</span><div class="sb-big">Spar ${kr(sv.monthly ?? 0)}<br>i måneden</div><div class="sb-hs">${nAi ? `AI fant ${nAi} abonnement${nAi === 1 ? '' : 'er'} å se på${pu ? `, og ${num[pu] ?? pu} prisøkning${pu > 1 ? 'er' : ''}` : ''}.` : 'AI fant ingenting å spare akkurat nå.'}</div><button class="sb-pill" data-sb="tab" data-v="ins">Gå gjennom</button></div>`,
+    next7: `<div class="${cls('next7')} sb-card ${isI() ? 'glass2' : ''}" ${soAttr('next7')}><div class="sb-wk"><div><span class="sb-dim">Neste 7 dager</span><b class="sb-wkv">${kr(wk)}</b><span class="sb-dim">${up.length} trekk</span></div><div class="sb-bars" aria-hidden="true">${bars.map((v, i) => `<i style="height:${v ? Math.max(8, (v / bmx) * 56) : 4}px" class="${v ? 'on' : ''}${i % 2 ? ' gap' : ''}"></i>`).join('')}</div></div></div>`,
+    check: `<div class="${cls('check')} sb-card ${isI() ? 'glass2' : ''}" ${soAttr('check')}><div class="sb-chk"><span class="sb-crown">♛</span><div class="m-grow"><b>Abonnementssjekk</b><span class="sb-dim">Gå gjennom før fornyelse</span></div></div><div class="sb-chk2">${low.length ? `<span><b>${low.length} abonnement${low.length > 1 ? 'er' : ''}</b> trenger en titt · spar opptil <span class="sb-acc">${kr(low.reduce((a, x) => a + per(x), 0))}</span></span><span class="sb-avs">${low.slice(0, 4).map((x) => lg(x, 26)).join('')}</span>` : '<span>Alt ser bra ut · ingen trenger en titt</span>'}</div></div>`,
+    list: `<div class="${cls('list')} sb-lblk" ${soAttr('list')}><div class="sec">Alle abonnementer · ${kr(SB.d?.monthly ?? 0)}/mnd</div>
     ${card(all.map((x) => { const [n, c] = ST[statusOf(x)] ?? ST.active, [cl, pr] = CYC[x.cycle] ?? CYC.monthly;
       return row(x, `<span class="sb-r"><b class="m-mono">${n0(x.price)} kr<small class="sb-dim">${pr}</small></b><button class="stchip ${c}" data-subtog="${x.id}" aria-label="${x.active ? 'Si opp' : 'Gjenoppta'} ${esc(x.name)}">${x.active ? (c === 'ok' ? 'Aktiv' : 'Si opp') : 'Sagt opp'}</button></span>`, `${cl}${x.nextDate ? ` · neste ${dd(x.nextDate)}` : ''} · ${catOf(x)}${c !== 'ok' && x.active ? ` · ${n.replace(/^\W+ /, '')}` : ''}`);
     }).join('') || '<div class="m-empty">Ingen abonnementer ennå. Trykk + for å legge til.</div>')}
-    <div class="snote" style="text-align:center">Trykk på status for å si opp eller gjenoppta.</div>`;
+    <div class="snote" style="text-align:center">Trykk på status for å si opp eller gjenoppta · hold inne på et kort for å flytte det.</div></div>`,
+  };
+  const pill = SO.on ? `<div class="sb-sopill" style="order:-1" data-soc><span>Dra for å flytte</span><button data-soc data-sb="soreset">Tilbakestill</button><button data-soc data-sb="sodone" class="on">Ferdig</button></div>` : '';
+  return `<div class="sb-home${SO.on ? ' so-on' : ''}">${pill}${SO_D.map((k) => blocks[k]).join('')}</div>`;
 }
 
 function insights() {
@@ -223,6 +274,14 @@ export async function subsBind(e, t) {
   if (m.screen !== 'sub' || m.sub) return false;
   const d = (s) => t.closest?.(s);
   let x;
+  if (e.type === 'click' && (x = d('[data-sb="soreset"], [data-sb="sodone"]'))) {
+    e.preventDefault();
+    if (x.dataset.sb === 'sodone') { SO.on = false; SO.drag = null; }
+    else { SO.o = null; try { localStorage.removeItem('sub_home_order'); } catch {} hlApi('/me/layout', { method: 'PUT', json: { subHomeOrder: SO_D } }).catch(() => {}); }
+    draw(); return true;
+  }
+  // Mens kortene redigeres (og klikket rett etter et langt trykk) åpner ingenting.
+  if (e.type === 'click' && d('[data-sk]') && (SO.on || (SO.fired && Date.now() - SO.at < 900))) { e.preventDefault(); e.stopPropagation(); SO.fired = false; return true; }
   if (SB.ed) {
     if ((e.type === 'input' || e.type === 'change') && t.dataset?.sbe) { SB.ed[t.dataset.sbe] = t.value; if (e.type === 'change') draw(); return true; }
     if (e.type === 'change' && t.matches?.('[data-sblogo]')) { const f = t.files?.[0]; t.value = ''; if (f) { SB.ed.file = f; SB.ed.logoUrl = null; } draw(); return true; }
