@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>body{margin:0}a{color:inherit;text-decoration:none;cursor:pointer}a:hover{opacity:.75}input,textarea,button{font:inherit;color:inherit}input::placeholder,textarea::placeholder{color:inherit;opacity:.5}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;background:{{ t.bg }};color:{{ t.ink }};font-family:{{ t.ui }};transition:background .25s">
+
+  <aside style="width:{{ sideW }};flex-shrink:0;background:{{ t.side }};border-right:1px solid {{ t.line }};display:flex;flex-direction:column;padding:22px 14px 18px;position:sticky;top:0;height:100vh;box-sizing:border-box;overflow-x:hidden;overflow-y:auto;transition:width .2s">
+    <div style="display:flex;align-items:center;justify-content:{{ jc }};gap:12px;padding:0 4px;font-weight:600;font-size:19px">
+      <span style="width:38px;height:38px;flex-shrink:0;border-radius:{{ t.r2 }};background:{{ t.acc }};color:{{ t.accInk }};display:grid;place-items:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16h16M8 15l4-4 3 3 5-6"></path></svg></span>
+      <sc-if value="{{ open }}" hint-placeholder-val="{{ true }}"><span style="white-space:nowrap">Finans<span style="color:{{ t.faint }};font-weight:400">Hub</span></span></sc-if>
+    </div>
+    <div style="height:14px;margin:26px 0 8px;position:relative"><sc-if value="{{ open }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;left:12px;bottom:0;font:500 11px {{ t.mono }};letter-spacing:.12em;color:{{ t.faint }}">GENERELT</span></sc-if></div>
+    <nav style="display:flex;flex-direction:column;gap:2px;margin-bottom:16px">
+      <sc-for list="{{ nav }}" as="n" hint-placeholder-count="11">
+        <a onClick="{{ n.go }}" title="{{ n.label }}" style="position:relative;display:flex;align-items:center;justify-content:{{ n.jc }};gap:14px;padding:{{ n.pad }};border-radius:{{ t.r2 }};background:{{ n.bg }};color:{{ n.color }};font-size:15px;font-weight:500;white-space:nowrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" style="flex-shrink:0" fill="none" stroke="{{ n.icon }}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="{{ n.d }}"></path></svg>
+          <sc-if value="{{ open }}" hint-placeholder-val="{{ true }}"><span style="flex:1">{{ n.label }}</span></sc-if>
+          <sc-if value="{{ n.badgeOpen }}" hint-placeholder-val="{{ false }}"><span style="width:22px;height:22px;border-radius:99px;background:{{ t.warn }};color:{{ t.badgeInk }};display:grid;place-items:center;font-size:12px;font-weight:600">2</span></sc-if>
+          <sc-if value="{{ n.badgeDot }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;top:7px;left:calc(50% + 4px);width:9px;height:9px;border-radius:99px;background:{{ t.warn }};border:2px solid {{ t.side }}"></span></sc-if>
+        </a>
+      </sc-for>
+    </nav>
+    <sc-if value="{{ open }}" hint-placeholder-val="{{ true }}">
+      <div style="margin-top:auto;flex-shrink:0;padding:14px 16px;border:1px solid {{ t.line2 }};border-radius:{{ t.r2 }};background:{{ t.surf }};white-space:nowrap">
+        <div style="font:500 11px {{ t.mono }};letter-spacing:.12em;color:{{ t.faint }}">AI-MOTOR</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;font-weight:600;font-size:15px"><span style="width:9px;height:9px;border-radius:99px;background:#3fbf7a;box-shadow:0 0 0 3px {{ t.posSoft }}"></span>Gemini · sky</div>
+        <div style="font:400 12px {{ t.mono }};color:{{ t.faint }};margin-top:6px">gemini-2.5-flash</div>
+      </div>
+    </sc-if>
+    <sc-if value="{{ closed }}" hint-placeholder-val="{{ false }}"><div title="AI-motor: Gemini · sky" style="margin-top:auto;height:44px;border:1px solid {{ t.line2 }};border-radius:{{ t.r2 }};background:{{ t.surf }};display:grid;place-items:center"><span style="width:9px;height:9px;border-radius:99px;background:#3fbf7a;box-shadow:0 0 0 3px {{ t.posSoft }}"></span></div></sc-if>
+  </aside>
+
+  <main style="flex:1;min-width:0;display:flex;flex-direction:column">
+    <header style="display:flex;align-items:center;gap:12px;padding:18px clamp(20px,3vw,40px);border-bottom:1px solid {{ t.line }}">
+      <button onClick="{{ toggleSide }}" title="Skjul/vis sidemeny" style="width:36px;height:36px;margin-left:-16px;border-radius:10px;border:1px solid {{ t.line2 }};background:{{ t.surf }};color:{{ t.muted }};display:grid;place-items:center;cursor:pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v14H4zM9 5v14"></path></svg></button>
+      <div style="flex:1;min-width:0;font-size:14px;color:{{ t.faint }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">FinansHub › <span style="color:{{ t.ink }}">{{ crumb }}</span></div>
+      <div style="display:flex;align-items:center;gap:10px;flex:0 1 280px;min-width:0;overflow:hidden;white-space:nowrap;padding:9px 14px;border:1px solid {{ t.line2 }};border-radius:999px;font-size:14px;color:{{ t.faint }};background:{{ t.surf }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 18a7 7 0 100-14 7 7 0 000 14zM20 20l-4-4"></path></svg>Søk i transaksjoner …<span style="margin-left:auto;font-size:12px;font-weight:600;color:{{ t.note }}">✦ AI</span></div>
+      <div style="width:38px;height:38px;border:1px solid {{ t.line2 }};border-radius:999px;display:grid;place-items:center;position:relative;background:{{ t.surf }}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 16V11a6 6 0 0112 0v5l2 2H4zM10 21h4"></path></svg><span style="position:absolute;top:8px;right:9px;width:7px;height:7px;border-radius:9px;background:{{ t.warn }}"></span></div>
+      <div style="display:flex;align-items:center;gap:10px"><div style="width:38px;height:38px;border-radius:999px;background:#ffcfa8;color:#1c1b19;display:grid;place-items:center;font-weight:600">S</div><div><div style="font-size:14px;font-weight:500;white-space:nowrap">Sebastian Kristo Jemtland</div><div style="font:400 12px {{ t.mono }};color:{{ t.faint }}">Privat</div></div></div>
+    </header>
+
+    <div style="padding:32px clamp(20px,3vw,40px) 56px;display:flex;flex-direction:column;gap:24px;max-width:1360px;width:100%;box-sizing:border-box">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap">
+        <div>
+          <sc-if value="{{ p.oversikt }}" hint-placeholder-val="{{ true }}"><div style="font:500 13px {{ t.mono }};color:{{ t.faint }};letter-spacing:.06em;margin-bottom:6px">LØRDAG 18. OKTOBER</div></sc-if>
+          <div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:{{ titleSize }};line-height:1.05;text-wrap:balance;letter-spacing:-.01em">{{ title }}</div>
+          <sc-if value="{{ hasSub }}" hint-placeholder-val="{{ false }}"><div style="font-size:14px;color:{{ t.muted }};margin-top:8px">{{ sub }}</div></sc-if>
+        </div>
+        <sc-if value="{{ p.subs }}" hint-placeholder-val="{{ false }}"><button style="padding:11px 18px;border-radius:999px;border:none;background:{{ t.acc }};color:{{ t.accInk }};font-weight:600;font-size:14px;cursor:pointer">+ Legg til abonnement</button></sc-if>
+        <sc-if value="{{ p.kontoer }}" hint-placeholder-val="{{ false }}"><button style="padding:11px 18px;border-radius:999px;border:none;background:{{ t.acc }};color:{{ t.accInk }};font-weight:600;font-size:14px;cursor:pointer">+ Ny konto</button></sc-if>
+      </div>
+
+      <!-- OVERSIKT -->
+      <sc-if value="{{ p.oversikt }}" hint-placeholder-val="{{ true }}">
+        <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start">
+          <div style="flex:999 1 520px;display:flex;flex-direction:column;gap:24px;min-width:0">
+            <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:30px;display:flex;flex-direction:column;gap:26px">
+              <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+                <div><div style="font-size:14px;color:{{ t.muted }}">Total saldo</div><div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:clamp(44px,6vw,76px);line-height:1;margin-top:8px;white-space:nowrap;letter-spacing:-.02em">−37 489,63 <span style="font-size:32px;color:{{ t.faint }}">kr</span></div></div>
+                <div style="font-size:14px;font-weight:500;color:{{ t.pos }};background:{{ t.posSoft }};padding:6px 12px;border-radius:999px">↗ 1 % mot september</div>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border-top:1px solid {{ t.line }}">
+                <div style="padding:18px 18px 0 0"><div style="font-size:13px;color:{{ t.faint }}">Inn i oktober</div><div style="font:500 26px {{ t.mono }};margin-top:6px">0,00 <span style="font-size:14px;color:{{ t.faint }}">kr</span></div><div style="font-size:13px;color:{{ t.faint }};margin-top:6px">Ingen inntekt registrert</div></div>
+                <div style="padding:18px 18px 0;border-left:1px solid {{ t.line }}"><div style="font-size:13px;color:{{ t.faint }}">Brukt i oktober</div><div style="font:500 26px {{ t.mono }};margin-top:6px">205,37 <span style="font-size:14px;color:{{ t.faint }}">kr</span></div><div style="font-size:13px;color:{{ t.pos }};margin-top:6px">↘ 89 % mot september</div></div>
+                <div style="padding:18px 0 0 18px;border-left:1px solid {{ t.line }}"><div style="font-size:13px;color:{{ t.faint }}">Igjen av budsjett</div><div style="font:500 26px {{ t.mono }};margin-top:6px">0,00 <span style="font-size:14px;color:{{ t.faint }}">kr</span></div><a style="display:inline-block;font-size:13px;font-weight:500;color:{{ t.note }};margin-top:6px">Sett opp budsjett →</a></div>
+              </div>
+            </div>
+            <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:26px 30px">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+                <div><div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:26px">Inn og ut</div><div style="font-size:13px;color:{{ t.faint }}">Per måned, siste 12 måneder</div></div>
+                <div style="display:flex;gap:18px;align-items:center;font-size:13px;color:{{ t.muted }}">
+                  <span style="display:flex;gap:6px;align-items:center"><span style="width:10px;height:10px;border-radius:3px;background:{{ t.acc }}"></span>Inn</span>
+                  <span style="display:flex;gap:6px;align-items:center"><span style="width:10px;height:10px;border-radius:3px;background:{{ t.warn }}"></span>Ut</span>
+                  <div style="display:flex;background:{{ t.surf2 }};border-radius:999px;padding:3px"><span style="padding:5px 14px;border-radius:999px;background:{{ t.surf }};color:{{ t.ink }};font-weight:500">Måned</span><span style="padding:5px 14px">År</span></div>
+                </div>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px;margin-top:22px;border-bottom:1px solid {{ t.line }}">
+                <sc-for list="{{ cols }}" as="c" hint-placeholder-count="12">
+                  <div style="height:190px;display:flex;align-items:flex-end;justify-content:center;gap:2px"><div style="width:40%;max-width:14px;height:{{ c.hIn }};background:{{ t.acc }};border-radius:4px 4px 0 0"></div><div style="width:50%;max-width:18px;height:{{ c.hUt }};background:{{ c.utBg }};border-radius:4px 4px 0 0"></div></div>
+                </sc-for>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:6px;margin-top:8px"><sc-for list="{{ cols }}" as="c" hint-placeholder-count="12"><div style="text-align:center;font-size:11px;color:{{ t.faint }};overflow:hidden">{{ c.m }}</div></sc-for></div>
+            </div>
+            <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:26px 30px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:26px">Siste transaksjoner</div><a onClick="{{ goTx }}" style="font-size:14px;font-weight:500;color:{{ t.acc }}">Se alle →</a></div>
+              <sc-for list="{{ recent }}" as="x" hint-placeholder-count="6">
+                <div style="display:grid;grid-template-columns:44px minmax(0,1fr) auto auto;gap:14px;align-items:center;padding:13px 0;border-top:1px solid {{ t.line }}">
+                  <div style="width:40px;height:40px;border-radius:11px;background:{{ x.bg }};color:{{ x.fg }};display:grid;place-items:center;font-weight:800;font-size:{{ x.fs }};box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)">{{ x.logo }}</div>
+                  <div style="min-width:0"><div style="font-size:15px;font-weight:500">{{ x.name }} <span style="font-size:13px;font-weight:400;color:{{ t.faint }}">· {{ x.cat }}</span></div><div style="font-size:13px;color:{{ t.note }};margin-top:2px">✦ {{ x.note }}</div></div>
+                  <div style="font:400 13px {{ t.mono }};color:{{ t.faint }}">{{ x.date }}</div>
+                  <div style="font:500 15px {{ t.mono }};text-align:right;white-space:nowrap">{{ x.amt }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="flex:1 1 320px;display:flex;flex-direction:column;gap:24px;min-width:0">
+            <div style="background:{{ t.acc }};color:{{ t.accInk }};border-radius:{{ t.r }};padding:26px">
+              <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:26px">Trenger gjennomgang</div><span style="font-size:13px;font-weight:600;background:{{ t.accInk }};color:{{ t.acc }};padding:4px 10px;border-radius:999px">2 nye</span></div>
+              <div style="display:flex;flex-direction:column;gap:10px;margin-top:18px">
+                <sc-for list="{{ queue }}" as="q" hint-placeholder-count="2">
+                  <a onClick="{{ q.open }}" style="display:flex;gap:14px;align-items:center;background:{{ t.revBg }};border-radius:{{ t.r2 }};padding:13px">
+                    <div style="width:38px;height:50px;border-radius:6px;background:repeating-linear-gradient(0deg,#e9e4d8 0 4px,#ddd6c6 4px 5px)"></div>
+                    <div style="flex:1"><div style="font-size:15px;font-weight:600">Ny kvittering</div><div style="font-size:13px;color:{{ t.revMute }};margin-top:2px">17.10 · manuell</div><div style="font-size:13px;font-weight:600;color:{{ t.revWarn }};margin-top:2px">Må fylles ut manuelt</div></div>
+                    <span style="font-size:13px;font-weight:600">Fyll ut →</span>
+                  </a>
+                </sc-for>
+              </div>
+            </div>
+            <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:26px">
+              <div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:26px">Handlinger</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px">
+                <sc-for list="{{ actions }}" as="a" hint-placeholder-count="4">
+                  <button onClick="{{ a.go }}" style="display:flex;flex-direction:column;align-items:flex-start;gap:22px;padding:16px;border-radius:{{ t.r2 }};border:none;background:{{ a.bg }};color:{{ t.ink }};cursor:pointer;text-align:left;font-size:14px;font-weight:500"><span style="width:34px;height:34px;border-radius:10px;background:{{ t.surf }};display:grid;place-items:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="{{ a.ic }}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ a.d }}"></path></svg></span>{{ a.label }}</button>
+                </sc-for>
+              </div>
+            </div>
+            <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:26px">
+              <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:26px">Kontoer</div><a onClick="{{ goKontoer }}" style="font-size:14px;font-weight:500;color:{{ t.acc }}">Se alle →</a></div>
+              <div style="margin-top:16px;border-radius:{{ t.r2 }};background:{{ t.card2 }};color:{{ t.card2Ink }};padding:20px;display:flex;flex-direction:column;gap:26px">
+                <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-style:italic;font-weight:800;font-size:20px">DNB</span><span style="font:400 13px {{ t.mono }};color:{{ t.card2Mute }}">•••• 3293</span></div>
+                <div><div style="font-size:13px;color:{{ t.card2Mute }}">Brukeskonto</div><div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:34px;margin-top:2px">−37 489,63 kr</div></div>
+              </div>
+            </div>
+            <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:24px 26px">
+              <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:24px">Budsjett</div><a style="font-size:14px;font-weight:500;color:{{ t.acc }}">Endre →</a></div>
+              <div style="font-size:14px;color:{{ t.muted }};margin-top:8px">Ingen budsjett satt. <a style="color:{{ t.note }};font-weight:600">Sett opp</a></div>
+            </div>
+            <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:24px 26px">
+              <div style="display:flex;justify-content:space-between;align-items:center"><div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:24px">Kommende trekk</div><a onClick="{{ goSubs }}" style="font-size:14px;font-weight:500;color:{{ t.acc }}">Alle →</a></div>
+              <div style="font-size:14px;color:{{ t.muted }};margin-top:8px">Ingen faste trekk registrert.</div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- TRANSAKSJONER -->
+      <sc-if value="{{ p.transaksjoner }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <div style="flex:1;min-width:260px;display:flex;align-items:center;gap:10px;padding:0 16px;height:46px;border:1px solid {{ t.line2 }};border-radius:{{ t.r2 }};background:{{ t.surf }};color:{{ t.faint }};font-size:14px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 18a7 7 0 100-14 7 7 0 000 14zM20 20l-4-4"></path></svg>Søk etter butikk eller beskrivelse</div>
+          <div style="display:flex;align-items:center;gap:24px;padding:0 16px;height:46px;border:1px solid {{ t.line2 }};border-radius:{{ t.r2 }};background:{{ t.surf }};font-size:14px">Alle kontoer <span style="color:{{ t.faint }}">▾</span></div>
+          <div style="display:flex;align-items:center;gap:24px;padding:0 16px;height:46px;border:1px solid {{ t.line2 }};border-radius:{{ t.r2 }};background:{{ t.surf }};font-size:14px">Inn og ut <span style="color:{{ t.faint }}">▾</span></div>
+          <button style="padding:0 18px;height:46px;border:1px solid {{ t.line2 }};border-radius:{{ t.r2 }};background:{{ t.surf }};font-size:14px;font-weight:500;cursor:pointer">Eksporter CSV</button>
+          <button style="padding:0 18px;height:46px;border:none;border-radius:{{ t.r2 }};background:{{ t.acc }};color:{{ t.accInk }};font-size:14px;font-weight:600;cursor:pointer">+ Ny transaksjon</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <sc-for list="{{ chips }}" as="c" hint-placeholder-count="13">
+            <button onClick="{{ c.pick }}" style="display:flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.color }};font-size:13px;font-weight:500;cursor:pointer"><span style="width:7px;height:7px;border-radius:99px;background:{{ c.dot }}"></span>{{ c.name }}</button>
+          </sc-for>
+        </div>
+        <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:8px 26px 10px;overflow-x:auto"><div style="min-width:720px">
+          <div style="display:flex;justify-content:space-between;padding:16px 0 14px;font-size:13px;color:{{ t.muted }}"><span>{{ txCount }}</span><span>Netto <b style="font:500 14px {{ t.mono }};color:{{ t.ink }}">{{ txNet }}</b></span></div>
+          <div style="display:grid;grid-template-columns:64px minmax(0,1fr) 200px 110px 110px;gap:14px;padding:10px 0;border-bottom:1px solid {{ t.line }};font:500 11px {{ t.mono }};letter-spacing:.1em;color:{{ t.faint }}"><span>DATO</span><span>BESKRIVELSE</span><span>KATEGORI</span><span>KVITTERING</span><span style="text-align:right">BELØP</span></div>
+          <sc-for list="{{ txList }}" as="x" hint-placeholder-count="10">
+            <div style="display:grid;grid-template-columns:64px minmax(0,1fr) 200px 110px 110px;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid {{ t.line }}" style-hover="background:{{ t.surf2 }}">
+              <span style="font:400 13px {{ t.mono }};color:{{ t.muted }}">{{ x.date }}</span>
+              <div style="display:flex;gap:12px;align-items:center;min-width:0"><div style="width:36px;height:36px;flex-shrink:0;border-radius:10px;background:{{ x.bg }};color:{{ x.fg }};display:grid;place-items:center;font-weight:800;font-size:{{ x.fsS }};box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)">{{ x.logo }}</div><div style="min-width:0"><div style="font-size:14px;font-weight:500">{{ x.name }}</div><div style="font-size:12px;color:{{ t.faint }}">Brukeskonto</div><div style="font-size:13px;color:{{ t.note }};margin-top:1px">✦ {{ x.note }}</div></div></div>
+              <div><span style="display:inline-flex;align-items:center;gap:7px;padding:4px 10px;border-radius:999px;background:{{ t.surf2 }};font-size:12px;font-weight:500"><span style="width:7px;height:7px;border-radius:99px;background:{{ x.dot }}"></span>{{ x.cat }}</span></div>
+              <span style="font-size:13px;color:{{ t.faint }}">{{ x.receipt }}</span>
+              <span style="font:500 14px {{ t.mono }};text-align:right;white-space:nowrap">{{ x.amt }}</span>
+            </div>
+          </sc-for>
+          <sc-if value="{{ txEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:28px 0;font-size:14px;color:{{ t.muted }}">Ingen transaksjoner i denne kategorien.</div></sc-if>
+        </div></div>
+      </sc-if>
+
+      <!-- AI-SØK -->
+      <sc-if value="{{ p.ai }}" hint-placeholder-val="{{ false }}">
+        <div style="max-width:980px;display:flex;flex-direction:column;gap:20px">
+          <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:26px">
+            <div style="font:600 12px {{ t.mono }};letter-spacing:.08em;color:{{ t.note }}">✦ AI-SØK · Gemini</div>
+            <div style="display:flex;gap:10px;margin-top:14px">
+              <input value="{{ aiQ }}" onChange="{{ setAiQ }}" onKeyDown="{{ aiKey }}" placeholder="Spør om økonomien din …" style="flex:1;height:52px;padding:0 18px;border-radius:{{ t.r2 }};border:1.5px solid {{ t.acc }};background:{{ t.bg }};font-size:16px;outline:none"></input>
+              <button onClick="{{ askAi }}" style="padding:0 24px;border-radius:{{ t.r2 }};border:none;background:{{ t.acc }};color:{{ t.accInk }};font-size:15px;font-weight:600;cursor:pointer">Spør AI</button>
+            </div>
+            <div style="font-size:13px;color:{{ t.muted }};margin-top:12px">Søker i transaksjoner, kvitteringer og varelinjene som AI har lest av kvitteringsbildene.</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+              <sc-for list="{{ aiSuggest }}" as="s" hint-placeholder-count="6"><button onClick="{{ s.pick }}" style="padding:7px 14px;border-radius:999px;border:1px solid {{ t.line2 }};background:transparent;font-size:13px;cursor:pointer">{{ s.q }}</button></sc-for>
+            </div>
+          </div>
+          <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:22px 26px">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:10px"><span style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:22px">Tidligere spørsmål</span><a onClick="{{ clearAi }}" style="font-size:13px;font-weight:500;color:{{ t.note }}">Tøm</a></div>
+            <sc-for list="{{ aiHist }}" as="h" hint-placeholder-count="8">
+              <a onClick="{{ h.pick }}" style="display:flex;gap:12px;align-items:center;padding:12px 4px;border-top:1px solid {{ t.line }};font-size:14px"><span style="color:{{ t.faint }}">↻</span>{{ h.q }}</a>
+            </sc-for>
+            <sc-if value="{{ aiHistEmpty }}" hint-placeholder-val="{{ false }}"><div style="padding:14px 0;border-top:1px solid {{ t.line }};font-size:14px;color:{{ t.muted }}">Ingen tidligere spørsmål.</div></sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- KVITTERINGER -->
+      <sc-if value="{{ p.kvitteringer }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:20px;align-items:start">
+          <div style="display:flex;flex-direction:column;gap:20px">
+            <div style="border:1.5px dashed {{ t.line2 }};border-radius:{{ t.r }};padding:28px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;background:{{ t.surf }}">
+              <span style="width:50px;height:50px;border-radius:{{ t.r2 }};background:{{ t.acc }};color:{{ t.accInk }};display:grid;place-items:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3M8 12h8"></path></svg></span>
+              <div style="font-size:16px;font-weight:600">Last opp kvitteringer</div>
+              <div style="font-size:13px;color:{{ t.muted }};max-width:280px">Bilder eller PDF · flere filer · dra hit eller klikk · leses av Gemini</div>
+            </div>
+            <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:22px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:22px">Kø</span><span style="font-size:13px;color:{{ t.muted }}">2 til gjennomgang</span></div>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
+                <sc-for list="{{ queue }}" as="q" hint-placeholder-count="2">
+                  <a onClick="{{ q.select }}" style="display:flex;gap:12px;align-items:center;padding:10px 12px;border-radius:{{ t.r2 }};border:1.5px solid {{ q.border }};background:{{ t.surf2 }}">
+                    <div style="width:30px;height:40px;border-radius:5px;background:repeating-linear-gradient(0deg,#e9e4d8 0 4px,#ddd6c6 4px 5px)"></div>
+                    <div style="flex:1"><div style="font-size:14px;font-weight:600">Ny kvittering</div><div style="font-size:12px;color:{{ t.faint }}">17.10 · Gemini</div></div>
+                    <span style="font-size:12px;font-weight:600;color:{{ t.warn }};background:{{ t.warnSoft }};padding:4px 9px;border-radius:7px">Gjennomgå</span>
+                  </a>
+                </sc-for>
+              </div>
+            </div>
+            <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:22px">
+              <div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:22px;padding-bottom:8px">Bokført</div>
+              <sc-for list="{{ booked }}" as="b" hint-placeholder-count="8">
+                <div style="display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:11px 0;border-top:1px solid {{ t.line }};font-size:13px">
+                  <span style="min-width:0">{{ b.name }}<sc-if value="{{ b.hasNote }}" hint-placeholder-val="{{ false }}"><span style="color:{{ t.note }}"> ✦ {{ b.note }}</span></sc-if><span style="color:{{ t.faint }}"> · {{ b.date }}</span></span>
+                  <span style="font:400 13px {{ t.mono }};white-space:nowrap;color:{{ b.color }}">{{ b.right }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:26px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div><div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:26px">Bekreft kvittering</div><div style="font-size:13px;color:{{ t.muted }};margin-top:2px">Manuell utfylling · kvittering {{ reviewNo }} av 2</div></div>
+              <span style="font-size:12px;font-weight:600;color:{{ t.warn }};background:{{ t.warnSoft }};padding:5px 11px;border-radius:999px">● Må fylles ut</span>
+            </div>
+            <div style="font-size:13px;color:{{ t.warn }};margin-top:16px">Kunne ikke leses automatisk: fetch failed. Fyll ut manuelt.</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:22px;margin-top:16px">
+              <div style="border-radius:{{ t.r2 }};background:{{ t.surf2 }};min-height:300px;display:grid;place-items:center;padding:16px">
+                <div style="width:60%;height:100%;min-height:260px;background:repeating-linear-gradient(0deg,#ece7dc 0 9px,#d9d2c3 9px 10px);border-radius:4px;display:grid;place-items:center;font:500 12px {{ t.mono }};color:#5c5850">Kvitteringsbilde</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:14px">
+                <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:{{ t.muted }}">Butikk<input style="height:44px;padding:0 14px;border-radius:10px;border:1px solid {{ t.line2 }};background:{{ t.bg }};outline:none"></input></label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                  <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:{{ t.muted }}">Dato<input value="17.10.2026" readOnly="{{ true }}" style="height:44px;padding:0 14px;border-radius:10px;border:1px solid {{ t.line2 }};background:{{ t.bg }};font-family:{{ t.mono }};outline:none"></input></label>
+                  <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:{{ t.muted }}">Total (kr)<input style="height:44px;padding:0 14px;border-radius:10px;border:1.5px solid {{ t.acc }};background:{{ t.bg }};font-family:{{ t.mono }};outline:none"></input></label>
+                </div>
+                <div style="font-size:13px;color:{{ t.muted }}">Kategori</div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:-6px">
+                  <sc-for list="{{ rCats }}" as="c" hint-placeholder-count="10"><button onClick="{{ c.pick }}" style="padding:6px 12px;border-radius:999px;border:1px solid {{ c.border }};background:{{ c.bg }};color:{{ c.color }};font-size:13px;cursor:pointer">{{ c.name }}</button></sc-for>
+                </div>
+                <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:{{ t.muted }}">Konto<div style="height:44px;padding:0 14px;border-radius:10px;border:1px solid {{ t.line2 }};background:{{ t.bg }};display:flex;align-items:center;justify-content:space-between;color:{{ t.ink }};font-size:14px">Brukeskonto<span style="color:{{ t.faint }}">▾</span></div></label>
+                <div style="display:flex;gap:12px;align-items:center;padding:14px;border-radius:{{ t.r2 }};border:1px solid {{ t.line2 }}"><span style="color:{{ t.faint }}">⌁</span><div><div style="font-size:14px;font-weight:600">Ingen bankmatch ennå</div><div style="font-size:13px;color:{{ t.muted }}">Bokføres som ny transaksjon</div></div></div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px;flex-wrap:wrap">
+                  <button style="padding:12px 16px;border-radius:{{ t.r2 }};border:1px solid {{ t.line2 }};background:transparent;font-size:14px;font-weight:500;cursor:pointer">Les på nytt med Ollama</button>
+                  <button style="padding:12px 16px;border-radius:{{ t.r2 }};border:1px solid {{ t.line2 }};background:transparent;font-size:14px;font-weight:500;cursor:pointer">Avvis</button>
+                  <button style="padding:12px 22px;border-radius:{{ t.r2 }};border:none;background:{{ t.acc }};color:{{ t.accInk }};font-size:14px;font-weight:600;cursor:pointer">Bokfør</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- AKSJER -->
+      <sc-if value="{{ p.aksjer }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 18px;border:1px solid {{ t.line }};border-radius:{{ t.r2 }};background:{{ t.surf }};font-size:13px"><span style="display:flex;gap:8px;align-items:center"><span style="width:8px;height:8px;border-radius:99px;background:#3fbf7a"></span>Trading 212 · Synkronisert · 08:42</span><a onClick="{{ goSettings }}" style="color:{{ t.muted }}">Innstillinger ›</a></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px">
+          <sc-for list="{{ stockKpis }}" as="k" hint-placeholder-count="4">
+            <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:20px 22px"><div style="font-size:13px;color:{{ t.muted }}">{{ k.label }}</div><div style="font:500 28px {{ t.mono }};margin-top:8px;color:{{ k.color }};letter-spacing:-.02em">{{ k.value }}</div><div style="font-size:12px;color:{{ t.faint }};margin-top:6px">{{ k.sub }}</div></div>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:20px;align-items:start">
+          <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:24px">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start">
+              <div><div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:22px">Porteføljeverdi</div><div style="font-size:13px;color:{{ t.pos }};margin-top:2px">+0,05 kr (+0 %) siste 3m</div></div>
+              <div style="display:flex;background:{{ t.surf2 }};border-radius:10px;padding:3px"><sc-for list="{{ ranges }}" as="r" hint-placeholder-count="4"><a onClick="{{ r.pick }}" style="padding:5px 12px;border-radius:8px;font-size:12px;font-weight:500;background:{{ r.bg }};color:{{ r.color }}">{{ r.l }}</a></sc-for></div>
+            </div>
+            <svg viewBox="0 0 800 220" style="width:100%;height:auto;display:block;margin-top:18px" preserveAspectRatio="none">
+              <line x1="0" x2="800" y1="60" y2="60" stroke="{{ t.line }}"></line><line x1="0" x2="800" y1="120" y2="120" stroke="{{ t.line }}"></line><line x1="0" x2="800" y1="180" y2="180" stroke="{{ t.line }}"></line>
+              <path d="M0,200 C260,200 420,40 800,26 L800,220 L0,220 Z" fill="{{ t.pos }}" fill-opacity=".12"></path>
+              <path d="M0,200 C260,200 420,40 800,26" fill="none" stroke="{{ t.pos }}" stroke-width="2.5"></path>
+            </svg>
+          </div>
+          <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:24px">
+            <div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:22px">Fordeling</div>
+            <div style="display:flex;gap:3px;height:10px;margin-top:18px;border-radius:99px;overflow:hidden"><div style="width:66%;background:{{ t.warn }}"></div><div style="width:34%;background:{{ t.blue }}"></div></div>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:16px;font-size:13px">
+              <div style="display:flex;gap:8px;align-items:center"><span style="width:8px;height:8px;border-radius:2px;background:{{ t.warn }}"></span><span style="flex:1">Vanguard S&amp;P 500 (Acc)</span><span style="font-family:{{ t.mono }}">66 %</span></div>
+              <div style="display:flex;gap:8px;align-items:center"><span style="width:8px;height:8px;border-radius:2px;background:{{ t.blue }}"></span><span style="flex:1">Vanguard FTSE All-World High Dividend Yield (Dist)</span><span style="font-family:{{ t.mono }}">34 %</span></div>
+            </div>
+          </div>
+        </div>
+        <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:6px 24px 8px;overflow-x:auto"><div style="min-width:760px">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 80px 100px 90px 100px 110px 70px;gap:12px;padding:14px 0;border-bottom:1px solid {{ t.line }};font:500 11px {{ t.mono }};letter-spacing:.1em;color:{{ t.faint }};text-align:right"><span style="text-align:left">POSISJON</span><span>ANTALL</span><span>SNITTKURS</span><span>KURS</span><span>VERDI</span><span>AVKASTNING</span><span>I DAG</span></div>
+          <sc-for list="{{ positions }}" as="s" hint-placeholder-count="2">
+            <div style="display:grid;grid-template-columns:minmax(0,1fr) 80px 100px 90px 100px 110px 70px;gap:12px;align-items:center;padding:14px 0;border-bottom:1px solid {{ t.line }};font:400 14px {{ t.mono }};text-align:right">
+              <div style="display:flex;gap:12px;align-items:center;text-align:left;font-family:{{ t.ui }}"><span style="width:38px;height:38px;border-radius:10px;background:{{ s.bg }};color:{{ s.fg }};display:grid;place-items:center;font:600 10px {{ t.mono }}">{{ s.tk }}</span><div><div style="font-size:14px;font-weight:500">{{ s.name }}</div><div style="font-size:12px;color:{{ t.faint }}">{{ s.code }}</div></div></div>
+              <span>{{ s.qty }}</span><span style="color:{{ t.muted }}">{{ s.avg }}</span><span>{{ s.px }}</span><span style="font-weight:600">{{ s.val }}</span>
+              <span style="color:{{ s.rc }};font-size:13px;line-height:1.3">{{ s.ret }}<br>{{ s.retp }}</span><span style="color:{{ t.pos }};font-size:13px">+0 %</span>
+            </div>
+          </sc-for>
+        </div></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:20px;align-items:start">
+          <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:24px"><div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:22px">Utbytte</div><div style="font-size:13px;color:{{ t.muted }};margin-top:6px">Ingen utbytte ennå.</div></div>
+          <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:24px">
+            <div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:22px;padding-bottom:8px">Siste ordre</div>
+            <sc-for list="{{ orders }}" as="o" hint-placeholder-count="2"><div style="display:flex;gap:10px;align-items:center;padding:12px 0;border-top:1px solid {{ t.line }};font-size:13px"><span style="font-size:11px;font-weight:600;color:{{ t.blue }};background:{{ t.blueSoft }};padding:3px 8px;border-radius:6px">Kjøp</span><b style="font-weight:600;font-size:14px">{{ o.tk }}</b><span style="color:{{ t.faint }}">· {{ o.meta }}</span><span style="margin-left:auto;font-family:{{ t.mono }};font-size:14px">{{ o.amt }}</span></div></sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- BOLIGER -->
+      <sc-if value="{{ p.boliger }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
+          <div style="flex:1 1 260px;max-width:100%;display:flex;flex-direction:column;gap:10px">
+            <sc-for list="{{ homes }}" as="h" hint-placeholder-count="4">
+              <a onClick="{{ h.pick }}" style="display:flex;flex-direction:column;gap:6px;padding:16px 18px;border-radius:{{ t.r2 }};border:1.5px solid {{ h.border }};background:{{ t.surf }}">
+                <div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:14px;font-weight:600">{{ h.name }}</b><span style="font-size:11px;padding:3px 8px;border-radius:6px;background:{{ t.surf2 }};color:{{ t.muted }}">{{ h.type }}</span></div>
+                <div style="font-size:13px;color:{{ t.muted }}">Bare deg</div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;color:{{ t.muted }}"><span>Du: eier</span><span style="font-family:{{ t.mono }};color:{{ t.ink }}">0 kr i år</span></div>
+              </a>
+            </sc-for>
+            <a onClick="{{ goSettings }}" style="padding:13px;text-align:center;border-radius:{{ t.r2 }};border:1px solid {{ t.line2 }};font-size:14px;font-weight:500">+ Ny bolig i Innstillinger</a>
+          </div>
+          <div style="flex:999 1 520px;display:flex;flex-direction:column;gap:18px;min-width:0">
+            <div style="display:flex;gap:10px;align-items:center"><span style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:30px">{{ home.name }}</span><span style="font-size:12px;padding:3px 9px;border-radius:6px;background:{{ t.surf2 }};color:{{ t.muted }}">{{ home.type }}</span></div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px">
+              <sc-for list="{{ homeKpis }}" as="k" hint-placeholder-count="4"><div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r2 }};padding:18px"><div style="font-size:13px;color:{{ t.muted }}">{{ k.label }}</div><div style="font:500 24px {{ t.mono }};margin-top:6px">{{ k.value }}</div><div style="font-size:12px;color:{{ t.faint }};margin-top:4px">{{ k.sub }}</div></div></sc-for>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:18px;align-items:start">
+              <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:22px">
+                <div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:20px">Utgifter per måned</div>
+                <div style="height:120px;border-bottom:1px dashed {{ t.line2 }};margin-top:14px;display:grid;place-items:center;font-size:13px;color:{{ t.faint }}">Ingen utgifter registrert i år</div>
+                <div style="display:grid;grid-template-columns:repeat(10,1fr);margin-top:8px;font-size:12px;color:{{ t.faint }};text-align:center"><span>jan</span><span>feb</span><span>mar</span><span>apr</span><span>mai</span><span>jun</span><span>jul</span><span>aug</span><span>sep</span><span>okt</span></div>
+              </div>
+              <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:22px"><div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:20px">Kategorier</div><div style="font-size:13px;color:{{ t.muted }};margin-top:8px">Ingen utgifter i år.</div></div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:18px;align-items:start">
+              <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:22px">
+                <div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:20px">Prosjekter</div>
+                <div style="font-size:13px;color:{{ t.muted }};margin-top:6px">Ingen prosjekter. Legg til et for å følge budsjett og avdrag til håndverkere.</div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-top:14px">
+                  <input placeholder="Nytt prosjekt, f.eks. Ny terrasse" style="min-width:0;height:40px;padding:0 12px;border-radius:9px;border:1px solid {{ t.line2 }};background:{{ t.bg }};font-size:13px;outline:none"></input>
+                  <input placeholder="Håndverker" style="min-width:0;height:40px;padding:0 12px;border-radius:9px;border:1px solid {{ t.line2 }};background:{{ t.bg }};font-size:13px;outline:none"></input>
+                  <input placeholder="Budsjett kr" style="min-width:0;height:40px;padding:0 12px;border-radius:9px;border:1px solid {{ t.line2 }};background:{{ t.bg }};font-size:13px;outline:none"></input>
+                  <button style="padding:0 14px;border-radius:9px;border:none;background:{{ t.acc }};color:{{ t.accInk }};font-size:13px;font-weight:600;cursor:pointer">Legg til</button>
+                </div>
+              </div>
+              <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:22px">
+                <div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:20px">Faste regninger</div>
+                <div style="font-size:13px;color:{{ t.muted }};margin-top:6px">Ingen faste regninger.</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:14px;font-size:13px">
+                  <input placeholder="Fra, f.eks. Fjordkraft" style="min-width:0;height:40px;padding:0 12px;border-radius:9px;border:1px solid {{ t.line2 }};background:{{ t.bg }};font-size:13px;outline:none"></input>
+                  <div style="height:40px;padding:0 12px;border-radius:9px;border:1px solid {{ t.line2 }};display:flex;align-items:center;justify-content:space-between">Strøm<span style="color:{{ t.faint }}">▾</span></div>
+                  <div style="height:40px;padding:0 12px;border-radius:9px;border:1px solid {{ t.line2 }};display:flex;align-items:center;justify-content:space-between">Månedlig<span style="color:{{ t.faint }}">▾</span></div>
+                  <div style="height:40px;padding:0 12px;border-radius:9px;border:1px solid {{ t.line2 }};display:flex;align-items:center;justify-content:space-between">Hvem betaler<span style="color:{{ t.faint }}">▾</span></div>
+                  <input placeholder="Neste dd.mm" style="min-width:0;height:40px;padding:0 12px;border-radius:9px;border:1px solid {{ t.line2 }};background:{{ t.bg }};font-size:13px;outline:none"></input>
+                  <button style="height:40px;border-radius:9px;border:1px solid {{ t.line2 }};background:transparent;cursor:pointer;font-size:16px">+</button>
+                </div>
+                <div style="font-size:12px;color:{{ t.faint }};margin-top:12px">Fordeling · likt delt · <a style="color:{{ t.note }}">Endre</a></div>
+                <span style="display:inline-block;margin-top:8px;padding:6px 10px;border-radius:8px;background:{{ t.surf2 }};font-size:13px">Sebastian <b style="font-family:{{ t.mono }};color:{{ t.pos }}">+0 kr</b></span>
+              </div>
+            </div>
+            <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:22px">
+              <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap">
+                <div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:20px">Legg til utgift eller kvittering</div>
+                <label style="display:flex;flex-direction:column;gap:6px;font-size:12px;color:{{ t.muted }}">Legg i bolig<div style="width:240px;max-width:100%;height:40px;padding:0 12px;border-radius:9px;border:1px solid {{ t.acc }};display:flex;align-items:center;justify-content:space-between;color:{{ t.acc }};font-size:13px;font-weight:500">{{ home.name }} (denne)<span>▾</span></div></label>
+              </div>
+              <div style="display:flex;gap:6px;margin-top:14px"><sc-for list="{{ addTabs }}" as="a" hint-placeholder-count="3"><a onClick="{{ a.pick }}" style="padding:6px 12px;border-radius:8px;border:1px solid {{ t.line2 }};font-size:13px;background:{{ a.bg }}">{{ a.l }}</a></sc-for></div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:12px;font-size:13px">
+                <input placeholder="Beskrivelse, f.eks. Plenklipper" style="min-width:0;height:42px;padding:0 12px;border-radius:9px;border:1px solid {{ t.line2 }};background:{{ t.bg }};font-size:13px;outline:none"></input>
+                <input placeholder="Beløp" style="min-width:0;height:42px;padding:0 12px;border-radius:9px;border:1px solid {{ t.line2 }};background:{{ t.bg }};font-size:13px;outline:none"></input>
+                <div style="height:42px;padding:0 12px;border-radius:9px;border:1px solid {{ t.line2 }};display:flex;align-items:center;justify-content:space-between">Kategori: ✦ AI<span style="color:{{ t.faint }}">▾</span></div>
+                <div style="height:42px;padding:0 12px;border-radius:9px;border:1px solid {{ t.line2 }};display:flex;align-items:center;justify-content:space-between">Uten prosjekt<span style="color:{{ t.faint }}">▾</span></div>
+                <div style="height:42px;padding:0 12px;border-radius:9px;border:1px solid {{ t.line2 }};display:flex;align-items:center;justify-content:space-between;white-space:nowrap;overflow:hidden">Betalt av Sebastian<span style="color:{{ t.faint }}">▾</span></div>
+                <button style="padding:0 22px;border-radius:9px;border:none;background:{{ t.acc }};color:{{ t.accInk }};font-weight:600;cursor:pointer">Legg til</button>
+              </div>
+              <div style="font-size:12px;color:{{ t.faint }};margin-top:10px">✦ AI velger kategori og underkategori, og lager en ny når ingen passer. Du kan endre den i listen.</div>
+            </div>
+            <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:22px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:12px;border-bottom:1px solid {{ t.line }}"><span style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:20px">Alle utgifter</span><span style="font-size:12px;color:{{ t.faint }}">0 poster · 0 kr</span></div>
+              <div style="font-size:13px;color:{{ t.muted }};padding-top:14px">Ingen utgifter her ennå.</div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- FINN -->
+      <sc-if value="{{ p.finn }}" hint-placeholder-val="{{ false }}">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px">
+          <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:22px"><div style="font-size:13px;color:{{ t.muted }}">Kjøpt i år</div><div style="font:500 30px {{ t.mono }};margin-top:10px">0 kr</div></div>
+          <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:22px"><div style="font-size:13px;color:{{ t.muted }}">Solgt i år</div><div style="font:500 30px {{ t.mono }};margin-top:10px;color:{{ t.pos }}">1 850 kr</div></div>
+          <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:22px"><div style="font-size:13px;color:{{ t.muted }}">Pågående handler</div><div style="font:500 30px {{ t.mono }};margin-top:10px">0</div></div>
+        </div>
+        <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:20px 22px;display:flex;flex-wrap:wrap;gap:16px 24px;align-items:center;justify-content:space-between">
+          <div><span style="font-size:11px;font-weight:600;color:{{ t.pos }};background:{{ t.posSoft }};padding:3px 8px;border-radius:6px">Solgt</span><div style="font-size:15px;font-weight:600;margin-top:8px">Racersykkel Trek Domane AL 2, 56 cm</div><div style="font-size:12px;color:{{ t.faint }};margin-top:2px">kjøper Kari · 17.10</div></div>
+          <div style="display:flex;align-items:center;gap:0">
+            <sc-for list="{{ finnSteps }}" as="s" hint-placeholder-count="4"><div style="display:flex;align-items:center"><sc-if value="{{ s.line }}" hint-placeholder-val="{{ false }}"><span style="width:22px;height:2px;background:{{ t.pos }}"></span></sc-if><span style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:{{ t.posSoft }};color:{{ t.pos }};font-size:12px;font-weight:600">✓ {{ s.l }}</span></div></sc-for>
+          </div>
+          <span style="font:600 16px {{ t.mono }};color:{{ t.pos }}">+1 850 kr</span>
+          <button style="width:30px;height:30px;border-radius:99px;border:1px solid {{ t.line2 }};background:transparent;cursor:pointer;color:{{ t.muted }}">×</button>
+        </div>
+        <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:24px">
+          <div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:22px">Legg til fra e-post</div>
+          <div style="font-size:13px;color:{{ t.muted }};margin-top:6px">Lim inn en e-post fra Finn (Trygg betaling, Fiks ferdig eller Tillit). AI trekker ut gjenstand, motpart, beløp og status, og matcher mot bankposten.</div>
+          <textarea placeholder="Lim inn e-posten her …" style="width:100%;box-sizing:border-box;min-height:120px;margin-top:14px;padding:14px;border-radius:{{ t.r2 }};border:1px solid {{ t.line2 }};background:{{ t.bg }};font-size:13px;resize:vertical;outline:none"></textarea>
+          <button style="margin-top:12px;padding:12px 18px;border-radius:{{ t.r2 }};border:none;background:{{ t.acc }};color:{{ t.accInk }};font-size:14px;font-weight:600;cursor:pointer">Les e-posten</button>
+        </div>
+        <div style="font-size:12px;color:{{ t.faint }};max-width:900px;line-height:1.6">Kilde: e-postkvitteringer fra Finn (Trygg betaling, Fiks ferdig-frakt, Tillit forsikring) leses av AI og matches mot bankposter. Proton Mail er koblet til: nye Finn-e-poster blir handler, og e-poster fra FINN, Posten/Bring og Tillit kobles til riktig handel.</div>
+      </sc-if>
+
+      <!-- IMPORT -->
+      <sc-if value="{{ p.import }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+          <button style="padding:13px 18px;border-radius:{{ t.r2 }};border:none;background:{{ t.acc }};color:{{ t.accInk }};font-size:14px;font-weight:600;cursor:pointer">Velg filer (.xlsx, .csv, .txt)</button>
+          <div style="display:flex;align-items:center;gap:24px;padding:0 16px;height:46px;border:1px solid {{ t.line2 }};border-radius:{{ t.r2 }};background:{{ t.surf }};font-size:14px">Brukeskonto <span style="color:{{ t.faint }}">▾</span></div>
+          <span style="font-size:13px;color:{{ t.muted }}">Lim inn tekst eller velg filer. Flere filer kan velges samtidig.</span>
+        </div>
+        <textarea value="{{ importText }}" onChange="{{ setImport }}" style="width:100%;box-sizing:border-box;min-height:200px;padding:16px;border-radius:{{ t.r }};border:1px solid {{ t.line2 }};background:{{ t.surf }};font:400 13px/1.6 {{ t.mono }};resize:vertical;outline:none;white-space:pre"></textarea>
+        <div style="display:flex;justify-content:flex-end"><button style="padding:12px 18px;border-radius:{{ t.r2 }};border:none;background:{{ t.surf2 }};color:{{ t.muted }};font-size:14px;font-weight:600;cursor:not-allowed">Importer 0 poster</button></div>
+      </sc-if>
+
+      <!-- SUBSCRIPTION OS -->
+      <sc-if value="{{ p.subs }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r2 }};padding:4px;width:max-content"><sc-for list="{{ subTabs }}" as="s" hint-placeholder-count="2"><a onClick="{{ s.pick }}" style="padding:8px 18px;border-radius:9px;font-size:14px;font-weight:500;background:{{ s.bg }};color:{{ s.color }}">{{ s.l }}</a></sc-for></div>
+        <sc-if value="{{ subOv }}" hint-placeholder-val="{{ true }}">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:18px">
+            <div style="background:{{ t.warnSoft }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:24px">
+              <span style="font-size:11px;font-weight:700;color:{{ t.warn }};letter-spacing:.06em">✦ AI-SPARING</span>
+              <div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:30px;line-height:1.1;margin-top:10px">Ingenting å spare akkurat nå</div>
+              <div style="font-size:14px;color:{{ t.muted }};margin-top:10px">Alle abonnementene ser ut til å være i bruk, og ingen har økt prisen.</div>
+            </div>
+            <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;align-items:end">
+              <div><div style="font-size:13px;color:{{ t.muted }}">Faste abonnementer per måned</div><div style="font:500 44px {{ t.mono }};letter-spacing:-.03em;margin-top:6px">233 kr</div><div style="font:400 13px {{ t.mono }};color:{{ t.faint }}">2 796 kr i året</div></div>
+              <sc-for list="{{ subMini }}" as="m" hint-placeholder-count="3"><div style="background:{{ t.surf2 }};border-radius:{{ t.r2 }};padding:14px"><div style="font-size:12px;color:{{ t.muted }}">{{ m.l }}</div><div style="font:500 20px {{ t.mono }};margin-top:6px">{{ m.v }}</div><span style="display:inline-block;margin-top:8px;font-size:11px;font-weight:600;padding:2px 7px;border-radius:5px;background:{{ m.bg }};color:{{ m.c }}">{{ m.tag }}</span></div></sc-for>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:{{ t.r2 }};border:1px solid {{ t.line }};background:{{ t.surf }};font-size:14px"><span style="width:22px;height:22px;border-radius:99px;background:{{ t.warn }};color:{{ t.badgeInk }};display:grid;place-items:center;font-weight:700;font-size:12px">!</span>1 trekk de neste dagene: Tv2 64 kr søndag.<a onClick="{{ goCal }}" style="margin-left:auto;font-weight:600;color:{{ t.note }}">Se kalender →</a></div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:18px;align-items:start">
+            <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:24px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:22px">Forbruk per måned · 2026</span><span style="font-size:13px;color:{{ t.faint }}">Trykk på en måned</span></div>
+              <div style="display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:8px;margin-top:20px;align-items:end;height:220px;position:relative">
+                <sc-for list="{{ subBars }}" as="b" hint-placeholder-count="12">
+                  <a onClick="{{ b.pick }}" style="position:relative;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end">
+                    <sc-if value="{{ b.sel }}" hint-placeholder-val="{{ false }}"><div style="position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:-60px;z-index:2;width:170px;padding:10px 12px;border-radius:10px;background:{{ t.ink }};color:{{ t.bg }};font-size:12px;box-shadow:0 10px 30px rgba(0,0,0,.25)"><b>● {{ b.full }} 2026</b><div style="display:flex;justify-content:space-between;margin-top:6px"><span>Totalt</span><span style="font-family:{{ t.mono }}">{{ b.v }}</span></div><div style="display:flex;justify-content:space-between"><span>Underholdning</span><span style="font-family:{{ t.mono }}">{{ b.v }}</span></div></div></sc-if>
+                    <div style="width:100%;height:{{ b.h }};border-radius:8px;background:{{ b.bg }}"></div>
+                    <span style="font-size:12px;color:{{ b.lc }}">{{ b.m }}</span>
+                  </a>
+                </sc-for>
+              </div>
+              <div style="display:flex;gap:6px;align-items:center;margin-top:14px;font-size:13px;color:{{ t.muted }}"><span style="width:8px;height:8px;border-radius:99px;background:{{ t.acc }}"></span>Underholdning</div>
+            </div>
+            <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:24px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:22px">Trekk denne måneden</span><span style="font-size:13px;color:{{ t.faint }}">0 kr av 233 kr</span></div>
+              <div style="height:8px;border-radius:99px;background:{{ t.surf2 }};margin-top:16px"></div>
+              <div style="font-size:13px;color:{{ t.muted }};margin-top:10px">0 av 2 trekk er betalt</div>
+              <sc-for list="{{ upcoming }}" as="u" hint-placeholder-count="2">
+                <div style="font-size:12px;color:{{ t.faint }};margin-top:16px">{{ u.date }}</div>
+                <div style="display:flex;gap:12px;align-items:center;margin-top:8px"><span style="width:34px;height:34px;border-radius:99px;background:{{ u.bg }};color:{{ u.fg }};display:grid;place-items:center;font-weight:700;font-size:13px">{{ u.logo }}</span><div style="flex:1"><div style="font-size:14px;font-weight:500">{{ u.name }}</div><div style="font-size:12px;color:{{ t.faint }}">{{ u.meta }}</div></div><span style="font:500 14px {{ t.mono }};color:{{ t.neg }}">{{ u.amt }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:18px;align-items:start">
+            <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:22px 24px">
+              <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:22px">Abonnementer</span><a style="font-size:13px;font-weight:600;color:{{ t.acc }}">⊕ Nytt abonnement</a></div>
+              <div style="overflow-x:auto"><div style="min-width:620px"><div style="display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr .8fr .8fr 60px;gap:10px;padding:16px 0 10px;border-bottom:1px solid {{ t.line }};font:500 11px {{ t.mono }};letter-spacing:.08em;color:{{ t.faint }}"><span>TJENESTE</span><span>PLAN</span><span>TREKK</span><span style="color:{{ t.ink }}">NESTE TREKK ↑</span><span>BELØP</span><span>STATUS</span><span style="text-align:right">HANDLING</span></div>
+              <sc-for list="{{ subsList }}" as="s" hint-placeholder-count="2">
+                <div style="display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr .8fr .8fr 60px;gap:10px;align-items:center;padding:16px 0;border-bottom:1px solid {{ t.line }};font-size:14px">
+                  <span style="display:flex;gap:10px;align-items:center;font-weight:500"><span style="width:28px;height:28px;border-radius:99px;background:{{ s.bg }};color:{{ s.fg }};display:grid;place-items:center;font-size:11px;font-weight:700">{{ s.logo }}</span>{{ s.name }}</span>
+                  <span style="color:{{ t.muted }}">{{ s.plan }}</span><span>Månedlig</span><span>{{ s.next }}</span><span style="font-family:{{ t.mono }}">{{ s.amt }}</span>
+                  <span><span style="font-size:12px;font-weight:600;color:{{ t.pos }};background:{{ t.posSoft }};padding:3px 8px;border-radius:6px">Aktiv</span></span>
+                  <span style="text-align:right;color:{{ t.faint }}">···</span>
+                </div>
+              </sc-for></div></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:18px">
+              <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:22px 24px;text-align:center">
+                <div style="display:flex;justify-content:space-between;align-items:center;text-align:left"><span style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:22px">Abonnementshelse</span><span style="font-size:12px;font-weight:600;color:{{ t.pos }};background:{{ t.posSoft }};padding:3px 9px;border-radius:6px">Svært bra</span></div>
+                <svg viewBox="0 0 240 140" style="width:240px;max-width:100%;height:auto;margin-top:12px"><path d="M30,125 A90,90 0 0,1 210,125" fill="none" stroke="{{ t.acc }}" stroke-width="22" stroke-dasharray="3 5"></path><text x="120" y="122" text-anchor="middle" font-family="{{ t.mono }}" font-size="40" font-weight="500" fill="{{ t.ink }}">100<tspan font-size="14" fill="{{ t.faint }}">/100</tspan></text></svg>
+                <div style="font-size:13px;color:{{ t.muted }};margin-top:6px">Alle abonnementene ser ut til å være i bruk.</div>
+              </div>
+              <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:22px 24px"><div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:22px">✦ Forslag</div><div style="font-size:13px;color:{{ t.muted }};margin-top:6px">Ingen forslag akkurat nå.</div></div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ subCal }}" hint-placeholder-val="{{ false }}">
+          <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:24px;max-width:720px">
+            <div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:22px">Oktober 2026</div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:16px;font:400 11px {{ t.mono }};color:{{ t.faint }};text-align:center"><span>MAN</span><span>TIR</span><span>ONS</span><span>TOR</span><span>FRE</span><span>LØR</span><span>SØN</span></div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:6px">
+              <sc-for list="{{ calDays }}" as="d" hint-placeholder-count="35"><div style="height:64px;border-radius:10px;background:{{ d.bg }};border:1px solid {{ d.border }};padding:6px 8px;font:400 12px {{ t.mono }};color:{{ d.color }};display:flex;flex-direction:column;justify-content:space-between"><span>{{ d.n }}</span><span style="font-size:11px;font-weight:600;color:{{ t.warn }}">{{ d.ev }}</span></div></sc-for>
+            </div>
+          </div>
+        </sc-if>
+      </sc-if>
+
+      <!-- KONTOER -->
+      <sc-if value="{{ p.kontoer }}" hint-placeholder-val="{{ false }}">
+        <div style="font-size:14px;color:{{ t.muted }}">Samlet saldo <b style="font:500 18px {{ t.mono }};color:{{ t.ink }};margin-left:6px">−37 489,63 kr</b></div>
+        <div style="display:flex;flex-direction:column;gap:8px;width:340px;max-width:100%">
+          <div style="border-radius:{{ t.r }};background:{{ t.card2 }};color:{{ t.card2Ink }};padding:22px;display:flex;flex-direction:column;gap:44px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-style:italic;font-weight:800;font-size:20px">DNB</span><span style="font:400 13px {{ t.mono }};color:{{ t.card2Mute }}">•••• 3293</span></div>
+            <div><div style="font-size:13px;color:{{ t.card2Mute }}">Brukeskonto</div><div style="font:500 28px {{ t.mono }};margin-top:2px">−37 489,63 kr</div></div>
+          </div>
+          <span style="font-size:13px;color:{{ t.muted }};padding-left:4px">Brukskonto</span>
+        </div>
+        <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:24px">
+          <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:22px">Sparemål</span><button style="padding:8px 14px;border-radius:10px;border:1px solid {{ t.line2 }};background:transparent;font-size:13px;cursor:pointer">+ Nytt sparemål</button></div>
+          <div style="font-size:13px;color:{{ t.muted }};margin-top:8px">Ingen sparemål ennå.</div>
+        </div>
+      </sc-if>
+
+      <!-- INNSTILLINGER -->
+      <sc-if value="{{ p.innstillinger }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start">
+          <div style="flex:1 1 240px;max-width:100%;background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:8px;display:flex;flex-direction:column;gap:2px">
+            <sc-for list="{{ setTabs }}" as="s" hint-placeholder-count="13">
+              <a onClick="{{ s.pick }}" style="padding:10px 12px;border-radius:{{ t.r2 }};background:{{ s.bg }}"><div style="font-size:14px;font-weight:500;color:{{ s.color }}">{{ s.l }}</div><div style="font-size:12px;color:{{ t.faint }};margin-top:2px">{{ s.d }}</div></a>
+            </sc-for>
+          </div>
+          <div style="flex:999 1 480px;display:flex;flex-direction:column;gap:20px;min-width:0">
+            <sc-if value="{{ setUtseende }}" hint-placeholder-val="{{ true }}">
+              <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:26px">
+                <div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:26px">Tema</div>
+                <div style="font-size:13px;color:{{ t.muted }};margin-top:2px">Velg hvordan FinansHub ser ut. Endringen gjelder med en gang.</div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-top:20px">
+                  <sc-for list="{{ themeCards }}" as="c" hint-placeholder-count="3">
+                    <a onClick="{{ c.pick }}" style="display:flex;flex-direction:column;gap:12px;padding:10px 10px 14px;border-radius:{{ t.r }};border:2px solid {{ c.border }};background:{{ t.bg }}">
+                      <div style="height:150px;border-radius:12px;overflow:hidden;display:flex;background:{{ c.bg }};border:1px solid {{ c.line }}">
+                        <div style="width:26%;background:{{ c.side }};border-right:1px solid {{ c.line }};padding:10px 8px;display:flex;flex-direction:column;gap:6px"><span style="width:16px;height:16px;border-radius:5px;background:{{ c.acc }}"></span><span style="height:6px;border-radius:3px;background:{{ c.ink }};opacity:.7;margin-top:6px"></span><span style="height:6px;width:80%;border-radius:3px;background:{{ c.faint }}"></span><span style="height:6px;width:70%;border-radius:3px;background:{{ c.faint }}"></span><span style="height:6px;width:85%;border-radius:3px;background:{{ c.faint }}"></span></div>
+                        <div style="flex:1;padding:10px;display:flex;flex-direction:column;gap:7px">
+                          <span style="font-family:{{ c.display }};font-weight:{{ c.dw }};font-size:17px;color:{{ c.ink }};line-height:1">−37 489</span>
+                          <div style="display:flex;gap:6px;flex:1"><div style="flex:1.4;border-radius:{{ c.rs }};background:{{ c.surf }};border:1px solid {{ c.line }};display:flex;align-items:flex-end;gap:3px;padding:6px"><span style="flex:1;height:40%;background:{{ c.warn }};border-radius:2px"></span><span style="flex:1;height:75%;background:{{ c.warn }};border-radius:2px"></span><span style="flex:1;height:30%;background:{{ c.warn }};border-radius:2px"></span><span style="flex:1;height:55%;background:{{ c.acc }};border-radius:2px"></span></div><div style="flex:1;border-radius:{{ c.rs }};background:{{ c.acc }}"></div></div>
+                        </div>
+                      </div>
+                      <div style="display:flex;justify-content:space-between;align-items:center;padding:0 4px"><div><div style="font-size:15px;font-weight:600">{{ c.name }}</div><div style="font-size:12px;color:{{ t.muted }};margin-top:2px">{{ c.desc }}</div></div><sc-if value="{{ c.on }}" hint-placeholder-val="{{ false }}"><span style="width:24px;height:24px;flex-shrink:0;border-radius:99px;background:{{ t.acc }};color:{{ t.accInk }};display:grid;place-items:center;font-size:13px;font-weight:700">✓</span></sc-if></div>
+                    </a>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:22px 26px;display:flex;justify-content:space-between;align-items:center;gap:20px">
+                <div><div style="font-size:15px;font-weight:600">Kompakt sidemeny</div><div style="font-size:13px;color:{{ t.muted }};margin-top:2px">Vis bare ikoner i sidemenyen</div></div>
+                <a onClick="{{ toggleSide }}" style="width:46px;height:26px;border-radius:99px;background:{{ swBg }};position:relative;flex-shrink:0;transition:background .2s"><span style="position:absolute;top:3px;left:{{ swX }};width:20px;height:20px;border-radius:99px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .2s"></span></a>
+              </div>
+            </sc-if>
+            <sc-if value="{{ setGenerelt }}" hint-placeholder-val="{{ false }}">
+              <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:26px">
+                <div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:26px">Generelt</div>
+                <div style="font-size:13px;color:{{ t.muted }};margin-top:2px">Navn, valuta, måned</div>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:20px">
+                  <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:{{ t.muted }}">Visningsnavn<input value="Sebastian Kristo Jemtland" readOnly="{{ true }}" style="height:44px;padding:0 12px;border-radius:10px;border:1px solid {{ t.line2 }};background:{{ t.bg }};font-size:14px;outline:none;min-width:0"></input></label>
+                  <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:{{ t.muted }}">Valuta<div style="height:44px;padding:0 12px;border-radius:10px;border:1px solid {{ t.line2 }};background:{{ t.bg }};display:flex;align-items:center;justify-content:space-between;color:{{ t.ink }};font-size:14px">NOK – norske kroner<span style="color:{{ t.faint }}">▾</span></div></label>
+                  <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:{{ t.muted }}">Måneden starter (lønningsdag)<div style="height:44px;padding:0 12px;border-radius:10px;border:1px solid {{ t.line2 }};background:{{ t.bg }};display:flex;align-items:center;justify-content:space-between;color:{{ t.ink }};font-size:14px">1. i måneden<span style="color:{{ t.faint }}">▾</span></div></label>
+                  <label style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:{{ t.muted }}">Sparemål for året (kr)<input value="120000" readOnly="{{ true }}" style="height:44px;padding:0 12px;border-radius:10px;border:1px solid {{ t.line2 }};background:{{ t.bg }};font-family:{{ t.mono }};font-size:14px;outline:none;min-width:0"></input></label>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ setOther }}" hint-placeholder-val="{{ false }}">
+              <div style="background:{{ t.surf }};border:1px solid {{ t.line }};border-radius:{{ t.r }};padding:26px">
+                <div style="font-family:{{ t.display }};font-weight:{{ t.dw }};font-size:26px">{{ setCur.l }}</div>
+                <div style="font-size:13px;color:{{ t.muted }};margin-top:2px">{{ setCur.d }}</div>
+                <div style="font-size:13px;color:{{ t.faint }};margin-top:20px;padding-top:16px;border-top:1px solid {{ t.line }}">Denne seksjonen er ikke tegnet ennå.</div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const THEMES = {
+  lys: { name:'Lys hovedbok', desc:'Papirtone, grønn aksent, serif-tall', bg:'#f4f1ea', side:'#ece7dc', surf:'#faf8f3', surf2:'#ece7dc', line:'#e2ddd2', line2:'#d9d3c6', ink:'#1c1b19', muted:'#5c5850', faint:'#8a8478', acc:'#1f4d3a', accInk:'#f4f1ea', pos:'#2f7a4f', posSoft:'#dfe9e1', neg:'#c8553d', warn:'#c8553d', warnSoft:'#f3e3d9', note:'#b4462f', blue:'#2f5d8a', blueSoft:'#dde6f0', purple:'#5b4a8a', purpleSoft:'#e6e0ef', navAct:'#f8f5ee', badgeInk:'#fff', revBg:'rgba(255,255,255,.08)', revMute:'#b9cdbf', revWarn:'#f2b8a6', card2:'#1c1b19', card2Ink:'#f4f1ea', card2Mute:'#a39d90', display:"'Instrument Serif',serif", dw:400, ui:'Geist,system-ui,sans-serif', mono:"'Geist Mono',monospace", r:'18px', r2:'12px', rs:'6px' },
+  mork: { name:'Mørk hovedbok', desc:'Samme oppsett i mørkt, mintgrønn aksent', bg:'#121210', side:'#0d0d0c', surf:'#1a1a17', surf2:'#24231f', line:'#2a2925', line2:'#34322d', ink:'#ece8df', muted:'#a8a294', faint:'#8a8478', acc:'#6fbf8e', accInk:'#121210', pos:'#6fbf8e', posSoft:'#17271e', neg:'#e07a5f', warn:'#e07a5f', warnSoft:'#2a1c15', note:'#e8957d', blue:'#8fb3dc', blueSoft:'#16202b', purple:'#b3a3e0', purpleSoft:'#1f1a2a', navAct:'#1f1e1b', badgeInk:'#121210', revBg:'rgba(0,0,0,.08)', revMute:'#24402f', revWarn:'#7a2814', card2:'#ece8df', card2Ink:'#121210', card2Mute:'#5c5850', display:"'Instrument Serif',serif", dw:400, ui:'Geist,system-ui,sans-serif', mono:"'Geist Mono',monospace", r:'18px', r2:'12px', rs:'6px' },
+  glod: { name:'Glød', desc:'Varm mørk, ravgul aksent, myke kort', bg:'#16110e', side:'#120e0b', surf:'#221a15', surf2:'#2c221c', line:'#2c221c', line2:'#3a2d25', ink:'#f3ebe3', muted:'#b3a597', faint:'#9c8f84', acc:'#ffb547', accInk:'#16110e', pos:'#7ee2a8', posSoft:'#16271d', neg:'#ff8f73', warn:'#ff7a59', warnSoft:'#3a2418', note:'#ffb547', blue:'#8fb6ff', blueSoft:'#1c2634', purple:'#c3a8ff', purpleSoft:'#271d33', navAct:'#2c221c', badgeInk:'#16110e', revBg:'rgba(22,17,14,.08)', revMute:'#4a3510', revWarn:'#8a2a10', card2:'#ff7a59', card2Ink:'#16110e', card2Mute:'#4a2618', display:"'Bricolage Grotesque',sans-serif", dw:600, ui:"'Bricolage Grotesque',sans-serif", mono:"'DM Mono',monospace", r:'24px', r2:'16px', rs:'8px' }
+};
+const ICONS = {
+  oversikt:'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z', transaksjoner:'M4 8h14l-3-3M20 16H6l3 3', ai:'M12 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2z',
+  kvitteringer:'M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6', aksjer:'M3 17l6-6 4 4 8-8M15 7h6v6', boliger:'M3 11l9-7 9 7v9H3zM9 20v-6h6v6',
+  finn:'M3 12V4h8l10 10-8 8zM7.5 7.5h.01', import:'M12 4v12M6 10l6 6 6-6M4 20h16', subs:'M4 12a8 8 0 0114-5M20 12a8 8 0 01-14 5M18 3v4h-4M6 21v-4h4',
+  kontoer:'M3 7h18v12H3zM3 11h18M7 15h3', innstillinger:'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M14 4v4M8 10v4M16 16v4'
+};
+const PAGES = [['oversikt','Oversikt'],['transaksjoner','Transaksjoner'],['ai','AI-søk'],['kvitteringer','Kvitteringer'],['aksjer','Aksjer'],['boliger','Boliger'],['finn','Finn-handler'],['import','Import'],['subs','Subscription OS'],['kontoer','Kontoer'],['innstillinger','Innstillinger']];
+const SUBS = { aksjer:'Trading 212', boliger:'Utgifter, prosjekter og regninger per bolig', finn:'Trygg betaling, Fiks ferdig, Tillit', import:'CSV, XLSX og tekst', subs:'Abonnementer' };
+const CATS = { 'Mat og dagligvarer':'#e8833a','Restaurant og kafé':'#e0b33a','Transport og lading':'#4a8fe0','Bolig':'#9a7be0','Hjem':'#3fa7d6','Fritid og hobby':'#3fbf8a','Abonnementer':'#e05a7a','Skole':'#b5c73a','Annet':'#8a8a8a','Inntekt':'#3fbf6a','Sparing':'#8a8a8a','Overføring':'#8a8a8a' };
+const L = (logo,bg,fg,fs) => ({ logo, bg, fg, fs: fs + 'px', fsS: (fs - 2) + 'px' });
+const TX = [
+  ['16.10','Biltema','Hjem','Kjøp av diverse batterier.','−194,40','Vedlagt',L('B','#1d5fae','#fff',16)],
+  ['11.10','Proton Ag','Abonnementer','Abonnement for sikkerhetstjenester','−10,97','–',L('P','#fff','#6d4aff',18)],
+  ['24.09','ICA KVANTUM','Mat og dagligvarer','Stort innkjøp av matvarer, lys og blomster.','−651,81','Vedlagt',L('ICA','#fff','#e3000f',12)],
+  ['14.09','ICA KVANTUM','Mat og dagligvarer','Dagligvareinnkjøp med yoghurt, frukt og snacks.','−207,99','Vedlagt',L('ICA','#fff','#e3000f',12)],
+  ['12.09','ICA Kvantum','Mat og dagligvarer','Innkjøp av matvarer og kontorrekvisita.','−314,29','Vedlagt',L('ICA','#fff','#e3000f',12)],
+  ['05.09','Beijer Byggmaterial AB','Hjem','Kjøp av byggevarer og trelast','−718,90','Vedlagt',L('BB','#ffd400','#1c1b19',14)],
+  ['03.08','jem & fix','Hjem','Diverse byggevarer og tilbehør til hjemmet','−887,50','Vedlagt',L('jem','#e2001a','#fff',12)],
+  ['29.07','Sp Dbrand','Hjem','Kjøp av tilbehør til elektronikk','−1 037,60','–',L('db','#ffc20e','#1c1b19',14)],
+  ['14.07','Sp Switchbot Eu','Hjem','Kjøp av smarthjem-produkter','−1 438,27','–',L('S','#e5383b','#fff',16)],
+  ['01.07','Anthropic: Claude s','Abonnementer','Abonnement for AI-tjeneste','−260,74','–',L('A\\','#fff','#1c1b19',14)],
+  ['01.06','Anthropic: Claude s','Abonnementer','Abonnement for AI-tjeneste','−248,40','–',L('A\\','#fff','#1c1b19',14)],
+  ['26.05','Thomann De Se','Fritid og hobby','Kjøp av musikkutstyr','−270,84','–',L('t','#fff','#00a6a6',18)],
+  ['25.05','Kjell.com','Hjem','Kjøp av elektronikk og tilbehør','−8 374,97','–',L('K','#0a5aa8','#fff',16)],
+  ['01.05','Claude.ai Subscript','Abonnementer','Abonnement for AI-tjeneste','−251,20','–',L('✳','#fff','#d97757',18)]
+].map(([date,name,cat,note,amt,receipt,l]) => ({ date,name,cat,note,amt,receipt,...l,dot:CATS[cat] }));
+const AI_HIST = ['Sist jeg var på ICA KVANTUM','når kjøpte jeg skruer','kjøpt skruer','ica','proton','Hvor mye brukte jeg på strøm i september?','har jeg kjøpt noen underlige skruer','når kjøpte jeg Kebab sist'];
+const SET_TABS = [['generelt','Generelt','Navn, valuta, måned'],['utseende','Utseende','Tema og sidemeny'],['sidemeny','Sidemeny','Rekkefølge og synlighet'],['boliger','Boliger','Ny bolig, deling, oppsett og kategorier'],['import','Import','Kontoutskrift, CSV og XLSX'],['ai','AI-motor','Ollama eller Gemini'],['aksjer','Aksjer · Trading 212','Nøkkel, miljø og synk'],['kategorier','Kategorier','Farger og typer'],['regler','Regler','Auto-kategorisering'],['bank','Bank og import','CSV og PSD2'],['varsler','Varsler','Budsjett og kvitteringer'],['mobil','Mobil og tilgang','App-tokens og snarveier'],['backup','Backup og data','Nedlasting, SMB-share og gjenoppretting']];
+const KEY = 'finanshub-app-v1';
+const V2CARD = { name:'Nåværende (FinansHub v2)', desc:'Dagens mørke design med oransje aksent', bg:'#0A0A0C', side:'#0F0F12', surf:'#141418', line:'#1E1E23', ink:'#F2F2F4', faint:'#5A5A62', acc:'#FF7A3D', warn:'#FF7A3D', display:'Geist, system-ui, sans-serif', dw:600, rs:'10px' };
+
+class Component extends DCLogic {
+  state = Object.assign({ page:'oversikt', theme:'lys', col:false, cat:'Alle', aiQ:'', aiHist:AI_HIST, review:0, rCat:null, range:'3M', home:0, addTab:0, subTab:'oversikt', subMonth:9, setTab:'utseende',
+    importText:'Dato\tForklaring\t\tRentedato\tUt\tInn\n10/14/26\t\tVisa 100021 Ruterappen\t10/15/26\t\t238.00' },
+    (() => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } })(), (() => { try { const d = localStorage.getItem('fh_design'); return THEMES[d] ? { theme: d } : {}; } catch (e) { return {}; } })(), (() => { try { const sp = this.props && this.props.startTheme; return THEMES[sp] ? { theme: sp, page: 'innstillinger', setTab: 'utseende' } : {}; } catch (e) { return {}; } })());
+  set(o) { this.setState(o, () => { const { page, theme, col } = this.state; localStorage.setItem(KEY, JSON.stringify({ page, theme, col })); }); }
+  renderVals() {
+    const s = this.state, t = THEMES[s.theme] || THEMES.lys, col = s.col;
+    const go = page => () => this.set({ page });
+    const p = {}; PAGES.forEach(([k]) => p[k] = s.page === k);
+    const nav = PAGES.map(([k, label]) => { const on = s.page === k; return { label, d: ICONS[k], go: go(k), bg: on ? t.navAct : 'transparent', color: on ? t.ink : t.muted, icon: on ? t.acc : t.faint, jc: col ? 'center' : 'flex-start', pad: col ? '11px 0' : '11px 12px', badgeOpen: k === 'kvitteringer' && !col, badgeDot: k === 'kvitteringer' && col }; });
+    const label = PAGES.find(x => x[0] === s.page)[1];
+    const months = ['nov','des','jan','feb','mar','apr','mai','jun','jul','aug','sep','okt'];
+    const ut = [7600,500,0,450,2100,14120,10800,400,2900,1200,1900,205], inn = [2600,0,0,0,0,0,0,0,0,0,0,0];
+    const cols = months.map((m, i) => ({ m, hIn: inn[i] / 15000 * 180 + 'px', hUt: Math.max(2, ut[i] / 15000 * 180) + 'px', utBg: i === 11 ? t.acc : t.warn }));
+    const chipNames = ['Alle', ...Object.keys(CATS)];
+    const chips = chipNames.map(name => { const on = s.cat === name; return { name, pick: () => this.set({ cat: name }), dot: name === 'Alle' ? t.ink : CATS[name], bg: on ? t.ink : t.surf, color: on ? t.bg : t.ink, border: on ? t.ink : t.line2 }; });
+    const txList = s.cat === 'Alle' ? TX : TX.filter(x => x.cat === s.cat);
+    const num = a => parseFloat(a.replace('−', '-').replace(/\s/g, '').replace(',', '.'));
+    const fmt = v => (v < 0 ? '−' : '') + Math.abs(v).toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' kr';
+    const queue = [0, 1].map(i => ({ open: () => this.set({ page: 'kvitteringer', review: i }), select: () => this.set({ review: i }), border: s.review === i ? t.acc : 'transparent' }));
+    const ask = q => { q = (q || '').trim(); if (!q) return; this.set({ aiQ: '', aiHist: [q, ...s.aiHist.filter(x => x !== q)] }); };
+    const cal = []; for (let i = 0; i < 35; i++) { const n = i - 2; const ev = n === 25 ? 'Tv2' : n === 28 ? 'Youtube' : ''; cal.push({ n: n >= 1 && n <= 31 ? n : '', bg: n >= 1 && n <= 31 ? t.surf2 : 'transparent', border: n === 18 ? t.acc : 'transparent', color: n === 18 ? t.ink : t.faint, ev }); }
+    const fullM = ['Januar','Februar','Mars','April','Mai','Juni','Juli','August','September','Oktober','November','Desember'];
+    const homes = [['Strømstad','Annet'],['Toten','Enebolig'],['Toten','Hytte'],['Arnebråtveien 51','Leilighet']];
+    const setCur = SET_TABS.find(x => x[0] === s.setTab) || SET_TABS[1];
+    return {
+      t, p, nav, open: !col, closed: col, sideW: col ? '72px' : '264px', jc: col ? 'center' : 'flex-start',
+      toggleSide: () => this.set({ col: !col }), swBg: col ? t.acc : t.line2, swX: col ? '23px' : '3px',
+      crumb: label, title: s.page === 'oversikt' ? 'God morgen, Sebastian Kristo Jemtland' : label, titleSize: s.page === 'oversikt' ? 'clamp(32px,4vw,52px)' : 'clamp(30px,3.5vw,44px)',
+      sub: SUBS[s.page] || '', hasSub: !!SUBS[s.page],
+      goTx: go('transaksjoner'), goKontoer: go('kontoer'), goSubs: go('subs'), goSettings: go('innstillinger'), goCal: () => this.set({ subTab: 'kalender' }),
+      cols, recent: TX.slice(0, 5), queue,
+      actions: [['Last opp kvittering', t.warnSoft, t.warn, 'M12 4v11M7 10l5 5 5-5M5 20h14', 'kvitteringer'], ['Ny transaksjon', t.blueSoft, t.blue, 'M12 5v14M5 12h14', 'transaksjoner'], ['Importer', t.posSoft, t.pos, 'M12 4v11M7 10l5 5 5-5M5 20h14', 'import'], ['Rapport', t.purpleSoft, t.purple, 'M5 20h14M8 17v-5M12 17V8M16 17v-3', 'oversikt']].map(([label, bg, ic, d, pg]) => ({ label, bg, ic, d, go: go(pg) })),
+      chips, txList, txEmpty: txList.length === 0, txCount: s.cat === 'Alle' ? '49 transaksjoner' : txList.length + ' transaksjoner',
+      txNet: s.cat === 'Alle' ? '−37 489,63 kr' : fmt(txList.reduce((a, x) => a + num(x.amt), 0)),
+      aiQ: s.aiQ, setAiQ: e => this.setState({ aiQ: e.target.value }), aiKey: e => { if (e.key === 'Enter') ask(s.aiQ); }, askAi: () => ask(s.aiQ),
+      aiSuggest: ['Hvor mye har jeg brukt på kaffe?','Når kjøpte jeg lyspærer?','Mat i oktober','Hva har jeg betalt for lading?','Sist jeg var på ICA KVANTUM','Sist jeg var på Anthropic: Claude s'].map(q => ({ q, pick: () => this.setState({ aiQ: q }) })),
+      aiHist: s.aiHist.map(q => ({ q, pick: () => this.setState({ aiQ: q }) })), aiHistEmpty: s.aiHist.length === 0, clearAi: () => this.set({ aiHist: [] }),
+      reviewNo: s.review + 1,
+      booked: [['FINN.no','Sykkelhjelm Giro, str. M','16.10','Avvist'],['–','','17.10','Avvist'],['Beijer Byggmaterial AB','Kjøp av byggevarer og trelast','05.09','718,90 kr'],['jem & fix','Diverse byggevarer og tilbehør til hjemmet','03.08','887,50 kr'],['ICA KVANTUM','','24.09','651,81 kr'],['ICA Kvantum','','12.09','314,29 kr'],['ICA KVANTUM','','14.09','207,99 kr'],['Biltema','','16.10','194,40 kr']].map(([name, note, date, right]) => ({ name, note, hasNote: !!note, date, right, color: right === 'Avvist' ? t.faint : t.ink })),
+      rCats: ['Mat og dagligvarer','Restaurant og kafé','Transport og lading','Bolig','Hjem','Fritid og hobby','Abonnementer','Skole','Annet'].map(name => { const on = s.rCat === name; return { name, pick: () => this.setState({ rCat: name }), bg: on ? t.acc : 'transparent', color: on ? t.accInk : t.ink, border: on ? t.acc : t.line2 }; }),
+      stockKpis: [['Porteføljeverdi','9 980,13 kr','Investert 2 995,50 kr',t.ink],['Avkastning','−15,51 kr','−0,52 %',t.neg],['Kontanter','7 000,14 kr','Tilgjengelig for handel',t.ink],['Utbytte i år','0,00 kr','0 utbetalinger',t.pos]].map(([label, value, sub, color]) => ({ label, value, sub, color })),
+      ranges: ['1M','3M','1 år','Alt'].map(l => ({ l, pick: () => this.setState({ range: l }), bg: s.range === l ? t.surf : 'transparent', color: s.range === l ? t.ink : t.faint })),
+      positions: [
+        { tk:'VUAG', name:'Vanguard S&P 500 (Acc)', code:'VUAGl_EQ', qty:'1,41', avg:'112,38', px:'111,98', val:'157,87', ret:'−15,62', retp:'−9,86 %', rc:t.neg, bg:t.warnSoft, fg:t.warn },
+        { tk:'VHYL', name:'Vanguard FTSE All-World High Dividend Yield (Dist)', code:'VHYLl_EQ', qty:'1,15', avg:'68,95', px:'69,25', val:'79,56', ret:'+0,11', retp:'+0,14 %', rc:t.pos, bg:t.blueSoft, fg:t.blue }],
+      orders: [{ tk:'VUAG', meta:'1,41 stk · 14.10', amt:'2 000,00 kr' }, { tk:'VHYL', meta:'1,15 stk · 14.10', amt:'1 000,00 kr' }],
+      homes: homes.map(([name, type], i) => ({ name, type, pick: () => this.setState({ home: i }), border: s.home === i ? t.acc : t.line })),
+      home: { name: homes[s.home][0], type: homes[s.home][1] },
+      homeKpis: [['Brukt i år','0 kr','0 utgifter og kvitteringer'],['Snitt per måned','0 kr','januar–oktober'],['Strøm i år','0 kr','Denne måneden 0 kr'],['Kategorier','0','med utgifter i år']].map(([label, value, sub]) => ({ label, value, sub })),
+      addTabs: ['Ny utgift','Kvittering','Fra transaksjoner'].map((l, i) => ({ l, pick: () => this.setState({ addTab: i }), bg: s.addTab === i ? t.surf2 : 'transparent' })),
+      finnSteps: ['Solgt','Sendt','Levert','Utbetalt'].map((l, i) => ({ l, line: i > 0 })),
+      importText: s.importText, setImport: e => this.setState({ importText: e.target.value }),
+      subTabs: [['oversikt','Oversikt'],['kalender','Kalender']].map(([k, l]) => ({ l, pick: () => this.setState({ subTab: k }), bg: s.subTab === k ? t.ink : 'transparent', color: s.subTab === k ? t.bg : t.muted })),
+      subOv: s.subTab === 'oversikt', subCal: s.subTab === 'kalender',
+      subMini: [['Aktive','2','Alle tjenester',t.blueSoft,t.blue],['Dyreste','169 kr','Youtube',t.warnSoft,t.warn],['Billigste','64 kr','Tv2',t.posSoft,t.pos]].map(([l, v, tag, bg, c]) => ({ l, v, tag, bg, c })),
+      subBars: ['Jan','Feb','Mar','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Des'].map((m, i) => ({ m, full: fullM[i], v: '233 kr', h: '180px', sel: s.subMonth === i, pick: () => this.setState({ subMonth: i }), bg: s.subMonth === i ? t.acc : t.warnSoft, lc: s.subMonth === i ? t.ink : t.faint })),
+      upcoming: [{ date:'25. oktober', name:'Tv2', meta:'Trekkes · Månedlig', amt:'−64 kr', logo:'T', bg:t.warnSoft, fg:t.warn }, { date:'28. oktober', name:'Youtube', meta:'Trekkes · Familie', amt:'−169 kr', logo:'▶', bg:'#fff', fg:'#ff0000' }],
+      subsList: [{ name:'Tv2', plan:'–', next:'25. okt', amt:'64 kr', logo:'T', bg:t.warnSoft, fg:t.warn }, { name:'Youtube', plan:'Familie', next:'28. nov', amt:'169 kr', logo:'▶', bg:'#fff', fg:'#ff0000' }],
+      calDays: cal,
+      setTabs: SET_TABS.map(([k, l, d]) => ({ l, d, pick: () => this.setState({ setTab: k }), bg: s.setTab === k ? t.surf2 : 'transparent', color: s.setTab === k ? t.acc : t.ink })),
+      setUtseende: s.setTab === 'utseende', setGenerelt: s.setTab === 'generelt', setOther: !['utseende','generelt'].includes(s.setTab), setCur: { l: setCur[1], d: setCur[2] },
+      themeCards: [{ ...V2CARD, on:false, border:t.line, pick: () => { try{localStorage.setItem('fh_design','v2')}catch(e){} try{window.dispatchEvent(new Event('fh-design'))}catch(e){} } }, ...Object.entries(THEMES).map(([k, th]) => ({ ...th, on: s.theme === k, border: s.theme === k ? t.acc : t.line, pick: () => { try{localStorage.setItem('fh_design',k)}catch(e){} this.set({ theme: k }); } }))]
+    };
+  }
+}
+</script>
+</body>
+</html>

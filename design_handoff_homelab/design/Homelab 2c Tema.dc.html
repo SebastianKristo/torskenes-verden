@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Manrope:wght@400;500;600;700;800&family=Sora:wght@200;300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="./image-slot.js"></script>
+<style>body{margin:0;background:#cfccc6;font-family:Manrope,sans-serif}a{color:inherit;text-decoration:none}a:hover{opacity:.8}</style>
+</helmet>
+
+<section style="padding:64px;display:flex;flex-direction:column;gap:72px">
+  <!-- 2c -->
+  <div id="2c" style="display:flex;flex-direction:column;gap:18px;width:1440px">
+    <div style="display:flex;align-items:center;gap:10px"><span style="font:600 13px IBM Plex Mono,monospace;background:#1c1b19;color:#f4f1ea;padding:4px 10px;border-radius:6px">2c</span><span style="font:600 16px Manrope,sans-serif;color:#1c1b19">Vindu og papir · bildet som et bredt vindu øverst, resten på lyst papir med avisspalter</span></div>
+    <div style="border-radius:20px;overflow:hidden;box-shadow:0 30px 80px -30px rgba(0,0,0,.35);background:#f3efe6;color:#1b1a17">
+      <div style="position:relative;height:420px;background:#8aa6c2">
+        <div style="position:absolute;inset:0"><image-slot id="hl-bg-2c-{{ bg.k }}" shape="rect" src="{{ bg.src }}" credit="{{ bg.credit }}" placeholder="Bakgrunnsbilde: slipp et foto her"></image-slot></div>
+        <div style="position:relative;pointer-events:none;height:100%;box-sizing:border-box;padding:24px 44px 30px;display:flex;flex-direction:column;color:#fff;text-shadow:0 2px 18px rgba(0,0,0,.35)">
+          <div style="display:flex;align-items:center;gap:20px;pointer-events:auto;text-shadow:none">
+            <span style="font:500 26px Newsreader,serif;text-shadow:0 1px 10px rgba(0,0,0,.35)">Homelab</span>
+            <nav style="display:flex;gap:2px;padding:4px;border-radius:999px;background:rgba(243,239,230,.94)"><sc-for list="{{ tabsP }}" as="t" hint-placeholder-count="9"><span style="padding:7px 12px;border-radius:999px;font:600 13px Manrope,sans-serif;background:{{ t.bg }};color:{{ t.c }}">{{ t.n }}</span></sc-for></nav>
+            <div style="margin-left:auto;display:flex;gap:2px;padding:4px;border-radius:999px;background:rgba(27,26,23,.55);backdrop-filter:blur(12px)"><sc-for list="{{ bgOpts }}" as="o" hint-placeholder-count="3"><a onClick="{{ o.pick }}" style="padding:6px 12px;border-radius:999px;font:600 12px Manrope,sans-serif;background:{{ o.bg }};color:{{ o.c }};cursor:pointer">{{ o.n }}</a></sc-for></div>
+            <span style="width:40px;height:40px;border-radius:99px;background:#1b1a17;color:#f3efe6;display:grid;place-items:center;font:700 14px Manrope,sans-serif">S</span>
+          </div>
+          <div style="margin-top:auto;display:flex;justify-content:space-between;align-items:flex-end;gap:40px">
+            <div><div style="font:italic 400 22px Newsreader,serif">Søndag 18. oktober</div><div style="font:500 84px/1 Newsreader,serif;letter-spacing:-.02em;margin-top:6px">God morgen, Sebastian</div></div>
+            <div style="text-align:right"><div style="font:400 120px/0.85 Newsreader,serif;letter-spacing:-.03em">7°</div><div style="font:500 15px Manrope,sans-serif;margin-top:8px">Lett regn · 08:42</div></div>
+          </div>
+        </div>
+      </div>
+      <div style="padding:0 44px 40px">
+        <div style="display:flex;align-items:center;gap:16px;height:56px;margin-top:-28px;margin-left:auto;width:calc(100% - 420px);box-sizing:border-box;position:relative;padding:0 6px 0 22px;border-radius:999px;background:#fff;box-shadow:0 10px 30px -10px rgba(0,0,0,.25)"><span style="font:700 18px Manrope,sans-serif"><span style="color:#4285f4">G</span><span style="color:#ea4335">o</span><span style="color:#fbbc05">o</span><span style="color:#4285f4">g</span><span style="color:#34a853">l</span><span style="color:#ea4335">e</span></span><span style="flex:1;font:400 15px Manrope,sans-serif;color:#8f897c">Søk på Google eller skriv inn en adresse</span><span style="height:44px;padding:0 22px;border-radius:999px;background:#1b1a17;color:#f3efe6;display:grid;place-items:center;font:700 14px Manrope,sans-serif">Søk</span></div>
+        <div style="display:flex;gap:28px;padding:16px 0;border-bottom:1px solid #d8d1c2;font:400 13px Manrope,sans-serif;white-space:nowrap;overflow:hidden"><b style="font:600 11px IBM Plex Mono,monospace;letter-spacing:.1em;color:#b23a2a">SISTE NYTT</b><sc-for list="{{ news }}" as="n" hint-placeholder-count="5"><span><b style="margin-right:6px">{{ n.src }}</b>{{ n.t }} <span style="color:#8f897c">{{ n.time }}</span></span></sc-for></div>
+        <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:24px">
+          <div style="padding-right:28px;border-right:1px solid #d8d1c2">
+            <div style="font:600 11px IBM Plex Mono,monospace;letter-spacing:.12em;color:#b23a2a">I DAG PÅ SKOLEN</div>
+            <div style="padding:10px 0 12px;border-bottom:1px solid #d8d1c2"><span style="font:600 10px IBM Plex Mono,monospace;background:#1b1a17;color:#f3efe6;padding:2px 6px;margin-right:8px">NÅ</span><span style="font:500 24px Newsreader,serif">Fysikk 2</span><div style="font:400 13px Manrope,sans-serif;color:#6b665c;margin-top:4px">08:15–09:45 · B-204 · <a style="text-decoration:underline">MazeMap ↗</a></div></div>
+            <sc-for list="{{ events }}" as="e" hint-placeholder-count="5"><div style="display:grid;grid-template-columns:96px minmax(0,1fr) auto;gap:10px;padding:9px 0;border-bottom:1px solid #e3ddcf;font:400 14px Manrope,sans-serif"><span style="color:#6b665c;font-size:13px">{{ e.when }}</span><b style="font-weight:600">{{ e.title }}</b><span style="font:600 10px IBM Plex Mono,monospace;color:#b23a2a">{{ e.tag }}</span></div></sc-for>
+          </div>
+          <div style="padding:0 28px;border-right:1px solid #d8d1c2">
+            <div style="font:600 11px IBM Plex Mono,monospace;letter-spacing:.12em;color:#b23a2a">AVGANGER</div>
+            <sc-for list="{{ trips }}" as="t" hint-placeholder-count="4"><div style="padding:10px 0;border-bottom:1px solid #e3ddcf"><div style="font:500 17px Newsreader,serif">{{ t.from }} → {{ t.to }}</div><div style="display:flex;gap:16px;margin-top:3px;font:500 13px Manrope,sans-serif"><sc-for list="{{ t.deps }}" as="d"><span><span style="font:700 10px Manrope,sans-serif;border:1px solid #1b1a17;padding:0 4px;margin-right:4px">{{ d.line }}</span>{{ d.min }}</span></sc-for></div></div></sc-for>
+            <div style="font:600 11px IBM Plex Mono,monospace;letter-spacing:.12em;color:#b23a2a;margin-top:24px">ENERGI</div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:6px"><span><span style="font:500 32px Newsreader,serif">2,4</span> <span style="font:400 13px Manrope,sans-serif;color:#6b665c">kW nå</span></span><span style="font:400 13px Manrope,sans-serif;color:#6b665c">130 kWh denne uken</span></div>
+            <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;height:60px;align-items:end;margin-top:8px;border-bottom:1px solid #1b1a17"><sc-for list="{{ energy }}" as="b" hint-placeholder-count="7"><div style="height:{{ b.h }};background:{{ b.cP }}"></div></sc-for></div>
+          </div>
+          <div style="padding-left:28px">
+            <div style="font:600 11px IBM Plex Mono,monospace;letter-spacing:.12em;color:#b23a2a">SPILLES NÅ</div>
+            <sc-for list="{{ nowPlaying }}" as="p" hint-placeholder-count="2"><div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #e3ddcf"><span style="width:38px;height:52px;background:{{ p.bg }};color:#fff;display:grid;place-items:center;font:500 18px Newsreader,serif;flex-shrink:0">{{ p.ini }}</span><div><div style="font:500 18px Newsreader,serif">{{ p.t }}</div><div style="font:400 12px Manrope,sans-serif;color:#6b665c">{{ p.who }} · {{ p.src }} · {{ p.left }}</div></div></div></sc-for>
+            <div style="font:600 11px IBM Plex Mono,monospace;letter-spacing:.12em;color:#b23a2a;margin-top:24px">PENGER</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:6px">
+              <div><div style="font:400 12px Manrope,sans-serif;color:#6b665c">Trading 212</div><div style="font:500 28px Newsreader,serif">48 312 kr</div><div style="font:500 12px Manrope,sans-serif;color:#2f7a4f">+862 kr (+1,8 %)</div></div>
+              <div><div style="font:400 12px Manrope,sans-serif;color:#6b665c">Brukt i oktober</div><div style="font:500 28px Newsreader,serif">5 541 kr</div><div style="font:400 12px Manrope,sans-serif;color:#6b665c">av 8 000 kr</div></div>
+            </div>
+            <div style="font:600 11px IBM Plex Mono,monospace;letter-spacing:.12em;color:#b23a2a;margin-top:24px">SNARVEIER</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font:600 13px Manrope,sans-serif"><sc-for list="{{ links }}" as="l" hint-placeholder-count="14"><span style="display:flex;gap:6px;align-items:center"><span style="width:8px;height:8px;border-radius:2px;background:{{ l.cL }}"></span>{{ l.n }}</span></sc-for></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3: 2c utbygd -->
+  <div id="3a" style="display:flex;flex-direction:column;gap:18px;width:1440px">
+    <div style="display:flex;align-items:center;gap:10px"><span style="font:600 13px IBM Plex Mono,monospace;background:#1c1b19;color:#f4f1ea;padding:4px 10px;border-radius:6px">3a</span><span style="font:600 16px Manrope,sans-serif;color:#1c1b19">Innlogging, innstillinger og satellitt i samme stil som <a href="#2c" style="text-decoration:underline">2c</a></span></div>
+    <div style="display:grid;grid-template-columns:460px minmax(0,1fr);gap:24px;align-items:start">
+      <div style="height:640px;border-radius:20px;overflow:hidden;background:#f3efe6;color:#1b1a17;box-shadow:0 30px 80px -30px rgba(0,0,0,.35);display:flex;flex-direction:column">
+        <div style="position:relative;height:260px;background:#8aa6c2;flex-shrink:0">
+          <div style="position:absolute;inset:0"><image-slot id="hl-bg-3a-login" shape="rect" src="{{ imgOslo.src }}" credit="{{ imgOslo.credit }}" placeholder="Bakgrunnsbilde"></image-slot></div>
+          <div style="position:relative;pointer-events:none;height:100%;box-sizing:border-box;padding:24px 32px 46px;display:flex;flex-direction:column;justify-content:flex-end;color:#fff;text-shadow:0 2px 18px rgba(0,0,0,.35)"><div style="font:italic 400 18px Newsreader,serif">Homelab</div><div style="font:500 46px/1.05 Newsreader,serif">Hei, velkommen hjem</div></div>
+        </div>
+        <div style="padding:28px 32px;display:flex;flex-direction:column;gap:16px">
+          <label style="font:600 11px IBM Plex Mono,monospace;letter-spacing:.12em;color:#b23a2a">BRUKERNAVN<div style="height:40px;border-bottom:1px solid #1b1a17;display:flex;align-items:center;font:400 19px Newsreader,serif;color:#1b1a17;letter-spacing:0">admin</div></label>
+          <label style="font:600 11px IBM Plex Mono,monospace;letter-spacing:.12em;color:#b23a2a">PASSORD<div style="height:40px;border-bottom:2px solid #b23a2a;display:flex;align-items:center;font:400 19px Newsreader,serif;color:#1b1a17;letter-spacing:.2em">•••••••</div></label>
+          <div style="display:flex;gap:8px;align-items:center;font:500 13px Manrope,sans-serif"><span style="width:16px;height:16px;border:1.5px solid #1b1a17;background:#1b1a17;color:#f3efe6;display:grid;place-items:center;font-size:10px">✓</span>Husk denne enheten på lokalt nett</div>
+          <span style="height:50px;border-radius:999px;background:#1b1a17;color:#f3efe6;display:grid;place-items:center;font:700 15px Manrope,sans-serif;margin-top:4px">Lås opp</span>
+          <div style="font:400 12px Manrope,sans-serif;color:#8f897c;text-align:center">Demo: admin / homelab · 2FA-kode 123456</div>
+        </div>
+      </div>
+      <div style="height:640px;border-radius:20px;overflow:hidden;background:#f3efe6;color:#1b1a17;box-shadow:0 30px 80px -30px rgba(0,0,0,.35);display:grid;grid-template-columns:260px minmax(0,1fr)">
+        <aside style="border-right:1px solid #d8d1c2;padding:28px 24px;display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;gap:12px;align-items:center"><span style="width:42px;height:42px;border-radius:99px;background:#1b1a17;color:#f3efe6;display:grid;place-items:center;font:700 14px Manrope,sans-serif">SE</span><div><div style="font:500 20px Newsreader,serif">Sebastian</div><div style="font:400 12px Manrope,sans-serif;color:#8f897c">@admin · Admin</div></div></div>
+          <div style="height:38px;border-radius:999px;background:#fff;padding:0 14px;display:flex;align-items:center;font:400 13px Manrope,sans-serif;color:#8f897c">⌕ Søk i innstillinger</div>
+          <sc-for list="{{ setNav }}" as="g" hint-placeholder-count="3"><div><div style="font:600 10px IBM Plex Mono,monospace;letter-spacing:.14em;color:#b23a2a;margin-bottom:4px">{{ g.t }}</div><sc-for list="{{ g.items }}" as="i"><div style="padding:6px 0;font:{{ i.w }} 15px Manrope,sans-serif;color:{{ i.c }};border-bottom:1px solid {{ i.bd }}">{{ i.n }}</div></sc-for></div></sc-for>
+          <div style="margin-top:auto;display:flex;flex-direction:column;gap:6px;font:600 13px Manrope,sans-serif"><span>Lås skjermen</span><span style="color:#b23a2a">Logg ut</span></div>
+        </aside>
+        <div style="padding:28px 40px;display:flex;flex-direction:column;gap:22px;overflow:hidden">
+          <div><div style="font:500 44px/1 Newsreader,serif">Startside</div><div style="font:italic 400 17px Newsreader,serif;color:#6b665c;margin-top:6px">Topplinje, faner og nyhetsbar.</div></div>
+          <sc-for list="{{ setGroups }}" as="g" hint-placeholder-count="2"><div><div style="font:600 10px IBM Plex Mono,monospace;letter-spacing:.14em;color:#b23a2a;padding-bottom:6px;border-bottom:2px solid #1b1a17">{{ g.t }}</div><sc-for list="{{ g.rows }}" as="r"><div style="display:flex;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid #d8d1c2"><div style="flex:1"><div style="font:600 15px Manrope,sans-serif">{{ r.t }}</div><div style="font:400 13px Manrope,sans-serif;color:#6b665c">{{ r.s }}</div></div><sc-if value="{{ r.isV }}"><span style="font:500 13px Manrope,sans-serif;color:#6b665c">{{ r.v }} →</span></sc-if><sc-if value="{{ r.isTog }}"><span style="width:42px;height:24px;border-radius:99px;background:{{ r.tg }};display:flex;justify-content:{{ r.tj }};padding:3px;box-sizing:border-box"><span style="width:18px;height:18px;border-radius:99px;background:#fff"></span></span></sc-if></div></sc-for></div></sc-for>
+        </div>
+      </div>
+    </div>
+
+    <div style="border-radius:20px;overflow:hidden;box-shadow:0 30px 80px -30px rgba(0,0,0,.35);background:#f3efe6;color:#1b1a17">
+      <div style="position:relative;height:360px;background:#0b1020">
+        <div style="position:absolute;inset:0"><image-slot id="hl-bg-3a-apod" shape="rect" src="{{ imgPlanet.src }}" credit="{{ imgPlanet.credit }}" placeholder="NASA · dagens rombilde"></image-slot></div>
+        <div style="position:relative;pointer-events:none;height:100%;box-sizing:border-box;padding:24px 44px 52px;display:flex;flex-direction:column;color:#fff;text-shadow:0 2px 18px rgba(0,0,0,.5)">
+          <div style="display:flex;align-items:center;gap:20px;pointer-events:auto;text-shadow:none"><span style="font:500 26px Newsreader,serif;text-shadow:0 1px 10px rgba(0,0,0,.4)">Homelab</span><nav style="display:flex;gap:2px;padding:4px;border-radius:999px;background:rgba(243,239,230,.94)"><sc-for list="{{ tabsRom }}" as="t" hint-placeholder-count="9"><span style="padding:7px 12px;border-radius:999px;font:600 13px Manrope,sans-serif;background:{{ t.bg }};color:{{ t.c }}">{{ t.n }}</span></sc-for></nav></div>
+          <div style="margin-top:auto;max-width:760px"><div style="font:600 11px IBM Plex Mono,monospace;letter-spacing:.14em">NASA · DAGENS ROMBILDE · 2026-10-18</div><div style="font:500 64px/1.02 Newsreader,serif;margin-top:8px">Satellitt og teleskop</div></div>
+        </div>
+      </div>
+      <div style="padding:28px 44px 40px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))">
+        <div style="padding-right:28px;border-right:1px solid #d8d1c2">
+          <div style="font:600 11px IBM Plex Mono,monospace;letter-spacing:.12em;color:#b23a2a">STARLINK OVER NORGE</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px"><div><div style="font:400 64px/1 Newsreader,serif">142</div><div style="font:400 13px Manrope,sans-serif;color:#6b665c">over Norge geografisk</div></div><div><div style="font:400 64px/1 Newsreader,serif">37</div><div style="font:400 13px Manrope,sans-serif;color:#6b665c">over horisonten (&gt;10°) fra Oslo</div></div></div>
+          <div style="display:flex;gap:4px;margin-top:16px"><sc-for list="{{ cities }}" as="c" hint-placeholder-count="4"><span style="padding:6px 13px;border-radius:999px;font:600 12px Manrope,sans-serif;background:{{ c.bg }};color:{{ c.c }};border:1px solid #1b1a17">{{ c.n }}</span></sc-for></div>
+          <div style="font:400 12px Manrope,sans-serif;color:#8f897c;margin-top:14px">Beregnet fra CelesTrak-banedata · oppdatert 08:42</div>
+        </div>
+        <div style="padding:0 28px;border-right:1px solid #d8d1c2">
+          <div style="font:600 11px IBM Plex Mono,monospace;letter-spacing:.12em;color:#b23a2a">HØYEST PÅ HIMMELEN NÅ</div>
+          <sc-for list="{{ sats }}" as="p" hint-placeholder-count="5"><div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #e3ddcf;font:400 14px Manrope,sans-serif"><b style="font-weight:600">{{ p.name }}</b><span style="color:#6b665c">{{ p.el }}° høyde · {{ p.az }}° retning</span></div></sc-for>
+          <div style="font:400 13px Manrope,sans-serif;color:#6b665c;margin-top:12px">Totalt 6 912 Starlink-satellitter i bane. <a style="text-decoration:underline">Synlige passeringer ↗</a></div>
+        </div>
+        <div style="padding-left:28px">
+          <div style="font:600 11px IBM Plex Mono,monospace;letter-spacing:.12em;color:#b23a2a">FRA NASA-ARKIVET</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px"><sc-for list="{{ gallery }}" as="g" hint-placeholder-count="6"><div><div style="aspect-ratio:1;background:{{ g.bg }}"></div><div style="font:500 12px Manrope,sans-serif;margin-top:6px">{{ g.t }}</div></div></sc-for></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const LINKS=[['NRK','#c8102e'],['VG','#d7263d'],['FINN','#0063fb'],['Komplett','#e0a100'],['Yr','#2f5d8a'],['Canvas','#e2492e'],['Claude','#d97757'],['ChatGPT','#10a37f'],['Gemini','#4b6bd6'],['Ruter','#e60000'],['Home Assistant','#18bcf2'],['Proxmox','#e57000'],['Homey','#7a3fe4'],['LabDeck','#3f51b5']];
+const TABS=['Dashboard','Studie','Rom','Økonomi','Hjem','Matplan','Sporing','Domener','Nettverk'];
+const FP = f => 'https://commons.wikimedia.org/wiki/Special:FilePath/' + encodeURIComponent(f) + '?width=2400';
+const BGS = {
+  oslo: { k:'oslo', n:'Oslo', src: FP('Oslo_S_aerial.jpg'), credit:'Foto: Wilhelm Joys Andersen, Wikimedia Commons (CC BY-SA 2.0)' },
+  vaer: { k:'vaer', n:'Vær nå', src: FP('Cloudy_Sky_Background.jpg'), credit:'Foto: Free Nature Stock, Wikimedia Commons (CC0)' },
+  planet: { k:'planet', n:'Planeter', src: FP('PIA21641-Jupiter-SouthernStorms-JunoCam-20170525.jpg'), credit:'Jupiter: NASA/JPL-Caltech/SwRI/MSSS' }
+};
+class Component extends DCLogic {
+  state = { bg: 'oslo' };
+  renderVals() {
+    const bgSel = this.state.bg;
+    const act=(arr,onBg,onC,offC)=>arr.map((n,i)=>({n,bg:i===0?onBg:'transparent',c:i===0?onC:offC}));
+    const tripsRaw=[['Amagerveien','Majorstuen',[['T5','3 min'],['T5','11 min'],['T5','19 min']]],['Frydenlund','Majorstuen',[['19','2 min'],['12','7 min'],['19','14 min']]],['Majorstuen','Amagerveien',[['T5','nå'],['T5','13 min'],['T5','21 min']]],['Majorstuen','Holbergs plass',[['19','4 min'],['11','9 min'],['19','16 min']]]];
+    const en=[18,22,14,19,24,16,17];
+    const cats=[['Mat','699','#2f7a4f','#8fe0b0'],['Transport','518','#2f5d8a','#a8d4fb'],['Bolig','3 500','#b07a12','#f3d38a'],['Fritid','175','#a03c8a','#e8a6d8'],['Skole','649','#4b5fc8','#9fb4ff']];
+    return {
+      bg: BGS[bgSel], imgOslo: BGS.oslo, imgPlanet: BGS.planet,
+      bgOpts: Object.values(BGS).map(o => ({ n:o.n, pick:()=>this.setState({ bg:o.k }), bg: o.k===bgSel ? '#f3efe6' : 'transparent', c: o.k===bgSel ? '#1b1a17' : '#fff' })),
+      tabsL: act(TABS,'#0f1726','#fff','#0f1726'),
+      tabsD: TABS.map((n,i)=>({n,op:i===0?1:.75,bd:i===0?'#fff':'transparent'})),
+      tabsP: act(TABS,'#1b1a17','#f3efe6','#1b1a17'),
+      news:[['NRK','Kraftig regn ventes på Østlandet i kveld','09:12'],['VG','Ny rekord for elbilsalg i september','09:05'],['NRK','Stortinget behandler statsbudsjettet','08:48'],['VG','Ruter innfører nye nattlinjer fra november','08:31'],['NRK','Nordlys kan bli synlig over Oslo i natt','08:10'],['VG','Strømprisen faller utover helgen','07:52']].map(([src,t,time])=>({src,t,time,c:src==='NRK'?'#0b4ea2':'#c8102e'})),
+      trips: tripsRaw.map(([from,to,ds])=>({from,to,deps:ds.map(([line,min])=>({line,min,c:line[0]==='T'?'#f3d38a':'#a8d4fb'}))})),
+      wxH:[['Nå','7°','0,4'],['10','7°','0,6'],['11','8°','0,3'],['12','9°','0,1'],['13','9°','0'],['14','8°','0,2']].map(([h,t,mm])=>({h,t,mm})),
+      wxD:[['Man','10°','4°','0 mm'],['Tir','8°','3°','1,2 mm'],['Ons','10°','6°','7,1 mm']].map(([d,hi,lo,mm])=>({d,hi,lo,mm})),
+      events:[['I dag 10:15','Matematikk R2','','#9fb4ff'],['I dag 12:30','Norsk – fremføring','NÅ','#f3d38a'],['Man 08:30','Fysikk 2 · Lab B','','#8fe0b0'],['Tir 23:59','Innlevering: Historie','FRIST','#f59a8f'],['Tor 09:00','Prøve i engelsk','','#9fb4ff']].map(([when,title,tag,c])=>({when,title,tag,c})),
+      stocks:[['AAPL','Apple','12 840','+2,1 %'],['NVDA','Nvidia','15 220','+3,4 %'],['EQNR','Equinor','9 410','−0,6 %'],['VUSA','S&P 500','10 842','+0,9 %']].map(([t,n,v,p])=>({t,n,v,p,cL:p[0]==='−'?'#b23a2a':'#2f7a4f',cD:p[0]==='−'?'#f59a8f':'#8fe0b0'})),
+      energy: ['Fre','Lør','Søn','Man','Tir','Ons','Tor'].map((d,i)=>({d,v:en[i],h:(en[i]/26*100)+'%',cL:i===6?'#0f1726':'rgba(15,23,38,.18)',cD:i===6?'#a8d4fb':'rgba(255,255,255,.18)',cP:i===6?'#1b1a17':'#d8d1c2'})),
+      nowPlaying:[{t:'Severance',src:'Plex',who:'sebastiankristo',left:'23 min igjen',pct:'62%',ini:'S',bg:'#2d4a6b'},{t:'Dune: Part Two',src:'Jellyfin',who:'Ingrid',left:'1 t 12 min igjen',pct:'34%',ini:'D',bg:'#8a5a2b'}],
+      upcoming3:[{t:'Severance',sub:'S03E04',when:'i kveld'},{t:'The Bear',sub:'S05E01',when:'tir 20.10'},{t:'Dune: Messiah',sub:'kino',when:'ons 21.10'}],
+      cats: cats.map(([n,sum,cL,cD])=>({n,sum,cL,cD,ofBudget:(parseFloat(sum.replace(' ',''))/8000*100)+'%'})),
+      tabsRom: TABS.map((n,i)=>({n,bg:i===2?'#1b1a17':'transparent',c:i===2?'#f3efe6':'#1b1a17'})),
+      setNav:[['GENERELT',['Konto','Utseende','Startside','Domener']],['TILKOBLINGER',['Integrasjoner']],['SIKKERHET',['Brukere']]].map(([t,items])=>({t,items:items.map(n=>({n,w:n==='Startside'?700:500,c:n==='Startside'?'#1b1a17':'#6b665c',bd:n==='Startside'?'#1b1a17':'transparent'}))})),
+      setGroups:[['TOPPLINJE',[['Faner','Rekkefølge, navn og synlighet','v','9 faner'],['Avstand','Mellom seksjoner og faner','v','Standard'],['Lås topplinjen','Hindrer at den flyttes ved et uhell','on']]],['NYHETSBAR',[['Vis nyhetsbar','NRK og VG øverst på dashboardet','on'],['Hastighet','Hvor fort overskriftene ruller','v','5'],['Pause ved musepeker','Stopper når pekeren er over','off']]]].map(([t,rows])=>({t,rows:rows.map(([rt,s,k,v])=>({t:rt,s,v,isV:k==='v',isTog:k!=='v',tg:k==='on'?'#2f7a4f':'#cfc8b9',tj:k==='on'?'flex-end':'flex-start'}))})),
+      cities:['Oslo','Bergen','Trondheim','Tromsø'].map((n,i)=>({n,bg:i===0?'#1b1a17':'transparent',c:i===0?'#f3efe6':'#1b1a17'})),
+      sats:[['STARLINK-31452',78,192],['STARLINK-30871',71,64],['STARLINK-32019',66,301],['STARLINK-6210',58,140],['STARLINK-11843',52,23]].map(([name,el,az])=>({name,el,az})),
+      gallery:[['Perseverance','#8a5a3a'],['Mars-overflate','#a8704a'],['James Webb','#2b2f5a'],['Karina-tåken','#5a3a6a'],['Hubble','#1d3a5a'],['Andromeda','#3a3550']].map(([t,bg])=>({t,bg})),
+      links12: LINKS.slice(0,12).map(([n,c])=>({n,ab:n.slice(0,2),cL:c})),
+      links: LINKS.map(([n,c])=>({n,ab:n.slice(0,2),cL:c}))
+    };
+  }
+}
+</script>
+</body>
+</html>

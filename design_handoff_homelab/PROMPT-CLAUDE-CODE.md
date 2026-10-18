@@ -846,3 +846,36 @@ Sammenlign alltid med `design/FinansHub Mobil v2.dc.html`. Designet er fasiten.
 4. **Fargebakgrunn på iOS virker ikke.** Innstillinger → Utseende → Bakgrunn → «Fargebakgrunn» skal tegne de fargede, uskarpe lysflekkene bak glasset (se designet). Bryteren må lagres, og lysflekkene skal ligge under alt innhold og over den svarte grunnen.
 5. **Finn → «Netto i år»-kortet på iOS** skal ha samme farge og stil som i designet (FinansHub Mobil v2 → Finn), ikke systemets standardkort.
 6. **Ruter-kortet på mobil er for stort.** Det skal være like kompakt som i designet: linjenavn i farget merke, destinasjon og minutter til avgang på én rad per avgang, maks 3–4 avganger. Ingen ekstra luft eller store tall.
+
+## Temaer for FinansHub (18.10.2026)
+- Under Innstillinger → Utseende velger brukeren mellom **Nåværende (FinansHub v2)** og tre nye temaer: **Lys hovedbok**, **Mørk hovedbok** og **Glød**. Se `design/FinansHub v3 Temaer.dc.html` og `design/FinansHub v3 Temaer README.md` (tokens, fonter, radier og sider).
+- Valget lagres per bruker (`design: 'v2' | 'lys' | 'mork' | 'glod'`). Byttet skjer med en gang. Alle komponenter skal bruke semantiske tokens (CSS-variabler på `[data-theme]`), og «Nåværende» er et eget token-sett med dagens farger.
+- Velgeren finnes i begge designene, så brukeren alltid kan bytte tilbake.
+
+## Mat (tidligere Matplan), 18.10.2026
+- Modulen heter nå **Mat** overalt (faner, menyer, widgets).
+- **Skann oppskrift:** samme opplegg som kvitteringer (kamera / bilder / PDF / lenke → kø → Gemini/Ollama i bakgrunnen). AI trekker ut navn, ingredienser og steg og legger retten i en mappe. Originalbildet lagres med oppskriften.
+- **Mapper:** standardmappene er Middag, Supper, Fisk, Kylling, Vegetar, Bakst, Frokost og Favoritter. Brukeren kan lage nye, AI foreslår mappe ved skanning, og mappen kan endres per rett. Datamodell: `food_folder(id, name, sort)` og `dish.folder_id`.
+- **Importer fra nettside (som Mealie):** brukeren limer inn en URL. Serveren henter siden og leser `application/ld+json` med `@type: Recipe` (navn, bilde, recipeIngredient, recipeInstructions, recipeYield, totalTime). Mangler det, prøver den microdata, og deretter AI på den rensede HTML-en. En forhåndsvisning viser bilde, tid, porsjoner, antall ingredienser og steg, og hvilken mappe retten skal i, før den lagres. Kilde-URL lagres og vises som «Original oppskrift ↗». Bildet lastes ned lokalt.
+- **Lenker og filer per rett:** f.eks. «Pizzadeig-kalkulator.xlsx». Brukeren kan legge til en URL eller laste opp en fil (xlsx, csv, pdf, docx, bilde), og typen vises med ikon (Regneark, PDF, Video, Dokument, Lenke). Datamodell: `dish_link(id, dish_id, title, url, file_path, kind)`.
+- **Valgt design for Mat: 2a i `design/Mat Varianter.dc.html`.** Den er lagt inn i `design/Matplan.dc.html`, som er modulen Mat. Fargene er mørk varm grunn (#15140F), kort i #1D1C16 og kanter i #2E2C24. Dagens dag er et limegrønt kort (#D4F25A) med Bricolage Grotesque, og de andre rettene og overskriftene står i Instrument Serif. Etiketter og ukelinje er i Geist Mono, og aksenten er #FF8A4C.
+
+## Tema for Homelab: «Vindu og papir» (18.10.2026)
+- Innstillinger → Utseende → Tema har valgene **Nåværende** og **Vindu og papir**. Se `design/Homelab 2c Tema.dc.html` og `design/Homelab 2c Tema README.md`.
+- Valget lagres per bruker (`hl_theme: 'cur' | '2c'`). All logikk (innlogging/2FA, integrasjoner, nyhetsbar, Ruter, vær, media, Rom) beholdes, og bare det visuelle laget byttes. Det nye temaet har også en velger, så brukeren kan bytte tilbake.
+
+## Nytt felles mobildesign (18.10.2026)
+- Valgt: **2a «Forside med kort»** i `design/Mobil Nytt Design.dc.html`, både lys og mørk. Det er ett designspråk for iOS og Android, uten Liquid Glass og uten Material You. Papir #f3efe6 / mørk #14130f, Newsreader, Manrope og IBM Plex Mono.
+- **Fotovindu:** bakgrunnen kan velges mellom Nåværende (gradient), Oslo, Vær nå, Planeter og Eget bilde.
+- **Siste nytt:** et kort med 5 nyheter. Knappen «Åpne nyhetsleser ›» nederst åpner en egen RSS-leser med filter per kilde, artikkelkort og en liste over kilder der brukeren kan legge til RSS- og Atom-adresser. Serveren henter feedene hvert 10. minutt og lagrer dem.
+- **Dyplenker:** et trykk på en nyhet åpner artikkelen via universal link / app link (åpner NRK-, VG-, E24- eller Aftenposten-appen hvis den er installert, ellers nettleseren). Ruter-kortet åpner Ruter-appen (`ruter.no` universal link, med avreisestopp som parameter). Temperaturen åpner Yr-appen for stedet (`yr.no`-lenke med lokasjons-ID).
+- **Nyhetsleser (RSS):** i morgenavis-stil med kategorifaner (Siste, Norge, Verden, Økonomi, Sport, Teknologi, Kultur). Tannhjulet øverst til høyre åpner «Kilder og AI»: en liste over RSS- og Atom-adresser der kategorien kan endres (Auto/fast) og kilder fjernes, «+ Legg til adresse», og to brytere: **✦ AI-sammendrag** (en kort ingress øverst over de viktigste sakene) og **✦ AI-kategorisering** (Ollama/Gemini setter kategori per sak når feeden mangler kategori). Datamodell: `rss_feed(id, name, url, category, enabled)` og `rss_item(id, feed_id, title, url, published, category, ai_category)`.
+
+## Mobiltema «Papir» (18.10.2026)
+- Under Innstillinger → Utseende → Mobildesign kan brukeren velge **Klassisk** (Liquid Glass / Material You) eller **Papir**. Papir er det nye felles designet for iOS og Android, se `design/Mobil Papir App.dc.html`, og har lys og mørk variant.
+- **Papir-appen:**
+  - **Fanelinje:** Hjem, Finans, Mat, Sporing, Mer og +Skann.
+  - **Mer-siden:** Domener, Media, Aksjer, Abonnementer, Boliger, Finn, Nyhetsleser og Innstillinger.
+  - **Innstillinger:** tema (Papir lys/mørk, eller tilbake til Klassisk), bakgrunn og nyhetsleser.
+- **Felles nyhetsleser:** `design/Nyhetsleser.dc.html` (variant web/mobil) brukes både i Papir-appen og i Homelab v2 på nett, der du trykker «SISTE NYTT ›» i nyhetsbaren. Kilder og AI-valg lagres samlet (`hl_rss`).
+- Alle funksjonene fra den klassiske appen skal finnes i Papir. Undersidene i prototypen viser oppsettet, og innholdet hentes fra de samme API-ene.
