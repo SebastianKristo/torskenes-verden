@@ -967,5 +967,109 @@ Sammenlign alltid med `design/FinansHub Mobil v2.dc.html`. Designet er fasiten.
   - **Publikum:** verdenskart, topp land, enheter, nettlesere, topp sider og henvisere.
   - **Ytelse:** statuskoder, TTFB og sikkerhet.
   - **Infra:** oppetid i 90 dager, DNS-poster og domeneinfo.
-  - Pila øverst går tilbake dit brukeren kom fra (Hjem eller Mer).
 - **FinansHub web, sidemeny:** «Import» skal ikke ligge i sidemenyen (GENERELT). All import (bank, Excel/CSV, Finn-e-poster, Finn-lenker) ligger bare under Innstillinger → Import. Fjern `imp` fra listen over menyelementer og fra «Sidemeny»-innstillingen. Lenker som peker til import, skal åpne Innstillinger → Import.
+- **Samsung-widgets (One UI):**
+  - **Navn under widgeten:** som Samsungs egne widgets, i 13–14 sp, sentrert, hvit med skygge. Cellen blir høyere med navnet: 2×2-raden er ca. 222 dp med navn og 196 dp uten.
+  - **Av/på:** «Vis navn under widget» i widgetens konfigurasjon (`appwidget-provider android:configure` + «Rediger widget»), standard på. Lagres per widget-instans.
+- **Papir mobil, Domener-layout:** bare toppkortet (domenevelger + periode) ligger i et hvitt kort som overlapper bildeheaderen. Resten (KPI-er, grafer, kart, lister) går i full innholdsbredde som egne hvite kort på papirbakgrunnen, ikke inne i en hvit ramme. Det gir ikke dobbel innrykk eller hvitt-på-hvitt.
+- **Papir mobil, Domener-toppkort:** etiketten «DOMENE» med antall, og domenene som en vannrett rad med kort (kilde over navnet, valgt kort er svart, sideveis scroll med snap). Under ligger periodene 1t, 24t, 7d og 30d som segmentert kontroll i full bredde. Ingen pille-boks som bryter over to linjer.
+- **Sporing i appen (Papir, iOS og Android): hold inne for å redigere.** Det mangler i bygget app (se skjermbilde 18.10).
+  - **Start:** et langt trykk (500 ms) på kortene Legg til, Kilder, filterfanene eller pakkelisten setter siden i redigeringsmodus, med en haptisk tikk.
+  - **Vugging, dempet:** rotasjon ±0,2° med en periode på 0,6 s, ease-in-out, annenhver i motsatt fase. Ikke kraftig rist.
+  - **Flytt:** ved å dra (iOS: UICollectionView/SwiftUI `.onMove`, Android: LazyColumn reorder) eller med ▲/▼. En «Ferdig»-linje øverst avslutter.
+  - **Lagring:** rekkefølgen lagres per bruker (`trk_order`).
+  - Vis også bare én tittel «Sporing» (headeren). Fjern den dupliserte tittelen og «14 på vei» under headeren.
+- **Papir mobil, fjerde fane (Domener eller Sporing):**
+  - **Standard «Automatisk»:** fanen er Domener, men bytter til Sporing når minst én pakke er på vei (status hentet, i transport eller klar for henting).
+  - **Valg:** Innstillinger → Fanelinje → Fjerde fane: Automatisk, Alltid Domener eller Alltid Sporing.
+  - **Mer:** den modulen som ikke står i fanelinjen, vises i Mer.
+- **Sporing, hold inne for å redigere (Papir-appen):** langt trykk gir dempet vugging. Fanene, pakkelisten og Legg til får ▲/▼, med «Ferdig» øverst og rekkefølgen lagret (`papir_trk_order`).
+- **Papir på Fold (åpen skjerm, ≥ 600 dp bredde):** samme design og funksjoner som på telefon, med disse tilpasningene:
+  - **Hjem:** to kolonner (søk, minikort og Siste nytt går over hele bredden).
+  - **Andre sider:** sentrert innhold, maks 720 dp.
+  - **Fanelinjen:** sentrert, maks 560 dp.
+  - **Finn:** rutenett med 3–4 kort i bredden.
+  - **Brettet sammen:** ser ut som vanlig telefon. Bruk WindowSizeClass (Compact/Medium/Expanded).
+- **Hilsen (alle flater):** bruk hilsen etter tid på døgnet etterfulgt av navnet, aldri bare «Hei». 05–10 God morgen, 10–12 God formiddag, 12–18 God ettermiddag, 18–23 God kveld, 23–05 God natt. For eksempel «God ettermiddag, Sebastian». Navnet hentes fra brukerprofilen (hovedadmin settes i onboarding). Datoen over hilsenen er dagens dato.
+- **Papir på Fold, fanelinje:** på åpen skjerm (Expanded) blir fanelinjen en loddrett navigasjonsskinne på venstre side (84 dp bred, avrundet, fra topp til bunn), med fanene øverst og +-knappen nederst. Innholdet og headeren flyttes 108 dp inn. Brettet sammen ligger den som vanlig nederst. Android: NavigationRail via WindowSizeClass.
+- **Domener, «Alle domener» på mobil:** ingen tabell. Ett kort per domene med navn og kilde, status-pille, tre tall (forespørsler, besøkende, oppetid) og en bunnlinje med bufret-andel og SSL-utløp. Tabellen brukes bare på web.
+- **Fold, skinnen:** bakgrunnsbildet i headeren går helt ut til venstre kant, bak navigasjonsskinnen. Skinnen er halvgjennomsiktig (rgba(27,26,23,.82) + blur 14). Tekst og innhold får innrykk på 124–130 dp, så ingenting havner under skinnen.
+- **Tilbake fra Domener (Papir):** både pila øverst («‹ Hjem») og kantsveip tilbake (iOS: interactive pop, Android: predictive back) går alltid til Hjem, også når Domener ble åpnet fra Mer. Bytte mellom fanene Oversikt, Publikum, Ytelse og Infra legges ikke i tilbake-historikken.
+- **Hilsen i Papir-headeren:** alltid to linjer, hilsen + komma på linje 1 og navnet på linje 2. Skriftstørrelse 31 pt på telefon og 44 på Fold, med temperatur ved siden av i 52 pt. Headeren er 226 pt høy, så navnet aldri havner bak søkefeltet. Ved lange hilsener («God ettermiddag,») skaleres teksten ned (minimumScaleFactor/autoSize) i stedet for å brytes.
+- **Fold-skinnen, detaljer:** hvert element er ikon over etikett (58 dp høyt, radius 18, 11,5 sp tekst). Aktiv fane har lys bakgrunn. Skinnen går fra 12 dp under toppen til 12 dp over bunnen, med +-knappen nederst inne i skinnen. Appen følger skjermhøyden (ingen minimumshøyde), så ingenting kuttes.
+- **Tilpass hver side (Papir, alle faner):** et langt trykk på et kort gir dempet vugging, og hvert kort får ▲, ▼ og − (skjul). Øverst vises en linje med «Ferdig» og «Skjult: + Budsjett …» for å hente tilbake skjulte kort. Rekkefølge og skjulte kort lagres per side og per bruker (`layout[page] = {order, hidden}`).
+  - **Hjem:** Søk, Pakker, Avganger, Snarveier, Siste nytt.
+  - **Finans → Oversikt:** Saldo, Kvitteringer, Siste transaksjoner, Budsjett.
+  - **Mat:** Dagens middag, Ukeplan, Mapper, Skann og import.
+  - **Sporing:** fanene, pakkelisten, Legg til.
+  - Nye moduler må følge samme mønster.
+- **Finans → Oversikt, Siste transaksjoner:** viser de 15 siste (`limit=15`) med «Vis alle ›» til Liste.
+- **Mangler i bygget app: banneret «N kvitteringer til gjennomgang».**
+  - **Plassering:** på Finans → Oversikt (Papir og Klassisk), rett under saldokortet. Rød/aksent flate, hvit tekst, «Skann ›» til høyre.
+  - **Vises når:** kvitteringskøen har elementer med status `needs_review` (AI-lest, ikke bekreftet). Teksten bruker riktig tall og entall/flertall («1 kvittering» / «2 kvitteringer»). Når køen er tom, skjules banneret.
+  - **Trykk på teksten:** åpner gjennomgangskøen (Mer → Kvitteringer, filtrert på «Til gjennomgang»).
+  - **Trykk på «Skann ›»:** åpner skann-arket.
+  - **Tilpasning:** kortet kan flyttes eller skjules med hold inne, som de andre kortene (nøkkel `f2`).
+  - **Data:** `GET /api/receipts?status=needs_review&count=1`, oppdateres ved push eller når appen kommer i forgrunnen.
+- **Scroll under headeren (Papir):** innholdet scroller aldri opp over bildeheaderen. Det første kortet kan overlappe headeren litt når siden er i toppen (23 pt). Så snart brukeren scroller, klippes innholdet ved headerens nederste kant (iOS: `clipped()` på scroll-området under headeren, Android: `clipToBounds`).
+- **Finn (Papir mobil), «På vei»:** mellom Netto i år-kortet og filterraden ligger en vannrett rad med handler som er underveis (sendt eller mottatt, ikke fullført).
+  - **Hvert kort:** bilde, tittel, steg-linje og neste steg, for eksempel «Kjøpt · Godkjenn innen 24 t» i aksentfarge når det haster.
+  - **Trykk på et kort:** åpner handelen. «Vis alle ›» setter filteret til På vei.
+  - **Skjules** når ingen handler er på vei.
+- **Værvisning i appen** (`design/Vaer.dc.html`): trykk på temperaturen på Hjem åpner en egen værskjerm i stedet for yr.no.
+  - **Bakgrunn:** himmelgradient etter vær og døgn (klart, skyet, regn, natt) med solskinn øverst ved klart vær.
+  - **Toppen:** sted, stor temperatur, beskrivelse, H/L og føles som.
+  - **Neste 24 timer:** veksle mellom temperatur, nedbørssjanse og vind.
+  - **7 dager:** min–maks-søyler, med en prikk for nåtemperaturen i dag.
+  - **Fliser:** vind (kompass med retning og kast), soloppgang (bue med solens posisjon og dagslys), månefase (lys andel), UV-indeks (fargeskala), føles som, nedbør, luftfuktighet (med duggpunkt), sikt og lufttrykk (skala fra lavt til høyt).
+  - **Stedsvelger nederst:** Oslo, Bergen, Trondheim og Tromsø (senere: egne steder og GPS).
+  - **Data:** Open-Meteo (current, hourly, daily, timezone Europe/Oslo). Hent via serveren og cache i 10 minutter. Lenke til yr.no nederst.
+  - «‹ Hjem» og kantsveip lukker.
+- **Finans → Mer (Papir):** et rutenett med to kort i bredden (3–4 på Fold), med undertittelen «Alt fra FinansHub på nettsiden».
+  - **Hvert kort:** ikon i rute (aksentfarge), tittel og et live-tall.
+  - **Kortene:** Budsjett (kr igjen), Kvitteringer (antall til gjennomgang + merke), Faste utgifter, Kontoer (saldo), Aksjer (verdi og endring), Rapporter, Subscription OS (kr/mnd), Boliger, Import og Innstillinger.
+  - Samme sider som på web.
+- **Værvisning v2** (`design/Vaer.dc.html`):
+  - **Header:** stor og sentrert («MIN POSISJON», by, stor temperatur, beskrivelse, H/L). Den tones ut ved scroll, og en kompakt linje («8° | Delvis skyet») vises øverst.
+  - **Timekort:** veksle mellom temperatur, nedbør og vind. Et trykk på «Forhold ›» åpner arket.
+  - **7 dager:** et trykk på en dag åpner arket på den dagen.
+  - **Fliser i full bredde:** Vind (rader for vind, kast og retning + kompass) og Måne (belyst, neste fullmåne, neste nymåne + månebilde).
+  - **Fliser i to kolonner:** Solnedgang/-oppgang (solkurve over døgnet med horisont og solprikk), UV, Føles som, Mot i går (dagens H mot gårsdagens), Nedbør (i dag + neste ventet), Sikt, Luftfuktighet (duggpunkt) og Lufttrykk (skive med trend ↑↓).
+  - **«Forhold»-arket:** dagvelger, dato, temperaturgraf (prikket for passerte timer, H/L-markører, ikoner hver 2. time, Faktisk/Føles som) og søylegraf for sjanse for nedbør.
+  - **Data:** Open-Meteo med `past_days=1` (for «mot i går» og passerte timer).
+  - **Stil:** egen stil (Newsreader/Manrope, norske tekster), ikke en kopi av Apples værapp.
+- **Finans → Søk (Papir):** egen fane med søkefelt og ✦ AI-bryter.
+  - **Uten AI:** vanlig søk i navn, kategori, beskrivelse og varelinjer. Hvert treff viser hvorfor det traff, for eksempel «linje: kyllingfilet 400g 89,90».
+  - **Med AI:** et svar-kort øverst med oppsummering (antall, sum, største post) og treffene under. Enkle enkeltord søkes alltid vanlig først.
+  - **Tomt felt:** forslag å prøve.
+- **Finans-fanelinjen kan tilpasses:** Innstillinger → «Finans · fanelinje og Mer».
+  - **Valg:** opptil 4 faner av Oversikt, Liste, Finn, Søk, Budsjett, Kvitteringer, Aksjer, Abonnementer, Kontoer og Boliger. «Mer» er alltid siste fane.
+  - **I Mer:** det som ikke er i fanelinjen.
+  - **Rekkefølge:** trykk på en fane for å flytte den til venstre. Det finnes også fjern og tilbakestill.
+  - **Standard:** Oversikt, Liste, Finn, Søk. Lagres per bruker.
+- **Subscription OS på mobil (Papir):** Finans → Abonnementer (fra Mer eller som egen fane) viser hele Subscription OS-mobilvisningen.
+  - **Faner:** Hjem (AI-sparing, sum per måned, neste trekk), Innsikt (måneder, helse, kategorier) og Historikk (AI-agent, trekk denne måneden).
+  - **Legg til:** manuelt, fra kvittering (✦ AI) eller fra faste trekk i banken.
+  - **Rediger-ark:** logo med opplasting eller ✦ AI, navn, pris, plan, kategori, syklus, faktureringsdato som dag + måned, status og slett.
+  - **Farger:** følger Papir (temaene `papir` og `papirDark` i komponenten), med AI-kortet i mørk gradient.
+- **Fanelinje med flytende skann (Papir, standard):**
+  - **Skann:** en egen avrundet firkant (60 pt, radius 22, aksentfarge, skanne-ikon) flyter over fanelinjen nederst til høyre, med en papirfarget ring og skygge. Trykk gir valg, hold inne laster opp.
+  - **Søk:** i fanelinjen står et søkeikon der +-knappen var. Det åpner Søk med ✦ AI.
+  - **Innholdet:** får ekstra bunnmarg, så FAB-en ikke dekker siste kort.
+  - **Valg:** Innstillinger → Fanelinje → Skanneknapp: «Flytende» eller «I linjen» (den gamle +-knappen).
+  - **Fold:** FAB-en ligger nederst til høyre på skjermen, og søk ligger i skinnen.
+  - **Søk i fanelinjen:** er en vanlig fane med tekst («⌕ Søk»), plassert rett før Mer (Mer er alltid sist). I Finans brukes Søk-fanen fra brukerens valg, og den legges ikke til to ganger.
+  - **Innhold bak FAB-en:** innholdet scroller helt ned til fanelinjen og vises bak den flytende skann-knappen. Det er ikke noe tomt felt over linjen. Scrollområdet har en ekstra innvendig bunnpadding (≈ 86 pt), så det siste kortet kan scrolles fri av knappen. Knappen har bare skygge, ingen papirring.
+- **Mangler i bygget app: detaljvisning for transaksjon (Finans → Liste → trykk på en rad), Papir.** Se `design/Mobil Papir App.dc.html` (side `ftx`).
+  - **Header:** tittelen «Detaljer», med «‹ Liste» tilbake.
+  - **Hovedkort** (hvitt, overlapper headeren): butikklogo/initialer i merkefarge, butikknavn i Newsreader, «kategori · dato · konto», stort beløp i Newsreader (grønt ved inntekt) og ✦ AI-sammendrag i aksentfarge («Ukeshandel: melk, brød, kyllingfilet og frukt»).
+  - **«ORIGINAL KVITTERING»:** etikett med status til høyre (Vedlagt / Til gjennomgang / Mangler).
+  - **Kvitteringen:** gjengitt som papirlapp (lys bakgrunn, monospace). Butikknavn sentrert, «dato · KVITTERING», stiplet linje, varelinjer med pris, stiplet linje og TOTAL. Et trykk åpner originalbildet/PDF-en i fullskjerm med zoom. Finnes ingen kvittering: «Legg ved kvittering» (kamera/filer).
+  - **Knapper under:** «Endre kategori» (ark med kategorier + «lag regel for fremtidige») og «Bankutskrift» (rå bankrad: tekst, KID/melding, bokført/rentedato).
+  - **Data:** `GET /api/transactions/:id` med `receipt { status, file_url, lines[{name,price}], total, ai_summary }`.
+- **Kontekstuell FAB:** på Sporing viser den flytende knappen «+» (Ny sending) i stedet for skanne-ikonet. Den åpner arket «Ny sending»:
+  - felt for sporingsnummer (fokus og tastatur med en gang), der transportøren gjenkjennes mens man skriver («✓ Posten gjenkjent»)
+  - «Spor sending»
+  - «Skann strekkode» (kamera, leser strekkode/QR)
+  - «Lim inn» (fra utklippstavlen)
+  På andre sider er FAB-en skanning som før.

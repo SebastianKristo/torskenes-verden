@@ -1,0 +1,32 @@
+# Prompt 15
+
+Startet: 2026-10-18
+- 18.10.2026: widgets for Samsung, de er litt større enn Samsung sine, litt høyere som i bildet. jeg tror mesteparten av det er at Samsung sine viser også tekst under widget. gjør det også, la meg skru det av og på i Rediger widget.
+- 18.10.2026: for Domener på mobil, gi full bredde. bare toppkortet trenger å være sånn som nå (skjermbilde)
+- 18.10.2026: lag bedre kort her (skjermbilde: domenevelger og periode på mobil)
+- 18.10.2026: la meg holde inne for wiggle-redigering, ikke kraftig wiggle. (skjermbilde: Sporing i Android-appen)
+- 18.10.2026: jeg ser ikke redigeringsbaren på mobilappen i Sporing (skjermbilde: Papir-appen, fanene i Sporing)
+- 18.10.2026: la meg toggle dette i innstillinger. men i navbar, vis heller Domener som standard, med mindre jeg har aktive pakker som er på vei.
+- 18.10.2026: oppdater designet på mobil også for Fold, ta utgangspunkt i brettbar skjerm. den skal være lik vanlig Android og iPhone, bare bruk Fold.
+- 18.10.2026: nå sier den også bare «Hei» og navnet. si «God morgen, navnet», «God ettermiddag, navnet» og så videre.
+- 18.10.2026: ordne (skjermbilde: domenekortene i toppkortet går helt ut i venstre kant)
+- 18.10.2026: på Fold ser jeg ikke navbaren, plasser navbaren på venstre side.
+- 18.10.2026: dette kortet ser også rart ut, trenger fiks (skjermbilde: «Alle domener»-tabellen på mobil med overlappende kolonner)
+- 18.10.2026: prøv også å legge bakgrunnen bak navbaren (skjermbilde: Fold med skinne til venstre)
+- 18.10.2026: når man er i Domener og den ligger i Mer: når man tar pilen tilbake eller sveiper fra siden, gå hjem.
+- 18.10.2026: nå falt navnet bak (skjermbilde: «God formiddag, Sebastian» brytes over tre linjer og havner bak søkefeltet)
+- 18.10.2026: ordne navbaren på Fold (skjermbilde: skinnen med «Oversikt» som går over kanten og +-knappen kuttet nederst)
+- 18.10.2026: la meg bestemme hva som vises med wiggle-redigering i alle faner i hele appen. f.eks. her i Finans: la meg fjerne Budsjett-delen. og gjør Siste transaksjoner større, la den være de siste 15 f.eks. (skjermbilde: Finans-oversikt i Papir)
+- 18.10.2026: jeg ser heller ikke denne i mobilappen (skjermbilde: «2 kvitteringer til gjennomgang · Skann ›»)
+- 18.10.2026: når man scroller, ikke scroll opp i bakgrunnen. stopp scrollen bak der den starter (skjermbilde: Liste-innhold som glir opp over bildet)
+- 18.10.2026: på Finn, vis under Netto i år og over baren de som er på vei (skjermbilde: Finn i Papir)
+- 18.10.2026: i mobilappen, i stedet for å åpne værsiden, lag en egen værmeldingsapp når man trykker. litt i dette designet, litt Apple, Google og Samsung sine værapp-design (skjermbilder: temperaturen på Hjem og en værvisning med timer, 7 dager og fliser)
+- 18.10.2026: når man er i Finans, så skal Mer gå til denne menyen. lag den menyen i Papir-designet (skjermbilde: Mer-rutenett med Budsjett, Kvitteringer, Faste utgifter, Kontoer, Aksjer, Rapporter, Subscription OS, Boliger …)
+- 18.10.2026: værapp mer som dette (skjermbilder: værapp med stor sentrert header, timevarsel, 10-dagers liste, flisene vind, månefase, solnedgang, UV, føles som, snitt, nedbør, sikt, fuktighet, trykk, og et «Forhold»-ark med temperaturgraf og nedbørssjanse)
+- 18.10.2026: få lagt til søkemenyen i Finans, også AI-søk. la meg i innstillinger redigere hva som skal ligge i Mer og hva som skal ligge i navbaren.
+- 18.10.2026: få laget Subscription OS for mobilen også, fullt utstyrt.
+- 18.10.2026: vis et design av navbar der skann-ikonet ligger over og flyter, og legg inn søkeikonet i navbaren
+- 18.10.2026: bytt om posisjon på Mer og Søk, og skriv «Søk»
+- 18.10.2026: vis ting bak skann-knappen (skjermbilde: tomt felt bak den flytende skann-knappen)
+- 18.10.2026: dette designet er ikke i mobilappen for ting i Liste (skjermbilde: Detaljer-visningen for en transaksjon med original kvittering)
+- 18.10.2026: når man er i Sporing, bruk skanneknappen som legg til-knapp for nye sendinger (skjermbilde: den flytende knappen)

@@ -13,7 +13,15 @@
 </helmet>
 <div style="display:flex;flex-direction:column;gap:22px;color:#1b1a17;font-family:Manrope,sans-serif">
 
-<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+<sc-if value="{{ isMobTop }}">
+<div style="background:#ffffff;border-radius:24px;padding:16px 0 14px;box-shadow:0 10px 30px -14px rgba(0,0,0,.3);display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;justify-content:space-between;align-items:baseline;padding:0 18px"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#b23a2a">DOMENE</span><span style="font-size:12px;color:#8f897c">{{ domCount }}</span></div>
+<div style="display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:0 18px;scroll-padding:0 18px;scroll-snap-type:x proximity"><sc-for list="{{ pills }}" as="p"><button onClick="{{ p.go }}" style="flex:none;scroll-snap-align:start;display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:128px;max-width:200px;padding:12px 14px;border-radius:16px;border:1px solid {{ p.bd }};background:{{ p.bg }};color:{{ p.fg }};cursor:pointer;text-align:left;font-family:inherit"><span style="display:flex;align-items:center;gap:7px;font-size:11.5px;opacity:.75"><span style="width:7px;height:7px;border-radius:4px;background:{{ p.dot }}"></span>{{ p.sub }}</span><b style="font-size:15px;font-weight:600;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis">{{ p.n }}</b></button></sc-for><span style="flex:none;width:10px"></span></div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:0 18px;padding:4px;border-radius:12px;background:#f1ece2"><sc-for list="{{ periods }}" as="p"><button onClick="{{ p.go }}" style="height:34px;border-radius:9px;border:0;background:{{ p.mbg }};color:{{ p.fg }};cursor:pointer;font:600 13px 'IBM Plex Mono',monospace;box-shadow:{{ p.sh }}">{{ p.n }}</button></sc-for></div>
+</div>
+</sc-if>
+<sc-if value="{{ isWebTop }}">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
 <div style="display:flex;gap:6px;flex-wrap:wrap;padding:5px;border:1px solid #d8d1c2;border-radius:999px;background:#ffffff">
 <sc-for list="{{ pills }}" as="p" hint-placeholder-count="3"><button onClick="{{ p.go }}" style="display:flex;align-items:center;gap:8px;height:38px;padding:0 16px;border-radius:999px;border:0;background:{{ p.bg }};color:{{ p.fg }};cursor:pointer;font-size:14px;white-space:nowrap"><span style="width:7px;height:7px;border-radius:4px;background:{{ p.dot }}"></span>{{ p.n }}</button></sc-for>
 
@@ -23,15 +31,21 @@
 
 
 
+</sc-if>
 <sc-if value="{{ allHint }}"><div style="padding:18px;border-radius:18px;background:#ffffff;font-size:14.5px;color:#6b665c">Velg et domene over for å se denne statistikken.</div></sc-if>
 <sc-if value="{{ isAllShow }}">
+<sc-if value="{{ isMobTop }}"><div style="display:flex;flex-direction:column;gap:10px"><sc-for list="{{ allRows }}" as="r"><button onClick="{{ r.go }}" style="display:flex;flex-direction:column;gap:12px;width:100%;padding:16px 18px;border-radius:20px;border:0;background:#ffffff;color:#1b1a17;cursor:pointer;text-align:left;font-family:inherit">
+<span style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;width:100%"><span style="min-width:0"><span style="display:block;font:600 17px 'IBM Plex Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</span><span style="font-size:12.5px;color:#6b665c">{{ r.src }}</span></span><span style="flex:none;display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:rgba(47,122,79,.12);color:{{ r.stC }};font-size:12.5px;font-weight:600"><span style="width:6px;height:6px;border-radius:3px;background:{{ r.stC }}"></span>{{ r.st }}</span></span>
+<span style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;width:100%"><span><span style="display:block;font-size:11.5px;color:#6b665c">Forespørsler</span><b style="font:600 16px 'IBM Plex Mono',monospace;white-space:nowrap">{{ r.req }}</b></span><span><span style="display:block;font-size:11.5px;color:#6b665c">Besøkende</span><b style="font:600 16px 'IBM Plex Mono',monospace;white-space:nowrap">{{ r.vis }}</b></span><span><span style="display:block;font-size:11.5px;color:#6b665c">Oppetid</span><b style="font:600 16px 'IBM Plex Mono',monospace;white-space:nowrap;color:{{ r.upC }}">{{ r.up }}</b></span></span>
+<span style="display:flex;justify-content:space-between;gap:10px;width:100%;padding-top:10px;border-top:1px solid #e3ddcf;font-size:12.5px;color:#6b665c"><span>Bufret <b style="color:#1b1a17;font-weight:600">{{ r.cache }}</b></span><span style="color:{{ r.certC }}">SSL {{ r.cert }}</span></span></button></sc-for></div></sc-if>
+<sc-if value="{{ isWebTop }}">
 <section style="background:#ffffff;border-radius:24px;padding:10px 0;overflow-x:auto">
 <div style="min-width:860px">
 <div style="display:grid;grid-template-columns:minmax(0,1.6fr) 110px 120px 110px 90px 100px 120px 110px;gap:12px;padding:12px 24px;font-size:12px;color:#6b665c;text-transform:uppercase;letter-spacing:.06em"><span>Domene</span><span>Status</span><span style="text-align:right">Forespørsler</span><span style="text-align:right">Besøkende</span><span style="text-align:right">Bufret</span><span style="text-align:right">Oppetid</span><span>SSL utløper</span><span>Fornyes</span></div>
 <sc-for list="{{ allRows }}" as="r" hint-placeholder-count="3"><button onClick="{{ r.go }}" style="display:grid;width:100%;grid-template-columns:minmax(0,1.6fr) 110px 120px 110px 90px 100px 120px 110px;gap:12px;align-items:center;padding:14px 24px;border:0;border-top:1px solid #d8d1c2;background:transparent;color:#1b1a17;cursor:pointer;text-align:left;font-size:14px"><span style="min-width:0"><span style="display:block;font-family:'IBM Plex Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</span><span style="font-size:12px;color:#6b665c">{{ r.src }}</span></span><span style="display:flex;align-items:center;gap:7px;font-size:13px;color:{{ r.stC }}"><span style="width:7px;height:7px;border-radius:4px;background:{{ r.stC }}"></span>{{ r.st }}</span><span style="text-align:right;font-family:'IBM Plex Mono',monospace">{{ r.req }}</span><span style="text-align:right;font-family:'IBM Plex Mono',monospace">{{ r.vis }}</span><span style="text-align:right;font-family:'IBM Plex Mono',monospace">{{ r.cache }}</span><span style="text-align:right;font-family:'IBM Plex Mono',monospace;color:{{ r.upC }}">{{ r.up }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:{{ r.certC }}">{{ r.cert }}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:#6b665c">{{ r.exp }}</span></button></sc-for>
 </div>
-</section>
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:14px"><sc-for list="{{ allKpi }}" as="k"><div style="background:#ffffff;border-radius:20px;padding:18px 20px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;color:#6b665c">{{ k.l }}</span><b style="font-size:28px;font-weight:600;letter-spacing:-.02em;white-space:nowrap">{{ k.v }}</b><span style="font-size:12px;color:#6b665c">{{ k.s }}</span></div></sc-for></div>
+</section></sc-if>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:10px"><sc-for list="{{ allKpi }}" as="k"><div style="background:#ffffff;border-radius:20px;padding:18px 20px;display:flex;flex-direction:column;gap:4px"><span style="font-size:13px;color:#6b665c">{{ k.l }}</span><b style="font-size:28px;font-weight:600;letter-spacing:-.02em;white-space:nowrap">{{ k.v }}</b><span style="font-size:12px;color:#6b665c">{{ k.s }}</span></div></sc-for></div>
 </sc-if>
 
 <sc-if value="{{ isOne }}">
@@ -185,9 +199,10 @@ class Component extends DCLogic {
     const upFor=dm=>{const r=rng(hash(dm.name+'up'));return Array.from({length:90},()=>{const x=r();return x<.006?'down':x<.03?'warn':'ok'})};
     const upPctOf=u=>100-(u.filter(x=>x==='down').length*.9+u.filter(x=>x==='warn').length*.06)/90;
     const SEC=this.props.section||'all',sOn=k=>SEC==='all'||SEC===k;
-    const vals={secT:sOn('oversikt'),secP:sOn('publikum'),secP2:sOn('publikum'),secY:sOn('ytelse'),secI:sOn('infra'),
-      pills:[{n:'Alle domener',k:'*'},...doms.map(x=>({n:x.name,k:x.name}))].map(p=>({n:p.n,bg:s.sel===p.k?'#1b1a17':'transparent',fg:s.sel===p.k?'#f3efe6':'#1b1a17',dot:p.k==='*'?'#b23a2a':'#2f7a4f',go:pick(p.k)})),
-      periods:['1t','24t','7d','30d'].map(n=>({n,bg:s.per===n?'#e3ddcf':'transparent',fg:s.per===n?'#1b1a17':'#6b665c',go:()=>this.setState({per:n})})),
+    const vals={topBg:this.props.mobile?'#ffffff':'transparent',topPad:this.props.mobile?'14px':'0',topSh:this.props.mobile?'0 10px 30px -14px rgba(0,0,0,.3)':'none',secT:sOn('oversikt'),secP:sOn('publikum'),secP2:sOn('publikum'),secY:sOn('ytelse'),secI:sOn('infra'),
+      isMobTop:!!this.props.mobile,isWebTop:!this.props.mobile,domCount:doms.length+' domener',
+      pills:[{n:'Alle domener',k:'*',sub:'Samlet'},...doms.map(x=>({n:x.name,k:x.name,sub:x.src||'Cloudflare'}))].map(p=>({n:p.n,sub:p.sub,bd:s.sel===p.k?'#1b1a17':'#e3ddcf',bg:s.sel===p.k?'#1b1a17':'transparent',fg:s.sel===p.k?'#f3efe6':'#1b1a17',dot:p.k==='*'?'#b23a2a':'#2f7a4f',go:pick(p.k)})),
+      periods:['1t','24t','7d','30d'].map(n=>({n,mbg:s.per===n?'#ffffff':'transparent',sh:s.per===n?'0 1px 3px rgba(0,0,0,.12)':'none',bg:s.per===n?'#e3ddcf':'transparent',fg:s.per===n?'#1b1a17':'#6b665c',go:()=>this.setState({per:n})})),
       adding:s.adding,toggleAdd:()=>this.setState({adding:!s.adding,nfErr:''}),nf:s.nf,nfErr:s.nfErr,nfHelp:SRC_HELP[s.nf.src],
       nfOn:Object.fromEntries(['name','src','token'].map(k=>[k,e=>this.setState({nf:{...s.nf,[k]:e.target.value},nfErr:''})])),
       addDomain:()=>{const n=s.nf.name.trim().toLowerCase().replace(/^https?:\/\//,'').replace(/\/.*$/,'');
