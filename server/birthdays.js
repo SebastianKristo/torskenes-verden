@@ -675,7 +675,11 @@ api.get('/google/auth', async (c, next) => {
   const client = googleClient();
   if (!client.id && !mockGoogle()) return c.html('<!doctype html><meta charset="utf-8"><title>Bursdager</title><p>Google Kalender er ikke satt opp. En administrator må legge inn klient-ID og hemmelighet under Innstillinger → Integrasjoner → Google Kalender.</p>', 409);
   const verifier = b64u(randomBytes(32)), state = b64u(randomBytes(18));
-  const redirect = redirectUri(c), ret = c.get('ret') ?? safeReturn(c.req.query('return'), originOf(c));
+  const redirect = redirectUri(c);
+  let ret = c.get('ret') ?? safeReturn(c.req.query('return'), originOf(c));
+  // Google godtar bare offentlige https-adresser som omdirigering. Startet innloggingen på en annen adresse (f.eks. lokal IP),
+  // sendes nettleseren tilbake dit etterpå i stedet for til den offentlige adressen i omdirigerings-URI-en.
+  if (ret.startsWith('/')) ret = `${originOf(c)}${ret}`;
   pending.set(state, { user: c.get('user'), verifier, ret, redirect, exp: Date.now() + 10 * 60_000 });
   if (mockGoogle()) return c.redirect(`/api/birthdays/google/callback?state=${state}&code=mock-${encodeURIComponent(c.get('user'))}`);
   const p = new URLSearchParams({ client_id: client.id, redirect_uri: redirect, response_type: 'code', scope: G_SCOPES.join(' '), access_type: 'offline', prompt: 'consent', include_granted_scopes: 'true',

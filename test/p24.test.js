@@ -552,3 +552,20 @@ test('«Test tilkobling» på web (POST /api/config/test/google) bruker Google-t
   assert.equal(bad.body.ok, false);
   assert.equal((await A('/api/config/test/finnes-ikke', 'POST')).status, 404);
 });
+
+test('Google: offentlig omdirigerings-URI, men innlogging startet på lokal IP sender nettleseren tilbake til den lokale adressen', async () => {
+  const pub = 'https://homelab.example.no/api/birthdays/google/callback';
+  assert.equal((await A('/api/integrations/google', 'PUT', { googleClientId: 'abc.apps.googleusercontent.com', googleClientSecret: 'hemmelig-klient', googleRedirectUri: pub })).status, 200);
+  bd._setGoogleFetch(async (url) => {
+    if (String(url).includes('oauth2.googleapis.com/token')) return new Response(JSON.stringify({ access_token: 'at', refresh_token: 'rt', expires_in: 3600 }), { headers: { 'content-type': 'application/json' } });
+    return new Response(JSON.stringify({ items: [], nextSyncToken: 's1' }), { headers: { 'content-type': 'application/json' } });
+  });
+  const start = await A('/api/birthdays/google/auth', 'GET', undefined, { host: '10.69.1.39:3000' });
+  assert.equal(start.status, 302);
+  const g = new URL(start.headers.get('location'));
+  assert.equal(g.searchParams.get('redirect_uri'), pub, 'Google får den offentlige adressen');
+  const back = await anon(`/api/birthdays/google/callback?state=${g.searchParams.get('state')}&code=abc`, 'GET', undefined, { host: 'homelab.example.no' });
+  assert.equal(back.status, 302);
+  assert.match(back.headers.get('location'), /^http:\/\/10\.69\.1\.39:3000\/\?bursdager=1&ok=1&google=ok#bursdager$/);
+  await A('/api/integrations/google', 'PUT', { googleRedirectUri: null });
+});
