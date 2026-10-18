@@ -5,14 +5,14 @@ import WidgetKit
 
 extension Store {
     /// Gir widgetene serveradressen og app-tokenet til kontoen som er i bruk (App Group).
-    func syncWidgets() {
+    func syncWidgets(force: Bool = false) {
         guard let a = account else {
             if WidgetShared.token != nil { WidgetShared.clear(); WidgetCenter.shared.reloadAllTimelines() }
             return
         }
         let changed = WidgetShared.token != a.token || WidgetShared.bases.first != (base.isEmpty ? a.server : base)
         WidgetShared.save(server: base.isEmpty ? a.server : base, external: a.external, local: a.local, token: a.token)
-        if changed { WidgetCenter.shared.reloadAllTimelines() }
+        if changed || force { WidgetCenter.shared.reloadAllTimelines() }
     }
 
     /// Skann bestilt fra widgeten (AppIntent) mens appen var lukket.

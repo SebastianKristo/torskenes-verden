@@ -113,8 +113,8 @@ private struct NotLinked: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Image(systemName: "person.crop.circle.badge.exclamationmark").font(.system(size: 22)).foregroundStyle(accentLight)
-            Text("Logg inn i FinansHub-appen").font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
-            Text("Widgeten henter data fra serveren din.").font(.system(size: 11)).foregroundStyle(.white.opacity(0.6))
+            Text(WidgetShared.linked ? "Åpne FinansHub-appen" : "Widgeten når ikke appen").font(.system(size: 13, weight: .semibold)).foregroundStyle(.white)
+            Text(WidgetShared.linked ? "Logg inn eller åpne appen én gang, så henter widgeten data." : "App Group mangler i signeringen. Se Innstillinger → Widgets i appen.").font(.system(size: 11)).foregroundStyle(.white.opacity(0.6))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }

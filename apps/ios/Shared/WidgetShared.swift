@@ -6,10 +6,46 @@ import AppIntents
 /// App Group som appen og widget-utvidelsen deler. Appen skriver serveradressen og app-tokenet hit,
 /// og widgetene henter GET /api/mobile/widgets med dem.
 enum WidgetShared {
-    static let group = "group.no.kristo.finanshub"
+    static let baseGroup = "group.no.kristo.finanshub"
     static let kind = "no.kristo.finanshub"
 
-    static var defaults: UserDefaults { UserDefaults(suiteName: group) ?? .standard }
+    /// Gruppen som faktisk virker på denne installasjonen. AltStore og SideStore gir gruppen nytt navn
+    /// (f.eks. group.no.kristo.finanshub.TEAMID) og skriver det i Info.plist som «ALTAppGroups».
+    /// Sideloadly og egen signering kan også endre bundle-ID-en. Vi prøver alle kandidatene og velger
+    /// den første som systemet faktisk gir oss en delt mappe for.
+    static let group: String? = resolveGroup()
+
+    /// true når appen og widgetene deler lagring. Uten det kan widgetene ikke se innloggingen.
+    static var linked: Bool { group != nil }
+
+    static var defaults: UserDefaults {
+        if let g = group, let d = UserDefaults(suiteName: g) { return d }
+        return .standard
+    }
+
+    private static func resolveGroup() -> String? {
+        var cands: [String] = []
+        func add(_ v: String?) { if let v, !v.isEmpty, !cands.contains(v) { cands.append(v) } }
+        // Appen selv, og appen som eier utvidelsen (…/FinansHub.app/PlugIns/X.appex → FinansHub.app).
+        var bundles: [Bundle] = [Bundle.main]
+        let url = Bundle.main.bundleURL
+        if url.pathExtension == "appex", let parent = Bundle(url: url.deletingLastPathComponent().deletingLastPathComponent()) {
+            bundles.append(parent)
+        }
+        for b in bundles {
+            for g in (b.object(forInfoDictionaryKey: "ALTAppGroups") as? [String]) ?? [] { add(g) }
+        }
+        add(baseGroup)
+        for b in bundles {
+            if var id = b.bundleIdentifier {
+                if id.hasSuffix(".widgets") { id = String(id.dropLast(".widgets".count)) }
+                add("group." + id)
+            }
+        }
+        let fm = FileManager.default
+        for g in cands where fm.containerURL(forSecurityApplicationGroupIdentifier: g) != nil { return g }
+        return nil
+    }
 
     /// Adressene i rekkefølgen widgeten prøver dem: hovedadressen, ekstern og lokal.
     static func save(server: String, external: String, local: String, token: String?) {

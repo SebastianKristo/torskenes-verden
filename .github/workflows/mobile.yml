@@ -61,6 +61,12 @@ jobs:
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build | tail -20
           test ${PIPESTATUS[0]} -eq 0
           mkdir -p Payload && cp -R build/Build/Products/Release-iphoneos/FinansHub.app Payload/
+          # Ad hoc-signatur med entitlements, så AltStore/SideStore/Sideloadly ser App Group-en
+          # og gir widgetene tilgang til innloggingen (uten den viser widgetene bare «Logg inn»).
+          APPX=Payload/FinansHub.app/PlugIns/FinansHubWidgets.appex
+          [ -d "$APPX" ] && codesign -f -s - --entitlements FinansHubWidgets/FinansHubWidgets.entitlements "$APPX"
+          codesign -f -s - --entitlements FinansHub/FinansHub.entitlements Payload/FinansHub.app
+          codesign -d --entitlements - Payload/FinansHub.app 2>/dev/null | grep -q application-groups || { echo "Mangler App Group i signaturen"; exit 1; }
           zip -qry FinansHub-unsigned.ipa Payload
       - uses: actions/upload-artifact@v4
         if: matrix.runner == 'macos-26'

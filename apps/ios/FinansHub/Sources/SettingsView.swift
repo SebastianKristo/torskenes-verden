@@ -6,7 +6,7 @@ private let groups: [(String, [(String, String, String)])] = [
     ("Konto", [("accounts", "Kontoer og brukere", "person.2"), ("security", "Sikkerhet", "lock"), ("tokens", "API-tokens", "key")]),
     ("Finans", [("ai", "AI og tolkning", "sparkles"), ("cats", "Kategorier og budsjett", "tag"), ("rules", "Regler", "list.bullet.rectangle"),
                 ("bank", "Bankimport", "building.columns"), ("stocks", "Aksjer · Trading 212", "chart.line.uptrend.xyaxis"), ("backup", "Backup og data", "externaldrive")]),
-    ("App", [("look", "Utseende", "paintpalette"), ("scan", "Skanning og AI", "doc.viewfinder"), ("notify", "Varsler", "bell"), ("haptics", "Haptikk", "hand.tap")]),
+    ("App", [("look", "Utseende", "paintpalette"), ("scan", "Skanning og AI", "doc.viewfinder"), ("notify", "Varsler", "bell"), ("haptics", "Haptikk", "hand.tap"), ("widgets", "Widgets", "square.grid.2x2")]),
     ("System", [("server", "Server og synk", "server.rack"), ("data", "Data og lagring", "internaldrive"), ("about", "Om FinansHub", "info.circle")]),
 ]
 
@@ -37,6 +37,7 @@ struct SettingsView: View {
                 case "scan": ScanPrefsPage()
                 case "notify": NotifyPage()
                 case "haptics": HapticsPage()
+                case "widgets": WidgetsPage()
                 case "server": ServerPage()
                 case "data": DataPage()
                 case "ai": AiPage()
@@ -495,6 +496,29 @@ private struct HapticsPage: View {
                 Card { link("Test haptikk") { h.test() } }
             }
             Note(text: "Følger «Systemhaptikk» i iOS-innstillingene (Lyder og haptikk). Er den av, vibrerer ikke appen heller.")
+        }
+    }
+}
+
+/// Innstillinger → App → Widgets: viser om widgetene deler lagring med appen og oppdaterer dem.
+private struct WidgetsPage: View {
+    @Environment(Store.self) private var store
+    var body: some View {
+        VStack(spacing: 12) {
+            Card {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(WidgetShared.linked ? "Widgetene er koblet til appen" : "Widgetene når ikke appen").font(.system(size: 16, weight: .semibold)).foregroundStyle(.white)
+                    Text(WidgetShared.group ?? "Ingen App Group i signeringen").font(.system(size: 13)).foregroundStyle(.white.opacity(0.6))
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+            }
+            Card { link("Oppdater widgetene nå") { store.syncWidgets(force: true) } }
+            if WidgetShared.linked {
+                Note(text: "Widgetene henter data fra serveren hvert 15. minutt med kontoen som er i bruk.")
+            } else {
+                Note(text: "Appen og widgetene må dele en App Group. AltStore og SideStore ordner det selv. I Sideloadly: slå på «Advanced options» → behold App Group / «Use app groups». Med egen Apple-utviklerkonto: legg group.no.kristo.finanshub til både appen og widget-utvidelsen.")
+            }
         }
     }
 }

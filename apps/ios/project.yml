@@ -78,3 +78,6 @@ targets:
       properties:
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        # Widgetene henter fra serveren selv, også på lokal adresse (http://192.168…).
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
