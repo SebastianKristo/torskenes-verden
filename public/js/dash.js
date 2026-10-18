@@ -3,6 +3,7 @@ import { store, widget, card, refresh, errBox, on, load } from './store.js';
 import { renderSearch, popHandler } from './extras.js';
 import { hiddenWidgets } from './profile.js';
 import './media.js';
+import './poscard.js';
 import { carousel, restoreCarousel, startPackages } from './weather-card.js';
 import { is2c, pwCredit, pwImg } from './hltheme.js';
 
@@ -354,7 +355,7 @@ function render2c(n, cardH) {
       <div class="p-cols">
         <div class="p-col">${card('p_school')}${hiddenWidgets().has('d_cal') ? '' : card('d_cal')}</div>
         <div class="p-col">${lab('AVGANGER')}<div id="trips" class="p-trips">${renderTrips()}</div>${hiddenWidgets().has('d_energy') ? '' : card('p_energy')}${card('p_wx')}${card('p_pk')}</div>
-        <div class="p-col">${card('p_play')}${hiddenWidgets().has('d_trading') && hiddenWidgets().has('d_eco') ? '' : card('p_money')}${hiddenWidgets().has('d_links') ? '' : card('p_links')}</div>
+        <div class="p-col">${hiddenWidgets().has('d_pos') ? '' : card('p_pos')}${card('p_play')}${hiddenWidgets().has('d_trading') && hiddenWidgets().has('d_eco') ? '' : card('p_money')}${hiddenWidgets().has('d_links') ? '' : card('p_links')}</div>
       </div>
       <div class="grid" data-dnd="dash2c">${['d_upcoming', 'd_media', 'd_media_hist', 'd_trading', 'd_eco'].map(cardH).join('')}</div>
     </div></div>`;
@@ -382,7 +383,7 @@ export function render() {
       <div id="lesson">${renderLesson()}</div></div>`;
   if (mob) {
     return `${hello}<div class="trips" id="trips">${renderTrips()}</div>${store.me.hideSearch ? '' : renderSearch()}
-      <div class="grid" data-dnd="m_home">${['d_weather_m', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_upcoming', 'd_media', 'd_media_hist'].map(cardH).join('')}</div>`;
+      <div class="grid" data-dnd="m_home">${['d_weather_m', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_upcoming', 'd_media', 'd_media_hist', 'd_pos'].map(cardH).join('')}</div>`;
   }
   // Toppområdet kan omorganiseres; søkebaren ligger som standard mellom avganger og klokke.
   return `<div style="display:flex;flex-direction:column;gap:28px">
@@ -391,7 +392,7 @@ export function render() {
       ${store.me.hideSearch ? '' : renderSearch()}
       <div class="hero">${hello}<div class="weather" id="weather">${carousel()}</div></div>
     </div>
-    <div class="grid" data-dnd="dash">${['d_cal', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_links', 'd_upcoming', 'd_media', 'd_media_hist'].map(cardH).join('')}</div></div>`;
+    <div class="grid" data-dnd="dash">${['d_cal', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_links', 'd_upcoming', 'd_media', 'd_media_hist', 'd_pos'].map(cardH).join('')}</div></div>`;
 }
 
 const setHtml = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };

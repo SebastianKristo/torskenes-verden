@@ -17,6 +17,7 @@ import * as domains from './domains.js';
 import * as tracking from './tracking.js';
 import * as family from './family.js';
 import * as tasks from './tasks.js';
+import './finpreload.js';
 import { loadAppIdentity, appName } from './appicon.js';
 import { loadHlTheme, applyHlTheme, is2c, setHlTheme, pwHeader, paintPhoto, bindPhoto } from './hltheme.js';
 

@@ -43,13 +43,35 @@ function loadLeaflet() {
   });
 }
 
+// Kartfliser går via serverens proxy og cache (/tiles), aldri direkte mot OSM-flisserverne (prompt 20).
+// Stilen følger temaet: mørk i «Nåværende», lys med sepia i Vindu og papir (CSS i family.css).
+const TILE_FALLBACK = {
+  tiles: Object.fromEntries(['voyager', 'dark', 'light', 'topo'].map((k) => [k, `/tiles/${k}/{z}/{x}/{y}{r}.png`])),
+  attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>-bidragsytere © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>',
+  default: 'voyager', maxZoom: 19,
+};
+let mapCfg = null;
+const loadMapCfg = () => (mapCfg ??= api('/config/map').then((c) => (c?.tiles ? { ...TILE_FALLBACK, ...c, tiles: { ...TILE_FALLBACK.tiles, ...c.tiles } } : TILE_FALLBACK)).catch(() => TILE_FALLBACK));
+const greyTile = (dark) => 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="${dark ? '#2a2b2e' : '#e4e0d6'}"/></svg>`);
+const tileStyle = () => (document.documentElement.dataset.hl === '2c' ? 'light' : 'dark');
+
+async function addTiles(m) {
+  const cfg = await loadMapCfg();
+  if (map !== m) return; // kartet ble byttet mens konfigen ble hentet
+  const style = tileStyle(), maxZoom = cfg.maxZoom ?? 19;
+  // detectRetina henter selv flisene ett zoomnivå opp på skjermer med høy tetthet, så {r} (@2x) droppes for å unngå dobbel oppskalering.
+  const url = String(cfg.tiles[style] ?? cfg.tiles[cfg.default] ?? TILE_FALLBACK.tiles[style]).replace('{r}', '');
+  m.getContainer().dataset.tiles = style;
+  L.tileLayer(url, { maxZoom, detectRetina: true, crossOrigin: true, errorTileUrl: greyTile(style === 'dark'), attribution: cfg.attribution ?? TILE_FALLBACK.attribution }).addTo(m);
+}
+
 function setupMap() {
   const el = document.getElementById('fam-map');
   if (!el || !L) return;
   if (map && map.getContainer() === el) return;
   map?.remove();
   map = L.map(el, { zoomControl: true, attributionControl: true }).setView([59.9139, 10.7522], 12);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>' }).addTo(map);
+  addTiles(map);
   layers = { zones: L.layerGroup().addTo(map), track: L.layerGroup().addTo(map), people: L.layerGroup().addTo(map), draft: L.layerGroup().addTo(map) };
   map.on('click', (e) => { if (S.picking) openZone({ lat: e.latlng.lat, lon: e.latlng.lng }); });
   let fitted = false;

@@ -2,7 +2,7 @@
 import {
   S, api, esc, n0, n2, sgn, neg, neg0, k, dd, dLong, today, monthName, cap, shiftMonth, ini, rgba, greet, pctChange, parseAmount,
   render, toast, loadBoot, loadSummary, loadTx, loadReceipts, loadRecurring, loadReport, loadAi, catById, cats, accs, uploadReceipt,
-  smooth, spark, conic, icon, logo, aiLine, ICONS,
+  smooth, spark, conic, icon, logo, aiLine, ICONS, loadLogoRegistry,
 } from './core.js';
 import { reanalyzeBtn, bindReanalyze } from './reanalyze.js';
 import { MODULE_PAGES, MODULE_SUB, MODULE_FN, MODULE_LOADERS, bolSettings, loadBolSettings, bindModules, backupTab, firstRunCard, loadBackup, impPage, finnImportBox, loadImpTpl, aksSettings, loadStocksSettings } from './modules.js';
@@ -335,7 +335,7 @@ function receipts() {
     <div style="flex:1 1 340px;min-width:0;display:flex;flex-direction:column;gap:16px">
       <label class="drop" data-drop><span class="drop-ic">${icon('scan', 24, 'currentColor')}</span><b style="font-size:15px;font-weight:600">Last opp kvitteringer</b><span class="note" style="font-size:13px">Bilder eller PDF · flere filer · dra hit eller klikk · leses av ${aiShort}</span><input type="file" accept="image/*,application/pdf" multiple data-upload hidden></label>
       ${card(`<div class="card-h"><h2 style="font-size:16px">Kø</h2><span class="note" style="font-size:12.5px">${queue.length} til gjennomgang</span></div>${qHtml || '<div class="note">Ingen kvitteringer i køen.</div>'}${(() => { const n = queue.filter((r) => r.canOcr && (r.error || r.merchant == null || r.total == null)).length; return n ? `<button class="btn ghost sm" style="align-self:flex-start;margin-top:4px" data-act="rc-ocr-all" title="Leser bildene lokalt på serveren med Tesseract, uten AI">Les ${n} som AI ikke klarte, med lokal OCR</button>` : ''; })()}`, '', 'padding:20px;gap:8px')}
-      ${card(`<h2 style="font-size:16px">Bokført</h2><div>${booked.map((r) => `<div class="kv-line" style="font-size:13.5px"><button class="link" style="color:var(--text);text-align:left" data-open-rc="${r.id}">${esc(r.merchant ?? '–')} ${r.aiShort ? `<span class="acc-l" style="font-size:12px">✦ ${esc(r.aiShort)}</span> ` : ''}<span class="muted">· ${dd(r.date)}</span></button><span class="mono" style="color:${r.status === 'rejected' ? 'var(--muted)' : 'var(--text)'}">${r.status === 'rejected' ? 'Avvist' : n2(r.total) + ' kr'}</span></div>`).join('') || '<div class="note">Ingen ennå.</div>'}</div>`, '', 'padding:20px;gap:2px')}
+      ${card(`<h2 style="font-size:16px">Bokført</h2><div>${booked.map((r) => `<div class="kv-line" style="font-size:13.5px"><button class="link" style="color:var(--text);text-align:left;display:flex;align-items:center;gap:8px" data-open-rc="${r.id}">${logo({ merchant: r.merchant ?? '', domain: r.domain }, 24, 7)}${esc(r.merchant ?? '–')} ${r.aiShort ? `<span class="acc-l" style="font-size:12px">✦ ${esc(r.aiShort)}</span> ` : ''}<span class="muted">· ${dd(r.date)}</span></button><span class="mono" style="color:${r.status === 'rejected' ? 'var(--muted)' : 'var(--text)'}">${r.status === 'rejected' ? 'Avvist' : n2(r.total) + ' kr'}</span></div>`).join('') || '<div class="note">Ingen ennå.</div>'}</div>`, '', 'padding:20px;gap:2px')}
     </div>
     ${card(panel, '', 'flex:2 1 520px;gap:18px')}
   </div>`;
@@ -468,7 +468,7 @@ function reports() {
     <div class="row-flex">
       ${card(`<div class="donut" style="background:${donut}"><div><span class="note" style="font-size:12px">Utgifter</span><span class="mono" style="font-size:19px;font-weight:600">${n0(r.total)} kr</span></div></div>
         <div style="flex:1 1 180px;display:flex;flex-direction:column;gap:9px">${r.byCategory.map((c) => `<div style="display:flex;align-items:center;gap:10px;font-size:13px"><span style="width:10px;height:10px;border-radius:3px;background:${c.color}"></span><span class="grow">${esc(c.category)}</span><span class="muted">${n0((c.amount / (r.total || 1)) * 100)} %</span><span class="mono" style="width:90px;text-align:right">${n0(c.amount)}</span></div>`).join('') || '<div class="note">Ingen utgifter i perioden.</div>'}</div>`, '', 'flex:1 1 380px;flex-direction:row;flex-wrap:wrap;gap:24px;align-items:center')}
-      ${card(`<h2>Mest brukt hos</h2>${r.merchants.map((m) => `<div style="display:flex;flex-direction:column;gap:5px"><div style="display:flex;justify-content:space-between;font-size:13.5px"><span>${esc(m.name)} <span class="muted">· ${m.count} kjøp</span></span><span class="mono">${n0(m.amount)} kr</span></div><div class="prog"><i style="width:${(m.amount / topMax) * 100}%;background:var(--acc)"></i></div></div>`).join('') || '<div class="note">Ingen kjøp i perioden.</div>'}`, '', 'flex:1 1 300px;gap:12px')}
+      ${card(`<h2>Mest brukt hos</h2>${r.merchants.map((m) => `<div style="display:flex;flex-direction:column;gap:5px"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13.5px"><span style="display:flex;align-items:center;gap:10px;min-width:0">${logo({ name: m.name, domain: m.domain }, 28, 8)}<span class="ell">${esc(m.name)} <span class="muted">· ${m.count} kjøp</span></span></span><span class="mono">${n0(m.amount)} kr</span></div><div class="prog"><i style="width:${(m.amount / topMax) * 100}%;background:var(--acc)"></i></div></div>`).join('') || '<div class="note">Ingen kjøp i perioden.</div>'}`, '', 'flex:1 1 300px;gap:12px')}
     </div>
     <section class="card" style="padding:10px 22px 16px"><div class="tbl-wrap"><table style="min-width:520px"><thead><tr><th>Måned</th><th style="text-align:right">Inn</th><th style="text-align:right">Ut</th><th style="text-align:right">Netto</th><th>Sparerate</th></tr></thead>
       <tbody>${r.months.map((m) => { const net = m.inn - m.ut; return `<tr style="cursor:default" class="mono"><td style="font-family:Geist,sans-serif">${cap(monthName(m.month))}</td><td style="text-align:right">${n0(m.inn)}</td><td style="text-align:right">${n0(m.ut)}</td><td style="text-align:right;color:${net >= 0 ? 'var(--pos)' : 'var(--acc-l)'}">${net >= 0 ? '+' : '−'}${n0(net)}</td><td class="muted">${m.inn ? n0((net / m.inn) * 100) + ' %' : '–'}</td></tr>`; }).join('')}</tbody></table></div></section>
@@ -773,6 +773,7 @@ export function draw() {
   const mp = el.querySelector('[data-mailpane]');
   if (mp) { if (mailPaneEl) mp.replaceWith(mailPaneEl); else { mailPaneEl = mp; import('/assets/js/settings-mail.js').then((m) => m.mailPane(mp)).catch(() => { mp.innerHTML = '<div class="note">Kunne ikke laste e-postoppsettet.</div>'; }); } }
   window.scrollTo(0, scroll);
+  window.fhLoaded?.(); // fjerner lasteskjermen fra index.html (loader.js)
   if (focus?.sel) { const f = el.querySelector(focus.sel); if (f) { f.focus(); try { f.setSelectionRange(focus.pos, focus.pos); } catch {} } }
 }
 const focusSel = (e) => (e.name ? `[data-form] input[name="${e.name}"]` : e.dataset.txField ? `[data-tx-field="${e.dataset.txField}"]` : e.dataset.rcField ? `[data-rc-field="${e.dataset.rcField}"]` : null);
@@ -890,6 +891,7 @@ const bankText = (b) => [`Dato: ${b.bookingDate ?? ''}`, b.valueDate ? `Rentedat
 export function bind() {
   const el = root();
   bindModules(el);
+  loadLogoRegistry().then((changed) => { if (changed) render(); });
   bindReanalyze(el, (r) => { u.selRc = r.id; refreshAll().then(() => toast('Kvitteringen er oppdatert')); });
   el.addEventListener('click', busyWrap(async (e) => {
     const t = e.target;

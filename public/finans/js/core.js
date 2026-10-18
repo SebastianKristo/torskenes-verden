@@ -134,12 +134,63 @@ export const ICONS = {
 export const icon = (k, size = 18, stroke = 'currentColor', w = 2) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${stroke}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICONS[k]}"/></svg>`;
 
 /* ---------- Logoer og AI-sammendrag (✦) ---------- */
-// Logo fra serverens favicon-cache når transaksjonen har et domene, ellers forbokstav i kategorifargen.
+// Logoregisteret (prompt 20): /finans/api/logos/registry gir kjente butikker og tjenester med domene, aliaser og farge.
+// Banktekster («VIPPS*REMA 1000 ULLEVÅL») matches mot navn og aliaser, så butikker og transaksjoner uten domene også får logo.
+// Bildet kommer fra /finans/api/logos/file/:id; mangler filen, prøves faviconen for domenet, og til slutt vises bokstaven.
+// Registeret caches i localStorage (samme nøkkel og form som mobilen, «fh_logoreg») og hentes på nytt med ETag.
+const REG_KEY = 'fh_logoreg';
+const REG = { items: null, by: null, dom: null, keys: [], t: 0 };
+const regNorm = (s) => String(s ?? '').toLowerCase().replace(/ü/g, 'u').replace(/æ/g, 'ae').replace(/ø/g, 'o').replace(/å/g, 'a').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .replace(/^(vipps\*|vipps |klarna\*|klarna |iz \*|izettle\*|sumup ?\*|zettle_\*|paypal \*|nets\*|dnb\*|varekjop |kortkjop |visa |bankaxept )+/g, '')
+  .replace(/\*+/g, ' ').replace(/\b\d+\b/g, ' ').replace(/[^a-z0-9.&+ ]/g, ' ').replace(/\s+/g, ' ').trim();
+function regIndex(items) {
+  const by = new Map(), dom = new Map();
+  for (const it of items) {
+    if (it.domene) dom.set(String(it.domene).toLowerCase().replace(/^www\./, ''), it);
+    for (const n of [it.navn, it.id, ...(it.alias ?? [])]) { const k = regNorm(n); if (k && !by.has(k)) by.set(k, it); }
+  }
+  Object.assign(REG, { items, by, dom, keys: [...by.keys()].filter((k) => k.length >= 3).sort((a, b) => b.length - a.length) });
+}
+try { const c = JSON.parse(localStorage.getItem(REG_KEY) || 'null'); if (Array.isArray(c?.items)) regIndex(c.items); } catch { /* privat modus */ }
+/** Henter registeret (høyst hver sjette time). Tåler en eldre server uten endepunktet (404 → bokstav/favicon som før). */
+export async function loadLogoRegistry() {
+  if (Date.now() - REG.t < 6 * 3600_000) return false;
+  REG.t = Date.now();
+  let etag = null;
+  try { etag = JSON.parse(localStorage.getItem(REG_KEY) || 'null')?.etag ?? null; } catch {}
+  try {
+    const r = await fetch('/finans/api/logos/registry', { headers: etag && REG.items ? { 'If-None-Match': etag } : {} });
+    if (r.status === 304 || !r.ok || !r.headers.get('content-type')?.includes('json')) return false;
+    const j = await r.json(), items = Array.isArray(j) ? j : j?.items;
+    if (!Array.isArray(items)) return false;
+    regIndex(items);
+    try { localStorage.setItem(REG_KEY, JSON.stringify({ etag: r.headers.get('etag'), version: j.version, items })); } catch {}
+    return true;
+  } catch { return false; }
+}
+/** Treff i registeret for en transaksjon, kvittering eller butikk: domene, så eksakt navn/alias, så prefiks. */
+export function logoMatch(t) {
+  if (!REG.by) return null;
+  if (t?.domain) { const d = REG.dom.get(String(t.domain).toLowerCase().replace(/^www\./, '')); if (d) return d; }
+  for (const raw of [t?.merchant, t?.description, t?.name]) {
+    const q = regNorm(raw);
+    if (!q) continue;
+    if (REG.by.has(q)) return REG.by.get(q);
+    for (const k of REG.keys) if (q.startsWith(k + ' ') || q === k) return REG.by.get(k);
+  }
+  return null;
+}
+const DEF_COLOR = '#A0A0AA';
 export function logo(t, size = 40, radius = 12) {
-  const name = t?.description ?? t?.merchant ?? t?.name ?? '', color = t?.color ?? '#A0A0AA';
+  const it = logoMatch(t);
+  const name = t?.description ?? t?.merchant ?? t?.name ?? it?.navn ?? '';
+  const color = (t?.color && t.color !== DEF_COLOR ? t.color : it?.farge) || t?.color || DEF_COLOR;
   const box = `width:${size}px;height:${size}px;border-radius:${radius}px;flex:none`;
-  if (t?.domain) return `<span class="m-logo" style="${box}"><img src="/finans/api/logo/${encodeURIComponent(t.domain)}" alt="" loading="lazy" width="${size - 8}" height="${size - 8}"><i style="color:${color}">${esc(ini(name))}</i></span>`;
-  return `<span class="m-ini" style="${box};background:${rgba(color, 0.18)};color:${color};font-size:${Math.round(size * 0.4)}px">${esc(ini(name))}</span>`;
+  const domain = t?.domain || it?.domene || null;
+  const fav = domain ? `/finans/api/logo/${encodeURIComponent(domain)}` : null;
+  const src = it && it.hasFile !== false ? `/finans/api/logos/file/${encodeURIComponent(it.id)}` : fav;
+  if (src) return `<span class="m-logo" style="${box}"><img src="${src}"${src !== fav && fav ? ` data-fb="${fav}"` : ''} alt="" loading="lazy" width="${size - 8}" height="${size - 8}"><i style="color:${esc(color)}">${esc(ini(name))}</i></span>`;
+  return `<span class="m-ini" style="${box};background:${rgba(color, 0.18)};color:${esc(color)};font-size:${Math.round(size * 0.4)}px">${esc(ini(name))}</span>`;
 }
 export const aiLine = (s, cls = 'ai') => (s ? `<span class="${cls}">✦ ${esc(s)}</span>` : '');
 
@@ -184,7 +235,8 @@ ICONS.mat = 'M7 3v8a2 2 0 0 0 2 2v8M5 3v6M9 3v6M17 21V3c-2 0-4 2-4 7v4h4';
 ICONS.close = 'M6 6l12 12M18 6L6 18';
 
 // Logoer som ikke finnes: vis forbokstaven (CSP stopper inline onerror).
-document.addEventListener('error', (e) => { const img = e.target; if (img?.tagName === 'IMG' && ['m-logo', 'hlic', 'trk-badge'].some((c) => img.parentNode?.classList?.contains(c))) { img.parentNode.classList.add('err'); img.remove(); } }, true);
+// Registerlogo uten fil (404): prøv faviconen (data-fb) før bokstaven.
+document.addEventListener('error', (e) => { const img = e.target; if (img?.tagName === 'IMG' && ['m-logo', 'hlic', 'trk-badge'].some((c) => img.parentNode?.classList?.contains(c))) { if (img.dataset.fb) { img.src = img.dataset.fb; delete img.dataset.fb; return; } img.parentNode.classList.add('err'); img.remove(); } }, true);
 
 // Mobil (prompt 06): Homelab-fanen, Mer-siden, redigering og originaler.
 Object.assign(ICONS, {
