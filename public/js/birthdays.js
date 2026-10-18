@@ -1,6 +1,6 @@
 // Bursdager (prompt 24, Bursdager.dc.html variant «web», claude-code-bursdager.md).
-// «Neste bursdag», søk, «+ Legg til», liste («NESTE 30 DAGER» og per måned), Kalendere (Google og Home Assistant)
-// og forhåndsvisning av telefon-widgetene. Data fra /api/birthdays (per bruker). Google-innloggingen går gjennom serveren
+// «Neste bursdag», søk, «+ Legg til», liste («NESTE 30 DAGER» og per måned), lenkeraden Kalendere og forhåndsvisning
+// av telefon-widgetene. Prompt 26: Google Kalender og Home Assistant ligger i Innstillinger → Kalendere (mountBdCalendars). Data fra /api/birthdays (per bruker). Google-innloggingen går gjennom serveren
 // (/api/birthdays/google/auth). Svarer serveren 404 (eldre versjon), lagres bursdagene bare i denne nettleseren.
 import { api, esc } from './util.js';
 import { store, emit } from './store.js';
@@ -16,7 +16,7 @@ const REMS = [[0, 'Samme dag'], [1, '1 dag før'], [7, '1 uke før'], [null, 'In
 const LKEY = 'hl_bd_local';
 
 const S = { d: null, err: null, local: false, q: '', sel: null, add: false, editId: null, f: null, busy: '', toast: '', delArm: null, gcals: null, hacals: null, haErr: null };
-let toastT = null, armT = null, pollT = null;
+let toastT = null, armT = null, pollT = null, calHost = null, from = 'page';
 const host = () => document.getElementById('bd');
 const isAdmin = () => store.me?.me?.role === 'admin';
 
@@ -171,6 +171,16 @@ function calendars() {
   </div>`;
 }
 
+/** Lenkeraden nederst i listen: «Kalendere · Google … · HA … · Innstillinger ›». */
+export function bdCalSummary() {
+  const g = S.d?.google ?? {}, ha = S.d?.ha ?? {};
+  return { g: g.connected ? `Google: ${g.email || 'koblet til'}` : 'Google ikke koblet', ha: ha.entityId ? `HA: ${ha.entityId}` : 'Home Assistant ikke importert' };
+}
+function calLink() {
+  const s = bdCalSummary();
+  return `<button type="button" class="bd-card bd-callink" data-bd-act="calset"><span class="bd-grow"><b>Kalendere</b><span>${esc(S.local ? 'Google Kalender og Home Assistant' : `${s.g} · ${s.ha}`)}</span></span><span class="bd-cl-r">Innstillinger ›</span></button>`;
+}
+
 function widgets(L) {
   const h = L[0], same = h ? L.filter((x) => x.days === h.days) : [], t3 = L.slice(0, 3);
   const big = h ? (h.days === 0 ? 'I dag' : String(h.days)) : '–', unit = h && h.days > 0 ? (h.days === 1 ? 'dag' : 'dager') : '';
@@ -196,20 +206,34 @@ function body() {
       <div class="bd-bar"><label class="bd-q"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg><input name="bdq" value="${esc(S.q)}" placeholder="Søk etter navn" autocomplete="off" aria-label="Søk etter navn"></label><button type="button" class="bd-add" data-bd-act="add">${S.add ? 'Lukk' : '+ Legg til'}</button></div>
       ${form()}
       <div class="bd-lists">${list(L)}</div>
+      ${calLink()}
     </div>
-    <div class="bd-col"><span class="bd-gt">KALENDERE</span>${calendars()}
-      <span class="bd-note pad">Nye bursdager lagres som årlige heldagshendelser. Endringer i Google Kalender og Home Assistant hentes inn automatisk.</span>
-      ${widgets(L)}
+    <div class="bd-col">${widgets(L)}
     </div></div>`;
 }
 
+function calBody() {
+  if (S.err && !S.d) return `<div class="bd-card bd-empty">Kunne ikke hente kalenderoppsettet: ${esc(S.err)}</div>`;
+  if (!S.d) return '<div class="bd-card bd-empty">Laster …</div>';
+  return `${S.toast && !host() ? `<div class="bd-toast" role="status">${esc(S.toast)}</div>` : ''}${calendars()}`;
+}
+function paintCal() { if (calHost?.isConnected) calHost.innerHTML = calBody(); }
+/** Innstillinger → Kalendere: Google Kalender og Home Assistant i et eget element som beholdes mellom omtegningene. */
+export function mountBdCalendars(slot) {
+  if (!calHost) { calHost = document.createElement('div'); calHost.className = 'bd bd-calset'; bind(calHost); }
+  slot.replaceWith(calHost);
+  if (!S.d) { calHost.innerHTML = calBody(); reload(); } else { paintCal(); loadCals(); }
+}
+
 function paint() {
+  paintCal();
   const h = host();
   if (!h) return;
   const a = document.activeElement, key = a && h.contains(a) ? a.name : null, pos = key && a.selectionStart != null ? a.selectionStart : null;
   // Skjemaet beholder det som er skrevet, også når siden tegnes på nytt.
   if (S.add) readForm(h);
   h.innerHTML = body();
+  paintCal();
   if (key) { const el = h.querySelector(`[name="${key}"]`); el?.focus(); if (pos != null) try { el.setSelectionRange(pos, pos); } catch { /* select */ } }
 }
 function readForm(h) {
@@ -285,12 +309,13 @@ const countOf = (r) => r?.added ?? r?.imported ?? r?.changed ?? r?.count ?? null
 async function act(a) {
   switch (a) {
     case 'retry': return reload();
+    case 'calset': document.dispatchEvent(new CustomEvent('hl:open-settings', { detail: 'kal' })); return;
     case 'add': S.add = !S.add; S.editId = null; S.f = f0(); return paint();
     case 'cancel': S.add = false; S.editId = null; return paint();
     case 'glogin':
       // Innloggingen går gjennom serveren (OAuth med PKCE), som sender tilbake til #/bursdager.
       S.busy = 'glogin'; paint();
-      location.assign('/api/birthdays/google/auth?return=' + encodeURIComponent('/#/bursdager'));
+      location.assign('/api/birthdays/google/auth?return=' + encodeURIComponent(from === 'set' ? '/#/kalender?settings=kal' : '/#/bursdager'));
       return;
     case 'gsync':
       S.busy = 'gsync'; paint();
@@ -317,6 +342,7 @@ function bind(h) {
     const t = e.target.closest('button');
     if (!t || !h.contains(t)) return;
     const d = t.dataset;
+    from = h === calHost ? 'set' : 'page';
     if (d.bdAct) return act(d.bdAct);
     if (d.bdSel) { const x = byId(d.bdSel); S.sel = !x || (String(S.sel) === String(x.id) && !t.classList.contains('bd-hero')) ? null : x.id; S.delArm = null; paint(); if (t.classList.contains('bd-hero')) h.querySelector(`[data-bd-row="${CSS.escape(d.bdSel)}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }); return; }
     if (d.bdF) { readForm(h); S.f[d.bdF] = d.bdF === 'reminderDays' ? remVal(d.v) : d.v; return paint(); }

@@ -17,12 +17,14 @@ export async function loadInteg(rerender) {
   rerender?.();
 }
 export const resetInteg = () => { list = null; };
+/** Én integrasjon fra /api/integrations (null før listen er hentet eller hvis serveren ikke har den). */
+export const integById = (id) => (Array.isArray(list) ? list.find((x) => String(x.id) === String(id)) ?? null : null);
 
 /** Integrasjonene som ikke dekkes av en gruppe i /api/config (samme lagringsnøkler). */
 function extra(cfg) {
   if (!Array.isArray(list) || !list.length) return [];
   const keys = new Set((cfg ?? []).flatMap((g) => g.fields.map((f) => f.key))), ids = new Set((cfg ?? []).map((g) => g.id).filter(Boolean));
-  return list.filter((it) => !ids.has(it.id) && !(it.fields?.length && it.fields.every((f) => keys.has(f.key))));
+  return list.filter((it) => !it.hidden && !ids.has(it.id) && !(it.fields?.length && it.fields.every((f) => keys.has(f.key))));
 }
 const statusTxt = (it) => {
   const t = test[it.id];
@@ -36,7 +38,7 @@ const scopeOf = (it) => (it.scope === 'personal' ? 'personal' : 'server');
 export function integRows(cfg, row, scope) {
   return extra(cfg).filter((it) => !scope || scopeOf(it) === scope).map((it) => {
     const [v, vc] = statusTxt(it);
-    return row({ t: it.name, s: it.group ?? '', k: (it.fields ?? []).map((f) => f.label).join(' '), logo: it.domain ?? DOMAIN[String(it.id).toLowerCase()] ?? null, ini: it.name, v, vc, btn: 'Oppsett', go: `int|i24:${it.id}` });
+    return row({ t: it.name, s: it.group ?? '', k: (it.fields ?? []).map((f) => f.label).join(' '), logo: it.domain ?? DOMAIN[String(it.id).toLowerCase()] ?? null, ini: it.name, v, vc, btn: 'Oppsett', go: it.id === 'calendars' ? 'kal' : `int|i24:${it.id}` });
   });
 }
 export const integCount = (cfg) => extra(cfg).filter((it) => it.status !== 'ok').length;

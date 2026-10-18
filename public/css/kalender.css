@@ -1,0 +1,237 @@
+/* Kalender (prompt 26, Kalender.dc.html variant «web»). Mørk i «Nåværende», papir i «Vindu og papir» (html[data-hl="2c"]). */
+.kal,.kal-top{--k-ink:var(--text);--k-mut:var(--text-2);--k-line:rgba(255,255,255,.12);--k-lab:#c8483a;--k-labt:#f59a8f;--k-card:var(--card,#141a26);--k-bg:#0b0e15;--k-in:rgba(255,255,255,.05);
+  --k-hero:#232b3b;--k-herofg:#f3efe6;--k-shadow:0 10px 30px -14px rgba(0,0,0,.6)}
+html[data-hl="2c"] .kal,html[data-hl="2c"] .kal-top{--k-ink:#1b1a17;--k-mut:#7a7468;--k-line:#d8d1c2;--k-lab:#b23a2a;--k-labt:#b23a2a;--k-card:#fff;--k-bg:#f3efe6;--k-in:#f3efe6;--k-hero:#1b1a17;--k-herofg:#f3efe6;--k-shadow:0 10px 30px -14px rgba(0,0,0,.4)}
+.kal{color:var(--k-ink);font-family:Manrope,system-ui,sans-serif;max-width:1240px;position:relative;display:flex;flex-direction:column;gap:14px}
+.kal *{box-sizing:border-box}
+.kal button,.kal a{font-family:inherit}
+.kal-top{display:flex;flex-direction:column;gap:2px;padding:6px 2px 16px;max-width:1240px}
+.kal-kick{font:600 10.5px 'IBM Plex Mono',var(--mono,monospace);letter-spacing:.12em;color:var(--k-labt)}
+.kal-h1{margin:0;font:500 40px/1.05 Newsreader,Georgia,serif;color:var(--k-ink)}
+html[data-hl="2c"] body.pw-low .kal-top{display:none}
+.kal-grow{flex:1;min-width:0}
+.kal-ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kal-card{border-radius:20px;background:var(--k-card);border:1px solid var(--k-line)}
+html[data-hl="2c"] .kal-card{border:0}
+.kal-none{padding:16px;font-size:14px;color:var(--k-mut);line-height:1.5}
+.kal-note{font-size:12px;color:var(--k-mut);line-height:1.45;padding:0 4px}
+.kal-lbl{font-size:12.5px;color:var(--k-mut)}
+.kal-gt{display:flex;justify-content:space-between;gap:8px;font:600 10.5px/1.2 'IBM Plex Mono',var(--mono,monospace);letter-spacing:.12em;color:var(--k-labt);padding:4px 4px 0}
+.kal-gt.ink{color:var(--k-ink)}
+.kal-gt .mut{color:var(--k-mut)}
+.kal-sec{display:flex;flex-direction:column;gap:6px}
+.kal-toast{position:sticky;top:8px;z-index:9;width:max-content;max-width:100%;margin:0 auto;padding:10px 16px;border-radius:999px;background:var(--k-ink);color:var(--k-bg);font-size:13.5px;font-weight:600;box-shadow:0 10px 24px -10px rgba(0,0,0,.5)}
+
+/* Oppsett: web = to kolonner (kalenderen fast til høyre, widgets over hele bredden), mobil = én kolonne */
+.kal-lay{display:flex;flex-direction:column;gap:14px}
+.kal-lay.web{display:grid;grid-template-columns:minmax(280px,360px) minmax(0,1fr);align-items:start}
+.kal-lay.web>.kal-c{grid-column:1}
+.kal-lay.web>.kal-c-calendar{grid-column:2}
+.kal-lay.web>.kal-c-widgets{grid-column:1 / -1}
+.kal-c{position:relative;display:flex;flex-direction:column;gap:6px;min-width:0;border-radius:24px;transition:transform .15s;-webkit-touch-callout:none}
+.kal-c-calendar{gap:12px}
+.kal-c-widgets{gap:10px}
+.kal-c.ro{outline:2px dashed var(--k-line);outline-offset:5px;transform:scale(.985);user-select:none;-webkit-user-select:none}
+.kal-c.ro>:not(.kal-roc){pointer-events:none}
+.kal-roc{position:absolute;top:-10px;right:-4px;z-index:5;display:flex;gap:4px}
+.kal-roc button{width:32px;height:32px;border-radius:16px;border:0;background:var(--k-ink);color:var(--k-bg);cursor:pointer;font-size:11px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.kal-roc button.dim{opacity:.35}
+.kal-roc button.hd{background:var(--k-lab);color:#fff;font-size:16px;font-weight:700}
+.kal-pill-ro{position:sticky;top:8px;z-index:8;display:flex;align-items:center;gap:6px;padding:6px 6px 6px 16px;border-radius:999px;background:var(--k-ink);color:var(--k-bg);box-shadow:0 10px 24px -8px rgba(0,0,0,.4)}
+.kal-pill-ro span{flex:1;min-width:0;font-size:13.5px;font-weight:600}
+.kal-pill-ro button{flex:none;height:34px;padding:0 12px;border-radius:999px;border:0;background:transparent;color:var(--k-bg);cursor:pointer;font:600 12.5px Manrope,system-ui,sans-serif}
+.kal-pill-ro button.done{padding:0 16px;background:var(--k-bg);color:var(--k-ink);font-weight:700;font-size:13px}
+.kal-hidl{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 2px}
+.kal-hidl span{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--k-mut)}
+.kal-hidl button{height:32px;padding:0 12px;border-radius:16px;border:1.5px dashed var(--k-line);background:var(--k-card);color:var(--k-ink);cursor:pointer;font:600 12.5px Manrope,system-ui,sans-serif}
+
+/* Nå-kort */
+.kal-now{width:100%;text-align:left;border:0;cursor:pointer;border-radius:24px;padding:18px;background:var(--k-hero);color:var(--k-herofg);display:flex;flex-direction:column;gap:12px;box-shadow:var(--k-shadow)}
+.kal-now-k{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#ff9c8c}
+.kal-now-k span+span{font-size:11px;letter-spacing:0;color:var(--k-herofg);opacity:.75}
+.kal-now-m{display:flex;align-items:center;gap:12px}
+.kal-strip{flex:none;width:6px;align-self:stretch;border-radius:3px;background:var(--c)}
+.kal-now-m b{display:block;font:500 30px/1.1 Newsreader,Georgia,serif}
+.kal-now-m span span{font-size:13.5px;opacity:.85}
+.kal-bar{height:4px;border-radius:2px;background:rgba(255,255,255,.18);overflow:hidden}
+.kal-bar span{display:block;height:100%;background:#ff9c8c}
+.kal-now-n{font-size:13px;opacity:.85;border-top:1px solid rgba(255,255,255,.16);padding-top:10px}
+
+/* Lister */
+.kal-list{padding:2px 14px}
+.kal-ex,.kal-it{width:100%;display:flex;align-items:center;gap:12px;min-height:58px;padding:8px 0;border:0;background:transparent;color:var(--k-ink);cursor:pointer;text-align:left}
+.kal-it{min-height:52px}
+.kal-ex.bt,.kal-it.bt{border-top:1px solid var(--k-line)}
+.kal-ex-d{flex:none;width:44px;display:flex;flex-direction:column;align-items:center;line-height:1}
+.kal-ex-d b{font:500 24px Newsreader,Georgia,serif}
+.kal-ex-d span{font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:var(--k-mut);margin-top:3px}
+.kal-ex .kal-grow b,.kal-it .kal-grow b{display:block;font-size:14.5px;font-weight:700}
+.kal-ex .kal-grow span,.kal-it .kal-grow span{font-size:12.5px;color:var(--k-mut)}
+.kal-pill{flex:none;padding:4px 9px;border-radius:999px;background:var(--k-in);color:var(--k-ink);font:700 11.5px Manrope,system-ui,sans-serif;white-space:nowrap}
+.kal-pill.soon{background:#b23a2a;color:#fff}
+.kal-it-tm{flex:none;width:72px;font:500 12px 'IBM Plex Mono',monospace;color:var(--k-mut)}
+.kal-it-c{flex:none;width:4px;align-self:stretch;border-radius:2px}
+.kal-tag{flex:none;padding:3px 8px;border-radius:999px;color:#fff;font:700 10.5px Manrope,system-ui,sans-serif}
+
+/* Kalendere-lenken */
+.kal-link{display:flex;align-items:center;gap:12px;padding:14px 16px;color:var(--k-ink);cursor:pointer;text-align:left;width:100%}
+.kal-link b{display:block;font-size:15px;font-weight:700}
+.kal-link .kal-grow span{font-size:12.5px;color:var(--k-mut)}
+.kal-link-r{flex:none;font-size:13px;font-weight:600;color:var(--k-mut)}
+
+/* Velger, navigasjon og filter */
+.kal-views{display:flex;gap:4px;padding:4px;border-radius:999px;background:var(--k-card);border:1px solid var(--k-line)}
+html[data-hl="2c"] .kal-views{border:0}
+.kal-views button{flex:1 1 0;min-width:0;height:38px;border-radius:999px;border:0;background:transparent;color:var(--k-ink);cursor:pointer;font:700 13.5px Manrope,system-ui,sans-serif}
+.kal-views button.on{background:var(--k-ink);color:var(--k-bg)}
+.kal-nav{display:flex;align-items:center;gap:8px}
+.kal-arr{flex:none;width:38px;height:38px;border-radius:19px;border:1px solid var(--k-line);background:var(--k-card);color:var(--k-ink);cursor:pointer;font-size:17px}
+.kal-nav-t{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;line-height:1.15}
+.kal-nav-t b{font:500 21px Newsreader,Georgia,serif;white-space:nowrap}
+.kal-nav-t span{font-size:12px;color:var(--k-mut)}
+.kal-today{flex:none;height:38px;padding:0 14px;border-radius:19px;border:0;background:var(--k-card);color:var(--k-mut);cursor:pointer;font:700 13px Manrope,system-ui,sans-serif}
+.kal-today.go{background:var(--k-lab);color:#fff}
+.kal-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.kal-chips:empty{display:none}
+.kal-filt{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.kal-fc{flex:none;display:flex;align-items:center;gap:7px;height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--k-line);background:var(--k-card);color:var(--k-ink);cursor:pointer;font:600 12.5px Manrope,system-ui,sans-serif}
+.kal-fc i{width:9px;height:9px;border-radius:5px}
+.kal-fc.off{background:transparent;opacity:.5}
+.kal-chip{height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--k-line);background:transparent;color:var(--k-ink);cursor:pointer;font:600 12.5px Manrope,system-ui,sans-serif}
+.kal-chip.on{background:var(--k-ink);color:var(--k-bg);border-color:var(--k-ink)}
+.kal-btn{height:38px;padding:0 16px;border-radius:19px;border:1px solid var(--k-line);background:transparent;display:inline-flex;align-items:center;color:var(--k-ink);text-decoration:none;cursor:pointer;font:700 13px Manrope,system-ui,sans-serif}
+.kal-btn:hover{color:var(--k-ink);border-color:var(--k-ink)}
+
+/* Detaljkort */
+.kal-det{padding:16px;border-radius:22px;background:var(--k-card);border:1.5px solid var(--c);display:flex;flex-direction:column;gap:10px}
+.kal-det-h{display:flex;align-items:flex-start;gap:12px}
+.kal-det-k{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--c)}
+html:not([data-hl="2c"]) .kal-det-k{filter:brightness(1.6)}
+.kal-det-h b{display:block;font:500 26px/1.1 Newsreader,Georgia,serif;margin-top:2px}
+.kal-det-h .kal-grow>span:last-child{display:block;font-size:13.5px;color:var(--k-mut);margin-top:4px}
+.kal-x{flex:none;width:34px;height:34px;border-radius:17px;border:1px solid var(--k-line);background:transparent;color:var(--k-ink);cursor:pointer;font-size:16px}
+.kal-det-r{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-top:1px solid var(--k-line);font-size:14px}
+.kal-det-r span{color:var(--k-mut)}
+.kal-det-r b{text-align:right}
+
+/* Uke */
+.kal-wk{padding:12px 10px 14px 6px;display:flex;flex-direction:column;gap:6px}
+.kal-wk-row{display:grid;grid-template-columns:30px repeat(5,minmax(0,1fr));gap:4px}
+.kal-wk-h{display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:transparent;color:var(--k-ink);cursor:pointer;padding:0}
+.kal-wk-h>span:first-child{font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:var(--k-mut)}
+.kal-dn{width:30px;height:30px;border-radius:15px;display:grid;place-items:center;font:500 17px Newsreader,Georgia,serif;color:var(--k-ink)}
+.kal-dn.on{background:var(--k-lab);color:#fff}
+.kal-dn.we{color:var(--k-mut)}
+.kal-wk-all{font:600 9px 'IBM Plex Mono',monospace;color:var(--k-mut);text-align:right;padding-top:5px}
+.kal-wk-allc{display:flex;flex-direction:column;gap:3px;min-width:0}
+.kal-wk-ae{border:0;border-radius:7px;padding:3px 5px;color:#fff;cursor:pointer;font:700 10.5px Manrope,system-ui,sans-serif;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kal-wk-hrs{position:relative}
+.kal-wk-hrs span{position:absolute;right:2px;transform:translateY(-50%);font:500 10px 'IBM Plex Mono',monospace;color:var(--k-mut)}
+.kal-wk-col{position:relative;border-radius:10px;min-width:0}
+.kal-wk-col.today{background:color-mix(in oklab,var(--k-lab) 8%,transparent)}
+.kal-hl{position:absolute;left:0;right:0;height:1px;background:var(--k-line);opacity:.6}
+.kal-blk{position:absolute;left:2px;right:2px;border:0;border-left:3px solid var(--c);border-radius:7px;padding:3px 5px;background:color-mix(in oklab,var(--c) 15%,var(--k-card));color:var(--k-ink);cursor:pointer;text-align:left;overflow:hidden;display:flex;flex-direction:column;gap:1px}
+html:not([data-hl="2c"]) .kal-blk{background:color-mix(in oklab,var(--c) 32%,#141a26)}
+.kal-blk.pr{background:var(--c);color:#fff}
+.kal-blk.sel{outline:2px solid var(--k-ink);outline-offset:1px}
+.kal-blk b{font-size:11px;font-weight:800;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kal-blk span{font-size:10px;font-weight:600;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kal-nowl{position:absolute;left:-3px;right:0;height:2px;background:var(--k-lab);z-index:2}
+.kal-nowl::before{content:'';position:absolute;left:-3px;top:-3px;width:8px;height:8px;border-radius:4px;background:var(--k-lab)}
+
+/* Måned */
+.kal-mo{padding:12px}
+.kal-mo-g{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}
+.kal-mo-h{text-align:center;font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:var(--k-mut);padding:2px 0 6px}
+.kal-mc{display:flex;flex-direction:column;align-items:center;gap:4px;padding-top:5px;border:0;border-radius:12px;background:transparent;color:var(--k-ink);cursor:pointer;min-width:0}
+.kal-mc .kal-dn{width:28px;height:28px;border-radius:14px;font-size:16px}
+.kal-mc.out{opacity:.38}
+.kal-mc.sel{background:var(--k-in);outline:1.5px solid var(--k-ink);outline-offset:-2px}
+.kal-dots{display:flex;gap:3px;height:6px}
+.kal-dots i{width:6px;height:6px;border-radius:3px}
+.kal-ag,.kal-vw{display:flex;flex-direction:column;gap:12px}
+
+/* Widgets på telefonen */
+.kal-wplat{display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:22px;background:linear-gradient(160deg,#6d7f8f,#2e3a46)}
+.kal-wplat-n{font:700 12.5px Manrope,system-ui,sans-serif;color:#fff}
+.kal-wrow{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
+.kal-wcol{flex:none;display:flex;flex-direction:column;align-items:center;gap:6px;max-width:100%}
+.kal-wcol>span{font-size:11px;font-weight:700;color:#fff;opacity:.85}
+.kal-w{--wbg:rgba(255,255,255,.95);--wfg:#1b1a17;--wmut:#7a7468;--wacc:#b23a2a;--wline:rgba(0,0,0,.08);--wrad:24px;
+  box-sizing:border-box;max-width:100%;border-radius:var(--wrad);background:var(--wbg);color:var(--wfg);padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.25);overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif}
+.and .kal-w{--wbg:#f4ddd8;--wfg:#3b0f0a;--wmut:#7d4a43;--wline:rgba(59,15,10,.14);--wrad:28px;font-family:'Google Sans',system-ui,sans-serif}
+.sam .kal-w{--wbg:#fff;--wfg:#111;--wmut:#6b6b6b;--wrad:20px;font-family:'SamsungOne','Samsung Sans',system-ui,sans-serif}
+.kal-w-s{width:158px;height:158px;display:flex;flex-direction:column}
+.and .kal-w-s{width:170px;height:170px}.sam .kal-w-s{width:134px;height:155px}
+.kal-w-m2{width:338px;height:158px;display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.25fr);gap:14px}
+.and .kal-w-m2{width:350px;height:170px}.sam .kal-w-m2{width:296px;height:155px}
+.kal-w-l2{width:338px;height:354px;padding:16px;display:flex;flex-direction:column;gap:8px}
+.and .kal-w-l2{width:350px;height:350px}.sam .kal-w-l2{width:296px;height:330px}
+.kal-w-k{font-size:10px;font-weight:800;letter-spacing:.08em;color:var(--wacc)}
+.kal-w-big{font-size:30px;font-weight:700;line-height:1;margin-top:6px;letter-spacing:-.02em}
+.kal-w-m2 .kal-w-big{font-size:28px}
+.kal-w-m{margin-top:auto;display:flex;align-items:center;gap:7px;min-width:0}
+.kal-w-st{flex:none;width:4px;height:32px;border-radius:2px}
+.kal-w-st.sm{width:3px;height:24px}
+.kal-w b,.kal-w span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kal-w-m .kal-grow,.kal-w-n .kal-grow,.kal-w-a .kal-grow{display:flex;flex-direction:column;line-height:1.15}
+.kal-w-m .kal-grow b{font-size:14px;font-weight:700}
+.kal-w-m .kal-grow span,.kal-w-r{font-size:11.5px;color:var(--wmut)}
+.kal-w-wh{font-size:11px;font-weight:700;color:var(--wacc);margin-top:6px}
+.kal-w-l{display:flex;flex-direction:column;min-width:0}
+.kal-w-t{margin-top:auto;font-size:14px;font-weight:700}
+.kal-w-l .kal-w-wh{margin-top:4px}
+.kal-w-rt{display:flex;flex-direction:column;gap:7px;min-width:0;border-left:1px solid var(--wline);padding-left:12px}
+.kal-w-day{font-size:10.5px;font-weight:700;color:var(--wmut)}
+.kal-w-n{display:flex;align-items:center;gap:7px;min-width:0}
+.kal-w .tn{flex:none;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+.kal-w-n .tn{width:34px}
+.kal-w-n .kal-grow b{font-size:12.5px;font-weight:700}
+.kal-w-n .kal-grow span{font-size:10.5px;color:var(--wmut)}
+.kal-w-lh{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.kal-w-lh b{font-size:16px;font-weight:700}
+.kal-w-lh span{flex:none;font-size:11px;font-weight:700;color:var(--wacc)}
+.kal-w-a{display:flex;align-items:center;gap:9px;min-width:0}
+.kal-w-a.past{opacity:.45}
+.kal-w-a .tn{width:76px;color:var(--wmut)}
+.kal-w-a .kal-w-st{height:28px}
+.kal-w-a .kal-grow b{font-size:13.5px;font-weight:700}
+.kal-w-a .kal-grow span{font-size:11px;color:var(--wmut)}
+.kal-w-hr{margin-top:auto;height:1px;background:var(--wline);flex:none}
+.kal-w-x{display:flex;align-items:center;gap:8px;min-width:0}
+.kal-w-x b{flex:1;min-width:0;font-size:13px;font-weight:700}
+.kal-wp{flex:none;padding:3px 8px;border-radius:999px;background:rgba(0,0,0,.07);color:inherit;font-size:10.5px;font-weight:800}
+.kal-wp.soon{background:#b23a2a;color:#fff}
+
+/* Hjem-widget KALENDER */
+.kal-hw-card{padding:0!important;overflow:hidden}
+.kal.kal-hw{display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-radius:20px;background:var(--k-card);color:var(--k-ink);text-decoration:none;max-width:none}
+.card .kal.kal-hw{background:transparent;padding:var(--pad-card,22px)}
+html[data-hl="2c"] .card .kal.kal-hw{padding:0}
+html[data-hl="2c"] .p-sec .kal.kal-hw{background:#fff}
+.kal.kal-hw:hover{color:var(--k-ink)}
+.kal-hw-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;color:var(--k-mut)}
+.kal-hw-k{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--k-labt)}
+.kal-hw-m{display:flex;align-items:center;gap:12px;min-width:0}
+.kal-hw-m .kal-strip{width:5px;height:44px;align-self:center}
+.kal-hw-m .kal-grow b{display:block;font:500 22px/1.15 Newsreader,Georgia,serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kal-hw-m .kal-grow span{display:block;font-size:12.5px;color:var(--k-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kal-hw-r{flex:none;text-align:right}
+.kal-hw-r b{display:block;font:500 26px/1 Newsreader,Georgia,serif}
+.kal-hw-r span{font-size:11.5px;font-weight:700;color:var(--k-labt)}
+.kal-hw-n{display:flex;gap:6px;min-width:0}
+.kal-hw-n>span{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:2px;padding:7px 9px;border-radius:12px;background:var(--k-in);border-left:3px solid}
+.kal-hw-n b:first-child{font:500 12px 'IBM Plex Mono',monospace;color:var(--k-mut)}
+.kal-hw-n b+b{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kal-hw-x{display:flex;align-items:center;gap:8px;padding-top:8px;border-top:1px solid var(--k-line);min-width:0}
+.kal-hw-x>span:first-child{flex:none;font:600 10px 'IBM Plex Mono',monospace;letter-spacing:.08em;color:var(--k-labt)}
+.kal-hw-x b{flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kal-hw-x .kal-wp{background:var(--k-in)}
+.kal-hw-x .kal-wp.soon{background:#b23a2a}
+.kal-hw-e{font-size:13px;color:var(--k-mut)}
+
+@media (max-width:767px){
+  .kal-h1{font-size:34px}
+  .kal-top{padding-bottom:10px}
+}

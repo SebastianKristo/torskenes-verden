@@ -168,6 +168,7 @@ const HEAD = {
   familie: () => ['Posisjon, soner og helse', 'Familie'],
   huskeliste: () => ['Delt med familien', 'Huskeliste'],
   bursdager: () => ['Familie og venner', 'Bursdager'],
+  kalender: () => [`Skole · ${new Date().getMonth() >= 6 ? 'høst' : 'vår'} ${new Date().getFullYear()}`, 'Kalender'],
   domener: () => ['Trafikk, oppetid og sikkerhet', 'Domener'],
   nettverk: () => ['Nettverk og lenker', 'Nettverk'],
   mer: () => ['Alle sider', 'Mer'],

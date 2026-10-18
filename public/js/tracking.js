@@ -13,6 +13,14 @@ const segs = () => (is2c() ? SEGS_2C : SEGS);
 // Hva hver transportør trenger. 17TRACK er reserven for alle uten egen klient.
 const KEYS = [['posten', 'Posten og Bring', 'API-nøkkel fra Mybring (bruker-ID og nøkkel)'], ['postnord', 'PostNord', 'API-nøkkel fra PostNord Developer'], ['dhl', 'DHL', 'DHL Shipment Tracking API (Unified)'],
   ['ups', 'UPS', 'OAuth-klient fra UPS Developer'], ['other', '17TRACK', 'Reserve for FedEx, GLS, DB Schenker, Helthjem, Budbee, Instabox og andre']];
+// Prompt 26: overstyr sporingstjenesten (carrierOverride, null = auto) ved ny pakke og under «Spor via» på en pakke.
+const OVR = [['posten', 'Posten'], ['bring', 'Bring'], ['postnord', 'PostNord'], ['dhl', 'DHL'], ['helthjem', 'Helthjem'], ['ups', 'UPS'], ['budbee', 'Budbee'], ['instabox', 'Instabox'], ['parcelsapp', 'ParcelsApp']];
+const OVR_EXTRA = { parcelsapp: { color: '#4B5BD6', fg: '#fff', ini: 'PA' } };
+const carName = (id) => S.d?.carriers?.find((c) => c.id === id)?.name ?? OVR.find((o) => o[0] === id)?.[1] ?? id;
+const carOf = (id) => S.d?.carriers?.find((c) => c.id === id) ?? OVR_EXTRA[id] ?? { color: '#3A4252', fg: '#eef0f4', ini: String(id ?? '?').slice(0, 2).toUpperCase() };
+/** «Bring · valgt» når tjenesten er overstyrt, ellers transportøren som er gjenkjent. */
+const carLabel = (t) => (t.carrierOverride ? (/valgt/.test(t.carrierLabel ?? '') ? t.carrierLabel : `${carName(t.carrierOverride)} · valgt`) : t.carrierName);
+const detName = (t) => (t.carrierDetected ? carName(t.carrierDetected) : t.carrierOverride ? '' : t.carrierName) || 'gjenkjent';
 const S = { d: null, err: '', seg: 'Aktive', open: null, delArm: null, sel: new Set(), bulkArm: false, no: '', name: '', guess: null, pick: null, busy: false, adding: false, toast: '' };
 let toastT = null, detT = null, pollT = null, unLive = null;
 
@@ -85,7 +93,7 @@ function card(t) {
   const tl = t.events.map((e, j) => `<div class="trk-ev${j ? '' : ' now'}"><div class="trk-ev-l"><i></i><em></em></div><div class="trk-ev-b"><div><b>${esc(e.status)}</b><span>${esc(evTime(e.ts))}</span></div>${e.location ? `<small>${esc(e.location)}</small>` : ''}</div></div>`).join('');
   return `<div class="trk-card${ready ? ' ready' : ''}${S.sel.has(t.id) ? ' picked' : ''}">
     <button class="trk-head" data-trk-open="${t.id}" aria-expanded="${open}">
-      <span class="trk-row"><span class="trk-selb${S.sel.has(t.id) ? ' on' : ''}" data-trk-selb="${t.id}" role="checkbox" aria-checked="${S.sel.has(t.id)}" title="Velg for arkivering eller sletting">${pkgLogo(t, 44)}<i>✓</i></span><span class="trk-tt"><b>${esc(pkgTitle(t))}</b><small>${esc(t.carrierName)} · <span class="trk-mono">${esc(t.trackingNo)}</span></small></span>
+      <span class="trk-row"><span class="trk-selb${S.sel.has(t.id) ? ' on' : ''}" data-trk-selb="${t.id}" role="checkbox" aria-checked="${S.sel.has(t.id)}" title="Velg for arkivering eller sletting">${pkgLogo(t, 44)}<i>✓</i></span><span class="trk-tt"><b>${esc(pkgTitle(t))}</b><small>${esc(carLabel(t))} · <span class="trk-mono">${esc(t.trackingNo)}</span></small></span>
         <span class="trk-src" style="background:${sbg};color:${sfg}">${esc(src)}</span></span>
       <span class="trk-st"><span><b style="color:${unknown ? 'var(--text-2)' : stC}">${esc(unknown ? 'Status ukjent' : t.statusText)}</b><small${unknown ? ' class="trk-err"' : ''}>${esc(etaText(t))}</small></span>${t.direction === 'out' ? '<em>Utgående</em>' : ''}</span>
       <span class="trk-steps">${steps}</span>
@@ -94,6 +102,7 @@ function card(t) {
     </button>
     ${open ? `<div class="trk-more">
       ${tl ? `<div class="trk-tl">${tl}</div>` : ''}
+      <div class="trk-via"><span class="trk-via-k">SPOR VIA</span><div class="trk-chips">${[[null, `✦ Auto · ${detName(t).replace(/ \(17TRACK\)$/, '')}`], ...OVR].map(([id, n]) => { const on = (t.carrierOverride ?? null) === id; return `<button class="trk-chip${on ? ' on' : ''}" data-trk-via="${t.id}:${id ?? ''}" aria-pressed="${on}">${id ? badge(carOf(id).color, carOf(id).fg, carOf(id).ini, 'sm', carOf(id).logo) : ''}${esc(n)}</button>`; }).join('')}</div></div>
       ${t.sourceNote ? `<span class="trk-note">✦ ${esc(t.sourceNote)}</span>` : ''}
       ${t.updateError?.text ? `<span class="trk-note warn">${esc(t.updateError.text)}</span>` : t.lastError ? `<span class="trk-note warn">${esc(t.lastError)}</span>` : ''}
       <div class="trk-acts">
@@ -107,9 +116,11 @@ function card(t) {
 function addHint() {
   const d = S.d, no = S.no.replace(/\s+/g, '').toUpperCase();
   if (!no || !d) return '';
-  const car = S.pick ?? S.guess ?? 'other', name = d.carriers.find((c) => c.id === car)?.name ?? car;
-  const hint = car === 'other' ? 'Fant ikke transportøren ut fra nummeret. Velg, eller la 17TRACK finne den.' : `✦ Ser ut som ${name}${S.pick ? ' (valgt av deg)' : ' ut fra formatet'}. Trykk for å endre.`;
-  return `<span class="trk-hint">${esc(hint)}</span><div class="trk-chips">${d.carriers.map((c) => `<button class="trk-chip${c.id === car ? ' on' : ''}" data-trk-pick="${c.id}">${badge(c.color, c.fg, c.ini, 'sm', c.logo)}${esc(c.name)}</button>`).join('')}</div>`;
+  const g = S.guess ?? 'other', gName = g === 'other' ? 'ukjent' : carName(g);
+  const hint = S.pick ? `Spores via ${carName(S.pick)} (valgt av deg). Velg Auto for å gjenkjenne tjenesten automatisk.`
+    : g === 'other' ? 'Fant ikke transportøren ut fra nummeret. Velg en tjeneste, eller la Auto prøve.' : `✦ Ser ut som ${gName} ut fra formatet. Velg en annen tjeneste for å overstyre.`;
+  const chip = (id, n, on) => `<button class="trk-chip${on ? ' on' : ''}" data-trk-pick="${id ?? ''}" aria-pressed="${on}">${id ? badge(carOf(id).color, carOf(id).fg, carOf(id).ini, 'sm', carOf(id).logo) : ''}${esc(n)}</button>`;
+  return `<span class="trk-hint">${esc(hint)}</span><div class="trk-chips">${chip(null, `✦ Auto · ${gName}`, !S.pick)}${OVR.map(([id, n]) => chip(id, n, S.pick === id)).join('')}</div>`;
 }
 
 function lists() {
@@ -251,7 +262,8 @@ async function add() {
   if (S.d?.items.some((t) => t.trackingNo === no)) return flash('Sendingen spores allerede', true);
   S.adding = true; paint();
   try {
-    const r = await T('', { method: 'POST', json: { trackingNo: no, name: S.name.trim(), carrier: S.pick ?? undefined } });
+    const known = S.pick && S.d?.carriers?.some((c) => c.id === S.pick);
+    const r = await T('', { method: 'POST', json: { trackingNo: no, name: S.name.trim(), carrier: known ? S.pick : undefined, carrierOverride: S.pick ?? null } });
     Object.assign(S, { no: '', name: '', pick: null, guess: null, seg: 'Aktive', open: r.item.id });
     flash(r.message);
     await load();
@@ -346,7 +358,18 @@ export function bind(view) {
       S.bulkArm = false; return paint();
     }
     if ((b = el('[data-trk-bulk]'))) return bulk(b.dataset.trkBulk);
-    if ((b = el('[data-trk-pick]'))) { S.pick = b.dataset.trkPick; return paintGuess(); }
+    if ((b = el('[data-trk-pick]'))) { S.pick = b.dataset.trkPick || null; return paintGuess(); }
+    if ((b = el('[data-trk-via]'))) {
+      const [id, car] = b.dataset.trkVia.split(':'), t = S.d.items.find((x) => x.id === +id), v = car || null;
+      if (!t || (t.carrierOverride ?? null) === v) return;
+      try {
+        const r = await T(`/${t.id}`, { method: 'PATCH', json: { carrierOverride: v } });
+        if (r?.item) S.d.items = S.d.items.map((x) => (x.id === t.id ? r.item : x)); else t.carrierOverride = v;
+        flash(r?.message || (v ? `Spores nå via ${carName(v)}` : `Tilbake til automatisk (${detName(r?.item ?? t)})`));
+        setTimeout(load, 2500); // serveren slår opp på nytt med en gang
+      } catch (err) { flash(err.status === 400 ? 'Serveren støtter ikke valg av tjeneste ennå' : err.message, true); }
+      return paint();
+    }
     if ((b = el('[data-trk-seg]'))) { Object.assign(S, { seg: b.dataset.trkSeg, open: null, delArm: null, bulkArm: false }); S.sel.clear(); return paint(); }
     if ((b = el('[data-trk-open]'))) { const id = +b.dataset.trkOpen; Object.assign(S, { open: S.open === id ? null : id, delArm: null }); return paint(); }
     if ((b = el('[data-trk-src]'))) {

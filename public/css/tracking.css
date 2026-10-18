@@ -168,3 +168,9 @@ html[data-hl="2c"] .trk-err{color:#b23a2a}
 @media (hover:hover) and (pointer:fine){.trk-ptr{display:none}}
 /* Prompt 22: navnet på fraktselskapet som reserve når den manuelle logoen mangler (aldri et tilfeldig favicon). */
 .pkl i.nm{font-size:calc(var(--s) * .19);font-weight:800;letter-spacing:-.01em;max-width:92%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Prompt 26: «Auto» uten logo, og «Spor via» på en åpen pakke */
+.trk-chip:not(:has(.trk-ini)){padding:0 13px}
+.trk-via{display:flex;flex-direction:column;gap:8px;min-width:0}
+.trk-via-k{font:600 10.5px var(--mono);letter-spacing:.12em;color:var(--text-2)}
+.trk-via .trk-chips{flex-wrap:wrap}

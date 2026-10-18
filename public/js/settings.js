@@ -16,6 +16,7 @@ import { loadApp, appView, appClick, appInput, appKey } from './settings-app.js'
 import { loadInteg, integRows, integSub, integClick, integChange, integCount } from './settings-integ.js';
 import { themeCards, setHlTheme, hlTheme, THEMES, uploadCustomPhoto } from './hltheme.js';
 import { mountHa } from './tasks-ha.js';
+import { kalView, kalClick, kalChange } from './settings-kal.js';
 
 const modal = () => document.getElementById('settings');
 
@@ -26,7 +27,7 @@ const P = {
   top: 'M4 4h16v5H4zM4 13h7v7H4zM15 13h5v7h-5z', map: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z',
   plug: 'M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4', users: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M16 3.1a4 4 0 0 1 0 7.8M22 21a7 7 0 0 0-5-6.7',
   lock: 'M6 11h12v9H6zM8 11V8a4 4 0 0 1 8 0v3', out: 'M9 4H5v16h4M14 8l4 4-4 4M18 12H9', search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5',
-  back: 'M15 18l-6-6 6-6',
+  back: 'M15 18l-6-6 6-6', cal: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
   bell: 'M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0', app: 'M5 4h14v16H5zM9 8h6M9 12h6M9 16h3',
 };
 export const svg = (d, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
@@ -69,10 +70,11 @@ const TABS = [
   ['varsel', 'Varsler', 'Lyd, stille timer, grupper og test.', 'Generelt', P.bell],
   ['app', 'App', 'Navn på appen og app-ikon.', 'Generelt', P.app],
   ['int', 'Integrasjoner', 'Adresser og API-nøkler for tjenestene.', 'Tilkoblinger', P.plug],
+  ['kal', 'Kalendere', 'Skolens iCal, Canvas, Google Kalender og Home Assistant.', 'Tilkoblinger', P.cal],
   ['users', 'Brukere', 'Hvem som har tilgang, og hvilken rolle de har.', 'Sikkerhet', P.users],
 ];
 // Gamle navn på faner (lenker og knapper fra før omleggingen) peker til nye.
-const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users' };
+const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal' };
 // Hvilken fane en underside hører til, så «go('tfa')» virker uansett hvor den kalles fra.
 const SUB_TAB = { me: 'konto', tfa: 'konto', pw: 'konto', devices: 'konto', server: 'konto', add: 'users', bg: 'look', style: 'look', hist: 'look', cats: 'look',
   tabs: 'top', head: 'top', speed: 'top', dash: 'top', mob: 'top', sc: 'top', doms: 'dom', mail: 'int' };
@@ -414,7 +416,7 @@ function intView() {
     const catSort = (a, b) => (CAT_ORDER.indexOf(a) + 99) % 99 - (CAT_ORDER.indexOf(b) + 99) % 99;
     const intRow = (g) => {
       const m = metaOf(g), v = valOf(g), warn = v.startsWith('!'), t = testState(g.name);
-      return row({ t: m.name, s: m.s, k: g.fields.map((f) => f.label).join(' '), logo: m.domain, ini: m.name, v: t?.v ?? (warn ? v.slice(1) : v), vc: t?.vc ?? (warn ? '#f3b54a' : undefined), btn: 'Oppsett', go: 'int|cfg:' + g.name });
+      return row({ t: m.name, s: m.s, k: g.fields.map((f) => f.label).join(' '), logo: m.domain, ini: m.name, v: t?.v ?? (warn ? v.slice(1) : v), vc: t?.vc ?? (warn ? '#f3b54a' : undefined), btn: 'Oppsett', go: g.name === 'Kalender / timeplan' ? 'kal' : 'int|cfg:' + g.name });
     };
     const mv = mailVal(), mailRow = row({ t: 'Proton Mail', s: 'Kvitteringer fra e-post via Bridge', logo: 'proton.me', v: mv.replace(/^!/, ''), vc: mv.startsWith('!') ? '#f3b54a' : undefined, btn: 'Oppsett', go: 'int|mail' });
     const mineBy = byCat(cfg.filter(isPersonal)), srvBy = byCat(cfg.filter((g) => !isPersonal(g)));
@@ -513,14 +515,14 @@ async function saveGroup(name, changes) {
 /* ---------- Søk på tvers av sidene ---------- */
 
 const H = { group, row, note };
-const VIEWS = { konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => notifyView(H), app: () => appView(H), int: intView, users: usersView };
+const VIEWS = { konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => notifyView(H), app: () => appView(H), int: intView, kal: () => kalView({ ...H, cfg }), users: usersView };
 function searchView() {
   const words = q.toLowerCase().split(/\s+/).filter(Boolean), out = [];
   const saved = sub; sub = null;
   for (const [k, name] of TABS) {
     let v;
     try { v = VIEWS[k](); } catch { continue; }
-    for (const g of v.groups ?? []) {
+    for (const g of v.groups ?? v.search ?? []) {
       const rows = g.rows.filter((r) => { const txt = `${r.q} ${g.t} ${name}`.toLowerCase(); return words.every((w) => txt.includes(w)); });
       if (rows.length) out.push({ ...g, t: g.t ? `${name} · ${g.t}` : name, note: '', rows });
     }
@@ -603,9 +605,9 @@ function go(to) {
 
 function enter() {
   const reload = () => { if (!modal().hidden) render(); };
-  if ((tab === 'int' || q) && !cfg) loadCfg();
+  if ((tab === 'int' || tab === 'kal' || q) && !cfg) loadCfg();
   if (tab === 'int' && !mail) loadMail();
-  if (tab === 'int' || q) loadInteg(reload);
+  if (tab === 'int' || tab === 'kal' || q) loadInteg(reload);
   if (tab === 'konto' || tab === 'users' || q) loadLogin(reload);
   if (tab === 'dom' || q) loadDomains(reload);
   if (tab === 'varsel' || q) loadNotify(reload);
@@ -673,7 +675,8 @@ export function bindSettings() {
     if (await notifyClick(e)) return;
     if (await appClick(e)) return;
 
-    /* Integrasjoner */
+    /* Integrasjoner og Kalendere */
+    if (kalClick(e, render)) return;
     if (await integClick(e, render)) return;
     const tb = e.target.closest('[data-test]');
     if (tb) { e.preventDefault(); return runTest(tb.dataset.test); }
@@ -834,6 +837,7 @@ export function bindSettings() {
     if (await notifyChange(e)) return;
     if (t.matches('[data-news-speed]')) { saveUi({ newsSpeed: +t.value }); return; }
     if (t.matches('[data-tab-label]')) { await saveLabels(t.dataset.tabLabel, t.value); return; }
+    if (kalChange(e, render)) return;
     if (integChange(e, render)) return;
     const form = t.closest('[data-group]');
     if (form && cfg) {

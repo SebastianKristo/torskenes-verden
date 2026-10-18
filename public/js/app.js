@@ -19,13 +19,14 @@ import * as family from './family.js';
 import * as tasks from './tasks.js';
 import * as weatherPage from './weather-page.js';
 import * as birthdays from './birthdays.js';
+import * as kalender from './kalender.js';
 import './finpreload.js';
 import { logout, noteUser } from './usercache.js';
 import { loadAppIdentity, appName } from './appicon.js';
 import { scrollMemory } from './scrollmem.js';
 import { loadHlTheme, applyHlTheme, is2c, setHlTheme, pwHeader, paintPhoto, bindPhoto } from './hltheme.js';
 
-const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, vaer: weatherPage.render, bursdager: birthdays.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
+const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, vaer: weatherPage.render, bursdager: birthdays.render, kalender: kalender.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
 const view = document.getElementById('view');
 const scrollMem = scrollMemory();
 let route = null, wasMobile = isMobile();
@@ -57,7 +58,7 @@ function renderRoute() {
   mountAll(view);
   setupDnd(view);
   // Rom er en underside av «Mer» på mobil.
-  const navKey = isMobile() && ['rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'domener', 'bursdager'].includes(route) ? 'mer' : route;
+  const navKey = isMobile() && ['rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'domener', 'bursdager', 'kalender'].includes(route) ? 'mer' : route;
   document.querySelectorAll('[data-r]').forEach((a) => { if (a.dataset.r === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   setTitle();
   // Prompt 23: tilbake gir samme scrollposisjon som før, nye sider åpner øverst.
@@ -65,7 +66,7 @@ function renderRoute() {
 }
 
 // Fanetittelen: «Side · Appnavn» (appnavnet fra Innstillinger → App, standard «Homelab»).
-const TITLES = { vaer: 'Vær', studie: 'Studie', rom: 'Rom', hjem: 'Hjem', matplan: 'Mat', sporing: 'Sporing', familie: 'Familie', huskeliste: 'Huskeliste', bursdager: 'Bursdager', domener: 'Domener', nettverk: 'Nettverk', mer: 'Mer' };
+const TITLES = { vaer: 'Vær', studie: 'Studie', rom: 'Rom', hjem: 'Hjem', matplan: 'Mat', sporing: 'Sporing', familie: 'Familie', huskeliste: 'Huskeliste', bursdager: 'Bursdager', kalender: 'Kalender', domener: 'Domener', nettverk: 'Nettverk', mer: 'Mer' };
 function setTitle() { document.title = TITLES[route] ? `${TITLES[route]} · ${appName()}` : appName(); }
 
 // Nyhetsbaren ligger under topplinjen, men i Vindu og papir under søkefeltet på papiret.
