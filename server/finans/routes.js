@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { db, OWNER, settings, saveSettings, secret, setSecret, secretSource, DEFAULT_SETTINGS } from './db.js';
 import { extract, extractText, extractOcr, health, providerName, testEngine, testRoboflow, ENGINES, TASKS, aiLog, barcode } from './ai.js';
+import { hasGemini, listKeysOut, addKey, removeKey, renameKey, orderKeys, resetKey, testKey } from './gemini-keys.js';
 import { sniffMime, isHeic, scanLog, scanLogOf } from './scan.js';
 import { mailConfig, mailStatus, testMail, runMail, recentImports, startMailWorker } from './mail.js';
 import { parseCsv, PROFILES } from './csv.js';
@@ -200,7 +201,7 @@ function reanalyzeInfo(r, st = settings()) {
   const unsure = (r.confidence ?? 0) < st.minConf / 100;
   const needs = r.status === 'failed' || !!r.error || unsure;
   if (!needs) return { canReanalyze: false, ...ocr };
-  if (!secret('geminiKey')) return { canReanalyze: false, ...ocr, reanalyzeReason: 'Legg inn en Gemini-nøkkel under Innstillinger → AI-motor for å analysere på nytt.' };
+  if (!hasGemini()) return { canReanalyze: false, ...ocr, reanalyzeReason: 'Legg inn en Gemini-nøkkel under Innstillinger → AI-motor for å analysere på nytt.' };
   return { canReanalyze: true, ...ocr, ...(r.candidate ? { reanalyzePending: true } : {}) };
 }
 
@@ -234,7 +235,7 @@ async function runQueue() {
       try { img = await readFile(join(DIR, rel)); } catch (e) { throw new Error(`Fant ikke filen på serveren (${e.code ?? e.message})`); }
       const mime = r.scan ? 'image/jpeg' : r.mime;
       log('lest', `${rel.split('/').pop()} · ${mime} · ${Math.round(img.length / 1024)} kB${r.scan ? ' (nedskalert JPEG)' : ''}`);
-      if (isHeic(mime)) log('heic', secret('geminiKey') ? 'HEIC uten JPEG-kopi fra klienten: sendes til Gemini, som kan lese HEIC' : 'HEIC uten JPEG-kopi og uten Gemini-nøkkel: Ollama kan ikke lese HEIC');
+      if (isHeic(mime)) log('heic', hasGemini() ? 'HEIC uten JPEG-kopi fra klienten: sendes til Gemini, som kan lese HEIC' : 'HEIC uten JPEG-kopi og uten Gemini-nøkkel: Ollama kan ikke lese HEIC');
       const cats = q("SELECT name FROM fh_categories WHERE kind='expense' ORDER BY sort").all().map((x) => x.name);
       // E-post uten vedlegg lagres som tekst og leses som tekst.
       const res = r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats) : await extract(img, mime, cats, force, { log });
@@ -409,7 +410,7 @@ api.get('/bootstrap', R, (c) => {
   const accs = q(`SELECT a.*, a.opening_balance + COALESCE((SELECT SUM(amount) FROM fh_transactions WHERE account_id=a.id),0) AS balance FROM fh_accounts a ORDER BY sort, id`).all();
   const month = curMonth();
   return c.json({
-    settings: { ...st, imapPin: st.imapPin ? { fingerprint: st.imapPin.fingerprint } : null, geminiKeySet: !!secret('geminiKey'), groqKeySet: !!secret('groqKey'), roboflowKeySet: !!secret('roboflowKey'), imapPassSet: !!secret('imapPass'), t212Set: t212Configured() }, month, period: period(month), profiles: PROFILES, user: st.name,
+    settings: { ...st, imapPin: st.imapPin ? { fingerprint: st.imapPin.fingerprint } : null, geminiKeySet: !!hasGemini(), groqKeySet: !!secret('groqKey'), roboflowKeySet: !!secret('roboflowKey'), imapPassSet: !!secret('imapPass'), t212Set: t212Configured() }, month, period: period(month), profiles: PROFILES, user: st.name,
     categories: cats.map((x) => ({ id: x.id, name: x.name, color: x.color, kind: x.kind })),
     accounts: accs.map((a) => ({ id: a.id, name: a.name, bank: a.bank, type: a.type, last4: a.last4, note: a.note, openingBalance: a.opening_balance / 100, balance: a.balance / 100 })),
     rules: q('SELECT r.*, c.name AS category FROM fh_rules r LEFT JOIN fh_categories c ON c.id=r.category_id ORDER BY priority, id').all().map((r) => ({ id: r.id, pattern: r.pattern, categoryId: r.category_id, category: r.category, priority: r.priority })),
@@ -875,7 +876,7 @@ api.post('/receipts/:id/reanalyze', W, async (c) => {
   if (r.status === 'pending' || r.status === 'processing') return bad(c, 'Kvitteringen leses fortsatt');
   const engine = (await c.req.json().catch(() => ({}))).engine === 'tesseract' ? 'tesseract' : 'gemini';
   const label = engine === 'tesseract' ? 'Lokal OCR' : 'Gemini';
-  if (engine === 'gemini' && !secret('geminiKey')) return bad(c, 'Legg inn en Gemini-nøkkel under Innstillinger → AI-motor for å analysere på nytt.');
+  if (engine === 'gemini' && !hasGemini()) return bad(c, 'Legg inn en Gemini-nøkkel under Innstillinger → AI-motor for å analysere på nytt.');
   if (engine === 'tesseract' && r.mime === 'text/plain') return bad(c, 'Lokal OCR leser bare bilder og PDF, ikke e-posttekst');
   const log = (step, detail) => scanLog(r.id, step, detail);
   log('reanalyse', `${label}, originalfilen`);
@@ -1175,7 +1176,7 @@ api.put('/settings', W, async (c) => {
   for (const k of ['groqKey', 'roboflowKey']) if (typeof b[k] === 'string' && c.get('access').session) setSecret(k, b[k].trim());
   if (typeof b.imapPass === 'string' && c.get('access').session) setSecret('imapPass', b.imapPass);
   const out = settings();
-  return c.json({ ...out, imapPin: out.imapPin ? { fingerprint: out.imapPin.fingerprint } : null, geminiKeySet: !!secret('geminiKey'), groqKeySet: !!secret('groqKey'), roboflowKeySet: !!secret('roboflowKey'), imapPassSet: !!secret('imapPass') });
+  return c.json({ ...out, imapPin: out.imapPin ? { fingerprint: out.imapPin.fingerprint } : null, geminiKeySet: !!hasGemini(), groqKeySet: !!secret('groqKey'), roboflowKeySet: !!secret('roboflowKey'), imapPassSet: !!secret('imapPass') });
 });
 
 api.get('/health/ai', R, async (c) => c.json(await health()));
@@ -1184,6 +1185,25 @@ api.post('/ai/test', R, async (c) => { const b = await c.req.json().catch(() => 
 api.post('/ai/roboflow/test', R, async (c) => c.json(await testRoboflow()));
 // Siste AI-kall (oppgave, motor, modell, ms, status) for feilsøking under Innstillinger → AI.
 api.get('/ai/log', R, (c) => c.json({ items: aiLog(+c.req.query('limit') || 50) }));
+// Flere Gemini-nøkler (reserver ved brukt opp kvote). Nøklene vises aldri, bare de fire siste tegnene.
+const keyErr = (c, e) => c.json({ error: e.message }, e.status ?? 400);
+api.get('/ai/gemini-keys', R, (c) => c.json({ items: listKeysOut() }));
+api.post('/ai/gemini-keys', sessionOnly, async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  try { const id = addKey(b.label, b.key); return c.json({ id, items: listKeysOut() }, 201); } catch (e) { return keyErr(c, e); }
+});
+api.patch('/ai/gemini-keys/:id', sessionOnly, async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  try { if (b.label != null) renameKey(c.req.param('id'), b.label); if (b.reset) resetKey(c.req.param('id')); return c.json({ items: listKeysOut() }); } catch (e) { return keyErr(c, e); }
+});
+api.delete('/ai/gemini-keys/:id', sessionOnly, (c) => { removeKey(c.req.param('id')); return c.json({ items: listKeysOut() }); });
+api.put('/ai/gemini-keys/order', sessionOnly, async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  orderKeys(Array.isArray(b.ids) ? b.ids.map(String) : []); return c.json({ items: listKeysOut() });
+});
+api.post('/ai/gemini-keys/:id/test', sessionOnly, async (c) => {
+  try { const r = await testKey(c.req.param('id')); return c.json({ ...r, items: listKeysOut() }); } catch (e) { return c.json({ ok: false, message: e.message, items: listKeysOut() }, e.status ?? 502); }
+});
 // Strekkoder og QR fra et bilde (Sporing → «Skann strekkode»). zbar på serveren, med Roboflow-beskjæring hvis satt opp.
 // 501 med årsak når serveren ikke har strekkodeleser; da bruker klienten sin egen.
 api.post('/scan/barcode', R, async (c) => {

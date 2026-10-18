@@ -17,6 +17,7 @@ import { config } from './config.js';
 import { settings, secret } from './finans/db.js';
 import { sniffMime } from './finans/scan.js';
 import { readJson, bad, str, MOCK, aiJson } from './homeos-common.js';
+import { geminiFetch, hasGemini } from './finans/gemini-keys.js';
 
 const ROOT = resolve(config.dataDir, 'mat');
 const rid = () => randomBytes(6).toString('hex');
@@ -310,10 +311,9 @@ async function visionJson(buf, mime, prompt, schema) {
   for (const p of order) {
     try {
       if (p === 'gemini') {
-        const key = secret('geminiKey');
-        if (!key) throw new Error('Gemini-nøkkel mangler (FinansHub → Innstillinger → AI-motor)');
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(st.geminiModel)}:generateContent`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, signal: AbortSignal.timeout(90_000),
+        if (!hasGemini()) throw new Error('Gemini-nøkkel mangler (FinansHub → Innstillinger → AI-motor)');
+        const res = await geminiFetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(st.geminiModel)}:generateContent`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(90_000),
           body: JSON.stringify({ contents: [{ parts: [{ inline_data: { mime_type: mime, data: buf.toString('base64') } }, { text: prompt }] }],
             generationConfig: { temperature: 0.1, responseMimeType: 'application/json', responseSchema: schema } }),
         });

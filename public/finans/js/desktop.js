@@ -475,6 +475,52 @@ function reports() {
 
 /* ===================== Innstillinger ===================== */
 
+// Flere Gemini-nøkler: reserver som tas i bruk når en konto har brukt opp kvoten. Bare de fire siste tegnene vises.
+function gkeysBox() {
+  if (S.gkeys === undefined) { S.gkeys = null; api('/ai/gemini-keys').then((r) => { S.gkeys = r.items ?? []; render(); }).catch(() => { S.gkeys = []; }); }
+  const list = S.gkeys ?? [];
+  const when = (t) => new Date(t).toLocaleString('nb-NO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const badge = (k) => (k.status === 'ok' ? '<span class="pill" style="background:var(--pos-soft,#16271d);color:var(--pos)">Aktiv</span>'
+    : `<span class="pill" style="background:var(--warn-soft);color:var(--neg)" title="${esc(k.reason ?? '')}">${esc(k.status === 'invalid' ? 'Ugyldig' : 'Brukt opp')} til ${esc(when(k.until))}</span>`);
+  const rows = list.map((k, i) => `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:var(--inner)">
+      <span class="mono" style="width:22px;color:var(--muted)">${i + 1}.</span>
+      <span class="grow" style="min-width:0"><b style="font-weight:600">${esc(k.label)}</b> <span class="note mono" style="font-size:12px">…${esc(k.last4)}</span>${k.lastOk ? `<span class="note" style="display:block;font-size:12px">Sist brukt ${esc(when(k.lastOk))}</span>` : ''}</span>
+      ${badge(k)}
+      ${k.status !== 'ok' ? `<button class="btn sm ghost" data-gk-act="reset" data-gk="${esc(k.id)}" title="Prøv nøkkelen igjen nå">Prøv igjen</button>` : ''}
+      <button class="btn sm ghost" data-gk-act="test" data-gk="${esc(k.id)}">Test</button>
+      ${!k.main && i > 1 ? `<button class="btn sm ghost" data-gk-act="up" data-gk="${esc(k.id)}" aria-label="Flytt opp">▲</button>` : ''}
+      <button class="btn sm ghost" data-gk-act="del" data-gk="${esc(k.id)}" aria-label="Fjern">Fjern</button>
+    </div>`).join('');
+  return `<div style="grid-column:1/-1;display:flex;flex-direction:column;gap:8px;padding:14px;border:1px solid var(--line);border-radius:14px">
+    <div><b style="font-weight:600">Gemini-nøkler i rekkefølge</b><div class="note" style="font-size:12.5px">Når en nøkkel har brukt opp kvoten (per minutt, dag eller måned), brukes neste med en gang. Den første prøves igjen når kvoten nullstilles.</div></div>
+    ${rows || '<div class="note" style="font-size:12.5px">Ingen nøkler ennå. Legg inn hovednøkkelen over, eller en reserve under.</div>'}
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><input class="inp" style="flex:1 1 140px" data-gk-label placeholder="Navn, f.eks. Konto 2"><input class="inp" type="password" style="flex:2 1 220px" data-gk-key placeholder="Ny Gemini API-nøkkel (AIza…)" autocomplete="off"><button class="btn" data-gk-act="add">+ Legg til reserve</button></div>
+    ${S.gkeyMsg ? `<div class="${S.gkeyMsg.ok ? 'ok-msg' : 'err-msg'}" style="font-size:13px">${esc(S.gkeyMsg.text)}</div>` : ''}
+  </div>`;
+}
+async function gkeyAction(t) {
+  const act = t.dataset.gkAct, id = t.dataset.gk, list = S.gkeys ?? [];
+  const call = async (path, opts) => { try { const r = await api(path, opts); S.gkeys = r.items ?? S.gkeys; return r; } catch (e) { S.gkeyMsg = { ok: false, text: e.message }; return null; } };
+  S.gkeyMsg = null;
+  if (act === 'add') {
+    const root = t.closest('div').parentElement, key = root.querySelector('[data-gk-key]').value.trim(), label = root.querySelector('[data-gk-label]').value.trim();
+    if (!key) { S.gkeyMsg = { ok: false, text: 'Lim inn nøkkelen først' }; return render(); }
+    if (await call('/ai/gemini-keys', { method: 'POST', json: { label, key } })) { S.gkeyMsg = { ok: true, text: 'Reservenøkkelen er lagret' }; loadAi().then(render); }
+  } else if (act === 'test') {
+    t.disabled = true; t.textContent = 'Tester …';
+    const r = await call(`/ai/gemini-keys/${encodeURIComponent(id)}/test`, { method: 'POST' });
+    if (r) S.gkeyMsg = { ok: r.ok, text: r.message };
+  } else if (act === 'reset') await call(`/ai/gemini-keys/${encodeURIComponent(id)}`, { method: 'PATCH', json: { reset: true } });
+  else if (act === 'del') {
+    if (t.dataset.sure !== '1') { t.dataset.sure = '1'; t.textContent = 'Bekreft'; return; }
+    await call(`/ai/gemini-keys/${encodeURIComponent(id)}`, { method: 'DELETE' }); loadAi().then(render);
+  } else if (act === 'up') {
+    const ids = list.filter((k) => !k.main).map((k) => k.id), i = ids.indexOf(id);
+    if (i > 0) { [ids[i - 1], ids[i]] = [ids[i], ids[i - 1]]; await call('/ai/gemini-keys/order', { method: 'PUT', json: { ids } }); }
+  }
+  render();
+}
+
 const SET_TABS = [['gen', 'Generelt', 'Navn, valuta, måned'], ['look', 'Utseende', 'Tema og sidemeny'], ['meny', 'Sidemeny', 'Rekkefølge og synlighet'], ['bol', 'Boliger', 'Ny bolig, deling, oppsett og kategorier'], ['imp', 'Import', 'Bank, Excel, Finn-e-post og annonser'], ['ai', 'AI og tolkning', 'Motorer, hvem gjør hva, OCR og logg'], ['aks', 'Aksjer · Trading 212', 'Nøkkel, miljø og synk'], ['cat', 'Kategorier', 'Farger og typer'], ['rule', 'Regler', 'Auto-kategorisering'],
   ['varsel', 'Varsler', 'Budsjett og kvitteringer'], ['mobil', 'Mobil og tilgang', 'App-tokens og snarveier'], ['data', 'Backup og data', 'Nedlasting, SMB-share og gjenoppretting']];
 
@@ -517,6 +563,7 @@ function settingsPage() {
         <label class="f">Ollama-modell<select class="inp" data-set="ollamaModel">${models.map((m) => opt(m, m, st.ollamaModel)).join('')}</select></label>
         <label class="f">Gemini-modell<input class="inp mono" style="font-size:13px" data-set="geminiModel" value="${esc(st.geminiModel)}"></label>
         <label class="f">Gemini API-nøkkel<input class="inp" type="password" data-set="geminiKey" value="" placeholder="${st.geminiKeySet ? '•••••••• lagret på serveren' : 'Lagres på serveren'}" autocomplete="off"></label>
+        ${gkeysBox()}
         <label class="f">Groq-modell (tekst)<input class="inp mono" style="font-size:13px" data-set="groqModel" list="groq-models" value="${esc(st.groqModel ?? '')}" placeholder="llama-3.3-70b-versatile"></label>
         <label class="f">Groq-modell (bilder)<input class="inp mono" style="font-size:13px" data-set="groqVisionModel" list="groq-models" value="${esc(st.groqVisionModel ?? '')}" placeholder="meta-llama/llama-4-scout-17b-16e-instruct"></label>
         <datalist id="groq-models">${(ai?.groqModels ?? ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'meta-llama/llama-4-scout-17b-16e-instruct', 'qwen/qwen3-32b']).map((m) => `<option value="${esc(m)}">`).join('')}</datalist>
@@ -788,6 +835,7 @@ export function bind() {
     let x;
     if ((x = d('[data-open-tx]'))) { const id = +x.dataset.openTx; if (u.page !== 'tx') { u.sel = id; location.hash = '#/tx'; return; } u.sel = u.sel === id ? null : id; u.msg = {}; return render(); }
     if ((x = d('[data-open-rc]'))) { e.preventDefault(); u.selRc = x.dataset.openRc; if (u.page !== 'kv') { location.hash = '#/kv'; return; } return render(); }
+    if ((x = d('[data-gk-act]'))) return gkeyAction(x);
     if ((x = d('[data-mode]'))) { u.mode = x.dataset.mode; return render(); }
     if ((x = d('[data-rap]'))) { u.rap = x.dataset.rap; await loadReport(); return render(); }
     if ((x = d('[data-month]'))) { u.month = shiftMonth(u.month, (u.page === 'rap' && u.rap === 'year' ? 12 : 1) * +x.dataset.month); return load(); }

@@ -3,6 +3,7 @@
 // 2) Svar: språkmodellen får treffene og ferdig utregnede summer, og må vise til treffene. Tall i svaret som ikke finnes
 //    i grunnlaget gjør at svaret forkastes og det regelbaserte sammendraget brukes i stedet – modellen får ikke finne på tall.
 import { db, settings, secret } from './db.js';
+import { geminiFetch, hasGemini } from './gemini-keys.js';
 import { textJson } from './ai.js';
 
 const q = (sql) => db.prepare(sql);
@@ -50,7 +51,7 @@ const embedModel = () => {
   if (!st.aiSearchEmbed) return null;
   if (st.embedModel) return { kind: 'ollama', model: st.embedModel };
   // text-embedding-004 ble slått av hos Google i januar 2026; gemini-embedding-001 er etterfølgeren (768 dimensjoner holder lagringen liten).
-  if (secret('geminiKey')) return { kind: 'gemini', model: 'gemini-embedding-001' };
+  if (hasGemini()) return { kind: 'gemini', model: 'gemini-embedding-001' };
   return null;
 };
 async function embed(texts, m) {
@@ -59,8 +60,8 @@ async function embed(texts, m) {
     if (!res.ok) throw new Error(`Ollama embed ${res.status}`);
     return (await res.json()).embeddings;
   }
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m.model}:batchEmbedContents`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': secret('geminiKey') }, signal: AbortSignal.timeout(30_000),
+  const res = await geminiFetch(`https://generativelanguage.googleapis.com/v1beta/models/${m.model}:batchEmbedContents`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(30_000),
     body: JSON.stringify({ requests: texts.map((t) => ({ model: `models/${m.model}`, content: { parts: [{ text: t }] }, outputDimensionality: 768 })) }),
   });
   if (!res.ok) throw new Error(`Gemini embed ${res.status}`);

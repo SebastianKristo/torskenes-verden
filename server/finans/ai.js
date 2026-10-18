@@ -1,6 +1,7 @@
 // AI-utlesing av kvitteringer. Felles prompt og skjema for Ollama (lokalt) og Gemini (sky).
 // Svaret valideres; ugyldig svar gir ett nytt forsøk før bilaget markeres for manuell utfylling.
 import { settings, secret, db } from './db.js';
+import { geminiFetch, hasGemini, usableKeys } from './gemini-keys.js';
 import { ocrEnabled, ocrReceipt, cropImage, decodeBarcodes, ocrTools } from '../ocr-fallback.js';
 
 export const PROMPT = (cats) => `Du leser en norsk kvittering. Returner KUN JSON etter skjemaet.
@@ -101,7 +102,7 @@ export const aiLog = (limit = 50) => db.prepare('SELECT ts, task, engine, model,
 export const GEMINI_DEFAULT = 'gemini-flash-latest';
 export const GROQ_DEFAULT = 'llama-3.3-70b-versatile';
 export const GROQ_VISION_DEFAULT = 'meta-llama/llama-4-scout-17b-16e-instruct';
-const configured = (p) => (p === 'gemini' ? !!secret('geminiKey') : p === 'groq' ? !!secret('groqKey') : true);
+const configured = (p) => (p === 'gemini' ? hasGemini() : p === 'groq' ? !!secret('groqKey') : true);
 
 // En motor som ikke svarte (nettverk/tidsavbrudd) hoppes over i 3 minutter, så ett kall ikke venter på samme tidsavbrudd igjen og igjen.
 const downUntil = {};
@@ -191,16 +192,16 @@ export function pickGemini(names, want = '') {
   return pool.sort((a, b) => rank(b) - rank(a))[0] ?? null;
 }
 async function geminiGenerate(parts, { schema, timeout, temperature, model }) {
-  const key = secret('geminiKey');
-  if (!key) throw Object.assign(new Error('Gemini-nøkkel mangler (Innstillinger → AI-motor)'), { noRetry: true });
+  if (!hasGemini()) throw Object.assign(new Error('Gemini-nøkkel mangler (Innstillinger → AI-motor)'), { noRetry: true });
   const want = model || GEMINI_DEFAULT;
   let m = geminiResolved[want] ?? want;
   for (let round = 0; round < 3; round++) {
     // 2.5-flash og nyere «tenker» før svaret; for korte JSON-oppgaver gjør det bare kallet tregt (og ga tidsavbrudd i AI-søket).
     const think = /flash/.test(m) && !noThinking.has(m) ? { thinkingConfig: { thinkingBudget: 0 } } : {};
     let res;
-    try { res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, signal: AbortSignal.timeout(timeout),
+    // geminiFetch prøver reservenøklene når en nøkkel har brukt opp kvoten (429) eller er ugyldig.
+    try { res = await geminiFetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(timeout),
       body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature, responseMimeType: 'application/json', ...(schema ? { responseSchema: forGemini(schema) } : {}), ...think } }),
     }); } catch (e) { throw netErr('Gemini', null, e); }
     if (res.ok) {
@@ -213,7 +214,7 @@ async function geminiGenerate(parts, { schema, timeout, temperature, model }) {
     if (res.status === 400 && /think/i.test(err.detail ?? '') && think.thinkingConfig) { noThinking.add(m); continue; }
     if (res.status === 404 || (res.status === 400 && /not (?:found|supported)|is not available|deprecated|retired/i.test(err.detail ?? ''))) {
       let names = [];
-      try { names = await listGemini(key); } catch { /* bruk feilen under */ }
+      try { names = await listGemini(usableKeys()[0]?.key); } catch { /* bruk feilen under */ }
       const next = pickGemini(names.filter((n) => n !== m), want);
       if (next && next !== m) { console.warn(`[ai] Gemini-modellen «${m}» finnes ikke lenger, bruker «${next}»`); geminiResolved[want] = next; m = next; continue; }
       throw Object.assign(new Error(`Gemini-modellen «${m}» finnes ikke lenger. Velg en annen modell under Innstillinger → AI-motor.`), { noRetry: true, status: 404 });
@@ -270,7 +271,7 @@ export async function extract(image, mime, cats, force, { log = () => {} } = {})
     const crop = await roboflowCrop(image, mime, st).catch((e) => { log('roboflow', `hoppet over: ${e.message}`); return null; });
     if (crop) { log('roboflow', `kvitteringen funnet og beskåret (${Math.round(crop.box.confidence * 100)} %)`); image = crop.image; }
   }
-  if (!force && (mime === 'image/heic' || mime === 'image/heif') && secret('geminiKey')) order = ['gemini', ...order];
+  if (!force && (mime === 'image/heic' || mime === 'image/heif') && hasGemini()) order = ['gemini', ...order];
   let lastErr;
   const errors = [];
   for (const p of [...new Set(order)]) {
@@ -394,7 +395,7 @@ export function errKind(e) {
 export async function health() {
   const st = settings();
   const out = { provider: st.provider, order: engineOrder(st, { skipDown: false }), down: ENGINES.filter(isDown),
-    ollama: { ok: false }, gemini: { ok: false, configured: !!secret('geminiKey'), model: st.geminiModel || GEMINI_DEFAULT, resolved: geminiResolved[st.geminiModel || GEMINI_DEFAULT] ?? null },
+    ollama: { ok: false }, gemini: { ok: false, configured: hasGemini(), keys: usableKeys().length, model: st.geminiModel || GEMINI_DEFAULT, resolved: geminiResolved[st.geminiModel || GEMINI_DEFAULT] ?? null },
     groq: { ok: false, configured: !!secret('groqKey'), model: st.groqModel || GROQ_DEFAULT, visionModel: st.groqVisionModel || GROQ_VISION_DEFAULT },
     roboflow: { configured: !!secret('roboflowKey'), workspace: st.roboflowWorkspace || ROBOFLOW_WORKSPACE, model: roboflowModelOf(st) || null, barcodeModel: st.roboflowBarcodeModel || null, workflow: st.roboflowWorkflow || null },
     tasks: Object.entries(TASKS).map(([id, t]) => ({ id, name: t.name, engine: taskEngines(st)[id], default: t.engine })),
@@ -407,7 +408,7 @@ export async function health() {
   } catch (e) { out.ollama = { ok: false, error: e.cause?.code || e.name }; }
   if (out.gemini.configured) {
     try {
-      const names = await listGemini(secret('geminiKey'));
+      const names = await listGemini(usableKeys()[0]?.key);
       const want = st.geminiModel || GEMINI_DEFAULT;
       out.gemini = { ...out.gemini, ok: true, hasModel: names.includes(want), suggested: pickGemini(names, want), models: names.filter((n) => n.startsWith('gemini')).slice(0, 40) };
     } catch (e) { out.gemini = { ...out.gemini, ok: false, error: e.message ?? e.cause?.code ?? e.name }; }

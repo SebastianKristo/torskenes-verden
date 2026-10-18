@@ -2,6 +2,13 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.10.2] – 18.10.2026
+- **Flere Gemini-nøkler som reserve.** I FinansHub → Innstillinger → AI og tolkning legger du inn reservenøkler i rekkefølge.
+  - Når en nøkkel svarer at kvoten er brukt opp (429), eller at den er ugyldig, brukes neste nøkkel med en gang.
+  - Nøkkelen som er brukt opp, hviler til kvoten nullstilles: 1 minutt for minuttkvote, neste døgnskifte hos Google for dagskvote, og første dag i neste måned for månedskvote eller fakturering.
+  - Hver nøkkel viser status (Aktiv, eller «Brukt opp til …»), og har knappene Test, Prøv igjen, ▲ (flytt opp) og Fjern. Bare de fire siste tegnene vises.
+  - Gjelder all bruk av Gemini: kvitteringer, AI-søk, embeddings, Mat og sammendrag.
+
 ## [4.10.1] – 18.10.2026
 - **Lokal OCR leser butikk og dato bedre:**
   - Kjente kjeder (REMA 1000, KIWI, Coop, MENY, Circle K, Elkjøp og mange flere) gjenkjennes hvor som helst på kvitteringen.
