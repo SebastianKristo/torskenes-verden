@@ -811,6 +811,10 @@ struct PaperHero: View {
             .padding(.bottom, home ? 36 : 34)
         }
         .frame(height: (home ? (wide ? 230 : 172) : 154) + topInset)
+        .overlay(alignment: .topTrailing) {
+            // Kreditering for bildet (NASA, fotografen på Unsplash/Pexels) under profilbildet.
+            BgCredit().padding(.top, topInset + 52).padding(.trailing, 22)
+        }
         .clipped()
     }
 
@@ -827,8 +831,8 @@ struct PaperHero: View {
         } else if store.paperTab == "familie" {
             FamilyHeroArt()
         } else if let img = store.photoImage, store.photo != "cur" {
-            // Overlay på en tom flate: bildet fyller vinduet uten å gjøre siden bredere.
-            Color.clear.overlay { Image(uiImage: img).resizable().scaledToFill() }.clipped()
+            // Bildet med uskarphet, mørklegging, dempede farger, papirtekstur og ev. regn/snø (Background19.swift).
+            BgPhotoLayer(image: img)
         } else {
             LinearGradient(colors: gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing)
         }
@@ -863,7 +867,7 @@ struct PaperHero: View {
     private var topRow: some View {
         HStack(spacing: 8) {
             if home {
-                Text(AppMeta.shared.name).font(PF.serif(22, medium: true)).foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.7).shadow(color: .black.opacity(0.4), radius: 6)
+                Text(AppMeta.shared.name).font(PF.serif(22, medium: true)).foregroundStyle(store.heroInk).lineLimit(1).minimumScaleFactor(0.7).shadow(color: .black.opacity(store.heroInk == .white ? 0.4 : 0), radius: 6)
             } else {
                 pill("‹ \(store.paperUpLabel)") { store.paperUp() }
             }
@@ -907,8 +911,8 @@ struct PaperHero: View {
             Spacer(minLength: 8)
             if home { weather }
         }
-        .foregroundStyle(.white)
-        .shadow(color: .black.opacity(0.35), radius: 7)
+        .foregroundStyle(store.heroInk)
+        .shadow(color: .black.opacity(store.heroInk == .white ? 0.35 : 0), radius: 7)
     }
 
     @ViewBuilder private var weather: some View {

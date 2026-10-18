@@ -455,6 +455,7 @@ struct PaperLookSettings: View {
             ])
             PLabel(text: "Bakgrunn på Hjem").padding(.leading, 4).padding(.top, 14)
             bgGrid
+            BgTuning()
             PLabel(text: "Ikonfarger").padding(.leading, 4).padding(.top, 14)
             VStack(spacing: 0) {
                 ForEach(Array(PaperIconTheme.themes.enumerated()), id: \.element.0) { i, t in
@@ -486,11 +487,12 @@ struct PaperLookSettings: View {
                 pick = nil
             }
         }
+        .task { await store.loadBgPreviews() }
     }
 
     private var bgGrid: some View {
-        let kinds: [(String, String, String)] = [("cur", "Nåværende", "Mørk gradient"), ("oslo", "Oslo", "Operaen og Bjørvika"),
-                                                  ("weather", "Vær nå", "Følger været"), ("planets", "Planeter", "Ny hver dag")]
+        let kinds: [(String, String, String)] = [("cur", "Ingen bilde", "Mørk gradient"), ("oslo", "Oslo", "Byen fra luften"),
+                                                  ("weather", "Vær nå", "Følger været der du er"), ("planets", "Planeter", "Jorda, Månen, Jupiter, Mars")]
         return VStack(spacing: 8) {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
                 ForEach(kinds, id: \.0) { k in bgTile(k.0, k.1, k.2) }
@@ -525,7 +527,7 @@ struct PaperLookSettings: View {
                     LinearGradient(colors: bgColors(kind), startPoint: .topLeading, endPoint: .bottomTrailing)
                     if on, kind != "cur", let img = store.photoImage {
                         Image(uiImage: img).resizable().scaledToFill()
-                    } else if kind != "cur", let img = Store.cachedBg(kind) {
+                    } else if kind != "cur", let img = store.bgPreviews[kind] ?? Store.cachedBg(kind) ?? Store.cachedBg("prev-" + kind) {
                         Image(uiImage: img).resizable().scaledToFill()
                     }
                 }

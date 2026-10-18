@@ -273,6 +273,12 @@ final class Store {
     var paperTrackFull = false
     var photoWindow: PhotoWindow?
     var photoImage: UIImage?
+    /// Bakgrunnen fra /api/background (prompt 19): kreditering, theme_hint, partikler. nil = eldre server.
+    var bgInfo: BgInfo?
+    /// Uskarphet, mørklegging, planet, bytte, Kun på Wi-Fi og animasjon. Lagres lokalt og i layout på serveren.
+    var bgPrefs = BgPrefs.load() { didSet { bgPrefs.save() } }
+    /// Forhåndsvisning per type i Innstillinger → Bakgrunn.
+    var bgPreviews: [String: UIImage] = [:]
 
     /* ---------- Papir, prompt 14 ---------- */
 

@@ -23,6 +23,7 @@ extension Store {
         if JS.bool(o, "onboarded") == false, !UserDefaults.standard.bool(forKey: "fh_onboarded"), onboarding == nil { onboarding = 0 }
         applyPaper15(o)
         applyPaper16(o)
+        applyPaper19(o)
     }
 
     nonisolated static let trkKeys = ["add", "shipments", "notify", "carriers"]
@@ -279,9 +280,11 @@ extension Store {
     func loadPhotoWindow() async {
         let kind = photo
         photoFailed = false
-        if kind == "cur" { photoWindow = nil; photoImage = nil; return }
+        if kind == "cur" { photoWindow = nil; photoImage = nil; bgInfo = nil; return }
         // Bildet fra forrige gang vises med en gang.
         if let cached = Store.cachedBg(kind) { photoImage = cached }
+        // Ny bakgrunnstjeneste (prompt 19). Eldre servere: /api/photo-window under.
+        if await loadBackground(kind) { return }
         guard let d = try? await api.callAt("/api", "GET", "/photo-window?kind=\(kind)") else {
             if photoImage == nil { photoFailed = true }
             return
@@ -304,7 +307,7 @@ extension Store {
         if photoImage == nil { photoFailed = true }
     }
 
-    private func loadBg(_ u: String) async -> UIImage? {
+    func loadBg(_ u: String) async -> UIImage? {
         if u.hasPrefix("http://") || u.hasPrefix("https://") {
             guard let url = URL(string: u), let r = try? await URLSession.shared.data(from: url) else { return nil }
             return UIImage(data: r.0)
