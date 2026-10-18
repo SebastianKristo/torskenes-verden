@@ -603,6 +603,29 @@ api.get('/transactions/:id/original', need('read:transactions'), (c) => {
   });
 });
 
+// Detaljvisning (Papir mobil, prompt 15): transaksjonen med kvitteringen (varelinjer, total, ✦-sammendrag) og bankraden.
+const RECEIPT_STATE = (st) => (st === 'booked' ? 'attached' : 'needs_review');
+api.get('/transactions/:id', need('read:transactions'), (c) => {
+  const id = +c.req.param('id');
+  if (!Number.isInteger(id)) return c.notFound();
+  const t = q(`${TX_SELECT} WHERE t.id=?`).get(id);
+  if (!t) return c.notFound();
+  const out = txOut(t);
+  const r = q('SELECT id, mime, file, total, extraction, status, ai_short FROM fh_receipts WHERE transaction_id=? ORDER BY created DESC LIMIT 1').get(id);
+  let ex = null; try { ex = r?.extraction ? JSON.parse(r.extraction) : null; } catch { ex = null; }
+  let bank = null; try { bank = t.raw_bank_row ? JSON.parse(t.raw_bank_row) : null; } catch { bank = null; }
+  return c.json({
+    ...out,
+    aiSummary: out.aiLong ?? out.aiShort ?? null,
+    receipt: r ? { id: r.id, status: RECEIPT_STATE(r.status), mime: r.mime, fileUrl: r.file ? `/finans/api/receipts/${r.id}/file` : null,
+      lines: (ex?.lines ?? []).map((l) => ({ name: l.description, price: l.amount })), total: r.total != null ? r.total / 100 : null,
+      aiSummary: r.ai_short ?? out.aiShort ?? null } : null,
+    bank: bank ? { bookingDate: bank.bookingDate ?? null, valueDate: bank.valueDate ?? null, description: bank.description ?? t.description,
+      message: bank.message ?? bank.raw?.['Melding/KID/Fakt.nr'] ?? null, amount: bank.amount ?? t.amount / 100, account: bank.account ?? null,
+      archiveReference: bank.archiveReference ?? null, raw: bank.raw ?? {} } : null,
+  });
+});
+
 const csvCell = (v) => (/[;"\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
 const nok = (o) => (o / 100).toFixed(2).replace('.', ',');
 api.get('/transactions.csv', need('read:transactions'), (c) => {
@@ -755,6 +778,12 @@ const origSelect = q('SELECT * FROM fh_receipts WHERE id=?');
 
 api.get('/receipts', R, (c) => {
   const status = c.req.query('status');
+  // Banneret «N kvitteringer til gjennomgang»: bare tallet.
+  if (c.req.query('count') === '1') {
+    const st = status === 'queue' ? null : status || 'needs_review';
+    const n = st ? q('SELECT COUNT(*) FROM fh_receipts WHERE status=?').pluck().get(st) : q("SELECT COUNT(*) FROM fh_receipts WHERE status IN ('pending','processing','needs_review')").pluck().get();
+    return c.json({ count: n });
+  }
   const where = status === 'queue' ? "WHERE status IN ('pending','processing','needs_review')" : status ? 'WHERE status=?' : '';
   const rows = q(`SELECT * FROM fh_receipts ${where} ORDER BY created DESC LIMIT 300`).all(...(status && status !== 'queue' ? [status] : []));
   const cats = catById(), accs = accById();

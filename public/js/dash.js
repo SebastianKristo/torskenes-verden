@@ -104,7 +104,7 @@ function renderTrips() {
   }).join('');
 }
 
-function greeting(h) { return h < 10 ? 'God morgen' : h < 18 ? 'Hei' : 'God kveld'; }
+function greeting(h) { return (h < 5 ? 'God natt' : h < 10 ? 'God morgen' : h < 12 ? 'God formiddag' : h < 18 ? 'God ettermiddag' : h < 23 ? 'God kveld' : 'God natt'); }
 
 function renderLesson() {
   const s = store.data.school;

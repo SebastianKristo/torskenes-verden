@@ -18,6 +18,7 @@ import { matApi } from './mat.js';
 import { domainOverview } from './domains.js';
 import { readBg, weatherImages, weatherKind, planetsToday, osloImages, apodImage } from './bg.js';
 import { uiPrefs, saveUiPrefs } from './ui.js';
+import { weatherFull } from './weather-full.js';
 import * as integrations from './integrations.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
@@ -100,7 +101,17 @@ const SCALAR = {
   onboarded: (v) => typeof v === 'boolean',
   // Rekkefølgen på kortene i Sporing (prompt 14): Legg til + kilder, Sendinger, Varsler og Transportører.
   trkOrder: (v) => Array.isArray(v) && v.length <= TRK_CARDS.length && new Set(v).size === v.length && v.every((x) => TRK_CARDS.includes(x)),
+  // Prompt 15: tilpassede sider (rekkefølge og skjulte kort per side), Finans-fanelinjen, fjerde fane og skanneknapp.
+  pages: (v) => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length <= 30
+    && Object.entries(v).every(([k, o]) => /^[\w.-]{1,40}$/.test(k) && o && typeof o === 'object' && !Array.isArray(o)
+      && Object.keys(o).every((f) => f === 'order' || f === 'hidden') && (o.order === undefined || cardIds(o.order)) && (o.hidden === undefined || cardIds(o.hidden))),
+  finTabs: (v) => Array.isArray(v) && v.length >= 1 && v.length <= 4 && new Set(v).size === v.length && v.every((x) => FIN_TABS.includes(x)),
+  fourthTab: (v) => ['auto', 'domener', 'sporing'].includes(v),
+  fab: (v) => ['float', 'inline'].includes(v),
 };
+const cardIds = (a) => Array.isArray(a) && a.length <= 40 && a.every((x) => typeof x === 'string' && /^[\w.-]{1,40}$/.test(x));
+const FIN_TABS = ['oversikt', 'liste', 'finn', 'sok', 'budsjett', 'kvitteringer', 'aksjer', 'abonnementer', 'kontoer', 'boliger'];
+const FIN_TABS_DEFAULT = ['oversikt', 'liste', 'finn', 'sok'];
 const TRK_CARDS = ['add', 'shipments', 'notify', 'carriers'];
 const PHOTO_KINDS = ['cur', 'oslo', 'weather', 'planets', 'custom'];
 export const layoutOf = (id) => kv.get(id, 'layout', {});
@@ -226,7 +237,8 @@ const minsTo = (iso) => Math.max(0, Math.round((new Date(iso) - Date.now()) / 60
 const hhmm = (iso) => new Date(iso).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Oslo' });
 const depOut = (d) => ({ line: d.line, mode: d.mode, color: d.color ?? MODE_COLOR[d.mode] ?? MODE_COLOR.bus, textColor: d.textColor ?? '#FFFFFF', min: minsTo(d.time), minutes: minsTo(d.time), time: hhmm(d.time), to: d.to });
 
-const greetingFor = (h) => (h < 10 ? 'God morgen' : h < 18 ? 'Hei' : 'God kveld');
+// 05–10 God morgen, 10–12 God formiddag, 12–18 God ettermiddag, 18–23 God kveld, 23–05 God natt.
+export const greetingFor = (h) => (h < 5 ? 'God natt' : h < 10 ? 'God morgen' : h < 12 ? 'God formiddag' : h < 18 ? 'God ettermiddag' : h < 23 ? 'God kveld' : 'God natt');
 const osloHour = () => +new Date().toLocaleString('en-GB', { hour: '2-digit', hour12: false, timeZone: 'Europe/Oslo' }).slice(0, 2);
 const safe = async (fn) => { try { return await fn(); } catch { return null; } };
 
@@ -267,7 +279,12 @@ api.put('/me/layout', authOrToken, async (c) => {
   for (const [k, v] of Object.entries(b)) {
     if (!LAYOUT[k] && !SCALAR[k]) return c.json({ error: `Ukjent nøkkel ${k}` }, 400);
     if (v === null) { delete next[k]; continue; }
-    if (SCALAR[k]) { if (!SCALAR[k](v)) return c.json({ error: `Ugyldig verdi for ${k}` }, 400); next[k] = v; continue; }
+    if (SCALAR[k]) {
+      if (!SCALAR[k](v)) return c.json({ error: `Ugyldig verdi for ${k}` }, 400);
+      // Sidene flettes per side, så en klient kan lagre én side uten å sende resten.
+      next[k] = k === 'pages' ? { ...(next.pages ?? {}), ...v } : v;
+      continue;
+    }
     if (!LAYOUT[k](v)) return c.json({ error: `Ugyldig verdi for ${k}` }, 400);
     next[k] = { ...(next[k] ?? {}), ...v };
     // Tomme navn betyr standardnavnet og lagres ikke.
@@ -275,6 +292,12 @@ api.put('/me/layout', authOrToken, async (c) => {
   }
   kv.set(c.get('user'), 'layout', next);
   return c.json(next);
+});
+
+// Værappen i mobilappene (prompt 15): Open-Meteo, cachet i 10 minutter.
+api.get('/weather/full', authOrToken, async (c) => {
+  const q = c.req.query();
+  return c.json(await weatherFull({ place: q.place, lat: q.lat, lon: q.lon, name: typeof q.name === 'string' ? q.name.slice(0, 60) : undefined }));
 });
 
 api.get('/me/shortcuts', authOrToken, (c) => c.json(shortcutsFor(c.get('user'))));
@@ -406,7 +429,8 @@ export const designOf = (id) => {
   const fresh = installKind() === 'papir';
   const trk = (l.trkOrder ?? []).filter((x) => TRK_CARDS.includes(x));
   return { design: l.design ?? 'v2', compactNav: !!l.compactNav, hlTheme: l.hlTheme ?? (fresh ? '2c' : 'cur'), mobileDesign: l.mobileDesign ?? (fresh ? 'papir' : 'klassisk'),
-    paperMode: l.paperMode ?? 'auto', photo: l.photo ?? (fresh ? 'oslo' : 'cur'), onboarded: l.onboarded ?? !fresh, trkOrder: [...trk, ...TRK_CARDS.filter((x) => !trk.includes(x))] };
+    paperMode: l.paperMode ?? 'auto', photo: l.photo ?? (fresh ? 'oslo' : 'cur'), onboarded: l.onboarded ?? !fresh, trkOrder: [...trk, ...TRK_CARDS.filter((x) => !trk.includes(x))],
+    pages: l.pages ?? {}, finTabs: l.finTabs ?? FIN_TABS_DEFAULT, fourthTab: l.fourthTab ?? 'auto', fab: l.fab ?? 'float' };
 };
 
 const PHOTOS = join(config.dataDir, 'photo-window');
