@@ -69,7 +69,27 @@ data class Shipment(
     val step: Int, val steps: List<String>, val eta: String, val pickupPoint: String, val archived: Boolean, val url: String, val events: List<TrackEvent>,
     /** Logoen fra serveren (/assets/carriers/<id>.svg). Appen viser initialene på merkefargen når SVG ikke kan tegnes. */
     val carrierLogo: String? = null,
+    /** Prompt 21: tittel fra serveren (varenavn eller butikk, ellers «Pakke fra Bring»). Aldri sporingsnummer. */
+    val title: String? = null,
+    /** Butikkens domene (fra e-postavsender, Finn eller ParcelsApp), og logo-id i logoregisteret. */
+    val shopDomain: String? = null,
+    val logoId: String? = null,
+    /** Fraktselskapets domene for den lille merkelappen (bring.no, postnord.no …). */
+    val carrierDomain: String? = null,
+    /** Antall pakker til (utenom denne) på Hjem-kortet. */
+    val moreCount: Int? = null,
 ) {
+    /** Tittelen på kortet: serverens tittel, ellers varenavn/butikk, ellers «Pakke fra <fraktselskap>». */
+    val cardTitle: String get() {
+        title?.takeIf { it.isNotBlank() && it != trackingNo }?.let { return it }
+        // Standardnavnet «Bring · 0750» (fraktselskap + slutten av sporingsnummeret) er ikke et varenavn.
+        val generic = name.isBlank() || name == trackingNo || name == "$carrierName · ${trackingNo.takeLast(4)}" || (trackingNo.length >= 6 && name.contains(trackingNo))
+        return listOfNotNull(shop.takeIf { it.isNotBlank() }, name.takeIf { !generic && it != shop }).joinToString(" · ").ifBlank { "Pakke fra $carrierName" }
+    }
+    /** Domenet logoen hentes fra: butikken først, så fraktselskapet. */
+    val logoDomain: String? get() = shopDomain ?: carrierDomain ?: CARRIER_DOMAINS[carrier]
+    val hasShopLogo: Boolean get() = shopDomain != null || logoId != null || shop.isNotBlank()
+
     val done get() = status == "delivered"
     val active get() = !archived && !done
     val ready get() = status == "ready_for_pickup" && direction != "out"
@@ -108,9 +128,22 @@ fun parseShipment(o: JSONObject): Shipment {
         (o.optIntOrNull("step") ?: Shipment.stepOf(status)).coerceIn(0, 4), steps, o.optStr("eta") ?: "", o.optStr("pickupPoint") ?: "",
         o.optBoolean("archived"), o.optStr("url") ?: "",
         o.optJSONArray("events")?.map { e -> TrackEvent(e.timeAt("ts") ?: e.timeAt("time"), e.optStr("ts") ?: "", e.optStr("status") ?: e.optStr("text") ?: "", e.optStr("location") ?: "") } ?: emptyList(),
-        o.optStr("carrierLogo"),
+        o.optStr("carrierLogo") ?: o.optJSONObject("logo")?.let { l -> l.optStr("carrierLogo") ?: l.optJSONObject("carrierLogo")?.optStr("url") },
+        title = o.optStr("title"),
+        shopDomain = o.optStr("shop_domain") ?: o.optStr("shopDomain") ?: o.optJSONObject("logo")?.optStr("domain"),
+        logoId = o.optJSONObject("logo")?.optStr("id"),
+        carrierDomain = o.optJSONObject("logo")?.let { l -> l.optJSONObject("carrierLogo")?.optStr("domain") ?: l.optStr("carrierDomain") }
+            ?: CARRIER_DOMAINS[carrier],
+        moreCount = o.optIntOrNull("moreCount"),
     )
 }
+
+/** Fraktselskap → domene (logo og merkelapp), som i claude-code-pakke-logo.md. */
+val CARRIER_DOMAINS: Map<String, String> = mapOf(
+    "bring" to "bring.no", "posten" to "posten.no", "postnord" to "postnord.no", "dhl" to "dhl.com", "helthjem" to "helthjem.no",
+    "instabox" to "instabox.io", "budbee" to "budbee.com", "ups" to "ups.com", "fedex" to "fedex.com", "gls" to "gls-group.com",
+    "dbschenker" to "dbschenker.com", "schenker" to "dbschenker.com", "porterbuddy" to "porterbuddy.com",
+)
 
 data class TrackSource(val on: Boolean, val lastCheck: Instant?)
 data class TrackNotice(val id: String, val kind: String, val text: String)

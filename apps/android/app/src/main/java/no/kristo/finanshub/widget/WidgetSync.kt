@@ -27,15 +27,19 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         val list = runCatching { store.load() }.getOrDefault(emptyList())
         val acc = list.firstOrNull { it.id == store.active() } ?: list.firstOrNull()
         if (acc == null) {
+            TasksStore.useAccount(ctx, null)
             WidgetStore.fail(ctx, "Logg inn i FinansHub", loggedIn = false)
             WidgetSync.redraw(ctx)
             return Result.success()
         }
+        // Data fra en annen konto enn den aktive vises aldri (kontobytte uten nett).
+        WidgetStore.useAccount(ctx, acc.id)
+        TasksStore.useAccount(ctx, acc.id)
         var err: String? = null
         for (base in listOf(acc.server, acc.local, acc.external).filter { it.isNotBlank() }.distinct()) {
             try {
                 val json = Api(base, acc.token).hlGet("/mobile/widgets", timeout = 8_000)
-                WidgetStore.save(ctx, json, System.currentTimeMillis())
+                WidgetStore.save(ctx, json, System.currentTimeMillis(), acc.id)
                 WidgetSync.redraw(ctx)
                 // Huskeliste-widgeten har egne data (/api/tasks/next).
                 runCatching { TasksStore.save(ctx, Api(base, acc.token).hlGet("/tasks/next?n=6", timeout = 8_000)); TasksWidgetSync.redraw(ctx) }

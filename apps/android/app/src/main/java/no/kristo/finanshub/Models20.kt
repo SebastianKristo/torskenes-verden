@@ -15,8 +15,15 @@ import java.util.Locale
 
 /* ---------- Kartfliser ---------- */
 
-/** GET /api/config/map → {tiles:{voyager:'/tiles/voyager/{z}/{x}/{y}{r}.png', …}, attribution, default, maxZoom}. */
-data class MapConfig(val tiles: Map<String, String>, val attribution: String?, val defaultStyle: String, val maxZoom: Int)
+/**
+ * GET /api/config/map → {tiles:{topo:'/tiles/topo/{z}/{x}/{y}.png', …}, attribution, default:'topo', maxZoom, paperFilter, darkFilter}.
+ * Prompt 21: standard er Kartverket topo (gratis, ingen nøkkel). CARTO krever nå nøkkel og brukes ikke som standard.
+ */
+data class MapConfig(
+    val tiles: Map<String, String>, val attribution: String?, val defaultStyle: String, val maxZoom: Int,
+    /** CSS-filteret serveren anbefaler i mørkt tema (f.eks. «invert(1) hue-rotate(180deg) …»). Appen bruker sin egen matrise. */
+    val darkFilter: String? = null,
+)
 
 /** Fliskilden kartet bruker: navn (cache-nøkkel), URL-mal med {s} {z} {x} {y} {r}, og om app-tokenet skal sendes. */
 data class MapTiles(val name: String, val template: String, val auth: Boolean, val attribution: String, val maxZoom: Int, val retina: Boolean)
@@ -25,26 +32,27 @@ fun parseMapConfig(s: String): MapConfig {
     val o = JSONObject(s)
     val t = o.optJSONObject("tiles")
     val tiles = mutableMapOf<String, String>()
-    t?.keys()?.forEach { k -> t.optStr(k)?.let { tiles[k] = it } }
-    return MapConfig(tiles, o.optStr("attribution"), o.optStr("default") ?: "voyager", o.optIntOrNull("maxZoom")?.coerceIn(10, 22) ?: 19)
+    t?.keys()?.forEach { k -> (t.optStr(k) ?: t.optJSONObject(k)?.optStr("url"))?.let { tiles[k] = it } }
+    return MapConfig(tiles, o.optStr("attribution"), o.optStr("default") ?: "topo", o.optIntOrNull("maxZoom")?.coerceIn(10, 22) ?: 18, o.optStr("darkFilter"))
 }
 
-private const val CARTO_ATTR = "© OpenStreetMap-bidragsytere © CARTO"
+private const val KARTVERKET_ATTR = "© Kartverket"
+/** Kartverket topo direkte (merk rekkefølgen {y}/{x}). Brukes når serveren ikke har topo-proxyen. */
+private const val KARTVERKET_TOPO = "https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png"
 
 /**
- * Hvilken kilde kartet skal bruke. Ny server: homelab-proxyen (/tiles) med app-token. Eldre server uten /api/config/map
- * (404): CARTO direkte, aldri tile.openstreetmap.org (OSM blokkerer apper med 403).
+ * Hvilken kilde kartet skal bruke. Ny server: homelab-proxyen (/tiles/topo) med app-token. Eldre server uten topo i
+ * /api/config/map (404, eller bare CARTO, som nå krever nøkkel): Kartverket topo direkte. Aldri tile.openstreetmap.org.
+ * Mørkt tema er de samme flisene med mørkt fargefilter i kartet.
  */
 fun mapTilesFor(cfg: MapConfig?, missing: Boolean, base: String, style: String, retina: Boolean): MapTiles {
     val r = if (retina) "2x" else "1x"
-    if (missing || base.isBlank()) {
-        val path = when (style) { "dark" -> "dark_all"; "light" -> "light_all"; else -> "rastertiles/voyager" }
-        return MapTiles("carto-$style-$r", "https://{s}.basemaps.cartocdn.com/$path/{z}/{x}/{y}{r}.png", false, CARTO_ATTR, 19, retina)
-    }
-    val tpl = cfg?.tiles?.get(style) ?: cfg?.tiles?.get(cfg.defaultStyle) ?: "/tiles/$style/{z}/{x}/{y}{r}.png"
+    val tpl = cfg?.tiles?.get(style) ?: cfg?.tiles?.get("topo")
+    if (missing || base.isBlank() || tpl == null) return MapTiles("kartverket-topo", KARTVERKET_TOPO, false, KARTVERKET_ATTR, 18, retina)
     val full = if (tpl.startsWith("/")) base.trimEnd('/') + tpl else tpl
     val own = full.startsWith(base.trimEnd('/'))
-    return MapTiles("homelab-$style-$r", full, own, cfg?.attribution ?: CARTO_ATTR, cfg?.maxZoom ?: 19, retina)
+    val attr = cfg?.attribution?.takeIf { it.isNotBlank() && !it.contains("CARTO") } ?: KARTVERKET_ATTR
+    return MapTiles("homelab-topo-$r", full, own, attr, cfg?.maxZoom ?: 18, retina)
 }
 
 /** Gyldig punkt på kartet (osmdroid tåler ikke NaN eller breddegrader utenfor Web Mercator). */
@@ -146,9 +154,11 @@ fun distM(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
 
 /** Ikonfarge per flis (tonet bakgrunn = samme farge med lav alfa). */
 val FM_COLORS: Map<String, Long> = mapOf(
-    "budsjett" to 0xFFD9822B, "kvitt" to 0xFFB23A2A, "faste" to 0xFF6B4FA0, "kontoer" to 0xFF2F5D8A,
-    "aksjer" to 0xFF2F7A4F, "rapp" to 0xFFB8892A, "abo" to 0xFFC2557A, "boliger" to 0xFF2A8A8A,
-    "fimport" to 0xFF4A4FA8, "finn" to 0xFF0063FB, "sok" to 0xFF7A3B69, "innst" to 0xFF6F6A60, "liste" to 0xFF5A5246,
+    // Prompt 21 (designet, fmtiles): Budsjett, Kvitteringer, Faste, Kontoer, Aksjer, Rapporter, Subscription OS, Boliger,
+    // Import, Finn, Søk og Innstillinger.
+    "budsjett" to 0xFFC0562A, "kvitt" to 0xFFB23A2A, "faste" to 0xFF7A5AD6, "kontoer" to 0xFF2B5D8A,
+    "aksjer" to 0xFF2F7D4F, "rapp" to 0xFFA8661A, "abo" to 0xFFC2417A, "boliger" to 0xFF3F7A6E,
+    "fimport" to 0xFF4A5BBF, "finn" to 0xFF2B6CB0, "sok" to 0xFF7A3B6B, "innst" to 0xFF6B6558, "liste" to 0xFF5A5246,
 )
 
 val FM_DEFAULT_ORDER = listOf("sok", "liste", "finn", "budsjett", "kvitt", "faste", "kontoer", "aksjer", "rapp", "abo", "boliger", "fimport", "innst")

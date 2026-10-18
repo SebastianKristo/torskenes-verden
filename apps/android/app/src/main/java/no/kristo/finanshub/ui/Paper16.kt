@@ -286,25 +286,14 @@ internal fun WxPlacesSheet(vm: AppViewModel) {
 private val ruterTime = DateTimeFormatter.ofPattern("HH:mm")
 private fun clock(iso: String?): String = runCatching { Instant.parse(iso!!).atZone(ZoneId.systemDefault()).format(ruterTime) }.getOrDefault("")
 
-/** Ruter-bildet øverst: Ruters røde flate med ordmerket og et stilisert bybilde. */
+/** Ruter-bildet øverst (prompt 21): foto fra GET /api/background?type=ruter med scrim, ellers den rolige gradienten. */
 @Composable
-private fun RuterHero(title: String, sub: String, onBack: () -> Unit) {
+private fun RuterHero(title: String, sub: String, photo: android.graphics.Bitmap?, onBack: () -> Unit) {
     val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    Box(Modifier.fillMaxWidth().height(200.dp + top).background(Brush.verticalGradient(listOf(Color(0xFFE60000), Color(0xFF9E0B0B))))) {
-        Canvas(Modifier.matchParentSize()) {
-            val w = size.width; val h = size.height
-            // Stilisert bybilde og trikkeskinner nederst.
-            val sky = Color.White.copy(alpha = .10f)
-            var x = 0f
-            var i = 0
-            while (x < w) {
-                val bw = w * (0.06f + (i % 3) * 0.025f)
-                val bh = h * (0.18f + ((i * 37) % 5) * 0.05f)
-                drawRect(sky, Offset(x, h - bh - 18f), Size(bw - 6f, bh))
-                x += bw; i++
-            }
-            drawLine(Color.White.copy(alpha = .35f), Offset(0f, h - 12f), Offset(w, h - 12f), 3f)
-            drawLine(Color.White.copy(alpha = .2f), Offset(0f, h - 4f), Offset(w, h - 4f), 2f)
+    Box(Modifier.fillMaxWidth().height(200.dp + top).background(Brush.verticalGradient(*HERO_FALLBACK))) {
+        if (photo != null) {
+            Image(photo.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
+            Box(Modifier.matchParentSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = .25f), .35f to Color.Transparent, 1f to Color.Black.copy(alpha = .45f))))
         }
         Column(Modifier.fillMaxSize().padding(top = top + 8.dp, start = 22.dp, end = 22.dp, bottom = 34.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -328,12 +317,13 @@ internal fun RuterPage(vm: AppViewModel) {
     val ctx = LocalContext.current
     val list = rememberLazyListState()
     BackHandler { if (vm.stopEdit) vm.stopEdit = false else vm.closeRuter() }
+    LaunchedEffect(Unit) { vm.loadRuterPhoto() }
     LaunchedEffect(vm.stopSel) { list.scrollToItem(0) }
     val sel = vm.myStops.firstOrNull { it.id == vm.stopSel } ?: vm.myStops.firstOrNull()
     val deps = sel?.let { vm.stopDeps[it.id] }?.departures ?: emptyList()
     Box(Modifier.fillMaxSize().background(p.bg)) {
         LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(bottom = 40.dp)) {
-            item { RuterHero(sel?.name ?: "Avganger", "Sanntid fra Ruter og Entur") { vm.closeRuter() } }
+            item { RuterHero(sel?.name ?: "Avganger", "Sanntid fra Ruter og Entur", vm.ruterPhoto) { vm.closeRuter() } }
             // Stoppene: rulles sideveis og kuttes aldri. Hold inne for å redigere.
             item {
                 Column(Modifier.fillMaxWidth().offset(y = (-22).dp).padding(horizontal = 16.dp)) {
@@ -382,39 +372,17 @@ internal fun RuterPage(vm: AppViewModel) {
             if (sel != null && deps.isEmpty() && vm.stopsError == null) item {
                 Text("Henter avganger …", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(20.dp, 14.dp))
             }
-            items(deps.size) { i ->
-                val d = deps[i]
-                Column(Modifier.fillMaxWidth().clickable { openLink(ctx, ruterLink(sel?.name)) }.padding(20.dp, 0.dp)) {
-                    Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Box(Modifier.widthIn(min = 38.dp).height(28.dp).clip(RoundedCornerShape(7.dp)).background(Color(d.color ?: ruterModeColor(d.mode, d.line))).padding(horizontal = 6.dp),
-                            contentAlignment = Alignment.Center) { Text(d.line, color = Color(d.textColor ?: 0xFFFFFFFF), fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, maxLines = 1) }
-                        Column(Modifier.weight(1f)) {
-                            PSerif(d.to, 19.sp, if (d.cancelled) p.mut else p.ink, maxLines = 1)
-                            val meta = listOfNotNull(
-                                d.platform?.let { "Plattform $it" },
-                                clock(d.expected ?: d.aimed).takeIf { it.isNotBlank() }?.let { t ->
-                                    val aimed = clock(d.aimed)
-                                    if (d.expected != null && aimed.isNotBlank() && aimed != t) "$t (rute $aimed)" else t
-                                },
-                                if (d.realtime) "● sanntid" else "rutetid",
-                            ).joinToString(" · ")
-                            Text(meta, color = if (d.realtime) p.pos else p.mut, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            d.situation?.let { Text("⚠ $it", color = p.lab, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis) }
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                if (d.cancelled) "Innstilt" else d.minutes?.let { if (it <= 0) "nå" else "$it" } ?: clock(d.expected ?: d.aimed),
-                                color = if (d.cancelled) p.lab else p.ink, fontFamily = PaperFonts.serif, fontSize = 26.sp,
-                                textDecoration = if (d.cancelled) TextDecoration.LineThrough else null, maxLines = 1,
-                            )
-                            if (!d.cancelled && (d.minutes ?: 0) > 0) Text("min", color = p.mut, fontSize = 11.sp)
-                        }
+            // Prompt 21: hver avgang kan utvides med stoppene på turen (bare én åpen om gangen).
+            if (deps.isNotEmpty()) item {
+                PCard(Modifier.padding(horizontal = 16.dp)) {
+                    deps.forEachIndexed { i, d ->
+                        val id = "${d.line}|${d.to}|${d.aimed ?: i}"
+                        DepRow21(d, sel?.name, vm.depOpen == id, top = i > 0) { vm.depOpen = if (vm.depOpen == id) null else id }
                     }
-                    Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
                 }
             }
             item {
-                Text("Data: Entur · Trykk på en avgang for å åpne Ruter-appen", color = p.mut, fontSize = 11.5.sp, modifier = Modifier.fillMaxWidth().padding(20.dp, 16.dp))
+                Text("Sanntid fra Entur · Trykk på en avgang for å se stoppene", color = p.mut, fontSize = 11.5.sp, modifier = Modifier.fillMaxWidth().padding(20.dp, 16.dp))
             }
         }
     }

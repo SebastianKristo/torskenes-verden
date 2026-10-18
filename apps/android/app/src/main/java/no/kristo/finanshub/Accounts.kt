@@ -101,7 +101,7 @@ class AppPrefs(ctx: Context) {
         const val MOBILE_DESIGN = "mobile_design" // klassisk | papir
         const val PAPER_MODE = "paper_mode"     // auto | lys | mork
         const val PHOTO = "photo_window"        // cur | oslo | weather | planets | custom
-        const val BG_PLANET = "bg_planet"       // auto | earth | moon | jupiter | mars (prompt 19)
+        const val BG_PLANET = "bg_planet"       // auto | earth | moon | jupiter | mars | saturn (prompt 19 og 21)
         const val BG_ROTATE = "bg_rotate"       // daily | hourly
         const val BG_BLUR = "bg_blur"           // 0–20 px
         const val BG_DIM = "bg_dim"             // 0–60 %

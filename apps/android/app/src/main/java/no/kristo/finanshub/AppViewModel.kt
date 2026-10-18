@@ -252,7 +252,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         private set
     private var netCallback: ConnectivityManager.NetworkCallback? = null
 
-    fun refreshPending() { pendingUploads = runCatching { PendingUploads.list(getApplication()) }.getOrDefault(emptyList()) }
+    /** Bare den innloggede kontoens kø vises og sendes (prompt 21). */
+    fun refreshPending() {
+        val id = account?.id
+        pendingUploads = if (id == null) emptyList() else runCatching { PendingUploads.listFor(getApplication(), id, accounts.size <= 1) }.getOrDefault(emptyList())
+    }
 
     /** Nettet kom tilbake: last opp det som venter (bare på Wi-Fi hvis det er valgt). */
     private fun watchNetwork() {
@@ -279,7 +283,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!canUpload()) { if (!quiet) message = "Venter på Wi-Fi (Innstillinger → Skanning)"; return }
         pendingBusy = true
         try {
-            val n = withContext(Dispatchers.IO) { PendingUploads.flush(getApplication(), api) }
+            val id = account?.id ?: return
+            val n = withContext(Dispatchers.IO) { PendingUploads.flush(getApplication(), api, id, accounts.size <= 1) }
             refreshPending()
             if (n > 0) { message = if (n == 1) "1 kvittering som ventet er lastet opp" else "$n kvitteringer som ventet er lastet opp"; loadReceipts(); loadJobs() }
             else if (!quiet && pendingUploads.isNotEmpty()) message = pendingUploads.first().lastError ?: "Fikk ikke lastet opp ennå"
@@ -289,7 +294,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun removePending(id: String) { PendingUploads.remove(getApplication(), id); refreshPending() }
 
     private suspend fun queuePending(path: String, parts: List<Api.Part>, name: String, error: String?) {
-        withContext(Dispatchers.IO) { PendingUploads.add(getApplication(), path, name, parts, error) }
+        withContext(Dispatchers.IO) { PendingUploads.add(getApplication(), path, name, parts, error, account?.id ?: "") }
         refreshPending()
         PendingUploads.schedule(getApplication(), prefs.bool(AppPrefs.WIFI_ONLY))
         message = "Ingen forbindelse med serveren. Kvitteringen venter på opplasting og sendes når nettet er tilbake."
@@ -417,6 +422,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun removeAccount(id: String) {
         accounts = accounts.filter { it.id != id }
+        clearUserFiles()
         if (activeId == id) {
             val next = accounts.firstOrNull()
             activeId = next?.id
@@ -444,6 +450,38 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         news = null; homeNews = emptyList(); newsOpen = false; photo = null; media = null; matFolders = emptyList(); recipeJobs = emptyList()
         recipePreview = null; dishOpen = null; paperPage = null
         logos.clear()
+        // Prompt 21 (brukerskille): alt som tilhører brukeren tømmes ved kontobytte og utlogging.
+        tasks = null; taskNext = emptyList(); tasksOpen = false; family = null; famTrack = emptyList(); famSel = null; familyOpen = false
+        famPositions = null; tracking = null; homePackages = null; myStops = emptyList(); stopDeps = emptyMap(); stopSel = null; ruterOpen = false
+        photoThumbs = emptyMap(); photoFailed = emptySet(); bgInfo = null; depOpen = null; shareListId = null; taskUsers = emptyList()
+        scopeToAccount()
+    }
+
+    /**
+     * Brukerskille på telefonen (prompt 21): widgetcachen, familie- og helsevalgene og opplastingskøen følger den
+     * aktive kontoen. Posisjon og helse sendes bare for kontoen som selv har slått på deling.
+     */
+    private fun scopeToAccount() {
+        val ctx = getApplication<Application>()
+        val id = accounts.firstOrNull { it.id == activeId }?.id
+        runCatching { no.kristo.finanshub.family.FamilyPrefs.useAccount(ctx, id) }
+        runCatching { no.kristo.finanshub.family.FamilyService.sync(ctx) }
+        runCatching {
+            if (no.kristo.finanshub.family.FamilyPrefs.health(ctx).isEmpty()) no.kristo.finanshub.family.HealthSync.cancel(ctx)
+            else no.kristo.finanshub.family.HealthSync.schedule(ctx)
+        }
+        runCatching { no.kristo.finanshub.widget.WidgetStore.useAccount(ctx, id); no.kristo.finanshub.widget.TasksStore.useAccount(ctx, id) }
+        viewModelScope.launch { runCatching { no.kristo.finanshub.widget.WidgetSync.redraw(ctx) }; runCatching { no.kristo.finanshub.widget.TasksWidgetSync.redraw(ctx) } }
+        if (id != null) runCatching { no.kristo.finanshub.widget.WidgetSync.refresh(ctx) }
+        refreshPending()
+    }
+
+    /** Utlogging: skannede kvitteringer og bakgrunnsbilder i cachen tilhører brukeren og slettes. */
+    private fun clearUserFiles() {
+        val ctx = getApplication<Application>()
+        runCatching { File(ctx.cacheDir, "scans").deleteRecursively() }
+        runCatching { File(ctx.cacheDir, "bg").deleteRecursively() }
+        photo = null
     }
 
     fun updateAddresses(local: String, external: String) {
@@ -2602,6 +2640,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var stopDeps by mutableStateOf<Map<String, StopDeps>>(emptyMap())
         private set
     var stopSel by mutableStateOf<String?>(null)
+    /** Prompt 21: avgangen som er utvidet med stoppliste (bare én om gangen). */
+    var depOpen by mutableStateOf<String?>(null)
+    /** Ruter-bildet øverst i Avganger (GET /api/background?type=ruter). null = gradient. */
+    var ruterPhoto by mutableStateOf<Bitmap?>(null)
+        private set
+    private var ruterPhotoTried = false
+    fun loadRuterPhoto() {
+        if (ruterPhoto != null || ruterPhotoTried) return
+        ruterPhotoTried = true
+        viewModelScope.launch { runCatching { backgroundFor("ruter")?.second }.getOrNull()?.let { ruterPhoto = it } }
+    }
     var stopEdit by mutableStateOf(false)
     var stopAddOpen by mutableStateOf(false)
     var stopSearch by mutableStateOf<List<StopRef>>(emptyList())
@@ -2793,8 +2842,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         else { no.kristo.finanshub.family.HealthSync.schedule(appCtx); no.kristo.finanshub.family.HealthSync.now(appCtx) }
         loadFamilyNow(first = false)
     }
-    fun famSaveZone(id: String?, name: String, lat: Double, lon: Double, radius: Double, colorHex: String) = launch {
+    fun famSaveZone(id: String?, name: String, lat: Double, lon: Double, radius: Double, colorHex: String, shared: Boolean = false) = launch {
         val body = JSONObject().put("name", name.ifBlank { "Sone" }).put("lat", lat).put("lon", lon).put("radius", radius).put("color", colorHex)
+            .put("shared", shared)
         if (id == null) api.hlPost("/family/zones", body) else api.request("PATCH", "/family/zones/" + URLEncoder.encode(id, "UTF-8"), body, prefix = Api.HOMELAB)
         famZoneDraft = null; famZoneEdit = null
         loadFamilyNow(first = false)
@@ -2812,7 +2862,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /* ---------- Prompt 20: kartfliser, posisjonskortet, helse og posisjon, Finans-fliser og logoregisteret ---------- */
 
-    /** /api/config/map. mapConfigMissing = eldre server (404/401/403): kartet bruker CARTO direkte. */
+    /** /api/config/map. mapConfigMissing = eldre server (404/401/403): kartet bruker Kartverket topo direkte. */
     var mapConfig by mutableStateOf<MapConfig?>(null)
         private set
     var mapConfigMissing by mutableStateOf(false)
@@ -2940,7 +2990,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun closeTasks() { tasksOpen = false; taskFocus = false }
     fun loadTasks() = launch {
         try {
-            val t = parseTasks(api.hlGet("/tasks"))
+            val t = withListSharing(parseTasks(api.hlGet("/tasks")))
             tasks = t
             tasksError = null
             taskNext = nextTasks(t)
@@ -2986,7 +3036,54 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         flash("Oppgaven er slettet")
     }
     private suspend fun loadTasksNow() {
-        runCatching { parseTasks(api.hlGet("/tasks")) }.getOrNull()?.let { tasks = it; taskNext = nextTasks(it) }
+        runCatching { withListSharing(parseTasks(api.hlGet("/tasks"))) }.getOrNull()?.let { tasks = it; taskNext = nextTasks(it) }
+    }
+
+    /* ---------- Prompt 21: deling av huskelister (eier, «Delt med …», «Del liste») ---------- */
+
+    /** Listen som deles nå (arket «Del liste»). */
+    var shareListId by mutableStateOf<String?>(null)
+    /** Personene man kan dele med (/api/users: bare id, navn og avatar). */
+    var taskUsers by mutableStateOf<List<TaskMember>>(emptyList())
+        private set
+    var shareBusy by mutableStateOf(false)
+        private set
+
+    /** Eier og medlemmer fra GET /api/tasks/lists når /api/tasks ikke har dem. Eldre server (404): som før. */
+    private suspend fun withListSharing(t: TasksData): TasksData {
+        if (t.lists.any { it.owner != null || it.members.isNotEmpty() }) return t
+        val extra = runCatching { parseTaskLists(api.hlGet("/tasks/lists")) }.getOrNull() ?: return t
+        if (extra.isEmpty()) return t
+        val by = extra.associateBy { it.id }
+        return t.copy(lists = t.lists.map { l -> by[l.id]?.let { e -> l.copy(owner = e.owner, ownerName = e.ownerName, members = e.members, mine = e.mine) } ?: l } +
+            extra.filter { e -> t.lists.none { it.id == e.id } })
+    }
+
+    fun openShareList(id: String) {
+        shareListId = id
+        viewModelScope.launch {
+            val u = runCatching { parseUserList(api.hlGet("/users")) }.getOrNull()
+            taskUsers = (u ?: tasks?.members ?: emptyList()).filter { it.id != family?.me?.userId && it.id != tasks?.lists?.firstOrNull { l -> l.id == id }?.owner }
+        }
+    }
+
+    /** PUT /api/tasks/lists/:id/members {userIds}. Bare eieren kan dele; listen oppdateres etterpå. */
+    fun shareList(id: String, userIds: List<String>) = viewModelScope.launch {
+        shareBusy = true
+        try {
+            api.hlPut("/tasks/lists/" + URLEncoder.encode(id, "UTF-8") + "/members", JSONObject().put("userIds", JSONArray(userIds)))
+            shareListId = null
+            loadTasksNow()
+            flash(if (userIds.isEmpty()) "Listen er ikke delt lenger" else "Listen er delt")
+        } catch (e: ApiException) {
+            message = when (e.status) {
+                404 -> "Deling av lister trenger en nyere Homelab-server."
+                403 -> "Bare eieren kan dele listen."
+                else -> e.message ?: "Kunne ikke dele listen"
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) { throw e
+        } catch (e: Exception) { message = e.message ?: "Kunne ikke dele listen"
+        } finally { shareBusy = false }
     }
 
     // Varsler: alt samlet i Innstillinger → Varsler (lagres per bruker på serveren, og lokalt for lyd og stille timer).

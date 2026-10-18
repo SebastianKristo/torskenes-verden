@@ -593,10 +593,10 @@ private fun TrkShipments(vm: AppViewModel, items: List<Shipment>) {
                     if (vm.trkPicking) Box(Modifier.size(22.dp).clip(CircleShape).background(if (picked) p.ink else Color.Transparent).border(2.dp, if (picked) p.ink else p.mut, CircleShape), contentAlignment = Alignment.Center) {
                         if (picked) Text("✓", color = p.bg, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
-                    // Logo: initialer på transportørens merkefarge (SVG-logoen kan ikke tegnes uten eget bibliotek).
-                    CarrierBadge(s.carrierIni, s.carrierColor, s.carrierFg, 44, s.carrier)
+                    // Prompt 21: butikklogo med fraktmerke (felles PackageLogo), tittel uten sporingsnummer.
+                    PackageLogo(vm, s, 44)
                     Column(Modifier.weight(1f)) {
-                        PSerif(s.name.ifBlank { s.shop.ifBlank { s.trackingNo } }, 18.sp, maxLines = 1)
+                        PSerif(s.cardTitle, 18.sp, maxLines = 1)
                         Text("${s.carrierName} · ${s.trackingNo}", color = p.mut, fontSize = 11.5.sp, fontFamily = PaperFonts.mono, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Text(s.sourceLabel, color = p.mut, fontSize = 11.sp)

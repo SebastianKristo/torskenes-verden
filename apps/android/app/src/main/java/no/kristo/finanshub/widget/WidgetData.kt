@@ -135,14 +135,35 @@ object WidgetStore {
 
     fun currentStyle(ctx: Context): WidgetStyle = _style.value ?: WidgetStyle.load(ctx).also { _style.value = it }
 
-    fun save(ctx: Context, json: String, at: Long) {
+    /** Lagrer svaret for kontoen (acct). Et svar fra en annen konto enn den siste tømmer først det gamle. */
+    fun save(ctx: Context, json: String, at: Long, acct: String? = null) {
         val d = WidgetData.parse(json, at)
-        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString("json", json).putLong("at", at).remove("error").apply()
+        val e = ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putString("json", json).putLong("at", at).remove("error")
+        if (acct != null) e.putString("acct", acct)
+        e.apply()
         _data.value = d
     }
 
     fun fail(ctx: Context, message: String, loggedIn: Boolean = true) {
+        // Utlogget: ingen data fra forrige bruker skal bli stående i widgetene.
+        if (!loggedIn) { clear(ctx); _data.value = WidgetData.EMPTY.copy(error = message, loggedIn = false); return }
         _data.value = current(ctx).copy(error = message, loggedIn = loggedIn)
+    }
+
+    /**
+     * Brukerskille (prompt 21): widgetdataene tilhører én konto. Bytter kontoen (eller man logger ut, acct = null),
+     * tømmes cachen med en gang, så forrige brukers data aldri vises, heller ikke uten nett.
+     */
+    fun useAccount(ctx: Context, acct: String?) {
+        val p = ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        if (acct != null && p.getString("acct", null) == acct) return
+        p.edit().remove("json").remove("at").remove("error").apply { if (acct != null) putString("acct", acct) else remove("acct") }.apply()
+        _data.value = WidgetData.EMPTY.copy(loggedIn = acct != null)
+    }
+
+    fun clear(ctx: Context) {
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().remove("json").remove("at").remove("error").remove("acct").apply()
+        _data.value = null
     }
 
     fun reloadStyle(ctx: Context) { _style.value = WidgetStyle.load(ctx) }

@@ -78,4 +78,4 @@ fun parseBgSettings(raw: String): BgSettings {
 
 val BG_KINDS = setOf("cur", "oslo", "weather", "planets", "custom", "none")
 val BG_TYPES =listOf("weather" to "Vær", "planets" to "Planeter", "oslo" to "Oslo", "custom" to "Eget bilde", "none" to "Ingen")
-val BG_PLANETS = listOf("auto" to "Bytt automatisk", "earth" to "Jorda", "moon" to "Månen", "jupiter" to "Jupiter", "mars" to "Mars")
+val BG_PLANETS = listOf("auto" to "Bytt automatisk", "earth" to "Jorda", "moon" to "Månen", "jupiter" to "Jupiter", "mars" to "Mars", "saturn" to "Saturn")

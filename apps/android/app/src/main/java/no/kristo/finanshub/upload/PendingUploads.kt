@@ -22,6 +22,8 @@ import java.util.concurrent.TimeUnit
 data class PendingUpload(
     val id: String, val path: String, val name: String, val created: Long, val attempts: Int, val lastError: String?,
     val parts: List<PendingPart>,
+    /** Kontoen som la kvitteringen i køen (prompt 21). Den lastes bare opp med denne kontoens innlogging. Tom = eldre versjon. */
+    val account: String = "",
 )
 data class PendingPart(val field: String, val filename: String, val mime: String, val file: String)
 
@@ -39,8 +41,15 @@ object PendingUploads {
         root(ctx).listFiles()?.mapNotNull { dir -> runCatching { read(File(dir, "meta.json")) }.getOrNull() }?.sortedBy { it.created } ?: emptyList()
     }
 
+    /**
+     * Køen for én konto. Elementer uten konto (fra før prompt 21) regnes som kontoens bare når det bare finnes én konto
+     * på telefonen (legacy = true); ellers blir de liggende til brukeren fjerner dem.
+     */
+    fun listFor(ctx: Context, account: String, legacy: Boolean): List<PendingUpload> =
+        list(ctx).filter { it.account == account || (legacy && it.account.isEmpty()) }
+
     /** Legger kvitteringen i køen. path er endepunktet under /finans/api (f.eks. /receipts eller /folders/3/receipts). */
-    fun add(ctx: Context, path: String, name: String, parts: List<Api.Part>, error: String?): PendingUpload = synchronized(lock) {
+    fun add(ctx: Context, path: String, name: String, parts: List<Api.Part>, error: String?, account: String = ""): PendingUpload = synchronized(lock) {
         val id = UUID.randomUUID().toString().take(12)
         val dir = File(root(ctx), id).apply { mkdirs() }
         val saved = parts.mapIndexed { i, p ->
@@ -48,7 +57,7 @@ object PendingUploads {
             File(dir, f).writeBytes(p.data)
             PendingPart(p.name, p.filename, p.mime, f)
         }
-        val u = PendingUpload(id, path, name, System.currentTimeMillis(), 0, error, saved)
+        val u = PendingUpload(id, path, name, System.currentTimeMillis(), 0, error, saved, account)
         write(File(dir, "meta.json"), u)
         u
     }
@@ -67,9 +76,9 @@ object PendingUploads {
      * Prøver å laste opp alt i køen med kontoen og adressen. Returnerer antall som kom fram.
      * Feil fra serveren som ikke går over av seg selv (4xx, f.eks. ugyldig fil) fjernes ikke, men merkes, så brukeren kan velge.
      */
-    suspend fun flush(ctx: Context, api: Api): Int {
+    suspend fun flush(ctx: Context, api: Api, account: String, legacy: Boolean): Int {
         var ok = 0
-        for (u in list(ctx)) {
+        for (u in listFor(ctx, account, legacy)) {
             try {
                 api.upload(u.path, parts(ctx, u))
                 remove(ctx, u.id); ok++
@@ -100,6 +109,7 @@ object PendingUploads {
             o.getString("id"), o.getString("path"), o.optString("name"), o.optLong("created"), o.optInt("attempts"),
             o.optString("lastError").takeIf { it.isNotBlank() && it != "null" },
             (0 until parts.length()).map { i -> parts.getJSONObject(i).let { PendingPart(it.getString("field"), it.optString("filename"), it.optString("mime"), it.getString("file")) } },
+            o.optString("account", ""),
         )
     }
 
@@ -107,7 +117,7 @@ object PendingUploads {
         val parts = JSONArray()
         u.parts.forEach { p -> parts.put(JSONObject().put("field", p.field).put("filename", p.filename).put("mime", p.mime).put("file", p.file)) }
         f.writeText(JSONObject().put("id", u.id).put("path", u.path).put("name", u.name).put("created", u.created).put("attempts", u.attempts)
-            .put("lastError", u.lastError ?: "").put("parts", parts).toString())
+            .put("lastError", u.lastError ?: "").put("parts", parts).put("account", u.account).toString())
     }
 }
 
@@ -118,12 +128,19 @@ class PendingUploadWorker(ctx: Context, params: WorkerParameters) : CoroutineWor
         if (PendingUploads.list(ctx).isEmpty()) return Result.success()
         val store = AccountStore(ctx)
         val accs = runCatching { store.load() }.getOrDefault(emptyList())
-        val acc = accs.firstOrNull { it.id == store.active() } ?: accs.firstOrNull() ?: return Result.success()
-        for (base in listOf(acc.server, acc.local, acc.external).filter { it.isNotBlank() }.distinct()) {
-            runCatching { PendingUploads.flush(ctx, Api(base, acc.token)) }
-            if (PendingUploads.list(ctx).isEmpty()) return Result.success()
+        if (accs.isEmpty()) return Result.success()
+        // Hver konto laster opp sine egne kvitteringer med sin egen innlogging (aldri til en annen brukers konto).
+        val legacy = accs.size == 1
+        for (acc in accs) {
+            if (PendingUploads.listFor(ctx, acc.id, legacy).isEmpty()) continue
+            for (base in listOf(acc.server, acc.local, acc.external).filter { it.isNotBlank() }.distinct()) {
+                runCatching { PendingUploads.flush(ctx, Api(base, acc.token), acc.id, legacy) }
+                if (PendingUploads.listFor(ctx, acc.id, legacy).isEmpty()) break
+            }
         }
+        if (PendingUploads.list(ctx).none { legacy || it.account.isNotEmpty() }) return Result.success()
         // Noe står igjen: prøv igjen senere (WorkManager venter med økende pause).
-        return if (PendingUploads.list(ctx).any { it.attempts < 8 }) Result.retry() else Result.success()
+        val known = accs.map { it.id }.toSet()
+        return if (PendingUploads.list(ctx).any { it.attempts < 8 && (it.account in known || (legacy && it.account.isEmpty())) }) Result.retry() else Result.success()
     }
 }

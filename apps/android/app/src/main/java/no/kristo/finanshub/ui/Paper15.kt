@@ -77,6 +77,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import kotlinx.coroutines.withTimeoutOrNull
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
@@ -139,10 +146,44 @@ internal fun EditDot(text: String, enabled: Boolean, onClick: () -> Unit) {
 internal fun EditWrap(vm: AppViewModel, page: String, sec: PSec, keys: List<String>, index: Int, count: Int, content: @Composable () -> Unit) {
     val p = PaperPal.current
     val edit = vm.editPage == page
-    val angle = wobbleAngle(edit, index)
+    // Prompt 21: hold inne 500 ms og dra. Kortet følger fingeren (litt større og gjennomsiktig), og bytter plass med
+    // naboen når det er dratt over halve høyden. Pilene virker fortsatt. Klikket etter et langt trykk åpner ikke siden.
+    var dragging by remember { mutableStateOf(false) }
+    var ty by remember { mutableFloatStateOf(0f) }
+    val st = remember { DragTrack() }
+    val idx by rememberUpdatedState(index)
+    val cnt by rememberUpdatedState(count)
+    val angle = wobbleAngle(edit && !dragging, index)
+    fun follow() {
+        val outer = st.top() - st.applied
+        if (st.startY.isNaN()) return
+        ty = st.startOuter + (st.lastY - st.startY) - outer
+        if (outer != st.swapAt) {
+            val h = st.height.coerceAtLeast(1f)
+            val dir = when { ty > h * .5f && idx < cnt - 1 -> 1; ty < -h * .5f && idx > 0 -> -1; else -> 0 }
+            if (dir != 0) { st.swapAt = outer; vm.movePageItem(page, keys, sec.key, dir) }
+        }
+    }
     Box(
-        Modifier.fillMaxWidth().graphicsLayer { rotationZ = angle }
-            .longPressEdit(!edit && sec.hold) { Haptics.tap(); vm.editPage = page },
+        Modifier.fillMaxWidth().zIndex(if (dragging) 5f else 0f)
+            .graphicsLayer {
+                rotationZ = angle; translationY = if (dragging) ty else 0f; st.applied = translationY
+                val sc = if (dragging) 1.03f else 1f; scaleX = sc; scaleY = sc; alpha = if (dragging) .88f else 1f
+                transformOrigin = androidx.compose.ui.graphics.TransformOrigin(.5f, 0f)
+            }
+            .onGloballyPositioned { c ->
+                st.coords = c; st.height = c.size.height.toFloat(); st.visualTop = c.positionInRoot().y
+                if (dragging) follow()
+            }
+            .holdDrag(sec.hold || edit,
+                onLong = { Haptics.tap(); vm.editPage = page; dragging = true; ty = 0f; st.startY = Float.NaN; st.swapAt = Float.NaN },
+                onDrag = { y ->
+                    if (st.startY.isNaN()) { st.startY = y; st.startOuter = st.top() - st.applied }
+                    st.lastY = y; follow()
+                },
+                onEnd = { dragging = false; ty = 0f; st.startY = Float.NaN },
+                toRootY = { o -> st.coords?.takeIf { it.isAttached }?.localToRoot(o)?.y ?: o.y },
+            ),
     ) {
         content()
         if (edit) {
@@ -160,6 +201,21 @@ internal fun EditWrap(vm: AppViewModel, page: String, sec: PSec, keys: List<Stri
     }
 }
 
+/** Tilstanden under et drag (ikke Compose-tilstand: endres i hver pekerhendelse). */
+internal class DragTrack {
+    var coords: androidx.compose.ui.layout.LayoutCoordinates? = null
+    var height = 0f
+    var visualTop = 0f
+    var startY = Float.NaN
+    var lastY = 0f
+    var startOuter = 0f
+    var swapAt = Float.NaN
+    /** Flyttingen laget faktisk har nå (kan ligge én ramme bak tilstanden). */
+    var applied = 0f
+    /** Kortets øverste kant på skjermen nå (med flytting), regnet ut direkte fra koordinatene. */
+    fun top(): Float = coords?.takeIf { it.isAttached }?.localToRoot(Offset.Zero)?.y ?: visualTop
+}
+
 /** Linja øverst i redigeringsmodus: «Ferdig» og «Skjult: + Budsjett …» for å hente tilbake skjulte kort. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -169,7 +225,7 @@ internal fun PageEditBar(vm: AppViewModel, page: String, secs: List<PSec>) {
     val hid = vm.pageHidden(page)
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.lab).padding(14.dp, 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Flytt med ▲ ▼, skjul med −", color = p.onLab, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, modifier = Modifier.weight(1f))
+            Text("Dra eller flytt med ▲ ▼, skjul med −", color = p.onLab, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, modifier = Modifier.weight(1f))
             Box(Modifier.clip(CircleShape).background(p.onLab).clickable { Haptics.success(); vm.editPage = null }.padding(14.dp, 6.dp)) {
                 Text("Ferdig", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.sp)
             }
@@ -188,7 +244,7 @@ internal fun PageEditBar(vm: AppViewModel, page: String, secs: List<PSec>) {
 
 @Composable
 internal fun EditHint() = Text(
-    "Hold inne på et kort for å flytte eller skjule det.", color = PaperPal.current.mut, fontSize = 11.5.sp,
+    "Hold inne på et kort og dra for å flytte det.", color = PaperPal.current.mut, fontSize = 11.5.sp,
     modifier = Modifier.fillMaxWidth().padding(4.dp, 6.dp), textAlign = TextAlign.Center,
 )
 
@@ -446,53 +502,88 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
     val grid = rememberLazyGridState()
     val wobble = rememberInfiniteTransition(label = "wobble").animateFloat(-1f, 1f, infiniteRepeatable(tween(130, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "w")
     val cols = if (wide) 4 else 2
-    val dragMod = if (!editing) Modifier else Modifier.pointerInput(Unit) {
+    // Prompt 21: hold inne 500 ms på en flis og dra (redigering slås på av seg selv); i redigering drar man direkte.
+    // Alt går i Initial-passet, så klikket etter et langt trykk ikke åpner flisen, og rutenettet ikke scroller under draget.
+    val editNow by rememberUpdatedState(editing)
+    val dragMod = Modifier.pointerInput(Unit) {
         fun hit(pos: Offset) = grid.layoutInfo.visibleItemsInfo.firstOrNull { i ->
             i.key is String && (i.key as String) != "fm-head" && pos.x >= i.offset.x && pos.x <= i.offset.x + i.size.width && pos.y >= i.offset.y && pos.y <= i.offset.y + i.size.height
         }
-        detectDragGestures(
-            onDragStart = { pos -> hit(pos)?.let { dragKey = it.key as String; dragOffset = Offset.Zero; Haptics.tap() } },
-            onDragEnd = { dragKey = null; dragOffset = Offset.Zero },
-            onDragCancel = { dragKey = null; dragOffset = Offset.Zero },
-            onDrag = { ch, amount ->
-                val k = dragKey
-                if (k != null) {
-                    ch.consume()
-                    dragOffset += amount
-                    val cur = grid.layoutInfo.visibleItemsInfo.firstOrNull { it.key == k }
-                    if (cur != null) {
-                        val center = Offset(cur.offset.x + cur.size.width / 2f, cur.offset.y + cur.size.height / 2f) + dragOffset
-                        val target = hit(center)
-                        if (target != null && target.key != k) {
-                            val l = order.toMutableList()
-                            val from = l.indexOf(k)
-                            val to = l.indexOf(target.key as String)
-                            if (from >= 0 && to >= 0) {
-                                l.removeAt(from); l.add(to, k)
-                                order = l
-                                // Flisen flytter seg i rutenettet; fingeren skal fortsatt holde den.
-                                dragOffset += Offset((cur.offset.x - target.offset.x).toFloat(), (cur.offset.y - target.offset.y).toFloat())
-                                Haptics.select()
-                            }
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            val item = hit(down.position) ?: return@awaitEachGesture
+            val slop = 8.dp.toPx()
+            if (!editNow) {
+                var cancel = false
+                val r = withTimeoutOrNull(500L) {
+                    while (true) {
+                        val ev = awaitPointerEvent(PointerEventPass.Initial)
+                        val ch = ev.changes.firstOrNull { it.id == down.id }
+                        if (ch == null || !ch.pressed || (ch.position - down.position).getDistance() > slop) { cancel = true; break }
+                    }
+                    true
+                }
+                if (r != null || cancel) return@awaitEachGesture
+                editing = true; Haptics.tap()
+            } else {
+                // Redigering: draget starter når fingeren flyttes; et vanlig trykk gjør ingenting.
+                while (true) {
+                    val ev = awaitPointerEvent(PointerEventPass.Initial)
+                    val ch = ev.changes.firstOrNull { it.id == down.id } ?: return@awaitEachGesture
+                    if (!ch.pressed) return@awaitEachGesture
+                    if ((ch.position - down.position).getDistance() > viewConfiguration.touchSlop) break
+                }
+            }
+            val k = item.key as String
+            dragKey = k; dragOffset = Offset.Zero
+            try {
+                while (true) {
+                    val ev = awaitPointerEvent(PointerEventPass.Initial)
+                    val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
+                    ev.changes.forEach { it.consume() }
+                    if (!ch.pressed) break
+                    dragOffset += ch.positionChange()
+                    val cur = grid.layoutInfo.visibleItemsInfo.firstOrNull { it.key == k } ?: continue
+                    val center = Offset(cur.offset.x + cur.size.width / 2f, cur.offset.y + cur.size.height / 2f) + dragOffset
+                    val target = hit(center)
+                    if (target != null && target.key != k) {
+                        val l = order.toMutableList()
+                        val from = l.indexOf(k)
+                        val to = l.indexOf(target.key as String)
+                        if (from >= 0 && to >= 0) {
+                            l.removeAt(from); l.add(to, k)
+                            order = l
+                            // Flisen flytter seg i rutenettet; fingeren skal fortsatt holde den.
+                            dragOffset += Offset((cur.offset.x - target.offset.x).toFloat(), (cur.offset.y - target.offset.y).toFloat())
+                            Haptics.select()
                         }
                     }
                 }
-            },
-        )
+            } finally { dragKey = null; dragOffset = Offset.Zero }
+        }
     }
     LazyVerticalGrid(
         GridCells.Fixed(cols), Modifier.fillMaxSize().then(dragMod), state = grid, contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom),
         horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item(key = "fm-head", span = { GridItemSpan(maxLineSpan) }) {
-            PCard(shadow = true) {
-                if (!editing) Column(Modifier.padding(16.dp, 12.dp)) {
+            if (!editing) PCard(shadow = true) {
+                Column(Modifier.padding(16.dp, 12.dp)) {
                     PLabel("Finans · Mer")
                     Text("Alt fra FinansHub på nettsiden · hold inne for å flytte", color = p.mut, fontSize = 13.sp)
-                } else Row(Modifier.padding(12.dp, 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Dra flisene til ny plass", color = p.ink, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                    PButton("Tilbakestill", height = 36.dp, kind = "line") { order = FM_DEFAULT_ORDER; vm.resetFmOrder() }
-                    PButton("Ferdig", height = 36.dp) { editing = false; vm.saveFmOrder(order); Haptics.success() }
+                }
+            } else {
+                // Prompt 21: redigeringslinja er en egen hvit pille med skygge (lesbar over toppbildet i lyst og mørkt tema).
+                Row(
+                    Modifier.fillMaxWidth().shadow(14.dp, CircleShape, ambientColor = Color.Black.copy(alpha = .3f), spotColor = Color.Black.copy(alpha = .3f))
+                        .clip(CircleShape).background(p.card).padding(start = 18.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Text("Dra for å flytte", color = p.ink, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1)
+                    Box(Modifier.height(36.dp).clip(CircleShape).background(p.bg).clickable(role = Role.Button) { order = FM_DEFAULT_ORDER; vm.resetFmOrder(); Haptics.select() }.padding(horizontal = 14.dp),
+                        contentAlignment = Alignment.Center) { Text("Tilbakestill", color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1) }
+                    Box(Modifier.height(36.dp).clip(CircleShape).background(Color(0xFF1B1A17)).clickable(role = Role.Button) { editing = false; vm.saveFmOrder(order); Haptics.success() }.padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center) { Text("Ferdig", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1) }
                 }
             }
         }
@@ -507,12 +598,13 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
             }
             Column(
                 tileMod.fillMaxWidth().heightIn(min = 112.dp).clip(RoundedCornerShape(20.dp)).background(p.card)
-                    .then(if (editing) Modifier else Modifier.combinedClickable(onClickLabel = t.title, onLongClick = { Haptics.tap(); editing = true }) { Haptics.select(); t.go() })
+                    .then(if (editing) Modifier else Modifier.clickable(onClickLabel = t.title) { Haptics.select(); t.go() })
                     .padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Row(verticalAlignment = Alignment.Top) {
-                    Box(Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(tint.copy(alpha = .14f)), contentAlignment = Alignment.Center) {
+                    // Ikonboksen: 14 % av fargen blandet inn i kortbakgrunnen (color-mix).
+                    Box(Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(androidx.compose.ui.graphics.lerp(p.card, tint, .14f)), contentAlignment = Alignment.Center) {
                         Icon(t.icon, null, tint = tint, modifier = Modifier.size(20.dp))
                     }
                     Spacer(Modifier.weight(1f))

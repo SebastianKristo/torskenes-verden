@@ -7,7 +7,11 @@ import org.json.JSONObject
 
 /* ---------- Huskeliste (/api/tasks, delt i familien) ---------- */
 
-data class TaskList(val id: String, val name: String, val color: Long)
+data class TaskList(
+    val id: String, val name: String, val color: Long,
+    /** Prompt 21: eieren av listen (id og navn), personene den er delt med, og om listen er min (bare eieren kan dele og slette). */
+    val owner: String? = null, val ownerName: String? = null, val members: List<TaskMember> = emptyList(), val mine: Boolean = true,
+)
 data class TaskItem(
     val id: String, val title: String, val list: String?, val due: String?, val assignee: String?,
     val done: Boolean, val doneAt: String?, val createdBy: String?,
@@ -20,7 +24,7 @@ fun parseTasks(s: String): TasksData {
     val la = o.optJSONArray("lists") ?: JSONArray()
     val lists = (0 until la.length()).mapNotNull { i ->
         val l = la.optJSONObject(i) ?: return@mapNotNull null
-        TaskList(l.optStr("id") ?: return@mapNotNull null, l.optStr("name") ?: "Liste", parseHex(l.optStr("color")) ?: 0xFF6B665C)
+        parseTaskList(l)
     }
     val ia = o.optJSONArray("items") ?: JSONArray()
     val items = (0 until ia.length()).mapNotNull { i ->
@@ -36,6 +40,38 @@ fun parseTasks(s: String): TasksData {
         TaskMember(m.optStr("id") ?: m.optStr("userId") ?: return@mapNotNull null, m.optStr("name") ?: m.optStr("username") ?: "")
     }
     return TasksData(lists, items, members)
+}
+
+/** Én liste fra /api/tasks eller /api/tasks/lists, med eier og medlemmer når serveren sender dem (eldre server: min, ikke delt). */
+fun parseTaskList(l: JSONObject): TaskList? {
+    val id = l.optStr("id") ?: return null
+    val ow = l.optJSONObject("owner")
+    val owner = ow?.let { it.optStr("id") ?: it.optStr("userId") } ?: l.optStr("owner")
+    val ownerName = ow?.let { it.optStr("name") ?: it.optStr("username") } ?: l.optStr("ownerName")
+    val ma = l.optJSONArray("members") ?: JSONArray()
+    val members = (0 until ma.length()).mapNotNull { i ->
+        val m = ma.optJSONObject(i) ?: return@mapNotNull ma.optString(i).takeIf { it.isNotBlank() }?.let { TaskMember(it, "") }
+        TaskMember(m.optStr("id") ?: m.optStr("userId") ?: return@mapNotNull null, m.optStr("name") ?: m.optStr("username") ?: "")
+    }
+    val mine = if (l.has("mine") && !l.isNull("mine")) l.optBoolean("mine") else true
+    return TaskList(id, l.optStr("name") ?: "Liste", parseHex(l.optStr("color")) ?: 0xFF6B665C, owner, ownerName, members, mine)
+}
+
+/** GET /api/tasks/lists → [..] eller {lists:[..]}. */
+fun parseTaskLists(s: String): List<TaskList> {
+    val t = s.trim()
+    val a = if (t.startsWith("[")) JSONArray(t) else JSONObject(t).optJSONArray("lists") ?: JSONArray()
+    return (0 until a.length()).mapNotNull { i -> a.optJSONObject(i)?.let(::parseTaskList) }
+}
+
+/** /api/users for vanlige brukere: bare id, navn og avatar. */
+fun parseUserList(s: String): List<TaskMember> {
+    val t = s.trim()
+    val a = if (t.startsWith("[")) JSONArray(t) else JSONObject(t).let { it.optJSONArray("users") ?: it.optJSONArray("items") ?: JSONArray() }
+    return (0 until a.length()).mapNotNull { i ->
+        val u = a.optJSONObject(i) ?: return@mapNotNull null
+        TaskMember(u.optStr("id") ?: u.optStr("userId") ?: return@mapNotNull null, u.optStr("name") ?: u.optStr("username") ?: "")
+    }
 }
 
 /** Standardlistene (brukes før serveren har svart). */

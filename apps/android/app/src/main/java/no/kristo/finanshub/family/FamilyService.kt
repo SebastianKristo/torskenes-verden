@@ -44,6 +44,7 @@ class FamilyService : Service() {
     private var lastSent: Location? = null
     private var lastSentAt = 0L
     private val queue = mutableListOf<JSONObject>()
+    @Volatile private var queueAcct: String? = null
 
     private val listener = object : LocationListener {
         override fun onLocationChanged(loc: Location) { onFix(loc) }
@@ -126,11 +127,14 @@ class FamilyService : Service() {
             .put("ts", loc.time.takeIf { it > 0 } ?: now)
         if (FamilyPrefs.sensors(this)) battery(this)?.let { (lvl, ch) -> o.put("battery", lvl).put("charging", ch) }
         else o.remove("activity")
-        synchronized(queue) { queue += o; while (queue.size > 200) queue.removeAt(0) }
+        // Køen tilhører én konto: bytter kontoen, kastes punktene fra den forrige (de sendes aldri med en annen innlogging).
+        val acct = FamilyPrefs.account(this)
+        synchronized(queue) { if (queueAcct != acct) { queue.clear(); queueAcct = acct }; queue += o; while (queue.size > 200) queue.removeAt(0) }
         scope.launch { flush(this@FamilyService) }
     }
 
     private suspend fun flush(ctx: Context) {
+        if (!FamilyPrefs.sharing(ctx) || FamilyPrefs.account(ctx) != queueAcct) { synchronized(queue) { queue.clear() }; return }
         val batch = synchronized(queue) { queue.toList() }
         if (batch.isEmpty()) return
         val api = FamilyPrefs.api(ctx) ?: return
@@ -199,35 +203,77 @@ class FamilyService : Service() {
     }
 }
 
-/** Valgene for Familie på denne telefonen, og innloggingen bakgrunnsjobbene bruker. */
+/**
+ * Valgene for Familie på denne telefonen, og innloggingen bakgrunnsjobbene bruker.
+ * Prompt 21 (brukerskille): deling, nøyaktighet, helse, sensorer, bakgrunn og soner lagres per konto («<konto>:<nøkkel>»).
+ * Posisjon og helse sendes bare for kontoen som selv har slått på deling, og bare med den kontoens innlogging.
+ * Deling er av som standard.
+ */
 object FamilyPrefs {
     private fun sp(ctx: Context) = ctx.getSharedPreferences("family", Context.MODE_PRIVATE)
-    fun sharing(ctx: Context) = sp(ctx).getBoolean("sharing", false)
-    fun precise(ctx: Context) = sp(ctx).getBoolean("precise", true)
-    fun setSharing(ctx: Context, on: Boolean) { sp(ctx).edit().putBoolean("sharing", on).apply() }
-    fun setPrecise(ctx: Context, on: Boolean) { sp(ctx).edit().putBoolean("precise", on).apply() }
-    fun health(ctx: Context): Set<String> = sp(ctx).getStringSet("health", emptySet()) ?: emptySet()
+    private val PER_ACCOUNT = listOf("sharing", "precise", "health", "sensors", "background", "zones", "inside")
+
+    /** Kontoen valgene gjelder for: speilet av den aktive kontoen (settes av appen ved innlogging og kontobytte). */
+    fun account(ctx: Context): String {
+        sp(ctx).getString("acct", null)?.let { return it }
+        val id = runCatching { AccountStore(ctx).active() }.getOrNull() ?: return ""
+        useAccount(ctx, id)
+        return id
+    }
+
+    /**
+     * Ny aktiv konto (null = logget ut). Første gang flyttes valgene fra eldre versjoner (uten konto) over til kontoen
+     * som er aktiv da, så en eksplisitt valgt deling beholdes.
+     */
+    fun useAccount(ctx: Context, id: String?) {
+        val p = sp(ctx)
+        val e = p.edit()
+        if (id != null && !p.getBoolean("migrated21", false)) {
+            val all = p.all
+            for (k in PER_ACCOUNT) {
+                val v = all[k] ?: continue
+                val nk = "$id:$k"
+                @Suppress("UNCHECKED_CAST")
+                when (v) {
+                    is Boolean -> e.putBoolean(nk, v)
+                    is String -> e.putString(nk, v)
+                    is Set<*> -> e.putStringSet(nk, v as Set<String>)
+                }
+                e.remove(k)
+            }
+            e.putBoolean("migrated21", true)
+        }
+        if (id == null) e.remove("acct") else e.putString("acct", id)
+        e.apply()
+    }
+
+    private fun k(ctx: Context, key: String): String = account(ctx) + ":" + key
+    fun sharing(ctx: Context) = account(ctx).isNotEmpty() && sp(ctx).getBoolean(k(ctx, "sharing"), false)
+    fun precise(ctx: Context) = sp(ctx).getBoolean(k(ctx, "precise"), true)
+    fun setSharing(ctx: Context, on: Boolean) { sp(ctx).edit().putBoolean(k(ctx, "sharing"), on).apply() }
+    fun setPrecise(ctx: Context, on: Boolean) { sp(ctx).edit().putBoolean(k(ctx, "precise"), on).apply() }
+    fun health(ctx: Context): Set<String> = if (account(ctx).isEmpty()) emptySet() else sp(ctx).getStringSet(k(ctx, "health"), emptySet()) ?: emptySet()
     /** «Batteri og bevegelse» sendes med posisjonen (Helse og posisjon). */
-    fun sensors(ctx: Context) = sp(ctx).getBoolean("sensors", true)
-    fun putSensors(ctx: Context, on: Boolean) { sp(ctx).edit().putBoolean("sensors", on).apply() }
-    /** Health Connect-dialogen er vist minst én gang (Familie viser da «Ingen data» med fremgangsmåte). */
+    fun sensors(ctx: Context) = sp(ctx).getBoolean(k(ctx, "sensors"), true)
+    fun putSensors(ctx: Context, on: Boolean) { sp(ctx).edit().putBoolean(k(ctx, "sensors"), on).apply() }
+    /** Health Connect-dialogen er vist minst én gang (Familie viser da «Ingen data» med fremgangsmåte). Gjelder telefonen. */
     fun healthAsked(ctx: Context) = sp(ctx).getBoolean("healthAsked", false)
     fun putHealthAsked(ctx: Context) { sp(ctx).edit().putBoolean("healthAsked", true).apply() }
     /** «Også i bakgrunnen» (Helse og posisjon). */
-    fun background(ctx: Context) = sp(ctx).getBoolean("background", true)
-    fun putBackground(ctx: Context, on: Boolean) { sp(ctx).edit().putBoolean("background", on).apply() }
+    fun background(ctx: Context) = sp(ctx).getBoolean(k(ctx, "background"), true)
+    fun putBackground(ctx: Context, on: Boolean) { sp(ctx).edit().putBoolean(k(ctx, "background"), on).apply() }
 
     /** Sonene (lat, lon, radius) fra siste henting, så tjenesten kan sjekke sonekanter uten nett. */
     fun setZones(ctx: Context, zones: List<Triple<String, Pair<Double, Double>, Double>>) {
         val a = JSONArray()
         zones.forEach { (id, ll, r) -> a.put(JSONObject().put("id", id).put("lat", ll.first).put("lon", ll.second).put("r", r)) }
-        sp(ctx).edit().putString("zones", a.toString()).apply()
+        sp(ctx).edit().putString(k(ctx, "zones"), a.toString()).apply()
     }
 
     /** true når posisjonen har gått inn i eller ut av en sone siden forrige gang (15 % slingringsmonn ut, som på serveren). */
     fun crossedZone(ctx: Context, lat: Double, lon: Double): Boolean {
-        val a = runCatching { JSONArray(sp(ctx).getString("zones", "[]")) }.getOrNull() ?: return false
-        val inside = sp(ctx).getStringSet("inside", emptySet())?.toMutableSet() ?: mutableSetOf()
+        val a = runCatching { JSONArray(sp(ctx).getString(k(ctx, "zones"), "[]")) }.getOrNull() ?: return false
+        val inside = sp(ctx).getStringSet(k(ctx, "inside"), emptySet())?.toMutableSet() ?: mutableSetOf()
         var changed = false
         val d = FloatArray(1)
         for (i in 0 until a.length()) {
@@ -239,16 +285,17 @@ object FamilyPrefs {
             val now = if (was) d[0] <= r * 1.15 else d[0] <= r
             if (now != was) { changed = true; if (now) inside += id else inside -= id }
         }
-        if (changed) sp(ctx).edit().putStringSet("inside", inside).apply()
+        if (changed) sp(ctx).edit().putStringSet(k(ctx, "inside"), inside).apply()
         return changed
     }
-    fun setHealth(ctx: Context, keys: Set<String>) { sp(ctx).edit().putStringSet("health", keys).apply() }
+    fun setHealth(ctx: Context, keys: Set<String>) { sp(ctx).edit().putStringSet(k(ctx, "health"), keys).apply() }
 
-    /** Den aktive kontoen (samme som widgetene bruker). */
+    /** Innloggingen til kontoen valgene gjelder for (samme som widgetene bruker). Ingen konto → ingenting sendes. */
     fun api(ctx: Context): Api? {
         val store = AccountStore(ctx)
         val list = runCatching { store.load() }.getOrDefault(emptyList())
-        val acc = list.firstOrNull { it.id == store.active() } ?: list.firstOrNull() ?: return null
+        val id = account(ctx)
+        val acc = list.firstOrNull { it.id == id } ?: return null
         val base = listOf(acc.server, acc.external, acc.local).firstOrNull { it.isNotBlank() } ?: return null
         return Api(base, acc.token)
     }

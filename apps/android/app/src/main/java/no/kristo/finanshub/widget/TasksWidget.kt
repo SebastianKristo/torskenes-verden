@@ -66,6 +66,14 @@ object TasksStore {
         items.value = parse(raw)
     }
 
+    /** Brukerskille (prompt 21): ny konto eller utlogging tømmer oppgavene i widgeten. */
+    fun useAccount(ctx: Context, acct: String?) {
+        val p = sp(ctx)
+        if (acct != null && p.getString("acct", null) == acct) return
+        p.edit().remove("json").apply { if (acct != null) putString("acct", acct) else remove("acct") }.apply()
+        items.value = emptyList()
+    }
+
     fun markDone(ctx: Context, id: String) {
         val l = current(ctx).filter { it.id != id }
         items.value = l

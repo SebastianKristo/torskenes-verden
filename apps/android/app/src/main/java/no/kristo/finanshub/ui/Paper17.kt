@@ -413,13 +413,15 @@ internal fun TasksScreen(vm: AppViewModel) {
     }
     Box(Modifier.fillMaxSize().background(p.bg)) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(0.dp, 0.dp, 0.dp, 60.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            item { ModuleHero("Oppgaver for hele familien", "Huskeliste", "‹ Hjem") { vm.closeTasks() } }
+            item { ModuleHero("Dine lister og lister delt med deg", "Huskeliste", "‹ Hjem") { vm.closeTasks() } }
             item {
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     PChip("Alle", vm.taskFilter == "alle", "${(t?.items ?: emptyList()).count { !it.done }}") { vm.taskFilter = "alle" }
                     lists.forEach { l -> PChip(l.name, vm.taskFilter == l.id, "${(t?.items ?: emptyList()).count { !it.done && it.list == l.id }}") { vm.taskFilter = l.id } }
                 }
             }
+            // Prompt 21: eier og «Delt med …» for valgt liste, med «Del liste» (bare eieren kan dele).
+            lists.firstOrNull { it.id == vm.taskFilter }?.let { cur -> item { ListShareRow(vm, cur, members) } }
             // Ny oppgave
             item {
                 PCard(Modifier.padding(horizontal = 16.dp), shadow = true) {
@@ -457,6 +459,54 @@ internal fun TasksScreen(vm: AppViewModel) {
         }
     }
     vm.taskEditId?.let { id -> (t?.items ?: emptyList()).firstOrNull { it.id == id }?.let { TaskSheet(vm, it, lists, members, today) } }
+    vm.shareListId?.let { id -> lists.firstOrNull { it.id == id }?.let { ShareListSheet(vm, it) } }
+}
+
+private fun firstName(n: String) = n.split(' ').first()
+
+/** «Eier: Du · Delt med Ingrid og Pål» med knappen «Del liste» for eieren. */
+@Composable
+private fun ListShareRow(vm: AppViewModel, l: TaskList, members: List<TaskMember>) {
+    val p = PaperPal.current
+    fun nameOf(m: TaskMember) = m.name.ifBlank { members.firstOrNull { it.id == m.id }?.name ?: "" }.ifBlank { "en person" }
+    val owner = if (l.mine) "Du" else l.ownerName ?: members.firstOrNull { it.id == l.owner }?.name?.let(::firstName) ?: "en annen"
+    val shared = l.members.filter { it.id != l.owner }.map { firstName(nameOf(it)) }
+    val sharedText = when (shared.size) { 0 -> "Ikke delt"; 1 -> "Delt med ${shared[0]}"; else -> "Delt med " + shared.dropLast(1).joinToString(", ") + " og " + shared.last() }
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp).clip(RoundedCornerShape(16.dp)).background(p.card).padding(start = 14.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(Modifier.size(10.dp).clip(CircleShape).background(Color(l.color)))
+        Column(Modifier.weight(1f)) {
+            Text("Eier: $owner", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, maxLines = 1)
+            Text(sharedText, color = if (shared.isEmpty()) p.mut else p.pos, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+        if (l.mine) Box(Modifier.height(36.dp).clip(CircleShape).background(p.ink).clickable { Haptics.select(); vm.openShareList(l.id) }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+            Text("Del liste", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        }
+    }
+}
+
+/** «Del liste»: velg personene listen skal deles med. Medlemmer kan legge til, endre og fullføre oppgaver. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ShareListSheet(vm: AppViewModel, l: TaskList) {
+    val p = PaperPal.current
+    var picked by remember(l.id) { mutableStateOf(l.members.map { it.id }.filter { it != l.owner }.toSet()) }
+    ModalBottomSheet(onDismissRequest = { vm.shareListId = null }, containerColor = p.bg, contentColor = p.ink) {
+        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(18.dp, 0.dp, 18.dp, 30.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            PSerif("Del «${l.name}»", 24.sp)
+            Text("De du velger, ser listen og kan legge til, endre og fullføre oppgaver. Bare du kan dele eller slette den.", color = p.mut, fontSize = 13.sp)
+            val users = vm.taskUsers
+            if (users.isEmpty()) Text("Henter personer …", color = p.mut, fontSize = 13.sp)
+            else PCard {
+                users.forEachIndexed { i, u ->
+                    PToggle(u.name.ifBlank { "Uten navn" }, null, u.id in picked, top = i > 0) { on -> picked = if (on) picked + u.id else picked - u.id }
+                }
+            }
+            PButton(if (vm.shareBusy) "Lagrer …" else "Lagre deling", Modifier.fillMaxWidth()) { if (!vm.shareBusy) vm.shareList(l.id, picked.toList()) }
+        }
+    }
 }
 
 private fun dueOptions(today: String): List<Pair<String?, String>> {

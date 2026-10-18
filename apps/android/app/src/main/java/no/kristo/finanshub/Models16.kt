@@ -85,7 +85,17 @@ data class Dep(
     val line: String, val to: String, val mode: String?, val color: Long?, val textColor: Long?,
     val aimed: String?, val expected: String?, val minutes: Int?, val realtime: Boolean, val platform: String?,
     val cancelled: Boolean, val situation: String?,
+    /** Prompt 21: stoppene fra valgt holdeplass til endestasjonen (Entur serviceJourney.estimatedCalls). Tom på eldre server. */
+    val stops: List<DepStop> = emptyList(),
+    /** Forsinkelse i minutter (expected − aimed). */
+    val delayMin: Int? = null,
+    /** «i rute» eller «N min forsinket» fra serveren. */
+    val status: String? = null,
+    val ruterUrl: String? = null,
 )
+
+/** Ett stopp på turen: navn, plattform og tidspunkt (klokkeslett «19:04» eller ISO). */
+data class DepStop(val name: String, val platform: String?, val time: String?, val aimed: String?, val expected: String?)
 
 data class StopDeps(val stop: StopRef, val departures: List<Dep>)
 
@@ -98,12 +108,20 @@ fun parseStopList(s: String): List<StopRef> {
     }
 }
 
-private fun parseDep(o: JSONObject): Dep = Dep(
-    o.optStr("line") ?: o.optStr("publicCode") ?: "?", o.optStr("to") ?: o.optStr("destination") ?: "", o.optStr("mode"),
-    o.optStr("color")?.let(::color), o.optStr("textColor")?.let(::color), o.optStr("aimed"), o.optStr("expected"),
-    o.optIntOrNull("minutes") ?: o.optIntOrNull("min"), o.optBoolean("realtime", false), o.optStr("platform") ?: o.optStr("quay"),
-    o.optBoolean("cancelled", false), o.optStr("situation"),
-)
+private fun parseDep(o: JSONObject): Dep {
+    val sa = o.optJSONArray("stops") ?: JSONArray()
+    val stops = (0 until sa.length()).mapNotNull { i ->
+        val x = sa.optJSONObject(i) ?: return@mapNotNull sa.optString(i).takeIf { it.isNotBlank() }?.let { DepStop(it, null, null, null, null) }
+        DepStop(x.optStr("name") ?: return@mapNotNull null, x.optStr("platform"), x.optStr("time"), x.optStr("aimed"), x.optStr("expected"))
+    }
+    return Dep(
+        o.optStr("line") ?: o.optStr("publicCode") ?: "?", o.optStr("to") ?: o.optStr("destination") ?: "", o.optStr("mode"),
+        o.optStr("color")?.let(::color), o.optStr("textColor")?.let(::color), o.optStr("aimed"), o.optStr("expected"),
+        o.optIntOrNull("minutes") ?: o.optIntOrNull("min"), o.optBoolean("realtime", false), o.optStr("platform") ?: o.optStr("quay"),
+        o.optBoolean("cancelled", false), o.optStr("situation"),
+        stops, o.optIntOrNull("delayMin"), o.optStr("status"), o.optStr("ruterUrl"),
+    )
+}
 
 fun parseStopDeps(s: String): StopDeps {
     val o = JSONObject(s)
@@ -129,7 +147,11 @@ data class FamMember(
     val userId: String, val name: String, val username: String, val avatarUrl: String?,
     val sharing: String, val precision: String, val last: FamPos?, val health: FamHealth?,
 )
-data class FamZone(val id: String, val name: String, val lat: Double, val lon: Double, val radius: Double, val color: Long, val notify: Map<String, Pair<Boolean, Boolean>>)
+data class FamZone(
+    val id: String, val name: String, val lat: Double, val lon: Double, val radius: Double, val color: Long, val notify: Map<String, Pair<Boolean, Boolean>>,
+    /** Prompt 21 (brukerskille): delt med familien (av som standard), hvem som lagde sonen, og om den er min (bare eieren kan endre). */
+    val shared: Boolean = false, val owner: String? = null, val mine: Boolean = true, val ownerName: String? = null,
+)
 data class FamEvent(val id: String, val userId: String, val zoneId: String, val zoneName: String?, val kind: String, val ts: String?)
 data class FamMe(val userId: String, val sharing: String, val precision: String, val shareHealth: Map<String, Boolean>)
 data class Family(val me: FamMe?, val members: List<FamMember>, val zones: List<FamZone>, val events: List<FamEvent>)
@@ -178,22 +200,25 @@ fun parseFamily(s: String): Family {
     val o = JSONObject(s)
     val me = o.optJSONObject("me")?.let { m ->
         val sh = m.optJSONObject("shareHealth")
-        FamMe(m.optStr("userId") ?: "", m.optStr("sharing") ?: "on", m.optStr("precision") ?: "exact",
+        FamMe(m.optStr("userId") ?: "", m.optStr("sharing") ?: "off", m.optStr("precision") ?: "exact",
             HEALTH_KEYS.associate { (k, _) -> k to (sh?.optBoolean(k, false) ?: false) })
     }
     val ms = o.optJSONArray("members") ?: JSONArray()
     val members = (0 until ms.length()).mapNotNull { i ->
         val m = ms.optJSONObject(i) ?: return@mapNotNull null
         FamMember(m.optStr("userId") ?: "$i", m.optStr("name") ?: m.optStr("username") ?: "Person", m.optStr("username") ?: "", m.optStr("avatarUrl"),
-            m.optStr("sharing") ?: "on", m.optStr("precision") ?: "exact", parsePos(m.optJSONObject("last")), parseHealth(m.optJSONObject("health")))
+            m.optStr("sharing") ?: "off", m.optStr("precision") ?: "exact", parsePos(m.optJSONObject("last")), parseHealth(m.optJSONObject("health")))
     }
     val zs = o.optJSONArray("zones") ?: JSONArray()
     val zones = (0 until zs.length()).mapNotNull { i ->
         val z = zs.optJSONObject(i) ?: return@mapNotNull null
         val notify = mutableMapOf<String, Pair<Boolean, Boolean>>()
         z.optJSONObject("notify")?.let { n -> n.keys().forEach { k -> n.optJSONObject(k)?.let { v -> notify[k] = v.optBoolean("enter") to v.optBoolean("leave") } } }
+        val owner = z.optStr("owner") ?: z.optStr("createdBy") ?: z.optStr("created_by")
+        val mine = if (z.has("mine") && !z.isNull("mine")) z.optBoolean("mine") else (owner == null || owner == me?.userId)
         FamZone(z.optStr("id") ?: "$i", z.optStr("name") ?: "Sone", z.optDouble("lat", 0.0), z.optDouble("lon", 0.0), z.optDouble("radius", 150.0),
-            z.optStr("color")?.let(::color) ?: 0xFFB23A2A, notify)
+            z.optStr("color")?.let(::color) ?: 0xFFB23A2A, notify,
+            shared = z.optBoolean("shared", false) || z.optInt("shared", 0) == 1, owner = owner, mine = mine, ownerName = z.optStr("ownerName"))
     }
     return Family(me, members, zones, parseFamEvents(o.optJSONArray("events")))
 }

@@ -122,14 +122,14 @@ internal fun PCard(modifier: Modifier = Modifier, shadow: Boolean = false, onCli
 
 /** Seksjonstittel med 2 dp blekklinje under (avisspalte). */
 @Composable
-internal fun PHead(label: String, right: String? = null, onRight: (() -> Unit)? = null) {
+internal fun PHead(label: String, right: String? = null, rule: Boolean = true, onRight: (() -> Unit)? = null) {
     val p = PaperPal.current
     Column(Modifier.fillMaxWidth().padding(top = 8.dp)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 2.dp), verticalAlignment = Alignment.Bottom) {
             PLabel(label, modifier = Modifier.weight(1f).padding(bottom = 6.dp))
             if (right != null) Text(right, color = p.mut, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp).then(if (onRight != null) Modifier.clickable(onClick = onRight) else Modifier))
         }
-        Box(Modifier.fillMaxWidth().height(2.dp).background(p.ink))
+        if (rule) Box(Modifier.fillMaxWidth().height(2.dp).background(p.ink))
     }
 }
 
@@ -377,6 +377,9 @@ internal fun PaperApp(
     if (vm.domainManager) DomainManagerSheet(vm)
 }
 
+/** Reservegradienten under toppbildet (170°, #4a5a6a → #2a3440 60 % → #1d242c). */
+internal val HERO_FALLBACK: Array<Pair<Float, Color>> = arrayOf(0f to Color(0xFF4A5A6A), .6f to Color(0xFF2A3440), 1f to Color(0xFF1D242C))
+
 /** Pakker og Avganger side om side på Fold: samme høyde. */
 private val FOLD_CARD = 176.dp
 
@@ -396,11 +399,13 @@ private fun Hero(vm: AppViewModel, home: Boolean, wide: Boolean, toggleMenu: () 
     val (kicker, title) = heroText(vm)
     val bmp: Bitmap? = if (vm.photoKind == "cur" || vm.photoKind == "none") null else vm.photo
     val fg = bgForeground(vm, bmp != null)
-    val grad = vm.photoGradient.takeIf { it.size >= 2 }?.map { Color(it) } ?: listOf(Color(0xFF4A5A6A), Color(0xFF2A3440), Color(0xFF1D242C))
+    // Prompt 21: toppbildet er alltid et foto. Uten foto (eller når alle filene feiler) vises bare den rolige gradienten
+    // linear-gradient(170deg, #4a5a6a, #2a3440 60%, #1d242c), aldri en tegning eller serverens egne farger.
+    val grad = HERO_FALLBACK
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     // Hjem: 226 dp (250 på Fold), så navnet aldri havner bak søkefeltet.
     val h = (if (home) (if (wide) 214.dp else 190.dp) else 132.dp) + statusTop
-    Box(Modifier.fillMaxWidth().height(h).background(Brush.linearGradient(grad)).animateContentSize()) {
+    Box(Modifier.fillMaxWidth().height(h).background(Brush.verticalGradient(*grad)).animateContentSize()) {
         // Bilde med blur, demping, scrim, papirtekstur og partikler (prompt 19).
         BgLayer(vm, bmp)
         Column(Modifier.fillMaxSize().padding(top = statusTop + 8.dp, start = if (wide) 130.dp else 22.dp, end = 22.dp, bottom = if (home) 40.dp else 32.dp)) {
@@ -614,14 +619,14 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
                     if (pk == null) PCard(cardMod, onClick = { vm.paperTab("trk") }) { Text("Ingen pakker på vei.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(16.dp, 14.dp)) }
                     else PCard(cardMod, onClick = { vm.paperTab("trk") }) {
                         Row(Modifier.padding(14.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                            CarrierBadge(pk.carrierIni, pk.carrierColor, pk.carrierFg, 52, pk.carrier)
+                            PackageLogo(vm, pk, 52)
                             Column(Modifier.weight(1f)) {
                                 PLabel(if (pk.ready) "Hent i dag" else pk.statusText.ifBlank { "På vei" })
-                                PSerif(pk.name.ifBlank { pk.shop.ifBlank { pk.trackingNo } }, 20.sp, maxLines = 1)
+                                // Tittel: varenavn eller butikk, ellers «Pakke fra Bring». Sporingsnummeret står i detaljene.
+                                PSerif(pk.cardTitle, 20.sp, maxLines = 1)
                                 Text(listOf(pk.etaText, pk.carrierName).filter { it.isNotBlank() }.joinToString(" · "), color = p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            val more = (vm.homePackages?.size ?: 1) - 1
-                            Text(if (more > 0) "$more til ›" else "›", color = p.mut, fontSize = 13.sp)
+                            Text(morePackagesLabel(vm, pk), color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }

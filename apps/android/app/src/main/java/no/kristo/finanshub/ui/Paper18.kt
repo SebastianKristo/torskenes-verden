@@ -54,11 +54,12 @@ internal fun PaperReceipts(vm: AppViewModel, navBottom: Dp, camera: () -> Unit, 
             }
         }
         if (vm.pendingUploads.isNotEmpty()) {
-            item { PHead("Venter på opplasting", if (vm.flag(AppPrefs.WIFI_ONLY)) "bare Wi-Fi" else null) }
+            item { PHead("Venter på opplasting", if (vm.flag(AppPrefs.WIFI_ONLY)) "bare Wi-Fi" else null, rule = false) }
             item { PaperPendingCard(vm) }
         }
         if (jobs.isNotEmpty() || vm.uploading > 0) {
-            item { PHead("Kø") }
+            // Prompt 21: ingen strek under etiketten (den stakk ut forbi kortets runde hjørner); skillelinjer bare mellom rader.
+            item { PHead("Kø", rule = false) }
             item {
                 PCard {
                     if (vm.uploading > 0) PRow("Laster opp ${vm.uploading} fil${if (vm.uploading > 1) "er" else ""}", "Sender til serveren …", "", serif = false)
@@ -79,7 +80,7 @@ internal fun PaperReceipts(vm: AppViewModel, navBottom: Dp, camera: () -> Unit, 
                 }
             }
         }
-        item { PHead("Til gjennomgang", q?.size?.takeIf { it > 0 }?.toString()) }
+        item { PHead("Til gjennomgang", q?.size?.takeIf { it > 0 }?.toString(), rule = false) }
         when {
             q == null -> item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
             q.isEmpty() -> item { Text("Ingen kvitteringer venter på gjennomgang.", color = p.mut, fontSize = 13.5.sp, modifier = Modifier.padding(8.dp)) }

@@ -88,6 +88,8 @@ data class MobileHome(
     val packages: List<Shipment>? = null,
     /** Ekstrafeltene i været (MET), lest romslig. */
     val weatherX: WeatherX? = null,
+    /** Prompt 21: antall aktive pakker i alt (for «+12 pakker ›»), når serveren sender det. */
+    val packagesTotal: Int? = null,
 )
 
 /** Oppsettet av mobilforsiden (per bruker og enhet): rekkefølge og synlighet for seksjoner og faner. */
@@ -413,6 +415,7 @@ fun parseMobileHome(s: String): MobileHome {
         o.optJSONObject("layout")?.let { l -> (l.optJSONObject("mobile") ?: l).takeIf { it.has("sec") }?.let { HomeLayout.from(it) } },
         packages = o.optJSONArray("packages")?.map(::parseShipment),
         weatherX = w?.let(::parseWeatherX),
+        packagesTotal = o.optIntOrNull("packagesTotal") ?: o.optIntOrNull("packagesActive"),
     )
 }
 

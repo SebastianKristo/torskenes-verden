@@ -229,9 +229,9 @@ private fun ShipmentCard(vm: AppViewModel, s: Shipment) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(C.surface1).animateContentSize()) {
         Column(Modifier.fillMaxWidth().clickable { Haptics.select(); vm.trkSel = if (open) null else s.id }.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                CarrierBadge(s.carrierIni, s.carrierColor, s.carrierFg, 44, s.carrier)
+                PackageLogo(vm, s, 44)
                 Column(Modifier.weight(1f)) {
-                    Text(s.name, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(s.cardTitle, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text("${s.carrierName} · ${s.trackingNo}", color = C.text2, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 Chip(if (s.outgoing) "Ut · ${s.sourceLabel}" else s.sourceLabel)
@@ -393,9 +393,9 @@ internal fun PackagesCard(vm: AppViewModel, modifier: Modifier = Modifier) {
             items.take(2).forEach { s ->
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(C.surface2).padding(12.dp, 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        CarrierBadge(s.carrierIni, s.carrierColor, s.carrierFg, 32, s.carrier)
+                        PackageLogo(vm, s, 32)
                         Column(Modifier.weight(1f)) {
-                            Text(s.name, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(s.cardTitle, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(s.statusText + if (s.etaText.isBlank()) "" else " · ${s.etaText}", color = if (s.ready) C.accentLight else C.text2, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }

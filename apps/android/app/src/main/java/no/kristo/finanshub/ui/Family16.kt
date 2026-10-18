@@ -20,6 +20,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -74,7 +76,8 @@ internal fun FamilyScreen(vm: AppViewModel) {
         else locPerm.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
     }
 
-    var tab by remember { mutableStateOf("kart") }
+    // Prompt 21: fanene Kart · Soner · Helse · Mer ligger i fanelinja nederst (som Subscription OS), ikke øverst.
+    val tab = vm.famTab.takeIf { it in setOf("kart", "soner", "helse") } ?: "kart"
     Box(Modifier.fillMaxSize().background(p.bg)) {
         Column(Modifier.fillMaxSize()) {
             // Kartet øverst (40 % av høyden på Kart, mindre på Soner og Helse), med tilbake og tittel oppå.
@@ -94,22 +97,11 @@ internal fun FamilyScreen(vm: AppViewModel) {
                     Text("‹ Hjem", color = p.bg, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                 }
             }
-            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 40.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, PAPER_BAR + 40.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 item {
                     Row(verticalAlignment = Alignment.Bottom) {
                         PSerif("Familie", 30.sp, modifier = Modifier.weight(1f))
                         Text("Min deling ›", color = p.lab, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clip(CircleShape).clickable { vm.famPrivacy = true }.padding(8.dp, 4.dp))
-                    }
-                }
-                // Tre faner: Kart, Soner og Helse.
-                item {
-                    Row(Modifier.fillMaxWidth().clip(CircleShape).border(1.dp, p.line, CircleShape).padding(3.dp)) {
-                        listOf("kart" to "Kart", "soner" to "Soner", "helse" to "Helse").forEach { (k, n) ->
-                            val on = tab == k
-                            Box(Modifier.weight(1f).height(36.dp).clip(CircleShape).background(if (on) p.ink else Color.Transparent).clickable { Haptics.select(); tab = k }, contentAlignment = Alignment.Center) {
-                                Text(n, color = if (on) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp)
-                            }
-                        }
                     }
                 }
                 vm.familyError?.let { e -> item { Text(e, color = p.lab, fontSize = 13.sp) } }
@@ -118,6 +110,8 @@ internal fun FamilyScreen(vm: AppViewModel) {
                     "kart" -> {
                         if (me != null) item { MySharing(vm, me, startSharing) }
                         item { PeopleChips(vm) }
+                        // Deling er av som standard: ingen ser hverandre før de selv slår det på.
+                        if (f != null && f.members.none { it.userId != me?.userId && it.sharing == "on" }) item { NobodySharing() }
                         if (sel != null) item { PersonCard(vm, sel) }
                         item { PHead("Hendelser") }
                         if (f != null && f.events.isEmpty()) item { Text("Ingen hendelser ennå.", color = p.mut, fontSize = 13.sp) }
@@ -143,6 +137,7 @@ internal fun FamilyScreen(vm: AppViewModel) {
                 }
             }
         }
+        FamilyTabBar(vm, tab, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(start = 12.dp, end = 12.dp, bottom = 12.dp))
     }
     if (vm.famZoneDraft != null || vm.famZoneEdit != null) ZoneSheet(vm)
     if (vm.famPrivacy) PrivacySheet(vm, startSharing)
@@ -158,11 +153,46 @@ private fun MySharing(vm: AppViewModel, me: FamMe, startSharing: () -> Unit) {
     ) {
         Box(Modifier.size(10.dp).clip(CircleShape).background(if (on) p.pos else p.mut))
         Column(Modifier.weight(1f)) {
-            Text(when (me.sharing) { "on" -> "Familien ser hvor du er"; "paused" -> "Pauset · de andre ser at du har pauset"; else -> "Du deler ikke posisjonen" }, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+            Text(when (me.sharing) { "on" -> "Familien ser hvor du er"; "paused" -> "Pauset · de andre ser at du har pauset"; else -> "Du deler ikke posisjonen · av som standard" }, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
             Text(if (me.precision == "approx") "Omtrentlig, rundt 1 km" else "Nøyaktig punkt", color = p.mut, fontSize = 12.sp)
         }
         if (on) PButton("Pause", height = 36.dp, kind = "line") { vm.famSetSharing("paused") }
         else PButton("Del", height = 36.dp) { startSharing() }
+    }
+}
+
+/** Tom tilstand: ingen andre deler posisjon med deg (deling er av som standard). */
+@Composable
+private fun NobodySharing() {
+    val p = PaperPal.current
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(p.card).padding(16.dp, 14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("Ingen deler posisjon med deg ennå", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp)
+        Text("Deling er av som standard. Du ser bare dem som selv har slått på deling, og bare de ser deg når du deler.", color = p.mut, fontSize = 12.5.sp)
+    }
+}
+
+/** Fanelinja nederst i Familie: Kart · Soner · Helse · Mer (samme pille som hovedlinja). */
+@Composable
+private fun FamilyTabBar(vm: AppViewModel, tab: String, modifier: Modifier) {
+    val p = PaperPal.current
+    Row(
+        modifier.fillMaxWidth().height(62.dp).shadow(16.dp, CircleShape).clip(CircleShape).background(p.nav).padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        listOf(Triple("kart", "Kart", "◎"), Triple("soner", "Soner", "◌"), Triple("helse", "Helse", "♡"), Triple("mer", "Mer", "⋯")).forEach { (k, n, ic) ->
+            val on = tab == k
+            Row(
+                (if (on) Modifier else Modifier.weight(1f)).height(46.dp).clip(CircleShape).background(if (on) p.navAct else Color.Transparent)
+                    .clickable(role = Role.Tab, onClickLabel = n) {
+                        Haptics.select()
+                        if (k == "mer") { vm.closeFamily(); vm.paperTab("mer") } else vm.famTab = k
+                    }.padding(horizontal = if (on) 16.dp else 2.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+            ) {
+                if (on) Text(ic, color = p.navActInk, fontSize = 14.sp)
+                Text(n, color = if (on) p.navActInk else p.navInk, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1)
+            }
+        }
     }
 }
 
@@ -259,6 +289,8 @@ private fun ZoneCard(vm: AppViewModel, f: Family, z: FamZone) {
                 Column(Modifier.weight(1f)) {
                     Text(z.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                     Text("${Math.round(z.radius)} m · ${if (here.isEmpty()) "ingen der nå" else here.joinToString(", ") { it.name.split(' ').first() }}", color = p.mut, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(when { !z.mine -> "Delt av ${z.ownerName ?: f.members.firstOrNull { it.userId == z.owner }?.name?.split(' ')?.first() ?: "familien"}"; z.shared -> "Delt med familien"; else -> "Bare for deg" },
+                        color = if (z.shared || !z.mine) p.pos else p.mut, fontSize = 11.5.sp, maxLines = 1)
                 }
                 Text("›", color = p.mut)
             }
@@ -357,6 +389,8 @@ private fun ZoneSheet(vm: AppViewModel) {
     var name by remember(z?.id) { mutableStateOf(z?.name ?: "") }
     var radius by remember(z?.id) { mutableStateOf((z?.radius ?: 150.0).toFloat()) }
     var col by remember(z?.id) { mutableStateOf(z?.color?.let { c -> ZONE_COLORS.firstOrNull { color(it) == c } } ?: ZONE_COLORS[0]) }
+    var shared by remember(z?.id) { mutableStateOf(z?.shared ?: false) }
+    val canEdit = z == null || z.mine
     ModalBottomSheet(onDismissRequest = { vm.famZoneDraft = null; vm.famZoneEdit = null }, containerColor = p.bg, contentColor = p.ink) {
         Column(Modifier.fillMaxWidth().padding(18.dp, 0.dp, 18.dp, 34.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             PSerif(if (z == null) "Ny sone" else z.name, 26.sp)
@@ -369,6 +403,9 @@ private fun ZoneSheet(vm: AppViewModel) {
                     Box(Modifier.size(34.dp).clip(CircleShape).background(Color(color(c))).border(if (c == col) 3.dp else 0.dp, p.ink, CircleShape).clickable { col = c })
                 }
             }
+            // Prompt 21: sonen er privat til eieren slår på deling. Bare eieren kan endre eller slette den.
+            if (canEdit) PCard { PToggle("Del med familien", "Av: bare du ser sonen. På: alle i familien ser den.", shared) { shared = it } }
+            else Text("Sonen er delt av ${z?.ownerName ?: "en annen"}. Bare den som lagde den, kan endre eller slette den.", color = p.mut, fontSize = 12.5.sp)
             if (z != null) {
                 PLabel("Varsel for meg når …")
                 PCard {
@@ -385,9 +422,9 @@ private fun ZoneSheet(vm: AppViewModel) {
                     }
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            if (canEdit) Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (z != null) PButton("Slett", Modifier.weight(1f), kind = "line") { vm.famDeleteZone(z.id) }
-                PButton("Lagre", Modifier.weight(1f)) { vm.famSaveZone(z?.id, name, pt.first, pt.second, radius.toDouble(), col) }
+                PButton("Lagre", Modifier.weight(1f)) { vm.famSaveZone(z?.id, name, pt.first, pt.second, radius.toDouble(), col, shared) }
             }
         }
     }

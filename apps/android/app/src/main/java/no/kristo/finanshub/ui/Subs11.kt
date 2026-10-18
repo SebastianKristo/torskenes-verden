@@ -49,11 +49,13 @@ private fun SCard(content: @Composable ColumnScope.() -> Unit) =
 @Composable
 internal fun SubsMobileScreen(vm: AppViewModel) {
     var month by remember { mutableStateOf<Int?>(null) }
-    var done by remember { mutableStateOf(vm.prefs.str("subs_done", "").split('\n').filter { it.isNotBlank() }.toSet()) }
+    // Per konto (prompt 21): avkrysningene tilhører brukeren, ikke telefonen.
+    val doneKey = "subs_done" + (vm.account?.id ?: "")
+    var done by remember(doneKey) { mutableStateOf(vm.prefs.str(doneKey, "").split('\n').filter { it.isNotBlank() }.toSet()) }
     val toggle: (String) -> Unit = { id ->
         Haptics.select()
         done = if (id in done) done - id else (done + id).also { Haptics.success() }
-        vm.prefs.set("subs_done", done.joinToString("\n"))
+        vm.prefs.set(doneKey, done.joinToString("\n"))
     }
     val x = vm.subsX
     Page {

@@ -148,7 +148,7 @@ internal fun PaperBgSettings(vm: AppViewModel, pickOwn: () -> Unit) {
                         val sub = when {
                             failed -> "Prøv igjen"
                             k == "none" -> "Bare gradient"
-                            else -> vm.bgPreviewInfo[k]?.credit?.line ?: when (k) { "weather" -> "MET"; "planets" -> "NASA"; "oslo" -> "Oslo fra lufta"; else -> "Last opp" }
+                            else -> vm.bgPreviewInfo[k]?.credit?.line ?: when (k) { "weather" -> "MET · Wikimedia Commons"; "planets" -> "NASA / JPL · Wikimedia Commons"; "oslo" -> "Wikimedia Commons"; else -> "Last opp" }
                         }
                         Text(sub, color = if (failed) p.lab else p.mut, fontSize = 10.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }

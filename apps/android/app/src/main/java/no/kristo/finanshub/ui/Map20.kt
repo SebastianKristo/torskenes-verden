@@ -79,7 +79,7 @@ private object MapSetup {
         done.set(true)
     }
 
-    /** Bearer-tokenet sendes bare til homelab-proxyen, aldri til CARTO. */
+    /** Bearer-tokenet sendes bare til homelab-proxyen, aldri til Kartverket direkte. */
     fun auth(token: String?) {
         val h = Configuration.getInstance().additionalHttpRequestProperties
         if (token.isNullOrBlank()) h.remove("Authorization") else h.put("Authorization", "Bearer $token")
@@ -122,6 +122,24 @@ private fun paperFilter(): ColorMatrixColorFilter {
     val sat = ColorMatrix().apply { setSaturation(.8f) }
     sepia.postConcat(sat)
     return ColorMatrixColorFilter(sepia)
+}
+
+/** Mørkt tema: invert(1) hue-rotate(180deg) brightness(.85), som anbefalt fra serveren (darkFilter). */
+private fun darkFilter(): ColorMatrixColorFilter {
+    val m = ColorMatrix(floatArrayOf(
+        -1f, 0f, 0f, 0f, 255f,
+        0f, -1f, 0f, 0f, 255f,
+        0f, 0f, -1f, 0f, 255f,
+        0f, 0f, 0f, 1f, 0f,
+    ))
+    m.postConcat(ColorMatrix(floatArrayOf(
+        -0.574f, 1.43f, 0.144f, 0f, 0f,
+        0.426f, 0.43f, 0.144f, 0f, 0f,
+        0.426f, 1.43f, -0.856f, 0f, 0f,
+        0f, 0f, 0f, 1f, 0f,
+    )))
+    m.postConcat(ColorMatrix().apply { setScale(.85f, .85f, .85f, 1f) })
+    return ColorMatrixColorFilter(m)
 }
 
 /**
@@ -168,7 +186,9 @@ private fun FamilyMapView(vm: AppViewModel, modifier: Modifier, onError: (Throwa
     val ink = PaperPal.current.ink.toArgb()
     val lab = PaperPal.current.lab.toArgb()
     val retina = remember { ctx.resources.displayMetrics.density >= 2f }
-    val spec = vm.mapTiles(if (dark) "dark" else "light", retina)
+    // Prompt 21: alltid topo (Kartverket via /tiles); mørkt tema er samme fliser med mørkt fargefilter.
+    val spec = vm.mapTiles("topo", retina)
+    val tileKey = spec.name + if (dark) "-dark" else "-paper"
     val token = vm.mapToken
     var centered by remember { mutableStateOf(false) }
     var mapRef by remember { mutableStateOf<SafeMapView?>(null) }
@@ -213,14 +233,14 @@ private fun FamilyMapView(vm: AppViewModel, modifier: Modifier, onError: (Throwa
                 val map = v as? SafeMapView ?: return@AndroidView
                 try {
                     // Fliskilden: homelab-proxyen (med token) eller CARTO på eldre server. Byttes når tema/konfig endres.
-                    if (map.tilesName != spec.name) {
+                    if (map.tilesName != tileKey) {
                         MapSetup.auth(if (spec.auth) token else null)
                         map.setTileSource(TemplateTileSource(spec))
                         map.setMaxZoomLevel(spec.maxZoom.toDouble())
-                        map.overlayManager.tilesOverlay.setColorFilter(if (!dark) paperFilter() else null)
+                        map.overlayManager.tilesOverlay.setColorFilter(if (dark) darkFilter() else paperFilter())
                         map.overlayManager.tilesOverlay.setLoadingBackgroundColor(if (dark) 0xFF24221E.toInt() else 0xFFE9E4D8.toInt())
                         map.overlayManager.tilesOverlay.setLoadingLineColor(if (dark) 0xFF2E2B26.toInt() else 0xFFDDD6C8.toInt())
-                        map.tilesName = spec.name
+                        map.tilesName = tileKey
                     }
                     drawOverlays(map, vm, f, track, sel, ink, lab)
                     // Sentrer på valgt person, ellers første med gyldig posisjon. Medlemmer uten posisjon hoppes over.
