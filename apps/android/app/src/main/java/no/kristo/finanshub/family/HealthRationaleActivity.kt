@@ -22,9 +22,10 @@ class HealthRationaleActivity : ComponentActivity() {
                 Spacer(Modifier.height(40.dp))
                 Text("Helse i FinansHub", color = Color(0xFF1B1A17), fontSize = 28.sp, fontWeight = FontWeight.Medium)
                 Text(
-                    "FinansHub leser bare de feltene du velger under Familie → Personvern: skritt, hvilepuls, puls, søvn og aktive kalorier, " +
-                        "for i dag og de siste 7 dagene. Et sammendrag sendes til din egen homelab-server hvert 15. minutt, og vises bare for familien " +
-                        "på serveren. Ingenting sendes til andre. Du kan slå delingen av når som helst, og serveren sletter helsedata etter 30 dager.",
+                    "FinansHub leser bare de typene du slår på under Innstillinger → App → Helse og posisjon: skritt, puls og hvilepuls, " +
+                        "søvn, og aktivitet og trening (aktive kalorier og treningsøkter), for i dag og de siste 7 dagene. Et sammendrag sendes " +
+                        "til din egen homelab-server hvert 15. minutt, og vises bare for familien på serveren. Ingenting sendes til andre. " +
+                        "Slår du av «Del helsedata», stopper synken og serveren sletter helsedataene dine.",
                     color = Color(0xFF1B1A17), fontSize = 15.sp,
                 )
                 Button(onClick = { finish() }) { Text("Lukk") }

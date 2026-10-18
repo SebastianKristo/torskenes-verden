@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.health.connect.client.HealthConnectClient
 import androidx.health.connect.client.permission.HealthPermission
 import androidx.health.connect.client.records.ActiveCaloriesBurnedRecord
+import androidx.health.connect.client.records.ExerciseSessionRecord
 import androidx.health.connect.client.records.HeartRateRecord
 import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
@@ -19,6 +20,8 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
@@ -40,7 +43,25 @@ object HealthSync {
         if ("hr" in keys) add(HealthPermission.getReadPermission(HeartRateRecord::class))
         if ("sleep" in keys || "week" in keys) add(HealthPermission.getReadPermission(SleepSessionRecord::class))
         if ("activeKcal" in keys || "week" in keys) add(HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class))
+        if ("activeKcal" in keys || "exercise" in keys) add(HealthPermission.getReadPermission(ExerciseSessionRecord::class))
     }
+
+    /** Hovedbryteren slått av: stopp synken og slett egne helsedata på serveren (DELETE /api/family/health/me). */
+    suspend fun stopAndDelete(ctx: Context) {
+        cancel(ctx)
+        val api = FamilyPrefs.api(ctx) ?: return
+        withContext(Dispatchers.IO) { runCatching { api.hlDelete("/family/health/me") } }
+    }
+
+    /** Alle typene appen kan be om (onboarding og «Be om tilgang»): skritt, puls, hvilepuls, søvn og trening. */
+    fun allPermissions(): Set<String> = setOf(
+        HealthPermission.getReadPermission(StepsRecord::class),
+        HealthPermission.getReadPermission(HeartRateRecord::class),
+        HealthPermission.getReadPermission(RestingHeartRateRecord::class),
+        HealthPermission.getReadPermission(SleepSessionRecord::class),
+        HealthPermission.getReadPermission(ExerciseSessionRecord::class),
+        HealthPermission.getReadPermission(ActiveCaloriesBurnedRecord::class),
+    )
 
     /** 0 = tilgjengelig, 1 = må installeres/oppdateres, 2 = finnes ikke på denne telefonen. */
     fun status(ctx: Context): Int = when (HealthConnectClient.getSdkStatus(ctx)) {
@@ -49,8 +70,13 @@ object HealthSync {
         else -> 2
     }
 
-    suspend fun granted(ctx: Context): Set<String> = if (status(ctx) != 0) emptySet() else
-        runCatching { HealthConnectClient.getOrCreate(ctx).permissionController.getGrantedPermissions() }.getOrDefault(emptySet())
+    /** Status uten å blokkere hovedtråden (PackageManager-oppslag). */
+    suspend fun statusIo(ctx: Context): Int = withContext(Dispatchers.IO) { runCatching { status(ctx) }.getOrDefault(2) }
+
+    suspend fun granted(ctx: Context): Set<String> = withContext(Dispatchers.IO) {
+        if (runCatching { status(ctx) }.getOrDefault(2) != 0) emptySet() else
+            runCatching { HealthConnectClient.getOrCreate(ctx).permissionController.getGrantedPermissions() }.getOrDefault(emptySet())
+    }
 
     fun schedule(ctx: Context) {
         val req = PeriodicWorkRequestBuilder<HealthWorker>(15, TimeUnit.MINUTES)
@@ -64,8 +90,10 @@ object HealthSync {
     }
 
     /** Leser dagens tall og de siste 7 dagene. Felter uten tillatelse eller uten data blir utelatt. */
-    suspend fun summary(ctx: Context, keys: Set<String>): JSONObject? {
-        if (status(ctx) != 0 || keys.isEmpty()) return null
+    suspend fun summary(ctx: Context, keys: Set<String>): JSONObject? = withContext(Dispatchers.IO) { summaryIo(ctx, keys) }
+
+    private suspend fun summaryIo(ctx: Context, keys: Set<String>): JSONObject? {
+        if (runCatching { status(ctx) }.getOrDefault(2) != 0 || keys.isEmpty()) return null
         val client = HealthConnectClient.getOrCreate(ctx)
         val granted = runCatching { client.permissionController.getGrantedPermissions() }.getOrDefault(emptySet())
         val zone = ZoneId.systemDefault()

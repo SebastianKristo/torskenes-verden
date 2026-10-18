@@ -57,7 +57,7 @@ internal val PAPER_SET_TITLES = mapOf(
     "accounts" to "Kontoer og brukere", "security" to "Sikkerhet", "tokens" to "API-tokens", "ai" to "AI og tolkning",
     "cats" to "Kategorier og budsjett", "rules" to "Regler", "stocks" to "Aksjer · Trading 212", "fin" to "Fanelinje og Mer i Finans",
     "modules" to "Moduler", "look" to "Utseende og fanelinje", "notify" to "Varsler og haptikk", "haptics" to "Haptikk",
-    "scan" to "Skanning", "server" to "Server og synk", "data" to "Data og lagring", "backup" to "Backup og data", "about" to "Om appen",
+    "scan" to "Skanning", "server" to "Server og synk", "data" to "Data og lagring", "backup" to "Backup og data", "about" to "Om appen", "healthpos" to "Helse og posisjon",
 )
 
 /**
@@ -92,6 +92,7 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
             "data" -> item { DataPage(vm) }
             "backup" -> item { BackupPage(vm) }
             "about" -> item { AboutPage(vm) }
+            "healthpos" -> item { HealthPosPage(vm) }
             else -> settingsMain(vm)
         }
     }
@@ -138,6 +139,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
     group("App") { i ->
         SetRow(vm, i(), Icons.Filled.Palette, "Utseende og fanelinje", "Papir ${when (vm.paperMode) { "mork" -> "mørk"; "lys" -> "lys"; else -> "· følger systemet" }} · bakgrunn · ikonfarger") { vm.settingsPage = "look" }
         SetRow(vm, i(), Icons.Filled.Notifications, "Varsler og haptikk", "Lyd, stille timer og test", top = true) { vm.settingsPage = "notify" }
+        SetRow(vm, i(), Icons.Filled.MonitorHeart, "Helse og posisjon", "Health Connect, typer og posisjonsdeling", top = true) { vm.settingsPage = "healthpos" }
         SetRow(vm, i(), Icons.Filled.DocumentScanner, "Skanning", "Kamera, beskjæring og opplasting", top = true) { vm.settingsPage = "scan" }
         SetRow(vm, i(), Icons.Filled.Dns, "Server og synk", "Lokal og ekstern adresse", top = true) { vm.settingsPage = "server" }
         SetRow(vm, i(), Icons.Filled.Backup, "Backup og data", "Nedlasting og lagring", top = true) { vm.settingsPage = "backup" }
@@ -676,35 +678,67 @@ private fun CompareChart(h: List<CmpHour>, yr: Color, st: Color, modifier: Modif
 
 /* ================= Hjem: Posisjon, Bolig og Huskeliste ================= */
 
+/**
+ * Posisjon · Familie (prompt 20, kort h6): to kolonner, avatar 34×34 i personens farge med to bokstaver og statusprikk,
+ * navn og linje 2 (sone, «Går · Bislett», strøk, «Sist sett 14:32» eller «Deler ikke posisjon»). «Du» først, maks 4 (siste blir +N).
+ */
 @Composable
 internal fun HomePositionCard(vm: AppViewModel) {
     val p = PaperPal.current
-    val f = vm.family
+    LaunchedEffect(Unit) { while (true) { vm.loadPositions(); delay(60_000) } }
+    val list = vm.famPositions
     PCard(onClick = { vm.openFamily() }) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row { PLabel("Posisjon", modifier = Modifier.weight(1f)); Text("Familie ›", color = p.mut, fontSize = 12.sp) }
-            if (f == null) Text("Se hvor familien er, soner og helse.", color = p.mut, fontSize = 13.sp)
-            else f.members.take(4).forEach { m ->
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ServerImage(vm, m.avatarUrl, Modifier.size(28.dp).clip(CircleShape).background(p.surf2)) {
-                        Text(m.name.take(1).uppercase(), color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.align(Alignment.Center))
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("POSISJON · FAMILIE", color = p.lab, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold, fontFamily = PaperFonts.mono,
+                    letterSpacing = 1.26.sp, modifier = Modifier.weight(1f))
+                Text("kart ›", color = p.mut, fontSize = 12.sp)
+            }
+            if (list == null) Text("Se hvor familien er, soner og helse.", color = p.mut, fontSize = 13.sp)
+            else if (list.isEmpty()) Text("Ingen i familien ennå.", color = p.mut, fontSize = 13.sp)
+            else {
+                val shown = if (list.size > 4) list.take(3) else list
+                val cells: List<PosCard?> = shown + (if (list.size > 4) listOf(null) else emptyList())
+                cells.chunked(2).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        row.forEach { c ->
+                            Box(Modifier.weight(1f)) { if (c != null) PosCell(vm, c) else PosMore(list.size - 3) }
+                        }
+                        if (row.size == 1) Spacer(Modifier.weight(1f))
                     }
-                    Text(m.name.split(' ').first(), color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 1)
-                    Text(when (m.sharing) {
-                        "paused" -> "Pauset"
-                        "off" -> "Deler ikke"
-                        else -> m.last?.place ?: zoneOf(f, m) ?: (if (m.last != null) "Ukjent sted" else "Ingen posisjon")
-                    }, color = if (m.sharing == "on") p.mut else p.lab, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
     }
 }
 
-private fun zoneOf(f: Family, m: FamMember): String? {
-    val l = m.last ?: return null
-    val d = FloatArray(1)
-    return f.zones.firstOrNull { z -> android.location.Location.distanceBetween(l.lat, l.lon, z.lat, z.lon, d); d[0] <= z.radius }?.name
+@Composable
+private fun PosCell(vm: AppViewModel, c: PosCard) {
+    val p = PaperPal.current
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(Modifier.size(36.dp)) {
+            ServerImage(vm, c.photo, Modifier.size(34.dp).clip(CircleShape).background(Color(c.color))) {
+                Text(c.initials, color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp, fontFamily = PaperFonts.sans, modifier = Modifier.align(Alignment.Center))
+            }
+            val dot = when (c.status) { "fresh" -> Color(0xFF2F7A4F); "stale" -> Color(0xFFD9A400); else -> Color(0xFF8A8578) }
+            Box(Modifier.align(Alignment.BottomEnd).size(10.dp).clip(CircleShape).background(p.card).padding(2.dp).clip(CircleShape).background(dot))
+        }
+        Column(Modifier.weight(1f)) {
+            Text(c.name, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(c.line2, color = p.mut, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+@Composable
+private fun PosMore(n: Int) {
+    val p = PaperPal.current
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(Modifier.size(34.dp).clip(CircleShape).background(p.surf2), contentAlignment = Alignment.Center) {
+            Text("+$n", color = p.ink, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp)
+        }
+        Text("Se alle", color = p.mut, fontSize = 12.sp)
+    }
 }
 
 @Composable
@@ -814,5 +848,5 @@ internal fun glyphVector(g: String): ImageVector? = when (g) {
 internal fun GlyphIcon(g: String, color: Color, size: Dp = 17.dp) {
     val v = glyphVector(g)
     if (v != null) Icon(v, null, tint = color, modifier = Modifier.size(size))
-    else Text(g, color = color, fontSize = 15.sp)
+    else Text(g, color = color, fontSize = 15.sp, lineHeight = 15.sp)
 }

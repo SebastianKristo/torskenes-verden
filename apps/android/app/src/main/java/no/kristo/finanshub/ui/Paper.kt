@@ -523,7 +523,8 @@ private fun PaperNav(vm: AppViewModel, bar: String, float: Boolean, modifier: Mo
                     .clickable(role = Role.Tab, onClickLabel = t.label) { t.go(); Haptics.select() }.padding(horizontal = if (on) 14.dp else 2.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
             ) {
-                if (on || t.key == "sok") GlyphIcon(t.icon, if (on) p.navActInk else p.navInk)
+                // Ikonet i en fast 18×18-boks, flyttet 1,5 dp ned, så det står midt på teksten (prompt 20).
+                if (on || t.key == "sok") Box(Modifier.size(18.dp).offset(y = 1.5.dp), contentAlignment = Alignment.Center) { GlyphIcon(t.icon, if (on) p.navActInk else p.navInk) }
                 Text(t.label, color = if (on) p.navActInk else p.navInk, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Clip)
             }
         }

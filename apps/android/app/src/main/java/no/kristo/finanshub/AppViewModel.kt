@@ -25,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.withLock
 import no.kristo.finanshub.ui.Privacy
 import org.json.JSONArray
 import org.json.JSONObject
@@ -1687,6 +1688,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         applyLayout15(raw)
         applyLayout16(raw)
         applyLayout19(raw)
+        applyLayout20(raw)
         val obKey = AppPrefs.ONBOARDED + (account?.id ?: "")
         onboardNeeded = x.onboarded == false && !prefs.bool(obKey)
         if (prefs.bool(AppPrefs.DESIGN_SYNCED)) return
@@ -2770,6 +2772,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             famSel?.let { loadTrack(it) }
         } catch (e: ApiException) {
             familyError = if (e.status == 404) "Familie trenger en nyere Homelab-server." else e.message
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            // Før fanget vi bare ApiException: en JSON-feil eller SecurityException her drepte appen (viewModelScope har ingen handler).
+            android.util.Log.w("FinansHub", "Familie: kunne ikke lese /api/family", e)
+            familyError = "Kunne ikke lese Familie fra serveren."
         }
     }
     fun famSelect(userId: String) { famSel = userId; Haptics.select(); launch { loadTrack(userId) } }
@@ -2814,6 +2822,111 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun famZoneNotify(zoneId: String, userId: String, enter: Boolean, leave: Boolean) = launch {
         api.hlPut("/family/zones/" + URLEncoder.encode(zoneId, "UTF-8") + "/notify", JSONObject().put("userId", userId).put("enter", enter).put("leave", leave))
         loadFamilyNow(first = false)
+    }
+
+    /* ---------- Prompt 20: kartfliser, posisjonskortet, helse og posisjon, Finans-fliser og logoregisteret ---------- */
+
+    /** /api/config/map. mapConfigMissing = eldre server (404/401/403): kartet bruker CARTO direkte. */
+    var mapConfig by mutableStateOf<MapConfig?>(null)
+        private set
+    var mapConfigMissing by mutableStateOf(false)
+        private set
+    private var mapConfigAt = 0L
+    fun loadMapConfig() {
+        if (mapConfig != null || mapConfigMissing || System.currentTimeMillis() - mapConfigAt < 60_000) return
+        mapConfigAt = System.currentTimeMillis()
+        viewModelScope.launch {
+            try { mapConfig = parseMapConfig(api.hlGet("/config/map")) }
+            catch (e: ApiException) { if (e.status == 404 || e.status == 401 || e.status == 403) mapConfigMissing = true }
+            catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (_: Exception) { mapConfigMissing = true }
+        }
+    }
+    fun mapTiles(style: String, retina: Boolean): MapTiles = mapTilesFor(mapConfig, mapConfigMissing, base, style, retina)
+    /** App-tokenet som sendes som Bearer til /tiles. */
+    val mapToken: String? get() = account?.token
+
+    /** Posisjonskortet på Hjem: /api/family/positions, eller bygget fra /api/family på eldre server. */
+    var famPositions by mutableStateOf<List<PosCard>?>(null)
+        private set
+    private var positionsOld = false
+    fun loadPositions() {
+        viewModelScope.launch {
+            try {
+                if (!positionsOld) {
+                    try { famPositions = parsePositions(api.hlGet("/family/positions")); return@launch }
+                    catch (e: ApiException) { if (e.status == 404) positionsOld = true else return@launch }
+                }
+                val f = family ?: parseFamily(api.hlGet("/family"))
+                famPositions = positionsFromFamily(f)
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e } catch (_: Exception) { }
+        }
+    }
+    /** Personens farge på kartet (fra posisjonskortet), ellers en stabil farge. */
+    fun famColor(userId: String): Long = famPositions?.firstOrNull { it.id == userId }?.color ?: posColorFor(userId)
+
+    /** Helse og posisjon: «Del helsedata» av stopper synken og sletter egne helsedata på serveren. */
+    fun healthMasterOff() = launch {
+        no.kristo.finanshub.family.FamilyPrefs.setHealth(appCtx, emptySet())
+        no.kristo.finanshub.family.HealthSync.stopAndDelete(appCtx)
+        runCatching { api.hlPut("/family/me", JSONObject().put("shareHealth", JSONObject().apply { HEALTH_KEYS.forEach { (k, _) -> put(k, false) } })) }
+        loadFamilyNow(first = false)
+        flash("Helsedata deles ikke lenger, og er slettet fra serveren")
+    }
+    fun healthAskedNow() { no.kristo.finanshub.family.FamilyPrefs.putHealthAsked(appCtx) }
+
+    /** Rekkefølgen på Finans-flisene (hold inne for å flytte). Lagres lokalt (papir_fm_order) og som fmOrder i /api/me/layout. */
+    var fmOrder by mutableStateOf(normalizeFmOrder(prefs.str(FM_ORDER_KEY, "").split(',').filter { it.isNotBlank() }))
+        private set
+    fun saveFmOrder(order: List<String>) {
+        fmOrder = normalizeFmOrder(order)
+        prefs.set(FM_ORDER_KEY, fmOrder.joinToString(","))
+        viewModelScope.launch { runCatching { api.hlPut("/me/layout", JSONObject().put("fmOrder", JSONArray(fmOrder))) } }
+    }
+    fun resetFmOrder() = saveFmOrder(FM_DEFAULT_ORDER)
+    fun applyLayout20(raw: String) {
+        val a = runCatching { JSONObject(raw).optJSONArray("fmOrder") }.getOrNull() ?: return
+        val l = a.strings().filter { it.isNotBlank() }
+        if (l.isNotEmpty()) { fmOrder = normalizeFmOrder(l); prefs.set(FM_ORDER_KEY, fmOrder.joinToString(",")) }
+    }
+
+    /** Logoregisteret: hentes én gang per døgn og ligger på disk, filene caches på disk per id. */
+    private var logoIndex: LogoIndex? = null
+    private var logoRegAt = 0L
+    private val logoRegMutex = kotlinx.coroutines.sync.Mutex()
+    private suspend fun logoRegistry(): LogoIndex? = logoRegMutex.withLock {
+        logoIndex?.let { if (System.currentTimeMillis() - logoRegAt < 24 * 3600_000L) return@withLock it }
+        val file = java.io.File(appCtx.filesDir, "logo-registry.json")
+        if (logoIndex == null) runCatching { withContext(Dispatchers.IO) { if (file.exists()) LogoIndex(parseLogoRegistry(file.readText())) else null } }.getOrNull()?.let { logoIndex = it }
+        if (System.currentTimeMillis() - logoRegAt > 10 * 60_000L) {
+            logoRegAt = System.currentTimeMillis()
+            runCatching {
+                val raw = api.get("/logos/registry")
+                val idx = LogoIndex(parseLogoRegistry(raw))
+                withContext(Dispatchers.IO) { file.writeText(raw) }
+                logoIndex = idx
+            }
+        }
+        logoIndex
+    }
+    /** Registertreff for et domene eller en butikktekst (brukes også for bokstavfargen). */
+    suspend fun logoItem(domain: String?, name: String?): LogoRegItem? = runCatching { logoRegistry()?.find(domain, name) }.getOrNull()
+    /** Logo fra registeret (/finans/api/logos/file/:id, cachet på disk), ellers serverens favicon-cache som før. */
+    suspend fun logoFor(domain: String?, name: String?): Bitmap? {
+        val item = logoItem(domain, name)
+        if (item != null && item.hasFile) {
+            val key = "reg:" + item.id
+            logos[key]?.let { return it }
+            val f = java.io.File(java.io.File(appCtx.cacheDir, "logos").apply { mkdirs() }, item.id.replace(Regex("[^A-Za-z0-9_-]"), "_") + ".png")
+            val b = withContext(Dispatchers.IO) { runCatching { if (f.exists() && System.currentTimeMillis() - f.lastModified() < 30L * 24 * 3600_000) BitmapFactory.decodeFile(f.path) else null }.getOrNull() }
+                ?: runCatching {
+                    val bytes = api.bytes("/finans/api/logos/file/" + URLEncoder.encode(item.id, "UTF-8"))
+                    withContext(Dispatchers.IO) { runCatching { f.writeBytes(bytes) } }
+                    withContext(Dispatchers.Default) { BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }
+                }.getOrNull()
+            if (b != null) { logos[key] = b; return b }
+        }
+        return logo(domain ?: item?.domain)
     }
 
     /* ---------- Prompt 16–17: huskeliste, varsler, appnavn og -ikon, vær sammenlignet, sanntid, dra for å oppdatere ---------- */

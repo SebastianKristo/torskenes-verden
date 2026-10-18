@@ -744,6 +744,7 @@ internal fun PaperOnboarding(vm: AppViewModel) {
     var notif by remember { mutableStateOf(Notify.allowed(ctx)) }
     val askNotif = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok -> notif = ok }
     val first = vm.displayName.split(' ').firstOrNull().orEmpty().ifBlank { "du" }
+    val (access, finishAccess) = rememberOnboardFinish(vm)
     Box(Modifier.fillMaxSize().background(p.bg)) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             GateHero("Steg ${step + 1} av 3", listOf("Velkommen,\n$first", "Velg bakgrunn", "Nesten ferdig")[step])
@@ -810,13 +811,14 @@ internal fun PaperOnboarding(vm: AppViewModel) {
                             PToggle("Kamera", "For å skanne kvitteringer og oppskrifter (systemets kamera-app)", true, top = true) { }
                             PToggle("Fingeravtrykk / ansikt", "Lås opp uten passord", vm.flag(AppPrefs.LOCK), top = true) { vm.setPref(AppPrefs.LOCK, it) }
                             PToggle("Haptisk tilbakemelding", "Små vibrasjoner ved trykk", vm.flag(Haptics.ON, true), top = true) { vm.setPref(Haptics.ON, it) }
+                            OnboardAccessRows(access)
                         }
                         Text("«Logg ut» ligger under Innstillinger → Konto.", color = p.mut, fontSize = 12.sp)
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 8.dp)) {
                     if (step > 0) PButton("Tilbake", Modifier.weight(1f), kind = "line", height = 52.dp) { step-- }
-                    PButton(if (step < 2) "Neste" else "Ferdig", Modifier.weight(1f), height = 52.dp) { if (step < 2) step++ else { Haptics.success(); vm.finishOnboarding() } }
+                    PButton(if (step < 2) "Neste" else "Ferdig", Modifier.weight(1f), height = 52.dp) { if (step < 2) step++ else { Haptics.success(); finishAccess() } }
                 }
             }
         }

@@ -2,7 +2,6 @@ package no.kristo.finanshub.ui
 
 import android.Manifest
 import android.content.pm.PackageManager
-import android.graphics.Paint
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -22,27 +21,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.health.connect.client.PermissionController
 import no.kristo.finanshub.*
 import no.kristo.finanshub.family.FamilyService
 import no.kristo.finanshub.family.HealthSync
-import org.osmdroid.config.Configuration
-import org.osmdroid.events.MapEventsReceiver
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory
-import org.osmdroid.util.GeoPoint
-import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.MapEventsOverlay
-import org.osmdroid.views.overlay.Marker
-import org.osmdroid.views.overlay.Polygon
-import org.osmdroid.views.overlay.Polyline
 import java.time.Duration
 import java.time.Instant
 
@@ -91,7 +79,7 @@ internal fun FamilyScreen(vm: AppViewModel) {
         Column(Modifier.fillMaxSize()) {
             // Kartet øverst (40 % av høyden på Kart, mindre på Soner og Helse), med tilbake og tittel oppå.
             if (tab != "helse") Box(Modifier.fillMaxWidth().fillMaxHeight(if (tab == "kart") 0.42f else 0.3f)) {
-                FamilyMap(vm, Modifier.matchParentSize())
+                FamilyMapSafe(vm, Modifier.matchParentSize())
                 Row(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.height(34.dp).clip(CircleShape).background(Color(0xCC1B1A17)).clickable { vm.closeFamily() }.padding(start = 10.dp, end = 14.dp), contentAlignment = Alignment.Center) {
                         Text("‹ Hjem", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
@@ -101,8 +89,6 @@ internal fun FamilyScreen(vm: AppViewModel) {
                         Text(if (vm.famZoneDraft != null) "Trykk på kartet der sonen skal være" else "Trykk på kartet for ny sone", color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
-                Text("© OpenStreetMap", color = Color(0xFF1B1A17), fontSize = 9.sp,
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).clip(RoundedCornerShape(4.dp)).background(Color.White.copy(alpha = .75f)).padding(4.dp, 1.dp))
             } else Row(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.height(34.dp).clip(CircleShape).background(p.ink).clickable { vm.closeFamily() }.padding(start = 10.dp, end = 14.dp), contentAlignment = Alignment.Center) {
                     Text("‹ Hjem", color = p.bg, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
@@ -146,7 +132,12 @@ internal fun FamilyScreen(vm: AppViewModel) {
                     else -> {
                         item { HealthHeader(vm) }
                         val ms = (f?.members ?: emptyList())
-                        if (f != null && ms.none { it.health != null }) item { Text("Ingen deler helsedata ennå. Slå det på under Min deling.", color = p.mut, fontSize = 13.sp) }
+                        if (f != null && ms.none { it.health != null }) item {
+                            // Health Connect sier ikke om lesetilgang er gitt; er dialogen vist og det ikke finnes data, vises fremgangsmåten.
+                            if (no.kristo.finanshub.family.FamilyPrefs.healthAsked(ctx)) Text("Ingen data. Sjekk at FinansHub har tilgang: Innstillinger → App → Helse og posisjon → Åpne Health Connect, " +
+                                "eller i Health Connect → Apptillatelser → FinansHub. Data kommer neste gang telefonen synker (hvert 15. minutt).", color = p.mut, fontSize = 13.sp)
+                            else Text("Ingen deler helsedata ennå. Slå det på under Innstillinger → App → Helse og posisjon.", color = p.mut, fontSize = 13.sp)
+                        }
                         items(ms.size) { i -> ms[i].health?.let { h -> HealthCard(ms[i], h) } }
                     }
                 }
@@ -185,8 +176,8 @@ private fun PeopleChips(vm: AppViewModel) {
                 Modifier.clip(CircleShape).background(if (on) p.ink else p.card).border(1.dp, p.line, CircleShape).clickable { vm.famSelect(m.userId) }.padding(start = 4.dp, end = 14.dp, top = 4.dp, bottom = 4.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                ServerImage(vm, m.avatarUrl, Modifier.size(32.dp).clip(CircleShape).background(p.surf2)) {
-                    Text(m.name.take(1).uppercase(), color = p.ink, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
+                ServerImage(vm, m.avatarUrl, Modifier.size(32.dp).clip(CircleShape).background(Color(vm.famColor(m.userId)))) {
+                    Text(posInitials(m.name), color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = 12.sp, modifier = Modifier.align(Alignment.Center))
                 }
                 Column {
                     Text(m.name.split(' ').first(), color = if (on) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, maxLines = 1)
@@ -215,7 +206,7 @@ private fun PersonCard(vm: AppViewModel, sel: FamMember) {
             if (sel.sharing != "on") Text(if (sel.sharing == "paused") "$first har satt delingen på pause." else "$first deler ikke posisjonen.", color = p.lab, fontSize = 13.sp)
             else if (l == null) Text("Ingen posisjon ennå.", color = p.mut, fontSize = 13.sp)
             else {
-                Text(listOfNotNull(l.place ?: "Ukjent sted", ago(l.ts)).filter { it.isNotBlank() }.joinToString(" · "), color = p.mut, fontSize = 12.5.sp)
+                Text(listOfNotNull(l.place, ago(l.ts)).filter { it.isNotBlank() }.joinToString(" · "), color = p.mut, fontSize = 12.5.sp)
                 PLabel("Sensorer fra mobilen")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Sensor("Batteri", l.battery?.let { "$it %" } ?: "–", if (l.charging == true) "Lader" else null)
@@ -286,7 +277,8 @@ private fun ZoneCard(vm: AppViewModel, f: Family, z: FamZone) {
 private fun HealthHeader(vm: AppViewModel) {
     val p = PaperPal.current
     val ctx = LocalContext.current
-    val st = remember { runCatching { HealthSync.status(ctx) }.getOrDefault(2) }
+    // Health Connect-oppslag går utenfor hovedtråden (prompt 20).
+    val st by produceState(2) { value = HealthSync.statusIo(ctx) }
     val shared = vm.family?.me?.shareHealth?.filterValues { it }?.keys ?: emptySet()
     PCard(onClick = { vm.famPrivacy = true }) {
         Row(Modifier.padding(14.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -355,110 +347,6 @@ private fun Sensor(label: String, value: String, sub: String?) {
     }
 }
 
-/** Kartet: OSM-fliser (osmdroid), avatar-markører, spor for valgt person og sonene som sirkler. Trykk lager en ny sone. */
-@Composable
-private fun FamilyMap(vm: AppViewModel, modifier: Modifier) {
-    val f = vm.family
-    val track = vm.famTrack
-    val sel = vm.famSel
-    val ink = PaperPal.current.ink.toArgb()
-    val lab = PaperPal.current.lab.toArgb()
-    var centered by remember { mutableStateOf(false) }
-    var mapRef by remember { mutableStateOf<MapView?>(null) }
-    // osmdroid må få onResume/onPause, ellers lastes ikke flisene (kartet ble stående tomt).
-    DisposableEffect(mapRef) {
-        val m = mapRef
-        m?.onResume()
-        onDispose { m?.onPause(); m?.onDetach() }
-    }
-    AndroidView(
-        modifier = modifier,
-        factory = { c ->
-            val cfg = Configuration.getInstance()
-            cfg.load(c, c.getSharedPreferences("osmdroid", android.content.Context.MODE_PRIVATE))
-            // OSM krever en egen User-Agent; uten den blokkeres flisene.
-            cfg.userAgentValue = "FinansHub/" + (runCatching { c.packageManager.getPackageInfo(c.packageName, 0).versionName }.getOrNull() ?: "1") + " (" + c.packageName + ")"
-            cfg.osmdroidBasePath = c.cacheDir
-            cfg.osmdroidTileCache = java.io.File(c.cacheDir, "osm-tiles")
-            MapView(c).apply {
-                setTileSource(TileSourceFactory.MAPNIK)
-                setUseDataConnection(true)
-                setMultiTouchControls(true)
-                isTilesScaledToDpi = true
-                zoomController.setVisibility(org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER)
-                controller.setZoom(12.0)
-                controller.setCenter(GeoPoint(59.9139, 10.7522))
-                mapRef = this
-            }
-        },
-        update = { map ->
-            map.overlays.clear()
-            map.overlays.add(MapEventsOverlay(object : MapEventsReceiver {
-                override fun singleTapConfirmedHelper(pt: GeoPoint?): Boolean { if (pt == null) return false; vm.famZoneDraft = pt.latitude to pt.longitude; return true }
-                override fun longPressHelper(pt: GeoPoint?): Boolean = false
-            }))
-            f?.zones?.forEach { z ->
-                val poly = Polygon(map)
-                poly.setPoints(Polygon.pointsAsCircle(GeoPoint(z.lat, z.lon), z.radius))
-                val col = z.color.toInt()
-                poly.fillPaint.color = android.graphics.Color.argb(46, android.graphics.Color.red(col), android.graphics.Color.green(col), android.graphics.Color.blue(col))
-                poly.outlinePaint.color = col
-                poly.outlinePaint.strokeWidth = 4f
-                poly.title = z.name
-                poly.setOnClickListener { _, _, _ -> vm.famZoneEdit = z; true }
-                map.overlays.add(poly)
-            }
-            if (track.size > 1) {
-                val line = Polyline(map)
-                line.setPoints(track.map { GeoPoint(it.lat, it.lon) })
-                line.outlinePaint.color = lab
-                line.outlinePaint.strokeWidth = 8f
-                line.outlinePaint.strokeCap = Paint.Cap.ROUND
-                map.overlays.add(line)
-            }
-            f?.members?.forEach { m ->
-                val l = m.last ?: return@forEach
-                if (m.sharing != "on") return@forEach
-                val mk = Marker(map)
-                mk.position = GeoPoint(l.lat, l.lon)
-                mk.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                mk.title = m.name
-                mk.snippet = listOfNotNull(ago(l.ts), kmh(l.speed), l.battery?.let { "$it %" }).joinToString(" · ")
-                mk.icon = avatarPin(map.context, m.name.take(1).uppercase(), if (m.userId == sel) lab else ink)
-                mk.setOnMarkerClickListener { _, _ -> vm.famSelect(m.userId); true }
-                map.overlays.add(mk)
-            }
-            val target = f?.members?.firstOrNull { it.userId == sel }?.last ?: f?.members?.firstNotNullOfOrNull { it.last }
-            if (target != null && !centered) { map.controller.setCenter(GeoPoint(target.lat, target.lon)); map.controller.setZoom(14.0); centered = true }
-            map.invalidate()
-        },
-    )
-    LaunchedEffect(sel) { centered = false }
-}
-
-/** Rund markør med initial (tegnes som bitmap, osmdroid bruker Drawable). */
-private fun avatarPin(ctx: android.content.Context, letter: String, color: Int): android.graphics.drawable.Drawable {
-    val d = ctx.resources.displayMetrics.density
-    val size = (40 * d).toInt()
-    val bmp = android.graphics.Bitmap.createBitmap(size, (size * 1.2f).toInt(), android.graphics.Bitmap.Config.ARGB_8888)
-    val c = android.graphics.Canvas(bmp)
-    val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    paint.color = color
-    c.drawCircle(size / 2f, size / 2f, size / 2f - 2 * d, paint)
-    val path = android.graphics.Path().apply { moveTo(size / 2f - 7 * d, size - 6 * d); lineTo(size / 2f + 7 * d, size - 6 * d); lineTo(size / 2f, size * 1.18f); close() }
-    c.drawPath(path, paint)
-    paint.color = android.graphics.Color.WHITE
-    paint.style = Paint.Style.STROKE
-    paint.strokeWidth = 3 * d
-    c.drawCircle(size / 2f, size / 2f, size / 2f - 3.5f * d, paint)
-    paint.style = Paint.Style.FILL
-    paint.textSize = 17 * d
-    paint.textAlign = Paint.Align.CENTER
-    paint.isFakeBoldText = true
-    c.drawText(letter, size / 2f, size / 2f + 6 * d, paint)
-    return android.graphics.drawable.BitmapDrawable(ctx.resources, bmp)
-}
-
 /** Ny eller endret sone: navn, radius og farge, og varsel per person (kom til / forlot). */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -513,7 +401,7 @@ private fun PrivacySheet(vm: AppViewModel, startSharing: () -> Unit) {
     val ctx = LocalContext.current
     val me = vm.family?.me
     var health by remember { mutableStateOf(me?.shareHealth?.filterValues { it }?.keys ?: emptySet()) }
-    val hcStatus = remember { runCatching { HealthSync.status(ctx) }.getOrDefault(2) }
+    val hcStatus by produceState(-1) { value = HealthSync.statusIo(ctx) }
     val hcPerm = rememberLauncherForActivityResult(PermissionController.createRequestPermissionResultContract()) { granted ->
         if (granted.isEmpty() && health.isNotEmpty()) vm.message = "Health Connect ga ikke tilgang. Velg feltene på nytt, eller gi tilgang i Health Connect."
         vm.famSetHealth(health)
@@ -535,6 +423,7 @@ private fun PrivacySheet(vm: AppViewModel, startSharing: () -> Unit) {
             }
             PLabel("Helse (Health Connect)")
             when (hcStatus) {
+                -1 -> Text("Sjekker Health Connect …", color = p.mut, fontSize = 13.sp)
                 2 -> Text("Health Connect finnes ikke på denne telefonen.", color = p.mut, fontSize = 13.sp)
                 1 -> Text("Health Connect må installeres eller oppdateres fra Play Butikk.", color = p.lab, fontSize = 13.sp)
                 else -> {
@@ -545,7 +434,8 @@ private fun PrivacySheet(vm: AppViewModel, startSharing: () -> Unit) {
                     }
                     PButton("Lagre helsedeling", Modifier.fillMaxWidth()) {
                         val perms = HealthSync.permissionsFor(health)
-                        if (perms.isEmpty()) vm.famSetHealth(health) else hcPerm.launch(perms)
+                        if (perms.isEmpty()) vm.famSetHealth(health)
+                        else try { vm.healthAskedNow(); hcPerm.launch(perms) } catch (e: Exception) { vm.message = "Fikk ikke åpnet Health Connect: ${e.message ?: "ukjent feil"}" }
                     }
                     Text("Bare det du velger, sendes til serveren, som et sammendrag hvert 15. minutt.", color = p.mut, fontSize = 12.sp)
                 }

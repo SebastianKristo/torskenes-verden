@@ -365,7 +365,8 @@ internal fun RuterPage(vm: AppViewModel) {
                                         }
                                     }
                                 }
-                                Box(Modifier.height(58.dp).clip(RoundedCornerShape(14.dp)).border(1.5.dp, p.line, RoundedCornerShape(14.dp)).clickable { vm.stopAddOpen = true }.padding(horizontal = 16.dp),
+                                // «+ Stopp»: kortbakgrunn og mørkere stiplet kant, så teksten er lesbar også over trikkebildet (prompt 20).
+                                Box(Modifier.height(58.dp).clip(RoundedCornerShape(14.dp)).background(p.card).dashedEdge(p.mut, 14.dp).clickable { vm.stopAddOpen = true }.padding(horizontal = 16.dp),
                                     contentAlignment = Alignment.Center) { Text("+ Stopp", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp) }
                             }
                         }

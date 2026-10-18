@@ -27,6 +27,10 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.zIndex
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -400,7 +404,12 @@ internal fun PaperRail(vm: AppViewModel, bar: String, float: Boolean, modifier: 
 
 private class FinTile(val key: String, val title: String, val value: String, val icon: ImageVector, val badge: String? = null, val pos: Boolean = false, val go: () -> Unit)
 
-/** «Alt fra FinansHub på nettsiden»: to kort i bredden (3–4 på Fold), ikon i rute, tittel og et live-tall. */
+/**
+ * «Alt fra FinansHub på nettsiden»: to kort i bredden (3–4 på Fold), ikon i farget rute, tittel og et live-tall.
+ * Prompt 20: hver flis har egen ikonfarge på tonet bakgrunn. Hold inne (~0,45 s) for redigeringsmodus: flisene vugger og
+ * kan dras til ny plass, med «Ferdig» og «Tilbakestill». Rekkefølgen lagres (papir_fm_order, og fmOrder på serveren).
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
     val p = PaperPal.current
@@ -412,7 +421,7 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
     val review = vm.reviewCount ?: vm.boot?.reviewCount ?: 0
     val saldo = vm.boot?.accounts?.sumOf { it.balance }
     val st = vm.stocks?.summary
-    val tiles = listOf(
+    val all = listOf(
         FinTile("sok", "Søk", "✦ Med AI", Icons.Filled.Search) { vm.paperFinTab("sok") },
         FinTile("liste", "Liste", "Alle transaksjoner", Icons.AutoMirrored.Filled.List) { vm.openFromFinMer(Screen.List) },
         FinTile("finn", "Finn", vm.finn?.items?.size?.let { "$it handler" } ?: "Kjøp og salg", Icons.Filled.Storefront) { vm.openFromFinMer(Screen.Finn) },
@@ -426,29 +435,85 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
         FinTile("boliger", "Boliger", vm.folders?.let { if (it.size == 1) "1 bolig" else "${it.size} boliger" } ?: "Utgifter og regninger", Icons.Filled.Home) { vm.openFromFinMer(Screen.Folders) },
         FinTile("fimport", "Import", "Bank, Excel og Finn", Icons.Filled.FileUpload) { vm.openFromFinMer(Screen.Import) },
         FinTile("innst", "Innstillinger", "Kategorier og regler", Icons.Filled.Settings) { vm.settingsPage = null; vm.openFromFinMer(Screen.Settings) },
-    ).filter { it.key !in vm.paperFinTabs }
+    )
+    var editing by remember { mutableStateOf(false) }
+    var order by remember { mutableStateOf(vm.fmOrder) }
+    var dragKey by remember { mutableStateOf<String?>(null) }
+    var dragOffset by remember { mutableStateOf(Offset.Zero) }
+    LaunchedEffect(vm.fmOrder) { if (!editing) order = vm.fmOrder }
+    val byKey = all.associateBy { it.key }
+    val tiles = order.mapNotNull { byKey[it] }.filter { it.key !in vm.paperFinTabs }
+    val grid = rememberLazyGridState()
+    val wobble = rememberInfiniteTransition(label = "wobble").animateFloat(-1f, 1f, infiniteRepeatable(tween(130, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "w")
     val cols = if (wide) 4 else 2
+    val dragMod = if (!editing) Modifier else Modifier.pointerInput(Unit) {
+        fun hit(pos: Offset) = grid.layoutInfo.visibleItemsInfo.firstOrNull { i ->
+            i.key is String && (i.key as String) != "fm-head" && pos.x >= i.offset.x && pos.x <= i.offset.x + i.size.width && pos.y >= i.offset.y && pos.y <= i.offset.y + i.size.height
+        }
+        detectDragGestures(
+            onDragStart = { pos -> hit(pos)?.let { dragKey = it.key as String; dragOffset = Offset.Zero; Haptics.tap() } },
+            onDragEnd = { dragKey = null; dragOffset = Offset.Zero },
+            onDragCancel = { dragKey = null; dragOffset = Offset.Zero },
+            onDrag = { ch, amount ->
+                val k = dragKey
+                if (k != null) {
+                    ch.consume()
+                    dragOffset += amount
+                    val cur = grid.layoutInfo.visibleItemsInfo.firstOrNull { it.key == k }
+                    if (cur != null) {
+                        val center = Offset(cur.offset.x + cur.size.width / 2f, cur.offset.y + cur.size.height / 2f) + dragOffset
+                        val target = hit(center)
+                        if (target != null && target.key != k) {
+                            val l = order.toMutableList()
+                            val from = l.indexOf(k)
+                            val to = l.indexOf(target.key as String)
+                            if (from >= 0 && to >= 0) {
+                                l.removeAt(from); l.add(to, k)
+                                order = l
+                                // Flisen flytter seg i rutenettet; fingeren skal fortsatt holde den.
+                                dragOffset += Offset((cur.offset.x - target.offset.x).toFloat(), (cur.offset.y - target.offset.y).toFloat())
+                                Haptics.select()
+                            }
+                        }
+                    }
+                }
+            },
+        )
+    }
     LazyVerticalGrid(
-        GridCells.Fixed(cols), Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom),
+        GridCells.Fixed(cols), Modifier.fillMaxSize().then(dragMod), state = grid, contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom),
         horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        item(span = { GridItemSpan(maxLineSpan) }) {
+        item(key = "fm-head", span = { GridItemSpan(maxLineSpan) }) {
             PCard(shadow = true) {
-                Column(Modifier.padding(16.dp, 12.dp)) {
+                if (!editing) Column(Modifier.padding(16.dp, 12.dp)) {
                     PLabel("Finans · Mer")
-                    Text("Alt fra FinansHub på nettsiden", color = p.mut, fontSize = 13.sp)
+                    Text("Alt fra FinansHub på nettsiden · hold inne for å flytte", color = p.mut, fontSize = 13.sp)
+                } else Row(Modifier.padding(12.dp, 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Dra flisene til ny plass", color = p.ink, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    PButton("Tilbakestill", height = 36.dp, kind = "line") { order = FM_DEFAULT_ORDER; vm.resetFmOrder() }
+                    PButton("Ferdig", height = 36.dp) { editing = false; vm.saveFmOrder(order); Haptics.success() }
                 }
             }
         }
-        items(tiles.size) { i ->
+        items(tiles.size, key = { tiles[it].key }) { i ->
             val t = tiles[i]
+            val tint = Color(FM_COLORS[t.key] ?: 0xFF6F6A60)
+            val dragging = dragKey == t.key
+            val tileMod = when {
+                dragging -> Modifier.zIndex(2f).graphicsLayer { translationX = dragOffset.x; translationY = dragOffset.y; scaleX = 1.05f; scaleY = 1.05f }
+                editing -> Modifier.graphicsLayer { rotationZ = wobble.value * (if (i % 2 == 0) 1.4f else -1.4f) }
+                else -> Modifier
+            }
             Column(
-                Modifier.fillMaxWidth().heightIn(min = 112.dp).clip(RoundedCornerShape(20.dp)).background(p.card).clickable(onClickLabel = t.title) { Haptics.select(); t.go() }.padding(14.dp),
+                tileMod.fillMaxWidth().heightIn(min = 112.dp).clip(RoundedCornerShape(20.dp)).background(p.card)
+                    .then(if (editing) Modifier else Modifier.combinedClickable(onClickLabel = t.title, onLongClick = { Haptics.tap(); editing = true }) { Haptics.select(); t.go() })
+                    .padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Row(verticalAlignment = Alignment.Top) {
-                    Box(Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(p.lab.copy(alpha = .12f)), contentAlignment = Alignment.Center) {
-                        Icon(t.icon, null, tint = p.lab, modifier = Modifier.size(20.dp))
+                    Box(Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(tint.copy(alpha = .14f)), contentAlignment = Alignment.Center) {
+                        Icon(t.icon, null, tint = tint, modifier = Modifier.size(20.dp))
                     }
                     Spacer(Modifier.weight(1f))
                     t.badge?.let { b ->

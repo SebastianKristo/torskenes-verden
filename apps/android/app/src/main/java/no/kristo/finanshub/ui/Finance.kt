@@ -80,13 +80,18 @@ internal fun Initial(text: String, color: Long, size: Int = 40, shape: RoundedCo
     }
 }
 
-/** Butikklogo (favicon via serverens cache) på hvit flate; initial når domenet er ukjent. */
+/** Butikklogo (logoregisteret, ellers favicon via serverens cache) på hvit flate; initial når logoen mangler. */
 @Composable
 internal fun Logo(vm: AppViewModel, domain: String?, name: String, color: Long, size: Int = 40, shape: RoundedCornerShape = RoundedCornerShape((size / 4).dp)) {
-    var bmp by remember(domain) { mutableStateOf<Bitmap?>(null) }
-    LaunchedEffect(domain) { bmp = vm.logo(domain) }
+    // Logoregisteret først (prompt 20): treff på domene eller butikktekst, fil fra /finans/api/logos/file/:id, bokstav i merkefargen.
+    var bmp by remember(domain, name) { mutableStateOf<Bitmap?>(null) }
+    var regColor by remember(domain, name) { mutableStateOf<Long?>(null) }
+    LaunchedEffect(domain, name) {
+        regColor = vm.logoItem(domain, name)?.color
+        bmp = vm.logoFor(domain, name)
+    }
     val b = bmp
-    if (b == null) Initial(name, color, size, shape)
+    if (b == null) Initial(name, regColor ?: color, size, shape)
     else Box(Modifier.size(size.dp).clip(shape).background(Color.White).padding((size / 9).dp), contentAlignment = Alignment.Center) {
         Image(b.asImageBitmap(), null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
     }

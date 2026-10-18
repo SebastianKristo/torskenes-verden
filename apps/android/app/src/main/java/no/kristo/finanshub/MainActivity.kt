@@ -63,11 +63,14 @@ class MainActivity : FragmentActivity() {
         vm.onBackground()
         // Endringer i appen (bokført kvittering, ny pakke) vises i widgetene.
         if (vm.loggedIn) no.kristo.finanshub.widget.WidgetSync.refresh(this)
+        // «Også i bakgrunnen» av (Helse og posisjon): posisjonen deles bare mens appen er åpen.
+        if (!no.kristo.finanshub.family.FamilyPrefs.background(this)) runCatching { stopService(Intent(this, no.kristo.finanshub.family.FamilyService::class.java)) }
     }
 
     override fun onStart() {
         super.onStart()
         vm.onForeground()
+        if (!no.kristo.finanshub.family.FamilyPrefs.background(this)) runCatching { no.kristo.finanshub.family.FamilyService.sync(this) }
     }
 
     override fun onNewIntent(intent: Intent) {

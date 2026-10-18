@@ -57,8 +57,14 @@ class FamilyService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP || !FamilyPrefs.sharing(this)) { stopSelf(); return START_NOT_STICKY }
-        startAsForeground()
-        startUpdates()
+        // Uten posisjonstillatelse kaster startForeground(type = location) SecurityException på Android 14+ (og
+        // ForegroundServiceStartNotAllowedException når appen er i bakgrunnen). Det krasjet appen; nå stopper tjenesten bare.
+        if (!hasLocation(this)) { stopSelf(); return START_NOT_STICKY }
+        try { startAsForeground() } catch (e: Exception) {
+            android.util.Log.w("FinansHub", "Familie: kunne ikke starte forgrunnstjenesten", e)
+            stopSelf(); return START_NOT_STICKY
+        }
+        runCatching { startUpdates() }
         return START_STICKY
     }
 
@@ -118,7 +124,8 @@ class FamilyService : Service() {
             .put("activity", activityFromSpeed(speed))
             .put("device", Build.MODEL)
             .put("ts", loc.time.takeIf { it > 0 } ?: now)
-        battery(this)?.let { (lvl, ch) -> o.put("battery", lvl).put("charging", ch) }
+        if (FamilyPrefs.sensors(this)) battery(this)?.let { (lvl, ch) -> o.put("battery", lvl).put("charging", ch) }
+        else o.remove("activity")
         synchronized(queue) { queue += o; while (queue.size > 200) queue.removeAt(0) }
         scope.launch { flush(this@FamilyService) }
     }
@@ -200,6 +207,15 @@ object FamilyPrefs {
     fun setSharing(ctx: Context, on: Boolean) { sp(ctx).edit().putBoolean("sharing", on).apply() }
     fun setPrecise(ctx: Context, on: Boolean) { sp(ctx).edit().putBoolean("precise", on).apply() }
     fun health(ctx: Context): Set<String> = sp(ctx).getStringSet("health", emptySet()) ?: emptySet()
+    /** «Batteri og bevegelse» sendes med posisjonen (Helse og posisjon). */
+    fun sensors(ctx: Context) = sp(ctx).getBoolean("sensors", true)
+    fun putSensors(ctx: Context, on: Boolean) { sp(ctx).edit().putBoolean("sensors", on).apply() }
+    /** Health Connect-dialogen er vist minst én gang (Familie viser da «Ingen data» med fremgangsmåte). */
+    fun healthAsked(ctx: Context) = sp(ctx).getBoolean("healthAsked", false)
+    fun putHealthAsked(ctx: Context) { sp(ctx).edit().putBoolean("healthAsked", true).apply() }
+    /** «Også i bakgrunnen» (Helse og posisjon). */
+    fun background(ctx: Context) = sp(ctx).getBoolean("background", true)
+    fun putBackground(ctx: Context, on: Boolean) { sp(ctx).edit().putBoolean("background", on).apply() }
 
     /** Sonene (lat, lon, radius) fra siste henting, så tjenesten kan sjekke sonekanter uten nett. */
     fun setZones(ctx: Context, zones: List<Triple<String, Pair<Double, Double>, Double>>) {
