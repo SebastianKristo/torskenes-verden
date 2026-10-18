@@ -17,7 +17,9 @@ const CYC = [['monthly', 'Månedlig'], ['yearly', 'Årlig'], ['biennial', 'Hvert
 const CYC_M = { monthly: 1, yearly: 12, biennial: 24 };
 const ST = { active: ['Aktiv', 'ok'], low_use: ['⚠ Lite brukt', 'low'], price_up: ['▲ Pris økt', 'up'], cancelled: ['Sagt opp', 'off'] };
 const ST_RANK = { price_up: 0, low_use: 1, active: 2, cancelled: 3 };
-const lg = (s, size = 28) => logo({ ...s, description: s.name ?? s.merchant, color: col(s.category) }, size, size / 2);
+// Egen logo (opplastet eller ✦ funnet med AI) vises før domenelogoen.
+const lg = (s, size = 28) => (s?.logoUrl ? `<span class="m-logo so-ownlogo" style="width:${size}px;height:${size}px;border-radius:${size / 2}px;flex:none;background-image:url('${esc(s.logoUrl)}')"></span>`
+  : logo({ ...s, description: s.name ?? s.merchant, color: col(s.category) }, size, size / 2));
 const dShort = (iso) => (iso ? `${+iso.slice(8, 10)}. ${MON_L[+iso.slice(5, 7) - 1].slice(0, 3)}` : '–');
 const dLong = (iso) => `${+iso.slice(8, 10)}. ${MON_L[+iso.slice(5, 7) - 1]}`;
 const ymOf = (iso) => iso.slice(0, 7);
@@ -112,7 +114,7 @@ function monthCard(d, byId) {
   const dates = [...new Set(shown.map((x) => x.date))].slice(0, 3);
   const groups = dates.map((dt) => `<div class="so-grp"><span class="muted">${days(dt, d.today) === 0 ? 'I dag' : days(dt, d.today) === 1 ? 'I går' : dLong(dt)}</span>${shown.filter((x) => x.date === dt).map((x) => {
     const s = byId.get(x.id);
-    return `<div class="so-li">${lg(s, 32)}<span class="grow"><b>${esc(s.name)}</b><small>${x.date <= d.today ? 'Betalt' : 'Trekkes'} · ${esc(s.plan || s.cycleName)}</small></span><span class="mono so-neg">−${kr(x.amount)}</span></div>`;
+    return `<div class="so-li so-click" data-ssub-edit="${s.id}" role="button" tabindex="0">${lg(s, 32)}<span class="grow"><b>${esc(s.name)}</b><small>${x.date <= d.today ? 'Betalt' : 'Trekkes'} · ${esc(s.plan || s.cycleName)}</small></span><span class="mono so-neg">−${kr(x.amount)}</span></div>`;
   }).join('')}</div>`).join('');
   return `<section class="card so-month"><div class="card-h"><h2>Trekk denne måneden</h2><span class="muted">${kr(done)} av ${kr(total)}</span></div>
     <div class="so-prog"><i style="width:${total ? (done / total) * 100 : 0}%"></i></div>
@@ -135,7 +137,7 @@ function table(d) {
       <span class="so-new-b"><button class="btn sm pri">Legg til</button><button type="button" class="btn sm ghost" data-sact="add-close">Avbryt</button></span></form>` : '';
   const body = rows.map((s) => {
     const [stT, stC] = ST[s.status] ?? ST.active, flag = s.status === 'low_use' || s.status === 'price_up';
-    const act = !s.active ? `<button class="so-act" data-msub-tog="${s.id}">Angre</button>` : flag ? `<button class="so-act on" data-ssub-cut="${s.id}">Si opp</button>` : `<button class="so-act" data-ssub-menu="${s.id}" aria-label="Flere valg">···</button>`;
+    const act = !s.active ? `<button class="so-act" data-msub-tog="${s.id}">Angre</button>` : flag ? `<button class="so-act on" data-ssub-cut="${s.id}">Si opp</button>` : `<button class="so-act" data-ssub-edit="${s.id}">Endre</button>`;
     const pop = u.subRow === s.id ? `<div class="so-pop">
         <label>Trekk<select class="sel sm" data-msub-cyc="${s.id}">${CYC.map(([v, l]) => `<option value="${v}"${s.cycle === v ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
         <label>Trekkdag<input class="inp sm" type="number" min="1" max="31" value="${s.chargeDay ?? ''}" data-ssub-day="${s.id}"></label>
@@ -143,7 +145,7 @@ function table(d) {
         <button data-msub-low="${s.id}">${s.lowUse ? 'Fjern «Lite brukt»' : 'Marker som lite brukt'}</button>
         <button data-ssub-cut="${s.id}">Si opp</button><button class="so-del" data-msub-del="${s.id}">Slett</button></div>` : '';
     const price = s.status === 'price_up' && s.prevPrice != null ? ` title="Var ${kr(s.prevPrice)} til ${dShort(s.priceChanged)}"` : '';
-    return `<div class="so-tr${s.active ? '' : ' off'}"><span class="so-name">${lg(s)}<b>${esc(s.name)}</b></span><span class="sub ell">${esc(s.plan || '–')}</span><span class="sub">${s.cycleName}</span>
+    return `<div class="so-tr so-click${s.active ? '' : ' off'}" data-ssub-edit="${s.id}" role="button" tabindex="0" aria-label="Rediger ${esc(s.name)}"><span class="so-name">${lg(s)}<b>${esc(s.name)}</b></span><span class="sub ell">${esc(s.plan || '–')}</span><span class="sub">${s.cycleName}</span>
       <span class="sub">${dShort(s.nextDate)}</span><span class="mono"${price}>${kr(s.price)}</span><span><span class="so-st ${stC}"${s.usageNote ? ` title="${esc(s.usageNote)}"` : ''}>${stT}</span></span><span class="so-hand">${act}${pop}</span></div>`;
   }).join('');
   return `<section class="card so-table"><div class="card-h"><h2>Abonnementer</h2><button class="so-link plain" data-sact="${u.subAdd ? 'add-close' : 'manual'}">${u.subAdd ? 'Lukk' : '⊕ Nytt abonnement'}</button></div>
@@ -194,7 +196,7 @@ function calendar(d, byId) {
   }
   const L = charges.filter((x) => x.date === sel);
   const detail = `<section class="card so-dd"><span class="so-ddt">${sel === d.today ? 'I DAG · ' : ''}${dLong(sel).toUpperCase()}</span><b class="mono so-ddv">${kr(L.reduce((a, x) => a + x.amount, 0))}</b>
-    ${L.length ? L.map((x) => { const s = byId.get(x.id); return `<div class="so-li">${lg(s, 32)}<span class="grow"><b>${esc(s.name)}</b><small>${esc([s.plan, s.cycleName, s.category].filter(Boolean).join(' · '))}</small></span><span class="mono">${kr(x.amount)}</span></div>`; }).join('') : '<div class="note">Ingen trekk denne dagen.</div>'}</section>`;
+    ${L.length ? L.map((x) => { const s = byId.get(x.id); return `<div class="so-li so-click" data-ssub-edit="${s.id}" role="button" tabindex="0">${lg(s, 32)}<span class="grow"><b>${esc(s.name)}</b><small>${esc([s.plan, s.cycleName, s.category].filter(Boolean).join(' · '))}</small></span><span class="mono">${kr(x.amount)}</span></div>`; }).join('') : '<div class="note">Ingen trekk denne dagen.</div>'}</section>`;
   const per = {};
   for (const s of d.items) if (s.active) per[s.category] = (per[s.category] ?? 0) + s.monthly;
   const cats = d.categories.filter((c) => per[c]), mx = Math.max(1, ...cats.map((c) => per[c]));
@@ -206,11 +208,48 @@ function calendar(d, byId) {
     <div class="so-side">${detail}${split}</div></div>`;
 }
 
+/* ---------- Rediger / legg til (ark) ---------- */
+// Samme ark for «Skriv inn selv» (tomt) og et trykk på et abonnement: logo (last opp eller ✦ AI), navn, pris, plan,
+// kategori, hvor ofte, faktureringsdato (dag + måned) og status. Lagres med POST/PATCH /subscriptions.
+const ST_ED = [['active', 'Aktiv'], ['low_use', 'Lite brukt'], ['cancelled', 'Sagt opp']];
+const CYC_THEN = { monthly: 'deretter hver måned', yearly: 'deretter hvert år', biennial: 'deretter hvert 2. år' };
+function openEd(s) {
+  const now = new Date(), next = s?.nextDate;
+  u.subEd = s ? { id: s.id, n: s.name, plan: s.plan ?? '', v: String(s.price).replace('.', ','), cyc: s.cycle, day: s.billDay ?? s.chargeDay ?? (next ? +next.slice(8, 10) : now.getDate()),
+    mon: s.billMonth ?? (next ? +next.slice(5, 7) : now.getMonth() + 1), cat: s.category, st: !s.active ? 'cancelled' : s.lowUse ? 'low_use' : 'active', logo: s.logoUrl ?? '', domain: s.domain }
+    : { id: null, n: '', plan: '', v: '', cyc: 'monthly', day: now.getDate(), mon: now.getMonth() + 2 > 12 ? 1 : now.getMonth() + 2, cat: S.subs?.categories?.[0] ?? 'Annet', st: 'active', logo: '' };
+  u.subMenu = false; u.subRow = null;
+}
+function editSheet(d) {
+  const e = u.subEd;
+  if (!e) return '';
+  const pv = e.file ? e.preview : e.logo;
+  const logoBox = `<span class="se-logo" style="${pv ? `background-image:url('${esc(pv)}')` : `background:${col(e.cat)}`}">${pv ? '' : esc((e.n || '?').split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase())}</span>`;
+  const chips = (list, cur, attr) => list.map(([k, n]) => `<button type="button" class="se-chip" ${attr}="${k}" aria-pressed="${cur === k}">${n}</button>`).join('');
+  const dateTxt = `Neste trekk ${e.day}. ${MON_L[(+e.mon || 1) - 1]}, ${CYC_THEN[e.cyc] ?? CYC_THEN.monthly}`;
+  return `<div class="se-back" data-sed="close"><form class="se" data-sform="ed" role="dialog" aria-modal="true" aria-label="${e.id ? `Rediger ${esc(e.n)}` : 'Nytt abonnement'}">
+    <span class="se-grip" aria-hidden="true"></span>
+    <div class="se-h"><b>${e.id ? `Rediger ${esc(e.n)}` : 'Nytt abonnement'}</b><button type="button" class="x-btn sm" data-sed="close" aria-label="Lukk">×</button></div>
+    <div class="se-logorow">${logoBox}<div class="se-lc"><span class="se-l">Logo</span><div class="se-lb">
+      <label class="btn sm">↑ Last opp<input type="file" accept="image/png,image/jpeg,image/webp" data-sed-file hidden></label>
+      <button type="button" class="btn sm" data-sed="ai" ${e.busy ? 'disabled' : ''}>${e.busy ? '✦ Leter …' : '✦ Finn logo med AI'}</button>
+      ${pv ? '<button type="button" class="btn sm ghost" data-sed="nologo">Fjern</button>' : ''}</div>
+      ${e.aiPending ? '<small class="se-note">✦ Logoen hentes når abonnementet er lagret.</small>' : ''}</div></div>
+    <div class="se-g2"><label>Navn<input class="inp" name="n" value="${esc(e.n)}" placeholder="F.eks. HBO Max" required></label><label>Pris (kr)<input class="inp mono" name="v" value="${esc(e.v)}" inputmode="decimal" placeholder="129" required></label></div>
+    <div class="se-g2 eq"><label>Plan<input class="inp" name="plan" value="${esc(e.plan)}" placeholder="Standard"></label><label>Kategori<select class="sel" name="cat">${(d.categories ?? []).map((c) => `<option${e.cat === c ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label></div>
+    <div class="se-f"><span class="se-l">Hvor ofte</span><div class="se-chips">${chips(CYC, e.cyc, 'data-sed-cyc')}</div></div>
+    <div class="se-f"><span class="se-l">Faktureringsdato</span><div class="se-date"><select class="sel" name="day" aria-label="Dag">${Array.from({ length: 31 }, (_, i) => `<option value="${i + 1}"${+e.day === i + 1 ? ' selected' : ''}>${i + 1}.</option>`).join('')}</select>
+      <select class="sel" name="mon" aria-label="Måned">${MON_L.map((m, i) => `<option value="${i + 1}"${+e.mon === i + 1 ? ' selected' : ''}>${m[0].toUpperCase()}${m.slice(1)}</option>`).join('')}</select></div><small class="se-note" data-sed-date>${esc(dateTxt)}</small></div>
+    <div class="se-f"><span class="se-l">Status</span><div class="se-chips">${chips(ST_ED, e.st, 'data-sed-st')}</div></div>
+    <div class="se-btns"><button class="btn pri se-save">Lagre</button>${e.id ? '<button type="button" class="btn se-del" data-sed="del">Slett</button>' : ''}</div>
+  </form></div>`;
+}
+
 export function subPage() {
   const d = S.subs;
   if (!d?.byMonth) return skel(400);
   const byId = new Map(d.items.map((s) => [s.id, s]));
-  return `<div class="so">${head()}${candPanel()}${(u.subTab ?? 'ov') === 'cal' ? calendar(d, byId) : overview(d, byId)}</div>`;
+  return `<div class="so">${head()}${candPanel()}${(u.subTab ?? 'ov') === 'cal' ? calendar(d, byId) : overview(d, byId)}</div>${editSheet(d)}`;
 }
 
 /* ---------- Hendelser ---------- */
@@ -218,6 +257,17 @@ export function subPage() {
 export function bindSubs(el) {
   const wrap = (fn) => async (e) => { if (u.page !== 'sub') return; try { await fn(e); } catch (err) { toast(err.message); } };
   const reload = async () => { await loadSubs(); render(); };
+  const saveEd = async () => {
+    const e2 = u.subEd, price = parseAmount(e2.v);
+    if (!e2.n.trim() || !(price >= 0)) return toast('Fyll inn navn og pris');
+    const json = { name: e2.n.trim(), plan: e2.plan.trim(), price, cycle: e2.cyc, billDay: +e2.day, billMonth: +e2.mon, nextDate: `${+e2.day}.${+e2.mon}`, category: e2.cat, status: e2.st };
+    if (!e2.logo && !e2.file && e2.id) json.logoUrl = null;
+    const s = e2.id ? await api(`/subscriptions/${e2.id}`, { method: 'PATCH', json }) : await api('/subscriptions', { method: 'POST', json });
+    if (e2.file) { const fd = new FormData(); fd.append('file', e2.file); await api(`/subscriptions/${s.id}/logo`, { method: 'POST', body: fd }).catch((err) => toast(err.message)); }
+    else if (e2.aiPending) await api(`/subscriptions/${s.id}/logo/ai`, { method: 'POST' }).catch(() => toast('Fant ingen logo. Last opp et bilde.'));
+    toast(e2.id ? `Lagret ${s.name}` : `${s.name} er lagt til`);
+    u.subEd = null; return reload();
+  };
   const patch = async (id, json) => { await api(`/subscriptions/${id}`, { method: 'PATCH', json }); return reload(); };
   el.addEventListener('click', wrap(async (e) => {
     const d = (s) => e.target.closest(s);
@@ -229,6 +279,31 @@ export function bindSubs(el) {
     if ((x = d('[data-smon]'))) { u.subMon = +x.dataset.smon; return render(); }
     if ((x = d('[data-sday]'))) { u.subDay = x.dataset.sday; return render(); }
     if ((x = d('[data-ssort]'))) { const k = x.dataset.ssort, cur = u.subSort ?? { k: 'next', dir: 1 }; u.subSort = { k, dir: cur.k === k ? -cur.dir : 1 }; return render(); }
+    // Bakgrunnen lukker bare når selve bakgrunnen trykkes, ikke arket.
+    if ((x = d('[data-sed]')) && !(x.classList.contains('se-back') && e.target !== x)) {
+      const e2 = u.subEd, k = x.dataset.sed;
+      if (k === 'close') { u.subEd = null; return render(); }
+      if (k === 'nologo') { e2.logo = ''; e2.file = null; e2.preview = null; e2.aiPending = false; return render(); }
+      if (k === 'ai') {
+        if (!e2.n.trim()) return toast('Skriv inn navnet først');
+        if (!e2.id) { e2.aiPending = true; e2.file = null; e2.preview = null; return render(); }
+        e2.busy = true; render();
+        try { const r = await api(`/subscriptions/${e2.id}/logo/ai`, { method: 'POST' }); e2.logo = r.logoUrl; toast(`✦ Fant logo for ${e2.n}`); await loadSubs(); }
+        catch (err) { toast(err.message || 'Fant ingen logo. Last opp et bilde.'); }
+        e2.busy = false; return render();
+      }
+      if (k === 'del') {
+        if (!confirm(`Slette ${e2.n}?`)) return;
+        await api(`/subscriptions/${e2.id}`, { method: 'DELETE' }); toast(`${e2.n} er slettet`); u.subEd = null; return reload();
+      }
+    }
+    if (u.subEd && d('.se')) {
+      if ((x = d('[data-sed-cyc]'))) { u.subEd.cyc = x.dataset.sedCyc; return render(); }
+      if ((x = d('[data-sed-st]'))) { u.subEd.st = x.dataset.sedSt; return render(); }
+      return;
+    }
+    // Knappene i Handling-kolonnen (Si opp, Angre) har egne handlinger; resten av raden åpner redigering.
+    if ((x = d('[data-ssub-edit]')) && !(d('.so-hand') && !d('.so-act[data-ssub-edit]'))) { e.stopPropagation(); const s = S.subs.items.find((y) => y.id === +x.dataset.ssubEdit); if (s) { openEd(s); render(); } return; }
     if ((x = d('[data-ssub-menu]'))) { const id = +x.dataset.ssubMenu; u.subRow = u.subRow === id ? null : id; return render(); }
     if ((x = d('[data-ssub-cut]'))) { const s = S.subs.items.find((y) => y.id === +x.dataset.ssubCut); u.subRow = null; await patch(s.id, { active: false }); return toast(`${s.name} er markert som sagt opp`); }
     if ((x = d('[data-scal]'))) {
@@ -246,7 +321,7 @@ export function bindSubs(el) {
     if ((x = d('[data-sact]'))) {
       switch (x.dataset.sact) {
         case 'menu': u.subMenu = !u.subMenu; return render();
-        case 'manual': u.subMenu = false; u.subTab = 'ov'; u.subAdd = true; render(); el.querySelector('[data-sform=new] [name=name]')?.focus(); return;
+        case 'manual': openEd(null); render(); el.querySelector('.se [name=n]')?.focus(); return;
         case 'add-close': u.subAdd = false; u.subF = null; return render();
         case 'cands': u.subMenu = false; u.subCand = true; S.subCands = null; render(); S.subCands = await api('/subscriptions/candidates'); return render();
         case 'cands-close': u.subCand = false; return render();
@@ -257,15 +332,34 @@ export function bindSubs(el) {
   el.addEventListener('change', wrap(async (e) => {
     const t = e.target;
     if (t.matches('[data-mrc="sub"]')) { u.subMenu = false; return; } // opplastingen gjøres i modules.js
+    if (t.matches('[data-sed-file]') && u.subEd) {
+      const f = t.files?.[0]; t.value = '';
+      if (!f) return;
+      if (f.size > 4 * 1024 * 1024) return toast('Logoen kan være maks 4 MB');
+      const e2 = u.subEd;
+      if (e2.id) { const fd = new FormData(); fd.append('file', f); const r = await api(`/subscriptions/${e2.id}/logo`, { method: 'POST', body: fd }); e2.logo = r.logoUrl; e2.file = null; await loadSubs(); return render(); }
+      e2.file = f; e2.aiPending = false; e2.preview = URL.createObjectURL(f); return render();
+    }
+    if (u.subEd && t.closest('[data-sform=ed]') && t.name) { u.subEd[t.name] = t.value; if (t.name === 'day' || t.name === 'mon' || t.name === 'cat') return render(); return; }
     if (t.matches('[data-ssub-day]')) return patch(+t.dataset.ssubDay, { chargeDay: +t.value || null });
     if (t.matches('[data-ssub-cat]')) return patch(+t.dataset.ssubCat, { category: t.value });
   }));
   // Feltene i den nye raden beholdes når siden tegnes på nytt.
-  el.addEventListener('input', (e) => { const f = e.target.closest('[data-sform=new]'); if (f) u.subF = Object.fromEntries(new FormData(f)); });
+  el.addEventListener('input', (e) => {
+    const f = e.target.closest('[data-sform=new]'); if (f) u.subF = Object.fromEntries(new FormData(f));
+    if (u.subEd && e.target.closest('[data-sform=ed]') && e.target.name) u.subEd[e.target.name] = e.target.value;
+  });
+  // Escape lukker arket uansett hvor fokus står (lytteren ligger på document, bare én gang).
+  if (!document.body.dataset.subEsc) { document.body.dataset.subEsc = '1'; document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && u.subEd && u.page === 'sub') { u.subEd = null; render(); } }); }
+  el.addEventListener('keydown', (e) => {
+    if (u.page !== 'sub') return;
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('.so-click[data-ssub-edit]')) { e.preventDefault(); e.target.click(); }
+  });
   el.addEventListener('submit', wrap(async (e) => {
     const f = e.target.closest('[data-sform]');
     if (!f) return;
     e.preventDefault();
+    if (f.dataset.sform === 'ed') return saveEd();
     const v = Object.fromEntries(new FormData(f));
     const price = parseAmount(v.price);
     if (!v.name.trim() || !(price > 0)) return toast('Skriv tjeneste og beløp');

@@ -350,12 +350,16 @@ export function finnOut(f) {
   const steps = JSON.parse(f.steps || '[]');
   const emails = q('SELECT subject, body FROM fh_finn_emails WHERE finn_id=?').all(f.id);
   const stage = stageOf(f, emails), names = STEPS[f.role === 'sold' ? 'sold' : 'bought'];
-  const done = stage >= 4;
+  const done = stage >= 4, cover = coverOf(f);
   return { id: f.id, role: f.role, item: f.item, counterpart: f.counterpart, date: f.date, amount: f.amount / 100, steps, txId: f.tx_id,
-    done, domain: 'finn.no', code: f.finn_code ?? null, orderId: f.order_id ?? null, tracking: f.tracking ?? null, adUrl: f.ad_url ?? null,
+    done, domain: 'finn.no', code: f.finn_code ?? null, orderId: f.order_id ?? null, tracking: f.tracking ?? null,
+    // Lenke til annonsen: lagret lenke, ellers bygd fra Finn-koden (åpner Finn-appen via universal link).
+    adUrl: f.ad_url ?? (f.finn_code ? `https://www.finn.no/recommerce/forsale/item/${f.finn_code}` : null),
     stage, status: done ? 'Fullført' : names[stage - 1], next: NEXT[f.role === 'sold' ? 'sold' : 'bought'][stage - 1], manualStage: f.stage ?? null,
+    // Brukeren må gjøre noe: godkjenne en mottatt vare (kjøp) eller sende pakken (salg).
+    needsAction: !done && ((f.role !== 'sold' && stage === 3) || (f.role === 'sold' && stage === 1)),
     track: names.map((t, i) => ({ t, done: i < stage, cur: i === stage - 1 && !done })),
-    cover: coverOf(f), summary: summaryOf(f), shipment: shipmentOf(f) };
+    cover, image: cover, summary: summaryOf(f), shipment: shipmentOf(f) };
 }
 // Sporing (prompt 11): sendingen til handelen fra Sporing-fanen (hl_shipments), med de siste hendelsene til tidslinjen.
 // Leses direkte fra tabellen for å unngå sirkulær import med server/tracking.js; finnes ikke tabellen ennå, er feltet null.
@@ -446,19 +450,36 @@ export function mountFinn(api, { R, W, upload, saveFinn }) {
       imap: { configured: !!(settings().imapHost && settings().imapUser && secret('imapPass')), finnFolder: settings().imapFinnFolder || null } });
   });
 
+  // Ny handel: fra en innlimt e-post, eller for hånd (rolle, tittel, pris, motpart). Med adUrl hentes annonsen
+  // fra finn.no (tittel, pris, tekst og bilder); da kan tittel og pris stå tomme og fylles fra annonsen.
   api.post('/finn', W, async (c) => {
     const b = await c.req.json();
     let d;
+    const adUrl = b.adUrl ? normalizeAdUrl(b.adUrl) : null;
+    if (b.adUrl && !adUrl) return bad(c, 'Lenken må gå til finn.no');
+    const code = adUrl?.match(/(?:item\/|finnkode=)(\d{6,12})/)?.[1] ?? null;
     if (str(b.email, 50000)) {
       try { d = await parseFinnEmail(String(b.email).slice(0, 50000)); } catch (e) { return bad(c, e.message); }
     } else {
-      d = { role: b.role === 'sold' ? 'sold' : 'bought', item: str(b.item, 120), counterpart: str(b.counterpart, 80), date: isDate(b.date) ? b.date : today(), amount: +String(b.amount ?? '').replace(',', '.'),
+      d = { role: b.role === 'sold' ? 'sold' : 'bought', item: str(b.item, 120), counterpart: str(b.counterpart, 80), date: isDate(b.date) ? b.date : today(), amount: +String(b.amount ?? '').replace(/\s/g, '').replace(',', '.'),
         steps: Array.isArray(b.steps) ? b.steps.slice(0, 8).map((s) => ({ t: str(s.t ?? s, 60), done: !!s.done })) : [{ t: 'Trygg betaling', done: true }] };
+      if (adUrl) { d.item ||= `Finn-annonse ${code ?? ''}`.trim(); if (!(d.amount > 0)) d.amount = 0; }
     }
-    if (!d.item || !Number.isFinite(d.amount) || d.amount <= 0) return bad(c, 'Fant ikke gjenstand og beløp');
-    const f = saveFinn(d);
+    if (!d.item || !Number.isFinite(d.amount) || d.amount < 0 || (d.amount === 0 && !adUrl)) return bad(c, 'Fant ikke gjenstand og beløp');
+    let f = saveFinn(d);
     if (str(b.email, 50000)) attachMail(f, { messageId: `paste:${d.source ?? f.id}:${Date.now()}`, date: d.date, from: 'Limt inn', subject: d.item, text: String(b.email).slice(0, 20000) }, 'paste');
-    return c.json(finnOut(q('SELECT * FROM fh_finn WHERE id=?').get(f.id)));
+    const stage = b.stage != null ? Math.min(4, Math.max(1, Math.round(+b.stage) || 1)) : null;
+    if (adUrl || stage) q('UPDATE fh_finn SET ad_url=COALESCE(?, ad_url), finn_code=COALESCE(finn_code, ?), stage=COALESCE(?, stage) WHERE id=?').run(adUrl, code, stage, f.id);
+    let adError = null;
+    if (adUrl) {
+      try {
+        const ad = await fetchAd(q('SELECT * FROM fh_finn WHERE id=?').get(f.id), adUrl);
+        f = q('SELECT * FROM fh_finn WHERE id=?').get(f.id);
+        if (/^Finn-annonse(?: \d+)?$/.test(f.item) && ad.title) q('UPDATE fh_finn SET item=? WHERE id=?').run(str(ad.title, 120), f.id);
+        if (f.amount === 0 && ad.price) q('UPDATE fh_finn SET amount=? WHERE id=?').run(Math.round(ad.price * 100), f.id);
+      } catch (e) { adError = e.message; }
+    }
+    return c.json({ ...finnOut(q('SELECT * FROM fh_finn WHERE id=?').get(f.id)), ...(adError ? { adError } : {}) });
   });
 
   api.get('/finn/:id', R, (c) => { const f = deal(c); return f ? c.json(finnFull(f)) : c.notFound(); });
@@ -471,9 +492,22 @@ export function mountFinn(api, { R, W, upload, saveFinn }) {
     let adUrl = cur.ad_url;
     if (b.adUrl !== undefined) { adUrl = b.adUrl ? normalizeAdUrl(b.adUrl) : null; if (b.adUrl && !adUrl) return bad(c, 'Lenken må gå til finn.no'); }
     const code = b.finnCode !== undefined ? (/^\d{6,12}$/.test(String(b.finnCode).trim()) ? String(b.finnCode).trim() : null) : cur.finn_code;
+    const codeFromUrl = adUrl?.match(/(?:item\/|finnkode=)(\d{6,12})/)?.[1] ?? null;
+    // Appene kan sende title (= item) og status som stegnavn (Betalt/Sendt/Mottatt/Godkjent, Solgt/Sendt/Levert/Utbetalt, Fullført).
+    if (b.item === undefined && b.title !== undefined) b.item = b.title;
+    if (b.stage === undefined && typeof b.status === 'string' && b.status.trim()) {
+      const names = STEPS[(b.role === 'sold' || b.role === 'bought' ? b.role : cur.role) === 'sold' ? 'sold' : 'bought'], st = b.status.trim().toLowerCase();
+      const i = names.findIndex((n) => n.toLowerCase() === st);
+      if (i >= 0) b.stage = i + 1; else if (st === 'fullført') b.stage = 4; else return bad(c, `Ukjent status «${b.status}»`);
+    }
     const stage = b.stage !== undefined ? (b.stage === null ? null : Math.min(4, Math.max(1, Math.round(+b.stage) || 1))) : cur.stage;
-    q('UPDATE fh_finn SET item=?, counterpart=?, steps=?, ad_url=?, finn_code=?, stage=? WHERE id=?')
-      .run(b.item !== undefined ? str(b.item, 120) || cur.item : cur.item, b.counterpart !== undefined ? str(b.counterpart, 80) : cur.counterpart, steps, adUrl, code, stage, cur.id);
+    const amt = b.amount !== undefined ? +String(b.amount).replace(/\s/g, '').replace(',', '.') : null;
+    if (b.amount !== undefined && !(Number.isFinite(amt) && amt >= 0)) return bad(c, 'Ugyldig beløp');
+    const role = b.role === 'sold' || b.role === 'bought' ? b.role : cur.role;
+    const date = b.date !== undefined && isDate(b.date) ? b.date : cur.date;
+    q('UPDATE fh_finn SET item=?, counterpart=?, steps=?, ad_url=?, finn_code=?, stage=?, amount=?, role=?, date=? WHERE id=?')
+      .run(b.item !== undefined ? str(b.item, 120) || cur.item : cur.item, b.counterpart !== undefined ? str(b.counterpart, 80) : cur.counterpart, steps, adUrl, code ?? codeFromUrl, stage,
+        amt != null ? Math.round(amt * 100) : cur.amount, role, date, cur.id);
     return c.json(finnFull(q('SELECT * FROM fh_finn WHERE id=?').get(cur.id)));
   });
 

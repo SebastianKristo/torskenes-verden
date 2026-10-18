@@ -196,6 +196,8 @@ addCol('fh_subscriptions', 'category', 'TEXT');
 addCol('fh_subscriptions', 'charge_day', 'INTEGER');            // 1–31; ellers dagen i next_date
 addCol('fh_subscriptions', 'prev_price', 'INTEGER');            // øre per trekk før siste prisendring
 addCol('fh_subscriptions', 'price_changed', 'TEXT');            // dato for prisendringen
+addCol('fh_subscriptions', 'bill_month', 'INTEGER');            // 1–12 for årlige og 2-årige trekk (prompt 14)
+addCol('fh_subscriptions', 'logo_url', 'TEXT');                 // egen logo (opplastet eller ✦ funnet med AI)
 db.exec(`
 CREATE TABLE IF NOT EXISTS fh_folder_projects (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -351,7 +351,7 @@ const upload = bodyLimit({ maxSize: Number(process.env.MAX_UPLOAD_MB ?? 40) * 10
 
 // Sidemenyen: Import ligger nå under Innstillinger, AI-søk har egen side etter Transaksjoner.
 // Matplan er den felles Homelab-komponenten (bare for administratorer, som resten av regnskapet).
-const NAV_DEFAULT = ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'imp', 'inn'];
+const NAV_DEFAULT = ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'inn']; // Import ligger under Innstillinger
 const NAV_FIXED = ['ov', 'inn'];
 // Lagret rekkefølge beholdes; sider som er fjernet (f.eks. Matplan, som nå er i Homelab) faller bort, og nye sider
 // (AI-søk, Import) settes inn rett etter nærmeste side som står foran dem i standardrekkefølgen.
@@ -1129,8 +1129,37 @@ function subOut(s) {
     monthly: Math.round(monthlyOre(s)) / 100, yearly: Math.round(monthlyOre(s) * 12) / 100, perLabel: { monthly: '/mnd', yearly: '/år', biennial: '/2 år' }[s.cycle] ?? '/mnd',
     cycleName: { monthly: 'Månedlig', yearly: 'Årlig', biennial: 'Hvert 2. år' }[s.cycle] ?? 'Månedlig',
     status: subsOs.statusOf(s), chargeDay: subsOs.chargeDayOf(s), category: subsOs.categoryFor(s.name, s.category),
-    prevPrice: s.prev_price != null ? s.prev_price / 100 : null, priceChanged: s.price_changed ?? null };
+    prevPrice: s.prev_price != null ? s.prev_price / 100 : null, priceChanged: s.price_changed ?? null,
+    // Prompt 14: faktureringsdato som dag + måned, tilstand (aktiv/sagt opp) og egen logo.
+    billDay: subsOs.chargeDayOf(s), billMonth: billMonthOf(s), state: s.active ? 'active' : 'cancelled',
+    logoUrl: s.logo_url || null, nextCharge: nextChargeOf(s) };
 }
+const MON_NB = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
+// Måneden for årlige og 2-årige trekk: lagret måned, ellers måneden i neste trekk.
+const billMonthOf = (s) => s.bill_month || (s.next_date ? +s.next_date.slice(5, 7) : null);
+function nextChargeOf(s) {
+  if (!s.next_date || !s.active) return null;
+  const then = { monthly: 'deretter hver måned', yearly: 'deretter hvert år', biennial: 'deretter hvert 2. år' }[s.cycle] ?? 'deretter hver måned';
+  return { date: s.next_date, label: `Neste trekk ${+s.next_date.slice(8, 10)}. ${MON_NB[+s.next_date.slice(5, 7) - 1]}, ${then}` };
+}
+const monthIn = (v) => { const n = Math.round(+v); return n >= 1 && n <= 12 ? n : null; };
+// Neste trekk fra dag + måned (årlig / hvert 2. år): neste gang den datoen kommer, i år eller senere.
+function nextFromDayMonth(day, month) {
+  if (!day || !month) return null;
+  const now = new Date(), t = new Date(now.toDateString());
+  const at = (y) => new Date(y, month - 1, Math.min(day, new Date(y, month, 0).getDate()));
+  let d = at(now.getFullYear());
+  if (d < t) d = at(now.getFullYear() + 1);
+  return d.toLocaleDateString('sv-SE');
+}
+const nextFor = (day, month, cycle) => (cycle !== 'monthly' && month ? nextFromDayMonth(day, month) : nextFromDay(day, cycle));
+// status fra redigeringsarket: active / low_use (Lite brukt) / cancelled / paused (regnes som sagt opp).
+function applyStatus(n, st) {
+  if (st === 'active' || st === 'Aktiv') { n.active = 1; n.low_use = 0; }
+  else if (st === 'low_use' || st === 'Lite brukt') { n.active = 1; n.low_use = 1; }
+  else if (st === 'cancelled' || st === 'paused' || st === 'Sagt opp') n.active = 0;
+}
+const logoUrlIn = (v) => { const t = String(v ?? '').trim(); return /^\/finans\/api\/(?:logo\/[a-z0-9.-]+|subscriptions\/\d+\/logo(?:\?v=\d+)?)$/i.test(t) || /^https:\/\/[^\s"'<>]{4,400}$/.test(t) ? t : null; };
 const dayIn = (v) => { const n = Math.round(+v); return n >= 1 && n <= 31 ? n : null; };
 const catIn = (v) => (subsOs.SUB_CATEGORIES.includes(v) ? v : null);
 // Neste trekk fra trekkdag: denne måneden hvis dagen ikke er passert, ellers neste.
@@ -1202,10 +1231,12 @@ api.post('/subscriptions', W, async (c) => {
   }
   const price = ore(b.price);
   if (!str(b.name) || price === null) return bad(c, 'Tjeneste og pris må fylles ut');
-  const cycle = cycleIn(b.cycle) ?? 'monthly', day = dayIn(b.chargeDay);
-  const s = q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,low_use,domain,charge_day,category,created) VALUES(?,?,?,?,?,?,?,?,?,?,?) RETURNING *')
-    .get(str(b.name, 80), str(b.plan, 80), Math.abs(price), cycle, dateIn(b.nextDate) ?? nextFromDay(day, cycle), str(b.usageNote, 80) || 'Ny', b.lowUse ? 1 : 0,
-      validDomain(b.domain) || domainFor(b.name), day, catIn(b.category), Date.now());
+  const cycle = cycleIn(b.cycle) ?? 'monthly', day = dayIn(b.billDay ?? b.chargeDay), month = monthIn(b.billMonth);
+  const st = { active: 1, low_use: b.lowUse ? 1 : 0 };
+  if (b.status !== undefined) applyStatus(st, b.status);
+  const s = q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,low_use,active,domain,charge_day,bill_month,category,logo_url,created) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING *')
+    .get(str(b.name, 80), str(b.plan, 80), Math.abs(price), cycle, dateIn(b.nextDate) ?? nextFor(day, month, cycle), str(b.usageNote, 80) || 'Ny', st.low_use, st.active,
+      validDomain(b.domain) || domainFor(b.name), day, cycle === 'monthly' ? null : month, catIn(b.category), logoUrlIn(b.logoUrl), Date.now());
   return c.json(subOut(s));
 });
 api.post('/subscriptions/receipts', need('receipts:write'), upload, (c) => receiptUpload(c, 'sub'));
@@ -1218,19 +1249,82 @@ api.patch('/subscriptions/:id', W, async (c) => {
   if (b.plan !== undefined) n.plan = str(b.plan, 80);
   if (b.price !== undefined && ore(b.price) !== null) n.price = Math.abs(ore(b.price));
   if (n.price > cur.price) { n.prev_price = cur.price; n.price_changed = new Date().toLocaleDateString('sv-SE'); } // «Pris økt» også når prisen endres for hånd
-  if (b.chargeDay !== undefined) { n.charge_day = dayIn(b.chargeDay); if (b.nextDate === undefined && n.charge_day) n.next_date = nextFromDay(n.charge_day, n.cycle); }
-  if (b.category !== undefined) n.category = catIn(b.category);
   if (b.cycle !== undefined) n.cycle = cycleIn(b.cycle) ?? cur.cycle;
+  const dayV = b.billDay !== undefined ? b.billDay : b.chargeDay;
+  if (dayV !== undefined) n.charge_day = dayIn(dayV);
+  if (b.billMonth !== undefined) n.bill_month = monthIn(b.billMonth);
+  if (n.cycle === 'monthly') n.bill_month = null;
+  // Ny dag, måned eller syklus: regn ut neste trekk på nytt (med mindre nextDate er sendt med).
+  if ((dayV !== undefined || b.billMonth !== undefined || b.cycle !== undefined) && b.nextDate === undefined && n.charge_day) n.next_date = nextFor(n.charge_day, n.bill_month, n.cycle);
+  if (b.category !== undefined) n.category = catIn(b.category);
+  if (b.status !== undefined) applyStatus(n, b.status);
+  if (b.logoUrl !== undefined) n.logo_url = b.logoUrl ? logoUrlIn(b.logoUrl) : null;
   if (b.nextDate !== undefined) n.next_date = dateIn(b.nextDate);
   if (b.usageNote !== undefined) n.usage_note = str(b.usageNote, 80);
   if (b.lowUse !== undefined) n.low_use = b.lowUse ? 1 : 0;
   if (b.active !== undefined) n.active = b.active ? 1 : 0;
   if (b.domain !== undefined) { n.domain = validDomain(b.domain); if (n.domain) learnDomain(n.name, n.domain); }
-  const s = q('UPDATE fh_subscriptions SET name=?, plan=?, price=?, cycle=?, next_date=?, usage_note=?, low_use=?, active=?, domain=?, charge_day=?, category=?, prev_price=?, price_changed=? WHERE id=? RETURNING *')
-    .get(n.name, n.plan, n.price, n.cycle, n.next_date, n.usage_note, n.low_use, n.active, n.domain, n.charge_day, n.category, n.prev_price, n.price_changed, cur.id);
+  const s = q('UPDATE fh_subscriptions SET name=?, plan=?, price=?, cycle=?, next_date=?, usage_note=?, low_use=?, active=?, domain=?, charge_day=?, bill_month=?, category=?, prev_price=?, price_changed=?, logo_url=? WHERE id=? RETURNING *')
+    .get(n.name, n.plan, n.price, n.cycle, n.next_date, n.usage_note, n.low_use, n.active, n.domain, n.charge_day, n.bill_month ?? null, n.category, n.prev_price, n.price_changed, n.logo_url ?? null, cur.id);
   return c.json(subOut(s));
 });
-api.delete('/subscriptions/:id', W, (c) => { q('DELETE FROM fh_subscriptions WHERE id=?').run(+c.req.param('id')); return ok(c); });
+api.delete('/subscriptions/:id', W, async (c) => {
+  const id = +c.req.param('id');
+  q('DELETE FROM fh_subscriptions WHERE id=?').run(id);
+  for (const ext of ['png', 'jpg', 'webp', 'svg']) await unlink(join(SUB_LOGOS, `${id}.${ext}`)).catch(() => {});
+  return ok(c);
+});
+// Egen logo per abonnement: lastes opp (bilde), eller ✦ AI finner tjenestens domene og logoen hentes derfra.
+const SUB_LOGOS = resolve(config.dataDir, 'finans', 'sublogos');
+const LOGO_TYPES = { png: 'image/png', jpg: 'image/jpeg', webp: 'image/webp' };
+const sniffLogo = (b) => (b[0] === 0x89 && b[1] === 0x50 ? 'png' : b[0] === 0xff && b[1] === 0xd8 ? 'jpg' : b.slice(0, 4).toString() === 'RIFF' && b.slice(8, 12).toString() === 'WEBP' ? 'webp' : null);
+api.post('/subscriptions/:id/logo', W, bodyLimit({ maxSize: 4 * 1024 * 1024, onError: (c) => bad(c, 'Logoen kan være maks 4 MB', 413) }), async (c) => {
+  const s = q('SELECT * FROM fh_subscriptions WHERE id=?').get(+c.req.param('id'));
+  if (!s) return c.notFound();
+  const f = (await c.req.parseBody()).file;
+  if (!(f instanceof File) || !f.size) return bad(c, 'Velg et bilde');
+  const buf = Buffer.from(await f.arrayBuffer()), ext = sniffLogo(buf);
+  if (!ext) return bad(c, 'Logoen må være PNG, JPEG eller WebP');
+  await mkdir(SUB_LOGOS, { recursive: true });
+  for (const e of Object.keys(LOGO_TYPES)) if (e !== ext) await unlink(join(SUB_LOGOS, `${s.id}.${e}`)).catch(() => {});
+  await writeFile(join(SUB_LOGOS, `${s.id}.${ext}`), buf);
+  const logoUrl = `/finans/api/subscriptions/${s.id}/logo?v=${Date.now()}`;
+  q('UPDATE fh_subscriptions SET logo_url=? WHERE id=?').run(logoUrl, s.id);
+  return c.json({ logoUrl, domain: s.domain || domainFor(s.name) || null, subscription: subOut(q('SELECT * FROM fh_subscriptions WHERE id=?').get(s.id)) });
+});
+api.get('/subscriptions/:id/logo', R, async (c) => {
+  const id = +c.req.param('id');
+  for (const [ext, type] of Object.entries(LOGO_TYPES)) {
+    const buf = await readFile(join(SUB_LOGOS, `${id}.${ext}`)).catch(() => null);
+    if (buf) return c.body(buf, 200, { 'Content-Type': type, 'Cache-Control': 'private, max-age=604800', 'X-Content-Type-Options': 'nosniff' });
+  }
+  return c.notFound();
+});
+// ✦ Finn logo med AI: kjent domene fra navnet, ellers spør AI-motoren om tjenestens nettsted. Logoen hentes via /logo/:domain.
+let subLogoAsk = null;   // tester kan sette en egen «AI»
+export const _setSubLogoAsk = (fn) => { subLogoAsk = fn; };
+api.post('/subscriptions/:id/logo/ai', W, async (c) => {
+  const s = q('SELECT * FROM fh_subscriptions WHERE id=?').get(+c.req.param('id'));
+  if (!s) return c.notFound();
+  const cands = [validDomain(s.domain), domainFor(s.name)].filter(Boolean);
+  let domain = null;
+  for (const d of cands) if (await logo(d)) { domain = d; break; }
+  if (!domain) {
+    let ai = null;
+    try {
+      const { askJson } = await import('./ai.js');
+      ai = await (subLogoAsk ?? askJson)(`Hva er det offisielle nettstedet (domenet) til abonnementstjenesten «${s.name}»${s.plan ? ` (plan: ${s.plan})` : ''}? Tjenesten brukes i Norge. Svar KUN med JSON {"domain":"eksempel.no"}. Er du usikker, svar {"domain":null}.`,
+        { type: 'object', properties: { domain: { type: ['string', 'null'] } }, required: ['domain'] }, { timeout: 20_000 });
+    } catch { ai = null; }
+    const d = validDomain(String(ai?.domain ?? '').toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]);
+    if (d && (await logo(d))) domain = d;
+  }
+  if (!domain) return c.json({ error: 'Fant ingen logo. Last opp et bilde i stedet.', logoUrl: null, domain: null }, 404);
+  learnDomain(s.name, domain);
+  const logoUrl = `/finans/api/logo/${domain}`;
+  q('UPDATE fh_subscriptions SET logo_url=?, domain=? WHERE id=?').run(logoUrl, domain, s.id);
+  return c.json({ logoUrl, domain, subscription: subOut(q('SELECT * FROM fh_subscriptions WHERE id=?').get(s.id)) });
+});
 
 /* --- Delte mapper (boliger og felles utgifter) --- */
 // Medlemmer er brukere i homelab (user_id) med rolle: owner = Eier, editor = Kan redigere, viewer = Kan se.

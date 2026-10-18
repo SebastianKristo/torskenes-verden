@@ -9,7 +9,9 @@ import { MODULE_PAGES, MODULE_SUB, MODULE_FN, MODULE_LOADERS, bolSettings, loadB
 
 ICONS.ai = 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z';
 const BASE_PAGES = [['ov', 'Oversikt'], ['tx', 'Transaksjoner'], ['ai', 'AI-søk'], ['kv', 'Kvitteringer'], ['bud', 'Budsjett'], ['fast', 'Faste utgifter'], ['konto', 'Kontoer'], ['rap', 'Rapporter'], ['inn', 'Innstillinger']];
-const NAV_DEFAULT = ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'imp', 'inn'];
+// Import ligger bare under Innstillinger → Import (prompt 14), ikke i sidemenyen.
+const NAV_DEFAULT = ['ov', 'tx', 'ai', 'kv', 'bud', 'fast', 'konto', 'aks', 'rap', 'sub', 'dir', 'finn', 'inn'];
+const NAV_NEVER = ['imp'];
 const NAV_FIXED = ['ov', 'inn'];
 const PAGES = [...BASE_PAGES, ...MODULE_PAGES];
 const defaultName = (p) => PAGES.find(([x]) => x === p)?.[1] ?? p;
@@ -33,7 +35,7 @@ const accOpts = (sel, empty) => (empty ? opt('', empty, sel) : '') + accs().map(
 // Sidemenyen er personlig: rekkefølge og skjulte punkter redigeres i Innstillinger → Sidemeny og lagres i
 // /api/me/layout (finNav), med FinansHubs egne prefs som reserve. Oversikt og Innstillinger kan ikke skjules.
 function navCfg() {
-  const def = (S.boot.navDefault ?? NAV_DEFAULT).filter((p) => PAGES.some(([x]) => x === p));
+  const def = (S.boot.navDefault ?? NAV_DEFAULT).filter((p) => PAGES.some(([x]) => x === p) && !NAV_NEVER.includes(p));
   const fin = S.layout?.finNav;
   const saved = (fin?.order?.length ? fin.order : S.boot.nav) ?? def;
   // Fjernede sider faller bort; nye (AI-søk, Import) settes inn etter nærmeste side foran dem i standardrekkefølgen.
@@ -245,7 +247,7 @@ function overview() {
   const up = s.upcoming.slice(0, 4).map((r) => `<div class="kv-line" style="align-items:center"><div><div style="font-weight:500">${esc(r.name)}</div><div class="note" style="font-size:12px">Trekkes ${new Date(r.next + 'T12:00').toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }).replace('.', '')}</div></div><div class="mono" style="font-weight:500">${n0(r.amount)} kr</div></div>`).join('');
   // På PC lastes kvitteringer opp fra filer (ingen kamera).
   const actions = `<label class="action" style="background:var(--warn-soft);color:var(--text);cursor:pointer"><span style="color:var(--acc-l)">${icon('down', 17)}</span>Last opp kvittering<input type="file" multiple accept="image/*,application/pdf" data-upload hidden></label>`
-    + [['Ny transaksjon', 'var(--blue-soft)', 'var(--blue-l)', 'plus', 'data-act="add-tx"'], ['Importer', 'var(--pos-soft)', 'var(--pos)', 'imp', 'href="#/imp"'], ['Rapport', 'var(--purple-soft)', 'var(--purple)', 'rap', 'href="#/rap"']]
+    + [['Ny transaksjon', 'var(--blue-soft)', 'var(--blue-l)', 'plus', 'data-act="add-tx"'], ['Importer', 'var(--pos-soft)', 'var(--pos)', 'imp', 'data-act="goto-import" href="#/inn"'], ['Rapport', 'var(--purple-soft)', 'var(--purple)', 'rap', 'href="#/rap"']]
     .map(([n, bg, c, ic, at]) => `<${at.startsWith('href') ? 'a' : 'button'} class="action" ${at} style="background:${bg};color:var(--text)"><span style="color:${c}">${icon(ic, 17)}</span>${n}</${at.startsWith('href') ? 'a' : 'button'}>`).join('');
   const noData = !S.boot.hasData ? card(`<div class="card-h"><div><h2>Kom i gang</h2><div class="note">Legg til en konto, importer fra nettbanken eller last opp en kvittering. Du kan også laste inn demodata for å se hvordan alt ser ut.</div></div>
     <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn" href="#/konto">Legg til konto</a><button class="btn" data-act="goto-import">Importer CSV</button><button class="btn pri" data-act="demo">Last inn demodata</button></div></div>`, '', 'border-color:var(--warm-line)') : '';
@@ -682,6 +684,8 @@ export function route() {
   let p = location.hash.replace(/^#\/?/, '').split('/')[0];
   // Matplan er en Homelab-fane; gamle lenker til FinansHub-siden sendes dit.
   if (p === 'mat') { location.replace('/#/matplan'); return; }
+  // Gamle lenker til Import-siden åpner Innstillinger → Import.
+  if (p === 'imp') { u.setTab = 'imp'; location.replace('#/inn'); return; }
   const next = PAGE_FN[p] && allowed(p) ? p : S.boot?.restricted ? 'dir' : 'ov';
   const entered = next !== u.page;
   if (entered) { u.page = next; u.msg = {}; window.scrollTo(0, 0); }

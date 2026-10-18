@@ -108,9 +108,10 @@ test('AI-søk: tidligere spørsmål lagres per bruker uten duplikater', async ()
 
 test('Sidemeny: skjulte punkter, Oversikt og Innstillinger kan ikke skjules, nye sider legges til', async () => {
   const r = (await call('/prefs', 'PUT', { nav: ['inn', 'tx', 'ov'], hidden: ['ov', 'finn', 'imp', 'rap'] })).body;
-  assert.deepEqual(r.hidden, ['finn', 'imp', 'rap']);
+  // Import er ikke lenger et menypunkt (ligger under Innstillinger → Import), så det faller bort også fra skjulte.
+  assert.deepEqual(r.hidden, ['finn', 'rap']);
   assert.deepEqual(r.nav.slice(0, 3), ['inn', 'tx', 'ai']);
-  assert.ok(r.nav.includes('imp') && r.nav.includes('ov') && !r.nav.includes('mat'));
+  assert.ok(!r.nav.includes('imp') && r.nav.includes('ov') && !r.nav.includes('mat'));
   assert.equal(new Set(r.nav).size, r.nav.length);
 });
 

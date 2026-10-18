@@ -83,8 +83,9 @@ h1,h2,h3{margin:0;font-weight:600}
 .ai-dot.off{background:var(--acc);box-shadow:0 0 0 4px color-mix(in srgb,var(--acc) 15%,transparent)}
 .ai-dot.unk{background:var(--muted);box-shadow:none}
 
-.main{flex:1 1 560px;min-width:0;padding:22px 32px 48px}
-.wrap{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+.main{flex:1 1 560px;min-width:0;padding:22px clamp(16px,2.4vw,40px) 48px}
+/* Innholdet starter rett ved sidemenyen (prompt 14): ikke sentrert, så det blir ikke tomrom til venstre på brede skjermer. */
+.wrap{max-width:1760px;margin:0;display:flex;flex-direction:column;gap:22px}
 .head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding-bottom:18px;border-bottom:1px solid var(--sep)}
 .crumb{display:flex;gap:8px;font-size:13px;color:var(--muted)}.crumb b{color:var(--text);font-weight:400}
 .head h1{margin-top:2px;font-size:28px;letter-spacing:-.03em}
@@ -372,10 +373,10 @@ input[type=date]{color-scheme:dark}
 .orig-bank{display:flex;flex-direction:column}.orig-bank .kv-line{gap:16px}
 .orig-raw summary{cursor:pointer;color:var(--text2);font-size:13px}
 .orig-raw pre{margin:8px 0 0;padding:12px;border-radius:12px;background:var(--deep);border:1px solid var(--line);font-size:12px;white-space:pre-wrap;word-break:break-word;max-height:240px;overflow:auto}
-.search{width:380px;padding-right:5px}
+.search{width:380px;padding:0 5px 0 16px;border-radius:22px}
 .search.ai{border-color:color-mix(in srgb,var(--acc) 45%,transparent)}
 .ai-star{color:var(--acc-l);font-size:15px;width:17px;text-align:center}
-.ai-tog{flex:none;white-space:nowrap;height:32px;padding:0 10px;border-radius:8px;border:1px solid var(--line2);background:var(--inner);color:var(--text2);font-size:12.5px;font-weight:600}
+.ai-tog{flex:none;white-space:nowrap;height:34px;padding:0 13px;border-radius:17px;border:1px solid var(--line2);background:var(--inner);color:var(--text2);font-size:12.5px;font-weight:600}
 .ai-tog[aria-pressed=true]{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
 .ai-panel{border-color:var(--warm-line);padding:20px 22px;gap:14px}
 .ai-k{font-size:12px;color:var(--acc-l);font-weight:600;letter-spacing:.04em}
@@ -652,8 +653,9 @@ html[data-v3] .head h1{font-family:var(--font-d);font-weight:var(--dw);font-size
 html[data-v3] .card h2,html[data-v3] .so .card h2{font-family:var(--font-d);font-weight:var(--dw);font-size:22px;letter-spacing:0}
 html[data-v3] .big{font-family:var(--font-d);font-weight:var(--dw);font-size:36px;letter-spacing:-.01em}
 html[data-v3][data-theme=glod] .head h1,html[data-v3][data-theme=glod] .big{letter-spacing:-.03em}
-html[data-v3] .search{border-radius:999px;background:var(--card);border-color:var(--line2)}
-html[data-v3] .ai-tog,html[data-v3] .ai-star{color:var(--note)}
+/* Søkepillen (høyde 44, radius 22) og AI-pillen inni (34/17, 5 px fra kanten) har samme form i alle temaer. */
+html[data-v3] .search{border-radius:22px;background:var(--card);border-color:var(--line2)}
+html[data-v3] .ai-tog:not([aria-pressed=true]),html[data-v3] .ai-star{color:var(--note)}
 html[data-v3] .icon-btn,html[data-v3] .close{border-color:var(--line2);background:var(--card)}
 html[data-v3] .icon-btn .dot{background:var(--warn)}
 html[data-v3] .chip[aria-pressed=true]{background:var(--text);color:var(--bg);border-color:var(--text)}
@@ -710,3 +712,27 @@ html[data-theme=lys]{--rev-warn:#f2b8a6}html[data-theme=mork]{--rev-warn:#7a2814
 html[data-v3] .review .rq [style*="--pos"],html[data-v3] .review .rq [style*="--blue-l"]{color:var(--rev-mute)!important}
 html[data-v3] .review .rq [style*="--acc-l"]{color:var(--rev-warn)!important}
 html[data-v3] .so-prog i{background:var(--acc)}
+
+/* ---------- Subscription OS: rediger / legg til (ark), prompt 14 ---------- */
+.so-click{cursor:pointer}.so-tr.so-click:hover,.so-li.so-click:hover{background:var(--hover)}
+.so-ownlogo{background-size:cover;background-position:center;background-color:var(--inner)}
+.se-back{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;animation:se-fade .16s ease-out}
+.se{width:100%;max-width:560px;max-height:92vh;overflow-y:auto;border-radius:24px 24px 0 0;background:var(--pop);color:var(--text);border:1px solid var(--line2);border-bottom:0;padding:18px 20px 26px;display:flex;flex-direction:column;gap:14px;animation:se-up .2s ease-out}
+.se-grip{align-self:center;width:40px;height:5px;border-radius:3px;background:var(--line3)}
+.se-h{display:flex;justify-content:space-between;align-items:center;gap:10px}.se-h b{font-size:20px;font-weight:600;letter-spacing:-.01em;color:var(--text);font-family:var(--font-d)}
+.se-logorow{display:flex;align-items:center;gap:14px;padding:12px;border-radius:16px;background:var(--deep);border:1px solid var(--line)}
+.se-logo{flex:none;width:64px;height:64px;border-radius:18px;background-size:cover;background-position:center;color:#fff;display:grid;place-items:center;font-size:18px;font-weight:800}
+.se-lc{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}.se-lb{display:flex;gap:6px;flex-wrap:wrap}.se-lb label.btn{cursor:pointer}
+.se-l{font-size:12.5px;color:var(--muted)}
+.se-g2{display:grid;grid-template-columns:2fr 1fr;gap:10px}.se-g2.eq{grid-template-columns:1fr 1fr}
+.se-g2 label,.se-f{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--muted);min-width:0}
+.se .inp,.se .sel{height:44px;width:100%;min-width:0;font-size:15px;color:var(--text)}
+.se-chips{display:flex;gap:6px}
+.se-chip{flex:1 1 0;height:38px;padding:0 10px;border-radius:19px;border:1px solid var(--line2);background:transparent;color:var(--text);font-size:13px;font-weight:600;white-space:nowrap}
+.se-chip[aria-pressed=true]{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
+.se-date{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px}
+.se-note{font-size:12.5px;color:var(--text2)}
+.se-btns{display:flex;gap:8px;margin-top:4px}.se-save{flex:1;height:48px;border-radius:24px;font-size:15.5px}
+.se-del{height:48px;padding:0 18px;border-radius:24px;border:1px solid color-mix(in srgb,var(--neg) 40%,transparent);background:transparent;color:var(--neg)}
+@keyframes se-fade{from{opacity:0}}@keyframes se-up{from{transform:translateY(24px);opacity:.6}}
+@media (min-width:760px){.se-back{align-items:center}.se{border-radius:24px;border-bottom:1px solid var(--line2)}}

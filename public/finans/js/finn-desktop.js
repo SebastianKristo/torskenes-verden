@@ -27,13 +27,46 @@ function track(d, clickable) {
     <span class="dl"><span class="dot"></span><span class="ln" style="${i + 1 < d.stage ? 'background:var(--text)' : ''}"></span></span><span class="t">${esc(s.t)}</span></button>`).join('')}</div>`;
 }
 
-function row(r) {
+// Finn-handler 2a (prompt 14): toppstripe med «Trenger deg nå» og KPI-er, filtre, kort gruppert etter steg.
+const TINTS = ['#3B2E22', '#22362C', '#1E2A3F', '#3A2F4A', '#2C2C33', '#2A3540', '#40322A', '#2F3A2A'];
+const tintOf = (r) => TINTS[[...String(r.item)].reduce((a, ch) => a + ch.charCodeAt(0), r.id) % TINTS.length];
+const initials = (t) => String(t).split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+const onWay = (r) => !r.done && !r.needsAction && r.stage >= 2;
+const FILTERS = [['all', 'Alle', () => true], ['act', 'Trenger handling', (r) => r.needsAction], ['way', 'På vei', onWay], ['bought', 'Kjøpt', (r) => r.role !== 'sold'], ['sold', 'Solgt', (r) => r.role === 'sold'], ['done', 'Fullført', (r) => r.done]];
+const GROUPS = [['TRENGER HANDLING', (r) => r.needsAction, 'act'], ['PÅ VEI', (r) => !r.needsAction && !r.done, 'way'], ['FULLFØRT', (r) => r.done, 'done']];
+const actLabel = (r) => (r.role === 'sold' ? 'Marker som sendt' : 'Godkjenn');
+const actVerb = (r) => (r.role === 'sold' ? 'Send' : 'Godkjenn');
+
+function dots(r) {
+  return `<div class="fh-dots">${r.track.map((s, i) => { const on = r.done || s.done && !s.cur, cur = s.cur; return `<span class="fh-dot${on ? ' on' : ''}${cur ? ' cur' : ''}${r.done ? ' ok' : ''}" title="${esc(s.t)}"><i></i>${i < r.track.length - 1 ? '<b></b>' : ''}</span>`; }).join('')}</div>`;
+}
+function dealCard(r) {
   const sold = r.role === 'sold', sel = u.finnSel === r.id;
-  return `<div class="card finn-row fd-row${sel ? ' fd-on' : ''}" data-fd-open="${r.id}" role="button" tabindex="0" aria-expanded="${sel}">
-    <div><span class="role ${sold ? 'sold' : 'bought'}">${sold ? 'Solgt' : 'Kjøpt'}</span><b style="display:block;font-weight:500;margin-top:6px">${esc(r.item)}</b><span class="note" style="font-size:12px">${esc(r.counterpart)}${r.counterpart ? ' · ' : ''}${dd(r.date)}${r.txId ? ' · matchet mot bankpost' : ''}</span>
-      ${r.summary?.text ? `<span class="fd-att">${esc(r.summary.text)}</span>` : ''}</div>
-    <div class="finn-steps">${r.track.map((s) => `<span class="step${s.done ? ' done' : ''}"${s.cur ? ' style="background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc-l)"' : ''}>${esc(s.t)}</span>`).join('')}</div>
-    <b class="mono" style="text-align:right;color:${sold ? 'var(--pos)' : 'var(--text)'}">${sold ? '+' : '−'}${n0(r.amount)} kr</b><button class="x-btn sm" data-fd-del="${r.id}" aria-label="Slett handelen">×</button></div>`;
+  const img = r.image ? `<img src="${esc(r.image)}" alt="" loading="lazy">` : `<span class="fh-ini">${esc(initials(r.item))}</span>`;
+  return `<div class="fh-card${r.needsAction ? ' act' : ''}${sel ? ' fh-on' : ''}" data-fd-open="${r.id}" role="button" tabindex="0" aria-expanded="${sel}" aria-label="${esc(r.item)}">
+    <div class="fh-img" style="background:${tintOf(r)}">${img}<span class="fh-role ${sold ? 'sold' : 'bought'}">${sold ? 'Solgt' : 'Kjøpt'}</span><span class="fh-amt${sold ? ' pos' : ''}">${sold ? '+' : '−'}${kr0(r.amount)}</span></div>
+    <div class="fh-body"><span class="fh-t">${esc(r.item)}</span>${dots(r)}
+      <div class="fh-nx"><span class="${r.needsAction ? 'act' : r.done ? 'ok' : ''}">${esc(r.done ? 'Fullført' : r.next)}</span><span class="fh-dt">${dd(r.date)}</span></div>
+      <span class="fh-att">${esc([r.counterpart, r.summary?.text].filter(Boolean).join(' · '))}</span></div></div>`;
+}
+function strip(d, items) {
+  const acts = items.filter((r) => r.needsAction), a = acts[0];
+  const now = a ? `<div class="fh-now"><span class="fh-nimg" style="background:${tintOf(a)}">${a.image ? `<img src="${esc(a.image)}" alt="">` : esc(initials(a.item))}</span><div style="min-width:0">
+      <div class="fh-k act">TRENGER DEG NÅ · ${acts.length}</div><div class="fh-nt">${esc(actVerb(a))} ${esc(a.item)}</div>
+      <div class="fh-nb"><button class="btn sm pri" data-fd-act="${a.id}">${actLabel(a)}</button><button class="btn sm" data-fd-open="${a.id}">Åpne</button></div></div></div>`
+    : `<div class="fh-now"><div><div class="fh-k">TRENGER DEG NÅ</div><div class="fh-nt muted">Ingen handler venter på deg</div></div></div>`;
+  const kpi = [['Kjøpt i år', kr0(d.bought), ''], ['Solgt i år', kr0(d.sold), 'pos'], ['Pågående', String(d.ongoing), '']]
+    .map(([l, v, c]) => `<div class="fh-kpi"><div class="fh-k">${l.toUpperCase()}</div><b class="${c}">${v}</b></div>`).join('');
+  return `<div class="fh-strip">${now}${kpi}</div>`;
+}
+function addPanel() {
+  if (!u.finnAdd) return '';
+  const f = u.finnAddF ?? {};
+  return `<form class="card fh-add" data-fd-form="new"><div class="card-h"><h2>Legg til kjøp eller salg</h2><button type="button" class="x-btn sm" data-fd-add aria-label="Lukk">×</button></div>
+    <div class="fh-seg" role="radiogroup" aria-label="Type">${[['bought', 'Kjøp'], ['sold', 'Salg']].map(([k, n]) => `<label><input type="radio" name="role" value="${k}"${(f.role ?? 'bought') === k ? ' checked' : ''}><span>${n}</span></label>`).join('')}</div>
+    <label class="fh-fl">Finn-lenke<input class="inp" name="adUrl" value="${esc(f.adUrl ?? '')}" placeholder="https://www.finn.no/recommerce/forsale/item/…" inputmode="url"><small>✦ AI henter tittel, pris, tekst og bilder fra annonsen</small></label>
+    <div class="fh-g3"><label class="fh-fl">Tittel<input class="inp" name="item" value="${esc(f.item ?? '')}" placeholder="Hentes fra annonsen"></label><label class="fh-fl">Pris (kr)<input class="inp mono" name="amount" value="${esc(f.amount ?? '')}" inputmode="decimal" placeholder="0"></label><label class="fh-fl">${(f.role ?? 'bought') === 'sold' ? 'Kjøper' : 'Selger'}<input class="inp" name="counterpart" value="${esc(f.counterpart ?? '')}"></label></div>
+    <div style="display:flex;gap:8px;align-items:center"><button class="btn pri" ${u.finnBusy === 'new' ? 'disabled' : ''}>${u.finnBusy === 'new' ? '✦ Henter annonsen …' : 'Legg til'}</button><span class="note" style="font-size:12.5px">Du trenger enten en lenke eller tittel og pris.</span></div></form>`;
 }
 
 function adCard(d) {
@@ -75,26 +108,42 @@ function photoCard(d) {
     <label class="fd-up">↑ Last opp bilder<input type="file" multiple accept="image/*" data-fd-file="photo"></label></div>`;
 }
 
+function editForm(d) {
+  if (!u.finnEdit) return '';
+  return `<form class="fh-edit" data-fd-form="edit"><label class="fh-fl">Tittel<input class="inp" name="item" value="${esc(d.item)}"></label><label class="fh-fl">Pris (kr)<input class="inp mono" name="amount" value="${esc(String(d.amount).replace('.', ','))}" inputmode="decimal"></label>
+    <label class="fh-fl">${d.role === 'sold' ? 'Kjøper' : 'Selger'}<input class="inp" name="counterpart" value="${esc(d.counterpart ?? '')}"></label><label class="fh-fl">Dato<input class="inp" type="date" name="date" value="${esc(d.date)}"></label>
+    <div class="fh-eb"><button class="btn pri sm">Lagre</button><button type="button" class="btn sm ghost" data-fd-edit>Avbryt</button><button type="button" class="btn sm fh-delb" data-fd-del="${d.id}">Slett handelen</button></div></form>`;
+}
 function detail() {
   const d = S.finnDeal;
   if (!d) return u.finnSel ? skel(320) : '';
   const sold = d.role === 'sold';
-  return `<section class="fd-panel" aria-label="${esc(d.item)}">
-    <div class="fd-head"><div style="min-width:0"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="role ${sold ? 'sold' : 'bought'}">${sold ? 'Solgt' : 'Kjøpt'}</span>${d.code ? `<span class="fd-code">Finn-kode ${esc(d.code)}</span>` : ''}${d.orderId ? `<span class="fd-code">· Ordre ${esc(d.orderId)}</span>` : ''}</div>
-      <h2>${esc(d.item)}</h2><span class="note" style="font-size:13px">${esc(d.counterpart || '')}${d.counterpart ? ' · ' : ''}${dd(d.date)} · <span class="mono" style="color:${sold ? 'var(--pos)' : 'var(--text)'}">${sold ? '+' : '−'}${n0(d.amount)} kr</span></span></div>
-      <button class="x-btn" data-fd-close aria-label="Lukk handelen">×</button></div>
-    <div style="display:flex;gap:24px;align-items:flex-end;flex-wrap:wrap">${track(d, true)}<span class="fd-status"><b>${esc(d.status)}</b> · ${esc(d.done ? 'Alt er i orden.' : d.next)}${d.manualStage ? ' · <button class="step" data-fd-stage="0" style="cursor:pointer">Automatisk</button>' : ''}</span></div>
-    <div class="fd-grid">${adCard(d)}${rcCard(d)}${mailCard(d)}${photoCard(d)}</div></section>`;
+  const steps = `<div class="fh-steps">${d.track.map((s, i) => `<button class="fh-step${s.done || d.done ? ' on' : ''}${s.cur ? ' cur' : ''}" data-fd-stage="${i + 1}" title="Sett steget til ${esc(s.t)}">${esc(s.t)}</button>`).join('')}
+    ${d.manualStage ? '<button class="fh-step auto" data-fd-stage="0" title="La e-postene styre steget">Automatisk</button>' : ''}</div>`;
+  return `<section class="fd-panel fh-panel" aria-label="${esc(d.item)}">
+    <div class="fd-head"><div class="fh-hl"><div class="fh-hm"><span class="fh-role ${sold ? 'sold' : 'bought'}">${sold ? 'Solgt' : 'Kjøpt'}</span>${d.code ? `<span class="fd-code">Finn-kode ${esc(d.code)}</span>` : ''}${d.orderId ? `<span class="fd-code">· Ordre ${esc(d.orderId)}</span>` : ''}</div>
+      <h2>${esc(d.item)}</h2><div class="fh-hv"><b class="mono ${sold ? 'pos' : ''}">${sold ? '+' : '−'}${kr0(d.amount)}</b><span>${esc(d.counterpart || '')}${d.counterpart ? ' · ' : ''}${dd(d.date)} · ${esc(d.done ? 'Fullført' : d.next)}</span></div></div>
+      <div class="fh-ha">${d.adUrl ? `<a class="btn sm" href="${esc(d.adUrl)}" target="_blank" rel="noopener">Annonse ↗</a>` : ''}<button class="btn sm" data-fd-edit aria-pressed="${!!u.finnEdit}">✎ Rediger</button><button class="x-btn" data-fd-close aria-label="Lukk handelen">×</button></div></div>
+    ${editForm(d)}${steps}
+    <div class="fh-cols"><div class="fh-col">${adCard(d)}</div><div class="fh-col">${rcCard(d)}${photoCard(d)}${mailCard(d)}</div></div></section>`;
 }
 
 export function finnPage() {
   const d = S.finn;
   if (!d) return skel(400);
-  const rows = d.items.map(row).join('');
-  return `<div class="mod">
-    <div class="mod-kpis">${[['Kjøpt i år', kr0(d.bought)], ['Solgt i år', kr0(d.sold)], ['Pågående handler', String(d.ongoing)]].map(([l, v]) => card(`<div class="sub">${l}</div><b class="mono" style="font-size:24px">${v}</b>`, 'padding:18px')).join('')}</div>
-    <div style="display:flex;flex-direction:column;gap:10px">${rows || card('<div class="empty">Ingen Finn-handler ennå.</div>')}</div>
-    ${detail()}
+  const all = d.items, fk = u.finnF ?? 'all', fil = FILTERS.find(([k]) => k === fk) ?? FILTERS[0];
+  const items = all.filter(fil[2]);
+  const segs = FILTERS.map(([k, n, f]) => `<button class="fh-segb" data-fd-filter="${k}" aria-pressed="${fk === k}">${n} <span>${all.filter(f).length}</span></button>`).join('');
+  const groups = GROUPS.map(([n, f, cls]) => { const g = items.filter(f); return g.length ? `<div class="fh-group"><div class="fh-gh"><b class="fh-k ${cls}">${n}</b><span>${g.length} ${g.length === 1 ? 'handel' : 'handler'}</span></div>
+    <div class="fh-grid">${g.map(dealCard).join('')}</div></div>` : ''; }).join('');
+  // Et trykk på et kort åpner detaljvisningen under rutenettet.
+  const det = detail();
+  return `<div class="mod fh">
+    <div class="fh-top"><span class="note" style="font-size:13px">${all.length} handler · ${d.nBought ?? 0} kjøp og ${d.nSold ?? 0} salg i år</span><button class="btn pri" data-fd-add>+ Legg til handel</button></div>
+    ${strip(d, all)}${addPanel()}
+    <div class="fh-segs">${segs}</div>
+    ${groups || card('<div class="empty">Ingen handler her ennå.</div>')}
+    ${det}
     <form class="mod-box" data-fd-form="paste"><b>Legg til fra e-post</b><span class="note" style="font-size:13px">Lim inn en e-post fra Finn (Trygg betaling, Fiks ferdig eller Tillit). AI trekker ut gjenstand, motpart, beløp og status, og matcher mot bankposten.</span>
       <textarea class="inp mod-ta" name="email" rows="5" placeholder="Lim inn e-posten her …" required></textarea><div><button class="btn pri">Les e-posten</button></div></form>
     <div class="note" style="font-size:13px">Kilde: e-postkvitteringer fra Finn (Trygg betaling, Fiks ferdig-frakt, Tillit forsikring) leses av AI og matches mot bankposter. ${d.imap.configured ? `Proton Mail er koblet til${d.imap.finnFolder ? ` (mappen ${esc(d.imap.finnFolder)})` : ''}: nye Finn-e-poster blir handler, og e-poster fra FINN, Posten/Bring og Tillit kobles til riktig handel.` : 'Sett opp Proton Mail under Innstillinger → Import for automatisk henting. Tidligere Finn-e-poster og annonselenker importeres samme sted.'}</div>
@@ -125,7 +174,17 @@ export function bindFinn(el) {
     const d = (s) => e.target.closest(s);
     let x;
     if ((x = d('[data-fd-del]'))) { e.stopPropagation(); if (!confirm('Slette handelen med annonse, kvitteringer, e-poster og bilder?')) return; await api(`/finn/${x.dataset.fdDel}`, { method: 'DELETE' }); if (u.finnSel === +x.dataset.fdDel) { u.finnSel = null; S.finnDeal = null; } S.finn = await api('/finn'); return render(); }
-    if ((x = d('[data-fd-open]'))) return open(+x.dataset.fdOpen);
+    if ((x = d('[data-fd-filter]'))) { u.finnF = x.dataset.fdFilter; return render(); }
+    if (d('[data-fd-add]')) { u.finnAdd = !u.finnAdd; if (u.finnAdd) { render(); el.querySelector('[data-fd-form="new"] [name=adUrl]')?.focus(); return; } u.finnAddF = null; return render(); }
+    if (d('[data-fd-edit]')) { u.finnEdit = !u.finnEdit; return render(); }
+    if ((x = d('[data-fd-act]'))) {
+      // «Godkjenn» (kjøp: Mottatt → Godkjent) eller «Marker som sendt» (salg: Solgt → Sendt).
+      const r = S.finn.items.find((y) => y.id === +x.dataset.fdAct);
+      await api(`/finn/${r.id}`, { method: 'PATCH', json: { stage: r.role === 'sold' ? 2 : 4 } });
+      toast(r.role === 'sold' ? `${r.item} er markert som sendt` : `${r.item} er godkjent`);
+      await loadFinn(); return render();
+    }
+    if ((x = d('[data-fd-open]'))) { u.finnEdit = false; return open(+x.dataset.fdOpen); }
     if (d('[data-fd-close]')) { u.finnSel = null; S.finnDeal = null; return render(); }
     if ((x = d('[data-fd-stage]'))) { const n = +x.dataset.fdStage; S.finnDeal = await api(`/finn/${u.finnSel}`, { method: 'PATCH', json: { stage: n || null } }); S.finn = await api('/finn'); return render(); }
     if ((x = d('[data-fd-mail]'))) { u.finnMail = u.finnMail === +x.dataset.fdMail ? null : +x.dataset.fdMail; return render(); }
@@ -133,7 +192,11 @@ export function bindFinn(el) {
     if ((x = d('[data-fd-rmfile]'))) { S.finnDeal = await api(`/finn/${u.finnSel}/files/${x.dataset.fdRmfile}`, { method: 'DELETE' }); S.finn = await api('/finn'); return render(); }
   }));
   el.addEventListener('keydown', (e) => { if (u.page === 'finn' && (e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[data-fd-open]')) { e.preventDefault(); e.target.click(); } });
-  el.addEventListener('input', (e) => { if (e.target.closest?.('[data-fd-form="ad"]')) u.finnUrl = e.target.value; });
+  el.addEventListener('input', (e) => {
+    if (e.target.closest?.('[data-fd-form="ad"]')) u.finnUrl = e.target.value;
+    const nf = e.target.closest?.('[data-fd-form="new"]');
+    if (nf) { const prev = u.finnAddF?.role; u.finnAddF = Object.fromEntries(new FormData(nf)); if (prev && prev !== u.finnAddF.role) render(); }
+  });
   el.addEventListener('change', wrap(async (e) => {
     const inp = e.target.closest?.('[data-fd-file]');
     if (!inp || !inp.files?.length) return;
@@ -145,6 +208,18 @@ export function bindFinn(el) {
     if (!f) return;
     e.preventDefault();
     const v = Object.fromEntries(new FormData(f));
+    if (f.dataset.fdForm === 'new') {
+      if (!v.adUrl?.trim() && (!v.item?.trim() || !(parseFloat(String(v.amount).replace(/\s/g, '').replace(',', '.')) > 0))) return toast('Lim inn en Finn-lenke, eller skriv tittel og pris');
+      u.finnBusy = 'new'; render();
+      const r = await api('/finn', { method: 'POST', json: { role: v.role, adUrl: v.adUrl?.trim() || undefined, item: v.item?.trim() || undefined, amount: v.amount?.trim() || undefined, counterpart: v.counterpart?.trim() || undefined } });
+      u.finnBusy = null; u.finnAdd = false; u.finnAddF = null;
+      toast(r.adError ? `${r.item} er lagt til, men annonsen ble ikke hentet: ${r.adError}` : `${r.item} er lagt til`);
+      u.finnSel = r.id; await loadFinn(); return render();
+    }
+    if (f.dataset.fdForm === 'edit') {
+      S.finnDeal = await api(`/finn/${u.finnSel}`, { method: 'PATCH', json: { item: v.item, amount: v.amount, counterpart: v.counterpart, date: v.date } });
+      u.finnEdit = false; S.finn = await api('/finn'); toast('Lagret'); return render();
+    }
     if (f.dataset.fdForm === 'paste') { const r = await api('/finn', { method: 'POST', json: v }); toast(`${r.item} lagt til`); f.reset(); u.finnSel = r.id; await loadFinn(); return render(); }
     if (f.dataset.fdForm === 'ad') {
       u.finnBusy = 'ad'; render();
