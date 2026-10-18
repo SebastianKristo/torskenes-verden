@@ -11,6 +11,7 @@ import { navSettings } from './mobile-paper3.js';
 import { TR, trkLoad, trkPrefRows, setTrkPref } from './mobile-track.js';
 import * as P23 from './mobile-p23.js';
 import * as P24 from './mobile-p24.js';
+import * as P26 from './mobile-p26.js';
 import { row, grp } from './mobile-p17.js';
 import { haSection } from './mobile-p22.js';
 import { p17SetMain, p17Modules, p17AiExtra, p17Varsler, aiLoad, notifyLoad, NT, canSrv, ADMIN_NOTE } from './mobile-p17.js';
@@ -52,7 +53,7 @@ function profile(big = false) {
   const sz = big ? 58 : 44;
   return `<a class="opt-row" href="#/set/konto"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:${sz}px;height:${sz}px;font-size:${big ? 22 : 17}px">${avInner()}</span><span class="m-grow"><b style="font-size:${big ? 19 : 16}px;font-weight:600">${esc(meName())}</b><br><span style="font-size:13px;opacity:.65">${me.username ? `@${esc(me.username)}` : 'FinansHub'}${me.role ? ` · ${esc(me.role)}` : ''} · ${esc(me.serverName || location.host)}</span></span><span style="opacity:.5">›</span></a>`;
 }
-const PAGES = { integ: 'Integrasjoner', varsler: 'Varsler og haptikk', mod: 'Moduler', profil: 'Profil', bakgrunn: 'Bakgrunn', fanelinje: 'Fanelinje', konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', nav: 'Navigasjonslinje', dom: 'Domener', scan: 'Skanning og AI', notif: 'Varsler', hap: 'Haptikk', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI og tolkning', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data' };
+const PAGES = { integ: 'Integrasjoner', kal: 'Kalendere', varsler: 'Varsler og haptikk', mod: 'Moduler', profil: 'Profil', bakgrunn: 'Bakgrunn', fanelinje: 'Fanelinje', konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', nav: 'Navigasjonslinje', dom: 'Domener', scan: 'Skanning og AI', notif: 'Varsler', hap: 'Haptikk', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI og tolkning', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data' };
 const when = (t) => (t ? new Date(t).toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'aldri');
 const aiMode = () => { const st = S.boot?.settings ?? {}; return st.provider === 'gemini' ? 'gemini' : st.provider === 'groq' ? 'groq' : st.fallback ? 'both' : 'ollama'; };
 
@@ -92,7 +93,9 @@ function main() {
 }
 
 const PAGE = {
-  integ: (th, sub) => P24.integPage24(P23.integPage(haSection()), haSection(), sub), // Prompt 24: alle integrasjoner
+  // Prompt 26: gruppert liste som på web og egen side per integrasjon (#/set/integ/<id>). Eldre server: forrige side.
+  integ: (th, sub) => P26.integPage26(P23.integPage(haSection()), sub),
+  kal: () => P26.kalSetPage(), // Prompt 26: Innstillinger → Kalendere (Skole-iCal, Canvas, Google Kalender og Home Assistant)
   varsler: () => p17Varsler(trkPrefRows()),
   mod: () => p17Modules(),
   profil: () => {

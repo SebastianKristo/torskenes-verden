@@ -17,6 +17,8 @@ import { aksTitle } from './mobile-aks.js';
 import * as P23 from './mobile-p23.js';
 import * as P24 from './mobile-p24.js';
 import * as P25 from './mobile-p25.js';
+import * as P26 from './mobile-p26.js';
+import * as KAL from './mobile-kal.js';
 import { setTitle } from './mobile-set.js';
 import { appName, huskeWidget, bolWidget, scanCtx, homeUpload, FT } from './mobile-p17.js';
 import { posCard, ppTi } from './mobile-p20.js';
@@ -106,7 +108,7 @@ const PAGE = {
   dom: ['Domener', 'Trafikk, besøk og oppetid'], 'dom/pub': ['Publikum', 'Kart, land og enheter'], 'dom/ytl': ['Ytelse', 'Statuskoder, fart og sikkerhet'], 'dom/inf': ['Infrastruktur', 'Oppetid, DNS og domeneinfo'], 'dom/admin': ['Domener', 'Legg til og fjern'],
   aks: ['Aksjer', 'Trading 212'], sub: ['Abonnementer', 'Subscription OS'], dir: ['Boliger', 'Utgifter, prosjekter og kvitteringer'], finn: ['Finn', 'Kjøp og salg'],
   avg: ['Avganger', 'Ruter · sanntid fra Entur'], fam: ['Familie', 'Posisjon, soner og helse'], huske: ['Huskeliste', 'Oppgaver for hele familien'],
-  bd: ['Bursdager', 'Familie og venner'], kv: ['Kvitteringer', 'Til gjennomgang'], fast: ['Faste trekk', 'Neste 30 dager'], konto: ['Kontoer', 'Saldo'], rap: ['Rapporter', 'Måned og år'], imp: ['Import', 'Bank, Excel og Finn'],
+  bd: ['Bursdager', 'Familie og venner'], kal: ['Kalender', 'Skole og familie'], kv: ['Kvitteringer', 'Til gjennomgang'], fast: ['Faste trekk', 'Neste 30 dager'], konto: ['Kontoer', 'Saldo'], rap: ['Rapporter', 'Måned og år'], imp: ['Import', 'Bank, Excel og Finn'],
   skann: ['Kvittering', 'Bekreft'], opp: ['Kø', 'Kvitteringer'], hl: ['', ''],
 };
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -125,9 +127,10 @@ function parentOf(scr) {
   return r[0] === 'hl' && scr !== 'hl' ? ['dir', 'Boliger'] : r;
 }
 function parentOf0(scr) {
-  if (scr === 'bd') return ['mer', 'Mer'];
+  if (scr === 'bd' || scr === 'kal') return ['mer', 'Mer'];
   if (m.detail && ['liste', 'sok', 'hjem'].includes(scr)) return ['txback', NAMES[scr]];
   if (scr === 'finn' && m.sub) return ['finn', 'Finn'];
+  if (scr === 'set' && /^integ\/./.test(m.sub ?? '')) return ['set/integ', 'Integrasjoner'];
   if (scr === 'set' && m.sub) return ['set', 'Alle innstillinger'];
   if (scr === 'mat' && m.sub) return ['mat', 'Mat'];
   // Domener: pila (og sveip tilbake) går alltid hjem, også når Domener ble åpnet fra Mer.
@@ -200,8 +203,9 @@ export function paperNav(scr) {
   let tabs, cur, plus;
   if (ctx === 'fin') {
     const fk = finKeys(), FTN = { oversikt: ['hjem', 'Oversikt', '◎'], liste: ['liste', 'Liste', '≡'], finn: ['finn', 'Finn', '⇄'], sok: ['sok', 'Søk', '⌕'], budsjett: ['budsjett', 'Budsjett', '◔'], kvitteringer: ['kv', 'Kvitteringer', '▢'], aksjer: ['aks', 'Aksjer', '↗'], abonnementer: ['sub', 'Abonnementer', '↻'], kontoer: ['konto', 'Kontoer', '▤'], boliger: ['dir', 'Boliger', '⌂'] };
-    tabs = fk.map((k) => FTN[k]).filter(Boolean);
-    if (flyt && !tabs.some(([k]) => k === 'sok')) tabs.push(['sok', 'Søk', '⌕']);
+    // Prompt 26: egne navn og ikoner fra «Rediger fanelinjen» (maks 5 faner + Mer).
+    tabs = fk.map((k) => P26.finTab(k, FTN[k])).filter(Boolean);
+    if (flyt && tabs.length < 5 && !tabs.some(([k]) => k === 'sok')) tabs.push(['sok', 'Søk', '⌕']);
     tabs.push(['fmer', 'Mer', '⋯']);
     cur = tabs.some(([k]) => k === scr) ? scr : 'fmer'; plus = scanCtx() === 'bol' ? ['Legg kvittering i boligen', 'bol'] : ['Legg til kvittering', 'fin'];
   } else if (ctx === 'dom') {
@@ -312,7 +316,7 @@ export function paperHome() {
     h4: `<div class="pp-minis">${minis.map(([k, v, sub, c, href, fs]) => `<a class="pp-card pp-mini" href="${href}"><span class="pp-lab mut">${k}</span><b class="pp-serif m-ell" style="font-size:${fs}">${esc(v)}</b><span class="${c === 'lab' ? 'pp-lab-c' : `pp-${c}`}" style="font-size:11px">${esc(sub)}</span></a>`).join('')}</div>`,
     h5: newsCard(H?.news),
     // Nye kort (prompt 17): Posisjon (familien), Bolig (budsjett, gjennomgang og neste faste utgift) og Huskeliste.
-    h6: posCard(), h7: bolWidget(), h8: huskeWidget(), h9: P24.bdWidget(),
+    h6: posCard(), h7: bolWidget(), h8: huskeWidget(), h9: P24.bdWidget(), h10: KAL.kalWidget(),
   }, { full: ['h1', 'h4', 'h5'] })}</div>`;
 }
 // Ruters egne linjefarger (fra Entur via serveren), med Ruters standardfarger per transportmiddel som reserve.
@@ -355,7 +359,7 @@ export function paperMer() {
   // fanelinja tas ut. I profilene Finans + Boliger og Boliger-profil står Hjem øverst.
   const n = onWay(), inBar = new Set(mainTabs('mer').map(([k]) => k));
   const mod = inBar.has('spor') ? (domOk() ? ['dom', 'Domener', 'Trafikk, besøk og oppetid'] : null) : ['spor', 'Sporing', n ? `${n} pakke${n === 1 ? '' : 'r'} på vei` : 'Pakker og sendinger'];
-  const rows = [...(P24.profRoot() ? [['hl', 'Hjem', 'Pakker, avganger og widgets']] : []), ...(mod ? [mod] : []), ['bd', 'Bursdager', 'Hvem har bursdag snart'], ['huske', 'Huskeliste', 'Oppgaver og widgets'], ['fam', 'Familie og kart', 'Posisjon, soner og helse'],
+  const rows = [...(P24.profRoot() ? [['hl', 'Hjem', 'Pakker, avganger og widgets']] : []), ...(mod ? [mod] : []), ['kal', 'Kalender', 'Timeplan, prøver og frister'], ['bd', 'Bursdager', 'Hvem har bursdag snart'], ['huske', 'Huskeliste', 'Oppgaver og widgets'], ['fam', 'Familie og kart', 'Posisjon, soner og helse'],
     ['media', 'Media', 'Spilles nå og historikk'], ['hjem', 'Finans', 'Oversikt, liste, Finn og mer'], ['nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag'], ['set', 'Innstillinger', 'Tema, bakgrunn og konto']]
     .filter(([k]) => k === 'hl' || k === 'set' || !inBar.has(k));
   // Prompt 25: ikon til venstre (40-boks med strekikon i fargene fra ikonpaletten).

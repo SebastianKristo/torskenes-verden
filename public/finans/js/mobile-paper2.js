@@ -8,6 +8,7 @@ import { pkgLogo, pkgTitle } from './mobile-p21.js';
 import { TR, trkLoad, trkPrefs, setTrkPref, badge, carOf, stepOf, isDone, isReady, STXT, normNo, detectLocal } from './mobile-track.js';
 import { edBlocks, finnWay } from './mobile-paper3.js';
 import { ppTi } from './mobile-p20.js';
+import * as P26 from './mobile-p26.js';
 
 const lab = (t, r = '') => `<div class="pp-sec"><span>${esc(t)}</span>${r ? `<span>${r}</span>` : ''}</div>`;
 const kr = (v) => `${n0(v)} kr`;
@@ -158,7 +159,7 @@ export async function paperFinnBind(e, t) {
 
 /* ---------- Sporing ---------- */
 
-const TT = { tab: 'act', set: false, nv: '', busy: false, sel: null, delArm: false, arch: null, lp: null, lpFired: false };
+const TT = { tab: 'act', set: false, nv: '', pick: '', busy: false, sel: null, delArm: false, arch: null, lp: null, lpFired: false };
 const TABS = [['act', 'Aktive', (p) => !p.archived && !isDone(p)], ['pick', 'Klar for henting', (p) => !p.archived && isReady(p)], ['way', 'På vei', (p) => !p.archived && !isDone(p) && !isReady(p) && stepOf(p) >= 1],
   ['reg', 'Registrert', (p) => !p.archived && !isDone(p) && stepOf(p) === 0], ['done', 'Levert', (p) => !p.archived && isDone(p)], ['all', 'Alle', (p) => !p.archived], ['arch', 'Arkiv', (p) => !!p.archived]];
 // Arkivet hentes for seg (GET /api/tracking?archived=1); eldre server: de arkiverte som ligger i den vanlige listen.
@@ -196,7 +197,8 @@ function selBar(list) {
 const NOTIFY = [['found', 'Ny pakke funnet', 'Når et sporingsnummer dukker opp i e-post eller Finn'], ['pickup', 'Klar for henting', 'Med hentested og frist'], ['out', 'Ute for levering', 'Når budet er på vei til deg'], ['delayed', 'Forsinket', 'Når leveringen er forsinket'], ['delivered', 'Levert', 'Når pakken er levert']];
 const SOURCES = [['email', 'E-post (Proton Mail)', 'Ordre- og fraktbekreftelser'], ['finn', 'Finn', 'Fiks ferdig-handler med sporingsnummer'], ['autoArchive', 'Arkiver leverte automatisk', 'Etter 7 dager']];
 const srcOn = (k) => { const s = TR.data?.sources?.[k]; return k === 'autoArchive' ? s?.on === true || s === true : s?.on !== false && s !== false; };
-const pkUrl = (p) => p.url || `${carOf(p.carrier).url}${encodeURIComponent(p.trackingNo ?? '')}`;
+// Prompt 26: lenken følger en overstyrt transportør (ParcelsApp har egen sporingsside).
+const pkUrl = (p0) => { const p = P26.shown(p0); return p.url || (p.carrier === 'parcelsapp' ? `https://parcelsapp.com/no/tracking/${encodeURIComponent(p.trackingNo ?? '')}` : `${carOf(p.carrier).url}${encodeURIComponent(p.trackingNo ?? '')}`); };
 const stTxt = (p) => (isDone(p) ? (p.direction === 'out' ? 'Levert til kjøper' : 'Levert') : isReady(p) ? 'Klar for henting' : p.statusText || STXT[p.status] || 'Ukjent status');
 function etaTxt(p) {
   const eta = p.estimatedDelivery ?? p.eta, dl = p.pickup?.deadline ?? (isReady(p) ? eta : null);
@@ -237,7 +239,7 @@ function pkCard(p) {
   const st = stepOf(p), done = isDone(p), ready = isReady(p), on = TT.sel?.has(String(p.id));
   const bars = [0, 1, 2, 3, 4].map((j) => `<i style="background:${done ? 'var(--pp-pos)' : j < st ? 'var(--pp-ink)' : j === st ? 'var(--pp-lab)' : 'var(--pp-line)'}"></i>`).join('');
   const src = p.source === 'finn' ? 'Finn' : p.source === 'email' ? 'E-post' : 'Manuelt';
-  return `<a class="pp-card pp-pk${ready ? ' ready' : ''}${TT.sel ? ' pksel' : ''}${on ? ' on' : ''}" data-pk="${esc(p.id)}" href="${esc(pkUrl(p))}" target="_blank" rel="noopener"><div class="pp-pkt"><span class="p17-pkb" data-pksel="${esc(p.id)}" title="Velg">${pkgLogo(p, 44)}${TT.sel ? `<i class="p17-pkc" aria-hidden="true">${on ? '✓' : ''}</i>` : ''}</span><span class="m-grow" style="min-width:0"><b class="pp-serif m-ell">${esc(pkgTitle(p))}</b><span class="pp-mut m-ell">${esc(carOf(p.carrier).name)} · ${esc(p.trackingNo ?? '')}</span></span><span class="pp-src">${src}</span></div>
+  return `<a class="pp-card pp-pk${ready ? ' ready' : ''}${TT.sel ? ' pksel' : ''}${on ? ' on' : ''}" data-pk="${esc(p.id)}" href="${esc(pkUrl(p))}" target="_blank" rel="noopener"><div class="pp-pkt"><span class="p17-pkb" data-pksel="${esc(p.id)}" title="Velg">${pkgLogo(P26.shown(p), 44)}${TT.sel ? `<i class="p17-pkc" aria-hidden="true">${on ? '✓' : ''}</i>` : ''}</span><span class="m-grow" style="min-width:0"><b class="pp-serif m-ell">${esc(pkgTitle(p))}</b><span class="pp-mut m-ell">${esc(P26.carLabel(p))} · ${esc(p.trackingNo ?? '')}</span></span><span class="pp-src">${src}</span></div>
     <div class="pp-row"><b class="pp-pks ${ready ? 'pp-lab-c' : done ? 'pp-pos' : ''}">${esc(stTxt(p))}</b><span class="pp-mut" style="text-align:right">${esc(etaTxt(p))}</span></div>${evLine(p)}<span class="pp-pkb">${bars}</span>${tlLine(p, st, done)}</a>`;
 }
 
@@ -251,14 +253,14 @@ function secHtml(k) {
     const fn = (TABS.find(([id]) => id === TT.tab) ?? TABS[0])[2], src = tabItems(TT.tab);
     const L = (src ?? []).filter(fn).sort((a, b) => (isReady(b) - isReady(a)) || (stepOf(b) - stepOf(a)));
     TT.vis = L;
-    return `${selBar(L)}${TR.err ? `<div class="pp-card pp-mut">${esc(TR.err)}</div>` : ''}${TR.missing ? '<div class="pp-card pp-mut">Serveren har ikke Sporing ennå. Oppdater Homelab for å spore pakker.</div>' : ''}
+    const one = TT.sel?.size === 1 ? L.find((p) => TT.sel.has(String(p.id))) : null;
+    return `${selBar(L)}${one ? P26.sporVia(one) : ''}${TR.err ? `<div class="pp-card pp-mut">${esc(TR.err)}</div>` : ''}${TR.missing ? '<div class="pp-card pp-mut">Serveren har ikke Sporing ennå. Oppdater Homelab for å spore pakker.</div>' : ''}
       ${src === null ? '<div class="m-spin"></div>' : L.map(pkCard).join('') || `<div class="pp-mut" style="padding:16px 4px;font-size:14px">${TT.tab === 'arch' ? 'Ingen arkiverte sendinger.' : 'Ingen pakker her.'}</div>`}
       ${TR.data?.parcelsapp?.configured ? `<span class="pp-mut" style="font-size:12px;padding:0 4px">ParcelsApp: ${n0(TR.data.parcelsapp.used ?? 0)} av ${n0(TR.data.parcelsapp.limit ?? 3)} oppslag brukt denne måneden</span>` : ''}`;
   }
   if (k === 'add') {
-    const no = normNo(TT.nv), car = no.length >= 6 ? carOf(detectLocal(no)).name : '';
     return `<form class="pp-trkadd" data-pptrkform><input class="pp-in dash" id="pp-trk-no" value="${esc(TT.nv)}" placeholder="Sporingsnummer" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Sporingsnummer"><button class="pp-btn ink" type="submit" ${TT.busy ? 'disabled' : ''}>${TT.busy ? '…' : 'Spor'}</button></form>
-      <span class="pp-mut" style="padding:0 4px;font-size:12px">${car ? `✦ Ser ut som ${esc(car)}` : '✦ Transportøren gjenkjennes ut fra nummeret.'}</span>
+      ${P26.addCars(TT.nv, TT.pick, 'data-pptrk="car"')}
       <div class="pp-chips">${SOURCES.slice(0, 2).map(([id, n]) => `<button class="pp-fchip sm" data-pptrk="src" data-k="${id}" aria-pressed="${srcOn(id)}">${srcOn(id) ? '✓ ' : ''}${n.replace(/ \(.*\)/, '')}</button>`).join('')}</div>`;
   }
   if (k === 'notify') return `<span class="pp-lab">VARSLER</span><div class="pp-card pp-tight">${notifyRows()}</div>`;
@@ -286,14 +288,15 @@ export function paperTrkSheet() {
 
 export async function paperTrkBind(e, t) {
   if (m.screen !== 'spor') return false;
-  if (e.type === 'input') { if (t.id === 'pp-trk-no') { const had = normNo(TT.nv).length >= 6; TT.nv = t.value; if (had !== (normNo(t.value).length >= 6)) draw(); return true; } return false; }
+  if (e.type === 'input') { if (t.id === 'pp-trk-no') { const had = normNo(TT.nv).length >= 6; TT.nv = t.value; if (had !== (normNo(t.value).length >= 6)) draw(); else P26.refreshAuto(t.value); return true; } return false; }
   if (e.type === 'submit' && t.matches?.('[data-pptrkform]')) {
     e.preventDefault();
     const no = normNo(TT.nv);
     if (no.length < 6) { haptic('err'); flash('Skriv inn et sporingsnummer'); return true; }
     if ((TR.data?.items ?? []).some((p) => normNo(p.trackingNo) === no)) { haptic('err'); flash('Sendingen spores allerede'); return true; }
     TT.busy = true; draw();
-    try { const r = await hlApi('/tracking', { method: 'POST', json: { trackingNo: no, carrier: detectLocal(no) } }); TT.nv = ''; TT.tab = 'act'; await trkLoad(); haptic('ok'); flash(r?.message || `✦ Sporer hos ${carOf((r?.item ?? r)?.carrier ?? detectLocal(no)).name}`); }
+    const pk = TT.pick;
+    try { const r = await hlApi('/tracking', { method: 'POST', json: P26.addBody(no, pk) }); P26.noteAdded(no, pk); TT.nv = ''; TT.pick = ''; TT.tab = 'act'; await trkLoad(); haptic('ok'); flash(r?.message || `✦ Sporer hos ${pk ? `${P26.carN(pk)} · valgt` : carOf((r?.item ?? r)?.carrier ?? detectLocal(no)).name}`); }
     catch (err) { haptic('err'); flash(err.message); }
     TT.busy = false; draw(); return true;
   }
@@ -310,6 +313,7 @@ export async function paperTrkBind(e, t) {
   if (!x) return false;
   e.preventDefault();
   const k = x.dataset.pptrk;
+  if (k === 'car') { TT.pick = x.dataset.k; haptic('tab'); draw(); return true; }
   if (k === 'selx') { TT.sel = null; TT.delArm = false; draw(); return true; }
   if (k === 'selall') { const L = TT.vis ?? [], all = L.length && L.every((p) => TT.sel?.has(String(p.id))); TT.sel = new Set(all ? [] : L.map((p) => String(p.id))); TT.delArm = false; draw(); return true; }
   if (k === 'arch' || k === 'unarch') { await bulk(k === 'arch' ? 'archive' : 'unarchive'); return true; }

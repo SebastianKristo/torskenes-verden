@@ -12,6 +12,7 @@ import { hlDom } from './mobile-hl.js';
 import { paperDark } from './mobile-paper.js';
 import { famSource } from './mobile-p22.js';
 import * as P25 from './mobile-p25.js';
+import * as P26 from './mobile-p26.js';
 
 const LS = 'fh_p24';
 const L = (() => { try { return JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch { return {}; } })();
@@ -114,8 +115,8 @@ const IDX = [
   ['appnavn', 'Navn på appen', 'Homelab', 'nm', 'navn app tittel'], ['appikon', 'App-ikon', 'Homelab', 'ic', 'ikon logo app'], ['hjemnav', 'Fanelinje i Hjem', 'Homelab', '#/set/fanelinje', 'fane faner hjem navigasjon'], ['navstil', 'Fanelinje-stil', 'Homelab', 'ns', 'fane fanelinje stil ikoner tekst navn navigasjon'],
   ['mod', 'Moduler', 'Homelab', '#/set/mod', 'modul widget sporing domener mat'], ['rss', 'Nyhetsleser', 'Homelab', '#/nyheter', 'rss nyheter kilder ikon'],
   ['look', 'Utseende og fanelinje', 'App', '#/set/look', 'tema mørk lys farge papir utseende ikonfarger'], ['bakgrunn', 'Bakgrunn på Hjem', 'App · Utseende', '#/set/bakgrunn', 'bakgrunn bilde planeter vær oslo'],
-  ['varsler', 'Varsler og haptikk', 'App', '#/set/varsler', 'varsel push lyd vibrasjon haptikk bursdager'], ['integ', 'Integrasjoner', 'App', '#/set/integ', 'integrasjon nøkkel api'],
-  ['bd', 'Bursdager', 'Mer', '#/bd', 'bursdag kalender google'],
+  ['varsler', 'Varsler og haptikk', 'App', '#/set/varsler', 'varsel push lyd vibrasjon haptikk bursdager'], ['kal', 'Kalendere', 'App', '#/set/kal', 'kalender google home assistant ha ical canvas skole timeplan synk'], ['integ', 'Integrasjoner', 'App', '#/set/integ', 'integrasjon nøkkel api'],
+  ['bd', 'Bursdager', 'Mer', '#/bd', 'bursdag'], ['kalside', 'Kalender', 'Mer', '#/kal', 'timeplan prøver frister skole uke måned agenda'],
 ];
 const INTEG_IDX = [['ha', 'Home Assistant', 'home ha assistant'], ['google', 'Google Kalender', 'kalender bursdag google oauth'], ['ai', 'AI (Gemini)', 'gemini groq ollama ai nøkkel'], ['t212', 'Trading 212', 'aksje'], ['bank', 'Bank', 'bank import'], ['imap', 'Kvitteringer på e-post (IMAP)', 'epost mail kvittering imap'],
   ['entur', 'Entur', 'ruter buss trikk avgang'], ['mybring', 'Mybring', 'posten bring pakke sporing'], ['postnord', 'PostNord', 'pakke sporing post'], ['parcelsapp', 'ParcelsApp', 'pakke sporing reserve'], ['cloudflare', 'Cloudflare', 'domene domener'], ['finn', 'Finn', 'finn annonse'],
@@ -265,7 +266,7 @@ function bdRow(p, i) {
       <span class="p24-fl">Påminnelse</span><div class="p24-chips">${REMS.map(([v, n]) => chip(p.rem === v, `data-p24="bdprem" data-id="${esc(p.id)}" data-v="${v ?? ''}"`, n)).join('')}</div>
       <div class="p24-chips">${p.src === 'google' ? '<a class="p24-ob" href="https://calendar.google.com/" target="_blank" rel="noopener">Åpne i Google Kalender</a>' : ''}<button class="p24-ob" data-p24="bdedit" data-id="${esc(p.id)}">Rediger</button><button class="p24-ob lab" data-p24="bddel" data-id="${esc(p.id)}">${BD.delArm === p.id ? 'Trykk igjen for å slette' : 'Slett'}</button></div></div>` : ''}</div>`;
 }
-function calCard() {
+export function calCard() {
   const G = BD.d?.google ?? {}, H = BD.d?.ha ?? {}, gOn = !!G.connected, hOn = !!H.entityId;
   if (gOn && !BD.cals && !BD.calBusy) { BD.calBusy = true; hlApi('/birthdays/google/calendars').then((r) => { BD.cals = Array.isArray(r) ? r : r?.items ?? r?.calendars ?? []; }).catch(() => { BD.cals = []; }).finally(() => draw()); }
   const haOk = H.allowed !== false && !BD.local;
@@ -301,9 +302,9 @@ export function bdView() {
   return `<div class="p24-bd">${hero}
     <div class="p24-bdq"><label class="p24-ssf"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg><input id="p24-bdq" data-p24in="bdq" type="search" value="${esc(BD.q)}" placeholder="Søk etter navn" autocomplete="off" aria-label="Søk etter navn"></label><button class="p24-add" data-p24="bdadd">${BD.add ? 'Lukk' : '+ Legg til'}</button></div>
     ${BD.add ? addCard() : ''}
-    ${!F.length ? `<div class="p24-card p24-mut">${L0.length ? 'Ingen treff.' : 'Ingen bursdager ennå. Trykk «+ Legg til», eller koble til Google Kalender eller Home Assistant under.'}</div>` : ''}
+    ${!F.length ? `<div class="p24-card p24-mut">${L0.length ? 'Ingen treff.' : 'Ingen bursdager ennå. Trykk «+ Legg til», eller koble til Google Kalender eller Home Assistant under Kalendere.'}</div>` : ''}
     ${G.map((g) => `<div class="p24-bdg"><span class="p24-lab"><span>${esc(g.t)}</span><span class="p24-c">${g.items.length}</span></span><div class="p24-card p24-bdl">${g.items.map(bdRow).join('')}</div></div>`).join('')}
-    ${calCard()}</div>`;
+    ${P26.bdCalLink()}</div>`;
 }
 /** Hjem-widgeten «BURSDAGER · NESTE» (h9): de tre neste og «alle ›». */
 export function bdWidget() {
@@ -620,7 +621,7 @@ async function bindAsync(e, t) {
     }
     case 'glogin': {
       if (BD.d?.google?.configured === false) { flash('Admin må legge inn Google-klienten under Innstillinger → Integrasjoner'); return true; }
-      const ret = `${location.origin}/finans/#/bd`;
+      const ret = `${location.origin}/finans/#/${m.screen === 'set' ? 'set/kal' : 'bd'}`;
       try { const r = await hlApi('/birthdays/google/start', { method: 'POST', json: { return: ret } }); location.href = r.url; }
       catch { location.href = `/api/birthdays/google/auth?return=${encodeURIComponent(ret)}`; }
       return true;

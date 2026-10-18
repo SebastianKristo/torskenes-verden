@@ -67,7 +67,7 @@ const MER_IC = {
   hl: HOUSE, dom: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18', spor: 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10',
   bd: 'M4 11h16v9H4zM2 7h20v4H2zM12 7v13M12 7c-1.5-3-5-3-5-1s3 1 5 1zM12 7c1.5-3 5-3 5-1s-3 1-5 1z', huske: 'M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2',
   fam: 'M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z', media: 'M5 4l14 8-14 8z', hjem: 'M3 6h18v12H3zM3 10h18M7 15h4',
-  nyheter: 'M5 5a14 14 0 0 1 14 14M5 11a8 8 0 0 1 8 8M6 18h.01',
+  nyheter: 'M5 5a14 14 0 0 1 14 14M5 11a8 8 0 0 1 8 8M6 18h.01', kal: 'M4 5h16v15H4zM4 10h16M9 3v4M15 3v4M8 14h2M12 14h2M8 17h2',
   set: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
 };
 /** Én Mer-rad: ikonboks, Newsreader-tittel, undertekst og ›. i = plass i lista (fargen går rundt i paletten). */
@@ -88,7 +88,7 @@ export function goSet(x) {
   haptic('tap');
   const id = String(x.id), href = String(x.href ?? '#/set');
   // Hvor raden ligger: integrasjoner har egen gruppe på undersiden, resten er rader på hovedsiden (eller en lenke dit).
-  const steps = id.startsWith('integ:') ? [[href, [`#ig-${CSS.escape(id.slice(6))}`]]]
+  const steps = id.startsWith('integ:') ? [[href, [`#ig-${CSS.escape(id.slice(6))}`, '.p26 .p26-r.top']]]
     : !href.startsWith('#/') ? [['#/set', [`[data-set="${CSS.escape(id)}"]`]]]
       : [['#/set', [`[data-set="${CSS.escape(id)}"]`, `a[href="${href}"]`]], ...(href.split('/').length > 3 ? [[href.split('/').slice(0, -1).join('/'), [`a[href="${href}"]`]]] : []), [href, href.startsWith('#/set/') ? [`[data-set="${CSS.escape(id)}"]`, '.p17-list', '.list'] : []]];
   HI = { steps, i: 0, sel: null, until: 0, t0: Date.now() };

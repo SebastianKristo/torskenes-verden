@@ -10,6 +10,7 @@ import { FCOL, FO, fmSort, fmBar, ppTi } from './mobile-p20.js';
 import { dragStart } from './mobile-p21.js';
 import * as P24 from './mobile-p24.js';
 import * as P25 from './mobile-p25.js';
+import * as P26 from './mobile-p26.js';
 
 /* ---------- Valg (lokal kopi + /api/me/layout) ---------- */
 
@@ -40,7 +41,7 @@ export const FT = {
 };
 export const FT_DEF = ['oversikt', 'liste', 'finn', 'sok'];
 // Prompt 24: profilene (Finans + Boliger) har fem Finans-faner; ellers fire.
-export const finKeys = () => { const v = [...new Set((L.finTabs ?? FT_DEF).filter((k) => FT[k]))]; return (v.length ? v : FT_DEF).slice(0, v.length === 5 && P24.profile() !== 'standard' ? 5 : 4); };
+export const finKeys = () => { const v = [...new Set((L.finTabs ?? FT_DEF).filter((k) => FT[k]))]; return (v.length ? v : FT_DEF).slice(0, 5); }; // Prompt 26: maks 5 faner (Mer kommer alltid sist)
 /** Setter Finans-fanene (profilvalg). push = lagre i /api/me/layout også. */
 export function setFinTabs(list, push = true) { L.finTabs = list.filter((k) => FT[k]); keep(); if (push) hlApi('/me/layout', { method: 'PUT', json: { finTabs: L.finTabs } }).catch(() => {}); }
 export const finScreens = () => finKeys().map((k) => FT[k][0]);
@@ -61,7 +62,7 @@ export const fourth = () => { if (!domOk()) return 'spor'; const f = fourthPref(
 /* ---------- Tilpass hver side: hold inne → vugging, ▲ ▼ og − ---------- */
 
 const PG = {
-  hl: [['h1', 'Søk'], ['h2', 'Pakker'], ['h3', 'Avganger'], ['h4', 'Snarveier'], ['h5', 'Siste nytt'], ['h6', 'Posisjon'], ['h7', 'Bolig'], ['h8', 'Huskeliste'], ['h9', 'Bursdager']],
+  hl: [['h1', 'Søk'], ['h2', 'Pakker'], ['h3', 'Avganger'], ['h10', 'Kalender'], ['h4', 'Snarveier'], ['h5', 'Siste nytt'], ['h6', 'Posisjon'], ['h7', 'Bolig'], ['h8', 'Huskeliste'], ['h9', 'Bursdager']],
   hjem: [['f1', 'Saldo'], ['f2', 'Kvitteringer'], ['f3', 'Siste transaksjoner'], ['f4', 'Budsjett']],
   mat: [['m1', 'Dagens middag'], ['m2', 'Ukeplan'], ['m3', 'Mapper'], ['m4', 'Skann og import']],
   spor: [['t1', 'Faner'], ['t2', 'Pakkelisten'], ['t3', 'Legg til']],
@@ -372,7 +373,7 @@ export function newShipSheet() {
   return `<div class="sheet-bg" data-ppns="x"></div><div class="pp-sheet" role="dialog" aria-label="Ny sending"><span class="pp-grab"></span>
     <div class="pp-row"><b class="pp-sh" style="font-size:24px">Ny sending</b><span class="pp-mut">✦ Transportør gjenkjennes</span></div>
     <form class="pp-col" data-ppnsform style="gap:8px"><input class="pp-in pp-nsno" id="pp-ns-no" value="${esc(NS.nv)}" placeholder="Sporingsnummer" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Sporingsnummer" enterkeyhint="go">
-      ${car ? `<span class="pp-pos" style="font-size:13px;font-weight:600;padding:0 4px">✓ ${esc(car)} gjenkjent</span>` : ''}<button class="pp-btn ink" type="submit" ${NS.busy ? 'disabled' : ''}>${NS.busy ? 'Legger til …' : 'Spor sending'}</button></form>
+      ${car && !NS.pick ? `<span class="pp-pos" style="font-size:13px;font-weight:600;padding:0 4px">✓ ${esc(car)} gjenkjent</span>` : ''}${P26.addCars(NS.nv, NS.pick, 'data-ppns="car"')}<button class="pp-btn ink" type="submit" ${NS.busy ? 'disabled' : ''}>${NS.busy ? 'Legger til …' : 'Spor sending'}</button></form>
     <div class="pp-two"><label class="pp-btn">Skann strekkode<input class="m-file" type="file" accept="image/*" capture="environment" data-ppnsscan></label><button class="pp-btn" data-ppns="paste">Lim inn</button></div>
     <span class="pp-mut" style="line-height:1.45">Sendinger fra e-post og Finn legges til automatisk.</span></div>`;
 }
@@ -396,7 +397,7 @@ async function readBarcode(file) {
 }
 export async function nsBind(e, t) {
   if (m.screen !== 'spor' || !NS.open) return false;
-  if (e.type === 'input' && t.id === 'pp-ns-no') { const had = normNo(NS.nv).length >= 6; NS.nv = t.value; if (had !== (normNo(t.value).length >= 6)) draw(); return true; }
+  if (e.type === 'input' && t.id === 'pp-ns-no') { const had = normNo(NS.nv).length >= 6; NS.nv = t.value; if (had !== (normNo(t.value).length >= 6)) draw(); else P26.refreshAuto(t.value); return true; }
   if (e.type === 'change' && t.matches?.('[data-ppnsscan]')) {
     const f = t.files?.[0]; t.value = ''; if (!f) return true;
     try { NS.nv = await readBarcode(f); haptic('ok'); } catch (err) { flash(err.message); }
@@ -408,7 +409,8 @@ export async function nsBind(e, t) {
     if (no.length < 6) { haptic('err'); flash('Skriv inn et sporingsnummer'); return true; }
     if ((TR.data?.items ?? []).some((p) => normNo(p.trackingNo) === no)) { haptic('err'); flash('Sendingen spores allerede'); return true; }
     NS.busy = true; draw();
-    try { const r = await hlApi('/tracking', { method: 'POST', json: { trackingNo: no, carrier: detectLocal(no) } }); NS.nv = ''; NS.open = false; await trkLoad(); haptic('ok'); flash(`Lagt til · ${carOf((r?.item ?? r)?.carrier ?? detectLocal(no)).name}`); }
+    const pk = NS.pick;
+    try { const r = await hlApi('/tracking', { method: 'POST', json: P26.addBody(no, pk) }); P26.noteAdded(no, pk); NS.nv = ''; NS.pick = ''; NS.open = false; await trkLoad(); haptic('ok'); flash(`Lagt til · ${pk ? `${P26.carN(pk)} · valgt` : carOf((r?.item ?? r)?.carrier ?? detectLocal(no)).name}`); }
     catch (err) { haptic('err'); flash(err.message); }
     NS.busy = false; draw(); return true;
   }
@@ -417,6 +419,7 @@ export async function nsBind(e, t) {
   if (!x) return false;
   e.preventDefault();
   if (x.dataset.ppns === 'x') NS.open = false;
+  else if (x.dataset.ppns === 'car') { NS.pick = x.dataset.k; haptic('tab'); }
   else if (x.dataset.ppns === 'paste') { try { NS.nv = (await navigator.clipboard.readText()).trim(); } catch { flash('Fikk ikke lese utklippstavlen'); } }
   draw(); return true;
 }
@@ -446,7 +449,7 @@ export function navSetBind(e, t) {
   else if (k === 't4') { const Lp = ['auto', 'domener', 'sporing']; save15({ fourthTab: Lp[(Lp.indexOf(fourthPref()) + 1) % 3] }); }
   else if (k === 'fin') {
     const id = x.dataset.k, i = fk.indexOf(id);
-    if (i < 0) { if (fk.length >= 4) { flash('Maks 4 faner. Fjern en først.'); return true; } save15({ finTabs: [...fk, id] }); }
+    if (i < 0) { if (fk.length >= 5) { flash('Maks 5 faner. Fjern en først.'); return true; } save15({ finTabs: [...fk, id] }); }
     else if (i > 0) { const v = [...fk]; [v[i - 1], v[i]] = [v[i], v[i - 1]]; save15({ finTabs: v }); }
   } else if (k === 'finrm') { if (fk.length > 1) save15({ finTabs: fk.slice(0, -1) }); }
   else if (k === 'finreset') save15({ finTabs: [...FT_DEF] });

@@ -139,7 +139,7 @@ export function p17SetMain(T = {}) {
       // Prompt 25: Fanelinje-stil. Trykk bytter mellom Tekst, Bare ikoner og Ikoner + navn på valgt (lagres i navStyle).
       row('', 'Fanelinje-stil', P25.NAV_STYLES.find(([k]) => k === P25.navStyle())[2], P25.navStyleName(), 'list', 'navstil', 'data-p25="nscycle"'),
       row('#/set/fanelinje', 'Fanelinje i Hjem', 'Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen', '', 'list', 'hjemnav'), row('#/set/mod', 'Moduler', domOk() ? 'Sporing, Domener, Mat, Nyheter' : 'Sporing, Mat, Nyheter', '', 'globe', 'mod'), row('#/nyheter', 'Nyhetsleser', 'Kilder og AI', '', 'look', 'rss')])}
-    ${grp('APP', [row('#/set/look', 'Utseende og fanelinje', 'Papir · bakgrunn · ikonfarger', '', 'look', 'look'), row('#/set/varsler', 'Varsler og haptikk', NT.d ? (NT.d.on === false ? 'Av' : 'På') : '', '', 'bell', 'varsler'), row('#/set/integ', 'Integrasjoner', canSrv() ? 'Dine og serverens' : 'Plex, kalender, sporing, IMAP …', '', 'home', 'integ')])}
+    ${grp('APP', [row('#/set/look', 'Utseende og fanelinje', 'Papir · bakgrunn · ikonfarger', '', 'look', 'look'), row('#/set/varsler', 'Varsler og haptikk', NT.d ? (NT.d.on === false ? 'Av' : 'På') : '', '', 'bell', 'varsler'), row('#/set/kal', 'Kalendere', 'Google Kalender · Home Assistant', '', 'users', 'kal'), row('#/set/integ', 'Integrasjoner', 'Home Assistant, Kalendere, Entur, Bring og flere', '', 'home', 'integ')])}
     ${grp('', [`<button class="opt-row p17-row" data-sact="logout"><span class="m-grow" style="color:var(--pp-lab);font-weight:700">Logg ut</span></button>`])}
     <span class="p17-ver">${esc(appName())} ${VERSION} · Papir</span>`;
 }
