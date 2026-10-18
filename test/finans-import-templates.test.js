@@ -90,7 +90,7 @@ test('ukjent format: AI leser første rader, malen lagres og brukes neste gang u
 });
 
 test('/import og /import/preview viser formatet, og innlimt DNB-tekst importeres', async () => {
-  db.prepare("INSERT INTO fh_accounts(name,type,opening_balance,sort) VALUES('Brukskonto','checking',0,0)").run();
+  db.prepare("INSERT INTO fh_accounts(name,type,opening_balance,sort,user_id) VALUES('Brukskonto','checking',0,0,'owner')").run();
   const text = [DNB_HEAD, ...DNB_ROWS].map((r) => r.join('\t')).join('\n');
   const pv = await call('/import/preview', 'POST', { text });
   assert.equal(pv.status, 200, JSON.stringify(pv.body));

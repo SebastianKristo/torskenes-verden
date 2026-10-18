@@ -40,18 +40,17 @@ const adminId = (await A('/api/me')).body.id;
 const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 16, 0x4a, 0x46, 0x49, 0x46, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0xff, 0xd9]);
 const file = (name = 'k.jpg') => { const fd = new FormData(); fd.append('file', new File([jpeg], name, { type: 'image/jpeg' })); return fd; };
 
-test('trading, skolekalender og media: bare admin; vanlig bruker får tomme data uten feil', async () => {
+test('trading, skolekalender og media: per bruker (ISO2); bruker uten oppsett får configured:false uten feil', async () => {
   const t = await A('/api/trading');
   assert.equal(t.status, 200);
   assert.ok(!t.body.restricted);
-  for (const p of ['/api/trading', '/api/school', '/api/media/now', '/api/media/recent', '/api/media/history']) {
+  for (const p of ['/api/trading', '/api/school', '/api/media/now', '/api/media/recent', '/api/media/history', '/api/upcoming']) {
     const r = await B(p);
     assert.equal(r.status, 200, p);
-    assert.equal(r.body.restricted, true, p);
     assert.equal(r.body.configured, false, p);
     assert.ok(!r.text.includes('positions":[{'), p);
   }
-  assert.equal((await B('/api/media/poster?src=plex&id=1')).status, 403);
+  assert.equal((await B('/api/media/poster?src=plex&id=1')).status, 404);
 });
 
 test('/api/config: admin ser verdiene, vanlig bruker bare et trygt utvalg uten adresser, koordinater eller e-post', async () => {
@@ -61,8 +60,11 @@ test('/api/config: admin ser verdiene, vanlig bruker bare et trygt utvalg uten a
   const b = await B('/api/config');
   assert.equal(b.status, 200);
   assert.ok(Array.isArray(b.body));
-  for (const s of ['post@eksempel.no', '10.0.0.5', '59.9301', '192.168.', 'http']) assert.ok(!b.text.includes(s), s);
-  assert.ok(b.body.every((g) => g.restricted && g.fields.every((f) => f.value === '')));
+  // ISO2: bare egne personlige grupper, med egne (tomme) verdier. Ingen servergrupper, ingen av adminens verdier.
+  assert.ok(b.body.length && b.body.every((g) => g.scope === 'personal'));
+  const vals = JSON.stringify(b.body.flatMap((g) => g.fields.map((f) => f.value)));
+  for (const s of ['post@eksempel.no', '10.0.0.5', '59.9301', '192.168.', 'http']) assert.ok(!vals.includes(s), s);
+  assert.ok(!b.text.includes('post@eksempel.no'));
   assert.equal((await B('/api/config', 'PUT', { wx_place: 'X' })).status, 403);
   assert.equal((await B('/api/state')).body.schoolUrl, '');
   const h = await B('/api/health');
@@ -177,7 +179,7 @@ test('FinansHub: Olas boligkvittering vises ikke i admins regnskap, kø eller jo
   assert.equal((await B(`/finans/api/folders/${f.id}/receipts/${rid}/file`)).status, 200);
 });
 
-test('/api/files: bare eieren og admin', async () => {
+test('/api/files: bare eieren (ISO2)', async () => {
   const fd = new FormData(); fd.append('file', new File([jpeg], 'r.jpg', { type: 'image/jpeg' })); fd.append('store', 'Rema');
   const rc = (await A('/api/receipts', 'POST', fd)).body;
   assert.ok(rc.file);
@@ -185,6 +187,6 @@ test('/api/files: bare eieren og admin', async () => {
   assert.equal((await B(`/api/files/${rc.file}`)).status, 404);
   const bg = (await B('/api/backgrounds/egen', 'POST', file('bg.jpg'))).body.bgCustom.egen;
   assert.equal((await B(`/api/files/${bg}`)).status, 200);
-  assert.equal((await A(`/api/files/${bg}`)).status, 200, 'admin får filer for drift');
+  assert.equal((await A(`/api/files/${bg}`)).status, 404, 'ISO2: heller ikke admin får andres filer');
   assert.equal((await B('/api/files/0123456789abcdef01234567.jpg')).status, 404);
 });

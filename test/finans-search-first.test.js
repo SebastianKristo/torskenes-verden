@@ -21,7 +21,7 @@ const call = async (path, method = 'GET', body) => {
 };
 await call('/settings', 'PUT', { ollamaUrl: 'http://127.0.0.1:9', provider: 'ollama', fallback: false });
 const today = new Date().toLocaleDateString('sv-SE');
-db.prepare('INSERT INTO fh_transactions(date, amount, description, merchant, created) VALUES(?,?,?,?,?)').run(today, -34900, 'Biltema Alnabru', 'Biltema Alnabru', Date.now());
+db.prepare('INSERT INTO fh_transactions(date, amount, description, merchant, created,user_id) VALUES(?,?,?,?,?,\'owner\')').run(today, -34900, 'Biltema Alnabru', 'Biltema Alnabru', Date.now());
 
 test('enkle søk: 1–2 ord uten spørreord og spørsmålstegn', () => {
   assert.equal(isSimpleQuery('biltema'), true);

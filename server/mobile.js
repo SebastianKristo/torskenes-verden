@@ -135,6 +135,8 @@ const SCALAR = {
   startRoute: (v) => typeof v === 'string' && /^[a-z0-9-]{1,30}(\/[a-z0-9-]{1,30}){0,2}$/.test(v),
   homeNav: (v) => Array.isArray(v) && v.length >= 1 && v.length <= 6 && new Set(v).size === v.length && v.every((x) => TAB_IDS.includes(x)),
   appIcon: (v) => typeof v === 'string' && /^[\w.-]{1,40}$/.test(v),
+  // Prompt 25: fanelinje-stil. text = navn på alle (ikon på valgt), icons = bare ikoner, icons_active_label = ikoner + navn på valgt.
+  navStyle: (v) => NAV_STYLES.includes(v),
   appName: (v) => typeof v === 'string' && v.trim().length >= 1 && v.trim().length <= 20 && !/[<>\u0000-\u001f]/.test(v),
 };
 // finNav som liste (prompt 24): fanene i Finans i profilen. Lagres som finNavList, så sidemenyen på desktop (finNav-objektet
@@ -155,6 +157,7 @@ export function profileOf(id) {
     finNav: l.finNavList ?? (l.profile && PROFILES[l.profile] ? p.finNav : l.finTabs ?? p.finNav), appIcon: l.appIcon ?? null, appName: l.appName ?? null, finSideNav: l.finNav ?? null };
 }
 const SUB_HOME_CARDS = ['ai', 'next7', 'check', 'list'];
+export const NAV_STYLES = ['text', 'icons', 'icons_active_label'];
 const BG_TYPES = ['weather', 'planets', 'oslo', 'custom', 'none', 'cur'];
 export const TAB_IDS = ['hjem', 'finans', 'mat', 'sporing', 'domener', 'sok', 'mer', 'vaer', 'nyheter', 'familie', 'avganger', 'aksjer', 'boliger', 'abonnementer', 'media', 'huske'];
 export const TAB_BAR_DEFAULT = { items: [{ id: 'hjem', label: 'Hjem', icon: 'house' }, { id: 'finans', label: 'Finans', icon: 'wallet' }, { id: 'mat', label: 'Mat', icon: 'fork.knife' }, { id: 'domener', label: 'Domener', icon: 'globe' }, { id: 'sok', label: 'Søk', icon: 'magnifyingglass' }, { id: 'mer', label: 'Mer', icon: 'ellipsis' }] };
@@ -573,7 +576,7 @@ api.get('/mobile/home', authOrToken, async (c) => {
     serverStatus: status,
     layout: layoutOf(id).mobile ?? {},
     search: searchSettings(id),
-    packages: isAdmin(id) ? packagesFor(2) : [], // Sporing (prompt 11): de 2 viktigste pakkene
+    packages: packagesFor(2, id), // Sporing (prompt 11): brukerens egne 2 viktigste pakker (per bruker fra ISO2)
     news: newsFor(id, 5), // Nyhetsleser (prompt 13): «Siste nytt» på forsiden
     design: designOf(id),
     app: appMeta(), // navn og ikon på appen (prompt 17)
@@ -594,7 +597,7 @@ export const designOf = (id) => {
     pages: l.pages ?? {}, finTabs: l.finTabs ?? FIN_TABS_DEFAULT, fourthTab: l.fourthTab ?? 'auto', fab: l.fab ?? 'float',
     tabBar: l.tabBar ?? null, tabBarDefault: TAB_BAR_DEFAULT, iconTheme: l.iconTheme ?? 'standard',
     bgType: l.bgType ?? l.photo ?? (fresh ? 'oslo' : 'cur'), bgPlanet: l.bgPlanet ?? 'auto', bgRotate: l.bgRotate ?? 'daily', bgBlur: l.bgBlur ?? 0, bgDim: l.bgDim ?? 0,
-    bgWifiOnly: !!l.bgWifiOnly, bgAnimate: l.bgAnimate ?? true };
+    bgWifiOnly: !!l.bgWifiOnly, bgAnimate: l.bgAnimate ?? true, navStyle: NAV_STYLES.includes(l.navStyle) ? l.navStyle : 'text' };
 };
 
 const PHOTOS = join(config.dataDir, 'photo-window');
@@ -706,7 +709,7 @@ api.get('/mobile/widgets', authOrToken, async (c) => {
     part(safe(ext.getWeather)),
     part(inner(finansApi, '/summary', c)), part(inner(finansApi, '/recurring', c)), part(inner(finansApi, '/stocks', c)), part(inner(finansApi, '/finn', c)),
     part(inner(finansApi, '/folders', c)),
-    admin ? part(inner(matApi, '/week', c)) : null, admin ? part(inner(matApi, `/week?start=${tomorrow}`, c)) : null,
+    part(inner(matApi, '/week', c)), part(inner(matApi, `/week?start=${tomorrow}`, c)), // Matplan er per bruker (ISO2)
     part(inner(finansApi, '/subscriptions', c)),
   ]);
 
@@ -716,7 +719,7 @@ api.get('/mobile/widgets', authOrToken, async (c) => {
   };
 
   let packages = null;
-  if (admin) { try { const items = packagesFor(4); packages = { items: items.map((p) => ({ id: p.id, name: p.name, title: p.title, shop: p.shop, logo: p.logo, moreCount: p.moreCount, carrier: p.carrier, carrierName: p.carrierName, status: p.status, statusText: p.statusText, step: p.step, eta: p.eta, pickupPoint: p.pickupPoint })), active: packagesFor(99).length }; } catch { packages = null; } }
+  { try { const items = packagesFor(4, id); packages = { items: items.map((p) => ({ id: p.id, name: p.name, title: p.title, shop: p.shop, logo: p.logo, moreCount: p.moreCount, carrier: p.carrier, carrierName: p.carrierName, status: p.status, statusText: p.statusText, step: p.step, eta: p.eta, pickupPoint: p.pickupPoint })), active: packagesFor(99, id).length }; } catch { packages = null; } } // brukerens egne (ISO2)
 
   const budget = sum && {
     month: sum.month, spent: r0(sum.budgetUsed ?? sum.ut), limit: r0(sum.budgetTotal), left: r0(sum.left), pct: sum.budgetTotal ? Math.round((sum.budgetUsed / sum.budgetTotal) * 100) : null, daysLeft: sum.daysLeft ?? null,

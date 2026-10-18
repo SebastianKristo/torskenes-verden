@@ -11,7 +11,7 @@ import { Readable, Writable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { createGzip, createGunzip } from 'node:zlib';
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync, randomUUID } from 'node:crypto';
-import { db, kv, OWNER, settings, saveSettings, secret } from './db.js';
+import { db, kv, OWNER, settings, saveSettings, secret, me, SERVER_KEYS } from './db.js';
 import { config } from '../config.js';
 import { writeXlsx, readXlsxSheets, fromSerial } from './xlsx.js';
 import { cachedStocks } from './stocks.js';
@@ -32,10 +32,33 @@ const ORE = { fh_accounts: ['opening_balance'], fh_transactions: ['amount'], fh_
 const DATECOLS = new Set(['date', 'next_date', 'next_due', 'due']);
 const MSCOLS = new Set(['created', 'last_used', 'expires', 'paid_at', 'started']);
 
-export function exportJson() {
+// ISO2: nedlasting og gjenoppretting (JSON/Excel) gjelder brukerens eget regnskap pluss boligene brukeren eier.
+// Hele databasen (SMB-arkivet) er serveroppsett og bare for hovedadmin (sjekkes i rutene).
+const FOLDER_CHILD = { fh_folder_members: 'folder_id', fh_folder_entries: 'folder_id', fh_folder_projects: 'folder_id', fh_folder_bills: 'folder_id' };
+const FINN_CHILD = { fh_finn_ad: 'finn_id', fh_finn_files: 'finn_id', fh_finn_emails: 'finn_id' };
+const SHARED = new Set(['fh_bolig_categories']);   // felles for alle boliger: med i eksporten, gjenopprettes bare av hovedadmin
+const hasUserCol = (t) => t !== 'fh_folder_members' && columns(t).includes('user_id');
+function scopeOf(t) {
+  if (t === 'fh_folders') return 'owner_id=?';
+  if (FOLDER_CHILD[t]) return `${FOLDER_CHILD[t]} IN (SELECT id FROM fh_folders WHERE owner_id=?)`;
+  if (t === 'fh_project_installments') return 'project_id IN (SELECT p.id FROM fh_folder_projects p JOIN fh_folders f ON f.id=p.folder_id WHERE f.owner_id=?)';
+  if (FINN_CHILD[t]) return `${FINN_CHILD[t]} IN (SELECT id FROM fh_finn WHERE user_id=?)`;
+  if (SHARED.has(t)) return '?=?';
+  if (hasUserCol(t)) return 'user_id=?';
+  return null;
+}
+const scopeArgs = (t, u) => (SHARED.has(t) ? [u, u] : [u]);
+/** Tabellene brukeren har data i (eget regnskap, egne boliger, egne Finn-handler, felles boligkategorier). */
+export const userTables = () => fhTables().filter((t) => scopeOf(t));
+const rowsOf = (t, u) => q(`SELECT * FROM ${t} WHERE ${scopeOf(t)}`).all(...scopeArgs(t, u));
+const inScope = (t, pkCols, r, u) => !!q(`SELECT 1 FROM ${t} WHERE ${pkCols.map((k) => `${k}=?`).join(' AND ')} AND ${scopeOf(t)}`).get(...pkCols.map((k) => r[k]), ...scopeArgs(t, u));
+const pkOf = (t) => { const pk = db.prepare(`PRAGMA table_info(${t})`).all().filter((c) => c.pk > 0).sort((a, b) => a.pk - b.pk).map((c) => c.name); return pk.length ? pk : ['rowid']; };
+const userSettingsOf = (u) => Object.fromEntries(Object.entries(settings(u)).filter(([k]) => u === OWNER || !SERVER_KEYS.has(k)));
+
+export function exportJson(u = me()) {
   const tables = {};
-  for (const t of fhTables()) tables[t] = q(`SELECT * FROM ${t}`).all();
-  return { format: 'finanshub-backup', version: 2, created: new Date().toISOString(), note: 'Beløp i øre. Kvitteringsbildene ligger i data/receipts (med i SMB-backupen).', settings: settings(), tables };
+  for (const t of userTables()) tables[t] = rowsOf(t, u);
+  return { format: 'finanshub-backup', version: 3, created: new Date().toISOString(), user: u, note: 'Beløp i øre. Kvitteringsbildene ligger i data/receipts (med i SMB-backupen).', settings: userSettingsOf(u), tables };
 }
 
 /* ---------------- Excel-database ---------------- */
@@ -48,25 +71,25 @@ const LABEL = { id: 'ID', name: 'Navn', date: 'Dato', amount: 'Beløp (kr)', des
   sort: 'Sortering', month: 'Måned', pattern: 'Mønster', priority: 'Prioritet', transaction_id: 'Transaksjons-ID', folder_id: 'Mappe-ID', project_id: 'Prosjekt-ID', price: 'Pris per trekk (kr)',
   cycle: 'Intervall', next_date: 'Neste trekk', budget: 'Budsjett (kr)', saved: 'Spart (kr)', target: 'Mål (kr)' };
 
-export function exportXlsx() {
-  const tables = fhTables();
+export function exportXlsx(u = me()) {
+  const tables = userTables();
   const counts = [];
   const sheets = [];
   const tableSheet = (t) => {
     const cols = columns(t).map((key) => ({ key, label: LABEL[key] ?? key, type: ORE[t]?.includes(key) ? 'kr' : DATECOLS.has(key) ? 'date' : MSCOLS.has(key) ? 'int' : /(^id|_id)$/.test(key) ? 'int' : undefined }));
-    const rows = q(`SELECT * FROM ${t}`).all().map((r) => { const o = { ...r }; for (const c of ORE[t] ?? []) if (o[c] != null) o[c] = o[c] / 100; return o; });
+    const rows = rowsOf(t, u).map((r) => { const o = { ...r }; for (const c of ORE[t] ?? []) if (o[c] != null) o[c] = o[c] / 100; return o; });
     counts.push([SHEET_OF[t] ?? t, rows.length]);
     return { name: SHEET_OF[t] ?? t.slice(3), table: t, columns: cols, rows };
   };
   const byName = Object.fromEntries(tables.map((t) => [t, tableSheet(t)]));
   // Varelinjer hentes fra kvitteringenes AI-uttrekk.
   const lines = [];
-  for (const r of q('SELECT id, merchant, date, extraction FROM fh_receipts WHERE extraction IS NOT NULL').all()) {
+  for (const r of q('SELECT id, merchant, date, extraction FROM fh_receipts WHERE extraction IS NOT NULL AND user_id=?').all(u)) {
     let ex; try { ex = JSON.parse(r.extraction); } catch { continue; }
     (ex?.lines ?? []).forEach((l, i) => lines.push({ receipt_id: r.id, nr: i + 1, merchant: r.merchant, date: r.date, description: l.description, quantity: l.quantity, amount: l.amount }));
   }
   counts.push(['Varelinjer', lines.length]);
-  const st = cachedStocks();
+  const st = cachedStocks(u);
   const extra = {
     Varelinjer: { name: 'Varelinjer', columns: [{ key: 'receipt_id', label: 'Kvitterings-ID' }, { key: 'nr', label: 'Linje', type: 'int' }, { key: 'merchant', label: 'Butikk' }, { key: 'date', label: 'Dato', type: 'date' }, { key: 'description', label: 'Vare', width: 36 }, { key: 'quantity', label: 'Antall', type: 'num' }, { key: 'amount', label: 'Beløp (kr)', type: 'kr' }], rows: lines },
     Aksjer: { name: 'Aksjer', columns: [{ key: 'ticker', label: 'Ticker' }, { key: 'name', label: 'Navn' }, { key: 'quantity', label: 'Antall', type: 'num' }, { key: 'avg', label: 'Snittkurs', type: 'kr' }, { key: 'price', label: 'Kurs', type: 'kr' }, { key: 'value', label: 'Verdi', type: 'kr' }, { key: 'pl', label: 'Avkastning', type: 'kr' }, { key: 'currency', label: 'Valuta' }], rows: st?.positions ?? [] },
@@ -120,34 +143,58 @@ function normalizeDump(d) {
   return out;
 }
 export function countRows(tables) {
-  const known = new Set(fhTables());
+  const known = new Set(userTables());
   return Object.fromEntries(Object.entries(tables).filter(([t]) => known.has(t)).map(([t, rows]) => [t, rows.length]));
 }
-export const currentCounts = () => Object.fromEntries(fhTables().map((t) => [t, q(`SELECT count(*) FROM ${t}`).pluck().get()]));
+/** Antall rader per tabell i brukerens eget regnskap (forhåndsvisningen før gjenoppretting). */
+export const currentCounts = (u = me()) => Object.fromEntries(userTables().map((t) => [t, q(`SELECT count(*) FROM ${t} WHERE ${scopeOf(t)}`).pluck().get(...scopeArgs(t, u))]));
+// Hele databasen (manifestet i SMB-arkivet).
+const globalCounts = () => Object.fromEntries(fhTables().map((t) => [t, q(`SELECT count(*) FROM ${t}`).pluck().get()]));
 
-// Upsert med bevarte ID-er. Fremmednøkler er av under importen slik at rekkefølgen ikke spiller noen rolle.
-export function restoreTables(tables, settingsPatch) {
-  const known = new Set(fhTables());
+// Upsert med bevarte ID-er, inn i brukerens eget regnskap. Fremmednøkler er av under importen slik at rekkefølgen ikke spiller noen rolle.
+// ISO2: en rad med en ID som allerede tilhører en annen bruker (eller en bolig brukeren ikke eier), hoppes over – den overskrives aldri.
+// Alle rader får brukeren som eier (user_id / owner_id). Underliggende rader må høre til en bolig/handel brukeren eier.
+const ORDER = ['fh_folders', 'fh_folder_projects', 'fh_finn', 'fh_accounts', 'fh_categories'];
+export function restoreTables(tables, settingsPatch, u = me()) {
+  const known = new Set(userTables());
   const done = {};
+  let skipped = 0;
+  const list = Object.entries(tables).sort(([a], [b]) => ((ORDER.indexOf(a) + 1 || 99) - (ORDER.indexOf(b) + 1 || 99)));
   db.pragma('foreign_keys = OFF');
   try {
     db.transaction(() => {
-      for (const [t, rows] of Object.entries(tables)) {
+      for (const [t, rows] of list) {
         if (!known.has(t) || !Array.isArray(rows)) continue;
-        const cols = new Set(columns(t));
+        if (SHARED.has(t) && u !== OWNER) continue;
+        const cols = new Set(columns(t)), pk = pkOf(t), own = hasUserCol(t);
         let n = 0;
-        for (const r of rows) {
+        for (const r0 of rows) {
+          const r = { ...r0 };
+          if (own) r.user_id = u;
+          if (t === 'fh_folders') r.owner_id = u;
           const keys = Object.keys(r).filter((k) => cols.has(k));
           if (!keys.length) continue;
+          // Finnes ID-en fra før hos noen andre: hopp over.
+          if (pk.every((k) => r[k] != null) && q(`SELECT 1 FROM ${t} WHERE ${pk.map((k) => `${k}=?`).join(' AND ')}`).get(...pk.map((k) => r[k])) && !inScope(t, pk, r, u)) { skipped++; continue; }
+          // Underliggende rader: forelderen må være brukerens egen.
+          const parentOk = FOLDER_CHILD[t] ? !!q('SELECT 1 FROM fh_folders WHERE id=? AND owner_id=?').get(r.folder_id, u)
+            : t === 'fh_project_installments' ? !!q('SELECT 1 FROM fh_folder_projects p JOIN fh_folders f ON f.id=p.folder_id WHERE p.id=? AND f.owner_id=?').get(r.project_id, u)
+            : FINN_CHILD[t] ? !!q('SELECT 1 FROM fh_finn WHERE id=? AND user_id=?').get(r.finn_id, u) : true;
+          if (!parentOk) { skipped++; continue; }
           db.prepare(`INSERT OR REPLACE INTO ${t} (${keys.join(',')}) VALUES (${keys.map(() => '?').join(',')})`).run(...keys.map((k) => (r[k] !== null && typeof r[k] === 'object' ? JSON.stringify(r[k]) : r[k])));
           n++;
         }
         done[t] = n;
       }
-      if (settingsPatch && typeof settingsPatch === 'object') saveSettings(settingsPatch);
+      if (settingsPatch && typeof settingsPatch === 'object') {
+        // Serveroppsettet (AI-motorer, SMB …) gjenopprettes bare av hovedadmin.
+        const patch = Object.fromEntries(Object.entries(settingsPatch).filter(([k]) => u === OWNER || !SERVER_KEYS.has(k)));
+        saveSettings(patch, u);
+      }
     })();
   } finally { db.pragma('foreign_keys = ON'); }
-  kv.set(OWNER, 'fh_firstrun', { done: true, at: Date.now(), via: 'restore' });
+  kv.set(u, 'fh_firstrun', { done: true, at: Date.now(), via: 'restore' });
+  if (skipped) done.skipped = skipped;
   return done;
 }
 
@@ -248,7 +295,7 @@ export async function buildArchive(c, phrase) {
     parts.push('kvitteringsbilder');
   }
   if (c.smbSettings) { entries.push({ name: 'settings.json', data: Buffer.from(JSON.stringify(q('SELECT * FROM kv').all())) }); parts.push('innstillinger'); }
-  entries.unshift({ name: 'manifest.json', data: Buffer.from(JSON.stringify({ format: 'homelab-backup', version: 1, created: new Date().toISOString(), parts, counts: currentCounts() })) });
+  entries.unshift({ name: 'manifest.json', data: Buffer.from(JSON.stringify({ format: 'homelab-backup', version: 1, created: new Date().toISOString(), parts, counts: globalCounts() })) });
   const ws = createWriteStream(out);
   try {
     if (c.smbEncrypt) await pipeline(Readable.from(tarEntries(entries)), createGzip(), encryptStream(phrase, ws), ws);
@@ -333,7 +380,7 @@ export async function runBackup(reason = 'manuell') {
   if (!normShare(st.smbShare)) return { started: false, message: 'Sett opp SMB-share først' };
   if (st.smbEncrypt && !secret('backupPhrase')) return { started: false, message: 'Legg inn en passfrase for kryptering, eller slå av kryptering' };
   if (!st.smbDb && !st.smbReceipts && !st.smbSettings) return { started: false, message: 'Velg hva backupen skal inneholde' };
-  const row = q("INSERT INTO fh_backups(file,kind,status,created) VALUES(?, 'smb', 'running', ?) RETURNING id").get('…', Date.now());
+  const row = q("INSERT INTO fh_backups(file,kind,status,created,user_id) VALUES(?, 'smb', 'running', ?, ?) RETURNING id").get('…', Date.now(), me());
   running = { id: row.id, started: Date.now(), reason };
   (async () => {
     let file = null;
@@ -393,9 +440,11 @@ async function stageArchive(path, phrase) {
   return { kind: 'archive', dir, root, counts, parts: manifest?.parts ?? [], created: Date.now() };
 }
 
-export async function stage({ file, remote, phrase }) {
+export async function stage({ file, remote, phrase, allowArchive = true }, u = me()) {
   let s;
+  const noArchive = () => { if (!allowArchive) throw new Error('Bare hovedadministratoren kan gjenopprette hele databasen. Last opp en JSON- eller Excel-fil fra ditt eget regnskap.'); };
   if (remote) {
+    noArchive();
     if (!/^homelab-backup-[\w.\-]+$/.test(remote)) throw new Error('Ugyldig filnavn');
     const local = join(WORK, `dl-${randomUUID()}-${remote}`);
     await smb(`${cdDir()}get "${remote}" "${local}"`, { timeout: 30 * 60_000 });
@@ -412,6 +461,7 @@ export async function stage({ file, remote, phrase }) {
       const tables = xlsxToTables(buf);
       s = { kind: 'xlsx', tables, counts: countRows(tables), created: Date.now() };
     } else {
+      noArchive();
       const tmp = join(WORK, `up-${randomUUID()}`);
       writeFileSync(tmp, buf);
       try { s = await stageArchive(tmp, phrase || secret('backupPhrase')); } finally { await unlink(tmp).catch(() => {}); }
@@ -419,15 +469,17 @@ export async function stage({ file, remote, phrase }) {
     s.label = file.name;
   } else throw new Error('Velg en fil eller en backup på sharen');
   const id = randomUUID();
+  s.user = u;
   stages.set(id, s);
-  return { stageId: id, kind: s.kind, label: s.label, counts: s.counts, current: currentCounts(), parts: s.parts ?? null };
+  return { stageId: id, kind: s.kind, label: s.label, counts: s.counts, current: s.kind === 'archive' ? globalCounts() : currentCounts(u), parts: s.parts ?? null };
 }
 
-export async function restore(stageId) {
+export async function restore(stageId, u = me(), { mainAdmin = u === OWNER } = {}) {
   const s = stages.get(stageId);
-  if (!s) throw new Error('Forhåndsvisningen er utløpt – velg filen på nytt');
+  if (!s || (s.user && s.user !== u)) throw new Error('Forhåndsvisningen er utløpt – velg filen på nytt');
+  if (s.kind === 'archive' && !mainAdmin) throw new Error('Bare hovedadministratoren kan gjenopprette hele databasen');
   let result;
-  if (s.kind === 'json' || s.kind === 'xlsx') result = restoreTables(s.tables, s.kind === 'json' ? s.settings : null);
+  if (s.kind === 'json' || s.kind === 'xlsx') result = restoreTables(s.tables, s.kind === 'json' ? s.settings : null, u);
   else {
     result = {};
     const dbFile = join(s.root, 'homelab.db');
@@ -509,5 +561,5 @@ function due(now = new Date()) {
 }
 setInterval(() => { try { if (due()) runBackup('tidsplan'); } catch (e) { console.warn('[backup] tidsplan', e.message); } }, 5 * 60_000).unref?.();
 
-export const needsFirstRun = () => !kv.get(OWNER, 'fh_firstrun', null)?.done && !q('SELECT 1 FROM fh_transactions LIMIT 1').get() && !q('SELECT 1 FROM fh_accounts LIMIT 1').get();
-export const finishFirstRun = (via) => kv.set(OWNER, 'fh_firstrun', { done: true, at: Date.now(), via });
+export const needsFirstRun = (u = me()) => !kv.get(u, 'fh_firstrun', null)?.done && !q('SELECT 1 FROM fh_transactions WHERE user_id=? LIMIT 1').get(u) && !q('SELECT 1 FROM fh_accounts WHERE user_id=? LIMIT 1').get(u);
+export const finishFirstRun = (via, u = me()) => kv.set(u, 'fh_firstrun', { done: true, at: Date.now(), via });

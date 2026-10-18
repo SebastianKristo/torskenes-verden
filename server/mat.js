@@ -2,7 +2,10 @@
 // kokker med «best på»-retter, HelloFresh-import, handleliste og ICS-kalender. Mapper, skanning og import fra
 // nettsider ligger i mat-recipes.js.
 //
-// Datamodell (kv OWNER/'mat', v: 2):
+// Per bruker (ISO2): hver bruker har sin egen Mat i kv(user,'mat'), matplan_fixed(user_id, weekday) og egne mapper,
+// lenker, filer og skannejobber (user_id i mat-recipes.js). Eierens data ligger der de lå (OWNER).
+//
+// Datamodell (kv user/'mat', v: 2):
 //   dishes: [{ id, name, src: 'own'|'hellofresh'|'scan'|'web', ing: [], steps: [], cost,
 //              folderId, sourceUrl, image, time, servings, scanFile }]
 //   cooks:  [{ name, best: [dishId] }]
@@ -15,7 +18,8 @@ import { randomBytes, timingSafeEqual, createHash } from 'node:crypto';
 import { kv, OWNER, db } from './db.js';
 import { config } from './config.js';
 import { userInfo } from './auth.js';
-import { guard, readJson, bad, str, num, MOCK, aiJson } from './homeos-common.js';
+import { userGuard, readJson, bad, str, num, MOCK, aiJson } from './homeos-common.js';
+import { activeUser, runAsUser } from './settings.js';
 import { mountRecipes, ensureDefaultFolders, folders, folderById, guessFolderId, allLinks, linksFor, removeDishData } from './mat-recipes.js';
 
 const DN = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
@@ -48,14 +52,18 @@ const DEMO_DISHES = [
   ['Kremet kyllinggryte med ris', 'hellofresh', ['Kyllinglår', 'Matfløte', 'Paprika', 'Jasminris'], ['Kok risen.', 'Brun kyllingen.', 'Ha i paprika og fløte, og la det småkoke.'], 149],
 ];
 
-function demo() {
+// Brukeren Mat gjelder: den innloggede (eller brukeren en bakgrunnsjobb kjører for).
+export const matUser = () => { const u = activeUser(); if (!u) throw Object.assign(new Error('Ikke innlogget'), { status: 401 }); return u; };
+
+function demo(u) {
+  const me = (u && userInfo(u)?.name) || 'Sebastian';
   const dishes = DEMO_DISHES.map(([name, src, ing, steps, cost]) => ({ id: id(), name, src, ing, steps, cost }));
   const by = (n) => dishes.find((d) => d.name === n).id;
-  const cooks = [{ name: 'Sebastian', best: [by('Taco'), by('Spaghetti bolognese')] }, { name: 'Ingrid', best: [by('Fiskesuppe'), by('Ovnsbakt laks med poteter')] }, { name: 'Pål', best: [by('Pizza')] }];
+  const cooks = [{ name: me, best: [by('Taco'), by('Spaghetti bolognese')] }, { name: 'Ingrid', best: [by('Fiskesuppe'), by('Ovnsbakt laks med poteter')] }, { name: 'Pål', best: [by('Pizza')] }];
   const start = monday(day(new Date())), plan = {};
-  [['Kyllingwok', 'Sebastian'], ['Kremet kyllinggryte med ris', 'Ingrid'], ['Ovnsbakt laks med poteter', 'Ingrid'], ['Fiskesuppe', 'Ingrid'], ['Taco', 'Sebastian'], ['Pizza', 'Pål'], ['Spaghetti bolognese', 'Sebastian']]
+  [['Kyllingwok', me], ['Kremet kyllinggryte med ris', 'Ingrid'], ['Ovnsbakt laks med poteter', 'Ingrid'], ['Fiskesuppe', 'Ingrid'], ['Taco', me], ['Pizza', 'Pål'], ['Spaghetti bolognese', me]]
     .forEach(([n, cook], i) => { plan[addDays(start, i)] = { dish: by(n), cook, by: 'user' }; });
-  return { v: 2, dishes, cooks, plan, fixed: { 4: { dish: by('Taco'), cook: 'Sebastian' } }, auto: false, lastAuto: '', shop: {} };
+  return { v: 2, dishes, cooks, plan, fixed: { 4: { dish: by('Taco'), cook: me } }, auto: false, lastAuto: '', shop: {} };
 }
 
 /* ---------------- Lagring og migrering ---------------- */
@@ -89,42 +97,55 @@ export function migrate(old) {
   return s;
 }
 
-/* Faste retter per ukedag (prompt 10): egen tabell. cook_id er kokkens navn (kokkene ligger i kv). */
+/* Faste retter per ukedag (prompt 10): egen tabell. cook_id er kokkens navn (kokkene ligger i kv). Per bruker fra ISO2. */
 db.exec(`CREATE TABLE IF NOT EXISTS matplan_fixed (
-  weekday INTEGER PRIMARY KEY CHECK (weekday BETWEEN 0 AND 6),
+  user_id TEXT NOT NULL,
+  weekday INTEGER NOT NULL CHECK (weekday BETWEEN 0 AND 6),
   dish_id TEXT NOT NULL,
-  cook_id TEXT
+  cook_id TEXT,
+  PRIMARY KEY (user_id, weekday)
 )`);
-const fixedRows = db.prepare('SELECT weekday, dish_id AS dish, cook_id AS cook FROM matplan_fixed');
-const fixedClear = db.prepare('DELETE FROM matplan_fixed');
-const fixedPut = db.prepare('INSERT INTO matplan_fixed(weekday, dish_id, cook_id) VALUES(?,?,?)');
-const loadFixed = () => Object.fromEntries(fixedRows.all().map((r) => [r.weekday, { dish: r.dish, cook: r.cook ?? null }]));
-const writeFixed = db.transaction((fixed) => {
-  fixedClear.run();
-  for (const [k, f] of Object.entries(fixed ?? {})) if (+k >= 0 && +k < 7 && f?.dish) fixedPut.run(+k, f.dish, f.cook ?? null);
+// ISO2: den gamle tabellen hadde weekday som primærnøkkel (én felles plan). Radene kopieres til OWNER i den nye. Idempotent.
+if (!db.prepare("SELECT 1 FROM pragma_table_info('matplan_fixed') WHERE name='user_id'").get()) {
+  db.transaction(() => {
+    const n = db.prepare('SELECT COUNT(*) n FROM matplan_fixed').get().n;
+    db.exec(`CREATE TABLE matplan_fixed_iso2 (user_id TEXT NOT NULL, weekday INTEGER NOT NULL CHECK (weekday BETWEEN 0 AND 6), dish_id TEXT NOT NULL, cook_id TEXT, PRIMARY KEY (user_id, weekday))`);
+    db.prepare('INSERT INTO matplan_fixed_iso2(user_id, weekday, dish_id, cook_id) SELECT ?, weekday, dish_id, cook_id FROM matplan_fixed').run(OWNER);
+    if (db.prepare('SELECT COUNT(*) n FROM matplan_fixed_iso2').get().n !== n) throw new Error('Mat: kopien av faste retter stemmer ikke');
+    db.exec('DROP TABLE matplan_fixed');
+    db.exec('ALTER TABLE matplan_fixed_iso2 RENAME TO matplan_fixed');
+  })();
+}
+const fixedRows = db.prepare('SELECT weekday, dish_id AS dish, cook_id AS cook FROM matplan_fixed WHERE user_id=?');
+const fixedClear = db.prepare('DELETE FROM matplan_fixed WHERE user_id=?');
+const fixedPut = db.prepare('INSERT INTO matplan_fixed(user_id, weekday, dish_id, cook_id) VALUES(?,?,?,?)');
+const loadFixed = (u) => Object.fromEntries(fixedRows.all(u).map((r) => [r.weekday, { dish: r.dish, cook: r.cook ?? null }]));
+const writeFixed = db.transaction((u, fixed) => {
+  fixedClear.run(u);
+  for (const [k, f] of Object.entries(fixed ?? {})) if (+k >= 0 && +k < 7 && f?.dish) fixedPut.run(u, +k, f.dish, f.cook ?? null);
 });
 
-function fresh() {
-  if (MOCK) return demo();
-  return { v: 2, dishes: [], cooks: [{ name: userInfo(OWNER)?.name || config.userName || 'Admin', best: [] }], plan: {}, fixed: {}, auto: false, lastAuto: '', shop: {} };
+function fresh(u) {
+  if (MOCK) return demo(u);
+  return { v: 2, dishes: [], cooks: [{ name: userInfo(u)?.name || (u === OWNER ? config.userName : '') || 'Meg', best: [] }], plan: {}, fixed: {}, auto: false, lastAuto: '', shop: {} };
 }
-export function state() {
-  const raw = kv.get(OWNER, 'mat', null);
-  let s = raw ? migrate(raw) : fresh(), dirty = !raw || raw.v !== 2;
+export function state(u = matUser()) {
+  const raw = kv.get(u, 'mat', null);
+  let s = raw ? migrate(raw) : fresh(u), dirty = !raw || raw.v !== 2;
   if (!s.calKey) { s.calKey = randomBytes(18).toString('base64url'); dirty = true; }
   // Engangsmigrering: faste retter flyttes fra kv til matplan_fixed.
-  if (!s.fixedDb) { if (!fixedRows.all().length) writeFixed(s.fixed); s.fixedDb = true; dirty = true; }
-  s.fixed = Object.fromEntries(Object.entries(loadFixed()).filter(([, f]) => s.dishes.some((d) => d.id === f.dish)));
+  if (!s.fixedDb) { if (!fixedRows.all(u).length) writeFixed(u, s.fixed); s.fixedDb = true; dirty = true; }
+  s.fixed = Object.fromEntries(Object.entries(loadFixed(u)).filter(([, f]) => s.dishes.some((d) => d.id === f.dish)));
   // Prompt 13: standardmappene opprettes én gang, og eksisterende retter får en gjettet mappe.
   if (!s.foldersInit) {
-    ensureDefaultFolders();
+    ensureDefaultFolders(u);
     for (const d of s.dishes) if (d.folderId === undefined) d.folderId = guessFolderId(d.name, d.ing);
     s.foldersInit = true; dirty = true;
   }
-  if (dirty) save(s);
+  if (dirty) save(s, u);
   return s;
 }
-const save = (s) => { writeFixed(s.fixed); kv.set(OWNER, 'mat', { ...s, fixed: {} }); };
+const save = (s, u = matUser()) => { writeFixed(u, s.fixed); kv.set(u, 'mat', { ...s, fixed: {} }); };
 
 /* ---------------- Hjelpere ---------------- */
 
@@ -192,15 +213,19 @@ const fixedDaysOf = (s, dishId) => Object.entries(s.fixed).filter(([, f]) => f.d
 const FOOD_CAT = 'Mat og dagligvarer';
 export function foodBudget(s, today = day(new Date())) {
   try {
-    const cat = db.prepare('SELECT id FROM fh_categories WHERE name=?').get(FOOD_CAT);
+    // Brukerens eget regnskap (ISO2): user_id på fh_* når kolonnen finnes; uten den er regnskapet eierens alene.
+    const u = matUser(), own = (t) => !!db.prepare(`SELECT 1 FROM pragma_table_info('${t}') WHERE name='user_id'`).get();
+    if (!own('fh_categories') && u !== OWNER) return null;
+    const by = (t) => (own(t) ? ' AND user_id=?' : ''), arg = (t) => (own(t) ? [u] : []);
+    const cat = db.prepare(`SELECT id FROM fh_categories WHERE name=?${by('fh_categories')}`).get(FOOD_CAT, ...arg('fh_categories'));
     if (!cat) return null;
-    const ms = Math.min(28, Math.max(1, +(kv.get(OWNER, 'fh_settings', {}).monthStart) || 1));
+    const ms = Math.min(28, Math.max(1, +(kv.get(u, 'fh_settings', null) ?? (u === OWNER || !own('fh_categories') ? kv.get(OWNER, 'fh_settings', {}) : {}) ?? {}).monthStart || 1));
     const t = parse(today);
     if (t.getDate() < ms) t.setMonth(t.getMonth() - 1, 1);
     const month = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}`;
     const from = `${month}-${String(ms).padStart(2, '0')}`, n = new Date(t.getFullYear(), t.getMonth() + 1, ms, 12), to = day(n);
-    const b = db.prepare("SELECT amount FROM fh_budgets WHERE category_id=? AND month IN (?, 'default') ORDER BY month = 'default'").get(cat.id, month);
-    const used = -(db.prepare('SELECT COALESCE(SUM(amount),0) AS s FROM fh_transactions WHERE category_id=? AND amount<0 AND date>=? AND date<?').get(cat.id, from, to).s) / 100;
+    const b = db.prepare(`SELECT amount FROM fh_budgets WHERE category_id=? AND month IN (?, 'default')${by('fh_budgets')} ORDER BY month = 'default'`).get(cat.id, month, ...arg('fh_budgets'));
+    const used = -(db.prepare(`SELECT COALESCE(SUM(amount),0) AS s FROM fh_transactions WHERE category_id=? AND amount<0 AND date>=? AND date<?${by('fh_transactions')}`).get(cat.id, from, to, ...arg('fh_transactions')).s) / 100;
     let planned = 0;
     for (let d = today; d < to; d = addDays(d, 1)) planned += dishOf(s, entry(s, d).dish)?.cost ?? 0;
     const budget = b ? b.amount / 100 : null;
@@ -336,7 +361,7 @@ function feedDates(s) {
 /* ---------------- API ---------------- */
 
 export const matApi = new Hono();
-matApi.use('*', guard);
+matApi.use('*', userGuard);
 
 const startOf = (c, b = {}) => { const q = b.start ?? b.date ?? c.req.query('start'); return monday(isDate(q) ? q : day(new Date())); };
 const reply = (c, s, start, extra = {}, status = 200) => c.json({ ...week(s, start), ...extra }, status);
@@ -632,24 +657,38 @@ mountRecipes(matApi, { state, save, dishOf, addDish, dishOut, reply, startOf });
 
 /* ---------------- ICS-feed (abonneres fra Google/Apple Kalender) ---------------- */
 
+// Nøkkelen avgjør hvem sin kalender det er (ISO2: hver bruker har sin egen calKey).
 export function matCalendar(c) {
-  const s = state(), key = String(c.req.query('key') ?? '');
-  const a = Buffer.from(key), b = Buffer.from(s.calKey);
-  if (a.length !== b.length || !timingSafeEqual(a, b)) return c.text('Ugyldig nøkkel', 403);
-  return c.body(ics(s, feedDates(s)), 200, { 'Content-Type': 'text/calendar; charset=utf-8', 'Cache-Control': 'no-cache' });
+  const key = String(c.req.query('key') ?? '');
+  if (key.length < 16 || !/^[\w-]+$/.test(key)) return c.text('Ugyldig nøkkel', 403);
+  for (const row of db.prepare("SELECT user FROM kv WHERE key='mat' AND instr(value, ?) > 0").all(key)) {
+    const out = runAsUser(row.user, () => {
+      const s = state(row.user);
+      const a = Buffer.from(key), b = Buffer.from(s.calKey ?? '');
+      if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+      return c.body(ics(s, feedDates(s)), 200, { 'Content-Type': 'text/calendar; charset=utf-8', 'Cache-Control': 'no-cache' });
+    });
+    if (out) return out;
+  }
+  return c.text('Ugyldig nøkkel', 403);
 }
 
 /* ---------------- Automatisk plan søndag kl. 18 ---------------- */
 
 export function startMatScheduler() {
-  const tick = async () => {
-    const now = new Date(), today = day(now);
-    if (now.getDay() !== 0 || now.getHours() < 18) return;
-    const s = state();
+  // Hver bruker med automatisk plan, i sin egen kontekst.
+  const tickFor = async (u) => {
+    const today = day(new Date());
+    const s = state(u);
     if (!s.auto || s.lastAuto === today) return;
-    s.lastAuto = today; save(s);
-    try { const s2 = state(); await generate(s2, weekDates(addDays(today, 1)), 'ai'); s2.lastAuto = today; save(s2); }
+    s.lastAuto = today; save(s, u);
+    try { const s2 = state(u); await generate(s2, weekDates(addDays(today, 1)), 'ai'); s2.lastAuto = today; save(s2, u); }
     catch (e) { console.error('[mat]', e.message); }
+  };
+  const tick = async () => {
+    const now = new Date();
+    if (now.getDay() !== 0 || now.getHours() < 18) return;
+    for (const { user } of db.prepare("SELECT user FROM kv WHERE key='mat'").all()) await runAsUser(user, () => tickFor(user)).catch(() => {});
   };
   setInterval(tick, 10 * 60_000).unref();
 }

@@ -127,7 +127,7 @@ test('status fra Bring-API-et oppdaterer, varsler og fyller widgeten', async () 
     const w = await call('/widget');
     assert.equal(w.body.items[0].trackingNo, 'CV704411234NO', 'klar for henting først');
     assert.equal(w.body.items[0].status, 'ready_for_pickup');
-    assert.deepEqual(trk.packagesFor(2).map((p) => p.status)[0], 'ready_for_pickup');
+    assert.deepEqual(trk.packagesFor(2, OWNER).map((p) => p.status)[0], 'ready_for_pickup'); // ISO2: per bruker
   } finally { globalThis.fetch = realFetch; }
 });
 

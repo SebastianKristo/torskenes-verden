@@ -2,14 +2,15 @@
 // Autentisering: Authorization: Basic base64(KEY:SECRET). Svarene caches i 60 s (API-et har strenge rate limits),
 // og et dagsbilde av porteføljen lagres slik at vi kan tegne porteføljeverdi over tid og «i dag»-endring per posisjon.
 import { kv, OWNER } from '../db.js';
-import { settings, secret, secretSource } from './db.js';
-import { cfgOverride } from '../settings.js';
+import { settings, secret, secretSource, me } from './db.js';
+import { userCfgOverride } from '../settings.js';
 
 const BASE = { live: 'https://live.trading212.com/api/v0', demo: 'https://demo.trading212.com/api/v0' };
 export const t212Base = (env = settings().t212Env) => BASE[env === 'demo' ? 'demo' : 'live'];
 const MOCK = process.env.MOCK_DATA === '1';
 const TTL = 60_000;
-let cache = null, inflight = null;
+// ISO2: Trading 212 er en personlig integrasjon. Nøkler, cache, dagsbilder og navneliste er per bruker (kv(bruker, …)).
+const caches = new Map(), inflights = new Map();
 
 // Limte verdier har ofte med seg mellomrom, linjeskift, usynlige tegn, anførselstegn eller «Basic »/«Bearer » foran.
 export function cleanCred(v) {
@@ -18,22 +19,24 @@ export function cleanCred(v) {
   return s.replace(/\s+/g, '');
 }
 // En lagret verdi som ikke kan dekrypteres skal ikke falle tilbake til en (gammel) nøkkel i .env – da blandes nøkkel og secret.
-const val = (k) => (secretSource(k) === 'undecryptable' ? '' : secret(k));
+const val = (k, u = me()) => (secretSource(k, u) === 'undecryptable' ? '' : secret(k, u));
 // Én felles nøkkel for FinansHub (Aksjer) og Homelab-dashbordet. Nøkkel, secret og miljø tas alltid fra SAMME kilde,
 // slik at en ny nøkkel aldri blandes med en gammel secret (eller en gammel TRADING212_API_KEY i .env uten secret).
 // Rekkefølge: FinansHub-innstillingene → Homelab → Integrasjoner → .env.
-export function t212Creds() {
-  const hl = { t212_key: cfgOverride('t212_key'), t212_secret: cfgOverride('t212_secret'), t212_env: cfgOverride('t212_env') };
-  const fhKey = cleanCred(val('t212Key')), fhSec = cleanCred(val('t212Secret'));
+export function t212Creds(u = me()) {
+  const ov = (k) => { try { return userCfgOverride(u, k); } catch { return undefined; } };
+  const hl = { t212_key: ov('t212_key'), t212_secret: ov('t212_secret'), t212_env: ov('t212_env') };
+  const fhKey = cleanCred(val('t212Key', u)), fhSec = cleanCred(val('t212Secret', u));
   const hlKey = cleanCred(hl.t212_key), hlSec = cleanCred(hl.t212_secret);
-  const envKey = cleanCred(process.env.TRADING212_API_KEY), envSec = cleanCred(process.env.TRADING212_API_SECRET);
+  // Miljøvariablene (.env) gjelder bare eieren.
+  const envKey = u === OWNER ? cleanCred(process.env.TRADING212_API_KEY) : '', envSec = u === OWNER ? cleanCred(process.env.TRADING212_API_SECRET) : '';
   const envEnv = process.env.TRADING212_ENV === 'demo' ? 'demo' : 'live';
   const src = [
-    fhKey && fhSec && { key: fhKey, secret: fhSec, env: settings().t212Env === 'demo' ? 'demo' : 'live', source: 'finans' },
+    fhKey && fhSec && { key: fhKey, secret: fhSec, env: settings(u).t212Env === 'demo' ? 'demo' : 'live', source: 'finans' },
     hlKey && hlSec && { key: hlKey, secret: hlSec, env: hl.t212_env === 'demo' ? 'demo' : 'live', source: 'homelab' },
     envKey && envSec && { key: envKey, secret: envSec, env: envEnv, source: 'env' },
   ].find(Boolean);
-  return src ?? { key: fhKey || hlKey || envKey, secret: '', env: settings().t212Env === 'demo' ? 'demo' : 'live', source: 'incomplete' };
+  return src ?? { key: fhKey || hlKey || envKey, secret: '', env: settings(u).t212Env === 'demo' ? 'demo' : 'live', source: 'incomplete' };
 }
 const creds = () => { const c = t212Creds(); return { key: c.key, secret: c.secret }; };
 export const t212Configured = () => { const c = creds(); return !!(c.key && c.secret); };
@@ -66,14 +69,14 @@ async function request(path, { key, sec, env, style }) {
 async function call(path, c = null) {
   const cr = c ?? (() => { const t = t212Creds(); return { key: t.key, secret: t.secret, env: t.env }; })();
   const auth = { key: cr.key, sec: cr.secret, env: cr.env };
-  let style = kv.get(OWNER, 'fh_t212_auth', 'basic');
+  let style = kv.get(me(), 'fh_t212_auth', 'basic');
   let res = await request(path, { ...auth, style });
   if (res.status === 401 && style === 'basic') {
     const legacy = await request(path, { ...auth, style: 'legacy' });
-    if (legacy.ok) { style = 'legacy'; res = legacy; if (!c) kv.set(OWNER, 'fh_t212_auth', 'legacy'); }
+    if (legacy.ok) { style = 'legacy'; res = legacy; if (!c) kv.set(me(), 'fh_t212_auth', 'legacy'); }
   } else if (res.status === 401 && style === 'legacy') {
     const basic = await request(path, { ...auth, style: 'basic' });
-    if (basic.ok) { style = 'basic'; res = basic; if (!c) kv.set(OWNER, 'fh_t212_auth', 'basic'); }
+    if (basic.ok) { style = 'basic'; res = basic; if (!c) kv.set(me(), 'fh_t212_auth', 'basic'); }
   }
   if (res.status === 401) console.warn(`[t212] 401 på ${path} (${auth.env}) · nøkkel ${auth.key.length} tegn, secret ${auth.sec.length} tegn`);
   if (!res.ok) throw t212Error(res.status, path, { env: auth.env, retryAfter: res.headers.get('retry-after') ?? res.headers.get('x-ratelimit-reset') });
@@ -145,9 +148,9 @@ const normDividends = (list) => items(list).map((d) => ({ ticker: d.ticker ?? ''
 // Dagsbilder: total verdi og kurs per ticker, maks to år.
 function snapshot(summary, positions) {
   const day = new Date().toLocaleDateString('sv-SE');
-  const hist = kv.get(OWNER, 'fh_t212_hist', []).filter((h) => h.date !== day);
+  const hist = kv.get(me(), 'fh_t212_hist', []).filter((h) => h.date !== day);
   hist.push({ date: day, value: Math.round(summary.total * 100) / 100, prices: Object.fromEntries(positions.map((p) => [p.ticker, p.price])) });
-  kv.set(OWNER, 'fh_t212_hist', hist.slice(-730));
+  kv.set(me(), 'fh_t212_hist', hist.slice(-730));
   return hist;
 }
 function dayChange(positions, hist) {
@@ -158,12 +161,12 @@ function dayChange(positions, hist) {
 
 // Instrumentnavn: tung liste med lav rate limit, hentes maks én gang i døgnet.
 async function instrumentNames() {
-  const c = kv.get(OWNER, 'fh_t212_names', null);
+  const c = kv.get(me(), 'fh_t212_names', null);
   if (c && Date.now() - c.at < 86400_000) return c.map;
   try {
     const list = await call('/equity/metadata/instruments');
     const map = Object.fromEntries(items(list).map((i) => [i.ticker, { name: i.shortName && i.name ? i.name : i.name ?? i.shortName, currency: i.currencyCode }]));
-    kv.set(OWNER, 'fh_t212_names', { at: Date.now(), map });
+    kv.set(me(), 'fh_t212_names', { at: Date.now(), map });
     return map;
   } catch { return c?.map ?? {}; }
 }
@@ -184,31 +187,34 @@ async function fetchAll() {
 }
 
 export async function stocks({ force = false } = {}) {
+  const u = me();
   const env = settings().t212Env;
+  const cache = caches.get(u);
   if (!t212Configured()) {
     if (MOCK) return { ...mock(), configured: false, mock: true, env, base: t212Base(env) };
     return { configured: false, env, base: t212Base(env), status: 'Ikke koblet til – legg inn API-nøkkel og secret' };
   }
   if (!force && cache && Date.now() - cache.at < TTL) return cache.data;
-  if (inflight) return inflight;
-  inflight = (async () => {
+  if (inflights.get(u)) return inflights.get(u);
+  const inflight = (async () => {
     try {
       const d = await fetchAll();
       const data = { ...d, configured: true, env, base: t212Base(env), syncedAt: Date.now(), status: d.partial ? `Synkronisert · ${d.partial}` : 'Synkronisert' };
-      cache = { at: Date.now(), data };
-      kv.set(OWNER, 'fh_t212_cache', data);
+      caches.set(u, { at: Date.now(), data });
+      kv.set(me(), 'fh_t212_cache', data);
       return data;
     } catch (e) {
       // Ved feil (f.eks. 429) vises siste gode svar med feilmeldingen.
-      const last = cache?.data ?? kv.get(OWNER, 'fh_t212_cache', null);
+      const last = cache?.data ?? kv.get(me(), 'fh_t212_cache', null);
       return { ...(last ?? { summary: null, positions: [], orders: [], dividends: [], history: [] }), configured: true, env, base: t212Base(env), error: e.message, status: e.message };
-    } finally { inflight = null; }
+    } finally { inflights.delete(u); }
   })();
+  inflights.set(u, inflight);
   return inflight;
 }
-export const resetStocks = () => { cache = null; };
+export const resetStocks = (u = me()) => { caches.delete(u); };
 // Siste kjente data uten nye kall (backup/Excel).
-export const cachedStocks = () => cache?.data ?? kv.get(OWNER, 'fh_t212_cache', null);
+export const cachedStocks = (u = me()) => caches.get(u)?.data ?? kv.get(u, 'fh_t212_cache', null);
 
 /* ---------------- Demodata (MOCK_DATA=1) ---------------- */
 

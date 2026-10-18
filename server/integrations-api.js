@@ -1,15 +1,17 @@
-// Integrasjoner (prompt 24): én liste med alle oppsettene, for appene og nettsiden.
-//   GET    /api/integrations                  → [{id, name, group, status, fields:[{key,label,type,value|null,saved,help}], canTest, message?}]
+// Integrasjoner (prompt 24, per bruker fra ISO2): én liste med oppsettene, for appene og nettsiden.
+//   GET    /api/integrations                  → [{id, name, group, scope, status, fields:[{key,label,type,value|null,saved,help}], canTest, message?}]
 //   PUT    /api/integrations/:id {key: value}  → lagrer (hemmeligheter kryptert), svarer med integrasjonen
 //   POST   /api/integrations/:id/test          → {ok, message, ms}
-//   DELETE /api/integrations/:id/:key          → fjerner verdien (tilbake til miljø/standard), svarer med integrasjonen
-// Bare administratorer (andre får 403). Sesjon eller app-token (authOrToken; endring krever finance:write).
-// Verdiene ligger der de alltid har ligget: Homelab-oppsettet (settings.js, kv «cfg», hemmeligheter krypteres med enc1:)
-// og FinansHubs innstillinger og hemmeligheter (finans/db.js, «fh_settings» og «fh_secret», krypteres med enc:).
-// Hemmelige verdier sendes aldri ut, bare saved:true/false.
+//   DELETE /api/integrations/:id/:key          → fjerner verdien (tilbake til standard), svarer med integrasjonen
+// scope: 'personal' = brukerens egne (Plex, Jellyfin, Sonarr, Radarr, skolekalender, Trading 212, IMAP, Finn, Bank, Mybring,
+// PostNord, ParcelsApp). Alle innloggede ser, endrer og tester sine egne, og ingen ser andres. 'server' = serveroppsett
+// (AI, HA, Google-klient, Entur, MET, Kart, Ikoner, Bilder, Cloudflare): bare administratorer ser dem (andre får 403 på dem).
+// Sesjon eller app-token (authOrToken; endring krever finance:write).
+// Lagring: personlige verdier i kv(user,'cfg_personal') via settings.js (userCfg/setUserCfg), serververdier i kv(OWNER,'cfg')
+// og FinansHubs AI-innstillinger (fh_settings/fh_secret hos OWNER). Hemmelige verdier sendes aldri ut, bare saved:true/false.
 import { Hono } from 'hono';
 import { kv, OWNER } from './db.js';
-import { cfg, updateConfig, SCHEMA } from './settings.js';
+import { cfg, updateConfig, userCfg, userCfgOverride, setUserCfg, runAsUser } from './settings.js';
 import { isAdmin, sessionUser, userInfo } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { authOrToken } from './mobile.js';
@@ -28,29 +30,43 @@ import { clearCache } from './cache.js';
 const MOCK = process.env.MOCK_DATA === '1';
 
 /* ---------------- Lagring ---------------- */
+// Hver store: get(user), set(user, v), clear(user), secret.
 
-// Felt i Homelab-oppsettet (settings.js): verdi, standard og hemmelig hentes fra SCHEMA.
-const CFG = new Map(SCHEMA.flatMap(([, , fs]) => fs.map((f) => [f[0], { secret: !!f[3] }])));
-const cfgStore = (key) => ({
-  get: () => cfg(key), secret: CFG.get(key)?.secret ?? false,
-  set: (v) => updateConfig({ [key]: v }), clear: () => updateConfig({ [key]: null }),
+// Serveroppsett (settings.js, kv «cfg» hos OWNER).
+const cfgStore = (key, isSecret = false) => ({
+  get: () => cfg(key), secret: isSecret,
+  set: (_u, v) => updateConfig({ [key]: v }, OWNER), clear: () => updateConfig({ [key]: null }, OWNER),
 });
-const fhSecret = (key) => ({ get: () => secret(key), secret: true, set: (v) => setSecret(key, String(v).trim()), clear: () => setSecret(key, '') });
+// Personlige verdier (settings.js, kv «cfg_personal» hos brukeren).
+const mine = (key, isSecret = false, check) => ({
+  get: (u) => userCfg(u, key), secret: isSecret,
+  set: (u, v) => { const x = check ? check(v) : String(v).trim(); if (x === undefined) throw new Error('Ugyldig verdi'); setUserCfg(u, { [key]: String(x) }); },
+  clear: (u) => setUserCfg(u, { [key]: null }),
+});
+// Trading 212 og IMAP for eieren: FinansHub har lest dem fra fh_secret/fh_settings. Speiles dit for OWNER, så Aksjer og
+// e-postimporten virker også før finans-koden leser userCfg. Andre brukere skrives aldri dit.
+const mirrored = (key, fhKey, isSecret, check) => {
+  const m = mine(key, isSecret, check);
+  const mirror = (u, v) => { if (u !== OWNER) return; if (isSecret) setSecret(fhKey, v ?? ''); else saveSettings({ [fhKey]: v ?? DEFAULT_SETTINGS[fhKey] }); };
+  return { ...m, set: (u, v) => { m.set(u, v); mirror(u, userCfgOverride(u, key)); }, clear: (u) => { m.clear(u); mirror(u, null); } };
+};
+// FinansHub-innstilling per bruker (kv(user,'fh_settings'), samme sted som FinansHub lagrer brukerens innstillinger).
+const fhUserSetting = (key, check) => ({
+  get: (u) => ({ ...DEFAULT_SETTINGS, ...(kv.get(u, 'fh_settings', {}) ?? {}) })[key] ?? '', secret: false,
+  set: (u, v) => { const x = check ? check(v) : String(v).trim(); if (x === undefined) throw new Error('Ugyldig verdi'); kv.set(u, 'fh_settings', { ...(kv.get(u, 'fh_settings', {}) ?? {}), [key]: x }); },
+  clear: (u) => { const s = { ...(kv.get(u, 'fh_settings', {}) ?? {}) }; delete s[key]; kv.set(u, 'fh_settings', s); },
+});
+// AI-motorene er serveroppsett (OWNER sine FinansHub-innstillinger og -hemmeligheter).
+const fhSecret = (key) => ({ get: () => secret(key), secret: true, set: (_u, v) => setSecret(key, String(v).trim()), clear: () => setSecret(key, '') });
 const fhSetting = (key, check) => ({
   get: () => settings()[key] ?? '', secret: false,
-  set: (v) => { const x = check ? check(v) : String(v).trim(); if (x === undefined) throw new Error('Ugyldig verdi'); saveSettings({ [key]: x }); },
+  set: (_u, v) => { const x = check ? check(v) : String(v).trim(); if (x === undefined) throw new Error('Ugyldig verdi'); saveSettings({ [key]: x }); },
   clear: () => saveSettings({ [key]: DEFAULT_SETTINGS[key] }),
-});
-// Trading 212: FinansHub (Aksjer) og Homelab-widgeten har hver sin lagring fra før. Lagres begge steder, så de er like.
-const both = (fhKey, cfgKey, isSecret = true) => ({
-  get: () => (isSecret ? secret(fhKey) : settings()[fhKey]) || cfg(cfgKey), secret: isSecret,
-  set: (v) => { const s = String(v).trim(); if (isSecret) setSecret(fhKey, s); else saveSettings({ [fhKey]: s }); updateConfig({ [cfgKey]: s }); kv.set(OWNER, 'fh_t212_auth', 'basic'); },
-  clear: () => { if (isSecret) setSecret(fhKey, ''); else saveSettings({ [fhKey]: DEFAULT_SETTINGS[fhKey] }); updateConfig({ [cfgKey]: null }); },
 });
 // Flere Gemini-nøkler (reserver): én per linje legges til listen; fjern tømmer reservene (hovednøkkelen er eget felt).
 const geminiExtra = {
   get: () => (geminiKeys().filter((k) => k.id !== 'main').length ? 'x' : ''), secret: true,
-  set: (v) => { String(v).split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean).forEach((k) => addKey('', k)); },
+  set: (_u, v) => { String(v).split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean).forEach((k) => addKey('', k)); },
   clear: () => { for (const k of geminiKeys()) if (k.id !== 'main') removeKey(k.id); },
 };
 const int = (lo, hi) => (v) => { const n = Math.round(Number(v)); return Number.isFinite(n) && n >= lo && n <= hi ? n : undefined; };
@@ -63,76 +79,113 @@ const F = (key, label, type, store, { help = '', required = false } = {}) => ({ 
 /* ---------------- Integrasjonene ---------------- */
 
 const viaGroup = (name) => () => integ.testIntegration(name);
+const P = 'personal', S = 'server';
 export const INTEGRATIONS = [
-  { id: 'ha', name: 'Home Assistant', group: 'Hjem', test: viaGroup('Home Assistant'), fields: [
-    F('ha_url', 'Adresse', 'url', cfgStore('ha_url'), { required: true, help: 'For eksempel http://192.168.1.20:8123' }),
-    F('ha_token', 'Long-lived token', 'secret', cfgStore('ha_token'), { required: true, help: 'Home Assistant → Profil → Sikkerhet → Long-lived access tokens' }),
+  // Personlige (hver bruker sine egne)
+  { id: 'plex', name: 'Plex', group: 'Media', scope: P, test: viaGroup('Plex'), fields: [
+    F('plex_url', 'Adresse', 'url', mine('plex_url'), { required: true, help: 'For eksempel http://192.168.1.20:32400' }),
+    F('plex_token', 'X-Plex-Token', 'secret', mine('plex_token', true), { required: true, help: 'Plex → ⋯ → Hent info → Vis XML: X-Plex-Token i adressen' }),
   ] },
-  { id: 'google', name: 'Google Kalender', group: 'Hjem', test: testGoogle, fields: [
+  { id: 'jellyfin', name: 'Jellyfin', group: 'Media', scope: P, test: viaGroup('Jellyfin'), fields: [
+    F('jf_url', 'Adresse', 'url', mine('jf_url'), { required: true, help: 'For eksempel http://192.168.1.20:8096' }),
+    F('jf_key', 'API-nøkkel', 'secret', mine('jf_key', true), { required: true, help: 'Kontrollpanel → Avansert → API-nøkler' }),
+    F('jf_user', 'Brukernavn (for «Nylig lagt til»)', 'text', mine('jf_user')),
+  ] },
+  { id: 'sonarr', name: 'Sonarr', group: 'Media', scope: P, test: viaGroup('Sonarr'), fields: [
+    F('sonarr_url', 'Adresse', 'url', mine('sonarr_url'), { required: true }),
+    F('sonarr_key', 'API-nøkkel', 'secret', mine('sonarr_key', true), { required: true, help: 'Settings → General → Security → API Key' }),
+  ] },
+  { id: 'radarr', name: 'Radarr', group: 'Media', scope: P, test: viaGroup('Radarr'), fields: [
+    F('radarr_url', 'Adresse', 'url', mine('radarr_url'), { required: true }),
+    F('radarr_key', 'API-nøkkel', 'secret', mine('radarr_key', true), { required: true, help: 'Settings → General → Security → API Key' }),
+  ] },
+  { id: 'calendar', name: 'Skolekalender (iCal)', group: 'Skole', scope: P, test: viaGroup('Kalender / timeplan'), fields: [
+    F('cal_ics', 'iCal-URL', 'secret', mine('cal_ics', true), { required: true, help: 'Canvas → Kalender → Kalenderfeed, eller Outlook → Publiser kalender → ICS' }),
+    F('cal_mazemap', 'MazeMap campus-ID', 'text', mine('cal_mazemap')),
+    F('school_url', 'Skolens nettside', 'url', mine('school_url')),
+  ] },
+  { id: 't212', name: 'Trading 212', group: 'Finans', scope: P, test: viaGroup('Trading 212'), fields: [
+    F('t212Key', 'API-nøkkel (Key ID)', 'secret', mirrored('t212_key', 't212Key', true), { required: true, help: 'app.trading212.com → Innstillinger → API. Bare lesetilgang.' }),
+    F('t212Secret', 'Secret', 'secret', mirrored('t212_secret', 't212Secret', true)),
+    F('t212Env', 'Miljø (live eller demo)', 'text', mirrored('t212_env', 't212Env', false, (v) => { const e = oneOf(['live', 'demo'])(v); if (!e) throw new Error('Miljø må være live eller demo'); return e; })),
+  ] },
+  { id: 'bank', name: 'Bank og import', group: 'Finans', scope: P, test: null, fields: [
+    F('csvProfile', `CSV-profil (${PROFILES.join(', ')})`, 'text', fhUserSetting('csvProfile', oneOf(PROFILES)), { help: 'Brukes når en bankfil er tvetydig. Kolonnene finnes ellers automatisk.' }),
+  ] },
+  { id: 'imap', name: 'Kvitteringer på e-post (IMAP)', group: 'Finans', scope: P, test: (u) => testImap(u), fields: [
+    F('imapHost', 'Vert', 'text', mirrored('imapHost', 'imapHost', false, hostOk), { required: true, help: 'Proton Mail Bridge: protonmail-bridge (i Docker) eller 127.0.0.1' }),
+    F('imapPort', 'Port', 'text', mirrored('imapPort', 'imapPort', false, int(1, 65535))),
+    F('imapSecurity', 'Sikkerhet (starttls, tls eller none)', 'text', mirrored('imapSecurity', 'imapSecurity', false, oneOf(['starttls', 'tls', 'none']))),
+    F('imapUser', 'Brukernavn', 'text', mirrored('imapUser', 'imapUser', false, (v) => String(v).trim().slice(0, 120)), { required: true }),
+    F('imapPass', 'Passord', 'secret', mirrored('imapPass', 'imapPass', true), { required: true }),
+    F('imapFolder', 'Mappe', 'text', mirrored('imapFolder', 'imapFolder', false, (v) => String(v).trim().slice(0, 120) || 'INBOX')),
+  ] },
+  { id: 'finn', name: 'Finn', group: 'Finans', scope: P, test: null, fields: [
+    F('imapFinnFolder', 'E-postmappe for Finn-e-poster', 'text', mirrored('imapFinnFolder', 'imapFinnFolder', false, (v) => String(v).trim().slice(0, 120)), { required: true, help: 'Kvitteringer og meldinger fra Finn leses fra denne mappen (samme e-postkonto som Kvitteringer).' }),
+  ] },
+  { id: 'mybring', name: 'Mybring (Posten og Bring)', group: 'Sporing', scope: P, test: () => testTracking(), fields: [
+    F('mybringUid', 'Mybring-bruker (e-post)', 'text', mine('mybringUid'), { required: true }),
+    F('mybringKey', 'API-nøkkel', 'secret', mine('mybringKey', true), { required: true, help: 'mybring.com → Innstillinger → API' }),
+  ] },
+  { id: 'postnord', name: 'PostNord', group: 'Sporing', scope: P, test: () => testTracking(), fields: [
+    F('postnordKey', 'API-nøkkel (valgfri)', 'secret', mine('postnordKey', true), { help: 'Valgfri (krever organisasjonsnummer hos developer.postnord.com). Uten nøkkel hentes status fra PostNords offentlige sporingsside (uoffisielt), med ParcelsApp som reserve.' }),
+  ] },
+  { id: 'parcelsapp', name: 'ParcelsApp', group: 'Sporing', scope: P, test: () => testTracking(), fields: [
+    F('trk_parcelsapp_key', 'API-nøkkel', 'secret', mine('trk_parcelsapp_key', true), { required: true, help: 'Siste reserve. Gratisplanen har 3 oppslag i måneden.' }),
+  ] },
+  // Serveroppsett (bare admin)
+  { id: 'ha', name: 'Home Assistant', group: 'Hjem', scope: S, test: viaGroup('Home Assistant'), fields: [
+    F('ha_url', 'Adresse', 'url', cfgStore('ha_url'), { required: true, help: 'For eksempel http://192.168.1.20:8123' }),
+    F('ha_token', 'Long-lived token', 'secret', cfgStore('ha_token', true), { required: true, help: 'Home Assistant → Profil → Sikkerhet → Long-lived access tokens' }),
+  ] },
+  { id: 'google', name: 'Google Kalender', group: 'Hjem', scope: S, test: testGoogle, fields: [
     F('googleClientId', 'Klient-ID', 'text', cfgStore('googleClientId'), { required: true, help: 'OAuth-klient (Web application) fra Google Cloud Console. Brukes av Bursdager.' }),
-    F('googleClientSecret', 'Klienthemmelighet', 'secret', cfgStore('googleClientSecret'), { required: true }),
+    F('googleClientSecret', 'Klienthemmelighet', 'secret', cfgStore('googleClientSecret', true), { required: true }),
     F('googleRedirectUri', 'Omdirigerings-URI (valgfri)', 'url', cfgStore('googleRedirectUri'), { help: 'https://<din adresse>/api/birthdays/google/callback. Tom = adressen serveren nås på.' }),
   ] },
-  { id: 'ai', name: 'AI (Gemini, Groq og Ollama)', group: 'AI', test: testAi, fields: [
+  { id: 'ai', name: 'AI (Gemini, Groq og Ollama)', group: 'AI', scope: S, test: testAi, fields: [
     F('geminiKey', 'Gemini API-nøkkel', 'secret', fhSecret('geminiKey'), { help: 'aistudio.google.com → Get API key' }),
     F('geminiKeys', 'Flere Gemini-nøkler (reserve, én per linje)', 'secret', geminiExtra, { help: 'Brukes etter tur når en nøkkel er brukt opp for dagen.' }),
     F('groqKey', 'Groq API-nøkkel', 'secret', fhSecret('groqKey'), { help: 'console.groq.com → API Keys' }),
     F('ollamaUrl', 'Ollama-adresse', 'url', fhSetting('ollamaUrl', urlOk), { help: 'For eksempel http://192.168.1.30:11434' }),
     F('ollamaModel', 'Ollama-modell', 'text', fhSetting('ollamaModel', (v) => String(v).trim().slice(0, 60) || undefined)),
   ] },
-  { id: 't212', name: 'Trading 212', group: 'Finans', test: viaGroup('Trading 212'), fields: [
-    F('t212Key', 'API-nøkkel (Key ID)', 'secret', both('t212Key', 't212_key'), { required: true, help: 'app.trading212.com → Innstillinger → API. Bare lesetilgang.' }),
-    F('t212Secret', 'Secret', 'secret', both('t212Secret', 't212_secret')),
-    F('t212Env', 'Miljø (live eller demo)', 'text', { ...both('t212Env', 't212_env', false), set: (v) => { const e = oneOf(['live', 'demo'])(v); if (!e) throw new Error('Miljø må være live eller demo'); saveSettings({ t212Env: e }); updateConfig({ t212_env: e }); } }),
-  ] },
-  { id: 'bank', name: 'Bank og import', group: 'Finans', test: null, fields: [
-    F('csvProfile', `CSV-profil (${PROFILES.join(', ')})`, 'text', fhSetting('csvProfile', oneOf(PROFILES)), { help: 'Brukes når en bankfil er tvetydig. Kolonnene finnes ellers automatisk.' }),
-  ] },
-  { id: 'imap', name: 'Kvitteringer på e-post (IMAP)', group: 'Finans', test: () => testMail(), fields: [
-    F('imapHost', 'Vert', 'text', fhSetting('imapHost', hostOk), { required: true, help: 'Proton Mail Bridge: protonmail-bridge (i Docker) eller 127.0.0.1' }),
-    F('imapPort', 'Port', 'text', fhSetting('imapPort', int(1, 65535))),
-    F('imapSecurity', 'Sikkerhet (starttls, tls eller none)', 'text', fhSetting('imapSecurity', oneOf(['starttls', 'tls', 'none']))),
-    F('imapUser', 'Brukernavn', 'text', fhSetting('imapUser', (v) => String(v).trim().slice(0, 120)), { required: true }),
-    F('imapPass', 'Passord', 'secret', fhSecret('imapPass'), { required: true }),
-    F('imapFolder', 'Mappe', 'text', fhSetting('imapFolder', (v) => String(v).trim().slice(0, 120) || 'INBOX')),
-  ] },
-  { id: 'entur', name: 'Entur (Ruter)', group: 'Reise', test: viaGroup('Ruter (Entur)'), fields: [
+  { id: 'entur', name: 'Entur (Ruter)', group: 'Reise', scope: S, test: viaGroup('Ruter (Entur)'), fields: [
     F('ruter_routes', 'Strekninger – én per linje: Fra (NSR-ID) > Til (NSR-ID)', 'text', cfgStore('ruter_routes'), { help: 'Stopp-ID finner du på stoppested.entur.org. Egne stopp i appen trenger ingen nøkkel.' }),
     F('ruter_count', 'Antall avganger', 'text', cfgStore('ruter_count')),
   ] },
-  { id: 'mybring', name: 'Mybring (Posten og Bring)', group: 'Sporing', test: testTracking, fields: [
-    F('mybringUid', 'Mybring-bruker (e-post)', 'text', cfgStore('mybringUid'), { required: true }),
-    F('mybringKey', 'API-nøkkel', 'secret', cfgStore('mybringKey'), { required: true, help: 'mybring.com → Innstillinger → API' }),
-  ] },
-  { id: 'postnord', name: 'PostNord', group: 'Sporing', test: testTracking, fields: [
-    F('postnordKey', 'API-nøkkel', 'secret', cfgStore('postnordKey'), { required: true, help: 'developer.postnord.com → Track and Trace' }),
-  ] },
-  { id: 'parcelsapp', name: 'ParcelsApp', group: 'Sporing', test: testTracking, fields: [
-    F('trk_parcelsapp_key', 'API-nøkkel', 'secret', cfgStore('trk_parcelsapp_key'), { required: true, help: 'Siste reserve. Gratisplanen har 3 oppslag i måneden.' }),
-  ] },
-  { id: 'cloudflare', name: 'Cloudflare', group: 'Nettverk', test: viaGroup('Cloudflare'), fields: [
-    F('cf_token', 'API-token (Zone, DNS, Analytics: Read)', 'secret', cfgStore('cf_token'), { required: true }),
+  { id: 'cloudflare', name: 'Cloudflare', group: 'Nettverk', scope: S, test: viaGroup('Cloudflare'), fields: [
+    F('cf_token', 'API-token (Zone, DNS, Analytics: Read)', 'secret', cfgStore('cf_token', true), { required: true }),
     F('cf_domain', 'Første domene', 'text', cfgStore('cf_domain')),
   ] },
-  { id: 'finn', name: 'Finn', group: 'Finans', test: null, fields: [
-    F('imapFinnFolder', 'E-postmappe for Finn-e-poster', 'text', fhSetting('imapFinnFolder', (v) => String(v).trim().slice(0, 120)), { required: true, help: 'Kvitteringer og meldinger fra Finn leses fra denne mappen (samme e-postkonto som Kvitteringer).' }),
-  ] },
-  { id: 'met', name: 'MET / Yr', group: 'Generelt', test: viaGroup('Vær (MET/Yr)'), fields: [
+  { id: 'met', name: 'MET / Yr', group: 'Generelt', scope: S, test: viaGroup('Vær (MET/Yr)'), fields: [
     F('wx_place', 'Sted', 'text', cfgStore('wx_place'), { required: true }),
     F('wx_lat', 'Breddegrad', 'text', cfgStore('wx_lat'), { required: true }),
     F('wx_lon', 'Lengdegrad', 'text', cfgStore('wx_lon'), { required: true }),
   ] },
-  { id: 'map', name: 'Kart (MapTiler og Stadia)', group: 'Generelt', test: testMap, fields: [
-    F('maptilerKey', 'MapTiler API-nøkkel', 'secret', cfgStore('maptilerKey'), { help: 'Valgfri. Kartverket (standard) trenger ingen nøkkel.' }),
-    F('stadiaKey', 'Stadia Maps API-nøkkel', 'secret', cfgStore('stadiaKey'), { help: 'Valgfri.' }),
+  { id: 'map', name: 'Kart (MapTiler og Stadia)', group: 'Generelt', scope: S, test: testMap, fields: [
+    F('maptilerKey', 'MapTiler API-nøkkel', 'secret', cfgStore('maptilerKey', true), { help: 'Valgfri. Kartverket (standard) trenger ingen nøkkel.' }),
+    F('stadiaKey', 'Stadia Maps API-nøkkel', 'secret', cfgStore('stadiaKey', true), { help: 'Valgfri.' }),
   ] },
-  { id: 'icons', name: 'Ikoner (Iconify)', group: 'Generelt', test: testIcons, fields: [] },
-  { id: 'photos', name: 'Bilder (Unsplash og Pexels)', group: 'Generelt', test: testBackgrounds, fields: [
-    F('unsplash_key', 'Unsplash Access Key', 'secret', cfgStore('unsplash_key')),
-    F('pexels_key', 'Pexels API-nøkkel', 'secret', cfgStore('pexels_key')),
+  { id: 'icons', name: 'Ikoner (Iconify)', group: 'Generelt', scope: S, test: testIcons, fields: [] },
+  { id: 'photos', name: 'Bilder (Unsplash og Pexels)', group: 'Generelt', scope: S, test: testBackgrounds, fields: [
+    F('unsplash_key', 'Unsplash Access Key', 'secret', cfgStore('unsplash_key', true)),
+    F('pexels_key', 'Pexels API-nøkkel', 'secret', cfgStore('pexels_key', true)),
   ] },
 ];
 const byId = new Map(INTEGRATIONS.map((x) => [x.id, x]));
+/** 'personal' | 'server' for en integrasjon (id eller navn), null hvis ukjent. */
+export const integrationScope = (key) => { const k = String(key ?? '').trim().toLowerCase(); return INTEGRATIONS.find((i) => i.id === k || i.name.toLowerCase() === k)?.scope ?? null; };
+// IMAP-test med brukerens egne verdier. finans/mail.js fyller manglende felt fra eierens oppsett, så andre brukere må ha
+// vert, brukernavn og passord selv før testen kjøres (ellers kunne eierens passord blitt sendt til en annen server).
+async function testImap(u) {
+  const c = imapOf(u);
+  if (u !== OWNER && !(c.host && c.user && c.pass)) return { ok: false, code: 'missing', message: 'Fyll inn vert, brukernavn og passord.' };
+  return testMail(c);
+}
+// IMAP-oppsettet til en bruker (til testMail), fra brukerens egne verdier.
+const imapOf = (u) => ({ host: userCfg(u, 'imapHost'), port: Number(userCfg(u, 'imapPort')) || 143, security: userCfg(u, 'imapSecurity') || 'starttls',
+  user: userCfg(u, 'imapUser'), pass: userCfg(u, 'imapPass'), folder: userCfg(u, 'imapFolder') || 'INBOX' });
 
 /* ---------------- Tester ---------------- */
 
@@ -166,49 +219,62 @@ async function testIcons() {
 
 /* ---------------- Utdata ---------------- */
 
-const lastTests = () => kv.get(OWNER, 'integ_tests', {}) ?? {};
-function fieldOut(f) {
-  const v = f.store.get();
+// Siste testresultat: personlige integrasjoner per bruker, serveroppsettet hos OWNER.
+const testsOwner = (x, u) => (x.scope === P ? u : OWNER);
+const lastTests = (who) => kv.get(who, 'integ_tests', {}) ?? {};
+function fieldOut(f, u) {
+  const v = f.store.get(u);
   const saved = v !== undefined && v !== null && String(v) !== '';
   const type = f.type === 'secret' || f.store.secret ? 'secret' : f.type;
   return { key: f.key, label: f.label, type, value: type === 'secret' ? null : saved ? String(v) : null, saved, help: f.help, required: !!f.required };
 }
-export function integrationOut(x) {
-  const fields = x.fields.map(fieldOut);
+export function integrationOut(x, u = OWNER) {
+  const fields = x.fields.map((f) => fieldOut(f, u));
   const missing = x.fields.some((f, i) => f.required && !fields[i].saved);
-  const t = lastTests()[x.id];
+  const t = lastTests(testsOwner(x, u))[x.id];
   const status = missing ? 'missing' : t && t.ok === false ? 'error' : 'ok';
-  return { id: x.id, name: x.name, group: x.group, status, fields, canTest: !!x.test, ...(t ? { lastTest: t } : {}), ...(status === 'error' ? { message: t.message } : {}) };
+  return { id: x.id, name: x.name, group: x.group, scope: x.scope, status, fields, canTest: !!x.test, ...(t ? { lastTest: t } : {}), ...(status === 'error' ? { message: t.message } : {}) };
 }
-export const listIntegrations = () => INTEGRATIONS.map(integrationOut);
+/** Integrasjonene user ser: egne personlige, og serveroppsettet bare for administratorer. */
+export const listIntegrations = (u = OWNER, admin = isAdmin(u)) => INTEGRATIONS.filter((x) => admin || x.scope === P).map((x) => integrationOut(x, u));
+
+async function runTest(x, u) {
+  const t0 = Date.now();
+  let r;
+  try { r = await runAsUser(u, () => x.test(u)); } catch (e) { r = { ok: false, message: e.message }; }
+  const out = { ok: !!r.ok, message: r.message ?? (r.ok ? 'OK' : 'Feilet'), ms: r.ms ?? Date.now() - t0, ...(r.mock ? { mock: true } : {}), at: new Date().toISOString() };
+  const who = testsOwner(x, u);
+  kv.set(who, 'integ_tests', { ...lastTests(who), [x.id]: out });
+  return out;
+}
 // Felles test for den eldre «Test tilkobling» (POST /api/config/test/:group): finner integrasjonen på id eller navn
-// (f.eks. «google» eller «Google Kalender»). null = ukjent eller uten egen test her.
-export async function testByIdOrName(key) {
+// (f.eks. «google» eller «Google Kalender»). null = ukjent eller uten egen test her. u = brukeren som tester.
+export async function testByIdOrName(key, u = OWNER) {
   const k = String(key ?? '').trim().toLowerCase();
   const x = INTEGRATIONS.find((i) => i.id === k || i.name.toLowerCase() === k);
   if (!x?.test) return null;
-  const t0 = Date.now();
-  let r;
-  try { r = await x.test(); } catch (e) { r = { ok: false, message: e.message }; }
-  const out = { ok: !!r.ok, message: r.message ?? (r.ok ? 'OK' : 'Feilet'), ms: r.ms ?? Date.now() - t0, ...(r.mock ? { mock: true } : {}), at: new Date().toISOString() };
-  kv.set(OWNER, 'integ_tests', { ...lastTests(), [x.id]: out });
-  return out;
+  if (x.scope !== P && !isAdmin(u)) return { ok: false, message: 'Bare administratorer kan teste serveroppsettet', restricted: true };
+  return runTest(x, u);
 }
 
 /* ---------------- API ---------------- */
 
 const api = new Hono();
-api.use('*', authOrToken, async (c, next) => {
-  if (!isAdmin(c.get('user'))) return c.json({ error: 'Bare administratorer kan se og endre integrasjonene', restricted: true }, 403);
-  await next();
-});
-const find = (c) => byId.get(c.req.param('id'));
+api.use('*', authOrToken);
+// Serveroppsett: bare administratorer. Personlige: alle, med egne verdier.
+const find = (c) => {
+  const x = byId.get(c.req.param('id'));
+  if (!x) return { res: c.json({ error: 'Ukjent integrasjon' }, 404) };
+  if (x.scope !== P && !isAdmin(c.get('user'))) return { res: c.json({ error: 'Bare administratorer kan se og endre serveroppsettet', restricted: true }, 403) };
+  return { x };
+};
 
-api.get('/', (c) => c.json(listIntegrations()));
-api.get('/:id', (c) => { const x = find(c); return x ? c.json(integrationOut(x)) : c.json({ error: 'Ukjent integrasjon' }, 404); });
+api.get('/', (c) => c.json(listIntegrations(c.get('user'))));
+api.get('/:id', (c) => { const { x, res } = find(c); return res ?? c.json(integrationOut(x, c.get('user'))); });
 api.put('/:id', async (c) => {
-  const x = find(c);
-  if (!x) return c.json({ error: 'Ukjent integrasjon' }, 404);
+  const { x, res } = find(c);
+  if (res) return res;
+  const u = c.get('user');
   const b = await c.req.json().catch(() => null);
   if (!b || typeof b !== 'object' || Array.isArray(b)) return c.json({ error: 'Forventet et objekt {nøkkel: verdi}' }, 400);
   const fields = new Map(x.fields.map((f) => [f.key, f]));
@@ -216,37 +282,32 @@ api.put('/:id', async (c) => {
   try {
     for (const [k, v] of Object.entries(b)) {
       const f = fields.get(k);
-      if (v === null) { f.store.clear(); continue; }
+      if (v === null) { f.store.clear(u); continue; }
       if (typeof v !== 'string' && typeof v !== 'number' && typeof v !== 'boolean') throw new Error(`${f.label}: ugyldig verdi`);
       const s = String(v);
       if (s.length > 4000) throw new Error(`${f.label}: for lang verdi`);
       if ((f.type === 'secret' || f.store.secret) && !s.trim()) continue; // tomt felt = behold lagret hemmelighet
-      f.store.set(s);
+      f.store.set(u, s);
     }
   } catch (e) { return c.json({ error: e.message }, e.status && e.status < 500 ? e.status : 400); }
   clearCache();
-  const t = lastTests(); delete t[x.id]; kv.set(OWNER, 'integ_tests', t); // ny verdi: forrige testresultat gjelder ikke lenger
-  return c.json(integrationOut(x));
+  const who = testsOwner(x, u), t = lastTests(who); delete t[x.id]; kv.set(who, 'integ_tests', t); // ny verdi: forrige testresultat gjelder ikke lenger
+  return c.json(integrationOut(x, u));
 });
 api.post('/:id/test', async (c) => {
-  const x = find(c);
-  if (!x) return c.json({ error: 'Ukjent integrasjon' }, 404);
+  const { x, res } = find(c);
+  if (res) return res;
   if (!x.test) return c.json({ error: 'Denne integrasjonen har ingen test' }, 400);
-  const t0 = Date.now();
-  let r;
-  try { r = await x.test(); } catch (e) { r = { ok: false, message: e.message }; }
-  const out = { ok: !!r.ok, message: r.message ?? (r.ok ? 'OK' : 'Feilet'), ms: r.ms ?? Date.now() - t0, ...(r.mock ? { mock: true } : {}), at: new Date().toISOString() };
-  kv.set(OWNER, 'integ_tests', { ...lastTests(), [x.id]: out });
-  return c.json(out);
+  return c.json(await runTest(x, c.get('user')));
 });
 api.delete('/:id/:key', (c) => {
-  const x = find(c);
-  if (!x) return c.json({ error: 'Ukjent integrasjon' }, 404);
+  const { x, res } = find(c);
+  if (res) return res;
   const f = x.fields.find((y) => y.key === c.req.param('key'));
   if (!f) return c.json({ error: 'Ukjent felt' }, 404);
-  try { f.store.clear(); } catch (e) { return c.json({ error: e.message }, 400); }
+  try { f.store.clear(c.get('user')); } catch (e) { return c.json({ error: e.message }, 400); }
   clearCache();
-  return c.json(integrationOut(x));
+  return c.json(integrationOut(x, c.get('user')));
 });
 
 export default api;

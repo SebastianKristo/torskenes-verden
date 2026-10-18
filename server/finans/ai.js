@@ -1,6 +1,6 @@
 // AI-utlesing av kvitteringer. Felles prompt og skjema for Ollama (lokalt) og Gemini (sky).
 // Svaret valideres; ugyldig svar gir ett nytt forsøk før bilaget markeres for manuell utfylling.
-import { settings, secret, db } from './db.js';
+import { settings, secret, db, me, addUserCol } from './db.js';
 import { geminiFetch, hasGemini, usableKeys } from './gemini-keys.js';
 import { ocrEnabled, ocrReceipt, cropImage, decodeBarcodes, ocrTools } from '../ocr-fallback.js';
 
@@ -121,15 +121,21 @@ const afterTimeout = (list, idx, st) => { const tried = list.slice(0, idx + 1); 
  * Kjører call(ms, startKey) for motoren p med tidsgrense, nye forsøk ved tidsavbrudd (1 s, 2 s, 4 s) og, for Gemini med
  * onTimeout=next, neste nøkkel. status(text, {timeoutEngine}) får hver hendelse. Feilen etter siste forsøk har timeout=true.
  */
-async function runEngine(p, st, call, { status = () => {}, onTimeout, task = 'receipts' } = {}) {
+async function runEngine(p, st, call, { status = () => {}, onTimeout, task = 'receipts', signal = null } = {}) {
   const t = aiTimeoutsOf(st), mode = onTimeout ?? t.onTimeout;
   let startKey = null;
   for (;;) {
     let err;
     for (let i = 0; ; i++) {
+      if (signal?.aborted) throw cancelled();
+      const t0 = Date.now();
       try { return await call(engineMs(p, st), startKey); } catch (e) {
+        if (signal?.aborted) throw cancelled();
         if (!e.timeout) throw e;
-        Object.assign(e, { timeoutEngine: p, timeoutSecs: t[p] });
+        const elapsed = (Date.now() - t0) / 1000;
+        Object.assign(e, { timeoutEngine: p, timeoutSecs: t[p], elapsedS: Math.round(elapsed * 10) / 10, limitText: `${providerName(p)} svarte ikke innen ${t[p]} s` });
+        // Prompt 25: hvilket lag som kuttet. Her er det kallet fra serveren til motoren (layer = motoren selv).
+        console.warn(`[ai] tidsavbrudd engine=${p} limit_s=${t[p]} elapsed_s=${e.elapsedS} layer=${p} task=${task}`);
         if (i >= t.retries) { err = e; break; }
         const wait = 1000 * 2 ** i;
         status(timeoutText(p, t[p], `nytt forsøk om ${wait / 1000} s …`), { timeoutEngine: p });
@@ -147,6 +153,19 @@ async function runEngine(p, st, call, { status = () => {}, onTimeout, task = 're
   }
 }
 
+// Prompt 25: avbrutt av brukeren (Avbryt i AI-søket). Telles ikke som tidsavbrudd, og motoren merkes ikke som nede.
+export class AiCancelled extends Error { constructor(msg = 'Avbrutt') { super(msg); this.cancelled = true; this.name = 'AiCancelled'; } }
+const cancelled = () => new AiCancelled();
+// Tidsgrense per motor kombinert med brukerens avbryt-signal.
+const withSignal = (ms, signal) => (signal ? AbortSignal.any([AbortSignal.timeout(ms), signal]) : AbortSignal.timeout(ms));
+
+/** Prompt 25: grensene klientene skal bruke. clientTimeoutS = maks(motor) × (forsøk + 1) + 10. */
+export function aiLimits(st = settings()) {
+  const t = aiTimeoutsOf(st);
+  const engines = { gemini: t.gemini, groq: t.groq, ollama: t.ollama, roboflow: t.roboflow };
+  return { engines, retries: t.retries, onTimeout: t.onTimeout, clientTimeoutS: Math.max(...Object.values(engines)) * (t.retries + 1) + 10, jobAfterS: 4 };
+}
+
 export const taskEngines = (st = settings()) => Object.fromEntries(Object.entries(TASKS).map(([k, t]) => [k, st.aiTasks?.[k] ?? t.engine]));
 
 /* ---------------- ai_log: hvert kall, så feil kan feilsøkes ---------------- */
@@ -155,15 +174,20 @@ db.exec(`CREATE TABLE IF NOT EXISTS ai_log (
   id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, task TEXT, engine TEXT, model TEXT,
   prompt_len INTEGER, ms INTEGER, status TEXT, error TEXT)`);
 if (!db.prepare('PRAGMA table_info(ai_log)').all().some((c) => c.name === 'timeout_engine')) db.exec('ALTER TABLE ai_log ADD COLUMN timeout_engine TEXT'); // prompt 23
-const insLog = db.prepare('INSERT INTO ai_log(ts,task,engine,model,prompt_len,ms,status,error,timeout_engine) VALUES(?,?,?,?,?,?,?,?,?)');
+// Prompt 25: grensen som gjaldt (limit_s) og laget som kuttet (layer: ollama/gemini/groq = kallet til motoren, worker = jobben).
+for (const [col, def] of [['limit_s', 'INTEGER'], ['layer', 'TEXT']]) if (!db.prepare('PRAGMA table_info(ai_log)').all().some((c) => c.name === col)) db.exec(`ALTER TABLE ai_log ADD COLUMN ${col} ${def}`);
+// ISO2: loggen er per bruker (AI-motorene er felles serveroppsett, men kallene og svarene hører til brukeren som gjorde dem).
+addUserCol('ai_log');
+const insLog = db.prepare('INSERT INTO ai_log(ts,task,engine,model,prompt_len,ms,status,error,timeout_engine,limit_s,layer,user_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)');
 let logCount = 0;
-export function logAi({ task = 'text', engine, model = null, promptLen = 0, ms = 0, status = 'ok', error = null, timeoutEngine = null }) {
+export function logAi({ task = 'text', engine, model = null, promptLen = 0, ms = 0, status = 'ok', error = null, timeoutEngine = null, limitS = null, layer = null }) {
   try {
-    insLog.run(Date.now(), task, engine, model, promptLen, Math.round(ms), status, error ? String(error).slice(0, 500) : null, timeoutEngine);
+    const lim = limitS ?? (TIMEOUT_ENGINES.includes(engine) ? aiTimeoutsOf()[engine] : null);
+    insLog.run(Date.now(), task, engine, model, promptLen, Math.round(ms), status, error ? String(error).slice(0, 500) : null, timeoutEngine, lim, layer ?? (timeoutEngine ? timeoutEngine : null), me());
     if (++logCount % 200 === 0) db.prepare('DELETE FROM ai_log WHERE id <= (SELECT max(id) - 2000 FROM ai_log)').run();
   } catch (e) { console.warn('[ai] logg', e.message); }
 }
-export const aiLog = (limit = 50) => db.prepare('SELECT ts, task, engine, model, prompt_len AS promptLen, ms, status, error, timeout_engine AS timeoutEngine FROM ai_log ORDER BY id DESC LIMIT ?').all(Math.min(500, Math.max(1, limit)));
+export const aiLog = (limit = 50, u = me()) => db.prepare('SELECT ts, task, engine, model, prompt_len AS promptLen, ms, round(ms / 100.0) / 10.0 AS elapsedS, limit_s AS limitS, layer, status, error, timeout_engine AS timeoutEngine FROM ai_log WHERE user_id=? ORDER BY id DESC LIMIT ?').all(u, Math.min(500, Math.max(1, limit)));
 export const GEMINI_DEFAULT = 'gemini-flash-latest';
 export const GROQ_DEFAULT = 'llama-3.3-70b-versatile';
 export const GROQ_VISION_DEFAULT = 'meta-llama/llama-4-scout-17b-16e-instruct';
@@ -224,18 +248,62 @@ async function ollamaReachable(base) {
   catch (e) { Object.assign(ollamaProbe, { at: Date.now(), ok: false, err: netErr('Ollama', base, e).message }); }
   return ollamaProbe;
 }
-async function ollamaChat(st, messages, schema, { timeout, temperature, model }) {
+// Prompt 25: Ollama strømmer (stream: true). Tidsgrensen gjelder tid uten nye tokens (første token inkludert, som også dekker
+// innlasting av modellen), ikke total tid. keep_alive: 10m holder modellen i minnet mellom søkene. Et svar som strømmer i det
+// uendelige stoppes etter OLLAMA_MAX_TOTAL (10 min).
+const OLLAMA_MAX_TOTAL = 10 * 60_000;
+export const OLLAMA_KEEP_ALIVE = '10m';
+async function ollamaChat(st, messages, schema, { timeout, temperature, model, signal = null }) {
   const useModel = model || st.ollamaModel;
   const base = st.ollamaUrl.replace(/\/$/, '');
   const probe = await ollamaReachable(base);
   if (!probe.ok) throw Object.assign(new Error(probe.err ?? `Ollama kan ikke nås på ${base}`), { noRetry: true, net: true });
-  let res;
-  try { res = await fetch(`${base}/api/chat`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(timeout),
-    body: JSON.stringify({ model: useModel, stream: false, format: forOllama(lowerTypes(schema)), options: { temperature }, messages }),
-  }); } catch (e) { ollamaProbe.at = 0; throw netErr('Ollama', base, e); }
-  if (!res.ok) throw await httpErr('Ollama', res);
-  return { model: useModel, data: parseJson('Ollama', (await res.json()).message?.content) };
+  const ctrl = new AbortController();
+  let idle = null, timedOut = false;
+  const arm = () => { clearTimeout(idle); idle = setTimeout(() => { timedOut = true; ctrl.abort(new DOMException('Ollama svarte ikke', 'TimeoutError')); }, timeout); };
+  const total = setTimeout(() => { timedOut = true; ctrl.abort(new DOMException('Ollama svarte ikke', 'TimeoutError')); }, Math.max(timeout, OLLAMA_MAX_TOTAL));
+  const onUser = () => ctrl.abort(signal.reason ?? cancelled());
+  if (signal?.aborted) throw cancelled();
+  signal?.addEventListener('abort', onUser, { once: true });
+  const fail = (e) => {
+    if (signal?.aborted) return cancelled();
+    if (timedOut) return Object.assign(new Error('Ollama svarte ikke innen tidsfristen'), { noRetry: true, net: true, timeout: true });
+    return e;
+  };
+  arm();
+  try {
+    let res;
+    try { res = await fetch(`${base}/api/chat`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctrl.signal,
+      body: JSON.stringify({ model: useModel, stream: true, keep_alive: OLLAMA_KEEP_ALIVE, format: forOllama(lowerTypes(schema)), options: { temperature }, messages }),
+    }); } catch (e) { ollamaProbe.at = 0; throw fail(netErr('Ollama', base, e)); }
+    if (!res.ok) throw await httpErr('Ollama', res);
+    // NDJSON: én linje per bit, {"message":{"content":"…"},"done":false} … {"done":true}. Et vanlig JSON-svar (én linje) virker også.
+    let content = '', buf = '', err = null;
+    const take = (line) => {
+      if (!line.trim()) return;
+      let j; try { j = JSON.parse(line); } catch { return; }
+      if (j.error) err = Object.assign(new Error(`Ollama svarte: ${String(j.error).slice(0, 200)}`), { noRetry: true });
+      content += j.message?.content ?? j.response ?? '';
+    };
+    const dec = new TextDecoder();
+    try {
+      if (res.body?.getReader) {
+        const reader = res.body.getReader();
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          arm();
+          buf += dec.decode(value, { stream: true });
+          let nl;
+          while ((nl = buf.indexOf('\n')) >= 0) { take(buf.slice(0, nl)); buf = buf.slice(nl + 1); }
+        }
+      } else buf = await res.text();
+    } catch (e) { throw fail(netErr('Ollama', base, e)); }
+    take(buf + dec.decode());
+    if (err) throw err;
+    return { model: useModel, data: parseJson('Ollama', content) };
+  } finally { clearTimeout(idle); clearTimeout(total); signal?.removeEventListener('abort', onUser); }
 }
 
 /* ---------------- Gemini ---------------- */
@@ -257,7 +325,7 @@ export function pickGemini(names, want = '') {
   const rank = (n) => (n === GEMINI_DEFAULT ? 1000 : 0) + ver(n) * 10 + (/flash/.test(n) ? 5 : 0) - (/lite/.test(n) ? 3 : 0) - (/preview/.test(n) ? 2 : 0);
   return pool.sort((a, b) => rank(b) - rank(a))[0] ?? null;
 }
-async function geminiGenerate(parts, { schema, timeout, temperature, model, startKey = null }) {
+async function geminiGenerate(parts, { schema, timeout, temperature, model, startKey = null, signal = null }) {
   if (!hasGemini()) throw Object.assign(new Error('Gemini-nøkkel mangler (Innstillinger → AI-motor)'), { noRetry: true });
   const want = model || GEMINI_DEFAULT;
   let m = geminiResolved[want] ?? want;
@@ -267,7 +335,7 @@ async function geminiGenerate(parts, { schema, timeout, temperature, model, star
     let res;
     // geminiFetch prøver reservenøklene når en nøkkel har brukt opp kvoten (429) eller er ugyldig.
     try { res = await geminiFetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(m)}:generateContent`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(timeout), startKey,
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: withSignal(timeout, signal), startKey,
       body: JSON.stringify({ contents: [{ parts }], generationConfig: { temperature, responseMimeType: 'application/json', ...(schema ? { responseSchema: forGemini(schema) } : {}), ...think } }),
     }); } catch (e) { throw Object.assign(netErr('Gemini', null, e), { keyId: e.geminiKeyId ?? startKey }); }
     if (res.ok) {
@@ -292,13 +360,13 @@ async function geminiGenerate(parts, { schema, timeout, temperature, model, star
 
 /* ---------------- Groq (OpenAI-kompatibelt) ---------------- */
 
-async function groqChat(content, schema, { timeout, temperature, model }) {
+async function groqChat(content, schema, { timeout, temperature, model, signal = null }) {
   const key = secret('groqKey');
   if (!key) throw Object.assign(new Error('Groq-nøkkel mangler (Innstillinger → AI-motor)'), { noRetry: true });
   const sys = `Svar KUN med ett JSON-objekt, uten forklaring. Det skal følge dette JSON-skjemaet:\n${JSON.stringify(lowerTypes(schema))}`;
   let res;
   try { res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(timeout),
+    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` }, signal: withSignal(timeout, signal),
     body: JSON.stringify({ model, temperature, response_format: { type: 'json_object' }, messages: [{ role: 'system', content: sys }, { role: 'user', content }] }),
   }); } catch (e) { throw netErr('Groq', null, e); }
   if (!res.ok) throw await httpErr('Groq', res);
@@ -436,37 +504,45 @@ async function lowConfCheck(res, image, mime, st, log) {
 /* ---------------- Tekst → JSON (sammendrag, søk, Mat, RSS, Finn …) ---------------- */
 
 // Valgt motor først, så reservene. Svarer { provider, model, data }. Feilen sier hva hver motor svarte.
-export async function textJson(prompt, schema, { timeout = 30_000, temperature = 0.2, force = null, task = 'text', status = () => {} } = {}) {
-  // timeout er beholdt for eldre kallere; tidsgrensen per motor kommer nå fra Innstillinger → AI → Tidsgrenser (prompt 23).
-  void timeout;
+// Prompt 25: ingen fast tidsgrense her lenger. Grensen per motor slås opp i Innstillinger → AI → Tidsgrenser ved hvert kall
+// (timeout fra eldre kallere ignoreres). signal = brukerens Avbryt; onEngine(engine, limitS) når en motor starter;
+// status(text, info) ved tidsavbrudd («✦ Ollama svarte ikke innen 60 s · prøver Groq …»).
+export async function textJson(prompt, schema, { temperature = 0.2, force = null, task = 'text', status = () => {}, signal = null, onEngine = () => {} } = {}) {
   const st = settings();
-  const errors = [];
+  const errors = [], timeouts = [];
   const list = engineOrder(st, { force, task: TASKS[task] ? task : null });
+  const limits = aiTimeoutsOf(st);
   for (let idx = 0; idx < list.length; idx++) {
+    if (signal?.aborted) throw cancelled();
     const p = list[idx];
     const t0 = Date.now();
     const model = p === 'groq' ? (st.groqModel || GROQ_DEFAULT) : p === 'gemini' ? (st.geminiModel || GEMINI_DEFAULT) : (st.ollamaTextModel || st.ollamaModel);
+    try { onEngine(p, limits[p]); } catch { /* bare visning */ }
     try {
-      const r = await runEngine(p, st, (ms, startKey) => (p === 'gemini' ? geminiGenerate([{ text: prompt }], { schema, timeout: ms, temperature, model: st.geminiModel, startKey })
-        : p === 'groq' ? groqChat(prompt, schema, { timeout: ms, temperature, model: st.groqModel || GROQ_DEFAULT })
-        : ollamaChat(st, [{ role: 'user', content: prompt }], schema, { timeout: ms, temperature, model: st.ollamaTextModel || st.ollamaModel })), { status, task, onTimeout: 'next' });
-      logAi({ task, engine: p, model: r.model, promptLen: prompt.length, ms: Date.now() - t0 });
-      return { provider: providerName(p), engine: p, model: r.model, data: r.data };
+      const r = await runEngine(p, st, (ms, startKey) => (p === 'gemini' ? geminiGenerate([{ text: prompt }], { schema, timeout: ms, temperature, model: st.geminiModel, startKey, signal })
+        : p === 'groq' ? groqChat(prompt, schema, { timeout: ms, temperature, model: st.groqModel || GROQ_DEFAULT, signal })
+        : ollamaChat(st, [{ role: 'user', content: prompt }], schema, { timeout: ms, temperature, model: st.ollamaTextModel || st.ollamaModel, signal })), { status, task, onTimeout: 'next', signal });
+      logAi({ task, engine: p, model: r.model, promptLen: prompt.length, ms: Date.now() - t0, timeoutEngine: timeouts[0]?.engine ?? null, layer: null });
+      return { provider: providerName(p), engine: p, model: r.model, data: r.data, timeouts };
     } catch (e) {
-      logAi({ task, engine: p, model, promptLen: prompt.length, ms: Date.now() - t0, status: errKind(e), error: e.message, timeoutEngine: e.timeout ? p : null });
-      markDown(p, e); errors.push(`${providerName(p)}: ${e.timeout ? `svarte ikke innen tidsfristen (${e.timeoutSecs ?? aiTimeoutsOf(st)[p]} s)` : e.message}`);
+      if (e.cancelled || signal?.aborted) { logAi({ task, engine: p, model, promptLen: prompt.length, ms: Date.now() - t0, status: 'avbrutt', error: 'Avbrutt av brukeren', layer: 'client' }); throw cancelled(); }
+      logAi({ task, engine: p, model, promptLen: prompt.length, ms: Date.now() - t0, status: errKind(e), error: e.timeout ? e.limitText ?? e.message : e.message, timeoutEngine: e.timeout ? p : null, layer: e.timeout ? p : null });
+      markDown(p, e); errors.push(`${providerName(p)}: ${e.timeout ? `svarte ikke innen tidsfristen (${e.timeoutSecs ?? limits[p]} s)` : e.message}`);
+      if (e.timeout) timeouts.push({ engine: p, limitS: e.timeoutSecs ?? limits[p], elapsedS: e.elapsedS ?? Math.round((Date.now() - t0) / 100) / 10, text: e.limitText ?? `${providerName(p)} svarte ikke innen ${limits[p]} s` });
       // Tidsavbrudd: neste motor, også når reserve er av (gjelder ikke «Test tilkobling», som tvinger én motor).
       if (e.timeout && !force) afterTimeout(list, idx, st);
+      if (e.timeout) { const nx = list[idx + 1]; status(timeoutText(p, e.timeoutSecs ?? limits[p], nx ? `prøver ${providerName(nx)} …` : 'bruker vanlig søk …'), { timeoutEngine: p, next: nx ?? null }); }
     }
   }
   const err = new Error(errors.length ? errors.join(' · ') : 'Ingen AI-motor tilgjengelig');
   err.errors = errors;
+  err.timeouts = timeouts;
   throw err;
 }
 
-// Eldre navn: gir bare dataene. Kallerne har alltid en heuristisk reserve.
-export async function askJson(prompt, schema, { timeout = 30_000, task = 'text' } = {}) {
-  return (await textJson(prompt, schema, { timeout, task })).data;
+// Eldre navn: gir bare dataene. Kallerne har alltid en heuristisk reserve. timeout ignoreres (grensen per motor gjelder).
+export async function askJson(prompt, schema, { task = 'text', signal = null } = {}) {
+  return (await textJson(prompt, schema, { task, signal })).data;
 }
 
 // Hva slags feil? Brukes i ai_log og i feilmeldingen i AI-søket.

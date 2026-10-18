@@ -2,13 +2,18 @@
 // 1) Hybrid gjenfinning: BM25 (SQLite FTS5) + valgfri vektor-likhet (embeddings fra Ollama eller Gemini), slått sammen med RRF.
 // 2) Svar: språkmodellen får treffene og ferdig utregnede summer, og må vise til treffene. Tall i svaret som ikke finnes
 //    i grunnlaget gjør at svaret forkastes og det regelbaserte sammendraget brukes i stedet – modellen får ikke finne på tall.
-import { db, settings, secret } from './db.js';
+import { db, settings, secret, me, addUserCol } from './db.js';
 import { geminiFetch, hasGemini } from './gemini-keys.js';
-import { textJson } from './ai.js';
+import { textJson, aiTimeoutsOf, AiCancelled, OLLAMA_KEEP_ALIVE } from './ai.js';
 
 const q = (sql) => db.prepare(sql);
 db.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS fh_fts USING fts5(kind UNINDEXED, ref UNINDEXED, text, tokenize = 'unicode61 remove_diacritics 2');
 CREATE TABLE IF NOT EXISTS fh_embed (kind TEXT NOT NULL, ref TEXT NOT NULL, model TEXT NOT NULL, hash TEXT NOT NULL, vec BLOB NOT NULL, PRIMARY KEY (kind, ref, model));`);
+// ISO2: søket er per bruker. Indeksen (avledet data, bygges på nytt fra tabellene) har brukeren i en egen kolonne, og
+// embeddings merkes med eieren. Den gamle fh_fts-indeksen brukes ikke lenger (den slettes ikke).
+db.exec("CREATE VIRTUAL TABLE IF NOT EXISTS fh_fts2 USING fts5(kind UNINDEXED, ref UNINDEXED, uid UNINDEXED, text, tokenize = 'unicode61 remove_diacritics 2')");
+addUserCol('fh_embed', `(SELECT user_id FROM fh_transactions t WHERE fh_embed.kind='tx' AND t.id=CAST(fh_embed.ref AS INTEGER)
+  UNION ALL SELECT user_id FROM fh_receipts r WHERE fh_embed.kind<>'tx' AND r.id=fh_embed.ref LIMIT 1)`);
 
 const MONTHS = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 const STOP = new Set(('hvor mye mange brukte brukt bruker jeg meg min mitt mine på i til av for fra med og eller hva hvilke hvilken hvilket når har hadde ' +
@@ -24,23 +29,23 @@ function signature() {
 }
 function docs() {
   const out = [];
-  const tx = q(`SELECT t.id, t.date, t.amount, t.description, t.merchant, t.note, t.ai_short, t.ai_long, c.name AS category, a.name AS account
-    FROM fh_transactions t LEFT JOIN fh_categories c ON c.id=t.category_id LEFT JOIN fh_accounts a ON a.id=t.account_id`).all();
-  for (const t of tx) out.push(['tx', String(t.id), [t.description, t.merchant !== t.description ? t.merchant : '', t.category, t.account, t.note, t.ai_short, t.ai_long].filter(Boolean).join(' · ')]);
-  // Prompt 21: kvitteringer vanlige brukere har lastet opp til en bolig, er ikke en del av regnskapet og søkes ikke i.
-  for (const r of q("SELECT id, merchant, date, total, extraction, ai_short, ai_long FROM fh_receipts WHERE status NOT IN ('rejected') AND (uploaded_by IS NULL OR uploaded_by IN (SELECT id FROM users WHERE role='admin'))").all()) {
+  const tx = q(`SELECT t.id, t.user_id, t.date, t.amount, t.description, t.merchant, t.note, t.ai_short, t.ai_long, c.name AS category, a.name AS account
+    FROM fh_transactions t LEFT JOIN fh_categories c ON c.id=t.category_id LEFT JOIN fh_accounts a ON a.id=t.account_id WHERE t.user_id IS NOT NULL`).all();
+  for (const t of tx) out.push(['tx', String(t.id), t.user_id, [t.description, t.merchant !== t.description ? t.merchant : '', t.category, t.account, t.note, t.ai_short, t.ai_long].filter(Boolean).join(' · ')]);
+  // ISO2: hver kvittering tilhører brukeren som eier den (user_id), og søkes bare i av den brukeren.
+  for (const r of q("SELECT id, user_id, merchant, date, total, extraction, ai_short, ai_long FROM fh_receipts WHERE status NOT IN ('rejected') AND user_id IS NOT NULL").all()) {
     let lines = [];
     try { lines = JSON.parse(r.extraction ?? 'null')?.lines ?? []; } catch { /* ugyldig */ }
-    out.push(['rc', r.id, [r.merchant, r.ai_short, r.ai_long, lines.map((l) => l.description).join(', ')].filter(Boolean).join(' · ')]);
-    lines.forEach((l, i) => l.description && out.push(['line', `${r.id}:${i}`, `${l.description} · ${r.merchant ?? ''}`]));
+    out.push(['rc', r.id, r.user_id, [r.merchant, r.ai_short, r.ai_long, lines.map((l) => l.description).join(', ')].filter(Boolean).join(' · ')]);
+    lines.forEach((l, i) => l.description && out.push(['line', `${r.id}:${i}`, r.user_id, `${l.description} · ${r.merchant ?? ''}`]));
   }
   return out;
 }
 export function ensureIndex() {
   const sig = signature();
   if (sig === builtSig) return;
-  const ins = q('INSERT INTO fh_fts(kind, ref, text) VALUES(?,?,?)');
-  db.transaction(() => { q('DELETE FROM fh_fts').run(); for (const d of docs()) ins.run(...d); })();
+  const ins = q('INSERT INTO fh_fts2(kind, ref, uid, text) VALUES(?,?,?,?)');
+  db.transaction(() => { q('DELETE FROM fh_fts2').run(); for (const d of docs()) ins.run(...d); })();
   builtSig = sig;
   embedLater();
 }
@@ -56,14 +61,16 @@ const embedModel = () => {
   if (hasGemini()) return { kind: 'gemini', model: 'gemini-embedding-001' };
   return null;
 };
-async function embed(texts, m) {
+// Prompt 25: grensen for embeddings er motorens grense fra Innstillinger → AI → Tidsgrenser (ikke fast 30 s), lest ved hvert kall.
+const embedSignal = (kind, signal) => { const t = AbortSignal.timeout(aiTimeoutsOf()[kind] * 1000); return signal ? AbortSignal.any([t, signal]) : t; };
+async function embed(texts, m, signal = null) {
   if (m.kind === 'ollama') {
-    const res = await fetch(`${settings().ollamaUrl.replace(/\/$/, '')}/api/embed`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(30_000), body: JSON.stringify({ model: m.model, input: texts }) });
+    const res = await fetch(`${settings().ollamaUrl.replace(/\/$/, '')}/api/embed`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: embedSignal('ollama', signal), body: JSON.stringify({ model: m.model, input: texts, keep_alive: OLLAMA_KEEP_ALIVE }) });
     if (!res.ok) throw new Error(`Ollama embed ${res.status}`);
     return (await res.json()).embeddings;
   }
   const res = await geminiFetch(`https://generativelanguage.googleapis.com/v1beta/models/${m.model}:batchEmbedContents`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(30_000),
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: embedSignal('gemini', signal),
     body: JSON.stringify({ requests: texts.map((t) => ({ model: `models/${m.model}`, content: { parts: [{ text: t }] }, outputDimensionality: 768 })) }),
   });
   if (!res.ok) throw new Error(`Gemini embed ${res.status}`);
@@ -80,23 +87,23 @@ function embedLater() {
   setTimeout(async () => {
     try {
       const have = new Map(q('SELECT kind||\'/\'||ref k, hash FROM fh_embed WHERE model=?').all(m.model).map((r) => [r.k, r.hash]));
-      const todo = q("SELECT kind, ref, text FROM fh_fts WHERE kind<>'line'").all().filter((d) => have.get(`${d.kind}/${d.ref}`) !== hashOf(d.text)).slice(0, 400);
-      const put = q('INSERT OR REPLACE INTO fh_embed(kind, ref, model, hash, vec) VALUES(?,?,?,?,?)');
+      const todo = q("SELECT kind, ref, uid, text FROM fh_fts2 WHERE kind<>'line'").all().filter((d) => have.get(`${d.kind}/${d.ref}`) !== hashOf(d.text)).slice(0, 400);
+      const put = q('INSERT OR REPLACE INTO fh_embed(kind, ref, model, hash, vec, user_id) VALUES(?,?,?,?,?,?)');
       for (let i = 0; i < todo.length; i += 32) {
         const part = todo.slice(i, i + 32), vecs = await embed(part.map((d) => d.text), m);
-        db.transaction(() => part.forEach((d, j) => vecs[j] && put.run(d.kind, d.ref, m.model, hashOf(d.text), toBlob(vecs[j]))))();
+        db.transaction(() => part.forEach((d, j) => vecs[j] && put.run(d.kind, d.ref, m.model, hashOf(d.text), toBlob(vecs[j]), d.uid)))();
       }
     } catch (e) { console.warn('[finans] embeddings:', e.message); }
     embedding = false;
   }, 500).unref?.();
 }
-async function vectorHits(text, limit = 30) {
+async function vectorHits(text, limit = 30, signal = null) {
   const m = embedModel();
   if (!m) return [];
   try {
-    const [qv] = await embed([text], m);
+    const [qv] = await embed([text], m, signal);
     const qn = Math.hypot(...qv);
-    return q('SELECT kind, ref, vec FROM fh_embed WHERE model=?').all(m.model).map((r) => {
+    return q('SELECT kind, ref, vec FROM fh_embed WHERE model=? AND user_id=?').all(m.model, me()).map((r) => {
       const v = fromBlob(r.vec); let dot = 0, n = 0;
       for (let i = 0; i < v.length; i++) { dot += v[i] * qv[i]; n += v[i] * v[i]; }
       return { kind: r.kind, ref: r.ref, score: dot / (Math.sqrt(n) * qn || 1) };
@@ -140,13 +147,13 @@ const ftsQuery = (words) => words.map((w) => `"${w.replace(/"/g, '')}"*`).join('
 const kr = (v) => new Intl.NumberFormat('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Math.abs(v)).replace(/ /g, ' ');
 const dd = (d) => (d ? `${d.slice(8, 10)}.${d.slice(5, 7)}.${d.slice(0, 4)}` : '');
 
-function hydrate(kind, ref) {
+function hydrate(kind, ref, u = me()) {
   if (kind === 'tx') {
-    const t = q('SELECT t.*, c.name AS category, c.color, c.kind AS ckind FROM fh_transactions t LEFT JOIN fh_categories c ON c.id=t.category_id WHERE t.id=?').get(+ref);
+    const t = q('SELECT t.*, c.name AS category, c.color, c.kind AS ckind FROM fh_transactions t LEFT JOIN fh_categories c ON c.id=t.category_id WHERE t.id=? AND t.user_id=?').get(+ref, u);
     return t && { type: 'tx', id: String(t.id), txId: t.id, description: t.merchant || t.description, date: t.date, amount: t.amount / 100, source: 'Transaksjon', category: t.category ?? 'Ukategorisert', color: t.color ?? '#A0A0AA', transfer: t.ckind === 'transfer' };
   }
   const [id, li] = ref.split(':');
-  const r = q(`SELECT * FROM fh_receipts WHERE id=? AND (uploaded_by IS NULL OR uploaded_by IN (SELECT id FROM users WHERE role='admin'))`).get(id);
+  const r = q('SELECT * FROM fh_receipts WHERE id=? AND user_id=?').get(id, u);
   if (!r) return null;
   let lines = [];
   try { lines = JSON.parse(r.extraction ?? 'null')?.lines ?? []; } catch { /* ugyldig */ }
@@ -157,8 +164,9 @@ function hydrate(kind, ref) {
   return { type: 'receipt', id: r.id, txId: r.transaction_id, receiptId: r.id, description: r.merchant ?? 'Kvittering', date: r.date, amount: r.total != null ? -r.total / 100 : null, source: r.status === 'booked' ? 'Kvittering · bokført' : 'Kvittering', color: '#9DBDFF' };
 }
 
-export async function search(text, { limit = 12 } = {}) {
+export async function search(text, { limit = 12, signal = null } = {}) {
   ensureIndex();
+  const u = me();
   const pq = parseQuery(text);
   const ranks = new Map();
   const bump = (kind, ref, rank, why) => {
@@ -167,15 +175,15 @@ export async function search(text, { limit = 12 } = {}) {
     ranks.set(k, cur);
   };
   if (pq.words.length) {
-    const rows = q(`SELECT kind, ref, snippet(fh_fts, 2, '«', '»', '…', 10) AS snip FROM fh_fts WHERE fh_fts MATCH ? ORDER BY bm25(fh_fts) LIMIT 300`).all(ftsQuery(pq.words));
+    const rows = q(`SELECT kind, ref, snippet(fh_fts2, 3, '«', '»', '…', 10) AS snip FROM fh_fts2 WHERE fh_fts2 MATCH ? AND uid=? ORDER BY bm25(fh_fts2) LIMIT 300`).all(ftsQuery(pq.words), u);
     rows.forEach((r, i) => bump(r.kind, r.ref, i, `Treff i teksten: ${r.snip}`));
   }
-  const vec = await vectorHits(text);
+  const vec = await vectorHits(text, 30, signal);
   vec.forEach((r, i) => bump(r.kind, r.ref, i, `Lignende innhold (${Math.round(r.score * 100)} % likhet)`));
   // Uten søkeord (f.eks. «hvor mye brukte jeg i september?»): alle transaksjoner i perioden.
-  if (!pq.words.length && pq.from) q('SELECT id FROM fh_transactions WHERE date>=? AND date<? ORDER BY abs(amount) DESC LIMIT 200').pluck().all(pq.from, pq.to).forEach((id, i) => bump('tx', String(id), i, `I perioden ${pq.label}`));
+  if (!pq.words.length && pq.from) q('SELECT id FROM fh_transactions WHERE user_id=? AND date>=? AND date<? ORDER BY abs(amount) DESC LIMIT 200').pluck().all(u, pq.from, pq.to).forEach((id, i) => bump('tx', String(id), i, `I perioden ${pq.label}`));
 
-  let hits = [...ranks.values()].map((r) => { const h = hydrate(r.kind, r.ref); return h && { ...h, score: r.score, reason: r.why }; }).filter(Boolean);
+  let hits = [...ranks.values()].map((r) => { const h = hydrate(r.kind, r.ref, u); return h && { ...h, score: r.score, reason: r.why }; }).filter(Boolean);
   if (pq.from) hits = hits.filter((h) => h.date && h.date >= pq.from && h.date < pq.to);
   hits.sort((a, b) => b.score - a.score);
 
@@ -218,9 +226,11 @@ export const markAiDown = (ms = 90_000, why = '') => { aiDownUntil = Date.now() 
 // Kaster AiUnavailable når motoren er nede eller ikke svarer; da bruker kallet vanlig søk.
 export class AiUnavailable extends Error {}
 // force = brukeren slo på ✦ AI selv: pausen etter en feil hoppes over, så AI faktisk prøves (og feilen vises på nytt).
-export async function answer(text, { force = false } = {}) {
+// Prompt 25: signal (Avbryt), onEngine(engine, limitS) og status(text) brukes av AI-søk som jobb. Ingen fast tidsgrense her.
+export async function answer(text, { force = false, signal = null, onEngine, status } = {}) {
   if (!force && aiDown()) throw new AiUnavailable(`svarte ikke for under 90 sekunder siden${aiDownWhy ? ': ' + aiDownWhy : ''}`);
-  const r = await search(text);
+  const r = await search(text, { signal });
+  if (signal?.aborted) throw new AiCancelled();
   const fallback = heuristicAnswer(text, r);
   let engine = 'AI';
   if (!r.all) return { answer: fallback, hits: r.hits, engine: 'Uten AI', facts: r.facts, empty: true };
@@ -233,25 +243,33 @@ Fasit (regnet ut av systemet): periode=${r.facts.period ?? 'alle'}; antall trans
 Grunnlag:
 ${ctx}`;
   try {
-    const out = await textJson(prompt, { type: 'object', properties: { answer: { type: 'string' } }, required: ['answer'] }, { timeout: 20_000, task: 'search' });
+    const out = await textJson(prompt, { type: 'object', properties: { answer: { type: 'string' } }, required: ['answer'] }, { task: 'search', signal, onEngine, status });
     engine = out.provider;
     const res = out.data;
     const a = String(res?.answer ?? '').trim().slice(0, 800);
     const allowed = [r.facts.outSum, r.facts.inSum, r.facts.count, r.hits.length, ...r.hits.flatMap((h, i) => [Math.abs(h.amount ?? 0), i + 1, +h.date?.slice(0, 4), +h.date?.slice(5, 7), +h.date?.slice(8, 10)]), ...[...String(text).matchAll(/\d+/g)].map((m) => +m[0])].filter(Number.isFinite);
-    if (a && numbersOk(a, allowed)) return { answer: a, hits: r.hits, engine, facts: r.facts };
-    return { answer: fallback, hits: r.hits, engine: `${engine} (kontrollert – tall fra systemet)`, facts: r.facts };
+    // Svarte en motor etter at en annen ikke svarte i tide, følger tidsavbruddet med («Ollama svarte ikke innen 60 s»).
+    const to = out.timeouts?.length ? { timeouts: out.timeouts, timeoutNotice: out.timeouts.map((x) => x.text).join(' · ') } : {};
+    if (a && numbersOk(a, allowed)) return { answer: a, hits: r.hits, engine, facts: r.facts, ...to };
+    return { answer: fallback, hits: r.hits, engine: `${engine} (kontrollert – tall fra systemet)`, facts: r.facts, ...to };
   } catch (e) {
+    if (e instanceof AiCancelled || e.cancelled) throw e;
     markAiDown(90_000, e.message);
-    throw Object.assign(new AiUnavailable(e.message), { kind: aiErrorKind(e.message) });
+    throw Object.assign(new AiUnavailable(e.message), { kind: aiErrorKind(e.message, e.timeouts), timeouts: e.timeouts ?? [] });
   }
 }
 
 // Feilen fra AI-motorene → kort, forståelig årsak til svar-kortet (tekstmeldingen fra hver motor følger med under).
-export function aiErrorKind(msg) {
+export function aiErrorKind(msg, timeouts = []) {
   const m = String(msg ?? '');
+  // Prompt 25: motoren og grensen som faktisk gjaldt, f.eks. «Ollama svarte ikke innen 60 s.»
+  if (timeouts?.length) return { kind: 'timeout', text: `${timeouts.map((x) => x.text).join(', ')}.`, engine: timeouts[0].engine, limitS: timeouts[0].limitS };
   if (/nøkkel mangler/i.test(m) && !/svarte/i.test(m)) return { kind: 'key', text: 'AI-nøkkel mangler. Legg den inn under Innstillinger → AI og tolkning.' };
   if (/svarte 40[13]|API key not valid|invalid api key|PERMISSION_DENIED|unauthori/i.test(m)) return { kind: 'auth', text: 'AI-nøkkelen ble avvist (401/403). Sjekk nøkkelen under Innstillinger → AI og tolkning.' };
-  if (/tidsfristen|timeout|tidsavbrudd/i.test(m)) return { kind: 'timeout', text: 'AI-motoren svarte ikke innen 20 sekunder.' };
+  if (/tidsfristen|timeout|tidsavbrudd/i.test(m)) {
+    const x = m.match(/(Gemini|Groq|Ollama)[^·]*?\((\d+) s\)/);
+    return { kind: 'timeout', text: x ? `${x[1]} svarte ikke innen ${x[2]} s.` : 'AI-motoren svarte ikke innen tidsgrensen.' };
+  }
   if (/modell|svarte 404|not found/i.test(m)) return { kind: 'model', text: 'AI-modellen finnes ikke eller kan ikke brukes. Velg en annen modell under Innstillinger → AI og tolkning.' };
   if (/svarte 429|quota|rate limit/i.test(m)) return { kind: 'quota', text: 'AI-kvoten er brukt opp for nå. Prøv igjen senere, eller bytt motor.' };
   if (/kan ikke nås|ECONNREFUSED|ENOTFOUND/i.test(m)) return { kind: 'network', text: 'AI-motoren kan ikke nås fra serveren.' };
@@ -260,8 +278,8 @@ export function aiErrorKind(msg) {
 
 export function suggestions() {
   const now = new Date(), prev = MONTHS[(now.getMonth() + 11) % 12];
-  const topCat = q(`SELECT c.name FROM fh_transactions t JOIN fh_categories c ON c.id=t.category_id WHERE c.kind='expense' AND t.date>=date('now','-90 days') GROUP BY c.id ORDER BY sum(-t.amount) DESC LIMIT 1`).pluck().get();
-  const topMerchant = q(`SELECT coalesce(merchant, description) FROM fh_transactions WHERE amount<0 AND date>=date('now','-90 days') GROUP BY coalesce(merchant, description) ORDER BY count(*) DESC LIMIT 1`).pluck().get();
+  const topCat = q(`SELECT c.name FROM fh_transactions t JOIN fh_categories c ON c.id=t.category_id WHERE t.user_id=? AND c.kind='expense' AND t.date>=date('now','-90 days') GROUP BY c.id ORDER BY sum(-t.amount) DESC LIMIT 1`).pluck().get(me());
+  const topMerchant = q(`SELECT coalesce(merchant, description) FROM fh_transactions WHERE user_id=? AND amount<0 AND date>=date('now','-90 days') GROUP BY coalesce(merchant, description) ORDER BY count(*) DESC LIMIT 1`).pluck().get(me());
   return [`Hvor mye brukte jeg på strøm i ${prev}?`, topCat && `Hva brukte jeg på ${topCat.toLowerCase()} i år?`, topMerchant && `Hvor ofte handlet jeg på ${topMerchant}?`, 'Hvilke kvitteringer har melk?', 'Hvor mye fikk jeg inn forrige måned?'].filter(Boolean).slice(0, 5);
 }
 
@@ -313,9 +331,9 @@ export function interpret(text, now = new Date()) {
   return out;
 }
 
-const txRows = () => q(`SELECT t.id, t.date, t.amount, t.description, t.merchant, t.note, t.ai_short, c.name AS category, c.kind AS ckind, c.color
-  FROM fh_transactions t LEFT JOIN fh_categories c ON c.id=t.category_id`).all();
-const receiptRows = () => q("SELECT id, merchant, date, total, status, extraction, transaction_id FROM fh_receipts WHERE status NOT IN ('rejected') AND (uploaded_by IS NULL OR uploaded_by IN (SELECT id FROM users WHERE role='admin'))").all().map((r) => {
+const txRows = (u = me()) => q(`SELECT t.id, t.date, t.amount, t.description, t.merchant, t.note, t.ai_short, c.name AS category, c.kind AS ckind, c.color
+  FROM fh_transactions t LEFT JOIN fh_categories c ON c.id=t.category_id WHERE t.user_id=?`).all(u);
+const receiptRows = (u = me()) => q("SELECT id, merchant, date, total, status, extraction, transaction_id FROM fh_receipts WHERE status NOT IN ('rejected') AND user_id=?").all(u).map((r) => {
   let lines = [];
   try { lines = JSON.parse(r.extraction ?? 'null')?.lines ?? []; } catch { /* ugyldig */ }
   return { ...r, lines: lines.filter((l) => l?.description) };
@@ -429,7 +447,7 @@ function followUps(d, hits, now) {
   const topStore = (() => { const c = new Map(); for (const h of hits) { const s = h.type === 'tx' ? h.description : h.store; if (s) c.set(s, (c.get(s) ?? 0) + 1); } return [...c].sort((a, b) => b[1] - a[1])[0]?.[0]; })();
   if (d.store) {
     out.push(`${cap(d.store)} i ${curM}`, `Største utgift hos ${d.store}`, `${cap(d.store)} over 500 kr`);
-    const rc = hits.find((h) => h.txId) && q('SELECT extraction FROM fh_receipts WHERE transaction_id=? LIMIT 1').pluck().get(hits[0].txId);
+    const rc = hits.find((h) => h.txId) && q('SELECT extraction FROM fh_receipts WHERE transaction_id=? AND user_id=? LIMIT 1').pluck().get(hits[0].txId, me());
     try { const l = JSON.parse(rc ?? 'null')?.lines?.[0]?.description; if (l) out.push(`Kvitteringer med ${fold(l).split(/\s+/)[0]}`); } catch { /* ugyldig */ }
   } else if (d.item) {
     out.push(`Sist jeg kjøpte ${d.item}`, `Kvitteringer med ${d.item} i ${prevM}`);
@@ -451,14 +469,14 @@ function followUps(d, hits, now) {
 export function suggestionGroups(now = new Date()) {
   ensureIndex();
   const curM = MONTHS[now.getMonth()], prevM = MONTHS[(now.getMonth() + 11) % 12];
-  const stores = q(`SELECT coalesce(merchant, description) n FROM fh_transactions WHERE amount<0 AND date>=date('now','-180 days') GROUP BY n ORDER BY count(*) DESC, max(date) DESC LIMIT 4`).pluck().all();
+  const stores = q(`SELECT coalesce(merchant, description) n FROM fh_transactions WHERE user_id=? AND amount<0 AND date>=date('now','-180 days') GROUP BY n ORDER BY count(*) DESC, max(date) DESC LIMIT 4`).pluck().all(me());
   const freq = new Map();
   for (const r of receiptRows()) for (const l of r.lines) {
     const w = fold(l.description).replace(/[^\p{L}\s]/gu, ' ').split(/\s+/).find((x) => x.length >= 3 && !PLAIN_STOP.has(x));
     if (w) freq.set(w, (freq.get(w) ?? 0) + 1);
   }
   const items = [...freq].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([w]) => w);
-  const review = q("SELECT count(*) FROM fh_receipts WHERE status='needs_review' AND (uploaded_by IS NULL OR uploaded_by IN (SELECT id FROM users WHERE role='admin'))").pluck().get();
+  const review = q("SELECT count(*) FROM fh_receipts WHERE status='needs_review' AND user_id=?").pluck().get(me());
   return [
     { title: 'Butikker', items: (stores.length ? stores : ['Rema 1000', 'Biltema']).map((s) => `Sist jeg var på ${s}`) },
     { title: 'Varer i kvitteringer', items: (items.length ? items : ['melk', 'tomater']).map((w) => `Kvitteringer med ${w}`) },

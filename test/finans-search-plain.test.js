@@ -26,9 +26,9 @@ await call('/settings', 'PUT', { ollamaUrl: 'http://127.0.0.1:9', provider: 'oll
 const now = new Date(), y = now.getFullYear(), m = now.getMonth();
 const day = (monthsBack, d) => new Date(y, m - monthsBack, d).toLocaleDateString('sv-SE');
 const cat = (name) => db.prepare('SELECT id FROM fh_categories WHERE name=?').pluck().get(name) ?? null;
-const insTx = db.prepare('INSERT INTO fh_transactions(date, amount, description, merchant, category_id, note, created) VALUES(?,?,?,?,?,?,?)');
+const insTx = db.prepare('INSERT INTO fh_transactions(date, amount, description, merchant, category_id, note, created,user_id) VALUES(?,?,?,?,?,?,?,\'owner\')');
 const tx = (date, kr, desc, merchant = desc, category = null, note = '') => Number(insTx.run(date, Math.round(kr * 100), desc, merchant, category && cat(category), note, Date.now()).lastInsertRowid);
-const insRc = db.prepare("INSERT INTO fh_receipts(id, status, merchant, date, total, extraction, transaction_id, created) VALUES(?,?,?,?,?,?,?,?)");
+const insRc = db.prepare("INSERT INTO fh_receipts(id, status, merchant, date, total, extraction, transaction_id, created,user_id) VALUES(?,?,?,?,?,?,?,?,'owner')");
 const rc = (id, status, merchant, date, total, lines, txId = null) => insRc.run(id, status, merchant, date, Math.round(total * 100), JSON.stringify({ merchant, lines }), txId, Date.now());
 
 const b1 = tx(day(0, 3), -349, 'Biltema Alnabru', 'Biltema Alnabru', 'Hjem');

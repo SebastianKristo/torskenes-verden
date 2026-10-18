@@ -1,19 +1,23 @@
 // Demodata fra designet, flyttet til inneværende måned. Lastes bare inn når det ikke finnes transaksjoner.
-import { db, OWNER, settings } from './db.js';
+import { db, OWNER, settings, ensureLedger } from './db.js';
 
-export function loadDemo() {
+// ISO2: demoen lastes inn i ett regnskap (brukeren u). Boliger lages bare i eierens demo (de er delte og ville ellers dukket opp hos andre).
+export function loadDemo(u = OWNER) {
+  ensureLedger(u);
   const q = (sql) => db.prepare(sql);
-  const cat = (n) => q('SELECT id FROM fh_categories WHERE name=?').get(n)?.id ?? null;
+  const cat = (n) => q('SELECT id FROM fh_categories WHERE name=? AND user_id=?').get(n, u)?.id ?? null;
+  const rcId = (k) => (u === OWNER ? `demo-${k}` : `demo-${k}-${u}`);
   const now = new Date();
   const day = (offsetMonths, d) => { const x = new Date(now.getFullYear(), now.getMonth() + offsetMonths, Math.min(d, 28)); return x.toLocaleDateString('sv-SE'); };
   db.transaction(() => {
-    q("INSERT OR IGNORE INTO fh_categories(name,color,kind,sort) VALUES('Overføring','#6B6B75','transfer',99)").run();
+    q("INSERT OR IGNORE INTO fh_categories(name,color,kind,sort,user_id) VALUES('Overføring','#6B6B75','transfer',99,?)").run(u);
     const acc = {};
     for (const [n, bank, type, l4, open, note] of [['Brukskonto', 'DNB', 'checking', '4821', 4000000, 'Hovedkonto'], ['Kredittkort', 'Bank Norwegian', 'credit', '9384', 0, 'Ramme 20 000 kr'],
       ['Sparekonto', 'DNB', 'savings', '1177', 7995000, '3,9 % rente'], ['Kontanter', 'Lommebok', 'cash', null, 65000, 'Manuell']]) {
-      acc[n] = q('INSERT INTO fh_accounts(name,bank,type,last4,opening_balance,note) VALUES(?,?,?,?,?,?) RETURNING id').get(n, bank, type, l4, open, note).id;
+      acc[n] = q('INSERT INTO fh_accounts(name,bank,type,last4,opening_balance,note,user_id) VALUES(?,?,?,?,?,?,?) RETURNING id').get(n, bank, type, l4, open, note, u).id;
     }
-    const tx = q("INSERT INTO fh_transactions(account_id,date,amount,description,merchant,category_id,source,created) VALUES(?,?,?,?,?,?,'manual',?)");
+    const txIns = q("INSERT INTO fh_transactions(account_id,date,amount,description,merchant,category_id,source,created,user_id) VALUES(?,?,?,?,?,?,'manual',?,?)");
+    const tx = { run: (...a) => txIns.run(...a, u) };
     const cur = [[16, 'REMA 1000 Bislett', 'Brukskonto', 'Mat og dagligvarer', -386.5], [15, 'Clas Ohlson', 'Kredittkort', 'Hjem', -349], [15, 'Circle K Lading', 'Kredittkort', 'Transport og lading', -612.4],
       [14, 'Fjordkraft strøm', 'Brukskonto', 'Bolig', -1284], [13, 'Kaffebrenneriet', 'Kredittkort', 'Restaurant og kafé', -89], [12, 'Lønn', 'Brukskonto', 'Inntekt', 41200],
       [11, 'Overføring sparekonto', 'Brukskonto', 'Sparing', -5000], [10, 'Ruter månedskort', 'Brukskonto', 'Transport og lading', -518], [9, 'Akademika', 'Kredittkort', 'Skole', -649],
@@ -41,10 +45,10 @@ export function loadDemo() {
       tx.run(acc.Kredittkort, day(-i, 24), -Math.round(rest * 0.2), 'XXL', 'XXL', cat('Fritid og hobby'), Date.now());
     }
     // Bankrader slik de ser ut i en DNB-/Bank Norwegian-eksport (vises under «Original banktransaksjon»).
-    const accs = Object.fromEntries(q('SELECT id, name, bank FROM fh_accounts').all().map((x) => [x.id, x]));
+    const accs = Object.fromEntries(q('SELECT id, name, bank FROM fh_accounts WHERE user_id=?').all(u).map((x) => [x.id, x]));
     const setRaw = q("UPDATE fh_transactions SET raw_bank_row=?, source='csv', external_id=? WHERE id=?");
     const mmdd = (iso) => `${iso.slice(8, 10)}.${iso.slice(5, 7)}`;
-    for (const t of q("SELECT * FROM fh_transactions WHERE source='manual'").all()) {
+    for (const t of q("SELECT * FROM fh_transactions WHERE source='manual' AND user_id=?").all(u)) {
       const a = accs[t.account_id];
       if (!a || a.bank === 'Lommebok') continue;
       const ref = String(80000000 + t.id * 7919).slice(0, 8);
@@ -59,21 +63,26 @@ export function loadDemo() {
       setRaw.run(JSON.stringify({ bookingDate: card ? t.date : raw.Dato, valueDate: card ? null : raw.Rentedato, description: text, amount: t.amount / 100, archiveReference: card ? null : ref,
         raw, account: a.name, bank: a.bank, source: `CSV · ${a.bank}`, file: card ? 'transaksjoner.xlsx' : 'Kontoutskrift.csv', importedAt: Date.now() }), `demo:${t.id}`, t.id);
     }
-    const bud = q("INSERT OR REPLACE INTO fh_budgets(category_id,month,amount) VALUES(?, 'default', ?)");
+    const budIns = q("INSERT OR REPLACE INTO fh_budgets(category_id,month,amount,user_id) VALUES(?, 'default', ?, ?)");
+    const bud = { run: (...a) => budIns.run(...a, u) };
     for (const [c, v] of Object.entries({ 'Mat og dagligvarer': 6000, 'Restaurant og kafé': 1800, 'Transport og lading': 1500, Bolig: 11000, Hjem: 1000, 'Fritid og hobby': 1500, Abonnementer: 750, Skole: 1000 })) bud.run(cat(c), v * 100);
-    const rec = q('INSERT INTO fh_recurring(name,amount,interval,day,category_id,account_id) VALUES(?,?,?,?,?,?)');
+    const recIns = q('INSERT INTO fh_recurring(name,amount,interval,day,category_id,account_id,user_id) VALUES(?,?,?,?,?,?,?)');
+    const rec = { run: (...a) => recIns.run(...a, u) };
     for (const [n, a, d, c] of [['Husleie', 9500, 1, 'Bolig'], ['Spotify', 129, 6, 'Abonnementer'], ['Ruter månedskort', 518, 10, 'Transport og lading'], ['Mobilabonnement', 399, 20, 'Abonnementer'],
       ['Innboforsikring', 214, 25, 'Bolig'], ['Netflix', 279, 28, 'Abonnementer'], ['Treningssenter', 549, 1, 'Fritid og hobby']]) rec.run(n, a * 100, 'monthly', d, cat(c), acc.Brukskonto);
-    const goal = q('INSERT INTO fh_goals(name,saved,target,color) VALUES(?,?,?,?)');
+    const goalIns = q('INSERT INTO fh_goals(name,saved,target,color,user_id) VALUES(?,?,?,?,?)');
+    const goal = { run: (...a) => goalIns.run(...a, u) };
     for (const [n, s, t, c] of [['Bufferkonto', 52000, 60000, '#5FD3A8'], ['Sommer 2027', 8400, 20000, '#7AA7FF'], ['Ny PC', 24550, 40000, '#FF7A3D']]) goal.run(n, s * 100, t * 100, c);
     // To kvitteringer i gjennomgangskøen, matchet mot kortkjøpene.
-    const rc = q("INSERT INTO fh_receipts(id,status,provider,model,seconds,extraction,merchant,date,total,category_id,account_id,confidence,transaction_id,created) VALUES(?,'needs_review',?,?,?,?,?,?,?,?,?,?,(SELECT id FROM fh_transactions WHERE description=? LIMIT 1),?)");
-    rc.run('demo-1', 'ollama', 'qwen2.5vl:7b', 11.4, JSON.stringify({ merchant: 'Clas Ohlson', lines: [{ description: 'Skjøteledning', amount: 199 }, { description: 'Lyspære E27 ×2', amount: 150 }], vat: [{ rate: 25, amount: 69.8 }], confidence: { total: 0.97 } }), 'Clas Ohlson', day(0, 15), 34900, cat('Hjem'), acc.Kredittkort, 0.97, 'Clas Ohlson', Date.now());
-    rc.run('demo-2', 'gemini', 'gemini-2.5-flash', 2.1, JSON.stringify({ merchant: 'Circle K Lading', lines: [], vat: [], confidence: { total: 0.72 } }), 'Circle K Lading', day(0, 15), 61240, cat('Transport og lading'), acc.Kredittkort, 0.72, 'Circle K Lading', Date.now() - 1000);
-    q("UPDATE fh_receipts SET ai_short='Skjøteledning og to lyspærer til hjemmet', ai_long='Kjøp hos Clas Ohlson: en skjøteledning og to E27-lyspærer. Kategorisert som hjem.', domain='clasohlson.com' WHERE id='demo-1'").run();
-    q("UPDATE fh_receipts SET ai_short='Hurtiglading av elbil', domain='circlek.no' WHERE id='demo-2'").run();
+    const rcIns = q("INSERT INTO fh_receipts(id,status,provider,model,seconds,extraction,merchant,date,total,category_id,account_id,confidence,transaction_id,created,user_id) VALUES(?,'needs_review',?,?,?,?,?,?,?,?,?,?,(SELECT id FROM fh_transactions WHERE description=? AND user_id=? LIMIT 1),?,?)");
+    const rc = { run: (...a) => { const created = a.pop(); rcIns.run(...a, u, created, u); } };
+    rc.run(rcId(1), 'ollama', 'qwen2.5vl:7b', 11.4, JSON.stringify({ merchant: 'Clas Ohlson', lines: [{ description: 'Skjøteledning', amount: 199 }, { description: 'Lyspære E27 ×2', amount: 150 }], vat: [{ rate: 25, amount: 69.8 }], confidence: { total: 0.97 } }), 'Clas Ohlson', day(0, 15), 34900, cat('Hjem'), acc.Kredittkort, 0.97, 'Clas Ohlson', Date.now());
+    rc.run(rcId(2), 'gemini', 'gemini-2.5-flash', 2.1, JSON.stringify({ merchant: 'Circle K Lading', lines: [], vat: [], confidence: { total: 0.72 } }), 'Circle K Lading', day(0, 15), 61240, cat('Transport og lading'), acc.Kredittkort, 0.72, 'Circle K Lading', Date.now() - 1000);
+    q("UPDATE fh_receipts SET ai_short='Skjøteledning og to lyspærer til hjemmet', ai_long='Kjøp hos Clas Ohlson: en skjøteledning og to E27-lyspærer. Kategorisert som hjem.', domain='clasohlson.com' WHERE id=?").run(rcId(1));
+    q("UPDATE fh_receipts SET ai_short='Hurtiglading av elbil', domain='circlek.no' WHERE id=?").run(rcId(2));
     // FinansHub v2: abonnementer, delte mapper og Finn-handler.
-    const sub = q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,low_use,domain,ai_short,created) VALUES(?,?,?,?,?,?,?,?,?,?)');
+    const subIns = q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,low_use,domain,ai_short,created,user_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)');
+    const sub = { run: (...a) => subIns.run(...a, u) };
     for (const [n, p, v, cyc, nd, use, low, dom, ai] of [['Netflix', 'Standard', 149, 'monthly', 17, 'Sett 2 t siste 30 d', 1, 'netflix.com', 'Strømmetjeneste, månedlig trekk'],
       ['Spotify', 'Familie', 239, 'monthly', 5, 'Daglig', 0, 'spotify.com', 'Musikkabonnement, familieplan'], ['iCloud+', '200 GB', 39, 'monthly', 12, '86 % brukt', 0, 'apple.com', 'Lagringsplass i iCloud'],
       ['Proton', 'Mail Plus · EUR 1', 11, 'monthly', 25, 'Ukentlig', 0, 'proton.me', 'Proton Mail Plus, betalt i euro'], ['ChatGPT', 'Plus', 229, 'monthly', 19, 'Ikke åpnet på 26 d', 1, 'openai.com', 'AI-abonnement, lite brukt siste måned'],
@@ -84,11 +93,11 @@ export function loadDemo() {
     }
     sub.run('NordVPN', '2-årsplan', 120000, 'biennial', (() => { const x = new Date(now); x.setMonth(x.getMonth() + 14); return x.toLocaleDateString('sv-SE'); })(), 'Ukentlig', 0, 'nordvpn.com', 'VPN, betalt for to år om gangen', Date.now());
     // Subscription OS: trekkdag fra neste trekk, og Viaplay har økt prisen fra 399 til 449 kr («Pris økt»).
-    q('UPDATE fh_subscriptions SET charge_day=CAST(substr(next_date,9,2) AS INTEGER), created=? WHERE next_date IS NOT NULL').run(Date.now() - 400 * 86400_000);
-    q("UPDATE fh_subscriptions SET prev_price=39900, price_changed=? WHERE name='Viaplay'").run((() => { const x = new Date(now); x.setDate(x.getDate() - 16); return x.toLocaleDateString('sv-SE'); })());
+    q('UPDATE fh_subscriptions SET charge_day=CAST(substr(next_date,9,2) AS INTEGER), created=? WHERE next_date IS NOT NULL AND user_id=?').run(Date.now() - 400 * 86400_000, u);
+    q("UPDATE fh_subscriptions SET prev_price=39900, price_changed=? WHERE name='Viaplay' AND user_id=?").run((() => { const x = new Date(now); x.setDate(x.getDate() - 16); return x.toLocaleDateString('sv-SE'); })(), u);
     // Delte mapper: boliger med prosjekter, faste regninger og strøm hver måned (fra designet).
     const users = new Map(db.prepare('SELECT id, username, name FROM users').all().map((u) => [(u.name || u.username).toLowerCase(), u.id]));
-    const me = settings().name;
+    const me = settings(u).name;
     const Y = now.getFullYear(), M = now.getMonth() + 1;
     const ym = (m, d) => `${Y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const folder = q('INSERT INTO fh_folders(name,type,address,owner_id,created) VALUES(?,?,?,?,?) RETURNING id');
@@ -113,7 +122,7 @@ export function loadDemo() {
       { name: 'Felles husholdning', type: 'Annet', addr: 'Daglige felleskjøp', mem: [[me, 'owner'], ['Ingrid', 'owner']],
         rows: [['Rema 1000 Bislett', ym(M, Math.min(16, now.getDate())), me, 386, 'Dagligvarer'], ['IKEA', ym(M, Math.min(5, now.getDate())), 'Ingrid', 1499, 'Vedlikehold']], projects: [], bills: [] },
     ];
-    for (const h of HOMES) {
+    for (const h of u === OWNER ? HOMES : []) {
       const id = folder.get(h.name, h.type, h.addr, OWNER, Date.now()).id;
       for (const [n, role] of h.mem) mem.run(id, n, null, role, 'active', n === me ? OWNER : users.get(n.toLowerCase()) ?? null);
       for (const p of h.projects) {
@@ -126,7 +135,8 @@ export function loadDemo() {
       for (const [d, date, who, v, cat] of h.rows) if (date <= now.toLocaleDateString('sv-SE')) ent.run(id, d, date, v * 100, who, cat, null, Date.now());
       for (const b of h.bills) bill.run(id, ...b);
     }
-    const finn = q('INSERT INTO fh_finn(role,item,counterpart,date,amount,steps,created) VALUES(?,?,?,?,?,?,?)');
+    const finnIns = q('INSERT INTO fh_finn(role,item,counterpart,date,amount,steps,created,user_id) VALUES(?,?,?,?,?,?,?,?)');
+    const finn = { run: (...a) => finnIns.run(...a, u) };
     for (const [role, item, who, dd, v, steps, done] of [['bought', 'Sykkel Trek FX 3', 'selger Kari N.', 12, 4500, ['Trygg betaling', 'Fiks ferdig · sendt', 'Tillit forsikring', 'Ikke mottatt'], 2],
       ['sold', 'iPhone 13 128 GB', 'kjøper Ola H.', 8, 3200, ['Trygg betaling', 'Fiks ferdig · levert', 'Utbetalt'], 3], ['bought', 'Kontorstol HÅG', 'selger Mona L.', 1, 1200, ['Trygg betaling', 'Fiks ferdig · levert', 'Godkjent'], 3],
       ['sold', 'PS5-kontroller', 'kjøper Jonas B.', -2, 450, ['Trygg betaling', 'Venter på sending'], 1]]) {

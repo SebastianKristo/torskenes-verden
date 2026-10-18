@@ -3,7 +3,7 @@
 //
 // NB: endepunktene, headerne og lenkemønstrene under er satt opp etter transportørenes offentlige dokumentasjon,
 // men er ikke testet mot ekte kontoer herfra. Sjekk dem med «Test tilkobling» før du stoler på dem.
-import { cfg } from './settings.js';
+import { cfg, activeUser } from './settings.js';
 import { kv, OWNER } from './db.js';
 
 // [id, navn, initialer, farge, tekstfarge, formater, sporingslenke (nummeret legges til på slutten)]
@@ -11,7 +11,7 @@ import { kv, OWNER } from './db.js';
 export const CARRIERS = [
   ['posten', 'Posten', 'P', '#E32D22', '#fff', [/^[A-Z]{2}\d{9}NO$/, /^(LP|LZ)\d{12,}$/], 'https://sporing.posten.no/sporing/'],
   ['bring', 'Bring', 'B', '#7BC144', '#0f2a05', [/^70\d{15}$/, /^3707\d{14}$/], 'https://tracking.bring.com/tracking/'],
-  ['postnord', 'PostNord', 'PN', '#00A0D6', '#fff', [/^00370\d{15}$/, /^[A-Z]{2}\d{9}(SE|DK|FI)$/], 'https://www.postnord.no/sporing?shipmentId='],
+  ['postnord', 'PostNord', 'PN', '#00A0D6', '#fff', [/^00370\d{15}$/, /^[A-Z]{2}\d{9}(SE|DK|FI)$/], 'https://www.postnord.no/pakkesporing/?shipmentId='],
   ['dhl', 'DHL', 'DHL', '#FFCC00', '#D40511', [/^JJD\d{10,}$/, /^(JVGL|GM)\w{8,}$/, /^\d{10}$/], 'https://www.dhl.com/no-no/home/sporing.html?tracking-id='],
   ['ups', 'UPS', 'UPS', '#351C15', '#FFB500', [/^1Z[0-9A-Z]{16}$/], 'https://www.ups.com/track?tracknum='],
   ['fedex', 'FedEx', 'FX', '#4D148C', '#fff', [/^\d{12}$/, /^\d{15}$/], 'https://www.fedex.com/fedextrack/?trknbr='],
@@ -143,6 +143,49 @@ async function postnord(no) {
     pickup: status === 'ready_for_pickup' && pp ? { name: pp, deadline: sh.returnDate ? String(sh.returnDate).slice(0, 10) : null } : null, events };
 }
 
+// PostNord uten nøkkel (uoffisielt): samme JSON som postnord.no/se bruker på den offentlige sporingssiden, med den
+// offentlige web-nøkkelen «web-ncp». Formatet er ikke dokumentert, så svaret leses forsiktig. Feil (403/404/HTML) gir
+// CarrierError, og fetchStatus går stille videre til reservene. Høyst ett oppslag per sending hver 30. minutt.
+export const POSTNORD_WEB_STATUS = {
+  INFORMED: 'registered', CREATED: 'registered', PRE_ADVICE: 'registered', EXPECTED: 'registered',
+  EN_ROUTE: 'in_transit', IN_TRANSIT: 'in_transit', OTHER: 'in_transit',
+  AVAILABLE_FOR_DELIVERY: 'ready_for_pickup', READY_FOR_PICKUP: 'ready_for_pickup', AVAILABLE_FOR_PICKUP: 'ready_for_pickup', AVAILABLE_FOR_DELIVERY_PAR_LOC: 'ready_for_pickup', NOTIFICATION_SENT: 'ready_for_pickup',
+  DELIVERED: 'delivered', DELIVERED_TO_PICKUP_POINT: 'ready_for_pickup',
+  RETURNED: 'returned', RETURN: 'returned', DELIVERY_IMPOSSIBLE: 'delayed', DELIVERY_REFUSED: 'delayed', STOPPED: 'delayed',
+};
+export const postnordWebStatus = (code, text) => POSTNORD_WEB_STATUS[String(code ?? '').toUpperCase().replace(/[\s-]+/g, '_')] ?? normStatus(code || text);
+const PN_WEB_MS = 30 * 60_000;
+const pnWebCache = new Map(); // nummer → { at, value }
+export const _clearPostnordWebCache = () => pnWebCache.clear();
+const txt = (v) => (v == null ? '' : typeof v === 'string' ? v : typeof v === 'object' ? String(v.displayName ?? v.name ?? v.header ?? v.text ?? v.city ?? '') : String(v));
+export async function postnordWeb(no) {
+  const hit = pnWebCache.get(no);
+  if (hit && Date.now() - hit.at < PN_WEB_MS) return hit.value;
+  const res = await fetch(`https://api2.postnord.com/rest/shipment/v1/trackingweb/shipmentInformation?shipmentId=${encodeURIComponent(no)}&locale=no`, {
+    headers: { 'x-bap-key': 'web-ncp', Accept: 'application/json', 'User-Agent': 'Mozilla/5.0 (homelab-os)' }, signal: AbortSignal.timeout(TIMEOUT) });
+  if (!res.ok) throw new CarrierError(`PostNord (nettside) svarte ${res.status}`, res.status === 404 ? 404 : res.status);
+  if (!/json/i.test(res.headers.get('content-type') ?? '')) throw new CarrierError('PostNord (nettside) svarte ikke med JSON');
+  let d;
+  try { d = await res.json(); } catch { throw new CarrierError('PostNord (nettside): ugyldig JSON'); }
+  // Kjente former: {items:[…]} eller {shipments:[{items:[…]}]} eller TrackingInformationResponse.shipments.
+  const sh = d?.TrackingInformationResponse?.shipments?.[0] ?? d?.shipments?.[0] ?? d;
+  const items = Array.isArray(sh?.items) ? sh.items : [];
+  const rawEvents = items.flatMap((it) => (Array.isArray(it?.events) ? it.events : []));
+  if (!items.length && !rawEvents.length) throw new CarrierError('PostNord (nettside) fant ikke sendingen', 404);
+  const events = rawEvents.map((e) => ev(e.eventTime ?? e.timestamp, txt(e.eventDescription ?? e.description ?? e.status), txt(e.location)))
+    .sort((a, b) => b.ts - a.ts);
+  const code = sh.status ?? items[0]?.status ?? sh.statusText?.status ?? null;
+  const head = txt(sh.statusText?.header ?? items[0]?.statusText?.header ?? sh.statusText);
+  let status = postnordWebStatus(typeof code === 'string' ? code : '', head || events[0]?.status);
+  if (status === 'unknown' && events[0]) status = normStatus(events[0].status);
+  const pp = txt(sh.deliveryPoint ?? items[0]?.deliveryPoint) || null;
+  const etaRaw = sh.estimatedTimeOfArrival ?? items[0]?.estimatedTimeOfArrival ?? sh.deliveryDate ?? null;
+  const eta = etaRaw && /^\d{4}-\d{2}-\d{2}/.test(String(etaRaw)) ? String(etaRaw).slice(0, 10) : null;
+  const value = { status, eta, pickupPoint: pp, pickup: status === 'ready_for_pickup' && pp ? { name: pp, deadline: null } : null, events, via: 'postnord-web', source: 'postnord-web', unofficial: true };
+  pnWebCache.set(no, { at: Date.now(), value });
+  return value;
+}
+
 // DHL Shipment Tracking – Unified (developer.dhl.com). Header DHL-API-Key.
 async function dhl(no) {
   const key = cfg('trk_dhl_key');
@@ -159,12 +202,12 @@ let upsToken = null;
 async function upsAuth() {
   const id = cfg('trk_ups_id'), sec = cfg('trk_ups_secret');
   if (!id || !sec) throw new CarrierError('Mangler OAuth-klient (Client ID og secret) fra UPS');
-  if (upsToken && upsToken.exp > Date.now() + 60_000 && upsToken.id === id) return upsToken.token;
+  if (upsToken && upsToken.exp > Date.now() + 60_000 && upsToken.id === `${id}:${sec}`) return upsToken.token;
   const res = await fetch('https://onlinetools.ups.com/security/v1/oauth/token', { method: 'POST', signal: AbortSignal.timeout(TIMEOUT),
     headers: { Authorization: 'Basic ' + Buffer.from(`${id}:${sec}`).toString('base64'), 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'grant_type=client_credentials' });
   if (!res.ok) throw new CarrierError(`UPS avviste klienten (${res.status})`, res.status);
   const d = await res.json();
-  upsToken = { id, token: d.access_token, exp: Date.now() + (+d.expires_in || 3600) * 1000 };
+  upsToken = { id: `${id}:${sec}`, token: d.access_token, exp: Date.now() + (+d.expires_in || 3600) * 1000 };
   return upsToken.token;
 }
 async function ups(no) {
@@ -198,10 +241,10 @@ async function track17(no) {
 export const PARCELSAPP_LIMIT = 3;
 const monthKey = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' }).slice(0, 7);
 export function parcelsappUsage() {
-  const u = kv.get(OWNER, 'parcelsapp_usage', null);
+  const u = kv.get(activeUser() ?? OWNER, 'parcelsapp_usage', null); // per bruker (ISO2): hver bruker har sin egen nøkkel og kvote
   return { used: u?.month === monthKey() ? u.used : 0, limit: PARCELSAPP_LIMIT, month: monthKey(), configured: !!cfg('trk_parcelsapp_key') };
 }
-const countParcelsapp = () => { const u = parcelsappUsage(); kv.set(OWNER, 'parcelsapp_usage', { month: u.month, used: u.used + 1 }); };
+const countParcelsapp = () => { const u = parcelsappUsage(); kv.set(activeUser() ?? OWNER, 'parcelsapp_usage', { month: u.month, used: u.used + 1 }); };
 const sleepMs = (ms) => new Promise((r) => setTimeout(r, ms));
 async function parcelsapp(no) {
   const key = cfg('trk_parcelsapp_key');
@@ -237,7 +280,7 @@ export const isConfigured = (carrier) => (configured[carrier] ?? configured.othe
 // Tydelig melding når selskapets egen nøkkel mangler (vises i Sporing og under Integrasjoner → Sporing).
 export function missingKeyText(carrier) {
   if (carrier === 'posten' || carrier === 'bring') return configured.posten() ? null : 'Mangler Mybring-nøkkel (mybringUid og mybringKey) under Integrasjoner → Sporing. ParcelsApp brukes som reserve.';
-  if (carrier === 'postnord') return configured.postnord() ? null : 'Mangler PostNord-nøkkel (postnordKey) under Integrasjoner → Sporing. ParcelsApp brukes som reserve.';
+  if (carrier === 'postnord') return configured.postnord() ? null : 'Uten PostNord-nøkkel hentes status fra PostNords offentlige sporingsside (uoffisielt), med ParcelsApp som reserve.';
   return null;
 }
 
@@ -250,6 +293,10 @@ export async function fetchStatus(carrier, no, { allowParcelsapp = false } = {})
   // Selskapets eget API først. Feiler det (ikke «fant ikke»), prøves reservene (prompt 22).
   if (own && isConfigured(carrier)) {
     try { return await own(n); } catch (e) { if (e.status === 404 || !(isConfigured('other') || (allowParcelsapp && cfg('trk_parcelsapp_key')))) throw e; err = e; }
+  }
+  // PostNord uten nøkkel: den offentlige sporingssiden (uoffisielt). Feil logges stille, og reservene prøves.
+  if (carrier === 'postnord' && !isConfigured('postnord')) {
+    try { return await postnordWeb(n); } catch (e) { console.debug?.(`[sporing] postnord-web: ${e.message}`); err ??= e.status === 404 ? null : e; }
   }
   if (isConfigured('other')) { try { return await track17(n); } catch (e) { err ??= e; } }
   if (allowParcelsapp && cfg('trk_parcelsapp_key') && parcelsappUsage().used < PARCELSAPP_LIMIT) return parcelsapp(n);

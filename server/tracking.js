@@ -4,11 +4,15 @@
 //   aktive pakker og hver 6. time når den har stått som «Registrert» i mer enn 3 dager (prompt 22). Levert og
 //   Returnert sjekkes ikke mer. Gamle e-postpakker som er levert (eller ikke funnet etter 30 dager) går rett i Arkiv.
 // - Nye sporingsnumre i e-post og Finn plukkes opp av samme jobb, og varsler («notices») lages etter brukerens valg.
+// - Per bruker (ISO2): hver sending har user_id, og sporingsnummeret er unikt per bruker. Kilder, varsler, varselvalg,
+//   transportørnøkler (cfg i brukerens kontekst) og e-postskanning er brukerens egne. Sanntid sendes bare til eieren.
 //   Ekte push er ikke bygget: appene og nettsiden viser varslene lokalt når de henter /api/tracking.
 import { Hono } from 'hono';
 import { db, kv, OWNER } from './db.js';
+import { runAsUser } from './settings.js';
 import { sessionUser } from './auth.js';
-import { guard, readJson, bad, str, MOCK, aiJson } from './homeos-common.js';
+import { userGuard, readJson, bad, str, MOCK, aiJson } from './homeos-common.js';
+import * as mailMod from './finans/mail.js';
 import { scanShippingMails, mailConfig, mailText } from './finans/mail.js';
 import { stageOf } from './finans/finn-routes.js';
 import { CARRIERS, CARRIER, detect, normNo, trackUrl, findTrackingNumbers, normStatus, STATUS_TEXT, STEPS_IN, STEPS_OUT, stepOf, fetchStatus, isConfigured, testCarriers, parcelsappUsage, FINAL, missingKeyText } from './tracking-carriers.js';
@@ -18,7 +22,8 @@ import { matchMerchant, itemForDomain, filePath as logoFile, isManual } from './
 db.exec(`
 CREATE TABLE IF NOT EXISTS hl_shipments (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  tracking_no TEXT NOT NULL UNIQUE,
+  tracking_no TEXT NOT NULL,
+  user_id TEXT,
   carrier TEXT NOT NULL DEFAULT 'other',
   name TEXT NOT NULL DEFAULT '',
   shop TEXT NOT NULL DEFAULT '',
@@ -33,7 +38,8 @@ CREATE TABLE IF NOT EXISTS hl_shipments (
   last_error TEXT,
   checked_at INTEGER,
   updated_at INTEGER NOT NULL,
-  created_at INTEGER NOT NULL
+  created_at INTEGER NOT NULL,
+  UNIQUE(user_id, tracking_no)
 );
 CREATE TABLE IF NOT EXISTS hl_shipment_events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,6 +59,34 @@ for (const [col, type] of [['source_date', 'INTEGER'], ['ok_at', 'INTEGER'], ['p
   if (!db.prepare('PRAGMA table_info(hl_shipments)').all().some((c) => c.name === col)) db.exec(`ALTER TABLE hl_shipments ADD COLUMN ${col} ${type}`);
 }
 
+// ISO2: user_id på sendingene. Eksisterende sendinger tilhører OWNER. Den gamle tabellen hadde UNIQUE(tracking_no);
+// den bygges om (rad for rad, samme id-er, så hendelsene beholdes) til UNIQUE(user_id, tracking_no). Idempotent.
+{
+  const cols = () => db.prepare('PRAGMA table_info(hl_shipments)').all().map((c) => c.name);
+  if (!cols().includes('user_id')) db.exec('ALTER TABLE hl_shipments ADD COLUMN user_id TEXT');
+  db.prepare('UPDATE hl_shipments SET user_id=? WHERE user_id IS NULL').run(OWNER);
+  const sql = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='hl_shipments'").get().sql;
+  if (/tracking_no\s+TEXT\s+NOT\s+NULL\s+UNIQUE/i.test(sql)) {
+    const next = sql.replace(/CREATE TABLE\s+(IF NOT EXISTS\s+)?"?hl_shipments"?/i, 'CREATE TABLE hl_shipments_iso2')
+      .replace(/tracking_no\s+TEXT\s+NOT\s+NULL\s+UNIQUE/i, 'tracking_no TEXT NOT NULL').replace(/\)\s*$/, ',\n  UNIQUE(user_id, tracking_no)\n)');
+    const list = cols().map((c) => `"${c}"`).join(',');
+    const before = { s: db.prepare('SELECT COUNT(*) n FROM hl_shipments').get().n, e: db.prepare('SELECT COUNT(*) n FROM hl_shipment_events').get().n };
+    db.pragma('foreign_keys = OFF');
+    try {
+      db.transaction(() => {
+        db.exec('DROP TABLE IF EXISTS hl_shipments_iso2');
+        db.exec(next);
+        db.exec(`INSERT INTO hl_shipments_iso2(${list}) SELECT ${list} FROM hl_shipments`);
+        if (db.prepare('SELECT COUNT(*) n FROM hl_shipments_iso2').get().n !== before.s) throw new Error('Sporing: kopien har ikke like mange rader');
+        db.exec('DROP TABLE hl_shipments');
+        db.exec('ALTER TABLE hl_shipments_iso2 RENAME TO hl_shipments');
+        if (db.prepare('SELECT COUNT(*) n FROM hl_shipment_events').get().n !== before.e) throw new Error('Sporing: hendelsene ble endret');
+      })();
+    } finally { db.pragma('foreign_keys = ON'); }
+  }
+  db.exec('CREATE INDEX IF NOT EXISTS hl_shipments_user ON hl_shipments(user_id, archived, updated_at)');
+}
+
 const q = (sql) => db.prepare(sql);
 const now = () => Date.now();
 const ACTIVE = ['registered', 'picked_up', 'in_transit', 'ready_for_pickup', 'out_for_delivery', 'delayed', 'unknown'];
@@ -69,23 +103,23 @@ export function nextCheckAt(r, t = Date.now()) {
   return r.checked_at ? r.checked_at + iv : t;
 }
 const PREF_DEFAULT = { found: true, out: true, pickup: true, delivered: true, delayed: false };
-// Varselvalgene er per bruker (prompt 14). Hovedadminens valg (OWNER) er utgangspunktet for brukere som ikke har lagret egne.
-const prefs = (uid = OWNER) => ({ ...PREF_DEFAULT, ...kv.get(OWNER, 'trk_prefs', {}), ...(uid !== OWNER ? kv.get(uid, 'trk_prefs', {}) : {}) });
-// Kildene (e-post, Finn) styrer den felles innhentingen og er derfor felles. autoArchive: leverte pakker arkiveres etter 3 dager.
-const sources = () => ({ finn: { on: true, lastCheck: null }, email: { on: true, lastCheck: null }, autoArchive: { on: false }, ...kv.get(OWNER, 'trk_sources', {}) });
-const uidOf = (c) => sessionUser(c) ?? c.get('user') ?? OWNER;
-const setSource = (k, patch) => { const s = sources(); s[k] = { ...s[k], ...patch }; kv.set(OWNER, 'trk_sources', s); };
+// Varselvalgene er per bruker (prompt 14, ISO2: ingen arv fra hovedadmin).
+const prefs = (uid) => ({ ...PREF_DEFAULT, ...kv.get(uid, 'trk_prefs', {}) });
+// Kildene (e-post, Finn) per bruker (ISO2). autoArchive: leverte pakker arkiveres etter 3 dager.
+const sources = (u) => ({ finn: { on: true, lastCheck: null }, email: { on: true, lastCheck: null }, autoArchive: { on: false }, ...kv.get(u, 'trk_sources', {}) });
+const uidOf = (c) => c.get('user') ?? sessionUser(c);
+const setSource = (u, k, patch) => { const s = sources(u); s[k] = { ...s[k], ...patch }; kv.set(u, 'trk_sources', s); };
 
 /* ---------------- Varsler ---------------- */
 
 // Varsler lagres som en kort liste (de 30 siste). Klientene viser dem lokalt (web Notification, lokalt varsel i appene).
-function notify(kind, text, shipmentId) {
+function notify(u, kind, text, shipmentId) {
   // Alle varsler lagres; hver bruker ser bare de typene de har slått på (listOut).
   const key = { found: 'found', out_for_delivery: 'out', ready_for_pickup: 'pickup', delivered: 'delivered', delayed: 'delayed' }[kind];
   if (!key) return;
-  const list = kv.get(OWNER, 'trk_notices', []);
+  const list = kv.get(u, 'trk_notices', []);
   list.unshift({ id: `${now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, ts: now(), kind: key, text, shipmentId });
-  kv.set(OWNER, 'trk_notices', list.slice(0, 30));
+  kv.set(u, 'trk_notices', list.slice(0, 30));
 }
 
 /* ---------------- Logo og tittel (prompt 21) ---------------- */
@@ -196,14 +230,16 @@ function view(r) {
   };
 }
 const byId = (id) => q('SELECT * FROM hl_shipments WHERE id=?').get(id);
+// Brukerens egen sending (andres gir undefined, som en ukjent id).
+const mineById = (u, id) => q('SELECT * FROM hl_shipments WHERE id=? AND user_id=?').get(id, u);
 
 // Legger til eller slår sammen på sporingsnummer. Eksisterende felt overskrives bare når de er tomme,
 // slik at et navn du har gitt selv ikke byttes ut av e-posten.
-export function upsertShipment({ trackingNo, carrier, name = '', shop = '', shopDomain = '', source = 'manual', sourceRef = null, sourceNote = '', direction = 'in', status, eta = null, pickupPoint = null, sourceDate = null }) {
+export function upsertShipment({ user = OWNER, trackingNo, carrier, name = '', shop = '', shopDomain = '', source = 'manual', sourceRef = null, sourceNote = '', direction = 'in', status, eta = null, pickupPoint = null, sourceDate = null }) {
   const no = normNo(trackingNo);
   if (no.length < 6 || no.length > 40) throw new Error('Ugyldig sporingsnummer');
   const car = CARRIER[carrier] ? carrier : detect(no);
-  const ex = q('SELECT * FROM hl_shipments WHERE tracking_no=?').get(no);
+  const ex = q('SELECT * FROM hl_shipments WHERE tracking_no=? AND user_id=?').get(no, user);
   if (ex) {
     q(`UPDATE hl_shipments SET name=CASE WHEN name='' THEN ? ELSE name END, shop=CASE WHEN shop='' THEN ? ELSE shop END,
        shop_domain=CASE WHEN shop_domain='' THEN ? ELSE shop_domain END,
@@ -213,11 +249,11 @@ export function upsertShipment({ trackingNo, carrier, name = '', shop = '', shop
     if (status && promote(ex, status, source === 'finn' ? 'Oppdatert fra Finn-handelen' : source === 'email' ? 'Oppdatert fra e-post' : '')) return { shipment: byId(ex.id), created: false, promoted: true };
     return { shipment: byId(ex.id), created: false };
   }
-  const r = q(`INSERT INTO hl_shipments(tracking_no,carrier,name,shop,shop_domain,source,source_ref,source_note,direction,status,eta,pickup_point,source_date,updated_at,created_at)
-    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING *`).get(no, car, str(name, 120), str(shop, 80), str(shopDomain || shopDomainFor(shop, ''), 120), source, sourceRef, str(sourceNote, 200), direction === 'out' ? 'out' : 'in',
+  const r = q(`INSERT INTO hl_shipments(user_id,tracking_no,carrier,name,shop,shop_domain,source,source_ref,source_note,direction,status,eta,pickup_point,source_date,updated_at,created_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING *`).get(user, no, car, str(name, 120), str(shop, 80), str(shopDomain || shopDomainFor(shop, ''), 120), source, sourceRef, str(sourceNote, 200), direction === 'out' ? 'out' : 'in',
     status && STATUS_TEXT[status] ? status : 'registered', eta, pickupPoint, validDate(sourceDate), now(), now());
   addEvent(r.id, now(), source === 'manual' ? 'Lagt til i Sporing' : source === 'finn' ? 'Funnet i Finn-handel' : 'Funnet i e-post', '');
-  if (source !== 'manual') notify('found', `Nytt sporingsnummer: ${r.name || r.tracking_no} (${(CARRIER[car] ?? CARRIER.other).name})`, r.id);
+  if (source !== 'manual') notify(user, 'found', `Nytt sporingsnummer: ${r.name || r.tracking_no} (${(CARRIER[car] ?? CARRIER.other).name})`, r.id);
   return { shipment: r, created: true };
 }
 const validDate = (d) => { const t = d instanceof Date ? d.getTime() : typeof d === 'number' ? d : Date.parse(d ?? ''); return Number.isFinite(t) && t > 0 ? t : null; };
@@ -243,10 +279,10 @@ function applyResult(r, res, { api = false } = {}) {
   archiveIfOld(byId(r.id));
   if (status !== r.status) {
     const name = r.name || r.tracking_no;
-    if (status === 'ready_for_pickup') notify('ready_for_pickup', `Klar for henting${res.pickupPoint || r.pickup_point ? ` hos ${res.pickupPoint || r.pickup_point}` : ''}: ${name}`, r.id);
-    else if (status === 'out_for_delivery') notify('out_for_delivery', `Ute for levering: ${name}`, r.id);
-    else if (status === 'delivered') notify('delivered', `Levert: ${name}`, r.id);
-    else if (status === 'delayed') notify('delayed', `Forsinket: ${name}`, r.id);
+    if (status === 'ready_for_pickup') notify(r.user_id, 'ready_for_pickup', `Klar for henting${res.pickupPoint || r.pickup_point ? ` hos ${res.pickupPoint || r.pickup_point}` : ''}: ${name}`, r.id);
+    else if (status === 'out_for_delivery') notify(r.user_id, 'out_for_delivery', `Ute for levering: ${name}`, r.id);
+    else if (status === 'delivered') notify(r.user_id, 'delivered', `Levert: ${name}`, r.id);
+    else if (status === 'delayed') notify(r.user_id, 'delayed', `Forsinket: ${name}`, r.id);
   }
 }
 
@@ -286,8 +322,8 @@ function shopOf(parsed) {
 const POSTAL = /posten|bring|postnord|dhl|ups|fedex|gls|schenker|helthjem|budbee|instabox|porterbuddy|17track/i;
 
 // Én e-post: finn sporingsnumre (regex, deretter AI som reserve) og lagre dem med butikk og vare.
-export async function fromMail(parsed) {
-  if (!sources().email.on) return 0;
+export async function fromMail(parsed, u = OWNER) {
+  if (!sources(u).email.on) return 0;
   const text = `${parsed.subject ?? ''}\n${mailText(parsed)}`;
   let nos = findTrackingNumbers(text), item = '', shop = shopOf(parsed);
   if (!nos.length && /sendt|shipped|på vei|on its way|sporing|tracking/i.test(parsed.subject ?? '')) {
@@ -308,7 +344,7 @@ export async function fromMail(parsed) {
   let n = 0;
   for (const no of nos) {
     const name = item || (shop ? `${shop}` : '');
-    const { created } = upsertShipment({ trackingNo: no, name, shop, shopDomain, source: 'email', sourceRef: parsed.messageId ?? null, status, sourceDate: parsed.date ?? null,
+    const { created } = upsertShipment({ user: u, trackingNo: no, name, shop, shopDomain, source: 'email', sourceRef: parsed.messageId ?? null, status, sourceDate: parsed.date ?? null,
       sourceNote: `Funnet i e-post${shop ? ` fra ${shop}` : ''}${date ? `, ${date}` : ''}` });
     if (created) n++;
   }
@@ -316,10 +352,15 @@ export async function fromMail(parsed) {
 }
 
 // Finn-handler med Fiks ferdig: sporingsnummeret ligger på handelen (fh_finn.tracking).
-export function syncFinn() {
-  if (!sources().finn.on) return 0;
+// Per bruker: fh_finn.user_id når kolonnen finnes (ISO-FIN), ellers bare eieren (alle gamle handler er eierens).
+const hasCol = (t, c) => { try { return db.prepare(`SELECT 1 FROM pragma_table_info('${t}') WHERE name=?`).get(c); } catch { return false; } };
+export function syncFinn(u = OWNER) {
+  if (!sources(u).finn.on) return 0;
   let rows = [];
-  try { rows = q("SELECT * FROM fh_finn WHERE tracking IS NOT NULL AND tracking<>''").all(); } catch { return 0; }
+  try {
+    if (hasCol('fh_finn', 'user_id')) rows = q("SELECT * FROM fh_finn WHERE tracking IS NOT NULL AND tracking<>'' AND (user_id=? OR (user_id IS NULL AND ?=?))").all(u, u, OWNER);
+    else if (u === OWNER) rows = q("SELECT * FROM fh_finn WHERE tracking IS NOT NULL AND tracking<>''").all();
+  } catch { return 0; }
   let n = 0;
   for (const f of rows) {
     try {
@@ -329,45 +370,64 @@ export function syncFinn() {
       try { emails = q('SELECT subject, body FROM fh_finn_emails WHERE finn_id=?').all(f.id); } catch { /* eldre database */ }
       const stage = stageOf(f, emails);
       const status = stage >= 3 ? 'delivered' : stage === 2 ? 'in_transit' : undefined;
-      const { created } = upsertShipment({ trackingNo: f.tracking, name: f.item, shop: 'Finn', shopDomain: 'finn.no', source: 'finn', sourceRef: String(f.id), direction: sold ? 'out' : 'in', status,
+      const { created } = upsertShipment({ user: u, trackingNo: f.tracking, name: f.item, shop: 'Finn', shopDomain: 'finn.no', source: 'finn', sourceRef: String(f.id), direction: sold ? 'out' : 'in', status,
         sourceNote: `${sold ? 'Solgt til' : 'Kjøpt fra'} ${f.counterpart?.replace(/^(selger|kjøper)\s+/i, '') || 'motpart'} på Finn · Fiks ferdig` });
       if (created) n++;
     } catch { /* ugyldig nummer */ }
   }
-  setSource('finn', { lastCheck: now() });
+  setSource(u, 'finn', { lastCheck: now() });
   return n;
 }
 
-// Én runde: nye numre fra Finn og e-post, deretter status for aktive pakker som er «på tur».
-let running = null;
-export function checkAll({ force = false } = {}) {
-  if (running) return running;
-  running = (async () => {
+// E-postskanning med brukerens egen IMAP. Eieren bruker scanShippingMails (FinansHub-oppsettet). Andre brukere skannes bare
+// når finans/mail.js har scanShippingMailsFor(user, onMail) – ellers aldri (den gamle funksjonen leser eierens innboks).
+async function scanMailFor(u) {
+  if (u === OWNER) return mailConfig().host ? scanShippingMails((p) => fromMail(p, u)) : null;
+  if (typeof mailMod.scanShippingMailsFor === 'function') return mailMod.scanShippingMailsFor(u, (p) => fromMail(p, u));
+  return null;
+}
+
+// Én runde for én bruker: nye numre fra Finn og e-post, deretter status for aktive pakker som er «på tur».
+// Kjøres i brukerens kontekst, så transportørnøklene (cfg) er brukerens egne.
+const running = new Map();
+function checkUser(u, { force = false } = {}) {
+  if (running.has(u)) return running.get(u);
+  const p = runAsUser(u, async () => {
     let found = 0, mail = null;
-    found += syncFinn();
-    if (sources().email.on) {
-      if (MOCK) found += mockMail();
-      else if (mailConfig().host) { mail = await scanShippingMails(fromMail).catch((e) => ({ ok: false, message: e.message })); found += mail?.found ?? 0; }
-      setSource('email', { lastCheck: now(), ...(mail && !mail.ok ? { error: mail.message } : { error: null }) });
+    found += syncFinn(u);
+    if (sources(u).email.on) {
+      if (MOCK) found += mockMail(u);
+      else { mail = await scanMailFor(u).catch((e) => ({ ok: false, message: e.message })); found += mail?.found ?? 0; }
+      setSource(u, 'email', { lastCheck: now(), ...(mail && !mail.ok ? { error: mail.message } : { error: null }) });
     }
     // Nye pakker (aldri sjekket) straks, ellers etter checkInterval (2 min slingringsmonn mot 15-minutters takten).
-    const due = q(`SELECT * FROM hl_shipments WHERE archived=0 AND status IN (${ACTIVE.map(() => '?').join(',')}) ORDER BY checked_at IS NOT NULL, checked_at`).all(...ACTIVE)
+    const due = q(`SELECT * FROM hl_shipments WHERE user_id=? AND archived=0 AND status IN (${ACTIVE.map(() => '?').join(',')}) ORDER BY checked_at IS NOT NULL, checked_at`).all(u, ...ACTIVE)
       .filter((r) => force || !r.checked_at || nextCheckAt(r) - 2 * 60_000 <= now());
     let updated = 0;
     for (const r of due.slice(0, 40)) if (await refresh(r)) updated++;
-    if (sources().autoArchive?.on) q("UPDATE hl_shipments SET archived=1 WHERE archived=0 AND status IN ('delivered','returned') AND updated_at < ?").run(now() - 3 * 86400_000);
-    for (const r of q("SELECT * FROM hl_shipments WHERE archived=0 AND source='email' AND status='delivered'").all()) archiveIfOld(r);
-    kv.set(OWNER, 'trk_last_run', now());
-    if (found || updated) broadcast('tracking', { action: 'checked', found, updated });
+    if (sources(u).autoArchive?.on) q("UPDATE hl_shipments SET archived=1 WHERE user_id=? AND archived=0 AND status IN ('delivered','returned') AND updated_at < ?").run(u, now() - 3 * 86400_000);
+    for (const r of q("SELECT * FROM hl_shipments WHERE user_id=? AND archived=0 AND source='email' AND status='delivered'").all(u)) archiveIfOld(r);
+    kv.set(u, 'trk_last_run', now());
+    if (found || updated) broadcast('tracking', { action: 'checked', found, updated }, [u]);
     return { found, updated, mail };
-  })().finally(() => { running = null; });
-  return running;
+  }).finally(() => { running.delete(u); });
+  running.set(u, p);
+  return p;
+}
+/** Én runde. Med user: bare den brukeren; uten: alle brukere etter tur. */
+export async function checkAll({ force = false, user } = {}) {
+  if (user) return checkUser(user, { force });
+  const total = { found: 0, updated: 0, mail: null };
+  for (const { id } of q('SELECT id FROM users ORDER BY is_main_admin DESC, created').all()) {
+    try { const r = await checkUser(id, { force }); total.found += r.found; total.updated += r.updated; if (id === OWNER) total.mail = r.mail; } catch { /* neste bruker */ }
+  }
+  return total;
 }
 
 let timer = null;
 export function startTrackingWorker() {
   if (timer) return;
-  if (MOCK) seedMock();
+  if (MOCK) seedMock(OWNER);
   timer = setInterval(() => { checkAll().catch(() => {}); }, 15 * 60_000);
   timer.unref?.();
   setTimeout(() => checkAll().catch(() => {}), 20_000).unref?.();
@@ -376,18 +436,20 @@ export function startTrackingWorker() {
 /* ---------------- Utdrag til widget og mobil ---------------- */
 
 const rank = (s) => (s.status === 'ready_for_pickup' ? 0 : s.status === 'out_for_delivery' ? 1 : 2);
-export function activeShipments(limit = 3) {
-  return q(`SELECT * FROM hl_shipments WHERE archived=0 AND status NOT IN ('delivered','returned') ORDER BY updated_at DESC`).all().map(view)
+export function activeShipments(u, limit = 3) {
+  return q(`SELECT * FROM hl_shipments WHERE user_id=? AND archived=0 AND status NOT IN ('delivered','returned') ORDER BY updated_at DESC`).all(u).map(view)
     .sort((a, b) => rank(a) - rank(b) || b.step - a.step).slice(0, limit);
 }
-const activeCount = () => q("SELECT COUNT(*) n FROM hl_shipments WHERE archived=0 AND status NOT IN ('delivered','returned')").get().n;
+const activeCount = (u) => q("SELECT COUNT(*) n FROM hl_shipments WHERE user_id=? AND archived=0 AND status NOT IN ('delivered','returned')").get(u).n;
 // moreCount: antall andre aktive pakker («+12 pakker ›»), dvs. alle aktive minus denne.
 const brief = (s, total) => ({ id: s.id, trackingNo: s.trackingNo, name: s.name, title: s.title, shop: s.shop, shopDomain: s.shopDomain, logo: s.logo,
   moreCount: Math.max(0, (total ?? 1) - 1), activeCount: total ?? null, carrier: s.carrier, carrierName: s.carrierName, carrierIni: s.carrierIni, carrierColor: s.carrierColor, carrierFg: s.carrierFg,
   status: s.status, statusText: s.statusText, step: s.step, eta: s.eta, pickupPoint: s.pickupPoint, direction: s.direction, carrierLogo: s.carrierLogo,
   lastEvent: s.lastEvent, updateError: s.updateError, estimatedDelivery: s.estimatedDelivery, pickup: s.pickup });
-export function packagesFor(limit = 2) {
-  try { const n = activeCount(); return activeShipments(limit).map((s) => brief(s, n)); } catch { return []; }
+/** De viktigste aktive pakkene til brukeren u (mobilforside og widgets). */
+export function packagesFor(limit = 2, u) {
+  if (!u) return [];
+  try { if (MOCK) seedMock(u); const n = activeCount(u); return runAsUser(u, () => activeShipments(u, limit).map((s) => brief(s, n))); } catch { return []; }
 }
 
 /* ---------------- Integrasjonstest ---------------- */
@@ -403,17 +465,19 @@ export async function testTracking() {
 /* ---------------- API (/api/tracking) ---------------- */
 
 const api = new Hono();
-api.use('*', guard);
+api.use('*', userGuard);
 
-const changed = (action, extra = {}) => broadcast('tracking', { action, ...extra });
+// Sanntid bare til eieren av sendingene (ISO2).
+const changed = (u, action, extra = {}) => broadcast('tracking', { action, ...extra }, [u]);
 // archived: 'all' (standard, som før), '0' = bare aktive/ikke arkiverte, '1' = bare Arkiv.
-const listOut = (uid = OWNER, archived = 'all') => {
-  const where = archived === '1' ? 'WHERE archived=1' : archived === '0' ? 'WHERE archived=0' : '';
-  const all = q('SELECT * FROM hl_shipments ORDER BY archived, updated_at DESC').all();
+const listOut = (uid, archived = 'all') => {
+  if (MOCK) seedMock(uid);
+  const where = archived === '1' || archived === '0';
+  const all = q('SELECT * FROM hl_shipments WHERE user_id=? ORDER BY archived, updated_at DESC').all(uid);
   const items = (where ? all.filter((r) => (archived === '1' ? r.archived : !r.archived)) : all).map(view);
   const p = prefs(uid);
   return {
-    items, sources: sources(), prefs: p, notices: kv.get(OWNER, 'trk_notices', []).filter((n) => p[n.kind] !== false).slice(0, 20), lastRun: kv.get(OWNER, 'trk_last_run', null),
+    items, sources: sources(uid), prefs: p, notices: kv.get(uid, 'trk_notices', []).filter((n) => p[n.kind] !== false).slice(0, 20), lastRun: kv.get(uid, 'trk_last_run', null),
     carriers: CARRIERS.map((c) => { const lg = c.manual ? packageLogo({ carrier: c.id, shop: '', shop_domain: '' }) : null;
       return { id: c.id, name: c.name, ini: c.ini, color: c.color, fg: c.fg, logo: c.manual ? lg.svg : c.logo, manual: !!c.manual, configured: isConfigured(c.id), keyMissing: missingKeyText(c.id) }; }),
     counts: { active: all.filter((s) => !s.archived && !FINAL.includes(s.status)).length, pickup: all.filter((s) => !s.archived && s.status === 'ready_for_pickup' && s.direction === 'in').length,
@@ -424,24 +488,25 @@ const listOut = (uid = OWNER, archived = 'all') => {
 };
 
 api.get('/', (c) => c.json(listOut(uidOf(c), ['0', '1'].includes(c.req.query('archived')) ? c.req.query('archived') : 'all')));
-api.get('/widget', (c) => { const n = activeCount(); return c.json({ items: activeShipments(3).map((s) => brief(s, n)), moreCount: Math.max(0, n - 1), count: listOut().counts }); });
+api.get('/widget', (c) => { const u = uidOf(c), out = listOut(u), n = activeCount(u); return c.json({ items: activeShipments(u, 3).map((s) => brief(s, n)), moreCount: Math.max(0, n - 1), count: out.counts }); });
 api.get('/detect', (c) => { const no = normNo(c.req.query('no')); const id = no ? detect(no) : 'other'; return c.json({ carrier: id, name: CARRIER[id].name, configured: isConfigured(id) }); });
 
 api.post('/', async (c) => {
   const b = await readJson(c);
   const no = normNo(b.trackingNo);
   if (no.length < 6) return bad(c, 'Skriv inn et sporingsnummer');
-  if (q('SELECT 1 FROM hl_shipments WHERE tracking_no=?').get(no)) return bad(c, 'Sendingen spores allerede', 409);
+  const u = uidOf(c);
+  if (q('SELECT 1 FROM hl_shipments WHERE tracking_no=? AND user_id=?').get(no, u)) return bad(c, 'Sendingen spores allerede', 409);
   let r;
-  try { ({ shipment: r } = upsertShipment({ trackingNo: no, carrier: b.carrier, name: str(b.name, 120), direction: b.direction })); } catch (e) { return bad(c, e.message); }
+  try { ({ shipment: r } = upsertShipment({ user: u, trackingNo: no, carrier: b.carrier, name: str(b.name, 120), direction: b.direction })); } catch (e) { return bad(c, e.message); }
   await refresh(r, { allowParcelsapp: true });
   const v = view(byId(r.id));
-  changed('created', { id: v.id });
+  changed(u, 'created', { id: v.id });
   return c.json({ item: v, message: v.lastError ? `Lagt til. Statusen kan ikke hentes ennå: ${v.lastError}` : `✦ Fant sendingen hos ${v.carrierName} · ${v.statusText}` });
 });
 
 api.patch('/:id', async (c) => {
-  const r = byId(+c.req.param('id'));
+  const r = mineById(uidOf(c), +c.req.param('id'));
   if (!r) return bad(c, 'Fant ikke sendingen', 404);
   const b = await readJson(c);
   if ('name' in b) q('UPDATE hl_shipments SET name=? WHERE id=?').run(str(b.name, 120), r.id);
@@ -449,17 +514,17 @@ api.patch('/:id', async (c) => {
   if ('archived' in b) q('UPDATE hl_shipments SET archived=? WHERE id=?').run(b.archived ? 1 : 0, r.id);
   if ('direction' in b) q('UPDATE hl_shipments SET direction=? WHERE id=?').run(b.direction === 'out' ? 'out' : 'in', r.id);
   q('UPDATE hl_shipments SET updated_at=? WHERE id=?').run(now(), r.id);
-  changed('updated', { id: r.id });
+  changed(r.user_id, 'updated', { id: r.id });
   return c.json({ item: view(byId(r.id)) });
 });
 
 // Hent status for én sending nå. Her kan ParcelsApp brukes som siste reserve (teller mot månedskvoten).
 api.post('/:id{[0-9]+}/refresh', async (c) => {
-  const r = byId(+c.req.param('id'));
+  const r = mineById(uidOf(c), +c.req.param('id'));
   if (!r) return bad(c, 'Fant ikke sendingen', 404);
   await refresh(r, { allowParcelsapp: true });
   const v = view(byId(r.id));
-  changed('updated', { id: r.id });
+  changed(r.user_id, 'updated', { id: r.id });
   return c.json({ item: v, parcelsapp: parcelsappUsage(), message: v.lastError ? `Fikk ikke hentet status: ${v.lastError}` : `${v.carrierName} · ${v.statusText}` });
 });
 
@@ -469,32 +534,31 @@ api.post('/bulk', async (c) => {
   const ids = Array.isArray(b.ids) ? [...new Set(b.ids.map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 500) : [];
   if (!ids.length) return bad(c, 'Velg minst én sending');
   if (!['archive', 'unarchive', 'delete'].includes(b.action)) return bad(c, 'action må være archive, unarchive eller delete');
-  const marks = ids.map(() => '?').join(',');
+  const marks = ids.map(() => '?').join(','), u = uidOf(c);
   const n = b.action === 'delete'
-    ? q(`DELETE FROM hl_shipments WHERE id IN (${marks})`).run(...ids).changes
-    : q(`UPDATE hl_shipments SET archived=?, updated_at=? WHERE id IN (${marks})`).run(b.action === 'archive' ? 1 : 0, now(), ...ids).changes;
-  changed('bulk', { ids, bulkAction: b.action });
+    ? q(`DELETE FROM hl_shipments WHERE user_id=? AND id IN (${marks})`).run(u, ...ids).changes
+    : q(`UPDATE hl_shipments SET archived=?, updated_at=? WHERE user_id=? AND id IN (${marks})`).run(b.action === 'archive' ? 1 : 0, now(), u, ...ids).changes;
+  changed(u, 'bulk', { ids, bulkAction: b.action });
   const word = { archive: 'arkivert', unarchive: 'gjenopprettet', delete: 'slettet' }[b.action];
   return c.json({ ok: true, changed: n, message: `${n} ${n === 1 ? 'sending' : 'sendinger'} ${word}`, ...listOut(uidOf(c)) });
 });
 
 api.delete('/:id', (c) => {
-  const id = +c.req.param('id');
-  q('DELETE FROM hl_shipments WHERE id=?').run(id);
-  changed('deleted', { id });
+  const id = +c.req.param('id'), u = uidOf(c);
+  if (q('DELETE FROM hl_shipments WHERE id=? AND user_id=?').run(id, u).changes) changed(u, 'deleted', { id });
   return c.json({ ok: true });
 });
 
 // Pull-to-refresh (prompt 22): henter status for alle aktive pakker nå (og nye numre fra Finn og e-post).
 api.post('/refresh', async (c) => {
-  const r = await checkAll({ force: true });
-  const failed = q('SELECT COUNT(*) n FROM hl_shipments WHERE archived=0 AND last_error IS NOT NULL').get().n;
+  const u = uidOf(c), r = await checkAll({ force: true, user: u });
+  const failed = q('SELECT COUNT(*) n FROM hl_shipments WHERE user_id=? AND archived=0 AND last_error IS NOT NULL').get(u).n;
   const msg = `${r.updated} oppdatert${r.found ? ` · ${r.found} ny${r.found === 1 ? '' : 'e'}` : ''}${failed ? ` · ${failed} kunne ikke oppdateres` : ''}`;
   return c.json({ ...listOut(uidOf(c)), refreshed: r.updated, found: r.found, failed, message: msg });
 });
 
 api.post('/check', async (c) => {
-  const r = await checkAll({ force: true });
+  const r = await checkAll({ force: true, user: uidOf(c) });
   const msg = r.found ? `✦ Fant ${r.found} nytt sporingsnummer${r.found === 1 ? '' : ''} · ${r.updated} oppdatert` : r.mail && !r.mail.ok ? `E-post: ${r.mail.message}` : `Alt er oppdatert. Ingen nye sporingsnumre${r.updated ? ` · ${r.updated} oppdatert` : ''}.`;
   return c.json({ ...listOut(uidOf(c)), message: msg });
 });
@@ -509,19 +573,22 @@ api.put('/prefs', async (c) => {
 
 api.put('/sources', async (c) => {
   const b = await readJson(c);
-  for (const k of ['finn', 'email', 'autoArchive']) if (k in b) setSource(k, { on: !!(b[k] && typeof b[k] === 'object' ? b[k].on : b[k]) });
-  return c.json({ sources: sources() });
+  const u = uidOf(c);
+  for (const k of ['finn', 'email', 'autoArchive']) if (k in b) setSource(u, k, { on: !!(b[k] && typeof b[k] === 'object' ? b[k].on : b[k]) });
+  return c.json({ sources: sources(u) });
 });
 
-api.delete('/notices', (c) => { kv.set(OWNER, 'trk_notices', []); return c.json({ ok: true }); });
+api.delete('/notices', (c) => { kv.set(uidOf(c), 'trk_notices', []); return c.json({ ok: true }); });
 
 export default api;
 
 /* ---------------- Demodata (MOCK_DATA=1) ---------------- */
 
 const DAY = 86400_000;
-function seedMock() {
-  if (q('SELECT 1 FROM hl_shipments LIMIT 1').get()) return;
+// Demo per bruker: én gang, og bare når brukeren ikke har noen sendinger.
+function seedMock(u) {
+  if (!u || kv.get(u, 'trk_mock_seeded') || q('SELECT 1 FROM hl_shipments WHERE user_id=? LIMIT 1').get(u)) { if (u && !kv.get(u, 'trk_mock_seeded')) kv.set(u, 'trk_mock_seeded', 1); return; }
+  kv.set(u, 'trk_mock_seeded', 1);
   const d = (n, h = '09:12') => { const t = new Date(now() - n * DAY); const [hh, mm] = h.split(':'); t.setHours(+hh, +mm, 0, 0); return t.getTime(); };
   const etaIn = (n) => new Date(now() + n * DAY).toLocaleDateString('sv-SE');
   const seed = [
@@ -535,15 +602,15 @@ function seedMock() {
     ['1Z999AA10123456784', 'ups', 'Apple · AirPods', 'Apple', 'email', 'Funnet i e-post fra Apple', 'in', 'delivered', etaIn(-6), null, [['Avsender: Nederland', 9], ['I transport', 7], ['Levert', 6]]],
   ];
   for (const [no, car, name, shop, src, note, dir, status, eta, pick, evs] of seed) {
-    const r = q(`INSERT INTO hl_shipments(tracking_no,carrier,name,shop,source,source_ref,source_note,direction,status,eta,pickup_point,checked_at,updated_at,created_at)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id`).get(no, car, name, shop, src, src === 'finn' ? 'demo' : null, note, dir, status, eta, pick, now(), now() - evs[evs.length - 1][1] * DAY, d(evs[0][1]));
+    const r = q(`INSERT INTO hl_shipments(user_id,tracking_no,carrier,name,shop,source,source_ref,source_note,direction,status,eta,pickup_point,checked_at,updated_at,created_at)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING id`).get(u, no, car, name, shop, src, src === 'finn' ? 'demo' : null, note, dir, status, eta, pick, now(), now() - evs[evs.length - 1][1] * DAY, d(evs[0][1]));
     evs.forEach(([t, n], i) => addEvent(r.id, d(n, ['09:12', '14:40', '06:55', '11:30', '16:05'][i] ?? '12:00'), t.split(':')[0].replace(/^Avsender$/, 'Registrert'), t.includes(':') ? t.split(': ')[1] : ''));
   }
 }
-function mockMail() {
+function mockMail(u) {
   const no = '00370726209876543210';
-  if (q('SELECT 1 FROM hl_shipments WHERE tracking_no=?').get(no)) return 0;
-  return upsertShipment({ trackingNo: no, name: 'Clas Ohlson · lyspærer', shop: 'Clas Ohlson', source: 'email', sourceNote: 'Funnet i e-post fra Clas Ohlson, i dag', eta: new Date(now() + 4 * DAY).toLocaleDateString('sv-SE') }).created ? 1 : 0;
+  if (q('SELECT 1 FROM hl_shipments WHERE tracking_no=? AND user_id=?').get(no, u)) return 0;
+  return upsertShipment({ user: u, trackingNo: no, name: 'Clas Ohlson · lyspærer', shop: 'Clas Ohlson', source: 'email', sourceNote: 'Funnet i e-post fra Clas Ohlson, i dag', eta: new Date(now() + 4 * DAY).toLocaleDateString('sv-SE') }).created ? 1 : 0;
 }
 // Demo: manuelle sendinger får en plausibel status ut fra nummeret, så siden har noe å vise uten nøkler.
 function mockAdvance(r) {

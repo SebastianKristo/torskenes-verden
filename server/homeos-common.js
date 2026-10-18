@@ -17,6 +17,17 @@ export const guard = async (c, next) => {
   await next();
 };
 
+// Per bruker (ISO2): Sporing, Matplan og Home OS har egne data for hver bruker, så alle innloggede slipper inn.
+// Brukeren legges i c.get('user').
+export const userGuard = async (c, next) => {
+  const write = c.req.method !== 'GET';
+  let id = sessionUser(c);
+  if (!id && fh.bearerOk?.(c, write ? 'finance:write' : 'finance:read')) id = c.get('user');
+  if (!id) return bad(c, 'Ikke innlogget', 401);
+  c.set('user', id);
+  await next();
+};
+
 export async function readJson(c) {
   try { const b = await c.req.json(); return b && typeof b === 'object' ? b : {}; } catch { return {}; }
 }

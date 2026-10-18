@@ -9,7 +9,10 @@ import tls from 'node:tls';
 import { createHash } from 'node:crypto';
 import { ImapFlow } from 'imapflow';
 import { simpleParser } from 'mailparser';
-import { db, kv, OWNER, settings, saveSettings, secret } from './db.js';
+import { db, kv, OWNER, settings, saveSettings, secret, me } from './db.js';
+import { runAsUser } from '../settings.js';
+// ISO2: e-postimporten er per bruker. Hver bruker har sin egen IMAP (userCfg hos ISO-INT, lest via settings()/secret()),
+// egen status, egne duplikatsjekker (fh_mail_imports.user_id) og egne kvitteringer. Bakgrunnsjobben kjører hver bruker for seg.
 
 const q = (sql) => db.prepare(sql);
 const MOCK = process.env.MOCK_DATA === '1';
@@ -23,8 +26,9 @@ export function mailConfig() {
     doneFolder: st.imapDoneFolder, poll: st.imapPollMinutes, finnFolder: st.imapFinnFolder, passSet: !!secret('imapPass'),
     pin: st.imapPin ? { fingerprint: st.imapPin.fingerprint, subject: st.imapPin.subject, at: st.imapPin.at } : null };
 }
-export const mailStatus = () => ({ running, ...kv.get(OWNER, 'fh_mail_status', { lastCheck: null, imported: 0, lastImported: 0, lastError: null, unseen: null }) });
-const setStatus = (patch) => kv.set(OWNER, 'fh_mail_status', { ...mailStatus(), ...patch, running: undefined });
+const runningFor = new Set();
+export const mailStatus = (u = me()) => ({ running: runningFor.has(u), ...kv.get(u, 'fh_mail_status', { lastCheck: null, imported: 0, lastImported: 0, lastError: null, unseen: null }) });
+const setStatus = (patch, u = me()) => kv.set(u, 'fh_mail_status', { ...mailStatus(u), ...patch, running: undefined });
 
 /* ---------------- Sertifikat ---------------- */
 
@@ -155,8 +159,10 @@ export function receiptAttachments(parsed) {
   }).filter(Boolean);
 }
 
-const seen = q('SELECT 1 FROM fh_mail_imports WHERE message_id=? AND sha256=?');
-const logImport = q('INSERT OR IGNORE INTO fh_mail_imports(message_id,sha256,receipt_id,folder,sender,subject,received_at,status,error,created) VALUES(?,?,?,?,?,?,?,?,?,?)');
+const seenQ = q('SELECT 1 FROM fh_mail_imports WHERE message_id=? AND sha256=? AND user_id=?');
+const seen = { get: (m, h) => seenQ.get(m, h, me()) };
+const logQ = q('INSERT OR IGNORE INTO fh_mail_imports(message_id,sha256,receipt_id,folder,sender,subject,received_at,status,error,created,user_id) VALUES(?,?,?,?,?,?,?,?,?,?,?)');
+const logImport = { run: (...a) => logQ.run(...a, me()) };
 
 // Behandler én e-post. ingest({buffer, mime, name, meta}) lager kvitteringsjobben og gir id-en tilbake.
 export async function importMessage(source, { folder, ingest }) {
@@ -188,9 +194,9 @@ export function looksLikeFinn(parsed) {
 // Leser «All Mail» hvis Bridge viser den (ellers INBOX), bare nye UID-er siden forrige runde; første gang de siste 120 dagene.
 const FINN_FROM = ['finn.no', 'posten', 'bring', 'tillit'];
 async function scanFinnMails(client, folders, finnLink) {
-  if (!q('SELECT 1 FROM fh_finn LIMIT 1').get()) return 0;
+  if (!q('SELECT 1 FROM fh_finn WHERE user_id=? LIMIT 1').get(me())) return 0;
   const box = folders.includes('All Mail') ? 'All Mail' : 'INBOX';
-  const state = kv.get(OWNER, 'fh_finn_scan', {});
+  const state = kv.get(me(), 'fh_finn_scan', {});
   const lock = await client.getMailboxLock(box);
   let linked = 0;
   try {
@@ -202,7 +208,7 @@ async function scanFinnMails(client, folders, finnLink) {
     for (const uid of uids) {
       try { const msg = await client.fetchOne(String(uid), { source: true }, { uid: true }); linked += finnLink(await simpleParser(msg.source)); } catch { /* hopp over */ }
     }
-    kv.set(OWNER, 'fh_finn_scan', { ...state, [box]: { validity: String(mb.uidValidity), lastUid: Math.max(prev && !fresh ? prev.lastUid : 0, Number(mb.uidNext ?? 1) - 1, ...uids) } });
+    kv.set(me(), 'fh_finn_scan', { ...state, [box]: { validity: String(mb.uidValidity), lastUid: Math.max(prev && !fresh ? prev.lastUid : 0, Number(mb.uidNext ?? 1) - 1, ...uids) } });
   } finally { lock.release(); }
   return linked;
 }
@@ -259,7 +265,7 @@ export async function scanShippingMails(onMail, { max = 150 } = {}) {
     ({ client } = await connect(c, { allowPin: true }));
     const folders = (await client.list()).map((f) => f.path);
     const box = folders.includes('All Mail') ? 'All Mail' : 'INBOX';
-    const state = kv.get(OWNER, 'trk_mail_scan', {});
+    const state = kv.get(me(), 'trk_mail_scan', {});
     const lock = await client.getMailboxLock(box);
     try {
       const mb = client.mailbox, prev = state[box];
@@ -273,7 +279,7 @@ export async function scanShippingMails(onMail, { max = 150 } = {}) {
           scanned++; found += (await onMail(await simpleParser(msg.source))) || 0;
         } catch { /* hopp over én e-post */ }
       }
-      kv.set(OWNER, 'trk_mail_scan', { ...state, [box]: { validity: String(mb.uidValidity), lastUid: Math.max(prev && !fresh ? prev.lastUid : 0, Number(mb.uidNext ?? 1) - 1, ...uids) } });
+      kv.set(me(), 'trk_mail_scan', { ...state, [box]: { validity: String(mb.uidValidity), lastUid: Math.max(prev && !fresh ? prev.lastUid : 0, Number(mb.uidNext ?? 1) - 1, ...uids) } });
     } finally { lock.release(); }
     return { ok: true, scanned, found };
   } catch (e) {
@@ -283,13 +289,16 @@ export async function scanShippingMails(onMail, { max = 150 } = {}) {
   }
 }
 
-let running = false;
+// Sporing (ISO-INT): skann en bestemt brukers egen innboks.
+export const scanShippingMailsFor = (u, onMail, opts) => runAsUser(u, () => scanShippingMails(onMail, opts));
+
 // Én runde: hent e-post fra kvitteringsmappen (og uleste fra Finn-mappen), importer og flytt/merk.
 export async function runMail({ ingest, finn, finnLink } = {}) {
-  if (running) return { ...mailStatus(), busy: true, ok: false, message: 'En henting pågår allerede – vent litt og prøv igjen' };
+  const u = me();
+  if (runningFor.has(u)) return { ...mailStatus(), busy: true, ok: false, message: 'En henting pågår allerede – vent litt og prøv igjen' };
   const c = cfgWith();
   if (!c.host || !c.user || !c.pass) return { ok: false, message: 'E-post er ikke satt opp' };
-  running = true;
+  runningFor.add(u);
   let client, imported = 0, errors = 0, lastError = null;
   try {
     ({ client } = await connect(c, { allowPin: true }));
@@ -335,22 +344,28 @@ export async function runMail({ ingest, finn, finnLink } = {}) {
     setStatus({ lastCheck: Date.now(), lastError: m.message });
     return { ok: false, ...m };
   } finally {
-    running = false;
+    runningFor.delete(u);
     await client?.logout().catch(() => client?.close());
   }
 }
 
-export const recentImports = () => q('SELECT message_id AS messageId, receipt_id AS receiptId, folder, sender, subject, received_at AS receivedAt, status, error, created FROM fh_mail_imports ORDER BY created DESC LIMIT 20').all();
+export const recentImports = (u = me()) => q('SELECT message_id AS messageId, receipt_id AS receiptId, folder, sender, subject, received_at AS receivedAt, status, error, created FROM fh_mail_imports WHERE user_id=? ORDER BY created DESC LIMIT 20').all(u);
+// Brukere som kan ha e-postimport: eieren og alle innloggingsbrukere.
+const mailUsers = () => { try { return [...new Set([OWNER, ...q('SELECT id FROM users').pluck().all()])]; } catch { return [OWNER]; } };
 
 // Bakgrunnsjobb: sjekker hvert minutt om det er tid for en ny runde (IMAP_POLL_MINUTES).
 let timer = null;
 export function startMailWorker(deps) {
   if (timer || MOCK) return;
   timer = setInterval(() => {
-    const c = mailConfig();
-    if (!c.on || !c.host) return;
-    const last = mailStatus().lastCheck ?? 0;
-    if (Date.now() - last >= Math.max(1, c.poll) * 60_000) runMail(deps).catch(() => {});
+    for (const u of mailUsers()) {
+      runAsUser(u, () => {
+        const c = mailConfig();
+        if (!c.on || !c.host) return;
+        const last = mailStatus(u).lastCheck ?? 0;
+        if (Date.now() - last >= Math.max(1, c.poll) * 60_000) runMail(deps).catch(() => {});
+      });
+    }
   }, 60_000);
   timer.unref?.();
 }

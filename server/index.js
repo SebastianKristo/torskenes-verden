@@ -10,7 +10,7 @@ import { config } from './config.js';
 import { db, kv, OWNER } from './db.js';
 import { createSession, destroySession, sessionUser, rememberDevice, pauseDevice, forgetDevice, currentDeviceId, currentSessionId, trustIp, isLan, requireAuth, requireAdmin, clientIp, verifyLogin, createTicket, redeemTicket, userInfo, listUsers, listUsersFor, createUser, deleteUser, updateUser, setPassword, checkPassword, isAdmin, needsSetup, setupServer, serverName, setServerName, startTotpSetup, confirmTotpSetup, disableTotp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
 import * as integrations from './integrations.js';
-import { cfg, publicConfig, updateConfig } from './settings.js';
+import { cfg, publicConfig, updateConfig, runRequest, userCfgSet } from './settings.js';
 import finansApi from './finans/routes.js';
 import { db as fhDb } from './finans/db.js';
 import homeApi from './home.js';
@@ -29,13 +29,15 @@ import notifyApi, { appMeta } from './notify.js';
 import { attachRealtime } from './realtime.js';
 import { revokeUserTokens } from './finans/routes.js';
 import birthdaysApi, { startBirthdayWorker, widgetOut as birthdaysWidget } from './birthdays.js';
-import integrationsApi, { settingsSearchApi, testByIdOrName } from './integrations-api.js';
+import integrationsApi, { settingsSearchApi, testByIdOrName, integrationScope } from './integrations-api.js';
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
 
 const api = process.env.MOCK_DATA === '1' ? await import('./mock.js') : integrations;
 if (api !== integrations) console.warn('[mock] MOCK_DATA=1 – viser eksempeldata.');
 
 const app = new Hono();
+// ISO2: hver forespørsel kjører med sin egen brukerkontekst, så cfg() gir den innloggedes personlige integrasjoner.
+app.use('*', (c, next) => runRequest(c, next));
 const UPLOADS = resolve(config.dataDir, 'uploads');
 const PUBLIC = resolve('public');
 
@@ -111,13 +113,15 @@ function finishLogin(c, userId, remember) {
 app.post('/api/auth/login', passwordLogin);
 app.post('/api/login', passwordLogin);
 // Steg 2: 6-sifret kode fra autentiseringsappen eller en gjenopprettingskode.
-app.post('/api/auth/totp', async (c) => {
+const totpStep = async (c) => {
   const { ticket, code, remember } = await c.req.json().catch(() => ({}));
   const r = redeemTicket(ticket, code, clientIp(c));
   if (!r.ok) { await sleep(400); return c.json({ error: r.error, expired: !!r.expired }, r.status); }
   finishLogin(c, r.user.id, remember ?? r.remember);
   return c.json({ ok: true, user: r.user });
-});
+};
+app.post('/api/auth/totp', totpStep);
+app.post('/api/auth/2fa', totpStep); // prompt 25: samme steg under navnet i designet
 
 /* ---------------- Førstegangsoppsett ---------------- */
 
@@ -129,6 +133,9 @@ app.post('/api/setup', async (c) => {
   const b = await c.req.json().catch(() => ({}));
   try {
     const u = setupServer(b);
+    // Prompt 25: Papir · lys er standard etter oppsettet, og bakgrunnen fra steg 3 (Oslo / Vær / Planeter / Ingen) lagres med en gang.
+    const bg = { oslo: 'oslo', vaer: 'weather', 'vær': 'weather', weather: 'weather', planeter: 'planets', planets: 'planets', ingen: 'none', none: 'none' }[String(b.background ?? b.bgType ?? '').toLowerCase()];
+    kv.set(u.id, 'layout', { ...layoutOf(u.id), mobileDesign: 'papir', paperMode: 'lys', ...(bg ? { bgType: bg, photo: bg === 'none' ? 'cur' : bg } : {}) });
     finishLogin(c, u.id, b.remember !== false);
     return c.json({ ok: true, user: meOut(u.id) });
   } catch (e) { loginFailed(ip); return c.json({ error: e.message }, e.status ?? 400); }
@@ -189,7 +196,7 @@ authed.get('/state', (c) => {
     categories: kv.get(u, 'categories', DEFAULT_CATS),
     loan: kv.get(u, 'loan', DEFAULT_LOAN),
     city: kv.get(u, 'city', 'Oslo'),
-    schoolUrl: c.get('role') === 'admin' ? cfg('school_url') : '', // serveroppsett: bare for administratorer (prompt 21)
+    schoolUrl: cfg('school_url'), // personlig (ISO2): brukerens egen skoleside, tom hvis ikke satt
     searchUrl: cfg('search_url'),
     searchStyle: kv.get(u, 'search_style', 'wide'),
     hideSearch: kv.get(u, 'hide_search', false),
@@ -308,22 +315,27 @@ authed.delete('/devices/:id', (c) => {
 
 // Integrasjonene er serveroppsett. Vanlige brukere får bare gruppene med navn, logo og om de er satt opp, uten verdier
 // (ingen adresser, koordinater, URL-er, e-post eller brukernavn), så Innstillinger kan vises uten feil (prompt 21).
-const restrictedConfig = () => publicConfig().map((g) => ({ name: g.name, id: g.id, domain: g.domain, category: g.category, help: '', guide: [], restricted: true,
-  fields: g.fields.map((f) => ({ key: f.key, label: f.label, type: f.type, secret: f.secret, set: f.set, value: '', custom: false })) }));
-authed.get('/config', (c) => c.json(c.get('role') === 'admin' ? publicConfig() : restrictedConfig()));
-authed.put('/config', requireAdmin, async (c) => {
-  try { updateConfig(await c.req.json()); } catch (e) { return c.json({ error: e.message }, 400); }
-  return c.json(publicConfig());
+// ISO2: hver gruppe har scope 'personal' (brukerens egne: Plex, Jellyfin, Sonarr, Radarr, skolekalender, Trading 212, Sporing)
+// eller 'server' (bare admin). Alle får sine egne personlige grupper med verdier; admin får i tillegg servergruppene.
+// Ingen ser andre brukeres personlige verdier.
+const configFor = (c) => publicConfig(c.get('user'), { admin: c.get('role') === 'admin' });
+authed.get('/config', (c) => c.json(configFor(c)));
+authed.put('/config', async (c) => {
+  const b = await c.req.json().catch(() => null);
+  if (!b || typeof b !== 'object' || Array.isArray(b)) return c.json({ error: 'Forventet et objekt {nøkkel: verdi}' }, 400);
+  try { updateConfig(b, c.get('user'), { admin: c.get('role') === 'admin' }); } catch (e) { return c.json({ error: e.message }, e.status === 403 ? 403 : 400); }
+  return c.json(configFor(c));
 });
-// «Test tilkobling»: ett ekte kall via serveren med de lagrede verdiene.
-authed.post('/config/test/:group', requireAdmin, async (c) => {
+// «Test tilkobling»: ett ekte kall via serveren med de lagrede verdiene. Personlige grupper kan alle teste (med egne verdier).
+authed.post('/config/test/:group', async (c) => {
   const group = c.req.param('group');
+  if (c.get('role') !== 'admin' && !(hasTrackingTest(group) || integrations.groupScope(group) === 'personal' || integrationScope(group) === 'personal')) return c.json({ error: 'Bare administratorer kan teste serveroppsettet', restricted: true }, 403);
   if (hasTrackingTest(group)) return c.json(await testTracking());
   if (hasBackgroundTest(group)) return c.json(await testBackgrounds());
   if (hasMapTest(group)) return c.json(await testMap());
   if (integrations.hasTest(group)) return c.json(await integrations.testIntegration(group));
   // Nyere integrasjoner (f.eks. Google Kalender) har testen sin i integrations-api.js.
-  const r = await testByIdOrName(group);
+  const r = await testByIdOrName(group, c.get('user'));
   return r ? c.json(r) : c.json({ error: 'Ukjent integrasjon' }, 404);
 });
 
@@ -353,7 +365,9 @@ function fileOwner(name) {
 authed.get('/files/:name', async (c) => {
   const name = c.req.param('name');
   if (!/^[a-f0-9]{24}(_t)?\.[a-z]{3,4}$/.test(name)) return c.notFound();
-  if (c.get('role') !== 'admin' && fileOwner(name) !== c.get('user')) return c.notFound();
+  // ISO2: også administratorer får bare sine egne filer; filer uten kjent eier (eldre) bare for administratorer.
+  const owner = fileOwner(name);
+  if (owner ? owner !== c.get('user') : c.get('role') !== 'admin') return c.notFound();
   const ext = name.split('.').pop();
   const mime = Object.entries(MIME_EXT).find(([, e]) => e === ext)?.[0] ?? 'application/octet-stream';
   try {
@@ -469,23 +483,27 @@ const proxy = (fn) => async (c) => {
     return c.json({ error: e.message }, 502);
   }
 };
-// Admins integrasjoner (portefølje, skolekalender, Plex/Jellyfin): vanlige brukere får 200 med tomme data og
-// {configured:false, restricted:true}, så widgetene viser «ikke koblet» i stedet for en feilmelding (prompt 21).
-const RESTRICTED = { configured: false, restricted: true, events: [], positions: [], items: [], servers: [] };
-const adminOnly = (fn) => async (c) => {
-  if (!isAdmin(c.get('user'))) return c.json(RESTRICTED);
+// Personlige integrasjoner (ISO2): portefølje, skolekalender, Plex/Jellyfin og Sonarr/Radarr bruker den innloggedes egne
+// verdier (cfg() leser brukerens kv cfg_personal). Har brukeren ikke satt opp noe, svares 200 med {configured:false}.
+// Med MOCK_DATA=1 får eieren demo, og andre brukere får demo først når de har lagt inn en egen verdi for integrasjonen.
+const NOT_CONFIGURED = { configured: false, events: [], positions: [], items: [], servers: [] };
+const MOCK_KEYS = { school: ['cal_ics'], trading: ['t212_key'], media: ['plex_token', 'jf_key'], upcoming: ['sonarr_key', 'radarr_key'] };
+const personal = (kind, fn) => async (c) => {
+  if (api !== integrations && c.get('user') !== OWNER && !MOCK_KEYS[kind].some((k) => userCfgSet(c.get('user'), k))) {
+    return c.json(kind === 'upcoming' ? { configured: false, tv: { configured: false, items: [] }, movies: { configured: false, items: [] } } : NOT_CONFIGURED);
+  }
   return fn(c);
 };
 authed.get('/ruter', proxy(api.getRuter));
 authed.get('/weather', proxy(api.getWeather));
-authed.get('/school', adminOnly(proxy(api.getSchool)));
-// Trading 212 gir ikke dagsendring direkte: lagre første totalverdi hver dag og sammenlign.
-authed.get('/trading', adminOnly(proxy(async () => {
+authed.get('/school', personal('school', proxy(api.getSchool)));
+// Trading 212 gir ikke dagsendring direkte: lagre første totalverdi hver dag (per bruker) og sammenlign.
+authed.get('/trading', personal('trading', proxy(async (c) => {
   const t = await api.getTrading();
   if (!t.configured || !Number.isFinite(t.total)) return t;
-  const today = new Date().toLocaleDateString('sv-SE');
-  let base = kv.get(OWNER, 't212_day');
-  if (base?.date !== today) { base = { date: today, total: t.total }; kv.set(OWNER, 't212_day', base); }
+  const today = new Date().toLocaleDateString('sv-SE'), u = c.get('user');
+  let base = kv.get(u, 't212_day');
+  if (base?.date !== today) { base = { date: today, total: t.total }; kv.set(u, 't212_day', base); }
   // Merk: innskudd/uttak samme dag regnes med i endringen.
   const dayChange = t.total - base.total;
   return { ...t, dayChange, dayPct: base.total ? (dayChange / base.total) * 100 : 0 };
@@ -497,14 +515,14 @@ authed.get('/health', proxy(async (c) => {
   if (isAdmin(c.get('user'))) return h;
   return { ...h, services: (h.services ?? []).map((x) => ({ name: x.name, up: x.up, status: x.status, ms: x.ms, error: x.error })) };
 }));
-authed.get('/upcoming', proxy(api.getUpcoming));
+authed.get('/upcoming', personal('upcoming', proxy(api.getUpcoming)));
 authed.get('/news', proxy(api.getNews));
 // Plex og Jellyfin: «Spilles nå» (30 s) og «Nylig lagt til» (10 min). Plakater hentes via serveren så tokenet aldri når nettleseren.
-app.get('/api/media/now', authOrToken, adminOnly(proxy(api.getMediaNow)));
-app.get('/api/media/recent', authOrToken, adminOnly(proxy(api.getMediaRecent)));
-app.get('/api/media/history', authOrToken, adminOnly(proxy(api.getMediaHistory)));
+// Hver bruker ser sin egen Plex/Jellyfin (ISO2).
+app.get('/api/media/now', authOrToken, personal('media', proxy(api.getMediaNow)));
+app.get('/api/media/recent', authOrToken, personal('media', proxy(api.getMediaRecent)));
+app.get('/api/media/history', authOrToken, personal('media', proxy(api.getMediaHistory)));
 app.get('/api/media/poster', authOrToken, async (c) => {
-  if (!isAdmin(c.get('user'))) return c.json({ error: 'Bare administratorer kan gjøre dette', restricted: true }, 403);
   try {
     const img = await api.getMediaPoster(c.req.query('src'), c.req.query('id'));
     if (!img) return c.notFound();
@@ -563,8 +581,14 @@ app.onError((err, c) => {
   return c.json({ error: 'Intern feil' }, 500);
 });
 
+// Prompt 25: HTTP-serveren skal aldri kutte et langt AI-kall (Ollama kan bruke 60–120 s, og flere motorer etter hverandre mer).
+// requestTimeout gjelder hele forespørselen (10 min), socketTimeout 0 = ingen grense for inaktiv socket (SSE fra /finans/api/jobs).
+export const HTTP_TIMEOUTS = { requestTimeout: 600_000, headersTimeout: 65_000, keepAliveTimeout: 75_000, socketTimeout: 0 };
+
 if (process.env.NODE_ENV !== 'test') {
-  const server = serve({ fetch: app.fetch, port: config.port }, (info) => console.log(`OS kjører på http://localhost:${info.port}`));
+  const server = serve({ fetch: app.fetch, port: config.port, serverOptions: { requestTimeout: HTTP_TIMEOUTS.requestTimeout, headersTimeout: HTTP_TIMEOUTS.headersTimeout, keepAliveTimeout: HTTP_TIMEOUTS.keepAliveTimeout } },
+    (info) => console.log(`OS kjører på http://localhost:${info.port}`));
+  server.setTimeout(HTTP_TIMEOUTS.socketTimeout);
   attachRealtime(server, wsUser);
 }
 

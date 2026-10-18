@@ -175,9 +175,11 @@ test('ikke funnet etter 30 dager → Arkiv med status Levert', async () => {
   assert.equal(s.archived, true);
 });
 
-test('sporing er fortsatt bare for administratorer', async () => {
-  assert.equal((await B('/api/tracking')).status, 403);
-  assert.equal((await B('/api/tracking/refresh', 'POST')).status, 403);
+test('sporing er per bruker (ISO2): vanlig bruker har egen, tom liste', async () => {
+  const r = await B('/api/tracking');
+  assert.equal(r.status, 200);
+  assert.equal(r.body.items.length, 0);
+  assert.equal((await B('/api/tracking/refresh', 'POST')).status, 200);
 });
 
 /* ---------------- 4. Familie ---------------- */

@@ -1,8 +1,9 @@
-// Home OS: bolig (verdi, lån, faste utgifter) og inventar med garanti.
+// Home OS: bolig (verdi, lån, faste utgifter) og inventar med garanti. Per bruker (ISO2): kv(user,'home_property'/'home_inventory').
+// Eierens data ligger fortsatt under OWNER (samme nøkler), så ingenting flyttes.
 import { Hono } from 'hono';
 import { randomBytes } from 'node:crypto';
-import { kv, OWNER } from './db.js';
-import { guard, readJson, bad, str, num, MOCK, domainFor } from './homeos-common.js';
+import { kv } from './db.js';
+import { userGuard, readJson, bad, str, num, MOCK, domainFor } from './homeos-common.js';
 
 const DEMO_PROPERTY = { value: 4850000, valueDate: '2026-10', loan: 3120000, bank: 'DNB', rate: 5.24, payment: 18400,
   costs: [{ name: 'Fellesk.', amount: 3450 }, { name: 'strøm', amount: 1284 }, { name: 'forsikring', amount: 556 }, { name: 'nett', amount: 1000 }] };
@@ -12,8 +13,9 @@ const DEMO_ITEMS = [['Oppvaskmaskin Bosch', 'Kjøkken', '2024-03-12', 'Elkjøp',
   .map(([name, room, date, store, price, warrantyUntil, receipt], i) => ({ id: 'd' + i, name, room, date, store, price, warrantyUntil, receipt }));
 
 const EMPTY = { value: 0, valueDate: '', loan: 0, bank: '', rate: 0, payment: 0, costs: [] };
-const property = () => kv.get(OWNER, 'home_property', MOCK ? DEMO_PROPERTY : EMPTY);
-const items = () => kv.get(OWNER, 'home_inventory', MOCK ? DEMO_ITEMS : []);
+// Standardverdien kopieres, så en endring aldri havner i det felles standardobjektet (og dermed hos andre brukere).
+const property = (u) => kv.get(u, 'home_property', null) ?? structuredClone(MOCK ? DEMO_PROPERTY : EMPTY);
+const items = (u) => kv.get(u, 'home_inventory', null) ?? structuredClone(MOCK ? DEMO_ITEMS : []);
 const withDomain = (i) => ({ ...i, domain: i.domain || domainFor(i.store) });
 const date = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(v ?? '') ? v : '');
 
@@ -28,37 +30,37 @@ function cleanItem(b, old = {}) {
 }
 
 const api = new Hono();
-api.use('*', guard);
+api.use('*', userGuard);
 
-api.get('/property', (c) => c.json(property()));
+api.get('/property', (c) => c.json(property(c.get('user'))));
 api.put('/property', async (c) => {
-  const b = await readJson(c), p = property();
+  const b = await readJson(c), p = property(c.get('user'));
   for (const k of ['value', 'loan', 'rate', 'payment']) if (b[k] !== undefined) p[k] = Math.max(0, num(b[k]));
   if (b.bank !== undefined) p.bank = str(b.bank, 40);
   if (b.valueDate !== undefined) p.valueDate = str(b.valueDate, 20);
   if (Array.isArray(b.costs)) p.costs = b.costs.slice(0, 20).map((x) => ({ name: str(x?.name, 30), amount: Math.max(0, num(x?.amount)) })).filter((x) => x.name);
-  kv.set(OWNER, 'home_property', p);
+  kv.set(c.get('user'), 'home_property', p);
   return c.json(p);
 });
 
-api.get('/inventory', (c) => c.json(items().map(withDomain)));
+api.get('/inventory', (c) => c.json(items(c.get('user')).map(withDomain)));
 api.post('/inventory', async (c) => {
   const it = cleanItem(await readJson(c));
   if (!it.name) return bad(c, 'Navn mangler');
   it.id = randomBytes(6).toString('hex');
-  const list = items(); list.push(it); kv.set(OWNER, 'home_inventory', list);
+  const list = items(c.get('user')); list.push(it); kv.set(c.get('user'), 'home_inventory', list);
   return c.json(withDomain(it), 201);
 });
 api.patch('/inventory/:id', async (c) => {
-  const list = items(), i = list.findIndex((x) => x.id === c.req.param('id'));
+  const list = items(c.get('user')), i = list.findIndex((x) => x.id === c.req.param('id'));
   if (i < 0) return bad(c, 'Fant ikke gjenstanden', 404);
   list[i] = cleanItem(await readJson(c), list[i]);
   if (!list[i].name) return bad(c, 'Navn mangler');
-  kv.set(OWNER, 'home_inventory', list);
+  kv.set(c.get('user'), 'home_inventory', list);
   return c.json(withDomain(list[i]));
 });
 api.delete('/inventory/:id', (c) => {
-  kv.set(OWNER, 'home_inventory', items().filter((x) => x.id !== c.req.param('id')));
+  kv.set(c.get('user'), 'home_inventory', items(c.get('user')).filter((x) => x.id !== c.req.param('id')));
   return c.json({ ok: true });
 });
 

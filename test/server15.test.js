@@ -58,11 +58,11 @@ test('månefase: kjent fullmåne og nymåne', () => {
 
 test('transaksjonsdetalj med kvittering og bankrad, og antall til gjennomgang', async () => {
   const now = Date.now();
-  const t = db.prepare("INSERT INTO fh_transactions(date,amount,description,merchant,source,created,raw_bank_row) VALUES('2026-10-17',-34250,'REMA 1000 MAJORSTUEN','Rema 1000','csv',?,?) RETURNING id")
+  const t = db.prepare("INSERT INTO fh_transactions(date,amount,description,merchant,source,created,raw_bank_row,user_id) VALUES('2026-10-17',-34250,'REMA 1000 MAJORSTUEN','Rema 1000','csv',?,?,'owner') RETURNING id")
     .get(now, JSON.stringify({ bookingDate: '2026-10-17', valueDate: '2026-10-18', description: 'REMA 1000 MAJORSTUEN', message: 'KID 1234' })).id;
-  db.prepare("INSERT INTO fh_receipts(id,file,mime,status,merchant,date,total,extraction,transaction_id,created) VALUES('r1','r1.jpg','image/jpeg','booked','Rema 1000','2026-10-17',34250,?,?,?)")
+  db.prepare("INSERT INTO fh_receipts(id,file,mime,status,merchant,date,total,extraction,transaction_id,created,user_id) VALUES('r1','r1.jpg','image/jpeg','booked','Rema 1000','2026-10-17',34250,?,?,?,'owner')")
     .run(JSON.stringify({ lines: [{ description: 'Kyllingfilet 400g', amount: 89.9 }, { description: 'Melk', amount: 22.5 }] }), t, now);
-  db.prepare("INSERT INTO fh_receipts(id,mime,status,created) VALUES('r2','image/jpeg','needs_review',?),('r3','image/jpeg','needs_review',?)").run(now, now);
+  db.prepare("INSERT INTO fh_receipts(id,mime,status,created,user_id) VALUES('r2','image/jpeg','needs_review',?,'owner'),('r3','image/jpeg','needs_review',?,'owner')").run(now, now);
   const d = await F(`/transactions/${t}`);
   assert.equal(d.status, 200, JSON.stringify(d.body));
   assert.equal(d.body.merchant, 'Rema 1000');

@@ -8,7 +8,8 @@ import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, writeFile, unlink, rmdir } from 'node:fs/promises';
 import { join, resolve, extname } from 'node:path';
 import { simpleParser } from 'mailparser';
-import { db, settings, secret } from './db.js';
+import { db, settings, secret, me } from './db.js';
+// ISO2: Finn-handlene er per bruker (fh_finn.user_id). Underliggende tabeller (annonse, filer, e-poster) nås bare via en handel brukeren eier.
 import { config } from '../config.js';
 import { askJson } from './ai.js';
 import { parseFinnEmail } from './finn.js';
@@ -313,7 +314,7 @@ const firstName = (cp) => String(cp ?? '').replace(/^(selger|kjøper)\s+/i, '').
 export function matchDeals({ subject, text, from }) {
   const t = `${subject ?? ''}\n${text ?? ''}`.toLowerCase(), sender = String(from ?? '').toLowerCase();
   const { code, tracking, order } = codesIn(`${subject}\n${text}`);
-  const rows = q("SELECT * FROM fh_finn WHERE date >= date('now','-400 days') ORDER BY date DESC").all();
+  const rows = q("SELECT * FROM fh_finn WHERE user_id=? AND date >= date('now','-400 days') ORDER BY date DESC").all(me());
   const hits = [];
   for (const f of rows) {
     const sure = (code && f.finn_code === code) || (order && f.order_id && f.order_id.toLowerCase() === order.toLowerCase())
@@ -388,7 +389,10 @@ export function finnOut(f) {
 const STATUS_NB = { registered: 'Registrert', picked_up: 'Hentet', in_transit: 'I transport', ready_for_pickup: 'Klar for henting', out_for_delivery: 'Ute for levering', delivered: 'Levert', delayed: 'Forsinket', unknown: 'Ukjent status' };
 function shipmentOf(f) {
   try {
-    const s = q("SELECT id, tracking_no, carrier, status, eta, pickup_point FROM hl_shipments WHERE (source='finn' AND source_ref=?) OR (tracking_no=?) LIMIT 1").get(String(f.id), f.tracking ?? '');
+    // Sporing er per bruker (ISO-INT): bare eierens egne sendinger når tabellen har user_id.
+    const own = q("SELECT 1 FROM pragma_table_info('hl_shipments') WHERE name='user_id'").get();
+    const s = q(`SELECT id, tracking_no, carrier, status, eta, pickup_point FROM hl_shipments WHERE ((source='finn' AND source_ref=?) OR (tracking_no=?))${own ? ' AND user_id=?' : ''} LIMIT 1`)
+      .get(String(f.id), f.tracking ?? '', ...(own ? [f.user_id ?? me()] : []));
     if (!s) return null;
     const events = q('SELECT ts, status, location FROM hl_shipment_events WHERE shipment_id=? ORDER BY ts DESC LIMIT 8').all(s.id);
     return { id: s.id, trackingNo: s.tracking_no, carrier: s.carrier, status: s.status, statusText: STATUS_NB[s.status] ?? s.status, eta: s.eta, pickupPoint: s.pickup_point, events };
@@ -475,12 +479,13 @@ export function finnFull(f) {
 /* ---------------- Demodata ---------------- */
 
 // MOCK_DATA: gi demohandlene Finn-kode, e-poster og (for noen) annonse og bilder, første gang listen åpnes.
-let demoDone = false;
+const demoDone = new Set();
 async function ensureDemo() {
-  if (!MOCK || demoDone) return;
-  demoDone = true;
-  if (q('SELECT 1 FROM fh_finn_emails LIMIT 1').get()) return;
-  const rows = q('SELECT * FROM fh_finn ORDER BY id').all();
+  const u = me();
+  if (!MOCK || demoDone.has(u)) return;
+  demoDone.add(u);
+  if (q('SELECT 1 FROM fh_finn_emails e JOIN fh_finn f ON f.id=e.finn_id WHERE f.user_id=? LIMIT 1').get(u)) return;
+  const rows = q('SELECT * FROM fh_finn WHERE user_id=? ORDER BY id').all(u);
   for (const [i, f] of rows.entries()) {
     const code = String(345678000 + f.id * 7919), track = `3707247600${String(12345678 + f.id).padStart(8, '0')}`;
     q('UPDATE fh_finn SET finn_code=COALESCE(finn_code, ?), tracking=COALESCE(tracking, ?) WHERE id=?').run(code, track, f.id);
@@ -508,12 +513,12 @@ async function ensureDemo() {
 /* ---------------- Ruter ---------------- */
 
 export function mountFinn(api, { R, W, upload, saveFinn }) {
-  const deal = (c) => q('SELECT * FROM fh_finn WHERE id=?').get(+c.req.param('id'));
+  const deal = (c) => q('SELECT * FROM fh_finn WHERE id=? AND user_id=?').get(+c.req.param('id'), c.get('user'));
   const filesIn = (b) => (Array.isArray(b.file) ? b.file : b.file ? [b.file] : []).filter((x) => x instanceof File && x.size > 0);
 
   api.get('/finn', R, async (c) => {
     await ensureDemo();
-    const rows = q('SELECT * FROM fh_finn ORDER BY date DESC, id DESC').all().map(finnOut);
+    const rows = q('SELECT * FROM fh_finn WHERE user_id=? ORDER BY date DESC, id DESC').all(c.get('user')).map(finnOut);
     const y = String(new Date().getFullYear());
     const sum = (role) => rows.filter((r) => r.role === role && r.date.startsWith(y)).reduce((a, r) => a + r.amount, 0);
     // Netto per måned i år (solgt − kjøpt) for stolpene på mobil.
@@ -617,6 +622,7 @@ export function mountFinn(api, { R, W, upload, saveFinn }) {
     return c.json(finnFull(f));
   });
   const adImg = async (c) => {
+    if (!deal(c)) return c.notFound();
     const imgs = JSON.parse(q('SELECT images FROM fh_finn_ad WHERE finn_id=?').pluck().get(+c.req.param('id')) ?? '[]');
     const rel = imgs[+c.req.param('n')];
     if (!rel) return c.notFound();
@@ -642,6 +648,7 @@ export function mountFinn(api, { R, W, upload, saveFinn }) {
   });
   api.get('/finn/:id/emails', R, (c) => { const f = deal(c); return f ? c.json(emailsOf(f)) : c.notFound(); });
   api.get('/finn/:id/emails/:eid', R, (c) => {
+    if (!deal(c)) return c.notFound();
     const e = q('SELECT * FROM fh_finn_emails WHERE id=? AND finn_id=?').get(+c.req.param('eid'), +c.req.param('id'));
     return e ? c.json({ ...emailRow(e), body: e.body ?? '', text: e.body ?? '', source: e.source }) : c.notFound();
   });
@@ -669,6 +676,7 @@ export function mountFinn(api, { R, W, upload, saveFinn }) {
     return c.json(finnFull(f));
   });
   api.get('/finn/:id/files/:fid', R, async (c) => {
+    if (!deal(c)) return c.notFound();
     const x = q('SELECT * FROM fh_finn_files WHERE id=? AND finn_id=?').get(+c.req.param('fid'), +c.req.param('id'));
     if (!x) return c.notFound();
     const dl = x.mime === 'message/rfc822' || c.req.query('download') === '1';
@@ -778,23 +786,25 @@ async function fetchMissingAds(me, ids) {
   }
 }
 
-let job = null;
-const jobOut = () => (job ? { kind: job.kind, running: job.running, total: job.total, done: job.done, added: job.added, linked: job.linked, skipped: job.skipped, ads: job.ads ?? 0, phase: job.phase ?? null, errors: job.errors.slice(-20), message: job.message ?? null, items: job.items ?? [], started: job.started, finished: job.finished ?? null } : { running: false });
+// Én importjobb om gangen per bruker.
+const jobs = new Map();
+const jobOut = (job = jobs.get(me())) => (job ? { kind: job.kind, running: job.running, total: job.total, done: job.done, added: job.added, linked: job.linked, skipped: job.skipped, ads: job.ads ?? 0, phase: job.phase ?? null, errors: job.errors.slice(-20), message: job.message ?? null, items: job.items ?? [], started: job.started, finished: job.finished ?? null } : { running: false });
 function startJob(kind, total, work) {
-  job = { kind, running: true, total, done: 0, added: 0, linked: 0, skipped: 0, errors: [], items: [], started: Date.now() };
-  const me = job;
-  me.promise = (async () => {
-    try { await work(me); } catch (e) { me.errors.push(e.message); }
-    me.running = false; me.finished = Date.now();
-    me.message ??= `${me.added} ny${me.added === 1 ? '' : 'e'} handel${me.added === 1 ? '' : 'er'} · ${me.linked} oppdatert · ${me.skipped} hoppet over${me.errors.length ? ` · ${me.errors.length} feil` : ''}`;
+  const job = { kind, running: true, total, done: 0, added: 0, linked: 0, skipped: 0, errors: [], items: [], started: Date.now() };
+  jobs.set(me(), job);
+  const j = job;
+  j.promise = (async () => {
+    try { await work(j); } catch (e) { j.errors.push(e.message); }
+    j.running = false; j.finished = Date.now();
+    j.message ??= `${j.added} ny${j.added === 1 ? '' : 'e'} handel${j.added === 1 ? '' : 'er'} · ${j.linked} oppdatert · ${j.skipped} hoppet over${j.errors.length ? ` · ${j.errors.length} feil` : ''}`;
   })();
-  return me;
+  return j;
 }
 async function waitJob(c, me, ms = 50_000) {
   let t;
   await Promise.race([me.promise, new Promise((r) => { t = setTimeout(r, ms); t.unref?.(); })]);
   clearTimeout(t);
-  return c.json(jobOut());
+  return c.json(jobOut(me));
 }
 const tally = (me, r) => { me[r]++; me.done++; };
 
@@ -806,7 +816,7 @@ export function finnCodes(text) {
 }
 
 export function mountFinnImport(api, { R, W, upload, finnFromMail }) {
-  const busy = (c) => (job?.running ? c.json({ ...jobOut(), error: 'En import pågår allerede – vent til den er ferdig' }, 409) : null);
+  const busy = (c) => (jobs.get(me())?.running ? c.json({ ...jobOut(), error: 'En import pågår allerede – vent til den er ferdig' }, 409) : null);
   api.get('/finn/import/status', R, (c) => c.json(jobOut()));
 
   api.post('/finn/import/eml', W, upload, async (c) => {
@@ -853,13 +863,15 @@ export function mountFinnImport(api, { R, W, upload, finnFromMail }) {
     const codes = finnCodes(b.text).slice(0, 50);
     if (!codes.length) return bad(c, 'Lim inn minst én Finn-lenke, f.eks. https://www.finn.no/recommerce/forsale/item/476377764');
     const role = b.role === 'sold' ? 'sold' : 'bought';
+    const uid = c.get('user');
     const me = startJob('links', codes.length, async (me) => {
       for (const code of codes) {
         const url = `https://www.finn.no/recommerce/forsale/item/${code}`;
-        let f = q('SELECT * FROM fh_finn WHERE finn_code=? ORDER BY id LIMIT 1').get(code), created = false;
+        const u = uid;
+        let f = q('SELECT * FROM fh_finn WHERE finn_code=? AND user_id=? ORDER BY id LIMIT 1').get(code, u), created = false;
         if (!f) {
-          f = q("INSERT INTO fh_finn(role,item,counterpart,date,amount,steps,source,finn_code,ad_url,created) VALUES(?,?,'',?,0,'[]',?,?,?,?) ON CONFLICT(source) DO NOTHING RETURNING *")
-            .get(role, `Finn-annonse ${code}`, today(), `ad:${code}`, code, url, Date.now()) ?? q('SELECT * FROM fh_finn WHERE source=?').get(`ad:${code}`);
+          f = q("INSERT INTO fh_finn(role,item,counterpart,date,amount,steps,source,finn_code,ad_url,created,user_id) VALUES(?,?,'',?,0,'[]',?,?,?,?,?) ON CONFLICT(user_id, source) DO NOTHING RETURNING *")
+            .get(role, `Finn-annonse ${code}`, today(), `ad:${code}`, code, url, Date.now(), u) ?? q('SELECT * FROM fh_finn WHERE source=? AND user_id=?').get(`ad:${code}`, u);
           created = true;
         }
         try {

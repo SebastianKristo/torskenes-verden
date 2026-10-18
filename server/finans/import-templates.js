@@ -3,7 +3,7 @@
 // første 5 radene og svarer med kolonnene; svaret lagres som en mal med kolonnesignatur, så neste fil med
 // samme kolonner bruker malen uten AI.
 import { createHash } from 'node:crypto';
-import { db } from './db.js';
+import { db, me, perUserUnique } from './db.js';
 import { askJson } from './ai.js';
 import { bankRow } from './csv.js';
 import { cleanDescription, splitRows } from './importer.js';
@@ -20,6 +20,8 @@ db.exec(`CREATE TABLE IF NOT EXISTS fh_import_template (
   source TEXT NOT NULL DEFAULT 'ai',           -- ai | guess
   created INTEGER NOT NULL
 )`);
+// ISO2: lagrede maler er per bruker (samme kolonner kan ha forskjellige maler hos to brukere).
+perUserUnique('fh_import_template', /signature TEXT NOT NULL UNIQUE/, 'signature TEXT NOT NULL', 'UNIQUE(user_id, signature)');
 
 export const FIELDS = ['date', 'desc', 'in', 'out', 'amount', 'message', 'payee'];
 export const FIELD_LABEL = { date: 'Dato', desc: 'Beskrivelse', in: 'Beløp inn', out: 'Beløp ut', amount: 'Beløp', message: 'Melding', payee: 'Mottaker' };
@@ -155,8 +157,9 @@ async function aiMapping(head, data) {
 }
 
 const tplRow = (r) => r && { id: r.id, name: r.name, builtin: false, ai: r.source === 'ai', hasHeader: !!r.has_header, signature: r.signature, mapping: JSON.parse(r.mapping_json), dateFormat: r.date_format, created: r.created };
-export const savedTemplates = () => q('SELECT * FROM fh_import_template ORDER BY created').all().map(tplRow);
-export const deleteTemplate = (id) => q('DELETE FROM fh_import_template WHERE id=?').run(+id).changes > 0;
+export const savedTemplates = (u = me()) => q('SELECT * FROM fh_import_template WHERE user_id=? ORDER BY created').all(u).map(tplRow);
+export const deleteTemplate = (id, u = me()) => q('DELETE FROM fh_import_template WHERE id=? AND user_id=?').run(+id, u).changes > 0;
+const savedBySig = (sig) => q('SELECT * FROM fh_import_template WHERE signature=? AND user_id=?').get(sig, me());
 export function listTemplates() {
   return [...BUILTIN.map((t) => ({ id: t.id, name: t.name, builtin: true, hasHeader: t.hasHeader })), ...savedTemplates()];
 }
@@ -168,7 +171,7 @@ export async function detectFormat(rows, { ai = true, save = true } = {}) {
   rows.slice(0, 6).forEach((r, i) => { const n = Object.keys(headMap(r)).length; if (n > best && !r.some(isDate)) { best = n; hi = i; } });
   if (best >= 2) {
     const head = rows[hi].map((h) => String(h ?? '').trim()), sig = sigOf(head), data = rows.slice(hi + 1);
-    const saved = tplRow(q('SELECT * FROM fh_import_template WHERE signature=?').get(sig));
+    const saved = tplRow(savedBySig(sig));
     if (saved) return { template: { ...saved, source: 'saved' }, mapping: saved.mapping, dateFormat: saved.dateFormat, headerIndex: hi, headers: head, data };
     const mp = headMap(head), H = head.map(norm);
     const bi = BUILTIN.find((t) => t.hasHeader && t.sig.every((x) => H.includes(x)));
@@ -179,7 +182,7 @@ export async function detectFormat(rows, { ai = true, save = true } = {}) {
   // Ukjente overskrifter: første rad har ingen datoer eller tall, men radene under har datoer.
   if (rows.length > 1 && !rows[0].some((x) => isDate(x) || isNum(x)) && rows.slice(1, 4).some((r) => r.some(isDate))) {
     const head = rows[0].map((h) => String(h ?? '').trim()), sig = sigOf(head);
-    const saved = tplRow(q('SELECT * FROM fh_import_template WHERE signature=?').get(sig));
+    const saved = tplRow(savedBySig(sig));
     if (saved) return { template: { ...saved, source: 'saved' }, mapping: saved.mapping, dateFormat: saved.dateFormat, headerIndex: 0, headers: head, data: rows.slice(1) };
     return unknown(head, rows.slice(1), 0, sig, headMap(head), { ai, save });
   }
@@ -187,7 +190,7 @@ export async function detectFormat(rows, { ai = true, save = true } = {}) {
   const bi = BUILTIN.find((t) => !t.hasHeader && t.cols === W && /^\d{1,2}\/\d{1,2}\/\d{2}$/.test(String(first[0] ?? '').trim()));
   if (bi) return { template: { id: bi.id, name: bi.name, builtin: true, source: 'builtin' }, mapping: bi.mapping, dateFormat: bi.dateFormat, headerIndex: -1, headers: null, data: rows };
   const sig = `nohead:${W}`;
-  const saved = tplRow(q('SELECT * FROM fh_import_template WHERE signature=?').get(sig));
+  const saved = tplRow(savedBySig(sig));
   if (saved) return { template: { ...saved, source: 'saved' }, mapping: saved.mapping, dateFormat: saved.dateFormat, headerIndex: -1, headers: null, data: rows };
   return unknown(null, rows, -1, sig, {}, { ai, save });
 }
@@ -201,9 +204,9 @@ async function unknown(head, data, hi, sig, partial, { ai, save }) {
   const name = `${source === 'ai' ? '✦ AI-mal' : 'Gjettet mal'} · ${label}`;
   let id = null;
   if (save && okMap(mapping) && data.some((r) => isDate(r[mapping.date]))) {
-    id = q(`INSERT INTO fh_import_template(name,signature,has_header,mapping_json,date_format,source,created) VALUES(?,?,?,?,?,?,?)
-      ON CONFLICT(signature) DO UPDATE SET mapping_json=excluded.mapping_json, date_format=excluded.date_format RETURNING id`)
-      .get(name, sig, head ? 1 : 0, JSON.stringify(mapping), g.dateFormat, source, Date.now()).id;
+    id = q(`INSERT INTO fh_import_template(name,signature,has_header,mapping_json,date_format,source,created,user_id) VALUES(?,?,?,?,?,?,?,?)
+      ON CONFLICT(user_id, signature) DO UPDATE SET mapping_json=excluded.mapping_json, date_format=excluded.date_format RETURNING id`)
+      .get(name, sig, head ? 1 : 0, JSON.stringify(mapping), g.dateFormat, source, Date.now(), me()).id;
   }
   return { template: { id, name, builtin: false, ai: source === 'ai', source }, mapping, dateFormat: g.dateFormat, headerIndex: hi, headers: head, data };
 }

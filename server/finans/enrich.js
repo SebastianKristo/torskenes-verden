@@ -5,7 +5,8 @@ import { mkdir, readFile, writeFile, stat } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { db, OWNER, kv } from '../db.js';
 import { config } from '../config.js';
-import { settings } from './db.js';
+import { settings, me } from './db.js';
+import { runAsUser } from '../settings.js';
 import { askJson } from './ai.js';
 import { matchMerchant, fileForDomain, isManualDomain } from '../logos/match.js';
 
@@ -60,7 +61,8 @@ Object.assign(DOMAINS, {
   'sport 1': 'sport1.no', 'sport1': 'sport1.no', 'anton sport': 'antonsport.no', 'bergans': 'bergans.com', 'norrøna': 'norrona.com', 'boozt': 'boozt.com', 'nelly': 'nelly.com', 'ellos': 'ellos.no', 'temu': 'temu.com', 'aliexpress': 'aliexpress.com', 'ebay': 'ebay.com', 'etsy': 'etsy.com',
   'norli': 'norli.no', 'ark bokhandel': 'ark.no', 'adlibris': 'adlibris.com', 'cdon': 'cdon.no', 'apotek': null, 'legekontor': null, 'tannlege': null,
 });
-const learned = () => kv.get(OWNER, 'fh_domains', {});
+// ISO2: lærte koblinger butikk → domene er per bruker.
+const learned = (u = me()) => kv.get(u, 'fh_domains', {}) ?? {};
 const DOMAIN_RE = /^(?=.{3,80}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24}$/;
 export const validDomain = (d) => typeof d === 'string' && DOMAIN_RE.test(d.toLowerCase()) ? d.toLowerCase() : null;
 
@@ -99,7 +101,8 @@ export function learnDomain(name, domain) {
   const k = keyOf(name).split(' ').slice(0, 3).join(' ');
   const d = domain === null ? null : validDomain(domain);
   if (!k || (domain !== null && !d)) return;
-  kv.set(OWNER, 'fh_domains', { ...learned(), [k]: d });
+  const u = me();
+  kv.set(u, 'fh_domains', { ...learned(u), [k]: d });
 }
 
 /* ---------------- Logo-cache ---------------- */
@@ -186,20 +189,27 @@ export function kick(delay = 1500) {
   timer = setTimeout(() => { timer = null; run(); }, delay);
   timer.unref?.();
 }
+// ISO2: jobben går per bruker (egne kategorier, egne lærte domener, egen AI-logg og brukerens eget aiSummaries-valg).
 async function run() {
-  if (running || !settings().aiSummaries || process.env.MOCK_DATA === '1') return;
+  if (running || process.env.MOCK_DATA === '1') return;
   if (Date.now() < backoff) return kick(backoff - Date.now());
+  const users = q('SELECT DISTINCT user_id FROM fh_transactions WHERE ai_done=0 AND user_id IS NOT NULL').pluck().all().filter((u) => settings(u).aiSummaries);
+  const u = users[0];
+  if (!u) return;
   running = true;
+  try { await runAsUser(u, () => runFor(u)); } finally { running = false; }
+}
+async function runFor(u) {
   try {
-    const cats = q("SELECT id, name FROM fh_categories ORDER BY sort").all();
+    const cats = q("SELECT id, name FROM fh_categories WHERE user_id=? ORDER BY sort").all(u);
     const catName = new Map(cats.map((c) => [c.id, c.name]));
     const rows = q(`SELECT t.id, t.description, t.merchant, t.amount, t.category_id, r.extraction FROM fh_transactions t
-      LEFT JOIN fh_receipts r ON r.transaction_id=t.id AND r.status='booked' WHERE t.ai_done=0 ORDER BY t.date DESC LIMIT 15`).all();
+      LEFT JOIN fh_receipts r ON r.transaction_id=t.id AND r.status='booked' WHERE t.ai_done=0 AND t.user_id=? ORDER BY t.date DESC LIMIT 15`).all(u);
     if (!rows.length) return;
     const input = rows.map((r) => ({ id: String(r.id), text: r.merchant || r.description, raw: r.description !== r.merchant ? r.description : undefined, amount: r.amount / 100,
       category: catName.get(r.category_id) ?? null, lines: r.extraction ? (JSON.parse(r.extraction).lines ?? []).slice(0, 15).map((l) => l.description) : undefined }));
     const res = await askJson(SUM_PROMPT(input, cats.map((c) => c.name)), SUM_SCHEMA, { timeout: 90_000, task: 'categorize' });
-    const upd = q('UPDATE fh_transactions SET ai_short=?, ai_long=?, domain=COALESCE(domain, ?), category_id=COALESCE(category_id, ?), ai_done=1 WHERE id=?');
+    const upd = q('UPDATE fh_transactions SET ai_short=?, ai_long=?, domain=COALESCE(domain, ?), category_id=COALESCE(category_id, ?), ai_done=1 WHERE id=? AND user_id=?');
     const byId = new Map((res.items ?? []).map((x) => [String(x.id), x]));
     db.transaction(() => {
       for (const r of rows) {
@@ -207,7 +217,7 @@ async function run() {
         const catId = x?.category ? cats.find((c) => c.name.toLowerCase() === String(x.category).toLowerCase())?.id ?? null : null;
         const dom = validDomain(x?.domain);
         if (dom && !domainFor(r.merchant || r.description)) learnDomain(r.merchant || r.description, dom);
-        upd.run(x?.short?.slice(0, 80) || null, x?.long?.slice(0, 600) || null, dom, catId, r.id);
+        upd.run(x?.short?.slice(0, 80) || null, x?.long?.slice(0, 600) || null, dom, catId, r.id, u);
       }
     })();
     backoff = 0;
@@ -215,7 +225,7 @@ async function run() {
   } catch (e) {
     console.warn('[finans] AI-sammendrag:', e.message);
     backoff = Date.now() + 10 * 60_000;
-  } finally { running = false; }
+  }
 }
 setTimeout(() => kick(0), 8000).unref?.();
 

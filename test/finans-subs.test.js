@@ -23,7 +23,7 @@ await call('/settings', 'PUT', { ollamaUrl: 'http://127.0.0.1:9', provider: 'oll
 
 const now = new Date(), y = now.getFullYear(), m = now.getMonth();
 const day = (monthsBack, d) => new Date(y, m - monthsBack, d).toLocaleDateString('sv-SE');
-const insTx = db.prepare('INSERT INTO fh_transactions(date, amount, description, merchant, created) VALUES(?,?,?,?,?)');
+const insTx = db.prepare('INSERT INTO fh_transactions(date, amount, description, merchant, created,user_id) VALUES(?,?,?,?,?,\'owner\')');
 const tx = (date, kr, name) => insTx.run(date, Math.round(kr * 100), name, name, Date.now());
 
 test('trekk per år: månedlig 12 ganger, årlig én gang, hvert 2. år bare i trekkåret', () => {

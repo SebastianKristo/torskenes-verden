@@ -1,6 +1,8 @@
 // Mat (prompt 13): mapper, oppskrifter fra nettsider og skannede bilder, og lenker/filer per rett.
 //
-// Datamodell (SQLite, ved siden av rettene i kv OWNER/'mat'):
+// Per bruker (ISO2): alle fire tabellene har user_id (gamle rader tilhører OWNER), og alle spørringer filtrerer på brukeren.
+//
+// Datamodell (SQLite, ved siden av rettene i kv user/'mat'):
 //   food_folder(id, name, sort)                          – dish.folderId peker hit
 //   dish_link(id, dish_id, title, url, file_path, kind)  – lenke (url) eller opplastet fil (file_path = mat_file.id)
 //   mat_file(id, path, mime, name, size, created)        – bilder, vedlegg og originalbilder fra skanning
@@ -12,7 +14,8 @@ import { mkdirSync, writeFileSync, readFileSync, existsSync, unlinkSync } from '
 import { join, resolve } from 'node:path';
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
-import { db } from './db.js';
+import { db, OWNER } from './db.js';
+import { activeUser, runAsUser } from './settings.js';
 import { config } from './config.js';
 import { settings, secret } from './finans/db.js';
 import { sniffMime } from './finans/scan.js';
@@ -30,19 +33,26 @@ CREATE TABLE IF NOT EXISTS dish_link (id TEXT PRIMARY KEY, dish_id TEXT NOT NULL
 CREATE INDEX IF NOT EXISTS dish_link_dish ON dish_link(dish_id);
 CREATE TABLE IF NOT EXISTS mat_file (id TEXT PRIMARY KEY, path TEXT NOT NULL, mime TEXT NOT NULL, name TEXT, size INTEGER, created INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS mat_scan_job (id TEXT PRIMARY KEY, status TEXT NOT NULL, error TEXT, dish_id TEXT, name TEXT, file_id TEXT, mime TEXT, created INTEGER NOT NULL, updated INTEGER NOT NULL);`);
+for (const t of ['food_folder', 'dish_link', 'mat_file', 'mat_scan_job']) {
+  if (!db.prepare(`SELECT 1 FROM pragma_table_info('${t}') WHERE name='user_id'`).get()) db.exec(`ALTER TABLE ${t} ADD COLUMN user_id TEXT`);
+  db.prepare(`UPDATE ${t} SET user_id=? WHERE user_id IS NULL`).run(OWNER);
+}
+db.exec('CREATE INDEX IF NOT EXISTS food_folder_user ON food_folder(user_id)');
+// Brukeren forespørselen eller jobben gjelder.
+const mu = () => { const u = activeUser(); if (!u) throw Object.assign(new Error('Ikke innlogget'), { status: 401 }); return u; };
 
 /* ---------------- Mapper ---------------- */
 
 export const DEFAULT_FOLDERS = ['Middag', 'Supper', 'Fisk', 'Kylling', 'Vegetar', 'Bakst', 'Frokost', 'Favoritter'];
-const qFolders = db.prepare('SELECT id, name, sort FROM food_folder ORDER BY sort, name');
-export const folders = () => qFolders.all();
-export const folderById = (id) => (id ? db.prepare('SELECT id, name, sort FROM food_folder WHERE id=?').get(id) ?? null : null);
+const qFolders = db.prepare('SELECT id, name, sort FROM food_folder WHERE user_id=? ORDER BY sort, name');
+export const folders = (u = mu()) => qFolders.all(u);
+export const folderById = (id, u = mu()) => (id ? db.prepare('SELECT id, name, sort FROM food_folder WHERE id=? AND user_id=?').get(id, u) ?? null : null);
 export const folderByName = (n) => folders().find((f) => low(f.name) === low(n)) ?? null;
 
-export function ensureDefaultFolders() {
-  if (folders().length) return;
-  const ins = db.prepare('INSERT INTO food_folder(id, name, sort) VALUES(?,?,?)');
-  db.transaction(() => DEFAULT_FOLDERS.forEach((n, i) => ins.run(rid(), n, i)))();
+export function ensureDefaultFolders(u = mu()) {
+  if (folders(u).length) return;
+  const ins = db.prepare('INSERT INTO food_folder(id, name, sort, user_id) VALUES(?,?,?,?)');
+  db.transaction(() => DEFAULT_FOLDERS.forEach((n, i) => ins.run(rid(), n, i, u)))();
 }
 
 // Enkel gjetning når AI ikke har svart: navn og ingredienser mot mappenavnene.
@@ -79,15 +89,15 @@ export function storeFile(buf, mime, name = '') {
   const id = rid(), ext = Object.entries(EXT_MIME).find(([, m]) => m === mime)?.[0] ?? (extOf(name) || 'bin');
   const path = `${id}.${ext}`;
   writeFileSync(join(ROOT, path), buf);
-  db.prepare('INSERT INTO mat_file(id, path, mime, name, size, created) VALUES(?,?,?,?,?,?)').run(id, path, mime, str(name, 160) || path, buf.length, Date.now());
+  db.prepare('INSERT INTO mat_file(id, path, mime, name, size, created, user_id) VALUES(?,?,?,?,?,?,?)').run(id, path, mime, str(name, 160) || path, buf.length, Date.now(), mu());
   return { id, url: fileUrl(id) };
 }
-const fileRow = (id) => db.prepare('SELECT * FROM mat_file WHERE id=?').get(id);
+const fileRow = (id) => db.prepare('SELECT * FROM mat_file WHERE id=? AND user_id=?').get(id, mu());
 function removeFile(id) {
   const f = id && fileRow(id);
   if (!f) return;
   try { unlinkSync(join(ROOT, f.path)); } catch { /* allerede borte */ }
-  db.prepare('DELETE FROM mat_file WHERE id=?').run(id);
+  db.prepare('DELETE FROM mat_file WHERE id=? AND user_id=?').run(id, mu());
 }
 const fileIdFromUrl = (u) => String(u ?? '').match(/^\/mat\/api\/files\/([a-f0-9]{12})$/)?.[1] ?? null;
 
@@ -103,16 +113,17 @@ export function linkKind(url = '', title = '', mime = '') {
   return 'link';
 }
 const linkOut = (r) => ({ id: r.id, title: r.title, url: r.url ?? (r.file_path ? fileUrl(r.file_path) : null), fileUrl: r.file_path ? fileUrl(r.file_path) : null, kind: r.kind });
-const qLinks = db.prepare('SELECT * FROM dish_link WHERE dish_id=? ORDER BY created');
+const qLinks0 = db.prepare('SELECT * FROM dish_link WHERE dish_id=? AND user_id=? ORDER BY created');
+const qLinks = { all: (dishId) => qLinks0.all(dishId, mu()) };
 export const linksFor = (dishId) => qLinks.all(dishId).map(linkOut);
 export function allLinks() {
   const m = new Map();
-  for (const r of db.prepare('SELECT * FROM dish_link ORDER BY created').all()) { if (!m.has(r.dish_id)) m.set(r.dish_id, []); m.get(r.dish_id).push(linkOut(r)); }
+  for (const r of db.prepare('SELECT * FROM dish_link WHERE user_id=? ORDER BY created').all(mu())) { if (!m.has(r.dish_id)) m.set(r.dish_id, []); m.get(r.dish_id).push(linkOut(r)); }
   return m;
 }
 export function removeDishData(dish) {
   for (const r of qLinks.all(dish.id)) removeFile(r.file_path);
-  db.prepare('DELETE FROM dish_link WHERE dish_id=?').run(dish.id);
+  db.prepare('DELETE FROM dish_link WHERE dish_id=? AND user_id=?').run(dish.id, mu());
   const img = fileIdFromUrl(dish.image);
   if (img) removeFile(img);
   if (dish.scanFile) removeFile(dish.scanFile);
@@ -392,7 +403,7 @@ export async function downloadImage(url) {
 /* ---------------- Skanning (kø i bakgrunnen) ---------------- */
 
 const jobOut = (j) => ({ id: j.id, status: j.status, error: j.error ?? null, dishId: j.dish_id ?? null, name: j.name ?? null, created: j.created, updated: j.updated, image: j.file_id ? fileUrl(j.file_id) : null });
-export const jobs = () => db.prepare('SELECT * FROM mat_scan_job ORDER BY created DESC LIMIT 30').all().map(jobOut);
+export const jobs = (u = mu()) => db.prepare('SELECT * FROM mat_scan_job WHERE user_id=? ORDER BY created DESC LIMIT 30').all(u).map(jobOut);
 const setJob = (id, f) => db.prepare(`UPDATE mat_scan_job SET ${Object.keys(f).map((k) => `${k}=@${k}`).join(', ')}, updated=@updated WHERE id=@id`).run({ ...f, id, updated: Date.now() });
 
 let running = false, ctx = null;
@@ -404,30 +415,34 @@ async function work() {
       const j = db.prepare("SELECT * FROM mat_scan_job WHERE status='queued' ORDER BY created LIMIT 1").get();
       if (!j) break;
       setJob(j.id, { status: 'reading' });
-      try {
-        const f = fileRow(j.file_id);
-        if (!f || !existsSync(join(ROOT, f.path))) throw new Error('Originalbildet mangler');
-        const buf = readFileSync(join(ROOT, f.path)), names = folders().map((x) => x.name);
-        let n;
-        try {
-          const ask = visionJson(buf, f.mime, recipePrompt(names, 'Du leser et bilde eller en PDF av en oppskrift (kokebok, utklipp, håndskrift eller skjermbilde).'), RECIPE_SCHEMA(names));
-          // Med eksempeldata venter vi ikke på en AI-motor som ikke finnes.
-          const r = MOCK && !AI ? await Promise.race([ask, new Promise((_, rej) => setTimeout(() => rej(new Error('tidsavbrudd')), 2500).unref?.())]) : await ask;
-          n = normalize(r.data);
-        } catch (e) {
-          if (!MOCK) throw e;
-          // Eksempeldata uten AI: lag en plausibel rett så flyten kan prøves.
-          n = { name: 'Skannet fiskegrateng', ingredients: ['400 g torsk', '3 dl makaroni', '4 dl melk', '2 egg', 'Revet ost'], steps: ['Kok makaronien.', 'Visp egg og melk.', 'Legg fisk og makaroni i form, hell over og stek på 200 °C i 35 minutter.'], servings: '4', time: '50 min', folder: 'Fisk' };
-        }
-        if (!n.name || (!n.ingredients.length && !n.steps.length)) throw new Error('Fant ingen oppskrift i bildet');
-        const dish = ctx.addDish({ ...n, folderId: (n.folder && folderByName(n.folder)?.id) || guessFolderId(n.name, n.ingredients), src: 'scan', scanFile: f.id, image: f.mime.startsWith('image/') ? fileUrl(f.id) : null });
-        setJob(j.id, { status: 'done', dish_id: dish.id, name: dish.name, error: null });
-      } catch (e) {
-        console.error('[mat] skanning feilet:', e.message);
-        setJob(j.id, { status: 'error', error: String(e.message).slice(0, 300) });
-      }
+      await runAsUser(j.user_id ?? OWNER, () => scanOne(j));
     }
   } finally { running = false; }
+}
+// Én skannejobb, i brukerens kontekst (mapper, filer og den nye retten blir brukerens).
+async function scanOne(j) {
+  try {
+    const f = fileRow(j.file_id);
+    if (!f || !existsSync(join(ROOT, f.path))) throw new Error('Originalbildet mangler');
+    const buf = readFileSync(join(ROOT, f.path)), names = folders().map((x) => x.name);
+    let n;
+    try {
+      const ask = visionJson(buf, f.mime, recipePrompt(names, 'Du leser et bilde eller en PDF av en oppskrift (kokebok, utklipp, håndskrift eller skjermbilde).'), RECIPE_SCHEMA(names));
+      // Med eksempeldata venter vi ikke på en AI-motor som ikke finnes.
+      const r = MOCK && !AI ? await Promise.race([ask, new Promise((_, rej) => setTimeout(() => rej(new Error('tidsavbrudd')), 2500).unref?.())]) : await ask;
+      n = normalize(r.data);
+    } catch (e) {
+      if (!MOCK) throw e;
+      // Eksempeldata uten AI: lag en plausibel rett så flyten kan prøves.
+      n = { name: 'Skannet fiskegrateng', ingredients: ['400 g torsk', '3 dl makaroni', '4 dl melk', '2 egg', 'Revet ost'], steps: ['Kok makaronien.', 'Visp egg og melk.', 'Legg fisk og makaroni i form, hell over og stek på 200 °C i 35 minutter.'], servings: '4', time: '50 min', folder: 'Fisk' };
+    }
+    if (!n.name || (!n.ingredients.length && !n.steps.length)) throw new Error('Fant ingen oppskrift i bildet');
+    const dish = ctx.addDish({ ...n, folderId: (n.folder && folderByName(n.folder)?.id) || guessFolderId(n.name, n.ingredients), src: 'scan', scanFile: f.id, image: f.mime.startsWith('image/') ? fileUrl(f.id) : null });
+    setJob(j.id, { status: 'done', dish_id: dish.id, name: dish.name, error: null });
+  } catch (e) {
+    console.error('[mat] skanning feilet:', e.message);
+    setJob(j.id, { status: 'error', error: String(e.message).slice(0, 300) });
+  }
 }
 
 /* ---------------- Ruter ---------------- */
@@ -459,7 +474,7 @@ export function mountRecipes(api, context) {
     if (folderByName(name)) return bad(c, `Mappen ${name} finnes allerede.`, 409);
     if (folders().length >= 60) return bad(c, 'Maks 60 mapper');
     const id = rid(), sort = Math.max(-1, ...folders().map((f) => f.sort)) + 1;
-    db.prepare('INSERT INTO food_folder(id, name, sort) VALUES(?,?,?)').run(id, name, sort);
+    db.prepare('INSERT INTO food_folder(id, name, sort, user_id) VALUES(?,?,?,?)').run(id, name, sort, mu());
     return c.json({ id, name, sort, count: 0 }, 201);
   });
   api.patch('/folders/:id', async (c) => {
@@ -471,7 +486,7 @@ export function mountRecipes(api, context) {
     const twin = folderByName(name);
     if (twin && twin.id !== f.id) return bad(c, `Mappen ${name} finnes allerede.`, 409);
     const sort = b.sort !== undefined && Number.isFinite(+b.sort) ? Math.round(+b.sort) : f.sort;
-    db.prepare('UPDATE food_folder SET name=?, sort=? WHERE id=?').run(name, sort, f.id);
+    db.prepare('UPDATE food_folder SET name=?, sort=? WHERE id=? AND user_id=?').run(name, sort, f.id, mu());
     return c.json({ ...f, name, sort });
   });
   api.delete('/folders/:id', (c) => {
@@ -481,7 +496,7 @@ export function mountRecipes(api, context) {
     let moved = 0;
     for (const d of s.dishes) if (d.folderId === f.id) { d.folderId = null; moved++; }
     ctx.save(s);
-    db.prepare('DELETE FROM food_folder WHERE id=?').run(f.id);
+    db.prepare('DELETE FROM food_folder WHERE id=? AND user_id=?').run(f.id, mu());
     return c.json({ ok: true, moved, status: `Mappen ${f.name} er slettet.${moved ? ` ${moved} ${moved === 1 ? 'rett' : 'retter'} ligger nå uten mappe.` : ''}` });
   });
 
@@ -518,7 +533,7 @@ export function mountRecipes(api, context) {
       if (!mime || !(mime.startsWith('image/') || mime === 'application/pdf')) return bad(c, `${f.name || 'Filen'} er verken bilde eller PDF.`, 415);
       const file = storeFile(buf, mime, f.name || 'oppskrift');
       const id = rid(), now = Date.now();
-      db.prepare('INSERT INTO mat_scan_job(id, status, file_id, mime, name, created, updated) VALUES(?,?,?,?,?,?,?)').run(id, 'queued', file.id, mime, str(f.name, 120) || null, now, now);
+      db.prepare('INSERT INTO mat_scan_job(id, status, file_id, mime, name, created, updated, user_id) VALUES(?,?,?,?,?,?,?,?)').run(id, 'queued', file.id, mime, str(f.name, 120) || null, now, now, mu());
       out.push(id);
     }
     queueMicrotask(work);
@@ -526,15 +541,15 @@ export function mountRecipes(api, context) {
   });
   api.get('/recipes/jobs', (c) => c.json(jobs()));
   api.delete('/recipes/jobs/:id', (c) => {
-    const j = db.prepare('SELECT * FROM mat_scan_job WHERE id=?').get(c.req.param('id'));
+    const j = db.prepare('SELECT * FROM mat_scan_job WHERE id=? AND user_id=?').get(c.req.param('id'), mu());
     if (!j) return bad(c, 'Fant ikke jobben', 404);
     if (j.status === 'reading') return bad(c, 'Jobben leses nå. Prøv igjen om litt.', 409);
     if (!j.dish_id) removeFile(j.file_id);
-    db.prepare('DELETE FROM mat_scan_job WHERE id=?').run(j.id);
+    db.prepare('DELETE FROM mat_scan_job WHERE id=? AND user_id=?').run(j.id, mu());
     return c.json({ ok: true });
   });
   api.post('/recipes/jobs/:id/retry', (c) => {
-    const j = db.prepare('SELECT * FROM mat_scan_job WHERE id=?').get(c.req.param('id'));
+    const j = db.prepare('SELECT * FROM mat_scan_job WHERE id=? AND user_id=?').get(c.req.param('id'), mu());
     if (!j) return bad(c, 'Fant ikke jobben', 404);
     if (j.status !== 'error') return bad(c, 'Bare jobber som feilet kan prøves igjen.', 409);
     setJob(j.id, { status: 'queued', error: null });
@@ -547,7 +562,8 @@ export function mountRecipes(api, context) {
     const s = ctx.state(), d = ctx.dishOf(s, c.req.param('id'));
     if (!d) return bad(c, 'Fant ikke retten', 404);
     if (qLinks.all(d.id).length >= 30) return bad(c, 'Maks 30 lenker og filer per rett');
-    const ins = db.prepare('INSERT INTO dish_link(id, dish_id, title, url, file_path, kind, created) VALUES(?,?,?,?,?,?,?)');
+    const ins0 = db.prepare('INSERT INTO dish_link(id, dish_id, title, url, file_path, kind, created, user_id) VALUES(?,?,?,?,?,?,?,?)'), me = mu();
+    const ins = { run: (...a) => ins0.run(...a, me) };
     if ((c.req.header('content-type') ?? '').includes('multipart')) {
       const { b, files } = await fileOf(c);
       if (!files.length) return bad(c, 'Velg en fil.');
@@ -574,10 +590,10 @@ export function mountRecipes(api, context) {
   });
   api.delete('/dishes/:id/links/:lid', (c) => {
     const s = ctx.state(), d = ctx.dishOf(s, c.req.param('id'));
-    const r = d && db.prepare('SELECT * FROM dish_link WHERE id=? AND dish_id=?').get(c.req.param('lid'), d.id);
+    const r = d && db.prepare('SELECT * FROM dish_link WHERE id=? AND dish_id=? AND user_id=?').get(c.req.param('lid'), d.id, mu());
     if (!r) return bad(c, 'Fant ikke lenken', 404);
     removeFile(r.file_path);
-    db.prepare('DELETE FROM dish_link WHERE id=?').run(r.id);
+    db.prepare('DELETE FROM dish_link WHERE id=? AND user_id=?').run(r.id, mu());
     return ctx.reply(c, s, ctx.startOf(c), { dish: ctx.dishOut(s, d), links: linksFor(d.id) });
   });
 

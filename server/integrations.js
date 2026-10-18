@@ -1,12 +1,15 @@
 // Alle kall mot eksterne tjenester. Kjøres kun på serveren; nøkler sendes aldri til nettleseren.
-import { t212Creds, t212AuthHeader } from './finans/stocks.js';
+import { t212AuthHeader } from './finans/stocks.js';
 import ical from 'node-ical';
 // undici sin egen fetch må brukes med undici-Agent: Node sin innebygde fetch har en eldre undici og avviser den («invalid onRequestStart method»).
 import { Agent, fetch as undiciFetch } from 'undici';
 import { config } from './config.js';
 import { cached, fetchJson } from './cache.js';
 import { fetchWeather } from './weather.js';
-import { cfg, parseRoutes, groupOf } from './settings.js';
+import { cfg, parseRoutes, groupOf, activeUser } from './settings.js';
+
+// Personlige integrasjoner (ISO2): cfg() gir den innloggede brukerens verdier (se settings.js), og cachen deles bare per bruker.
+const mine = (k) => `${k}:${activeUser() ?? '-'}`;
 
 /* ---------------- Ruter / Entur ---------------- */
 
@@ -242,7 +245,7 @@ function expand(ev, from, to) {
   return ev.rrule.between(new Date(from.getTime() - dur), to, true).filter((d) => !ex.has(d.getTime()));
 }
 
-export const getSchool = () => cached('school', 15 * 60_000, async () => {
+export const getSchool = () => cached(mine('school'), 15 * 60_000, async () => {
   const icalUrl = cfg('cal_ics');
   if (!icalUrl) return { configured: false, events: [] };
   const res = await fetch(icalUrl, { signal: AbortSignal.timeout(15_000) });
@@ -280,7 +283,7 @@ const clean = (v) => String(v ?? '').trim().replace(/^["'`]+|["'`]+$/g, '').repl
 // Nye nøkler (2025+) har Key ID og secret: «Authorization: Basic base64(KEY:SECRET)». Eldre nøkler uten secret sendes som før.
 // Samme nøkkel som FinansHub → Aksjer (se t212Creds): nøkkel, secret og miljø fra én og samme kilde.
 export function t212Auth() {
-  const { key, secret, env } = t212Creds();
+  const key = clean(cfg('t212_key')), secret = clean(cfg('t212_secret')), env = cfg('t212_env') === 'demo' ? 'demo' : 'live';
   if (!key) return null;
   return { base: `https://${env}.trading212.com`, env, headers: { Authorization: t212AuthHeader(key, secret) } };
 }
@@ -294,14 +297,14 @@ async function t212Json(a, path) {
   return res.json();
 }
 
-export const getTrading = () => cached('t212', 60_000, async () => {
+export const getTrading = () => cached(mine('t212'), 60_000, async () => {
   const a = t212Auth();
   if (!a) return { configured: false };
   // Hent sekvensielt: Trading 212 har strenge rate limits per endepunkt.
   const cash = await t212Json(a, '/api/v0/equity/account/cash');
   const portfolio = await t212Json(a, '/api/v0/equity/portfolio');
   let currency = 'NOK';
-  try { currency = (await cached('t212info', 24 * 3600_000, () => t212Json(a, '/api/v0/equity/account/info'))).currencyCode || currency; } catch {}
+  try { currency = (await cached(mine('t212info'), 24 * 3600_000, () => t212Json(a, '/api/v0/equity/account/info'))).currencyCode || currency; } catch {}
   const positions = portfolio.map((p) => {
     const value = p.quantity * p.currentPrice;
     const cost = p.quantity * p.averagePrice;
@@ -369,7 +372,7 @@ export const getGallery = (key) => cached('gal_' + key, 12 * 3600_000, async () 
 // Proxmox o.l. bruker selvsignerte sertifikater på LAN; godta dem kun for helsesjekken.
 const insecure = new Agent({ connect: { rejectUnauthorized: false } });
 
-export const getHealth = () => cached('health', 30_000, async () => {
+export const getHealth = () => cached(mine('health'), 30_000, async () => {
   const list = config.services.map(([n, u]) => [n, n === 'Home Assistant' ? cfg('ha_url') : u]);
   for (const [n, k] of [['Sonarr', 'sonarr'], ['Radarr', 'radarr']]) if (cfg(k + '_key')) list.push([n, cfg(k + '_url')]);
   const services = await Promise.all(list.filter(([, u]) => u).map(async ([name, url]) => {
@@ -425,11 +428,11 @@ async function radarr() {
   }) };
 }
 
-export const getUpcoming = () => cached('upcoming', 10 * 60_000, async () => {
+export const getUpcoming = () => cached(mine('upcoming'), 10 * 60_000, async () => {
   const [tv, movies] = await Promise.all([sonarr().catch((e) => ({ configured: true, error: e.message, items: [] })), radarr().catch((e) => ({ configured: true, error: e.message, items: [] }))]);
   const byDate = (a, b) => String(a.date ?? '9').localeCompare(String(b.date ?? '9'));
   tv.items.sort(byDate); movies.items.sort(byDate);
-  return { tv, movies };
+  return { configured: !!(tv.configured || movies.configured), tv, movies };
 });
 
 /* ---------------- Media: Plex og Jellyfin ---------------- */
@@ -456,12 +459,12 @@ const plexPoster = (thumb) => (thumb ? `/api/media/poster?src=plex&id=${encodeUR
 const jfPoster = (id) => (id ? `/api/media/poster?src=jellyfin&id=${encodeURIComponent(id)}` : null);
 
 // Servernavn og versjon endres sjelden; hentes separat og caches.
-const plexInfo = () => cached('plex_info', 10 * 60_000, async () => {
+const plexInfo = () => cached(mine('plex_info'), 10 * 60_000, async () => {
   const { url, token } = plexCfg();
   const j = (await mediaGet(`${url}/`, plexH(token))).MediaContainer ?? {};
   return { name: j.friendlyName || 'Plex', version: plexVer(j.version), machineId: j.machineIdentifier };
 });
-const jfInfo = () => cached('jf_info', 10 * 60_000, async () => {
+const jfInfo = () => cached(mine('jf_info'), 10 * 60_000, async () => {
   const { url, key } = jfCfg();
   const j = await mediaGet(`${url}/System/Info`, jfH(key));
   return { name: j.ServerName || 'Jellyfin', version: j.Version || '' };
@@ -498,7 +501,7 @@ async function plexRecent() {
 }
 
 async function jfUserId() {
-  return cached('jf_uid', 10 * 60_000, async () => {
+  return cached(mine('jf_uid'), 10 * 60_000, async () => {
     const { url, key, user } = jfCfg();
     const users = await mediaGet(`${url}/Users`, jfH(key));
     const u = user ? users.find((x) => x.Name?.toLowerCase() === user.toLowerCase()) : users[0];
@@ -539,7 +542,7 @@ async function jfRecent() {
 }
 
 /* Historikk: siste avspillinger. Plex via /status/sessions/history/all (brukernavn fra /accounts), Jellyfin via DatePlayed per bruker. */
-const plexAccounts = () => cached('plex_accounts', 30 * 60_000, async () => {
+const plexAccounts = () => cached(mine('plex_accounts'), 30 * 60_000, async () => {
   const { url, token } = plexCfg();
   const list = (await mediaGet(`${url}/accounts`, plexH(token)).catch(() => null))?.MediaContainer?.Account ?? [];
   return Object.fromEntries(list.map((a) => [String(a.id), a.name]));
@@ -598,15 +601,15 @@ async function collect(kind) {
   return { configured: servers.length > 0, servers, items };
 }
 
-export const getMediaNow = () => cached('media_now', 30_000, () => collect('now'));
-export const getMediaRecent = () => cached('media_recent', 10 * 60_000, async () => {
+export const getMediaNow = () => cached(mine('media_now'), 30_000, () => collect('now'));
+export const getMediaRecent = () => cached(mine('media_recent'), 10 * 60_000, async () => {
   const r = await collect('recent');
   r.items.sort((a, b) => String(b.added ?? '').localeCompare(String(a.added ?? '')));
   r.items = r.items.slice(0, 12);
   return r;
 });
 
-export const getMediaHistory = () => cached('media_history', 5 * 60_000, async () => {
+export const getMediaHistory = () => cached(mine('media_history'), 5 * 60_000, async () => {
   const r = await collect('history');
   r.items.sort((a, b) => String(b.playedAt ?? '').localeCompare(String(a.playedAt ?? '')));
   r.items = r.items.slice(0, 20);
@@ -809,3 +812,6 @@ export async function testIntegration(group) {
   try { return { ok: true, message: await fn(), ms: Date.now() - t0 }; }
   catch (e) { return { ok: false, message: e instanceof TestError ? e.message : `Uventet feil: ${e.message}`, ms: Date.now() - t0 }; }
 }
+
+/** 'personal' eller 'server' for en gruppe i Innstillinger (navn eller id), null hvis ukjent. */
+export const groupScope = (group) => { const g = groupOf(group); return g ? (g.scope === 'personal' ? 'personal' : 'server') : null; };

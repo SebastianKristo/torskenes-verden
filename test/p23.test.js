@@ -165,9 +165,14 @@ test('tidsgrenser: innstillingene valideres og ligger i FinansHub-innstillingene
   const put2 = await A('/finans/api/settings', 'PUT', { aiTimeouts: { onTimeout: 'queue' } });
   assert.deepEqual(put2.body.aiTimeouts, { gemini: 5, groq: 120, roboflow: 15, ollama: 30, retries: 3, onTimeout: 'queue' });
   assert.equal((await A('/finans/api/bootstrap')).body.settings.aiTimeouts.onTimeout, 'queue');
-  // Admin-data: vanlige brukere får ikke lese eller endre dem.
-  assert.equal((await B('/finans/api/settings')).status, 403);
+  // ISO2: tidsgrensene er serveroppsett. Vanlige brukere ser dem (under server), men kan ikke endre dem.
+  const bs = await B('/finans/api/settings');
+  assert.equal(bs.status, 200);
+  assert.equal(bs.body.canEditServer, false);
+  assert.equal(bs.body.server.aiTimeouts.onTimeout, 'queue');
+  assert.equal(bs.body.ollamaUrl, undefined, 'vanlige brukere ser ikke server-URL-er');
   assert.equal((await B('/finans/api/settings', 'PUT', { aiTimeouts: { gemini: 60 } })).status, 403);
+  assert.equal((await A('/finans/api/settings')).body.aiTimeouts.gemini, 5);
 });
 
 test('tidsgrenser: Gemini henger → nytt forsøk, neste nøkkel, så Groq; status og ai_log viser motoren', async () => {
@@ -308,9 +313,9 @@ test('Finn: annonsen hentes når handelen opprettes, med attributter, lokale bil
   const full = await A(`/finans/api/finn/${id}`);
   assert.equal(full.body.messages.length, 2);
   assert.equal(full.body.ad.attrs.length, 5);
-  // Admin-data: vanlige brukere slipper ikke inn.
-  assert.equal((await B(`/finans/api/finn/${id}/ad`)).status, 403);
-  assert.equal((await B(`/finans/api/finn/${id}/messages`)).status, 403);
+  // ISO2: handelen er admins egen; andre brukere (eget regnskap) finner den ikke.
+  assert.equal((await B(`/finans/api/finn/${id}/ad`)).status, 404);
+  assert.equal((await B(`/finans/api/finn/${id}/messages`)).status, 404);
   finn._setFetch(null);
 });
 

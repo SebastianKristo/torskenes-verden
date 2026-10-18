@@ -1,7 +1,7 @@
 // Subscription OS: kategorier, månedsgraf, abonnementshelse, AI-sparing, kommende trekk,
 // «Pris økt» fra banktransaksjonene og kandidater (faste trekk som ikke er registrert ennå).
 // Alt regnes ut fra fh_subscriptions og fh_transactions; ingenting her endrer data unntatt priceCheck().
-import { db } from './db.js';
+import { db, me } from './db.js';
 
 const q = (sql) => db.prepare(sql);
 export const CYCLE_MONTHS = { monthly: 1, yearly: 12, biennial: 24 };
@@ -113,9 +113,9 @@ const same = (a, b) => { const x = key(a), y = key(b); return !!x && !!y && (x =
 
 // «Pris økt»: sammenlign de to siste banktrekkene for abonnementet. Når siste trekk er høyere,
 // blir det den nye prisen og forrige trekk lagres som forrige pris.
-export function priceCheck(subs) {
-  const txs = q("SELECT id, date, amount, COALESCE(NULLIF(merchant,''), description) AS name FROM fh_transactions WHERE amount < 0 AND date >= date('now','-26 months') ORDER BY date DESC").all();
-  const upd = q('UPDATE fh_subscriptions SET price=?, prev_price=?, price_changed=? WHERE id=?');
+export function priceCheck(subs, u = me()) {
+  const txs = q("SELECT id, date, amount, COALESCE(NULLIF(merchant,''), description) AS name FROM fh_transactions WHERE user_id=? AND amount < 0 AND date >= date('now','-26 months') ORDER BY date DESC").all(u);
+  const upd = q('UPDATE fh_subscriptions SET price=?, prev_price=?, price_changed=? WHERE id=? AND user_id=?');
   for (const s of subs) {
     if (!s.active) continue;
     const mine = txs.filter((t) => same(t.name, s.name));
@@ -124,17 +124,17 @@ export function priceCheck(subs) {
     const a = Math.abs(last.amount), b = Math.abs(prev.amount);
     // Forrige trekk må være omtrent den lagrede prisen, og det nye høyst 50 % mer – ellers er det et annet kjøp hos samme butikk.
     if (Math.abs(b - s.price) > s.price * 0.05 || a > b * 1.5) continue;
-    if (a > b * 1.01 && a - b >= 100 && s.price_changed !== last.date) { upd.run(a, b, last.date, s.id); s.price = a; s.prev_price = b; s.price_changed = last.date; }
+    if (a > b * 1.01 && a - b >= 100 && s.price_changed !== last.date) { upd.run(a, b, last.date, s.id, u); s.price = a; s.prev_price = b; s.price_changed = last.date; }
   }
   return subs;
 }
 
 // ✦ Fra transaksjoner: faste trekk sett minst 3 ganger (ulike måneder), omtrent samme beløp, ikke registrert.
-export function candidates(subs, { min = 3 } = {}) {
+export function candidates(subs, { min = 3, u = me() } = {}) {
   // Overføringer, lønn og faste utgifter som husleie er ikke abonnementer.
   const txs = q(`SELECT t.id, t.date, t.amount, t.merchant, t.description, t.domain FROM fh_transactions t LEFT JOIN fh_categories c ON c.id = t.category_id
-    WHERE t.amount < 0 AND t.date >= date('now','-14 months') AND COALESCE(c.name,'') NOT IN ('Overføring','Inntekt','Sparing') ORDER BY t.date`).all();
-  const fixed = q("SELECT r.name FROM fh_recurring r LEFT JOIN fh_categories c ON c.id = r.category_id WHERE COALESCE(c.name,'') <> 'Abonnementer'").all().map((r) => r.name);
+    WHERE t.user_id=? AND t.amount < 0 AND t.date >= date('now','-14 months') AND COALESCE(c.name,'') NOT IN ('Overføring','Inntekt','Sparing') ORDER BY t.date`).all(u);
+  const fixed = q("SELECT r.name FROM fh_recurring r LEFT JOIN fh_categories c ON c.id = r.category_id WHERE r.user_id=? AND COALESCE(c.name,'') <> 'Abonnementer'").all(u).map((r) => r.name);
   const groups = new Map();
   for (const t of txs) {
     const name = t.merchant || t.description, k = key(name);

@@ -5,6 +5,59 @@ import { join } from 'node:path';
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 import { db, OWNER, kv } from '../db.js';
 import { config } from '../config.js';
+import { currentUser, userCfg, userCfgSet, setUserCfg } from '../settings.js';
+
+// ISO2: regnskapet er per bruker. me() = brukeren i denne forespørselen/jobben (routes.js kjører hver forespørsel i
+// runAsUser), ellers OWNER (oppstart og eldre bakgrunnsjobber). Alle spørringer mot personlige fh_*-tabeller filtrerer på user_id.
+export const me = () => { let u; try { u = currentUser(); } catch { u = undefined; } return u || OWNER; };
+
+// Bygger en tabell på nytt med ny UNIQUE-regel (UNIQUE(name) → UNIQUE(user_id, name)). Alle rader og ID-er beholdes;
+// fremmednøkler er av mens tabellen byttes, så ingenting kaskaderes. Idempotent: gjør ingenting når regelen er på plass.
+export function rebuildTable(t, fix) {
+  const sql = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name=?").pluck().get(t);
+  if (!sql) return false;
+  const next = fix(sql);
+  if (!next || next === sql) return false;
+  const cols = db.prepare(`PRAGMA table_info(${t})`).all().map((c) => `"${c.name}"`).join(',');
+  const idx = db.prepare("SELECT sql FROM sqlite_master WHERE type='index' AND tbl_name=? AND sql IS NOT NULL").pluck().all(t);
+  const seq = db.prepare("SELECT seq FROM sqlite_sequence WHERE name=?").pluck().get(t);
+  const tmp = `${t}__iso2`;
+  db.pragma('foreign_keys = OFF');
+  try {
+    db.transaction(() => {
+      const before = db.prepare(`SELECT count(*) FROM ${t}`).pluck().get();
+      db.exec(`DROP TABLE IF EXISTS ${tmp}`);
+      db.exec(next.replace(/^CREATE TABLE\s+(?:"[^"]+"|\S+)/i, `CREATE TABLE ${tmp}`));
+      db.exec(`INSERT INTO ${tmp}(${cols}) SELECT ${cols} FROM ${t}`);
+      if (db.prepare(`SELECT count(*) FROM ${tmp}`).pluck().get() !== before) throw new Error(`rebuild ${t}: radantallet stemmer ikke`);
+      db.exec(`DROP TABLE ${t}`);
+      db.exec(`ALTER TABLE ${tmp} RENAME TO ${t}`);
+      for (const s of idx) db.exec(s);
+      if (seq != null) db.prepare('UPDATE sqlite_sequence SET seq=max(seq, ?) WHERE name=?').run(seq, t);
+    })();
+  } finally { db.pragma('foreign_keys = ON'); }
+  return true;
+}
+// Legger til user_id og bytter en UNIQUE-regel til å gjelde per bruker. Eksisterende rader tilhører OWNER.
+export function perUserUnique(t, oldRe, replacement, unique) {
+  const done = rebuildTable(t, (sql) => {
+    if (sql.includes(unique)) return null;
+    let s = sql.replace(oldRe, replacement);
+    if (!/\buser_id\b/.test(s)) s = s.replace(/\)\s*$/, ', user_id TEXT)');
+    return s.replace(/\)\s*$/, `, ${unique})`);
+  });
+  if (done) { db.prepare(`UPDATE ${t} SET user_id=? WHERE user_id IS NULL`).run(OWNER); db.exec(`CREATE INDEX IF NOT EXISTS ${t}_uid ON ${t}(user_id)`); }
+  return done;
+}
+// user_id på en tabell (idempotent). Radene som finnes når kolonnen legges til, får fill (standard OWNER) – bare den ene gangen,
+// så en rad uten eier senere aldri havner hos eieren av seg selv.
+export function addUserCol(t, fill = `'${OWNER}'`) {
+  if (db.prepare(`PRAGMA table_info(${t})`).all().some((c) => c.name === 'user_id')) return false;
+  db.exec(`ALTER TABLE ${t} ADD COLUMN user_id TEXT`);
+  db.exec(`UPDATE ${t} SET user_id=${fill} WHERE user_id IS NULL`);
+  db.exec(`CREATE INDEX IF NOT EXISTS ${t}_uid ON ${t}(user_id)`);
+  return true;
+}
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS fh_accounts (
@@ -261,6 +314,15 @@ if (!kv.get(OWNER, 'fh_mig_05', false)) {
   kv.set(OWNER, 'fh_mig_05', true);
 }
 
+// ISO2: alle personlige tabeller får user_id. Eksisterende rader tilhører OWNER (hovedadmin), med ett unntak:
+// kvitteringer en bruker uten admin-rolle lastet opp til en bolig, var aldri en del av eierens regnskap og tilhører opplasteren.
+perUserUnique('fh_categories', /name TEXT NOT NULL UNIQUE/, 'name TEXT NOT NULL', 'UNIQUE(user_id, name)');
+perUserUnique('fh_finn', /,\s*UNIQUE\s*\(\s*source\s*\)/i, '', 'UNIQUE(user_id, source)');
+perUserUnique('fh_mail_imports', /,\s*UNIQUE\s*\(\s*message_id\s*,\s*sha256\s*\)/i, '', 'UNIQUE(user_id, message_id, sha256)');
+for (const t of ['fh_accounts', 'fh_transactions', 'fh_budgets', 'fh_recurring', 'fh_rules', 'fh_goals', 'fh_subscriptions', 'fh_backups']) addUserCol(t);
+addUserCol('fh_receipts', `CASE WHEN uploaded_by IS NOT NULL AND uploaded_by IN (SELECT id FROM users WHERE role<>'admin') THEN uploaded_by ELSE '${OWNER}' END`);
+db.exec('CREATE INDEX IF NOT EXISTS fh_tx_uid_date ON fh_transactions(user_id, date)');
+
 export const DEFAULT_CATEGORIES = [
   ['Mat og dagligvarer', '#FF9F5A', 'expense'], ['Restaurant og kafé', '#F2C14E', 'expense'], ['Transport og lading', '#7AA7FF', 'expense'],
   ['Bolig', '#B79CFF', 'expense'], ['Hjem', '#8FD3FF', 'expense'], ['Fritid og hobby', '#5FD3A8', 'expense'], ['Abonnementer', '#FF6B8B', 'expense'],
@@ -294,8 +356,53 @@ export const DEFAULT_SETTINGS = {
 function mainAdminName() {
   try { const u = db.prepare("SELECT name, username FROM users ORDER BY is_main_admin DESC, role='admin' DESC, created LIMIT 1").get(); return u ? (u.name || u.username) : null; } catch { return null; }
 }
-export function settings() { const st = { ...DEFAULT_SETTINGS, ...kv.get(OWNER, 'fh_settings', {}) }; if (!st.name) st.name = mainAdminName() || 'Meg'; return st; }
-export function saveSettings(patch) { kv.set(OWNER, 'fh_settings', { ...kv.get(OWNER, 'fh_settings', {}), ...patch }); }
+// ISO2: innstillingene er delt i to.
+// - SERVER_KEYS: serveroppsett (AI-motorer, modeller, URL-er, aiTasks, tidsgrenser, embeddings, SMB-backup, Boliger-AI). Ligger hos OWNER,
+//   brukes av alle, og kan bare endres av admin (sjekkes i rutene).
+// - Resten er brukerens egne (budsjettstart, kategorivalg, varsler, e-postimport …) i kv(bruker, 'fh_settings').
+// - IMAP-tilkoblingen og Trading 212-miljøet er personlige integrasjoner hos ISO-INT (kv(bruker,'cfg_personal'), userCfg/setUserCfg).
+export const SERVER_KEYS = new Set(['provider', 'fallback', 'ollamaUrl', 'ollamaModel', 'ollamaTextModel', 'geminiModel', 'groqModel', 'groqVisionModel',
+  'roboflowWorkflow', 'roboflowWorkspace', 'roboflowModel', 'roboflowBarcodeModel', 'minConf', 'aiTasks', 'ocrFallback', 'ocrLowConf', 'aiTimeouts', 'embedModel', 'aiSearchEmbed',
+  'boligAiNew', 'smbOn', 'smbShare', 'smbDir', 'smbVersion', 'smbUser', 'smbDomain', 'smbSchedule', 'smbKeep', 'smbDb', 'smbReceipts', 'smbSettings', 'smbEncrypt']);
+// FinansHub-navn → nøkkel i cfg_personal (settings.js).
+export const PERSONAL_CFG = { imapHost: 'imapHost', imapPort: 'imapPort', imapSecurity: 'imapSecurity', imapUser: 'imapUser', imapFolder: 'imapFolder',
+  imapDoneFolder: 'imapDoneFolder', imapFinnFolder: 'imapFinnFolder', t212Env: 't212_env' };
+export const isServerKey = (k) => SERVER_KEYS.has(k);
+const rawSettings = (u) => kv.get(u, 'fh_settings', {}) ?? {};
+function userName(u) {
+  if (u === OWNER) return mainAdminName();
+  try { const r = db.prepare('SELECT name, username FROM users WHERE id=?').get(u); return r ? (r.name || r.username) : null; } catch { return null; }
+}
+const pcfg = (u, k, own) => {
+  const ck = PERSONAL_CFG[k];
+  let v;
+  try { v = u === OWNER && !userCfgSet(u, ck) && own[k] !== undefined ? own[k] : userCfg(u, ck); } catch { v = own[k]; }
+  if (k === 'imapPort') return Number(v) || 143;
+  if (k === 't212Env') return v === 'demo' ? 'demo' : 'live';
+  return v ?? '';
+};
+/** FinansHub-innstillingene slik brukeren u ser dem: serveroppsett (fra OWNER) + egne valg + egne integrasjoner. */
+export function settings(u = me()) {
+  const own = rawSettings(u), srv = u === OWNER ? own : rawSettings(OWNER);
+  const st = { ...DEFAULT_SETTINGS };
+  if (u !== OWNER) st.mailOn = false;   // miljøvariablene (IMAP_HOST …) gjelder bare eieren
+  for (const [k, v] of Object.entries(own)) if (!SERVER_KEYS.has(k) && !PERSONAL_CFG[k]) st[k] = v;
+  for (const k of SERVER_KEYS) if (srv[k] !== undefined) st[k] = srv[k];
+  for (const k of Object.keys(PERSONAL_CFG)) st[k] = pcfg(u, k, own);
+  if (!st.name) st.name = userName(u) || 'Meg';
+  return st;
+}
+/** Bare serveroppsettet (SERVER_KEYS), slik alle brukere bruker det. */
+export const serverSettings = () => { const st = settings(OWNER); return Object.fromEntries([...SERVER_KEYS].map((k) => [k, st[k]])); };
+/** Lagrer: servernøkler hos OWNER, personlige integrasjoner via setUserCfg, resten hos brukeren u. */
+export function saveSettings(patch, u = me()) {
+  const srv = {}, usr = {}, pc = {};
+  for (const [k, v] of Object.entries(patch ?? {})) (SERVER_KEYS.has(k) ? srv : PERSONAL_CFG[k] ? pc : usr)[k] = v;
+  if (Object.keys(srv).length) kv.set(OWNER, 'fh_settings', { ...rawSettings(OWNER), ...srv });
+  if (Object.keys(pc).length) setUserCfg(u, Object.fromEntries(Object.entries(pc).map(([k, v]) => [PERSONAL_CFG[k], v == null ? null : String(v)])));
+  // Eieren: de personlige verdiene speiles også i fh_settings, som før (eldre lesere).
+  if (Object.keys(usr).length || (u === OWNER && Object.keys(pc).length)) kv.set(u, 'fh_settings', { ...rawSettings(u), ...usr, ...(u === OWNER ? pc : {}) });
+}
 
 // Hemmeligheter for FinansHub (Gemini, Trading 212, SMB, IMAP) lagres separat, kryptert med AES-256-GCM, og sendes aldri ut.
 // Nøkkelen avledes fra SECRET_KEY (eller SESSION_SECRET). Byttes den, må hemmelighetene legges inn på nytt.
@@ -315,38 +422,73 @@ export function unseal(v) {
   } catch { return ''; }
 }
 const envOf = (k) => [SECRET_ENV[k]].flat().map((e) => process.env[e]).find((v) => v) ?? '';
-export const secret = (k) => unseal(kv.get(OWNER, 'fh_secret', {})[k]) || envOf(k) || '';
+// ISO2: IMAP-passordet og Trading 212-nøklene er personlige (cfg_personal hos ISO-INT, per bruker). Resten (Gemini, Groq, Roboflow,
+// SMB, backup-passfrase) er serverhemmeligheter hos OWNER. Miljøvariablene gjelder bare eieren.
+export const PERSONAL_SECRETS = { imapPass: 'imapPass', t212Key: 't212_key', t212Secret: 't212_secret' };
+const ownerSecret = (k) => unseal(kv.get(OWNER, 'fh_secret', {})[k]) || envOf(k) || '';
+export function secret(k, u = me()) {
+  const p = PERSONAL_SECRETS[k];
+  if (!p) return ownerSecret(k);
+  let v = '';
+  try { v = userCfgSet(u, p) ? userCfg(u, p) || '' : ''; } catch { v = ''; }
+  if (v || u !== OWNER) return v;
+  return ownerSecret(k);
+}
 // Hvor hemmeligheten kommer fra: 'ui' (lagret og lesbar), 'undecryptable' (lagret, men SECRET_KEY/SESSION_SECRET er endret), 'env' eller null.
-export function secretSource(k) {
+export function secretSource(k, u = me()) {
+  const p = PERSONAL_SECRETS[k];
+  if (p) {
+    let set = false; try { set = userCfgSet(u, p); } catch { set = false; }
+    if (set) { let v = ''; try { v = userCfg(u, p); } catch { v = ''; } return v ? 'ui' : 'undecryptable'; }
+    if (u !== OWNER) return null;
+  }
   const v = kv.get(OWNER, 'fh_secret', {})[k];
   if (v) return unseal(v) ? 'ui' : 'undecryptable';
   return envOf(k) ? 'env' : null;
 }
-export function setSecret(k, v) { const s = kv.get(OWNER, 'fh_secret', {}); if (v) s[k] = seal(v); else delete s[k]; kv.set(OWNER, 'fh_secret', s); }
+const setOwnerSecret = (k, v) => { const s = kv.get(OWNER, 'fh_secret', {}); if (v) s[k] = seal(v); else delete s[k]; kv.set(OWNER, 'fh_secret', s); };
+export function setSecret(k, v, u = me()) {
+  const p = PERSONAL_SECRETS[k];
+  if (!p) return setOwnerSecret(k, v);
+  setUserCfg(u, { [p]: v ? String(v) : null });
+  if (u === OWNER) setOwnerSecret(k, v);   // eieren: speiles i fh_secret som før
+}
 // Hemmeligheter fra før krypteringen kom inn krypteres ved oppstart.
 { const s = kv.get(OWNER, 'fh_secret', {}); let ch = false; for (const [k, v] of Object.entries(s)) if (v && !String(v).startsWith('enc:')) { s[k] = seal(v); ch = true; } if (ch) kv.set(OWNER, 'fh_secret', s); }
 
-// Første oppstart: kategorier og regler, og flytt gamle kvitteringer fra den enkle Økonomi-fanen inn som transaksjoner.
-if (!db.prepare('SELECT 1 FROM fh_categories LIMIT 1').get()) {
-  const ins = db.prepare('INSERT INTO fh_categories(name,color,kind,sort) VALUES(?,?,?,?)');
-  DEFAULT_CATEGORIES.forEach(([n, c, k], i) => ins.run(n, c, k, i));
-  const rule = db.prepare('INSERT INTO fh_rules(pattern,category_id) VALUES(?,(SELECT id FROM fh_categories WHERE name=?))');
-  DEFAULT_RULES.forEach(([p, c]) => rule.run(p, c));
+// Standardkategorier og -regler for brukeren u.
+function seedLedger(u) {
+  const ins = db.prepare('INSERT OR IGNORE INTO fh_categories(name,color,kind,sort,user_id) VALUES(?,?,?,?,?)');
+  DEFAULT_CATEGORIES.forEach(([n, c, k], i) => ins.run(n, c, k, i, u));
+  const rule = db.prepare('INSERT INTO fh_rules(pattern,category_id,user_id) VALUES(?,(SELECT id FROM fh_categories WHERE name=? AND user_id=?),?)');
+  DEFAULT_RULES.forEach(([p, c]) => rule.run(p, c, u, u));
+}
+// Første oppstart: kategorier og regler for eieren, og flytt gamle kvitteringer fra den enkle Økonomi-fanen inn som transaksjoner.
+if (!db.prepare('SELECT 1 FROM fh_categories WHERE user_id=? LIMIT 1').get(OWNER)) {
+  db.transaction(() => seedLedger(OWNER))();
   migrateOldReceipts();
+}
+// Nye brukere får et tomt regnskap med standardkategoriene ved første bruk (én gang; sletter de alle kategoriene, seedes det ikke på nytt).
+const seeded = new Set([OWNER]);
+export function ensureLedger(u) {
+  if (!u || seeded.has(u)) return;
+  seeded.add(u);
+  if (kv.get(u, 'fh_ledger_v1', false)) return;
+  db.transaction(() => { if (!db.prepare('SELECT 1 FROM fh_categories WHERE user_id=? LIMIT 1').get(u)) seedLedger(u); kv.set(u, 'fh_ledger_v1', Date.now()); })();
 }
 
 // Bare hovedadmins egne kvitteringer flyttes inn i husholdningens regnskap; andre brukeres blir i deres egen Økonomi-fane.
 function migrateOldReceipts() {
   const old = db.prepare('SELECT * FROM receipts WHERE user=?').all(OWNER);
   if (!old.length) return;
-  const acc = db.prepare("INSERT INTO fh_accounts(name,bank,type) VALUES('Brukskonto','','checking') RETURNING id").get().id;
+  const acc = db.prepare("INSERT INTO fh_accounts(name,bank,type,user_id) VALUES('Brukskonto','','checking',?) RETURNING id").get(OWNER).id;
   const MAP = { Mat: 'Mat og dagligvarer', Transport: 'Transport og lading', Bolig: 'Bolig', Fritid: 'Fritid og hobby', Skole: 'Skole' };
-  const cat = db.prepare('SELECT id FROM fh_categories WHERE name=?');
-  const tx = db.prepare("INSERT INTO fh_transactions(account_id,date,amount,description,merchant,category_id,source,created) VALUES(?,?,?,?,?,?,'receipt',?) RETURNING id");
-  const rc = db.prepare("INSERT INTO fh_receipts(id,file,thumb,mime,status,merchant,date,total,category_id,account_id,confidence,transaction_id,provider,created) VALUES(?,?,?,?,'booked',?,?,?,?,?,1,?,'manuell',?)");
+  const cat = db.prepare('SELECT id FROM fh_categories WHERE name=? AND user_id=?');
+  const tx = db.prepare(`INSERT INTO fh_transactions(account_id,date,amount,description,merchant,category_id,source,created,user_id) VALUES(?,?,?,?,?,?,'receipt',?,'${OWNER}') RETURNING id`);
+  const rc = db.prepare(`INSERT INTO fh_receipts(id,file,thumb,mime,status,merchant,date,total,category_id,account_id,confidence,transaction_id,provider,created,user_id) VALUES(?,?,?,?,'booked',?,?,?,?,?,1,?,'manuell',?,'${OWNER}')`);
   db.transaction(() => {
     for (const r of old) {
-      const cid = cat.get(MAP[r.category] ?? 'Annet')?.id ?? null;
+      const cid = cat.get(MAP[r.category] ?? 'Annet', OWNER)?.id ?? null;
       const ore = Math.round(r.amount * 100);
       const t = tx.get(acc, r.date, -ore, r.store, r.store, cid, r.created);
       if (r.file) {
@@ -362,3 +504,6 @@ function migrateOldReceipts() {
 }
 
 export { db, OWNER, kv };
+
+// Eier av en rad: true når raden finnes og tilhører u (brukes før oppdatering/sletting).
+export const owns = (table, id, u = me()) => !!db.prepare(`SELECT 1 FROM ${table} WHERE id=? AND user_id=?`).get(id, u);

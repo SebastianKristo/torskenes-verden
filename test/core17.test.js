@@ -120,7 +120,8 @@ test('Sporing: velg flere → arkiver, Arkiv-filter, gjenopprett og slett', asyn
 test('ParcelsApp: brukes som siste reserve, teller og stopper etter 3 oppslag i måneden', async () => {
   updateConfig({ trk_parcelsapp_key: 'pa-test-key' });
   // Hemmeligheten lagres kryptert, men leses som klartekst.
-  assert.match(kv.get(OWNER, 'cfg', {}).trk_parcelsapp_key, /^enc1:/);
+  // ISO2: personlig nøkkel – lagres hos brukeren (her eieren) i cfg_personal.
+  assert.match(kv.get(OWNER, 'cfg_personal', {}).trk_parcelsapp_key, /^enc1:/);
   assert.equal(cfg('trk_parcelsapp_key'), 'pa-test-key');
   kv.del(OWNER, 'parcelsapp_usage');
   const orig = globalThis.fetch;

@@ -379,9 +379,13 @@ test('familie: én post per person, kilde = mest nøyaktige siste 5 min, manuell
 
 /* ---------------- 5. Integrasjoner ---------------- */
 
-test('integrasjoner: alle oppsett, hemmeligheter sendes aldri ut, lagres kryptert, bare admin', async () => {
-  assert.equal((await B('/api/integrations')).status, 403);
-  assert.equal((await TB('/api/integrations')).status, 403);
+test('integrasjoner: alle oppsett, hemmeligheter sendes aldri ut, lagres kryptert; serveroppsett bare for admin (ISO2)', async () => {
+  // ISO2: vanlige brukere får sine egne personlige integrasjoner, ikke serveroppsettet.
+  const own = await B('/api/integrations');
+  assert.equal(own.status, 200);
+  assert.ok(own.body.length && own.body.every((x) => x.scope === 'personal'));
+  assert.equal((await TB('/api/integrations')).status, 200);
+  assert.equal((await B('/api/integrations/ha')).status, 403);
   assert.equal((await anon('/api/integrations')).status, 401);
   let r = await TA('/api/integrations');
   assert.equal(r.status, 200);
@@ -400,7 +404,7 @@ test('integrasjoner: alle oppsett, hemmeligheter sendes aldri ut, lagres krypter
   assert.equal(r.body.fields.find((f) => f.key === 'mybringUid').value, 'meg@example.no');
   assert.ok(!JSON.stringify(r.body).includes('bring-hemmelig'));
   assert.equal(cfg('mybringKey'), 'bring-hemmelig-123', 'samme lagringsnøkkel som Sporing bruker');
-  assert.match(kv.get('owner', 'cfg').mybringKey, /^enc1:/, 'kryptert');
+  assert.match(kv.get('owner', 'cfg_personal').mybringKey, /^enc1:/, 'kryptert, hos brukeren (ISO2)');
   assert.ok(!JSON.stringify((await A('/api/integrations')).body).includes('bring-hemmelig'));
 
   // FinansHub-hemmeligheter (AI, IMAP) og Trading 212 i begge lagringene.
@@ -427,7 +431,7 @@ test('integrasjoner: alle oppsett, hemmeligheter sendes aldri ut, lagres krypter
   assert.equal(r.status, 200);
   assert.equal(r.body.fields.find((f) => f.key === 'mybringKey').saved, false);
   assert.equal(r.body.status, 'missing');
-  assert.equal((await B('/api/integrations/mybring/mybringUid', 'DELETE')).status, 403);
+  assert.equal((await B('/api/integrations/ha/ha_url', 'DELETE')).status, 403);
   r = await A('/api/integrations/bank/test', 'POST');
   assert.equal(r.status, 400, 'bank har ingen test');
 });

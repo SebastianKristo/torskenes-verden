@@ -87,7 +87,7 @@ test('butikk og domene fra e-postavsender; transportøren som avsender gir ingen
 test('moreCount: alle aktive minus denne, i packagesFor og /widget', async () => {
   const n = db.prepare("SELECT COUNT(*) n FROM hl_shipments WHERE archived=0 AND status<>'delivered'").get().n;
   assert.ok(n >= 4);
-  const p = trk.packagesFor(2);
+  const p = trk.packagesFor(2, 'owner'); // ISO2: per bruker (eieren)
   assert.equal(p[0].moreCount, n - 1);
   for (const k of ['title', 'logo', 'moreCount', 'shop']) assert.ok(k in p[0], k);
   const w = await (await trk.default.request('/widget', { headers: H })).json();
