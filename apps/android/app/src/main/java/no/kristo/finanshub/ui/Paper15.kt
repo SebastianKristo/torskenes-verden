@@ -796,15 +796,15 @@ internal fun PaperNavSettings(vm: AppViewModel) {
             ) {
                 when {
                     !on && tabs.size >= 4 -> vm.flash("Maks 4 faner. Fjern en først.")
-                    !on -> vm.setPaperFinTabs(tabs + k)
-                    at > 0 -> vm.setPaperFinTabs(tabs.toMutableList().also { l -> l[at] = l[at - 1]; l[at - 1] = k })
+                    !on -> vm.updatePaperFinTabs(tabs + k)
+                    at > 0 -> vm.updatePaperFinTabs(tabs.toMutableList().also { l -> l[at] = l[at - 1]; l[at - 1] = k })
                 }
             }
         }
         PRow("Fjern fra fanelinjen", "Flytter siste fane til Mer", if (tabs.size > 1) "Fjern ${FIN_TABS.firstOrNull { it.first == tabs.last() }?.second ?: ""}" else "–", p.lab, serif = false, top = true) {
-            if (tabs.size > 1) vm.setPaperFinTabs(tabs.dropLast(1))
+            if (tabs.size > 1) vm.updatePaperFinTabs(tabs.dropLast(1))
         }
-        PRow("Tilbakestill", "Oversikt, Liste, Finn, Søk", "Nullstill", serif = false, top = true) { vm.setPaperFinTabs(FIN_TABS_DEFAULT) }
+        PRow("Tilbakestill", "Oversikt, Liste, Finn, Søk", "Nullstill", serif = false, top = true) { vm.updatePaperFinTabs(FIN_TABS_DEFAULT) }
     }
     PLabel("Fanelinje", modifier = Modifier.padding(start = 4.dp, top = 10.dp))
     PCard {

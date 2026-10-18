@@ -2116,7 +2116,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** Fanene i Finans-linja (opptil 4, «Mer» er alltid sist). */
     var paperFinTabs by mutableStateOf(FIN_TABS_DEFAULT)
         private set
-    fun setPaperFinTabs(l: List<String>) {
+    fun updatePaperFinTabs(l: List<String>) {
         val v = l.distinct().filter { k -> FIN_TABS.any { it.first == k } }.take(4).ifEmpty { listOf("oversikt") }
         paperFinTabs = v
         prefs.set(AppPrefs.FIN_TABS + (account?.id ?: ""), v.joinToString(","))
