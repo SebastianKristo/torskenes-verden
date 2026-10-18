@@ -1,0 +1,63 @@
+# Prompt 23
+
+Startet: 2026-10-18
+
+- 2026-10-18: «legg til ikoner vedsida, la ai bestemme eller la meg sette ikon. finn alle de store ikon bibloketnene. og la meg feks søke etter ikoner.» (vedlegg: Nyhetsleser med fanene Siste · Norge · Verden · Økonomi · Sport · Teknologi)
+  - `Nyhetsleser.dc.html`: hver fane har et ikon ved siden av navnet (følger tekstfargen). Standard: Siste ⚡, Norge fjell, Verden globus, Økonomi graf, Sport pokal, Teknologi brikke, Kultur masker.
+  - Innstillinger (⚙) → ny seksjon **«IKONER PÅ FANENE»**: bryter «Vis ikoner», én rad per fane med gjeldende ikon og kilde (Standard / ✦ AI / Valgt), og «✦ La AI velge alle».
+  - Trykk på en fane → **ikonvelger**: søkefelt (engelske ord), filter per bibliotek (Alle, Lucide, Material Symbols, Material Design, Phosphor, Tabler, Heroicons, Font Awesome, Remix, Fluent, Bootstrap, Iconoir, Carbon, Solar, MingCute, Streamline, Noto emoji, Twemoji), rutenett med opptil 96 treff, «✦ La AI velge» og «Ingen ikon».
+  - Søket bruker Iconify (api.iconify.design, over 200 åpne ikonsett, cirka 275 000 ikoner, gratis, uten nøkkel). Emoji- og flaggsett vises i farger, de andre i tekstfargen.
+  - AI-valg: Claude foreslår ett engelsk nøkkelord for kategorien, og første treff i valgt bibliotek brukes (Lucide som standard). Uten AI brukes en innebygd ordliste.
+  - Lagres i `hl_rss` (`ic`, `icSrc`, `icOn`).
+  - For Claude Code: bruk Iconify. Web: `@iconify/react` eller SVG-URL, og cache SVG lokalt i backend (`/api/icons/:prefix/:name.svg`) for offline. iOS/Android: hent SVG via backend og render som mal-bilde (tint = tekstfarge). Samme ikonvelger kan gjenbrukes for soner, kategorier, budsjett og abonnement.
+- 2026-10-18: «husker du sweipe tilbake på ios, jeg vil også se pewview av hva jeg sveiper til sånn som i videoen. nå er det bare svart til den nye siden.» (gjelder skjermopptaket fra prompt 21)
+  - Sveipet i videoen er altså iOS-sveip tilbake fra venstre kant. Feilen er i appen: bak siden er det svart i stedet for forrige side.
+  - Skrevet `prompts/claude-code-sveip-tilbake.md`: forrige side synlig bak med parallakse og slør, terskler (50 % / 500 pt/s), haptikk, unntak for rotsider, kart og scroll. Årsak (ruter uten stabel, eller av-slått `interactivePopGestureRecognizer`) og fiks for SwiftUI `NavigationStack`, Capacitor/WebView (montert sidestabel) og Android Predictive Back.
+- 2026-10-18: «la meg bestemme grensen på ai motor svarer ikke innnen 20 sek feks.»
+  - `Mobil Papir App.dc.html` → Innstillinger → AI og tolkning: ny gruppe **TIDSGRENSER**.
+    - Tidsgrense per motor: Gemini 20 s, Groq 15 s, Roboflow 15 s, Ollama 45 s. Trykk blar gjennom 5 · 10 · 15 · 20 · 30 · 45 · 60 · 90 · 120 s.
+    - **Nye forsøk:** Ingen / 1 / 2 / 3.
+    - **Ved tidsavbrudd:** Prøv neste motor (standard) / Bruk lokal OCR / Legg i kø og prøv senere.
+    - Lagres i `papir_ai_to`.
+  - For Claude Code: lagre i `user_settings.ai_timeouts` (`{gemini, groq, roboflow, ollama, retries, on_timeout}`). Backend bruker `asyncio.wait_for` / `httpx.Timeout(total=…)` per kall. Ved tidsavbrudd: logg, prøv på nytt med eksponentiell ventetid (1 s, 2 s, 4 s), så kjør valgt handling (neste motor i Gemini-poolen, så Groq, så Ollama, så Tesseract-OCR). Klienten viser «✦ Gemini svarte ikke innen 20 s · prøver Groq …» i køen. Gjelder også web (FinansHub → Innstillinger → AI).
+- 2026-10-18: «i innstlinger vis jeg feks scoller ned til app seksjon og går inn i utsende og fnalinke og så går tilbake til alle innstligner gå tilbake til der vi var ikke da scroll opp til toppen av siden.»
+  - `Mobil Papir App.dc.html`: scrollposisjonen huskes per side. Går du inn i en underside (f.eks. Innstillinger → Utseende og fanelinje) og tilbake, havner du der du var i listen. Nye undersider åpner fortsatt øverst. Posisjonen til siden du gikk tilbake fra glemmes, så den åpner øverst neste gang. Gjelder alle sider med undersider (Innstillinger, Finans → Mer, Mer, Sporing osv.).
+  - For Claude Code: iOS `NavigationStack` gjør dette selv hvis listen er i hver destinasjon (ikke én delt `ScrollView`). Bruk ellers `ScrollViewReader` + lagret id/offset per rute. Android: `rememberSaveable` `LazyListState` per destinasjon i `NavHost`. Web/Capacitor: lagre `scrollTop` per rute i et map ved navigasjon, og gjenopprett ved tilbake (`popstate`).
+- 2026-10-18: «i finans i finn både på webb og i app, når jeg trykker på en annonse åpne annonse ikke i finn, hvis annonsen med bilder i karusell med pris og tekst på samme måte som finn viser en annonse og så all annen med eposter og chat under der igjen.» (vedlegg: Finn-kort «MOTTATT · −6 500 kr · iPhone 14 Pro 256 GB»)
+  - **App** (`Mobil Papir App.dc.html` → Finans → Finn): trykk på et kort åpner annonsen i appen, ikke på finn.no. Den viser bildekarusell i full bredde (sveip, prikker og «1 / 4»), «‹ Finn» og ✎. Under står status og dato, tittel, pris, «Kjøpt fra / Solgt til», Fiks ferdig-steg, «Om annonsen» (tilstand, merke, modell …), beskrivelse og «Åpne annonsen i Finn ›». Deretter **E-poster** (Proton Mail, trykk for å lese) og **Meldinger** med motparten (bobler og felt for å sende). ✎ åpner den gamle redigeringen.
+  - **Web** (`FinansHub v3 Temaer.dc.html` → Finn-handler): trykk på handelen åpner samme visning i et panel. Karusell med ‹ › til venstre og annonseinfo til høyre. Under står E-poster og Meldinger i to kolonner.
+  - For Claude Code: hent annonsedata (bilder, tittel, pris, beskrivelse, attributter) én gang når handelen opprettes, via lenke eller e-post, og lagre lokalt (`finn_ads`, bilder i `/data/finn/<id>/`), så annonsen kan vises også etter at den er fjernet fra Finn. E-poster kobles via Proton Mail-integrasjonen (avsender @finn.no / posten.no + annonse- eller sendingsnummer). Chat: Finn har ikke åpent chat-API. Vis meldinger som er hentet fra e-postvarsler («Du har fått en ny melding»), og la «Åpne i Finn» dyplenke til samtalen for å svare.
+- 2026-10-18: «oppdater kvittering siden med det nye papir designet og gi den full funkjsonaliteti med til gjenomgang, ko, bilder filer ta bilde. og sørg for at android og ios appene får en nøyaktg kopi av aksje siden, bare fjern scann ikonet fra aksje siden.» (vedlegg: gammel Kvitteringer-side og Aksjer-siden)
+  - `Mobil Papir App.dc.html` → Kvitteringer er bygget på nytt i Papir. Øverst «Ta bilde av kvittering» (åpner kamera), deretter **Bilder** og **Filer**.
+    - **KØ:** status, fremdrift og «✦ Analyser på nytt». «Klar» → trykk → går til gjennomgang.
+    - **TIL GJENNOMGANG:** logo, motor og sikkerhet. Trykk for å redigere navn, beløp og kategori, med **Godkjenn og bokfør**, **✦ På nytt** og **Slett**.
+    - **BOKFØRT:** med ↺ angre.
+    - Lagres i `papir_rc`.
+  - Skann-knappen er fjernet fra Aksjer.
+  - Skrevet `prompts/claude-code-aksjer-kvitt.md`: nøyaktig kopi av Kvitteringer og Aksjer på iOS og Android (dokumentskanner, rekkefølge, komponenter, ingen FAB på Aksjer).
+- 2026-10-18: «og når feks aksje er åpen og jeg trykker på mer åpne mer til finans.»
+  - Designet gjør dette allerede: på Finans-undersider (Aksjer, Kvitteringer, Boliger …) viser fanelinjen Finans-fanene, og «Mer» åpner Finans → Mer. Feilen er i appen.
+  - Lagt til avsnittet «Navigasjon: «Mer» følger modulen» i `claude-code-aksjer-kvitt.md`, med regler for Finans, Domener og Familie, implementasjon med egen stabel per modul, og test.
+- 2026-10-18: «i abonment på mobil legg det kortet litt opp i bakgrunnen som de andre stedene.» (vedlegg: Abonnementer i appen, AI-sparing-kortet starter under toppbildet med en liten «Abonnementer»-tekst over)
+  - `Mobil Papir App.dc.html`: Abonnementer ligger nå opp i toppbildet som de andre sidene (samme negative marg og `z-index` som Boliger og Familie).
+  - `Subscription OS.dc.html`: den lille «Abonnementer»-teksten over kortet er fjernet når tittelen vises i appens topp (`hide-title`). Raden vises bare når det er en tilbake- eller +-knapp.
+  - For Claude Code: første kort på alle Finans-undersider overlapper toppbildet med cirka 23 pt (`offset(y: -23)` / `Modifier.offset`). Ingen dobbel sidetittel.
+- 2026-10-18: «sørg for at ios og android for en nøyaktig kopi av denne» (gjelder Abonnementer / Subscription OS)
+  - Skrevet `prompts/claude-code-abonnement.md`: tokens for lys og mørk Papir, topp uten dobbel tittel, overlapp mot toppbildet, fanelinje Hjem · Innsikt · Historikk, AI-sparing-kort med eksakt gradient, Neste 7 dager, sjekk, liste, Innsikt, Historikk, rediger og legg til, og skjermbildetest på iPhone og Pixel.
+- 2026-10-18: «legg denne i instligner under integration for homeassistant» (vedlegg: «SYNK MED HOME ASSISTANT»-kortet fra Huskeliste)
+  - `Mobil Papir App.dc.html` → Innstillinger → App → ny underside **Integrasjoner**:
+    - **HOME ASSISTANT:** tilkobling (adresse og token, «Tilkoblet»).
+    - **SYNK MED HOME ASSISTANT · SYNKET HH:MM:** «Synkroniser lister» av/på, én rad per liste (Hjem, Handel, Hytta, Jobb) med koblet `todo.*`-entitet (trykk for å bytte), og «↻ Synk nå».
+    - Bruker samme lagring som Huskeliste (`huske_ha`), så endringer vises begge steder. Kortet i Huskeliste beholdes.
+  - For Claude Code: samme i appen og på web (Innstillinger → Integrasjoner → Home Assistant). Se `claude-code-huske-ha.md`.
+- 2026-10-18: «i abonomenter la meg rearege elemeter med å holde inne og dra for rearenge»
+  - `Subscription OS.dc.html` (mobil, Hjem): hold inne 0,45 s på et kort (AI-sparing, Neste 7 dager, Abonnementssjekk, listen) for å starte redigering. Kortene får stiplet ramme, og kortet som dras forstørres litt. Dra opp eller ned for å flytte. Pillen «Dra for å flytte · Tilbakestill · Ferdig» vises øverst. Trykk inne i kortene er blokkert mens du redigerer, og et langt trykk åpner ikke et abonnement. Lagres i `sub_home_order`.
+  - For Claude Code: samme oppførsel i appen (som Hjem-widgets: `onLongPressGesture` + `onDrag`/`onDrop` på iOS, `detectDragGesturesAfterLongPress` på Android). Lagre rekkefølgen i brukerinnstillingene. Lagt til i `claude-code-abonnement.md`.
+- 2026-10-18: «oppdater også denne menyen med riktige farger og design papir» (vedlegg: «Endre abonnement»-arket i iOS-appen med blek rosa «Lagre»/«Finn logo med AI», laksefarget «Slett» og hvite chips)
+  - `Subscription OS.dc.html`: redigeringsarket følger nå temaet. I Papir har det papirbakgrunn, kortfargede felt, valgt chip fylt svart med lys tekst, «Lagre» fylt svart, «✦ Finn logo med AI» og «Slett» i rødt `#b23a2a`, og Manrope. Mørkt tema beholdes for FinansHub v2.
+  - Lagt til avsnittet «Endre abonnement»-arket (Papir) i `claude-code-abonnement.md` med eksakte farger og tilstander for appen.
+
+## Tilhørende filer
+- `claude-code-abonnement.md`
+- `claude-code-aksjer-kvitt.md`
+- `claude-code-sveip-tilbake.md`
