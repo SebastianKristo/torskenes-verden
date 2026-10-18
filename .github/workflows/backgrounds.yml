@@ -1,0 +1,52 @@
+name: Bakgrunner
+# Laster ned bakgrunnsfotoene fra Wikimedia Commons (server/backgrounds/fetch-backgrounds.mjs) og committer
+# server/backgrounds/files (WebP 2000 og 1080 px + credits.json) til main.
+# Push med GITHUB_TOKEN starter ikke andre workflows: kjør «Docker-image» manuelt etterpå for å få bildene med i imaget.
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: 'Bare disse nøklene (f.eks. planet,oslo). Tomt = alle.'
+        required: false
+        default: ''
+permissions:
+  contents: write
+concurrency:
+  group: backgrounds
+  cancel-in-progress: false
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: ImageMagick (med WebP)
+        run: |
+          if ! command -v magick >/dev/null && ! command -v convert >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends imagemagick webp
+          fi
+          (command -v magick || command -v convert) && (magick -version 2>/dev/null || convert -version) | head -3
+      - name: Hent bakgrunner
+        env:
+          ONLY: ${{ github.event.inputs.only }}
+        run: |
+          if [ -n "$ONLY" ]; then node server/backgrounds/fetch-backgrounds.mjs --only "$ONLY"; else node server/backgrounds/fetch-backgrounds.mjs; fi
+          du -sh server/backgrounds/files
+      - name: Commit til main
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add server/backgrounds/files
+          if git diff --cached --quiet; then
+            echo 'Ingen endringer.'
+            exit 0
+          fi
+          git commit -m "Bakgrunner: oppdaterte foto fra Wikimedia Commons"
+          git pull --rebase origin main
+          git push origin HEAD:main
