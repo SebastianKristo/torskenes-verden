@@ -68,6 +68,11 @@ struct FamMember: Identifiable, Hashable {
     var color: String
     /// Prompt 22: profilbildet du har valgt for personen (eller kontobildet). Tom = avatarUrl / initialer.
     var photoUrl: String = ""
+    /// Prompt 24: én person = én oppføring. Enhetene til personen, hvilken som er kilde, og om kilden er valgt manuelt.
+    var devices: [FamDevice] = []
+    var sourceDevice: String = ""
+    var deviceCount: Int = 0
+    var sourceManual: Bool = false
 
     init(_ o: [String: Any]) {
         id = JS.str(o, "userId") ?? JS.str(o, "id") ?? UUID().uuidString
@@ -80,6 +85,13 @@ struct FamMember: Identifiable, Hashable {
         last = FamPos(JS.dict(o, "last"))
         health = FamHealth(JS.dict(o, "health"))
         color = JS.str(o, "color") ?? JS.str(o, "farge") ?? ""
+        let devs: [FamDevice] = JS.list(o, "devices").map { FamDevice($0) }
+        devices = devs
+        let srcDict: [String: Any]? = JS.dict(o, "sourceDevice")
+        let src: String = JS.str(o, "sourceDevice") ?? JS.str(srcDict, "id") ?? (devs.first(where: { $0.isSource })?.id ?? "")
+        sourceDevice = src
+        deviceCount = JS.int(o, "deviceCount") ?? devs.count
+        sourceManual = JS.bool(o, "sourceManual") ?? JS.bool(srcDict, "manual") ?? false
     }
 
     var initial: String { String(name.prefix(1)).uppercased() }
@@ -223,7 +235,7 @@ final class FamilyModel {
             if let v = JS.str(me, "precision") { precision = v }
             if let sh = JS.dict(me, "shareHealth") { HealthSync.shared.applyServer(sh) }
         }
-        members = JS.list(o, "members").map { FamMember($0) }
+        members = Fam24Group.merge(JS.list(o, "members").map { FamMember($0) })
         for mem in members {
             guard let c = mem.last?.coord else { continue }
             var t: [CLLocationCoordinate2D] = trails[mem.id] ?? []
@@ -507,6 +519,9 @@ final class FamilyLocation: NSObject, CLLocationManagerDelegate {
         if loc.course >= 0 { body["heading"] = loc.course }
         if extras && dev.batteryLevel >= 0 { body["battery"] = Double(dev.batteryLevel) * 100 }
         body["device"] = "\(dev.model) · iOS \(dev.systemVersion)"
+        // Prompt 24: én person = én oppføring. Fast id per installasjon, så serveren kan slå sammen enhetene.
+        body["deviceId"] = Fam24Device.installId
+        body["platform"] = "ios"
         let api = API(base: server, token: token)
         let app = UIApplication.shared
         let task = app.applicationState != .active ? app.beginBackgroundTask(withName: "familie-posisjon", expirationHandler: nil) : .invalid
@@ -543,7 +558,7 @@ struct FamilyHeroArt: View {
 }
 
 /// Prompt 22: Familie nøyaktig etter Familie.dc.html. Fanene (Kart, Soner, Helse) ligger i fanelinja nederst,
-/// verktøyraden over kartet, Kartverket-fliser i kartet og egne komponenter (Family22*.swift).
+/// verktøyraden over kartet, Apple Maps (MapKit) i kartet (prompt 24) og egne komponenter (Family22*.swift).
 struct FamilyView: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p

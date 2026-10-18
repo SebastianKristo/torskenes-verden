@@ -69,6 +69,19 @@ final class NewsIcons23 {
         loaded = true
     }
 
+    /// Prompt 24: alle faneikonene (valgte og standard) lastes ved oppstart, så de vises med en gang i Nyhetsleser.
+    func preload(_ store: Store) async {
+        await IconCache23.shared.preload(allIds, store)
+        await load(store)
+        await IconCache23.shared.preload(allIds, store)
+    }
+
+    private var allIds: [String] {
+        var out: [String] = Array(defaults.values)
+        for v in ic.values where !v.isEmpty { out.append(v) }
+        return out
+    }
+
     private func push(_ store: Store) {
         saveLocal()
         let body: [String: Any] = ["ic": ic, "icSrc": icSrc, "icOn": icOn]
@@ -85,6 +98,7 @@ final class NewsIcons23 {
         ic[cat] = id
         icSrc[cat] = src
         push(store)
+        Task { await IconCache23.shared.preload([id], store) }
     }
 
     /// ✦ AI foreslår ett engelsk nøkkelord (POST /api/icons/suggest), første treff i biblioteket brukes. Uten AI: ordlisten.

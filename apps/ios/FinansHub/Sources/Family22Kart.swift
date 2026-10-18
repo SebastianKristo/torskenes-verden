@@ -41,6 +41,7 @@ struct Fam22PersonCard: View {
         VStack(alignment: .leading, spacing: 12) {
             header(t)
             sensors(t)
+            if mem.devices.count > 1 || (isMe && !mem.devices.isEmpty) { Fam24Devices(mem: mem, isMe: isMe) }
             actions(t)
         }
         .padding(16)
@@ -95,7 +96,7 @@ struct Fam22PersonCard: View {
 
     private var whereLine: String {
         if !Fam22Where.shareOk(mem) { return mem.sharing == "paused" ? "Deling er satt på pause" : "Deler ikke posisjon" }
-        return Fam22Where.text(mem, m) + " · oppdatert " + Fam22Fmt.ago(mem.last?.ts).lowercased()
+        return Fam22Where.text(mem, m) + Fam24Group.suffix(mem) + " · oppdatert " + Fam22Fmt.ago(mem.last?.ts).lowercased()
     }
 
     private func sensors(_ t: Fam22Tok) -> some View {
@@ -172,7 +173,7 @@ struct Fam22PeopleList: View {
         let bat: Double? = mem.last?.battery
         let batText: String = bat.map { "\(Int($0.rounded())) %" + ((mem.last?.charging ?? false) ? " ⚡" : "") } ?? "–"
         let low: Bool = (bat ?? 100) < 20
-        let place: String = ok ? Fam22Where.text(mem, m) : (mem.sharing == "paused" ? "Deling er satt på pause" : "Deler ikke posisjon")
+        let place: String = (ok ? Fam22Where.text(mem, m) : (mem.sharing == "paused" ? "Deling er satt på pause" : "Deler ikke posisjon")) + Fam24Group.suffix(mem)
         return Button { if ok { tap(mem) } } label: {
             HStack(spacing: 12) {
                 Fam22Avatar(mem: mem, size: 42, font: 14)

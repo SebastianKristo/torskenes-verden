@@ -37,7 +37,7 @@ struct NewsReaderView: View {
                 .presentationBackground(p.bg)
         }
         .task { if store.news == nil { await store.loadNews() } }
-        .task { await NewsIcons23.shared.load(store) }
+        .task { await NewsIcons23.shared.preload(store) }
     }
 
     private func header(_ d: NewsData) -> some View {

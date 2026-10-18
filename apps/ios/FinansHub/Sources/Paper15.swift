@@ -52,9 +52,10 @@ extension Store {
             if !out.isEmpty && out != paperPages { paperPages = out }
         }
         let tabs = JS.strings(o, "finTabs").filter { Store.finNavAll.map(\.id).contains($0) }
-        if !tabs.isEmpty && tabs != finNav { finNav = Array(tabs.prefix(4)) }
+        if !tabs.isEmpty && tabs != finNav { finNav = Array(tabs.prefix(5)) }
         if let v = JS.str(o, "fourthTab"), ["auto", "domener", "sporing"].contains(v), v != fourthTab { fourthTab = v }
         if let v = JS.str(o, "fab"), ["float", "inline"].contains(v), v != fabMode { fabMode = v }
+        migrateHome24()
     }
 
     /* ---------- Tilpass hver side ---------- */
@@ -135,7 +136,8 @@ extension Store {
     }
 
     func setFinNav(_ v: [String]) {
-        finNav = Array(v.prefix(4))
+        // Prompt 24: Finans + Boliger har fem faner (Boliger · Søk · Liste · Oversikt · Kvitteringer).
+        finNav = Array(v.prefix(5))
         savePaperLayout(["finTabs": finNav])
         Haptics.shared.select()
     }
@@ -545,7 +547,7 @@ extension Store {
         case "kvitt": return finNav.contains("kvitteringer") ? "Hjem" : "Mer"
         case "boliger": return folder != nil ? "Boliger" : (finNav.contains("boliger") ? "Hjem" : "Mer")
         case "profil": return "Alle innstillinger"
-        case "huske": return "Mer"
+        case "huske", "bursdag": return "Mer"
         default: return paperTab.hasPrefix("innst-") ? "Alle innstillinger" : "Hjem"
         }
     }

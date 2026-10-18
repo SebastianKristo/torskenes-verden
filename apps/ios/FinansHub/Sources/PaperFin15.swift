@@ -467,6 +467,8 @@ struct PaperFinMoreGrid: View {
         let review = store.reviewCount ?? s?.review.count ?? store.boot?.reviewCount ?? 0
         let total = (store.boot?.accounts ?? []).reduce(0) { $0 + $1.balance }
         var t: [Tile] = []
+        // Prompt 24: profiler uten Hjem i fanelinjen (Finans + Boliger) har Hjem som flis her.
+        if !store.mainTabItems.contains(where: { $0.id == "hjem" }) { t.append(Tile(id: "hjem", name: "Hjem", icon: "house.fill", value: "Pakker, avganger og widgets") { store.paperGo("hjem") }) }
         if !store.finNav.contains("sok") { t.append(Tile(id: "fsok", name: "Søk", icon: "magnifyingglass", value: "✦ Med AI") { store.paperGo("fsok") }) }
         if !store.finNav.contains("liste") { t.append(Tile(id: "fliste", name: "Liste", icon: "list.bullet", value: "Alle transaksjoner") { store.paperGo("fliste") }) }
         if !store.finNav.contains("finn") { t.append(Tile(id: "finn", name: "Finn", icon: "arrow.left.arrow.right", value: "Kjøp og salg") { store.paperGo("finn") }) }
@@ -554,7 +556,7 @@ struct PaperFinMoreGrid: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top) {
                     Image(systemName: t.icon).font(.system(size: 17, weight: .semibold)).foregroundStyle(tint)
-                        .frame(width: 38, height: 38).background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .frame(width: 42, height: 42).background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     Spacer()
                     if t.badge > 0 {
                         Text("\(t.badge)").font(PF.ui(11.5, .bold)).foregroundStyle(.white).frame(minWidth: 22, minHeight: 22)
@@ -562,8 +564,8 @@ struct PaperFinMoreGrid: View {
                     }
                 }
                 Spacer(minLength: 0)
-                Text(t.name).font(PF.serif(18, medium: true)).foregroundStyle(p.ink).lineLimit(1).minimumScaleFactor(0.8)
-                Text(t.value).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(2)
+                Text(t.name).font(PF.serif(20, medium: true)).foregroundStyle(p.ink).lineLimit(1).minimumScaleFactor(0.8)
+                Text(t.value).font(PF.ui(12.5)).foregroundStyle(t.value.contains("▲") ? p.pos : p.mut).lineLimit(2)
             }
             .padding(14)
             .frame(maxWidth: .infinity, minHeight: 132, alignment: .topLeading)

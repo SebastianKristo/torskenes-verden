@@ -86,18 +86,19 @@ enum PaperIconTheme {
 /// Et ikon i fanelinja: SF Symbol-navn (ASCII) eller et tegn som «◎».
 struct PaperTabIcon: View {
     let icon: String
-    var size: CGFloat = 14
-    /// Prompt 20: fast boks (18×18 ved 14 pt) så ikonet står midt på teksten. Tegn som ◎ sitter høyt i
-    /// Newsreader, så de flyttes 1,5 pt ned.
+    var size: CGFloat = 16
+    /// Prompt 24 (claude-code-familie-design.md, «Fanelinje – ikon ved siden av tekst»): ikonboks 18 × 18,
+    /// glyf 16 pt, sentrert mot teksten og flyttet 1,5 pt ned. Tegn-ikoner (◎ ◌ ♡ ⋯) i Newsreader 500.
     var body: some View {
-        let box: CGFloat = size + 4
+        let box: CGFloat = 18
         if PaperTabIcon.isSymbol(icon) {
-            Image(systemName: icon).font(.system(size: size, weight: .semibold))
+            Image(systemName: icon).font(.system(size: size - 2, weight: .semibold))
                 .frame(width: box, height: box)
-        } else {
-            Text(icon).font(.system(size: size + 1, weight: .semibold)).lineLimit(1).fixedSize()
                 .offset(y: 1.5)
+        } else {
+            Text(icon).font(PF.serif(size, medium: true)).lineLimit(1).fixedSize()
                 .frame(width: box, height: box)
+                .offset(y: 1.5)
         }
     }
     static func isSymbol(_ s: String) -> Bool { s.count > 2 && s.unicodeScalars.allSatisfy { $0.isASCII } }
@@ -237,7 +238,7 @@ extension Store {
     var paper16Kicker: String? {
         switch paperTab {
         case "aksjer": return "Trading 212" + (stocksX?.mock == true ? " · demodata" : "")
-        case "boliger": return folder.map { $0.address ?? "Bolig" } ?? "Utgifter, prosjekter og regninger"
+        case "boliger": return folder.map { $0.address ?? "Bolig" } ?? Bol24Model.shared.kicker
         case "familie": return "Posisjon, soner og helse"
         case "avg": return "Ruter · sanntid fra Entur"
         case "profil": return "@" + (account?.username ?? "")

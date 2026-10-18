@@ -158,7 +158,8 @@ struct PaperShell: View {
         GeometryReader { g in
             let wide = g.size.width >= 600
             let bottom = Swift.max(12, g.safeAreaInsets.bottom - 8)
-            let showBar = !store.newsOpen && store.dishSel == nil
+            // Prompt 24: Ruter-visningen er fullskjerm uten fanelinje og skann-knapp.
+            let showBar = !store.newsOpen && store.dishSel == nil && !store.ruter24Full
             // Prompt 23: ingen skann-knapp på Aksjer.
             let fab = showBar && store.fabMode == "float" && store.paperTab != "abo" && store.paperTab != "familie" && !store.nav23NoScan
             ZStack(alignment: wide ? .topLeading : .bottom) {
@@ -242,6 +243,10 @@ struct PaperShell: View {
         .task(id: store.account?.id) {
             Realtime.shared.connect(store)
             await AppMeta.shared.load(store)
+            await AppMeta.shared.load24(store)
+            // Prompt 24: ikonene i Nyhetsleser lastes på forhånd og profilen (startside og faner) leses.
+            Task { await NewsIcons23.shared.preload(store) }
+            await store.prof24Boot()
             await store.loadPhotoWindow()
             if store.mobileHome == nil { await store.loadHome() }
             if store.tracking == nil { try? await store.loadTracking() }
@@ -280,6 +285,8 @@ struct PaperShell: View {
             classic(back: store.paperFinBackLabel) { FinanceTab(tab: t) }
         } else if let m = store.paperClassic {
             classic(back: m == .tracking ? "Sporing" : nil) { ModuleView(module: m, scan: scan, photos: $photos, files: $files) }
+        } else if store.ruter24Full {
+            RuterView24()
         } else {
             PaperPage().environment(\.colorScheme, p.dark ? .dark : .light)
         }
@@ -779,7 +786,8 @@ struct PaperPage: View {
         case "abo": PaperSubs()
         case "mat": MatView(pal: MatPal.paper(p), paperMode: true)
         case "sporing": PaperTracking()
-        case "mer": PaperMore()
+        case "mer": PaperMore24()
+        case "bursdag": BirthdaysPage24()
         case "innst": PaperSettings17()
         case "huske": PaperTasksView()
         case "domener", "dpub", "dytl", "dinf": PaperDomains()
@@ -807,6 +815,7 @@ struct PaperPage: View {
         case "sporing": await store.refreshTracking22()
         case "domener", "dpub", "dytl", "dinf": store.reloadDomain(); if store.domAllMode { await store.loadDomAll() }
         case "ftx": if let id = store.paperTxId { store.openPaperTx(id) }
+        case "boliger": await Bol24Model.shared.load(store)
         default: await store.loadHome(); await store.loadPhotoWindow()
         }
     }
@@ -823,6 +832,8 @@ struct PaperHero: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             background
+            // Prompt 24: bakgrunnen til valgt bolig (Boliger24Hero.swift).
+            if store.paperTab == "boliger" && store.folder == nil { Bol24HeroLayer() }
             // Mørk toning øverst og nederst, så teksten alltid er lesbar.
             LinearGradient(stops: [.init(color: .black.opacity(0.25), location: 0), .init(color: .clear, location: 0.35), .init(color: .black.opacity(0.45), location: 1)],
                            startPoint: .top, endPoint: .bottom)
@@ -883,8 +894,11 @@ struct PaperHero: View {
         HStack(spacing: 8) {
             if home {
                 Text(AppMeta.shared.name).font(PF.serif(22, medium: true)).foregroundStyle(store.heroInk).lineLimit(1).minimumScaleFactor(0.7).shadow(color: .black.opacity(store.heroInk == .white ? 0.4 : 0), radius: 6)
+            } else if store.prof24IsRoot {
+                // Prompt 24: rotsidene i Finans + Boliger har ingen tilbakeknapp; profilbildet står fortsatt til høyre.
+                Color.clear.frame(width: 1, height: 34)
             } else {
-                pill("‹ \(store.paperUpLabel)") { store.paperUp() }
+                pill("‹ \(store.prof24UpLabel)") { store.paperUp() }
             }
             Spacer()
             // Finans viser @brukernavn ved profilbildet (ikke fullt navn). Bakgrunnen velges under Innstillinger → Utseende.
@@ -925,6 +939,7 @@ struct PaperHero: View {
             .layoutPriority(1)
             Spacer(minLength: 8)
             if home { weather }
+            if store.prof24DomainPill { Dom24Pill() }
         }
         .foregroundStyle(store.heroInk)
         .shadow(color: .black.opacity(store.heroInk == .white ? 0.35 : 0), radius: 7)
@@ -980,6 +995,7 @@ struct PaperHero: View {
         case "mat": return "Uke \(Calendar(identifier: .iso8601).component(.weekOfYear, from: Date()))"
         case "sporing": return "Pakker og sendinger"
         case "mer": return "Alle moduler"
+        case "bursdag": return "Familie og venner"
         case "innst": return "Konto, Finans, \(AppMeta.shared.name) og app"
         default: return store.paper16Kicker ?? ""
         }
@@ -1005,6 +1021,7 @@ struct PaperHero: View {
         case "mat": return "Mat"
         case "sporing": return "Sporing"
         case "mer": return "Mer"
+        case "bursdag": return "Bursdager"
         case "innst": return "Innstillinger"
         default: return store.paper16Title ?? ""
         }

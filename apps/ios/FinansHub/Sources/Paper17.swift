@@ -80,6 +80,7 @@ final class AppMeta {
             }
         }
         Task { _ = try? await store.api.callAt("/api", "PUT", "/app", json: ["icon": id]) }
+        store.savePaperLayout(["appIcon": id])
     }
 }
 
@@ -97,7 +98,7 @@ final class NotifyModel {
     var quietTo = "07:00"
     var sound = "klokke"
     var volume: Double = 80
-    var groups: [String: Bool] = ["pakker": true, "finans": true, "familie": true, "reise": true, "haptikk": true]
+    var groups: [String: Bool] = ["pakker": true, "finans": true, "familie": true, "reise": true, "birthdays": true, "haptikk": true]
     var hasCustom = false
     var authorized: UNAuthorizationStatus = .notDetermined
     var loaded = false
@@ -109,6 +110,7 @@ final class NotifyModel {
         ("finans", "Finans og hjem", "Kvitteringer, budsjett, abonnementer og boliger"),
         ("familie", "Familie", "Når noen kommer til eller forlater en sone"),
         ("reise", "Reise og vær", "Avganger og værvarsler"),
+        ("birthdays", "Bursdager", "Påminnelse kl. 09:00 før bursdager"),
         ("haptikk", "Haptikk", "Vibrasjon sammen med varslene"),
     ]
 
@@ -571,7 +573,27 @@ struct PaperSettings17: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
+            // Prompt 24: «Søk i innstillinger» og ✦ AI øverst. Med et søk vises treffene i stedet for gruppene.
+            Set24Search()
+            if Set24Model.shared.query.trimmingCharacters(in: .whitespaces).isEmpty {
+                mainGroups
+            } else {
+                Set24Results()
+            }
+        }
+        .sheet(isPresented: $naming) {
+            AppName24Sheet { naming = false }.environment(\.paper, p).presentationDetents([.medium, .large]).presentationBackground(p.bg)
+        }
+        .sheet(isPresented: $picking) {
+            AppIconSheet { picking = false }.environment(\.paper, p).presentationDetents([.medium, .large]).presentationBackground(p.bg)
+        }
+        .task { await NotifyModel.shared.load(store) }
+    }
+
+    @ViewBuilder private var mainGroups: some View {
             profileCard
+            // Prompt 24: PROFIL – Standard · Finans + Boliger · Boliger-profil (Profiles24.swift).
+            group("Profil", 4, store.prof24Rows(p))
             group("Konto", 0, [
                 PaperLinkRow(name: "Kontoer og brukere", sub: "Profil, brukere og flere kontoer", icon: "person.2") { store.paperGo("innst-konto") },
                 PaperLinkRow(name: "Sikkerhet", sub: store.lockEnabled ? "Lås med Face ID er på" : "2FA, Face ID og pålitelige enheter", icon: "lock") { store.paperGo("innst-sik") },
@@ -585,8 +607,6 @@ struct PaperSettings17: View {
                 PaperLinkRow(name: "Aksjer · Trading 212", sub: "Nøkkel, miljø og synk", icon: "chart.line.uptrend.xyaxis") { store.paperGo("innst-aksjer") },
                 PaperLinkRow(name: "Fanelinje og Mer i Finans", sub: "\(store.finNav.count) faner", icon: "dock.rectangle") { store.paperGo("innst-fin") },
                 PaperLinkRow(name: "Subscription OS", sub: "Abonnementer og AI-sparing", icon: "repeat") { store.paperFinGo("abo") },
-                PaperLinkRow(name: "Boliger-profil", sub: "Bare Finans og Domener, med Boliger først. For den som mest laster opp kvitteringer.",
-                             value: boligerProfile ? "På" : "Av", valueColor: boligerProfile ? p.pos : p.mut, icon: "house") { toggleBoligerProfile() },
             ])
             group(AppMeta.shared.name, 1, [
                 PaperLinkRow(name: "Navn på appen", sub: AppMeta.shared.name, value: "Endre ›", icon: "character.cursor.ibeam") { naming = true },
@@ -598,7 +618,7 @@ struct PaperSettings17: View {
             group("App", 2, [
                 PaperLinkRow(name: "Utseende og fanelinje", sub: themeSub, icon: "paintpalette") { store.paperGo("innst-ut") },
                 PaperLinkRow(name: "Varsler og haptikk", sub: NotifyModel.shared.on ? "På · \(NotifyModel.sounds.first { $0.0 == NotifyModel.shared.sound }?.1 ?? "")" : "Av", icon: "bell") { store.paperGo("innst-varsler") },
-                PaperLinkRow(name: "Integrasjoner", sub: "Home Assistant og synk av lister", icon: "point.3.connected.trianglepath.dotted") { store.paperGo("innst-integ") },
+                PaperLinkRow(name: "Integrasjoner", sub: "Home Assistant, Google, Entur, Bring og 12 til", icon: "point.3.connected.trianglepath.dotted") { store.paperGo("innst-integ") },
                 PaperLinkRow(name: "Helse og posisjon", sub: HealthSync.shared.master ? "Apple Health er på · posisjon og bakgrunn" : "Apple Health er av · posisjon og bakgrunn", icon: "heart.text.square") { store.paperGo("innst-helse") },
                 PaperLinkRow(name: "Avansert", sub: "Skanning, widgets, server og data", icon: "gearshape.2") { store.paperGo("innst-avansert") },
             ])
@@ -607,14 +627,6 @@ struct PaperSettings17: View {
             ])
             Text("\(AppMeta.shared.name) · versjon \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "–")")
                 .font(PF.mono(10.5, bold: false)).foregroundStyle(p.mut).frame(maxWidth: .infinity).padding(.top, 14)
-        }
-        .sheet(isPresented: $naming) {
-            AppNameSheet { naming = false }.environment(\.paper, p).presentationDetents([.medium]).presentationBackground(p.bg)
-        }
-        .sheet(isPresented: $picking) {
-            AppIconSheet { picking = false }.environment(\.paper, p).presentationDetents([.medium, .large]).presentationBackground(p.bg)
-        }
-        .task { await NotifyModel.shared.load(store) }
     }
 
     private var themeSub: String {
@@ -702,7 +714,7 @@ struct PaperSettingsSub: View {
             case "sik": SettingsSubpage(page: "security")
             case "api": SettingsSubpage(page: "tokens")
             case "ai": PaperAiSettings()
-            case "integ": PaperIntegrations23()
+            case "integ": PaperIntegrations24()
             case "kat": SettingsSubpage(page: "cats")
             case "regler": SettingsSubpage(page: "rules")
             case "aksjer": SettingsSubpage(page: "stocks")
@@ -728,7 +740,7 @@ struct PaperSettingsSub: View {
         "sik": ("Sikkerhet", "2FA, Face ID og enheter"),
         "api": ("API-tokens", "Snarveier og integrasjoner"),
         "ai": ("AI og tolkning", "Motorer, roller og sikkerhet"),
-        "integ": ("Integrasjoner", "Home Assistant og synk"),
+        "integ": ("Integrasjoner", "Status, felt og test for alle oppsett"),
         "kat": ("Kategorier og budsjett", "Farger og budsjett per måned"),
         "regler": ("Regler", "Tekst inneholder … → kategori"),
         "aksjer": ("Aksjer · Trading 212", "Nøkkel, miljø og synk"),

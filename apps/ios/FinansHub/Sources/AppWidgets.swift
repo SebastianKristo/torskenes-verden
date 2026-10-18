@@ -52,6 +52,8 @@ extension Store {
     private func paperDeepLink(_ page: String, _ sub: String) {
         switch page {
         case "huske", "tasks", "huskeliste": paperGo("huske")
+        case "bursdager", "bursdag", "birthdays": paperGo("bursdag")
+        case "avganger", "ruter", "avg": paperGo("avg")
         case "familie", "family", "posisjon": paperGo("familie")
         case "tracking", "packages", "sporing": paperGo("sporing")
         case "mat", "matplan": paperGo("mat")

@@ -13,14 +13,15 @@ struct PaperBoliger: View {
     @Environment(\.paper) private var p
 
     var body: some View {
+        // Prompt 24: Boliger etter Boliger.dc.html (Boliger24*.swift). Den gamle detaljen brukes bare når en bolig
+        // åpnes direkte (widget, snarvei eller opplasting fra en annen side).
         VStack(spacing: 10) {
             if let f = store.folder {
                 PaperBoligDetail(f: f)
             } else {
-                list
+                Bol24Page()
             }
         }
-        .task { if store.folders == nil { await store.loadBoligerList() } }
     }
 
     @ViewBuilder private var list: some View {

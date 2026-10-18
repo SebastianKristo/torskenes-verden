@@ -512,6 +512,17 @@ final class IconCache23 {
 
     /// Ny innlogging eller ny server: prøv ikonene som manglet på nytt.
     func retryMissing() { missing = [] }
+
+    /// Prompt 24: last ikonene inn i minnet på forhånd (fra disk, ellers backend), så fanene viser dem med en gang.
+    func preload(_ ids: [String], _ store: Store) async {
+        let todo: [String] = Array(Set(ids.filter { !$0.isEmpty && mem[$0] == nil }))
+        if todo.isEmpty { return }
+        await withTaskGroup(of: Void.self) { group in
+            for id in todo {
+                group.addTask { @MainActor in _ = await IconCache23.shared.icon(id, store) }
+            }
+        }
+    }
 }
 
 /// Ikonet tegnet i Canvas: fyll og strek i tekstfargen (mal), eller egne farger for emoji- og flaggsett.
@@ -523,8 +534,10 @@ struct IconView23: View {
     @State private var icon: SVGIcon23? = nil
 
     var body: some View {
+        // Prompt 24: forhåndslastede ikoner tegnes i første bilde (minnet leses direkte), ikke først når .task er ferdig.
+        let shown: SVGIcon23? = icon ?? IconCache23.shared.cached(id)
         Canvas { ctx, sz in
-            guard let ic = icon else { return }
+            guard let ic = shown else { return }
             draw(ic, ctx, sz)
         }
         .frame(width: size, height: size)

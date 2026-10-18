@@ -26,6 +26,7 @@ extension Store {
         applyPaper19(o)
         applyPaper22(o)
         FinTileOrder20.apply(o)
+        Prof24.shared.apply(o, self)
     }
 
     nonisolated static let trkKeys = ["add", "shipments", "notify", "carriers"]
@@ -155,17 +156,17 @@ extension Store {
             return
         }
         if paperInner || paperFin != nil || (paperClassic != nil && !paperInDomains) { paperBack(); return }
-        // Domener går alltid hjem, også når siden ble åpnet fra Mer.
-        if paperInDomains { paperGo("hjem"); return }
+        // Domener går alltid hjem, også når siden ble åpnet fra Mer (prompt 24: Boliger i Finans + Boliger).
+        if paperInDomains { prof24GoRoot(); return }
         if paperTab == "ftx" { paperGo("fliste"); return }
         if paperTab == "abo" && !finNav.contains("abonnementer") { paperGo("fmer"); return }
         if paperTab == "innst" { paperGo("mer"); return }
         if paperTab.hasPrefix("innst-") || paperTab == "profil" { paperGo("innst"); return }
-        if paperTab == "huske" { paperGo("mer"); return }
+        if paperTab == "huske" || paperTab == "bursdag" { paperGo("mer"); return }
         if paperTab == "boliger" && folder != nil { folder = nil; return }
         if (paperTab == "aksjer" && !finNav.contains("aksjer")) || (paperTab == "boliger" && !finNav.contains("boliger")) { paperGo("fmer"); return }
         if paperTab == "kvitt" && !finNav.contains("kvitteringer") { paperGo("fmer"); return }
-        paperGo("hjem")
+        prof24GoRoot()
     }
 
     /// Hvor Domener ble åpnet fra (Hjem eller Mer).
@@ -209,12 +210,12 @@ extension Store {
         if newsOpen { newsOpen = false; return }
         if dishSel != nil { dishSel = nil; return }
         if paperInner { back(); return }
-        if paperInDomains { paperGo("hjem"); return }
+        if paperInDomains { prof24GoRoot(); return }
         if paperTab == "ftx" { paperGo("fliste"); return }
         if paperTab == "abo" && !finNav.contains("abonnementer") { paperGo("fmer"); return }
         if paperTab == "boliger" && folder != nil { folder = nil; return }
         if paperTab.hasPrefix("innst-") || paperTab == "profil" { paperGo("innst"); return }
-        if paperTab == "huske" { paperGo("mer"); return }
+        if paperTab == "huske" || paperTab == "bursdag" { paperGo("mer"); return }
         if nav23SubOfFinMore { paperGo("fmer"); return }
         if paperFin != nil { paperFin = nil; go(.home); return }
         if paperTrackFull { paperTrackFull = false; return }

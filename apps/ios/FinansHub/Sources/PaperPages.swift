@@ -23,13 +23,15 @@ struct PaperHome: View {
                 PaperCardDef(key: "h6", label: "Huskeliste", view: AnyView(PaperTasksCard())),
                 PaperCardDef(key: "h7", label: "Posisjon", view: AnyView(PaperFamilyCard())),
                 PaperCardDef(key: "h8", label: "Bolig", view: AnyView(PaperHomeBoligCard())),
+                PaperCardDef(key: "h9", label: "Bursdager", view: AnyView(PaperBirthdaysCard24())),
             ], fullWidth: ["h1", "h5"], twoColumns: true)
             if let e = store.homeError { Text(e).font(PF.ui(12.5)).foregroundStyle(p.lab).frame(maxWidth: .infinity, alignment: .leading) }
         }
     }
 
+    /// Prompt 24: Pakker vises alltid, også uten aktive pakker («Ingen aktive pakker · Legg til et sporingsnummer»).
     @ViewBuilder private var packages: some View {
-        if let s = topPackage { packageCard(s) }
+        if let s = topPackage { packageCard(s) } else { PaperNoPackagesCard24() }
     }
 
     private var topPackage: Shipment? {

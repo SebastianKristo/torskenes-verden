@@ -88,7 +88,7 @@ struct RuterStopList21: View {
             .buttonStyle(.plain)
             .padding(.top, 8)
         }
-        .padding(.leading, 68).padding(.trailing, 14).padding(.bottom, 12)
+        .padding(.leading, 60).padding(.trailing, 14).padding(.bottom, 14)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
