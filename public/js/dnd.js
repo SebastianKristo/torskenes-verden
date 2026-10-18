@@ -1,4 +1,5 @@
-// Flyttbare elementer: HTML5 drag-and-drop på desktop, long-press (450 ms) og dra på mobil.
+// Flyttbare elementer: på desktop hold inne museknappen i 280 ms og dra (ellers kan tekst markeres og kopieres som vanlig),
+// på mobil long-press (450 ms) og dra. Mens et skjemafelt i kortet har fokus, kan kortet ikke dras.
 // Rekkefølge og kortstørrelser lagres på serveren per gruppe.
 // Kortrutenett (alle grupper unntatt header, faner og toppområdet) får masonry og usynlig resize-håndtak.
 import { api, isMobile } from './util.js';
@@ -7,7 +8,7 @@ import { store } from './store.js';
 const INTERACTIVE = 'input,select,textarea,button,a,label,canvas,form,.resize-h';
 const FLAT = ['head', 'tabs', 'top'];        // ikke kortrutenett
 const ALWAYS = ['head', 'tabs'];             // kan dras selv om elementet er en lenke/knapp
-const GAP = 20, ROW = 4;
+const GAP = 20, ROW = 4, HOLD_MS = 280;
 
 const sorted = (grid) => [...grid.children].filter((k) => k.dataset.i !== undefined).sort((a, b) => a.style.order - b.style.order);
 
@@ -107,19 +108,52 @@ export function setupDnd(root) {
     let dragEl = null;
 
     for (const el of grid.children) {
-      // Desktop
-      if (always) el.draggable = true;
-      else el.addEventListener('pointerdown', (e) => { el.draggable = e.pointerType === 'mouse' && !e.target.closest(INTERACTIVE); });
-      el.addEventListener('dragstart', (e) => {
-        if (e.target !== el && !el.contains(e.target)) return;
+      // Ingen innebygd HTML5-dra (lenker og bilder ville ellers dras med en gang).
+      el.draggable = false; el.querySelectorAll('a,img').forEach((x) => { x.draggable = false; });
+      // Desktop: hold inne i 280 ms før kortet løftes. Beveger musa seg før det, er det tekstmarkering.
+      let holdT = null, held = false, sx = 0, sy = 0, moved = false;
+      const focusedField = () => { const a = document.activeElement; return a && el.contains(a) && a.matches('input,select,textarea,[contenteditable]'); };
+      const stopHold = () => { clearTimeout(holdT); holdT = null; };
+      el.addEventListener('pointerdown', (e) => {
+        if (e.pointerType !== 'mouse' || e.button !== 0) return;
+        if (document.querySelector('header.top.hp-edit') && el.closest('header')) return;
+        if ((!always && e.target.closest(INTERACTIVE)) || e.target.closest('input,select,textarea,.resize-h') || focusedField()) return;
         e.stopPropagation(); // nestede grupper (faner inne i header)
-        dragEl = el; el.classList.add('dragging');
-        e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', '');
+        sx = e.clientX; sy = e.clientY; moved = false;
+        stopHold();
+        holdT = setTimeout(() => {
+          holdT = null; held = true; dragEl = el;
+          getSelection()?.removeAllRanges();
+          el.classList.add('dragging');
+          document.body.classList.add('dnd-active');
+        }, HOLD_MS);
       });
-      el.addEventListener('dragend', (e) => { e.stopPropagation(); el.classList.remove('dragging'); grid.querySelectorAll(':scope > .drop-target').forEach((k) => k.classList.remove('drop-target')); dragEl = null; });
-      el.addEventListener('dragover', (e) => { if (!dragEl || dragEl === el) return; e.preventDefault(); e.stopPropagation(); el.classList.add('drop-target'); });
-      el.addEventListener('dragleave', () => el.classList.remove('drop-target'));
-      el.addEventListener('drop', (e) => { if (!dragEl) return; e.preventDefault(); e.stopPropagation(); el.classList.remove('drop-target'); if (move(grid, dragEl, el)) persist(grid); });
+      el.addEventListener('pointermove', (e) => {
+        if (holdT && Math.hypot(e.clientX - sx, e.clientY - sy) > 4) stopHold();
+      });
+      el.addEventListener('pointerup', stopHold);
+      el.addEventListener('pointerleave', () => { if (!held) stopHold(); });
+      // Lenker og knapper (faner) skal ikke åpnes når de nettopp ble flyttet.
+      el.addEventListener('click', (e) => { if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; } }, true);
+      el.addEventListener('dragstart', (e) => { if (held || holdT) e.preventDefault(); });
+      const onMove = (e) => {
+        if (!held || dragEl !== el) return;
+        e.preventDefault();
+        const target = sorted(grid).find((k) => { const r = k.getBoundingClientRect(); return e.clientX > r.left && e.clientX < r.right && e.clientY > r.top && e.clientY < r.bottom; });
+        grid.querySelectorAll(':scope > .drop-target').forEach((k) => k !== target && k.classList.remove('drop-target'));
+        if (target && target !== el && move(grid, el, target)) { moved = true; target.classList.add('drop-target'); }
+      };
+      const onUp = () => {
+        stopHold();
+        if (!held || dragEl !== el) return;
+        held = false; dragEl = null;
+        el.classList.remove('dragging');
+        document.body.classList.remove('dnd-active');
+        grid.querySelectorAll(':scope > .drop-target').forEach((k) => k.classList.remove('drop-target'));
+        if (moved) persist(grid);
+      };
+      addEventListener('pointermove', onMove);
+      addEventListener('pointerup', onUp);
 
       // Mobil
       let timer = null, startX = 0, startY = 0, lifted = false;

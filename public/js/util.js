@@ -52,3 +52,9 @@ export async function makeThumb(file, size = 240) {
     return await c.convertToBlob({ type: 'image/jpeg', quality: 0.8 });
   } catch { return null; }
 }
+
+// Overlegg lukkes bare når trykket både startet og sluttet på bakgrunnen. Ellers lukker f.eks. en nedtrekksliste
+// på Android (som slippes utenfor feltet) eller en tekstmarkering som slippes utenfor, hele innstillingene.
+let downTarget = null;
+addEventListener('pointerdown', (e) => { downTarget = e.target; }, true);
+export const backdropClick = (e, el) => e.target === el && downTarget === el;

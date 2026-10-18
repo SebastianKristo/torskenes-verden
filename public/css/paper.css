@@ -629,3 +629,5 @@ html[data-hl="2c"] .trk-toast{background:var(--ink);color:var(--pp)}
 }
 html[data-hl="2c"] .lg.logo-lg{background:#f3efe6;color:var(--ink2);box-shadow:inset 0 0 0 1px var(--rule)}
 html[data-hl="2c"] .lg.logo-lg.has{background:#fff}
+/* Huskeliste og Familie: fotovinduet har tittelen, så sidetittelen skjules. */
+html[data-hl="2c"] body.pw-low .tk-top,html[data-hl="2c"] body.pw-low .fam-top{display:none}

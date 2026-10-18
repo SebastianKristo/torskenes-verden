@@ -1,7 +1,7 @@
 // Felles nyhetsleser (prompt 13, design/Nyhetsleser.dc.html, variant web). Åpnes fra «SISTE NYTT ›» i nyhetsbaren
 // både i Homelab v2 og i «Vindu og papir» (2c): import('/assets/js/news.js').then((m) => m.openNews()).
 // Kilder og ✦ AI-valg lagres på serveren (/api/rss), så de er de samme i Papir-appen og PWA-en.
-import { api, esc } from './util.js';
+import { api, esc, backdropClick } from './util.js';
 
 const CSS_ID = 'news-css';
 const ensureCss = () => {
@@ -129,7 +129,7 @@ export function openNews(opts = {}) {
 
   el.addEventListener('click', async (e) => {
     const t = e.target.closest('[data-act],[data-cat],[data-tog],[data-cyc],[data-del]');
-    if (!t) { if (e.target === el) close(); return; }
+    if (!t) { if (backdropClick(e, el)) close(); return; }
     if (t.dataset.act === 'set-close' && e.target.closest('[data-stop]') && !e.target.closest('.nw-done')) return;
     const act = t.dataset.act;
     if (act === 'close') return close();

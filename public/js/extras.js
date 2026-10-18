@@ -1,5 +1,5 @@
 // Søkebar, nyhetslinje og popup.
-import { esc, hm, api } from './util.js';
+import { esc, hm, api, backdropClick } from './util.js';
 import { store, on, emit } from './store.js';
 
 /* ---------- Popup ---------- */
@@ -21,7 +21,7 @@ const handlers = new Map();
 export function popHandler(prefix, fn) { handlers.set(prefix, fn); }
 
 export function bindPopup() {
-  pop().addEventListener('click', (e) => { if (e.target === pop() || e.target.closest('[data-pop-close]')) closePopup(); });
+  pop().addEventListener('click', (e) => { if (backdropClick(e, pop()) || e.target.closest('[data-pop-close]')) closePopup(); });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !pop().hidden) closePopup();
     if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[data-pop]')) { e.preventDefault(); e.target.click(); }

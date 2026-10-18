@@ -5,7 +5,7 @@
 .trk button{font-family:inherit}
 .trk-mono{font-family:'Geist Mono',ui-monospace,monospace}
 .trk-ini{flex:none;display:grid;place-items:center;font-weight:800;width:30px;height:30px;border-radius:9px;font-size:10px}
-.trk-ini.lg{width:42px;height:42px;border-radius:12px;font-size:12px}
+.trk-ini.lg{width:44px;height:44px;border-radius:12px;font-size:12px}
 .trk-ini.sm{width:24px;height:24px;border-radius:12px;font-size:9.5px}
 
 .trk-box,.trk-panel{padding:16px;border-radius:20px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:12px}
@@ -124,7 +124,21 @@
 .trk-ini,.pk-car{position:relative;overflow:hidden}
 .trk-logo{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;box-sizing:border-box;padding:18%;background:#fff}
 .trk-logo[src*="/assets/carriers/"]{padding:0;object-fit:cover}
+.trk-ini .trk-logo{width:100%;height:100%} /* ikke den generelle .lg img-regelen (70 %) */
 /* Levert: hele sporet grønt, siste punkt markert. */
 .trk-step.fin i,.trk-step.fin.ln em{background:var(--green,#8fe0b0)}
 .trk-step.fin:last-child i{box-shadow:0 0 0 5px rgba(143,224,176,.22)}
 .trk-step.fin:last-child small{color:var(--green,#8fe0b0);font-weight:600}
+/* Prompt 17: velg flere (klikk på ikonet) og meny for arkivering/sletting. */
+.trk-selb{position:relative;flex:none;display:grid;border-radius:12px;cursor:pointer}
+.trk-selb>i{position:absolute;inset:0;display:none;place-items:center;border-radius:12px;background:rgba(27,26,23,.72);color:#fff;font-style:normal;font-weight:800;font-size:18px}
+.trk-selb.on>i{display:grid}
+.trk-selb:hover .trk-ini{box-shadow:0 0 0 2px var(--blue,#7aa7ff)}
+html[data-hl="2c"] .trk-selb:hover .trk-ini{box-shadow:0 0 0 2px #1b1a17}
+.trk-card.picked{outline:2px solid var(--blue,#7aa7ff);outline-offset:-2px}
+html[data-hl="2c"] .trk-card.picked{outline-color:#1b1a17}
+.trk-selbar{position:sticky;top:12px;z-index:5;display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 14px;margin:0 0 12px;border-radius:16px;background:var(--card,#141a26);border:1px solid var(--line);box-shadow:0 10px 30px -14px rgba(0,0,0,.5)}
+html[data-hl="2c"] .trk-selbar{background:#1b1a17;color:#f3efe6;border-color:#1b1a17}
+html[data-hl="2c"] .trk-selbar .trk-btn{background:transparent;color:#f3efe6;border-color:rgba(243,239,230,.35)}
+html[data-hl="2c"] .trk-selbar .trk-link{color:#f3efe6}
+.trk-selbar b{margin-right:auto;font-size:14px}

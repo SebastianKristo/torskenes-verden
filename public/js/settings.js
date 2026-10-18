@@ -1,6 +1,6 @@
 // Innstillinger: sidemeny med profil, søk og grupper (Generelt, Tilkoblinger, Sikkerhet). Innholdet er seksjoner
 // med overskrift over et innrammet kort; radene har tekst til venstre, verdi til høyre og en knapp eller bryter.
-import { esc, api, cssUrl, logoImg, initials } from './util.js';
+import { esc, api, cssUrl, logoImg, initials, backdropClick } from './util.js';
 import { store, emit, load } from './store.js';
 import { OPTIONS, srcFor, applyBackground, preloadAll } from './background.js';
 import { SEARCH_STYLES, GWORD, renderTicker, applyTicker, menuLabels, loadHistory, searchState, setHistory } from './extras.js';
@@ -9,6 +9,8 @@ import { orderOf, setOrder } from './dnd.js';
 import { toggleHeadEdit, resetHead, setHeadLock, setHeadAlign, headAlign, saveUi } from './topedit.js';
 import { loginView, loadLogin, loginClick, loginSubmit, loginChange, loginData, roleName } from './settings-login.js';
 import { domainsPane, loadDomains, domainsClick, domainsChange, domainsSubmit, domainCount } from './settings-domains.js';
+import { loadNotify, notifyView, notifyClick, notifyChange, notifyInput } from './settings-notify.js';
+import { loadApp, appView, appClick, appInput, appKey } from './settings-app.js';
 import { themeCards, setHlTheme, hlTheme, THEMES } from './hltheme.js';
 
 const modal = () => document.getElementById('settings');
@@ -21,6 +23,7 @@ const P = {
   plug: 'M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4', users: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M16 3.1a4 4 0 0 1 0 7.8M22 21a7 7 0 0 0-5-6.7',
   lock: 'M6 11h12v9H6zM8 11V8a4 4 0 0 1 8 0v3', out: 'M9 4H5v16h4M14 8l4 4-4 4M18 12H9', search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5',
   back: 'M15 18l-6-6 6-6',
+  bell: 'M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0', app: 'M5 4h14v16H5zM9 8h6M9 12h6M9 16h3',
 };
 export const svg = (d, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 
@@ -59,11 +62,13 @@ const TABS = [
   ['look', 'Utseende', 'Tema, bakgrunnsbilde, søkebar og kategorier.', 'Generelt', P.look],
   ['top', 'Startside', 'Topplinje, faner, nyhetsbar og forsiden.', 'Generelt', P.top],
   ['dom', 'Domener', 'Domener, statistikkilder og verdenskart.', 'Generelt', P.map],
+  ['varsel', 'Varsler', 'Lyd, stille timer, grupper og test.', 'Generelt', P.bell],
+  ['app', 'App', 'Navn på appen og app-ikon.', 'Generelt', P.app],
   ['int', 'Integrasjoner', 'Adresser og API-nøkler for tjenestene.', 'Tilkoblinger', P.plug],
   ['users', 'Brukere', 'Hvem som har tilgang, og hvilken rolle de har.', 'Sikkerhet', P.users],
 ];
 // Gamle navn på faner (lenker og knapper fra før omleggingen) peker til nye.
-const ALIAS = { login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users' };
+const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users' };
 // Hvilken fane en underside hører til, så «go('tfa')» virker uansett hvor den kalles fra.
 const SUB_TAB = { me: 'konto', tfa: 'konto', pw: 'konto', devices: 'konto', server: 'konto', add: 'users', bg: 'look', style: 'look', hist: 'look', cats: 'look',
   tabs: 'top', head: 'top', speed: 'top', dash: 'top', mob: 'top', sc: 'top', doms: 'dom', mail: 'int' };
@@ -456,7 +461,8 @@ async function saveGroup(name, changes) {
 
 /* ---------- Søk på tvers av sidene ---------- */
 
-const VIEWS = { konto: kontoView, look: lookView, top: topView, dom: domView, int: intView, users: usersView };
+const H = { group, row, note };
+const VIEWS = { konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => notifyView(H), app: () => appView(H), int: intView, users: usersView };
 function searchView() {
   const words = q.toLowerCase().split(/\s+/).filter(Boolean), out = [];
   const saved = sub; sub = null;
@@ -505,6 +511,8 @@ function render() {
   const content = v.groups ? v.groups.map(groupHtml).join('') : v.html;
   // Fokus i et tekstfelt beholdes når siden tegnes på nytt (f.eks. etter automatisk lagring eller mens man søker).
   const act = document.activeElement, fk = modal().contains(act) && act.name ? [act.closest('form')?.dataset.group ?? '', act.name, act.selectionStart] : null;
+  // Søkefeltet beholdes som samme element (ikke tegnet på nytt), så skriving, markør og tastaturforslag (IME) ikke avbrytes.
+  const keepQ = act?.matches?.('[data-setq]') && modal().contains(act) ? act : null;
   modal().innerHTML = `<div class="set-box" role="dialog" aria-modal="true" aria-labelledby="set-title">${sideHtml()}
     <div class="set-main"><button class="set-close" data-close aria-label="Lukk">×</button>
     <div class="set-body" data-key="${esc(key)}"><div class="set-inner">
@@ -512,8 +520,9 @@ function render() {
         <h2 id="set-title">${esc(v.title ?? tName)}</h2><div class="set-ps">${esc(v.sub ?? tSub)}</div></header>
       ${content}</div></div></div></div>`;
   modal().querySelector('.set-body').scrollTop = keep;
+  if (keepQ) { const nq = modal().querySelector('[data-setq]'); if (nq) { nq.replaceWith(keepQ); keepQ.focus({ preventScroll: true }); } }
   if (v.mount) { const slot = modal().querySelector('[data-mail-host]'); if (slot) v.mount(slot); }
-  if (fk) {
+  if (fk && !keepQ) {
     const el = [...modal().querySelectorAll(`[name="${CSS.escape(fk[1])}"]`)].find((e) => (e.closest('form')?.dataset.group ?? '') === fk[0]);
     if (el) { el.focus(); try { el.setSelectionRange(fk[2], fk[2]); } catch { /* range/select */ } }
   }
@@ -538,6 +547,8 @@ function enter() {
   if (tab === 'int' && !mail) loadMail();
   if (tab === 'konto' || tab === 'users' || q) loadLogin(reload);
   if (tab === 'dom' || q) loadDomains(reload);
+  if (tab === 'varsel' || q) loadNotify(reload);
+  if (tab === 'app' || q) loadApp(reload);
 }
 
 async function loadCfg() {
@@ -584,7 +595,7 @@ async function signOut(forget) {
 export function bindSettings() {
   const m = modal();
   m.addEventListener('click', async (e) => {
-    if (e.target === m || e.target.closest('[data-close]')) return closeSettings();
+    if (backdropClick(e, m) || e.target.closest('[data-close]')) return closeSettings();
     const t = e.target.closest('[data-tab]');
     if (t) { tab = t.dataset.tab; sub = null; q = ''; enter(); render(); return; }
     if (e.target.closest('[data-back]')) { sub = null; render(); return; }
@@ -597,6 +608,8 @@ export function bindSettings() {
     if (g) return go(g.dataset.go);
     if (await loginClick(e)) return;
     if (await domainsClick(e)) return;
+    if (await notifyClick(e)) return;
+    if (await appClick(e)) return;
 
     /* Integrasjoner */
     const tb = e.target.closest('[data-test]');
@@ -705,6 +718,7 @@ export function bindSettings() {
 
   let qTimer = null;
   m.addEventListener('input', (e) => {
+    if (notifyInput(e) || appInput(e)) return;
     if (e.target.matches('[data-setq]')) {
       const val = e.target.value;
       clearTimeout(qTimer);
@@ -730,6 +744,7 @@ export function bindSettings() {
     if (t.matches('[data-setq]')) return;
     if (await loginChange(e)) return;
     if (domainsChange(e)) return;
+    if (await notifyChange(e)) return;
     if (t.matches('[data-news-speed]')) { saveUi({ newsSpeed: +t.value }); return; }
     if (t.matches('[data-tab-label]')) { await saveLabels(t.dataset.tabLabel, t.value); return; }
     const form = t.closest('[data-group]');
@@ -774,6 +789,7 @@ export function bindSettings() {
       await saveCats();
     }
   });
+  m.addEventListener('keydown', (e) => { appKey(e); });
   document.addEventListener('keydown', (e) => {
     if (m.hidden) return;
     if (e.key === 'Escape') {

@@ -1,5 +1,6 @@
 // Homelab-tema: «Nåværende» (cur) eller «Vindu og papir» (2c). Valget lagres per bruker i /api/me/layout.hlTheme,
 // med localStorage som reserve (og for innloggingssiden, som ikke vet hvem brukeren er). Bare det visuelle byttes.
+import { appName } from './appicon.js';
 import { api, esc } from './util.js';
 import { store } from './store.js';
 
@@ -28,7 +29,7 @@ export function applyHlTheme() {
   const logo = document.querySelector('header.top .logo');
   if (logo) {
     logo.dataset.os ??= logo.textContent;
-    logo.textContent = theme === '2c' ? (store.me?.serverName || 'Homelab') : logo.dataset.os;
+    logo.textContent = theme === '2c' ? (appName() !== 'Homelab' ? appName() : store.me?.serverName || 'Homelab') : logo.dataset.os;
   }
   // Profilmenyen: bytte av tema, og «Logg ut» i stedet for «Lås» i Vindu og papir.
   const sw = document.getElementById('menu-theme');
@@ -186,6 +187,7 @@ const HEAD = {
   matplan: () => [`Uke ${weekNo()}`, 'Mat'],
   sporing: () => ['Pakker og sendinger', 'Sporing'],
   familie: () => ['Posisjon, soner og helse', 'Familie'],
+  huskeliste: () => ['Delt med familien', 'Huskeliste'],
   domener: () => ['Trafikk, oppetid og sikkerhet', 'Domener'],
   nettverk: () => ['Nettverk og lenker', 'Nettverk'],
   mer: () => ['Alle sider', 'Mer'],

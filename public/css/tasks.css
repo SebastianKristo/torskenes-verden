@@ -1,0 +1,38 @@
+/* Huskeliste (prompt 17). Mørk i «Nåværende», papir i «Vindu og papir» (html[data-hl="2c"]). */
+.tk{--t-ink:var(--text);--t-mut:var(--text-2);--t-line:var(--line);--t-lab:#f59a8f;--t-pos:#8fe0b0;--t-card:var(--card,#141a26);--t-chip:rgba(255,255,255,.06);--t-bg:var(--bg,#0b0e15);display:flex;flex-direction:column;gap:14px;color:var(--t-ink);max-width:860px}
+html[data-hl="2c"] .tk{--t-ink:#1b1a17;--t-mut:#7a7468;--t-line:#e3ddcf;--t-lab:#b23a2a;--t-pos:#2f7a4f;--t-card:#fff;--t-chip:#f3efe6;--t-bg:#f3efe6;font-family:Manrope,system-ui,sans-serif}
+.tk-top{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.tk-sub{color:var(--text-2);font-size:13px}
+.tk-lists{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.tk-list{flex:none;height:38px;padding:0 14px;border-radius:999px;border:1px solid transparent;background:var(--t-card);color:var(--t-ink);font:700 13px/1 inherit;display:flex;align-items:center;gap:8px;white-space:nowrap;cursor:pointer}
+.tk-list.on{background:var(--t-ink);color:var(--t-bg);border-color:var(--t-ink)}
+.tk-k{opacity:.6}
+.tk-dot{width:9px;height:9px;border-radius:5px}
+.tk-add{display:flex;gap:8px;margin:0}
+.tk-add input{flex:1;min-width:0;height:48px;padding:0 18px;border-radius:999px;border:1px solid var(--t-line);background:var(--t-card);color:var(--t-ink);font:500 15px inherit;outline:none}
+.tk-add input:focus{border-color:var(--t-lab)}
+.tk-add button{flex:none;width:48px;height:48px;border-radius:24px;border:0;background:var(--t-lab);color:#fff;font-size:24px;line-height:1;cursor:pointer}
+html:not([data-hl="2c"]) .tk-add button{color:#1a0d0b}
+.tk-opts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.tk-opt{height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--t-line);background:transparent;color:var(--t-ink);font:600 12.5px inherit;cursor:pointer}
+.tk-opt.on{border-color:var(--t-ink)}
+.tk-sep{width:1px;height:20px;background:var(--t-line);margin:0 4px}
+.tk-group{display:flex;flex-direction:column;gap:6px}
+.tk-gt{font:600 10.5px/1 'IBM Plex Mono',var(--mono,monospace);letter-spacing:.12em;padding:0 4px;color:var(--t-mut)}
+.tk-gt.late{color:var(--t-lab)}.tk-gt.pos{color:var(--t-pos)}
+.tk-card{padding:2px 14px!important;gap:0!important}
+html[data-hl="2c"] .tk-card{background:#fff;border-radius:20px;border:0}
+.tk-row{display:flex;align-items:center;gap:12px;min-height:54px}
+.tk-row.bt{border-top:1px solid var(--t-line)}
+.tk-chk{flex:none;width:26px;height:26px;border-radius:8px;border:2px solid var(--c);background:transparent;color:#fff;font-size:14px;font-weight:800;padding:0;cursor:pointer;display:grid;place-items:center}
+.tk-row.done .tk-chk{background:var(--c)}
+.tk-main{flex:1;min-width:0;padding:8px 0;display:flex;flex-direction:column;gap:2px}
+.tk-n{font-size:15px;font-weight:600;overflow-wrap:anywhere}
+.tk-row.done .tk-n{text-decoration:line-through;opacity:.5}
+.tk-meta{font-size:12px;color:var(--t-mut)}
+.tk-meta.late{color:var(--t-lab)}
+.tk-x{flex:none;width:32px;height:32px;border-radius:16px;border:0;background:transparent;color:var(--t-mut);font-size:18px;cursor:pointer}
+.tk-x:hover{background:var(--t-chip);color:var(--t-ink)}
+.tk-empty{padding:20px 4px;font-size:14px;color:var(--t-mut);line-height:1.5}
+.tk-btn{margin-top:10px;height:36px;padding:0 16px;border-radius:18px;border:1px solid var(--t-line);background:transparent;color:var(--t-ink);font-weight:600;cursor:pointer}
+.tk-foot{font-size:12px;color:var(--t-mut);padding:4px}

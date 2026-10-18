@@ -95,3 +95,22 @@ html[data-hl="2c"] .fam-ht b{font:500 24px/1.1 'Newsreader',serif}
 /* Vindu og papir: tittelen står i fotovinduet. */
 html[data-hl="2c"] .fam-top .os-title{display:none}
 .fam-pname{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+/* Prompt 17: faner (Kart / Soner / Helse), personkort og hint ved ny sone. */
+.fam-tabs{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.fam-tabs button{height:36px;padding:0 16px;border-radius:999px;border:1px solid var(--f-line);background:transparent;color:var(--f-ink);font-weight:700;font-size:13.5px;cursor:pointer}
+.fam-tabs button.on{background:var(--f-on);color:var(--f-onink);border-color:var(--f-on)}
+.fam-live{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--f-mute)}
+.fam-live i{width:8px;height:8px;border-radius:4px;background:#d9a400}
+.fam-live i.on{background:#2f7a4f;box-shadow:0 0 0 3px rgba(47,122,79,.18)}
+.fam-hint{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:500;padding:8px 14px;border-radius:999px;background:var(--f-on);color:var(--f-onink);font-size:13px;font-weight:600;pointer-events:none;white-space:nowrap}
+.fam-pchead{display:flex;align-items:center;gap:12px}
+.fam-pchead .fam-link{margin-left:auto;font-size:20px;line-height:1}
+.fam-cells{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.fam-cell{display:flex;flex-direction:column;gap:3px;padding:10px 12px;border-radius:14px;background:var(--f-chip)}
+.fam-cell span{font-size:11.5px;color:var(--f-mute)}
+.fam-cell b{font-size:14px;font-weight:600;overflow-wrap:anywhere}
+.fam-cell b.low{color:var(--f-acc)}
+.fam-pbtns{display:flex;gap:8px;flex-wrap:wrap}
+.fam-pbtns a.fam-btn{text-decoration:none;display:inline-flex;align-items:center}
+.fam-hgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--gap,20px);margin-bottom:var(--gap,20px)}
+.fam-note{font-size:12.5px;color:var(--f-mute);line-height:1.5;margin-bottom:var(--gap,20px);max-width:720px}

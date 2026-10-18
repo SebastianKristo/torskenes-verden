@@ -1,3 +1,5 @@
+import { loadAppIdentity } from './appicon.js';
+
 const form = document.getElementById('login');
 const err = document.getElementById('err');
 let ticket = null;
@@ -102,3 +104,9 @@ fetch('/api/setup/status').then((r) => r.json()).then((s) => {
   if (!s.needsSetup) return;
   form.hidden = true; setup.hidden = false; obShow(1);
 }).catch(() => {});
+
+// Appnavnet (Innstillinger → App) i innloggingsbildet og fanetittelen, og ikonet som favicon.
+loadAppIdentity().then(({ name }) => {
+  for (const el of document.querySelectorAll('.lock-pw-k')) el.textContent = name;
+  document.title = `Lås opp · ${name}`;
+});

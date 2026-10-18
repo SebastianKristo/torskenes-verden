@@ -2,9 +2,10 @@
 // sensorer, soner (trykk på kartet), varsler per person, hendelser og helse. Personvern håndheves på serveren;
 // her vises bare det den gir oss. Nettleseren kan dele egen posisjon mens siden er åpen.
 import { api, esc, initials, hm, nb } from './util.js';
+import { onLive, liveOn } from './realtime.js';
 
-const S = { d: null, sel: null, track: [], err: null, zoneDraft: null, picking: false, sharingHere: false, watch: null, lastSent: 0 };
-let map = null, L = null, layers = null, pollT = null, evSince = Date.now();
+const S = { tab: 'kart', d: null, sel: null, track: [], err: null, zoneDraft: null, picking: false, sharingHere: false, watch: null, lastSent: 0 };
+let map = null, L = null, layers = null, pollT = null, evSince = Date.now(), unLive = null;
 
 const ACT = { still: 'I ro', walking: 'Går', running: 'Løper', cycling: 'Sykler', driving: 'Kjører' };
 const SHARE = { on: 'Deler', paused: 'Pauset', off: 'Av' };
@@ -135,6 +136,33 @@ function memberRow(m) {
     </span></button>`;
 }
 
+// Personkortet for den valgte: sensorer, enhet, koordinater, veibeskrivelse og «Spill av lyd» (som i designet).
+function personCard() {
+  const m = person(S.sel);
+  if (!m) return '';
+  const l = m.last, sp = kmh(l?.speed);
+  if (m.sharing !== 'on' || !l) {
+    return `<section class="card fam-card fam-pcard"><div class="fam-pchead">${avatar(m, 'lg')}<span class="fam-pmain"><b>${esc(m.self ? 'Deg' : m.name)}</b><span class="fam-sub">${m.sharing !== 'on' ? `Deling er ${m.sharing === 'paused' ? 'satt på pause' : 'slått av'}` : 'Ingen posisjon ennå'}</span></span></div></section>`;
+  }
+  const zone = (S.d?.zones ?? []).find((z) => l.place && z.name === l.place);
+  const where = (l.place ? `I ${l.place}` : l.approx ? 'Omtrentlig posisjon' : ACT[l.activity] ?? 'Ukjent sted') + (sp ? ` · ${sp} km/t` : '');
+  const cell = (k, v, cls = '') => (v == null || v === '' ? '' : `<div class="fam-cell"><span>${k}</span><b class="${cls}">${v}</b></div>`);
+  const nav = `https://www.google.com/maps/dir/?api=1&destination=${l.lat},${l.lon}`;
+  return `<section class="card fam-card fam-pcard"><div class="fam-pchead">${avatar(m, 'lg')}<span class="fam-pmain"><b>${esc(m.self ? 'Deg' : m.name)}</b><span class="fam-sub">${esc(where)} · oppdatert ${esc(ago(l.ts))}</span></span>
+      <button type="button" class="fam-link" data-fam-act="unsel" aria-label="Lukk">×</button></div>
+    <div class="fam-cells">
+      ${cell('Batteri', l.battery != null ? `${Math.round(l.battery)} %${l.charging ? ' ⚡' : ''}` : null, l.battery != null && l.battery < 20 && !l.charging ? 'low' : '')}
+      ${cell('Aktivitet', l.activity ? ACT[l.activity] ?? esc(l.activity) : null)}
+      ${cell('Fart', sp != null ? `${sp} km/t` : null)}
+      ${cell('Nøyaktighet', l.acc != null ? `± ${l.acc >= 1000 ? `${nb(l.acc / 1000, 1)} km` : `${Math.round(l.acc)} m`}` : null)}
+      ${cell('Enhet', l.device ? esc(l.device) : null)}
+      ${cell('Koordinater', l.approx ? 'Omtrentlig' : `${l.lat.toFixed(4)}, ${l.lon.toFixed(4)}`)}
+      ${zone ? cell('Sone', esc(zone.name)) : ''}
+    </div>
+    <div class="fam-pbtns"><a class="fam-btn" href="${esc(nav)}" target="_blank" rel="noopener">Veibeskrivelse</a>${m.self ? '' : `<button type="button" class="fam-btn" data-fam-act="ping">Spill av lyd</button>`}</div>
+  </section>`;
+}
+
 function healthCard() {
   const m = person(S.sel), h = m?.health;
   if (!m) return '';
@@ -146,6 +174,14 @@ function healthCard() {
       ${week.some((d) => d.steps != null) ? `<div class="fam-week">${week.map((d) => `<div class="fam-wd"><i style="height:${Math.round(((d.steps ?? 0) / max) * 100)}%"></i><span>${new Date(d.date + 'T12:00').toLocaleDateString('nb-NO', { weekday: 'narrow' })}</span></div>`).join('')}</div><div class="fam-sub">Skritt siste 7 dager</div>` : ''}`
       : `<div class="fam-empty">${m.self ? 'Helsedata sendes fra FinansHub-appen på telefonen (Apple Helse eller Health Connect). Nettleseren kan ikke lese helsedata.' : `${esc(m.name)} deler ikke helsedata.`}</div>`}
   </section>`;
+}
+
+function healthAll() {
+  const keep = S.sel;
+  const cards = (S.d?.members ?? []).map((m) => { S.sel = m.userId; return healthCard(); }).join('');
+  S.sel = keep;
+  return `<div class="fam-hgrid">${cards}</div>
+    <div class="fam-note">Apple Health og Health Connect kan bare leses av appen på telefonen. Homelab-appen sender et sammendrag hit hvert 15. minutt, og bare det personen har valgt å dele.</div>`;
 }
 
 function zonesCard() {
@@ -195,18 +231,24 @@ function zoneSheet() {
   </div>`;
 }
 
+function tabs() {
+  return `<div class="fam-tabs" role="tablist">${[['kart', 'Kart'], ['soner', 'Soner'], ['helse', 'Helse']].map(([k, n]) => `<button type="button" role="tab" aria-selected="${S.tab === k}" class="${S.tab === k ? 'on' : ''}" data-fam-tab="${k}">${n}</button>`).join('')}
+    <span class="fam-live"><i class="${liveOn() ? 'on' : ''}"></i>${liveOn() ? 'Sanntid' : 'Oppdateres hvert 20. sekund'}</span></div>`;
+}
+
 function body() {
   if (S.err && !S.d) return `<div class="card fam-card"><div class="fam-empty">Kunne ikke hente familien: ${esc(S.err)}</div></div>`;
   if (!S.d) return '<div class="card fam-card"><div class="fam-empty">Laster …</div></div>';
-  return `<div class="fam-grid">
-    <section class="card fam-mapcard"><div id="fam-map" class="fam-map${S.picking ? ' picking' : ''}"></div>${zoneSheet()}</section>
-    <div class="fam-side">
+  if (S.tab === 'helse') return tabs() + healthAll() + privacyCard();
+  const mapCard = `<section class="card fam-mapcard"><div id="fam-map" class="fam-map${S.picking ? ' picking' : ''}"></div>
+    ${S.picking ? '<div class="fam-hint">Trykk på kartet der sonen skal være</div>' : ''}${zoneSheet()}</section>`;
+  const side = S.tab === 'soner'
+    ? `<div class="fam-side">${zonesCard()}</div>`
+    : `<div class="fam-side">${personCard()}
       <section class="card fam-card"><div class="fam-h"><span class="fam-k">Familien</span><span class="fam-sub">${S.d.members.filter((m) => m.last).length} av ${S.d.members.length} synlige</span></div>
-        <div class="fam-people">${S.d.members.map(memberRow).join('')}</div></section>
-      ${healthCard()}
-    </div>
-    <div class="fam-row3">${zonesCard()}${eventsCard()}${privacyCard()}</div>
-  </div>`;
+        <div class="fam-people">${S.d.members.map(memberRow).join('')}</div></section></div>`;
+  const row3 = S.tab === 'soner' ? '' : `<div class="fam-row3">${eventsCard()}${privacyCard()}</div>`;
+  return `${tabs()}<div class="fam-grid">${mapCard}${side}${row3}</div>`;
 }
 
 function paint() {
@@ -273,6 +315,7 @@ function bind(h) {
   h.addEventListener('click', async (e) => {
     const t = e.target.closest('button');
     if (!t) return;
+    if (t.dataset.famTab) { S.tab = t.dataset.famTab; if (S.tab !== 'soner') S.picking = false; return paint(); }
     if (t.dataset.famSel) return select(t.dataset.famSel);
     if (t.dataset.famPref) return savePref({ [t.dataset.famPref]: t.dataset.v });
     if (t.dataset.famHealth) { const cur = S.d.me.shareHealth ?? {}; return savePref({ shareHealth: { [t.dataset.famHealth]: !cur[t.dataset.famHealth] } }); }
@@ -285,7 +328,14 @@ function bind(h) {
       return paint();
     }
     switch (t.dataset.famAct) {
-      case 'pick': S.picking = !S.picking; return paint();
+      case 'pick': S.picking = !S.picking; if (S.picking) S.tab = 'soner'; return paint();
+      case 'unsel': S.sel = null; S.track = []; paint(); return drawMap();
+      case 'ping': {
+        const m = person(S.sel);
+        try { await api(`/family/ping/${encodeURIComponent(S.sel)}`, { method: 'POST' }); toast(`Ber ${m?.name ?? 'telefonen'} spille av lyd`); }
+        catch (er) { toast(/404|finnes ikke|Not Found/i.test(er.message) ? 'Serveren støtter ikke «Spill av lyd» ennå' : er.message); }
+        return;
+      }
       case 'zclose': S.zoneDraft = null; return paint();
       case 'zdel': {
         if (!confirm(`Slette sonen «${S.zoneDraft.name}»?`)) return;
@@ -318,9 +368,15 @@ export function render() {
     bind(h);
     clearInterval(pollT);
     pollT = setInterval(() => {
-      if (!host()) { clearInterval(pollT); stopHere(); map?.remove(); map = null; return; }
-      if (!document.hidden && !S.zoneDraft) { load(); pollEvents(); }
+      if (!host()) { clearInterval(pollT); stopHere(); map?.remove(); map = null; unLive?.(); unLive = null; return; }
+      if (!document.hidden && !S.zoneDraft) { if (!liveOn()) load(); pollEvents(); }
     }, 20_000);
+    unLive?.();
+    unLive = onLive('family', (m) => {
+      if (!host()) { unLive?.(); unLive = null; return; }
+      for (const e of m.events ?? (m.event ? [m.event] : [])) toast(`${e.name} ${e.kind === 'enter' ? 'kom til' : 'forlot'} ${e.zone}`);
+      if (!S.zoneDraft) load();
+    });
     try { L = await loadLeaflet(); } catch (e) { S.err = e.message; }
     await load();
   });
