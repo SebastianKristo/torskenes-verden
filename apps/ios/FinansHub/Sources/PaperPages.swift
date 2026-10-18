@@ -499,7 +499,7 @@ struct PaperTracking: View {
                 Text("Hold inne en pakke for å velge flere · hold inne et kort for å flytte det").font(PF.ui(12)).foregroundStyle(p.mut).frame(maxWidth: .infinity).multilineTextAlignment(.center)
             }
             HStack(spacing: 8) {
-                PLineButton(title: store.trkChecking ? "Sjekker …" : "Sjekk nå", height: 44, full: true) { store.checkTracking() }
+                PLineButton(title: store.trkChecking ? "Sjekker …" : "Sjekk nå", height: 44, full: true) { Task { await store.refreshTracking22() } }
                 PLineButton(title: "⚙ Kilder", height: 44, full: true) { store.trkSettings = true }
             }
             // Pakkevarslene ligger samlet under Innstillinger → Varsler.
@@ -668,16 +668,8 @@ struct PaperShipmentCard: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(open ? "Skjul hendelser" : "Vis hendelser")
             }
-            HStack(alignment: .firstTextBaseline) {
-                Text(s.statusText).font(PF.ui(14, .bold)).foregroundStyle(s.status == "ready_for_pickup" || s.status == "delayed" ? p.lab : s.status == "delivered" ? p.pos : p.ink)
-                Spacer()
-                Text(s.pickupPoint.isEmpty ? s.eta : [s.pickupPoint, s.eta].filter { !$0.isEmpty }.joined(separator: " · ")).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(1)
-            }
-            HStack(spacing: 4) {
-                ForEach(0..<5, id: \.self) { j in
-                    Capsule().fill(barColor(j)).frame(height: 5)
-                }
-            }
+            // Prompt 22: siste hendelse, feiltekst og tidslinje med faktisk status (Track22.swift).
+            PaperShipmentStatus22(s: s)
             if open { timeline }
         }
         .padding(14)

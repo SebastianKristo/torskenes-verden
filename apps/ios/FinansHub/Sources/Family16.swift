@@ -66,9 +66,12 @@ struct FamMember: Identifiable, Hashable {
     var health: FamHealth?
     /// Personens egen farge fra Familie (prompt 20). Tom = lages fra paletten.
     var color: String
+    /// Prompt 22: profilbildet du har valgt for personen (eller kontobildet). Tom = avatarUrl / initialer.
+    var photoUrl: String = ""
 
     init(_ o: [String: Any]) {
         id = JS.str(o, "userId") ?? JS.str(o, "id") ?? UUID().uuidString
+        photoUrl = JS.str(o, "photoUrl") ?? ""
         name = JS.str(o, "name") ?? JS.str(o, "username") ?? "Ukjent"
         username = JS.str(o, "username") ?? ""
         avatarUrl = JS.str(o, "avatarUrl") ?? ""
@@ -96,6 +99,8 @@ struct FamZone: Identifiable, Hashable {
     var shared: Bool = false
     var createdBy: String = ""
     var mineFlag: Bool? = nil
+    /// Prompt 22: ikon-nøkkel (home, work, …). Mangler feltet, brukes lokal reserve eller standard etter navn.
+    var icon: String = "pin"
 
     init(_ o: [String: Any]) {
         id = JS.str(o, "id") ?? UUID().uuidString
@@ -107,6 +112,9 @@ struct FamZone: Identifiable, Hashable {
         lon = JS.num(o, "lon") ?? 0
         radius = JS.num(o, "radius") ?? 150
         color = JS.str(o, "color") ?? "#b23a2a"
+        let zid: String = id
+        let zname: String = name
+        icon = Fam22Icons.valid(JS.str(o, "icon")) ?? Fam22Local.icon(zid) ?? Fam22Icons.defaultFor(zname)
         var n: [String: [Bool]] = [:]
         if let d = o["notify"] as? [String: Any] {
             for (k, v) in d {
@@ -168,12 +176,21 @@ final class FamilyModel {
     var zoneDraft: CLLocationCoordinate2D?
     var zoneEdit: FamZone?
     var addingZone = false
+    /// Prompt 22: siste posisjoner per person (spor på kartet), plassering og utkast til ny sone, og sonen som redigeres.
+    var trails: [String: [CLLocationCoordinate2D]] = [:]
+    var placing22 = false
+    var draft22: Fam22Draft?
+    var editZone22: String?
+    /// Lagring av soneendringer samles (fri fargevelger sender mange endringer).
+    var zoneSave22: [String: Task<Void, Never>] = [:]
     private var lastEventTs: Double = UserDefaults.standard.double(forKey: AcctScope.key("fh_fam_events_since"))
 
     /// Kontobytte: tøm alt fra forrige konto og les valgene for den nye.
     func resetForAccount() {
         members = []; zones = []; events = []; selected = nil; track = []
         loaded = false; error = nil; zoneDraft = nil; zoneEdit = nil; addingZone = false
+        trails = [:]; placing22 = false; draft22 = nil; editZone22 = nil
+        Fam22Photos.shared.reset()
         meId = ""
         sharing = UserDefaults.standard.string(forKey: AcctScope.key("fh_fam_sharing")) ?? "off"
         precision = UserDefaults.standard.string(forKey: AcctScope.key("fh_fam_precision")) ?? "exact"
@@ -207,11 +224,20 @@ final class FamilyModel {
             if let sh = JS.dict(me, "shareHealth") { HealthSync.shared.applyServer(sh) }
         }
         members = JS.list(o, "members").map { FamMember($0) }
+        for mem in members {
+            guard let c = mem.last?.coord else { continue }
+            var t: [CLLocationCoordinate2D] = trails[mem.id] ?? []
+            if let l = t.last, abs(l.latitude - c.latitude) < 0.000001, abs(l.longitude - c.longitude) < 0.000001 { continue }
+            t.append(c)
+            if t.count > 31 { t.removeFirst(t.count - 31) }
+            trails[mem.id] = t
+        }
         zones = JS.list(o, "zones").map { FamZone($0) }
         // Geofencing i iOS: inn og ut av sonene sendes til serveren med en gang, også når appen er lukket.
         FamilyLocation.shared.syncZones(zones)
         events = JS.list(o, "events").map { FamEvent($0) }
-        if selected == nil { selected = members.first { $0.last != nil }?.id }
+        // Prompt 22: ingen person er valgt fra start (som i designet); en valgt person som ikke lenger finnes, nullstilles.
+        if let s = selected, !members.contains(where: { $0.id == s }) { selected = nil }
     }
 
     func loadTrack(_ id: String, _ store: Store) async {
@@ -256,8 +282,9 @@ final class FamilyModel {
         return z.createdBy == meId
     }
 
-    func saveZone(name: String, coord: CLLocationCoordinate2D, radius: Double, color: String, id: String?, shared: Bool = false, _ store: Store) {
-        let body: [String: Any] = ["name": name, "lat": coord.latitude, "lon": coord.longitude, "radius": radius, "color": color, "shared": shared]
+    func saveZone(name: String, coord: CLLocationCoordinate2D, radius: Double, color: String, id: String?, shared: Bool = false, icon: String? = nil, _ store: Store) {
+        var body: [String: Any] = ["name": name, "lat": coord.latitude, "lon": coord.longitude, "radius": radius, "color": color, "shared": shared]
+        if let icon { body["icon"] = icon }
         Task {
             do {
                 if let id {
@@ -515,253 +542,161 @@ struct FamilyHeroArt: View {
     }
 }
 
+/// Prompt 22: Familie nøyaktig etter Familie.dc.html. Fanene (Kart, Soner, Helse) ligger i fanelinja nederst,
+/// verktøyraden over kartet, Kartverket-fliser i kartet og egne komponenter (Family22*.swift).
 struct FamilyView: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
-    @State private var camera: MapCameraPosition = .automatic
+    @State private var ctl: Fam22MapCtl = Fam22MapCtl()
     @MainActor private var m: FamilyModel { FamilyModel.shared }
 
     private var tab: String { m.tab }
 
     var body: some View {
-        VStack(spacing: 10) {
-            // Prompt 21: fanene ligger i fanelinja nederst, så knappene øverst er skjult i appen.
-            if let e = m.error { PCard { Text(e).font(PF.ui(13)).foregroundStyle(p.lab).fixedSize(horizontal: false, vertical: true) } }
+        VStack(spacing: 14) {
+            if let e = m.error { errorCard(e) }
+            if tab != "helse" { mapSection }
             switch tab {
             case "soner":
-                mapCard
-                zonesCard
+                Fam22ZonesTab { z in ctl.focusZone(z.coord, radius: z.radius) }
             case "helse":
-                FamilyHealthView()
+                Fam22HealthTab()
             default:
-                mapCard
-                mySharing
-                people
-                eventsCard
+                kartTab
             }
         }
-        .task {
+        .task { await refreshLoop() }
+    }
+
+    private func errorCard(_ e: String) -> some View {
+        let t: Fam22Tok = Fam22Tok.of(p)
+        return Text(e).font(PF.ui(13)).foregroundStyle(t.lab).fixedSize(horizontal: false, vertical: true)
+            .padding(16).frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 22).fill(t.card))
+    }
+
+    /// Henter på nytt hvert 30. sekund mens siden er åpen. Første gang zoomes kartet så alle vises.
+    private func refreshLoop() async {
+        await m.load(store)
+        for mem in m.members { await Fam22Photos.shared.ensure(mem, store) }
+        if !ctl.fitted { ctl.fitted = true; ctl.fit(pinned.compactMap { $0.last?.coord }) }
+        while !Task.isCancelled {
+            try? await Task.sleep(nanoseconds: 30_000_000_000)
+            if Task.isCancelled { break }
             await m.load(store)
-            if pinned.isEmpty {
-                // Ingen posisjoner ennå: vis Oslo i stedet for et tomt verdenskart.
-                camera = .region(MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: 59.9139, longitude: 10.7522), latitudinalMeters: 12000, longitudinalMeters: 12000))
+        }
+    }
+
+    /* ---------- Verktøyrad og kart ---------- */
+
+    @ViewBuilder private var mapSection: some View {
+        Fam22Toolbar(placing: m.placing22, place: togglePlacing, fit: fitAll, refresh: refresh)
+        Fam22MapCard(zones: mapZones, pins: mapPins, trails: mapTrails, placing: m.placing22, liveOn: liveOn, liveText: liveText,
+                     ctl: ctl, fit: fitAll, onPin: { id in pick(id) }, onPlace: { c in place(c) })
+    }
+
+    private var pinned: [FamMember] { m.members.filter { Fam22Where.shareOk($0) } }
+
+    private var liveOn: Bool { m.sharing == "on" }
+    private var liveText: String { m.sharing == "on" ? "Sanntid · din GPS er på" : "Sanntid · din deling er av" }
+
+    private var mapZones: [Fam22MapZone] {
+        var out: [Fam22MapZone] = m.zones.map { (z: FamZone) -> Fam22MapZone in
+            Fam22MapZone(id: z.id, coord: z.coord, radius: z.radius, color: z.color, icon: z.icon, name: z.name, draft: false)
+        }
+        if let d = m.draft22 {
+            out.append(Fam22MapZone(id: "draft", coord: d.coord, radius: d.radius, color: d.color, icon: d.iconKey, name: d.name, draft: true))
+        }
+        return out
+    }
+
+    private var mapPins: [Fam22MapPin] {
+        pinned.compactMap { (mem: FamMember) -> Fam22MapPin? in
+            guard let pos = mem.last else { return nil }
+            let isMe: Bool = mem.id == m.meId
+            return Fam22MapPin(id: mem.id, coord: pos.coord, color: Color(hex: Fam22Fmt.color(mem)),
+                               ini: isMe ? "Du" : Fam22Fmt.ini(mem), photo: Fam22Photos.shared.image(mem.id),
+                               selected: m.selected == mem.id, speed: Fam22Fmt.kmh(pos))
+        }
+    }
+
+    private var mapTrails: [Fam22Trail] {
+        pinned.compactMap { (mem: FamMember) -> Fam22Trail? in
+            let coords: [CLLocationCoordinate2D]
+            if m.selected == mem.id && m.track.count > 1 {
+                coords = m.track.suffix(31).map(\.coord)
             } else {
-                focusSelected()
+                coords = m.trails[mem.id] ?? []
             }
-        }
-        .sheet(isPresented: Binding(get: { m.addingZone }, set: { m.addingZone = $0 })) {
-            FamilyZoneSheet(zone: m.zoneEdit, coord: m.zoneDraft ?? m.zoneEdit?.coord)
-                .environment(\.paper, p).presentationDetents([.medium, .large]).presentationBackground(p.bg)
+            guard coords.count > 1 else { return nil }
+            return Fam22Trail(id: mem.id, color: Fam22Fmt.color(mem), coords: coords)
         }
     }
 
-    /* ---------- Faner: Kart, Soner og Helse ---------- */
-
-    private var tabs: some View {
-        HStack(spacing: 4) {
-            ForEach([("kart", "Kart"), ("soner", "Soner"), ("helse", "Helse")], id: \.0) { t in
-                Button { m.tab = t.0; Haptics.shared.select() } label: {
-                    Text(t.1).font(PF.ui(14, .semibold)).foregroundStyle(tab == t.0 ? p.bg : p.ink)
-                        .frame(maxWidth: .infinity, minHeight: 38)
-                        .background(tab == t.0 ? p.ink : Color.clear, in: Capsule())
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(4)
-        .background(p.card, in: Capsule())
+    private func togglePlacing() {
+        Haptics.shared.select()
+        m.draft22 = nil
+        m.placing22.toggle()
     }
 
-    /* ---------- Kart ---------- */
-
-    private var mapCard: some View {
-        VStack(spacing: 0) {
-            MapReader { proxy in
-                Map(position: $camera) {
-                    ForEach(m.zones) { z in
-                        MapCircle(center: z.coord, radius: z.radius)
-                            .stroke(Color(hex: z.color), lineWidth: 2)
-                            .foregroundStyle(Color(hex: z.color).opacity(0.18))
-                        Annotation(z.name, coordinate: z.coord, anchor: .center) {
-                            Text(z.name).font(PF.ui(10.5, .bold)).foregroundStyle(.white).padding(.horizontal, 6).padding(.vertical, 2)
-                                .background(Color(hex: z.color), in: Capsule())
-                        }
-                    }
-                    MapPolyline(coordinates: m.track.count > 1 ? m.track.map(\.coord) : [])
-                        .stroke(Color(hex: "#b23a2a"), lineWidth: 3)
-                    ForEach(pinned) { mem in
-                        Annotation(mem.first, coordinate: mem.last?.coord ?? CLLocationCoordinate2D(), anchor: .center) {
-                            FamilyPin(member: mem, selected: m.selected == mem.id)
-                                .onTapGesture {
-                                    m.select(mem.id, store)
-                                    if let c = mem.last?.coord { focus(c) }
-                                }
-                        }
-                    }
-                }
-                .mapStyle(.standard(elevation: .flat, pointsOfInterest: .excludingAll))
-                .onTapGesture { pt in
-                    guard m.zoneDraft == nil, let c = proxy.convert(pt, from: .local) else { return }
-                    if zonePickMode {
-                        m.zoneDraft = c
-                        m.zoneEdit = nil
-                        m.addingZone = true
-                        zonePickMode = false
-                    }
-                }
-            }
-            .frame(height: 300)
-            HStack(spacing: 8) {
-                Button { zonePickMode.toggle(); Haptics.shared.select() } label: {
-                    Text(zonePickMode ? "Trykk på kartet …" : "+ Ny sone").font(PF.ui(13, .semibold))
-                        .foregroundStyle(zonePickMode ? p.onLab : p.ink).padding(.horizontal, 14).frame(height: 34)
-                        .background(zonePickMode ? p.lab : p.popSel, in: Capsule())
-                }
-                .buttonStyle(.plain)
-                Spacer()
-                Button { focusAll() } label: {
-                    Text("Vis alle").font(PF.ui(13, .semibold)).foregroundStyle(p.ink).padding(.horizontal, 14).frame(height: 34).overlay(Capsule().stroke(p.line, lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-                Button { Task { await m.load(store) } } label: {
-                    Image(systemName: "arrow.clockwise").font(.system(size: 14, weight: .semibold)).foregroundStyle(p.ink).frame(width: 34, height: 34).overlay(Circle().stroke(p.line, lineWidth: 1))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Oppdater")
-            }
-            .padding(10)
-        }
-        .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .shadow(color: .black.opacity(0.12), radius: 15, y: 10)
+    private func place(_ c: CLLocationCoordinate2D) {
+        Haptics.shared.tap()
+        let color: String = Fam22Icons.draftColors[m.zones.count % Fam22Icons.draftColors.count]
+        m.draft22 = Fam22Draft(name: "", lat: c.latitude, lon: c.longitude, radius: 200, color: color, icon: nil, shared: false)
+        m.placing22 = false
+        m.tab = "soner"
     }
 
-    @State private var zonePickMode = false
+    private func fitAll() { ctl.fit(pinned.compactMap { $0.last?.coord }) }
 
-    private var pinned: [FamMember] { m.members.filter { $0.last != nil && $0.sharing == "on" } }
-
-    private func focus(_ c: CLLocationCoordinate2D) {
-        withAnimation(.easeInOut(duration: 0.4)) {
-            camera = .region(MKCoordinateRegion(center: c, latitudinalMeters: 1500, longitudinalMeters: 1500))
+    private func refresh() {
+        Haptics.shared.tap()
+        Task {
+            await m.load(store)
+            store.flash("Posisjoner oppdatert")
         }
     }
 
-    private func focusSelected() {
-        if let id = m.selected, let pos = m.member(id)?.last { focus(pos.coord) }
+    private func pick(_ id: String) {
+        m.select(id, store)
+        if let c = m.member(id)?.last?.coord { ctl.focusPerson(c) }
     }
 
-    private func focusAll() {
-        withAnimation(.easeInOut(duration: 0.4)) { camera = .automatic }
-    }
+    /* ---------- Kart-fanen ---------- */
 
-    /* ---------- Min deling ---------- */
-
-    private var mySharing: some View {
-        Button { store.paperGo("innst-fam") } label: {
-            HStack(spacing: 12) {
-                Circle().fill(m.sharing == "on" ? p.pos : m.sharing == "paused" ? Color(hex: "#c27a1a") : p.mut).frame(width: 10, height: 10)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(sharingTitle).font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink)
-                    Text(m.sharing == "on" ? (m.precision == "approx" ? "Omtrentlig posisjon (ca. 1 km)" : "Nøyaktig posisjon") : "Av som standard · trykk for å slå på").font(PF.ui(12)).foregroundStyle(p.mut)
-                }
-                Spacer()
-                Text("Personvern ›").font(PF.ui(13, .semibold)).foregroundStyle(p.mut)
-            }
-            .padding(14)
-            .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    @ViewBuilder private var kartTab: some View {
+        if let id = m.selected, let mem = m.member(id), Fam22Where.shareOk(mem) {
+            Fam22PersonCard(mem: mem) { m.selected = nil; m.track = [] }
         }
-        .buttonStyle(.plain)
+        if !m.loaded && m.members.isEmpty {
+            errorCardMuted("Henter familien …")
+        } else {
+            Fam22PeopleList(members: orderedMembers, meId: m.meId) { mem in pick(mem.id) }
+        }
+        if m.loaded && othersSharing.isEmpty {
+            // Prompt 21: deling er av som standard. Bare de som selv slår på deling, vises med posisjon.
+            FamilyEmptyShare21()
+        }
+        if !m.events.isEmpty { Fam22Events(events: m.events) }
+        Fam22MyShare()
+    }
+
+    private func errorCardMuted(_ s: String) -> some View {
+        let t: Fam22Tok = Fam22Tok.of(p)
+        return Text(s).font(PF.ui(13.5)).foregroundStyle(t.mut)
+            .padding(16).frame(maxWidth: .infinity, alignment: .leading)
+            .background(RoundedRectangle(cornerRadius: 22).fill(t.card))
+    }
+
+    /// Deg først, så de andre.
+    private var orderedMembers: [FamMember] {
+        let me: [FamMember] = m.members.filter { $0.id == m.meId }
+        let rest: [FamMember] = m.members.filter { $0.id != m.meId }
+        return me + rest
     }
 
     private var othersSharing: [FamMember] {
         m.members.filter { $0.id != m.meId && $0.sharing == "on" }
-    }
-
-    private var sharingTitle: String {
-        switch m.sharing {
-        case "on": return "Du deler posisjonen din"
-        case "paused": return "Delingen din er pauset"
-        default: return "Du deler ikke posisjonen din"
-        }
-    }
-
-    /* ---------- Personene ---------- */
-
-    @ViewBuilder private var people: some View {
-        PSection(title: "Familien", trailing: "\(m.members.count)")
-        if !m.loaded && m.members.isEmpty {
-            PCard { Text("Henter familien …").font(PF.ui(13.5)).foregroundStyle(p.mut) }
-        } else if othersSharing.isEmpty {
-            // Prompt 21: deling er av som standard. Bare de som selv slår på deling, vises med posisjon.
-            FamilyEmptyShare21()
-        }
-        ForEach(m.members) { mem in
-            FamilyMemberCard(member: mem, selected: m.selected == mem.id) {
-                m.select(mem.id, store)
-                if let c = mem.last?.coord { focus(c) }
-            }
-        }
-    }
-
-    /* ---------- Soner ---------- */
-
-    @ViewBuilder private var zonesCard: some View {
-        PSection(title: "Soner", trailing: "\(m.zones.count)")
-        if m.zones.isEmpty {
-            PCard { Text("Trykk «+ Ny sone» og så på kartet for å lage en sone, f.eks. Hjemme eller Skolen.").font(PF.ui(13.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true) }
-        } else {
-            VStack(spacing: 0) {
-                ForEach(Array(m.zones.enumerated()), id: \.element.id) { i, z in
-                    if i > 0 { Rectangle().fill(p.line).frame(height: 1) }
-                    Button { m.zoneEdit = z; m.zoneDraft = nil; m.addingZone = true } label: {
-                        HStack(spacing: 12) {
-                            Circle().fill(Color(hex: z.color)).frame(width: 14, height: 14)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(z.name).font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink)
-                                Text("Radius \(Int(z.radius)) m · " + zoneShareText(z) + " · " + notifyText(z)).font(PF.ui(12)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
-                            }
-                            Spacer()
-                            Text("›").foregroundStyle(p.mut)
-                        }
-                        .padding(.horizontal, 14).padding(.vertical, 11)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        }
-    }
-
-    private func zoneShareText(_ z: FamZone) -> String {
-        if !m.zoneIsMine(z) { return "delt med deg" }
-        return z.shared ? "delt med familien" : "bare deg"
-    }
-
-    private func notifyText(_ z: FamZone) -> String {
-        let n = z.notify.filter { $0.value.contains(true) }.count
-        return n == 0 ? "ingen varsler" : "varsel for \(n) person\(n == 1 ? "" : "er")"
-    }
-
-    /* ---------- Hendelser ---------- */
-
-    @ViewBuilder private var eventsCard: some View {
-        if !m.events.isEmpty {
-            PSection(title: "Hendelser", trailing: "\(m.events.count)")
-            VStack(spacing: 0) {
-                ForEach(Array(m.events.prefix(20).enumerated()), id: \.element.id) { i, ev in
-                    if i > 0 { Rectangle().fill(p.line).frame(height: 1) }
-                    HStack(spacing: 10) {
-                        Image(systemName: ev.kind == "leave" ? "arrow.up.right.circle" : "arrow.down.left.circle").foregroundStyle(ev.kind == "leave" ? p.lab : p.pos)
-                        Text(m.eventText(ev)).font(PF.ui(13.5)).foregroundStyle(p.ink).fixedSize(horizontal: false, vertical: true)
-                        Spacer()
-                        Text(ev.ts.map { JS.fmt($0, Calendar.current.isDateInToday($0) ? "HH:mm" : "dd.MM HH:mm") } ?? "").font(PF.ui(11.5)).foregroundStyle(p.mut)
-                    }
-                    .padding(.horizontal, 14).padding(.vertical, 9)
-                }
-            }
-            .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        }
     }
 }
 

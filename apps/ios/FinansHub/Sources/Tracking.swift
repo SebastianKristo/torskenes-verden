@@ -108,6 +108,20 @@ struct Shipment: Identifiable, Hashable {
     var logoDomain: String = ""
     var carrierLogo: String = ""
     var moreCount: Int? = nil
+    /// Prompt 22: siste hendelse fra fraktselskapets API, feil ved oppdatering, forventet levering, hentested
+    /// og tidspunktene i tidslinjen. Tomme fra eldre servere.
+    var lastText: String = ""
+    var lastPlace: String = ""
+    var lastAt: Date? = nil
+    var errText: String = ""
+    var errRetry: Date? = nil
+    var estimated: String = ""
+    var pickupName: String = ""
+    var pickupDeadline: Date? = nil
+    var stepTimes: [Date?] = []
+    /// shop | carrier | letter (logo.kind) og om logoen er manuelt kontrollert.
+    var logoKind: String = ""
+    var logoManual: Bool = false
 
     init(_ o: [String: Any]) {
         id = JS.str(o, "id") ?? UUID().uuidString
@@ -148,6 +162,28 @@ struct Shipment: Identifiable, Hashable {
         archived = JS.bool(o, "archived") ?? false
         url = JS.str(o, "url") ?? ""
         events = JS.list(o, "events").map(TrackEvent.init)
+        logoKind = JS.str(lg, "kind") ?? ""
+        logoManual = JS.bool(lg, "manual") ?? ((JS.str(lg, "kilde") ?? JS.str(lg, "source") ?? "") == "manuell")
+        let le: [String: Any]? = JS.dict(o, "lastEvent")
+        lastText = JS.str(le, "text") ?? JS.str(le, "status") ?? ""
+        lastPlace = JS.str(le, "place") ?? JS.str(le, "location") ?? ""
+        lastAt = JS.date(le?["time"] ?? le?["ts"])
+        let ue: [String: Any]? = JS.dict(o, "updateError")
+        errText = JS.str(ue, "text") ?? JS.str(o, "updateError") ?? ""
+        errRetry = JS.date(ue?["retryAt"])
+        estimated = JS.str(o, "estimatedDelivery") ?? ""
+        let pk: [String: Any]? = JS.dict(o, "pickup")
+        pickupName = JS.str(pk, "name") ?? ""
+        pickupDeadline = JS.date(pk?["deadline"])
+        if pickupPoint.isEmpty && !pickupName.isEmpty { pickupPoint = pickupName }
+        let rawSteps: [[String: Any]] = JS.list(o, "steps")
+        if !rawSteps.isEmpty {
+            stepTimes = rawSteps.map { st -> Date? in JS.date(st["time"] ?? st["at"] ?? st["date"]) }
+            // Siste steg som er gjort / aktivt gir faktisk status når serveren sender objekter.
+            var lastDone: Int = -1
+            for (i, st) in rawSteps.enumerated() where (JS.bool(st, "done") ?? false) || (JS.bool(st, "active") ?? false) { lastDone = i }
+            if lastDone >= 0 && stat != "delivered" { step = Swift.max(0, Swift.min(4, lastDone)) }
+        }
     }
 
     static let stepsIn = ["Registrert", "Hentet", "I transport", "Klar for henting", "Levert"]

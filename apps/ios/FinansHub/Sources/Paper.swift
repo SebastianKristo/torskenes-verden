@@ -159,12 +159,13 @@ struct PaperShell: View {
             let wide = g.size.width >= 600
             let bottom = Swift.max(12, g.safeAreaInsets.bottom - 8)
             let showBar = !store.newsOpen && store.dishSel == nil
-            let fab = showBar && store.fabMode == "float" && store.paperTab != "abo"
+            let fab = showBar && store.fabMode == "float" && store.paperTab != "abo" && store.paperTab != "familie"
             ZStack(alignment: wide ? .topLeading : .bottom) {
                 p.bg.ignoresSafeArea()
                 VStack(spacing: 0) {
                     // Ikke .clipped(): da kuttes fotovinduet ved safe area, og statuslinja får papirfarge i stedet for bildet.
-                    content(p).frame(maxWidth: .infinity, maxHeight: .infinity)
+                    // Prompt 22: FinansHub-sidene bruker «Lys hovedbok» (lys-tokens) som standard (Theme22.swift).
+                    content(store.finPalette22(p)).environment(\.paper, store.finPalette22(p)).frame(maxWidth: .infinity, maxHeight: .infinity)
                         // Sidene fra den klassiske appen skal ikke ligge under skinnen på bred skjerm.
                         .padding(.leading, wide && showBar && (store.paperClassic != nil || store.paperFin != nil) ? 108 : 0)
                     if showBar && !wide { Color.clear.frame(height: 62 + bottom - g.safeAreaInsets.bottom + 10) }
@@ -187,6 +188,15 @@ struct PaperShell: View {
                         .padding(.trailing, 16).padding(.bottom, fab ? (wide ? 96 : 158) : 72)
                         .offset(y: g.safeAreaInsets.bottom - bottom)
                         .transition(.opacity)
+                }
+            }
+            .overlay(alignment: .bottom) {
+                // Prompt 22: «Ny oppgave …» fast over fanelinjen på Huskeliste, ved siden av FAB-en (+).
+                if showBar && !wide && store.paperTab == "huske" && store.paperClassic == nil && store.paperFin == nil {
+                    TaskDockField22(ownButton: !fab)
+                        .padding(.leading, 16).padding(.trailing, fab ? 96 : 16)
+                        .padding(.bottom, 62 + 14)
+                        .offset(y: g.safeAreaInsets.bottom - bottom)
                 }
             }
             .overlay(alignment: .bottomTrailing) {
@@ -243,6 +253,7 @@ struct PaperShell: View {
         Haptics.shared.tap()
         if store.paperInDomains { store.domainManager = true; return }
         if store.paperTab == "sporing" && store.paperClassic == nil { store.trackAddOpen = true; return }
+        if store.paperTab == "huske" && store.paperClassic == nil { TaskDock22.shared.submit(store); return }
         if store.paperTab == "abo" { store.subAdding = true; return }
         store.scanTarget = store.paperTab == "mat" ? "recipe" : "receipt"
         scan.camera()
@@ -252,6 +263,7 @@ struct PaperShell: View {
         Haptics.shared.tick()
         if store.paperInDomains { store.domainManager = true; return }
         if store.paperTab == "sporing" && store.paperClassic == nil { store.trackAddOpen = true; return }
+        if store.paperTab == "huske" && store.paperClassic == nil { TaskDock22.shared.focusTick += 1; return }
         if store.paperTab == "abo" { store.subAdding = true; return }
         store.paperScanOpen = true
     }
@@ -336,7 +348,7 @@ struct PaperTabBar: View {
         // Subscription OS: Hjem, Innsikt og Historikk i linja (med den røde +-sirkelen).
         if store.paperTab == "abo" { return [("abo:home", "Hjem", "house"), ("abo:ins", "Innsikt", "chart.bar"), ("abo:hist", "Historikk", "clock")] }
         // Prompt 21: Familie har Kart, Soner og Helse i linja (som Subscription OS), pluss Mer.
-        if store.paperTab == "familie" { return [("fam:kart", "Kart", "map"), ("fam:soner", "Soner", "circle.dashed"), ("fam:helse", "Helse", "heart"), ("mer", "Mer", "ellipsis")] }
+        if store.paperTab == "familie" { return [("fam:kart", "Kart", "◎"), ("fam:soner", "Soner", "◌"), ("fam:helse", "Helse", "♡"), ("mer", "Mer", "⋯")] }
         var t: [(String, String, String)] = []
         if store.paperInFinance {
             for f in store.finNavItems { t.append((f.page, f.name, f.icon)) }
@@ -788,7 +800,7 @@ struct PaperPage: View {
         case "finn": try? await store.loadFinn()
         case "abo": try? await store.loadSubs()
         case "mat": try? await store.loadWeek(); await store.loadMatExtras()
-        case "sporing": try? await store.loadTracking()
+        case "sporing": await store.refreshTracking22()
         case "domener", "dpub", "dytl", "dinf": store.reloadDomain(); if store.domAllMode { await store.loadDomAll() }
         case "ftx": if let id = store.paperTxId { store.openPaperTx(id) }
         default: await store.loadHome(); await store.loadPhotoWindow()
@@ -838,8 +850,6 @@ struct PaperHero: View {
     @ViewBuilder private var background: some View {
         if store.paperTab == "avg" {
             RuterHeroArt()
-        } else if store.paperTab == "familie" {
-            FamilyHeroArt()
         } else if let img = store.photoImage, store.photo != "cur" {
             // Bildet med uskarphet, mørklegging, dempede farger, papirtekstur og ev. regn/snø (Background19.swift).
             BgPhotoLayer(image: img)
@@ -903,9 +913,9 @@ struct PaperHero: View {
     private var bottomRow: some View {
         HStack(alignment: .bottom, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(kicker).font(PF.italic(15)).opacity(0.9).lineLimit(1)
+                Text(kicker).font(PF.italic(store.paperTab == "familie" ? 17 : 15)).opacity(0.9).lineLimit(1)
                 ForEach(Array(title.components(separatedBy: "\n").enumerated()), id: \.offset) { _, line in
-                    Text(line).font(PF.serif(home ? (wide ? 44 : 31) : 36, medium: true)).lineLimit(1).minimumScaleFactor(0.55)
+                    Text(line).font(PF.serif(home ? (wide ? 44 : 31) : (store.paperTab == "familie" ? 40 : 36), medium: true)).lineLimit(1).minimumScaleFactor(0.55)
                 }
             }
             .layoutPriority(1)

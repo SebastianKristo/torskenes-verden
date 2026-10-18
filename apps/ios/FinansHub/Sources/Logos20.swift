@@ -11,6 +11,8 @@ struct LogoItem20: Hashable {
     let alias: [String]
     let farge: String
     let hasFile: Bool
+    /// Prompt 22: «manuell» for kontrollerte logoer (fraktselskapene), ellers kilden fra fetch-logos.
+    var kilde: String = ""
 }
 
 /// Registeret caches på disk (Caches/logos20/registry.json) og oppdateres høyst én gang i døgnet. Filene hentes fra
@@ -21,6 +23,7 @@ final class LogoRegistry20 {
     static let shared = LogoRegistry20()
 
     private var byDomain: [String: LogoItem20] = [:]
+    private var byId: [String: LogoItem20] = [:]
     private var keys: [(String, LogoItem20)] = []
     private var loaded = false
     private var unsupported = false
@@ -96,11 +99,14 @@ final class LogoRegistry20 {
         let rows: [[String: Any]] = JS.list(o, "items")
         guard !rows.isEmpty else { return }
         var dom: [String: LogoItem20] = [:]
+        var ids: [String: LogoItem20] = [:]
         var k: [(String, LogoItem20)] = []
         for r in rows {
             guard let id = JS.str(r, "id") else { continue }
             let item = LogoItem20(id: id, navn: JS.str(r, "navn") ?? id, domene: LogoRegistry20.cleanDomain(JS.str(r, "domene") ?? ""),
-                                  alias: JS.strings(r, "alias"), farge: JS.str(r, "farge") ?? "", hasFile: JS.bool(r, "hasFile") ?? false)
+                                  alias: JS.strings(r, "alias"), farge: JS.str(r, "farge") ?? "", hasFile: JS.bool(r, "hasFile") ?? false,
+                                  kilde: JS.str(r, "kilde") ?? "")
+            ids[id] = item
             if !item.domene.isEmpty && dom[item.domene] == nil { dom[item.domene] = item }
             let names: [String] = [item.navn] + item.alias
             for n in names {
@@ -111,6 +117,7 @@ final class LogoRegistry20 {
         // Lengste nøkkel først, så «coop extra» vinner over «coop».
         k.sort { $0.0.count > $1.0.count }
         byDomain = dom
+        byId = ids
         keys = k
         loaded = true
     }
@@ -163,17 +170,31 @@ final class LogoRegistry20 {
         guard !domain.isEmpty else { return nil }
         await ensure(api)
         guard let item = byDomain[domain], item.hasFile, !missing.contains(item.id) else { return nil }
-        if let m = memo[item.id] { return m }
-        let file: URL? = dir?.appendingPathComponent(item.id + ".png")
+        return await file(item, api: api)
+    }
+
+    /// Prompt 22: logo for fraktselskapet bare når den er manuelt kontrollert (kilde «manuell»). Ellers nil, så appen
+    /// viser fargefyll med navnet i stedet for et tilfeldig favicon.
+    func manualImage(id: String, api: API) async -> UIImage? {
+        await ensure(api)
+        guard let item = byId[id], item.hasFile, item.kilde == "manuell", !missing.contains(item.id) else { return nil }
+        return await file(item, api: api, key: item.id + "-manuell")
+    }
+
+    /// key: navnet i minnet og på disk (manuelle logoer får egen nøkkel, så en gammel favicon-fil i hurtigbufferen ikke brukes).
+    private func file(_ item: LogoItem20, api: API, key: String? = nil) async -> UIImage? {
+        let k: String = key ?? item.id
+        if let m = memo[k] { return m }
+        let file: URL? = dir?.appendingPathComponent(k + ".png")
         if let file, let data = try? Data(contentsOf: file), let img = UIImage(data: data) {
-            memo[item.id] = img
+            memo[k] = img
             return img
         }
         let enc: String = item.id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? item.id
         do {
             let data: Data = try await api.bytes("/finans/api/logos/file/" + enc)
             guard let img = UIImage(data: data) else { return nil }
-            memo[item.id] = img
+            memo[k] = img
             if let file { try? data.write(to: file, options: .atomic) }
             return img
         } catch let e as APIError where e.status == 404 {

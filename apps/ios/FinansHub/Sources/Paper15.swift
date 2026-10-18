@@ -445,7 +445,9 @@ struct PaperFab: View {
 
     var body: some View {
         let track = store.paperTab == "sporing" && store.paperClassic == nil
-        Image(systemName: track ? "plus" : "viewfinder")
+        // Prompt 22: på Huskeliste viser FAB-en + og legger til oppgaven i feltet over fanelinjen.
+        let huske: Bool = store.paperTab == "huske" && store.paperClassic == nil
+        Image(systemName: track || huske ? "plus" : "viewfinder")
             .font(.system(size: 25, weight: .semibold))
             .foregroundStyle(p.onLab)
             .frame(width: 60, height: 60)
@@ -457,7 +459,7 @@ struct PaperFab: View {
             .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .onTapGesture { tap() }
             .onLongPressGesture(minimumDuration: 0.45, perform: { hold() }, onPressingChanged: { pressed = $0 })
-            .accessibilityLabel(track ? "Ny sending" : "Skann")
+            .accessibilityLabel(huske ? "Legg til oppgave" : track ? "Ny sending" : "Skann")
             .accessibilityHint(track ? "Legg til et sporingsnummer" : "Trykk for valg, hold inne for å laste opp")
             .accessibilityAddTraits(.isButton)
     }

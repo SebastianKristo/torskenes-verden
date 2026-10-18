@@ -15,7 +15,11 @@ extension Shipment {
     }
 
     /// Har pakken en butikklogo (eller et logo-id fra registeret)?
-    var hasShopLogo: Bool { !logoId.isEmpty || !shopLogoDomain.isEmpty }
+    /// Prompt 22: logo.kind avgjør (carrier betyr at logo.id er fraktselskapet, ikke butikken).
+    var hasShopLogo: Bool {
+        if !logoKind.isEmpty { return logoKind == "shop" }
+        return !logoId.isEmpty || !shopLogoDomain.isEmpty
+    }
 
     /// «Komplett · skjerm», «Komplett» eller «Pakke fra Bring». Sporingsnummeret vises bare i detaljene.
     var displayTitle: String {
@@ -53,11 +57,9 @@ struct PackageLogo21: View {
         if s.hasShopLogo {
             PaperLogo(domain: s.shopLogoDomain.isEmpty ? nil : s.shopLogoDomain, name: s.shop.isEmpty ? s.carrierName : s.shop,
                       color: s.carrierColor, size: size, radius: radius, logoUrl: shopLogoUrl)
-        } else if CarrierMark.known(s.carrier) {
-            ZStack {
-                RoundedRectangle(cornerRadius: radius, style: .continuous).fill(Color.white)
-                CarrierMark(carrier: s.carrier, size: size, radius: radius)
-            }
+        } else if s.carrier != "other" && !s.carrier.isEmpty {
+            // Prompt 22: manuelt kontrollert logo fra biblioteket, ellers fargefyll med navnet (aldri favicon).
+            CarrierLogo22(s: s, size: size, radius: radius)
         } else {
             PaperLogo(domain: s.carrierLogoDomain.isEmpty ? nil : s.carrierLogoDomain, name: s.carrierName,
                       color: s.carrierColor, size: size, radius: radius, logoUrl: carrierLogoUrl)
@@ -84,8 +86,8 @@ struct PackageCarrierDot21: View {
 
     var body: some View {
         Group {
-            if CarrierMark.known(s.carrier) {
-                CarrierMark(carrier: s.carrier, size: size, radius: size / 2)
+            if s.carrier != "other" && !s.carrier.isEmpty {
+                CarrierLogo22(s: s, size: size, radius: size / 2)
             } else {
                 PaperLogo(domain: s.carrierLogoDomain.isEmpty ? nil : s.carrierLogoDomain, name: s.carrierName,
                           color: s.carrierColor, size: size, radius: size / 2)

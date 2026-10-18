@@ -104,20 +104,15 @@ struct PaperTabIcon: View {
 }
 
 /// Google-logoen i søkefeltet (den firefargede «G»-en).
-/// Prompt 20: tegnet som buer i de fire fargene (som SVG-en i designet), ikke som en tonet bokstav.
+/// Prompt 22: de offisielle banene fra google-g.svg (48 × 48, #EA4335 / #4285F4 / #FBBC05 / #34A853), se Glyphs22.swift.
 struct GoogleG: View {
     var size: CGFloat = 18
     var body: some View {
-        let w: CGFloat = size * 0.22
         ZStack {
-            GoogleArc20(from: 0.0, to: 0.13, color: Color(hex: "#4285F4"), width: w)
-            GoogleArc20(from: 0.13, to: 0.40, color: Color(hex: "#34A853"), width: w)
-            GoogleArc20(from: 0.40, to: 0.58, color: Color(hex: "#FBBC05"), width: w)
-            GoogleArc20(from: 0.58, to: 0.875, color: Color(hex: "#EA4335"), width: w)
-            // Tverrstreken mot midten.
-            Rectangle().fill(Color(hex: "#4285F4"))
-                .frame(width: size * 0.48, height: w)
-                .offset(x: size * 0.24 - w * 0.25)
+            GoogleG22Part(part: 0).fill(Color(hex: "#EA4335"))
+            GoogleG22Part(part: 1).fill(Color(hex: "#4285F4"))
+            GoogleG22Part(part: 2).fill(Color(hex: "#FBBC05"))
+            GoogleG22Part(part: 3).fill(Color(hex: "#34A853"))
         }
         .frame(width: size, height: size)
         .padding(2)
@@ -243,7 +238,7 @@ extension Store {
         switch paperTab {
         case "aksjer": return "Trading 212" + (stocksX?.mock == true ? " · demodata" : "")
         case "boliger": return folder.map { $0.address ?? "Bolig" } ?? "Utgifter, prosjekter og regninger"
-        case "familie": return "Kart, soner og helse"
+        case "familie": return "Posisjon, soner og helse"
         case "avg": return "Ruter · sanntid fra Entur"
         case "profil": return "@" + (account?.username ?? "")
         case "innst-ut": return "Tema, bakgrunn og ikonfarger"

@@ -24,6 +24,7 @@ extension Store {
         applyPaper15(o)
         applyPaper16(o)
         applyPaper19(o)
+        applyPaper22(o)
         FinTileOrder20.apply(o)
     }
 

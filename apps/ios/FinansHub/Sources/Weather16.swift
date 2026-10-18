@@ -93,104 +93,14 @@ extension Store {
     }
 }
 
-/// Stedsvelgeren nederst i værappen: egne steder (rulles sideveis), hold inne for å fjerne, + for å søke.
-struct WxPlaceBar: View {
-    @Environment(Store.self) private var store
-    @State private var searching = false
-    @State private var editing = false
-
-    var body: some View {
-        HStack(spacing: 6) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(store.weatherPlaces) { pl in chip(pl) }
-                }
-                .padding(.horizontal, 2)
-            }
-            Button {
-                Haptics.shared.tap()
-                if editing { editing = false } else { searching = true }
-            } label: {
-                Image(systemName: editing ? "checkmark" : "plus").font(.system(size: 15, weight: .bold)).foregroundStyle(Color(hex: "#1b2a40"))
-                    .frame(width: 34, height: 34).background(Color.white, in: Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(editing ? "Ferdig" : "Legg til sted")
-        }
-        .padding(6)
-        .background(.ultraThinMaterial, in: Capsule())
-        .padding(.horizontal, 14)
-        .padding(.bottom, 18)
-        .sheet(isPresented: $searching) { WxPlaceSearch().presentationDetents([.medium, .large]) }
-        .task { await store.loadWeatherPlaces() }
-    }
-
-    private func chip(_ pl: WxPlace) -> some View {
-        let on = store.weatherPlace == pl.id
-        return HStack(spacing: 4) {
-            Text(pl.name).font(PF.ui(13, .semibold)).fixedSize()
-            if editing {
-                Button { store.removeWeatherPlace(pl) } label: { Image(systemName: "xmark.circle.fill").font(.system(size: 13)) }
-                    .buttonStyle(.plain).accessibilityLabel("Fjern \(pl.name)")
-            }
-        }
-        .foregroundStyle(on ? Color(hex: "#1b2a40") : .white)
-        .padding(.horizontal, 12).frame(height: 34)
-        .background(on ? Color.white : Color.white.opacity(0.16), in: Capsule())
-        .contentShape(Capsule())
-        .onTapGesture { if !editing { store.setWeatherPlace(pl.id) } }
-        .onLongPressGesture(minimumDuration: 0.5) { Haptics.shared.tick(); editing = true }
-    }
-}
-
-/// Søk etter steder (Kartverket / Open-Meteo via serveren).
-struct WxPlaceSearch: View {
-    @Environment(Store.self) private var store
-    @Environment(\.dismiss) private var dismiss
-    @State private var q = ""
-    @State private var hits: [WxPlace] = []
-    @State private var busy = false
-    @FocusState private var focus: Bool
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Legg til sted").font(PF.serif(24, medium: true))
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Søk etter sted, f.eks. Lillehammer", text: $q).font(PF.ui(15)).focused($focus).autocorrectionDisabled().submitLabel(.search)
-                if busy { ProgressView() }
-            }
-            .padding(.horizontal, 14).frame(height: 46)
-            .background(Color.primary.opacity(0.08), in: Capsule())
-            ScrollView {
-                VStack(spacing: 0) {
-                    ForEach(Array(hits.enumerated()), id: \.offset) { i, h in
-                        if i > 0 { Divider() }
-                        Button { store.addWeatherPlace(h); dismiss() } label: {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Text(h.name).font(PF.ui(15, .semibold))
-                                    if !h.region.isEmpty { Text(h.region).font(PF.ui(12)).foregroundStyle(.secondary) }
-                                }
-                                Spacer()
-                                Text("+ Legg til").font(PF.ui(13, .semibold)).foregroundStyle(Color(hex: "#b23a2a"))
-                            }
-                            .padding(.vertical, 11).contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    if hits.isEmpty && q.count >= 2 && !busy { Text("Fant ingen steder.").font(PF.ui(13)).foregroundStyle(.secondary).padding(.vertical, 12) }
-                }
-            }
-        }
-        .padding(18)
-        .onAppear { focus = true }
-        .task(id: q) {
-            try? await Task.sleep(for: .milliseconds(300))
-            guard !Task.isCancelled else { return }
-            busy = true
-            hits = await store.searchWeatherPlaces(q)
-            busy = false
-        }
+extension Store {
+    /// Prompt 22: hold inne og dra i Steder. Lagres lokalt og (hvis serveren støtter det) per bruker.
+    func moveWeatherPlaces(from: IndexSet, to: Int) {
+        var list: [WxPlace] = weatherPlaces
+        list.move(fromOffsets: from, toOffset: to)
+        weatherPlaces = list
+        Haptics.shared.tick()
+        let ids: [String] = list.map(\.id)
+        Task { _ = try? await self.api.callAt("/api", "PUT", "/weather/places/order", json: ["ids": ids]) }
     }
 }

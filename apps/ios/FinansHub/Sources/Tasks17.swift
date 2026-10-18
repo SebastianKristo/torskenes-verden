@@ -183,11 +183,22 @@ final class TasksModel {
 struct PaperTasksView: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
-    @State private var cur = "alle"
+    @Environment(\.paperWide) private var wide
     @State private var text = ""
-    @State private var dueDays: Int? = 0
-    @State private var who = ""
     @State private var editing: TaskItem17?
+    /// Prompt 22: valgt liste, frist og person deles med feltet over fanelinjen (TaskDock22).
+    @MainActor private var cur: String {
+        get { TaskDock22.shared.cur }
+        nonmutating set { TaskDock22.shared.cur = newValue }
+    }
+    @MainActor private var dueDays: Int? {
+        get { TaskDock22.shared.dueDays }
+        nonmutating set { TaskDock22.shared.dueDays = newValue }
+    }
+    @MainActor private var who: String {
+        get { TaskDock22.shared.who }
+        nonmutating set { TaskDock22.shared.who = newValue }
+    }
     @FocusState private var focused: Bool
     @MainActor private var m: TasksModel { TasksModel.shared }
 
@@ -195,7 +206,8 @@ struct PaperTasksView: View {
         VStack(alignment: .leading, spacing: 12) {
             listChips
             if let l = m.lists.first(where: { $0.id == cur }) { TaskListHeader21(list: l) }
-            addField
+            // Prompt 22: på telefon ligger feltet fast over fanelinjen (TaskDockField22), ikke øverst.
+            if wide { addField }
             options
             if let e = m.error { PCard { Text(e).font(PF.ui(13)).foregroundStyle(p.lab).fixedSize(horizontal: false, vertical: true) } }
             ForEach(groups, id: \.0) { g in
@@ -211,6 +223,7 @@ struct PaperTasksView: View {
                 }
                 .buttonStyle(.plain).padding(.leading, 4)
             }
+            TaskHASection22()
             Text("Widgeten «Huskeliste» på hjemskjermen viser de tre neste oppgavene, og du kan krysse av rett i den.")
                 .font(PF.ui(12)).foregroundStyle(p.mut).padding(.horizontal, 4).padding(.top, 6).fixedSize(horizontal: false, vertical: true)
         }
@@ -253,13 +266,15 @@ struct PaperTasksView: View {
         let on = cur == id
         return Button { cur = id; Haptics.shared.select() } label: {
             HStack(spacing: 8) {
-                Circle().fill(c).frame(width: 9, height: 9)
+                // Prompt 22: «Alle» har ingen fargeprikk.
+                if id != "alle" { Circle().fill(c).frame(width: 9, height: 9) }
                 Text(name).font(PF.ui(13, .bold))
-                if n > 0 { Text("\(n)").font(PF.ui(12, .semibold)).opacity(0.7) }
+                if n > 0 { Text("\(n)").font(PF.ui(12, .semibold)).opacity(0.6) }
             }
             .foregroundStyle(on ? p.bg : p.ink)
             .padding(.horizontal, 14).frame(height: 38)
             .background(on ? p.ink : p.card, in: Capsule())
+            .overlay(Capsule().stroke(on ? p.ink : Color.clear, lineWidth: 1))
         }
         .buttonStyle(.plain)
     }
@@ -299,7 +314,9 @@ struct PaperTasksView: View {
 
     private func smallChip(_ t: String, _ on: Bool, _ act: @escaping () -> Void) -> some View {
         Button { act(); Haptics.shared.select() } label: {
-            Text(t).font(PF.ui(12.5, .semibold)).foregroundStyle(p.ink).padding(.horizontal, 12).frame(height: 32)
+            // Prompt 22: valgt chip er fylt (blekk-bakgrunn, lys tekst), uvalgt er kortfarge med tynn kant.
+            Text(t).font(PF.ui(12.5, .semibold)).foregroundStyle(on ? p.bg : p.ink).padding(.horizontal, 12).frame(height: 32)
+                .background(on ? p.ink : p.card, in: Capsule())
                 .overlay(Capsule().stroke(on ? p.ink : p.line, lineWidth: 1))
         }
         .buttonStyle(.plain)
