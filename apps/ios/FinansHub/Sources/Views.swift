@@ -90,14 +90,27 @@ struct Logo: View {
     /// Egen logo (abonnementer: opplastet eller funnet med ✦ AI). Brukes før faviconet.
     var logoUrl: String? = nil
     @State private var img: UIImage? = nil
+    private var taskKey: String {
+        let a: String = logoUrl ?? ""
+        let b: String = domain ?? ""
+        return a + "|" + b
+    }
     var body: some View {
-        Group {
-            if let img {
-                Image(uiImage: img).resizable().scaledToFit().padding(size / 9)
-                    .frame(width: size, height: size).background(.white, in: RoundedRectangle(cornerRadius: size / 4))
-            } else { Initial(text: name, color: color, size: size) }
+        content.task(id: taskKey) { await load() }
+    }
+    @ViewBuilder private var content: some View {
+        if let img {
+            logoImage(img)
+        } else {
+            Initial(text: name, color: color, size: size)
         }
-        .task(id: (logoUrl ?? "") + "|" + (domain ?? "")) { await load() }
+    }
+    private func logoImage(_ i: UIImage) -> some View {
+        let r: CGFloat = size / 4
+        let pad: CGFloat = size / 9
+        return Image(uiImage: i).resizable().scaledToFit().padding(pad)
+            .frame(width: size, height: size)
+            .background(Color.white, in: RoundedRectangle(cornerRadius: r))
     }
     private func load() async {
         if let u = logoUrl, !u.isEmpty, let i = await store.image(u) { img = i; return }
