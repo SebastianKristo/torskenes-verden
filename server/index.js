@@ -8,7 +8,7 @@ import { randomBytes } from 'node:crypto';
 import { join, resolve } from 'node:path';
 import { config } from './config.js';
 import { db, kv, OWNER } from './db.js';
-import { createSession, destroySession, sessionUser, rememberDevice, pauseDevice, forgetDevice, currentDeviceId, currentSessionId, trustIp, isLan, requireAuth, requireAdmin, clientIp, verifyLogin, createTicket, redeemTicket, userInfo, listUsers, createUser, deleteUser, updateUser, setPassword, checkPassword, isAdmin, needsSetup, setupServer, serverName, setServerName, startTotpSetup, confirmTotpSetup, disableTotp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
+import { createSession, destroySession, sessionUser, rememberDevice, pauseDevice, forgetDevice, currentDeviceId, currentSessionId, trustIp, isLan, requireAuth, requireAdmin, clientIp, verifyLogin, createTicket, redeemTicket, userInfo, listUsers, listUsersFor, createUser, deleteUser, updateUser, setPassword, checkPassword, isAdmin, needsSetup, setupServer, serverName, setServerName, startTotpSetup, confirmTotpSetup, disableTotp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
 import * as integrations from './integrations.js';
 import { cfg, publicConfig, updateConfig } from './settings.js';
 import finansApi from './finans/routes.js';
@@ -184,7 +184,7 @@ authed.get('/state', (c) => {
     categories: kv.get(u, 'categories', DEFAULT_CATS),
     loan: kv.get(u, 'loan', DEFAULT_LOAN),
     city: kv.get(u, 'city', 'Oslo'),
-    schoolUrl: cfg('school_url'),
+    schoolUrl: c.get('role') === 'admin' ? cfg('school_url') : '', // serveroppsett: bare for administratorer (prompt 21)
     searchUrl: cfg('search_url'),
     searchStyle: kv.get(u, 'search_style', 'wide'),
     hideSearch: kv.get(u, 'hide_search', false),
@@ -245,8 +245,9 @@ authed.put('/password', async (c) => {
 /* --- Brukere, 2FA og innstillinger per bruker --- */
 
 const fail = (c, e) => c.json({ error: e.message }, e.status ?? 400);
-// Alle innloggede ser listen (brukes også til deling av mapper); bare admin kan endre den.
-authed.get('/users', (c) => c.json({ me: userInfo(c.get('user')), users: listUsers() }));
+// Alle innloggede ser listen (brukes til deling av boliger og huskelister); bare admin kan endre den.
+// Vanlige brukere ser bare id, navn og profilbilde om de andre (prompt 21), ikke rolle, brukernavn eller 2FA.
+authed.get('/users', (c) => c.json({ me: userInfo(c.get('user')), users: listUsersFor(c.get('user')) }));
 authed.post('/users', requireAdmin, async (c) => {
   try { return c.json(createUser(await c.req.json().catch(() => ({})))); } catch (e) { return fail(c, e); }
 });
@@ -300,7 +301,11 @@ authed.delete('/devices/:id', (c) => {
 
 /* --- Integrasjonsinnstillinger --- */
 
-authed.get('/config', (c) => c.json(publicConfig()));
+// Integrasjonene er serveroppsett. Vanlige brukere får bare gruppene med navn, logo og om de er satt opp, uten verdier
+// (ingen adresser, koordinater, URL-er, e-post eller brukernavn), så Innstillinger kan vises uten feil (prompt 21).
+const restrictedConfig = () => publicConfig().map((g) => ({ name: g.name, id: g.id, domain: g.domain, category: g.category, help: '', guide: [], restricted: true,
+  fields: g.fields.map((f) => ({ key: f.key, label: f.label, type: f.type, secret: f.secret, set: f.set, value: '', custom: false })) }));
+authed.get('/config', (c) => c.json(c.get('role') === 'admin' ? publicConfig() : restrictedConfig()));
 authed.put('/config', requireAdmin, async (c) => {
   try { updateConfig(await c.req.json()); } catch (e) { return c.json({ error: e.message }, 400); }
   return c.json(publicConfig());
@@ -328,9 +333,20 @@ async function saveFile(file, allowPdf = true) {
 }
 const removeFile = (name) => name && unlink(join(UPLOADS, name)).catch(() => {});
 
+// Hvem eier en opplastet fil? Kvitteringer (gamle Økonomi) og egne bakgrunnsbilder (bg_custom). null = ukjent.
+function fileOwner(name) {
+  const r = db.prepare('SELECT user FROM receipts WHERE file=? OR thumb=? LIMIT 1').get(name, name);
+  if (r) return r.user;
+  for (const row of db.prepare("SELECT user, value FROM kv WHERE key='bg_custom' AND instr(value, ?) > 0").all(name)) {
+    try { if (Object.values(JSON.parse(row.value) ?? {}).flat().includes(name)) return row.user; } catch { /* ugyldig */ }
+  }
+  return null;
+}
+// Bare eieren av filen og administratorer (også når eieren ikke kan avgjøres) får den. Andre får 404, som for ukjente filer.
 authed.get('/files/:name', async (c) => {
   const name = c.req.param('name');
   if (!/^[a-f0-9]{24}(_t)?\.[a-z]{3,4}$/.test(name)) return c.notFound();
+  if (c.get('role') !== 'admin' && fileOwner(name) !== c.get('user')) return c.notFound();
   const ext = name.split('.').pop();
   const mime = Object.entries(MIME_EXT).find(([, e]) => e === ext)?.[0] ?? 'application/octet-stream';
   try {
@@ -446,11 +462,18 @@ const proxy = (fn) => async (c) => {
     return c.json({ error: e.message }, 502);
   }
 };
+// Admins integrasjoner (portefølje, skolekalender, Plex/Jellyfin): vanlige brukere får 200 med tomme data og
+// {configured:false, restricted:true}, så widgetene viser «ikke koblet» i stedet for en feilmelding (prompt 21).
+const RESTRICTED = { configured: false, restricted: true, events: [], positions: [], items: [], servers: [] };
+const adminOnly = (fn) => async (c) => {
+  if (!isAdmin(c.get('user'))) return c.json(RESTRICTED);
+  return fn(c);
+};
 authed.get('/ruter', proxy(api.getRuter));
 authed.get('/weather', proxy(api.getWeather));
-authed.get('/school', proxy(api.getSchool));
+authed.get('/school', adminOnly(proxy(api.getSchool)));
 // Trading 212 gir ikke dagsendring direkte: lagre første totalverdi hver dag og sammenlign.
-authed.get('/trading', proxy(async () => {
+authed.get('/trading', adminOnly(proxy(async () => {
   const t = await api.getTrading();
   if (!t.configured || !Number.isFinite(t.total)) return t;
   const today = new Date().toLocaleDateString('sv-SE');
@@ -459,16 +482,22 @@ authed.get('/trading', proxy(async () => {
   // Merk: innskudd/uttak samme dag regnes med i endringen.
   const dayChange = t.total - base.total;
   return { ...t, dayChange, dayPct: base.total ? (dayChange / base.total) * 100 : 0 };
-}));
+})));
 authed.get('/energy', proxy(api.getEnergy));
-authed.get('/health', proxy(api.getHealth));
+// Tjenestestatus: vanlige brukere ser navn og om tjenesten svarer, ikke interne adresser (prompt 21).
+authed.get('/health', proxy(async (c) => {
+  const h = await api.getHealth();
+  if (isAdmin(c.get('user'))) return h;
+  return { ...h, services: (h.services ?? []).map((x) => ({ name: x.name, up: x.up, status: x.status, ms: x.ms, error: x.error })) };
+}));
 authed.get('/upcoming', proxy(api.getUpcoming));
 authed.get('/news', proxy(api.getNews));
 // Plex og Jellyfin: «Spilles nå» (30 s) og «Nylig lagt til» (10 min). Plakater hentes via serveren så tokenet aldri når nettleseren.
-app.get('/api/media/now', authOrToken, proxy(api.getMediaNow));
-app.get('/api/media/recent', authOrToken, proxy(api.getMediaRecent));
-app.get('/api/media/history', authOrToken, proxy(api.getMediaHistory));
+app.get('/api/media/now', authOrToken, adminOnly(proxy(api.getMediaNow)));
+app.get('/api/media/recent', authOrToken, adminOnly(proxy(api.getMediaRecent)));
+app.get('/api/media/history', authOrToken, adminOnly(proxy(api.getMediaHistory)));
 app.get('/api/media/poster', authOrToken, async (c) => {
+  if (!isAdmin(c.get('user'))) return c.json({ error: 'Bare administratorer kan gjøre dette', restricted: true }, 403);
   try {
     const img = await api.getMediaPoster(c.req.query('src'), c.req.query('id'));
     if (!img) return c.notFound();

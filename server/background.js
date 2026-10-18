@@ -1,18 +1,23 @@
-// Felles bakgrunnstjeneste (prompt 19) for Homelab og FinansHub, web og app.
+// Felles bakgrunnstjeneste (prompt 19, foto fra Wikimedia Commons i prompt 21) for Homelab og FinansHub, web og app.
 //
-// GET /api/background gir {type, image_url, credit, theme_hint, …} for brukerens valg (Innstillinger → Utseende → Bakgrunn):
-// - weather: været nå fra MET Locationforecast 2.0 (hvert 30. min) og dag/natt fra MET Sunrise 3.0. Bildet hentes fra
-//   Unsplash eller Pexels (når nøkkelen finnes), ellers brukes de medfølgende værbildene.
-// - planets: Jorda, Månen, Jupiter og Mars fra NASA Image and Video Library (fritt å bruke, NASA krediteres).
-// - oslo: egne opplastede bilder (DATA_DIR/backgrounds/oslo), ellers Unsplash/Pexels («Oslo aerial»), ellers det medfølgende.
-//   Getty Images er lisensbelagt og brukes ikke.
+// GET /api/background gir {type, url, image_url, fallbacks, credit, theme_hint, gradient, scrim, …} for brukerens valg
+// (Innstillinger → Utseende → Bakgrunn). Toppbildet er alltid et ekte fotografi, aldri en tegning:
+// - weather: været nå fra MET (hvert 30. min). Værkoden velger vaer_klart, vaer_sky eller vaer_regn (0–1, 2–50, 51+ for
+//   Open-Meteo weather_code; MET symbol_code kartlegges tilsvarende). Unsplash/Pexels når nøkkelen finnes, ellers Wikimedia.
+// - planets: Jorda, Månen, Jupiter, Mars og Saturn (NASA m.fl. via Wikimedia Commons). Dagens planet er
+//   floor(Date.now()/864e5) % 5, eller planeten brukeren har valgt (bgPlanet).
+// - oslo: egne opplastede bilder (DATA_DIR/backgrounds/oslo), så Unsplash/Pexels («Oslo aerial»), så Wikimedia.
+// - ruter (bare ?type=ruter): trikkefoto til Ruter-visningen.
 // - custom: brukerens eget bilde (/api/me/photo-window). none/cur: bare gradient.
-// Alle bilder lastes ned én gang, caches på disk og skaleres til WebP med ImageMagick når den finnes.
+// Wikimedia-fotoene ligger ferdig nedlastet i server/backgrounds/files (fetch-backgrounds.mjs i GitHub Actions). Mangler de,
+// lastes de ned ved første bruk via Special:FilePath (width=2000, reserve 1280, 9 s per forsøk) og caches på disk.
+// Når ingen foto finnes, er image_url null og klienten viser gradienten linear-gradient(170deg,#4a5a6a,#2a3440 60%,#1d242c).
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { readFile, writeFile, mkdir, readdir, unlink, stat } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { createHash, randomBytes } from 'node:crypto';
 import { config } from './config.js';
@@ -20,9 +25,9 @@ import { kv, OWNER } from './db.js';
 import { cfg } from './settings.js';
 import { isAdmin } from './auth.js';
 import { authOrToken, designOf, layoutOf } from './mobile.js';
+import { CATALOG, PLANETS, PLANET_NAME, PLANET_FILES, KNOWN_CREDITS, bundledPath, filePathUrl, infoUrl, pageUrl, creditFromInfo } from './backgrounds/catalog.js';
 
 const isMock = () => process.env.MOCK_DATA === '1';
-const BUNDLED = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'bg');
 const ROOT = join(config.dataDir, 'backgrounds');
 const CACHE = join(ROOT, 'cache');
 const OSLO = join(ROOT, 'oslo');
@@ -66,8 +71,6 @@ const metaGet = (id) => metaAll()[id] ?? null;
 function metaSet(id, m) { const a = metaAll(); a[id] = { ...(a[id] ?? {}), ...m }; kv.set(OWNER, META, a); return a[id]; }
 
 // Medfølgende bilder har id «b-<navn>» (f.eks. b-weather-clear).
-const BUNDLED_NAMES = ['oslo', 'planets-1', 'planets-2', 'planets-3', 'weather-clear', 'weather-cloudy', 'weather-fog', 'weather-night', 'weather-rain', 'weather-snow'];
-const bundledId = (n) => `b-${n}`;
 
 /** Sørger for at bildet fra url finnes på disk. Gir id-en, eller null når nedlastingen feiler. */
 const inflight = new Map();
@@ -196,16 +199,6 @@ const WX_QUERY = {
   clear: ['clear blue sky sun', 'clear night sky stars'], partly: ['partly cloudy sky', 'moon clouds night'], cloudy: ['overcast clouds sky', 'cloudy night sky'],
   rain: ['rain window drops', 'rainy night city lights'], snow: ['snow forest winter', 'snowy night'], fog: ['foggy forest', 'fog night street'], thunder: ['thunderstorm lightning', 'lightning night'],
 };
-const WX_BUNDLED = { clear: 'weather-clear', partly: 'weather-cloudy', cloudy: 'weather-cloudy', rain: 'weather-rain', snow: 'weather-snow', fog: 'weather-fog', thunder: 'weather-rain' };
-function wxGradient(kind, isDay) {
-  if (!isDay) return kind === 'clear' || kind === 'partly' ? 'linear-gradient(170deg, #0b1026 0%, #1b2350 55%, #3c3a6e 100%)' : 'linear-gradient(170deg, #10151f 0%, #24303f 60%, #3c4a5a 100%)';
-  return {
-    clear: 'linear-gradient(170deg, #3d7cc9 0%, #7fb2e5 55%, #f4d9a6 100%)', partly: 'linear-gradient(170deg, #5b8bc4 0%, #9fbfdf 60%, #e8ddc8 100%)',
-    cloudy: 'linear-gradient(170deg, #6f7f90 0%, #a9b5c0 60%, #d5dbe0 100%)', rain: 'linear-gradient(170deg, #4a5a6c 0%, #7d8b99 55%, #b7c0c8 100%)',
-    snow: 'linear-gradient(170deg, #9fb3c8 0%, #d7e1ea 60%, #f3f5f7 100%)', fog: 'linear-gradient(170deg, #8d949a 0%, #b9bec2 60%, #dcdedf 100%)',
-    thunder: 'linear-gradient(170deg, #1f2230 0%, #3b3f55 55%, #6b6a7a 100%)',
-  }[kind];
-}
 const gradColors = (g) => (String(g).match(/#[0-9a-f]{6}/gi) ?? []).slice(0, 3);
 
 export async function currentWeather(lat, lon, now = Date.now()) {
@@ -234,37 +227,120 @@ export async function currentWeather(lat, lon, now = Date.now()) {
 }
 export const _clearWeather = () => wxCache.clear();
 
-/* ---------------- Planeter (NASA Image and Video Library) ---------------- */
+/* ---------------- Wikimedia Commons (prompt 21) ---------------- */
 
-export const PLANETS = ['earth', 'moon', 'jupiter', 'mars'];
-const PLANET_NAME = { earth: 'Jorda', moon: 'Månen', jupiter: 'Jupiter', mars: 'Mars' };
-const PLANET_QUERY = { earth: 'Earth Blue Marble', moon: 'full moon', jupiter: 'Jupiter Juno', mars: 'Mars globe' };
-async function planetCandidates(planet) {
-  const key = `nasa_${planet}`;
-  const c = kv.get(OWNER, key, null);
-  if (c && Date.now() - c.at < 7 * DAY && c.items?.length) return c.items;
-  if (isMock()) return [];
+// Ferdig nedlastede kopier (server/backgrounds/files, følger med i Docker-imaget). BG_FILES_DIR overstyrer (testene).
+const FILES = process.env.BG_FILES_DIR || join(dirname(fileURLToPath(import.meta.url)), 'backgrounds', 'files');
+const WIKI_UA = 'KristoHomelab/1.0 (https://kristo.no; kontakt@kristo.no)';
+export const FALLBACK_GRADIENT = 'linear-gradient(170deg,#4a5a6a,#2a3440 60%,#1d242c)';
+export const SCRIM = 'linear-gradient(180deg, rgba(0,0,0,.25), rgba(0,0,0,0) 35%, rgba(0,0,0,.45))';
+const wmId = (file) => `wm-${sha(`wikimedia:${file}`)}`;
+// id → { file, keys } for alle filene i katalogen.
+const WM = new Map();
+for (const [key, files] of Object.entries(CATALOG)) for (const f of files) { const id = wmId(f); const e = WM.get(id) ?? { file: f, keys: [] }; e.keys.push(key); WM.set(id, e); }
+
+let creditsCache = { m: -1, data: {} };
+function bundledCredits() {
+  const p = join(FILES, 'credits.json');
   try {
-    const d = await getJson(`https://images-api.nasa.gov/search?q=${encodeURIComponent(PLANET_QUERY[planet])}&media_type=image&page_size=30`);
-    const items = (d.collection?.items ?? []).map((it) => {
-      const m = it.data?.[0] ?? {}, href = it.links?.find((l) => l.render === 'image' || /thumb/.test(l.href ?? ''))?.href ?? it.links?.[0]?.href;
-      return href ? { src: href.replace(/~thumb\.(jpg|png)$/i, '~large.$1'), thumb: href, nasaId: m.nasa_id, title: m.title ?? PLANET_NAME[planet] } : null;
-    }).filter((x) => x && /^https:\/\//.test(x.src)).slice(0, 8);
-    if (items.length) kv.set(OWNER, key, { at: Date.now(), items });
-    return items.length ? items : (c?.items ?? []);
-  } catch (e) { console.warn('[bakgrunn] NASA:', e.message); return c?.items ?? []; }
+    const m = statSync(p).mtimeMs;
+    if (m !== creditsCache.m) creditsCache = { m, data: JSON.parse(readFileSync(p, 'utf8')) };
+  } catch { creditsCache = { m: -1, data: {} }; }
+  return creditsCache.data;
 }
-async function planetImage(planet, index) {
-  const items = await planetCandidates(planet);
-  for (let i = 0; i < Math.min(items.length, 4); i++) {
-    const it = items[(index + i) % items.length];
-    const credit = { text: `NASA · ${it.title}`, author: 'NASA', url: `https://images.nasa.gov/details/${encodeURIComponent(it.nasaId ?? '')}`, source: 'NASA Image and Video Library' };
-    // «~large» finnes ikke alltid; da prøves miniatyren.
-    const id = (await ensureImage(it.src, credit, { theme: 'dark' })) ?? (it.thumb !== it.src ? await ensureImage(it.thumb, credit, { theme: 'dark' }) : null);
-    if (id) return { id, credit };
+/** Ferdig nedlastet kopi i ønsket størrelse (1080 når det holder, ellers 2000). */
+function bundledFor(file, width = 2000) {
+  const e = WM.get(wmId(file));
+  for (const key of e?.keys ?? []) {
+    const sizes = width <= 1080 ? [1080, 2000] : [2000, 1080];
+    for (const s of sizes) { const p = bundledPath(FILES, key, file, s); if (existsSync(p)) return { path: p, size: s }; }
   }
   return null;
 }
+function wikiCredit(file, extra) {
+  const b = bundledCredits()[file] ?? {}, m = metaGet(wmId(file))?.credit ?? {};
+  const [kAuthor, kLicense] = KNOWN_CREDITS[file] ?? [];
+  const author = b.author || m.author || kAuthor || null, license = b.license || m.license || kLicense || null;
+  return { text: `${author ? `${author} · ` : ''}Wikimedia Commons`, author, license, licenseUrl: b.licenseUrl || m.licenseUrl || null, url: pageUrl(file), source: 'Wikimedia Commons', file, ...extra };
+}
+
+// Nedlasting ved første bruk. Feilet en fil nylig, prøves den ikke igjen på 15 minutter.
+const wmInflight = new Map(), wmFailed = new Map();
+async function fetchWiki(file) {
+  const id = wmId(file);
+  for (const w of [2000, 1280]) {
+    try {
+      const r = await fetch(filePathUrl(file, w), { headers: { 'User-Agent': WIKI_UA, Accept: 'image/*' }, redirect: 'follow', signal: AbortSignal.timeout(9000) });
+      if (!r.ok) { await r.body?.cancel?.().catch(() => {}); continue; }
+      const b = Buffer.from(await r.arrayBuffer());
+      const t = imgType(b);
+      if (!t || b.length > 30 * 1024 * 1024) continue;
+      const name = `${id}.${EXT[t]}`;
+      await writeFile(join(CACHE, name), b);
+      let credit = {};
+      try { credit = creditFromInfo(await getJson(infoUrl(file), { 'User-Agent': WIKI_UA }, 5000)); } catch { /* kreditering fra KNOWN_CREDITS */ }
+      metaSet(id, { file: name, src: filePathUrl(file, w), wikimedia: file, credit, theme: (await luminanceHint(join(CACHE, name))) ?? 'dark', at: Date.now() });
+      return id;
+    } catch (e) { console.warn('[bakgrunn] Wikimedia', file, e.message); }
+  }
+  wmFailed.set(file, Date.now());
+  return null;
+}
+async function cachedWiki(id) {
+  const m = metaGet(id);
+  if (!m?.file) return false;
+  try { await stat(join(CACHE, m.file)); return true; } catch { return false; }
+}
+/** Er fotoet tilgjengelig nå (ferdig nedlastet eller i cachen)? */
+const wikiReady = async (file) => !!bundledFor(file) || (await cachedWiki(wmId(file)));
+function wikiDownload(file) {
+  if (isMock()) return Promise.resolve(null); // ingen nett i demo/test
+  if (wmInflight.has(file)) return wmInflight.get(file);
+  if (Date.now() - (wmFailed.get(file) ?? 0) < 15 * 60_000) return Promise.resolve(null);
+  const p = fetchWiki(file).finally(() => wmInflight.delete(file));
+  wmInflight.set(file, p);
+  return p;
+}
+export const _clearWiki = () => { wmFailed.clear(); };
+
+/**
+ * Første tilgjengelige foto av filene (i rekkefølge). Mangler alle, lastes de ned etter tur, men kallet venter høyst
+ * budget ms totalt; nedlastingen fortsetter i bakgrunnen, så neste kall har bildet. Gir { id, file, fallbacks } eller null.
+ */
+export async function wikiPick(files, { budget = 12_000 } = {}) {
+  const ready = [];
+  for (const f of files) if (await wikiReady(f)) ready.push(f);
+  if (ready.length) return { id: wmId(ready[0]), file: ready[0], fallbacks: ready.slice(1, 3).map(wmId) };
+  const end = Date.now() + budget;
+  for (const f of files) {
+    const left = end - Date.now();
+    if (left <= 0) break;
+    let timer;
+    const id = await Promise.race([wikiDownload(f), new Promise((r) => { timer = setTimeout(() => r(null), left); })]);
+    clearTimeout(timer);
+    if (id) return { id, file: f, fallbacks: [] };
+  }
+  return null;
+}
+/** Rekkefølgen starter på dagens indeks, så hver dag får et nytt bilde når det finnes flere. */
+const rotate = (list, i) => list.map((_, k) => list[(i + k) % list.length]);
+
+/** Værkode → nøkkel. Tall: Open-Meteo weather_code (0–1 klart, 2–50 skyet, 51+ regn). Tekst: MET symbol_code. */
+export function vaerKey(code) {
+  if (code === null || code === undefined || code === '') return 'vaer_sky';
+  if (typeof code === 'number' || /^\d+$/.test(String(code))) { const n = +code; return n <= 1 ? 'vaer_klart' : n <= 50 ? 'vaer_sky' : 'vaer_regn'; }
+  const k = weatherKindOf(code);
+  return k === 'clear' ? 'vaer_klart' : ['rain', 'snow', 'thunder'].includes(k) ? 'vaer_regn' : 'vaer_sky';
+}
+
+/* ---------------- Planeter (Wikimedia Commons) ---------------- */
+
+export { PLANETS };
+// Dagens planet: floor(Date.now()/864e5) % 5 (Jorda, Månen, Jupiter, Mars, Saturn). «hourly» bytter hver time.
+export const planetOfDay = (now = Date.now(), rotateBy = 'daily') => PLANETS[Math.floor(now / (rotateBy === 'hourly' ? HOUR : DAY)) % PLANETS.length];
+/** Filene for planeten først, så de andre planetfotoene som reserve. */
+const planetFiles = (p) => [...PLANET_FILES[p], ...CATALOG.planet.filter((f) => !PLANET_FILES[p].includes(f))];
+const planetOfFile = (file) => PLANETS.find((p) => PLANET_FILES[p].includes(file)) ?? null;
 
 /* ---------------- Oslo: egne bilder ---------------- */
 
@@ -294,15 +370,28 @@ export function bgSettings(userId) {
 /* ---------------- Selve tjenesten ---------------- */
 
 const CUR_GRADIENT = 'linear-gradient(160deg, #1d2a44 0%, #3a3f6b 45%, #c9826b 100%)';
-const SPACE_GRADIENT = 'linear-gradient(170deg, #05060d 0%, #141a33 100%)';
-const OSLO_GRADIENT = 'linear-gradient(170deg, #f2b36b 0%, #d7766a 45%, #4a3a5e 100%)';
-const out = (type, o) => ({ type, image_url: null, fallbacks: [], credit: null, theme_hint: 'dark', gradient: CUR_GRADIENT, particles: null, next: null, ...o, colors: gradColors(o.gradient ?? CUR_GRADIENT) });
+const out = (type, o) => {
+  const r = { type, image_url: null, fallbacks: [], credit: null, theme_hint: 'dark', gradient: CUR_GRADIENT, scrim: SCRIM, particles: null, next: null, ...o };
+  return { ...r, url: r.image_url, colors: gradColors(r.gradient) };
+};
 const themeOf = (id, d = 'dark') => metaGet(id)?.theme ?? d;
+// Typer i ?type=. «ruter» kan ikke velges som bakgrunn, bare hentes. planet/vaer er aliasene fra designet.
+const QUERY_TYPE = { planet: 'planets', vaer: 'weather', ruter: 'ruter' };
+// Ingen foto ennå (ikke lastet ned, eller ingen nett): bare navnet, gradienten vises.
+const NONE_CREDIT = (what) => ({ text: what, author: null, license: null, url: null, source: null });
+
+/** Wikimedia-foto for en nøkkel (eller en filliste), som felt til out(). null når ingen foto finnes ennå. */
+async function wikiOut(files, width, start = 0, extraCredit) {
+  const pick = await wikiPick(rotate(files, start));
+  if (!pick) return null;
+  return { image_url: imgUrl(pick.id, width), fallbacks: pick.fallbacks.map((id) => imgUrl(id, width)), credit: wikiCredit(pick.file, extraCredit), theme_hint: themeOf(pick.id), file: pick.file };
+}
 
 /** Bakgrunnen for brukeren. type overstyrer valget (forhåndsvisning). */
-export async function backgroundFor(userId, { type, lat, lon, w = 1440, now = Date.now(), planet } = {}) {
+export async function backgroundFor(userId, { type, lat, lon, w = 1440, now = Date.now(), planet, code } = {}) {
   const st = bgSettings(userId);
-  const t = BG_TYPES.includes(type) ? type : st.type;
+  const qt = QUERY_TYPE[type] ?? type;
+  const t = BG_TYPES.includes(qt) || qt === 'ruter' ? qt : st.type;
   const width = Math.min(2560, Math.max(320, Math.round(+w || 1440)));
   const base = { settings: st };
 
@@ -311,55 +400,54 @@ export async function backgroundFor(userId, { type, lat, lon, w = 1440, now = Da
     const lo = Number.isFinite(+lon) && +lon !== 0 ? +lon : (parseFloat(cfg('wx_lon')) || config.location.lon);
     const wx = await currentWeather(la, lo, now);
     const kind = weatherKindOf(wx.symbol ?? '');
-    const gradient = wxGradient(kind, wx.isDay);
-    const bundled = bundledId(wx.isDay ? WX_BUNDLED[kind] : 'weather-night');
+    // ?code= (Open-Meteo weather_code eller MET symbol_code) overstyrer værkoden, f.eks. når klienten har egne værdata.
+    const key = vaerKey(code ?? wx.symbol);
     const stock = await fromStock(WX_QUERY[kind][wx.isDay ? 0 : 1], dayIndex(now));
-    const id = stock?.id ?? bundled;
+    const wiki = await wikiOut(CATALOG[key], width, Math.floor(now / DAY));
     const text = `${WX_TEXT[kind]}${wx.temp != null ? ` · ${Math.round(wx.temp)}°` : ''}`;
+    const img = stock ? { image_url: imgUrl(stock.id, width), fallbacks: wiki ? [wiki.image_url, ...wiki.fallbacks] : [], credit: { ...stock.credit, text: `${text} · ${stock.credit.text}` }, theme_hint: themeOf(stock.id) } : wiki
+      ? { ...wiki, credit: { ...wiki.credit, text: `${text} · ${wiki.credit.text}` } } : { credit: { text: `${text} · MET Norge`, author: null, license: null, url: 'https://www.yr.no', source: 'MET Norge' } };
+    delete img.file;
     return out('weather', {
-      ...base, image_url: imgUrl(id, width), fallbacks: stock ? [imgUrl(bundled, width)] : [],
-      credit: stock?.credit ? { ...stock.credit, text: `${text} · ${stock.credit.text}` } : { text: `${text} · MET Norge`, url: 'https://www.yr.no', author: null, source: 'MET Norge' },
-      theme_hint: stock ? themeOf(id, wx.isDay && ['snow', 'fog', 'cloudy'].includes(kind) ? 'light' : 'dark') : (wx.isDay && ['snow', 'fog'].includes(kind) ? 'light' : 'dark'),
-      gradient, weather: { symbol: wx.symbol, kind, isDay: wx.isDay, temp: wx.temp },
+      ...base, ...img, key, gradient: FALLBACK_GRADIENT, weather: { symbol: wx.symbol, kind, isDay: wx.isDay, temp: wx.temp },
       particles: kind === 'rain' || kind === 'thunder' ? 'rain' : kind === 'snow' ? 'snow' : null,
       next: new Date(Math.max(now, (wx.at ?? now)) + 30 * 60_000).toISOString(),
     });
   }
 
   if (t === 'planets') {
-    const idx = st.planetRotate === 'hourly' ? hourIndex(now) : dayIndex(now);
-    const p = PLANETS.includes(planet) ? planet : st.planet === 'auto' ? PLANETS[idx % PLANETS.length] : st.planet;
-    const img = await planetImage(p, Math.floor(idx / PLANETS.length));
-    const bundled = bundledId(`planets-${(idx % 3) + 1}`);
+    const p = PLANETS.includes(planet) ? planet : st.planet === 'auto' ? planetOfDay(now, st.planetRotate) : st.planet;
+    const wiki = await wikiOut(planetFiles(p), width);
+    const shown = wiki ? planetOfFile(wiki.file) ?? p : p;
+    if (wiki) delete wiki.file;
     return out('planets', {
-      ...base, planet: p, image_url: imgUrl(img?.id ?? bundled, width), fallbacks: img ? [imgUrl(bundled, width)] : [],
-      credit: img?.credit ?? { text: `${PLANET_NAME[p]} · illustrasjon`, author: null, url: null, source: 'Homelab' },
-      theme_hint: 'dark', gradient: SPACE_GRADIENT,
-      next: st.planetRotate === 'hourly' ? nextHour(now) : nextMidnight(now),
+      ...base, planet: p, planetName: PLANET_NAME[p], shown, key: 'planet', ...(wiki ?? { credit: NONE_CREDIT(PLANET_NAME[p]) }), theme_hint: 'dark', gradient: FALLBACK_GRADIENT,
+      next: st.planetRotate === 'hourly' ? nextHour(now) : new Date((Math.floor(now / DAY) + 1) * DAY).toISOString(),
     });
   }
 
   if (t === 'oslo') {
     const own = await osloUploads();
     const idx = dayIndex(now);
-    let id = null, credit = null;
-    if (own.length) { const o = own[idx % own.length]; id = o.id; credit = { text: 'Oslo · eget bilde', author: null, url: null, source: 'Eget bilde' }; }
-    else {
-      const s = (await fromStock('Oslo aerial', idx)) ?? (await fromStock('Oslo drone', idx));
-      if (s) ({ id, credit } = s);
-    }
-    const bundled = bundledId('oslo');
-    return out('oslo', {
-      ...base, image_url: imgUrl(id ?? bundled, width), fallbacks: id ? [imgUrl(bundled, width)] : [],
-      credit: credit ?? { text: 'Oslo · illustrasjon. Legg inn en Unsplash- eller Pexels-nøkkel for ekte bilder.', author: null, url: null, source: 'Homelab' },
-      theme_hint: id && !id.startsWith('o-') ? themeOf(id) : 'dark', gradient: OSLO_GRADIENT, next: nextMidnight(now),
-    });
+    let img = null;
+    if (own.length) { const o = own[idx % own.length]; img = { image_url: imgUrl(o.id, width), credit: { text: 'Oslo · eget bilde', author: null, license: null, url: null, source: 'Eget bilde' }, theme_hint: 'dark' }; }
+    if (!img) { const s = (await fromStock('Oslo aerial', idx)) ?? (await fromStock('Oslo drone', idx)); if (s) img = { image_url: imgUrl(s.id, width), credit: s.credit, theme_hint: themeOf(s.id) }; }
+    const wiki = await wikiOut(CATALOG.oslo, width, idx);
+    if (wiki) delete wiki.file;
+    if (img) img.fallbacks = wiki ? [wiki.image_url, ...wiki.fallbacks] : [];
+    return out('oslo', { ...base, key: 'oslo', ...(img ?? wiki ?? { credit: NONE_CREDIT('Oslo') }), gradient: FALLBACK_GRADIENT, next: nextMidnight(now) });
+  }
+
+  if (t === 'ruter') {
+    const wiki = await wikiOut(CATALOG.ruter, width);
+    if (wiki) delete wiki.file;
+    return out('ruter', { ...base, key: 'ruter', ...(wiki ?? { credit: NONE_CREDIT('Ruter') }), theme_hint: 'dark', gradient: FALLBACK_GRADIENT });
   }
 
   if (t === 'custom') {
     const v = kv.get(userId, 'photo_v', 0);
-    if (v) return out('custom', { ...base, image_url: `/api/me/photo-window?v=${v}`, fallbacks: [imgUrl(bundledId('oslo'), width)], credit: { text: 'Eget bilde', author: null, url: null, source: 'Eget bilde' }, theme_hint: 'dark' });
-    return out('custom', { ...base, credit: { text: 'Last opp et eget bilde under Innstillinger → Utseende → Bakgrunn', author: null, url: null, source: null } });
+    if (v) return out('custom', { ...base, image_url: `/api/me/photo-window?v=${v}`, credit: { text: 'Eget bilde', author: null, license: null, url: null, source: 'Eget bilde' }, theme_hint: 'dark', gradient: FALLBACK_GRADIENT });
+    return out('custom', { ...base, credit: { text: 'Last opp et eget bilde under Innstillinger → Utseende → Bakgrunn', author: null, url: null, source: null }, gradient: FALLBACK_GRADIENT });
   }
 
   return out(t === 'none' ? 'none' : 'cur', { ...base });
@@ -370,7 +458,7 @@ export async function backgroundFor(userId, { type, lat, lon, w = 1440, now = Da
 export async function testBackgrounds() {
   const parts = [];
   const uKey = cfg('unsplash_key'), pKey = cfg('pexels_key');
-  if (!uKey && !pKey) return { ok: false, message: 'Ingen nøkkel lagt inn. Uten Unsplash eller Pexels brukes de medfølgende illustrasjonene for Oslo og vær.' };
+  if (!uKey && !pKey) return { ok: false, message: 'Ingen nøkkel lagt inn. Uten Unsplash eller Pexels brukes fotoene fra Wikimedia Commons for Oslo og vær.' };
   let ok = true;
   if (uKey) { try { const d = await getJson('https://api.unsplash.com/search/photos?query=Oslo&per_page=1', { Authorization: `Client-ID ${uKey}` }); parts.push(`Unsplash virker (${d.total ?? 0} treff på «Oslo»)`); } catch (e) { ok = false; parts.push(`Unsplash: ${e.status === 401 ? 'ugyldig nøkkel' : e.message}`); } }
   if (pKey) { try { const d = await getJson('https://api.pexels.com/v1/search?query=Oslo&per_page=1', { Authorization: pKey }); parts.push(`Pexels virker (${d.total_results ?? 0} treff)`); } catch (e) { ok = false; parts.push(`Pexels: ${e.status === 401 ? 'ugyldig nøkkel' : e.message}`); } }
@@ -387,30 +475,42 @@ api.use('*', authOrToken);
 api.get('/', async (c) => {
   const q = c.req.query();
   const w = Math.round((+q.w || 1440) * Math.min(3, Math.max(1, +q.dpr || 1)));
-  try { return c.json(await backgroundFor(c.get('user'), { type: q.type, lat: q.lat, lon: q.lon, w, planet: q.planet })); }
+  try { return c.json(await backgroundFor(c.get('user'), { type: q.type, lat: q.lat, lon: q.lon, w, planet: q.planet, code: q.code })); }
   catch (e) { console.warn('[bakgrunn]', e.message); return c.json(out('cur', { settings: bgSettings(c.get('user')), error: e.message })); }
 });
 
 // Forhåndsvisning av hver type i innstillingene. Hver type får høyst 6 s; en som ikke blir ferdig, viser gradienten.
+// Forhåndsvisning av hver type i innstillingene. Hver type får høyst 6 s; en som ikke blir ferdig, viser gradienten.
 api.get('/previews', async (c) => {
   const id = c.get('user'), w = Math.min(960, +c.req.query('w') || 480);
-  const one = (t) => Promise.race([backgroundFor(id, { type: t, w }), new Promise((r) => setTimeout(() => r(out(t, {})), 6000).unref?.())])
-    .then((b) => ({ image_url: b.image_url, credit: b.credit, theme_hint: b.theme_hint, gradient: b.gradient, ...(b.planet ? { planet: b.planet } : {}), ...(b.weather ? { weather: b.weather } : {}) }))
-    .catch(() => ({ image_url: null, credit: null, theme_hint: 'dark', gradient: CUR_GRADIENT }));
-  const [weather, planets, oslo, custom] = await Promise.all(['weather', 'planets', 'oslo', 'custom'].map(one));
-  return c.json({ weather, planets, oslo, custom, none: { image_url: null, credit: null, theme_hint: 'dark', gradient: CUR_GRADIENT } });
+  const one = (t) => Promise.race([backgroundFor(id, { type: t, w }), new Promise((r) => setTimeout(() => r(out(t, { gradient: FALLBACK_GRADIENT })), 6000).unref?.())])
+    .then((b) => ({ image_url: b.image_url, url: b.image_url, credit: b.credit, theme_hint: b.theme_hint, gradient: b.gradient, ...(b.planet ? { planet: b.planet } : {}), ...(b.weather ? { weather: b.weather } : {}) }))
+    .catch(() => ({ image_url: null, url: null, credit: null, theme_hint: 'dark', gradient: FALLBACK_GRADIENT }));
+  const [weather, planets, oslo, custom, ruter] = await Promise.all(['weather', 'planets', 'oslo', 'custom', 'ruter'].map(one));
+  return c.json({ weather, planets, oslo, custom, ruter, none: { image_url: null, url: null, credit: null, theme_hint: 'dark', gradient: CUR_GRADIENT } });
 });
 
-// Selve bildet i ønsket bredde. id er «b-<navn>» (medfølgende), «o-<hash>» (eget Oslo-bilde) eller hash fra cachen.
+// Kreditering for alle Wikimedia-fotoene (Innstillinger → Utseende → Bakgrunn).
+api.get('/credits', (c) => c.json({ items: [...WM.values()].map((e) => ({ keys: e.keys, ...wikiCredit(e.file), bundled: !!bundledFor(e.file) })) }));
+
+// Selve bildet i ønsket bredde. id er «wm-<hash>» (Wikimedia), «o-<hash>» (eget Oslo-bilde) eller hash fra cachen.
 api.get('/img/:id', async (c) => {
   const id = c.req.param('id');
+  const w = Math.min(2560, Math.max(320, +c.req.query('w') || 1440));
   let path = null;
-  if (/^b-[a-z0-9-]{2,40}$/.test(id) && BUNDLED_NAMES.includes(id.slice(2))) path = join(BUNDLED, `${id.slice(2)}.jpg`);
-  else if (/^o-[a-f0-9]{16}$/.test(id)) { const f = (await osloUploads()).find((x) => x.id === id); if (f) path = join(OSLO, f.file); }
+  if (/^wm-[a-f0-9]{16}$/.test(id) && WM.has(id)) {
+    const b = bundledFor(WM.get(id).file, w);
+    if (b) {
+      const etag = `"${id}-b${b.size}"`;
+      if (c.req.header('if-none-match') === etag) return c.body(null, 304, { ETag: etag });
+      try { return c.body(await readFile(b.path), 200, { 'Content-Type': 'image/webp', 'Cache-Control': 'private, max-age=604800', ETag: etag, 'X-Content-Type-Options': 'nosniff' }); } catch { /* prøv cachen */ }
+    }
+    const m = metaGet(id); if (m?.file) path = join(CACHE, m.file);
+  } else if (/^o-[a-f0-9]{16}$/.test(id)) { const f = (await osloUploads()).find((x) => x.id === id); if (f) path = join(OSLO, f.file); }
   else if (/^[a-f0-9]{16}$/.test(id)) { const m = metaGet(id); if (m?.file) path = join(CACHE, m.file); }
   if (!path) return c.json({ error: 'Fant ikke bildet' }, 404);
   try {
-    const r = await sized(path, id, Math.min(2560, Math.max(320, +c.req.query('w') || 1440)));
+    const r = await sized(path, id, w);
     if (c.req.header('if-none-match') === r.etag) return c.body(null, 304, { ETag: r.etag });
     return c.body(r.body, 200, { 'Content-Type': r.type, 'Cache-Control': 'private, max-age=604800', ETag: r.etag, 'X-Content-Type-Options': 'nosniff' });
   } catch { return c.json({ error: 'Fant ikke bildet' }, 404); }

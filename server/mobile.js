@@ -120,7 +120,7 @@ const SCALAR = {
   iconTheme: (v) => ICON_THEMES.includes(v),
   // Prompt 19: bakgrunner (type, planet, bytte, uskarphet, demping, Kun på Wi-Fi og animasjon). bgType speiles mot photo.
   bgType: (v) => BG_TYPES.includes(v),
-  bgPlanet: (v) => ['auto', 'earth', 'moon', 'jupiter', 'mars'].includes(v),
+  bgPlanet: (v) => ['auto', 'earth', 'moon', 'jupiter', 'mars', 'saturn'].includes(v),
   bgRotate: (v) => ['daily', 'hourly'].includes(v),
   bgBlur: (v) => Number.isInteger(v) && v >= 0 && v <= 20,
   bgDim: (v) => Number.isInteger(v) && v >= 0 && v <= 60,
@@ -257,7 +257,9 @@ export async function serverStatus() {
 const MODE_COLOR = { metro: '#EC700C', tram: '#0B91EF', bus: '#E60000', rail: '#003087', water: '#682C88', coach: '#75A300' };
 const minsTo = (iso) => Math.max(0, Math.round((new Date(iso) - Date.now()) / 60000));
 const hhmm = (iso) => new Date(iso).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Oslo' });
-const depOut = (d) => ({ line: d.line, mode: d.mode, color: d.color ?? MODE_COLOR[d.mode] ?? MODE_COLOR.bus, textColor: d.textColor ?? '#FFFFFF', min: minsTo(d.time), minutes: minsTo(d.time), time: hhmm(d.time), to: d.to });
+const depOut = (d) => ({ line: d.line, mode: d.mode, color: d.color ?? MODE_COLOR[d.mode] ?? MODE_COLOR.bus, textColor: d.textColor ?? '#FFFFFF', min: minsTo(d.time), minutes: minsTo(d.time), time: hhmm(d.time), to: d.to,
+  // Prompt 21: turen (holdeplasser til endestasjonen) og status, når kilden har dem (widgets/ruter; ikke reiseforslagene).
+  ...(d.stops ? { modeName: d.modeName, platform: d.platform, delayMin: d.delayMin, status: d.status, stops: d.stops, stopsCount: d.stopsCount, ruterUrl: d.ruterUrl } : {}) });
 
 // 05–10 God morgen, 10–12 God formiddag, 12–18 God ettermiddag, 18–23 God kveld, 23–05 God natt.
 export const greetingFor = (h) => (h < 5 ? 'God natt' : h < 10 ? 'God morgen' : h < 12 ? 'God formiddag' : h < 18 ? 'God ettermiddag' : h < 23 ? 'God kveld' : 'God natt');
@@ -289,7 +291,8 @@ api.delete('/me/avatar', authOrToken, async (c) => {
   kv.del(id, 'avatar_v');
   return c.json(meOut(id));
 });
-// Andre brukeres bilder (brukerlisten, delte mapper). Bare for innloggede.
+// Andre brukeres bilder (brukerlisten, delte mapper, Familie, Huskeliste). Bare for innloggede; profilbildet er en del av
+// det trygge utvalget (id, navn, bilde) som alle innloggede ser om hverandre (prompt 21).
 api.get('/users/:id/avatar', authOrToken, (c) => sendAvatar(c, c.req.param('id')));
 
 // Lagret oppsett med standardverdiene for utseendet fylt inn (de avhenger av om installasjonen er ny, se designOf).
@@ -523,7 +526,7 @@ api.get('/mobile/home', authOrToken, async (c) => {
     news: newsFor(id, 5), // Nyhetsleser (prompt 13): «Siste nytt» på forsiden
     design: designOf(id),
     app: appMeta(), // navn og ikon på appen (prompt 17)
-    tasks: nextTasks(3), // Huskeliste-widget (prompt 17): de tre neste oppgavene
+    tasks: nextTasks(id, 3), // Huskeliste-widget (prompt 17): de tre neste oppgavene brukeren selv ser (prompt 21)
   });
 });
 
@@ -661,7 +664,7 @@ api.get('/mobile/widgets', authOrToken, async (c) => {
   };
 
   let packages = null;
-  if (admin) { try { const items = packagesFor(4); packages = { items: items.map((p) => ({ id: p.id, name: p.name, carrier: p.carrier, carrierName: p.carrierName, status: p.status, statusText: p.statusText, step: p.step, eta: p.eta, pickupPoint: p.pickupPoint })), active: packagesFor(99).length }; } catch { packages = null; } }
+  if (admin) { try { const items = packagesFor(4); packages = { items: items.map((p) => ({ id: p.id, name: p.name, title: p.title, shop: p.shop, logo: p.logo, moreCount: p.moreCount, carrier: p.carrier, carrierName: p.carrierName, status: p.status, statusText: p.statusText, step: p.step, eta: p.eta, pickupPoint: p.pickupPoint })), active: packagesFor(99).length }; } catch { packages = null; } }
 
   const budget = sum && {
     month: sum.month, spent: r0(sum.budgetUsed ?? sum.ut), limit: r0(sum.budgetTotal), left: r0(sum.left), pct: sum.budgetTotal ? Math.round((sum.budgetUsed / sum.budgetTotal) * 100) : null, daysLeft: sum.daysLeft ?? null,

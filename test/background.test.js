@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'hl-bg19-'));
+process.env.BG_FILES_DIR = mkdtempSync(join(tmpdir(), 'hl-bg19-files-')); // tom: ingen ferdig nedlastede foto
 process.env.SESSION_SECRET = 'test-secret-test-secret-test-secret-12';
 process.env.USER_NAME = 'Sebastian';
 process.env.MOCK_DATA = '1';
@@ -52,33 +53,31 @@ test('symbol_code kartlegges til kind', () => {
   assert.equal(k('rainandthunder'), 'thunder');
 });
 
-test('MOCK_DATA: vær gir realistisk svar med medfølgende bilde og innstillinger', async () => {
+test('MOCK_DATA: vær gir realistisk svar med gradient som reserve og innstillinger', async () => {
   const r = await B('/?type=weather&w=400&dpr=2');
   assert.equal(r.status, 200);
   const b = r.body;
   assert.equal(b.type, 'weather');
   assert.deepEqual(b.weather, { symbol: 'partlycloudy_day', kind: 'partly', isDay: true, temp: 9 });
-  assert.match(b.image_url, /^\/api\/background\/img\/b-weather-cloudy\?w=800$/);
+  assert.equal(b.key, 'vaer_sky');
+  // Ingen foto lastet ned (og ikke nett i demo): ingen tegning, bare den rolige gradienten.
+  assert.equal(b.image_url, null);
+  assert.equal(b.url, null);
+  assert.equal(b.gradient, 'linear-gradient(170deg,#4a5a6a,#2a3440 60%,#1d242c)');
+  assert.match(b.scrim, /^linear-gradient\(180deg/);
   assert.equal(b.particles, null);
   assert.ok(['light', 'dark'].includes(b.theme_hint));
-  assert.match(b.gradient, /^linear-gradient/);
   assert.ok(b.colors.length >= 2 && b.colors.every((c) => /^#[0-9a-f]{6}$/i.test(c)));
   assert.ok(!Number.isNaN(Date.parse(b.next)));
   assert.deepEqual(Object.keys(b.settings).sort(), ['animate', 'blur', 'dim', 'planet', 'planetRotate', 'type', 'wifiOnly']);
-  const img = await bg.request(local(b.image_url), { headers: H });
-  assert.equal(img.status, 200);
-  assert.match(img.headers.get('content-type'), /^image\//);
-  assert.match(img.headers.get('cache-control'), /max-age/);
-  const etag = img.headers.get('etag');
-  assert.ok(etag);
-  const again = await bg.request(local(b.image_url), { headers: { ...H, 'if-none-match': etag } });
-  assert.equal(again.status, 304);
+  // De gamle tegnede bildene serveres ikke lenger.
+  assert.equal((await bg.request('/img/b-weather-cloudy', { headers: H })).status, 404);
 });
 
 test('uten innlogging: 401', async () => {
   const r = await bg.request('/?type=weather');
   assert.equal(r.status, 401);
-  assert.equal((await bg.request('/img/b-oslo')).status, 401);
+  assert.equal((await bg.request('/img/wm-0123456789abcdef')).status, 401);
 });
 
 test('vær fra MET (compact + Sunrise) med Unsplash-bilde, regn gir partikler og fotografkreditering', async () => {
@@ -100,6 +99,7 @@ test('vær fra MET (compact + Sunrise) med Unsplash-bilde, regn gir partikler og
     }
     if (url.startsWith('https://images.unsplash.com/')) return JPEG();
     if (url.includes('/download')) return json({});
+    if (url.includes('commons.wikimedia.org')) return new Response('nede', { status: 503 });
   });
   try {
     const b = await live(async () => (await B('/?w=1080')).body);
@@ -108,7 +108,7 @@ test('vær fra MET (compact + Sunrise) med Unsplash-bilde, regn gir partikler og
     assert.equal(b.weather.temp, 4.4);
     assert.equal(b.particles, 'rain');
     assert.match(b.image_url, /^\/api\/background\/img\/[a-f0-9]{16}\?w=1080$/);
-    assert.equal(b.fallbacks.length, 1);
+    assert.deepEqual(b.fallbacks, []); // Wikimedia er nede i testen
     assert.match(b.credit.text, /Kari Nordmann/);
     assert.match(b.credit.url, /utm_source=/);
     assert.equal(b.credit.source, 'Unsplash');
@@ -122,35 +122,39 @@ test('vær fra MET (compact + Sunrise) med Unsplash-bilde, regn gir partikler og
   } finally { f.restore(); updateConfig({ unsplash_key: null }); BG._clearSearch(); }
 });
 
-test('planeter fra NASA: valgt planet, kreditering og fast rotasjon', async () => {
+test('planeter fra Wikimedia: valgt planet, kreditering, Saturn og fast rotasjon', async () => {
+  BG._clearWiki();
   const f = withFetch((url) => {
-    if (url.startsWith('https://images-api.nasa.gov/search')) {
-      const q = new URL(url).searchParams.get('q');
-      return json({ collection: { items: [{ data: [{ nasa_id: `PIA-${q.length}`, title: `${q} bilde` }], links: [{ href: `https://images-assets.nasa.gov/image/x/x~thumb.jpg`, render: 'image' }] }] } });
-    }
-    if (url.startsWith('https://images-assets.nasa.gov/')) return JPEG();
+    if (url.startsWith('https://commons.wikimedia.org/wiki/Special:FilePath/')) return JPEG();
+    if (url.startsWith('https://commons.wikimedia.org/w/api.php')) return json({ query: { pages: { 1: { imageinfo: [{ extmetadata: { Artist: { value: '<a href="x">NASA / JPL</a>' }, LicenseShortName: { value: 'Public domain' } } }] } } } });
   });
   try {
-    await M('/me/layout', 'PUT', { bgType: 'planets', bgPlanet: 'jupiter', bgRotate: 'hourly' });
+    await M('/me/layout', 'PUT', { bgType: 'planets', bgPlanet: 'saturn', bgRotate: 'hourly' });
     const b = await live(async () => (await B('/')).body);
     assert.equal(b.type, 'planets');
-    assert.equal(b.planet, 'jupiter');
+    assert.equal(b.planet, 'saturn');
+    assert.equal(b.planetName, 'Saturn');
     assert.equal(b.theme_hint, 'dark');
-    assert.match(b.credit.text, /^NASA · Jupiter Juno/);
-    assert.match(b.credit.url, /images\.nasa\.gov\/details\/PIA-/);
-    assert.ok(f.calls.some((c) => c.url.includes('q=Jupiter%20Juno') && c.url.includes('media_type=image')));
-    assert.ok(f.calls.some((c) => c.url.endsWith('~large.jpg')));
+    assert.match(b.image_url, /^\/api\/background\/img\/wm-[a-f0-9]{16}\?w=1440$/);
+    assert.equal(b.credit.text, 'NASA / JPL · Wikimedia Commons');
+    assert.equal(b.credit.license, 'Public domain');
+    assert.equal(b.credit.source, 'Wikimedia Commons');
+    assert.match(b.credit.url, /commons\.wikimedia\.org\/wiki\/File:Saturn_during_Equinox\.jpg$/);
+    assert.ok(f.calls.some((c) => c.url === 'https://commons.wikimedia.org/wiki/Special:FilePath/Saturn_during_Equinox.jpg?width=2000'));
     assert.ok(Date.parse(b.next) - Date.now() <= 3600_000);
-    // auto roterer gjennom alle fire.
+    const img = await bg.request(local(b.image_url), { headers: H });
+    assert.equal(img.status, 200);
+    // auto: floor(now/864e5) % 5 gjennom alle fem.
     await M('/me/layout', 'PUT', { bgPlanet: 'auto', bgRotate: 'daily' });
-    const seen = new Set();
-    for (let d = 0; d < 4; d++) seen.add((await BG.backgroundFor(null, { type: 'planets', now: Date.now() + d * 86400_000 })).planet);
-    assert.deepEqual([...seen].sort(), ['earth', 'jupiter', 'mars', 'moon']);
+    const seen = [];
+    for (let d = 0; d < 5; d++) { const now = d * 86400_000; seen.push((await BG.backgroundFor(null, { type: 'planets', now })).planet); }
+    assert.deepEqual(seen, ['earth', 'moon', 'jupiter', 'mars', 'saturn']);
+    assert.equal(BG.planetOfDay(Date.now()), BG.PLANETS[Math.floor(Date.now() / 864e5) % 5]);
   } finally { f.restore(); }
 });
 
 test('layout: bg-felt valideres og photo speiles begge veier', async () => {
-  for (const [k, v] of [['bgBlur', 21], ['bgBlur', 2.5], ['bgDim', 61], ['bgType', 'getty'], ['bgPlanet', 'saturn'], ['bgRotate', 'weekly'], ['bgWifiOnly', 'ja'], ['bgAnimate', 1]]) {
+  for (const [k, v] of [['bgBlur', 21], ['bgBlur', 2.5], ['bgDim', 61], ['bgType', 'getty'], ['bgPlanet', 'pluto'], ['bgRotate', 'weekly'], ['bgWifiOnly', 'ja'], ['bgAnimate', 1]]) {
     assert.equal((await M('/me/layout', 'PUT', { [k]: v })).status, 400, `${k}=${v}`);
   }
   let r = await M('/me/layout', 'PUT', { bgType: 'oslo', bgBlur: 12, bgDim: 40, bgWifiOnly: true, bgAnimate: false });
@@ -171,8 +175,8 @@ test('layout: bg-felt valideres og photo speiles begge veier', async () => {
 
 test('Oslo: egne bilder (admin), dagens bilde, sletting og reserve', async () => {
   let b = (await B('/?type=oslo')).body;
-  assert.match(b.image_url, /b-oslo/);
-  assert.match(b.credit.text, /Unsplash- eller Pexels-nøkkel/);
+  assert.equal(b.image_url, null);
+  assert.equal(b.gradient, 'linear-gradient(170deg,#4a5a6a,#2a3440 60%,#1d242c)');
   const fd = new FormData();
   fd.append('file', new File([Buffer.concat([Buffer.from([0xff, 0xd8, 0xff]), Buffer.alloc(100)])], 'oslo.jpg', { type: 'image/jpeg' }));
   fd.append('file', new File([Buffer.from('ikke et bilde')], 'tekst.txt', { type: 'text/plain' }));
@@ -197,8 +201,9 @@ test('Oslo: egne bilder (admin), dagens bilde, sletting og reserve', async () =>
 test('forhåndsvisning gir alle typer', async () => {
   const r = await B('/previews');
   assert.equal(r.status, 200);
-  for (const t of ['weather', 'planets', 'oslo', 'custom', 'none']) assert.ok(r.body[t] && 'image_url' in r.body[t] && 'theme_hint' in r.body[t], t);
-  assert.match(r.body.planets.image_url, /b-planets-/);
+  for (const t of ['weather', 'planets', 'oslo', 'custom', 'ruter', 'none']) assert.ok(r.body[t] && 'image_url' in r.body[t] && 'theme_hint' in r.body[t], t);
+  // Reserven er et nedlastet foto (Saturn fra testen over) eller ingen, aldri en tegning.
+  assert.ok(r.body.planets.image_url === null || /\/img\/wm-[a-f0-9]{16}/.test(r.body.planets.image_url));
 });
 
 test('Test tilkobling: uten nøkler, og med Unsplash-nøkkel', async () => {

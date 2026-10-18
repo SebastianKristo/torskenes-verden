@@ -20,11 +20,12 @@ export const CARRIERS = [
   ['helthjem', 'Helthjem', 'HH', '#2E2A6B', '#fff', [/^HH\d{8,}$/], 'https://helthjem.no/sporing/'],
   ['budbee', 'Budbee', 'BB', '#2BCE96', '#05271b', [/^BB[A-Z0-9]{8,}$/], 'https://tracking.budbee.com/'],
   ['instabox', 'Instabox', 'IB', '#FF4E00', '#fff', [/^IB[A-Z0-9]{8,}$/], 'https://track.instabox.io/'],
+  ['porterbuddy', 'Porterbuddy', 'PB', '#5B2D90', '#fff', [], 'https://www.porterbuddy.com/track/'],
   ['other', 'Annen (17TRACK)', '17', '#3A4252', '#eef0f4', [], 'https://t.17track.net/no#nums='],
 ].map(([id, name, ini, color, fg, re, url]) => ({ id, name, ini, color, fg, re, url }));
-// Domenet brukes til logoen (offentlig favicon via /finans/api/logo/<domene>, samme kilde som i designet).
-const DOMAIN = { posten: 'posten.no', bring: 'bring.no', postnord: 'postnord.no', dhl: 'dhl.com', ups: 'ups.com', fedex: 'fedex.com', gls: 'gls-group.eu',
-  schenker: 'dbschenker.com', helthjem: 'helthjem.no', budbee: 'budbee.com', instabox: 'instabox.io', other: '17track.net' };
+// Domenet brukes til logoen (logobiblioteket, ellers favicon via /finans/api/logo/<domene>). Listen er fra claude-code-pakke-logo.md.
+export const DOMAIN = { posten: 'posten.no', bring: 'bring.no', postnord: 'postnord.no', dhl: 'dhl.com', ups: 'ups.com', fedex: 'fedex.com', gls: 'gls-group.com',
+  schenker: 'dbschenker.com', helthjem: 'helthjem.no', budbee: 'budbee.com', instabox: 'instabox.io', porterbuddy: 'porterbuddy.com', other: '17track.net' };
 // Logoene ligger lokalt i public/carriers (prompt 14): enkle merke-SVG-er i transportørens farger, offentlige under /assets/carriers/.
 // Klientene viser initialer på merkefargen hvis bildet ikke laster.
 for (const c of CARRIERS) { c.domain = DOMAIN[c.id]; c.logo = `/assets/carriers/${c.id}.svg`; c.favicon = `/finans/api/logo/${DOMAIN[c.id]}`; }
@@ -197,7 +198,11 @@ async function parcelsapp(no) {
   if (!sh) throw new CarrierError('ParcelsApp har ikke data for nummeret ennå', 404);
   const events = (sh.states ?? []).map((e) => ev(e.date, e.status, e.location));
   const eta = sh.attributes?.find?.((a) => /delivery|eta/i.test(a.l ?? ''))?.val ?? null;
-  return { status: normStatus(sh.status ?? events[0]?.status), eta: eta && /^\d{4}-\d{2}-\d{2}/.test(eta) ? eta.slice(0, 10) : null, pickupPoint: null, events, via: 'parcelsapp' };
+  // Butikken (prompt 21): ParcelsApp kan ha «shop» direkte eller som attributt (navn eller domene).
+  const shopRaw = String((typeof sh.shop === 'string' ? sh.shop : sh.shop?.name) ?? sh.attributes?.find?.((a) => /^(shop|store|seller|merchant)$/i.test(a.n ?? a.l ?? ''))?.val ?? '').trim();
+  const isDom = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(shopRaw);
+  return { status: normStatus(sh.status ?? events[0]?.status), eta: eta && /^\d{4}-\d{2}-\d{2}/.test(eta) ? eta.slice(0, 10) : null, pickupPoint: null, events, via: 'parcelsapp',
+    ...(shopRaw ? { shop: isDom ? '' : shopRaw.slice(0, 60), shopDomain: isDom ? shopRaw.toLowerCase().replace(/^www\./, '') : (String(sh.shop?.domain ?? '').toLowerCase() || '') } : {}) };
 }
 
 const CLIENT = { posten: bring, bring, postnord, dhl, ups };

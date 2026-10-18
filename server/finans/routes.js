@@ -217,6 +217,19 @@ function findMatch(totalOre, date, last4) {
   return rows[0] ?? null;
 }
 
+/* ---------------- Kvitteringer fra vanlige brukere (prompt 21) ---------------- */
+// En kvittering en bruker uten admin-rolle har lastet opp til en bolig, hører til boligen og ikke til husholdningens
+// regnskap. Den vises ikke i /receipts, gjennomgangskøen, jobs eller søk for administratorer som ikke er medlem av boligen,
+// og kobles aldri automatisk til en transaksjon i regnskapet.
+const folderOfTarget = (target) => { const m = String(target ?? '').match(/^folder:(\d+)/); return m ? +m[1] : null; };
+const rcPrivate = (r) => !!r?.uploaded_by && !auth.isAdmin(r.uploaded_by);
+const rcVisibleTo = (r, uid) => !rcPrivate(r) || (folderOfTarget(r.target) != null && !!q('SELECT 1 FROM fh_folder_members WHERE folder_id=? AND user_id=?').get(folderOfTarget(r.target), uid));
+// SQL-varianten av rcVisibleTo for lister og tellinger (ett ?-parameter: brukeren som ser).
+const RC_VISIBLE = `NOT (uploaded_by IS NOT NULL AND uploaded_by NOT IN (SELECT id FROM users WHERE role='admin')
+  AND NOT EXISTS (SELECT 1 FROM fh_folder_members fm WHERE fm.user_id=? AND target LIKE 'folder:%' AND fm.folder_id=CAST(substr(target, 8) AS INTEGER)))`;
+// Kvitteringen i :id, eller null når den ikke finnes eller ikke er synlig for brukeren (gir 404 som en ukjent kvittering).
+const rcGet = (c, id = c.req.param('id')) => { const r = q('SELECT * FROM fh_receipts WHERE id=?').get(id); return r && rcVisibleTo(r, c.get('user')) ? r : null; };
+
 /* ---------------- Kvitteringskø ---------------- */
 
 const queue = [];
@@ -247,8 +260,9 @@ async function runQueue() {
       const st = settings();
       // Regler går foran AI-forslaget.
       const catId = (st.autoCat && ruleFor(d.merchant)) || catIdByName(d.suggested_category) || r.category_id;
-      const acc = d.card_last4 ? q('SELECT id FROM fh_accounts WHERE last4=?').get(d.card_last4)?.id : null;
-      const match = findMatch(totalOre, d.date, d.card_last4);
+      const priv = rcPrivate(r);
+      const acc = !priv && d.card_last4 ? q('SELECT id FROM fh_accounts WHERE last4=?').get(d.card_last4)?.id : null;
+      const match = priv ? null : findMatch(totalOre, d.date, d.card_last4);
       q(`UPDATE fh_receipts SET status='needs_review', provider=?, model=?, seconds=?, extraction=?, merchant=?, date=?, total=?, category_id=?,
          account_id=COALESCE(?, account_id), confidence=?, transaction_id=? WHERE id=? AND status='processing'`)
         .run(res.provider, res.model, res.seconds, JSON.stringify(d), d.merchant, d.date ?? r.date, totalOre, catId,
@@ -274,7 +288,7 @@ function routeTarget(id) {
   if (!r?.target) return;
   // «Legg ved kvittering» fra en transaksjon: kvitteringen hører til den, uansett hva bankmatchen fant.
   const tm = r.target.match(/^tx:(\d+)$/);
-  if (tm) { if (q('SELECT 1 FROM fh_transactions WHERE id=?').get(+tm[1])) q('UPDATE fh_receipts SET transaction_id=? WHERE id=?').run(+tm[1], id); return; }
+  if (tm && !rcPrivate(r)) { if (q('SELECT 1 FROM fh_transactions WHERE id=?').get(+tm[1])) q('UPDATE fh_receipts SET transaction_id=? WHERE id=?').run(+tm[1], id); return; }
   if (r.target === 'sub' && r.total != null && !q('SELECT 1 FROM fh_subscriptions WHERE name=? AND active=1').get(r.merchant)) {
     q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,domain,ai_short,charge_day,category,created) VALUES(?,?,?,?,?,?,?,?,?,?,?)')
       .run(r.merchant || 'Ukjent', 'Fra kvittering', r.total, 'monthly', r.date ? shiftDate(r.date, 1) : null, 'Ny', r.domain, r.ai_short,
@@ -388,8 +402,10 @@ const meOut = (a) => ({ id: a.user, username: a.info.username, role: a.info.role
   isMainAdmin: !!a.info.isMainAdmin, avatarUrl: avatarOf(a), serverName: serverName() });
 
 api.get('/me', (c) => c.json(meOut(c.get('access'))));
-// Brukere man kan dele mapper med (navn og brukernavn, ingen hemmeligheter).
-api.get('/users', (c) => c.json(listUsers().map((u) => ({ id: u.id, username: u.username, name: u.name, role: u.role }))));
+// Brukere man kan dele mapper med. Administratorer ser navn, brukernavn og rolle; andre bare id, navn og profilbilde (prompt 21).
+api.get('/users', (c) => c.json(c.get('access').admin
+  ? listUsers().map((u) => ({ id: u.id, username: u.username, name: u.name, role: u.role, avatarUrl: u.avatarUrl ?? null }))
+  : listUsers().map((u) => ({ id: u.id, name: u.name, avatarUrl: u.avatarUrl ?? null }))));
 // Personlige valg i FinansHub: rekkefølgen i sidemenyen.
 // Reserve for /api/me/layout (finNav): rekkefølge og skjulte punkter i sidemenyen.
 api.get('/prefs', (c) => c.json(prefsOut(c.get('user'))));
@@ -419,7 +435,7 @@ api.get('/bootstrap', R, (c) => {
     accounts: accs.map((a) => ({ id: a.id, name: a.name, bank: a.bank, type: a.type, last4: a.last4, note: a.note, openingBalance: a.opening_balance / 100, balance: a.balance / 100 })),
     rules: q('SELECT r.*, c.name AS category FROM fh_rules r LEFT JOIN fh_categories c ON c.id=r.category_id ORDER BY priority, id').all().map((r) => ({ id: r.id, pattern: r.pattern, categoryId: r.category_id, category: r.category, priority: r.priority })),
     goals: q('SELECT * FROM fh_goals ORDER BY id').all().map((g) => ({ ...g, saved: g.saved / 100, target: g.target / 100 })),
-    reviewCount: q("SELECT COUNT(*) n FROM fh_receipts WHERE status IN ('pending','processing','needs_review')").get().n,
+    reviewCount: q(`SELECT COUNT(*) n FROM fh_receipts WHERE status IN ('pending','processing','needs_review') AND ${RC_VISIBLE}`).get(a.user).n,
     hasData: !!q('SELECT 1 FROM fh_transactions LIMIT 1').get(), firstRun: backup.needsFirstRun(), me: meOut(a), nav: navOrder(a.user), navHidden: navHidden(a.user), navLabels: navLabels(a.user), navDefault: NAV_DEFAULT, navFixed: NAV_FIXED,
   });
 });
@@ -462,7 +478,7 @@ api.get('/summary', need('read:summary', 'read:budget'), (c) => {
   const ySum = sums(yStart, to);
   const recurring = q('SELECT * FROM fh_recurring WHERE active=1').all().map((r) => recurringOut(r, cats)).sort((a, b) => a.next.localeCompare(b.next));
   const recent = q(`${TX_SELECT} ORDER BY t.date DESC, t.id DESC LIMIT 8`).all().map((t) => txOut(t, cats, accs));
-  const review = q("SELECT * FROM fh_receipts WHERE status IN ('pending','processing','needs_review') ORDER BY created DESC").all().map((r) => receiptOut(r, cats, accs));
+  const review = q(`SELECT * FROM fh_receipts WHERE status IN ('pending','processing','needs_review') AND ${RC_VISIBLE} ORDER BY created DESC`).all(c.get('user')).map((r) => receiptOut(r, cats, accs));
   return c.json({
     month, from, to, daysLeft,
     inn: cur.inn / 100, ut: cur.ut / 100, prevInn: prev.inn / 100, prevUt: prev.ut / 100,
@@ -703,7 +719,7 @@ async function receiptUpload(c, target = null) {
   for (const f of raw) console.info(`[skann] mottatt ${f.name || '(uten navn)'} · oppgitt ${f.type || 'ingen type'} · ${Math.round(f.size / 1024)} kB`);
   if (target === 'sub' && files.length && files.every((f) => MIME[f.type] || isMail(f))) {
     const ids = [];
-    for (const f of files) ids.push(MIME[f.type] ? await saveReceipt(f, null, null, null, target) : await mailReceipt(f, target));
+    for (const f of files) ids.push(MIME[f.type] ? await saveReceipt(f, null, null, null, target, c.get('user')) : await mailReceipt(f, target));
     runQueue();
     return c.json({ ...receiptOut(origSelect.get(ids[0])), jobs: ids.map((id) => jobOut(origSelect.get(id))) });
   }
@@ -715,12 +731,12 @@ async function receiptUpload(c, target = null) {
   const pair = scans.length === files.length;
   const acc = +b.accountId || q('SELECT id FROM fh_accounts ORDER BY sort, id LIMIT 1').get()?.id || null;
   const ids = [];
-  for (const [i, f] of files.entries()) ids.push(await saveReceipt(f, pair ? scans[i] : files.length === 1 ? scans[0] : null, thumbs.length === files.length ? thumbs[i] : files.length === 1 ? thumbs[0] : null, acc, target));
+  for (const [i, f] of files.entries()) ids.push(await saveReceipt(f, pair ? scans[i] : files.length === 1 ? scans[0] : null, thumbs.length === files.length ? thumbs[i] : files.length === 1 ? thumbs[0] : null, acc, target, c.get('user')));
   runQueue();
   const first = receiptOut(origSelect.get(ids[0]));
   return c.json({ ...first, jobs: ids.map((id) => jobOut(origSelect.get(id))) });
 }
-async function saveReceipt(f, scanFile, thumbFile, acc, target) {
+async function saveReceipt(f, scanFile, thumbFile, acc, target, uploadedBy = null) {
   const id = randomUUID();
   const d = new Date(), sub = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}`;
   await mkdir(join(DIR, sub), { recursive: true });
@@ -730,8 +746,8 @@ async function saveReceipt(f, scanFile, thumbFile, acc, target) {
   let scan = null, thumb = null;
   if (scanFile?.type === 'image/jpeg') { scan = `${sub}/${id}_scan.jpg`; await writeFile(join(DIR, scan), Buffer.from(await scanFile.arrayBuffer())); }
   if (thumbFile?.type === 'image/jpeg') { thumb = `${sub}/${id}_t.jpg`; await writeFile(join(DIR, thumb), Buffer.from(await thumbFile.arrayBuffer())); }
-  q("INSERT INTO fh_receipts(id,file,scan,thumb,mime,status,date,account_id,name,target,created) VALUES(?,?,?,?,?,'pending',?,?,?,?,?)")
-    .run(id, file, scan, thumb, f.type, today(), acc, str(f.name, 120) || null, target, Date.now());
+  q("INSERT INTO fh_receipts(id,file,scan,thumb,mime,status,date,account_id,name,target,uploaded_by,created) VALUES(?,?,?,?,?,'pending',?,?,?,?,?,?)")
+    .run(id, file, scan, thumb, f.type, today(), acc, str(f.name, 120) || null, target, uploadedBy, Date.now());
   queue.push({ id });
   scanLog(id, 'mottatt', `${f.name || 'kvittering'} · ${f.type} · ${Math.round(f.size / 1024)} kB${scan ? ' + JPEG-kopi' : ''}${thumb ? ' + miniatyr' : ''}`);
   const tm = String(target ?? '').match(/^tx:(\d+)$/);
@@ -778,8 +794,9 @@ function jobOut(r) {
 api.get('/receipts/jobs', R, (c) => {
   const a = c.get('access');
   // Andre brukere ser bare sine egne opplastinger til delte mapper.
-  const rows = a.admin ? q("SELECT * FROM fh_receipts WHERE created>? AND status<>'rejected' ORDER BY created DESC LIMIT 100").all(Date.now() - 86400_000)
-    : q("SELECT * FROM fh_receipts WHERE created>? AND status<>'rejected' AND target LIKE ? ORDER BY created DESC LIMIT 100").all(Date.now() - 86400_000, `folder:%:${a.user}`);
+  // Eksakt sammenligning på uploaded_by (bruker-ID-er kan inneholde _, som er jokertegn i LIKE).
+  const rows = a.admin ? q(`SELECT * FROM fh_receipts WHERE created>? AND status<>'rejected' AND ${RC_VISIBLE} ORDER BY created DESC LIMIT 100`).all(Date.now() - 86400_000, a.user)
+    : q("SELECT * FROM fh_receipts WHERE created>? AND status<>'rejected' AND uploaded_by=? AND substr(target, 1, 7)='folder:' ORDER BY created DESC LIMIT 100").all(Date.now() - 86400_000, a.user);
   return c.json(rows.map(jobOut));
 });
 const origSelect = q('SELECT * FROM fh_receipts WHERE id=?');
@@ -789,17 +806,18 @@ api.get('/receipts', R, (c) => {
   // Banneret «N kvitteringer til gjennomgang»: bare tallet.
   if (c.req.query('count') === '1') {
     const st = status === 'queue' ? null : status || 'needs_review';
-    const n = st ? q('SELECT COUNT(*) FROM fh_receipts WHERE status=?').pluck().get(st) : q("SELECT COUNT(*) FROM fh_receipts WHERE status IN ('pending','processing','needs_review')").pluck().get();
+    const n = st ? q(`SELECT COUNT(*) FROM fh_receipts WHERE status=? AND ${RC_VISIBLE}`).pluck().get(st, c.get('user'))
+      : q(`SELECT COUNT(*) FROM fh_receipts WHERE status IN ('pending','processing','needs_review') AND ${RC_VISIBLE}`).pluck().get(c.get('user'));
     return c.json({ count: n });
   }
-  const where = status === 'queue' ? "WHERE status IN ('pending','processing','needs_review')" : status ? 'WHERE status=?' : '';
-  const rows = q(`SELECT * FROM fh_receipts ${where} ORDER BY created DESC LIMIT 300`).all(...(status && status !== 'queue' ? [status] : []));
+  const where = status === 'queue' ? "WHERE status IN ('pending','processing','needs_review') AND" : status ? 'WHERE status=? AND' : 'WHERE';
+  const rows = q(`SELECT * FROM fh_receipts ${where} ${RC_VISIBLE} ORDER BY created DESC LIMIT 300`).all(...(status && status !== 'queue' ? [status] : []), c.get('user'));
   const cats = catById(), accs = accById();
   return c.json(rows.map((r) => receiptOut(r, cats, accs)));
 });
 
 api.get('/receipts/:id', R, (c) => {
-  const r = origSelect.get(c.req.param('id'));
+  const r = rcGet(c);
   return r ? c.json(receiptOut(r)) : c.notFound();
 });
 
@@ -808,11 +826,11 @@ async function sendFile(c, rel, mime) {
   try { return c.body(await readFile(join(DIR, rel)), 200, { 'Content-Type': mime, 'Cache-Control': 'private, max-age=86400', 'X-Content-Type-Options': 'nosniff', 'Content-Disposition': 'inline' }); }
   catch { return c.notFound(); }
 }
-api.get('/receipts/:id/file', R, (c) => { const r = origSelect.get(c.req.param('id')); return r ? sendFile(c, r.file, r.mime) : c.notFound(); });
-api.get('/receipts/:id/thumb', R, (c) => { const r = origSelect.get(c.req.param('id')); return r ? sendFile(c, r.thumb, 'image/jpeg') : c.notFound(); });
+api.get('/receipts/:id/file', R, (c) => { const r = rcGet(c); return r ? sendFile(c, r.file, r.mime) : c.notFound(); });
+api.get('/receipts/:id/thumb', R, (c) => { const r = rcGet(c); return r ? sendFile(c, r.thumb, 'image/jpeg') : c.notFound(); });
 
 api.patch('/receipts/:id', W, async (c) => {
-  const r = origSelect.get(c.req.param('id'));
+  const r = rcGet(c);
   if (!r) return c.notFound();
   const b = await c.req.json();
   q('UPDATE fh_receipts SET merchant=?, date=?, total=?, category_id=?, account_id=? WHERE id=?').run(
@@ -821,7 +839,7 @@ api.patch('/receipts/:id', W, async (c) => {
     b.accountId !== undefined ? (+b.accountId || null) : r.account_id, r.id);
   // Ny dato eller nytt beløp kan gi en annen bankmatch.
   const u = origSelect.get(r.id);
-  if (b.total !== undefined || b.date !== undefined) {
+  if ((b.total !== undefined || b.date !== undefined) && !rcPrivate(u)) {
     const m = findMatch(u.total, u.date, JSON.parse(u.extraction ?? '{}').card_last4);
     q('UPDATE fh_receipts SET transaction_id=? WHERE id=?').run(m?.id ?? null, r.id);
   }
@@ -829,7 +847,7 @@ api.patch('/receipts/:id', W, async (c) => {
 });
 
 api.post('/receipts/:id/book', W, async (c) => {
-  const r = origSelect.get(c.req.param('id'));
+  const r = rcGet(c);
   if (!r) return c.notFound();
   if (r.status === 'booked') return bad(c, 'Kvitteringen er allerede bokført');
   if (!r.merchant || r.total == null || !isDate(r.date)) return bad(c, 'Butikk, dato og total må fylles ut før bokføring');
@@ -856,10 +874,10 @@ api.post('/receipts/:id/book', W, async (c) => {
   return c.json(receiptOut(origSelect.get(r.id)));
 });
 
-api.post('/receipts/:id/reject', W, (c) => { q("UPDATE fh_receipts SET status='rejected' WHERE id=?").run(c.req.param('id')); return ok(c); });
+api.post('/receipts/:id/reject', W, (c) => { const r = rcGet(c); if (r) q("UPDATE fh_receipts SET status='rejected' WHERE id=?").run(r.id); return ok(c); });
 
 api.post('/receipts/:id/reprocess', W, (c) => {
-  const r = origSelect.get(c.req.param('id'));
+  const r = rcGet(c);
   if (!r) return c.notFound();
   const p = c.req.query('provider');
   q("UPDATE fh_receipts SET status='pending', candidate=NULL WHERE id=?").run(r.id);
@@ -874,7 +892,7 @@ api.post('/receipts/:id/reprocess', W, (c) => {
 const readOut = (o) => ({ merchant: o.merchant ?? null, date: o.date ?? null, total: o.total ?? null, items: (o.lines ?? []).map((l) => ({ description: l.description, amount: l.amount, quantity: l.quantity ?? null })),
   confidence: o.confidence ?? null, engine: o.engine ?? null, model: o.model ?? null, category: o.category ?? null, error: o.error ?? null });
 api.post('/receipts/:id/reanalyze', W, async (c) => {
-  const r = origSelect.get(c.req.param('id'));
+  const r = rcGet(c);
   if (!r) return c.notFound();
   if (['booked', 'rejected'].includes(r.status)) return bad(c, 'Kvitteringen er allerede bokført eller avvist');
   if (r.status === 'pending' || r.status === 'processing') return bad(c, 'Kvitteringen leses fortsatt');
@@ -904,7 +922,7 @@ api.post('/receipts/:id/reanalyze', W, async (c) => {
   return c.json({ previous, result: readOut({ ...d, confidence: Math.min(d.confidence.total, d.confidence.merchant || 1), engine: label, model: res.model, category: d.suggested_category }), candidateId });
 });
 api.post('/receipts/:id/reanalyze/apply', W, async (c) => {
-  const r = origSelect.get(c.req.param('id'));
+  const r = rcGet(c);
   if (!r) return c.notFound();
   const b = await c.req.json().catch(() => ({}));
   let cand = null; try { cand = JSON.parse(r.candidate ?? 'null'); } catch { /* ugyldig */ }
@@ -926,9 +944,10 @@ async function applyCandidate(r, cand) {
     const d = cand.data, st = settings();
     const totalOre = d.total != null ? Math.round(d.total * 100) : null;
     const catId = (st.autoCat && ruleFor(d.merchant)) || catIdByName(d.suggested_category) || r.category_id;
-    const acc = d.card_last4 ? q('SELECT id FROM fh_accounts WHERE last4=?').get(d.card_last4)?.id : null;
+    const priv = rcPrivate(r);
+    const acc = !priv && d.card_last4 ? q('SELECT id FROM fh_accounts WHERE last4=?').get(d.card_last4)?.id : null;
     const tm = String(r.target ?? '').match(/^tx:(\d+)$/);
-    const match = tm ? { id: +tm[1] } : findMatch(totalOre, d.date, d.card_last4);
+    const match = priv ? null : tm ? { id: +tm[1] } : findMatch(totalOre, d.date, d.card_last4);
     q(`UPDATE fh_receipts SET status='needs_review', error=NULL, provider=?, model=?, seconds=?, extraction=?, merchant=?, date=?, total=?, category_id=?,
        account_id=COALESCE(?, account_id), confidence=?, transaction_id=?, candidate=NULL WHERE id=?`)
       .run(cand.provider, cand.model, cand.seconds, JSON.stringify(d), d.merchant, d.date ?? r.date, totalOre, catId,
@@ -941,14 +960,14 @@ async function applyCandidate(r, cand) {
 // «Les med lokal OCR» på flere kvitteringer: de som feilet (eller de valgte). Resultatet tas i bruk med en gang
 // og havner til gjennomgang, siden det ikke finnes noe tidligere svar å sammenligne med.
 api.get('/receipts/ocr', R, (c) => c.json({ count: q(`SELECT count(*) FROM fh_receipts WHERE status IN ('needs_review','failed') AND file IS NOT NULL AND COALESCE(mime,'') <> 'text/plain'
-  AND (error IS NOT NULL OR merchant IS NULL OR total IS NULL)`).pluck().get() }));
+  AND (error IS NOT NULL OR merchant IS NULL OR total IS NULL) AND ${RC_VISIBLE}`).pluck().get(c.get('user')) }));
 api.post('/receipts/ocr', W, async (c) => {
   const b = await c.req.json().catch(() => ({}));
   const ids = Array.isArray(b.ids) ? b.ids.map(String).slice(0, 200) : null;
-  const rows = ids ? ids.map((id) => origSelect.get(id)).filter(Boolean)
+  const rows = ids ? ids.map((id) => rcGet(c, id)).filter(Boolean)
     // Standard: kvitteringer til gjennomgang som AI ikke klarte (feilmelding, eller mangler butikk eller beløp).
     : q(`SELECT id FROM fh_receipts WHERE status IN ('needs_review','failed') AND file IS NOT NULL AND COALESCE(mime,'') <> 'text/plain'
-         AND (error IS NOT NULL OR merchant IS NULL OR total IS NULL) ORDER BY created DESC LIMIT 200`).all().map((x) => origSelect.get(x.id)).filter(Boolean);
+         AND (error IS NOT NULL OR merchant IS NULL OR total IS NULL) AND ${RC_VISIBLE} ORDER BY created DESC LIMIT 200`).all(c.get('user')).map((x) => origSelect.get(x.id)).filter(Boolean);
   const out = { done: 0, failed: 0, skipped: 0, errors: [] };
   for (const r of rows) {
     if (!r.file || r.mime === 'text/plain' || ['booked', 'rejected', 'pending', 'processing'].includes(r.status)) { out.skipped++; continue; }
@@ -967,7 +986,7 @@ api.post('/receipts/ocr', W, async (c) => {
 });
 
 api.delete('/receipts/:id', W, async (c) => {
-  const r = origSelect.get(c.req.param('id'));
+  const r = rcGet(c);
   if (!r) return ok(c);
   q('DELETE FROM fh_receipts WHERE id=?').run(r.id);
   for (const f of [r.file, r.thumb, r.scan]) if (f) await unlink(join(DIR, f)).catch(() => {});
@@ -1738,7 +1757,7 @@ api.post('/folders/:id/receipts', need('receipts:write'), upload, (c) => {
 for (const kind of ['thumb', 'file']) {
   api.get(`/folders/:id/receipts/:rid/${kind}`, (c) => {
     const { f, err } = folderFor(c); if (err) return err;
-    const rid = +c.req.param('rid');
+    const rid = c.req.param('rid'); // kvitterings-ID-er er UUID-er (tekst)
     if (!q('SELECT 1 FROM fh_folder_entries WHERE folder_id=? AND receipt_id=?').get(f.id, rid)) return c.notFound();
     const r = origSelect.get(rid);
     if (!r) return c.notFound();
@@ -2077,7 +2096,21 @@ api.post('/demo', sessionOnly, async (c) => {
 api.delete('/all', sessionOnly, async (c) => {
   const b = await c.req.json().catch(() => ({}));
   if (b.confirm !== 'SLETT') return bad(c, 'Skriv SLETT for å bekrefte');
-  db.transaction(() => { for (const t of ['fh_project_installments', 'fh_folder_projects', 'fh_folder_bills', 'fh_folder_entries', 'fh_folder_members', 'fh_folders', 'fh_finn_files', 'fh_finn_emails', 'fh_finn_ad', 'fh_finn', 'fh_subscriptions', 'fh_receipts', 'fh_transactions', 'fh_budgets', 'fh_recurring', 'fh_goals', 'fh_accounts']) q(`DELETE FROM ${t}`).run(); })();
+  // Regnskapet slettes helt, men av Boliger bare de admin selv eier (prompt 21). Andres boliger, og kvitteringene i dem, blir liggende.
+  const uid = c.get('user');
+  const mine = q(`SELECT id FROM fh_folders f WHERE f.owner_id=? OR (f.owner_id IS NULL AND EXISTS (SELECT 1 FROM fh_folder_members m WHERE m.folder_id=f.id AND m.user_id=? AND m.role='owner'))`).pluck().all(uid, uid);
+  const inMine = `(${mine.map(() => '?').join(',') || 'NULL'})`;
+  db.transaction(() => {
+    q(`DELETE FROM fh_project_installments WHERE project_id IN (SELECT id FROM fh_folder_projects WHERE folder_id IN ${inMine})`).run(...mine);
+    for (const t of ['fh_folder_projects', 'fh_folder_bills', 'fh_folder_entries', 'fh_folder_members']) q(`DELETE FROM ${t} WHERE folder_id IN ${inMine}`).run(...mine);
+    q(`DELETE FROM fh_folders WHERE id IN ${inMine}`).run(...mine);
+    for (const t of ['fh_finn_files', 'fh_finn_emails', 'fh_finn_ad', 'fh_finn', 'fh_subscriptions']) q(`DELETE FROM ${t}`).run();
+    // Kvitteringer som hører til en gjenværende bolig (en post der, eller lastet opp dit), beholdes.
+    q(`DELETE FROM fh_receipts WHERE id NOT IN (SELECT receipt_id FROM fh_folder_entries WHERE receipt_id IS NOT NULL)
+       AND NOT (target LIKE 'folder:%' AND CAST(substr(target, 8) AS INTEGER) IN (SELECT id FROM fh_folders))`).run();
+    q('UPDATE fh_receipts SET transaction_id=NULL').run();
+    for (const t of ['fh_transactions', 'fh_budgets', 'fh_recurring', 'fh_goals', 'fh_accounts']) q(`DELETE FROM ${t}`).run();
+  })();
   return ok(c);
 });
 

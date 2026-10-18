@@ -71,8 +71,12 @@ export const getRuter = () => cached('ruter', 30_000, async () => {
 });
 
 // Avganger fra ett stoppested (mobilwidgeten «Ruter-avganger»). Standard er første «fra»-stopp i strekningene.
+// Prompt 21: også holdeplassene på turen (stops), plattform, forsinkelse og status, som på Avganger-siden.
+// serviceJourney.estimatedCalls gir alle stopp på turen (dagens dato), med sanntid når den finnes.
+const JOURNEY_CALLS = 'estimatedCalls{ quay{ id name publicCode stopPlace{ id name } } aimedArrivalTime expectedArrivalTime aimedDepartureTime expectedDepartureTime }';
 const DEPARTURE_QUERY = `query($id:String!,$n:Int!){
-  stopPlace(id:$id){ name estimatedCalls(numberOfDepartures:$n){ expectedDepartureTime destinationDisplay{frontText} serviceJourney{ line{publicCode transportMode presentation{colour textColour}} } } }
+  stopPlace(id:$id){ id name estimatedCalls(numberOfDepartures:$n){ aimedDepartureTime expectedDepartureTime cancellation quay{ id publicCode name } destinationDisplay{frontText}
+    serviceJourney{ line{publicCode transportMode presentation{colour textColour}} ${JOURNEY_CALLS} } } }
 }`;
 export const getDepartures = (stopId) => {
   const id = String(stopId || parseRoutes(cfg('ruter_routes'))[0]?.fromId || '58381').replace(/\D/g, '');
@@ -84,11 +88,53 @@ export const getDepartures = (stopId) => {
     });
     const sp = d.data?.stopPlace;
     if (!sp) throw new Error('Fant ikke stoppestedet');
-    return { stop: sp.name, stopId: id, departures: sp.estimatedCalls.map((c) => ({
-      line: c.serviceJourney?.line?.publicCode ?? '', mode: c.serviceJourney?.line?.transportMode ?? 'bus', to: c.destinationDisplay?.frontText ?? '', time: c.expectedDepartureTime }))
-      .map((d, i) => withLineColor(d, sp.estimatedCalls[i].serviceJourney?.line?.presentation)) };
+    return departuresOut(sp, id);
   });
 };
+/** Widget-formen ({stop, stopId, departures:[{line, mode, to, time, color, textColor, …turfelt}]}). Brukes også av mock.js. */
+export function departuresOut(sp, id, now = Date.now()) {
+  return { stop: sp.name, stopId: String(id), departures: (sp.estimatedCalls ?? []).map((c) => {
+    const line = c.serviceJourney?.line ?? {};
+    return withLineColor({ line: line.publicCode ?? '', mode: line.transportMode ?? 'bus', to: c.destinationDisplay?.frontText ?? '', time: c.expectedDepartureTime ?? c.aimedDepartureTime,
+      ...journeyOut(c, sp, now) }, line.presentation);
+  }) };
+}
+
+/* ---------------- Turen: holdeplasser fra valgt stopp til endestasjon (prompt 21) ---------------- */
+
+export const MODE_NAME = { tram: 'Trikk', bus: 'Buss', coach: 'Buss', metro: 'T-bane', rail: 'Tog', water: 'Båt', air: 'Fly', cableway: 'Bane', funicular: 'Bane' };
+export const modeName = (m) => MODE_NAME[String(m ?? '').toLowerCase()] ?? 'Buss';
+const clock = (iso) => (iso ? new Date(iso).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Oslo' }) : null);
+const numId = (v) => String(v ?? '').match(/(\d+)$/)?.[1] ?? null;
+/** «i rute», «N min forsinket» eller «innstilt». Tidlig avgang regnes som i rute. */
+export const statusOf = (delayMin, cancelled) => (cancelled ? 'innstilt' : delayMin >= 1 ? `${delayMin} min forsinket` : 'i rute');
+
+/** Holdeplassene fra valgt stopp (inkludert) til endestasjonen: [{ name, platform, time, aimed, expected, clock, stopPlaceId }]. */
+export function journeyStops(call, sp) {
+  const all = call?.serviceJourney?.estimatedCalls ?? [];
+  if (!all.length) return [];
+  let i = call.quay?.id ? all.findIndex((x) => x.quay?.id === call.quay.id) : -1;
+  if (i < 0 && sp?.id) i = all.findIndex((x) => x.quay?.stopPlace?.id === sp.id);
+  if (i < 0 && sp?.name) i = all.findIndex((x) => (x.quay?.stopPlace?.name ?? x.quay?.name) === sp.name);
+  return all.slice(Math.max(0, i)).map((x, k, arr) => {
+    // Første stopp: avgangstid. Endestasjonen har bare ankomsttid.
+    const aimed = (k === arr.length - 1 ? x.aimedArrivalTime ?? x.aimedDepartureTime : x.aimedDepartureTime ?? x.aimedArrivalTime) ?? null;
+    const expected = (k === arr.length - 1 ? x.expectedArrivalTime ?? x.expectedDepartureTime : x.expectedDepartureTime ?? x.expectedArrivalTime) ?? aimed;
+    return { name: x.quay?.stopPlace?.name ?? x.quay?.name ?? '', platform: x.quay?.publicCode || null, time: expected, aimed, expected, clock: clock(expected), stopPlaceId: x.quay?.stopPlace?.id ?? null };
+  });
+}
+/** Turfeltene til én avgang: stops, modeName, platform, delayMin, status og ruterUrl. */
+export function journeyOut(c, sp, now = Date.now()) {
+  const exp = c.expectedDepartureTime ?? c.aimedDepartureTime;
+  const delayMin = c.aimedDepartureTime && exp ? Math.max(0, Math.round((Date.parse(exp) - Date.parse(c.aimedDepartureTime)) / 60000)) : 0;
+  const stops = journeyStops(c, sp);
+  const last = stops[stops.length - 1];
+  const fromId = numId(sp?.id), toId = numId(last?.stopPlaceId);
+  const url = fromId && toId && toId !== fromId ? ruterUrl({ fromId, fromName: sp.name, toId, toName: last.name })
+    : fromId ? `https://reise.ruter.no/?fromId=__NSR-StopPlace-${fromId}__&fromType=__STOP_PLACE__&fromName=__${encodeURIComponent(sp.name ?? '')}__` : 'https://reise.ruter.no/';
+  return { modeName: modeName(c.serviceJourney?.line?.transportMode), platform: c.quay?.publicCode || null, delayMin, status: statusOf(delayMin, !!c.cancellation),
+    stops, stopsCount: stops.length, ruterUrl: url, clock: clock(exp), minutes: Math.max(0, Math.round((Date.parse(exp) - now) / 60000)) };
+}
 
 // Søk etter stoppesteder (Entur geocoder). Svarer [{ id:'NSR:StopPlace:…', name, locality, modes }].
 const CAT_MODE = { metroStation: 'metro', onstreetTram: 'tram', tramStation: 'tram', onstreetBus: 'bus', busStation: 'bus', railStation: 'rail', ferryStop: 'water', harbourPort: 'water', airport: 'air' };
@@ -110,10 +156,10 @@ export async function searchStops(q) {
 const STOP_QUERY = `query($id:String!,$n:Int!){
   stopPlace(id:$id){ id name estimatedCalls(numberOfDepartures:$n, timeRange:86400){
     aimedDepartureTime expectedDepartureTime realtime cancellation
-    quay{ publicCode name }
+    quay{ id publicCode name }
     destinationDisplay{ frontText }
     situations{ summary{ value language } }
-    serviceJourney{ line{ publicCode transportMode presentation{ colour textColour } } }
+    serviceJourney{ line{ publicCode transportMode presentation{ colour textColour } } ${JOURNEY_CALLS} }
   } }
 }`;
 export const stopIdOf = (v) => { const s = String(v ?? '').trim(); const m = s.match(/^(?:NSR:StopPlace:)?(\d{1,9})$/); return m ? `NSR:StopPlace:${m[1]}` : null; };
@@ -124,7 +170,7 @@ export function stopDeparturesOut(sp, now = Date.now()) {
     return { line: line.publicCode ?? '', to: c.destinationDisplay?.frontText ?? '', ...lineColor(line.transportMode, line.publicCode, line.presentation),
       aimed: c.aimedDepartureTime, expected: exp, time: exp, minutes: Math.max(0, Math.round((Date.parse(exp) - now) / 60000)),
       delay: c.aimedDepartureTime && exp ? Math.round((Date.parse(exp) - Date.parse(c.aimedDepartureTime)) / 60000) : 0,
-      realtime: !!c.realtime, cancelled: !!c.cancellation, platform: c.quay?.publicCode || null, situation: sit[0] ?? null };
+      realtime: !!c.realtime, cancelled: !!c.cancellation, situation: sit[0] ?? null, ...journeyOut(c, sp, now) };
   }) };
 }
 export const getStopDepartures = (stop, n = 20) => {

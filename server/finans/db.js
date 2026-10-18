@@ -162,6 +162,13 @@ addCol('fh_transactions', 'ai_done', 'INTEGER NOT NULL DEFAULT 0');
 addCol('fh_receipts', 'name', 'TEXT');          // opprinnelig filnavn (opplastingskøen)
 addCol('fh_receipts', 'started', 'INTEGER');    // når AI-en begynte, for fremdrift
 addCol('fh_receipts', 'target', 'TEXT');        // 'sub' | 'folder:<id>[:<bruker>]' – hva kvitteringen ble lastet opp for
+// Prompt 21: hvem som lastet opp kvitteringen (null = e-post eller eldre opplasting i husholdningens regnskap).
+// Eldre opplastinger til en bolig har brukeren i target («folder:<id>:<bruker>») og fylles inn derfra.
+addCol('fh_receipts', 'uploaded_by', 'TEXT');
+for (const r of db.prepare("SELECT id, target FROM fh_receipts WHERE uploaded_by IS NULL AND target LIKE 'folder:%:%'").all()) {
+  const m = String(r.target).match(/^folder:\d+:(.+)$/);
+  if (m) db.prepare('UPDATE fh_receipts SET uploaded_by=? WHERE id=?').run(m[1], r.id);
+}
 // Prompt 05: tokens per bruker med utløp, abonnement hvert 2. år, boligmapper med roller, prosjekter og regninger.
 addCol('fh_tokens', 'user_id', 'TEXT');
 addCol('fh_tokens', 'expires', 'INTEGER');      // ms, null = aldri
@@ -328,8 +335,9 @@ if (!db.prepare('SELECT 1 FROM fh_categories LIMIT 1').get()) {
   migrateOldReceipts();
 }
 
+// Bare hovedadmins egne kvitteringer flyttes inn i husholdningens regnskap; andre brukeres blir i deres egen Økonomi-fane.
 function migrateOldReceipts() {
-  const old = db.prepare('SELECT * FROM receipts').all();
+  const old = db.prepare('SELECT * FROM receipts WHERE user=?').all(OWNER);
   if (!old.length) return;
   const acc = db.prepare("INSERT INTO fh_accounts(name,bank,type) VALUES('Brukskonto','','checking') RETURNING id").get().id;
   const MAP = { Mat: 'Mat og dagligvarer', Transport: 'Transport og lading', Bolig: 'Bolig', Fritid: 'Fritid og hobby', Skole: 'Skole' };

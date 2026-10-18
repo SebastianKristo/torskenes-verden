@@ -4,8 +4,31 @@ import { buildWeather } from './weather.js';
 
 export const { GALLERIES, getTle, getApod, getGallery } = real;
 
-export const getDepartures = async () => ({ stop: 'Bislett', stopId: '6350', departures: [['11', 'tram', 'Majorstuen', 2], ['17', 'tram', 'Rikshospitalet', 4], ['18', 'tram', 'Rikshospitalet', 7], ['11', 'tram', 'Kjelsås', 9], ['17', 'tram', 'Grefsen', 12], ['18', 'tram', 'Ljabru', 15]]
-  .map(([line, mode, to, m]) => real.withLineColor({ line, mode, to, time: at(m) })) });
+// Prompt 21: hver avgang har turen (serviceJourney.estimatedCalls). Første avgang er alltid 17 mot Grefsen st. med fire stopp
+// (valgt stopp, Grefsenveien, Kjelsåsveien, Grefsen st.), som i designet.
+const VIA = ['Sporveisgata', 'Dalsbergstien', 'Stensgata', 'Bislett', 'Dalbakken', 'Adamstuen', 'Ullevål sykehus', 'Universitetet Blindern', 'Forskningsparken', 'Tåsen', 'Nydalen', 'Storo'];
+const mockJourney = (from, fromId, to, startIso, offsets, names) => offsets.map((o, k) => {
+  const t = new Date(Date.parse(startIso) + o * 60000).toISOString();
+  const name = k === 0 ? from : k === offsets.length - 1 ? to : names[k - 1];
+  const sid = k === 0 ? fromId : `NSR:StopPlace:${9000 + (([...name].reduce((x, ch) => x + ch.charCodeAt(0), 0) * 7) % 900)}`;
+  return { quay: { id: k === 0 ? `${fromId}:Q` : `${sid}:Q`, name, publicCode: k === 0 ? 'B' : null, stopPlace: { id: sid, name } }, aimedArrivalTime: t, expectedArrivalTime: t, aimedDepartureTime: t, expectedDepartureTime: t };
+});
+const grefsen = (from, fromId, aimedIso) => ({ aimedDepartureTime: aimedIso, expectedDepartureTime: aimedIso, realtime: true, cancellation: false,
+  quay: { id: `${fromId}:Q`, publicCode: 'B', name: from }, destinationDisplay: { frontText: 'Grefsen st.' }, situations: [],
+  serviceJourney: { line: { publicCode: '17', transportMode: 'tram', presentation: null }, estimatedCalls: mockJourney(from, fromId, 'Grefsen st.', aimedIso, [0, 3, 5, 8], ['Grefsenveien', 'Kjelsåsveien']) } });
+const otherJourney = (from, fromId, to, i, aimedIso, delay) => {
+  const n = 3 + (i % 6); // 3–8 stopp, så «· · · N stopp» også kan vises
+  const offsets = Array.from({ length: n }, (_, k) => k * 2 + (k ? delay : 0));
+  return mockJourney(from, fromId, to, aimedIso, offsets, VIA.slice(i % 4, i % 4 + n - 2));
+};
+
+export const getDepartures = async () => {
+  const id = 'NSR:StopPlace:6350', name = 'Bislett';
+  const calls = [grefsen(name, id, at(2)), ...[['11', 'tram', 'Majorstuen', 4], ['18', 'tram', 'Rikshospitalet', 7], ['11', 'tram', 'Kjelsås', 9], ['17', 'tram', 'Rikshospitalet', 12], ['18', 'tram', 'Ljabru', 15]]
+    .map(([line, mode, to, m], i) => ({ aimedDepartureTime: at(m), expectedDepartureTime: at(m), cancellation: false, quay: { id: `${id}:Q`, publicCode: 'A', name }, destinationDisplay: { frontText: to },
+      serviceJourney: { line: { publicCode: line, transportMode: mode, presentation: null }, estimatedCalls: otherJourney(name, id, to, i + 1, at(m), 0) } }))];
+  return real.departuresOut({ id, name, estimatedCalls: calls }, '6350');
+};
 
 // Stopp og avganger for Avganger-siden (eksempeldata).
 const MOCK_STOPS = [['NSR:StopPlace:58381', 'Amagerveien', 'Oslo', ['bus']], ['NSR:StopPlace:6350', 'Bislett', 'Oslo', ['tram']], ['NSR:StopPlace:58366', 'Jernbanetorget', 'Oslo', ['metro', 'tram', 'bus']],
@@ -18,12 +41,12 @@ export const getStopDepartures = async (stop, n = 20) => {
   const s = MOCK_STOPS.find((x) => x.id === id) ?? { id, name: 'Stopp ' + id.split(':').pop(), modes: ['bus'] };
   const lines = { metro: [['5', 'Vestli'], ['3', 'Mortensrud'], ['2', 'Ellingsrudåsen']], tram: [['19', 'Majorstuen'], ['12', 'Kjelsås'], ['11', 'Ljabru']], bus: [['45', 'Majorstuen'], ['20', 'Skøyen'], ['31', 'Fornebu']], rail: [['L2', 'Ski'], ['R11', 'Eidsvoll']], water: [['B9', 'Nesodden']] };
   const pool = s.modes.flatMap((m) => (lines[m] ?? lines.bus).map(([line, to]) => ({ line, to, mode: m })));
-  const now = Date.now(), calls = [];
-  for (let i = 0; i < Math.min(40, +n || 20); i++) {
+  const now = Date.now(), calls = [grefsen(s.name, s.id, new Date(now + 2 * 60000).toISOString())];
+  for (let i = 1; i < Math.min(40, +n || 20); i++) {
     const p = pool[i % pool.length], aimed = new Date(now + (2 + i * 3 + (i % 2)) * 60000), delay = i % 4 === 1 ? 2 : 0;
     calls.push({ aimedDepartureTime: aimed.toISOString(), expectedDepartureTime: new Date(aimed.getTime() + delay * 60000).toISOString(), realtime: i % 5 !== 4, cancellation: i === 7,
-      quay: { publicCode: String(1 + (i % 2)) }, destinationDisplay: { frontText: p.to }, situations: i === 3 ? [{ summary: [{ value: 'Forsinkelser på grunn av vegarbeid', language: 'no' }] }] : [],
-      serviceJourney: { line: { publicCode: p.line, transportMode: p.mode, presentation: null } } });
+      quay: { id: `${s.id}:Q${1 + (i % 2)}`, publicCode: String(1 + (i % 2)) }, destinationDisplay: { frontText: p.to }, situations: i === 3 ? [{ summary: [{ value: 'Forsinkelser på grunn av vegarbeid', language: 'no' }] }] : [],
+      serviceJourney: { line: { publicCode: p.line, transportMode: p.mode, presentation: null }, estimatedCalls: otherJourney(s.name, s.id, p.to, i, aimed.toISOString(), delay).map((x, k) => (k === 0 ? { ...x, quay: { ...x.quay, id: `${s.id}:Q${1 + (i % 2)}`, publicCode: String(1 + (i % 2)) }, expectedDepartureTime: new Date(aimed.getTime() + delay * 60000).toISOString() } : x)) } });
   }
   return real.stopDeparturesOut({ id: s.id, name: s.name, estimatedCalls: calls }, now);
 };

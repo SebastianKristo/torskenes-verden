@@ -3,18 +3,21 @@
 //   resten av API-et (authOrToken), via en liten intern rute, så ingen tilgangslogikk dupliseres her.
 // - Meldinger ut: {type: 'tasks' | 'family' | 'tracking' | 'hello' | 'pong', ...payload, ts}. Klienten kan sende «ping».
 // - Serveren pinger hvert 30. sekund og kobler fra døde forbindelser.
+// - Brukerskille (prompt 21): uten userIds går meldingen bare til administratorer (Sporing og annet serveroppsett).
+//   Huskeliste og Familie sender alltid med en liste over dem som har tilgang.
 import { WebSocketServer } from 'ws';
+import { isAdmin } from './auth.js';
 
 const clients = new Set(); // { ws, user, alive }
 let wss = null;
 
-/** Sender en melding til alle tilkoblede (eller bare til userIds). Trygg å kalle uten at ws er startet (tester). */
+/** Sender en melding til userIds, eller til administratorene når userIds mangler. Trygg å kalle uten at ws er startet (tester). */
 export function broadcast(type, payload = {}, userIds = null) {
   if (!clients.size) return 0;
   const msg = JSON.stringify({ ...payload, type, ts: Date.now() });
   let n = 0;
   for (const c of clients) {
-    if (userIds && !userIds.includes(c.user)) continue;
+    if (userIds ? !userIds.includes(c.user) : !isAdmin(c.user)) continue;
     if (c.ws.readyState === 1) { c.ws.send(msg); n++; }
   }
   return n;

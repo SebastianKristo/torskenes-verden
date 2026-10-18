@@ -39,6 +39,9 @@ const s = call(S), c = call(C), r = call(R);
 const id = (u) => auth.listUsers().find((x) => x.username === u).id;
 
 test('Du først og bare én gang, så familien; to-bokstavs initialer og egen farge', async () => {
+  // Prompt 21: bare deg selv før de andre slår på deling.
+  assert.deepEqual((await s('/positions')).body.map((x) => x.navn), ['Du']);
+  for (const f of [s, c, r]) await f('/me', 'PUT', { sharing: 'on' });
   const res = await s('/positions');
   assert.equal(res.status, 200);
   const rows = res.body;
@@ -91,10 +94,12 @@ test('gammel posisjon er stale, «Sist sett» etter to timer; pause gir off', as
   assert.equal(ru.status, 'stale');
   assert.equal(ru.linje2, 'Sagene');
   await c('/me', 'PUT', { sharing: 'paused' });
-  const cy = (await s('/positions')).body.find((x) => x.navn === 'Cybele');
-  assert.equal(cy.status, 'off');
-  assert.equal(cy.linje2, 'Deler ikke posisjon');
-  assert.equal(cy.sted, null);
+  // Prompt 21: pause betyr at personen ikke vises for de andre i det hele tatt.
+  assert.equal((await s('/positions')).body.find((x) => x.navn === 'Cybele'), undefined);
+  const self = (await c('/positions')).body[0];
+  assert.equal(self.status, 'off');
+  assert.equal(self.linje2, 'Deler ikke posisjon');
+  assert.equal(self.sted, null);
   await c('/me', 'PUT', { sharing: 'on' });
 });
 
@@ -114,6 +119,8 @@ test('farge: stabil fra paletten, kan endres med PUT /me og vises i GET /api/fam
 test('DELETE /health/me sletter bare egne helsedata', async () => {
   const d = new Date().toISOString().slice(0, 10);
   await c('/health', 'POST', { date: d, steps: 1234 });
+  await r('/me', 'PUT', { shareHealth: { steps: true } });
+  await c('/me', 'PUT', { shareHealth: { steps: true } });
   await r('/health', 'POST', { date: d, steps: 999 });
   const del = await c('/health/me', 'DELETE');
   assert.equal(del.status, 200);

@@ -108,6 +108,25 @@ export function fileForDomain(domain) {
   return null;
 }
 
+/** Registeroppføringen for et domene (den med fil først), eller null. Underdomener faller tilbake til hoveddomenet. */
+export function itemForDomain(domain) {
+  let d = String(domain ?? '').toLowerCase().replace(/^www\./, '').trim();
+  while (d.includes('.')) {
+    const hits = load().items.filter((it) => it.domene === d);
+    if (hits.length) return hits.find((it) => it.kilde !== 'bokstav' && hasFile(it.id)) ?? hits[0];
+    d = d.slice(d.indexOf('.') + 1);
+    if (!d.includes('.')) break;
+  }
+  return null;
+}
+
+/* ---------------- Egne valg (POST /finans/api/logos/override) ---------------- */
+
+// normalisert navn → domene. Settes av routes.js fra kv ved oppstart og når admin lagrer et valg.
+let OVERRIDES = new Map();
+export function setOverrides(obj) { OVERRIDES = new Map(Object.entries(obj ?? {}).map(([k, v]) => [normalize(k), String(v).toLowerCase()])); }
+export const overrides = () => Object.fromEntries(OVERRIDES);
+
 // Til appene: liten liste med ETag (endres når registeret eller filene endres).
 let pubCache = null;
 export function publicRegistry() {
@@ -146,6 +165,13 @@ export function matchMerchant(text) {
   load();
   const cands = candidates(text).filter((c) => c.length >= 2);
   if (!cands.length) return null;
+  // 0. Eget valg for navnet (overstyrer registeret).
+  for (const c of [normalize(text), ...cands]) {
+    const d = OVERRIDES.get(c);
+    if (!d) continue;
+    const it = itemForDomain(d);
+    return it ? { ...out(it), domene: d, override: true } : { id: null, navn: String(text).trim(), domene: d, farge: null, kategori: null, override: true };
+  }
   // 1. Eksakt
   for (const c of cands) { const h = INDEX.find((x) => x.a === c); if (h) return out(h.it); }
   // 2. Prefiks: aliaset står først i teksten (hele ord). Lengste alias vinner.

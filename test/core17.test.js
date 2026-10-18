@@ -249,6 +249,9 @@ test('Familie: enhetsnavn på posisjonen og «Spill av lyd» bare til den person
   const kl = await fin.request('/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'kari17', password: 'kariPassord123', device: 'test' }) });
   const kariToken = (await kl.json()).token;
   assert.ok(kariToken);
+  // Prompt 21: deling er av som standard; begge slår den på.
+  await call('/api/family/me', 'PUT', { sharing: 'on' });
+  await app.request('/api/family/me', { method: 'PUT', headers: { authorization: `Bearer ${kariToken}`, 'content-type': 'application/json' }, body: JSON.stringify({ sharing: 'on' }) });
   const loc = await call('/api/family/location', 'POST', { lat: 59.91, lon: 10.75, acc: 12, device: 'iPhone 15 <b>', ts: Date.now() });
   assert.equal(loc.status, 200, JSON.stringify(loc.body));
   const fam = await app.request('/api/family', { headers: { authorization: `Bearer ${kariToken}` } }).then((r) => r.json());

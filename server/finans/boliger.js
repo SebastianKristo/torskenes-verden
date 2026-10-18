@@ -222,14 +222,15 @@ export function layoutFor(uid) {
 /* ---------- API (/finans/api/boliger) ---------- */
 
 export const bolApi = new Hono();
-// Kategoriene deles av alle boliger: administratorer og eiere av minst én bolig kan endre dem.
-const canManage = (c) => c.get('access')?.admin || !!q("SELECT 1 FROM fh_folder_members WHERE user_id=? AND role='owner'").get(c.get('user'));
+// Kategoriene deles av alle boliger, så bare administratorer kan endre dem (prompt 21: en eier av én bolig skal ikke
+// kunne endre kategoriene for alle andre).
+const canManage = (c) => !!c.get('access')?.admin;
 const writeOk = (c) => c.get('access')?.session || c.get('access')?.scopes?.has('finance:write');
 const catsOut = (c) => c.json({ categories: catTree(), options: catOptions(), aiNew: aiNewAllowed(), canManage: canManage(c) });
 
 bolApi.get('/categories', (c) => catsOut(c));
 bolApi.post('/categories', async (c) => {
-  if (!canManage(c) || !writeOk(c)) return bad(c, 'Bare administratorer og eiere av en bolig kan endre kategoriene', 403);
+  if (!canManage(c) || !writeOk(c)) return bad(c, 'Bare administratorer kan endre kategoriene', 403);
   const b = await c.req.json().catch(() => ({}));
   const name = clean(b.name);
   if (!name) return bad(c, 'Skriv et navn på kategorien');
@@ -240,7 +241,7 @@ bolApi.post('/categories', async (c) => {
   return catsOut(c);
 });
 bolApi.patch('/categories/:id', async (c) => {
-  if (!canManage(c) || !writeOk(c)) return bad(c, 'Bare administratorer og eiere av en bolig kan endre kategoriene', 403);
+  if (!canManage(c) || !writeOk(c)) return bad(c, 'Bare administratorer kan endre kategoriene', 403);
   const cat = catById(+c.req.param('id'));
   if (!cat) return c.notFound();
   const b = await c.req.json().catch(() => ({}));
@@ -254,7 +255,7 @@ bolApi.patch('/categories/:id', async (c) => {
 });
 // Fjerner en kategori. Utgiftene beholdes: fra en underkategori flyttes de til hovedkategorien, fra en hovedkategori til «Annet».
 bolApi.delete('/categories/:id', (c) => {
-  if (!canManage(c) || !writeOk(c)) return bad(c, 'Bare administratorer og eiere av en bolig kan endre kategoriene', 403);
+  if (!canManage(c) || !writeOk(c)) return bad(c, 'Bare administratorer kan endre kategoriene', 403);
   const cat = catById(+c.req.param('id'));
   if (!cat) return c.notFound();
   db.transaction(() => {
@@ -271,7 +272,7 @@ bolApi.delete('/categories/:id', (c) => {
 // Nullstill: standardkategoriene kommer tilbake, og egne eller AI-lagde kategorier uten utgifter fjernes.
 // Kategorier som er i bruk beholdes, så ingen utgifter mister kategorien sin.
 bolApi.post('/categories/reset', (c) => {
-  if (!canManage(c) || !writeOk(c)) return bad(c, 'Bare administratorer og eiere av en bolig kan endre kategoriene', 403);
+  if (!canManage(c) || !writeOk(c)) return bad(c, 'Bare administratorer kan endre kategoriene', 403);
   db.transaction(() => {
     const def = new Map(DEFAULT_TREE.map(([n, , subs]) => [n.toLowerCase(), new Set(subs.map((s) => s.toLowerCase()))]));
     const used = (id) => !!q('SELECT 1 FROM fh_folder_entries WHERE category_id=? LIMIT 1').get(id);
@@ -288,7 +289,7 @@ bolApi.post('/categories/reset', (c) => {
   return catsOut(c);
 });
 bolApi.put('/settings', async (c) => {
-  if (!canManage(c) || !writeOk(c)) return bad(c, 'Bare administratorer og eiere av en bolig kan endre dette', 403);
+  if (!canManage(c) || !writeOk(c)) return bad(c, 'Bare administratorer kan endre dette', 403);
   const b = await c.req.json().catch(() => ({}));
   if (typeof b.aiNew === 'boolean') saveSettings({ boligAiNew: b.aiNew });
   return catsOut(c);

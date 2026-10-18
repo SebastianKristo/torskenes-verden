@@ -94,6 +94,11 @@ export const listUsers = () => db.prepare('SELECT * FROM users ORDER BY role=\'a
 
 export const isAdmin = (id) => userRow(id)?.role === 'admin';
 
+// Det trygge utvalget om andre brukere (prompt 21): id, navn og profilbilde. Ikke rolle, brukernavn, e-post eller 2FA.
+export const peerOut = (u) => u && { id: u.id, name: u.name, displayName: u.displayName, avatarUrl: u.avatarUrl };
+/** Brukerlisten slik viewer får se den: administratorer ser alt, andre ser det trygge utvalget (seg selv i sin helhet). */
+export const listUsersFor = (viewer) => (isAdmin(viewer) ? listUsers() : listUsers().map((u) => (u.id === viewer ? u : peerOut(u))));
+
 const adminCount = () => db.prepare("SELECT COUNT(*) n FROM users WHERE role='admin'").get().n;
 
 export function createUser({ username, password, role = 'bruker', name = '' }) {

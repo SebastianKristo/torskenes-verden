@@ -12,6 +12,7 @@ import { scanShippingMails, mailConfig, mailText } from './finans/mail.js';
 import { stageOf } from './finans/finn-routes.js';
 import { CARRIERS, CARRIER, detect, normNo, trackUrl, findTrackingNumbers, normStatus, STATUS_TEXT, STEPS_IN, STEPS_OUT, stepOf, fetchStatus, isConfigured, testCarriers, parcelsappUsage } from './tracking-carriers.js';
 import { broadcast } from './realtime.js';
+import { matchMerchant, itemForDomain, filePath as logoFile } from './logos/match.js';
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS hl_shipments (
@@ -44,6 +45,8 @@ CREATE TABLE IF NOT EXISTS hl_shipment_events (
 );
 CREATE INDEX IF NOT EXISTS hl_shipment_events_s ON hl_shipment_events(shipment_id, ts);
 `);
+// Prompt 21: butikkens domene (fra e-postavsender, Finn eller ParcelsApp) til logoen. Idempotent.
+if (!db.prepare('PRAGMA table_info(hl_shipments)').all().some((c) => c.name === 'shop_domain')) db.exec("ALTER TABLE hl_shipments ADD COLUMN shop_domain TEXT NOT NULL DEFAULT ''");
 
 const q = (sql) => db.prepare(sql);
 const now = () => Date.now();
@@ -68,6 +71,59 @@ function notify(kind, text, shipmentId) {
   kv.set(OWNER, 'trk_notices', list.slice(0, 30));
 }
 
+/* ---------------- Logo og tittel (prompt 21) ---------------- */
+
+const POSTAL_DOMAIN = /(^|\.)(posten|bring|postnord|dhl|ups|fedex|gls-group|dbschenker|helthjem|budbee|instabox|porterbuddy|17track)\.[a-z.]+$/i;
+/** Domene fra en e-postadresse eller URL, uten underdomener som mail./e./info. («ordre@mail.komplett.no» → «komplett.no»). */
+export function domainOf(v) {
+  let d = String(v ?? '').trim().toLowerCase().replace(/^.*@/, '').replace(/^https?:\/\//, '').replace(/[/?#].*$/, '').replace(/^www\./, '');
+  if (!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(d)) return '';
+  const parts = d.split('.');
+  // Behold to ledd (komplett.no), eller tre for co.uk/com.au o.l.
+  const keep = /^(co|com|org|net)$/.test(parts[parts.length - 2]) && parts.length > 2 ? 3 : 2;
+  d = parts.slice(-keep).join('.');
+  return POSTAL_DOMAIN.test(d) ? '' : d;
+}
+/** Butikkens domene fra navn eller lagret domene, via logobiblioteket. */
+function shopDomainFor(shop, stored) {
+  if (stored) return stored;
+  if (!shop) return '';
+  if (/^finn$/i.test(shop)) return 'finn.no';
+  return matchMerchant(shop)?.domene ?? '';
+}
+const ini = (name) => (String(name ?? '').trim().match(/[A-Za-zÆØÅæøå0-9]/)?.[0] ?? '?').toUpperCase();
+const fileUrl = (id) => `/finans/api/logos/file/${id}`;
+/** Én logo: registeroppføring med fil først, så favicon for domenet, ellers bokstav. */
+function logoOf({ name, domain, color }) {
+  const it = (domain && itemForDomain(domain)) || (name && matchMerchant(name)) || null;
+  const id = it?.id ?? null, dom = domain || it?.domene || null;
+  const has = !!(id && logoFile(id));
+  return { id: has ? id : null, domain: dom, name: it?.navn ?? name ?? null, url: has ? fileUrl(id) : dom ? `/finans/api/logo/${dom}` : null, letter: ini(it?.navn ?? name), color: it?.farge ?? color ?? '#3A4252', hasFile: has };
+}
+/**
+ * Logoen på pakkekortet: 1) butikken, 2) fraktselskapet når butikken er ukjent, 3) bokstav med selskapets farge.
+ * Når butikken vises, ligger fraktselskapet i carrierLogo (liten merkelapp).
+ */
+export function packageLogo(r) {
+  const c = CARRIER[r.carrier] ?? CARRIER.other;
+  const carrier = { ...logoOf({ name: c.id === 'other' ? null : c.name, domain: c.id === 'other' ? null : c.domain, color: c.color }), letter: c.ini, color: c.color, fg: c.fg, svg: c.logo };
+  const sd = shopDomainFor(r.shop, r.shop_domain);
+  const shop = r.shop || sd ? logoOf({ name: r.shop || null, domain: sd || null }) : null;
+  if (shop && (shop.hasFile || shop.domain)) return { kind: 'shop', ...shop, carrierLogo: carrier };
+  if (c.id !== 'other') return { kind: 'carrier', ...carrier, carrierLogo: null };
+  return { kind: 'letter', id: null, domain: null, name: r.shop || null, url: null, letter: ini(r.shop || r.name || 'P'), color: c.color, hasFile: false, carrierLogo: null };
+}
+/** Tittel: varenavn eller butikk, ellers «Pakke fra Bring». Aldri sporingsnummeret. */
+export function packageTitle(r) {
+  const c = CARRIER[r.carrier] ?? CARRIER.other;
+  const no = normNo(r.tracking_no);
+  const name = String(r.name ?? '').trim();
+  // Eldre klienter lagret «Bring · 0750» (fraktselskap + del av sporingsnummeret) som navn; det regnes som tomt.
+  if (name && name !== `${c.name} · ${no.slice(-4)}`) return name;
+  if (r.shop) return r.shop;
+  return c.id === 'other' ? 'Pakke' : `Pakke fra ${c.name}`;
+}
+
 /* ---------------- Lagring ---------------- */
 
 function view(r) {
@@ -80,7 +136,7 @@ function view(r) {
   if (status === 'delivered' && out) statusText = 'Levert til mottaker';
   return {
     id: r.id, trackingNo: r.tracking_no, carrier: r.carrier, carrierName: c.name, carrierIni: c.ini, carrierColor: c.color, carrierFg: c.fg, carrierLogo: c.logo,
-    name: r.name || `${c.name} · ${r.tracking_no.slice(-4)}`, shop: r.shop, source: r.source, sourceRef: r.source_ref, sourceNote: r.source_note,
+    name: packageTitle(r), title: packageTitle(r), shop: r.shop, shopDomain: shopDomainFor(r.shop, r.shop_domain) || null, logo: packageLogo(r), source: r.source, sourceRef: r.source_ref, sourceNote: r.source_note,
     direction: r.direction, status, statusText, step: stepOf(r.status), steps: out ? STEPS_OUT : (r.status === 'out_for_delivery' ? [...STEPS_IN.slice(0, 3), 'Ute for levering', 'Levert'] : STEPS_IN),
     eta: r.eta, pickupPoint: r.pickup_point, archived: !!r.archived, delayed: status === 'delayed', updatedAt: r.updated_at, checkedAt: r.checked_at,
     lastError: r.last_error, url: trackUrl(r.carrier, r.tracking_no), keyed: isConfigured(r.carrier), events,
@@ -90,21 +146,22 @@ const byId = (id) => q('SELECT * FROM hl_shipments WHERE id=?').get(id);
 
 // Legger til eller slår sammen på sporingsnummer. Eksisterende felt overskrives bare når de er tomme,
 // slik at et navn du har gitt selv ikke byttes ut av e-posten.
-export function upsertShipment({ trackingNo, carrier, name = '', shop = '', source = 'manual', sourceRef = null, sourceNote = '', direction = 'in', status, eta = null, pickupPoint = null }) {
+export function upsertShipment({ trackingNo, carrier, name = '', shop = '', shopDomain = '', source = 'manual', sourceRef = null, sourceNote = '', direction = 'in', status, eta = null, pickupPoint = null }) {
   const no = normNo(trackingNo);
   if (no.length < 6 || no.length > 40) throw new Error('Ugyldig sporingsnummer');
   const car = CARRIER[carrier] ? carrier : detect(no);
   const ex = q('SELECT * FROM hl_shipments WHERE tracking_no=?').get(no);
   if (ex) {
     q(`UPDATE hl_shipments SET name=CASE WHEN name='' THEN ? ELSE name END, shop=CASE WHEN shop='' THEN ? ELSE shop END,
+       shop_domain=CASE WHEN shop_domain='' THEN ? ELSE shop_domain END,
        source_ref=COALESCE(source_ref, ?), source_note=CASE WHEN source_note='' THEN ? ELSE source_note END, updated_at=? WHERE id=?`)
-      .run(str(name, 120), str(shop, 80), sourceRef, str(sourceNote, 200), now(), ex.id);
+      .run(str(name, 120), str(shop, 80), str(shopDomain, 120), sourceRef, str(sourceNote, 200), now(), ex.id);
     // En kilde som vet at pakken er kommet lenger (Finn-handelen, e-post «Pakken er levert») flytter statusen fremover, aldri bakover.
     if (status && promote(ex, status, source === 'finn' ? 'Oppdatert fra Finn-handelen' : source === 'email' ? 'Oppdatert fra e-post' : '')) return { shipment: byId(ex.id), created: false, promoted: true };
     return { shipment: byId(ex.id), created: false };
   }
-  const r = q(`INSERT INTO hl_shipments(tracking_no,carrier,name,shop,source,source_ref,source_note,direction,status,eta,pickup_point,updated_at,created_at)
-    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING *`).get(no, car, str(name, 120), str(shop, 80), source, sourceRef, str(sourceNote, 200), direction === 'out' ? 'out' : 'in',
+  const r = q(`INSERT INTO hl_shipments(tracking_no,carrier,name,shop,shop_domain,source,source_ref,source_note,direction,status,eta,pickup_point,updated_at,created_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING *`).get(no, car, str(name, 120), str(shop, 80), str(shopDomain || shopDomainFor(shop, ''), 120), source, sourceRef, str(sourceNote, 200), direction === 'out' ? 'out' : 'in',
     status && STATUS_TEXT[status] ? status : 'registered', eta, pickupPoint, now(), now());
   addEvent(r.id, now(), source === 'manual' ? 'Lagt til i Sporing' : source === 'finn' ? 'Funnet i Finn-handel' : 'Funnet i e-post', '');
   if (source !== 'manual') notify('found', `Nytt sporingsnummer: ${r.name || r.tracking_no} (${(CARRIER[car] ?? CARRIER.other).name})`, r.id);
@@ -123,6 +180,8 @@ const addEvent = (id, ts, status, location, raw = null) => insEvent.run(id, ts, 
 // Ny status fra transportøren: lagre hendelser, og varsle hvis statusen har endret seg.
 function applyResult(r, res) {
   for (const e of res.events ?? []) addEvent(r.id, e.ts, e.status, e.location);
+  // Butikk fra ParcelsApp fyller bare tomme felt.
+  if (res.shop || res.shopDomain) q("UPDATE hl_shipments SET shop=CASE WHEN shop='' THEN ? ELSE shop END, shop_domain=CASE WHEN shop_domain='' THEN ? ELSE shop_domain END WHERE id=?").run(str(res.shop ?? '', 80), str(res.shopDomain || shopDomainFor(res.shop, ''), 120), r.id);
   const status = res.status && res.status !== 'unknown' ? res.status : r.status;
   q('UPDATE hl_shipments SET status=?, eta=COALESCE(?, eta), pickup_point=COALESCE(?, pickup_point), last_error=NULL, checked_at=?, updated_at=CASE WHEN status<>? THEN ? ELSE updated_at END WHERE id=?')
     .run(status, res.eta ?? null, res.pickupPoint ?? null, now(), status, now(), r.id);
@@ -169,6 +228,7 @@ export async function fromMail(parsed) {
   }
   if (!nos.length) return 0;
   if (POSTAL.test(shop)) shop = '';
+  const shopDomain = shop ? domainOf(parsed.from?.value?.[0]?.address) : '';
   const date = parsed.date ? new Date(parsed.date).toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit' }) : '';
   // Emnet sier ofte hvor pakken er («Pakken din er levert», «Klar for henting»). Brødteksten er for full av ord som «levering».
   const st = normStatus(parsed.subject ?? '');
@@ -176,7 +236,7 @@ export async function fromMail(parsed) {
   let n = 0;
   for (const no of nos) {
     const name = item || (shop ? `${shop}` : '');
-    const { created } = upsertShipment({ trackingNo: no, name, shop, source: 'email', sourceRef: parsed.messageId ?? null, status,
+    const { created } = upsertShipment({ trackingNo: no, name, shop, shopDomain, source: 'email', sourceRef: parsed.messageId ?? null, status,
       sourceNote: `Funnet i e-post${shop ? ` fra ${shop}` : ''}${date ? `, ${date}` : ''}` });
     if (created) n++;
   }
@@ -197,7 +257,7 @@ export function syncFinn() {
       try { emails = q('SELECT subject, body FROM fh_finn_emails WHERE finn_id=?').all(f.id); } catch { /* eldre database */ }
       const stage = stageOf(f, emails);
       const status = stage >= 3 ? 'delivered' : stage === 2 ? 'in_transit' : undefined;
-      const { created } = upsertShipment({ trackingNo: f.tracking, name: f.item, shop: 'Finn', source: 'finn', sourceRef: String(f.id), direction: sold ? 'out' : 'in', status,
+      const { created } = upsertShipment({ trackingNo: f.tracking, name: f.item, shop: 'Finn', shopDomain: 'finn.no', source: 'finn', sourceRef: String(f.id), direction: sold ? 'out' : 'in', status,
         sourceNote: `${sold ? 'Solgt til' : 'Kjøpt fra'} ${f.counterpart?.replace(/^(selger|kjøper)\s+/i, '') || 'motpart'} på Finn · Fiks ferdig` });
       if (created) n++;
     } catch { /* ugyldig nummer */ }
@@ -246,10 +306,13 @@ export function activeShipments(limit = 3) {
   return q(`SELECT * FROM hl_shipments WHERE archived=0 AND status<>'delivered' ORDER BY updated_at DESC`).all().map(view)
     .sort((a, b) => rank(a) - rank(b) || b.step - a.step).slice(0, limit);
 }
-const brief = (s) => ({ id: s.id, trackingNo: s.trackingNo, name: s.name, carrier: s.carrier, carrierName: s.carrierName, carrierIni: s.carrierIni, carrierColor: s.carrierColor, carrierFg: s.carrierFg,
+const activeCount = () => q("SELECT COUNT(*) n FROM hl_shipments WHERE archived=0 AND status<>'delivered'").get().n;
+// moreCount: antall andre aktive pakker («+12 pakker ›»), dvs. alle aktive minus denne.
+const brief = (s, total) => ({ id: s.id, trackingNo: s.trackingNo, name: s.name, title: s.title, shop: s.shop, shopDomain: s.shopDomain, logo: s.logo,
+  moreCount: Math.max(0, (total ?? 1) - 1), activeCount: total ?? null, carrier: s.carrier, carrierName: s.carrierName, carrierIni: s.carrierIni, carrierColor: s.carrierColor, carrierFg: s.carrierFg,
   status: s.status, statusText: s.statusText, step: s.step, eta: s.eta, pickupPoint: s.pickupPoint, direction: s.direction, carrierLogo: s.carrierLogo });
 export function packagesFor(limit = 2) {
-  try { return activeShipments(limit).map(brief); } catch { return []; }
+  try { const n = activeCount(); return activeShipments(limit).map((s) => brief(s, n)); } catch { return []; }
 }
 
 /* ---------------- Integrasjonstest ---------------- */
@@ -280,11 +343,12 @@ const listOut = (uid = OWNER, archived = 'all') => {
     counts: { active: all.filter((s) => !s.archived && s.status !== 'delivered').length, pickup: all.filter((s) => !s.archived && s.status === 'ready_for_pickup' && s.direction === 'in').length,
       delivered: all.filter((s) => s.archived || s.status === 'delivered').length, archived: all.filter((s) => s.archived).length },
     parcelsapp: parcelsappUsage(),
+    moreCount: Math.max(0, all.filter((s) => !s.archived && s.status !== 'delivered').length - 1),
   };
 };
 
 api.get('/', (c) => c.json(listOut(uidOf(c), ['0', '1'].includes(c.req.query('archived')) ? c.req.query('archived') : 'all')));
-api.get('/widget', (c) => c.json({ items: activeShipments(3).map(brief), count: listOut().counts }));
+api.get('/widget', (c) => { const n = activeCount(); return c.json({ items: activeShipments(3).map((s) => brief(s, n)), moreCount: Math.max(0, n - 1), count: listOut().counts }); });
 api.get('/detect', (c) => { const no = normNo(c.req.query('no')); const id = no ? detect(no) : 'other'; return c.json({ carrier: id, name: CARRIER[id].name, configured: isConfigured(id) }); });
 
 api.post('/', async (c) => {
@@ -383,6 +447,7 @@ function seedMock() {
     ['JJD000390007882034', 'dhl', 'Zalando · jakke', 'Zalando', 'email', 'Funnet i e-post fra Zalando', 'in', 'in_transit', etaIn(3), null, [['Avsender: Tyskland', 2], ['Mottatt av DHL i Leipzig', 1], ['Ankommet terminal Oslo', 0]]],
     ['LP005123456789012', 'posten', 'AliExpress · USB-C-kabler', 'AliExpress', 'email', 'Funnet i e-post fra AliExpress', 'in', 'in_transit', etaIn(6), null, [['Avsender: Kina', 11], ['Mottatt av Posten i Oslo', 2]]],
     ['HH40211873', 'helthjem', 'Elkjøp · støvsuger', 'Elkjøp', 'email', 'Funnet i e-post fra Elkjøp', 'in', 'delivered', etaIn(-2), null, [['Avsender: Jessheim', 5], ['I transport', 4], ['Ute for levering', 2], ['Levert', 2]]],
+    ['70712345678901234', 'bring', '', '', 'email', 'Funnet i e-post', 'in', 'registered', etaIn(4), null, [['Avsender: Oslo', 0]]],
     ['1Z999AA10123456784', 'ups', 'Apple · AirPods', 'Apple', 'email', 'Funnet i e-post fra Apple', 'in', 'delivered', etaIn(-6), null, [['Avsender: Nederland', 9], ['I transport', 7], ['Levert', 6]]],
   ];
   for (const [no, car, name, shop, src, note, dir, status, eta, pick, evs] of seed) {

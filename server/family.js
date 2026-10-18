@@ -4,7 +4,7 @@
 // Posisjoner beholdes i 7 dager, helse i 30. Alle ruter godtar sesjon eller app-token.
 import { Hono } from 'hono';
 import { readFile } from 'node:fs/promises';
-import { db, kv } from './db.js';
+import { db, kv, OWNER } from './db.js';
 import { userInfo, listUsers, sessionUser } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { broadcast } from './realtime.js';
@@ -41,6 +41,9 @@ CREATE TABLE IF NOT EXISTS family_health (
 
 // Prompt 17: enhetsnavn («iPhone 15») per posisjon.
 if (!db.prepare('PRAGMA table_info(family_pos)').all().some((c) => c.name === 'device')) db.exec('ALTER TABLE family_pos ADD COLUMN device TEXT');
+// Prompt 21: soner tilhører den som lagde dem og er private til eieren deler dem med familien (shared=1).
+if (!db.prepare('PRAGMA table_info(family_zone)').all().some((c) => c.name === 'shared')) db.exec('ALTER TABLE family_zone ADD COLUMN shared INTEGER NOT NULL DEFAULT 0');
+db.prepare('UPDATE family_zone SET created_by=? WHERE created_by IS NULL').run(OWNER);
 
 const q = (sql) => db.prepare(sql);
 const HEALTH_KEYS = ['steps', 'restingHr', 'hr', 'sleep', 'activeKcal', 'week'];
@@ -49,7 +52,25 @@ const COLOR = /^#[0-9a-f]{6}$/i;
 
 /* ---------------- Innstillinger per bruker ---------------- */
 
-const DEF_PREFS = { sharing: 'on', precision: 'exact', shareHealth: { steps: true, restingHr: true, hr: false, sleep: true, activeKcal: true, week: true } };
+// Prompt 21: deling er av som standard, og ingen helsetyper deles før brukeren selv slår dem på.
+const DEF_PREFS = { sharing: 'off', precision: 'exact', shareHealth: { steps: false, restingHr: false, hr: false, sleep: false, activeKcal: false, week: false } };
+// Før prompt 21 var standarden «på» med de fleste helsetypene delt, og PUT /me lagret hele objektet (også standardverdiene)
+// selv når brukeren bare byttet farge. Lagret «on» og helsetyper lik den gamle standarden kan derfor ikke skilles fra en kopi
+// av standarden, og settes til av (én gang). Eksplisitte valg som avviker fra den gamle standarden (pause, av, omtrentlig,
+// puls delt, helsetyper slått av) beholdes.
+const OLD_DEF = { sharing: 'on', shareHealth: { steps: true, restingHr: true, hr: false, sleep: true, activeKcal: true, week: true } };
+if (!kv.get(OWNER, 'family_prefs_v21', false)) {
+  db.transaction(() => {
+    for (const row of db.prepare("SELECT user, value FROM kv WHERE key='family_prefs'").all()) {
+      let p; try { p = JSON.parse(row.value) ?? {}; } catch { continue; }
+      const next = { ...p };
+      if (next.sharing === OLD_DEF.sharing || next.sharing == null) next.sharing = 'off';
+      next.shareHealth = Object.fromEntries(Object.entries(p.shareHealth ?? {}).filter(([k, v]) => typeof v === 'boolean' && v !== OLD_DEF.shareHealth[k]).map(([k, v]) => [k, v]));
+      kv.set(row.user, 'family_prefs', next);
+    }
+    kv.set(OWNER, 'family_prefs_v21', Date.now());
+  })();
+}
 export function prefsOf(id) {
   const p = kv.get(id, 'family_prefs', {}) ?? {};
   return {
@@ -106,10 +127,23 @@ function cleanPoint(p, now = Date.now()) {
 }
 
 const zones = () => q('SELECT * FROM family_zone ORDER BY id').all();
+// Soner en person ser: egne og dem andre har delt med familien.
+const zonesFor = (viewer) => q('SELECT * FROM family_zone WHERE created_by=? OR shared=1 ORDER BY id').all(viewer);
+const zoneVisible = (z, viewer) => !!z && (z.created_by === viewer || !!z.shared);
 const zoneOut = (z, viewer) => {
   const n = q('SELECT target, enter, leave FROM family_notify WHERE zone_id=? AND viewer=?').all(z.id, viewer);
-  return { id: z.id, name: z.name, lat: z.lat, lon: z.lon, radius: z.radius, color: z.color, createdBy: z.created_by, notify: Object.fromEntries(n.map((x) => [x.target, { enter: !!x.enter, leave: !!x.leave }])) };
+  return { id: z.id, name: z.name, lat: z.lat, lon: z.lon, radius: z.radius, color: z.color, createdBy: z.created_by, mine: z.created_by === viewer, shared: !!z.shared,
+    notify: Object.fromEntries(n.map((x) => [x.target, { enter: !!x.enter, leave: !!x.leave }]).filter(([t]) => t === viewer || canSee(viewer, t))) };
 };
+// Deler personen posisjon med deg? «on» gjelder hele familien; en selv ser alltid seg selv.
+function canSee(viewer, id) {
+  if (id === viewer) return true;
+  const m = MOCK && MOCKS.find((x) => x.id === id);
+  if (m) return m.sharing === 'on';
+  return !!userInfo(id) && prefsOf(id).sharing === 'on';
+}
+// En hendelse vises bare når personen deler med deg (eller er deg), og sonen er synlig for deg.
+const eventVisible = (e, viewer) => canSee(viewer, e.user) && (MOCK && MOCKS.some((m) => m.id === e.user) ? true : zoneVisible(q('SELECT * FROM family_zone WHERE id=?').get(e.zone_id), viewer));
 const eventOut = (e) => ({ id: e.id, userId: e.user, name: userInfo(e.user)?.displayName ?? mockName(e.user) ?? e.user, zoneId: e.zone_id, zone: e.zone_name, kind: e.kind, ts: e.ts });
 
 // Inn/ut av soner: sammenligner med forrige tilstand og lagrer en hendelse ved endring. Litt hysterese
@@ -132,11 +166,12 @@ function zoneEvents(user, p) {
 // Sanntid (WebSocket): de andre får vite at personen har flyttet seg (uten koordinater, de hentes med GET /api/family
 // og følger personvernet der). Hendelser går bare til seere som har varsel på for den sonen og personen.
 function notifyLive(user, events) {
-  const others = listUsers().map((u) => u.id).filter((id) => id !== user);
+  const others = listUsers().map((u) => u.id).filter((id) => id !== user && canSee(id, user));
   if (others.length) broadcast('family', { kind: 'location', userId: user }, others);
   for (const e of events) {
+    const z = q('SELECT * FROM family_zone WHERE id=?').get(e.zoneId);
     const viewers = q(`SELECT viewer FROM family_notify WHERE zone_id=? AND target=? AND viewer != ? AND ${e.kind === 'enter' ? 'enter' : 'leave'}=1`)
-      .all(e.zoneId, user, user).map((r) => r.viewer);
+      .all(e.zoneId, user, user).map((r) => r.viewer).filter((v) => zoneVisible(z, v) && canSee(v, user));
     if (viewers.length) broadcast('family', { kind: 'event', event: e }, viewers);
   }
 }
@@ -154,9 +189,9 @@ function prune() {
 /* ---------------- Utdata med personvern ---------------- */
 
 const lastPos = (user) => q('SELECT * FROM family_pos WHERE user=? ORDER BY ts DESC LIMIT 1').get(user);
-function posOut(r, exact) {
+function posOut(r, exact, viewer) {
   if (!r) return null;
-  const inZone = zones().find((z) => dist(r, z) <= z.radius);
+  const inZone = (viewer ? zonesFor(viewer) : []).find((z) => dist(r, z) <= z.radius);
   const base = { ts: r.ts, battery: r.battery, charging: r.charging == null ? null : !!r.charging, activity: r.activity, place: inZone?.name ?? null, device: r.device ?? null };
   if (exact) return { ...base, lat: r.lat, lon: r.lon, acc: r.acc, speed: r.speed, heading: r.heading, alt: r.alt };
   return { ...base, lat: rough(r.lat), lon: rough(r.lon), acc: Math.max(r.acc ?? 0, 1000), speed: null, heading: null, alt: null, approx: true };
@@ -173,17 +208,22 @@ function healthOut(user, share) {
   return { today: pick(rows[0]), week: share.week ? rows.slice().reverse().map(pick) : [], updatedAt: Math.max(...rows.map((r) => r.updated)) };
 }
 
+// Helse for andre: bare når personen deler med familien (sharing «on») og har slått på minst én helsetype selv.
+// Aldri når deling er av eller på pause.
 function memberOut(u, viewer) {
   const self = u.id === viewer, pr = prefsOf(u.id);
   const visible = self || pr.sharing === 'on';
   const share = self ? Object.fromEntries(HEALTH_KEYS.map((k) => [k, true])) : pr.shareHealth;
+  const healthOn = self || (pr.sharing === 'on' && HEALTH_KEYS.some((k) => k !== 'week' && share[k]));
   return {
     userId: u.id, name: u.displayName ?? u.name, username: u.username, avatarUrl: u.avatarUrl ?? null, self, color: colorOf(u.id),
     sharing: pr.sharing, precision: pr.precision,
-    last: visible ? posOut(lastPos(u.id), self || pr.precision === 'exact') : null,
-    health: healthOut(u.id, share),
+    last: visible ? posOut(lastPos(u.id), self || pr.precision === 'exact', viewer) : null,
+    health: healthOn ? healthOut(u.id, share) : null,
   };
 }
+// Personene du ser i Familie: deg selv og dem som deler med deg (sharing «on»).
+const visibleUsers = (viewer) => listUsers().filter((u) => u.id === viewer || prefsOf(u.id).sharing === 'on');
 
 /* ---------------- Mockdata (MOCK_DATA=1) ---------------- */
 // Tre familiemedlemmer som beveger seg rundt i Oslo, så kart, spor, soner og hendelser kan vises uten telefoner.
@@ -208,7 +248,7 @@ function mockMember(m, viewer) {
   const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(now - (6 - i) * DAY).toISOString().slice(0, 10); return { date: d, steps: 4200 + ((i * 1777 + m.id.length * 991) % 7400), sleepMin: 380 + ((i * 37) % 90), activeKcal: 260 + ((i * 53) % 340), restingHr: 56 + (i % 5) }; });
   return {
     userId: m.id, name: m.name, username: m.username, avatarUrl: null, self: false, color: m.color, sharing: m.sharing, precision: m.precision, mock: true,
-    last: m.sharing === 'on' ? posOut(raw, m.precision === 'exact') : null,
+    last: m.sharing === 'on' ? posOut(raw, m.precision === 'exact', viewer) : null,
     health: { today: { ...days[6], hr: 72 }, week: days, updatedAt: now - 9 * 60_000 },
   };
 }
@@ -220,13 +260,13 @@ function mockTrack(m, hours) {
 function seedMock(viewer) {
   if (!MOCK || kv.get(viewer, 'family_mock_seeded')) return;
   kv.set(viewer, 'family_mock_seeded', true);
-  if (!zones().length) {
-    const ins = q('INSERT INTO family_zone(name, lat, lon, radius, color, created_by, created) VALUES(?,?,?,?,?,?,?)');
+  if (!zonesFor(viewer).length) {
+    const ins = q('INSERT INTO family_zone(name, lat, lon, radius, color, created_by, created, shared) VALUES(?,?,?,?,?,?,?,1)');
     ins.run('Hjem', 59.9275, 10.7160, 150, '#2f7a4f', viewer, Date.now());
     ins.run('Jobb', 59.9110, 10.7610, 200, '#b23a2a', viewer, Date.now());
     ins.run('Skole', 59.9395, 10.7310, 180, '#2f5d8a', viewer, Date.now());
   }
-  const z = zones(), now = Date.now();
+  const z = zonesFor(viewer), now = Date.now();
   const ev = q('INSERT INTO family_event(user, zone_id, zone_name, kind, ts) VALUES(?,?,?,?,?)');
   ev.run('mock-ingrid', z[0].id, z[0].name, 'leave', now - 95 * 60_000);
   ev.run('mock-jonas', z[2].id, z[2].name, 'enter', now - 70 * 60_000);
@@ -332,8 +372,8 @@ export async function positions(me) {
   const seen = new Set([me]);
   const self = userInfo(me);
   const list = self ? [memberOut(self, me)] : [];
-  for (const u of listUsers()) { if (seen.has(u.id)) continue; seen.add(u.id); list.push(memberOut(u, me)); }
-  if (MOCK) for (const m of MOCKS) if (!seen.has(m.id)) { seen.add(m.id); list.push(mockMember(m, me)); }
+  for (const u of visibleUsers(me)) { if (seen.has(u.id)) continue; seen.add(u.id); list.push(memberOut(u, me)); }
+  if (MOCK) for (const m of MOCKS) if (!seen.has(m.id) && m.sharing === 'on') { seen.add(m.id); list.push(mockMember(m, me)); }
   return Promise.all(list.map((m) => positionRow(m)));
 }
 
@@ -352,6 +392,8 @@ api.use('*', async (c, next) => {
 const bad = (c, msg, status = 400) => c.json({ error: msg }, status);
 const body = (c) => c.req.json().catch(() => ({}));
 const isMember = (id) => !!userInfo(id) || (MOCK && MOCKS.some((m) => m.id === id));
+// Ukjent eller ikke synlig gir samme svar, så man ikke kan finne ut hvem som finnes ved å prøve.
+const notVisible = (c) => c.json({ error: 'Ukjent person' }, 404);
 
 // Leaflet leveres fra egen server (ingen CDN, CSP tillater bare 'self' for skript).
 const VENDOR = { 'leaflet.js': ['leaflet/dist/leaflet.js', 'text/javascript'], 'leaflet.css': ['leaflet/dist/leaflet.css', 'text/css'] };
@@ -365,7 +407,7 @@ api.post('/location', async (c) => {
   const me = c.get('user'), b = await body(c), pr = prefsOf(me);
   const pts = (Array.isArray(b.points) ? b.points : [b]).slice(0, 500).map((p) => cleanPoint(p)).filter(Boolean).sort((a, b) => a.ts - b.ts);
   if (!pts.length) return bad(c, 'Ugyldig posisjon (lat/lon mangler eller er utenfor gyldig område)');
-  // Pause eller av: ingenting lagres, og ingen hendelser lages.
+  // Pause eller av (standard): ingenting lagres, og ingen hendelser lages.
   if (pr.sharing !== 'on') return c.json({ ok: true, stored: 0, sharing: pr.sharing, events: [] });
   const ins = q('INSERT INTO family_pos(user, ts, lat, lon, acc, speed, heading, alt, battery, charging, activity, device) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)');
   const events = [];
@@ -377,7 +419,7 @@ api.post('/location', async (c) => {
   })();
   prune();
   notifyLive(me, events);
-  return c.json({ ok: true, stored: pts.length, sharing: pr.sharing, events });
+  return c.json({ ok: true, stored: pts.length, sharing: pr.sharing, events: events.filter((e) => zoneVisible(q('SELECT * FROM family_zone WHERE id=?').get(e.zoneId), me)) });
 });
 
 // «Spill av lyd»: ber den andres telefon om å spille en lyd (sanntid på /api/ws, bare til den personen).
@@ -385,6 +427,9 @@ api.post('/ping/:userId', (c) => {
   const me = c.get('user'), to = c.req.param('userId');
   if (!isMember(to)) return bad(c, 'Ukjent person', 404);
   if (to === me) return bad(c, 'Du kan ikke pinge deg selv');
+  // Bare mellom personer som deler: den andre må dele med deg, og du må dele selv.
+  if (!canSee(me, to)) return notVisible(c);
+  if (prefsOf(me).sharing !== 'on') return c.json({ error: 'Slå på deling av posisjon for å spille av lyd på andres telefon', code: 'sharing_off' }, 403);
   const reached = broadcast('family', { kind: 'ping', from: me, fromName: userInfo(me)?.displayName ?? me, to }, [to]);
   return c.json({ ok: true, delivered: reached > 0 });
 });
@@ -392,16 +437,17 @@ api.post('/ping/:userId', (c) => {
 api.get('/', (c) => {
   const me = c.get('user');
   seedMock(me);
-  const members = listUsers().map((u) => memberOut(u, me));
-  if (MOCK) members.push(...MOCKS.map((m) => mockMember(m, me)));
-  const events = q('SELECT * FROM family_event ORDER BY ts DESC LIMIT 30').all().filter((e) => isMember(e.user)).map(eventOut);
-  return c.json({ me: { userId: me, ...prefsOf(me), color: colorOf(me) }, members, zones: zones().map((z) => zoneOut(z, me)), events, updatedAt: Date.now() });
+  const members = visibleUsers(me).map((u) => memberOut(u, me));
+  if (MOCK) members.push(...MOCKS.filter((m) => m.sharing === 'on').map((m) => mockMember(m, me)));
+  const events = q('SELECT * FROM family_event ORDER BY ts DESC LIMIT 300').all().filter((e) => isMember(e.user) && eventVisible(e, me)).slice(0, 30).map(eventOut);
+  return c.json({ me: { userId: me, ...prefsOf(me), color: colorOf(me) }, members, zones: zonesFor(me).map((z) => zoneOut(z, me)), events, updatedAt: Date.now() });
 });
 
 api.get('/track/:userId', (c) => {
   const me = c.get('user'), id = c.req.param('userId');
   const hours = Math.min(168, Math.max(1, Number(c.req.query('hours')) || 24));
   if (!isMember(id)) return c.json({ error: 'Ukjent person' }, 404);
+  if (!canSee(me, id)) return c.json({ userId: id, sharing: 'off', points: [] });
   const m = MOCK && MOCKS.find((x) => x.id === id);
   const pr = m ? { sharing: m.sharing, precision: m.precision } : prefsOf(id);
   const self = id === me;
@@ -428,8 +474,10 @@ api.put('/me', async (c) => {
   kv.set(me, 'family_prefs', next);
   // «Av»: slett lagrede posisjoner, så ingenting ligger igjen.
   if (next.sharing === 'off' && cur.sharing !== 'off') { q('DELETE FROM family_pos WHERE user=?').run(me); q('DELETE FROM family_inside WHERE user=?').run(me); }
-  if (next.sharing !== cur.sharing || next.precision !== cur.precision) broadcast('family', { kind: 'sharing', userId: me, sharing: next.sharing });
-  if (b.color !== undefined) broadcast('family', { kind: 'color', userId: me, color: colorOf(me) });
+  // Sanntid bare til dem som hadde eller får tilgang (deling «on» før eller etter endringen).
+  const others = listUsers().map((u) => u.id).filter((id) => id !== me);
+  if ((next.sharing !== cur.sharing || next.precision !== cur.precision) && (next.sharing === 'on' || cur.sharing === 'on')) broadcast('family', { kind: 'sharing', userId: me, sharing: next.sharing }, others);
+  if (b.color !== undefined && next.sharing === 'on') broadcast('family', { kind: 'color', userId: me, color: colorOf(me) }, others);
   return c.json({ me: { userId: me, ...prefsOf(me), color: colorOf(me) } });
 });
 
@@ -440,35 +488,43 @@ function zoneInput(b, partial = false) {
   if (b.lon !== undefined || !partial) { const v = num(b.lon, -180, 180); if (v == null) return 'Ugyldig lengdegrad'; z.lon = v; }
   if (b.radius !== undefined || !partial) { const v = num(Number(b.radius ?? 150), 25, 20_000); if (v == null) return 'Radius må være mellom 25 m og 20 km'; z.radius = Math.round(v); }
   if (b.color !== undefined || !partial) { const v = String(b.color ?? '#b23a2a'); if (!COLOR.test(v)) return 'Ugyldig farge'; z.color = v; }
+  if (b.shared !== undefined || !partial) z.shared = b.shared === true || b.shared === 1 ? 1 : 0; // «Del med familien», av som standard
   return z;
 }
 
 api.post('/zones', async (c) => {
   const z = zoneInput(await body(c));
   if (typeof z === 'string') return bad(c, z);
-  const r = q('INSERT INTO family_zone(name, lat, lon, radius, color, created_by, created) VALUES(?,?,?,?,?,?,?) RETURNING *').get(z.name, z.lat, z.lon, z.radius, z.color, c.get('user'), Date.now());
+  const r = q('INSERT INTO family_zone(name, lat, lon, radius, color, created_by, created, shared) VALUES(?,?,?,?,?,?,?,?) RETURNING *').get(z.name, z.lat, z.lon, z.radius, z.color, c.get('user'), Date.now(), z.shared);
   return c.json(zoneOut(r, c.get('user')), 201);
 });
-api.patch('/zones/:id', async (c) => {
+// Sonen må være synlig (ellers 404) og din egen for å endres eller slettes (ellers 403).
+function ownZone(c) {
   const id = Number(c.req.param('id')), cur = q('SELECT * FROM family_zone WHERE id=?').get(id);
-  if (!cur) return c.json({ error: 'Fant ikke sonen' }, 404);
+  if (!zoneVisible(cur, c.get('user'))) return { err: c.json({ error: 'Fant ikke sonen' }, 404) };
+  if (cur.created_by !== c.get('user')) return { err: c.json({ error: 'Bare den som lagde sonen kan endre eller slette den', code: 'not_owner' }, 403) };
+  return { id, cur };
+}
+api.patch('/zones/:id', async (c) => {
+  const { id, cur, err } = ownZone(c); if (err) return err;
   const z = zoneInput(await body(c), true);
   if (typeof z === 'string') return bad(c, z);
   const n = { ...cur, ...z };
-  q('UPDATE family_zone SET name=?, lat=?, lon=?, radius=?, color=? WHERE id=?').run(n.name, n.lat, n.lon, n.radius, n.color, id);
+  q('UPDATE family_zone SET name=?, lat=?, lon=?, radius=?, color=?, shared=? WHERE id=?').run(n.name, n.lat, n.lon, n.radius, n.color, n.shared ? 1 : 0, id);
   if (z.lat != null || z.lon != null || z.radius != null) q('DELETE FROM family_inside WHERE zone_id=?').run(id); // ny form: start på nytt
+  // Ikke delt lenger: andres varsler for sonen fjernes.
+  if (cur.shared && !n.shared) q('DELETE FROM family_notify WHERE zone_id=? AND viewer<>?').run(id, cur.created_by);
   return c.json(zoneOut(q('SELECT * FROM family_zone WHERE id=?').get(id), c.get('user')));
 });
 api.delete('/zones/:id', (c) => {
-  const id = Number(c.req.param('id'));
-  if (!q('SELECT 1 FROM family_zone WHERE id=?').get(id)) return c.json({ error: 'Fant ikke sonen' }, 404);
+  const { id, err } = ownZone(c); if (err) return err;
   db.transaction(() => { for (const t of ['family_notify', 'family_inside']) q(`DELETE FROM ${t} WHERE zone_id=?`).run(id); q('DELETE FROM family_zone WHERE id=?').run(id); })();
   return c.json({ ok: true });
 });
 api.put('/zones/:id/notify', async (c) => {
   const id = Number(c.req.param('id')), b = await body(c);
-  if (!q('SELECT 1 FROM family_zone WHERE id=?').get(id)) return c.json({ error: 'Fant ikke sonen' }, 404);
-  if (!isMember(String(b.userId ?? ''))) return bad(c, 'Ukjent person');
+  if (!zoneVisible(q('SELECT * FROM family_zone WHERE id=?').get(id), c.get('user'))) return c.json({ error: 'Fant ikke sonen' }, 404);
+  if (!isMember(String(b.userId ?? '')) || !canSee(c.get('user'), String(b.userId))) return bad(c, 'Ukjent person');
   q(`INSERT INTO family_notify(zone_id, viewer, target, enter, leave) VALUES(?,?,?,?,?)
      ON CONFLICT(zone_id, viewer, target) DO UPDATE SET enter=excluded.enter, leave=excluded.leave`).run(id, c.get('user'), String(b.userId), b.enter ? 1 : 0, b.leave ? 1 : 0);
   return c.json(zoneOut(q('SELECT * FROM family_zone WHERE id=?').get(id), c.get('user')));
@@ -516,8 +572,8 @@ api.get('/positions', async (c) => {
 api.get('/events', (c) => {
   const me = c.get('user'), since = Number(c.req.query('since')) || Date.now() - DAY;
   const rows = q(`SELECT e.* FROM family_event e JOIN family_notify n ON n.zone_id=e.zone_id AND n.target=e.user AND n.viewer=?
-    WHERE e.ts > ? AND e.user != ? AND ((e.kind='enter' AND n.enter=1) OR (e.kind='leave' AND n.leave=1)) ORDER BY e.ts LIMIT 100`).all(me, since, me);
-  return c.json({ events: rows.map(eventOut), now: Date.now() });
+    WHERE e.ts > ? AND e.user != ? AND ((e.kind='enter' AND n.enter=1) OR (e.kind='leave' AND n.leave=1)) ORDER BY e.ts LIMIT 300`).all(me, since, me);
+  return c.json({ events: rows.filter((e) => eventVisible(e, me)).slice(0, 100).map(eventOut), now: Date.now() });
 });
 
 export default api;

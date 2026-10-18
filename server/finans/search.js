@@ -27,7 +27,8 @@ function docs() {
   const tx = q(`SELECT t.id, t.date, t.amount, t.description, t.merchant, t.note, t.ai_short, t.ai_long, c.name AS category, a.name AS account
     FROM fh_transactions t LEFT JOIN fh_categories c ON c.id=t.category_id LEFT JOIN fh_accounts a ON a.id=t.account_id`).all();
   for (const t of tx) out.push(['tx', String(t.id), [t.description, t.merchant !== t.description ? t.merchant : '', t.category, t.account, t.note, t.ai_short, t.ai_long].filter(Boolean).join(' · ')]);
-  for (const r of q("SELECT id, merchant, date, total, extraction, ai_short, ai_long FROM fh_receipts WHERE status NOT IN ('rejected')").all()) {
+  // Prompt 21: kvitteringer vanlige brukere har lastet opp til en bolig, er ikke en del av regnskapet og søkes ikke i.
+  for (const r of q("SELECT id, merchant, date, total, extraction, ai_short, ai_long FROM fh_receipts WHERE status NOT IN ('rejected') AND (uploaded_by IS NULL OR uploaded_by IN (SELECT id FROM users WHERE role='admin'))").all()) {
     let lines = [];
     try { lines = JSON.parse(r.extraction ?? 'null')?.lines ?? []; } catch { /* ugyldig */ }
     out.push(['rc', r.id, [r.merchant, r.ai_short, r.ai_long, lines.map((l) => l.description).join(', ')].filter(Boolean).join(' · ')]);
@@ -145,7 +146,7 @@ function hydrate(kind, ref) {
     return t && { type: 'tx', id: String(t.id), txId: t.id, description: t.merchant || t.description, date: t.date, amount: t.amount / 100, source: 'Transaksjon', category: t.category ?? 'Ukategorisert', color: t.color ?? '#A0A0AA', transfer: t.ckind === 'transfer' };
   }
   const [id, li] = ref.split(':');
-  const r = q('SELECT * FROM fh_receipts WHERE id=?').get(id);
+  const r = q(`SELECT * FROM fh_receipts WHERE id=? AND (uploaded_by IS NULL OR uploaded_by IN (SELECT id FROM users WHERE role='admin'))`).get(id);
   if (!r) return null;
   let lines = [];
   try { lines = JSON.parse(r.extraction ?? 'null')?.lines ?? []; } catch { /* ugyldig */ }
@@ -314,7 +315,7 @@ export function interpret(text, now = new Date()) {
 
 const txRows = () => q(`SELECT t.id, t.date, t.amount, t.description, t.merchant, t.note, t.ai_short, c.name AS category, c.kind AS ckind, c.color
   FROM fh_transactions t LEFT JOIN fh_categories c ON c.id=t.category_id`).all();
-const receiptRows = () => q("SELECT id, merchant, date, total, status, extraction, transaction_id FROM fh_receipts WHERE status NOT IN ('rejected')").all().map((r) => {
+const receiptRows = () => q("SELECT id, merchant, date, total, status, extraction, transaction_id FROM fh_receipts WHERE status NOT IN ('rejected') AND (uploaded_by IS NULL OR uploaded_by IN (SELECT id FROM users WHERE role='admin'))").all().map((r) => {
   let lines = [];
   try { lines = JSON.parse(r.extraction ?? 'null')?.lines ?? []; } catch { /* ugyldig */ }
   return { ...r, lines: lines.filter((l) => l?.description) };
@@ -457,7 +458,7 @@ export function suggestionGroups(now = new Date()) {
     if (w) freq.set(w, (freq.get(w) ?? 0) + 1);
   }
   const items = [...freq].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([w]) => w);
-  const review = q("SELECT count(*) FROM fh_receipts WHERE status='needs_review'").pluck().get();
+  const review = q("SELECT count(*) FROM fh_receipts WHERE status='needs_review' AND (uploaded_by IS NULL OR uploaded_by IN (SELECT id FROM users WHERE role='admin'))").pluck().get();
   return [
     { title: 'Butikker', items: (stores.length ? stores : ['Rema 1000', 'Biltema']).map((s) => `Sist jeg var på ${s}`) },
     { title: 'Varer i kvitteringer', items: (items.length ? items : ['melk', 'tomater']).map((w) => `Kvitteringer med ${w}`) },

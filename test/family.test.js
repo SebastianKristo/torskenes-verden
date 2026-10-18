@@ -27,6 +27,16 @@ const HOME = { lat: 59.9275, lon: 10.7160 };
 const ingridId = auth.listUsers().find((u) => u.username === 'ingrid').id;
 const sebId = auth.listUsers().find((u) => u.username === 'sebastian').id;
 
+test('prompt 21: deling er av som standard; ingenting lagres og ingen ser deg før du slår det på', async () => {
+  const me = (await b('/')).body.me;
+  assert.equal(me.sharing, 'off');
+  assert.ok(Object.values(me.shareHealth).every((v) => v === false));
+  assert.equal((await b('/location', 'POST', { lat: 59.95, lon: 10.70 })).body.stored, 0);
+  assert.ok(!(await a('/')).body.members.some((x) => x.userId === ingridId));
+  await a('/me', 'PUT', { sharing: 'on' });
+  await b('/me', 'PUT', { sharing: 'on', shareHealth: { steps: true, restingHr: true, sleep: true, activeKcal: true, week: true } });
+});
+
 test('krever innlogging, også vanlig bruker med bare finance:read kan dele', async () => {
   assert.equal((await fam.request('/')).status, 401);
   const r = await b('/location', 'POST', { lat: 59.95, lon: 10.70, acc: 9, speed: 3, battery: 0.64, charging: false, activity: 'walking' });
@@ -59,8 +69,8 @@ test('pause: ingenting lagres og ingen posisjon vises, bare status; av sletter s
   await b('/me', 'PUT', { sharing: 'paused' });
   const r = await b('/location', 'POST', { lat: 59.90, lon: 10.75 });
   assert.equal(r.body.stored, 0);
-  const m = (await a('/')).body.members.find((x) => x.userId === ingridId);
-  assert.deepEqual([m.sharing, m.last], ['paused', null]);
+  // Prompt 21: den som har pause, vises ikke for de andre.
+  assert.ok(!(await a('/')).body.members.some((x) => x.userId === ingridId));
   assert.deepEqual((await a(`/track/${ingridId}`)).body.points, []);
   await b('/me', 'PUT', { sharing: 'off' });
   await b('/me', 'PUT', { sharing: 'on' });
@@ -69,7 +79,8 @@ test('pause: ingenting lagres og ingen posisjon vises, bare status; av sletter s
 });
 
 test('soner: inn og ut gir hendelser, og varsel bare der seeren har slått det på', async () => {
-  const z = (await a('/zones', 'POST', { name: 'Hjem', ...HOME, radius: 150, color: '#2f7a4f' })).body;
+  const z = (await a('/zones', 'POST', { name: 'Hjem', ...HOME, radius: 150, color: '#2f7a4f', shared: true })).body;
+  assert.equal(z.shared, true);
   assert.equal(z.name, 'Hjem');
   assert.equal((await a('/zones', 'POST', { name: '', ...HOME })).status, 400);
   const since = Date.now() - 1;
@@ -107,6 +118,7 @@ test('helse: bare delte felt lagres og vises; uke-sammendrag', async () => {
   assert.equal(h.week.length, 2);
   assert.equal((await b('/health', 'POST', { steps: 3 })).status, 400);
   // Seb deler ikke helse ennå: ingen data.
+  await a('/me', 'PUT', { sharing: 'on' });
   assert.equal((await b('/')).body.members.find((x) => x.userId === sebId).health, null);
 });
 

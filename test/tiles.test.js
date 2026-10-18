@@ -105,9 +105,18 @@ test('ugyldige fliser og stiler; maptiler bare med nøkkel', async () => {
   let cfg = await (await get('/api/config/map')).json();
   assert.deepEqual(Object.keys(cfg.tiles).sort(), ['dark', 'light', 'topo', 'voyager']);
   assert.equal(cfg.tiles.voyager, '/tiles/voyager/{z}/{x}/{y}{r}.png');
-  assert.equal(cfg.default, 'voyager');
-  assert.equal(cfg.maxZoom, 19);
-  assert.match(cfg.attribution, /OpenStreetMap.*CARTO/);
+  // Prompt 21: topo (Kartverket) er standard, også i mørkt og Papir-tema (med CSS-filter). CARTO er bare valgbar.
+  assert.equal(cfg.default, 'topo');
+  assert.equal(cfg.dark, 'topo');
+  assert.equal(cfg.paper, 'topo');
+  assert.equal(cfg.tiles.topo, '/tiles/topo/{z}/{x}/{y}{r}.png');
+  assert.equal(cfg.maxZoom, 18);
+  assert.equal(cfg.attribution, '© Kartverket');
+  assert.match(cfg.darkFilter, /invert\(1\)/);
+  assert.equal(cfg.paperFilter, 'sepia(.25) saturate(.8)');
+  assert.deepEqual(cfg.filters, { default: null, dark: cfg.darkFilter, paper: cfg.paperFilter });
+  assert.equal(cfg.styles.find((x) => x.default).id, 'topo');
+  assert.match(cfg.attributions.voyager, /OpenStreetMap.*CARTO/);
   updateConfig({ maptilerKey: 'abc123' });
   cfg = await (await get('/api/config/map')).json();
   assert.ok(cfg.tiles.maptiler);

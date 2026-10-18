@@ -1,5 +1,5 @@
 // Kartfliser (prompt 20): proxy og cache for alle klientene, så ingen henter fra tile.openstreetmap.org (som blokkerer apper).
-//   GET /tiles/:style/:z/:x/:y.png  (også :y@2x.png)   stiler: voyager, dark, light (CARTO), topo (Kartverket),
+//   GET /tiles/:style/:z/:x/:y.png  (også :y@2x.png)   stiler: topo (Kartverket, standard), voyager, dark, light (CARTO),
 //                                                    maptiler og stadia når nøkkelen er satt i Integrasjoner → Kart.
 //   GET /api/config/map                             felles kartkonfig for web og apper.
 // Flisene hentes med egen User-Agent og caches i DATA_DIR/tiles i 30 dager. Feiler leverandøren, sendes en lagret
@@ -25,10 +25,10 @@ const CARTO_ATTR = '© OpenStreetMap-bidragsytere © CARTO';
 
 // {s} = subdomene, {r} = «@2x» eller tom. maxZoom per stil.
 const STYLES = {
+  topo: { url: 'https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png', max: 18, retina: false, attribution: '© Kartverket' },
   voyager: { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', subs: 'abcd', max: 19, retina: true, attribution: CARTO_ATTR },
   dark: { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', subs: 'abcd', max: 19, retina: true, attribution: CARTO_ATTR },
   light: { url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', subs: 'abcd', max: 19, retina: true, attribution: CARTO_ATTR },
-  topo: { url: 'https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png', max: 18, retina: false, attribution: '© Kartverket' },
   maptiler: { url: 'https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}{r}.png?key={key}', key: 'maptilerKey', max: 19, retina: true, attribution: '© MapTiler © OpenStreetMap-bidragsytere' },
   stadia: { url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key={key}', key: 'stadiaKey', max: 19, retina: true, attribution: '© Stadia Maps © OpenMapTiles © OpenStreetMap-bidragsytere' },
 };
@@ -153,18 +153,26 @@ api.get('/tiles/:style/:z/:x/:file', tileAuth, async (c) => {
   return c.body(t.body, 200, { 'Content-Type': t.type, 'Cache-Control': t.cache, 'X-Tile-Source': t.source, 'X-Content-Type-Options': 'nosniff' });
 });
 
-// Felles kartkonfig. {r} fylles av Leaflet («@2x» på retina med detectRetina); appene kan sette den selv.
+// Felles kartkonfig (prompt 21): Kartverket topo er standard i alle tema (gratis, ingen nøkkel). Mørkt og Papir-tema er
+// også topo, med CSS-filter (darkFilter/paperFilter) på flislaget. CARTO-stilene er fortsatt valgbare, men aldri standard.
+// {r} fylles av Leaflet («@2x» på retina med detectRetina); appene kan sette den selv.
+export const DARK_FILTER = 'invert(1) hue-rotate(180deg) brightness(.92) contrast(.88) saturate(.55)';
+export const PAPER_FILTER = 'sepia(.25) saturate(.8)';
 api.get('/api/config/map', tileAuth, (c) => {
   const styles = availableStyles();
   const tiles = Object.fromEntries(styles.map((s) => [s, `/tiles/${s}/{z}/{x}/{y}{r}.png`]));
   const attributions = Object.fromEntries(styles.map((s) => [s, STYLES[s].attribution]));
   const maxZooms = Object.fromEntries(styles.map((s) => [s, STYLES[s].max]));
   return c.json({
-    tiles, attribution: CARTO_ATTR, attributions, maxZooms, default: 'voyager', dark: 'dark', paper: 'light', maxZoom: 19,
-    paperFilter: 'sepia(.25) saturate(.8)', errorTileUrl: '/tiles/blank.png', errorTileUrlDark: '/tiles/blank-dark.png', tileSize: 256,
+    tiles, attribution: STYLES.topo.attribution, attributions, maxZooms, default: 'topo', dark: 'topo', paper: 'topo', maxZoom: STYLES.topo.max,
+    filters: { default: null, dark: DARK_FILTER, paper: PAPER_FILTER }, darkFilter: DARK_FILTER, paperFilter: PAPER_FILTER,
+    // Valgbare stiler (Innstillinger). CARTO krever i dag ofte nøkkel og er bare et alternativ.
+    styles: styles.map((s) => ({ id: s, name: STYLE_NAME[s] ?? s, attribution: STYLES[s].attribution, maxZoom: STYLES[s].max, retina: !!STYLES[s].retina, default: s === 'topo' })),
+    errorTileUrl: '/tiles/blank.png', errorTileUrlDark: '/tiles/blank-dark.png', tileSize: 256,
     auth: { cookie: true, header: 'Authorization: Bearer <token>', query: 'token' },
   }, 200, { 'Cache-Control': 'private, max-age=300' });
 });
+const STYLE_NAME = { topo: 'Kartverket topo', voyager: 'CARTO Voyager', dark: 'CARTO mørk', light: 'CARTO lys', maptiler: 'MapTiler', stadia: 'Stadia Maps' };
 
 export default api;
 
@@ -177,5 +185,5 @@ export async function testMap() {
     try { await fetchTile(s, 10, 542, 297, false); out.push(`${s}: OK`); } catch (e) { out.push(`${s}: ${e.message}`); }
   }
   const ok = !out.some((l) => /HTTP|Ikke/.test(l));
-  return { ok, message: `CARTO og Kartverket trenger ingen nøkkel. ${out.join(' · ')}` };
+  return { ok, message: `Kartverket topo (standard) trenger ingen nøkkel. ${out.join(' · ')}` };
 }
