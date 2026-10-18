@@ -15,6 +15,7 @@ import { mainTabs, heroBg, bolTitle } from './mobile-p16.js';
 import { SB } from './mobile-subs.js';
 import { aksTitle } from './mobile-aks.js';
 import * as P23 from './mobile-p23.js';
+import * as P24 from './mobile-p24.js';
 import { setTitle } from './mobile-set.js';
 import { appName, huskeWidget, bolWidget, scanCtx, homeUpload, FT } from './mobile-p17.js';
 import { posCard, ppTi } from './mobile-p20.js';
@@ -104,7 +105,7 @@ const PAGE = {
   dom: ['Domener', 'Trafikk, besøk og oppetid'], 'dom/pub': ['Publikum', 'Kart, land og enheter'], 'dom/ytl': ['Ytelse', 'Statuskoder, fart og sikkerhet'], 'dom/inf': ['Infrastruktur', 'Oppetid, DNS og domeneinfo'], 'dom/admin': ['Domener', 'Legg til og fjern'],
   aks: ['Aksjer', 'Trading 212'], sub: ['Abonnementer', 'Subscription OS'], dir: ['Boliger', 'Utgifter, prosjekter og kvitteringer'], finn: ['Finn', 'Kjøp og salg'],
   avg: ['Avganger', 'Ruter · sanntid fra Entur'], fam: ['Familie', 'Posisjon, soner og helse'], huske: ['Huskeliste', 'Oppgaver for hele familien'],
-  kv: ['Kvitteringer', 'Til gjennomgang'], fast: ['Faste trekk', 'Neste 30 dager'], konto: ['Kontoer', 'Saldo'], rap: ['Rapporter', 'Måned og år'], imp: ['Import', 'Bank, Excel og Finn'],
+  bd: ['Bursdager', 'Familie og venner'], kv: ['Kvitteringer', 'Til gjennomgang'], fast: ['Faste trekk', 'Neste 30 dager'], konto: ['Kontoer', 'Saldo'], rap: ['Rapporter', 'Måned og år'], imp: ['Import', 'Bank, Excel og Finn'],
   skann: ['Kvittering', 'Bekreft'], opp: ['Kø', 'Kvitteringer'], hl: ['', ''],
 };
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -114,7 +115,16 @@ export const FIN_SUB = ['budsjett', 'kv', 'fast', 'konto', 'aks', 'sub', 'dir', 
 export const ctxOf = (scr) => (scr === 'dom' ? 'dom' : FIN_MAIN.includes(scr) || FIN_SUB.includes(scr) ? 'fin' : 'main');
 const NAMES = { hl: 'Hjem', mer: 'Mer', fmer: 'Mer', hjem: 'Oversikt', liste: 'Liste', finn: 'Finn', mat: 'Mat', spor: 'Sporing', set: 'Innstillinger', sok: 'Søk', dom: 'Domener' };
 // Hvor pila øverst til venstre går: Finans-fanene og de andre hovedfanene går hjem, undersider til forelderen.
+// Prompt 24: i profilene Finans + Boliger og Boliger-profil er Boliger roten. Finans-fanene og Finans → Mer har ingen
+// tilbake-knapp, og all «tilbake til Hjem» går til Boliger (også fra Domener).
 function parentOf(scr) {
+  const r = parentOf0(scr);
+  if (!P24.profRoot()) return r;
+  if ((finScreens().includes(scr) || scr === 'fmer') && !(m.detail && ['liste', 'sok', 'hjem'].includes(scr)) && !(scr === 'dir' && m.sub) && !(scr === 'finn' && m.sub)) return [null, ''];
+  return r[0] === 'hl' && scr !== 'hl' ? ['dir', 'Boliger'] : r;
+}
+function parentOf0(scr) {
+  if (scr === 'bd') return ['mer', 'Mer'];
   if (m.detail && ['liste', 'sok', 'hjem'].includes(scr)) return ['txback', NAMES[scr]];
   if (scr === 'finn' && m.sub) return ['finn', 'Finn'];
   if (scr === 'set' && m.sub) return ['set', 'Alle innstillinger'];
@@ -142,18 +152,18 @@ export function paperHero(scr) {
   const ttl = home ? `<span class="pp-gl">${esc(greet())},</span><span class="pp-gl">${esc(meName().split(' ')[0])}</span>` : esc(title);
   const [pk, pl] = parentOf(scr);
   const w = hlData()?.weather;
-  const backBtn = home ? `<span class="pp-brand">${esc(appName())}</span>`
+  const backBtn = home ? `<span class="pp-brand">${esc(appName())}</span>` : !pk ? ''
     : ['txback', 'back'].includes(pk) ? `<button class="pp-pill pp-back" data-mact="${pk}">‹ ${esc(pl)}</button>` : `<a class="pp-pill pp-back" href="#/${pk}">‹ ${esc(pl)}</a>`;
   const failNote = home && P.fail[kind] ? '<button class="pp-pill pp-fail" data-pp="retry">Fikk ikke lastet bildet · trykk for å prøve igjen</button>' : '';
   // Bakgrunnsvelgeren ligger under Innstillinger → Bakgrunn. Profilbildet åpner Innstillinger → Profil.
   // I Finans vises profilbildet og @brukernavn, ikke fullt navn.
   const un = m.me?.username, fin = ctxOf(scr) === 'fin';
-  const own = heroBg(scr);
-  return `<header class="pp-hero${home ? ' home' : ''}${own ? ' own' : ''}${!own && heroHint(kind) === 'light' ? ' hint-light' : ''}" style="${own ?? ''}">${own ? '' : bgOf(kind)}
+  const own = heroBg(scr), bolK = scr === 'dir' && !m.sub ? P24.bolKicker() : null;
+  return `<header class="pp-hero${home ? ' home' : ''}${own ? ' own' : ''}${!own && heroHint(kind) === 'light' ? ' hint-light' : ''}" style="${own ?? ''}">${own ? '' : bgOf(kind)}${scr === 'dir' ? P24.bolFade() : ''}
     <div class="pp-top">${backBtn}<span class="m-grow"></span>
       <a class="pp-av${avatarUrl() ? ' img' : ''}${fin && un ? ' chip' : ''}" href="#/set/profil" aria-label="Profil">${fin && un ? `<span class="pp-avi">${avInner()}</span><span class="pp-un">@${esc(un)}</span>` : avInner()}</a></div>
     ${failNote}
-    <div class="pp-bottom"><div class="m-grow"><div class="pp-kick">${esc(kicker)}</div><h1 class="pp-title${home ? ' big' : ''}">${ttl}</h1></div>
+    <div class="pp-bottom"><div class="m-grow"><div class="pp-kick">${esc(bolK ?? kicker)}</div><h1 class="pp-title${home ? ' big' : ''}">${ttl}</h1></div>${scr === 'dir' ? P24.domPill() : ''}
       ${home && w ? `<a class="pp-temp" href="#/vaer" aria-label="Åpne værvisningen"><b>${w.temp != null ? Math.round(w.temp) + '°' : '–'}</b><span>${esc(w.text ?? '')}${w.updated ? ` · ${esc(new Date(w.updated).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }))}` : ''} ›</span></a>` : ''}</div>
     ${P.photo[kind]?.credit && home && P.img[kind] ? (P.photo[kind].creditUrl ? `<a class="pp-credit" href="${esc(P.photo[kind].creditUrl)}" target="_blank" rel="noopener">${esc(P.photo[kind].credit)}</a>` : `<span class="pp-credit">${esc(P.photo[kind].credit)}</span>`) : ''}
   </header>`;
@@ -293,13 +303,15 @@ export function paperHome() {
       : ['SPORING', String(onWay() || active(TR.data?.items ?? []).length || 0), onWay() ? 'på vei' : 'ingen på vei', onWay() ? 'lab' : 'mut', '#/spor', '20px'],
   ];
   // Hold inne et kort for å flytte eller skjule det (Søk, Pakker, Avganger, Snarveier, Siste nytt).
+  // Prompt 24: Pakker vises alltid, også uten aktive pakker.
+  const pkgCard = pkg || `<a class="pp-card pp-pkg p24-nopkg" href="#/spor"><span class="m-grow" style="min-width:0"><span class="pp-lab">PAKKER</span><b class="pp-serif m-ell" style="display:block">Ingen aktive pakker</b><span class="pp-mut m-ell">Legg til et sporingsnummer ›</span></span></a>`;
   return `<div class="pp-home">${edBlocks('hl', {
     h1: '<form class="pp-search" data-ppsearch role="search"><svg class="pp-g" width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg><input class="m-input" name="q" type="search" enterkeyhint="search" placeholder="Søk på Google" aria-label="Søk på Google" autocomplete="off"></form>',
-    h2: pkg, h3: ruter,
+    h2: pkgCard, h3: ruter,
     h4: `<div class="pp-minis">${minis.map(([k, v, sub, c, href, fs]) => `<a class="pp-card pp-mini" href="${href}"><span class="pp-lab mut">${k}</span><b class="pp-serif m-ell" style="font-size:${fs}">${esc(v)}</b><span class="${c === 'lab' ? 'pp-lab-c' : `pp-${c}`}" style="font-size:11px">${esc(sub)}</span></a>`).join('')}</div>`,
     h5: newsCard(H?.news),
     // Nye kort (prompt 17): Posisjon (familien), Bolig (budsjett, gjennomgang og neste faste utgift) og Huskeliste.
-    h6: posCard(), h7: bolWidget(), h8: huskeWidget(),
+    h6: posCard(), h7: bolWidget(), h8: huskeWidget(), h9: P24.bdWidget(),
   }, { full: ['h1', 'h4', 'h5'] })}</div>`;
 }
 // Ruters egne linjefarger (fra Entur via serveren), med Ruters standardfarger per transportmiddel som reserve.
@@ -338,12 +350,14 @@ export function paperFin() {
 /* ---------- Mer ---------- */
 
 export function paperMer() {
-  // Modulen som ikke står i fanelinja (Domener eller Sporing) ligger øverst i Mer.
-  const n = onWay(), mod = fourth() === 'spor' ? ['dom', 'Domener', 'Trafikk, besøk og oppetid'] : ['spor', 'Sporing', n ? `${n} pakke${n === 1 ? '' : 'r'} på vei` : 'Pakker og sendinger'];
-  const rows = [mod, ['huske', 'Huskeliste', 'Oppgaver for hele familien'], ['avg', 'Avganger', 'Sanntid fra Ruter og Entur'], ['fam', 'Familie og kart', 'Posisjon, soner og helse'], ['vaer', 'Vær', 'Steder og varsel fra yr.no'],
-    ['media', 'Media', 'Spilles nå og historikk'], ['hjem', 'Finans', 'Oversikt, liste, Finn og mer'], ['dir', 'Boliger', 'Utgifter, prosjekter og kvitteringer'],
-    ['nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag'], ['set', 'Innstillinger', 'Tema, bakgrunn, fanelinje og konto']];
-  return `<div class="pp-card pp-list">${rows.map(([k, n, s]) => `<a href="#/${k}"><span class="m-grow"><b class="pp-serif">${n}</b><span class="pp-mut">${s}</span></span><span class="pp-mut">›</span></a>`).join('')}</div>`;
+  // Prompt 24 (claude-code-mer-lik.md): ett kort, rekkefølge og tekster som i designet. Det som allerede ligger i
+  // fanelinja tas ut. I profilene Finans + Boliger og Boliger-profil står Hjem øverst.
+  const n = onWay(), inBar = new Set(mainTabs('mer').map(([k]) => k));
+  const mod = inBar.has('spor') ? ['dom', 'Domener', 'Trafikk, besøk og oppetid'] : ['spor', 'Sporing', n ? `${n} pakke${n === 1 ? '' : 'r'} på vei` : 'Pakker og sendinger'];
+  const rows = [...(P24.profRoot() ? [['hl', 'Hjem', 'Pakker, avganger og widgets']] : []), mod, ['bd', 'Bursdager', 'Hvem har bursdag snart'], ['huske', 'Huskeliste', 'Oppgaver og widgets'], ['fam', 'Familie og kart', 'Posisjon, soner og helse'],
+    ['media', 'Media', 'Spilles nå og historikk'], ['hjem', 'Finans', 'Oversikt, liste, Finn og mer'], ['nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag'], ['set', 'Innstillinger', 'Tema, bakgrunn og konto']]
+    .filter(([k]) => k === 'hl' || k === 'set' || !inBar.has(k));
+  return `<div class="pp-card pp-list p24-mer">${rows.map(([k, nm, sd]) => `<a href="#/${k}"><span class="m-grow"><b class="pp-serif">${nm}</b><span class="pp-mut">${sd}</span></span><span class="pp-mut">›</span></a>`).join('')}</div>`;
 }
 
 /* ---------- Media (Plex og Jellyfin) ---------- */

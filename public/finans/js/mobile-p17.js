@@ -18,17 +18,22 @@ const VERSION = '2.6';
 /* ---------- Navn og ikon på appen (settings.app_name, GET/PUT /api/app) ---------- */
 
 export const appName = () => (String(L.name ?? '').trim() || 'Homelab');
+/** Leser appName/appIcon fra /api/me/layout (per bruker, går foran serverens felles navn). */
+export function takeApp(r) { if (!r) return; if (typeof r.appName === 'string' && r.appName.trim()) { L.name = r.appName.trim().slice(0, 20); L.own = 1; } if (['hus', 'monogram', 'rom'].includes(r.appIcon)) { L.icon = r.appIcon; L.ownIc = 1; } keep(); applyIcon(); }
 export const appIcon = () => (['hus', 'monogram', 'rom'].includes(L.icon) ? L.icon : 'hus');
 const ICONS = [['hus', 'Huset med stativ'], ['monogram', 'Papir-monogram'], ['rom', 'Fire rom']];
 let appT = 0;
 export async function appLoad(force = false) {
   if (!force && Date.now() - appT < 5 * 60000) return;
   appT = Date.now();
-  try { const r = await fetch('/api/app', { cache: 'no-store' }); if (r.ok) { const j = await r.json(); if (j?.name) L.name = j.name; if (j?.icon) L.icon = j.icon; keep(); } } catch {}
+  try { const r = await fetch('/api/app', { cache: 'no-store' }); if (r.ok) { const j = await r.json(); if (j?.name && !L.own) L.name = j.name; if (j?.icon && !L.ownIc) L.icon = j.icon; keep(); } } catch {}
   applyIcon();
 }
 async function saveApp(patch) {
-  Object.assign(L, patch); keep(); applyIcon(); draw();
+  if (patch.name) patch = { ...patch, name: String(patch.name).slice(0, 20) };
+  Object.assign(L, patch); if (patch.name !== undefined) L.own = patch.name ? 1 : 0; if (patch.icon) L.ownIc = 1; keep(); applyIcon(); draw();
+  // Prompt 24: navn og ikon lagres også per bruker i /api/me/layout (appName, appIcon), så det følger kontoen.
+  hlApi('/me/layout', { method: 'PUT', json: { ...(patch.name !== undefined ? { appName: patch.name } : {}), ...(patch.icon ? { appIcon: patch.icon } : {}) } }).catch(() => {});
   try { await hlApi('/app', { method: 'PUT', json: patch }); flash(patch.name ? `Appen heter nå ${appName()} ✓` : 'App-ikonet er byttet ✓'); }
   catch (e) { flash(e.status === 403 ? 'Lagret på denne enheten. Bare admin kan endre for alle.' : e.status === 404 ? 'Lagret på denne enheten. Serveren støtter ikke dette ennå.' : e.message); }
 }
@@ -73,7 +78,7 @@ function nameSheet() {
   const v = P17.nv;
   return `<div class="sheet-bg" data-p17="nmx"></div><div class="pp-sheet" role="dialog" aria-label="Navn på appen"><span class="pp-grab"></span>
     <div class="pp-sh">Navn på appen</div>
-    <input class="sinp p17-nmin" id="p17-nm" data-p17in="nm" value="${esc(v)}" maxlength="28" placeholder="Homelab" autocomplete="off" aria-label="Navn på appen">
+    <input class="sinp p17-nmin" id="p17-nm" data-p17in="nm" value="${esc(v)}" maxlength="20" placeholder="Homelab" autocomplete="off" aria-label="Navn på appen">
     <div class="pp-chips">${['Homelab', 'Torskenes Verden'].map((x) => `<button class="pp-fchip" data-p17="nmset" data-v="${esc(x)}" aria-pressed="${v === x}">${esc(x)}</button>`).join('')}</div>
     <span class="pp-mut">Vises øverst på Hjem, i innloggingen, i varsler og i nettleserfanen.</span>
     <div class="p17-two"><button class="pp-btn" data-p17="nmx">Avbryt</button><button class="pp-btn ink" data-p17="nmsave" ${v.trim() ? '' : 'disabled'}>Lagre</button></div></div>`;
@@ -109,12 +114,12 @@ export function p17Sheets() {
 
 /* ---------- Innstillinger i Papir (Mobil Papir App → innst) ---------- */
 
-const row = (href, label, sub, val, ic, key, attr = '') => {
+export const row = (href, label, sub, val, ic, key, attr = '') => {
   const c = iconColor(key, '#b23a2a');
   const tag = href ? `a class="opt-row p17-row" href="${href}"` : `button class="opt-row p17-row" ${attr}`;
   return `<${tag}>${ic ? `<span class="set-ic fill" style="background:${c}">${icon(ic, 16, iconInk(c))}</span>` : ''}<span class="m-grow p17-rt"><b>${esc(label)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>${val ? `<span class="sval">${esc(val)}</span>` : ''}<span class="p17-chev" aria-hidden="true">›</span></${href ? 'a' : 'button'}>`;
 };
-const grp = (t, rows) => `${t ? `<span class="pp-lab p17-gl">${esc(t)}</span>` : ''}<div class="list p17-list">${rows.filter(Boolean).join('')}</div>`;
+export const grp = (t, rows) => `${t ? `<span class="pp-lab p17-gl">${esc(t)}</span>` : ''}<div class="list p17-list">${rows.filter(Boolean).join('')}</div>`;
 const ENG = { ollama: 'Ollama', gemini: 'Gemini', groq: 'Groq' };
 export function p17SetMain(T = {}) {
   const me = m.me ?? {}, st = S.boot?.settings ?? {}, fk = (() => { try { return (JSON.parse(localStorage.getItem('fh_p15') || '{}').finTabs ?? []).length || 4; } catch { return 4; } })();
@@ -168,8 +173,8 @@ export function p17AiExtra() {
 
 export const NT = { d: null, err: '', busy: false };
 const SOUNDS = [['klokke', 'Klokke'], ['pling', 'Pling'], ['papir', 'Papir'], ['dobbel', 'Dobbel'], ['dyp', 'Dyp'], ['egen', 'Egen lyd'], ['stille', 'Stille']];
-const NGROUPS = [['pakker', 'Pakker', 'Ny pakke, klar for henting, levert'], ['finans', 'Finans og hjem', 'Kvitteringer, budsjett og faste utgifter'], ['familie', 'Familie', 'Kommer og går fra soner'], ['reise', 'Reise og vær', 'Avganger og værvarsler'], ['haptikk', 'Haptikk', 'Vibrasjon ved varsler']];
-const NDEF = { on: true, quietOn: true, quietFrom: '22:00', quietTo: '07:00', sound: 'klokke', volume: 70, groups: { pakker: true, finans: true, familie: true, reise: false, haptikk: true } };
+const NGROUPS = [['pakker', 'Pakker', 'Ny pakke, klar for henting, levert'], ['finans', 'Finans og hjem', 'Kvitteringer, budsjett og faste utgifter'], ['familie', 'Familie', 'Kommer og går fra soner'], ['birthdays', 'Bursdager', 'Kl. 09:00 før en bursdag (påminnelse per person)'], ['reise', 'Reise og vær', 'Avganger og værvarsler'], ['haptikk', 'Haptikk', 'Vibrasjon ved varsler']];
+const NDEF = { on: true, quietOn: true, quietFrom: '22:00', quietTo: '07:00', sound: 'klokke', volume: 70, groups: { pakker: true, finans: true, familie: true, birthdays: true, reise: false, haptikk: true } };
 export async function notifyLoad() {
   try { const r = await hlApi('/me/notify'); NT.d = { ...NDEF, ...(r ?? {}), groups: { ...NDEF.groups, ...(r?.groups ?? {}) } }; NT.err = ''; }
   catch (e) { NT.d = { ...NDEF, ...(L.notify ?? {}), groups: { ...NDEF.groups, ...(L.notify?.groups ?? {}) } }; NT.err = e.status === 404 ? 'Lagres på denne enheten til serveren er oppdatert.' : ''; }

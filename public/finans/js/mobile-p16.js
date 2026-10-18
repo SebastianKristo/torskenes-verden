@@ -11,6 +11,8 @@ import { hlData, ruterUrl } from './mobile-hl.js';
 import { paper, paperDark } from './mobile-paper.js';
 import { setTiles } from './mobile-p20.js';
 import { DEP, depKey, depStatus, stopList } from './mobile-p21.js';
+import * as P24 from './mobile-p24.js';
+import * as P22 from './mobile-p22.js';
 
 /* ---------- Valg (lokal kopi + /api/me/layout) ---------- */
 
@@ -25,7 +27,13 @@ export function take16(r) {
   if (ICON_THEMES[r.iconTheme]) L.iconTheme = r.iconTheme;
   keep();
 }
-function save16(patch) { Object.assign(L, patch); keep(); hlApi('/me/layout', { method: 'PUT', json: patch }).catch(() => {}); }
+function save16(patch) { Object.assign(L, patch); keep(); hlApi('/me/layout', { method: 'PUT', json: patch }).catch(() => {}); if (patch.tabBar) P24.markCustom({ tabBar: patch.tabBar }); }
+/** Setter hovedlinja (profilvalg). null = standardfanene. push = lagre i /api/me/layout også. */
+export function setTabBar(items, push = true) {
+  if (items) L.tabBar = { items: items.filter((x) => TB[x?.id]).slice(0, 6) }; else delete L.tabBar;
+  keep();
+  if (push) hlApi('/me/layout', { method: 'PUT', json: { tabBar: L.tabBar ?? { items: defItems() } } }).catch(() => {});
+}
 
 /* ---------- Fanelinja ---------- */
 
@@ -166,6 +174,7 @@ function ruterBg() {
 /** Bakgrunn i toppbildet for sider med eget bilde (Avganger). null = brukerens bakgrunn. */
 export function heroBg(scr) {
   if (scr === 'avg') return `background-image:linear-gradient(180deg,rgba(0,0,0,.25),rgba(0,0,0,0) 35%,rgba(0,0,0,.45)),${ruterBg()};background-size:cover;background-position:center 40%`;
+  if (scr === 'dir' && paper()) return P24.bolHero();
   if (scr === 'fam') return 'background-image:linear-gradient(180deg,rgba(0,0,0,.2),rgba(0,0,0,0) 40%,rgba(0,0,0,.45)),linear-gradient(160deg,#5c7a5a 0%,#3d5a6b 55%,#26323d 100%)';
   return null;
 }
@@ -241,7 +250,7 @@ AV.lpUp = () => { if (avlp) clearTimeout(avlp.t); avlp = null; };
 export const FM = { d: null, err: '', sel: null, track: {}, zone: null, zoneMode: false, geo: false, geoErr: '', last: 0, seen: 0, busy: false };
 let LF = null, mapEl = null, map = null, layer = null, famTimer = null, watchId = null;
 export async function famLoad() {
-  try { FM.d = await hlApi('/family'); FM.err = ''; }
+  try { FM.d = await hlApi('/family'); if (Array.isArray(FM.d?.members)) FM.d.members = P22.groupMembers(FM.d.members); FM.err = ''; }
   catch (e) { FM.err = e.status === 404 ? 'Familie og kart krever en nyere server. Oppdater Homelab.' : e.message; }
   if (FM.sel) await trackLoad(FM.sel);
   clearTimeout(famTimer);
@@ -402,7 +411,7 @@ function bolList() {
   const L0 = BO.list ?? [], sum = L0.reduce((a, f) => a + (f.yearTotal ?? 0), 0);
   return `<div class="pp-card p16-bover"><span class="pp-lab">I ÅR · ALLE BOLIGER</span><b class="pp-serif p16-big">${kr(sum)}</b><span class="pp-mut">${L0.length} bolig${L0.length === 1 ? '' : 'er'} · ${L0.reduce((a, f) => a + (f.count ?? 0), 0)} poster</span>
       <div class="p16-qa"><button class="pp-btn sm ink" data-p16="bolny">+ Ny bolig</button></div></div>
-    ${L0.map((f) => `<a class="pp-card p16-bol" href="#/dir/${f.id}"><span class="p16-bic">${TYPE_IC[f.type] ?? '◇'}</span><span class="m-grow" style="min-width:0"><b class="pp-serif p16-bn">${esc(f.name)}</b><span class="pp-mut">${esc([f.type, f.address].filter(Boolean).join(' · '))}</span><span class="pp-mut">${f.members?.length > 1 ? `Delt med ${f.members.length - 1} · ` : ''}${esc(f.myRole ?? '')}</span></span><span class="p16-br"><b>${kr(f.yearTotal)}</b><small>i år</small></span></a>`).join('') || '<div class="pp-card"><div class="pp-mut">Ingen boliger ennå. Lag en for huset, hytta eller utleieleiligheten, og last opp kvitteringer rett i den.</div></div>'}
+    ${L0.map((f) => `<a class="pp-card p16-bol" href="#/dir/${f.id}" data-p24bol="${f.id}" draggable="false"><span class="p16-bic">${TYPE_IC[f.type] ?? '◇'}</span><span class="m-grow" style="min-width:0"><b class="pp-serif p16-bn">${esc(f.name)}</b><span class="pp-mut">${esc([f.type, f.address].filter(Boolean).join(' · '))}</span><span class="pp-mut">${f.members?.length > 1 ? `Delt med ${f.members.length - 1} · ` : ''}${esc(f.myRole ?? '')}</span></span><span class="p16-br"><b>${kr(f.yearTotal)}</b><small>i år</small></span></a>`).join('') || '<div class="pp-card"><div class="pp-mut">Ingen boliger ennå. Lag en for huset, hytta eller utleieleiligheten, og last opp kvitteringer rett i den.</div></div>'}
     ${BO.ny ? newBolSheet() : ''}`;
 }
 function newBolSheet() {
@@ -468,12 +477,12 @@ function addSheet(d) {
 export function bolView() {
   if (BO.err && !BO.list) return `<div class="pp-card"><div class="pp-mut">${esc(BO.err)}</div></div>`;
   if (!BO.list) return '<div class="m-spin"></div>';
-  const id = bolId();
-  if (!id) return bolList();
+  const id = bolId(), pills = paper() ? P24.bolPills() : ''; // Prompt 24: bolig-pillene (hold inne = Rediger bolig)
+  if (!id) return pills + bolList();
   const d = BO.d[id];
-  if (!d) return '<div class="m-spin"></div>';
-  if (d.error) return `<div class="pp-card"><div class="pp-mut">${esc(d.error)}</div></div>`;
-  return bolDetail(d);
+  if (!d) return pills + '<div class="m-spin"></div>';
+  if (d.error) return `${pills}<div class="pp-card"><div class="pp-mut">${esc(d.error)}</div></div>`;
+  return pills + bolDetail(d);
 }
 export const bolIdNow = () => bolId();
 export async function bolUpload(id, files) {

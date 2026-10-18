@@ -10,6 +10,8 @@ import { tabEditor, iconThemeRow, iconColor, iconInk } from './mobile-p16.js';
 import { navSettings } from './mobile-paper3.js';
 import { TR, trkLoad, trkPrefRows, setTrkPref } from './mobile-track.js';
 import * as P23 from './mobile-p23.js';
+import * as P24 from './mobile-p24.js';
+import { row, grp } from './mobile-p17.js';
 import { haSection } from './mobile-p22.js';
 import { p17SetMain, p17Modules, p17AiExtra, p17Varsler, aiLoad, notifyLoad, NT } from './mobile-p17.js';
 
@@ -55,14 +57,14 @@ const when = (t) => (t ? new Date(t).toLocaleDateString('nb-NO', { day: '2-digit
 const aiMode = () => { const st = S.boot?.settings ?? {}; return st.provider === 'gemini' ? 'gemini' : st.provider === 'groq' ? 'groq' : st.fallback ? 'both' : 'ollama'; };
 
 /** Tittelen i Papir-toppbildet for en underside. */
-export const setTitle = (sub) => PAGES[sub] ?? null;
+export const setTitle = (sub) => PAGES[String(sub ?? '').split('/')[0]] ?? null;
 export function settingsView(th, sub) {
-  const page = PAGES[sub] ? sub : '';
+  const [s0, s1 = ''] = String(sub ?? '').split('/'), page = PAGES[s0] ? s0 : '';
   // Papir: toppbildet har tittelen og «‹ Innstillinger», så undersidene starter rett på innholdet.
   const head = paper() ? '' : page
     ? `<div class="m-row">${th === 'ios' ? `<a class="gback" href="#/set" aria-label="Tilbake til Innstillinger">${icon('chev', 20, 'currentColor', 2.6)}</a>` : '<a class="back" href="#/set" aria-label="Tilbake til Innstillinger">←</a>'}</div><div class="title" style="font-size:${th === 'ios' ? 30 : 32}px">${PAGES[page]}</div>`
     : `<div class="title" style="padding:6px 4px 0">Innstillinger</div>`;
-  return `${head}${page ? PAGE[page](th) : main(th)}`;
+  return `${head}${page ? PAGE[page](th, s1) : main(th)}`;
 }
 
 // Papir: tema, bakgrunn og nyhetsleser øverst (Mobil Papir App → Innstillinger), resten som før.
@@ -78,7 +80,8 @@ function paperTop() {
 
 function main() {
   // Papir: samme gruppering som designet (Konto, Finans, appnavnet, App, Logg ut og versjon).
-  if (paper()) return p17SetMain({ tokens: T.tokens });
+  // Prompt 24: søk og ✦ AI-søk øverst, så PROFIL, så resten.
+  if (paper()) return P24.setTop(row, grp, p17SetMain({ tokens: T.tokens }));
   const st = S.boot?.settings ?? {};
   return `${paper() ? paperTop() : ''}${G('', [profile(true)])}
     ${G('Konto', [nav('konto', 'Kontoer og brukere', '1 på enheten', 'users', '#5E8BFF'), nav('sik', 'Sikkerhet', m.me?.totp ? '2FA på' : '', 'shield', '#34C759'), nav('tok', 'API-tokens', T.tokens ? `${T.tokens.length} aktive` : '', 'key', '#FF9F0A')])}
@@ -89,7 +92,7 @@ function main() {
 }
 
 const PAGE = {
-  integ: () => P23.integPage(haSection()),
+  integ: (th, sub) => P24.integPage24(P23.integPage(haSection()), haSection(), sub), // Prompt 24: alle integrasjoner
   varsler: () => p17Varsler(trkPrefRows()),
   mod: () => p17Modules(),
   profil: () => {

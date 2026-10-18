@@ -25,7 +25,8 @@ import { wxView, wxLoad, wxBind, wxBindScroll, WX, wxAfterDraw, wxPlaces } from 
 import { wx22Down, wx22Move, wx22Up } from './mobile-wx22.js';
 import * as P22 from './mobile-p22.js';
 import * as P23 from './mobile-p23.js';
-import { HK, p17Bind, p17Sheets, huskeView, tasksLoad, posWidget, bolWidgetLoad, appLoad, applyIcon, ptrBind, wsConnect, onRealtime } from './mobile-p17.js';
+import * as P24 from './mobile-p24.js';
+import { takeApp, HK, p17Bind, p17Sheets, huskeView, tasksLoad, posWidget, bolWidgetLoad, appLoad, applyIcon, ptrBind, wsConnect, onRealtime } from './mobile-p17.js';
 import { trkDown, trkMove, trkUp } from './mobile-paper2.js';
 import { take16, p16Bind, p16Pointer, p16Move, p16Up, tabSheet, avgView, avgLoad, avgSheet, famView, famLoad, famSheet, famAfterDraw, bolView, bolLoad, AV, BO } from './mobile-p16.js';
 
@@ -53,7 +54,7 @@ const FINMODS = ['sub', 'dir', 'finn'];
 export const FIN = ['hjem', 'liste', 'budsjett', 'sok', 'skann', 'opp', ...PAGES, ...FINMODS];
 const TWO = ['hjem', 'liste', 'budsjett', 'skann', 'opp', 'sok'];
 const HLG = ['hl', 'spor', 'set'];
-const ALL = [...new Set([...FIN, 'hl', 'spor', 'mat', 'dom', 'set', 'media', 'nyheter', 'fmer', 'vaer', 'avg', 'fam', 'huske'])];
+const ALL = [...new Set([...FIN, 'hl', 'spor', 'mat', 'dom', 'set', 'media', 'nyheter', 'fmer', 'vaer', 'avg', 'fam', 'huske', 'bd'])];
 // Oversikt, Liste og Budsjett bruker egne navn fra Sidemeny; Søk og Mer beholder de korte navnene i fanelinja.
 const RENAME = ['home', 'list', 'bud', 'finn'];
 // Egne navn fra Innstillinger → Utseende → Navigasjonslinje (LAY.names) går foran; tomt felt gir standardnavnet.
@@ -77,7 +78,7 @@ export const hide = (txt) => (pref('hideAmt') && !m.reveal ? '••••' : tx
 /* ---------- Startside og vei tilbake ---------- */
 // Startside lagres per bruker (LAY.start). Med Finans som startside går «hjem» til Finans, og Homelab ligger i profilmenyen.
 const START = { homelab: 'hl', 'fin-hjem': 'hjem', 'fin-liste': 'liste', 'fin-budsjett': 'budsjett' };
-export const startScr = () => START[LAY().start] ?? (['hl', 'hjem', 'liste', 'budsjett'].includes(pref('start')) ? pref('start') : 'hl');
+export const startScr = () => P24.profStart() ?? START[LAY().start] ?? (['hl', 'hjem', 'liste', 'budsjett'].includes(pref('start')) ? pref('start') : 'hl');
 export const startFin = () => startScr() !== 'hl';
 // Prompt 14: «Knapp i linjen» er fjernet. Pila øverst til venstre går alltid til startsiden.
 export const backStyle = () => 'arrow';
@@ -397,7 +398,7 @@ export function draw() {
   const plain = !m.detail && !m.edit;
   const ppMain = !pp ? null : scr === 'hl' ? paperHome() : m.detail && !m.edit && m.sel != null && ['liste', 'sok', 'hjem'].includes(scr) ? paperTx(m.sel)
     : scr === 'hjem' && !S.boot?.restricted && plain ? paperFin() : scr === 'mer' ? paperMer()
-    : scr === 'fmer' ? finMerGrid() : scr === 'kv' && plain ? P23.kvView() : fad ? P23.finnAdView() : scr === 'sok' && plain ? paperSearch() : scr === 'liste' && plain ? paperList() : scr === 'finn' && !m.sub ? paperFinn() : scr === 'spor' ? paperTrk() : scr === 'dir' ? bolView() : scr === 'avg' ? avgView() : scr === 'fam' ? P22.famView22() : null;
+    : scr === 'bd' ? P24.bdView() : scr === 'fmer' ? finMerGrid() : scr === 'kv' && plain ? P23.kvView() : fad ? P23.finnAdView() : scr === 'sok' && plain ? paperSearch() : scr === 'liste' && plain ? paperList() : scr === 'finn' && !m.sub ? paperFinn() : scr === 'spor' ? paperTrk() : scr === 'dir' ? bolView() : scr === 'avg' ? P24.ruterView() : scr === 'fam' ? P22.famView22() : null;
   const main = scr === 'vaer' ? wxView() : scr === 'nyheter' ? newsView() : scr === 'huske' ? (pp ? P22.huske22() : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Huskeliste</div></div>' + huskeView()) : !pp && scr === 'avg' ? avgView() : !pp && scr === 'fam' ? famView()
     : scr === 'media' ? (pp ? '' : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Media</div></div>') + mediaView()
     : ppMain ?? (scr === 'set' ? settingsView(th, m.sub)
@@ -410,13 +411,15 @@ export function draw() {
     : scr === 'finn' ? finnView(th, m.sub)
     : !fin || FINMODS.includes(scr) ? modView(scr, th, m.sub)
     : scrs[scr] ? scrs[scr](th) : confirmView ? confirmRc(th) : scanQueue(th));
-  const n = navModel(), dom = scr === 'dom', bt = !pp && backTop(scr) && scr !== 'vaer', hero = pp && scr !== 'nyheter' && scr !== 'vaer' && !fad;
-  const nav = scr === 'nyheter' || scr === 'vaer' || fad ? '' : pp ? (scr === 'huske' ? P22.huskeNav(paperNav(scr)) + P22.huskeDock() : paperNav(scr)) : th === 'ios' ? iosNav(n) : andNav(n);
+  // Prompt 24: Ruter-visningen (Avganger) er et fullskjerm-overlegg uten fanelinje og skanneknapp, med eget toppbilde.
+  const rv = pp && scr === 'avg';
+  const n = navModel(), dom = scr === 'dom', bt = !pp && backTop(scr) && scr !== 'vaer', hero = pp && scr !== 'nyheter' && scr !== 'vaer' && !fad && !rv;
+  const nav = scr === 'nyheter' || scr === 'vaer' || fad || rv ? '' : pp ? (scr === 'huske' ? P22.huskeNav(paperNav(scr)) + P22.huskeDock() : paperNav(scr)) : th === 'ios' ? iosNav(n) : andNav(n);
   // Bevar fokus og markør i et felt når skjermen tegnes på nytt (f.eks. søk mens forslag kommer inn).
   const ae = document.activeElement, keep = ae?.id && root().contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
-  root().innerHTML = `<div class="m ${th}${fad ? ' p23-fad' : ''}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}${fabStyle() === 'float' ? ' flyt' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${scr === 'vaer' ? ' vaer' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
+  root().innerHTML = `<div class="m ${th}${fad ? ' p23-fad' : ''}${rv ? ' p24-rvm' : ''}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}${fabStyle() === 'float' ? ' flyt' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${scr === 'vaer' ? ' vaer' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
     ${pp ? '' : rail(n)}${hero ? paperHero(scr) : ''}<div class="m-scroll">${bt ? topRow(th) : ''}${main}</div><div class="m-detail">${twoPane ? detail(th) : ''}</div>${nav}
-    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() : ''}${avgSheet()}${pp ? "" : famSheet()}${p17Sheets()}${p21Sheets(HK)}${P22.p22Sheets()}${origOverlay(th)}${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
+    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() : ''}${avgSheet()}${pp ? "" : famSheet()}${p17Sheets()}${p21Sheets(HK)}${P22.p22Sheets()}${pp ? P24.sheets24() : ''}${origOverlay(th)}${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
     <input class="m-file" id="m-capture" type="file" accept="image/*" capture="environment" data-mupload data-confirm></div>`;
   if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', pp ? (m.light ? '#f3efe6' : '#14130f') : th === 'ios' ? '#07070A' : getComputedStyle(root().firstElementChild).backgroundColor || '#19120E');
@@ -461,7 +464,7 @@ async function load() {
       jobs.push(loadJobs());
     }
     if (PAGES.includes(scr)) jobs.push(pageLoad(scr, m.sub));
-    else if (scr === 'set') jobs.push(settingsLoad(m.sub), ...(m.sub === 'integ' ? [P23.integLoad().catch(() => {})] : []));
+    else if (scr === 'set') jobs.push(settingsLoad(m.sub), ...(String(m.sub).startsWith('integ') ? [P23.integLoad().catch(() => {}), P24.integLoad24(true).catch(() => {})] : !m.sub ? [P24.integLoad24().catch(() => {})] : []));
     else if (scr === 'hl') jobs.push(hlLoad());
     else if (scr === 'spor') jobs.push(trkLoad().then(() => trkWatch()));
     else if (scr === 'mat') jobs.push(matLoad());
@@ -471,7 +474,8 @@ async function load() {
     else if (scr === 'avg') jobs.push(avgLoad());
     else if (scr === 'fam') jobs.push(famLoad());
     else if (scr === 'huske') jobs.push(tasksLoad(true));
-    else if (scr === 'dir' && paper()) jobs.push(bolLoad(m.sub));
+    else if (scr === 'bd') jobs.push(P24.bdLoad(true));
+    else if (scr === 'dir' && paper()) { P24.noteBol(m.sub); jobs.push(bolLoad(m.sub)); }
     else if (scr === 'finn' && paper() && /^ad\/\d+/.test(m.sub ?? '')) jobs.push(P23.finnAdLoad(+m.sub.split('/')[1]));
     else if (scr === 'finn') jobs.push(paper() && !m.sub ? paperFinnLoad() : finnLoad(m.sub));
     else if (scr === 'fmer') jobs.push(loadSummary().catch(() => {}), fmerLoad().catch(() => {}));
@@ -479,7 +483,7 @@ async function load() {
     if (paper()) {
       jobs.push(regLoad().catch(() => {}));
       jobs.push(photoLoad().then(() => draw()).catch(() => {}));
-      if (scr === 'hl') jobs.push(matLoad().catch(() => {}), loadSummary().catch(() => {}), newsLoad().catch(() => {}), tasksLoad().catch(() => {}), posLoad().catch(() => {}), bolWidgetLoad().catch(() => {}));
+      if (scr === 'hl') jobs.push(matLoad().catch(() => {}), loadSummary().catch(() => {}), newsLoad().catch(() => {}), tasksLoad().catch(() => {}), posLoad().catch(() => {}), bolWidgetLoad().catch(() => {}), P24.bdLoad().catch(() => {}));
       if (scr === 'mer' || scr === 'hjem') jobs.push(loadSummary().catch(() => {}));
       if (scr === 'hjem') jobs.push(recentLoad().catch(() => {}), rcCount().catch(() => {}));
       if (m.detail && m.sel != null) jobs.push(txLoad(m.sel).catch(() => {}));
@@ -511,10 +515,12 @@ function poll() {
 }
 
 export function route() {
-  const parts = location.hash.replace(/^#\/?/, '').split('/');
+  // Prompt 24: Google-innloggingen kommer tilbake til #/bd?ok=1&google=ok (eller ?error=…).
+  const [path, qs] = location.hash.replace(/^#\/?/, '').split('?'), parts = path.split('/');
+  if (qs) { history.replaceState(null, '', `#/${path}`); if (/google=ok/.test(qs)) setTimeout(() => flash('Koblet til Google Kalender ✓'), 300); else if (/google=error/.test(qs)) setTimeout(() => flash(`Google: ${decodeURIComponent((qs.match(/error=([^&]*)/) ?? [])[1] ?? 'innloggingen feilet')}`), 300); }
   const h = parts[0];
   // Desktop- og eldre lenker
-  const map = { ov: 'hjem', tx: 'liste', bud: 'budsjett', inn: 'set', meg: 'set', homelab: 'hl', ai: 'sok', matplan: 'mat', domener: 'dom', aksjer: 'aks', abonnement: 'sub', mapper: 'dir', sporing: 'spor', trk: 'spor', news: 'nyheter', nyhetsleser: 'nyheter', rss: 'nyheter' };
+  const map = { ov: 'hjem', tx: 'liste', bud: 'budsjett', inn: 'set', meg: 'set', homelab: 'hl', ai: 'sok', matplan: 'mat', domener: 'dom', aksjer: 'aks', abonnement: 'sub', mapper: 'dir', sporing: 'spor', trk: 'spor', news: 'nyheter', nyhetsleser: 'nyheter', rss: 'nyheter', bursdager: 'bd', bursdag: 'bd', birthdays: 'bd', ruter: 'avg', avganger: 'avg' };
   const start = startScr();
   let next = map[h] ?? (ALL.includes(h) ? h : start);
   if (next === 'fmer' && !paper()) next = 'mer';
@@ -729,10 +735,10 @@ export function bind() {
   bindGlobal();
   // Prompt 17: navn og ikon på appen, dra for å oppdatere og sanntid (Huskeliste, Familie og Sporing).
   applyIcon(); appLoad().then(() => draw()).catch(() => {}); ptrBind(); wsConnect(onRealtime);
-  wxBindScroll();
+  wxBindScroll(); P23.icBoot();
   addEventListener('fh-design', (e) => { const d = e.detail ?? {}; takeDesign(d); if (typeof d.lock === 'boolean') setPref('lock', d.lock); if (typeof d.hap === 'boolean') setPref('hap', d.hap); if (d.photo) photoLoad(d.photo).then(draw).catch(() => {}); draw(); });
   loadLayout().then((r) => {
-    takeDesign(r); take15(r); take16(r); take20(r);
+    takeDesign(r); take15(r); take16(r); take20(r); P24.take24(r); takeApp(r);
     // Første gang etter innlogging (nye installasjoner): onboarding i tre steg.
     if (r && r.onboarded === false) import('./mobile-gate.js').then((g) => g.showOnboarding(r)).catch(() => {});
     if (document.documentElement.dataset.ui === 'mobile') draw();
@@ -742,7 +748,7 @@ export function bind() {
     swDown(e); // sveip tilbake fra kanten ser hendelsen først, men stopper ingen andre før den tar over
     if (soDown(e)) return;
     p20Down(e); edDown(e); // først: nullstiller også «klikket etter et langt trykk»
-    if (paper()) { p16Pointer(e); trkDown(e); }
+    if (paper()) { p16Pointer(e); trkDown(e); P24.down24(e); }
     if (m.screen === 'vaer' && wx22Down(e, wxPlaces())) return;
     if (P22.down(e)) return;
     if (paperDown(e)) return;
@@ -754,16 +760,17 @@ export function bind() {
   });
   const cancelLp = () => clearTimeout(lpTimer);
   el.addEventListener('pointerup', cancelLp); el.addEventListener('pointercancel', cancelLp);
-  el.addEventListener('pointerup', (e) => { soUp(e); dragEnd(e); wx22Up(e, wxPlaces()); P22.up(e); paperUp(e); edUp(e); p16Up(e); trkUp(e); p20Up(e); }); el.addEventListener('pointercancel', (e) => { soUp(e); dragEnd(e); wx22Up(e, wxPlaces()); P22.up(e); paperUp(e); edUp(e); p16Up(e); trkUp(e); p20Up(e); });
+  el.addEventListener('pointerup', (e) => { P24.up24(e); soUp(e); dragEnd(e); wx22Up(e, wxPlaces()); P22.up(e); paperUp(e); edUp(e); p16Up(e); trkUp(e); p20Up(e); }); el.addEventListener('pointercancel', (e) => { P24.up24(e); soUp(e); dragEnd(e); wx22Up(e, wxPlaces()); P22.up(e); paperUp(e); edUp(e); p16Up(e); trkUp(e); p20Up(e); });
   el.addEventListener('dragover', (e) => { if (e.target.closest('[data-p16drop]')) e.preventDefault(); });
   el.addEventListener('drop', safe(async (e) => { await p16Bind(e, e.target); }));
-  el.addEventListener('contextmenu', (e) => { if (e.target.closest('[data-ppplus], [data-edk], [data-pk], [data-fmk], [data-sk]')) e.preventDefault(); });
+  el.addEventListener('contextmenu', (e) => { if (e.target.closest('[data-ppplus], [data-edk], [data-pk], [data-fmk], [data-sk], [data-p24bol], [data-p24lp]')) e.preventDefault(); });
   el.addEventListener('contextmenu', (e) => { if (e.target.closest('[data-scan]')) e.preventDefault(); });
   el.addEventListener('click', safe(async (e) => {
     const t = e.target, d = (s) => t.closest(s);
     let x;
     if (Date.now() - tsup < 400 && d('.tabs')) { e.preventDefault(); e.stopPropagation(); return; }
     if (P23.swGuard()) { e.preventDefault(); e.stopPropagation(); return; } // klikket etter et sveip tilbake
+    if (await P24.bind24(e, t)) return;
     if (await P23.bind(e, t)) return;
     if (paper() && m.screen === 'spor' && await paperTrkBind(e, t)) return; // velg flere pakker går foran tilpass siden
     if (paper() && p20Click(e, t)) return; // Finans-flisene (flytt) og Posisjon-kortet
@@ -829,7 +836,7 @@ export function bind() {
     }
     if (act === 'logout') { await logout(); }
   }));
-  el.addEventListener('input', (e) => { P23.bind(e, e.target); P22.bind(e, e.target); p17Bind(e, e.target); p16Bind(e, e.target); wxBind(e, e.target); if (paper()) { paperFinnBind(e, e.target); paperTrkBind(e, e.target); nsBind(e, e.target); fsBind(e, e.target); } paperBind(e, e.target); matBind(e, e.target); if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
+  el.addEventListener('input', (e) => { if (P24.bind24(e, e.target) === true) return; P23.bind(e, e.target); P22.bind(e, e.target); p17Bind(e, e.target); p16Bind(e, e.target); wxBind(e, e.target); if (paper()) { paperFinnBind(e, e.target); paperTrkBind(e, e.target); nsBind(e, e.target); fsBind(e, e.target); } paperBind(e, e.target); matBind(e, e.target); if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
   el.addEventListener('change', safe(async (e) => {
     const t = e.target;
     if (t.matches('[data-mupload]')) { const f = [...t.files]; t.value = ''; await upload(f, { confirm: t.hasAttribute('data-confirm') && f.length === 1, stay: t.hasAttribute('data-stay') }); return; }
@@ -838,6 +845,7 @@ export function bind() {
       const r = await api(`/receipts/${m.rc}`, { method: 'PATCH', json: { [f]: f === 'total' ? parseAmount(t.value) : f === 'accountId' ? +t.value : t.value } });
       S.receipts = S.receipts.map((y) => (y.id === r.id ? r : y)); return draw();
     }
+    if (await P24.bind24(e, t)) return;
     if (await P22.bind(e, t)) return;
     if (await p17Bind(e, t)) return;
     if (await p16Bind(e, t)) return;
@@ -853,6 +861,7 @@ export function bind() {
   }));
   el.addEventListener('submit', safe(async (e) => {
     if (e.target.matches('[data-msearch]')) { e.preventDefault(); u.q = e.target.q.value; await loadTx(); return draw(); }
+    if (await P24.bind24(e, e.target)) return;
     if (await P23.bind(e, e.target)) return;
     if (await P22.bind(e, e.target)) return;
     if (await wxBind(e, e.target)) return;
@@ -873,7 +882,7 @@ export function bind() {
   el.addEventListener('keydown', (e) => { hlBind(e, e.target); });
   el.addEventListener('focusin', (e) => { hlBind(e, e.target); });
   el.addEventListener('focusout', (e) => { hlBind(e, e.target); });
-  el.addEventListener('pointermove', (e) => { if (swMove(e)) return; if (soMove(e)) return; if (dragMove(e)) return; if (wx22Move(e)) return; if (P22.move(e)) return; p20Move(e); paperMove(e); edMove(e); p16Move(e); trkMove(e); if (tabMove(e)) return; hlBind(e, e.target); }, { passive: false });
+  el.addEventListener('pointermove', (e) => { if (swMove(e)) return; if (soMove(e)) return; if (dragMove(e)) return; if (wx22Move(e)) return; if (P22.move(e)) return; p20Move(e); paperMove(e); edMove(e); p16Move(e); P24.move24(e); trkMove(e); if (tabMove(e)) return; hlBind(e, e.target); }, { passive: false });
   el.addEventListener('pointerup', (e) => { if (swEnd(e)) return; if (tabUp(e)) return; hlBind(e, e.target); });
   el.addEventListener('pointercancel', (e) => { if (swEnd(e)) return; tabUp(e); });
   // Hindrer at nettleseren tar over berøringen (og sender pointercancel) mens man sveiper tilbake.

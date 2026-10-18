@@ -30,13 +30,16 @@ export async function posLoad(force = false) {
   if (!force && Date.now() - PS.t < 20000 && PS.d) return;
   PS.t = Date.now();
   if (!PS.legacy) {
-    try { const r = await hlApi('/family/positions'); PS.d = (Array.isArray(r) ? r : r?.items ?? r?.positions ?? []).map(fromApi); PS.err = ''; return; }
+    try { const r = await hlApi('/family/positions'); PS.d = onePer((Array.isArray(r) ? r : r?.items ?? r?.positions ?? []).map(fromApi)); PS.err = ''; return; }
     catch (e) { if (e.status !== 404) { PS.err = e.message; if (PS.d) return; } else PS.legacy = true; }
   }
   await famLoad().catch(() => {});
   PS.d = FM.d ? fromFamily(FM.d) : null;
   PS.err = FM.err || PS.err;
 }
+// Prompt 24: én avatar per person (eldre server kan sende én post per enhet). Den ferskeste vinner.
+const RANK = { fresh: 0, stale: 1, off: 2 };
+function onePer(list) { const by = new Map(); for (const p of list) { const k = String(p.id); const o = by.get(k); if (!o || RANK[p.status] < RANK[o.status]) by.set(k, p); } return [...by.values()]; }
 function fromApi(p) {
   const st = ['fresh', 'stale', 'off'].includes(p.status) ? p.status : 'off';
   const name = p.self ? 'Du' : String(p.navn ?? p.name ?? '').split(' ')[0];
@@ -112,7 +115,7 @@ export async function setTiles(Lf, map, el, mode) {
 
 /* ---------- Finans-flisene: farger og egen rekkefølge (papir_fm_order) ---------- */
 
-export const FCOL = { budsjett: '#c0562a', kv: '#b23a2a', fast: '#7a5ad6', konto: '#2b5d8a', aks: '#2f7d4f', rap: '#a8661a', sub: '#c2417a', dir: '#3f7a6e', imp: '#4a5bbf', finn: '#2b6cb0', sok: '#7a3b6b', set: '#6b6558', liste: '#5b6470' };
+export const FCOL = { hl: '#3d4652', budsjett: '#c0562a', kv: '#b23a2a', fast: '#7a5ad6', konto: '#2b5d8a', aks: '#2f7d4f', rap: '#a8661a', sub: '#c2417a', dir: '#3f7a6e', imp: '#4a5bbf', finn: '#2b6cb0', sok: '#7a3b6b', set: '#6b6558', liste: '#5b6470' };
 const OKEY = 'papir_fm_order';
 export const FO = { edit: false, order: Array.isArray(ls.get(OKEY)) ? ls.get(OKEY) : null };
 /** Fra /api/me/layout (fmOrder), hvis serveren har lagret den. */

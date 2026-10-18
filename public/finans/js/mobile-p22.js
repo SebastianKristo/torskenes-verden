@@ -39,7 +39,37 @@ const lsJ = (k, d) => { try { return JSON.parse(localStorage.getItem(k) || 'null
 export const F22 = { edit: null, rm: null, local: lsJ(PKEY, {}), tracks: {}, tT: 0, busy: false };
 const meId = () => FM.d?.me?.userId;
 const isMe = (p) => p?.self || String(p?.userId) === String(meId());
-const mem = () => FM.d?.members ?? [];
+// Prompt 24: én person = én oppføring, også med flere enheter. Serveren slår sammen (devices, sourceDevice); en eldre
+// server sender én post per enhet, og da grupperes det her på userId. Posisjonen kommer fra enheten med lavest
+// nøyaktighet de siste 5 minuttene, ellers fra den nyeste; batteri og bevegelse fra samme enhet.
+let memSrc = null, memOut = [];
+export function groupMembers(list) {
+  const by = new Map();
+  for (const p of list) { const k = String(p.userId ?? p.username ?? p.name); if (!by.has(k)) by.set(k, []); by.get(k).push(p); }
+  return [...by.values()].map((g) => {
+    if (g.length === 1) return g[0];
+    const ts = (p) => +new Date(p.last?.ts ?? 0), now = Date.now();
+    const fresh = g.filter((p) => p.last?.acc != null && now - ts(p) < 5 * 6e4).sort((a, b) => a.last.acc - b.last.acc);
+    const best = fresh[0] ?? [...g].sort((a, b) => ts(b) - ts(a))[0];
+    const devices = g.map((p, i) => ({ id: p.deviceId ?? p.last?.deviceId ?? `${p.last?.device ?? p.device ?? 'enhet'}-${i}`, name: p.last?.device ?? p.device ?? 'Enhet', platform: p.platform ?? p.last?.platform, battery: p.last?.battery, lastSeen: p.last?.ts, accuracy: p.last?.acc, isSource: p === best }));
+    return { ...best, sharing: g.some((p) => p.sharing === 'on') ? 'on' : best.sharing, devices, deviceCount: g.length, sourceDevice: devices.find((d) => d.isSource)?.id };
+  });
+}
+const mem = () => { const l = FM.d?.members ?? []; if (l !== memSrc) { memSrc = l; memOut = groupMembers(l); } return memOut; };
+const devN = (p) => p?.deviceCount ?? p?.devices?.length ?? 1;
+const batPct = (b) => (b == null ? null : Math.round(b * (b <= 1 ? 100 : 1)));
+function devList(p) {
+  const ds = p.devices ?? [];
+  if (ds.length < 2) return '';
+  const pin = FM.src ?? null, me = isMe(p);
+  const row = (id, n, s, on) => `<button class="f22-dev" ${me ? `data-p24f="src" data-id="${esc(id ?? '')}"` : 'disabled'} aria-pressed="${on}"><span class="m-grow" style="min-width:0"><b class="m-ell">${esc(n)}</b><span class="f22-mut">${esc(s)}</span></span>${on ? '<span class="f22-ok">✓</span>' : ''}</button>`;
+  return `<div class="f22-devs"><span class="f22-lab">ENHETER · ${ds.length}</span>${me ? row(null, 'Automatisk', 'Nyeste og mest nøyaktige posisjon', !pin) : ''}${ds.map((d) => row(d.id, d.name, [batPct(d.battery) != null ? `${batPct(d.battery)} %` : '', d.lastSeen ? agoT(d.lastSeen).toLowerCase() : '', d.isSource ? 'brukes nå' : ''].filter(Boolean).join(' · '), me ? String(pin) === String(d.id) : d.isSource)).join('')}</div>`;
+}
+export async function famSource(id) {
+  FM.src = id || null;
+  try { await hlApi('/family/me/source', { method: 'PUT', json: { deviceId: id || null } }); } catch (e) { if (e.status !== 404) flash(e.message); }
+  await famLoad().catch(() => {}); draw();
+}
 const memOf = (id) => mem().find((p) => String(p.userId) === String(id));
 const colOf = (p, i = 0) => hex(p?.color || ZDEF[i % ZDEF.length]);
 export const photoOf = (p) => F22.local[p?.userId] || p?.photoUrl || p?.avatarUrl || null;
@@ -187,7 +217,7 @@ function personCard() {
   return `<div class="f22-card f22-pc"><div class="f22-row"><label class="f22-pav" title="Bytt profilbilde">${av(p, 48, 16, '<span class="f22-ed">✎</span>')}<input type="file" accept="image/*" data-f22file="${esc(p.userId)}" hidden></label>
       <div class="m-grow" style="min-width:0"><b class="f22-pn">${esc(isMe(p) ? 'Deg' : p.name || p.username)}</b><span class="f22-mut">${esc(on ? `${whereOf(p)} · oppdatert ${agoT(L0.ts).toLowerCase()}` : p.sharing === 'paused' ? 'Har pauset delingen' : 'Deler ikke posisjon')}</span></div>
       <button class="f22-x" data-f22="psx" aria-label="Lukk">×</button></div>
-    <div class="f22-sens">${sens.map(([l, v, bad]) => `<div><span>${l}</span><b${bad ? ' class="bad"' : ''}>${esc(v)}</b></div>`).join('')}</div>
+    <div class="f22-sens">${sens.map(([l, v, bad]) => `<div><span>${l}</span><b${bad ? ' class="bad"' : ''}>${esc(v)}</b></div>`).join('')}</div>${devList(p)}
     ${on ? `<div class="f22-two"><a class="f22-b ink" href="https://www.google.com/maps/dir/?api=1&destination=${L0.lat},${L0.lon}" target="_blank" rel="noopener">Veibeskrivelse</a>${isMe(p) ? '<button class="f22-b" data-f22="shareme">Del min posisjon</button>' : `<button class="f22-b" data-p17="ping" data-id="${esc(p.userId)}">Spill av lyd</button>`}</div>` : ''}</div>`;
 }
 function peopleCard() {
@@ -196,7 +226,7 @@ function peopleCard() {
   return `<div class="f22-card f22-list">${list.map((p, i) => {
     const L0 = p.last, ok = (p.sharing === 'on' || isMe(p)) && L0, age = L0?.ts ? Date.now() - new Date(L0.ts) : Infinity, b = batOf(L0);
     const dot = !ok || (isMe(p) && FM.d?.me?.sharing !== 'on') ? '#9a9488' : age < 15 * 6e4 ? '#2f7a4f' : '#d9a400';
-    const where = p.sharing === 'paused' ? 'Deling er satt på pause' : !ok ? (isMe(p) ? 'Du deler ikke posisjon' : 'Deler ikke posisjon') : whereOf(p);
+    const where = (p.sharing === 'paused' ? 'Deling er satt på pause' : !ok ? (isMe(p) ? 'Du deler ikke posisjon' : 'Deler ikke posisjon') : whereOf(p)) + (devN(p) > 1 ? ` · ${devN(p)} enheter` : '');
     return `<button class="f22-pr" data-f22="sel" data-id="${esc(p.userId)}"${i ? '' : ' style="border-top:0"'}>${av(p, 42, 14, `<i class="f22-dot" style="background:${dot}"></i>`)}
       <span class="m-grow" style="min-width:0"><b>${esc(p.name || p.username)}${isMe(p) ? ' (deg)' : ''}</b><span class="f22-mut m-ell">${esc(where)}</span></span>
       <span class="f22-bat"><b${b != null && b < 20 ? ' class="bad"' : ''}>${b == null ? '–' : `${b} %${L0?.charging ? ' ⚡' : ''}`}</b><span>${ok ? esc(agoT(L0.ts)) : '–'}</span></span></button>`;

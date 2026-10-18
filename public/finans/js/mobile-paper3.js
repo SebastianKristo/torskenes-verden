@@ -8,6 +8,7 @@ import { TR, trkLoad, carOf, normNo, detectLocal } from './mobile-track.js';
 import { hlData } from './mobile-hl.js';
 import { FCOL, FO, fmSort, fmBar, ppTi } from './mobile-p20.js';
 import { dragStart } from './mobile-p21.js';
+import * as P24 from './mobile-p24.js';
 
 /* ---------- Valg (lokal kopi + /api/me/layout) ---------- */
 
@@ -17,7 +18,7 @@ const keep = () => { try { localStorage.setItem(LS, JSON.stringify(L)); } catch 
 /** Leser feltene fra /api/me/layout (pages, finTabs, fourthTab, fab). */
 export function take15(r) {
   if (!r) return;
-  if (r.pages && typeof r.pages === 'object') L.pages = { ...(L.pages ?? {}), ...r.pages };
+  if (r.pages && typeof r.pages === 'object') { L.pages = { ...(L.pages ?? {}), ...r.pages }; if (!L.h2fix) fixH2(); }
   if (Array.isArray(r.finTabs) && r.finTabs.length) L.finTabs = r.finTabs;
   if (['auto', 'domener', 'sporing'].includes(r.fourthTab)) L.fourthTab = r.fourthTab;
   if (['float', 'inline'].includes(r.fab)) L.fab = r.fab;
@@ -25,6 +26,7 @@ export function take15(r) {
 }
 export function save15(patch) {
   Object.assign(L, patch); keep();
+  if (patch.finTabs) P24.markCustom({ finTabs: patch.finTabs });
   hlApi('/me/layout', { method: 'PUT', json: patch }).catch(() => {});
 }
 
@@ -36,7 +38,10 @@ export const FT = {
   kvitteringer: ['kv', 'Kvitteringer', '▢'], aksjer: ['aks', 'Aksjer', '↗'], abonnementer: ['sub', 'Abonnementer', '↻'], kontoer: ['konto', 'Kontoer', '▤'], boliger: ['dir', 'Boliger', '⌂'],
 };
 export const FT_DEF = ['oversikt', 'liste', 'finn', 'sok'];
-export const finKeys = () => { const v = (L.finTabs ?? FT_DEF).filter((k) => FT[k]); return [...new Set(v.length ? v : FT_DEF)].slice(0, 4); };
+// Prompt 24: profilene (Finans + Boliger) har fem Finans-faner; ellers fire.
+export const finKeys = () => { const v = [...new Set((L.finTabs ?? FT_DEF).filter((k) => FT[k]))]; return (v.length ? v : FT_DEF).slice(0, v.length === 5 && P24.profile() !== 'standard' ? 5 : 4); };
+/** Setter Finans-fanene (profilvalg). push = lagre i /api/me/layout også. */
+export function setFinTabs(list, push = true) { L.finTabs = list.filter((k) => FT[k]); keep(); if (push) hlApi('/me/layout', { method: 'PUT', json: { finTabs: L.finTabs } }).catch(() => {}); }
 export const finScreens = () => finKeys().map((k) => FT[k][0]);
 export const fabStyle = () => (L.fab === 'inline' ? 'inline' : 'float');
 export const fourthPref = () => L.fourthTab ?? 'auto';
@@ -55,7 +60,7 @@ export const fourth = () => { const f = fourthPref(); return f === 'sporing' ? '
 /* ---------- Tilpass hver side: hold inne → vugging, ▲ ▼ og − ---------- */
 
 const PG = {
-  hl: [['h1', 'Søk'], ['h2', 'Pakker'], ['h3', 'Avganger'], ['h4', 'Snarveier'], ['h5', 'Siste nytt'], ['h6', 'Posisjon'], ['h7', 'Bolig'], ['h8', 'Huskeliste']],
+  hl: [['h1', 'Søk'], ['h2', 'Pakker'], ['h3', 'Avganger'], ['h4', 'Snarveier'], ['h5', 'Siste nytt'], ['h6', 'Posisjon'], ['h7', 'Bolig'], ['h8', 'Huskeliste'], ['h9', 'Bursdager']],
   hjem: [['f1', 'Saldo'], ['f2', 'Kvitteringer'], ['f3', 'Siste transaksjoner'], ['f4', 'Budsjett']],
   mat: [['m1', 'Dagens middag'], ['m2', 'Ukeplan'], ['m3', 'Mapper'], ['m4', 'Skann og import']],
   spor: [['t1', 'Faner'], ['t2', 'Pakkelisten'], ['t3', 'Legg til']],
@@ -63,8 +68,17 @@ const PG = {
 const ED = { page: null, vis: {} };
 export const editing = (page) => ED.page === page;
 export const edReset = () => { ED.page = null; };
+function fixH2() {
+  const cur = L.pages?.hl;
+  if (!L.h2fix && cur && (cur.hidden ?? []).includes('h2')) {
+    L.pages = { ...L.pages, hl: { ...cur, hidden: cur.hidden.filter((k) => k !== 'h2') } };
+    hlApi('/me/layout', { method: 'PUT', json: { pages: { hl: L.pages.hl } } }).catch(() => {});
+  }
+  L.h2fix = 1; keep();
+}
 function pageCfg(page) {
   const keys = PG[page].map(([k]) => k), cur = L.pages?.[page] ?? {};
+  // Prompt 24: en eldre migrering kunne skjule Pakker (h2). Den vises igjen én gang; nye kort legges til etter lagret rekkefølge.
   const saved = (cur.order ?? []).filter((k) => keys.includes(k));
   return { order: [...saved, ...keys.filter((k) => !saved.includes(k))], hidden: (cur.hidden ?? []).filter((k) => keys.includes(k)) };
 }
@@ -161,6 +175,7 @@ export async function recentLoad(force = false) {
 /* ---------- Finans → Mer: rutenett med live-tall ---------- */
 
 const IC = {
+  hl: 'M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6',
   sok: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-4-4', liste: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01', finn: 'M7 7h10l-3-3M17 17H7l3 3',
   budsjett: 'M12 3v9l6.4 6.4A9 9 0 1 1 12 3zM15 3.5A9 9 0 0 1 20.5 9H15z', kv: 'M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M9 8h4l2 2v6H9z',
   fast: 'M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3', konto: 'M3 10h18M5 10v8M9 10v8M15 10v8M19 10v8M3 20h18M12 3l9 5H3z',
@@ -184,6 +199,7 @@ export function finMerGrid() {
   const st = D.stocks?.summary, chg = st?.changePct ?? st?.dayPct ?? null;
   const dirs = Array.isArray(D.dirs) ? D.dirs : D.dirs?.items ?? null;
   const T = [
+    ...(P24.profRoot() ? [['hl', 'Hjem', 'Pakker, avganger og widgets']] : []), // Prompt 24: Hjem som flis i profilene
     ['sok', 'Søk', '✦ Med AI'], ['liste', 'Liste', 'Alle transaksjoner'], ['finn', 'Finn', 'Kjøp og salg'],
     ['budsjett', 'Budsjett', s?.budgetTotal ? `${n0(s.left ?? 0)} kr ${(s.left ?? 0) < 0 ? 'over' : 'igjen'}` : 'Ikke satt opp'],
     ['kv', 'Kvitteringer', rv ? `${rv} til gjennomgang` : 'Ingen til gjennomgang', rv],

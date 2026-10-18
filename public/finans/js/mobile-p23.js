@@ -1,6 +1,7 @@
 // Prompt 23 (mobil-PWA): sveip tilbake med forrige side montert bak, scrollposisjon per rute, Kvitteringer i Papir,
 // Finn-annonsen i appen, AI-tidsgrenser, Integrasjoner (Home Assistant) og ikoner på fanene i Nyhetsleser.
 // Fasit: design/Mobil Papir App.dc.html, Nyhetsleser.dc.html og prompts/prompt-23-pakke/*.
+import * as P24 from './mobile-p24.js';
 import { S, api, hlApi, esc, n0, n2, dd, today, parseAmount, loadReceipts, loadBoot } from './core.js';
 import { m, draw, flash, loadJobs, ACTIVE_JOBS, retryUpload } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
@@ -485,16 +486,18 @@ const COLOR = ['noto', 'twemoji', 'fluent-emoji', 'logos', 'flag', 'circle-flags
 export const IC = { n: null, q: '', lib: '', res: null, tot: 0, busy: false, err: '', ai: false, all: false, local: null };
 const icUrl = (id) => `/api/icons/${id.split(':').map(encodeURIComponent).join('/')}.svg`;
 const isColor = (id) => COLOR.includes(id.split(':')[0]) || /emoji/.test(id);
-/** Ikonet som span: tekstfarge via mask, fargesett som bilde. */
-export const icSpan = (id, size = 16, cls = 'p23-ic') => (!id ? '' : isColor(id)
-  ? `<span class="${cls}" style="width:${size}px;height:${size}px;background:url('${icUrl(id)}') center/contain no-repeat" aria-hidden="true"></span>`
-  : `<span class="${cls}" style="width:${size}px;height:${size}px;-webkit-mask:url('${icUrl(id)}') center/contain no-repeat;mask:url('${icUrl(id)}') center/contain no-repeat" aria-hidden="true"></span>`);
+/** Prompt 24: ikonet som <img> (ikke CSS-maske, som nettleseren ikke tegnet før fanen ble tegnet på nytt).
+ *  Fargen bakes inn i SVG-en (blekk for valgt, dempet ellers), og SVG-ene forhåndslastes. */
+/** Forhåndslast standardikonene ved oppstart (og brukerens egne fra lokal kopi). */
+export const icBoot = () => setTimeout(() => P24.icPreload([...Object.values(ICD), ...Object.values(IC.local?.ic ?? {})]).catch(() => {}), 1200);
+export const icSpan = (id, size = 16, cls = 'p23-ic', tone = 'ink') => P24.icImg(id, size, cls, tone);
 const newsSt = (P) => ({ ic: {}, icSrc: {}, icOn: true, ...(IC.local ?? {}), ...(P.news?.settings ?? {}) });
 export const icOf = (P, k) => { const s = newsSt(P), d = P.news?.iconDefaults ?? ICD; return k in (s.ic ?? {}) ? s.ic[k] : d[k] ?? ''; };
 /** Fanene i Nyhetsleser med ikon (brukes av newsView). */
 export function newsTabs(P, cats) {
   const on = newsSt(P).icOn !== false;
-  return `<div class="pp-tabs" role="tablist">${cats.map(([k, n]) => { const id = on ? icOf(P, k) : ''; return `<button role="tab" data-pp="cat" data-k="${k}" aria-selected="${P.cat === k}" class="${id ? 'p23-tabic' : ''}">${icSpan(id, 16)}${esc(n)}</button>`; }).join('')}</div>`;
+  if (on) P24.icPreload(cats.map(([k]) => icOf(P, k)));
+  return `<div class="pp-tabs" role="tablist">${cats.map(([k, n]) => { const id = on ? icOf(P, k) : ''; return `<button role="tab" data-pp="cat" data-k="${k}" aria-selected="${P.cat === k}" class="${id ? 'p23-tabic' : ''}">${icSpan(id, 16, 'p23-ic', P.cat === k ? 'ink' : 'mut')}${esc(n)}</button>`; }).join('')}</div>`;
 }
 /** Seksjonen «IKONER PÅ FANENE» i innstillingsarket. */
 export function newsIconSection(P, cats) {

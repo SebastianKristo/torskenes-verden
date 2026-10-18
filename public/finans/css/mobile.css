@@ -2498,3 +2498,241 @@ html[data-ui=mobile]:has(#app > .m.papir),html[data-ui=mobile] body:has(#app > .
 .m:has(.sb-edit) .pp-nav,.m:has(.sb-edit) .pp-navbg,.m:has(.sb-edit) .pp-fab{display:none!important}
 .m.papir.ph .m-scroll>.p17-gl:first-child{margin-top:34px}
 .m .p23-cat{padding:0 12px}
+
+/* =====================================================================
+   Prompt 24 (mobile-p24.js): fanelinje-ikoner, Mer, Ruter, Bursdager, Boliger, Innstillinger-søk, Integrasjoner, Familie
+   ===================================================================== */
+
+/* Fanelinje: ikon i 18 × 18-boks, glyf 16 (Newsreader), sentrert og 1,5 ned; 7 mellom ikon og tekst. Valgt pille 0 16, ellers 0 6. */
+.m.papir .pp-nav a,.m.papir .pp-nav.sb-nav>button[data-sb=tab]{gap:7px;align-items:center}
+.m.papir .pp-nav a>i,.m.papir .pp-nav.sb-nav>button>i{flex:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;font:500 16px/1 Newsreader,serif;font-style:normal;transform:translateY(1.5px)}
+.m.papir .pp-nav a:not([aria-current=page])>i,.m.papir .pp-nav.sb-nav>button:not([aria-current=page])>i{display:none}
+.m.papir .pp-nav a>span,.m.papir .pp-nav.sb-nav>button>span{line-height:1}
+.m.papir .pp-nav a:not([aria-current=page]){padding:0 6px}
+.m.papir .pp-nav a[aria-current=page],.m.papir .pp-nav.sb-nav>button[aria-current=page]{padding:0 16px}
+@media (min-width:600px){
+  .m.papir .pp-nav a>i,.m.papir .pp-nav.sb-nav>button>i{display:inline-flex!important;transform:none;font-size:17px}
+  .m.papir .pp-nav a,.m.papir .pp-nav a[aria-current=page]{padding:0 2px;gap:2px}
+}
+
+/* Mer: ett kort, Newsreader 19, undertekst 12.5, trykk-opasitet .6 */
+.pp-list.p24-mer a{padding:13px 14px;-webkit-tap-highlight-color:transparent}
+.pp-list.p24-mer a:active{opacity:.6}
+.pp-list.p24-mer b.pp-serif{font:500 19px Newsreader,serif;display:block}
+.pp-list.p24-mer .pp-mut{font-size:12.5px}
+.pp-list.p24-mer>a>.pp-mut{font-size:15px}
+
+/* Felles småbrikker */
+.m .p24-card{border-radius:20px;background:var(--pp-card);padding:16px}
+.m .p24-mut{font-size:12.5px;color:var(--pp-mut)}
+.m .p24-lab{display:flex;justify-content:space-between;font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--pp-lab);padding:4px 4px 0}
+.m .p24-lab .p24-c{color:var(--pp-mut)}
+.m .p24-fl{font-size:12.5px;color:var(--pp-mut)}
+.m .p24-note{font-size:12px;color:var(--pp-mut);line-height:1.45}
+.m .p24-in{height:44px;padding:0 14px;border-radius:14px;border:1px solid var(--pp-line);background:var(--pp-bg);color:var(--pp-ink);font:600 15px Manrope,sans-serif;outline:none;min-width:0;width:100%;box-sizing:border-box}
+.m .p24-in.mono{font-family:'IBM Plex Mono',monospace}
+select.p24-in{padding:0 10px}
+.m .p24-chips{display:flex;gap:6px;flex-wrap:wrap}
+.m .p24-chip{height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);font:600 12.5px Manrope,sans-serif;cursor:pointer}
+.m .p24-chip.mono{font:600 12px 'IBM Plex Mono',monospace}
+.m .p24-chip.on{background:var(--pp-ink);color:var(--pp-bg);border-color:var(--pp-ink)}
+.m .p24-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.m .p24-row8{display:flex;gap:8px}
+.m .p24-b{height:40px;padding:0 16px;border-radius:20px;border:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);font:700 13.5px Manrope,sans-serif;cursor:pointer}
+.m .p24-b.ink{border:0;background:var(--pp-ink);color:var(--pp-bg)}
+.m .p24-b.lab{color:var(--pp-lab)}
+.m .p24-b.sm{height:34px;padding:0 16px;font-size:13px}
+.m .p24-b.lg{height:48px;border-radius:24px;font-size:15px}
+.m .p24-b.ghost{border:0;height:44px}
+.m .p24-b:disabled{opacity:.45}
+.m .p24-two .p24-b{height:44px;border-radius:22px;font-size:14px}
+.m .p24-tog{display:flex;align-items:center;gap:12px;width:100%;padding:8px 0;border:0;border-top:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);text-align:left;font-family:inherit;cursor:pointer}
+.m .p24-tog b{display:block;font-size:14px;font-weight:600}
+.m .p24-tog small{font-size:12px;color:var(--pp-mut)}
+.m .p24-sw{flex:none;width:46px;height:28px;border-radius:14px;background:var(--pp-line);padding:3px;display:flex;justify-content:flex-start;box-sizing:border-box}
+.m .p24-sw.on{background:var(--pp-pos);justify-content:flex-end}
+.m .p24-sw i{width:22px;height:22px;border-radius:11px;background:#fff}
+
+/* Søk (Innstillinger og Bursdager) */
+.m .p24-ss,.m .p24-bdq{display:flex;gap:8px}
+.m .p24-ssf{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:46px;padding:0 14px;border-radius:999px;background:var(--pp-card);color:var(--pp-mut);box-sizing:border-box}
+.m .p24-ss .p24-ssf{box-shadow:0 10px 30px -14px rgba(0,0,0,.3)}
+.m .p24-ssf svg{flex:none}
+.m .p24-ssf input{flex:1;min-width:0;height:100%;border:0;background:transparent;color:var(--pp-ink);font:500 15px Manrope,sans-serif;outline:none;-webkit-appearance:none;appearance:none}
+.m .p24-ssf input::-webkit-search-cancel-button{display:none}
+.m .p24-ssx{flex:none;width:26px;height:26px;border-radius:13px;border:0;background:var(--pp-line);color:var(--pp-ink);font-size:13px;cursor:pointer}
+.m .p24-ai{flex:none;height:46px;padding:0 16px;border-radius:999px;border:0;background:var(--pp-card);color:var(--pp-ink);font:700 13.5px Manrope,sans-serif;box-shadow:0 10px 30px -14px rgba(0,0,0,.3);cursor:pointer}
+.m .p24-ai.on{background:var(--pp-lab);color:#fff}
+.m .p24-ans{display:flex;gap:10px;padding:12px 14px;border-radius:18px;background:var(--pp-card);border:1px solid var(--pp-line);font-size:13.5px;line-height:1.45}
+.m .p24-ans>span:first-child{flex:none;color:var(--pp-lab);font-weight:800}
+.m .p24-none{font-size:13px;padding:0 4px}
+.m.papir.ph .m-scroll>.p24-ss:first-child{position:relative;z-index:2}
+
+/* Integrasjoner */
+.m .p24-igh{display:flex!important;justify-content:space-between;gap:8px}
+.m .p24-igh>span:last-child{letter-spacing:.04em}
+.m .p24-igv{max-width:42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-size:12px}
+.m .p24-igf{display:flex;flex-direction:column;gap:10px;padding:4px 14px 16px;background:var(--pp-card)}
+.m .p24-igf .p24-in{font:500 14.5px 'IBM Plex Mono',monospace;height:46px}
+.m .p24-igf .pp-btn{height:44px;border-radius:22px}
+.m .p24-clr{height:36px;border:0;background:transparent;color:var(--pp-lab);font:700 13px Manrope,sans-serif;cursor:pointer}
+.m .p24-igg.hit .p17-list{box-shadow:0 0 0 2px var(--pp-lab)}
+.m .p24-igg{scroll-margin-top:80px}
+
+/* Bursdager (Bursdager.dc.html, mobil) */
+.m .p24-bd{display:flex;flex-direction:column;gap:14px}
+.m .p24-bdhero{text-align:left;border:0;cursor:pointer;font-family:inherit;color:#fff;border-radius:24px;padding:18px;background:var(--pp-lab);display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 30px -14px rgba(0,0,0,.4);width:100%}
+.m .p24-bdk{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;opacity:.9}
+.m .p24-bdk>span:last-child{font-size:10px;letter-spacing:.06em;opacity:.9}
+.m .p24-bdm{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.m .p24-bdn{display:block;font:500 34px/1.05 Newsreader,serif;text-wrap:pretty}
+.m .p24-bds{display:block;margin-top:4px;font-size:14px;opacity:.92}
+.m .p24-bdbig{flex:none;text-align:right}
+.m .p24-bdbig b{display:block;font:400 48px/1 Newsreader,serif}
+.m .p24-bdbig small{font-size:12.5px;opacity:.88}
+.m .p24-bdmore{font-size:13px;opacity:.92;border-top:1px solid rgba(255,255,255,.28);padding-top:10px}
+.m .p24-add{flex:none;height:46px;padding:0 18px;border-radius:999px;border:0;background:var(--pp-ink);color:var(--pp-bg);font:700 14px Manrope,sans-serif;cursor:pointer}
+.m .p24-bdadd{padding:16px;border-radius:22px;background:var(--pp-card);display:flex;flex-direction:column;gap:10px;border:1.5px solid var(--pp-lab)}
+.m .p24-h22{font:500 22px Newsreader,serif}
+.m .p24-dmy{display:grid;grid-template-columns:76px minmax(0,1fr) 92px;gap:8px}
+.m .p24-bdg{display:flex;flex-direction:column;gap:6px}
+.m .p24-bdl{padding:2px 14px}
+.m .p24-bdr{border-top:1px solid var(--pp-line)}
+.m .p24-bdh{width:100%;display:flex;align-items:center;gap:12px;min-height:60px;padding:8px 0;border:0;background:transparent;color:var(--pp-ink);text-align:left;font-family:inherit;cursor:pointer}
+.m .p24-bdh b{display:block;font-size:15px;font-weight:700}
+.m .p24-bav{flex:none;color:#fff;display:grid;place-items:center;font-family:Manrope,sans-serif;font-weight:800;overflow:hidden}
+.m .p24-bav img{width:100%;height:100%;object-fit:cover}
+.m .p24-bdw{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.m .p24-bdw b{font:500 17px Newsreader,serif;white-space:nowrap}
+.m .p24-bdw b.soon,.m .p24-bww.soon{color:var(--pp-lab)}
+.m .p24-bdw small{font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.06em;color:var(--pp-mut)}
+.m .p24-bdo{display:flex;flex-direction:column;gap:8px;padding:0 0 14px 54px;font-size:13.5px}
+.m .p24-bdo .p24-chip{height:30px;padding:0 11px;border-radius:15px;font-size:12px}
+.m .p24-ob{height:36px;padding:0 14px;border-radius:18px;border:1px solid var(--pp-line);background:transparent;display:inline-flex;align-items:center;color:var(--pp-ink);text-decoration:none;font:700 13px Manrope,sans-serif;cursor:pointer}
+.m .p24-ob.lab{color:var(--pp-lab)}
+.m .p24-bdcal{display:flex;flex-direction:column;gap:6px}
+.m .p24-cal{display:flex;flex-direction:column;gap:12px}
+.m .p24-ch{display:flex;align-items:center;gap:12px}
+.m .p24-ch b{display:block;font-size:15px;font-weight:700}
+.m .p24-ch small{font-size:12.5px}
+.m .p24-ci{flex:none;width:40px;height:40px;border-radius:12px;display:grid;place-items:center}
+.m .p24-ci.g{background:#fff;border:1px solid var(--pp-line);box-sizing:border-box}
+.m .p24-ci.ha{background:#18bcf2;color:#fff}
+.m .p24-glog{height:46px;border-radius:23px;border:1px solid var(--pp-line);background:#fff;color:#1f1f1f;display:flex;align-items:center;justify-content:center;gap:10px;font:600 14.5px Manrope,sans-serif;cursor:pointer}
+.m .p24-glog:disabled{opacity:.5}
+.m .p24-hr{display:block;height:1px;background:var(--pp-line)}
+.m .p24-cal .p24-b.ink{height:42px;border-radius:21px}
+.m .p24-cal .p24-row8 .p24-b{height:40px}
+/* Hjem-widgeten */
+.m .p24-bdwid{display:flex;flex-direction:column;gap:8px;padding:14px 16px;color:var(--pp-ink);text-decoration:none}
+.m .p24-bdwid .pp-row{display:flex;justify-content:space-between;align-items:baseline;width:100%}
+.m .p24-bwr{display:flex;align-items:center;gap:10px;min-width:0}
+.m .p24-bwr b.m-ell{display:block;font-size:14.5px;font-weight:700}
+.m .p24-bwr .pp-mut{font-size:12px}
+.m .p24-bww{flex:none;font:500 18px Newsreader,serif;color:var(--pp-ink)}
+.m .p24-nopkg{color:var(--pp-ink);text-decoration:none}
+
+/* Ruter-visningen: fullskjerm, ingen fanelinje/FAB, toppbilde 52/16/40 og innhold −34 inn i bildet */
+.m.papir.p24-rvm .m-scroll{padding:0 16px calc(env(safe-area-inset-bottom) + 40px);gap:14px}
+.m .p24-rv{display:flex;flex-direction:column}
+.m .p24-rvh{margin:0 -16px;padding:max(52px,calc(env(safe-area-inset-top) + 8px)) 16px 40px;background-color:#2a3440;background-size:cover;background-position:center;color:#fff;display:flex;flex-direction:column;gap:14px}
+.m .p24-rvt{display:flex;align-items:center;gap:10px}
+.m .p24-gp{height:36px;padding:0 14px 0 10px;border-radius:999px;border:0;background:rgba(27,26,23,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#fff;display:inline-flex;align-items:center;font:600 13px Manrope,sans-serif;text-decoration:none;cursor:pointer}
+button.p24-gp{padding:0 12px;font-size:12.5px}
+.m .p24-rvk{margin-top:26px}
+.m .p24-rvk>span{font:italic 400 17px Newsreader,serif;opacity:.92}
+.m .p24-rvk h1{margin:2px 0 0;font:500 40px/1.02 Newsreader,serif;letter-spacing:-.01em;text-shadow:0 2px 14px rgba(0,0,0,.35)}
+.m .p24-rvk small{font-size:13px;opacity:.9}
+.m .p24-rvb{margin-top:-34px;position:relative;display:flex;flex-direction:column;gap:14px}
+.m .p24-stops{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:2px 16px;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.m .p24-stops::-webkit-scrollbar{display:none}
+.m .p24-sp{flex:none;height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--pp-line);background:var(--pp-card);color:var(--pp-ink);font:600 13px Manrope,sans-serif;white-space:nowrap;cursor:pointer}
+.m .p24-sp.on{background:var(--pp-ink);color:var(--pp-bg);border-color:var(--pp-ink)}
+.m .p24-sp.add{border:1.5px dashed var(--pp-mut);font-weight:700}
+.m .p24-mine{padding:14px;display:flex;flex-direction:column;gap:10px}
+.m .p24-mh{display:flex;justify-content:space-between;align-items:center}
+.m .p24-mh b{font:500 20px Newsreader,serif}
+.m .p24-mr{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--pp-line)}
+.m .p24-mr b{display:block;font-size:14.5px;font-weight:700}
+.m .p24-mr small{font-size:12px;color:var(--pp-mut)}
+.m .p24-mr button{flex:none;width:36px;height:36px;border-radius:18px;border:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);cursor:pointer}
+.m .p24-mr button.rm{border:0;color:var(--pp-lab);font-size:20px}
+.m .p24-msq{display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;border-radius:14px;background:var(--pp-bg);border:1px solid var(--pp-line)}
+.m .p24-msq span{color:var(--pp-mut)}
+.m .p24-msq input{flex:1;min-width:0;border:0;outline:none;background:transparent;color:var(--pp-ink);font:500 15px Manrope,sans-serif}
+.m .p24-res{display:flex;flex-direction:column}
+.m .p24-res button{display:flex;align-items:center;gap:10px;padding:10px 0;border:0;border-top:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);text-align:left;font-family:inherit;cursor:pointer}
+.m .p24-res b{display:block;font-size:14.5px;font-weight:600}
+.m .p24-res small{font-size:12px;color:var(--pp-mut)}
+.m .p24-res button>span:last-child{flex:none;font:700 12.5px Manrope,sans-serif}
+.m .p24-st{font-size:13px;color:var(--pp-mut);padding:0 4px}
+.m .p24-st.lab{color:var(--pp-lab)}
+.m .p24-seg{display:flex;gap:4px;padding:4px;border-radius:999px;background:var(--pp-card)}
+.m .p24-seg button{flex:1 1 0;min-width:0;height:34px;border-radius:999px;border:0;background:transparent;color:var(--pp-ink);font:600 12.5px Manrope,sans-serif;cursor:pointer}
+.m .p24-seg button[aria-pressed=true]{background:var(--pp-ink);color:var(--pp-bg)}
+.m .p24-alert{display:flex;gap:10px;padding:12px 14px;border-radius:16px;background:var(--pp-card);border:1px solid var(--pp-line);font-size:13px;line-height:1.45}
+.m .p24-alert b{flex:none;color:var(--pp-lab);font-weight:800}
+.m .p24-deps{display:flex;flex-direction:column;border-radius:20px;background:var(--pp-card);overflow:hidden}
+.m .p24-dep{border-top:1px solid var(--pp-line)}
+.m .p24-dep.x .p24-dh b{text-decoration:line-through;opacity:.6}
+.m .p24-dh{width:100%;display:flex;align-items:center;gap:12px;padding:12px 14px;border:0;background:transparent;color:var(--pp-ink);text-align:left;font-family:inherit;cursor:pointer}
+.m .p24-dh b.m-ell{display:block;font-size:15px;font-weight:600}
+.m .p24-dh .m-grow>span{font-size:12px}
+.m .p24-ln{flex:none;min-width:34px;height:28px;padding:0 6px;box-sizing:border-box;border-radius:7px;display:grid;place-items:center;font-size:13px;font-weight:800}
+.m .p24-dm{flex:none;text-align:right}
+.m .p24-dm b{display:block;font:500 24px/1 Newsreader,serif;white-space:nowrap}
+.m .p24-dm small{font-size:11.5px;color:var(--pp-mut)}
+.m .p24-dep .p21-sl{padding:2px 14px 14px 60px}
+.m .p24-foot{font-size:12px;color:var(--pp-mut);line-height:1.45;padding:0 4px}
+@media (min-width:600px){ .m.papir.p24-rvm .m-scroll{max-width:720px} }
+
+/* Boliger: piller, toppbilde med krysstoning, domene-pille og «Rediger bolig» */
+.m .p24-hp{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -18px;padding:2px 18px;position:relative;z-index:2}
+.m .p24-hp::-webkit-scrollbar{display:none}
+.m .p24-hpi{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;flex:none;display:flex;align-items:center;gap:10px;height:52px;padding:0 16px 0 8px;border-radius:26px;border:1px solid var(--pp-line);background:var(--pp-card);color:var(--pp-ink);text-decoration:none;font-family:inherit;box-sizing:border-box}
+.m .p24-hpi.on{background:var(--pp-ink);color:var(--pp-bg);border-color:var(--pp-ink)}
+.m .p24-hpi b{display:block;font-size:14px;font-weight:700;white-space:nowrap}
+.m .p24-hpi small{font-size:11.5px;opacity:.75;white-space:nowrap}
+.m .p24-hpi.add{padding:0 18px;border:1.5px dashed var(--pp-line);background:transparent;font:700 13.5px Manrope,sans-serif;cursor:pointer}
+.m .p24-hav{flex:none;width:36px;height:36px;border-radius:18px;color:#fff;display:grid;place-items:center;font:500 17px Newsreader,serif}
+.p16-bol{-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+.m .p24-xf{position:absolute;inset:0;z-index:0;background-size:cover;background-position:center;pointer-events:none;animation:p24xf .2s ease-out forwards}
+.pp-hero>.pp-bottom{position:relative;z-index:1}
+@keyframes p24xf{from{opacity:1}to{opacity:0}}
+.pp-hero.own{transition:background-image .2s}
+.m .p24-dom{flex:none;align-self:center;margin-top:6px;display:flex;align-items:center;gap:8px;height:38px;padding:0 14px 0 6px;border-radius:999px;background:rgba(27,26,23,.55);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);color:#fff;text-decoration:none;text-shadow:none}
+.m .p24-gl{flex:none;width:28px;height:28px;border-radius:14px;background:rgba(255,255,255,.16);display:grid;place-items:center}
+.m .p24-dv{display:flex;flex-direction:column;align-items:flex-start;line-height:1.1}
+.m .p24-dv b{font:700 14px 'IBM Plex Mono',monospace}
+.m .p24-dv small{font-size:11px;font-weight:600;opacity:.85;white-space:nowrap}
+.m .p24-dom>i{flex:none;width:8px;height:8px;border-radius:4px}
+.pp-sheet.p24-be{gap:12px;max-height:90dvh;overflow-y:auto}
+.m .p24-beh{display:grid;grid-template-columns:44px 1fr 44px;align-items:center}
+.m .p24-beh b{text-align:center;font:500 22px Newsreader,serif}
+.m .p24-beh button{justify-self:end;width:38px;height:38px;border-radius:19px;border:1px solid var(--pp-line);background:var(--pp-card);color:var(--pp-ink);font-size:17px;cursor:pointer}
+.m .p24-bep{height:120px;border-radius:20px;display:flex;align-items:flex-end;padding:14px;box-sizing:border-box;color:#fff;font:500 26px Newsreader,serif;text-shadow:0 2px 10px rgba(0,0,0,.4)}
+.m .p24-be .p24-in{height:46px;background:var(--pp-card)}
+.m .p24-cols{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.m .p24-cols>button{width:32px;height:32px;border-radius:16px;border:3px solid transparent;box-shadow:inset 0 0 0 2px var(--pp-bg);cursor:pointer}
+.m .p24-cols>button[aria-pressed=true]{border-color:var(--pp-ink)}
+.m .p24-colf{position:relative;width:32px;height:32px;border-radius:16px;background:conic-gradient(#f44,#fd0,#4c4,#0cf,#44f,#c4f,#f44);cursor:pointer}
+.m .p24-colf input{position:absolute;inset:0;opacity:0;width:100%;height:100%;border:0;padding:0;cursor:pointer}
+.m .p24-bgs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.m .p24-bgo{display:flex;flex-direction:column;gap:5px;padding:0;border:0;background:transparent;color:var(--pp-ink);font-family:inherit;text-align:left;cursor:pointer}
+.m .p24-bgo>span{aspect-ratio:16/10;border-radius:12px;background-size:cover;background-position:center}
+.m .p24-bgo[aria-pressed=true]>span{outline:2.5px solid var(--pp-lab);outline-offset:2px}
+.m .p24-bgo>span.up{border:1.5px dashed var(--pp-line);display:grid;place-items:center;font-size:20px;color:var(--pp-mut)}
+.m .p24-bgo small{font-size:12px;font-weight:600}
+
+/* Familie: enhetslisten i personkortet */
+.m .f22-devs{display:flex;flex-direction:column;gap:2px;margin-top:4px}
+.m .f22-dev{display:flex;align-items:center;gap:10px;width:100%;padding:9px 2px;border:0;border-top:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);text-align:left;font-family:inherit;cursor:pointer}
+.m .f22-dev:disabled{cursor:default;color:var(--pp-ink)}
+.m .f22-dev b{display:block;font-size:14px;font-weight:700}
+.m .f22-ok{flex:none;color:var(--pp-pos);font-weight:800}
+
+/* Nyhetsleser: ikonene er <img>, ikke maske */
+img.p23-ic,span.p24-img{background:none!important;-webkit-mask:none!important;mask:none!important;display:inline-block;flex:none;vertical-align:-3px;object-fit:contain}
+.m .pp-sheet.p24-be>*{flex-shrink:0}
+.m.papir .pp-hero .pp-bottom>.m-grow{min-width:0}
+.m.papir .pp-hero .pp-kick{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
