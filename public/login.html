@@ -3,64 +3,76 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#07080b">
+<meta name="theme-color" content="#f3efe6">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>OS · Lås opp</title>
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Logg inn · Homelab</title>
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="icon" href="/assets/icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/assets/css/app.css">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/login.css">
-<link rel="stylesheet" href="/assets/css/paper.css">
-<script src="/assets/js/hl-boot.js"></script>
 <script type="module" src="/assets/js/login.js"></script>
 </head>
 <body>
-<div class="lock">
-  <form id="setup" class="lock-box setup-box" hidden novalidate>
-    <div class="lock-pw" aria-hidden="true"><div class="lock-pw-k">Homelab</div><div class="lock-pw-t">Ny server</div></div>
-    <div class="setup-top"><div class="logo">OS</div><span class="lock-small" id="ob-step">Steg 1 av 2</span></div>
-    <div class="setup-bar"><span class="on"></span><span id="ob-bar2"></span></div>
-    <div class="step" data-ob="1">
-      <div class="lock-title" style="line-height:1.2">Velkommen til <b>din nye server</b></div>
-      <div class="lock-hint">Først lager vi hovedadministratoren. Navnet vises i hilsenen på forsiden og i menyen, og du kan endre det senere under Innstillinger → Innlogging.</div>
-      <label class="ob-field">Navn på hovedadmin<input name="adminName" placeholder="f.eks. Kari" autocomplete="name" maxlength="60"></label>
-      <label class="ob-field">Navn på serveren<input name="serverName" placeholder="f.eks. Homelab" value="Homelab" maxlength="40"></label>
-    </div>
-    <div class="step" data-ob="2" hidden>
-      <div class="lock-title" style="line-height:1.2">Hei, <b id="ob-hello"></b></div>
-      <div class="lock-hint">Velg brukernavn og passord for innlogging. Tofaktor kan slås på etterpå.</div>
-      <label class="ob-field">Brukernavn<input name="username" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="32"></label>
-      <label class="ob-field">Passord<input type="password" name="password" autocomplete="new-password" placeholder="Minst 8 tegn"></label>
-      <label class="ob-field">Gjenta passord<input type="password" name="password2" autocomplete="new-password"></label>
-    </div>
-    <div class="err" id="ob-err" role="alert" hidden></div>
-    <button type="submit" class="lock-btn" id="ob-btn">Neste</button>
-    <button type="button" class="lock-back" id="ob-back" hidden>← Tilbake</button>
-  </form>
-  <form id="login" class="lock-box">
-    <div class="lock-pw" aria-hidden="true"><div class="lock-pw-k">Homelab</div><div class="lock-pw-t">Hei, velkommen hjem</div></div>
-    <div class="logo">OS</div>
-    <div class="lock-title">Hei, <b>velkommen hjem</b></div>
-    <div class="step" data-step="cred">
-      <span class="p-flab" aria-hidden="true">BRUKERNAVN</span>
-      <input name="username" placeholder="Brukernavn" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" autofocus aria-label="Brukernavn">
-      <span class="p-flab" aria-hidden="true">PASSORD</span>
-      <input type="password" name="password" placeholder="Passord" autocomplete="current-password" aria-label="Passord">
-    </div>
-    <div class="step" data-step="code" hidden>
-      <div class="lock-hint">Tofaktor er på for <b id="tfa-user"></b>. Skriv inn den 6-sifrede koden fra autentiseringsappen.</div>
-      <span class="p-flab" aria-hidden="true">KODE</span>
-      <input name="code" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="11" placeholder="000000" aria-label="Kode fra autentiseringsappen">
-      <div class="lock-small">Mistet telefonen? Skriv inn en gjenopprettingskode.</div>
-    </div>
-    <div class="err" id="err" role="alert" hidden></div>
-    <label class="remember" data-step="cred"><input type="checkbox" name="remember" checked><span>Husk denne enheten på lokalt nett</span></label>
-    <button type="submit" class="lock-btn">Lås opp</button>
-    <button type="button" class="lock-back" id="back" data-step="code" hidden>← Tilbake</button>
-  </form>
-</div>
+<!-- Innlogging og førstegangsoppsett i Papir-stil (prompt 25, «Homelab Papir Web» tweak gate):
+     toppbilde til venstre, skjema på papir til høyre. Smale skjermer stabler dem. -->
+<main class="gate" id="gate-root">
+  <div class="gate-hero" id="g-hero">
+    <span class="gate-brand" id="g-brand">Homelab</span>
+    <div class="gate-hero-t"><span class="gate-kick" id="g-kick"></span><h1 id="g-title"></h1></div>
+  </div>
+  <div class="gate-side">
+    <form id="gate" class="gate-form" novalidate>
+      <div class="gate-bars" data-show="onb" hidden><span></span><span></span><span></span><span></span></div>
+      <span class="gate-lab" id="g-lab">LOGG INN</span>
+      <b class="gate-h" id="g-h">Logg inn på Homelab</b>
+      <span class="gate-sub" id="g-sub">Bruk brukernavnet og passordet for serveren din.</span>
+
+      <div class="gate-fields" data-show="login">
+        <label class="gate-l" for="f-srv">Server</label>
+        <input id="f-srv" name="srv" class="gate-in mono" autocomplete="url" autocapitalize="none" autocorrect="off" spellcheck="false" inputmode="url">
+        <label class="gate-l" for="f-u">Brukernavn</label>
+        <input id="f-u" name="username" class="gate-in" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false">
+        <label class="gate-l" for="f-pw">Passord</label>
+        <input id="f-pw" name="password" type="password" class="gate-in" autocomplete="current-password">
+      </div>
+
+      <div class="gate-fields" data-show="2fa" hidden>
+        <label class="gate-l" for="f-code" id="f-code-l">Kode fra autentiseringsappen</label>
+        <input id="f-code" name="code" class="gate-in gate-code" inputmode="numeric" autocomplete="one-time-code" placeholder="123 456">
+        <button type="button" class="gate-link" id="g-recovery">Mistet telefonen? Bruk en gjenopprettingskode</button>
+      </div>
+
+      <div class="gate-fields" data-show="s1" hidden>
+        <label class="gate-l" for="f-name">Navn på hovedadmin</label>
+        <input id="f-name" name="adminName" class="gate-in" placeholder="Sebastian" autocomplete="name" maxlength="60">
+        <label class="gate-l" for="f-server">Navn på serveren</label>
+        <input id="f-server" name="serverName" class="gate-in" placeholder="Homelab" value="Homelab" maxlength="40">
+      </div>
+
+      <div class="gate-fields" data-show="s2" hidden>
+        <label class="gate-l" for="f-ou">Brukernavn</label>
+        <input id="f-ou" name="newUsername" class="gate-in" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="32">
+        <label class="gate-l" for="f-opw">Passord</label>
+        <input id="f-opw" name="newPassword" type="password" class="gate-in" autocomplete="new-password">
+        <label class="gate-l" for="f-opw2">Gjenta passord</label>
+        <input id="f-opw2" name="newPassword2" type="password" class="gate-in" autocomplete="new-password">
+      </div>
+
+      <div class="gate-bgs" data-show="s3" hidden id="g-bgs"></div>
+
+      <div class="gate-sum" data-show="s4" hidden id="g-sum"></div>
+
+      <span class="gate-err" id="g-err" role="alert" hidden></span>
+      <button type="submit" class="gate-btn" id="g-btn">Logg inn</button>
+      <div class="gate-foot">
+        <button type="button" class="gate-back" id="g-back" hidden>← Tilbake</button>
+        <span class="gate-grow"></span>
+        <span class="gate-foot-t" id="g-foot"></span>
+      </div>
+    </form>
+  </div>
+</main>
 </body>
 </html>

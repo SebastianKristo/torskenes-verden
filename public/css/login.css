@@ -1,35 +1,59 @@
-.lock{min-height:100vh;display:grid;place-items:center;padding:24px;background:radial-gradient(ellipse at 50% 30%,#1a1d24,#07080b 70%)}
-.lock-box{width:100%;max-width:360px;display:flex;flex-direction:column;gap:14px;background:rgba(14,17,26,.85);border:1px solid #1f2430;border-radius:28px;padding:32px}
-.lock-title{font-size:28px;font-weight:300}
-.lock-title b{font-weight:700}
-.lock-box input{padding:14px 18px;background:#0b0e15;border:1px solid var(--line);border-radius:999px;color:var(--text);font-size:16px;outline:none}
-.lock-box input:focus{border-color:var(--blue)}
-.lock-btn{padding:14px;border:0;border-radius:999px;background:var(--blue);color:var(--lock);font-weight:600;font-size:15px}
-.lock-btn:disabled{opacity:.6}
-@media (max-width:767px){
-  .lock{place-items:stretch;padding:calc(env(safe-area-inset-top) + 32px) 24px 32px}
-  .lock-box{background:none;border:0;padding:0;justify-content:center;max-width:440px;margin:0 auto}
-  .lock-box .logo{width:52px;height:52px;border-radius:14px}
-  .lock-title{font-size:32px}
-  .lock-box input{padding:16px 20px;font-size:17px;background:rgba(11,14,21,.85)}
-  .lock-btn{padding:16px;font-size:16px}
-}
-.remember{display:flex;align-items:center;gap:10px;color:var(--text-2);font-size:14px;cursor:pointer}
-.remember input{width:20px;height:20px;margin:0;accent-color:var(--blue)}
-.step{display:flex;flex-direction:column;gap:14px}
-.lock-hint{font-size:14px;color:var(--text-2);line-height:1.45}
-.lock-hint b{color:var(--text)}
-.lock-box input.code{font-size:22px;letter-spacing:8px;text-align:center;font-family:'JetBrains Mono',monospace}
-.lock-small{font-size:12px;color:var(--muted)}
-.lock-back{background:none;border:0;color:var(--text-2);font-size:14px;padding:0;cursor:pointer}
-.err{color:var(--red,#f59a8f);font-size:14px}
-.lock-box [hidden]{display:none!important}
+/* Innlogging og førstegangsoppsett i Papir-stil (prompt 25). Fasit: «Homelab Papir Web.dc.html», tweak gate.
+   Venstre: toppbilde med «Homelab» og stor Newsreader-tittel. Høyre: skjema på papir med rød etikett,
+   hvite felt og svart pilleknapp. Under 840 px ligger delene under hverandre. */
+:root{--g-page:#f3efe6;--g-ink:#1b1a17;--g-ink2:#7a7468;--g-rule:#d8d1c2;--g-acc:#b23a2a;--g-field:#fff;
+  --g-serif:Newsreader,Georgia,serif;--g-sans:Manrope,system-ui,sans-serif;--g-mono:'IBM Plex Mono',ui-monospace,monospace;color-scheme:light}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--g-page)}
+body{font-family:var(--g-sans);color:var(--g-ink);-webkit-font-smoothing:antialiased}
+[hidden]{display:none!important}
 
-.setup-box{max-width:420px;gap:16px}
-.setup-top{display:flex;justify-content:space-between;align-items:center}
-.setup-bar{display:flex;gap:6px}
-.setup-bar span{flex:1;height:4px;border-radius:2px;background:#232938;transition:background .2s}
-.setup-bar span.on{background:var(--blue)}
-.ob-field{display:flex;flex-direction:column;gap:6px;font-size:13px;color:#8a93a6}
-#ob-err{color:#f59a8f;font-size:13px}
-.lock-box[hidden]{display:none}
+.gate{position:fixed;inset:0;background:var(--g-page);display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));overflow-y:auto}
+.gate-hero{position:relative;min-height:320px;background-color:#5d7690;background-size:cover;background-position:center 40%;color:#fff;
+  display:flex;flex-direction:column;justify-content:space-between;padding:clamp(20px,4vw,48px)}
+.gate-brand{font:500 28px var(--g-serif);text-shadow:0 1px 10px rgba(0,0,0,.35)}
+.gate-hero-t{text-shadow:0 2px 14px rgba(0,0,0,.35)}
+.gate-kick{display:block;font:italic 400 19px var(--g-serif);opacity:.92}
+.gate-hero h1{margin:6px 0 0;font:500 clamp(44px,6vw,76px)/1 var(--g-serif);letter-spacing:-.01em;white-space:pre-line;text-wrap:balance}
+
+.gate-side{display:flex;align-items:center;justify-content:center;padding:clamp(20px,4vw,56px)}
+.gate-form{width:100%;max-width:440px;margin:0;display:flex;flex-direction:column;gap:12px}
+.gate-fields{display:flex;flex-direction:column;gap:12px}
+.gate-bars{display:flex;gap:6px}
+.gate-bars span{flex:1;height:4px;border-radius:2px;background:var(--g-rule);transition:background .2s}
+.gate-bars span.on{background:var(--g-acc)}
+.gate-lab{font:600 10.5px var(--g-mono);letter-spacing:.12em;color:var(--g-acc)}
+.gate-h{font:500 32px/1.1 var(--g-serif);color:var(--g-ink)}
+.gate-sub{font-size:14px;color:var(--g-ink2);line-height:1.5;text-wrap:pretty}
+.gate-l{font-size:12.5px;font-weight:600;color:var(--g-ink2)}
+.gate-in{height:48px;padding:0 16px;border-radius:14px;border:1px solid var(--g-rule);background:var(--g-field);color:var(--g-ink);
+  font:600 15px var(--g-sans);outline:none;min-width:0;width:100%;margin:0}
+.gate-in:focus{border-color:var(--g-ink)}
+.gate-in::placeholder{color:#b3ab9c;font-weight:500}
+.gate-in.mono{font-family:var(--g-mono);font-weight:500}
+.gate-code{height:60px;font:600 24px var(--g-mono);letter-spacing:.3em;text-align:center}
+.gate-code.rc{font-size:18px;letter-spacing:.12em}
+.gate-link{align-self:flex-start;padding:0;border:0;background:none;color:var(--g-ink2);font:600 12.5px var(--g-sans);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+
+.gate-bgs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.gate-bg{display:flex;flex-direction:column;gap:6px;padding:0;border:0;background:transparent;cursor:pointer;text-align:left;font-family:inherit;color:var(--g-ink)}
+.gate-bg i{display:block;aspect-ratio:16/9;border-radius:14px;background-size:cover;background-position:center;outline-offset:2px}
+.gate-bg[aria-pressed="true"] i{outline:2px solid var(--g-ink)}
+.gate-bg:focus-visible i{outline:2px solid var(--g-acc)}
+.gate-bg b{font-size:13.5px}
+.gate-bg span{font-size:12px;color:var(--g-ink2);margin-top:-4px}
+
+.gate-sum{border-radius:18px;background:#fff;padding:4px 16px}
+.gate-sum div{display:flex;justify-content:space-between;gap:10px;padding:12px 0;border-top:1px solid var(--g-rule)}
+.gate-sum div:first-child{border-top:0}
+.gate-sum span{font-size:14px;color:var(--g-ink2)}
+.gate-sum b{font-size:14px;text-align:right;overflow-wrap:anywhere}
+
+.gate-err{font-size:13px;font-weight:600;color:var(--g-acc)}
+.gate-btn{height:50px;margin-top:4px;border-radius:25px;border:0;background:var(--g-ink);color:var(--g-page);cursor:pointer;font:700 15px var(--g-sans)}
+.gate-btn:disabled{opacity:.6;cursor:default}
+.gate-btn:focus-visible,.gate-back:focus-visible,.gate-link:focus-visible{outline:2px solid var(--g-acc);outline-offset:2px}
+.gate-foot{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:40px}
+.gate-grow{flex:1}
+.gate-back{height:40px;padding:0;border:0;background:transparent;color:var(--g-ink);cursor:pointer;font:700 14px var(--g-sans)}
+.gate-foot-t{font-size:12.5px;color:var(--g-ink2)}

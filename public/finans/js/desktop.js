@@ -63,11 +63,25 @@ function aiPanel() {
     <span class="grow"><span style="font-weight:500">${esc(h.description)}</span> <span class="note" style="font-size:12.5px">· ${dd(h.date)} · ${esc(h.source)}</span><span class="ai-why">${esc(h.reason ?? '')}</span></span>
     <span class="mono" style="white-space:nowrap">${h.amount != null ? sgn(h.amount) + ' kr' : '–'}</span></button>`).join('');
   return `<section class="card ai-panel"><div class="card-h" style="align-items:flex-start"><div style="min-width:0"><div class="ai-k">✦ AI-SØK · ${esc(a.engine ?? (S.boot.settings.provider === 'ollama' ? 'Ollama' : 'Gemini'))}</div>${a.q ? `<div class="ai-q">${esc(a.q)}</div>` : '<div class="ai-q">Spør om økonomien din på vanlig norsk</div>'}</div><button class="x-btn" data-act="ai-close" aria-label="Lukk">×</button></div>
-    ${a.busy ? '<div class="sub" style="font-size:14px"><span class="spin" style="width:14px;height:14px;display:inline-block;vertical-align:-2px;margin-right:8px"></span>Leser transaksjoner, kvitteringer og varelinjer …</div>' : ''}
+    ${a.busy ? aiProgress(a) : ''}
     ${a.aiUnavailable ? `<div class="ai-note">${esc(a.notice ?? 'AI-motoren svarer ikke, så dette er vanlig søk.')}</div>` : ''}
     ${a.plainFirst ? `<div class="ai-note ai-plain">${esc(a.notice)} <button class="btn sm ghost" data-act="ai-force">✦ Spør AI likevel</button></div>` : ''}
     ${a.answer ? `<div class="ai-a">${esc(a.answer)}</div>` : ''}${hits ? `<div class="ai-hits">${hits}</div>` : ''}
     ${aiChips(a.q ? 'Prøv også' : '', a.followUps)}${aiChips(a.q ? 'Flere forslag' : '', (a.suggestions ?? []).filter((g) => !(a.followUps ?? []).includes(g)))}</section>`;
+}
+// Prompt 25: jobbmodus. «✦ Ollama tenker … 34 s av 60 s» med fremdriftslinje og Avbryt mens svaret lages.
+function aiProgress(a) {
+  const j = a.job ?? {}, el = Math.max(0, Math.round(j.elapsedS ?? (Date.now() - (a.t0 ?? Date.now())) / 1000)), lim = j.limitS ?? a.limitGuess ?? null;
+  const eng = j.engine ?? a.engineGuess;
+  const text = j.text ?? (eng ? `✦ ${eng} tenker … ${el} s${lim ? ` av ${lim} s` : ''}` : `✦ Leser transaksjoner, kvitteringer og varelinjer … ${el} s`);
+  const pct = lim ? Math.min(100, Math.round((el / lim) * 100)) : null;
+  return `<div class="ai-job" data-ai-job><div style="display:flex;align-items:center;gap:10px"><span class="spin" style="width:14px;height:14px;display:inline-block;flex:none"></span><span class="sub" style="font-size:14px;flex:1;min-width:0" data-ai-job-text>${esc(text)}</span><button class="btn sm ghost" data-act="ai-cancel">Avbryt</button></div>
+    <div style="height:4px;border-radius:2px;background:var(--line);overflow:hidden;margin-top:10px"><span data-ai-job-bar style="display:block;height:100%;width:${pct ?? 0}%;background:var(--acc);transition:width .4s linear${pct == null ? ';opacity:.5;width:30%;animation:aiIndet 1.4s ease-in-out infinite' : ''}"></span></div></div>`;
+}
+if (!document.getElementById('ai-job-css')) {
+  const st = document.createElement('style'); st.id = 'ai-job-css';
+  st.textContent = '@keyframes aiIndet{0%{transform:translateX(-100%)}100%{transform:translateX(340%)}}';
+  document.head.appendChild(st);
 }
 const aiChips = (title, list) => ((list ?? []).length ? `${title ? `<div class="ai-k" style="margin-top:2px">${title}</div>` : ''}<div class="ai-sugg">${list.map((g) => `<button data-ai-q="${esc(g)}">${esc(g)}</button>`).join('')}</div>` : '');
 // /search/suggestions svarer {groups, items}; eldre servere svarer med en liste.
@@ -872,14 +886,68 @@ async function uploadFiles(files) {
   await refreshAll();
 }
 
+// AI-søket kjører som jobb (prompt 25): POST /search/ai med «Prefer: respond-async». Raske svar kommer direkte (200);
+// ellers svarer serveren 202 {jobId}, og /jobs/:id gir fremdrift til den er ferdig. Ingen fast klient-timeout:
+// serveren eier motorgrensene. Eldre servere uten jobber svarer synkront som før (og 404 på /jobs gir samme vei).
+let aiRun = 0;
+const sleepMs = (ms) => new Promise((r) => setTimeout(r, ms));
+async function aiLimits() {
+  if (S.aiLimits !== undefined) return S.aiLimits;
+  S.aiLimits = await api('/ai/limits').catch(() => null);
+  return S.aiLimits;
+}
+const engName = (k) => ({ ollama: 'Ollama', gemini: 'Gemini', groq: 'Groq', roboflow: 'Roboflow' }[k] ?? null);
+function paintAiJob() {
+  // Oppdaterer bare teksten og linjen, så resten av siden ikke tegnes på nytt hvert sekund.
+  const box = document.querySelector('[data-ai-job]');
+  if (!box || !u.ai?.busy) return;
+  const tmp = document.createElement('div'); tmp.innerHTML = aiProgress(u.ai);
+  box.querySelector('[data-ai-job-text]').textContent = tmp.querySelector('[data-ai-job-text]').textContent;
+  box.querySelector('[data-ai-job-bar]').setAttribute('style', tmp.querySelector('[data-ai-job-bar]').getAttribute('style'));
+}
 async function askAi(text, force = false) {
   const qText = String(text ?? '').trim();
+  const run = ++aiRun;
   u.aiDraft = qText;
-  u.ai = { ...(u.ai ?? {}), q: qText, busy: true, answer: '', hits: [], plainFirst: false, notice: null };
+  u.aiCtl?.abort();
+  const ctl = (u.aiCtl = new AbortController());
+  const prov = S.boot?.settings?.provider;
+  u.ai = { ...(u.ai ?? {}), q: qText, busy: true, answer: '', hits: [], plainFirst: false, notice: null, job: null, jobId: null, t0: Date.now(), engineGuess: engName(prov) };
   render();
-  try { const r = await api('/search/ai', { method: 'POST', json: { q: qText, ...(force ? { force: true } : {}) } }); u.ai = { ...r, busy: false }; if (r.history) S.aiHist = r.history; }
-  catch (e) { u.ai = { q: qText, busy: false, answer: e.message, hits: [], suggestions: u.ai?.suggestions }; }
+  aiLimits().then((l) => { const lim = l?.engines?.[prov]; if (run === aiRun && u.ai?.busy && !u.ai.job && lim) { u.ai.limitGuess = typeof lim === 'number' ? lim : lim.limitS ?? lim.timeoutS ?? null; } });
+  const tick = setInterval(() => { if (run !== aiRun || !u.ai?.busy) return clearInterval(tick); paintAiJob(); }, 1000);
+  const live = () => run === aiRun && !ctl.signal.aborted;
+  try {
+    let r = await api('/search/ai?async=1', { method: 'POST', headers: { Prefer: 'respond-async' }, json: { q: qText, ...(force ? { force: true } : {}) }, signal: ctl.signal });
+    if (r?.jobId && !r.answer && !r.hits) {
+      u.ai.jobId = r.jobId;
+      for (;;) {
+        if (!live()) return;
+        let j;
+        try { j = await api(`/jobs/${encodeURIComponent(r.jobId)}`, { signal: ctl.signal }); }
+        catch (e) { if (e.status === 404) throw new Error('Serveren mistet AI-jobben. Prøv igjen.'); if (e.name === 'AbortError') return; await sleepMs(1500); continue; }
+        if (!live()) return;
+        u.ai.job = j; paintAiJob();
+        if (j.status === 'done') { r = j.result ?? {}; break; }
+        if (j.status === 'error') throw new Error(j.error || 'AI-søket feilet');
+        if (j.status === 'cancelled') { u.ai = { q: qText, busy: false, answer: 'AI-søket ble avbrutt.', hits: [], suggestions: u.ai?.suggestions }; return render(); }
+        await sleepMs(1000);
+      }
+    }
+    if (!live()) return;
+    u.ai = { ...r, q: r.q ?? qText, busy: false }; if (r.history) S.aiHist = r.history;
+  } catch (e) {
+    if (!live() || e.name === 'AbortError') return;
+    u.ai = { q: qText, busy: false, answer: e.message, hits: [], suggestions: u.ai?.suggestions };
+  } finally { clearInterval(tick); if (u.aiCtl === ctl) u.aiCtl = null; }
+  if (run === aiRun) render();
+}
+async function cancelAi() {
+  const a = u.ai, id = a?.jobId;
+  aiRun++; u.aiCtl?.abort(); u.aiCtl = null;
+  u.ai = { q: a?.q ?? '', busy: false, answer: 'AI-søket ble avbrutt.', hits: [], suggestions: a?.suggestions };
   render();
+  if (id) await api(`/jobs/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => {});
 }
 // Lagrer rekkefølge og skjulte punkter: i /api/me/layout (finSideNav) når det finnes, og alltid i FinansHubs prefs.
 const saveNavCfg = busyWrap(async (order, hidden, labels = navLabels()) => {
@@ -1041,7 +1109,8 @@ export function bind() {
         if (!u.aiMode) u.ai = null;
         render(); document.querySelector('.search input')?.focus(); return;
       }
-      case 'ai-close': u.ai = null; u.aiMode = false; return render();
+      case 'ai-close': if (u.ai?.busy) await cancelAi(); u.ai = null; u.aiMode = false; return render();
+      case 'ai-cancel': return cancelAi();
       case 'ai-force': return askAi(u.ai?.q, true);
     }
   }));
