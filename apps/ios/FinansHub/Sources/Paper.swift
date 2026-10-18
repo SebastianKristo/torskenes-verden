@@ -161,21 +161,23 @@ struct PaperShell: View {
             ZStack(alignment: .bottom) {
                 p.bg.ignoresSafeArea()
                 VStack(spacing: 0) {
-                    content(p).frame(maxWidth: .infinity, maxHeight: .infinity).clipped()
+                    // Ikke .clipped(): da kuttes fotovinduet ved safe area, og statuslinja får papirfarge i stedet for bildet.
+                    content(p).frame(maxWidth: .infinity, maxHeight: .infinity)
                     if showBar { Color.clear.frame(height: 62 + bottom - g.safeAreaInsets.bottom + 10) }
                 }
                 if showBar {
+                    // ZStack-en slutter ved safe area-bunnen, så linja flyttes ned dit den skal stå:
+                    // max(12, inset − 8) pt over skjermkanten.
                     PaperTabBar(scan: scan)
-                        .padding(.bottom, bottom)
-                        .ignoresSafeArea(edges: .bottom)
+                        .offset(y: g.safeAreaInsets.bottom - bottom)
                 }
                 if let h = store.paperHint {
                     Text(h).font(PF.ui(12.5, .semibold)).foregroundStyle(p.bg)
                         .padding(.horizontal, 12).padding(.vertical, 8)
                         .background(p.ink, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .frame(maxWidth: .infinity, alignment: .trailing)
-                        .padding(.trailing, 16).padding(.bottom, bottom + 72)
-                        .ignoresSafeArea(edges: .bottom)
+                        .padding(.trailing, 16).padding(.bottom, 72)
+                        .offset(y: g.safeAreaInsets.bottom - bottom)
                         .transition(.opacity)
                 }
             }
@@ -672,11 +674,18 @@ struct PaperHero: View {
                 bottomRow
             }
             .padding(.horizontal, 22)
-            .padding(.top, 58)
+            .padding(.top, topInset + 10)
             .padding(.bottom, home ? 42 : 34)
         }
-        .frame(height: home ? 262 : 212)
+        .frame(height: (home ? 204 : 154) + topInset)
         .clipped()
+    }
+
+    /// Fotovinduet går helt opp under statuslinja; innholdet starter under den (Dynamic Island eller hakk).
+    private var topInset: CGFloat {
+        let scene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+        let inset = scene?.windows.first(where: { $0.isKeyWindow })?.safeAreaInsets.top ?? scene?.windows.first?.safeAreaInsets.top ?? 0
+        return inset > 0 ? inset : 47
     }
 
     @ViewBuilder private var background: some View {
