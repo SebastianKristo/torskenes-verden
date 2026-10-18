@@ -3,7 +3,8 @@
 // ≥ 600 px (åpen brettbar): navigasjonsrail + to paneler for Finans (liste/detalj).
 import {
   S, api, esc, n0, n2, sgn, neg, dd, dWeek, today, monthName, cap, ini, greet, parseAmount,
-  loadBoot, loadSummary, loadTx, loadReceipts, cats, accs, uploadReceipt, icon, logo, aiLine, conic, navName } from './core.js';
+  loadBoot, loadSummary, loadTx, loadReceipts, cats, accs, uploadReceipt, icon, aiLine, conic, navName } from './core.js';
+import { logo, posLoad, regLoad, take20, p20Down, p20Move, p20Up, p20Click, p20Screen } from './mobile-p20.js';
 import * as UPQ from './mobile-upq.js';
 import { MODS, modView, modLoad, domNav, modBind, modAfterDraw } from './mobile-mods.js';
 import { settingsView, settingsLoad, settingsBind } from './mobile-set.js';
@@ -466,8 +467,9 @@ async function load() {
     else if (scr === 'fmer') jobs.push(loadSummary().catch(() => {}), fmerLoad().catch(() => {}));
     else if ((!FIN.includes(scr) || FINMODS.includes(scr)) && !['media', 'nyheter', 'vaer'].includes(scr)) jobs.push(modLoad(scr, m.sub));
     if (paper()) {
+      jobs.push(regLoad().catch(() => {}));
       jobs.push(photoLoad().then(() => draw()).catch(() => {}));
-      if (scr === 'hl') jobs.push(matLoad().catch(() => {}), loadSummary().catch(() => {}), newsLoad().catch(() => {}), tasksLoad().catch(() => {}), famLoad().catch(() => {}), bolWidgetLoad().catch(() => {}));
+      if (scr === 'hl') jobs.push(matLoad().catch(() => {}), loadSummary().catch(() => {}), newsLoad().catch(() => {}), tasksLoad().catch(() => {}), posLoad().catch(() => {}), bolWidgetLoad().catch(() => {}));
       if (scr === 'mer' || scr === 'hjem') jobs.push(loadSummary().catch(() => {}));
       if (scr === 'hjem') jobs.push(recentLoad().catch(() => {}), rcCount().catch(() => {}));
       if (m.detail && m.sel != null) jobs.push(txLoad(m.sel).catch(() => {}));
@@ -510,6 +512,7 @@ export function route() {
   const sub = parts.slice(1).join('/');
   if (next !== m.screen || sub !== m.sub) {
     if (next !== m.screen) { edReset(); if (next === 'vaer') WX.from = m.screen; m.edit = null; m.pdet = null; if (next === 'dom') m.domFrom = m.screen === 'dom' ? m.domFrom : m.screen; if (next === 'set') m.setFrom = m.screen === 'set' ? m.setFrom : m.screen; }
+    p20Screen(next);
     m.screen = next; m.sub = sub; m.detail = false; m.menu = false; m.sheet = false; m.min = false; m.orig = null; paperState.scan = false; paperState.open = paperState.open && next === 'hl';
     if (next !== 'skann' && next !== 'opp') m.rc = null;
     window.scrollTo(0, 0);
@@ -754,14 +757,14 @@ export function bind() {
   wxBindScroll();
   addEventListener('fh-design', (e) => { const d = e.detail ?? {}; takeDesign(d); if (typeof d.lock === 'boolean') setPref('lock', d.lock); if (typeof d.hap === 'boolean') setPref('hap', d.hap); if (d.photo) photoLoad(d.photo).then(draw).catch(() => {}); draw(); });
   loadLayout().then((r) => {
-    takeDesign(r); take15(r); take16(r);
+    takeDesign(r); take15(r); take16(r); take20(r);
     // Første gang etter innlogging (nye installasjoner): onboarding i tre steg.
     if (r && r.onboarded === false) import('./mobile-gate.js').then((g) => g.showOnboarding(r)).catch(() => {});
     if (document.documentElement.dataset.ui === 'mobile') draw();
   }).catch(() => {});
   // Skanneknappen: trykk = kamera (eller valg), hold inne ~480 ms = arket med Bilder/Filer.
   el.addEventListener('pointerdown', (e) => {
-    edDown(e); // først: nullstiller også «klikket etter et langt trykk»
+    p20Down(e); edDown(e); // først: nullstiller også «klikket etter et langt trykk»
     if (paper()) { p16Pointer(e); trkDown(e); }
     if (paperDown(e)) return;
     if (swDown(e)) return;
@@ -773,10 +776,10 @@ export function bind() {
   });
   const cancelLp = () => clearTimeout(lpTimer);
   el.addEventListener('pointerup', cancelLp); el.addEventListener('pointercancel', cancelLp);
-  el.addEventListener('pointerup', (e) => { paperUp(e); edUp(e); p16Up(e); trkUp(e); }); el.addEventListener('pointercancel', (e) => { paperUp(e); edUp(e); p16Up(e); trkUp(e); });
+  el.addEventListener('pointerup', (e) => { paperUp(e); edUp(e); p16Up(e); trkUp(e); p20Up(e); }); el.addEventListener('pointercancel', (e) => { paperUp(e); edUp(e); p16Up(e); trkUp(e); p20Up(e); });
   el.addEventListener('dragover', (e) => { if (e.target.closest('[data-p16drop]')) e.preventDefault(); });
   el.addEventListener('drop', safe(async (e) => { await p16Bind(e, e.target); }));
-  el.addEventListener('contextmenu', (e) => { if (e.target.closest('[data-ppplus], [data-edk], [data-pk]')) e.preventDefault(); });
+  el.addEventListener('contextmenu', (e) => { if (e.target.closest('[data-ppplus], [data-edk], [data-pk], [data-fmk]')) e.preventDefault(); });
   el.addEventListener('contextmenu', (e) => { if (e.target.closest('[data-scan]')) e.preventDefault(); });
   el.addEventListener('click', safe(async (e) => {
     const t = e.target, d = (s) => t.closest(s);
@@ -784,6 +787,7 @@ export function bind() {
     if (Date.now() - tsup < 400 && d('.tabs')) { e.preventDefault(); e.stopPropagation(); return; }
     if (Date.now() - swUp < 400) { e.preventDefault(); e.stopPropagation(); return; } // klikket etter et sveip tilbake
     if (paper() && m.screen === 'spor' && await paperTrkBind(e, t)) return; // velg flere pakker går foran tilpass siden
+    if (paper() && p20Click(e, t)) return; // Finans-flisene (flytt) og Posisjon-kortet
     if (paper() && edClick(e, t)) return; // tilpass siden: ▲ ▼ −, Ferdig, og klikket etter et langt trykk
     if (await p17Bind(e, t)) return;
     if (await p16Bind(e, t)) return;
@@ -884,7 +888,7 @@ export function bind() {
   el.addEventListener('keydown', (e) => { hlBind(e, e.target); });
   el.addEventListener('focusin', (e) => { hlBind(e, e.target); });
   el.addEventListener('focusout', (e) => { hlBind(e, e.target); });
-  el.addEventListener('pointermove', (e) => { paperMove(e); edMove(e); p16Move(e); trkMove(e); if (swMove(e)) return; if (tabMove(e)) return; hlBind(e, e.target); }, { passive: false });
+  el.addEventListener('pointermove', (e) => { p20Move(e); paperMove(e); edMove(e); p16Move(e); trkMove(e); if (swMove(e)) return; if (tabMove(e)) return; hlBind(e, e.target); }, { passive: false });
   el.addEventListener('pointerup', (e) => { if (swEnd(e)) return; if (tabUp(e)) return; hlBind(e, e.target); });
   el.addEventListener('pointercancel', (e) => { if (swEnd(e)) return; tabUp(e); });
   // Hindrer at nettleseren tar over berøringen (og sender pointercancel) mens man sveiper tilbake.

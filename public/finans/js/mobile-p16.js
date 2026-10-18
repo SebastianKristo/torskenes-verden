@@ -7,6 +7,8 @@ import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { fourth, fabStyle } from './mobile-paper3.js';
 import { hlData, ruterUrl } from './mobile-hl.js';
+import { paper, paperDark } from './mobile-paper.js';
+import { setTiles } from './mobile-p20.js';
 
 /* ---------- Valg (lokal kopi + /api/me/layout) ---------- */
 
@@ -316,10 +318,11 @@ export function famAfterDraw() {
     if (!map) {
       mapEl.innerHTML = '';
       map = Lf.map(mapEl, { zoomControl: false, attributionControl: true }).setView([59.9139, 10.7522], 11);
-      Lf.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' }).addTo(map);
       map.on('click', (ev) => { if (!FM.zoneMode) return; FM.zoneMode = false; FM.zone = { lat: ev.latlng.lat, lon: ev.latlng.lng, name: '', radius: 200, color: ZCOL[0] }; draw(); setTimeout(() => document.getElementById('p16-zn')?.focus(), 50); });
       paint(Lf, true);
     } else { paint(Lf, false); }
+    // Fliser via serverens /tiles (prompt 20): mørkt tema = dark, Papir = light med sepia, ellers voyager.
+    setTiles(Lf, map, mapEl, paper() ? (paperDark() ? 'dark' : 'light') : 'voyager').catch(() => {});
     setTimeout(() => map?.invalidateSize(), 30);
   }).catch((e) => { mapEl.innerHTML = `<div class="p16-mapmsg">${esc(e.message)} · listen under virker likevel</div>`; });
 }

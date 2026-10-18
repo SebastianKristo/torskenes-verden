@@ -1,6 +1,7 @@
 // Transaksjoner på mobil: detalj (AI-beskrivelse, varelinjer, originaler, info), redigering/ny/slett,
 // og fullskjermvisning av original kvittering og original banktransaksjon (som den kom fra banken, før navnevasking).
-import { S, api, esc, n2, sgn, dd, dWeek, today, cap, cats, accs, icon, logo, parseAmount, loadTx, loadSummary } from './core.js';
+import { S, api, esc, n2, sgn, dd, dWeek, today, cap, cats, accs, icon, parseAmount, loadTx, loadSummary } from './core.js';
+import { logo } from './mobile-p20.js'; // logoregisteret (prompt 20), ellers core.logo
 import { m, draw, flash, two, amtC, backBtn, openSheet } from './mobile.js';
 import { c3 } from './mobile-theme.js';
 

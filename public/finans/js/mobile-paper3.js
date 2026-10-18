@@ -6,6 +6,7 @@ import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { TR, trkLoad, carOf, normNo, detectLocal } from './mobile-track.js';
 import { hlData } from './mobile-hl.js';
+import { FCOL, FO, fmSort, fmBar, ppTi } from './mobile-p20.js';
 
 /* ---------- Valg (lokal kopi + /api/me/layout) ---------- */
 
@@ -178,8 +179,10 @@ export function finMerGrid() {
     ['dir', 'Boliger', dirs ? `${dirs.length} ${dirs.length === 1 ? 'bolig' : 'boliger'}` : 'Utgifter og prosjekter'],
     ['imp', 'Import', 'Bank, Excel og Finn'], ['set', 'Innstillinger', 'Kategorier og regler'],
   ].filter(([k]) => !inTabs.includes(k));
-  return `<div class="pp-fmgrid">${T.map(([k, n, v, badge]) => `<a class="pp-fmt" href="#/${k === 'set' ? 'set' : k}"><span class="pp-fmi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="${IC[k]}"/></svg></span>
-    ${badge ? `<span class="pp-fmb">${badge}</span>` : ''}<span class="pp-fmn"><b class="pp-serif">${esc(n)}</b><span class="${/▲/.test(v) ? 'pp-pos' : ''}">${esc(v)}</span></span></a>`).join('')}</div>`;
+  // Prompt 20: egen ikonfarge per flis, og rekkefølgen brukeren har valgt (hold inne for å flytte). Linja med
+  // Ferdig/Tilbakestill ligger under flisene, så de ikke flytter seg under fingeren når redigeringen starter.
+  return `<div class="pp-fmgrid${FO.edit ? ' edit' : ''}">${fmSort(T).map(([k, n, v, badge]) => `<a class="pp-fmt" href="#/${k === 'set' ? 'set' : k}" data-fmk="${k}" style="--fc:${FCOL[k] ?? 'var(--pp-lab)'}"><span class="pp-fmi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="${IC[k]}"/></svg></span>
+    ${badge ? `<span class="pp-fmb">${badge}</span>` : ''}<span class="pp-fmn"><b class="pp-serif">${esc(n)}</b><span class="${/▲/.test(v) ? 'pp-pos' : ''}">${esc(v)}</span></span></a>`).join('')}</div>${FO.edit ? fmBar() : '<span class="pp-edhint">Hold inne en flis for å endre rekkefølgen</span>'}`;
 }
 
 /* ---------- Finans → Søk med ✦ AI ---------- */
@@ -229,7 +232,7 @@ export function paperSearch() {
     ${!FS.busy && aiTxt ? `<div class="pp-card pp-aians"><span class="pp-lab">✦ AI-SVAR</span><span class="pp-serif">${esc(aiTxt)}</span><span class="pp-mut">${esc(src)}</span></div>` : ''}
     ${!FS.busy && hits.length ? `<div class="pp-sec"><span>TREFF · ${hits.length}</span><span>Netto ${sum < 0 ? '−' : '+'}${n0(sum)} kr</span></div>
       <div class="pp-rows">${hits.slice(0, 60).map((h) => { const id = h.txId ?? (h.type === 'tx' ? h.id : null), name = h.description ?? h.merchant ?? h.title ?? 'Treff';
-        return `<button class="pp-tx" ${id != null ? `data-tx="${esc(id)}"` : ''}><span class="pp-ti" style="background:${esc(h.color ?? '#6b665c')}">${esc(ini(name))}</span><span class="m-grow" style="min-width:0"><b class="m-ell">${esc(name)}</b><span class="pp-mut m-ell">${esc([h.date ? dd(h.date) : '', h.reason || h.why || h.category || ''].filter(Boolean).join(' · '))}</span></span><span class="pp-serif ${h.amount > 0 ? 'pp-pos' : ''}">${h.amount != null ? `${h.amount < 0 ? '−' : '+'}${n0(h.amount)}` : ''}</span></button>`; }).join('')}</div>` : ''}
+        return `<button class="pp-tx" ${id != null ? `data-tx="${esc(id)}"` : ''}>${ppTi({ ...h, merchant: name }, ini(name), h.color)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(name)}</b><span class="pp-mut m-ell">${esc([h.date ? dd(h.date) : '', h.reason || h.why || h.category || ''].filter(Boolean).join(' · '))}</span></span><span class="pp-serif ${h.amount > 0 ? 'pp-pos' : ''}">${h.amount != null ? `${h.amount < 0 ? '−' : '+'}${n0(h.amount)}` : ''}</span></button>`; }).join('')}</div>` : ''}
     ${!FS.busy && r && !hits.length && !FS.ai ? '<div class="pp-mut" style="padding:16px 4px;font-size:14px">Ingen treff. Slå på ✦ AI for å søke i innholdet i kvitteringene.</div>' : ''}`;
 }
 

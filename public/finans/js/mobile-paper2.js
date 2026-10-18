@@ -6,6 +6,7 @@ import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { TR, trkLoad, trkPrefs, setTrkPref, badge, carOf, stepOf, isDone, isReady, STXT, normNo, detectLocal } from './mobile-track.js';
 import { edBlocks, finnWay } from './mobile-paper3.js';
+import { ppTi } from './mobile-p20.js';
 
 const lab = (t, r = '') => `<div class="pp-sec"><span>${esc(t)}</span>${r ? `<span>${r}</span>` : ''}</div>`;
 const kr = (v) => `${n0(v)} kr`;
@@ -28,7 +29,7 @@ export function paperList() {
   return `<form class="pp-search" data-msearch role="search"><span aria-hidden="true">⌕</span><input class="m-input" id="m-txq" name="q" type="search" value="${esc(q)}" enterkeyhint="search" placeholder="Søk i transaksjoner og kvitteringer" aria-label="Søk i transaksjoner" autocomplete="off"><a class="pp-ai" href="#/sok" aria-label="Spør AI">✦ AI</a></form>
     <div class="pp-chips">${cats.map((n) => `<button class="pp-fchip" data-ppl="cat" data-k="${esc(n)}" aria-pressed="${PL.cat === n}">${esc(n)}</button>`).join('')}</div>
     ${lab(`${PL.cat === 'Alle' ? month : PL.cat.toUpperCase()} · ${L.length}`, `Netto ${sum < 0 ? '−' : '+'}${n0(sum)} kr`)}
-    ${items === null ? '<div class="m-spin"></div>' : `<div class="pp-rows">${L.map((t) => { const [rt, rcls] = rc(t); return `<button class="pp-tx" data-tx="${t.id}"><span class="pp-ti" style="background:${esc(t.color ?? '#6b665c')}">${esc(ini(t.merchant || t.description))}</span><span class="m-grow" style="min-width:0"><b class="m-ell">${esc(t.merchant || t.description)}</b><span class="pp-mut">${esc(t.category ?? '')} · ${esc(t.date === today() ? 'I dag' : ddmm(t.date))} · <span class="${rcls}">${rt}</span></span></span><span class="pp-serif ${t.amount > 0 ? 'pp-pos' : ''}">${t.amount < 0 ? '−' : '+'}${n0(t.amount)}</span></button>`; }).join('')}</div>
+    ${items === null ? '<div class="m-spin"></div>' : `<div class="pp-rows">${L.map((t) => { const [rt, rcls] = rc(t); return `<button class="pp-tx" data-tx="${t.id}">${ppTi(t, ini(t.merchant || t.description), t.color)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(t.merchant || t.description)}</b><span class="pp-mut">${esc(t.category ?? '')} · ${esc(t.date === today() ? 'I dag' : ddmm(t.date))} · <span class="${rcls}">${rt}</span></span></span><span class="pp-serif ${t.amount > 0 ? 'pp-pos' : ''}">${t.amount < 0 ? '−' : '+'}${n0(t.amount)}</span></button>`; }).join('')}</div>
     ${L.length ? '' : '<div class="pp-mut" style="padding:16px 4px;font-size:14px">Ingen treff. ✦ Prøv å spørre AI, for eksempel «hvor mye brukte jeg på mat i september».</div>'}`}`;
 }
 

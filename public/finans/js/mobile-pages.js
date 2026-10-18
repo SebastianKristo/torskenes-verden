@@ -1,6 +1,7 @@
 // «Mer» i Finans: alle funksjonene fra FinansHub på nettsiden, tilpasset mobil, i én felles mal
 // (tilbake, tittel og undertekst, hero-kort, nøkkeltall, grupper med rader). Rader åpner en detaljside med feltene og tilhørende transaksjoner.
-import { S, api, esc, n0, n2, sgn, dd, today, monthName, cap, icon, logo, aiLine, loadReceipts, accs, navName } from './core.js';
+import { S, api, esc, n0, n2, sgn, dd, today, monthName, cap, icon, aiLine, loadReceipts, accs, navName } from './core.js';
+import { logo } from './mobile-p20.js'; // logoregisteret (prompt 20), ellers core.logo
 import { m, draw, flash, avatar, backBtn, theme, amtC, openSheet, openCam, upqList } from './mobile.js';
 import { c3 } from './mobile-theme.js';
 import { LAY } from './mobile-hl.js';

@@ -483,7 +483,7 @@ export function onRealtime(d) {
   rtT = setTimeout(async () => {
     if (d.type === 'tasks') { HK.t = 0; await tasksLoad(true); if (m.screen === 'huske' || m.screen === 'hl') draw(); }
     else if (d.type === 'family' && d.kind === 'ping') { playSound(); navigator.vibrate?.([200, 100, 200]); flash(`${d.fromName ?? 'Noen'} vil finne telefonen din`); }
-    else if (d.type === 'family') { await famLoad(); if (m.screen === 'fam' || m.screen === 'hl') draw(); }
+    else if (d.type === 'family') { await famLoad(); if (m.screen === 'hl') await import('./mobile-p20.js').then((x) => x.posLoad(true)).catch(() => {}); if (m.screen === 'fam' || m.screen === 'hl') draw(); }
     else if (d.type === 'tracking' && (m.screen === 'spor' || m.screen === 'hl')) { const { trkLoad } = await import('./mobile-track.js'); await trkLoad().catch(() => {}); draw(); }
   }, 250);
 }
