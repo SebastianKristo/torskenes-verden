@@ -258,7 +258,8 @@ export function finnImportBox() {
   return `<div class="mod-box" style="padding:18px;border-radius:18px;gap:12px">
     <div style="display:flex;align-items:center;gap:12px"><img src="/finans/api/logo/finn.no" alt="" style="width:36px;height:36px;border-radius:10px;background:#fff;padding:5px" onerror="this.style.visibility='hidden'"><div style="flex:1;min-width:0"><b style="font-weight:600">Finn.no</b><div class="note" style="font-size:12.5px">Tidligere kjøp, salg og annonser legges i Finn-handler</div></div></div>
     <label style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;border:1.5px dashed var(--line,#3A3A42);cursor:pointer"><span style="width:34px;height:34px;border-radius:10px;background:var(--inner,#1B1B20);display:grid;place-items:center;color:var(--acc-l)">✉</span><span style="flex:1;min-width:0"><b style="font-weight:500">Finn-e-poster (.eml, .mbox eller Proton-eksport)</b><br><span class="note" style="font-size:12.5px">Kvitteringer, «Du har solgt», Fiks ferdig og utbetalinger kobles til riktig handel, også annonser du har lagt inn fra lenke. Annonsen hentes fra finn.no når Finn-koden står i e-posten.</span></span><input type="file" multiple accept=".eml,.mbox,.zip,.txt,message/rfc822" data-mfinn-imp hidden></label>
-    <button class="btn" style="align-self:flex-start" data-mact="finn-imp-mail" ${j?.running ? 'disabled' : ''}>✦ Hent alle Finn-e-poster fra Proton Mail</button>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="note" style="font-size:12.5px">Mappe i Proton Mail</span><input class="inp" style="width:160px" data-mfinn-folder value="${esc(fi.folder ?? S.finnFolder ?? 'FINN')}" placeholder="FINN" aria-label="Mappe i Proton Mail"><button class="btn pri" data-mact="finn-imp-folder" ${j?.running ? 'disabled' : ''}>✦ Importer fra mappen</button><button class="btn" data-mact="finn-imp-mail" ${j?.running ? 'disabled' : ''}>Søk i all e-post</button></div>
+    <span class="note" style="font-size:12px;margin-top:-6px">Alle e-postene i mappen leses, uansett avsender. «FINN» finner også «Folders/FINN» i Bridge. Søk i all e-post leter etter avsender FINN, Posten/Bring og Tillit.</span>
     <div style="display:flex;flex-direction:column;gap:6px"><span class="note" style="font-size:12.5px">Annonselenker, én per linje</span><textarea class="inp mod-ta mono" rows="3" data-mfinn-links placeholder="https://www.finn.no/recommerce/forsale/item/476377764">${esc(fi.links)}</textarea>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select class="sel" data-mfinn-role aria-label="Type handel"><option value="bought"${fi.role === 'bought' ? ' selected' : ''}>Kjøpt</option><option value="sold"${fi.role === 'sold' ? ' selected' : ''}>Solgt</option></select><button class="btn pri" data-mact="finn-imp-links" ${j?.running || !codes.length ? 'disabled' : ''}>✦ Hent annonser (${codes.length})</button><span class="note" style="font-size:12.5px">AI henter tittel, pris, beskrivelse og bilder og lagrer dem i handelen</span></div></div>
     ${status}${items}
@@ -577,6 +578,7 @@ export function bindModules(el) {
       case 'fr-smb': u.setTab = 'data'; location.hash = '#/inn'; return;
       case 'imp-commit': return preview(true);
       case 'finn-imp-mail': return finnImp('/finn/import/mail', { method: 'POST', json: {} });
+      case 'finn-imp-folder': return finnImp('/finn/import/mail', { method: 'POST', json: { folder: (S.finnImp.folder ?? S.finnFolder ?? 'FINN').trim() || 'FINN' } });
       case 'finn-imp-links': return finnImp('/finn/import/links', { method: 'POST', json: { text: S.finnImp.links, role: S.finnImp.role } });
     }
   }));
@@ -588,6 +590,7 @@ export function bindModules(el) {
     if (t.matches('[data-mimp-acc]')) { u.impAcc = t.value; return; }
     if (t.matches('[data-mfinn-imp]')) { const fd = new FormData(); for (const f of t.files) fd.append('files', f); t.value = ''; return finnImp('/finn/import/eml', { method: 'POST', body: fd }); }
     if (t.matches('[data-mfinn-links]')) { S.finnImp.links = t.value; return render(); }
+    if (t.matches('[data-mfinn-folder]')) { S.finnImp.folder = t.value; return; }
     if (t.matches('[data-mfinn-role]')) { S.finnImp.role = t.value; return; }
     if (t.matches('[data-msub-cyc]')) { await api(`/subscriptions/${t.dataset.msubCyc}`, { method: 'PATCH', json: { cycle: t.value } }); return reload(); }
     if (t.matches('[data-brole]')) { const [fid, mid] = t.dataset.brole.split(':'); await api(`/folders/${fid}/members/${mid}`, { method: 'PATCH', json: { role: t.value } }); toast('Tilgangen er endret'); return reloadBol(); }

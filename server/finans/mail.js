@@ -209,7 +209,19 @@ async function scanFinnMails(client, folders, finnLink) {
 
 // Import av tidligere Finn-e-poster (Innstillinger → Import → Finn.no): henter ALLE e-poster fra FINN, Posten/Bring og
 // Tillit i «All Mail» (ellers INBOX), eldste først, uten å endre noe i postkassen. Gir de rå kildene tilbake (maks `max`).
-export async function fetchAllFinnMails({ max = 400 } = {}) {
+// Proton Mail Bridge viser egne mapper som «Folders/FINN» og etiketter som «Labels/FINN». Brukeren kan skrive bare «FINN».
+export function resolveFolder(folders, name) {
+  const want = String(name ?? '').trim().replace(/^\/+|\/+$/g, '');
+  if (!want) return null;
+  const lc = want.toLowerCase();
+  return folders.find((f) => f === want) ?? folders.find((f) => f.toLowerCase() === lc)
+    ?? folders.find((f) => f.toLowerCase() === `folders/${lc}`) ?? folders.find((f) => f.toLowerCase() === `labels/${lc}`)
+    ?? folders.find((f) => f.toLowerCase().endsWith(`/${lc}`)) ?? null;
+}
+
+// Henter Finn-e-poster: fra en bestemt mappe (alle e-postene i den, uansett avsender), eller fra «All Mail»
+// med avsender FINN, Posten/Bring eller Tillit. Endrer ingenting i postkassen.
+export async function fetchAllFinnMails({ max = 400, folder = null } = {}) {
   const c = cfgWith();
   if (!c.host || !c.user || !c.pass) return { ok: false, sources: [], message: 'E-post er ikke satt opp. Fyll inn Proton Mail Bridge under «Kvitteringer fra e-post».' };
   let client;
@@ -217,10 +229,13 @@ export async function fetchAllFinnMails({ max = 400 } = {}) {
   try {
     ({ client } = await connect(c, { allowPin: true }));
     const folders = (await client.list()).map((f) => f.path);
-    const box = folders.includes('All Mail') ? 'All Mail' : 'INBOX';
+    const named = folder ? resolveFolder(folders, folder) : null;
+    if (folder && !named) return { ok: false, sources, message: `Fant ikke mappen «${folder}» i Proton Mail. Mappene er: ${folders.slice(0, 30).join(', ')}` };
+    const box = named ?? (folders.includes('All Mail') ? 'All Mail' : 'INBOX');
     const lock = await client.getMailboxLock(box);
     try {
-      const uids = ((await client.search({ or: FINN_FROM.map((from) => ({ from })) }, { uid: true })) || []).sort((a, b) => a - b).slice(-max);
+      const query = named ? { all: true } : { or: FINN_FROM.map((from) => ({ from })) };
+      const uids = ((await client.search(query, { uid: true })) || []).sort((a, b) => a - b).slice(-max);
       for (const uid of uids) {
         try { const msg = await client.fetchOne(String(uid), { source: true }, { uid: true }); if (msg?.source) sources.push(msg.source); } catch { /* hopp over én e-post */ }
       }
@@ -279,7 +294,9 @@ export async function runMail({ ingest, finn, finnLink } = {}) {
   try {
     ({ client } = await connect(c, { allowPin: true }));
     const folders = (await client.list()).map((f) => f.path);
-    const jobs = [[c.folder, 'receipt'], ...(c.finnFolder && finn ? [[c.finnFolder, 'finn']] : [])];
+    const finnBox = c.finnFolder && finn ? resolveFolder(folders, c.finnFolder) : null;
+    if (c.finnFolder && finn && !finnBox) lastError = `Fant ikke Finn-mappen «${c.finnFolder}»`;
+    const jobs = [[c.folder, 'receipt'], ...(finnBox ? [[finnBox, 'finn']] : [])];
     for (const [folder, kind] of jobs) {
       const lock = await client.getMailboxLock(folder);
       try {
@@ -291,7 +308,11 @@ export async function runMail({ ingest, finn, finnLink } = {}) {
           try {
             const msg = await client.fetchOne(String(uid), { source: true }, { uid: true });
             const parsed = kind === 'receipt' && finn ? await simpleParser(msg.source) : null;
-            if (kind === 'finn' || (parsed && looksLikeFinn(parsed))) { const p = parsed ?? await simpleParser(msg.source); await finn(mailText(p), p); imported++; }
+            if (kind === 'finn' || (parsed && looksLikeFinn(parsed))) {
+              const p = parsed ?? await simpleParser(msg.source);
+              // Ikke alle e-poster i Finn-mappen er en handel (Posten, meldinger fra motparten): de kobles til handelen i stedet.
+              try { await finn(mailText(p), p); imported++; } catch (e) { if (kind === 'finn' && finnLink && finnLink(p)) imported++; else throw e; }
+            }
             else imported += (await importMessage(msg.source, { folder, ingest })).imported;
             const target = kind === 'receipt' ? c.doneFolder : null;
             if (target && folders.includes(target)) await client.messageMove(String(uid), target, { uid: true });

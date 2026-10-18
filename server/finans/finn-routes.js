@@ -695,15 +695,17 @@ export function mountFinnImport(api, { R, W, upload, finnFromMail }) {
 
   api.post('/finn/import/mail', W, async (c) => {
     if (busy(c)) return busy(c);
-    const fetchAds = (await c.req.json().catch(() => ({}))).fetchAds !== false;
+    const b = await c.req.json().catch(() => ({}));
+    const fetchAds = b.fetchAds !== false;
+    const folder = typeof b.folder === 'string' && b.folder.trim() ? b.folder.trim().slice(0, 120) : null;
     const me = startJob('mail', 0, async (me) => {
-      const r = await (mailFetcher ?? (async () => (await import('./mail.js')).fetchAllFinnMails()))();
+      const r = await (mailFetcher ?? (async (o) => (await import('./mail.js')).fetchAllFinnMails(o)))({ folder });
       if (!r.ok) { me.message = r.message; me.errors.push(r.message); return; }
       me.total = r.sources.length;
       const touched = new Set();
       for (const s of r.sources) { try { tally(me, await importOne(s, finnFromMail, 'imap', touched)); } catch (e) { me.done++; me.errors.push(e.message); } }
       if (fetchAds) await fetchMissingAds(me, touched);
-      me.message = `Fant ${r.sources.length} Finn-e-post${r.sources.length === 1 ? '' : 'er'} · ${me.added} nye handler · ${me.linked} oppdatert${me.ads ? ` · ${me.ads} annonse${me.ads === 1 ? '' : 'r'} hentet fra finn.no` : ''}`;
+      me.message = `Fant ${r.sources.length} e-post${r.sources.length === 1 ? '' : 'er'}${folder ? ` i mappen «${folder}»` : ' fra Finn'} · ${me.added} nye handler · ${me.linked} oppdatert${me.ads ? ` · ${me.ads} annonse${me.ads === 1 ? '' : 'r'} hentet fra finn.no` : ''}`;
     });
     return waitJob(c, me);
   });

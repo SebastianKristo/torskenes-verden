@@ -64,7 +64,7 @@ test('Hent alle Finn-e-poster fra Bridge (mocket henter)', async () => {
   const r = await call('/finn/import/mail', 'POST', {});
   assert.equal(r.status, 200, JSON.stringify(r.body));
   assert.equal(r.body.added, 1);
-  assert.match(r.body.message, /Fant 2 Finn-e-poster/);
+  assert.match(r.body.message, /Fant 2 e-poster fra Finn/);
   F._setFinnMailFetcher(async () => ({ ok: false, sources: [], message: 'E-post er ikke satt opp' }));
   const e = await call('/finn/import/mail', 'POST', {});
   assert.equal(e.body.message, 'E-post er ikke satt opp');
@@ -127,4 +127,22 @@ test('e-post kobles til annonse som allerede er importert, og annonsen hentes fo
   assert.ok(hits.some((u) => u.includes('/item/488800222')), hits.join('\n'));
   assert.equal(r.body.ads, 1);
   F._setFetch(null);
+});
+
+test('Importer fra mappen FINN: mappenavnet sendes videre og «FINN» finner «Folders/FINN»', async () => {
+  const { resolveFolder } = await import('../server/finans/mail.js');
+  const boxes = ['INBOX', 'All Mail', 'Folders/FINN', 'Labels/Kvittering'];
+  assert.equal(resolveFolder(boxes, 'FINN'), 'Folders/FINN');
+  assert.equal(resolveFolder(boxes, 'finn'), 'Folders/FINN');
+  assert.equal(resolveFolder(boxes, 'Folders/FINN'), 'Folders/FINN');
+  assert.equal(resolveFolder(boxes, 'Kvittering'), 'Labels/Kvittering');
+  assert.equal(resolveFolder(boxes, 'Finnes ikke'), null);
+  let asked = null;
+  F._setFinnMailFetcher(async (o) => { asked = o; return { ok: true, sources: [Buffer.from(eml('FINN.no <noreply@finn.no>', 'Du har solgt Ski Madshus', 'Du har solgt Ski Madshus til kjøper Ole.\nOrdrenummer: TB-8080\nTotalt: 700,00 kr\nTrygg betaling', 'ski1'))] }; });
+  const r = await call('/finn/import/mail', 'POST', { folder: 'FINN', fetchAds: false });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(asked.folder, 'FINN');
+  assert.equal(r.body.added, 1);
+  assert.match(r.body.message, /mappen «FINN»/);
+  F._setFinnMailFetcher(null);
 });

@@ -93,7 +93,7 @@ export async function mailPane(el, { guide = true } = {}) {
           <label>Mappe å lese fra<input name="folder" value="${esc(c.folder)}" placeholder="Folders/Kvitteringer"></label>
           <label>Flytt ferdige til<input name="doneFolder" value="${esc(c.doneFolder)}" placeholder="Folders/Kvitteringer/Lest"></label>
           <label>Sjekk hvert (minutter)<input name="poll" inputmode="numeric" value="${esc(c.poll)}"></label>
-          <label>Finn-mappe (valgfritt)<input name="finnFolder" value="${esc(c.finnFolder)}" placeholder="Folders/Finn"></label>
+          <label>Finn-mappe (valgfritt)<input name="finnFolder" value="${esc(c.finnFolder)}" placeholder="FINN"></label>
         </div>
         ${c.pin ? `<div class="mp-note">Pinnet sertifikat${c.pin.subject ? ` (${esc(c.pin.subject)})` : ''}: <span style="font-family:ui-monospace,monospace;font-size:12px;word-break:break-all">${esc(c.pin.fingerprint)}</span> · <button type="button" data-mp="forget" style="padding:4px 10px;font-size:12.5px">Glem sertifikat</button></div>` : ''}
         ${res ? `<div class="mp-res ${res.ok ? 'ok' : 'bad'}" role="status"><b>${res.ok ? '✓' : '✕'}</b> ${esc(res.message ?? '')}</div>` : ''}
