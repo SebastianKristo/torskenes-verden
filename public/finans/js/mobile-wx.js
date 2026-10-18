@@ -1,15 +1,24 @@
 // Værvisning v2 (design/Vaer.dc.html): et trykk på temperaturen på Hjem åpner en egen værskjerm i stedet for yr.no.
 // Himmel etter vær og døgn, stor sentrert header som tones ut ved scroll, neste 24 timer (temperatur, nedbør, vind),
 // 7 dager, fliser (vind, måne, sol, UV, føles som, mot i går, nedbør, sikt, fuktighet, trykk) og «Forhold»-arket.
-// Data: GET /api/weather/full?place= (Open-Meteo via serveren, 10 min cache). Eldre server: /mobile/home.weather.
+// Data: GET /api/weather/full?place= (MET/yr.no via serveren, Open-Meteo som reserve, 10 min cache). Eldre server: /mobile/home.weather.
+// Steder: GET/POST/DELETE /api/weather/places og søk i /api/weather/search?q= (Kartverket).
 import { esc, hlApi } from './core.js';
-import { m, draw } from './mobile.js';
+import { m, draw, flash } from './mobile.js';
 import { hlData } from './mobile-hl.js';
 
 const PLACES = [['oslo', 'Oslo'], ['bergen', 'Bergen'], ['trondheim', 'Trondheim'], ['tromso', 'Tromsø']];
-export const WX = { place: (() => { try { return localStorage.getItem('fh_wx_place') || 'oslo'; } catch { return 'oslo'; } })(), d: {}, err: '', mode: 'temp', sh: null, feel: false, from: 'hl' };
+export const WX = { places: null, add: false, q: '', res: null, sErr: '', busy: false, edit: false, place: (() => { try { return localStorage.getItem('fh_wx_place') || 'oslo'; } catch { return 'oslo'; } })(), d: {}, err: '', mode: 'temp', sh: null, feel: false, from: 'hl' };
 
+async function placesLoad() {
+  if (WX.places) return;
+  try { const r = await hlApi('/weather/places'); WX.places = (Array.isArray(r) ? r : r?.items ?? []).map((x) => [String(x.id), x.name, x]); }
+  catch { WX.places = PLACES.map(([k, n]) => [k, n, null]); WX.fixed = true; }
+  if (!WX.places.some(([k]) => k === WX.place) && WX.places[0]) WX.place = WX.places[0][0];
+}
+const plist = () => WX.places ?? PLACES.map(([k, n]) => [k, n, null]);
 export async function wxLoad(force = false) {
+  await placesLoad();
   const p = WX.place;
   if (!force && WX.d[p] && Date.now() - WX.d[p]._t < 10 * 60000) return;
   try { const r = await hlApi(`/weather/full?place=${encodeURIComponent(p)}`); WX.d[p] = { ...r, _t: Date.now() }; WX.err = ''; }
@@ -97,10 +106,11 @@ const dShort = (iso) => { const d = new Date(iso); return Number.isNaN(+d) ? '�
 export function wxView() {
   const D = WX.d[WX.place];
   const back = `<button class="vx-back" data-wx="back" data-swipeback>‹ ${WX.from === 'hl' ? 'Hjem' : 'Tilbake'}</button>`;
-  const places = `<div class="vx-places" role="tablist">${PLACES.map(([k, n]) => `<button role="tab" data-wx="place" data-k="${k}" aria-selected="${WX.place === k}">${n}</button>`).join('')}</div>`;
+  // Stedsvelgeren nederst: egne steder kan legges til (søk) og fjernes (Rediger → ✕).
+  const places = `<div class="vx-places" role="tablist">${plist().map(([k, n]) => `<button role="tab" data-wx="${WX.edit ? 'rmpl' : 'place'}" data-k="${esc(k)}" aria-selected="${WX.place === k}">${esc(n)}${WX.edit && plist().length > 1 ? ' <b aria-label="Fjern">✕</b>' : ''}</button>`).join('')}${WX.fixed ? '' : `<button data-wx="addpl" aria-label="Legg til sted">＋</button><button data-wx="editpl" aria-pressed="${WX.edit}">${WX.edit ? 'Ferdig' : 'Rediger'}</button>`}</div>${WX.add ? addSheet() : ''}`;
   if (!D) return `<div class="vx" style="background:${SKY.cloudy[0]}"><div class="vx-bar">${back}</div><div class="vx-in">${WX.err ? `<div class="vx-card vx-pad">${esc(WX.err)}</div>` : '<div class="m-spin"></div>'}</div>${places}</div>`;
   const c = D.current ?? {}, td = D.today ?? {}, kind0 = D.kind ?? kindOf(c.code), kind = nightOf(kind0 === 'night' ? 'clear' : kind0, c.isDay !== false && kind0 !== 'night');
-  const [sky, glow] = SKY[kind] ?? SKY.cloudy, desc = descOf(c.code, c.text), city = D.place?.name ?? PLACES.find(([k]) => k === WX.place)?.[1] ?? '';
+  const [sky, glow] = SKY[kind] ?? SKY.cloudy, desc = descOf(c.code, c.text), city = D.place?.name ?? plist().find(([k]) => k === WX.place)?.[1] ?? '';
   const nowT = Date.now(), hours = (D.hours ?? []).filter((h) => new Date(h.t) >= nowT - 3600e3).slice(0, 24);
   const days = (D.days ?? []).slice(0, 7), lo = Math.min(...days.map((d) => d.lo ?? 99)), hi = Math.max(...days.map((d) => d.hi ?? -99)), span = Math.max(1, hi - lo);
   const modes = [['temp', 'Temperatur', 'M10 14V5a2 2 0 1 1 4 0v9a4 4 0 1 1-4 0z'], ['rain', 'Nedbør', 'M12 3c3 4 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 3-7 6-11z'], ['wind', 'Vind', 'M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8']];
@@ -157,14 +167,14 @@ export function wxView() {
     <svg viewBox="0 0 100 86" class="vx-pres" aria-hidden="true"><circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="8" stroke-dasharray="0.9 2.4" transform="rotate(135 50 50)"/><g transform="rotate(${rot.toFixed(0)} 50 50)"><line x1="50" y1="9" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/></g>
       <text x="50" y="40" fill="#fff" font-size="12" font-weight="800" text-anchor="middle">${tr === 'up' || tr > 0 ? '↑' : tr === 'down' || tr < 0 ? '↓' : '→'}</text><text x="50" y="56" fill="#fff" font-size="15" font-weight="800" text-anchor="middle">${pr != null ? Math.round(pr) : '–'}</text><text x="50" y="66" fill="#fff" font-size="8" font-weight="700" text-anchor="middle">hPa</text><text x="26" y="84" fill="#fff" font-size="8" font-weight="700" text-anchor="middle">Lavt</text><text x="74" y="84" fill="#fff" font-size="8" font-weight="700" text-anchor="middle">Høyt</text></svg></div>`;
   return `<div class="vx" style="background:${sky}"><div class="vx-glow" style="background:${glow}"></div>
-    <div class="vx-bar">${back}<div class="vx-compact"><b>${esc(city)}</b><span>${deg(c.temp)} | ${esc(desc)}</span></div><span class="vx-src">${D.mock ? 'Eksempeldata' : D.fallback ? 'MET' : 'Open-Meteo'}</span></div>
+    <div class="vx-bar">${back}<div class="vx-compact"><b>${esc(city)}</b><span>${deg(c.temp)} | ${esc(desc)}</span></div><span class="vx-src">${D.mock ? 'Eksempeldata' : D.fallback || D.source === 'met' ? 'MET' : 'Open-Meteo'}</span></div>
     <div class="vx-in">
       <div class="vx-head"><span class="vx-pos">MIN POSISJON</span><span class="vx-city">${esc(city)}</span><span class="vx-temp">${deg(c.temp)}</span><span class="vx-desc">${esc(desc)}</span><span class="vx-hl">H:${deg(td.hi ?? days[0]?.hi)}  L:${deg(td.lo ?? days[0]?.lo)}${c.feels != null ? ` · Føles som ${deg(c.feels)}` : ''}</span></div>
       ${hours.length ? `<div class="vx-card vx-hours"><div class="vx-hrow"><button class="vx-forh" data-wx="day" data-i="0"><b>Forhold ›</b><span>${esc(hrTitle)}</span></button><div class="vx-modes">${modes.map(([k, n, p]) => `<button data-wx="mode" data-k="${k}" aria-label="${n}" aria-pressed="${WX.mode === k}">${tIco(p, k === 'rain', 18)}</button>`).join('')}</div></div><div class="vx-hs">${hrs}</div></div>` : ''}
       ${days.length ? `<div class="vx-card vx-days">${dayRows}</div>` : ''}
       ${wind}${moon}
       <div class="vx-grid">${sun}${uvT}${feel}${yd}${rain}${vis}${hum}${pres}</div>
-      <a class="vx-yr" href="${esc(D.yrUrl || 'https://www.yr.no/nb')}" target="_blank" rel="noopener">Data: ${D.fallback ? 'MET Norge' : 'Open-Meteo'} · Se også yr.no ↗</a>
+      <a class="vx-yr" href="${esc(D.yrUrl || 'https://www.yr.no/nb')}" target="_blank" rel="noopener">${esc(D.credit || `Data: ${D.fallback || D.source === 'met' ? 'MET Norge' : 'Open-Meteo'}`)} · Se også yr.no ↗</a>
     </div>${places}${WX.sh != null ? sheet(D) : ''}</div>`;
 }
 function tIco(p, fill = false, size = 15) { return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${p}"/></svg>`; }
@@ -228,15 +238,48 @@ export function wxBindScroll() {
     el.classList.toggle('sc', y > 140);
   }, { passive: true });
 }
+function addSheet() {
+  const res = WX.res ?? [];
+  return `<div class="sheet-bg" data-wx="addx"></div><div class="pp-sheet vx-sheet2" role="dialog" aria-label="Legg til sted"><span class="pp-grab"></span><div class="pp-sh">Legg til sted</div>
+    <input class="sinp p16-inp" id="vx-q" data-wxq value="${esc(WX.q)}" placeholder="Søk etter by eller sted" autocomplete="off" enterkeyhint="search">
+    <div class="p16-res">${WX.sErr ? `<div class="pp-mut">${esc(WX.sErr)}</div>` : ''}${res.map((r, i) => `<button class="p16-ri" data-wx="pick" data-i="${i}"><span class="m-grow"><b>${esc(r.name)}</b><span class="pp-mut">${esc([r.region, r.country].filter(Boolean).join(', '))}</span></span><span class="pp-lab-c">+ Legg til</span></button>`).join('') || (WX.busy ? '<div class="m-spin"></div>' : WX.q.length > 1 && !WX.sErr ? '<div class="pp-mut">Ingen treff.</div>' : '')}</div>
+    <button class="pp-btn" data-wx="addx">Lukk</button></div>`;
+}
+let qT = null;
+async function search() {
+  const q = WX.q.trim();
+  if (q.length < 2) { WX.res = null; draw(); return; }
+  WX.busy = true; draw();
+  try { WX.res = await hlApi(`/weather/search?q=${encodeURIComponent(q)}`); WX.sErr = ''; } catch (e) { WX.res = []; WX.sErr = e.status === 404 ? 'Søk etter steder krever en nyere server.' : e.message; }
+  WX.busy = false; draw();
+  const el = document.getElementById('vx-q'); if (el) { el.focus({ preventScroll: true }); el.setSelectionRange(el.value.length, el.value.length); }
+}
 export async function wxBind(e, t) {
-  if (m.screen !== 'vaer' || e.type !== 'click') return false;
+  if (m.screen !== 'vaer') return false;
+  if (e.type === 'input' && t.matches?.('[data-wxq]')) { WX.q = t.value; clearTimeout(qT); qT = setTimeout(search, 280); return true; }
+  if (e.type !== 'click') return false;
   const x = t.closest?.('[data-wx]');
   if (!x) return false;
   e.preventDefault();
   const k = x.dataset.wx;
   if (k === 'back') { if (history.length > 1) history.back(); else location.hash = '#/hl'; return true; }
   if (k === 'place') { WX.place = x.dataset.k; try { localStorage.setItem('fh_wx_place', WX.place); } catch {} WX.sh = null; draw(); scrollTo(0, 0); await wxLoad(); draw(); return true; }
-  if (k === 'mode') WX.mode = x.dataset.k;
+  if (k === 'addpl') { WX.add = true; WX.q = ''; WX.res = null; WX.sErr = ''; draw(); setTimeout(() => document.getElementById('vx-q')?.focus(), 40); return true; }
+  if (k === 'addx') WX.add = false;
+  else if (k === 'editpl') WX.edit = !WX.edit;
+  else if (k === 'pick') {
+    const r = WX.res?.[+x.dataset.i]; if (!r) return true;
+    try {
+      const p = await hlApi('/weather/places', { method: 'POST', json: { name: r.name, lat: r.lat, lon: r.lon, region: r.region } });
+      WX.places = null; await placesLoad(); WX.add = false;
+      const id = String(p?.id ?? p?.place?.id ?? WX.places.find(([, n]) => n === r.name)?.[0] ?? WX.place);
+      WX.place = id; try { localStorage.setItem('fh_wx_place', id); } catch {}
+      draw(); await wxLoad(); flash(`${r.name} er lagt til ✓`);
+    } catch (err) { flash(err.message); }
+  } else if (k === 'rmpl') {
+    const id = x.dataset.k; if (plist().length <= 1) return true;
+    try { await hlApi(`/weather/places/${encodeURIComponent(id)}`, { method: 'DELETE' }); WX.places = plist().filter(([q]) => q !== id); if (WX.place === id) { WX.place = WX.places[0][0]; await wxLoad(); } } catch (err) { flash(err.message); }
+  } else if (k === 'mode') WX.mode = x.dataset.k;
   else if (k === 'day') WX.sh = +x.dataset.i;
   else if (k === 'shx') WX.sh = null;
   else if (k === 'feel') WX.feel = x.dataset.k === '1';

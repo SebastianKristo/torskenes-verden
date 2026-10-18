@@ -5,6 +5,7 @@
 import { api, esc, n0, n2, today, icon } from './core.js';
 import { m, draw, flash, avatar, backBtn, theme } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
+import { paper } from './mobile-paper.js';
 
 export const AK = { d: null, per: '1M', seg: 'all', q: '', txf: 'all', hi: null, busy: false };
 const RG = [['1D', 1, 'i dag'], ['1U', 7, 'siste uke'], ['1M', 31, 'siste måned'], ['3M', 92, 'siste 3 måneder'], ['1Å', 365, 'siste år'], ['Alt', 1e5, 'totalt']];
@@ -55,7 +56,9 @@ function posSeries(p) {
 }
 const posOf = (t) => (AK.d?.positions ?? []).find((p) => tickerOf(p) === t || p.symbol === t);
 
+// Papir: toppbildet har allerede tilbakeknapp, tittel og profilbilde, så sidene starter med verdikortet (delvis oppe i bildet).
 function head(title, sub, back, right = '') {
+  if (paper()) return '';
   const th = theme();
   return `<div class="m-row" style="justify-content:space-between">${backBtn(th, back[0], back[1])}<span class="m-row" style="gap:8px">${right}${avatar()}</span></div>
     <div style="padding:2px 4px 0"><div class="title m-ell">${esc(title)}</div>${sub ? `<div class="psub">${sub}</div>` : ''}</div>`;
@@ -78,12 +81,17 @@ function overview() {
     : { v: vals.length > 1 ? vals[vals.length - 1] - vals[0] : 0, p: vals.length > 1 && vals[0] ? ((vals[vals.length - 1] - vals[0]) / vals[0]) * 100 : 0 };
   const g = path(vals, 330, 130);
   const top = [...pf].sort((a, b) => b.value - a.value).slice(0, 3);
+  const pp = paper(), divs = (d.dividends ?? []).reduce((a, o) => a + (o.amount ?? 0), 0), pl = pos.reduce((a, p) => a + (p.pl ?? 0), 0);
+  // Nøkkeltallene vises i hel lengde (ingen «…»): rutenett som bryter linjer i stedet for å kutte.
+  const kpi = pp ? `<div class="ak-stats ak-kpi">${[['Investert', money(invested)], ['Avkastning', `${pl < 0 ? '−' : '+'}${n0(pl)} ${cur()}`, pl < 0 ? 'dn' : 'up'], ['Kontanter', money(s.cash ?? 0)], ['Utbytte', money(divs)], ['Posisjoner', `${pos.length}`], ['Konto', d.env === 'demo' ? 'Demo' : 'Invest']]
+    .map(([l, v, c]) => `<div class="ak-stat"><span>${l}</span><b class="m-mono ${c ?? ''}">${esc(v)}</b></div>`).join('')}</div>` : '';
   return `${head('Aksjer', `Trading 212 · ${d.env === 'demo' ? 'Demo' : 'Invest'}${d.mock ? ' · eksempeldata' : ''}`, ['#/mer', 'Tilbake til Mer'], syncPill())}
-    <div class="ak-hero"><span class="ak-lbl">${AK.seg === 'cash' ? 'Kontanter' : 'Porteføljeverdi'}</span><b class="ak-val">${money(val)}</b>
+    <div class="ak-hero${pp ? ' pp-card ak-over' : ''}">${pp ? `<div class="ak-hrow"><span class="ak-lbl">${AK.seg === 'cash' ? 'Kontanter' : `Total verdi${d.mock ? ' · eksempeldata' : ''}`}</span>${syncPill()}</div>` : `<span class="ak-lbl">${AK.seg === 'cash' ? 'Kontanter' : 'Porteføljeverdi'}</span>`}<b class="ak-val">${money(val)}</b>
       <span class="m-row" style="gap:8px;flex-wrap:wrap">${chip(ch.p, `${pct(ch.p)} ${perTxt()}`)}<span class="ak-dim">${ch.v < 0 ? '−' : '+'}${n0(ch.v)} ${cur()}</span></span></div>
     <div class="ak-chart"><svg viewBox="0 0 330 130" preserveAspectRatio="none" role="img" aria-label="Utvikling ${esc(perTxt())}"><defs><linearGradient id="akg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".32"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs><path d="${g.area}" fill="url(#akg)"/><path d="${g.d}" class="ln"/></svg></div>
     <div class="ak-rng" role="tablist" aria-label="Periode">${RG.map(([k]) => `<button role="tab" data-ak="per" data-v="${k}" aria-selected="${AK.per === k}">${k}</button>`).join('')}</div>
     <div class="ak-seg" role="tablist" aria-label="Filter">${SEG.map(([k, n]) => `<button role="tab" data-ak="seg" data-v="${k}" aria-selected="${AK.seg === k}">${n}</button>`).join('')}</div>
+    ${kpi}
     ${AK.seg === 'cash' ? `<div class="ak-card"><div class="ak-row"><span class="ak-ini">${esc(cur())}</span><span class="m-grow"><b>Ledig kontantbeholdning</b><span class="ak-dim">Klar til å investere</span></span><b class="m-mono">${money(s.cash ?? 0)}</b></div></div>`
       : `${top.length ? `<div class="ak-h">Største posisjoner</div><div class="ak-tops">${top.map((p, i) => topCard(p, i)).join('')}</div>` : ''}
       <div class="ak-h phd"><span>Alle posisjoner</span><a class="pha" href="#/aks/tx">Transaksjoner ›</a></div>
@@ -116,7 +124,7 @@ function detail(t) {
     ...(AK.d.dividends ?? []).filter((o) => o.ticker === p.ticker || o.symbol === p.symbol).map((o) => ({ ...o, k: 'div', value: o.amount }))].sort((a, b) => String(b.date).localeCompare(String(a.date)));
   const tipL = Math.min(78, Math.max(4, (mx / 330) * 100));
   return `${head(p.name, `${esc(p.symbol)} · Trading 212`, ['#/aks', 'Tilbake til Aksjer'])}
-    <div class="ak-hero"><span class="ak-lbl">Kurs</span><b class="ak-val">${money(p.price, true)}</b><span class="m-row" style="gap:8px">${chip(s.real ? ch : p.plPct, `${pct(s.real ? ch : p.plPct)} ${s.real ? perTxt() : 'siden kjøp'}`)}</span></div>
+    <div class="ak-hero${paper() ? ' pp-card ak-over' : ''}"><span class="ak-lbl">${paper() ? `${esc(p.symbol)} · Kurs` : 'Kurs'}</span><b class="ak-val">${money(p.price, true)}</b><span class="m-row" style="gap:8px">${chip(s.real ? ch : p.plPct, `${pct(s.real ? ch : p.plPct)} ${s.real ? perTxt() : 'siden kjøp'}`)}</span></div>
     <div class="ak-chart det" data-akchart="${s.vals.length}"><svg viewBox="0 0 330 160" preserveAspectRatio="none" role="img" aria-label="Kursgraf"><defs><linearGradient id="akg2" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".3"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs><path d="${g.area}" fill="url(#akg2)"/><path d="${g.d}" class="ln"/><line x1="${mx}" x2="${mx}" y1="0" y2="160" class="mk"/></svg>
       <i class="ak-dot" style="left:${(mx / 330) * 100}%;top:${(my / 160) * 100}%"></i><span class="ak-tip" style="left:${tipL}%">${money(s.vals[hi], true)}<small>${esc(s.dates[hi] ? (/^\d{4}-/.test(s.dates[hi]) ? `${s.dates[hi].slice(8, 10)}.${s.dates[hi].slice(5, 7)}` : s.dates[hi]) : '')}</small></span></div>
     ${s.real ? `<div class="ak-rng" role="tablist" aria-label="Periode">${RG.map(([k]) => `<button role="tab" data-ak="per" data-v="${k}" aria-selected="${AK.per === k}">${k}</button>`).join('')}</div>` : '<div class="snote">Kursgraf per aksje vises når serveren lagrer kurshistorikk. Linjen går fra snittkurs til kurs nå.</div>'}
@@ -144,13 +152,20 @@ function txs() {
   const by = new Map();
   for (const o of all) (by.get(o.date) ?? by.set(o.date, []).get(o.date)).push(o);
   return `${head('Transaksjoner', 'Kjøp, salg og utbytte fra Trading 212', ['#/aks', 'Tilbake til Aksjer'])}
-    <form class="search ak-search" data-aksearch role="search"><span style="opacity:.7">${icon('search', 18)}</span><input class="m-input" id="m-akq" type="search" value="${esc(AK.q)}" placeholder="Søk etter aksje" aria-label="Søk i transaksjoner" enterkeyhint="search"></form>
+    <form class="search ak-search${paper() ? ' pp-card ak-over' : ''}" data-aksearch role="search"><span style="opacity:.7">${icon('search', 18)}</span><input class="m-input" id="m-akq" type="search" value="${esc(AK.q)}" placeholder="Søk etter aksje" aria-label="Søk i transaksjoner" enterkeyhint="search"></form>
     <div class="ak-seg" role="tablist">${TXF.map(([k, n]) => `<button role="tab" data-ak="txf" data-v="${k}" aria-selected="${AK.txf === k}">${n}</button>`).join('')}</div>
     <div id="m-aktx">${[...by].map(([dt, l]) => `<div class="ak-h">${esc(dayTitle(String(dt)))}</div><div class="ak-card">${l.map(txRow).join('')}</div>`).join('') || '<div class="m-empty">Ingen transaksjoner.</div>'}</div>`;
 }
 
 /* ---------- Visning og hendelser ---------- */
 
+/** Toppbildet i Papir for en aksje: navnet og tickeren. */
+export function aksTitle(sub) {
+  if (!sub) return null;
+  if (sub === 'tx') return ['Transaksjoner', 'Kjøp, salg og utbytte'];
+  const p = posOf(decodeURIComponent(sub));
+  return p ? [p.name, `${p.symbol} · Trading 212`] : null;
+}
 export function aksView(sub) {
   const d = AK.d, back = ['#/mer', 'Tilbake til Mer'];
   const wrap = (h) => `<div class="aks">${h}</div>`;

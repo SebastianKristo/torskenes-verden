@@ -5,6 +5,7 @@
 import { api, esc, n0, dd, today, icon, ICONS, logo, parseAmount, navName } from './core.js';
 import { m, draw, flash, avatar, backBtn, theme } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
+import { paper } from './mobile-paper.js';
 
 Object.assign(ICONS, { sins: 'M4 20V10M10 20V4M16 20v-7M22 20H2', shist: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2', shome: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z' });
 
@@ -65,7 +66,9 @@ const card = (inner, cls = '') => `<div class="sb-card ${isI() ? 'glass2' : ''} 
 const row = (x, right, sub) => `<div class="sb-row"${x.id != null ? ` data-sbed="${esc(x.id)}" role="button" tabindex="0"` : ''}>${lg(x)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(x.name)}${x.plan ? ` <span class="sb-dim" style="font-weight:400">· ${esc(x.plan)}</span>` : ''}</b><span class="sb-dim m-ell">${esc(sub)}</span></span>${right}</div>`;
 const whenTxt = (d) => { if (!d) return ''; const days = Math.round((new Date(d + 'T12:00') - new Date(today() + 'T12:00')) / 864e5); return days === 0 ? 'I dag' : days === 1 ? 'I morgen' : days > 1 && days < 7 ? new Date(d + 'T12:00').toLocaleDateString('nb-NO', { weekday: 'long' }).replace(/^./, (c) => c.toUpperCase()) : `${+d.slice(8, 10)}. ${MND[+d.slice(5, 7) - 1]}`; };
 
+// Papir: Hjem, Innsikt og Historikk ligger i fanelinja, med + som en rød sirkel (se paperNav), og toppbildet har tittelen.
 function head() {
+  if (paper()) return '';
   const th = theme();
   return `<div class="m-row" style="justify-content:space-between">${backBtn(th, '#/mer', 'Tilbake til Mer')}${avatar()}</div>
     <div class="sb-tabs" role="tablist">${TABS.map(([k, n, ic]) => `<button role="tab" data-sb="tab" data-v="${k}" aria-selected="${SB.tab === k}">${icon(ic, 17)}${n}</button>`).join('')}</div>

@@ -5,7 +5,8 @@ import { m, draw, flash, pref, setPref, theme, iosBg, isIOS, meName, avInner, av
 import { LAY, saveLayout } from './mobile-hl.js';
 import { SEEDS, MODES } from './mobile-theme.js';
 import { haptic, hpref, setHap, canVibrate, HAP_TYPES } from './mobile-haptics.js';
-import { paper, saveDesign, paperState } from './mobile-paper.js';
+import { paper, saveDesign, paperState, photoChoices } from './mobile-paper.js';
+import { tabEditor, iconThemeRow, iconColor, iconInk } from './mobile-p16.js';
 import { navSettings } from './mobile-paper3.js';
 import { TR, trkLoad, trkPrefRows, setTrkPref } from './mobile-track.js';
 
@@ -30,7 +31,8 @@ export async function settingsLoad(sub) {
 
 const ios = () => theme() === 'ios';
 const G = (title, rows, note = '') => `${title ? `<div class="sec">${title}</div>` : ''}<div class="list ${ios() ? 'glass2' : ''}">${rows.filter(Boolean).join('')}</div>${note ? `<div class="snote">${note}</div>` : ''}`;
-const nav = (k, label, sub, ic, color) => `<a class="opt-row" href="#/set/${k}"><span class="set-ic fill" style="background:${color}">${icon(ic, 17, '#fff')}</span><span class="m-grow">${label}</span>${sub ? `<span class="sval">${esc(sub)}</span>` : ''}<span style="opacity:.5">›</span></a>`;
+// Ikonfargene følger fargetemaet under Innstillinger → Ikonfarger (Standard = dagens farger).
+const nav = (k, label, sub, ic, color) => { const c = iconColor(k, color); return `<a class="opt-row" href="#/set/${k}"><span class="set-ic fill" style="background:${c}">${icon(ic, 17, iconInk(c))}</span><span class="m-grow">${label}</span>${sub ? `<span class="sval">${esc(sub)}</span>` : ''}<span style="opacity:.5">›</span></a>`; };
 const tog = (id, label, sub, on) => `<button class="opt-row" data-stog="${id}" role="switch" aria-checked="${!!on}"><span class="m-grow"><b style="font-weight:500">${label}</b>${sub ? `<br><span style="font-size:13px;opacity:.65">${sub}</span>` : ''}</span><span class="sw" aria-hidden="true" aria-checked="${!!on}"></span></button>`;
 const chips = (id, label, opts, cur, multi = false) => `<div class="opt-row col"><span style="font-size:13px;opacity:.7">${label}</span><div class="schips">${opts.map(([k, n]) => { const on = multi ? cur.includes(k) : cur === k; return `<button class="chip" data-schip="${id}" data-v="${esc(k)}" aria-pressed="${on}">${on && !multi ? '✓ ' : ''}${esc(n)}</button>`; }).join('')}</div></div>`;
 const val = (label, v, color = '') => `<div class="opt-row"><span class="m-grow">${label}</span><span class="sval" style="${color ? `color:${color};opacity:1` : ''}">${v}</span></div>`;
@@ -43,13 +45,16 @@ function profile(big = false) {
   const sz = big ? 58 : 44;
   return `<a class="opt-row" href="#/set/konto"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:${sz}px;height:${sz}px;font-size:${big ? 22 : 17}px">${avInner()}</span><span class="m-grow"><b style="font-size:${big ? 19 : 16}px;font-weight:600">${esc(meName())}</b><br><span style="font-size:13px;opacity:.65">${me.username ? `@${esc(me.username)}` : 'FinansHub'}${me.role ? ` · ${esc(me.role)}` : ''} · ${esc(me.serverName || location.host)}</span></span><span style="opacity:.5">›</span></a>`;
 }
-const PAGES = { konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', nav: 'Navigasjonslinje', dom: 'Domener', scan: 'Skanning og AI', notif: 'Varsler', hap: 'Haptikk', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI-motor', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data' };
+const PAGES = { profil: 'Profil', bakgrunn: 'Bakgrunn', fanelinje: 'Fanelinje', konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', nav: 'Navigasjonslinje', dom: 'Domener', scan: 'Skanning og AI', notif: 'Varsler', hap: 'Haptikk', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI-motor', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data' };
 const when = (t) => (t ? new Date(t).toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'aldri');
 const aiMode = () => { const st = S.boot?.settings ?? {}; return st.provider === 'gemini' ? 'gemini' : st.fallback ? 'both' : 'ollama'; };
 
+/** Tittelen i Papir-toppbildet for en underside. */
+export const setTitle = (sub) => PAGES[sub] ?? null;
 export function settingsView(th, sub) {
   const page = PAGES[sub] ? sub : '';
-  const head = page
+  // Papir: toppbildet har tittelen og «‹ Innstillinger», så undersidene starter rett på innholdet.
+  const head = paper() ? '' : page
     ? `<div class="m-row">${th === 'ios' ? `<a class="gback" href="#/set" aria-label="Tilbake til Innstillinger">${icon('chev', 20, 'currentColor', 2.6)}</a>` : '<a class="back" href="#/set" aria-label="Tilbake til Innstillinger">←</a>'}</div><div class="title" style="font-size:${th === 'ios' ? 30 : 32}px">${PAGES[page]}</div>`
     : `<div class="title" style="padding:6px 4px 0">Innstillinger</div>`;
   return `${head}${page ? PAGE[page](th) : main(th)}`;
@@ -61,9 +66,9 @@ function paperTop() {
   const md = pref('paperMode'), r = (k, n, s2) => `<button class="opt-row" data-sact="ppmode" data-v="${k}"><span class="m-grow"><b style="font-weight:600">${n}</b><br><span style="font-size:13px;opacity:.65">${s2}</span></span><span class="sval" style="${md === k ? 'color:var(--pp-pos);opacity:1;font-weight:600' : ''}">${md === k ? '✓ Valgt' : ''}</span></button>`;
   return `${G('Tema', [r('lys', 'Papir · lys', 'Lyst papir og svart fanelinje'), r('mork', 'Papir · mørk', 'Kveldspapir og lys fanelinje'), r('auto', 'Papir · følg systemet', 'Lys om dagen, mørk når telefonen er mørk'),
     `<button class="opt-row" data-sact="design" data-v="klassisk"><span class="m-grow"><b style="font-weight:600">Klassisk (Liquid Glass / Material You)</b><br><span style="font-size:13px;opacity:.65">Bytt tilbake til det forrige mobildesignet</span></span><span class="sval" style="color:var(--pp-lab);opacity:1;font-weight:600">Bytt ›</span></button>`])}
-    <div class="pp-col pp-navset" style="gap:8px">${navSettings()}</div>
-    ${G('Forside', [`<button class="opt-row" data-sact="ppphoto"><span class="m-grow"><b style="font-weight:600">Bakgrunn</b><br><span style="font-size:13px;opacity:.65">${PHOTO_N[pref('photo')] ?? 'Nåværende'}</span></span><span class="sval">Endre ›</span></button>`, link('<b style="font-weight:600">Nyhetsleser</b>', '#/nyheter', 'Kilder, kategorier og AI')])}
-    ${G('Konto', [`<button class="opt-row" data-mact="logout"><span class="m-grow"><b style="font-weight:600">Logg ut</b><br><span style="font-size:13px;opacity:.65">Du må logge inn igjen${m.me?.totp ? ' med 2FA' : ''}</span></span><span class="sval" style="color:var(--pp-lab);opacity:1;font-weight:600">Logg ut</span></button>`])}`;
+    ${G('Tilpass', [nav('profil', 'Profil', m.me?.username ? `@${m.me.username}` : '', 'users', '#5E8BFF'), nav('bakgrunn', 'Bakgrunn på Hjem', PHOTO_N[pref('photo')] ?? 'Nåværende', 'look', '#FF9F0A'), nav('fanelinje', 'Fanelinje', 'Faner, navn og ikoner', 'list', '#5E5CE6'), link('<b style="font-weight:600">Nyhetsleser</b>', '#/nyheter', 'Kilder, kategorier og AI')])}
+    <div class="sec">Ikonfarger</div>${iconThemeRow()}
+`;
 }
 
 function main() {
@@ -77,6 +82,16 @@ function main() {
 }
 
 const PAGE = {
+  profil: () => {
+    const me = m.me ?? {};
+    return `<div class="pp-card p16-prof"><label class="p16-pav"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:84px;height:84px;font-size:32px">${avInner()}</span><span class="p16-pedit">Bytt bilde</span><input class="m-file" type="file" accept="image/*" data-avatar></label>
+        <b class="pp-serif" style="font-size:24px">${me.username ? `@${esc(me.username)}` : esc(meName())}</b><span class="pp-mut">${esc(meName())}${me.role ? ` · ${me.role === 'admin' ? 'Administrator' : 'Bruker'}` : ''}</span></div>
+      ${G('Konto', [val('Brukernavn', me.username ? `@${esc(me.username)}` : '–'), val('Rolle', me.role === 'admin' ? 'Administrator' : me.role ? 'Bruker' : '–'), val('Tofaktor', me.totp ? '● På' : '○ Av', me.totp ? '#2f7a4f' : ''), avatarUrl() ? btn('Fjern profilbildet', 'avdel', '#b23a2a') : ''], 'Profilbildet vises i alle appene og i Homelab på PC. Navn og brukernavn endres av admin i Homelab → Innstillinger → Brukere.')}
+      ${G('', [nav('konto', 'Kontoer og brukere', '', 'users', '#5E8BFF'), nav('sik', 'Sikkerhet', me.totp ? '2FA på' : '', 'shield', '#34C759')])}
+      ${G('', [btn('Logg ut', 'logout', '#b23a2a')])}`;
+  },
+  bakgrunn: () => `${photoChoices()}<div class="snote">Bakgrunnen vises øverst på Hjem. «Vær nå» følger været, og «Planeter» er NASAs bilde for dagen. Bildene lastes ned av serveren din.</div>`,
+  fanelinje: () => `<div class="sec">Hovedlinja</div>${tabEditor()}<div class="pp-col pp-navset" style="gap:8px">${navSettings()}</div>`,
   konto: () => `${G('Profilbilde', [`<label class="opt-row"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:44px;height:44px">${avInner()}</span><span class="m-grow" style="color:var(--m-acc);font-weight:500">${avatarUrl() ? 'Bytt profilbilde' : 'Last opp profilbilde'}</span><input class="m-file" type="file" accept="image/*" data-avatar></label>`, avatarUrl() ? btn('Fjern bildet', 'avdel', '#FF8A80') : ''], 'Velg fra Bilder, Filer eller ta et nytt bilde. Samme bilde vises i Homelab.')}
     ${G('På denne enheten', [profile(), val('Status', '✓ Aktiv', '#7BE3A0')],
     'Nettappen er logget inn med én konto om gangen. Flere kontoer i samme app, og raskt bytte ved å holde inne profilbildet, finnes i iOS- og Android-appene.')}

@@ -10,6 +10,10 @@ import { TR, active, badge, carName } from './mobile-track.js';
 import { haptic } from './mobile-haptics.js';
 import { matToday, matTitle } from './mobile-mat.js';
 import { edBlocks, finKeys, finScreens, fabStyle, fourth, onWay, rcBanner, FX, openNewShip } from './mobile-paper3.js';
+import { mainTabs, heroBg, bolTitle } from './mobile-p16.js';
+import { SB } from './mobile-subs.js';
+import { aksTitle } from './mobile-aks.js';
+import { setTitle } from './mobile-set.js';
 
 /* ---------- Valg (per bruker i /api/me/layout, med lokal kopi) ---------- */
 
@@ -88,7 +92,8 @@ const PAGE = {
   spor: ['Sporing', 'Pakker og sendinger'],
   mer: ['Mer', 'Alle moduler'], set: ['Innstillinger', 'Konto og utseende'], media: ['Media', 'Plex · Jellyfin'],
   dom: ['Domener', 'Trafikk, besøk og oppetid'], 'dom/pub': ['Publikum', 'Kart, land og enheter'], 'dom/ytl': ['Ytelse', 'Statuskoder, fart og sikkerhet'], 'dom/inf': ['Infrastruktur', 'Oppetid, DNS og domeneinfo'], 'dom/admin': ['Domener', 'Legg til og fjern'],
-  aks: ['Aksjer', 'Trading 212'], sub: ['Abonnementer', 'Subscription OS'], dir: ['Boliger', 'Utgifter og prosjekter'], finn: ['Finn', 'Kjøp og salg'],
+  aks: ['Aksjer', 'Trading 212'], sub: ['Abonnementer', 'Subscription OS'], dir: ['Boliger', 'Utgifter, prosjekter og kvitteringer'], finn: ['Finn', 'Kjøp og salg'],
+  avg: ['Avganger', 'Ruter · sanntid fra Entur'], fam: ['Familie', 'Kart, soner og deling'],
   kv: ['Kvitteringer', 'Til gjennomgang'], fast: ['Faste trekk', 'Neste 30 dager'], konto: ['Kontoer', 'Saldo'], rap: ['Rapporter', 'Måned og år'], imp: ['Import', 'Bank, Excel og Finn'],
   skann: ['Kvittering', 'Bekreft'], opp: ['Kø', 'Kvitteringer'], hl: ['', ''],
 };
@@ -107,6 +112,9 @@ function parentOf(scr) {
   // Domener: pila (og sveip tilbake) går alltid hjem, også når Domener ble åpnet fra Mer.
   if (scr === 'dom') return m.sub === 'admin' ? ['dom', 'Domener'] : ['hl', 'Hjem'];
   if (scr === 'skann' && m.rc) return ['back', 'Kvitteringer'];
+  if (scr === 'aks' && m.sub) return ['aks', 'Aksjer'];
+  if (scr === 'dir' && m.sub) return ['dir', 'Boliger'];
+  if (['avg', 'fam', 'vaer'].includes(scr)) return ['hl', 'Hjem'];
   if (finScreens().includes(scr) || scr === 'fmer') return ['hl', 'Hjem'];
   if (FIN_SUB.includes(scr)) return ['fmer', 'Mer'];
   if (['media', 'nyheter'].includes(scr)) return ['mer', 'Mer'];
@@ -117,7 +125,8 @@ function parentOf(scr) {
 export function paperHero(scr) {
   const home = scr === 'hl', kind = photoKind();
   const key = scr === 'dom' && m.sub ? `dom/${m.sub}` : scr;
-  const [title, kick] = (m.detail && ['liste', 'sok', 'hjem'].includes(scr) && ['Detaljer', 'Transaksjon']) || (scr === 'mat' && matTitle()) || (PAGE[key] ?? PAGE[scr] ?? [cap(scr), '']);
+  const [title, kick] = (m.detail && ['liste', 'sok', 'hjem'].includes(scr) && ['Detaljer', 'Transaksjon']) || (scr === 'mat' && matTitle()) || (scr === 'dir' && m.sub && bolTitle()) || (scr === 'aks' && m.sub && aksTitle(m.sub)) || (scr === 'set' && m.sub && setTitle(m.sub) && [setTitle(m.sub), 'Innstillinger'])
+    || (scr === 'sub' && SB.tab !== 'home' && [SB.tab === 'ins' ? 'Innsikt' : 'Historikk', 'Subscription OS']) || (PAGE[key] ?? PAGE[scr] ?? [cap(scr), '']);
   const kicker = home ? cap(new Date().toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' })) : typeof kick === 'function' ? kick() : kick;
   // Hilsen etter tid på døgnet, alltid på to linjer: «God ettermiddag,» og navnet. Lange hilsener skaleres ned i stedet for å brytes.
   const ttl = home ? `<span class="pp-gl">${esc(greet())},</span><span class="pp-gl">${esc(meName().split(' ')[0])}</span>` : esc(title);
@@ -126,27 +135,30 @@ export function paperHero(scr) {
   const backBtn = home ? '<span class="pp-brand">Homelab</span>'
     : ['txback', 'back'].includes(pk) ? `<button class="pp-pill pp-back" data-mact="${pk}">‹ ${esc(pl)}</button>` : `<a class="pp-pill pp-back" href="#/${pk}">‹ ${esc(pl)}</a>`;
   const failNote = home && P.fail[kind] ? '<button class="pp-pill pp-fail" data-pp="retry">Fikk ikke lastet bildet · trykk for å prøve igjen</button>' : '';
-  return `<header class="pp-hero${home ? ' home' : ''}" style="${bgOf(kind)}">
+  // Bakgrunnsvelgeren ligger under Innstillinger → Bakgrunn. Profilbildet åpner Innstillinger → Profil.
+  // I Finans vises profilbildet og @brukernavn, ikke fullt navn.
+  const un = m.me?.username, fin = ctxOf(scr) === 'fin';
+  return `<header class="pp-hero${home ? ' home' : ''}${heroBg(scr) ? ' own' : ''}" style="${heroBg(scr) ?? bgOf(kind)}">
     <div class="pp-top">${backBtn}<span class="m-grow"></span>
-      ${home ? `<button class="pp-pill" data-pp="photo" aria-haspopup="menu" aria-expanded="${P.open}">${esc(PHOTOS.find(([k]) => k === kind)?.[1] ?? 'Eget bilde')} ▾</button>` : ''}
-      <a class="pp-av${avatarUrl() ? ' img' : ''}" href="#/set" aria-label="Innstillinger">${avInner()}</a></div>
-    ${home ? photoMenu(kind) : ''}${failNote}
+      <a class="pp-av${avatarUrl() ? ' img' : ''}${fin && un ? ' chip' : ''}" href="#/set/profil" aria-label="Profil">${fin && un ? `<span class="pp-avi">${avInner()}</span><span class="pp-un">@${esc(un)}</span>` : avInner()}</a></div>
+    ${failNote}
     <div class="pp-bottom"><div class="m-grow"><div class="pp-kick">${esc(kicker)}</div><h1 class="pp-title${home ? ' big' : ''}">${ttl}</h1></div>
       ${home && w ? `<a class="pp-temp" href="#/vaer" aria-label="Åpne værvisningen"><b>${w.temp != null ? Math.round(w.temp) + '°' : '–'}</b><span>${esc(w.text ?? '')}${w.updated ? ` · ${esc(new Date(w.updated).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }))}` : ''} ›</span></a>` : ''}</div>
     ${P.photo[kind]?.credit && home ? `<span class="pp-credit">${esc(P.photo[kind].credit)}</span>` : ''}
   </header>`;
 }
 
-// Egen nedtrekksmeny (ikke systemets): papirfarget panel med radius 18, miniatyrer 30×30 og ✓ på valgt rad.
-function photoMenu(kind) {
+/** Innstillinger → Bakgrunn: valgene som en liste (samme bilder og feilmeldinger som før). */
+export function photoChoices() {
+  const kind = photoKind();
+  if (!P.choicesLoaded) { P.choicesLoaded = true; Promise.all(PHOTOS.map(([q]) => photoLoad(q))).then(draw).catch(() => {}); }
   const sub = (k) => {
     if (P.fail[k]) return 'Fikk ikke lastet bildet · trykk for å prøve igjen';
     if (k === 'weather') { const sy = WX_NB[P.photo.weather?.symbol] ?? WX_NB[String(P.photo.weather?.symbol ?? '').split('_')[0]]; return `${PHOTO_SUB.weather}${sy ? ` · ${sy}` : ''}`; }
     return PHOTO_SUB[k];
   };
-  return `<div class="pp-menu${P.open ? ' open' : ''}" role="menu" aria-hidden="${!P.open}">${PHOTOS.map(([k, n]) => `<button role="menuitemradio" aria-checked="${kind === k}" data-pp="setphoto" data-k="${k}" tabindex="${P.open ? 0 : -1}"><span class="pp-th" style="${thumbOf(k)}"></span><span class="m-grow pp-mi"><span>${n}</span><small class="${P.fail[k] ? 'bad' : ''}">${esc(sub(k))}</small></span><span class="pp-ck${P.fail[k] && kind !== k ? ' bad' : ''}">${kind === k ? '✓' : P.fail[k] ? '!' : ''}</span></button>`).join('')}
-    <i class="pp-msep"></i>
-    <label class="pp-own"><span class="pp-th dash">+</span><span class="m-grow pp-mi"><span>Eget bilde</span>${kind === 'custom' ? '<small>Valgt</small>' : ''}</span><span class="pp-ck">${kind === 'custom' ? '✓' : ''}</span><input class="m-file" type="file" accept="image/jpeg,image/png,image/webp" data-ppfile></label></div>`;
+  return `<div class="pp-card p16-photos">${PHOTOS.map(([k, n]) => `<button role="menuitemradio" aria-checked="${kind === k}" data-pp="setphoto" data-k="${k}"><span class="pp-th" style="${thumbOf(k)}"></span><span class="m-grow pp-mi"><span>${n}</span><small class="${P.fail[k] ? 'bad' : ''}">${esc(sub(k))}</small></span><span class="pp-ck">${kind === k ? '✓' : ''}</span></button>`).join('')}
+    <label class="pp-own"><span class="pp-th dash">+</span><span class="m-grow pp-mi"><span>Eget bilde</span><small>${kind === 'custom' ? 'Valgt' : 'Last opp fra Bilder eller Filer'}</small></span><span class="pp-ck">${kind === 'custom' ? '✓' : ''}</span><input class="m-file" type="file" accept="image/jpeg,image/png,image/webp" data-ppfile></label></div>`;
 }
 
 // Fanelinja: jevnt fordelte faner (aktiv fane har ikon og egen bredde). Hjem vises bare på Hjem; ellers går pila
@@ -167,17 +179,20 @@ export function paperNav(scr) {
     tabs = [['dom', 'Oversikt', '◎'], ['dom/pub', 'Publikum', '◍'], ['dom/ytl', 'Ytelse', '⚡'], ['dom/inf', 'Infra', '▤']];
     cur = ['pub', 'ytl', 'inf'].includes(m.sub) ? `dom/${m.sub}` : 'dom'; plus = ['Legg til domene', 'dom'];
   } else {
-    const t4 = fourth() === 'spor' ? ['spor', 'Sporing', '▣'] : ['dom', 'Domener', '◎'];
-    tabs = [['hl', 'Hjem', '⌂'], ['hjem', 'Finans', 'kr'], ['mat', 'Mat', '◐'], t4].filter(([k]) => k !== 'hl' || scr === 'hl');
-    if (flyt) tabs.push(['sok', 'Søk', '⌕']);
-    tabs.push(['mer', 'Mer', '⋯']);
-    cur = ['hl', 'mat', 'spor', 'dom'].includes(scr) ? scr : 'mer';
+    // Hovedlinja kan redigeres: hold inne på linja, eller Innstillinger → Fanelinje (navn, ikon, rekkefølge, fjern).
+    tabs = mainTabs(scr);
+    cur = tabs.some(([k]) => k === scr) ? scr : 'mer';
     plus = scr === 'spor' ? ['Ny sending', 'spor'] : [scr === 'mat' ? 'Skann oppskrift' : 'Skann', scr === 'mat' ? 'mat' : 'main'];
+  }
+  // Abonnementer: Hjem, Innsikt og Historikk i fanelinja, og + som en rød sirkel.
+  if (scr === 'sub') {
+    return `<div class="pp-navbg" aria-hidden="true"></div><nav class="pp-nav sb-nav" data-ctx="sub" aria-label="Abonnementer">${[['home', 'Hjem', '⌂'], ['ins', 'Innsikt', '◔'], ['hist', 'Historikk', '↻']].map(([k, n, ic]) => `<button data-sb="tab" data-v="${k}" ${SB.tab === k ? 'aria-current="page"' : ''}><i>${ic}</i><span>${n}</span></button>`).join('')}
+      <button class="pp-scan sb-red${SB.sheet ? ' on' : ''}" data-sb="sheet" aria-label="${SB.sheet ? 'Lukk' : 'Legg til abonnement'}" aria-expanded="${SB.sheet}">${SB.sheet ? '×' : '+'}</button></nav>`;
   }
   if (ctx === 'dom') plus = ['Legg til domene', 'dom'];
   const fabIc = plus[1] === 'spor' || plus[1] === 'dom' ? 'M12 5v14M5 12h14' : SCAN_IC;
   const fab = flyt ? `<button class="pp-fab${P.press ? ' down' : ''}" data-ppplus="${plus[1]}" aria-label="${plus[0]}${plus[1] === 'spor' || plus[1] === 'dom' ? '' : ' (trykk for valg, hold inne for å laste opp)'}" title="${esc(plus[0])}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${fabIc}"/></svg></button>` : '';
-  return `<div class="pp-navbg" aria-hidden="true"></div><nav class="pp-nav${flyt ? ' flyt' : ''}" aria-label="Faner">${tabs.map(([k, n, ic]) => `<a href="#/${k}" data-tab="${k}" ${cur === k ? 'aria-current="page"' : ''}><i>${ic}</i><span>${n}</span></a>`).join('')}
+  return `<div class="pp-navbg" aria-hidden="true"></div><nav class="pp-nav${flyt ? ' flyt' : ''}" data-ctx="${ctx}" aria-label="Faner${ctx === 'main' ? ' (hold inne for å redigere)' : ''}">${tabs.map(([k, n, ic]) => `<a href="#/${k}" data-tab="${k}" ${cur === k ? 'aria-current="page"' : ''}><i>${ic}</i><span>${n}</span></a>`).join('')}
     ${flyt ? '' : `<button class="pp-scan${P.press ? ' down' : ''}" data-ppplus="${plus[1]}" aria-label="${plus[0]} (trykk for valg, hold inne for å laste opp)" title="Trykk for valg · hold inne for å laste opp">+</button>`}</nav>${fab}
     <input class="m-file" id="pp-quick" type="file" multiple accept="${plus[1] === 'mat' ? 'image/*,application/pdf' : 'application/pdf,image/jpeg,image/png,image/heic,image/heif,.heic,.heif'}" data-ppquick="${plus[1] === 'spor' ? 'main' : plus[1]}">
     ${P.hint ? `<div class="pp-hint" role="status">${esc(P.hint)}</div>` : ''}`;
@@ -235,8 +250,10 @@ export function paperHome() {
   const pk = active(TR.data?.items ?? []).sort((a, b) => (a.status === 'ready_for_pickup' ? -1 : 0) - (b.status === 'ready_for_pickup' ? -1 : 0));
   const p0 = pk[0];
   const pkg = p0 ? `<a class="pp-card pp-pkg" href="#/spor">${badge(p0.carrier, 52, p0.carrierLogo)}<span class="m-grow"><span class="pp-lab">${p0.status === 'ready_for_pickup' ? 'HENT I DAG' : 'PÅ VEI'}</span><b class="pp-serif">${esc(p0.name || p0.shop || p0.trackingNo)}</b><span class="pp-mut m-ell">${esc(p0.pickupPoint || p0.statusText || carName(p0.carrier))}${p0.eta ? ` · ${esc(/^\d{4}-\d\d-\d\d/.test(p0.eta) ? (p0.status === 'ready_for_pickup' ? 'innen ' : '') + new Date(p0.eta.slice(0, 10) + 'T12:00').toLocaleDateString('nb-NO', { day: 'numeric', month: 'numeric' }) : p0.eta)}` : ''}</span></span>${pk.length > 1 ? `<span class="pp-mut">${pk.length - 1} til ›</span>` : ''}</a>` : '';
-  const trips = (H?.ruter ?? []).flatMap((x) => (x.departures ?? []).slice(0, 2).map((d) => ({ ...d, min: d.min ?? d.minutes, to: d.to ?? x.to, from: x.from }))).sort((a, b) => (a.min ?? 99) - (b.min ?? 99)).slice(0, 3);
-  const ruter = trips.length ? `<a class="pp-card pp-ruter" href="${esc(ruterUrl(H.ruter[0]?.from))}" target="_blank" rel="noopener"><div class="pp-row"><span class="pp-lab">AVGANGER${H.ruter[0]?.from ? ` · ${esc(H.ruter[0].from.toUpperCase())}` : ''}</span><span class="pp-mut">sanntid ›</span></div>
+  // Brukerens egne stopp (Entur, prompt 16) går foran stoppene fra Homelab-oppsettet. Et trykk åpner Avganger.
+  const src = H?.stops?.length ? H.stops.map((x) => ({ from: x.name, departures: x.departures })) : H?.ruter ?? [];
+  const trips = src.flatMap((x) => (x.departures ?? []).slice(0, 2).map((d) => ({ ...d, min: d.min ?? d.minutes, to: d.to ?? x.to, from: x.from }))).sort((a, b) => (a.min ?? 99) - (b.min ?? 99)).slice(0, 3);
+  const ruter = trips.length ? `<a class="pp-card pp-ruter" href="#/avg"><div class="pp-row"><span class="pp-lab">AVGANGER${src[0]?.from ? ` · ${esc(src[0].from.toUpperCase())}` : ''}</span><span class="pp-mut">sanntid ›</span></div>
       ${trips.map((d) => `<div class="pp-dep"><span class="pp-line" style="background:${esc(lineBg(d))};color:${esc(lineFg(d))}">${esc(d.line)}</span><span class="m-grow m-ell">${esc(d.to ?? '')}</span><b class="pp-serif">${d.min != null ? (d.min <= 0 ? 'nå' : d.min) : ''}</b><span class="pp-mut pp-min">${d.min > 0 ? 'min' : ''}</span></div>`).join('')}</a>` : '';
   const s = S.summary, rv = (s?.review ?? []).filter((r) => r.status === 'needs_review').length, mt = matToday();
   const dm = hlDom(), dom = dm ? { visitors: dm.visitors, total: dm.n, down: dm.up === false ? 1 : 0 } : null;
@@ -248,7 +265,7 @@ export function paperHome() {
   ];
   // Hold inne et kort for å flytte eller skjule det (Søk, Pakker, Avganger, Snarveier, Siste nytt).
   return `<div class="pp-home">${edBlocks('hl', {
-    h1: '<form class="pp-search" data-ppsearch role="search"><span aria-hidden="true">⌕</span><input class="m-input" name="q" type="search" enterkeyhint="search" placeholder="Søk på Google" aria-label="Søk på Google" autocomplete="off"></form>',
+    h1: '<form class="pp-search" data-ppsearch role="search"><svg class="pp-g" width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg><input class="m-input" name="q" type="search" enterkeyhint="search" placeholder="Søk på Google" aria-label="Søk på Google" autocomplete="off"></form>',
     h2: pkg, h3: ruter,
     h4: `<div class="pp-minis">${minis.map(([k, v, sub, c, href, fs]) => `<a class="pp-card pp-mini" href="${href}"><span class="pp-lab mut">${k}</span><b class="pp-serif m-ell" style="font-size:${fs}">${esc(v)}</b><span class="${c === 'lab' ? 'pp-lab-c' : `pp-${c}`}" style="font-size:11px">${esc(sub)}</span></a>`).join('')}</div>`,
     h5: newsCard(H?.news),
@@ -292,8 +309,9 @@ export function paperFin() {
 export function paperMer() {
   // Modulen som ikke står i fanelinja (Domener eller Sporing) ligger øverst i Mer.
   const n = onWay(), mod = fourth() === 'spor' ? ['dom', 'Domener', 'Trafikk, besøk og oppetid'] : ['spor', 'Sporing', n ? `${n} pakke${n === 1 ? '' : 'r'} på vei` : 'Pakker og sendinger'];
-  const rows = [mod, ['media', 'Media', 'Spilles nå og historikk'], ['hjem', 'Finans', 'Oversikt, liste, Finn og mer'],
-    ['nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag'], ['set', 'Innstillinger', 'Tema, bakgrunn og konto']];
+  const rows = [mod, ['avg', 'Avganger', 'Sanntid fra Ruter og Entur'], ['fam', 'Familie og kart', 'Posisjon, soner og deling'], ['vaer', 'Vær', 'Steder og varsel fra yr.no'],
+    ['media', 'Media', 'Spilles nå og historikk'], ['hjem', 'Finans', 'Oversikt, liste, Finn og mer'], ['dir', 'Boliger', 'Utgifter, prosjekter og kvitteringer'],
+    ['nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag'], ['set', 'Innstillinger', 'Tema, bakgrunn, fanelinje og konto']];
   return `<div class="pp-card pp-list">${rows.map(([k, n, s]) => `<a href="#/${k}"><span class="m-grow"><b class="pp-serif">${n}</b><span class="pp-mut">${s}</span></span><span class="pp-mut">›</span></a>`).join('')}</div>`;
 }
 

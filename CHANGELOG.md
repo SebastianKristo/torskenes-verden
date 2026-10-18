@@ -2,6 +2,35 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.9.0] – 18.10.2026 · prompt 16
+- **AI virker igjen.** Fire feil er rettet:
+  - Standardmodellen var en Gemini-modell som er gått ut (`gemini-2.5-flash`). Nå brukes den nyeste flash-modellen, med automatisk bytte hvis en modell forsvinner.
+  - AI-søket gikk ut på tid fordi den nye modellen tenker før den svarer.
+  - Kallene ventet lenge når Ollama ikke svarte.
+  - Feilene ble skjult. Nå vises den egentlige årsaken.
+- **Nye AI-leverandører:** Groq (tekst og bilder) og en Roboflow-nøkkel, begge med testknapp.
+- **Familie og kart (ny modul)** på web, PWA, iOS og Android:
+  - Posisjon i sanntid med spor, fart og sensorer (batteri, lading, aktivitet og nøyaktighet).
+  - Soner med varsel når noen kommer eller går, per person.
+  - Personvern: pause, av, eller omtrentlig posisjon. Serveren håndhever valget.
+  - Helse fra Apple Health og Health Connect. Bare det du velger deles.
+- **Avganger:** egen side med flere avganger, plattform, sanntid og avvik. Du kan søke opp stopp i Entur og holde inne for å endre rekkefølge eller fjerne stopp.
+- **Vær:** data fra MET (yr.no), og du kan søke opp, legge til og fjerne steder.
+- **Papir på mobil:**
+  - Innstillinger i Papir, med profil, bakgrunnsvelger og ikonfarger.
+  - Redigerbar fanelinje: navn, ikon, rekkefølge, fjerne og legge til.
+  - Sider åpner alltid øverst, og søkefeltet har Google-ikon.
+  - Finans viser profilbilde og @brukernavn i stedet for fullt navn.
+  - Aksjer og Boliger har fått fulle mobilsider.
+  - Abonnementer har Hjem, Innsikt og Historikk i fanelinja.
+- **Boliger på web:** ny meny med faner, kommende forfall, prosjekter med budsjett og dra-og-slipp av kvitteringer.
+
+### Gjenstår
+- **HealthKit ved sideloading:** jeg vet ikke om det godtas med gratis Apple-ID. Feiler installasjonen, fjern HealthKit-entitlementen i Sideloadly («Remove entitlements»).
+- **Kart på iOS:** iOS bruker Apple Maps, ikke OpenStreetMap.
+- **Undersider i Innstillinger:** de avanserte undersidene i iOS- og Android-appen har ikke fått Papir-layout.
+- **Automatisk fjerde fane:** valget lagres som Domener på serveren og blir derfor ikke synket mellom enheter.
+
 ## [4.8.0] – 18.10.2026 · prompt 15
 - **Tilpass hver side (Papir):** hold inne et kort, så vugger det dempet. Hvert kort får ▲, ▼ og − (skjul), og «Ferdig» står øverst. Det gjelder Hjem, Finans, Mat og Sporing, og valgene lagres per side og bruker.
 - **Fanelinja:**

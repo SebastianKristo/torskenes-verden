@@ -1645,3 +1645,169 @@ a.wx-r{color:inherit;text-decoration:none}
 .pp-hero button.pp-pill{background:rgba(27,26,23,.55)!important;color:#fff!important;padding:0 14px 0 12px!important}
 .pp-fmn b{color:var(--pp-ink)}
 .m.papir.ph .sb .m-row>.title{visibility:hidden}
+
+/* ---------- Prompt 16: fanelinje, Innstillinger, Avganger, Familie, Boliger, Aksjer og Abonnementer i Papir ---------- */
+.pp-search .pp-g{flex:none}
+.pp-av.chip{width:auto;height:38px;border-radius:19px;padding:0 12px 0 3px;display:flex;align-items:center;gap:7px;background:rgba(243,239,230,.94)}
+.pp-av.chip .pp-avi{width:32px;height:32px;border-radius:16px;overflow:hidden;display:grid;place-items:center;background:#1b1a17;color:#f3efe6;font-size:13px}
+.pp-av.chip .pp-avi img{width:100%;height:100%;object-fit:cover}
+.pp-av.chip .pp-un{font:600 13px Manrope,sans-serif;color:#1b1a17;white-space:nowrap}
+.p16-sheet{max-height:86dvh;overflow-y:auto;overscroll-behavior:contain}
+.p16-tbe{gap:0;padding:6px 12px}
+.p16-tbr{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--pp-line)}
+.p16-tbr:last-child{border-bottom:0}
+.p16-ic{flex:none;width:40px;height:40px;border-radius:12px;background:var(--pp-surf2);color:var(--pp-ink);font:500 18px Newsreader,serif;display:grid;place-items:center;cursor:pointer}
+.p16-tbn{flex:1;min-width:0;height:40px}
+.p16-fx{font-size:12px;color:var(--pp-mut);white-space:nowrap}
+.p16-chips{display:flex;flex-wrap:wrap;gap:8px}
+.p16-chip{height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--pp-line);background:var(--pp-card);color:var(--pp-ink);font:600 13px Manrope,sans-serif;cursor:pointer;white-space:nowrap}
+.p16-chip[aria-pressed=true]{background:var(--pp-ink);color:var(--pp-bg);border-color:var(--pp-ink)}
+.p16-themes{flex-direction:row;flex-wrap:wrap;gap:8px;padding:12px}
+.p16-theme{flex:1 1 92px;min-width:92px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:10px 12px;border-radius:14px;border:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);font:600 13px Manrope,sans-serif;cursor:pointer;position:relative}
+.p16-theme[aria-pressed=true]{border:2px solid var(--pp-ink);padding:9px 11px}
+.p16-theme b{position:absolute;top:8px;right:10px}
+.p16-dots{display:flex;gap:4px}.p16-dots i{width:14px;height:14px;border-radius:5px;display:block}
+.p16-inp{width:100%;height:46px;box-sizing:border-box;font-size:16px}
+.p16-res{display:flex;flex-direction:column;gap:6px;min-height:40px}
+.p16-ri{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:var(--pp-card);color:var(--pp-ink);text-align:left;cursor:pointer}
+.p16-ri b{display:block;font-size:15px}.p16-ri .pp-mut{display:block}
+.p16-photos{padding:6px 8px;gap:2px}
+.p16-photos button,.p16-photos label{display:flex;align-items:center;gap:12px;min-height:54px;padding:6px 8px;border-radius:12px;color:var(--pp-ink);font:600 14.5px Manrope,sans-serif;text-align:left;cursor:pointer;background:transparent}
+.p16-photos .pp-th{width:40px;height:40px;border-radius:10px}
+.p16-photos small{display:block;font-weight:500;font-size:12px;color:var(--pp-mut)}.p16-photos small.bad{color:var(--pp-lab)}
+.p16-photos .pp-ck{font-weight:800;color:var(--pp-pos)}
+.p16-prof{align-items:center;text-align:center;gap:6px;padding:22px 16px}
+.p16-pav{position:relative;display:grid;place-items:center;cursor:pointer}
+.p16-pedit{margin-top:6px;font:700 12px Manrope,sans-serif;color:var(--pp-lab)}
+
+/* Avganger */
+.m.papir .pp-hero.own .pp-credit{display:none}
+.p16-avtop{gap:10px}
+.p16-stopchips{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none;margin:0 -16px;padding:2px 16px 4px;scroll-padding:0 16px}
+.p16-stopchips::-webkit-scrollbar{display:none}
+.m.papir .p16-stopchips>*{flex:none;box-sizing:border-box;min-width:max-content;scroll-snap-align:start;height:38px;padding:0 16px;border-radius:999px;border:1px solid var(--pp-line);background:var(--pp-bg);color:var(--pp-ink);font:600 13.5px Manrope,sans-serif;display:flex;align-items:center;white-space:nowrap;text-decoration:none;cursor:pointer;max-width:none}
+.m.papir .p16-stopchips>button{background:var(--pp-ink);color:var(--pp-bg);border-color:var(--pp-ink)}
+.p16-stop{gap:6px;scroll-margin-top:16px}
+.p16-sn{font-size:24px;line-height:1.15;margin:2px 0 0;overflow-wrap:anywhere}
+.p16-deps{display:flex;flex-direction:column}
+.p16-dep{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--pp-line)}
+.p16-dep:first-child{border-top:0}
+.p16-dep .pp-line{flex:none;min-width:38px;height:26px;padding:0 6px;border-radius:7px;display:grid;place-items:center;font:700 13px Manrope,sans-serif;box-sizing:border-box}
+.p16-dt{min-width:0;display:flex;flex-direction:column;gap:1px}
+.p16-dt b{font-size:15.5px;font-weight:600;overflow-wrap:anywhere}
+.p16-dt .pp-mut{font-size:12px}
+.p16-rt{color:var(--pp-pos)}
+.p16-sit{font:italic 12.5px Newsreader,serif;color:var(--pp-lab)}
+.p16-min{flex:none;display:flex;align-items:baseline;gap:3px;min-width:48px;justify-content:flex-end}
+.p16-min b{font-size:24px}.p16-min small{font-size:11px;color:var(--pp-mut)}
+.p16-dep.x .p16-dt b,.p16-dep.x .p16-min b{text-decoration:line-through;opacity:.6}
+
+/* Familie */
+.p16-mapc{padding:0;overflow:hidden;gap:0}
+.p16-map{height:320px;position:relative;background:var(--pp-surf2)}
+.p16-mapin{position:absolute;inset:0}
+.p16-mapin .leaflet-container,.p16-mapin.leaflet-container{background:#e8e2d4;font-family:Manrope,sans-serif}
+.p16-mapmsg{position:absolute;inset:0;display:grid;place-items:center;padding:20px;text-align:center;font-size:13px;color:var(--pp-mut)}
+.p16-mapbar{padding:10px 12px;gap:8px;justify-content:flex-start}
+.p16-pinw{background:none;border:0}
+.p16-pin{width:40px;height:40px;border-radius:20px;border:3px solid #fff;background:#1b1a17;color:#f3efe6;display:grid;place-items:center;font:700 14px Manrope,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.35);overflow:hidden;box-sizing:border-box}
+.p16-pin.on{border-color:#b23a2a}
+.p16-pin img{width:100%;height:100%;object-fit:cover}
+.p16-mem{text-align:left;cursor:pointer;border:2px solid transparent;width:100%;box-sizing:border-box}
+.p16-mem.on{border-color:var(--pp-ink)}
+.p16-av{flex:none;border-radius:50%;background:var(--pp-ink);color:var(--pp-bg);display:grid;place-items:center;font-weight:700;overflow:hidden}
+.p16-av img{width:100%;height:100%;object-fit:cover}
+.p16-mn{display:block;font-size:19px}
+.p16-mem .pp-mut{display:block;overflow-wrap:anywhere}
+.p16-st{flex:none;padding:4px 10px;border-radius:999px;font:700 11.5px Manrope,sans-serif}
+.p16-st.pos{background:var(--pp-posC);color:var(--pp-onPosC)}.p16-st.warn{background:var(--pp-labC);color:var(--pp-onLabC)}.p16-st.mut{background:var(--pp-surf2);color:var(--pp-mut)}
+.p16-sens{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.p16-sens span{padding:4px 9px;border-radius:8px;background:var(--pp-surf2);font:600 12px 'IBM Plex Mono',monospace}
+.p16-hl{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:6px;margin-top:6px;width:100%}
+.p16-hl span{display:flex;flex-direction:column;padding:8px;border-radius:10px;background:var(--pp-surf2)}
+.p16-hl small{font-size:11px;color:var(--pp-mut)}.p16-hl b{font:500 17px Newsreader,serif}
+.p16-me{gap:10px}
+.p16-seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:6px}
+.p16-seg button{height:40px;border-radius:10px;border:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);font:700 13px Manrope,sans-serif;cursor:pointer}
+.p16-seg button[aria-pressed=true]{background:var(--pp-ink);color:var(--pp-bg);border-color:var(--pp-ink)}
+.p16-zd{flex:none;width:12px;height:12px;border-radius:50%;display:inline-block}
+.p16-zone b{display:block}.p16-zone .pp-mut{display:block}
+.p16-zn{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.p16-znr{display:flex;align-items:center;gap:6px}
+.p16-tg{height:32px;padding:0 12px;border-radius:999px;border:1px solid var(--pp-line);background:transparent;color:var(--pp-mut);font:600 12px Manrope,sans-serif;cursor:pointer}
+.p16-tg[aria-pressed=true]{background:var(--pp-posC);color:var(--pp-onPosC);border-color:transparent}
+.p16-ev{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--pp-line)}
+.p16-ev:first-child{border-top:0}
+.p16-rad{display:flex;align-items:center;gap:10px;font-size:14px}.p16-rad input{flex:1}
+.p16-cols{display:flex;gap:10px}.p16-cols button{width:34px;height:34px;border-radius:50%;cursor:pointer}
+.p16-cols button[aria-pressed=true]{outline:3px solid var(--pp-ink);outline-offset:2px}
+
+/* Boliger */
+.p16-bover{gap:6px}
+.p16-big{font-size:38px;line-height:1.05}
+.p16-qa{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.p16-qa .pp-btn{position:relative}
+.p16-bol{flex-direction:row;align-items:center;gap:12px}
+.p16-bic{flex:none;width:48px;height:48px;border-radius:14px;background:var(--pp-surf2);display:grid;place-items:center;font:500 22px Newsreader,serif}
+.p16-bn{display:block;font-size:18px;overflow-wrap:anywhere}
+.p16-bol .pp-mut{display:block}
+.p16-br{flex:none;display:flex;flex-direction:column;align-items:flex-end;text-align:right}
+.p16-br b{font:600 14.5px 'IBM Plex Mono',monospace;white-space:nowrap}.p16-br small{font-size:11px;color:var(--pp-mut)}
+.p16-kpi{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:6px}
+.p16-kpi span{display:flex;flex-direction:column;padding:10px;border-radius:12px;background:var(--pp-surf2)}
+.p16-kpi small{font-size:11.5px;color:var(--pp-mut)}.p16-kpi b{font:600 14.5px 'IBM Plex Mono',monospace}
+.p16-tabs{display:flex;flex-wrap:wrap;gap:6px}
+.p16-tabs::-webkit-scrollbar{display:none}
+.p16-tabs button{flex:none;height:38px;padding:0 15px;border-radius:999px;border:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);font:700 13px Manrope,sans-serif;cursor:pointer;white-space:nowrap}
+.p16-tabs button[aria-selected=true]{background:var(--pp-ink);color:var(--pp-bg);border-color:var(--pp-ink)}
+.p16-bars{display:flex;align-items:flex-end;gap:6px;height:96px;padding-top:6px}
+.p16-bars span{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;min-width:0}
+.p16-bars i{width:100%;max-width:24px;border-radius:5px 5px 2px 2px;background:var(--pp-ink);display:block}
+.p16-bars span:last-child i{background:var(--pp-lab)}
+.p16-bars small{font-size:10px;color:var(--pp-mut)}
+.p16-cat{display:flex;align-items:center;gap:10px;padding:7px 0}
+.p16-cat b{font:600 13.5px 'IBM Plex Mono',monospace;white-space:nowrap}
+.p16-pb{display:block;height:6px;border-radius:3px;background:var(--pp-surf2);overflow:hidden;margin-bottom:4px}
+.p16-pb i{display:block;height:100%;border-radius:3px}
+.p16-ent{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid var(--pp-line)}
+.p16-ent:first-child{border-top:0}
+.p16-ent .p16-zd{margin-top:5px}
+.p16-ent b{display:block;font-size:14.5px;overflow-wrap:anywhere}.p16-ent .pp-mut{display:block}
+.p16-ai{display:block;font:italic 12.5px Newsreader,serif;color:var(--pp-lab)}
+.p16-amt{flex:none;font:600 14px 'IBM Plex Mono',monospace!important;white-space:nowrap}
+.p16-drop{align-items:center;text-align:center;border:1.5px dashed var(--pp-line);background:transparent;cursor:pointer;padding:22px}
+.p16-rcg{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.p16-rc{display:flex;flex-direction:column;gap:3px;padding:8px;border-radius:16px;background:var(--pp-card);color:var(--pp-ink);text-decoration:none;min-width:0}
+.p16-rci{aspect-ratio:3/4;border-radius:10px;background:var(--pp-surf2) center/cover no-repeat}
+.p16-rc b{font-size:13px}
+.p16-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+/* Aksjer i Papir: verdikortet delvis oppe i toppbildet, og nøkkeltallene i hel lengde */
+.m.papir .aks .ak-over{background:var(--pp-card)!important;color:var(--pp-ink);border-radius:20px;padding:16px 18px;box-shadow:0 10px 30px -14px rgba(0,0,0,.35)}
+.m.papir .aks .ak-hrow{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.m.papir .aks .ak-hrow .ak-pill{flex:none;white-space:nowrap}
+.m.papir .aks .ak-stat b,.m.papir .aks .ak-stat span{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+.m.papir .aks .ak-stat{background:var(--pp-card);border-color:transparent}
+.m.papir .aks .ak-top b.m-ell,.m.papir .aks .ak-row b.m-ell{white-space:normal;overflow:visible;text-overflow:clip;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* Abonnementer: Hjem, Innsikt og Historikk i fanelinja, + som en rød sirkel */
+.pp-nav.sb-nav>button[data-sb=tab]{flex:1 1 0;min-width:0;height:46px;padding:0 6px;border-radius:999px;color:var(--pp-navInk);display:flex;align-items:center;justify-content:center;gap:7px;font:600 12.5px Manrope,sans-serif;white-space:nowrap;background:transparent;cursor:pointer}
+.pp-nav.sb-nav>button[aria-current=page]{flex:none;background:var(--pp-navAct);color:var(--pp-navActInk);padding:0 16px}
+.pp-nav.sb-nav>button i{font:500 16px Newsreader,serif;font-style:normal}
+.pp-nav.sb-nav>button:not([aria-current=page]) i{display:none}
+.pp-nav .pp-scan.sb-red{background:#d63b2b!important;color:#fff!important;border-radius:50%}
+.m.papir .sb-hero .sb-pill{background:#f3efe6!important;color:#1b1a17!important;border:0}
+.m.papir.pd .sb-hero .sb-pill{background:#ece7dc!important;color:#14130f!important}
+@media (min-width:600px){
+  .m.papir .pp-nav.sb-nav>button[data-sb=tab],.m.papir .pp-nav.sb-nav>button[aria-current=page]{flex:none;height:58px;padding:0 2px;border-radius:18px;flex-direction:column;justify-content:center;gap:2px;font-size:11.5px;width:100%}
+  .m.papir .pp-nav.sb-nav>button i{display:block}
+  /* Fold: pakkekortet er like høyt som Avganger-kortet ved siden av */
+  .m.papir.hlp .pp-home{align-items:stretch}
+  .m.papir.hlp .pp-home>[data-edk=h2],.m.papir.hlp .pp-home>[data-edk=h3]{display:flex;flex-direction:column}
+  .m.papir.hlp .pp-home>[data-edk=h2]>.pp-card,.m.papir.hlp .pp-home>[data-edk=h3]>.pp-card{flex:1;box-sizing:border-box}
+  .p16-map{height:420px}
+  .p16-kpi{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+/* Vær: legg til og fjern steder */
+.vx-places button b{font-size:11px;margin-left:4px;opacity:.75}
+.vx-sheet2{background:#f3efe6!important;color:#1b1a17;z-index:80;--pp-bg:#f3efe6;--pp-surf2:#ebe5d8;--pp-ink:#1b1a17;--pp-card:#fff;--pp-mut:#7a7468;--pp-line:#d8d1c2;--pp-lab:#b23a2a}

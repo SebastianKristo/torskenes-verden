@@ -19,6 +19,7 @@ import { paper, paperDark, paperHero, paperNav, paperScanSheet, paperHome, paper
 import { paperList, paperFinn, paperFinnSheet, paperFinnLoad, paperFinnBind, paperTrk, paperTrkSheet, paperTrkBind } from './mobile-paper2.js';
 import { take15, edDown, edMove, edUp, edClick, edReset, paperSearch, fsBind, paperTx, txLoad, txBind15, finMerGrid, fmerLoad, rcCount, recentLoad, newShipSheet, nsBind, navSetBind, fabStyle } from './mobile-paper3.js';
 import { wxView, wxLoad, wxBind, wxBindScroll, WX } from './mobile-wx.js';
+import { take16, p16Bind, p16Pointer, p16Move, p16Up, tabSheet, avgView, avgLoad, avgSheet, famView, famLoad, famSheet, famAfterDraw, bolView, bolLoad, AV, BO } from './mobile-p16.js';
 
 const u = S.ui;
 export const m = {
@@ -44,7 +45,7 @@ const FINMODS = ['sub', 'dir', 'finn'];
 export const FIN = ['hjem', 'liste', 'budsjett', 'sok', 'skann', 'opp', ...PAGES, ...FINMODS];
 const TWO = ['hjem', 'liste', 'budsjett', 'skann', 'opp', 'sok'];
 const HLG = ['hl', 'spor', 'set'];
-const ALL = [...new Set([...FIN, 'hl', 'spor', 'mat', 'dom', 'set', 'media', 'nyheter', 'fmer', 'vaer'])];
+const ALL = [...new Set([...FIN, 'hl', 'spor', 'mat', 'dom', 'set', 'media', 'nyheter', 'fmer', 'vaer', 'avg', 'fam'])];
 // Oversikt, Liste og Budsjett bruker egne navn fra Sidemeny; Søk og Mer beholder de korte navnene i fanelinja.
 const RENAME = ['home', 'list', 'bud', 'finn'];
 // Egne navn fra Innstillinger → Utseende → Navigasjonslinje (LAY.names) går foran; tomt felt gir standardnavnet.
@@ -366,8 +367,8 @@ export function draw() {
   const plain = !m.detail && !m.edit;
   const ppMain = !pp ? null : scr === 'hl' ? paperHome() : m.detail && !m.edit && m.sel != null && ['liste', 'sok', 'hjem'].includes(scr) ? paperTx(m.sel)
     : scr === 'hjem' && !S.boot?.restricted && plain ? paperFin() : scr === 'mer' ? paperMer()
-    : scr === 'fmer' ? finMerGrid() : scr === 'sok' && plain ? paperSearch() : scr === 'liste' && plain ? paperList() : scr === 'finn' && !m.sub ? paperFinn() : scr === 'spor' ? paperTrk() : null;
-  const main = scr === 'vaer' ? wxView() : scr === 'nyheter' ? newsView()
+    : scr === 'fmer' ? finMerGrid() : scr === 'sok' && plain ? paperSearch() : scr === 'liste' && plain ? paperList() : scr === 'finn' && !m.sub ? paperFinn() : scr === 'spor' ? paperTrk() : scr === 'dir' ? bolView() : scr === 'avg' ? avgView() : scr === 'fam' ? famView() : null;
+  const main = scr === 'vaer' ? wxView() : scr === 'nyheter' ? newsView() : !pp && scr === 'avg' ? avgView() : !pp && scr === 'fam' ? famView()
     : scr === 'media' ? (pp ? '' : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Media</div></div>') + mediaView()
     : ppMain ?? (scr === 'set' ? settingsView(th, m.sub)
     : scr === 'hl' ? hlView(th)
@@ -385,11 +386,14 @@ export function draw() {
   const ae = document.activeElement, keep = ae?.id && root().contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
   root().innerHTML = `<div class="m ${th}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}${fabStyle() === 'float' ? ' flyt' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${scr === 'vaer' ? ' vaer' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
     ${pp ? '' : rail(n)}${hero ? paperHero(scr) : ''}<div class="m-scroll">${bt ? topRow(th) : ''}${main}</div><div class="m-detail">${twoPane ? detail(th) : ''}</div>${nav}
-    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() : ''}${origOverlay(th)}${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
+    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() : ''}${avgSheet()}${famSheet()}${origOverlay(th)}${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
     <input class="m-file" id="m-capture" type="file" accept="image/*" capture="environment" data-mupload data-confirm></div>`;
   if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', pp ? (m.light ? '#f3efe6' : '#14130f') : th === 'ios' ? '#07070A' : getComputedStyle(root().firstElementChild).backgroundColor || '#19120E');
-  hlAfterDraw(); pageAfterDraw(); if (scr === 'dom') modAfterDraw(th);
+  hlAfterDraw(); pageAfterDraw(); if (scr === 'dom') modAfterDraw(th); if (scr === 'fam') famAfterDraw();
+  // Nye sider åpner alltid helt øverst: også undersider i Innstillinger, kvittering, detaljer, Avganger, Vær og Nyhetsleser.
+  const vk = [scr, m.sub, m.detail ? m.sel : '', m.edit ? 'e' : '', m.rc ?? '', m.pdet ?? '', BO.tab, m.vk ?? ''].join('|');
+  if (vk !== m.lastVk) { m.lastVk = vk; window.scrollTo(0, 0); root().querySelector('.m-scroll')?.scrollTo?.(0, 0); }
   // Glassmarkøren glir med fjæring mellom fanene. Fanelinja tegnes på nytt ved hver oppdatering, så animasjonen
   // (Web Animations) gjenopptas med medgått tid hvis en ny tegning kommer midt i den.
   const mk = root().querySelector('.tabs .mark');
@@ -435,6 +439,9 @@ async function load() {
     else if (scr === 'media') jobs.push(mediaLoad());
     else if (scr === 'nyheter') jobs.push(newsLoad());
     else if (scr === 'vaer') jobs.push(wxLoad());
+    else if (scr === 'avg') jobs.push(avgLoad());
+    else if (scr === 'fam') jobs.push(famLoad());
+    else if (scr === 'dir' && paper()) jobs.push(bolLoad(m.sub));
     else if (scr === 'finn') jobs.push(paper() && !m.sub ? paperFinnLoad() : finnLoad(m.sub));
     else if (scr === 'fmer') jobs.push(loadSummary().catch(() => {}), fmerLoad().catch(() => {}));
     else if ((!FIN.includes(scr) || FINMODS.includes(scr)) && !['media', 'nyheter', 'vaer'].includes(scr)) jobs.push(modLoad(scr, m.sub));
@@ -712,7 +719,7 @@ export function bind() {
   wxBindScroll();
   addEventListener('fh-design', (e) => { const d = e.detail ?? {}; takeDesign(d); if (typeof d.lock === 'boolean') setPref('lock', d.lock); if (typeof d.hap === 'boolean') setPref('hap', d.hap); if (d.photo) photoLoad(d.photo).then(draw).catch(() => {}); draw(); });
   loadLayout().then((r) => {
-    takeDesign(r); take15(r);
+    takeDesign(r); take15(r); take16(r);
     // Første gang etter innlogging (nye installasjoner): onboarding i tre steg.
     if (r && r.onboarded === false) import('./mobile-gate.js').then((g) => g.showOnboarding(r)).catch(() => {});
     if (document.documentElement.dataset.ui === 'mobile') draw();
@@ -720,6 +727,7 @@ export function bind() {
   // Skanneknappen: trykk = kamera (eller valg), hold inne ~480 ms = arket med Bilder/Filer.
   el.addEventListener('pointerdown', (e) => {
     edDown(e); // først: nullstiller også «klikket etter et langt trykk»
+    if (paper()) p16Pointer(e);
     if (paperDown(e)) return;
     if (swDown(e)) return;
     if (tabDown(e)) return;
@@ -730,7 +738,9 @@ export function bind() {
   });
   const cancelLp = () => clearTimeout(lpTimer);
   el.addEventListener('pointerup', cancelLp); el.addEventListener('pointercancel', cancelLp);
-  el.addEventListener('pointerup', (e) => { paperUp(e); edUp(e); }); el.addEventListener('pointercancel', (e) => { paperUp(e); edUp(e); });
+  el.addEventListener('pointerup', (e) => { paperUp(e); edUp(e); p16Up(e); }); el.addEventListener('pointercancel', (e) => { paperUp(e); edUp(e); p16Up(e); });
+  el.addEventListener('dragover', (e) => { if (e.target.closest('[data-p16drop]')) e.preventDefault(); });
+  el.addEventListener('drop', safe(async (e) => { await p16Bind(e, e.target); }));
   el.addEventListener('contextmenu', (e) => { if (e.target.closest('[data-ppplus], [data-edk]')) e.preventDefault(); });
   el.addEventListener('contextmenu', (e) => { if (e.target.closest('[data-scan]')) e.preventDefault(); });
   el.addEventListener('click', safe(async (e) => {
@@ -739,6 +749,7 @@ export function bind() {
     if (Date.now() - tsup < 400 && d('.tabs')) { e.preventDefault(); e.stopPropagation(); return; }
     if (Date.now() - swUp < 400) { e.preventDefault(); e.stopPropagation(); return; } // klikket etter et sveip tilbake
     if (paper() && edClick(e, t)) return; // tilpass siden: ▲ ▼ −, Ferdig, og klikket etter et langt trykk
+    if (await p16Bind(e, t)) return;
     if (await wxBind(e, t)) return;
     // Domener i Papir: å bytte mellom Oversikt, Publikum, Ytelse og Infra legges ikke i tilbake-historikken.
     if (paper() && m.screen === 'dom' && (x = d('.pp-nav [data-tab^="dom"]'))) { e.preventDefault(); location.replace('#/' + x.dataset.tab); return; }
@@ -793,7 +804,7 @@ export function bind() {
     }
     if (act === 'logout') { await fetch('/api/logout', { method: 'POST' }); location.href = '/login?next=/finans/'; }
   }));
-  el.addEventListener('input', (e) => { if (paper()) { paperFinnBind(e, e.target); paperTrkBind(e, e.target); nsBind(e, e.target); fsBind(e, e.target); } paperBind(e, e.target); matBind(e, e.target); if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
+  el.addEventListener('input', (e) => { p16Bind(e, e.target); wxBind(e, e.target); if (paper()) { paperFinnBind(e, e.target); paperTrkBind(e, e.target); nsBind(e, e.target); fsBind(e, e.target); } paperBind(e, e.target); matBind(e, e.target); if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
   el.addEventListener('change', safe(async (e) => {
     const t = e.target;
     if (t.matches('[data-mupload]')) { const f = [...t.files]; t.value = ''; await upload(f, { confirm: t.hasAttribute('data-confirm') && f.length === 1 }); return; }
@@ -802,6 +813,7 @@ export function bind() {
       const r = await api(`/receipts/${m.rc}`, { method: 'PATCH', json: { [f]: f === 'total' ? parseAmount(t.value) : f === 'accountId' ? +t.value : t.value } });
       S.receipts = S.receipts.map((y) => (y.id === r.id ? r : y)); return draw();
     }
+    if (await p16Bind(e, t)) return;
     if (paper() && await paperFinnBind(e, t)) return;
     if (paper() && (await nsBind(e, t) || await txBind15(e, t))) return;
     if (await paperBind(e, t)) return;
@@ -830,7 +842,7 @@ export function bind() {
   el.addEventListener('keydown', (e) => { hlBind(e, e.target); });
   el.addEventListener('focusin', (e) => { hlBind(e, e.target); });
   el.addEventListener('focusout', (e) => { hlBind(e, e.target); });
-  el.addEventListener('pointermove', (e) => { paperMove(e); edMove(e); if (swMove(e)) return; if (tabMove(e)) return; hlBind(e, e.target); }, { passive: false });
+  el.addEventListener('pointermove', (e) => { paperMove(e); edMove(e); p16Move(e); if (swMove(e)) return; if (tabMove(e)) return; hlBind(e, e.target); }, { passive: false });
   el.addEventListener('pointerup', (e) => { if (swEnd(e)) return; if (tabUp(e)) return; hlBind(e, e.target); });
   el.addEventListener('pointercancel', (e) => { if (swEnd(e)) return; tabUp(e); });
   // Hindrer at nettleseren tar over berøringen (og sender pointercancel) mens man sveiper tilbake.
