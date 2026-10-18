@@ -13,6 +13,7 @@ import { setTiles } from './mobile-p20.js';
 import { DEP, depKey, depStatus, stopList } from './mobile-p21.js';
 import * as P24 from './mobile-p24.js';
 import * as P22 from './mobile-p22.js';
+import * as P25 from './mobile-p25.js';
 
 /* ---------- Valg (lokal kopi + /api/me/layout) ---------- */
 
@@ -91,7 +92,8 @@ function tbAdd() {
 }
 /** Selve redigeringen (brukes både i arket og under Innstillinger → Fanelinje). */
 export function tabEditor() {
-  return `<div class="pp-card p16-tbe">${tbRows()}</div>
+  // Prompt 25: STIL · FORHÅNDSVISNING over «Legg til» (samme valg som Innstillinger → Fanelinje-stil).
+  return `<div class="pp-card p16-tbe">${tbRows()}</div>${P25.styleSection(mainTabs('hl'))}
     <span class="pp-lab">LEGG TIL FANE</span>${tbAdd()}
     <div class="pp-mut">Trykk på ikonet for å bytte det. Et tomt navn gir standardnavnet. Hjem vises bare på Hjem, og Mer står alltid sist.</div>
     <button class="pp-btn sm" data-p16="tbreset" style="align-self:flex-start">Tilbakestill fanelinja</button>`;

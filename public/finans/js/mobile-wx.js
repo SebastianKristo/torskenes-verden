@@ -8,6 +8,7 @@ import { m, draw, flash } from './mobile.js';
 import { hlData } from './mobile-hl.js';
 import { cmpView, CMP, cmpLoad } from './mobile-p17.js';
 import { WX2, normCmp, pentAt, cmpCard, bottomBtns, mapView, placesSheet, metricSheet, fxKind, fxAfterDraw, wx22Bind } from './mobile-wx22.js';
+import * as P25 from './mobile-p25.js';
 
 const PLACES = [['oslo', 'Oslo'], ['bergen', 'Bergen'], ['trondheim', 'Trondheim'], ['tromso', 'Tromsø']];
 export const WX = { places: null, add: false, q: '', res: null, sErr: '', busy: false, edit: false, place: (() => { try { return localStorage.getItem('fh_wx_place') || 'oslo'; } catch { return 'oslo'; } })(), d: {}, err: '', mode: 'temp', sh: null, feel: false, from: 'hl' };
@@ -177,16 +178,19 @@ export function wxView() {
   const pres = `<div class="vx-card vx-tile" data-wx2="ms" data-k="pres" role="button" tabindex="0"><div class="vx-t">${tIco('M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 12l4-4')}LUFTTRYKK</div>
     <svg viewBox="0 0 100 86" class="vx-pres" aria-hidden="true"><circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="8" stroke-dasharray="0.9 2.4" transform="rotate(135 50 50)"/><g transform="rotate(${rot.toFixed(0)} 50 50)"><line x1="50" y1="9" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/></g>
       <text x="50" y="40" fill="#fff" font-size="12" font-weight="800" text-anchor="middle">${tr === 'up' || tr > 0 ? '↑' : tr === 'down' || tr < 0 ? '↓' : '→'}</text><text x="50" y="56" fill="#fff" font-size="15" font-weight="800" text-anchor="middle">${pr != null ? Math.round(pr) : '–'}</text><text x="50" y="66" fill="#fff" font-size="8" font-weight="700" text-anchor="middle">hPa</text><text x="26" y="84" fill="#fff" font-size="8" font-weight="700" text-anchor="middle">Lavt</text><text x="74" y="84" fill="#fff" font-size="8" font-weight="700" text-anchor="middle">Høyt</text></svg></div>`;
+  // Prompt 25: på Fold og nettbrett (≥ 700 px) to kolonner (5 : 7) med værkartet rett på siden. Under 700 er kolonnene
+  // display:contents, så rekkefølgen er som før.
+  const fold = P25.wxFold();
   WX.fx = fxKind(kind0 === 'night' ? 'night' : kind0, c.isDay !== false && kind0 !== 'night', c.code);
   return `<div class="vx" style="background:${sky}"><div class="w22-fx" id="w22-fx" aria-hidden="true"></div><div class="vx-glow" style="background:${glow}"></div>
     <div class="vx-bar">${back}<div class="vx-compact"><b>${esc(city)}</b><span>${deg(c.temp)} | ${esc(desc)}</span></div><span class="vx-src">${D.mock ? 'Eksempeldata' : D.fallback || D.source === 'met' ? 'MET' : 'Open-Meteo'}</span></div>
-    <div class="vx-in">
+    <div class="vx-in${fold ? ' p25-fold' : ''}"><div class="p25-c1">
       <div class="vx-head"><span class="vx-pos">MIN POSISJON</span><span class="vx-city">${esc(city)}</span><span class="vx-temp">${deg(c.temp)}</span><span class="vx-desc">${esc(desc)}</span><span class="vx-hl">H:${deg(td.hi ?? days[0]?.hi)}  L:${deg(td.lo ?? days[0]?.lo)}${c.feels != null ? ` · Føles som ${deg(c.feels)}` : ''}</span></div>
       ${hours.length ? `<div class="vx-card vx-hours"><div class="vx-hrow"><button class="vx-forh" data-wx="day" data-i="0"><b>Forhold ›</b><span>${esc(hrTitle)}</span></button><div class="vx-modes">${modes.map(([k, n, p]) => `<button data-wx="mode" data-k="${k}" aria-label="${n}" aria-pressed="${WX.mode === k}">${tIco(p, k === 'rain', 18)}</button>`).join('')}</div></div><div class="vx-hs">${hrs}</div></div>` : ''}
-      ${days.length ? `<div class="vx-card vx-days">${dayRows}</div>` : ''}
+      ${days.length ? `<div class="vx-card vx-days">${dayRows}</div>` : ''}</div><div class="p25-c2">${fold ? P25.wxMapCard(P0, WX2.layer) : ''}
       ${cmpCard(C2, D, { IC, ICC, kindOf, busy: CMP.busy, err: CMP.err })}
       ${wind}${moon}
-      <div class="vx-grid">${sun}${uvT}${feel}${yd}${rain}${vis}${hum}${pres}</div>
+      <div class="vx-grid">${sun}${uvT}${feel}${yd}${rain}${vis}${hum}${pres}</div></div>
       <a class="vx-yr" href="${esc(D.yrUrl || 'https://www.yr.no/nb')}" target="_blank" rel="noopener">${esc(D.credit || `Data: ${D.fallback || D.source === 'met' ? 'MET Norge' : 'Open-Meteo'}`)} · Se også yr.no ↗</a>
     </div>${places}${WX.sh != null ? sheet(D) : ''}${metricSheet(D)}${cmpView(WX.place, city)}</div>`;
 }

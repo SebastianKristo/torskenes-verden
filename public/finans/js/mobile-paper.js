@@ -4,7 +4,7 @@
 // Alle eksisterende sider tegnes i Papir ved at Android-fargerollene (--m3-*) får papirfarger (se mobile-theme.js).
 // Her ligger skallet (fotovindu og fanelinje), Papir-forsiden, Finans-oversikten, Mer, Media og nyhetsleseren.
 import { S, esc, n0, hlApi, ini, today, greet } from './core.js';
-import { m, draw, flash, pref, setPref, meName, avInner, avatarUrl, openSheet, upload, ACTIVE_JOBS } from './mobile.js';
+import { m, draw, flash, pref, setPref, meName, avInner, avatarUrl, openSheet, upload, ACTIVE_JOBS, startScr } from './mobile.js';
 import { hlData, hlDom, ruterUrl } from './mobile-hl.js';
 import { TR, active, badge, carName } from './mobile-track.js';
 import { pkgLogo, pkgTitle, pkgMore } from './mobile-p21.js';
@@ -16,6 +16,7 @@ import { SB } from './mobile-subs.js';
 import { aksTitle } from './mobile-aks.js';
 import * as P23 from './mobile-p23.js';
 import * as P24 from './mobile-p24.js';
+import * as P25 from './mobile-p25.js';
 import { setTitle } from './mobile-set.js';
 import { appName, huskeWidget, bolWidget, scanCtx, homeUpload, FT } from './mobile-p17.js';
 import { posCard, ppTi } from './mobile-p20.js';
@@ -153,7 +154,7 @@ export function paperHero(scr) {
   const [pk, pl] = parentOf(scr);
   const w = hlData()?.weather;
   const backBtn = home ? `<span class="pp-brand">${esc(appName())}</span>` : !pk ? ''
-    : ['txback', 'back'].includes(pk) ? `<button class="pp-pill pp-back" data-mact="${pk}">‹ ${esc(pl)}</button>` : `<a class="pp-pill pp-back" href="#/${pk}">‹ ${esc(pl)}</a>`;
+    : ['txback', 'back'].includes(pk) ? `<button class="pp-pill pp-back" data-mact="${pk}">‹ ${esc(pl)}</button>` : `<a class="pp-pill pp-back${pk === 'hl' || pk === startScr() ? ' to-home' : ''}" href="#/${pk}">‹ ${esc(pl)}</a>`;
   const failNote = home && P.fail[kind] ? '<button class="pp-pill pp-fail" data-pp="retry">Fikk ikke lastet bildet · trykk for å prøve igjen</button>' : '';
   // Bakgrunnsvelgeren ligger under Innstillinger → Bakgrunn. Profilbildet åpner Innstillinger → Profil.
   // I Finans vises profilbildet og @brukernavn, ikke fullt navn.
@@ -357,7 +358,8 @@ export function paperMer() {
   const rows = [...(P24.profRoot() ? [['hl', 'Hjem', 'Pakker, avganger og widgets']] : []), mod, ['bd', 'Bursdager', 'Hvem har bursdag snart'], ['huske', 'Huskeliste', 'Oppgaver og widgets'], ['fam', 'Familie og kart', 'Posisjon, soner og helse'],
     ['media', 'Media', 'Spilles nå og historikk'], ['hjem', 'Finans', 'Oversikt, liste, Finn og mer'], ['nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag'], ['set', 'Innstillinger', 'Tema, bakgrunn og konto']]
     .filter(([k]) => k === 'hl' || k === 'set' || !inBar.has(k));
-  return `<div class="pp-card pp-list p24-mer">${rows.map(([k, nm, sd]) => `<a href="#/${k}"><span class="m-grow"><b class="pp-serif">${nm}</b><span class="pp-mut">${sd}</span></span><span class="pp-mut">›</span></a>`).join('')}</div>`;
+  // Prompt 25: ikon til venstre (40-boks med strekikon i fargene fra ikonpaletten).
+  return `<div class="pp-card pp-list p24-mer p25-mer">${rows.map((r, i) => P25.merRow(r, i, !m.light)).join('')}</div>`;
 }
 
 /* ---------- Media (Plex og Jellyfin) ---------- */

@@ -11,6 +11,7 @@ import { setFinTabs } from './mobile-paper3.js';
 import { hlDom } from './mobile-hl.js';
 import { paperDark } from './mobile-paper.js';
 import { famSource } from './mobile-p22.js';
+import * as P25 from './mobile-p25.js';
 
 const LS = 'fh_p24';
 const L = (() => { try { return JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch { return {}; } })();
@@ -110,7 +111,7 @@ const IDX = [
   ['profil', 'Profilbilde og navn', 'Konto', '#/set/profil', 'avatar bilde profil'],
   ['fai', 'AI og tolkning', 'Finans', '#/set/fai', 'ai gemini groq ollama roboflow kvittering ocr'], ['kat', 'Kategorier og budsjett', 'Finans', '#/set/kat', 'kategori budsjett'], ['regel', 'Regler', 'Finans', '#/set/regel', 'regel automatisk'],
   ['bank', 'Bankimport', 'Finans', '#/set/bank', 'bank dnb csv import'], ['t212', 'Aksjer · Trading 212', 'Finans', '#/set/t212', 'aksje trading212 t212 fond'], ['fanelinje', 'Fanelinje og Mer i Finans', 'Finans', '#/set/fanelinje', 'fane faner navigasjon'], ['sub', 'Subscription OS', 'Finans', '#/sub', 'abonnement'],
-  ['appnavn', 'Navn på appen', 'Homelab', 'nm', 'navn app tittel'], ['appikon', 'App-ikon', 'Homelab', 'ic', 'ikon logo app'], ['hjemnav', 'Fanelinje i Hjem', 'Homelab', '#/set/fanelinje', 'fane faner hjem navigasjon'],
+  ['appnavn', 'Navn på appen', 'Homelab', 'nm', 'navn app tittel'], ['appikon', 'App-ikon', 'Homelab', 'ic', 'ikon logo app'], ['hjemnav', 'Fanelinje i Hjem', 'Homelab', '#/set/fanelinje', 'fane faner hjem navigasjon'], ['navstil', 'Fanelinje-stil', 'Homelab', 'ns', 'fane fanelinje stil ikoner tekst navn navigasjon'],
   ['mod', 'Moduler', 'Homelab', '#/set/mod', 'modul widget sporing domener mat'], ['rss', 'Nyhetsleser', 'Homelab', '#/nyheter', 'rss nyheter kilder ikon'],
   ['look', 'Utseende og fanelinje', 'App', '#/set/look', 'tema mørk lys farge papir utseende ikonfarger'], ['bakgrunn', 'Bakgrunn på Hjem', 'App · Utseende', '#/set/bakgrunn', 'bakgrunn bilde planeter vær oslo'],
   ['varsler', 'Varsler og haptikk', 'App', '#/set/varsler', 'varsel push lyd vibrasjon haptikk bursdager'], ['integ', 'Integrasjoner', 'App', '#/set/integ', 'integrasjon nøkkel api'],
@@ -134,11 +135,10 @@ function searchBar() {
 }
 function searchResults() {
   const hits = SS.ai && SS.ids ? SS.ids.map((id) => index().find((x) => x.id === id)).filter(Boolean) : localHits(SS.q);
-  const rows = hits.map((x) => {
-    const tag = x.href.startsWith('#') ? `a class="opt-row p17-row" href="${esc(x.href)}"` : `button class="opt-row p17-row" data-p17="${esc(x.href)}"`;
-    return `<${tag}><span class="m-grow p17-rt"><b>${esc(x.title)}</b><small>${esc(x.path)}</small></span><span class="p17-chev" aria-hidden="true">›</span></${x.href.startsWith('#') ? 'a' : 'button'}>`;
-  }).join('');
-  return `${SS.ans ? `<div class="p24-ans"><span>✦</span><span>${esc(SS.ans)}</span></div>` : ''}${SS.busy ? '<div class="pp-mut" style="padding:0 4px">✦ Tenker …</div>' : ''}
+  // Prompt 25: et trykk på et treff åpner riktig side, scroller til raden og fremhever den (som «Ta meg dit →»).
+  const rows = hits.map((x) => `<a class="opt-row p17-row" href="${esc(x.href.startsWith('#') ? x.href : '#/set')}" data-p24="goset" data-id="${esc(x.id)}"><span class="m-grow p17-rt"><b>${esc(x.title)}</b><small>${esc(x.path)}</small></span><span class="p17-chev" aria-hidden="true">›</span></a>`).join('');
+  const top = SS.ai && !SS.busy && hits[0];
+  return `${SS.ans ? `<div class="p24-ans"><span>✦</span><span class="p25-ansb"><span>${esc(SS.ans)}</span>${top ? `<button class="p25-go" data-p24="goset" data-id="${esc(top.id)}">Ta meg dit →</button>` : ''}</span></div>` : ''}${SS.busy ? '<div class="pp-mut" style="padding:0 4px">✦ Tenker …</div>' : ''}
     ${rows ? `<span class="pp-lab p17-gl">TREFF · ${hits.length}</span><div class="list p17-list">${rows}</div>` : SS.busy ? '' : `<span class="pp-mut p24-none">Ingen treff.${SS.ai ? '' : ' Slå på ✦ AI for å spørre med vanlige ord.'}</span>`}`;
 }
 async function aiSearch() {
@@ -585,6 +585,7 @@ async function bindAsync(e, t) {
   switch (k) {
     case 'prof': await pickProfile(x.dataset.k); return true;
     case 'sqx': SS.q = ''; SS.ans = ''; SS.ids = null; draw(); document.getElementById('p24-sq')?.focus(); return true;
+    case 'goset': { e.preventDefault(); const it = index().find((y) => y.id === x.dataset.id); SS.q = ''; SS.ans = ''; SS.ids = null; SS.ai = false; P25.goSet(it); return true; }
     case 'sqai': SS.ai = !SS.ai; SS.ans = ''; SS.ids = null; draw(); if (SS.ai && SS.q.trim()) aiSearch(); document.getElementById('p24-sq')?.focus(); return true;
     case 'igf': IG.open = IG.open === x.dataset.k ? null : x.dataset.k; draw(); setTimeout(() => document.querySelector('.p24-igf input')?.focus(), 30); return true;
     case 'igx': IG.open = null; draw(); return true;

@@ -26,6 +26,7 @@ import { wx22Down, wx22Move, wx22Up } from './mobile-wx22.js';
 import * as P22 from './mobile-p22.js';
 import * as P23 from './mobile-p23.js';
 import * as P24 from './mobile-p24.js';
+import * as P25 from './mobile-p25.js';
 import { takeApp, HK, p17Bind, p17Sheets, huskeView, tasksLoad, posWidget, bolWidgetLoad, appLoad, applyIcon, ptrBind, wsConnect, onRealtime } from './mobile-p17.js';
 import { trkDown, trkMove, trkUp } from './mobile-paper2.js';
 import { take16, p16Bind, p16Pointer, p16Move, p16Up, tabSheet, avgView, avgLoad, avgSheet, famView, famLoad, famSheet, famAfterDraw, bolView, bolLoad, AV, BO } from './mobile-p16.js';
@@ -414,7 +415,7 @@ export function draw() {
   // Prompt 24: Ruter-visningen (Avganger) er et fullskjerm-overlegg uten fanelinje og skanneknapp, med eget toppbilde.
   const rv = pp && scr === 'avg';
   const n = navModel(), dom = scr === 'dom', bt = !pp && backTop(scr) && scr !== 'vaer', hero = pp && scr !== 'nyheter' && scr !== 'vaer' && !fad && !rv;
-  const nav = scr === 'nyheter' || scr === 'vaer' || fad || rv ? '' : pp ? (scr === 'huske' ? P22.huskeNav(paperNav(scr)) + P22.huskeDock() : paperNav(scr)) : th === 'ios' ? iosNav(n) : andNav(n);
+  const nav = scr === 'nyheter' || scr === 'vaer' || fad || rv ? '' : pp ? P25.nav25(scr === 'huske' ? P22.huskeNav(paperNav(scr)) + P22.huskeDock() : paperNav(scr), scr) : th === 'ios' ? iosNav(n) : andNav(n);
   // Bevar fokus og markør i et felt når skjermen tegnes på nytt (f.eks. søk mens forslag kommer inn).
   const ae = document.activeElement, keep = ae?.id && root().contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
   root().innerHTML = `<div class="m ${th}${fad ? ' p23-fad' : ''}${rv ? ' p24-rvm' : ''}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}${fabStyle() === 'float' ? ' flyt' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${scr === 'vaer' ? ' vaer' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
@@ -426,6 +427,7 @@ export function draw() {
   hlAfterDraw(); pageAfterDraw(); if (scr === 'dom') modAfterDraw(th); if (scr === 'fam') { if (pp) P22.famAfterDraw22(); else famAfterDraw(); } wxAfterDraw(); P22.afterDraw(scr, pp);
   if (fad) P23.finnAdAfterDraw();
   P23.arrive(vk, vkChanged);
+  P25.afterDraw();
   // Glassmarkøren glir med fjæring mellom fanene. Fanelinja tegnes på nytt ved hver oppdatering, så animasjonen
   // (Web Animations) gjenopptas med medgått tid hvis en ny tegning kommer midt i den.
   const mk = root().querySelector('.tabs .mark');
@@ -735,10 +737,10 @@ export function bind() {
   bindGlobal();
   // Prompt 17: navn og ikon på appen, dra for å oppdatere og sanntid (Huskeliste, Familie og Sporing).
   applyIcon(); appLoad().then(() => draw()).catch(() => {}); ptrBind(); wsConnect(onRealtime);
-  wxBindScroll(); P23.icBoot();
+  wxBindScroll(); P23.icBoot(); P25.boot();
   addEventListener('fh-design', (e) => { const d = e.detail ?? {}; takeDesign(d); if (typeof d.lock === 'boolean') setPref('lock', d.lock); if (typeof d.hap === 'boolean') setPref('hap', d.hap); if (d.photo) photoLoad(d.photo).then(draw).catch(() => {}); draw(); });
   loadLayout().then((r) => {
-    takeDesign(r); take15(r); take16(r); take20(r); P24.take24(r); takeApp(r);
+    takeDesign(r); take15(r); take16(r); take20(r); P24.take24(r); P25.take25(r); takeApp(r);
     // Første gang etter innlogging (nye installasjoner): onboarding i tre steg.
     if (r && r.onboarded === false) import('./mobile-gate.js').then((g) => g.showOnboarding(r)).catch(() => {});
     if (document.documentElement.dataset.ui === 'mobile') draw();
@@ -770,6 +772,7 @@ export function bind() {
     let x;
     if (Date.now() - tsup < 400 && d('.tabs')) { e.preventDefault(); e.stopPropagation(); return; }
     if (P23.swGuard()) { e.preventDefault(); e.stopPropagation(); return; } // klikket etter et sveip tilbake
+    if (P25.bind25(e, t)) return;
     if (await P24.bind24(e, t)) return;
     if (await P23.bind(e, t)) return;
     if (paper() && m.screen === 'spor' && await paperTrkBind(e, t)) return; // velg flere pakker går foran tilpass siden

@@ -5,6 +5,7 @@ import { logo } from './mobile-p20.js'; // logoregisteret (prompt 20), ellers co
 import { m, draw, flash, avatar, backBtn, theme, amtC, openSheet, openCam, upqList } from './mobile.js';
 import { c3 } from './mobile-theme.js';
 import { LAY } from './mobile-hl.js';
+import * as P25 from './mobile-p25.js';
 import { AK, aksView, aksLoad, aksBind } from './mobile-aks.js';
 
 export const PAGES = ['mer', 'kv', 'fast', 'konto', 'aks', 'rap', 'imp', 'sok'];
@@ -205,7 +206,7 @@ function sok() {
       A.notice ? `<div class="snote snotice">${esc(A.notice)}</div>` : '',
       r?.plainFirst && !A.busy ? `<div class="plainfirst ${gl()}"><span class="m-grow">${esc(r.notice || 'Fant treff med vanlig søk, så AI ble ikke brukt')}</span><button class="pact" data-pa="askai" data-q="${esc(r.q)}">✦ Spør AI likevel</button></div>` : '',
       `<form data-aiform class="list ${gl()} aiform"><label class="opt-row col"><span style="font-size:13px;opacity:.7">${mode === 'ai' ? 'Spørsmål' : 'Søk'}</span><input class="sinp" id="m-aiq" type="search" enterkeyhint="search" autocomplete="off" value="${esc(A.q)}" placeholder="${mode === 'ai' ? 'f.eks. Når kjøpte jeg lyspærer?' : 'f.eks. tomater, Biltema, over 500 kr'}"></label><button type="submit" class="opt-row"><span class="m-grow" style="color:var(--m-acc);font-weight:600">${A.busy ? (mode === 'ai' ? 'Spør AI …' : 'Søker …') : mode === 'ai' ? '✦ Spør AI' : 'Søk'}</span></button></form>`,
-      A.busy ? '<div class="m-spin"></div>' : '',
+      A.busy ? (P25.JOB.cur ? P25.jobCard() : '<div class="m-spin"></div>') : '',
       // Før søk: forslag i tre grupper.
       !r && !A.busy ? groupsOf().map((g) => G(g.title, [chipsOf(g.items.slice(0, 6))])).join('') : '',
       r ? G(r.mode === 'plain' ? 'Resultat' : 'Svar', [R.text(r.answer || r.summary || (r.hits?.length ? `${r.hits.length} treff` : 'Fant ingen treff.')), r.engine ? `<div class="opt-row"><span class="snote" style="padding:0">${esc(r.engine)}</span></div>` : '']) : '',
@@ -251,11 +252,14 @@ async function ask(q, { force = false } = {}) {
       try {
         // Enkle ord (f.eks. «ica», «proton»): serveren prøver vanlig søk først og svarer plainFirst når det gir treff.
         // «✦ Spør AI likevel» sender force:true.
-        const r = await api('/search/ai', { method: 'POST', json: force ? { q, force: true } : { q } });
-        if (r?.aiUnavailable) throw Object.assign(new Error('AI er ikke tilgjengelig'), { ai: true });
+        // Prompt 25: lange søk blir en jobb med fremdrift og Avbryt (ingen fast tidsgrense i klienten).
+        P25.cancelAi();
+        const r = await P25.aiJob(force ? { q, force: true } : { q }, (J) => { if (!P25.jobTick(J) && m.screen === 'sok') draw(); });
+        if (r?.aiUnavailable) throw Object.assign(new Error(r.aiErrorText || 'AI er ikke tilgjengelig'), { ai: true, why: r.aiErrorText });
         A.r = { ...r, q, mode: r?.plainFirst ? 'plain' : r?.mode ?? 'ai' };
       } catch (e) {
-        A.aiDown = true; A.notice = 'AI-motoren svarer ikke nå. Viser vanlig søk i butikk, kategori, notat og varelinjer.';
+        if (e.name === 'AbortError') A.notice = 'Du avbrøt AI-søket. Viser vanlig søk.';
+        else { A.aiDown = true; A.notice = `${e.why ? `${e.why} ` : 'AI-motoren svarer ikke nå. '}Viser vanlig søk i butikk, kategori, notat og varelinjer.`; }
         A.r = { ...(await plainSearch(q)), q };
       }
     } else A.r = { ...(await plainSearch(q)), q };

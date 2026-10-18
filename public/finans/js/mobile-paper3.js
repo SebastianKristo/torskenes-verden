@@ -9,6 +9,7 @@ import { hlData } from './mobile-hl.js';
 import { FCOL, FO, fmSort, fmBar, ppTi } from './mobile-p20.js';
 import { dragStart } from './mobile-p21.js';
 import * as P24 from './mobile-p24.js';
+import * as P25 from './mobile-p25.js';
 
 /* ---------- Valg (lokal kopi + /api/me/layout) ---------- */
 
@@ -222,21 +223,25 @@ export function finMerGrid() {
 export const FS = { q: '', ai: false, busy: false, r: null, err: '' };
 const simple = (q) => q && !/\s/.test(q) && q.length < 20;
 // force: trykk på ✦ AI eller Enter med AI på kjører AI-søket med en gang, også for enkle ord.
+let fsSeq = 0;
 async function fsRun(force = false) {
-  const q = FS.q.trim();
+  const q = FS.q.trim(), my = ++fsSeq;
   if (!q) { FS.r = null; draw(); return; }
   FS.busy = true; FS.err = ''; draw();
   try {
     let r;
     if (FS.ai && (force || !simple(q))) {
+      // Prompt 25: ingen fast 25 s-grense. Tar søket lang tid, blir det en jobb på serveren («✦ Ollama tenker … 34 s av
+      // 60 s») med fremdrift og Avbryt. Grensen er motorens; serveren går videre til neste motor når den nås.
+      P25.cancelAi(); // et nytt søk erstatter et som fortsatt kjører
       try {
-        const sig = typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(25000) : undefined;
-        r = await api('/search/ai', { method: 'POST', json: { q, force: true }, signal: sig });
+        r = await P25.aiJob({ q, force: true }, (J) => { if (!P25.jobTick(J) && m.screen === 'sok') draw(); });
         r = { ...r, ai: !r?.plainFirst && r?.mode !== 'plain', aiDown: r?.aiErrorKind ? r.aiErrorText || r.aiError || 'ukjent feil' : r?.aiError || '' };
-      } catch (e) { r = { ...(await plainSearch(q)), aiDown: e.name === 'TimeoutError' || e.name === 'AbortError' ? 'brukte mer enn 20 sekunder' : e.message }; }
+      } catch (e) { r = e.name === 'AbortError' ? { ...(await plainSearch(q)), cancelled: true } : { ...(await plainSearch(q)), aiDown: e.message }; }
     } else r = await plainSearch(q);
+    if (my !== fsSeq) return; // et nyere søk har tatt over
     FS.r = { ...r, q };
-  } catch (e) { FS.err = e.message; FS.r = null; }
+  } catch (e) { if (my !== fsSeq) return; FS.err = e.message; FS.r = null; }
   FS.busy = false; draw();
 }
 async function plainSearch(q) {
@@ -251,16 +256,16 @@ const hitsOf = (r) => (r?.hits ?? r?.items ?? []).filter((h) => h && (h.txId ?? 
 export function paperSearch() {
   const r = FS.r, hits = hitsOf(r), q = FS.q.trim(), sum = hits.reduce((a, h) => a + (Number(h.amount) || 0), 0);
   const big = [...hits].sort((a, b) => Math.abs(b.amount ?? 0) - Math.abs(a.amount ?? 0))[0];
-  const aiTxt = r?.aiDown && FS.ai ? `AI svarte ikke: ${r.aiDown}` : r?.ai && (r.answer || r.summary) ? r.answer || r.summary
+  const aiTxt = r?.cancelled && FS.ai ? 'Du avbrøt AI-søket. Her er treffene fra vanlig søk.' : r?.aiDown && FS.ai ? `AI svarte ikke: ${r.aiDown}` : r?.ai && (r.answer || r.summary) ? r.answer || r.summary
     : FS.ai && r && hits.length ? `Du har ${hits.length} treff på «${r.q}», til sammen ${n0(sum)} kr ${sum < 0 ? 'brukt' : 'inn'}. Største post er ${big?.description ?? big?.merchant ?? ''}.`
       : FS.ai && r && !hits.length ? `Jeg fant ingen kjøp som passer «${r.q}» i transaksjonene, kvitteringene eller varelinjene.` : '';
-  const src = r?.aiDown ? 'Viser treffene fra vanlig søk. Sjekk nøkkel og motor under Innstillinger → AI og tolkning.' : r?.ai ? `✦ ${r.engine || r.provider || 'AI'} leste transaksjoner, kvitteringer og varelinjer.` : 'Fant vanlige treff først, AI oppsummerte.';
+  const src = r?.cancelled ? 'Søk på nytt med ✦ AI for å prøve igjen.' : r?.aiDown ? 'Viser treffene fra vanlig søk. Sjekk nøkkel og motor under Innstillinger → AI og tolkning.' : r?.ai ? `✦ ${r.engine || r.provider || 'AI'} leste transaksjoner, kvitteringer og varelinjer.` : 'Fant vanlige treff først, AI oppsummerte.';
   const sugg = ['rema', 'spotify', 'kyllingfilet', 'hvor mye brukte jeg på mat?', 'strøm i oktober'];
   return `<form class="pp-search pp-fsq" data-ppfs role="search"><span aria-hidden="true">⌕</span><input class="m-input" id="pp-fsq" name="q" type="search" value="${esc(FS.q)}" enterkeyhint="search" placeholder="${FS.ai ? 'Spør, f.eks. «hva brukte jeg på kaffe?»' : 'Søk i transaksjoner og kvitteringer'}" aria-label="Søk i Finans" autocomplete="off">
       <button type="button" class="pp-aitog${FS.ai ? ' on' : ''}" data-ppfsk="ai" aria-pressed="${FS.ai}">✦ AI</button></form>
     ${!q && !r ? `<div class="pp-col" style="gap:8px"><span class="pp-lab" style="padding:4px 2px 0">PRØV</span><div class="pp-chips pp-wrap">${sugg.map((n) => `<button class="pp-fchip" data-ppfsk="sugg" data-q="${esc(n)}">${esc(n)}</button>`).join('')}</div>
       <span class="pp-mut" style="line-height:1.45;padding:2px">Enkle ord som «rema» eller «spotify» søkes vanlig først. Med ✦ AI kan du spørre fritt, og AI leser også varelinjene i kvitteringene.</span></div>` : ''}
-    ${FS.busy ? '<div class="m-spin"></div>' : ''}${FS.err ? `<div class="pp-card pp-mut">${esc(FS.err)}</div>` : ''}
+    ${FS.busy ? (P25.JOB.cur ? P25.jobCard() : '<div class="m-spin"></div>') : ''}${FS.err ? `<div class="pp-card pp-mut">${esc(FS.err)}</div>` : ''}
     ${!FS.busy && aiTxt ? `<div class="pp-card pp-aians"><span class="pp-lab">✦ AI-SVAR</span><span class="pp-serif">${esc(aiTxt)}</span><span class="pp-mut">${esc(src)}</span></div>` : ''}
     ${!FS.busy && hits.length ? `<div class="pp-sec"><span>TREFF · ${hits.length}</span><span>Netto ${sum < 0 ? '−' : '+'}${n0(sum)} kr</span></div>
       <div class="pp-rows">${hits.slice(0, 60).map((h) => { const id = h.txId ?? (h.type === 'tx' ? h.id : null), name = h.description ?? h.merchant ?? h.title ?? 'Treff';

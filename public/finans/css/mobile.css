@@ -1530,7 +1530,7 @@ a.wx-r{color:inherit;text-decoration:none}
 
 /* Fold og nettbrett (≥ 600 px): fanelinja blir en loddrett skinne til venstre, bildet går helt ut bak den. */
 @media (min-width:600px){
-  .m.papir .pp-nav{top:12px;bottom:12px;left:12px;right:auto;width:84px;height:auto;max-width:none;margin:0;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:4px;padding:12px 6px;border-radius:28px;background:rgba(27,26,23,.82);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+  .m.papir .pp-nav{top:12px;bottom:12px;left:12px;right:auto;width:84px;height:auto;max-width:none;margin:0;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:4px;padding:12px 6px;border-radius:28px;background:var(--pp-nav);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
   .m.papir .pp-nav a,.m.papir .pp-nav a[aria-current=page]{flex:none;height:58px;padding:0 2px;border-radius:18px;flex-direction:column;justify-content:center;gap:2px;font-size:11.5px;width:100%}
   .m.papir .pp-nav a i{display:block!important;font-size:17px;line-height:1}
   .m.papir .pp-nav .pp-scan{margin:auto auto 0}
@@ -2736,3 +2736,92 @@ img.p23-ic,span.p24-img{background:none!important;-webkit-mask:none!important;ma
 .m .pp-sheet.p24-be>*{flex-shrink:0}
 .m.papir .pp-hero .pp-bottom>.m-grow{min-width:0}
 .m.papir .pp-hero .pp-kick{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ================= Prompt 25 ================= */
+/* Fanelinje-stil (layout.navStyle): Tekst (som før) · Bare ikoner · Ikoner + navn på valgt. Gjelder alle fanelinjer. */
+@media (max-width:599px){
+  .m.papir .pp-nav.ns-icons>a,.m.papir .pp-nav.ns-icons>a[aria-current=page],.m.papir .pp-nav.ns-icons>button[data-sb=tab],.m.papir .pp-nav.ns-icons>button[aria-current=page]{flex:1 1 0;min-width:0;padding:0 6px}
+  .m.papir .pp-nav.ns-icons>a>i,.m.papir .pp-nav.ns-icons>button[data-sb=tab]>i,.m.papir .pp-nav.ns-ial>a>i,.m.papir .pp-nav.ns-ial>button[data-sb=tab]>i{display:inline-flex!important;font-size:20px}
+  .m.papir .pp-nav.ns-icons>a>span,.m.papir .pp-nav.ns-icons>button[data-sb=tab]>span{display:none}
+  .m.papir .pp-nav.ns-ial>a[aria-current=page]>i,.m.papir .pp-nav.ns-ial>button[aria-current=page]>i{font-size:16px}
+  .m.papir .pp-nav.ns-ial>a:not([aria-current=page])>span,.m.papir .pp-nav.ns-ial>button[data-sb=tab]:not([aria-current=page])>span{display:none}
+}
+/* Fold og nettbrett (≥ 600): sidelinja har samme farge som fanelinja på telefon (nav + blur), ikon på alle faner og
+   etiketten på én linje. Rød Hjem-knapp (60) øverst når du ikke er på Hjem; da skjules «‹ Hjem». */
+.p25-home,.m .pp-nav>a.p25-home{display:none}
+@media (min-width:600px){
+  .m.papir .pp-nav{background:var(--pp-nav)!important;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+  .m.papir .pp-nav>a,.m.papir .pp-nav>button[data-sb=tab]{border-radius:18px}
+  .m.papir .pp-nav>a>i,.m.papir .pp-nav>button[data-sb=tab]>i{display:inline-flex!important;transform:none;font-size:16px}
+  .m.papir .pp-nav.ns-icons>a>i,.m.papir .pp-nav.ns-icons>button[data-sb=tab]>i,.m.papir .pp-nav.ns-ial>a:not([aria-current=page])>i,.m.papir .pp-nav.ns-ial>button[data-sb=tab]:not([aria-current=page])>i{font-size:20px}
+  .m.papir .pp-nav>a>span,.m.papir .pp-nav>button[data-sb=tab]>span{display:block!important;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.2}
+  .m.papir .pp-nav.ns-icons>a>span,.m.papir .pp-nav.ns-icons>button[data-sb=tab]>span{display:none!important}
+  .m.papir .pp-nav>a.p25-home{flex:none!important;align-self:center;display:grid!important;place-items:center;width:60px!important;height:60px!important;margin:0 0 8px;padding:0!important;border-radius:30px!important;background:var(--pp-lab)!important;color:var(--pp-onLab)!important;box-shadow:0 8px 20px -8px rgba(0,0,0,.5);animation:p25pop .15s ease-out;-webkit-tap-highlight-color:transparent}
+  .m.papir .pp-nav>a.p25-home:active{transform:scale(.94)}
+  .m.papir:has(.pp-nav>.p25-home) .pp-back.to-home{display:none}
+}
+@keyframes p25pop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+
+/* «Rediger fanelinjen» → STIL · FORHÅNDSVISNING og de tre stil-kortene */
+.m .p25-sl{color:var(--pp-mut)!important}
+.p25-pvbg{border-radius:22px;padding:14px 10px;background:linear-gradient(160deg,#5d7690,#2e3a46)}
+.p25-pvbar{box-sizing:border-box;background:var(--pp-nav);display:flex;align-items:center;overflow:hidden}
+.p25-pvbar.big{height:62px;border-radius:999px;gap:2px;padding:0 8px;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);box-shadow:0 14px 30px -12px rgba(0,0,0,.5)}
+.p25-pv{min-width:0;color:var(--pp-navInk);display:flex;align-items:center;justify-content:center;white-space:nowrap;overflow:hidden}
+.p25-pv.on{background:var(--pp-navAct);color:var(--pp-navActInk)}
+.p25-pv i{font-style:normal}
+.p25-pv span{overflow:hidden;text-overflow:ellipsis}
+.p25-pvbar.big .p25-pv{height:46px;border-radius:999px;gap:7px;font:600 12.5px Manrope,sans-serif}
+.p25-pvbar.big .p25-pv i{flex:none;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;font:500 18px/1 Newsreader,serif;transform:translateY(1.5px)}
+.p25-pvplus{flex:none;width:46px;height:46px;margin-left:4px;border-radius:23px;background:var(--pp-lab);color:var(--pp-onLab);display:grid;place-items:center;font-size:22px}
+.p25-styles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.m .p25-style{display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:10px 8px;border-radius:18px;border:2px solid transparent;background:var(--pp-card);color:var(--pp-ink);cursor:pointer;font-family:Manrope,sans-serif;min-width:0}
+.m .p25-style[aria-checked=true]{border-color:var(--pp-ink)}
+.p25-pvbar.sm{height:34px;border-radius:17px;justify-content:space-around;padding:0 4px;gap:2px}
+.p25-pvbar.sm .p25-pv{gap:3px;height:26px;border-radius:13px;font:600 9.5px Manrope,sans-serif}
+.p25-pvbar.sm .p25-pv i{font:500 12px/1 Newsreader,serif}
+.p25-style b{font-size:12.5px;font-weight:700;text-align:center;line-height:1.25}
+
+/* Mer: ikon til venstre i 40-boks (radius 12, bg) med strekikon 21 i palettfarger */
+.pp-list.p25-mer a{gap:12px}
+.p25-mic{flex:none;width:40px;height:40px;border-radius:12px;background:var(--pp-bg);display:grid;place-items:center}
+
+/* Innstillinger: «Ta meg dit →» og fremheving av raden i ca. 3 s (lys rød bakgrunn og rød strek som toner ut) */
+.m .p25-ansb{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px}
+.m .p25-go{align-self:flex-start;height:38px;padding:0 16px;border-radius:19px;border:0;background:var(--pp-ink);color:var(--pp-bg);font:700 13.5px Manrope,sans-serif;cursor:pointer}
+.m .p17-row,.m .p24-igg{transition:background-color .6s ease,box-shadow .6s ease}
+.m .p25-hi,.m.papir .list>.p25-hi,.m.papir .p17-list>.p17-row.p25-hi{background:color-mix(in oklab,var(--pp-lab,#b23a2a) 16%,var(--pp-card,#fff))!important;box-shadow:inset 3px 0 0 var(--pp-lab,#b23a2a)!important}
+.m .p24-igg.p25-hi{border-radius:16px}
+
+/* AI-søk i Finans som jobb: «✦ Ollama tenker … 34 s av 60 s», fremdriftslinje og Avbryt */
+.m .p25-job{display:flex;flex-direction:column;gap:10px}
+.m .p25-jt{font:500 17px/1.3 Newsreader,serif}
+.p25-bar{position:relative;display:block;height:4px;border-radius:2px;background:var(--pp-line,rgba(127,127,127,.3));overflow:hidden}
+.p25-bar i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:2px;background:var(--pp-lab,#b23a2a);transition:width 1s linear}
+.p25-bar.ind i{width:35%;animation:p25slide 1.1s cubic-bezier(.4,0,.2,1) infinite}
+.m .p25-cancel{align-self:flex-start}
+@keyframes p25slide{0%{transform:translateX(-100%)}100%{transform:translateX(300%)}}
+@media (prefers-reduced-motion:reduce){.p25-bar.ind i{animation-duration:3s}}
+
+/* Værsiden på Fold og nettbrett (≥ 700): to kolonner 5 : 7, kart på siden, fliser i 3 kolonner, detaljark som sidepanel */
+.p25-c1,.p25-c2{display:contents}
+.p25-wmap{display:none}
+@media (min-width:700px){
+  .vx-in.p25-fold{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);align-items:start;gap:12px 20px;max-width:1280px;padding-left:24px;padding-right:24px;box-sizing:border-box}
+  .vx-in.p25-fold>.p25-c1,.vx-in.p25-fold>.p25-c2{display:flex;flex-direction:column;gap:12px;min-width:0}
+  .vx-in.p25-fold .vx-head{opacity:1!important}
+  .vx-in.p25-fold .vx-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .vx-in.p25-fold>.vx-yr{grid-column:1 / -1;justify-self:center}
+  .p25-wmap{display:block;position:relative;flex:none;height:300px;border-radius:24px;overflow:hidden;border:1px solid rgba(255,255,255,.16);background:rgba(10,20,35,.5)}
+  .p25-wmap iframe{width:100%;height:100%;border:0;display:block}
+  .p25-wmt{position:absolute;left:10px;right:10px;top:10px;display:flex;justify-content:space-between;align-items:center;gap:8px;pointer-events:none}
+  .p25-wml{pointer-events:auto;display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(10,20,35,.75);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);min-width:0;overflow-x:auto;scrollbar-width:none}
+  .m .p25-wml button{flex:none;height:30px;padding:0 12px!important;border-radius:999px;border:0;background:transparent!important;color:#fff!important;font:700 12px -apple-system,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
+  .m .p25-wml button[aria-pressed=true]{background:#fff!important;color:#0d1520!important}
+  .m .p25-wfs{flex:none;pointer-events:auto;height:36px;padding:0 14px!important;border-radius:999px;border:0;background:rgba(10,20,35,.75)!important;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#fff!important;font:700 12.5px -apple-system,system-ui,sans-serif;cursor:pointer;white-space:nowrap}
+  .m.vaer .vx-sh{left:auto;right:16px;width:min(520px,46%);max-width:none;top:calc(env(safe-area-inset-top) + 60px);bottom:16px;margin:0;border-radius:28px;box-shadow:0 30px 80px -20px rgba(0,0,0,.6);padding-bottom:30px;animation:p25side .26s cubic-bezier(.3,1.1,.5,1)}
+  .m.vaer .w22-bot{left:24px;right:24px;max-width:none}
+  .m.vaer .p17-cmp{align-items:stretch;justify-content:flex-end}
+  .m.vaer .p17-cmpin{width:min(520px,46%);max-height:none;margin:calc(env(safe-area-inset-top) + 60px) 16px 16px auto;border-radius:28px;box-shadow:0 30px 80px -20px rgba(0,0,0,.6);padding-bottom:30px}
+}
+@keyframes p25side{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}

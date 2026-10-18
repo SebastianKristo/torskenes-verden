@@ -8,6 +8,7 @@ import { haptic } from './mobile-haptics.js';
 import { iconColor, iconInk, FM, famLoad, BO, bolLoad, bolUpload } from './mobile-p16.js';
 import { listShareLine } from './mobile-p21.js';
 import { currentUser } from './mobile-upq.js';
+import * as P25 from './mobile-p25.js';
 
 const LS = 'fh_p17';
 const L = (() => { try { return JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch { return {}; } })();
@@ -116,7 +117,7 @@ export function p17Sheets() {
 
 export const row = (href, label, sub, val, ic, key, attr = '') => {
   const c = iconColor(key, '#b23a2a');
-  const tag = href ? `a class="opt-row p17-row" href="${href}"` : `button class="opt-row p17-row" ${attr}`;
+  const tag = `${href ? `a class="opt-row p17-row" href="${href}"` : `button class="opt-row p17-row" ${attr}`}${key ? ` data-set="${esc(key)}"` : ''}`;
   return `<${tag}>${ic ? `<span class="set-ic fill" style="background:${c}">${icon(ic, 16, iconInk(c))}</span>` : ''}<span class="m-grow p17-rt"><b>${esc(label)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>${val ? `<span class="sval">${esc(val)}</span>` : ''}<span class="p17-chev" aria-hidden="true">›</span></${href ? 'a' : 'button'}>`;
 };
 export const grp = (t, rows) => `${t ? `<span class="pp-lab p17-gl">${esc(t)}</span>` : ''}<div class="list p17-list">${rows.filter(Boolean).join('')}</div>`;
@@ -131,6 +132,8 @@ export function p17SetMain(T = {}) {
       row('#/set/kat', 'Kategorier og budsjett', `${(S.boot?.categories ?? []).length} kategorier`, '', 'cat', 'kat'), row('#/set/regel', 'Regler', `${(S.boot?.rules ?? []).length} regler`, '', 'rule', 'regel'),
       row('#/set/bank', 'Bankimport', 'DNB · CSV · ✦ AI', '', 'bank', 'bank'), row('#/set/t212', 'Aksjer · Trading 212', t212, '', 'aks', 't212'), row('#/set/fanelinje', 'Fanelinje og Mer i Finans', `${fk} faner`, '', 'list', 'fanelinje'), row('#/sub', 'Subscription OS', 'Abonnementer og AI-sparing', '', 'sub', 'sub')])}
     ${grp(appName().toUpperCase(), [row('', 'Navn på appen', '', appName(), 'home', 'appnavn', 'data-p17="nm"'), row('', 'App-ikon', '', ICONS.find(([k]) => k === appIcon())?.[1] ?? '', 'img', 'appikon', 'data-p17="ic"'),
+      // Prompt 25: Fanelinje-stil. Trykk bytter mellom Tekst, Bare ikoner og Ikoner + navn på valgt (lagres i navStyle).
+      row('', 'Fanelinje-stil', P25.NAV_STYLES.find(([k]) => k === P25.navStyle())[2], P25.navStyleName(), 'list', 'navstil', 'data-p25="nscycle"'),
       row('#/set/fanelinje', 'Fanelinje i Hjem', 'Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen', '', 'list', 'hjemnav'), row('#/set/mod', 'Moduler', 'Sporing, Domener, Mat, Nyheter', '', 'globe', 'mod'), row('#/nyheter', 'Nyhetsleser', 'Kilder og AI', '', 'look', 'rss')])}
     ${grp('APP', [row('#/set/look', 'Utseende og fanelinje', 'Papir · bakgrunn · ikonfarger', '', 'look', 'look'), row('#/set/varsler', 'Varsler og haptikk', NT.d ? (NT.d.on === false ? 'Av' : 'På') : '', '', 'bell', 'varsler'), row('#/set/integ', 'Integrasjoner', 'Home Assistant', '', 'home', 'integ')])}
     ${grp('', [`<button class="opt-row p17-row" data-sact="logout"><span class="m-grow" style="color:var(--pp-lab);font-weight:700">Logg ut</span></button>`])}
