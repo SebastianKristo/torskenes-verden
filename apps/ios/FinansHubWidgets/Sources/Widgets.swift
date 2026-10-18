@@ -500,12 +500,12 @@ private struct DomainsView: View {
     }
 }
 
-/* ---------- Matplan ---------- */
+/* ---------- Mat ---------- */
 
 struct MealWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "fh.mat", provider: WProvider()) { e in MealView(entry: e) }
-            .configurationDisplayName("Matplan")
+            .configurationDisplayName("Mat")
             .description("Middag i dag og i morgen.")
             .supportedFamilies([.systemSmall, .systemMedium])
     }

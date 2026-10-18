@@ -156,6 +156,46 @@ struct Dish: Decodable, Identifiable, Hashable {
     var ing: [String]? = nil
     var steps: [String]? = nil
     var cost: Double? = nil
+    /// Mat (prompt 13): mappe, kilde, bilde, lenker og filer, tid og porsjoner.
+    var folderId: String? = nil
+    var sourceUrl: String? = nil
+    var image: String? = nil
+    var links: [DishLink] = []
+    var time: String? = nil
+    var servings: String? = nil
+
+    enum K: String, CodingKey { case id, name, src, ing, ingredients, steps, cost, folderId, sourceUrl, image, links, time, servings }
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        id = (try? c.decode(FlexID.self, forKey: .id)) ?? FlexID(UUID().uuidString)
+        name = (try? c.decode(String.self, forKey: .name)) ?? ""
+        src = try? c.decode(String.self, forKey: .src)
+        let a = (try? c.decode([FlexText].self, forKey: .ing))?.map(\.value)
+        let b = (try? c.decode([FlexText].self, forKey: .ingredients))?.map(\.value)
+        ing = (a?.isEmpty == false ? a : b) ?? a
+        steps = (try? c.decode([FlexText].self, forKey: .steps))?.map(\.value)
+        cost = (try? c.decode(FlexNum.self, forKey: .cost))?.value
+        let f = (try? c.decode(FlexID.self, forKey: .folderId))?.value
+        folderId = (f?.isEmpty ?? true) ? nil : f
+        sourceUrl = try? c.decode(String.self, forKey: .sourceUrl)
+        image = try? c.decode(String.self, forKey: .image)
+        links = (try? c.decode([DishLink].self, forKey: .links)) ?? []
+        let t = (try? c.decode(FlexID.self, forKey: .time))?.value
+        time = (t?.isEmpty ?? true) ? nil : t
+        let s = (try? c.decode(FlexID.self, forKey: .servings))?.value
+        servings = (s?.isEmpty ?? true) ? nil : s
+    }
+}
+
+/// Tekst i en liste som kan komme som "…" eller {text|name|step: "…"}.
+struct FlexText: Decodable, Hashable {
+    let value: String
+    enum K: String, CodingKey { case text, name, step, title }
+    init(from d: Decoder) throws {
+        if let s = try? d.singleValueContainer().decode(String.self) { value = s; return }
+        let c = try d.container(keyedBy: K.self)
+        value = (try? c.decode(String.self, forKey: .text)) ?? (try? c.decode(String.self, forKey: .name)) ?? (try? c.decode(String.self, forKey: .step)) ?? (try? c.decode(String.self, forKey: .title)) ?? ""
+    }
 }
 
 struct ShopItem: Decodable, Identifiable, Hashable {

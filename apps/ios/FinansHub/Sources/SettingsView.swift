@@ -342,6 +342,24 @@ private struct LookPage: View {
         @Bindable var s = store
         VStack(spacing: 12) {
             Group {
+                SectionLabel(text: "Mobildesign")
+                Card {
+                    Choice(label: "Klassisk", sub: "Liquid Glass eller Material, som før", on: !store.paper) { store.setMobileDesign("klassisk") }
+                    Sep()
+                    Choice(label: "Papir", sub: "Fotovindu, papir og avisspalter. Hjem, Finans, Mat, Sporing og Mer", on: store.paper) { store.setMobileDesign("papir") }
+                }
+                if store.paper {
+                    Card {
+                        Choice(label: "Papir · følg systemet", on: store.paperMode == "auto") { store.setPaperMode("auto") }
+                        Sep()
+                        Choice(label: "Papir · lys", on: store.paperMode == "lys") { store.setPaperMode("lys") }
+                        Sep()
+                        Choice(label: "Papir · mørk", on: store.paperMode == "mork") { store.setPaperMode("mork") }
+                    }
+                }
+                Note(text: "Lagres på kontoen din, så valget følger deg til andre enheter.")
+            }
+            Group {
                 SectionLabel(text: "Designstil")
                 Card {
                     Choice(label: "iOS · Liquid Glass", sub: "Glassflater og systemets fanelinje", on: store.designStyle == "ios") { store.designStyle = "ios" }

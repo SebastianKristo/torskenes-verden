@@ -49,6 +49,20 @@ targets:
         # «Last ned» lagrer kvitteringer i appens mappe, som vises i Filer → På min iPhone → FinansHub.
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true
+        # Fontene i Papir og Mat (OFL, Google Fonts): Newsreader, Manrope, IBM Plex Mono, Instrument Serif og Bricolage Grotesque.
+        UIAppFonts:
+          - BricolageGrotesque-ExtraBold.ttf
+          - IBMPlexMono-Medium.ttf
+          - IBMPlexMono-SemiBold.ttf
+          - InstrumentSerif-Regular.ttf
+          - Manrope-Bold.ttf
+          - Manrope-ExtraBold.ttf
+          - Manrope-Medium.ttf
+          - Manrope-Regular.ttf
+          - Manrope-SemiBold.ttf
+          - Newsreader-Italic.ttf
+          - Newsreader-Medium.ttf
+          - Newsreader-Regular.ttf
         # Deep links fra widgetene: finanshub://<side>
         CFBundleURLTypes:
           - CFBundleURLName: no.kristo.finanshub

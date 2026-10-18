@@ -365,6 +365,12 @@ struct RootView: View {
         ScanActions(camera: { showCamera = true }, choices: { showChoices = true }, photos: { showPhotos = true }, files: { showFiles = true }, tapOpensCamera: store.scanTap == "camera")
     }
 
+    /// Kvittering (standard) eller oppskrift (Skann i Papir med «Oppskrift» valgt).
+    private func deliver(_ files: [Store.Upload]) {
+        if store.scanTarget == "recipe" { store.scanRecipe(files) } else { store.upload(files) }
+        store.scanTarget = "receipt"
+    }
+
     private func openPendingScan(_ v: String?) {
         guard let v, store.loggedIn, !store.locked else { return }
         store.pendingScan = nil
@@ -388,7 +394,7 @@ struct RootView: View {
                 PadShell(scan: scan, photos: $photoItems, files: $showFiles)
             } else {
                 // Bygges på nytt når designstilen byttes (iOS ↔ Material).
-                PhoneShell(scan: scan, photos: $photoItems, files: $showFiles).id(store.designStyle)
+                PhoneShell(scan: scan, photos: $photoItems, files: $showFiles).id(store.designStyle + store.mobileDesign)
             }
             if store.busy { ProgressView().controlSize(.large).padding(30).glass(20) }
             if let msg = store.message {
@@ -400,7 +406,9 @@ struct RootView: View {
                 ZStack { Rectangle().fill(.ultraThinMaterial); Image(systemName: "lock.fill").font(.largeTitle).foregroundStyle(.white.opacity(0.8)) }.ignoresSafeArea()
             }
         }
-        .edgeSwipeBack(enabled: store.loggedIn && !store.locked && !store.addingAccount && store.canSwipeBack) { store.back() }
+        .edgeSwipeBack(enabled: store.loggedIn && !store.locked && !store.addingAccount && (store.paper ? store.paperCanSwipeBack : store.canSwipeBack)) {
+            if store.paper { store.paperBack() } else { store.back() }
+        }
         .preferredColorScheme(.dark)
         .tint(.accent)
         .task(id: store.loggedIn) {
@@ -412,7 +420,7 @@ struct RootView: View {
                 if UIApplication.shared.applicationState == .active { await store.pollTracking() }
             }
         }
-        .fullScreenCover(isPresented: $showCamera) { CameraView { img in if let img { store.upload(image: img) } }.ignoresSafeArea() }
+        .fullScreenCover(isPresented: $showCamera) { CameraView { img in if let img { deliver([.image(img)]) } }.ignoresSafeArea() }
         .photosPicker(isPresented: $showPhotos, selection: $photoItems, maxSelectionCount: 20, matching: .images)
         .onChange(of: photoItems) { _, items in
             guard !items.isEmpty else { return }
@@ -422,7 +430,7 @@ struct RootView: View {
                     if let d = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: d) { files.append(.image(img)) }
                 }
                 photoItems = []
-                store.upload(files)
+                deliver(files)
             }
         }
         .fileImporter(isPresented: $showFiles, allowedContentTypes: [.pdf, .jpeg, .heic, .image], allowsMultipleSelection: true) { result in
@@ -434,7 +442,7 @@ struct RootView: View {
                 guard let d = try? Data(contentsOf: url) else { continue }
                 if url.pathExtension.lowercased() == "pdf" { files.append(.pdf(d)) } else if let img = UIImage(data: d) { files.append(.image(img)) }
             }
-            store.upload(files)
+            deliver(files)
         }
         .confirmationDialog("Legg til kvittering", isPresented: $showChoices, titleVisibility: .visible) {
             Button("Ta bilde") { showCamera = true }
@@ -453,6 +461,10 @@ struct RootView: View {
         }
         .sheet(isPresented: Binding(get: { store.matFull }, set: { store.matFull = $0 })) {
             MatWeekView()
+        }
+        // Nyhetsleseren i den klassiske appen (Papir viser den inne i skallet).
+        .fullScreenCover(isPresented: Binding(get: { store.newsOpen && !store.paper }, set: { if !$0 { store.newsOpen = false } })) {
+            NewsReaderView(back: { store.newsOpen = false }).environment(\.paper, .night).environment(\.colorScheme, .dark)
         }
         .onChange(of: phase) { _, p in
             if p == .background { store.didEnterBackground() } else if p == .active { store.didBecomeActive() }
@@ -475,11 +487,12 @@ struct PhoneShell: View {
     var body: some View {
         let m = store.module
         let mat = m == .mat
-        let pal = MatPalette.current(store)
         VStack(spacing: 0) {
-            if let t = store.topRowTitle { TopBackRow(title: t, light: mat && !pal.dark) }
+            if let t = store.topRowTitle { TopBackRow(title: t) }
             Group {
-                if DesignStyle.material {
+                if store.paper {
+                    PaperShell(scan: scan, photos: $photos, files: $files)
+                } else if DesignStyle.material {
                     MaterialShell(scan: scan, photos: $photos, files: $files)
                 } else if mat {
                     MatSurface()
@@ -495,7 +508,7 @@ struct PhoneShell: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .background { if mat { pal.bg.ignoresSafeArea() } }
+        .background { if mat && !store.paper { MatPal.twoA.bg.ignoresSafeArea() } }
     }
 }
 
@@ -704,7 +717,7 @@ struct AvatarImage: View {
 
 func host(_ url: String) -> String { url.replacingOccurrences(of: "https://", with: "").replacingOccurrences(of: "http://", with: "") }
 
-/// Menyen bak profilbildet: Homelab, Andre OS (Finans, Matplan, Domener), Rediger forsiden og Innstillinger.
+/// Menyen bak profilbildet: Homelab, Andre OS (Finans, Mat, Domener), Rediger forsiden og Innstillinger.
 struct ProfileMenu: View {
     @Environment(Store.self) private var store
     var body: some View {
@@ -723,11 +736,13 @@ struct ProfileMenu: View {
                 VStack(spacing: 0) {
                     row("Finans", "Hjem, liste, budsjett og mer", "banknote", store.module == nil || store.module?.isFinance == true) { store.go(Tab.home) }
                     Divider().overlay(.white.opacity(0.12))
-                    row("Matplan", "Ukemeny, kokk og handleliste", "fork.knife", store.module == .mat) { store.open(.mat) }
+                    row("Mat", "Ukemeny, oppskrifter og handleliste", "fork.knife", store.module == .mat) { store.open(.mat) }
                     Divider().overlay(.white.opacity(0.12))
                     row("Domener", "Trafikk, besøk, ytelse og sikkerhet", "globe", store.module == .domains) { store.open(.domains) }
                     Divider().overlay(.white.opacity(0.12))
                     row("Sporing", "Pakker på vei, henting og varsler", "shippingbox", store.module == .tracking) { store.open(.tracking) }
+                    Divider().overlay(.white.opacity(0.12))
+                    row("Nyhetsleser", "Siste nytt fra RSS, med ✦ AI-sammendrag", "newspaper", store.newsOpen) { store.menuOpen = false; store.openNews() }
                 }
                 .glass(24)
                 row("Rediger forsiden", "Widgets og fanelinjer", "square.and.pencil", store.editHome) { store.open(.homelab); store.editHome = true }.glass(24)

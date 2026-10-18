@@ -35,7 +35,7 @@ enum Tab: String, CaseIterable, Identifiable {
 /// Skjermer som fyller hele vinduet: Homelab, sidene under Mer, modulene og innstillinger.
 enum Module: String, CaseIterable, Identifiable {
     case homelab = "Homelab", upload = "Kvitteringer", fast = "Faste utgifter", accounts = "Kontoer", stocks = "Aksjer", reports = "Rapporter", imports = "Import"
-    case mat = "Matplan", domains = "Domener", sub = "Subscription OS", folders = "Boliger", settings = "Innstillinger", tracking = "Sporing"
+    case mat = "Mat", domains = "Domener", sub = "Subscription OS", folders = "Boliger", settings = "Innstillinger", tracking = "Sporing"
     var id: String { rawValue }
     var icon: String {
         switch self {
@@ -59,11 +59,11 @@ enum Module: String, CaseIterable, Identifiable {
     static let others: [Module] = [.mat, .domains]
 }
 
-/// Fanene på Homelab: Homelab, Finans, Matplan, Sporing og Domener.
+/// Fanene på Homelab: Homelab, Finans, Mat, Sporing og Domener.
 enum HlTab: String, CaseIterable, Identifiable {
     case hl, home, dom, mat, trk
     var id: String { rawValue }
-    var label: String { switch self { case .hl: "Homelab"; case .home: "Finans"; case .dom: "Domener"; case .mat: "Matplan"; case .trk: "Sporing" } }
+    var label: String { switch self { case .hl: "Homelab"; case .home: "Finans"; case .dom: "Domener"; case .mat: "Mat"; case .trk: "Sporing" } }
     var icon: String { switch self { case .hl: "square.grid.3x3.fill"; case .home: "banknote"; case .dom: "globe"; case .mat: "fork.knife"; case .trk: "shippingbox" } }
 }
 
@@ -243,6 +243,50 @@ final class Store {
     var subTab = "home"
     /// «Fra transaksjoner» i +-panelet (nil = laster).
     var subCandidates: [SubCandidate]?
+
+    /* ---------- Papir, nyhetsleser, fotovindu og Mat (prompt 13) ---------- */
+
+    /// klassisk | papir. Lagres per bruker på serveren (layout.mobileDesign) og lokalt.
+    var mobileDesign = UserDefaults.standard.string(forKey: "fh_mobile_design") ?? "klassisk" {
+        didSet { UserDefaults.standard.set(mobileDesign, forKey: "fh_mobile_design") }
+    }
+    /// auto | lys | mork
+    var paperMode = UserDefaults.standard.string(forKey: "fh_paper_mode") ?? "auto" {
+        didSet { UserDefaults.standard.set(paperMode, forKey: "fh_paper_mode") }
+    }
+    /// cur | oslo | weather | planets | custom
+    var photo = UserDefaults.standard.string(forKey: "fh_photo") ?? "oslo" {
+        didSet { UserDefaults.standard.set(photo, forKey: "fh_photo") }
+    }
+    /// Papir-fanen: hjem | finans | mat | sporing | mer
+    var paperTab = "hjem"
+    /// En Finans-fane fra den klassiske appen, åpnet fra Papir (Liste, Budsjett, Søk, Finn, Oversikt).
+    var paperFin: Tab?
+    /// «Alt om sporing»: den klassiske Sporing-siden med kilder, varsler og transportører.
+    var paperTrackFull = false
+    var photoWindow: PhotoWindow?
+    var photoImage: UIImage?
+    var news: NewsData?
+    var homeNews: [NewsItem] = []
+    var newsOpen = false
+    var newsCat = "siste"
+    var newsBusy = false
+    /// Koordinatene til været på forsiden (for Yr-lenken).
+    var weatherLat: Double?
+    var weatherLon: Double?
+    /// Skann fra Papir: «receipt» eller «recipe». Kamera, Bilder og Filer sender bildet hit.
+    var scanTarget = "receipt"
+    var matFolders: [MatFolder] = []
+    /// Valgt mappe i Mat (nil = alle).
+    var matFolder: String?
+    var recipeJobs: [RecipeJob] = []
+    var recipePreview: RecipePreview?
+    var recipeBusy = false
+    /// Åpen rett i Mat (id).
+    var dishSel: String?
+    var matImport = false
+    /// Fil fra en rett som skal åpnes i delingsarket.
+    var sharedFile: URL?
 
     /* ---------- Valg (UserDefaults) ---------- */
 
@@ -536,7 +580,7 @@ final class Store {
                 stocksX = StocksX.parse(d)
             case .reports: try await loadReport()
             case .imports: break
-            case .mat: try await loadWeek()
+            case .mat: try await loadWeek(); await loadMatExtras()
             case .sub: try await loadSubs()
             case .folders: let list: [Folder] = try await decodeList(api.call("GET", "/folders")); folders = list
             case .domains: try await loadDomains()
@@ -644,7 +688,7 @@ final class Store {
 
     /// «‹ Homelab» / «‹ Finans» øverst (med profilbildet til høyre på samme rad). nil = ingen topprad.
     var topRowTitle: String? {
-        guard compact, layout.backStyle == "arrow", editing == nil, detail == nil, original == nil, !editHome else { return nil }
+        guard compact, mobileDesign != "papir", layout.backStyle == "arrow", editing == nil, detail == nil, original == nil, !editHome else { return nil }
         if let m = module {
             switch m {
             case .domains, .mat: return startLabel
@@ -771,11 +815,13 @@ final class Store {
             let raw = JS.obj(d)
             homeWeather = JS.dict(raw, "weather").map(WeatherX.init)
             if raw["packages"] != nil { homePackages = JS.list(raw, "packages").map(Shipment.init) }
+            applyPaperHome(raw)
             if UserDefaults.standard.string(forKey: layoutKey) == nil, let l = HomeLayout.from(json: ((try? JSONSerialization.jsonObject(with: d)) as? [String: Any])?["layout"]) { layout = l }
         } catch let e as APIError {
             homeError = e.status == 404 ? "Homelab-forsiden finnes ikke på serveren ennå. Oppdater homelab." : (e.status == 401 || e.status == 403) ? "Homelab godtar ikke app-tokenet ennå. Oppdater homelab-serveren." : e.message
         } catch { homeError = "Uventet svar fra Homelab." }
         if summary == nil { summary = try? await api.get("/summary", as: Summary.self) }
+        if let d = try? await api.callAt("/api", "GET", "/me/layout") { applyPaperLayout(JS.obj(d)) }
         if UserDefaults.standard.string(forKey: layoutKey) == nil, let d = try? await api.callAt("/api", "GET", "/me/layout"), let l = HomeLayout.from(json: try? JSONSerialization.jsonObject(with: d)) {
             layout = l
             if let st = l.start, Store.startPage(fromKey: st) != startPage { startPage = Store.startPage(fromKey: st) }

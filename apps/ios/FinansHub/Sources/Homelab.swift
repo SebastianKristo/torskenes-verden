@@ -5,7 +5,7 @@ import SwiftUI
 let sectionName = ["clock": "Klokke og vær", "search": "Google-søk", "links": "Snarveier", "os": "Andre OS", "srv": "Serverstatus", "ruter": "Ruter"]
 private let sectionIcon = ["clock": "clock", "search": "magnifyingglass", "links": "square.grid.2x2", "os": "square.stack.3d.up", "srv": "server.rack", "ruter": "tram.fill"]
 private let sectionDesc = ["clock": "Tid, været der du er og pakker på vei (sveip)", "search": "Forslag og historikk mens du skriver", "links": "Snarveiene dine fra Homelab",
-                           "os": "Finans, Domener og Matplan", "srv": "CPU, minne, disk og oppetid", "ruter": "Neste avganger fra holdeplassene dine"]
+                           "os": "Finans, Domener og Mat", "srv": "CPU, minne, disk og oppetid", "ruter": "Neste avganger fra holdeplassene dine"]
 
 private func kr(_ v: Double) -> String { "\(neg0(v)) kr" }
 
@@ -255,7 +255,7 @@ struct ShortcutIcon: View {
     }
 }
 
-/// Andre OS: Finans som stort kort, Domener og Matplan som små.
+/// Andre OS: Finans som stort kort, Domener og Mat som små.
 struct OtherOs: View {
     @Environment(Store.self) private var store
     var body: some View {
@@ -265,7 +265,7 @@ struct OtherOs: View {
             HStack(spacing: 10) {
                 mini("Domener", "globe", Color.domPink,
                      store.domainToday.map { "\(count($0.visitors)) besøk i dag" } ?? "Trafikk og sikkerhet", store.domainToday?.name) { store.open(.domains) }
-                mini("Matplan", "fork.knife", Color.positive, store.todayMeal ?? "Ukemeny og handleliste", store.todayMeal == nil ? nil : "I dag") { store.open(.mat) }
+                mini("Mat", "fork.knife", Color.positive, store.todayMeal ?? "Ukemeny og handleliste", store.todayMeal == nil ? nil : "I dag") { store.open(.mat) }
             }
         }
     }

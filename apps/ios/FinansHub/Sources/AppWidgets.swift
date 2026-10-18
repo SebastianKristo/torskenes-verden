@@ -28,6 +28,7 @@ extension Store {
         guard url.scheme == "finanshub", loggedIn else { return }
         let page = (url.host ?? "").lowercased()
         let sub = url.pathComponents.dropFirst().first?.lowercased() ?? ""
+        if paper { paperDeepLink(page, sub); return }
         switch page {
         case "homelab", "weather", "vaer": open(.homelab)
         case "tracking", "packages", "sporing": open(.tracking)
@@ -42,7 +43,28 @@ extension Store {
         case "finn": go(.finn)
         case "boliger", "folders": open(.folders)
         case "scan", "skann": pendingScan = sub == "files" ? "files" : "camera"
+        case "news", "nyheter", "rss": openNews()
         default: goStart()
+        }
+    }
+
+    /// Samme dyplenker i Papir: fanene og sidene i Papir-skallet.
+    private func paperDeepLink(_ page: String, _ sub: String) {
+        switch page {
+        case "tracking", "packages", "sporing": paperGo("sporing")
+        case "mat", "matplan": paperGo("mat")
+        case "home", "finance", "finans": paperGo("finans")
+        case "list", "liste": paperGo("finans"); paperOpenFin(.list)
+        case "budget", "budsjett": paperGo("finans"); paperOpenFin(.budget)
+        case "finn": paperGo("mer"); paperOpenFin(.finn)
+        case "receipts", "review", "kvitteringer": paperGo("finans"); paperOpen(.upload)
+        case "subs", "nextcharge", "abonnement": paperGo("mer"); paperOpen(.sub)
+        case "stocks", "aksjer": paperGo("mer"); paperOpen(.stocks)
+        case "domains", "domener": paperGo("mer"); paperOpen(.domains)
+        case "boliger", "folders": paperGo("mer"); paperOpen(.folders)
+        case "news", "nyheter", "rss": openNews()
+        case "scan", "skann": pendingScan = sub == "files" ? "files" : "camera"
+        default: paperGo("hjem")
         }
     }
 }
