@@ -116,7 +116,16 @@ const SCALAR = {
     && v.items.every((x) => x && typeof x === 'object' && TAB_IDS.includes(x.id) && Object.keys(x).every((f) => ['id', 'label', 'icon'].includes(f))
       && (x.label === undefined || (typeof x.label === 'string' && x.label.length <= 24)) && (x.icon === undefined || (typeof x.icon === 'string' && /^[\w.-]{1,40}$/.test(x.icon)))),
   iconTheme: (v) => ICON_THEMES.includes(v),
+  // Prompt 19: bakgrunner (type, planet, bytte, uskarphet, demping, Kun på Wi-Fi og animasjon). bgType speiles mot photo.
+  bgType: (v) => BG_TYPES.includes(v),
+  bgPlanet: (v) => ['auto', 'earth', 'moon', 'jupiter', 'mars'].includes(v),
+  bgRotate: (v) => ['daily', 'hourly'].includes(v),
+  bgBlur: (v) => Number.isInteger(v) && v >= 0 && v <= 20,
+  bgDim: (v) => Number.isInteger(v) && v >= 0 && v <= 60,
+  bgWifiOnly: (v) => typeof v === 'boolean',
+  bgAnimate: (v) => typeof v === 'boolean',
 };
+const BG_TYPES = ['weather', 'planets', 'oslo', 'custom', 'none', 'cur'];
 export const TAB_IDS = ['hjem', 'finans', 'mat', 'sporing', 'domener', 'sok', 'mer', 'vaer', 'nyheter', 'familie', 'avganger', 'aksjer', 'boliger', 'abonnementer', 'media', 'huske'];
 export const TAB_BAR_DEFAULT = { items: [{ id: 'hjem', label: 'Hjem', icon: 'house' }, { id: 'finans', label: 'Finans', icon: 'wallet' }, { id: 'mat', label: 'Mat', icon: 'fork.knife' }, { id: 'domener', label: 'Domener', icon: 'globe' }, { id: 'sok', label: 'Søk', icon: 'magnifyingglass' }, { id: 'mer', label: 'Mer', icon: 'ellipsis' }] };
 const ICON_THEMES = ['standard', 'varm', 'kjolig', 'mono', 'fargerik'];
@@ -294,6 +303,9 @@ api.put('/me/layout', authOrToken, async (c) => {
       if (!SCALAR[k](v)) return c.json({ error: `Ugyldig verdi for ${k}` }, 400);
       // Sidene flettes per side, så en klient kan lagre én side uten å sende resten.
       next[k] = k === 'pages' ? { ...(next.pages ?? {}), ...v } : v;
+      // Gamle klienter sender photo, nye bgType. «Ingen» finnes bare som bgType og vises som gradient (cur).
+      if (k === 'photo') next.bgType = v;
+      if (k === 'bgType') next.photo = v === 'none' ? 'cur' : v;
       continue;
     }
     if (!LAYOUT[k](v)) return c.json({ error: `Ugyldig verdi for ${k}` }, 400);
@@ -523,7 +535,9 @@ export const designOf = (id) => {
   return { design: l.design ?? 'v2', compactNav: !!l.compactNav, hlTheme: l.hlTheme ?? (fresh ? '2c' : 'cur'), mobileDesign: l.mobileDesign ?? (fresh ? 'papir' : 'klassisk'),
     paperMode: l.paperMode ?? 'auto', photo: l.photo ?? (fresh ? 'oslo' : 'cur'), onboarded: l.onboarded ?? !fresh, trkOrder: [...trk, ...TRK_CARDS.filter((x) => !trk.includes(x))],
     pages: l.pages ?? {}, finTabs: l.finTabs ?? FIN_TABS_DEFAULT, fourthTab: l.fourthTab ?? 'auto', fab: l.fab ?? 'float',
-    tabBar: l.tabBar ?? null, tabBarDefault: TAB_BAR_DEFAULT, iconTheme: l.iconTheme ?? 'standard' };
+    tabBar: l.tabBar ?? null, tabBarDefault: TAB_BAR_DEFAULT, iconTheme: l.iconTheme ?? 'standard',
+    bgType: l.bgType ?? l.photo ?? (fresh ? 'oslo' : 'cur'), bgPlanet: l.bgPlanet ?? 'auto', bgRotate: l.bgRotate ?? 'daily', bgBlur: l.bgBlur ?? 0, bgDim: l.bgDim ?? 0,
+    bgWifiOnly: !!l.bgWifiOnly, bgAnimate: l.bgAnimate ?? true };
 };
 
 const PHOTOS = join(config.dataDir, 'photo-window');

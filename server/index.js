@@ -18,6 +18,7 @@ import { matApi, matCalendar, startMatScheduler } from './mat.js';
 import domainsApi from './domains.js';
 import trackingApi, { startTrackingWorker, hasTrackingTest, testTracking } from './tracking.js';
 import uiApi from './ui.js';
+import backgroundApi, { hasBackgroundTest, testBackgrounds } from './background.js';
 import mobileApi, { meOut, removeAvatar, shortcutsFor, layoutOf, authOrToken, designOf } from './mobile.js';
 import rssApi, { startRssWorker } from './rss.js';
 import familyApi from './family.js';
@@ -307,6 +308,7 @@ authed.put('/config', requireAdmin, async (c) => {
 authed.post('/config/test/:group', requireAdmin, async (c) => {
   const group = c.req.param('group');
   if (hasTrackingTest(group)) return c.json(await testTracking());
+  if (hasBackgroundTest(group)) return c.json(await testBackgrounds());
   if (!integrations.hasTest(group)) return c.json({ error: 'Ukjent integrasjon' }, 404);
   return c.json(await integrations.testIntegration(group));
 });
@@ -494,6 +496,7 @@ const toFinans = async (c, path) => {
   return app.fetch(new Request(u, { method: 'POST', headers: c.req.raw.headers, body: await c.req.arrayBuffer() }), c.env);
 };
 app.post('/api/homes/:id{[0-9]+}/expenses', (c) => toFinans(c, (c.req.header('content-type') ?? '').startsWith('multipart/') ? `/folders/${c.req.param('id')}/receipts` : `/folders/${c.req.param('id')}/entries`));
+app.route('/api/background', backgroundApi); // Bakgrunner (prompt 19): Vær, Planeter, Oslo, eget bilde
 app.route('/api', mobileApi);
 app.route('/api', authed);
 app.route('/home/api', homeApi);

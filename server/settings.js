@@ -88,6 +88,14 @@ export const SCHEMA = [
     ['nasa_key', 'NASA API-nøkkel', e('NASA_API_KEY', 'DEMO_KEY'), true],
     ['sat_group', 'CelesTrak-gruppe', e('SAT_GROUP', 'starlink')],
   ]],
+  ['Bakgrunner', { id: 'backgrounds', domain: 'unsplash.com', category: 'Hjem', help: 'Brukes til bakgrunnene Oslo og Vær. Uten nøkler vises egne opplastede bilder og de medfølgende illustrasjonene. Planeter kommer fra NASA og trenger ingen nøkkel.', guide: [
+    ['Unsplash', 'Lag en gratis app på unsplash.com/developers og kopier «Access Key». Fotografen krediteres automatisk med lenke, slik Unsplash krever.'],
+    ['Pexels', 'Lag en gratis nøkkel på pexels.com/api. Brukes når Unsplash mangler eller ikke gir treff.'],
+    ['Egne bilder', 'Last opp egne Oslo-bilder i Utseende → Bakgrunn. Getty-bilder kan bare brukes hvis du har kjøpt lisens.'],
+  ] }, [
+    ['unsplash_key', 'Unsplash Access Key', e('UNSPLASH_ACCESS_KEY'), true],
+    ['pexels_key', 'Pexels API-nøkkel', e('PEXELS_API_KEY'), true],
+  ]],
   ['Cloudflare', { id: 'cloudflare', domain: 'cloudflare.com', category: 'Nettverk', help: 'Lag tokenet i Cloudflare under My Profile → API Tokens med Zone, DNS, Analytics, Registrar og Firewall Services: Read.' }, [
     ['cf_token', 'Standard-token for Domener (Zone, DNS, Analytics, Registrar og Firewall Services: Read)', e('CLOUDFLARE_API_TOKEN'), true],
     ['cf_domain', 'Første domene (legges inn i Domener ved oppstart)', e('CLOUDFLARE_DOMAIN')],
