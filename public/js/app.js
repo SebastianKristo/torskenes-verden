@@ -17,12 +17,13 @@ import * as domains from './domains.js';
 import * as tracking from './tracking.js';
 import * as family from './family.js';
 import * as tasks from './tasks.js';
+import * as weatherPage from './weather-page.js';
 import './finpreload.js';
 import { logout, noteUser } from './usercache.js';
 import { loadAppIdentity, appName } from './appicon.js';
 import { loadHlTheme, applyHlTheme, is2c, setHlTheme, pwHeader, paintPhoto, bindPhoto } from './hltheme.js';
 
-const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
+const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, vaer: weatherPage.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
 const view = document.getElementById('view');
 let route = null, wasMobile = isMobile();
 
@@ -47,7 +48,8 @@ function renderRoute() {
   // Nyhetsbaren kan ligge inne i visningen (Vindu og papir); flytt den ut før visningen tegnes på nytt.
   const tk = document.getElementById('ticker');
   if (tk && view.contains(tk)) document.querySelector('header.top').after(tk);
-  view.innerHTML = (is2c() ? pwHeader(route) : '') + ROUTES[route]();
+  // Værsiden er en egen fullskjermside (systemfont, animert himmel) uten fotovindu.
+  view.innerHTML = (is2c() && route !== 'vaer' ? pwHeader(route) : '') + ROUTES[route]();
   placeTicker();
   paintPhoto();
   mountAll(view);
@@ -59,7 +61,7 @@ function renderRoute() {
 }
 
 // Fanetittelen: «Side · Appnavn» (appnavnet fra Innstillinger → App, standard «Homelab»).
-const TITLES = { studie: 'Studie', rom: 'Rom', hjem: 'Hjem', matplan: 'Mat', sporing: 'Sporing', familie: 'Familie', huskeliste: 'Huskeliste', domener: 'Domener', nettverk: 'Nettverk', mer: 'Mer' };
+const TITLES = { vaer: 'Vær', studie: 'Studie', rom: 'Rom', hjem: 'Hjem', matplan: 'Mat', sporing: 'Sporing', familie: 'Familie', huskeliste: 'Huskeliste', domener: 'Domener', nettverk: 'Nettverk', mer: 'Mer' };
 function setTitle() { document.title = TITLES[route] ? `${TITLES[route]} · ${appName()}` : appName(); }
 
 // Nyhetsbaren ligger under topplinjen, men i Vindu og papir under søkefeltet på papiret.

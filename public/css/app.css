@@ -949,3 +949,5 @@ html[data-hl="2c"] .dx{--dx-ink:#1b1a17;--dx-mut:#6b665c;--dx-lab:#b23a2a;--dx-c
 .p-dep.on,.dep.on{text-decoration:underline;text-underline-offset:4px}
 .trip-open{min-width:min(360px,100%)}
 @media (prefers-reduced-motion:reduce){.dx.dx-in{animation:none}}
+.sbar-g{flex:none;width:20px;height:20px;display:block}
+.card-head .card-link{margin-left:auto;font-size:12.5px;font-weight:600;color:var(--text-2);text-decoration:none;white-space:nowrap}.card-head .card-link:hover{color:var(--text)}

@@ -45,14 +45,16 @@ const ICON = (c) => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"
 export const SEARCH_STYLES = [['light', 'Lys, sentrert'], ['dark', 'Mørk, sentrert'], ['wideLight', 'Full bredde, lys'], ['wide', 'Full bredde, mørk']];
 
 const isGoogle = () => /google\./.test(store.me.searchUrl);
+// Prompt 22: den offisielle Google-«G» (48×48, fire baner) som egen fil. /assets/google-g.svg = public/google-g.svg (kopi av public/assets/google-g.svg).
+const GICON = '<img class="sbar-g" src="/assets/google-g.svg" width="20" height="20" alt="" aria-hidden="true">';
 
 export function renderSearch() {
   const st = store.me.searchStyle, light = st === 'light' || st === 'wideLight';
   const ph = isGoogle() ? 'Søk på Google eller skriv inn en adresse' : 'Søk eller skriv inn en adresse';
   const ai = aiOn();
   const form = (inner) => `<form class="sbar ${st}${ai ? ' ai' : ''}" data-search role="search">${inner}<input name="q" placeholder="${ai ? 'Spør ✦ AI om hva som helst' : ph}" autocomplete="off" aria-label="Søk" role="combobox" aria-autocomplete="list" aria-expanded="false" enterkeyhint="search"><button type="button" class="sq-ai-tog" data-sq-ai aria-pressed="${ai}" title="Svar fra AI-motoren (Ollama eller Gemini)">✦ AI</button><button type="submit">Søk</button><div class="sq-drop" role="listbox" hidden></div></form>`;
-  if (st === 'light' || st === 'dark') return `<div class="search-wrap">${isGoogle() ? GWORD : ''}${form(ICON(light ? '#5f6368' : '#8a93a6'))}</div>`;
-  return `<div>${form(isGoogle() ? `${GWORD}<span class="sep"></span>` : ICON(light ? '#5f6368' : '#8a93a6'))}</div>`;
+  if (st === 'light' || st === 'dark') return `<div class="search-wrap">${isGoogle() ? GWORD : ''}${form(isGoogle() ? GICON : ICON(light ? '#5f6368' : '#8a93a6'))}</div>`;
+  return `<div>${form(isGoogle() ? `${GICON}<span class="sep"></span>` : ICON(light ? '#5f6368' : '#8a93a6'))}</div>`;
 }
 
 /* Forslag fra Google (via serveren) og søkehistorikk per bruker, delt med mobilappen. */

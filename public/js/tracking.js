@@ -28,12 +28,33 @@ const host = () => document.getElementById('trk-os');
 const dm = (d) => `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
 const isoDate = (s) => /^\d{4}-\d{2}-\d{2}/.test(s ?? '') ? new Date(s.slice(0, 10) + 'T12:00') : null;
 const evTime = (ts) => { const d = new Date(ts); return `${dm(d)} ${hm(d)}`; };
-const isDone = (t) => t.archived || t.status === 'delivered';
+const isDone = (t) => t.archived || t.status === 'delivered' || t.status === 'returned';
 const isPick = (t) => !isDone(t) && t.status === 'ready_for_pickup' && t.direction !== 'out';
+// Prompt 22: serveren gir estimatedDelivery, pickup {name, deadline}, lastEvent {text, place, time} og updateError {text, retryAt}.
+const tsOf = (v) => (v == null || v === '' ? null : typeof v === 'number' ? new Date(v < 1e12 ? v * 1000 : v) : new Date(/^\d{4}-\d{2}-\d{2}$/.test(v) ? v + 'T12:00' : v));
+const when = (v) => { const d = tsOf(v); return d && !Number.isNaN(+d) ? (/T00:00|T12:00:00?$/.test(String(v)) || /^\d{4}-\d{2}-\d{2}$/.test(String(v)) ? dm(d) : `${dm(d)} ${hm(d)}`) : ''; };
+const lastEv = (t) => {
+  const le = t.lastEvent;
+  if (le && (le.text || le.place)) return { text: le.text ?? '', place: le.place ?? '', time: le.time ?? null };
+  const e = t.events?.[0];
+  return e ? { text: e.status, place: e.location ?? '', time: e.ts } : null;
+};
+function errText(t) {
+  const u = t.updateError;
+  if (!u) return '';
+  const at = tsOf(u.retryAt);
+  return `Kunne ikke oppdatere${at && !Number.isNaN(+at) ? ` · prøver igjen ${hm(at)}` : ''}`;
+}
 function etaText(t) {
-  const d = isoDate(t.eta), txt = d ? dm(d) : t.eta;
+  const eta = t.estimatedDelivery ?? t.eta, d = isoDate(eta), txt = d ? dm(d) : eta;
   if (t.status === 'delivered') { const last = t.events.find((e) => /levert/i.test(e.status)) ?? t.events[0]; return last ? `Levert ${dm(new Date(last.ts))}` : 'Levert'; }
-  if (t.status === 'ready_for_pickup') return [t.pickupPoint, txt && `hent innen ${txt}`].filter(Boolean).join(' · ') || 'Klar for henting';
+  if (t.status === 'ready_for_pickup') {
+    const dl = t.pickup?.deadline ? when(t.pickup.deadline) : txt;
+    return [t.pickup?.name ?? t.pickupPoint, dl && `hent innen ${dl}`].filter(Boolean).join(' · ') || 'Klar for henting';
+  }
+  if (t.updateError && !(t.step > 0)) return errText(t);
+  if (t.status === 'returned') return 'Returnert til avsender';
+  if (!txt && t.noEtaText) return t.noEtaText;
   if (t.direction === 'out' && t.step === 0) return txt ? `Lever pakken innen ${txt}` : 'Lever pakken hos utleveringsstedet';
   if (t.status === 'delayed') return txt ? `Var ventet ${txt}` : 'Forsinket';
   return txt ? `Ventet ${txt}` : 'Ingen leveringsdato ennå';
@@ -47,25 +68,34 @@ const sw = (on) => `<span class="trk-sw${on ? ' on' : ''}"><i></i></span>`;
 function card(t) {
   const fin = t.status === 'delivered', ready = isPick(t), open = S.open === t.id, [src, sbg, sfg] = SRC[t.source] ?? SRC.manual;
   const stC = ready ? '#ffb08a' : fin ? 'var(--green)' : t.delayed ? 'var(--yellow)' : 'var(--text)';
-  const steps = t.steps.map((n, j) => {
-    const dn = j <= t.step, cur = j === t.step && !fin;
-    const label = j === 3 && t.direction !== 'out' ? (t.status === 'out_for_delivery' ? 'Ute' : 'Hentested') : n;
-    return `<span class="trk-step${dn ? ' dn' : ''}${cur ? ' cur' : ''}${j < t.step ? ' ln' : ''}${fin ? ' fin' : ''}"><span><i></i><em></em></span><small>${esc(label)}</small></span>`;
+  // Uten svar fra transportøren vises ikke «Registrert» som om det var sant (prompt 22).
+  const unknown = !!t.updateError && !(t.step > 0) && !fin && !ready;
+  // Tidslinjen: steps kan være navn (eldre server) eller {name|label, done, time}. Siste fullførte steg får dato og klokkeslett.
+  // Prompt 22: timeline [{key,label,done,current,time,timeText}] fra serveren går foran steps.
+  const stepArr = Array.isArray(t.timeline) && t.timeline.length ? t.timeline.map((x) => ({ name: x.label ?? x.key ?? '', done: !!x.done, cur: !!x.current, time: x.time, tt: x.timeText })) : (t.steps ?? []).map((x) => (typeof x === 'string' ? { name: x } : { name: x.name ?? x.label ?? x.t ?? '', done: x.done, time: x.time ?? x.at ?? x.ts }));
+  const curStep = stepArr.some((x) => x.cur) ? stepArr.findIndex((x) => x.cur) : stepArr.some((x) => typeof x.done === 'boolean') ? stepArr.reduce((a, x, j) => (x.done ? j : a), -1) : t.step ?? 0;
+  const lastTime = stepArr[curStep]?.time ?? (curStep === (t.step ?? 0) ? lastEv(t)?.time : null);
+  const steps = stepArr.map((x, j) => {
+    const dn = j <= curStep && !unknown, cur = j === curStep && !fin && !unknown;
+    const label = !t.timeline && j === 3 && t.direction !== 'out' && stepArr.length === 5 && /hentested|ute/i.test(x.name || 'Hentested') ? (t.status === 'out_for_delivery' ? 'Ute' : 'Hentested') : x.name;
+    const at = j === curStep && !unknown && (x.tt || lastTime) ? `<time>${esc(x.tt || when(lastTime))}</time>` : '';
+    return `<span class="trk-step${dn ? ' dn' : ''}${cur ? ' cur' : ''}${j < curStep ? ' ln' : ''}${fin ? ' fin' : ''}"><span><i></i><em></em></span><small>${esc(label)}${at}</small></span>`;
   }).join('');
-  const ev = t.events[0];
+  const ev = lastEv(t), err = errText(t);
   const tl = t.events.map((e, j) => `<div class="trk-ev${j ? '' : ' now'}"><div class="trk-ev-l"><i></i><em></em></div><div class="trk-ev-b"><div><b>${esc(e.status)}</b><span>${esc(evTime(e.ts))}</span></div>${e.location ? `<small>${esc(e.location)}</small>` : ''}</div></div>`).join('');
   return `<div class="trk-card${ready ? ' ready' : ''}${S.sel.has(t.id) ? ' picked' : ''}">
     <button class="trk-head" data-trk-open="${t.id}" aria-expanded="${open}">
       <span class="trk-row"><span class="trk-selb${S.sel.has(t.id) ? ' on' : ''}" data-trk-selb="${t.id}" role="checkbox" aria-checked="${S.sel.has(t.id)}" title="Velg for arkivering eller sletting">${pkgLogo(t, 44)}<i>✓</i></span><span class="trk-tt"><b>${esc(pkgTitle(t))}</b><small>${esc(t.carrierName)} · <span class="trk-mono">${esc(t.trackingNo)}</span></small></span>
         <span class="trk-src" style="background:${sbg};color:${sfg}">${esc(src)}</span></span>
-      <span class="trk-st"><span><b style="color:${stC}">${esc(t.statusText)}</b><small>${esc(etaText(t))}</small></span>${t.direction === 'out' ? '<em>Utgående</em>' : ''}</span>
+      <span class="trk-st"><span><b style="color:${unknown ? 'var(--text-2)' : stC}">${esc(unknown ? 'Status ukjent' : t.statusText)}</b><small${unknown ? ' class="trk-err"' : ''}>${esc(etaText(t))}</small></span>${t.direction === 'out' ? '<em>Utgående</em>' : ''}</span>
       <span class="trk-steps">${steps}</span>
-      <span class="trk-last">${ev ? `${esc(ev.status)}${ev.location ? ' · ' + esc(ev.location) : ''} <span>· ${esc(evTime(ev.ts))}</span>` : 'Ingen hendelser ennå'}</span>
+      <span class="trk-last">${ev ? `${esc([ev.text, ev.place].filter(Boolean).join(' · '))}${ev.time ? ` <span>· ${esc(when(ev.time))}</span>` : ''}` : 'Ingen hendelser ennå'}</span>
+      ${err && !unknown ? `<span class="trk-err">${esc(err)}</span>` : ''}
     </button>
     ${open ? `<div class="trk-more">
       ${tl ? `<div class="trk-tl">${tl}</div>` : ''}
       ${t.sourceNote ? `<span class="trk-note">✦ ${esc(t.sourceNote)}</span>` : ''}
-      ${t.lastError ? `<span class="trk-note warn">${esc(t.lastError)}</span>` : ''}
+      ${t.updateError?.text ? `<span class="trk-note warn">${esc(t.updateError.text)}</span>` : t.lastError ? `<span class="trk-note warn">${esc(t.lastError)}</span>` : ''}
       <div class="trk-acts">
         <a class="trk-btn" href="${esc(t.url)}" target="_blank" rel="noopener">Åpne hos ${esc(t.carrierName.replace(/ \(17TRACK\)$/, ''))} ↗</a>
         <button class="trk-btn" data-trk-arch="${t.id}">${t.archived ? 'Flytt tilbake' : 'Arkiver'}</button>
@@ -176,6 +206,8 @@ function paint() {
   if (!h) return;
   const a = document.activeElement, keep = a?.name && h.contains(a) ? { n: a.name, s: a.selectionStart } : null;
   document.getElementById('trk-sum').textContent = summary();
+  const rb = document.querySelector('[data-trk-refresh]');
+  if (rb) { rb.disabled = S.busy; rb.textContent = S.busy ? 'Oppdaterer …' : '↻ Oppdater'; }
   h.innerHTML = body();
   // Mangler logoen (eldre server eller nettfeil), vises bokstav-merket under.
   h.querySelectorAll('.trk-logo').forEach((i) => { i.addEventListener('error', () => i.remove(), { once: true }); });
@@ -209,7 +241,7 @@ export function render() {
     clearInterval(pollT);
     pollT = setInterval(() => { if (!host()) { unLive?.(); unLive = null; return clearInterval(pollT); } if (!document.hidden && !S.busy && !S.adding) load(); }, 60_000);
   });
-  return `<div class="trk-top"><div class="os-title">Spor<b>ing</b></div><div id="trk-sum" class="trk-sumtxt">${esc(summary())}</div></div>
+  return `<div id="trk-ptr" class="trk-ptr" aria-hidden="true"><span>Dra for å oppdatere</span></div><div class="trk-top"><div class="os-title">Spor<b>ing</b></div><div id="trk-sum" class="trk-sumtxt">${esc(summary())}</div><button class="trk-btn trk-refresh" data-trk-refresh ${S.busy ? 'disabled' : ''} aria-label="Oppdater status">↻ Oppdater</button></div>
     <div id="trk-os" class="trk">${body()}</div><div id="trk-toast" class="trk-toast" role="status" aria-live="polite" hidden></div>`;
 }
 
@@ -227,10 +259,37 @@ async function add() {
   S.adding = false; paint();
 }
 
+// «Sjekk nå» og dra-for-å-oppdatere: POST /tracking/refresh (prompt 22), /check på en eldre server.
 async function check() {
+  if (S.busy) return;
   S.busy = true; paint();
-  try { const r = await T('/check', { method: 'POST' }); S.d = r; flash(r.message); } catch (e) { flash(e.message, true); }
+  try {
+    let r;
+    try { r = await T('/refresh', { method: 'POST' }); } catch (e) { if (e.status !== 404) throw e; r = await T('/check', { method: 'POST' }); }
+    if (r?.items) { const ark = (S.d?.items ?? []).filter((t) => t.archived && !r.items.some((x) => x.id === t.id)); S.d = { ...S.d, ...r, items: [...r.items, ...ark] }; } else await load();
+    flash(r?.message ?? 'Status er oppdatert');
+  } catch (e) { flash(e.message, true); }
   S.busy = false; paint();
+}
+
+// Dra ned øverst på siden (berøring) for å oppdatere.
+let ptr = null;
+function bindPull(view) {
+  const ind = () => document.getElementById('trk-ptr');
+  view.addEventListener('touchstart', (e) => { if (!host() || window.scrollY > 0 || S.busy || e.touches.length !== 1) return; ptr = { y: e.touches[0].clientY, d: 0 }; }, { passive: true });
+  view.addEventListener('touchmove', (e) => {
+    if (!ptr) return;
+    ptr.d = Math.max(0, e.touches[0].clientY - ptr.y);
+    const i = ind();
+    if (i) { const h = Math.min(70, ptr.d * 0.5); i.style.height = `${h}px`; i.classList.toggle('arm', ptr.d > 90); i.querySelector('span').textContent = ptr.d > 90 ? 'Slipp for å oppdatere' : 'Dra for å oppdatere'; }
+  }, { passive: true });
+  view.addEventListener('touchend', () => {
+    if (!ptr) return;
+    const go = ptr.d > 90; ptr = null;
+    const i = ind();
+    if (i) { i.style.height = go ? '44px' : '0px'; if (go) i.querySelector('span').textContent = 'Oppdaterer …'; }
+    if (go) check().finally(() => { const j = ind(); if (j) j.style.height = '0px'; });
+  });
 }
 
 // Flere på en gang: POST /tracking/bulk. På en eldre server uten bulk gjøres det én og én.
@@ -256,6 +315,8 @@ async function bulk(action) {
 }
 
 export function bind(view) {
+  bindPull(view);
+  view.addEventListener('click', (e) => { if (e.target.closest('[data-trk-refresh]')) check(); });
   view.addEventListener('input', (e) => {
     if (!e.target.closest('#trk-os')) return;
     if (e.target.name === 'trk-name') { S.name = e.target.value; return; }

@@ -14,8 +14,9 @@ html[data-hl="2c"] .tk{--t-ink:#1b1a17;--t-mut:#7a7468;--t-line:#e3ddcf;--t-lab:
 .tk-add button{flex:none;width:48px;height:48px;border-radius:24px;border:0;background:var(--t-lab);color:#fff;font-size:24px;line-height:1;cursor:pointer}
 html:not([data-hl="2c"]) .tk-add button{color:#1a0d0b}
 .tk-opts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-.tk-opt{height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--t-line);background:transparent;color:var(--t-ink);font:600 12.5px inherit;cursor:pointer}
-.tk-opt.on{border-color:var(--t-ink)}
+.tk-opt{height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--t-line);background:var(--t-card);color:var(--t-ink);font:600 12.5px inherit;cursor:pointer}
+/* Prompt 22: valgte chips for frist og person er fylte, som valgt liste. */
+.tk-opt.on{background:var(--t-ink);color:var(--t-bg);border-color:var(--t-ink)}
 .tk-sep{width:1px;height:20px;background:var(--t-line);margin:0 4px}
 .tk-group{display:flex;flex-direction:column;gap:6px}
 .tk-gt{font:600 10.5px/1 'IBM Plex Mono',var(--mono,monospace);letter-spacing:.12em;padding:0 4px;color:var(--t-mut)}
@@ -45,3 +46,35 @@ html[data-hl="2c"] .tk-card{background:#fff;border-radius:20px;border:0}
 .tk-btn.pri{background:var(--t-ink);color:var(--t-bg);border-color:var(--t-ink)}
 .tk-share .tk-btn{margin:0}
 .tk-shd{font-size:11px;opacity:.65;margin-left:-2px}
+/* Prompt 22: synk med Home Assistant To-do (fasit Huskeliste.dc.html). */
+.tkha{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.tkha-head{display:flex;justify-content:space-between;align-items:baseline;padding:0 4px}
+.tkha-head .tk-gt{padding:0}
+.tkha-st{font-size:12px;color:var(--t-mut)}
+.tkha-st.err{color:var(--t-lab);font-weight:600}
+.tkha-card{display:block!important}
+.tkha-tgl,.tkha-row,.tkha-sync{width:100%;display:flex;align-items:center;gap:12px;border:0;background:transparent;color:var(--t-ink);cursor:pointer;text-align:left;font:inherit;padding:0}
+.tkha-tgl{min-height:56px}
+.tkha-tgl b{display:block;font-size:15px;font-weight:700}
+.tkha-tgl .tk-main{padding:0}
+.tkha-sw{flex:none;width:46px;height:28px;border-radius:14px;background:var(--t-line);position:relative;transition:background .15s}
+.tkha-sw i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:11px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:left .15s}
+.tkha-sw.on{background:#2f7a4f}.tkha-sw.on i{left:21px}
+.tkha-row{min-height:52px;border-top:1px solid var(--t-line)}
+.tkha-n{flex:1;min-width:0;font-size:14.5px;font-weight:600}
+.tkha-e{flex:none;font:600 12.5px 'IBM Plex Mono',ui-monospace,monospace;color:var(--t-ink);max-width:50%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tkha-e.mut{color:var(--t-mut)}
+.tkha-chev{flex:none;color:var(--t-mut);transition:transform .15s}
+.tkha-row[aria-expanded=true] .tkha-chev{transform:rotate(90deg)}
+.tkha-pick{display:flex;flex-direction:column;gap:2px;padding:4px 0 10px 21px}
+.tkha-opt{display:flex;align-items:center;gap:10px;min-height:38px;padding:0 12px;border:0;border-radius:12px;background:transparent;color:var(--t-ink);font-family:inherit;font-weight:600;font-size:13.5px;line-height:1.2;cursor:pointer;text-align:left}
+.tkha-opt .mono{font:600 12.5px 'IBM Plex Mono',ui-monospace,monospace}
+.tkha-opt:hover{background:var(--t-chip)}
+.tkha-opt.on{background:var(--t-ink);color:var(--t-bg)}
+.tkha-opt.on .tk-meta{color:inherit;opacity:.7}
+.tkha-opt.add{color:var(--t-lab)}
+.tkha-none{padding:8px 12px}
+.tkha-sync{justify-content:center;gap:8px;min-height:48px;border-top:1px solid var(--t-line);color:var(--t-lab);font-weight:700;font-size:14px}
+.tkha-tgl:disabled,.tkha-row:disabled,.tkha-sync:disabled{opacity:.55;cursor:default}
+.tkha-note{line-height:1.45;padding:0 4px}
+.tk.tk-set{max-width:none;gap:6px}

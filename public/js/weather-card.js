@@ -73,7 +73,7 @@ export function weatherCard() {
       <div class="wxc-sec"><div class="wxc-sec-h"><span>Neste timer</span><span>Nedbør mm</span></div><div class="wxc-h8">${h8}</div></div>
       <div class="wxc-days">${d6}</div></div>`;
   }
-  return `<div class="card-head" style="align-items:flex-start"><div><div class="card-title">Værmelding</div><div class="card-sub">${esc(w.place)}${upd}</div></div></div>
+  return `<div class="card-head" style="align-items:flex-start"><div><div class="card-title">Værmelding</div><div class="card-sub">${esc(w.place)}${upd}</div></div><a class="card-link" href="#/vaer">Værsiden ›</a></div>
     <div class="wxc-now">${svg(w.icon, 46, '#a8d4fb')}<div class="wxc-temp">${w.temp}°</div>
       <div class="wxc-cond"><b>${esc(w.text)}</b><span>Føles som ${deg(w.feels)} · ${deg(w.hi)} / ${deg(w.lo)}</span><span>${esc(mini)}</span></div></div>
     <div class="wxc-h6">${h6}</div>

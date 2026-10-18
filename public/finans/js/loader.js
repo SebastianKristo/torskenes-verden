@@ -7,6 +7,16 @@
   // Hent oversikten (/finans/api/bootstrap) parallelt med at modulene lastes; core.js loadBoot() bruker svaret (prompt 21).
   try { window.__fhBoot = fetch('/finans/api/bootstrap', { credentials: 'same-origin' }); window.__fhBoot.catch(function () {}); } catch (e) { window.__fhBoot = null; }
   var mobile = q.indexOf('desktop') < 0 && (matchMedia('(max-width: 899px)').matches || (matchMedia('(pointer: coarse)').matches && matchMedia('(max-width: 1100px)').matches));
+  // Tema før første tegning (prompt 22): lokal cache fh_design, ellers «lys» (Lys hovedbok). index.html har lys fra start.
+  if (!mobile) {
+    var d = 'lys';
+    try { var c = localStorage.getItem('fh_design'); if (c === 'v2' || c === 'lys' || c === 'mork' || c === 'glod') d = c; } catch (e) { /* privat modus */ }
+    h.setAttribute('data-ui', 'desktop');
+    h.setAttribute('data-theme', d);
+    if (d === 'v2') h.removeAttribute('data-v3'); else h.setAttribute('data-v3', '');
+    var m = document.querySelector('meta[name=theme-color]');
+    if (m) m.setAttribute('content', { v2: '#0A0A0C', lys: '#f4f1ea', mork: '#121210', glod: '#16110e' }[d]);
+  }
   if (mobile) return;
   var t = 'cur';
   try { t = localStorage.getItem('hl_theme') === '2c' ? '2c' : 'cur'; } catch (e) { /* privat modus */ }

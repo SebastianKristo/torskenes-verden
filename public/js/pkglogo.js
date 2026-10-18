@@ -23,21 +23,34 @@ export function pkgTitle(p) {
 const enc = encodeURIComponent;
 const srcOf = (lg) => (lg?.id ? `/finans/api/logos/file/${enc(lg.id)}` : lg?.domain ? `/finans/api/logo/${enc(lg.domain)}` : null);
 
+// Prompt 22: fraktselskaper med manuelt kontrollert logo i biblioteket (kilde «manuell»). De viser aldri et tilfeldig
+// favicon eller en egentegnet SVG; mangler filen, vises selskapets farge med navnet.
+export const MANUAL = new Set(['posten', 'bring', 'postnord', 'dhl', 'helthjem', 'instabox', 'budbee', 'ups', 'fedex']);
+const MANUAL_COLOR = { posten: '#E32D22', bring: '#7BC144' };
+const carKey = (p, c) => String((c && typeof c === 'object' && c.id) || p?.carrier || '').toLowerCase();
+const libFile = (u) => /\/logos\/file\//.test(u ?? '');
 const hex = (c, d) => (/^#[0-9a-f]{3,8}$/i.test(c ?? '') ? c : d);
 // Fraktselskapet fra serverens logo-objekt: fil i biblioteket, så lokal SVG (virker uten nett), så favicon.
-const carSrc = (c) => (!c || typeof c !== 'object' ? (typeof c === 'string' ? c : null) : (c.hasFile && c.url) || c.svg || c.url || null);
+const carSrc = (c, key) => {
+  if (MANUAL.has(key) || c?.manual === true) { const u = c && typeof c === 'object' ? c.url : c; return libFile(u) ? u : null; } // bare filen i biblioteket
+  return !c || typeof c !== 'object' ? (typeof c === 'string' ? c : null) : (c.hasFile && c.url) || c.svg || c.url || null;
+};
+// Bokstav-reserven: for fraktselskaper med manuell logo vises hele navnet («Posten») på selskapets farge.
+const letterOf = (key, label, letter) => (MANUAL.has(key) ? label : letter || initials(label));
+const nmCls = (txt) => (String(txt).length > 2 ? ' nm' : '');
 
 /** Server (prompt 21): logo = {kind:'shop'|'carrier'|'letter', id, domain, url, letter, color, carrierLogo}. */
 function serverLogo(p, lg, size, cls) {
-  const name = carName(p);
-  const car = lg.kind === 'shop' ? carSrc(lg.carrierLogo) : null;
-  const main = lg.kind === 'shop' ? lg.url : lg.kind === 'carrier' ? carSrc(lg) ?? p.carrierLogo : null;
-  const color = hex(lg.color, hex(p.carrierColor, '#6b665c')), fg = hex(lg.fg, hex(p.carrierFg, '#fff'));
+  const name = carName(p), key = carKey(p, lg.kind === 'carrier' ? lg : null);
+  const car = lg.kind === 'shop' ? carSrc(lg.carrierLogo, carKey(p, lg.carrierLogo)) : null;
+  const main = lg.kind === 'shop' ? lg.url : lg.kind === 'carrier' ? carSrc(lg, key) ?? (MANUAL.has(key) ? null : p.carrierLogo) : null;
+  const color = hex(MANUAL_COLOR[key], hex(lg.color, hex(p.carrierColor, '#6b665c'))), fg = hex(lg.fg, hex(p.carrierFg, '#fff'));
   const full = (u) => (/\/carriers\//.test(u ?? '') ? ' full' : '');
   const img = main ? `<img class="pkl-img${full(main)}" data-pkl src="${esc(main)}"${car ? ` data-fb="${esc(car)}"` : ''} alt="" loading="lazy" decoding="async">` : '';
   const badge = car ? `<img class="pkl-car${full(car)}" data-pkl src="${esc(car)}" alt="${esc(name)}" title="${esc(name)}" loading="lazy" decoding="async">` : '';
   const label = lg.kind === 'shop' ? lg.name || p.shop || name : name;
-  return `<span class="pkl ${cls}${main ? ' has' : ''}" style="--s:${size}px;--c:${color};--fg:${fg}" role="img" aria-label="${esc(label)}"><i>${esc(lg.letter || initials(label))}</i>${img}${badge}</span>`;
+  const txt = lg.kind === 'carrier' ? letterOf(key, label, lg.letter) : lg.letter || initials(label);
+  return `<span class="pkl ${cls}${main ? ' has' : ''}" style="--s:${size}px;--c:${color};--fg:${fg}" role="img" aria-label="${esc(label)}"><i class="${nmCls(txt).trim()}">${esc(txt)}</i>${img}${badge}</span>`;
 }
 
 /** Logoen som HTML. size i px (52 på kort, 44 i Sporing). */
@@ -48,15 +61,16 @@ export function pkgLogo(p, size = 52, cls = '') {
   const shopDom = p?.shopDomain ?? p?.shop_domain ?? null;
   let shop = srcOf(lg) ?? (shopDom ? `/finans/api/logo/${enc(shopDom)}` : null);
   if (shop && !lg.id && (lg.domain ?? shopDom) === carDom) shop = null; // «butikken» er fraktselskapet selv
-  const car = carSrc(lg.carrierLogo) || p?.carrierLogo || (carDom ? `/finans/api/logo/${enc(carDom)}` : null);
+  const key = carKey(p), man = MANUAL.has(key);
+  const car = man ? carSrc(lg.carrierLogo ?? p?.carrierLogo, key) : carSrc(lg.carrierLogo) || p?.carrierLogo || (carDom ? `/finans/api/logo/${enc(carDom)}` : null);
   const main = shop ?? car;
-  const ini = shop ? initials(p.shop || p.title || carName(p)) : p?.carrierIni || initials(carName(p));
-  const color = /^#[0-9a-f]{3,8}$/i.test(p?.carrierColor ?? '') ? p.carrierColor : '#6b665c';
+  const ini = shop ? initials(p.shop || p.title || carName(p)) : man ? carName(p) : p?.carrierIni || initials(carName(p));
+  const color = MANUAL_COLOR[key] ?? (/^#[0-9a-f]{3,8}$/i.test(p?.carrierColor ?? '') ? p.carrierColor : '#6b665c');
   const fg = /^#[0-9a-f]{3,8}$/i.test(p?.carrierFg ?? '') ? p.carrierFg : '#fff';
   const full = (u) => (/\/carriers\//.test(u) ? ' full' : '');
   const img = main ? `<img class="pkl-img${full(main)}" data-pkl src="${esc(main)}"${shop && car ? ` data-fb="${esc(car)}"` : ''} alt="" loading="lazy" decoding="async">` : '';
   const badge = shop && car ? `<img class="pkl-car${full(car)}" data-pkl src="${esc(car)}" alt="${esc(carName(p))}" title="${esc(carName(p))}" loading="lazy" decoding="async">` : '';
-  return `<span class="pkl ${cls}${main ? ' has' : ''}" style="--s:${size}px;--c:${color};--fg:${fg}" role="img" aria-label="${esc(shop ? p.shop || carName(p) : carName(p))}"><i>${esc(ini)}</i>${img}${badge}</span>`;
+  return `<span class="pkl ${cls}${main ? ' has' : ''}" style="--s:${size}px;--c:${color};--fg:${fg}" role="img" aria-label="${esc(shop ? p.shop || carName(p) : carName(p))}"><i class="${nmCls(ini).trim()}">${esc(ini)}</i>${img}${badge}</span>`;
 }
 
 /** «+12 pakker ›»: moreCount fra serveren, ellers antall minus denne. */

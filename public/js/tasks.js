@@ -4,6 +4,7 @@
 import { api, esc } from './util.js';
 import { onLive, liveOn } from './realtime.js';
 import { store } from './store.js';
+import { mountHa } from './tasks-ha.js';
 
 const S = { d: null, err: null, cur: 'alle', nv: '', nd: 0, nw: null, busy: false, editId: null, share: null };
 let pollT = null, unLive = null;
@@ -81,9 +82,10 @@ function body() {
   const chip = (id, name, color) => {
     const n = (id === 'alle' ? items : items.filter((t) => t.list === id)).filter((t) => !t.done).length;
     const l = id === 'alle' ? null : listOf(id), sh = l && (listMembers(l).length || !isMine(l));
-    return `<button type="button" class="tk-list${S.cur === id ? ' on' : ''}" data-tk-list="${esc(id)}"${sh ? ' title="Delt liste"' : ''}><span class="tk-dot" style="background:${esc(color)}"></span>${esc(name)}${sh ? '<span class="tk-shd" aria-label="delt">⇄</span>' : ''}<span class="tk-k">${n}</span></button>`;
+    // «Alle» har ingen fargeprikk (prompt 22).
+    return `<button type="button" class="tk-list${S.cur === id ? ' on' : ''}" data-tk-list="${esc(id)}" aria-pressed="${S.cur === id}"${sh ? ' title="Delt liste"' : ''}>${id === 'alle' ? '' : `<span class="tk-dot" style="background:${esc(color)}"></span>`}${esc(name)}${sh ? '<span class="tk-shd" aria-label="delt">⇄</span>' : ''}<span class="tk-k">${n}</span></button>`;
   };
-  const opt = (kind, v, n, on) => `<button type="button" class="tk-opt${on ? ' on' : ''}" data-tk-${kind}="${v ?? ''}">${esc(n)}</button>`;
+  const opt = (kind, v, n, on) => `<button type="button" class="tk-opt${on ? ' on' : ''}" data-tk-${kind}="${v ?? ''}" aria-pressed="${on}">${esc(n)}</button>`;
   const group = (title, cls, arr) => (arr.length ? `<section class="tk-group"><span class="tk-gt ${cls}">${title}</span><div class="card tk-card">${arr.map(row).join('')}</div></section>` : '');
   // Ansvarlig: deg og dem listen er delt med (eller alle på en eldre server uten deling).
   const curL = S.cur === 'alle' ? null : listOf(S.cur), hasShare = lists.some((l) => 'members' in l);
@@ -95,14 +97,27 @@ function body() {
     <div class="tk-opts">${[[0, 'I dag'], [1, 'I morgen'], [7, 'Neste uke'], [null, 'Uten dato']].map(([v, n]) => opt('due', v, n, S.nd === v)).join('')}<span class="tk-sep"></span>${who.map(([v, n]) => opt('who', v, n, S.nw === v)).join('')}</div>
     ${group('I DAG OG FORFALT', 'late', od)}${group('SENERE', 'mut', later)}${group('FERDIG', 'pos', done)}
     ${inL.length ? '' : `<div class="tk-empty">Ingen oppgaver i ${esc(curName)}.</div>`}
+    ${isAdmin() ? '<div class="tk-ha-slot"></div>' : ''}
     <div class="tk-foot">${liveOn() ? '● Sanntid' : 'Oppdateres automatisk'} · Listene er private til eieren deler dem. Widgets for iPhone og Android finnes i appen.</div>`;
+}
+
+// Synk med Home Assistant (prompt 22): bare admin. Seksjonen beholdes mellom omtegninger, så valg og status ikke blinker.
+const isAdmin = () => store.me?.me?.role === 'admin';
+let haEl = null, haCtl = null;
+function placeHa(h) {
+  const slot = h.querySelector('.tk-ha-slot');
+  if (!slot) return;
+  if (!haEl) { haEl = document.createElement('div'); haEl.className = 'tk-group'; haCtl = mountHa(haEl, { lists: () => Promise.resolve(S.d?.lists ?? []) }); }
+  slot.replaceWith(haEl);
 }
 
 function paint() {
   const h = host();
   if (!h) return;
   const act = document.activeElement, focusAdd = act?.closest?.('[data-tk-form]') && act.name === 'title';
+  if (haEl && h.contains(haEl)) haEl.remove();
   h.innerHTML = body();
+  placeHa(h);
   if (focusAdd) { const i = h.querySelector('[data-tk-form] input'); i?.focus(); i?.setSelectionRange(i.value.length, i.value.length); }
 }
 
@@ -171,6 +186,7 @@ export function render() {
     if (!h) return;
     bind(h);
     load();
+    haCtl?.refresh();
     unLive?.();
     unLive = onLive('tasks', (m) => {
       if (!host()) { unLive?.(); unLive = null; return; }
@@ -181,7 +197,8 @@ export function render() {
         return paint();
       }
       if (m.action === 'deleted' && m.id != null) { S.d.items = S.d.items.filter((x) => x.id !== m.id); return paint(); }
-      if (m.action === 'lists' && m.lists) { S.d.lists = m.lists; return paint(); }
+      if (m.action === 'lists' && m.lists) { S.d.lists = m.lists; haCtl?.refresh(); return paint(); }
+      if (m.action === 'ha') { haCtl?.refresh(); return; }
       load();
     });
     clearInterval(pollT);

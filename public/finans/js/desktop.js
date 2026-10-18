@@ -76,18 +76,21 @@ const suggList = (r) => (Array.isArray(r) ? r : r?.items ?? []);
 // (design, compactNav), med localStorage som reserve når serveren ikke kjenner feltene ennå.
 export const THEMES = {
   v2: { name: 'Nåværende (FinansHub v2)', desc: 'Dagens mørke design med oransje aksent', bg: '#0A0A0C', side: '#0F0F12', surf: '#141418', line: '#1E1E23', ink: '#F2F2F4', faint: '#5A5A62', acc: '#FF7A3D', warn: '#FF7A3D', d: 'Geist,system-ui,sans-serif', dw: 600, rs: '10px', meta: '#0A0A0C' },
-  lys: { name: 'Lys hovedbok', desc: 'Papirtone, grønn aksent, serif-tall', bg: '#f4f1ea', side: '#ece7dc', surf: '#faf8f3', line: '#e2ddd2', ink: '#1c1b19', faint: '#8a8478', acc: '#1f4d3a', warn: '#c8553d', d: "'Instrument Serif',serif", dw: 400, rs: '6px', meta: '#f4f1ea' },
+  lys: { name: 'Lys hovedbok · standard', desc: 'Papirtone, grønn aksent, serif-tall', bg: '#f4f1ea', side: '#ece7dc', surf: '#faf8f3', line: '#e2ddd2', ink: '#1c1b19', faint: '#8a8478', acc: '#1f4d3a', warn: '#c8553d', d: "'Instrument Serif',serif", dw: 400, rs: '6px', meta: '#f4f1ea' },
   mork: { name: 'Mørk hovedbok', desc: 'Samme oppsett i mørkt, mintgrønn aksent', bg: '#121210', side: '#0d0d0c', surf: '#1a1a17', line: '#2a2925', ink: '#ece8df', faint: '#8a8478', acc: '#6fbf8e', warn: '#e07a5f', d: "'Instrument Serif',serif", dw: 400, rs: '6px', meta: '#121210' },
   glod: { name: 'Glød', desc: 'Varm mørk, ravgul aksent, myke kort', bg: '#16110e', side: '#120e0b', surf: '#221a15', line: '#2c221c', ink: '#f3ebe3', faint: '#9c8f84', acc: '#ffb547', warn: '#ff7a59', d: "'Bricolage Grotesque',sans-serif", dw: 600, rs: '8px', meta: '#16110e' },
 };
 const lsGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
-export const design = () => { const v = S.layout?.design ?? lsGet('fh_design'); return THEMES[v] ? v : 'v2'; };
+// Rekkefølge (prompt 22): brukerens lagrede valg fra serveren, så lokal cache fh_design, så «lys» (Lys hovedbok) som standard.
+export const design = () => [S.layout?.design, lsGet('fh_design')].find((v) => THEMES[v]) ?? 'lys';
 const compactNav = () => (typeof S.layout?.compactNav === 'boolean' ? S.layout.compactNav : lsGet('fh_compact') === '1');
 // Setter tema-attributtene på <html>. Mobil har egne design, så temaene gjelder bare desktop (CSS er avgrenset med data-ui).
 export function applyTheme() {
   const h = document.documentElement, d = design();
   if (h.dataset.theme !== d) h.dataset.theme = d;
+  // Serverens valg caches lokalt, så neste lasting starter i riktig tema uten å blinke.
+  if (THEMES[S.layout?.design] && lsGet('fh_design') !== d) lsSet('fh_design', d);
   h.toggleAttribute('data-v3', d !== 'v2');
   h.toggleAttribute('data-compact', compactNav());
   const m = document.querySelector('meta[name=theme-color]');
@@ -95,7 +98,7 @@ export function applyTheme() {
 }
 async function saveLayout(patch) {
   S.layout = { ...(S.layout ?? {}), ...patch };
-  if ('design' in patch) lsSet('fh_design', patch.design);
+  if ('design' in patch) { lsSet('fh_design', patch.design); try { sessionStorage.setItem('fh_jump', '1'); } catch {} }
   if ('compactNav' in patch) lsSet('fh_compact', patch.compactNav ? '1' : '0');
   applyTheme();
   render();
@@ -807,7 +810,15 @@ function schedulePoll() {
 }
 export async function refreshAll() { await loadBoot(); await load(); }
 
+// Hopp til Innstillinger → Utseende bare rett etter et manuelt temabytte (sessionStorage fh_jump), aldri ved første oppstart.
+let jumpChecked = false;
+function takeJump() {
+  if (jumpChecked) return false;
+  jumpChecked = true;
+  try { const j = sessionStorage.getItem('fh_jump') === '1'; sessionStorage.removeItem('fh_jump'); return j; } catch { return false; }
+}
 export function route() {
+  if (takeJump() && allowed('inn') && !S.boot?.restricted) { u.setTab = 'look'; if (!location.hash.startsWith('#/inn')) { location.replace('#/inn'); } }
   let p = location.hash.replace(/^#\/?/, '').split('/')[0];
   // Matplan er en Homelab-fane; gamle lenker til FinansHub-siden sendes dit.
   if (p === 'mat') { location.replace('/#/matplan'); return; }
@@ -816,6 +827,7 @@ export function route() {
   const next = PAGE_FN[p] && allowed(p) ? p : S.boot?.restricted ? 'dir' : 'ov';
   const entered = next !== u.page;
   if (entered) { u.page = next; u.msg = {}; window.scrollTo(0, 0); }
+  if (next !== 'inn') { try { sessionStorage.removeItem('fh_jump'); } catch {} } // hoppet gjelder bare rett etter byttet
   draw();
   if (entered && next === 'ai') document.querySelector('[data-ai-page-input]')?.focus();
   load();

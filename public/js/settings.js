@@ -14,6 +14,7 @@ import { domainsPane, loadDomains, domainsClick, domainsChange, domainsSubmit, d
 import { loadNotify, notifyView, notifyClick, notifyChange, notifyInput } from './settings-notify.js';
 import { loadApp, appView, appClick, appInput, appKey } from './settings-app.js';
 import { themeCards, setHlTheme, hlTheme, THEMES, uploadCustomPhoto } from './hltheme.js';
+import { mountHa } from './tasks-ha.js';
 
 const modal = () => document.getElementById('settings');
 
@@ -432,10 +433,12 @@ function intView() {
     : `<label class="sg-field"><span>${esc(f.label)}</span><input name="${f.key}" type="${f.type}" value="${esc(f.value)}" placeholder="${f.secret ? (f.set ? '•••••••• lagret' : 'ikke satt') : esc(f.placeholder ?? '')}" autocomplete="off" spellcheck="false"${ro ? ' readonly' : ''}>${f.secret && f.set && !ro ? `<button type="button" class="sg-link red" data-clear-secret="${f.key}">Fjern</button>` : ''}</label>`).join('');
   const res = t && t.st !== 'run' ? `<div class="sg-res"><i style="background:${t.st === 'ok' ? '#34c759' : '#f26b5e'}"></i><div><b>${t.st === 'ok' ? 'Tilkoblet' : 'Tilkoblingen feilet'}</b><span>${esc(t.msg)}</span></div><span class="mono">${when(t.at)}${t.ms ? ` · ${t.ms} ms` : ''}</span></div>` : '';
   const head = `<div class="int-head">${logoImg(m.domain, m.name, 'sg-lg big')}<div><b>${esc(m.name)}</b><span>${esc(m.s)}</span></div></div>`;
-  return { title: m.name, sub: `Integrasjoner · ${m.s}`, html: `${head}<form class="sg" data-group="${esc(g.name)}"><h3 class="sg-t">Oppsett</h3><div class="sg-box">${fields}</div>
+  // Prompt 22: Huskeliste ↔ HA To-do under Home Assistant (bare admin, samme innstillinger som på Huskeliste-siden).
+  const haTodo = g.name === 'Home Assistant' && !ro ? '<section class="sg"><h3 class="sg-h">Huskeliste</h3><div data-mount-host></div></section>' : '';
+  return { mount: haTodo ? mountHaTodo : undefined, title: m.name, sub: `Integrasjoner · ${m.s}`, html: `${head}<form class="sg" data-group="${esc(g.name)}"><h3 class="sg-t">Oppsett</h3><div class="sg-box">${fields}</div>
       ${NOTES[g.name] ? note(NOTES[g.name]) : typeof g.help === 'string' && g.help.trim() && !/```|\n\n/.test(g.help) ? note(esc(g.help)) : ''}</form>
       ${ro ? note('Bare administratorer kan endre og teste integrasjonene.') : `<div class="sg-acts"><button class="sg-btn pri" data-test="${esc(g.name)}"${t?.st === 'run' ? ' disabled' : ''}>${t?.st === 'run' ? 'Tester …' : 'Test tilkobling'}</button>
-        <span class="${msg ? (msg.ok ? 'green' : 'red') : 'muted'}" style="font-size:13px">${esc(msg?.text ?? 'Endringer lagres automatisk')}</span></div>`}${res}${guideHtml(g)}` };
+        <span class="${msg ? (msg.ok ? 'green' : 'red') : 'muted'}" style="font-size:13px">${esc(msg?.text ?? 'Endringer lagres automatisk')}</span></div>`}${res}${haTodo}${guideHtml(g)}` };
 }
 
 /** Veiledning: serverens help (liste med [tittel, tekst, kode] eller tekst med ```kode```), ellers den innebygde. */
@@ -451,6 +454,13 @@ function guideHtml(g) {
     const [t, d, code] = Array.isArray(st) ? st : [st.title ?? st.t, st.text ?? st.d, st.code];
     return `<div class="guide-step"><span class="guide-no">${i + 1}</span><div><b>${esc(t)}</b>${d ? `<p>${esc(d)}</p>` : ''}${code ? `<pre class="guide-code">${esc(code)}</pre>` : ''}</div></div>`;
   }).join('')}</div></section>`;
+}
+
+// Huskeliste-synken med HA beholdes som samme element mellom omtegninger (som Proton-panelet).
+let haHost = null;
+function mountHaTodo(slot) {
+  if (!haHost) { haHost = document.createElement('div'); haHost.className = 'tk tk-set'; mountHa(haHost); }
+  slot.replaceWith(haHost);
 }
 
 // Proton-panelet tegnes av FinansHub-modulen og beholdes mellom omtegninger av innstillingene.
@@ -558,7 +568,7 @@ function render() {
       ${content}</div></div></div></div>`;
   modal().querySelector('.set-body').scrollTop = keep;
   if (keepQ) { const nq = modal().querySelector('[data-setq]'); if (nq) { nq.replaceWith(keepQ); keepQ.focus({ preventScroll: true }); } }
-  if (v.mount) { const slot = modal().querySelector('[data-mail-host]'); if (slot) v.mount(slot); }
+  if (v.mount) { const slot = modal().querySelector('[data-mail-host],[data-mount-host]'); if (slot) v.mount(slot); }
   if (fk && !keepQ) {
     const el = [...modal().querySelectorAll(`[name="${CSS.escape(fk[1])}"]`)].find((e) => (e.closest('form')?.dataset.group ?? '') === fk[0]);
     if (el) { el.focus(); try { el.setSelectionRange(fk[2], fk[2]); } catch { /* range/select */ } }
