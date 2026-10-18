@@ -212,3 +212,59 @@ test('Boliger: /api/homes/:id/expenses legger utgift i boligen', async () => {
   const full = (await call(`/finans/api/folders/${f.id}`)).body;
   assert.ok(JSON.stringify(full.entries ?? full).includes('Maling'));
 });
+
+test('Boliger: budsjett, farge, autoCat og varsler på boligen, og status på utgiftsposter', async () => {
+  const list = (await call('/finans/api/folders')).body;
+  const f = (Array.isArray(list) ? list : list.items)[0];
+  assert.deepEqual([f.budget, f.autoCat, f.notify], [null, true, true]);
+  const p = await call(`/finans/api/folders/${f.id}`, 'PATCH', { budget: 25000, color: '#2f7a4f', autoCat: false, notify: false });
+  assert.equal(p.status, 200, JSON.stringify(p.body).slice(0, 200));
+  assert.deepEqual([p.body.budget, p.body.color, p.body.autoCat, p.body.notify], [25000, '#2f7a4f', false, false]);
+  assert.equal(p.body.kpi.budget, 25000);
+  assert.equal((await call(`/finans/api/folders/${f.id}`, 'PATCH', { color: 'rød' })).status, 400);
+  assert.equal((await call(`/finans/api/folders/${f.id}`, 'PATCH', { budget: 'mye' })).status, 400);
+  assert.equal((await call(`/finans/api/folders/${f.id}`, 'PATCH', { budget: null })).body.budget, null);
+  // Manuell post = ok
+  const man = await call(`/finans/api/folders/${f.id}/entries`, 'POST', { description: 'Lyspærer', amount: 129, date: '2026-10-18' });
+  assert.equal(man.status, 200, JSON.stringify(man.body).slice(0, 200));
+  assert.equal(man.body.entries.find((e) => e.description === 'Lyspærer').status, 'ok');
+  // Kvittering skannet rett inn i boligen = review
+  const jpeg = Buffer.from('ffd8ffe000104a46494600010100000100010000ffdb004300080606070605080707070909080a0c140d0c0b0b0c1912130f141d1a1f1e1d1a1c1c20242e2720222c231c1c2837292c30313434341f27393d38323c2e333432ffc0000b080001000101011100ffc4001f0000010501010101010100000000000000000102030405060708090a0bffda0008010100003f00d2cf20ffd9', 'hex');
+  const fd = new FormData(); fd.append('file', new File([jpeg], 'kvittering.jpg', { type: 'image/jpeg' }));
+  const up = await app.request(`/api/homes/${f.id}/expenses`, { method: 'POST', headers: { authorization: H.authorization }, body: fd });
+  assert.ok(up.status < 300, await up.text());
+  const full = (await call(`/finans/api/folders/${f.id}`)).body;
+  const scanned = full.entries.find((e) => e.receiptId && e.status === 'review');
+  assert.ok(scanned, JSON.stringify(full.entries.map((e) => [e.description, e.status, e.receiptId])));
+  assert.ok(full.kpi.review >= 1);
+  const ok = await call(`/finans/api/folders/${f.id}/entries/${scanned.id}`, 'PATCH', { status: 'ok' });
+  assert.equal(ok.body.entries.find((e) => e.id === scanned.id).status, 'ok');
+  assert.equal(ok.body.kpi.review, full.kpi.review - 1);
+  assert.equal((await call(`/finans/api/folders/${f.id}/entries/${scanned.id}`, 'PATCH', { status: 'tull' })).status, 400);
+});
+
+test('Familie: enhetsnavn på posisjonen og «Spill av lyd» bare til den personen', async () => {
+  const { createUser } = await import('../server/auth.js');
+  const kari = createUser({ username: 'kari17', password: 'kariPassord123', role: 'bruker', name: 'Kari' });
+  const kl = await fin.request('/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'kari17', password: 'kariPassord123', device: 'test' }) });
+  const kariToken = (await kl.json()).token;
+  assert.ok(kariToken);
+  const loc = await call('/api/family/location', 'POST', { lat: 59.91, lon: 10.75, acc: 12, device: 'iPhone 15 <b>', ts: Date.now() });
+  assert.equal(loc.status, 200, JSON.stringify(loc.body));
+  const fam = await app.request('/api/family', { headers: { authorization: `Bearer ${kariToken}` } }).then((r) => r.json());
+  const me = fam.members.find((m) => m.username === 'sebastian' || (!m.self && m.last?.device));
+  assert.equal(me.last.device, 'iPhone 15 b');
+  const w = openWs(`?token=${kariToken}`), mine = openWs();
+  await Promise.all([w.ready, mine.ready]);
+  const id = kari.id ?? kari.userId ?? kari;
+  const r = await call(`/api/family/ping/${encodeURIComponent(id)}`, 'POST', {});
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.ok, true);
+  const got = await waitFor(() => w.msgs.find((m) => m.type === 'family' && m.kind === 'ping'));
+  assert.ok(got);
+  assert.equal(got.to, id);
+  await new Promise((res) => setTimeout(res, 100));
+  assert.ok(!mine.msgs.some((m) => m.kind === 'ping'), 'avsenderen får ikke pingen');
+  assert.equal((await call('/api/family/ping/finnes-ikke', 'POST', {})).status, 404);
+  w.ws.close(); mine.ws.close();
+});

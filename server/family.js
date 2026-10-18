@@ -38,6 +38,9 @@ CREATE TABLE IF NOT EXISTS family_health (
 );
 `);
 
+// Prompt 17: enhetsnavn («iPhone 15») per posisjon.
+if (!db.prepare('PRAGMA table_info(family_pos)').all().some((c) => c.name === 'device')) db.exec('ALTER TABLE family_pos ADD COLUMN device TEXT');
+
 const q = (sql) => db.prepare(sql);
 const HEALTH_KEYS = ['steps', 'restingHr', 'hr', 'sleep', 'activeKcal', 'week'];
 const ACTIVITIES = ['still', 'walking', 'running', 'cycling', 'driving'];
@@ -86,6 +89,7 @@ function cleanPoint(p, now = Date.now()) {
     battery: battery(p.battery),
     charging: typeof p.charging === 'boolean' ? (p.charging ? 1 : 0) : null,
     activity: ACTIVITIES.includes(p.activity) ? p.activity : null,
+    device: typeof p.device === 'string' && p.device.trim() ? p.device.trim().replace(/[\u0000-\u001f<>]/g, '').slice(0, 60) : null,
   };
 }
 
@@ -141,7 +145,7 @@ const lastPos = (user) => q('SELECT * FROM family_pos WHERE user=? ORDER BY ts D
 function posOut(r, exact) {
   if (!r) return null;
   const inZone = zones().find((z) => dist(r, z) <= z.radius);
-  const base = { ts: r.ts, battery: r.battery, charging: r.charging == null ? null : !!r.charging, activity: r.activity, place: inZone?.name ?? null };
+  const base = { ts: r.ts, battery: r.battery, charging: r.charging == null ? null : !!r.charging, activity: r.activity, place: inZone?.name ?? null, device: r.device ?? null };
   if (exact) return { ...base, lat: r.lat, lon: r.lon, acc: r.acc, speed: r.speed, heading: r.heading, alt: r.alt };
   return { ...base, lat: rough(r.lat), lon: rough(r.lon), acc: Math.max(r.acc ?? 0, 1000), speed: null, heading: null, alt: null, approx: true };
 }
@@ -249,17 +253,26 @@ api.post('/location', async (c) => {
   if (!pts.length) return bad(c, 'Ugyldig posisjon (lat/lon mangler eller er utenfor gyldig område)');
   // Pause eller av: ingenting lagres, og ingen hendelser lages.
   if (pr.sharing !== 'on') return c.json({ ok: true, stored: 0, sharing: pr.sharing, events: [] });
-  const ins = q('INSERT INTO family_pos(user, ts, lat, lon, acc, speed, heading, alt, battery, charging, activity) VALUES(?,?,?,?,?,?,?,?,?,?,?)');
+  const ins = q('INSERT INTO family_pos(user, ts, lat, lon, acc, speed, heading, alt, battery, charging, activity, device) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)');
   const events = [];
   db.transaction(() => {
     for (const p of pts) {
-      ins.run(me, p.ts, p.lat, p.lon, p.acc, p.speed, p.heading, p.alt, p.battery, p.charging, p.activity);
+      ins.run(me, p.ts, p.lat, p.lon, p.acc, p.speed, p.heading, p.alt, p.battery, p.charging, p.activity, p.device);
       events.push(...zoneEvents(me, p));
     }
   })();
   prune();
   notifyLive(me, events);
   return c.json({ ok: true, stored: pts.length, sharing: pr.sharing, events });
+});
+
+// «Spill av lyd»: ber den andres telefon om å spille en lyd (sanntid på /api/ws, bare til den personen).
+api.post('/ping/:userId', (c) => {
+  const me = c.get('user'), to = c.req.param('userId');
+  if (!isMember(to)) return bad(c, 'Ukjent person', 404);
+  if (to === me) return bad(c, 'Du kan ikke pinge deg selv');
+  const reached = broadcast('family', { kind: 'ping', from: me, fromName: userInfo(me)?.displayName ?? me, to }, [to]);
+  return c.json({ ok: true, delivered: reached > 0 });
 });
 
 api.get('/', (c) => {

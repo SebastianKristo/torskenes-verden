@@ -189,6 +189,13 @@ addCol('fh_folders', 'split', "TEXT NOT NULL DEFAULT 'equal'");  // 'equal' elle
 addCol('fh_folder_members', 'user_id', 'TEXT');                   // null = navngitt person uten innlogging
 addCol('fh_folder_entries', 'category', 'TEXT');
 addCol('fh_folder_entries', 'project_id', 'INTEGER');
+// Prompt 17: Boliger – budsjett (øre), farge, automatisk kategorisering og varsler per bolig, og status på utgiftsposter
+// ('review' = fra kvitteringsskanning, ikke gått gjennom; 'ok' = godkjent eller lagt inn for hånd).
+addCol('fh_folders', 'budget', 'INTEGER');
+addCol('fh_folders', 'color', 'TEXT');
+addCol('fh_folders', 'auto_cat', 'INTEGER NOT NULL DEFAULT 1');
+addCol('fh_folders', 'notify', 'INTEGER NOT NULL DEFAULT 1');
+addCol('fh_folder_entries', 'status', "TEXT NOT NULL DEFAULT 'ok'");
 // Prompt 06: bankraden slik den kom fra banken (JSON, uendret før navnevasking).
 addCol('fh_transactions', 'raw_bank_row', 'TEXT');
 // Prompt 11: Subscription OS – kategori, trekkdag og forrige pris (for «Pris økt»).

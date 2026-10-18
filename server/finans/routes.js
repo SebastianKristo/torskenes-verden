@@ -285,10 +285,11 @@ function routeTarget(id) {
     const text = `${r.merchant ?? ''} ${r.name ?? ''} ${lines.map((l) => l.description).join(' ')}`;
     let entry = q('SELECT id FROM fh_folder_entries WHERE receipt_id=?').get(r.id);
     if (!entry) {
-      entry = q('INSERT INTO fh_folder_entries(folder_id,receipt_id,tx_id,description,date,amount,paid_by,category,created) VALUES(?,?,?,?,?,?,?,?,?) RETURNING id')
+      entry = q("INSERT INTO fh_folder_entries(folder_id,receipt_id,tx_id,description,date,amount,paid_by,category,status,created) VALUES(?,?,?,?,?,?,?,?,'review',?) RETURNING id")
         .get(+f[1], r.id, r.transaction_id, r.merchant || r.name || 'Kvittering', r.date || today(), r.total ?? 0, payer, null, Date.now());
     } else q('UPDATE fh_folder_entries SET description=?, date=?, amount=? WHERE receipt_id=?').run(r.merchant || 'Kvittering', r.date || today(), r.total ?? 0, r.id);
-    assignCategory(entry.id, text, null);
+    // Automatisk kategorisering kan slås av per bolig (auto_cat).
+    if (q('SELECT auto_cat FROM fh_folders WHERE id=?').get(+f[1])?.auto_cat !== 0) assignCategory(entry.id, text, null);
     if (uid !== OWNER && userInfo(uid)?.role !== 'admin') q("UPDATE fh_receipts SET status='filed' WHERE id=? AND status='needs_review'").run(r.id);
   }
 }
@@ -732,7 +733,7 @@ async function saveReceipt(f, scanFile, thumbFile, acc, target) {
   const fm = String(target ?? '').match(/^folder:(\d+)(?::(.+))?$/);
   if (fm) {
     const payer = q('SELECT name FROM fh_folder_members WHERE folder_id=? AND user_id=?').get(+fm[1], fm[2] ?? OWNER)?.name ?? settings().name;
-    q('INSERT INTO fh_folder_entries(folder_id,receipt_id,description,date,amount,paid_by,category,created) VALUES(?,?,?,?,0,?,?,?)').run(+fm[1], id, str(f.name, 120) || 'Kvittering', today(), payer, null, Date.now());
+    q("INSERT INTO fh_folder_entries(folder_id,receipt_id,description,date,amount,paid_by,category,status,created) VALUES(?,?,?,?,0,?,?,'review',?)").run(+fm[1], id, str(f.name, 120) || 'Kvittering', today(), payer, null, Date.now());
   }
   return id;
 }
@@ -1442,7 +1443,9 @@ function folderOut(f, uid, full = false) {
   const yearTotal = yearRows.reduce((a, e) => a + e.amount, 0);
   const out = { id: f.id, name: f.name, type: f.type, address: f.address, myRole: me ? ROLES[me.role] : null, role: me?.role ?? null,
     members: mem.map((m) => ({ id: m.id, userId: m.user_id, name: m.name, email: m.email, role: m.role, roleName: ROLES[m.role] ?? 'Kan redigere', you: m.user_id === uid, login: !!m.user_id })),
-    total: entries.reduce((a, e) => a + e.amount, 0) / 100, yearTotal: yearTotal / 100, count: entries.length };
+    total: entries.reduce((a, e) => a + e.amount, 0) / 100, yearTotal: yearTotal / 100, count: entries.length,
+    budget: f.budget == null ? null : f.budget / 100, color: f.color ?? null, autoCat: f.auto_cat !== 0, notify: f.notify !== 0,
+    review: entries.filter((e) => e.status === 'review').length };
   if (!full) return out;
   out.canEdit = !!me && me.role !== 'viewer';
   out.isOwner = me?.role === 'owner';
@@ -1493,13 +1496,14 @@ function folderOut(f, uid, full = false) {
   const months = nowM + 1;
   out.kpi = { yearTotal: yearTotal / 100, count: yearRows.length, perMonth: Math.round(yearTotal / months) / 100, months,
     stromYear: Object.values(out.months).reduce((a, m) => a + (m.byCat['Strøm'] ?? 0), 0), stromNow: strom(nowM), stromPrev: strom(nowM - 1),
-    projectsLeft: projects.reduce((a, p) => a + Math.max(0, p.remaining), 0), projectNames: projects.map((p) => p.name), catCount: out.categories.length };
+    projectsLeft: projects.reduce((a, p) => a + Math.max(0, p.remaining), 0), projectNames: projects.map((p) => p.name), catCount: out.categories.length,
+    review: out.review, budget: out.budget, budgetLeft: out.budget == null ? null : Math.round(out.budget * 100 - yearTotal) / 100 };
   out.entries = entries.map((e) => {
     const t = e.tx_id ? q('SELECT ai_short, domain FROM fh_transactions WHERE id=?').get(e.tx_id) : null;
     const r = e.receipt_id ? origSelect.get(e.receipt_id) : null;
     const pending = r && (r.status === 'pending' || r.status === 'processing');
     return { id: e.id, description: e.description, date: e.date, amount: e.amount / 100, paidBy: e.paid_by, ...entryCat(e), project: e.project, projectId: e.project_id,
-      txId: e.tx_id, receiptId: e.receipt_id, pending: !!pending, domain: t?.domain || r?.domain || domainFor(e.description),
+      txId: e.tx_id, receiptId: e.receipt_id, pending: !!pending, status: e.status === 'review' ? 'review' : 'ok', domain: t?.domain || r?.domain || domainFor(e.description),
       aiShort: pending ? 'Gemini leser kvitteringen …' : t?.ai_short || r?.ai_short || heuristic({ merchant: e.description, amount: -e.amount / 100 }).short };
   });
   // Hovedkategorier (prosjekter og faste regninger) og hele treet med ID-er (utgifter).
@@ -1546,6 +1550,17 @@ api.patch('/folders/:id', async (c) => {
   if (str(b.name)) q('UPDATE fh_folders SET name=? WHERE id=?').run(str(b.name, 60), f.id);
   if (FOLDER_TYPES.includes(b.type)) q('UPDATE fh_folders SET type=? WHERE id=?').run(b.type, f.id);
   if (b.address !== undefined) q('UPDATE fh_folders SET address=? WHERE id=?').run(str(b.address, 120), f.id);
+  // Prompt 17: budsjett i kr (null fjerner), farge #rrggbb (null fjerner), automatisk kategorisering og varsler.
+  if (b.budget !== undefined) {
+    if (b.budget === null || b.budget === '') q('UPDATE fh_folders SET budget=NULL WHERE id=?').run(f.id);
+    else { const v = ore(b.budget); if (v === null || v < 0) return bad(c, 'Budsjettet må være et beløp i kr'); q('UPDATE fh_folders SET budget=? WHERE id=?').run(v, f.id); }
+  }
+  if (b.color !== undefined) {
+    if (b.color !== null && !/^#[0-9a-f]{6}$/i.test(String(b.color))) return bad(c, 'Farge må være #rrggbb');
+    q('UPDATE fh_folders SET color=? WHERE id=?').run(b.color, f.id);
+  }
+  if (b.autoCat !== undefined) q('UPDATE fh_folders SET auto_cat=? WHERE id=?').run(b.autoCat ? 1 : 0, f.id);
+  if (b.notify !== undefined) q('UPDATE fh_folders SET notify=? WHERE id=?').run(b.notify ? 1 : 0, f.id);
   if (b.split === 'equal') q("UPDATE fh_folders SET split='equal' WHERE id=?").run(f.id);
   else if (b.split && typeof b.split === 'object') q('UPDATE fh_folders SET split=? WHERE id=?').run(JSON.stringify(Object.fromEntries(Object.entries(b.split).slice(0, 30).map(([k, v]) => [str(k, 40), Math.max(0, Math.min(1000, +v || 0))]))), f.id);
   return fullOut(c, f);
@@ -1633,6 +1648,10 @@ api.patch('/folders/:id/entries/:eid', async (c) => {
   }
   if (b.projectId !== undefined) q('UPDATE fh_folder_entries SET project_id=? WHERE id=?').run(q('SELECT id FROM fh_folder_projects WHERE id=? AND folder_id=?').get(+b.projectId, f.id)?.id ?? null, e.id);
   if (b.paidBy && q('SELECT 1 FROM fh_folder_members WHERE folder_id=? AND name=?').get(f.id, b.paidBy)) q('UPDATE fh_folder_entries SET paid_by=? WHERE id=?').run(b.paidBy, e.id);
+  if (b.status !== undefined) {
+    if (!['review', 'ok'].includes(b.status)) return bad(c, "status må være 'review' eller 'ok'");
+    q('UPDATE fh_folder_entries SET status=? WHERE id=?').run(b.status, e.id);
+  }
   return fullOut(c, f);
 });
 api.post('/folders/:id/receipts', need('receipts:write'), upload, (c) => {
