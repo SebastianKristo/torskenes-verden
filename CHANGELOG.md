@@ -2,6 +2,26 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.11.0] – 18.10.2026 · prompt 18–19
+- **Dynamiske bakgrunner (prompt 19), på web og i appene.** Velg i Innstillinger → Utseende → Bakgrunn:
+  - **Vær:** bakgrunnen følger været der du er, med Oslo som reserve. Værdata kommer fra MET, med egen variant for dag og natt og diskret regn og snø.
+  - **Planeter:** NASA-bilder av Jorda, Månen, Jupiter og Mars. Velg én, eller bytt automatisk daglig eller hver time.
+  - **Oslo:** luftfoto fra Unsplash eller Pexels med kreditering av fotografen, eller egne bilder som admin laster opp. Getty krever kjøpt lisens og brukes ikke.
+  - **Eget bilde** eller **Ingen**.
+  - Forhåndsvisning av hver type, uskarphet 0–20 px, mørklegging 0–60 % og bryter for animasjon. I appene finnes også «Kun på Wi-Fi».
+  - Teksten blir mørk eller lys etter bildet. I Papir dempes bildet og får papirtekstur.
+  - Bildene caches og skaleres til skjermen som WebP. Valgene synkes mellom web og app.
+  - Partiklene slås av ved «Reduser bevegelse», Low Power Mode eller batterisparing.
+  - Nøkler for Unsplash og Pexels legges inn under Integrasjoner → Bakgrunner. Nytt API: `GET /api/background`, `/api/background/previews` og `/api/background/oslo`.
+- **Prompt 18:**
+  - Riktige farger i lyst tema på Backup og Kontoer.
+  - Logoer for butikker, fraktselskaper og abonnementer.
+  - Papir-design på Kvitteringer, Legg til abonnement og Innstillinger.
+  - Ikoner ved hvert punkt i Finans-innstillingene.
+- **Opplastingskø for kvitteringer:** kvitteringer som ikke kommer fram fordi du mangler nett, legges i «Venter på opplasting» og sendes automatisk når nettet er tilbake.
+- **Brukernavn kan endres** i Innstillinger → Konto. Admin kan for eksempel bytte fra «benjamin» til «sebastian». Passord, data og app-tokener beholdes.
+- **iOS:** logo-visningen er delt opp, så den bygger på Xcode 16.
+
 ## [4.10.3] – 18.10.2026
 - **Ollama-modeller i Innstillinger → AI og tolkning.** Modellene hentes fra Ollama (`/api/tags`), og du kan velge egne modeller til tre oppgaver:
   - kvitteringer, som krever en modell som leser bilder
