@@ -250,7 +250,9 @@ textarea.inp{height:auto;padding:10px 12px;resize:vertical}
 
 /* Innstillinger */
 .set-nav{flex:0 0 220px;max-width:100%;padding:10px;gap:2px}
-.set-nav button{display:flex;flex-direction:column;align-items:flex-start;padding:10px 12px;border-radius:11px;border:0;text-align:left;background:transparent}
+.set-nav button{display:flex;flex-direction:row;align-items:flex-start;gap:11px;padding:10px 12px;border-radius:11px;border:0;text-align:left;background:transparent}
+.set-nav .set-tx{display:flex;flex-direction:column;min-width:0}
+.set-nav .set-ic{flex:none;width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:var(--ic);background:color-mix(in srgb,var(--ic) 15%,transparent);margin-top:1px}
 .set-nav button[aria-current=true]{background:var(--sep)}
 .set-nav span{font-weight:500}.set-nav small{font-size:12px;color:var(--muted)}
 .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
@@ -936,3 +938,7 @@ html[data-theme=lys] .bol2-modal{background:rgba(28,27,25,.35)}
 .bol2 .bol-dropover{display:none}
 .bol2.drag .bol-dropover{display:flex}
 .bol2 .card-h h3{font:var(--dw) 21px var(--font-d)}
+
+/* Kontoer: brukskontoens kort følger temaets bankkort (card2) i de nye temaene, med lesbar tekst. */
+:root{--accf-check:linear-gradient(135deg,#2A2A31,#17171B);--accf-check-ink:#F2F2F4}
+html[data-v3]{--accf-check:var(--card2);--accf-check-ink:var(--card2-ink)}

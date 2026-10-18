@@ -434,7 +434,9 @@ function recurring() {
 
 /* ===================== Kontoer ===================== */
 
-const FACES = { checking: ['linear-gradient(135deg,#2A2A31,#17171B)', 'var(--text)'], credit: ['linear-gradient(135deg,#FF8A4C,#C24E17)', 'var(--acc-ink)'], savings: ['linear-gradient(135deg,#1F3A2F,#13201B)', 'var(--text)'], cash: ['var(--inner)', 'var(--text)'] };
+// Kortflatene har egne farger; teksten må ha fast kontrast mot flaten, ikke følge temaets tekstfarge (som er mørk i lyst tema).
+// Brukskontoen bruker temaets bankkort-tokens (card2) i de nye temaene, se .acc-face-check i finans.css.
+const FACES = { checking: ['var(--accf-check)', 'var(--accf-check-ink)'], credit: ['linear-gradient(135deg,#FF8A4C,#C24E17)', '#FFF8F2'], savings: ['linear-gradient(135deg,#1F3A2F,#13201B)', '#EAF3EE'], cash: ['var(--inner)', 'var(--text)'] };
 function accounts() {
   const a = accs(), goals = S.boot.goals;
   const cardsHtml = a.map((x) => { const [face, ink] = FACES[x.type] ?? FACES.cash; return `<div style="display:flex;flex-direction:column;gap:12px">
@@ -577,6 +579,10 @@ async function gkeyAction(t) {
   render();
 }
 
+// Ikon og farge per punkt i innstillingslista (fargene er temaets tokens, så de virker i alle temaene).
+const SET_ICONS = { gen: ['gear', 'var(--muted)'], look: ['look', 'var(--purple)'], meny: ['list', 'var(--blue)'], bol: ['dir', 'var(--gold)'],
+  imp: ['imp', 'var(--blue)'], ai: ['ai', 'var(--acc-l)'], aks: ['aks', 'var(--pos)'], cat: ['cat', 'var(--purple)'], rule: ['rule', 'var(--gold)'],
+  varsel: ['bell', 'var(--neg)'], mobil: ['key', 'var(--blue)'], data: ['backup', 'var(--pos)'] };
 const SET_TABS = [['gen', 'Generelt', 'Navn, valuta, måned'], ['look', 'Utseende', 'Tema og sidemeny'], ['meny', 'Sidemeny', 'Rekkefølge og synlighet'], ['bol', 'Boliger', 'Ny bolig, deling, oppsett og kategorier'], ['imp', 'Import', 'Bank, Excel, Finn-e-post og annonser'], ['ai', 'AI og tolkning', 'Motorer, hvem gjør hva, OCR og logg'], ['aks', 'Aksjer · Trading 212', 'Nøkkel, miljø og synk'], ['cat', 'Kategorier', 'Farger og typer'], ['rule', 'Regler', 'Auto-kategorisering'],
   ['varsel', 'Varsler', 'Budsjett og kvitteringer'], ['mobil', 'Mobil og tilgang', 'App-tokens og snarveier'], ['data', 'Backup og data', 'Nedlasting, SMB-share og gjenoppretting']];
 
@@ -678,7 +684,7 @@ function settingsPage() {
   else if (t === 'bol') body = bolSettings();
   else if (t === 'aks') body = aksSettings();
   return `<div class="row-flex">
-    <nav class="card set-nav">${tabs.map(([k2, n, s2]) => `<button data-settab="${k2}" aria-current="${t === k2}"><span>${n}</span><small>${s2}</small></button>`).join('')}</nav>
+    <nav class="card set-nav">${tabs.map(([k2, n, s2]) => { const [ic, col] = SET_ICONS[k2] ?? ['gear', 'var(--muted)']; return `<button data-settab="${k2}" aria-current="${t === k2}"><span class="set-ic" style="--ic:${col}">${icon(ic, 16)}</span><span class="set-tx"><span>${n}</span><small>${s2}</small></span></button>`; }).join('')}</nav>
     ${card(`<div><h2 style="font-size:18px">${cur[1]}</h2><div class="note" style="font-size:13px">${cur[2]}</div></div>${body}${u.msg.set ? `<div class="ok-msg">${esc(u.msg.set)}</div>` : ''}`, '', 'flex:1 1 480px;padding:24px;gap:18px')}
   </div>`;
 }

@@ -26,6 +26,39 @@ const DOMAINS = {
   'g-sport': 'gsport.no', 'intersport': 'intersport.no', 'stormberg': 'stormberg.no', 'h&m': 'hm.com', 'cubus': 'cubus.com', 'dressmann': 'dressmann.com',
   'kaffe': null, 'lønn': null, 'husleie': null, 'overføring': null,
 };
+// Flere vanlige tjenester og butikker (strømming, programvare, aviser, levering, trening, telefon, strøm, forsikring, bank, transport, spill).
+Object.assign(DOMAINS, {
+  tv2: 'tv2.no', 'tv 2': 'tv2.no', nrk: 'nrk.no', 'max ': 'max.com', 'hbo max': 'max.com', 'disney+': 'disneyplus.com', 'prime video': 'primevideo.com', 'amazon prime': 'amazon.com',
+  'apple tv': 'apple.com', 'apple music': 'apple.com', 'apple one': 'apple.com', 'app store': 'apple.com', 'itunes': 'apple.com', skyshowtime: 'skyshowtime.com', 'discovery+': 'discoveryplus.com',
+  discovery: 'discoveryplus.com', strim: 'strim.no', 'allente': 'allente.no', 'riks': 'riks.no', 'paramount': 'paramountplus.com', crunchyroll: 'crunchyroll.com', twitch: 'twitch.tv',
+  tidal: 'tidal.com', deezer: 'deezer.com', 'youtube premium': 'youtube.com', soundcloud: 'soundcloud.com', audible: 'audible.com', storytel: 'storytel.com', bookbeat: 'bookbeat.no', nextory: 'nextory.no',
+  squarespace: 'squarespace.com', wix: 'wix.com', wordpress: 'wordpress.com', shopify: 'shopify.com', webflow: 'webflow.com', godaddy: 'godaddy.com', namecheap: 'namecheap.com', domeneshop: 'domeneshop.no', 'one.com': 'one.com',
+  github: 'github.com', gitlab: 'gitlab.com', vercel: 'vercel.com', netlify: 'netlify.com', heroku: 'heroku.com', 'digitalocean': 'digitalocean.com', hetzner: 'hetzner.com', 'aws ': 'aws.amazon.com', 'amazon web services': 'aws.amazon.com',
+  microsoft: 'microsoft.com', 'office 365': 'microsoft.com', 'microsoft 365': 'microsoft.com', onedrive: 'microsoft.com', xbox: 'xbox.com', adobe: 'adobe.com', figma: 'figma.com', canva: 'canva.com', notion: 'notion.so',
+  dropbox: 'dropbox.com', 'google one': 'google.com', 'google play': 'play.google.com', 'google storage': 'google.com', gemini: 'gemini.google.com', perplexity: 'perplexity.ai', midjourney: 'midjourney.com', mistral: 'mistral.ai', groq: 'groq.com',
+  jetbrains: 'jetbrains.com', '1password': '1password.com', bitwarden: 'bitwarden.com', lastpass: 'lastpass.com', nordvpn: 'nordvpn.com', mullvad: 'mullvad.net', expressvpn: 'expressvpn.com', surfshark: 'surfshark.com',
+  grammarly: 'grammarly.com', todoist: 'todoist.com', slack: 'slack.com', zoom: 'zoom.us', discord: 'discord.com', linkedin: 'linkedin.com', duolingo: 'duolingo.com', 'chess.com': 'chess.com', strava: 'strava.com',
+  plex: 'plex.tv', jellyfin: 'jellyfin.org', 'home assistant': 'home-assistant.io', nabu: 'nabucasa.com', unifi: 'ui.com', ubiquiti: 'ui.com', synology: 'synology.com', backblaze: 'backblaze.com', tailscale: 'tailscale.com',
+  playstation: 'playstation.com', 'psn': 'playstation.com', nintendo: 'nintendo.com', steam: 'steampowered.com', 'epic games': 'epicgames.com', 'ea ': 'ea.com', ubisoft: 'ubisoft.com', blizzard: 'blizzard.com', 'battle.net': 'blizzard.com', 'riot': 'riotgames.com',
+  aftenposten: 'aftenposten.no', 'vg+': 'vg.no', 'vg ': 'vg.no', dagbladet: 'dagbladet.no', e24: 'e24.no', 'dn ': 'dn.no', 'dagens næringsliv': 'dn.no', 'bergens tidende': 'bt.no', 'adresseavisen': 'adressa.no', 'stavanger aftenblad': 'aftenbladet.no',
+  'morgenbladet': 'morgenbladet.no', 'klassekampen': 'klassekampen.no', 'finansavisen': 'finansavisen.no', 'tek.no': 'tek.no', 'schibsted': 'schibsted.com', 'amedia': 'amedia.no', 'nytimes': 'nytimes.com', 'the economist': 'economist.com',
+  uber: 'uber.com', bolt: 'bolt.eu', 'voi ': 'voi.com', tier: 'tier.app', ryde: 'ryde.no', getaround: 'getaround.com', 'hertz': 'hertz.no', 'avis ': 'avis.no', 'sixt': 'sixt.no', 'easypark': 'easypark.no', 'apcoa': 'apcoa.no', 'onepark': 'onepark.no',
+  'bompenger': 'autopass.no', autopass: 'autopass.no', 'fjellinjen': 'fjellinjen.no', skyss: 'skyss.no', atb: 'atb.no', kolumbus: 'kolumbus.no', 'entur': 'entur.no', widerøe: 'wideroe.no', wideroe: 'wideroe.no', 'klm': 'klm.com',
+  'elixia': 'elixia.no', 'evo ': 'evofitness.no', 'fresh fitness': 'freshfitness.no', '3t': '3t.no', 'actic': 'actic.no', 'spenst': 'spenst.no', 'friskis': 'friskissvettis.no',
+  talkmore: 'talkmore.no', chili: 'chilimobil.no', onecall: 'onecall.no', 'mycall': 'mycall.no', altibox: 'altibox.no', 'telia ': 'telia.no', 'get ': 'telia.no', 'nextgentel': 'nextgentel.no', 'starlink': 'starlink.com', 'fiberbredbånd': null,
+  tibber: 'tibber.com', elvia: 'elvia.no', hafslund: 'hafslund.no', fortum: 'fortum.no', lyse: 'lyse.no', 'norgesenergi': 'norgesenergi.no', 'gudbrandsdal energi': 'ge.no', 'kraftriket': 'kraftriket.no', 'motkraft': 'motkraft.no',
+  gjensidige: 'gjensidige.no', 'if skadeforsikring': 'if.no', 'if forsikring': 'if.no', tryg: 'tryg.no', frende: 'frende.no', fremtind: 'fremtind.no', storebrand: 'storebrand.no', 'codan': 'codan.no', 'eika forsikring': 'eika.no', 'landkreditt': 'landkreditt.no',
+  nordea: 'nordea.no', 'sparebank 1': 'sparebank1.no', sparebank1: 'sparebank1.no', handelsbanken: 'handelsbanken.no', sbanken: 'sbanken.no', 'danske bank': 'danskebank.no', 'eika': 'eika.no', klarna: 'klarna.com', paypal: 'paypal.com',
+  'santander': 'santander.no', 'komplett bank': 'komplettbank.no', 'instabank': 'instabank.no', 'resurs': 'resursbank.no', 'collector': 'collector.no', 'nordnet': 'nordnet.no', 'trading 212': 'trading212.com', 'firi': 'firi.com', 'kron': 'kron.no',
+  'lånekassen': 'lanekassen.no', skatteetaten: 'skatteetaten.no', 'nav ': 'nav.no', 'posten': 'posten.no', 'bring': 'bring.no', 'postnord': 'postnord.no', 'dhl': 'dhl.com', 'helthjem': 'helthjem.no', 'budbee': 'budbee.com', 'instabox': 'instabox.io',
+  'oda ': 'oda.com', 'oda.com': 'oda.com', 'morgenlevering': 'morgenlevering.no', 'adams matkasse': 'adamsmatkasse.no', 'godtlevert': 'godtlevert.no', 'just eat': 'just-eat.no', 'mcdonald': 'mcdonalds.no', 'burger king': 'burgerking.no',
+  'max burger': 'max.se', 'starbucks': 'starbucks.no', 'espresso house': 'espressohouse.com', 'deli de luca': 'delideluca.no', '7-eleven': '7-eleven.no', 'narvesen': 'narvesen.no', 'vinmonopolet': 'vinmonopolet.no', 'spar ': 'spar.no',
+  'prisma': 'prisma.no', 'mega ': 'coop.no', 'prix ': 'coop.no', 'rema 1000': 'rema.no', 'elkjop': 'elkjop.no', 'power.no': 'power.no', 'netonnet': 'netonnet.no', 'multicom': 'multicom.no', 'proshop': 'proshop.no', 'dustin': 'dustin.no',
+  'clas ohlson': 'clasohlson.com', 'jula': 'jula.no', 'plantasjen': 'plantasjen.no', 'princess': 'princess.no', 'kitchn': 'kitchn.no', 'tilbords': 'tilbords.no', 'søstrene grene': 'sostrenegrene.com', 'flying tiger': 'flyingtiger.com',
+  'zara': 'zara.com', 'lindex': 'lindex.com', 'kappahl': 'kappahl.com', 'bik bok': 'bikbok.com', 'carlings': 'carlings.com', 'vero moda': 'veromoda.com', 'jack & jones': 'jackjones.com', 'nike': 'nike.com', 'adidas': 'adidas.no',
+  'sport 1': 'sport1.no', 'sport1': 'sport1.no', 'anton sport': 'antonsport.no', 'bergans': 'bergans.com', 'norrøna': 'norrona.com', 'boozt': 'boozt.com', 'nelly': 'nelly.com', 'ellos': 'ellos.no', 'temu': 'temu.com', 'aliexpress': 'aliexpress.com', 'ebay': 'ebay.com', 'etsy': 'etsy.com',
+  'norli': 'norli.no', 'ark bokhandel': 'ark.no', 'adlibris': 'adlibris.com', 'cdon': 'cdon.no', 'apotek': null, 'legekontor': null, 'tannlege': null,
+});
 const learned = () => kv.get(OWNER, 'fh_domains', {});
 const DOMAIN_RE = /^(?=.{3,80}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,24}$/;
 export const validDomain = (d) => typeof d === 'string' && DOMAIN_RE.test(d.toLowerCase()) ? d.toLowerCase() : null;
@@ -37,9 +70,26 @@ export function domainFor(name) {
   if (l.trim().length < 2) return null;
   const L = learned();
   for (const [k, v] of Object.entries(L)) if (l.includes(' ' + k + ' ') || l.trim() === k) return v;
-  let best = null, len = 0;
+  let best, len = 0;
   for (const [k, v] of Object.entries(DOMAINS)) if (k.length > len && l.includes(' ' + k)) { best = v; len = k.length; }
-  return best;
+  if (best !== undefined) return best;
+  // Skrivefeil i ett ord (f.eks. «Claue», «Netflx»): ett tegn feil mot et kjent navn på minst fem bokstaver.
+  for (const w of l.trim().split(' ').filter((x) => x.length >= 5)) {
+    for (const [k, v] of Object.entries(DOMAINS)) if (v && k.length >= 5 && !k.includes(' ') && editsOne(w, k)) return v;
+  }
+  return null;
+}
+// true når a og b er like bortsett fra ett tegn (bytt, lagt til eller fjernet).
+function editsOne(a, b) {
+  if (a === b) return false;
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0, j = 0, diff = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { i++; j++; continue; }
+    if (++diff > 1) return false;
+    if (a.length > b.length) i++; else if (b.length > a.length) j++; else { i++; j++; }
+  }
+  return diff + (a.length - i) + (b.length - j) <= 1;
 }
 export function learnDomain(name, domain) {
   const k = keyOf(name).split(' ').slice(0, 3).join(' ');
