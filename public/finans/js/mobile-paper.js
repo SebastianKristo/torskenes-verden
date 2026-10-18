@@ -14,6 +14,7 @@ import { mainTabs, heroBg, bolTitle } from './mobile-p16.js';
 import { SB } from './mobile-subs.js';
 import { aksTitle } from './mobile-aks.js';
 import { setTitle } from './mobile-set.js';
+import { appName, huskeWidget, posWidget, bolWidget, scanCtx, homeUpload } from './mobile-p17.js';
 
 /* ---------- Valg (per bruker i /api/me/layout, med lokal kopi) ---------- */
 
@@ -93,7 +94,7 @@ const PAGE = {
   mer: ['Mer', 'Alle moduler'], set: ['Innstillinger', 'Konto og utseende'], media: ['Media', 'Plex · Jellyfin'],
   dom: ['Domener', 'Trafikk, besøk og oppetid'], 'dom/pub': ['Publikum', 'Kart, land og enheter'], 'dom/ytl': ['Ytelse', 'Statuskoder, fart og sikkerhet'], 'dom/inf': ['Infrastruktur', 'Oppetid, DNS og domeneinfo'], 'dom/admin': ['Domener', 'Legg til og fjern'],
   aks: ['Aksjer', 'Trading 212'], sub: ['Abonnementer', 'Subscription OS'], dir: ['Boliger', 'Utgifter, prosjekter og kvitteringer'], finn: ['Finn', 'Kjøp og salg'],
-  avg: ['Avganger', 'Ruter · sanntid fra Entur'], fam: ['Familie', 'Kart, soner og deling'],
+  avg: ['Avganger', 'Ruter · sanntid fra Entur'], fam: ['Familie', 'Posisjon, soner og helse'], huske: ['Huskeliste', 'Oppgaver for hele familien'],
   kv: ['Kvitteringer', 'Til gjennomgang'], fast: ['Faste trekk', 'Neste 30 dager'], konto: ['Kontoer', 'Saldo'], rap: ['Rapporter', 'Måned og år'], imp: ['Import', 'Bank, Excel og Finn'],
   skann: ['Kvittering', 'Bekreft'], opp: ['Kø', 'Kvitteringer'], hl: ['', ''],
 };
@@ -107,14 +108,14 @@ const NAMES = { hl: 'Hjem', mer: 'Mer', fmer: 'Mer', hjem: 'Oversikt', liste: 'L
 function parentOf(scr) {
   if (m.detail && ['liste', 'sok', 'hjem'].includes(scr)) return ['txback', NAMES[scr]];
   if (scr === 'finn' && m.sub) return ['finn', 'Finn'];
-  if (scr === 'set' && m.sub) return ['set', 'Innstillinger'];
+  if (scr === 'set' && m.sub) return ['set', 'Alle innstillinger'];
   if (scr === 'mat' && m.sub) return ['mat', 'Mat'];
   // Domener: pila (og sveip tilbake) går alltid hjem, også når Domener ble åpnet fra Mer.
   if (scr === 'dom') return m.sub === 'admin' ? ['dom', 'Domener'] : ['hl', 'Hjem'];
   if (scr === 'skann' && m.rc) return ['back', 'Kvitteringer'];
   if (scr === 'aks' && m.sub) return ['aks', 'Aksjer'];
   if (scr === 'dir' && m.sub) return ['dir', 'Boliger'];
-  if (['avg', 'fam', 'vaer'].includes(scr)) return ['hl', 'Hjem'];
+  if (['avg', 'fam', 'vaer', 'huske'].includes(scr)) return ['hl', 'Hjem'];
   if (finScreens().includes(scr) || scr === 'fmer') return ['hl', 'Hjem'];
   if (FIN_SUB.includes(scr)) return ['fmer', 'Mer'];
   if (['media', 'nyheter'].includes(scr)) return ['mer', 'Mer'];
@@ -132,7 +133,7 @@ export function paperHero(scr) {
   const ttl = home ? `<span class="pp-gl">${esc(greet())},</span><span class="pp-gl">${esc(meName().split(' ')[0])}</span>` : esc(title);
   const [pk, pl] = parentOf(scr);
   const w = hlData()?.weather;
-  const backBtn = home ? '<span class="pp-brand">Homelab</span>'
+  const backBtn = home ? `<span class="pp-brand">${esc(appName())}</span>`
     : ['txback', 'back'].includes(pk) ? `<button class="pp-pill pp-back" data-mact="${pk}">‹ ${esc(pl)}</button>` : `<a class="pp-pill pp-back" href="#/${pk}">‹ ${esc(pl)}</a>`;
   const failNote = home && P.fail[kind] ? '<button class="pp-pill pp-fail" data-pp="retry">Fikk ikke lastet bildet · trykk for å prøve igjen</button>' : '';
   // Bakgrunnsvelgeren ligger under Innstillinger → Bakgrunn. Profilbildet åpner Innstillinger → Profil.
@@ -174,7 +175,7 @@ export function paperNav(scr) {
     tabs = fk.map((k) => FTN[k]).filter(Boolean);
     if (flyt && !tabs.some(([k]) => k === 'sok')) tabs.push(['sok', 'Søk', '⌕']);
     tabs.push(['fmer', 'Mer', '⋯']);
-    cur = tabs.some(([k]) => k === scr) ? scr : 'fmer'; plus = ['Legg til kvittering', 'fin'];
+    cur = tabs.some(([k]) => k === scr) ? scr : 'fmer'; plus = scanCtx() === 'bol' ? ['Legg kvittering i boligen', 'bol'] : ['Legg til kvittering', 'fin'];
   } else if (ctx === 'dom') {
     tabs = [['dom', 'Oversikt', '◎'], ['dom/pub', 'Publikum', '◍'], ['dom/ytl', 'Ytelse', '⚡'], ['dom/inf', 'Infra', '▤']];
     cur = ['pub', 'ytl', 'inf'].includes(m.sub) ? `dom/${m.sub}` : 'dom'; plus = ['Legg til domene', 'dom'];
@@ -191,10 +192,10 @@ export function paperNav(scr) {
   }
   if (ctx === 'dom') plus = ['Legg til domene', 'dom'];
   const fabIc = plus[1] === 'spor' || plus[1] === 'dom' ? 'M12 5v14M5 12h14' : SCAN_IC;
-  const fab = flyt ? `<button class="pp-fab${P.press ? ' down' : ''}" data-ppplus="${plus[1]}" aria-label="${plus[0]}${plus[1] === 'spor' || plus[1] === 'dom' ? '' : ' (trykk for valg, hold inne for å laste opp)'}" title="${esc(plus[0])}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${fabIc}"/></svg></button>` : '';
+  const fab = flyt ? `<button class="pp-fab${P.press ? ' down' : ''}" data-ppplus="${plus[1]}" aria-label="${plus[0]}${plus[1] === 'spor' || plus[1] === 'dom' ? '' : ' (trykk for kamera, hold inne for valg)'}" title="${esc(plus[0])}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${fabIc}"/></svg></button>` : '';
   return `<div class="pp-navbg" aria-hidden="true"></div><nav class="pp-nav${flyt ? ' flyt' : ''}" data-ctx="${ctx}" aria-label="Faner${ctx === 'main' ? ' (hold inne for å redigere)' : ''}">${tabs.map(([k, n, ic]) => `<a href="#/${k}" data-tab="${k}" ${cur === k ? 'aria-current="page"' : ''}><i>${ic}</i><span>${n}</span></a>`).join('')}
-    ${flyt ? '' : `<button class="pp-scan${P.press ? ' down' : ''}" data-ppplus="${plus[1]}" aria-label="${plus[0]} (trykk for valg, hold inne for å laste opp)" title="Trykk for valg · hold inne for å laste opp">+</button>`}</nav>${fab}
-    <input class="m-file" id="pp-quick" type="file" multiple accept="${plus[1] === 'mat' ? 'image/*,application/pdf' : 'application/pdf,image/jpeg,image/png,image/heic,image/heif,.heic,.heif'}" data-ppquick="${plus[1] === 'spor' ? 'main' : plus[1]}">
+    ${flyt ? '' : `<button class="pp-scan${P.press ? ' down' : ''}" data-ppplus="${plus[1]}" aria-label="${plus[0]} (trykk for kamera, hold inne for valg)" title="Trykk for kamera · hold inne for valg">+</button>`}</nav>${fab}
+    <input class="m-file" id="pp-cam" type="file" accept="image/*" capture="environment" data-ppquick="${['spor', 'dom', 'main'].includes(plus[1]) ? 'fin' : plus[1]}">
     ${P.hint ? `<div class="pp-hint" role="status">${esc(P.hint)}</div>` : ''}`;
 }
 
@@ -205,13 +206,18 @@ export function paperScanSheet() {
   const jobs = P.qShow ? (m.jobs ?? []).filter((j) => ACTIVE_JOBS.includes(j.status) || j.status === 'needs_review').slice(0, 5) : [];
   const q = jobs.map((j) => { const run = ACTIVE_JOBS.includes(j.status), pct = run ? Math.max(5, Math.min(99, j.progress ?? 30)) : 100;
     return `<div class="pp-q"><div class="pp-row"><span class="m-ell">${esc(j.merchant || j.name || 'Kvittering')}</span><span class="${run ? 'pp-lab-c' : 'pp-pos'}">${run ? `✦ Leser … ${pct} %` : '✓ Klar til bekreftelse'}</span></div><span class="pp-bar"><i style="width:${pct}%;background:${run ? 'var(--pp-lab)' : 'var(--pp-pos)'}"></i></span></div>`; }).join('');
-  const title = mat ? 'Skann oppskrift' : ctx === 'fin' ? 'Legg til kvittering' : 'Skann';
-  const sub = ctx === 'fin' ? 'Ta bilde, velg filer eller del fra e-post. ✦ Gemini leser i bakgrunnen og kobler mot transaksjonen.' : mat ? 'Bilde eller PDF av en oppskrift. ✦ AI trekker ut ingredienser og steg.' : 'Kvittering, oppskrift eller dokument. ✦ Gemini leser i bakgrunnen.';
+  // Hold inne på skanneknappen: Kvittering, Oppskrift, Bilder og Fil. I en bolig havner kvitteringen i boligen.
+  const bol = scanCtx() === 'bol', qc = bol ? 'bol' : 'fin', bolN = bol ? (bolTitle()?.[0] ?? 'boligen') : '';
+  const title = mat ? 'Skann oppskrift' : bol ? `Legg i ${bolN}` : ctx === 'fin' ? 'Legg til kvittering' : 'Skann';
+  const sub = bol ? `Kvitteringen legges i ${bolN} med status «til gjennomgang». ✦ AI fyller inn beløp og kategori.` : ctx === 'fin' ? 'Ta bilde, velg filer eller del fra e-post. ✦ Gemini leser i bakgrunnen og kobler mot transaksjonen.' : mat ? 'Bilde eller PDF av en oppskrift. ✦ AI trekker ut ingredienser og steg.' : 'Kvittering, oppskrift, bilder eller fil. ✦ Gemini leser i bakgrunnen.';
+  const IMG = 'application/pdf,image/jpeg,image/png,image/heic,image/heif,.heic,.heif';
+  const opt = (n, s2, attr, ink = false) => `<label class="pp-btn p17-opt${ink ? ' ink' : ''}"><span><b>${n}</b><small>${s2}</small></span><input class="m-file" type="file" ${attr}></label>`;
   return `<div class="sheet-bg" data-pp="scanx"></div><div class="pp-sheet" role="dialog" aria-label="${esc(title)}"><span class="pp-grab"></span>
     <div class="pp-sh">${esc(title)}</div><div class="pp-mut">${esc(sub)}</div>${q}
-    ${mat ? '' : '<button class="pp-btn ink" data-mact="cam">Kamera</button>'}
-    ${mat ? '' : '<label class="pp-btn">Bilder eller filer<input class="m-file" type="file" multiple accept="application/pdf,image/jpeg,image/png,image/heic,image/heif,.heic,.heif" data-ppquick="fin"></label>'}
-    ${ctx === 'fin' ? '' : `<label class="pp-btn${mat ? ' ink' : ''}">${mat ? 'Kamera, bilder eller PDF' : 'Oppskrift'}<input class="m-file" type="file" multiple accept="image/*,application/pdf" data-ppscanrec></label>`}
+    ${mat ? opt('Oppskrift', 'Kamera', 'accept="image/*" capture="environment" data-ppscanrec', true) : opt('Kvittering', 'Kamera', `accept="image/*" capture="environment" data-ppquick="${qc}"`, true)}
+    ${mat || bol ? '' : opt('Oppskrift', 'Bilde eller PDF til Mat', 'multiple accept="image/*,application/pdf" data-ppscanrec')}
+    ${opt('Bilder', 'Fra biblioteket', `multiple accept="image/*" ${mat ? 'data-ppscanrec' : `data-ppquick="${qc}"`}`)}
+    ${opt('Fil', 'PDF eller bilde fra Filer', `multiple accept="${mat ? 'image/*,application/pdf' : IMG}" ${mat ? 'data-ppscanrec' : `data-ppquick="${qc}"`}`)}
     <button class="pp-btn ghost" data-pp="scanx">${q ? 'Lukk' : 'Avbryt'}</button></div>`;
 }
 
@@ -224,7 +230,7 @@ export function paperDown(e) {
   plusEl = x; plusLong = false; P.press = true; x.classList.add('down');
   clearTimeout(plusT);
   if (['spor', 'dom'].includes(x.dataset.ppplus)) return true; // Ny sending og Legg til domene har ikke hold inne
-  plusT = setTimeout(() => { plusLong = true; haptic('tap'); navigator.vibrate?.(12); P.hint = 'Slipp for å velge filer'; showHint(); }, 450);
+  plusT = setTimeout(() => { plusLong = true; haptic('tap'); navigator.vibrate?.(12); P.scan = true; P.scanAt = Date.now(); P.qShow = (m.jobs ?? []).some((j) => ACTIVE_JOBS.includes(j.status)); draw(); }, 450);
   return true;
 }
 const showHint = () => { const n = document.querySelector('.pp-hint') ?? Object.assign(document.createElement('div'), { className: 'pp-hint' }); n.textContent = P.hint; n.setAttribute('role', 'status'); if (!n.isConnected) document.querySelector('.m.papir')?.appendChild(n); };
@@ -233,8 +239,8 @@ export function paperUp(e) {
   clearTimeout(plusT); P.press = false; plusEl.classList.remove('down');
   const over = e.type === 'pointerup' && plusEl.contains(document.elementFromPoint(e.clientX, e.clientY));
   plusEl = null;
-  if (plusLong && over) { plusLong = 'used'; document.getElementById('pp-quick')?.click(); setTimeout(() => { P.hint = ''; document.querySelector('.pp-hint')?.remove(); }, 1600); }
-  else { P.hint = ''; document.querySelector('.pp-hint')?.remove(); }
+  if (plusLong) plusLong = 'used'; // holdt inne: arket med valg er allerede åpent
+  void over;
   return true;
 }
 export function paperMove(e) { if (plusEl && !plusLong && (Math.abs(e.movementX) > 6 || Math.abs(e.movementY) > 6)) { clearTimeout(plusT); } return false; }
@@ -269,6 +275,8 @@ export function paperHome() {
     h2: pkg, h3: ruter,
     h4: `<div class="pp-minis">${minis.map(([k, v, sub, c, href, fs]) => `<a class="pp-card pp-mini" href="${href}"><span class="pp-lab mut">${k}</span><b class="pp-serif m-ell" style="font-size:${fs}">${esc(v)}</b><span class="${c === 'lab' ? 'pp-lab-c' : `pp-${c}`}" style="font-size:11px">${esc(sub)}</span></a>`).join('')}</div>`,
     h5: newsCard(H?.news),
+    // Nye kort (prompt 17): Posisjon (familien), Bolig (budsjett, gjennomgang og neste faste utgift) og Huskeliste.
+    h6: posWidget(), h7: bolWidget(), h8: huskeWidget(),
   }, { full: ['h1', 'h4', 'h5'] })}</div>`;
 }
 // Ruters egne linjefarger (fra Entur via serveren), med Ruters standardfarger per transportmiddel som reserve.
@@ -309,7 +317,7 @@ export function paperFin() {
 export function paperMer() {
   // Modulen som ikke står i fanelinja (Domener eller Sporing) ligger øverst i Mer.
   const n = onWay(), mod = fourth() === 'spor' ? ['dom', 'Domener', 'Trafikk, besøk og oppetid'] : ['spor', 'Sporing', n ? `${n} pakke${n === 1 ? '' : 'r'} på vei` : 'Pakker og sendinger'];
-  const rows = [mod, ['avg', 'Avganger', 'Sanntid fra Ruter og Entur'], ['fam', 'Familie og kart', 'Posisjon, soner og deling'], ['vaer', 'Vær', 'Steder og varsel fra yr.no'],
+  const rows = [mod, ['huske', 'Huskeliste', 'Oppgaver for hele familien'], ['avg', 'Avganger', 'Sanntid fra Ruter og Entur'], ['fam', 'Familie og kart', 'Posisjon, soner og helse'], ['vaer', 'Vær', 'Steder og varsel fra yr.no'],
     ['media', 'Media', 'Spilles nå og historikk'], ['hjem', 'Finans', 'Oversikt, liste, Finn og mer'], ['dir', 'Boliger', 'Utgifter, prosjekter og kvitteringer'],
     ['nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag'], ['set', 'Innstillinger', 'Tema, bakgrunn, fanelinje og konto']];
   return `<div class="pp-card pp-list">${rows.map(([k, n, s]) => `<a href="#/${k}"><span class="m-grow"><b class="pp-serif">${n}</b><span class="pp-mut">${s}</span></span><span class="pp-mut">›</span></a>`).join('')}</div>`;
@@ -395,6 +403,7 @@ export async function paperBind(e, t) {
     if (t.matches?.('[data-ppquick]')) {
       const files = [...t.files]; t.value = ''; if (!files.length) return true;
       if (t.dataset.ppquick === 'mat') return recipeUpload(files);
+      if (t.dataset.ppquick === 'bol') { P.scan = false; draw(); await homeUpload(files); return true; }
       P.scan = true; P.qShow = true; draw();
       await upload(files, { stay: true });
       draw(); return true;
@@ -419,9 +428,12 @@ export async function paperBind(e, t) {
   const plus = t.closest?.('[data-ppplus]');
   if (plus) {
     e.preventDefault();
-    if (plusLong) { plusLong = false; return true; } // holdt inne: filvelgeren er allerede åpnet
+    if (plusLong) { plusLong = false; return true; } // holdt inne: arket med valg er allerede åpent
     if (plus.dataset.ppplus === 'dom') { location.hash = '#/dom/admin'; return true; }
     if (plus.dataset.ppplus === 'spor') { openNewShip(); return true; }
+    // Trykk: kameraet med en gang (i Mat som oppskrift, i en bolig rett inn i boligen).
+    const cam = document.getElementById('pp-cam');
+    if (cam) { if (plus.dataset.ppplus === 'mat') { cam.removeAttribute('data-ppquick'); cam.setAttribute('data-ppscanrec', ''); } cam.click(); return true; }
     P.scan = true; P.qShow = (m.jobs ?? []).some((j) => ACTIVE_JOBS.includes(j.status)); draw(); return true;
   }
   const x = t.closest?.('[data-pp]');
@@ -432,7 +444,7 @@ export async function paperBind(e, t) {
   if (k === 'setphoto') { const kk = x.dataset.k, retry = P.fail[kk]; P.open = false; saveDesign({ photo: kk }, false); draw(); await photoLoad(kk, retry); draw(); return true; }
   if (k === 'retry') { await photoLoad(photoKind(), true); draw(); return true; }
   if (k === 'scan') { P.scan = true; draw(); return true; }
-  if (k === 'scanx') { P.scan = false; P.qShow = false; draw(); return true; }
+  if (k === 'scanx') { if (Date.now() - (P.scanAt ?? 0) < 700) return true; P.scan = false; P.qShow = false; draw(); return true; } // fingeren som holdt inne, slippes over bakgrunnen
   if (k === 'newsback') { history.length > 1 ? history.back() : (location.hash = '#/mer'); return true; }
   if (k === 'newsset') { P.set = true; draw(); return true; }
   if (k === 'newssetx') { P.set = false; draw(); return true; }

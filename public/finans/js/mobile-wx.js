@@ -6,6 +6,7 @@
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { hlData } from './mobile-hl.js';
+import { cmpEntry, cmpView } from './mobile-p17.js';
 
 const PLACES = [['oslo', 'Oslo'], ['bergen', 'Bergen'], ['trondheim', 'Trondheim'], ['tromso', 'Tromsø']];
 export const WX = { places: null, add: false, q: '', res: null, sErr: '', busy: false, edit: false, place: (() => { try { return localStorage.getItem('fh_wx_place') || 'oslo'; } catch { return 'oslo'; } })(), d: {}, err: '', mode: 'temp', sh: null, feel: false, from: 'hl' };
@@ -174,8 +175,9 @@ export function wxView() {
       ${days.length ? `<div class="vx-card vx-days">${dayRows}</div>` : ''}
       ${wind}${moon}
       <div class="vx-grid">${sun}${uvT}${feel}${yd}${rain}${vis}${hum}${pres}</div>
+      ${cmpEntry()}
       <a class="vx-yr" href="${esc(D.yrUrl || 'https://www.yr.no/nb')}" target="_blank" rel="noopener">${esc(D.credit || `Data: ${D.fallback || D.source === 'met' ? 'MET Norge' : 'Open-Meteo'}`)} · Se også yr.no ↗</a>
-    </div>${places}${WX.sh != null ? sheet(D) : ''}</div>`;
+    </div>${places}${WX.sh != null ? sheet(D) : ''}${cmpView(WX.place, city)}</div>`;
 }
 function tIco(p, fill = false, size = 15) { return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${p}"/></svg>`; }
 

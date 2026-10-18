@@ -1811,3 +1811,140 @@ a.wx-r{color:inherit;text-decoration:none}
 /* Vær: legg til og fjern steder */
 .vx-places button b{font-size:11px;margin-left:4px;opacity:.75}
 .vx-sheet2{background:#f3efe6!important;color:#1b1a17;z-index:80;--pp-bg:#f3efe6;--pp-surf2:#ebe5d8;--pp-ink:#1b1a17;--pp-card:#fff;--pp-mut:#7a7468;--pp-line:#d8d1c2;--pp-lab:#b23a2a}
+
+/* ================= Prompt 17 · innstillinger i Papir, appnavn/-ikon, varsler, Huskeliste, Hjem-kort, Familie-faner, Yr mot Storm, dra for å oppdatere ================= */
+/* Innhold bak den røde +-knappen: ingen margin nederst, bare 112 px innvendig avstand, og kortene scroller bak linja. */
+.m.papir.flyt .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 112px)!important;margin-bottom:0}
+.m.papir.flyt .pp-navbg{background:linear-gradient(to top,color-mix(in srgb,var(--pp-bg) 70%,transparent),transparent);height:calc(var(--pp-navb) + 40px)}
+/* Logoer for transportører: SVG-ene fra serveren fyller hele merket (ingen hvit kant rundt). */
+.trk-badge img[src*="/assets/carriers/"]{padding:0;object-fit:cover;background:none}
+.p17-pkb{position:relative;flex:none;display:inline-flex;cursor:pointer}
+.p17-pkc{position:absolute;right:-5px;top:-5px;width:20px;height:20px;border-radius:50%;border:2px solid var(--pp-card);background:var(--pp-line);color:#fff;display:grid;place-items:center;font:800 11px Manrope,sans-serif;font-style:normal}
+.pp-pk.on{outline:2px solid var(--pp-ink);outline-offset:-2px}
+.pp-pk.on .p17-pkc{background:var(--pp-ink);color:var(--pp-bg)}
+.pp-pk.pksel{user-select:none;-webkit-user-select:none}
+.p17-selbar{position:sticky;top:8px;z-index:7;display:flex;align-items:center;gap:6px;padding:6px 6px 6px 16px;border-radius:999px;background:var(--pp-ink);color:var(--pp-bg);box-shadow:0 10px 24px -8px rgba(0,0,0,.4);flex-wrap:wrap}
+.p17-selbar b{font:700 13.5px Manrope,sans-serif;white-space:nowrap}
+.p17-selbar button{height:32px;padding:0 12px;border-radius:16px;border:0;background:color-mix(in srgb,var(--pp-bg) 16%,transparent);color:var(--pp-bg);font:700 12.5px Manrope,sans-serif;cursor:pointer;white-space:nowrap}
+.p17-selbar button.bad{background:var(--pp-lab);color:#fff}
+.p17-selbar button.x{width:32px;padding:0;font-size:18px}
+.p17-selbar button:disabled{opacity:.45}
+.p17-golink{flex-direction:row!important;align-items:center;color:var(--pp-ink)}
+.p17-golink .m-grow{display:flex;flex-direction:column;gap:2px}
+/* Innstillinger i Papir */
+.m.papir .p17-prof{flex-direction:row;align-items:center;gap:14px;padding:16px;border-radius:22px;box-shadow:0 10px 30px -14px rgba(0,0,0,.35);margin-top:2px}
+.p17-rt{display:flex;flex-direction:column;gap:2px;min-width:0}
+.p17-rt small{font-size:12.5px;color:var(--pp-mut,inherit);opacity:.95;line-height:1.35}
+.p17-rt b{font-weight:600}
+.m.papir .p17-gl{display:block;padding:10px 4px 2px}
+.m.papir .p17-list{border-radius:20px;background:var(--pp-card);overflow:hidden}
+.m.papir .p17-row{min-height:56px;gap:12px;color:var(--pp-ink);font-family:Manrope,sans-serif;text-align:left;width:100%;border:0;background:transparent}
+.m.papir .p17-list>.p17-row+.p17-row{border-top:1px solid var(--pp-line)}
+.p17-row .sval{max-width:42%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.p17-chev{opacity:.45;font-size:18px;flex:none}
+.p17-ver{display:block;text-align:center;font-size:12px;color:var(--pp-mut);padding:6px 0 2px}
+.p17-time{width:96px!important;flex:none;height:36px!important;padding:0 8px!important}
+.p17-eng{margin-top:6px}
+.p17-two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.p17-nmin{height:48px;font:500 20px Newsreader,serif!important}
+.p17-ic .p17-icons{display:flex;gap:8px}
+.p17-icons button{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 6px;border-radius:18px;border:2px solid var(--pp-line);background:var(--pp-card);color:var(--pp-ink);cursor:pointer;font:600 12px Manrope,sans-serif;text-align:center}
+.p17-icons button[aria-pressed=true]{border-color:var(--pp-ink)}
+.p17-ici{width:64px;height:64px;border-radius:15px;overflow:hidden;box-shadow:0 6px 16px -8px rgba(0,0,0,.45);display:block}
+.p17-ici img,.p17-dk img{width:100%;height:100%;display:block}
+.p17-dots{display:flex;gap:8px}
+.p17-dots button{width:30px;height:30px;border-radius:50%;border:2px solid transparent;cursor:pointer}
+.p17-dots button[aria-pressed=true]{border-color:var(--pp-ink);box-shadow:0 0 0 2px var(--pp-card) inset}
+.p17-dock{border-radius:22px;padding:18px 14px;display:grid;grid-template-columns:repeat(4,1fr);justify-items:center;gap:6px}
+.p17-dk{display:flex;flex-direction:column;align-items:center;gap:4px;width:58px}
+.p17-dk img,.p17-dk i{width:54px;height:54px;border-radius:13px;display:block;overflow:hidden}
+.p17-dk i{background:rgba(255,255,255,.28)}
+.p17-dk small{font-size:10.5px;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.5);white-space:nowrap;overflow:hidden;max-width:64px;text-overflow:ellipsis;min-height:13px}
+.p17-opt{display:flex!important;align-items:center;justify-content:flex-start;text-align:left;gap:10px}
+.p17-opt span{display:flex;flex-direction:column;gap:1px}
+.p17-opt small{font-size:12px;font-weight:500;opacity:.7}
+/* Huskeliste */
+.p17-hk{gap:10px}
+.p17-lists,.p17-due{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:2px 16px}
+.p17-lists .pp-fchip{display:inline-flex;align-items:center;gap:6px}
+.p17-lists .pp-fchip i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.p17-lists .pp-fchip span{opacity:.6;font-weight:700}
+.p17-lists .pp-fchip[aria-pressed=true],.p17-due .pp-fchip[aria-pressed=true],.p17-eng .pp-fchip[aria-pressed=true]{background:var(--pp-ink)!important;color:var(--pp-bg)!important;border-color:var(--pp-ink)!important}
+.p17-sep{flex:none;width:1px;background:var(--pp-line);margin:4px 2px}
+.p17-hadd{flex-direction:row!important;align-items:center;gap:8px;padding:6px 6px 6px 14px!important;border-radius:999px!important;box-shadow:0 10px 30px -14px rgba(0,0,0,.3)}
+.p17-hadd input{flex:1;min-width:0;border:0!important;background:transparent!important;height:42px;font:500 15px Manrope,sans-serif;color:var(--pp-ink);outline:none;padding:0!important}
+.p17-plus{flex:none;width:42px;height:42px;border-radius:50%;border:0;background:var(--pp-ink);color:var(--pp-bg);font:500 24px/1 Manrope,sans-serif;cursor:pointer}
+.p17-tks{padding:2px 14px!important;gap:0!important}
+.p17-tk{display:flex;align-items:center;gap:12px;min-height:54px;padding:6px 0}
+.p17-tk+.p17-tk{border-top:1px solid var(--pp-line)}
+.p17-tk b{font-size:15px;font-weight:600;overflow-wrap:anywhere}
+.p17-tk.done b{text-decoration:line-through;opacity:.5}
+.p17-chk{flex:none;width:26px;height:26px;border-radius:50%!important;border:2px solid var(--c,var(--pp-ink))!important;background:var(--cb,transparent)!important;color:#fff;font:800 13px Manrope,sans-serif;cursor:pointer;display:grid;place-items:center;padding:0}
+.p17-chk.sm{width:20px;height:20px}
+.m.papir .p17-list>.p17-row{border-radius:0!important;margin:0!important;box-shadow:none!important}
+.p17-x{flex:none;width:32px;height:32px;border-radius:16px;border:0;background:transparent;color:var(--pp-mut);font-size:20px;cursor:pointer}
+.p17-hw .p17-hwr{display:flex;align-items:center;gap:10px;min-height:30px;font-size:14px}
+.p17-hw,.p17-pw,.p17-bw{color:var(--pp-ink)}
+/* Posisjon og Bolig på Hjem */
+.p17-ppl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px}
+.p17-pp{display:flex;align-items:center;gap:9px;min-width:0}
+.p17-pp .p16-av{position:relative;flex:none}
+.p17-pp .p16-av i{position:absolute;right:-1px;bottom:-1px;width:10px;height:10px;border-radius:50%;border:2px solid var(--pp-card);background:#9a9a9a}
+.p17-pp .p16-av i.on{background:#3fbf7a}.p17-pp .p16-av i.pa{background:#e0a33a}
+.p17-pp b{font-size:14px}
+.p17-bwn{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.p17-bwn b{font-size:30px;line-height:1}
+.p17-bar{display:block;height:6px;border-radius:3px;background:var(--pp-line);overflow:hidden}
+.p17-bar i{display:block;height:100%;border-radius:3px;background:var(--pp-ink)}
+.p17-facts{display:flex;gap:8px}
+.p17-facts span{flex:1 1 0;min-width:0;padding:8px 10px;border-radius:12px;background:var(--pp-bg);display:flex;flex-direction:column;gap:1px}
+.p17-facts small{font-size:11px;color:var(--pp-mut)}
+.p17-facts b{font-size:14px;font-weight:700}
+/* Familie: faner, personkort og helse */
+.p17-ftabs{margin-top:2px}
+.p17-pc{gap:10px}
+.p17-sens{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.p17-sens span{padding:8px 10px;border-radius:12px;background:var(--pp-bg);display:flex;flex-direction:column;gap:1px;min-width:0}
+.p17-sens small{font-size:11px;color:var(--pp-mut)}
+.p17-sens b{font-size:14px;font-weight:700}
+.p17-two .pp-btn{text-align:center;justify-content:center;text-decoration:none}
+.p17-ring{display:flex;align-items:center;gap:14px}
+.p17-week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;height:64px;align-items:end}
+.p17-week span{height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px}
+.p17-week i{display:block;width:100%;max-width:22px;border-radius:5px 5px 2px 2px;background:var(--pp-pos)}
+.p17-week small{font-size:10px;color:var(--pp-mut)}
+.p17-hsrc .pp-chips{flex-wrap:wrap}
+.p17-hsrc .pp-fchip[aria-pressed=true]{background:var(--pp-ink)!important;color:var(--pp-bg)!important}
+/* Yr mot Storm */
+.p17-cmpb{display:flex;align-items:center;gap:12px;padding:14px 16px;border:0;color:#fff;text-align:left;cursor:pointer;font-family:Manrope,sans-serif;width:100%}
+.p17-cmpb .p17-rt small{color:rgba(255,255,255,.75)}
+.p17-cmpi{display:flex;flex:none}
+.p17-cmpi span{width:30px;height:30px;border-radius:15px;display:grid;place-items:center;font-size:10px;font-weight:800;color:#fff;border:2px solid rgba(255,255,255,.7)}
+.p17-cmpi span+span{margin-left:-8px}
+.p17-cmp{position:fixed;inset:0;z-index:85;background:rgba(0,0,0,.45);display:flex;align-items:flex-end}
+.p17-cmpin{width:100%;max-height:92%;overflow-y:auto;scrollbar-width:none;border-radius:28px 28px 0 0;background:#17191e;color:#fff;padding:18px 16px calc(env(safe-area-inset-bottom) + 24px);box-sizing:border-box;display:flex;flex-direction:column;gap:14px}
+.p17-cmpin .vx-card{background:rgba(255,255,255,.08)}
+.p17-done{background:#fff!important;color:#17191e!important}
+.p17-agree{display:flex!important;flex-direction:row!important;align-items:center;gap:12px;padding:14px 16px}
+.p17-agree>span{flex:none;width:12px;height:12px;border-radius:50%}
+.p17-agree small{color:rgba(255,255,255,.7)}
+.p17-leg{display:flex;gap:14px;font-size:12px;font-weight:700;margin-bottom:6px}
+.p17-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.p17-cmpc{width:100%;height:auto;display:block}
+.p17-cmpt{padding:6px 14px!important}
+.p17-cr{display:grid;grid-template-columns:52px minmax(0,1fr) minmax(0,1fr) 54px;gap:6px;align-items:center;padding:8px 0;font-size:13.5px}
+.p17-cr+.p17-cr{border-top:1px solid rgba(255,255,255,.12)}
+.p17-cr.h{font:700 10.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:rgba(255,255,255,.6)}
+.p17-cr small{display:block;font-size:11px;color:rgba(255,255,255,.6)}
+.p17-cr .bad{color:#f26b5e;font-weight:700}
+/* Dra for å oppdatere */
+.p17-ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 8px);z-index:95;transform:translate(-50%,-60px);opacity:0;display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;background:var(--pp-ink,#1b1a17);color:var(--pp-bg,#f3efe6);font:700 12.5px Manrope,sans-serif;box-shadow:0 10px 24px -8px rgba(0,0,0,.45);pointer-events:none;transition:opacity .15s}
+.p17-ptri{display:inline-block;font-size:15px}
+.p17-ptri.spin{animation:p17spin .8s linear infinite}
+@keyframes p17spin{to{transform:rotate(360deg)}}
+/* Klassisk: Huskeliste og de nye kortene får papirfarger lokalt. */
+.m:not(.papir) .p17-hk{--pp-bg:transparent;--pp-card:rgba(255,255,255,.07);--pp-ink:currentColor;--pp-mut:rgba(255,255,255,.6);--pp-line:rgba(255,255,255,.14);--pp-lab:#ff8a80;--pp-pos:#7BE3A0}
+.m.light:not(.papir) .p17-hk{--pp-card:#fff;--pp-mut:rgba(0,0,0,.55);--pp-line:rgba(0,0,0,.1);--pp-lab:#b23a2a;--pp-pos:#2f7a4f}
+@media (min-width:600px){.p17-ppl{grid-template-columns:repeat(3,minmax(0,1fr))}.p17-sens{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.m.papir .p17-ftabs{background:var(--pp-card);border-radius:999px;padding:4px;box-shadow:0 10px 30px -14px rgba(0,0,0,.35);border:0}
+.m.papir .p17-ftabs button{border-radius:999px!important}

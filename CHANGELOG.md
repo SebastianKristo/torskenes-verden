@@ -2,6 +2,44 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.10.0] – 18.10.2026 · prompt 16–17
+- **Papir på alle skjermer i appene.** Innstillinger er gruppert som i designet: profil, Konto, Finans, appnavn og App, med Logg ut nederst.
+- **Navn og ikon på appen:** velg et eget navn, for eksempel «Torskenes Verden», og et av tre nye ikoner (Hus, Monogram eller Fire rom).
+  - iPhone: standard, mørk og tonet variant.
+  - Android: Material You-ikon med monokromt lag.
+  - Web: favicon og ikon på hjemskjermen.
+- **Huskeliste (ny):** lister, forfall og hvem som skal gjøre hva. Lista deles i familien, oppdateres i sanntid og har widgets på iOS og Android.
+- **Sanntid** via WebSocket for huskeliste, sporing og familie.
+- **Familie:** fanene Kart, Soner og Helse, personkort med enhet og veibeskrivelse, og «Spill av lyd». Sonene sjekkes på telefonen.
+- **Sporing:**
+  - Velg flere og arkiver eller slett dem.
+  - Ny fane Arkiv.
+  - Ekte logoer i riktig størrelse.
+  - ParcelsApp som reserve, med 3 oppslag i måneden. Oppslagene brukes bare når du selv ber om status.
+- **Varsler samlet i Innstillinger:** stille timer, fem lyder eller din egen, volum, grupper og «Test varsel».
+- **Vær:** «Yr mot Storm» sammenligner Yr med ECMWF i en graf og en 7-dagerstabell.
+- **AI:**
+  - AI-søket viser tydelig hvorfor det feiler.
+  - Logg over alle AI-kall.
+  - «Hvem gjør hva» lar deg velge motor per oppgave, med reserve.
+  - Roboflow kan beskjære kvitteringer.
+  - Strekkoder leses på serveren med zbar.
+- **Lokal OCR-reserve (Tesseract):** kvitteringer leses uten AI når AI feiler. Kan slås av og på. Docker-imaget blir større.
+- **Boliger:** nytt design på web med budsjett, farge, utgifter til gjennomgang med godkjenning, historikk og tilgang. Skann rett inn i en bolig fra mobilen.
+- **Skanneknappen:** trykk åpner kameraet. Hold inne gir valg mellom Kvittering, Oppskrift, Bilder og Fil.
+- **Mobil:** dra ned for å oppdatere, og innholdet scroller bak den røde +-knappen.
+- **Homelab web:**
+  - Kortene flytter seg først når du holder inne i 280 ms, så du kan markere, kopiere og lime inn tekst.
+  - Menyer og nedtrekkslister lukker seg ikke lenger med en gang.
+  - Søk i innstillinger tar imot skriving.
+- **Nøkler i Integrasjoner lagres kryptert.**
+
+### Gjenstår
+- **Varsler for en bolig:** valget lagres, men ingen varsler bruker det ennå.
+- **iOS:** godkjenning og budsjett i Boliger er ikke tatt i bruk, og strekkoder leses fortsatt med VisionKit.
+- **Android:** sonene sjekkes av appen selv, ikke av Android sin innebygde sonevakt (geofencing).
+- **Oslo-bilder fra Getty Images** kan ikke brukes uten lisens.
+
 ## [4.9.0] – 18.10.2026 · prompt 16
 - **AI virker igjen.** Fire feil er rettet:
   - Standardmodellen var en Gemini-modell som er gått ut (`gemini-2.5-flash`). Nå brukes den nyeste flash-modellen, med automatisk bytte hvis en modell forsvinner.

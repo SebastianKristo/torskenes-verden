@@ -9,6 +9,7 @@ import { paper, saveDesign, paperState, photoChoices } from './mobile-paper.js';
 import { tabEditor, iconThemeRow, iconColor, iconInk } from './mobile-p16.js';
 import { navSettings } from './mobile-paper3.js';
 import { TR, trkLoad, trkPrefRows, setTrkPref } from './mobile-track.js';
+import { p17SetMain, p17Modules, p17AiExtra, p17Varsler, aiLoad, notifyLoad, NT } from './mobile-p17.js';
 
 const T = { f: {}, ai: null, bk: null, srch: null, tokens: null, devices: null, newTok: '', nt: { name: '', scopes: ['receipts:write'], exp: '90' }, ping: '', lastSync: null, usage: null };
 const SCOPES = ['receipts:write', 'read:transactions', 'read:summary', 'read:budget', 'write:transactions', 'finance:read'];
@@ -18,7 +19,9 @@ export async function settingsLoad(sub) {
   const jobs = [];
   if (!sub || sub === 'tok') jobs.push(api('/tokens').then((x) => { T.tokens = x; }).catch(() => { T.tokens = T.tokens ?? []; }));
   if (sub === 'sik') jobs.push(fetch('/api/devices').then((r) => (r.ok ? r.json() : null)).then((x) => { T.devices = x; }).catch(() => { T.devices = null; }));
-  if (sub === 'notif' && !TR.data?.prefs) jobs.push(trkLoad().catch(() => {}));
+  if ((sub === 'notif' || sub === 'varsler') && !TR.data?.prefs) jobs.push(trkLoad().catch(() => {}));
+  if (sub === 'varsler' || (!sub && !NT.d)) jobs.push(notifyLoad().catch(() => {}));
+  if (sub === 'fai') jobs.push(aiLoad().catch(() => {}), loadBoot().catch(() => {}));
   if (sub === 'data') jobs.push(navigator.storage?.estimate?.().then((x) => { T.usage = x.usage; }).catch(() => {}));
   if (sub === 'bk') jobs.push(api('/backup').then((x) => { T.bk = x; }).catch(() => { T.bk = null; }));
   if (sub === 'sokbar') jobs.push(hlApi('/search/history').then((x) => { T.srch = { suggest: x?.suggest !== false, save: x?.save !== false, n: (x?.items ?? []).length }; }).catch(() => { T.srch = null; }));
@@ -45,9 +48,9 @@ function profile(big = false) {
   const sz = big ? 58 : 44;
   return `<a class="opt-row" href="#/set/konto"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:${sz}px;height:${sz}px;font-size:${big ? 22 : 17}px">${avInner()}</span><span class="m-grow"><b style="font-size:${big ? 19 : 16}px;font-weight:600">${esc(meName())}</b><br><span style="font-size:13px;opacity:.65">${me.username ? `@${esc(me.username)}` : 'FinansHub'}${me.role ? ` · ${esc(me.role)}` : ''} · ${esc(me.serverName || location.host)}</span></span><span style="opacity:.5">›</span></a>`;
 }
-const PAGES = { profil: 'Profil', bakgrunn: 'Bakgrunn', fanelinje: 'Fanelinje', konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', nav: 'Navigasjonslinje', dom: 'Domener', scan: 'Skanning og AI', notif: 'Varsler', hap: 'Haptikk', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI-motor', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data' };
+const PAGES = { varsler: 'Varsler og haptikk', mod: 'Moduler', profil: 'Profil', bakgrunn: 'Bakgrunn', fanelinje: 'Fanelinje', konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', nav: 'Navigasjonslinje', dom: 'Domener', scan: 'Skanning og AI', notif: 'Varsler', hap: 'Haptikk', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI og tolkning', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data' };
 const when = (t) => (t ? new Date(t).toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'aldri');
-const aiMode = () => { const st = S.boot?.settings ?? {}; return st.provider === 'gemini' ? 'gemini' : st.fallback ? 'both' : 'ollama'; };
+const aiMode = () => { const st = S.boot?.settings ?? {}; return st.provider === 'gemini' ? 'gemini' : st.provider === 'groq' ? 'groq' : st.fallback ? 'both' : 'ollama'; };
 
 /** Tittelen i Papir-toppbildet for en underside. */
 export const setTitle = (sub) => PAGES[sub] ?? null;
@@ -72,6 +75,8 @@ function paperTop() {
 }
 
 function main() {
+  // Papir: samme gruppering som designet (Konto, Finans, appnavnet, App, Logg ut og versjon).
+  if (paper()) return p17SetMain({ tokens: T.tokens });
   const st = S.boot?.settings ?? {};
   return `${paper() ? paperTop() : ''}${G('', [profile(true)])}
     ${G('Konto', [nav('konto', 'Kontoer og brukere', '1 på enheten', 'users', '#5E8BFF'), nav('sik', 'Sikkerhet', m.me?.totp ? '2FA på' : '', 'shield', '#34C759'), nav('tok', 'API-tokens', T.tokens ? `${T.tokens.length} aktive` : '', 'key', '#FF9F0A')])}
@@ -82,6 +87,8 @@ function main() {
 }
 
 const PAGE = {
+  varsler: () => p17Varsler(trkPrefRows()),
+  mod: () => p17Modules(),
   profil: () => {
     const me = m.me ?? {};
     return `<div class="pp-card p16-prof"><label class="p16-pav"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:84px;height:84px;font-size:32px">${avInner()}</span><span class="p16-pedit">Bytt bilde</span><input class="m-file" type="file" accept="image/*" data-avatar></label>
@@ -122,6 +129,8 @@ const PAGE = {
   },
 
   look: (th) => {
+    // Papir: tema, profil, bakgrunn, fanelinje og ikonfarger (Utseende og fanelinje).
+    if (paper()) return paperTop();
     const cur = (() => { try { return localStorage.getItem('fh_theme') || 'auto'; } catch { return 'auto'; } })();
     const st = { hl: 'homelab', hjem: 'fin-hjem', liste: 'fin-liste', budsjett: 'fin-budsjett' }[startScr()] ?? 'homelab';
     return `${G('Mobildesign', [chips('mdesign', 'Design', [['klassisk', 'Klassisk'], ['papir', 'Papir']], pref('mDesign'))],
@@ -190,10 +199,11 @@ const PAGE = {
   },
   fai: () => {
     const st = S.boot?.settings ?? {}, f = T.f;
-    return `${G('Motor', [chips('ai', 'Leses av', [['ollama', 'Ollama lokalt'], ['gemini', 'Gemini'], ['both', 'Ollama + Gemini']], aiMode()), chips('minConf', 'Minste sikkerhet', [['75', '0,75'], ['85', '0,85'], ['95', '0,95']], String(st.minConf ?? 85))], 'Under minste sikkerhet markeres kvitteringen «Sjekk beløp».')}
+    return `${G('Motor', [chips('ai', 'Hovedmotor', [['ollama', 'Ollama lokalt'], ['gemini', 'Gemini'], ['groq', 'Groq'], ['both', 'Ollama + Gemini']], aiMode()), chips('minConf', 'Minste sikkerhet', [['75', '0,75'], ['85', '0,85'], ['95', '0,95']], String(st.minConf ?? 85))], 'Under minste sikkerhet markeres kvitteringen «Sjekk beløp».')}
       ${G('Ollama', [inp('ollamaUrl', 'Adresse', f.ollamaUrl ?? st.ollamaUrl, 'http://192.168.1.40:11434', 'url'), inp('ollamaModel', 'Modell', f.ollamaModel ?? st.ollamaModel, 'qwen2.5vl:7b')])}
       ${G('Gemini', [inp('geminiModel', 'Modell', f.geminiModel ?? st.geminiModel, 'gemini-2.5-flash'), inp('geminiKey', st.geminiKeySet ? 'API-nøkkel (lagret – skriv for å bytte)' : 'API-nøkkel', f.geminiKey ?? '', '••••••••', 'password')])}
-      ${G('', [btn('Lagre', 'aisave'), btn('Test motor', 'aitest')], T.ai ?? '')}`;
+      ${G('', [btn('Lagre', 'aisave'), btn('Test motor', 'aitest')], T.ai ?? '')}
+      ${p17AiExtra()}`;
   },
   kat: () => {
     const c = S.boot?.categories ?? [], KIND = { expense: 'Utgift', income: 'Inntekt', transfer: 'Overføring' };

@@ -156,9 +156,41 @@ export async function paperFinnBind(e, t) {
 
 /* ---------- Sporing ---------- */
 
-const TT = { tab: 'act', set: false, nv: '', busy: false };
+const TT = { tab: 'act', set: false, nv: '', busy: false, sel: null, delArm: false, arch: null, lp: null, lpFired: false };
 const TABS = [['act', 'Aktive', (p) => !p.archived && !isDone(p)], ['pick', 'Klar for henting', (p) => !p.archived && isReady(p)], ['way', 'På vei', (p) => !p.archived && !isDone(p) && !isReady(p) && stepOf(p) >= 1],
-  ['reg', 'Registrert', (p) => !p.archived && !isDone(p) && stepOf(p) === 0], ['done', 'Levert', (p) => isDone(p)], ['all', 'Alle', () => true]];
+  ['reg', 'Registrert', (p) => !p.archived && !isDone(p) && stepOf(p) === 0], ['done', 'Levert', (p) => !p.archived && isDone(p)], ['all', 'Alle', (p) => !p.archived], ['arch', 'Arkiv', (p) => !!p.archived]];
+// Arkivet hentes for seg (GET /api/tracking?archived=1); eldre server: de arkiverte som ligger i den vanlige listen.
+async function archLoad() { try { const r = await hlApi('/tracking?archived=1'); TT.arch = (r?.items ?? []).map((p) => ({ ...p, archived: true })); } catch { TT.arch = (TR.data?.items ?? []).filter((p) => p.archived); } }
+const tabItems = (id) => (id === 'arch' ? TT.arch ?? (TR.data?.items ?? []).filter((p) => p.archived) : TR.data?.items ?? null);
+const tabCount = (id, f) => (id === 'arch' ? TR.data?.counts?.archived ?? (TT.arch ?? (TR.data?.items ?? []).filter((p) => p.archived)).length : (TR.data?.items ?? []).filter(f).length);
+/* Velg flere: hold inne en pakke (mobil) eller klikk på ikonet (PC). Menyen har Velg alle, Arkiver/Gjenopprett og Slett. */
+export function trkDown(e) {
+  TT.lpFired = false;
+  if (m.screen !== 'spor' || (e.button ?? 0) > 0) return;
+  const c = e.target.closest?.('[data-pk]');
+  if (!c || TT.sel) return;
+  TT.lp = { x: e.clientX, y: e.clientY, t: setTimeout(() => { TT.lp = null; TT.lpFired = true; TT.sel = new Set([c.dataset.pk]); TT.delArm = false; haptic('ok'); navigator.vibrate?.(15); draw(); }, 500) };
+}
+export function trkMove(e) { if (TT.lp && (Math.abs(e.clientX - TT.lp.x) > 10 || Math.abs(e.clientY - TT.lp.y) > 10)) { clearTimeout(TT.lp.t); TT.lp = null; } }
+export function trkUp() { if (TT.lp) clearTimeout(TT.lp.t); TT.lp = null; }
+async function bulk(action) {
+  const ids = [...(TT.sel ?? [])];
+  if (!ids.length) return;
+  try { await hlApi('/tracking/bulk', { method: 'POST', json: { ids, action } }); }
+  catch (e) {
+    if (e.status !== 404) { flash(e.message); return; }
+    for (const id of ids) await (action === 'delete' ? hlApi(`/tracking/${encodeURIComponent(id)}`, { method: 'DELETE' }) : hlApi(`/tracking/${encodeURIComponent(id)}`, { method: 'PATCH', json: { archived: action === 'archive' } })).catch(() => {});
+  }
+  haptic('ok'); flash(`${ids.length} ${ids.length === 1 ? 'sending' : 'sendinger'} ${action === 'delete' ? 'slettet' : action === 'archive' ? 'arkivert' : 'gjenopprettet'}`);
+  TT.sel = null; TT.delArm = false; await trkLoad(); if (TT.tab === 'arch' || action !== 'delete') await archLoad(); draw();
+}
+function selBar(list) {
+  if (!TT.sel) return '';
+  const n = TT.sel.size, arch = TT.tab === 'arch', all = list.length && list.every((p) => TT.sel.has(String(p.id)));
+  return `<div class="p17-selbar" role="toolbar" aria-label="Valgte sendinger"><b>${n} valgt</b><span class="m-grow"></span>
+    <button data-pptrk="selall">${all ? 'Velg ingen' : 'Velg alle'}</button><button data-pptrk="${arch ? 'unarch' : 'arch'}" ${n ? '' : 'disabled'}>${arch ? 'Gjenopprett' : 'Arkiver'}</button>
+    <button class="bad" data-pptrk="del" ${n ? '' : 'disabled'}>${TT.delArm ? 'Trykk igjen for å slette' : 'Slett'}</button><button class="x" data-pptrk="selx" aria-label="Avslutt valg">×</button></div>`;
+}
 const NOTIFY = [['found', 'Ny pakke funnet', 'Når et sporingsnummer dukker opp i e-post eller Finn'], ['pickup', 'Klar for henting', 'Med hentested og frist'], ['out', 'Ute for levering', 'Når budet er på vei til deg'], ['delayed', 'Forsinket', 'Når leveringen er forsinket'], ['delivered', 'Levert', 'Når pakken er levert']];
 const SOURCES = [['email', 'E-post (Proton Mail)', 'Ordre- og fraktbekreftelser'], ['finn', 'Finn', 'Fiks ferdig-handler med sporingsnummer'], ['autoArchive', 'Arkiver leverte automatisk', 'Etter 7 dager']];
 const srcOn = (k) => { const s = TR.data?.sources?.[k]; return k === 'autoArchive' ? s?.on === true || s === true : s?.on !== false && s !== false; };
@@ -175,24 +207,26 @@ const notifyRows = () => { const P = trkPrefs(); return NOTIFY.map(([k, n, s]) =
 const sourceRows = () => SOURCES.map(([k, n, s]) => tog(`data-pptrk="src" data-k="${k}"`, n, s, srcOn(k))).join('');
 
 function pkCard(p) {
-  const st = stepOf(p), done = isDone(p), ready = isReady(p);
+  const st = stepOf(p), done = isDone(p), ready = isReady(p), on = TT.sel?.has(String(p.id));
   const bars = [0, 1, 2, 3, 4].map((j) => `<i style="background:${done ? 'var(--pp-pos)' : j < st ? 'var(--pp-ink)' : j === st ? 'var(--pp-lab)' : 'var(--pp-line)'}"></i>`).join('');
   const src = p.source === 'finn' ? 'Finn' : p.source === 'email' ? 'E-post' : 'Manuelt';
-  return `<a class="pp-card pp-pk${ready ? ' ready' : ''}" href="${esc(pkUrl(p))}" target="_blank" rel="noopener"><div class="pp-pkt">${badge(p.carrier, 42, p.carrierLogo)}<span class="m-grow" style="min-width:0"><b class="pp-serif m-ell">${esc(p.name || p.shop || p.trackingNo)}</b><span class="pp-mut m-ell">${esc(carOf(p.carrier).name)} · ${esc(p.trackingNo ?? '')}</span></span><span class="pp-src">${src}</span></div>
+  return `<a class="pp-card pp-pk${ready ? ' ready' : ''}${TT.sel ? ' pksel' : ''}${on ? ' on' : ''}" data-pk="${esc(p.id)}" href="${esc(pkUrl(p))}" target="_blank" rel="noopener"><div class="pp-pkt"><span class="p17-pkb" data-pksel="${esc(p.id)}" title="Velg">${badge(p.carrier, 44, p.carrierLogo)}${TT.sel ? `<i class="p17-pkc" aria-hidden="true">${on ? '✓' : ''}</i>` : ''}</span><span class="m-grow" style="min-width:0"><b class="pp-serif m-ell">${esc(p.name || p.shop || p.trackingNo)}</b><span class="pp-mut m-ell">${esc(carOf(p.carrier).name)} · ${esc(p.trackingNo ?? '')}</span></span><span class="pp-src">${src}</span></div>
     <div class="pp-row"><b class="pp-pks ${ready ? 'pp-lab-c' : done ? 'pp-pos' : ''}">${esc(stTxt(p))}</b><span class="pp-mut" style="text-align:right">${esc(etaTxt(p))}</span></div><span class="pp-pkb">${bars}</span></a>`;
 }
 
 function secHtml(k) {
   const items = TR.data?.items ?? null;
   if (k === 'tabs') {
-    return `<div class="pp-trktabs"><div class="pp-trktabs-s" role="tablist">${TABS.map(([id, n, f]) => `<button role="tab" data-pptrk="tab" data-k="${id}" aria-selected="${TT.tab === id}">${n}<span>${(items ?? []).filter(f).length}</span></button>`).join('')}</div>
-      <button class="pp-trkset" data-pptrk="set" aria-label="Varsler og kilder"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8M14 4v6M8 14v6"/></svg></button></div>`;
+    return `<div class="pp-trktabs"><div class="pp-trktabs-s" role="tablist">${TABS.map(([id, n, f]) => `<button role="tab" data-pptrk="tab" data-k="${id}" aria-selected="${TT.tab === id}">${n}<span>${tabCount(id, f)}</span></button>`).join('')}</div>
+      <button class="pp-trkset" data-pptrk="set" aria-label="Kilder"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8M14 4v6M8 14v6"/></svg></button></div>`;
   }
   if (k === 'shipments') {
-    const fn = (TABS.find(([id]) => id === TT.tab) ?? TABS[0])[2];
-    const L = (items ?? []).filter(fn).sort((a, b) => (isReady(b) - isReady(a)) || (stepOf(b) - stepOf(a)));
-    return `${TR.err ? `<div class="pp-card pp-mut">${esc(TR.err)}</div>` : ''}${TR.missing ? '<div class="pp-card pp-mut">Serveren har ikke Sporing ennå. Oppdater Homelab for å spore pakker.</div>' : ''}
-      ${items === null ? '<div class="m-spin"></div>' : L.map(pkCard).join('') || '<div class="pp-mut" style="padding:16px 4px;font-size:14px">Ingen pakker her.</div>'}`;
+    const fn = (TABS.find(([id]) => id === TT.tab) ?? TABS[0])[2], src = tabItems(TT.tab);
+    const L = (src ?? []).filter(fn).sort((a, b) => (isReady(b) - isReady(a)) || (stepOf(b) - stepOf(a)));
+    TT.vis = L;
+    return `${selBar(L)}${TR.err ? `<div class="pp-card pp-mut">${esc(TR.err)}</div>` : ''}${TR.missing ? '<div class="pp-card pp-mut">Serveren har ikke Sporing ennå. Oppdater Homelab for å spore pakker.</div>' : ''}
+      ${src === null ? '<div class="m-spin"></div>' : L.map(pkCard).join('') || `<div class="pp-mut" style="padding:16px 4px;font-size:14px">${TT.tab === 'arch' ? 'Ingen arkiverte sendinger.' : 'Ingen pakker her.'}</div>`}
+      ${TR.data?.parcelsapp?.configured ? `<span class="pp-mut" style="font-size:12px;padding:0 4px">ParcelsApp: ${n0(TR.data.parcelsapp.used ?? 0)} av ${n0(TR.data.parcelsapp.limit ?? 3)} oppslag brukt denne måneden</span>` : ''}`;
   }
   if (k === 'add') {
     const no = normNo(TT.nv), car = no.length >= 6 ? carOf(detectLocal(no)).name : '';
@@ -215,9 +249,10 @@ export function paperTrk() {
 export function paperTrkSheet() {
   if (!TT.set || m.screen !== 'spor') return '';
   return `<div class="sheet-bg" data-pptrk="setx"></div><div class="pp-sheet tall" role="dialog" aria-label="Varsler og kilder"><span class="pp-grab"></span>
-    <div class="pp-row"><div><div class="pp-lab">SPORING</div><div class="pp-sh">Varsler og kilder</div></div><button class="pp-btn ink sm" data-pptrk="setx">Ferdig</button></div>
-    <span class="pp-lab">VARSLER</span><div class="pp-card pp-tight">${notifyRows()}</div>
+    <div class="pp-row"><div><div class="pp-lab">SPORING</div><div class="pp-sh">Kilder</div></div><button class="pp-btn ink sm" data-pptrk="setx">Ferdig</button></div>
+    <a class="pp-card p17-golink" href="#/set/varsler"><span class="m-grow"><b>Varsler</b><span class="pp-mut">Pakkevarsler ligger nå under Innstillinger → Varsler</span></span><span aria-hidden="true">›</span></a>
     <span class="pp-lab">KILDER</span><div class="pp-card pp-tight">${sourceRows()}</div>
+    <span class="pp-lab">PARCELSAPP</span><div class="pp-card pp-tight"><div class="pp-tog"><span class="m-grow"><b>Reserve for ukjente transportører</b><span class="pp-mut">${TR.data?.parcelsapp?.configured ? `${n0(TR.data.parcelsapp.used ?? 0)} av ${n0(TR.data.parcelsapp.limit ?? 3)} oppslag brukt denne måneden` : 'Legg inn nøkkelen i Homelab → Innstillinger → Integrasjoner → Sporing. Gratisplanen har 3 oppslag i måneden.'}</span></span><span class="${TR.data?.parcelsapp?.configured ? 'pp-pos' : 'pp-mut'}" style="font-size:12.5px">${TR.data?.parcelsapp?.configured ? 'Tilkoblet' : 'Mangler nøkkel'}</span></div></div>
     ${secHtml('carriers')}
     <span class="pp-mut" style="line-height:1.45">E-post leses via Proton Mail Bridge hvert 15. minutt. Finn-handler med Fiks ferdig hentes automatisk.</span></div>`;
 }
@@ -236,11 +271,23 @@ export async function paperTrkBind(e, t) {
     TT.busy = false; draw(); return true;
   }
   if (e.type !== 'click') return false;
+  // Velg flere: klikket etter et langt trykk, klikk på ikonet (PC) og klikk på kort mens noe er valgt.
+  const card = t.closest?.('[data-pk]');
+  if (card && (TT.lpFired || TT.sel || t.closest('[data-pksel]'))) {
+    e.preventDefault();
+    if (TT.lpFired) { TT.lpFired = false; return true; }
+    const id = card.dataset.pk; TT.sel ??= new Set(); TT.sel.has(id) ? TT.sel.delete(id) : TT.sel.add(id); TT.delArm = false; haptic('tab');
+    draw(); return true;
+  }
   const x = t.closest?.('[data-pptrk]');
   if (!x) return false;
   e.preventDefault();
   const k = x.dataset.pptrk;
-  if (k === 'tab') { TT.tab = x.dataset.k; haptic('tab'); }
+  if (k === 'selx') { TT.sel = null; TT.delArm = false; draw(); return true; }
+  if (k === 'selall') { const L = TT.vis ?? [], all = L.length && L.every((p) => TT.sel?.has(String(p.id))); TT.sel = new Set(all ? [] : L.map((p) => String(p.id))); TT.delArm = false; draw(); return true; }
+  if (k === 'arch' || k === 'unarch') { await bulk(k === 'arch' ? 'archive' : 'unarchive'); return true; }
+  if (k === 'del') { if (!TT.delArm) { TT.delArm = true; haptic('err'); draw(); return true; } await bulk('delete'); return true; }
+  if (k === 'tab') { TT.tab = x.dataset.k; TT.sel = null; TT.delArm = false; haptic('tab'); if (TT.tab === 'arch' && !TT.arch) { draw(); await archLoad(); } }
   else if (k === 'set') TT.set = true;
   else if (k === 'setx') TT.set = false;
   else if (k === 'src') {

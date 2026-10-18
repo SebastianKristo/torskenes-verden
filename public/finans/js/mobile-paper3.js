@@ -53,7 +53,7 @@ export const fourth = () => { const f = fourthPref(); return f === 'sporing' ? '
 /* ---------- Tilpass hver side: hold inne → vugging, ▲ ▼ og − ---------- */
 
 const PG = {
-  hl: [['h1', 'Søk'], ['h2', 'Pakker'], ['h3', 'Avganger'], ['h4', 'Snarveier'], ['h5', 'Siste nytt']],
+  hl: [['h1', 'Søk'], ['h2', 'Pakker'], ['h3', 'Avganger'], ['h4', 'Snarveier'], ['h5', 'Siste nytt'], ['h6', 'Posisjon'], ['h7', 'Bolig'], ['h8', 'Huskeliste']],
   hjem: [['f1', 'Saldo'], ['f2', 'Kvitteringer'], ['f3', 'Siste transaksjoner'], ['f4', 'Budsjett']],
   mat: [['m1', 'Dagens middag'], ['m2', 'Ukeplan'], ['m3', 'Mapper'], ['m4', 'Skann og import']],
   spor: [['t1', 'Faner'], ['t2', 'Pakkelisten'], ['t3', 'Legg til']],
@@ -86,7 +86,8 @@ export function edDown(e) {
   lpFired = false;
   if ((e.button ?? 0) > 0 || ED.page) return;
   const b = e.target.closest?.('[data-edk]');
-  if (!b || e.target.closest('input,textarea,select,label,[data-ped],[data-ppplus]')) return;
+  // En pakke i Sporing har sitt eget lange trykk (velg flere); hold inne et annet kort for å flytte det.
+  if (!b || e.target.closest('input,textarea,select,label,[data-ped],[data-ppplus],[data-pk],.p17-chk')) return;
   const page = b.dataset.edp;
   lp = { x: e.clientX, y: e.clientY, t: setTimeout(() => { lp = null; lpFired = true; ED.page = page; haptic('ok'); navigator.vibrate?.(15); draw(); }, 500) };
 }
@@ -185,15 +186,19 @@ export function finMerGrid() {
 
 export const FS = { q: '', ai: false, busy: false, r: null, err: '' };
 const simple = (q) => q && !/\s/.test(q) && q.length < 20;
-async function fsRun() {
+// force: trykk på ✦ AI eller Enter med AI på kjører AI-søket med en gang, også for enkle ord.
+async function fsRun(force = false) {
   const q = FS.q.trim();
   if (!q) { FS.r = null; draw(); return; }
   FS.busy = true; FS.err = ''; draw();
   try {
     let r;
-    if (FS.ai && !simple(q)) {
-      try { r = await api('/search/ai', { method: 'POST', json: { q } }); r = { ...r, ai: !r?.plainFirst && r?.mode !== 'plain' }; }
-      catch (e) { r = { ...(await plainSearch(q)), aiDown: e.message }; }
+    if (FS.ai && (force || !simple(q))) {
+      try {
+        const sig = typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(25000) : undefined;
+        r = await api('/search/ai', { method: 'POST', json: { q, force: true }, signal: sig });
+        r = { ...r, ai: !r?.plainFirst && r?.mode !== 'plain', aiDown: r?.aiErrorKind ? r.aiErrorText || r.aiError || 'ukjent feil' : r?.aiError || '' };
+      } catch (e) { r = { ...(await plainSearch(q)), aiDown: e.name === 'TimeoutError' || e.name === 'AbortError' ? 'brukte mer enn 20 sekunder' : e.message }; }
     } else r = await plainSearch(q);
     FS.r = { ...r, q };
   } catch (e) { FS.err = e.message; FS.r = null; }
@@ -211,10 +216,10 @@ const hitsOf = (r) => (r?.hits ?? r?.items ?? []).filter((h) => h && (h.txId ?? 
 export function paperSearch() {
   const r = FS.r, hits = hitsOf(r), q = FS.q.trim(), sum = hits.reduce((a, h) => a + (Number(h.amount) || 0), 0);
   const big = [...hits].sort((a, b) => Math.abs(b.amount ?? 0) - Math.abs(a.amount ?? 0))[0];
-  const aiTxt = r?.ai && (r.answer || r.summary) ? r.answer || r.summary
+  const aiTxt = r?.aiDown && FS.ai ? `AI svarte ikke: ${r.aiDown}` : r?.ai && (r.answer || r.summary) ? r.answer || r.summary
     : FS.ai && r && hits.length ? `Du har ${hits.length} treff på «${r.q}», til sammen ${n0(sum)} kr ${sum < 0 ? 'brukt' : 'inn'}. Største post er ${big?.description ?? big?.merchant ?? ''}.`
       : FS.ai && r && !hits.length ? `Jeg fant ingen kjøp som passer «${r.q}» i transaksjonene, kvitteringene eller varelinjene.` : '';
-  const src = r?.aiDown ? `AI svarte ikke (${r.aiDown}). Viser vanlig søk.` : r?.ai ? `✦ ${r.engine || r.provider || 'AI'} leste transaksjoner, kvitteringer og varelinjer.` : 'Fant vanlige treff først, AI oppsummerte.';
+  const src = r?.aiDown ? 'Viser treffene fra vanlig søk. Sjekk nøkkel og motor under Innstillinger → AI og tolkning.' : r?.ai ? `✦ ${r.engine || r.provider || 'AI'} leste transaksjoner, kvitteringer og varelinjer.` : 'Fant vanlige treff først, AI oppsummerte.';
   const sugg = ['rema', 'spotify', 'kyllingfilet', 'hvor mye brukte jeg på mat?', 'strøm i oktober'];
   return `<form class="pp-search pp-fsq" data-ppfs role="search"><span aria-hidden="true">⌕</span><input class="m-input" id="pp-fsq" name="q" type="search" value="${esc(FS.q)}" enterkeyhint="search" placeholder="${FS.ai ? 'Spør, f.eks. «hva brukte jeg på kaffe?»' : 'Søk i transaksjoner og kvitteringer'}" aria-label="Søk i Finans" autocomplete="off">
       <button type="button" class="pp-aitog${FS.ai ? ' on' : ''}" data-ppfsk="ai" aria-pressed="${FS.ai}">✦ AI</button></form>
@@ -332,7 +337,15 @@ export function newShipSheet() {
     <span class="pp-mut" style="line-height:1.45">Sendinger fra e-post og Finn legges til automatisk.</span></div>`;
 }
 export function openNewShip() { NS.open = true; draw(); setTimeout(() => document.getElementById('pp-ns-no')?.focus(), 30); }
+// Strekkoder: serveren først (Roboflow, POST /scan/barcode → {codes, engine}). Ved 501 (ikke satt opp) eller en eldre
+// server leser nettleseren selv med BarcodeDetector der den finnes.
 async function readBarcode(file) {
+  try {
+    const fd = new FormData(); fd.append('file', file, file.name || 'strekkode.jpg');
+    const r = await fetch('/finans/api/scan/barcode', { method: 'POST', body: fd });
+    if (r.ok) { const j = await r.json().catch(() => null); const v = (j?.codes ?? []).map((c) => c.value ?? c.rawValue ?? c).find((s) => normNo(String(s)).length >= 6); if (v) return String(v); }
+    else if (r.status !== 501 && r.status !== 404) { const j = await r.json().catch(() => null); if (!('BarcodeDetector' in window)) throw new Error(j?.error ?? `Feil ${r.status}`); }
+  } catch (e) { if (!('BarcodeDetector' in window)) throw e; }
   if (!('BarcodeDetector' in window)) throw new Error('Telefonen kan ikke lese strekkoder her. Skriv inn eller lim inn nummeret.');
   const bmp = await createImageBitmap(file);
   const det = new window.BarcodeDetector();
@@ -405,12 +418,12 @@ export function navSetBind(e, t) {
 export async function fsBind(e, t) {
   if (m.screen !== 'sok') return false;
   if (e.type === 'input' && t.id === 'pp-fsq') { FS.q = t.value; if (!t.value) { FS.r = null; draw(); } return true; }
-  if (e.type === 'submit' && t.matches?.('[data-ppfs]')) { e.preventDefault(); FS.q = t.q.value; t.q.blur(); await fsRun(); return true; }
+  if (e.type === 'submit' && t.matches?.('[data-ppfs]')) { e.preventDefault(); FS.q = t.q.value; t.q.blur(); await fsRun(FS.ai); return true; }
   if (e.type !== 'click') return false;
   const x = t.closest?.('[data-ppfsk]');
   if (!x) return false;
   e.preventDefault();
-  if (x.dataset.ppfsk === 'ai') { FS.ai = !FS.ai; haptic('tab'); if (FS.q.trim()) await fsRun(); else draw(); }
+  if (x.dataset.ppfsk === 'ai') { FS.ai = !FS.ai; haptic('tab'); const v = document.getElementById('pp-fsq')?.value; if (v != null) FS.q = v; if (FS.q.trim()) await fsRun(FS.ai); else draw(); }
   else if (x.dataset.ppfsk === 'sugg') { FS.q = x.dataset.q; FS.ai = /\s/.test(FS.q); await fsRun(); }
   return true;
 }

@@ -1,6 +1,7 @@
 // Papir (prompt 16): redigerbar fanelinje (hold inne på linja, eller Innstillinger → Fanelinje), fargetema for ikonene
 // i Innstillinger, Avganger (egen side i nyhetsleser-stil med flere stopp fra Entur og sanntid), Familie og kart
 // (OpenStreetMap via Leaflet, soner, personvern) og Boliger i full mobilversjon. Valgene lagres per bruker i /api/me/layout.
+import { FT, famTabs, personCard, healthView } from './mobile-p17.js';
 import { api, esc, n0, ini, hlApi, dd, today, cap } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
@@ -30,9 +31,9 @@ export const TB = {
   hjem: ['hl', 'Hjem', '⌂'], finans: ['hjem', 'Finans', 'kr'], mat: ['mat', 'Mat', '◐'], auto: [null, 'Domener / Sporing', '◎'],
   domener: ['dom', 'Domener', '◎'], sporing: ['spor', 'Sporing', '▣'], sok: ['sok', 'Søk', '⌕'], boliger: ['dir', 'Boliger', '⌂'],
   avganger: ['avg', 'Avganger', '⇆'], familie: ['fam', 'Familie', '◉'], vaer: ['vaer', 'Vær', '☼'], nyheter: ['nyheter', 'Nyheter', '▤'],
-  aksjer: ['aks', 'Aksjer', '↗'], abonnementer: ['sub', 'Abonnementer', '↻'], media: ['media', 'Media', '♪'], mer: ['mer', 'Mer', '⋯'],
+  aksjer: ['aks', 'Aksjer', '↗'], abonnementer: ['sub', 'Abonnementer', '↻'], media: ['media', 'Media', '♪'], huske: ['huske', 'Huskeliste', '☑'], mer: ['mer', 'Mer', '⋯'],
 };
-export const TB_ICONS = ['⌂', 'kr', '◐', '◎', '▣', '⌕', '⇆', '◉', '☼', '▤', '↗', '↻', '♥', '★', '✦', '◔', '≡', '⇄', '▢', '✉', '♪', '⚑'];
+export const TB_ICONS = ['☑', '⌂', 'kr', '◐', '◎', '▣', '⌕', '⇆', '◉', '☼', '▤', '↗', '↻', '♥', '★', '✦', '◔', '≡', '⇄', '▢', '✉', '♪', '⚑'];
 const defItems = () => ['hjem', 'finans', 'mat', 'auto', ...(fabStyle() === 'float' ? ['sok'] : []), 'mer'].map((id) => ({ id }));
 export const tbItems = () => {
   const v = (L.tabBar?.items ?? defItems()).filter((x) => TB[x.id] && x.id !== 'mer');
@@ -263,7 +264,14 @@ export function famView() {
   if (!FM.d) return '<div class="m-spin"></div>';
   const me = FM.d.me ?? {}, mem = FM.d.members ?? [], zones = FM.d.zones ?? [], ev = (FM.d.events ?? []).slice(0, 12);
   const sh = me.sharing ?? 'on', pr = me.precision ?? 'exact';
-  return `<div class="pp-card p16-mapc"><div id="fam-slot" class="p16-map"></div>
+  // Fanene Kart, Soner og Helse (design/Familie.dc.html). Kartet ligger på Kart og Soner.
+  const tab = FT.tab;
+  if (tab === 'helse') return famTabs() + healthView();
+  const mapCard = `<div class="pp-card p16-mapc"><div id="fam-slot" class="p16-map"></div>
+      <div class="pp-row p16-mapbar"><button class="pp-btn sm${FM.zoneMode ? ' ink' : ''}" data-p16="zmode">${FM.zoneMode ? 'Trykk på kartet …' : '+ Ny sone'}</button><button class="pp-btn sm" data-p16="famfit">Vis alle</button></div></div>`;
+  if (tab === 'soner') return `${famTabs()}${mapCard}<span class="pp-lab">SONER</span>${zones.map(zoneCard).join('') || '<div class="pp-card"><div class="pp-mut">Ingen soner ennå. Trykk «+ Ny sone» og så på kartet, for eksempel hjemme, skolen eller jobben.</div></div>'}
+    <span class="pp-mut" style="font-size:12px;padding:0 4px">Trykk «Kommer» eller «Drar» for å få varsel når en person kommer til eller forlater sonen.</span>`;
+  return `${famTabs()}${personCard()}<div class="pp-card p16-mapc"><div id="fam-slot" class="p16-map"></div>
       <div class="pp-row p16-mapbar"><button class="pp-btn sm${FM.zoneMode ? ' ink' : ''}" data-p16="zmode">${FM.zoneMode ? 'Trykk på kartet …' : '+ Ny sone'}</button><button class="pp-btn sm" data-p16="famfit">Vis alle</button></div></div>
     <span class="pp-lab">FAMILIEN</span>${mem.map(memberCard).join('') || '<div class="pp-card"><div class="pp-mut">Ingen andre deler posisjon ennå. Alle med en bruker på serveren og appen kan bli med.</div></div>'}
     <span class="pp-lab">DIN DELING</span><div class="pp-card p16-me">
@@ -272,7 +280,6 @@ export function famView() {
       <div class="pp-mut">${sh === 'paused' ? 'De andre ser at du har pauset delingen.' : sh === 'off' ? 'Posisjonen din vises ikke for noen.' : pr === 'approx' ? 'De andre ser bare et område på ca. 1 km, og ikke farten din.' : 'De andre ser posisjonen, sporet og farten din.'}</div>
       <button class="pp-srow" data-p16="famgeo"><span class="m-grow"><b>Del fra denne nettleseren</b><span class="pp-mut">${FM.geoErr ? esc(FM.geoErr) : FM.geo ? 'På · sender mens siden er åpen' : 'Posisjon sendes bare mens appen er åpen her'}</span></span><span class="sw" aria-checked="${FM.geo}"></span></button>
       <div class="pp-mut">Helsedata (skritt, puls, søvn og kalorier) kan bare leses av iOS- og Android-appene med ditt samtykke. Nettleseren har ikke tilgang til dem.</div></div>
-    <span class="pp-lab">SONER</span>${zones.map(zoneCard).join('') || '<div class="pp-card"><div class="pp-mut">Ingen soner ennå. Trykk «+ Ny sone» og så på kartet, for eksempel hjemme, skolen eller jobben.</div></div>'}
     <span class="pp-lab">HENDELSER</span><div class="pp-card">${ev.map((x) => `<div class="p16-ev"><span class="p16-zd" style="background:${esc(zoneOf(x.zoneId)?.color || '#b23a2a')}"></span><span class="m-grow">${esc(evText(x))}</span><span class="pp-mut">${ago(x.ts)}</span></div>`).join('') || '<div class="pp-mut">Ingen hendelser ennå.</div>'}</div>`;
 }
 export function famSheet() {
@@ -443,7 +450,8 @@ export function bolView() {
   if (d.error) return `<div class="pp-card"><div class="pp-mut">${esc(d.error)}</div></div>`;
   return bolDetail(d);
 }
-async function bolUpload(id, files) {
+export const bolIdNow = () => bolId();
+export async function bolUpload(id, files) {
   if (!files.length) return;
   BO.up = files.length; draw();
   let ok = 0;
