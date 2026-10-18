@@ -58,7 +58,7 @@ internal val PAPER_SET_TITLES = mapOf(
     "accounts" to "Kontoer og brukere", "security" to "Sikkerhet", "tokens" to "API-tokens", "ai" to "AI og tolkning",
     "cats" to "Kategorier og budsjett", "rules" to "Regler", "stocks" to "Aksjer · Trading 212", "fin" to "Fanelinje og Mer i Finans",
     "modules" to "Moduler", "look" to "Utseende og fanelinje", "notify" to "Varsler og haptikk", "haptics" to "Haptikk",
-    "scan" to "Skanning", "server" to "Server og synk", "data" to "Data og lagring", "backup" to "Backup og data", "about" to "Om appen", "healthpos" to "Helse og posisjon", "integ" to "Integrasjoner",
+    "scan" to "Skanning", "server" to "Server og synk", "data" to "Data og lagring", "backup" to "Backup og data", "about" to "Om appen", "healthpos" to "Helse og posisjon", "integ" to "Integrasjoner", "kal" to "Kalendere",
 )
 
 /**
@@ -80,14 +80,22 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
     LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 30.dp + navBottom), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         when (sub) {
             null -> settingsMain(vm)
-            "fin" -> item { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) { PaperNavSettings(vm) } }
+            "fin" -> item {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // Prompt 26: samme editor som når man holder inne på Finans-linja.
+                    PCard { PRow("Rediger fanelinjen", "Navn, ikon, rekkefølge og stil · eller hold inne på fanelinjen i Finans", "Rediger ›", PaperPal.current.lab, serif = false) { vm.b26.finEdit = true } }
+                    PaperNavSettings(vm)
+                }
+            }
             "modules" -> item { ModulesSub(vm) }
             "notify" -> item { NotifySub(vm) }
             "accounts" -> item { AccountsPage(vm) }
             "security" -> item { SecurityPage(vm, onPrivacyChanged) }
             "tokens" -> item { TokensPage(vm) }
             "ai" -> { item { AiPage(vm) }; item { AiTimeouts23(vm) } }
-            "integ" -> item { IntegrationsPage24(vm) }
+            // Prompt 26: gruppert liste som på web, egen side per integrasjon, og Kalendere.
+            "integ" -> item { IntegList26(vm) }
+            "kal" -> item { KalSettings26(vm) }
             "cats" -> item { CategoriesPage(vm) }
             "rules" -> item { RulesPage(vm) }
             "stocks" -> item { StocksPrefsPage(vm) }
@@ -98,7 +106,7 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
             "backup" -> item { BackupPage(vm) }
             "about" -> item { AboutPage(vm) }
             "healthpos" -> item { HealthPosPage(vm) }
-            else -> settingsMain(vm)
+            else -> sub?.takeIf { it.startsWith("integ:") }?.let { ip -> item { IntegPage26(vm, ip.removePrefix("integ:")) } } ?: settingsMain(vm)
         }
     }
     if (vm.appNameEdit) AppNameSheet24(vm)
@@ -149,7 +157,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
     group("App") { i ->
         SetRow(vm, i(), Icons.Filled.Palette, "Utseende og fanelinje", "Papir ${when (vm.paperMode) { "mork" -> "mørk"; "lys" -> "lys"; else -> "· følger systemet" }} · bakgrunn · ikonfarger") { vm.settingsPage = "look" }
         SetRow(vm, i(), Icons.Filled.Notifications, "Varsler og haptikk", "Lyd, stille timer og test", top = true) { vm.settingsPage = "notify" }
-        SetRow(vm, i(), Icons.Filled.Home, "Integrasjoner", if (vm.userIsAdmin) "Dine og serverens: Plex, Bring, IMAP, Home Assistant og flere" else "Dine egne: kalender, Plex, Trading 212, Bring og flere", top = true) { vm.settingsPage = "integ" }
+        SetRow(vm, i(), Icons.Filled.CalendarMonth, "Kalendere", "Google Kalender · Home Assistant · Skole-iCal", top = true) { vm.openKalSettings26(null) }
+        SetRow(vm, i(), Icons.Filled.Home, "Integrasjoner", if (vm.userIsAdmin) "Home Assistant, Kalendere, Entur, Bring og flere" else "Kalendere, Trading 212, Bring, e-post og flere", top = true) { vm.settingsPage = "integ" }
         SetRow(vm, i(), Icons.Filled.MonitorHeart, "Helse og posisjon", "Health Connect, typer og posisjonsdeling", top = true) { vm.settingsPage = "healthpos" }
         SetRow(vm, i(), Icons.Filled.DocumentScanner, "Skanning", "Kamera, beskjæring og opplasting", top = true) { vm.settingsPage = "scan" }
         SetRow(vm, i(), Icons.Filled.Dns, "Server og synk", "Lokal og ekstern adresse", top = true) { vm.settingsPage = "server" }

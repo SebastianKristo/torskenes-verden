@@ -190,7 +190,7 @@ private fun heroText(vm: AppViewModel): Pair<String, String> {
     return when (vm.paperPage) {
         "mer" -> "Alle moduler" to "Mer"
         "fmer" -> "Finans" to "Mer"
-        "set" -> if (vm.settingsPage == null) "Konto og utseende" to "Innstillinger" else "Alle innstillinger" to (PAPER_SET_TITLES[vm.settingsPage] ?: "Innstillinger")
+        "set" -> if (vm.settingsPage == null) "Konto og utseende" to "Innstillinger" else "Alle innstillinger" to (settingsTitle26(vm))
         "fsok" -> "Finans · ✦ AI" to "Søk"
         "media" -> "Plex · Jellyfin" to "Media"
         else -> when (vm.screen) {
@@ -217,7 +217,7 @@ private fun heroText(vm: AppViewModel): Pair<String, String> {
             Screen.Sub -> "Subscription OS" to "Abonnementer"
             Screen.Folders -> (boligKicker24(vm) ?: "Utgifter og regninger") to "Boliger"
             Screen.Finn -> "Kjøp og salg" to "Finn"
-            Screen.Settings -> if (vm.settingsPage == null) "Konto og utseende" to "Innstillinger" else "Alle innstillinger" to (PAPER_SET_TITLES[vm.settingsPage] ?: "Innstillinger")
+            Screen.Settings -> if (vm.settingsPage == null) "Konto og utseende" to "Innstillinger" else "Alle innstillinger" to (settingsTitle26(vm))
             Screen.List -> "Alle kontoer" to "Liste"
             Screen.Search -> "Finans · ✦ AI" to "Søk"
             Screen.Scan -> "Finans" to "Kvitteringer"
@@ -228,7 +228,7 @@ private fun heroText(vm: AppViewModel): Pair<String, String> {
 
 private fun backLabel(vm: AppViewModel): String = when {
     vm.b24BackLabel() != null -> vm.b24BackLabel()!!
-    vm.settingsPage != null && (vm.paperPage == "set" || vm.screen == Screen.Settings) -> "Alle innstillinger"
+    vm.settingsPage != null && (vm.paperPage == "set" || vm.screen == Screen.Settings) -> vm.settingsBackLabel26()
     vm.selectedTx != null && vm.paperPage == "fsok" -> "Søk"
     vm.selectedTx != null && vm.paperPage == null -> when (vm.screen) { Screen.List -> "Liste"; Screen.Home -> "Oversikt"; else -> "Tilbake" }
     vm.screen == Screen.Domains && vm.paperPage == null -> "Hjem"
@@ -284,6 +284,7 @@ internal fun PaperApp(
     // Prompt 23: scrollposisjonen huskes per side (tilbake gjenoppretter, nye sider åpner øverst).
     val scrollKey = navScrollKey(vm, pageKey)
     nav.enter(scrollKey, vm.navBackSeq, holder)
+    topReset26(vm, nav, holder, scrollKey) // Prompt 26: nytt trykk på aktiv fane → øverst
     val meter = nav.meter(scrollKey)
     val onTap: () -> Unit = {
         when {
@@ -316,7 +317,7 @@ internal fun PaperApp(
                     // Ny side åpner alltid helt øverst: alt innhold (og rulleposisjonen) bygges på nytt ved hvert sidebytte.
                     // Dra for å oppdatere: fra toppen når siden står øverst (ca. 70 dp), så hentes siden på nytt.
                     PullToRefreshBox(isRefreshing = vm.pullRefreshing, onRefresh = { vm.pullRefresh() }, modifier = Modifier.fillMaxHeight()) {
-                    Box(Modifier.fillMaxHeight().widthIn(max = if (!wide) 10_000.dp else if (home) 960.dp else 720.dp)) { key(pageKey) { holder.SaveableStateProvider(scrollKey) {
+                    Box(Modifier.fillMaxHeight().widthIn(max = if (!wide) 10_000.dp else if (home) 960.dp else 720.dp)) { key(pageKey, vm.b26.topSeq) { holder.SaveableStateProvider(scrollKey) {
                         when {
                             vm.original != null -> PaneBox(navBottom) { OriginalScreen(vm) }
                             vm.editing != null -> PaneBox(navBottom) { TxEditScreen(vm, vm.editing!!, scan) }
@@ -382,6 +383,7 @@ internal fun PaperApp(
             if (vm.familyOpen) FamilyScreen(vm)
             if (vm.tasksOpen) TasksScreen(vm)
             if (vm.bd24.open) BirthdaysScreen24(vm)
+            if (vm.kal26.open) KalenderScreen26(vm)
             if (vm.compareOpen) CompareScreen(vm)
             // Prompt 23 (MOD): Finn-annonsen i fullskjerm (egen BackHandler, så tilbake lukker den uten forhåndsvisning).
             if (vm.m23.finnAdFor != null) FinnAdScreen23(vm)
@@ -389,6 +391,7 @@ internal fun PaperApp(
       }
     }
     if (vm.tabEdit) TabBarEditor(vm)
+    if (vm.b26.finEdit) FinTabBarEditor26(vm)
     if (vm.scanSheet) PaperScanSheet(vm, takePhoto, pickPhotos, pickFiles)
     if (vm.trkSettings) PaperTrackSettings(vm)
     if (vm.trkAddOpen) NewShipmentSheet(vm)
@@ -542,11 +545,11 @@ private fun PaperNav(vm: AppViewModel, bar: String, float: Boolean, modifier: Mo
     val tabs = navTabs(vm, bar, float)
     Row(
         modifier.fillMaxWidth().height(62.dp).shadow(16.dp, CircleShape).clip(CircleShape).background(p.nav)
-            .longPressEdit(bar == "main") { Haptics.tap(); vm.tabEdit = true }.padding(horizontal = 8.dp),
+            .longPressEdit26(bar == "main" || bar == "fin", bar) { Haptics.tap(); if (bar == "fin") vm.b26.finEdit = true else vm.tabEdit = true }.padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         // Prompt 24: egen Row per fane (Mer24.kt): ikonboks 18, glyf 16, 1,5 ned, 7 mellomrom, tekst uten fontpadding.
-        tabs.forEach { t -> PaperTab24(t.label, t.icon, cur == t.key, p.navInk, p.navActInk, p.navAct) { t.go(); Haptics.select() } }
+        tabs.forEach { t -> PaperTab24(t.label, t.icon, cur == t.key, p.navInk, p.navActInk, p.navAct) { if (cur == t.key) vm.tabReselect26(bar, t) else t.go(); Haptics.select() } }
         if ((!float || bar == "sub") && !noScanHere(vm)) ScanPress(vm, bar, Modifier.padding(start = 4.dp), 46.dp, CircleShape, onTap, onHold) { Text("+", color = p.onLab, fontSize = 22.sp) }
     }
 }
@@ -606,7 +609,7 @@ private fun ScanQueue(vm: AppViewModel) {
 /* ---------------- Hjem ---------------- */
 
 private val HOME_SECS = listOf(
-    PSec("h1", "Søk", full = true), PSec("h2", "Pakker"), PSec("h3", "Avganger"), PSec("h9", "Bursdager"), PSec("hm", "Moduler", full = true),
+    PSec("h1", "Søk", full = true), PSec("h2", "Pakker"), PSec("h3", "Avganger"), PSec("h10", "Kalender"), PSec("h9", "Bursdager"), PSec("hm", "Moduler", full = true),
     PSec("h8", "Huskeliste"), PSec("h6", "Posisjon"), PSec("h7", "Bolig"),
     PSec("h5", "Siste nytt", full = true), PSec("h4", "Snarveier", full = true), PSec("hs", "Server"),
 )
@@ -661,6 +664,7 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
                 // Nye kort: Huskeliste (de tre neste med avkrysning), Posisjon (familien) og Bolig.
                 "h8" -> HomeTasksCard(vm)
                 "h9" -> HomeBirthdaysCard24(vm)
+                "h10" -> HomeKalCard26(vm)
                 "h6" -> HomePositionCard(vm)
                 "h7" -> HomeBoligCard(vm)
                 "h5" -> PaperNewsCard(vm)

@@ -54,6 +54,7 @@ private val MER_PATHS25: Map<String, String> = mapOf(
     "domener" to "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18",
     "sporing" to "M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10",
     "bursdag" to "M4 11h16v9H4zM2 7h20v4H2zM12 7v13M12 7c-1.5-3-5-3-5-1s3 1 5 1zM12 7c1.5-3 5-3 5-1s-3 1-5 1z",
+    "kalender" to "M4 5h16v15H4zM4 10h16M8 3v4M16 3v4M8 14h2M12 14h2M16 14h.01M8 17h2",
     "huske" to "M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2",
     "kart" to "M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z",
     "media" to "M5 4l14 8-14 8z",
@@ -92,7 +93,7 @@ internal fun PaperRail25(vm: AppViewModel, bar: String, float: Boolean, modifier
         modifier.width(84.dp).fillMaxHeight()
             .shadow(16.dp, shape, ambientColor = Color.Black.copy(alpha = .5f), spotColor = Color.Black.copy(alpha = .5f))
             .clip(shape).background(p.nav)
-            .longPressEdit(bar == "main") { Haptics.tap(); vm.tabEdit = true }
+            .longPressEdit26(bar == "main" || bar == "fin", bar) { Haptics.tap(); if (bar == "fin") vm.b26.finEdit = true else vm.tabEdit = true }
             .padding(horizontal = 6.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp), horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -102,7 +103,7 @@ internal fun PaperRail25(vm: AppViewModel, bar: String, float: Boolean, modifier
             exit = fadeOut(tween(150)) + scaleOut(tween(150), targetScale = .8f),
         ) { RedHome25(vm) }
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            tabs.forEach { t -> RailTab25(t.label, t.icon, cur == t.key, style) { t.go(); Haptics.select() } }
+            tabs.forEach { t -> RailTab25(t.label, t.icon, cur == t.key, style) { if (cur == t.key) vm.tabReselect26(bar, t) else t.go(); Haptics.select() } }
         }
         if (!float && !noScanHere(vm)) ScanPress(vm, bar, Modifier, 56.dp, RoundedCornerShape(18.dp), onTap, onHold) { Text("+", color = p.onLab, fontSize = 22.sp) }
     }

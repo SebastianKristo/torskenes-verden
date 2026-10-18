@@ -64,6 +64,7 @@ private fun setIndex24(vm: AppViewModel): List<SetItem24> = buildList {
     add(SetItem24("news", "Nyhetsleser", vm.appName, "Kilder og AI", null, "nyheter rss"))
     add(SetItem24("look", "Utseende og fanelinje", "App", "Tema (lys og mørk), bakgrunn og ikonfarger", "look", "tema mørk lys farge bakgrunn"))
     add(SetItem24("notify", "Varsler og haptikk", "App", "Lyd, stille timer, vibrasjon og test", "notify", "varsel lyd vibr push"))
+    add(SetItem24("kal", "Kalendere", "App", "Google Kalender, Home Assistant, Skole-iCal og Canvas", "kal", "kalender google ha skole canvas ical timeplan bursdag"))
     add(SetItem24("integ", "Integrasjoner", "App", if (vm.userIsAdmin) "Dine og serverens: Plex, Bring, IMAP, Home Assistant og flere" else "Dine egne: kalender, Plex, Trading 212, Bring, IMAP og flere", "integ", "integrasjon"))
     add(SetItem24("healthpos", "Helse og posisjon", "App", "Health Connect, skritt, puls, søvn og posisjonsdeling", "healthpos", "helse posisjon skritt kart"))
     add(SetItem24("scan", "Skanning", "App", "Kamera, beskjæring og opplasting", "scan", "kamera skann"))
@@ -81,7 +82,7 @@ private val SYN24: Map<String, List<String>> = mapOf(
     "varsel" to listOf("notify"), "lyd" to listOf("notify"), "vibr" to listOf("notify"), "token" to listOf("tokens"), "nøkkel" to listOf("tokens", "integ:ai"),
     "pakk" to listOf("integ:mybring", "integ:postnord", "integ:parcelsapp"), "post" to listOf("integ:mybring", "integ:postnord"), "bring" to listOf("integ:mybring"),
     "spor" to listOf("integ:mybring", "integ:parcelsapp"), "buss" to listOf("integ:entur"), "trikk" to listOf("integ:entur"), "ruter" to listOf("integ:entur"),
-    "avgang" to listOf("integ:entur"), "kalend" to listOf("integ:google"), "bursdag" to listOf("integ:google"), "google" to listOf("integ:google"),
+    "avgang" to listOf("integ:entur"), "kalend" to listOf("kal", "integ:google"), "bursdag" to listOf("kal", "integ:google"), "google" to listOf("kal", "integ:google"), "canvas" to listOf("kal"), "skole" to listOf("kal"),
     "gemini" to listOf("ai", "integ:ai"), "ai" to listOf("ai", "integ:ai"), "aksje" to listOf("stocks", "integ:t212"), "bank" to listOf("import", "integ:bank"),
     "budsjett" to listOf("cats"), "kategori" to listOf("cats"), "regel" to listOf("rules"), "home" to listOf("integ:ha"), "ha" to listOf("integ:ha"),
     "domene" to listOf("integ:cloudflare"), "cloudflare" to listOf("integ:cloudflare"), "vær" to listOf("integ:met"), "yr" to listOf("integ:met"),
@@ -136,7 +137,9 @@ private fun open24(vm: AppViewModel, it: SetItem24) {
     fun main(key: String, index: Int) { vm.settingsPage = null; vm.highlight25(key, index) }
     when {
         it.id.startsWith("profile:") -> main(it.id, 3)
-        it.id.startsWith("integ:") -> { vm.settingsPage = "integ"; vm.highlight25(it.id, 0) }
+        // Prompt 26: hver integrasjon har egen side (Kalendere for skole, Google og HA).
+        it.id.startsWith("integ:") -> vm.openInteg26(it.id.removePrefix("integ:"))
+        it.id == "kal" -> vm.openKalSettings26(null)
         it.id == "import" -> main(rowKey25("Bankimport"), 7)
         it.id == "sub" -> main(rowKey25("Subscription OS"), 7)
         it.id == "appname" -> main(rowKey25("Navn på appen"), 9)
@@ -334,7 +337,7 @@ private fun IntegCard24(vm: AppViewModel, i: Integ24) {
 }
 
 @Composable
-private fun IntegEditor24(vm: AppViewModel, i: Integ24, f: IntegField24) {
+internal fun IntegEditor24(vm: AppViewModel, i: Integ24, f: IntegField24) {
     val p = PaperPal.current
     val s = vm.b24
     var v by remember(i.id, f.key) { mutableStateOf(if (f.type == "secret") "" else f.value ?: "") }
@@ -375,7 +378,7 @@ private fun IntegEditor24(vm: AppViewModel, i: Integ24, f: IntegField24) {
 
 /** Rad som SetRow, men med farge på verdien (grønn «Tilkoblet», rød «Ikke satt») og valgfritt ikon. */
 @Composable
-private fun IRow24(
+internal fun IRow24(
     vm: AppViewModel, i: Int, icon: ImageVector?, title: String, sub: String?, value: String, valueColor: Color, top: Boolean,
     titleColor: Color = PaperPal.current.ink, onClick: (() -> Unit)?,
 ) {

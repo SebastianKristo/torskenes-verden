@@ -323,7 +323,7 @@ internal fun navTabs(vm: AppViewModel, bar: String, float: Boolean): List<NavTab
             .map { (kn, ic) -> NavTab(kn.first, kn.second, ic) { vm.domainSection(kn.first) } }
         "fin" -> {
             val l = vm.paperFinTabs.mapNotNull { k -> FIN_TABS.firstOrNull { it.first == k } }
-                .map { (k, n) -> NavTab(k, n, finIcon(k)) { vm.paperFinTab(k) } }.toMutableList()
+                .map { (k, n) -> NavTab(k, vm.finTabLabel26(k, n), vm.finTabIcon26(k, finIcon(k))) { vm.paperFinTab(k) } }.toMutableList()
             if (float && l.none { it.key == "sok" }) l += NavTab("sok", "Søk", "⌕") { vm.paperFinTab("sok") }
             l += NavTab("fmer", "Mer", "⋯") { vm.paperFinTab("fmer") }
             l
@@ -863,7 +863,9 @@ internal fun NewShipmentSheet(vm: AppViewModel) {
     val clean = no.uppercase().filter { it.isLetterOrDigit() }
     val guess = if (clean.length >= 6) Carrier.detect(clean) else null
     val car = guess?.let { g -> Carrier.KNOWN.firstOrNull { it.id == g } }?.takeIf { it.id != "other" }
-    val submit = { if (clean.length >= 6) { vm.addTracking(clean, "", guess, false); vm.trkAddOpen = false } }
+    // Prompt 26: Auto (gjenkjent) eller en bestemt tjeneste.
+    var pick by remember { mutableStateOf<String?>(null) }
+    val submit = { if (clean.length >= 6) { vm.addTracking26(clean, pick); vm.trkAddOpen = false } }
     // «Skann strekkode»: bilde av pakkelappen, som serveren leser (Roboflow). Uten oppsett skriver eller limer man inn selv.
     var shot by remember { mutableStateOf<android.net.Uri?>(null) }
     val cam = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok -> if (ok) shot?.let { u -> vm.scanBarcode(u) { code -> no = code } } }
@@ -890,7 +892,9 @@ internal fun NewShipmentSheet(vm: AppViewModel) {
                 )
                 Box(Modifier.fillMaxWidth().height(2.dp).background(p.lab))
             }
-            if (car != null) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CarrierChips26(clean, pick) { pick = it }
+            if (pick != null) Text("Spores via ${trkCarName26(pick)} · valgt", color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            else if (car != null) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 CarrierBadge(car.ini, car.color, car.fg, 24, car.id)
                 Text("✓ ${car.name} gjenkjent", color = p.pos, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             }

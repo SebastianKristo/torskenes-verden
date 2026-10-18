@@ -91,7 +91,10 @@ data class DomSum24(val visitsToday: Long, val domains: Int, val status: String)
 data class IntegField24(val key: String, val label: String, val type: String, val value: String?, val saved: Boolean, val help: String?)
 /** scope: "personal" (brukerens egne, alle ser og endrer) eller "server" (serveroppsett, bare administrator). */
 data class Integ24(val id: String, val name: String, val group: String?, val status: String, val fields: List<IntegField24>, val canTest: Boolean,
-    val scope: String = "server") {
+    val scope: String = "server",
+    // Prompt 26: metadata som på web (kategori, merke, farge, kort beskrivelse, statustekst og nummererte steg). Se Mod26B.kt.
+    val category: String? = null, val badge: String? = null, val color: String? = null, val description: String? = null,
+    val statusText: String? = null, val guide: List<Pair<String, String>> = emptyList(), val hidden: Boolean = false) {
     val personal: Boolean get() = scope == "personal"
 }
 
@@ -114,6 +117,8 @@ internal fun parseIntegrations24(s: String): List<Integ24> {
             },
             o.optBoolean("canTest", true),
             o.optStr("scope")?.takeIf { it == "personal" || it == "server" } ?: if (o.optString("id") in PERSONAL24) "personal" else "server",
+            category = o.optStr("category"), badge = o.optStr("badge"), color = o.optStr("color"), description = o.optStr("description"),
+            statusText = o.optStr("statusText"), guide = parseGuide26(o.opt("guide")), hidden = o.optBoolean("hidden", false),
         )
     }
 }
@@ -279,6 +284,7 @@ fun AppViewModel.b24PickProfile(key: String) {
     b24.profile = key
     prefs.set(pk24("profile"), key)
     updatePaperFinTabs(p.finNav.map(::finKey24))
+    clearFinLabels26() // Prompt 26: profilen gir standardnavn og -ikoner i Finans-linja
     if (key == "standard" || p.homeNav.isEmpty()) resetTabBar()
     else saveTabBar(p.homeNav.mapNotNull { k -> MAIN_TABS.firstOrNull { it.id == k } } + MAIN_TABS.first { it.id == "mer" })
     launch24b {

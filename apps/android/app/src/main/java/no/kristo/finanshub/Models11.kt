@@ -84,6 +84,11 @@ data class Shipment(
     val estimatedDelivery: String? = null,
     val pickup: TrkPickup? = null,
     val stepInfo: List<TrkStep> = emptyList(),
+    /** Prompt 26: valgt transportør (null = automatisk), den gjenkjente, og teksten i underteksten («Bring · valgt»). */
+    val carrierOverride: String? = null,
+    val carrierDetected: String? = null,
+    val carrierLabel: String? = null,
+    val carrierDetectedName: String? = null,
 ) {
     /** Tittelen på kortet: serverens tittel, ellers varenavn/butikk, ellers «Pakke fra <fraktselskap>». */
     val cardTitle: String get() {
@@ -145,6 +150,7 @@ fun parseShipment(o: JSONObject): Shipment {
             ?: CARRIER_DOMAINS[carrier],
         moreCount = o.optIntOrNull("moreCount"),
         lastEvent = lastEvent, updateError = updateError, estimatedDelivery = o.optStr("estimatedDelivery"), pickup = pickup, stepInfo = stepInfo,
+        carrierOverride = o.optStr("carrierOverride") ?: o.optStr("carrier_override"), carrierDetected = o.optStr("carrierDetected"), carrierLabel = o.optStr("carrierLabel"), carrierDetectedName = o.optStr("carrierDetectedName"),
     )
 }
 

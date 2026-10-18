@@ -454,6 +454,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         tasks = null; taskNext = emptyList(); tasksOpen = false; family = null; famTrack = emptyList(); famSel = null; familyOpen = false
         famPositions = null; tracking = null; homePackages = null; myStops = emptyList(); stopDeps = emptyMap(); stopSel = null; ruterOpen = false
         photoThumbs = emptyMap(); photoFailed = emptySet(); bgInfo = null; depOpen = null; shareListId = null; taskUsers = emptyList()
+        kal26.open = false; kal26.events = null; kal26.loadedFor = null; kal26.layoutFor = null
         scopeToAccount()
     }
 
@@ -614,9 +615,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             editing != null -> editing = null
             detail != null -> { detail = null; detailTx = null }
             editHome -> editHome = false
-            screen == Screen.Settings && settingsPage != null -> settingsPage = null
-            paper && paperPage == "set" && settingsPage != null -> settingsPage = null
+            screen == Screen.Settings && settingsPage != null -> settingsBack26()
+            paper && paperPage == "set" && settingsPage != null -> settingsBack26()
             tasksOpen -> closeTasks()
+            kal26.open -> closeKal26()
             bd24.open -> closeBirthdays24()
             compareOpen -> compareOpen = false
             screen == Screen.Folders && folder != null -> folder = null
@@ -693,6 +695,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "news", "rss", "nyheter" -> openNews()
             "huske", "tasks" -> openTasks(newTask = uri.path?.trim('/') == "new")
             "bursdager", "birthdays" -> birthdaysLink24(uri)
+            "kalender", "calendar" -> kalLink26(uri)
             "avganger", "ruter" -> { go(Screen.Homelab); openRuter() }
             "familie", "family" -> openFamily()
             "finn" -> go(Screen.Finn)
@@ -1721,6 +1724,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         applyLayout19(raw)
         applyLayout20(raw)
         applyLayout24a(raw)
+        applyLayout26b(raw)
         val obKey = AppPrefs.ONBOARDED + (account?.id ?: "")
         onboardNeeded = x.onboarded == false && !prefs.bool(obKey)
         if (prefs.bool(AppPrefs.DESIGN_SYNCED)) return
@@ -2341,6 +2345,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val out = saved.toMutableList()
         keys.forEachIndexed { i, k ->
             if (k in out) return@forEachIndexed
+            // Prompt 26: Kalender (h10) legges nederst når brukeren har et lagret oppsett (ellers etter Avganger).
+            if (page == "hjem" && k == "h10" && saved.isNotEmpty()) { out.add(k); return@forEachIndexed }
             val prev = keys.subList(0, i).lastOrNull { it in out }
             out.add(if (prev == null) 0 else out.indexOf(prev) + 1, k)
         }
@@ -3498,6 +3504,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val p25 = P25State()
     internal suspend fun <T> api25(f: suspend Api.() -> T): T = api.f()
     internal fun launch25(block: suspend () -> Unit) = launch(block)
+
+    /* ---------- Prompt 26 (ANDROID-B): Kalendere, Integrasjoner, Sporing, Finans-fanelinja og aktiv fane (Mod26B.kt) ---------- */
+    val b26 = B26State()
+
+    /* ---------- Prompt 26 (A): Kalender med skoletimeplan, widgets og Hjem-kortet (Calendar26.kt) ---------- */
+    val kal26 = Kal26State()
+    internal suspend fun <T> api26a(f: suspend Api.() -> T): T = api.f()
+    internal fun launch26a(block: suspend () -> Unit) = launch(block)
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.

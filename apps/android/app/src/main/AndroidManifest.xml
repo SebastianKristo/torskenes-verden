@@ -475,6 +475,32 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s24_bal" />
         </receiver>
 
+        <!-- Prompt 26: Kalender (Material You 2×2, 4×2, 4×4) og Samsung-variantene (134 × 155, 296 × 155, 296 × 330 dp, av til appen ser Samsung). -->
+        <receiver android:name=".widget.KalReceiver26S" android:exported="true" android:enabled="true" android:label="Kalender">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_kal26_s" />
+        </receiver>
+        <receiver android:name=".widget.KalReceiver26M" android:exported="true" android:enabled="true" android:label="Kalender 4×2">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_kal26_m" />
+        </receiver>
+        <receiver android:name=".widget.KalReceiver26L" android:exported="true" android:enabled="true" android:label="Kalender 4×4">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_kal26_l" />
+        </receiver>
+        <receiver android:name=".widget.S24KalReceiver26S" android:exported="true" android:enabled="false" android:label="Kalender · Samsung">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s26_kal_s" />
+        </receiver>
+        <receiver android:name=".widget.S24KalReceiver26M" android:exported="true" android:enabled="false" android:label="Kalender 4×2 · Samsung">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s26_kal_m" />
+        </receiver>
+        <receiver android:name=".widget.S24KalReceiver26L" android:exported="true" android:enabled="false" android:label="Kalender 4×4 · Samsung">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s26_kal_l" />
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.files"

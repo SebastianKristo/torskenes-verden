@@ -164,7 +164,8 @@ internal fun BirthdaysScreen24(vm: AppViewModel) {
                     }
                 }
             }
-            item { Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { BdCalendars(vm, ctx) } }
+            // Prompt 26: kalenderoppsettet ligger i Innstillinger → Kalendere. Her er bare lenkeraden.
+            item { Column(Modifier.padding(horizontal = 16.dp)) { BdCalLink26(vm) } }
             item {
                 Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     BdLabel("WIDGETS PÅ TELEFONEN")
@@ -388,7 +389,7 @@ private fun GoogleG(size: Int) {
 /** Kalendere: Google (logg inn, kalender, skriv nye, kontakter, synk, logg ut) og Home Assistant (calendar.*, importer, to veier). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun BdCalendars(vm: AppViewModel, ctx: android.content.Context) {
+internal fun BdCalendars(vm: AppViewModel, ctx: android.content.Context) {
     val p = PaperPal.current
     val s = vm.bd24
     val g = s.google

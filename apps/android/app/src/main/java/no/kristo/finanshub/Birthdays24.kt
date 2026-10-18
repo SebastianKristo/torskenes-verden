@@ -289,7 +289,8 @@ fun AppViewModel.googleLogin24(ctx: Context) {
 /** finanshub://bursdager[?ok=1&google=ok | ?error=…&google=error | /new]: fra widgetene og etter Google-innloggingen. */
 fun AppViewModel.birthdaysLink24(uri: Uri) {
     val new = uri.path?.trim('/') == "new"
-    openBirthdays24(new)
+    // Prompt 26: Google-innloggingen startes fra Innstillinger → Kalendere; da blir man stående der.
+    if (new || settingsPage != "kal") openBirthdays24(new)
     val s = bd24
     val err = uri.getQueryParameter("error")
     when {

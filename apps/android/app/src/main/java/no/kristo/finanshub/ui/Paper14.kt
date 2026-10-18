@@ -542,18 +542,21 @@ internal fun PaperTracking(vm: AppViewModel, navBottom: Dp) {
 private fun TrkAdd(vm: AppViewModel, t: TrackingData?) {
     val p = PaperPal.current
     var no by remember { mutableStateOf("") }
+    var pick by remember { mutableStateOf<String?>(null) }
     val guess = if (no.length >= 6) Carrier.detect(no) else null
     val car = guess?.let { g -> Carrier.KNOWN.firstOrNull { it.id == g } }
+    val add = { if (no.length >= 6) { vm.addTracking26(no, pick); no = ""; pick = null } }
     PCard {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             PLabel("Legg til sending")
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 PField("Sporingsnummer", no, { no = it.uppercase() }, Modifier.weight(1f), placeholder = "CV704411234NO",
                     keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.Characters, autoCorrectEnabled = false, imeAction = ImeAction.Done),
-                    onDone = { if (no.length >= 6) { vm.addTracking(no, "", guess, false); no = "" } })
-                PButton("Legg til", height = 42.dp) { if (no.length >= 6) { vm.addTracking(no, "", guess, false); no = "" } }
+                    onDone = { add() })
+                PButton("Legg til", height = 42.dp) { add() }
             }
-            if (car != null && car.id != "other") Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CarrierChips26(no, pick) { pick = it }
+            if (pick == null && car != null && car.id != "other") Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 CarrierLogo(vm, car.id, car.name, car.ini, car.color, car.fg, 22)
                 Text("Gjenkjent: ${car.name}", color = p.mut, fontSize = 12.5.sp)
             }
@@ -580,8 +583,11 @@ private fun TrkShipments(vm: AppViewModel, items: List<Shipment>) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // Hold inne på en pakke for å velge flere, og arkiver, gjenopprett eller slett dem samlet.
         if (vm.trkPicking) TrkPickBar(vm, list.map { it.id }, arkiv)
+        // Prompt 26: én pakke valgt → SPOR VIA (overstyr transportøren).
+        if (vm.trkPicking && !arkiv) TrkSporVia26(vm, list)
         if (list.isEmpty()) PCard { Text(if (arkiv) "Ingen arkiverte sendinger." else "Ingen sendinger her.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(14.dp)) }
-        list.forEach { s ->
+        list.forEach { s0 ->
+            val s = vm.trkView26(s0)
             val picked = s.id in vm.trkPicked
             Column(
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(if (picked) p.surf2 else p.card)
@@ -600,7 +606,7 @@ private fun TrkShipments(vm: AppViewModel, items: List<Shipment>) {
                     PackageLogo(vm, s, 44)
                     Column(Modifier.weight(1f)) {
                         PSerif(s.cardTitle, 18.sp, maxLines = 1)
-                        Text("${s.carrierName} · ${s.trackingNo}", color = p.mut, fontSize = 11.5.sp, fontFamily = PaperFonts.mono, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("${vm.trkCarrierLabel26(s)} · ${s.trackingNo}", color = p.mut, fontSize = 11.5.sp, fontFamily = PaperFonts.mono, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Text(s.sourceLabel, color = p.mut, fontSize = 11.sp)
                 }

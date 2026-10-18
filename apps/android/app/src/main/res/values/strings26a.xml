@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_kal26_s_desc">Neste time med rom og lærer</string>
+    <string name="widget_kal26_m_desc">Neste time og de tre neste</string>
+    <string name="widget_kal26_l_desc">Hele dagen og de neste prøvene</string>
+    <string name="widget_s26_kal_s_desc">Neste time · Samsung-størrelse</string>
+    <string name="widget_s26_kal_m_desc">Neste time og de tre neste · Samsung-størrelse</string>
+    <string name="widget_s26_kal_l_desc">Hele dagen og prøver · Samsung-størrelse</string>
+</resources>

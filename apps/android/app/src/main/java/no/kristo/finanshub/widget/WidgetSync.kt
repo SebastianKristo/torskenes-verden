@@ -30,6 +30,7 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
             TasksStore.useAccount(ctx, null)
             Bd24WidgetStore.useAccount(ctx, null)
             Deps24Store.useAccount(ctx, null)
+            Kal26WidgetStore.useAccount(ctx, null)
             WidgetStore.fail(ctx, "Logg inn i FinansHub", loggedIn = false)
             WidgetSync.redraw(ctx)
             return Result.success()
@@ -39,6 +40,7 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         TasksStore.useAccount(ctx, acc.id)
         Bd24WidgetStore.useAccount(ctx, acc.id)
         Deps24Store.useAccount(ctx, acc.id)
+        Kal26WidgetStore.useAccount(ctx, acc.id)
         var err: String? = null
         for (base in listOf(acc.server, acc.local, acc.external).filter { it.isNotBlank() }.distinct()) {
             try {
@@ -49,6 +51,8 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                 runCatching { TasksStore.save(ctx, Api(base, acc.token).hlGet("/tasks/next?n=6", timeout = 8_000)); TasksWidgetSync.redraw(ctx) }
                 // Prompt 24: bursdager og avganger (Bursdager-widgeten og Samsung-widgetene).
                 runCatching { fetch24(ctx, Api(base, acc.token)); S24.redraw(ctx) }
+                // Prompt 26: Kalender-widgetene (lagrer, tegner på nytt og planlegger neste timegrense).
+                runCatching { fetchKal26(ctx, Api(base, acc.token), acc.id) }
                 return Result.success()
             } catch (e: ApiException) {
                 err = e.message
@@ -96,5 +100,6 @@ object WidgetSync {
     suspend fun redraw(ctx: Context) {
         ALL_WIDGETS.forEach { w -> runCatching { w.updateAll(ctx) } }
         S24.redraw(ctx)
+        runCatching { Kal26Widgets.redraw(ctx) }
     }
 }
