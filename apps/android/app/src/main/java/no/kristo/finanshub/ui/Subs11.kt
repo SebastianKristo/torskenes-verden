@@ -138,8 +138,12 @@ private fun whenText(date: String): String {
 
 @Composable
 private fun ChargeRow(vm: AppViewModel, x: SubsX, c: SubCharge, i: Int, n: Int, sub: String, dim: Boolean = false) {
-    Row(Modifier.fillMaxWidth().clip(itemShape(i, n)).background(C.surface1).padding(16.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Logo(vm, x.item(c.id)?.domain, c.name, 0xFFFF7A3D, 36)
+    var edit by remember { mutableStateOf(false) }
+    val item = x.item(c.id)
+    if (edit && item != null) SubEditSheet(vm, item) { edit = false }
+    Row(Modifier.fillMaxWidth().clip(itemShape(i, n)).background(C.surface1).clickable(enabled = item != null) { Haptics.select(); edit = true }.padding(16.dp, 12.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        SubLogo(vm, item, c.name, 36)
         Column(Modifier.weight(1f)) { Text(c.name, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis); Text(sub, color = C.text2, fontSize = 12.sp) }
         Text(kr0(c.amount), fontFamily = Mono, fontWeight = FontWeight.SemiBold, color = if (dim) C.text2 else C.text)
     }
@@ -154,10 +158,12 @@ private fun SubItemRow(vm: AppViewModel, s: SubItem, i: Int, n: Int) {
         s.status == "low_use" -> "⚠ Lite brukt" to C.accentLight
         else -> "Aktiv" to C.positive
     }
+    if (menu) SubEditSheet(vm, s) { menu = false }
     Box {
-        Row(Modifier.fillMaxWidth().clip(itemShape(i, n)).background(C.surface1).clickable { menu = true }.padding(16.dp, 12.dp),
+        // Trykk åpner redigering (navn, pris, plan, kategori, syklus, faktureringsdato, status og logo).
+        Row(Modifier.fillMaxWidth().clip(itemShape(i, n)).background(C.surface1).clickable { Haptics.select(); menu = true }.padding(16.dp, 12.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Logo(vm, s.domain, s.name, 0xFFFF7A3D, 36)
+            SubLogo(vm, s, s.name, 36)
             Column(Modifier.weight(1f)) {
                 Text(s.name + if (s.plan.isBlank()) "" else " · ${s.plan}", fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(listOfNotNull(s.cycleName, s.nextDate.takeIf { it.isNotBlank() }?.let { "Neste ${ddmm(it)}" }, s.category).joinToString(" · "), color = C.text2, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -167,9 +173,6 @@ private fun SubItemRow(vm: AppViewModel, s: SubItem, i: Int, n: Int) {
                 Text(n0(s.price), fontFamily = Mono, fontWeight = FontWeight.SemiBold)
                 Chip(pill, pc.copy(alpha = .15f), pc)
             }
-        }
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            DropdownMenuItem(text = { Text(if (s.active) "Marker som sagt opp" else "Aktiver igjen") }, onClick = { menu = false; vm.setSubItemActive(s, !s.active) })
         }
     }
 }
@@ -364,7 +367,7 @@ private fun AddSubSheet(vm: AppViewModel, close: () -> Unit) {
             TextButton(onClick = close) { Text("Lukk", color = C.primary) }
         }
         when (mode) {
-            "manual" -> ManualForm(vm, close)
+            "manual" -> SubEditForm(vm, null, close, embedded = true)
             "receipt" -> {
                 Text("✦ AI leser kvitteringen eller fakturaen, finner tjeneste, beløp, syklus og trekkdag, og lager abonnementet. E-poster i kvitteringsmappen i Proton Mail leses automatisk.", color = C.text2, fontSize = 13.sp)
                 Button(onClick = { pick.launch(arrayOf("image/*", "application/pdf")) }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp),

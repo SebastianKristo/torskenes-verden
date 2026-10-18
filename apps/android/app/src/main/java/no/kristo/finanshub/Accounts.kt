@@ -102,5 +102,7 @@ class AppPrefs(ctx: Context) {
         const val PAPER_MODE = "paper_mode"     // auto | lys | mork
         const val PHOTO = "photo_window"        // cur | oslo | weather | planets | custom
         const val DESIGN_SYNCED = "design_synced" // valgene over er hentet fra serveren én gang
+        const val FRESH_PAPIR = "fresh_papir"   // appen ble installert med Papir som standard
+        const val ONBOARDED = "onboarded_"      // + konto-ID: onboardingen i Papir er fullført på denne enheten
     }
 }

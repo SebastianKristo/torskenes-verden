@@ -82,8 +82,10 @@ class ScanActions(val camera: () -> Unit, val sheet: () -> Unit, private val tap
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit, onPrivacyChanged: () -> Unit) {
-    if (!vm.loggedIn || vm.addingAccount) { LoginScreen(vm); return }
+    if (!vm.loggedIn || vm.addingAccount) { if (vm.paper) PaperLogin(vm) else LoginScreen(vm); return }
     if (vm.locked) { LockScreen(vm, unlock); return }
+    // Første gang etter innlogging på en ny installasjon: velg design, bakgrunn og tilganger.
+    if (vm.onboardNeeded) { PaperOnboarding(vm); return }
     val ctx = LocalContext.current
     val snack = remember { SnackbarHostState() }
     LaunchedEffect(vm.message) { vm.message?.let { snack.showSnackbar(it); vm.message = null } }

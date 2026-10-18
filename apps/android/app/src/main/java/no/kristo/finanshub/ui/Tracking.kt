@@ -91,26 +91,48 @@ internal fun TrackingScreen(vm: AppViewModel) {
             }
         }
         vm.moduleError?.let { e -> item { Empty(e) } }
-        item { AddCard(vm, t) }
-        if (t == null) { if (vm.moduleError == null) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = C.primary) } }; return@Page }
-        item { SourcesCard(vm, t) }
-        item {
-            val counts = mapOf("active" to t.activeCount, "pickup" to t.pickupCount, "out" to t.items.count { it.outgoing && it.active }, "done" to t.items.count { it.archived || it.done })
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TRK_FILTERS.forEach { (k, l) ->
-                    val n = counts[k] ?: 0
-                    FilterChip(selected = vm.trkFilter == k, onClick = { Haptics.select(); vm.trkFilter = k }, label = { Text(if (n > 0) "$l $n" else l) },
-                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = C.container, selectedLabelColor = C.onContainer))
+        // Langt trykk på et kort: redigeringsmodus med ▲/▼ (rekkefølgen lagres per bruker som trkOrder).
+        if (vm.trkEdit) item {
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(C.container).padding(16.dp, 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Flytt kortene med ▲ og ▼", color = C.onContainer, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                TextButton(onClick = { Haptics.success(); vm.trkEdit = false }) { Text("Ferdig", color = C.onContainer, fontWeight = FontWeight.Bold) }
+            }
+        }
+        if (t == null) {
+            item { AddCard(vm, t) }
+            if (vm.moduleError == null) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = C.primary) } }
+            return@Page
+        }
+        val order = vm.trkOrder
+        order.forEachIndexed { idx, id ->
+            val title = TRK_CARDS.firstOrNull { it.first == id }?.second ?: id
+            item(key = "trk-card-$id") {
+                ReorderWrap(vm, id, title, idx, order.size, C.container, C.onContainer) {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        when (id) {
+                            "add" -> { AddCard(vm, t); SourcesCard(vm, t) }
+                            "shipments" -> {
+                                val counts = mapOf("active" to t.activeCount, "pickup" to t.pickupCount, "out" to t.items.count { it.outgoing && it.active }, "done" to t.items.count { it.archived || it.done })
+                                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    TRK_FILTERS.forEach { (k, l) ->
+                                        val n = counts[k] ?: 0
+                                        FilterChip(selected = vm.trkFilter == k, onClick = { Haptics.select(); vm.trkFilter = k }, label = { Text(if (n > 0) "$l $n" else l) },
+                                            colors = FilterChipDefaults.filterChipColors(selectedContainerColor = C.container, selectedLabelColor = C.onContainer))
+                                    }
+                                }
+                                val shown = t.items.filter { s ->
+                                    when (vm.trkFilter) { "pickup" -> !s.archived && s.ready; "out" -> s.outgoing && s.active; "done" -> s.archived || s.done; else -> s.active }
+                                }
+                                if (shown.isEmpty()) Empty("Ingen sendinger her.")
+                                shown.forEach { s -> ShipmentCard(vm, s) }
+                            }
+                            "notify" -> PrefsCard(vm, t)
+                            "carriers" -> CarriersCard(t)
+                        }
+                    }
                 }
             }
         }
-        val shown = t.items.filter { s ->
-            when (vm.trkFilter) { "pickup" -> !s.archived && s.ready; "out" -> s.outgoing && s.active; "done" -> s.archived || s.done; else -> s.active }
-        }
-        if (shown.isEmpty()) item { Empty("Ingen sendinger her.") }
-        shown.forEach { s -> item(key = "trk-${s.id}") { ShipmentCard(vm, s) } }
-        item { PrefsCard(vm, t) }
-        item { CarriersCard(t) }
     }
 }
 

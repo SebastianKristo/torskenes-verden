@@ -67,6 +67,8 @@ data class Shipment(
     val id: String, val trackingNo: String, val carrier: String, val carrierName: String, val carrierIni: String, val carrierColor: Long, val carrierFg: Long,
     val name: String, val shop: String, val source: String, val sourceRef: String, val direction: String, val status: String, val statusText: String,
     val step: Int, val steps: List<String>, val eta: String, val pickupPoint: String, val archived: Boolean, val url: String, val events: List<TrackEvent>,
+    /** Logoen fra serveren (/assets/carriers/<id>.svg). Appen viser initialene på merkefargen når SVG ikke kan tegnes. */
+    val carrierLogo: String? = null,
 ) {
     val done get() = status == "delivered"
     val active get() = !archived && !done
@@ -106,6 +108,7 @@ fun parseShipment(o: JSONObject): Shipment {
         (o.optIntOrNull("step") ?: Shipment.stepOf(status)).coerceIn(0, 4), steps, o.optStr("eta") ?: "", o.optStr("pickupPoint") ?: "",
         o.optBoolean("archived"), o.optStr("url") ?: "",
         o.optJSONArray("events")?.map { e -> TrackEvent(e.timeAt("ts") ?: e.timeAt("time"), e.optStr("ts") ?: "", e.optStr("status") ?: e.optStr("text") ?: "", e.optStr("location") ?: "") } ?: emptyList(),
+        o.optStr("carrierLogo"),
     )
 }
 
@@ -114,6 +117,8 @@ data class TrackNotice(val id: String, val kind: String, val text: String)
 data class TrackingData(
     val items: List<Shipment>, val finn: TrackSource, val email: TrackSource, val carriers: List<Carrier>, val prefs: Map<String, Boolean>,
     val notices: List<TrackNotice>?, val lastRun: Instant?,
+    /** Kilden «Arkiver leverte automatisk» (etter 7 dager). */
+    val autoArchive: TrackSource = TrackSource(true, null),
 ) {
     val lastCheck: Instant? get() = listOfNotNull(finn.lastCheck, email.lastCheck, lastRun).maxOrNull()
     val activeCount get() = items.count { it.active }
@@ -147,6 +152,7 @@ fun parseTracking(s: String): TrackingData {
         TrackingData.PREF_DEFAULT.mapValues { (k, v) -> p?.optBoolOrNull(k) ?: v },
         if (o.has("notices")) o.optJSONArray("notices")?.map { TrackNotice(it.optStr("id") ?: it.optString("ts"), it.optString("kind"), it.optString("text")) } ?: emptyList() else null,
         o.timeAt("lastRun"),
+        source("autoArchive"),
     )
 }
 
@@ -249,6 +255,8 @@ fun parseStocksX(s: String): StocksX {
 data class SubItem(
     val id: Int, val name: String, val plan: String, val price: Double, val monthly: Double, val cycle: String, val nextDate: String, val chargeDay: Int?,
     val category: String, val status: String, val active: Boolean, val domain: String?, val aiShort: String?,
+    /** Prompt 14: faktureringsdato som dag + måned (årlige), egen logo og neste trekk fra serveren. */
+    val billDay: Int? = null, val billMonth: Int? = null, val logoUrl: String? = null, val nextCharge: String? = null,
 ) {
     val cycleName get() = when (cycle) { "yearly" -> "Årlig"; "biennial" -> "Hvert 2. år"; else -> "Månedlig" }
     val flagged get() = active && (status == "low_use" || status == "price_up")
@@ -271,11 +279,14 @@ fun parseSubsX(s: String): SubsX {
     val items = o.optJSONArray("items")?.map { x ->
         val price = x.num("price"); val cycle = x.optStr("cycle") ?: "monthly"
         val next = x.optStr("nextDate") ?: ""
-        val active = x.optBoolean("active", true)
+        // Prompt 14: «state» (active | cancelled) skiller sagt opp fra helsestatusen i «status».
+        val active = x.optStr("state")?.let { it != "cancelled" } ?: x.optBoolean("active", true)
         SubItem(x.optInt("id"), x.optStr("name") ?: "Abonnement", x.optStr("plan") ?: "", price,
             x.optDoubleOrNull("monthly") ?: when (cycle) { "yearly" -> price / 12; "biennial" -> price / 24; else -> price }, cycle, next,
             x.optIntOrNull("chargeDay") ?: next.takeIf { it.length >= 10 }?.substring(8, 10)?.toIntOrNull(), x.optStr("category") ?: "Annet",
-            x.optStr("status") ?: if (!active) "cancelled" else if (x.optBoolean("lowUse")) "low_use" else "active", active, x.optStr("domain"), x.optStr("aiShort"))
+            x.optStr("status") ?: if (!active) "cancelled" else if (x.optBoolean("lowUse")) "low_use" else "active", active, x.optStr("domain"), x.optStr("aiShort"),
+            x.optIntOrNull("billDay") ?: x.optIntOrNull("bill_day"), x.optIntOrNull("billMonth") ?: x.optIntOrNull("bill_month"),
+            x.optStr("logoUrl") ?: x.optStr("logo_url"), x.optJSONObject("nextCharge")?.optStr("label") ?: x.optStr("nextCharge"))
     } ?: emptyList()
     val act = items.filter { it.active }
     val h = o.optJSONObject("health")

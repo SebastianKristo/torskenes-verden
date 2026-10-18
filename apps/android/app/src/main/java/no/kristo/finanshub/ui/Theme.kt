@@ -231,19 +231,23 @@ object Tone {
 /** Farge fra designet, oversatt til gjeldende tone. Bruk denne i stedet for Color(0xFF…) i grensesnittet. */
 fun tc(c: Long): Color = Tone.map(c)
 
-/** Papir-paletten fra «Mobil Papir App» (lys og mørk). */
+/** Papir-paletten fra «Mobil Papir App» (lys og mørk). Mørk er rettet i prompt 14 (kontrast ≥ 4,5:1 for dempet tekst). */
 class PaperPal(
     val ink: Color, val bg: Color, val card: Color, val line: Color, val lab: Color, val mut: Color, val pos: Color, val sub: Color,
     val surf2: Color, val container: Color, val tertiary: Color, val posSoft: Color, val nav: Color, val navInk: Color, val navAct: Color, val navActInk: Color,
+    /** Tekst og ikon på aksentfargen (+-knappen), og flatene i egne rullegardiner (bakgrunnsvelgeren). */
+    val onLab: Color = Color.White, val pop: Color = Color(0xFFF3EFE6), val popSel: Color = Color(0xFFE6E0D2),
 ) {
     companion object {
         val LIGHT = PaperPal(
-            Color(0xFF1B1A17), Color(0xFFF3EFE6), Color(0xFFFFFFFF), Color(0xFFD8D1C2), Color(0xFFB23A2A), Color(0xFF8F897C), Color(0xFF2F7A4F), Color(0xFF6B665C),
-            Color(0xFFEBE6DA), Color(0xFFE6E0D2), Color(0xFFEBE4C8), Color(0xFFDFE9E1), Color(0xFF1B1A17), Color(0xFFA39E92), Color(0xFFF3EFE6), Color(0xFF1B1A17),
+            Color(0xFF1B1A17), Color(0xFFF3EFE6), Color(0xFFFFFFFF), Color(0xFFD8D1C2), Color(0xFFB23A2A), Color(0xFF7A7468), Color(0xFF2F7A4F), Color(0xFF6B665C),
+            Color(0xFFEBE6DA), Color(0xFFE6E0D2), Color(0xFFEBE4C8), Color(0xFFDFE9E1), Color(0xFF1B1A17), Color(0xFFB3ADA1), Color(0xFFF3EFE6), Color(0xFF1B1A17),
+            onLab = Color.White, pop = Color(0xFFF3EFE6), popSel = Color(0xFFE6E0D2),
         )
         val DARK = PaperPal(
-            Color(0xFFECE7DC), Color(0xFF14130F), Color(0xFF211F19), Color(0xFF34322A), Color(0xFFE8705C), Color(0xFF8A8578), Color(0xFF7FCF9A), Color(0xFFA39E92),
-            Color(0xFF2A2821), Color(0xFF2E2B23), Color(0xFF2F2C1D), Color(0xFF17271E), Color(0xFFECE7DC), Color(0xFF5E594F), Color(0xFF14130F), Color(0xFFECE7DC),
+            Color(0xFFECE7DC), Color(0xFF14130F), Color(0xFF211F19), Color(0xFF3A372E), Color(0xFFF08A76), Color(0xFFA39D90), Color(0xFF8FD9A8), Color(0xFFA39D90),
+            Color(0xFF2A2821), Color(0xFF2E2B23), Color(0xFF2F2C1D), Color(0xFF17271E), Color(0xFF2A2821), Color(0xFFA39D90), Color(0xFFECE7DC), Color(0xFF14130F),
+            onLab = Color(0xFF1B1A17), pop = Color(0xFF2A2821), popSel = Color(0xFF3A372E),
         )
         val current: PaperPal get() = if (Tone.paperDark) DARK else LIGHT
     }

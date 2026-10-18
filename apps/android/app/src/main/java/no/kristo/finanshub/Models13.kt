@@ -49,7 +49,7 @@ fun parseNews(s: String): NewsData {
 
 /* ---------------- Fotovindu (GET /api/photo-window) ---------------- */
 
-data class PhotoWindow(val kind: String, val url: String?, val credit: String?, val gradient: List<Long>)
+data class PhotoWindow(val kind: String, val url: String?, val credit: String?, val gradient: List<Long>, val fallbacks: List<String> = emptyList(), val symbol: String? = null)
 
 /** Hex-fargene i en CSS-gradient («linear-gradient(170deg,#4a5a6a,#2a3440)»). */
 fun gradientColors(css: String?): List<Long> =
@@ -57,7 +57,7 @@ fun gradientColors(css: String?): List<Long> =
 
 fun parsePhotoWindow(s: String): PhotoWindow {
     val o = JSONObject(s)
-    return PhotoWindow(o.optString("kind"), o.optStr("url"), o.optStr("credit"), gradientColors(o.optStr("gradient")))
+    return PhotoWindow(o.optString("kind"), o.optStr("url"), o.optStr("credit"), gradientColors(o.optStr("gradient")), o.optJSONArray("fallbacks").strings(), o.optStr("symbol"))
 }
 
 /* ---------------- Media (GET /api/media/now og /api/media/history) ---------------- */

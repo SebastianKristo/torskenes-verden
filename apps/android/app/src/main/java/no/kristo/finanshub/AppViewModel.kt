@@ -239,6 +239,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var jobPoll: kotlinx.coroutines.Job? = null
 
     init {
+        // Ny installasjon: Papir er standard (prompt 14). Eksisterende installasjoner beholder det de har.
+        if (prefs.str(AppPrefs.MOBILE_DESIGN, "").isEmpty()) {
+            prefs.set(AppPrefs.MOBILE_DESIGN, if (accounts.isEmpty()) "papir" else "klassisk")
+            if (accounts.isEmpty()) prefs.set(AppPrefs.FRESH_PAPIR, true)
+        }
         Privacy.hidden = prefs.bool(AppPrefs.HIDE_AMOUNTS)
         layout = localLayout()
         if (loggedIn) refresh()
@@ -256,15 +261,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val financeStart: Boolean get() = startPage != Screen.Homelab
     val startLabel: String get() = if (financeStart) "Finans" else "Homelab"
     fun goStart() = go(startPage)
-    /** Knapp i fanelinja i stedet for pil øverst. */
-    val homeInBar: Boolean get() = layout.backStyle == "bar"
+    /** Startsiden har ikke lenger egen knapp i fanelinja (prompt 14): pila øverst til venstre går hjem. */
+    val homeInBar: Boolean get() = false
 
     /** «‹ Homelab» / «‹ Finans» øverst med profilbildet til høyre på samme rad. null = ingen topprad. */
     fun topRowTitle(compact: Boolean): String? {
         if (editing != null || detail != null || original != null || editHome) return null
         // Mat er en egen flate uten fanelinje: pilen vises alltid der.
         if (screen == Screen.Mat) return if (matFull) null else startLabel
-        if (!compact || layout.backStyle != "arrow") return null
+        if (!compact) return null
         return when (screen) {
             Screen.Domains -> startLabel
             Screen.Homelab, Screen.Tracking -> if (financeStart) "Finans" else null
@@ -293,6 +298,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun launch(block: suspend () -> Unit) = viewModelScope.launch {
         try { block() } catch (e: ApiException) {
+            if (e.status == 403 && e.message?.startsWith(Api.TOKEN_REFUSED) == true) return@launch
             if (e.status == 401 && loggedIn && !e.needsTotp) expired() else { message = e.message; Haptics.error() }
         } catch (e: Exception) { message = e.message ?: "Noe gikk galt"; Haptics.error() }
     }
@@ -499,7 +505,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         backTo = from?.takeIf { it != s }
         screen = s
         menuOpen = false
-        paperPage = null; paperFromMer = false; scanTarget = "receipt"; dishOpen = null
+        paperPage = null; paperFromMer = false; paperFromFinMer = false; scanTarget = "receipt"; dishOpen = null
+        if (s == Screen.Homelab || s == Screen.Mat || s == Screen.Tracking || s == Screen.Domains) paperFin = false
+        if (s != Screen.Finn) finnEdit = null
+        trkEdit = false
         launch { loadFor(s) }
     }
 
@@ -521,6 +530,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             screen == Screen.Domains && domainManager -> domainManager = false
             screen == Screen.Mat && matFull -> matFull = false
             screen == Screen.Mat && dishOpen != null -> dishOpen = null
+            paper && paperPage == "fmer" -> { paperPage = null; navigate(Screen.Homelab, null) }
+            paper && paperFromFinMer -> { navigate(Screen.Home, null); paperFin = true; paperPage = "fmer" }
+            paper && paperFin && screen in setOf(Screen.Home, Screen.List, Screen.Finn) -> navigate(Screen.Homelab, null)
             paper && paperPage != null && paperPage != "mer" -> paperPage = "mer"
             paper && paperPage == "mer" -> { paperPage = null; navigate(Screen.Homelab, null) }
             paper && paperFromMer -> { paperFromMer = false; paperPage = "mer" }
@@ -1059,7 +1071,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** Flere filer legges i kø og lastes opp én og én; AI-en leser dem i bakgrunnen på serveren. Uten nett (eller utenfor Wi-Fi) venter de. */
-    fun uploadUris(uris: List<Uri>) {
+    fun uploadUris(uris: List<Uri>, stay: Boolean = false) {
         if (uris.isEmpty()) return
         // Skann/opplasting inne i en bolig: kvitteringen havner i valgt bolig, og AI velger kategori og underkategori.
         val bolig = if (screen == Screen.Folders && editing == null) (uploadFolder ?: folder?.folder?.id) else null
@@ -1079,7 +1091,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         // Fra «Legg ved kvittering» i skjemaet: bli stående, kvitteringen kobles når den bokføres.
         if (editing != null) message = "Kvitteringen er lagt i opplastingskøen"
-        else if (screen != Screen.Scan) this.open(Screen.Scan)
+        else if (screen != Screen.Scan && !stay) this.open(Screen.Scan)
         if (!canUpload()) { offline = offline + uris; message = "${uris.size} kvittering(er) venter på Wi-Fi"; return }
         uploading += uris.size
         launch {
@@ -1379,7 +1391,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** k: finn | email */
     fun setTrackingSource(k: String, on: Boolean) {
-        tracking = tracking?.let { if (k == "finn") it.copy(finn = it.finn.copy(on = on)) else it.copy(email = it.email.copy(on = on)) }
+        tracking = tracking?.let {
+            when (k) {
+                "finn" -> it.copy(finn = it.finn.copy(on = on))
+                "autoArchive" -> it.copy(autoArchive = it.autoArchive.copy(on = on))
+                else -> it.copy(email = it.email.copy(on = on))
+            }
+        }
         launch { api.hlPut("/tracking/sources", JSONObject().put(k, on)) }
     }
 
@@ -1523,7 +1541,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun paperTab(t: String) {
         when (t) {
             "hjem" -> go(Screen.Homelab)
-            "fin" -> go(Screen.Home)
+            "fin" -> { go(Screen.Home); paperFin = true }
             "mat" -> go(Screen.Mat)
             "trk" -> go(Screen.Tracking)
             "mer" -> { if (screen !in setOf(Screen.Homelab, Screen.Home, Screen.Mat, Screen.Tracking)) go(Screen.Homelab); paperPage = "mer" }
@@ -1547,11 +1565,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Første gang: valgene fra serveren (satt på en annen enhet eller på nett) tas i bruk. */
     private suspend fun syncDesignFromServer() {
+        val raw = runCatching { api.hlGet("/me/layout") }.getOrNull() ?: return
+        val x = runCatching { parseLayoutExtras(raw) }.getOrNull() ?: return
+        // Rekkefølgen på Sporing og onboarding følger brukeren, så de leses hver gang.
+        if (x.trkOrder.isNotEmpty()) trkOrder = normalizeTrkOrder(x.trkOrder)
+        val obKey = AppPrefs.ONBOARDED + (account?.id ?: "")
+        onboardNeeded = x.onboarded == false && !prefs.bool(obKey)
         if (prefs.bool(AppPrefs.DESIGN_SYNCED)) return
-        val o = runCatching { JSONObject(api.hlGet("/me/layout")) }.getOrNull() ?: return
-        o.optStr("mobileDesign")?.takeIf { it == "klassisk" || it == "papir" }?.let { prefs.set(AppPrefs.MOBILE_DESIGN, it) }
-        o.optStr("paperMode")?.takeIf { it in setOf("auto", "lys", "mork") }?.let { prefs.set(AppPrefs.PAPER_MODE, it) }
-        o.optStr("photo")?.takeIf { it in setOf("cur", "oslo", "weather", "planets", "custom") }?.let { prefs.set(AppPrefs.PHOTO, it) }
+        // Ny installasjon står i Papir: serverens standardverdi «klassisk» skal ikke bytte tilbake.
+        x.mobileDesign?.takeIf { it == "papir" || (it == "klassisk" && !prefs.bool(AppPrefs.FRESH_PAPIR)) }?.let { prefs.set(AppPrefs.MOBILE_DESIGN, it) }
+        x.paperMode?.takeIf { it in setOf("auto", "lys", "mork") }?.let { prefs.set(AppPrefs.PAPER_MODE, it) }
+        x.photo?.takeIf { it in setOf("cur", "oslo", "weather", "planets", "custom") }?.let { prefs.set(AppPrefs.PHOTO, it) }
         prefs.set(AppPrefs.DESIGN_SYNCED, true)
         prefTick++
     }
@@ -1560,17 +1584,17 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun loadPhotoNow() {
         val kind = photoKind
-        if (kind == "cur") { photo = null; photoGradient = emptyList(); photoCredit = null; return }
-        val pw = runCatching { parsePhotoWindow(api.hlGet("/photo-window?kind=$kind")) }.getOrNull()
+        if (kind == "cur") { photo = null; photoGradient = emptyList(); photoCredit = null; photoError = null; return }
+        val (pw, bmp) = photoFor(kind)
         photoGradient = pw?.gradient ?: emptyList()
         photoCredit = pw?.credit
-        val url = pw?.url
-        photo = when {
-            // SVG (f.eks. /assets/img/oslo.svg) kan ikke vises uten SVG-bibliotek: gradienten brukes da.
-            url.isNullOrBlank() || url.substringBefore('?').endsWith(".svg", true) -> null
-            url.startsWith("http://") || url.startsWith("https://") -> if (url.startsWith(base.trimEnd('/'))) image(url.removePrefix(base.trimEnd('/'))) else externalImage(url)
-            else -> image(url)
-        }
+        photo = bmp
+        photoThumbs = photoThumbs + (kind to bmp)
+        if (bmp == null && (pw?.url != null || pw?.fallbacks?.isNotEmpty() == true)) {
+            photoFailed = photoFailed + kind
+            photoError = "Fikk ikke lastet bildet · trykk for å prøve igjen"
+            android.util.Log.w("FinansHub", "Bakgrunn «$kind»: ingen av bildene kunne lastes (${pw?.url})")
+        } else { photoFailed = photoFailed - kind; photoError = null }
     }
 
     /** Bilde fra en annen tjeneste (f.eks. Wikimedia). Tokenet sendes ikke dit. */
@@ -1791,4 +1815,246 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val view = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
         runCatching { ctx.startActivity(view) }.onFailure { shareFile(f.name, mime, data) }
     }
+
+    /* ---------- Prompt 14: Papir – Finans-fanelinja, Finn, Sporing, bakgrunn, onboarding og abonnementer ---------- */
+
+    /** Papir: Finans har egen fanelinje (Oversikt, Liste, Finn, Mer). true mens brukeren er inne i Finans. */
+    var paperFin by mutableStateOf(false)
+    /** Siden ble åpnet fra Finans → Mer: tilbake går dit. */
+    var paperFromFinMer by mutableStateOf(false)
+        private set
+    /** Domener i Papir: oversikt | publikum | ytelse | infra (egen fanelinje). */
+    var domSection by mutableStateOf("oversikt")
+    /** Første gang etter innlogging på en ny installasjon: design, bakgrunn og tilganger (3 steg). */
+    var onboardNeeded by mutableStateOf(false)
+    /** Rekkefølgen på kortene i Sporing (lagres per bruker som trkOrder), og redigeringsmodus (langt trykk). */
+    var trkOrder by mutableStateOf(TRK_CARDS.map { it.first })
+    var trkEdit by mutableStateOf(false)
+    /** Papir → Sporing: fane og arket «Varsler og kilder». */
+    var trkTab by mutableStateOf("active")
+    var trkSettings by mutableStateOf(false)
+    /** Papir → Finn: filter, åpen redigering og skjemaet «Legg til kjøp eller salg». */
+    var finnSeg by mutableStateOf("all")
+    var finnEdit by mutableStateOf<Int?>(null)
+    var finnAdding by mutableStateOf(false)
+    /** Kort hint over +-knappen («Velg filer å laste opp») etter et langt trykk. */
+    var plusHint by mutableStateOf<String?>(null)
+    /** Bakgrunnsvelgeren: miniatyrer per valg, valg som ikke kunne lastes, og feilmeldingen for det valgte. */
+    var photoThumbs by mutableStateOf<Map<String, Bitmap?>>(emptyMap())
+        private set
+    var photoFailed by mutableStateOf<Set<String>>(emptySet())
+        private set
+    var photoError by mutableStateOf<String?>(null)
+        private set
+
+    /** Fanene i Finans-linja: ov (Oversikt), liste, finn og mer. */
+    fun paperFinTab(k: String) {
+        when (k) {
+            "liste" -> go(Screen.List)
+            "finn" -> go(Screen.Finn)
+            "mer" -> { if (!screen.isFinance) go(Screen.Home); paperPage = "fmer" }
+            else -> go(Screen.Home)
+        }
+        paperFin = true
+        Haptics.select()
+    }
+
+    /** Fra Finans → Mer: siden åpnes inne i Finans, og tilbake går til Mer. */
+    fun openFromFinMer(s: Screen) { go(s); paperFin = true; paperFromFinMer = true }
+    fun openFinMerPage(p: String) { paperPage = p; paperFin = true; if (p == "media") loadMedia() }
+
+    /** Domener i Papir: en av de fire seksjonene. */
+    fun domainSection(k: String) { domSection = k; Haptics.select() }
+
+    /** Bildet for et bakgrunnsvalg: serverens bilde, så reservene, med lokal hurtigbuffer. SVG hoppes over (gradienten brukes). */
+    private suspend fun photoFor(kind: String): Pair<PhotoWindow?, Bitmap?> {
+        val pw = runCatching { parsePhotoWindow(api.hlGet("/photo-window?kind=$kind")) }.getOrNull() ?: return null to null
+        for (u in listOfNotNull(pw.url) + pw.fallbacks) {
+            if (u.isBlank() || u.substringBefore('?').endsWith(".svg", true)) continue
+            bgImage(u)?.let { return pw to it }
+        }
+        return pw to null
+    }
+
+    /** Henter et bakgrunnsbilde én gang og legger det i cacheDir/bg (bildene byttes ikke ofte). */
+    private suspend fun bgImage(url: String): Bitmap? {
+        val ctx = getApplication<Application>()
+        val dir = File(ctx.cacheDir, "bg").apply { mkdirs() }
+        val f = File(dir, Integer.toHexString(url.hashCode()) + ".img")
+        val fresh = f.exists() && System.currentTimeMillis() - f.lastModified() < 3_600_000L
+        val data: ByteArray? = if (fresh) withContext(Dispatchers.IO) { runCatching { f.readBytes() }.getOrNull() } else runCatching {
+            val b = base.trimEnd('/')
+            when {
+                url.startsWith("/") -> api.bytes(url)
+                b.isNotEmpty() && url.startsWith(b) -> api.bytes(url.removePrefix(b))
+                else -> withContext(Dispatchers.IO) {
+                    val c = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+                    c.connectTimeout = 6000; c.readTimeout = 10000
+                    c.setRequestProperty("User-Agent", "FinansHub-Android")
+                    try { if (c.responseCode >= 400) null else c.inputStream.use { it.readBytes() } } finally { c.disconnect() }
+                }
+            }
+        }.getOrNull()?.also { bytes -> withContext(Dispatchers.IO) { runCatching { f.writeBytes(bytes) } } }
+            ?: if (f.exists()) withContext(Dispatchers.IO) { runCatching { f.readBytes() }.getOrNull() } else null
+        if (data == null || data.isEmpty()) return null
+        return withContext(Dispatchers.Default) {
+            val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(data, 0, data.size, opts)
+            var sample = 1
+            while (maxOf(opts.outWidth, opts.outHeight) / (sample * 2) >= 1400) sample *= 2
+            BitmapFactory.decodeByteArray(data, 0, data.size, BitmapFactory.Options().apply { inSampleSize = sample })
+        }
+    }
+
+    /** Miniatyrene i bakgrunnsvelgeren (hentes når menyen åpnes). */
+    fun loadPhotoThumbs() {
+        for (k in listOf("oslo", "weather", "planets")) {
+            if (photoThumbs.containsKey(k) && k !in photoFailed) continue
+            viewModelScope.launch {
+                val (_, b) = photoFor(k)
+                photoThumbs = photoThumbs + (k to b)
+                photoFailed = if (b == null) photoFailed + k else photoFailed - k
+            }
+        }
+        if (photoKind == "custom" && photo != null) photoThumbs = photoThumbs + ("custom" to photo)
+    }
+
+    /** «Fikk ikke lastet bildet · trykk for å prøve igjen». */
+    fun retryPhoto(k: String) {
+        val ctx = getApplication<Application>()
+        File(ctx.cacheDir, "bg").listFiles()?.forEach { it.setLastModified(0) }
+        photoFailed = photoFailed - k
+        photoThumbs = photoThumbs - k
+        if (k == photoKind) loadPhoto() else loadPhotoThumbs()
+    }
+
+    /** Flytter et kort i Sporing opp (−1) eller ned (+1). Lagres per bruker på serveren. */
+    fun moveTrk(id: String, dir: Int) {
+        val l = trkOrder.toMutableList()
+        val i = l.indexOf(id)
+        val j = i + dir
+        if (i < 0 || j !in l.indices) return
+        l.removeAt(i); l.add(j, id)
+        trkOrder = l
+        Haptics.select()
+        viewModelScope.launch { runCatching { api.hlPut("/me/layout", JSONObject().put("trkOrder", JSONArray(l))) } }
+    }
+
+    /** Onboarding (3 steg) er ferdig: lagres på enheten og på serveren. */
+    fun finishOnboarding() {
+        onboardNeeded = false
+        prefs.set(AppPrefs.ONBOARDED + (account?.id ?: ""), true)
+        prefs.set(AppPrefs.FRESH_PAPIR, false)
+        viewModelScope.launch { runCatching { api.hlPut("/me/layout", JSONObject().put("onboarded", true)) } }
+    }
+
+    /* Finn i Papir: legg til, rediger, steg, slett og vedlegg. */
+
+    /** «+ Legg til kjøp eller salg»: med Finn-lenke henter serveren tittel, pris, tekst og bilder (✦ AI). */
+    fun finnCreate(role: String, link: String, title: String, price: String, who: String) = launch {
+        val amount = parseAmountNo(price)
+        val r = if (role == "sold") "sold" else "bought"
+        val url = link.trim().takeIf { it.contains("finn.no") || Regex("""^\d{6,12}$""").matches(it) }
+            ?.let { if (it.all(Char::isDigit)) "https://www.finn.no/recommerce/forsale/item/$it" else if (it.startsWith("http")) it else "https://$it" }
+        if (url == null && (title.isBlank() || amount == null || amount <= 0)) { flash("Skriv inn tittel og pris, eller lim inn en Finn-lenke"); return@launch }
+        // Med adUrl kan tittel og pris stå tomme: serveren henter annonsen selv (✦ AI), og handelen lages selv om hentingen feiler.
+        val body = JSONObject().put("role", r).put("item", title.trim()).put("counterpart", who.trim())
+        if (amount != null) body.put("amount", amount)
+        if (url != null) body.put("adUrl", url)
+        busy = true
+        try {
+            val res = JSONObject(api.request("POST", "/finn", body, read = 90_000))
+            finn = parseFinn(api.get("/finn"))
+            finnAdding = false
+            finnSeg = "all"
+            val err = res.optStr("adError")
+            flash(if (err != null) "Lagret, men annonsen kunne ikke hentes: $err" else if (r == "sold") "Salget er lagt til" else "Kjøpet er lagt til")
+        } finally { busy = false }
+    }
+
+    /** Lagrer tittel, pris, person og status (steg 1–4). */
+    fun finnSave(id: Int, title: String, price: String, who: String, stage: Int?) = launch {
+        val body = JSONObject().put("item", title.trim()).put("counterpart", who.trim())
+        parseAmountNo(price)?.let { body.put("amount", it) }
+        if (stage != null) body.put("stage", stage)
+        api.patch("/finn/$id", body)
+        finn = parseFinn(api.get("/finn"))
+        finnEdit = null
+        flash("Handelen er lagret")
+    }
+
+    fun finnStage(id: Int, stage: Int) = launch {
+        api.patch("/finn/$id", JSONObject().put("stage", stage))
+        finn = parseFinn(api.get("/finn"))
+        Haptics.select()
+    }
+
+    fun finnDelete(id: Int) = launch {
+        api.delete("/finn/$id")
+        finnEdit = null
+        finn = parseFinn(api.get("/finn"))
+        flash("Handelen er slettet")
+    }
+
+    /** Kvittering og bilder til en handel fra Papir-rutenettet. */
+    fun finnUploadFor(id: Int, kind: String, uris: List<Uri>) { finnSel = id; finnUpload(kind, uris) }
+
+    /* Abonnementer: rediger og legg til (prompt 14). */
+
+    /**
+     * Lagrer et abonnement: navn, plan, pris, syklus (monthly | yearly | biennial), faktureringsdato (dag + måned),
+     * kategori og status (active | paused | cancelled). id = null lager et nytt. Returnerer id-en via onSaved.
+     */
+    fun saveSub(id: Int?, name: String, plan: String, price: Double, cycle: String, billDay: Int?, billMonth: Int?, category: String, status: String, logo: Uri? = null) = launch {
+        val body = JSONObject().put("name", name.trim()).put("plan", plan.trim()).put("price", price).put("cycle", cycle).put("category", category)
+            .put("status", status).put("active", status != "cancelled")
+            .put("billDay", billDay ?: JSONObject.NULL).put("billMonth", billMonth ?: JSONObject.NULL)
+        if (billDay != null) body.put("chargeDay", billDay)
+        busy = true
+        try {
+            val res = if (id == null) api.post("/subscriptions", body) else api.patch("/subscriptions/$id", body)
+            val newId = id ?: runCatching { JSONObject(res).let { it.optJSONObject("item")?.optInt("id") ?: it.optInt("id") } }.getOrNull()?.takeIf { it > 0 }
+            if (logo != null && newId != null) uploadSubLogo(newId, logo)
+            loadSubs()
+            flash(if (id == null) "${name.trim()} er lagt til" else "${name.trim()} er lagret")
+        } finally { busy = false }
+    }
+
+    fun deleteSub(id: Int) = launch {
+        api.delete("/subscriptions/$id")
+        loadSubs()
+        flash("Abonnementet er slettet")
+    }
+
+    private suspend fun uploadSubLogo(id: Int, uri: Uri) {
+        val ctx = getApplication<Application>()
+        val data = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } } ?: return
+        val png = withContext(Dispatchers.Default) { scaled(data, 512, 92) } ?: data
+        api.upload("/subscriptions/$id/logo", listOf(Api.Part("file", "logo.jpg", "image/jpeg", png)))
+    }
+
+    /** «Last opp logo» på et lagret abonnement. */
+    fun subLogoUpload(id: Int, uri: Uri) = launch {
+        busy = true
+        try { uploadSubLogo(id, uri); loadSubs(); flash("Logoen er lagret") } finally { busy = false }
+    }
+
+    /** «✦ Finn logo med AI»: serveren slår opp tjenestens domene og henter logoen. */
+    fun subLogoAi(id: Int) = launch {
+        busy = true
+        try {
+            val r = JSONObject(api.request("POST", "/subscriptions/$id/logo/ai", JSONObject(), read = 60_000))
+            loadSubs()
+            flash(if (r.optStr("logoUrl") != null) "✦ Fant logoen${r.optStr("domain")?.let { " ($it)" } ?: ""}" else "Fant ingen logo. Last opp en selv.")
+        } catch (e: ApiException) {
+            flash(if (e.status == 404) "Fant ingen logo. Last opp en selv." else "Kunne ikke finne logo: ${e.message}")
+        } finally { busy = false }
+    }
+
+    /** Logo lastet opp eller funnet av AI (krever token). */
+    suspend fun subLogo(url: String): Bitmap? = if (url.startsWith("/")) image(url) else null
+
+    /** «1 234,50», «1234.5» eller «−200» som tall. */
+    private fun parseAmountNo(s: String): Double? = s.replace(" ", "").replace("\u00a0", "").replace("kr", "").replace("−", "-").replace(',', '.').trim().toDoubleOrNull()
 }
+

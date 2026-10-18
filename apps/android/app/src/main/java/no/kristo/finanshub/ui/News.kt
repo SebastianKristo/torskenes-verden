@@ -180,7 +180,7 @@ private fun NewsSettings(vm: AppViewModel, p: PaperPal, cats: List<NewsCategory>
             Box(
                 Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(14.dp)).background(p.lab).clickable { if (nf.isNotBlank()) { vm.addFeed(nf); nf = "" } },
                 contentAlignment = Alignment.Center,
-            ) { if (vm.newsBusy) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp) else Text("+ Legg til adresse", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
+            ) { if (vm.newsBusy) CircularProgressIndicator(color = p.onLab, modifier = Modifier.size(20.dp), strokeWidth = 2.dp) else Text("+ Legg til adresse", color = p.onLab, fontWeight = FontWeight.Bold, fontSize = 14.sp) }
             Text(if (d?.aiCategorize != false) "✦ AI finner navnet på kilden og foreslår kategori." else "Kategorien settes til Auto.", color = p.mut, fontSize = 12.sp)
             Box(Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(14.dp)).border(1.dp, p.line, RoundedCornerShape(14.dp)).clickable { vm.refreshNews() }, contentAlignment = Alignment.Center) {
                 Text("Hent nye saker nå", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)

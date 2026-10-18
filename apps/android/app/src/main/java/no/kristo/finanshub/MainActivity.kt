@@ -39,7 +39,7 @@ class MainActivity : FragmentActivity() {
             // Farger og lys/mørk fra Innstillinger → Utseende (Material You når «Følg systemet»).
             // Papir (Innstillinger → Utseende → Mobildesign) har egne farger og fonter.
             FinansTheme(vm.option(AppPrefs.COLOR, "system"), vm.option(AppPrefs.MODE, "dark"), vm.option(AppPrefs.PAGES, "same") == "same",
-                paperMode = if (vm.paper && vm.loggedIn) vm.paperMode else null) {
+                paperMode = if (vm.paper || (vm.onboardNeeded && vm.loggedIn)) vm.paperMode else null) {
                 FinansApp(vm, size.widthSizeClass, unlock = ::unlock, onPrivacyChanged = ::applySwitcherPrivacy)
             }
         }

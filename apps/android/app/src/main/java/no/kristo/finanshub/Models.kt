@@ -77,7 +77,7 @@ data class Me(
 
 data class Weather(val place: String, val temp: Double?, val text: String?, val wind: Double?, val max: Double?, val min: Double?, val code: Int?, val lat: Double? = null, val lon: Double? = null)
 data class Shortcut(val name: String, val url: String, val local: Boolean)
-data class Departure(val line: String, val color: Long?, val min: Int?, val time: String?, val to: String? = null)
+data class Departure(val line: String, val color: Long?, val min: Int?, val time: String?, val to: String? = null, val textColor: Long? = null, val mode: String? = null)
 data class RuterLine(val from: String, val to: String, val departures: List<Departure>)
 data class ServerStatus(val cpu: Double?, val mem: Double?, val disk: Double?, val temp: Double?, val uptime: String?)
 data class MobileHome(
@@ -405,7 +405,8 @@ fun parseMobileHome(s: String): MobileHome {
         o.optJSONArray("shortcuts")?.map { Shortcut(it.optString("name"), it.optString("url"), it.optBoolean("local")) } ?: emptyList(),
         o.optJSONArray("ruter")?.map { r ->
             RuterLine(r.optString("from"), r.optString("to"), r.optJSONArray("departures")?.map {
-                Departure(it.optString("line"), it.optStr("color")?.let(::color), it.optIntOrNull("min"), it.optStr("time"), it.optStr("to") ?: it.optStr("destination"))
+                Departure(it.optString("line"), it.optStr("color")?.let(::color), it.optIntOrNull("min") ?: it.optIntOrNull("minutes"), it.optStr("time"), it.optStr("to") ?: it.optStr("destination"),
+                    it.optStr("textColor")?.let(::hexColor), it.optStr("mode"))
             } ?: emptyList())
         } ?: emptyList(),
         st?.let { ServerStatus(it.optDoubleOrNull("cpu"), it.optDoubleOrNull("mem"), it.optDoubleOrNull("disk"), it.optDoubleOrNull("temp"), it.optStr("uptimeText") ?: when (val u = it.opt("uptime")) { is Number -> uptimeLabel(u.toDouble()); is String -> u; else -> null }) },

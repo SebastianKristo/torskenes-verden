@@ -342,12 +342,6 @@ private fun LookPage(vm: AppViewModel) = Pages {
         }
         Note("Med Finans som startside åpner appen der, og Homelab og de andre modulene ligger i profilmenyen.")
     }
-    Section("Tilbake til startsiden") {
-        Group {
-            Choice("Pil øverst", "«‹ ${vm.startLabel}» i Domener, Mat og Andre OS", on = vm.layout.backStyle == "arrow") { vm.setBackStyle("arrow") }
-            Choice("Knapp i linjen", "${vm.startLabel} helt til venstre i navigasjonslinjen", on = vm.layout.backStyle == "bar") { vm.setBackStyle("bar") }
-        }
-    }
     Section("Navigasjonslinje") {
         var open by remember { mutableStateOf(false) }
         Group {

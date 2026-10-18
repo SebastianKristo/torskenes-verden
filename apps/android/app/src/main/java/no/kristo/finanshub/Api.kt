@@ -63,6 +63,10 @@ class Api(private val baseUrl: String, private val token: String?) {
         if (code >= 400) {
             val o = runCatching { JSONObject(body) }.getOrNull()
             val msg = o?.optString("error")?.takeIf { it.isNotBlank() } ?: "Feil $code"
+            // «Ikke innlogget» fra Homelab-, Mat- eller Domener-ruter som ikke godtar app-tokenet ennå: finans-innloggingen er gyldig,
+            // så det skal verken logge ut eller vise «Ikke innlogget» (prompt 14). Appen viser ingen melding for dette.
+            val path = conn.url.path
+            if (code == 401 && !path.startsWith(FINANS) && o?.optBoolean("needsTotp") != true) throw ApiException("$TOKEN_REFUSED ($path)", 403)
             throw ApiException(msg, code, o?.optBoolean("needsTotp") == true)
         }
         // En nettside (innloggingssiden, en proxy eller Cloudflare) i stedet for data: si det tydelig i stedet for en JSON-feil.
@@ -138,6 +142,8 @@ class Api(private val baseUrl: String, private val token: String?) {
         const val MAT = "/mat/api"
         const val DOMAINS = "/domains/api"
         const val HOMELAB = "/api"
+        /** Begynnelsen på meldingen når en Homelab-rute ikke godtar app-tokenet. Vises ikke som melding. */
+        const val TOKEN_REFUSED = "Ikke tilgang med app-token"
 
         /**
          * Bytter brukernavn + passord (+ 2FA-kode) mot et token med finans-tilgang.

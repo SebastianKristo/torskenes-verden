@@ -33,11 +33,12 @@ import no.kristo.finanshub.*
  * Trafikk, Besøk, Ytelse og Sikkerhet; på brettbar vises fanene øverst.
  */
 @Composable
-internal fun DomainsScreen(vm: AppViewModel, twoPane: Boolean) {
+internal fun DomainsScreen(vm: AppViewModel, twoPane: Boolean, section: String? = null) {
     val a = vm.analytics
     Page {
-        item { DomainHeader(vm) }
-        if (twoPane) item {
+        // Papir har egen fanelinje (Oversikt, Publikum, Ytelse og Infra) i stedet for fanene her.
+        if (section == null || section == "oversikt") item { DomainHeader(vm) }
+        if (twoPane && section == null) item {
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(P.card).padding(4.dp)) {
                 DomTab.entries.forEach { t ->
                     val on = vm.domTab == t
@@ -59,11 +60,17 @@ internal fun DomainsScreen(vm: AppViewModel, twoPane: Boolean) {
         if (a == null && vm.moduleError == null && vm.domains?.isEmpty() != true) item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = P.accent) } }
         if (a != null) {
             if (a.mock) item { Text("Eksempeldata – legg inn Cloudflare-token i Homelab for ekte tall.", color = P.text2, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp)) }
-            when (vm.domTab) {
-                DomTab.Traffic -> traffic(vm, a)
-                DomTab.Visits -> visits(vm, a)
-                DomTab.Perf -> perf(a)
-                DomTab.Security -> security(a)
+            when (section) {
+                "oversikt" -> traffic(vm, a, withCard = false)
+                "publikum" -> visits(vm, a)
+                "ytelse" -> { perf(a, withUptime = false); item { Title("Sikkerhet") }; security(a) }
+                "infra" -> infra(vm, a)
+                else -> when (vm.domTab) {
+                    DomTab.Traffic -> traffic(vm, a)
+                    DomTab.Visits -> visits(vm, a)
+                    DomTab.Perf -> perf(a)
+                    DomTab.Security -> security(a)
+                }
             }
         }
     }
@@ -180,7 +187,7 @@ private fun KV(k: String, v: String, good: Boolean? = null) {
 
 /* ---------------- Faner ---------------- */
 
-private fun androidx.compose.foundation.lazy.LazyListScope.traffic(vm: AppViewModel, a: Analytics) {
+private fun androidx.compose.foundation.lazy.LazyListScope.traffic(vm: AppViewModel, a: Analytics, withCard: Boolean = true) {
     item {
         // Ca. 20 % lavere enn før: mindre polstring, tall og kurve.
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp, 28.dp, 28.dp, 10.dp)).background(P.hero).padding(18.dp, 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -209,7 +216,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.traffic(vm: AppViewMo
             }
         }
     }
-    item { DomainCard(vm, a) }
+    if (withCard) item { DomainCard(vm, a) }
     item { Title("Historikk") }
     item { RangeChips(vm, listOf("7d" to "7 d", "30d" to "30 d", "90d" to "90 d", "1y" to "1 år")) }
     item {
@@ -242,7 +249,44 @@ private fun androidx.compose.foundation.lazy.LazyListScope.visits(vm: AppViewMod
     item { PinkCard { Bars(a.browsers, "%") } }
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.perf(a: Analytics) {
+/** Papir → Domener → Infra: oppetid i 90 dager, domeneinfo og DNS-poster. */
+private fun androidx.compose.foundation.lazy.LazyListScope.infra(vm: AppViewModel, a: Analytics) {
+    uptime(a)
+    item { DomainCard(vm, a) }
+    item { Title("DNS-poster") }
+    item {
+        PinkCard {
+            if (a.dns.isEmpty()) Text("Ingen DNS-poster hentet", color = P.text2, fontSize = 13.sp)
+            a.dns.take(30).forEach { r ->
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(r.type, fontFamily = Mono, fontSize = 12.sp, color = P.accent, modifier = Modifier.width(52.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(r.name, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, color = P.onHero)
+                        Text(r.content, fontFamily = Mono, fontSize = 12.sp, color = P.text2, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    if (r.proxied) Text("Proxy", color = C.positive, fontSize = 11.sp)
+                }
+            }
+        }
+    }
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.uptime(a: Analytics) {
+    item { Title("Oppetid siste 90 dager") }
+    item {
+        PinkCard {
+            val days = a.uptime90.takeLast(90)
+            Text(if (a.uptimePct > 0) pct(a.uptimePct) else "–", fontFamily = Mono, fontSize = 22.sp, color = P.onHero)
+            Row(Modifier.fillMaxWidth().height(28.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                days.forEach { u -> Box(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(1.dp)).background(if (u < 0) P.card2 else if (u >= 0.999) C.positive else if (u >= 0.98) tc(0xFFF2C14E) else P.red)) }
+            }
+            if (days.isNotEmpty()) Row { Text("${days.size} dager siden", color = P.text2, fontSize = 11.sp, modifier = Modifier.weight(1f)); Text("I dag", color = P.text2, fontSize = 11.sp) }
+            if (days.isEmpty()) Text("Ingen målinger ennå", color = P.text2, fontSize = 13.sp)
+        }
+    }
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.perf(a: Analytics, withUptime: Boolean = true) {
     item {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -264,18 +308,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.perf(a: Analytics) {
     }
     item { Title("Protokoll") }
     item { PinkCard { Bars(a.http, "%"); HorizontalDivider(color = P.card2); Bars(a.tls, "%") } }
-    item { Title("Oppetid siste 90 dager") }
-    item {
-        PinkCard {
-            val days = a.uptime90.takeLast(90)
-            Text(if (a.uptimePct > 0) pct(a.uptimePct) else "–", fontFamily = Mono, fontSize = 22.sp, color = P.onHero)
-            Row(Modifier.fillMaxWidth().height(28.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                days.forEach { u -> Box(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(1.dp)).background(if (u < 0) P.card2 else if (u >= 0.999) C.positive else if (u >= 0.98) tc(0xFFF2C14E) else P.red)) }
-            }
-            if (days.isNotEmpty()) Row { Text("${days.size} dager siden", color = P.text2, fontSize = 11.sp, modifier = Modifier.weight(1f)); Text("I dag", color = P.text2, fontSize = 11.sp) }
-            if (days.isEmpty()) Text("Ingen målinger ennå", color = P.text2, fontSize = 13.sp)
-        }
-    }
+    if (withUptime) uptime(a)
 }
 
 private fun androidx.compose.foundation.lazy.LazyListScope.security(a: Analytics) {
