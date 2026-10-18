@@ -61,7 +61,7 @@ struct PaperHome: View {
                     }
                     if deps.isEmpty { Text("Ingen avganger akkurat nå.").font(PF.ui(13)).foregroundStyle(p.mut) }
                     ForEach(Array(deps.enumerated()), id: \.offset) { _, d in
-                        PaperRuterRow(line: d.1.line, color: d.1.color, dest: d.1.to ?? d.0, minutes: d.1.min, time: d.1.time)
+                        PaperRuterRow(line: d.1.line, color: d.1.ruterColor, textColor: d.1.ruterTextColor, dest: d.1.to ?? d.0, minutes: d.1.min, time: d.1.time)
                     }
                 }
                 .padding(.horizontal, 16).padding(.vertical, 14)
@@ -80,7 +80,7 @@ struct PaperHome: View {
         return HStack(spacing: 8) {
             mini("Finans", left.map { n0($0) } ?? "–", review > 0 ? "\(review) kvitteringer" : "igjen i mnd", review > 0 ? p.lab : p.mut, 20) { store.paperGo("finans") }
             mini("Mat", store.todayMeal ?? "Ingen rett", "", p.mut, 16) { store.paperGo("mat") }
-            mini("Domener", up.map { n0($0.visitors) } ?? "–", up == nil ? "" : "besøk i dag", p.pos, 20) { store.paperOpen(.domains) }
+            mini("Domener", up.map { n0($0.visitors) } ?? "–", up == nil ? "" : "besøk i dag", p.pos, 20) { store.paperOpenDomains(from: "hjem") }
         }
     }
 
@@ -220,12 +220,13 @@ struct PaperRuterRow: View {
     @Environment(\.paper) private var p
     let line: String
     let color: String?
+    var textColor: String = "#FFFFFF"
     let dest: String
     let minutes: Int?
     let time: String?
     var body: some View {
         HStack(spacing: 10) {
-            Text(line).font(PF.ui(12, .heavy)).foregroundStyle(Color(hex: "#1b1a17"))
+            Text(line).font(PF.ui(12, .heavy)).foregroundStyle(Color(hex: textColor))
                 .frame(minWidth: 30).frame(height: 24).padding(.horizontal, 4)
                 .background(lineColor, in: RoundedRectangle(cornerRadius: 6))
             Text(dest).font(PF.ui(14.5)).foregroundStyle(p.ink).lineLimit(1)
@@ -239,11 +240,11 @@ struct PaperRuterRow: View {
         }
     }
 
-    /// T-bane gul, trikk og buss blå (som i designet) når linjen ikke har egen farge.
+    /// Ruters linjefarge (T-bane oransje, trikk blå, buss rød) når linjen ikke har egen farge.
     private var lineColor: Color {
         if let c = color, !c.isEmpty { return Color(hex: c) }
-        if let n = Int(line), n <= 5 { return Color(hex: "#f3d38a") }
-        return Color(hex: "#a8d4fb")
+        if let n = Int(line), n <= 5 { return Color(hex: "#EC700C") }
+        return Color(hex: "#E60000")
     }
 }
 
@@ -368,7 +369,7 @@ struct PaperFinance: View {
         VStack(alignment: .leading, spacing: 0) {
             PSection(title: "Alt i Finans")
             PaperLinkList(rows: [
-                PaperLinkRow(name: "Transaksjoner", sub: "Søk, filtrer og rediger") { store.paperOpenFin(.list) },
+                PaperLinkRow(name: "Transaksjoner", sub: "Søk, filtrer og rediger") { store.paperGo("fliste") },
                 PaperLinkRow(name: "Budsjett", sub: "Kategorier og forbruk") { store.paperOpenFin(.budget) },
                 PaperLinkRow(name: "✦ AI-søk", sub: "Spør om økonomien din") { store.paperOpenFin(.search) },
                 PaperLinkRow(name: "Kvitteringer", sub: "Skann, kø og bekreftelse") { store.paperOpen(.upload) },
@@ -429,62 +430,167 @@ struct PaperLinkList: View {
 
 /* ---------- Sporing ---------- */
 
+/// Faner (Aktive, Klar for henting, På vei, Registrert, Levert, Alle) med antall, et felt for sporingsnummer
+/// der transportøren gjenkjennes, pakkekort (trykk åpner sporingen hos transportøren) og ⚙ «Varsler og kilder».
 struct PaperTracking: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
     @State private var no = ""
-    @State private var name = ""
-    @State private var showDone = false
+
+    static let tabs = ["Aktive", "Klar for henting", "På vei", "Registrert", "Levert", "Alle"]
+
+    static func inTab(_ s: Shipment, _ t: String) -> Bool {
+        switch t {
+        case "Aktive": return s.active
+        case "Klar for henting": return !s.archived && s.status == "ready_for_pickup"
+        case "På vei": return !s.archived && ["picked_up", "in_transit", "out_for_delivery", "delayed"].contains(s.status)
+        case "Registrert": return !s.archived && (s.status == "registered" || s.status == "unknown")
+        case "Levert": return s.status == "delivered"
+        default: return true
+        }
+    }
 
     var body: some View {
         let all = store.tracking?.items ?? store.homePackages ?? []
-        let active = all.filter { !$0.archived && $0.status != "delivered" }
-        let done = all.filter { !$0.archived && $0.status == "delivered" }
+        let list = all.filter { PaperTracking.inTab($0, store.trkTab) }.sorted { a, b in a.ready != b.ready ? a.ready : a.step > b.step }
         VStack(spacing: 10) {
-            if store.tracking == nil && active.isEmpty { ProgressView().padding(30) }
-            if store.tracking != nil && active.isEmpty {
-                PCard { Text("Ingen pakker på vei. Sporingsnumre fra e-post og Finn legges til automatisk.").font(PF.ui(13.5)).foregroundStyle(p.mut) }
+            tabBar(all)
+            addField
+            if store.tracking == nil && all.isEmpty { ProgressView().padding(30) }
+            if store.tracking != nil && list.isEmpty {
+                PCard { Text(store.trkTab == "Aktive" ? "Ingen pakker på vei. Sporingsnumre fra e-post og Finn legges til automatisk." : "Ingen pakker her.").font(PF.ui(13.5)).foregroundStyle(p.mut) }
             }
-            ForEach(active, id: \.id) { s in PaperShipmentCard(s: s) }
-            addCard
+            ForEach(list, id: \.id) { s in PaperShipmentCard(s: s) }
             HStack(spacing: 8) {
                 PLineButton(title: store.trkChecking ? "Sjekker …" : "Sjekk nå", height: 44, full: true) { store.checkTracking() }
-                PLineButton(title: "Kilder og varsler ›", height: 44, full: true) { store.paperTrackFull = true }
-            }
-            if !done.isEmpty {
-                Button { withAnimation { showDone.toggle() } } label: {
-                    PSection(title: "Levert", trailing: showDone ? "Skjul" : "Vis \(done.count)")
-                }
-                .buttonStyle(.plain)
-                if showDone { ForEach(done, id: \.id) { s in PaperShipmentCard(s: s) } }
+                PLineButton(title: "⚙ Varsler og kilder", height: 44, full: true) { store.trkSettings = true }
             }
         }
         .task { if store.tracking == nil { try? await store.loadTracking() } }
+        .sheet(isPresented: Binding(get: { store.trkSettings }, set: { store.trkSettings = $0 })) {
+            PaperTrackSettings()
+                .environment(\.paper, p)
+                .presentationDetents([.medium, .large])
+                .presentationBackground(p.bg)
+        }
     }
 
-    private var addCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            PLabel(text: "+ Legg til sporingsnummer")
+    private func tabBar(_ all: [Shipment]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 4) {
+                ForEach(PaperTracking.tabs, id: \.self) { t in
+                    let on = store.trkTab == t
+                    let n = all.filter { PaperTracking.inTab($0, t) }.count
+                    Button { Haptics.shared.select(); store.trkTab = t } label: {
+                        HStack(spacing: 5) {
+                            Text(t).font(PF.ui(13, .semibold))
+                            Text("\(n)").font(PF.mono(11, bold: false)).opacity(0.75)
+                        }
+                        .foregroundStyle(on ? p.bg : p.mut)
+                        .padding(.horizontal, 12).frame(height: 34)
+                        .background(on ? p.ink : Color.clear, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(4)
+        }
+        .background(p.card, in: Capsule())
+    }
+
+    private var addField: some View {
+        let car = Carrier.detect(no)
+        let name = Carrier.known.first { $0.id == car }?.name
+        return HStack(spacing: 8) {
             TextField("Sporingsnummer", text: $no)
                 .font(PF.mono(15, bold: false)).foregroundStyle(p.ink)
                 .textInputAutocapitalization(.characters).autocorrectionDisabled()
-                .padding(.horizontal, 12).frame(height: 44)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(p.line, lineWidth: 1))
-            TextField("Navn (valgfritt)", text: $name)
-                .font(PF.ui(14.5)).foregroundStyle(p.ink)
-                .padding(.horizontal, 12).frame(height: 44)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(p.line, lineWidth: 1))
-            PInkButton(title: "Spor pakken", height: 44, full: true) {
-                store.addTracking(no: no, name: name, carrier: nil, out: false)
-                no = ""; name = ""
+                .submitLabel(.done)
+                .onSubmit(add)
+            if no.count >= 6, let name, car != "other" {
+                Text(name).font(PF.ui(11.5, .semibold)).foregroundStyle(p.mut).lineLimit(1)
+            }
+            Button(action: add) {
+                Text("Spor").font(PF.ui(13, .bold)).foregroundStyle(p.bg).padding(.horizontal, 14).frame(height: 34)
+                    .background(p.ink, in: Capsule())
+            }
+            .buttonStyle(.plain)
+            .disabled(no.trimmingCharacters(in: .whitespaces).count < 6)
+        }
+        .padding(.leading, 14).padding(.trailing, 5)
+        .frame(height: 44)
+        .background(p.card, in: Capsule())
+    }
+
+    private func add() {
+        let n = no.replacingOccurrences(of: " ", with: "").uppercased()
+        guard n.count >= 6 else { return }
+        let car = Carrier.detect(n)
+        store.addTracking(no: n, name: "", carrier: car == "other" ? nil : car, out: false)
+        no = ""
+    }
+}
+
+/// «Varsler og kilder»: varsler for ny pakke, klar for henting, ute for levering, forsinket og levert,
+/// og kildene E-post (Proton), Finn og automatisk arkivering av leverte.
+struct PaperTrackSettings: View {
+    @Environment(Store.self) private var store
+    @Environment(\.paper) private var p
+
+    var body: some View {
+        let t = store.tracking ?? TrackingData()
+        ScrollView {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Varsler og kilder").font(PF.serif(24, medium: true)).foregroundStyle(p.ink).padding(.bottom, 4)
+                PLabel(text: "Varsler")
+                group([
+                    row("Ny pakke funnet", "Når et sporingsnummer dukker opp i e-post eller Finn", t.prefs["found"] ?? true) { store.setTrackingPref("found", $0) },
+                    row("Klar for henting", "Med hentested og frist", t.prefs["pickup"] ?? true) { store.setTrackingPref("pickup", $0) },
+                    row("Ute for levering", "Når budet er på vei til deg", t.prefs["out"] ?? true) { store.setTrackingPref("out", $0) },
+                    row("Forsinket", "Når leveringen er forsinket", t.prefs["delayed"] ?? true) { store.setTrackingPref("delayed", $0) },
+                    row("Levert", "Når pakken er levert", t.prefs["delivered"] ?? false) { store.setTrackingPref("delivered", $0) },
+                ])
+                PLabel(text: "Kilder").padding(.top, 8)
+                group([
+                    row("E-post (Proton)", "Sporingsnumre i ordre- og fraktbekreftelser", t.email.on) { store.setTrackingSource("email", $0) },
+                    row("Finn", "Pakker fra Finn-handler (Fiks ferdig)", t.finn.on) { store.setTrackingSource("finn", $0) },
+                    row("Arkiver leverte automatisk", "Leverte pakker flyttes til Levert etter to dager", t.autoArchive.on) { store.setTrackingSource("autoArchive", $0) },
+                ])
+            }
+            .padding(20)
+        }
+        .environment(\.colorScheme, p.dark ? .dark : .light)
+    }
+
+    private struct Row: Identifiable {
+        let id = UUID()
+        let n: String
+        let s: String
+        let on: Bool
+        let set: (Bool) -> Void
+    }
+
+    private func row(_ n: String, _ s: String, _ on: Bool, _ set: @escaping (Bool) -> Void) -> Row { Row(n: n, s: s, on: on, set: set) }
+
+    private func group(_ rows: [Row]) -> some View {
+        VStack(spacing: 0) {
+            ForEach(Array(rows.enumerated()), id: \.element.id) { i, r in
+                if i > 0 { Rectangle().fill(p.line).frame(height: 1) }
+                Toggle(isOn: Binding(get: { r.on }, set: { v in Haptics.shared.select(); r.set(v) })) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(r.n).font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
+                        Text(r.s).font(PF.ui(12.5)).foregroundStyle(p.mut)
+                    }
+                }
+                .tint(p.pos)
+                .padding(.horizontal, 14).padding(.vertical, 10)
             }
         }
-        .padding(14)
         .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 }
 
-/// En pakke: transportør, navn, status, ETA og fem steg. Trykk viser tidslinjen.
+/// En pakke: logo (initialer på merkefarge), navn, status, ETA og fem steg. Trykk åpner sporingen hos transportøren.
 struct PaperShipmentCard: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
@@ -500,9 +606,14 @@ struct PaperShipmentCard: View {
                     Text("\(s.carrierName) · \(s.trackingNo)").font(PF.ui(12)).foregroundStyle(p.mut).lineLimit(1)
                 }
                 Spacer(minLength: 0)
+                Button { withAnimation(.easeOut(duration: 0.2)) { open.toggle() } } label: {
+                    Text(open ? "▴" : "▾").font(PF.ui(14, .bold)).foregroundStyle(p.mut).frame(width: 32, height: 32)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(open ? "Skjul hendelser" : "Vis hendelser")
             }
             HStack(alignment: .firstTextBaseline) {
-                Text(s.statusText).font(PF.ui(14, .bold)).foregroundStyle(s.status == "ready_for_pickup" || s.status == "delayed" ? p.lab : p.ink)
+                Text(s.statusText).font(PF.ui(14, .bold)).foregroundStyle(s.status == "ready_for_pickup" || s.status == "delayed" ? p.lab : s.status == "delivered" ? p.pos : p.ink)
                 Spacer()
                 Text(s.pickupPoint.isEmpty ? s.eta : [s.pickupPoint, s.eta].filter { !$0.isEmpty }.joined(separator: " · ")).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(1)
             }
@@ -515,10 +626,12 @@ struct PaperShipmentCard: View {
         }
         .padding(14)
         .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(s.status == "ready_for_pickup" ? p.lab : Color.clear, lineWidth: 1.5))
         .contentShape(Rectangle())
-        .onTapGesture { withAnimation(.easeOut(duration: 0.2)) { open.toggle() } }
+        .onTapGesture {
+            if !s.url.isEmpty { store.openLink(s.url) } else { withAnimation(.easeOut(duration: 0.2)) { open.toggle() } }
+        }
         .contextMenu {
-            if let u = URL(string: s.url), !s.url.isEmpty { Button { store.openURL(u) } label: { Label("Åpne hos \(s.carrierName)", systemImage: "safari") } }
             Button { UIPasteboard.general.string = s.trackingNo; store.flash("Sporingsnummeret er kopiert") } label: { Label("Kopier sporingsnummer", systemImage: "doc.on.doc") }
             Button { store.archiveTracking(s, !s.archived) } label: { Label(s.archived ? "Hent tilbake" : "Arkiver", systemImage: "archivebox") }
             Button(role: .destructive) { store.deleteTracking(s) } label: { Label("Slett", systemImage: "trash") }
@@ -558,15 +671,11 @@ struct PaperMore: View {
     @Environment(Store.self) private var store
     var body: some View {
         PaperLinkList(rows: [
-            PaperLinkRow(name: "Domener", sub: "Trafikk, besøk og oppetid") { store.paperOpen(.domains) },
-            PaperLinkRow(name: "Aksjer", sub: "Trading 212") { store.paperOpen(.stocks) },
-            PaperLinkRow(name: "Abonnementer", sub: "Subscription OS") { store.paperOpen(.sub) },
-            PaperLinkRow(name: "Boliger", sub: "Utgifter, prosjekter og regninger") { store.paperOpen(.folders) },
-            PaperLinkRow(name: "Finn", sub: "Kjøp og salg") { store.paperOpenFin(.finn) },
+            PaperLinkRow(name: "Domener", sub: "Trafikk, besøk og oppetid") { store.paperOpenDomains(from: "mer") },
+            PaperLinkRow(name: "Finans", sub: "Oversikt, liste, Finn og mer") { store.paperGo("finans") },
             PaperLinkRow(name: "Nyhetsleser", sub: "RSS med ✦ AI-sammendrag") { store.openNews() },
-            PaperLinkRow(name: "Kvitteringer", sub: "Skann, kø og bekreftelse") { store.paperOpen(.upload) },
-            PaperLinkRow(name: "Rapporter", sub: "Måned og år") { store.paperOpen(.reports) },
-            PaperLinkRow(name: "Innstillinger", sub: "Tema, bakgrunn og konto") { store.paperTab = "innst" },
+            PaperLinkRow(name: "Sporing", sub: "Pakker, varsler og kilder") { store.paperGo("sporing") },
+            PaperLinkRow(name: "Innstillinger", sub: "Tema, bakgrunn og konto") { store.paperGo("innst") },
         ])
         .padding(.top, -8)
     }
@@ -577,7 +686,6 @@ struct PaperMore: View {
 struct PaperSettings: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
-    @State private var bgDialog = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -588,22 +696,15 @@ struct PaperSettings: View {
                 PaperLinkRow(name: "Klassisk (Liquid Glass)", sub: "Bytt tilbake til det forrige mobildesignet", value: "Bytt ›", valueColor: p.lab) { store.setMobileDesign("klassisk") },
             ])
             group("Forside", [
-                PaperLinkRow(name: "Bakgrunn", sub: photoName, value: "Endre ›") { bgDialog = true },
+                PaperLinkRow(name: "Bakgrunn", sub: photoName, value: "Endre ›") { store.paperGo("hjem"); store.paperBgOpen = true },
                 PaperLinkRow(name: "Nyhetsleser", sub: "Kilder, kategorier og AI", value: "Åpne ›") { store.openNews() },
             ])
             group("Konto", [
                 PaperLinkRow(name: store.displayName.isEmpty ? "Konto" : store.displayName, sub: accountSub, value: "") {},
                 PaperLinkRow(name: "Alle innstillinger", sub: "Sikkerhet, varsler, skanning, haptikk, widgets og server") { store.paperOpen(.settings) },
                 PaperLinkRow(name: "Lås appen", sub: "Face ID / kode", value: store.lockEnabled ? "På" : "Av", valueColor: store.lockEnabled ? p.pos : p.mut) { store.lockEnabled.toggle() },
+                PaperLinkRow(name: "Logg ut", sub: "Du må logge inn igjen med 2FA", value: "Logg ut", valueColor: p.lab) { store.logout() },
             ])
-        }
-        .confirmationDialog("Bakgrunn", isPresented: $bgDialog, titleVisibility: .visible) {
-            Button("Nåværende (gradient)") { store.setPhoto("cur") }
-            Button("Oslo") { store.setPhoto("oslo") }
-            Button("Vær nå") { store.setPhoto("weather") }
-            Button("Planeter") { store.setPhoto("planets") }
-            Button("Eget bilde (velg på Hjem)") { store.paperGo("hjem") }
-            Button("Avbryt", role: .cancel) {}
         }
     }
 

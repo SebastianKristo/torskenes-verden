@@ -17,9 +17,44 @@ extension Store {
             photo = v
             Task { await self.loadPhotoWindow() }
         }
+        // Rekkefølgen på Sporing-kortene og onboarding (nye brukere får onboarded: false).
+        let order = JS.strings(o, "trkOrder").filter { Store.trkKeys.contains($0) }
+        if !order.isEmpty { trkOrder = Store.fullTrkOrder(order) }
+        if JS.bool(o, "onboarded") == false, !UserDefaults.standard.bool(forKey: "fh_onboarded"), onboarding == nil { onboarding = 0 }
     }
 
-    private func savePaperLayout(_ body: [String: Any]) {
+    nonisolated static let trkKeys = ["add", "shipments", "notify", "carriers"]
+    nonisolated static func fullTrkOrder(_ o: [String]) -> [String] {
+        var out = o.filter { trkKeys.contains($0) }
+        for k in trkKeys where !out.contains(k) { out.append(k) }
+        return out
+    }
+
+    /// Flytter et Sporing-kort opp (-1) eller ned (+1) og lagrer rekkefølgen per bruker.
+    func moveTrkCard(_ k: String, _ dir: Int) {
+        var o = Store.fullTrkOrder(trkOrder)
+        guard let i = o.firstIndex(of: k) else { return }
+        let j = i + dir
+        guard j >= 0, j < o.count else { return }
+        o.swapAt(i, j)
+        Haptics.shared.tick()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { trkOrder = o }
+        savePaperLayout(["trkOrder": o])
+    }
+
+    func setTrkOrder(_ o: [String]) {
+        trkOrder = Store.fullTrkOrder(o)
+        savePaperLayout(["trkOrder": trkOrder])
+    }
+
+    /// Onboarding ferdig (eller hoppet over): lagres lokalt og per bruker.
+    func finishOnboarding() {
+        onboarding = nil
+        UserDefaults.standard.set(true, forKey: "fh_onboarded")
+        savePaperLayout(["onboarded": true])
+    }
+
+    func savePaperLayout(_ body: [String: Any]) {
         Task { _ = try? await self.api.callAt("/api", "PUT", "/me/layout", json: body) }
     }
 
@@ -44,11 +79,31 @@ extension Store {
 
     /* ---------- Papir-navigasjon ---------- */
 
+    /// Finans i Papir har egen fanelinje: Oversikt, Liste, Finn og Mer.
+    nonisolated static let paperFinTabs = ["finans", "fliste", "finn", "fmer"]
+    /// Domener i Papir: Oversikt, Publikum, Ytelse og Infra.
+    nonisolated static let paperDomTabs = ["domener", "dpub", "dytl", "dinf"]
+
+    var paperInFinance: Bool {
+        if Store.paperFinTabs.contains(paperTab) { return true }
+        if paperFin != nil { return true }
+        if let m = paperClassic, m.isFinance || m == .upload { return true }
+        return false
+    }
+    var paperInDomains: Bool { Store.paperDomTabs.contains(paperTab) }
+
     /// Bytter Papir-fane. Data lastes som i den klassiske appen.
     func paperGo(_ t: String) {
         Haptics.shared.select()
+        // Mellom Domener-fanene byttes bare seksjonen (dataene er de samme).
+        if paperInDomains && Store.paperDomTabs.contains(t) && module == .domains {
+            paperTab = t
+            domTab = t == "dpub" ? .visits : t == "dytl" ? .perf : t == "dinf" ? .security : .traffic
+            return
+        }
         paperFin = nil
         paperTrackFull = false
+        paperBgOpen = false
         newsOpen = false
         selectedTx = nil
         detail = nil
@@ -56,15 +111,41 @@ extension Store {
         original = nil
         finnSel = nil
         finnDetail = nil
-        paperTab = t
+        trkSettings = false
         switch t {
         case "finans": go(.home)
+        case "fliste": go(.list)
+        case "finn": go(.finn)
         case "mat": open(.mat)
         case "sporing": open(.tracking)
+        case "domener", "dpub", "dytl", "dinf":
+            open(.domains)
+            domTab = t == "dpub" ? .visits : t == "dytl" ? .perf : t == "dinf" ? .security : .traffic
         default: open(.homelab)
         }
         // open/go over setter module; Papir-fanen styrer selve visningen.
-        if t == "mer" { paperTab = "mer" }
+        paperTab = t
+        if Store.paperFinTabs.contains(t) || t == "mer" || t == "innst" || t == "hjem" { module = t == "hjem" || t == "mer" || t == "innst" ? .homelab : nil }
+    }
+
+    /// Pila øverst til venstre: i Finans og Domener tilbake til Hjem (Domener: dit brukeren kom fra).
+    func paperUp() {
+        // En Finans-side fra den klassiske appen (Liste med valgt rad, Budsjett …): rett tilbake til Papir-fanen.
+        if paperFin != nil && original == nil && editing == nil && detail == nil {
+            selectedTx = nil
+            paperFin = nil
+            return
+        }
+        if paperInner || paperFin != nil || (paperClassic != nil && !paperInDomains) { paperBack(); return }
+        if paperInDomains { paperGo(paperDomFrom); return }
+        paperGo("hjem")
+    }
+
+    /// Hvor Domener ble åpnet fra (Hjem eller Mer).
+    var paperDomFrom: String { UserDefaults.standard.string(forKey: "fh_dom_from") ?? "hjem" }
+    func paperOpenDomains(from: String) {
+        UserDefaults.standard.set(from, forKey: "fh_dom_from")
+        paperGo("domener")
     }
 
     /// En Finans-fane fra den klassiske appen (Liste, Budsjett, Søk, Finn).
@@ -106,6 +187,7 @@ extension Store {
         switch m {
         case .homelab, .mat: return nil
         case .tracking: return paperTrackFull ? .tracking : nil
+        case .domains: return paperInDomains ? nil : m
         default: return m
         }
     }
@@ -163,18 +245,61 @@ extension Store {
 
     /* ---------- Fotovindu ---------- */
 
+    /// Bakgrunnen på Hjem: serveren laster ned og cacher bildene (/api/bg/…), appen cacher dem også på disk.
+    /// Feiler et bilde, prøves neste i settet; feiler alle, vises gradienten og en feilmelding i menyen.
     func loadPhotoWindow() async {
         let kind = photo
+        photoFailed = false
         if kind == "cur" { photoWindow = nil; photoImage = nil; return }
-        guard let d = try? await api.callAt("/api", "GET", "/photo-window?kind=\(kind)") else { photoImage = nil; return }
-        let pw = PhotoWindow(JS.obj(d), kind: kind)
-        photoWindow = pw
-        guard pw.hasBitmap else { photoImage = nil; return }
-        if pw.url.hasPrefix("http://") || pw.url.hasPrefix("https://") {
-            if let u = URL(string: pw.url), let r = try? await URLSession.shared.data(from: u) { photoImage = UIImage(data: r.0) }
-        } else {
-            photoImage = await image(pw.url.hasPrefix("/") ? pw.url : "/" + pw.url)
+        // Bildet fra forrige gang vises med en gang.
+        if let cached = Store.cachedBg(kind) { photoImage = cached }
+        guard let d = try? await api.callAt("/api", "GET", "/photo-window?kind=\(kind)") else {
+            if photoImage == nil { photoFailed = true }
+            return
         }
+        let o = JS.obj(d)
+        let pw = PhotoWindow(o, kind: kind)
+        photoWindow = pw
+        var urls: [String] = []
+        if pw.hasBitmap { urls.append(pw.url) }
+        for f in JS.strings(o, "fallbacks") where !f.isEmpty && !urls.contains(f) { urls.append(f) }
+        if urls.isEmpty { photoImage = nil; return }
+        for u in urls {
+            if let img = await loadBg(u) {
+                photoImage = img
+                Store.storeBg(kind, img)
+                return
+            }
+        }
+        print("[Papir] Fikk ikke lastet bakgrunnsbildet (\(kind)): \(urls.joined(separator: ", "))")
+        if photoImage == nil { photoFailed = true }
+    }
+
+    private func loadBg(_ u: String) async -> UIImage? {
+        if u.hasPrefix("http://") || u.hasPrefix("https://") {
+            guard let url = URL(string: u), let r = try? await URLSession.shared.data(from: url) else { return nil }
+            return UIImage(data: r.0)
+        }
+        return await image(u.hasPrefix("/") ? u : "/" + u)
+    }
+
+    nonisolated private static func bgFile(_ kind: String) -> URL? {
+        guard let dir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else { return nil }
+        return dir.appendingPathComponent("papir-bg-\(kind).jpg")
+    }
+
+    nonisolated static func cachedBg(_ kind: String) -> UIImage? {
+        guard let f = bgFile(kind), let d = try? Data(contentsOf: f) else { return nil }
+        return UIImage(data: d)
+    }
+
+    nonisolated static func storeBg(_ kind: String, _ img: UIImage) {
+        guard let f = bgFile(kind), let d = img.jpegData(compressionQuality: 0.85) else { return }
+        try? d.write(to: f)
+    }
+
+    func retryPhoto() {
+        Task { await self.loadPhotoWindow() }
     }
 
     /// Eget bilde som bakgrunn (POST /api/me/photo-window).

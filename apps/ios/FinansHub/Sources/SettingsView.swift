@@ -378,12 +378,7 @@ private struct LookPage: View {
                     }
                 }
                 Note(text: store.financeStart ? "Appen åpner i Finans. Hjem-knappen går til Finans, og Homelab og de andre modulene ligger bak profilbildet." : "Appen åpner på Homelab.")
-                SectionLabel(text: "Tilbake til startsiden")
-                Card {
-                    Choice(label: "Pil øverst", sub: "«‹ \(store.startLabel)» med profilbildet på samme rad", on: store.layout.backStyle == "arrow") { store.setBackStyle("arrow") }
-                    Sep()
-                    Choice(label: "Knapp i linjen", sub: "\(store.startLabel) som første fane i fanelinja", on: store.layout.backStyle == "bar") { store.setBackStyle("bar") }
-                }
+                // Tilbake til startsiden går alltid med pila øverst til venstre («Knapp i linjen» er fjernet).
             }
             NavigationBarPrefs()
             Group {

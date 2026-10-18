@@ -770,14 +770,35 @@ struct Shortcut: Decodable, Hashable {
 
 struct Departure: Decodable, Hashable {
     var line: String; var color: String?; var min: Int?; var time: String?; var to: String?
-    enum K: String, CodingKey { case line, color, min, time, to }
+    /// Ruters linjefarge og tekstfarge (fra Entur), og transportmiddel: metro | tram | bus | water | rail.
+    var textColor: String?; var mode: String?
+    enum K: String, CodingKey { case line, color, min, minutes, time, to, textColor, mode }
     init(from d: Decoder) throws {
         let c = try d.container(keyedBy: K.self)
         line = (try? c.decode(FlexID.self, forKey: .line))?.value ?? ""
         color = try? c.decode(String.self, forKey: .color); time = try? c.decode(String.self, forKey: .time)
         to = try? c.decode(String.self, forKey: .to)
-        min = (try? c.decode(FlexNum.self, forKey: .min))?.value.map { Int($0) }
+        textColor = try? c.decode(String.self, forKey: .textColor)
+        mode = try? c.decode(String.self, forKey: .mode)
+        min = ((try? c.decode(FlexNum.self, forKey: .min))?.value ?? (try? c.decode(FlexNum.self, forKey: .minutes))?.value).map { Int($0) }
     }
+
+    /// Ruters farger når serveren ikke sender egen: T-bane oransje, trikk blå, buss rød, regionbuss grønn, båt lilla, tog mørkeblå.
+    var ruterColor: String {
+        if let color, !color.isEmpty { return color }
+        switch mode ?? "" {
+        case "metro": return "#EC700C"
+        case "tram": return "#0B91EF"
+        case "water": return "#682C88"
+        case "rail": return "#003087"
+        case "bus": return (Int(line) ?? 0) >= 100 ? "#75A300" : "#E60000"
+        default:
+            if let n = Int(line), n <= 5 { return "#EC700C" }
+            if let n = Int(line), (11...19).contains(n) { return "#0B91EF" }
+            return "#E60000"
+        }
+    }
+    var ruterTextColor: String { textColor ?? "#FFFFFF" }
 }
 
 struct RuterLine: Decodable, Hashable {

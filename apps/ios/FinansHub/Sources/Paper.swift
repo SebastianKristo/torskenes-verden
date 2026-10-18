@@ -4,17 +4,22 @@ import UIKit
 
 /* ---------------- Papir: felles mobildesign (Mobil Papir App / Mobil Nytt Design 2a) ---------------- */
 
-/// Fargene i Papir, lys og mørk.
+/// Fargene i Papir, lys og mørk. Mørk Papir er rettet for kontrast: mørk fanelinje (#2a2821) med lys aktiv fane,
+/// +-knapp #f08a76 med mørkt ikon og dempet tekst #a39d90 (minst 4,5:1 mot #14130f).
 struct PaperPalette {
     let dark: Bool
     let ink, bg, card, line, lab, mut, pos, nav, navInk, navAct, navActInk: Color
+    /// Ikonet på +-knappen, nedtrekksmenyen og valgt rad i den.
+    let onLab, pop, popSel: Color
 
     static let light = PaperPalette(dark: false, ink: Color(hex: "#1b1a17"), bg: Color(hex: "#f3efe6"), card: .white, line: Color(hex: "#d8d1c2"),
-                                    lab: Color(hex: "#b23a2a"), mut: Color(hex: "#8f897c"), pos: Color(hex: "#2f7a4f"), nav: Color(hex: "#1b1a17"),
-                                    navInk: Color(hex: "#a39e92"), navAct: Color(hex: "#f3efe6"), navActInk: Color(hex: "#1b1a17"))
-    static let night = PaperPalette(dark: true, ink: Color(hex: "#ece7dc"), bg: Color(hex: "#14130f"), card: Color(hex: "#211f19"), line: Color(hex: "#34322a"),
-                                    lab: Color(hex: "#e8705c"), mut: Color(hex: "#8a8578"), pos: Color(hex: "#7fcf9a"), nav: Color(hex: "#ece7dc"),
-                                    navInk: Color(hex: "#5e594f"), navAct: Color(hex: "#14130f"), navActInk: Color(hex: "#ece7dc"))
+                                    lab: Color(hex: "#b23a2a"), mut: Color(hex: "#7a7468"), pos: Color(hex: "#2f7a4f"), nav: Color(hex: "#1b1a17"),
+                                    navInk: Color(hex: "#b3ada1"), navAct: Color(hex: "#f3efe6"), navActInk: Color(hex: "#1b1a17"),
+                                    onLab: .white, pop: Color(hex: "#f3efe6"), popSel: Color(hex: "#e6e0d2"))
+    static let night = PaperPalette(dark: true, ink: Color(hex: "#ece7dc"), bg: Color(hex: "#14130f"), card: Color(hex: "#211f19"), line: Color(hex: "#3a372e"),
+                                    lab: Color(hex: "#f08a76"), mut: Color(hex: "#a39d90"), pos: Color(hex: "#8fd9a8"), nav: Color(hex: "#2a2821"),
+                                    navInk: Color(hex: "#a39d90"), navAct: Color(hex: "#ece7dc"), navActInk: Color(hex: "#14130f"),
+                                    onLab: Color(hex: "#1b1a17"), pop: Color(hex: "#2a2821"), popSel: Color(hex: "#3a372e"))
 
     static func of(_ mode: String, system: ColorScheme) -> PaperPalette {
         switch mode {
@@ -137,41 +142,62 @@ struct ShareSheet: UIViewControllerRepresentable {
 
 /* ---------------- Skallet ---------------- */
 
-/// Papir-appen på iPhone: fotovindu øverst, innhold på papir og en svart fanelinje som flyter nederst
-/// (Hjem, Finans, Mat, Sporing, Mer og +Skann). Sidene fra den klassiske appen vises inne i skallet.
+/// Papir-appen på iPhone: fotovindu øverst, innhold på papir og en fanelinje nederst. Fanelinja følger stedet:
+/// Hjem (Hjem bare på startsiden, Finans, Mat, Sporing, Mer), Finans (Oversikt, Liste, Finn, Mer) og Domener
+/// (Oversikt, Publikum, Ytelse, Infra). Innholdet stopper over linja, så ingenting synes bak den.
 struct PaperShell: View {
     @Environment(Store.self) private var store
     @Environment(\.scenePhase) private var phase
     let scan: ScanActions
     @Binding var photos: [PhotosPickerItem]
     @Binding var files: Bool
-    @State private var scanSheet = false
 
     var body: some View {
         // Appen tvinger mørk modus i roten (klassisk design), så systemets valg leses fra skjermen.
-        let system = paperSystemScheme(phase)
-        let p = PaperPalette.of(store.paperMode, system: system)
-        ZStack(alignment: .bottom) {
-            p.bg.ignoresSafeArea()
-            content(p)
-            if !store.newsOpen && store.dishSel == nil { PaperTabBar(scan: { openScan() }).environment(\.paper, p) }
+        let p = PaperPalette.of(store.paperMode, system: paperSystemScheme(phase))
+        GeometryReader { g in
+            let bottom = Swift.max(12, g.safeAreaInsets.bottom - 8)
+            let showBar = !store.newsOpen && store.dishSel == nil
+            ZStack(alignment: .bottom) {
+                p.bg.ignoresSafeArea()
+                VStack(spacing: 0) {
+                    content(p).frame(maxWidth: .infinity, maxHeight: .infinity).clipped()
+                    if showBar { Color.clear.frame(height: 62 + bottom - g.safeAreaInsets.bottom + 10) }
+                }
+                if showBar {
+                    PaperTabBar(scan: scan)
+                        .padding(.bottom, bottom)
+                        .ignoresSafeArea(edges: .bottom)
+                }
+                if let h = store.paperHint {
+                    Text(h).font(PF.ui(12.5, .semibold)).foregroundStyle(p.bg)
+                        .padding(.horizontal, 12).padding(.vertical, 8)
+                        .background(p.ink, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .padding(.trailing, 16).padding(.bottom, bottom + 72)
+                        .ignoresSafeArea(edges: .bottom)
+                        .transition(.opacity)
+                }
+            }
+            .overlay(alignment: .topTrailing) {
+                if store.paperBgOpen && store.paperTab == "hjem" && !store.newsOpen && store.dishSel == nil && store.paperClassic == nil {
+                    PaperBgMenu(top: g.safeAreaInsets.top + 62)
+                }
+            }
         }
         .environment(\.paper, p)
-        .sheet(isPresented: $scanSheet) {
-            PaperScanSheet(scan: scan, recipe: store.paperTab == "mat") { scanSheet = false }
+        .animation(.easeOut(duration: 0.16), value: store.paperBgOpen)
+        .animation(.easeOut(duration: 0.2), value: store.paperHint)
+        .sheet(isPresented: Binding(get: { store.paperScanOpen }, set: { store.paperScanOpen = $0 })) {
+            PaperScanSheet(scan: scan, recipe: store.paperTab == "mat") { store.paperScanOpen = false }
                 .environment(\.paper, p)
-                .presentationDetents([.height(330)])
+                .presentationDetents([.height(360), .medium])
                 .presentationBackground(p.bg)
         }
         .task(id: store.account?.id) {
             await store.loadPhotoWindow()
             if store.mobileHome == nil { await store.loadHome() }
         }
-    }
-
-    private func openScan() {
-        Haptics.shared.tap()
-        scanSheet = true
     }
 
     @ViewBuilder private func content(_ p: PaperPalette) -> some View {
@@ -182,7 +208,9 @@ struct PaperShell: View {
             DishDetailView(id: id, pal: MatPal.paper(p)).environment(\.paper, p)
                 .environment(\.colorScheme, p.dark ? .dark : .light)
         } else if let t = store.paperFin {
-            classic(back: "Finans") { FinanceTab(tab: t) }
+            classic(back: store.paperFinBackLabel) { FinanceTab(tab: t) }
+        } else if store.paperInDomains {
+            classic(back: store.paperDomFrom == "mer" ? "Mer" : "Hjem") { DomainsView() }
         } else if let m = store.paperClassic {
             classic(back: m == .tracking ? "Sporing" : nil) { ModuleView(module: m, scan: scan, photos: $photos, files: $files) }
         } else {
@@ -190,13 +218,13 @@ struct PaperShell: View {
         }
     }
 
-    /// En side fra den klassiske appen: mørk bakgrunn og plass til fanelinja. Sidene under Mer har egen
-    /// tilbakeknapp i toppen; Finans-fanene får «‹ Finans» i Papir-stil.
+    /// En side fra den klassiske appen: mørk bakgrunn over papiret. Sidene under Mer har egen tilbakeknapp i toppen;
+    /// Finans-sidene og Domener får «‹ …» i Papir-stil.
     private func classic<C: View>(back: String?, @ViewBuilder _ c: () -> C) -> some View {
         VStack(spacing: 0) {
             if let back {
                 HStack {
-                    Button { store.paperBack() } label: {
+                    Button { store.paperUp() } label: {
                         Text("‹ \(back)").font(PF.ui(13, .semibold)).foregroundStyle(.white).padding(.leading, 10).padding(.trailing, 14).frame(height: 34)
                             .background(Color.white.opacity(0.12), in: Capsule())
                     }
@@ -209,7 +237,6 @@ struct PaperShell: View {
         }
         .background { ZStack { Color(hex: "#14130f"); Backdrop() }.ignoresSafeArea() }
         .environment(\.colorScheme, .dark)
-        .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 84) }
     }
 }
 
@@ -217,66 +244,146 @@ extension Store {
     /// «‹ Mer» / «‹ Hjem» over sidene fra den klassiske appen.
     var paperBackLabel: String {
         switch paperTab {
-        case "finans": "Finans"
+        case "finans", "fliste", "finn", "fmer": "Finans"
         case "mat": "Mat"
         case "sporing": "Sporing"
         case "hjem": "Hjem"
         default: "Mer"
         }
     }
+
+    /// Klassiske Finans-sider åpnet fra Papir: tilbake til fanen de kom fra.
+    var paperFinBackLabel: String {
+        switch paperTab {
+        case "fliste": "Liste"
+        case "finn": "Finn"
+        case "fmer": "Mer"
+        default: "Oversikt"
+        }
+    }
 }
 
-/// Den svarte fanelinja som flyter nederst. Den valgte fanen er en lys pille med ikon.
+/// Fanelinja nederst: fanene fordeles jevnt (den aktive tar bare plassen den trenger), og +-knappen står rett etter
+/// siste fane. Trykk på + åpner valgarket; hold inne (450 ms) åpner filvelgeren direkte.
 struct PaperTabBar: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
-    let scan: () -> Void
-    private let tabs: [(String, String, String)] = [("hjem", "Hjem", "⌂"), ("finans", "Finans", "kr"), ("mat", "Mat", "◐"), ("sporing", "Sporing", "▣"), ("mer", "Mer", "⋯")]
+    let scan: ScanActions
+
+    private var tabs: [(String, String, String)] {
+        if store.paperInDomains { return [("domener", "Oversikt", "◎"), ("dpub", "Publikum", "◍"), ("dytl", "Ytelse", "⚡"), ("dinf", "Infra", "▤")] }
+        if store.paperInFinance { return [("finans", "Oversikt", "◎"), ("fliste", "Liste", "≡"), ("finn", "Finn", "⇄"), ("fmer", "Mer", "⋯")] }
+        var t: [(String, String, String)] = []
+        if current == "hjem" { t.append(("hjem", "Hjem", "⌂")) }
+        t.append(("finans", "Finans", "kr"))
+        t.append(("mat", "Mat", "◐"))
+        t.append(("sporing", "Sporing", "▣"))
+        t.append(("mer", "Mer", "⋯"))
+        return t
+    }
 
     private var current: String {
-        if store.paperFin != nil { return "finans" }
-        return store.paperTab == "innst" ? "mer" : store.paperTab
+        if store.paperInDomains { return store.paperTab }
+        if store.paperInFinance {
+            if store.paperFin == .list { return "fliste" }
+            if store.paperFin == .finn { return "finn" }
+            if store.paperFin == nil && store.paperClassic == nil && Store.paperFinTabs.contains(store.paperTab) { return store.paperTab }
+            return "fmer"
+        }
+        if store.paperTab == "innst" || store.paperClassic != nil { return "mer" }
+        return store.paperTab
     }
 
     var body: some View {
+        let cur = current
         HStack(spacing: 2) {
-            ForEach(tabs, id: \.0) { t in tab(t.0, t.1, t.2) }
-            Spacer(minLength: 0)
-            Button(action: scan) {
-                Image(systemName: "plus").font(.system(size: 20, weight: .semibold)).foregroundStyle(.white)
-                    .frame(width: 46, height: 46).background(p.lab, in: Circle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Skann")
+            ForEach(tabs, id: \.0) { t in tab(t.0, t.1, t.2, on: cur == t.0) }
+            PaperPlusButton(label: plusLabel, tap: plusTap, hold: plusHold)
+                .padding(.leading, 4)
         }
         .padding(.horizontal, 8)
         .frame(height: 62)
         .background(p.nav, in: Capsule())
         .shadow(color: .black.opacity(0.35), radius: 15, y: 10)
-        .padding(.horizontal, 16)
-        .padding(.bottom, 4)
+        .padding(.horizontal, 12)
     }
 
-    private func tab(_ id: String, _ name: String, _ icon: String) -> some View {
-        let on = current == id
-        return Button { if on && store.paperTab != "innst" { store.paperBack() } else { store.paperGo(id) } } label: {
-            HStack(spacing: 6) {
+    private var plusLabel: String {
+        if store.paperInDomains { return "Legg til domene" }
+        if store.paperInFinance { return "Legg til kvittering" }
+        return store.paperTab == "mat" ? "Skann oppskrift" : "Skann"
+    }
+
+    private func plusTap() {
+        Haptics.shared.tap()
+        if store.paperInDomains { store.domainManager = true; return }
+        store.paperScanOpen = true
+    }
+
+    private func plusHold() {
+        Haptics.shared.tick()
+        if store.paperInDomains { store.domainManager = true; return }
+        store.scanTarget = store.paperTab == "mat" ? "recipe" : "receipt"
+        store.paperHint = "Velg filer å laste opp"
+        scan.files()
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(1600))
+            store.paperHint = nil
+        }
+    }
+
+    private func tab(_ id: String, _ name: String, _ icon: String, on: Bool) -> some View {
+        Button { tapTab(id, on: on) } label: {
+            HStack(spacing: 7) {
                 if on { Text(icon).font(PF.serif(16, medium: true)) }
                 Text(name).font(PF.ui(12.5, .semibold)).lineLimit(1).minimumScaleFactor(0.75)
             }
             .foregroundStyle(on ? p.navActInk : p.navInk)
-            .padding(.horizontal, on ? 14 : 7)
+            .padding(.horizontal, on ? 16 : 6)
+            .frame(maxWidth: on ? nil : .infinity)
             .frame(height: 46)
             .background(on ? p.navAct : Color.clear, in: Capsule())
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .layoutPriority(on ? 1 : 0)
         .accessibilityLabel(name)
         .accessibilityAddTraits(on ? .isSelected : [])
     }
+
+    private func tapTab(_ id: String, on: Bool) {
+        if on {
+            if store.paperInner || store.paperFin != nil || store.paperClassic != nil { store.paperBack() }
+            return
+        }
+        store.paperGo(id)
+    }
 }
 
-/// «Skann»: kvittering, oppskrift eller dokument. Gemini leser i bakgrunnen.
+/// +-knappen: trykk = valg, hold inne = opplasting med en gang (haptisk tikk og et kort hint).
+struct PaperPlusButton: View {
+    @Environment(\.paper) private var p
+    let label: String
+    let tap: () -> Void
+    let hold: () -> Void
+    @State private var pressed = false
+
+    var body: some View {
+        Text("+").font(.system(size: 24, weight: .regular)).foregroundStyle(p.onLab)
+            .frame(width: 46, height: 46)
+            .background(p.lab, in: Circle())
+            .scaleEffect(pressed ? 0.88 : 1)
+            .animation(.easeOut(duration: 0.15), value: pressed)
+            .contentShape(Circle())
+            .onTapGesture { tap() }
+            .onLongPressGesture(minimumDuration: 0.45, perform: { hold() }, onPressingChanged: { pressed = $0 })
+            .accessibilityLabel(label)
+            .accessibilityHint("Trykk for valg, hold inne for å laste opp")
+            .accessibilityAddTraits(.isButton)
+    }
+}
+
+/// Skann-arket: kvittering, oppskrift eller dokument, og køen med det som leses nå.
 struct PaperScanSheet: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
@@ -285,27 +392,69 @@ struct PaperScanSheet: View {
     let close: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Skann").font(PF.serif(24, medium: true)).foregroundStyle(p.ink)
-            Text("Kvittering, oppskrift eller dokument. ✦ Gemini leser i bakgrunnen.").font(PF.ui(13)).foregroundStyle(p.mut)
-            HStack(spacing: 6) {
-                choice("Kvittering", !recipe) { recipe = false }
-                choice("Oppskrift", recipe) { recipe = true }
+        ScrollView {
+            VStack(alignment: .leading, spacing: 10) {
+                Text(title).font(PF.serif(24, medium: true)).foregroundStyle(p.ink)
+                Text(sub).font(PF.ui(13)).foregroundStyle(p.mut)
+                if !store.paperInFinance {
+                    HStack(spacing: 6) {
+                        choice("Kvittering", !recipe) { recipe = false }
+                        choice("Oppskrift", recipe) { recipe = true }
+                    }
+                }
+                Button { go { scan.camera() } } label: {
+                    Text("Kamera").font(PF.ui(15, .bold)).foregroundStyle(p.bg).frame(maxWidth: .infinity, minHeight: 54)
+                        .background(p.ink, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                lineButton("Bilder eller filer") { go { scan.files() } }
+                lineButton("Fra Bilder") { go { scan.photos() } }
+                queue
             }
-            Button { go { scan.camera() } } label: {
-                Text("Kamera").font(PF.ui(15, .bold)).foregroundStyle(p.bg).frame(maxWidth: .infinity, minHeight: 54)
-                    .background(p.ink, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            HStack(spacing: 8) {
-                lineButton("Bilder") { go { scan.photos() } }
-                lineButton("Filer (PDF)") { go { scan.files() } }
-            }
+            .padding(.horizontal, 18).padding(.top, 22).padding(.bottom, 10)
         }
-        .padding(.horizontal, 18).padding(.top, 22).padding(.bottom, 10)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(p.bg)
         .environment(\.colorScheme, p.dark ? .dark : .light)
+    }
+
+    private var title: String { store.paperInFinance ? "Legg til kvittering" : recipe ? "Skann oppskrift" : "Skann" }
+    private var sub: String {
+        store.paperInFinance ? "Ta bilde, velg filer eller del fra e-post. ✦ Gemini leser i bakgrunnen og kobler mot transaksjonen."
+            : "Kvittering, oppskrift eller dokument. ✦ Gemini leser i bakgrunnen."
+    }
+
+    @ViewBuilder private var queue: some View {
+        let jobs = Array(store.jobs.filter { $0.status != "booked" }.prefix(6))
+        if !jobs.isEmpty || store.uploading > 0 {
+            PLabel(text: "Kø").padding(.top, 6)
+            if store.uploading > 0 {
+                Text("Laster opp \(store.uploading) fil\(store.uploading > 1 ? "er" : "") …").font(PF.ui(13)).foregroundStyle(p.mut)
+            }
+            ForEach(jobs) { j in queueRow(j) }
+        }
+    }
+
+    private func queueRow(_ j: Job) -> some View {
+        let done = j.status == "needs_review" || j.status == "review" || j.status == "done"
+        let failed = j.status == "error" || j.status == "failed"
+        let pct = Double(Swift.min(100, Swift.max(0, j.progress ?? (done ? 100 : 10)))) / 100
+        return VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Text(j.merchant ?? j.name ?? "Kvittering").font(PF.ui(14, .semibold)).foregroundStyle(p.ink).lineLimit(1)
+                Spacer()
+                Text(failed ? "Feilet" : done ? "✓ Klar til bekreftelse" : j.status == "pending" ? "I kø" : "✦ Leser … \(Int(pct * 100)) %").font(PF.ui(12)).foregroundStyle(done ? p.pos : p.lab)
+            }
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(p.line)
+                    Capsule().fill(done ? p.pos : p.lab).frame(width: g.size.width * pct)
+                }
+            }
+            .frame(height: 4)
+        }
+        .padding(12)
+        .background(p.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
     private func go(_ act: @escaping () -> Void) {
@@ -337,6 +486,124 @@ struct PaperScanSheet: View {
     }
 }
 
+/* ---------------- Bakgrunnsvelgeren (egen nedtrekksmeny) ---------------- */
+
+/// Papirfarget panel under bakgrunnspillen: miniatyr, navn, undertekst og ✓, og «+ Eget bilde» nederst.
+/// Lukkes ved trykk utenfor. Ikke systemets Menu/contextMenu.
+struct PaperBgMenu: View {
+    @Environment(Store.self) private var store
+    @Environment(\.paper) private var p
+    let top: CGFloat
+    @State private var item: PhotosPickerItem?
+
+    private let kinds: [(String, String)] = [("cur", "Nåværende"), ("oslo", "Oslo"), ("weather", "Vær nå"), ("planets", "Planeter")]
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Color.black.opacity(0.001)
+                .ignoresSafeArea()
+                .onTapGesture { store.paperBgOpen = false }
+            panel
+                .padding(.top, top)
+                .padding(.trailing, 22)
+                .transition(.opacity.combined(with: .scale(scale: 0.96, anchor: .topTrailing)))
+        }
+        .onChange(of: item) { _, it in
+            guard let it else { return }
+            Task {
+                if let d = try? await it.loadTransferable(type: Data.self), let img = UIImage(data: d) { store.uploadPhoto(img) }
+                item = nil
+                store.paperBgOpen = false
+            }
+        }
+    }
+
+    private var panel: some View {
+        VStack(spacing: 2) {
+            ForEach(kinds, id: \.0) { k in row(k.0, k.1) }
+            if store.photo == "custom" { row("custom", "Eget bilde") }
+            Rectangle().fill(p.line).frame(height: 1).padding(.horizontal, 8).padding(.vertical, 2)
+            PhotosPicker(selection: $item, matching: .images) {
+                HStack(spacing: 10) {
+                    Text("+").font(PF.ui(15, .semibold)).foregroundStyle(p.mut)
+                        .frame(width: 30, height: 30)
+                        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(p.mut, style: StrokeStyle(lineWidth: 1.5, dash: [3, 3])))
+                    Text("Eget bilde").font(PF.ui(14, .semibold)).foregroundStyle(p.ink)
+                    Spacer()
+                }
+                .padding(.horizontal, 10).frame(height: 44)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(6)
+        .frame(width: 236)
+        .background(p.pop, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(color: .black.opacity(0.45), radius: 20, y: 16)
+    }
+
+    private func row(_ kind: String, _ name: String) -> some View {
+        let sel = store.photo == kind
+        return Button { pick(kind) } label: {
+            HStack(spacing: 10) {
+                thumb(kind)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(name).font(PF.ui(14, .semibold)).foregroundStyle(p.ink)
+                    Text(subtitle(kind, sel)).font(PF.ui(11.5, .medium)).foregroundStyle(sel && store.photoFailed ? p.lab : p.mut).lineLimit(2)
+                }
+                Spacer(minLength: 4)
+                if sel { Text("✓").font(PF.ui(13, .bold)).foregroundStyle(p.pos) }
+            }
+            .padding(.horizontal, 10).frame(minHeight: 50)
+            .background(sel ? p.popSel : Color.clear, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(sel ? .isSelected : [])
+    }
+
+    private func pick(_ kind: String) {
+        Haptics.shared.select()
+        if store.photo == kind && store.photoFailed { store.retryPhoto(); return }
+        store.setPhoto(kind)
+        store.paperBgOpen = false
+    }
+
+    private func subtitle(_ kind: String, _ sel: Bool) -> String {
+        if sel && store.photoFailed { return "Fikk ikke lastet bildet · trykk for å prøve igjen" }
+        switch kind {
+        case "cur": return "Mørk gradient"
+        case "oslo": return "Bilde av Oslo"
+        case "weather": return "Følger været nå · \(store.weatherWord)"
+        case "planets": return "Ny planet hver dag (NASA)"
+        default: return "Ditt bilde"
+        }
+    }
+
+    @ViewBuilder private func thumb(_ kind: String) -> some View {
+        let img: UIImage? = store.photo == kind ? store.photoImage : Store.cachedBg(kind)
+        ZStack {
+            LinearGradient(colors: [Color(hex: "#4a5a6a"), Color(hex: "#1d242c")], startPoint: .top, endPoint: .bottom)
+            if let img, kind != "cur" { Image(uiImage: img).resizable().scaledToFill() }
+        }
+        .frame(width: 30, height: 30)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
+extension Store {
+    /// «klart», «skyet», «regn» … for «Vær nå».
+    var weatherWord: String {
+        let s = (photoWindow?.symbol ?? homeWeather?.symbol ?? "").lowercased()
+        if s.contains("rain") || s.contains("sleet") || s.contains("regn") { return "regn" }
+        if s.contains("snow") || s.contains("snø") { return "snø" }
+        if s.contains("fog") || s.contains("tåke") { return "tåke" }
+        if s.contains("night") || s.contains("natt") { return "natt" }
+        if s.contains("clear") || s.contains("fair") || s.contains("klart") { return "klart" }
+        return "skyet"
+    }
+}
+
 /* ---------------- Fotovinduet og sidene ---------------- */
 
 /// Papir-siden for valgt fane: fotovindu (høyere på Hjem) og innhold som overlapper vinduet nederst.
@@ -352,7 +619,7 @@ struct PaperPage: View {
                 VStack(spacing: 10) { page }
                     .padding(.horizontal, 16)
                     .padding(.top, -23)
-                    .padding(.bottom, 110)
+                    .padding(.bottom, 20)
             }
         }
         .scrollIndicators(.hidden)
@@ -363,6 +630,9 @@ struct PaperPage: View {
     @ViewBuilder private var page: some View {
         switch store.paperTab {
         case "finans": PaperFinance()
+        case "fliste": PaperFinList()
+        case "finn": PaperFinn()
+        case "fmer": PaperFinMore()
         case "mat": MatView(pal: MatPal.paper(p), paperMode: true)
         case "sporing": PaperTracking()
         case "mer": PaperMore()
@@ -373,7 +643,9 @@ struct PaperPage: View {
 
     private func refresh() async {
         switch store.paperTab {
-        case "finans": await store.loadPaperFinance(force: true)
+        case "finans", "fmer": await store.loadPaperFinance(force: true)
+        case "fliste": try? await store.loadTx()
+        case "finn": try? await store.loadFinn()
         case "mat": try? await store.loadWeek(); await store.loadMatExtras()
         case "sporing": try? await store.loadTracking()
         default: await store.loadHome(); await store.loadPhotoWindow()
@@ -381,19 +653,19 @@ struct PaperPage: View {
     }
 }
 
-/// Toppbildet med hilsen/tittel, klokke og vær (Hjem), bakgrunnsvelger og profilbilde.
+/// Toppbildet med hilsen/tittel, klokke og vær (Hjem), bakgrunnsvelger og profilbilde. Utenfor Hjem står
+/// pila øverst til venstre («‹ Hjem»), som går tilbake til startsiden.
 struct PaperHero: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
     let home: Bool
-    @State private var pickBg = false
-    @State private var ownItem: PhotosPickerItem?
-    @State private var pickOwn = false
 
     var body: some View {
         ZStack(alignment: .bottom) {
             background
-            LinearGradient(colors: [.black.opacity(0.25), .clear, .black.opacity(0.45)], startPoint: .top, endPoint: .bottom)
+            // Mørk toning øverst og nederst, så teksten alltid er lesbar.
+            LinearGradient(stops: [.init(color: .black.opacity(0.25), location: 0), .init(color: .clear, location: 0.35), .init(color: .black.opacity(0.45), location: 1)],
+                           startPoint: .top, endPoint: .bottom)
             VStack(alignment: .leading, spacing: 6) {
                 topRow
                 Spacer(minLength: 0)
@@ -405,23 +677,6 @@ struct PaperHero: View {
         }
         .frame(height: home ? 262 : 212)
         .clipped()
-        .confirmationDialog("Bakgrunn", isPresented: $pickBg, titleVisibility: .visible) {
-            Button("Nåværende (gradient)") { store.setPhoto("cur") }
-            Button("Oslo") { store.setPhoto("oslo") }
-            Button("Vær nå") { store.setPhoto("weather") }
-            Button("Planeter") { store.setPhoto("planets") }
-            Button("Eget bilde …") { pickOwn = true }
-            if store.photo == "custom" { Button("Fjern eget bilde", role: .destructive) { store.removePhoto() } }
-            Button("Avbryt", role: .cancel) {}
-        }
-        .photosPicker(isPresented: $pickOwn, selection: $ownItem, matching: .images)
-        .onChange(of: ownItem) { _, it in
-            guard let it else { return }
-            Task {
-                if let d = try? await it.loadTransferable(type: Data.self), let img = UIImage(data: d) { store.uploadPhoto(img) }
-                ownItem = nil
-            }
-        }
     }
 
     @ViewBuilder private var background: some View {
@@ -438,12 +693,12 @@ struct PaperHero: View {
         if let c = store.photoWindow?.colors, c.count >= 2, store.photo != "cur" { return c }
         if store.photo == "oslo" { return [Color(hex: "#6f86a0"), Color(hex: "#c9a27a"), Color(hex: "#3a4250")] }
         if store.photo == "weather" {
-            let sym = store.photoWindow?.symbol ?? ""
-            let s = (sym.isEmpty ? (store.homeWeather?.symbol ?? "") : sym).lowercased()
-            if s.contains("rain") || s.contains("sleet") { return [Color(hex: "#3d4a57"), Color(hex: "#1f2730")] }
-            if s.contains("snow") { return [Color(hex: "#9fb0c0"), Color(hex: "#4f5f70")] }
-            if s.contains("clear") || s.contains("fair") { return [Color(hex: "#5d8fc9"), Color(hex: "#d9a86a")] }
-            return [Color(hex: "#6c7a88"), Color(hex: "#323c46")]
+            switch store.weatherWord {
+            case "regn": return [Color(hex: "#3d4a57"), Color(hex: "#1f2730")]
+            case "snø": return [Color(hex: "#9fb0c0"), Color(hex: "#4f5f70")]
+            case "klart": return [Color(hex: "#5d8fc9"), Color(hex: "#d9a86a")]
+            default: return [Color(hex: "#6c7a88"), Color(hex: "#323c46")]
+            }
         }
         if store.photo == "planets" { return [Color(hex: "#1b1530"), Color(hex: "#5a3a2a")] }
         return [Color(hex: "#4a5a6a"), Color(hex: "#2a3440"), Color(hex: "#1d242c")]
@@ -463,12 +718,12 @@ struct PaperHero: View {
         HStack(spacing: 8) {
             if home {
                 Text("Homelab").font(PF.serif(22, medium: true)).foregroundStyle(.white).shadow(color: .black.opacity(0.4), radius: 6)
-            } else if store.paperTab == "innst" {
-                pill("‹ Mer") { store.paperGo("mer") }
+            } else {
+                pill("‹ \(store.paperTab == "innst" ? "Mer" : "Hjem")") { store.paperUp() }
             }
             Spacer()
-            if home { pill("\(bgName) ▾") { pickBg = true } }
-            Button { store.paperTab = "innst" } label: {
+            if home { pill("\(bgName) ▾") { Haptics.shared.select(); store.paperBgOpen.toggle() } }
+            Button { store.paperGo("innst") } label: {
                 ZStack {
                     Circle().fill(Color(hex: "#f3efe6"))
                     if let a = store.avatar {
@@ -530,6 +785,9 @@ struct PaperHero: View {
         case "finans":
             let days = (Calendar.current.range(of: .day, in: .month, for: Date())?.count ?? 30) - Calendar.current.component(.day, from: Date())
             return "\(monthName()) · \(days) dager igjen"
+        case "fliste": return "\(monthName()) · alle kontoer"
+        case "finn": return "Kjøp og salg"
+        case "fmer": return "Penger, moduler og data"
         case "mat": return "Uke \(Calendar(identifier: .iso8601).component(.weekOfYear, from: Date()))"
         case "sporing":
             let items = (store.tracking?.items ?? store.homePackages ?? []).filter { !$0.archived && $0.status != "delivered" }
@@ -547,6 +805,9 @@ struct PaperHero: View {
             let first = store.displayName.split(separator: " ").first.map(String.init) ?? ""
             return "\(greetingWord()),\n\(first.isEmpty ? "hei" : first)"
         case "finans": return "Finans"
+        case "fliste": return "Liste"
+        case "finn": return "Finn"
+        case "fmer": return "Mer i Finans"
         case "mat": return "Mat"
         case "sporing": return "Sporing"
         case "mer": return "Mer"

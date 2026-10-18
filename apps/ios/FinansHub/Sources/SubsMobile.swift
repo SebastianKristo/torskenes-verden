@@ -20,6 +20,11 @@ struct SubItem: Identifiable, Hashable {
     var domain: String?
     var usageNote: String
     var aiShort: String
+    /// Faktureringsdato som dag + måned (måned for årlige og toårige), logo og status (active | paused | cancelled).
+    var billDay: Int?
+    var billMonth: Int?
+    var logoUrl: String?
+    var nextCharge: String
     init(_ o: [String: Any]) {
         id = JS.int(o, "id") ?? 0
         name = JS.str(o, "name") ?? "Abonnement"
@@ -35,6 +40,11 @@ struct SubItem: Identifiable, Hashable {
         domain = JS.str(o, "domain")
         usageNote = JS.str(o, "usageNote") ?? ""
         aiShort = JS.str(o, "aiShort") ?? ""
+        let nd = nextDate
+        billDay = JS.int(o, "billDay") ?? chargeDay
+        billMonth = JS.int(o, "billMonth") ?? (nd.count >= 7 ? Int(nd.dropFirst(5).prefix(2)) : nil)
+        logoUrl = JS.str(o, "logoUrl")
+        nextCharge = JS.str(o, "nextCharge") ?? nd
     }
     var cycleName: String { cycle == "yearly" ? "Årlig" : cycle == "biennial" ? "Hvert 2. år" : "Månedlig" }
     var flagged: Bool { active && (status == "low_use" || status == "price_up") }
@@ -280,6 +290,9 @@ struct SubsMobileView: View {
         .sheet(isPresented: $adding) {
             SubAddSheet().presentationDetents([.medium, .large]).presentationBackground(.ultraThinMaterial)
         }
+        .sheet(isPresented: Binding(get: { store.subEdit != nil || store.subNew }, set: { if !$0 { store.subEdit = nil; store.subNew = false } })) {
+            SubEditSheet(item: store.subEdit).presentationDetents([.large]).presentationBackground(.ultraThinMaterial)
+        }
     }
 
     private var tabs: some View {
@@ -411,7 +424,9 @@ struct SubsMobileView: View {
             }
         }
         .padding(.horizontal, 16).padding(.vertical, 12).contentShape(Rectangle())
+        .onTapGesture { Haptics.shared.tap(); store.subEdit = s }
         .contextMenu {
+            Button("Endre") { store.subEdit = s }
             if s.active { Button("Marker som sagt opp") { store.setSubItemActive(s, false) } } else { Button("Aktiver igjen") { store.setSubItemActive(s, true) } }
         }
     }
@@ -608,7 +623,13 @@ struct SubAddSheet: View {
 
     private var options: some View {
         VStack(spacing: 0) {
-            option("square.and.pencil", "Skriv inn selv", "Tjeneste, beløp, syklus og trekkdag") { mode = "manual" }
+            option("square.and.pencil", "Skriv inn selv", "Tjeneste, beløp, syklus og faktureringsdato") {
+                dismiss()
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(450))
+                    store.subNew = true
+                }
+            }
             Divider().overlay(.white.opacity(0.12))
             option("doc.viewfinder", "Fra kvittering", "✦ AI leser bilde eller PDF og fyller inn") { mode = "receipt" }
             Divider().overlay(.white.opacity(0.12))
@@ -702,5 +723,223 @@ struct SubAddSheet: View {
     private func send(_ d: Data, _ mime: String, _ name: String) {
         store.uploadSubReceipt(d, mime: mime, name: name)
         dismiss()
+    }
+}
+
+
+/* ---------------- Rediger og legg til abonnement ---------------- */
+
+/// Logo (last opp eller ✦ finn med AI), navn, pris, plan, kategori, hvor ofte, faktureringsdato (dag + måned) og status.
+struct SubEditSheet: View {
+    @Environment(Store.self) private var store
+    @Environment(\.dismiss) private var dismiss
+    let item: SubItem?
+    @State private var name = ""
+    @State private var price = ""
+    @State private var plan = ""
+    @State private var category = "Annet"
+    @State private var cycle = "monthly"
+    @State private var day = 1
+    @State private var month = 1
+    @State private var status = "active"
+    @State private var logo: PhotosPickerItem?
+    @State private var logoImg: UIImage?
+    @State private var confirmDelete = false
+
+    private static let months = ["januar", "februar", "mars", "april", "mai", "juni", "juli", "august", "september", "oktober", "november", "desember"]
+    private static let cats = ["Strømming", "Musikk", "Programvare", "Lagring", "Nyheter", "Trening", "Spill", "Mobil og internett", "Forsikring", "Annet"]
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text(item == nil ? "Nytt abonnement" : "Endre abonnement").font(.title3.weight(.bold))
+                    Spacer()
+                    Button("Lukk") { dismiss() }.fontWeight(.semibold).foregroundStyle(Color.accentLight)
+                }
+                logoRow
+                field("Navn, f.eks. Netflix", $name, .default)
+                HStack(spacing: 10) {
+                    field("Pris i kr", $price, .decimalPad)
+                    field("Plan (valgfritt)", $plan, .default)
+                }
+                Picker("Kategori", selection: $category) { ForEach(SubEditSheet.cats + extraCat, id: \.self) { Text($0).tag($0) } }
+                    .pickerStyle(.menu).tint(.white)
+                    .padding(.horizontal, 10).frame(maxWidth: .infinity, minHeight: 46, alignment: .leading).glass(16)
+                Text("Hvor ofte").font(.footnote.weight(.semibold)).foregroundStyle(.white.opacity(0.7))
+                Picker("Hvor ofte", selection: $cycle) {
+                    Text("Månedlig").tag("monthly")
+                    Text("Årlig").tag("yearly")
+                    Text("Hvert 2. år").tag("biennial")
+                }
+                .pickerStyle(.segmented)
+                Text("Faktureringsdato").font(.footnote.weight(.semibold)).foregroundStyle(.white.opacity(0.7))
+                HStack(spacing: 10) {
+                    Picker("Dag", selection: $day) { ForEach(1...31, id: \.self) { Text("\($0).").tag($0) } }
+                        .pickerStyle(.menu).tint(.white).padding(.horizontal, 10).frame(maxWidth: .infinity, minHeight: 46).glass(16)
+                    Picker("Måned", selection: $month) { ForEach(1...12, id: \.self) { Text(SubEditSheet.months[$0 - 1]).tag($0) } }
+                        .pickerStyle(.menu).tint(.white).padding(.horizontal, 10).frame(maxWidth: .infinity, minHeight: 46).glass(16)
+                        .disabled(cycle == "monthly").opacity(cycle == "monthly" ? 0.5 : 1)
+                }
+                Text(nextText).font(.footnote).foregroundStyle(.white.opacity(0.65))
+                Text("Status").font(.footnote.weight(.semibold)).foregroundStyle(.white.opacity(0.7))
+                Picker("Status", selection: $status) {
+                    Text("Aktiv").tag("active")
+                    Text("Pause").tag("paused")
+                    Text("Sagt opp").tag("cancelled")
+                }
+                .pickerStyle(.segmented)
+                Button { save() } label: {
+                    Text("Lagre").fontWeight(.bold).foregroundStyle(Color.ink).frame(maxWidth: .infinity, minHeight: 50).contentShape(Capsule())
+                }
+                .buttonStyle(.plain).glass(25, tint: .accent)
+                .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty || amount == nil)
+                .opacity(name.trimmingCharacters(in: .whitespaces).isEmpty || amount == nil ? 0.5 : 1)
+                if item != nil {
+                    Button(role: .destructive) { confirmDelete = true } label: {
+                        Text("Slett").fontWeight(.semibold).foregroundStyle(Color(hex: "#FF8A80")).frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(20)
+        }
+        .preferredColorScheme(.dark)
+        .onAppear(perform: fill)
+        .onChange(of: logo) { _, it in
+            guard let it else { return }
+            Task {
+                if let d = try? await it.loadTransferable(type: Data.self), let img = UIImage(data: d) {
+                    logoImg = img
+                    if let s = item { store.uploadSubLogo(s.id, img) }
+                }
+                logo = nil
+            }
+        }
+        .confirmationDialog("Slette \(name)?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Slett", role: .destructive) { if let s = item { store.deleteSub(s.id) }; dismiss() }
+            Button("Avbryt", role: .cancel) {}
+        }
+    }
+
+    private var extraCat: [String] { SubEditSheet.cats.contains(category) ? [] : [category] }
+
+    private var amount: Double? { Double(price.replacingOccurrences(of: " ", with: "").replacingOccurrences(of: ",", with: ".")) }
+
+    private var logoRow: some View {
+        HStack(spacing: 12) {
+            Group {
+                if let logoImg {
+                    Image(uiImage: logoImg).resizable().scaledToFit().padding(6).frame(width: 52, height: 52).background(.white, in: RoundedRectangle(cornerRadius: 13))
+                } else {
+                    Logo(domain: item?.domain, name: name.isEmpty ? "?" : name, color: "#FF7A3D", size: 52)
+                }
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                PhotosPicker(selection: $logo, matching: .images) {
+                    Text("Last opp logo").font(.footnote.weight(.semibold)).padding(.horizontal, 12).frame(height: 32).glass(16)
+                }
+                .buttonStyle(.plain)
+                .disabled(item == nil)
+                Button { if let s = item { store.findSubLogo(s.id) } } label: {
+                    Text("✦ Finn logo med AI").font(.footnote.weight(.semibold)).foregroundStyle(Color.ink).padding(.horizontal, 12).frame(height: 32).contentShape(Capsule())
+                }
+                .buttonStyle(.plain).glass(16, tint: .accent)
+                .disabled(item == nil)
+            }
+            Spacer()
+        }
+        .overlay(alignment: .bottomLeading) {
+            if item == nil { Text("Logo kan legges til etter lagring").font(.caption2).foregroundStyle(.white.opacity(0.5)).offset(y: 16) }
+        }
+        .padding(.bottom, item == nil ? 12 : 0)
+    }
+
+    private func field(_ ph: String, _ b: Binding<String>, _ kb: UIKeyboardType) -> some View {
+        TextField(ph, text: b).keyboardType(kb).padding(.horizontal, 14).frame(height: 46).glass(16)
+    }
+
+    /// «Neste trekk 21. oktober, deretter hvert år».
+    private var nextText: String {
+        let cal = Calendar.current
+        let now = Date()
+        var c = cal.dateComponents([.year, .month], from: now)
+        if cycle != "monthly" { c.month = month }
+        c.day = day
+        var d = cal.date(from: c) ?? now
+        while cal.startOfDay(for: d) < cal.startOfDay(for: now) {
+            let comp: Calendar.Component = cycle == "monthly" ? .month : .year
+            d = cal.date(byAdding: comp, value: cycle == "biennial" ? 2 : 1, to: d) ?? now
+            if d == now { break }
+        }
+        let m = SubEditSheet.months[cal.component(.month, from: d) - 1]
+        let then = cycle == "yearly" ? "deretter hvert år" : cycle == "biennial" ? "deretter hvert 2. år" : "deretter hver måned"
+        return "Neste trekk \(cal.component(.day, from: d)). \(m), \(then)"
+    }
+
+    private func fill() {
+        guard let s = item else {
+            month = Calendar.current.component(.month, from: Date())
+            day = Calendar.current.component(.day, from: Date())
+            return
+        }
+        name = s.name
+        price = s.price == s.price.rounded() ? String(Int(s.price)) : String(s.price).replacingOccurrences(of: ".", with: ",")
+        plan = s.plan
+        category = s.category.isEmpty ? "Annet" : s.category
+        cycle = s.cycle
+        day = Swift.min(31, Swift.max(1, s.billDay ?? 1))
+        month = Swift.min(12, Swift.max(1, s.billMonth ?? Calendar.current.component(.month, from: Date())))
+        status = !s.active || s.status == "cancelled" ? "cancelled" : s.status == "paused" ? "paused" : "active"
+    }
+
+    private func save() {
+        guard let a = amount else { return }
+        var body: [String: Any] = ["name": name.trimmingCharacters(in: .whitespaces), "plan": plan, "price": a, "cycle": cycle, "category": category,
+                                   "billDay": day, "status": status, "chargeDay": day, "active": status != "cancelled"]
+        if cycle == "monthly" { body["billMonth"] = NSNull() } else { body["billMonth"] = month }
+        store.saveSub(item?.id, body)
+        dismiss()
+    }
+}
+
+extension Store {
+    /// Nytt (id = nil) eller endret abonnement.
+    func saveSub(_ id: Int?, _ body: [String: Any]) {
+        run {
+            if let id { try await self.api.call("PATCH", "/subscriptions/\(id)", json: body) } else { try await self.api.call("POST", "/subscriptions", json: body) }
+            try await self.loadSubs()
+            self.flash(id == nil ? "\(body["name"] as? String ?? "Abonnementet") er lagt til" : "Lagret")
+        }
+    }
+
+    func deleteSub(_ id: Int) {
+        run {
+            try await self.api.call("DELETE", "/subscriptions/\(id)")
+            try await self.loadSubs()
+            self.flash("Abonnementet er slettet")
+        }
+    }
+
+    func uploadSubLogo(_ id: Int, _ img: UIImage) {
+        guard let d = img.scaled(max: 512).pngData() else { return }
+        run {
+            _ = try await self.api.upload("/subscriptions/\(id)/logo", parts: [API.Part(name: "file", filename: "logo.png", mime: "image/png", data: d)])
+            try await self.loadSubs()
+            self.flash("Logoen er lagret")
+        }
+    }
+
+    /// ✦ AI slår opp tjenestens domene og henter logoen. Finner den ingen, kan logoen lastes opp.
+    func findSubLogo(_ id: Int) {
+        run {
+            do {
+                _ = try await self.api.call("POST", "/subscriptions/\(id)/logo/ai", json: [:])
+                try await self.loadSubs()
+                self.flash("✦ Logoen er funnet")
+            } catch let e as APIError {
+                self.message = e.status == 404 ? "Fant ingen logo. Last opp et bilde i stedet." : e.message
+            }
+        }
     }
 }

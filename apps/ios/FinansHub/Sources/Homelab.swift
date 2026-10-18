@@ -390,9 +390,9 @@ private struct RuterRow: View {
     }
     var body: some View {
         HStack(spacing: 12) {
-            Text(dep.line).font(.system(size: 13, weight: .bold)).foregroundStyle(.white)
+            Text(dep.line).font(.system(size: 13, weight: .bold)).foregroundStyle(Color(hex: dep.ruterTextColor))
                 .padding(.horizontal, 6).frame(minWidth: 32, minHeight: 24)
-                .background(Color(hex: dep.color ?? "#E60000"), in: RoundedRectangle(cornerRadius: 6))
+                .background(Color(hex: dep.ruterColor), in: RoundedRectangle(cornerRadius: 6))
             Text(dep.to ?? fallback).font(.system(size: 15)).lineLimit(1).truncationMode(.tail)
             Spacer(minLength: 0)
             Text(minText).font(.system(size: 15, weight: .semibold)).monospacedDigit()

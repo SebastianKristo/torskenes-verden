@@ -247,7 +247,8 @@ final class Store {
     /* ---------- Papir, nyhetsleser, fotovindu og Mat (prompt 13) ---------- */
 
     /// klassisk | papir. Lagres per bruker på serveren (layout.mobileDesign) og lokalt.
-    var mobileDesign = UserDefaults.standard.string(forKey: "fh_mobile_design") ?? "klassisk" {
+    /// Ny installasjon (ingen kontoer i nøkkelringen): Papir er standard.
+    var mobileDesign = UserDefaults.standard.string(forKey: "fh_mobile_design") ?? (Store.freshInstall ? "papir" : "klassisk") {
         didSet { UserDefaults.standard.set(mobileDesign, forKey: "fh_mobile_design") }
     }
     /// auto | lys | mork
@@ -266,6 +267,38 @@ final class Store {
     var paperTrackFull = false
     var photoWindow: PhotoWindow?
     var photoImage: UIImage?
+
+    /* ---------- Papir, prompt 14 ---------- */
+
+    /// Bakgrunnsvelgeren på Hjem (egen nedtrekksmeny).
+    var paperBgOpen = false
+    /// Bildet til bakgrunnen kunne ikke lastes (vises i menyen: «trykk for å prøve igjen»).
+    var photoFailed = false
+    /// Kort hint over +-knappen («Velg filer å laste opp»).
+    var paperHint: String?
+    /// Skann-arket i Papir (åpnes av +-knappen).
+    var paperScanOpen = false
+    /// Onboarding etter første innlogging (0–2), nil = vises ikke.
+    var onboarding: Int?
+    /// Sporing i Papir: Aktive | Klar for henting | På vei | Registrert | Levert | Alle
+    var trkTab = "Aktive"
+    /// «Varsler og kilder» i Papir-sporing.
+    var trkSettings = false
+    /// Rekkefølgen på Sporing-kortene (lagres per bruker i layout.trkOrder).
+    var trkOrder: [String] = UserDefaults.standard.stringArray(forKey: "fh_trk_order") ?? ["add", "shipments", "notify", "carriers"] {
+        didSet { UserDefaults.standard.set(trkOrder, forKey: "fh_trk_order") }
+    }
+    /// Finn i Papir: Alle | På vei | Kjøpt | Solgt | Fullført
+    var finnSeg = "Alle"
+    /// Abonnementet som redigeres (arket), og om arket er åpent for et nytt abonnement.
+    var subEdit: SubItem?
+    var subNew = false
+
+    /// Ingen kontoer og ikke noe eldre token: appen er nyinstallert.
+    nonisolated static var freshInstall: Bool {
+        if UserDefaults.standard.object(forKey: "fh_installed_before") != nil { return false }
+        return Keychain.get("accounts") == nil && Keychain.get("token") == nil
+    }
     var news: NewsData?
     var homeNews: [NewsItem] = []
     var newsOpen = false
@@ -411,7 +444,7 @@ final class Store {
 
     /* ---------- Innlogging og kontoer ---------- */
 
-    func login(server raw: String, username: String, password: String, code: String? = nil) {
+    func login(server raw: String, username: String, password: String, code: String? = nil, trust: Bool = false) {
         run {
             self.busy = true
             defer { self.busy = false }
@@ -419,13 +452,17 @@ final class Store {
             guard !srv.isEmpty else { self.message = "Skriv inn serveradressen"; return }
             let r: LoginResult
             do {
-                r = try await API.login(base: srv, username: username, password: password, code: code, device: UIDevice.current.name)
+                r = try await API.login(base: srv, username: username, password: password, code: code, device: UIDevice.current.name, trust: trust)
             } catch let e as APIError where e.needsTotp {
                 if self.pending != nil, let code, !code.isEmpty { self.message = e.message }
                 self.pending = PendingLogin(server: srv, username: username, password: password)
                 return
             }
             self.pending = nil
+            // Første innlogging på en ny installasjon: onboarding i tre steg (design, bakgrunn, tilgang).
+            let firstEver = Store.freshInstall
+            UserDefaults.standard.set(true, forKey: "fh_installed_before")
+            if firstEver && !UserDefaults.standard.bool(forKey: "fh_onboarded") { self.onboarding = 0 }
             Keychain.set("server", srv)
             let same = self.accounts.first { $0.server == srv && $0.username.lowercased() == r.username.lowercased() }
             let acc = LoginAccount(id: same?.id ?? UUID().uuidString, server: srv, username: r.username, name: r.name, role: r.role, token: r.token, local: same?.local ?? "", external: same?.external ?? "")
@@ -688,7 +725,7 @@ final class Store {
 
     /// «‹ Homelab» / «‹ Finans» øverst (med profilbildet til høyre på samme rad). nil = ingen topprad.
     var topRowTitle: String? {
-        guard compact, mobileDesign != "papir", layout.backStyle == "arrow", editing == nil, detail == nil, original == nil, !editHome else { return nil }
+        guard compact, mobileDesign != "papir", editing == nil, detail == nil, original == nil, !editHome else { return nil }
         if let m = module {
             switch m {
             case .domains, .mat: return startLabel
@@ -709,7 +746,7 @@ final class Store {
     }
 
     /// «Knapp i linjen»: Homelab-/Finans-knappen ligger i fanelinja i stedet for pilen øverst.
-    var homeInBar: Bool { layout.backStyle == "bar" }
+    var homeInBar: Bool { false }
 
     /// Finans-fanene i systemets fanelinje på iPhone: høyst fire, fordi Skann ligger i søkeplassen til høyre.
     /// Søk faller ut først (det finnes også under Mer), og Oversikt og Mer blir alltid med.

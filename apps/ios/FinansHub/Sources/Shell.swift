@@ -367,8 +367,19 @@ struct RootView: View {
 
     /// Kvittering (standard) eller oppskrift (Skann i Papir med «Oppskrift» valgt).
     private func deliver(_ files: [Store.Upload]) {
-        if store.scanTarget == "recipe" { store.scanRecipe(files) } else { store.upload(files) }
+        if store.scanTarget == "recipe" { store.scanRecipe(files) } else {
+            store.upload(files)
+            // Papir: filene havner i køen i Skann-arket.
+            if store.paper && !files.isEmpty { store.paperScanOpen = true }
+        }
         store.scanTarget = "receipt"
+    }
+
+    /// Toasten: over fanelinja i Papir, og «Ikke innlogget» vises aldri når brukeren er innlogget.
+    private var toast: String? {
+        guard let m = store.message else { return nil }
+        if store.loggedIn && m.localizedCaseInsensitiveContains("ikke innlogget") { return nil }
+        return m
     }
 
     private func openPendingScan(_ v: String?) {
@@ -381,7 +392,9 @@ struct RootView: View {
         ZStack {
             Backdrop()
             if !store.loggedIn || store.addingAccount {
-                LoginView()
+                if store.paper { PaperLoginView() } else { LoginView() }
+            } else if store.onboarding != nil && store.paper {
+                PaperOnboardingView()
             } else if store.locked {
                 LockView()
             } else if store.original != nil {
@@ -397,8 +410,8 @@ struct RootView: View {
                 PhoneShell(scan: scan, photos: $photoItems, files: $showFiles).id(store.designStyle + store.mobileDesign)
             }
             if store.busy { ProgressView().controlSize(.large).padding(30).glass(20) }
-            if let msg = store.message {
-                VStack { Spacer(); Text(msg).font(.subheadline.weight(.semibold)).padding(.horizontal, 18).padding(.vertical, 12).glass(16).padding(.bottom, 150) }
+            if let msg = toast {
+                VStack { Spacer(); Text(msg).font(.subheadline.weight(.semibold)).padding(.horizontal, 18).padding(.vertical, 12).glass(16).padding(.bottom, store.paper ? 96 : 150) }
                     .transition(.opacity).onTapGesture { store.message = nil }
             }
             // «Skjul beløp i appveksleren»: dekker innholdet når appen ikke er aktiv.

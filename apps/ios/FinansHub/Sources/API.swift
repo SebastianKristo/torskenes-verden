@@ -130,9 +130,11 @@ struct API {
     /// Bytter brukernavn + passord (+ 2FA-kode) mot et token med finans-tilgang.
     /// Kaster APIError(needsTotp: true) når serveren ber om koden.
     /// Prøver /login først og faller tilbake til /auth/token på eldre servere (bare passord).
-    static func login(base: String, username: String, password: String, code: String?, device: String) async throws -> LoginResult {
+    static func login(base: String, username: String, password: String, code: String?, device: String, trust: Bool = false) async throws -> LoginResult {
         let api = API(base: base, token: nil)
         var body: [String: Any] = ["password": password, "device": device, "deviceName": device]
+        // «Husk denne enheten i 30 dager» (2FA-steget i Papir).
+        if trust { body["trust"] = true; body["remember"] = true }
         let user = username.trimmingCharacters(in: .whitespaces)
         if !user.isEmpty { body["username"] = user }
         if let code, !code.isEmpty { body["code"] = code.trimmingCharacters(in: .whitespaces) }

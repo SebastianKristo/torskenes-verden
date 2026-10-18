@@ -214,8 +214,10 @@ struct TrackingData {
     var items: [Shipment] = []
     var finn = TrackSource(on: true, lastCheck: nil)
     var email = TrackSource(on: true, lastCheck: nil)
+    /// Arkiver leverte pakker automatisk.
+    var autoArchive = TrackSource(on: true, lastCheck: nil)
     var carriers: [Carrier] = []
-    var prefs: [String: Bool] = ["found": true, "out": true, "pickup": true, "delivered": true, "delayed": false]
+    var prefs: [String: Bool] = ["found": true, "out": true, "pickup": true, "delivered": false, "delayed": true]
     var notices: [TrackNotice]? = nil
     var lastRun: Date?
 
@@ -231,6 +233,7 @@ struct TrackingData {
         }
         finn = source("finn")
         email = source(src?["email"] != nil ? "email" : "mail")
+        autoArchive = source("autoArchive")
         let list = JS.list(o, "carriers").map { c -> Carrier in
             let id = JS.str(c, "id") ?? "other"
             let def = Carrier.known.first { $0.id == id }
@@ -325,9 +328,9 @@ extension Store {
         run { try await self.api.callAt("/api", "PUT", "/tracking/prefs", json: [k: on]) }
     }
 
-    /// k: finn | email
+    /// k: finn | email | autoArchive
     func setTrackingSource(_ k: String, _ on: Bool) {
-        if k == "finn" { tracking?.finn.on = on } else { tracking?.email.on = on }
+        if k == "finn" { tracking?.finn.on = on } else if k == "autoArchive" { tracking?.autoArchive.on = on } else { tracking?.email.on = on }
         run { try await self.api.callAt("/api", "PUT", "/tracking/sources", json: [k: on]) }
     }
 
@@ -433,18 +436,14 @@ struct TrackingView: View {
     @State private var carrier: String?
     @State private var out = false
     @State private var confirmDelete: String?
-    /// Rekkefølgen på kortene (hold inne → de vaker, dra for å flytte). Lagres på enheten.
-    @AppStorage("trk.order") private var orderRaw = "add,sources,list,prefs,carriers"
+    /// Rekkefølgen på kortene: langt trykk (500 ms) → redigeringsmodus der kortene vugger og får ▲/▼ (eller dras).
+    /// Kortene er Legg til + kilder, Sendinger, Varsler og Transportører. Lagres per bruker (layout.trkOrder).
     @State private var arranging = false
     @State private var wiggle = false
     @State private var dropTarget: String?
 
-    private static let allSections = ["add", "sources", "list", "prefs", "carriers"]
-    private var order: [String] {
-        var o = orderRaw.split(separator: ",").map(String.init).filter { TrackingView.allSections.contains($0) }
-        for k in TrackingView.allSections where !o.contains(k) { o.append(k) }
-        return o
-    }
+    private static let allSections = Store.trkKeys
+    private var order: [String] { Store.fullTrkOrder(store.trkOrder) }
 
     var body: some View {
         let t = store.tracking
@@ -468,7 +467,7 @@ struct TrackingView: View {
 
     private var arrangeBar: some View {
         HStack {
-            Text("Dra kortene for å endre rekkefølgen").font(.footnote).foregroundStyle(.white.opacity(0.75))
+            Text("Flytt kortene med ▲/▼ eller dra dem").font(.footnote).foregroundStyle(.white.opacity(0.75))
             Spacer()
             Button { stopArranging() } label: {
                 Text("Ferdig").fontWeight(.bold).foregroundStyle(Color.ink).padding(.horizontal, 16).frame(height: 36).contentShape(Capsule())
@@ -495,16 +494,19 @@ struct TrackingView: View {
         o.removeAll { $0 == from }
         let i = o.firstIndex(of: to) ?? o.count
         o.insert(from, at: i)
-        Haptics.shared.select()
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { orderRaw = o.joined(separator: ",") }
+        Haptics.shared.tick()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { store.setTrkOrder(o) }
     }
 
     @ViewBuilder private func section(_ k: String, _ t: TrackingData?) -> some View {
         switch k {
-        case "add": addCard(t)
-        case "sources": if let t { sourcesCard(t) }
-        case "list": if let t { VStack(spacing: 12) { list(t) } }
-        case "prefs": if let t { prefsCard(t) }
+        case "add":
+            VStack(spacing: 12) {
+                addCard(t)
+                if let t { sourcesCard(t) }
+            }
+        case "shipments": if let t { VStack(spacing: 12) { list(t) } }
+        case "notify": if let t { prefsCard(t) }
         case "carriers": if let t { carriersCard(t) }
         default: EmptyView()
         }
@@ -516,6 +518,7 @@ struct TrackingView: View {
             section(k, t)
                 .allowsHitTesting(false)
                 .overlay(RoundedRectangle(cornerRadius: 24).stroke(dropTarget == k ? Color.accent : Color.white.opacity(0.25), lineWidth: dropTarget == k ? 2 : 1))
+                .overlay(alignment: .topTrailing) { arrows(k) }
                 .rotationEffect(.degrees(wiggle ? (odd ? 0.7 : -0.7) : 0))
                 .contentShape(RoundedRectangle(cornerRadius: 24))
                 .draggable(k) { section(k, t).frame(width: 320).opacity(0.9) }
@@ -528,6 +531,26 @@ struct TrackingView: View {
             section(k, t)
                 .simultaneousGesture(LongPressGesture(minimumDuration: 0.5).onEnded { _ in startArranging() })
         }
+    }
+
+    /// ▲/▼ på kortet i redigeringsmodus.
+    private func arrows(_ k: String) -> some View {
+        let i = order.firstIndex(of: k) ?? 0
+        return HStack(spacing: 6) {
+            arrow("chevron.up", enabled: i > 0) { store.moveTrkCard(k, -1) }
+            arrow("chevron.down", enabled: i < order.count - 1) { store.moveTrkCard(k, 1) }
+        }
+        .padding(10)
+    }
+
+    private func arrow(_ icon: String, enabled: Bool, _ act: @escaping () -> Void) -> some View {
+        Button(action: act) {
+            Image(systemName: icon).font(.system(size: 14, weight: .bold)).foregroundStyle(Color.ink)
+                .frame(width: 34, height: 34).background(Color.white.opacity(enabled ? 0.92 : 0.35), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .accessibilityLabel(icon == "chevron.up" ? "Flytt opp" : "Flytt ned")
     }
 
     private func header(_ t: TrackingData?) -> some View {
