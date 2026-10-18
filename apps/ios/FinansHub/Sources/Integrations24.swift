@@ -3,7 +3,9 @@ import SwiftUI
 /* ---------------- Prompt 24: Innstillinger → Integrasjoner med alle oppsettene (GET /api/integrations) ----------------
    Hver integrasjon har status, felt som redigeres rett under raden (hemmelige verdier vises som «•••• lagret»),
    Test tilkobling og Fjern verdi. Hemmeligheter sendes til backend og lagres kryptert der, aldri i appen.
-   Eldre server (404): Home Assistant-kortet fra prompt 23. Ikke admin (403): bare synk med Home Assistant. */
+   Eldre server (404): Home Assistant-kortet fra prompt 23.
+   ISO2: hver integrasjon har scope 'personal' (brukerens egne, for alle) eller 'server' (bare admin får dem).
+   «Dine integrasjoner» vises først og «Server (administrator)» under. */
 
 struct Int24Field: Identifiable, Hashable {
     var key: String
@@ -38,6 +40,8 @@ struct Int24Item: Identifiable, Hashable {
     var id: String
     var name: String
     var group: String
+    /// "personal", "server" eller "" (eldre server uten scope).
+    var scope: String
     var status: String
     var fields: [Int24Field]
     var canTest: Bool
@@ -47,6 +51,7 @@ struct Int24Item: Identifiable, Hashable {
         id = JS.str(o, "id") ?? UUID().uuidString
         name = JS.str(o, "name") ?? id
         group = JS.str(o, "group") ?? ""
+        scope = JS.str(o, "scope") ?? ""
         status = JS.str(o, "status") ?? "missing"
         fields = JS.list(o, "fields").map { Int24Field($0) }
         canTest = JS.bool(o, "canTest") ?? false
@@ -54,6 +59,7 @@ struct Int24Item: Identifiable, Hashable {
     }
 
     var missing: [Int24Field] { fields.filter { !$0.isSet } }
+    var personal: Bool { scope == "personal" }
 }
 
 @MainActor
@@ -65,7 +71,7 @@ final class Int24Model {
 
     var items: [Int24Item] = []
     var loaded: Bool = false
-    /// 0 = ok, 403 = ikke admin, 404 = eldre server, -1 = annen feil.
+    /// 0 = ok, 403 = nektet (eldre server), 404 = eldre server, -1 = annen feil.
     var state: Int = 0
     var failText: String = ""
     /// Integrasjonen søket åpnet (rulles til og markeres).
@@ -183,7 +189,7 @@ struct PaperIntegrations24: View {
         ScrollViewReader { proxy in
             VStack(alignment: .leading, spacing: 4) {
                 if m.state == 403 {
-                    note("Bare administratorer kan se og endre integrasjonene. Synk med Home Assistant kan du styre selv.")
+                    note("Serveren gir ikke denne kontoen egne integrasjoner ennå. Oppdater homelab.")
                 } else if m.state == -1 {
                     note(m.failText.isEmpty ? "Fikk ikke kontakt med serveren." : m.failText)
                 } else if !m.loaded {
@@ -194,15 +200,44 @@ struct PaperIntegrations24: View {
                         }
                     }
                 }
-                ForEach(m.items) { it in
-                    Int24Group(item: it).set25Highlight(it.name, id: false).id(it.id)
+                if hasScope {
+                    if !personalItems.isEmpty {
+                        header("Dine integrasjoner", "Bare du ser og bruker disse verdiene.")
+                        ForEach(personalItems) { it in
+                            Int24Group(item: it).set25Highlight(it.name, id: false).id(it.id)
+                        }
+                    }
+                    if !serverItems.isEmpty {
+                        header("Server (administrator)", "Felles oppsett for hele serveren.")
+                        ForEach(serverItems) { it in
+                            Int24Group(item: it).set25Highlight(it.name, id: false).id(it.id)
+                        }
+                    }
+                } else {
+                    ForEach(m.items) { it in
+                        Int24Group(item: it).set25Highlight(it.name, id: false).id(it.id)
+                    }
                 }
-                PLabel(text: "Synk med Home Assistant").padding(.leading, 4).padding(.top, 14)
-                TaskHASection22()
+                if !hasScope || !serverItems.isEmpty {
+                    PLabel(text: "Synk med Home Assistant").padding(.leading, 4).padding(.top, 14)
+                    TaskHASection22()
+                }
             }
             .onAppear { scrollToFocus(proxy) }
             .onChange(of: m.items.count) { _, _ in scrollToFocus(proxy) }
         }
+    }
+
+    private var hasScope: Bool { m.items.contains { !$0.scope.isEmpty } }
+    private var personalItems: [Int24Item] { m.items.filter { $0.personal } }
+    private var serverItems: [Int24Item] { m.items.filter { !$0.personal } }
+
+    private func header(_ title: String, _ sub: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title).font(PF.ui(18, .bold)).foregroundStyle(p.ink)
+            Text(sub).font(PF.ui(12.5)).foregroundStyle(p.mut)
+        }
+        .padding(.leading, 4).padding(.top, 14)
     }
 
     private func scrollToFocus(_ proxy: ScrollViewProxy) {

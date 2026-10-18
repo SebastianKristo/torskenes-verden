@@ -82,7 +82,7 @@ struct PaperIntegrations23: View {
             failed = nil
         } catch let e as APIError {
             st = nil
-            failed = e.status == 403 ? "Bare administratorer kan sette opp Home Assistant." : e.status == 404 ? "Serveren har ikke synk med Home Assistant ennå. Oppdater homelab." : e.message
+            failed = e.status == 403 ? "Home Assistant settes opp av administrator." : e.status == 404 ? "Serveren har ikke synk med Home Assistant ennå. Oppdater homelab." : e.message
         } catch {
             st = nil
             failed = "Fikk ikke kontakt med serveren."

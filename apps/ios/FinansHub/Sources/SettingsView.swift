@@ -469,6 +469,8 @@ private struct ScanPrefsPage: View {
                 Sep()
                 Choice(label: "Ollama + Gemini", sub: "Lokalt først, Gemini som reserve", on: st?.provider == "ollama" && st?.fallback == true) { store.save("provider", "ollama"); store.save("fallback", true) }
             }
+            .disabled(!store.canEditServer).opacity(store.canEditServer ? 1 : 0.55)
+            if !store.canEditServer { Note(text: ServerLock26.note) }
         }
     }
 }
@@ -659,6 +661,8 @@ private struct AiPage: View {
                 Sep()
                 Choice(label: "Ollama + Gemini", sub: "Lokalt først, Gemini som reserve", on: st?.provider == "ollama" && st?.fallback == true) { store.save("provider", "ollama"); store.save("fallback", true) }
             }
+            .disabled(!store.canEditServer).opacity(store.canEditServer ? 1 : 0.55)
+            if !store.canEditServer { Note(text: ServerLock26.note) }
             Card { Switch(label: "Kategoriser automatisk", sub: "AI foreslår kategori for nye transaksjoner", on: Binding(get: { st?.autoCat ?? true }, set: { store.save("autoCat", $0) })) }
             SectionLabel(text: "Krav til sikkerhet")
             Card {
@@ -667,6 +671,7 @@ private struct AiPage: View {
                     Choice(label: "\(v) %", sub: v == 85 ? "Standard" : nil, on: (st?.minConf ?? 85) == v) { store.save("minConf", v) }
                 }
             }
+            .disabled(!store.canEditServer).opacity(store.canEditServer ? 1 : 0.55)
             Note(text: "Kvitteringer under grensen må sjekkes før de bokføres. API-nøkler for Gemini legges inn i FinansHub på PC.")
         }
     }

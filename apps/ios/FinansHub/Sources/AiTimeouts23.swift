@@ -8,6 +8,12 @@ struct AiTimeouts23: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
     @State private var to: [String: Any] = AiTimeouts23.local()
+    /// ISO2: tidsgrensene er serveroppsett. Låst = skrivebeskyttet visning for andre enn admin.
+    let locked: Bool
+
+    init(locked: Bool = false) {
+        self.locked = locked
+    }
 
     static let steps: [Int] = [5, 10, 15, 20, 30, 45, 60, 90, 120]
     static let engines: [(String, String, String, Int)] = [("gemini", "Gemini", "Les kvitteringer", 20), ("groq", "Groq", "AI-søk og kategorier", 15),
@@ -22,7 +28,7 @@ struct AiTimeouts23: View {
                 VStack(spacing: 0) {
                     ForEach(Array(AiTimeouts23.engines.enumerated()), id: \.element.0) { i, e in
                         if i > 0 { Rectangle().fill(p.line).frame(height: 1) }
-                        row(e.1, e.2 + " · trykk for å endre", "\(seconds(e.0, e.3)) s", p.ink) { bump(e.0, e.3) }
+                        row(e.1, e.2 + (locked ? "" : " · trykk for å endre"), "\(seconds(e.0, e.3)) s", p.ink) { bump(e.0, e.3) }
                     }
                     Rectangle().fill(p.line).frame(height: 1)
                     row("Nye forsøk", "Før den gir opp en motor", retriesText, p.ink) { nextRetries() }
@@ -30,7 +36,8 @@ struct AiTimeouts23: View {
                     row("Ved tidsavbrudd", "Hva som skjer når grensen er nådd", actionText, p.lab) { nextAction() }
                 }
             }
-            Text("Nye forsøk venter 1 s, 2 s og 4 s. Køen viser hvilken motor som svarte for sent.").font(PF.ui(12)).foregroundStyle(p.mut)
+            .disabled(locked)
+            Text(locked ? ServerLock26.note + ". Nye forsøk venter 1 s, 2 s og 4 s." : "Nye forsøk venter 1 s, 2 s og 4 s. Køen viser hvilken motor som svarte for sent.").font(PF.ui(12)).foregroundStyle(p.mut)
                 .padding(.horizontal, 6).padding(.top, 6).fixedSize(horizontal: false, vertical: true)
         }
         .onAppear { merge(JS.dict(AiSettingsModel.shared.settings, "aiTimeouts")) }
@@ -95,6 +102,7 @@ struct AiTimeouts23: View {
     }
 
     private func save() {
+        if locked { store.flash(ServerLock26.note); return }
         let body: [String: Any] = full
         to = body
         if let d = try? JSONSerialization.data(withJSONObject: body) { UserDefaults.standard.set(d, forKey: AiTimeouts23.key) }

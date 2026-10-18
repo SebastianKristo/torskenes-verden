@@ -872,6 +872,8 @@ final class AiSettingsModel {
     var testing: String?
     var results: [String: String] = [:]
     var log: [[String: Any]] = []
+    /// ISO2: canEditServer fra bootstrap. nil = eldre server (Store.canEditServer avgjør da).
+    var canEdit: Bool? = nil
 
     static let engines: [(String, String, String)] = [("gemini", "Gemini", "Kvitteringer og bilder"), ("groq", "Groq", "AI-søk og kategorier (raskt)"),
                                                      ("roboflow", "Roboflow", "Strekkoder og pakkelapper"), ("ollama", "Ollama", "Lokalt · reserve")]
@@ -880,7 +882,11 @@ final class AiSettingsModel {
 
     func load(_ store: Store) async {
         if let d = try? await store.api.call("GET", "/health/ai") { health = JS.obj(d) }
-        if let d = try? await store.api.call("GET", "/bootstrap"), let s = JS.dict(JS.obj(d), "settings") { settings = s }
+        if let d = try? await store.api.call("GET", "/bootstrap") {
+            let o: [String: Any] = JS.obj(d)
+            if let s = JS.dict(o, "settings") { settings = s }
+            canEdit = JS.bool(o, "canEditServer")
+        }
         if let d = try? await store.api.call("GET", "/ai/log?limit=20") {
             let o = (try? JSONSerialization.jsonObject(with: d)) as? [Any] ?? JS.list(JS.obj(d), "items")
             log = o.compactMap { $0 as? [String: Any] }
@@ -947,9 +953,17 @@ struct PaperAiSettings: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
     @MainActor private var m: AiSettingsModel { AiSettingsModel.shared }
+    /// ISO2: AI-motorer, modeller, OCR, sikkerhetsgrense og tidsgrenser er serveroppsett (bare admin endrer).
+    private var canEdit: Bool { m.canEdit ?? store.canEditServer }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
+            if !canEdit {
+                Text(ServerLock26.note + ". Du ser oppsettet, men kan ikke endre det.").font(PF.ui(13)).foregroundStyle(p.mut)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(14).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(p.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            }
             PLabel(text: "Motorer").padding(.leading, 4).padding(.top, 6)
             PCard(padding: 0) {
                 VStack(spacing: 0) {
@@ -960,7 +974,7 @@ struct PaperAiSettings: View {
                 }
             }
             // Prompt 23: tidsgrense per motor, nye forsøk og hva som skjer ved tidsavbrudd (AiTimeouts23.swift).
-            AiTimeouts23()
+            AiTimeouts23(locked: !canEdit)
             PLabel(text: "Hvem gjør hva").padding(.leading, 4).padding(.top, 14)
             PCard(padding: 0) {
                 VStack(spacing: 0) {
@@ -970,19 +984,20 @@ struct PaperAiSettings: View {
                     }
                 }
             }
+            .disabled(!canEdit)
             Text("Feiler motoren, prøves neste automatisk. Hvert kall logges.").font(PF.ui(12)).foregroundStyle(p.mut).padding(.horizontal, 6).padding(.top, 6)
             PLabel(text: "Lokal OCR-reserve").padding(.leading, 4).padding(.top, 14)
             PCard(padding: 0) {
                 VStack(spacing: 0) {
-                    flagRow("Lokal OCR-reserve", "Tesseract leser kvitteringen offline hvis AI feiler", "ocrFallback", true)
+                    flagRow("Lokal OCR-reserve", "Tesseract leser kvitteringen offline hvis AI feiler", "ocrFallback", true).disabled(!canEdit)
                     Rectangle().fill(p.line).frame(height: 1)
-                    flagRow("Bruk ved lav AI-sikkerhet", "Sammenlign med lokal OCR under grensen", "ocrLowConf", false)
+                    flagRow("Bruk ved lav AI-sikkerhet", "Sammenlign med lokal OCR under grensen", "ocrLowConf", false).disabled(!canEdit)
                     Rectangle().fill(p.line).frame(height: 1)
                     flagRow("Kategoriser automatisk", "AI foreslår kategori for nye transaksjoner", "autoCat", true)
                 }
             }
             PLabel(text: "Minste sikkerhet").padding(.leading, 4).padding(.top, 14)
-            confRow
+            confRow.disabled(!canEdit)
             if !m.log.isEmpty {
                 PLabel(text: "Siste kall").padding(.leading, 4).padding(.top, 14)
                 PCard(padding: 0) {
@@ -994,7 +1009,7 @@ struct PaperAiSettings: View {
                     }
                 }
             }
-            Text("Nøkler for Gemini, Groq og Roboflow legges inn i FinansHub i nettleseren (Innstillinger → AI-motor). De lagres kryptert på serveren.")
+            Text(canEdit ? "Nøkler for Gemini, Groq og Roboflow legges inn i FinansHub i nettleseren (Innstillinger → AI-motor). De lagres kryptert på serveren." : "AI-motorer og nøkler settes opp av administrator.")
                 .font(PF.ui(12)).foregroundStyle(p.mut).padding(.horizontal, 6).padding(.top, 10).fixedSize(horizontal: false, vertical: true)
         }
         .task { await m.load(store) }
@@ -1016,6 +1031,8 @@ struct PaperAiSettings: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(m.testing != nil)
+                .opacity(canEdit ? 1 : 0)
+                .disabled(!canEdit)
             }
             Text(m.results[id] ?? st.0).font(PF.ui(12)).foregroundStyle(st.1 ? p.pos : p.lab).lineLimit(2)
         }

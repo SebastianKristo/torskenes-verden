@@ -37,6 +37,8 @@ struct Boot: Decodable {
     let reviewCount: Int
     var goals: [Goal]? = nil
     var rules: [Rule]? = nil
+    /// ISO2: bare admin kan endre serveroppsettet (AI, OCR, tidsgrenser, SMB). Mangler på eldre servere.
+    var canEditServer: Bool? = nil
 }
 
 struct Tx: Decodable, Identifiable, Hashable {

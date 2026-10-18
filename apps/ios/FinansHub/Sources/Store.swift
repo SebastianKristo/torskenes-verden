@@ -935,6 +935,7 @@ final class Store {
     }
 
     func save(_ key: String, _ value: Any) {
+        if ServerLock26.isServerKey(key) && !canEditServer { flash(ServerLock26.note); return }
         run {
             try await self.api.call("PUT", "/settings", json: [key: value])
             self.boot = try await self.api.get("/bootstrap")
