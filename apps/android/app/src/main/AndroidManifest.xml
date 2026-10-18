@@ -80,7 +80,7 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_domains" />
         </receiver>
-        <receiver android:name=".widget.MatReceiver" android:exported="true" android:label="Matplan">
+        <receiver android:name=".widget.MatReceiver" android:exported="true" android:label="Mat">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_mat" />
         </receiver>
@@ -124,7 +124,7 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ui_stocks" />
         </receiver>
-        <receiver android:name=".widget.OneUiMatReceiver" android:exported="true" android:label="Middag · One UI">
+        <receiver android:name=".widget.OneUiMatReceiver" android:exported="true" android:label="Mat · One UI">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ui_mat" />
         </receiver>

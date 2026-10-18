@@ -314,6 +314,26 @@ private fun TokensPage(vm: AppViewModel) = Pages {
 
 @Composable
 private fun LookPage(vm: AppViewModel) = Pages {
+    Section("Mobildesign") {
+        Group {
+            Choice("Klassisk", "Material You, som appen har sett ut til nå", on = !vm.paper) { vm.setMobileDesign("klassisk") }
+            Choice("Papir", "Lyst papir, fotovindu øverst og nyheter på forsiden (likt med iPhone)", on = vm.paper) { vm.setMobileDesign("papir") }
+        }
+        if (vm.paper) Group {
+            listOf("auto" to "Følg systemet", "lys" to "Papir · lys", "mork" to "Papir · mørk").forEach { (k, n) ->
+                Choice(n, on = vm.paperMode == k) { vm.setPaperMode(k) }
+            }
+        }
+        Note("Papir har de samme sidene og funksjonene. Du kan bytte tilbake her eller i Papir → Innstillinger.")
+    }
+    Section("Nyhetsleser") {
+        Group {
+            Row(Modifier.fillMaxWidth().clickable { vm.openNews(settings = true) }.padding(16.dp, 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) { Text("Kilder og AI"); Text("RSS- og Atom-adresser, ✦ AI-sammendrag og ✦ AI-kategorisering", color = C.text2, fontSize = 12.sp) }
+                Icon(Icons.Filled.ChevronRight, null, tint = C.text2)
+            }
+        }
+    }
     Section("Oppstart") {
         Group {
             listOf("homelab" to "Homelab", "home" to "Finans · Hjem", "list" to "Finans · Liste", "budget" to "Finans · Budsjett").forEach { (k, n) ->
@@ -324,7 +344,7 @@ private fun LookPage(vm: AppViewModel) = Pages {
     }
     Section("Tilbake til startsiden") {
         Group {
-            Choice("Pil øverst", "«‹ ${vm.startLabel}» i Domener, Matplan og Andre OS", on = vm.layout.backStyle == "arrow") { vm.setBackStyle("arrow") }
+            Choice("Pil øverst", "«‹ ${vm.startLabel}» i Domener, Mat og Andre OS", on = vm.layout.backStyle == "arrow") { vm.setBackStyle("arrow") }
             Choice("Knapp i linjen", "${vm.startLabel} helt til venstre i navigasjonslinjen", on = vm.layout.backStyle == "bar") { vm.setBackStyle("bar") }
         }
     }
@@ -340,10 +360,10 @@ private fun LookPage(vm: AppViewModel) = Pages {
     }
     Section("Sider") {
         Group {
-            Choice("Samme overalt", "Alle sidene, også Domener og Matplan, bruker fargetemaet under", on = vm.option(AppPrefs.PAGES, "same") == "same") { vm.setPref(AppPrefs.PAGES, "same") }
+            Choice("Samme overalt", "Alle sidene, også Domener og Mat, bruker fargetemaet under", on = vm.option(AppPrefs.PAGES, "same") == "same") { vm.setPref(AppPrefs.PAGES, "same") }
             Choice("Egen farge per side", "Domener er rosa, og modulene beholder sine egne kulører", on = vm.option(AppPrefs.PAGES, "same") == "own") { vm.setPref(AppPrefs.PAGES, "own") }
         }
-        Note("Matplan følger alltid appens tema og lys/mørk-valget.")
+        Note("Mat følger alltid appens tema og lys/mørk-valget.")
     }
     Group {
         Toggle("Skjul beløp til jeg trykker", "Beløp vises som prikker til du trykker på saldoen eller øyet", vm.flag(AppPrefs.HIDE_AMOUNTS)) { vm.setPref(AppPrefs.HIDE_AMOUNTS, it) }

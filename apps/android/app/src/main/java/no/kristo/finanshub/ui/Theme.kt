@@ -23,8 +23,11 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import no.kristo.finanshub.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
@@ -136,15 +139,48 @@ object Tone {
     var dynamic by mutableStateOf<ColorScheme?>(null)
     /** «Samme overalt»: alle sider i samme fargetema (standard). */
     var samePages by mutableStateOf(true)
+    /** Mobildesign «Papir» (prompt 13): papir og blekk i stedet for Material You. paperDark = kveldspapir. */
+    var paper by mutableStateOf(false)
+    var paperDark by mutableStateOf(false)
     private val cache = HashMap<Long, Color>()
     private var cacheKey: Any? = null
 
     fun map(c: Long): Color {
-        val s = seed; val l = light; val d = dynamic; val same = samePages
-        if (s == BASE_SEED && !l && d == null && !same) return Color(c)
-        val key = listOf(s, l, d, same)
+        val s = seed; val l = light; val d = dynamic; val same = samePages; val pp = paper; val pd = paperDark
+        if (!pp && s == BASE_SEED && !l && d == null && !same) return Color(c)
+        val key = listOf(s, l, d, same, pp, pd)
         if (key != cacheKey) { cache.clear(); cacheKey = key }
-        return cache.getOrPut(c) { resolve(c, s, l, d, same) }
+        return cache.getOrPut(c) { if (pp) paperResolve(c, pd) else resolve(c, s, l, d, same) }
+    }
+
+    /** Papir: rollene får papirfargene; øvrige designfarger legges på blekkrødt (som «Samme overalt»). */
+    private fun paperResolve(c: Long, dark: Boolean): Color {
+        val argb = 0xFF000000 or (c and 0xFFFFFF)
+        val alpha = ((c shr 24) and 0xFF) / 255f
+        val pal = if (dark) PaperPal.DARK else PaperPal.LIGHT
+        val fixed: Color? = when (argb) {
+            0xFF9FE3C6, 0xFF7BE3A0 -> pal.pos
+            0xFF1F3A2F -> pal.posSoft
+            0xFFFF8A80 -> pal.lab
+            else -> null
+        }
+        if (fixed != null) return fixed.copy(alpha = alpha)
+        val role = if (argb in FIXED) null else ROLE_OF[argb]
+        val r: Color = when (role) {
+            Role.SURFACE, Role.SURFACE_LOW -> pal.bg
+            Role.SURFACE1 -> pal.card
+            Role.SURFACE2 -> pal.surf2
+            Role.SURFACE3 -> pal.line
+            Role.PRIMARY, Role.ON_PRIMARY_CONTAINER, Role.ON_SECONDARY_CONTAINER, Role.ON_TERTIARY_CONTAINER, Role.ON_SURFACE -> pal.ink
+            Role.ON_PRIMARY -> pal.bg
+            Role.PRIMARY_CONTAINER, Role.SECONDARY_CONTAINER -> pal.container
+            Role.TERTIARY_CONTAINER -> pal.tertiary
+            Role.ON_SURFACE_VARIANT -> pal.sub
+            Role.OUTLINE -> pal.mut
+            Role.ACCENT -> pal.lab
+            null -> return resolve(c, 0xFF000000 or (pal.lab.toArgb().toLong() and 0xFFFFFF), !dark, null, true)
+        }
+        return r.copy(alpha = alpha)
     }
 
     private fun resolve(c: Long, seed: Long, light: Boolean, d: ColorScheme?, same: Boolean): Color {
@@ -194,6 +230,37 @@ object Tone {
 
 /** Farge fra designet, oversatt til gjeldende tone. Bruk denne i stedet for Color(0xFF…) i grensesnittet. */
 fun tc(c: Long): Color = Tone.map(c)
+
+/** Papir-paletten fra «Mobil Papir App» (lys og mørk). */
+class PaperPal(
+    val ink: Color, val bg: Color, val card: Color, val line: Color, val lab: Color, val mut: Color, val pos: Color, val sub: Color,
+    val surf2: Color, val container: Color, val tertiary: Color, val posSoft: Color, val nav: Color, val navInk: Color, val navAct: Color, val navActInk: Color,
+) {
+    companion object {
+        val LIGHT = PaperPal(
+            Color(0xFF1B1A17), Color(0xFFF3EFE6), Color(0xFFFFFFFF), Color(0xFFD8D1C2), Color(0xFFB23A2A), Color(0xFF8F897C), Color(0xFF2F7A4F), Color(0xFF6B665C),
+            Color(0xFFEBE6DA), Color(0xFFE6E0D2), Color(0xFFEBE4C8), Color(0xFFDFE9E1), Color(0xFF1B1A17), Color(0xFFA39E92), Color(0xFFF3EFE6), Color(0xFF1B1A17),
+        )
+        val DARK = PaperPal(
+            Color(0xFFECE7DC), Color(0xFF14130F), Color(0xFF211F19), Color(0xFF34322A), Color(0xFFE8705C), Color(0xFF8A8578), Color(0xFF7FCF9A), Color(0xFFA39E92),
+            Color(0xFF2A2821), Color(0xFF2E2B23), Color(0xFF2F2C1D), Color(0xFF17271E), Color(0xFFECE7DC), Color(0xFF5E594F), Color(0xFF14130F), Color(0xFFECE7DC),
+        )
+        val current: PaperPal get() = if (Tone.paperDark) DARK else LIGHT
+    }
+}
+
+/** Fontene i Papir (lagt i res/font fra Fontsource, SIL OFL): Newsreader, Manrope og IBM Plex Mono. */
+object PaperFonts {
+    val serif = FontFamily(
+        Font(R.font.newsreader_regular, FontWeight.Normal), Font(R.font.newsreader_italic, FontWeight.Normal, FontStyle.Italic),
+        Font(R.font.newsreader_medium, FontWeight.Medium),
+    )
+    val sans = FontFamily(
+        Font(R.font.manrope_regular, FontWeight.Normal), Font(R.font.manrope_medium, FontWeight.Medium),
+        Font(R.font.manrope_semibold, FontWeight.SemiBold), Font(R.font.manrope_bold, FontWeight.Bold), Font(R.font.manrope_bold, FontWeight.ExtraBold),
+    )
+    val mono = FontFamily(Font(R.font.plexmono_regular, FontWeight.Normal), Font(R.font.plexmono_semibold, FontWeight.SemiBold))
+}
 
 // Tonal palett fra grunnfargen #FF7A3D (Material 3 Expressive, mørkt tema), som i designet 1b.
 object C {
@@ -263,6 +330,20 @@ private val type = Typography(
     labelLarge = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
 )
 
+/** Papir: Manrope i brødtekst, Newsreader i titler. */
+private val paperType = Typography(
+    displaySmall = TextStyle(fontFamily = PaperFonts.serif, fontSize = 40.sp, fontWeight = FontWeight.Medium),
+    headlineMedium = TextStyle(fontFamily = PaperFonts.serif, fontSize = 30.sp, fontWeight = FontWeight.Medium),
+    titleLarge = TextStyle(fontFamily = PaperFonts.serif, fontSize = 24.sp, fontWeight = FontWeight.Medium),
+    titleMedium = TextStyle(fontFamily = PaperFonts.sans, fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
+    bodyLarge = TextStyle(fontFamily = PaperFonts.sans, fontSize = 16.sp),
+    bodyMedium = TextStyle(fontFamily = PaperFonts.sans, fontSize = 14.sp),
+    bodySmall = TextStyle(fontFamily = PaperFonts.sans, fontSize = 12.sp),
+    labelLarge = TextStyle(fontFamily = PaperFonts.sans, fontSize = 14.sp, fontWeight = FontWeight.SemiBold),
+    labelMedium = TextStyle(fontFamily = PaperFonts.sans, fontSize = 12.sp, fontWeight = FontWeight.SemiBold),
+    labelSmall = TextStyle(fontFamily = PaperFonts.sans, fontSize = 11.sp, fontWeight = FontWeight.SemiBold),
+)
+
 // Uttrykksfulle former: ulik rundingsgrad på hjørnene, som i M3 Expressive.
 private val shapes = Shapes(
     small = RoundedCornerShape(12.dp), medium = RoundedCornerShape(20.dp), large = RoundedCornerShape(28.dp), extraLarge = RoundedCornerShape(32.dp),
@@ -274,10 +355,20 @@ private val shapes = Shapes(
  * hentes fra rollene i dynamicDark/LightColorScheme. Eldre Android faller tilbake til oransje.
  */
 @Composable
-fun FinansTheme(color: String = "system", mode: String = "dark", samePages: Boolean = true, content: @Composable () -> Unit) {
+fun FinansTheme(
+    color: String = "system", mode: String = "dark", samePages: Boolean = true,
+    /** Papir: «auto» følger systemet, ellers «lys» eller «mork». null = Klassisk. */
+    paperMode: String? = null,
+    content: @Composable () -> Unit,
+) {
     val ctx = LocalContext.current
-    val light = when (mode) { "light" -> true; "system" -> !isSystemInDarkTheme(); else -> false }
-    val dynamic = color == "system" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    val sysDark = isSystemInDarkTheme()
+    val paper = paperMode != null
+    val paperDark = when (paperMode) { "mork" -> true; "lys" -> false; else -> sysDark }
+    val light = if (paper) !paperDark else when (mode) { "light" -> true; "system" -> !sysDark; else -> false }
+    if (Tone.paper != paper) Tone.paper = paper
+    if (Tone.paperDark != paperDark) Tone.paperDark = paperDark
+    val dynamic = !paper && color == "system" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     // Systemets skjema: lages på nytt når bakgrunnsbildet (og dermed aksentfargen) byttes, fordi aktiviteten da får ny konfigurasjon.
     val dyn = remember(dynamic, light, ctx) {
         when {
@@ -293,17 +384,18 @@ fun FinansTheme(color: String = "system", mode: String = "dark", samePages: Bool
     if (Tone.seed != seed) Tone.seed = seed
     if (Tone.light != light) Tone.light = light
     if (Tone.dynamic != dyn) Tone.dynamic = dyn
-    if (Tone.samePages != samePages) Tone.samePages = samePages
+    if (Tone.samePages != (samePages || paper)) Tone.samePages = samePages || paper
     val scheme = dyn ?: schemeFromPalette(light)
     val view = LocalView.current
     if (!view.isInEditMode) SideEffect {
         (view.context as? Activity)?.window?.let { w ->
             val c = WindowCompat.getInsetsController(w, view)
-            c.isAppearanceLightStatusBars = light
+            // Papir har fotovinduet øverst: lyse ikoner i statuslinjen.
+            c.isAppearanceLightStatusBars = light && !paper
             c.isAppearanceLightNavigationBars = light
         }
     }
-    MaterialTheme(colorScheme = scheme, typography = type, shapes = shapes, content = content)
+    MaterialTheme(colorScheme = scheme, typography = if (paper) paperType else type, shapes = shapes, content = content)
 }
 
 /* ---------- Formatering (norsk, minus som −) ---------- */

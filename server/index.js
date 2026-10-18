@@ -18,7 +18,7 @@ import { matApi, matCalendar, startMatScheduler } from './mat.js';
 import domainsApi from './domains.js';
 import trackingApi, { startTrackingWorker, hasTrackingTest, testTracking } from './tracking.js';
 import uiApi from './ui.js';
-import mobileApi, { meOut, removeAvatar, shortcutsFor, layoutOf } from './mobile.js';
+import mobileApi, { meOut, removeAvatar, shortcutsFor, layoutOf, authOrToken } from './mobile.js';
 import rssApi, { startRssWorker } from './rss.js';
 import { revokeUserTokens } from './finans/routes.js';
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
@@ -452,10 +452,10 @@ authed.get('/health', proxy(api.getHealth));
 authed.get('/upcoming', proxy(api.getUpcoming));
 authed.get('/news', proxy(api.getNews));
 // Plex og Jellyfin: «Spilles nå» (30 s) og «Nylig lagt til» (10 min). Plakater hentes via serveren så tokenet aldri når nettleseren.
-authed.get('/media/now', proxy(api.getMediaNow));
-authed.get('/media/recent', proxy(api.getMediaRecent));
-authed.get('/media/history', proxy(api.getMediaHistory));
-authed.get('/media/poster', async (c) => {
+app.get('/api/media/now', authOrToken, proxy(api.getMediaNow));
+app.get('/api/media/recent', authOrToken, proxy(api.getMediaRecent));
+app.get('/api/media/history', authOrToken, proxy(api.getMediaHistory));
+app.get('/api/media/poster', authOrToken, async (c) => {
   try {
     const img = await api.getMediaPoster(c.req.query('src'), c.req.query('id'));
     if (!img) return c.notFound();

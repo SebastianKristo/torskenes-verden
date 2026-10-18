@@ -439,7 +439,7 @@ private fun Material(kind: WKind, d: WidgetData, f: Fmt) {
             }
         }
         WKind.MAT -> {
-            val m = d.matplan ?: return MEmpty(kind.route, "Middag i dag", d.error ?: "Ingen middag planlagt.")
+            val m = d.matplan ?: return MEmpty(kind.route, "Mat i dag", d.error ?: "Ingen middag planlagt.")
             MCard(kind.route, c.tertiaryContainer) {
                 T("Middag i dag", 13.sp, c.onTertiaryContainer)
                 Fill()
@@ -648,7 +648,7 @@ private fun OneUi(kind: WKind, d: WidgetData, style: WidgetStyle, f: Fmt) {
             }
         }
         WKind.UI_MAT -> {
-            val m = d.matplan ?: return UEmpty(kind.route, u, "Middag i dag", d.error ?: "Ingen middag planlagt.")
+            val m = d.matplan ?: return UEmpty(kind.route, u, "Mat i dag", d.error ?: "Ingen middag planlagt.")
             UCard(kind.route, u.bg, padding = 16.dp) {
                 T("Middag i dag", 13.sp, u.sub)
                 Fill()

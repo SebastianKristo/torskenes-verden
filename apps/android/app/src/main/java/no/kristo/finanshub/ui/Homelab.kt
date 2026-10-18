@@ -53,11 +53,11 @@ private val WIDGETS: Map<String, Triple<String, String, ImageVector>> = mapOf(
     "clock" to Triple("Klokke og vær", "Tid, været og pakker på vei (sveip)", Icons.Filled.Schedule),
     "search" to Triple("Google-søk", "Søk med forslag og historikk", Icons.Filled.Search),
     "links" to Triple("Snarveier", "Favorittsider og tjenester på hjemmenettet", Icons.Filled.Apps),
-    "os" to Triple("Andre OS", "Finans, Domener og Matplan", Icons.Filled.Widgets),
+    "os" to Triple("Andre OS", "Finans, Domener og Mat", Icons.Filled.Widgets),
     "srv" to Triple("Serverstatus", "CPU, minne, lagring og oppetid", Icons.Filled.Dns),
     "ruter" to Triple("Ruter-avganger", "Neste avganger fra holdeplassen", Icons.Filled.DirectionsBus),
 )
-private val HL_NAMES = mapOf("hl" to "Homelab", "home" to "Finans", "trk" to "Sporing", "dom" to "Domener", "mat" to "Matplan")
+private val HL_NAMES = mapOf("hl" to "Homelab", "home" to "Finans", "trk" to "Sporing", "dom" to "Domener", "mat" to "Mat")
 private val FIN_NAMES = mapOf("home" to "Oversikt", "list" to "Liste", "finn" to "Finn", "bud" to "Budsjett", "ai" to "Søk", "mer" to "Mer")
 
 private fun greeting(): String = when (LocalTime.now().hour) { in 5..9 -> "God morgen"; in 10..17 -> "Hei"; else -> "God kveld" }
@@ -250,7 +250,7 @@ private fun OtherOs(vm: AppViewModel, twoPane: Boolean) {
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             MiniOs("Domener", vm.domainToday?.let { "${count(it.second)} besøk i dag" } ?: "Trafikk og sikkerhet", Icons.Filled.Language, P.hero, P.onHero) { vm.go(Screen.Domains) }
-            MiniOs("Matplan", vm.todayMeal ?: "Ingen middag planlagt", Icons.Filled.Restaurant, tc(0xFF45462A), tc(0xFFE6E6AE)) { vm.go(Screen.Mat) }
+            MiniOs("Mat", vm.todayMeal ?: "Ingen middag planlagt", Icons.Filled.Restaurant, tc(0xFF45462A), tc(0xFFE6E6AE)) { vm.go(Screen.Mat) }
         }
     }
 }
@@ -293,7 +293,10 @@ private fun RuterCard(lines: List<RuterLine>) {
     val rows = lines.flatMap { l -> l.departures.map { d -> l to d } }
         .sortedBy { (_, d) -> d.min ?: Int.MAX_VALUE }.take(4)
     val stop = lines.map { it.from }.distinct().singleOrNull()
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(C.surface1).padding(18.dp, 16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    // Trykk åpner Ruter-appen (universal link) med avreisestoppet.
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(C.surface1).clickable(onClickLabel = "Åpne Ruter") { openLink(ctx, ruterLink(lines.firstOrNull()?.from)) }
+        .padding(18.dp, 16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), verticalAlignment = Alignment.Bottom) {
             Text(if (stop.isNullOrBlank()) "Ruter" else "Ruter · $stop", fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text("Sanntid", color = C.text2, fontSize = 12.5.sp)

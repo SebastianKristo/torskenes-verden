@@ -75,7 +75,7 @@ data class Me(
 
 /* ---------------- Homelab (mobil forside) ---------------- */
 
-data class Weather(val place: String, val temp: Double?, val text: String?, val wind: Double?, val max: Double?, val min: Double?, val code: Int?)
+data class Weather(val place: String, val temp: Double?, val text: String?, val wind: Double?, val max: Double?, val min: Double?, val code: Int?, val lat: Double? = null, val lon: Double? = null)
 data class Shortcut(val name: String, val url: String, val local: Boolean)
 data class Departure(val line: String, val color: Long?, val min: Int?, val time: String?, val to: String? = null)
 data class RuterLine(val from: String, val to: String, val departures: List<Departure>)
@@ -97,7 +97,7 @@ data class HomeLayout(
     val names: Map<String, String> = emptyMap(),
     /** Tilbake til startsiden: «arrow» (pil øverst, standard) eller «bar» (knapp i fanelinja). */
     val backStyle: String = "arrow",
-    /** Matplan: «light» (matapp-utseendet), «dark» eller «system». */
+    /** Mat: eldre valg for lys/mørk («light», «dark» eller «system»); brukes ikke lenger. */
     val matTheme: String = "light",
     /** Startside: «homelab», «fin-hjem», «fin-liste» eller «fin-budsjett». */
     val start: String? = null,
@@ -213,7 +213,12 @@ data class Day(
     val date: String, val weekday: String, val name: String?, val cost: Double?, val source: String?, val cook: String?, val fixed: Boolean,
     val dishId: String? = null, val today: Boolean = false, val tag: String? = null, val bestCook: String? = null, val ingredients: List<String> = emptyList(),
 )
-data class Dish(val id: String, val name: String, val src: String?, val ing: List<String>, val steps: List<String>, val cost: Double, val days: List<Int>)
+data class Dish(
+    val id: String, val name: String, val src: String?, val ing: List<String>, val steps: List<String>, val cost: Double, val days: List<Int>,
+    /** Mat (prompt 13): mappe, kilde-URL, bilde, lenker og filer, tid og porsjoner. */
+    val folderId: String? = null, val sourceUrl: String? = null, val image: String? = null, val links: List<DishLink> = emptyList(),
+    val time: String? = null, val servings: String? = null,
+)
 data class Shop(val id: String, val text: String, val done: Boolean)
 data class Week(
     val start: String, val days: List<Day>, val cooks: List<String>, val shopping: List<Shop>, val weekCost: Double, val auto: Boolean,
@@ -395,7 +400,8 @@ fun parseMobileHome(s: String): MobileHome {
     val st = o.optJSONObject("serverStatus")
     return MobileHome(
         o.optStr("name"), o.optStr("serverName"), o.optStr("avatarUrl"), o.optStr("greeting"),
-        w?.let { Weather(it.optString("place", "Oslo"), it.optDoubleOrNull("temp"), it.optStr("text"), it.optDoubleOrNull("wind"), it.optDoubleOrNull("max"), it.optDoubleOrNull("min"), it.optIntOrNull("code")) },
+        w?.let { Weather(it.optString("place", "Oslo"), it.optDoubleOrNull("temp"), it.optStr("text"), it.optDoubleOrNull("wind"), it.optDoubleOrNull("max"), it.optDoubleOrNull("min"), it.optIntOrNull("code"),
+            it.optDoubleOrNull("lat"), it.optDoubleOrNull("lon") ?: it.optDoubleOrNull("lng")) },
         o.optJSONArray("shortcuts")?.map { Shortcut(it.optString("name"), it.optString("url"), it.optBoolean("local")) } ?: emptyList(),
         o.optJSONArray("ruter")?.map { r ->
             RuterLine(r.optString("from"), r.optString("to"), r.optJSONArray("departures")?.map {
@@ -531,9 +537,13 @@ fun parseWeek(s: String): Week {
         o.num("weekCost"), o.optBoolean("auto"),
         o.optStr("end"), o.optIntOrNull("week"),
         o.optJSONArray("dishes")?.map {
-            Dish(it.optString("id"), it.optString("name"), it.optStr("src"), it.optJSONArray("ing").strings().filter(String::isNotBlank),
+            Dish(it.optString("id"), it.optString("name"), it.optStr("src"), (it.optJSONArray("ing") ?: it.optJSONArray("ingredients")).strings().filter(String::isNotBlank),
                 it.optJSONArray("steps").strings().filter(String::isNotBlank), it.num("cost"),
-                it.optJSONArray("days")?.let { a -> (0 until a.length()).map { i -> a.optInt(i) } } ?: emptyList())
+                it.optJSONArray("days")?.let { a -> (0 until a.length()).map { i -> a.optInt(i) } } ?: emptyList(),
+                if (it.has("folderId") && !it.isNull("folderId")) it.opt("folderId").toString() else null,
+                it.optStr("sourceUrl"), it.optStr("image"), parseDishLinks(it.optJSONArray("links")),
+                if (it.has("time") && !it.isNull("time")) it.opt("time").toString() else null,
+                if (it.has("servings") && !it.isNull("servings")) it.opt("servings").toString() else null)
         } ?: emptyList(),
     )
 }

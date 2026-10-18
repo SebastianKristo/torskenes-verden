@@ -315,7 +315,7 @@ private fun FolderView(vm: AppViewModel, d: FolderDetail) {
 
 /* Finn-handler: se Finn.kt (design 2a). */
 
-/* ---------------- Matplan ---------------- */
+/* ---------------- Mat ---------------- */
 
 private val sourceLabel = mapOf("gemini" to "Gemini", "hellofresh" to "HelloFresh", "fixed" to "Fast", "own" to "Egen")
 

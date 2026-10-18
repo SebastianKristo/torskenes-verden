@@ -98,5 +98,9 @@ class AppPrefs(ctx: Context) {
         const val N_WEEKLY = "n_weekly"
         const val USE_LOCAL = "use_local"
         const val SEARCH_MODE = "search_mode"   // ai | plain
+        const val MOBILE_DESIGN = "mobile_design" // klassisk | papir
+        const val PAPER_MODE = "paper_mode"     // auto | lys | mork
+        const val PHOTO = "photo_window"        // cur | oslo | weather | planets | custom
+        const val DESIGN_SYNCED = "design_synced" // valgene over er hentet fra serveren én gang
     }
 }

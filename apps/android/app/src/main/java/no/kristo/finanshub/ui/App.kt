@@ -90,9 +90,10 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
 
     // Kamera (systemets kamera-app, bakkamera), Bilder (fotovelger) og Filer (PDF, JPG, HEIC).
     var photoUri by remember { mutableStateOf<Uri?>(null) }
-    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok -> if (ok) photoUri?.let(vm::uploadUri) }
-    val photos = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(20)) { uris -> vm.uploadUris(uris) }
-    val files = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris -> vm.uploadUris(uris) }
+    // Kvittering eller oppskrift (vm.scanTarget): Mat-siden skanner oppskrifter, ellers kvitteringer.
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok -> if (ok) photoUri?.let { vm.scanUris(listOf(it)) } }
+    val photos = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(20)) { uris -> vm.scanUris(uris) }
+    val files = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris -> vm.scanUris(uris) }
     val takePhoto: () -> Unit = {
         val dir = File(ctx.cacheDir, "scans").apply { mkdirs() }
         val f = File(dir, "kvittering-${System.currentTimeMillis()}.jpg")
@@ -110,13 +111,24 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
         vm.pendingScan = null
     }
 
+    val pickFiles: () -> Unit = { files.launch(arrayOf("application/pdf", "image/jpeg", "image/heic", "image/heif", "image/png")) }
+    val pickPhotos: () -> Unit = { photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+
+    // Mobildesign «Papir»: eget skall med fotovindu og fanelinje, samme sider og API-er som Klassisk.
+    if (vm.paper) {
+        PaperApp(vm, snack, takePhoto, pickPhotos, pickFiles, onPrivacyChanged)
+        if (vm.menuOpen) ProfileSheet(vm)
+        if (vm.widgetGallery) WidgetGallery(vm)
+        return
+    }
+
     val twoPane = width != WindowWidthSizeClass.Compact
     val s = vm.screen
     val overlay = vm.original != null || vm.editing != null || vm.detail != null
     // Tilbake: lukker det som er åpent, ellers forrige side. På startsiden uten noe åpent lukkes appen som vanlig.
     val canBack = overlay || vm.editHome || s != vm.startPage || vm.selectedTx != null || vm.matFull || vm.finnSel != null
     BackHandler(enabled = canBack) { vm.back() }
-    // Matplan er en egen flate: ingen fanelinje, skanneknapp eller rail, bare pilen øverst og profilmenyen.
+    // Mat er en egen flate: ingen fanelinje, skanneknapp eller rail, bare pilen øverst og profilmenyen.
     val matSurface = s == Screen.Mat && !vm.matFull && !overlay
     val topRow = vm.topRowTitle(!twoPane)
 
@@ -130,7 +142,7 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
             if (!twoPane && fab) ScanFab(scan)
         },
     ) { pad ->
-        // Matplan går helt ned til kanten (listen legger selv på plass til navigasjonslinja), så ingenting kuttes nederst.
+        // Mat går helt ned til kanten (listen legger selv på plass til navigasjonslinja), så ingenting kuttes nederst.
         Row(Modifier.fillMaxSize().padding(if (matSurface) PaddingValues(top = pad.calculateTopPadding()) else pad)) {
             if (twoPane && s != Screen.Mat) Rail(vm, scan)
             when {
@@ -156,13 +168,12 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
     if (vm.domainManager) DomainManagerSheet(vm)
     if (vm.menuOpen) { if (twoPane) SideMenu(vm) else ProfileSheet(vm) }
     if (vm.widgetGallery) WidgetGallery(vm)
-    if (vm.scanSheet) ScanSheet(vm, takePhoto,
-        photos = { photos.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-        files = { files.launch(arrayOf("application/pdf", "image/jpeg", "image/heic", "image/heif", "image/png")) })
+    if (vm.scanSheet) ScanSheet(vm, takePhoto, photos = pickPhotos, files = pickFiles)
+    if (vm.newsOpen) NewsReader(vm)
 }
 
 @Composable
-private fun MainPane(vm: AppViewModel, twoPane: Boolean, scan: ScanActions, onPrivacyChanged: () -> Unit) {
+internal fun MainPane(vm: AppViewModel, twoPane: Boolean, scan: ScanActions, onPrivacyChanged: () -> Unit) {
     val s = vm.screen
     // Telefon: trykk på en rad åpner utgiftsdetaljen over listen.
     if (!twoPane && s.isFinance && s != Screen.Scan && vm.selectedTx != null) { TxDetail(vm, back = { vm.selectedTx = null }); return }
@@ -202,7 +213,7 @@ private fun DetailPane(vm: AppViewModel) {
 
 /**
  * Bunnlinja: Homelab-fanene på Homelab, Finans-fanene i Finans og Trafikk/Besøk/Ytelse/Sikkerhet i Domener.
- * Matplan har ingen. Med «Knapp i linjen» står startsiden helt til venstre, skilt med en tynn strek.
+ * Mat har ingen. Med «Knapp i linjen» står startsiden helt til venstre, skilt med en tynn strek.
  */
 @Composable
 private fun BottomBar(vm: AppViewModel) {
@@ -335,7 +346,7 @@ internal fun TopBackRow(vm: AppViewModel, title: String, fg: Color, bg: Color, b
 
 internal fun host(url: String) = url.removePrefix("https://").removePrefix("http://")
 
-/** Menyen bak profilbildet: Homelab, Andre OS (Finans, Matplan, Domener), Rediger forsiden og Innstillinger. */
+/** Menyen bak profilbildet: Homelab, Andre OS (Finans, Mat, Domener), Rediger forsiden og Innstillinger. */
 @Composable
 private fun MenuContent(vm: AppViewModel) {
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp, 0.dp, 20.dp, 32.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -350,10 +361,11 @@ private fun MenuContent(vm: AppViewModel) {
         MenuRow("Homelab", "Dashbord, søk og snarveier", Icons.Filled.Dashboard, vm.screen == Screen.Homelab, 0, 1) { vm.editHome = false; vm.go(Screen.Homelab) }
         SectionLabel("Andre OS")
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            MenuRow("Finans", "Hjem, liste, budsjett og mer", Icons.Filled.Savings, vm.screen.isFinance, 0, 4) { vm.go(if (vm.financeStart) vm.startPage else Screen.Home) }
-            MenuRow("Matplan", "Ukemeny, kokk og handleliste", Icons.Filled.Restaurant, vm.screen == Screen.Mat, 1, 4) { vm.go(Screen.Mat) }
-            MenuRow("Domener", "Trafikk, besøk, ytelse og sikkerhet", Icons.Filled.Language, vm.screen == Screen.Domains, 2, 4) { vm.go(Screen.Domains) }
-            MenuRow("Sporing", "Pakker på vei, henting og varsler", Icons.Filled.LocalShipping, vm.screen == Screen.Tracking, 3, 4) { vm.go(Screen.Tracking) }
+            MenuRow("Finans", "Hjem, liste, budsjett og mer", Icons.Filled.Savings, vm.screen.isFinance, 0, 5) { vm.go(if (vm.financeStart) vm.startPage else Screen.Home) }
+            MenuRow("Mat", "Ukemeny, oppskrifter og handleliste", Icons.Filled.Restaurant, vm.screen == Screen.Mat, 1, 5) { vm.go(Screen.Mat) }
+            MenuRow("Domener", "Trafikk, besøk, ytelse og sikkerhet", Icons.Filled.Language, vm.screen == Screen.Domains, 2, 5) { vm.go(Screen.Domains) }
+            MenuRow("Sporing", "Pakker på vei, henting og varsler", Icons.Filled.LocalShipping, vm.screen == Screen.Tracking, 3, 5) { vm.go(Screen.Tracking) }
+            MenuRow("Nyhetsleser", "RSS med ✦ AI-sammendrag", Icons.Filled.Newspaper, vm.newsOpen, 4, 5) { vm.openNews() }
         }
         Spacer(Modifier.height(4.dp))
         MenuRow("Rediger forsiden", "Widgets og fanelinjer", Icons.Filled.Edit, vm.editHome, 0, 1) { vm.go(Screen.Homelab); vm.editHome = true }
@@ -387,7 +399,7 @@ internal fun MenuRow(label: String, sub: String?, icon: ImageVector, on: Boolean
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ProfileSheet(vm: AppViewModel) {
+internal fun ProfileSheet(vm: AppViewModel) {
     ModalBottomSheet(onDismissRequest = { vm.menuOpen = false }, containerColor = C.surface1) { MenuContent(vm) }
 }
 
@@ -404,22 +416,23 @@ private fun SideMenu(vm: AppViewModel) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ScanSheet(vm: AppViewModel, camera: () -> Unit, photos: () -> Unit, files: () -> Unit) {
+internal fun ScanSheet(vm: AppViewModel, camera: () -> Unit, photos: () -> Unit, files: () -> Unit) {
     ModalBottomSheet(onDismissRequest = { vm.scanSheet = false }, containerColor = C.surface1) {
         Column(Modifier.fillMaxWidth().padding(20.dp, 0.dp, 20.dp, 32.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text("Legg til kvittering", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp))
+            Text(if (vm.scanTarget == "recipe") "Skann oppskrift" else "Legg til kvittering", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 12.dp))
             MenuRow("Ta bilde", null, Icons.Filled.PhotoCamera, false, 0, 3) { vm.scanSheet = false; camera() }
             MenuRow("Velg fra Bilder", null, Icons.Filled.PhotoLibrary, false, 1, 3) { vm.scanSheet = false; photos() }
             MenuRow("Velg fil (PDF, JPG, HEIC)", null, Icons.Filled.Description, false, 2, 3) { vm.scanSheet = false; files() }
             Spacer(Modifier.height(10.dp))
             OutlinedButton(onClick = { vm.scanSheet = false }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp)) { Text("Avbryt") }
-            Text("Filene legges i opplastingskøen, og Gemini leser dem i bakgrunnen.", color = C.text2, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp, start = 8.dp))
+            Text(if (vm.scanTarget == "recipe") "✦ Gemini leser oppskriften i bakgrunnen og legger retten i en mappe." else "Filene legges i opplastingskøen, og Gemini leser dem i bakgrunnen.",
+                color = C.text2, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp, start = 8.dp))
         }
     }
 }
 
 @Composable
-private fun LockScreen(vm: AppViewModel, unlock: () -> Unit) {
+internal fun LockScreen(vm: AppViewModel, unlock: () -> Unit) {
     Column(Modifier.fillMaxSize().background(C.bg).padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp, Alignment.CenterVertically)) {
         Box(Modifier.size(72.dp).clip(RoundedCornerShape(24.dp)).background(C.accent), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Lock, null, tint = tc(0xFF1A0C04), modifier = Modifier.size(32.dp)) }
         Text("FinansHub er låst", style = MaterialTheme.typography.headlineMedium)

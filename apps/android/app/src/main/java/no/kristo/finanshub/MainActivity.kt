@@ -37,7 +37,9 @@ class MainActivity : FragmentActivity() {
             // Brettbare: bredde ≥ 600 dp (Medium/Expanded) gir navigasjonsrail og to paneler.
             val size = calculateWindowSizeClass(this)
             // Farger og lys/mørk fra Innstillinger → Utseende (Material You når «Følg systemet»).
-            FinansTheme(vm.option(AppPrefs.COLOR, "system"), vm.option(AppPrefs.MODE, "dark"), vm.option(AppPrefs.PAGES, "same") == "same") {
+            // Papir (Innstillinger → Utseende → Mobildesign) har egne farger og fonter.
+            FinansTheme(vm.option(AppPrefs.COLOR, "system"), vm.option(AppPrefs.MODE, "dark"), vm.option(AppPrefs.PAGES, "same") == "same",
+                paperMode = if (vm.paper && vm.loggedIn) vm.paperMode else null) {
                 FinansApp(vm, size.widthSizeClass, unlock = ::unlock, onPrivacyChanged = ::applySwitcherPrivacy)
             }
         }

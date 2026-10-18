@@ -33,14 +33,14 @@ import java.util.UUID
 
 /**
  * Skjermer. Homelab er forsiden; Finans (Oversikt, Liste, Budsjett, Søk, Mer) og sidene under Mer er «Andre OS»
- * sammen med Matplan og Domener.
+ * sammen med Mat og Domener.
  */
 enum class Screen(val label: String) {
     Homelab("Homelab"),
     Home("Oversikt"), List("Liste"), Budget("Budsjett"), Search("Søk"), More("Mer"),
     Scan("Kvitteringer"), Fast("Faste utgifter"), Accounts("Kontoer"), Stocks("Aksjer"), Reports("Rapporter"), Import("Import"),
     Sub("Subscription OS"), Folders("Boliger"), Finn("Finn-handler"),
-    Mat("Matplan"), Domains("Domener"), Settings("Innstillinger"), Tracking("Sporing");
+    Mat("Mat"), Domains("Domener"), Settings("Innstillinger"), Tracking("Sporing");
 
     /** Fanelinja for Finans vises (Mer er markert på undersidene). */
     val isFinance get() = this in FINANCE
@@ -178,7 +178,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var moduleError by mutableStateOf<String?>(null)
     /** «Administrer domener» er åpen. */
     var domainManager by mutableStateOf(false)
-    /** Valgt dag i Matplan (indeks 0–6), null = i dag. «Hele uka og alle retter» er åpen. */
+    /** Valgt dag i Mat (indeks 0–6), null = i dag. «Hele uka og alle retter» er åpen. */
     var matDay by mutableStateOf<Int?>(null)
     var matFull by mutableStateOf(false)
     /** Verdenskartet til Domener → Besøk (lastes én gang). */
@@ -262,7 +262,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     /** «‹ Homelab» / «‹ Finans» øverst med profilbildet til høyre på samme rad. null = ingen topprad. */
     fun topRowTitle(compact: Boolean): String? {
         if (editing != null || detail != null || original != null || editHome) return null
-        // Matplan er en egen flate uten fanelinje: pilen vises alltid der.
+        // Mat er en egen flate uten fanelinje: pilen vises alltid der.
         if (screen == Screen.Mat) return if (matFull) null else startLabel
         if (!compact || layout.backStyle != "arrow") return null
         return when (screen) {
@@ -385,6 +385,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         ai = null; aiHistory = emptyList(); editing = null; original = null; detail = null; detailTx = null
         recurring = null; stocks = null; report = null; importResult = null; importUris = emptyList(); importText = ""
         editHome = false; domainManager = false; matDay = null; matFull = false; aiNote = null; suggestGroups = emptyList()
+        news = null; homeNews = emptyList(); newsOpen = false; photo = null; media = null; matFolders = emptyList(); recipeJobs = emptyList()
+        recipePreview = null; dishOpen = null; paperPage = null
         logos.clear()
     }
 
@@ -497,12 +499,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         backTo = from?.takeIf { it != s }
         screen = s
         menuOpen = false
+        paperPage = null; paperFromMer = false; scanTarget = "receipt"; dishOpen = null
         launch { loadFor(s) }
     }
 
     /** Tilbake: lukker det som er åpent, ellers til forrige side (undersider av Mer → Mer, Finans og moduler → Homelab). */
     fun back(): Boolean {
         when {
+            newsOpen -> { if (newsSettings) newsSettings = false else newsOpen = false }
             original != null -> original = null
             editing != null -> editing = null
             detail != null -> { detail = null; detailTx = null }
@@ -516,6 +520,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             selectedTx != null -> selectedTx = null
             screen == Screen.Domains && domainManager -> domainManager = false
             screen == Screen.Mat && matFull -> matFull = false
+            screen == Screen.Mat && dishOpen != null -> dishOpen = null
+            paper && paperPage != null && paperPage != "mer" -> paperPage = "mer"
+            paper && paperPage == "mer" -> { paperPage = null; navigate(Screen.Homelab, null) }
+            paper && paperFromMer -> { paperFromMer = false; paperPage = "mer" }
+            paper && screen == Screen.Homelab && backTo == null -> return false
+            paper && screen != Screen.Homelab && backTo == null -> navigate(Screen.Homelab, null)
             screen == startPage && backTo == null -> return false
             else -> navigate(backTo ?: if (screen.isMorePage || (screen in setOf(Screen.Finn, Screen.Budget) && !finTabShown(screen))) Screen.More else startPage, null)
         }
@@ -565,6 +575,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "stocks" -> open(Screen.Stocks)
             "domains" -> go(Screen.Domains)
             "mat" -> go(Screen.Mat)
+            "news", "rss", "nyheter" -> openNews()
             "finn" -> go(Screen.Finn)
             "boliger" -> open(Screen.Folders)
             "search" -> go(Screen.Search)
@@ -623,7 +634,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     suspend fun loadHome() {
         homeError = null
         // Feil her logger aldri ut: finans-tokenet kan være gyldig selv om en eldre server ikke kjenner forsiden.
-        try { mobileHome = parseMobileHome(api.hlGet("/mobile/home")); mobileHome?.packages?.let { homePackages = it } } catch (e: ApiException) {
+        try {
+            val raw = api.hlGet("/mobile/home")
+            mobileHome = parseMobileHome(raw); mobileHome?.packages?.let { homePackages = it }
+            homeNews = runCatching { parseNewsItems(org.json.JSONObject(raw).optJSONArray("news")) }.getOrDefault(homeNews)
+        } catch (e: ApiException) {
             homeError = when (e.status) {
                 404 -> "Homelab-forsiden finnes ikke på serveren ennå. Oppdater homelab."
                 401, 403 -> "Homelab godtar ikke app-tokenet ennå. Oppdater homelab-serveren."
@@ -649,6 +664,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             d.name to a.visitors
         }.getOrNull()
         if (avatar == null) loadAvatar(me?.avatarUrl ?: mobileHome?.avatarUrl)
+        syncDesignFromServer()
+        if (paper && photo == null && photoKind != "cur") loadPhotoNow()
         pollTracking()
     }
 
@@ -1162,9 +1179,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         ByteArrayOutputStream().use { o -> out.compress(Bitmap.CompressFormat.JPEG, quality, o); o.toByteArray() }
     }.getOrNull()
 
-    /* ---------- Matplan ---------- */
+    /* ---------- Mat ---------- */
 
-    suspend fun loadWeek() { week = parseWeek(api.matGet("/week")) }
+    suspend fun loadWeek() {
+        val raw = api.matGet("/week")
+        week = parseWeek(raw)
+        // Mapper og skannekø finnes bare på nyere servere; feil her stopper ikke uka. /week har også «folders».
+        val inWeek = runCatching { org.json.JSONObject(raw).optJSONArray("folders")?.let { parseMatFolders(it.toString()) } }.getOrNull()
+        matFolders = inWeek?.takeIf { it.isNotEmpty() } ?: runCatching { parseMatFolders(api.matGet("/folders")) }.getOrDefault(matFolders)
+        recipeJobs = runCatching { parseRecipeJobs(api.matGet("/recipes/jobs")) }.getOrDefault(recipeJobs)
+    }
 
     fun planWeek() = launch {
         busy = true
@@ -1462,5 +1486,309 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             }
             shareFile("finanshub-transaksjoner.csv", "text/csv", csv.toByteArray())
         } finally { busy = false }
+    }
+
+    /* ---------- Prompt 13: mobildesign Papir, fotovindu, nyhetsleser, media og Mat ---------- */
+
+    /** Innstillinger → Utseende → Mobildesign: «klassisk» (Material You) eller «papir». */
+    val paper: Boolean get() = option(AppPrefs.MOBILE_DESIGN, "klassisk") == "papir"
+    /** Papir: «auto» (følger systemet), «lys» eller «mork». */
+    val paperMode: String get() = option(AppPrefs.PAPER_MODE, "auto")
+    /** Bakgrunnen i fotovinduet: cur (gradient), oslo, weather, planets eller custom. */
+    val photoKind: String get() = option(AppPrefs.PHOTO, "oslo")
+
+    /** Papir-sider uten egen Screen: «mer», «set» (Papir-innstillinger) og «media». null = vm.screen vises. */
+    var paperPage by mutableStateOf<String?>(null)
+    /** Siden ble åpnet fra Mer: tilbake går til Mer (og Mer er markert i fanelinjen). */
+    var paperFromMer by mutableStateOf(false)
+        private set
+    var photo by mutableStateOf<Bitmap?>(null)
+        private set
+    var photoGradient by mutableStateOf<List<Long>>(emptyList())
+        private set
+    var photoCredit by mutableStateOf<String?>(null)
+        private set
+    var photoMenu by mutableStateOf(false)
+
+    fun setMobileDesign(d: String) {
+        setPref(AppPrefs.MOBILE_DESIGN, d)
+        paperPage = null
+        if (d == "papir") loadPhoto()
+        pushDesign()
+    }
+    fun setPaperMode(m: String) { setPref(AppPrefs.PAPER_MODE, m); pushDesign() }
+    fun setPhotoKind(k: String) { setPref(AppPrefs.PHOTO, k); photoMenu = false; loadPhoto(); pushDesign() }
+
+    /** Papir-fanene: Hjem, Finans, Mat, Sporing og Mer. */
+    fun paperTab(t: String) {
+        when (t) {
+            "hjem" -> go(Screen.Homelab)
+            "fin" -> go(Screen.Home)
+            "mat" -> go(Screen.Mat)
+            "trk" -> go(Screen.Tracking)
+            "mer" -> { if (screen !in setOf(Screen.Homelab, Screen.Home, Screen.Mat, Screen.Tracking)) go(Screen.Homelab); paperPage = "mer" }
+        }
+        Haptics.select()
+    }
+    /** Fra Mer: en side (Screen) eller en Papir-side («media», «set»). */
+    fun openFromMer(s: Screen) { go(s); paperFromMer = true }
+    fun openPaperPage(p: String) {
+        paperPage = p
+        if (p == "media") loadMedia()
+    }
+
+    private fun pushDesign() {
+        viewModelScope.launch {
+            runCatching {
+                api.hlPut("/me/layout", JSONObject().put("mobileDesign", option(AppPrefs.MOBILE_DESIGN, "klassisk")).put("paperMode", paperMode).put("photo", photoKind))
+            }
+        }
+    }
+
+    /** Første gang: valgene fra serveren (satt på en annen enhet eller på nett) tas i bruk. */
+    private suspend fun syncDesignFromServer() {
+        if (prefs.bool(AppPrefs.DESIGN_SYNCED)) return
+        val o = runCatching { JSONObject(api.hlGet("/me/layout")) }.getOrNull() ?: return
+        o.optStr("mobileDesign")?.takeIf { it == "klassisk" || it == "papir" }?.let { prefs.set(AppPrefs.MOBILE_DESIGN, it) }
+        o.optStr("paperMode")?.takeIf { it in setOf("auto", "lys", "mork") }?.let { prefs.set(AppPrefs.PAPER_MODE, it) }
+        o.optStr("photo")?.takeIf { it in setOf("cur", "oslo", "weather", "planets", "custom") }?.let { prefs.set(AppPrefs.PHOTO, it) }
+        prefs.set(AppPrefs.DESIGN_SYNCED, true)
+        prefTick++
+    }
+
+    fun loadPhoto() = launch { loadPhotoNow() }
+
+    private suspend fun loadPhotoNow() {
+        val kind = photoKind
+        if (kind == "cur") { photo = null; photoGradient = emptyList(); photoCredit = null; return }
+        val pw = runCatching { parsePhotoWindow(api.hlGet("/photo-window?kind=$kind")) }.getOrNull()
+        photoGradient = pw?.gradient ?: emptyList()
+        photoCredit = pw?.credit
+        val url = pw?.url
+        photo = when {
+            // SVG (f.eks. /assets/img/oslo.svg) kan ikke vises uten SVG-bibliotek: gradienten brukes da.
+            url.isNullOrBlank() || url.substringBefore('?').endsWith(".svg", true) -> null
+            url.startsWith("http://") || url.startsWith("https://") -> if (url.startsWith(base.trimEnd('/'))) image(url.removePrefix(base.trimEnd('/'))) else externalImage(url)
+            else -> image(url)
+        }
+    }
+
+    /** Bilde fra en annen tjeneste (f.eks. Wikimedia). Tokenet sendes ikke dit. */
+    private suspend fun externalImage(url: String): Bitmap? = runCatching {
+        withContext(Dispatchers.IO) {
+            val c = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+            c.connectTimeout = 6000; c.readTimeout = 10000
+            c.setRequestProperty("User-Agent", "FinansHub-Android")
+            try { c.inputStream.use { it.readBytes() } } finally { c.disconnect() }
+        }.let { b -> withContext(Dispatchers.Default) { BitmapFactory.decodeByteArray(b, 0, b.size) } }
+    }.getOrNull()
+
+    /** «Eget bilde»: skaleres til maks 1600 px og lagres per bruker på serveren. */
+    fun uploadPhoto(uri: Uri) = launch {
+        busy = true
+        try {
+            val ctx = getApplication<Application>()
+            val data = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes() } }
+            val jpeg = withContext(Dispatchers.Default) { scaled(data, 1600, 85) } ?: run { message = "Kunne ikke lese bildet"; return@launch }
+            api.upload("/me/photo-window", listOf(Api.Part("file", "bakgrunn.jpg", "image/jpeg", jpeg)), prefix = Api.HOMELAB)
+            photoMenu = false
+            setPref(AppPrefs.PHOTO, "custom")
+            pushDesign()
+            photo = BitmapFactory.decodeByteArray(jpeg, 0, jpeg.size)
+            photoGradient = emptyList()
+            flash("Bakgrunnen er oppdatert")
+        } finally { busy = false }
+    }
+
+    /* ---------- Nyhetsleser (/api/rss) ---------- */
+
+    var news by mutableStateOf<NewsData?>(null)
+    /** De 5 sakene på forsiden (fra /api/mobile/home). */
+    var homeNews by mutableStateOf<List<NewsItem>>(emptyList())
+    var newsOpen by mutableStateOf(false)
+    var newsSettings by mutableStateOf(false)
+    var newsCat by mutableStateOf("siste")
+    var newsBusy by mutableStateOf(false)
+    var newsError by mutableStateOf<String?>(null)
+
+    fun openNews(settings: Boolean = false) { newsOpen = true; newsSettings = settings; menuOpen = false; loadNews() }
+
+    fun loadNews(cat: String = newsCat) = launch {
+        newsCat = cat
+        newsBusy = true
+        try {
+            news = parseNews(api.hlGet("/rss?cat=" + URLEncoder.encode(cat, "UTF-8") + "&limit=40", timeout = 8000))
+            newsError = null
+        } catch (e: ApiException) {
+            newsError = if (e.status == 404) "Nyhetsleseren finnes ikke på serveren ennå. Oppdater homelab." else e.message
+        } finally { newsBusy = false }
+    }
+
+    fun addFeed(url: String) = launch {
+        val u = url.trim().let { if (it.startsWith("http")) it else "https://$it" }
+        if (u.length < 10) return@launch
+        newsBusy = true
+        try { api.hlPost("/rss/feeds", JSONObject().put("url", u)); flash("Kilden er lagt til"); news = parseNews(api.hlGet("/rss?cat=$newsCat&limit=40")) } finally { newsBusy = false }
+    }
+    fun setFeedCategory(id: String, cat: String) = launch {
+        api.request("PATCH", "/rss/feeds/" + URLEncoder.encode(id, "UTF-8"), JSONObject().put("category", cat), prefix = Api.HOMELAB)
+        news = parseNews(api.hlGet("/rss?cat=$newsCat&limit=40"))
+    }
+    fun removeFeed(id: String) = launch {
+        api.hlDelete("/rss/feeds/" + URLEncoder.encode(id, "UTF-8"))
+        news = parseNews(api.hlGet("/rss?cat=$newsCat&limit=40"))
+    }
+    fun setNewsSetting(key: String, on: Boolean) = launch {
+        news = news?.let { if (key == "aiSummary") it.copy(aiSummary = on) else it.copy(aiCategorize = on) }
+        api.hlPut("/rss/settings", JSONObject().put(key, on))
+        news = parseNews(api.hlGet("/rss?cat=$newsCat&limit=40"))
+    }
+    fun refreshNews() = launch {
+        newsBusy = true
+        try { api.request("POST", "/rss/refresh", JSONObject(), prefix = Api.HOMELAB, read = 60_000); news = parseNews(api.hlGet("/rss?cat=$newsCat&limit=40")) } finally { newsBusy = false }
+    }
+
+    /* ---------- Media (Plex og Jellyfin) ---------- */
+
+    var media by mutableStateOf<MediaData?>(null)
+
+    fun loadMedia() = launch {
+        val now = runCatching { api.hlGet("/media/now") }
+        val hist = runCatching { api.hlGet("/media/history") }
+        val n = parseMediaItems(now.getOrNull())
+        val h = parseMediaItems(hist.getOrNull())
+        val err = (hist.exceptionOrNull() ?: now.exceptionOrNull())?.let { e ->
+            if (e is ApiException && (e.status == 401 || e.status == 403)) "Media godtar ikke app-tokenet ennå. Oppdater homelab." else e.message
+        }
+        media = MediaData(n.first || h.first, n.second, h.second, if (hist.isFailure && now.isFailure) err else null)
+    }
+
+    /* ---------- Mat: mapper, skann oppskrift, import fra nettside, lenker og filer ---------- */
+
+    var matFolders by mutableStateOf<List<MatFolder>>(emptyList())
+    /** Valgt mappe i rettlisten (null = Alle). */
+    var matFolderSel by mutableStateOf<String?>(null)
+    var recipeJobs by mutableStateOf<List<RecipeJob>>(emptyList())
+    var recipePreview by mutableStateOf<RecipePreview?>(null)
+    var recipeBusy by mutableStateOf(false)
+    /** Åpen rett (detaljark med oppskrift, mappe, lenker og filer). */
+    var dishOpen by mutableStateOf<String?>(null)
+    /** Skann fra «+»: «receipt» (kvittering) eller «recipe» (oppskrift på Mat-siden). */
+    var scanTarget by mutableStateOf("receipt")
+    private var recipePoll: kotlinx.coroutines.Job? = null
+
+    /** Kamera/filer fra skannearket: kvittering eller oppskrift etter hvor brukeren er. */
+    fun scanUris(uris: List<Uri>) { if (scanTarget == "recipe") scanRecipes(uris) else uploadUris(uris) }
+
+    fun importRecipe(url: String) = launch {
+        val u = url.trim().let { if (it.startsWith("http")) it else "https://$it" }
+        recipeBusy = true
+        try { recipePreview = parseRecipePreview(api.request("POST", "/recipes/import", JSONObject().put("url", u), prefix = Api.MAT, read = 90_000)) }
+        finally { recipeBusy = false }
+    }
+
+    fun saveRecipe(folderId: String?) = launch {
+        val p = recipePreview ?: return@launch
+        recipeBusy = true
+        try {
+            api.matPost("/recipes/import/save", JSONObject().put("preview", JSONObject(p.raw)).put("folderId", folderId ?: JSONObject.NULL))
+            recipePreview = null
+            loadWeek()
+            flash("${p.name.ifBlank { "Retten" }} er lagret")
+        } finally { recipeBusy = false }
+    }
+
+    /** Skann oppskrift: bilder skaleres ned lokalt (HEIC blir JPEG), PDF sendes som den er. */
+    fun scanRecipes(uris: List<Uri>) = launch {
+        if (uris.isEmpty()) return@launch
+        val ctx = getApplication<Application>()
+        for (u in uris) {
+            val mime = ctx.contentResolver.getType(u) ?: "image/jpeg"
+            val data = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(u)?.use { it.readBytes() } } ?: continue
+            val pdf = mime.contains("pdf")
+            val bytes = if (pdf) data else withContext(Dispatchers.Default) { scaled(data, 2400, 85) } ?: data
+            api.upload("/recipes/scan", listOf(Api.Part("file", if (pdf) "oppskrift.pdf" else "oppskrift.jpg", if (pdf) "application/pdf" else "image/jpeg", bytes)), prefix = Api.MAT)
+        }
+        flash(if (uris.size == 1) "✦ Oppskriften leses i bakgrunnen" else "✦ ${uris.size} oppskrifter leses i bakgrunnen")
+        recipeJobs = runCatching { parseRecipeJobs(api.matGet("/recipes/jobs")) }.getOrDefault(recipeJobs)
+        pollRecipes()
+    }
+
+    private fun pollRecipes() {
+        if (recipePoll?.isActive == true) return
+        recipePoll = viewModelScope.launch {
+            repeat(60) {
+                delay(3000)
+                val j = runCatching { parseRecipeJobs(api.matGet("/recipes/jobs")) }.getOrNull() ?: return@launch
+                val before = recipeJobs.count { it.active }
+                recipeJobs = j
+                if (j.count { it.active } < before) runCatching { loadWeek() }
+                if (j.none { it.active }) return@launch
+            }
+        }
+    }
+
+    fun retryRecipeJob(id: String) = launch {
+        api.matPost("/recipes/jobs/" + URLEncoder.encode(id, "UTF-8") + "/retry")
+        recipeJobs = parseRecipeJobs(api.matGet("/recipes/jobs"))
+        pollRecipes()
+    }
+    fun removeRecipeJob(id: String) = launch {
+        api.request("DELETE", "/recipes/jobs/" + URLEncoder.encode(id, "UTF-8"), prefix = Api.MAT)
+        recipeJobs = parseRecipeJobs(api.matGet("/recipes/jobs"))
+    }
+
+    fun addMatFolder(name: String) = launch {
+        val n = name.trim().takeIf { it.isNotEmpty() } ?: return@launch
+        api.matPost("/folders", JSONObject().put("name", n.take(40)))
+        matFolders = parseMatFolders(api.matGet("/folders"))
+    }
+    fun renameMatFolder(id: String, name: String) = launch {
+        api.matPatch("/folders/" + URLEncoder.encode(id, "UTF-8"), JSONObject().put("name", name.trim().take(40)))
+        matFolders = parseMatFolders(api.matGet("/folders"))
+    }
+    fun deleteMatFolder(id: String) = launch {
+        api.request("DELETE", "/folders/" + URLEncoder.encode(id, "UTF-8"), prefix = Api.MAT)
+        if (matFolderSel == id) matFolderSel = null
+        loadWeek()
+    }
+    fun setDishFolder(dishId: String, folderId: String?) = launch {
+        api.matPatch("/dishes/" + URLEncoder.encode(dishId, "UTF-8"), JSONObject().put("folderId", folderId ?: JSONObject.NULL))
+        loadWeek()
+    }
+    fun addDishLink(dishId: String, title: String, url: String) = launch {
+        val u = url.trim().let { if (it.startsWith("http")) it else "https://$it" }
+        api.matPost("/dishes/" + URLEncoder.encode(dishId, "UTF-8") + "/links", JSONObject().put("title", title.trim().ifBlank { u }).put("url", u))
+        loadWeek()
+    }
+    fun uploadDishFile(dishId: String, uri: Uri) = launch {
+        val ctx = getApplication<Application>()
+        val mime = ctx.contentResolver.getType(uri) ?: "application/octet-stream"
+        val name = ctx.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null } ?: "fil"
+        val data = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } } ?: return@launch
+        busy = true
+        try {
+            api.upload("/dishes/" + URLEncoder.encode(dishId, "UTF-8") + "/links",
+                listOf(Api.Part("file", name, mime, data), Api.Part.text("title", name.substringBeforeLast('.'))), prefix = Api.MAT)
+            loadWeek()
+            flash("$name er lagt til")
+        } finally { busy = false }
+    }
+    fun removeDishLink(dishId: String, linkId: String) = launch {
+        api.request("DELETE", "/dishes/" + URLEncoder.encode(dishId, "UTF-8") + "/links/" + URLEncoder.encode(linkId, "UTF-8"), prefix = Api.MAT)
+        loadWeek()
+    }
+
+    /** Åpner en lagret fil (krever token): lastes ned og vises i en app som kan åpne filtypen. */
+    fun openDishFile(l: DishLink) = launch {
+        val path = l.fileUrl ?: return@launch
+        val data = api.bytes(if (path.startsWith("/")) path else "/mat/api/" + path)
+        val ctx = getApplication<Application>()
+        val ext = l.title.substringAfterLast('.', "").ifBlank { when (l.kind) { "pdf" -> "pdf"; "sheet" -> "xlsx"; "doc" -> "docx"; "image" -> "jpg"; else -> "bin" } }
+        val f = File(File(ctx.cacheDir, "scans").apply { mkdirs() }, "mat-${l.id}.$ext").apply { writeBytes(data) }
+        val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", f)
+        val mime = android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: "application/octet-stream"
+        val view = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { ctx.startActivity(view) }.onFailure { shareFile(f.name, mime, data) }
     }
 }
