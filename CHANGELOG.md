@@ -2,6 +2,27 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.15.0] – 18.10.2026 · prompt 23
+- **Sveip tilbake viser forrige side:** når du sveiper fra venstre kant, ligger forrige side bak med parallakse og slør. Den er aldri svart. Android bruker Predictive Back, og PWA har samme gest.
+- **Scrollposisjonen huskes:** går du inn i en underside og tilbake, havner du der du var. Nye undersider åpner øverst.
+- **«Mer» følger modulen:** på Aksjer, Kvitteringer og de andre Finans-undersidene åpner «Mer» Finans → Mer.
+- **Kvitteringer i Papir:**
+  - «Ta bilde av kvittering» bruker dokumentskanneren på iOS. «Bilder» og «Filer» ligger rett under.
+  - KØ viser status, for eksempel «Gemini svarte ikke innen 20 s · prøver Groq».
+  - Under «Til gjennomgang» kan du redigere, godkjenne, analysere på nytt og slette.
+  - «Bokført» har ↺ for å angre.
+- **Aksjer:** nøyaktig kopi av designet, uten skann-knapp.
+- **Abonnementer:**
+  - Nøyaktig kopi av designet: første kort ligger opp i toppbildet, og tittelen står ikke lenger to ganger.
+  - Hold inne og dra for å endre rekkefølgen på kortene.
+  - «Endre abonnement» har fått Papir-farger.
+- **Finn-annonsen åpnes i appen og på web:**
+  - Viser bildekarusell, pris, Fiks ferdig, «Om annonsen», beskrivelse, e-poster fra Proton og meldinger.
+  - Annonsen og bildene lagres lokalt, så de kan vises selv om annonsen er fjernet fra Finn.
+- **Ikoner på fanene i Nyhetsleser:** la AI velge, eller søk i over 200 åpne ikonbiblioteker via Iconify. Ikonene caches på serveren.
+- **Tidsgrenser for AI:** egen grense per motor (Gemini 20 s, Groq 15 s, Roboflow 15 s, Ollama 45 s), 0–3 nye forsøk, og valget om å prøve neste motor, bruke lokal OCR eller legge kvitteringen i kø.
+- **Innstillinger → App → Integrasjoner:** Home Assistant med tilkobling og synk av Huskeliste.
+
 ## [4.14.0] – 18.10.2026 · prompt 22
 - **Familie har fått nytt design**, likt på iOS, Android og web:
   - Fanelinje nederst med Kart · Soner · Helse · Mer, uten skann-knapp. Verktøyraden ligger over kartet.
