@@ -175,8 +175,8 @@ private fun StockOverview(vm: AppViewModel, x: StocksX?, range: String, onRange:
         if (x == null) { if (vm.moduleError == null) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = C.primary) } }; return@Page }
         if (!x.configured && !x.mock && x.positions.isEmpty()) item {
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(C.surface1).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Ikke koblet til Trading 212", fontWeight = FontWeight.SemiBold)
-                Text("Legg inn API-nøkkel og secret i FinansHub på web under Innstillinger → Aksjer · Trading 212. Gi bare lesetilgang.", color = C.text2, fontSize = 13.sp)
+                Text("Ikke satt opp · Sett opp under Integrasjoner", fontWeight = FontWeight.SemiBold)
+                Text("Legg inn din egen API-nøkkel og secret under Innstillinger → Integrasjoner → Trading 212. Gi bare lesetilgang.", color = C.text2, fontSize = 13.sp)
             }
         }
         item {

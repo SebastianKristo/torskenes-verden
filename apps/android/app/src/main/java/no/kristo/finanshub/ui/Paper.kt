@@ -967,7 +967,7 @@ private fun PaperMedia(vm: AppViewModel, navBottom: Dp) {
         if (m == null) item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
         else {
             m.error?.let { e -> item { Text(e, color = p.lab, fontSize = 13.sp) } }
-            if (!m.configured && m.error == null) item { Text("Plex eller Jellyfin er ikke satt opp. Legg dem inn i Homelab → Innstillinger → Integrasjoner.", color = p.mut, fontSize = 13.sp) }
+            if (!m.configured && m.error == null) item { Text("Ikke satt opp · Sett opp under Integrasjoner (Plex eller Jellyfin).", color = p.mut, fontSize = 13.sp) }
             item {
                 PCard(shadow = true) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {

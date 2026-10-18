@@ -416,10 +416,13 @@ internal fun ScanPage(vm: AppViewModel) = Pages {
     val st = vm.boot?.settings
     Section("AI-motor (på serveren)") {
         Group {
-            Choice("Ollama lokalt", "Bildet forlater aldri huset", st?.provider == "ollama" && st?.fallback != true) { vm.saveSetting("provider", "ollama"); vm.saveSetting("fallback", false) }
-            Choice("Gemini", "Raskest og mest presis", st?.provider == "gemini") { vm.saveSetting("provider", "gemini"); vm.saveSetting("fallback", false) }
-            Choice("Ollama + Gemini", "Lokalt først, Gemini som reserve", st?.provider == "ollama" && st?.fallback == true) { vm.saveSetting("provider", "ollama"); vm.saveSetting("fallback", true) }
+            if (!vm.canEditServer) Info("AI-motor", engineName(st)) else {
+                Choice("Ollama lokalt", "Bildet forlater aldri huset", st?.provider == "ollama" && st?.fallback != true) { vm.saveSetting("provider", "ollama"); vm.saveSetting("fallback", false) }
+                Choice("Gemini", "Raskest og mest presis", st?.provider == "gemini") { vm.saveSetting("provider", "gemini"); vm.saveSetting("fallback", false) }
+                Choice("Ollama + Gemini", "Lokalt først, Gemini som reserve", st?.provider == "ollama" && st?.fallback == true) { vm.saveSetting("provider", "ollama"); vm.saveSetting("fallback", true) }
+            }
         }
+        if (!vm.canEditServer) Note(SERVER_LOCKED)
     }
 }
 
@@ -532,15 +535,30 @@ internal fun AboutPage(vm: AppViewModel) = Pages {
 internal fun AiPage(vm: AppViewModel) = Pages {
     val st = vm.boot?.settings
     Group {
-        Choice("Ollama lokalt", "Bildet forlater aldri huset", st?.provider == "ollama" && st?.fallback != true) { vm.saveSetting("provider", "ollama"); vm.saveSetting("fallback", false) }
-        Choice("Gemini", "Raskest og mest presis", st?.provider == "gemini") { vm.saveSetting("provider", "gemini"); vm.saveSetting("fallback", false) }
-        Choice("Ollama + Gemini", "Lokalt først, Gemini som reserve", st?.provider == "ollama" && st?.fallback == true) { vm.saveSetting("provider", "ollama"); vm.saveSetting("fallback", true) }
+        if (!vm.canEditServer) Info("AI-motor", engineName(st)) else {
+            Choice("Ollama lokalt", "Bildet forlater aldri huset", st?.provider == "ollama" && st?.fallback != true) { vm.saveSetting("provider", "ollama"); vm.saveSetting("fallback", false) }
+            Choice("Gemini", "Raskest og mest presis", st?.provider == "gemini") { vm.saveSetting("provider", "gemini"); vm.saveSetting("fallback", false) }
+            Choice("Ollama + Gemini", "Lokalt først, Gemini som reserve", st?.provider == "ollama" && st?.fallback == true) { vm.saveSetting("provider", "ollama"); vm.saveSetting("fallback", true) }
+        }
     }
+    if (!vm.canEditServer) Note("AI-motor, modeller og minimum sikkerhet: $SERVER_LOCKED")
     Group {
         Info("Minimum sikkerhet", "${st?.minConf ?: 85} %")
         Toggle("Kategoriser automatisk", "Regler først, deretter AI", st?.autoCat == true) { vm.saveSetting("autoCat", it) }
     }
-    Note("Nøkler og modeller for Ollama og Gemini legges inn i FinansHub på PC. De lagres bare på serveren.")
+    Note(if (vm.canEditServer) "Nøkler og modeller for Ollama og Gemini legges inn i FinansHub på PC. De lagres bare på serveren."
+        else "Nøkler og modeller for Ollama og Gemini er felles for serveren. $SERVER_LOCKED")
+}
+
+/** ISO2: serveroppsettet (AI-motorer, modeller, tidsgrenser, SMB) kan bare endres når canEditServer er true. */
+internal const val SERVER_LOCKED = "Settes opp av administrator."
+
+internal fun engineName(st: no.kristo.finanshub.Settings?): String = when {
+    st == null -> "–"
+    st.provider == "gemini" -> "Gemini"
+    st.provider == "ollama" && st.fallback -> "Ollama + Gemini"
+    st.provider == "ollama" -> "Ollama lokalt"
+    else -> st.provider.replaceFirstChar { it.uppercase() }
 }
 
 @Composable
@@ -578,17 +596,20 @@ internal fun StocksPrefsPage(vm: AppViewModel) = Pages {
     }
     Button(onClick = { vm.open(Screen.Stocks) }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp),
         colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) { Text("Åpne Aksjer", fontWeight = FontWeight.Bold) }
-    Note("Lag nøkkelen hos Trading 212 under Innstillinger → API (Beta), med bare lesetilgang. Nøkkel og secret legges inn i FinansHub på PC og lagres kun på serveren.")
+    Note("Lag nøkkelen hos Trading 212 under Innstillinger → API (Beta), med bare lesetilgang. Legg din egen nøkkel og secret inn under Innstillinger → Integrasjoner → Trading 212. De lagres kryptert på serveren.")
 }
 
 @Composable
 internal fun BackupPage(vm: AppViewModel) = Pages {
     val uri = LocalUriHandler.current
+    // ISO2: backup av hele databasen og SMB er bare for hovedadministrator (canSmb). Eldre server uten flagget: admin-rollen.
+    val canSmb = vm.me?.isMainAdmin == true || (vm.boot?.canEditServer == null && vm.userIsAdmin)
     Group {
         Row(Modifier.fillMaxWidth().clickable { vm.exportCsv() }.padding(16.dp, 14.dp)) { Text("Eksporter transaksjoner som CSV", Modifier.weight(1f)); Icon(Icons.Filled.IosShare, null, tint = C.text2) }
         Row(Modifier.fillMaxWidth().clickable { runCatching { uri.openUri(vm.base.trimEnd('/') + "/finans/?desktop=1#/inn") } }.padding(16.dp, 14.dp)) {
-            Text("Full backup, Excel og SMB-share", Modifier.weight(1f)); Icon(Icons.Filled.OpenInBrowser, null, tint = C.text2)
+            Text(if (canSmb) "Full backup, Excel og SMB-share" else "Eksporter og gjenopprett dine data", Modifier.weight(1f)); Icon(Icons.Filled.OpenInBrowser, null, tint = C.text2)
         }
     }
-    Note("Full backup (.json), Excel-databasen og backup til SMB-share settes opp i FinansHub på PC under Innstillinger → Backup og data.")
+    Note(if (canSmb) "Full backup (.json), Excel-databasen og backup til SMB-share settes opp i FinansHub på PC under Innstillinger → Backup og data."
+        else "Du kan eksportere og gjenopprette dine egne data i FinansHub på PC under Innstillinger → Backup og data. Backup av hele databasen og SMB-share: $SERVER_LOCKED")
 }

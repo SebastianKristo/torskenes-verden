@@ -387,8 +387,8 @@ internal fun StocksScreen(vm: AppViewModel) {
         if (s == null && vm.moduleError == null) item { Loading() }
         if (s != null && !s.configured && !s.mock) item {
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(C.surface1).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Ikke koblet til Trading 212", fontWeight = FontWeight.SemiBold)
-                Text("Lag en API-nøkkel hos Trading 212 under Innstillinger → API (Beta). Gi bare lesetilgang (account, portfolio, history:orders, history:dividends), og lås den gjerne til IP-en til homelaben. Nøkkel og secret legges inn i FinansHub på PC og lagres bare på serveren.",
+                Text("Ikke satt opp · Sett opp under Integrasjoner", fontWeight = FontWeight.SemiBold)
+                Text("Lag en API-nøkkel hos Trading 212 under Innstillinger → API (Beta). Gi bare lesetilgang (account, portfolio, history:orders, history:dividends), og lås den gjerne til IP-en til homelaben. Legg nøkkel og secret inn under Innstillinger → Integrasjoner → Trading 212. De er dine egne og lagres kryptert på serveren.",
                     color = C.text2, fontSize = 13.sp)
             }
         }

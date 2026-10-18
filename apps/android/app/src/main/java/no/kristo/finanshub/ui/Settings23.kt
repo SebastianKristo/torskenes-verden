@@ -27,6 +27,9 @@ private fun nextStep(v: Int): Int = AI_TO_STEPS.getOrNull(AI_TO_STEPS.indexOf(v)
 internal fun AiTimeouts23(vm: AppViewModel) {
     LaunchedEffect(Unit) { vm.loadAiTimeouts23() }
     val t = vm.m23.aiTo ?: AiTimeouts23()
+    // ISO2: tidsgrensene er serveroppsett. Uten canEditServer vises de skrivebeskyttet.
+    val lock = !vm.canEditServer
+    val tap = if (lock) "skrivebeskyttet" else "trykk for å endre"
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         PLabel("Tidsgrenser", modifier = Modifier.padding(start = 4.dp, top = 10.dp))
         PCard {
@@ -34,20 +37,23 @@ internal fun AiTimeouts23(vm: AppViewModel) {
             listOf(Triple("gemini", "Gemini", "Les kvitteringer"), Triple("groq", "Groq", "AI-søk og kategorier"), Triple("roboflow", "Roboflow", "Strekkoder"),
                 Triple("ollama", "Ollama (lokal)", "Reserve på hjemmeserveren")).forEach { (k, n, sd) ->
                 val v = when (k) { "gemini" -> t.gemini; "groq" -> t.groq; "roboflow" -> t.roboflow; else -> t.ollama }
-                SetRow(vm, i, Icons.Filled.AutoAwesome, n, "$sd · trykk for å endre", "$v s", top = i > 0) {
+                SetRow(vm, i, Icons.Filled.AutoAwesome, n, "$sd · $tap", "$v s", top = i > 0) {
+                    if (lock) return@SetRow
                     val nv = nextStep(v)
                     vm.saveAiTimeouts23(when (k) { "gemini" -> t.copy(gemini = nv); "groq" -> t.copy(groq = nv); "roboflow" -> t.copy(roboflow = nv); else -> t.copy(ollama = nv) })
                 }
                 i++
             }
             SetRow(vm, i++, Icons.Filled.Replay, "Nye forsøk", "Før den gir opp en motor",
-                when (t.retries) { 0 -> "Ingen"; 1 -> "1 gang"; else -> "${t.retries} ganger" }, top = true) { vm.saveAiTimeouts23(t.copy(retries = (t.retries + 1) % 4)) }
+                when (t.retries) { 0 -> "Ingen"; 1 -> "1 gang"; else -> "${t.retries} ganger" }, top = true) { if (!lock) vm.saveAiTimeouts23(t.copy(retries = (t.retries + 1) % 4)) }
             SetRow(vm, i, Icons.Filled.NotificationsActive, "Ved tidsavbrudd", "Hva som skjer når grensen er nådd",
                 (ON_TIMEOUT.firstOrNull { it.first == t.onTimeout } ?: ON_TIMEOUT[0]).second, top = true) {
+                if (lock) return@SetRow
                 val j = ON_TIMEOUT.indexOfFirst { it.first == t.onTimeout }
                 vm.saveAiTimeouts23(t.copy(onTimeout = ON_TIMEOUT[(j + 1) % ON_TIMEOUT.size].first))
             }
         }
+        if (lock) Text("Tidsgrenser for AI: $SERVER_LOCKED", color = PaperPal.current.mut, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 4.dp))
         Text("Nye forsøk venter 1 s, 2 s og 4 s. Køen viser hvilken motor som svarte for sent, f.eks. «✦ Gemini svarte ikke innen ${t.gemini} s · prøver Groq …».",
             color = PaperPal.current.mut, fontSize = 12.sp, lineHeight = 17.sp, modifier = Modifier.padding(horizontal = 4.dp))
     }
@@ -66,10 +72,10 @@ internal fun IntegrationsPage23(vm: AppViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         PLabel("Home Assistant", modifier = Modifier.padding(start = 4.dp, top = 4.dp))
         PCard {
-            val conn = ha?.connText() ?: if (vm.userIsAdmin) "Henter …" else "Bare admin"
+            val conn = ha?.connText() ?: if (vm.userIsAdmin) "Henter …" else "Administrator"
             SetRow(vm, 0, Icons.Filled.Home, "Tilkobling", ha?.error?.takeIf { ha.entities.isEmpty() } ?: "Adresse og token fra Homelab-serveren · ${ha?.entities?.size ?: 0} To-do-lister", conn) { vm.loadTasksHa() }
         }
-        if (!vm.userIsAdmin) Text("Bare administratorer kan sette opp synk med Home Assistant.", color = p.mut, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 4.dp))
+        if (!vm.userIsAdmin) Text("Settes opp av administrator.", color = p.mut, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 4.dp))
         if (vm.userIsAdmin && ha != null) TasksHaSection(vm, lists, pad = 0.dp)
     }
 }

@@ -89,7 +89,18 @@ data class DomSum24(val visitsToday: Long, val domains: Int, val status: String)
 /* ---------- Integrasjoner ---------- */
 
 data class IntegField24(val key: String, val label: String, val type: String, val value: String?, val saved: Boolean, val help: String?)
-data class Integ24(val id: String, val name: String, val group: String?, val status: String, val fields: List<IntegField24>, val canTest: Boolean)
+/** scope: "personal" (brukerens egne, alle ser og endrer) eller "server" (serveroppsett, bare administrator). */
+data class Integ24(val id: String, val name: String, val group: String?, val status: String, val fields: List<IntegField24>, val canTest: Boolean,
+    val scope: String = "server") {
+    val personal: Boolean get() = scope == "personal"
+}
+
+/** Personlige integrasjoner (ISO2), brukt når serveren ikke sier scope selv (eldre server eller reservelisten). */
+private val PERSONAL24 = setOf("calendar", "school", "plex", "jellyfin", "sonarr", "radarr", "t212", "tracking", "mybring", "postnord", "parcelsapp",
+    "dhl", "ups", "17track", "imap", "bank", "finn")
+
+/** ISO2: om brukeren kan endre serveroppsettet i FinansHub (bootstrap.canEditServer; eldre server: admin-rollen). */
+val AppViewModel.canEditServer: Boolean get() = boot?.canEditServer ?: userIsAdmin
 
 internal fun parseIntegrations24(s: String): List<Integ24> {
     val t = s.trim()
@@ -102,6 +113,7 @@ internal fun parseIntegrations24(s: String): List<Integ24> {
                     f.optBoolean("saved", f.optStr("value") != null), f.optStr("help"))
             },
             o.optBoolean("canTest", true),
+            o.optStr("scope")?.takeIf { it == "personal" || it == "server" } ?: if (o.optString("id") in PERSONAL24) "personal" else "server",
         )
     }
 }
@@ -124,7 +136,7 @@ val INTEG24_FALLBACK: List<Integ24> = listOf(
     Triple("map", "Kart (MapTiler / Stadia)", listOf(Triple("maptiler", "MapTiler-nøkkel", "secret"), Triple("stadia", "Stadia-nøkkel", "secret"))),
     Triple("icons", "Ikoner", listOf(Triple("src", "Ikonkilde", "text"))),
     Triple("photos", "Unsplash / Pexels", listOf(Triple("unsplash", "Unsplash-nøkkel", "secret"), Triple("pexels", "Pexels-nøkkel", "secret"))),
-).map { (id, n, fs) -> Integ24(id, n, null, "missing", fs.map { (k, l, ty) -> IntegField24(k, l, ty, null, false, null) }, false) }
+).map { (id, n, fs) -> Integ24(id, n, null, "missing", fs.map { (k, l, ty) -> IntegField24(k, l, ty, null, false, null) }, false, if (id in PERSONAL24) "personal" else "server") }
 
 /* ---------- Søk i Innstillinger ---------- */
 
@@ -376,7 +388,7 @@ fun AppViewModel.b24LoadIntegrations() {
             s.integLegacy = e.status == 404
             s.integError = when (e.status) {
                 404 -> "Serveren har ikke det nye integrasjonsoppsettet ennå. Oppdater homelab for å redigere her."
-                403 -> "Bare administratorer kan se og endre integrasjoner."
+                403 -> "Serveren godtar ikke kontoen for integrasjoner ennå. Oppdater homelab."
                 else -> e.message
             }
             if (s.integ == null) s.integ = INTEG24_FALLBACK

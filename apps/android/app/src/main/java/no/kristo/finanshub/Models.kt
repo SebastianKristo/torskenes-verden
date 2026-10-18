@@ -19,6 +19,8 @@ data class Rule(val id: Int, val pattern: String, val category: String?)
 data class Boot(
     val settings: Settings, val categories: List<Category>, val accounts: List<Account>, val reviewCount: Int,
     val goals: List<Goal> = emptyList(), val rules: List<Rule> = emptyList(), val restricted: Boolean = false,
+    /** ISO2: om brukeren kan endre serveroppsettet (AI-motorer, modeller, tidsgrenser, SMB). null = eldre server uten feltet. */
+    val canEditServer: Boolean? = null,
 )
 
 data class Tx(
@@ -344,6 +346,7 @@ fun parseBoot(s: String): Boot {
         o.optJSONArray("goals")?.map { Goal(it.optInt("id"), it.optString("name"), it.num("saved"), it.num("target"), color(it.optString("color", "#5FD3A8"))) } ?: emptyList(),
         o.optJSONArray("rules")?.map { Rule(it.optInt("id"), it.optString("pattern"), it.optStr("category")) } ?: emptyList(),
         o.optBoolean("restricted"),
+        o.optBoolOrNull("canEditServer") ?: st.optBoolOrNull("canEditServer"),
     )
 }
 

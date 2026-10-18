@@ -149,7 +149,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
     group("App") { i ->
         SetRow(vm, i(), Icons.Filled.Palette, "Utseende og fanelinje", "Papir ${when (vm.paperMode) { "mork" -> "mørk"; "lys" -> "lys"; else -> "· følger systemet" }} · bakgrunn · ikonfarger") { vm.settingsPage = "look" }
         SetRow(vm, i(), Icons.Filled.Notifications, "Varsler og haptikk", "Lyd, stille timer og test", top = true) { vm.settingsPage = "notify" }
-        SetRow(vm, i(), Icons.Filled.Home, "Integrasjoner", "Home Assistant, Google, Entur, Bring og 12 til", top = true) { vm.settingsPage = "integ" }
+        SetRow(vm, i(), Icons.Filled.Home, "Integrasjoner", if (vm.userIsAdmin) "Dine og serverens: Plex, Bring, IMAP, Home Assistant og flere" else "Dine egne: kalender, Plex, Trading 212, Bring og flere", top = true) { vm.settingsPage = "integ" }
         SetRow(vm, i(), Icons.Filled.MonitorHeart, "Helse og posisjon", "Health Connect, typer og posisjonsdeling", top = true) { vm.settingsPage = "healthpos" }
         SetRow(vm, i(), Icons.Filled.DocumentScanner, "Skanning", "Kamera, beskjæring og opplasting", top = true) { vm.settingsPage = "scan" }
         SetRow(vm, i(), Icons.Filled.Dns, "Server og synk", "Lokal og ekstern adresse", top = true) { vm.settingsPage = "server" }

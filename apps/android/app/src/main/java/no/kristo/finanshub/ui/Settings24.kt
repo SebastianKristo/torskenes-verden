@@ -64,12 +64,12 @@ private fun setIndex24(vm: AppViewModel): List<SetItem24> = buildList {
     add(SetItem24("news", "Nyhetsleser", vm.appName, "Kilder og AI", null, "nyheter rss"))
     add(SetItem24("look", "Utseende og fanelinje", "App", "Tema (lys og mørk), bakgrunn og ikonfarger", "look", "tema mørk lys farge bakgrunn"))
     add(SetItem24("notify", "Varsler og haptikk", "App", "Lyd, stille timer, vibrasjon og test", "notify", "varsel lyd vibr push"))
-    add(SetItem24("integ", "Integrasjoner", "App", "Home Assistant, Google, Entur, Bring og flere", "integ", "integrasjon"))
+    add(SetItem24("integ", "Integrasjoner", "App", if (vm.userIsAdmin) "Dine og serverens: Plex, Bring, IMAP, Home Assistant og flere" else "Dine egne: kalender, Plex, Trading 212, Bring, IMAP og flere", "integ", "integrasjon"))
     add(SetItem24("healthpos", "Helse og posisjon", "App", "Health Connect, skritt, puls, søvn og posisjonsdeling", "healthpos", "helse posisjon skritt kart"))
     add(SetItem24("scan", "Skanning", "App", "Kamera, beskjæring og opplasting", "scan", "kamera skann"))
     add(SetItem24("server", "Server og synk", "App", "Lokal og ekstern adresse", "server", "server adresse"))
     add(SetItem24("backup", "Backup og data", "App", "Nedlasting og lagring", "backup", "backup eksport"))
-    (vm.b24.integ ?: INTEG24_FALLBACK).forEach { i ->
+    (vm.b24.integ ?: INTEG24_FALLBACK).filter { vm.userIsAdmin || it.personal }.forEach { i ->
         add(SetItem24("integ:${i.id}", i.name, "Integrasjoner", i.fields.joinToString(", ") { it.label }, "integ", i.id))
     }
 }
@@ -166,7 +166,7 @@ private fun SearchBar24(vm: AppViewModel) {
     val p = PaperPal.current
     val s = vm.b24
     val items = setIndex24(vm)
-    LaunchedEffect(Unit) { if (s.integ == null && vm.userIsAdmin) vm.b24LoadIntegrations() }
+    LaunchedEffect(Unit) { if (s.integ == null) vm.b24LoadIntegrations() }
     // ✦ AI: spørsmålet sendes når man slutter å skrive (eller trykker Søk).
     LaunchedEffect(s.sq, s.sqAi) {
         s.aiAnswer = null; s.aiIds = null
@@ -281,17 +281,27 @@ internal fun LazyListScope.profileGroup24(vm: AppViewModel) {
 internal fun IntegrationsPage24(vm: AppViewModel) {
     val p = PaperPal.current
     val s = vm.b24
-    LaunchedEffect(Unit) { if (vm.userIsAdmin) vm.b24LoadIntegrations() }
+    LaunchedEffect(Unit) { vm.b24LoadIntegrations() }
+    // ISO2: «Dine integrasjoner» (personlige, alle roller) først, «Server (administrator)» under og bare for admin.
+    val all = s.integ ?: emptyList()
+    val mine = all.filter { it.personal }
+    val server = if (vm.userIsAdmin) all.filter { !it.personal } else emptyList()
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        if (!vm.userIsAdmin) Text("Bare administratorer kan se og endre integrasjonene.", color = p.mut, fontSize = 12.5.sp, modifier = Modifier.padding(4.dp))
-        else {
-            s.integError?.let { Text(it, color = if (s.integLegacy) p.mut else p.lab, fontSize = 12.5.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)) }
-            (s.integ ?: emptyList()).forEach { i -> IntegCard24(vm, i) }
-            if (s.integ == null) Text("Henter integrasjonene …", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(4.dp))
-            Text("Hemmelige verdier lagres kryptert på serveren og vises aldri i appen.", color = p.mut, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp))
+        s.integError?.let { Text(it, color = if (s.integLegacy) p.mut else p.lab, fontSize = 12.5.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp)) }
+        if (s.integ == null) Text("Henter integrasjonene …", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(4.dp))
+        if (mine.isNotEmpty()) {
+            Text("Dine integrasjoner", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 17.sp, modifier = Modifier.padding(start = 4.dp, top = 8.dp))
+            Text("Bare du ser og bruker disse. Kalender, media, Trading 212, sporing, e-post, bank og Finn.", color = p.mut, fontSize = 12.5.sp, modifier = Modifier.padding(horizontal = 4.dp))
+            mine.forEach { i -> IntegCard24(vm, i) }
         }
-        // Synk med Home Assistant (Huskeliste) som før.
-        IntegrationsPage23(vm)
+        if (server.isNotEmpty()) {
+            Text("Server (administrator)", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 17.sp, modifier = Modifier.padding(start = 4.dp, top = 18.dp))
+            Text("Felles oppsett for alle brukere på serveren.", color = p.mut, fontSize = 12.5.sp, modifier = Modifier.padding(horizontal = 4.dp))
+            server.forEach { i -> IntegCard24(vm, i) }
+        }
+        if (s.integ != null) Text("Hemmelige verdier lagres kryptert på serveren og vises aldri i appen.", color = p.mut, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp))
+        // Synk med Home Assistant (Huskeliste) som før. Serveroppsett: bare for admin.
+        if (vm.userIsAdmin) IntegrationsPage23(vm)
     }
 }
 
