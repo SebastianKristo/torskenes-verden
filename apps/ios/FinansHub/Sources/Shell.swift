@@ -403,7 +403,8 @@ struct RootView: View {
                 TxEditView(scan: scan)
             } else if store.detail != nil {
                 DetailView()
-            } else if hSize == .regular {
+            } else if hSize == .regular && !store.paper {
+                // Papir på iPad bruker samme skall som på iPhone, med navigasjonsskinne til venstre.
                 PadShell(scan: scan, photos: $photoItems, files: $showFiles)
             } else {
                 // Bygges på nytt når designstilen byttes (iOS ↔ Material).

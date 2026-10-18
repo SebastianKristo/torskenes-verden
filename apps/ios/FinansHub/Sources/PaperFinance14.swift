@@ -81,9 +81,9 @@ struct PaperFinList: View {
             Button {
                 Haptics.shared.tap()
                 let q = store.query
-                guard !q.trimmingCharacters(in: .whitespaces).isEmpty else { store.paperOpenFin(.search); return }
+                guard !q.trimmingCharacters(in: .whitespaces).isEmpty else { store.paperGo("fsok"); return }
+                store.paperGo("fsok")
                 store.ask(q)
-                store.paperOpenFin(.search)
             } label: {
                 Text("✦ AI").font(PF.ui(13, .bold)).foregroundStyle(p.bg).padding(.horizontal, 14).frame(height: 34)
                     .background(p.ink, in: Capsule())
@@ -127,10 +127,7 @@ struct PaperFinList: View {
     }
 
     private func row(_ t: Tx) -> some View {
-        Button {
-            store.paperOpenFin(.list)
-            store.selectedTx = t.id
-        } label: {
+        Button { store.openPaperTx(t.id) } label: {
             HStack(spacing: 12) {
                 Text(String((t.merchant ?? t.description).prefix(1)).uppercased()).font(PF.ui(11, .heavy)).foregroundStyle(.white)
                     .frame(width: 38, height: 38).background(Color(hex: t.color), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
@@ -172,6 +169,7 @@ struct PaperFinn: View {
         let list = all.filter { PaperFinn.inSeg($0, store.finnSeg) }
         VStack(spacing: 10) {
             netCard(all)
+            PaperFinnWay()
             segments(all)
             PLineButton(title: adding ? "Lukk" : "+ Legg til kjøp eller salg", height: 44, full: true) { withAnimation { adding.toggle() } }
             if adding { PaperFinnAdd { adding = false } }
@@ -179,7 +177,7 @@ struct PaperFinn: View {
             if store.finn != nil && list.isEmpty {
                 PCard { Text("Ingen handler i utvalget.").font(PF.ui(13.5)).foregroundStyle(p.mut) }
             }
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 10)], spacing: 10) {
                 ForEach(list) { d in
                     PaperFinnCard(d: d, editing: editId == d.id) { toggleEdit(d) }
                 }

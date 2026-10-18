@@ -74,16 +74,26 @@ struct MatView: View {
         VStack(alignment: .leading, spacing: 12) {
             if !paperMode { header }
             if let e = store.moduleError { Text(e).font(pal.ui(13)).foregroundStyle(pal.accent) }
-            if let w = store.week, !w.days.isEmpty {
-                todayCard(w)
-                weekList(w)
-            } else if store.moduleError == nil {
-                ProgressView().frame(maxWidth: .infinity).padding(40)
+            if paperMode {
+                // Papir: Dagens middag, Ukeplan, Mapper og Skann og import kan flyttes og skjules (hold inne).
+                PaperCardStack(page: "mat", cards: [
+                    PaperCardDef(key: "m1", label: "Dagens middag", view: AnyView(todaySection)),
+                    PaperCardDef(key: "m2", label: "Ukeplan", view: AnyView(weekSection)),
+                    PaperCardDef(key: "m3", label: "Mapper", view: AnyView(VStack(alignment: .leading, spacing: 12) { folders; recipes })),
+                    PaperCardDef(key: "m4", label: "Skann og import", view: AnyView(VStack(alignment: .leading, spacing: 12) { actions; jobs })),
+                ])
+            } else {
+                if let w = store.week, !w.days.isEmpty {
+                    todayCard(w)
+                    weekList(w)
+                } else if store.moduleError == nil {
+                    ProgressView().frame(maxWidth: .infinity).padding(40)
+                }
+                folders
+                actions
+                jobs
+                recipes
             }
-            folders
-            actions
-            jobs
-            recipes
             shopping
             Button { store.matFull = true } label: {
                 Text("Hele uka med kokk, kost og faste dager ›").font(pal.ui(13.5, .semibold)).foregroundStyle(pal.muted).frame(maxWidth: .infinity, minHeight: 40)
@@ -134,6 +144,18 @@ struct MatView: View {
     }
 
     /* ---------- Topp ---------- */
+
+    @ViewBuilder private var todaySection: some View {
+        if let w = store.week, !w.days.isEmpty {
+            todayCard(w)
+        } else if store.moduleError == nil {
+            ProgressView().frame(maxWidth: .infinity).padding(40)
+        }
+    }
+
+    @ViewBuilder private var weekSection: some View {
+        if let w = store.week, !w.days.isEmpty { weekList(w) }
+    }
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 10) {

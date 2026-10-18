@@ -190,7 +190,7 @@ struct HomeView: View {
             VStack(spacing: 14) {
                 HStack(alignment: .bottom) {
                     VStack(alignment: .leading) {
-                        Text("Hei, \(store.displayName)").font(.subheadline).foregroundStyle(.white.opacity(0.7))
+                        Text("\(greetingWord()), \(store.displayName.split(separator: " ").first.map(String.init) ?? store.displayName)").font(.subheadline).foregroundStyle(.white.opacity(0.7))
                         Text(monthLabel(store.summary?.month ?? "")).font(.system(size: 34, weight: .bold))
                     }
                     Spacer()

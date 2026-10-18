@@ -294,6 +294,46 @@ final class Store {
     var subEdit: SubItem?
     var subNew = false
 
+    /* ---------- Papir, prompt 15 ---------- */
+
+    /// Tilpassede sider: rekkefølge og skjulte kort per side (layout.pages). Lokal kopi til serveren har svart.
+    var paperPages: [String: PaperPageLayout] = PaperPageLayout.loadLocal() {
+        didSet { PaperPageLayout.saveLocal(paperPages) }
+    }
+    /// Siden som er i redigeringsmodus (hold inne et kort), nil = ingen.
+    var paperEditPage: String?
+    /// Finans-fanelinjen i Papir (opptil 4 av oversikt, liste, finn, sok, budsjett …). Mer er alltid sist.
+    var finNav: [String] = UserDefaults.standard.stringArray(forKey: "fh_fin_nav") ?? ["oversikt", "liste", "finn", "sok"] {
+        didSet { UserDefaults.standard.set(finNav, forKey: "fh_fin_nav") }
+    }
+    /// Fjerde fane: auto (Domener, eller Sporing når pakker er på vei) | domener | sporing
+    var fourthTab = UserDefaults.standard.string(forKey: "fh_fourth_tab") ?? "auto" {
+        didSet { UserDefaults.standard.set(fourthTab, forKey: "fh_fourth_tab") }
+    }
+    /// Skanneknappen: float (flyter over linjen, søk i linjen) | inline (+ i linjen)
+    var fabMode = UserDefaults.standard.string(forKey: "fh_fab") ?? "float" {
+        didSet { UserDefaults.standard.set(fabMode, forKey: "fh_fab") }
+    }
+    /// Værappen (trykk på temperaturen på Hjem).
+    var weatherOpen = false
+    var weatherFull: WeatherFull?
+    var weatherPlace = UserDefaults.standard.string(forKey: "fh_wx_place") ?? "oslo" {
+        didSet { UserDefaults.standard.set(weatherPlace, forKey: "fh_wx_place") }
+    }
+    var weatherBusy = false
+    /// Detaljvisning for en transaksjon i Papir (Finans → Liste → trykk på en rad).
+    var paperTxId: Int?
+    var txDetail: PaperTxData?
+    /// Kvitteringer til gjennomgang (banneret på Finans → Oversikt).
+    var reviewCount: Int?
+    /// De 15 siste transaksjonene (Finans → Oversikt).
+    var recent15: [Tx]?
+    /// Domener i Papir: «Alle domener» (kort per domene) og tallene for hvert domene.
+    var domAllMode = false
+    var domAll: [String: Analytics] = [:]
+    /// «Ny sending»-arket (den flytende knappen på Sporing).
+    var trackAddOpen = false
+
     /// Ingen kontoer og ikke noe eldre token: appen er nyinstallert.
     nonisolated static var freshInstall: Bool {
         if UserDefaults.standard.object(forKey: "fh_installed_before") != nil { return false }
@@ -1012,7 +1052,7 @@ final class Store {
     }
 
     /// Vanlig søk i butikknavn, kategorier, notater og varelinjene i kvitteringene.
-    private func plainSearch(_ q: String) async throws {
+    func plainSearch(_ q: String) async throws {
         let enc = q.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? q
         do {
             ai = try JSONDecoder().decode(AiAnswer.self, from: try await api.call("GET", "/search?q=\(enc)"))

@@ -21,6 +21,7 @@ extension Store {
         let order = JS.strings(o, "trkOrder").filter { Store.trkKeys.contains($0) }
         if !order.isEmpty { trkOrder = Store.fullTrkOrder(order) }
         if JS.bool(o, "onboarded") == false, !UserDefaults.standard.bool(forKey: "fh_onboarded"), onboarding == nil { onboarding = 0 }
+        applyPaper15(o)
     }
 
     nonisolated static let trkKeys = ["add", "shipments", "notify", "carriers"]
@@ -80,7 +81,7 @@ extension Store {
     /* ---------- Papir-navigasjon ---------- */
 
     /// Finans i Papir har egen fanelinje: Oversikt, Liste, Finn og Mer.
-    nonisolated static let paperFinTabs = ["finans", "fliste", "finn", "fmer"]
+    nonisolated static let paperFinTabs = ["finans", "fliste", "finn", "fmer", "fsok", "ftx", "abo"]
     /// Domener i Papir: Oversikt, Publikum, Ytelse og Infra.
     nonisolated static let paperDomTabs = ["domener", "dpub", "dytl", "dinf"]
 
@@ -112,8 +113,12 @@ extension Store {
         finnSel = nil
         finnDetail = nil
         trkSettings = false
+        paperEditPage = nil
         switch t {
         case "finans": go(.home)
+        case "fsok": go(.search)
+        case "ftx": break
+        case "abo": Task { try? await self.loadSubs() }
         case "fliste": go(.list)
         case "finn": go(.finn)
         case "mat": open(.mat)
@@ -126,6 +131,7 @@ extension Store {
         // open/go over setter module; Papir-fanen styrer selve visningen.
         paperTab = t
         if Store.paperFinTabs.contains(t) || t == "mer" || t == "innst" || t == "hjem" { module = t == "hjem" || t == "mer" || t == "innst" ? .homelab : nil }
+        if t != "ftx" { paperTxId = nil }
     }
 
     /// Pila øverst til venstre: i Finans og Domener tilbake til Hjem (Domener: dit brukeren kom fra).
@@ -137,7 +143,11 @@ extension Store {
             return
         }
         if paperInner || paperFin != nil || (paperClassic != nil && !paperInDomains) { paperBack(); return }
-        if paperInDomains { paperGo(paperDomFrom); return }
+        // Domener går alltid hjem, også når siden ble åpnet fra Mer.
+        if paperInDomains { paperGo("hjem"); return }
+        if paperTab == "ftx" { paperGo("fliste"); return }
+        if paperTab == "abo" && !finNav.contains("abonnementer") { paperGo("fmer"); return }
+        if paperTab == "innst" { paperGo("mer"); return }
         paperGo("hjem")
     }
 
@@ -173,9 +183,13 @@ extension Store {
 
     /// Tilbake i Papir: lukker det som er åpent, ellers tilbake til fanen.
     func paperBack() {
+        if paperEditPage != nil { paperEditPage = nil; return }
         if newsOpen { newsOpen = false; return }
         if dishSel != nil { dishSel = nil; return }
         if paperInner { back(); return }
+        if paperInDomains { paperGo("hjem"); return }
+        if paperTab == "ftx" { paperGo("fliste"); return }
+        if paperTab == "abo" && !finNav.contains("abonnementer") { paperGo("fmer"); return }
         if paperFin != nil { paperFin = nil; go(.home); return }
         if paperTrackFull { paperTrackFull = false; return }
         if paperClassic != nil { back(); return }
@@ -193,7 +207,8 @@ extension Store {
     }
 
     var paperCanSwipeBack: Bool {
-        newsOpen || dishSel != nil || paperInner || paperFin != nil || paperTrackFull || paperClassic != nil
+        newsOpen || dishSel != nil || paperInner || paperFin != nil || paperTrackFull || paperClassic != nil || paperInDomains
+            || paperTab == "ftx" || paperEditPage != nil || (paperTab == "abo" && !finNav.contains("abonnementer"))
     }
 
     /// Oversikt og kontoer til Papir-Finans (uten feilmelding når serveren ikke svarer).

@@ -13,14 +13,20 @@ struct PaperHome: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            PaperSearch()
-            if let s = topPackage { packageCard(s) }
-            ruter
-            minis
-            newsCard
-            shortcuts
+            // Hold inne et kort for å flytte eller skjule det (Søk, Pakker, Avganger, Snarveier og Siste nytt).
+            PaperCardStack(page: "hjem", cards: [
+                PaperCardDef(key: "h1", label: "Søk", view: AnyView(VStack(spacing: 10) { PaperSearch(); minis })),
+                PaperCardDef(key: "h2", label: "Pakker", view: AnyView(packages)),
+                PaperCardDef(key: "h3", label: "Avganger", view: AnyView(ruter)),
+                PaperCardDef(key: "h4", label: "Snarveier", view: AnyView(shortcuts)),
+                PaperCardDef(key: "h5", label: "Siste nytt", view: AnyView(newsCard)),
+            ], fullWidth: ["h1", "h5"], twoColumns: true)
             if let e = store.homeError { Text(e).font(PF.ui(12.5)).foregroundStyle(p.lab).frame(maxWidth: .infinity, alignment: .leading) }
         }
+    }
+
+    @ViewBuilder private var packages: some View {
+        if let s = topPackage { packageCard(s) }
     }
 
     private var topPackage: Shipment? {
@@ -265,31 +271,45 @@ struct PaperCarrierBadge: View {
 struct PaperFinance: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
+    @Environment(\.scenePhase) private var phase
 
     var body: some View {
         VStack(spacing: 10) {
-            saldo
-            let review = store.summary?.review.count ?? store.boot?.reviewCount ?? 0
-            if review > 0 {
-                Button { store.paperOpen(.upload) } label: {
-                    HStack {
-                        Text(review == 1 ? "1 kvittering til gjennomgang" : "\(review) kvitteringer til gjennomgang")
-                        Spacer()
-                        Text("Gå gjennom ›")
-                    }
-                    .font(PF.ui(15, .bold)).foregroundStyle(.white)
-                    .padding(.horizontal, 16).padding(.vertical, 14)
-                    .background(p.lab, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                }
-                .buttonStyle(.plain)
-            }
-            PSection(title: "Siste transaksjoner", trailing: nil)
-            recent
-            budget
-            pages
+            // Saldo, Kvitteringer (banneret), Siste transaksjoner og Budsjett kan flyttes og skjules (hold inne).
+            PaperCardStack(page: "finans", cards: [
+                PaperCardDef(key: "f1", label: "Saldo", view: AnyView(saldo)),
+                PaperCardDef(key: "f2", label: "Kvitteringer", view: AnyView(PaperReviewBanner())),
+                PaperCardDef(key: "f3", label: "Siste transaksjoner", view: AnyView(recentCard)),
+                PaperCardDef(key: "f4", label: "Budsjett", view: AnyView(budgetCard)),
+            ])
         }
-        .task { await store.loadPaperFinance() }
+        .task {
+            await store.loadPaperFinance()
+            await store.loadPaperFinance15()
+        }
+        .onChange(of: phase) { _, ph in if ph == .active { Task { await store.loadPaperFinance15() } } }
     }
+
+    private var recentCard: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .firstTextBaseline) {
+                PLabel(text: "Siste transaksjoner · \(recentList.count)")
+                Spacer()
+                Button { store.paperGo("fliste") } label: { Text("Vis alle ›").font(PF.ui(12.5, .semibold)).foregroundStyle(p.mut) }
+                    .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 2).padding(.bottom, 6)
+            Rectangle().fill(p.ink).frame(height: 2)
+            recent
+        }
+        .padding(.top, 4)
+    }
+
+    private var budgetCard: some View {
+        VStack(spacing: 0) { budget }
+    }
+
+    private var recentList: [Tx] { store.recent15 ?? Array((store.summary?.recent ?? []).prefix(15)) }
 
     private var saldo: some View {
         let total = (store.boot?.accounts ?? []).reduce(0) { $0 + $1.balance }
@@ -319,13 +339,10 @@ struct PaperFinance: View {
     }
 
     @ViewBuilder private var recent: some View {
-        let list = Array((store.summary?.recent ?? []).prefix(5))
+        let list = recentList
         if list.isEmpty { Text(store.summary == nil ? "Henter …" : "Ingen transaksjoner ennå.").font(PF.ui(13)).foregroundStyle(p.mut).frame(maxWidth: .infinity, alignment: .leading) }
         ForEach(list) { t in
-            Button {
-                store.paperOpenFin(.list)
-                store.selectedTx = t.id
-            } label: {
+            Button { store.openPaperTx(t.id) } label: {
                 HStack(spacing: 12) {
                     Text(initial(t.merchant ?? t.description)).font(PF.ui(11, .heavy)).foregroundStyle(.white)
                         .frame(width: 38, height: 38).background(Color(hex: t.color), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
@@ -454,13 +471,15 @@ struct PaperTracking: View {
         let all = store.tracking?.items ?? store.homePackages ?? []
         let list = all.filter { PaperTracking.inTab($0, store.trkTab) }.sorted { a, b in a.ready != b.ready ? a.ready : a.step > b.step }
         VStack(spacing: 10) {
-            tabBar(all)
-            addField
-            if store.tracking == nil && all.isEmpty { ProgressView().padding(30) }
-            if store.tracking != nil && list.isEmpty {
-                PCard { Text(store.trkTab == "Aktive" ? "Ingen pakker på vei. Sporingsnumre fra e-post og Finn legges til automatisk." : "Ingen pakker her.").font(PF.ui(13.5)).foregroundStyle(p.mut) }
+            // Hold inne fanene, pakkelisten eller Legg til for å endre rekkefølgen (lagres per bruker).
+            PaperCardStack(page: "sporing", cards: [
+                PaperCardDef(key: "A", label: "Faner", view: AnyView(tabBar(all))),
+                PaperCardDef(key: "B", label: "Pakkelisten", view: AnyView(shipments(all, list))),
+                PaperCardDef(key: "C", label: "Legg til", view: AnyView(addField)),
+            ])
+            if store.paperEditPage != "sporing" {
+                Text("Hold inne et kort for å endre rekkefølgen").font(PF.ui(12)).foregroundStyle(p.mut).frame(maxWidth: .infinity)
             }
-            ForEach(list, id: \.id) { s in PaperShipmentCard(s: s) }
             HStack(spacing: 8) {
                 PLineButton(title: store.trkChecking ? "Sjekker …" : "Sjekk nå", height: 44, full: true) { store.checkTracking() }
                 PLineButton(title: "⚙ Varsler og kilder", height: 44, full: true) { store.trkSettings = true }
@@ -472,6 +491,16 @@ struct PaperTracking: View {
                 .environment(\.paper, p)
                 .presentationDetents([.medium, .large])
                 .presentationBackground(p.bg)
+        }
+    }
+
+    private func shipments(_ all: [Shipment], _ list: [Shipment]) -> some View {
+        VStack(spacing: 10) {
+            if store.tracking == nil && all.isEmpty { ProgressView().padding(30) }
+            if store.tracking != nil && list.isEmpty {
+                PCard { Text(store.trkTab == "Aktive" ? "Ingen pakker på vei. Sporingsnumre fra e-post og Finn legges til automatisk." : "Ingen pakker her.").font(PF.ui(13.5)).foregroundStyle(p.mut) }
+            }
+            ForEach(list, id: \.id) { s in PaperShipmentCard(s: s) }
         }
     }
 
@@ -631,11 +660,14 @@ struct PaperShipmentCard: View {
         .onTapGesture {
             if !s.url.isEmpty { store.openLink(s.url) } else { withAnimation(.easeOut(duration: 0.2)) { open.toggle() } }
         }
-        .contextMenu {
-            Button { UIPasteboard.general.string = s.trackingNo; store.flash("Sporingsnummeret er kopiert") } label: { Label("Kopier sporingsnummer", systemImage: "doc.on.doc") }
-            Button { store.archiveTracking(s, !s.archived) } label: { Label(s.archived ? "Hent tilbake" : "Arkiver", systemImage: "archivebox") }
-            Button(role: .destructive) { store.deleteTracking(s) } label: { Label("Slett", systemImage: "trash") }
+    }
+
+    private func small(_ t: String, _ act: @escaping () -> Void) -> some View {
+        Button(action: act) {
+            Text(t).font(PF.ui(12, .semibold)).foregroundStyle(p.ink).padding(.horizontal, 12).frame(height: 30)
+                .overlay(Capsule().stroke(p.line, lineWidth: 1))
         }
+        .buttonStyle(.plain)
     }
 
     private func barColor(_ j: Int) -> Color {
@@ -660,6 +692,13 @@ struct PaperShipmentCard: View {
             if !s.url.isEmpty {
                 Button { store.openLink(s.url) } label: { Text("Åpne hos \(s.carrierName) ↗").font(PF.ui(13, .semibold)).foregroundStyle(p.lab) }.buttonStyle(.plain)
             }
+            // Hold inne brukes til å flytte kortene, så handlingene ligger her i stedet for i en hurtigmeny.
+            HStack(spacing: 8) {
+                small("Kopier nr.") { UIPasteboard.general.string = s.trackingNo; store.flash("Sporingsnummeret er kopiert") }
+                small(s.archived ? "Hent tilbake" : "Arkiver") { store.archiveTracking(s, !s.archived) }
+                small("Slett") { store.deleteTracking(s) }
+            }
+            .padding(.top, 4)
         }
         .padding(.top, 4)
     }
@@ -670,14 +709,19 @@ struct PaperShipmentCard: View {
 struct PaperMore: View {
     @Environment(Store.self) private var store
     var body: some View {
-        PaperLinkList(rows: [
-            PaperLinkRow(name: "Domener", sub: "Trafikk, besøk og oppetid") { store.paperOpenDomains(from: "mer") },
-            PaperLinkRow(name: "Finans", sub: "Oversikt, liste, Finn og mer") { store.paperGo("finans") },
-            PaperLinkRow(name: "Nyhetsleser", sub: "RSS med ✦ AI-sammendrag") { store.openNews() },
-            PaperLinkRow(name: "Sporing", sub: "Pakker, varsler og kilder") { store.paperGo("sporing") },
-            PaperLinkRow(name: "Innstillinger", sub: "Tema, bakgrunn og konto") { store.paperGo("innst") },
-        ])
-        .padding(.top, -8)
+        // Den modulen som ikke står i fanelinjen (Domener eller Sporing), ligger her.
+        let fourth = store.paperTab4
+        var rows: [PaperLinkRow] = []
+        if fourth != "domener" { rows.append(PaperLinkRow(name: "Domener", sub: "Trafikk, besøk og oppetid") { store.paperOpenDomains(from: "mer") }) }
+        if fourth != "sporing" { rows.append(PaperLinkRow(name: "Sporing", sub: store.paperOnWay > 0 ? "\(store.paperOnWay) på vei" : "Pakker, varsler og kilder") { store.paperGo("sporing") }) }
+        rows.append(PaperLinkRow(name: "Aksjer", sub: "Trading 212") { store.paperFinGo("aksjer") })
+        rows.append(PaperLinkRow(name: "Abonnementer", sub: "Subscription OS") { store.paperGo("abo") })
+        rows.append(PaperLinkRow(name: "Boliger", sub: "Utgifter, prosjekter og regninger") { store.paperFinGo("boliger") })
+        rows.append(PaperLinkRow(name: "Finn", sub: "Kjøp og salg") { store.paperGo("finn") })
+        rows.append(PaperLinkRow(name: "Værmelding", sub: "Timer, 7 dager og forhold") { store.openWeather() })
+        rows.append(PaperLinkRow(name: "Nyhetsleser", sub: "RSS med ✦ AI-sammendrag") { store.openNews() })
+        rows.append(PaperLinkRow(name: "Innstillinger", sub: "Tema, fanelinje, bakgrunn og konto") { store.paperGo("innst") })
+        return PaperLinkList(rows: rows).padding(.top, -8)
     }
 }
 
@@ -695,6 +739,12 @@ struct PaperSettings: View {
                 PaperLinkRow(name: "Papir · følg systemet", sub: "Lys om dagen, mørk når iPhone er i mørk modus", value: store.paperMode == "auto" ? "✓ Valgt" : "", valueColor: p.pos) { store.setPaperMode("auto") },
                 PaperLinkRow(name: "Klassisk (Liquid Glass)", sub: "Bytt tilbake til det forrige mobildesignet", value: "Bytt ›", valueColor: p.lab) { store.setMobileDesign("klassisk") },
             ])
+            group("Fanelinje", [
+                PaperLinkRow(name: "Skanneknapp", sub: store.fabMode == "float" ? "Flyter over linjen, søk ligger i linjen" : "Ligger i linjen som +",
+                             value: store.fabMode == "float" ? "Flytende ›" : "I linjen ›") { store.setFabMode(store.fabMode == "float" ? "inline" : "float") },
+                PaperLinkRow(name: "Fjerde fane", sub: fourthSub, value: fourthName + " ›") { cycleFourth() },
+            ])
+            finNavGroup
             group("Forside", [
                 PaperLinkRow(name: "Bakgrunn", sub: photoName, value: "Endre ›") { store.paperGo("hjem"); store.paperBgOpen = true },
                 PaperLinkRow(name: "Nyhetsleser", sub: "Kilder, kategorier og AI", value: "Åpne ›") { store.openNews() },
@@ -705,6 +755,58 @@ struct PaperSettings: View {
                 PaperLinkRow(name: "Lås appen", sub: "Face ID / kode", value: store.lockEnabled ? "På" : "Av", valueColor: store.lockEnabled ? p.pos : p.mut) { store.lockEnabled.toggle() },
                 PaperLinkRow(name: "Logg ut", sub: "Du må logge inn igjen med 2FA", value: "Logg ut", valueColor: p.lab) { store.logout() },
             ])
+        }
+    }
+
+    private var fourthName: String {
+        switch store.fourthTab {
+        case "domener": return "Domener"
+        case "sporing": return "Sporing"
+        default: return "Automatisk"
+        }
+    }
+
+    private var fourthSub: String {
+        switch store.fourthTab {
+        case "domener": return "Alltid Domener"
+        case "sporing": return "Alltid Sporing"
+        default: return "Domener, eller Sporing når pakker er på vei (nå: " + (store.paperTab4 == "sporing" ? "Sporing, \(store.paperOnWay) på vei" : "Domener") + ")"
+        }
+    }
+
+    private func cycleFourth() {
+        let order = ["auto", "domener", "sporing"]
+        let i = order.firstIndex(of: store.fourthTab) ?? 0
+        store.setFourthTab(order[(i + 1) % order.count])
+    }
+
+    /// «Finans · fanelinje og Mer»: opptil 4 faner. Trykk for å legge til eller flytte til venstre.
+    private var finNavGroup: some View {
+        let nav = store.finNav
+        var rows: [PaperLinkRow] = Store.finNavAll.map { f in
+            let i = nav.firstIndex(of: f.id)
+            let sub = i.map { "I fanelinjen, plass \($0 + 1)" + ($0 > 0 ? " · trykk for å flytte til venstre" : "") } ?? "Ligger i Mer"
+            let value = i.map { $0 > 0 ? "◂ Fane \($0 + 1)" : "Fane 1" } ?? "+ Legg til"
+            return PaperLinkRow(name: f.name, sub: sub, value: value, valueColor: i == nil ? p.lab : p.pos) { toggleFin(f.id) }
+        }
+        let last = nav.last.flatMap { id in Store.finNavAll.first { $0.id == id }?.name } ?? "–"
+        rows.append(PaperLinkRow(name: "Fjern fra fanelinjen", sub: "Flytter siste fane til Mer", value: nav.count > 1 ? "Fjern \(last)" : "–", valueColor: p.lab) {
+            if nav.count > 1 { store.setFinNav(Array(nav.dropLast())) }
+        })
+        rows.append(PaperLinkRow(name: "Tilbakestill", sub: "Oversikt, Liste, Finn, Søk", value: "Nullstill") { store.setFinNav(["oversikt", "liste", "finn", "sok"]) })
+        return group("Finans · fanelinje og Mer", rows)
+    }
+
+    private func toggleFin(_ id: String) {
+        var nav = store.finNav
+        if let i = nav.firstIndex(of: id) {
+            guard i > 0 else { return }
+            nav.swapAt(i - 1, i)
+            store.setFinNav(nav)
+        } else {
+            guard nav.count < 4 else { store.flash("Maks 4 faner. Fjern en først."); return }
+            nav.append(id)
+            store.setFinNav(nav)
         }
     }
 

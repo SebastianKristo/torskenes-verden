@@ -156,29 +156,45 @@ struct PaperShell: View {
         // Appen tvinger mørk modus i roten (klassisk design), så systemets valg leses fra skjermen.
         let p = PaperPalette.of(store.paperMode, system: paperSystemScheme(phase))
         GeometryReader { g in
+            let wide = g.size.width >= 600
             let bottom = Swift.max(12, g.safeAreaInsets.bottom - 8)
             let showBar = !store.newsOpen && store.dishSel == nil
-            ZStack(alignment: .bottom) {
+            let fab = showBar && store.fabMode == "float"
+            ZStack(alignment: wide ? .topLeading : .bottom) {
                 p.bg.ignoresSafeArea()
                 VStack(spacing: 0) {
                     // Ikke .clipped(): da kuttes fotovinduet ved safe area, og statuslinja får papirfarge i stedet for bildet.
                     content(p).frame(maxWidth: .infinity, maxHeight: .infinity)
-                    if showBar { Color.clear.frame(height: 62 + bottom - g.safeAreaInsets.bottom + 10) }
+                        // Sidene fra den klassiske appen skal ikke ligge under skinnen på bred skjerm.
+                        .padding(.leading, wide && showBar && (store.paperClassic != nil || store.paperFin != nil) ? 108 : 0)
+                    if showBar && !wide { Color.clear.frame(height: 62 + bottom - g.safeAreaInsets.bottom + 10) }
                 }
-                if showBar {
+                if showBar && wide {
+                    PaperTabBar(scan: scan, rail: true)
+                        .padding(.leading, 12)
+                        .padding(.vertical, 12)
+                } else if showBar {
                     // ZStack-en slutter ved safe area-bunnen, så linja flyttes ned dit den skal stå:
                     // max(12, inset − 8) pt over skjermkanten.
-                    PaperTabBar(scan: scan)
+                    PaperTabBar(scan: scan, rail: false)
                         .offset(y: g.safeAreaInsets.bottom - bottom)
                 }
                 if let h = store.paperHint {
                     Text(h).font(PF.ui(12.5, .semibold)).foregroundStyle(p.bg)
                         .padding(.horizontal, 12).padding(.vertical, 8)
                         .background(p.ink, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                        .padding(.trailing, 16).padding(.bottom, 72)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                        .padding(.trailing, 16).padding(.bottom, fab ? (wide ? 96 : 158) : 72)
                         .offset(y: g.safeAreaInsets.bottom - bottom)
                         .transition(.opacity)
+                }
+            }
+            .overlay(alignment: .bottomTrailing) {
+                if fab {
+                    PaperFab(tap: fabTap, hold: fabHold)
+                        .padding(.trailing, wide ? 24 : 18)
+                        .padding(.bottom, wide ? Swift.max(0, 24 - bottom) : 62 + 14)
+                        .offset(y: g.safeAreaInsets.bottom - bottom)
                 }
             }
             .overlay(alignment: .topTrailing) {
@@ -186,6 +202,7 @@ struct PaperShell: View {
                     PaperBgMenu(top: g.safeAreaInsets.top + 62)
                 }
             }
+            .environment(\.paperWide, wide)
         }
         .environment(\.paper, p)
         .animation(.easeOut(duration: 0.16), value: store.paperBgOpen)
@@ -196,9 +213,40 @@ struct PaperShell: View {
                 .presentationDetents([.height(360), .medium])
                 .presentationBackground(p.bg)
         }
+        .sheet(isPresented: Binding(get: { store.trackAddOpen }, set: { store.trackAddOpen = $0 })) {
+            PaperNewShipmentSheet()
+                .environment(\.paper, p)
+                .presentationDetents([.medium, .large])
+                .presentationBackground(p.bg)
+        }
+        .fullScreenCover(isPresented: Binding(get: { store.weatherOpen }, set: { store.weatherOpen = $0 })) {
+            PaperWeatherView()
+        }
         .task(id: store.account?.id) {
             await store.loadPhotoWindow()
             if store.mobileHome == nil { await store.loadHome() }
+            if store.tracking == nil { try? await store.loadTracking() }
+        }
+    }
+
+    /// Den flytende knappen: «Ny sending» på Sporing, ellers skann-arket (Legg til domene i Domener).
+    private func fabTap() {
+        Haptics.shared.tap()
+        if store.paperInDomains { store.domainManager = true; return }
+        if store.paperTab == "sporing" && store.paperClassic == nil { store.trackAddOpen = true; return }
+        store.paperScanOpen = true
+    }
+
+    private func fabHold() {
+        Haptics.shared.tick()
+        if store.paperInDomains { store.domainManager = true; return }
+        if store.paperTab == "sporing" && store.paperClassic == nil { store.trackAddOpen = true; return }
+        store.scanTarget = store.paperTab == "mat" ? "recipe" : "receipt"
+        store.paperHint = "Velg filer å laste opp"
+        scan.files()
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(1600))
+            store.paperHint = nil
         }
     }
 
@@ -211,8 +259,6 @@ struct PaperShell: View {
                 .environment(\.colorScheme, p.dark ? .dark : .light)
         } else if let t = store.paperFin {
             classic(back: store.paperFinBackLabel) { FinanceTab(tab: t) }
-        } else if store.paperInDomains {
-            classic(back: store.paperDomFrom == "mer" ? "Mer" : "Hjem") { DomainsView() }
         } else if let m = store.paperClassic {
             classic(back: m == .tracking ? "Sporing" : nil) { ModuleView(module: m, scan: scan, photos: $photos, files: $files) }
         } else {
@@ -265,21 +311,32 @@ extension Store {
     }
 }
 
-/// Fanelinja nederst: fanene fordeles jevnt (den aktive tar bare plassen den trenger), og +-knappen står rett etter
-/// siste fane. Trykk på + åpner valgarket; hold inne (450 ms) åpner filvelgeren direkte.
+/// Fanelinja nederst (eller skinnen til venstre på bred skjerm): fanene fordeles jevnt (den aktive tar bare plassen
+/// den trenger). Hjem: Hjem (bare på startsiden), Finans, Mat, fjerde fane (Domener/Sporing), Søk og Mer. Finans:
+/// brukerens valg (opptil 4) og Mer. Domener: Oversikt, Publikum, Ytelse og Infra. Med «I linjen» står + sist;
+/// med den flytende skanneknappen står Søk rett før Mer.
 struct PaperTabBar: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
     let scan: ScanActions
+    var rail = false
+
+    private var floating: Bool { store.fabMode == "float" }
 
     private var tabs: [(String, String, String)] {
         if store.paperInDomains { return [("domener", "Oversikt", "◎"), ("dpub", "Publikum", "◍"), ("dytl", "Ytelse", "⚡"), ("dinf", "Infra", "▤")] }
-        if store.paperInFinance { return [("finans", "Oversikt", "◎"), ("fliste", "Liste", "≡"), ("finn", "Finn", "⇄"), ("fmer", "Mer", "⋯")] }
         var t: [(String, String, String)] = []
+        if store.paperInFinance {
+            for f in store.finNavItems { t.append((f.page, f.name, f.icon)) }
+            if floating && !t.contains(where: { $0.0 == "fsok" }) { t.append(("fsok", "Søk", "⌕")) }
+            t.append(("fmer", "Mer", "⋯"))
+            return t
+        }
         if current == "hjem" { t.append(("hjem", "Hjem", "⌂")) }
         t.append(("finans", "Finans", "kr"))
         t.append(("mat", "Mat", "◐"))
-        t.append(("sporing", "Sporing", "▣"))
+        if store.paperTab4 == "sporing" { t.append(("sporing", "Sporing", "▣")) } else { t.append(("domener", "Domener", "◎")) }
+        if floating { t.append(("fsok", "Søk", "⌕")) }
         t.append(("mer", "Mer", "⋯"))
         return t
     }
@@ -287,27 +344,34 @@ struct PaperTabBar: View {
     private var current: String {
         if store.paperInDomains { return store.paperTab }
         if store.paperInFinance {
-            if store.paperFin == .list { return "fliste" }
-            if store.paperFin == .finn { return "finn" }
-            if store.paperFin == nil && store.paperClassic == nil && Store.paperFinTabs.contains(store.paperTab) { return store.paperTab }
-            return "fmer"
+            let c = store.paperFinCurrent
+            let ids = tabs.map(\.0)
+            return ids.contains(c) ? c : "fmer"
         }
         if store.paperTab == "innst" || store.paperClassic != nil { return "mer" }
+        // Sporing ligger i Mer når fjerde fane er Domener.
+        if store.paperTab == "sporing" && store.paperTab4 != "sporing" { return "mer" }
         return store.paperTab
     }
 
     var body: some View {
         let cur = current
-        HStack(spacing: 2) {
-            ForEach(tabs, id: \.0) { t in tab(t.0, t.1, t.2, on: cur == t.0) }
-            PaperPlusButton(label: plusLabel, tap: plusTap, hold: plusHold)
-                .padding(.leading, 4)
+        if rail {
+            PaperRail(tabs: tabs, current: cur, showPlus: !floating, tapTab: { id, on in tapTab(id, on: on) }, plusTap: plusTap, plusHold: plusHold)
+        } else {
+            HStack(spacing: 2) {
+                ForEach(tabs, id: \.0) { t in tab(t.0, t.1, t.2, on: cur == t.0) }
+                if !floating {
+                    PaperPlusButton(label: plusLabel, tap: plusTap, hold: plusHold)
+                        .padding(.leading, 4)
+                }
+            }
+            .padding(.horizontal, 8)
+            .frame(height: 62)
+            .background(p.nav, in: Capsule())
+            .shadow(color: .black.opacity(0.35), radius: 15, y: 10)
+            .padding(.horizontal, 12)
         }
-        .padding(.horizontal, 8)
-        .frame(height: 62)
-        .background(p.nav, in: Capsule())
-        .shadow(color: .black.opacity(0.35), radius: 15, y: 10)
-        .padding(.horizontal, 12)
     }
 
     private var plusLabel: String {
@@ -358,7 +422,8 @@ struct PaperTabBar: View {
             if store.paperInner || store.paperFin != nil || store.paperClassic != nil { store.paperBack() }
             return
         }
-        store.paperGo(id)
+        if id == "domener" && !store.paperInDomains { store.paperOpenDomains(from: "hjem"); return }
+        store.paperFinGo(id)
     }
 }
 
@@ -608,25 +673,49 @@ extension Store {
 
 /* ---------------- Fotovinduet og sidene ---------------- */
 
-/// Papir-siden for valgt fane: fotovindu (høyere på Hjem) og innhold som overlapper vinduet nederst.
+/// Papir-siden for valgt fane: fotovindu (høyere på Hjem) og innhold som overlapper vinduet nederst (23 pt).
+/// Innholdet scroller aldri opp over bildet: så snart brukeren scroller, klippes det ved headerens nederste kant.
 struct PaperPage: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
+    @Environment(\.paperWide) private var wide
+    @State private var scrolled = false
 
     var body: some View {
         let home = store.paperTab == "hjem"
-        ScrollView {
-            VStack(spacing: 0) {
-                PaperHero(home: home)
-                VStack(spacing: 10) { page }
-                    .padding(.horizontal, 16)
-                    .padding(.top, -23)
-                    .padding(.bottom, 20)
+        let maxW: CGFloat = wide ? (home ? 960 : 720) : .infinity
+        VStack(spacing: 0) {
+            PaperHero(home: home)
+            ScrollView {
+                VStack(spacing: 0) {
+                    GeometryReader { g in
+                        Color.clear.preference(key: PaperScrollKey.self, value: g.frame(in: .named("ppage")).minY)
+                    }
+                    .frame(height: 0)
+                    VStack(spacing: wide ? 12 : 10) { page }
+                        .frame(maxWidth: maxW)
+                        .padding(.horizontal, 16)
+                        .frame(maxWidth: .infinity)
+                        .padding(.leading, wide ? 108 : 0)
+                        .padding(.bottom, store.fabMode == "float" && !wide ? 86 : 20)
+                }
             }
+            .coordinateSpace(name: "ppage")
+            .scrollIndicators(.hidden)
+            .onPreferenceChange(PaperScrollKey.self) { v in
+                let s = v < -1
+                if s != scrolled { scrolled = s }
+            }
+            .mask(
+                VStack(spacing: 0) {
+                    Color.clear.frame(height: scrolled ? 23 : 0)
+                    Color.black
+                }
+            )
+            .padding(.top, -23)
+            .refreshable { await refresh() }
         }
-        .scrollIndicators(.hidden)
         .ignoresSafeArea(edges: .top)
-        .refreshable { await refresh() }
     }
 
     @ViewBuilder private var page: some View {
@@ -634,22 +723,29 @@ struct PaperPage: View {
         case "finans": PaperFinance()
         case "fliste": PaperFinList()
         case "finn": PaperFinn()
-        case "fmer": PaperFinMore()
+        case "fmer": PaperFinMoreGrid()
+        case "fsok": PaperFinSearch()
+        case "ftx": PaperTxDetailView()
+        case "abo": PaperSubs()
         case "mat": MatView(pal: MatPal.paper(p), paperMode: true)
         case "sporing": PaperTracking()
         case "mer": PaperMore()
         case "innst": PaperSettings()
+        case "domener", "dpub", "dytl", "dinf": PaperDomains()
         default: PaperHome()
         }
     }
 
     private func refresh() async {
         switch store.paperTab {
-        case "finans", "fmer": await store.loadPaperFinance(force: true)
+        case "finans", "fmer": await store.loadPaperFinance(force: true); await store.loadPaperFinance15()
         case "fliste": try? await store.loadTx()
         case "finn": try? await store.loadFinn()
+        case "abo": try? await store.loadSubs()
         case "mat": try? await store.loadWeek(); await store.loadMatExtras()
         case "sporing": try? await store.loadTracking()
+        case "domener", "dpub", "dytl", "dinf": store.reloadDomain(); if store.domAllMode { await store.loadDomAll() }
+        case "ftx": if let id = store.paperTxId { store.openPaperTx(id) }
         default: await store.loadHome(); await store.loadPhotoWindow()
         }
     }
@@ -660,6 +756,7 @@ struct PaperPage: View {
 struct PaperHero: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
+    @Environment(\.paperWide) private var wide
     let home: Bool
 
     var body: some View {
@@ -673,11 +770,12 @@ struct PaperHero: View {
                 Spacer(minLength: 0)
                 bottomRow
             }
-            .padding(.horizontal, 22)
+            .padding(.leading, wide ? 130 : 22)
+            .padding(.trailing, 22)
             .padding(.top, topInset + 10)
-            .padding(.bottom, home ? 42 : 34)
+            .padding(.bottom, home ? 36 : 34)
         }
-        .frame(height: (home ? 204 : 154) + topInset)
+        .frame(height: (home ? (wide ? 230 : 172) : 154) + topInset)
         .clipped()
     }
 
@@ -728,7 +826,7 @@ struct PaperHero: View {
             if home {
                 Text("Homelab").font(PF.serif(22, medium: true)).foregroundStyle(.white).shadow(color: .black.opacity(0.4), radius: 6)
             } else {
-                pill("‹ \(store.paperTab == "innst" ? "Mer" : "Hjem")") { store.paperUp() }
+                pill("‹ \(store.paperUpLabel)") { store.paperUp() }
             }
             Spacer()
             if home { pill("\(bgName) ▾") { Haptics.shared.select(); store.paperBgOpen.toggle() } }
@@ -756,12 +854,16 @@ struct PaperHero: View {
         .buttonStyle(.plain)
     }
 
+    /// Hilsenen står alltid på to linjer («God ettermiddag,» / navnet) og skaleres ned i stedet for å brytes.
     private var bottomRow: some View {
-        HStack(alignment: .bottom) {
+        HStack(alignment: .bottom, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(kicker).font(PF.italic(15)).opacity(0.9)
-                Text(title).font(PF.serif(home ? 40 : 36, medium: true)).lineLimit(2).minimumScaleFactor(0.7).fixedSize(horizontal: false, vertical: true)
+                Text(kicker).font(PF.italic(15)).opacity(0.9).lineLimit(1)
+                ForEach(Array(title.components(separatedBy: "\n").enumerated()), id: \.offset) { _, line in
+                    Text(line).font(PF.serif(home ? (wide ? 44 : 31) : 36, medium: true)).lineLimit(1).minimumScaleFactor(0.55)
+                }
             }
+            .layoutPriority(1)
             Spacer(minLength: 8)
             if home { weather }
         }
@@ -773,14 +875,23 @@ struct PaperHero: View {
         let w = store.homeWeather
         let t = w?.temp ?? store.mobileHome?.weather?.temp
         if let t {
-            Button { store.openURL(store.yrURL) } label: {
+            Button { store.openWeather() } label: {
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text("\(Int(t.rounded()))°").font(PF.serif(60))
-                    Text("\(w?.text ?? store.mobileHome?.weather?.text ?? "") · \(clock) ›").font(PF.ui(13)).opacity(0.9).lineLimit(1)
+                    Text("\(Int(t.rounded()))°").font(PF.serif(52))
+                    Text("\(w?.text ?? store.mobileHome?.weather?.text ?? "") · \(clock) ›").font(PF.ui(13)).opacity(0.9).lineLimit(1).minimumScaleFactor(0.8)
                 }
             }
             .buttonStyle(.plain)
-            .accessibilityLabel("Åpne været i Yr")
+            .accessibilityLabel("Åpne værmeldingen")
+        }
+    }
+
+    private var rangeName: String {
+        switch store.domRange {
+        case "1h": return "Siste time"
+        case "7d": return "Siste 7 dager"
+        case "30d": return "Siste 30 dager"
+        default: return "Siste 24 timer"
         }
     }
 
@@ -796,12 +907,16 @@ struct PaperHero: View {
             return "\(monthName()) · \(days) dager igjen"
         case "fliste": return "\(monthName()) · alle kontoer"
         case "finn": return "Kjøp og salg"
-        case "fmer": return "Penger, moduler og data"
+        case "fmer": return "Alt fra FinansHub på nettsiden"
+        case "fsok": return "Transaksjoner, kvitteringer og varelinjer"
+        case "ftx": return "Transaksjon"
+        case "abo": return "Abonnementer, kalender og AI-sparing"
+        case "domener": return store.domAllMode ? "Alle domener" : rangeName
+        case "dpub": return "Kart, land og enheter"
+        case "dytl": return "Statuskoder, fart og sikkerhet"
+        case "dinf": return "Oppetid, DNS og domeneinfo"
         case "mat": return "Uke \(Calendar(identifier: .iso8601).component(.weekOfYear, from: Date()))"
-        case "sporing":
-            let items = (store.tracking?.items ?? store.homePackages ?? []).filter { !$0.archived && $0.status != "delivered" }
-            let ready = items.filter { $0.status == "ready_for_pickup" }.count
-            return "\(items.count) på vei" + (ready > 0 ? " · \(ready) klar" : "")
+        case "sporing": return "Pakker og sendinger"
         case "mer": return "Alle moduler"
         case "innst": return "Konto og utseende"
         default: return ""
@@ -812,11 +927,18 @@ struct PaperHero: View {
         switch store.paperTab {
         case "hjem":
             let first = store.displayName.split(separator: " ").first.map(String.init) ?? ""
-            return "\(greetingWord()),\n\(first.isEmpty ? "hei" : first)"
+            return first.isEmpty ? greetingWord() : "\(greetingWord()),\n\(first)"
         case "finans": return "Finans"
         case "fliste": return "Liste"
         case "finn": return "Finn"
-        case "fmer": return "Mer i Finans"
+        case "fmer": return "Mer"
+        case "fsok": return "Søk"
+        case "ftx": return "Detaljer"
+        case "abo": return "Subscription OS"
+        case "domener": return "Domener"
+        case "dpub": return "Publikum"
+        case "dytl": return "Ytelse"
+        case "dinf": return "Infrastruktur"
         case "mat": return "Mat"
         case "sporing": return "Sporing"
         case "mer": return "Mer"
@@ -830,8 +952,9 @@ func greetingWord(_ d: Date = Date()) -> String {
     let h = Calendar.current.component(.hour, from: d)
     switch h {
     case 5..<10: return "God morgen"
-    case 10..<17: return "God dag"
-    case 17..<23: return "God kveld"
+    case 10..<12: return "God formiddag"
+    case 12..<18: return "God ettermiddag"
+    case 18..<23: return "God kveld"
     default: return "God natt"
     }
 }

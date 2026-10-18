@@ -11,10 +11,7 @@ private func kr(_ v: Double) -> String { "\(neg0(v)) kr" }
 
 private func hm(_ d: Date) -> String { let f = DateFormatter(); f.locale = Locale(identifier: "nb_NO"); f.dateFormat = "HH:mm"; return f.string(from: d) }
 
-private func greet(_ d: Date = Date()) -> String {
-    let h = Calendar.current.component(.hour, from: d)
-    return h < 5 ? "God natt" : h < 10 ? "God morgen" : h < 18 ? "God dag" : "God kveld"
-}
+private func greet(_ d: Date = Date()) -> String { greetingWord(d) }
 
 struct HomelabView: View {
     @Environment(Store.self) private var store
@@ -48,7 +45,8 @@ struct HomelabView: View {
 
     private var header: some View {
         let first = store.displayName.split(separator: " ").first.map(String.init) ?? ""
-        let hello = store.mobileHome?.greeting.flatMap { $0.isEmpty ? nil : $0 } ?? (first.isEmpty ? greet() : "\(greet()), \(first)")
+        // Hilsen etter tid på døgnet, alltid med navnet («God ettermiddag, Sebastian»).
+        let hello = first.isEmpty ? greet() : "\(greet()), \(first)"
         return HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(store.editHome ? "Homelab" : longDate()).font(.subheadline).foregroundStyle(.white.opacity(0.7))
