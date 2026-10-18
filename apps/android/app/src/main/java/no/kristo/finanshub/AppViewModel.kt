@@ -242,20 +242,6 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var pollJob: kotlinx.coroutines.Job? = null
     private var jobPoll: kotlinx.coroutines.Job? = null
 
-    init {
-        // Ny installasjon: Papir er standard (prompt 14). Eksisterende installasjoner beholder det de har.
-        if (prefs.str(AppPrefs.MOBILE_DESIGN, "").isEmpty()) {
-            prefs.set(AppPrefs.MOBILE_DESIGN, if (accounts.isEmpty()) "papir" else "klassisk")
-            if (accounts.isEmpty()) prefs.set(AppPrefs.FRESH_PAPIR, true)
-        }
-        Privacy.hidden = prefs.bool(AppPrefs.HIDE_AMOUNTS)
-        layout = localLayout()
-        loadLocalLayout15()
-        loadLocalLayout16()
-        refreshPending()
-        watchNetwork()
-        if (loggedIn) refresh()
-    }
 
     /* ---------- Venter på opplasting (prompt 18) ---------- */
 
@@ -3214,4 +3200,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             message = if (e.status == 501) "Strekkodelesing er ikke satt opp på serveren (Roboflow). Skriv inn eller lim inn nummeret." else e.message
         } finally { barcodeBusy = false }
     }
+
+    // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
+    // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.
+    init {
+        // Ny installasjon: Papir er standard (prompt 14). Eksisterende installasjoner beholder det de har.
+        if (prefs.str(AppPrefs.MOBILE_DESIGN, "").isEmpty()) {
+            prefs.set(AppPrefs.MOBILE_DESIGN, if (accounts.isEmpty()) "papir" else "klassisk")
+            if (accounts.isEmpty()) prefs.set(AppPrefs.FRESH_PAPIR, true)
+        }
+        Privacy.hidden = prefs.bool(AppPrefs.HIDE_AMOUNTS)
+        layout = localLayout()
+        loadLocalLayout15()
+        loadLocalLayout16()
+        refreshPending()
+        watchNetwork()
+        if (loggedIn) refresh()
+    }
+
 }
