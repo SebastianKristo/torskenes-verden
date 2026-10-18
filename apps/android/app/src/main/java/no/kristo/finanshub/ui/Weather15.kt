@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -201,6 +202,12 @@ private fun CardLabel(icon: String, text: String, fill: Boolean = false, modifie
 
 @Composable
 internal fun WeatherApp(vm: AppViewModel) {
+    // Prompt 25: bred layout (Fold/nettbrett) når bredden er minst 700 dp. Byttes uten ny lasting når Fold åpnes og lukkes.
+    BoxWithConstraints(Modifier.fillMaxSize()) { WeatherBody(vm, maxWidth >= 700.dp) }
+}
+
+@Composable
+private fun WeatherBody(vm: AppViewModel, wide: Boolean) {
     val w = vm.weatherFull
     var ms by remember { mutableStateOf<String?>(null) }
     var msDay by remember { mutableIntStateOf(0) }
@@ -218,19 +225,24 @@ internal fun WeatherApp(vm: AppViewModel) {
     }
     LaunchedEffect(Unit) { if (vm.wxPlaces.isEmpty()) vm.loadWxPlaces() }
     val state = rememberLazyListState()
+    val wideScroll = rememberScrollState()
     val density = LocalDensity.current
     // Scrollposisjon i dp (headeren tones ut over 220 dp, den kompakte linja kommer etter 200 dp).
-    val sc by remember { derivedStateOf { if (state.firstVisibleItemIndex > 0) 10_000f else state.firstVisibleItemScrollOffset / density.density } }
+    val sc by remember(wide) { derivedStateOf {
+        if (wide) wideScroll.value / density.density
+        else if (state.firstVisibleItemIndex > 0) 10_000f else state.firstVisibleItemScrollOffset / density.density
+    } }
     val code = w?.current?.code ?: 2
     val night = w?.current?.isDay == false || (w == null && LocalDateTime.now().hour.let { it < 7 || it >= 18 })
     val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     val open = { k: String -> ms = k; msDay = 0 }
     // Systemfonten (Roboto) gjelder bare værsiden.
-    CompositionLocalProvider(LocalTextStyle provides TextStyle(fontFamily = FontFamily.Default, color = Color.White)) { Box(Modifier.fillMaxSize()) {
+    CompositionLocalProvider(LocalTextStyle provides TextStyle(fontFamily = FontFamily.Default, color = Color.White), LocalWxWide25 provides wide) { Box(Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize().background(skyBrush(code, night))) {
             WxFx(fxKind(code, night), heavy = code == 65 || code == 82 || code >= 95, thunder = code >= 95)
-            LazyColumn(
+            if (wide) WideWeather25(vm, w, wideScroll, top, bottom, { mapOpen = true }, { cmpOpen = true }, open)
+            else LazyColumn(
                 state = state, modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(16.dp, top + 58.dp, 16.dp, bottom + 100.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
@@ -783,5 +795,60 @@ private fun PresTile(w: WeatherFull, modifier: Modifier, onClick: () -> Unit) {
                 svgText(tm, "Høyt", 74f, 84f, k, 8f, Color.White, FontWeight.Bold, 1)
             }
         }
+    }
+}
+
+/* ---------- Prompt 25: værsiden på Fold og nettbrett (≥ 700 dp) ---------- */
+
+/**
+ * To kolonner (5 : 7, maks 1280, 24 dp kantmarg, 20 dp mellom). Venstre: sted og temperatur (tones ikke ut), time for time
+ * og 10 dager. Høyre: værkart rett på siden, Yr mot Pent, vind og måne, og flisene i 3 kolonner. Kildelenken nederst over begge.
+ */
+@Composable
+private fun WideWeather25(
+    vm: AppViewModel, w: WeatherFull?, scroll: androidx.compose.foundation.ScrollState, top: Dp, bottom: Dp,
+    openMap: () -> Unit, openCmp: () -> Unit, open: (String) -> Unit,
+) {
+    Column(
+        Modifier.fillMaxSize().verticalScroll(scroll).padding(top = top + 58.dp, bottom = bottom + 100.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Column(Modifier.widthIn(max = 1280.dp).fillMaxWidth().padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            if (w == null) {
+                Box(Modifier.fillMaxWidth().padding(60.dp), contentAlignment = Alignment.Center) {
+                    vm.weatherError?.let { Text(it, textAlign = TextAlign.Center) } ?: CircularProgressIndicator(color = Color.White)
+                }
+                return@Column
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                Column(Modifier.weight(5f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Header(w, Modifier)
+                    HourCard(vm, w) { vm.weatherSheetDay = 0 }
+                    DaysCard(w) { vm.weatherSheetDay = it }
+                }
+                Column(Modifier.weight(7f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    WxMapInline25(w, Modifier.fillMaxWidth().height(300.dp).clip(cardShape).border(1.dp, glassBg, cardShape), openMap)
+                    CmpCard(vm, w, openCmp)
+                    WindCard(w) { open("wind") }
+                    MoonCard { open("moon") }
+                    TileRow3({ SunTile(w, it) { open("sun") } }, { UvTile(w, it) { open("uv") } }, { FeelTile(w, it) { open("feel") } })
+                    TileRow3({ YdTile(w, it) { open("yd") } }, { RainTile(w, it) { open("rain") } }, { VisTile(w, it) { open("vis") } })
+                    TileRow3({ HumTile(w, it) { open("hum") } }, { PresTile(w, it) { open("pres") } }, null)
+                }
+            }
+            val ctx = LocalContext.current
+            Text("Data: MET Norge${if (w.mock) " (eksempeldata)" else ""} · Se også yr.no ↗", fontSize = 12.5.sp, textDecoration = TextDecoration.Underline,
+                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().alpha(.85f).clickable { openLink(ctx, w.yrUrl ?: "https://www.yr.no/") }.padding(top = 4.dp))
+        }
+    }
+}
+
+/** Tre fliser i bredden (Fold). En tom plass holdes åpen, så flisene får lik bredde. */
+@Composable
+private fun TileRow3(a: @Composable (Modifier) -> Unit, b: @Composable (Modifier) -> Unit, c: (@Composable (Modifier) -> Unit)?) {
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        a(Modifier.weight(1f).fillMaxHeight().heightIn(min = 176.dp))
+        b(Modifier.weight(1f).fillMaxHeight().heightIn(min = 176.dp))
+        if (c != null) c(Modifier.weight(1f).fillMaxHeight().heightIn(min = 176.dp)) else Spacer(Modifier.weight(1f))
     }
 }

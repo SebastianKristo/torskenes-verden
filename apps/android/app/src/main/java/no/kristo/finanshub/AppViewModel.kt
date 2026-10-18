@@ -917,16 +917,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                     val body = JSONObject().put("q", t).put("force", force || searchMode != "plain")
                     var why: String? = null
                     val a = try {
-                        val raw = api.request("POST", "/search/ai", body, timeout = 25_000)
+                        // Prompt 25: jobbmodus med fremdrift og Avbryt, og lesegrense fra /ai/limits (ikke fast 30 s).
+                        val raw = aiSearchRaw25(body)
                         runCatching { JSONObject(raw) }.getOrNull()?.let { o -> if (o.optStr("aiErrorKind") != null) why = o.optStr("aiErrorText") ?: o.optStr("notice") }
                         parseAi(raw, t)
                     } catch (e: ApiException) {
                         if (e.status == 401) throw e
                         why = e.message
                         null
-                    } catch (e: Exception) { why = e.message; null }
+                    } catch (e: AiCancelled25) { why = AI_CANCELLED25; null } catch (e: Exception) { why = e.message; null }
                     if (a == null || a.aiUnavailable) {
-                        aiNote = (why?.let { "✦ AI svarte ikke: $it" } ?: "AI-søket er ikke tilgjengelig nå.") + " Viser vanlig søk."
+                        aiNote = if (why == AI_CANCELLED25) "✦ AI-søket ble avbrutt. Viser vanlig søk."
+                            else (why?.let { "✦ AI svarte ikke: $it" } ?: "AI-søket er ikke tilgjengelig nå.") + " Viser vanlig søk."
                         plainSearch(t)
                     } else { if (why != null) aiNote = "✦ $why"; a }
                 }
@@ -2524,7 +2526,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
     private suspend fun aiSearch(q: String): AiAnswer? = runCatching {
-        parseAi(api.request("POST", "/search/ai", JSONObject().put("q", q).put("force", true), timeout = 25_000), q)
+        parseAi(aiSearchRaw25(JSONObject().put("q", q).put("force", true)), q)
     }.getOrNull()?.takeIf { !it.aiUnavailable }
     private suspend fun plainSearchPublic(q: String): AiAnswer {
         val enc = URLEncoder.encode(q, "UTF-8")
@@ -2611,8 +2613,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val l = runCatching { parseLayout16(raw) }.getOrNull() ?: return
         if (l.tabBar.isNotEmpty()) tabBar = l.tabBar
         l.iconTheme?.let { prefs.set(AppPrefs.ICON_THEME, it); prefTick++ }
+        applyNavStyle25(raw)
     }
     fun loadLocalLayout16() {
+        loadNavStyle25()
         prefs.str(AppPrefs.TAB_BAR + (account?.id ?: ""), "").takeIf { it.isNotBlank() }?.let { raw ->
             runCatching { tabBar = parseLayout16(JSONObject().put("tabBar", JSONObject().put("items", JSONArray(raw))).toString()).tabBar }
         }
@@ -3489,6 +3493,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val bd24 = Bd24State()
     internal suspend fun <T> api24a(f: suspend Api.() -> T): T = api.f()
     internal fun launch24a(block: suspend () -> Unit) = launch(block)
+
+    /* ---------- Prompt 25: fanelinje-stil, AI-søk som jobb og «Ta meg dit →» (P25.kt) ---------- */
+    val p25 = P25State()
+    internal suspend fun <T> api25(f: suspend Api.() -> T): T = api.f()
+    internal fun launch25(block: suspend () -> Unit) = launch(block)
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.

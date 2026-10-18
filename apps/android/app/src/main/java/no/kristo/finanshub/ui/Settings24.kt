@@ -58,6 +58,7 @@ private fun setIndex24(vm: AppViewModel): List<SetItem24> = buildList {
     add(SetItem24("sub", "Subscription OS", "Finans", "Abonnementer og AI-sparing", null, "abonnement"))
     add(SetItem24("appname", "Navn på appen", vm.appName, vm.appName, null, "navn"))
     add(SetItem24("appicon", "App-ikon", vm.appName, "Bytt ikon på appen", null, "ikon logo"))
+    add(SetItem24("navstyle", "Fanelinje-stil", vm.appName, "Tekst, bare ikoner eller ikoner + navn på valgt", null, "fane faner ikon ikoner stil navbar"))
     add(SetItem24("tabedit", "Fanelinje i Hjem", vm.appName, "Fjern, flytt, gi nytt navn og ikon", null, "fane faner"))
     add(SetItem24("modules", "Moduler", vm.appName, "Familie, Huskeliste, Avganger, Vær", "modules", "widget modul"))
     add(SetItem24("news", "Nyhetsleser", vm.appName, "Kilder og AI", null, "nyheter rss"))
@@ -125,18 +126,25 @@ private fun iconFor24(id: String): ImageVector = when {
     }
 }
 
+/**
+ * Prompt 25: «Ta meg dit →» og trykk på et søketreff. Åpner riktig underside, scroller til raden og fremhever den i ca. 3 s
+ * (dyplenke settings/<side>#<rad-id>). Rader på hovedsiden (profiler, navn, ikon, fanelinje …) fremheves der de står.
+ */
 private fun open24(vm: AppViewModel, it: SetItem24) {
     vm.b24.sq = ""; vm.b24.aiAnswer = null; vm.b24.aiIds = null
+    // Plassen til gruppekortet på hovedsiden: søk 0, profilkort 1, PROFIL 2–3, KONTO 4–5, FINANS 6–7, appnavn 8–9, APP 10–11.
+    fun main(key: String, index: Int) { vm.settingsPage = null; vm.highlight25(key, index) }
     when {
-        it.id.startsWith("profile:") -> vm.b24PickProfile(it.id.removePrefix("profile:"))
-        it.id.startsWith("integ:") -> { vm.settingsPage = "integ" }
-        it.id == "import" -> vm.openFromMer(Screen.Import)
-        it.id == "sub" -> vm.openFromMer(Screen.Sub)
-        it.id == "appname" -> vm.appNameEdit = true
-        it.id == "appicon" -> vm.appIconEdit = true
-        it.id == "tabedit" -> vm.tabEdit = true
-        it.id == "news" -> vm.openNews(settings = true)
-        it.page != null -> vm.settingsPage = it.page
+        it.id.startsWith("profile:") -> main(it.id, 3)
+        it.id.startsWith("integ:") -> { vm.settingsPage = "integ"; vm.highlight25(it.id, 0) }
+        it.id == "import" -> main(rowKey25("Bankimport"), 7)
+        it.id == "sub" -> main(rowKey25("Subscription OS"), 7)
+        it.id == "appname" -> main(rowKey25("Navn på appen"), 9)
+        it.id == "appicon" -> main(rowKey25("App-ikon"), 9)
+        it.id == "navstyle" -> main(rowKey25("Fanelinje-stil"), 9)
+        it.id == "tabedit" -> main(rowKey25("Fanelinje i Hjem"), 9)
+        it.id == "news" -> main(rowKey25("Nyhetsleser"), 9)
+        it.page != null -> { vm.settingsPage = it.page; vm.highlight25("page:${it.page}", 0) }
     }
 }
 
@@ -214,7 +222,16 @@ private fun SearchResults24(vm: AppViewModel) {
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Text("✦", color = p.lab, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
-                    Text(it, color = p.ink, fontSize = 13.5.sp, lineHeight = 19.6.sp)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(it, color = p.ink, fontSize = 13.5.sp, lineHeight = 19.6.sp)
+                        // Prompt 25: «Ta meg dit →» åpner undersiden, scroller til innstillingen og fremhever den.
+                        val first = hits.firstOrNull()
+                        if (first != null && s.aiAnswer != null && !s.aiBusy) Box(
+                            Modifier.height(36.dp).clip(CircleShape).background(p.ink)
+                                .clickable(role = Role.Button, onClickLabel = "Ta meg dit") { Haptics.select(); open24(vm, first) }.padding(horizontal = 16.dp),
+                            contentAlignment = Alignment.Center,
+                        ) { Text("Ta meg dit →", color = p.bg, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+                    }
                 }
             }
         }
@@ -241,7 +258,7 @@ internal fun LazyListScope.profileGroup24(vm: AppViewModel) {
                 Column {
                     if (i > 0) Box(Modifier.fillMaxWidth().padding(start = 60.dp).height(1.dp).background(p.line))
                     Row(
-                        Modifier.fillMaxWidth().clickable { if (!on) vm.b24PickProfile(pr.key) }.padding(14.dp, 11.dp),
+                        Modifier.fillMaxWidth().hl25(vm, "profile:${pr.key}").clickable { if (!on) vm.b24PickProfile(pr.key) }.padding(14.dp, 11.dp),
                         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
                         IconTile(vm, i, Icons.Filled.People)
@@ -284,7 +301,7 @@ private fun IntegCard24(vm: AppViewModel, i: Integ24) {
     val s = vm.b24
     val missing = i.fields.filter { !it.saved && it.value.isNullOrBlank() }
     PLabel(i.name, modifier = Modifier.padding(start = 4.dp, top = 10.dp))
-    PCard {
+    PCard(Modifier.hl25(vm, "integ:${i.id}")) {
         val (stTxt, stCol) = when (i.status) { "ok" -> "Tilkoblet" to p.pos; "error" -> "Feil" to p.lab; else -> "Ikke koblet" to p.mut }
         IRow24(vm, 0, Icons.Filled.Extension, "Status", if (missing.isEmpty()) "Alle felt er fylt ut" else "Mangler " + missing.joinToString(", ") { it.label.lowercase() }, stTxt, stCol, top = false, onClick = null)
         i.fields.forEach { f ->

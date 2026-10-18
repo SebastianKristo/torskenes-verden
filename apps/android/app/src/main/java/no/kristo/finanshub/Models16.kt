@@ -7,7 +7,8 @@ import org.json.JSONObject
 
 /** En fane i Papir-hovedlinja (layout.tabBar.items): id fra kjente faner, eget navn og ikon (tegn). */
 data class TabItem(val id: String, val label: String, val icon: String) {
-    fun toJson(): JSONObject = JSONObject().put("id", id).put("label", label).put("icon", icon)
+    // Prompt 25: ikonet lagres med SF Symbol-navnet (som iOS og web bruker), ikke tegnet appen tegner med.
+    fun toJson(): JSONObject = JSONObject().put("id", id).put("label", label).put("icon", tabIconName25(icon))
 }
 
 /** Fanene hovedlinja kan ha (ID-ene serveren godtar i layout.tabBar), med standardnavn og -ikon. «Mer» står alltid sist. */
@@ -55,7 +56,9 @@ fun parseLayout16(s: String): Layout16 {
         val t = items.optJSONObject(i) ?: continue
         val id = t.optStr("id") ?: continue
         val def = MAIN_TABS.firstOrNull { it.id == id } ?: continue
-        list += TabItem(id, (t.optStr("label") ?: def.label).take(18), (t.optStr("icon") ?: def.icon).take(3))
+        // Prompt 25: ikonet kan være et navn fra iOS/web («creditcard», «fork.knife»). Før ble det kuttet til 3 tegn («cre»)
+        // og tegnet som tekst. Nå oversettes det til appens ikon, eller fanens standardikon.
+        list += TabItem(id, (t.optStr("label") ?: def.label).take(18), tabGlyph25(id, t.optStr("icon")))
     }
     return Layout16(list.distinctBy { it.id }.take(6), o.optStr("iconTheme")?.takeIf { k -> ICON_THEMES.any { it.first == k } })
 }

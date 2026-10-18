@@ -209,6 +209,21 @@ internal fun WxFx(kind: String, heavy: Boolean, thunder: Boolean) {
 @Composable
 internal fun WxSheetShell(onClose: () -> Unit, z: Float = 20f, content: @Composable ColumnScope.() -> Unit) {
     val top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    // Prompt 25: på Fold (≥ 700 dp) er arket et sidepanel til høyre: min(520 dp, 46 %), 16 dp fra kanten, radius 28 og skygge.
+    if (LocalWxWide25.current) {
+        val shape = RoundedCornerShape(28.dp)
+        BoxWithConstraints(Modifier.fillMaxSize().zIndex(z).background(Color.Black.copy(alpha = .2f)).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClose)) {
+            val pw = minOf(520.dp, maxWidth * .46f)
+            Column(
+                Modifier.align(Alignment.CenterEnd).padding(top = top + 16.dp, end = 16.dp).navigationBarsPadding().padding(bottom = 16.dp).width(pw).fillMaxHeight()
+                    .shadow(24.dp, shape).clip(shape).background(sheetBg)
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+                    .verticalScroll(rememberScrollState()).imePadding().padding(16.dp, 14.dp, 16.dp, 30.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp), content = content,
+            )
+        }
+        return
+    }
     Box(Modifier.fillMaxSize().zIndex(z).background(Color.Black.copy(alpha = .35f)).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClose)) {
         Column(
             Modifier.fillMaxSize().padding(top = top + 12.dp).clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)).background(sheetBg)
@@ -797,10 +812,7 @@ private val MAP_LAYERS = listOf("rain" to "Nedbør", "temp" to "Temperatur", "wi
 @Composable
 internal fun WxMap(w: WeatherFull?, close: () -> Unit) {
     var layer by remember { mutableStateOf("rain") }
-    val la = w?.lat ?: 59.91
-    val lo = w?.lon ?: 10.75
-    val src = "https://embed.windy.com/embed2.html?lat=$la&lon=$lo&detailLat=$la&detailLon=$lo&zoom=7&level=surface&overlay=$layer&product=ecmwf&menu=&message=true&marker=true" +
-        "&calendar=now&type=map&location=coordinates&metricWind=m%2Fs&metricTemp=%C2%B0C"
+    val src = windySrc25(w, layer)
     Box(Modifier.fillMaxSize().zIndex(23f).background(Color(0xFF0D1520)).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}) {
         AndroidView(
             factory = { c: android.content.Context -> WebView(c).apply { settings.javaScriptEnabled = true; settings.domStorageEnabled = true; webViewClient = WebViewClient(); setBackgroundColor(0xFF0D1520.toInt()); loadUrl(src) } },
@@ -824,6 +836,46 @@ internal fun WxMap(w: WeatherFull?, close: () -> Unit) {
                 val on = layer == k
                 Box(Modifier.height(38.dp).clip(CircleShape).background(if (on) Color.White else Color.Transparent).clickable { Haptics.select(); layer = k }.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
                     Text(n, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, color = if (on) Color(0xFF0D1520) else Color.White, maxLines = 1)
+                }
+            }
+        }
+    }
+}
+
+/** Windy-kartet for stedet og laget (Nedbør, Temperatur, Vind, Skyer). */
+private fun windySrc25(w: WeatherFull?, layer: String): String {
+    val la = w?.lat ?: 59.91
+    val lo = w?.lon ?: 10.75
+    return "https://embed.windy.com/embed2.html?lat=$la&lon=$lo&detailLat=$la&detailLon=$lo&zoom=7&level=surface&overlay=$layer&product=ecmwf&menu=&message=true&marker=true" +
+        "&calendar=now&type=map&location=coordinates&metricWind=m%2Fs&metricTemp=%C2%B0C"
+}
+
+/** Prompt 25: værkartet rett på siden på Fold (300 dp høyt), med lagvelger og «⤢ Fullskjerm». */
+@SuppressLint("SetJavaScriptEnabled")
+@Composable
+internal fun WxMapInline25(w: WeatherFull?, modifier: Modifier, onFull: () -> Unit) {
+    var layer by remember { mutableStateOf("rain") }
+    val src = windySrc25(w, layer)
+    Box(modifier.background(Color(0xFF0D1520))) {
+        AndroidView(
+            factory = { c: android.content.Context -> WebView(c).apply { settings.javaScriptEnabled = true; settings.domStorageEnabled = true; webViewClient = WebViewClient(); setBackgroundColor(0xFF0D1520.toInt()); tag = src; loadUrl(src) } },
+            update = { v: WebView -> if (v.tag != src) { v.tag = src; v.loadUrl(src) } },
+            modifier = Modifier.fillMaxSize(),
+        )
+        Box(
+            Modifier.align(Alignment.TopEnd).padding(10.dp).height(34.dp).clip(CircleShape).background(Color(0xBF0A1423))
+                .border(1.dp, Color.White.copy(alpha = .14f), CircleShape).clickable { Haptics.select(); onFull() }.padding(horizontal = 12.dp),
+            contentAlignment = Alignment.Center,
+        ) { Text("⤢ Fullskjerm", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White, maxLines = 1) }
+        Row(
+            Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp).clip(CircleShape).background(Color(0xBF0A1423))
+                .border(1.dp, Color.White.copy(alpha = .14f), CircleShape).padding(3.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            MAP_LAYERS.forEach { (k, n) ->
+                val on = layer == k
+                Box(Modifier.height(32.dp).clip(CircleShape).background(if (on) Color.White else Color.Transparent).clickable { Haptics.select(); layer = k }.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                    Text(n, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, color = if (on) Color(0xFF0D1520) else Color.White, maxLines = 1)
                 }
             }
         }

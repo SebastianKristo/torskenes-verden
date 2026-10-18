@@ -20,6 +20,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.ShowChart
 import androidx.compose.material.icons.filled.*
@@ -73,7 +74,10 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
     }
     // Utseende: tema, ikonfarger, bakgrunn og fanelinje (egen liste fra prompt 16).
     if (sub == "look") { PaperSettings16(vm, navBottom); return }
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 30.dp + navBottom), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    // Prompt 25: «Ta meg dit →» scroller først til gruppen (så raden komponeres), deretter fram til raden (hl25).
+    val list = androidx.compose.foundation.lazy.rememberLazyListState()
+    LaunchedEffect(vm.p25.hlSeq, sub) { vm.p25.hlIndex?.let { runCatching { list.animateScrollToItem(it) } } }
+    LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 30.dp + navBottom), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         when (sub) {
             null -> settingsMain(vm)
             "fin" -> item { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) { PaperNavSettings(vm) } }
@@ -136,6 +140,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
     group(vm.appName) { i ->
         SetRow(vm, i(), Icons.Filled.Edit, "Navn på appen", vm.appName, "Endre ›") { vm.appNameEdit = true }
         SetRow(vm, i(), Icons.Filled.Image, "App-ikon", APP_ICONS.firstOrNull { it.first == vm.appInfo.icon }?.second ?: "Huset med stativ", "Endre ›", top = true) { vm.appIconEdit = true }
+        // Prompt 25: Fanelinje-stil (Tekst / Bare ikoner / Ikoner + navn på valgt). Trykk bytter til neste, lagres i layout.navStyle.
+        SetRow(vm, i(), Icons.Filled.ViewWeek, "Fanelinje-stil", navStyleSub25(), navStyleName25() + " ›", top = true) { vm.setNavStyle25(nextNavStyle25()) }
         SetRow(vm, i(), Icons.Filled.ViewWeek, "Fanelinje i Hjem", "Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen", top = true) { vm.tabEdit = true }
         SetRow(vm, i(), Icons.Filled.Dashboard, "Moduler", "Familie, Huskeliste, Avganger, Vær", top = true) { vm.settingsPage = "modules" }
         SetRow(vm, i(), Icons.Filled.Newspaper, "Nyhetsleser", "Kilder og AI", top = true) { vm.openNews(settings = true) }
@@ -882,12 +888,22 @@ internal fun glyphVector(g: String): ImageVector? = when (g) {
     "⚑" -> Icons.Filled.Flag
     "◆" -> Icons.Filled.Diamond
     "✓" -> Icons.Filled.Checklist
+    // Prompt 25: tegnene i Finans-, Domener- og Abonnement-linjene og de nye ikonene fra iOS (bolt, leaf, bag, calendar).
+    "≡" -> Icons.AutoMirrored.Filled.List
+    "◔" -> Icons.Filled.PieChart
+    "▥" -> Icons.Filled.AccountBalance
+    "◍" -> Icons.Filled.People
+    "⚡" -> Icons.Filled.Bolt
+    "☘" -> Icons.Filled.Eco
+    "◘" -> Icons.Filled.ShoppingBag
+    "▦" -> Icons.Filled.CalendarMonth
+    "•" -> Icons.Filled.Circle
     else -> null
 }
 
 @Composable
 internal fun GlyphIcon(g: String, color: Color, size: Dp = 17.dp) {
-    val v = glyphVector(g)
-    if (v != null) Icon(v, null, tint = color, modifier = Modifier.size(size))
-    else Text(g, color = color, fontSize = 15.sp, lineHeight = 15.sp)
+    // Prompt 25: aldri tekst. Et ikonnavn fra iOS/web («creditcard») oversettes; ukjent gir et standardikon.
+    val v = glyphVector(g) ?: iconNameGlyph25(g)?.let { glyphVector(it) } ?: Icons.Filled.Apps
+    Icon(v, null, tint = color, modifier = Modifier.size(size))
 }

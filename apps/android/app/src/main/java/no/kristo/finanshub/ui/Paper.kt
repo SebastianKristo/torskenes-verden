@@ -434,7 +434,8 @@ private fun Hero(vm: AppViewModel, home: Boolean, wide: Boolean, toggleMenu: () 
                 if (home) PSerif(vm.appName, 22.sp, fg, Modifier.weight(1f), maxLines = 1)
                 else {
                     // Prompt 24: ingen tilbakeknapp på rotsidene i profilene (profilbildet står fortsatt til høyre).
-                    if (!vm.b24IsRoot()) Box(
+                    // Prompt 25: på Fold viser sidelinja en rød Hjem-knapp; da trengs ikke «‹ Hjem» (andre mål vises fortsatt).
+                    if (!vm.b24IsRoot() && !(wide && backLabel(vm) == "Hjem")) Box(
                         Modifier.height(34.dp).clip(CircleShape).background(Color(0x8C1B1A17)).clickable(onClickLabel = "Tilbake") { if (!vm.b24Back()) vm.back() }.padding(start = 10.dp, end = 14.dp),
                         contentAlignment = Alignment.Center,
                     ) { Text("‹ ${backLabel(vm)}", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1) }

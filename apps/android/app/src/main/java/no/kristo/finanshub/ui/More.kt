@@ -230,7 +230,8 @@ internal fun SearchScreen(vm: AppViewModel) {
                 }
             }
         }
-        if (vm.aiBusy) item { Loading() }
+        // Prompt 25: AI-søk som jobb: «✦ Ollama tenker … N s av M s», fremdrift og Avbryt.
+        if (vm.aiBusy) item { if (vm.p25.job != null) AiJobCard25(vm) else Loading() }
         if (r != null && !vm.aiBusy) {
             vm.aiNote?.let { n -> item { Text(n, color = C.accentLight, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 8.dp)) } }
             if (r.plainFirst) item {

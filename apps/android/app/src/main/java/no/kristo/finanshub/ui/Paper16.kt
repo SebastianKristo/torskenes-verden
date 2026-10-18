@@ -114,7 +114,7 @@ internal fun SetRow(vm: AppViewModel, i: Int, icon: ImageVector, title: String, 
     Column {
         if (top) Box(Modifier.fillMaxWidth().padding(start = 60.dp).height(1.dp).background(p.line))
         Row(
-            Modifier.fillMaxWidth().clickable(onClick = onClick).padding(14.dp, 11.dp),
+            Modifier.fillMaxWidth().hl25(vm, rowKey25(title)).clickable(onClick = onClick).padding(14.dp, 11.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             IconTile(vm, i, icon)
@@ -224,6 +224,8 @@ internal fun TabBarEditor(vm: AppViewModel) {
                     }
                 }
             }
+            // Prompt 25: STIL med stor forhåndsvisning av din egen fanelinje (samme valg som Innstillinger → Fanelinje-stil).
+            NavStyleSection25(vm, items)
             val missing = MAIN_TABS.filter { m -> items.none { it.id == m.id } }
             if (missing.isNotEmpty() && items.size < 6) {
                 PLabel("Legg til")

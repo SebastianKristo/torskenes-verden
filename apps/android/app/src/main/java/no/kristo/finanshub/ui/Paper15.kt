@@ -337,10 +337,12 @@ internal fun navTabs(vm: AppViewModel, bar: String, float: Boolean): List<NavTab
             vm.tabBarItems().forEach { t ->
                 if (t.id == "sok" && !float) return@forEach
                 // Uten egen oppsett følger fjerde fane «Automatisk» (Domener, eller Sporing når pakker er på vei).
-                val id = if (vm.tabBar.isEmpty() && t.id == "domener" && vm.tab4 == "sporing") "sporing" else t.id
+                // Prompt 25: «Domener/Sporing» fra iOS er den automatiske fanen; den heter Domener eller Sporing, aldri «Domener/».
+                val auto = t.id == "domener" && (vm.tabBar.isEmpty() || isAutoTab25(t))
+                val id = if (auto && vm.tab4 == "sporing") "sporing" else t.id
                 val def = MAIN_TABS.firstOrNull { it.id == id } ?: t
-                val label = if (id == t.id) t.label else def.label
-                val icon = if (id == t.id) t.icon else def.icon
+                val label = if (id == t.id && !auto) t.label else def.label
+                val icon = if (id == t.id && !auto) t.icon else def.icon
                 add(NavTab(navKey(id), label, icon) { vm.mainTab(id) })
             }
         }
@@ -429,32 +431,10 @@ internal fun PaperFab(vm: AppViewModel, bar: String, modifier: Modifier, onTap: 
     }
 }
 
-/** Fold (bredde ≥ 600 dp): loddrett skinne til venstre, halvgjennomsiktig over bildet, med +-knappen nederst. */
+/** Fold (bredde ≥ 600 dp): loddrett sidelinje til venstre. Prompt 25: se PaperRail25 (P25Ui.kt). */
 @Composable
-internal fun PaperRail(vm: AppViewModel, bar: String, float: Boolean, modifier: Modifier, onTap: () -> Unit, onHold: () -> Unit) {
-    val p = PaperPal.current
-    val tabs = navTabs(vm, bar, float)
-    val cur = navCurrent(vm, bar)
-    Column(
-        modifier.width(84.dp).fillMaxHeight().clip(RoundedCornerShape(28.dp)).background(Color(0xE61B1A17)).padding(6.dp, 12.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp), horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            tabs.forEach { t ->
-                val on = cur == t.key
-                Column(
-                    Modifier.fillMaxWidth().height(58.dp).clip(RoundedCornerShape(18.dp)).background(if (on) Color(0xFFF3EFE6) else Color.Transparent)
-                        .clickable(role = Role.Tab, onClickLabel = t.label) { t.go(); Haptics.select() },
-                    horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
-                ) {
-                    GlyphIcon(t.icon, if (on) Color(0xFF1B1A17) else Color(0xFFD8D1C2), 19.dp)
-                    Text(t.label, color = if (on) Color(0xFF1B1A17) else Color(0xFFD8D1C2), fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Clip)
-                }
-            }
-        }
-        if (!float && !noScanHere(vm)) ScanPress(vm, bar, Modifier, 56.dp, RoundedCornerShape(18.dp), onTap, onHold) { Text("+", color = p.onLab, fontSize = 22.sp) }
-    }
-}
+internal fun PaperRail(vm: AppViewModel, bar: String, float: Boolean, modifier: Modifier, onTap: () -> Unit, onHold: () -> Unit) =
+    PaperRail25(vm, bar, float, modifier, onTap, onHold)
 
 /* ---------------- Finans → Mer som rutenett ---------------- */
 
@@ -671,7 +651,9 @@ internal fun PaperFinSearch(vm: AppViewModel, navBottom: Dp) {
                 }
             }
         }
-        if (vm.finSearchBusy) item { Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
+        // Prompt 25: AI-søk som jobb viser «✦ Ollama tenker … N s av M s», fremdrift og Avbryt.
+        if (vm.finSearchBusy && vm.p25.job != null) item { AiJobCard25(vm) }
+        else if (vm.finSearchBusy) item { Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
         if (r != null && q.isNotBlank() && !vm.finSearchBusy) {
             val plain = r.mode == "plain" || r.plainFirst
             if (vm.finSearchAi && r.answer.isNotBlank()) item {
