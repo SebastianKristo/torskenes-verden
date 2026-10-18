@@ -2,6 +2,22 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.19.0] – 18.10.2026 · prompt 26
+- **Kalender (ny):** skoletimeplanen på web og i appene, under Mer → Kalender.
+  - Nå-kort med time, rom og lærer, minutter igjen og fremdriftslinje.
+  - «Prøver og frister» med nedtelling.
+  - Visningene Uke, Måned og Agenda, med filter, detaljkort, påminnelse og MazeMap-lenke.
+  - Data fra skolens iCal og Canvas, i tillegg til Bursdager og Google Kalender. Gjentakende timer, flyttede timer og planleggingsdager håndteres. En prøve erstatter timen den overlapper.
+  - Hold inne et kort for å flytte (▲ ▼) eller skjule (−) det.
+  - Widgets i tre størrelser på iPhone, Android (Material You) og Samsung (One UI). De oppdateres når hver time starter og slutter. Det finnes også en Kalender-widget på Hjem.
+- **Innstillinger → Kalendere:** Google Kalender, Home Assistant, skole-iCal og Canvas er samlet her. Bursdager-siden har en lenke hit.
+- **Integrasjoner i appene som på web:**
+  - Listen er gruppert, og hver integrasjon har farget merke, navn, beskrivelse og status.
+  - Hver integrasjon har en egen side med oppsett, «Slik gjør du», Test og Fjern.
+- **Sporing:** velg tjenesten selv: Auto, Posten, Bring, PostNord, DHL, Helthjem, UPS, Budbee, Instabox eller ParcelsApp. Valget gjøres for nye pakker, eller med hold inne → «Spor via». E-post endrer ikke valget.
+- **Finans-fanelinjen:** hold inne for å endre navn, ikon og rekkefølge, eller legge til og fjerne faner. Det fungerer som på Hjem.
+- **Trykk på aktiv fane** går til fanens rot, for eksempel fra Bursdager tilbake til Mer. Et nytt trykk scroller til toppen.
+
 ## [4.18.0] – 18.10.2026 · alt individuelt per bruker
 - **Hver bruker har sine egne data, også andre admins.** Bare Boliger deles, og bare med dem du inviterer.
   - **FinansHub:** eget regnskap for hver bruker. Gjelder kontoer, transaksjoner, kvitteringer, budsjett, faste utgifter, abonnementer, Finn, AI-søk og -logg, e-postimport, Trading 212, innstillinger og backup av egne data.
