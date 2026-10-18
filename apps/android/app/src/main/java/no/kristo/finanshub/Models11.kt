@@ -78,6 +78,12 @@ data class Shipment(
     val carrierDomain: String? = null,
     /** Antall pakker til (utenom denne) på Hjem-kortet. */
     val moreCount: Int? = null,
+    /** Prompt 22: siste hendelse fra API-et, feil ved siste oppdatering, forventet levering, hentested og steg med tid. */
+    val lastEvent: TrkLastEvent? = null,
+    val updateError: TrkUpdateError? = null,
+    val estimatedDelivery: String? = null,
+    val pickup: TrkPickup? = null,
+    val stepInfo: List<TrkStep> = emptyList(),
 ) {
     /** Tittelen på kortet: serverens tittel, ellers varenavn/butikk, ellers «Pakke fra <fraktselskap>». */
     val cardTitle: String get() {
@@ -107,7 +113,7 @@ data class Shipment(
         val STEPS_IN = listOf("Registrert", "Hentet", "I transport", "Klar for henting", "Levert")
         val STEPS_OUT = listOf("Registrert", "Levert inn", "I transport", "Ute for levering", "Levert")
         val STATUS = mapOf("registered" to "Registrert", "picked_up" to "Hentet", "in_transit" to "I transport", "ready_for_pickup" to "Klar for henting",
-            "out_for_delivery" to "Ute for levering", "delivered" to "Levert", "delayed" to "Forsinket", "unknown" to "Ukjent status")
+            "out_for_delivery" to "Ute for levering", "delivered" to "Levert", "delayed" to "Forsinket", "returned" to "Returnert", "unknown" to "Ukjent status")
         fun stepOf(s: String) = when (s) { "picked_up" -> 1; "in_transit", "delayed" -> 2; "ready_for_pickup", "out_for_delivery" -> 3; "delivered" -> 4; else -> 0 }
     }
 }
@@ -119,7 +125,10 @@ fun parseShipment(o: JSONObject): Shipment {
     val no = o.optStr("trackingNo") ?: o.optStr("no") ?: ""
     val status = o.optStr("status") ?: "unknown"
     val direction = o.optStr("direction") ?: "in"
-    val steps = o.optJSONArray("steps").strings().takeIf { it.size == 5 } ?: if (direction == "out") Shipment.STEPS_OUT else Shipment.STEPS_IN
+    val stepInfo = parseTrkSteps(o.optJSONArray("steps"))
+    val steps = (if (stepInfo.isNotEmpty()) stepInfo.map { it.label } else o.optJSONArray("steps").strings()).takeIf { it.size == 5 && it.none(String::isBlank) }
+        ?: if (direction == "out") Shipment.STEPS_OUT else Shipment.STEPS_IN
+    val (lastEvent, updateError, pickup) = parseTrkExtras(o)
     return Shipment(
         o.optStr("id") ?: no, no, carrier, carrierName, o.optStr("carrierIni") ?: def?.ini ?: carrierName.take(2).uppercase(),
         o.optStr("carrierColor")?.let(::color) ?: def?.color ?: 0xFF3A4252, o.optStr("carrierFg")?.let(::color) ?: def?.fg ?: 0xFFFFFFFF,
@@ -135,6 +144,7 @@ fun parseShipment(o: JSONObject): Shipment {
         carrierDomain = o.optJSONObject("logo")?.let { l -> l.optJSONObject("carrierLogo")?.optStr("domain") ?: l.optStr("carrierDomain") }
             ?: CARRIER_DOMAINS[carrier],
         moreCount = o.optIntOrNull("moreCount"),
+        lastEvent = lastEvent, updateError = updateError, estimatedDelivery = o.optStr("estimatedDelivery"), pickup = pickup, stepInfo = stepInfo,
     )
 }
 

@@ -531,7 +531,7 @@ internal fun PaperTracking(vm: AppViewModel, navBottom: Dp) {
                         Text("›", color = p.mut)
                     }
                 }
-                "s5" -> if (t != null) TrkCarriers(t)
+                "s5" -> if (t != null) TrkCarriers(vm, t)
             }
         }
     }
@@ -553,7 +553,7 @@ private fun TrkAdd(vm: AppViewModel, t: TrackingData?) {
                 PButton("Legg til", height = 42.dp) { if (no.length >= 6) { vm.addTracking(no, "", guess, false); no = "" } }
             }
             if (car != null && car.id != "other") Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                CarrierBadge(car.ini, car.color, car.fg, 22, car.id)
+                CarrierLogo(vm, car.id, car.name, car.ini, car.color, car.fg, 22)
                 Text("Gjenkjent: ${car.name}", color = p.mut, fontSize = 12.5.sp)
             }
             if (t != null) {
@@ -574,6 +574,8 @@ private fun TrkShipments(vm: AppViewModel, items: List<Shipment>) {
     val arkiv = vm.trkTab == "arkiv"
     val src = if (arkiv) (vm.trkArchived ?: items.filter { it.archived }) else items
     val list = src.filter { trkTabMatch(vm.trkTab, it) }.sortedWith(compareByDescending<Shipment> { it.ready }.thenByDescending { it.step })
+    // Prompt 22: trykk på en pakke viser tidslinjen med faktisk status; lenken til fraktselskapet ligger der.
+    var expanded by remember { mutableStateOf<String?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // Hold inne på en pakke for å velge flere, og arkiver, gjenopprett eller slett dem samlet.
         if (vm.trkPicking) TrkPickBar(vm, list.map { it.id }, arkiv)
@@ -584,7 +586,7 @@ private fun TrkShipments(vm: AppViewModel, items: List<Shipment>) {
                 Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(if (picked) p.surf2 else p.card)
                     .then(if (picked) Modifier.border(2.dp, p.ink, RoundedCornerShape(18.dp)) else if (s.ready) Modifier.border(1.5.dp, p.lab, RoundedCornerShape(18.dp)) else Modifier)
                     .combinedClickable(
-                        onClick = { if (vm.trkPicking) vm.trkPick(s.id) else openLink(ctx, s.url.ifBlank { carrierTrackUrl(s.carrier, s.trackingNo) }) },
+                        onClick = { if (vm.trkPicking) vm.trkPick(s.id) else { Haptics.select(); expanded = if (expanded == s.id) null else s.id } },
                         onLongClick = { Haptics.tap(); vm.trkPick(s.id) },
                     ).padding(14.dp, 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -608,9 +610,12 @@ private fun TrkShipments(vm: AppViewModel, items: List<Shipment>) {
                     }
                 }
                 Row {
-                    Text(s.statusText, color = if (s.ready) p.lab else if (s.done) p.pos else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                    Text(s.etaText, color = p.mut, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(trkStatusText(s), color = if (s.ready) p.lab else if (s.done) p.pos else if (s.updateError != null && s.status == "registered") p.mut else p.ink,
+                        fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    Text(trkEtaText(s), color = p.mut, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
+                TrkEventLines(s)
+                if (expanded == s.id && !vm.trkPicking) TrkTimeline(s)
             }
         }
     }
@@ -627,14 +632,14 @@ private fun TrkNotify(vm: AppViewModel, t: TrackingData) {
 }
 
 @Composable
-private fun TrkCarriers(t: TrackingData) {
+private fun TrkCarriers(vm: AppViewModel, t: TrackingData) {
     val p = PaperPal.current
     PCard {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             PLabel("Transportører")
             t.carriers.filter { it.id != "other" }.forEach { c ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    CarrierBadge(c.ini, c.color, c.fg, 26, c.id)
+                    CarrierLogo(vm, c.id, c.name, c.ini, c.color, c.fg, 26)
                     Text(c.name, color = p.ink, fontSize = 14.sp, modifier = Modifier.weight(1f))
                     Text(when (c.configured) { true -> "Koblet til"; false -> "Uten nøkkel"; null -> "" }, color = if (c.configured == true) p.pos else p.mut, fontSize = 12.sp)
                 }

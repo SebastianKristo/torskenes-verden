@@ -170,7 +170,7 @@ private fun GoogleSearch(vm: AppViewModel) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         TextField(
             value = text, onValueChange = { text = it; vm.suggest(it) }, placeholder = { Text("Søk på Google eller skriv en adresse") },
-            leadingIcon = { Text("G", fontWeight = FontWeight.Bold, fontSize = 20.sp, color = tc(0xFF4285F4)) },
+            leadingIcon = { GoogleG(20.dp) },
             trailingIcon = { if (text.isNotEmpty()) IconButton(onClick = { text = ""; vm.suggest("") }) { Icon(Icons.Filled.Close, "Tøm") } },
             singleLine = true, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Search, autoCorrectEnabled = false),
             keyboardActions = KeyboardActions(onSearch = { go(text) }),

@@ -146,11 +146,15 @@ data class FamHealth(val steps: Int?, val restingHr: Int?, val hr: Int?, val sle
 data class FamMember(
     val userId: String, val name: String, val username: String, val avatarUrl: String?,
     val sharing: String, val precision: String, val last: FamPos?, val health: FamHealth?,
+    /** Prompt 22: bildet seeren har valgt for personen (ellers avataren), og personens farge fra serveren. */
+    val photoUrl: String? = null, val color: Long? = null,
 )
 data class FamZone(
     val id: String, val name: String, val lat: Double, val lon: Double, val radius: Double, val color: Long, val notify: Map<String, Pair<Boolean, Boolean>>,
     /** Prompt 21 (brukerskille): delt med familien (av som standard), hvem som lagde sonen, og om den er min (bare eieren kan endre). */
     val shared: Boolean = false, val owner: String? = null, val mine: Boolean = true, val ownerName: String? = null,
+    /** Prompt 22: ikonnøkkel (home, work, school …). Null på eldre server: standard etter navn. */
+    val icon: String? = null,
 )
 data class FamEvent(val id: String, val userId: String, val zoneId: String, val zoneName: String?, val kind: String, val ts: String?)
 data class FamMe(val userId: String, val sharing: String, val precision: String, val shareHealth: Map<String, Boolean>)
@@ -207,7 +211,8 @@ fun parseFamily(s: String): Family {
     val members = (0 until ms.length()).mapNotNull { i ->
         val m = ms.optJSONObject(i) ?: return@mapNotNull null
         FamMember(m.optStr("userId") ?: "$i", m.optStr("name") ?: m.optStr("username") ?: "Person", m.optStr("username") ?: "", m.optStr("avatarUrl"),
-            m.optStr("sharing") ?: "off", m.optStr("precision") ?: "exact", parsePos(m.optJSONObject("last")), parseHealth(m.optJSONObject("health")))
+            m.optStr("sharing") ?: "off", m.optStr("precision") ?: "exact", parsePos(m.optJSONObject("last")), parseHealth(m.optJSONObject("health")),
+            photoUrl = m.optStr("photoUrl"), color = m.optStr("color")?.takeIf { it.matches(Regex("#[0-9a-fA-F]{6}")) }?.let(::color))
     }
     val zs = o.optJSONArray("zones") ?: JSONArray()
     val zones = (0 until zs.length()).mapNotNull { i ->
@@ -218,7 +223,8 @@ fun parseFamily(s: String): Family {
         val mine = if (z.has("mine") && !z.isNull("mine")) z.optBoolean("mine") else (owner == null || owner == me?.userId)
         FamZone(z.optStr("id") ?: "$i", z.optStr("name") ?: "Sone", z.optDouble("lat", 0.0), z.optDouble("lon", 0.0), z.optDouble("radius", 150.0),
             z.optStr("color")?.let(::color) ?: 0xFFB23A2A, notify,
-            shared = z.optBoolean("shared", false) || z.optInt("shared", 0) == 1, owner = owner, mine = mine, ownerName = z.optStr("ownerName"))
+            shared = z.optBoolean("shared", false) || z.optInt("shared", 0) == 1, owner = owner, mine = mine, ownerName = z.optStr("ownerName"),
+            icon = z.optStr("icon"))
     }
     return Family(me, members, zones, parseFamEvents(o.optJSONArray("events")))
 }

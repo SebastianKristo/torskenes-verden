@@ -1718,7 +1718,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (prefs.bool(AppPrefs.DESIGN_SYNCED)) return
         // Ny installasjon står i Papir: serverens standardverdi «klassisk» skal ikke bytte tilbake.
         x.mobileDesign?.takeIf { it == "papir" || (it == "klassisk" && !prefs.bool(AppPrefs.FRESH_PAPIR)) }?.let { prefs.set(AppPrefs.MOBILE_DESIGN, it) }
-        x.paperMode?.takeIf { it in setOf("auto", "lys", "mork") }?.let { prefs.set(AppPrefs.PAPER_MODE, it) }
+        // Ny enhet starter i «lys» (prompt 22): serverens standardverdi «auto» skal ikke bytte tilbake, et eget valg (lys/mørk) gjelder.
+        x.paperMode?.takeIf { it in setOf("lys", "mork") || (it == "auto" && !prefs.bool(AppPrefs.FRESH_PAPIR)) }?.let { prefs.set(AppPrefs.PAPER_MODE, it) }
         x.photo?.takeIf { it in setOf("cur", "oslo", "weather", "planets", "custom") }?.let { prefs.set(AppPrefs.PHOTO, it) }
         runCatching { parseBgSettings(raw).type }.getOrNull()?.takeIf { it in BG_KINDS }?.let { prefs.set(AppPrefs.PHOTO, it) }
         prefs.set(AppPrefs.DESIGN_SYNCED, true)
@@ -2531,7 +2532,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         weatherPlace = place
         weatherError = null
         launch {
-            try { weatherFull = parseWeatherFull(api.hlGet("/weather/full?place=" + URLEncoder.encode(place, "UTF-8"), timeout = 15_000)) }
+            try {
+                val raw = api.hlGet("/weather/full?place=" + URLEncoder.encode(place, "UTF-8"), timeout = 15_000)
+                weatherFull = parseWeatherFull(raw)
+                loadWxCmp22(place, raw)
+            }
             catch (e: ApiException) { weatherError = if (e.status == 404) "Værappen trenger en nyere Homelab-server." else e.message }
         }
     }
@@ -2632,6 +2637,104 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
     /** Været for et sted: kjente steder med ID, egne steder med koordinater. */
     fun loadWeatherAt(p: WxPlace) = loadWeather(p.id)
+
+    /* ---------- Prompt 22: Yr og Pent, steder i egen rekkefølge, Huskeliste ↔ HA, logo for fraktselskap ---------- */
+
+    /** «Yr og Pent» på værsiden: lastes automatisk når værsiden åpnes eller stedet byttes. */
+    var wxCmp22 by mutableStateOf<WxCmp22?>(null)
+        private set
+    var wxCmp22Busy by mutableStateOf(false)
+        private set
+    var wxCmp22Failed by mutableStateOf(false)
+        private set
+    private var wxCmp22Place: String? = null
+    /** compare i /weather/full (ny server), ellers /weather/compare (eldre). 404 på begge: kortet sier at Pent ikke svarte. */
+    private fun loadWxCmp22(place: String, raw: String?) {
+        val fromFull = raw?.let { r -> runCatching { parseWxCmp22(JSONObject(r).optJSONObject("compare")) }.getOrNull() }
+        if (fromFull != null) { wxCmp22 = fromFull; wxCmp22Place = place; wxCmp22Failed = false; return }
+        if (wxCmp22Place == place && wxCmp22 != null) return
+        wxCmp22 = null
+        wxCmp22Failed = false
+        wxCmp22Busy = true
+        viewModelScope.launch {
+            val c = runCatching { parseWxCmp22(JSONObject(api.hlGet("/weather/compare?place=" + URLEncoder.encode(place, "UTF-8"), timeout = 15_000))) }.getOrNull()
+            if (weatherPlace == place) {
+                wxCmp22 = c
+                wxCmp22Place = place
+                wxCmp22Failed = c == null
+            }
+            wxCmp22Busy = false
+        }
+    }
+
+    /** Steder: hold inne og dra for å endre rekkefølgen. Lagres med PUT /weather/places/order. */
+    fun reorderWxPlaces(list: List<WxPlace>) {
+        wxPlaces = list
+        viewModelScope.launch { runCatching { api.hlPut("/weather/places/order", JSONObject().put("ids", JSONArray(list.map { it.id }))) } }
+    }
+
+    /** Bare admin ser og endrer synken med Home Assistant To-do. */
+    val userIsAdmin: Boolean get() = (me?.role ?: account?.role) == "admin"
+    var tasksHa by mutableStateOf<TasksHa?>(null)
+        private set
+    var tasksHaBusy by mutableStateOf(false)
+        private set
+    /** GET /api/tasks/ha. Eldre server (404) eller ikke admin: seksjonen vises ikke. */
+    fun loadTasksHa() {
+        if (!userIsAdmin) { tasksHa = null; return }
+        viewModelScope.launch { tasksHa = runCatching { parseTasksHa(api.hlGet("/tasks/ha")) }.getOrNull() }
+    }
+    fun setTasksHaOn(on: Boolean) {
+        tasksHa = tasksHa?.copy(enabled = on, status = if (on) "connecting" else "off")
+        tasksHaCall { api.hlPut("/tasks/ha", JSONObject().put("enabled", on)) }
+    }
+    fun mapTasksHa(listId: String, entityId: String?) {
+        tasksHa = tasksHa?.let { h -> h.copy(maps = if (entityId == null) h.maps - listId else h.maps + (listId to entityId)) }
+        tasksHaCall { api.hlPut("/tasks/ha/map", JSONObject().put("listId", listId).put("entityId", entityId ?: JSONObject.NULL)) }
+    }
+    fun syncTasksHa() = tasksHaCall { api.hlPost("/tasks/ha/sync") }
+    /** «+ Lag ny liste i HA»: lager listen i HA og kobler den til listen i appen. */
+    fun createTasksHaList(listId: String, name: String) = tasksHaCall {
+        val r = JSONObject(api.hlPost("/tasks/ha/create", JSONObject().put("name", name)))
+        val id = r.optStr("entity_id") ?: r.optStr("entityId") ?: r.optJSONObject("entity")?.optStr("entity_id")
+        if (id != null) api.hlPut("/tasks/ha/map", JSONObject().put("listId", listId).put("entityId", id))
+    }
+    private fun tasksHaCall(f: suspend () -> Unit) {
+        viewModelScope.launch {
+            tasksHaBusy = true
+            try {
+                f()
+                Haptics.success()
+            } catch (e: ApiException) {
+                message = if (e.status == 404) "Synk med Home Assistant trenger en nyere Homelab-server." else e.message
+            } catch (e: Exception) {
+                message = e.message ?: "Home Assistant svarte ikke"
+            } finally {
+                tasksHa = runCatching { parseTasksHa(api.hlGet("/tasks/ha")) }.getOrNull() ?: tasksHa
+                runCatching { loadTasksNow() }
+                tasksHaBusy = false
+            }
+        }
+    }
+
+    /**
+     * Logo for fraktselskap: bare manuelt kontrollerte filer fra logobiblioteket (/finans/api/logos/file/:id).
+     * Aldri et tilfeldig favicon; mangler filen, viser appen fargefyll med selskapsnavnet.
+     */
+    suspend fun carrierRegLogo(domain: String?, name: String?): Bitmap? {
+        val item = logoItem(domain, name)?.takeIf { it.hasFile } ?: return null
+        val key = "reg:" + item.id
+        logos[key]?.let { return it }
+        val f = java.io.File(java.io.File(appCtx.cacheDir, "logos").apply { mkdirs() }, item.id.replace(Regex("[^A-Za-z0-9_-]"), "_") + ".png")
+        val b = withContext(Dispatchers.IO) { runCatching { if (f.exists() && System.currentTimeMillis() - f.lastModified() < 7L * 24 * 3600_000) BitmapFactory.decodeFile(f.path) else null }.getOrNull() }
+            ?: runCatching {
+                val bytes = api.bytes("/finans/api/logos/file/" + URLEncoder.encode(item.id, "UTF-8"))
+                withContext(Dispatchers.IO) { runCatching { f.writeBytes(bytes) } }
+                withContext(Dispatchers.Default) { BitmapFactory.decodeByteArray(bytes, 0, bytes.size) }
+            }.getOrNull()
+        if (b != null) logos[key] = b
+        return b
+    }
 
     /* Avganger: egen side i nyhetsleser-stil. Egne stopp med ekte sanntid fra Entur. */
     var ruterOpen by mutableStateOf(false)
@@ -3237,6 +3340,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         Haptics.tap()
         viewModelScope.launch {
             try {
+                // Sporing: be serveren sjekke status hos fraktselskapene først (prompt 22). Eldre server (404): bare last på nytt.
+                if (screen == Screen.Tracking) runCatching { api.request("POST", "/tracking/refresh", JSONObject(), prefix = Api.HOMELAB, timeout = 30_000) }
                 runCatching { loadFor(screen) }
                 if (screen == Screen.Homelab) { runCatching { loadHome() }; loadHomeExtras() }
                 if (tasksOpen) loadTasksNow()
@@ -3305,6 +3410,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (prefs.str(AppPrefs.MOBILE_DESIGN, "").isEmpty()) {
             prefs.set(AppPrefs.MOBILE_DESIGN, if (accounts.isEmpty()) "papir" else "klassisk")
             if (accounts.isEmpty()) prefs.set(AppPrefs.FRESH_PAPIR, true)
+            // Prompt 22: «Lys hovedbok» er standard på nye enheter. Lagrede valg (fra serveren eller brukeren) overskrives ikke.
+            if (prefs.str(AppPrefs.PAPER_MODE, "").isEmpty()) prefs.set(AppPrefs.PAPER_MODE, "lys")
+            if (prefs.str(AppPrefs.MODE, "").isEmpty()) prefs.set(AppPrefs.MODE, "light")
         }
         Privacy.hidden = prefs.bool(AppPrefs.HIDE_AMOUNTS)
         layout = localLayout()

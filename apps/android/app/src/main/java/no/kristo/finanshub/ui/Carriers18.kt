@@ -38,7 +38,8 @@ private class Mark(
 )
 
 private val MARKS = mapOf(
-    "posten" to Mark(0xFFE32D22, "", 0f, FontWeight.Bold, 0xFFFFFFFF, 0f),
+    // Prompt 22: ikke et eget tegnet posthorn (var feil logo). Uten fil fra logobiblioteket: merkefarge med navnet.
+    "posten" to Mark(0xFFE32D22, "Posten", 14f, FontWeight.Bold, 0xFFFFFFFF, 37f, spacing = -0.3f),
     "bring" to Mark(0xFF7BC144, "bring", 17f, FontWeight.Bold, 0xFFFFFFFF, 38.5f, spacing = -0.6f),
     "postnord" to Mark(0xFF00A0D6, "postnord", 11.5f, FontWeight.Bold, 0xFFFFFFFF, 36.5f, spacing = -0.3f),
     "dhl" to Mark(0xFFFFCC00, "DHL", 20f, FontWeight.Black, 0xFFD40511, 40f, x = 38f, italic = true, spacing = -1f),
@@ -84,7 +85,7 @@ internal fun CarrierMark(key: String, size: Int) {
         }
     }
     Box(Modifier.size(size.dp).clip(shape).background(Color(m.bg)), contentAlignment = Alignment.Center) {
-        if (key == "posten" || key == "helthjem" || key == "postnord" || key == "dhl") {
+        if (key == "helthjem" || key == "postnord" || key == "dhl") {
             Canvas(Modifier.fillMaxSize()) {
                 val k = this.size.width / 64f
                 scale(k, k, pivot = Offset.Zero) {

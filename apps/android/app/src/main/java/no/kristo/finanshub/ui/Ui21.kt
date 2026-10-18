@@ -166,7 +166,8 @@ internal fun PackageLogo(vm: AppViewModel, s: Shipment, size: Int = 52) {
     var carrierBmp by remember(s.id, s.carrier) { mutableStateOf<android.graphics.Bitmap?>(null) }
     LaunchedEffect(s.id, s.shopDomain, s.logoId, s.carrier) {
         if (s.hasShopLogo) shopBmp = runCatching { vm.logoFor(s.shopDomain, s.shop.ifBlank { s.logoId }) }.getOrNull()
-        carrierBmp = runCatching { vm.logoFor(s.carrierDomain ?: CARRIER_DOMAINS[s.carrier], s.carrierName) }.getOrNull()
+        // Prompt 22: fraktselskapet bare fra manuelt kontrollerte filer i logobiblioteket, aldri et tilfeldig favicon.
+        carrierBmp = runCatching { vm.carrierRegLogo(s.carrierDomain ?: CARRIER_DOMAINS[s.carrier], s.carrierName) }.getOrNull()
     }
     val main = shopBmp
     Box(Modifier.size((size + 4).dp)) {

@@ -51,7 +51,11 @@ data class WxCurrent(
     val pressure: Double?, val pressureTrend: String?, val visibility: Double?, val uv: Double?, val precip: Double?,
 )
 data class WxToday(val hi: Double?, val lo: Double?, val sunrise: String?, val sunset: String?, val daylight: String?, val precipSum: Double?, val precipProb: Double?)
-data class WxHour(val t: String, val temp: Double?, val feels: Double?, val code: Int, val isDay: Boolean, val precipProb: Double?, val precip: Double?, val wind: Double?, val gust: Double?, val windDir: Double?)
+data class WxHour(
+    val t: String, val temp: Double?, val feels: Double?, val code: Int, val isDay: Boolean, val precipProb: Double?, val precip: Double?, val wind: Double?, val gust: Double?, val windDir: Double?,
+    /** Prompt 22: timedata fra MET for detaljarkene (7 dager). Mangler på eldre server. Sikt i km. */
+    val humidity: Double? = null, val uv: Double? = null, val pressure: Double? = null, val visKm: Double? = null,
+)
 data class WxDay(val date: String, val hi: Double?, val lo: Double?, val code: Int, val precipProb: Double?, val precipSum: Double?, val sunrise: String?, val sunset: String?, val uvMax: Double?, val windMax: Double?)
 data class WxMoon(val phase: Double, val illum: Double, val name: String, val nextFull: String?, val nextNew: String?)
 
@@ -98,7 +102,9 @@ fun parseWeatherFull(s: String): WeatherFull {
     val today = WxToday(td.dOrNull("hi"), td.dOrNull("lo"), td.optStr("sunrise"), td.optStr("sunset"), td.optStr("daylight"), td.dOrNull("precipSum"), td.dOrNull("precipProb"))
     val hours = o.optJSONArray("hours")?.map {
         WxHour(it.optString("t"), it.dOrNull("temp"), it.dOrNull("feels"), it.optInt("code", 3), it.optBoolean("isDay", true),
-            it.dOrNull("precipProb"), it.dOrNull("precip"), it.dOrNull("wind"), it.dOrNull("gust"), it.dOrNull("windDir"))
+            it.dOrNull("precipProb"), it.dOrNull("precip"), it.dOrNull("wind"), it.dOrNull("gust"), it.dOrNull("windDir"),
+            it.dOrNull("humidity") ?: it.dOrNull("rh"), it.dOrNull("uv") ?: it.dOrNull("uvIndex"), it.dOrNull("pressure") ?: it.dOrNull("pressureMsl"),
+            (it.dOrNull("visibility") ?: it.dOrNull("vis"))?.let { v -> if (v > 200) v / 1000.0 else v })
     } ?: emptyList()
     val days = o.optJSONArray("days")?.map {
         WxDay(it.optString("date"), it.dOrNull("hi"), it.dOrNull("lo"), it.optInt("code", 3), it.dOrNull("precipProb"), it.dOrNull("precipSum"),

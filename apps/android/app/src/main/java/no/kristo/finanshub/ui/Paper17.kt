@@ -412,41 +412,24 @@ internal fun TasksScreen(vm: AppViewModel) {
         }
     }
     Box(Modifier.fillMaxSize().background(p.bg)) {
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(0.dp, 0.dp, 0.dp, 60.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        LaunchedEffect(Unit) { vm.loadTasksHa() }
+        LazyColumn(Modifier.fillMaxSize().imePadding(), contentPadding = PaddingValues(0.dp, 0.dp, 0.dp, 120.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             item { ModuleHero("Dine lister og lister delt med deg", "Huskeliste", "‹ Hjem") { vm.closeTasks() } }
             item {
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    PChip("Alle", vm.taskFilter == "alle", "${(t?.items ?: emptyList()).count { !it.done }}") { vm.taskFilter = "alle" }
-                    lists.forEach { l -> PChip(l.name, vm.taskFilter == l.id, "${(t?.items ?: emptyList()).count { !it.done && it.list == l.id }}") { vm.taskFilter = l.id } }
+                    TaskListChip("Alle", null, vm.taskFilter == "alle", (t?.items ?: emptyList()).count { !it.done }) { vm.taskFilter = "alle" }
+                    lists.forEach { l -> TaskListChip(l.name, l.color, vm.taskFilter == l.id, (t?.items ?: emptyList()).count { !it.done && it.list == l.id }) { vm.taskFilter = l.id } }
                 }
             }
             // Prompt 21: eier og «Delt med …» for valgt liste, med «Del liste» (bare eieren kan dele).
             lists.firstOrNull { it.id == vm.taskFilter }?.let { cur -> item { ListShareRow(vm, cur, members) } }
-            // Ny oppgave
+            // Frist og person for nye oppgaver (prompt 22: fylte chips når valgt). Feltet ligger fast nederst, over fanelinjen.
             item {
-                PCard(Modifier.padding(horizontal = 16.dp), shadow = true) {
-                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            BasicTextField(
-                                title, { title = it }, singleLine = true,
-                                textStyle = TextStyle(color = p.ink, fontSize = 18.sp, fontFamily = PaperFonts.serif),
-                                cursorBrush = SolidColor(p.lab),
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                                keyboardActions = KeyboardActions(onDone = { add() }),
-                                modifier = Modifier.weight(1f).focusRequester(focus),
-                                decorationBox = { inner -> Box { if (title.isEmpty()) Text("Ny oppgave …", color = p.mut, fontSize = 18.sp, fontFamily = PaperFonts.serif); inner() } },
-                            )
-                            Box(Modifier.size(40.dp).clip(CircleShape).background(p.lab).clickable { add() }, contentAlignment = Alignment.Center) {
-                                Text("+", color = p.onLab, fontSize = 22.sp)
-                            }
-                        }
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            dueOptions(today).forEach { (k, n) -> PChip(n, due == k) { due = k } }
-                        }
-                        if (members.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            PChip("Alle", who == null) { who = null }
-                            members.forEach { m -> PChip(m.name.split(' ').first(), who == m.id) { who = m.id } }
-                        }
+                FlowRow(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    dueOptions(today).forEach { (k, n) -> TaskChip(n, due == k) { due = k } }
+                    if (members.isNotEmpty()) {
+                        TaskChip("Alle", who == null) { who = null }
+                        members.forEach { m -> TaskChip(m.name.split(' ').first(), who == m.id) { who = m.id } }
                     }
                 }
             }
@@ -456,7 +439,10 @@ internal fun TasksScreen(vm: AppViewModel) {
             taskGroup(vm, "Senere", later, lists, members, today)
             taskGroup(vm, "Ferdig", done.take(30), lists, members, today)
             if (t != null && all.isEmpty()) item { Text("Ingen oppgaver her ennå.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 18.dp)) }
+            // Prompt 22: synk med Home Assistant To-do (bare admin).
+            if (vm.userIsAdmin && vm.tasksHa != null) item { TasksHaSection(vm, lists) }
         }
+        TaskDock(title, { title = it }, focus, Modifier.align(Alignment.BottomCenter)) { if (title.isBlank()) runCatching { focus.requestFocus() } else add() }
     }
     vm.taskEditId?.let { id -> (t?.items ?: emptyList()).firstOrNull { it.id == id }?.let { TaskSheet(vm, it, lists, members, today) } }
     vm.shareListId?.let { id -> lists.firstOrNull { it.id == id }?.let { ShareListSheet(vm, it) } }
