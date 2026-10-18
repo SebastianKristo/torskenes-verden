@@ -63,6 +63,42 @@ body.nw-open { overflow: hidden; }
 .nw-add button { height: 46px; border-radius: 14px; border: 0; background: var(--lab); color: var(--acc-ink); cursor: pointer; font: 700 14px Manrope, system-ui, sans-serif; }
 .nw-add button:disabled { opacity: .6; cursor: progress; }
 
+
+/* Ikoner på fanene og ikonvelger (prompt 23). Ikonene er masker i currentColor, så de følger tekstfargen på fanen. */
+.nw-tabs button { display: flex; align-items: center; gap: 6px; }
+.nw-link { border: 0; background: transparent; color: var(--lab); cursor: pointer; font: 700 12.5px Manrope, system-ui, sans-serif; padding: 0; }
+.nw-link:disabled { opacity: .7; cursor: progress; }
+.nw-sw.ink { background: var(--line); }
+.nw-sw.ink.on { background: var(--ink); }
+.nw-icr { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 8px 14px; border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--ink); cursor: pointer; text-align: left; font-family: Manrope, system-ui, sans-serif; }
+.nw-icr b { display: block; font-size: 14.5px; font-weight: 600; }
+.nw-icb { flex: none; width: 34px; height: 34px; border-radius: 10px; background: var(--bg); color: var(--ink); display: grid; place-items: center; }
+.nw-icid { font: 500 11.5px 'IBM Plex Mono', ui-monospace, monospace; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nw-icsrc { flex: none; font-size: 12px; font-weight: 700; color: var(--mut); }
+.nw-icsrc.ai { color: var(--lab); }
+.nw-ipscrim { z-index: 12; }
+.nw-ip { width: 440px; max-width: 100%; height: 100%; background: var(--bg); color: var(--ink); display: flex; flex-direction: column; overflow: hidden; }
+.nw-iph { flex: none; padding: 16px 16px 10px; display: flex; flex-direction: column; gap: 10px; }
+.nw-ipt { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; text-align: center; }
+.nw-ipn { font: 500 22px Newsreader, Georgia, serif; }
+.nw-ipx { justify-self: end; width: 38px; height: 38px; border-radius: 19px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; font-size: 17px; }
+.nw-ipq { margin: 0; display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 6px 0 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); }
+.nw-ipq svg { flex: none; color: var(--mut); }
+.nw-ipq input { flex: 1; min-width: 0; height: 100%; border: 0; background: transparent; color: var(--ink); font: 500 15px Manrope, system-ui, sans-serif; outline: none; }
+.nw-ipq button { flex: none; height: 36px; padding: 0 14px; border-radius: 18px; border: 0; background: var(--ink); color: var(--bg); cursor: pointer; font: 700 13px Manrope, system-ui, sans-serif; }
+.nw-iplibs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.nw-iplibs::-webkit-scrollbar { display: none; }
+.nw-iplibs button { flex: none; height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; font: 600 12.5px Manrope, system-ui, sans-serif; white-space: nowrap; }
+.nw-iplibs button.on { border-color: var(--ink); background: var(--ink); color: var(--bg); }
+.nw-ipa { display: flex; gap: 8px; }
+.nw-ipai { flex: 1; height: 40px; border-radius: 20px; border: 0; background: var(--lab); color: var(--acc-ink); cursor: pointer; font: 700 13.5px Manrope, system-ui, sans-serif; }
+.nw-ipai:disabled { opacity: .7; cursor: progress; }
+.nw-ipno { flex: none; height: 40px; padding: 0 16px; border-radius: 20px; border: 1px solid var(--line); background: var(--card); color: var(--ink); cursor: pointer; font: 700 13.5px Manrope, system-ui, sans-serif; }
+.nw-ipg { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: 0 16px 24px; display: grid; grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); gap: 8px; align-content: start; }
+.nw-ipg button { aspect-ratio: 1; border-radius: 14px; border: 2px solid transparent; background: var(--card); color: var(--ink); cursor: pointer; display: grid; place-items: center; padding: 0; }
+.nw-ipg button.on { border-color: var(--lab); }
+.nw-ipg button:hover { border-color: var(--line); }
+
 @media (max-width: 720px) {
   .nw { padding: 0; }
   .nw-card { width: 100%; height: 100%; min-height: 0; border-radius: 0; }
@@ -73,4 +109,5 @@ body.nw-open { overflow: hidden; }
   .nw-leadt { font-size: 19px; }
   .nw-scrim { align-items: flex-end; }
   .nw-sheet { width: 100%; height: auto; max-height: 86%; border-radius: 28px 28px 0 0; }
+  .nw-ip { width: 100%; height: 86%; border-radius: 28px 28px 0 0; }
 }

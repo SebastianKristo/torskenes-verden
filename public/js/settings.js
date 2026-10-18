@@ -548,10 +548,18 @@ function sideHtml() {
     </div></aside>`;
 }
 
+const subScroll = new Map(); // fane → scrollTop i listen før en underside ble åpnet
 function render() {
   if (!TABS.some(([k]) => k === tab)) tab = ALIAS[tab] ?? TABS[0][0];
   const [, tName, tSub] = tabOf(tab);
-  const body = modal().querySelector('.set-body'), key = `${tab}|${sub}|${q ? 'q' : ''}`, keep = body?.dataset.key === key ? body.scrollTop : 0;
+  const body = modal().querySelector('.set-body'), key = `${tab}|${sub}|${q ? 'q' : ''}`;
+  // Prompt 23: åpnes en underside, huskes posisjonen i listen; går man tilbake, havner man der man var. Nye undersider åpner øverst.
+  let keep = body?.dataset.key === key ? body.scrollTop : 0;
+  if (body && body.dataset.key !== key) {
+    const [pt, ps] = body.dataset.key.split('|'), had = ps && ps !== 'null';
+    if (!had && sub && pt === tab) subScroll.set(tab, body.scrollTop);
+    else if (had && !sub && pt === tab && !q) { keep = subScroll.get(tab) ?? 0; subScroll.delete(tab); }
+  }
   let v;
   try { v = q.trim() && !sub ? searchView() : VIEWS[tab](); }
   catch (e) { console.error(e); v = { html: `<div class="err">Noe gikk galt på denne siden: ${esc(e.message)}. Prøv en annen side eller last inn på nytt.</div>` }; }
@@ -567,6 +575,7 @@ function render() {
         <h2 id="set-title">${esc(v.title ?? tName)}</h2><div class="set-ps">${esc(v.sub ?? tSub)}</div></header>
       ${content}</div></div></div></div>`;
   modal().querySelector('.set-body').scrollTop = keep;
+  if (keep) requestAnimationFrame(() => { const b = modal().querySelector('.set-body'); if (b && b.dataset.key === key && b.scrollTop < keep - 1) b.scrollTop = keep; });
   if (keepQ) { const nq = modal().querySelector('[data-setq]'); if (nq) { nq.replaceWith(keepQ); keepQ.focus({ preventScroll: true }); } }
   if (v.mount) { const slot = modal().querySelector('[data-mail-host],[data-mount-host]'); if (slot) v.mount(slot); }
   if (fk && !keepQ) {

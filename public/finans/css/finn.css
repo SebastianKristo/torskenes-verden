@@ -236,3 +236,57 @@ html[data-v3] .fh-t{font-family:var(--font-d);font-weight:var(--dw,500);font-siz
 /* Prompt 12: netto i år er grønn når den er positiv (som i Finn Mobil-designet). */
 .mf-sum .v.pos{color:#7BE3A0}
 .m.and .mf-sum .v.pos{color:var(--m3-7BE3A0,#7BE3A0)}
+
+/* ---------- Annonsen i FinansHub (prompt 23, FinansHub v3 Temaer → Finn-handler) ---------- */
+.fa-wrap{display:flex;flex-direction:column;gap:14px}
+.fa{background:var(--pop);border:1px solid var(--line);border-radius:var(--r,18px);overflow:hidden;color:var(--text);display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr))}
+.fa-car{position:relative;aspect-ratio:4/3;background:#111;min-width:0}
+.fa-track{position:absolute;inset:0;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain}
+.fa-track::-webkit-scrollbar{display:none}
+.fa-sl{flex:none;width:100%;height:100%;scroll-snap-align:center;display:grid;place-items:center;color:rgba(255,255,255,.4);font-size:13px;font-weight:600}
+.fa-sl img{width:100%;height:100%;object-fit:cover;display:block}
+.fa-sl span{font-size:44px;font-weight:700;letter-spacing:-.02em}
+.fa-nav{position:absolute;top:50%;transform:translateY(-50%);width:40px;height:40px;border-radius:20px;border:0;background:rgba(255,255,255,.9);color:#1c1b19;cursor:pointer;font-size:18px;display:grid;place-items:center}
+.fa-nav.l{left:12px}.fa-nav.r{right:12px}
+.fa-cnt{position:absolute;right:12px;bottom:12px;padding:3px 10px;border-radius:10px;background:rgba(0,0,0,.6);color:#fff;font-size:12px;font-weight:700}
+.fa-info{padding:24px 26px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.fa-ih{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.fa-ih h2{font-family:var(--font-d);font-weight:var(--dw,600);font-size:26px;line-height:1.15;margin:10px 0 0;text-wrap:pretty;color:var(--text)}
+.fa-st{font-size:11px;font-weight:600;color:var(--text2);background:var(--inner);padding:3px 8px;border-radius:6px}
+.fa-st.sold,.fa-st.ok{color:var(--pos);background:var(--pos-soft)}
+.fa-ib{flex:none;display:flex;gap:6px}
+.fa-x{flex:none;width:34px;height:34px;border-radius:17px;border:1px solid var(--line2);background:transparent;cursor:pointer;color:var(--muted);font-size:15px}
+.fa-x[aria-pressed=true]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.fa-pr{font-family:var(--mono);font-weight:500;font-size:34px;line-height:1.1}
+.fa-sub{font-size:13px;color:var(--muted)}.fa-rm{color:var(--neg,var(--warn))!important}
+.fa-spec{border-top:1px solid var(--line)}
+.fa-spec>div{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.fa-spec span{color:var(--muted)}.fa-spec b{font-weight:600;text-align:right}
+.fa-d{margin:0;font-size:14px;line-height:1.55;color:var(--text);text-wrap:pretty;white-space:pre-line}
+.fa-links{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:12.5px;color:var(--muted)}
+.fa-links a{font-size:13px;font-weight:600;color:var(--acc)}
+.fa-ref{border:0;background:transparent;padding:0;color:var(--text2);font:600 12.5px var(--font-ui,inherit);cursor:pointer}
+.fa-ref:disabled{opacity:.6;cursor:progress}
+.fa-cols{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));border-top:1px solid var(--line)}
+.fa-col{padding:20px 26px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.fa-mails{border-right:1px solid var(--line);gap:6px}
+.fa-ch{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.fa-ch>span{font-family:var(--font-d);font-weight:var(--dw,600);font-size:18px}
+.fa-ch small{font-size:12px;color:var(--muted)}.fa-ch a{font-size:12px;color:var(--muted)}
+.fa-mail{display:flex;gap:12px;align-items:flex-start;padding:11px 0;border-top:1px solid var(--line);color:var(--text);cursor:pointer;text-align:left}
+.fa-mail:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.fa-mi{flex:none;width:30px;height:30px;border-radius:8px;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:800}
+.fa-mt{flex:1;min-width:0}
+.fa-mh{display:flex;justify-content:space-between;gap:8px}.fa-mh b{font-size:13.5px;font-weight:600;min-width:0;overflow-wrap:anywhere}.fa-mh span{flex:none;font-size:11.5px;color:var(--muted)}
+.fa-mf{display:block;font-size:12px;color:var(--muted)}
+.fa-mb{display:block;margin-top:6px;font-size:13.5px;line-height:1.5;white-space:pre-line;overflow-wrap:anywhere}
+.fa-rmm{margin-top:8px;border:0;background:transparent;padding:0;color:var(--muted);font-size:12px;text-decoration:underline;cursor:pointer}
+.fa-msg{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.fa-msg span{max-width:80%;padding:9px 13px;border-radius:16px 16px 16px 5px;background:var(--inner);color:var(--text);font-size:13.5px;line-height:1.4;overflow-wrap:anywhere}
+.fa-msg.me{align-items:flex-end}.fa-msg.me span{border-radius:16px 16px 5px 16px;background:var(--text);color:var(--bg)}
+.fa-msg small{font-size:10.5px;color:var(--muted)}
+.fa-send{margin:6px 0 0;display:flex;gap:8px}
+.fa-send input{flex:1;min-width:0;height:42px;padding:0 14px;border-radius:21px;border:1px solid var(--line2);background:var(--bg);color:var(--text);font-size:13.5px;outline:none;font-family:inherit}
+.fa-send button{flex:none;padding:0 18px;height:42px;border-radius:21px;border:0;background:var(--acc);color:var(--acc-ink);font-weight:600;cursor:pointer;font-family:inherit}
+.fa-empty{font-size:12.5px;color:var(--muted);line-height:1.45}
+@media (max-width:760px){.fa-mails{border-right:0;border-bottom:1px solid var(--line)}.fa-info,.fa-col{padding:18px}.fa-pr{font-size:28px}}

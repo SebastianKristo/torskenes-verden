@@ -21,10 +21,12 @@ import * as weatherPage from './weather-page.js';
 import './finpreload.js';
 import { logout, noteUser } from './usercache.js';
 import { loadAppIdentity, appName } from './appicon.js';
+import { scrollMemory } from './scrollmem.js';
 import { loadHlTheme, applyHlTheme, is2c, setHlTheme, pwHeader, paintPhoto, bindPhoto } from './hltheme.js';
 
 const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, vaer: weatherPage.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
 const view = document.getElementById('view');
+const scrollMem = scrollMemory();
 let route = null, wasMobile = isMobile();
 
 function current() {
@@ -37,7 +39,6 @@ function current() {
 
 function renderRoute() {
   const next = current();
-  if (next !== route) window.scrollTo(0, 0);
   route = next;
   // Bakgrunnsbilde og «Siste nytt» vises bare på dashboardet.
   document.body.classList.toggle('not-dash', route !== 'dash');
@@ -58,6 +59,8 @@ function renderRoute() {
   const navKey = isMobile() && ['rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'domener'].includes(route) ? 'mer' : route;
   document.querySelectorAll('[data-r]').forEach((a) => { if (a.dataset.r === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   setTitle();
+  // Prompt 23: tilbake gir samme scrollposisjon som før, nye sider åpner øverst.
+  scrollMem.enter(route);
 }
 
 // Fanetittelen: «Side · Appnavn» (appnavnet fra Innstillinger → App, standard «Homelab»).

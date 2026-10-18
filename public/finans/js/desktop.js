@@ -1,4 +1,5 @@
 // FinansHub desktop. Alle sider tegnes fra S (core.js); hendelser fanges med delegering på roten.
+import { scrollMemory } from '/assets/js/scrollmem.js';
 import {
   S, api, esc, n0, n2, sgn, neg, neg0, k, dd, dLong, today, monthName, cap, shiftMonth, ini, rgba, greet, pctChange, parseAmount,
   render, toast, loadBoot, loadSummary, loadTx, loadReceipts, loadRecurring, loadReport, loadAi, catById, cats, accs, uploadReceipt,
@@ -332,7 +333,7 @@ function receipts() {
   const qHtml = queue.map((r) => { const [label, bg, fg] = STATUS[r.status]; return `<button class="rq${r.id === u.selRc ? ' sel' : ''}" data-open-rc="${r.id}">${paper(r)}<span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><b class="ell" style="font-weight:600">${esc(r.merchant ?? 'Ny kvittering')}</b><span class="mono">${r.total != null ? n2(r.total) + ' kr' : ''}</span></span><span class="note" style="display:block;font-size:12px">${dd(r.date)} · ${esc(r.provider ?? aiShort)}</span>${aiLine(r.aiShort, 'd-ai ell')}${r.canReanalyze ? `<span class="acc-l" role="button" tabindex="0" style="display:inline-block;margin-top:4px;font-size:12px;font-weight:600;color:var(--blue-l)" data-reanalyze="${esc(r.id)}">✦ Analyser på nytt med Gemini</span>` : ''}</span><span class="status" style="background:${bg};color:${fg}">${label}</span></button>`; }).join('');
   let panel;
   if (!R) panel = '<div class="empty" style="padding:80px 20px">Velg en kvittering i køen, eller last opp en ny.</div>';
-  else if (R.status === 'pending' || R.status === 'processing') panel = `<div style="padding:80px 20px;display:flex;flex-direction:column;align-items:center;gap:14px" class="sub"><span class="spin"></span>Leser kvitteringen med ${aiShort} …<button class="btn sm ghost" data-act="rc-manual">Fyll ut manuelt i stedet</button></div>`;
+  else if (R.status === 'pending' || R.status === 'processing') panel = `<div style="padding:80px 20px;display:flex;flex-direction:column;align-items:center;gap:14px" class="sub"><span class="spin"></span>${R.aiShort ? esc(R.aiShort) : `Leser kvitteringen med ${aiShort} …`}<button class="btn sm ghost" data-act="rc-manual">Fyll ut manuelt i stedet</button></div>`;
   else panel = confirmPanel(R);
   return `<div class="row-flex">
     <div style="flex:1 1 340px;min-width:0;display:flex;flex-direction:column;gap:16px">
@@ -482,6 +483,23 @@ function reports() {
 
 // Ollama-modellene på maskinen: installerte (velg til kvitteringer, tekst og søk) og anbefalte for Mac mini M4 16 GB,
 // med «Installer» som laster ned i bakgrunnen og viser fremdrift.
+// Tidsgrenser for AI-motorene (prompt 23, Innstillinger → AI og tolkning → TIDSGRENSER). Lagres som settings.aiTimeouts.
+const AI_TO_DEF = { gemini: 20, groq: 15, roboflow: 15, ollama: 45, retries: 0, onTimeout: 'next' };
+const AI_TO_STEPS = [5, 10, 15, 20, 30, 45, 60, 90, 120];
+const AI_TO_THEN = [['next', 'Prøv neste motor'], ['ocr', 'Bruk lokal OCR'], ['queue', 'Legg i kø og prøv senere']];
+const aiTo = (st) => ({ ...AI_TO_DEF, ...(st.aiTimeouts ?? {}) });
+function timeoutsBox(st) {
+  const to = aiTo(st);
+  const steps = (v) => (AI_TO_STEPS.includes(v) ? AI_TO_STEPS : [...AI_TO_STEPS, v].sort((a, b) => a - b));
+  const eng = [['gemini', 'Gemini', 'Les kvitteringer'], ['groq', 'Groq', 'AI-søk og kategorier'], ['roboflow', 'Roboflow', 'Strekkoder'], ['ollama', 'Ollama (lokal)', 'Reserve på hjemmeserveren']]
+    .map(([k2, n, sd]) => `<label class="f">${n} · <span class="note" style="font-size:12px">${sd}</span><select class="inp" data-ai-to="${k2}">${steps(to[k2]).map((v) => opt(v, `${v} s`, to[k2])).join('')}</select></label>`).join('');
+  return `<div class="box" style="flex-direction:column;align-items:stretch;gap:10px;padding:16px"><div><b style="font-weight:600">Tidsgrenser</b><div class="note" style="font-size:12.5px">Hvor lenge hver motor får før den regnes som tidsavbrutt. Køen viser hvilken motor som ikke svarte.</div></div>
+    <div class="form-grid">${eng}
+      <label class="f">Nye forsøk · <span class="note" style="font-size:12px">Før den gir opp en motor (venter 1, 2 og 4 s)</span><select class="inp" data-ai-to="retries">${[0, 1, 2, 3].map((v) => opt(v, v === 0 ? 'Ingen' : v === 1 ? '1 gang' : `${v} ganger`, to.retries)).join('')}</select></label>
+      <label class="f">Ved tidsavbrudd · <span class="note" style="font-size:12px">Når grensen er nådd</span><select class="inp" data-ai-to="onTimeout">${AI_TO_THEN.map(([v, l]) => opt(v, l, to.onTimeout)).join('')}</select></label></div>
+    ${u.msg.aiTo ? `<span class="err-msg" style="font-size:12.5px">${esc(u.msg.aiTo)}</span>` : ''}</div>`;
+}
+
 function ollamaBox(st) {
   if (S.olm === undefined) { S.olm = null; loadOllamaModels(); }
   const o = S.olm;
@@ -640,6 +658,7 @@ function settingsPage() {
         <label class="f">Roboflow-modell for strekkoder (valgfri)<input class="inp mono" style="font-size:13px" data-set="roboflowBarcodeModel" value="${esc(st.roboflowBarcodeModel ?? '')}" placeholder="barcodes/2"></label></div>
       <div class="box" style="flex-direction:column;align-items:stretch;gap:10px;padding:16px"><div><b style="font-weight:600">Hvem gjør hva</b><div class="note" style="font-size:12.5px">Motor per oppgave. Feiler den, prøves neste motor automatisk når reserve er på.</div></div>
         <div class="form-grid">${(ai?.tasks ?? [{ id: 'receipts', name: 'Les kvitteringer', engine: 'gemini' }, { id: 'search', name: 'AI-søk', engine: 'groq' }, { id: 'categorize', name: 'Kategorisering', engine: 'groq' }, { id: 'barcode', name: 'Strekkoder', engine: 'roboflow' }]).map((tk) => `<label class="f">${esc(tk.name)}<select class="inp" data-ai-task="${tk.id}">${(tk.id === 'barcode' ? [['roboflow', 'Roboflow + zbar'], ['zbar', 'Bare zbar (lokalt)']] : [['gemini', 'Gemini'], ['groq', 'Groq'], ['ollama', 'Ollama (lokalt)']]).map(([v, l]) => opt(v, l, st.aiTasks?.[tk.id] ?? tk.engine)).join('')}</select></label>`).join('')}</div></div>
+      ${timeoutsBox(st)}
       <div class="box" style="flex-direction:column;align-items:stretch;gap:8px;padding:16px"><div><b style="font-weight:600">Lokal OCR-reserve</b><div class="note" style="font-size:12.5px">Tesseract leser kvitteringen i containeren når AI feiler. Resultatet havner alltid til gjennomgang. ${ai?.ocr ? (ai.ocr.tesseract ? `Installert: ${esc(ai.ocr.tesseract)}` : 'Tesseract er ikke installert på serveren (bruk Docker-imaget).') : ''}</div></div>
         <button class="tog-row" data-act="ocr-toggle"><span class="grow"><b style="font-weight:500">Bruk lokal OCR når AI feiler</b></span><span class="toggle" role="switch" aria-checked="${!!(ai?.ocr?.enabled ?? st.ocrFallback ?? true)}"></span></button>
         <button class="tog-row" data-tog="ocrLowConf"><span class="grow"><b style="font-weight:500">Bruk også ved lav AI-sikkerhet</b><br><span class="note" style="font-size:12.5px">Sammenligner AI-svaret med lokal OCR når sikkerheten er under ${st.minConf} %</span></span><span class="toggle" role="switch" aria-checked="${!!st.ocrLowConf}"></span></button></div>
@@ -817,6 +836,7 @@ function takeJump() {
   jumpChecked = true;
   try { const j = sessionStorage.getItem('fh_jump') === '1'; sessionStorage.removeItem('fh_jump'); return j; } catch { return false; }
 }
+let scrollMem = null; // lages først når desktop-visningen er i bruk
 export function route() {
   if (takeJump() && allowed('inn') && !S.boot?.restricted) { u.setTab = 'look'; if (!location.hash.startsWith('#/inn')) { location.replace('#/inn'); } }
   let p = location.hash.replace(/^#\/?/, '').split('/')[0];
@@ -826,9 +846,11 @@ export function route() {
   if (p === 'imp') { u.setTab = 'imp'; location.replace('#/inn'); return; }
   const next = PAGE_FN[p] && allowed(p) ? p : S.boot?.restricted ? 'dir' : 'ov';
   const entered = next !== u.page;
-  if (entered) { u.page = next; u.msg = {}; window.scrollTo(0, 0); }
+  if (entered) { u.page = next; u.msg = {}; }
   if (next !== 'inn') { try { sessionStorage.removeItem('fh_jump'); } catch {} } // hoppet gjelder bare rett etter byttet
   draw();
+  // Prompt 23: tilbake (popstate/hash) gir samme scrollposisjon som før, nye sider åpner øverst.
+  (scrollMem ??= scrollMemory()).enter(next);
   if (entered && next === 'ai') document.querySelector('[data-ai-page-input]')?.focus();
   load();
 }
@@ -1056,6 +1078,14 @@ export function bind() {
     }
     if (t.dataset.rcField) { const f = t.dataset.rcField; return patchRc(u.selRc, { [f]: f === 'total' ? parseAmount(t.value) : f === 'accountId' ? (+t.value || null) : t.value }); }
     if (t.dataset.budget) { await api('/budgets', { method: 'PUT', json: { categoryId: +t.dataset.budget, amount: parseAmount(t.value) ?? 0 } }); await loadSummary(); return render(); }
+    if (t.dataset.aiTo) {
+      const key = t.dataset.aiTo, v = key === 'onTimeout' ? t.value : +t.value, next = { ...aiTo(S.boot.settings), [key]: v };
+      S.boot.settings = await api('/settings', { method: 'PUT', json: { aiTimeouts: next } });
+      // Eldre server uten aiTimeouts: behold valget i visningen og si fra at det ikke er lagret.
+      u.msg.aiTo = S.boot.settings.aiTimeouts ? '' : 'Serveren støtter ikke tidsgrenser ennå. Valget er ikke lagret.';
+      if (!S.boot.settings.aiTimeouts) S.boot.settings.aiTimeouts = next;
+      return render();
+    }
     if (t.dataset.aiTask) { await saveSet({ aiTasks: { ...(S.boot.settings.aiTasks ?? {}), [t.dataset.aiTask]: t.value } }); await loadAi(); return render(); }
     if (t.dataset.set) {
       const key = t.dataset.set; let v = t.value;

@@ -2,6 +2,7 @@
 // både i Homelab v2 og i «Vindu og papir» (2c): import('/assets/js/news.js').then((m) => m.openNews()).
 // Kilder og ✦ AI-valg lagres på serveren (/api/rss), så de er de samme i Papir-appen og PWA-en.
 import { api, esc, backdropClick } from './util.js';
+import { ICON_LIBS, iconHtml, searchIcons, suggestIcon, keywordFor } from './icons.js';
 
 const CSS_ID = 'news-css';
 const ensureCss = () => {
@@ -16,6 +17,11 @@ const ensureCss = () => {
 };
 
 const CAT_NAME = { auto: 'Auto', siste: 'Siste', norge: 'Norge', verden: 'Verden', okonomi: 'Økonomi', sport: 'Sport', teknologi: 'Teknologi', kultur: 'Kultur' };
+// Standardikonene på fanene (Nyhetsleser.dc.html). Serveren sender de samme som iconDefaults.
+const IC_DEF = { siste: 'lucide:zap', norge: 'lucide:mountain-snow', verden: 'lucide:globe', okonomi: 'lucide:trending-up', sport: 'lucide:trophy', teknologi: 'lucide:cpu', kultur: 'lucide:drama' };
+const IC_LOCAL = 'hl_rss_ic'; // bare reserve når serveren ikke lagrer ikonene ennå
+const readLocal = () => { try { return JSON.parse(localStorage.getItem(IC_LOCAL) || 'null'); } catch { return null; } };
+const writeLocal = (v) => { try { localStorage.setItem(IC_LOCAL, JSON.stringify(v)); } catch { /* privat modus */ } };
 const CYCLE = ['auto', 'norge', 'verden', 'okonomi', 'sport', 'teknologi', 'kultur'];
 const hm = (iso) => (iso ? new Date(iso).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }) : '');
 const when = (iso) => {
@@ -38,7 +44,7 @@ export function openNews(opts = {}) {
   const root = document.documentElement;
   const paper = root.dataset.hlTheme === '2c' || document.body.classList.contains('theme-2c');
   const theme = opts.theme ?? (paper ? (matchMedia('(prefers-color-scheme: dark)').matches && root.dataset.paperMode !== 'lys' ? 'paperDark' : 'paper') : 'web');
-  const st = { cat: opts.cat ?? 'siste', data: null, error: '', set: false, nf: '', busy: false, adding: false, addError: '' };
+  const st = { cat: opts.cat ?? 'siste', data: null, error: '', set: false, nf: '', busy: false, adding: false, addError: '', ip: null, icAll: false, icErr: '' };
 
   const el = document.createElement('div');
   el.className = `nw nw-${theme}`;
@@ -56,7 +62,7 @@ export function openNews(opts = {}) {
     open = null;
     opts.onClose?.();
   };
-  const onKey = (e) => { if (e.key === 'Escape') { if (st.set) { st.set = false; render(); } else close(); } };
+  const onKey = (e) => { if (e.key === 'Escape') { if (st.ip) { st.ip = null; render(); } else if (st.set) { st.set = false; render(); } else close(); } };
   document.addEventListener('keydown', onKey);
 
   // Bare svaret på siste forespørsel brukes, så et tregt førstekall ikke overskriver en kategori som er valgt etterpå.
@@ -70,6 +76,43 @@ export function openNews(opts = {}) {
     st.error = error;
     if (data) st.data = data;
     render();
+  }
+
+  /* ---------- Ikoner på fanene (prompt 23) ---------- */
+  const icState = () => {
+    const s = st.data?.settings ?? {};
+    const srv = 'icOn' in s, loc = srv ? null : readLocal();
+    return { ic: (srv ? s.ic : loc?.ic) ?? {}, icSrc: (srv ? s.icSrc : loc?.icSrc) ?? {}, icOn: (srv ? s.icOn : loc?.icOn) !== false };
+  };
+  const icOf = (id) => { const x = icState(); return id in x.ic ? x.ic[id] : (st.data?.iconDefaults ?? IC_DEF)[id] ?? ''; };
+  const cats = () => st.data?.categories ?? Object.keys(CAT_NAME).slice(1).map((id) => ({ id, name: CAT_NAME[id] }));
+  async function saveIcons(patch) {
+    const next = { ...icState(), ...patch };
+    st.data = st.data ?? { settings: {} };
+    st.data.settings = { ...(st.data.settings ?? {}), ...next };
+    render();
+    try {
+      const r = await api('/rss/settings', { method: 'PUT', json: patch });
+      if (r && 'icOn' in r) st.data.settings = { ...st.data.settings, ...r };
+      else { writeLocal(next); delete st.data.settings.icOn; }
+      st.icErr = '';
+    } catch (er) { st.icErr = er.message; }
+    render();
+  }
+  const setIcon = (id, icon, src) => { const x = icState(); return saveIcons({ ic: { ...x.ic, [id]: icon }, icSrc: { ...x.icSrc, [id]: src } }); };
+  async function ipSearch() {
+    const ip = st.ip;
+    if (!ip || !ip.q.trim()) return;
+    const n = (ip.seq = (ip.seq ?? 0) + 1);
+    ip.busy = true; ip.err = ''; render();
+    try { const r = await searchIcons(ip.q, ip.lib, 96); if (st.ip !== ip || n !== ip.seq) return; ip.res = r.icons; ip.total = r.total; }
+    catch { if (st.ip !== ip || n !== ip.seq) return; ip.res = []; ip.err = 'Fikk ikke kontakt med ikonbiblioteket'; }
+    ip.busy = false; render();
+  }
+  async function aiPick(id, lib) {
+    const icon = await suggestIcon(CAT_NAME[id] ?? id, lib).catch(() => null);
+    if (icon) await setIcon(id, icon, 'ai');
+    return icon;
   }
 
   const item = (x, showCat) => `<a class="nw-it" href="${esc(x.url ?? '#')}" target="_blank" rel="noopener noreferrer">
@@ -100,6 +143,7 @@ export function openNews(opts = {}) {
     return `<div class="nw-scrim" data-act="set-close"><div class="nw-sheet" data-stop>
       <div class="nw-sh"><div><div class="nw-lab">NYHETSLESER</div><div class="nw-st">Kilder og AI</div></div><button class="nw-done" data-act="set-close">Ferdig</button></div>
       <div class="nw-box">${tog('aiSummary', '✦ AI-sammendrag', 'Lager en kort ingress over de viktigste sakene øverst.', 0)}${tog('aiCategorize', '✦ AI-kategorisering', 'Setter kategori per sak når kilden står på Auto.', 1)}</div>
+      ${iconSection()}
       <div class="nw-row"><span class="nw-lab">ADRESSER · ${(d.feeds ?? []).length}</span><span class="nw-hint">Trykk på kategorien for å endre</span></div>
       <div class="nw-box">${(d.feeds ?? []).map((f, i) => `<div class="nw-feed" style="border-top:${i ? '1px solid var(--line)' : '0'}">
         <span class="nw-ini" style="background:${esc(f.color)}">${esc(f.name.slice(0, 2).toUpperCase())}</span>
@@ -112,26 +156,73 @@ export function openNews(opts = {}) {
     </div></div>`;
   }
 
+  function iconSection() {
+    const x = icState();
+    const rows = cats().map((c) => {
+      const id = icOf(c.id), src = !(c.id in x.ic) ? 'Standard' : x.icSrc[c.id] === 'ai' ? '✦ AI' : x.ic[c.id] ? 'Valgt' : 'Ingen';
+      return `<button class="nw-icr" data-ic-row="${c.id}"><span class="nw-icb">${iconHtml(id, 20)}</span>
+        <span class="nw-tx"><b>${esc(c.name)}</b><span class="nw-icid">${esc(id || 'ingen ikon')}</span></span>
+        <span class="nw-icsrc${src === '✦ AI' ? ' ai' : ''}">${src}</span><span class="nw-ch" aria-hidden="true">›</span></button>`;
+    }).join('');
+    return `<div class="nw-row"><span class="nw-lab">IKONER PÅ FANENE</span><button class="nw-link" data-act="ic-ai-all" ${st.icAll ? 'disabled' : ''}>${st.icAll ? '✦ Velger …' : '✦ La AI velge alle'}</button></div>
+      <div class="nw-box"><button class="nw-tog" data-act="ic-tgl" aria-pressed="${x.icOn}"><span class="nw-tx"><b>Vis ikoner</b><span>Ved siden av navnet på hver fane</span></span><span class="nw-sw ink ${x.icOn ? 'on' : ''}"><span></span></span></button>${rows}</div>
+      ${st.icErr ? `<span class="nw-hint err">${esc(st.icErr)}</span>` : ''}`;
+  }
+
+  function picker() {
+    const ip = st.ip;
+    if (!ip) return '';
+    const cur = icOf(ip.cat);
+    const status = ip.busy ? 'Søker i over 200 ikonbibliotek …' : ip.err ? ip.err : ip.res ? (ip.res.length ? `${ip.res.length} av ${ip.total || ip.res.length} treff · Iconify (Lucide, Material, Phosphor, Tabler, Font Awesome …)` : 'Ingen treff. Prøv et annet engelsk ord.') : '';
+    return `<div class="nw-scrim nw-ipscrim" data-act="ip-close"><div class="nw-ip" data-stop role="dialog" aria-label="Ikon for ${esc(CAT_NAME[ip.cat] ?? ip.cat)}">
+      <div class="nw-iph">
+        <div class="nw-ipt"><span></span><div><div class="nw-lab">IKON FOR</div><div class="nw-ipn">${esc(CAT_NAME[ip.cat] ?? ip.cat)}</div></div><button class="nw-ipx" data-act="ip-close" aria-label="Lukk">×</button></div>
+        <form class="nw-ipq" data-ip-form><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+          <input name="ipq" value="${esc(ip.q)}" placeholder="Søk etter ikon (engelsk), f.eks. football" autocomplete="off" aria-label="Søk etter ikon"><button type="submit">Søk</button></form>
+        <div class="nw-iplibs">${ICON_LIBS.map(([k, n]) => `<button data-ip-lib="${k}" class="${ip.lib === k ? 'on' : ''}" aria-pressed="${ip.lib === k}">${esc(n)}</button>`).join('')}</div>
+        <div class="nw-ipa"><button class="nw-ipai" data-act="ip-ai" ${ip.ai ? 'disabled' : ''}>${ip.ai ? '✦ Velger …' : '✦ La AI velge'}</button><button class="nw-ipno" data-act="ip-none">Ingen ikon</button></div>
+        <span class="nw-hint">${esc(status)}</span></div>
+      <div class="nw-ipg">${(ip.res ?? []).map((id) => `<button data-ip-pick="${esc(id)}" title="${esc(id)}" class="${id === cur ? 'on' : ''}">${iconHtml(id, 26)}</button>`).join('')}</div>
+    </div></div>`;
+  }
+
   function render() {
     const d = st.data;
-    const keepScroll = el.querySelector('.nw-body')?.scrollTop ?? 0;
+    const keepScroll = el.querySelector('.nw-body')?.scrollTop ?? 0, keepSheet = el.querySelector('.nw-sheet')?.scrollTop ?? 0, keepIp = el.querySelector('.nw-ipg')?.scrollTop ?? 0;
+    const focus = document.activeElement?.name === 'ipq' ? document.activeElement.selectionStart : null;
     el.innerHTML = `<div class="nw-card">
       <div class="nw-head"><div class="nw-hl">
         <button class="nw-back" data-act="close">${opts.backLabel ?? '‹ Tilbake'}</button>
         <div><div class="nw-lab">NYHETSLESER · ${d?.feeds?.length ?? 0} KILDER${d?.updatedAt ? ` · OPPDATERT ${hm(d.updatedAt)}` : ''}</div><h2 class="nw-title">Siste nytt</h2></div></div>
         <div class="nw-hr"><button class="nw-ic" data-act="refresh" aria-label="Oppdater" title="Oppdater" ${st.busy ? 'disabled' : ''}>↻</button><button class="nw-ic" data-act="set-open" aria-label="Kilder og AI" title="Kilder og AI">${gear}</button></div></div>
-      <nav class="nw-tabs">${(d?.categories ?? Object.keys(CAT_NAME).slice(1).map((id) => ({ id, name: CAT_NAME[id] }))).map((c) => `<button data-cat="${c.id}" class="${c.id === st.cat ? 'on' : ''}">${esc(c.name)}</button>`).join('')}</nav>
+      <nav class="nw-tabs">${cats().map((c) => `<button data-cat="${c.id}" class="${c.id === st.cat ? 'on' : ''}">${icState().icOn ? iconHtml(icOf(c.id), 16) : ''}${esc(c.name)}</button>`).join('')}</nav>
       <div class="nw-body">${body()}</div>
-      ${st.set ? sheet() : ''}</div>`;
+      ${st.set ? sheet() : ''}${picker()}</div>`;
     const b = el.querySelector('.nw-body');
     if (b) b.scrollTop = keepScroll;
+    const sh = el.querySelector('.nw-sheet'); if (sh) sh.scrollTop = keepSheet;
+    const g = el.querySelector('.nw-ipg'); if (g) g.scrollTop = keepIp;
+    if (focus != null) { const q = el.querySelector('[name=ipq]'); q?.focus(); q?.setSelectionRange(focus, focus); }
   }
 
   el.addEventListener('click', async (e) => {
-    const t = e.target.closest('[data-act],[data-cat],[data-tog],[data-cyc],[data-del]');
+    const t = e.target.closest('[data-act],[data-cat],[data-tog],[data-cyc],[data-del],[data-ic-row],[data-ip-lib],[data-ip-pick]');
     if (!t) { if (backdropClick(e, el)) close(); return; }
     if (t.dataset.act === 'set-close' && e.target.closest('[data-stop]') && !e.target.closest('.nw-done')) return;
+    if (t.dataset.act === 'ip-close' && e.target.closest('.nw-ip') && !e.target.closest('.nw-ipx')) return;
     const act = t.dataset.act;
+    if (act === 'ip-close') { st.ip = null; return render(); }
+    if (act === 'ic-tgl') return saveIcons({ icOn: !icState().icOn });
+    if (act === 'ic-ai-all') {
+      st.icAll = true; render();
+      for (const c of cats()) await aiPick(c.id, '');
+      st.icAll = false; return render();
+    }
+    if (t.dataset.icRow) { const id = t.dataset.icRow; st.ip = { cat: id, q: keywordFor(CAT_NAME[id] ?? id), lib: st.ip?.lib ?? '', res: null, total: 0, busy: false, err: '', ai: false }; render(); return ipSearch(); }
+    if (t.dataset.ipLib !== undefined) { st.ip.lib = t.dataset.ipLib; return ipSearch(); }
+    if (t.dataset.ipPick) { const id = st.ip.cat; st.ip = null; return setIcon(id, t.dataset.ipPick, 'pick'); }
+    if (act === 'ip-ai') { const ip = st.ip; ip.ai = true; render(); const r = await aiPick(ip.cat, ip.lib); if (st.ip === ip) { if (r) st.ip = null; else { ip.ai = false; ip.err = 'Fant ikke noe ikon. Søk selv.'; } } return render(); }
+    if (act === 'ip-none') { const id = st.ip.cat; st.ip = null; return setIcon(id, '', 'pick'); }
     if (act === 'close') return close();
     if (act === 'retry') return load();
     if (act === 'set-open') { st.set = true; return render(); }
@@ -158,8 +249,9 @@ export function openNews(opts = {}) {
       render(); return load();
     }
   });
-  el.addEventListener('input', (e) => { if (e.target.name === 'url') st.nf = e.target.value; });
+  el.addEventListener('input', (e) => { if (e.target.name === 'url') st.nf = e.target.value; if (e.target.name === 'ipq' && st.ip) st.ip.q = e.target.value; });
   el.addEventListener('submit', async (e) => {
+    if (e.target.matches('[data-ip-form]')) { e.preventDefault(); return ipSearch(); }
     if (!e.target.matches('[data-add]')) return;
     e.preventDefault();
     const url = st.nf.trim();

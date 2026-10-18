@@ -91,16 +91,6 @@ function rcCard(d) {
     <label class="fd-up">↑ Legg ved kvittering<input type="file" multiple accept="image/*,application/pdf,.eml,message/rfc822" data-fd-file="receipt"></label></div>`;
 }
 
-function mailCard(d) {
-  const note = S.finn?.imap?.configured ? 'Kobles automatisk fra Proton Mail' : 'Sett opp Proton Mail for automatisk kobling';
-  const list = [...d.emails].reverse();
-  return `<div class="fd-card"><div class="h"><b>E-poster i handelen</b><span class="fd-acc">${list.length ? `${list.length} · ` : ''}${note}</span></div>
-    <div class="fd-mails">${list.map((e) => { const open = u.finnMail === e.id; return `<div class="fd-mail"><button data-fd-mail="${e.id}" aria-expanded="${open}"><span class="dt">${dd(e.date)}</span><span class="s"><span>${esc(e.subject || '(uten emne)')}</span><small>${esc(e.from || '')}</small></span><span class="note">${open ? '⌃' : '⌄'}</span></button>
-      ${open ? `<div class="body">${esc(e.body || e.snippet || '')}<br><button data-fd-rmmail="${e.id}">Fjern fra handelen</button></div>` : ''}</div>`; }).join('')
-      || '<span class="fd-note" style="padding:6px 0">Ingen e-poster koblet til ennå. E-poster fra FINN, Posten/Bring, Tillit eller motparten med Finn-koden eller varenavnet kobles automatisk.</span>'}</div>
-    <label class="fd-up">↑ Legg ved e-post (.eml)<input type="file" multiple accept=".eml,message/rfc822" data-fd-file="email"></label></div>`;
-}
-
 function photoCard(d) {
   return `<div class="fd-card"><div class="h"><b>Bilder</b>${d.photos.length ? `<span class="note" style="font-size:12px">${d.photos.length} egne</span>` : ''}</div>
     ${d.photos.length ? `<div class="fd-photos">${d.photos.map((g) => `<div><a href="${esc(g.url)}" target="_blank" rel="noopener"><img src="${esc(g.thumb)}" alt="${esc(g.name)}" loading="lazy"></a><button data-fd-rmfile="${g.id}" aria-label="Fjern bilde">×</button></div>`).join('')}</div>`
@@ -109,23 +99,100 @@ function photoCard(d) {
 }
 
 function editForm(d) {
-  if (!u.finnEdit) return '';
   return `<form class="fh-edit" data-fd-form="edit"><label class="fh-fl">Tittel<input class="inp" name="item" value="${esc(d.item)}"></label><label class="fh-fl">Pris (kr)<input class="inp mono" name="amount" value="${esc(String(d.amount).replace('.', ','))}" inputmode="decimal"></label>
     <label class="fh-fl">${d.role === 'sold' ? 'Kjøper' : 'Selger'}<input class="inp" name="counterpart" value="${esc(d.counterpart ?? '')}"></label><label class="fh-fl">Dato<input class="inp" type="date" name="date" value="${esc(d.date)}"></label>
-    <div class="fh-eb"><button class="btn pri sm">Lagre</button><button type="button" class="btn sm ghost" data-fd-edit>Avbryt</button><button type="button" class="btn sm fh-delb" data-fd-del="${d.id}">Slett handelen</button></div></form>`;
+    <div class="fh-eb"><button class="btn pri sm">Lagre</button><button type="button" class="btn sm fh-delb" data-fd-del="${d.id}">Slett handelen</button></div></form>`;
 }
+// Annonsen i FinansHub (prompt 23, FinansHub v3 Temaer → Finn-handler): karusell med ‹ › til venstre, annonseinfo til høyre,
+// og E-poster og Meldinger i to kolonner under. Annonsen hentes fra den lokale kopien (/finn/:id/ad), så den vises også når
+// den er fjernet fra finn.no. Svarer serveren 404 (eldre versjon), brukes annonsedataene i selve handelen.
+const FA_TINTS = ['#3B2E22', '#22362C', '#2C2C33', '#1E2A3F'];
+const mailColor = (from) => (/finn/i.test(from) ? '#0063fb' : /posten|bring/i.test(from) ? '#e32d22' : /tillit/i.test(from) ? '#2f7a4f' : 'var(--muted)');
+const mailIni = (from) => (/finn/i.test(from) ? 'F' : /posten/i.test(from) ? 'P' : /bring/i.test(from) ? 'B' : String(from || '?').replace(/["'<]/g, '').trim().slice(0, 1).toUpperCase() || '?');
+const mailFrom = (from) => (/finn/i.test(from) ? 'FINN' : /posten/i.test(from) ? 'Posten' : /bring/i.test(from) ? 'Bring' : String(from || '').replace(/<.*>/, '').replace(/"/g, '').trim() || String(from || ''));
+const tm = (iso) => { if (!iso) return ''; const s = String(iso); if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return dd(s); const t = new Date(s); return Number.isNaN(+t) ? s : `${String(t.getDate()).padStart(2, '0')}.${String(t.getMonth() + 1).padStart(2, '0')} ${t.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}`; };
+const optional = (p) => api(p).catch((e) => (e.status === 404 || e.status === 405 || e.status === 501 ? null : Promise.reject(e)));
+
+export async function loadAd(id) {
+  const [ad, emails, msgs] = await Promise.all([optional(`/finn/${id}/ad`), optional(`/finn/${id}/emails`), optional(`/finn/${id}/messages`)].map((p) => p.catch(() => null)));
+  if (u.finnSel !== id) return;
+  const m = Array.isArray(msgs) ? { messages: msgs } : msgs ?? {};
+  u.finnAd = { id, ad: ad && !ad.error ? ad : null, emails: Array.isArray(emails) ? emails : emails?.emails ?? null,
+    messages: m.items ?? m.messages ?? null, chatUrl: m.chatUrl ?? null, full: {} };
+}
+
+function adModel(d) {
+  const x = u.finnAd?.id === d.id ? u.finnAd : null;
+  const a = x?.ad, old = d.ad ?? {};
+  const attrs = (a?.attrs ?? []).filter((r) => r && r.label && r.value != null && r.value !== '');
+  if (!attrs.length && (a?.place ?? old.place)) attrs.push({ label: 'Lokasjon', value: a?.place ?? old.place });
+  const emails = (x?.emails ?? d.emails ?? []).map((e) => ({ id: e.id, from: e.from ?? e.sender ?? '', subject: e.subject ?? '', date: e.date, snippet: e.snippet ?? '', body: x?.full?.[e.id] ?? e.body ?? null }));
+  return { title: a?.title ?? old.title ?? d.item, price: a?.price ?? old.price ?? d.amount, description: a?.description ?? old.description ?? '',
+    images: a?.images?.length ? a.images : old.images ?? [], url: a?.url ?? old.url ?? d.adUrl ?? null, removed: !!a?.removed, fetchedAt: a?.fetchedAt ?? old.fetched ?? null,
+    attrs, emails: [...emails].sort((p, q) => String(p.date).localeCompare(String(q.date))), messages: x?.messages ?? d.messages ?? [], chatUrl: x?.chatUrl ?? d.chatUrl ?? a?.url ?? d.adUrl ?? null, hasApi: !!a };
+}
+
+function carousel(m, d) {
+  const slides = m.images.length ? m.images.map((src, i) => `<div class="fa-sl" style="background-color:${FA_TINTS[i % 4]}"><img src="${esc(src)}" alt="Bilde ${i + 1} fra annonsen" loading="${i ? 'lazy' : 'eager'}"></div>`)
+    : FA_TINTS.slice(0, 1).map((t) => `<div class="fa-sl" style="background-color:${t}"><span>${esc(initials(d.item))}</span></div>`);
+  const n = slides.length, i = Math.min(u.finnAdI ?? 0, n - 1);
+  return `<div class="fa-car"><div class="fa-track" data-fa-track>${slides.join('')}</div>
+    ${n > 1 ? `<button class="fa-nav l" data-fa-nav="-1" aria-label="Forrige bilde">‹</button><button class="fa-nav r" data-fa-nav="1" aria-label="Neste bilde">›</button>` : ''}
+    <span class="fa-cnt" data-fa-cnt>${m.images.length ? `${i + 1} / ${n}` : 'Ingen bilder'}</span></div>`;
+}
+
+function adPanel(d) {
+  const m = adModel(d), sold = d.role === 'sold';
+  const who = d.counterpart ? `${sold ? 'Solgt til' : 'Kjøpt fra'} ${d.counterpart}` : sold ? 'Solgt' : 'Kjøpt';
+  const ship = d.shipment ? ` · ${esc(String(d.shipment.carrier || 'Sending').replace(/^./, (ch) => ch.toUpperCase()))}` : '';
+  const first = String(d.counterpart || '').replace(/^(kjøper|selger)\s+/i, '').split(/\s+/)[0];
+  const st = `${sold ? 'Solgt' : 'Kjøpt'} · ${d.done ? 'Fullført' : d.next}`;
+  const mails = m.emails.map((e) => { const open = u.finnMail === e.id; return `<div class="fa-mail" data-fa-mail="${e.id}" role="button" tabindex="0" aria-expanded="${open}">
+      <span class="fa-mi" style="background:${mailColor(e.from)}">${esc(mailIni(e.from))}</span>
+      <span class="fa-mt"><span class="fa-mh"><b>${esc(e.subject || '(uten emne)')}</b><span>${esc(tm(e.date))}</span></span><span class="fa-mf">${esc(mailFrom(e.from))}</span>
+      ${open ? `<span class="fa-mb">${e.body == null ? 'Henter e-posten …' : esc(e.body || e.snippet)}</span><button class="fa-rmm" data-fd-rmmail="${e.id}">Fjern fra handelen</button>` : ''}</span></div>`; }).join('');
+  const chat = m.messages.map((c) => { const me = c.from === 'me'; return `<div class="fa-msg${me ? ' me' : ''}"><span>${esc(c.text)}</span><small>${esc(tm(c.time))}</small></div>`; }).join('');
+  return `<section class="fa" aria-label="Annonsen: ${esc(m.title)}" data-fa="${d.id}">
+    ${carousel(m, d)}
+    <div class="fa-info">
+      <div class="fa-ih"><div style="min-width:0"><span class="fa-st${d.done ? ' ok' : ''}${sold ? ' sold' : ''}">${esc(st)}</span><h2>${esc(m.title)}</h2></div>
+        <div class="fa-ib"><button class="fa-x" data-fd-edit aria-pressed="${!!u.finnEdit}" aria-label="Rediger handelen" title="Rediger handelen">✎</button><button class="fa-x" data-fd-close aria-label="Lukk annonsen">×</button></div></div>
+      <div class="fa-pr mono">${m.price != null ? kr0(m.price) : '–'}</div>
+      <div class="fa-sub">${esc(who)} · ${dd(d.date)}${ship}${m.removed ? ' · <b class="fa-rm">Fjernet fra Finn</b>' : ''}</div>
+      ${m.attrs.length ? `<div class="fa-spec">${m.attrs.map((r) => `<div><span>${esc(r.label)}</span><b>${esc(r.value)}</b></div>`).join('')}</div>` : ''}
+      ${m.description ? `<p class="fa-d">${esc(m.description)}</p>` : !m.images.length && !d.ad ? '<p class="fa-d muted">Annonsen er ikke hentet ennå. Lim inn lenken under ✎ Rediger, eller hent den på nytt.</p>' : ''}
+      <div class="fa-links">${m.url ? `<a href="${esc(m.url)}" target="_blank" rel="noopener">Åpne annonsen i Finn ↗</a>` : ''}
+        <button class="fa-ref" data-fa-refresh ${u.finnBusy === 'refresh' ? 'disabled' : ''}>${u.finnBusy === 'refresh' ? 'Henter …' : '↻ Hent annonsen på nytt'}</button>
+        ${m.fetchedAt ? `<span>Lagret ${esc(tm(typeof m.fetchedAt === 'number' ? new Date(m.fetchedAt).toISOString() : m.fetchedAt))}</span>` : ''}</div>
+    </div>
+    <div class="fa-cols">
+      <div class="fa-col fa-mails"><div class="fa-ch"><span>E-poster</span><small>Proton Mail · ${m.emails.length}</small></div>
+        ${mails || '<span class="fa-empty">Ingen e-poster koblet til ennå. E-poster fra FINN, Posten/Bring og Tillit med Finn-koden kobles automatisk.</span>'}
+        <label class="fd-up">↑ Legg ved e-post (.eml)<input type="file" multiple accept=".eml,message/rfc822" data-fd-file="email"></label></div>
+      <div class="fa-col fa-chat"><div class="fa-ch"><span>Meldinger${first ? ` med ${esc(first)}` : ''}</span>${m.chatUrl ? `<a href="${esc(m.chatUrl)}" target="_blank" rel="noopener">Åpne i Finn ↗</a>` : ''}</div>
+        ${chat || '<span class="fa-empty">Ingen meldinger ennå. Meldinger hentes fra e-postvarslene «Du har fått en ny melding».</span>'}
+        <form class="fa-send" data-fa-send><input name="msg" value="${esc(u.finnMsg ?? '')}" placeholder="Skriv en melding …" autocomplete="off" aria-label="Melding"><button>Send</button></form>
+        <span class="fa-empty">Finn har ikke åpent chat-API. «Send» kopierer meldingen og åpner samtalen i Finn.</span></div>
+    </div></section>`;
+}
+
+function manage(d) {
+  if (!u.finnEdit) return '';
+  const steps = `<div class="fh-steps">${d.track.map((s, i) => `<button class="fh-step${s.done || d.done ? ' on' : ''}${s.cur ? ' cur' : ''}" data-fd-stage="${i + 1}" title="Sett steget til ${esc(s.t)}">${esc(s.t)}</button>`).join('')}
+    ${d.manualStage ? '<button class="fh-step auto" data-fd-stage="0" title="La e-postene styre steget">Automatisk</button>' : ''}</div>`;
+  return `<section class="fd-panel fh-panel" aria-label="Rediger ${esc(d.item)}">
+    <div class="fd-head"><div class="fh-hl"><div class="fh-hm"><span class="fh-role ${d.role === 'sold' ? 'sold' : 'bought'}">${d.role === 'sold' ? 'Solgt' : 'Kjøpt'}</span>${d.code ? `<span class="fd-code">Finn-kode ${esc(d.code)}</span>` : ''}${d.orderId ? `<span class="fd-code">· Ordre ${esc(d.orderId)}</span>` : ''}</div><h2 style="font-size:22px">Rediger handelen</h2></div>
+      <div class="fh-ha"><button class="btn sm" data-fd-edit>Ferdig</button></div></div>
+    ${editForm(d)}${steps}
+    <div class="fh-cols"><div class="fh-col">${adCard(d)}</div><div class="fh-col">${rcCard(d)}${photoCard(d)}</div></div></section>`;
+}
+
 function detail() {
   const d = S.finnDeal;
   if (!d) return u.finnSel ? skel(320) : '';
-  const sold = d.role === 'sold';
-  const steps = `<div class="fh-steps">${d.track.map((s, i) => `<button class="fh-step${s.done || d.done ? ' on' : ''}${s.cur ? ' cur' : ''}" data-fd-stage="${i + 1}" title="Sett steget til ${esc(s.t)}">${esc(s.t)}</button>`).join('')}
-    ${d.manualStage ? '<button class="fh-step auto" data-fd-stage="0" title="La e-postene styre steget">Automatisk</button>' : ''}</div>`;
-  return `<section class="fd-panel fh-panel" aria-label="${esc(d.item)}">
-    <div class="fd-head"><div class="fh-hl"><div class="fh-hm"><span class="fh-role ${sold ? 'sold' : 'bought'}">${sold ? 'Solgt' : 'Kjøpt'}</span>${d.code ? `<span class="fd-code">Finn-kode ${esc(d.code)}</span>` : ''}${d.orderId ? `<span class="fd-code">· Ordre ${esc(d.orderId)}</span>` : ''}</div>
-      <h2>${esc(d.item)}</h2><div class="fh-hv"><b class="mono ${sold ? 'pos' : ''}">${sold ? '+' : '−'}${kr0(d.amount)}</b><span>${esc(d.counterpart || '')}${d.counterpart ? ' · ' : ''}${dd(d.date)} · ${esc(d.done ? 'Fullført' : d.next)}</span></div></div>
-      <div class="fh-ha">${d.adUrl ? `<a class="btn sm" href="${esc(d.adUrl)}" target="_blank" rel="noopener">Annonse ↗</a>` : ''}<button class="btn sm" data-fd-edit aria-pressed="${!!u.finnEdit}">✎ Rediger</button><button class="x-btn" data-fd-close aria-label="Lukk handelen">×</button></div></div>
-    ${editForm(d)}${steps}
-    <div class="fh-cols"><div class="fh-col">${adCard(d)}</div><div class="fh-col">${rcCard(d)}${photoCard(d)}${mailCard(d)}</div></div></section>`;
+  // Etter en ny tegning står karusellen på samme bilde som før.
+  requestAnimationFrame(() => { const t = document.querySelector('[data-fa-track]'); if (t && u.finnAdI) t.scrollTo({ left: u.finnAdI * t.clientWidth, behavior: 'instant' }); });
+  return `<div class="fa-wrap">${adPanel(d)}${manage(d)}</div>`;
 }
 
 export function finnPage() {
@@ -134,16 +201,18 @@ export function finnPage() {
   const all = d.items, fk = u.finnF ?? 'all', fil = FILTERS.find(([k]) => k === fk) ?? FILTERS[0];
   const items = all.filter(fil[2]);
   const segs = FILTERS.map(([k, n, f]) => `<button class="fh-segb" data-fd-filter="${k}" aria-pressed="${fk === k}">${n} <span>${all.filter(f).length}</span></button>`).join('');
-  const groups = GROUPS.map(([n, f, cls]) => { const g = items.filter(f); return g.length ? `<div class="fh-group"><div class="fh-gh"><b class="fh-k ${cls}">${n}</b><span>${g.length} ${g.length === 1 ? 'handel' : 'handler'}</span></div>
-    <div class="fh-grid">${g.map(dealCard).join('')}</div></div>` : ''; }).join('');
-  // Et trykk på et kort åpner detaljvisningen under rutenettet.
+  // Et trykk på et kort åpner annonsen rett under gruppen kortet står i.
   const det = detail();
+  let placed = false;
+  const groups = GROUPS.map(([n, f, cls]) => { const g = items.filter(f); if (!g.length) return ''; const here = !placed && g.some((r) => r.id === u.finnSel); if (here) placed = true;
+    return `<div class="fh-group"><div class="fh-gh"><b class="fh-k ${cls}">${n}</b><span>${g.length} ${g.length === 1 ? 'handel' : 'handler'}</span></div>
+    <div class="fh-grid">${g.map(dealCard).join('')}</div></div>${here ? det : ''}`; }).join('');
   return `<div class="mod fh">
     <div class="fh-top"><span class="note" style="font-size:13px">${all.length} handler · ${d.nBought ?? 0} kjøp og ${d.nSold ?? 0} salg i år</span><button class="btn pri" data-fd-add>+ Legg til handel</button></div>
     ${strip(d, all)}${addPanel()}
     <div class="fh-segs">${segs}</div>
     ${groups || card('<div class="empty">Ingen handler her ennå.</div>')}
-    ${det}
+    ${placed ? '' : det}
     <form class="mod-box" data-fd-form="paste"><b>Legg til fra e-post</b><span class="note" style="font-size:13px">Lim inn en e-post fra Finn (Trygg betaling, Fiks ferdig eller Tillit). AI trekker ut gjenstand, motpart, beløp og status, og matcher mot bankposten.</span>
       <textarea class="inp mod-ta" name="email" rows="5" placeholder="Lim inn e-posten her …" required></textarea><div><button class="btn pri">Les e-posten</button></div></form>
     <div class="note" style="font-size:13px">Kilde: e-postkvitteringer fra Finn (Trygg betaling, Fiks ferdig-frakt, Tillit forsikring) leses av AI og matches mot bankposter. ${d.imap.configured ? `Proton Mail er koblet til${d.imap.finnFolder ? ` (mappen ${esc(d.imap.finnFolder)})` : ''}: nye Finn-e-poster blir handler, og e-poster fra FINN, Posten/Bring og Tillit kobles til riktig handel.` : 'Sett opp Proton Mail under Innstillinger → Import for automatisk henting. Tidligere Finn-e-poster og annonselenker importeres samme sted.'}</div>
@@ -156,6 +225,7 @@ async function upload(kind, files) {
   for (const f of files) fd.append('file', f);
   const r = await api(`/finn/${u.finnSel}/${kind === 'email' ? 'emails' : 'files'}`, { method: 'POST', body: fd });
   S.finnDeal = r; S.finn = await api('/finn');
+  if (kind === 'email' || kind === 'ad') await loadAd(u.finnSel);
   toast(kind === 'email' ? (r.added ? `${r.added} e-post${r.added === 1 ? '' : 'er'} lagt ved` : 'E-posten finnes allerede i handelen')
     : kind === 'photo' ? `${files.length} bilde${files.length === 1 ? '' : 'r'} lagt til` : kind === 'ad' ? 'Annonsen er lagret' : files.length === 1 ? 'Kvitteringen er lagt ved' : 'Kvitteringene er lagt ved');
   render();
@@ -165,9 +235,11 @@ export function bindFinn(el) {
   const wrap = (fn) => async (e) => { try { await fn(e); } catch (err) { u.finnBusy = null; toast(err.message); render(); } };
   const open = async (id) => {
     if (u.finnSel === id) { u.finnSel = null; S.finnDeal = null; return render(); }
-    u.finnSel = id; u.finnUrl = null; u.finnMail = null; S.finnDeal = null; render();
-    S.finnDeal = await api(`/finn/${id}`); render();
-    el.querySelector('.fd-panel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    u.finnSel = id; u.finnUrl = null; u.finnMail = null; u.finnAdI = 0; u.finnMsg = ''; u.finnAd = null; S.finnDeal = null; render();
+    const [deal] = await Promise.all([api(`/finn/${id}`), loadAd(id)]);
+    if (u.finnSel !== id) return;
+    S.finnDeal = deal; render();
+    el.querySelector('.fa')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
   el.addEventListener('click', wrap(async (e) => {
     if (u.page !== 'finn') return;
@@ -187,12 +259,43 @@ export function bindFinn(el) {
     if ((x = d('[data-fd-open]'))) { u.finnEdit = false; return open(+x.dataset.fdOpen); }
     if (d('[data-fd-close]')) { u.finnSel = null; S.finnDeal = null; return render(); }
     if ((x = d('[data-fd-stage]'))) { const n = +x.dataset.fdStage; S.finnDeal = await api(`/finn/${u.finnSel}`, { method: 'PATCH', json: { stage: n || null } }); S.finn = await api('/finn'); return render(); }
-    if ((x = d('[data-fd-mail]'))) { u.finnMail = u.finnMail === +x.dataset.fdMail ? null : +x.dataset.fdMail; return render(); }
-    if ((x = d('[data-fd-rmmail]'))) { S.finnDeal = await api(`/finn/${u.finnSel}/emails/${x.dataset.fdRmmail}`, { method: 'DELETE' }); u.finnMail = null; S.finn = await api('/finn'); return render(); }
+    if ((x = d('[data-fa-nav]'))) { const t = el.querySelector('[data-fa-track]'); t?.scrollBy({ left: +x.dataset.faNav * t.clientWidth, behavior: 'smooth' }); return; }
+    if ((x = d('[data-fa-mail]')) && !d('[data-fd-rmmail]')) {
+      const id = +x.dataset.faMail, ad = u.finnAd;
+      u.finnMail = u.finnMail === id ? null : id; render();
+      // Full tekst hentes fra /finn/:id/emails/:eid; finnes ikke ruten, brukes teksten som allerede ligger i handelen.
+      if (u.finnMail === id && ad?.emails && ad.full[id] == null) {
+        const r = await optional(`/finn/${u.finnSel}/emails/${id}`).catch(() => null);
+        ad.full[id] = r?.body ?? r?.text ?? (typeof r === 'string' ? r : null) ?? S.finnDeal?.emails?.find((e) => e.id === id)?.body ?? ad.emails.find((e) => e.id === id)?.snippet ?? '';
+        return render();
+      }
+      return;
+    }
+    if (d('[data-fa-refresh]')) {
+      u.finnBusy = 'refresh'; render();
+      const id = u.finnSel;
+      try {
+        const r = await api(`/finn/${id}/ad/refresh`, { method: 'POST' }).catch((er) => (er.status === 404 ? api(`/finn/${id}/ad`, { method: 'POST', json: {} }) : Promise.reject(er)));
+        S.finnDeal = await api(`/finn/${id}`); await loadAd(id); toast(`✦ ${r?.message ?? 'Annonsen er hentet på nytt'}`);
+      } finally { u.finnBusy = null; }
+      return render();
+    }
+    if ((x = d('[data-fd-rmmail]'))) { S.finnDeal = await api(`/finn/${u.finnSel}/emails/${x.dataset.fdRmmail}`, { method: 'DELETE' }); u.finnMail = null; S.finn = await api('/finn'); await loadAd(u.finnSel); return render(); }
     if ((x = d('[data-fd-rmfile]'))) { S.finnDeal = await api(`/finn/${u.finnSel}/files/${x.dataset.fdRmfile}`, { method: 'DELETE' }); S.finn = await api('/finn'); return render(); }
   }));
-  el.addEventListener('keydown', (e) => { if (u.page === 'finn' && (e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[data-fd-open]')) { e.preventDefault(); e.target.click(); } });
+  el.addEventListener('keydown', (e) => { if (u.page === 'finn' && (e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[data-fd-open],[data-fa-mail]')) { e.preventDefault(); e.target.click(); } });
+  // Telleren «1 / 4» følger sveip og pilene uten å tegne siden på nytt.
+  el.addEventListener('scroll', (e) => {
+    const t = e.target;
+    if (!t.matches?.('[data-fa-track]')) return;
+    const n = t.children.length, i = Math.min(n - 1, Math.round(t.scrollLeft / Math.max(1, t.clientWidth)));
+    if (i === u.finnAdI) return;
+    u.finnAdI = i;
+    const c = el.querySelector('[data-fa-cnt]');
+    if (c && n > 1) c.textContent = `${i + 1} / ${n}`;
+  }, true);
   el.addEventListener('input', (e) => {
+    if (e.target.closest?.('[data-fa-send]')) u.finnMsg = e.target.value;
     if (e.target.closest?.('[data-fd-form="ad"]')) u.finnUrl = e.target.value;
     const nf = e.target.closest?.('[data-fd-form="new"]');
     if (nf) { const prev = u.finnAddF?.role; u.finnAddF = Object.fromEntries(new FormData(nf)); if (prev && prev !== u.finnAddF.role) render(); }
@@ -204,6 +307,15 @@ export function bindFinn(el) {
     await upload(inp.dataset.fdFile, files);
   }));
   el.addEventListener('submit', wrap(async (e) => {
+    if (e.target.closest?.('[data-fa-send]')) {
+      // Finn har ikke åpent chat-API: meldingen kopieres og samtalen åpnes i Finn, der den sendes.
+      e.preventDefault();
+      const msg = (u.finnMsg ?? '').trim(), m = adModel(S.finnDeal);
+      if (!msg) return;
+      try { await navigator.clipboard?.writeText(msg); } catch { /* ingen tilgang til utklippstavlen */ }
+      if (m.chatUrl) window.open(m.chatUrl, '_blank', 'noopener');
+      u.finnMsg = ''; toast('Meldingen er kopiert. Lim den inn i Finn for å sende.'); return render();
+    }
     const f = e.target.closest?.('[data-fd-form]');
     if (!f) return;
     e.preventDefault();
@@ -224,7 +336,7 @@ export function bindFinn(el) {
     if (f.dataset.fdForm === 'ad') {
       u.finnBusy = 'ad'; render();
       const r = await api(`/finn/${u.finnSel}/ad`, { method: 'POST', json: { url: v.url?.trim() || undefined } });
-      u.finnBusy = null; u.finnUrl = null; S.finnDeal = r; S.finn = await api('/finn');
+      u.finnBusy = null; u.finnUrl = null; S.finnDeal = r; S.finn = await api('/finn'); await loadAd(u.finnSel);
       toast(`✦ ${r.message ?? 'Annonsen er lagret'}`); return render();
     }
   }));
