@@ -2,6 +2,17 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.10.3] – 18.10.2026
+- **Ollama-modeller i Innstillinger → AI og tolkning.** Modellene hentes fra Ollama (`/api/tags`), og du kan velge egne modeller til tre oppgaver:
+  - kvitteringer, som krever en modell som leser bilder
+  - tekst: AI-søk, sammendrag og kategorier
+  - søk med vektorer (embeddings)
+- **Anbefalte modeller for Mac mini M4 med 16 GB:**
+  - qwen2.5vl:7b, gemma3:12b, qwen3:8b og nomic-embed-text, med flere i listen.
+  - **«Installer»** laster ned modellen i Ollama med fremdriftslinje.
+  - Modeller som er for store for 16 GB, merkes.
+- **Andre modeller:** du kan installere en hvilken som helst modell fra ollama.com/library ved navn, og slette installerte modeller.
+
 ## [4.10.2] – 18.10.2026
 - **Flere Gemini-nøkler som reserve.** I FinansHub → Innstillinger → AI og tolkning legger du inn reservenøkler i rekkefølge.
   - Når en nøkkel svarer at kvoten er brukt opp (429), eller at den er ugyldig, brukes neste nøkkel med en gang.

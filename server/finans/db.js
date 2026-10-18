@@ -265,7 +265,7 @@ const DEFAULT_RULES = [['REMA*', 'Mat og dagligvarer'], ['KIWI*', 'Mat og daglig
 export const DEFAULT_SETTINGS = {
   name: '', currency: 'NOK', monthStart: 1, yearGoal: 120000,
   provider: process.env.AI_PROVIDER === 'gemini' ? 'gemini' : 'ollama', fallback: (process.env.AI_FALLBACK ?? 'gemini') !== 'none',
-  ollamaUrl: process.env.OLLAMA_URL ?? 'http://192.168.1.30:11434', ollamaModel: process.env.OLLAMA_MODEL ?? 'qwen2.5vl:7b',
+  ollamaUrl: process.env.OLLAMA_URL ?? 'http://192.168.1.30:11434', ollamaModel: process.env.OLLAMA_MODEL ?? 'qwen2.5vl:7b', ollamaTextModel: process.env.OLLAMA_TEXT_MODEL ?? '',
   geminiModel: process.env.GEMINI_MODEL ?? 'gemini-flash-latest', groqModel: process.env.GROQ_MODEL ?? '', groqVisionModel: process.env.GROQ_VISION_MODEL ?? '', roboflowWorkflow: process.env.ROBOFLOW_WORKFLOW ?? '', minConf: Math.round(Number(process.env.AI_MIN_CONFIDENCE ?? 0.85) * 100),
   autoCat: true, n80: true, n100: true, nRc: true, nFast: true, csvProfile: 'DNB', aiSummaries: true,
   // Kvitteringer fra e-post (Proton Mail via Bridge, eller vanlig IMAP). Passordet ligger i hemmelighetene (imapPass).

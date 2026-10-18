@@ -48,8 +48,9 @@ export function ensureIndex() {
 
 const embedModel = () => {
   const st = settings();
-  if (!st.aiSearchEmbed) return null;
+  // En valgt Ollama-embeddingmodell slår på vektorsøket; Gemini-embeddings krever bryteren.
   if (st.embedModel) return { kind: 'ollama', model: st.embedModel };
+  if (!st.aiSearchEmbed) return null;
   // text-embedding-004 ble slått av hos Google i januar 2026; gemini-embedding-001 er etterfølgeren (768 dimensjoner holder lagringen liten).
   if (hasGemini()) return { kind: 'gemini', model: 'gemini-embedding-001' };
   return null;

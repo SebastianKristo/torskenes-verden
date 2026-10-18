@@ -475,6 +475,62 @@ function reports() {
 
 /* ===================== Innstillinger ===================== */
 
+// Ollama-modellene på maskinen: installerte (velg til kvitteringer, tekst og søk) og anbefalte for Mac mini M4 16 GB,
+// med «Installer» som laster ned i bakgrunnen og viser fremdrift.
+function ollamaBox(st) {
+  if (S.olm === undefined) { S.olm = null; loadOllamaModels(); }
+  const o = S.olm;
+  if (!o) return '<div style="grid-column:1/-1" class="note">Henter modellene fra Ollama …</div>';
+  if (o.ok === false) return `<div style="grid-column:1/-1;display:flex;gap:10px;align-items:center" class="err-msg">${esc(o.error ?? 'Ollama svarer ikke')} <button class="btn sm ghost" data-olm="reload">Prøv igjen</button></div>`;
+  const pull = (n) => (o.pulls ?? []).find((p) => p.name === n);
+  const inst = o.installed ?? [];
+  const sel = (key, label, filter, empty) => `<label class="f">${label}<select class="inp" data-set="${key}">${empty ? `<option value="">${esc(empty)}</option>` : ''}${inst.filter(filter).map((m) => `<option value="${esc(m.name)}"${(st[key] || '') === m.name ? ' selected' : ''}>${esc(m.name)}${m.size ? ` · ${m.size} GB` : ''}</option>`).join('')}</select></label>`;
+  const row = (c) => {
+    const p = pull(c.name), busy = p && !p.done;
+    const right = c.installed ? '<span class="pill" style="background:var(--pos-soft,#16271d);color:var(--pos)">Installert</span>'
+      : busy ? `<span style="display:flex;align-items:center;gap:8px;min-width:170px"><span style="flex:1;height:6px;border-radius:3px;background:var(--line);overflow:hidden"><span style="display:block;height:100%;width:${p.pct ?? 3}%;background:var(--acc)"></span></span><span class="mono" style="font-size:12px">${p.pct != null ? p.pct + ' %' : esc(p.status)}</span></span>`
+      : c.tooBig ? '<span class="note" style="font-size:12px">For stor for 16 GB</span>'
+      : `<button class="btn sm${c.rec ? ' pri' : ''}" data-olm="pull" data-name="${esc(c.name)}">Installer · ${c.size} GB</button>`;
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:var(--inner);${c.tooBig ? 'opacity:.55' : ''}">
+      <span class="grow" style="min-width:0"><b style="font-weight:600" class="mono">${esc(c.name)}</b>${c.rec ? ' <span style="display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:99px;background:var(--surf2,var(--line));color:var(--acc-l,var(--acc));vertical-align:2px">Anbefalt</span>' : ''}${c.vision ? ' <span class="note" style="font-size:12px">· leser bilder</span>' : ''}
+        <span class="note" style="display:block;font-size:12.5px">${esc(c.note)}</span>${p?.error ? `<span class="err-msg" style="display:block;font-size:12px">${esc(p.error)}</span>` : ''}</span>${right}</div>`;
+  };
+  const extra = inst.filter((m) => !(o.catalog ?? []).some((c) => c.installed && (c.name === m.name || `${c.name}:latest` === m.name)));
+  return `<div style="grid-column:1/-1;display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid var(--line);border-radius:14px">
+    <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><b style="font-weight:600">Ollama-modeller</b><div class="note" style="font-size:12.5px">${inst.length} installert${o.version ? ` · Ollama ${esc(o.version)}` : ''} · ${esc(o.url)}. Anbefalingene passer for Mac mini M4 med 16 GB minne.</div></div><button class="btn sm ghost" data-olm="reload">Oppdater</button></div>
+    <div class="form-grid">
+      ${sel('ollamaTextModel', 'Tekst (AI-søk, sammendrag, kategorier)', () => true, 'Samme som kvitteringer')}
+      ${sel('embedModel', 'Søk med vektorer (embeddings)', (m) => /embed/i.test(m.name), 'Av')}
+    </div>
+    ${(o.catalog ?? []).map(row).join('')}
+    ${extra.length ? `<div class="note" style="font-size:12.5px">Andre installerte: ${extra.map((m) => `<span class="mono">${esc(m.name)}</span>${m.size ? ` (${m.size} GB)` : ''} <button class="link" style="font-size:12px" data-olm="del" data-name="${esc(m.name)}">slett</button>`).join(' · ')}</div>` : ''}
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><input class="inp mono" style="flex:1 1 220px;font-size:13px" data-olm-name placeholder="Annen modell fra ollama.com/library, f.eks. phi4-mini"><button class="btn" data-olm="pull-custom">Installer</button></div>
+  </div>`;
+}
+let olmTimer = null;
+async function loadOllamaModels() {
+  try { S.olm = await api('/ai/ollama/models'); } catch (e) { S.olm = { ok: false, error: e.message }; }
+  render();
+  // Følg med på installeringer som pågår.
+  clearTimeout(olmTimer);
+  if ((S.olm?.pulls ?? []).some((p) => !p.done)) olmTimer = setTimeout(loadOllamaModels, 1500);
+}
+async function ollamaAction(t) {
+  const a = t.dataset.olm;
+  if (a === 'reload') { S.olm = null; render(); return loadOllamaModels(); }
+  if (a === 'pull' || a === 'pull-custom') {
+    const name = a === 'pull' ? t.dataset.name : t.closest('div').querySelector('[data-olm-name]').value.trim();
+    if (!name) return;
+    try { await api('/ai/ollama/pull', { method: 'POST', json: { model: name } }); } catch (e) { toast(e.message); }
+    return loadOllamaModels();
+  }
+  if (a === 'del') {
+    if (t.dataset.sure !== '1') { t.dataset.sure = '1'; t.textContent = 'bekreft sletting'; return; }
+    try { S.olm = await api(`/ai/ollama/models/${encodeURIComponent(t.dataset.name)}`, { method: 'DELETE' }); } catch (e) { toast(e.message); }
+    return render();
+  }
+}
+
 // Flere Gemini-nøkler: reserver som tas i bruk når en konto har brukt opp kvoten. Bare de fire siste tegnene vises.
 function gkeysBox() {
   if (S.gkeys === undefined) { S.gkeys = null; api('/ai/gemini-keys').then((r) => { S.gkeys = r.items ?? []; render(); }).catch(() => { S.gkeys = []; }); }
@@ -560,7 +616,8 @@ function settingsPage() {
       ${[['ollama', 'Ollama · lokalt', 'Bildet forlater aldri huset'], ['gemini', 'Gemini · sky', 'Raskest og mest presis'], ['groq', 'Groq · sky', 'Svært rask tekst, Llama-modeller']].map(([k2, n, s2]) => `<button class="prov" data-provider="${k2}" aria-pressed="${st.provider === k2}"><b><span class="radio"></span>${n}</b><span class="note" style="font-size:12.5px">${s2}</span></button>`).join('')}</div>
       <div class="form-grid">
         <label class="f">Ollama-adresse<input class="inp mono" style="font-size:13px" data-set="ollamaUrl" value="${esc(st.ollamaUrl)}"></label>
-        <label class="f">Ollama-modell<select class="inp" data-set="ollamaModel">${models.map((m) => opt(m, m, st.ollamaModel)).join('')}</select></label>
+        <label class="f">Ollama-modell (kvitteringer, må lese bilder)<select class="inp" data-set="ollamaModel">${models.map((m) => opt(m, m, st.ollamaModel)).join('')}</select></label>
+        ${ollamaBox(st)}
         <label class="f">Gemini-modell<input class="inp mono" style="font-size:13px" data-set="geminiModel" value="${esc(st.geminiModel)}"></label>
         <label class="f">Gemini API-nøkkel<input class="inp" type="password" data-set="geminiKey" value="" placeholder="${st.geminiKeySet ? '•••••••• lagret på serveren' : 'Lagres på serveren'}" autocomplete="off"></label>
         ${gkeysBox()}
@@ -836,6 +893,7 @@ export function bind() {
     if ((x = d('[data-open-tx]'))) { const id = +x.dataset.openTx; if (u.page !== 'tx') { u.sel = id; location.hash = '#/tx'; return; } u.sel = u.sel === id ? null : id; u.msg = {}; return render(); }
     if ((x = d('[data-open-rc]'))) { e.preventDefault(); u.selRc = x.dataset.openRc; if (u.page !== 'kv') { location.hash = '#/kv'; return; } return render(); }
     if ((x = d('[data-gk-act]'))) return gkeyAction(x);
+    if ((x = d('[data-olm]'))) return ollamaAction(x);
     if ((x = d('[data-mode]'))) { u.mode = x.dataset.mode; return render(); }
     if ((x = d('[data-rap]'))) { u.rap = x.dataset.rap; await loadReport(); return render(); }
     if ((x = d('[data-month]'))) { u.month = shiftMonth(u.month, (u.page === 'rap' && u.rap === 'year' ? 12 : 1) * +x.dataset.month); return load(); }

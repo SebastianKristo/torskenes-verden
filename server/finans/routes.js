@@ -8,6 +8,7 @@ import { join, resolve } from 'node:path';
 import { db, OWNER, settings, saveSettings, secret, setSecret, secretSource, DEFAULT_SETTINGS } from './db.js';
 import { extract, extractText, extractOcr, health, providerName, testEngine, testRoboflow, ENGINES, TASKS, aiLog, barcode } from './ai.js';
 import { hasGemini, listKeysOut, addKey, removeKey, renameKey, orderKeys, resetKey, testKey } from './gemini-keys.js';
+import { ollamaModels, startPull, pullStatus, deleteModel } from './ollama-models.js';
 import { sniffMime, isHeic, scanLog, scanLogOf } from './scan.js';
 import { mailConfig, mailStatus, testMail, runMail, recentImports, startMailWorker } from './mail.js';
 import { parseCsv, PROFILES } from './csv.js';
@@ -1153,7 +1154,7 @@ api.get('/reports', R, (c) => {
 
 const SETTING_KEYS = { name: (v) => str(v, 40), currency: (v) => (['NOK', 'EUR', 'SEK'].includes(v) ? v : 'NOK'), monthStart: (v) => Math.min(28, Math.max(1, +v || 1)),
   yearGoal: (v) => Math.max(0, +v || 0), provider: (v) => (ENGINES.includes(v) ? v : 'ollama'), fallback: Boolean,
-  ollamaUrl: (v) => (/^https?:\/\/\S+$/.test(v) ? v : DEFAULT_SETTINGS.ollamaUrl), ollamaModel: (v) => str(v, 60) || DEFAULT_SETTINGS.ollamaModel,
+  ollamaUrl: (v) => (/^https?:\/\/\S+$/.test(v) ? v : DEFAULT_SETTINGS.ollamaUrl), ollamaModel: (v) => str(v, 60) || DEFAULT_SETTINGS.ollamaModel, ollamaTextModel: (v) => str(v, 60), embedModel: (v) => str(v, 60), aiSearchEmbed: Boolean,
   geminiModel: (v) => (/^[a-z0-9.\-]{3,60}$/i.test(v) ? v : DEFAULT_SETTINGS.geminiModel),
   groqModel: (v) => (/^[a-z0-9./_:\-]{2,80}$/i.test(String(v)) ? String(v) : ''), groqVisionModel: (v) => (/^[a-z0-9./_:\-]{2,80}$/i.test(String(v)) ? String(v) : ''),
   roboflowWorkflow: (v) => (/^[a-z0-9._\-/]{0,120}$/i.test(String(v)) ? String(v) : ''), minConf: (v) => Math.min(99, Math.max(50, +v || 85)),
@@ -1185,6 +1186,17 @@ api.post('/ai/test', R, async (c) => { const b = await c.req.json().catch(() => 
 api.post('/ai/roboflow/test', R, async (c) => c.json(await testRoboflow()));
 // Siste AI-kall (oppgave, motor, modell, ms, status) for feilsøking under Innstillinger → AI.
 api.get('/ai/log', R, (c) => c.json({ items: aiLog(+c.req.query('limit') || 50) }));
+// Ollama: installerte modeller, anbefalte for maskinen, installering med fremdrift og sletting.
+api.get('/ai/ollama/models', R, async (c) => { try { return c.json(await ollamaModels()); } catch (e) { return c.json({ ok: false, error: e.message, pulls: pullStatus() }, e.status ?? 502); } });
+api.get('/ai/ollama/pull', R, (c) => c.json({ pulls: pullStatus() }));
+api.post('/ai/ollama/pull', sessionOnly, async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  try { return c.json({ pulls: startPull(b.model) }, 202); } catch (e) { return c.json({ error: e.message }, e.status ?? 400); }
+});
+api.delete('/ai/ollama/models/:name{.+}', sessionOnly, async (c) => {
+  try { await deleteModel(decodeURIComponent(c.req.param('name'))); return c.json(await ollamaModels()); } catch (e) { return c.json({ error: e.message }, e.status ?? 502); }
+});
+
 // Flere Gemini-nøkler (reserver ved brukt opp kvote). Nøklene vises aldri, bare de fire siste tegnene.
 const keyErr = (c, e) => c.json({ error: e.message }, e.status ?? 400);
 api.get('/ai/gemini-keys', R, (c) => c.json({ items: listKeysOut() }));

@@ -159,17 +159,18 @@ async function ollamaReachable(base) {
   catch (e) { Object.assign(ollamaProbe, { at: Date.now(), ok: false, err: netErr('Ollama', base, e).message }); }
   return ollamaProbe;
 }
-async function ollamaChat(st, messages, schema, { timeout, temperature }) {
+async function ollamaChat(st, messages, schema, { timeout, temperature, model }) {
+  const useModel = model || st.ollamaModel;
   const base = st.ollamaUrl.replace(/\/$/, '');
   const probe = await ollamaReachable(base);
   if (!probe.ok) throw Object.assign(new Error(probe.err ?? `Ollama kan ikke nås på ${base}`), { noRetry: true, net: true });
   let res;
   try { res = await fetch(`${base}/api/chat`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(timeout),
-    body: JSON.stringify({ model: st.ollamaModel, stream: false, format: forOllama(lowerTypes(schema)), options: { temperature }, messages }),
+    body: JSON.stringify({ model: useModel, stream: false, format: forOllama(lowerTypes(schema)), options: { temperature }, messages }),
   }); } catch (e) { ollamaProbe.at = 0; throw netErr('Ollama', base, e); }
   if (!res.ok) throw await httpErr('Ollama', res);
-  return { model: st.ollamaModel, data: parseJson('Ollama', (await res.json()).message?.content) };
+  return { model: useModel, data: parseJson('Ollama', (await res.json()).message?.content) };
 }
 
 /* ---------------- Gemini ---------------- */
@@ -360,7 +361,7 @@ export async function textJson(prompt, schema, { timeout = 30_000, temperature =
     try {
       const r = p === 'gemini' ? await geminiGenerate([{ text: prompt }], { schema, timeout, temperature, model: st.geminiModel })
         : p === 'groq' ? await groqChat(prompt, schema, { timeout, temperature, model: st.groqModel || GROQ_DEFAULT })
-        : await ollamaChat(st, [{ role: 'user', content: prompt }], schema, { timeout, temperature });
+        : await ollamaChat(st, [{ role: 'user', content: prompt }], schema, { timeout, temperature, model: st.ollamaTextModel || st.ollamaModel });
       logAi({ task, engine: p, model: r.model, promptLen: prompt.length, ms: Date.now() - t0 });
       return { provider: providerName(p), engine: p, model: r.model, data: r.data };
     } catch (e) {
