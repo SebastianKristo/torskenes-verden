@@ -1,8 +1,10 @@
-// Matplan: retter med ingredienser og fremgangsmåte, ukeplan (AI eller tilfeldig), faste retter per ukedag,
-// kokker med «best på»-retter, HelloFresh-import, handleliste og ICS-kalender.
+// Mat (tidligere Matplan): retter med ingredienser og fremgangsmåte, ukeplan (AI eller tilfeldig), faste retter per ukedag,
+// kokker med «best på»-retter, HelloFresh-import, handleliste og ICS-kalender. Mapper, skanning og import fra
+// nettsider ligger i mat-recipes.js.
 //
 // Datamodell (kv OWNER/'mat', v: 2):
-//   dishes: [{ id, name, src: 'own'|'hellofresh', ing: [], steps: [], cost }]
+//   dishes: [{ id, name, src: 'own'|'hellofresh'|'scan'|'web', ing: [], steps: [], cost,
+//              folderId, sourceUrl, image, time, servings, scanFile }]
 //   cooks:  [{ name, best: [dishId] }]
 //   plan:   { 'YYYY-MM-DD': { dish: id|null, cook, by: 'ai'|'user'|'auto' } }
 //   fixed:  { 0–6 (mandag = 0): { dish: id, cook } } – lagret i SQLite-tabellen matplan_fixed, ikke i kv.
@@ -14,6 +16,7 @@ import { kv, OWNER, db } from './db.js';
 import { config } from './config.js';
 import { userInfo } from './auth.js';
 import { guard, readJson, bad, str, num, MOCK, aiJson } from './homeos-common.js';
+import { mountRecipes, ensureDefaultFolders, folders, folderById, guessFolderId, allLinks, linksFor, removeDishData } from './mat-recipes.js';
 
 const DN = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
 const day = (d) => d.toLocaleDateString('sv-SE');
@@ -24,7 +27,7 @@ const monday = (s) => addDays(s, -wd(s));
 const isDate = (s) => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(parse(s).getTime());
 const id = () => randomBytes(5).toString('hex');
 const low = (s) => String(s ?? '').trim().toLowerCase();
-const lines = (v, max = 40) => (Array.isArray(v) ? v : String(v ?? '').split(/\r?\n/)).map((x) => str(String(x ?? ''), 160)).filter(Boolean).slice(0, max);
+const lines = (v, max = 40, len = 160) => (Array.isArray(v) ? v : String(v ?? '').split(/\r?\n/)).map((x) => str(String(x ?? ''), len)).filter(Boolean).slice(0, max);
 const weekDates = (start) => DN.map((_, i) => addDays(start, i));
 export function isoWeek(s) {
   const d = parse(s); d.setDate(d.getDate() + 3 - ((d.getDay() + 6) % 7));
@@ -112,6 +115,12 @@ export function state() {
   // Engangsmigrering: faste retter flyttes fra kv til matplan_fixed.
   if (!s.fixedDb) { if (!fixedRows.all().length) writeFixed(s.fixed); s.fixedDb = true; dirty = true; }
   s.fixed = Object.fromEntries(Object.entries(loadFixed()).filter(([, f]) => s.dishes.some((d) => d.id === f.dish)));
+  // Prompt 13: standardmappene opprettes én gang, og eksisterende retter får en gjettet mappe.
+  if (!s.foldersInit) {
+    ensureDefaultFolders();
+    for (const d of s.dishes) if (d.folderId === undefined) d.folderId = guessFolderId(d.name, d.ing);
+    s.foldersInit = true; dirty = true;
+  }
   if (dirty) save(s);
   return s;
 }
@@ -169,6 +178,13 @@ function shopping(s, start) {
   return [...items.values(), ...st.extra.map((x) => ({ ...x, auto: false }))];
 }
 
+// Retten slik klientene får den: eldre felt (ing) og nye (ingredients, folder, links …).
+export function dishOut(s, d, links = null) {
+  const f = d.folderId ? folderById(d.folderId) : null;
+  return { ...d, ingredients: d.ing, folderId: f ? f.id : null, folder: f?.name ?? null, sourceUrl: d.sourceUrl ?? null, image: d.image ?? null,
+    time: d.time ?? null, servings: d.servings ?? null, links: links ? (links.get(d.id) ?? []) : linksFor(d.id) };
+}
+
 const fixedDaysOf = (s, dishId) => Object.entries(s.fixed).filter(([, f]) => f.dish === dishId).map(([k]) => +k).sort((a, b) => a - b);
 
 // Ukekostnaden trekkes fra budsjettet for «Mat og dagligvarer» (på serveren, uten FinansHub-grensesnittet):
@@ -210,7 +226,8 @@ function week(s, start) {
   return {
     start, end, week: isoWeek(start), today,
     days,
-    dishes: s.dishes.map((d) => ({ ...d, days: used(d.id), fixedDays: fixedDaysOf(s, d.id) })),
+    dishes: (() => { const links = allLinks(); return s.dishes.map((d) => ({ ...dishOut(s, d, links), days: used(d.id), fixedDays: fixedDaysOf(s, d.id) })); })(),
+    folders: (() => { const cnt = {}; for (const d of s.dishes) if (d.folderId) cnt[d.folderId] = (cnt[d.folderId] ?? 0) + 1; return folders().map((f) => ({ ...f, count: cnt[f.id] ?? 0 })); })(),
     chefs: s.cooks.map((c) => ({ name: c.name, best: c.best.map((x) => dishOf(s, x)).filter(Boolean).map((d) => ({ id: d.id, name: d.name })) })),
     cooks: s.cooks.map((c) => c.name),
     fixed: Object.entries(s.fixed).map(([i, f]) => ({ weekday: DN[i], index: +i, dishId: f.dish, name: dishOf(s, f.dish)?.name ?? null, cook: f.cook ?? bestOf(s, f.dish) })).filter((x) => x.name).sort((a, b) => a.index - b.index),
@@ -306,7 +323,7 @@ function ics(s, dates) {
     return ['BEGIN:VEVENT', `UID:middag-${dt}@homelab-os`, `DTSTAMP:${stamp}`, `DTSTART;TZID=Europe/Oslo:${dt}T170000`, `DTEND;TZID=Europe/Oslo:${dt}T180000`,
       `SUMMARY:${icsText(dish.name)}`, `DESCRIPTION:${icsText(`Kokk: ${e.cook ?? '–'}${dish.ing.length ? `\nIngredienser: ${dish.ing.join(', ')}` : ''}`)}`, 'END:VEVENT'].join('\r\n');
   });
-  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//homelab-os//Matplan//NO', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:Middag', 'X-WR-TIMEZONE:Europe/Oslo', ...ev, 'END:VCALENDAR'].join('\r\n') + '\r\n';
+  return ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//homelab-os//Mat//NO', 'CALSCALE:GREGORIAN', 'X-WR-CALNAME:Middag', 'X-WR-TIMEZONE:Europe/Oslo', ...ev, 'END:VCALENDAR'].join('\r\n') + '\r\n';
 }
 // Feeden: alt som er planlagt siste 30 dager og fremover, pluss faste retter de neste fire ukene.
 function feedDates(s) {
@@ -328,7 +345,7 @@ matApi.get('/week', (c) => reply(c, state(), startOf(c)));
 
 matApi.get('/week.ics', (c) => {
   const s = state(), start = startOf(c);
-  return c.body(ics(s, weekDates(start)), 200, { 'Content-Type': 'text/calendar; charset=utf-8', 'Content-Disposition': `attachment; filename="matplan-uke-${isoWeek(start)}.ics"` });
+  return c.body(ics(s, weekDates(start)), 200, { 'Content-Type': 'text/calendar; charset=utf-8', 'Content-Disposition': `attachment; filename="mat-uke-${isoWeek(start)}.ics"` });
 });
 
 // Ny plan: scope 'week' fyller uka (mode 'ai' eller 'shuffle'), scope 'day' bytter én dag.
@@ -399,23 +416,29 @@ matApi.post('/swap', async (c) => {
 function dishInput(b, old = {}) {
   return {
     name: b.name !== undefined ? str(b.name, 80) : old.name,
-    src: b.src !== undefined ? (b.src === 'hellofresh' || b.hellofresh === true ? 'hellofresh' : 'own') : b.hellofresh !== undefined ? (b.hellofresh ? 'hellofresh' : 'own') : old.src ?? 'own',
-    ing: b.ing !== undefined || b.ingredients !== undefined ? lines(b.ing ?? b.ingredients) : old.ing ?? [],
-    steps: b.steps !== undefined ? lines(b.steps, 20) : old.steps ?? [],
+    src: b.src !== undefined ? (b.src === 'hellofresh' || b.hellofresh === true ? 'hellofresh' : ['scan', 'web'].includes(b.src) ? b.src : (b.src === 'own' && ['scan', 'web'].includes(old.src) ? old.src : 'own'))
+      : b.hellofresh !== undefined ? (b.hellofresh ? 'hellofresh' : (['scan', 'web'].includes(old.src) ? old.src : 'own')) : old.src ?? 'own',
+    ing: b.ing !== undefined || b.ingredients !== undefined ? lines(b.ing ?? b.ingredients, 60, 200) : old.ing ?? [],
+    steps: b.steps !== undefined ? lines(b.steps, 40, 600) : old.steps ?? [],
     cost: b.cost !== undefined ? Math.max(0, Math.round(num(b.cost))) : old.cost ?? 0,
+    folderId: b.folderId !== undefined ? (folderById(b.folderId)?.id ?? null) : old.folderId ?? null,
+    time: b.time !== undefined ? (str(String(b.time ?? ''), 30) || null) : old.time ?? null,
+    servings: b.servings !== undefined ? (str(String(b.servings ?? ''), 20) || null) : old.servings ?? null,
+    sourceUrl: b.sourceUrl !== undefined ? httpUrl(b.sourceUrl) : old.sourceUrl ?? null,
   };
 }
+const httpUrl = (v) => { try { const u = new URL(String(v ?? '').trim()); return /^https?:$/.test(u.protocol) ? u.href.slice(0, 500) : null; } catch { return null; } };
 
 matApi.post('/dishes', async (c) => {
   const b = await readJson(c), s = state(), v = dishInput(b);
   if (!v.name) return bad(c, 'Skriv et navn på retten.');
   if (dishByName(s, v.name)) return bad(c, `${v.name} finnes allerede.`, 409);
   if (s.dishes.length >= 500) return bad(c, 'Maks 500 retter');
-  const d = { id: id(), ...v };
+  const d = { id: id(), ...v, folderId: b.folderId !== undefined ? v.folderId : guessFolderId(v.name, v.ing) };
   s.dishes.push(d);
   if (isDate(b.date)) place(s, b.date, d.id);
   save(s);
-  return reply(c, s, startOf(c, b), { dish: d }, 201);
+  return reply(c, s, startOf(c, b), { dish: dishOut(s, d) }, 201);
 });
 
 matApi.patch('/dishes/:id', async (c) => {
@@ -427,7 +450,7 @@ matApi.patch('/dishes/:id', async (c) => {
   if (twin && twin.id !== d.id) return bad(c, `${v.name} finnes allerede.`, 409);
   Object.assign(d, v);
   save(s);
-  return reply(c, s, startOf(c, b), { dish: d });
+  return reply(c, s, startOf(c, b), { dish: dishOut(s, d) });
 });
 
 // «Alltid på» Ma–Sø for en rett: dagene i listen får retten som fast rett (en annen fast rett på samme dag byttes ut),
@@ -462,6 +485,7 @@ function deleteDish(s, dishId) {
   for (const [date, p] of Object.entries(s.plan)) if (p.dish === dishId) s.plan[date] = { ...p, dish: null };
   for (const [k, f] of Object.entries(s.fixed)) if (f.dish === dishId) delete s.fixed[k];
   for (const c of s.cooks) c.best = c.best.filter((x) => x !== dishId);
+  removeDishData(d);
   return d;
 }
 matApi.delete('/dishes/:id', (c) => {
@@ -590,6 +614,22 @@ matApi.delete('/shopping/:id', (c) => {
 
 matApi.post('/calendar/rotate', (c) => { const s = state(); s.calKey = randomBytes(18).toString('base64url'); save(s); return c.json({ calendarUrl: `/mat/calendar.ics?key=${s.calKey}` }); });
 
+/* Mapper, oppskrifter fra nettsider og skanning, lenker og filer (mat-recipes.js) */
+
+// Ny rett fra import eller skanning. Finnes navnet fra før, får den nye retten «(2)» bak.
+function addDish(f) {
+  const s = state();
+  if (s.dishes.length >= 500) throw Object.assign(new Error('Maks 500 retter'), { status: 400 });
+  let name = str(f.name, 80) || 'Ny rett';
+  for (let i = 2; dishByName(s, name); i++) name = `${str(f.name, 74)} (${i})`;
+  const d = { id: id(), name, src: f.src ?? 'own', ing: lines(f.ingredients ?? f.ing, 60, 200), steps: lines(f.steps, 40, 600), cost: 0,
+    folderId: f.folderId ?? null, sourceUrl: f.sourceUrl ?? null, image: f.image ?? null, time: f.time ?? null, servings: f.servings ?? null, ...(f.scanFile ? { scanFile: f.scanFile } : {}) };
+  s.dishes.push(d);
+  save(s);
+  return d;
+}
+mountRecipes(matApi, { state, save, dishOf, addDish, dishOut, reply, startOf });
+
 /* ---------------- ICS-feed (abonneres fra Google/Apple Kalender) ---------------- */
 
 export function matCalendar(c) {
@@ -609,7 +649,7 @@ export function startMatScheduler() {
     if (!s.auto || s.lastAuto === today) return;
     s.lastAuto = today; save(s);
     try { const s2 = state(); await generate(s2, weekDates(addDays(today, 1)), 'ai'); s2.lastAuto = today; save(s2); }
-    catch (e) { console.error('[matplan]', e.message); }
+    catch (e) { console.error('[mat]', e.message); }
   };
   setInterval(tick, 10 * 60_000).unref();
 }

@@ -19,6 +19,7 @@ import domainsApi from './domains.js';
 import trackingApi, { startTrackingWorker, hasTrackingTest, testTracking } from './tracking.js';
 import uiApi from './ui.js';
 import mobileApi, { meOut, removeAvatar, shortcutsFor, layoutOf } from './mobile.js';
+import rssApi, { startRssWorker } from './rss.js';
 import { revokeUserTokens } from './finans/routes.js';
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
 
@@ -473,13 +474,14 @@ app.route('/api/ui', uiApi);
 app.route('/api/tracking', trackingApi); // Sporing (prompt 11): pakker fra Finn, e-post og manuelt
 app.route('/api/matplan', matApi); // samme Matplan-API som /mat/api (prompt 10: Matplan hører til Homelab)
 // Profil, oppsett, søk, mobilforside og widgets: sesjon ELLER FinansHub-token (må stå før /api med requireAuth).
+app.route('/api/rss', rssApi); // Nyhetsleser (prompt 13): RSS/Atom med ✦ AI-sammendrag og -kategorisering
 app.route('/api', mobileApi);
 app.route('/api', authed);
 app.route('/home/api', homeApi);
 app.route('/mat/api', matApi);
 app.route('/domains/api', domainsApi);
 app.get('/mat/calendar.ics', matCalendar);
-if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); }
+if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); }
 
 app.onError((err, c) => {
   console.error(err);

@@ -12,6 +12,7 @@ import { kv, OWNER } from './db.js';
 import { aiJson } from './homeos-common.js';
 import { sessionUser, userInfo, serverName, isAdmin } from './auth.js';
 import { packagesFor } from './tracking.js';
+import { newsFor } from './rss.js';
 import finansApi, { bearerOk } from './finans/routes.js';
 import { matApi } from './mat.js';
 import { domainOverview } from './domains.js';
@@ -87,6 +88,16 @@ const LAYOUT = {
     && (v.matTheme === undefined || ['light', 'dark', 'system'].includes(v.matTheme)),
   homelab: (v) => v && typeof v === 'object' && !Array.isArray(v) && (v.hiddenWidgets === undefined || ids(v.hiddenWidgets)) && (v.hiddenTabs === undefined || ids(v.hiddenTabs)) && (v.labels === undefined || labels(v.labels)),
 };
+// Enkle verdier (prompt 13): tema for FinansHub desktop, kompakt sidemeny, Homelab-tema, mobildesign, papirmodus og fotovindu.
+const SCALAR = {
+  design: (v) => ['v2', 'lys', 'mork', 'glod'].includes(v),
+  compactNav: (v) => typeof v === 'boolean',
+  hlTheme: (v) => ['cur', '2c'].includes(v),
+  mobileDesign: (v) => ['klassisk', 'papir'].includes(v),
+  paperMode: (v) => ['auto', 'lys', 'mork'].includes(v),
+  photo: (v) => PHOTO_KINDS.includes(v),
+};
+const PHOTO_KINDS = ['cur', 'oslo', 'weather', 'planets', 'custom'];
 export const layoutOf = (id) => kv.get(id, 'layout', {});
 
 /* ---------------- Snarveier ---------------- */
@@ -248,8 +259,9 @@ api.put('/me/layout', authOrToken, async (c) => {
   if (!b || typeof b !== 'object' || Array.isArray(b)) return c.json({ error: 'Forventet et objekt' }, 400);
   const next = { ...layoutOf(c.get('user')) };
   for (const [k, v] of Object.entries(b)) {
-    if (!LAYOUT[k]) return c.json({ error: `Ukjent nøkkel ${k}` }, 400);
+    if (!LAYOUT[k] && !SCALAR[k]) return c.json({ error: `Ukjent nøkkel ${k}` }, 400);
     if (v === null) { delete next[k]; continue; }
+    if (SCALAR[k]) { if (!SCALAR[k](v)) return c.json({ error: `Ugyldig verdi for ${k}` }, 400); next[k] = v; continue; }
     if (!LAYOUT[k](v)) return c.json({ error: `Ugyldig verdi for ${k}` }, 400);
     next[k] = { ...(next[k] ?? {}), ...v };
     // Tomme navn betyr standardnavnet og lagres ikke.
@@ -375,7 +387,86 @@ api.get('/mobile/home', authOrToken, async (c) => {
     layout: layoutOf(id).mobile ?? {},
     search: searchSettings(id),
     packages: isAdmin(id) ? packagesFor(2) : [], // Sporing (prompt 11): de 2 viktigste pakkene
+    news: newsFor(id, 5), // Nyhetsleser (prompt 13): «Siste nytt» på forsiden
+    design: designOf(id),
   });
+});
+
+/* ---------------- Utseende og fotovindu (prompt 13) ---------------- */
+
+/** Valgt utseende med standardverdier: FinansHub-tema, Homelab-tema, mobildesign, papirmodus og fotovindu. */
+export const designOf = (id) => {
+  const l = layoutOf(id);
+  return { design: l.design ?? 'v2', compactNav: !!l.compactNav, hlTheme: l.hlTheme ?? 'cur', mobileDesign: l.mobileDesign ?? 'klassisk', paperMode: l.paperMode ?? 'auto', photo: l.photo ?? 'cur' };
+};
+
+const PHOTOS = join(config.dataDir, 'photo-window');
+await mkdir(PHOTOS, { recursive: true });
+const photoFile = (id) => join(PHOTOS, `${String(id).replace(/[^\w-]/g, '')}.img`);
+const CUR_GRADIENT = 'linear-gradient(160deg, #1d2a44 0%, #3a3f6b 45%, #c9826b 100%)';
+// Værgradienter etter MET-symbolet, dag og natt.
+function weatherGradient(symbol = '') {
+  const night = /_night|polartwilight/.test(symbol);
+  if (/thunder/.test(symbol)) return 'linear-gradient(170deg, #1f2230 0%, #3b3f55 55%, #6b6a7a 100%)';
+  if (/snow|sleet/.test(symbol)) return 'linear-gradient(170deg, #9fb3c8 0%, #d7e1ea 60%, #f3f5f7 100%)';
+  if (/rain/.test(symbol)) return night ? 'linear-gradient(170deg, #10151f 0%, #24303f 60%, #3c4a5a 100%)' : 'linear-gradient(170deg, #4a5a6c 0%, #7d8b99 55%, #b7c0c8 100%)';
+  if (/fog/.test(symbol)) return 'linear-gradient(170deg, #8d949a 0%, #b9bec2 60%, #dcdedf 100%)';
+  if (/cloudy/.test(symbol) && !/partly/.test(symbol)) return night ? 'linear-gradient(170deg, #161a22 0%, #2c323d 100%)' : 'linear-gradient(170deg, #6f7f90 0%, #a9b5c0 60%, #d5dbe0 100%)';
+  if (night) return 'linear-gradient(170deg, #0b1026 0%, #1b2350 55%, #3c3a6e 100%)';
+  return 'linear-gradient(170deg, #3d7cc9 0%, #7fb2e5 55%, #f4d9a6 100%)';
+}
+
+api.get('/photo-window', authOrToken, async (c) => {
+  const id = c.get('user');
+  let kind = c.req.query('kind') || designOf(id).photo;
+  if (!PHOTO_KINDS.includes(kind)) return c.json({ error: 'Ukjent fotovindu' }, 400);
+  if (kind === 'custom') {
+    const v = kv.get(id, 'photo_v', 0);
+    if (v) return c.json({ kind, url: `/api/me/photo-window?v=${v}`, credit: 'Eget bilde', gradient: CUR_GRADIENT });
+    kind = 'cur'; // ikke lastet opp ennå
+  }
+  if (kind === 'planets') {
+    const a = await safe(ext.getApod);
+    if (a && a.media_type === 'image' && a.url) return c.json({ kind, url: a.hdurl && !MOCK ? a.hdurl : a.url, credit: `NASA APOD · ${a.title ?? ''}${a.copyright ? ` · © ${String(a.copyright).trim()}` : ''}`.trim(), gradient: 'linear-gradient(170deg, #05060d 0%, #141a33 100%)' });
+    if (a?.thumbnail_url) return c.json({ kind, url: a.thumbnail_url, credit: `NASA APOD · ${a.title ?? ''}`, gradient: 'linear-gradient(170deg, #05060d 0%, #141a33 100%)' });
+    return c.json({ kind, url: '/assets/img/planets.svg', credit: 'Illustrasjon · NASA APOD svarte ikke', gradient: 'linear-gradient(170deg, #05060d 0%, #141a33 100%)' });
+  }
+  if (kind === 'oslo') return c.json({ kind, url: '/assets/img/oslo.svg', credit: 'Oslo · illustrasjon', gradient: 'linear-gradient(170deg, #f2b36b 0%, #d7766a 45%, #4a3a5e 100%)' });
+  if (kind === 'weather') {
+    const w = await safe(ext.getWeather);
+    return c.json({ kind, url: null, credit: w ? `Vær nå · ${w.text ?? ''} ${w.temp != null ? Math.round(w.temp) + '°' : ''}`.trim() : 'Vær nå', gradient: weatherGradient(w?.symbol ?? ''), symbol: w?.symbol ?? null });
+  }
+  return c.json({ kind: 'cur', url: null, credit: '', gradient: CUR_GRADIENT });
+});
+
+api.get('/me/photo-window', authOrToken, async (c) => {
+  const id = c.get('user');
+  if (!kv.get(id, 'photo_v', 0)) return c.json({ error: 'Ingen eget bilde' }, 404);
+  try {
+    const b = await readFile(photoFile(id));
+    return c.body(b, 200, { 'Content-Type': imageKind(b) ?? 'image/jpeg', 'Cache-Control': 'private, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff' });
+  } catch { return c.json({ error: 'Ingen eget bilde' }, 404); }
+});
+api.post('/me/photo-window', authOrToken, bodyLimit({ maxSize: 8 * 1024 * 1024 + 64 * 1024, onError: (c) => c.json({ error: 'Bildet er for stort (maks 8 MB)' }, 413) }), async (c) => {
+  const f = (await c.req.parseBody().catch(() => ({}))).file;
+  if (!(f instanceof File)) return c.json({ error: 'Mangler fil' }, 400);
+  const b = Buffer.from(await f.arrayBuffer());
+  if (b.length > 8 * 1024 * 1024) return c.json({ error: 'Bildet er for stort (maks 8 MB)' }, 413);
+  if (!imageKind(b)) return c.json({ error: 'Bruk et JPEG-, PNG- eller WebP-bilde' }, 400);
+  const id = c.get('user'), v = Date.now();
+  await writeFile(photoFile(id), b);
+  kv.set(id, 'photo_v', v);
+  const l = layoutOf(id);
+  kv.set(id, 'layout', { ...l, photo: 'custom' });
+  return c.json({ kind: 'custom', url: `/api/me/photo-window?v=${v}`, credit: 'Eget bilde' });
+});
+api.delete('/me/photo-window', authOrToken, async (c) => {
+  const id = c.get('user');
+  await unlink(photoFile(id)).catch(() => {});
+  kv.del(id, 'photo_v');
+  const l = layoutOf(id);
+  if (l.photo === 'custom') kv.set(id, 'layout', { ...l, photo: 'cur' });
+  return c.json({ ok: true, photo: designOf(id).photo });
 });
 
 /* ---------------- Widgets (iOS WidgetKit og Android Glance) ---------------- */

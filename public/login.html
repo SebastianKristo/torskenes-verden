@@ -13,11 +13,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/css/app.css">
 <link rel="stylesheet" href="/assets/css/login.css">
+<link rel="stylesheet" href="/assets/css/paper.css">
+<script src="/assets/js/hl-boot.js"></script>
 <script type="module" src="/assets/js/login.js"></script>
 </head>
 <body>
 <div class="lock">
   <form id="setup" class="lock-box setup-box" hidden novalidate>
+    <div class="lock-pw" aria-hidden="true"><div class="lock-pw-k">Homelab</div><div class="lock-pw-t">Ny server</div></div>
     <div class="setup-top"><div class="logo">OS</div><span class="lock-small" id="ob-step">Steg 1 av 2</span></div>
     <div class="setup-bar"><span class="on"></span><span id="ob-bar2"></span></div>
     <div class="step" data-ob="1">
@@ -38,14 +41,18 @@
     <button type="button" class="lock-back" id="ob-back" hidden>← Tilbake</button>
   </form>
   <form id="login" class="lock-box">
+    <div class="lock-pw" aria-hidden="true"><div class="lock-pw-k">Homelab</div><div class="lock-pw-t">Hei, velkommen hjem</div></div>
     <div class="logo">OS</div>
     <div class="lock-title">Hei, <b>velkommen hjem</b></div>
     <div class="step" data-step="cred">
+      <span class="p-flab" aria-hidden="true">BRUKERNAVN</span>
       <input name="username" placeholder="Brukernavn" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" autofocus aria-label="Brukernavn">
+      <span class="p-flab" aria-hidden="true">PASSORD</span>
       <input type="password" name="password" placeholder="Passord" autocomplete="current-password" aria-label="Passord">
     </div>
     <div class="step" data-step="code" hidden>
       <div class="lock-hint">Tofaktor er på for <b id="tfa-user"></b>. Skriv inn den 6-sifrede koden fra autentiseringsappen.</div>
+      <span class="p-flab" aria-hidden="true">KODE</span>
       <input name="code" class="code" inputmode="numeric" autocomplete="one-time-code" maxlength="11" placeholder="000000" aria-label="Kode fra autentiseringsappen">
       <div class="lock-small">Mistet telefonen? Skriv inn en gjenopprettingskode.</div>
     </div>

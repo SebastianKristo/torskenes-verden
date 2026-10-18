@@ -1,9 +1,10 @@
 import { esc, kr, nb, signed, p2, cap, isoDay, hm, isMobile, api, logoImg } from './util.js';
-import { store, widget, card, refresh, errBox, on } from './store.js';
+import { store, widget, card, refresh, errBox, on, load } from './store.js';
 import { renderSearch, popHandler } from './extras.js';
 import { hiddenWidgets } from './profile.js';
 import './media.js';
 import { carousel, restoreCarousel, startPackages } from './weather-card.js';
+import { is2c, pwBgSel, pwCredit, pwOverlay } from './hltheme.js';
 
 // Snarveiene hentes fra serveren per bruker (/api/state.shortcuts), og deles med mobilappen.
 // Ekte logo (favicon via serveren); lokale adresser slås opp med AI én gang. Uten logo vises forbokstavene i en farge.
@@ -65,6 +66,17 @@ function renderTrips() {
   const r = store.data.ruter;
   if (!r) return store.errors.ruter ? errBox('ruter', 'Ruter') : '<div class="trip"><div class="skeleton"></div></div>'.repeat(4);
   const t = store.now.getTime();
+  // Vindu og papir: strekning i serif og linjene som ramme-merker i blekk.
+  if (is2c()) {
+    return r.trips.map((trip) => {
+      const deps = trip.deps.map((d) => {
+        const m = Math.round((new Date(d.time) - t) / 60000);
+        return m < -1 ? '' : `<span class="p-dep"><span class="p-line">${esc(d.line)}</span>${m <= 0 ? 'nå' : `${m} min`}</span>`;
+      }).join('');
+      return `<a class="p-trip" href="${esc(trip.url)}" target="_blank" rel="noopener"><div class="p-trip-n">${esc(trip.from)} → ${esc(trip.to)}</div>
+        <div class="p-deps">${deps || `<span class="p-mute">${trip.error ? 'Ingen sanntid' : 'Ingen avganger'}</span>`}</div></a>`;
+    }).join('');
+  }
   return r.trips.map((trip) => {
     const deps = trip.deps.map((d) => {
       const m = Math.round((new Date(d.time) - t) / 60000);
@@ -237,6 +249,111 @@ popHandler('pos', (i) => {
 // På mobil er karusellen selve kortet (lysbildene har egen kortstil).
 widget('d_weather_m', { cls: 'card wxc-host', render: () => carousel(), mounted: (el) => restoreCarousel(el) });
 
+/* ---------- Vindu og papir (2c) ---------- */
+
+// Seksjonene i de tre spaltene er egne widgets, så de tegnes på nytt når dataene kommer, akkurat som kortene.
+const lab = (t, extra = '') => `<div class="p-lab"${extra}>${t}</div>`;
+const pdate = (n) => cap(n.toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' }));
+
+widget('p_school', { cls: 'p-sec', render() {
+  const s = store.data.school;
+  let now = '';
+  if (s && !s.configured) now = '<div class="p-mute">Legg inn SCHOOL_ICAL_URL for timeplan.</div>';
+  else if (!s) now = errBox('school', 'Timeplan');
+  else {
+    const l = lessonNow();
+    now = l ? `<div class="p-now"><span class="p-tag-ink">${l.label}</span><span class="p-now-t">${esc(l.subj)}</span>
+      <div class="p-mute">${esc(l.time)} · ${esc(l.room)} · ${esc(l.left)}${l.map ? ` · <a href="${esc(l.map)}" target="_blank" rel="noopener" class="p-u">MazeMap ↗</a>` : ''}</div></div>` : '<div class="p-now"><span class="p-now-t">Ingen flere timer i dag</span></div>';
+  }
+  const rows = upcoming(5).map((e) => `<div class="p-ev" data-pop="ev:${esc(e.start)}|${esc(e.title)}" role="button" tabindex="0"><span class="p-mute">${esc(e.when)}</span><b>${esc(e.title)}</b><span class="p-tag">${e.tag}</span></div>`).join('')
+    || (s ? '<div class="p-mute" style="padding:9px 0">Ingen kommende hendelser.</div>' : '');
+  return lab('I DAG PÅ SKOLEN') + now + rows;
+} });
+
+widget('p_energy', { cls: 'p-sec', render() {
+  const e = store.data.energy;
+  if (!e) return lab('ENERGI') + (errBox('energy', 'Home Assistant') || '<div class="skeleton" style="min-height:90px"></div>');
+  if (!e.configured) return lab('ENERGI') + '<div class="p-mute">Legg inn HA_URL og HA_TOKEN på serveren.</div>';
+  const mx = Math.max(...e.days.map((d) => d.kwh), 1), last = e.days.length - 1;
+  return lab('ENERGI') + `<div class="p-split"><span><span class="p-num">${e.kw != null ? nb(e.kw, 1) : '–'}</span> <span class="p-mute">kW nå</span></span><span class="p-mute">${nb(e.week)} kWh denne uken${e.price != null ? ` · ${nb(e.price, 2)} kr/kWh` : ''}</span></div>
+    <div class="p-bars">${e.days.map((d, i) => `<div title="${esc(d.label)}: ${nb(d.kwh)} kWh" class="${i === last ? 'cur' : ''}" style="height:${(d.kwh / mx) * 100}%"></div>`).join('')}</div>
+    <div class="p-bars-l">${e.days.map((d) => `<span>${esc(d.label)}</span>`).join('')}</div>`;
+} });
+
+widget('p_wx', { cls: 'p-sec', render() {
+  const w = store.data.weather;
+  if (!w) return lab('VÆR') + (errBox('weather', 'Vær') || '<div class="skeleton" style="min-height:90px"></div>');
+  const hours = (w.hours ?? []).slice(0, 6).map((h) => `<div><span class="p-mute">${esc(h.t ?? h.label)}</span><b>${h.temp}°</b><span class="p-mute">${h.mm ? nb(h.mm, 1) : '0'}</span></div>`).join('');
+  const days = (w.days ?? []).slice(1, 4).map((d) => `<div class="p-wxd"><span>${esc(d.label)}</span><b>${d.max}°</b><span class="p-mute">${d.min}°</span><span class="p-mute">${d.mm ? `${nb(d.mm, 1)} mm` : '0 mm'}</span></div>`).join('');
+  return lab(`VÆR · ${esc(w.place ?? '').toUpperCase()}`) + `<div class="p-mute" style="margin-top:6px">${esc(w.text)} · føles som ${w.feels ?? '–'}° · vind ${w.wind} m/s${w.hi != null ? ` · ${w.hi}° / ${w.lo}°` : ''}</div>
+    ${hours ? `<div class="p-wxh">${hours}</div>` : ''}${days}`;
+} });
+
+widget('p_pk', { cls: 'p-sec', render() {
+  const d = store.data.trackw;
+  const all = (d?.items ?? []).filter((p) => !p.archived && p.status !== 'delivered');
+  const ready = (p) => p.status === 'ready_for_pickup';
+  const rows = [...all].sort((a, b) => ready(b) - ready(a) || (b.step ?? 0) - (a.step ?? 0)).slice(0, 3).map((p) => `<a class="p-pk" href="#/sporing"><b>${esc(p.name || p.shop || p.trackingNo)}</b>
+    <span class="${ready(p) ? 'p-acc' : 'p-mute'}">${esc(p.statusText ?? '')}${ready(p) && p.pickupPoint ? ` · ${esc(p.pickupPoint)}` : p.eta ? ` · ${esc(p.eta)}` : ''}</span></a>`).join('');
+  return lab(`PAKKER${all.length ? ` · ${all.length} PÅ VEI` : ''}`) + (rows || `<div class="p-mute" style="padding:9px 0">${d ? 'Ingen pakker på vei.' : ''}</div>`) + '<a class="p-u p-more" href="#/sporing">Åpne sporing ›</a>';
+} });
+
+widget('p_play', { cls: 'p-sec', render() {
+  const now = store.data.media_now, items = now?.items ?? [];
+  const left = (ms) => { const m = Math.round((ms || 0) / 60000); return m >= 60 ? `${Math.floor(m / 60)} t ${m % 60} min igjen` : `${m} min igjen`; };
+  const rows = items.slice(0, 3).map((n) => `<div class="p-play"><span class="p-poster" style="${n.poster ? `background-image:url('${esc(n.poster)}')` : ''}">${n.poster ? '' : esc(String(n.title).charAt(0).toUpperCase())}</span>
+    <div><div class="p-play-t">${esc(n.title)}</div><div class="p-mute">${esc([n.user, n.src === 'jellyfin' ? 'Jellyfin' : 'Plex', left(n.leftMs)].filter(Boolean).join(' · '))}</div></div></div>`).join('');
+  const empty = !now ? '' : now.configured === false ? 'Legg inn Plex eller Jellyfin under Innstillinger → Integrasjoner.' : 'Ingen spiller noe akkurat nå.';
+  return lab('SPILLES NÅ') + (rows || `<div class="p-mute" style="padding:9px 0">${empty}</div>`);
+} });
+
+widget('p_money', { cls: 'p-sec', render() {
+  const t = store.data.trading, f = store.data.finans;
+  const cur = t?.currency === 'NOK' || !t?.currency ? 'kr' : t.currency;
+  const tr = !t ? '<div class="skeleton" style="min-height:60px"></div>' : !t.configured ? '<div class="p-mute">Ikke koblet</div>'
+    : `<div class="p-big">${nb(t.total)} ${esc(cur)}</div>${t.dayChange != null ? `<div class="${t.dayChange < 0 ? 'p-neg' : 'p-pos'}">${signed(t.dayChange)} ${esc(cur)} (${signed(t.dayPct, 1)} %)</div>` : `<div class="${t.pplPct < 0 ? 'p-neg' : 'p-pos'}">${signed(t.pplPct, 1)} % totalt</div>`}`;
+  const month = cap(store.now.toLocaleDateString('nb-NO', { month: 'long' }));
+  const fh = !f ? (errBox('finans', 'FinansHub') || '<div class="skeleton" style="min-height:60px"></div>')
+    : `<div class="p-big">${kr(f.budgetTotal ? f.budgetUsed : f.ut)}</div><div class="p-mute">${f.budgetTotal ? `av ${kr(f.budgetTotal)}` : 'brukt'}${f.review?.length ? ` · <a class="p-u" href="/finans/#/kv">${f.review.length} til gjennomgang</a>` : ''}</div>`;
+  return lab('PENGER') + `<div class="p-money"><a href="/finans/#/aks"><div class="p-mute">Trading 212</div>${tr}</a><a href="/finans/"><div class="p-mute">Brukt i ${esc(month.toLowerCase())}</div>${fh}</a></div>`;
+} });
+
+widget('p_links', { cls: 'p-sec', render() {
+  const list = store.me.shortcuts ?? [];
+  return lab('SNARVEIER') + `<div class="p-links">${list.map(({ name, url }, i) => `<a href="${esc(url)}" target="_blank" rel="noopener"><span style="background:${TILE_COLORS[i % TILE_COLORS.length]}"></span>${esc(name)}</a>`).join('') || '<span class="p-mute">Ingen snarveier.</span>'}</div>`;
+} });
+
+function photoWindow(n) {
+  const w = store.data.weather;
+  return `<section class="pw pw-dash">${pwOverlay()}
+    ${pwBgSel()}
+    <div class="pw-bottom">
+      <div><div class="pw-date" id="date">${pdate(n)}</div><div class="pw-hello"><span id="greet">${greeting(n.getHours())}</span>, ${esc(store.me.user)}</div></div>
+      <div class="pw-wx"><div class="pw-temp" id="pw-temp">${w ? `${w.temp}°` : '–°'}</div><div class="pw-cond"><span id="pw-cond">${w ? esc(w.text) : ''}</span>${w ? ' · ' : ''}<span id="clock-hm">${p2(n.getHours())}:${p2(n.getMinutes())}</span></div></div>
+    </div>
+    <div class="pw-credit">${esc(pwCredit())}</div></section>`;
+}
+
+function render2c(n, cardH) {
+  return `<div class="p-dash">${photoWindow(n)}
+    <div class="p-paper">
+      <div class="p-search">${store.me.hideSearch ? '' : renderSearch()}</div>
+      <div id="p-ticker-slot"></div>
+      <div class="p-cols">
+        <div class="p-col">${card('p_school')}${hiddenWidgets().has('d_cal') ? '' : card('d_cal')}</div>
+        <div class="p-col">${lab('AVGANGER')}<div id="trips" class="p-trips">${renderTrips()}</div>${hiddenWidgets().has('d_energy') ? '' : card('p_energy')}${card('p_wx')}${card('p_pk')}</div>
+        <div class="p-col">${card('p_play')}${hiddenWidgets().has('d_trading') && hiddenWidgets().has('d_eco') ? '' : card('p_money')}${hiddenWidgets().has('d_links') ? '' : card('p_links')}</div>
+      </div>
+      <div class="grid" data-dnd="dash2c">${['d_upcoming', 'd_media', 'd_media_hist', 'd_trading', 'd_eco'].map(cardH).join('')}</div>
+    </div></div>`;
+}
+
+let pkTimer2 = null;
+function startPk2c() {
+  if (pkTimer2) return;
+  pkTimer2 = setInterval(() => { if (!document.hidden && document.querySelector('[data-w="p_pk"]')) load('trackw', '/tracking/widget'); }, 120_000);
+}
+
 /* ---------- Side ---------- */
 
 export function render() {
@@ -245,6 +362,7 @@ export function render() {
   requestAnimationFrame(() => restoreCarousel());
   // Skjulte widgets tegnes med hidden, så indeksene i lagret rekkefølge ikke forskyves.
   const cardH = (id) => hid.has(id) ? card(id).replace('<section ', '<section hidden ') : card(id);
+  if (is2c()) { startPk2c(); return render2c(n, cardH); }
   const hello = `<div class="hello">
       <div class="greet"><span id="greet">${greeting(n.getHours())}</span>, <b>${esc(store.me.user)}</b></div>
       <div class="sub" id="date">${cap(n.toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' }))} · ${esc(store.me.place)}</div>
@@ -272,11 +390,12 @@ export function tick() {
   const hmEl = document.getElementById('clock-hm');
   if (!hmEl) return;
   hmEl.textContent = `${p2(n.getHours())}:${p2(n.getMinutes())}`;
-  document.getElementById('clock-s').textContent = p2(n.getSeconds());
+  const sEl = document.getElementById('clock-s');
+  if (sEl) sEl.textContent = p2(n.getSeconds());
   if (n.getSeconds() === 0) {
     document.getElementById('greet').textContent = greeting(n.getHours());
     setHtml('lesson', renderLesson());
-    refresh('d_agenda');
+    refresh('d_agenda', 'p_school');
     if (n.getHours() === 0 && n.getMinutes() === 0) refresh('d_cal');
   }
   if (n.getSeconds() % 15 === 0) setHtml('trips', renderTrips());
@@ -284,8 +403,16 @@ export function tick() {
 
 on('ruter', () => setHtml('trips', renderTrips()));
 // Vær og pakker oppdateres i weather-card.js (bare lysbildene, så sveipeposisjonen beholdes).
-on('school', () => { setHtml('lesson', renderLesson()); refresh('d_cal', 'd_agenda'); });
-on('trading', () => refresh('d_trading'));
-on('energy', () => refresh('d_energy'));
+on('school', () => { setHtml('lesson', renderLesson()); refresh('d_cal', 'd_agenda', 'p_school'); });
+on('trading', () => refresh('d_trading', 'p_money'));
+on('energy', () => refresh('d_energy', 'p_energy'));
 on('upcoming', () => refresh('d_upcoming'));
-on('finans', () => refresh('d_eco'));
+on('finans', () => refresh('d_eco', 'p_money'));
+// Vindu og papir: temperatur i vinduet og seksjonene for vær, pakker og media.
+on('weather', () => {
+  const w = store.data.weather;
+  if (w) { setHtml('pw-temp', `${w.temp}°`); setHtml('pw-cond', esc(w.text)); }
+  refresh('p_wx');
+});
+on('trackw', () => refresh('p_pk'));
+on('media_now', () => refresh('p_play'));

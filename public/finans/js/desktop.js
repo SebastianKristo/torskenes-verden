@@ -46,7 +46,7 @@ function navCfg() {
 const navOrder = () => { if (S.boot.restricted) return ['dir', 'inn']; const { order, hidden } = navCfg(); return order.filter((p) => !hidden.includes(p)); };
 function sideNav() {
   const b = S.boot;
-  const items = navOrder().map((p) => `<a href="#/${p}" ${p === u.page ? 'aria-current="page"' : ''}>${icon(p, 18, 'currentColor')}<span>${esc(pageName(p))}</span>${p === 'kv' && b.reviewCount ? `<span class="badge">${b.reviewCount}</span>` : ''}</a>`).join('');
+  const items = navOrder().map((p) => `<a href="#/${p}" title="${esc(pageName(p))}" ${p === u.page ? 'aria-current="page"' : ''}>${icon(p, 18, 'currentColor')}<span>${esc(pageName(p))}</span>${p === 'kv' && b.reviewCount ? `<span class="badge">${b.reviewCount}</span>` : ''}</a>`).join('');
   return `<div class="side-label">${b.restricted ? 'Delt med deg' : 'Generelt'}</div><nav class="nav">${items}</nav>`;
 }
 
@@ -68,6 +68,51 @@ const aiChips = (title, list) => ((list ?? []).length ? `${title ? `<div class="
 // /search/suggestions svarer {groups, items}; eldre servere svarer med en liste.
 const suggList = (r) => (Array.isArray(r) ? r : r?.items ?? []);
 
+/* ===================== Tema og kompakt sidemeny (prompt 13) ===================== */
+
+// «Nåværende» (v2) og de tre temaene fra «FinansHub v3 Temaer». Valget lagres per bruker i /api/me/layout
+// (design, compactNav), med localStorage som reserve når serveren ikke kjenner feltene ennå.
+export const THEMES = {
+  v2: { name: 'Nåværende (FinansHub v2)', desc: 'Dagens mørke design med oransje aksent', bg: '#0A0A0C', side: '#0F0F12', surf: '#141418', line: '#1E1E23', ink: '#F2F2F4', faint: '#5A5A62', acc: '#FF7A3D', warn: '#FF7A3D', d: 'Geist,system-ui,sans-serif', dw: 600, rs: '10px', meta: '#0A0A0C' },
+  lys: { name: 'Lys hovedbok', desc: 'Papirtone, grønn aksent, serif-tall', bg: '#f4f1ea', side: '#ece7dc', surf: '#faf8f3', line: '#e2ddd2', ink: '#1c1b19', faint: '#8a8478', acc: '#1f4d3a', warn: '#c8553d', d: "'Instrument Serif',serif", dw: 400, rs: '6px', meta: '#f4f1ea' },
+  mork: { name: 'Mørk hovedbok', desc: 'Samme oppsett i mørkt, mintgrønn aksent', bg: '#121210', side: '#0d0d0c', surf: '#1a1a17', line: '#2a2925', ink: '#ece8df', faint: '#8a8478', acc: '#6fbf8e', warn: '#e07a5f', d: "'Instrument Serif',serif", dw: 400, rs: '6px', meta: '#121210' },
+  glod: { name: 'Glød', desc: 'Varm mørk, ravgul aksent, myke kort', bg: '#16110e', side: '#120e0b', surf: '#221a15', line: '#2c221c', ink: '#f3ebe3', faint: '#9c8f84', acc: '#ffb547', warn: '#ff7a59', d: "'Bricolage Grotesque',sans-serif", dw: 600, rs: '8px', meta: '#16110e' },
+};
+const lsGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+export const design = () => { const v = S.layout?.design ?? lsGet('fh_design'); return THEMES[v] ? v : 'v2'; };
+const compactNav = () => (typeof S.layout?.compactNav === 'boolean' ? S.layout.compactNav : lsGet('fh_compact') === '1');
+// Setter tema-attributtene på <html>. Mobil har egne design, så temaene gjelder bare desktop (CSS er avgrenset med data-ui).
+export function applyTheme() {
+  const h = document.documentElement, d = design();
+  if (h.dataset.theme !== d) h.dataset.theme = d;
+  h.toggleAttribute('data-v3', d !== 'v2');
+  h.toggleAttribute('data-compact', compactNav());
+  const m = document.querySelector('meta[name=theme-color]');
+  if (m && h.dataset.ui === 'desktop') m.content = THEMES[d].meta;
+}
+async function saveLayout(patch) {
+  S.layout = { ...(S.layout ?? {}), ...patch };
+  if ('design' in patch) lsSet('fh_design', patch.design);
+  if ('compactNav' in patch) lsSet('fh_compact', patch.compactNav ? '1' : '0');
+  applyTheme();
+  render();
+  if (S.layoutOk === false) return;
+  const r = await fetch('/api/me/layout', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) }).catch(() => null);
+  if (r && !r.ok && r.status !== 404) toast('Valget er lagret i denne nettleseren');
+}
+const thPrev = (t) => `<span class="th-prev" style="--p-bg:${t.bg};--p-side:${t.side};--p-surf:${t.surf};--p-line:${t.line};--p-ink:${t.ink};--p-faint:${t.faint};--p-acc:${t.acc};--p-warn:${t.warn};--p-d:${t.d};--p-dw:${t.dw};--p-rs:${t.rs}">
+  <span class="ps"><i></i><i></i><i style="width:80%"></i><i style="width:70%"></i><i style="width:85%"></i></span>
+  <span class="pm"><b>−37 489</b><span class="pr"><span class="pc"><span style="height:40%"></span><span style="height:75%"></span><span style="height:30%"></span><span style="height:55%"></span></span><span class="pa"></span></span></span></span>`;
+function lookTab() {
+  const cur = design(), comp = compactNav();
+  return `<div class="th-grid">${Object.entries(THEMES).map(([k, t]) => `<button class="th-card" data-theme-pick="${k}" aria-pressed="${cur === k}">${thPrev(t)}
+      <span class="th-meta"><span><b>${esc(t.name)}</b><small>${esc(t.desc)}</small></span>${cur === k ? '<span class="th-ok" aria-hidden="true">✓</span>' : ''}</span></button>`).join('')}</div>
+    <div class="box" style="justify-content:space-between;gap:20px"><div><b style="font-weight:600;font-size:15px">Kompakt sidemeny</b><div class="note" style="font-size:13px;margin-top:2px">Vis bare ikoner i sidemenyen</div></div>
+      <button class="toggle" role="switch" aria-checked="${comp}" data-act="compact-nav" aria-label="Kompakt sidemeny"></button></div>
+    <div class="note" style="font-size:13px">Velg hvordan FinansHub ser ut. Endringen gjelder med en gang og følger brukeren din på alle nettlesere. Mobilappen og PWA-en har egne design under Innstillinger → Utseende der.</div>`;
+}
+
 function shell(content) {
   const b = S.boot, st = b.settings;
   const pg = PAGES.find(([p]) => p === u.page);
@@ -85,7 +130,7 @@ function shell(content) {
   </aside>
   <main class="main"><div class="wrap">
     <header class="head">
-      <div><div class="crumb"><span>FinansHub</span><span>›</span><b>${esc(pageName(u.page))}</b></div><h1>${u.page === 'ov' ? `${greet()}, ${esc(me.name)}` : esc(pageName(u.page))}</h1>${MODULE_SUB[u.page] ? `<div class="note" style="font-size:14px;margin-top:4px">${MODULE_SUB[u.page]}</div>` : ''}</div>
+      <div style="display:flex;gap:14px;align-items:flex-start"><button class="side-tog" data-act="compact-nav" aria-label="${compactNav() ? 'Vis hele sidemenyen' : 'Kompakt sidemeny'}" title="${compactNav() ? 'Vis hele sidemenyen' : 'Kompakt sidemeny'}" aria-pressed="${compactNav()}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 5h16v14H4zM9 5v14"/></svg></button><div><div class="crumb"><span>FinansHub</span><span>›</span><b>${esc(pageName(u.page))}</b></div><h1>${u.page === 'ov' ? `${greet()}, ${esc(me.name)}` : esc(pageName(u.page))}</h1>${MODULE_SUB[u.page] ? `<div class="note" style="font-size:14px;margin-top:4px">${MODULE_SUB[u.page]}</div>` : ''}</div></div>
       <div class="head-r">
         ${b.restricted ? '' : `<form class="search${aiMode ? ' ai' : ''}" data-form="gsearch" role="search">${aiMode ? '<span class="ai-star">✦</span>' : icon('search', 17, 'var(--muted)')}<input name="q" value="${esc(aiMode ? (u.aiDraft ?? '') : u.q)}" placeholder="${aiMode ? 'Spør, f.eks. «strøm i september»' : 'Søk i transaksjoner …'}" aria-label="${aiMode ? 'Spør AI om transaksjoner og kvitteringer' : 'Søk i transaksjoner'}"><button type="button" class="ai-tog" data-act="ai-toggle" aria-pressed="${aiMode}" title="Søk med AI i transaksjoner og kvitteringer">✦ AI</button></form>
         <a class="icon-btn" href="#/kv" aria-label="Varsler: ${b.reviewCount} kvitteringer til gjennomgang">${icon('bell', 18)}${b.reviewCount ? '<span class="dot"></span>' : ''}</a>`}
@@ -144,14 +189,14 @@ function chart(s) {
   const ticks = [1, 0.75, 0.5, 0.25, 0].map((f) => `<div><span>${k(mx * f)}</span></div>`).join('');
   const hov = rows.map((r, i) => {
     const on = u.hov === i;
-    return `<div data-hov="${i}">${on ? `<div class="vline"></div><span class="pt" style="background:var(--warn);top:calc(${(1 - r.inn / mx) * 100}% - 6px)"></span><span class="pt" style="background:var(--acc);top:calc(${(1 - r.ut / mx) * 100}% - 6px)"></span>
+    return `<div data-hov="${i}">${on ? `<div class="vline"></div><span class="pt" style="background:var(--c-in);top:calc(${(1 - r.inn / mx) * 100}% - 6px)"></span><span class="pt" style="background:var(--c-out);top:calc(${(1 - r.ut / mx) * 100}% - 6px)"></span>
       <div class="tip" style="left:${i > rows.length / 2 ? 'calc(50% - 172px)' : 'calc(50% + 12px)'}"><b>${cap(monthName(r.month))} ${r.month.slice(0, 4)}</b><span><span class="sub">● Inn</span><span class="mono">${n0(r.inn)} kr</span></span><span><span class="sub">● Ut</span><span class="mono">${n0(r.ut)} kr</span></span><span><span class="sub">Netto</span><span class="mono" style="color:${r.inn - r.ut >= 0 ? 'var(--pos)' : 'var(--acc-l)'}">${neg0(r.inn - r.ut)} kr</span></span></div>` : ''}</div>`;
   }).join('');
   return `<div class="chart" data-chart>
     <div class="chart-grid">${ticks}</div>
-    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="gi" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F2C14E" stop-opacity=".22"/><stop offset="1" stop-color="#F2C14E" stop-opacity="0"/></linearGradient><linearGradient id="gu" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FF7A3D" stop-opacity=".18"/><stop offset="1" stop-color="#FF7A3D" stop-opacity="0"/></linearGradient></defs>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true"><defs><linearGradient id="gi" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--c-in)" stop-opacity=".22"/><stop offset="1" style="stop-color:var(--c-in)" stop-opacity="0"/></linearGradient><linearGradient id="gu" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color:var(--c-out)" stop-opacity=".18"/><stop offset="1" style="stop-color:var(--c-out)" stop-opacity="0"/></linearGradient></defs>
       <path d="${smooth(pi)} L${W} ${H} L0 ${H} Z" fill="url(#gi)"/><path d="${smooth(pu)} L${W} ${H} L0 ${H} Z" fill="url(#gu)"/>
-      <path d="${smooth(pi)}" fill="none" stroke="#F2C14E" stroke-width="2.5" vector-effect="non-scaling-stroke"/><path d="${smooth(pu)}" fill="none" stroke="#FF7A3D" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg>
+      <path d="${smooth(pi)}" fill="none" style="stroke:var(--c-in)" stroke-width="2.5" vector-effect="non-scaling-stroke"/><path d="${smooth(pu)}" fill="none" style="stroke:var(--c-out)" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg>
     <div class="chart-hov">${hov}</div>
     <div class="chart-x">${rows.map((r) => `<span>${monthName(r.month, false)}</span>`).join('')}</div></div>`;
 }
@@ -176,10 +221,10 @@ function overview() {
   const ang = Math.PI * (1 - pctOf(s)), gx = 50 + 40 * Math.cos(ang), gy = 44 - 40 * Math.sin(ang);
   const pct = pctOf(s);
   const kpis = `<div class="kpis">
-    ${kpi('Total saldo', 'wallet', '#2A1A12', '#FFB08A', neg(s.balance), change(bal.at(-1), bal.at(-2)), `<div class="bars">${saldoBars}</div>`)}
-    ${kpi(`Inn i ${monthName(s.month)}`, 'up', '#142032', '#9DBDFF', n2(s.inn), s.lastIncome ? `${esc(s.lastIncome.description)} ${dd(s.lastIncome.date)}` : 'Ingen inntekt registrert', `<svg width="96" height="46" viewBox="0 0 96 46" fill="none" preserveAspectRatio="none" aria-hidden="true"><path d="${innSp.area}" fill="rgba(122,167,255,.16)"/><path d="${innSp.line}" stroke="#7AA7FF" stroke-width="2" stroke-linecap="round"/></svg>`)}
-    ${kpi(`Brukt i ${monthName(s.month)}`, 'dn', '#2A1A12', '#FFB08A', n2(s.ut), change(s.ut, s.prevUt, true), `<div class="bars" style="gap:3px">${utBars}</div>`)}
-    ${kpi('Igjen av budsjett', 'pie', '#13201B', '#9FE3C6', neg(s.left), s.budgetTotal ? `${n0(pct * 100)} % brukt · ${s.daysLeft} dager igjen` : '<a href="#/bud">Sett opp budsjett</a>', `<svg width="96" height="46" viewBox="0 0 100 48" fill="none" aria-hidden="true"><path d="M10 44A40 40 0 0 1 90 44" stroke="#24242A" stroke-width="8" stroke-linecap="round"/><path d="M10 44A40 40 0 0 1 90 44" stroke="${pct >= 1 ? '#FF7A3D' : pct > 0.8 ? '#F2C14E' : '#FF7A3D'}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${pct * 125.7} 200"/><circle cx="${gx.toFixed(1)}" cy="${gy.toFixed(1)}" r="3" fill="#F2F2F4"/></svg>`)}
+    ${kpi('Total saldo', 'wallet', 'var(--warn-soft)', 'var(--acc-l)', neg(s.balance), change(bal.at(-1), bal.at(-2)), `<div class="bars">${saldoBars}</div>`)}
+    ${kpi(`Inn i ${monthName(s.month)}`, 'up', 'var(--blue-soft)', 'var(--blue-l)', n2(s.inn), s.lastIncome ? `${esc(s.lastIncome.description)} ${dd(s.lastIncome.date)}` : 'Ingen inntekt registrert', `<svg width="96" height="46" viewBox="0 0 96 46" fill="none" preserveAspectRatio="none" aria-hidden="true"><path d="${innSp.area}" style="fill:color-mix(in srgb,var(--blue) 16%,transparent)"/><path d="${innSp.line}" style="stroke:var(--blue)" stroke-width="2" stroke-linecap="round"/></svg>`)}
+    ${kpi(`Brukt i ${monthName(s.month)}`, 'dn', 'var(--warn-soft)', 'var(--acc-l)', n2(s.ut), change(s.ut, s.prevUt, true), `<div class="bars" style="gap:3px">${utBars}</div>`)}
+    ${kpi('Igjen av budsjett', 'pie', 'var(--pos-soft)', 'var(--pos)', neg(s.left), s.budgetTotal ? `${n0(pct * 100)} % brukt · ${s.daysLeft} dager igjen` : '<a href="#/bud">Sett opp budsjett</a>', `<svg width="96" height="46" viewBox="0 0 100 48" fill="none" aria-hidden="true"><path d="M10 44A40 40 0 0 1 90 44" style="stroke:var(--line)" stroke-width="8" stroke-linecap="round"/><path d="M10 44A40 40 0 0 1 90 44" stroke="${pct >= 1 ? 'var(--acc)' : pct > 0.8 ? 'var(--warn)' : 'var(--acc)'}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${pct * 125.7} 200"/><circle cx="${gx.toFixed(1)}" cy="${gy.toFixed(1)}" r="3" style="fill:var(--text)"/></svg>`)}
   </div>`;
   const a = accs(), credit = a.find((x) => x.type === 'credit'), main = a.find((x) => x.type === 'checking') ?? a[0];
   const accCard = card(`<div class="card-h"><h2>Kontoer</h2><a class="btn sm pri" href="#/konto">Se alle</a></div>
@@ -199,14 +244,14 @@ function overview() {
     <span style="display:block;font-size:12px;color:${r.flag || r.error ? 'var(--acc-l)' : r.status === 'needs_review' ? 'var(--pos)' : 'var(--blue-l)'}">${r.status !== 'needs_review' ? 'Leses av AI …' : r.error ? 'Må fylles ut manuelt' : r.flag ?? 'Alle felt lest sikkert'}</span></span></button>`).join('');
   const up = s.upcoming.slice(0, 4).map((r) => `<div class="kv-line" style="align-items:center"><div><div style="font-weight:500">${esc(r.name)}</div><div class="note" style="font-size:12px">Trekkes ${new Date(r.next + 'T12:00').toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' }).replace('.', '')}</div></div><div class="mono" style="font-weight:500">${n0(r.amount)} kr</div></div>`).join('');
   // På PC lastes kvitteringer opp fra filer (ingen kamera).
-  const actions = `<label class="action" style="background:#2A1A12;color:var(--text);cursor:pointer"><span style="color:#FFB08A">${icon('down', 17)}</span>Last opp kvittering<input type="file" multiple accept="image/*,application/pdf" data-upload hidden></label>`
-    + [['Ny transaksjon', '#142032', '#9DBDFF', 'plus', 'data-act="add-tx"'], ['Importer', '#13201B', '#9FE3C6', 'imp', 'href="#/imp"'], ['Rapport', '#221A30', '#C9B6FF', 'rap', 'href="#/rap"']]
+  const actions = `<label class="action" style="background:var(--warn-soft);color:var(--text);cursor:pointer"><span style="color:var(--acc-l)">${icon('down', 17)}</span>Last opp kvittering<input type="file" multiple accept="image/*,application/pdf" data-upload hidden></label>`
+    + [['Ny transaksjon', 'var(--blue-soft)', 'var(--blue-l)', 'plus', 'data-act="add-tx"'], ['Importer', 'var(--pos-soft)', 'var(--pos)', 'imp', 'href="#/imp"'], ['Rapport', 'var(--purple-soft)', 'var(--purple)', 'rap', 'href="#/rap"']]
     .map(([n, bg, c, ic, at]) => `<${at.startsWith('href') ? 'a' : 'button'} class="action" ${at} style="background:${bg};color:var(--text)"><span style="color:${c}">${icon(ic, 17)}</span>${n}</${at.startsWith('href') ? 'a' : 'button'}>`).join('');
   const noData = !S.boot.hasData ? card(`<div class="card-h"><div><h2>Kom i gang</h2><div class="note">Legg til en konto, importer fra nettbanken eller last opp en kvittering. Du kan også laste inn demodata for å se hvordan alt ser ut.</div></div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn" href="#/konto">Legg til konto</a><button class="btn" data-act="goto-import">Importer CSV</button><button class="btn pri" data-act="demo">Last inn demodata</button></div></div>`, '', 'border-color:#3A2A1C') : '';
+    <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn" href="#/konto">Legg til konto</a><button class="btn" data-act="goto-import">Importer CSV</button><button class="btn pri" data-act="demo">Last inn demodata</button></div></div>`, '', 'border-color:var(--warm-line)') : '';
   return `<div style="display:flex;flex-direction:column;gap:18px">${S.boot.firstRun ? firstRunCard() : noData}${kpis}
     <div class="row-flex">${card(`<div class="card-h"><div><h2>Inn og ut</h2><div class="note" style="font-size:13px">${u.mode === 'year' ? `Akkumulert, ${s.month.slice(0, 4)}` : 'Per måned, siste 12 måneder'}</div></div>
-      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap"><div class="legend"><span><i style="background:var(--warn)"></i>Inn</span><span><i style="background:var(--acc)"></i>Ut</span></div>
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap"><div class="legend"><span><i style="background:var(--c-in)"></i>Inn</span><span><i style="background:var(--c-out)"></i>Ut</span></div>
       <div class="seg"><button data-mode="month" aria-pressed="${u.mode === 'month'}">Måned</button><button data-mode="year" aria-pressed="${u.mode === 'year'}">År</button></div></div></div>${chart(s)}`, '', 'flex:2 1 560px')}${accCard}</div>
     <div class="row-flex">
       ${card(`<div class="card-h" style="margin-bottom:-6px"><h2>Siste transaksjoner</h2><a class="link" href="#/tx">Se alle →</a></div><div style="display:flex;flex-direction:column;gap:2px">${s.recent.map(txRow).join('') || '<div class="empty">Ingen transaksjoner ennå.</div>'}</div>`, '', 'flex:1.3 1 380px;gap:6px')}
@@ -215,7 +260,7 @@ function overview() {
         ${card(`<div class="card-h"><h2>Budsjett</h2><a class="link" href="#/bud">Endre →</a></div>${s.budgetTotal ? `<div class="stack">${stack}</div>${budTop}` : '<div class="note">Ingen budsjett satt. <a href="#/bud">Sett opp</a></div>'}`, '', 'gap:12px')}
       </div>
       <div style="flex:1 1 300px;min-width:0;display:flex;flex-direction:column;gap:16px">
-        ${card(`<div class="card-h"><h2>Trenger gjennomgang</h2><span class="pill" style="background:#3A2414;color:var(--acc-l)">${s.review.length} nye</span></div>${rv || '<div class="note">Alt er gjennomgått.</div>'}`, 'review', 'gap:10px')}
+        ${card(`<div class="card-h"><h2>Trenger gjennomgang</h2><span class="pill" style="background:var(--warn-soft);color:var(--acc-l)">${s.review.length} nye</span></div>${rv || '<div class="note">Alt er gjennomgått.</div>'}`, 'review', 'gap:10px')}
         ${card(`<div class="card-h" style="margin-bottom:-6px"><h2>Kommende trekk</h2><a class="link" href="#/fast">Alle →</a></div><div>${up || '<div class="note" style="padding-top:8px">Ingen faste trekk registrert.</div>'}</div>`, '', 'gap:2px')}
       </div>
     </div></div>`;
@@ -225,7 +270,7 @@ function overview() {
 
 function transactions() {
   const list = S.tx;
-  const chips = [{ id: '', name: 'Alle', color: '#F2F2F4' }, ...cats()].map((c) => `<button class="chip" data-cat="${c.id}" aria-pressed="${String(u.cat) === String(c.id)}"><i style="background:${c.color}"></i>${esc(c.name)}</button>`).join('');
+  const chips = [{ id: '', name: 'Alle', color: 'var(--text)' }, ...cats()].map((c) => `<button class="chip" data-cat="${c.id}" aria-pressed="${String(u.cat) === String(c.id)}"><i style="background:${c.color}"></i>${esc(c.name)}</button>`).join('');
   const qs = new URLSearchParams({ ...(u.q && { q: u.q }), ...(u.cat && { category: u.cat }), ...(u.acc && { account: u.acc }), ...(u.type && { type: u.type }) });
   const rows = list?.items.map((t) => `<tr data-open-tx="${t.id}" class="${u.sel === t.id ? 'on' : ''}">
     <td class="mono muted" style="white-space:nowrap">${dd(t.date)}</td>
@@ -269,7 +314,7 @@ function transactions() {
 
 /* ===================== Kvitteringer ===================== */
 
-const STATUS = { pending: ['I kø', '#142032', '#9DBDFF'], processing: ['Leser …', '#142032', '#9DBDFF'], needs_review: ['Gjennomgå', '#3A2414', '#FFB08A'] };
+const STATUS = { pending: ['I kø', 'var(--blue-soft)', 'var(--blue-l)'], processing: ['Leser …', 'var(--blue-soft)', 'var(--blue-l)'], needs_review: ['Gjennomgå', 'var(--warn-soft)', 'var(--acc-l)'] };
 
 function receipts() {
   const all = S.receipts;
@@ -279,7 +324,7 @@ function receipts() {
   const booked = all.filter((r) => r.status === 'booked' || r.status === 'rejected').slice(0, 12);
   if (!u.selRc || !all.find((r) => r.id === u.selRc)) u.selRc = queue[0]?.id ?? null;
   const R = all.find((r) => r.id === u.selRc);
-  const qHtml = queue.map((r) => { const [label, bg, fg] = STATUS[r.status]; return `<button class="rq${r.id === u.selRc ? ' sel' : ''}" data-open-rc="${r.id}">${paper(r)}<span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><b class="ell" style="font-weight:600">${esc(r.merchant ?? 'Ny kvittering')}</b><span class="mono">${r.total != null ? n2(r.total) + ' kr' : ''}</span></span><span class="note" style="display:block;font-size:12px">${dd(r.date)} · ${esc(r.provider ?? aiShort)}</span>${aiLine(r.aiShort, 'd-ai ell')}${r.canReanalyze ? `<span class="acc-l" role="button" tabindex="0" style="display:inline-block;margin-top:4px;font-size:12px;font-weight:600;color:#B6C3FF" data-reanalyze="${esc(r.id)}">✦ Analyser på nytt med Gemini</span>` : ''}</span><span class="status" style="background:${bg};color:${fg}">${label}</span></button>`; }).join('');
+  const qHtml = queue.map((r) => { const [label, bg, fg] = STATUS[r.status]; return `<button class="rq${r.id === u.selRc ? ' sel' : ''}" data-open-rc="${r.id}">${paper(r)}<span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><b class="ell" style="font-weight:600">${esc(r.merchant ?? 'Ny kvittering')}</b><span class="mono">${r.total != null ? n2(r.total) + ' kr' : ''}</span></span><span class="note" style="display:block;font-size:12px">${dd(r.date)} · ${esc(r.provider ?? aiShort)}</span>${aiLine(r.aiShort, 'd-ai ell')}${r.canReanalyze ? `<span class="acc-l" role="button" tabindex="0" style="display:inline-block;margin-top:4px;font-size:12px;font-weight:600;color:var(--blue-l)" data-reanalyze="${esc(r.id)}">✦ Analyser på nytt med Gemini</span>` : ''}</span><span class="status" style="background:${bg};color:${fg}">${label}</span></button>`; }).join('');
   let panel;
   if (!R) panel = '<div class="empty" style="padding:80px 20px">Velg en kvittering i køen, eller last opp en ny.</div>';
   else if (R.status === 'pending' || R.status === 'processing') panel = `<div style="padding:80px 20px;display:flex;flex-direction:column;align-items:center;gap:14px" class="sub"><span class="spin"></span>Leser kvitteringen med ${aiShort} …<button class="btn sm ghost" data-act="rc-manual">Fyll ut manuelt i stedet</button></div>`;
@@ -311,16 +356,16 @@ function confirmPanel(R) {
   const log = (R.log ?? []).length ? `<details class="note" style="font-size:12.5px"><summary style="cursor:pointer">Skannelogg (${R.log.length} steg)</summary><div class="mono" style="display:flex;flex-direction:column;gap:2px;margin-top:6px">${R.log.map((l) => `<div><span class="muted">${new Date(l.t).toLocaleTimeString('nb-NO')}</span> ${esc(l.step)}${l.detail ? ` – ${esc(l.detail)}` : ''}</div>`).join('')}</div></details>` : '';
   const catBtns = cats('expense').map((c) => `<button data-rc-cat="${c.id}" aria-pressed="${R.categoryId === c.id}" ${done ? 'disabled' : ''}>${esc(c.name)}</button>`).join('');
   return `<div class="card-h"><div><h2 style="font-size:18px">${done ? (R.status === 'booked' ? 'Bokført kvittering' : 'Avvist kvittering') : 'Bekreft kvittering'}</h2><div class="note" style="font-size:13px">${R.provider && R.provider !== 'Manuell' ? `Lest av ${esc(R.provider)}${R.seconds ? ` · ${n2(R.seconds).replace(/,?0+$/, '')} s` : ''}${R.model ? ` · ${esc(R.model)}` : ''}` : 'Manuell utfylling'}</div></div>
-      ${R.error ? `<span class="conf" style="background:#2A1A10;color:var(--acc-l)"><i></i>Må fylles ut</span>` : `<span class="conf" style="background:${high ? '#13201B' : '#2A1A10'};color:${high ? 'var(--pos)' : 'var(--acc-l)'}"><i></i>${high ? 'Høy sikkerhet' : 'Sjekk beløp'}</span>`}</div>
+      ${R.error ? `<span class="conf" style="background:var(--warn-soft);color:var(--acc-l)"><i></i>Må fylles ut</span>` : `<span class="conf" style="background:${high ? 'var(--pos-soft)' : 'var(--warn-soft)'};color:${high ? 'var(--pos)' : 'var(--acc-l)'}"><i></i>${high ? 'Høy sikkerhet' : 'Sjekk beløp'}</span>`}</div>
     ${R.error ? `<div class="err-msg">${esc(R.error)}</div>` : R.flag ? `<div class="err-msg">${esc(R.flag)}</div>` : ''}
-    ${!done && (R.canReanalyze || R.reanalyzeReason) ? `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:14px;background:#151A33;border:1px solid #2A3570"><span style="flex:1 1 220px;font-size:13px;color:#C9D2FF">${R.error ? 'Lesingen mislyktes.' : `Lav sikkerhet${R.provider ? ` fra ${esc(R.provider)}` : ''}.`} Gemini kan lese originalbildet på nytt, og du velger hvilket resultat du vil beholde.</span>${reanalyzeBtn(R, 'btn', 'height:40px')}</div>` : ''}
+    ${!done && (R.canReanalyze || R.reanalyzeReason) ? `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:14px;background:var(--blue-soft);border:1px solid #2A3570"><span style="flex:1 1 220px;font-size:13px;color:#C9D2FF">${R.error ? 'Lesingen mislyktes.' : `Lav sikkerhet${R.provider ? ` fra ${esc(R.provider)}` : ''}.`} Gemini kan lese originalbildet på nytt, og du velger hvilket resultat du vil beholde.</span>${reanalyzeBtn(R, 'btn', 'height:40px')}</div>` : ''}
     <div class="row-flex" style="gap:18px">${img}
       <div style="flex:1 1 260px;display:flex;flex-direction:column;gap:12px">
         <label class="f">Butikk<input class="inp" data-rc-field="merchant" value="${esc(R.merchant ?? '')}" ${done ? 'disabled' : ''}></label>
         <div style="display:flex;gap:10px"><label class="f" style="flex:1">Dato<input class="inp" type="date" data-rc-field="date" value="${R.date ?? ''}" ${done ? 'disabled' : ''}></label><label class="f" style="flex:1">Total (kr)<input class="inp hl mono" data-rc-field="total" inputmode="decimal" value="${R.total != null ? n2(R.total).replace(/\s/g, '') : ''}" ${done ? 'disabled' : ''}></label></div>
         <div class="f">Kategori<div class="catpick">${catBtns}</div></div>
         <label class="f">Konto<select class="inp" data-rc-field="accountId" ${done ? 'disabled' : ''}>${accOpts(R.accountId, '–')}</select></label>
-        <div class="match ${R.match ? '' : 'none'}">${icon('link', 18, R.match ? '#9FE3C6' : '#8C8C96')}<div><div style="font-weight:600;color:${R.match ? 'var(--pos)' : 'var(--text)'}">${R.match ? 'Matchet mot kortkjøp' : 'Ingen bankmatch ennå'}</div><div class="sub">${R.match ? `${dd(R.match.date)} · ${sgn(R.match.amount)} kr · ${esc(R.match.account)}` : 'Bokføres som ny transaksjon'}</div></div></div>
+        <div class="match ${R.match ? '' : 'none'}">${icon('link', 18, R.match ? 'var(--pos)' : 'var(--muted)')}<div><div style="font-weight:600;color:${R.match ? 'var(--pos)' : 'var(--text)'}">${R.match ? 'Matchet mot kortkjøp' : 'Ingen bankmatch ennå'}</div><div class="sub">${R.match ? `${dd(R.match.date)} · ${sgn(R.match.amount)} kr · ${esc(R.match.account)}` : 'Bokføres som ny transaksjon'}</div></div></div>
       </div></div>
     ${log}
     <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
@@ -340,7 +385,7 @@ function budget() {
   const ring = conic(s.budgets.map((b) => ({ value: b.used, color: b.color })), Math.max(s.budgetTotal, s.budgetUsed));
   const cards = cats('expense').map((c) => {
     const uu = used.get(c.id) ?? 0, b = budMap.get(c.id) ?? 0, r = b ? uu / b : 0, over = b && uu > b;
-    return `<div class="card" style="padding:20px;gap:12px;border-color:${over ? '#4A2A20' : 'var(--line)'}">
+    return `<div class="card" style="padding:20px;gap:12px;border-color:${over ? 'var(--warm-line)' : 'var(--line)'}">
       <div class="card-h"><span style="display:flex;align-items:center;gap:10px;font-weight:600"><span class="ini sm" style="background:${rgba(c.color, 0.14)};color:${c.color}">${esc(ini(c.name))}</span>${esc(c.name)}</span><span style="font-size:12px;color:${over ? 'var(--acc-l)' : r > 0.8 ? 'var(--warn)' : 'var(--muted)'}">${!b ? 'Ikke satt' : over ? `Over med ${n0(uu - b)} kr` : r > 0.8 ? 'Nær grensen' : `${n0(b - uu)} kr igjen`}</span></div>
       <div class="mono" style="font-size:22px;font-weight:600">${n0(uu)} <span style="font-size:13px;color:var(--muted);font-weight:400">av ${n0(b)} kr</span></div>
       <div class="prog" style="height:8px"><i style="width:${Math.min(100, r * 100)}%;background:${over ? 'var(--acc)' : r > 0.8 ? 'var(--warn)' : c.color}"></i></div>
@@ -373,7 +418,7 @@ function recurring() {
   const IV = { monthly: 'Månedlig', yearly: 'Årlig', weekly: 'Ukentlig' };
   const rows = list.map((r) => `<div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-top:1px solid var(--sep);opacity:${r.active ? 1 : 0.45}">
     <span class="ini" style="background:${rgba(r.color, 0.14)};color:${r.color}">${esc(ini(r.name))}</span>
-    <button class="grow link" style="color:var(--text);text-align:left" data-edit-rec="${r.id}"><div style="font-weight:500">${esc(r.name)}${r.detected ? ' <span class="pill" style="background:#142032;color:var(--blue-l);font-size:11px">oppdaget</span>' : ''}</div><div class="note" style="font-size:12px">${esc(r.category)} · ${IV[r.interval]} · ${r.day}.${r.interval === 'yearly' && r.month ? ' ' + monthName(`2000-${String(r.month).padStart(2, '0')}`) : ''} · neste ${dd(r.next)}</div></button>
+    <button class="grow link" style="color:var(--text);text-align:left" data-edit-rec="${r.id}"><div style="font-weight:500">${esc(r.name)}${r.detected ? ' <span class="pill" style="background:var(--blue-soft);color:var(--blue-l);font-size:11px">oppdaget</span>' : ''}</div><div class="note" style="font-size:12px">${esc(r.category)} · ${IV[r.interval]} · ${r.day}.${r.interval === 'yearly' && r.month ? ' ' + monthName(`2000-${String(r.month).padStart(2, '0')}`) : ''} · neste ${dd(r.next)}</div></button>
     <span class="mono" style="font-weight:500">${n0(r.amount)} kr</span>
     <button class="toggle" role="switch" aria-checked="${r.active}" aria-label="Aktiv" data-rec-toggle="${r.id}"></button></div>`).join('');
   return `<div class="row-flex">
@@ -409,7 +454,7 @@ function accounts() {
 function reports() {
   const r = S.report;
   if (!r) return skel(400);
-  const donut = conic(r.byCategory.map((c) => ({ value: c.amount, color: c.color })), r.total, 1, '#24242A');
+  const donut = conic(r.byCategory.map((c) => ({ value: c.amount, color: c.color })), r.total, 1, 'var(--line)');
   const topMax = r.merchants[0]?.amount || 1;
   const title = r.mode === 'year' ? r.from.slice(0, 4) : `${cap(monthName(r.from.slice(0, 7)))} ${r.from.slice(0, 4)}`;
   return `<div style="display:flex;flex-direction:column;gap:16px">
@@ -428,7 +473,7 @@ function reports() {
 
 /* ===================== Innstillinger ===================== */
 
-const SET_TABS = [['gen', 'Generelt', 'Navn, valuta, måned'], ['meny', 'Sidemeny', 'Rekkefølge og synlighet'], ['bol', 'Boliger', 'Ny bolig, deling, oppsett og kategorier'], ['imp', 'Import', 'Bank, Excel, Finn-e-post og annonser'], ['ai', 'AI-motor', 'Ollama eller Gemini'], ['aks', 'Aksjer · Trading 212', 'Nøkkel, miljø og synk'], ['cat', 'Kategorier', 'Farger og typer'], ['rule', 'Regler', 'Auto-kategorisering'],
+const SET_TABS = [['gen', 'Generelt', 'Navn, valuta, måned'], ['look', 'Utseende', 'Tema og sidemeny'], ['meny', 'Sidemeny', 'Rekkefølge og synlighet'], ['bol', 'Boliger', 'Ny bolig, deling, oppsett og kategorier'], ['imp', 'Import', 'Bank, Excel, Finn-e-post og annonser'], ['ai', 'AI-motor', 'Ollama eller Gemini'], ['aks', 'Aksjer · Trading 212', 'Nøkkel, miljø og synk'], ['cat', 'Kategorier', 'Farger og typer'], ['rule', 'Regler', 'Auto-kategorisering'],
   ['varsel', 'Varsler', 'Budsjett og kvitteringer'], ['mobil', 'Mobil og tilgang', 'App-tokens og snarveier'], ['data', 'Backup og data', 'Nedlasting, SMB-share og gjenoppretting']];
 
 // Innstillinger → Sidemeny: dra, ▲▼ og bryter for vis/skjul. Endringene lagres med en gang.
@@ -497,7 +542,7 @@ function settingsPage() {
     body = `<div style="display:flex;flex-direction:column;gap:12px">
     <div class="sub" style="font-size:13px">Mobilappen åpnes på <b class="mono">/finans/</b> eller i de native appene, og logger inn med brukernavn og passord (og 2FA-kode hvis det er på).</div>
     <div class="sub" style="font-size:13px">Personlige tokens gir tilgang til FinansHub-API-et uten innlogging, f.eks. for iOS-snarveien som laster opp kvitteringer (<span class="mono">POST /finans/api/receipts</span>), Home Assistant, Excel Power Query eller skript (<span class="mono">Authorization: Bearer fh_pat_…</span>). De gir aldri tilgang til resten av homelab. Bare hashen lagres.</div>
-    ${(S.tokens ?? []).map((tk) => `<div class="edit-row"><span class="grow"><b style="font-weight:500">${esc(tk.name)}</b>${tk.expired ? ' <span class="pill" style="background:#3A2414;color:var(--acc-l)">utløpt</span>' : ''}<br><span class="note mono" style="font-size:12px">${tk.scopes.join(' · ')}</span><br><span class="note" style="font-size:12px">Laget ${when(tk.created)} · ${tk.lastUsed ? 'sist brukt ' + when(tk.lastUsed) : 'aldri brukt'} · ${tk.expires ? (tk.expired ? 'utløp ' : 'utløper ') + when(tk.expires) : 'utløper aldri'}</span></span><button class="btn sm danger" data-del-token="${tk.id}">Trekk tilbake</button></div>`).join('') || '<div class="note">Ingen tokens.</div>'}
+    ${(S.tokens ?? []).map((tk) => `<div class="edit-row"><span class="grow"><b style="font-weight:500">${esc(tk.name)}</b>${tk.expired ? ' <span class="pill" style="background:var(--warn-soft);color:var(--acc-l)">utløpt</span>' : ''}<br><span class="note mono" style="font-size:12px">${tk.scopes.join(' · ')}</span><br><span class="note" style="font-size:12px">Laget ${when(tk.created)} · ${tk.lastUsed ? 'sist brukt ' + when(tk.lastUsed) : 'aldri brukt'} · ${tk.expires ? (tk.expired ? 'utløp ' : 'utløper ') + when(tk.expires) : 'utløper aldri'}</span></span><button class="btn sm danger" data-del-token="${tk.id}">Trekk tilbake</button></div>`).join('') || '<div class="note">Ingen tokens.</div>'}
     <form data-form="token" class="box" style="flex-direction:column;align-items:stretch;gap:12px;padding:16px"><b style="font-weight:600">Nytt token</b>
       <div class="form-grid"><label class="f">Navn<input class="inp" name="name" placeholder="F.eks. iPhone-snarvei" required></label>
       <label class="f">Utløper<select class="inp" name="expires">${[['30d', 'Om 30 dager'], ['90d', 'Om 90 dager'], ['1y', 'Om 1 år'], ['never', 'Aldri']].map(([v, l]) => opt(v, l, '90d')).join('')}</select></label></div>
@@ -507,6 +552,7 @@ function settingsPage() {
   }
   else if (t === 'data') body = backupTab();
   else if (t === 'meny') body = menuTab();
+  else if (t === 'look') body = lookTab();
   else if (t === 'bol') body = bolSettings();
   else if (t === 'aks') body = aksSettings();
   return `<div class="row-flex">
@@ -571,7 +617,7 @@ function modalHtml() {
     <div style="display:flex;gap:10px">${m.id ? '<button type="button" class="btn danger" data-act="del-acc">Slett</button>' : ''}<button class="btn pri" style="flex:1;height:50px">Lagre</button></div></form></div>`; }
   if (m.type === 'goal') { const g = S.boot.goals.find((x) => x.id === m.id) ?? {}; return `<div class="modal" data-modal><form data-form="goal"><div class="card-h"><h2 style="font-size:19px">${m.id ? 'Endre sparemål' : 'Nytt sparemål'}</h2>${close}</div>
     <label class="f">Navn<input class="inp" name="name" required value="${esc(g.name ?? '')}"></label>
-    <div style="display:flex;gap:10px"><label class="f" style="flex:1">Spart (kr)<input class="inp mono" name="saved" inputmode="decimal" value="${g.saved ?? 0}"></label><label class="f" style="flex:1">Mål (kr)<input class="inp mono" name="target" inputmode="decimal" required value="${g.target ?? ''}"></label><label class="f">Farge<input type="color" name="color" value="${g.color ?? '#5FD3A8'}"></label></div>
+    <div style="display:flex;gap:10px"><label class="f" style="flex:1">Spart (kr)<input class="inp mono" name="saved" inputmode="decimal" value="${g.saved ?? 0}"></label><label class="f" style="flex:1">Mål (kr)<input class="inp mono" name="target" inputmode="decimal" required value="${g.target ?? ''}"></label><label class="f">Farge<input type="color" name="color" value="${g.color ?? 'var(--ok)'}"></label></div>
     <div style="display:flex;gap:10px">${m.id ? '<button type="button" class="btn danger" data-act="del-goal">Slett</button>' : ''}<button class="btn pri" style="flex:1;height:50px">Lagre</button></div></form></div>`; }
   if (m.type === 'rec') { const r = S.recurring?.find((x) => x.id === m.id) ?? { interval: 'monthly', day: 1 }; return `<div class="modal" data-modal><form data-form="rec"><div class="card-h"><h2 style="font-size:19px">${m.id ? 'Endre fast utgift' : 'Ny fast utgift'}</h2>${close}</div>
     <div style="display:flex;gap:10px"><label class="f" style="flex:2">Navn<input class="inp" name="name" required value="${esc(r.name ?? '')}" placeholder="Spotify"></label><label class="f" style="flex:1">Beløp (kr)<input class="inp mono" name="amount" required inputmode="decimal" value="${r.amount ?? ''}"></label></div>
@@ -593,6 +639,7 @@ export function draw() {
   const el = root();
   const scroll = window.scrollY;
   const focus = document.activeElement?.closest('[data-form] input, [data-tx-field], [data-rc-field]') ? { sel: focusSel(document.activeElement), pos: document.activeElement.selectionStart } : null;
+  applyTheme();
   el.innerHTML = shell(PAGE_FN[u.page]());
   // E-postimporten (felles med Homelab-innstillingene) monteres i Innstillinger → Import.
   const mp = el.querySelector('[data-mailpane]');
@@ -727,6 +774,7 @@ export function bind() {
     if ((x = d('[data-cat]'))) { u.cat = x.dataset.cat; await loadTx(); return render(); }
     if ((x = d('[data-rc-cat]'))) return patchRc(u.selRc, { categoryId: +x.dataset.rcCat });
     if ((x = d('[data-settab]'))) { u.setTab = x.dataset.settab; u.msg = {}; if (u.setTab === 'ai') loadAi().then(render); return load(); }
+    if ((x = d('[data-theme-pick]'))) return saveLayout({ design: x.dataset.themePick });
     if ((x = d('[data-provider]'))) return saveSet({ provider: x.dataset.provider });
     if ((x = d('[data-tog]'))) return saveSet({ [x.dataset.tog]: !S.boot.settings[x.dataset.tog] });
     if ((x = d('[data-txtype]'))) { u.add.kind = x.dataset.txtype; return render(); }
@@ -789,6 +837,7 @@ export function bind() {
       case 'wipe': u.add = { type: 'wipe' }; return render();
       case 'print': return window.print();
       case 'nav-showall': return saveNavCfg(navCfg().order, []);
+      case 'compact-nav': return saveLayout({ compactNav: !compactNav() });
       case 'nav-reset': await saveNavCfg([...(S.boot.navDefault ?? NAV_DEFAULT)], navCfg().hidden); toast('Standard rekkefølge er satt'); return;
       case 'ai-hist-clear': S.aiHist = await api('/search/history', { method: 'DELETE' }); return render();
       case 'orig-zoom': u.origZoom = !u.origZoom; return render();

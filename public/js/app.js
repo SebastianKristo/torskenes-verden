@@ -14,6 +14,7 @@ import * as home from './home.js';
 import * as mat from './mat.js';
 import * as domains from './domains.js';
 import * as tracking from './tracking.js';
+import { loadHlTheme, applyHlTheme, is2c, pickPw } from './hltheme.js';
 
 const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
 const view = document.getElementById('view');
@@ -33,13 +34,33 @@ function renderRoute() {
   route = next;
   // Bakgrunnsbilde og «Siste nytt» vises bare på dashboardet.
   document.body.classList.toggle('not-dash', route !== 'dash');
+  // Vindu og papir: Dashboard og Rom har et fotovindu øverst som topplinjen ligger oppå.
+  document.body.classList.toggle('pw-on', is2c() && (route === 'dash' || route === 'rom'));
+  document.body.dataset.route = route;
+  // Nyhetsbaren kan ligge inne i visningen (Vindu og papir); flytt den ut før visningen tegnes på nytt.
+  const tk = document.getElementById('ticker');
+  if (tk && view.contains(tk)) document.querySelector('header.top').after(tk);
   view.innerHTML = ROUTES[route]();
+  placeTicker();
   mountAll(view);
   setupDnd(view);
   // Rom er en underside av «Mer» på mobil.
   const navKey = isMobile() && ['rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'domener'].includes(route) ? 'mer' : route;
   document.querySelectorAll('[data-r]').forEach((a) => { if (a.dataset.r === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
-  document.title = { dash: 'OS', studie: 'Studie · OS', rom: 'Rom · OS', hjem: 'Hjem · OS', matplan: 'Matplan · OS', sporing: 'Sporing · OS', domener: 'Domener · OS', nettverk: 'Nettverk · OS', mer: 'Mer · OS' }[route];
+  document.title = { dash: 'OS', studie: 'Studie · OS', rom: 'Rom · OS', hjem: 'Hjem · OS', matplan: 'Mat · OS', sporing: 'Sporing · OS', domener: 'Domener · OS', nettverk: 'Nettverk · OS', mer: 'Mer · OS' }[route];
+}
+
+// Nyhetsbaren ligger under topplinjen, men i Vindu og papir under søkefeltet på papiret.
+function placeTicker() {
+  const t = document.getElementById('ticker'), slot = document.getElementById('p-ticker-slot');
+  if (!t) return;
+  if (slot) slot.appendChild(t);
+  else if (t.parentElement !== document.querySelector('.shell')) document.querySelector('header.top').after(t);
+}
+
+// «SISTE NYTT ›» åpner den felles nyhetsleseren (news.js). Finnes den ikke ennå, skjer ingenting.
+async function openNewsReader() {
+  try { const m = await import('./news.js'); (m.openNews ?? m.default)?.(); } catch (e) { console.warn('Nyhetsleseren er ikke tilgjengelig', e); }
 }
 
 function weatherPill() {
@@ -54,6 +75,9 @@ function bindShell() {
   btn.addEventListener('click', (e) => { e.stopPropagation(); menu.hidden = !menu.hidden; btn.setAttribute('aria-expanded', String(!menu.hidden)); });
   document.addEventListener('click', (e) => { if (!menu.contains(e.target)) close(); });
   document.addEventListener('click', async (e) => {
+    if (e.target.closest('.ticker-label')) { e.preventDefault(); openNewsReader(); return; }
+    const pw = e.target.closest('[data-pw-bg]');
+    if (pw) { await pickPw(pw.dataset.pwBg, applyBackground); renderRoute(); return; }
     const act = e.target.closest('[data-act]')?.dataset.act;
     if (!act) return;
     close();
@@ -67,14 +91,16 @@ function bindShell() {
     if (act === 'logout') { await api('/logout', { method: 'POST' }).catch(() => {}); location.href = '/login'; }
   });
   window.addEventListener('hashchange', renderRoute);
+  document.addEventListener('hl:theme', () => { route = null; renderRoute(); weatherPill(); });
   document.addEventListener('hl:name', renderRoute); // nytt navn i hilsenen med en gang
   window.addEventListener('resize', () => { if (isMobile() !== wasMobile) { wasMobile = isMobile(); renderRoute(); weatherPill(); } });
 }
 
 async function main() {
-  const [me, ui] = await Promise.all([api('/state'), api('/ui').catch(() => uiDefaults())]);
+  const [me, ui] = await Promise.all([api('/state'), api('/ui').catch(() => uiDefaults()), loadHlTheme()]);
   store.me = me;
   store.me.ui = { ...uiDefaults(), ...ui };
+  applyHlTheme();
   applyProfile();
   applyNav();
   menuLabels();

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 600" preserveAspectRatio="xMidYMid slice">
+  <!-- Fotovindu «Oslo»: kveldshimmel over fjorden med Operaen, Barcode og Holmenkollen i silhuett. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b2f55"/><stop offset=".45" stop-color="#b06a6f"/><stop offset=".78" stop-color="#f1b26b"/><stop offset="1" stop-color="#f6d49a"/>
+    </linearGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5d4a63"/><stop offset="1" stop-color="#1c1a2b"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="600" fill="url(#sky)"/>
+  <circle cx="1180" cy="400" r="70" fill="#ffd9a0" opacity=".85"/>
+  <path d="M0 410 L120 380 L260 395 L380 350 L470 372 L520 300 L540 372 L640 360 L760 390 L900 370 L1040 395 L1200 380 L1350 398 L1600 370 L1600 470 L0 470Z" fill="#4a3a5e" opacity=".75"/>
+  <g fill="#2a2238">
+    <rect x="610" y="330" width="34" height="140"/><rect x="650" y="300" width="40" height="170"/><rect x="696" y="345" width="28" height="125"/>
+    <rect x="730" y="285" width="44" height="185"/><rect x="780" y="320" width="32" height="150"/><rect x="818" y="350" width="36" height="120"/>
+    <path d="M880 470 L1000 405 L1130 440 L1210 470Z"/>
+    <rect x="300" y="380" width="60" height="90"/><rect x="370" y="360" width="46" height="110"/><rect x="430" y="395" width="70" height="75"/>
+    <rect x="1260" y="390" width="50" height="80"/><rect x="1320" y="372" width="40" height="98"/><rect x="1370" y="400" width="80" height="70"/>
+  </g>
+  <rect y="470" width="1600" height="130" fill="url(#sea)"/>
+  <g stroke="#f6d49a" stroke-opacity=".35" stroke-width="3">
+    <path d="M1120 500 h120 M1140 525 h80 M1160 548 h40"/>
+  </g>
+</svg>

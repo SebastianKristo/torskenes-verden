@@ -133,7 +133,7 @@ test('HelloFresh-import legger til nye retter og hopper over kjente', async () =
 test('ICS for uka og abonnert feed', async () => {
   const r = await call(`/week.ics?start=${start}`);
   assert.equal(r.status, 200);
-  assert.match(r.headers.get('content-disposition'), /matplan-uke-\d+\.ics/);
+  assert.match(r.headers.get('content-disposition'), /mat-uke-\d+\.ics/);
   assert.match(r.body, /BEGIN:VCALENDAR[\s\S]*DTSTART;TZID=Europe\/Oslo:\d{8}T170000[\s\S]*Kokk: /);
   const key = (await call('/week')).body.calendarUrl.split('key=')[1];
   const ok = mat.matCalendar({ req: { query: () => key }, text: (t, s) => ({ t, s }), body: (b, s) => ({ b, s }) });

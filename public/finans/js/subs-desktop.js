@@ -153,7 +153,7 @@ function table(d) {
 function gauge(score) {
   const ticks = Array.from({ length: 30 }, (_, i) => {
     const a = Math.PI * (1 - i / 29), on = i / 29 <= score / 100;
-    const c = on ? (i < 10 ? '#C85A26' : i < 20 ? '#FF7A3D' : '#FFB08A') : '#2A2A32';
+    const c = on ? (i < 10 ? '#C85A26' : i < 20 ? 'var(--acc)' : 'var(--acc-l)') : '#2A2A32';
     return `<line x1="${(110 + 78 * Math.cos(a)).toFixed(1)}" y1="${(112 - 78 * Math.sin(a)).toFixed(1)}" x2="${(110 + 100 * Math.cos(a)).toFixed(1)}" y2="${(112 - 100 * Math.sin(a)).toFixed(1)}" stroke="${c}" stroke-width="5" stroke-linecap="round"/>`;
   }).join('');
   return `<svg class="so-gauge" viewBox="0 0 220 124" role="img" aria-label="Abonnementshelse ${score} av 100">${ticks}<text x="110" y="112" text-anchor="middle"><tspan class="so-gv">${score}</tspan><tspan class="so-gm" dx="2">/100</tspan></text></svg>`;

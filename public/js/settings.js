@@ -9,6 +9,7 @@ import { orderOf, setOrder } from './dnd.js';
 import { toggleHeadEdit, resetHead, setHeadLock, setHeadAlign, headAlign, saveUi } from './topedit.js';
 import { loginView, loadLogin, loginClick, loginSubmit, loginChange, loginData, roleName } from './settings-login.js';
 import { domainsPane, loadDomains, domainsClick, domainsChange, domainsSubmit, domainCount } from './settings-domains.js';
+import { themeCards, setHlTheme, hlTheme, THEMES } from './hltheme.js';
 
 const modal = () => document.getElementById('settings');
 
@@ -55,14 +56,14 @@ const box = (t, inner, n = '') => `<section class="sg">${t ? `<h3 class="sg-t">$
 // [id, navn, undertekst, seksjon, ikon]
 const TABS = [
   ['konto', 'Konto', 'Personlig informasjon og innlogging.', 'Generelt', P.user],
-  ['look', 'Utseende', 'Bakgrunnsbilde, søkebar og kategorier.', 'Generelt', P.look],
+  ['look', 'Utseende', 'Tema, bakgrunnsbilde, søkebar og kategorier.', 'Generelt', P.look],
   ['top', 'Startside', 'Topplinje, faner, nyhetsbar og forsiden.', 'Generelt', P.top],
   ['dom', 'Domener', 'Domener, statistikkilder og verdenskart.', 'Generelt', P.map],
   ['int', 'Integrasjoner', 'Adresser og API-nøkler for tjenestene.', 'Tilkoblinger', P.plug],
   ['users', 'Brukere', 'Hvem som har tilgang, og hvilken rolle de har.', 'Sikkerhet', P.users],
 ];
 // Gamle navn på faner (lenker og knapper fra før omleggingen) peker til nye.
-const ALIAS = { login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users' };
+const ALIAS = { login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users' };
 // Hvilken fane en underside hører til, så «go('tfa')» virker uansett hvor den kalles fra.
 const SUB_TAB = { me: 'konto', tfa: 'konto', pw: 'konto', devices: 'konto', server: 'konto', add: 'users', bg: 'look', style: 'look', hist: 'look', cats: 'look',
   tabs: 'top', head: 'top', speed: 'top', dash: 'top', mob: 'top', sc: 'top', doms: 'dom', mail: 'int' };
@@ -134,7 +135,8 @@ function srchPreview([k, name]) {
 function lookView() {
   const s = store.me, sq = searchState();
   if (!sub) return { groups: [
-    group('Bakgrunn', [row({ t: 'Bakgrunnsbilde', s: 'Vises bare på Dashboard. De andre sidene har en rolig, mørk bakgrunn.', v: BGN[s.bg] ?? 'Måne', go: 'look|bg' })]),
+    { ...group('Tema', [{ html: themeCards(), q: `tema ${THEMES.map((t) => t[1]).join(' ')} papir vindu` }], 'Byttet skjer med en gang og lagres på brukeren din. Alt virker likt i begge temaene.'), cls: 'sg-theme' },
+    group('Bakgrunn', [row({ t: 'Bakgrunnsbilde', s: hlTheme() === '2c' ? 'Vises i fotovinduet øverst på Dashboard.' : 'Vises bare på Dashboard. De andre sidene har en rolig, mørk bakgrunn.', v: BGN[s.bg] ?? 'Måne', go: 'look|bg' })]),
     group('Søkebar', [
       row({ t: 'Vis søkebar', s: 'Kan dras mellom avgangene og klokka.', tog: !s.hideSearch, act: 'data-toggle="search"' }),
       row({ t: 'Stil', v: SRN[s.searchStyle] ?? 'Lys', go: 'look|style' }),
@@ -636,6 +638,8 @@ export function bindSettings() {
     if (e.target.closest('[data-sc-reset]')) { if (confirm('Tilbakestille snarveiene til standardlisten?')) await saveShortcuts(null); return; }
 
     /* Utseende */
+    const th = e.target.closest('[data-hl-theme]');
+    if (th) { await setHlTheme(th.dataset.hlTheme); render(); return; }
     if (e.target.closest('[data-sq-clearall]')) {
       if (!confirm('Tømme hele søkehistorikken?')) return;
       await api('/search/history', { method: 'DELETE' }).catch(() => {}); setHistory([]); sqMsg = 'Historikken er tømt'; render(); return;

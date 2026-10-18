@@ -24,7 +24,7 @@ export const loadFinn = async () => {
 
 function track(d, clickable) {
   return `<div class="fd-track">${d.track.map((s, i) => `<button ${clickable ? `data-fd-stage="${i + 1}"` : 'disabled'} class="${s.done ? 'on' : ''}${s.cur ? ' cur' : ''}${i === 3 ? ' last' : ''}${i + 1 < d.stage ? ' nx' : ''}" title="Sett steget til ${esc(s.t)}">
-    <span class="dl"><span class="dot"></span><span class="ln" style="${i + 1 < d.stage ? 'background:#F2F2F4' : ''}"></span></span><span class="t">${esc(s.t)}</span></button>`).join('')}</div>`;
+    <span class="dl"><span class="dot"></span><span class="ln" style="${i + 1 < d.stage ? 'background:var(--text)' : ''}"></span></span><span class="t">${esc(s.t)}</span></button>`).join('')}</div>`;
 }
 
 function row(r) {
@@ -32,7 +32,7 @@ function row(r) {
   return `<div class="card finn-row fd-row${sel ? ' fd-on' : ''}" data-fd-open="${r.id}" role="button" tabindex="0" aria-expanded="${sel}">
     <div><span class="role ${sold ? 'sold' : 'bought'}">${sold ? 'Solgt' : 'Kjøpt'}</span><b style="display:block;font-weight:500;margin-top:6px">${esc(r.item)}</b><span class="note" style="font-size:12px">${esc(r.counterpart)}${r.counterpart ? ' · ' : ''}${dd(r.date)}${r.txId ? ' · matchet mot bankpost' : ''}</span>
       ${r.summary?.text ? `<span class="fd-att">${esc(r.summary.text)}</span>` : ''}</div>
-    <div class="finn-steps">${r.track.map((s) => `<span class="step${s.done ? ' done' : ''}"${s.cur ? ' style="background:rgba(255,122,61,.14);color:#FFB08A"' : ''}>${esc(s.t)}</span>`).join('')}</div>
+    <div class="finn-steps">${r.track.map((s) => `<span class="step${s.done ? ' done' : ''}"${s.cur ? ' style="background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc-l)"' : ''}>${esc(s.t)}</span>`).join('')}</div>
     <b class="mono" style="text-align:right;color:${sold ? 'var(--pos)' : 'var(--text)'}">${sold ? '+' : '−'}${n0(r.amount)} kr</b><button class="x-btn sm" data-fd-del="${r.id}" aria-label="Slett handelen">×</button></div>`;
 }
 

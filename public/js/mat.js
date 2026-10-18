@@ -1,4 +1,5 @@
-// Matplan: én felles komponent for Homelab-fanen og FinansHub (embedded skjuler den store tittelen).
+// Mat (tidligere Matplan): én felles komponent for Homelab-fanen og andre flater (embedded skjuler den store tittelen).
+// Design 2a: mørk varm grunn, limegrønt kort for i dag, Instrument Serif på retter og titler, Geist Mono på etiketter.
 // Selvstendig modul (egen fetch og egen CSS) slik at den kan importeres fra både /assets/js og /finans.
 //   import { mountMatplan } from '/assets/js/mat.js'; mountMatplan(el, { embedded: true });
 
@@ -21,24 +22,37 @@ function loadCss() {
   const l = document.createElement('link');
   l.rel = 'stylesheet'; l.href = '/assets/css/mat.css'; l.dataset.matCss = '';
   document.head.appendChild(l);
+  if (!document.querySelector('link[data-mat-fonts]')) {
+    const f = document.createElement('link');
+    f.rel = 'stylesheet'; f.dataset.matFonts = '';
+    f.href = 'https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&family=Instrument+Serif&family=Bricolage+Grotesque:opsz,wght@12..96,500..800&display=swap';
+    document.head.appendChild(f);
+  }
 }
+
+const KIND = { sheet: ['XLS', '#1D6F42', 'Regneark'], pdf: ['PDF', '#C8352B', 'PDF'], video: ['▶', '#E62117', 'Video'], doc: ['DOC', '#2B579A', 'Dokument'], image: ['IMG', '#6B4FA0', 'Bilde'], link: ['↗', '#3A3A3E', 'Lenke'] };
+const host = (u) => { try { return new URL(u, location.href).hostname.replace(/^www\./, ''); } catch { return ''; } };
+const JOB = { queued: ['I kø', '#9A9588', '15%'], reading: ['✦ Leser …', '#FFB27F', '60%'], done: ['Ferdig', '#7FD08A', '100%'], error: ['Feilet', '#F59A8F', '100%'] };
 
 export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}) {
   loadCss();
   const S = {
     w: null, err: '', off: 0, open: null, q: '', flt: 'Alle', ed: null, efErr: '', hfOpen: false, hfMsg: '',
     cal: false, copied: false, status: '', busy: false, newCook: '', shopAll: false,
+    fold: 'Alle', foldNew: false, foldEdit: false, link: '', imp: null, jobs: [], seenJobs: null,
   };
+  let jobTimer = null;
   let stTimer = null;
 
   async function call(path, opts = {}) {
     const init = { credentials: 'same-origin', ...opts, headers: { ...(opts.headers ?? {}) } };
+    if (opts.form) { init.body = opts.form; delete init.form; }
     if (opts.json !== undefined) { init.body = JSON.stringify(opts.json); init.headers['Content-Type'] = 'application/json'; delete init.json; }
     const res = await fetch(api + path, init);
     if (res.status === 401 && !embedded) { location.href = '/login'; throw new Error('Ikke innlogget'); }
     const ct = res.headers.get('content-type') ?? '';
     const data = ct.includes('json') ? await res.json().catch(() => ({})) : await res.blob();
-    if (!res.ok) throw new Error(data?.error || (res.status === 403 ? 'Matplan er bare tilgjengelig for administratorer.' : `Feil ${res.status}`));
+    if (!res.ok) throw new Error(data?.error || (res.status === 403 ? 'Mat er bare tilgjengelig for administratorer.' : `Feil ${res.status}`));
     return data;
   }
 
@@ -55,6 +69,33 @@ export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}
   }
   const load = () => run(() => call(`/week?start=${startOf()}`));
 
+  /* ---------- Skanning: kø som spørres til alt er lest ---------- */
+
+  async function pollJobs() {
+    clearTimeout(jobTimer);
+    let list;
+    try { list = await call('/recipes/jobs'); } catch { return; }
+    const before = new Map((S.jobs ?? []).map((j) => [j.id, j.status]));
+    S.jobs = list;
+    const fresh = list.filter((j) => before.has(j.id) && before.get(j.id) !== j.status && (j.status === 'done' || j.status === 'error'));
+    if (fresh.some((j) => j.status === 'done')) {
+      const j = fresh.find((x) => x.status === 'done');
+      await run(() => call(`/week?start=${startOf()}`));
+      const d = dishById(j.dishId);
+      if (d) { S.open = d.id; S.fold = 'Alle'; flash(`✦ ${d.name} lagt i mappen ${d.folder ?? 'uten mappe'}`); }
+    } else if (fresh.length) flash(fresh[0].error || 'Skanningen feilet.');
+    paintScan();
+    if (list.some((j) => j.status === 'queued' || j.status === 'reading') && el.isConnected) jobTimer = setTimeout(pollJobs, 2000);
+  }
+  async function upload(files) {
+    if (!files?.length) return;
+    const fd = new FormData();
+    for (const f of files) fd.append('file', f, f.name);
+    try { const r = await call('/recipes/scan', { method: 'POST', form: fd }); S.jobs = r.jobs ?? S.jobs; flash(files.length > 1 ? `${files.length} oppskrifter lagt i køen` : 'Oppskriften er lagt i køen'); }
+    catch (e) { flash(e.message); }
+    paint(); pollJobs();
+  }
+
   /* ---------- Visning ---------- */
 
   const dishById = (id) => S.w?.dishes.find((d) => d.id === id);
@@ -64,7 +105,7 @@ export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}
     const range = m.getMonth() === e.getMonth() ? `${m.getDate()}.–${e.getDate()}. ${MON[m.getMonth()]}` : `${m.getDate()}. ${MON[m.getMonth()]}–${e.getDate()}. ${MON[e.getMonth()]}`;
     const feed = `webcal://${location.host}${w.calendarUrl}`;
     return `<div class="mp-head">
-      <div class="mp-titles"><div class="mp-kicker">${esc(`Uke ${w.week} · ${range}`.toUpperCase())}</div>${embedded ? '' : '<h1 class="mp-h1">Matplan</h1>'}</div>
+      <div class="mp-titles"><div class="mp-kicker">${esc(`Uke ${w.week} · ${range}`.toUpperCase())}</div>${embedded ? '' : '<h1 class="mp-h1">Mat</h1>'}</div>
       <div class="mp-actions">
         <button class="mp-btn mp-toggle" data-a="auto" role="switch" aria-checked="${w.auto}"><span class="mp-sw${w.auto ? ' on' : ''}"><i></i></span>Ny plan hver søndag</button>
         <div class="mp-calwrap" data-mp-cal>
@@ -115,17 +156,30 @@ export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}
   function dishList(w) {
     const q = S.q.trim().toLowerCase();
     const list = w.dishes.filter((d) => (!q || d.name.toLowerCase().includes(q) || d.ing.some((i) => i.toLowerCase().includes(q)))
+      && (S.fold === 'Alle' || (S.fold === '__none' ? !d.folderId : d.folderId === S.fold))
       && (S.flt === 'Alle' || (S.flt === 'På planen' && d.days.length) || (S.flt === 'Ikke brukt' && !d.days.length) || (S.flt === 'HelloFresh' && d.src === 'hellofresh')));
-    if (!list.length) return `<div class="mp-none">${w.dishes.length ? 'Ingen retter passer søket.' : 'Ingen retter ennå. Legg til en med «+ Ny rett» eller lim inn HelloFresh-menyen.'}</div>`;
+    if (!list.length) return `<div class="mp-none">${w.dishes.length ? (S.fold !== 'Alle' && !q && S.flt === 'Alle' ? 'Ingen retter i denne mappen ennå.' : 'Ingen retter passer søket.') : 'Ingen retter ennå. Legg til en med «+ Ny rett», skann en oppskrift eller lim inn en lenke.'}</div>`;
     return list.map((d) => {
       const open = S.open === d.id && S.ed !== d.id, editing = S.ed === d.id;
       return `<div class="mp-drow">
         <button class="mp-dhead" draggable="true" data-drag="dish:${esc(d.id)}" data-a="toggle" data-id="${esc(d.id)}" aria-expanded="${open || editing}" title="Dra til en dag for å legge den på planen">
-          <span class="mp-dinfo"><span class="mp-dtitle"><b>${esc(d.name)}</b>${d.src === 'hellofresh' ? '<span class="mp-hf">HelloFresh</span>' : ''}</span>
-            <span class="mp-mute">${d.ing.length} ${d.ing.length === 1 ? 'ingrediens' : 'ingredienser'}</span></span>
+          <span class="mp-dinfo"><span class="mp-dtitle"><b>${esc(d.name)}</b>${d.folder ? `<span class="mp-fold">${esc(d.folder)}</span>` : ''}${d.src === 'scan' ? '<span class="mp-scanned">✦ Skannet</span>' : ''}${d.src === 'hellofresh' ? '<span class="mp-hf">HelloFresh</span>' : ''}</span>
+            <span class="mp-mute">${[`${d.ing.length} ${d.ing.length === 1 ? 'ingrediens' : 'ingredienser'}`, d.time, d.servings ? `${d.servings} porsjoner` : ''].filter(Boolean).map(esc).join(' · ')}</span></span>
           <span class="mp-dside">${(d.fixedDays ?? []).length ? `<span class="mp-chip mp-chip-fix" title="Alltid på ${(d.fixedDays).map((i) => DAYS[i].toLowerCase()).join(', ')}">Fast</span>` : ''}${d.days.map((i) => `<span class="mp-chip">${AB[i]}</span>`).join('')}${chev(open || editing)}</span>
         </button>
         ${open ? `<div class="mp-dbody">
+          <div class="mp-row mp-wrap mp-meta">
+            <label class="mp-inline">Mappe<span class="mp-selwrap mp-mini"><select data-folder="${esc(d.id)}" aria-label="Mappe for ${esc(d.name)}"><option value=""${d.folderId ? '' : ' selected'}>Ingen mappe</option>${w.folders.map((f) => `<option value="${esc(f.id)}"${f.id === d.folderId ? ' selected' : ''}>${esc(f.name)}</option>`).join('')}</select>${chev()}</span></label>
+            ${d.sourceUrl ? `<a class="mp-src" href="${esc(d.sourceUrl)}" target="_blank" rel="noopener noreferrer">Original oppskrift: ${esc(host(d.sourceUrl))} ↗</a>` : ''}
+          </div>
+          ${d.image ? `<img class="mp-photo" src="${esc(d.image)}" alt="" loading="lazy">` : ''}
+          <div class="mp-links"><div class="mp-lbl">LENKER OG FILER</div>
+            ${(d.links ?? []).map((l) => { const [ic, bg, label] = KIND[l.kind] ?? KIND.link; return `<div class="mp-link">
+              <span class="mp-lic" style="background:${bg}">${ic}</span>
+              <a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer"${l.fileUrl ? ' download' : ''}><b>${esc(l.title)}</b><span>${esc(l.fileUrl ? `${label} · lastet opp` : `${label} · ${host(l.url)}`)}</span></a>
+              <button class="mp-x" data-a="rmlink" data-id="${esc(d.id)}" data-lid="${esc(l.id)}" aria-label="Fjern ${esc(l.title)}">×</button></div>`; }).join('')}
+            <form class="mp-row mp-wrap" data-f="link" data-id="${esc(d.id)}"><input class="mp-in mp-lin" name="url" type="url" placeholder="Lenke, f.eks. Excel-kalkulator for pizzadeig" aria-label="Lenke"><button class="mp-btn mp-dark" type="submit">Legg til</button><label class="mp-btn mp-dark">Fil<input type="file" multiple accept=".xlsx,.xls,.csv,.pdf,.docx,image/*" data-linkfile="${esc(d.id)}" hidden></label></form>
+          </div>
           <div class="mp-cols">
             <div><div class="mp-lbl">INGREDIENSER</div>${d.ing.length ? `<ul>${d.ing.map((i) => `<li>${esc(i)}</li>`).join('')}</ul>` : '<div class="mp-faint">Ingen ingredienser lagt inn.</div>'}</div>
             <div><div class="mp-lbl">SLIK GJØR DU</div>${d.steps.length ? `<ol>${d.steps.map((i) => `<li>${esc(i)}</li>`).join('')}</ol>` : '<div class="mp-faint">Ingen fremgangsmåte lagt inn.</div>'}</div>
@@ -146,6 +200,39 @@ export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}
         ${editing ? `<div class="mp-dbody">${dishForm(d)}</div>` : ''}
       </div>`;
     }).join('');
+  }
+
+  function scanCard() {
+    const I = S.imp, w = W();
+    const busy = (S.jobs ?? []).filter((j) => j.status !== 'done' || Date.now() - j.updated < 60_000).slice(0, 5);
+    return `<div class="mp-row mp-between"><b class="mp-st">Skann oppskrift</b><span class="mp-faint">✦ AI leser i bakgrunnen</span></div>
+      <div class="mp-scanbtns">
+        <label class="mp-btn mp-acc mp-big">Kamera<input type="file" accept="image/*" capture="environment" data-scanfile hidden></label>
+        <label class="mp-btn mp-dark mp-big">Bilder eller PDF<input type="file" multiple accept="image/*,application/pdf" data-scanfile hidden></label>
+      </div>
+      <form class="mp-row" data-f="import"><input class="mp-in" name="url" type="url" value="${esc(S.link)}" data-link placeholder="Lim inn lenke fra en nettside, f.eks. matprat.no eller tine.no" aria-label="Lenke til oppskrift"><button class="mp-btn mp-dark" type="submit" ${I?.run ? 'disabled' : ''}>Importer</button></form>
+      ${I ? `<div class="mp-imp">
+        ${I.run ? `<div class="mp-accl">✦ Henter ${esc(I.dom)} … leser oppskriften (schema.org/Recipe)</div>` : ''}
+        ${I.err ? `<div class="mp-err">${esc(I.err)}</div><div><button class="mp-btn mp-plain" data-a="impcancel">Lukk</button></div>` : ''}
+        ${I.p ? `<div class="mp-row mp-top">${I.p.image ? `<img class="mp-impimg" src="${esc(I.p.image)}" alt="" referrerpolicy="no-referrer">` : '<span class="mp-impimg"></span>'}
+            <div class="mp-col"><b class="mp-impt">${esc(I.p.name)}</b><span class="mp-faint">${[esc(I.dom), esc(I.p.time), I.p.servings ? `${esc(I.p.servings)} porsjoner` : ''].filter(Boolean).join(' · ')}</span>
+            <span class="mp-mute mp-sm">${I.p.ingredients.length} ingredienser · ${I.p.steps.length} steg${I.p.method === 'ai' ? ' · ✦ lest med AI' : ''}</span></div></div>
+          <label class="mp-inline">Lagre i<span class="mp-selwrap mp-mini"><select data-impfolder>${w.folders.map((f) => `<option value="${esc(f.id)}"${f.id === I.folderId ? ' selected' : ''}>${esc(f.name)}</option>`).join('')}</select>${chev()}</span></label>
+          <div class="mp-row"><button class="mp-btn mp-light" data-a="impsave" ${I.saving ? 'disabled' : ''}>${I.saving ? 'Lagrer …' : 'Lagre oppskrift'}</button><button class="mp-btn mp-plain" data-a="impcancel">Avbryt</button></div>` : ''}
+      </div>` : ''}
+      ${busy.map((j) => { const [t, c, wd] = JOB[j.status] ?? JOB.queued; return `<div class="mp-job"><div class="mp-row mp-between"><span class="mp-ell">${esc(j.status === 'done' ? `${j.name} → ${dishById(j.dishId)?.folder ?? 'uten mappe'}` : j.name || 'Oppskrift')}</span><span style="color:${c}" class="mp-jst">${t}</span></div>
+        <span class="mp-bar"><i style="width:${wd};background:${c}"></i></span>
+        ${j.status === 'error' ? `<div class="mp-row mp-between"><span class="mp-err mp-sm">${esc(j.error)}</span><span class="mp-row"><button class="mp-btn mp-plain mp-sm" data-a="jobretry" data-id="${esc(j.id)}">Prøv igjen</button><button class="mp-x" data-a="jobdel" data-id="${esc(j.id)}" aria-label="Fjern">×</button></span></div>` : ''}</div>`; }).join('')}`;
+  }
+
+  function folderBar(w) {
+    const none = w.dishes.filter((d) => !d.folderId).length;
+    const chips = [{ id: 'Alle', name: 'Alle', count: w.dishes.length }, ...w.folders, ...(none ? [{ id: '__none', name: 'Uten mappe', count: none }] : [])];
+    const cur = w.folders.find((f) => f.id === S.fold);
+    return `<div class="mp-folders"><div class="mp-row mp-between"><span class="mp-lbl mp-nomb">MAPPER</span><span class="mp-row">${cur ? `<button class="mp-btn mp-link mp-sm" data-a="foldedit">${S.foldEdit ? 'Ferdig' : 'Rediger'}</button>` : ''}<button class="mp-btn mp-link mp-sm" data-a="foldnew">+ Ny mappe</button></span></div>
+      ${S.foldNew ? '<form class="mp-row" data-f="folder"><input class="mp-in" name="name" maxlength="40" placeholder="Navn, f.eks. Grill" aria-label="Navn på ny mappe"><button class="mp-btn mp-light" type="submit">Lagre</button></form>' : ''}
+      ${cur && S.foldEdit ? `<form class="mp-row" data-f="foldrename" data-id="${esc(cur.id)}"><input class="mp-in" name="name" maxlength="40" value="${esc(cur.name)}" aria-label="Nytt navn på mappen"><button class="mp-btn mp-light" type="submit">Lagre</button><button class="mp-btn mp-plain mp-dim" type="button" data-a="folddel" data-id="${esc(cur.id)}">Slett</button></form>` : ''}
+      <div class="mp-fchips">${chips.map((f) => `<button class="mp-fchip${S.fold === f.id ? ' on' : ''}" data-a="fold" data-id="${esc(f.id)}" aria-pressed="${S.fold === f.id}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h6l2 2h10v11H3z"/></svg>${esc(f.name)}<span>${f.count ?? 0}</span></button>`).join('')}</div></div>`;
   }
 
   function cookCards(w) {
@@ -170,8 +257,9 @@ export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}
 
   function html() {
     const w = S.w;
-    if (!w) return `<div class="mp-loading">${S.err ? esc(S.err) : 'Laster matplan …'}</div>`;
+    if (!w) return `<div class="mp-loading">${S.err ? esc(S.err) : 'Laster Mat …'}</div>`;
     const secT = S.off === 0 ? 'Denne uka' : S.off === 1 ? 'Neste uke' : S.off === -1 ? 'Forrige uke' : `Uke ${w.week}`;
+    if (S.fold !== 'Alle' && S.fold !== '__none' && !w.folders.some((f) => f.id === S.fold)) S.fold = 'Alle';
     return `${header(w)}
       <div class="mp-status" data-status ${S.status ? '' : 'hidden'}>${esc(S.status)}</div>
       <div class="mp-main">
@@ -204,6 +292,8 @@ export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}
         <div class="mp-right">
           <div class="mp-row mp-between"><div class="mp-h2">Retter <span class="mp-count">${w.dishes.length}</span></div><button class="mp-btn" data-a="new">+ Ny rett</button></div>
           ${S.ed === '__new' ? dishForm(null) : ''}
+          <div class="mp-scan" data-scan>${scanCard()}</div>
+          ${folderBar(w)}
           <input class="mp-in mp-search" type="search" data-q value="${esc(S.q)}" placeholder="Søk i retter og ingredienser" aria-label="Søk i retter og ingredienser">
           <div class="mp-row mp-wrap">${FILTERS.map((f) => `<button class="mp-filter${S.flt === f ? ' on' : ''}" data-a="flt" data-f="${f}" aria-pressed="${S.flt === f}">${f}</button>`).join('')}</div>
           <div class="mp-list" data-list>${dishList(w)}</div>
@@ -216,9 +306,29 @@ export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}
     const active = document.activeElement, keep = active?.matches?.('[data-q]') && el.contains(active) ? active.selectionStart : null;
     el.innerHTML = html();
     if (keep !== null) { const q = el.querySelector('[data-q]'); q?.focus(); q?.setSelectionRange(keep, keep); }
+    el.querySelector('.mp-fchip.on')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   }
   function paintStatus() { const s = el.querySelector('[data-status]'); if (s) { s.textContent = S.status; s.hidden = !S.status; } }
   function paintList() { const l = el.querySelector('[data-list]'); if (l && S.w) l.innerHTML = dishList(S.w); }
+  function paintScan() {
+    const x = el.querySelector('[data-scan]');
+    if (!x || !S.w) return;
+    const a = document.activeElement, focusLink = a?.matches?.('[data-link]') && x.contains(a);
+    x.innerHTML = scanCard();
+    if (focusLink) x.querySelector('[data-link]')?.focus();
+  }
+  async function importUrl(url) {
+    url = String(url ?? '').trim();
+    if (!url) return;
+    if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
+    S.link = url; S.imp = { run: true, dom: host(url) }; paintScan();
+    try {
+      const p = await call('/recipes/import', { method: 'POST', json: { url } });
+      const f = W().folders.find((x) => x.name === p.folderSuggestion) ?? W().folders[0];
+      S.imp = { p, dom: host(p.sourceUrl), folderId: f?.id ?? null };
+    } catch (e) { S.imp = { err: e.message, dom: host(url) }; }
+    paintScan();
+  }
 
   /* ---------- Handlinger ---------- */
 
@@ -290,6 +400,29 @@ export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}
         return run(() => call(`/cooks/${encodeURIComponent(c.name)}/best`, { method: 'PUT', json: { best: c.best.map((x) => x.id).filter((x) => x !== b.dataset.id), start: w.start } }));
       }
       case 'shopall': S.shopAll = !S.shopAll; return paint();
+      case 'fold': S.fold = b.dataset.id; S.foldEdit = false; return paint();
+      case 'foldnew': S.foldNew = !S.foldNew; paint(); return el.querySelector('form[data-f="folder"] input')?.focus();
+      case 'foldedit': S.foldEdit = !S.foldEdit; return paint();
+      case 'folddel': {
+        const f = w.folders.find((x) => x.id === b.dataset.id);
+        if (!f || !confirm(`Slette mappen ${f.name}? Rettene i den blir liggende uten mappe.`)) return;
+        try { const r = await call(`/folders/${f.id}`, { method: 'DELETE' }); S.fold = 'Alle'; S.foldEdit = false; flash(r.status); } catch (err) { flash(err.message); }
+        return load();
+      }
+      case 'impcancel': S.imp = null; S.link = ''; return paintScan();
+      case 'impsave': {
+        const I = S.imp;
+        if (!I?.p) return;
+        I.saving = true; paintScan();
+        try {
+          const r = await call('/recipes/import/save', { method: 'POST', json: { preview: I.p, folderId: I.folderId, start: w.start } });
+          S.w = r; S.imp = null; S.link = ''; S.open = r.dish?.id ?? null; S.fold = 'Alle'; S.flt = 'Alle'; S.q = ''; flash(r.status);
+        } catch (err) { I.saving = false; I.err = err.message; I.p = null; }
+        return paint();
+      }
+      case 'jobretry': try { S.jobs = await call(`/recipes/jobs/${b.dataset.id}/retry`, { method: 'POST' }); } catch (err) { flash(err.message); } paintScan(); return pollJobs();
+      case 'jobdel': try { await call(`/recipes/jobs/${b.dataset.id}`, { method: 'DELETE' }); S.jobs = S.jobs.filter((j) => j.id !== b.dataset.id); } catch (err) { flash(err.message); } return paintScan();
+      case 'rmlink': return run(() => call(`/dishes/${b.dataset.id}/links/${b.dataset.lid}?start=${w.start}`, { method: 'DELETE' }));
       case 'shop': return run(() => call(`/shopping/${encodeURIComponent(b.dataset.id)}/toggle`, { method: 'POST', json: { start: w.start } }).then(() => call(`/week?start=${w.start}`)));
     }
   });
@@ -301,13 +434,32 @@ export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}
       const d = dishById(t.dataset.onday), date = t.value;
       return run(() => call(`/day/${date}`, { method: 'PATCH', json: { dishId: d.id } }), { msg: `${d.name} er lagt på ${DAYS[w.days.find((x) => x.date === date).index].toLowerCase()}.` });
     }
+    if (t.matches('[data-scanfile]')) { const files = [...t.files]; t.value = ''; return upload(files); }
+    if (t.matches('[data-linkfile]')) {
+      const files = [...t.files]; t.value = '';
+      if (!files.length) return;
+      const fd = new FormData();
+      for (const f of files) fd.append('file', f, f.name);
+      return run(() => call(`/dishes/${t.dataset.linkfile}/links?start=${w.start}`, { method: 'POST', form: fd }), { msg: files.length > 1 ? `${files.length} filer lagt til` : `${files[0].name} lagt til` });
+    }
+    if (t.matches('[data-folder]')) {
+      const d = dishById(t.dataset.folder), f = w.folders.find((x) => x.id === t.value);
+      return run(() => call(`/dishes/${d.id}`, { method: 'PATCH', json: { folderId: t.value || null, start: w.start } }), { msg: `${d.name} ligger nå i ${f ? f.name : 'ingen mappe'}.` });
+    }
+    if (t.matches('[data-impfolder]') && S.imp) { S.imp.folderId = t.value; return; }
     if (t.matches('[data-best]') && t.value) {
       const c = w.chefs.find((x) => x.name === t.dataset.best);
       return run(() => call(`/cooks/${encodeURIComponent(c.name)}/best`, { method: 'PUT', json: { best: [...c.best.map((x) => x.id), t.value], start: w.start } }));
     }
   });
 
-  el.addEventListener('input', (e) => { if (e.target.matches('[data-q]')) { S.q = e.target.value; paintList(); } });
+  el.addEventListener('input', (e) => { if (e.target.matches('[data-q]')) { S.q = e.target.value; paintList(); } if (e.target.matches('[data-link]')) S.link = e.target.value; });
+  // Lim inn en lenke rett i feltet: importen starter med en gang.
+  el.addEventListener('paste', (e) => {
+    if (!e.target.matches?.('[data-link]')) return;
+    const t = e.clipboardData?.getData('text')?.trim();
+    if (t && /^https?:\/\/\S+$/i.test(t)) { e.preventDefault(); importUrl(t); }
+  });
 
   el.addEventListener('submit', async (e) => {
     const f = e.target.closest('form[data-f]');
@@ -329,6 +481,24 @@ export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}
       try { const r = await call('/hellofresh', { method: 'POST', json: { text: v.text ?? '', start: w.start } }); S.w = r; S.hfOpen = false; S.hfMsg = r.status; if (r.added) S.flt = 'HelloFresh'; }
       catch (err) { S.hfMsg = err.message; }
       return paint();
+    }
+    if (f.dataset.f === 'import') return importUrl(v.url);
+    if (f.dataset.f === 'link') {
+      const url = String(v.url ?? '').trim();
+      if (!url) return;
+      return run(() => call(`/dishes/${f.dataset.id}/links?start=${w.start}`, { method: 'POST', json: { url } }));
+    }
+    if (f.dataset.f === 'folder') {
+      const name = String(v.name ?? '').trim();
+      if (!name) return;
+      try { const r = await call('/folders', { method: 'POST', json: { name } }); S.foldNew = false; S.fold = r.id; flash(`Mappen ${name} er laget.`); } catch (err) { flash(err.message); }
+      return load();
+    }
+    if (f.dataset.f === 'foldrename') {
+      const name = String(v.name ?? '').trim();
+      if (!name) return;
+      try { await call(`/folders/${f.dataset.id}`, { method: 'PATCH', json: { name } }); S.foldEdit = false; flash(`Mappen heter nå ${name}.`); } catch (err) { flash(err.message); }
+      return load();
     }
     if (f.dataset.f === 'cook') { const name = String(v.name ?? '').trim(); if (name) return run(() => call('/cooks', { method: 'POST', json: { name, start: w.start } })); return; }
     if (f.dataset.f === 'shop') { const text = String(v.text ?? '').trim(); if (text) return run(() => call('/shopping', { method: 'POST', json: { text, start: w.start } })); }
@@ -372,8 +542,13 @@ export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}
   const outside = (e) => { if (!el.isConnected) return document.removeEventListener('click', outside); if (S.cal && !e.composedPath().includes(el)) { S.cal = false; paint(); } };
   document.addEventListener('click', outside);
 
+  // Slipp bilder eller PDF på «Skann oppskrift».
+  el.addEventListener('dragover', (e) => { if (e.target.closest?.('[data-scan]') && [...(e.dataTransfer?.types ?? [])].includes('Files')) { e.preventDefault(); e.target.closest('[data-scan]').classList.add('drop'); } });
+  el.addEventListener('dragleave', (e) => { const x = e.target.closest?.('[data-scan]'); if (x && !x.contains(e.relatedTarget)) x.classList.remove('drop'); });
+  el.addEventListener('drop', (e) => { const x = e.target.closest?.('[data-scan]'); if (x && e.dataTransfer?.files?.length) { e.preventDefault(); x.classList.remove('drop'); upload([...e.dataTransfer.files]); } });
+
   paint();
-  load();
+  load().then(pollJobs);
   return { reload: load, el };
 }
 

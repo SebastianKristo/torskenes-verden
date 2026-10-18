@@ -1,5 +1,6 @@
 import { esc, api } from './util.js';
 import { store, widget, card, refresh } from './store.js';
+import { is2c } from './hltheme.js';
 
 const CITIES = { Oslo: [59.91, 10.75], Bergen: [60.39, 5.32], Trondheim: [63.43, 10.39], Tromsø: [69.65, 18.96] };
 const NORWAY = { latMin: 57.9, latMax: 71.2, lonMin: 4.5, lonMax: 31.1 };
@@ -42,8 +43,20 @@ for (const [k, name] of GALS) widget('r_gal_' + k, { render() {
   return `<div class="card-title">${name}</div><div class="hscroll">${items.map((i) => `<a class="gal-item" href="${esc(i.url)}" target="_blank" rel="noopener"><div style="background-image:url('${esc(i.img)}')"></div><span>${esc(i.title)}</span><span class="mono muted" style="font-size:11px">${esc(i.date)}</span></a>`).join('') || '<div class="gal-item"><div></div></div>'.repeat(4)}</div>`;
 } });
 
+// Vindu og papir: dagens NASA-bilde som fotovindu øverst, med tittelen på bildet.
+widget('r_pw', { cls: 'pw pw-rom', render() {
+  const a = sp.apod, img = a?.media_type === 'image' ? a.url : a?.thumbnail_url;
+  return `<div class="pw-apod${img ? ' on' : ''}" style="${img ? `background-image:url('${esc(img)}')` : ''}"></div>
+    <div class="pw-bottom"><div><div class="pw-kicker">NASA · DAGENS ROMBILDE${a?.date ? ` · ${esc(a.date)}` : ''}</div><div class="pw-title">Satellitt og teleskop</div>
+    ${a?.title ? `<div class="pw-date">${esc(a.title)}${a.copyright ? ` · © ${esc(a.copyright)}` : ''}</div>` : ''}</div></div>`;
+} });
+
 export function render() {
   load();
+  if (is2c()) {
+    return `<div class="p-dash">${card('r_pw')}<div class="p-paper p-rom">
+      ${card('r_starlink')}${card('r_apod')}<div class="p-gal">${GALS.map(([k]) => card('r_gal_' + k)).join('')}</div></div></div>`;
+  }
   return `<div style="display:flex;flex-direction:column;gap:20px"><div class="page-title">Satellitt <b>og teleskop</b></div>
     ${card('r_starlink')}${card('r_apod')}${GALS.map(([k]) => card('r_gal_' + k)).join('')}</div>`;
 }
@@ -57,7 +70,7 @@ async function load() {
   loadLand();
   if (sp.loaded) { start(); return; }
   sp.loaded = true;
-  api('/space/apod').then((a) => { sp.apod = a; }).catch((e) => { sp.apod = { error: e.message }; }).finally(() => refresh('r_apod'));
+  api('/space/apod').then((a) => { sp.apod = a; }).catch((e) => { sp.apod = { error: e.message }; }).finally(() => refresh('r_apod', 'r_pw'));
   for (const [k] of GALS) api('/space/gallery/' + k).then((d) => { sp.gal[k] = d.items; refresh('r_gal_' + k); }).catch(() => {});
   try {
     const [sat, tle] = await Promise.all([import('/vendor/satellite/index.js'), api('/space/tle')]);
@@ -120,8 +133,11 @@ function draw() {
   const k = Math.cos((64 * Math.PI) / 180), sx = 38 * k, sy = 20, sc = Math.min(W / sx, H / sy);
   const ox = (W - sx * sc) / 2, oy = (H - sy * sc) / 2;
   const px = (lon) => ox + (lon + 2) * k * sc, py = (lat) => oy + (74 - lat) * sc;
-  x.fillStyle = '#0d1016'; x.fillRect(0, 0, W, H);
-  x.strokeStyle = '#1a1e26'; x.lineWidth = 1;
+  // Papirfarger i Vindu og papir, ellers mørkt kart.
+  const P = is2c() ? { bg: '#ebe5d8', grid: '#e0d9ca', no: '#d8d1c2', land: '#e3ddcf', noLine: '#6b665c', line: '#b9b2a3', box: '#8f897c', dot: '#1b1a17', city: '#1b1a17', sel: '#b23a2a' }
+    : { bg: '#0d1016', grid: '#1a1e26', no: '#232c3b', land: '#1a1f28', noLine: '#4d5b75', line: '#2f3746', box: '#3a4560', dot: '#a8d4fb', city: '#eef0f4', sel: '#f3d38a' };
+  x.fillStyle = P.bg; x.fillRect(0, 0, W, H);
+  x.strokeStyle = P.grid; x.lineWidth = 1;
   for (let l = 50; l < 80; l += 2) { x.beginPath(); x.moveTo(0, py(l)); x.lineTo(W, py(l)); x.stroke(); }
   for (let l = -20; l < 60; l += 4) { x.beginPath(); x.moveTo(px(l), 0); x.lineTo(px(l), H); x.stroke(); }
   // Land: Norge litt lysere enn nabolandene, med tynne grenser.
@@ -129,19 +145,19 @@ function draw() {
     const no = ctry.id === NORWAY_ID;
     x.beginPath();
     for (const ring of ctry.rings) ring.forEach(([lo, la], i) => (i ? x.lineTo(px(lo), py(la)) : x.moveTo(px(lo), py(la))));
-    x.fillStyle = no ? '#232c3b' : '#1a1f28'; x.fill('evenodd');
-    x.strokeStyle = no ? '#4d5b75' : '#2f3746'; x.lineWidth = no ? 2 : 1.4; x.stroke();
+    x.fillStyle = no ? P.no : P.land; x.fill('evenodd');
+    x.strokeStyle = no ? P.noLine : P.line; x.lineWidth = no ? 2 : 1.4; x.stroke();
   }
-  x.strokeStyle = '#3a4560'; x.setLineDash([8, 8]);
+  x.strokeStyle = P.box; x.setLineDash([8, 8]);
   x.strokeRect(px(NORWAY.lonMin), py(NORWAY.latMax), px(NORWAY.lonMax) - px(NORWAY.lonMin), py(NORWAY.latMin) - py(NORWAY.latMax));
   x.setLineDash([]);
-  x.fillStyle = '#a8d4fb';
+  x.fillStyle = P.dot;
   for (const p of sp.stats?.pts ?? []) { x.beginPath(); x.arc(px(p.lon), py(p.lat), 3.5, 0, 7); x.fill(); }
-  x.font = '22px Outfit, sans-serif';
+  x.font = is2c() ? '22px Manrope, sans-serif' : '22px Outfit, sans-serif';
   const city = store.me.city in CITIES ? store.me.city : 'Oslo';
   for (const [n, [la, lo]] of Object.entries(CITIES)) {
     const sel = n === city;
-    x.fillStyle = sel ? '#f3d38a' : '#eef0f4';
+    x.fillStyle = sel ? P.sel : P.city;
     x.beginPath(); x.arc(px(lo), py(la), sel ? 8 : 5, 0, 7); x.fill();
     x.fillText(n, px(lo) + 12, py(la) + 7);
   }
