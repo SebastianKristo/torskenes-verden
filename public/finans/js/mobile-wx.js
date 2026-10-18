@@ -6,7 +6,8 @@
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { hlData } from './mobile-hl.js';
-import { cmpEntry, cmpView } from './mobile-p17.js';
+import { cmpView, CMP, cmpLoad } from './mobile-p17.js';
+import { WX2, normCmp, pentAt, cmpCard, bottomBtns, mapView, placesSheet, metricSheet, fxKind, fxAfterDraw, wx22Bind } from './mobile-wx22.js';
 
 const PLACES = [['oslo', 'Oslo'], ['bergen', 'Bergen'], ['trondheim', 'Trondheim'], ['tromso', 'Tromsø']];
 export const WX = { places: null, add: false, q: '', res: null, sErr: '', busy: false, edit: false, place: (() => { try { return localStorage.getItem('fh_wx_place') || 'oslo'; } catch { return 'oslo'; } })(), d: {}, err: '', mode: 'temp', sh: null, feel: false, from: 'hl' };
@@ -28,7 +29,11 @@ export async function wxLoad(force = false) {
     if (p === 'oslo' && w) { WX.d[p] = { ...fromHome(w), _t: Date.now() }; WX.err = ''; }
     else WX.err = e.status === 404 ? 'Værvisningen krever en nyere server. Oppdater Homelab.' : e.message;
   }
+  // Yr og Pent lastes automatisk når værsiden åpnes eller stedet byttes (eldre server: /weather/compare).
+  if (WX.d[p] && !WX.d[p].compare && !CMP.d[p] && !CMP.busy) cmpLoad(p).catch?.(() => {});
 }
+export const cmpOf = (p = WX.place) => normCmp(WX.d[p]?.compare) ?? normCmp(CMP.d[p]);
+export async function placesReload() { WX.places = null; await placesLoad(); }
 // Reserve: bygg det vi kan av været på Homelab-forsiden (MET, 8 timer og 6 dager).
 function fromHome(w) {
   const now = new Date();
@@ -64,15 +69,16 @@ const IC = {
 const ICC = { clear: '#ffd36b', night: '#e6ecff', partly: '#ffe39a', cloudy: '#ffffff', rain: '#9fe0ff', snow: '#ffffff', fog: '#e9eef4', thunder: '#ffd36b' };
 const ico = (k, size = 26, col) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${col || ICC[k] || '#fff'}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${IC[k] ?? IC.cloudy}"/></svg>`;
 const nightOf = (k, isDay) => (!isDay && (k === 'clear' || k === 'partly') ? 'night' : k);
+// Himmel fra design/Vaer.dc.html (prompt 22): mørkere grå ved regn, lysere grå ved snø. Solen tegnes på canvas (dempet).
 const SKY = {
-  clear: ['linear-gradient(180deg,#2f6fc4 0%,#4d8fd8 40%,#8fc2ee 100%)', 'radial-gradient(90% 50% at 70% 0%,rgba(255,226,140,.55),transparent 70%)'],
-  partly: ['linear-gradient(180deg,#3d6c9e 0%,#6b93ba 50%,#a9c3da 100%)', 'radial-gradient(80% 40% at 75% 0%,rgba(255,226,140,.3),transparent 70%)'],
-  cloudy: ['linear-gradient(180deg,#4f6378 0%,#71869a 50%,#9fb0bf 100%)', 'none'],
-  rain: ['linear-gradient(180deg,#33414f 0%,#4b5c6d 50%,#6e7f8f 100%)', 'none'],
-  thunder: ['linear-gradient(180deg,#252c3a 0%,#3b4556 60%,#56627a 100%)', 'none'],
-  snow: ['linear-gradient(180deg,#6c829b 0%,#93a6ba 50%,#c3d0dc 100%)', 'none'],
-  fog: ['linear-gradient(180deg,#6f7b86 0%,#8f99a2 50%,#b6bdc3 100%)', 'none'],
-  night: ['linear-gradient(180deg,#0b1730 0%,#182a4f 55%,#2d4370 100%)', 'radial-gradient(60% 30% at 80% 5%,rgba(200,215,255,.18),transparent 70%)'],
+  clear: ['linear-gradient(180deg,#3d6fa8 0%,#2f6fb8 40%,#4a8ad0 75%,#8ab6e4 100%)', 'none'],
+  partly: ['linear-gradient(180deg,#3d6fa8 0%,#2f6fb8 40%,#4a8ad0 75%,#8ab6e4 100%)', 'none'],
+  cloudy: ['linear-gradient(180deg,#4f6d8f 0%,#6a87a6 55%,#9bb0c5 100%)', 'none'],
+  rain: ['linear-gradient(180deg,#3b4658 0%,#323d4e 45%,#2a3342 100%)', 'none'],
+  thunder: ['linear-gradient(180deg,#2c3443 0%,#262e3b 45%,#1f2632 100%)', 'none'],
+  snow: ['linear-gradient(180deg,#5e6b7c 0%,#7d8a9a 55%,#a3aebb 100%)', 'none'],
+  fog: ['linear-gradient(180deg,#36485e 0%,#4f627a 55%,#74869b 100%)', 'none'],
+  night: ['linear-gradient(180deg,#0b1730 0%,#1c2d52 55%,#2a3f6a 100%)', 'none'],
 };
 const WMO_NB = { 0: 'Klarvær', 1: 'Lettskyet', 2: 'Delvis skyet', 3: 'Skyet', 45: 'Tåke', 48: 'Rimtåke', 51: 'Lett yr', 53: 'Yr', 55: 'Kraftig yr', 61: 'Lett regn', 63: 'Regn', 65: 'Kraftig regn', 71: 'Lett snø', 73: 'Snø', 75: 'Kraftig snø', 80: 'Regnbyger', 81: 'Regnbyger', 82: 'Kraftige regnbyger', 85: 'Snøbyger', 86: 'Snøbyger', 95: 'Torden', 96: 'Torden med hagl', 99: 'Torden med hagl' };
 const KIND_NB = { clear: 'Klarvær', night: 'Klarvær', partly: 'Delvis skyet', cloudy: 'Skyet', rain: 'Regn', snow: 'Snø', fog: 'Tåke', thunder: 'Torden' };
@@ -108,7 +114,10 @@ export function wxView() {
   const D = WX.d[WX.place];
   const back = `<button class="vx-back" data-wx="back" data-swipeback>‹ ${WX.from === 'hl' ? 'Hjem' : 'Tilbake'}</button>`;
   // Stedsvelgeren nederst: egne steder kan legges til (søk) og fjernes (Rediger → ✕).
-  const places = `<div class="vx-places" role="tablist">${plist().map(([k, n]) => `<button role="tab" data-wx="${WX.edit ? 'rmpl' : 'place'}" data-k="${esc(k)}" aria-selected="${WX.place === k}">${esc(n)}${WX.edit && plist().length > 1 ? ' <b aria-label="Fjern">✕</b>' : ''}</button>`).join('')}${WX.fixed ? '' : `<button data-wx="addpl" aria-label="Legg til sted">＋</button><button data-wx="editpl" aria-pressed="${WX.edit}">${WX.edit ? 'Ferdig' : 'Rediger'}</button>`}</div>${WX.add ? addSheet() : ''}`;
+  // Prompt 22: ingen stedspiller nederst. Kartknapp nede til venstre, ☰ (Steder) nede til høyre.
+  const P0 = plist().find(([k]) => k === WX.place)?.[2] ?? D?.place;
+  const places = `${bottomBtns()}${placesSheet(WX, plist)}${mapView(P0, D?.place?.name ?? plist().find(([k]) => k === WX.place)?.[1])}`;
+  if (!D) WX.fx = null;
   if (!D) return `<div class="vx" style="background:${SKY.cloudy[0]}"><div class="vx-bar">${back}</div><div class="vx-in">${WX.err ? `<div class="vx-card vx-pad">${esc(WX.err)}</div>` : '<div class="m-spin"></div>'}</div>${places}</div>`;
   const c = D.current ?? {}, td = D.today ?? {}, kind0 = D.kind ?? kindOf(c.code), kind = nightOf(kind0 === 'night' ? 'clear' : kind0, c.isDay !== false && kind0 !== 'night');
   const [sky, glow] = SKY[kind] ?? SKY.cloudy, desc = descOf(c.code, c.text), city = D.place?.name ?? plist().find(([k]) => k === WX.place)?.[1] ?? '';
@@ -117,22 +126,23 @@ export function wxView() {
   const modes = [['temp', 'Temperatur', 'M10 14V5a2 2 0 1 1 4 0v9a4 4 0 1 1-4 0z'], ['rain', 'Nedbør', 'M12 3c3 4 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 3-7 6-11z'], ['wind', 'Vind', 'M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8']];
   const hv = (h) => (WX.mode === 'rain' ? `${Math.round(h.precipProb ?? (h.precip > 0 ? 60 : 0))} %` : WX.mode === 'wind' ? `${Math.round(h.wind ?? 0)}` : deg(h.temp));
   const nr = D.nextRain, hrTitle = nr?.t ? `Nedbør ventet rundt ${hm(nr.t)}` : kind === 'rain' ? 'Regn akkurat nå' : 'Opphold de neste timene';
-  const hrs = hours.map((h, i) => { const k = nightOf(kindOf(h.code), h.isDay !== false && new Date(h.t).getHours() > 6 && new Date(h.t).getHours() < 20);
-    return `<div class="vx-h"><span${i === 0 ? ' class="b"' : ''}>${i === 0 ? 'Nå' : String(new Date(h.t).getHours()).padStart(2, '0')}</span>${ico(k, 28)}<span class="vx-pp">${(h.precipProb ?? 0) >= 20 ? `${Math.round(h.precipProb)} %` : ''}</span><b>${hv(h)}</b></div>`; }).join('');
+  const C2 = cmpOf();
+  const hrs = hours.map((h, i) => { const pt = WX.mode === 'temp' ? pentAt(C2, h.t) : null; const k = nightOf(kindOf(h.code), h.isDay !== false && new Date(h.t).getHours() > 6 && new Date(h.t).getHours() < 20);
+    return `<div class="vx-h"><span${i === 0 ? ' class="b"' : ''}>${i === 0 ? 'Nå' : String(new Date(h.t).getHours()).padStart(2, '0')}</span>${ico(k, 28)}<span class="vx-pp">${(h.precipProb ?? 0) >= 20 ? `${Math.round(h.precipProb)} %` : ''}</span><b>${hv(h)}</b><span class="w22-pt">${pt != null ? `${Math.round(pt)}°` : ''}</span></div>`; }).join('');
   const dayRows = days.map((d, i) => { const k = kindOf(d.code), l = (((d.lo ?? lo) - lo) / span) * 100, w = (((d.hi ?? hi) - (d.lo ?? lo)) / span) * 100;
     const nowL = i === 0 && c.temp != null ? Math.max(0, Math.min(100, ((c.temp - lo) / span) * 100)) : null, dt = new Date(d.date + 'T12:00');
     return `<button class="vx-d" data-wx="day" data-i="${i}"><span class="vx-dn">${i === 0 ? 'I dag' : WD[dt.getDay()].replace(/^./, (x) => x.toUpperCase())}</span><span class="vx-di">${ico(k, 24)}<small>${(d.precipProb ?? 0) >= 20 ? `${Math.round(d.precipProb)} %` : ''}</small></span>
       <span class="vx-lo">${deg(d.lo)}</span><span class="vx-rng"><i style="left:${l.toFixed(1)}%;width:${Math.max(4, w).toFixed(1)}%"></i>${nowL != null ? `<em style="left:${nowL.toFixed(1)}%"></em>` : ''}</span><span class="vx-hi">${deg(d.hi)}</span></button>`; }).join('');
   // Vind
   const ws = c.wind != null ? Math.round(c.wind) : null, wg = c.gust != null ? Math.round(c.gust) : null;
-  const wind = `<div class="vx-card vx-split"><div class="vx-col"><div class="vx-t">${tIco('M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8')}VIND</div>
+  const wind = `<div class="vx-card vx-split" data-wx2="ms" data-k="wind" role="button" tabindex="0"><div class="vx-col"><div class="vx-t">${tIco('M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8')}VIND</div>
       ${[['Vind', ws != null ? `${ws} m/s` : '–'], ['Vindkast', wg != null ? `${wg} m/s` : '–'], ['Retning', c.windDir != null ? `${Math.round(c.windDir)}° ${dirName(c.windDir)}` : '–']].map(([a, b], i) => `<div class="vx-r${i ? ' bt' : ''}"><span>${a}</span><span>${b}</span></div>`).join('')}</div>
     <svg viewBox="0 0 100 100" class="vx-comp" aria-hidden="true"><circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="7" stroke-dasharray="0.8 2.5"/><text x="50" y="12" fill="#fff" font-size="8" font-weight="800" text-anchor="middle">N</text><text x="91" y="53" fill="#fff" font-size="8" font-weight="800" text-anchor="middle" opacity=".75">Ø</text><text x="50" y="97" fill="#fff" font-size="8" font-weight="800" text-anchor="middle" opacity=".75">S</text><text x="9" y="53" fill="#fff" font-size="8" font-weight="800" text-anchor="middle" opacity=".75">V</text>
       <g transform="rotate(${Math.round(c.windDir ?? 0)} 50 50)"><circle cx="50" cy="12" r="3.2" fill="#fff"/><line x1="50" y1="15" x2="50" y2="34" stroke="#fff" stroke-width="2"/><line x1="50" y1="66" x2="50" y2="86" stroke="#fff" stroke-width="2"/><path d="M45 80 L50 89 L55 80" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></g>
       <circle cx="50" cy="50" r="19" fill="rgba(20,50,90,.35)"/><text x="50" y="51" fill="#fff" font-size="14" font-weight="800" text-anchor="middle">${ws ?? '–'}</text><text x="50" y="61" fill="#fff" font-size="7.5" font-weight="700" text-anchor="middle">m/s</text></svg></div>`;
   // Måne
   const mo = D.moon?.phase != null ? D.moon : moonOf(), mp = mo.phase ?? moonOf().phase;
-  const moon = `<div class="vx-card vx-split"><div class="vx-col"><div class="vx-t">${tIco('M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z')}${esc(String(mo.name ?? moonOf().name).toUpperCase())}</div>
+  const moon = `<div class="vx-card vx-split" data-wx2="ms" data-k="moon" role="button" tabindex="0"><div class="vx-col"><div class="vx-t">${tIco('M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z')}${esc(String(mo.name ?? moonOf().name).toUpperCase())}</div>
       ${[['Belyst', `${Math.round(mo.illum ?? moonOf().illum)} %`], ['Neste fullmåne', dShort(mo.nextFull ?? moonOf().nextFull)], ['Neste nymåne', dShort(mo.nextNew ?? moonOf().nextNew)]].map(([a, b], i) => `<div class="vx-r${i ? ' bt' : ''}"><span>${a}</span><span>${b}</span></div>`).join('')}</div>
     <svg viewBox="0 0 56 56" class="vx-moon" aria-hidden="true"><circle cx="28" cy="28" r="24" fill="rgba(20,40,70,.55)"/><path d="${moonPath(mp)}" fill="#e9eef5"/><circle cx="20" cy="20" r="3" fill="rgba(120,140,170,.25)"/><circle cx="33" cy="33" r="4.5" fill="rgba(120,140,170,.22)"/><circle cx="34" cy="18" r="2" fill="rgba(120,140,170,.25)"/></svg></div>`;
   // Sol
@@ -141,43 +151,44 @@ export function wxView() {
   const dayFrac = (now.getHours() * 60 + now.getMinutes()) / 1440, srF = sr ? (sr.getHours() * 60 + sr.getMinutes()) / 1440 : 0.3, ssF = ss ? (ss.getHours() * 60 + ss.getMinutes()) / 1440 : 0.72;
   const sunY = (f) => 25 - 22 * Math.sin(((f - srF) / (ssF - srF)) * Math.PI) * (f >= srF && f <= ssF ? 1 : 0.35);
   const curve = Array.from({ length: 49 }, (_, i) => { const f = i / 48, inDay = f >= srF && f <= ssF, y = inDay ? 25 - 22 * Math.sin(((f - srF) / (ssF - srF)) * Math.PI) : 25 + 12 * Math.sin(Math.min(1, (f < srF ? srF - f : f - ssF) / Math.max(0.05, 1 - (ssF - srF))) * Math.PI / 2); return `${i ? 'L' : 'M'}${(f * 120).toFixed(1)} ${y.toFixed(1)}`; }).join(' ');
-  const sun = `<div class="vx-card vx-tile vx-sun"><div class="vx-t pad">${tIco('M3 18h18M7 14a5 5 0 0 1 10 0M12 4v3M5 8l1.5 1.5M19 8l-1.5 1.5')}${lbl}</div><b class="vx-big pad">${hm(beforeSet ? td.sunset : td.sunrise)}</b>
+  const sun = `<div class="vx-card vx-tile vx-sun" data-wx2="ms" data-k="sun" role="button" tabindex="0"><div class="vx-t pad">${tIco('M3 18h18M7 14a5 5 0 0 1 10 0M12 4v3M5 8l1.5 1.5M19 8l-1.5 1.5')}${lbl}</div><b class="vx-big pad">${hm(beforeSet ? td.sunset : td.sunrise)}</b>
     <svg viewBox="0 0 120 50" preserveAspectRatio="none" class="vx-sunc" aria-hidden="true"><line x1="0" y1="25" x2="120" y2="25" stroke="rgba(255,255,255,.45)" stroke-width="1"/><path d="${curve}" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2.2"/><circle cx="${(dayFrac * 120).toFixed(1)}" cy="${sunY(dayFrac).toFixed(1)}" r="4.5" fill="#fff"/></svg>
     <span class="vx-sm pad">${beforeSet ? `Soloppgang: ${hm(td.sunrise)}` : `Solnedgang: ${hm(td.sunset)}`}</span></div>`;
   // UV
   const uv = c.uv ?? days[0]?.uvMax ?? null, uvN = uv == null ? '–' : uv < 3 ? 'Lav' : uv < 6 ? 'Moderat' : uv < 8 ? 'Høy' : uv < 11 ? 'Svært høy' : 'Ekstrem';
-  const uvT = `<div class="vx-card vx-tile"><div class="vx-t">${tIco('M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v2M12 20v2M2 12h2M20 12h2')}UV-INDEKS</div><b class="vx-big" style="line-height:1">${uv == null ? '–' : Math.round(uv)}</b><b class="vx-mid">${uvN}</b>
+  const uvT = `<div class="vx-card vx-tile" data-wx2="ms" data-k="uv" role="button" tabindex="0"><div class="vx-t">${tIco('M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM12 2v2M12 20v2M2 12h2M20 12h2')}UV-INDEKS</div><b class="vx-big" style="line-height:1">${uv == null ? '–' : Math.round(uv)}</b><b class="vx-mid">${uvN}</b>
     <span class="vx-uvb"><em style="left:${Math.min(100, ((uv ?? 0) / 11) * 100).toFixed(0)}%"></em></span><span class="vx-sm">${uv != null && uv >= 3 ? 'Bruk solkrem midt på dagen.' : 'Lav resten av dagen.'}</span></div>`;
   // Føles som
   const fd = c.feels != null && c.temp != null ? Math.round(c.feels - c.temp) : 0;
-  const feel = `<div class="vx-card vx-tile"><div class="vx-t">${tIco('M10 14V5a2 2 0 1 1 4 0v9a4 4 0 1 1-4 0z')}FØLES SOM</div><b class="vx-big">${deg(c.feels)}</b><span class="vx-sm" style="margin-top:auto">${fd <= -2 ? 'Vinden gjør at det føles kaldere.' : fd >= 2 ? 'Fuktigheten gjør at det føles varmere.' : 'Ligner den faktiske temperaturen.'}</span></div>`;
+  const feel = `<div class="vx-card vx-tile" data-wx2="ms" data-k="feel" role="button" tabindex="0"><div class="vx-t">${tIco('M10 14V5a2 2 0 1 1 4 0v9a4 4 0 1 1-4 0z')}FØLES SOM</div><b class="vx-big">${deg(c.feels)}</b><span class="vx-sm" style="margin-top:auto">${fd <= -2 ? 'Vinden gjør at det føles kaldere.' : fd >= 2 ? 'Fuktigheten gjør at det føles varmere.' : 'Ligner den faktiske temperaturen.'}</span></div>`;
   // Mot i går
   const yh = D.yesterday?.hi, th = td.hi ?? days[0]?.hi, diff = yh != null && th != null ? Math.round(th - yh) : null;
-  const yd = `<div class="vx-card vx-tile"><div class="vx-t">${tIco('M3 20h18M5 16l4-4 3 3 7-7')}MOT I GÅR</div><b class="vx-big">${diff == null ? '–' : `${diff > 0 ? '+' : ''}${diff}°`}</b><b class="vx-sm b">${diff == null ? 'Ingen data for i går' : diff > 0 ? 'Varmere enn i går' : diff < 0 ? 'Kaldere enn i går' : 'Likt som i går'}</b>
+  const yd = `<div class="vx-card vx-tile" data-wx2="ms" data-k="yd" role="button" tabindex="0"><div class="vx-t">${tIco('M3 20h18M5 16l4-4 3 3 7-7')}MOT I GÅR</div><b class="vx-big">${diff == null ? '–' : `${diff > 0 ? '+' : ''}${diff}°`}</b><b class="vx-sm b">${diff == null ? 'Ingen data for i går' : diff > 0 ? 'Varmere enn i går' : diff < 0 ? 'Kaldere enn i går' : 'Likt som i går'}</b>
     <div class="vx-yd"><span>I dag</span><span>H:${deg(th)}</span><span>I går</span><span>H:${deg(yh)}</span></div></div>`;
   // Nedbør
   const ps = td.precipSum ?? days[0]?.precipSum ?? 0;
-  const rain = `<div class="vx-card vx-tile"><div class="vx-t">${tIco('M12 3c3 4 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 3-7 6-11z', true)}NEDBØR</div><b class="vx-big">${(Math.round((ps ?? 0) * 10) / 10).toLocaleString('nb-NO')} mm</b><b class="vx-mid">I dag</b>
+  const rain = `<div class="vx-card vx-tile" data-wx2="ms" data-k="rain" role="button" tabindex="0"><div class="vx-t">${tIco('M12 3c3 4 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 3-7 6-11z', true)}NEDBØR</div><b class="vx-big">${(Math.round((ps ?? 0) * 10) / 10).toLocaleString('nb-NO')} mm</b><b class="vx-mid">I dag</b>
     <span class="vx-sm" style="margin-top:auto">${nr?.t ? `${(Math.round((nr.mm ?? 0) * 10) / 10).toLocaleString('nb-NO')} mm ventet ${new Date(nr.t).toDateString() === now.toDateString() ? 'rundt' : `${WD[new Date(nr.t).getDay()]}`} ${hm(nr.t)}.` : 'Ingen nedbør ventet de neste dagene.'}</span></div>`;
   // Sikt, fuktighet og trykk
   const vk = c.visibility != null ? (c.visibility > 100 ? c.visibility / 1000 : c.visibility) : null;
-  const vis = `<div class="vx-card vx-tile"><div class="vx-t">${tIco('M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z')}SIKT</div><b class="vx-big">${vk == null ? '–' : `${Math.round(vk)} km`}</b><span class="vx-sm" style="margin-top:auto">${vk == null ? '' : vk >= 10 ? 'Helt klart sikt akkurat nå.' : vk >= 4 ? 'Litt dis.' : 'Dårlig sikt.'}</span></div>`;
-  const hum = `<div class="vx-card vx-tile"><div class="vx-t">${tIco('M3 9h11a3 3 0 1 0-3-3M3 14h15M3 19h9')}LUFTFUKTIGHET</div><b class="vx-big">${c.humidity != null ? Math.round(c.humidity) : '–'} %</b><span class="vx-sm" style="margin-top:auto">Duggpunktet er ${deg(c.dew)} akkurat nå.</span></div>`;
+  const vis = `<div class="vx-card vx-tile" data-wx2="ms" data-k="vis" role="button" tabindex="0"><div class="vx-t">${tIco('M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z')}SIKT</div><b class="vx-big">${vk == null ? '–' : `${Math.round(vk)} km`}</b><span class="vx-sm" style="margin-top:auto">${vk == null ? '' : vk >= 10 ? 'Helt klart sikt akkurat nå.' : vk >= 4 ? 'Litt dis.' : 'Dårlig sikt.'}</span></div>`;
+  const hum = `<div class="vx-card vx-tile" data-wx2="ms" data-k="hum" role="button" tabindex="0"><div class="vx-t">${tIco('M3 9h11a3 3 0 1 0-3-3M3 14h15M3 19h9')}LUFTFUKTIGHET</div><b class="vx-big">${c.humidity != null ? Math.round(c.humidity) : '–'} %</b><span class="vx-sm" style="margin-top:auto">Duggpunktet er ${deg(c.dew)} akkurat nå.</span></div>`;
   const pr = c.pressure, rot = pr != null ? Math.max(-135, Math.min(135, ((pr - 1013) / 50) * 135)) : 0, tr = c.pressureTrend;
-  const pres = `<div class="vx-card vx-tile"><div class="vx-t">${tIco('M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 12l4-4')}LUFTTRYKK</div>
+  const pres = `<div class="vx-card vx-tile" data-wx2="ms" data-k="pres" role="button" tabindex="0"><div class="vx-t">${tIco('M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 12l4-4')}LUFTTRYKK</div>
     <svg viewBox="0 0 100 86" class="vx-pres" aria-hidden="true"><circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="8" stroke-dasharray="0.9 2.4" transform="rotate(135 50 50)"/><g transform="rotate(${rot.toFixed(0)} 50 50)"><line x1="50" y1="9" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/></g>
       <text x="50" y="40" fill="#fff" font-size="12" font-weight="800" text-anchor="middle">${tr === 'up' || tr > 0 ? '↑' : tr === 'down' || tr < 0 ? '↓' : '→'}</text><text x="50" y="56" fill="#fff" font-size="15" font-weight="800" text-anchor="middle">${pr != null ? Math.round(pr) : '–'}</text><text x="50" y="66" fill="#fff" font-size="8" font-weight="700" text-anchor="middle">hPa</text><text x="26" y="84" fill="#fff" font-size="8" font-weight="700" text-anchor="middle">Lavt</text><text x="74" y="84" fill="#fff" font-size="8" font-weight="700" text-anchor="middle">Høyt</text></svg></div>`;
-  return `<div class="vx" style="background:${sky}"><div class="vx-glow" style="background:${glow}"></div>
+  WX.fx = fxKind(kind0 === 'night' ? 'night' : kind0, c.isDay !== false && kind0 !== 'night', c.code);
+  return `<div class="vx" style="background:${sky}"><div class="w22-fx" id="w22-fx" aria-hidden="true"></div><div class="vx-glow" style="background:${glow}"></div>
     <div class="vx-bar">${back}<div class="vx-compact"><b>${esc(city)}</b><span>${deg(c.temp)} | ${esc(desc)}</span></div><span class="vx-src">${D.mock ? 'Eksempeldata' : D.fallback || D.source === 'met' ? 'MET' : 'Open-Meteo'}</span></div>
     <div class="vx-in">
       <div class="vx-head"><span class="vx-pos">MIN POSISJON</span><span class="vx-city">${esc(city)}</span><span class="vx-temp">${deg(c.temp)}</span><span class="vx-desc">${esc(desc)}</span><span class="vx-hl">H:${deg(td.hi ?? days[0]?.hi)}  L:${deg(td.lo ?? days[0]?.lo)}${c.feels != null ? ` · Føles som ${deg(c.feels)}` : ''}</span></div>
       ${hours.length ? `<div class="vx-card vx-hours"><div class="vx-hrow"><button class="vx-forh" data-wx="day" data-i="0"><b>Forhold ›</b><span>${esc(hrTitle)}</span></button><div class="vx-modes">${modes.map(([k, n, p]) => `<button data-wx="mode" data-k="${k}" aria-label="${n}" aria-pressed="${WX.mode === k}">${tIco(p, k === 'rain', 18)}</button>`).join('')}</div></div><div class="vx-hs">${hrs}</div></div>` : ''}
       ${days.length ? `<div class="vx-card vx-days">${dayRows}</div>` : ''}
+      ${cmpCard(C2, D, { IC, ICC, kindOf, busy: CMP.busy, err: CMP.err })}
       ${wind}${moon}
       <div class="vx-grid">${sun}${uvT}${feel}${yd}${rain}${vis}${hum}${pres}</div>
-      ${cmpEntry()}
       <a class="vx-yr" href="${esc(D.yrUrl || 'https://www.yr.no/nb')}" target="_blank" rel="noopener">${esc(D.credit || `Data: ${D.fallback || D.source === 'met' ? 'MET Norge' : 'Open-Meteo'}`)} · Se også yr.no ↗</a>
-    </div>${places}${WX.sh != null ? sheet(D) : ''}${cmpView(WX.place, city)}</div>`;
+    </div>${places}${WX.sh != null ? sheet(D) : ''}${metricSheet(D)}${cmpView(WX.place, city)}</div>`;
 }
 function tIco(p, fill = false, size = 15) { return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="${fill ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${p}"/></svg>`; }
 
@@ -211,7 +222,7 @@ function sheet(D) {
   const pp = hrs.map((h) => Math.round(h.precipProb ?? 0));
   const nowLine = isToday ? `<line x1="${X(nowH).toFixed(1)}" y1="0" x2="${X(nowH).toFixed(1)}" y2="170" stroke="#9aa0aa" stroke-width="1" stroke-dasharray="3 3"/>` : '';
   return `<div class="vx-shbg" data-wx="shx"></div><div class="vx-sh" role="dialog" aria-label="Forhold">
-    <div class="vx-shtop"><button class="vx-x" data-wx="shx" aria-label="Lukk">×</button><b>Forhold</b><span></span></div>
+    <div class="vx-shtop"><span></span><b>Forhold</b><button class="vx-x" data-wx="shx" aria-label="Lukk">×</button></div>
     <div class="vx-shdays">${days.map((x, k) => { const t = new Date(x.date + 'T12:00'); return `<button data-wx="day" data-i="${k}" aria-pressed="${k === i}"><span>${WD[t.getDay()].slice(0, 1).toUpperCase()}</span><b>${t.getDate()}</b></button>`; }).join('')}</div>
     <div class="vx-shdate">${WD[dt.getDay()].replace(/^./, (x) => x.toUpperCase())}dag ${dt.getDate()}. ${MON[dt.getMonth()]}</div>
     <div class="vx-shnow"><div><div class="vx-row"><b>${deg(isToday ? D.current?.temp : d.hi)}</b>${ico(kindOf(isToday ? D.current?.code : d.code), 34)}</div><span>H:${deg(d.hi)} L:${deg(d.lo)}</span></div><span class="vx-sm">${esc(descOf(d.code))}</span></div>
@@ -258,6 +269,7 @@ async function search() {
 }
 export async function wxBind(e, t) {
   if (m.screen !== 'vaer') return false;
+  if (await wx22Bind(e, t, { WX, plist, wxLoad, placesReload })) return true;
   if (e.type === 'input' && t.matches?.('[data-wxq]')) { WX.q = t.value; clearTimeout(qT); qT = setTimeout(search, 280); return true; }
   if (e.type !== 'click') return false;
   const x = t.closest?.('[data-wx]');
@@ -287,3 +299,7 @@ export async function wxBind(e, t) {
   else if (k === 'feel') WX.feel = x.dataset.k === '1';
   draw(); return true;
 }
+
+/** Etter tegning: animert værbakgrunn (prompt 22). */
+export function wxAfterDraw() { fxAfterDraw(m.screen === 'vaer' ? WX.fx : null); }
+export const wxPlaces = () => ({ WX, plist, wxLoad });

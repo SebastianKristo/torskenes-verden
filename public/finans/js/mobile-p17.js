@@ -357,7 +357,7 @@ export function healthView() {
     ${cards || ''}${vis.some((p) => !(p.self || String(p.userId) === String(me.userId))) ? '' : '<div class="pp-card p21-empty"><b class="pp-serif">Ingen deler helse med deg ennå</b><div class="pp-mut">Helsedeling er av som standard. Velg selv over hva du vil dele.</div></div>'}`;
 }
 
-/* ---------- Yr mot Storm (GET /api/weather/compare) ---------- */
+/* ---------- Yr mot Pent (GET /api/weather/compare) ---------- */
 
 export const CMP = { open: false, d: {}, err: '', busy: false };
 export async function cmpLoad(place) {
@@ -366,13 +366,13 @@ export async function cmpLoad(place) {
   catch (e) { CMP.err = e.status === 404 ? 'Sammenligningen krever en nyere server. Oppdater Homelab.' : e.message; }
   CMP.busy = false; draw();
 }
-export const cmpEntry = () => `<button class="vx-card p17-cmpb" data-p17="cmp"><span class="p17-cmpi"><span style="background:#0a6ac2">Yr</span><span style="background:#ff8a3d">St</span></span><span class="m-grow p17-rt"><b>Sammenlign Yr og Storm</b><small>Temperatur og nedbør side om side</small></span><span aria-hidden="true">›</span></button>`;
+export const cmpEntry = () => `<button class="vx-card p17-cmpb" data-p17="cmp"><span class="p17-cmpi"><span style="background:#0a6ac2">Yr</span><span style="background:#ff8a3d">St</span></span><span class="m-grow p17-rt"><b>Sammenlign Yr og Pent</b><small>Temperatur og nedbør side om side</small></span><span aria-hidden="true">›</span></button>`;
 const f1 = (v) => (v == null ? '–' : (Math.round(v * 10) / 10).toLocaleString('nb-NO'));
 export function cmpView(place, placeName) {
   if (!CMP.open) return '';
   const D = CMP.d[place];
   let body = '';
-  if (CMP.busy && !D) body = '<span class="vx-sm">Henter Storm-data …</span>';
+  if (CMP.busy && !D) body = '<span class="vx-sm">Henter Pent-data …</span>';
   else if (CMP.err && !D) body = `<div class="vx-card vx-pad">${esc(CMP.err)}</div>`;
   else if (D) {
     const hrs = (D.hours ?? []).slice(0, 24), W = 300, H = 150, n = Math.max(1, hrs.length - 1);
@@ -384,16 +384,16 @@ export function cmpView(place, placeName) {
     const hx = hrs.map((h, i) => (i % 4 ? '' : `<text x="${X(i).toFixed(1)}" y="${H - 4}" fill="rgba(255,255,255,.75)" font-size="9" font-weight="700" text-anchor="middle">${String(new Date(h.t).getHours()).padStart(2, '0')}</text>`)).join('');
     const days = D.days ?? [], ag = D.agreement ?? (days.length ? Math.round(days.reduce((a, d) => a + (d.agree ?? 0), 0) / days.length) : null);
     const avgDiff = days.length ? days.reduce((a, d) => a + Math.abs(d.diffHi ?? 0), 0) / days.length : 0;
-    const agC = avgDiff < 1.5 ? '#6fdc8c' : avgDiff < 3 ? '#ffb347' : '#f26b5e', agT = avgDiff < 1.5 ? 'Yr og Storm er enige' : avgDiff < 3 ? 'Litt uenige' : 'Uenige denne uken';
+    const agC = avgDiff < 1.5 ? '#6fdc8c' : avgDiff < 3 ? '#ffb347' : '#f26b5e', agT = avgDiff < 1.5 ? 'Yr og Pent er enige' : avgDiff < 3 ? 'Litt uenige' : 'Uenige denne uken';
     body = `<div class="vx-card p17-agree"><span style="background:${agC}"></span><div class="p17-rt"><b>${agT}${ag != null ? ` · ${ag} %` : ''}</b><small>Snitt avvik i makstemperatur: ${f1(avgDiff)}° over ${days.length} dager</small></div></div>
-      <div class="vx-card vx-pad"><div class="p17-leg"><span><i style="background:#0a6ac2"></i>Yr</span><span><i style="background:#ff8a3d"></i>Storm (ECMWF)</span></div>
+      <div class="vx-card vx-pad"><div class="p17-leg"><span><i style="background:#0a6ac2"></i>Yr</span><span><i style="background:#ff8a3d"></i>Pent (StormGeo-modell)</span></div>
         <svg viewBox="0 0 ${W} ${H}" class="p17-cmpc" aria-label="Temperatur og nedbør neste 24 timer">${bars}<path d="${ln('yr')}" fill="none" stroke="#5aa9ff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="${ln('ecmwf')}" fill="none" stroke="#ff8a3d" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="5 4"/>${hx}</svg>
-        <span class="vx-sm">Søyler viser nedbør per time. Yr til venstre, Storm til høyre.</span></div>
-      <div class="vx-card p17-cmpt"><div class="p17-cr h"><span></span><span>YR</span><span>STORM</span><span>AVVIK</span></div>${days.slice(0, 7).map((d, i) => `<div class="p17-cr"><span>${i === 0 ? 'I dag' : esc(new Date(d.date + 'T12:00').toLocaleDateString('nb-NO', { weekday: 'short' }))}</span><span>${f1(d.yr?.lo)}° / <b>${f1(d.yr?.hi)}°</b><small>${f1(d.yr?.mm)} mm</small></span><span>${f1(d.ecmwf?.lo)}° / <b>${f1(d.ecmwf?.hi)}°</b><small>${f1(d.ecmwf?.mm)} mm</small></span><span class="${Math.abs(d.diffHi ?? 0) >= 3 ? 'bad' : ''}">${d.diffHi != null ? `${d.diffHi > 0 ? '+' : ''}${f1(d.diffHi)}°` : '–'}</span></div>`).join('')}</div>
-      <a class="vx-yr" href="https://www.storm.no/" target="_blank" rel="noopener">Åpne storm.no ↗</a>
-      <span class="vx-sm" style="line-height:1.45">Yr er MET Norway (api.met.no). Storm har ikke et åpent API, så Storm-kolonnen viser ECMWF-modellen fra Open-Meteo, som er nærmeste åpne kilde. Avvik er forskjellen i makstemperatur.</span>`;
+        <span class="vx-sm">Søyler viser nedbør per time. Yr til venstre, Pent til høyre.</span></div>
+      <div class="vx-card p17-cmpt"><div class="p17-cr h"><span></span><span>YR</span><span>PENT</span><span>AVVIK</span></div>${days.slice(0, 7).map((d, i) => `<div class="p17-cr"><span>${i === 0 ? 'I dag' : esc(new Date(d.date + 'T12:00').toLocaleDateString('nb-NO', { weekday: 'short' }))}</span><span>${f1(d.yr?.lo)}° / <b>${f1(d.yr?.hi)}°</b><small>${f1(d.yr?.mm)} mm</small></span><span>${f1(d.ecmwf?.lo)}° / <b>${f1(d.ecmwf?.hi)}°</b><small>${f1(d.ecmwf?.mm)} mm</small></span><span class="${Math.abs(d.diffHi ?? 0) >= 3 ? 'bad' : ''}">${d.diffHi != null ? `${d.diffHi > 0 ? '+' : ''}${f1(d.diffHi)}°` : '–'}</span></div>`).join('')}</div>
+      <a class="vx-yr" href="https://www.pent.no/" target="_blank" rel="noopener">Åpne pent.no ↗</a>
+      <span class="vx-sm" style="line-height:1.45">Yr er MET Norway (api.met.no). Pent (StormGeo) har ikke et åpent API, så Pent-kolonnen viser ECMWF-modellen fra Open-Meteo, som er nærmeste åpne kilde. Avvik er forskjellen i makstemperatur.</span>`;
   }
-  return `<div class="p17-cmp" role="dialog" aria-label="Yr mot Storm"><div class="p17-cmpin"><div class="pp-row" style="align-items:center"><div class="p17-rt"><b class="pp-serif" style="font-size:26px;color:#fff">Yr mot Storm</b><small style="color:rgba(255,255,255,.75)">${esc(placeName ?? '')}</small></div><button class="pp-btn sm ink p17-done" data-p17="cmpx">Ferdig</button></div>${body}</div></div>`;
+  return `<div class="p17-cmp" role="dialog" aria-label="Yr mot Pent"><div class="p17-cmpin"><div class="pp-row" style="align-items:center"><div class="p17-rt"><b class="pp-serif" style="font-size:26px;color:#fff">Yr mot Pent</b><small style="color:rgba(255,255,255,.75)">${esc(placeName ?? '')}</small></div><button class="pp-btn sm ink p17-done" data-p17="cmpx">Ferdig</button></div>${body}</div></div>`;
 }
 
 /* ---------- Skanneknappen: trykk = kamera, hold inne = valg (Kvittering, Oppskrift, Bilder, Fil) ---------- */
@@ -458,12 +458,20 @@ export function ptrBind() {
     PTR.y0 = null; PTR.on = false;
     if (!go) { ptrHide(); return; }
     PTR.busy = true; PTR.dy = 130; ptrShow(); haptic('tap');
-    try { appT = 0; HK.t = 0; await Promise.all([appLoad(true), m.screen === 'huske' ? tasksLoad(true) : null, m.screen === 'fam' ? famLoad() : null].filter(Boolean)); route(); } catch {}
+    try { appT = 0; HK.t = 0; await Promise.all([appLoad(true), m.screen === 'huske' ? tasksLoad(true) : null, m.screen === 'fam' ? famLoad() : null, m.screen === 'spor' || m.screen === 'trk' ? trkRefresh() : null].filter(Boolean)); route(); } catch {}
     setTimeout(() => { PTR.busy = false; ptrHide(); }, 700);
   };
   addEventListener('touchend', end, { passive: true });
   addEventListener('touchcancel', () => { PTR.y0 = null; PTR.on = false; ptrHide(); }, { passive: true });
 }
+
+// Sporing (prompt 22): dra for å oppdatere ber serveren sjekke status hos fraktselskapene nå (POST /api/tracking/refresh).
+async function trkRefresh() {
+  try { const r = await hlApi('/tracking/refresh', { method: 'POST' }); if (r?.error) flash(r.error); }
+  catch (e) { if (e.status !== 404) flash(e.message); }
+  const { trkLoad } = await import('./mobile-track.js'); await trkLoad().catch(() => {});
+}
+export { trkRefresh };
 
 /* ---------- Sanntid: én WebSocket (/api/ws) for Huskeliste, Familie og Sporing ---------- */
 

@@ -2,13 +2,17 @@
 // fra e-postavsender og Finn, og egne logovalg (POST /finans/api/logos/override).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, cpSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 process.env.DATA_DIR = mkdtempSync(join(tmpdir(), 'hl-trk21-'));
 process.env.SESSION_SECRET = 'test-secret-test-secret-test-secret-12';
 process.env.USER_NAME = 'Sebastian';
+// Logomappe uten de manuelt kontrollerte fraktlogoene (files/manuell), så testen ikke avhenger av hva
+// workflowen «Logoer» har lastet ned.
+process.env.LOGO_FILES_DIR = mkdtempSync(join(tmpdir(), 'hl-trk21-logos-'));
+cpSync(new URL('../server/logos/files', import.meta.url), process.env.LOGO_FILES_DIR, { recursive: true, filter: (src) => !/[\\/]manuell([\\/]|$)/.test(src) });
 delete process.env.MOCK_DATA;
 const { hashPassword } = await import('../server/password.js');
 process.env.APP_PASSWORD_HASH = hashPassword('testpassord1');

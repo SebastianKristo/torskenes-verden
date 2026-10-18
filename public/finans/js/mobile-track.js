@@ -39,7 +39,7 @@ const detectLocal = (no) => CAR.find((c) => c.id !== 'other' && c.re.some((r) =>
 const ST_IN = ['Registrert', 'Hentet', 'I transport', 'Klar for henting', 'Levert'];
 const ST_OUT = ['Registrert', 'Levert inn', 'I transport', 'Ute for levering', 'Levert'];
 const STEP = { registered: 0, picked_up: 1, in_transit: 2, delayed: 2, unknown: 0, ready_for_pickup: 3, out_for_delivery: 3, delivered: 4 };
-const STXT = { registered: 'Registrert', picked_up: 'Hentet', in_transit: 'I transport', ready_for_pickup: 'Klar for henting', out_for_delivery: 'Ute for levering', delivered: 'Levert', delayed: 'Forsinket', unknown: 'Ukjent status' };
+const STXT = { registered: 'Registrert', picked_up: 'Hentet', in_transit: 'I transport', ready_for_pickup: 'Klar for henting', out_for_delivery: 'Ute for levering', delivered: 'Levert', returned: 'Returnert', delayed: 'Forsinket', unknown: 'Ukjent status' };
 // Viktigst først: klar for henting, ute for levering, forsinket, i transport …
 const RANK = { ready_for_pickup: 0, out_for_delivery: 1, delayed: 2, in_transit: 3, picked_up: 4, registered: 5, unknown: 6, delivered: 9 };
 const PREFS = [['found', 'Nytt sporingsnummer funnet', 'Fra Finn eller e-post'], ['out', 'Ute for levering', ''], ['pickup', 'Klar for henting', 'Med hentested og frist'], ['delivered', 'Levert', ''], ['delayed', 'Forsinket', 'Når ETA flyttes mer enn én dag']];
@@ -103,7 +103,9 @@ const isI = () => theme() === 'ios';
 const gl = (c = 'glass2') => (isI() ? c : '');
 const hm = (t) => (t ? new Date(t).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }) : '–');
 const dm = (t) => { if (!t) return ''; const d = new Date(t); return Number.isNaN(+d) ? String(t) : `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')} ${hm(t)}`; };
-export const badge = (car, size = 42, logo = null) => { const c = carOf(car); return `<span class="trk-badge" style="width:${size}px;height:${size}px;background:${c.c};color:${c.fg};font-size:${c.ini.length > 2 ? size * 0.27 : size * 0.36}px;border-radius:${Math.round(size * 0.29)}px" aria-hidden="true">${esc(c.ini)}<img src="${esc(logo || cLogo(c.id))}" alt="" loading="lazy"></span>`; };
+// Prompt 22: logo kan være et objekt fra logobiblioteket. Uten fil (url: null): fargefyll med navnet, ikke favicon.
+const fillBadge = (car, size, lg) => { const txt = size >= 30 ? lg.label || lg.name || lg.letter : lg.letter || String(lg.label ?? '').charAt(0), fs = size >= 30 ? Math.min(size * 0.3, (size * 1.5) / Math.max(3, String(txt).length)) : size * (String(txt).length > 2 ? 0.3 : 0.42); return `<span class="trk-badge p22-cf" style="width:${size}px;height:${size}px;background:${esc(lg.color || carOf(car).c)};color:${esc(lg.fg || '#fff')};font-size:${fs.toFixed(1)}px;border-radius:${Math.round(size * 0.29)}px" aria-label="${esc(lg.label || lg.name || '')}">${esc(txt || '•')}</span>`; };
+export const badge = (car, size = 42, logo = null) => { if (logo && typeof logo === 'object') { if (!logo.url) return fillBadge(car, size, logo); logo = logo.url; } const c = carOf(car); return `<span class="trk-badge" style="width:${size}px;height:${size}px;background:${c.c};color:${c.fg};font-size:${c.ini.length > 2 ? size * 0.27 : size * 0.36}px;border-radius:${Math.round(size * 0.29)}px" aria-hidden="true">${esc(c.ini)}<img src="${esc(logo || cLogo(c.id))}" alt="" loading="lazy"></span>`; };
 export { carOf, stepOf, isDone, isReady, STXT, normNo, detectLocal, PREFS };
 const statusTxt = (p) => (isDone(p) ? (p.direction === 'out' ? 'Levert til kjøper' : 'Levert') : p.statusText || STXT[p.status] || 'Ukjent status');
 const statusCls = (p) => (isReady(p) ? 'ready' : isDone(p) ? 'done' : p.status === 'delayed' ? 'late' : '');

@@ -199,8 +199,13 @@ const srcOn = (k) => { const s = TR.data?.sources?.[k]; return k === 'autoArchiv
 const pkUrl = (p) => p.url || `${carOf(p.carrier).url}${encodeURIComponent(p.trackingNo ?? '')}`;
 const stTxt = (p) => (isDone(p) ? (p.direction === 'out' ? 'Levert til kjøper' : 'Levert') : isReady(p) ? 'Klar for henting' : p.statusText || STXT[p.status] || 'Ukjent status');
 function etaTxt(p) {
-  const d = /^\d{4}-\d{2}-\d{2}/.test(String(p.eta ?? '')) ? new Date(String(p.eta).slice(0, 10) + 'T12:00').toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'numeric' }) : p.eta ?? '';
-  if (isReady(p)) return [p.pickupPoint, d ? `hent innen ${d}` : ''].filter(Boolean).join(' · ');
+  const eta = p.estimatedDelivery ?? p.eta, dl = p.pickup?.deadline ?? (isReady(p) ? eta : null);
+  const fmt = (v) => (/^\d{4}-\d{2}-\d{2}/.test(String(v ?? '')) ? new Date(String(v).slice(0, 10) + 'T12:00').toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'numeric' }) : v ?? '');
+  const d = fmt(eta);
+  if (isReady(p)) return [p.pickup?.name ?? p.pickupPoint, dl ? `hent innen ${fmt(dl)}` : ''].filter(Boolean).join(' · ');
+  // Prompt 22: «Ingen leveringsdato ennå» bare når status er Registrert og API-et ikke har estimatedDelivery.
+  if (p.noEtaText && !d) return p.noEtaText;
+  if (!d && !isDone(p) && stepOf(p) === 0 && !p.updateError && !('noEtaText' in p)) return 'Ingen leveringsdato ennå';
   if (isDone(p)) return d ? `Levert ${d}` : '';
   return d ? `Ventet ${d}` : '';
 }
@@ -208,12 +213,32 @@ const tog = (attr, n, s, on) => `<button class="pp-tog" ${attr} role="switch" ar
 const notifyRows = () => { const P = trkPrefs(); return NOTIFY.map(([k, n, s]) => tog(`data-trkpref="${k}"`, n, s, !!P[k])).join(''); };
 const sourceRows = () => SOURCES.map(([k, n, s]) => tog(`data-pptrk="src" data-k="${k}"`, n, s, srcOn(k))).join('');
 
+/* Prompt 22: siste hendelse fra API-et, feil ved oppdatering og tidslinje med faktisk status. */
+const tShort = (v) => { if (!v) return ''; const d = new Date(v); return Number.isNaN(+d) ? String(v) : `${d.toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit' })} ${d.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}`; };
+const hmOnly = (v) => { const d = new Date(v); return Number.isNaN(+d) ? '' : d.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }); };
+function evLine(p) {
+  const e = p.updateError, L = p.lastEvent;
+  const err = e ? `<span class="t22-err">${esc(typeof e === 'string' ? 'Kunne ikke oppdatere' : e.text || 'Kunne ikke oppdatere')}${e.retryAt ? ` · prøver igjen ${hmOnly(e.retryAt)}` : ''}</span>` : '';
+  const ev = L && (L.line || L.text || L.place) ? `<span class="t22-ev m-ell">${esc(L.line || [L.text, L.place, tShort(L.time)].filter(Boolean).join(' · '))}</span>` : '';
+  return ev || err ? `<span class="t22-evs">${ev}${err}</span>` : '';
+}
+const TL = ['Registrert', 'Hentet', 'I transport', 'Hentested', 'Levert'];
+function tlLine(p, st, done) {
+  // steps: enten bare navnene (['Registrert', …]) eller objekter med done/time per steg.
+  const T = Array.isArray(p.timeline) && p.timeline.length ? p.timeline : null;
+  if (T) { const ci = Math.max(0, T.findIndex((x) => x.current) >= 0 ? T.findIndex((x) => x.current) : T.map((x) => !!x.done).lastIndexOf(true)); return `<span class="t22-tl" style="grid-template-columns:repeat(${T.length},minmax(0,1fr))">${T.map((x, i) => `<span class="${i === ci ? 'on' : x.done ? 'past' : ''}">${esc(x.label ?? TL[i] ?? '')}${i === ci && (x.timeText || x.time) ? `<small>${esc(x.timeText || tShort(x.time))}</small>` : ''}</span>`).join('')}</span>`; }
+  const S = Array.isArray(p.steps) && p.steps.length ? p.steps.slice(0, 6) : null, obj = S && typeof S[0] === 'object';
+  const labels = S ? S.map((x, i) => (typeof x === 'string' ? x : x?.label ?? x?.text ?? x?.name ?? TL[i])) : TL;
+  const cur = obj ? Math.max(0, S.map((x) => !!(x?.done ?? x?.reached ?? x?.time)).lastIndexOf(true)) : Math.min(labels.length - 1, done ? labels.length - 1 : st);
+  const when = (obj ? S[cur]?.time ?? null : null) ?? p.lastEvent?.time ?? p.statusAt ?? null;
+  return `<span class="t22-tl" style="grid-template-columns:repeat(${labels.length},minmax(0,1fr))">${labels.map((n, i) => `<span class="${i === cur ? 'on' : i < cur ? 'past' : ''}">${esc(n)}${i === cur && when ? `<small>${esc(tShort(when))}</small>` : ''}</span>`).join('')}</span>`;
+}
 function pkCard(p) {
   const st = stepOf(p), done = isDone(p), ready = isReady(p), on = TT.sel?.has(String(p.id));
   const bars = [0, 1, 2, 3, 4].map((j) => `<i style="background:${done ? 'var(--pp-pos)' : j < st ? 'var(--pp-ink)' : j === st ? 'var(--pp-lab)' : 'var(--pp-line)'}"></i>`).join('');
   const src = p.source === 'finn' ? 'Finn' : p.source === 'email' ? 'E-post' : 'Manuelt';
   return `<a class="pp-card pp-pk${ready ? ' ready' : ''}${TT.sel ? ' pksel' : ''}${on ? ' on' : ''}" data-pk="${esc(p.id)}" href="${esc(pkUrl(p))}" target="_blank" rel="noopener"><div class="pp-pkt"><span class="p17-pkb" data-pksel="${esc(p.id)}" title="Velg">${pkgLogo(p, 44)}${TT.sel ? `<i class="p17-pkc" aria-hidden="true">${on ? '✓' : ''}</i>` : ''}</span><span class="m-grow" style="min-width:0"><b class="pp-serif m-ell">${esc(pkgTitle(p))}</b><span class="pp-mut m-ell">${esc(carOf(p.carrier).name)} · ${esc(p.trackingNo ?? '')}</span></span><span class="pp-src">${src}</span></div>
-    <div class="pp-row"><b class="pp-pks ${ready ? 'pp-lab-c' : done ? 'pp-pos' : ''}">${esc(stTxt(p))}</b><span class="pp-mut" style="text-align:right">${esc(etaTxt(p))}</span></div><span class="pp-pkb">${bars}</span></a>`;
+    <div class="pp-row"><b class="pp-pks ${ready ? 'pp-lab-c' : done ? 'pp-pos' : ''}">${esc(stTxt(p))}</b><span class="pp-mut" style="text-align:right">${esc(etaTxt(p))}</span></div>${evLine(p)}<span class="pp-pkb">${bars}</span>${tlLine(p, st, done)}</a>`;
 }
 
 function secHtml(k) {

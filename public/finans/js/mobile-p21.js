@@ -78,14 +78,28 @@ function shopSrc(p) {
  * Logoen på pakkekortet: butikken pakken kommer fra, med fraktselskapets logo som liten merkelapp nede til høyre.
  * Ukjent butikk: fraktselskapets logo. Feiler bildet: bokstav i fraktselskapets farge (aldri en tom boks).
  */
+/**
+ * Logo for fraktselskapet (prompt 22): serveren sender et objekt fra logobiblioteket. Mangler filen (url: null), vises
+ * fargefyll med navnet (label), aldri et tilfeldig favicon. En streng er en eldre server sin logo-URL.
+ */
+export function carBadge(carrier, size, lg) {
+  if (lg && typeof lg === 'object') {
+    if (lg.url) return badge(carrier, size, lg.url);
+    const txt = size >= 30 ? lg.label || lg.name || lg.letter : lg.letter || String(lg.label ?? '').charAt(0);
+    const fs = size >= 30 ? Math.min(size * 0.3, (size * 1.5) / Math.max(3, String(txt).length)) : size * (String(txt).length > 2 ? 0.3 : 0.42);
+    return `<span class="trk-badge p22-cf" style="width:${size}px;height:${size}px;background:${esc(lg.color || carOf(carrier).c)};color:${esc(lg.fg || '#fff')};font-size:${fs.toFixed(1)}px;border-radius:${Math.round(size * 0.29)}px" aria-label="${esc(lg.label || lg.name || '')}">${esc(txt || '•')}</span>`;
+  }
+  return badge(carrier, size, lg || null);
+}
 export function pkgLogo(p, size = 52) {
   const L = p.logo ?? {}, car = L.carrierLogo || p.carrierLogo || null;
+  if (L.kind === 'carrier' && !L.url && (L.label || L.name)) return `<span class="p21-pl" style="width:${size}px;height:${size}px">${carBadge(p.carrier, size, L)}</span>`;
   const hasShop = L.kind ? L.kind === 'shop' : !!(p.shop || L.domain || p.shopDomain || p.shop_domain);
   const shop = hasShop ? shopSrc(p) : null;
-  if (!shop) return `<span class="p21-pl" style="width:${size}px;height:${size}px">${badge(p.carrier, size, car)}</span>`;
+  if (!shop) return `<span class="p21-pl" style="width:${size}px;height:${size}px">${carBadge(p.carrier, size, car)}</span>`;
   const c = carOf(p.carrier), r = Math.round(size * 0.27), ini = String(L.letter || p.shop || c.ini || '•').replace(/[^A-Za-zÆØÅæøå0-9]/g, '').charAt(0).toUpperCase() || '•';
   return `<span class="p21-pl" style="width:${size}px;height:${size}px"><span class="trk-badge p21-shop" style="width:${size}px;height:${size}px;border-radius:${r}px;background:${esc(c.c)};color:${esc(c.fg)};font-size:${size * 0.4}px" aria-hidden="true">${esc(ini)}<img src="${esc(shop)}" alt="" loading="lazy"></span>
-    <span class="p21-pcb">${badge(p.carrier, 18, car)}</span></span>`;
+    <span class="p21-pcb">${carBadge(p.carrier, 18, car)}</span></span>`;
 }
 
 /* ---------- Avganger: utvidbar rad med holdeplassene ---------- */
