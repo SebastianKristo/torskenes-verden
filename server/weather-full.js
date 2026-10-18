@@ -269,3 +269,62 @@ export async function weatherFull({ place, lat, lon, name, source = 'met' } = {}
     return { ...buildFull(mockRaw(p), p), mock: true, source: 'mock', error: 'Fikk ikke kontakt med MET eller Open-Meteo – viser eksempeldata' };
   });
 }
+
+/* ---------------- «Sammenlign Yr og Storm» (prompt 17) ---------------- */
+// Storm har ikke et åpent API. Storm bruker ECMWF-data, så ECMWF IFS fra Open-Meteo brukes som nærmeste kilde.
+// Yr = MET Locationforecast (samme som værappen). Begge omregnes til lokal tid i Oslo og stilles side om side:
+// 24 timer (temperatur og nedbør) og 7 dager (maks/min/nedbør), med avvik og et mål på hvor enige de er (0–100).
+
+async function fetchEcmwf(p) {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}&timezone=Europe%2FOslo&forecast_days=8&models=ecmwf_ifs025`
+    + '&hourly=temperature_2m,precipitation&daily=temperature_2m_max,temperature_2m_min,precipitation_sum';
+  return fetchJson(url, { headers: { 'User-Agent': 'homelab-os', Accept: 'application/json' } }, 8000);
+}
+const c1 = (v) => (v == null || !Number.isFinite(v) ? null : Math.round(v * 10) / 10);
+
+// Hvor enige er de om én dag: 100 = likt, ned mot 0 ved store avvik i maks/min og nedbør.
+function agreeOf(a, b) {
+  if (!a || !b || a.hi == null || b.hi == null) return null;
+  const dHi = Math.abs(a.hi - b.hi), dLo = Math.abs((a.lo ?? 0) - (b.lo ?? 0)), dMm = Math.abs((a.mm ?? 0) - (b.mm ?? 0));
+  return Math.max(0, Math.min(100, Math.round(100 - dHi * 12 - dLo * 8 - Math.min(40, dMm * 6))));
+}
+
+export function buildCompare(yrRaw, ecRaw, place, now = osloNowLocal()) {
+  const series = (raw) => new Map((raw?.hourly?.time ?? []).map((t, i) => [t, { temp: c1(raw.hourly.temperature_2m?.[i]), mm: c1(raw.hourly.precipitation?.[i] ?? 0) }]));
+  const Y = series(yrRaw), E = series(ecRaw);
+  const times = [...new Set([...Y.keys(), ...E.keys()])].filter((t) => t >= now).sort().slice(0, 24);
+  const hours = times.map((t) => ({ t, yr: Y.get(t) ?? null, ecmwf: E.get(t) ?? null }));
+  const daysOf = (raw) => new Map((raw?.daily?.time ?? []).map((d, i) => [d, { hi: c1(raw.daily.temperature_2m_max?.[i]), lo: c1(raw.daily.temperature_2m_min?.[i]), mm: c1(raw.daily.precipitation_sum?.[i] ?? 0) }]));
+  const YD = daysOf(yrRaw), ED = daysOf(ecRaw), today = now.slice(0, 10);
+  const dates = [...new Set([...YD.keys(), ...ED.keys()])].filter((d) => d >= today).sort().slice(0, 7);
+  const days = dates.map((date) => {
+    const yr = YD.get(date) ?? null, ecmwf = ED.get(date) ?? null;
+    return { date, yr, ecmwf, diffHi: yr?.hi != null && ecmwf?.hi != null ? c1(ecmwf.hi - yr.hi) : null, agree: agreeOf(yr, ecmwf) };
+  });
+  const scores = days.map((d) => d.agree).filter((x) => x != null);
+  return { place, hours, days, agreement: scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null,
+    sources: { yr: 'MET Norge (yr.no)', ecmwf: 'ECMWF IFS via Open-Meteo (nærmeste åpne kilde til Storm)' }, updatedAt: new Date().toISOString() };
+}
+
+// Eksempeldata: ECMWF litt varmere og våtere enn Yr, med økende avvik utover i uka.
+function mockEcmwf(p) {
+  const y = mockRaw(p);
+  const H = y.hourly, D = y.daily;
+  return {
+    hourly: { time: H.time, temperature_2m: H.temperature_2m.map((v, i) => (v == null ? null : v + 0.4 + Math.sin(i / 5) * 0.8)), precipitation: H.precipitation.map((v, i) => Math.max(0, (v ?? 0) * 1.25 + (i % 9 === 0 ? 0.2 : 0))) },
+    daily: { time: D.time, temperature_2m_max: D.temperature_2m_max.map((v, i) => (v == null ? null : v + 0.3 * i)), temperature_2m_min: D.temperature_2m_min.map((v, i) => (v == null ? null : v - 0.2 * i)),
+      precipitation_sum: D.precipitation_sum.map((v, i) => Math.max(0, (v ?? 0) + (i % 3 === 1 ? 1.4 : -0.3))) },
+  };
+}
+
+export async function weatherCompare(p) {
+  if (MOCK) return { ...buildCompare(mockRaw(p), mockEcmwf(p), p), mock: true };
+  return cached(`wcmp:${p.lat},${p.lon}`, 10 * 60_000, async () => {
+    const [met, ec] = await Promise.allSettled([fetchMet(p), fetchEcmwf(p)]);
+    const yr = met.status === 'fulfilled' ? (() => { try { return metToRaw(met.value, p); } catch { return null; } })() : null;
+    const ecRaw = ec.status === 'fulfilled' ? ec.value : null;
+    if (!yr && !ecRaw) return { ...buildCompare(mockRaw(p), mockEcmwf(p), p), mock: true, error: 'Fikk ikke kontakt med MET eller Open-Meteo – viser eksempeldata' };
+    return { ...buildCompare(yr, ecRaw, p), ...(yr ? {} : { error: 'MET svarte ikke' }), ...(ecRaw ? {} : { error: 'ECMWF (Open-Meteo) svarte ikke' }) };
+  });
+}
+export { PLACES as COMPARE_PLACES };

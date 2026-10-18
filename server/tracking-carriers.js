@@ -4,6 +4,7 @@
 // NB: endepunktene, headerne og lenkemønstrene under er satt opp etter transportørenes offentlige dokumentasjon,
 // men er ikke testet mot ekte kontoer herfra. Sjekk dem med «Test tilkobling» før du stoler på dem.
 import { cfg } from './settings.js';
+import { kv, OWNER } from './db.js';
 
 // [id, navn, initialer, farge, tekstfarge, formater, sporingslenke (nummeret legges til på slutten)]
 // Formatene er et utgangspunkt og må verifiseres. Rekkefølgen betyr noe: mest spesifikke først.
@@ -167,6 +168,38 @@ async function track17(no) {
   return { status: normStatus(info.latest_status?.status ?? events[0]?.status), eta: info.time_metrics?.estimated_delivery_date?.to ?? null, pickupPoint: null, events };
 }
 
+// ParcelsApp (parcelsapp.com/api/v3) som siste reserve for ukjente transportører. Gratisplanen har 3 oppslag
+// i måneden, så serveren teller selv og stopper før kvoten er brukt opp. Brukes bare når noen ber om status
+// (ny sending eller «Oppdater»), aldri av den automatiske jobben, så kvoten ikke spises opp i bakgrunnen.
+export const PARCELSAPP_LIMIT = 3;
+const monthKey = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' }).slice(0, 7);
+export function parcelsappUsage() {
+  const u = kv.get(OWNER, 'parcelsapp_usage', null);
+  return { used: u?.month === monthKey() ? u.used : 0, limit: PARCELSAPP_LIMIT, month: monthKey(), configured: !!cfg('trk_parcelsapp_key') };
+}
+const countParcelsapp = () => { const u = parcelsappUsage(); kv.set(OWNER, 'parcelsapp_usage', { month: u.month, used: u.used + 1 }); };
+const sleepMs = (ms) => new Promise((r) => setTimeout(r, ms));
+async function parcelsapp(no) {
+  const key = cfg('trk_parcelsapp_key');
+  if (!key) throw new CarrierError('Mangler API-nøkkel for ParcelsApp');
+  if (parcelsappUsage().used >= PARCELSAPP_LIMIT) throw new CarrierError(`ParcelsApp: månedskvoten (${PARCELSAPP_LIMIT} oppslag) er brukt opp`, 429);
+  const base = 'https://parcelsapp.com/api/v3/shipments/tracking';
+  countParcelsapp(); // telles før kallet, så et kall som henger ikke gir gratis forsøk
+  let d = await getJson(base, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ shipments: [{ trackingId: no, language: 'en', country: 'Norway' }], apiKey: key }) });
+  if (d.error) throw new CarrierError(`ParcelsApp: ${d.error}`);
+  // Svaret kan komme med en gang (fra hurtigbuffer) eller som en uuid som må hentes til «done» er sant.
+  for (let i = 0; i < 6 && !(d.done || d.shipments?.[0]?.states?.length) && d.uuid; i++) {
+    await sleepMs(2000);
+    d = await getJson(`${base}?uuid=${encodeURIComponent(d.uuid)}&apiKey=${encodeURIComponent(key)}`);
+  }
+  const sh = d.shipments?.[0];
+  if (!sh) throw new CarrierError('ParcelsApp har ikke data for nummeret ennå', 404);
+  const events = (sh.states ?? []).map((e) => ev(e.date, e.status, e.location));
+  const eta = sh.attributes?.find?.((a) => /delivery|eta/i.test(a.l ?? ''))?.val ?? null;
+  return { status: normStatus(sh.status ?? events[0]?.status), eta: eta && /^\d{4}-\d{2}-\d{2}/.test(eta) ? eta.slice(0, 10) : null, pickupPoint: null, events, via: 'parcelsapp' };
+}
+
 const CLIENT = { posten: bring, bring, postnord, dhl, ups };
 export const configured = {
   posten: () => !!(cfg('trk_bring_uid') && cfg('trk_bring_key')), bring: () => !!(cfg('trk_bring_uid') && cfg('trk_bring_key')),
@@ -174,13 +207,17 @@ export const configured = {
 };
 export const isConfigured = (carrier) => (configured[carrier] ?? configured.other)();
 
-// Henter status fra transportøren. Mangler egen klient eller nøkkel, prøves 17TRACK.
-export async function fetchStatus(carrier, no) {
+// Henter status fra transportøren. Mangler egen klient eller nøkkel, prøves 17TRACK, og til slutt ParcelsApp
+// (bare når allowParcelsapp er satt, dvs. når brukeren selv ber om status).
+export async function fetchStatus(carrier, no, { allowParcelsapp = false } = {}) {
   const n = normNo(no);
   const own = CLIENT[carrier];
   if (own && isConfigured(carrier)) return own(n);
-  if (isConfigured('other')) return track17(n);
-  throw new CarrierError(own ? `Mangler nøkkel for ${CARRIER[carrier]?.name ?? carrier}` : 'Ingen nøkkel for 17TRACK (reserve)');
+  let err = null;
+  if (isConfigured('other')) { try { return await track17(n); } catch (e) { err = e; } }
+  if (allowParcelsapp && cfg('trk_parcelsapp_key') && parcelsappUsage().used < PARCELSAPP_LIMIT) return parcelsapp(n);
+  if (err) throw err;
+  throw new CarrierError(own ? `Mangler nøkkel for ${CARRIER[carrier]?.name ?? carrier}` : 'Ingen nøkkel for 17TRACK eller ParcelsApp (reserve)');
 }
 
 // «Test tilkobling» for Sporing-gruppen: sjekker hver transportør som har nøkkel. Et ukjent nummer gir 404,
@@ -194,6 +231,7 @@ export async function testCarriers() {
     try { await fn(no); res.push(`${name}: OK`); }
     catch (e) { res.push(`${name}: ${e.status === 404 ? 'OK (nøkkelen godtatt)' : e.message}`); if (e.status && e.status !== 404) throw new Error(res.join(' · ')); }
   }
-  if (!res.some((r) => /OK/.test(r))) throw new Error(res.join(' · ') + '. Legg inn minst én nøkkel.');
+  if (cfg('trk_parcelsapp_key')) { const u = parcelsappUsage(); res.push(`ParcelsApp: nøkkel lagret (${u.used} av ${u.limit} oppslag brukt denne måneden, testes ikke for å spare kvoten)`); }
+  if (!res.some((r) => /OK|ParcelsApp: nøkkel/.test(r))) throw new Error(res.join(' · ') + '. Legg inn minst én nøkkel.');
   return res.join(' · ');
 }

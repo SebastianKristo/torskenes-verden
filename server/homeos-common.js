@@ -26,8 +26,9 @@ export const num = (v) => { const n = typeof v === 'number' ? v : parseFloat(Str
 
 // Tekst → JSON med FinansHubs valgte motor (Ollama, Gemini eller Groq), med de andre som reserve.
 // Samme vei som FinansHub (modelloppslag, «nede»-vakt og feilmelding fra hver motor). Svarer { provider, data }.
-export async function aiJson(prompt, schema, { timeout = 60_000, temperature = 0.7 } = {}) {
-  const r = await textJson(prompt, schema, { timeout, temperature });
+// task: «categorize» (RSS-kategorier o.l.) eller «search» velger motor fra «Hvem gjør hva»; ellers valgt motor.
+export async function aiJson(prompt, schema, { timeout = 60_000, temperature = 0.7, task = 'text' } = {}) {
+  const r = await textJson(prompt, schema, { timeout, temperature, task });
   return { provider: r.provider, model: r.model, data: r.data };
 }
 

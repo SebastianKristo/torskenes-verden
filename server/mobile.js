@@ -18,7 +18,9 @@ import { matApi } from './mat.js';
 import { domainOverview } from './domains.js';
 import { readBg, weatherImages, weatherKind, planetsToday, osloImages, apodImage } from './bg.js';
 import { uiPrefs, saveUiPrefs } from './ui.js';
-import { weatherFull, searchPlaces, DEFAULT_PLACES } from './weather-full.js';
+import { weatherFull, searchPlaces, DEFAULT_PLACES, weatherCompare, PLACES as WX_PLACES } from './weather-full.js';
+import { appMeta } from './notify.js';
+import { nextTasks } from './tasks.js';
 import * as integrations from './integrations.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
@@ -312,6 +314,16 @@ api.get('/weather/full', authOrToken, async (c) => {
   return c.json(await weatherFull({ place: q.place, lat: q.lat, lon: q.lon, name: typeof q.name === 'string' ? q.name.slice(0, 60) : undefined, source: src }));
 });
 
+// «Sammenlign Yr og Storm»: Yr (MET) mot ECMWF (Open-Meteo, nærmeste åpne kilde til Storm). ?place=<id> (også egne steder) eller ?lat=&lon=.
+api.get('/weather/compare', authOrToken, async (c) => {
+  const q = c.req.query();
+  const own = q.place ? placesOf(c.get('user')).find((x) => x.id === q.place) : null;
+  let p = own ? { id: own.id, name: own.name, lat: own.lat, lon: own.lon } : WX_PLACES[String(q.place ?? '').toLowerCase()];
+  const lat = Number(q.lat), lon = Number(q.lon);
+  if (!p && Number.isFinite(lat) && Number.isFinite(lon) && Math.abs(lat) <= 90 && Math.abs(lon) <= 180 && q.lat !== '' && q.lon !== '') p = { id: 'pos', name: typeof q.name === 'string' ? q.name.slice(0, 60) : 'Min posisjon', lat: Math.round(lat * 1e4) / 1e4, lon: Math.round(lon * 1e4) / 1e4 };
+  return c.json(await weatherCompare(p ?? WX_PLACES.oslo));
+});
+
 // Steder i værappen, per bruker: standard Oslo, Bergen, Trondheim og Tromsø. Søk via Kartverket (Open-Meteo som reserve).
 const placesOf = (u) => { const v = kv.get(u, 'wx_places', null); return Array.isArray(v) ? v : DEFAULT_PLACES; };
 const coord = (v, lim) => { const n = Number(v); return Number.isFinite(n) && Math.abs(n) <= lim ? Math.round(n * 1e4) / 1e4 : null; };
@@ -496,6 +508,8 @@ api.get('/mobile/home', authOrToken, async (c) => {
     packages: isAdmin(id) ? packagesFor(2) : [], // Sporing (prompt 11): de 2 viktigste pakkene
     news: newsFor(id, 5), // Nyhetsleser (prompt 13): «Siste nytt» på forsiden
     design: designOf(id),
+    app: appMeta(), // navn og ikon på appen (prompt 17)
+    tasks: nextTasks(3), // Huskeliste-widget (prompt 17): de tre neste oppgavene
   });
 });
 

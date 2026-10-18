@@ -3,6 +3,7 @@
 // og et dagsbilde av porteføljen lagres slik at vi kan tegne porteføljeverdi over tid og «i dag»-endring per posisjon.
 import { kv, OWNER } from '../db.js';
 import { settings, secret, secretSource } from './db.js';
+import { cfgOverride } from '../settings.js';
 
 const BASE = { live: 'https://live.trading212.com/api/v0', demo: 'https://demo.trading212.com/api/v0' };
 export const t212Base = (env = settings().t212Env) => BASE[env === 'demo' ? 'demo' : 'live'];
@@ -22,7 +23,7 @@ const val = (k) => (secretSource(k) === 'undecryptable' ? '' : secret(k));
 // slik at en ny nøkkel aldri blandes med en gammel secret (eller en gammel TRADING212_API_KEY i .env uten secret).
 // Rekkefølge: FinansHub-innstillingene → Homelab → Integrasjoner → .env.
 export function t212Creds() {
-  const hl = kv.get(OWNER, 'cfg', {});
+  const hl = { t212_key: cfgOverride('t212_key'), t212_secret: cfgOverride('t212_secret'), t212_env: cfgOverride('t212_env') };
   const fhKey = cleanCred(val('t212Key')), fhSec = cleanCred(val('t212Secret'));
   const hlKey = cleanCred(hl.t212_key), hlSec = cleanCred(hl.t212_secret);
   const envKey = cleanCred(process.env.TRADING212_API_KEY), envSec = cleanCred(process.env.TRADING212_API_SECRET);

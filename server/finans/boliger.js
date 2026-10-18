@@ -165,7 +165,7 @@ ${String(text).slice(0, 4000)}
 // Spør AI om kategori for teksten. Gir { id, created: [navn …] } eller kaster hvis ingen motor svarer.
 export async function aiCat(text, { allowNew = aiNewAllowed() } = {}) {
   const tree = catTree();
-  const x = await askJson(PROMPT(text, tree, allowNew), SCHEMA, { timeout: 30_000 });
+  const x = await askJson(PROMPT(text, tree, allowNew), SCHEMA, { timeout: 30_000, task: 'categorize' });
   const topName = clean(x.category), subName = x.subcategory ? clean(x.subcategory) : '';
   if (!topName) throw new Error('AI ga ingen kategori');
   const created = [];

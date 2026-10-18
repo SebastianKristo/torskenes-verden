@@ -140,7 +140,7 @@ async function run() {
     if (!rows.length) return;
     const input = rows.map((r) => ({ id: String(r.id), text: r.merchant || r.description, raw: r.description !== r.merchant ? r.description : undefined, amount: r.amount / 100,
       category: catName.get(r.category_id) ?? null, lines: r.extraction ? (JSON.parse(r.extraction).lines ?? []).slice(0, 15).map((l) => l.description) : undefined }));
-    const res = await askJson(SUM_PROMPT(input, cats.map((c) => c.name)), SUM_SCHEMA, { timeout: 90_000 });
+    const res = await askJson(SUM_PROMPT(input, cats.map((c) => c.name)), SUM_SCHEMA, { timeout: 90_000, task: 'categorize' });
     const upd = q('UPDATE fh_transactions SET ai_short=?, ai_long=?, domain=COALESCE(domain, ?), category_id=COALESCE(category_id, ?), ai_done=1 WHERE id=?');
     const byId = new Map((res.items ?? []).map((x) => [String(x.id), x]));
     db.transaction(() => {
@@ -166,7 +166,7 @@ export async function summarizeReceipt(d, category) {
   const h = heuristic({ merchant: d.merchant, amount: d.total != null ? -d.total : null, lines: d.lines, category });
   if (!settings().aiSummaries || process.env.MOCK_DATA === '1') return { ...h, domain: domainFor(d.merchant) };
   try {
-    const res = await askJson(SUM_PROMPT([{ id: '1', text: d.merchant, amount: -(d.total ?? 0), category, lines: (d.lines ?? []).slice(0, 25).map((l) => `${l.description} ${l.amount}`) }], []), SUM_SCHEMA, { timeout: 45_000 });
+    const res = await askJson(SUM_PROMPT([{ id: '1', text: d.merchant, amount: -(d.total ?? 0), category, lines: (d.lines ?? []).slice(0, 25).map((l) => `${l.description} ${l.amount}`) }], []), SUM_SCHEMA, { timeout: 45_000, task: 'categorize' });
     const x = res.items?.[0];
     const dom = validDomain(x?.domain) ?? domainFor(d.merchant);
     if (dom && d.merchant && !domainFor(d.merchant)) learnDomain(d.merchant, dom);

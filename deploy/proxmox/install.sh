@@ -62,7 +62,7 @@ for _ in $(seq 1 30); do pct exec "$CTID" -- getent hosts deb.debian.org >/dev/n
 run() { pct exec "$CTID" -- bash -c "$1"; }
 
 c "Installerer Docker og git …"
-run "apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ca-certificates curl git openssl smbclient >/dev/null"
+run "apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq ca-certificates curl git openssl smbclient tesseract-ocr tesseract-ocr-nor tesseract-ocr-eng imagemagick zbar-tools >/dev/null"
 run "curl -fsSL https://get.docker.com | sh >/dev/null"
 
 c "Henter koden og bygger …"

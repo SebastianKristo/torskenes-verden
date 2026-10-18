@@ -6,7 +6,7 @@ import { readFile, writeFile, unlink, mkdir } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { db, OWNER, settings, saveSettings, secret, setSecret, secretSource, DEFAULT_SETTINGS } from './db.js';
-import { extract, extractText, health, providerName, testEngine, testRoboflow, ENGINES } from './ai.js';
+import { extract, extractText, health, providerName, testEngine, testRoboflow, ENGINES, TASKS, aiLog, barcode } from './ai.js';
 import { sniffMime, isHeic, scanLog, scanLogOf } from './scan.js';
 import { mailConfig, mailStatus, testMail, runMail, recentImports, startMailWorker } from './mail.js';
 import { parseCsv, PROFILES } from './csv.js';
@@ -1114,6 +1114,12 @@ const SETTING_KEYS = { name: (v) => str(v, 40), currency: (v) => (['NOK', 'EUR',
   geminiModel: (v) => (/^[a-z0-9.\-]{3,60}$/i.test(v) ? v : DEFAULT_SETTINGS.geminiModel),
   groqModel: (v) => (/^[a-z0-9./_:\-]{2,80}$/i.test(String(v)) ? String(v) : ''), groqVisionModel: (v) => (/^[a-z0-9./_:\-]{2,80}$/i.test(String(v)) ? String(v) : ''),
   roboflowWorkflow: (v) => (/^[a-z0-9._\-/]{0,120}$/i.test(String(v)) ? String(v) : ''), minConf: (v) => Math.min(99, Math.max(50, +v || 85)),
+  roboflowWorkspace: (v) => (/^[a-z0-9._\-]{0,80}$/i.test(String(v)) ? String(v) : ''), roboflowModel: (v) => (/^[a-z0-9._\-/]{0,120}$/i.test(String(v)) ? String(v) : ''),
+  roboflowBarcodeModel: (v) => (/^[a-z0-9._\-/]{0,120}$/i.test(String(v)) ? String(v) : ''),
+  // «Hvem gjør hva»: motor per oppgave. Ukjente oppgaver/motorer droppes; null = standard.
+  aiTasks: (v) => Object.fromEntries(Object.entries(v && typeof v === 'object' ? v : {}).filter(([k, e]) => TASKS[k] && (k === 'barcode' ? ['roboflow', 'zbar'] : ENGINES).includes(e))),
+  // Lokal OCR-reserve: null = følg OCR_FALLBACK. ocrLowConf = les også lokalt når AI er usikker.
+  ocrFallback: (v) => (v === null ? null : !!v), ocrLowConf: Boolean,
   autoCat: Boolean, n80: Boolean, n100: Boolean, nRc: Boolean, nFast: Boolean, csvProfile: (v) => (PROFILES.includes(v) ? v : 'DNB'),
   aiSummaries: Boolean, imapHost: (v) => (/^[a-z0-9.-]{0,120}$/i.test(v) ? v : ''), imapUser: (v) => str(v, 120), imapFolder: (v) => str(v, 60) || 'INBOX' };
 
@@ -1134,6 +1140,20 @@ api.get('/health/ai', R, async (c) => c.json(await health()));
 // «Test tilkobling» per motor (ollama | gemini | groq) og for Roboflow-nøkkelen.
 api.post('/ai/test', R, async (c) => { const b = await c.req.json().catch(() => ({})); return c.json(await testEngine(String(b.provider ?? settings().provider))); });
 api.post('/ai/roboflow/test', R, async (c) => c.json(await testRoboflow()));
+// Siste AI-kall (oppgave, motor, modell, ms, status) for feilsøking under Innstillinger → AI.
+api.get('/ai/log', R, (c) => c.json({ items: aiLog(+c.req.query('limit') || 50) }));
+// Strekkoder og QR fra et bilde (Sporing → «Skann strekkode»). zbar på serveren, med Roboflow-beskjæring hvis satt opp.
+// 501 med årsak når serveren ikke har strekkodeleser; da bruker klienten sin egen.
+api.post('/scan/barcode', R, async (c) => {
+  const b = await c.req.parseBody().catch(() => ({}));
+  const f = b.file;
+  if (!(f instanceof File) || !f.size) return c.json({ error: 'Last opp et bilde (feltet «file»)' }, 400);
+  if (f.size > 15 * 1024 * 1024) return c.json({ error: 'Bildet er for stort (maks 15 MB)' }, 413);
+  const img = Buffer.from(await f.arrayBuffer());
+  const mime = sniffMime(img, f.type, f.name) || 'image/jpeg';
+  try { return c.json(await barcode(img, mime)); }
+  catch (e) { return c.json({ error: e.message, codes: [] }, e.missing ? 501 : 502); }
+});
 
 // Personlige tokens (fh_pat_…): bare hashen lagres, tokenet vises én gang. Hver bruker ser og trekker tilbake sine egne.
 const tokenOut = (t) => ({ id: t.id.slice(0, 12), name: t.name, scopes: t.scopes.split(' '), created: t.created, lastUsed: t.last_used, last_used: t.last_used, expires: t.expires, expired: !!t.expires && t.expires < Date.now() });
@@ -1884,20 +1904,24 @@ api.post('/search/ai', R, async (c) => {
   const plain = plainSearch(text);
   const extra = { q: text, followUps: plain.followUps, suggestions: plain.suggestions, history: aiHistory(uid) };
   if (b.mode === 'plain') return c.json({ ...plain, ...extra });
+  // ✦ AI-bryteren på: force (eller ai:true / mode:'ai') kjører AI med en gang, også rett etter en feil.
+  const force = b.force === true || b.ai === true || b.mode === 'ai';
   // Enkle ord: vanlig søk først. Gir det treff, brukes ikke AI (sparer kall og tid). force:true tvinger AI.
-  if (!b.force && isSimpleQuery(text) && plain.hits.length) {
+  if (!force && isSimpleQuery(text) && plain.hits.length) {
     const n = plain.total ?? plain.hits.length;
     return c.json({ ...plain, ...extra, mode: 'plain', plainFirst: true, engine: 'Vanlig søk', notice: `Fant ${n} treff med vanlig søk, så AI ble ikke brukt` });
   }
   try {
-    const ai = await aiAnswer(text);
+    const ai = await aiAnswer(text, { force });
     // Fant AI-søket ingenting, men vanlig søk gjorde det («sist jeg var på …», varelinjer): bruk det.
     if (ai.empty && plain.hits.length) return c.json({ ...plain, ...extra, engine: 'Vanlig søk' });
     return c.json({ mode: 'ai', ...ai, ...extra, interpreted: plain.interpreted });
   } catch (e) {
     if (!(e instanceof AiUnavailable)) throw e;
     // Årsaken vises (f.eks. «Gemini: nøkkelen er ugyldig · Ollama kan ikke nås»), ellers ser det bare ut som at AI ikke virker.
-    return c.json({ ...plain, ...extra, aiUnavailable: true, aiError: e.message, engine: 'Vanlig søk', notice: `AI-motoren svarte ikke (${e.message.slice(0, 220)}), så dette er vanlig søk.` });
+    const k = e.kind ?? { kind: 'error', text: 'AI-motoren svarte ikke.' };
+    return c.json({ ...plain, ...extra, aiUnavailable: true, aiError: e.message, aiErrorKind: k.kind, aiErrorText: k.text, engine: 'Vanlig søk',
+      notice: `${k.text} Detaljer: ${e.message.slice(0, 220)}. Dette er vanlig søk.` });
   }
 });
 api.get('/search/history', R, (c) => c.json(aiHistory(c.get('user'))));

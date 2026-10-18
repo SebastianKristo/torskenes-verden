@@ -5,9 +5,12 @@ COPY package*.json ./
 RUN npm ci --omit=dev
 
 FROM node:22-bookworm-slim
-ENV NODE_ENV=production TZ=Europe/Oslo DATA_DIR=/data PORT=3000
+ENV NODE_ENV=production TZ=Europe/Oslo DATA_DIR=/data PORT=3000 OCR_FALLBACK=on
 # smbclient: backup av FinansHub til SMB-share (Innstillinger → Backup og data).
-RUN apt-get update && apt-get install -y --no-install-recommends smbclient && rm -rf /var/lib/apt/lists/*
+# tesseract-ocr (+ nor/eng): lokal OCR-reserve for kvitteringer når AI feiler (OCR_FALLBACK=on|off).
+# imagemagick: forbehandling (gråtoner, skjevhet, terskel) og beskjæring etter Roboflow. zbar-tools: strekkoder og QR.
+RUN apt-get update && apt-get install -y --no-install-recommends smbclient tesseract-ocr tesseract-ocr-nor tesseract-ocr-eng imagemagick zbar-tools \
+  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json ./

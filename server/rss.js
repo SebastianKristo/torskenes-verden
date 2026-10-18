@@ -201,7 +201,7 @@ export async function aiCategorize(user) {
     .filter((i) => !mapCategory(i.category));
   if (!todo.length) return 0;
   const r = await aiJson(`Sett én kategori på hver nyhetssak. Kategorier: ${CAT_IDS.join(', ')} (norge = innenriks, verden = utenriks, okonomi = økonomi og næringsliv).
-Saker: ${JSON.stringify(todo.map((t) => ({ id: t.id, title: t.title })))}`, CAT_SCHEMA);
+Saker: ${JSON.stringify(todo.map((t) => ({ id: t.id, title: t.title })))}`, CAT_SCHEMA, { task: 'categorize' });
   const set = db.prepare('UPDATE rss_item SET ai_category=? WHERE id=?');
   let n = 0;
   for (const it of r.data?.items ?? []) if (CAT_IDS.includes(it.category) && todo.some((t) => t.id === it.id)) { set.run(it.category, it.id); n++; }

@@ -1,7 +1,27 @@
 // Integrasjonsinnstillinger som kan endres fra siden. Verdier i databasen overstyrer miljøvariabler.
 // Hemmeligheter lagres kun på serveren og sendes aldri tilbake til nettleseren.
+import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto';
 import { kv, OWNER } from './db.js';
 import { clearCache } from './cache.js';
+
+// Hemmelige felt lagres kryptert (AES-256-GCM, nøkkel avledet fra SESSION_SECRET) med prefikset «enc1:».
+// Eldre verdier i klartekst leses som før og krypteres neste gang de lagres.
+let SECRET_KEY = null;
+const secretKey = () => (SECRET_KEY ??= scryptSync(process.env.SESSION_SECRET || 'homelab-os', 'hl-settings-v1', 32));
+function sealSecret(text) {
+  if (!text) return text;
+  const iv = randomBytes(12), c = createCipheriv('aes-256-gcm', secretKey(), iv);
+  const ct = Buffer.concat([c.update(text, 'utf8'), c.final()]);
+  return 'enc1:' + Buffer.concat([iv, c.getAuthTag(), ct]).toString('base64');
+}
+function openSecret(v) {
+  if (typeof v !== 'string' || !v.startsWith('enc1:')) return v;
+  try {
+    const b = Buffer.from(v.slice(5), 'base64'), d = createDecipheriv('aes-256-gcm', secretKey(), b.subarray(0, 12));
+    d.setAuthTag(b.subarray(12, 28));
+    return Buffer.concat([d.update(b.subarray(28)), d.final()]).toString('utf8');
+  } catch { return ''; }
+}
 
 const e = (k, d = '') => process.env[k] ?? d;
 
@@ -78,6 +98,7 @@ export const SCHEMA = [
     ['DHL', 'Lag en app på developer.dhl.com og legg til «Shipment Tracking – Unified». Bruk API Key (ikke secret).'],
     ['UPS', 'Lag en app på developer.ups.com med produktet «Tracking», og kopier Client ID og Client Secret (OAuth).'],
     ['17TRACK (reserve)', 'Lag en konto på api.17track.net. Den dekker FedEx, GLS, DB Schenker, Helthjem, Budbee, Instabox og de fleste andre. Gratisplanen har en månedlig kvote.'],
+    ['ParcelsApp (siste reserve)', 'Lag en API-nøkkel på parcelsapp.com/developers/console/api-keys. Gratisplanen har 3 oppslag i måneden, så den brukes bare når du selv legger til eller oppdaterer en sending som ingen annen kilde kjenner. Serveren teller oppslagene.'],
   ] }, [
     ['trk_bring_uid', 'Posten/Bring: Mybring-bruker (e-post)', e('BRING_API_UID')],
     ['trk_bring_key', 'Posten/Bring: API-nøkkel', e('BRING_API_KEY'), true],
@@ -86,6 +107,7 @@ export const SCHEMA = [
     ['trk_ups_id', 'UPS: Client ID', e('UPS_CLIENT_ID')],
     ['trk_ups_secret', 'UPS: Client Secret', e('UPS_CLIENT_SECRET'), true],
     ['trk_17_key', '17TRACK: API-nøkkel (reserve)', e('TRACK17_API_KEY'), true],
+    ['trk_parcelsapp_key', 'ParcelsApp: API-nøkkel (reserve, 3 oppslag i måneden)', e('PARCELSAPP_API_KEY'), true],
   ]],
   ['Søk', { id: 'search', domain: 'google.com', category: 'Generelt', help: 'Søket legges til på slutten av adressen, for eksempel https://www.google.com/search?q=' }, [
     ['search_url', 'Søke-URL (søket legges til på slutten)', e('SEARCH_URL', 'https://www.google.com/search?q=')],
@@ -94,9 +116,15 @@ export const SCHEMA = [
 
 const FIELDS = new Map(SCHEMA.flatMap(([, , fs]) => fs.map((f) => [f[0], { key: f[0], label: f[1], def: f[2], secret: !!f[3], type: f[4] }])));
 
+/** Verdien som er lagret fra siden (dekryptert), uten fallback til miljø/standard. undefined hvis ingen. */
+export function cfgOverride(key) {
+  const v = kv.get(OWNER, 'cfg', {})[key];
+  return v == null ? undefined : openSecret(v);
+}
+
 export function cfg(key) {
   const over = kv.get(OWNER, 'cfg', {});
-  return over[key] ?? FIELDS.get(key)?.def ?? '';
+  return over[key] != null ? openSecret(over[key]) : FIELDS.get(key)?.def ?? '';
 }
 
 // Til nettleseren: hemmeligheter vises bare som «satt / ikke satt».
@@ -133,7 +161,7 @@ export function updateConfig(changes) {
     if (f.secret && v === '') continue; // tomt felt = behold lagret hemmelighet
     if (v && /_url$|cal_ics/.test(key) && !isUrl(v)) throw new Error(`${f.label}: ugyldig URL`);
     if (v && VALID[key] && !VALID[key](v)) throw new Error(`${f.label}: ugyldig verdi`);
-    over[key] = v;
+    over[key] = f.secret ? sealSecret(v) : v;
   }
   kv.set(OWNER, 'cfg', over);
   clearCache();

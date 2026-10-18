@@ -7,6 +7,7 @@ import { readFile } from 'node:fs/promises';
 import { db, kv } from './db.js';
 import { userInfo, listUsers, sessionUser } from './auth.js';
 import { bearerOk } from './finans/routes.js';
+import { broadcast } from './realtime.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const DAY = 86_400_000;
@@ -110,6 +111,18 @@ function zoneEvents(user, p) {
     out.push(eventOut(r));
   }
   return out;
+}
+
+// Sanntid (WebSocket): de andre får vite at personen har flyttet seg (uten koordinater, de hentes med GET /api/family
+// og følger personvernet der). Hendelser går bare til seere som har varsel på for den sonen og personen.
+function notifyLive(user, events) {
+  const others = listUsers().map((u) => u.id).filter((id) => id !== user);
+  if (others.length) broadcast('family', { kind: 'location', userId: user }, others);
+  for (const e of events) {
+    const viewers = q(`SELECT viewer FROM family_notify WHERE zone_id=? AND target=? AND viewer != ? AND ${e.kind === 'enter' ? 'enter' : 'leave'}=1`)
+      .all(e.zoneId, user, user).map((r) => r.viewer);
+    if (viewers.length) broadcast('family', { kind: 'event', event: e }, viewers);
+  }
 }
 
 let lastPrune = 0;
@@ -245,6 +258,7 @@ api.post('/location', async (c) => {
     }
   })();
   prune();
+  notifyLive(me, events);
   return c.json({ ok: true, stored: pts.length, sharing: pr.sharing, events });
 });
 
@@ -285,6 +299,7 @@ api.put('/me', async (c) => {
   kv.set(me, 'family_prefs', next);
   // «Av»: slett lagrede posisjoner, så ingenting ligger igjen.
   if (next.sharing === 'off' && cur.sharing !== 'off') { q('DELETE FROM family_pos WHERE user=?').run(me); q('DELETE FROM family_inside WHERE user=?').run(me); }
+  if (next.sharing !== cur.sharing || next.precision !== cur.precision) broadcast('family', { kind: 'sharing', userId: me, sharing: next.sharing });
   return c.json({ me: { userId: me, ...prefsOf(me) } });
 });
 

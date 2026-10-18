@@ -1,6 +1,7 @@
 // AI-utlesing av kvitteringer. Felles prompt og skjema for Ollama (lokalt) og Gemini (sky).
 // Svaret valideres; ugyldig svar gir ett nytt forsøk før bilaget markeres for manuell utfylling.
-import { settings, secret } from './db.js';
+import { settings, secret, db } from './db.js';
+import { ocrEnabled, ocrReceipt, cropImage, decodeBarcodes, ocrTools } from '../ocr-fallback.js';
 
 export const PROMPT = (cats) => `Du leser en norsk kvittering. Returner KUN JSON etter skjemaet.
 - Beløp i kroner som tall med punktum som desimalskille (386.50).
@@ -68,7 +69,35 @@ export function validate(x) {
 /* ---------------- Felles: motorer, reserve og «nede»-vakt ---------------- */
 
 export const ENGINES = ['ollama', 'gemini', 'groq'];
-export const providerName = (p) => ({ gemini: 'Gemini', groq: 'Groq', ollama: 'Ollama' }[p] ?? 'Ollama');
+export const providerName = (p) => ({ gemini: 'Gemini', groq: 'Groq', ollama: 'Ollama', tesseract: 'Lokal OCR', roboflow: 'Roboflow' }[p] ?? 'Ollama');
+export const GROQ_MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant', 'meta-llama/llama-4-scout-17b-16e-instruct', 'qwen/qwen3-32b'];
+export const ROBOFLOW_WORKSPACE = 'sebastians-workspace-y3jnc';
+
+/* ---------------- «Hvem gjør hva»: motor per oppgave ---------------- */
+
+// Oppgavene og standardmotoren. Lagres som settings.aiTasks = { receipts:'gemini', … }. Strekkoder leses av Roboflow/zbar.
+export const TASKS = {
+  receipts: { name: 'Les kvitteringer', engine: 'gemini' },
+  search: { name: 'AI-søk', engine: 'groq' },
+  categorize: { name: 'Kategorisering', engine: 'groq' },
+  barcode: { name: 'Strekkoder', engine: 'roboflow' },
+};
+export const taskEngines = (st = settings()) => Object.fromEntries(Object.entries(TASKS).map(([k, t]) => [k, st.aiTasks?.[k] ?? t.engine]));
+
+/* ---------------- ai_log: hvert kall, så feil kan feilsøkes ---------------- */
+
+db.exec(`CREATE TABLE IF NOT EXISTS ai_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, ts INTEGER NOT NULL, task TEXT, engine TEXT, model TEXT,
+  prompt_len INTEGER, ms INTEGER, status TEXT, error TEXT)`);
+const insLog = db.prepare('INSERT INTO ai_log(ts,task,engine,model,prompt_len,ms,status,error) VALUES(?,?,?,?,?,?,?,?)');
+let logCount = 0;
+export function logAi({ task = 'text', engine, model = null, promptLen = 0, ms = 0, status = 'ok', error = null }) {
+  try {
+    insLog.run(Date.now(), task, engine, model, promptLen, Math.round(ms), status, error ? String(error).slice(0, 500) : null);
+    if (++logCount % 200 === 0) db.prepare('DELETE FROM ai_log WHERE id <= (SELECT max(id) - 2000 FROM ai_log)').run();
+  } catch (e) { console.warn('[ai] logg', e.message); }
+}
+export const aiLog = (limit = 50) => db.prepare('SELECT ts, task, engine, model, prompt_len AS promptLen, ms, status, error FROM ai_log ORDER BY id DESC LIMIT ?').all(Math.min(500, Math.max(1, limit)));
 export const GEMINI_DEFAULT = 'gemini-flash-latest';
 export const GROQ_DEFAULT = 'llama-3.3-70b-versatile';
 export const GROQ_VISION_DEFAULT = 'meta-llama/llama-4-scout-17b-16e-instruct';
@@ -80,11 +109,15 @@ const isDown = (p) => (downUntil[p] ?? 0) > Date.now();
 const markDown = (p, e) => { if (e?.net) downUntil[p] = Date.now() + 3 * 60_000; };
 export const _resetAi = () => { for (const k of Object.keys(downUntil)) delete downUntil[k]; for (const k of Object.keys(geminiResolved)) delete geminiResolved[k]; ollamaProbe.at = 0; };
 
-// Rekkefølge: valgt motor først, deretter de andre som er satt opp (når reserve er på). force = bare den motoren.
-export function engineOrder(st = settings(), { force = null, skipDown = true } = {}) {
+// Rekkefølge: motoren for oppgaven (eller valgt motor) først, deretter de andre som er satt opp (når reserve er på).
+// force = bare den motoren. Uten reserve («hold alt lokalt») brukes standardmotorene per oppgave ikke; da gjelder bare valgt motor,
+// med mindre brukeren selv har valgt motor for oppgaven.
+export function engineOrder(st = settings(), { force = null, skipDown = true, task = null } = {}) {
   if (force) return [force];
-  const first = ENGINES.includes(st.provider) ? st.provider : 'ollama';
-  const rest = st.fallback ? ENGINES.filter((p) => p !== first && configured(p)) : [];
+  const main = ENGINES.includes(st.provider) ? st.provider : 'ollama';
+  const pick = task ? (st.aiTasks?.[task] ?? (st.fallback ? TASKS[task]?.engine : null)) : null;
+  const first = ENGINES.includes(pick) && configured(pick) ? pick : main;
+  const rest = st.fallback ? [main, ...ENGINES].filter((p, i, a) => p !== first && a.indexOf(p) === i && configured(p)) : [];
   const all = [first, ...rest];
   const live = skipDown ? all.filter((p) => !isDown(p)) : all;
   return live.length ? live : all;
@@ -231,7 +264,12 @@ const modelOf = (p, st) => (p === 'gemini' ? (geminiResolved[st.geminiModel || G
 // Feilmeldingen tar med årsaken fra hver motor, ikke bare den siste.
 export async function extract(image, mime, cats, force, { log = () => {} } = {}) {
   const st = settings();
-  let order = engineOrder(st, { force });
+  let order = engineOrder(st, { force, task: 'receipts' });
+  // Roboflow (valgfritt): finn kvitteringen i bildet og beskjær før AI/OCR leser den.
+  if (!force && /^image\/(jpe?g|png|webp)$/.test(mime)) {
+    const crop = await roboflowCrop(image, mime, st).catch((e) => { log('roboflow', `hoppet over: ${e.message}`); return null; });
+    if (crop) { log('roboflow', `kvitteringen funnet og beskåret (${Math.round(crop.box.confidence * 100)} %)`); image = crop.image; }
+  }
   if (!force && (mime === 'image/heic' || mime === 'image/heif') && secret('geminiKey')) order = ['gemini', ...order];
   let lastErr;
   const errors = [];
@@ -242,38 +280,78 @@ export async function extract(image, mime, cats, force, { log = () => {} } = {})
         log('ai', `${providerName(p)} (${modelOf(p, st)})${attempt ? ', nytt forsøk' : ''}`);
         const raw = await PROVIDERS[p](image, mime, cats, st);
         const data = validate(raw);
+        logAi({ task: 'receipts', engine: p, model: modelOf(p, st), promptLen: image.length, ms: Date.now() - t0, status: data.confidence.total < st.minConf / 100 ? 'lav-sikkerhet' : 'ok' });
         // Lav sikkerhet hos primærmotoren: prøv reserven hvis den finnes.
-        if (!force && p === st.provider && st.fallback && data.confidence.total < st.minConf / 100 && order.length > 1 && attempt === 0) {
+        if (!force && p === order[0] && st.fallback && data.confidence.total < st.minConf / 100 && order.length > 1 && attempt === 0) {
           lastErr = new Error('Lav sikkerhet'); lastErr.partial = { provider: p, model: modelOf(p, st), data, seconds: (Date.now() - t0) / 1000 };
           break;
         }
-        return { provider: p, model: modelOf(p, st), data, seconds: (Date.now() - t0) / 1000 };
+        return await lowConfCheck({ provider: p, model: modelOf(p, st), data, seconds: (Date.now() - t0) / 1000 }, image, mime, st, log);
       } catch (e) {
         lastErr = e;
+        logAi({ task: 'receipts', engine: p, model: modelOf(p, st), promptLen: image.length, ms: Date.now() - t0, status: 'feil', error: e.message });
         markDown(p, e);
         log('ai-feil', `${providerName(p)}: ${e.message}`);
         if (attempt === 1 || e.noRetry || /mangler|kan ikke|svarte 4/.test(e.message)) { errors.push(`${providerName(p)}: ${e.message}`); break; } // ikke vits å prøve igjen
       }
     }
   }
-  if (lastErr?.partial) return lastErr.partial;
+  if (lastErr?.partial) return lowConfCheck(lastErr.partial, image, mime, st, log);
+  // Alle AI-motorene feilet: lokal OCR-reserve (Tesseract) hvis den er på og installert.
+  const why = errors.length > 1 ? errors.join(' · ') : (lastErr?.message ?? 'Ingen AI-motor tilgjengelig');
+  if (!force && ocrEnabled(st)) {
+    const t0 = Date.now();
+    try {
+      log('ocr', 'AI feilet, prøver lokal OCR (Tesseract)');
+      const data = validate(await ocrReceipt(image, mime));
+      data.needs_review = true;
+      logAi({ task: 'receipts', engine: 'tesseract', model: 'tesseract-nor', promptLen: image.length, ms: Date.now() - t0 });
+      return { provider: 'tesseract', model: 'tesseract-nor', data, seconds: (Date.now() - t0) / 1000, aiError: why };
+    } catch (e) {
+      logAi({ task: 'receipts', engine: 'tesseract', model: 'tesseract-nor', promptLen: image.length, ms: Date.now() - t0, status: e.missing ? 'mangler' : 'feil', error: e.message });
+      log('ocr-feil', e.message);
+      if (!e.missing) throw new Error(`${why} · Lokal OCR: ${e.message}`);
+    }
+  }
   if (errors.length > 1) throw new Error(errors.join(' · '));
   throw lastErr ?? new Error('Ingen AI-motor tilgjengelig');
+}
+
+// «Bruk ved lav AI-sikkerhet»: les også med lokal OCR. Er totalen lik, økes sikkerheten litt; mangler AI totalen, brukes OCR-ens.
+async function lowConfCheck(res, image, mime, st, log) {
+  if (!st.ocrLowConf || !ocrEnabled(st) || res.data.confidence.total >= st.minConf / 100) return res;
+  const t0 = Date.now();
+  try {
+    const o = await ocrReceipt(image, mime);
+    logAi({ task: 'receipts', engine: 'tesseract', model: 'tesseract-nor', promptLen: image.length, ms: Date.now() - t0, status: 'kontroll' });
+    const d = res.data;
+    const agree = o.total != null && d.total != null && Math.abs(o.total - d.total) < 0.01;
+    if (agree) d.confidence.total = Math.min(0.95, Math.max(d.confidence.total, st.minConf / 100));
+    else if (d.total == null && o.total != null) { d.total = o.total; d.confidence.total = o.confidence.total; }
+    if (!d.org_number && o.org_number) d.org_number = o.org_number;
+    log('ocr', agree ? `lokal OCR fant samme total (${o.total} kr)` : `lokal OCR fant ${o.total ?? 'ingen'} total`);
+    return { ...res, ocrCheck: { total: o.total, agree } };
+  } catch (e) { log('ocr-feil', e.message); return res; }
 }
 
 /* ---------------- Tekst → JSON (sammendrag, søk, Mat, RSS, Finn …) ---------------- */
 
 // Valgt motor først, så reservene. Svarer { provider, model, data }. Feilen sier hva hver motor svarte.
-export async function textJson(prompt, schema, { timeout = 30_000, temperature = 0.2, force = null } = {}) {
+export async function textJson(prompt, schema, { timeout = 30_000, temperature = 0.2, force = null, task = 'text' } = {}) {
   const st = settings();
   const errors = [];
-  for (const p of engineOrder(st, { force })) {
+  for (const p of engineOrder(st, { force, task: TASKS[task] ? task : null })) {
+    const t0 = Date.now();
     try {
       const r = p === 'gemini' ? await geminiGenerate([{ text: prompt }], { schema, timeout, temperature, model: st.geminiModel })
         : p === 'groq' ? await groqChat(prompt, schema, { timeout, temperature, model: st.groqModel || GROQ_DEFAULT })
         : await ollamaChat(st, [{ role: 'user', content: prompt }], schema, { timeout, temperature });
+      logAi({ task, engine: p, model: r.model, promptLen: prompt.length, ms: Date.now() - t0 });
       return { provider: providerName(p), engine: p, model: r.model, data: r.data };
-    } catch (e) { markDown(p, e); errors.push(`${providerName(p)}: ${e.message}`); }
+    } catch (e) {
+      logAi({ task, engine: p, model: p === 'groq' ? (st.groqModel || GROQ_DEFAULT) : p === 'gemini' ? (st.geminiModel || GEMINI_DEFAULT) : st.ollamaModel, promptLen: prompt.length, ms: Date.now() - t0, status: errKind(e), error: e.message });
+      markDown(p, e); errors.push(`${providerName(p)}: ${e.message}`);
+    }
   }
   const err = new Error(errors.length ? errors.join(' · ') : 'Ingen AI-motor tilgjengelig');
   err.errors = errors;
@@ -281,8 +359,20 @@ export async function textJson(prompt, schema, { timeout = 30_000, temperature =
 }
 
 // Eldre navn: gir bare dataene. Kallerne har alltid en heuristisk reserve.
-export async function askJson(prompt, schema, { timeout = 30_000 } = {}) {
-  return (await textJson(prompt, schema, { timeout })).data;
+export async function askJson(prompt, schema, { timeout = 30_000, task = 'text' } = {}) {
+  return (await textJson(prompt, schema, { timeout, task })).data;
+}
+
+// Hva slags feil? Brukes i ai_log og i feilmeldingen i AI-søket.
+export function errKind(e) {
+  const m = String(e?.message ?? '');
+  if (/nøkkel mangler/i.test(m)) return 'mangler-nøkkel';
+  if (e?.status === 401 || e?.status === 403 || /svarte 40[13]|API key not valid|invalid api key|permission/i.test(m)) return 'nøkkel-avvist';
+  if (/tidsfristen|timeout|tidsavbrudd/i.test(m)) return 'tidsavbrudd';
+  if (e?.net || /kan ikke nås/i.test(m)) return 'nett';
+  if (e?.status === 404 || /modell/i.test(m)) return 'modell';
+  if (e?.status === 429 || /quota|rate/i.test(m)) return 'kvote';
+  return 'feil';
 }
 
 /* ---------------- Status og tilkoblingstest ---------------- */
@@ -292,7 +382,10 @@ export async function health() {
   const out = { provider: st.provider, order: engineOrder(st, { skipDown: false }), down: ENGINES.filter(isDown),
     ollama: { ok: false }, gemini: { ok: false, configured: !!secret('geminiKey'), model: st.geminiModel || GEMINI_DEFAULT, resolved: geminiResolved[st.geminiModel || GEMINI_DEFAULT] ?? null },
     groq: { ok: false, configured: !!secret('groqKey'), model: st.groqModel || GROQ_DEFAULT, visionModel: st.groqVisionModel || GROQ_VISION_DEFAULT },
-    roboflow: { configured: !!secret('roboflowKey'), workflow: st.roboflowWorkflow || null } };
+    roboflow: { configured: !!secret('roboflowKey'), workspace: st.roboflowWorkspace || ROBOFLOW_WORKSPACE, model: roboflowModelOf(st) || null, barcodeModel: st.roboflowBarcodeModel || null, workflow: st.roboflowWorkflow || null },
+    tasks: Object.entries(TASKS).map(([id, t]) => ({ id, name: t.name, engine: taskEngines(st)[id], default: t.engine })),
+    groqModels: GROQ_MODELS, ocr: null };
+  { const tl = await ocrTools(); out.ocr = { enabled: ocrEnabled(st), lowConf: !!st.ocrLowConf, tesseract: tl.tesseract, imagemagick: !!tl.magick, zbar: !!tl.zbar }; }
   try {
     const r = await fetch(`${st.ollamaUrl.replace(/\/$/, '')}/api/tags`, { signal: AbortSignal.timeout(4000) });
     const models = r.ok ? (await r.json()).models?.map((m) => m.name) ?? [] : [];
@@ -321,27 +414,102 @@ export async function testEngine(p) {
   if (!ENGINES.includes(p)) return { ok: false, message: 'Ukjent motor' };
   const t0 = Date.now();
   try {
-    const r = await textJson('Svar med JSON {"ok": true, "svar": "hei"}.', { type: 'object', properties: { ok: { type: 'boolean' }, svar: { type: 'string' } }, required: ['ok'] }, { timeout: 25_000, force: p });
+    const r = await textJson('Svar med JSON {"ok": true, "svar": "hei"}.', { type: 'object', properties: { ok: { type: 'boolean' }, svar: { type: 'string' } }, required: ['ok'] }, { timeout: 25_000, force: p, task: 'test' });
     delete downUntil[p];
-    return { ok: true, engine: p, model: r.model, seconds: (Date.now() - t0) / 1000, message: `${providerName(p)} svarte (${r.model}) på ${((Date.now() - t0) / 1000).toFixed(1)} s` };
+    const ms = Date.now() - t0;
+    return { ok: true, engine: p, model: r.model, ms, seconds: ms / 1000, message: `${providerName(p)} svarte (${r.model}) på ${ms} ms` };
   } catch (e) { return { ok: false, engine: p, message: e.message.replace(/^\w+: /, '') }; }
 }
 
-// Roboflow: nøkkelen sjekkes mot API-et. Brukes valgfritt til kvitteringsdeteksjon via en workflow.
+/* ---------------- Roboflow ---------------- */
+
+// Modell for kvitteringsdeteksjon: «prosjekt/versjon» eller «arbeidsområde/prosjekt/versjon» (arbeidsområdet trengs ikke i URL-en).
+const roboflowModelOf = (st) => {
+  const v = String(st.roboflowModel || st.roboflowWorkflow || '').trim().replace(/^\/+|\/+$/g, '');
+  const parts = v.split('/').filter(Boolean);
+  return parts.length >= 2 ? parts.slice(-2).join('/') : '';
+};
+
+// Objektdeteksjon: https://detect.roboflow.com/<prosjekt>/<versjon>?api_key=… med base64-bildet i kroppen.
+export async function roboflowDetect(image, model, { timeout = 15_000 } = {}) {
+  const key = secret('roboflowKey');
+  if (!key) throw Object.assign(new Error('Roboflow-nøkkel mangler (Innstillinger → AI og tolkning)'), { noRetry: true });
+  if (!model) throw Object.assign(new Error('Roboflow-modell er ikke satt opp'), { noRetry: true });
+  const t0 = Date.now();
+  let res;
+  try { res = await fetch(`https://detect.roboflow.com/${model}?api_key=${encodeURIComponent(key)}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: image.toString('base64'), signal: AbortSignal.timeout(timeout),
+  }); } catch (e) { throw netErr('Roboflow', null, e); }
+  if (!res.ok) { const err = await httpErr('Roboflow', res); logAi({ task: 'barcode', engine: 'roboflow', model, promptLen: image.length, ms: Date.now() - t0, status: errKind(err), error: err.message }); throw err; }
+  const d = await res.json();
+  return { predictions: (d.predictions ?? []).filter((p) => Number.isFinite(+p.width) && Number.isFinite(+p.height)).sort((a, b) => b.confidence - a.confidence), ms: Date.now() - t0 };
+}
+
+// Kvitteringen i bildet → beskåret bilde (krever ImageMagick). null når Roboflow ikke er satt opp eller ingenting ble funnet.
+async function roboflowCrop(image, mime, st) {
+  const model = roboflowModelOf(st);
+  if (!secret('roboflowKey') || !model || !(await ocrTools()).magick) return null;
+  const { predictions, ms } = await roboflowDetect(image, model);
+  const box = predictions.find((p) => /receipt|kvittering|bong/i.test(p.class ?? '')) ?? predictions[0];
+  logAi({ task: 'receipts', engine: 'roboflow', model, promptLen: image.length, ms, status: box ? 'ok' : 'ingen-treff' });
+  if (!box || box.confidence < 0.4) return null;
+  const cropped = await cropImage(image, mime, box);
+  return cropped ? { image: cropped, box } : null;
+}
+
+/**
+ * Strekkoder, QR og pakkelapper (Sporing → «Skann strekkode»). Leses med zbar på serveren; er en Roboflow-modell for
+ * strekkoder satt opp (roboflowBarcodeModel), beskjæres hver funnet kode først, så små koder på store bilder også leses.
+ */
+export async function barcode(image, mime) {
+  const st = settings(), t0 = Date.now();
+  const codes = [];
+  let engine = 'zbar';
+  const add = (list) => { for (const c of list) if (!codes.some((x) => x.value === c.value)) codes.push(c); };
+  const bcModel = String(st.roboflowBarcodeModel || '').split('/').filter(Boolean).slice(-2).join('/');
+  if (secret('roboflowKey') && bcModel) {
+    try {
+      const { predictions } = await roboflowDetect(image, bcModel);
+      engine = 'roboflow+zbar';
+      for (const p of predictions.slice(0, 6)) {
+        const crop = await cropImage(image, mime, { ...p, width: p.width * 1.15, height: p.height * 1.3 });
+        if (crop) add(await decodeBarcodes(crop, 'image/jpeg').catch(() => []));
+      }
+    } catch (e) { if (e.missing) throw e; /* bruk hele bildet under */ }
+  }
+  try { add(await decodeBarcodes(image, mime)); }
+  catch (e) {
+    logAi({ task: 'barcode', engine, model: bcModel || null, promptLen: image.length, ms: Date.now() - t0, status: e.missing ? 'mangler' : 'feil', error: e.message });
+    if (!codes.length) throw e;
+  }
+  logAi({ task: 'barcode', engine, model: bcModel || null, promptLen: image.length, ms: Date.now() - t0, status: codes.length ? 'ok' : 'ingen-treff' });
+  return { codes, engine };
+}
+
+// Roboflow: nøkkelen sjekkes mot API-et, og arbeidsområdet vises. Med modell satt opp sjekkes også at modellen finnes.
 export async function testRoboflow() {
   const key = secret('roboflowKey');
   if (!key) return { ok: false, message: 'Roboflow-nøkkel mangler' };
+  const st = settings(), t0 = Date.now();
   try {
     const r = await fetch(`https://api.roboflow.com/?api_key=${encodeURIComponent(key)}`, { signal: AbortSignal.timeout(8000) });
     if (!r.ok) throw await httpErr('Roboflow', r);
     const d = await r.json().catch(() => ({}));
-    return { ok: true, workspace: d.workspace ?? null, message: `Roboflow er koblet til${d.workspace ? ` (arbeidsområde ${d.workspace})` : ''}` };
-  } catch (e) { return { ok: false, message: e.net ? e.message : e.message ?? 'Roboflow svarte ikke' }; }
+    const ms = Date.now() - t0;
+    logAi({ task: 'test', engine: 'roboflow', model: roboflowModelOf(st) || null, ms });
+    const want = st.roboflowWorkspace || ROBOFLOW_WORKSPACE;
+    const ws = d.workspace ?? null;
+    return { ok: true, workspace: ws, ms, model: roboflowModelOf(st) || null,
+      message: `Roboflow er koblet til${ws ? ` (arbeidsområde ${ws})` : ''} på ${ms} ms${ws && want && ws !== want ? ` · obs: nøkkelen hører til «${ws}», ikke «${want}»` : ''}` };
+  } catch (e) {
+    logAi({ task: 'test', engine: 'roboflow', ms: Date.now() - t0, status: errKind(e), error: e.message });
+    return { ok: false, message: e.message ?? 'Roboflow svarte ikke' };
+  }
 }
 
 // Kvittering fra e-posttekst (nettbutikker sender ofte kvitteringen som HTML uten vedlegg). Samme skjema som bildelesingen.
 export async function extractText(text, cats) {
   const t0 = Date.now();
-  const raw = await askJson(`${PROMPT(cats)}\n\nKvitteringen er en e-post. Les beløp, dato, butikk og varelinjer fra teksten under. Ignorer reklame og bunntekst.\n\n---\n${String(text).slice(0, 15000)}`, SCHEMA, { timeout: 60_000 });
+  const raw = await askJson(`${PROMPT(cats)}\n\nKvitteringen er en e-post. Les beløp, dato, butikk og varelinjer fra teksten under. Ignorer reklame og bunntekst.\n\n---\n${String(text).slice(0, 15000)}`, SCHEMA, { timeout: 60_000, task: 'receipts' });
   return { provider: 'tekst', model: 'e-post', data: validate(raw), seconds: (Date.now() - t0) / 1000 };
 }

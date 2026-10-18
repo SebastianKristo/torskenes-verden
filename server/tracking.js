@@ -10,7 +10,8 @@ import { sessionUser } from './auth.js';
 import { guard, readJson, bad, str, MOCK, aiJson } from './homeos-common.js';
 import { scanShippingMails, mailConfig, mailText } from './finans/mail.js';
 import { stageOf } from './finans/finn-routes.js';
-import { CARRIERS, CARRIER, detect, normNo, trackUrl, findTrackingNumbers, normStatus, STATUS_TEXT, STEPS_IN, STEPS_OUT, stepOf, fetchStatus, isConfigured, testCarriers } from './tracking-carriers.js';
+import { CARRIERS, CARRIER, detect, normNo, trackUrl, findTrackingNumbers, normStatus, STATUS_TEXT, STEPS_IN, STEPS_OUT, stepOf, fetchStatus, isConfigured, testCarriers, parcelsappUsage } from './tracking-carriers.js';
+import { broadcast } from './realtime.js';
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS hl_shipments (
@@ -134,9 +135,10 @@ function applyResult(r, res) {
   }
 }
 
-async function refresh(r) {
+// allowParcelsapp: bare når brukeren selv ber om status (ny sending, «Oppdater»), så ParcelsApp-kvoten spares.
+async function refresh(r, { allowParcelsapp = false } = {}) {
   if (MOCK) return mockAdvance(r);
-  try { applyResult(r, await fetchStatus(r.carrier, r.tracking_no)); return true; }
+  try { applyResult(r, await fetchStatus(r.carrier, r.tracking_no, { allowParcelsapp })); return true; }
   catch (e) { q('UPDATE hl_shipments SET last_error=?, checked_at=? WHERE id=?').run(String(e.message).slice(0, 200), now(), r.id); return false; }
 }
 
@@ -222,6 +224,7 @@ export function checkAll({ force = false } = {}) {
     for (const r of due.slice(0, 40)) if (await refresh(r)) updated++;
     if (sources().autoArchive?.on) q("UPDATE hl_shipments SET archived=1 WHERE archived=0 AND status='delivered' AND updated_at < ?").run(now() - 3 * 86400_000);
     kv.set(OWNER, 'trk_last_run', now());
+    if (found || updated) broadcast('tracking', { action: 'checked', found, updated });
     return { found, updated, mail };
   })().finally(() => { running = null; });
   return running;
@@ -264,18 +267,23 @@ export async function testTracking() {
 const api = new Hono();
 api.use('*', guard);
 
-const listOut = (uid = OWNER) => {
-  const items = q('SELECT * FROM hl_shipments ORDER BY archived, updated_at DESC').all().map(view);
+const changed = (action, extra = {}) => broadcast('tracking', { action, ...extra });
+// archived: 'all' (standard, som før), '0' = bare aktive/ikke arkiverte, '1' = bare Arkiv.
+const listOut = (uid = OWNER, archived = 'all') => {
+  const where = archived === '1' ? 'WHERE archived=1' : archived === '0' ? 'WHERE archived=0' : '';
+  const all = q('SELECT * FROM hl_shipments ORDER BY archived, updated_at DESC').all();
+  const items = (where ? all.filter((r) => (archived === '1' ? r.archived : !r.archived)) : all).map(view);
   const p = prefs(uid);
   return {
     items, sources: sources(), prefs: p, notices: kv.get(OWNER, 'trk_notices', []).filter((n) => p[n.kind] !== false).slice(0, 20), lastRun: kv.get(OWNER, 'trk_last_run', null),
     carriers: CARRIERS.map((c) => ({ id: c.id, name: c.name, ini: c.ini, color: c.color, fg: c.fg, logo: c.logo, configured: isConfigured(c.id) })),
-    counts: { active: items.filter((s) => !s.archived && s.status !== 'delivered').length, pickup: items.filter((s) => !s.archived && s.status === 'ready_for_pickup' && s.direction === 'in').length,
-      delivered: items.filter((s) => s.archived || s.status === 'delivered').length },
+    counts: { active: all.filter((s) => !s.archived && s.status !== 'delivered').length, pickup: all.filter((s) => !s.archived && s.status === 'ready_for_pickup' && s.direction === 'in').length,
+      delivered: all.filter((s) => s.archived || s.status === 'delivered').length, archived: all.filter((s) => s.archived).length },
+    parcelsapp: parcelsappUsage(),
   };
 };
 
-api.get('/', (c) => c.json(listOut(uidOf(c))));
+api.get('/', (c) => c.json(listOut(uidOf(c), ['0', '1'].includes(c.req.query('archived')) ? c.req.query('archived') : 'all')));
 api.get('/widget', (c) => c.json({ items: activeShipments(3).map(brief), count: listOut().counts }));
 api.get('/detect', (c) => { const no = normNo(c.req.query('no')); const id = no ? detect(no) : 'other'; return c.json({ carrier: id, name: CARRIER[id].name, configured: isConfigured(id) }); });
 
@@ -286,8 +294,9 @@ api.post('/', async (c) => {
   if (q('SELECT 1 FROM hl_shipments WHERE tracking_no=?').get(no)) return bad(c, 'Sendingen spores allerede', 409);
   let r;
   try { ({ shipment: r } = upsertShipment({ trackingNo: no, carrier: b.carrier, name: str(b.name, 120), direction: b.direction })); } catch (e) { return bad(c, e.message); }
-  await refresh(r);
+  await refresh(r, { allowParcelsapp: true });
   const v = view(byId(r.id));
+  changed('created', { id: v.id });
   return c.json({ item: v, message: v.lastError ? `Lagt til. Statusen kan ikke hentes ennå: ${v.lastError}` : `✦ Fant sendingen hos ${v.carrierName} · ${v.statusText}` });
 });
 
@@ -300,11 +309,39 @@ api.patch('/:id', async (c) => {
   if ('archived' in b) q('UPDATE hl_shipments SET archived=? WHERE id=?').run(b.archived ? 1 : 0, r.id);
   if ('direction' in b) q('UPDATE hl_shipments SET direction=? WHERE id=?').run(b.direction === 'out' ? 'out' : 'in', r.id);
   q('UPDATE hl_shipments SET updated_at=? WHERE id=?').run(now(), r.id);
+  changed('updated', { id: r.id });
   return c.json({ item: view(byId(r.id)) });
 });
 
+// Hent status for én sending nå. Her kan ParcelsApp brukes som siste reserve (teller mot månedskvoten).
+api.post('/:id{[0-9]+}/refresh', async (c) => {
+  const r = byId(+c.req.param('id'));
+  if (!r) return bad(c, 'Fant ikke sendingen', 404);
+  await refresh(r, { allowParcelsapp: true });
+  const v = view(byId(r.id));
+  changed('updated', { id: r.id });
+  return c.json({ item: v, parcelsapp: parcelsappUsage(), message: v.lastError ? `Fikk ikke hentet status: ${v.lastError}` : `${v.carrierName} · ${v.statusText}` });
+});
+
+// Velg flere (prompt 17): arkiver, gjenopprett eller slett mange sendinger på én gang.
+api.post('/bulk', async (c) => {
+  const b = await readJson(c);
+  const ids = Array.isArray(b.ids) ? [...new Set(b.ids.map(Number).filter((n) => Number.isInteger(n) && n > 0))].slice(0, 500) : [];
+  if (!ids.length) return bad(c, 'Velg minst én sending');
+  if (!['archive', 'unarchive', 'delete'].includes(b.action)) return bad(c, 'action må være archive, unarchive eller delete');
+  const marks = ids.map(() => '?').join(',');
+  const n = b.action === 'delete'
+    ? q(`DELETE FROM hl_shipments WHERE id IN (${marks})`).run(...ids).changes
+    : q(`UPDATE hl_shipments SET archived=?, updated_at=? WHERE id IN (${marks})`).run(b.action === 'archive' ? 1 : 0, now(), ...ids).changes;
+  changed('bulk', { ids, bulkAction: b.action });
+  const word = { archive: 'arkivert', unarchive: 'gjenopprettet', delete: 'slettet' }[b.action];
+  return c.json({ ok: true, changed: n, message: `${n} ${n === 1 ? 'sending' : 'sendinger'} ${word}`, ...listOut(uidOf(c)) });
+});
+
 api.delete('/:id', (c) => {
-  q('DELETE FROM hl_shipments WHERE id=?').run(+c.req.param('id'));
+  const id = +c.req.param('id');
+  q('DELETE FROM hl_shipments WHERE id=?').run(id);
+  changed('deleted', { id });
   return c.json({ ok: true });
 });
 

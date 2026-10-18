@@ -214,8 +214,9 @@ export const markAiDown = (ms = 90_000, why = '') => { aiDownUntil = Date.now() 
 
 // Kaster AiUnavailable når motoren er nede eller ikke svarer; da bruker kallet vanlig søk.
 export class AiUnavailable extends Error {}
-export async function answer(text) {
-  if (aiDown()) throw new AiUnavailable(`svarte ikke for under 90 sekunder siden${aiDownWhy ? ': ' + aiDownWhy : ''}`);
+// force = brukeren slo på ✦ AI selv: pausen etter en feil hoppes over, så AI faktisk prøves (og feilen vises på nytt).
+export async function answer(text, { force = false } = {}) {
+  if (!force && aiDown()) throw new AiUnavailable(`svarte ikke for under 90 sekunder siden${aiDownWhy ? ': ' + aiDownWhy : ''}`);
   const r = await search(text);
   const fallback = heuristicAnswer(text, r);
   let engine = 'AI';
@@ -229,7 +230,7 @@ Fasit (regnet ut av systemet): periode=${r.facts.period ?? 'alle'}; antall trans
 Grunnlag:
 ${ctx}`;
   try {
-    const out = await textJson(prompt, { type: 'object', properties: { answer: { type: 'string' } }, required: ['answer'] }, { timeout: 20_000 });
+    const out = await textJson(prompt, { type: 'object', properties: { answer: { type: 'string' } }, required: ['answer'] }, { timeout: 20_000, task: 'search' });
     engine = out.provider;
     const res = out.data;
     const a = String(res?.answer ?? '').trim().slice(0, 800);
@@ -238,8 +239,20 @@ ${ctx}`;
     return { answer: fallback, hits: r.hits, engine: `${engine} (kontrollert – tall fra systemet)`, facts: r.facts };
   } catch (e) {
     markAiDown(90_000, e.message);
-    throw new AiUnavailable(e.message);
+    throw Object.assign(new AiUnavailable(e.message), { kind: aiErrorKind(e.message) });
   }
+}
+
+// Feilen fra AI-motorene → kort, forståelig årsak til svar-kortet (tekstmeldingen fra hver motor følger med under).
+export function aiErrorKind(msg) {
+  const m = String(msg ?? '');
+  if (/nøkkel mangler/i.test(m) && !/svarte/i.test(m)) return { kind: 'key', text: 'AI-nøkkel mangler. Legg den inn under Innstillinger → AI og tolkning.' };
+  if (/svarte 40[13]|API key not valid|invalid api key|PERMISSION_DENIED|unauthori/i.test(m)) return { kind: 'auth', text: 'AI-nøkkelen ble avvist (401/403). Sjekk nøkkelen under Innstillinger → AI og tolkning.' };
+  if (/tidsfristen|timeout|tidsavbrudd/i.test(m)) return { kind: 'timeout', text: 'AI-motoren svarte ikke innen 20 sekunder.' };
+  if (/modell|svarte 404|not found/i.test(m)) return { kind: 'model', text: 'AI-modellen finnes ikke eller kan ikke brukes. Velg en annen modell under Innstillinger → AI og tolkning.' };
+  if (/svarte 429|quota|rate limit/i.test(m)) return { kind: 'quota', text: 'AI-kvoten er brukt opp for nå. Prøv igjen senere, eller bytt motor.' };
+  if (/kan ikke nås|ECONNREFUSED|ENOTFOUND/i.test(m)) return { kind: 'network', text: 'AI-motoren kan ikke nås fra serveren.' };
+  return { kind: 'error', text: 'AI-motoren svarte med en feil.' };
 }
 
 export function suggestions() {

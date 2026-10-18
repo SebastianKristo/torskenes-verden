@@ -21,6 +21,9 @@ import uiApi from './ui.js';
 import mobileApi, { meOut, removeAvatar, shortcutsFor, layoutOf, authOrToken, designOf } from './mobile.js';
 import rssApi, { startRssWorker } from './rss.js';
 import familyApi from './family.js';
+import tasksApi from './tasks.js';
+import notifyApi, { appMeta } from './notify.js';
+import { attachRealtime } from './realtime.js';
 import { revokeUserTokens } from './finans/routes.js';
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
 
@@ -171,6 +174,7 @@ authed.get('/state', (c) => {
     shortcuts: shortcutsFor(u),
     layout: layoutOf(u).homelab ?? {},
     design: designOf(u),
+    app: appMeta(),
     place: cfg('wx_place'),
     bg: kv.get(u, 'bg', 'mane'),
     bgCustom: kv.get(u, 'bg_custom', {}),
@@ -481,6 +485,15 @@ app.route('/api/matplan', matApi); // samme Matplan-API som /mat/api (prompt 10:
 // Profil, oppsett, søk, mobilforside og widgets: sesjon ELLER FinansHub-token (må stå før /api med requireAuth).
 app.route('/api/rss', rssApi); // Nyhetsleser (prompt 13): RSS/Atom med ✦ AI-sammendrag og -kategorisering
 app.route('/api/family', familyApi); // Familie og kart (prompt 16): posisjon, soner, varsler og helse
+app.route('/api/tasks', tasksApi); // Huskeliste (prompt 17): delt i familien, sanntid via /api/ws
+app.route('/api', notifyApi); // Varsler (/api/me/notify) og appnavn (/api/app) (prompt 17)
+// Boliger (prompt 17): skann rett inn i en bolig. Alias for FinansHub-rutene, samme tilgang (sesjon eller token).
+const toFinans = async (c, path) => {
+  const u = new URL(c.req.url);
+  u.pathname = `/finans/api${path}`;
+  return app.fetch(new Request(u, { method: 'POST', headers: c.req.raw.headers, body: await c.req.arrayBuffer() }), c.env);
+};
+app.post('/api/homes/:id{[0-9]+}/expenses', (c) => toFinans(c, (c.req.header('content-type') ?? '').startsWith('multipart/') ? `/folders/${c.req.param('id')}/receipts` : `/folders/${c.req.param('id')}/entries`));
 app.route('/api', mobileApi);
 app.route('/api', authed);
 app.route('/home/api', homeApi);
@@ -495,7 +508,21 @@ app.onError((err, c) => {
 });
 
 if (process.env.NODE_ENV !== 'test') {
-  serve({ fetch: app.fetch, port: config.port }, (info) => console.log(`OS kjører på http://localhost:${info.port}`));
+  const server = serve({ fetch: app.fetch, port: config.port }, (info) => console.log(`OS kjører på http://localhost:${info.port}`));
+  attachRealtime(server, wsUser);
 }
+
+// Innlogging for /api/ws: sesjonscookien eller ?token= sjekkes med den vanlige regelen (sesjon eller app-token) via en intern rute.
+const wsAuth = new Hono();
+wsAuth.get('/', authOrToken, (c) => c.json({ user: c.get('user') }));
+async function wsUser(req, token) {
+  const headers = {};
+  if (req.headers.cookie) headers.cookie = req.headers.cookie;
+  if (token) headers.authorization = `Bearer ${token}`;
+  else if (req.headers.authorization) headers.authorization = req.headers.authorization;
+  const r = await wsAuth.request('/', { headers });
+  return r.ok ? (await r.json()).user : null;
+}
+export { wsUser };
 
 export default app;
