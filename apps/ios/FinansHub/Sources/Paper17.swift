@@ -611,6 +611,7 @@ struct PaperSettings17: View {
             group(AppMeta.shared.name, 1, [
                 PaperLinkRow(name: "Navn på appen", sub: AppMeta.shared.name, value: "Endre ›", icon: "character.cursor.ibeam") { naming = true },
                 PaperLinkRow(name: "App-ikon", sub: AppMeta.shared.iconName, value: "Endre ›", icon: "app.badge") { picking = true },
+                PaperLinkRow(name: "Fanelinje-stil", sub: NavStyle25.sub(store.navStyle25), value: NavStyle25.name(store.navStyle25) + " ›", icon: "rectangle.split.3x1") { store.cycleNavStyle25() },
                 PaperLinkRow(name: "Fanelinje i Hjem", sub: "Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen", icon: "dock.rectangle") { store.tabBarEditing = true },
                 PaperLinkRow(name: "Moduler", sub: "Sporing, Domener, Mat, Familie, Avganger og Vær", icon: "square.grid.2x2") { store.paperGo("innst-hl") },
                 PaperLinkRow(name: "Nyhetsleser", sub: "Kilder og AI", icon: "newspaper") { store.openNews() },

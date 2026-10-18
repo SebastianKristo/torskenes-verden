@@ -388,7 +388,8 @@ struct PaperTabBar: View {
     var body: some View {
         let cur = current
         if rail {
-            PaperRail(tabs: tabs, current: cur, showPlus: !floating, tapTab: { id, on in tapTab(id, on: on) }, plusTap: plusTap, plusHold: plusHold)
+            PaperRail(tabs: tabs, current: cur, showPlus: !floating, tapTab: { id, on in tapTab(id, on: on) }, plusTap: plusTap, plusHold: plusHold,
+                      style: store.navStyle25, showHome: !store.paperIsHome25, goHome: { store.paperGoHome25() })
         } else {
             HStack(spacing: 2) {
                 ForEach(tabs, id: \.0) { t in tab(t.0, t.1, t.2, on: cur == t.0) }
@@ -434,20 +435,13 @@ struct PaperTabBar: View {
     }
 
     private func tab(_ id: String, _ name: String, _ icon: String, on: Bool) -> some View {
-        Button { tapTab(id, on: on) } label: {
-            HStack(spacing: 7) {
-                if on { PaperTabIcon(icon: icon) }
-                Text(name).font(PF.ui(12.5, .semibold)).lineLimit(1).minimumScaleFactor(0.75)
-            }
-            .foregroundStyle(on ? p.navActInk : p.navInk)
-            .padding(.horizontal, on ? 16 : 6)
-            .frame(maxWidth: on ? nil : .infinity)
-            .frame(height: 46)
-            .background(on ? p.navAct : Color.clear, in: Capsule())
-            .contentShape(Capsule())
+        // Prompt 25: stilen (Tekst / Bare ikoner / Ikoner + navn på valgt) tegnes i NavStyle25.swift.
+        let style: String = store.navStyle25
+        return Button { tapTab(id, on: on) } label: {
+            NavTabLabel25(name: name, icon: icon, on: on, style: style)
         }
         .buttonStyle(.plain)
-        .layoutPriority(on ? 1 : 0)
+        .layoutPriority(on && style != "icons" ? 1 : 0)
         .accessibilityLabel(name)
         .accessibilityAddTraits(on ? .isSelected : [])
     }
@@ -737,6 +731,8 @@ struct PaperPage: View {
         let maxW: CGFloat = wide ? (home ? 960 : 720) : .infinity
         VStack(spacing: 0) {
             PaperHero(home: home)
+            // Prompt 25: ScrollViewReader for «Ta meg dit →» (Settings25.swift).
+            ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 0) {
                     GeometryReader { g in
@@ -767,8 +763,18 @@ struct PaperPage: View {
             )
             .padding(.top, -23)
             .refreshable { await refresh() }
+            .task(id: "\(pageKey)#\(Set25Focus.shared.tick)") { await scrollToFocus25(proxy) }
+            }
         }
         .ignoresSafeArea(edges: .top)
+    }
+
+    /// Scroller til raden som skal fremheves (midt på skjermen).
+    private func scrollToFocus25(_ proxy: ScrollViewProxy) async {
+        guard let t = Set25Focus.shared.target else { return }
+        try? await Task.sleep(nanoseconds: 350_000_000)
+        if Task.isCancelled { return }
+        withAnimation(.easeInOut(duration: 0.35)) { proxy.scrollTo(Set25Focus.rowId(t), anchor: .center) }
     }
 
     private var pageKey: String {
@@ -894,8 +900,9 @@ struct PaperHero: View {
         HStack(spacing: 8) {
             if home {
                 Text(AppMeta.shared.name).font(PF.serif(22, medium: true)).foregroundStyle(store.heroInk).lineLimit(1).minimumScaleFactor(0.7).shadow(color: .black.opacity(store.heroInk == .white ? 0.4 : 0), radius: 6)
-            } else if store.prof24IsRoot {
+            } else if store.prof24IsRoot || (wide && store.prof24UpLabel == "Hjem") {
                 // Prompt 24: rotsidene i Finans + Boliger har ingen tilbakeknapp; profilbildet står fortsatt til høyre.
+                // Prompt 25: på bred skjerm går den røde Hjem-knappen i sidelinja hjem, så «‹ Hjem» skjules.
                 Color.clear.frame(width: 1, height: 34)
             } else {
                 pill("‹ \(store.prof24UpLabel)") { store.paperUp() }

@@ -250,7 +250,7 @@ struct SearchView: View {
                 if let n = store.aiNote {
                     Label(n, systemImage: "info.circle").font(.footnote).foregroundStyle(Color.accentLight)
                 }
-                if store.aiBusy { Loading() }
+                if store.aiBusy { AiJobProgressClassic25() }
                 if let r, !store.aiBusy {
                     results(r)
                 } else if !store.aiBusy {

@@ -9,6 +9,7 @@ struct WxSheetFrame22<C: View>: View {
     let title: String
     @ViewBuilder let content: () -> C
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.wxInPanel25) private var inPanel
 
     var body: some View {
         ScrollView {
@@ -17,7 +18,7 @@ struct WxSheetFrame22<C: View>: View {
                     Text(title).font(.system(size: 18, weight: .bold)).frame(maxWidth: .infinity)
                     HStack {
                         Spacer()
-                        Button { dismiss() } label: {
+                        Button { if inPanel { WxPanel25.shared.close() } else { dismiss() } } label: {
                             Text("×").font(.system(size: 18)).foregroundStyle(.white)
                                 .frame(width: 40, height: 40).background(Color(hex: "#2a2d34"), in: Circle())
                         }
@@ -658,6 +659,7 @@ struct WxForholdBody22: View {
 struct WxCompareSheet22: View {
     @Environment(Store.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.wxInPanel25) private var inPanel
     let w: WeatherFull
 
     var body: some View {
@@ -669,7 +671,7 @@ struct WxCompareSheet22: View {
                         Text(w.placeName).font(.system(size: 13)).foregroundStyle(Color(hex: "#9aa3ae"))
                     }
                     Spacer()
-                    Button { dismiss() } label: {
+                    Button { if inPanel { WxPanel25.shared.close() } else { dismiss() } } label: {
                         Text("Ferdig").font(.system(size: 13.5, weight: .bold)).foregroundStyle(Color(hex: "#17191e"))
                             .padding(.horizontal, 16).frame(height: 38).background(Color.white, in: Capsule())
                     }

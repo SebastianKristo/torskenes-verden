@@ -151,6 +151,8 @@ extension Store {
             if !items.isEmpty && items != tabBarItems { tabBarItems = Array(items.prefix(5)) }
         }
         if let v = JS.str(o, "iconTheme"), PaperIconTheme.themes.contains(where: { $0.0 == v }), v != iconTheme { iconTheme = v }
+        // Prompt 25: fanelinje-stil (NavStyle25.swift).
+        if let v = JS.str(o, "navStyle"), NavStyle25.ids.contains(v), v != navStyle25 { navStyle25 = v }
     }
 
     /// Fanene i hovedlinjen (uten Mer), i brukerens rekkefølge.
@@ -292,6 +294,8 @@ struct PaperTabBarEditor: View {
                         .padding(.horizontal, 14).padding(.vertical, 10)
                     }
                     .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+                    // Prompt 25: STIL med stor forhåndsvisning av din egen fanelinje (NavStyle25.swift).
+                    NavStylePicker25(items: items).padding(.top, 6)
                     let unused = PaperTabItem.all.filter { a in !items.contains { $0.id == a.id } }
                     if !unused.isEmpty {
                         PLabel(text: "Legg til")

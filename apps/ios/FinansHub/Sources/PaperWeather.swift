@@ -290,19 +290,37 @@ struct PaperWeatherView: View {
     @State private var comparing: Bool = false
     @State private var places: Bool = false
     @State private var map: Bool = false
+    /// Prompt 25: to kolonner og sidepanel når bredden er minst 700 pt (Weather25.swift).
+    @State private var wide: Bool = false
 
     var body: some View {
         let w: WeatherFull? = store.weatherFull
         let code: Int = w?.code ?? 2
         let night: Bool = !(w?.isDay ?? WxFmt22.dayByClock())
-        ZStack(alignment: .top) {
-            WxSky22(code: code, night: night).ignoresSafeArea()
-            WxFx22(kind: wxFxKind22(code, night: night), heavy: code == 65 || code == 82 || code >= 95, thunder: code >= 95)
-                .ignoresSafeArea()
-            scrollBody(w)
-            WxTopBar22(w: w, scrolled: scroll > 200)
-            WxBottomButtons22(map: { Haptics.shared.tap(); map = true }, places: { Haptics.shared.tap(); places = true })
+        GeometryReader { g in
+            let isWide: Bool = g.size.width >= 700
+            ZStack(alignment: .top) {
+                WxSky22(code: code, night: night).ignoresSafeArea()
+                WxFx22(kind: wxFxKind22(code, night: night), heavy: code == 65 || code == 82 || code >= 95, thunder: code >= 95)
+                    .ignoresSafeArea()
+                if isWide, let w {
+                    WxWide25(w: w, width: g.size.width, mode: $mode, open: { k in open(k) }, openDay: { i in openDay(i) },
+                             compare: { openCompare() }, fullMap: { map = true })
+                } else {
+                    scrollBody(w)
+                }
+                WxTopBar22(w: w, scrolled: isWide ? false : scroll > 200)
+                WxBottomButtons22(map: { Haptics.shared.tap(); map = true }, places: { Haptics.shared.tap(); places = true })
+                if isWide { WxSidePanel25(width: g.size.width) }
+            }
+            .frame(width: g.size.width, height: g.size.height)
+            .onAppear { wide = isWide }
+            .onChange(of: isWide) { _, v in
+                wide = v
+                if !v { WxPanel25.shared.close() }
+            }
         }
+        .onDisappear { WxPanel25.shared.close() }
         .foregroundStyle(.white)
         .environment(\.colorScheme, .dark)
         .sheet(item: $sheet) { ref in
@@ -354,9 +372,9 @@ struct PaperWeatherView: View {
 
     @ViewBuilder private func content(_ w: WeatherFull) -> some View {
         WxHeader22(w: w).opacity(Double(Swift.max(0, 1 - scroll / 220)))
-        WxHourCard22(w: w, mode: $mode) { sheet = WxSheetRef22(id: "forhold", day: 0) }
-        WxDaysCard22(w: w) { i in sheet = WxSheetRef22(id: "forhold", day: i) }
-        WxCompareCard22(w: w) { comparing = true }
+        WxHourCard22(w: w, mode: $mode) { openDay(0) }
+        WxDaysCard22(w: w) { i in openDay(i) }
+        WxCompareCard22(w: w) { openCompare() }
         WxWindCard22(w: w).onTapGesture { open("wind") }
         WxMoonCard22(w: w).onTapGesture { open("moon") }
         WxTileGrid22(w: w) { k in open(k) }
@@ -371,6 +389,15 @@ struct PaperWeatherView: View {
 
     private func open(_ k: String) {
         Haptics.shared.tap()
-        sheet = WxSheetRef22(id: k, day: 0)
+        if wide { WxPanel25.shared.open(WxSheetRef22(id: k, day: 0)) } else { sheet = WxSheetRef22(id: k, day: 0) }
+    }
+
+    /// «Forhold» for en dag: sidepanel på bred skjerm, ellers ark.
+    private func openDay(_ i: Int) {
+        if wide { Haptics.shared.tap(); WxPanel25.shared.open(WxSheetRef22(id: "forhold", day: i)) } else { sheet = WxSheetRef22(id: "forhold", day: i) }
+    }
+
+    private func openCompare() {
+        if wide { Haptics.shared.tap(); WxPanel25.shared.openCompare() } else { comparing = true }
     }
 }

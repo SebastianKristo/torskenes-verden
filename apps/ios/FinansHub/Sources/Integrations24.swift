@@ -195,7 +195,7 @@ struct PaperIntegrations24: View {
                     }
                 }
                 ForEach(m.items) { it in
-                    Int24Group(item: it).id(it.id)
+                    Int24Group(item: it).set25Highlight(it.name, id: false).id(it.id)
                 }
                 PLabel(text: "Synk med Home Assistant").padding(.leading, 4).padding(.top, 14)
                 TaskHASection22()

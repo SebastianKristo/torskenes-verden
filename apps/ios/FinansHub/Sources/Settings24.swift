@@ -69,6 +69,7 @@ final class Set24Model {
         add("navn", "Navn på appen", AppMeta.shared.name, AppMeta.shared.name, "naming")
         add("ikon", "App-ikon", AppMeta.shared.iconName, AppMeta.shared.name, "icon")
         add("tabbar", "Fanelinje i Hjem", "Fjern, flytt, gi nytt navn og ikon", AppMeta.shared.name, "tabbar")
+        add("navstil", "Fanelinje-stil", "Tekst, bare ikoner eller ikoner + navn på valgt", AppMeta.shared.name, "innst")
         add("hl", "Moduler", "Sporing, Domener, Mat, Familie, Avganger og Vær", AppMeta.shared.name, "innst-hl")
         add("news", "Nyhetsleser", "Kilder, AI og ikoner på fanene", AppMeta.shared.name, "news")
         add("ut", "Utseende og fanelinje", "Tema (Papir lys / mørk), bakgrunn og fanelinje", "App", "innst-ut")
@@ -164,7 +165,7 @@ final class Set24Model {
         busy = true
         let items: [[String: String]] = index(store).map { ["id": $0.id, "title": $0.title, "path": $0.path] }
         do {
-            let d: Data = try await store.api.callAt("/api", "POST", "/settings/ai-search", json: ["q": q, "items": items], timeout: 25)
+            let d: Data = try await store.api.callAt("/api", "POST", "/settings/ai-search", json: ["q": q, "items": items], timeout: store.aiClientTimeout25)
             let o: [String: Any] = JS.obj(d)
             if q != query.trimmingCharacters(in: .whitespaces) { busy = false; return }
             answer = JS.str(o, "answer") ?? ""
@@ -187,6 +188,7 @@ final class Set24Model {
         if r.hasPrefix("integ:") {
             Int24Model.shared.focus = String(r.dropFirst(6))
             store.paperGo("innst-integ")
+            Set25Focus.shared.flash(it.title)
             return
         }
         switch r {
@@ -197,6 +199,8 @@ final class Set24Model {
         case "naming", "icon": break
         default: store.paperGo(r)
         }
+        // Prompt 25: samme fremheving som «Ta meg dit →» (raden fremheves hvis den står på siden).
+        Set25Focus.shared.flash(it.title)
     }
 }
 
@@ -257,8 +261,10 @@ struct Set24Results: View {
     var body: some View {
         let hits: [Set24Item] = m.hits(store)
         let ans: String = m.ai ? (m.answer.isEmpty ? (m.busy ? "Tenker …" : m.localAnswer(store)) : m.answer) : ""
+        // Prompt 25: «Ta meg dit →» når AI-et har funnet en innstilling (Settings25.swift).
+        let goIt: Set24Item? = (m.ai && !m.busy) ? hits.first : nil
         VStack(alignment: .leading, spacing: 6) {
-            if !ans.isEmpty { answerCard(ans) }
+            if !ans.isEmpty { answerCard(ans, goIt) }
             if hits.isEmpty {
                 if !m.ai {
                     Text("Ingen treff. Slå på ✦ AI for å spørre med vanlige ord.").font(PF.ui(13)).foregroundStyle(p.mut).padding(.horizontal, 4)
@@ -284,10 +290,14 @@ struct Set24Results: View {
         m.open(it, store)
     }
 
-    private func answerCard(_ s: String) -> some View {
+    private func answerCard(_ s: String, _ goIt: Set24Item?) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Text("✦").font(PF.ui(14, .heavy)).foregroundStyle(p.lab)
-            Text(s).font(PF.ui(13.5)).foregroundStyle(p.ink).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 10) {
+                Text(s).font(PF.ui(13.5)).foregroundStyle(p.ink).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
+                if let goIt { Set25GoButton { m.goThere(goIt, store) } }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.horizontal, 14).padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -188,6 +188,13 @@ final class Store {
     var aiHistory: [String] = []
     /// Melding når AI-søket falt tilbake til vanlig søk.
     var aiNote: String?
+    /// Prompt 25: AI-søk som jobb (AiJob25.swift): fremdrift, tidsgrense fra /ai/limits og Avbryt.
+    var aiJob25: AiJob25?
+    var aiClientTimeout25: Double = 180
+    @ObservationIgnored var aiLimitsLoaded25: Bool = false
+    @ObservationIgnored var aiJobId25: String?
+    @ObservationIgnored var aiTask25: Task<Data, Error>?
+    @ObservationIgnored var aiCancelled25: Bool = false
     /// Forslag før søk: Butikker, Varer i kvitteringer, Beløp og perioder.
     var suggestGroups: [SuggestGroup] = []
     var editing: TxDraft?
@@ -362,6 +369,10 @@ final class Store {
     /// Fargetema for ikonene i Innstillinger: standard | varm | kjolig | mono | fargerik
     var iconTheme = UserDefaults.standard.string(forKey: "fh_icon_theme") ?? "standard" {
         didSet { UserDefaults.standard.set(iconTheme, forKey: "fh_icon_theme") }
+    }
+    /// Prompt 25: fanelinje-stil (layout.navStyle): text | icons | icons_active_label.
+    var navStyle25: String = UserDefaults.standard.string(forKey: "fh_nav_style25") ?? "text" {
+        didSet { UserDefaults.standard.set(navStyle25, forKey: "fh_nav_style25") }
     }
     /// Legg til abonnement (den røde +-sirkelen i fanelinja på Subscription OS).
     var subAdding = false
@@ -1082,7 +1093,12 @@ final class Store {
                 do {
                     // ✦ AI er på: kjør AI-søket med en gang (force), også for korte søk.
                     let body: [String: Any] = ["q": t, "force": true]
-                    let d = try await self.api.callAt("/finans/api", "POST", "/search/ai", json: body, timeout: 25)
+                    // Prompt 25: ingen fast 25/30 s-grense. Jobbmodus med fremdrift og Avbryt (AiJob25.swift).
+                    self.aiCancelled25 = false
+                    let job: Task<Data, Error> = Task { @MainActor in try await self.aiSearch25(body) }
+                    self.aiTask25 = job
+                    defer { self.aiTask25 = nil }
+                    let d: Data = try await job.value
                     let raw = JS.obj(d)
                     let r = try JSONDecoder().decode(AiAnswer.self, from: d)
                     if let kind = JS.str(raw, "aiErrorKind"), !kind.isEmpty {
@@ -1096,11 +1112,15 @@ final class Store {
                 } catch let e as APIError where e.status == 401 && !e.needsTotp {
                     throw e
                 } catch let e as APIError {
-                    self.aiNote = "✦ AI svarte ikke: \(e.message). Viser vanlig søk."
-                    try await self.plainSearch(t)
+                    if self.aiCancelled25 { self.aiNote = "✦ AI-søket ble avbrutt."; self.ai = nil } else {
+                        self.aiNote = "✦ AI svarte ikke: \(e.message). Viser vanlig søk."
+                        try await self.plainSearch(t)
+                    }
                 } catch {
-                    self.aiNote = "✦ AI svarte ikke: \(error.localizedDescription). Viser vanlig søk."
-                    try await self.plainSearch(t)
+                    if self.aiCancelled25 { self.aiNote = "✦ AI-søket ble avbrutt."; self.ai = nil } else {
+                        self.aiNote = "✦ AI svarte ikke: \(error.localizedDescription). Viser vanlig søk."
+                        try await self.plainSearch(t)
+                    }
                 }
             }
             self.aiHistory = Array(([t] + self.aiHistory.filter { $0 != t }).prefix(20))

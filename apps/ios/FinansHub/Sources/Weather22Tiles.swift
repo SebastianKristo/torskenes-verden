@@ -5,9 +5,11 @@ import SwiftUI
 struct WxTileGrid22: View {
     let w: WeatherFull
     let open: (String) -> Void
+    /// Prompt 25: 3 kolonner på bred skjerm (Weather25.swift).
+    var columns: Int = 2
 
     var body: some View {
-        let cols: [GridItem] = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+        let cols: [GridItem] = Array(repeating: GridItem(.flexible(), spacing: 12), count: Swift.max(1, columns))
         LazyVGrid(columns: cols, spacing: 12) {
             WxSunTile22(w: w).onTapGesture { open("sun") }
             WxUvTile22(w: w).onTapGesture { open("uv") }

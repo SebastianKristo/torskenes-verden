@@ -478,31 +478,37 @@ struct PaperRail: View {
     let tapTab: (String, Bool) -> Void
     let plusTap: () -> Void
     let plusHold: () -> Void
+    /// Prompt 25: fanelinje-stil, og den røde Hjem-knappen øverst når du ikke er på Hjem (NavStyle25.swift).
+    var style: String = "text"
+    var showHome: Bool = false
+    var goHome: () -> Void = {}
 
     var body: some View {
+        let shape: RoundedRectangle = RoundedRectangle(cornerRadius: 28, style: .continuous)
         VStack(spacing: 4) {
+            if showHome {
+                RailHomeButton25(act: goHome)
+                    .padding(.bottom, 4)
+                    .transition(.scale(scale: 0.6).combined(with: .opacity))
+            }
             ForEach(tabs, id: \.0) { t in item(t.0, t.1, t.2, on: current == t.0) }
             Spacer(minLength: 8)
             if showPlus { PaperPlusButton(label: "Skann", tap: plusTap, hold: plusHold) }
         }
+        .animation(.easeOut(duration: 0.15), value: showHome)
         .padding(.horizontal, 6).padding(.vertical, 12)
         .frame(width: 84)
         .frame(maxHeight: .infinity)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
-        .background(Color(hex: "#1b1a17").opacity(0.82), in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        // Samme farge som fanelinja på telefon: nav-tokenet over uskarphet (ikke en ugjennomsiktig grå flate).
+        .background(p.nav.opacity(0.88), in: shape)
+        .background(.ultraThinMaterial, in: shape)
+        .shadow(color: .black.opacity(0.35), radius: 15, y: 12)
         .environment(\.colorScheme, .dark)
     }
 
     private func item(_ id: String, _ name: String, _ icon: String, on: Bool) -> some View {
         Button { tapTab(id, on) } label: {
-            VStack(spacing: 3) {
-                PaperTabIcon(icon: icon, size: 16)
-                Text(name).font(PF.ui(11.5, .semibold)).lineLimit(1).minimumScaleFactor(0.7)
-            }
-            .foregroundStyle(on ? p.navActInk : p.navInk)
-            .frame(maxWidth: .infinity).frame(height: 58)
-            .background(on ? p.navAct : Color.clear, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .contentShape(Rectangle())
+            RailTabLabel25(name: name, icon: icon, on: on, style: style)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(name)

@@ -4,12 +4,13 @@ import UIKit
 /* ---------------- Prompt 24: «Mer» lik på iOS og Android, Ruter fullskjerm og Hjem-oppsett ---------------- */
 // Fasit: side «mer» i design/Mobil Papir App.dc.html og prompts/claude-code-mer-lik.md.
 // Ett kort (radius 20, skygge), rader med Newsreader 19 og undertekst, «›», skillelinjer bare mellom rader,
-// ingen ikoner. Faner som allerede står i fanelinjen tas ut.
+// Prompt 25: ikon til venstre (40 × 40-boks, radius 12, bg, strekikon 21 i ikonpaletten). Faner som allerede står i fanelinjen tas ut.
 
 struct More24Row: Identifiable {
     let id: String
     let name: String
     let sub: String
+    var icon: String = "circle"
     let act: () -> Void
 }
 
@@ -21,7 +22,7 @@ struct PaperMore24: View {
         VStack(spacing: 0) {
             ForEach(Array(rows.enumerated()), id: \.element.id) { i, r in
                 if i > 0 { Rectangle().fill(p.line).frame(height: 1) }
-                Button(action: r.act) { row(r) }
+                Button(action: r.act) { row(r, i) }
                     .buttonStyle(More24Press())
             }
         }
@@ -30,8 +31,13 @@ struct PaperMore24: View {
         .shadow(color: .black.opacity(0.3), radius: 8, y: 10)
     }
 
-    private func row(_ r: More24Row) -> some View {
+    private func row(_ r: More24Row, _ i: Int) -> some View {
         HStack(spacing: 12) {
+            Image(systemName: r.icon).font(.system(size: 19, weight: .medium))
+                .foregroundStyle(PaperIconTheme.color(store.iconTheme, i))
+                .frame(width: 40, height: 40)
+                .background(p.bg, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
                 Text(r.name).font(PF.serif(19, medium: true)).foregroundStyle(p.ink).lineLimit(1)
                 Text(r.sub).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(1)
@@ -49,27 +55,27 @@ struct PaperMore24: View {
         var out: [More24Row] = []
         // Profiler uten Hjem i fanelinjen (f.eks. Finans + Boliger): Hjem står først her.
         if !inBar.contains("hjem") {
-            out.append(More24Row(id: "hjem", name: "Hjem", sub: "Pakker, avganger og widgets") { store.paperGo("hjem") })
+            out.append(More24Row(id: "hjem", name: "Hjem", sub: "Pakker, avganger og widgets", icon: "house") { store.paperGo("hjem") })
         }
         let n: Int = store.paperOnWay
         if !inBar.contains("sporing") {
-            out.append(More24Row(id: "sporing", name: "Sporing", sub: n > 0 ? (n == 1 ? "1 pakke på vei" : "\(n) pakker på vei") : "Pakker og sendinger") { store.paperGo("sporing") })
+            out.append(More24Row(id: "sporing", name: "Sporing", sub: n > 0 ? (n == 1 ? "1 pakke på vei" : "\(n) pakker på vei") : "Pakker og sendinger", icon: "shippingbox") { store.paperGo("sporing") })
         }
         if !inBar.contains("domener") {
-            out.append(More24Row(id: "domener", name: "Domener", sub: "Trafikk, besøk og oppetid") { store.paperOpenDomains(from: "mer") })
+            out.append(More24Row(id: "domener", name: "Domener", sub: "Trafikk, besøk og oppetid", icon: "globe") { store.paperOpenDomains(from: "mer") })
         }
-        out.append(More24Row(id: "bursdag", name: "Bursdager", sub: "Hvem har bursdag snart") { store.paperGo("bursdag") })
+        out.append(More24Row(id: "bursdag", name: "Bursdager", sub: "Hvem har bursdag snart", icon: "gift") { store.paperGo("bursdag") })
         if !inBar.contains("huske") {
-            out.append(More24Row(id: "huske", name: "Huskeliste", sub: "Oppgaver og widgets") { store.paperGo("huske") })
+            out.append(More24Row(id: "huske", name: "Huskeliste", sub: "Oppgaver og widgets", icon: "checklist") { store.paperGo("huske") })
         }
         if !inBar.contains("familie") {
-            out.append(More24Row(id: "familie", name: "Familie og kart", sub: "Posisjon, soner og helse") { store.paperGo("familie") })
+            out.append(More24Row(id: "familie", name: "Familie og kart", sub: "Posisjon, soner og helse", icon: "mappin.and.ellipse") { store.paperGo("familie") })
         }
-        out.append(More24Row(id: "finans", name: "Finans", sub: "Oversikt, liste, Finn og mer") { store.paperMainTab("finans") })
+        out.append(More24Row(id: "finans", name: "Finans", sub: "Oversikt, liste, Finn og mer", icon: "creditcard") { store.paperMainTab("finans") })
         if !inBar.contains("nyheter") {
-            out.append(More24Row(id: "nyheter", name: "Nyhetsleser", sub: "RSS med AI-sammendrag") { store.openNews() })
+            out.append(More24Row(id: "nyheter", name: "Nyhetsleser", sub: "RSS med AI-sammendrag", icon: "dot.radiowaves.up.forward") { store.openNews() })
         }
-        out.append(More24Row(id: "innst", name: "Innstillinger", sub: "Tema, bakgrunn og konto") { store.paperGo("innst") })
+        out.append(More24Row(id: "innst", name: "Innstillinger", sub: "Tema, bakgrunn og konto", icon: "gearshape") { store.paperGo("innst") })
         return out
     }
 }

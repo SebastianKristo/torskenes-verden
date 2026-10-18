@@ -452,6 +452,8 @@ struct PaperLinkList: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                // Prompt 25: «Ta meg dit →» scroller hit og fremhever raden (Settings25.swift).
+                .set25Highlight(r.name)
             }
         }
         .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))

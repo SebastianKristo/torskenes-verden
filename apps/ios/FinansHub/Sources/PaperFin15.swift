@@ -280,7 +280,9 @@ struct PaperFinSearch: View {
     var body: some View {
         VStack(spacing: 10) {
             field
-            if store.aiBusy { ProgressView().padding(20) }
+            // Prompt 25: «✦ Ollama tenker … N s av M s», fremdriftslinje og Avbryt.
+            if store.aiBusy { AiJobProgress25() }
+            if let n = store.aiNote, !store.aiBusy, n.contains("avbrutt") { Text(n).font(PF.ui(12.5)).foregroundStyle(p.mut) }
             if q.trimmingCharacters(in: .whitespaces).isEmpty && store.ai == nil && !store.aiBusy { suggestions }
             if let a = store.ai, !store.aiBusy { results(a) }
         }
