@@ -1,0 +1,89 @@
+# Prompt 22
+
+Startet: 2026-10-18
+
+- 2026-10-18: «gjør dette til standard theme papir, på alle ny brukere og enheter. behold det gamle men da må man bytte over til det.» (vedlegg: temakortet «Lys hovedbok – Papirtone, grønn aksent, serif-tall»)
+  - `FinansHub v2.dc.html`: standard er nå `lys` (Lys hovedbok) i stedet for `v2`. Det gamle mørke designet ligger i Innstillinger → Utseende som «Nåværende (FinansHub v2)».
+  - `FinansHub v3 Temaer.dc.html`: kortet heter «Lys hovedbok · standard». Hopper bare til Innstillinger rett etter et manuelt temabytte, ikke ved første oppstart.
+  - Skrevet `prompts/claude-code-standard-tema.md`: standardverdi i backend, rekkefølge for tema på klienten, ingen mørk blink ved lasting, test.
+- 2026-10-18: «for huskeliste legg til ny oppgave i alle legg den over navbaren, og legg lus ikonet der scann ikonte er nå»
+  - `Mobil Papir App.dc.html`: på Huskeliste ligger feltet «Ny oppgave …» fast nederst, rett over fanelinjen, ved siden av den runde knappen. Skann-knappen (FAB) er byttet med «+». Trykk på + legger til oppgaven, eller fokuserer feltet hvis det er tomt. Enter virker også.
+  - `Huskeliste.dc.html`: ny prop `dock-add` skjuler det gamle feltet øverst. Oppgaven legges inn via hendelsen `huske-add` i valgt liste med valgt frist og person (chipsene øverst gjelder fortsatt).
+  - For Claude Code: samme i native app. Feltet er festet over fanelinjen og flytter seg opp med tastaturet (`safeAreaInset(edge: .bottom)` på iOS, `imePadding()` på Android). FAB viser + på Huskeliste.
+- 2026-10-18: «også feil med idag og meg rart rundt sirkel kortet, alle er helt svart.» (vedlegg: Huskeliste, valgte chips «I dag» og «Meg» har bare tynn mørk kant, «Alle» har svart prikk på svart pille)
+  - `Huskeliste.dc.html`: valgte chips for frist og person er nå fylt (`--h-ink` bakgrunn, lys tekst), som valgt liste. Uvalgte er kortbakgrunn med tynn kant. «Alle» har ingen fargeprikk.
+- 2026-10-18: «la meg synrkosisere huskelisten med en liste i homeassistant.»
+  - `Huskeliste.dc.html`: ny seksjon «SYNK MED HOME ASSISTANT» med bryter, én rad per liste koblet til en `todo.*`-entitet (trykk for å bytte), status «Synket HH:MM» og «↻ Synk nå». Lagres i `huske_ha`.
+  - Skrevet `prompts/claude-code-huske-ha.md`: toveis synk med HA To-do via WebSocket `todo/item/list` og `subscribe`, `todo.add_item`/`update_item`/`remove_item`, feltmapping, konflikter, offline-kø, test med Assist.
+- 2026-10-18: «google ikonet i søk på mobil, nesten i orden fiks opp feieln» (vedlegg: Google-«G» med litt skjeve skjøter)
+  - Byttet til de offisielle Google «G»-banene (eksakte koordinater) i alle mobil- og webfiler, slik at fargene møtes riktig og den blå tverrstreken har riktig lengde.
+  - For Claude Code: bruk den offisielle «G»-SVG-en (48×48 viewBox, fire baner #EA4335 / #4285F4 / #FBBC05 / #34A853) som egen asset `google-g.svg`. Ikke tegn den på nytt.
+- 2026-10-18: «for vær siden bruk nøyaktig slik ooppset kart i venster høytne for vær kart. i høyere hjrønr  legg til en hamburgermeny for å steder og for å søke etter og legge til nye steder. bruk også samme font bare i vær siden» (vedlegg: iOS-værapp med kartknapp nede til venstre, liste nede til høyre, systemfont)
+  - `Vaer.dc.html`: rund kartknapp nede til venstre åpner værkart i fullskjerm (Windy-innbygging sentrert på valgt sted) med lagvelger Nedbør · Temperatur · Vind · Skyer og «Ferdig».
+  - Hamburgermeny (☰) øverst til høyre åpner «Steder»: søk, legg til, bytt, flytt og fjern steder (det eksisterende arket). Den gamle søkeknappen i bunnlinjen er fjernet. Stedspillene står fortsatt i midten nederst.
+  - Bare værsiden bruker nå systemfonten (SF Pro på iPhone/Mac, Roboto på Android): stor tynn temperatur (200), resten 500–700. Resten av appen beholder Newsreader og Manrope.
+  - For Claude Code: iOS `.font(.system(...))`, Android `FontFamily.Default`. Værkart: Windy embed i WebView, eller MET/Yr-radar som fliser over Kartverket-kartet. Hamburgermeny → stedsark med søk (Open-Meteo geocoding) og «+ Legg til».
+- 2026-10-18: «lag også en klarere og mer integrert samelinging mellom yr og pent i vær siden.»
+  - `Vaer.dc.html`: «Storm» heter nå «Pent» (pent.no / StormGeo). Sammenligningen er bygget inn på værsiden. Et eget kort «Yr og Pent» viser enighet (grønn, gul eller rød prikk med snittavvik) og de neste 4 dagene side om side: ikon, maks/min, nedbør og avvik-chip. «Time for time og hele uka ›» åpner det fulle arket med graf.
+  - Time for time-raden viser Pents temperatur i oransje under Yrs, så avvik ses med en gang.
+  - Pent-data lastes automatisk når værsiden åpnes eller stedet byttes. Arket trenger ikke lenger være åpent.
+  - For Claude Code: Pent har ikke åpent API. Bruk StormGeo/ECMWF via Open-Meteo (`models=ecmwf_ifs025`) som i designet, eller StormGeo-API med nøkkel hvis tilgjengelig. Merk kilden «Pent (StormGeo-modell)». Yr = MET Locationforecast.
+- 2026-10-18: «denne skal være hamburgermenyen som når er øverst til høyere, den skal ligge nederst til høyere» (vedlegg: stedspillene Oslo · Bergen · Trondheim nederst på værsiden)
+  - `Vaer.dc.html`: stedspillene nederst er fjernet. Hamburgermenyen (☰) er flyttet fra øverst til høyre til nederst til høyre, som en rund knapp på linje med kartknappen nede til venstre. Den åpner «Steder» med søk, legg til og bytt sted. Øverst til høyre står kildeteksten igjen.
+- 2026-10-18: «plaser x i høyere hjrøen» (vedlegg: arket «Forhold» med × øverst til venstre)
+  - `Vaer.dc.html`: lukkeknappen (×) i «Forhold»-arket er flyttet til øverst til høyre. Tittelen står fortsatt midtstilt.
+- 2026-10-18: «lag popup som dette for alle , luftfyrkk, uv index soloppgang og alle de andre.» (refererer til «Forhold»-arket)
+  - `Vaer.dc.html`: alle kortene på værsiden kan nå trykkes og åpner et eget ark i samme stil som «Forhold»: tittel i midten, × øverst til høyre, dagvelger (7 dager), dato, stor verdi med undertekst, graf for valgt dag (00–24, «nå»-markør i dag) og et «Om …»-kort med forklaring.
+    - **UV-indeks:** fargede søyler per time + skala Lav · Moderat · Høy · Svært høy · Ekstrem.
+    - **Føles som:** linje, med faktisk temperatur stiplet.
+    - **Mot i går:** valgt dag mot dagen før.
+    - **Nedbør:** mm per time (søyler) + sannsynlighet.
+    - **Sikt**, **Luftfuktighet** (0–100 %), **Lufttrykk** (hPa): linje.
+    - **Vind:** vind + vindkast stiplet.
+    - **Sol:** soloppgang, solnedgang og dagslengde for 7 dager.
+    - **Månen:** fase og belyst andel for 7 dager.
+  - Timedata for luftfuktighet, UV, nedbør og vindkast hentes nå fra MET. Rettet også dagvelgeren i «Forhold», som brøt over to linjer.
+- 2026-10-18: «i sporing posten har feil logo. og den har funnet allerede leverte leveringer men det står bare registeret.» (vedlegg: Sporing-kort «Posten · 79NO», rød firkant med sirkel og pil som logo, status Registrert, «Funnet i e-post · 17.10 23:31»)
+  - Feilen er i appen. Skrevet `prompts/claude-code-sporing-status.md`: manuelt kontrollerte logoer for fraktselskap i logobiblioteket (Posten, Bring, PostNord …) og statusoppdatering via Mybring/PostNord-API med ParcelsApp som reserve. Sjekkes straks og jevnlig. Gamle, leverte e-postpakker går rett i Arkiv. Siste hendelse og feilmelding vises.
+- 2026-10-18: «i været vis også type vær i bakgrunnen slik som i bildene» (vedlegg: værapp med stjernehimmel om natten, regn med skyer og regnstriper, sol med glorie og lysrefleks)
+  - `Vaer.dc.html`: animert værbakgrunn (canvas) etter værkode og dag/natt.
+    - **Klart om natten:** blinkende stjerner. **Lettskyet om natten:** stjerner og noen mørke skyer.
+    - **Sol:** stor lysglorie øverst, svak regnbuering og lysreflekser. **Lettskyet:** sol og noen hvite skyer.
+    - **Overskyet:** drivende skylag. **Regn og byger:** grå skyer og skrå regnstriper (tettere ved kraftig regn), lyn ved torden. **Snø:** fallende snøfnugg. **Tåke:** tåkeslør nederst.
+  - Mørkere grå himmel ved regn og lysere grå ved snø. Animasjonen stopper ved «Reduser bevegelse» og settes ned når appen ikke er synlig.
+  - For Claude Code: iOS SpriteKit/`Canvas` + `TimelineView` (partikler), Android Compose `Canvas` + `withFrameNanos`. Samme typer og regler for dag/natt, maks 30 fps og pause når skjermen er av.
+- 2026-10-18: «vis ikke redigering før man holder inne på en av de. legg heller redigerin som man kan enre rekkeføgle med å holde inne og slette med å sweipe fra venster mot høyere.» (vedlegg: «Mine steder» med ↑ og − på hver rad)
+  - `Vaer.dc.html` → Steder: knappene ↑ og − er fjernet, så radene er rene.
+    - **Hold inne** (0,45 s) på et sted → raden løftes (litt større, skygge, ≡ vises). Dra opp eller ned for å endre rekkefølgen, slipp for å lagre.
+    - **Sveip mot høyre** → rødt «Slett»-felt kommer fram bak raden. Mer enn 60 px blir stående åpen (trykk «Slett»), mer enn 60 % av bredden sletter med en gang. Trykk et annet sted for å lukke.
+    - Vanlig trykk velger stedet som før. Loddrett scrolling virker fortsatt (`touch-action: pan-y`). Det siste stedet kan ikke slettes.
+  - For Claude Code: iOS `List` med `.onMove` + `.swipeActions(edge: .leading, allowsFullSwipe: true)`, Android `ReorderableLazyColumn` + `SwipeToDismissBox` (StartToEnd).
+- 2026-10-18: «sola blenden veldig.» (vedlegg: værsiden på bred skjerm med kraftig hvit solglorie som vasker ut tekst og kort)
+  - `Vaer.dc.html`: solen er dempet. Glorien skaleres etter den korteste siden (maks 560 px) i stedet for den lengste, lysstyrken er omtrent halvert, regnbueringen og lysrefleksene er svakere, og solen sitter i øvre høyre hjørne. Skyene ved «Delvis skyet» er mer gjennomsiktige.
+  - Mens data hentes (eksempeldata), følger dag/natt nå klokken, så det ikke vises sol om kvelden.
+  - For Claude Code: hold solglorien under ca. 60 % lysstyrke i midten og la kortene ha nok kontrast (tekst minst 4,5:1).
+- 2026-10-18: «fjern scan knappen, legg kart soner heles i navbaren. og» (vedlegg: iOS-appen Familie med Kart/Soner/Helse under toppbildet og rød skann-knapp. Utsnitt av «+ Ny sone · Vis alle · ↻»)
+  - `Mobil Papir App.dc.html`: skann-knappen er skjult på Familie. Kart · Soner · Helse lå allerede i fanelinjen i designet (prompt 21).
+  - Skrevet `prompts/claude-code-familie-nav.md` slik at appen gjør det samme: egen fanelinje på Familie, knappene øverst fjernes og FAB skjules.
+- 2026-10-18: «plasser denne over kartet istedet for unnder som nå. vis også profilbilde for personene» (vedlegg: raden «+ Ny sone · Vis alle · ↻» under kartet)
+  - `Familie.dc.html`: verktøyraden ligger nå **over** kartet (Kart og Soner): «+ Ny sone» til venstre, «Vis alle» og ↻ (oppdater posisjoner) til høyre. Den gamle sone-knappen nede i Soner er fjernet.
+  - **Profilbilder:** pins på kartet, familielisten og helselisten viser personens bilde i stedet for initialer når det finnes. Trykk på en person → trykk på avataren (✎) for å velge bilde. Bildet beskjæres til kvadrat (160 px) og lagres (`fam_photos`). Uten bilde vises farge og initialer som før.
+  - For Claude Code: bruk brukerens profilbilde fra kontoen (`/api/users/:id/avatar`) som standard, med mulighet til å overstyre per person i Familie. Pins på kartet (MapKit `MKAnnotationView` / Compose `MarkerComposable`) viser rundt bilde med hvit kant og fargering.
+- 2026-10-18: «la meg gi ikoner til soner. og veglge hvilke som helst farge.»
+  - `Familie.dc.html` → Soner: hver sone har et ikon. Velg mellom Hjem, Jobb, Skole, Familie, Hytte, Trening, Butikk, Sport, Kafé, Natur, Reise, Favoritt og Sted. Standard settes etter navn (Hjem, Jobb, Skole, Mormor → Familie), ellers Sted.
+  - **Farge:** 10 forhåndsvalgte, pluss regnbuerunding som åpner fri fargevelger (hvilken som helst farge, hex vises).
+  - Gjelder både «Ny sone» og eksisterende soner. ✎ på en sone åpner redigering av navn, ikon, farge og radius, og endringer lagres med en gang.
+  - Sonelisten viser ikonet i en fylt sirkel i sonens farge. Kartet viser ikonet i sentrum av sonen (hvit kant) med navnet under.
+  - For Claude Code: lagre `icon` (nøkkel) og `color` (hex) per sone i `/api/familie/soner`. iOS `ColorPicker`, Android egen fargevelger (HSV-hjul). Bruk SF Symbols / Material Symbols som tilsvarer nøklene.
+- 2026-10-18: «gi nøyaktig dette designet for familie siden til både andorid og ios. nøyaktig likt.»
+  - Skrevet `prompts/claude-code-familie-design.md`: full spesifikasjon av Familie-siden etter `Familie.dc.html`. Tokens (lys og mørk), fonter, radier og avstander. Topp, fanelinje uten FAB, verktøyrad over kartet, kart med Kartverket-fliser (ikke Apple Maps, så iOS og Android blir like), soner med ikon og farge, personpins med profilbilde, personkort, lister, Soner-redigering, Helse. Ikontabell med SF Symbols og Material Symbols, datamodell og pikseltest på iPhone og Pixel.
+
+## Tilhørende filer
+- `claude-code-standard-tema.md`
+- `claude-code-huske-ha.md`
+- `claude-code-sporing-status.md`
+- `claude-code-familie-nav.md`
+- `claude-code-familie-design.md`
+- `claude-code-kart-fiks.md` (fra prompt 20/21)
+- `claude-code-pakke-logo.md` (fra prompt 21)
+- `claude-code-logobibliotek.md` (fra prompt 20)
