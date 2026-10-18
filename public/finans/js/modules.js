@@ -1,6 +1,6 @@
 // FinansHub v2-moduler i sidemenyen: Subscription OS, Delte mapper, Finn-handler og Import.
 // Samme mønster som desktop.js: sidene tegnes fra S, hendelser fanges med delegering (data-m*-attributter).
-import { S, api, esc, n0, n2, sgn, dd, today, render, toast, loadBoot, accs, logo, aiLine, ICONS, parseAmount, ini, smooth } from './core.js';
+import { S, api, esc, n0, n2, sgn, dd, today, render, toast, loadBoot, accs, logo, aiLine, ICONS, parseAmount, ini, smooth, icon } from './core.js';
 import { finnPage as finnDesk, loadFinn as loadFinnDesk, bindFinn } from './finn-desktop.js'; // Finn-handler med detaljside
 import { subPage, loadSubs, bindSubs } from './subs-desktop.js'; // Subscription OS: Oversikt og Kalender
 
@@ -89,100 +89,208 @@ function receiptsCard(cur) {
   return `${drop}${card(`<div class="card-h" style="align-items:baseline"><h3>Kvitteringer</h3><span class="note" style="font-size:12.5px">${list.length} lagret i ${esc(cur.name)}</span></div>${grid ? `<div class="bol-rcs">${grid}</div>` : '<div class="note" style="font-size:13.5px">Ingen kvitteringer ennå.</div>'}`, 'padding:20px;gap:14px')}`;
 }
 
+// Boliger (design «Boliger» web): boligvelger som piller, fanene Oversikt · Utgifter · Prosjekter · Regninger · Tilgang.
+// Budsjett, farge og varselvalg lagres på boligen når serveren tar imot dem, og ellers lokalt i nettleseren.
+const BOL_COLORS = ['#2f6b45', '#2b5d8a', '#7a3f6e', '#a8661b', '#b23a2a', '#3f4655'];
+const META_KEY = 'fh_bol_meta';
+const metaAll = () => { try { return JSON.parse(localStorage.getItem(META_KEY) || '{}'); } catch { return {}; } };
+const bolMeta = (f) => { const m = metaAll()[f.id] ?? {}; return { budget: f.budget ?? m.budget ?? null, color: f.color ?? m.color ?? BOL_COLORS[(f.id - 1) % BOL_COLORS.length], autoCat: f.autoCat ?? m.autoCat ?? true, notify: f.notify ?? m.notify ?? true }; };
+async function setBolMeta(f, patch) {
+  const all = metaAll(); all[f.id] = { ...all[f.id], ...patch };
+  try { localStorage.setItem(META_KEY, JSON.stringify(all)); } catch { /* privat modus */ }
+  if (f.isOwner) { try { S.folder = await api(`/folders/${f.id}`, { method: 'PATCH', json: patch }); } catch { /* eldre server: beholdes lokalt */ } }
+}
+const BOL_TABS2 = [['ov', 'Oversikt'], ['ut', 'Utgifter'], ['pr', 'Prosjekter'], ['rg', 'Regninger'], ['acc', 'Tilgang']];
+const CAT_GLYPH = { Strøm: '⚡', Vaktmester: '⌂', Vedlikehold: '⚒', 'Kommunale avgifter': '▤', Forsikring: '◈', Hage: '✿', 'Hage og uteområde': '✿', Håndverker: '⚒', Renhold: '✧', Møbler: '▭', Internett: '⌁', Oppvarming: '♨' };
+const glyph = (c) => CAT_GLYPH[c] ?? (String(c ?? '?').slice(0, 1).toUpperCase());
+const tint = (c) => `color-mix(in oklab,${c} 16%,transparent)`;
+const ROLE_TXT = { owner: ['Eier', 'Full tilgang, kan invitere og slette'], editor: ['Kan laste opp', 'Legger til kvitteringer og utgifter'], viewer: ['Kan se', 'Ser oversikt og kvitteringer'] };
+const inReview = (e) => e.pending || e.status === 'review' || e.review === true;
+const avColor = (n) => BOL_COLORS[[...String(n ?? '')].reduce((a, ch) => a + ch.charCodeAt(0), 0) % BOL_COLORS.length];
+const ini2 = (n) => esc(String(n ?? '?').trim().split(/\s+/).map((w) => w[0]).join('').slice(0, 2).toUpperCase() || '?');
+const topCats = (cur) => (cur.catTree ?? []).filter((o) => !o.sub);
+
+function bolTile(cur, e, sz = 44) {
+  if (e.receiptId) return `<span class="bol2-tile" style="width:${sz}px;height:${sz}px"><img src="/finans/api/folders/${cur.id}/receipts/${e.receiptId}/thumb" alt="" loading="lazy"></span>`;
+  return `<span class="bol2-tile" style="width:${sz}px;height:${sz}px;background:${tint(e.color ?? '#8a8478')};color:${e.color ?? 'var(--muted)'}">${esc(glyph(e.category))}</span>`;
+}
+function catChipRow(cur, e) {
+  const tops = topCats(cur); const curId = tops.find((o) => o.label === e.category)?.id ?? e.categoryId;
+  const list = [...tops.filter((o) => o.id === curId), ...tops.filter((o) => o.id !== curId)].slice(0, 6);
+  return `<div class="bol2-chips">${list.map((o) => `<button class="bol2-chip${o.id === curId ? ' on' : ''}" data-bol2-cat="${e.id}:${o.id}"><i style="background:${(cur.categories ?? []).find((c) => c.name === o.label)?.color ?? 'var(--muted)'}"></i>${esc(o.label)}</button>`).join('')}</div>`;
+}
+function reviewCards(cur) {
+  const list = cur.entries.filter(inReview);
+  if (!list.length) return '';
+  return `<div class="bol2-lab"><span>TIL GJENNOMGANG · ${list.length}</span>${cur.canEdit && list.some((e) => !e.pending) ? '<button class="link-btn" data-bol2-act="ok-all">Godkjenn alle</button>' : ''}</div>
+    ${list.map((e) => `<div class="bol2-rev"><div class="bol2-rev-h">${bolTile(cur, e)}<span class="grow ell-wrap"><b class="ell">${esc(e.description)}</b><span class="note">${e.pending ? '✦ AI leser kvitteringen …' : `✦ AI foreslår ${esc(e.categoryLabel ?? e.category)} · ${esc(e.paidBy)}`}</span></span><b class="mono">${e.pending ? '…' : kr0(e.amount)}</b></div>
+      ${e.pending || !cur.canEdit ? '' : catChipRow(cur, e)}
+      <div class="bol2-rev-b"><button class="btn" data-bol2-open="${e.id}">Detaljer</button>${cur.canEdit ? `<button class="btn pri" data-bol2-ok="${e.id}"${e.pending ? ' disabled' : ''}>Godkjenn</button>` : ''}</div></div>`).join('')}`;
+}
+function entryLine(cur, e, i, full = false) {
+  const rv = inReview(e);
+  return `<button class="bol2-row${i ? '' : ' first'}" data-bol2-open="${e.id}">${bolTile(cur, e, 40)}<span class="grow ell-wrap"><b class="ell">${esc(e.description)}</b><span class="note ell" style="${rv ? 'color:var(--acc-l)' : ''}">${esc(dd(e.date))} · ${esc(e.categoryLabel ?? e.category)}${full ? ` · ${esc(e.paidBy)}` : ''}${e.project ? ` · ${esc(e.project)}` : ''}</span></span>
+    <span class="bol2-row-r"><b class="mono">${e.pending ? '…' : kr0(e.amount)}</b>${e.pending ? '<small>Leses av AI</small>' : rv ? '<small>Til gjennomgang</small>' : e.receiptId ? '<small>⎙ Kvittering</small>' : ''}</span></button>`;
+}
+function detailSheet(cur) {
+  const e = cur.entries.find((x) => x.id === u.bolSel);
+  if (!e) return '';
+  const rv = inReview(e), mem = cur.members.length || 1;
+  return `<div class="bol2-modal" data-bol2-back><div class="bol2-sheet" role="dialog" aria-modal="true" aria-label="${esc(e.description)}">
+    <div class="bol2-sheet-h"><div><div class="bol2-kick">${esc(cur.name.toUpperCase())} · ${e.pending ? 'LESES AV AI' : rv ? 'TIL GJENNOMGANG' : 'GODKJENT'}</div><h3>${esc(e.description)}</h3></div><button class="x-btn" data-bol2-act="close" aria-label="Lukk">×</button></div>
+    <div class="bol2-sheet-top">${e.receiptId ? `<a class="bol2-rc" href="/finans/api/folders/${cur.id}/receipts/${e.receiptId}/file" target="_blank" rel="noopener" title="Åpne kvitteringen"><img src="/finans/api/folders/${cur.id}/receipts/${e.receiptId}/thumb" alt=""></a>` : '<span class="bol2-rc empty"></span>'}
+      <div class="grow" style="min-width:0"><div class="bol2-amt">${e.pending ? '…' : kr0(e.amount)}</div><div class="note">${esc(dd(e.date))} · lagt til av ${esc(e.paidBy)}</div>${e.aiShort ? `<div class="bol2-ai">✦ ${esc(e.aiShort)}</div>` : ''}</div></div>
+    ${cur.canEdit && !e.pending ? `<div class="note" style="font-size:13px">Kategori</div>${catChipRow(cur, e)}` : ''}
+    ${cur.canEdit && mem > 1 ? `<div class="bol2-opt"><span><b>Betalt av</b><span class="note">Fordeles etter boligens nøkkel (${cur.split === 'equal' ? `likt på ${mem}` : 'egen nøkkel'})</span></span><select class="inp" data-bol2-paid="${e.id}">${cur.members.map((m) => `<option${m.name === e.paidBy ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}</select></div>` : ''}
+    ${e.receiptId ? `<a class="bol2-opt" href="/finans/api/folders/${cur.id}/receipts/${e.receiptId}/file" target="_blank" rel="noopener"><b>Original kvittering</b><span class="note">Åpne ›</span></a>` : ''}
+    ${cur.canEdit ? `<div class="bol2-sheet-b"><button class="btn bol2-del" data-bol2-del="${e.id}">${u.bolDelE === e.id ? 'Trykk igjen for å slette' : 'Slett'}</button><button class="btn pri" data-bol2-ok="${e.id}"${e.pending ? ' disabled' : ''}>${rv ? 'Godkjenn' : 'Lagre'}</button></div>` : ''}
+  </div></div>`;
+}
+function newHomeSheet() {
+  if (!u.bolNew) return '';
+  return `<div class="bol2-modal" data-bol2-back><form class="bol2-sheet" data-mform="folder" role="dialog" aria-modal="true" aria-label="Ny bolig">
+    <div class="bol2-sheet-h"><div><div class="bol2-kick">FINANS · BOLIGER</div><h3>Ny bolig</h3></div><button type="button" class="x-btn" data-bol2-act="close" aria-label="Lukk">×</button></div>
+    <label class="bol2-f">Navn<input class="inp" name="name" placeholder="F.eks. Hytta Geilo" required></label>
+    <label class="bol2-f">Adresse<input class="inp" name="address" placeholder="Valgfritt"></label>
+    <label class="bol2-f">Type<select class="inp" name="type">${optList(TYPES.map((t) => [t, t]), 'Hytte')}</select></label>
+    <div class="note" style="font-size:12.5px">Du kan dele boligen og sette budsjett under Tilgang etterpå.</div>
+    <div class="bol2-sheet-b"><button type="button" class="btn" data-bol2-act="close">Avbryt</button><button class="btn pri">Opprett</button></div></form></div>`;
+}
+function accessTab(cur, meta) {
+  const ownerCount = cur.members.filter((m) => m.role === 'owner').length;
+  const rows = cur.members.map((m, i) => {
+    const [rn, rd] = ROLE_TXT[m.role] ?? ROLE_TXT.editor;
+    const canChange = cur.isOwner && !(m.role === 'owner' && ownerCount < 2);
+    return `<div class="bol2-mem${i ? '' : ' first'}"><span class="bol2-av" style="background:${avColor(m.name)}">${ini2(m.name)}</span><span class="grow ell-wrap"><b class="ell">${esc(m.name)}</b><span class="note">${rd}${m.you ? ' · deg' : ''}${m.login ? '' : ' · uten innlogging'}</span></span>
+      ${canChange ? `<select class="bol2-role" data-brole="${cur.id}:${m.id}" aria-label="Tilgang for ${esc(m.name)}">${Object.entries(ROLE_TXT).map(([k, [n]]) => `<option value="${k}"${k === m.role ? ' selected' : ''}>${n}</option>`).join('')}</select>` : `<span class="bol2-role ro">${rn}</span>`}
+      ${(cur.isOwner && !m.you) || (m.you && !(m.role === 'owner' && ownerCount < 2)) ? `<button class="bol2-rm" data-brm="${cur.id}:${m.id}"${m.you ? ' data-leave="1"' : ''} aria-label="${m.you ? 'Forlat boligen' : `Fjern ${esc(m.name)}`}" title="${m.you ? 'Forlat boligen' : 'Fjern'}">−</button>` : ''}</div>`;
+  }).join('');
+  const role = u.bolInvRole ?? 'editor';
+  const invite = cur.isOwner ? `<div class="card bol2-card"><h3 class="bol2-h">Inviter</h3><form class="bol2-inv" data-mform="bol2-invite"><input class="inp" name="who" placeholder="Brukernavn eller navn" required list="bol2-users">
+      <datalist id="bol2-users">${(S.users ?? []).filter((x) => !cur.members.some((m) => m.userId === x.id)).map((x) => `<option value="${esc(x.username)}">${esc(x.name ?? x.username)}</option>`).join('')}</datalist>
+      <div class="bol2-seg">${Object.entries(ROLE_TXT).map(([k, [n]]) => `<button type="button" class="${k === role ? 'on' : ''}" data-bol2-irole="${k}">${n}</button>`).join('')}</div>
+      <div class="note" style="font-size:12.5px">${ROLE_TXT[role][1]}.</div><button class="btn pri bol2-wide">Send invitasjon</button></form></div>` : '';
+  const sw = (k, on, t, s) => `<label class="bol2-tog"><span><b>${t}</b><span class="note">${s}</span></span><input type="checkbox" data-bol2-meta="${k}"${on ? ' checked' : ''}${cur.isOwner ? '' : ' disabled'}><i></i></label>`;
+  const about = `<div class="card bol2-card"><h3 class="bol2-h">Om boligen</h3>
+    <label class="bol2-f">Navn<input class="inp" data-bol2-field="name" value="${esc(cur.name)}"${cur.isOwner ? '' : ' disabled'}></label>
+    <label class="bol2-f">Adresse<input class="inp" data-bol2-field="address" value="${esc(cur.address ?? '')}"${cur.isOwner ? '' : ' disabled'}></label>
+    <label class="bol2-f">Månedsbudsjett (kr)<input class="inp mono" data-bol2-field="budget" inputmode="numeric" value="${meta.budget ?? ''}" placeholder="Ikke satt"${cur.isOwner ? '' : ' disabled'}></label>
+    <div class="bol2-f">Farge<div class="bol2-sw">${BOL_COLORS.map((c) => `<button type="button" style="background:${c}" class="${c === meta.color ? 'on' : ''}" data-bol2-color="${c}" aria-label="Farge ${c}"${cur.isOwner ? '' : ' disabled'}></button>`).join('')}</div></div>
+    ${sw('autoCat', meta.autoCat, 'AI-kategorisering', 'Kvitteringer over 90 % sikkerhet godkjennes automatisk')}
+    ${sw('notify', meta.notify, 'Varsle ved nye utgifter', 'Push når noen laster opp en kvittering')}
+    ${cur.isOwner ? `<button class="btn bol2-del bol2-wide" data-bol2-act="del-home">${u.bolDelH === cur.id ? `Trykk igjen for å slette ${esc(cur.name)}` : `Slett ${esc(cur.name)}`}</button>` : ''}</div>`;
+  return `<div class="bol2-cols"><div class="bol2-col"><div class="card bol2-card"><h3 class="bol2-h">Hvem har tilgang</h3>${rows}</div>${invite}</div><div class="bol2-col">${about}</div></div>`;
+}
+
 function dirPage() {
   const list = S.folders;
   if (!list) return skel(400);
   const cur = S.folder;
-  const mode = u.dirMode ?? 'new';
   const me = S.boot.me ?? {};
-  const cards = list.map((f) => {
-    const others = f.members.filter((m) => !m.you).map((m) => m.name);
-    return `<button class="dir-card bol-pick${cur?.id === f.id ? ' on' : ''}" data-mdir="${f.id}" role="tab" aria-selected="${cur?.id === f.id}"><span class="bol-pick-ic" aria-hidden="true">${bolIcon(f.type)}</span><span class="bol-pick-t"><b>${esc(f.name)}</b><span class="note">${esc(f.type || 'Bolig')} · ${others.length ? 'delt med ' + esc(others.join(', ')) : 'bare deg'}</span></span><span class="mono bol-pick-v">${kr0(f.yearTotal)}<small>i år</small></span></button>`;
+  const monthIdx = new Date().getMonth(), monName = MONTHS_LONG[monthIdx];
+  const pills = list.map((f) => {
+    const on = cur?.id === f.id, m = bolMeta(f);
+    const v = on && cur.months?.length ? `${kr0(cur.months[cur.months.length - 1].total)} i ${monName.slice(0, 3)}` : `${kr0(f.yearTotal)} i år`;
+    return `<button class="bol2-pill${on ? ' on' : ''}" data-mdir="${f.id}" role="tab" aria-selected="${on}"><span class="bol2-ini" style="background:${m.color}">${esc(f.name.slice(0, 1).toUpperCase())}</span><span class="bol2-pill-t"><b>${esc(f.name)}</b><small>${v}</small></span></button>`;
   }).join('');
-  const left = `<div class="bol-switch" role="tablist" aria-label="Boliger">${cards || `<div class="card note" style="padding:16px;font-size:13.5px">Ingen boliger er delt med ${esc(me.name ?? 'deg')} ennå.</div>`}${toBolSettings}</div>`;
-  if (!cur) return `<div class="bol-wrap">${left}</div>`;
+  const sumAll = `${list.length} bolig${list.length === 1 ? '' : 'er'} · ${kr0(list.reduce((a, f) => a + (f.yearTotal ?? 0), 0))} i år`;
+  const top = `<div class="bol2-top"><div class="bol2-pills" role="tablist" aria-label="Boliger">${pills}<button class="bol2-pill add" data-bol2-act="new-home">+ Ny bolig</button></div><span class="note bol2-sum">${sumAll}</span></div>`;
+  if (!cur) return `<div class="bol2">${top}${list.length ? '' : `<div class="card note" style="padding:18px;font-size:14px">Ingen boliger er delt med ${esc(me.name ?? 'deg')} ennå. Trykk «+ Ny bolig» for å lage den første.</div>`}${newHomeSheet()}</div>`;
 
-  const k = cur.kpi;
-  const pctStrom = k.stromPrev ? Math.round((k.stromNow / k.stromPrev - 1) * 100) : null;
-  const kpis = [['Brukt i år', kr0(k.yearTotal), `${k.count} utgifter og kvitteringer`], ['Snitt per måned', kr0(k.perMonth), k.months > 1 ? `januar–${MONTHS_LONG[k.months - 1]}` : 'januar'],
-    ['Strøm i år', kr0(k.stromYear), `Denne måneden ${kr0(k.stromNow)}${pctStrom !== null ? ` · ${pctStrom >= 0 ? '+' : '−'}${Math.abs(pctStrom)} % mot forrige` : ''}`],
-    cur.projects.length ? ['Igjen på prosjekter', kr0(k.projectsLeft), k.projectNames.join(', ')] : ['Kategorier', String(k.catCount), 'med utgifter i år']]
-    .map(([l, v, sub]) => `<div class="card mod-kpi"><span class="note" style="font-size:13px">${l}</span><b class="mono">${v}</b><span class="muted" style="font-size:12px">${esc(sub)}</span></div>`).join('');
-  const mMax = Math.max(1, ...cur.months.map((m) => m.total));
-  const top = cur.months.reduce((a, m) => (m.total > a.total ? m : a), cur.months[0] ?? { total: 0, label: '' });
-  const catColor = Object.fromEntries(cur.categories.map((c) => [c.name, c.color]));
-  const chart = `<div class="dir-chart">${cur.months.map((m) => `<div class="dir-col" title="${m.label}: ${n0(m.total)} kr"><div class="dir-bar" style="height:${(m.total / mMax) * 100}%">${Object.entries(m.byCat).sort((a, b) => b[1] - a[1]).map(([c, v]) => `<span style="flex:${Math.max(1, Math.round(v))} 1 0;background:${u.dcat && u.dcat !== c ? 'var(--line2)' : catColor[c] ?? '#6E6E78'}"></span>`).join('')}</div><span>${m.label}</span></div>`).join('')}</div>`;
-  // Kategorier med fordeling på underkategorier.
-  const catsHtml = cur.categories.map((c) => `<div class="dir-catg"><button class="dir-cat${u.dcat === c.name ? ' on' : ''}" data-mdcat="${esc(c.name)}" style="--c:${c.color}"><span class="dir-cat-h"><span><i style="background:${c.color}"></i>${esc(c.name)}</span><span class="mono">${kr0(c.sum)}</span></span><span class="prog"><i style="width:${c.pct}%;background:${c.color}"></i></span></button>
-    ${(c.subs ?? []).length ? `<div class="dir-subs">${c.subs.map((x) => `<span class="dir-sub"><span class="ell">${esc(x.name)}</span><span class="dir-sub-bar"><i style="width:${x.pct}%;background:${c.color}"></i></span><span class="mono">${kr0(x.sum)}</span></span>`).join('')}</div>` : ''}</div>`).join('') || '<div class="note">Ingen utgifter i år.</div>';
-  const projects = cur.projects.map((p) => {
-    const over = p.remaining < 0;
-    return `<div class="dir-proj"><div class="dir-proj-h"><div><b>${esc(p.name)}</b><div class="note" style="font-size:12.5px">${esc(p.vendor)} · ${esc(p.category)}</div></div><div style="text-align:right"><b class="mono">${n0(p.spent)} / ${n0(p.budget)} kr</b><div style="font-size:12px;color:${over ? 'var(--neg)' : 'var(--dim)'}">${over ? `${n0(-p.remaining)} kr over budsjett` : `${n0(p.remaining)} kr gjenstår`}</div></div></div>
-      <div class="prog" style="height:8px"><i style="width:${Math.min(100, p.budget ? (p.spent / p.budget) * 100 : 0)}%;background:${over ? 'var(--neg)' : 'var(--acc)'}"></i></div>
-      <div>${p.installments.map((x) => `<div class="inst"><span class="inst-mark${x.paid ? ' on' : ''}">${x.paid ? '✓' : ''}</span><span class="grow">${esc(x.label)} <span class="muted" style="font-size:12.5px">· ${esc(/^\d{4}-\d{2}-\d{2}$/.test(x.due ?? '') ? dd(x.due) : x.due ?? '–')}</span></span><span class="mono">${kr0(x.amount)}</span>${!x.paid && cur.canEdit ? `<button class="btn sm pay" data-mpay="${x.id}">Registrer betalt</button>` : ''}</div>`).join('')}
-      ${cur.canEdit ? `<form class="inst-add" data-mform="inst" data-pid="${p.id}"><input class="inp" name="label" placeholder="Nytt avdrag" required><input class="inp" name="due" placeholder="Forfall dd.mm"><input class="inp" name="amount" placeholder="kr" inputmode="decimal" required><button class="btn sm">+</button></form>` : ''}</div></div>`;
-  }).join('') || '<div class="note" style="font-size:13.5px">Ingen prosjekter. Legg til et for å følge budsjett og avdrag til håndverkere.</div>';
-  const bills = cur.bills.map((b) => `<div class="bill"><span class="bill-ic" style="background:${b.color}22;color:${b.color}">${esc(b.category.slice(0, 1))}</span><span class="grow"><span style="display:block;font-size:14px">${esc(b.category)}</span><span class="note" style="font-size:12px">${esc(b.name)}${b.payer ? ' · ' + esc(b.payer) : ''} · ${esc(b.freq)}</span></span>
-    <span style="text-align:right"><b class="mono" style="display:block;font-size:14px">${b.last ? kr0(b.last.amount) : '–'}</b><span class="note" style="font-size:12px;white-space:nowrap">neste ${b.nextDue ? (/^\d{4}-\d{2}-\d{2}$/.test(b.nextDue) ? dd(b.nextDue) : esc(b.nextDue)) : '–'}</span></span>${cur.canEdit ? `<button class="x-btn sm" data-mbill-del="${b.id}" aria-label="Fjern regning">×</button>` : ''}</div>`).join('');
-  const names = cur.members.map((m) => m.name);
-  const billAdd = cur.canEdit ? `<form class="inst-add" data-mform="bill"><input class="inp" name="name" placeholder="Fra, f.eks. Fjordkraft" required><select class="inp" name="category">${optList(cur.catOptions.map((c) => [c, c]), 'Strøm')}</select><select class="inp" name="freq">${optList(cur.freqs.map((c) => [c, c]), 'Månedlig')}</select><select class="inp" name="payer">${optList([['', 'Hvem betaler'], ...names.map((n) => [n, n])], '')}</select><input class="inp" name="nextDue" placeholder="Neste dd.mm"><button class="btn sm">+</button></form>` : '';
-  const split = `<div style="display:flex;flex-direction:column;gap:6px;padding-top:6px"><span class="note" style="font-size:12.5px">Fordeling · ${cur.split === 'equal' ? 'likt delt' : 'egen nøkkel'}${cur.isOwner ? ` · <button class="link-btn" data-mact="split-edit">${u.splitEdit ? 'Lukk' : 'Endre'}</button>` : ''}</span>
-    <div class="dir-bal">${cur.balances.map((b) => `<span>${esc(b.name)} <b class="mono" style="color:${b.balance >= 0 ? 'var(--pos)' : 'var(--acc-l)'}">${b.balance >= 0 ? '+' : '−'}${n0(Math.abs(b.balance))} kr</b></span>`).join('')}</div>
-    ${u.splitEdit ? `<form class="inst-add" data-mform="split">${cur.members.map((m) => `<label class="note" style="font-size:12px;display:flex;flex-direction:column;gap:4px">${esc(m.name)}<input class="inp" name="w:${esc(m.name)}" value="${cur.weights[m.name] ?? 1}" inputmode="decimal" style="width:80px"></label>`).join('')}<button class="btn sm" name="equal" value="1">Likt</button><button class="btn sm pri">Lagre nøkkel</button></form>` : ''}</div>`;
-  const rows = cur.entries.filter((e) => !u.dcat || e.category === u.dcat);
-  const listHtml = rows.map((e) => `<div class="dir-row2">${logo({ ...e, color: '#A0A0AA' }, 30, 8)}<span class="grow ell-wrap"><span class="ell" style="display:block">${esc(e.description)}</span>
-    <span class="dir-meta">${cur.canEdit && !e.pending ? `<label class="mtag mtag-sel" style="background:${e.color}1F;color:${e.color}" title="Endre kategori">${e.aiCategory ? '✦ ' : ''}${esc(e.categoryLabel ?? e.category)}<select data-mentry-cat="${e.id}" aria-label="Kategori for ${esc(e.description)}">${(cur.catTree ?? []).map((o) => `<option value="${o.id}"${o.id === e.categoryId ? ' selected' : ''}>${esc(o.label)}</option>`).join('')}</select></label>`
-      : `<span class="mtag" style="background:${e.color}1F;color:${e.color}">${e.pending ? '✦ Kategoriseres …' : `${e.aiCategory ? '✦ ' : ''}${esc(e.categoryLabel ?? e.category)}`}</span>`}${e.project ? `<span class="mtag">${esc(e.project)}</span>` : ''}${dd(e.date)} · betalt av ${esc(e.paidBy)}</span>${aiLine(e.aiShort, 'd-ai')}</span>
-    <b class="mono" style="white-space:nowrap">${e.pending ? '…' : kr0(e.amount)}</b>${cur.canEdit ? `<button class="x-btn sm" data-mentry-del="${e.id}" aria-label="Fjern">×</button>` : ''}</div>`).join('') || '<div class="note" style="padding:18px 0;border-top:1px solid var(--sep)">Ingen utgifter her ennå.</div>';
+  const meta = bolMeta(cur);
+  const months = cur.months ?? [];
+  const spent = months[months.length - 1]?.total ?? 0, prev = months[months.length - 2]?.total ?? 0;
+  const dl = prev ? Math.round(((spent - prev) / prev) * 100) : null;
+  const bud = +meta.budget || 0, pct = bud ? Math.min(100, (spent / bud) * 100) : 0;
+  const rvN = cur.entries.filter(inReview).length;
+  const tab = BOL_TABS2.some(([k]) => k === u.bolTab) ? u.bolTab : 'ov';
+  const counts = { ut: cur.entries.length, pr: cur.projects.length, rg: (cur.upcoming ?? []).filter((x) => x.days <= 14).length || cur.bills.length, acc: cur.members.length };
+  const tabs = `<nav class="bol2-tabs" role="tablist" aria-label="Boligmeny">${BOL_TABS2.map(([k, n]) => `<button role="tab" aria-selected="${tab === k}" class="${tab === k ? 'on' : ''}" data-mbol-tab="${k}">${n}${counts[k] ? ` · ${counts[k]}` : ''}${k === 'ut' && rvN ? '<i class="bol2-dot"></i>' : ''}</button>`).join('')}</nav>`;
+
+  const hero = `<div class="bol2-hero" style="--hc:${meta.color}">
+    <div class="bol2-hero-h"><span class="bol2-ini lg">${esc(cur.name.slice(0, 1).toUpperCase())}</span><div class="grow" style="min-width:0"><div class="bol2-hero-n">${esc(cur.name)}</div><div class="bol2-hero-a">${esc(cur.address || cur.type || 'Bolig')}</div></div><span class="bol2-hero-m">${monName[0].toUpperCase() + monName.slice(1)}</span></div>
+    <div class="bol2-hero-l">Brukt denne måneden</div>
+    <div class="bol2-hero-v"><span>${kr0(spent)}</span>${dl !== null && prev ? `<span class="bol2-hero-d">${dl >= 0 ? '▲' : '▼'} ${Math.abs(dl)} % fra ${MONTHS_LONG[(monthIdx + 11) % 12]}</span>` : ''}</div>
+    ${bud ? `<div class="bol2-bar"><i style="width:${pct}%"></i></div><div class="bol2-hero-f"><span>av ${kr0(bud)} i budsjett</span><b>${spent > bud ? `${kr0(spent - bud)} over` : `${kr0(bud - spent)} igjen`}</b></div>`
+      : `<div class="bol2-hero-f"><span>${kr0(cur.kpi.yearTotal)} i år · snitt ${kr0(cur.kpi.perMonth)} per måned</span>${cur.isOwner ? '<button class="link-btn" data-mbol-tab="acc">Sett budsjett ›</button>' : ''}</div>`}</div>`;
+  const acts = cur.canEdit ? `<div class="bol2-acts">
+    <label class="bol2-act"><span class="bol2-act-ic red">${icon('scan', 18)}</span><b>Skann</b><input type="file" accept="image/*" capture="environment" data-mrc="folder" hidden></label>
+    <label class="bol2-act"><span class="bol2-act-ic">↑</span><b>Last opp</b><input type="file" multiple accept="image/*,application/pdf" data-mrc="folder" hidden></label>
+    <a class="bol2-act" href="#/inn" data-bol2-act="mail"><span class="bol2-act-ic">✉</span><b>Fra e-post</b></a>
+    <button class="bol2-act" data-bol2-act="new-entry"><span class="bol2-act-ic">+</span><b>Ny utgift</b></button></div>` : '';
+  // Kategorier denne måneden (ellers i år) som stablet stolpe og rader.
+  const byCat = Object.entries(months[months.length - 1]?.byCat ?? {}).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
+  const useYear = !byCat.length;
+  const catRows = useYear ? (cur.categories ?? []).map((c) => [c.name, c.sum]) : byCat;
+  const catTot = catRows.reduce((a, [, v]) => a + v, 0) || 1;
+  const colOf = (n) => (cur.categories ?? []).find((c) => c.name === n)?.color ?? '#8a8478';
+  const cntOf = (n) => cur.entries.filter((e) => e.category === n && (useYear || (e.date ?? '').startsWith(months[months.length - 1]?.month ?? '#'))).length;
+  const catsCard = catRows.length ? `<div class="card bol2-card"><div class="bol2-ch"><h3 class="bol2-h">Kategorier</h3><span class="note">${useYear ? 'I år' : monName[0].toUpperCase() + monName.slice(1)}</span></div>
+    <div class="bol2-stack">${catRows.map(([n, v]) => `<i style="flex:${Math.max(1, Math.round(v))} 1 0;background:${colOf(n)}" title="${esc(n)}"></i>`).join('')}</div>
+    ${catRows.map(([n, v]) => { const c = cntOf(n); return `<button class="bol2-crow" data-bol2-fcat="${esc(n)}"><span class="bol2-tile sm" style="background:${tint(colOf(n))};color:${colOf(n)}">${esc(glyph(n))}</span><span class="grow">${esc(n)} <span class="note">· ${c} utgift${c === 1 ? '' : 'er'}</span></span><span class="note">${Math.round((v / catTot) * 100)} %</span><b class="mono">${kr0(v)}</b></button>`; }).join('')}</div>` : '';
+  const hist = months.slice(-6), hMax = Math.max(1, ...hist.map((m) => m.total)), avg = hist.length > 1 ? hist.slice(0, -1).reduce((a, m) => a + m.total, 0) / (hist.length - 1) : 0;
+  const k = (v) => (v >= 1000 ? `${(v / 1000).toFixed(1).replace(/\.0$/, '')}k` : String(Math.round(v)));
+  const histCard = `<div class="card bol2-card"><div class="bol2-ch"><h3 class="bol2-h">Historikk</h3>${avg ? `<span class="note">Snitt ${kr0(avg)}</span>` : ''}</div><div class="bol2-hist">${hist.map((m, i) => { const last = i === hist.length - 1; return `<div class="bol2-hcol${last ? ' now' : ''}"><small class="mono">${k(m.total)}</small><span style="height:${Math.max(3, (m.total / hMax) * 100)}%"></span><b>${esc(m.label)}</b></div>`; }).join('') || '<div class="note">Ingen utgifter i år.</div>'}</div></div>`;
+  const recent = cur.entries.filter((e) => !inReview(e)).slice(0, 5);
+  const recentCard2 = `<div class="card bol2-card"><div class="bol2-ch"><h3 class="bol2-h">Siste utgifter</h3><button class="link-btn" data-mbol-tab="ut">Alle ›</button></div>${recent.map((e, i) => entryLine(cur, e, i)).join('') || '<div class="note" style="font-size:13.5px">Ingen utgifter ennå. Dra en kvittering inn på siden for å komme i gang.</div>'}</div>`;
+  const others = cur.members.filter((m) => !m.you);
+  const shareCard = `<button class="card bol2-card bol2-share" data-mbol-tab="acc"><span class="bol2-avs">${cur.members.slice(0, 4).map((m) => `<span class="bol2-av" style="background:${avColor(m.name)}">${ini2(m.name)}</span>`).join('')}</span><span class="grow"><b>${others.length ? `Delt med ${cur.members.length} personer` : 'Bare deg'}</b><span class="note">Hvem som kan se og laste opp</span></span><span class="note">›</span></button>`;
+
+  let body;
+  if (tab === 'ut') {
+    const qv = (u.bolQ ?? '').trim().toLowerCase();
+    const rows = cur.entries.filter((e) => (!u.dcat || e.category === u.dcat) && (!qv || [e.description, e.categoryLabel, e.category, e.project, e.paidBy, e.aiShort].some((x) => String(x ?? '').toLowerCase().includes(qv))));
+    const chips = [['', 'Alle'], ...(cur.categories ?? []).map((c) => [c.name, c.name])].map(([v, n]) => `<button class="bol2-fchip${(u.dcat ?? '') === v ? ' on' : ''}" data-mbol-cat="${esc(v)}">${esc(n)}</button>`).join('');
+    const view = u.bolView === 'rc' ? 'rc' : 'list';
+    body = `<div class="bol2-search">${icon('search', 16, 'var(--muted)')}<input type="search" placeholder="Søk i utgifter og kvitteringer" value="${esc(u.bolQ ?? '')}" data-mbol-q aria-label="Søk i utgifter"></div>
+      <div class="bol2-fchips">${chips}</div>
+      <div class="bol2-meta"><span class="note">${rows.length} utgift${rows.length === 1 ? '' : 'er'}</span><span class="bol2-view"><button class="${view === 'list' ? 'on' : ''}" data-bol2-view="list">Liste</button><button class="${view === 'rc' ? 'on' : ''}" data-bol2-view="rc">Kvitteringer</button></span><b class="mono">${kr0(rows.reduce((a, e) => a + e.amount, 0))}</b></div>
+      ${view === 'rc' ? receiptsCard(cur) : `<div class="card bol2-card">${rows.map((e, i) => entryLine(cur, e, i, true)).join('') || `<div class="note" style="padding:12px 0">${qv ? `Ingen treff på «${esc(u.bolQ)}».` : 'Ingen utgifter her ennå.'}</div>`}</div>`}`;
+  } else if (tab === 'pr') {
+    body = projectsTab(cur);
+  } else if (tab === 'rg') {
+    body = billsTab(cur);
+  } else if (tab === 'acc') {
+    body = accessTab(cur, meta);
+  } else {
+    body = `<div class="bol2-cols ov"><div class="bol2-col">${hero}${acts}${reviewCards(cur)}${catsCard}${(cur.upcoming ?? []).length ? upcomingCard(cur, 4, 'padding:20px;gap:6px') : ''}</div>
+      <div class="bol2-col">${histCard}${recentCard2}${cur.projects.length ? projMini(cur).replace('flex:3 1 340px;', '') : ''}${shareCard}</div></div>`;
+  }
+  const addSheet = u.bolAdd ? `<div class="bol2-modal" data-bol2-back><div class="bol2-sheet" role="dialog" aria-modal="true" aria-label="Ny utgift"><div class="bol2-sheet-h"><div><div class="bol2-kick">${esc(cur.name.toUpperCase())}</div><h3>Ny utgift</h3></div><button class="x-btn" data-bol2-act="close" aria-label="Lukk">×</button></div>${addBoxHtml(cur)}</div></div>` : '';
+  return `<div class="bol2" data-bol-drop>${top}${tabs}${body}${detailSheet(cur)}${addSheet}${newHomeSheet()}
+    ${cur.canEdit ? '<div class="bol-dropover" aria-hidden="true"><b>Slipp kvitteringene her</b><span>✦ AI leser butikk, dato og beløp, og velger kategori</span></div>' : ''}</div>`;
+}
+function addBoxHtml(cur) {
+  const mode = u.dirMode ?? 'new', names = cur.members.map((m) => m.name);
   const tgt = target(), other = tgt !== cur.id;
-  const addBox = editable().length ? `<div class="mod-box"><div class="bol-add-h"><b>Legg til utgift eller kvittering</b>${legg(cur)}</div>${modes('dir', mode)}
-    ${other ? `<div class="note" style="font-size:12.5px">Havner i <b style="color:var(--acc-l)">${esc(targetName())}</b>.</div>` : ''}
-    ${mode === 'new' ? `<form class="mod-grid" data-mform="entry"><input class="inp" name="description" placeholder="Beskrivelse, f.eks. Plantasjen" required><input class="inp" name="amount" placeholder="Beløp" inputmode="decimal" required>
+  if (!editable().length) return '<div class="note">Du har lesetilgang. Be en eier om redigeringstilgang.</div>';
+  return `${legg(cur)}${modes('dir', mode)}${other ? `<div class="note" style="font-size:12.5px">Havner i <b style="color:var(--acc-l)">${esc(targetName())}</b>.</div>` : ''}
+    ${mode === 'new' ? `<form class="bol2-form" data-mform="entry"><input class="inp" name="description" placeholder="Beskrivelse, f.eks. Plantasjen" required><input class="inp" name="amount" placeholder="Beløp" inputmode="decimal" required>
       ${catSelect('categoryId', other ? S.bolCats?.options ?? cur.catTree : cur.catTree, '', 'Kategori: ✦ AI velger')}<select class="inp" name="projectId">${optList([['', 'Uten prosjekt'], ...(other ? [] : cur.projects.map((p) => [p.id, p.name]))], '')}</select>
       ${other ? '' : `<select class="inp" name="paidBy">${optList(names.map((n) => [n, 'Betalt av ' + n]), cur.members.find((m) => m.you)?.name)}</select>`}<button class="btn pri">Legg til</button></form>`
-      : mode === 'rc' ? `<label class="mod-drop"><b>Last opp kvitteringer og regninger</b><span>Flere filer · AI leser butikk, dato og beløp, og velger kategori og underkategori</span><input type="file" multiple accept="image/*,application/pdf" data-mrc="folder" hidden></label>`
-      : S.boot.restricted ? '<div class="note" style="padding:12px">Transaksjoner fra regnskapet kan bare flyttes hit av en administrator.</div>' : txPick('folder')}
-    <div class="note" style="font-size:12px">✦ AI velger kategori og underkategori${S.bolCats?.aiNew === false ? '' : ', og lager en ny når ingen passer'}. Du kan endre den i listen.</div></div>`
-    : '<div class="card note" style="padding:12px 14px;font-size:13px">Du har lesetilgang. Be en eier om redigeringstilgang for å legge til utgifter og kvitteringer.</div>';
-  // Kortene i rekkefølgen fra Innstillinger → Boliger → Oppsett av boligsiden.
-  const block = {
-    kpi: `<div class="mod-kpis">${kpis}</div>`,
-    months: card(`<div class="card-h" style="align-items:baseline"><h3>Utgifter per måned</h3><span class="note" style="font-size:12.5px">${top.total ? `Høyeste: ${top.label} · ${kr0(top.total)}` : ''}</span></div>${chart}`, 'flex:2 1 380px;padding:20px;gap:14px'),
-    cats: card(`<div class="card-h" style="align-items:baseline"><h3>Kategorier</h3>${u.dcat ? '<button class="link-btn" data-mact="dcat-clear">Vis alle</button>' : ''}</div><div style="display:flex;flex-direction:column;gap:6px">${catsHtml}</div>`, 'flex:1 1 260px;padding:20px;gap:14px'),
-    projects: card(`<h3>Prosjekter</h3>${projects}${cur.canEdit ? '<form class="inst-add" data-mform="project"><input class="inp" name="name" placeholder="Nytt prosjekt, f.eks. Ny terrasse" required style="flex:2 1 160px"><input class="inp" name="vendor" placeholder="Håndverker"><input class="inp" name="budget" placeholder="Budsjett kr" inputmode="decimal" required><button class="btn pri sm">Legg til</button></form>' : ''}`, 'flex:3 1 380px;padding:20px;gap:14px'),
-    bills: card(`<h3>Faste regninger</h3>${bills || '<div class="note" style="font-size:13.5px">Ingen faste regninger.</div>'}${billAdd}${split}`, 'flex:2 1 260px;padding:20px;gap:10px'),
-    add: addBox,
-    entries: card(`<div class="card-h" style="padding:12px 0"><h3>${esc(u.dcat || 'Alle utgifter')}</h3><span class="note" style="font-size:12.5px">${rows.length} poster · ${kr0(rows.reduce((a, e) => a + e.amount, 0))}</span></div>${listHtml}`, 'padding:8px 20px;gap:0'),
-  };
-  const lay = cur.layout ?? { order: Object.keys(block), hid: [] };
-  const tab = BOL_TABS.some(([k]) => k === u.bolTab) ? u.bolTab : 'ov';
-  // Oversikt: kortene i rekkefølgen fra Innstillinger → Boliger → Oppsett av boligsiden, med kommende forfall og siste poster.
-  const ovBlock = { ...block, bills: upcomingCard(cur, 6), entries: recentCard(cur), projects: cur.projects.length ? projMini(cur) : '' };
-  const shown = lay.order.filter((id) => ovBlock[id] && !lay.hid.includes(id) && (tab !== 'ov' || id !== 'add'));
-  const PAIRS = [['months', 'cats'], ['projects', 'bills']];
-  const parts = [];
-  for (let i = 0; i < shown.length; i++) {
-    const a = shown[i], b2 = shown[i + 1];
-    if (PAIRS.some(([x, y]) => (a === x && b2 === y) || (a === y && b2 === x))) { parts.push(`<div class="row-flex">${ovBlock[a]}${ovBlock[b2]}</div>`); i++; }
-    else parts.push(PAIRS.some((pr) => pr.includes(a)) ? `<div class="row-flex">${ovBlock[a]}</div>` : ovBlock[a]);
-  }
-  const body = tab === 'ut' ? `${addBox}${timelineCard(cur)}`
-    : tab === 'pr' ? `${block.projects}`
-    : tab === 'rg' ? `<div class="row-flex">${upcomingCard(cur, 40, 'flex:1 1 320px;padding:20px;gap:6px')}${block.bills}</div>`
-    : tab === 'kv' ? receiptsCard(cur)
-    : parts.join('\n') || '<div class="card note" style="padding:16px">Alle kortene er skjult. Velg hva som vises under Innstillinger → Boliger → Oppsett av boligsiden.</div>';
-  const shared = cur.members.filter((m) => !m.you);
-  const nUp = (cur.upcoming ?? []).filter((x) => x.days <= 14).length;
-  const counts = { ut: cur.entries.length, pr: cur.projects.length, rg: nUp || cur.bills.length, kv: (cur.receipts ?? []).length };
-  const hero = `<div class="bol-hero" style="--bh:${bolHue(cur.type)}">
-    <div class="bol-hero-t"><span class="bol-hero-ic" aria-hidden="true">${bolIcon(cur.type, 26)}</span><div style="min-width:0"><div class="bol-hero-k">${esc(cur.type || 'Bolig')}${cur.myRole ? ` · ${esc(cur.myRole.toLowerCase())}` : ''}</div><h2 class="bol-hero-n">${esc(cur.name)}</h2><div class="bol-hero-a">${esc(cur.address || 'Ingen adresse')}</div></div></div>
-    <div class="bol-hero-r"><div class="bol-avs">${cur.members.slice(0, 5).map((m) => `<span class="bol-av" title="${esc(m.name)}${m.you ? ' (deg)' : ''} · ${esc(m.roleName)}">${short(m.name)}</span>`).join('')}${shared.length ? '' : '<span class="note" style="font-size:12.5px">Bare deg</span>'}</div>
-      ${cur.canEdit ? `<div class="bol-acts"><label class="btn pri sm">↑ Last opp kvittering<input type="file" multiple accept="image/*,application/pdf" data-mrc="folder" hidden></label><button class="btn sm" data-mbol-tab="ut" data-mbol-add="1">+ Ny utgift</button><a class="btn sm ghost" href="#/inn" data-mact="bol-settings">Deling</a></div>` : ''}</div>
-  </div>`;
-  const tabs = `<nav class="bol-tabs" role="tablist" aria-label="Boligmeny">${BOL_TABS.map(([key, name]) => `<button role="tab" aria-selected="${tab === key}" class="bol-tab${tab === key ? ' on' : ''}" data-mbol-tab="${key}">${name}${counts[key] ? `<span class="bol-tab-n">${counts[key]}</span>` : ''}</button>`).join('')}</nav>`;
-  const right = `<div class="dir-main bol-main"${cur.canEdit ? ' data-bol-drop' : ''}>${hero}${tabs}${body}
-    ${cur.canEdit ? '<div class="bol-dropover" aria-hidden="true"><b>Slipp kvitteringene her</b><span>✦ AI leser butikk, dato og beløp, og velger kategori</span></div>' : ''}</div>`;
-  return `<div class="bol-wrap">${left}${right}</div>`;
+      : mode === 'rc' ? `<label class="mod-drop"><b>Last opp kvitteringer og regninger</b><span>Flere filer · AI leser butikk, dato og beløp, og velger kategori</span><input type="file" multiple accept="image/*,application/pdf" data-mrc="folder" hidden></label>`
+      : S.boot.restricted ? '<div class="note" style="padding:12px">Transaksjoner fra regnskapet kan bare flyttes hit av en administrator.</div>' : txPick('folder')}`;
+}
+function projectsTab(cur) {
+  const list = cur.projects.map((p) => {
+    const over = p.remaining < 0;
+    return `<div class="card bol2-card"><div class="bol2-ch"><div style="min-width:0"><h3 class="bol2-h">${esc(p.name)}</h3><div class="note">${esc(p.vendor || 'Uten håndverker')} · ${esc(p.category)}</div></div><div style="text-align:right"><b class="mono">${n0(p.spent)} / ${n0(p.budget)} kr</b><div class="note" style="color:${over ? 'var(--neg)' : ''}">${over ? `${n0(-p.remaining)} kr over budsjett` : `${n0(p.remaining)} kr igjen`}</div></div></div>
+      <div class="bol2-bar thin"><i style="width:${Math.min(100, p.budget ? (p.spent / p.budget) * 100 : 0)}%;background:${over ? 'var(--neg)' : 'var(--acc)'}"></i></div>
+      ${p.installments.map((x) => `<div class="inst"><span class="inst-mark${x.paid ? ' on' : ''}">${x.paid ? '✓' : ''}</span><span class="grow">${esc(x.label)} <span class="muted" style="font-size:12.5px">· ${esc(/^\d{4}-\d{2}-\d{2}$/.test(x.due ?? '') ? dd(x.due) : x.due ?? '–')}</span></span><span class="mono">${kr0(x.amount)}</span>${!x.paid && cur.canEdit ? `<button class="btn sm pay" data-mpay="${x.id}">Marker betalt</button>` : ''}</div>`).join('')}
+      ${cur.canEdit ? `<form class="inst-add" data-mform="inst" data-pid="${p.id}"><input class="inp" name="label" placeholder="Nytt avdrag" required><input class="inp" name="due" placeholder="Forfall dd.mm"><input class="inp" name="amount" placeholder="kr" inputmode="decimal" required><button class="btn sm">+</button></form>` : ''}</div>`;
+  }).join('');
+  const add = cur.canEdit ? `<div class="card bol2-card"><h3 class="bol2-h">Nytt prosjekt</h3><form class="inst-add" data-mform="project"><input class="inp" name="name" placeholder="F.eks. Ny terrasse" required style="flex:2 1 160px"><input class="inp" name="vendor" placeholder="Håndverker"><input class="inp" name="budget" placeholder="Budsjett kr" inputmode="decimal" required><button class="btn pri sm">Legg til</button></form></div>` : '';
+  return `<div class="bol2-grid">${list || '<div class="card note" style="padding:18px;font-size:13.5px">Ingen prosjekter ennå. Legg til et for å følge budsjett og avdrag til håndverkere.</div>'}${add}</div>`;
+}
+function billsTab(cur) {
+  const names = cur.members.map((m) => m.name);
+  const bills = cur.bills.map((b, i) => `<div class="bol2-row static${i ? '' : ' first'}"><span class="bol2-tile" style="width:40px;height:40px;background:${tint(b.color)};color:${b.color}">${esc(glyph(b.category))}</span><span class="grow ell-wrap"><b class="ell">${esc(b.category)}</b><span class="note ell">${esc(b.name)}${b.payer ? ' · ' + esc(b.payer) : ''} · ${esc(b.freq)}</span></span>
+    <span class="bol2-row-r"><b class="mono">${b.last ? kr0(b.last.amount) : '–'}</b><small>neste ${b.nextDue ? (/^\d{4}-\d{2}-\d{2}$/.test(b.nextDue) ? dd(b.nextDue) : esc(b.nextDue)) : '–'}</small></span>${cur.canEdit ? `<button class="x-btn sm" data-mbill-del="${b.id}" aria-label="Fjern regning">×</button>` : ''}</div>`).join('');
+  const add = cur.canEdit ? `<form class="inst-add" data-mform="bill"><input class="inp" name="name" placeholder="Fra, f.eks. Fjordkraft" required><select class="inp" name="category">${optList(cur.catOptions.map((c) => [c, c]), 'Strøm')}</select><select class="inp" name="freq">${optList(cur.freqs.map((c) => [c, c]), 'Månedlig')}</select><select class="inp" name="payer">${optList([['', 'Hvem betaler'], ...names.map((n) => [n, n])], '')}</select><input class="inp" name="nextDue" placeholder="Neste dd.mm"><button class="btn sm">+</button></form>` : '';
+  const split = `<div class="bol2-ch" style="margin-top:6px"><span class="note">Fordeling · ${cur.split === 'equal' ? 'likt delt' : 'egen nøkkel'}${cur.isOwner ? ` · <button class="link-btn" data-mact="split-edit">${u.splitEdit ? 'Lukk' : 'Endre'}</button>` : ''}</span></div>
+    <div class="dir-bal">${cur.balances.map((b) => `<span>${esc(b.name)} <b class="mono" style="color:${b.balance >= 0 ? 'var(--pos)' : 'var(--acc-l)'}">${b.balance >= 0 ? '+' : '−'}${n0(Math.abs(b.balance))} kr</b></span>`).join('')}</div>
+    ${u.splitEdit ? `<form class="inst-add" data-mform="split">${cur.members.map((m) => `<label class="note" style="font-size:12px;display:flex;flex-direction:column;gap:4px">${esc(m.name)}<input class="inp" name="w:${esc(m.name)}" value="${cur.weights[m.name] ?? 1}" inputmode="decimal" style="width:80px"></label>`).join('')}<button class="btn sm" name="equal" value="1">Likt</button><button class="btn sm pri">Lagre nøkkel</button></form>` : ''}`;
+  return `<div class="bol2-cols"><div class="bol2-col">${upcomingCard(cur, 40, 'padding:20px;gap:6px')}</div><div class="bol2-col"><div class="card bol2-card"><h3 class="bol2-h">Faste regninger</h3>${bills || '<div class="note" style="font-size:13.5px">Ingen faste regninger.</div>'}${add}${split}</div></div></div>`;
 }
 
 /* ===================== Innstillinger → Boliger ===================== */
@@ -191,7 +299,7 @@ export async function loadBolSettings() {
   const [folders, users, cats, layout] = await Promise.all([api('/folders'), api('/users').catch(() => []), api('/boliger/categories'), api('/boliger/layout')]);
   S.folders = folders; S.users = users; S.bolCats = cats; S.bolLayout = layout;
 }
-const reloadBol = async () => { await loadBolSettings(); render(); };
+const reloadBol = async () => { if (u.page === 'dir') { await loadFolders(); return render(); } await loadBolSettings(); render(); };
 
 export function bolSettings() {
   const list = S.folders, cats = S.bolCats, lay = S.bolLayout;
@@ -542,6 +650,25 @@ export function bindModules(el) {
   el.addEventListener('click', wrap(async (e) => {
     const t = e.target, d = (s) => t.closest(s);
     let x;
+    // Boliger (nytt design): ark, godkjenning, kategorivalg og Tilgang.
+    if ((x = d('[data-bol2-back]')) && t === x) { u.bolSel = null; u.bolAdd = false; u.bolNew = false; u.bolDelE = null; return render(); }
+    if ((x = d('[data-bol2-open]'))) { u.bolSel = +x.dataset.bol2Open; u.bolDelE = null; return render(); }
+    if ((x = d('[data-bol2-cat]'))) { const [eid, cid] = x.dataset.bol2Cat.split(':').map(Number); S.folder = await api(`/folders/${u.dir}/entries/${eid}`, { method: 'PATCH', json: { categoryId: cid } }); return render(); }
+    if ((x = d('[data-bol2-ok]'))) { const eid = +x.dataset.bol2Ok; S.folder = await api(`/folders/${u.dir}/entries/${eid}`, { method: 'PATCH', json: { status: 'ok' } }); if (u.bolSel === eid) u.bolSel = null; toast(`Lagret i ${S.folder.name}`); return render(); }
+    if ((x = d('[data-bol2-del]'))) { const eid = +x.dataset.bol2Del; if (u.bolDelE !== eid) { u.bolDelE = eid; return render(); } S.folder = await api(`/folders/${u.dir}/entries/${eid}`, { method: 'DELETE' }); u.bolSel = null; u.bolDelE = null; toast('Utgiften er slettet'); return reload(); }
+    if ((x = d('[data-bol2-irole]'))) { u.bolInvRole = x.dataset.bol2Irole; return render(); }
+    if ((x = d('[data-bol2-color]'))) { await setBolMeta(S.folder, { color: x.dataset.bol2Color }); return render(); }
+    if ((x = d('[data-bol2-view]'))) { u.bolView = x.dataset.bol2View; return render(); }
+    if ((x = d('[data-bol2-fcat]'))) { u.bolTab = 'ut'; u.dcat = x.dataset.bol2Fcat; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    if ((x = d('[data-bol2-act]'))) {
+      const a = x.dataset.bol2Act;
+      if (a === 'close') { u.bolSel = null; u.bolAdd = false; u.bolNew = false; u.bolDelE = null; return render(); }
+      if (a === 'new-home') { u.bolNew = true; render(); el.querySelector('[data-mform=folder] input')?.focus(); return; }
+      if (a === 'new-entry') { u.bolAdd = true; u.dirMode = 'new'; render(); el.querySelector('.bol2-sheet [data-mform=entry] input')?.focus(); return; }
+      if (a === 'mail') { e.preventDefault(); u.setTab = 'imp'; location.hash = '#/inn'; return; }
+      if (a === 'ok-all') { for (const en of S.folder.entries.filter((y) => !y.pending && (y.status === 'review' || y.review))) S.folder = await api(`/folders/${u.dir}/entries/${en.id}`, { method: 'PATCH', json: { status: 'ok' } }); toast('Alle er godkjent'); return render(); }
+      if (a === 'del-home') { const f = S.folder; if (u.bolDelH !== f.id) { u.bolDelH = f.id; return render(); } await api(`/folders/${f.id}`, { method: 'DELETE' }); u.bolDelH = null; u.dir = null; u.bolTab = 'ov'; toast(`${f.name} er slettet. Transaksjonene i regnskapet beholdes.`); return reload(); }
+    }
     // Boliger: meny, kategorifilter i tidslinjen.
     if ((x = d('[data-mbol-tab]'))) { u.bolTab = x.dataset.mbolTab; if (x.dataset.mbolAdd) u.dirMode = 'new'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); if (x.dataset.mbolAdd) el.querySelector('[data-mform=entry] input')?.focus(); return; }
     if ((x = d('[data-mbol-cat]'))) { u.dcat = x.dataset.mbolCat || null; return render(); }
@@ -654,6 +781,14 @@ export function bindModules(el) {
     if (t.matches('[data-mfinn-role]')) { S.finnImp.role = t.value; return; }
     if (t.matches('[data-msub-cyc]')) { await api(`/subscriptions/${t.dataset.msubCyc}`, { method: 'PATCH', json: { cycle: t.value } }); return reload(); }
     if (t.matches('[data-brole]')) { const [fid, mid] = t.dataset.brole.split(':'); await api(`/folders/${fid}/members/${mid}`, { method: 'PATCH', json: { role: t.value } }); toast('Tilgangen er endret'); return reloadBol(); }
+    if (t.matches('[data-bol2-paid]')) { S.folder = await api(`/folders/${u.dir}/entries/${t.dataset.bol2Paid}`, { method: 'PATCH', json: { paidBy: t.value } }); return render(); }
+    if (t.matches('[data-bol2-meta]')) { await setBolMeta(S.folder, { [t.dataset.bol2Meta]: t.checked }); return render(); }
+    if (t.matches('[data-bol2-field]')) {
+      const k = t.dataset.bol2Field, v = t.value.trim();
+      if (k === 'budget') { await setBolMeta(S.folder, { budget: v ? parseAmount(v) : null }); return render(); }
+      if (k === 'name' && !v) return render();
+      S.folder = await api(`/folders/${u.dir}`, { method: 'PATCH', json: { [k]: v } }); await loadFolders(); toast('Lagret'); return render();
+    }
     if (t.matches('[data-mbol-target]')) { u.bolTarget = +t.value; return render(); }
     if (t.matches('[data-mentry-cat]')) { S.folder = await api(`/folders/${u.dir}/entries/${t.dataset.mentryCat}`, { method: 'PATCH', json: { categoryId: +t.value } }); return render(); }
     if (t.matches('[data-mbk-file]')) {
@@ -665,6 +800,8 @@ export function bindModules(el) {
       S.stage = await api('/backup/stage', { method: 'POST', body: fd }); return render();
     }
   }));
+  // Escape lukker arkene i Boliger.
+  if (!bindModules.esc) { bindModules.esc = true; document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && (u.bolSel || u.bolAdd || u.bolNew)) { u.bolSel = null; u.bolAdd = false; u.bolNew = false; render(); } }); }
   // Underkategori legges til med Enter.
   el.addEventListener('keydown', wrap(async (e) => {
     const t = e.target;
@@ -703,10 +840,10 @@ export function bindModules(el) {
     e.preventDefault();
     const v = Object.fromEntries(new FormData(f));
     switch (f.dataset.mform) {
-      case 'folder': { const r = await api('/folders', { method: 'POST', json: { ...v, share: (u.newPick ?? []).map((id) => ({ userId: id, role: 'editor' })) } }); u.dir = r.id; u.newPick = []; toast(r.members.length > 1 ? `${r.name} er opprettet og delt` : `${r.name} er opprettet`); return u.page === 'inn' ? reloadBol() : reload(); }
+      case 'folder': { const r = await api('/folders', { method: 'POST', json: { ...v, share: (u.newPick ?? []).map((id) => ({ userId: id, role: 'editor' })) } }); u.dir = r.id; u.newPick = []; u.bolNew = false; u.bolTab = 'ov'; toast(r.members.length > 1 ? `${r.name} er opprettet og delt` : `${r.name} er opprettet`); return u.page === 'inn' ? reloadBol() : reload(); }
       case 'entry': {
         const r = await api(`/folders/${target()}/entries`, { method: 'POST', json: { description: v.description, amount: parseAmount(v.amount), date: today(), categoryId: +v.categoryId || null, projectId: +v.projectId || null, paidBy: v.paidBy } });
-        toast(`Lagt til i ${r.name}${v.categoryId ? '' : ' · ✦ AI velger kategori'}`); return reload();
+        u.bolAdd = false; toast(`Lagt til i ${r.name}${v.categoryId ? '' : ' · ✦ AI velger kategori'}`); return reload();
       }
       case 'bshare': if (!v.userId) return; { const r = await api(`/folders/${f.dataset.fid}/members`, { method: 'POST', json: v }); toast(`${r.name} er delt`); } return reloadBol();
       case 'bcat': S.bolCats = await api('/boliger/categories', { method: 'POST', json: { name: v.name } }); toast(`«${v.name.trim()}» er lagt til`); render(); el.querySelector('[data-mform=bcat] input')?.focus(); return;
@@ -729,6 +866,14 @@ export function bindModules(el) {
         S.backup.config = await api('/backup/smb', { method: 'PUT', json: body }); u.msg = { ...(u.msg ?? {}), smb: 'Lagret', smbOk: true }; await loadBackup(); return render();
       }
       case 'remote': S.stage = await api('/backup/stage', { method: 'POST', json: { remote: u.remotePhrase, phrase: v.phrase } }); u.remotePhrase = null; return render();
+      case 'bol2-invite': {
+        const who = String(v.who ?? '').trim(), role = u.bolInvRole ?? 'editor';
+        if (!who) return;
+        const usr = (S.users ?? []).find((x) => x.username === who.toLowerCase() || String(x.name ?? '').toLowerCase() === who.toLowerCase());
+        if (usr) S.folder = await api(`/folders/${u.dir}/members`, { method: 'POST', json: { userId: usr.id, role } });
+        else S.folder = await api(`/folders/${u.dir}/invite`, { method: 'POST', json: { members: [who] } });
+        toast(`${usr ? (usr.name ?? usr.username) : who} har fått tilgang`); return reload();
+      }
       case 'invite': if (!v.emails.trim()) return; S.folder = await api(`/folders/${u.dir}/invite`, { method: 'POST', json: v }); return reload();
       case 'finn': { const r = await api('/finn', { method: 'POST', json: v }); toast(`${r.item} lagt til`); return reload(); }
     }
