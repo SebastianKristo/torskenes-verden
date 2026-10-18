@@ -906,6 +906,26 @@ api.post('/receipts/:id/book', W, async (c) => {
   return c.json(receiptOut(origSelect.get(r.id)));
 });
 
+// Angre bokføring (↺ i Bokført): kvitteringen går tilbake til gjennomgang. En transaksjon som bokføringen selv lagde
+// (source='receipt'), fjernes. En banktransaksjon kvitteringen var koblet til, beholdes og forblir koblet.
+api.post('/receipts/:id/unbook', W, (c) => {
+  const r = rcGet(c);
+  if (!r) return c.notFound();
+  if (r.status !== 'booked') return bad(c, 'Kvitteringen er ikke bokført');
+  db.transaction(() => {
+    const tx = r.transaction_id ? q('SELECT id, source FROM fh_transactions WHERE id=?').get(r.transaction_id) : null;
+    const others = tx ? q('SELECT COUNT(*) n FROM fh_receipts WHERE transaction_id=? AND id<>?').get(tx.id, r.id).n : 0;
+    if (tx && tx.source === 'receipt' && !others) {
+      q('UPDATE fh_folder_entries SET tx_id=NULL WHERE tx_id=?').run(tx.id);
+      q('DELETE FROM fh_transactions WHERE id=?').run(tx.id);
+      q("UPDATE fh_receipts SET status='needs_review', transaction_id=NULL WHERE id=?").run(r.id);
+    } else {
+      q("UPDATE fh_receipts SET status='needs_review' WHERE id=?").run(r.id);
+    }
+  })();
+  return c.json(receiptOut(origSelect.get(r.id)));
+});
+
 api.post('/receipts/:id/reject', W, (c) => { const r = rcGet(c); if (r) q("UPDATE fh_receipts SET status='rejected' WHERE id=?").run(r.id); return ok(c); });
 
 api.post('/receipts/:id/reprocess', W, (c) => {
