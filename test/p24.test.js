@@ -537,3 +537,18 @@ test('AI-søk i innstillinger: AI velger id-er fra listen, tekstmatch uten AI', 
   assert.equal(r.body.answer, 'Mørkt tema ligger under Utseende.');
   ia._setSettingsAi(null);
 });
+
+test('«Test tilkobling» på web (POST /api/config/test/google) bruker Google-testen, ikke «Ukjent integrasjon»', async () => {
+  await A('/api/integrations/google', 'PUT', { googleClientId: 'abc.apps.googleusercontent.com', googleClientSecret: 'hemmelig-klient' });
+  ia._setIntegrationsGoogleFetch(async () => new Response(JSON.stringify({ error: 'invalid_grant' }), { status: 400, headers: { 'content-type': 'application/json' } }));
+  for (const key of ['google', 'Google Kalender']) {
+    const r = await A(`/api/config/test/${encodeURIComponent(key)}`, 'POST');
+    assert.equal(r.status, 200, r.text);
+    assert.equal(r.body.ok, true);
+    assert.match(r.body.message, /godtok klienten/);
+  }
+  ia._setIntegrationsGoogleFetch(async () => new Response(JSON.stringify({ error: 'invalid_client' }), { status: 401, headers: { 'content-type': 'application/json' } }));
+  const bad = await A('/api/config/test/google', 'POST');
+  assert.equal(bad.body.ok, false);
+  assert.equal((await A('/api/config/test/finnes-ikke', 'POST')).status, 404);
+});

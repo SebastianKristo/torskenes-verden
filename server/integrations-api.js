@@ -181,6 +181,19 @@ export function integrationOut(x) {
   return { id: x.id, name: x.name, group: x.group, status, fields, canTest: !!x.test, ...(t ? { lastTest: t } : {}), ...(status === 'error' ? { message: t.message } : {}) };
 }
 export const listIntegrations = () => INTEGRATIONS.map(integrationOut);
+// Felles test for den eldre «Test tilkobling» (POST /api/config/test/:group): finner integrasjonen på id eller navn
+// (f.eks. «google» eller «Google Kalender»). null = ukjent eller uten egen test her.
+export async function testByIdOrName(key) {
+  const k = String(key ?? '').trim().toLowerCase();
+  const x = INTEGRATIONS.find((i) => i.id === k || i.name.toLowerCase() === k);
+  if (!x?.test) return null;
+  const t0 = Date.now();
+  let r;
+  try { r = await x.test(); } catch (e) { r = { ok: false, message: e.message }; }
+  const out = { ok: !!r.ok, message: r.message ?? (r.ok ? 'OK' : 'Feilet'), ms: r.ms ?? Date.now() - t0, ...(r.mock ? { mock: true } : {}), at: new Date().toISOString() };
+  kv.set(OWNER, 'integ_tests', { ...lastTests(), [x.id]: out });
+  return out;
+}
 
 /* ---------------- API ---------------- */
 

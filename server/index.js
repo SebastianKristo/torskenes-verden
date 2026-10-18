@@ -29,7 +29,7 @@ import notifyApi, { appMeta } from './notify.js';
 import { attachRealtime } from './realtime.js';
 import { revokeUserTokens } from './finans/routes.js';
 import birthdaysApi, { startBirthdayWorker, widgetOut as birthdaysWidget } from './birthdays.js';
-import integrationsApi, { settingsSearchApi } from './integrations-api.js';
+import integrationsApi, { settingsSearchApi, testByIdOrName } from './integrations-api.js';
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
 
 const api = process.env.MOCK_DATA === '1' ? await import('./mock.js') : integrations;
@@ -321,8 +321,10 @@ authed.post('/config/test/:group', requireAdmin, async (c) => {
   if (hasTrackingTest(group)) return c.json(await testTracking());
   if (hasBackgroundTest(group)) return c.json(await testBackgrounds());
   if (hasMapTest(group)) return c.json(await testMap());
-  if (!integrations.hasTest(group)) return c.json({ error: 'Ukjent integrasjon' }, 404);
-  return c.json(await integrations.testIntegration(group));
+  if (integrations.hasTest(group)) return c.json(await integrations.testIntegration(group));
+  // Nyere integrasjoner (f.eks. Google Kalender) har testen sin i integrations-api.js.
+  const r = await testByIdOrName(group);
+  return r ? c.json(r) : c.json({ error: 'Ukjent integrasjon' }, 404);
 });
 
 /* --- Filer (kvitteringer og bakgrunner) --- */
