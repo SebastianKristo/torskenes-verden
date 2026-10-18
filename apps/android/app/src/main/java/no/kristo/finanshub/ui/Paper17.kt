@@ -83,7 +83,7 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
             "security" -> item { SecurityPage(vm, onPrivacyChanged) }
             "tokens" -> item { TokensPage(vm) }
             "ai" -> { item { AiPage(vm) }; item { AiTimeouts23(vm) } }
-            "integ" -> item { IntegrationsPage23(vm) }
+            "integ" -> item { IntegrationsPage24(vm) }
             "cats" -> item { CategoriesPage(vm) }
             "rules" -> item { RulesPage(vm) }
             "stocks" -> item { StocksPrefsPage(vm) }
@@ -97,11 +97,13 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
             else -> settingsMain(vm)
         }
     }
-    if (vm.appNameEdit) AppNameSheet(vm)
-    if (vm.appIconEdit) AppIconSheet(vm)
+    if (vm.appNameEdit) AppNameSheet24(vm)
+    if (vm.appIconEdit) AppIconSheet24(vm)
 }
 
 private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppViewModel) {
+    // Prompt 24: søk og ✦ AI øverst; med tekst i feltet vises bare treffene.
+    if (settingsSearch24(vm)) return
     item {
         val p = PaperPal.current
         PCard(shadow = true) {
@@ -116,6 +118,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
             }
         }
     }
+    profileGroup24(vm)
     group("Konto") { i ->
         SetRow(vm, i(), Icons.Filled.People, "Kontoer og brukere", "Bytt konto, legg til og logg ut") { vm.settingsPage = "accounts" }
         SetRow(vm, i(), Icons.Filled.Lock, "Sikkerhet", if (vm.me?.totp == true) "2FA på" else "2FA av", top = true) { vm.settingsPage = "security" }
@@ -140,7 +143,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
     group("App") { i ->
         SetRow(vm, i(), Icons.Filled.Palette, "Utseende og fanelinje", "Papir ${when (vm.paperMode) { "mork" -> "mørk"; "lys" -> "lys"; else -> "· følger systemet" }} · bakgrunn · ikonfarger") { vm.settingsPage = "look" }
         SetRow(vm, i(), Icons.Filled.Notifications, "Varsler og haptikk", "Lyd, stille timer og test", top = true) { vm.settingsPage = "notify" }
-        SetRow(vm, i(), Icons.Filled.Home, "Integrasjoner", "Home Assistant", top = true) { vm.settingsPage = "integ" }
+        SetRow(vm, i(), Icons.Filled.Home, "Integrasjoner", "Home Assistant, Google, Entur, Bring og 12 til", top = true) { vm.settingsPage = "integ" }
         SetRow(vm, i(), Icons.Filled.MonitorHeart, "Helse og posisjon", "Health Connect, typer og posisjonsdeling", top = true) { vm.settingsPage = "healthpos" }
         SetRow(vm, i(), Icons.Filled.DocumentScanner, "Skanning", "Kamera, beskjæring og opplasting", top = true) { vm.settingsPage = "scan" }
         SetRow(vm, i(), Icons.Filled.Dns, "Server og synk", "Lokal og ekstern adresse", top = true) { vm.settingsPage = "server" }

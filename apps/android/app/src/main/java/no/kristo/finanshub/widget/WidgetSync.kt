@@ -28,6 +28,8 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         val acc = list.firstOrNull { it.id == store.active() } ?: list.firstOrNull()
         if (acc == null) {
             TasksStore.useAccount(ctx, null)
+            Bd24WidgetStore.useAccount(ctx, null)
+            Deps24Store.useAccount(ctx, null)
             WidgetStore.fail(ctx, "Logg inn i FinansHub", loggedIn = false)
             WidgetSync.redraw(ctx)
             return Result.success()
@@ -35,6 +37,8 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
         // Data fra en annen konto enn den aktive vises aldri (kontobytte uten nett).
         WidgetStore.useAccount(ctx, acc.id)
         TasksStore.useAccount(ctx, acc.id)
+        Bd24WidgetStore.useAccount(ctx, acc.id)
+        Deps24Store.useAccount(ctx, acc.id)
         var err: String? = null
         for (base in listOf(acc.server, acc.local, acc.external).filter { it.isNotBlank() }.distinct()) {
             try {
@@ -43,6 +47,8 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                 WidgetSync.redraw(ctx)
                 // Huskeliste-widgeten har egne data (/api/tasks/next).
                 runCatching { TasksStore.save(ctx, Api(base, acc.token).hlGet("/tasks/next?n=6", timeout = 8_000)); TasksWidgetSync.redraw(ctx) }
+                // Prompt 24: bursdager og avganger (Bursdager-widgeten og Samsung-widgetene).
+                runCatching { fetch24(ctx, Api(base, acc.token)); S24.redraw(ctx) }
                 return Result.success()
             } catch (e: ApiException) {
                 err = e.message
@@ -67,6 +73,9 @@ object WidgetSync {
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .build()
         WorkManager.getInstance(ctx).enqueueUniquePeriodicWork(PERIODIC, ExistingPeriodicWorkPolicy.KEEP, req)
+        // Prompt 24: Samsung-widgetene (bare på Samsung) og bursdagene like etter midnatt.
+        runCatching { S24.enableProviders(ctx) }
+        runCatching { S24.scheduleMidnight(ctx) }
     }
 
     /** Henter med en gang (appen åpnet, widget lagt til, innlogging eller kontobytte). */
@@ -86,5 +95,6 @@ object WidgetSync {
     /** Tegner alle widgetene på nytt (også dem som ikke har en åpen økt). */
     suspend fun redraw(ctx: Context) {
         ALL_WIDGETS.forEach { w -> runCatching { w.updateAll(ctx) } }
+        S24.redraw(ctx)
     }
 }

@@ -527,19 +527,10 @@ private fun Fam22TabBar(vm: AppViewModel, tab: String, modifier: Modifier) {
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         listOf(Triple("kart", "Kart", "◎"), Triple("soner", "Soner", "◌"), Triple("helse", "Helse", "♡"), Triple("mer", "Mer", "⋯")).forEach { (k, n, ic) ->
-            val on = tab == k
-            Row(
-                (if (on) Modifier else Modifier.weight(1f)).height(46.dp).clip(CircleShape).background(if (on) p.navAct else Color.Transparent)
-                    .clickable(role = Role.Tab, onClickLabel = n) {
-                        Haptics.select()
-                        if (k == "mer") { vm.closeFamily(); vm.paperTab("mer") } else vm.famTab = k
-                    }.padding(horizontal = if (on) 16.dp else 6.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-            ) {
-                if (on) Box(Modifier.size(18.dp).offset(y = 1.5.dp), contentAlignment = Alignment.Center) {
-                    Fam22Text(ic, 16.sp, p.navActInk, FontWeight.Medium, PaperFonts.serif, maxLines = 1, lineHeight = 16.sp)
-                }
-                Fam22Text(n, 12.5.sp, if (on) p.navActInk else p.navInk, FontWeight.SemiBold, maxLines = 1, lineHeight = 12.5.sp)
+            // Prompt 24 (A): felles fane (Mer24.kt) med 7 dp mellomrom og tekst uten fontpadding.
+            PaperTab24(n, ic, tab == k, p.navInk, p.navActInk, p.navAct, serif = true) {
+                Haptics.select()
+                if (k == "mer") { vm.closeFamily(); vm.paperTab("mer") } else vm.famTab = k
             }
         }
     }
@@ -637,6 +628,8 @@ private fun Fam22PersonCard(
                     }
                 }
             }
+            // Prompt 24: enhetene under sensorrutene; trykk velger kilde (bare for deg selv).
+            if (m.devices.size > 1 || (isMe && m.devices.isNotEmpty())) Fam24Devices(vm, m, isMe)
             val url = String.format(java.util.Locale.US, "https://www.google.com/maps/dir/?api=1&destination=%.6f,%.6f", l.lat, l.lon)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(
@@ -689,7 +682,8 @@ private fun Fam22People(
                 }
                 Column(Modifier.weight(1f)) {
                     Fam22Text(if (m.userId == meId) "${m.name} (deg)" else m.name, 15.sp, p.ink, FontWeight.Bold, maxLines = 1)
-                    Fam22Text(fam22Where(zones, m), 12.5.sp, p.mut, maxLines = 1)
+                    // Prompt 24: én person = én oppføring, også med flere enheter («Hjem · 2 enheter»).
+                    Fam22Text(fam22Where(zones, m) + fam24DevicesSuffix(m), 12.5.sp, p.mut, maxLines = 1)
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Fam22Text(fam22Battery(l), 12.5.sp, if ((l?.battery ?: 100) < 20) p.lab else p.ink, FontWeight.SemiBold, PaperFonts.mono, maxLines = 1)

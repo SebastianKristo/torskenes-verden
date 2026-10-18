@@ -124,6 +124,8 @@ class FamilyService : Service() {
             .put("alt", if (loc.hasAltitude()) loc.altitude else JSONObject.NULL)
             .put("activity", activityFromSpeed(speed))
             .put("device", Build.MODEL)
+            // Prompt 24: stabil ID per installasjon og plattform, så serveren kan slå sammen enhetene til én person.
+            .put("deviceId", installId24(this)).put("platform", "android")
             .put("ts", loc.time.takeIf { it > 0 } ?: now)
         if (FamilyPrefs.sensors(this)) battery(this)?.let { (lvl, ch) -> o.put("battery", lvl).put("charging", ch) }
         else o.remove("activity")
@@ -140,6 +142,7 @@ class FamilyService : Service() {
         val api = FamilyPrefs.api(ctx) ?: return
         try {
             val body = if (batch.size == 1) batch[0] else JSONObject().put("points", JSONArray(batch))
+                .put("device", Build.MODEL).put("deviceId", installId24(ctx)).put("platform", "android")
             val r = JSONObject(api.hlPost("/family/location", body))
             synchronized(queue) { queue.removeAll(batch.toSet()) }
             notifyEvents(ctx, r.optJSONArray("events"))
@@ -299,4 +302,13 @@ object FamilyPrefs {
         val base = listOf(acc.server, acc.external, acc.local).firstOrNull { it.isNotBlank() } ?: return null
         return Api(base, acc.token)
     }
+}
+
+/** Prompt 24: stabil enhets-ID for denne installasjonen (UUID, lagres første gang). */
+internal fun installId24(ctx: Context): String {
+    val sp = ctx.applicationContext.getSharedPreferences("family24", Context.MODE_PRIVATE)
+    sp.getString("installId", null)?.let { return it }
+    val id = "and-" + java.util.UUID.randomUUID().toString()
+    sp.edit().putString("installId", id).apply()
+    return id
 }

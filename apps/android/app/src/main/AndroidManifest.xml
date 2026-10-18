@@ -106,6 +106,204 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- Prompt 24: navnet under ikonet. Android kan ikke endre etiketten under kjøring, så hvert ferdig navn er et eget alias
+             per ikon (Innstillinger → Navn på appen). Bare ett alias er på om gangen; det nye slås på før det gamle slås av. -->
+        <activity-alias
+            android:name=".IconHus_Homelab"
+            android:enabled="false"
+            android:exported="true"
+            android:label="Homelab"
+            android:icon="@mipmap/ic_launcher_hus"
+            android:roundIcon="@mipmap/ic_launcher_hus_round"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconHus_Hjem"
+            android:enabled="false"
+            android:exported="true"
+            android:label="Hjem"
+            android:icon="@mipmap/ic_launcher_hus"
+            android:roundIcon="@mipmap/ic_launcher_hus_round"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconHus_Familie"
+            android:enabled="false"
+            android:exported="true"
+            android:label="Familie"
+            android:icon="@mipmap/ic_launcher_hus"
+            android:roundIcon="@mipmap/ic_launcher_hus_round"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconHus_Finans"
+            android:enabled="false"
+            android:exported="true"
+            android:label="Finans"
+            android:icon="@mipmap/ic_launcher_hus"
+            android:roundIcon="@mipmap/ic_launcher_hus_round"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconHus_Papir"
+            android:enabled="false"
+            android:exported="true"
+            android:label="Papir"
+            android:icon="@mipmap/ic_launcher_hus"
+            android:roundIcon="@mipmap/ic_launcher_hus_round"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconMonogram_Homelab"
+            android:enabled="false"
+            android:exported="true"
+            android:label="Homelab"
+            android:icon="@mipmap/ic_launcher_mono"
+            android:roundIcon="@mipmap/ic_launcher_mono_round"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconMonogram_Hjem"
+            android:enabled="false"
+            android:exported="true"
+            android:label="Hjem"
+            android:icon="@mipmap/ic_launcher_mono"
+            android:roundIcon="@mipmap/ic_launcher_mono_round"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconMonogram_Familie"
+            android:enabled="false"
+            android:exported="true"
+            android:label="Familie"
+            android:icon="@mipmap/ic_launcher_mono"
+            android:roundIcon="@mipmap/ic_launcher_mono_round"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconMonogram_Finans"
+            android:enabled="false"
+            android:exported="true"
+            android:label="Finans"
+            android:icon="@mipmap/ic_launcher_mono"
+            android:roundIcon="@mipmap/ic_launcher_mono_round"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconMonogram_Papir"
+            android:enabled="false"
+            android:exported="true"
+            android:label="Papir"
+            android:icon="@mipmap/ic_launcher_mono"
+            android:roundIcon="@mipmap/ic_launcher_mono_round"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconRom_Homelab"
+            android:enabled="false"
+            android:exported="true"
+            android:label="Homelab"
+            android:icon="@mipmap/ic_launcher_rom"
+            android:roundIcon="@mipmap/ic_launcher_rom_round"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconRom_Hjem"
+            android:enabled="false"
+            android:exported="true"
+            android:label="Hjem"
+            android:icon="@mipmap/ic_launcher_rom"
+            android:roundIcon="@mipmap/ic_launcher_rom_round"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconRom_Familie"
+            android:enabled="false"
+            android:exported="true"
+            android:label="Familie"
+            android:icon="@mipmap/ic_launcher_rom"
+            android:roundIcon="@mipmap/ic_launcher_rom_round"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconRom_Finans"
+            android:enabled="false"
+            android:exported="true"
+            android:label="Finans"
+            android:icon="@mipmap/ic_launcher_rom"
+            android:roundIcon="@mipmap/ic_launcher_rom_round"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconRom_Papir"
+            android:enabled="false"
+            android:exported="true"
+            android:label="Papir"
+            android:icon="@mipmap/ic_launcher_rom"
+            android:roundIcon="@mipmap/ic_launcher_rom_round"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
         <!-- Familie: posisjonsdeling i bakgrunnen. -->
         <service
             android:name=".family.FamilyService"
@@ -236,6 +434,45 @@
         <receiver android:name=".widget.OneUiFinnReceiver" android:exported="true" android:label="Finn · One UI">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ui_finn" />
+        </receiver>
+
+        <!-- Prompt 24: Bursdager (Material You) og Samsung-widgetene i Samsungs egen størrelse (134 × 155 dp).
+             Samsung-providerne er av her og slås på i appen når Build.MANUFACTURER er samsung (S24.enableProviders). -->
+        <receiver android:name=".widget.BirthdaysReceiver24" android:exported="true" android:enabled="true" android:label="Bursdager">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_bd24" />
+        </receiver>
+        <receiver android:name=".widget.S24ScanReceiver" android:exported="true" android:enabled="false" android:label="Skann · Samsung">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s24_scan" />
+        </receiver>
+        <receiver android:name=".widget.S24TasksReceiver" android:exported="true" android:enabled="false" android:label="Huskeliste · Samsung">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s24_tasks" />
+        </receiver>
+        <receiver android:name=".widget.S24TasksWideReceiver" android:exported="true" android:enabled="false" android:label="Huskeliste 4×2 · Samsung">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s24_tasks_wide" />
+        </receiver>
+        <receiver android:name=".widget.S24BirthdaysReceiver" android:exported="true" android:enabled="false" android:label="Bursdager · Samsung">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s24_bd" />
+        </receiver>
+        <receiver android:name=".widget.S24PackagesReceiver" android:exported="true" android:enabled="false" android:label="Sporing · Samsung">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s24_pk" />
+        </receiver>
+        <receiver android:name=".widget.S24DeparturesReceiver" android:exported="true" android:enabled="false" android:label="Avganger · Samsung">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s24_dep" />
+        </receiver>
+        <receiver android:name=".widget.S24DeparturesWideReceiver" android:exported="true" android:enabled="false" android:label="Avganger 4×2 · Samsung">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s24_dep_wide" />
+        </receiver>
+        <receiver android:name=".widget.S24BalanceReceiver" android:exported="true" android:enabled="false" android:label="Saldo · Samsung">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s24_bal" />
         </receiver>
 
         <provider

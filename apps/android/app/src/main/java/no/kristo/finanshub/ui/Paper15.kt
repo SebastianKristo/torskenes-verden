@@ -498,7 +498,9 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
     var dragOffset by remember { mutableStateOf(Offset.Zero) }
     LaunchedEffect(vm.fmOrder) { if (!editing) order = vm.fmOrder }
     val byKey = all.associateBy { it.key }
-    val tiles = order.mapNotNull { byKey[it] }.filter { it.key !in vm.paperFinTabs }
+    // Prompt 24: i profilene (Finans + Boliger, Boliger-profil) ligger Hjem som første flis i Finans → Mer.
+    val tiles = (if (vm.b24ProfileOn) listOf(FinTile("hjem", "Hjem", "Pakker, avganger og widgets", Icons.Filled.Home) { vm.paperTab("hjem") }) else emptyList()) +
+        order.mapNotNull { byKey[it] }.filter { it.key !in vm.paperFinTabs }
     val grid = rememberLazyGridState()
     val wobble = rememberInfiniteTransition(label = "wobble").animateFloat(-1f, 1f, infiniteRepeatable(tween(130, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "w")
     val cols = if (wide) 4 else 2
@@ -597,15 +599,16 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
                 else -> Modifier
             }
             Column(
-                tileMod.fillMaxWidth().heightIn(min = 112.dp).clip(RoundedCornerShape(20.dp)).background(p.card)
+                tileMod.fillMaxWidth().height(132.dp).clip(RoundedCornerShape(20.dp)).background(p.card)
                     .then(if (editing) Modifier else Modifier.clickable(onClickLabel = t.title) { Haptics.select(); t.go() })
                     .padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 Row(verticalAlignment = Alignment.Top) {
                     // Ikonboksen: 14 % av fargen blandet inn i kortbakgrunnen (color-mix).
-                    Box(Modifier.size(38.dp).clip(RoundedCornerShape(12.dp)).background(androidx.compose.ui.graphics.lerp(p.card, tint, .14f)), contentAlignment = Alignment.Center) {
-                        Icon(t.icon, null, tint = tint, modifier = Modifier.size(20.dp))
+                    // Prompt 24 (claude-code-mer-lik.md): flis 132 høy, ikonboks 42 × 42, tittel Newsreader 20, verdi 12,5.
+                    Box(Modifier.size(42.dp).clip(RoundedCornerShape(12.dp)).background(androidx.compose.ui.graphics.lerp(p.card, tint, .14f)), contentAlignment = Alignment.Center) {
+                        Icon(t.icon, null, tint = tint, modifier = Modifier.size(22.dp))
                     }
                     Spacer(Modifier.weight(1f))
                     t.badge?.let { b ->
@@ -613,8 +616,8 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
                     }
                 }
                 Spacer(Modifier.weight(1f))
-                PSerif(t.title, 17.sp, maxLines = 1)
-                Text(t.value, color = if (t.pos) p.pos else p.mut, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                PSerif(t.title, 20.sp, maxLines = 1)
+                Text(t.value, color = if (t.pos) p.pos else p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }

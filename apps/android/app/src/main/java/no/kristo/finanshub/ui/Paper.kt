@@ -215,7 +215,7 @@ private fun heroText(vm: AppViewModel): Pair<String, String> {
             }
             Screen.Stocks -> "Trading 212" to "Aksjer"
             Screen.Sub -> "Subscription OS" to "Abonnementer"
-            Screen.Folders -> "Utgifter og regninger" to "Boliger"
+            Screen.Folders -> (boligKicker24(vm) ?: "Utgifter og regninger") to "Boliger"
             Screen.Finn -> "Kjøp og salg" to "Finn"
             Screen.Settings -> if (vm.settingsPage == null) "Konto og utseende" to "Innstillinger" else "Alle innstillinger" to (PAPER_SET_TITLES[vm.settingsPage] ?: "Innstillinger")
             Screen.List -> "Alle kontoer" to "Liste"
@@ -227,6 +227,7 @@ private fun heroText(vm: AppViewModel): Pair<String, String> {
 }
 
 private fun backLabel(vm: AppViewModel): String = when {
+    vm.b24BackLabel() != null -> vm.b24BackLabel()!!
     vm.settingsPage != null && (vm.paperPage == "set" || vm.screen == Screen.Settings) -> "Alle innstillinger"
     vm.selectedTx != null && vm.paperPage == "fsok" -> "Søk"
     vm.selectedTx != null && vm.paperPage == null -> when (vm.screen) { Screen.List -> "Liste"; Screen.Home -> "Oversikt"; else -> "Tilbake" }
@@ -257,7 +258,7 @@ internal fun PaperApp(
             vm.photoMenu -> vm.photoMenu = false
             vm.editPage != null -> vm.editPage = null
             vm.trkEdit -> vm.trkEdit = false
-            else -> vm.back()
+            else -> if (!vm.b24Back()) vm.back()
         }
     }
     val (nav, holder) = rememberNav23()
@@ -271,6 +272,7 @@ internal fun PaperApp(
         }
     }
     LaunchedEffect(vm.base) { if (vm.photo == null && vm.photoKind != "cur") vm.loadPhoto() }
+    LaunchedEffect(vm.base, vm.account?.id) { vm.b24Start(); vm.b24PreloadNewsIcons() } // Prompt 24: profil/startside og ikonene i Nyhetsleser
     val navInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     // Linja ligger 12 dp over bunnen, eller like over systemets navigasjonsfelt (max(12, inset − 8)).
     val barBottom = maxOf(12.dp, navInset - 8.dp)
@@ -319,7 +321,7 @@ internal fun PaperApp(
                             vm.original != null -> PaneBox(navBottom) { OriginalScreen(vm) }
                             vm.editing != null -> PaneBox(navBottom) { TxEditScreen(vm, vm.editing!!, scan) }
                             vm.detail != null -> PaneBox(navBottom) { DetailScreen(vm, vm.detail!!) }
-                            vm.paperPage == "mer" -> PaperMore(vm, navBottom)
+                            vm.paperPage == "mer" -> PaperMore24(vm, navBottom, PAPER_BAR)
                             vm.paperPage == "fmer" -> PaperFinMoreGrid(vm, navBottom, wide)
                             vm.paperPage == "fsok" && vm.selectedTx == null -> PaperFinSearch(vm, navBottom)
                             vm.paperPage == "set" -> PaperSettings17(vm, navBottom, onPrivacyChanged)
@@ -336,7 +338,7 @@ internal fun PaperApp(
                             // Verdikortet ligger delvis oppe i bildeheaderen, som på Sporing.
                             s == Screen.Stocks && vm.stockScreen == "ov" -> PaperStocks23(vm, navBottom)
                             s == Screen.Stocks -> Box(Modifier.fillMaxSize()) { MainPane(vm, false, scan, onPrivacyChanged) }
-                            s == Screen.Folders -> PaperBoliger(vm, navBottom) { vm.scanTarget = "receipt"; vm.scanSheet = true }
+                            s == Screen.Folders -> PaperBoliger24(vm, navBottom, takePhoto, pickFiles)
                             // Innstillinger i Papir: aldri den klassiske skjermen.
                             s == Screen.Settings -> PaperSettings17(vm, navBottom, onPrivacyChanged)
                             // Kvitteringer i Papir (prompt 18). Bekreftelsen av én kvittering bruker fortsatt den felles skjermen.
@@ -376,9 +378,10 @@ internal fun PaperApp(
             if (vm.busy) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) }
             if (vm.newsOpen) NewsReader(vm)
             if (vm.weatherOpen) WeatherApp(vm)
-            if (vm.ruterOpen) RuterPage(vm)
+            if (vm.ruterOpen) RuterScreen24(vm)
             if (vm.familyOpen) FamilyScreen(vm)
             if (vm.tasksOpen) TasksScreen(vm)
+            if (vm.bd24.open) BirthdaysScreen24(vm)
             if (vm.compareOpen) CompareScreen(vm)
             // Prompt 23 (MOD): Finn-annonsen i fullskjerm (egen BackHandler, så tilbake lukker den uten forhåndsvisning).
             if (vm.m23.finnAdFor != null) FinnAdScreen23(vm)
@@ -425,12 +428,14 @@ private fun Hero(vm: AppViewModel, home: Boolean, wide: Boolean, toggleMenu: () 
     Box(Modifier.fillMaxWidth().height(h).background(Brush.verticalGradient(*grad)).animateContentSize()) {
         // Bilde med blur, demping, scrim, papirtekstur og partikler (prompt 19).
         BgLayer(vm, bmp)
+        BoligHero24(vm, Modifier.matchParentSize()) // Prompt 24: bakgrunnen til valgt bolig på Boliger
         Column(Modifier.fillMaxSize().padding(top = statusTop + 8.dp, start = if (wide) 130.dp else 22.dp, end = 22.dp, bottom = if (home) 40.dp else 32.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (home) PSerif(vm.appName, 22.sp, fg, Modifier.weight(1f), maxLines = 1)
                 else {
-                    Box(
-                        Modifier.height(34.dp).clip(CircleShape).background(Color(0x8C1B1A17)).clickable(onClickLabel = "Tilbake") { vm.back() }.padding(start = 10.dp, end = 14.dp),
+                    // Prompt 24: ingen tilbakeknapp på rotsidene i profilene (profilbildet står fortsatt til høyre).
+                    if (!vm.b24IsRoot()) Box(
+                        Modifier.height(34.dp).clip(CircleShape).background(Color(0x8C1B1A17)).clickable(onClickLabel = "Tilbake") { if (!vm.b24Back()) vm.back() }.padding(start = 10.dp, end = 14.dp),
                         contentAlignment = Alignment.Center,
                     ) { Text("‹ ${backLabel(vm)}", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1) }
                     Spacer(Modifier.weight(1f))
@@ -451,6 +456,7 @@ private fun Hero(vm: AppViewModel, home: Boolean, wide: Boolean, toggleMenu: () 
                     if (home) AutoSerif(title, if (wide) 44.sp else 31.sp, fg, min = 20.sp)
                     else PSerif(title, 36.sp, fg, maxLines = 2)
                 }
+                if (!home) DomainPill24(vm)
                 val w = vm.mobileHome?.weather
                 if (home && w?.temp != null) Column(
                     Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClickLabel = "Åpne været") { vm.openWeather() }.padding(start = 8.dp),
@@ -538,18 +544,8 @@ private fun PaperNav(vm: AppViewModel, bar: String, float: Boolean, modifier: Mo
             .longPressEdit(bar == "main") { Haptics.tap(); vm.tabEdit = true }.padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        tabs.forEach { t ->
-            val on = cur == t.key
-            Row(
-                (if (on) Modifier else Modifier.weight(1f)).height(46.dp).clip(CircleShape).background(if (on) p.navAct else Color.Transparent)
-                    .clickable(role = Role.Tab, onClickLabel = t.label) { t.go(); Haptics.select() }.padding(horizontal = if (on) 14.dp else 2.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-            ) {
-                // Ikonet i en fast 18×18-boks, flyttet 1,5 dp ned, så det står midt på teksten (prompt 20).
-                if (on || t.key == "sok") Box(Modifier.size(18.dp).offset(y = 1.5.dp), contentAlignment = Alignment.Center) { GlyphIcon(t.icon, if (on) p.navActInk else p.navInk) }
-                Text(t.label, color = if (on) p.navActInk else p.navInk, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Clip)
-            }
-        }
+        // Prompt 24: egen Row per fane (Mer24.kt): ikonboks 18, glyf 16, 1,5 ned, 7 mellomrom, tekst uten fontpadding.
+        tabs.forEach { t -> PaperTab24(t.label, t.icon, cur == t.key, p.navInk, p.navActInk, p.navAct) { t.go(); Haptics.select() } }
         if ((!float || bar == "sub") && !noScanHere(vm)) ScanPress(vm, bar, Modifier.padding(start = 4.dp), 46.dp, CircleShape, onTap, onHold) { Text("+", color = p.onLab, fontSize = 22.sp) }
     }
 }
@@ -609,7 +605,7 @@ private fun ScanQueue(vm: AppViewModel) {
 /* ---------------- Hjem ---------------- */
 
 private val HOME_SECS = listOf(
-    PSec("h1", "Søk", full = true), PSec("h2", "Pakker"), PSec("h3", "Avganger"), PSec("hm", "Moduler", full = true),
+    PSec("h1", "Søk", full = true), PSec("h2", "Pakker"), PSec("h3", "Avganger"), PSec("h9", "Bursdager"), PSec("hm", "Moduler", full = true),
     PSec("h8", "Huskeliste"), PSec("h6", "Posisjon"), PSec("h7", "Bolig"),
     PSec("h5", "Siste nytt", full = true), PSec("h4", "Snarveier", full = true), PSec("hs", "Server"),
 )
@@ -633,7 +629,14 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
                     val pk = (vm.homePackages ?: emptyList()).sortedByDescending { it.ready }.firstOrNull()
                     // På Fold står pakkekortet ved siden av Avganger og er like høyt.
                     val cardMod = if (wide) Modifier.height(FOLD_CARD) else Modifier
-                    if (pk == null) PCard(cardMod, onClick = { vm.paperTab("trk") }) { Text("Ingen pakker på vei.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(16.dp, 14.dp)) }
+                    if (pk == null) PCard(cardMod, onClick = { vm.paperTab("trk") }) {
+                        // Prompt 24: kortet vises alltid, også uten aktive pakker.
+                        Column(Modifier.padding(16.dp, 14.dp)) {
+                            PLabel("Sporing")
+                            PSerif("Ingen aktive pakker", 20.sp, maxLines = 1)
+                            Text("Legg til et sporingsnummer", color = p.mut, fontSize = 12.5.sp, maxLines = 1)
+                        }
+                    }
                     else PCard(cardMod, onClick = { vm.paperTab("trk") }) {
                         Row(Modifier.padding(14.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                             PackageLogo(vm, pk, 52)
@@ -656,6 +659,7 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
                 "hm" -> PaperMinis(vm)
                 // Nye kort: Huskeliste (de tre neste med avkrysning), Posisjon (familien) og Bolig.
                 "h8" -> HomeTasksCard(vm)
+                "h9" -> HomeBirthdaysCard24(vm)
                 "h6" -> HomePositionCard(vm)
                 "h7" -> HomeBoligCard(vm)
                 "h5" -> PaperNewsCard(vm)

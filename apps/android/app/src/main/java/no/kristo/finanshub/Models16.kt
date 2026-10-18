@@ -148,6 +148,8 @@ data class FamMember(
     val sharing: String, val precision: String, val last: FamPos?, val health: FamHealth?,
     /** Prompt 22: bildet seeren har valgt for personen (ellers avataren), og personens farge fra serveren. */
     val photoUrl: String? = null, val color: Long? = null,
+    /** Prompt 24: én person = én oppføring. Enhetene (devices), valgt kilde (null = automatisk) og antall enheter. */
+    val devices: List<FamDevice> = emptyList(), val sourceDevice: String? = null, val deviceCount: Int = 0,
 )
 data class FamZone(
     val id: String, val name: String, val lat: Double, val lon: Double, val radius: Double, val color: Long, val notify: Map<String, Pair<Boolean, Boolean>>,
@@ -212,8 +214,9 @@ fun parseFamily(s: String): Family {
         val m = ms.optJSONObject(i) ?: return@mapNotNull null
         FamMember(m.optStr("userId") ?: "$i", m.optStr("name") ?: m.optStr("username") ?: "Person", m.optStr("username") ?: "", m.optStr("avatarUrl"),
             m.optStr("sharing") ?: "off", m.optStr("precision") ?: "exact", parsePos(m.optJSONObject("last")), parseHealth(m.optJSONObject("health")),
-            photoUrl = m.optStr("photoUrl"), color = m.optStr("color")?.takeIf { it.matches(Regex("#[0-9a-fA-F]{6}")) }?.let(::color))
-    }
+            photoUrl = m.optStr("photoUrl"), color = m.optStr("color")?.takeIf { it.matches(Regex("#[0-9a-fA-F]{6}")) }?.let(::color),
+            devices = parseFamDevices24(m), sourceDevice = parseFamSource24(m), deviceCount = m.optInt("deviceCount", 0))
+    }.let(::dedupeFamily24)
     val zs = o.optJSONArray("zones") ?: JSONArray()
     val zones = (0 until zs.length()).mapNotNull { i ->
         val z = zs.optJSONObject(i) ?: return@mapNotNull null

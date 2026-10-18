@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_bd24_desc">De tre neste bursdagene, og + for ny</string>
+    <string name="widget_s24_scan_desc">Kamera og filer · Samsung-størrelse</string>
+    <string name="widget_s24_tasks_desc">Tre oppgaver og ny oppgave · Samsung-størrelse</string>
+    <string name="widget_s24_bd_desc">Neste bursdag · Samsung-størrelse</string>
+    <string name="widget_s24_pk_desc">Pakker på vei · Samsung-størrelse</string>
+    <string name="widget_s24_dep_desc">Neste avganger · Samsung-størrelse</string>
+    <string name="widget_s24_bal_desc">Saldo og neste trekk · Samsung-størrelse</string>
+</resources>

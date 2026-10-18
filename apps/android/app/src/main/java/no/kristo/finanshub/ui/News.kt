@@ -50,6 +50,8 @@ internal fun NewsReader(vm: AppViewModel) {
     val ctx = LocalContext.current
     val d = vm.news
     val cats = d?.categories ?: NEWS_CATS
+    // Prompt 24: alle faneikonene lastes med en gang (ikke først når fanen tegnes på nytt).
+    LaunchedEffect(d?.ic, d?.icOn, d?.categories) { vm.b24PreloadNewsIcons() }
     BackHandler { if (vm.newsSettings) vm.newsSettings = false else vm.newsOpen = false }
     Box(Modifier.fillMaxSize().background(p.bg).clickable(remember { MutableInteractionSource() }, null) {}.statusBarsPadding()) {
         Column(Modifier.fillMaxSize()) {

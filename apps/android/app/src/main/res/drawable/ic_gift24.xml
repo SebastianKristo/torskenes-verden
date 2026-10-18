@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gaveikon i Bursdager-widgeten (Samsung 2×2), tegnet med strek som i Bursdager.dc.html. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:pathData="M4,11h16v9H4zM2,7h20v4H2zM12,7v13M12,7c-1.5,-3 -5,-3 -5,-1s3,1 5,1zM12,7c1.5,-3 5,-3 5,-1s-3,1 -5,1z"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+</vector>

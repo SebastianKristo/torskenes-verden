@@ -617,6 +617,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             screen == Screen.Settings && settingsPage != null -> settingsPage = null
             paper && paperPage == "set" && settingsPage != null -> settingsPage = null
             tasksOpen -> closeTasks()
+            bd24.open -> closeBirthdays24()
             compareOpen -> compareOpen = false
             screen == Screen.Folders && folder != null -> folder = null
             screen == Screen.Scan && selectedReceipt != null -> selectedReceipt = null
@@ -691,6 +692,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "mat" -> go(Screen.Mat)
             "news", "rss", "nyheter" -> openNews()
             "huske", "tasks" -> openTasks(newTask = uri.path?.trim('/') == "new")
+            "bursdager", "birthdays" -> birthdaysLink24(uri)
+            "avganger", "ruter" -> { go(Screen.Homelab); openRuter() }
             "familie", "family" -> openFamily()
             "finn" -> go(Screen.Finn)
             "boliger" -> open(Screen.Folders)
@@ -1715,6 +1718,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         applyLayout16(raw)
         applyLayout19(raw)
         applyLayout20(raw)
+        applyLayout24a(raw)
         val obKey = AppPrefs.ONBOARDED + (account?.id ?: "")
         onboardNeeded = x.onboarded == false && !prefs.bool(obKey)
         if (prefs.bool(AppPrefs.DESIGN_SYNCED)) return
@@ -2330,9 +2334,21 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun pageOrder(page: String, keys: List<String>): List<String> {
         val saved = (pageLayouts[page]?.order ?: emptyList()).filter { it in keys }.distinct()
-        return saved + keys.filter { it !in saved }
+        // Prompt 24: nye kort (f.eks. Bursdager h9) legges inn etter nærmeste kort foran dem i standardrekkefølgen,
+        // i tillegg til den lagrede rekkefølgen. Ingenting erstattes eller faller ut.
+        val out = saved.toMutableList()
+        keys.forEachIndexed { i, k ->
+            if (k in out) return@forEachIndexed
+            val prev = keys.subList(0, i).lastOrNull { it in out }
+            out.add(if (prev == null) 0 else out.indexOf(prev) + 1, k)
+        }
+        return out
     }
-    fun pageHidden(page: String): Set<String> = pageLayouts[page]?.hidden?.toSet() ?: emptySet()
+    fun pageHidden(page: String): Set<String> {
+        val h = pageLayouts[page]?.hidden?.toSet() ?: emptySet()
+        // Prompt 24: Pakker (h2) vises alltid på Hjem, også om en eldre migrering skjulte den. Skjuler brukeren den selv etterpå, gjelder det.
+        return if (page == "hjem" && "h2" in h && !prefs.bool("p24_h2_user")) h - "h2" else h
+    }
 
     /** Flytter et synlig kort opp (−1) eller ned (+1) forbi nabokortet som vises. */
     fun movePageItem(page: String, keys: List<String>, key: String, dir: Int) {
@@ -2346,6 +2362,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         savePage(page, PageLay(order, hid.toList()))
     }
     fun hidePageItem(page: String, keys: List<String>, key: String) {
+        if (page == "hjem" && key == "h2") prefs.set("p24_h2_user", true)
         savePage(page, PageLay(pageOrder(page, keys), (pageHidden(page) + key).toList()))
     }
     fun showPageItem(page: String, keys: List<String>, key: String) {
@@ -2364,7 +2381,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var paperFinTabs by mutableStateOf(FIN_TABS_DEFAULT)
         private set
     fun updatePaperFinTabs(l: List<String>) {
-        val v = l.distinct().filter { k -> FIN_TABS.any { it.first == k } }.take(4).ifEmpty { listOf("oversikt") }
+        val v = l.distinct().filter { k -> FIN_TABS.any { it.first == k } }.take(5).ifEmpty { listOf("oversikt") }
         paperFinTabs = v
         prefs.set(AppPrefs.FIN_TABS + (account?.id ?: ""), v.joinToString(","))
         viewModelScope.launch { runCatching { api.hlPut("/me/layout", JSONObject().put("finTabs", JSONArray(v))) } }
@@ -3231,35 +3248,55 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         Notify.test(appCtx, notifyPrefs)
     }
 
-    // Appnavn og -ikon (Innstillinger → Navn på appen / App-ikon). Navnet ligger på serveren og vises også på web.
+    // Appnavn og -ikon (Innstillinger → Navn på appen / App-ikon). Prompt 24: navnet og ikonet følger brukeren (/api/me/layout
+    // appName/appIcon, maks 20 tegn), med /api/app som reserve. Navnet under ikonet er et av de ferdige navnene (activity-alias).
     var appInfo by mutableStateOf(AppInfo("Homelab", "hus"))
         private set
     val appName: String get() = appInfo.name.ifBlank { "Homelab" }
+    /** Etiketten under ikonet i appskuffen: et av APP_LABELS, eller null (standardnavnet). */
+    val launcherLabel: String? get() = prefs.str("app_label24", "").takeIf { it in APP_LABELS }
     fun loadAppInfo() = viewModelScope.launch {
+        val local = prefs.str("app_name24", "")
         runCatching { parseAppInfo(api.hlGet("/app")) }.getOrNull()?.let { a ->
-            appInfo = a.copy(icon = prefs.str("app_icon", a.icon))
+            appInfo = a.copy(name = local.ifBlank { a.name }, icon = prefs.str("app_icon", a.icon))
+        } ?: run { if (local.isNotBlank()) appInfo = appInfo.copy(name = local, icon = prefs.str("app_icon", appInfo.icon)) }
+    }
+    /** layout.appName / layout.appIcon fra serveren (satt på en annen enhet eller på web). */
+    fun applyLayout24a(raw: String) {
+        val o = runCatching { JSONObject(raw) }.getOrNull() ?: return
+        o.optStr("appName")?.take(20)?.let { n -> prefs.set("app_name24", n); appInfo = appInfo.copy(name = n) }
+        o.optStr("appIcon")?.takeIf { k -> APP_ICONS.any { it.first == k } }?.let { k ->
+            if (k != appInfo.icon) { prefs.set("app_icon", k); appInfo = appInfo.copy(icon = k); runCatching { applyLauncher24(appCtx, launcherAlias24(k, launcherLabel)) } }
         }
     }
     fun saveAppName(name: String) = launch {
-        val v = name.trim().take(40).ifBlank { "Homelab" }
+        val v = name.trim().take(20).ifBlank { "Homelab" }
         appInfo = appInfo.copy(name = v)
-        try { api.hlPut("/app", JSONObject().put("name", v)); flash("Appen heter nå «$v»") }
-        catch (e: ApiException) { if (e.status == 403) message = "Bare administrator kan endre navnet på appen" else throw e }
-    }
-    /** Bytter ikonet i appskuffen (activity-alias). Launcheren kan bruke noen sekunder på å vise det nye ikonet. */
-    fun setAppIcon(key: String) {
-        val ctx = appCtx
-        val pm = ctx.packageManager
-        APP_ICONS.forEach { (k, _, alias) ->
-            val cn = android.content.ComponentName(ctx, "${ctx.packageName}.$alias")
-            val state = if (k == key) android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED else android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-            runCatching { pm.setComponentEnabledSetting(cn, state, android.content.pm.PackageManager.DONT_KILL_APP) }
+        prefs.set("app_name24", v)
+        // Ferdig navn: etiketten under ikonet byttes også (nytt alias slås på før det gamle slås av).
+        val label = v.takeIf { it in APP_LABELS }
+        if (label != launcherLabel) {
+            prefs.set("app_label24", label ?: "")
+            runCatching { applyLauncher24(appCtx, launcherAlias24(appInfo.icon, label)) }
         }
+        runCatching { api.hlPut("/me/layout", JSONObject().put("appName", v)) }
+        // Eldre server: navnet for hele homelab (bare administrator).
+        runCatching { api.hlPut("/app", JSONObject().put("name", v)) }
+        flash(if (label != null || v == "Homelab") "Appen heter nå «$v». Det kan ta noen sekunder før hjemskjermen viser det."
+            else "Appen heter nå «$v» inne i appen. Navnet under ikonet på hjemskjermen kan bare være et av de ferdige navnene på Android.")
+    }
+    /** Bytter ikonet i appskuffen (activity-alias): det nye aliaset slås på før det gamle slås av, så appen aldri forsvinner. */
+    fun setAppIcon(key: String) {
+        val ok = runCatching { applyLauncher24(appCtx, launcherAlias24(key, launcherLabel)) }.getOrDefault(false)
+        if (!ok) { message = "Fikk ikke byttet ikonet."; Haptics.error(); return }
         prefs.set("app_icon", key)
         appInfo = appInfo.copy(icon = key)
         Haptics.success()
-        message = "App-ikonet er byttet. Det kan ta noen sekunder før hjemskjermen viser det nye."
-        viewModelScope.launch { runCatching { api.hlPut("/app", JSONObject().put("icon", key)) } }
+        message = "Ikonet byttes. Det kan ta noen sekunder før hjemskjermen oppdateres. Snarveier på hjemskjermen kan bli fjernet, og må legges til på nytt."
+        viewModelScope.launch {
+            runCatching { api.hlPut("/me/layout", JSONObject().put("appIcon", key)) }
+            runCatching { api.hlPut("/app", JSONObject().put("icon", key)) }
+        }
     }
 
     // Vær: «Sammenlign Yr og Storm» (Yr fra MET, Storm har ikke åpent API, så ECMWF fra Open-Meteo brukes).
@@ -3442,6 +3479,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal fun launchNav(block: suspend () -> Unit) = launch(block)
     /** Kvitteringer i Papir (Receipts23.kt): bokførte, åpen rad og «Klar» som er sett. */
     val rc23 = no.kristo.finanshub.ui.Receipts23State()
+
+    /* ---------- Prompt 24 (ANDROID-B): Familie, profiler, Boliger, søk i Innstillinger og integrasjoner (Mod24B.kt) ---------- */
+    val b24 = B24State()
+    internal suspend fun <T> api24b(f: suspend Api.() -> T): T = api.f()
+    internal fun launch24b(block: suspend () -> Unit) = launch(block)
+
+    /* ---------- Prompt 24 (A): Bursdager (Birthdays24.kt), Ruter (Ruter24.kt) og app-ikon/navn (AppIcon24.kt) ---------- */
+    val bd24 = Bd24State()
+    internal suspend fun <T> api24a(f: suspend Api.() -> T): T = api.f()
+    internal fun launch24a(block: suspend () -> Unit) = launch(block)
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.

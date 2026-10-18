@@ -34,13 +34,27 @@ class WidgetConfigActivity : ComponentActivity() {
         setResult(RESULT_CANCELED, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
         if (id == AppWidgetManager.INVALID_APPWIDGET_ID) { finish(); return }
         val start = WidgetStore.label(this, id)
+        // Prompt 24: Samsung-widgetene i Samsung-størrelse har ikke navn under seg, men kan bruke Papir-farger.
+        val s24 = runCatching { AppWidgetManager.getInstance(this).getAppWidgetInfo(id).provider.className.contains(".S24") }.getOrDefault(false)
+        val papir0 = S24.papir(this, id)
         setContent {
             var on by remember { mutableStateOf(start) }
+            var papir by remember { mutableStateOf(papir0) }
             MaterialTheme(colorScheme = darkColorScheme(primary = Color(0xFF3E91FF))) {
                 Surface(Modifier.fillMaxSize(), color = Color(0xFF121214)) {
                     Column(Modifier.fillMaxSize().systemBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                         Text("Rediger widget", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
-                        Row(
+                        if (s24) Row(
+                            Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color(0xFF1E1E22)).clickable { papir = !papir }.padding(18.dp, 14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text("Papir-farger", color = Color.White, fontSize = 16.sp)
+                                Text("Rød og hvit som i appen. Av: farger fra One UI-temaet", color = Color(0xFFB4B4BC), fontSize = 13.sp)
+                            }
+                            Switch(papir, { papir = it })
+                        }
+                        if (!s24) Row(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(Color(0xFF1E1E22)).clickable { on = !on }.padding(18.dp, 14.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -51,7 +65,7 @@ class WidgetConfigActivity : ComponentActivity() {
                             Switch(on, { on = it })
                         }
                         Spacer(Modifier.weight(1f))
-                        Button(onClick = { save(id, on) }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp)) { Text("Ferdig", fontSize = 16.sp) }
+                        Button(onClick = { if (s24) S24.setPapir(this@WidgetConfigActivity, id, papir); save(id, on) }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp)) { Text("Ferdig", fontSize = 16.sp) }
                     }
                 }
             }

@@ -173,7 +173,7 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
     if (vm.scanSheet) ScanSheet(vm, takePhoto, photos = pickPhotos, files = pickFiles)
     if (vm.newsOpen) NewsReader(vm)
     if (vm.weatherOpen) WeatherApp(vm)
-    if (vm.ruterOpen) RuterPage(vm)
+    if (vm.ruterOpen) RuterScreen24(vm)
     if (vm.familyOpen) FamilyScreen(vm)
     if (vm.tasksOpen) TasksScreen(vm)
     if (vm.compareOpen) CompareScreen(vm)
