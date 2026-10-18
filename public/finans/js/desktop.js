@@ -132,11 +132,11 @@ function shell(content) {
   </aside>
   <main class="main"><div class="wrap">
     <header class="head">
-      <div style="display:flex;gap:14px;align-items:flex-start"><button class="side-tog" data-act="compact-nav" aria-label="${compactNav() ? 'Vis hele sidemenyen' : 'Kompakt sidemeny'}" title="${compactNav() ? 'Vis hele sidemenyen' : 'Kompakt sidemeny'}" aria-pressed="${compactNav()}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 5h16v14H4zM9 5v14"/></svg></button><div><div class="crumb"><span>FinansHub</span><span>›</span><b>${esc(pageName(u.page))}</b></div><h1>${u.page === 'ov' ? `${greet()}, ${esc(me.name)}` : esc(pageName(u.page))}</h1>${MODULE_SUB[u.page] ? `<div class="note" style="font-size:14px;margin-top:4px">${MODULE_SUB[u.page]}</div>` : ''}</div></div>
+      <div style="display:flex;gap:14px;align-items:flex-start"><button class="side-tog" data-act="compact-nav" aria-label="${compactNav() ? 'Vis hele sidemenyen' : 'Kompakt sidemeny'}" title="${compactNav() ? 'Vis hele sidemenyen' : 'Kompakt sidemeny'}" aria-pressed="${compactNav()}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 5h16v14H4zM9 5v14"/></svg></button><div><div class="crumb"><span>FinansHub</span><span>›</span><b>${esc(pageName(u.page))}</b></div><h1>${u.page === 'ov' ? `${greet()}, ${esc(String(me.name ?? '').split(/\s+/)[0] || '@' + (me.username ?? ''))}` : esc(pageName(u.page))}</h1>${MODULE_SUB[u.page] ? `<div class="note" style="font-size:14px;margin-top:4px">${MODULE_SUB[u.page]}</div>` : ''}</div></div>
       <div class="head-r">
         ${b.restricted ? '' : `<form class="search${aiMode ? ' ai' : ''}" data-form="gsearch" role="search">${aiMode ? '<span class="ai-star">✦</span>' : icon('search', 17, 'var(--muted)')}<input name="q" value="${esc(aiMode ? (u.aiDraft ?? '') : u.q)}" placeholder="${aiMode ? 'Spør, f.eks. «strøm i september»' : 'Søk i transaksjoner …'}" aria-label="${aiMode ? 'Spør AI om transaksjoner og kvitteringer' : 'Søk i transaksjoner'}"><button type="button" class="ai-tog" data-act="ai-toggle" aria-pressed="${aiMode}" title="Søk med AI i transaksjoner og kvitteringer">✦ AI</button></form>
         <a class="icon-btn" href="#/kv" aria-label="Varsler: ${b.reviewCount} kvitteringer til gjennomgang">${icon('bell', 18)}${b.reviewCount ? '<span class="dot"></span>' : ''}</a>`}
-        <div class="me"><div class="av">${esc(ini(me.name))}</div><div class="me-n"><div>${esc(me.name)}</div><div>${me.role === 'admin' ? 'Privat' : 'Boliger'}</div></div></div>
+        <a class="me" href="#/inn" title="${esc(me.name ?? '')}"><div class="av">${me.avatarUrl ? `<img src="${esc(me.avatarUrl)}" alt="">` : esc(ini(me.username ?? me.name))}</div><div class="me-n"><div>@${esc(me.username ?? 'meg')}</div><div>${me.role === 'admin' ? 'Privat' : 'Boliger'}</div></div></a>
         <a class="close" href="/#/dash" aria-label="Tilbake til Hjem" title="Tilbake til Hjem">×</a>
       </div>
     </header>
@@ -475,7 +475,7 @@ function reports() {
 
 /* ===================== Innstillinger ===================== */
 
-const SET_TABS = [['gen', 'Generelt', 'Navn, valuta, måned'], ['look', 'Utseende', 'Tema og sidemeny'], ['meny', 'Sidemeny', 'Rekkefølge og synlighet'], ['bol', 'Boliger', 'Ny bolig, deling, oppsett og kategorier'], ['imp', 'Import', 'Bank, Excel, Finn-e-post og annonser'], ['ai', 'AI-motor', 'Ollama eller Gemini'], ['aks', 'Aksjer · Trading 212', 'Nøkkel, miljø og synk'], ['cat', 'Kategorier', 'Farger og typer'], ['rule', 'Regler', 'Auto-kategorisering'],
+const SET_TABS = [['gen', 'Generelt', 'Navn, valuta, måned'], ['look', 'Utseende', 'Tema og sidemeny'], ['meny', 'Sidemeny', 'Rekkefølge og synlighet'], ['bol', 'Boliger', 'Ny bolig, deling, oppsett og kategorier'], ['imp', 'Import', 'Bank, Excel, Finn-e-post og annonser'], ['ai', 'AI-motor', 'Ollama, Gemini eller Groq'], ['aks', 'Aksjer · Trading 212', 'Nøkkel, miljø og synk'], ['cat', 'Kategorier', 'Farger og typer'], ['rule', 'Regler', 'Auto-kategorisering'],
   ['varsel', 'Varsler', 'Budsjett og kvitteringer'], ['mobil', 'Mobil og tilgang', 'App-tokens og snarveier'], ['data', 'Backup og data', 'Nedlasting, SMB-share og gjenoppretting']];
 
 // Innstillinger → Sidemeny: dra, ▲▼ og bryter for vis/skjul. Endringene lagres med en gang.
@@ -511,15 +511,20 @@ function settingsPage() {
     const models = ai?.ollama?.models?.length ? ai.ollama.models : ['qwen2.5vl:7b', 'gemma3:12b', 'llama3.2-vision:11b', 'minicpm-v'];
     if (!models.includes(st.ollamaModel)) models.unshift(st.ollamaModel);
     body = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
-      ${[['ollama', 'Ollama · lokalt', 'Bildet forlater aldri huset'], ['gemini', 'Gemini · sky', 'Raskest og mest presis']].map(([k2, n, s2]) => `<button class="prov" data-provider="${k2}" aria-pressed="${st.provider === k2}"><b><span class="radio"></span>${n}</b><span class="note" style="font-size:12.5px">${s2}</span></button>`).join('')}</div>
+      ${[['ollama', 'Ollama · lokalt', 'Bildet forlater aldri huset'], ['gemini', 'Gemini · sky', 'Raskest og mest presis'], ['groq', 'Groq · sky', 'Svært rask tekst, Llama-modeller']].map(([k2, n, s2]) => `<button class="prov" data-provider="${k2}" aria-pressed="${st.provider === k2}"><b><span class="radio"></span>${n}</b><span class="note" style="font-size:12.5px">${s2}</span></button>`).join('')}</div>
       <div class="form-grid">
         <label class="f">Ollama-adresse<input class="inp mono" style="font-size:13px" data-set="ollamaUrl" value="${esc(st.ollamaUrl)}"></label>
         <label class="f">Ollama-modell<select class="inp" data-set="ollamaModel">${models.map((m) => opt(m, m, st.ollamaModel)).join('')}</select></label>
         <label class="f">Gemini-modell<input class="inp mono" style="font-size:13px" data-set="geminiModel" value="${esc(st.geminiModel)}"></label>
-        <label class="f">Gemini API-nøkkel<input class="inp" type="password" data-set="geminiKey" value="" placeholder="${st.geminiKeySet ? '•••••••• lagret på serveren' : 'Lagres på serveren'}" autocomplete="off"></label></div>
+        <label class="f">Gemini API-nøkkel<input class="inp" type="password" data-set="geminiKey" value="" placeholder="${st.geminiKeySet ? '•••••••• lagret på serveren' : 'Lagres på serveren'}" autocomplete="off"></label>
+        <label class="f">Groq-modell (tekst)<input class="inp mono" style="font-size:13px" data-set="groqModel" value="${esc(st.groqModel ?? '')}" placeholder="llama-3.3-70b-versatile"></label>
+        <label class="f">Groq-modell (bilder)<input class="inp mono" style="font-size:13px" data-set="groqVisionModel" value="${esc(st.groqVisionModel ?? '')}" placeholder="meta-llama/llama-4-scout-17b-16e-instruct"></label>
+        <label class="f">Groq API-nøkkel · <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a><input class="inp" type="password" data-set="groqKey" value="" placeholder="${st.groqKeySet ? '•••••••• lagret på serveren' : 'gsk_…'}" autocomplete="off"></label>
+        <label class="f">Roboflow API-nøkkel (valgfri) · <a href="https://app.roboflow.com/settings/api" target="_blank" rel="noopener">roboflow.com</a><input class="inp" type="password" data-set="roboflowKey" value="" placeholder="${st.roboflowKeySet ? '•••••••• lagret på serveren' : 'Lagres på serveren'}" autocomplete="off"></label>
+        <label class="f">Roboflow workflow/modell-ID (valgfri)<input class="inp mono" style="font-size:13px" data-set="roboflowWorkflow" value="${esc(st.roboflowWorkflow ?? '')}" placeholder="arbeidsområde/workflow"></label></div>
       <label class="f">Minste sikkerhet før bilaget merkes «Sjekk» · <b class="mono" style="color:var(--text)">${st.minConf} %</b><input type="range" min="50" max="99" value="${st.minConf}" data-set="minConf"></label>
-      <button class="tog-row" data-tog="fallback"><span class="grow"><b style="font-weight:500">Bruk ${st.provider === 'ollama' ? 'Gemini' : 'Ollama'} som reserve</b><br><span class="note" style="font-size:12.5px">Når hovedmotoren er utilgjengelig eller usikker. Slå av for å holde alt lokalt.</span></span><span class="toggle" role="switch" aria-checked="${!!st.fallback}"></span></button>
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn ghost" data-act="test-ai">Test tilkobling</button>${u.msg.ai ? `<span class="${u.msg.aiOk ? 'ok-msg' : 'err-msg'}">${esc(u.msg.ai)}</span>` : ''}</div>
+      <button class="tog-row" data-tog="fallback"><span class="grow"><b style="font-weight:500">Bruk de andre motorene som reserve</b><br><span class="note" style="font-size:12.5px">Når hovedmotoren er utilgjengelig eller usikker. Slå av for å holde alt lokalt.</span></span><span class="toggle" role="switch" aria-checked="${!!st.fallback}"></span></button>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn ghost" data-act="test-ai">Test tilkobling</button>${['ollama', 'gemini', 'groq'].map((k2) => `<button class="btn ghost" data-test-engine="${k2}">Test ${k2 === 'groq' ? 'Groq' : k2 === 'gemini' ? 'Gemini' : 'Ollama'}</button>`).join('')}<button class="btn ghost" data-act="test-roboflow">Test Roboflow</button>${u.msg.ai ? `<span class="${u.msg.aiOk ? 'ok-msg' : 'err-msg'}">${esc(u.msg.ai)}</span>` : ''}</div>
       <div class="note" style="font-size:12.5px">Med Gemini sendes bildet til Google. På gratisnivået kan Google bruke data til å forbedre tjenestene – sjekk vilkårene.</div>`;
   } else if (t === 'cat') body = `<div style="display:flex;flex-direction:column;gap:8px">${cats().map((c) => `<div class="edit-row"><input type="color" value="${c.color}" data-cat-field="color" data-id="${c.id}" aria-label="Farge"><input class="inp grow" value="${esc(c.name)}" data-cat-field="name" data-id="${c.id}" aria-label="Navn" style="flex:1 1 160px">
       <select class="inp" data-cat-field="kind" data-id="${c.id}" style="width:140px">${Object.entries(KINDS).map(([k2, l]) => opt(k2, l, c.kind)).join('')}</select><button class="del" data-del-cat="${c.id}" aria-label="Slett">×</button></div>`).join('')}
@@ -777,6 +782,7 @@ export function bind() {
     if ((x = d('[data-month]'))) { u.month = shiftMonth(u.month, (u.page === 'rap' && u.rap === 'year' ? 12 : 1) * +x.dataset.month); return load(); }
     if ((x = d('[data-cat]'))) { u.cat = x.dataset.cat; await loadTx(); return render(); }
     if ((x = d('[data-rc-cat]'))) return patchRc(u.selRc, { categoryId: +x.dataset.rcCat });
+    if ((x = d('[data-test-engine]'))) { const k = x.dataset.testEngine; u.msg.ai = 'Tester …'; render(); const r = await api('/ai/test', { method: 'POST', json: { provider: k } }).catch((e) => ({ ok: false, message: e.message })); u.msg.aiOk = r.ok; u.msg.ai = r.message; return render(); }
     if ((x = d('[data-settab]'))) { u.setTab = x.dataset.settab; u.msg = {}; if (u.setTab === 'ai') loadAi().then(render); return load(); }
     if ((x = d('[data-theme-pick]'))) return saveLayout({ design: x.dataset.themePick });
     if ((x = d('[data-provider]'))) return saveSet({ provider: x.dataset.provider });
@@ -834,9 +840,10 @@ export function bind() {
         const a = S.ai, st = S.boot.settings;
         if (!a) { u.msg.ai = 'Fikk ikke svar fra serveren.'; u.msg.aiOk = false; }
         else if (st.provider === 'ollama') { u.msg.aiOk = a.ollama.ok && a.ollama.hasModel; u.msg.ai = !a.ollama.ok ? `Ollama svarte ikke på ${st.ollamaUrl} (${a.ollama.error ?? 'feil'})` : a.ollama.hasModel ? `Ollama svarte · ${st.ollamaModel} er lastet ned` : `Ollama svarte, men ${st.ollamaModel} mangler. Kjør: ollama pull ${st.ollamaModel}`; }
-        else { u.msg.aiOk = a.gemini.ok; u.msg.ai = !a.gemini.configured ? 'Gemini-nøkkel mangler' : a.gemini.ok ? `Gemini svarte · ${st.geminiModel}` : `Gemini svarte ikke (${a.gemini.status ?? a.gemini.error})`; }
+        else { const r = await api('/ai/test', { method: 'POST', json: { provider: st.provider } }).catch((e) => ({ ok: false, message: e.message })); u.msg.aiOk = r.ok; u.msg.ai = r.message; }
         return render();
       }
+      case 'test-roboflow': { u.msg.ai = 'Tester Roboflow …'; render(); const r = await api('/ai/roboflow/test', { method: 'POST' }).catch((e) => ({ ok: false, message: e.message })); u.msg.aiOk = r.ok; u.msg.ai = r.message; return render(); }
       case 'demo': await api('/demo', { method: 'POST' }); toast('Demodata lastet inn'); return refreshAll();
       case 'wipe': u.add = { type: 'wipe' }; return render();
       case 'print': return window.print();
@@ -907,9 +914,9 @@ export function bind() {
     if (t.dataset.set) {
       const key = t.dataset.set; let v = t.value;
       if (['monthStart', 'yearGoal', 'minConf'].includes(key)) v = +String(v).replace(/\s/g, '');
-      if ((key === 'geminiKey' || key === 'imapPass') && !v) return;
+      if (['geminiKey', 'groqKey', 'roboflowKey', 'imapPass'].includes(key) && !v) return;
       await saveSet({ [key]: v }); if (key === 'monthStart') await refreshAll();
-      if (key === 'geminiKey') toast('Nøkkelen er lagret på serveren');
+      if (['geminiKey', 'groqKey', 'roboflowKey'].includes(key)) toast('Nøkkelen er lagret på serveren');
       return;
     }
     if (t.dataset.catField) { await api(`/categories/${t.dataset.id}`, { method: 'PATCH', json: { [t.dataset.catField]: t.value } }); await loadBoot(); return render(); }

@@ -307,3 +307,36 @@ bolApi.post('/categories/suggest', async (c) => {
   if (!text) return bad(c, 'Mangler tekst');
   try { const r = await aiCat(text, { allowNew: false }); return c.json({ id: r.id, label: catLabel(r.id), engine: 'ai' }); } catch { const id = heuristicCat(text); return c.json({ id, label: catLabel(id), engine: 'regler' }); }
 });
+
+/* ---------------- Kommende forfall (prompt 16) ---------------- */
+// Faste regninger og avdrag som ikke er betalt, sortert etter dato. Forfall kan stå som ISO-dato eller «dd.mm»
+// (da regnes neste gang datoen kommer). Brukes av boligsiden på web og i appene.
+const DAY = 86_400_000;
+export function dueDate(raw, today = new Date()) {
+  const s = String(raw ?? '').trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  const m = s.match(/^(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?$/);
+  if (!m) return null;
+  const d = +m[1], mo = +m[2];
+  if (d < 1 || d > 31 || mo < 1 || mo > 12) return null;
+  let y = m[3] ? (+m[3] < 100 ? 2000 + +m[3] : +m[3]) : today.getFullYear();
+  const iso = (yy) => `${yy}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  // Uten år: er datoen passert for over en måned siden, gjelder neste år.
+  if (!m[3] && new Date(iso(y) + 'T12:00') < new Date(today.getTime() - 31 * DAY)) y += 1;
+  return iso(y);
+}
+export function upcomingOf(out, { days = 90, today = new Date() } = {}) {
+  const t0 = new Date(today.toISOString().slice(0, 10) + 'T00:00').getTime();
+  const rows = [];
+  for (const b of out.bills ?? []) {
+    const date = dueDate(b.nextDue, today);
+    if (date) rows.push({ kind: 'bill', id: b.id, title: b.category, sub: [b.name, b.freq, b.payer].filter(Boolean).join(' · '), amount: b.last?.amount ?? null, date, color: b.color });
+  }
+  for (const p of out.projects ?? []) for (const x of p.installments ?? []) {
+    if (x.paid) continue;
+    const date = dueDate(x.due, today);
+    if (date) rows.push({ kind: 'installment', id: x.id, projectId: p.id, title: x.label, sub: `${p.name}${p.vendor ? ' · ' + p.vendor : ''}`, amount: x.amount, date, color: p.color });
+  }
+  return rows.map((r) => ({ ...r, days: Math.round((new Date(r.date + 'T00:00').getTime() - t0) / DAY) }))
+    .filter((r) => r.days <= days).sort((a, b) => a.date.localeCompare(b.date));
+}

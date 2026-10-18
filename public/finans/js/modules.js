@@ -45,6 +45,50 @@ const legg = (cur) => {
 };
 const toBolSettings = '<a class="btn ghost" href="#/inn" data-mact="bol-settings">+ Ny bolig i Innstillinger</a>';
 
+const BOL_TABS = [['ov', 'Oversikt'], ['ut', 'Utgifter'], ['pr', 'Prosjekter'], ['rg', 'Regninger'], ['kv', 'Kvitteringer']];
+const BOL_ICON = { Hytte: 'M3 20h18M5 20V11l7-7 7 7v9M10 20v-5h4v5', Leilighet: 'M5 21V4h14v17M9 8h2M13 8h2M9 12h2M13 12h2M9 16h2M13 16h2', Utleie: 'M3 11l9-7 9 7M5 10v10h14V10M15 14a3 3 0 1 1-6 0 3 3 0 0 1 6 0M12 17v3', Annet: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z' };
+const bolIcon = (type, sz = 20) => `<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="${BOL_ICON[type] ?? 'M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6'}"/></svg>`;
+const bolHue = (type) => ({ Hytte: 28, Leilighet: 215, Utleie: 160, Annet: 280 }[type] ?? 14);
+const dueTxt = (x) => (x.days < 0 ? `${-x.days} d over` : x.days === 0 ? 'i dag' : x.days === 1 ? 'i morgen' : x.days <= 31 ? `om ${x.days} d` : dd(x.date));
+function upcomingCard(cur, n = 6, style = 'flex:2 1 260px;padding:20px;gap:6px') {
+  const list = (cur.upcoming ?? []).slice(0, n);
+  const rows = list.map((x) => `<div class="bol-up${x.days < 0 ? ' late' : x.days <= 7 ? ' soon' : ''}"><span class="bol-up-d"><b>${esc(dd(x.date))}</b><small>${esc(dueTxt(x))}</small></span><span class="bol-up-dot" style="background:${x.color}"></span><span class="grow ell-wrap"><b class="ell" style="display:block;font-weight:500">${esc(x.title)}</b><span class="note ell" style="display:block;font-size:12px">${x.kind === 'installment' ? 'Avdrag · ' : ''}${esc(x.sub)}</span></span><b class="mono" style="white-space:nowrap">${x.amount != null ? kr0(x.amount) : '–'}</b>${x.kind === 'installment' && cur.canEdit ? `<button class="btn sm pay" data-mpay="${x.id}">Betalt</button>` : ''}</div>`).join('');
+  return card(`<div class="card-h" style="align-items:baseline"><h3>Kommende forfall</h3><button class="link-btn" data-mbol-tab="rg">Regninger ›</button></div>${rows || '<div class="note" style="font-size:13.5px">Ingen regninger eller avdrag forfaller de neste 90 dagene. Legg inn faste regninger under Regninger.</div>'}`, style);
+}
+function recentCard(cur) {
+  const rows = cur.entries.slice(0, 6).map((e) => `<div class="dir-row2">${logo({ ...e, color: '#A0A0AA' }, 30, 8)}<span class="grow ell-wrap"><span class="ell" style="display:block">${esc(e.description)}</span><span class="dir-meta"><span class="mtag" style="background:${e.color}1F;color:${e.color}">${e.pending ? '✦ Kategoriseres …' : `${e.aiCategory ? '✦ ' : ''}${esc(e.categoryLabel ?? e.category)}`}</span>${dd(e.date)}${e.receiptId ? ' · 🧾' : ''}</span></span><b class="mono" style="white-space:nowrap">${e.pending ? '…' : kr0(e.amount)}</b></div>`).join('');
+  return card(`<div class="card-h" style="padding:12px 0 4px;align-items:baseline"><h3>Siste utgifter</h3><button class="link-btn" data-mbol-tab="ut">Alle ${cur.entries.length} ›</button></div>${rows || '<div class="note" style="padding:14px 0">Ingen utgifter ennå. Dra en kvittering inn på siden for å komme i gang.</div>'}`, 'padding:8px 20px 14px;gap:0');
+}
+function projMini(cur) {
+  const rows = cur.projects.map((p) => { const pct = p.budget ? Math.min(100, (p.spent / p.budget) * 100) : 0, over = p.remaining < 0;
+    return `<button class="bol-pm" data-mbol-tab="pr"><span class="bol-pm-h"><b>${esc(p.name)}</b><span class="mono" style="color:${over ? 'var(--neg)' : 'var(--dim)'}">${Math.round(pct)} %</span></span><span class="prog" style="height:6px"><i style="width:${pct}%;background:${over ? 'var(--neg)' : 'var(--acc)'}"></i></span><span class="note" style="font-size:12px">${n0(p.spent)} av ${n0(p.budget)} kr${p.vendor ? ' · ' + esc(p.vendor) : ''}</span></button>`; }).join('');
+  return card(`<div class="card-h" style="align-items:baseline"><h3>Prosjekter</h3><button class="link-btn" data-mbol-tab="pr">Alle ›</button></div><div style="display:flex;flex-direction:column;gap:8px">${rows}</div>`, 'flex:3 1 340px;padding:20px;gap:12px');
+}
+// Utgifter som tidslinje per måned, med søk og kategorifilter.
+function timelineCard(cur) {
+  const qv = (u.bolQ ?? '').trim().toLowerCase();
+  const rows = cur.entries.filter((e) => (!u.dcat || e.category === u.dcat) && (!qv || [e.description, e.categoryLabel, e.category, e.project, e.paidBy, e.aiShort].some((x) => String(x ?? '').toLowerCase().includes(qv))));
+  const groups = new Map();
+  for (const e of rows) { const m = (e.date ?? '').slice(0, 7); if (!groups.has(m)) groups.set(m, []); groups.get(m).push(e); }
+  const chips = [['', 'Alle'], ...cur.categories.map((c) => [c.name, c.name])].map(([v, n]) => `<button class="bol-chip${(u.dcat ?? '') === v ? ' on' : ''}" data-mbol-cat="${esc(v)}">${esc(n)}</button>`).join('');
+  const body = [...groups].map(([m, list]) => { const [y, mo] = m.split('-');
+    return `<div class="bol-tl-m"><div class="bol-tl-h"><b>${MONTHS_LONG[+mo - 1] ?? m} ${y ?? ''}</b><span class="mono">${kr0(list.reduce((a, e) => a + e.amount, 0))}</span></div>${list.map((e) => entryRow(cur, e)).join('')}</div>`; }).join('');
+  return card(`<div class="bol-tl-top"><h3>${esc(u.dcat || 'Alle utgifter')}</h3><span class="note" style="font-size:12.5px">${rows.length} poster · ${kr0(rows.reduce((a, e) => a + e.amount, 0))}</span><input class="inp bol-q" type="search" placeholder="Søk i butikk, kategori, prosjekt …" value="${esc(u.bolQ ?? '')}" data-mbol-q aria-label="Søk i utgifter"></div>
+    <div class="bol-chips">${chips}</div>${body || `<div class="note" style="padding:18px 0;border-top:1px solid var(--sep)">${qv ? `Ingen treff på «${esc(u.bolQ)}».` : 'Ingen utgifter her ennå.'}</div>`}`, 'padding:16px 20px;gap:10px');
+}
+function entryRow(cur, e) {
+  return `<div class="dir-row2">${e.receiptId ? `<a class="bol-thumb" href="/finans/api/folders/${cur.id}/receipts/${e.receiptId}/file" target="_blank" rel="noopener" title="Åpne kvitteringen"><img src="/finans/api/folders/${cur.id}/receipts/${e.receiptId}/thumb" alt="" loading="lazy"></a>` : logo({ ...e, color: '#A0A0AA' }, 30, 8)}<span class="grow ell-wrap"><span class="ell" style="display:block">${esc(e.description)}</span>
+    <span class="dir-meta">${cur.canEdit && !e.pending ? `<label class="mtag mtag-sel" style="background:${e.color}1F;color:${e.color}" title="Endre kategori">${e.aiCategory ? '✦ ' : ''}${esc(e.categoryLabel ?? e.category)}<select data-mentry-cat="${e.id}" aria-label="Kategori for ${esc(e.description)}">${(cur.catTree ?? []).map((o) => `<option value="${o.id}"${o.id === e.categoryId ? ' selected' : ''}>${esc(o.label)}</option>`).join('')}</select></label>`
+      : `<span class="mtag" style="background:${e.color}1F;color:${e.color}">${e.pending ? '✦ Kategoriseres …' : `${e.aiCategory ? '✦ ' : ''}${esc(e.categoryLabel ?? e.category)}`}</span>`}${e.project ? `<span class="mtag">${esc(e.project)}</span>` : ''}${dd(e.date)} · betalt av ${esc(e.paidBy)}</span>${aiLine(e.aiShort, 'd-ai')}</span>
+    <b class="mono" style="white-space:nowrap">${e.pending ? '…' : kr0(e.amount)}</b>${cur.canEdit ? `<button class="x-btn sm" data-mentry-del="${e.id}" aria-label="Fjern">×</button>` : ''}</div>`;
+}
+function receiptsCard(cur) {
+  const list = cur.receipts ?? [];
+  const drop = cur.canEdit ? `<label class="bol-drop"><span class="bol-drop-ic" aria-hidden="true">↑</span><b>Dra kvitteringer og regninger hit</b><span>eller trykk for å velge · bilder og PDF · ✦ AI leser butikk, dato og beløp og velger kategori</span><input type="file" multiple accept="image/*,application/pdf" data-mrc="folder" hidden></label>` : '';
+  const grid = list.map((r) => `<a class="bol-rc" href="${r.fileUrl}" target="_blank" rel="noopener"><span class="bol-rc-img"><img src="${r.thumbUrl}" alt="" loading="lazy">${r.pending ? '<span class="bol-rc-pend">✦ Leses …</span>' : ''}</span><span class="bol-rc-t"><b class="ell">${esc(r.description)}</b><span class="note">${dd(r.date)} · <span style="color:${r.color}">${esc(r.category)}</span></span><b class="mono">${r.pending ? '…' : kr0(r.amount)}</b></span></a>`).join('');
+  return `${drop}${card(`<div class="card-h" style="align-items:baseline"><h3>Kvitteringer</h3><span class="note" style="font-size:12.5px">${list.length} lagret i ${esc(cur.name)}</span></div>${grid ? `<div class="bol-rcs">${grid}</div>` : '<div class="note" style="font-size:13.5px">Ingen kvitteringer ennå.</div>'}`, 'padding:20px;gap:14px')}`;
+}
+
 function dirPage() {
   const list = S.folders;
   if (!list) return skel(400);
@@ -53,11 +97,10 @@ function dirPage() {
   const me = S.boot.me ?? {};
   const cards = list.map((f) => {
     const others = f.members.filter((m) => !m.you).map((m) => m.name);
-    return `<button class="dir-card${cur?.id === f.id ? ' on' : ''}" data-mdir="${f.id}"><span class="dir-card-h"><b>${esc(f.name)}</b><span class="mtag">${esc(f.type || 'Mappe')}</span></span>
-      <span class="note" style="font-size:12.5px">${others.length ? 'Delt med ' + esc(others.join(', ')) : 'Bare deg'}</span><span class="dir-card-f"><span>Du: ${esc((f.myRole ?? '').toLowerCase())}</span><span class="mono">${kr0(f.yearTotal)} i år</span></span></button>`;
+    return `<button class="dir-card bol-pick${cur?.id === f.id ? ' on' : ''}" data-mdir="${f.id}" role="tab" aria-selected="${cur?.id === f.id}"><span class="bol-pick-ic" aria-hidden="true">${bolIcon(f.type)}</span><span class="bol-pick-t"><b>${esc(f.name)}</b><span class="note">${esc(f.type || 'Bolig')} · ${others.length ? 'delt med ' + esc(others.join(', ')) : 'bare deg'}</span></span><span class="mono bol-pick-v">${kr0(f.yearTotal)}<small>i år</small></span></button>`;
   }).join('');
-  const left = `<div class="dir-left">${cards || `<div class="card note" style="padding:16px;font-size:13.5px">Ingen boliger er delt med ${esc(me.name ?? 'deg')} ennå.</div>`}${toBolSettings}</div>`;
-  if (!cur) return `<div class="dir-layout">${left}</div>`;
+  const left = `<div class="bol-switch" role="tablist" aria-label="Boliger">${cards || `<div class="card note" style="padding:16px;font-size:13.5px">Ingen boliger er delt med ${esc(me.name ?? 'deg')} ennå.</div>`}${toBolSettings}</div>`;
+  if (!cur) return `<div class="bol-wrap">${left}</div>`;
 
   const k = cur.kpi;
   const pctStrom = k.stromPrev ? Math.round((k.stromNow / k.stromPrev - 1) * 100) : null;
@@ -112,20 +155,34 @@ function dirPage() {
     entries: card(`<div class="card-h" style="padding:12px 0"><h3>${esc(u.dcat || 'Alle utgifter')}</h3><span class="note" style="font-size:12.5px">${rows.length} poster · ${kr0(rows.reduce((a, e) => a + e.amount, 0))}</span></div>${listHtml}`, 'padding:8px 20px;gap:0'),
   };
   const lay = cur.layout ?? { order: Object.keys(block), hid: [] };
-  const shown = lay.order.filter((id) => block[id] && !lay.hid.includes(id));
+  const tab = BOL_TABS.some(([k]) => k === u.bolTab) ? u.bolTab : 'ov';
+  // Oversikt: kortene i rekkefølgen fra Innstillinger → Boliger → Oppsett av boligsiden, med kommende forfall og siste poster.
+  const ovBlock = { ...block, bills: upcomingCard(cur, 6), entries: recentCard(cur), projects: cur.projects.length ? projMini(cur) : '' };
+  const shown = lay.order.filter((id) => ovBlock[id] && !lay.hid.includes(id) && (tab !== 'ov' || id !== 'add'));
   const PAIRS = [['months', 'cats'], ['projects', 'bills']];
   const parts = [];
   for (let i = 0; i < shown.length; i++) {
     const a = shown[i], b2 = shown[i + 1];
-    if (PAIRS.some(([x, y]) => (a === x && b2 === y) || (a === y && b2 === x))) { parts.push(`<div class="row-flex">${block[a]}${block[b2]}</div>`); i++; }
-    else parts.push(PAIRS.some((pr) => pr.includes(a)) ? `<div class="row-flex">${block[a]}</div>` : block[a]);
+    if (PAIRS.some(([x, y]) => (a === x && b2 === y) || (a === y && b2 === x))) { parts.push(`<div class="row-flex">${ovBlock[a]}${ovBlock[b2]}</div>`); i++; }
+    else parts.push(PAIRS.some((pr) => pr.includes(a)) ? `<div class="row-flex">${ovBlock[a]}</div>` : ovBlock[a]);
   }
-  const shared = cur.members.filter((m) => !m.you).map((m) => m.name);
-  const right = `<div class="dir-main">
-    <div class="card-h" style="align-items:flex-start;flex-wrap:wrap;gap:14px"><div style="min-width:0"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:24px;font-weight:600;letter-spacing:-.02em">${esc(cur.name)}</b><span class="mtag">${esc(cur.type)}</span></div><div class="note" style="font-size:13px;margin-top:4px">${esc([cur.address, shared.length ? `Delt med ${shared.join(', ')}` : ''].filter(Boolean).join(' · '))}</div></div></div>
-    ${parts.join('\n') || '<div class="card note" style="padding:16px">Alle kortene er skjult. Velg hva som vises under Innstillinger → Boliger → Oppsett av boligsiden.</div>'}
+  const body = tab === 'ut' ? `${addBox}${timelineCard(cur)}`
+    : tab === 'pr' ? `${block.projects}`
+    : tab === 'rg' ? `<div class="row-flex">${upcomingCard(cur, 40, 'flex:1 1 320px;padding:20px;gap:6px')}${block.bills}</div>`
+    : tab === 'kv' ? receiptsCard(cur)
+    : parts.join('\n') || '<div class="card note" style="padding:16px">Alle kortene er skjult. Velg hva som vises under Innstillinger → Boliger → Oppsett av boligsiden.</div>';
+  const shared = cur.members.filter((m) => !m.you);
+  const nUp = (cur.upcoming ?? []).filter((x) => x.days <= 14).length;
+  const counts = { ut: cur.entries.length, pr: cur.projects.length, rg: nUp || cur.bills.length, kv: (cur.receipts ?? []).length };
+  const hero = `<div class="bol-hero" style="--bh:${bolHue(cur.type)}">
+    <div class="bol-hero-t"><span class="bol-hero-ic" aria-hidden="true">${bolIcon(cur.type, 26)}</span><div style="min-width:0"><div class="bol-hero-k">${esc(cur.type || 'Bolig')}${cur.myRole ? ` · ${esc(cur.myRole.toLowerCase())}` : ''}</div><h2 class="bol-hero-n">${esc(cur.name)}</h2><div class="bol-hero-a">${esc(cur.address || 'Ingen adresse')}</div></div></div>
+    <div class="bol-hero-r"><div class="bol-avs">${cur.members.slice(0, 5).map((m) => `<span class="bol-av" title="${esc(m.name)}${m.you ? ' (deg)' : ''} · ${esc(m.roleName)}">${short(m.name)}</span>`).join('')}${shared.length ? '' : '<span class="note" style="font-size:12.5px">Bare deg</span>'}</div>
+      ${cur.canEdit ? `<div class="bol-acts"><label class="btn pri sm">↑ Last opp kvittering<input type="file" multiple accept="image/*,application/pdf" data-mrc="folder" hidden></label><button class="btn sm" data-mbol-tab="ut" data-mbol-add="1">+ Ny utgift</button><a class="btn sm ghost" href="#/inn" data-mact="bol-settings">Deling</a></div>` : ''}</div>
   </div>`;
-  return `<div class="dir-layout">${left}${right}</div>`;
+  const tabs = `<nav class="bol-tabs" role="tablist" aria-label="Boligmeny">${BOL_TABS.map(([key, name]) => `<button role="tab" aria-selected="${tab === key}" class="bol-tab${tab === key ? ' on' : ''}" data-mbol-tab="${key}">${name}${counts[key] ? `<span class="bol-tab-n">${counts[key]}</span>` : ''}</button>`).join('')}</nav>`;
+  const right = `<div class="dir-main bol-main"${cur.canEdit ? ' data-bol-drop' : ''}>${hero}${tabs}${body}
+    ${cur.canEdit ? '<div class="bol-dropover" aria-hidden="true"><b>Slipp kvitteringene her</b><span>✦ AI leser butikk, dato og beløp, og velger kategori</span></div>' : ''}</div>`;
+  return `<div class="bol-wrap">${left}${right}</div>`;
 }
 
 /* ===================== Innstillinger → Boliger ===================== */
@@ -485,6 +542,9 @@ export function bindModules(el) {
   el.addEventListener('click', wrap(async (e) => {
     const t = e.target, d = (s) => t.closest(s);
     let x;
+    // Boliger: meny, kategorifilter i tidslinjen.
+    if ((x = d('[data-mbol-tab]'))) { u.bolTab = x.dataset.mbolTab; if (x.dataset.mbolAdd) u.dirMode = 'new'; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); if (x.dataset.mbolAdd) el.querySelector('[data-mform=entry] input')?.focus(); return; }
+    if ((x = d('[data-mbol-cat]'))) { u.dcat = x.dataset.mbolCat || null; return render(); }
     if ((x = d('[data-mmode]'))) { const [k, m] = x.dataset.mmode.split(':'); u[k === 'sub' ? 'subMode' : 'dirMode'] = m; return render(); }
     if ((x = d('[data-mtx]'))) {
       const [k, id] = x.dataset.mtx.split(':');
@@ -495,7 +555,7 @@ export function bindModules(el) {
     if ((x = d('[data-msub-tog]'))) { const s = S.subs.items.find((y) => y.id === +x.dataset.msubTog); await api(`/subscriptions/${s.id}`, { method: 'PATCH', json: { active: !s.active } }); return reload(); }
     if ((x = d('[data-msub-low]'))) { const s = S.subs.items.find((y) => y.id === +x.dataset.msubLow); await api(`/subscriptions/${s.id}`, { method: 'PATCH', json: { lowUse: !s.lowUse } }); return reload(); }
     if ((x = d('[data-msub-del]'))) { if (!confirm('Slette abonnementet?')) return; await api(`/subscriptions/${x.dataset.msubDel}`, { method: 'DELETE' }); return reload(); }
-    if ((x = d('[data-mdir]'))) { u.dir = +x.dataset.mdir; u.dcat = null; u.bolTarget = null; S.folder = await api(`/folders/${u.dir}`); return render(); }
+    if ((x = d('[data-mdir]'))) { u.dir = +x.dataset.mdir; u.dcat = null; u.bolQ = ''; u.bolTarget = null; S.folder = await api(`/folders/${u.dir}`); return render(); }
     // Innstillinger → Boliger.
     if ((x = d('[data-bshare]'))) { const id = +x.dataset.bshare; u.bolShare = u.bolShare === id ? null : id; u.bolDel = null; return render(); }
     if ((x = d('[data-bdel]'))) {
@@ -614,6 +674,27 @@ export function bindModules(el) {
     if (!name) return;
     S.bolCats = await api('/boliger/categories', { method: 'POST', json: { name, parentId: +t.dataset.bcatSub } });
     render(); el.querySelector(`[data-bcat-sub="${t.dataset.bcatSub}"]`)?.focus();
+  }));
+  // Søk i boligens utgifter: tegn på nytt og behold markøren i feltet.
+  let bolQT = null;
+  el.addEventListener('input', (e) => {
+    if (!e.target.matches('[data-mbol-q]')) return;
+    const v = e.target.value; clearTimeout(bolQT);
+    bolQT = setTimeout(() => { u.bolQ = v; render(); const i = el.querySelector('[data-mbol-q]'); if (i) { i.focus(); i.setSelectionRange(v.length, v.length); } }, 160);
+  });
+  // Dra og slipp kvitteringer rett inn i boligen.
+  let dragN = 0;
+  const dropZone = (e) => e.target.closest?.('[data-bol-drop]');
+  const hasFiles = (e) => [...(e.dataTransfer?.types ?? [])].includes('Files');
+  el.addEventListener('dragenter', (e) => { const z = dropZone(e); if (!z || !hasFiles(e)) return; e.preventDefault(); dragN++; z.classList.add('drag'); });
+  el.addEventListener('dragover', (e) => { if (dropZone(e) && hasFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; } });
+  el.addEventListener('dragleave', (e) => { const z = dropZone(e); if (!z) return; if (--dragN <= 0) { dragN = 0; z.classList.remove('drag'); } });
+  el.addEventListener('drop', wrap(async (e) => {
+    const z = dropZone(e); if (!z) return;
+    e.preventDefault(); dragN = 0; z.classList.remove('drag');
+    const files = [...(e.dataTransfer?.files ?? [])].filter((f) => /^image\/|pdf$/.test(f.type) || /\.(pdf|jpe?g|png|heic|heif|webp)$/i.test(f.name));
+    if (!files.length) return toast('Bare bilder og PDF kan lastes opp som kvittering');
+    await uploadTo('folder', files);
   }));
   el.addEventListener('input', (e) => { if (e.target.matches('[data-keep]')) { const o = el.querySelector('[data-keep-out]'); if (o) o.textContent = e.target.value; } });
   el.addEventListener('submit', wrap(async (e) => {
