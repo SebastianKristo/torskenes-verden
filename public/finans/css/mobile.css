@@ -916,3 +916,61 @@ em.role.dns{min-width:46px;text-align:center;font-style:normal;font-size:11px;fo
 .m-scroll.swiping{transition:none;box-shadow:-12px 0 30px rgba(0,0,0,.35);will-change:transform}
 .m-scroll.swipeend{transition:transform .2s cubic-bezier(.2,.8,.2,1)}
 .two .ak-fixed{bottom:calc(env(safe-area-inset-bottom) + 16px)}
+/* Prompt 12: transportørlogo i merket (initialene ligger under som reserve), og levert = grønt hele veien. */
+.trk-badge{position:relative;overflow:hidden}
+.trk-badge img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;box-sizing:border-box;padding:18%;background:#fff;display:block}
+.trk-bars.fin i{background:#8fe0b0!important}
+.trk-steps.fin i{background:#8fe0b0}.trk-steps.fin span::before{background:#8fe0b0!important}
+.trk-steps.fin span:last-child i{box-shadow:0 0 0 5px rgba(143,224,176,.25)}.trk-steps.fin span:last-child small{color:#8fe0b0;font-weight:600;opacity:1}
+/* Prompt 12: hilsenen alltid på to linjer, kompakt klokke/vær med 6-timersstripe nederst, og fast korthøyde i karusellen
+   (Pakker er like høy som Klokke og vær også med 0 eller 1 pakke). */
+.hlgreet{line-height:1.08;min-width:0}.hlgreet span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wxcard{gap:10px;padding:18px 20px 14px;justify-content:space-between}
+.wxcard .wx-top{align-items:flex-start}
+.wx-l{display:flex;flex-direction:column;gap:6px;min-width:0}.wx-date{text-transform:capitalize;font-size:13px}
+.wx-r{display:flex;flex-direction:column;align-items:flex-end;text-align:right;gap:1px;min-width:0}
+.wx-r .wx-now b{font-size:28px;font-weight:600;line-height:1.1;letter-spacing:0}
+.wx-cnd{font-size:13.5px;font-weight:600}.wx-r .dim{font-size:12.5px}
+.wx-wind{display:flex;align-items:center;gap:6px;font-size:12.5px!important;min-width:0}
+.wxcard .wx-hours{padding-top:10px;border-top:1px solid rgba(255,255,255,.12);gap:4px}
+.and .wxcard .wx-hours{border-top-color:var(--m3-3D332C,rgba(255,255,255,.12))}
+.wxcard .wx-hours small.mm{min-height:12px;font-size:10px}
+.hcar-item{height:var(--hcar-h,236px)}
+.hcar-item>.hcard{height:100%;box-sizing:border-box;overflow:hidden}
+.pkgcard .pkg-foot{margin-top:auto}
+.pkgcard .pkg-stats{margin-top:0}
+/* Prompt 12 · Domener: domenenavnet står som tekst, velgeren er et ikon ved Oppdater, og Live-kortet er ca. 20 % lavere. */
+.dname{font-size:17px;font-weight:600;min-width:0;padding-left:4px}
+.dpick-ic.on{background:var(--m-acc);color:#fff}
+.dhero{padding:16px 18px;gap:8px}
+.dlive b{font-size:22px}
+.dspark{height:46px}
+/* Prompt 12 · Matplan følger appens tema: glass på iPhone (med fargebakgrunnen), Material You på Android og Fold.
+   Fargene settes som --mp-*-variabler, så resten av Matplan-stilene er de samme. */
+.m.matp.ios{--mp-bg:#07070A;--mp-fg:#fff;--mp-mut:rgba(255,255,255,.62);--mp-dim:rgba(255,255,255,.5);--mp-card:rgba(255,255,255,.08);--mp-red:#FF8A4C;
+  --mp-lime:rgba(196,230,120,.16);--mp-cream:rgba(255,206,140,.13);--mp-cream2:rgba(255,170,110,.2);--mp-line:rgba(255,255,255,.18);--mp-ink:#fff;--mp-brown:rgba(255,255,255,.62);
+  --mp-tagc:#FFB08A;--mp-mint:#9FE3C6;--mp-peach:#FFB08A;--mp-row:rgba(255,255,255,.06);--mp-sep:rgba(255,255,255,.1);--mp-ckb:rgba(255,255,255,.35);--mp-ckon:#C2E27A}
+.m.matp.ios.nobg{--mp-bg:#07070A}
+.m.matp.ios .blob{display:block}
+.m.matp.ios .mp-card,.m.matp.ios .mp-tile,.m.matp.ios .mp-sel,.m.matp.ios .mp-round{border:1px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.2);-webkit-backdrop-filter:blur(30px) saturate(180%);backdrop-filter:blur(30px) saturate(180%)}
+.m.matp.ios .mat .mp-soft{background:rgba(255,255,255,.12)}
+.m.matp.ios .gtop{background:rgba(255,255,255,.1);-webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);color:#fff}
+.m.matp.ios .m-spin,.m.matp.and .m-spin{border-color:rgba(255,255,255,.15);border-top-color:var(--mp-red)}
+.m.matp.and{--mp-bg:var(--m3-19120E,#19120E);--mp-fg:var(--m3-F0DFD7,#F0DFD7);--mp-mut:var(--m3-D7C2B8,#D7C2B8);--mp-dim:var(--m3-A08D83,#A08D83);--mp-card:var(--m3-261E19,#261E19);
+  --mp-red:var(--m3-FFB68A,#FFB68A);--mp-lime:var(--m3-45462A,#45462A);--mp-cream:var(--m3-5D4033,#5D4033);--mp-cream2:var(--m3-3D332C,#3D332C);--mp-line:var(--m3-52443C,#52443C);
+  --mp-ink:var(--m3-FFB68A,#FFB68A);--mp-brown:var(--m3-D7C2B8,#D7C2B8);--mp-tagc:var(--m3-FFB68A,#FFB68A);--mp-mint:var(--m3-9FE3C6,#9FE3C6);--mp-peach:var(--m3-FFB08A,#FFB08A);
+  --mp-row:var(--m3-2A211B,#2A211B);--mp-sep:var(--m3-31281F,#31281F);--mp-ckb:var(--m3-52443C,#52443C);--mp-ckon:var(--m3-45462A,#45462A)}
+.m.matp.and .mat .mp-day[aria-selected=true],.m.matp.and .mat .mp-cta{color:var(--m3-532200,#532200)}
+.m.matp.and .mp-tile.lime,.m.matp.and .mp-step span{color:var(--m3-E6E6AE,#E6E6AE)}
+.m.matp.and .mp-tile.cream,.m.matp.and .mp-sel{color:var(--m3-FFDBC8,#FFDBC8)}
+.m.matp.and .mp-card,.m.matp.and .mp-tile.white{border-radius:28px}
+/* Full høyde: Matplan har ingen fanelinje, så innholdet får bare plass til hjem-indikatoren nederst. */
+.m.matp .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 32px);min-height:100dvh;box-sizing:border-box}
+/* Prompt 12: «✦ Analyser på nytt med Gemini» på bekreftelsessiden og i køen. */
+.m .rean{display:flex;align-items:center;gap:12px;width:100%;padding:13px 16px;border-radius:18px;text-align:left;font-size:15px;font-weight:600;color:#FFB08A;cursor:pointer}
+.ios .rean{background:rgba(255,138,76,.12);border:1px solid rgba(255,176,138,.25)}
+.and .rean{background:var(--m3-5D4033,#5D4033);color:var(--m3-FFDBC8,#FFDBC8);border-radius:20px}
+.m .rean small{display:block;font-size:12.5px;font-weight:400;opacity:.75;margin-top:2px}
+.hcar-item{--hcar-h:240px}
+.hcar-item .pkgcard{gap:8px;padding:14px 16px}
+.hcar-item .pkg-row{padding:8px 12px}

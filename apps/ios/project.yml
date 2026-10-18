@@ -16,6 +16,16 @@ targets:
     sources:
       - FinansHub/Sources
       - FinansHub/Resources
+      - Shared
+    dependencies:
+      # Widgetene (WidgetKit) bygges som utvidelse og legges i FinansHub.app/PlugIns.
+      - target: FinansHubWidgets
+        embed: true
+    entitlements:
+      path: FinansHub/FinansHub.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.no.kristo.finanshub
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: no.kristo.finanshub
@@ -39,3 +49,32 @@ targets:
         # «Last ned» lagrer kvitteringer i appens mappe, som vises i Filer → På min iPhone → FinansHub.
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true
+        # Deep links fra widgetene: finanshub://<side>
+        CFBundleURLTypes:
+          - CFBundleURLName: no.kristo.finanshub
+            CFBundleURLSchemes: [finanshub]
+
+  FinansHubWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - FinansHubWidgets/Sources
+      - Shared
+    entitlements:
+      path: FinansHubWidgets/FinansHubWidgets.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.no.kristo.finanshub
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: no.kristo.finanshub.widgets
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: FinansHub
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+    info:
+      path: FinansHubWidgets/Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension

@@ -49,13 +49,17 @@ const isGoogle = () => /google\./.test(store.me.searchUrl);
 export function renderSearch() {
   const st = store.me.searchStyle, light = st === 'light' || st === 'wideLight';
   const ph = isGoogle() ? 'Søk på Google eller skriv inn en adresse' : 'Søk eller skriv inn en adresse';
-  const form = (inner) => `<form class="sbar ${st}" data-search role="search">${inner}<input name="q" placeholder="${ph}" autocomplete="off" aria-label="Søk" role="combobox" aria-autocomplete="list" aria-expanded="false" enterkeyhint="search"><button type="submit">Søk</button><div class="sq-drop" role="listbox" hidden></div></form>`;
+  const ai = aiOn();
+  const form = (inner) => `<form class="sbar ${st}${ai ? ' ai' : ''}" data-search role="search">${inner}<input name="q" placeholder="${ai ? 'Spør ✦ AI om hva som helst' : ph}" autocomplete="off" aria-label="Søk" role="combobox" aria-autocomplete="list" aria-expanded="false" enterkeyhint="search"><button type="button" class="sq-ai-tog" data-sq-ai aria-pressed="${ai}" title="Svar fra AI-motoren (Ollama eller Gemini)">✦ AI</button><button type="submit">Søk</button><div class="sq-drop" role="listbox" hidden></div></form>`;
   if (st === 'light' || st === 'dark') return `<div class="search-wrap">${isGoogle() ? GWORD : ''}${form(ICON(light ? '#5f6368' : '#8a93a6'))}</div>`;
   return `<div>${form(isGoogle() ? `${GWORD}<span class="sep"></span>` : ICON(light ? '#5f6368' : '#8a93a6'))}</div>`;
 }
 
 /* Forslag fra Google (via serveren) og søkehistorikk per bruker, delt med mobilappen. */
-const sq = { hist: null, suggest: true, save: true, sugg: [], sel: -1, items: [], timer: 0, seq: 0 };
+const sq = { hist: null, suggest: true, save: true, sugg: [], suggErr: '', sel: -1, items: [], timer: 0, seq: 0, ai: null };
+// «✦ AI»-modus huskes per nettleser.
+const aiOn = () => { try { return localStorage.getItem('hl.searchAi') === '1'; } catch { return false; } };
+const setAi = (on) => { try { localStorage.setItem('hl.searchAi', on ? '1' : '0'); } catch { /* privat modus */ } };
 const HIC = 'M12 8v4l3 2M3.5 12a8.5 8.5 0 1 0 2.5-6M3 4v4h4', SIC = 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5';
 const isUrl = (q) => !/\s/.test(q) && /^(https?:\/\/\S+|[\w-]+(\.[\w-]+)*\.[a-z]{2,}(:\d+)?(\/\S*)?)$/i.test(q);
 
@@ -75,10 +79,14 @@ function drawDrop(form) {
   const sg = lv ? sq.sugg.filter((x) => !hm.some((y) => y.toLowerCase() === x.toLowerCase())).slice(0, 6) : [];
   sq.items = [...hm.map((t) => ({ t, h: true })), ...sg.map((t) => ({ t, h: false }))];
   if (sq.sel >= sq.items.length) sq.sel = -1;
-  const open = document.activeElement === input && (sq.items.length > 0 || !lv);
+  const ai = sq.ai && sq.ai.q === v.trim() ? sq.ai : null;
+  const err = lv && !sq.items.length && sq.suggErr ? sq.suggErr : '';
+  const open = document.activeElement === input && (sq.items.length > 0 || !lv || !!ai || !!err);
   drop.hidden = !open;
   input.setAttribute('aria-expanded', String(open));
   if (!open) return;
+  if (ai) { drop.innerHTML = aiPanel(ai); return; }
+  if (err) { drop.innerHTML = `<div class="sq-empty">Forslag utilgjengelig: ${esc(err)}</div>`; return; }
   const split = (t) => { const i = lv ? t.toLowerCase().indexOf(lv) : -1; return i === 0 ? `<span>${esc(t.slice(0, lv.length))}</span><b>${esc(t.slice(lv.length))}</b>` : `<b>${esc(t)}</b>`; };
   drop.innerHTML = (!lv && hist.length ? '<div class="sq-head"><span>Nylige søk</span><button type="button" data-sq-clear>Tøm historikk</button></div>' : '')
     + sq.items.map((x, i) => `<div class="sq-item" role="option" id="sq-${i}" aria-selected="${sq.sel === i}" data-sq-i="${i}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${x.h ? HIC : SIC}"/></svg><span class="sq-t">${split(x.t)}</span>${x.h ? `<button type="button" class="sq-del" data-sq-del="${i}" aria-label="Fjern fra historikk">×</button>` : ''}</div>`).join('')
@@ -92,9 +100,10 @@ function fetchSugg(form) {
   if (!sq.suggest || !q) { sq.sugg = []; drawDrop(form); return; }
   sq.timer = setTimeout(async () => {
     const my = ++sq.seq;
-    const list = await api(`/search/suggest?q=${encodeURIComponent(q)}`).catch(() => []);
+    const r = await api(`/search/suggest?full=1&q=${encodeURIComponent(q)}`).catch((e) => ({ items: [], error: e.message }));
     if (my !== sq.seq || form.q.value.trim() !== q) return;
-    sq.sugg = Array.isArray(list) ? list : [];
+    sq.sugg = Array.isArray(r) ? r : Array.isArray(r?.items) ? r.items : [];
+    sq.suggErr = r?.error ?? '';
     drawDrop(form);
   }, 145);
 }
@@ -111,6 +120,31 @@ function runSearch(q) {
   location.href = isUrl(q) ? (/^https?:\/\//i.test(q) ? q : `https://${q}`) : store.me.searchUrl + encodeURIComponent(q);
 }
 
+/* ✦ AI: korte søk går til vanlig søk; ellers vises svaret fra AI-motoren i nedtrekket, med årsak hvis det feiler. */
+function aiPanel(a) {
+  if (a.loading) return '<div class="sq-ai"><div class="sq-ai-h">✦ AI tenker …</div><div class="skeleton" style="min-height:54px;border-radius:12px"></div></div>';
+  if (a.error) return `<div class="sq-ai err"><div class="sq-ai-h">✦ AI</div><p>${esc(a.error)}</p><div class="sq-ai-act"><button type="button" data-sq-google="${esc(a.q)}">Søk på Google i stedet</button></div></div>`;
+  const d = a.data;
+  return `<div class="sq-ai"><div class="sq-ai-h">✦ AI · ${esc(d.provider ?? '')}</div><p>${esc(d.answer)}</p>
+    ${d.followUps?.length ? `<div class="sq-ai-f">${d.followUps.map((f) => `<button type="button" data-sq-ask="${esc(f)}">${esc(f)}</button>`).join('')}</div>` : ''}
+    <div class="sq-ai-act"><button type="button" data-sq-google="${esc(d.searchQuery || a.q)}">Søk på Google: ${esc(d.searchQuery || a.q)} ›</button></div></div>`;
+}
+async function askAi(form, q, force = false) {
+  q = q.trim();
+  if (!q) return;
+  if (isUrl(q)) return runSearch(q);
+  form.q.value = q;
+  sq.ai = { q, loading: true };
+  drawDrop(form);
+  try {
+    const r = await api('/search/ask', { method: 'POST', json: { q, force } });
+    if (sq.ai?.q !== q) return;
+    if (r.mode === 'plain') { sq.ai = null; return runSearch(q); }
+    sq.ai = { q, data: r };
+  } catch (e) { if (sq.ai?.q === q) sq.ai = { q, error: e.message }; }
+  drawDrop(form);
+}
+
 async function removeHist(form, t) {
   sq.hist = (sq.hist ?? []).filter((x) => x !== t);
   drawDrop(form);
@@ -123,7 +157,21 @@ export function bindSearch() {
     if (!e.target.matches('[data-search]')) return;
     e.preventDefault();
     const it = sq.items[sq.sel];
-    runSearch(it ? it.t : e.target.q.value);
+    const q = it ? it.t : e.target.q.value;
+    if (aiOn()) askAi(e.target, q); else runSearch(q);
+  });
+  document.addEventListener('click', (e) => {
+    const tog = e.target.closest?.('[data-sq-ai]');
+    if (!tog) return;
+    const f = formOf(e), on = !aiOn();
+    setAi(on);
+    document.querySelectorAll('[data-search]').forEach((x) => {
+      x.classList.toggle('ai', on);
+      x.querySelector('[data-sq-ai]')?.setAttribute('aria-pressed', String(on));
+      x.q.placeholder = on ? 'Spør ✦ AI om hva som helst' : (isGoogle() ? 'Søk på Google eller skriv inn en adresse' : 'Søk eller skriv inn en adresse');
+    });
+    sq.ai = null;
+    f?.q.focus();
   });
   document.addEventListener('focusin', async (e) => {
     const f = formOf(e);
@@ -156,8 +204,12 @@ export function bindSearch() {
     const del = e.target.closest('[data-sq-del]');
     if (del) return removeHist(f, sq.items[+del.dataset.sqDel]?.t);
     if (e.target.closest('[data-sq-clear]')) { sq.hist = []; drawDrop(f); api('/search/history', { method: 'DELETE' }).catch(() => {}); return; }
+    const g = e.target.closest('[data-sq-google]');
+    if (g) { sq.ai = null; return runSearch(g.dataset.sqGoogle); }
+    const ask = e.target.closest('[data-sq-ask]');
+    if (ask) return askAi(f, ask.dataset.sqAsk, true);
     const it = e.target.closest('[data-sq-i]');
-    if (it) runSearch(sq.items[+it.dataset.sqI].t);
+    if (it) { const t = sq.items[+it.dataset.sqI].t; if (aiOn()) askAi(f, t); else runSearch(t); }
   });
   document.addEventListener('mouseover', (e) => {
     const it = e.target.closest?.('[data-sq-i]'), f = formOf(e);

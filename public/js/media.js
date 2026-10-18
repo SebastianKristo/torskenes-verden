@@ -63,6 +63,35 @@ widget('d_media', { render() {
   return head + down + nowHtml + recHtml;
 } });
 
+/* Mediehistorikk: eget kort med en vannrett rad plakatkort (siste avspillinger fra Plex og Jellyfin). */
+const ago = (iso) => {
+  const m = Math.max(0, Math.round((Date.now() - new Date(iso)) / 60_000));
+  if (!iso || !Number.isFinite(m)) return '';
+  if (m < 60) return `${m} min siden`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h} t siden`;
+  const d = Math.round(h / 24);
+  return d === 1 ? 'i går' : `${d} dager siden`;
+};
+function histCard(m) {
+  const s = SRC[m.src] ?? SRC.plex;
+  const tag = m.url && m.url !== '#' ? 'a' : 'div';
+  const ep = m.kind === 'episode' && m.season != null ? `Sesong ${m.season} · Episode ${m.episode ?? '?'}` : 'Film';
+  return `<${tag} class="mh-card"${tag === 'a' ? ` href="${esc(m.url)}" target="_blank" rel="noopener"` : ''}>
+    <div class="mh-art" style="background-color:${tint(m.show)};${m.poster ? `background-image:url('${esc(m.poster)}')` : ''}"><span class="media-src" style="background:${s.bg};color:${s.fg}">${s.name}</span>${m.poster ? '' : `<span class="mh-show">${esc(m.show)}</span>`}</div>
+    <div class="mh-meta"><span class="mh-user">${esc(m.user || '–')}</span><span>${esc(ago(m.playedAt))}</span><span class="mh-ell" title="${esc(m.show)}">${esc(m.show)}</span><span>${esc(ep)}</span><span class="mh-ell" title="${esc(m.title)}">${esc(m.title)}</span></div></${tag}>`;
+}
+widget('d_media_hist', { cls: 'card span2', render() {
+  const h = store.data.media_history;
+  const n = h?.items?.length ?? 0;
+  const head = `<div class="card-head"><div><div class="card-title">Mediehistorikk</div><div class="card-sub">${n ? `${n} siste avspillinger · ` : ''}Plex og Jellyfin${h?.mock ? ' · eksempeldata' : ''}</div></div></div>`;
+  if (!h) return head + (errBox('media_history', 'Mediehistorikk') || '<div class="skeleton" style="min-height:200px"></div>');
+  if (!h.configured) return head + '<div class="empty">Legg inn Plex eller Jellyfin under Innstillinger → Integrasjoner → Media.</div>';
+  const down = (h.servers ?? []).filter((s) => s.ok === false).map((s) => `<div class="err">${esc(s.name)}: ${esc(s.error ?? 'utilgjengelig')}</div>`).join('');
+  return head + down + (n ? `<div class="mh-row">${h.items.map(histCard).join('')}</div>` : '<div class="empty">Ingen avspillinger ennå.</div>');
+} });
+on('media_history', () => refresh('d_media_hist'));
+
 on('media_now', () => refresh('d_media'));
 on('media_recent', () => refresh('d_media'));
 
@@ -70,8 +99,10 @@ on('media_recent', () => refresh('d_media'));
 const visible = () => !document.hidden && document.querySelector('[data-w="d_media"]');
 load('media_now', '/media/now');
 load('media_recent', '/media/recent');
+load('media_history', '/media/history');
 setInterval(() => { if (visible()) load('media_now', '/media/now'); }, 30_000);
 setInterval(() => { if (visible()) load('media_recent', '/media/recent'); }, 10 * 60_000);
+setInterval(() => { if (!document.hidden && document.querySelector('[data-w="d_media_hist"]')) load('media_history', '/media/history'); }, 5 * 60_000);
 
 // Logo som ikke lar seg hente: skjul bildet (CSP tillater ikke inline onerror).
-document.addEventListener('error', (e) => { const img = e.target; if (img?.tagName === 'IMG' && img.parentNode?.classList?.contains('media-chip')) img.remove(); }, true);
+document.addEventListener('error', (e) => { const img = e.target; if (img?.tagName === 'IMG' && (img.parentNode?.classList?.contains('media-chip') || img.classList.contains('trk-logo'))) img.remove(); }, true);

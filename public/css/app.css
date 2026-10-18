@@ -515,6 +515,7 @@ button.dm-row:hover{background:rgba(255,255,255,.03)}
 .menu-head:empty{display:none}
 .pillnav a[hidden],.bottomnav a[hidden],.grid>[hidden]{display:none!important}
 .sbar{position:relative}
+.sbar:focus-within{z-index:40}
 .sq-drop{position:absolute;left:0;right:0;top:calc(100% + 8px);z-index:30;padding:8px 0;border-radius:24px;background:rgba(18,25,38,.97);color:#eef0f4;border:1px solid #232938;box-shadow:0 18px 40px rgba(0,0,0,.4);text-align:left;backdrop-filter:blur(16px)}
 .sbar.light .sq-drop,.sbar.wideLight .sq-drop{background:#fff;color:#202124;border-color:#e3e5e8}
 .sq-head{display:flex;justify-content:space-between;align-items:center;padding:4px 20px 6px;font-size:12px;color:#8a93a6}
@@ -797,6 +798,7 @@ button.sg-row:hover .sg-btn2{background:#1c2534}
 .wxc-chips{display:flex;gap:6px;flex-wrap:wrap}
 .wxc-chip{display:flex;align-items:center;gap:6px;height:30px;padding:0 11px;border-radius:15px;background:rgba(7,8,11,.38);font-size:12.5px;color:#d7dbe4;white-space:nowrap}
 .wxc-btn{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:18px;border:0;background:rgba(255,255,255,.1);color:#eef0f4;cursor:pointer;font-size:13.5px;font-weight:500;font-family:inherit;text-decoration:none}
+.wxc-chips+.wxc-btn{margin-top:-6px}
 .wxc-btn:hover{background:rgba(255,255,255,.16)}
 .wxc-more{display:flex;flex-direction:column;gap:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.08)}
 .wxc-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
@@ -834,3 +836,18 @@ button.sg-row:hover .sg-btn2{background:#1c2534}
   .wxc-d .wxc-mm{margin-left:0}
   .wxc-day{grid-template-columns:40px 20px 30px minmax(0,1fr) 30px 46px;gap:6px;font-size:13px}
 }
+
+/* ---------- ✦ AI i søkefeltet ---------- */
+.sbar .sq-ai-tog{flex:none;height:34px;padding:0 12px;border-radius:17px;font-size:13px;font-weight:600;background:rgba(255,255,255,.08);color:inherit;border:1px solid rgba(255,255,255,.14);cursor:pointer}
+.sbar.light .sq-ai-tog,.sbar.wideLight .sq-ai-tog{background:#f1f3f4;color:#5f6368;border-color:#dadce0}
+.sbar .sq-ai-tog[aria-pressed=true]{background:linear-gradient(135deg,#7aa7ff,#c9b6ff);color:#10131a;border-color:transparent}
+@media (max-width:767px){.sbar .sq-ai-tog{display:inline-flex;align-items:center;height:32px;padding:0 10px}}
+.sq-ai{padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.sq-ai-h{font-size:12.5px;font-weight:600;color:#a9c3ff}
+.sbar.light .sq-ai-h,.sbar.wideLight .sq-ai-h{color:#1a73e8}
+.sq-ai p{margin:0;font-size:14.5px;line-height:1.5;white-space:pre-wrap}
+.sq-ai.err p{color:#f59a8f}
+.sq-ai-f{display:flex;gap:6px;flex-wrap:wrap}
+.sbar .sq-drop .sq-ai-f button{padding:6px 11px;border-radius:14px;background:rgba(127,140,170,.16);font-size:12.5px}
+.sbar .sq-drop .sq-ai-act button{font-size:13px;font-weight:600;color:#7aa7ff}
+.sbar.light .sq-drop .sq-ai-act button,.sbar.wideLight .sq-drop .sq-ai-act button{color:#1a73e8}

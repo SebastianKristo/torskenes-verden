@@ -252,7 +252,7 @@ export function render() {
       <div id="lesson">${renderLesson()}</div></div>`;
   if (mob) {
     return `${hello}<div class="trips" id="trips">${renderTrips()}</div>${store.me.hideSearch ? '' : renderSearch()}
-      <div class="grid" data-dnd="m_home">${['d_weather_m', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_upcoming', 'd_media'].map(cardH).join('')}</div>`;
+      <div class="grid" data-dnd="m_home">${['d_weather_m', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_upcoming', 'd_media', 'd_media_hist'].map(cardH).join('')}</div>`;
   }
   // Toppområdet kan omorganiseres; søkebaren ligger som standard mellom avganger og klokke.
   return `<div style="display:flex;flex-direction:column;gap:28px">
@@ -261,7 +261,7 @@ export function render() {
       ${store.me.hideSearch ? '' : renderSearch()}
       <div class="hero">${hello}<div class="weather" id="weather">${carousel()}</div></div>
     </div>
-    <div class="grid" data-dnd="dash">${['d_cal', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_links', 'd_upcoming', 'd_media'].map(cardH).join('')}</div></div>`;
+    <div class="grid" data-dnd="dash">${['d_cal', 'd_agenda', 'd_trading', 'd_energy', 'd_eco', 'd_links', 'd_upcoming', 'd_media', 'd_media_hist'].map(cardH).join('')}</div></div>`;
 }
 
 const setHtml = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };

@@ -207,6 +207,32 @@ async function scanFinnMails(client, folders, finnLink) {
   return linked;
 }
 
+// Import av tidligere Finn-e-poster (Innstillinger → Import → Finn.no): henter ALLE e-poster fra FINN, Posten/Bring og
+// Tillit i «All Mail» (ellers INBOX), eldste først, uten å endre noe i postkassen. Gir de rå kildene tilbake (maks `max`).
+export async function fetchAllFinnMails({ max = 400 } = {}) {
+  const c = cfgWith();
+  if (!c.host || !c.user || !c.pass) return { ok: false, sources: [], message: 'E-post er ikke satt opp. Fyll inn Proton Mail Bridge under «Kvitteringer fra e-post».' };
+  let client;
+  const sources = [];
+  try {
+    ({ client } = await connect(c, { allowPin: true }));
+    const folders = (await client.list()).map((f) => f.path);
+    const box = folders.includes('All Mail') ? 'All Mail' : 'INBOX';
+    const lock = await client.getMailboxLock(box);
+    try {
+      const uids = ((await client.search({ or: FINN_FROM.map((from) => ({ from })) }, { uid: true })) || []).sort((a, b) => a - b).slice(-max);
+      for (const uid of uids) {
+        try { const msg = await client.fetchOne(String(uid), { source: true }, { uid: true }); if (msg?.source) sources.push(msg.source); } catch { /* hopp over én e-post */ }
+      }
+    } finally { lock.release(); }
+    return { ok: true, sources, box };
+  } catch (e) {
+    return { ok: false, sources, message: mailError(e, c).message };
+  } finally {
+    await client?.logout().catch(() => client?.close());
+  }
+}
+
 // Sporing: leser nye e-poster i «All Mail» (ellers INBOX) som ligner ordre- eller fraktbekreftelser, og gir dem
 // til onMail(parsed). Første gang de siste 30 dagene, deretter bare nye UID-er. Endrer ingenting i postkassen.
 const SHIP_SUBJECT = ['sendt', 'sporing', 'pakke', 'levering', 'på vei', 'shipped', 'tracking', 'delivery', 'ordre', 'order', 'hentes', 'hentested', 'forsendelse'];

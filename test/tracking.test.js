@@ -143,3 +143,36 @@ test('varselvalg: «Forsinket» er av som standard', async () => {
   const r = await call('/');
   assert.deepEqual(r.body.prefs, { found: true, out: true, pickup: true, delivered: true, delayed: false });
 });
+
+test('statuskoder fra alle transportører gir riktig felles status', () => {
+  const cases = {
+    DELIVERED: 'delivered', Delivered: 'delivered', COLLECTED: 'delivered', 'Sendingen er utlevert': 'delivered', 'Pakken er levert': 'delivered', // Bring, PostNord, DHL, UPS, 17TRACK
+    READY_FOR_PICKUP: 'ready_for_pickup', AvailableForPickup: 'ready_for_pickup', NOTIFICATION_SENT: 'ready_for_pickup',
+    OutForDelivery: 'out_for_delivery', TRANSPORT_TO_RECIPIENT: 'out_for_delivery', AVAILABLE_FOR_DELIVERY: 'out_for_delivery',
+    EN_ROUTE: 'in_transit', InTransit: 'in_transit', transit: 'in_transit', HANDED_IN: 'picked_up',
+    'pre-transit': 'registered', InfoReceived: 'registered', INFORMED: 'registered', PRE_NOTIFIED: 'registered',
+    DeliveryFailure: 'delayed', ATTEMPTED_DELIVERY: 'delayed', 'Pakken er ikke levert': 'delayed',
+  };
+  for (const [s, want] of Object.entries(cases)) assert.equal(car.normStatus(s), want, s);
+  assert.match(car.CARRIER.posten.logo, /\/finans\/api\/logo\/posten\.no$/);
+});
+
+test('Finn-handel som er mottatt gjør pakken levert, også uten nøkkel hos transportøren', () => {
+  const now = Date.now();
+  const id = db.prepare("INSERT INTO fh_finn(role,item,counterpart,date,amount,steps,created,tracking,stage) VALUES('bought','Lampe','selger Ola','2026-10-10',30000,'[]',?, 'CV111222333NO', 2) RETURNING id").get(now).id;
+  trk.syncFinn();
+  const get = () => db.prepare("SELECT status FROM hl_shipments WHERE tracking_no='CV111222333NO'").get().status;
+  assert.equal(get(), 'in_transit', 'Sendt i handelen → i transport');
+  db.prepare('UPDATE fh_finn SET stage=3 WHERE id=?').run(id);
+  trk.syncFinn();
+  assert.equal(get(), 'delivered', 'Mottatt i handelen → levert');
+  db.prepare('UPDATE fh_finn SET stage=2 WHERE id=?').run(id);
+  trk.syncFinn();
+  assert.equal(get(), 'delivered', 'statusen går aldri bakover');
+});
+
+test('e-post med «levert» i emnet flytter en kjent pakke til levert', async () => {
+  trk.upsertShipment({ trackingNo: 'CV444555666NO', name: 'Bok', source: 'manual' });
+  await trk.fromMail({ subject: 'Pakken din er levert', text: 'Sporingsnummer CV444555666NO. Takk for at du handlet hos oss. Sporing av pakken.', from: { value: [{ name: 'Posten', address: 'noreply@posten.no' }] }, date: new Date() });
+  assert.equal(db.prepare("SELECT status FROM hl_shipments WHERE tracking_no='CV444555666NO'").get().status, 'delivered');
+});

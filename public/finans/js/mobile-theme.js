@@ -2,7 +2,7 @@
 // Alle Android-farger i mobile.css er skrevet som var(--m3-XXXXXX, #XXXXXX). Her regnes de om fra én frøfarge i OKLCH:
 // hver farge har en fast rolle (overflate, tekst, primær, container …) med egen tone i mørk og lys modus. Bare kulørtonen
 // følger aksentfargen; lys modus bruker egne toner per rolle (ikke invertering). Statusfarger (grønn, rød, gul, blå)
-// og Domener-rosa følger ikke aksentfargen.
+// og Domener-rosa følger ikke aksentfargen. Med «Samme overalt» brukes hovedtemaet også på Domener.
 // «Følg systemet» prøver CSS-fargen AccentColor (systemets aksentfarge) og faller tilbake til oransje.
 
 export const SEEDS = { sys: ['Følg systemet', null], orange: ['Oransje', '#FFB68A'], blue: ['Blå', '#A8C7FA'], green: ['Grønn', '#8CD5B0'], purple: ['Lilla', '#D0BCFF'], pink: ['Rosa', '#FFB1C8'], yellow: ['Gul', '#E9C46A'] };
@@ -67,7 +67,15 @@ const okL = (tone) => { const f = (tone + 16) / 116, Y = tone > 8 ? f ** 3 : ton
 // Kroma i lys modus: sterkest midt på toneskalaen, svak ved ytterpunktene (som M3-tonepaletter).
 const lightC = (base, tone) => base * Math.max(0.22, 1 - Math.abs(tone - 48) / 58);
 
-function palette(seed, light) {
+// «Samme overalt» (prompt 12, standard): Domener-rosa erstattes av rollen med samme plass i hovedtemaet, så alle sider
+// bruker Material You-fargene fra frøfargen. «Egen farge per side» beholder rosa.
+const K_SAME = { '7B2949': '5D4033', FFD9E2: 'FFDBC8', FFB1C8: 'FFB68A', '3B0A1E': '532200', '2A2024': '2A211B', '3A2F33': '3A2F29', '2F2529': '31281F',
+  '3A2C31': '3A2F29', '1A1114': '19120E', D5C2C6: 'D7C2B8', F2DEE2: 'F0DFD7' };
+function palette(seed, light, same = false) {
+  const out = palOf(seed, light);
+  return Object.keys(ROLE).map((h) => `--m3-${h}:${same && K_SAME[h] ? out[K_SAME[h]] : out[h]}`).join(';');
+}
+function palOf(seed, light) {
   const [, sC, sH] = oklch(seed);
   const dh = sH - BASE_H, pC = Math.max(0.06, Math.min(0.17, sC)), kC = Math.max(0.5, Math.min(1.25, sC / BASE_C));
   return Object.entries(ROLE).map(([h, [fam, tone]]) => {
@@ -87,8 +95,8 @@ function palette(seed, light) {
       else if (fam === 't') out = hex(T, lightC(0.07, tone), H + dh);
       else out = hex(T, lightC(Math.max(0.08, C), tone), H); // k og x: fast kulør
     }
-    return `--m3-${h}:${out}`;
-  }).join(';');
+    return [h, out];
+  }).reduce((a, [h, v]) => ((a[h] = v), a), {});
 }
 
 // Systemets aksentfarge (Chrome på Android 12+ eksponerer Material You-fargen som AccentColor der det støttes).
@@ -109,16 +117,16 @@ let mq = null, key = '';
 export const isLight = (mode) => mode === 'light' || (mode === 'sys' && !!matchMedia('(prefers-color-scheme: light)').matches);
 
 /** Setter (eller fjerner) Android-paletten. on=false for iOS-temaet. */
-export function applyM3(on, seedKey = 'sys', mode = 'dark', redraw = () => {}) {
+export function applyM3(on, seedKey = 'sys', mode = 'dark', redraw = () => {}, same = true) {
   let el = document.getElementById('fh-m3');
   if (!on) { el?.remove(); key = ''; return false; }
   if (!mq) { mq = matchMedia('(prefers-color-scheme: light)'); mq.addEventListener?.('change', () => { key = ''; redraw(); }); }
   const seed = SEEDS[seedKey]?.[1] ?? systemSeed() ?? '#FFB68A';
-  const light = isLight(mode), k = seed + light;
+  const light = isLight(mode), k = seed + light + same;
   if (k === key) return light;
   key = k;
   if (!el) { el = document.createElement('style'); el.id = 'fh-m3'; document.head.appendChild(el); }
-  el.textContent = `:root{${palette(seed, light)}}`;
+  el.textContent = `:root{${palette(seed, light, same)}}`;
   return light;
 }
 export const paletteFor = palette; // for tester

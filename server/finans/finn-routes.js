@@ -124,12 +124,12 @@ const abs = (rel) => { const p = resolve(ROOT, rel); if (!p.startsWith(ROOT + '/
 /* ---------------- Annonsen (finn.no) ---------------- */
 
 let doFetch = (...a) => fetch(...a);
-export const _setFetch = (fn) => { doFetch = fn ? Object.assign(fn, { mocked: true }) : (...a) => fetch(...a); robots = null; lastFetch = 0; };
+export const _setFetch = (fn, gap = 8000) => { doFetch = fn ? Object.assign(fn, { mocked: true }) : (...a) => fetch(...a); robots = null; lastFetch = 0; MIN_GAP = gap; };
 const UA = 'HomelabOS/1.0 (privat arkiv av egne Finn-handler)';
 const FINN_HOST = /^(www\.|m\.)?finn\.no$/i;
 const IMG_HOST = /(^|\.)finncdn\.no$|(^|\.)finn\.no$/i;
 let robots = null, lastFetch = 0;
-const MIN_GAP = 8000;
+let MIN_GAP = 8000;
 
 // robots.txt for finn.no, gruppen «*». Hentes én gang per døgn; utilgjengelig robots.txt tolkes som tillatt.
 async function robotsAllows(url) {
@@ -570,5 +570,144 @@ export function mountFinn(api, { R, W, upload, saveFinn }) {
     if (!f) return c.notFound();
     q('DELETE FROM fh_finn_emails WHERE id=? AND finn_id=?').run(+c.req.param('eid'), f.id);
     return c.json(finnFull(f));
+  });
+}
+
+/* ---------------- Import (Innstillinger → Import → Finn.no) ---------------- */
+// Tidligere Finn-e-poster (.eml, .mbox, .zip med .eml, eller alle fra Proton Mail Bridge) og annonselenker.
+// Arbeidet går som én jobb om gangen i bakgrunnen; kallet venter inntil ~50 s og gir ellers fremdriften (running: true),
+// så Cloudflare-tunnelen (100 s) ikke kutter forespørselen. GET /finn/import/status viser jobben.
+
+const DEAL_MAIL = /kvittering|du har (?:kjøpt|solgt)|er solgt|trygg betaling|fiks ferdig|utbetal|tillit/i;
+let mailFetcher = null;   // tester kan sette en egen henter (uten IMAP)
+export const _setFinnMailFetcher = (fn) => { mailFetcher = fn; };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+// .mbox: e-postene skilles med linjer som begynner med «From ». .zip (Proton-eksport): alle .eml/.mbox inni.
+export async function mailSources(file) {
+  const name = String(file.name ?? '').toLowerCase(), buf = Buffer.from(await file.arrayBuffer());
+  if (/\.zip$/.test(name) || (buf[0] === 0x50 && buf[1] === 0x4b)) {
+    const { unzip } = await import('./xlsx.js');
+    const out = [];
+    for (const [n, text] of unzip(buf, (n) => /\.(eml|mbox)$/i.test(n))) out.push(...(/\.mbox$/i.test(n) ? splitMbox(text) : [Buffer.from(text, 'utf8')]));
+    return out;
+  }
+  const text = buf.toString('utf8');
+  if (/\.mbox$/.test(name) || /^From \S+.*\r?\n[\w-]+:/.test(text)) return splitMbox(text);
+  return [buf];
+}
+export function splitMbox(text) {
+  return String(text).split(/^From [^\r\n]*\r?\n/m).map((s) => s.replace(/^>(>*From )/gm, '$1')).filter((s) => /^[\w-]+:/m.test(s.slice(0, 2000))).map((s) => Buffer.from(s, 'utf8'));
+}
+
+// Én e-post: handelsmail fra FINN oppretter eller oppdaterer handelen; andre (Posten/Bring, Tillit, motparten) kobles
+// til handlene de passer til. Svarer 'added' | 'linked' | 'skipped'.
+async function importOne(source, finnFromMail, origin) {
+  const p = await simpleParser(source);
+  const m = asMail(p);
+  if (!m.subject && !m.text) return 'skipped';
+  const from = String(m.from).toLowerCase();
+  if (/finn\.no/.test(from) && DEAL_MAIL.test(`${m.subject}\n${m.text}`)) {
+    const before = q('SELECT coalesce(max(id),0) FROM fh_finn').pluck().get();
+    try {
+      const f = await finnFromMail(m.text, p);
+      if (origin !== 'imap') q("UPDATE fh_finn_emails SET source=? WHERE finn_id=? AND message_id=? AND source='imap'").run(origin, f.id, String(m.messageId || `${m.subject}|${m.date}`).slice(0, 300));
+      return f.id > before ? 'added' : 'linked';
+    } catch { /* ikke en handel (f.eks. en statusmail uten beløp) – prøv å koble den */ }
+  }
+  let n = 0;
+  for (const f of matchDeals(m)) if (attachMail(f, { ...m, messageId: m.messageId || `${origin}:${m.subject}:${m.date}` }, origin)) n++;
+  return n ? 'linked' : 'skipped';
+}
+
+let job = null;
+const jobOut = () => (job ? { kind: job.kind, running: job.running, total: job.total, done: job.done, added: job.added, linked: job.linked, skipped: job.skipped, errors: job.errors.slice(-20), message: job.message ?? null, items: job.items ?? [], started: job.started, finished: job.finished ?? null } : { running: false });
+function startJob(kind, total, work) {
+  job = { kind, running: true, total, done: 0, added: 0, linked: 0, skipped: 0, errors: [], items: [], started: Date.now() };
+  const me = job;
+  me.promise = (async () => {
+    try { await work(me); } catch (e) { me.errors.push(e.message); }
+    me.running = false; me.finished = Date.now();
+    me.message ??= `${me.added} ny${me.added === 1 ? '' : 'e'} handel${me.added === 1 ? '' : 'er'} · ${me.linked} oppdatert · ${me.skipped} hoppet over${me.errors.length ? ` · ${me.errors.length} feil` : ''}`;
+  })();
+  return me;
+}
+async function waitJob(c, me, ms = 50_000) {
+  let t;
+  await Promise.race([me.promise, new Promise((r) => { t = setTimeout(r, ms); t.unref?.(); })]);
+  clearTimeout(t);
+  return c.json(jobOut());
+}
+const tally = (me, r) => { me[r]++; me.done++; };
+
+export function finnCodes(text) {
+  const codes = [];
+  for (const m of String(text ?? '').matchAll(/(?:finn\.no\/[^\s"'<>]*?(?:item\/|finnkode=)|\bfinnkode\s*[:=]?\s*)(\d{6,12})/gi)) if (!codes.includes(m[1])) codes.push(m[1]);
+  for (const m of String(text ?? '').matchAll(/^\s*(\d{8,12})\s*$/gm)) if (!codes.includes(m[1])) codes.push(m[1]);
+  return codes;
+}
+
+export function mountFinnImport(api, { R, W, upload, finnFromMail }) {
+  const busy = (c) => (job?.running ? c.json({ ...jobOut(), error: 'En import pågår allerede – vent til den er ferdig' }, 409) : null);
+  api.get('/finn/import/status', R, (c) => c.json(jobOut()));
+
+  api.post('/finn/import/eml', W, upload, async (c) => {
+    if (busy(c)) return busy(c);
+    const b = await c.req.parseBody({ all: true });
+    const files = [b.file, b.files, b['files[]']].flat().filter((x) => x instanceof File && x.size > 0);
+    if (!files.length) return bad(c, 'Velg .eml-, .mbox- eller .zip-filer');
+    const sources = [], errors = [];
+    for (const f of files.slice(0, 50)) { try { sources.push(...await mailSources(f)); } catch (e) { errors.push(`${f.name}: ${e.message}`); } }
+    if (!sources.length) return bad(c, errors[0] ?? 'Fant ingen e-poster i filene');
+    const me = startJob('eml', sources.length, async (me) => {
+      me.errors.push(...errors);
+      for (const s of sources.slice(0, 2000)) { try { tally(me, await importOne(s, finnFromMail, 'eml')); } catch (e) { me.done++; me.errors.push(e.message); } }
+    });
+    return waitJob(c, me);
+  });
+
+  api.post('/finn/import/mail', W, async (c) => {
+    if (busy(c)) return busy(c);
+    const me = startJob('mail', 0, async (me) => {
+      const r = await (mailFetcher ?? (async () => (await import('./mail.js')).fetchAllFinnMails()))();
+      if (!r.ok) { me.message = r.message; me.errors.push(r.message); return; }
+      me.total = r.sources.length;
+      for (const s of r.sources) { try { tally(me, await importOne(s, finnFromMail, 'imap')); } catch (e) { me.done++; me.errors.push(e.message); } }
+      me.message = `Fant ${r.sources.length} Finn-e-post${r.sources.length === 1 ? '' : 'er'} · ${me.added} nye handler · ${me.linked} oppdatert`;
+    });
+    return waitJob(c, me);
+  });
+
+  // Annonselenker (én per linje). Hver annonse hentes med samme regler som «Hent annonse» (robots.txt, 8 s mellomrom),
+  // og blir en ny handel – eller oppdaterer handelen som allerede har Finn-koden.
+  api.post('/finn/import/links', W, async (c) => {
+    if (busy(c)) return busy(c);
+    const b = await c.req.json().catch(() => ({}));
+    const codes = finnCodes(b.text).slice(0, 50);
+    if (!codes.length) return bad(c, 'Lim inn minst én Finn-lenke, f.eks. https://www.finn.no/recommerce/forsale/item/476377764');
+    const role = b.role === 'sold' ? 'sold' : 'bought';
+    const me = startJob('links', codes.length, async (me) => {
+      for (const code of codes) {
+        const url = `https://www.finn.no/recommerce/forsale/item/${code}`;
+        let f = q('SELECT * FROM fh_finn WHERE finn_code=? ORDER BY id LIMIT 1').get(code), created = false;
+        if (!f) {
+          f = q("INSERT INTO fh_finn(role,item,counterpart,date,amount,steps,source,finn_code,ad_url,created) VALUES(?,?,'',?,0,'[]',?,?,?,?) ON CONFLICT(source) DO NOTHING RETURNING *")
+            .get(role, `Finn-annonse ${code}`, today(), `ad:${code}`, code, url, Date.now()) ?? q('SELECT * FROM fh_finn WHERE source=?').get(`ad:${code}`);
+          created = true;
+        }
+        try {
+          if (!(MOCK && !doFetch.mocked)) { const w = lastFetch + MIN_GAP - Date.now(); if (w > 0) await sleep(w); }
+          const ad = await fetchAd(f, url);
+          if (created || /^Finn-annonse \d+$/.test(f.item)) q('UPDATE fh_finn SET item=?, amount=CASE WHEN amount=0 THEN ? ELSE amount END WHERE id=?').run(str(ad.title, 120) || f.item, ad.price ? Math.round(ad.price * 100) : 0, f.id);
+          me.items.push({ id: f.id, code, title: ad.title, images: ad.images?.length ?? 0, status: 'ok' });
+          tally(me, created ? 'added' : 'linked');
+        } catch (e) {
+          if (created && !q('SELECT 1 FROM fh_finn_emails WHERE finn_id=?').get(f.id)) q('DELETE FROM fh_finn WHERE id=?').run(f.id);
+          me.items.push({ code, status: 'error', error: e.message });
+          me.errors.push(`${code}: ${e.message}`); me.done++;
+        }
+      }
+    });
+    return waitJob(c, me);
   });
 }

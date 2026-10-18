@@ -86,6 +86,10 @@ struct Receipt: Decodable, Identifiable, Hashable {
     let match: Tx?
     var aiShort: String? = nil
     var domain: String? = nil
+    /// «✦ Analyser på nytt med Gemini»: feilet, lav sikkerhet eller usikker Ollama. reason = hvorfor ikke.
+    var canReanalyze: Bool? = nil
+    var reanalyzeReason: String? = nil
+    var engine: String? = nil
 }
 
 struct Budget: Decodable, Identifiable, Hashable {
@@ -125,6 +129,7 @@ struct Job: Decodable, Identifiable, Hashable {
     let progress: Int?
     let merchant: String?
     let total: Double?
+    var canReanalyze: Bool? = nil
 }
 
 struct MealDay: Decodable, Identifiable, Hashable {
@@ -552,6 +557,8 @@ struct Threats: Decodable, Hashable { var total: Double?; var types: [NamedVal]?
 struct SecuritySettings: Decodable, Hashable { var sslMode: String?; var alwaysHttps: Bool?; var minTls: String?; var dnssec: Bool?; var botFight: Bool?; var certExpires: String? }
 struct DnsRecord: Decodable, Hashable { var type: String?; var name: String?; var content: String?; var proxied: Bool? }
 
+/// Avkodes felt for felt: ett felt med uventet form (f.eks. null i uptime90 for dager uten måling)
+/// skal ikke gi «Uventet svar fra serveren» for hele Domener-siden.
 struct Analytics: Decodable {
     var name: String?
     var status: String?
@@ -586,6 +593,45 @@ struct Analytics: Decodable {
     var nameServers: [String]?
     var source: String?
     var ip: String?
+
+    enum K: String, CodingKey { case name, status, plan, mock, requests, visitors, pageviews, cachedPct, bytes, uptimePct, sslExpires, renews, series, live, countries, devices, browsers, statusCodes, ttfb, originMs, errorPct, http, tls, threats, security, topPages, referrers, uptime90, dns, registrar, nameServers, source, ip }
+
+    init(from d: Decoder) throws {
+        let c = try d.container(keyedBy: K.self)
+        name = try? c.decode(String.self, forKey: .name)
+        status = try? c.decode(String.self, forKey: .status)
+        plan = try? c.decode(String.self, forKey: .plan)
+        mock = try? c.decode(Bool.self, forKey: .mock)
+        requests = (try? c.decode(FlexNum.self, forKey: .requests))?.value
+        visitors = (try? c.decode(FlexNum.self, forKey: .visitors))?.value
+        pageviews = (try? c.decode(FlexNum.self, forKey: .pageviews))?.value
+        cachedPct = (try? c.decode(FlexNum.self, forKey: .cachedPct))?.value
+        bytes = (try? c.decode(FlexNum.self, forKey: .bytes))?.value
+        uptimePct = (try? c.decode(FlexNum.self, forKey: .uptimePct))?.value
+        sslExpires = try? c.decode(String.self, forKey: .sslExpires)
+        renews = try? c.decode(String.self, forKey: .renews)
+        series = try? c.decode([SeriesPoint].self, forKey: .series)
+        live = try? c.decode(LiveNow.self, forKey: .live)
+        countries = try? c.decode([CountryVal].self, forKey: .countries)
+        devices = try? c.decode([NamedVal].self, forKey: .devices)
+        browsers = try? c.decode([NamedVal].self, forKey: .browsers)
+        statusCodes = (try? c.decode([String: FlexNum].self, forKey: .statusCodes))?.compactMapValues { $0.value }
+        ttfb = try? c.decode(Ttfb.self, forKey: .ttfb)
+        originMs = (try? c.decode(FlexNum.self, forKey: .originMs))?.value
+        errorPct = (try? c.decode(FlexNum.self, forKey: .errorPct))?.value
+        http = try? c.decode([NamedVal].self, forKey: .http)
+        tls = try? c.decode([NamedVal].self, forKey: .tls)
+        threats = try? c.decode(Threats.self, forKey: .threats)
+        security = try? c.decode(SecuritySettings.self, forKey: .security)
+        topPages = try? c.decode([NamedVal].self, forKey: .topPages)
+        referrers = try? c.decode([NamedVal].self, forKey: .referrers)
+        uptime90 = (try? c.decode([Double?].self, forKey: .uptime90))?.map { $0 ?? -1 }
+        dns = try? c.decode([DnsRecord].self, forKey: .dns)
+        registrar = try? c.decode(String.self, forKey: .registrar)
+        nameServers = try? c.decode([String].self, forKey: .nameServers)
+        source = try? c.decode(String.self, forKey: .source)
+        ip = try? c.decode(String.self, forKey: .ip)
+    }
 }
 
 /* ---------- Formatering (norsk, minus som −) ---------- */
@@ -683,12 +729,13 @@ struct Shortcut: Decodable, Hashable {
 }
 
 struct Departure: Decodable, Hashable {
-    var line: String; var color: String?; var min: Int?; var time: String?
-    enum K: String, CodingKey { case line, color, min, time }
+    var line: String; var color: String?; var min: Int?; var time: String?; var to: String?
+    enum K: String, CodingKey { case line, color, min, time, to }
     init(from d: Decoder) throws {
         let c = try d.container(keyedBy: K.self)
         line = (try? c.decode(FlexID.self, forKey: .line))?.value ?? ""
         color = try? c.decode(String.self, forKey: .color); time = try? c.decode(String.self, forKey: .time)
+        to = try? c.decode(String.self, forKey: .to)
         min = (try? c.decode(FlexNum.self, forKey: .min))?.value.map { Int($0) }
     }
 }

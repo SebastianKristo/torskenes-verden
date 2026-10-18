@@ -67,7 +67,7 @@ function move(key, i, j) {
 
 /* ---------- Data ---------- */
 
-const H = { set: { suggest: true, save: true }, data: null, err: '', q: '', open: false, sug: [], hist: null, sel: -1, edit: false, gal: false, dom: null, mat: null, drag: null, car: 0, wxMore: false };
+const H = { set: { suggest: true, save: true }, data: null, err: '', q: '', open: false, sug: [], hist: null, sel: -1, edit: false, gal: false, dom: null, mat: null, drag: null, car: 0 };
 const WXT = { 0: 'Klart', 1: 'Lettskyet', 2: 'Delvis skyet', 3: 'Overskyet', 45: 'Tåke', 48: 'Tåke', 51: 'Yr', 53: 'Yr', 55: 'Yr', 61: 'Lett regn', 63: 'Regn', 65: 'Kraftig regn', 71: 'Lett snø', 73: 'Snø', 75: 'Kraftig snø', 80: 'Regnbyger', 81: 'Regnbyger', 82: 'Kraftige byger', 95: 'Torden' };
 const histLocal = () => { try { return JSON.parse(localStorage.getItem('hl_search_hist') || '[]'); } catch { return []; } };
 const histNorm = (r) => (Array.isArray(r) ? r : r?.items ?? r?.history ?? []).map((x) => (typeof x === 'string' ? x : x?.q ?? x?.query ?? '')).filter(Boolean);
@@ -138,48 +138,24 @@ function wxIc(x) {
 }
 const wi = (x, size = 18) => icon('w_' + wxIc(x), size, 'currentColor', 1.8);
 const deg = (v) => (v == null || Number.isNaN(+v) ? '–' : `${Math.round(v)}°`);
-const mm = (v) => (v ? `${String(Math.round(v * 10) / 10).replace('.', ',')} mm` : '');
-const clockHm = (t) => (t ? new Date(t).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }) : '–');
 const windOf = (w) => (w.wind && typeof w.wind === 'object' ? w.wind : { speed: w.wind ?? w.windInfo?.speed, gust: w.windGust ?? w.windInfo?.gust, dir: w.windDir ?? w.windInfo?.dir, dirText: w.windDirText ?? w.windInfo?.dirText });
 const DIRS = ['nord', 'nordøst', 'øst', 'sørøst', 'sør', 'sørvest', 'vest', 'nordvest'];
 const dirTxt = (wd) => wd.dirText || (wd.dir != null ? `fra ${DIRS[Math.round(((wd.dir % 360) + 360) % 360 / 45) % 8]}` : '');
-const dayLbl = (d, i) => d.label ?? (i === 0 ? 'I dag' : new Date(d.date + 'T12:00').toLocaleDateString('nb-NO', { weekday: 'short' }).replace('.', ''));
 
-// Klokke og vær: kompakt kort like høyt som Pakker. Resten av været ligger i «Mer vær ▾».
+// Klokke og vær (prompt 12): klokke, dato, temperatur, tilstand, føles som / høy / lav, vindlinjen og stripen med de
+// neste 6 timene nederst. Nowcast, dagene, sol/UV/trykk og «Mer vær» hører bare til på web-Dashboard.
 function wWeather(th) {
   const w = H.data?.weather;
-  if (!w) return card(th, `<b class="hclock" data-clock>${timeTxt()}</b><span class="hwx"><b>–</b><span>${H.data ? 'Ingen værdata' : 'Henter vær …'}</span></span>`, 'row wxcard');
+  const date = new Date().toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' });
+  if (!w) return card(th, `<div class="wx-top"><span class="wx-l"><b class="hclock" data-clock>${timeTxt()}</b><span class="dim wx-date">${esc(date)}</span></span><span class="wx-r"><b>–</b><span class="dim">${H.data ? 'Ingen værdata' : 'Henter vær …'}</span></span></div>`, 'wxcard');
   const wd = windOf(w), hi = w.hi ?? w.max, lo = w.lo ?? w.min;
-  const mini = [wd.speed != null ? `Vind ${Math.round(wd.speed)}${wd.gust ? `–${Math.round(wd.gust)}` : ''} m/s` : '', w.precip24 != null ? `nedbør ${mm(w.precip24) || '0 mm'}` : w.precipNow ? `nedbør ${mm(w.precipNow)}` : '', w.humidity != null ? `fukt ${Math.round(w.humidity)} %` : ''].filter(Boolean).join(' · ');
-  const hours = (w.hours ?? []).slice(0, 6), days = (w.days ?? []).slice(1, 4);
-  const chips = [w.sunrise ? ['rise', `Sol opp ${clockHm(w.sunrise)}`] : null, w.sunset ? ['set', `Ned ${clockHm(w.sunset)}`] : null, w.uv != null ? ['uv', `UV ${w.uv}`] : null, w.pressure != null ? ['gauge', `${Math.round(w.pressure)} hPa`] : null].filter(Boolean);
-  const more = H.wxMore ? wxMore(w, wd) : '';
-  return card(th, `<div class="wx-top"><b class="hclock" data-clock>${timeTxt()}</b><span class="wx-now"><span class="wx-ic">${wi(w, 30)}</span><b>${deg(w.temp)}</b></span></div>
-    <div class="wx-cond"><b>${esc(w.text ?? WXT[w.code] ?? 'Skiftende')}</b><span class="dim">${w.feels != null ? `Føles som ${deg(w.feels)} · ` : ''}${hi != null ? `${deg(hi)} / ${deg(lo)}` : ''} · ${esc(w.place ?? 'Oslo')}</span>${mini ? `<span class="dim sm">${esc(mini)}</span>` : ''}</div>
-    ${hours.length ? `<div class="wx-hours">${hours.map((x, i) => `<span><small>${esc(x.t ?? x.label ?? (i ? '' : 'Nå'))}</small>${wi(x, 17)}<b>${deg(x.temp)}</b><small class="mm">${x.mm ? String(Math.round(x.mm * 10) / 10).replace('.', ',') : '–'}</small></span>`).join('')}</div>` : ''}
-    ${w.nowcast?.text ? `<div class="wx-nc">${esc(w.nowcast.text)}</div>` : ''}
-    ${days.length ? `<div class="wx-days">${days.map((x, i) => `<span>${wi(x, 20)}<span class="m-grow"><small class="dl">${esc(dayLbl(x, i + 1))}</small><b>${deg(x.max)} <span class="dim">/ ${deg(x.min)}</span></b><small class="mm">${esc(mm(x.mm) || 'Opphold')}</small></span></span>`).join('')}</div>` : ''}
-    ${chips.length ? `<div class="wx-chips">${chips.map(([k, t]) => `<span>${icon('w_' + k, 13, 'currentColor', 1.8)}${esc(t)}</span>`).join('')}</div>` : ''}
-    ${w.hours || w.days ? `<button class="wx-more" data-hle="wxmore" aria-expanded="${!!H.wxMore}">${H.wxMore ? 'Mindre vær ▴' : 'Mer vær ▾'}</button>` : ''}${more}`, 'wxcard');
-}
-function wxMore(w, wd) {
-  const stats = [
-    ['wind', 'Vind', wd.speed != null ? `${Math.round(wd.speed)} m/s` : '–', [wd.gust ? `kast ${Math.round(wd.gust)}` : '', dirTxt(wd)].filter(Boolean).join(' · ')],
-    ['drop', 'Nedbør', mm(w.precipNow) || '0 mm', w.precip24 != null ? `${mm(w.precip24) || '0 mm'} neste 24 t` : 'nå'],
-    ['hum', 'Fuktighet', w.humidity != null ? `${Math.round(w.humidity)} %` : '–', w.dew != null ? `duggpunkt ${deg(w.dew)}` : ''],
-    ['uv', 'UV-indeks', w.uv != null ? String(w.uv) : '–', w.uvText ?? ''],
-    ['gauge', 'Lufttrykk', w.pressure != null ? `${Math.round(w.pressure)} hPa` : '–', w.pressureTrend ?? ''],
-    ['eye', 'Sikt', w.visibility != null ? String(w.visibility) : '–', ''],
-    ['rise', 'Soloppgang', clockHm(w.sunrise), w.dayLengthText || (w.dayLength ? `${Math.floor(w.dayLength / 60)} t ${w.dayLength % 60} m dag` : '')],
-    ['set', 'Solnedgang', clockHm(w.sunset), ''],
-  ];
-  const hours = (w.hours ?? []).slice(0, 8), mx = Math.max(1, ...hours.map((x) => x.mm ?? 0));
-  const days = (w.days ?? []).slice(0, 6), LO = Math.min(...days.map((d) => d.min ?? 0)), HI = Math.max(...days.map((d) => d.max ?? 0)), span = HI - LO || 1;
-  return `<div class="wx-drop">
-    <div class="wx-stats">${stats.map(([k, l, v, s]) => `<div><span class="dim">${icon('w_' + k, 13, 'currentColor', 1.8)}${esc(l)}</span><b>${esc(v)}</b>${s ? `<small class="dim">${esc(s)}</small>` : ''}</div>`).join('')}</div>
-    ${hours.length ? `<div class="wx-h8"><div class="dim sm wx-lbl"><span>Neste timer</span><span>Nedbør mm</span></div><div class="wx-h8r">${hours.map((x, i) => `<span><small>${esc(x.t ?? x.label ?? (i ? '' : 'Nå'))}</small>${wi(x, 17)}<b>${deg(x.temp)}</b><i style="height:${Math.round(((x.mm ?? 0) / mx) * 22)}px"></i><small class="mm">${x.mm ? String(Math.round(x.mm * 10) / 10).replace('.', ',') : '–'}</small></span>`).join('')}</div></div>` : ''}
-    ${days.length ? `<div class="wx-d6">${days.map((x, i) => `<div><span class="wx-dl">${esc(dayLbl(x, i))}</span>${wi(x, 17)}<span class="dim">${deg(x.min)}</span><span class="wx-rng"><i style="left:${(((x.min ?? LO) - LO) / span) * 100}%;right:${100 - (((x.max ?? HI) - LO) / span) * 100}%"></i></span><b>${deg(x.max)}</b><small class="mm">${esc(mm(x.mm))}</small></div>`).join('')}</div>` : ''}
-  </div>`;
+  const wind = wd.speed != null ? `Vind ${Math.round(wd.speed)}${wd.gust ? `–${Math.round(wd.gust)}` : ''} m/s${dirTxt(wd) ? ` ${dirTxt(wd)}` : ''}` : '';
+  const sub = [w.feels != null ? `Føles ${deg(w.feels)}` : '', hi != null ? `${deg(hi)} / ${deg(lo)}` : ''].filter(Boolean).join(' · ');
+  const hours = (w.hours ?? []).slice(0, 6);
+  return card(th, `<div class="wx-top"><span class="wx-l"><b class="hclock" data-clock>${timeTxt()}</b><span class="dim wx-date">${esc(date)}</span></span>
+      <span class="wx-r"><span class="wx-now"><span class="wx-ic">${wi(w, 26)}</span><b>${deg(w.temp)}</b></span><span class="wx-cnd">${esc(w.text ?? WXT[w.code] ?? 'Skiftende')}</span><span class="dim">${esc(sub)}</span></span></div>
+    ${wind ? `<div class="dim wx-wind">${icon('w_wind', 13, 'currentColor', 1.8)}<span class="m-ell">${esc(wind)} · ${esc(w.place ?? 'Oslo')}</span></div>` : ''}
+    ${hours.length ? `<div class="wx-hours">${hours.map((x, i) => `<span><small>${esc(x.t ?? x.label ?? (i ? '' : 'Nå'))}</small>${wi(x, 16)}<b>${deg(x.temp)}</b><small class="mm">${x.mm ? String(Math.round(x.mm * 10) / 10).replace('.', ',') : ''}</small></span>`).join('')}</div>` : ''}`, 'wxcard');
 }
 // Karusellen øverst: Klokke og vær + Pakker, med scroll-snap og prikker. Flyttes og skjules sammen som «Klokke og vær».
 function wClock(th) {
@@ -245,7 +221,7 @@ function wSrv(th) {
 }
 function wRuter(th) {
   const r = H.data?.ruter ?? [];
-  const rows = r.flatMap((x) => (x.departures ?? []).slice(0, 2).map((d) => ({ ...d, to: d.to ?? x.to }))).sort((a, b) => (a.min ?? 99) - (b.min ?? 99)).slice(0, 5);
+  const rows = r.flatMap((x) => (x.departures ?? []).slice(0, 2).map((d) => ({ ...d, to: d.to ?? x.to }))).sort((a, b) => (a.min ?? 99) - (b.min ?? 99)).slice(0, 4);
   return card(th, `<div class="hhead"><b>Ruter${r[0]?.from ? ` · ${esc(r[0].from)}` : ''}</b><span class="dim">Sanntid</span></div>
     ${rows.length ? rows.map((d) => `<div class="hdep"><span class="hline" style="background:${esc(d.color ?? '#0B91EF')}">${esc(d.line)}</span><span class="m-ell m-grow">${esc(d.to)}</span><b>${d.min != null ? (d.min <= 0 ? 'nå' : `${d.min} min`) : esc(d.time ?? '')}</b></div>`).join('') : `<div class="dim" style="padding:6px 0">${H.data ? 'Ingen avganger. Sett opp strekninger i Homelab → Innstillinger.' : 'Henter avganger …'}</div>`}`);
 }
@@ -270,7 +246,7 @@ function gallery(th) {
 export function hlView(th) {
   const now = new Date(), name = H.data?.name || meName();
   const vis = lay.sec.filter((id) => !lay.hide[id]);
-  const head = `<div class="hlhead"><div class="m-grow"><span class="dim" style="text-transform:capitalize">${now.toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' })}</span><div class="title hlgreet">${greetTxt(now.getHours())}, ${esc(name)}</div></div>
+  const head = `<div class="hlhead"><div class="m-grow"><span class="dim" style="text-transform:capitalize">${now.toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' })}</span><div class="title hlgreet"><span>${greetTxt(now.getHours())},</span><span>${esc(name)}</span></div></div>
     ${H.edit ? `<span class="m-row" style="gap:8px"><button class="gbtn sm" data-hle="gal" aria-label="Legg til widget" aria-expanded="${H.gal}">${icon('plus', 20, 'currentColor', 2.4)}</button><button class="donebtn" data-hle="done">Ferdig</button></span>`
       : `<button class="m-av hlav${avatarUrl() ? ' img' : ''}" data-mact="menu" aria-label="Profil og meny" aria-haspopup="dialog">${avInner()}</button>`}</div>`;
   const body = vis.map((id, i) => `<div class="wg${H.edit ? ` jig${i % 2 ? ' alt' : ''}` : ''}" data-wg="${id}">${H.edit ? `<div class="wg-ov" data-wgdrag="${id}" aria-hidden="true"></div><button class="wg-rm" data-hle="rm" data-id="${id}" aria-label="Fjern ${WD[id][0]}">−</button><span class="wg-mv"><button data-hle="mvsec" data-id="${id}" data-d="-1" aria-label="Flytt ${WD[id][0]} opp">▲</button><button data-hle="mvsec" data-id="${id}" data-d="1" aria-label="Flytt ${WD[id][0]} ned">▼</button></span>` : ''}${RENDER[id](th)}</div>`).join('');
@@ -400,7 +376,6 @@ export function hlBind(e, t) {
     if (tr) tr.scrollTo({ left: i * tr.clientWidth, behavior: 'smooth' });
     return true;
   }
-  if (e.type === 'click' && d('[data-hle="wxmore"]')) { e.preventDefault(); H.wxMore = !H.wxMore; haptic('tap'); draw(); return true; }
   if (e.type !== 'click' || !(x = d('[data-hle]'))) return false;
   e.preventDefault();
   const k = x.dataset.hle, id = x.dataset.id;

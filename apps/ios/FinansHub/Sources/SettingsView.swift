@@ -368,14 +368,6 @@ private struct LookPage: View {
             }
             NavigationBarPrefs()
             Group {
-                SectionLabel(text: "Matplan")
-                Card {
-                    Choice(label: "Lys", on: store.layout.matTheme == "light") { store.setMatTheme("light") }
-                    Sep()
-                    Choice(label: "Mørk", on: store.layout.matTheme == "dark") { store.setMatTheme("dark") }
-                    Sep()
-                    Choice(label: "Som systemet", on: store.layout.matTheme == "system") { store.setMatTheme("system") }
-                }
                 Card { Switch(label: "Skjul beløp til jeg trykker", sub: "Beløp vises som prikker til du trykker på saldoen eller øyet", on: $s.hideAmounts) }
                 SectionLabel(text: "Forsiden")
                 Card {

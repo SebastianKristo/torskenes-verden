@@ -78,20 +78,31 @@ export const getDepartures = (stopId) => {
 
 // Proxy mot Google Suggest (nettleseren får ikke kalle Google direkte på grunn av CSP). Svarer [] ved feil.
 const suggestCache = new Map();
-export async function getSuggestions(q) {
+export async function getSuggestions(q, { withError = false } = {}) {
   const key = String(q).trim().toLowerCase().slice(0, 120);
-  if (!key) return [];
+  if (!key) return withError ? { items: [] } : [];
   const hit = suggestCache.get(key);
-  if (hit && hit.exp > Date.now()) return hit.list;
-  let list = [];
+  if (hit && hit.exp > Date.now()) return withError ? { items: hit.list } : hit.list;
+  let list = [], error = null;
   try {
     const res = await fetch(`https://suggestqueries.google.com/complete/search?client=chrome&hl=no&ie=utf-8&oe=utf-8&q=${encodeURIComponent(key)}`,
-      { signal: AbortSignal.timeout(2000), headers: { 'User-Agent': 'Mozilla/5.0 (homelab-os)' } });
-    if (res.ok) { const d = JSON.parse(await res.text()); list = (Array.isArray(d?.[1]) ? d[1] : []).filter((x) => typeof x === 'string').slice(0, 8); }
-  } catch { list = []; }
-  if (suggestCache.size > 500) suggestCache.delete(suggestCache.keys().next().value);
-  suggestCache.set(key, { list, exp: Date.now() + 10 * 60_000 });
-  return list;
+      { signal: AbortSignal.timeout(4000), headers: { 'User-Agent': 'Mozilla/5.0 (homelab-os)', Accept: 'application/json' } });
+    if (!res.ok) throw new Error(`Google svarte ${res.status}`);
+    // Google kan svare i ISO-8859-1 selv om vi ber om UTF-8; tegnsettet i headeren avgjør.
+    const cs = /charset=([\w-]+)/i.exec(res.headers.get('content-type') ?? '')?.[1] ?? 'utf-8';
+    let text;
+    try { text = new TextDecoder(cs).decode(await res.arrayBuffer()); } catch { text = ''; }
+    const d = JSON.parse(text);
+    list = (Array.isArray(d?.[1]) ? d[1] : []).filter((x) => typeof x === 'string').slice(0, 8);
+  } catch (e) {
+    error = e.name === 'TimeoutError' ? 'Google svarte ikke i tide' : e instanceof SyntaxError ? 'Uventet svar fra Google' : e.cause ? `Kunne ikke nå Google (${e.cause.code ?? e.cause.message ?? e.message})` : e.message;
+  }
+  // Feil caches ikke, så neste tastetrykk prøver igjen.
+  if (!error) {
+    if (suggestCache.size > 500) suggestCache.delete(suggestCache.keys().next().value);
+    suggestCache.set(key, { list, exp: Date.now() + 10 * 60_000 });
+  }
+  return withError ? { items: list, ...(error ? { error } : {}) } : list;
 }
 
 /* ---------------- Vær / MET ---------------- */
@@ -414,6 +425,45 @@ async function jfRecent() {
   });
 }
 
+/* Historikk: siste avspillinger. Plex via /status/sessions/history/all (brukernavn fra /accounts), Jellyfin via DatePlayed per bruker. */
+const plexAccounts = () => cached('plex_accounts', 30 * 60_000, async () => {
+  const { url, token } = plexCfg();
+  const list = (await mediaGet(`${url}/accounts`, plexH(token)).catch(() => null))?.MediaContainer?.Account ?? [];
+  return Object.fromEntries(list.map((a) => [String(a.id), a.name]));
+});
+async function plexHistory() {
+  const { url, token } = plexCfg();
+  const [list, acc, info] = await Promise.all([
+    mediaGet(`${url}/status/sessions/history/all?sort=viewedAt:desc&X-Plex-Container-Start=0&X-Plex-Container-Size=20`, plexH(token)).then((j) => j.MediaContainer?.Metadata ?? []),
+    plexAccounts().catch(() => ({})), plexInfo().catch(() => null),
+  ]);
+  return list.map((m) => {
+    const ep = m.type === 'episode';
+    const key = String(m.ratingKey ?? m.key ?? '').match(/\d+/)?.[0];
+    return {
+      src: 'plex', kind: ep ? 'episode' : 'movie', user: acc[String(m.accountID)] ?? (m.accountID === 1 ? 'Eier' : ''),
+      show: ep ? m.grandparentTitle : m.title, title: ep ? m.title : (m.year ? String(m.year) : ''), season: ep ? m.parentIndex ?? null : null, episode: ep ? m.index ?? null : null,
+      playedAt: m.viewedAt ? new Date(m.viewedAt * 1000).toISOString() : null,
+      poster: plexPoster(ep ? m.grandparentThumb || m.thumb : m.thumb),
+      url: key && info?.machineId ? `${url}/web/index.html#!/server/${info.machineId}/details?key=${encodeURIComponent('/library/metadata/' + key)}` : `${url}/web/index.html`,
+    };
+  });
+}
+async function jfHistory() {
+  const { url, key, user } = jfCfg();
+  const uid = await jfUserId();
+  const j = await mediaGet(`${url}/Users/${encodeURIComponent(uid)}/Items?SortBy=DatePlayed&SortOrder=Descending&Filters=IsPlayed&Recursive=true&IncludeItemTypes=Episode,Movie&Limit=20&Fields=UserData,ProductionYear`, jfH(key));
+  return (j.Items ?? []).map((it) => {
+    const ep = it.Type === 'Episode';
+    return {
+      src: 'jellyfin', kind: ep ? 'episode' : 'movie', user: user || '',
+      show: ep ? it.SeriesName : it.Name, title: ep ? it.Name : (it.ProductionYear ? String(it.ProductionYear) : ''), season: ep ? it.ParentIndexNumber ?? null : null, episode: ep ? it.IndexNumber ?? null : null,
+      playedAt: it.UserData?.LastPlayedDate ?? null, poster: jfPoster(ep ? it.SeriesId || it.Id : it.Id),
+      url: `${url}/web/#/details?id=${encodeURIComponent(it.Id)}`,
+    };
+  });
+}
+
 async function mediaServers() {
   const p = plexCfg(), j = jfCfg();
   const out = [];
@@ -425,7 +475,7 @@ async function mediaServers() {
 
 async function collect(kind) {
   const servers = await mediaServers();
-  const fns = { plex: kind === 'now' ? plexNow : plexRecent, jellyfin: kind === 'now' ? jfNow : jfRecent };
+  const fns = { plex: { now: plexNow, recent: plexRecent, history: plexHistory }[kind], jellyfin: { now: jfNow, recent: jfRecent, history: jfHistory }[kind] };
   const results = await Promise.allSettled(servers.map((s) => fns[s.src]()));
   const items = [];
   servers.forEach((s, i) => {
@@ -440,6 +490,13 @@ export const getMediaRecent = () => cached('media_recent', 10 * 60_000, async ()
   const r = await collect('recent');
   r.items.sort((a, b) => String(b.added ?? '').localeCompare(String(a.added ?? '')));
   r.items = r.items.slice(0, 12);
+  return r;
+});
+
+export const getMediaHistory = () => cached('media_history', 5 * 60_000, async () => {
+  const r = await collect('history');
+  r.items.sort((a, b) => String(b.playedAt ?? '').localeCompare(String(a.playedAt ?? '')));
+  r.items = r.items.slice(0, 20);
   return r;
 });
 

@@ -421,7 +421,7 @@ function mountMail(slot) {
     return m.mailPane(mailHost);
   }).catch(() => {
     mailMounted = false;
-    mailHost.innerHTML = box('Proton Mail', row({ t: 'Oppsett i FinansHub', s: 'Henting av kvitteringer fra e-post settes opp under FinansHub → Innstillinger → Bank og import.', btn: 'Åpne', act: 'data-open-fh-mail' }).html);
+    mailHost.innerHTML = box('Proton Mail', row({ t: 'Oppsett i FinansHub', s: 'Henting av kvitteringer fra e-post settes opp under FinansHub → Innstillinger → Import.', btn: 'Åpne', act: 'data-open-fh-mail' }).html);
   });
 }
 

@@ -72,15 +72,12 @@ export function weatherCard() {
       <div class="wxc-sec"><div class="wxc-sec-h"><span>Neste timer</span><span>Nedbør mm</span></div><div class="wxc-h8">${h8}</div></div>
       <div class="wxc-days">${d6}</div></div>`;
   }
-  return `<div class="card-head" style="align-items:flex-start"><div><div class="card-title">Værmelding</div><div class="card-sub">${esc(w.place)}${upd} · yr.no</div></div>
-      <a href="https://www.yr.no" target="_blank" rel="noopener" class="sub" style="font-size:13px">yr.no ↗</a></div>
+  return `<div class="card-head" style="align-items:flex-start"><div><div class="card-title">Værmelding</div><div class="card-sub">${esc(w.place)}${upd}</div></div></div>
     <div class="wxc-now">${svg(w.icon, 46, '#a8d4fb')}<div class="wxc-temp">${w.temp}°</div>
       <div class="wxc-cond"><b>${esc(w.text)}</b><span>Føles som ${deg(w.feels)} · ${deg(w.hi)} / ${deg(w.lo)}</span><span>${esc(mini)}</span></div></div>
     <div class="wxc-h6">${h6}</div>
-    ${w.nowcast?.text ? `<div class="wxc-cast">${esc(w.nowcast.text)}</div>` : ''}
     ${d3 ? `<div class="wxc-d3">${d3}</div>` : ''}
     <div class="wxc-chips">${chips}</div>
-    <span style="flex:1"></span>
     <button class="wxc-btn" data-wx-more aria-expanded="${ui.open}">${ui.open ? 'Mindre vær ▴' : 'Mer vær ▾'}</button>${more}`;
 }
 
@@ -93,7 +90,7 @@ const CARRIERS = {
 };
 const carrierBadge = (p, size = 30) => {
   const [ini, bg, fg] = CARRIERS[p.carrier] ?? [(p.carrierName ?? '?').slice(0, 2).toUpperCase(), '#3a4256', '#eef0f4'];
-  return `<span class="pk-car" style="width:${size}px;height:${size}px;background:${bg};color:${fg}">${esc(ini)}</span>`;
+  return `<span class="pk-car" style="width:${size}px;height:${size}px;background:${bg};color:${fg}">${esc(ini)}${p.carrierLogo ? `<img class="trk-logo" src="${esc(p.carrierLogo)}" alt="" loading="lazy">` : ''}</span>`;
 };
 
 export function packagesCard() {
@@ -105,7 +102,7 @@ export function packagesCard() {
   const count = all.length ? `${all.length} på vei${pick ? ` · ${pick} klar` : ''}` : '';
   const list = rows.map((p) => {
     const st = p.step ?? 0, fin = p.status === 'delivered';
-    const bars = [0, 1, 2, 3, 4].map((j) => `<i style="background:${j <= st ? (j === st && !fin ? '#ff7a3d' : '#eef0f4') : 'rgba(255,255,255,.16)'}"></i>`).join('');
+    const bars = [0, 1, 2, 3, 4].map((j) => `<i style="background:${fin ? '#8fe0b0' : j <= st ? (j === st ? '#ff7a3d' : '#eef0f4') : 'rgba(255,255,255,.16)'}"></i>`).join('');
     const eta = ready(p) && p.pickupPoint ? p.pickupPoint : p.eta ?? '';
     return `<a class="pk-row" href="#/sporing" aria-label="${esc(p.name || p.trackingNo)}">
       <span class="pk-top">${carrierBadge(p)}<span class="pk-txt"><b>${esc(p.name || p.shop || p.trackingNo)}</b><span style="color:${ready(p) ? '#ffb08a' : fin ? '#8fe0b0' : '#eef0f4'}">${esc(p.statusText ?? '')}</span></span>

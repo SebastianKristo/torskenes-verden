@@ -26,6 +26,11 @@ const plex = createServer((req, res) => {
   if (u.pathname === '/library/recentlyAdded') return json(res, { MediaContainer: { Metadata: [
     { type: 'movie', title: 'Flow', year: 2024, thumb: '/library/metadata/20/thumb/222', addedAt: 1_760_000_000 },
   ] } });
+  if (u.pathname === '/status/sessions/history/all') return json(res, { MediaContainer: { Metadata: [
+    { type: 'episode', ratingKey: '501', grandparentTitle: 'FBI', title: 'Long Shot', parentIndex: 8, index: 21, viewedAt: 1_760_700_000, accountID: 1, grandparentThumb: '/library/metadata/40/thumb/1' },
+    { type: 'movie', ratingKey: '502', title: 'Flow', year: 2024, viewedAt: 1_760_600_000, accountID: 7, thumb: '/library/metadata/20/thumb/222' },
+  ] } });
+  if (u.pathname === '/accounts') return json(res, { MediaContainer: { Account: [{ id: 1, name: 'sebastiankristo' }, { id: 7, name: 'Ingrid' }] } });
   if (u.pathname === '/photo/:/transcode') { res.writeHead(200, { 'content-type': 'image/jpeg' }); return res.end(Buffer.from([0xff, 0xd8, 0xff])); }
   res.writeHead(404); res.end();
 });
@@ -40,6 +45,9 @@ const jf = createServer((req, res) => {
     { UserName: 'Pål', DeviceName: 'Nettleser' },
   ]);
   if (u.pathname === '/Users') return json(res, [{ Name: 'Pål', Id: 'u1' }, { Name: 'Sebastian', Id: 'u2' }]);
+  if (u.pathname === '/Users/u2/Items' && u.searchParams.get('SortBy') === 'DatePlayed') return json(res, { Items: [
+    { Type: 'Episode', SeriesName: 'Severance', Name: 'Woe’s Hollow', ParentIndexNumber: 2, IndexNumber: 4, Id: 'd'.repeat(32), SeriesId: 'e'.repeat(32), UserData: { LastPlayedDate: '2025-10-16T20:00:00Z' } },
+  ] });
   if (u.pathname === '/Users/u2/Items/Latest') return json(res, [{ Type: 'Episode', SeriesName: 'Andor', ParentIndexNumber: 2, IndexNumber: 3, Id: 'b'.repeat(32), SeriesId: 'c'.repeat(32), DateCreated: '2026-10-17T10:00:00Z' }]);
   res.writeHead(404); res.end();
 });
@@ -88,6 +96,19 @@ test('nylig lagt til bruker riktig Jellyfin-bruker og sorterer nyest først', as
   const r = await integ.getMediaRecent();
   assert.deepEqual(r.items.map((x) => [x.src, x.title, x.sub]), [['jellyfin', 'Andor', 'Serie · S02E03'], ['plex', 'Flow', 'Film · 2024']]);
   assert.match(r.items[0].poster, new RegExp(`id=${'c'.repeat(32)}$`), 'episoder viser seriens plakat');
+});
+
+test('historikk: siste avspillinger fra begge, nyest først, med bruker, sesong og episode', async () => {
+  const r = await integ.getMediaHistory();
+  assert.equal(r.configured, true);
+  assert.deepEqual(r.items.map((x) => [x.src, x.user, x.show, x.season, x.episode, x.title]), [
+    ['plex', 'sebastiankristo', 'FBI', 8, 21, 'Long Shot'],
+    ['jellyfin', 'sebastian', 'Severance', 2, 4, 'Woe’s Hollow'],
+    ['plex', 'Ingrid', 'Flow', null, null, '2024'],
+  ]);
+  assert.match(r.items[0].url, /details\?key=%2Flibrary%2Fmetadata%2F501$/);
+  assert.match(r.items[1].poster, new RegExp(`id=${'e'.repeat(32)}$`), 'episoder viser seriens plakat');
+  assert.ok(!JSON.stringify(r).includes('ptok') && !JSON.stringify(r).includes('jkey'));
 });
 
 test('plakat-proxy godtar bare gyldige ID-er', async () => {

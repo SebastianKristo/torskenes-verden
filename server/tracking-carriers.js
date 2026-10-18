@@ -21,6 +21,10 @@ export const CARRIERS = [
   ['instabox', 'Instabox', 'IB', '#FF4E00', '#fff', [/^IB[A-Z0-9]{8,}$/], 'https://track.instabox.io/'],
   ['other', 'Annen (17TRACK)', '17', '#3A4252', '#eef0f4', [], 'https://t.17track.net/no#nums='],
 ].map(([id, name, ini, color, fg, re, url]) => ({ id, name, ini, color, fg, re, url }));
+// Domenet brukes til logoen (offentlig favicon via /finans/api/logo/<domene>, samme kilde som i designet).
+const DOMAIN = { posten: 'posten.no', bring: 'bring.no', postnord: 'postnord.no', dhl: 'dhl.com', ups: 'ups.com', fedex: 'fedex.com', gls: 'gls-group.eu',
+  schenker: 'dbschenker.com', helthjem: 'helthjem.no', budbee: 'budbee.com', instabox: 'instabox.io', other: '17track.net' };
+for (const c of CARRIERS) { c.domain = DOMAIN[c.id]; c.logo = `/finans/api/logo/${DOMAIN[c.id]}`; }
 export const CARRIER = Object.fromEntries(CARRIERS.map((c) => [c.id, c]));
 
 export const normNo = (no) => String(no ?? '').replace(/[\s-]+/g, '').toUpperCase();
@@ -58,14 +62,17 @@ export const stepOf = (status) => STEP[status] ?? 0;
 
 // Fritekst eller transportørkode → felles status. Brukes for alle transportører, så små forskjeller i ordlyd ikke betyr noe.
 export function normStatus(s) {
-  const t = String(s ?? '').toLowerCase();
-  if (/deliver(ed)?_?$|^delivered|levert til mottaker|er levert|utlevert|hentet av mottaker|picked up by (the )?(recipient|customer)|delivered/.test(t) && !/out for delivery|ute for levering|not delivered|ikke levert/.test(t)) return 'delivered';
-  if (/ready.?for.?pickup|klar for henting|kan hentes|available for pickup|ligger klar|awaiting.?collection|ankommet hentested/.test(t)) return 'ready_for_pickup';
-  if (/out.?for.?delivery|ute for levering|on.?vehicle|med sjåfør|utkjøring/.test(t)) return 'out_for_delivery';
+  // Koder som DELIVERED, AvailableForPickup og EN_ROUTE gjøres om til ord («available for pickup») før mønstrene under.
+  const t = String(s ?? '').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ').toLowerCase().trim();
+  if (/not delivered|ikke levert|delivery failure|attempted delivery|failed attempt|returned|retur/.test(t)) return 'delayed';
+  if (/^deliver(ed)?$|^delivered|levert til mottaker|er levert|utlevert|ble levert|hentet av mottaker|er hentet|collected|picked up by (the )?(recipient|customer)|delivered/.test(t) && !/out for delivery|ute for levering|for delivery/.test(t)) return 'delivered';
+  if (/ready.?for.?pickup|klar for henting|kan hentes|klar til henting|available for (pick ?up|collection)|ligger klar|awaiting.?collection|ankommet hentested|notification sent|arrived at pick ?up/.test(t)) return 'ready_for_pickup';
+  if (/out.?for.?delivery|ute for levering|on.?vehicle|med sjåfør|utkjøring|transport to recipient|available for delivery/.test(t)) return 'out_for_delivery';
   if (/delay|forsink|exception|avvik/.test(t)) return 'delayed';
-  if (/in.?transit|transit|underveis|på vei|ankommet terminal|sortert|departed|arrived|processed|i transport/.test(t)) return 'in_transit';
-  if (/picked.?up|hentet hos avsender|mottatt av|received by|levert inn|innlevert|accepted|pre.?transit/.test(t)) return 'picked_up';
-  if (/registrert|registered|label created|information received|created|pre-advice|forhåndsvarslet|notified/.test(t)) return 'registered';
+  if (/pre ?transit/.test(t)) return 'registered';
+  if (/in.?transit|transit|underveis|på vei|en route|ankommet terminal|sortert|departed|arrived|processed|i transport/.test(t)) return 'in_transit';
+  if (/picked.?up|hentet hos avsender|mottatt av|received by|levert inn|innlevert|handed in|accepted|\bsendt\b|shipped|dispatched/.test(t)) return 'picked_up';
+  if (/registrert|registered|label created|info(rmation)? received|created|pre ?advice|pre ?notified|informed|forhåndsvarslet|notified/.test(t)) return 'registered';
   return 'unknown';
 }
 

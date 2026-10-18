@@ -51,7 +51,7 @@ export const finTabs = () => tabsOf(LAY().finTabs, FINTABS, FIXED_FIN);
 const finCur = (s) => { const c = ['liste', 'budsjett', 'sok', 'finn'].includes(s) ? s : [...PAGES, ...FINMODS].includes(s) ? 'mer' : 'hjem'; return c === 'hjem' || finTabs().some(([k]) => k === c) ? c : 'mer'; };
 
 /* ---------- Valg på denne enheten (localStorage) ---------- */
-const PDEF = { scanTap: 'cam', start: 'hl', hideAmt: false, appHide: false, lock: false, lockAfter: '5', crop: true, origImg: true, wifi: false, nSub: false, nDom: true, nWeek: false, m3Seed: 'sys', m3Mode: 'dark' };
+const PDEF = { scanTap: 'cam', start: 'hl', hideAmt: false, appHide: false, lock: false, lockAfter: '5', crop: true, origImg: true, wifi: false, nSub: false, nDom: true, nWeek: false, m3Seed: 'sys', m3Mode: 'dark', pageColors: 'same' };
 let P = {};
 try { P = JSON.parse(localStorage.getItem('fh_mprefs') || '{}') || {}; } catch { P = {}; }
 if (P.start === 'hjem' && !P.startV2) { P.start = 'hl'; P.startV2 = 1; } // Homelab er ny standard startside
@@ -185,6 +185,18 @@ function budget(th) {
     ${rows.map((b) => budCard(b, th, s)).join('') || '<div class="m-empty">Ingen budsjett satt. Sett opp på desktop under Budsjett.</div>'}`;
 }
 
+/* ---------- Analyser på nytt med Gemini (prompt 12) ---------- */
+// Serveren sier fra med canReanalyze; eldre servere: vis knappen ved feil eller lav sikkerhet.
+const canRe = (R, high) => (R.canReanalyze ?? (!!R.error || R.status === 'error' || !high)) && !['booked', 'pending', 'processing'].includes(R.status);
+const reBtn = (th, R, sub = R.reason) => `<button class="rean ${th === 'ios' ? 'glass2' : ''}" data-reanalyze="${esc(R.id)}"><span>✦</span><span class="m-grow">Analyser på nytt med Gemini${sub ? `<small>${esc(sub)}</small>` : ''}</span><span style="opacity:.6">›</span></button>`;
+// Dialogen (side om side, «Behold») ligger i reanalyze.js, som også brukes på desktop.
+async function reanalyze(id) {
+  try {
+    const mod = await import('./reanalyze.js');
+    await mod.openReanalyze(id, { onDone: async () => { await Promise.all([loadReceipts().catch(() => {}), loadJobs().catch(() => {})]); draw(); } });
+  } catch (err) { flash(err?.message && !/import|module|fetch/i.test(err.message) ? err.message : 'Ny analyse er ikke tilgjengelig på denne serveren ennå.'); }
+}
+
 /* ---------- Last opp (kø i bakgrunnen) ---------- */
 
 function uploadScreen(th) {
@@ -195,7 +207,8 @@ function uploadScreen(th) {
     <button class="cta ${th === 'ios' ? 'glass2' : ''}" data-mact="cam"><span class="n">${icon('cam', 20)}</span><span class="m-grow"><b style="display:block;font-weight:600">Ta bilde</b><span style="font-size:13px;opacity:.75">Bakkamera</span></span></button>
     ${m.offline.length ? `<div class="m-empty">${m.offline.length} fil${m.offline.length > 1 ? 'er' : ''} venter på ${pref('wifi') ? 'Wi-Fi' : 'nett'} og lastes opp automatisk.</div>` : ''}
     ${m.uploading ? `<div class="m-empty">Laster opp ${m.uploading} fil${m.uploading > 1 ? 'er' : ''} …</div>` : ''}
-    ${j.length ? `<div class="sec">Kø</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${j.map((x) => { const [txt, c, p] = st(x); return `<button class="item job" data-job="${esc(x.id)}"><span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(x.merchant || x.name || 'Kvittering')}</span><span class="m-ell s" style="color:${c}">${txt}</span><span class="m-bar" style="height:4px;margin-top:6px;background:${th === 'ios' ? 'rgba(255,255,255,.12)' : c3('#31281F')}"><i style="width:${p}%;background:${c}"></i></span></span><span class="m-mono">${x.total != null ? n2(x.total) : ''}</span></button>`; }).join('')}</div>` : ''}`;
+    ${j.length ? `<div class="sec">Kø</div><div class="list ${th === 'ios' ? 'glass2' : ''}">${j.map((x) => { const [txt, c, p] = st(x); return `<button class="item job" data-job="${esc(x.id)}"><span class="m-grow"><span class="m-ell" style="font-weight:500">${esc(x.merchant || x.name || 'Kvittering')}</span><span class="m-ell s" style="color:${c}">${txt}</span><span class="m-bar" style="height:4px;margin-top:6px;background:${th === 'ios' ? 'rgba(255,255,255,.12)' : c3('#31281F')}"><i style="width:${p}%;background:${c}"></i></span></span><span class="m-mono">${x.total != null ? n2(x.total) : ''}</span></button>`; }).join('')}</div>` : ''}
+    ${j.filter((x) => x.canReanalyze ?? x.status === 'error').map((x) => reBtn(th, x, `${x.merchant || x.name || 'Kvittering'}${x.status === 'error' ? ' · mislyktes' : ' · usikker'}`)).join('')}`;
 }
 
 /* ---------- Kvitteringer: kø og bekreft ---------- */
@@ -227,6 +240,7 @@ function confirmRc(th) {
     ${paper}
     <div class="conf"><span>${R.provider && R.provider !== 'Manuell' ? `Lest av ${esc(R.provider)}${R.seconds ? ` · ${n2(R.seconds).replace(/0$/, '')} s` : ''}` : 'Manuell utfylling'}</span><span style="color:${high ? '#9FE3C6' : '#FFB08A'};font-weight:600">● ${R.error ? 'Fyll ut' : high ? 'Høy sikkerhet' : 'Sjekk beløp'}</span></div>
     ${R.error ? `<div style="font-size:13px;color:#FFB08A;padding:0 6px">${esc(R.error)}</div>` : ''}
+    ${canRe(R, high) ? reBtn(th, R) : ''}
     ${fields}
     <div style="display:flex;flex-wrap:wrap;gap:8px">${catChips}</div>
     <div class="m-match ${R.match ? '' : 'none'}"><b style="font-weight:600;${R.match ? 'color:#9FE3C6' : ''}">${R.match ? 'Matchet mot kortkjøp' : 'Ingen bankmatch'}</b><br><span style="opacity:.8">${R.match ? `${dd(R.match.date)} · ${sgn(R.match.amount)} kr · ${esc(R.match.account)}` : 'Bokføres som ny transaksjon'}</span></div>
@@ -339,7 +353,7 @@ function rail(n) {
 
 export function draw() {
   const th = theme(), wide = two(), scr = m.screen;
-  m.light = applyM3(th === 'and', pref('m3Seed'), pref('m3Mode'), () => draw());
+  m.light = applyM3(th === 'and', pref('m3Seed'), pref('m3Mode'), () => draw(), pref('pageColors') !== 'per');
   const fin = FIN.includes(scr), twoPane = wide && TWO.includes(scr) && !(S.boot?.restricted);
   const confirmView = scr === 'skann' && m.rc && !wide;
   const scrs = { hjem: home, liste: list, budsjett: budget, opp: uploadScreen };
@@ -357,7 +371,7 @@ export function draw() {
   const nav = th === 'ios' ? iosNav(n) : andNav(n);
   // Bevar fokus og markør i et felt når skjermen tegnes på nytt (f.eks. søk mens forslag kommer inn).
   const ae = document.activeElement, keep = ae?.id && root().contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
-  root().innerHTML = `<div class="m ${th}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() && scr !== 'mat' ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
+  root().innerHTML = `<div class="m ${th}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
     ${rail(n)}<div class="m-scroll">${bt ? topRow(th) : ''}${main}</div><div class="m-detail">${twoPane ? detail(th) : ''}</div>${nav}
     ${menuSheet(th)}${scanSheet(th)}${origOverlay(th)}${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
     <input class="m-file" id="m-capture" type="file" accept="image/*" capture="environment" data-mupload data-confirm></div>`;
@@ -694,6 +708,7 @@ export function bind() {
     // Søk-fanen: bytt skjerm i samme trykk, så tastaturet kommer opp med en gang (iOS krever brukerhandling).
     if ((x = d('[data-tab="sok"]'))) { e.preventDefault(); history.pushState(null, '', '#/sok'); route(); document.getElementById('m-aiq')?.focus(); return; }
     if ((x = d('[data-tx]'))) { m.sel = +x.dataset.tx; m.edit = null; m.detail = true; window.scrollTo(0, 0); return draw(); }
+    if ((x = d('[data-reanalyze]'))) { e.preventDefault(); return reanalyze(x.dataset.reanalyze); }
     if ((x = d('[data-job]'))) { const j = m.jobs.find((y) => y.id === x.dataset.job); if (j && j.status !== 'booked' && !ACTIVE.includes(j.status)) { m.rc = j.id; if (two()) { await loadReceipts(); return draw(); } location.hash = '#/skann'; } return; }
     if ((x = d('[data-rc]'))) { m.rc = x.dataset.rc; if (m.screen !== 'skann') { location.hash = '#/skann'; return; } return draw(); }
     if ((x = d('[data-bud]'))) { m.budSel = +x.dataset.bud; if (!S.tx) await loadTx(); return draw(); }

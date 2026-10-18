@@ -74,50 +74,122 @@ final class Haptics {
 
 /* ---------------- Sveip fra venstre kant = tilbake ---------------- */
 
-/// Appen bruker ikke NavigationStack, så tilbakegesten er en egen kantgest: start innenfor 24 pt fra venstre kant
-/// og dra mot høyre. Etter 90 pt kommer et haptisk tikk, og når du slipper går appen tilbake (samme vei som ‹-pilen).
+/// Systemets interaktive tilbakesveip: samme UIScreenEdgePanGestureRecognizer som UINavigationController bruker,
+/// lagt på vinduet. Siden følger fingeren fra venstre kant, bakgrunnen dempes, og slipper du etter ca. 35 %
+/// av bredden eller med fart, går appen tilbake (samme vei som ‹-pilen). Ingen pil eller ikon under sveipet.
 struct EdgeSwipeBack: ViewModifier {
     let enabled: Bool
     let action: () -> Void
     @State private var dx: CGFloat = 0
-    @State private var active = false
-    @State private var armed = false
+    @State private var width: CGFloat = 390
 
     func body(content: Content) -> some View {
-        content
-            .overlay(alignment: .leading) {
-                if active && dx > 6 {
-                    Image(systemName: "chevron.left").font(.system(size: 17, weight: .bold)).foregroundStyle(armed ? Color.ink : .white)
-                        .frame(width: 44, height: 44)
-                        .background(armed ? Color.accent : Color.white.opacity(0.2), in: Circle())
-                        .overlay(Circle().stroke(.white.opacity(0.3), lineWidth: 1))
-                        .offset(x: Swift.min(dx, 130) * 0.55 - 34)
-                        .opacity(Double(Swift.min(1, dx / 70)))
-                        .allowsHitTesting(false)
-                        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: armed)
-                }
+        ZStack {
+            Color.black.ignoresSafeArea()
+            content
+                .offset(x: dx)
+                .shadow(color: .black.opacity(dx > 0 ? 0.35 : 0), radius: 12, x: -4, y: 0)
+            if dx > 0 {
+                Color.black.opacity(0.25 * Double(1 - Swift.min(1, dx / Swift.max(width, 1)))).ignoresSafeArea().allowsHitTesting(false)
+                    .mask(alignment: .leading) { Rectangle().frame(width: dx) }
             }
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 10, coordinateSpace: .global)
-                    .onChanged { v in
-                        guard enabled else { return }
-                        if !active {
-                            guard v.startLocation.x < 24, v.translation.width > 0, abs(v.translation.width) > abs(v.translation.height) * 1.2 else { return }
-                            active = true
-                        }
-                        dx = Swift.max(0, v.translation.width)
-                        let now = dx >= 90
-                        if now != armed {
-                            armed = now
-                            if now { Haptics.shared.tick() }
-                        }
-                    }
-                    .onEnded { _ in
-                        let go = active && armed
-                        active = false; armed = false; dx = 0
-                        if go { action() }
-                    }
-            )
+        }
+        .background(EdgePanInstaller(enabled: enabled, onChange: changed, onEnd: ended))
+    }
+
+    private func changed(_ t: CGFloat, _ w: CGFloat) {
+        width = w
+        dx = Swift.max(0, t)
+    }
+
+    private func ended(_ t: CGFloat, _ v: CGFloat, _ w: CGFloat) {
+        let go = t > w * 0.35 || (v > 700 && t > 20)
+        if go {
+            Haptics.shared.tick()
+            withAnimation(.easeOut(duration: 0.2)) { dx = w }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                action()
+                var tr = Transaction()
+                tr.disablesAnimations = true
+                withTransaction(tr) { dx = 0 }
+            }
+        } else {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) { dx = 0 }
+        }
+    }
+}
+
+/// Legger UIScreenEdgePanGestureRecognizer på vinduet og fjerner den igjen.
+private struct EdgePanInstaller: UIViewRepresentable {
+    let enabled: Bool
+    let onChange: (CGFloat, CGFloat) -> Void
+    let onEnd: (CGFloat, CGFloat, CGFloat) -> Void
+
+    func makeCoordinator() -> EdgePanCoordinator { EdgePanCoordinator() }
+
+    func makeUIView(context: Context) -> EdgePanHost {
+        let v = EdgePanHost()
+        v.coordinator = context.coordinator
+        v.isUserInteractionEnabled = false
+        return v
+    }
+
+    func updateUIView(_ v: EdgePanHost, context: Context) {
+        context.coordinator.enabled = enabled
+        context.coordinator.onChange = onChange
+        context.coordinator.onEnd = onEnd
+    }
+
+    static func dismantleUIView(_ v: EdgePanHost, coordinator: EdgePanCoordinator) { coordinator.detach() }
+}
+
+final class EdgePanHost: UIView {
+    weak var coordinator: EdgePanCoordinator?
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if let w = window { coordinator?.attach(to: w) } else { coordinator?.detach() }
+    }
+}
+
+final class EdgePanCoordinator: NSObject, UIGestureRecognizerDelegate {
+    var enabled = false
+    var onChange: ((CGFloat, CGFloat) -> Void)?
+    var onEnd: ((CGFloat, CGFloat, CGFloat) -> Void)?
+    private var pan: UIScreenEdgePanGestureRecognizer?
+    private weak var win: UIWindow?
+
+    func attach(to w: UIWindow) {
+        if win === w, pan != nil { return }
+        detach()
+        let g = UIScreenEdgePanGestureRecognizer(target: self, action: #selector(handle(_:)))
+        g.edges = .left
+        g.delegate = self
+        w.addGestureRecognizer(g)
+        pan = g
+        win = w
+    }
+
+    func detach() {
+        if let g = pan { g.view?.removeGestureRecognizer(g) }
+        pan = nil
+    }
+
+    /// Ikke mens et ark (sheet) eller fullskjerm ligger over appen.
+    func gestureRecognizerShouldBegin(_ g: UIGestureRecognizer) -> Bool {
+        guard enabled else { return false }
+        return win?.rootViewController?.presentedViewController == nil
+    }
+
+    @objc private func handle(_ g: UIScreenEdgePanGestureRecognizer) {
+        guard let v = g.view else { return }
+        let w = v.bounds.width
+        let t = g.translation(in: v).x
+        switch g.state {
+        case .began, .changed: onChange?(t, w)
+        case .ended: onEnd?(t, g.velocity(in: v).x, w)
+        case .cancelled, .failed: onEnd?(0, 0, w)
+        default: break
+        }
     }
 }
 

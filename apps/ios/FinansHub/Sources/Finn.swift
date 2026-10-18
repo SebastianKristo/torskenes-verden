@@ -211,15 +211,15 @@ private struct FinnSummary: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Netto i år").font(.subheadline).foregroundStyle(text2)
+                    Text("Netto i år").font(.system(size: 14)).foregroundStyle(Color(hex: "#9C9CA6"))
                     Text((net >= 0 ? "+" : "−") + n0(net) + " kr").font(.system(size: 32, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(net >= 0 ? sellC : .white).lineLimit(1).minimumScaleFactor(0.6)
+                        .foregroundStyle(net >= 0 ? sellC : Color(hex: "#F4F4F6")).lineLimit(1).minimumScaleFactor(0.6)
                 }
                 Spacer()
                 HStack(alignment: .bottom, spacing: 4) {
                     ForEach(Array(months.enumerated()), id: \.offset) { k, m in
                         VStack(spacing: 4) {
-                            RoundedRectangle(cornerRadius: 4).fill(k == 3 ? Color.accent : .white.opacity(0.18)).frame(width: 12, height: m.1 / top * 30 + 4)
+                            RoundedRectangle(cornerRadius: 4).fill(k == 3 ? Color(hex: "#FF7A3D") : Color(hex: "#33343C")).frame(width: 12, height: m.1 / top * 30 + 4)
                             Text(m.0).font(.system(size: 9.5)).foregroundStyle(text2)
                         }
                     }
@@ -231,16 +231,18 @@ private struct FinnSummary: View {
                 share("Solgt · \(inYear.filter(\.sold).count)", sold, mx, sellC)
             }
         }
-        .padding(18).frame(maxWidth: .infinity, alignment: .leading).glass(24)
+        // Samme farge og stil som i designet (FinansHub Mobil v2 → Finn): mørkt, ugjennomsiktig kort, ikke glass.
+        .padding(18).frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(hex: "#16161B"), in: RoundedRectangle(cornerRadius: 24))
     }
 
     private func share(_ l: String, _ v: Double, _ mx: Double, _ c: Color) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(l).font(.system(size: 12.5)).foregroundStyle(text2)
+            Text(l).font(.system(size: 12.5)).foregroundStyle(Color(hex: "#9C9CA6"))
             Text(n0(v) + " kr").font(.system(size: 16, weight: .bold, design: .monospaced)).lineLimit(1).minimumScaleFactor(0.7)
             GeometryReader { g in
                 ZStack(alignment: .leading) {
-                    Capsule().fill(.white.opacity(0.12))
+                    Capsule().fill(Color(hex: "#22222A"))
                     Capsule().fill(c).frame(width: g.size.width * Swift.min(1, Swift.max(0, v / mx)))
                 }
             }

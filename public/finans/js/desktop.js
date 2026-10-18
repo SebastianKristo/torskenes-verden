@@ -4,7 +4,8 @@ import {
   render, toast, loadBoot, loadSummary, loadTx, loadReceipts, loadRecurring, loadReport, loadAi, catById, cats, accs, uploadReceipt,
   smooth, spark, conic, icon, logo, aiLine, ICONS,
 } from './core.js';
-import { MODULE_PAGES, MODULE_SUB, MODULE_FN, MODULE_LOADERS, bolSettings, loadBolSettings, bindModules, backupTab, firstRunCard, loadBackup, impPage, aksSettings, loadStocksSettings } from './modules.js';
+import { reanalyzeBtn, bindReanalyze } from './reanalyze.js';
+import { MODULE_PAGES, MODULE_SUB, MODULE_FN, MODULE_LOADERS, bolSettings, loadBolSettings, bindModules, backupTab, firstRunCard, loadBackup, impPage, finnImportBox, loadImpTpl, aksSettings, loadStocksSettings } from './modules.js';
 
 ICONS.ai = 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z';
 const BASE_PAGES = [['ov', 'Oversikt'], ['tx', 'Transaksjoner'], ['ai', 'AI-søk'], ['kv', 'Kvitteringer'], ['bud', 'Budsjett'], ['fast', 'Faste utgifter'], ['konto', 'Kontoer'], ['rap', 'Rapporter'], ['inn', 'Innstillinger']];
@@ -278,7 +279,7 @@ function receipts() {
   const booked = all.filter((r) => r.status === 'booked' || r.status === 'rejected').slice(0, 12);
   if (!u.selRc || !all.find((r) => r.id === u.selRc)) u.selRc = queue[0]?.id ?? null;
   const R = all.find((r) => r.id === u.selRc);
-  const qHtml = queue.map((r) => { const [label, bg, fg] = STATUS[r.status]; return `<button class="rq${r.id === u.selRc ? ' sel' : ''}" data-open-rc="${r.id}">${paper(r)}<span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><b class="ell" style="font-weight:600">${esc(r.merchant ?? 'Ny kvittering')}</b><span class="mono">${r.total != null ? n2(r.total) + ' kr' : ''}</span></span><span class="note" style="display:block;font-size:12px">${dd(r.date)} · ${esc(r.provider ?? aiShort)}</span>${aiLine(r.aiShort, 'd-ai ell')}</span><span class="status" style="background:${bg};color:${fg}">${label}</span></button>`; }).join('');
+  const qHtml = queue.map((r) => { const [label, bg, fg] = STATUS[r.status]; return `<button class="rq${r.id === u.selRc ? ' sel' : ''}" data-open-rc="${r.id}">${paper(r)}<span class="grow"><span style="display:flex;justify-content:space-between;gap:8px"><b class="ell" style="font-weight:600">${esc(r.merchant ?? 'Ny kvittering')}</b><span class="mono">${r.total != null ? n2(r.total) + ' kr' : ''}</span></span><span class="note" style="display:block;font-size:12px">${dd(r.date)} · ${esc(r.provider ?? aiShort)}</span>${aiLine(r.aiShort, 'd-ai ell')}${r.canReanalyze ? `<span class="acc-l" role="button" tabindex="0" style="display:inline-block;margin-top:4px;font-size:12px;font-weight:600;color:#B6C3FF" data-reanalyze="${esc(r.id)}">✦ Analyser på nytt med Gemini</span>` : ''}</span><span class="status" style="background:${bg};color:${fg}">${label}</span></button>`; }).join('');
   let panel;
   if (!R) panel = '<div class="empty" style="padding:80px 20px">Velg en kvittering i køen, eller last opp en ny.</div>';
   else if (R.status === 'pending' || R.status === 'processing') panel = `<div style="padding:80px 20px;display:flex;flex-direction:column;align-items:center;gap:14px" class="sub"><span class="spin"></span>Leser kvitteringen med ${aiShort} …<button class="btn sm ghost" data-act="rc-manual">Fyll ut manuelt i stedet</button></div>`;
@@ -306,10 +307,13 @@ function confirmPanel(R) {
       ${(ex.lines ?? []).map((l) => `<div class="ln"><span>${esc(l.description)}${l.quantity > 1 ? ` ×${l.quantity}` : ''}</span><span>${n2(l.amount)}</span></div>`).join('') || '<div class="ln" style="opacity:.6"><span>Ingen varelinjer lest</span></div>'}
       <div class="dash"></div><div class="ln hl" style="font-weight:600;font-size:14px;padding:2px 4px"><span>TOTAL</span><span>${R.total != null ? n2(R.total) : '–'}</span></div>
       ${(ex.vat ?? []).map((v) => `<div class="ln"><span>herav mva ${v.rate} %</span><span>${n2(v.amount)}</span></div>`).join('')}</div>`;
+  // Skanneloggen: hvert steg fra opplasting til lagring, så en feil kan spores.
+  const log = (R.log ?? []).length ? `<details class="note" style="font-size:12.5px"><summary style="cursor:pointer">Skannelogg (${R.log.length} steg)</summary><div class="mono" style="display:flex;flex-direction:column;gap:2px;margin-top:6px">${R.log.map((l) => `<div><span class="muted">${new Date(l.t).toLocaleTimeString('nb-NO')}</span> ${esc(l.step)}${l.detail ? ` – ${esc(l.detail)}` : ''}</div>`).join('')}</div></details>` : '';
   const catBtns = cats('expense').map((c) => `<button data-rc-cat="${c.id}" aria-pressed="${R.categoryId === c.id}" ${done ? 'disabled' : ''}>${esc(c.name)}</button>`).join('');
   return `<div class="card-h"><div><h2 style="font-size:18px">${done ? (R.status === 'booked' ? 'Bokført kvittering' : 'Avvist kvittering') : 'Bekreft kvittering'}</h2><div class="note" style="font-size:13px">${R.provider && R.provider !== 'Manuell' ? `Lest av ${esc(R.provider)}${R.seconds ? ` · ${n2(R.seconds).replace(/,?0+$/, '')} s` : ''}${R.model ? ` · ${esc(R.model)}` : ''}` : 'Manuell utfylling'}</div></div>
       ${R.error ? `<span class="conf" style="background:#2A1A10;color:var(--acc-l)"><i></i>Må fylles ut</span>` : `<span class="conf" style="background:${high ? '#13201B' : '#2A1A10'};color:${high ? 'var(--pos)' : 'var(--acc-l)'}"><i></i>${high ? 'Høy sikkerhet' : 'Sjekk beløp'}</span>`}</div>
     ${R.error ? `<div class="err-msg">${esc(R.error)}</div>` : R.flag ? `<div class="err-msg">${esc(R.flag)}</div>` : ''}
+    ${!done && (R.canReanalyze || R.reanalyzeReason) ? `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:14px;background:#151A33;border:1px solid #2A3570"><span style="flex:1 1 220px;font-size:13px;color:#C9D2FF">${R.error ? 'Lesingen mislyktes.' : `Lav sikkerhet${R.provider ? ` fra ${esc(R.provider)}` : ''}.`} Gemini kan lese originalbildet på nytt, og du velger hvilket resultat du vil beholde.</span>${reanalyzeBtn(R, 'btn', 'height:40px')}</div>` : ''}
     <div class="row-flex" style="gap:18px">${img}
       <div style="flex:1 1 260px;display:flex;flex-direction:column;gap:12px">
         <label class="f">Butikk<input class="inp" data-rc-field="merchant" value="${esc(R.merchant ?? '')}" ${done ? 'disabled' : ''}></label>
@@ -318,9 +322,10 @@ function confirmPanel(R) {
         <label class="f">Konto<select class="inp" data-rc-field="accountId" ${done ? 'disabled' : ''}>${accOpts(R.accountId, '–')}</select></label>
         <div class="match ${R.match ? '' : 'none'}">${icon('link', 18, R.match ? '#9FE3C6' : '#8C8C96')}<div><div style="font-weight:600;color:${R.match ? 'var(--pos)' : 'var(--text)'}">${R.match ? 'Matchet mot kortkjøp' : 'Ingen bankmatch ennå'}</div><div class="sub">${R.match ? `${dd(R.match.date)} · ${sgn(R.match.amount)} kr · ${esc(R.match.account)}` : 'Bokføres som ny transaksjon'}</div></div></div>
       </div></div>
+    ${log}
     <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
       ${done ? `<button class="btn ghost" data-act="rc-delete">Slett kvittering</button>${R.file ? `<a class="btn" href="${R.file}" target="_blank">Åpne original ↗</a>` : ''}`
-        : `${R.file ? `<button class="btn ghost" style="height:48px" data-act="rc-reprocess" data-prov="${other}">Les på nytt med ${other === 'gemini' ? 'Gemini' : 'Ollama'}</button>` : ''}<button class="btn ghost" style="height:48px" data-act="rc-reject">Avvis</button><button class="btn pri" style="height:48px;padding:0 28px" data-act="rc-book">Bokfør</button>`}
+        : `${R.file && !(other === 'gemini' && R.canReanalyze) ? `<button class="btn ghost" style="height:48px" data-act="rc-reprocess" data-prov="${other}">Les på nytt med ${other === 'gemini' ? 'Gemini' : 'Ollama'}</button>` : ''}<button class="btn ghost" style="height:48px" data-act="rc-reject">Avvis</button><button class="btn pri" style="height:48px;padding:0 28px" data-act="rc-book">Bokfør</button>`}
     </div>`;
 }
 
@@ -423,8 +428,8 @@ function reports() {
 
 /* ===================== Innstillinger ===================== */
 
-const SET_TABS = [['gen', 'Generelt', 'Navn, valuta, måned'], ['meny', 'Sidemeny', 'Rekkefølge og synlighet'], ['bol', 'Boliger', 'Ny bolig, deling, oppsett og kategorier'], ['imp', 'Import', 'Kontoutskrift, CSV og XLSX'], ['ai', 'AI-motor', 'Ollama eller Gemini'], ['aks', 'Aksjer · Trading 212', 'Nøkkel, miljø og synk'], ['cat', 'Kategorier', 'Farger og typer'], ['rule', 'Regler', 'Auto-kategorisering'],
-  ['bank', 'Bank og import', 'CSV og PSD2'], ['varsel', 'Varsler', 'Budsjett og kvitteringer'], ['mobil', 'Mobil og tilgang', 'App-tokens og snarveier'], ['data', 'Backup og data', 'Nedlasting, SMB-share og gjenoppretting']];
+const SET_TABS = [['gen', 'Generelt', 'Navn, valuta, måned'], ['meny', 'Sidemeny', 'Rekkefølge og synlighet'], ['bol', 'Boliger', 'Ny bolig, deling, oppsett og kategorier'], ['imp', 'Import', 'Bank, Excel, Finn-e-post og annonser'], ['ai', 'AI-motor', 'Ollama eller Gemini'], ['aks', 'Aksjer · Trading 212', 'Nøkkel, miljø og synk'], ['cat', 'Kategorier', 'Farger og typer'], ['rule', 'Regler', 'Auto-kategorisering'],
+  ['varsel', 'Varsler', 'Budsjett og kvitteringer'], ['mobil', 'Mobil og tilgang', 'App-tokens og snarveier'], ['data', 'Backup og data', 'Nedlasting, SMB-share og gjenoppretting']];
 
 // Innstillinger → Sidemeny: dra, ▲▼ og bryter for vis/skjul. Endringene lagres med en gang.
 function menuTab() {
@@ -444,6 +449,7 @@ function menuTab() {
 function settingsPage() {
   // Brukere uten admin-rolle ser bare Boliger. Ukjente faner faller tilbake til første fane.
   const tabs = S.boot.restricted ? SET_TABS.filter(([x]) => x === 'bol') : SET_TABS;
+  if (u.setTab === 'bank') u.setTab = 'imp'; // «Bank og import» er slått sammen med Import (prompt 12)
   if (!tabs.some(([x]) => x === u.setTab)) u.setTab = tabs[0][0];
   const st = S.boot.settings, t = u.setTab, cur = tabs.find((x) => x[0] === t);
   let body = '';
@@ -474,7 +480,7 @@ function settingsPage() {
   else if (t === 'rule') body = `<div style="display:flex;flex-direction:column;gap:8px"><div class="sub" style="font-size:13px">Regler går foran AI-forslaget. Bruk * som jokertegn – «REMA*» treffer også «VARER REMA 1000». Rettelser du gjør ved bokføring blir nye regler automatisk.</div>
     ${S.boot.rules.map((r) => `<div class="edit-row"><input class="inp mono" style="flex:1 1 140px;font-size:13px" value="${esc(r.pattern)}" data-rule-field="pattern" data-id="${r.id}" aria-label="Mønster"><span class="muted">→</span><select class="inp" style="flex:1 1 180px" data-rule-field="categoryId" data-id="${r.id}">${catOpts(r.categoryId)}</select><button class="del" data-del-rule="${r.id}" aria-label="Slett">×</button></div>`).join('')}
     <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="add" data-act="add-rule">+ Ny regel</button><button class="add" data-act="apply-rules">Bruk på ukategoriserte</button></div>${u.msg.rules ? `<div class="ok-msg">${esc(u.msg.rules)}</div>` : ''}</div>`;
-  else if (t === 'bank') body = `<form data-form="csv" style="display:flex;flex-direction:column;gap:14px">
+  const bankPart = `<form data-form="csv" style="display:flex;flex-direction:column;gap:14px">
     <div class="form-grid"><label class="f">CSV-profil${sel('csvProfile', S.boot.profiles.map((p) => [p, p]))}</label><label class="f">Konto<select class="inp" name="accountId" required>${accOpts('', 'Velg konto')}</select></label></div>
     <label class="drop" style="flex-direction:row;justify-content:flex-start;text-align:left;padding:20px"><span class="ini" style="background:var(--inner);color:var(--acc-l)">↑</span><span><b style="font-weight:600">Importer CSV fra nettbanken</b><br><span class="note" style="font-size:12.5px">Duplikater hoppes over automatisk · regler brukes på nye rader</span></span><input type="file" name="file" accept=".csv,text/csv" hidden data-csv></label>
     ${u.msg.csv ? `<div class="${u.msg.csvOk ? 'ok-msg' : 'err-msg'}">${esc(u.msg.csv)}</div>` : ''}
@@ -482,6 +488,7 @@ function settingsPage() {
     </form>
     <div class="box" style="padding:16px;flex-direction:column;align-items:stretch;gap:12px"><div><b style="font-weight:600">Kvitteringer fra e-post (Proton Mail / IMAP)</b><div class="note" style="font-size:12.5px">Vedlegg og e-postkvitteringer hentes automatisk og havner i opplastingskøen. Finn-handler kan bruke samme postkasse med egen mappe.</div></div>
       <div data-mailpane style="--mp-acc:var(--acc);--mp-acc-ink:var(--on-acc,#1A0C04);--mp-card:var(--inner);--mp-line:var(--line);--mp-field:var(--bg)"></div></div>`;
+  if (t === 'imp') body = `<div style="display:flex;flex-direction:column;gap:14px">${finnImportBox()}${impPage()}${bankPart}</div>`;
   else if (t === 'varsel') body = `<div style="display:flex;flex-direction:column;gap:8px">${[['autoCat', 'Auto-kategorisering', 'Bruk regler og AI-forslag'], ['aiSummaries', '✦ AI-sammendrag', 'Kort og lang beskrivelse av hver post, laget i bakgrunnen'], ['n80', 'Varsel ved 80 % av budsjett', 'Per kategori'], ['n100', 'Varsel når budsjett er brukt opp', 'Per kategori'], ['nRc', 'Ny kvittering til gjennomgang', 'Vises som merke i menyen'], ['nFast', 'Påminnelse om faste trekk', 'Dagen før trekkdato']]
     .map(([k2, n, s2]) => `<button class="tog-row" data-tog="${k2}"><span class="grow"><b style="font-weight:500">${n}</b><br><span class="note" style="font-size:12.5px">${s2}</span></span><span class="toggle" role="switch" aria-checked="${!!st[k2]}"></span></button>`).join('')}
     <div class="note" style="font-size:12.5px">Varsler vises i FinansHub og i mobilappen. Push-varsler krever at appen er installert på hjemskjermen.</div></div>`;
@@ -500,7 +507,6 @@ function settingsPage() {
   }
   else if (t === 'data') body = backupTab();
   else if (t === 'meny') body = menuTab();
-  else if (t === 'imp') body = impPage();
   else if (t === 'bol') body = bolSettings();
   else if (t === 'aks') body = aksSettings();
   return `<div class="row-flex">
@@ -588,7 +594,7 @@ export function draw() {
   const scroll = window.scrollY;
   const focus = document.activeElement?.closest('[data-form] input, [data-tx-field], [data-rc-field]') ? { sel: focusSel(document.activeElement), pos: document.activeElement.selectionStart } : null;
   el.innerHTML = shell(PAGE_FN[u.page]());
-  // E-postimporten (felles med Homelab-innstillingene) monteres i Bank og import.
+  // E-postimporten (felles med Homelab-innstillingene) monteres i Innstillinger → Import.
   const mp = el.querySelector('[data-mailpane]');
   if (mp) { if (mailPaneEl) mp.replaceWith(mailPaneEl); else { mailPaneEl = mp; import('/assets/js/settings-mail.js').then((m) => m.mailPane(mp)).catch(() => { mp.innerHTML = '<div class="note">Kunne ikke laste e-postoppsettet.</div>'; }); } }
   window.scrollTo(0, scroll);
@@ -612,6 +618,7 @@ export async function load(page = u.page) {
   if (page === 'inn' && u.setTab === 'mobil') S.tokens = await api('/tokens').catch(() => []);
   if (page === 'inn' && u.setTab === 'data') await loadBackup().catch((e) => toast(e.message));
   if (page === 'inn' && u.setTab === 'aks') await loadStocksSettings().catch((e) => toast(e.message));
+  if (page === 'inn' && (u.setTab === 'imp' || u.setTab === 'bank')) await loadImpTpl();
   if (page === 'inn' && (u.setTab === 'bol' || S.boot?.restricted)) await loadBolSettings().catch((e) => toast(e.message));
   render();
   schedulePoll();
@@ -706,6 +713,7 @@ const bankText = (b) => [`Dato: ${b.bookingDate ?? ''}`, b.valueDate ? `Rentedat
 export function bind() {
   const el = root();
   bindModules(el);
+  bindReanalyze(el, (r) => { u.selRc = r.id; refreshAll().then(() => toast('Kvitteringen er oppdatert')); });
   el.addEventListener('click', busyWrap(async (e) => {
     const t = e.target;
     const d = (sel) => t.closest(sel);
@@ -744,7 +752,7 @@ export function bind() {
     const R = S.receipts?.find((y) => y.id === u.selRc);
     switch (act) {
       case 'add-tx': u.add = { type: 'tx', kind: 'ut' }; if (u.page !== 'tx') location.hash = '#/tx'; return render();
-      case 'goto-import': u.setTab = 'bank'; location.hash = '#/inn'; return u.page === 'inn' && render();
+      case 'goto-import': u.setTab = 'imp'; location.hash = '#/inn'; return u.page === 'inn' && render();
       case 'close-modal': u.add = null; return render();
       case 'close-sel': u.sel = null; return render();
       case 'del-tx': if (!confirm('Slette transaksjonen?')) return; await api(`/transactions/${sel.id}`, { method: 'DELETE' }); u.sel = null; await loadTx(); await loadBoot(); return render();

@@ -534,7 +534,7 @@ struct ConfirmView: View {
                         if let i = queue.firstIndex(where: { $0.id == r.id }) { Text("\(i + 1) av \(queue.count)").foregroundStyle(.white.opacity(0.7)) }
                     }
                     Text("Bekreft kvittering").font(.system(size: 28, weight: .bold))
-                    if r.status != "needs_review" {
+                    if r.status != "needs_review" && r.status != "error" {
                         VStack(spacing: 14) { ProgressView().controlSize(.large); Text("Leser kvitteringen …").foregroundStyle(.white.opacity(0.7)) }.frame(maxWidth: .infinity).padding(50)
                     } else {
                         paper(r)
@@ -547,6 +547,11 @@ struct ConfirmView: View {
                         }
                         .font(.footnote).foregroundStyle(.white.opacity(0.7)).padding(.horizontal, 6)
                         if let e = r.error { Text(e).font(.footnote).foregroundStyle(Color.accentLight).padding(.horizontal, 6) }
+                        if store.canReanalyze(r) {
+                            ReanalyzeButton(receiptId: r.id)
+                        } else if let why = r.reanalyzeReason, r.error != nil {
+                            Text(why).font(.caption).foregroundStyle(.white.opacity(0.55)).padding(.horizontal, 6)
+                        }
                         VStack(spacing: 0) {
                             field("Butikk") { TextField("Butikk", text: $merchant).multilineTextAlignment(.trailing).onSubmit { store.update(r.id, "merchant", merchant) } }
                             Divider().overlay(.white.opacity(0.12))
@@ -705,21 +710,35 @@ struct JobQueue: View {
                 if store.uploading > 0 { row("Laster opp \(store.uploading) fil" + (store.uploading > 1 ? "er" : ""), "Sender til serveren …", nil) }
                 ForEach(jobs) { j in
                     Divider().overlay(.white.opacity(0.12))
-                    Button { store.selectedReceipt = j.id } label: {
-                        switch j.status {
-                        case "pending": row(j.name ?? "Fil", "I kø", nil)
-                        case "processing": row(j.name ?? "Fil", "Gemini leser … \(j.progress ?? 0) %", Double(j.progress ?? 0) / 100)
-                        case "needs_review": row(j.merchant ?? j.name ?? "Kvittering", "Klar · trykk for å bekrefte", nil, ready: true)
-                        case "error": row(j.name ?? "Fil", "Feilet – fyll ut manuelt", nil)
-                        default: row(j.name ?? "Fil", j.status, nil)
-                        }
+                    HStack(spacing: 0) {
+                        jobButton(j)
+                        if showReanalyze(j) { ReanalyzeButton(receiptId: j.id, compact: true).padding(.trailing, 12) }
                     }
-                    .buttonStyle(.plain)
                 }
             }
             .glass(24)
         }
     }
+
+    /// Feilet eller usikker lesing: «✦ Analyser på nytt» rett i køen.
+    private func showReanalyze(_ j: Job) -> Bool {
+        if let r = store.receipts?.first(where: { $0.id == j.id }) { return store.canReanalyze(r) }
+        return j.canReanalyze ?? (j.status == "error")
+    }
+
+    private func jobButton(_ j: Job) -> some View {
+        Button { store.selectedReceipt = j.id } label: {
+            switch j.status {
+            case "pending": row(j.name ?? "Fil", "I kø", nil)
+            case "processing": row(j.name ?? "Fil", "Gemini leser … \(j.progress ?? 0) %", Double(j.progress ?? 0) / 100)
+            case "needs_review": row(j.merchant ?? j.name ?? "Kvittering", "Klar · trykk for å bekrefte", nil, ready: true)
+            case "error": row(j.name ?? "Fil", "Feilet – fyll ut manuelt", nil)
+            default: row(j.name ?? "Fil", j.status, nil)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
     private func row(_ t: String, _ sub: String, _ p: Double?, ready: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(t).fontWeight(.medium).lineLimit(1)

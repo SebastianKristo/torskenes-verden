@@ -166,3 +166,6 @@
 .mf-tr.big{font-family:inherit;font-size:inherit;font-weight:inherit;letter-spacing:normal;white-space:normal}
 .mf-img .ini{width:auto;height:auto;border-radius:0}
 .mf .r{text-align:left}
+/* Prompt 12: netto i år er grønn når den er positiv (som i Finn Mobil-designet). */
+.mf-sum .v.pos{color:#7BE3A0}
+.m.and .mf-sum .v.pos{color:var(--m3-7BE3A0,#7BE3A0)}

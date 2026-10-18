@@ -1,5 +1,5 @@
 // Proton Mail (via Bridge) → kvitteringer i FinansHub. Brukes i Homelab → Innstillinger → Integrasjoner → Proton Mail
-// og i FinansHub → Innstillinger → Bank og import. Snakker bare med /finans/api/mail/*; Bridge-passordet sendes aldri tilbake.
+// og i FinansHub → Innstillinger → Import. Snakker bare med /finans/api/mail/*; Bridge-passordet sendes aldri tilbake.
 const API = '/finans/api/mail';
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const when = (t) => (t ? new Date(t).toLocaleString('nb-NO', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'aldri');

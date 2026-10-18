@@ -202,11 +202,12 @@ function domManage(th) {
 
 function domView(th) {
   if (dm.manage || m.sub === 'admin') return domManage(th);
-  const pickBtn = `<button class="dpick ${gl(th)}" data-dom="pick" aria-expanded="${dm.pick}">${esc(dm.sel ?? 'Domene')} <span style="opacity:.6">▾</span></button>`;
+  // Prompt 12: domenevelgeren er bare et ikon, og ligger sammen med Oppdater ved siden av profilbildet.
+  const pickBtn = `<button class="mini dpick-ic${dm.pick ? ' on' : ''}" data-dom="pick" aria-expanded="${dm.pick}" aria-label="Velg domene (${esc(dm.sel ?? 'ingen valgt')})">${icon('globe', 18)}</button>`;
   // iPhone: tannhjulet ligger i fanelinjen (samme plass som Skann i Finans), ikke øverst.
-  const right = `<button class="mini" data-dom="refresh" aria-label="Oppdater">${icon('refresh', 18)}</button>${isIos(th) ? '' : `<a class="mini" href="#/set/dom" aria-label="Innstillinger">${icon('gear', 18)}</a>`}`;
+  const right = `${pickBtn}<button class="mini" data-dom="refresh" aria-label="Oppdater">${icon('refresh', 18)}</button>${isIos(th) ? '' : `<a class="mini" href="#/set/dom" aria-label="Innstillinger">${icon('gear', 18)}</a>`}`;
   const manageRow = `<button class="opt-row" data-dom="manage"><span class="m-grow" style="color:var(--m-acc);font-weight:600">＋ Administrer domener</span></button>`;
-  const top = `<div class="m-row" style="justify-content:space-between;padding:6px 4px 0;gap:8px">${pickBtn}<span class="m-row" style="gap:8px">${right}${avatar()}</span></div>
+  const top = `<div class="m-row" style="justify-content:space-between;padding:6px 4px 0;gap:8px"><b class="dname m-ell">${esc(dm.sel ?? 'Domener')}</b><span class="m-row" style="gap:8px;flex:none">${right}${avatar()}</span></div>
     ${dm.pick ? listBox(th, (dm.list ?? []).map((d) => `<button class="opt-row" data-dom="sel" data-name="${esc(d.name)}"><span class="m-grow">${esc(d.name)}<br><span style="font-size:12px;opacity:.6">${esc(DSRC[d.source] ?? d.source ?? '')}</span></span>${d.name === dm.sel ? '<span style="color:var(--m-acc)">✓</span>' : ''}</button>`).join('') + manageRow) : ''}`;
   if (!dm.list) return `${top}<div class="m-spin"></div>`;
   if (!dm.list.length) return `${top}<div class="m-empty">Ingen domener lagt til ennå.</div>${listBox(th, manageRow)}`;

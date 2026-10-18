@@ -56,7 +56,7 @@ function listView() {
   const line = (l, n, v, c) => `<div><span class="l">${l} · ${n}</span><b class="mono">${kr(v)}</b><span class="tr"><i style="width:${Math.round((v / most) * 100)}%;background:${c}"></i></span></div>`;
   return `<div class="mf-top"><h1>Finn</h1><button class="mf-ib" data-mfa="q" aria-label="${F.qOpen ? 'Lukk søk' : 'Søk i handler'}" aria-expanded="${F.qOpen}">${F.qOpen ? '×' : '⌕'}</button></div>
     ${F.qOpen ? `<input class="mf-q" id="mf-q" type="search" enterkeyhint="search" placeholder="Søk etter vare, person eller Finn-kode" value="${esc(F.q)}" data-mfq aria-label="Søk i handler">` : ''}
-    <section class="mf-card" aria-label="Finn i år"><div class="mf-sum"><div><div class="l">Netto i år</div><div class="v mono">${signed(L.sold - L.bought)}</div></div><div class="mf-bars" aria-hidden="true">${bars}</div></div>
+    <section class="mf-card" aria-label="Finn i år"><div class="mf-sum"><div><div class="l">Netto i år</div><div class="v mono${L.sold - L.bought >= 0 ? ' pos' : ''}">${signed(L.sold - L.bought)}</div></div><div class="mf-bars" aria-hidden="true">${bars}</div></div>
       <div class="mf-bs">${line('Kjøpt', L.nBought ?? 0, L.bought, '#8FB3FF')}${line('Solgt', L.nSold ?? 0, L.sold, '#7BE3A0')}</div></section>
     ${ongoing.length ? `<div class="mf-h"><b>${ongoing.length} på vei</b>${ongoing.length > 1 ? '<span>Sveip for flere</span>' : ''}</div>
       <div class="mf-act">${ongoing.map(activeCard).join('')}</div>` : ''}

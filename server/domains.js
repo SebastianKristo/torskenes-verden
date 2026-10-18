@@ -7,7 +7,7 @@ import { connect } from 'node:tls';
 import { promises as dnsp } from 'node:dns';
 import { db } from './db.js';
 import { cfg } from './settings.js';
-import { cached } from './cache.js';
+import { cached, peek } from './cache.js';
 import * as auth from './auth.js';
 import * as fh from './finans/routes.js';
 import { guard, MOCK, readJson, str } from './homeos-common.js';
@@ -577,5 +577,22 @@ api.get('/:name/live', async (c) => {
   if (!r) return c.json({ error: 'Fant ikke domenet' }, 404);
   return c.json((await cached(`domlive:${r.id}`, 30_000, () => live(r)).catch(() => null)) ?? { visitors: null });
 });
+
+/** Kort oversikt til widgets: oppe/nede fra siste sjekk og SSL som utløper innen 30 dager (fra cache, ingen nye kall). */
+export function domainOverview() {
+  const rows = listRows();
+  const items = rows.map((r) => {
+    const p = lastProbe.get(r.name);
+    return { name: r.name, up: MOCK ? true : p ? p.ok : null, ms: p?.ms ?? null };
+  });
+  const soon = [];
+  if (MOCK) soon.push({ name: rows[1]?.name ?? 'arildkrist.com', days: 21 });
+  else for (const r of rows) {
+    const c = peek('cert:' + r.name);
+    const days = c?.expires ? Math.round((new Date(c.expires) - Date.now()) / 864e5) : null;
+    if (days != null && days <= 30) soon.push({ name: r.name, days });
+  }
+  return { total: items.length, up: items.filter((x) => x.up === true).length, down: items.filter((x) => x.up === false).length, items, expiringSoon: soon };
+}
 
 export default api;

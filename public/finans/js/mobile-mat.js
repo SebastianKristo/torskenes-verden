@@ -1,8 +1,8 @@
-// Matplan i mobilappen: egen flate med lyst «matapp»-utseende (og mørk modus). Ingen Finans-fanelinje eller skanneknapp;
+// Matplan i mobilappen: følger appens tema (glass på iPhone, Material You på Android, lys eller mørk som appen).
+// Ingen egen lys/mørk-bryter (fjernet i prompt 12). Ingen Finans-fanelinje eller skanneknapp;
 // bare pilen tilbake øverst og profilmenyen. Samme data som Matplan på web (/mat/api).
 import { esc, matApi, today } from './core.js';
 import { m, draw, flash, meName } from './mobile.js';
-import { LAY, saveLayout } from './mobile-hl.js';
 
 const M = { w: null, err: '', sel: null, busy: false };
 const AB = ['Ma', 'Ti', 'On', 'To', 'Fr', 'Lø', 'Sø'];
@@ -11,10 +11,8 @@ const DN = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søn
 // Farger for initial-rutene til ingrediensene (lys / mørk).
 const BG = { light: ['#E4F0A9', '#FBEACB', '#DCEBE6', '#F6D9CF', '#E8E2F4'], dark: ['#3B4421', '#3D3323', '#24403A', '#4A2E26', '#36304A'] };
 
-export const matDark = () => {
-  const t = LAY().matTheme ?? 'light';
-  return t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
-};
+// Mørk når appen er mørk: iPhone er alltid mørk, Android følger Material You-modusen.
+export const matDark = () => !m.light;
 
 export async function matLoad() {
   M.err = '';
@@ -30,7 +28,7 @@ const ingIni = (n) => (String(n).replace(/^[0-9\s.,/½¼]+(g|kg|dl|l|ml|ss|ts|st
 export function matView() {
   const dark = matDark(), w = M.w;
   const head = (right = '') => `<div class="mp-head"><div class="m-grow"><div class="mp-hi">Hei, <b>${esc(meName())}</b></div><div class="mp-title">Middag denne uka</div>${right}</div>
-    <div class="mp-btns"><button class="mp-round" data-mp="theme" aria-label="${dark ? 'Bytt til lyst utseende' : 'Bytt til mørkt utseende'}" title="${dark ? 'Lyst utseende' : 'Mørkt utseende'}">${dark ? '☀' : '☾'}</button><button class="mp-round" data-mp="week" aria-label="Ny ukeplan med AI" ${M.busy ? 'disabled' : ''}>✦</button></div></div>`;
+    <div class="mp-btns"><button class="mp-round" data-mp="week" aria-label="Ny ukeplan med AI" ${M.busy ? 'disabled' : ''}>✦</button></div></div>`;
   if (M.err) return `<div class="mat">${head()}<div class="mp-card mp-empty">${esc(M.err)}</div><a class="mp-cta" href="/#/matplan">Åpne Matplan i nettleseren</a></div>`;
   if (!w) return `<div class="mat">${head()}<div class="mp-card mp-empty"><div class="m-spin"></div></div></div>`;
   const days = w.days ?? [], ti = Math.max(0, days.findIndex((d) => d.today || d.date === today())), sel = Math.min(M.sel ?? ti, days.length - 1), x = days[sel] ?? {};
@@ -73,7 +71,6 @@ export async function matBind(e, t) {
   if (!x) return false;
   e.preventDefault();
   const k = x.dataset.mp, w = M.w;
-  if (k === 'theme') { saveLayout({ matTheme: matDark() ? 'light' : 'dark' }); return true; }
   if (k === 'day') { M.sel = +x.dataset.i; draw(); return true; }
   if (k === 'always') {
     const day = w?.days?.[M.sel], dish = (w?.dishes ?? []).find((y) => y.id === day?.dishId);

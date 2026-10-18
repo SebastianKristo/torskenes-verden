@@ -83,8 +83,12 @@ jobs:
           test ${PIPESTATUS[0]} -eq 0
           mkdir -p Payload ../../dist
           cp -R build/Build/Products/Release-iphoneos/FinansHub.app Payload/
+          # Widgetene ligger i FinansHub.app/PlugIns og blir med i IPA-en.
+          ls Payload/FinansHub.app/PlugIns || echo "Advarsel: fant ingen widget-utvidelse"
           zip -qry "../../dist/FinansHub-$V-unsigned.ipa" Payload
       - name: Signert IPA (bare med sertifikat i secrets)
+        # Widget-utvidelsen trenger egen profil (no.kristo.finanshub.widgets); uten den hoppes signert IPA over.
+        continue-on-error: true
         env:
           CERT_B64: ${{ secrets.IOS_CERT_P12_BASE64 }}
           CERT_PASSWORD: ${{ secrets.IOS_CERT_PASSWORD }}

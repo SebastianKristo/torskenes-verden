@@ -8,6 +8,7 @@ import { Hono } from 'hono';
 import { db, kv, OWNER } from './db.js';
 import { guard, readJson, bad, str, MOCK, aiJson } from './homeos-common.js';
 import { scanShippingMails, mailConfig, mailText } from './finans/mail.js';
+import { stageOf } from './finans/finn-routes.js';
 import { CARRIERS, CARRIER, detect, normNo, trackUrl, findTrackingNumbers, normStatus, STATUS_TEXT, STEPS_IN, STEPS_OUT, stepOf, fetchStatus, isConfigured, testCarriers } from './tracking-carriers.js';
 
 db.exec(`
@@ -73,7 +74,7 @@ function view(r) {
   let statusText = STATUS_TEXT[status] ?? STATUS_TEXT.unknown;
   if (status === 'delivered' && out) statusText = 'Levert til mottaker';
   return {
-    id: r.id, trackingNo: r.tracking_no, carrier: r.carrier, carrierName: c.name, carrierIni: c.ini, carrierColor: c.color, carrierFg: c.fg,
+    id: r.id, trackingNo: r.tracking_no, carrier: r.carrier, carrierName: c.name, carrierIni: c.ini, carrierColor: c.color, carrierFg: c.fg, carrierLogo: c.logo,
     name: r.name || `${c.name} · ${r.tracking_no.slice(-4)}`, shop: r.shop, source: r.source, sourceRef: r.source_ref, sourceNote: r.source_note,
     direction: r.direction, status, statusText, step: stepOf(r.status), steps: out ? STEPS_OUT : (r.status === 'out_for_delivery' ? [...STEPS_IN.slice(0, 3), 'Ute for levering', 'Levert'] : STEPS_IN),
     eta: r.eta, pickupPoint: r.pickup_point, archived: !!r.archived, delayed: status === 'delayed', updatedAt: r.updated_at, checkedAt: r.checked_at,
@@ -93,6 +94,8 @@ export function upsertShipment({ trackingNo, carrier, name = '', shop = '', sour
     q(`UPDATE hl_shipments SET name=CASE WHEN name='' THEN ? ELSE name END, shop=CASE WHEN shop='' THEN ? ELSE shop END,
        source_ref=COALESCE(source_ref, ?), source_note=CASE WHEN source_note='' THEN ? ELSE source_note END, updated_at=? WHERE id=?`)
       .run(str(name, 120), str(shop, 80), sourceRef, str(sourceNote, 200), now(), ex.id);
+    // En kilde som vet at pakken er kommet lenger (Finn-handelen, e-post «Pakken er levert») flytter statusen fremover, aldri bakover.
+    if (status && promote(ex, status, source === 'finn' ? 'Oppdatert fra Finn-handelen' : source === 'email' ? 'Oppdatert fra e-post' : '')) return { shipment: byId(ex.id), created: false, promoted: true };
     return { shipment: byId(ex.id), created: false };
   }
   const r = q(`INSERT INTO hl_shipments(tracking_no,carrier,name,shop,source,source_ref,source_note,direction,status,eta,pickup_point,updated_at,created_at)
@@ -101,6 +104,13 @@ export function upsertShipment({ trackingNo, carrier, name = '', shop = '', sour
   addEvent(r.id, now(), source === 'manual' ? 'Lagt til i Sporing' : source === 'finn' ? 'Funnet i Finn-handel' : 'Funnet i e-post', '');
   if (source !== 'manual') notify('found', `Nytt sporingsnummer: ${r.name || r.tracking_no} (${(CARRIER[car] ?? CARRIER.other).name})`, r.id);
   return { shipment: r, created: true };
+}
+// Rangering for «bare fremover»: forsinket teller som underveis.
+const RANK = { unknown: -1, registered: 0, picked_up: 1, in_transit: 2, delayed: 2, ready_for_pickup: 3, out_for_delivery: 3, delivered: 4 };
+function promote(r, status, note) {
+  if (!STATUS_TEXT[status] || (RANK[status] ?? -1) <= (RANK[r.status] ?? -1)) return false;
+  applyResult(r, { status, events: note ? [{ ts: now(), status: `${STATUS_TEXT[status]} · ${note}`, location: '' }] : [] });
+  return true;
 }
 const insEvent = q('INSERT OR IGNORE INTO hl_shipment_events(shipment_id, ts, status, location, raw) VALUES(?,?,?,?,?)');
 const addEvent = (id, ts, status, location, raw = null) => insEvent.run(id, ts, String(status).slice(0, 200), String(location ?? '').slice(0, 120), raw);
@@ -154,10 +164,13 @@ export async function fromMail(parsed) {
   if (!nos.length) return 0;
   if (POSTAL.test(shop)) shop = '';
   const date = parsed.date ? new Date(parsed.date).toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit' }) : '';
+  // Emnet sier ofte hvor pakken er («Pakken din er levert», «Klar for henting»). Brødteksten er for full av ord som «levering».
+  const st = normStatus(parsed.subject ?? '');
+  const status = st === 'unknown' ? undefined : st;
   let n = 0;
   for (const no of nos) {
     const name = item || (shop ? `${shop}` : '');
-    const { created } = upsertShipment({ trackingNo: no, name, shop, source: 'email', sourceRef: parsed.messageId ?? null,
+    const { created } = upsertShipment({ trackingNo: no, name, shop, source: 'email', sourceRef: parsed.messageId ?? null, status,
       sourceNote: `Funnet i e-post${shop ? ` fra ${shop}` : ''}${date ? `, ${date}` : ''}` });
     if (created) n++;
   }
@@ -168,12 +181,17 @@ export async function fromMail(parsed) {
 export function syncFinn() {
   if (!sources().finn.on) return 0;
   let rows = [];
-  try { rows = q("SELECT id, role, item, counterpart, tracking FROM fh_finn WHERE tracking IS NOT NULL AND tracking<>''").all(); } catch { return 0; }
+  try { rows = q("SELECT * FROM fh_finn WHERE tracking IS NOT NULL AND tracking<>''").all(); } catch { return 0; }
   let n = 0;
   for (const f of rows) {
     try {
       const sold = f.role === 'sold';
-      const { created } = upsertShipment({ trackingNo: f.tracking, name: f.item, shop: 'Finn', source: 'finn', sourceRef: String(f.id), direction: sold ? 'out' : 'in',
+      // Steget i handelen (Sendt → Mottatt/Levert) gir status også når transportøren ikke har nøkkel.
+      let emails = [];
+      try { emails = q('SELECT subject, body FROM fh_finn_emails WHERE finn_id=?').all(f.id); } catch { /* eldre database */ }
+      const stage = stageOf(f, emails);
+      const status = stage >= 3 ? 'delivered' : stage === 2 ? 'in_transit' : undefined;
+      const { created } = upsertShipment({ trackingNo: f.tracking, name: f.item, shop: 'Finn', source: 'finn', sourceRef: String(f.id), direction: sold ? 'out' : 'in', status,
         sourceNote: `${sold ? 'Solgt til' : 'Kjøpt fra'} ${f.counterpart?.replace(/^(selger|kjøper)\s+/i, '') || 'motpart'} på Finn · Fiks ferdig` });
       if (created) n++;
     } catch { /* ugyldig nummer */ }
@@ -221,7 +239,7 @@ export function activeShipments(limit = 3) {
     .sort((a, b) => rank(a) - rank(b) || b.step - a.step).slice(0, limit);
 }
 const brief = (s) => ({ id: s.id, trackingNo: s.trackingNo, name: s.name, carrier: s.carrier, carrierName: s.carrierName, carrierIni: s.carrierIni, carrierColor: s.carrierColor, carrierFg: s.carrierFg,
-  status: s.status, statusText: s.statusText, step: s.step, eta: s.eta, pickupPoint: s.pickupPoint, direction: s.direction });
+  status: s.status, statusText: s.statusText, step: s.step, eta: s.eta, pickupPoint: s.pickupPoint, direction: s.direction, carrierLogo: s.carrierLogo });
 export function packagesFor(limit = 2) {
   try { return activeShipments(limit).map(brief); } catch { return []; }
 }
@@ -245,7 +263,7 @@ const listOut = () => {
   const items = q('SELECT * FROM hl_shipments ORDER BY archived, updated_at DESC').all().map(view);
   return {
     items, sources: sources(), prefs: prefs(), notices: kv.get(OWNER, 'trk_notices', []).slice(0, 20), lastRun: kv.get(OWNER, 'trk_last_run', null),
-    carriers: CARRIERS.map((c) => ({ id: c.id, name: c.name, ini: c.ini, color: c.color, fg: c.fg, configured: isConfigured(c.id) })),
+    carriers: CARRIERS.map((c) => ({ id: c.id, name: c.name, ini: c.ini, color: c.color, fg: c.fg, logo: c.logo, configured: isConfigured(c.id) })),
     counts: { active: items.filter((s) => !s.archived && s.status !== 'delivered').length, pickup: items.filter((s) => !s.archived && s.status === 'ready_for_pickup' && s.direction === 'in').length,
       delivered: items.filter((s) => s.archived || s.status === 'delivered').length },
   };

@@ -8,6 +8,7 @@ struct FinansHubApp: App {
         WindowGroup {
             RootView()
                 .environment(store)
+                .onOpenURL { store.openDeepLink($0) }
                 .task {
                     if store.locked { store.unlock() }
                     if store.loggedIn { try? await store.reload() }

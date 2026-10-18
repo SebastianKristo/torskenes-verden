@@ -32,3 +32,6 @@ export async function fetchJson(url, opts = {}, timeoutMs = 10_000) {
 }
 
 export function clearCache() { store.clear(); }
+
+/** Siste verdi uten å hente på nytt (undefined hvis ingen). */
+export const peek = (key) => store.get(key)?.value;

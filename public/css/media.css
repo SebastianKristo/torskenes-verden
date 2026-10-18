@@ -21,3 +21,17 @@
 .media-tile{text-decoration:none}
 .media-tile .poster-img{align-items:flex-start}
 .media-tile .media-src{position:absolute;top:6px;left:6px;z-index:1}
+
+/* Mediehistorikk: plakatkort i en vannrett rad. */
+.mh-row{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x proximity;scroll-padding-inline:var(--pad-card,22px);scrollbar-width:none;margin:0 calc(-1 * var(--pad-card,22px));padding:0 var(--pad-card,22px) 4px}
+.mh-row::-webkit-scrollbar{display:none}
+.mh-card{flex:none;width:172px;scroll-snap-align:start;display:flex;flex-direction:column;border-radius:14px;overflow:hidden;background:#141a26;border:1px solid #232938;color:#eef0f4;text-decoration:none}
+.mh-card:hover{border-color:#34405a}
+.mh-art{aspect-ratio:2/3;background:center/cover no-repeat;position:relative;display:flex;align-items:flex-end;justify-content:center;padding:10px}
+.mh-art .media-src{position:absolute;top:8px;left:8px}
+.mh-show{font-size:22px;font-weight:800;letter-spacing:-.02em;color:rgba(255,255,255,.82);text-align:center;line-height:1.05;text-wrap:balance;overflow-wrap:anywhere}
+.mh-meta{padding:10px 10px 12px;display:flex;flex-direction:column;gap:3px;font-family:var(--mono,'JetBrains Mono',monospace);font-size:11.5px;line-height:1.35;min-width:0;color:#b6bccb}
+.mh-meta>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mh-user{color:#f3c84a;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.mh-ell{overflow:hidden;text-overflow:ellipsis}
+.mh-meta .mh-ell:nth-child(3){color:#eef0f4}

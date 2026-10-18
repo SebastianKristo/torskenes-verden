@@ -209,7 +209,7 @@ function finnPage() {
     <div style="display:flex;flex-direction:column;gap:10px">${rows || card('<div class="empty">Ingen Finn-handler ennå.</div>')}</div>
     <form class="mod-box" data-mform="finn"><b>Legg til fra e-post</b><span class="note" style="font-size:13px">Lim inn en e-post fra Finn (Trygg betaling, Fiks ferdig eller Tillit). AI trekker ut gjenstand, motpart, beløp og status, og matcher mot bankposten.</span>
       <textarea class="inp mod-ta" name="email" rows="5" placeholder="Lim inn e-posten her …" required></textarea><div><button class="btn pri">Les e-posten</button></div></form>
-    <div class="note" style="font-size:13px">Kilde: e-postkvitteringer fra Finn (Trygg betaling, Fiks ferdig-frakt, Tillit forsikring) leses av AI og matches mot bankposter. ${d.imap.configured ? 'IMAP er konfigurert; automatisk henting kommer i en senere versjon.' : 'Automatisk henting via IMAP settes opp i Innstillinger → Bank og import (kommer).'}</div>
+    <div class="note" style="font-size:13px">Kilde: e-postkvitteringer fra Finn (Trygg betaling, Fiks ferdig-frakt, Tillit forsikring) leses av AI og matches mot bankposter. ${d.imap.configured ? 'IMAP er konfigurert; automatisk henting kommer i en senere versjon.' : 'Automatisk henting via IMAP settes opp i Innstillinger → Import.'}</div>
   </div>`;
 }
 
@@ -223,11 +223,56 @@ export function impPage() {
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><label class="btn pri" style="cursor:pointer">Velg filer (.xlsx, .csv, .txt)<input type="file" multiple accept=".xlsx,.csv,.txt,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-mimp hidden></label>
       <select class="sel" data-mimp-acc aria-label="Konto">${accOptions}</select><span class="note" style="font-size:13px">${esc(im.status)}</span></div>
     <textarea class="inp mod-ta mono" data-mimp-text rows="6" placeholder="Dato&#9;Forklaring&#9;Rentedato&#9;Ut&#9;Inn&#10;10/14/26&#9;Visa 100021 Ruterappen&#9;10/15/26&#9;238.00">${esc(im.text)}</textarea>
+    ${(im.formats ?? []).map(fmtBox).join('')}
     ${im.rows.length ? card(im.rows.map((r) => `<div class="imp-row${r.duplicate ? ' dup' : ''}">${logo({ description: r.description, domain: r.domain, color: '#A0A0AA' }, 28, 8)}<span class="mono note" style="font-size:12px">${dd(r.date)}</span>
       <span class="ell-wrap"><span style="display:block">${esc(r.description)}</span>${aiLine(r.aiShort, 'd-ai')}<span class="muted ell" style="font-size:12px;display:block">${esc(r.raw)}</span></span>
       <span class="note" style="font-size:13px">${r.duplicate ? 'Finnes fra før' : esc(r.category ?? 'AI kategoriserer')}</span><b class="mono" style="text-align:right;color:${r.amount > 0 ? 'var(--pos)' : 'var(--text)'}">${sgn(r.amount)}</b></div>`).join(''), 'padding:0;gap:0;overflow:hidden') : ''}
     <div style="display:flex;justify-content:flex-end"><button class="btn" style="background:var(--text);color:var(--bg)" data-mact="imp-commit" ${n ? '' : 'disabled'}>Importer ${n} poster</button></div>
+    ${tplList()}
   </div>`;
+}
+
+// Hvilket format filen ble lest med, og hvilke kolonner som er koblet til hvilke felt.
+const SRC_TXT = { builtin: ['Innebygd mal', '#B9B9C2'], saved: ['Lagret mal', '#9FE3C6'], head: ['Kolonnenavn', '#B9B9C2'], ai: ['✦ AI leste de første radene og lagret malen', '#FFB08A'], guess: ['Gjettet ut fra verdiene (AI svarte ikke) og lagret som mal', '#FFB08A'] };
+function fmtBox(f) {
+  const [src, col] = SRC_TXT[f.template?.source] ?? ['', '#8C8C96'];
+  return `<div class="mod-box" style="gap:10px;padding:14px 16px;border-radius:14px">
+    <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><span class="note" style="font-size:12.5px">Format${f.file && (S.imp.formats ?? []).length > 1 ? ` · ${esc(f.file)}` : ''}</span><b style="font-weight:600">${esc(f.template?.name ?? '')}</b><span style="font-size:12.5px;color:${col}">${esc(src)}</span><span class="note mono" style="margin-left:auto;font-size:12.5px">${{ mdy: 'MM/DD/ÅÅ', ymd: 'ÅÅÅÅ-MM-DD' }[f.dateFormat] ?? 'DD.MM.ÅÅÅÅ'}</span></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">${(f.columns ?? []).map((c) => `<span style="display:inline-flex;gap:6px;align-items:center;height:28px;padding:0 10px;border-radius:8px;background:var(--inner,#1B1B20);font-size:12.5px"><span class="note">${esc(c.label)}</span>←<span>${esc(c.column)}</span></span>`).join('')}</div></div>`;
+}
+function tplList() {
+  const t = S.impTpl;
+  if (!t) return '';
+  return `<div style="display:flex;flex-direction:column;gap:8px"><b style="font-size:14px;font-weight:600">Importmaler</b><div style="display:flex;gap:8px;flex-wrap:wrap">${t.map((x) => `<span style="display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 ${x.builtin ? 12 : 6}px 0 12px;border-radius:9px;background:#141418;border:1px solid var(--sep);font-size:13px">${esc(x.name)}<span class="note" style="font-size:11.5px">${x.builtin ? 'Innebygd' : x.hasHeader ? 'Med overskrift' : 'Uten overskrift'}</span>${x.builtin ? '' : `<button data-mtpl-del="${x.id}" aria-label="Slett mal" style="width:22px;height:22px;border-radius:6px;border:0;background:transparent;color:var(--text2);cursor:pointer">×</button>`}</span>`).join('')}</div>
+    <span class="note" style="font-size:12.5px;line-height:1.45">Når et format er ukjent, leser AI de første radene, finner dato, beskrivelse og beløp, og lagrer det som en mal. Neste fil med samme kolonner bruker malen direkte.</span></div>`;
+}
+export const loadImpTpl = async () => { S.impTpl = await api('/import/templates').catch(() => S.impTpl ?? null); };
+
+// Innstillinger → Import → Finn.no: tidligere Finn-e-poster og annonselenker blir handler i Finn-handler.
+export function finnImportBox() {
+  const fi = S.finnImp ?? (S.finnImp = { links: '', role: 'bought', job: null });
+  const codes = [...new Set([...(fi.links.matchAll(/finn\.no\/[^\s]*?(?:item\/|finnkode=)(\d{6,12})/gi))].map((m) => m[1]))];
+  const j = fi.job;
+  const items = (j?.items ?? []).map((r) => `<div style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:var(--inner,#1B1B20)"><span style="flex:none;width:44px;height:44px;border-radius:10px;background:hsl(${(+r.code) % 360} 35% 30%)"></span><span style="flex:1;min-width:0"><b style="display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.title ?? r.error ?? '')}</b><span class="note mono" style="font-size:12px">Finn-kode ${esc(r.code)}${r.status === 'ok' ? ` · ${r.images} bilde${r.images === 1 ? '' : 'r'}` : ''}</span></span><span style="font-size:12.5px;color:${r.status === 'ok' ? '#9FE3C6' : '#FF8A8A'}">${r.status === 'ok' ? '✓ Lagret' : 'Feilet'}</span></div>`).join('');
+  const status = j ? `<div class="${j.errors?.length && !j.added && !j.linked ? 'err-msg' : 'ok-msg'}" style="font-size:13px">${j.running ? `✦ Arbeider … ${j.done} av ${j.total || '?'}` : esc(j.message ?? '')}${!j.running && j.errors?.length ? `<br><span class="note" style="font-size:12px">${j.errors.slice(0, 3).map(esc).join('<br>')}</span>` : ''}</div>` : '';
+  return `<div class="mod-box" style="padding:18px;border-radius:18px;gap:12px">
+    <div style="display:flex;align-items:center;gap:12px"><img src="/finans/api/logo/finn.no" alt="" style="width:36px;height:36px;border-radius:10px;background:#fff;padding:5px" onerror="this.style.visibility='hidden'"><div style="flex:1;min-width:0"><b style="font-weight:600">Finn.no</b><div class="note" style="font-size:12.5px">Tidligere kjøp, salg og annonser legges i Finn-handler</div></div></div>
+    <label style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:12px;border:1.5px dashed var(--line,#3A3A42);cursor:pointer"><span style="width:34px;height:34px;border-radius:10px;background:var(--inner,#1B1B20);display:grid;place-items:center;color:#FFB08A">✉</span><span style="flex:1;min-width:0"><b style="font-weight:500">Finn-e-poster (.eml, .mbox eller Proton-eksport)</b><br><span class="note" style="font-size:12.5px">Kvitteringer, «Du har solgt», Fiks ferdig og utbetalinger kobles til riktig handel</span></span><input type="file" multiple accept=".eml,.mbox,.zip,.txt,message/rfc822" data-mfinn-imp hidden></label>
+    <button class="btn" style="align-self:flex-start" data-mact="finn-imp-mail" ${j?.running ? 'disabled' : ''}>✦ Hent alle Finn-e-poster fra Proton Mail</button>
+    <div style="display:flex;flex-direction:column;gap:6px"><span class="note" style="font-size:12.5px">Annonselenker, én per linje</span><textarea class="inp mod-ta mono" rows="3" data-mfinn-links placeholder="https://www.finn.no/recommerce/forsale/item/476377764">${esc(fi.links)}</textarea>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><select class="sel" data-mfinn-role aria-label="Type handel"><option value="bought"${fi.role === 'bought' ? ' selected' : ''}>Kjøpt</option><option value="sold"${fi.role === 'sold' ? ' selected' : ''}>Solgt</option></select><button class="btn pri" data-mact="finn-imp-links" ${j?.running || !codes.length ? 'disabled' : ''}>✦ Hent annonser (${codes.length})</button><span class="note" style="font-size:12.5px">AI henter tittel, pris, beskrivelse og bilder og lagrer dem i handelen</span></div></div>
+    ${status}${items}
+  </div>`;
+}
+async function finnImp(path, opts) {
+  const fi = S.finnImp;
+  fi.job = { running: true, done: 0, total: 0 }; render();
+  try {
+    fi.job = await api(path, opts);
+    while (fi.job.running) { render(); await new Promise((r) => setTimeout(r, 2500)); fi.job = await api('/finn/import/status'); }
+    toast(fi.job.message ?? 'Ferdig');
+  } catch (e) { fi.job = { running: false, message: e.message, errors: [e.message] }; }
+  render();
 }
 
 /* ===================== Aksjer (Trading 212) ===================== */
@@ -393,7 +438,7 @@ const loadFinn = async () => { S.finn = await api('/finn'); };
 const loadStocks = async (force) => { S.stocks = await api(`/stocks${force === true ? '?force=1' : ''}`); };
 export async function loadBackup() { S.backup = await api('/backup'); }
 const recentIfAdmin = async () => { if (!S.boot.restricted) await loadRecentOut(); };
-export const MODULE_LOADERS = { aks: [loadStocks], sub: [loadSubs], dir: [loadFolders, loadUsers, recentIfAdmin, loadBolCats], finn: [loadFinnDesk], imp: [] };
+export const MODULE_LOADERS = { aks: [loadStocks], sub: [loadSubs], dir: [loadFolders, loadUsers, recentIfAdmin, loadBolCats], finn: [loadFinnDesk], imp: [loadImpTpl] };
 
 /* ===================== Hendelser ===================== */
 
@@ -407,12 +452,13 @@ async function preview(commit = false) {
   if (!impFiles.length && !im.text.trim()) { im.rows = []; im.status = 'Lim inn tekst eller velg filer.'; return render(); }
   try {
     const r = await api(`/import${commit ? '?commit=1' : ''}`, { method: 'POST', body: fd });
-    im.rows = r.rows;
+    im.rows = r.rows; im.formats = commit ? [] : r.formats ?? [];
+    if (r.formats?.some((f) => f.template?.source === 'ai' || f.template?.source === 'guess')) { await loadImpTpl(); if (!commit) toast('✦ AI fant formatet og lagret det som mal'); }
     const files = impFiles.length ? `${impFiles.length} fil${impFiles.length === 1 ? '' : 'er'} · ` : '';
     im.status = commit ? `${r.imported} poster importert · ${r.duplicates} duplikater hoppet over · AI kategoriserer og beskriver i bakgrunnen`
       : `${files}${r.rows.length} rader lest${r.skipped ? ` · ${r.skipped} rader hoppet over` : ''}${r.errors?.length ? ' · ' + r.errors.join('; ') : ''}`;
     if (commit) { toast(`${r.imported} poster importert`); impFiles = []; im.text = ''; im.rows = []; await loadBoot(); }
-  } catch (e) { im.status = e.message; im.rows = []; }
+  } catch (e) { im.status = e.message; im.rows = []; im.formats = []; }
   render();
 }
 
@@ -479,6 +525,7 @@ export function bindModules(el) {
       if (!confirm(`Fjerne «${c?.name}»?${n}`)) return;
       S.bolCats = await api(`/boliger/categories/${id}`, { method: 'DELETE' }); return render();
     }
+    if ((x = d('[data-mtpl-del]'))) { if (!confirm('Slette malen? Neste fil med samme kolonner tolkes på nytt.')) return; await api(`/import/templates/${x.dataset.mtplDel}`, { method: 'DELETE' }); await loadImpTpl(); toast('Malen er slettet'); return render(); }
     if ((x = d('[data-mentry-del]'))) { if (!confirm('Fjerne posten fra boligen?')) return; S.folder = await api(`/folders/${u.dir}/entries/${x.dataset.mentryDel}`, { method: 'DELETE' }); return reload(); }
     if ((x = d('[data-mpick]'))) { const id = x.dataset.mpick, p = u.newPick ?? []; u.newPick = p.includes(id) ? p.filter((y) => y !== id) : [...p, id]; return render(); }
     if ((x = d('[data-mdcat]'))) { u.dcat = u.dcat === x.dataset.mdcat ? null : x.dataset.mdcat; return render(); }
@@ -529,6 +576,8 @@ export function bindModules(el) {
       case 'fr-empty': await api('/firstrun', { method: 'POST', json: { choice: 'empty' } }); S.boot.firstRun = false; return render();
       case 'fr-smb': u.setTab = 'data'; location.hash = '#/inn'; return;
       case 'imp-commit': return preview(true);
+      case 'finn-imp-mail': return finnImp('/finn/import/mail', { method: 'POST', json: {} });
+      case 'finn-imp-links': return finnImp('/finn/import/links', { method: 'POST', json: { text: S.finnImp.links, role: S.finnImp.role } });
     }
   }));
   el.addEventListener('change', wrap(async (e) => {
@@ -537,6 +586,9 @@ export function bindModules(el) {
     if (t.matches('[data-mimp]')) { impFiles = [...t.files]; t.value = ''; return preview(); }
     if (t.matches('[data-mimp-text]')) { S.imp.text = t.value; return preview(); }
     if (t.matches('[data-mimp-acc]')) { u.impAcc = t.value; return; }
+    if (t.matches('[data-mfinn-imp]')) { const fd = new FormData(); for (const f of t.files) fd.append('files', f); t.value = ''; return finnImp('/finn/import/eml', { method: 'POST', body: fd }); }
+    if (t.matches('[data-mfinn-links]')) { S.finnImp.links = t.value; return render(); }
+    if (t.matches('[data-mfinn-role]')) { S.finnImp.role = t.value; return; }
     if (t.matches('[data-msub-cyc]')) { await api(`/subscriptions/${t.dataset.msubCyc}`, { method: 'PATCH', json: { cycle: t.value } }); return reload(); }
     if (t.matches('[data-brole]')) { const [fid, mid] = t.dataset.brole.split(':'); await api(`/folders/${fid}/members/${mid}`, { method: 'PATCH', json: { role: t.value } }); toast('Tilgangen er endret'); return reloadBol(); }
     if (t.matches('[data-mbol-target]')) { u.bolTarget = +t.value; return render(); }

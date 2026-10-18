@@ -12,7 +12,9 @@ import { kv, OWNER } from './db.js';
 import { aiJson } from './homeos-common.js';
 import { sessionUser, userInfo, serverName, isAdmin } from './auth.js';
 import { packagesFor } from './tracking.js';
-import { bearerOk } from './finans/routes.js';
+import finansApi, { bearerOk } from './finans/routes.js';
+import { matApi } from './mat.js';
+import { domainOverview } from './domains.js';
 import { uiPrefs, saveUiPrefs } from './ui.js';
 import * as integrations from './integrations.js';
 
@@ -281,9 +283,39 @@ api.put('/me/shortcuts', authOrToken, async (c) => {
   return c.json(shortcutsFor(c.get('user')));
 });
 
+// Standard: en liste med forslag (som før). Med ?full=1: {items, error?} så klienten kan vise hvorfor forslagene mangler.
 api.get('/search/suggest', authOrToken, async (c) => {
-  if (!searchSettings(c.get('user')).suggest) return c.json([]);
-  return c.json(await ext.getSuggestions(c.req.query('q') ?? ''));
+  const full = c.req.query('full') === '1';
+  if (!searchSettings(c.get('user')).suggest) return c.json(full ? { items: [], off: true } : []);
+  const r = await ext.getSuggestions(c.req.query('q') ?? '', { withError: true });
+  if (full) return c.json(r);
+  return c.json(r.items, 200, r.error ? { 'X-Suggest-Error': encodeURIComponent(r.error) } : {});
+});
+
+// «✦ AI» i søkefeltet: korte søk (1–2 ord uten spørsmål) går rett til vanlig søk; ellers svarer AI-motoren (Ollama/Gemini).
+const QUESTION = /\?|^(hva|hvem|hvor|hvordan|hvorfor|når|hvilk\w*|kan|er|skal|bør|vil|finnes|what|who|where|how|why|when|which|is|are|can|should|does|do)(\s|$)/i;
+export const plainFirst = (q) => q.split(/\s+/).filter(Boolean).length <= 2 && !QUESTION.test(q);
+api.post('/search/ask', authOrToken, async (c) => {
+  const b = await json(c);
+  const q = String(b?.q ?? '').trim().slice(0, 300);
+  if (!q) return c.json({ error: 'Skriv et spørsmål' }, 400);
+  if (!b.force && plainFirst(q)) return c.json({ mode: 'plain', q, notice: 'Kort søk – viser vanlige treff først, uten AI.' });
+  const schema = { type: 'OBJECT', properties: { answer: { type: 'STRING' }, followUps: { type: 'ARRAY', items: { type: 'STRING' } }, searchQuery: { type: 'STRING' } }, required: ['answer'] };
+  const prompt = 'Svar kort og presist på norsk bokmål (maks 5 setninger) på spørsmålet under. Er du usikker, si det. Ikke finn på tall, priser eller åpningstider du ikke vet.\n'
+    + 'Foreslå opptil 3 oppfølgingsspørsmål og et godt Google-søk for å lese mer. Returner JSON.\n'
+    + `Dato i dag: ${new Date().toLocaleDateString('nb-NO')}.\nSpørsmål: «${q}»`;
+  try {
+    const { provider, data } = MOCK
+      ? { provider: 'Eksempel', data: { answer: `Dette er et eksempelsvar på «${q}». Med ekte AI-motor svarer Ollama eller Gemini her.`, followUps: [`${q} i Oslo`, `${q} pris`], searchQuery: q } }
+      : await aiJson(prompt, schema);
+    const answer = String(data?.answer ?? '').trim();
+    if (!answer) throw new Error('AI-motoren ga et tomt svar');
+    return c.json({ mode: 'ai', q, provider, answer: answer.slice(0, 2000), followUps: (Array.isArray(data.followUps) ? data.followUps : []).map(String).filter(Boolean).slice(0, 3),
+      searchQuery: String(data.searchQuery ?? '').trim().slice(0, 200) || q });
+  } catch (e) {
+    const why = e.name === 'TimeoutError' ? 'AI-motoren svarte ikke i tide' : e.message;
+    return c.json({ error: `✦ AI svarte ikke: ${why}. Sjekk AI-motor under FinansHub → Innstillinger → AI-motor.`, reason: why }, 502);
+  }
 });
 api.get('/search/history', authOrToken, (c) => c.json({ items: histOf(c.get('user')), ...searchSettings(c.get('user')) }));
 api.post('/search/history', authOrToken, async (c) => {
@@ -344,6 +376,84 @@ api.get('/mobile/home', authOrToken, async (c) => {
     search: searchSettings(id),
     packages: isAdmin(id) ? packagesFor(2) : [], // Sporing (prompt 11): de 2 viktigste pakkene
   });
+});
+
+/* ---------------- Widgets (iOS WidgetKit og Android Glance) ---------------- */
+
+// Ett kall med alt widgetene trenger. Hver del hentes for seg, og en del som feiler (eller som brukeren ikke har tilgang til) blir null.
+// Finans, Matplan og Domener spørres internt med samme innlogging (cookie eller token) som kallet, så tilgangsreglene er de samme som ellers.
+const inner = async (app, path, c) => {
+  const headers = {};
+  for (const h of ['authorization', 'cookie']) { const v = c.req.header(h); if (v) headers[h] = v; }
+  const res = await app.request(path, { headers });
+  if (!res.ok) throw new Error(`${path} svarte ${res.status}`);
+  return res.json();
+};
+const part = (p) => p.then((v) => v ?? null, () => null);
+const r0 = (n) => (Number.isFinite(+n) ? Math.round(+n) : null);
+const daysTo = (d) => (d ? Math.round((new Date(`${String(d).slice(0, 10)}T12:00:00`) - new Date(`${new Date().toLocaleDateString('sv-SE')}T12:00:00`)) / 864e5) : null);
+
+api.get('/mobile/widgets', authOrToken, async (c) => {
+  const id = c.get('user'), admin = isAdmin(id);
+  const tomorrow = new Date(Date.now() + 864e5).toLocaleDateString('sv-SE');
+  const [w, sum, rec, stk, finn, folders, week, week2, subs] = await Promise.all([
+    part(safe(ext.getWeather)),
+    part(inner(finansApi, '/summary', c)), part(inner(finansApi, '/recurring', c)), part(inner(finansApi, '/stocks', c)), part(inner(finansApi, '/finn', c)),
+    part(inner(finansApi, '/folders', c)),
+    admin ? part(inner(matApi, '/week', c)) : null, admin ? part(inner(matApi, `/week?start=${tomorrow}`, c)) : null,
+    part(inner(finansApi, '/subscriptions', c)),
+  ]);
+
+  const weather = w && {
+    temp: r0(w.temp), symbol: w.symbol ?? w.kind ?? null, desc: w.text ?? w.desc ?? '', hi: r0(w.hi ?? w.days?.[0]?.max), lo: r0(w.lo ?? w.days?.[0]?.min), feels: r0(w.feels),
+    place: w.place ?? '', hours: (w.hours ?? []).slice(0, 6).map((h) => ({ t: h.t ?? h.label ?? '', symbol: h.symbol ?? h.icon ?? null, temp: r0(h.temp) })),
+  };
+
+  let packages = null;
+  if (admin) { try { const items = packagesFor(4); packages = { items: items.map((p) => ({ id: p.id, name: p.name, carrier: p.carrier, carrierName: p.carrierName, status: p.status, statusText: p.statusText, step: p.step, eta: p.eta, pickupPoint: p.pickupPoint })), active: packagesFor(99).length }; } catch { packages = null; } }
+
+  const budget = sum && {
+    month: sum.month, spent: r0(sum.budgetUsed ?? sum.ut), limit: r0(sum.budgetTotal), left: r0(sum.left), pct: sum.budgetTotal ? Math.round((sum.budgetUsed / sum.budgetTotal) * 100) : null, daysLeft: sum.daysLeft ?? null,
+    top: [...(sum.budgets ?? [])].sort((a, b) => (b.used ?? 0) - (a.used ?? 0)).slice(0, 3).map((b) => ({ name: b.category, spent: r0(b.used), limit: r0(b.budget), color: b.color })),
+  };
+  const finance = sum && {
+    balance: r0(sum.balance), currency: 'NOK',
+    recent: (sum.recent ?? []).slice(0, 4).map((t) => ({ id: t.id, date: t.date, merchant: t.merchant || t.description, amount: t.amount, category: t.category, color: t.color })),
+    toReview: (sum.review ?? []).length,
+  };
+
+  // Neste trekk: faste utgifter og abonnementer, det som kommer først.
+  const charges = [
+    ...(Array.isArray(rec) ? rec : []).filter((r) => r.active !== false && r.next).map((r) => ({ name: r.name, amount: r.amount, date: r.next })),
+    ...(subs?.items ?? []).filter((s) => s.active !== false && s.nextDate).map((s) => ({ name: s.name, amount: s.price, date: s.nextDate })),
+  ].filter((x) => daysTo(x.date) >= 0).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+  const nextCharge = charges[0] ? { ...charges[0], daysLeft: daysTo(charges[0].date) } : null;
+
+  const stocks = stk?.summary && (stk.configured !== false || stk.mock) ? {
+    value: r0(stk.summary.total ?? stk.summary.value), change: r0(stk.summary.result), changePct: stk.summary.invested ? Math.round((stk.summary.result / stk.summary.invested) * 1000) / 10 : null,
+    top: [...(stk.positions ?? [])].sort((a, b) => Math.abs(b.dayPct ?? 0) - Math.abs(a.dayPct ?? 0)).slice(0, 3).map((p) => ({ ticker: p.symbol ?? p.ticker, name: p.name, changePct: p.dayPct ?? null })),
+  } : null;
+
+  let domains = null;
+  if (admin) { try { const d = domainOverview(); domains = { total: d.total, up: d.up, down: d.down, expiringSoon: d.expiringSoon }; } catch { domains = null; } }
+
+  const dayOf = (wk, date) => wk?.days?.find((d) => d.date === date);
+  const today = dayOf(week, new Date().toLocaleDateString('sv-SE')), tm = dayOf(week, tomorrow) ?? dayOf(week2, tomorrow);
+  const meal = (d) => (d?.name ? { dish: d.name, cook: d.cook ?? null } : null);
+  const matplan = week ? { today: meal(today), tomorrow: meal(tm) } : null;
+
+  const finnW = finn && {
+    active: finn.ongoing ?? 0, netYear: r0((finn.sold ?? 0) - (finn.bought ?? 0)),
+    items: (finn.items ?? []).filter((f) => !f.done).slice(0, 3).map((f) => ({ id: f.id, title: f.item, role: f.role, step: f.stage ?? null, status: f.status ?? '' })),
+  };
+
+  const home = Array.isArray(folders) && folders[0] ? folders[0] : null;
+  const det = home ? await part(inner(finansApi, `/folders/${home.id}`, c)) : null;
+  const boliger = home && { id: home.id, name: home.name, yearTotal: r0(home.yearTotal ?? home.total), count: home.count ?? 0,
+    dueSoon: (det?.bills ?? []).filter((b) => b.nextDue).sort((a, b) => String(a.nextDue).localeCompare(String(b.nextDue))).slice(0, 3)
+      .map((b) => ({ title: b.name, amount: b.last?.amount ?? null, date: b.nextDue, color: b.color ?? null })) };
+
+  return c.json({ updatedAt: new Date().toISOString(), weather, packages, budget, finance, nextCharge, stocks, domains, matplan, finn: finnW, boliger });
 });
 
 export default api;

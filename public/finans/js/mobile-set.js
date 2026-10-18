@@ -100,12 +100,12 @@ const PAGE = {
         'Samme skjermer, data, kontoer og innstillinger i begge stilene. Valget gjelder bare denne enheten, og du bytter tilbake her.')}
       ${th === 'ios' ? G('Bakgrunn', [tog('iosbg', 'Fargebakgrunn', 'Fargede lysflekker bak glassflatene', iosBg())]) : ''}
       ${th === 'and' ? `${G('Farger', [chips('m3Seed', 'Fargetema', Object.entries(SEEDS).map(([k, [n]]) => [k, n]), pref('m3Seed'))], '«Følg systemet» bruker Material You-fargen fra telefonen når nettleseren gir tilgang til den (Android 12 og nyere), ellers oransje. Fargene regnes ut i OKLCH med faste toner per rolle. Grønt, rødt og Domener-rosa følger ikke aksentfargen.')}
-      ${G('Modus', [chips('m3Mode', 'Lys eller mørk', Object.entries(MODES), pref('m3Mode'))])}` : ''}
+      ${G('Modus', [chips('m3Mode', 'Lys eller mørk', Object.entries(MODES), pref('m3Mode'))])}
+      ${G('Sider', [chips('pageColors', 'Farger på sidene', [['same', 'Samme overalt'], ['per', 'Egen farge per side']], pref('pageColors'))], '«Samme overalt» gir Domener, Matplan, Finans og resten samme fargetema. «Egen farge per side» gir Domener sin rosa farge.')}` : ''}
       ${G('Oppstart', [chips('startL', 'Startside', [['homelab', 'Homelab'], ['fin-hjem', 'Finans · Hjem'], ['fin-liste', 'Finans · Liste'], ['fin-budsjett', 'Finans · Budsjett']], st)],
         st === 'homelab' ? 'Appen åpner på Homelab. Finans, Matplan og Domener ligger bak profilbildet.' : 'Appen åpner i Finans, og hjem-knappen går til Finans. Homelab og de andre modulene ligger bak profilbildet.')}
       ${G('Navigasjonslinje', [chips('backStyle', 'Tilbake til startsiden', [['arrow', 'Pil øverst'], ['bar', 'Knapp i linjen']], backStyle()), nav('nav', 'Endre navn, rekkefølge og skjul faner', '', 'list', '#5E5CE6')],
         '«Pil øverst» viser «‹ Homelab» eller «‹ Finans» øverst i moduler som Domener og Matplan, med profilbildet på samme rad.')}
-      ${G('Matplan', [chips('matTheme', 'Utseende', [['light', 'Lys'], ['dark', 'Mørk'], ['system', 'Følg systemet']], LAY().matTheme ?? 'light')], 'Du kan også bytte med ☾ / ☀ øverst i Matplan.')}
       ${G('Personvern', [tog('hideAmt', 'Skjul beløp til jeg trykker', 'Viser •••• i stedet for tall på Hjem', pref('hideAmt'))])}`;
   },
 
@@ -236,7 +236,7 @@ export async function settingsBind(e, t) {
     const id = x.dataset.schip, v = x.dataset.v;
     if (id === 'theme') { try { if (v === 'auto') localStorage.removeItem('fh_theme'); else localStorage.setItem('fh_theme', v); } catch {} }
     else if (id === 'startL') { saveLayout({ start: v }, false); setPref('start', { homelab: 'hl', 'fin-hjem': 'hjem', 'fin-liste': 'liste', 'fin-budsjett': 'budsjett' }[v]); }
-    else if (id === 'backStyle' || id === 'matTheme') saveLayout({ [id]: v }, false);
+    else if (id === 'backStyle') saveLayout({ [id]: v }, false);
     else if (id === 'ai') S.boot.settings = await api('/settings', { method: 'PUT', json: v === 'both' ? { provider: 'ollama', fallback: true } : { provider: v, fallback: false } });
     else if (id === 'ntscope') T.nt.scopes = T.nt.scopes.includes(v) ? T.nt.scopes.filter((s) => s !== v) : [...T.nt.scopes, v];
     else if (id === 'ntexp') T.nt.exp = v;

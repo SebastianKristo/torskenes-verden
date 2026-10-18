@@ -35,7 +35,8 @@ function etaText(t) {
   return txt ? `Ventet ${txt}` : 'Ingen leveringsdato ennå';
 }
 const SRC = { finn: ['Finn', 'rgba(122,167,255,.16)', '#a9c3ff'], email: ['E-post', 'rgba(255,154,92,.16)', '#ffb08a'], manual: ['Manuelt', 'rgba(255,255,255,.1)', '#c4cad6'] };
-const badge = (c, fg, ini, cls = '') => `<span class="trk-ini ${cls}" style="background:${esc(c)};color:${esc(fg)}">${esc(ini)}</span>`;
+// Transportørlogo på hvit bakgrunn; mangler logoen, vises initialene i transportørens farge.
+const badge = (c, fg, ini, cls = '', logo = '') => `<span class="trk-ini ${cls}" style="background:${esc(c)};color:${esc(fg)}">${esc(ini)}${logo ? `<img class="trk-logo" src="${esc(logo)}" alt="" loading="lazy">` : ''}</span>`;
 const sw = (on) => `<span class="trk-sw${on ? ' on' : ''}"><i></i></span>`;
 
 /* ---------- Visning ---------- */
@@ -45,13 +46,13 @@ function card(t) {
   const steps = t.steps.map((n, j) => {
     const dn = j <= t.step, cur = j === t.step && !fin;
     const label = j === 3 && t.direction !== 'out' ? (t.status === 'out_for_delivery' ? 'Ute' : 'Hentested') : n;
-    return `<span class="trk-step${dn ? ' dn' : ''}${cur ? ' cur' : ''}${j < t.step ? ' ln' : ''}"><span><i></i><em></em></span><small>${esc(label)}</small></span>`;
+    return `<span class="trk-step${dn ? ' dn' : ''}${cur ? ' cur' : ''}${j < t.step ? ' ln' : ''}${fin ? ' fin' : ''}"><span><i></i><em></em></span><small>${esc(label)}</small></span>`;
   }).join('');
   const ev = t.events[0];
   const tl = t.events.map((e, j) => `<div class="trk-ev${j ? '' : ' now'}"><div class="trk-ev-l"><i></i><em></em></div><div class="trk-ev-b"><div><b>${esc(e.status)}</b><span>${esc(evTime(e.ts))}</span></div>${e.location ? `<small>${esc(e.location)}</small>` : ''}</div></div>`).join('');
   return `<div class="trk-card${ready ? ' ready' : ''}">
     <button class="trk-head" data-trk-open="${t.id}" aria-expanded="${open}">
-      <span class="trk-row">${badge(t.carrierColor, t.carrierFg, t.carrierIni, 'lg')}<span class="trk-tt"><b>${esc(t.name)}</b><small>${esc(t.carrierName)} · <span class="trk-mono">${esc(t.trackingNo)}</span></small></span>
+      <span class="trk-row">${badge(t.carrierColor, t.carrierFg, t.carrierIni, 'lg', t.carrierLogo)}<span class="trk-tt"><b>${esc(t.name)}</b><small>${esc(t.carrierName)} · <span class="trk-mono">${esc(t.trackingNo)}</span></small></span>
         <span class="trk-src" style="background:${sbg};color:${sfg}">${esc(src)}</span></span>
       <span class="trk-st"><span><b style="color:${stC}">${esc(t.statusText)}</b><small>${esc(etaText(t))}</small></span>${t.direction === 'out' ? '<em>Utgående</em>' : ''}</span>
       <span class="trk-steps">${steps}</span>
@@ -74,7 +75,7 @@ function addHint() {
   if (!no || !d) return '';
   const car = S.pick ?? S.guess ?? 'other', name = d.carriers.find((c) => c.id === car)?.name ?? car;
   const hint = car === 'other' ? 'Fant ikke transportøren ut fra nummeret. Velg, eller la 17TRACK finne den.' : `✦ Ser ut som ${name}${S.pick ? ' (valgt av deg)' : ' ut fra formatet'}. Trykk for å endre.`;
-  return `<span class="trk-hint">${esc(hint)}</span><div class="trk-chips">${d.carriers.map((c) => `<button class="trk-chip${c.id === car ? ' on' : ''}" data-trk-pick="${c.id}">${badge(c.color, c.fg, c.ini, 'sm')}${esc(c.name)}</button>`).join('')}</div>`;
+  return `<span class="trk-hint">${esc(hint)}</span><div class="trk-chips">${d.carriers.map((c) => `<button class="trk-chip${c.id === car ? ' on' : ''}" data-trk-pick="${c.id}">${badge(c.color, c.fg, c.ini, 'sm', c.logo)}${esc(c.name)}</button>`).join('')}</div>`;
 }
 
 function lists() {
@@ -98,7 +99,7 @@ function body() {
   const togs = [...TOGS.map(([k, n, s]) => [k, n, s, !!d.prefs[k]]), ['hap', 'Haptisk tilbakemelding', 'Vibrasjon ved nye pakker og statusendringer (denne enheten)', hapOn]]
     .map(([k, n, s, on]) => `<button class="trk-tog" data-trk-tog="${k}" aria-pressed="${on}"><span><b>${esc(n)}</b>${s ? `<small>${esc(s)}</small>` : ''}</span>${sw(on)}</button>`).join('');
   const conf = (id) => d.carriers.find((c) => c.id === id) ?? {};
-  const conns = KEYS.map(([id, n, s]) => { const c = conf(id); return `<div class="trk-conn">${badge(c.color, c.fg, c.ini, 'md')}<span><b>${esc(n)}</b><small>${esc(s)}</small></span><em class="${c.configured ? 'ok' : 'miss'}">${c.configured ? 'Tilkoblet' : 'Mangler nøkkel'}</em></div>`; }).join('');
+  const conns = KEYS.map(([id, n, s]) => { const c = conf(id); return `<div class="trk-conn">${badge(c.color, c.fg, c.ini, 'md', c.logo)}<span><b>${esc(n)}</b><small>${esc(s)}</small></span><em class="${c.configured ? 'ok' : 'miss'}">${c.configured ? 'Tilkoblet' : 'Mangler nøkkel'}</em></div>`; }).join('');
   return `
   <div class="trk-box">
     <div class="trk-add">

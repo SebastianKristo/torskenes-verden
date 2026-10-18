@@ -182,19 +182,25 @@ struct SystemBar<Content: View>: View {
         }
     }
 
+    /// Fanene i TabView får en ugjennomsiktig systembakgrunn, så bakgrunnen (med fargede lysflekker når
+    /// «Fargebakgrunn» er på) må ligge inne i hver fane, under innholdet.
+    private func page(_ it: BarItem) -> some View {
+        content(it).background(Backdrop())
+    }
+
     @available(iOS 18.0, *)
     @ViewBuilder private var modern: some View {
         if let a = action {
             TabView(selection: picked) {
                 ForEach(items, id: \.self) { it in
-                    SwiftUI.Tab(label(it), systemImage: icon(it), value: it) { content(it) }
+                    SwiftUI.Tab(label(it), systemImage: icon(it), value: it) { page(it) }
                 }
                 SwiftUI.Tab(a.title, systemImage: a.icon, value: BarItem.action, role: .search) { Color.clear }
             }
         } else {
             TabView(selection: picked) {
                 ForEach(items, id: \.self) { it in
-                    SwiftUI.Tab(label(it), systemImage: icon(it), value: it) { content(it) }
+                    SwiftUI.Tab(label(it), systemImage: icon(it), value: it) { page(it) }
                 }
             }
         }
@@ -203,7 +209,7 @@ struct SystemBar<Content: View>: View {
     private var legacy: some View {
         TabView(selection: picked) {
             ForEach(items, id: \.self) { it in
-                content(it).tabItem { Label(label(it), systemImage: icon(it)) }.tag(it)
+                page(it).tabItem { Label(label(it), systemImage: icon(it)) }.tag(it)
             }
         }
         .overlay(alignment: .bottomTrailing) {
@@ -359,6 +365,12 @@ struct RootView: View {
         ScanActions(camera: { showCamera = true }, choices: { showChoices = true }, photos: { showPhotos = true }, files: { showFiles = true }, tapOpensCamera: store.scanTap == "camera")
     }
 
+    private func openPendingScan(_ v: String?) {
+        guard let v, store.loggedIn, !store.locked else { return }
+        store.pendingScan = nil
+        if v == "files" { showFiles = true } else { showCamera = true }
+    }
+
     var body: some View {
         ZStack {
             Backdrop()
@@ -445,7 +457,10 @@ struct RootView: View {
         .onChange(of: phase) { _, p in
             if p == .background { store.didEnterBackground() } else if p == .active { store.didBecomeActive() }
         }
-        .onAppear { store.compact = hSize != .regular }
+        // Skann fra widgeten (AppIntent eller finanshub://scan/...): åpner kameraet eller filvelgeren.
+        .onChange(of: store.pendingScan) { _, v in openPendingScan(v) }
+        .onReceive(NotificationCenter.default.publisher(for: WidgetShared.scanNotification)) { _ in store.takePendingScan() }
+        .onAppear { store.compact = hSize != .regular; store.takePendingScan(); openPendingScan(store.pendingScan) }
         .onChange(of: hSize) { _, v in store.compact = v != .regular }
     }
 }

@@ -453,6 +453,7 @@ authed.get('/news', proxy(api.getNews));
 // Plex og Jellyfin: «Spilles nå» (30 s) og «Nylig lagt til» (10 min). Plakater hentes via serveren så tokenet aldri når nettleseren.
 authed.get('/media/now', proxy(api.getMediaNow));
 authed.get('/media/recent', proxy(api.getMediaRecent));
+authed.get('/media/history', proxy(api.getMediaHistory));
 authed.get('/media/poster', async (c) => {
   try {
     const img = await api.getMediaPoster(c.req.query('src'), c.req.query('id'));

@@ -66,27 +66,31 @@ export function readXlsx(buf) {
 
 /* ---------------- Tekst og CSV ---------------- */
 
-function splitLine(line, sep) {
-  const out = []; let cur = '', q = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (q) { if (ch === '"' && line[i + 1] === '"') { cur += '"'; i++; } else if (ch === '"') q = false; else cur += ch; }
-    else if (ch === '"') q = true;
-    else if (ch === sep) { out.push(cur); cur = ''; }
-    else cur += ch;
+// CSV/TSV med `,`, `;` eller tab. Celler i anførselstegn kan inneholde skilletegn og linjeskift.
+export function splitRows(text) {
+  const t = String(text ?? '').replace(/^﻿/, '');
+  const first = t.split(/\r?\n/).find((l) => l.trim()) ?? '';
+  const outside = first.replace(/"[^"]*"/g, '');
+  const count = (ch) => outside.split(ch).length - 1;
+  const sep = count('\t') ? '\t' : count(';') >= count(',') && count(';') ? ';' : count(',') ? ',' : '\t';
+  const rows = [];
+  let row = [], cell = '', quoted = false;
+  for (let i = 0; i < t.length; i++) {
+    const ch = t[i];
+    if (quoted) {
+      if (ch === '"') { if (t[i + 1] === '"') { cell += '"'; i++; } else quoted = false; }
+      else cell += ch === '\n' || ch === '\r' ? ' ' : ch;
+    } else if (ch === '"' && !cell.trim()) { quoted = true; cell = ''; }
+    else if (ch === sep) { row.push(cell.trim()); cell = ''; }
+    else if (ch === '\n') { row.push(cell.trim()); rows.push(row); row = []; cell = ''; }
+    else if (ch !== '\r') cell += ch;
   }
-  out.push(cur);
-  return out.map((s) => s.trim());
+  row.push(cell.trim()); rows.push(row);
+  return rows.filter((r) => r.some((x) => String(x).trim()));
 }
 
-export function readText(text) {
-  const lines = String(text).replace(/^﻿/, '').split(/\r?\n/).filter((l) => l.trim());
-  if (!lines.length) return [];
-  // Tab (kopiert fra nettbank/Excel), semikolon (norsk CSV) eller komma.
-  const sample = lines.slice(0, 5).join('\n');
-  const sep = (sample.match(/\t/g)?.length ?? 0) >= lines.slice(0, 5).length ? '\t' : (sample.match(/;/g)?.length ?? 0) >= 1 ? ';' : ',';
-  return lines.map((l) => splitLine(l, sep));
-}
+// Innlimt tekst eller CSV: samme oppdeling som filene (tab, semikolon eller komma; celler i anførselstegn over flere linjer).
+export const readText = (text) => splitRows(text);
 
 /* ---------------- Tolkning ---------------- */
 

@@ -123,7 +123,9 @@ struct Shipment: Identifiable, Hashable {
         direction = dir
         status = stat
         statusText = JS.str(o, "statusText") ?? Shipment.statusName[stat] ?? "Ukjent status"
-        step = Swift.max(0, Swift.min(4, JS.int(o, "step") ?? Shipment.stepOf(stat)))
+        // Levert er alltid siste steg, selv om serveren bare har steget fra registreringen.
+        let rawStep = JS.int(o, "step") ?? Shipment.stepOf(stat)
+        step = stat == "delivered" ? 4 : Swift.max(0, Swift.min(4, rawStep))
         let st = JS.strings(o, "steps")
         steps = st.count == 5 ? st : (dir == "out" ? Shipment.stepsOut : Shipment.stepsIn)
         eta = JS.str(o, "eta") ?? ""
@@ -363,13 +365,36 @@ extension Store {
 
 /* ---------------- Sporing: visning ---------------- */
 
-/// Transportørmerket: initialer på merkefargen.
+/// Domenet til transportørens logo (hentes via /finans/api/logo, samme som butikklogoene).
+let carrierDomains: [String: String] = [
+    "posten": "posten.no", "bring": "bring.no", "postnord": "postnord.no", "dhl": "dhl.com", "ups": "ups.com",
+    "fedex": "fedex.com", "gls": "gls-group.com", "schenker": "dbschenker.com", "helthjem": "helthjem.no",
+    "budbee": "budbee.com", "instabox": "instabox.io",
+]
+
+/// Transportørmerket: logoen når den finnes, ellers initialer på merkefargen.
 struct CarrierBadge: View {
+    @Environment(Store.self) private var store
     let ini: String
     let color: String
     let fg: String
     var size: CGFloat = 40
+    var carrier: String? = nil
+    @State private var img: UIImage? = nil
     var body: some View {
+        Group {
+            if let img {
+                Image(uiImage: img).resizable().scaledToFit().padding(size / 8)
+                    .frame(width: size, height: size).background(.white, in: RoundedRectangle(cornerRadius: size * 0.28))
+            } else {
+                initials
+            }
+        }
+        .task(id: carrier) {
+            if let c = carrier, let d = carrierDomains[c] { img = await store.logo(d) }
+        }
+    }
+    private var initials: some View {
         Text(ini).font(.system(size: size * (ini.count > 2 ? 0.28 : 0.36), weight: .heavy)).foregroundStyle(Color(hex: fg)).lineLimit(1).minimumScaleFactor(0.6)
             .frame(width: size, height: size).background(Color(hex: color), in: RoundedRectangle(cornerRadius: size * 0.28))
     }
@@ -408,6 +433,18 @@ struct TrackingView: View {
     @State private var carrier: String?
     @State private var out = false
     @State private var confirmDelete: String?
+    /// Rekkefølgen på kortene (hold inne → de vaker, dra for å flytte). Lagres på enheten.
+    @AppStorage("trk.order") private var orderRaw = "add,sources,list,prefs,carriers"
+    @State private var arranging = false
+    @State private var wiggle = false
+    @State private var dropTarget: String?
+
+    private static let allSections = ["add", "sources", "list", "prefs", "carriers"]
+    private var order: [String] {
+        var o = orderRaw.split(separator: ",").map(String.init).filter { TrackingView.allSections.contains($0) }
+        for k in TrackingView.allSections where !o.contains(k) { o.append(k) }
+        return o
+    }
 
     var body: some View {
         let t = store.tracking
@@ -415,13 +452,11 @@ struct TrackingView: View {
             VStack(spacing: 12) {
                 header(t)
                 if let e = store.moduleError { Empty(text: e) }
-                addCard(t)
-                if let t {
-                    sourcesCard(t)
-                    list(t)
-                    prefsCard(t)
-                    carriersCard(t)
-                } else if store.moduleError == nil { ProgressView().padding(30) }
+                if arranging { arrangeBar }
+                ForEach(order, id: \.self) { k in
+                    arrangeable(k, t)
+                }
+                if t == nil && store.moduleError == nil { ProgressView().padding(30) }
             }
             .padding(.horizontal, 18).padding(.bottom, 110)
         }
@@ -429,6 +464,70 @@ struct TrackingView: View {
         .tracksScroll(store)
         .refreshable { await store.reloadModule() }
         .onAppear { LocalNotify.ask() }
+    }
+
+    private var arrangeBar: some View {
+        HStack {
+            Text("Dra kortene for å endre rekkefølgen").font(.footnote).foregroundStyle(.white.opacity(0.75))
+            Spacer()
+            Button { stopArranging() } label: {
+                Text("Ferdig").fontWeight(.bold).foregroundStyle(Color.ink).padding(.horizontal, 16).frame(height: 36).contentShape(Capsule())
+            }
+            .buttonStyle(.plain).glass(18, tint: .accent)
+        }
+    }
+
+    private func stopArranging() {
+        Haptics.shared.tap()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { arranging = false; wiggle = false }
+    }
+
+    private func startArranging() {
+        guard !arranging else { return }
+        Haptics.shared.tick()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { arranging = true }
+        withAnimation(.easeInOut(duration: 0.14).repeatForever(autoreverses: true)) { wiggle = true }
+    }
+
+    private func move(_ from: String, before to: String) {
+        guard from != to else { return }
+        var o = order
+        o.removeAll { $0 == from }
+        let i = o.firstIndex(of: to) ?? o.count
+        o.insert(from, at: i)
+        Haptics.shared.select()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { orderRaw = o.joined(separator: ",") }
+    }
+
+    @ViewBuilder private func section(_ k: String, _ t: TrackingData?) -> some View {
+        switch k {
+        case "add": addCard(t)
+        case "sources": if let t { sourcesCard(t) }
+        case "list": if let t { VStack(spacing: 12) { list(t) } }
+        case "prefs": if let t { prefsCard(t) }
+        case "carriers": if let t { carriersCard(t) }
+        default: EmptyView()
+        }
+    }
+
+    @ViewBuilder private func arrangeable(_ k: String, _ t: TrackingData?) -> some View {
+        if arranging {
+            let odd = (TrackingView.allSections.firstIndex(of: k) ?? 0) % 2 == 1
+            section(k, t)
+                .allowsHitTesting(false)
+                .overlay(RoundedRectangle(cornerRadius: 24).stroke(dropTarget == k ? Color.accent : Color.white.opacity(0.25), lineWidth: dropTarget == k ? 2 : 1))
+                .rotationEffect(.degrees(wiggle ? (odd ? 0.7 : -0.7) : 0))
+                .contentShape(RoundedRectangle(cornerRadius: 24))
+                .draggable(k) { section(k, t).frame(width: 320).opacity(0.9) }
+                .dropDestination(for: String.self) { items, _ in
+                    if let from = items.first { move(from, before: k) }
+                    dropTarget = nil
+                    return true
+                } isTargeted: { on in dropTarget = on ? k : (dropTarget == k ? nil : dropTarget) }
+        } else {
+            section(k, t)
+                .simultaneousGesture(LongPressGesture(minimumDuration: 0.5).onEnded { _ in startArranging() })
+        }
     }
 
     private func header(_ t: TrackingData?) -> some View {
@@ -474,7 +573,7 @@ struct TrackingView: View {
                         ForEach(carriers) { c in
                             Button { Haptics.shared.select(); carrier = c.id } label: {
                                 HStack(spacing: 6) {
-                                    CarrierBadge(ini: c.ini, color: c.color, fg: c.fg, size: 22)
+                                    CarrierBadge(ini: c.ini, color: c.color, fg: c.fg, size: 22, carrier: c.id)
                                     Text(c.name).font(.footnote.weight(pick == c.id ? .semibold : .regular)).lineLimit(1)
                                 }
                                 .padding(.leading, 6).padding(.trailing, 12).frame(height: 34).foregroundStyle(pick == c.id ? Color.ink : .white).contentShape(Capsule())
@@ -561,7 +660,7 @@ struct TrackingView: View {
             } label: {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 12) {
-                        CarrierBadge(ini: s.carrierIni, color: s.carrierColor, fg: s.carrierFg)
+                        CarrierBadge(ini: s.carrierIni, color: s.carrierColor, fg: s.carrierFg, carrier: s.carrier)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(s.name).fontWeight(.semibold).lineLimit(1)
                             Text("\(s.carrierName) · \(s.trackingNo)").font(.caption).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
@@ -672,7 +771,7 @@ struct TrackingView: View {
             ForEach(Array(list.enumerated()), id: \.element.id) { i, c in
                 if i > 0 { Divider().overlay(.white.opacity(0.1)) }
                 HStack(spacing: 12) {
-                    CarrierBadge(ini: c.ini, color: c.color, fg: c.fg, size: 30)
+                    CarrierBadge(ini: c.ini, color: c.color, fg: c.fg, size: 30, carrier: c.id)
                     Text(c.name).lineLimit(1)
                     Spacer()
                     if let ok = c.configured {
@@ -692,7 +791,7 @@ struct PackagesCard: View {
     var body: some View {
         let items = store.homePackages ?? store.tracking?.top(2) ?? []
         Button { Haptics.shared.tap(); store.goHl(.trk) } label: {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Image(systemName: "shippingbox.fill").foregroundStyle(Color.accentLight)
                     Text("Pakker").font(.headline)
@@ -707,7 +806,7 @@ struct PackagesCard: View {
                     ForEach(items.prefix(2)) { s in
                         VStack(alignment: .leading, spacing: 8) {
                             HStack(spacing: 10) {
-                                CarrierBadge(ini: s.carrierIni, color: s.carrierColor, fg: s.carrierFg, size: 34)
+                                CarrierBadge(ini: s.carrierIni, color: s.carrierColor, fg: s.carrierFg, size: 34, carrier: s.carrier)
                                 VStack(alignment: .leading, spacing: 1) {
                                     Text(s.name).fontWeight(.semibold).lineLimit(1)
                                     Text(s.statusText + (s.etaText.isEmpty ? "" : " · \(s.etaText)")).font(.caption).foregroundStyle(s.ready ? Color.accentLight : .white.opacity(0.65)).lineLimit(1)
@@ -716,14 +815,14 @@ struct PackagesCard: View {
                             }
                             StepBar(step: s.step, color: s.done ? .positive : .accent)
                         }
-                        .padding(12).background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 18))
+                        .padding(10).background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 18))
                     }
                     Spacer(minLength: 0)
                 }
                 HStack { Spacer(); Text("Åpne sporing ›").font(.footnote.weight(.semibold)).foregroundStyle(Color.accentLight) }
             }
             .foregroundStyle(.white)
-            .padding(20).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).glass(28)
+            .padding(18).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).glass(28)
             .contentShape(RoundedRectangle(cornerRadius: 28))
         }
         .buttonStyle(.plain)

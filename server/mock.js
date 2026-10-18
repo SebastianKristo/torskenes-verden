@@ -8,7 +8,7 @@ export const getDepartures = async () => ({ stop: 'Bislett', stopId: '6350', dep
   .map(([line, mode, to, m]) => ({ line, mode, to, time: at(m) })) });
 
 const SUGG = ['vær', 'vær oslo', 'vg', 'nrk', 'finn.no', 'yr oslo', 'ruter reiseplanlegger', 'proxmox backup', 'home assistant', 'kino oslo', 'komplett', 'oppskrift taco', 'oppskrift pizza', 'kaffe', 'kalender 2026'];
-export const getSuggestions = async (q) => { const k = String(q).trim().toLowerCase(); if (!k) return []; const hits = SUGG.filter((x) => x.startsWith(k)); return [...hits, `${k} åpningstider`, `${k} pris`].slice(0, 6); };
+export const getSuggestions = async (q, { withError = false } = {}) => { const k = String(q).trim().toLowerCase(); const list = !k ? [] : [...SUGG.filter((x) => x.startsWith(k)), `${k} åpningstider`, `${k} pris`].slice(0, 6); return withError ? { items: list } : list; };
 const at = (min) => new Date(Date.now() + min * 60000).toISOString();
 const todayAt = (h, m) => { const d = new Date(); d.setHours(h, m, 0, 0); return d; };
 const dayAt = (offset, h, m) => { const d = todayAt(h, m); d.setDate(d.getDate() + offset); return d.toISOString(); };
@@ -105,4 +105,10 @@ export const getMediaRecent = async () => ({ configured: true, mock: true, serve
   ['Shōgun', 'Serie · S01', 'plex', 'tv'], ['The Brutalist', 'Film · 2024', 'plex', 'movie'], ['Flow', 'Film · 2024', 'jellyfin', 'movie'],
   ['Slow Horses', 'Serie · S05E02', 'jellyfin', 'tv'], ['Conclave', 'Film · 2024', 'plex', 'movie'], ['Andor', 'Serie · S02E03', 'jellyfin', 'tv'],
 ].map(([title, sub, src, kind], i) => ({ src, kind, title, sub, added: new Date(Date.now() - i * 3600_000).toISOString(), poster: null, url: '#' })) });
+export const getMediaHistory = async () => ({ configured: true, mock: true, servers: mediaServers(), items: [
+  ['sebastiankristo', 'FBI', 8, 21, 'Long Shot', 'plex', 20], ['sebastiankristo', 'FBI', 8, 20, 'Roleplay', 'plex', 21], ['sebastiankristo', 'FBI', 8, 19, 'Fidelity', 'plex', 22],
+  ['Ingrid', 'Dune: Part Two', 0, 0, '2024', 'plex', 26], ['sebastiankristo', 'Severance', 2, 4, 'Woe’s Hollow', 'jellyfin', 30], ['Pål', 'The Bear', 3, 2, 'Next', 'jellyfin', 47],
+  ['sebastiankristo', 'Severance', 2, 3, 'Who Is Alive?', 'jellyfin', 52],
+].map(([user, show, season, episode, title, src, h]) => ({ src, kind: season ? 'episode' : 'movie', user, show, title, season: season || null, episode: episode || null,
+  playedAt: new Date(Date.now() - h * 3600_000).toISOString(), poster: null, url: '#' })) });
 export const getMediaPoster = async () => null;

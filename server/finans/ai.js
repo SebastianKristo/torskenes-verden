@@ -65,47 +65,72 @@ export function validate(x) {
   return out;
 }
 
+// Nettverksfeil («fetch failed») sier lite; ta med årsaken (ECONNREFUSED, tidsavbrudd …).
+const netErr = (name, url, e) => {
+  if (e.name === 'TimeoutError' || e.name === 'AbortError') return Object.assign(new Error(`${name} svarte ikke innen tidsfristen`), { noRetry: true });
+  const code = e.cause?.code || e.cause?.message || e.message;
+  return Object.assign(new Error(`${name} kan ikke nås${url ? ` på ${url}` : ''} (${code})`), { noRetry: true });
+};
+// Feilmeldingen fra API-et (Gemini: error.message, Ollama: error) i stedet for bare statuskoden.
+async function httpErr(name, res) {
+  let detail = '';
+  try { const t = await res.text(); try { const j = JSON.parse(t); detail = j.error?.message ?? j.error ?? t; } catch { detail = t; } } catch { /* tomt svar */ }
+  detail = String(detail ?? '').replace(/\s+/g, ' ').trim().slice(0, 160);
+  return Object.assign(new Error(`${name} svarte ${res.status}${detail ? `: ${detail}` : ''}`), { noRetry: res.status >= 400 && res.status < 500 });
+}
+
 async function ollama(image, mime, cats, st) {
-  if (mime === 'application/pdf') throw new Error('Ollama kan ikke lese PDF');
-  const res = await fetch(`${st.ollamaUrl.replace(/\/$/, '')}/api/chat`, {
+  if (mime === 'application/pdf') throw Object.assign(new Error('Ollama kan ikke lese PDF'), { noRetry: true });
+  if (mime === 'image/heic' || mime === 'image/heif') throw Object.assign(new Error('Ollama kan ikke lese HEIC-bilder (bruk Gemini, eller last opp som JPEG)'), { noRetry: true });
+  const base = st.ollamaUrl.replace(/\/$/, '');
+  let res;
+  try { res = await fetch(`${base}/api/chat`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     signal: AbortSignal.timeout(Number(process.env.OLLAMA_TIMEOUT ?? 120) * 1000),
     body: JSON.stringify({ model: st.ollamaModel, stream: false, format: forOllama(SCHEMA), options: { temperature: 0 },
       messages: [{ role: 'user', content: PROMPT(cats), images: [image.toString('base64')] }] }),
-  });
-  if (!res.ok) throw new Error(`Ollama svarte ${res.status}`);
-  return JSON.parse((await res.json()).message.content);
+  }); } catch (e) { throw netErr('Ollama', base, e); }
+  if (!res.ok) throw await httpErr('Ollama', res);
+  const content = (await res.json()).message?.content ?? '';
+  try { return JSON.parse(content); } catch { throw new Error('Ollama svarte ikke med gyldig JSON'); }
 }
 
 async function gemini(image, mime, cats, st) {
   const key = secret('geminiKey');
-  if (!key) throw new Error('Gemini-nøkkel mangler');
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(st.geminiModel)}:generateContent`, {
+  if (!key) throw Object.assign(new Error('Gemini-nøkkel mangler (Innstillinger → AI-motor)'), { noRetry: true });
+  let res;
+  try { res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(st.geminiModel)}:generateContent`, {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key }, signal: AbortSignal.timeout(60_000),
     body: JSON.stringify({
       contents: [{ parts: [{ inline_data: { mime_type: mime, data: image.toString('base64') } }, { text: PROMPT(cats) }] }],
       generationConfig: { temperature: 0, responseMimeType: 'application/json', responseSchema: forGemini(SCHEMA) },
     }),
-  });
-  if (!res.ok) throw new Error(`Gemini svarte ${res.status}`);
+  }); } catch (e) { throw netErr('Gemini', null, e); }
+  if (!res.ok) throw await httpErr('Gemini', res);
   const d = await res.json();
   const text = d.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join('') ?? '';
-  return JSON.parse(text);
+  if (!text) throw new Error(`Gemini ga tomt svar${d.candidates?.[0]?.finishReason ? ` (${d.candidates[0].finishReason})` : d.promptFeedback?.blockReason ? ` (${d.promptFeedback.blockReason})` : ''}`);
+  try { return JSON.parse(text); } catch { throw new Error('Gemini svarte ikke med gyldig JSON'); }
 }
 
 const PROVIDERS = { ollama, gemini };
 export const providerName = (p) => (p === 'gemini' ? 'Gemini' : 'Ollama');
 
 // Leser kvitteringen med valgt motor (eller tvunget motor ved «Les på nytt»), med reserve og ett nytt forsøk.
-export async function extract(image, mime, cats, force) {
+// HEIC går rett til Gemini når nøkkelen finnes (Ollama kan ikke lese det). log(steg, detalj) får hvert forsøk.
+// Feilmeldingen tar med årsaken fra hver motor, ikke bare den siste.
+export async function extract(image, mime, cats, force, { log = () => {} } = {}) {
   const st = settings();
-  const order = force ? [force] : [st.provider, ...(st.fallback ? [st.provider === 'ollama' ? 'gemini' : 'ollama'] : [])];
+  let order = force ? [force] : [st.provider, ...(st.fallback ? [st.provider === 'ollama' ? 'gemini' : 'ollama'] : [])];
+  if (!force && (mime === 'image/heic' || mime === 'image/heif') && secret('geminiKey')) order = ['gemini', ...order];
   let lastErr;
+  const errors = [];
   for (const p of [...new Set(order)]) {
     const model = p === 'gemini' ? st.geminiModel : st.ollamaModel;
     for (let attempt = 0; attempt < 2; attempt++) {
       const t0 = Date.now();
       try {
+        log('ai', `${providerName(p)} (${model})${attempt ? ', nytt forsøk' : ''}`);
         const raw = await PROVIDERS[p](image, mime, cats, st);
         const data = validate(raw);
         // Lav sikkerhet hos primærmotoren: prøv reserven hvis den finnes.
@@ -116,11 +141,13 @@ export async function extract(image, mime, cats, force) {
         return { provider: p, model, data, seconds: (Date.now() - t0) / 1000 };
       } catch (e) {
         lastErr = e;
-        if (/mangler|kan ikke|svarte 4/.test(e.message)) break; // ikke vits å prøve igjen
+        log('ai-feil', `${providerName(p)}: ${e.message}`);
+        if (attempt === 1 || e.noRetry || /mangler|kan ikke|svarte 4/.test(e.message)) { errors.push(`${providerName(p)}: ${e.message}`); break; } // ikke vits å prøve igjen
       }
     }
   }
   if (lastErr?.partial) return lastErr.partial;
+  if (errors.length > 1) throw new Error(errors.join(' · '));
   throw lastErr ?? new Error('Ingen AI-motor tilgjengelig');
 }
 

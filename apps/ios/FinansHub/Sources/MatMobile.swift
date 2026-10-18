@@ -18,14 +18,16 @@ struct MatPalette {
                                   black: Color(hex: "#ECEFE6"), onBlack: Color(hex: "#141612"), tagBg: Color(hex: "#2C2519"), tagFg: Color(hex: "#F0B470"), row: Color(hex: "#252821"),
                                   tiles: ["#3B4421", "#3D3323", "#24403A", "#4A2E26", "#36304A"].map { Color(hex: $0) })
 
-    /// Lys, mørk eller som systemet (Innstillinger → Utseende → Matplan).
-    @MainActor static func current(_ store: Store) -> MatPalette {
-        switch store.layout.matTheme {
-        case "dark": return night
-        case "system": return UIScreen.main.traitCollection.userInterfaceStyle == .dark ? night : light
-        default: return light
-        }
+    /// Appens eget tema: mørkt glass over bakgrunnen, med appens aksentfarge.
+    @MainActor static var app: MatPalette {
+        MatPalette(dark: true, bg: .clear, text: .white, sub: .white.opacity(0.7), muted: .white.opacity(0.55),
+                   card: .white.opacity(0.08), accent: .accentLight, lime: Color.accent.opacity(0.22), cream: .white.opacity(0.10), border: .white.opacity(0.14),
+                   black: .white, onBlack: .ink, tagBg: .white.opacity(0.12), tagFg: .accentLight, row: .white.opacity(0.06),
+                   tiles: [Color.accent.opacity(0.22), .white.opacity(0.10), Color.positive.opacity(0.18), Color.accent.opacity(0.14), .white.opacity(0.14)])
     }
+
+    /// Matplan følger appens tema (glass på iOS). Det egne lys/mørk-valget er fjernet.
+    @MainActor static func current(_ store: Store) -> MatPalette { app }
 }
 
 private let shortDay = ["Ma", "Ti", "On", "To", "Fr", "Lø", "Sø"]
@@ -76,11 +78,6 @@ struct MatSurface: View {
                 Text("Middag denne uka").font(.system(size: 30, weight: .bold)).foregroundStyle(p.text).lineLimit(1).minimumScaleFactor(0.7)
             }
             Spacer()
-            Button { store.setMatTheme(p.dark ? "light" : "dark") } label: {
-                Text(p.dark ? "☀" : "☾").font(.system(size: 18)).foregroundStyle(p.text).frame(width: 44, height: 44)
-                    .background(p.card, in: Circle()).overlay(Circle().stroke(p.border, lineWidth: 1))
-            }
-            .buttonStyle(GlassPress()).accessibilityLabel(p.dark ? "Bytt til lyst utseende" : "Bytt til mørkt utseende")
             Button { store.planWeek() } label: {
                 Text("✦").font(.system(size: 18, weight: .bold)).foregroundStyle(p.onBlack).frame(width: 44, height: 44).background(p.black, in: Circle())
             }

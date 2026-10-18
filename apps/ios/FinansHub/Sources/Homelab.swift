@@ -52,7 +52,7 @@ struct HomelabView: View {
         return HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(store.editHome ? "Homelab" : longDate()).font(.subheadline).foregroundStyle(.white.opacity(0.7))
-                Text(store.editHome ? "Rediger forsiden" : hello).font(.system(size: 30, weight: .bold)).lineLimit(1).minimumScaleFactor(0.6)
+                greetingText(store.editHome ? "Rediger forsiden" : hello)
             }
             Spacer()
             if store.editHome {
@@ -69,6 +69,13 @@ struct HomelabView: View {
             }
         }
         .padding(.top, 6)
+    }
+
+    /// Hilsenen står alltid på to linjer: «God kveld,» over navnet.
+    private func greetingText(_ s: String) -> some View {
+        let two: String
+        if let r = s.range(of: ", ") { two = String(s[..<r.lowerBound]) + ",\n" + String(s[r.upperBound...]) } else { two = s }
+        return Text(two).font(.system(size: 30, weight: .bold)).lineLimit(2).minimumScaleFactor(0.7).fixedSize(horizontal: false, vertical: true)
     }
 
     @ViewBuilder private func section(_ id: String) -> some View {
@@ -335,38 +342,62 @@ struct ServerCard: View {
     }
 }
 
-/// Ruter: neste avganger per strekning.
+/// Ruter: kompakt som i designet – farget linjemerke, destinasjon og minutter på én rad, maks 4 avganger per strekning.
 struct RuterCard: View {
     @Environment(Store.self) private var store
     var body: some View {
         let lines = store.mobileHome?.ruter ?? []
-        VStack(alignment: .leading, spacing: 10) {
-            SectionLabel(text: "Ruter")
-            if lines.isEmpty {
-                Text("Ingen strekninger. Legg dem til i Homelab på PC.").font(.footnote).foregroundStyle(.white.opacity(0.6)).padding(16).frame(maxWidth: .infinity, alignment: .leading).glass(22)
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(lines.enumerated()), id: \.offset) { i, r in
-                        if i > 0 { Divider().overlay(.white.opacity(0.12)) }
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(r.to.isEmpty ? r.from : "\(r.from) → \(r.to)").font(.subheadline.weight(.semibold)).lineLimit(1)
-                            if r.departures.isEmpty { Text("Ingen avganger nå").font(.footnote).foregroundStyle(.white.opacity(0.6)) }
-                            ForEach(Array(r.departures.prefix(4).enumerated()), id: \.offset) { _, d in
-                                HStack(spacing: 10) {
-                                    Text(d.line).font(.caption.weight(.bold)).foregroundStyle(.white).padding(.horizontal, 8).padding(.vertical, 3)
-                                        .background(Color(hex: d.color ?? "#E60000"), in: RoundedRectangle(cornerRadius: 6))
-                                    Text(d.time ?? "").font(.system(.footnote, design: .monospaced)).foregroundStyle(.white.opacity(0.7))
-                                    Spacer()
-                                    Text(d.min.map { $0 <= 0 ? "Nå" : "\($0) min" } ?? "").font(.system(.subheadline, design: .monospaced).weight(.semibold))
-                                }
-                            }
-                        }
-                        .padding(16)
-                    }
+        if lines.isEmpty {
+            Text("Ingen strekninger. Legg dem til i Homelab på PC.").font(.footnote).foregroundStyle(.white.opacity(0.6)).padding(16).frame(maxWidth: .infinity, alignment: .leading).glass(24)
+        } else {
+            VStack(spacing: 10) {
+                ForEach(Array(lines.enumerated()), id: \.offset) { _, r in
+                    RuterBlock(line: r)
                 }
-                .glass(24)
             }
         }
+    }
+}
+
+private struct RuterBlock: View {
+    let line: RuterLine
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text("Ruter · \(line.from)").font(.system(size: 16, weight: .bold)).lineLimit(1)
+                Spacer(minLength: 0)
+                Text("Sanntid").font(.system(size: 12.5)).foregroundStyle(.white.opacity(0.62))
+            }
+            .padding(.bottom, 6)
+            if line.departures.isEmpty {
+                Text("Ingen avganger nå").font(.footnote).foregroundStyle(.white.opacity(0.6)).frame(minHeight: 40)
+            }
+            ForEach(Array(line.departures.prefix(4).enumerated()), id: \.offset) { _, d in
+                RuterRow(dep: d, fallback: line.to)
+            }
+        }
+        .padding(.horizontal, 18).padding(.vertical, 16)
+        .frame(maxWidth: .infinity, alignment: .leading).glass(24)
+    }
+}
+
+private struct RuterRow: View {
+    let dep: Departure
+    let fallback: String
+    private var minText: String {
+        guard let m = dep.min else { return dep.time ?? "" }
+        return m <= 0 ? "Nå" : "\(m) min"
+    }
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(dep.line).font(.system(size: 13, weight: .bold)).foregroundStyle(.white)
+                .padding(.horizontal, 6).frame(minWidth: 32, minHeight: 24)
+                .background(Color(hex: dep.color ?? "#E60000"), in: RoundedRectangle(cornerRadius: 6))
+            Text(dep.to ?? fallback).font(.system(size: 15)).lineLimit(1).truncationMode(.tail)
+            Spacer(minLength: 0)
+            Text(minText).font(.system(size: 15, weight: .semibold)).monospacedDigit()
+        }
+        .frame(minHeight: 40)
     }
 }
 

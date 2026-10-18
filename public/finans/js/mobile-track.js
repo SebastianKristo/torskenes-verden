@@ -28,6 +28,9 @@ export const CAR = [
   ['other', 'Annen (17TRACK)', '17', '#3A4252', '#eef0f4', [], 'https://t.17track.net/no#nums='],
 ].map(([id, name, ini, c, fg, re, url]) => ({ id, name, ini, c, fg, re, url }));
 const CM = Object.fromEntries(CAR.map((c) => [c.id, c]));
+// Logoer som i Sporing-designet: favicon fra transportørens domene på hvit bakgrunn, initialene vises hvis bildet ikke lastes.
+const CDOM = { posten: 'posten.no', bring: 'bring.no', postnord: 'postnord.no', dhl: 'dhl.com', ups: 'ups.com', fedex: 'fedex.com', gls: 'gls-group.eu', schenker: 'dbschenker.com', helthjem: 'helthjem.no', budbee: 'budbee.com', instabox: 'instabox.io', other: '17track.net' };
+const cLogo = (id) => `https://www.google.com/s2/favicons?domain=${CDOM[id] ?? CDOM.other}&sz=128`;
 const carOf = (id) => CM[id] ?? CM.other;
 const normNo = (no) => String(no ?? '').replace(/[\s-]+/g, '').toUpperCase();
 const detectLocal = (no) => CAR.find((c) => c.id !== 'other' && c.re.some((r) => r.test(no)))?.id ?? 'other';
@@ -46,7 +49,8 @@ export const TR = { data: null, err: '', missing: false, f: { no: '', name: '', 
 
 /* ---------- Data ---------- */
 
-const stepOf = (p) => (Number.isFinite(p.step) ? p.step : STEP[p.status] ?? 0);
+// Status vinner over et eldre/feil steg-tall: en levert pakke skal aldri vises som «Registrert».
+const stepOf = (p) => (p.status === 'delivered' ? 4 : Math.max(Number.isFinite(p.step) ? p.step : 0, STEP[p.status] ?? 0));
 const isDone = (p) => p.status === 'delivered' || stepOf(p) >= 4;
 const isReady = (p) => p.status === 'ready_for_pickup';
 export const active = (items) => (items ?? []).filter((p) => !p.archived && !isDone(p));
@@ -98,7 +102,7 @@ const isI = () => theme() === 'ios';
 const gl = (c = 'glass2') => (isI() ? c : '');
 const hm = (t) => (t ? new Date(t).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }) : '–');
 const dm = (t) => { if (!t) return ''; const d = new Date(t); return Number.isNaN(+d) ? String(t) : `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')} ${hm(t)}`; };
-export const badge = (car, size = 42) => { const c = carOf(car); return `<span class="trk-badge" style="width:${size}px;height:${size}px;background:${c.c};color:${c.fg};font-size:${c.ini.length > 2 ? size * 0.27 : size * 0.36}px" aria-hidden="true">${esc(c.ini)}</span>`; };
+export const badge = (car, size = 42) => { const c = carOf(car); return `<span class="trk-badge" style="width:${size}px;height:${size}px;background:${c.c};color:${c.fg};font-size:${c.ini.length > 2 ? size * 0.27 : size * 0.36}px;border-radius:${Math.round(size * 0.29)}px" aria-hidden="true">${esc(c.ini)}<img src="${cLogo(c.id)}" alt="" loading="lazy"></span>`; };
 const statusTxt = (p) => (isDone(p) ? (p.direction === 'out' ? 'Levert til kjøper' : 'Levert') : p.statusText || STXT[p.status] || 'Ukjent status');
 const statusCls = (p) => (isReady(p) ? 'ready' : isDone(p) ? 'done' : p.status === 'delayed' ? 'late' : '');
 const etaTxt = (p) => {
@@ -114,9 +118,9 @@ function fmtEta(v) {
 const srcPill = (p) => (p.source === 'finn' ? '<em class="trk-src finn">Finn</em>' : p.source === 'email' ? '<em class="trk-src mail">E-post</em>' : '');
 function steps(p) {
   const L = Array.isArray(p.steps) && p.steps.length === 5 ? p.steps : p.direction === 'out' ? ST_OUT : ST_IN, st = stepOf(p), fin = isDone(p);
-  return `<div class="trk-steps" aria-label="Steg ${st + 1} av 5: ${esc(L[st])}">${L.map((n, j) => `<span class="${j <= st ? 'on' : ''}${j === st && !fin ? ' cur' : ''}"><i></i><small>${esc(j === 3 && p.direction !== 'out' && p.status === 'out_for_delivery' ? 'Ute' : n)}</small></span>`).join('')}</div>`;
+  return `<div class="trk-steps${fin ? ' fin' : ''}" aria-label="Steg ${st + 1} av 5: ${esc(L[st])}">${L.map((n, j) => `<span class="${j <= st ? 'on' : ''}${j === st && !fin ? ' cur' : ''}"><i></i><small>${esc(j === 3 && p.direction !== 'out' && p.status === 'out_for_delivery' ? 'Ute' : n)}</small></span>`).join('')}</div>`;
 }
-const bars = (p) => { const st = stepOf(p), fin = isDone(p); return `<span class="trk-bars" aria-hidden="true">${[0, 1, 2, 3, 4].map((j) => `<i class="${j <= st ? (j === st && !fin ? 'cur' : 'on') : ''}"></i>`).join('')}</span>`; };
+const bars = (p) => { const st = stepOf(p), fin = isDone(p); return `<span class="trk-bars${fin ? ' fin' : ''}" aria-hidden="true">${[0, 1, 2, 3, 4].map((j) => `<i class="${j <= st ? (j === st && !fin ? 'cur' : 'on') : ''}"></i>`).join('')}</span>`; };
 
 /* ---------- Pakker-kortet i karusellen (Homelab-hjem) ---------- */
 
@@ -129,16 +133,15 @@ export function pkgCard(th, list, { loading = false, missing = false } = {}) {
   return `<a class="hcard pkgcard ${th === 'ios' ? 'glass2' : ''}" href="#/spor" aria-label="Pakker – åpne Sporing">
     <span class="pkg-head"><span class="pkg-ic">${icon('box', 18)}</span><b class="m-grow">Pakker</b><span class="dim">${esc(count)}</span></span>
     ${rows || `<span class="pkg-none">${loading ? 'Henter pakker …' : missing ? 'Sporing krever nyere server.' : 'Ingen pakker på vei.'}</span>`}
-    ${pkgExtra(all)}
+    ${items.length < 2 ? pkgExtra() : ''}
     <span class="pkg-foot">${items.length ? 'Åpne sporing ›' : 'Legg til sporingsnummer ›'}</span></a>`;
 }
 
-// Fyller resten av kortet (det er like høyt som Klokke og vær): neste pakke etter de to øverst og tellere.
-function pkgExtra(all) {
-  const L = segLists(TR.data?.items ?? []), more = topPackages(all, 3)[2];
+// Fyller resten av kortet når det er færre enn to pakker (kortet har fast høyde, lik Klokke og vær): tellere.
+function pkgExtra() {
+  const L = segLists(TR.data?.items ?? []);
   if (!TR.data?.items) return '';
-  return `${more ? `<span class="pkg-next">Også på vei: <b>${esc(more.name || more.trackingNo)}</b> · ${esc(statusTxt(more))}</span>` : ''}
-    <span class="pkg-stats"><span><b>${L.act.length}</b>På vei</span><span><b>${L.pick.length}</b>Klar for henting</span><span><b>${L.done.length}</b>Levert</span></span>`;
+  return `<span class="pkg-stats"><span><b>${L.act.length}</b>På vei</span><span><b>${L.pick.length}</b>Klar for henting</span><span><b>${L.done.length}</b>Levert</span></span>`;
 }
 
 /* ---------- Sporing-siden ---------- */

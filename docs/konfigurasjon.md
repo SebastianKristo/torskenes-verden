@@ -23,7 +23,7 @@ Konfigurasjonen kommer fra to steder:
 | `MOCK_DATA` | | – | `1` gir eksempeldata uten eksterne kall. |
 | `TOTP_ENC_KEY` | | avledet | 64 hex-tegn. Krypterer 2FA-hemmeligheter. |
 | `SECRET_KEY` | | avledet | Krypterer lagrede nøkler i FinansHub (Gemini, Trading 212, SMB, IMAP). |
-| `MAX_UPLOAD_MB` | | `15` | Største fil ved opplasting. |
+| `MAX_UPLOAD_MB` | | `40` | Største opplasting (original, JPEG-kopi og miniatyr til sammen). |
 
 > [!IMPORTANT]
 > Bytter du `SESSION_SECRET` (og ikke har satt `TOTP_ENC_KEY` og `SECRET_KEY`), kan ikke lagrede 2FA-hemmeligheter og nøkler leses lenger. Sett dem eksplisitt hvis du vil kunne rotere sesjonshemmeligheten.

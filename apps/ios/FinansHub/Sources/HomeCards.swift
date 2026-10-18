@@ -105,10 +105,12 @@ func weatherSymbol(_ code: String, text: String = "") -> String {
 private func degText(_ v: Double?) -> String { v.map { "\(Int($0.rounded()))°" } ?? "–" }
 private func mmText(_ v: Double) -> String { String(format: v < 10 ? "%.1f" : "%.0f", v).replacingOccurrences(of: ".", with: ",") }
 
-/// Klokke og vær (kompakt, like stort som Pakker-kortet): tid, ikon og temperatur, «føles som», høy/lav,
-/// en kort linje, 6 timer, nowcast, de neste 3 dagene og chips for sol, UV og lufttrykk.
+/// Klokke og vær på mobil: tid, dato, temperatur, tilstand, «føles som» / høy / lav, vindlinjen og en liten
+/// stripe med de neste 6 timene nederst. Nowcast, dagene og chipsene hører bare til på web-Dashboard.
 struct ClockWeather: View {
     @Environment(Store.self) private var store
+    /// Når false fyller ikke kortet høyden (brukes for å måle naturlig høyde).
+    var fill = true
     var body: some View {
         TimelineView(.everyMinute) { ctx in card(ctx.date) }
     }
@@ -118,9 +120,10 @@ struct ClockWeather: View {
         VStack(alignment: .leading, spacing: 10) {
             header(date)
             if let x = store.homeWeather { details(x) }
-            Spacer(minLength: 0)
         }
-        .padding(18).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).glass(28)
+        .padding(18)
+        .frame(maxWidth: .infinity, maxHeight: fill ? .infinity : nil, alignment: .topLeading)
+        .glass(28)
     }
 
     private func header(_ date: Date) -> some View {
@@ -162,47 +165,22 @@ struct ClockWeather: View {
     @ViewBuilder private func details(_ x: WeatherX) -> some View {
         let line = shortLine(x)
         if !line.isEmpty { Text(line.joined(separator: " · ")).font(.caption).foregroundStyle(.white.opacity(0.7)).lineLimit(1).minimumScaleFactor(0.8) }
-        if !x.hours.isEmpty {
-            HStack(spacing: 0) {
-                ForEach(Array(x.hours.prefix(6).enumerated()), id: \.offset) { _, h in
-                    VStack(spacing: 3) {
-                        Text(h.label).font(.caption2).foregroundStyle(.white.opacity(0.65)).lineLimit(1)
-                        Image(systemName: weatherSymbol(h.symbol)).symbolRenderingMode(.multicolor).font(.system(size: 16)).frame(height: 18)
-                        Text(degText(h.temp)).font(.caption.weight(.semibold)).monospacedDigit()
-                        Text(h.mm > 0 ? mmText(h.mm) : " ").font(.system(size: 9)).foregroundStyle(Color(hex: "#8FC1FF"))
-                    }
-                    .frame(maxWidth: .infinity)
+        if fill { Spacer(minLength: 0) }
+        if !x.hours.isEmpty { hourStrip(Array(x.hours.prefix(6))) }
+    }
+
+    private func hourStrip(_ hours: [WeatherX.Hour]) -> some View {
+        HStack(spacing: 0) {
+            ForEach(Array(hours.enumerated()), id: \.offset) { _, h in
+                VStack(spacing: 3) {
+                    Text(h.label).font(.caption2).foregroundStyle(.white.opacity(0.65)).lineLimit(1)
+                    Image(systemName: weatherSymbol(h.symbol)).symbolRenderingMode(.multicolor).font(.system(size: 16)).frame(height: 18)
+                    Text(degText(h.temp)).font(.caption.weight(.semibold)).monospacedDigit()
                 }
-            }
-            .padding(.vertical, 6).background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
-        }
-        if !x.nowcast.isEmpty {
-            Label(x.nowcast, systemImage: "umbrella").font(.caption).foregroundStyle(Color.accentLight).lineLimit(2)
-        }
-        let days = x.days.count > 3 ? Array(x.days.dropFirst().prefix(3)) : x.days
-        if !days.isEmpty {
-            VStack(spacing: 4) {
-                ForEach(Array(days.enumerated()), id: \.offset) { _, d in
-                    HStack(spacing: 10) {
-                        Text(d.label).font(.caption).frame(width: 52, alignment: .leading).lineLimit(1)
-                        Image(systemName: weatherSymbol(d.symbol)).symbolRenderingMode(.multicolor).font(.system(size: 14)).frame(width: 22)
-                        Text("\(degText(d.max)) / \(degText(d.min))").font(.caption.weight(.semibold)).monospacedDigit()
-                        Spacer()
-                        if d.mm > 0 { Text("\(mmText(d.mm)) mm").font(.caption2).foregroundStyle(Color(hex: "#8FC1FF")) }
-                    }
-                }
+                .frame(maxWidth: .infinity)
             }
         }
-        let chips = chipItems(x)
-        if !chips.isEmpty {
-            HStack(spacing: 6) {
-                ForEach(chips, id: \.0) { icon, t in
-                    HStack(spacing: 4) { Image(systemName: icon).font(.system(size: 10)); Text(t).font(.caption2.weight(.semibold)).lineLimit(1) }
-                        .foregroundStyle(.white.opacity(0.85)).padding(.horizontal, 8).frame(height: 24).background(.white.opacity(0.1), in: Capsule())
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
+        .padding(.vertical, 6).background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
     }
 
     private func shortLine(_ x: WeatherX) -> [String] {
@@ -218,17 +196,6 @@ struct ClockWeather: View {
         return parts
     }
 
-    private func chipItems(_ x: WeatherX) -> [(String, String)] {
-        var out: [(String, String)] = []
-        if let d = x.sunrise { out.append(("sunrise", JS.fmt(d, "HH:mm"))) }
-        if let d = x.sunset { out.append(("sunset", JS.fmt(d, "HH:mm"))) }
-        if let u = x.uv { out.append(("sun.max", "UV \(Int(u.rounded()))")) }
-        if let p = x.pressure {
-            let trend = x.pressureTrend == "Stigende" ? " ↑" : (x.pressureTrend == "Synkende" ? " ↓" : "")
-            out.append(("gauge.with.dots.needle.33percent", "\(Int(p.rounded())) hPa" + trend))
-        }
-        return out
-    }
 }
 
 /// «Klokke og vær» på Homelab-hjem: sveip sideveis mellom været og pakkene, med prikker under (kan trykkes).
@@ -236,6 +203,7 @@ struct ClockWeather: View {
 struct HomeCarousel: View {
     @Environment(Store.self) private var store
     @State private var page = 0
+    @State private var clockHeight: CGFloat = 246
     var body: some View {
         VStack(spacing: 10) {
             TabView(selection: $page) {
@@ -243,7 +211,11 @@ struct HomeCarousel: View {
                 PackagesCard().padding(.horizontal, 2).tag(1)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
-            .frame(height: store.homeWeather == nil ? 250 : 400)
+            .frame(height: max(clockHeight, 246))
+            // Kortene er like høye: høyden er klokkekortets naturlige høyde (Pakker fyller samme høyde, også tomt).
+            .background(ClockWeather(fill: false).fixedSize(horizontal: false, vertical: true).hidden()
+                .background(GeometryReader { g in Color.clear.preference(key: ClockHeightKey.self, value: g.size.height) }))
+            .onPreferenceChange(ClockHeightKey.self) { h in if h > 0 { clockHeight = h } }
             .onChange(of: page) { _, _ in Haptics.shared.select() }
             HStack(spacing: 6) {
                 ForEach(0..<2, id: \.self) { i in
@@ -255,4 +227,9 @@ struct HomeCarousel: View {
             }
         }
     }
+}
+
+private struct ClockHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }

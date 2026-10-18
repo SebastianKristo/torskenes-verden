@@ -7,12 +7,14 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { db, OWNER, settings, saveSettings, secret, setSecret, secretSource, DEFAULT_SETTINGS } from './db.js';
 import { extract, extractText, health, providerName } from './ai.js';
+import { sniffMime, isHeic, scanLog, scanLogOf } from './scan.js';
 import { mailConfig, mailStatus, testMail, runMail, recentImports, startMailWorker } from './mail.js';
 import { parseCsv, PROFILES } from './csv.js';
 import { domainFor, learnDomain, validDomain, logo, heuristic, kick as kickAi, summarizeReceipt } from './enrich.js';
-import { parseFile, readText, rowsToTx } from './importer.js';
+import { parseFile } from './importer.js';
+import { importRows, splitRows, listTemplates, deleteTemplate } from './import-templates.js';
 import { parseFinnEmail } from './finn.js';
-import { mountFinn, linkMail, attachParsed } from './finn-routes.js';
+import { mountFinn, mountFinnImport, linkMail, attachParsed } from './finn-routes.js';
 import { sessionUser, clientIp, verifyLogin, userInfo, listUsers } from '../auth.js';
 import * as auth from '../auth.js';
 import { config } from '../config.js';
@@ -184,8 +186,20 @@ function receiptOut(r, cats = catById(), accs = accById()) {
     accountId: r.account_id, account: accs.get(r.account_id)?.name ?? null, confidence: r.confidence, flag, error: r.error, mime: r.mime,
     file: r.file ? `/finans/api/receipts/${r.id}/file` : null, thumb: r.thumb ? `/finans/api/receipts/${r.id}/thumb` : null,
     extraction: ex, match: match ? txOut(match, cats, accs) : null, created: r.created, name: r.name ?? null,
-    aiShort: r.ai_short ?? (r.status === 'pending' || r.status === 'processing' ? 'Gemini leser kvitteringen …' : null), aiLong: r.ai_long ?? null,
+    aiShort: r.ai_short ?? (r.status === 'pending' || r.status === 'processing' ? `${providerName(st.provider)} leser kvitteringen …` : null), aiLong: r.ai_long ?? null,
+    ...reanalyzeInfo(r, st), log: scanLogOf(r),
     domain: r.domain || domainFor(r.merchant), target: r.target ?? null, source: r.source ?? 'upload', ...(r.meta ? { email: (() => { try { const m = JSON.parse(r.meta); return { from: m.from, subject: m.subject, date: m.date }; } catch { return null; } })() } : {}) };
+}
+
+// «✦ Analyser på nytt med Gemini»: når lesingen feilet, var usikker (under minConf) eller Ollama var usikker.
+// Krever Gemini-nøkkel; ellers sier reanalyzeReason hva som mangler.
+function reanalyzeInfo(r, st = settings()) {
+  if (!r.file || ['booked', 'rejected', 'pending', 'processing'].includes(r.status)) return { canReanalyze: false };
+  const unsure = (r.confidence ?? 0) < st.minConf / 100;
+  const needs = r.status === 'failed' || !!r.error || unsure;
+  if (!needs) return { canReanalyze: false };
+  if (!secret('geminiKey')) return { canReanalyze: false, reanalyzeReason: 'Legg inn en Gemini-nøkkel under Innstillinger → AI-motor for å analysere på nytt.' };
+  return { canReanalyze: true, ...(r.candidate ? { reanalyzePending: true } : {}) };
 }
 
 // Finn banktransaksjon: samme beløp ±1 kr og dato ±3 dager, uten kvittering fra før. Kort-siffer gir forrang.
@@ -205,17 +219,25 @@ let running = false;
 async function runQueue() {
   if (running) return;
   running = true;
-  while (queue.length) {
+  // Én kvittering som feiler (eller en uventet feil her) skal aldri stoppe resten av køen.
+  try { while (queue.length) {
     const { id, force } = queue.shift();
     const r = q('SELECT * FROM fh_receipts WHERE id=?').get(id);
     if (!r) continue;
     q("UPDATE fh_receipts SET status='processing', error=NULL, started=? WHERE id=?").run(Date.now(), id);
+    const log = (step, detail) => scanLog(id, step, detail);
     try {
-      const img = await readFile(join(DIR, r.scan ?? r.file));
+      const rel = r.scan ?? r.file;
+      let img;
+      try { img = await readFile(join(DIR, rel)); } catch (e) { throw new Error(`Fant ikke filen på serveren (${e.code ?? e.message})`); }
+      const mime = r.scan ? 'image/jpeg' : r.mime;
+      log('lest', `${rel.split('/').pop()} · ${mime} · ${Math.round(img.length / 1024)} kB${r.scan ? ' (nedskalert JPEG)' : ''}`);
+      if (isHeic(mime)) log('heic', secret('geminiKey') ? 'HEIC uten JPEG-kopi fra klienten: sendes til Gemini, som kan lese HEIC' : 'HEIC uten JPEG-kopi og uten Gemini-nøkkel: Ollama kan ikke lese HEIC');
       const cats = q("SELECT name FROM fh_categories WHERE kind='expense' ORDER BY sort").all().map((x) => x.name);
       // E-post uten vedlegg lagres som tekst og leses som tekst.
-      const res = r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats) : await extract(img, r.scan ? 'image/jpeg' : r.mime, cats, force);
+      const res = r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats) : await extract(img, mime, cats, force, { log });
       const d = res.data;
+      log('lest-ut', `${providerName(res.provider)} · ${d.merchant ?? 'ukjent butikk'} · ${d.total ?? '–'} kr · sikkerhet ${Math.round((d.confidence.total ?? 0) * 100)} % · ${res.seconds?.toFixed?.(1) ?? '?'} s`);
       const totalOre = d.total != null ? Math.round(d.total * 100) : null;
       const st = settings();
       // Regler går foran AI-forslaget.
@@ -229,13 +251,15 @@ async function runQueue() {
       const sum = await summarizeReceipt(d, catById().get(catId)?.name);
       q('UPDATE fh_receipts SET ai_short=?, ai_long=?, domain=? WHERE id=?').run(sum.short, sum.long, sum.domain, id);
       routeTarget(id);
+      log('lagret', 'klar til gjennomgang');
     } catch (e) {
       console.warn('[finans] Kvittering', id, e.message);
+      log('feil', e.message);
       q("UPDATE fh_receipts SET status='needs_review', error=?, confidence=0 WHERE id=? AND status='processing'").run(`Kunne ikke leses automatisk: ${e.message}. Fyll ut manuelt.`, id);
       try { routeTarget(id); } catch { /* mappen kan være slettet */ }
     }
-  }
-  running = false;
+  } } catch (e) { console.error('[skann] køen', e); } finally { running = false; }
+  if (queue.length) setImmediate(runQueue);
 }
 // Kvitteringer lastet opp fra Subscription OS eller en delt mappe havner også der når AI-en er ferdig.
 // Fra mappe: target «folder:<id>:<bruker-id>». Lastet opp av en bruker uten admin-rolle → status «filed» (bare i mappen,
@@ -322,7 +346,8 @@ api.use('*', async (c, next) => {
   await next();
 });
 const R = need('finance:read'), W = need('finance:write');
-const upload = bodyLimit({ maxSize: Number(process.env.MAX_UPLOAD_MB ?? 15) * 1024 * 1024 + 4096, onError: (c) => bad(c, `Filen er for stor (maks ${process.env.MAX_UPLOAD_MB ?? 15} MB)`, 413) });
+// Original + JPEG-kopi + miniatyr i samme forespørsel; et 48 MP-bilde fra iPhone kan alene være over 15 MB.
+const upload = bodyLimit({ maxSize: Number(process.env.MAX_UPLOAD_MB ?? 40) * 1024 * 1024 + 4096, onError: (c) => bad(c, `Filen er for stor (maks ${process.env.MAX_UPLOAD_MB ?? 40} MB)`, 413) });
 
 // Sidemenyen: Import ligger nå under Innstillinger, AI-søk har egen side etter Transaksjoner.
 // Matplan er den felles Homelab-komponenten (bare for administratorer, som resten av regnskapet).
@@ -598,7 +623,13 @@ api.post('/import/csv', W, upload, async (c) => {
   if (!accountId || !q('SELECT 1 FROM fh_accounts WHERE id=?').get(accountId)) return bad(c, 'Velg kontoen filen hører til');
   const profile = PROFILES.includes(b.profile) ? b.profile : settings().csvProfile;
   let parsed;
-  try { parsed = parseCsv(await b.file.text(), accountId, profile); } catch (e) { return bad(c, e.message); }
+  const text = await b.file.text();
+  // Ukjente kolonner: importmalene (innebygde, lagrede eller ✦ AI) tar over.
+  try { parsed = parseCsv(text, accountId, profile); } catch (e) {
+    const r = await importRows(splitRows(text), accountId);
+    if (!r.rows.length) return bad(c, e.message);
+    parsed = { rows: r.rows.map((x) => ({ ...x, merchant: x.description })), skipped: r.skipped };
+  }
   const auto = settings().autoCat;
   const ins = q("INSERT OR IGNORE INTO fh_transactions(account_id,date,amount,description,merchant,category_id,source,external_id,raw_bank_row,created) VALUES(?,?,?,?,?,?,'csv',?,?,?)");
   const bankMeta = { account: accName(accountId), source: `CSV · ${profile}`, file: str(b.file.name, 120) || null, importedAt: Date.now() };
@@ -628,18 +659,28 @@ async function mailReceipt(f, target) {
   const text = [`Fra: ${m.from?.text ?? ''}`, `Emne: ${m.subject ?? ''}`, `Dato: ${m.date?.toISOString?.() ?? ''}`, '', m.text || String(m.html || '').replace(/<[^>]+>/g, ' ')].join('\n');
   return ingestReceipt({ buffer: Buffer.from(text.slice(0, 60000)), mime: 'text/plain', name: m.subject || f.name, meta: { subject: m.subject, from: m.from?.text }, target, source: 'upload' });
 }
+// Filtypen leses fra innholdet: apper og nettlesere sender ofte tom eller feil type (HEIC fra Filer, octet-stream, image/jpg).
+async function typed(f) {
+  const buf = Buffer.from(await f.arrayBuffer());
+  const mime = sniffMime(buf, f.type, f.name);
+  return mime ? new File([buf], f.name || `kvittering.${MIME[mime]}`, { type: mime }) : f;
+}
 async function receiptUpload(c, target = null) {
   const b = await c.req.parseBody({ all: true });
-  const files = asList(b.file).concat(asList(b['file[]']), asList(b.files), asList(b['files[]']));
+  const raw = asList(b.file).concat(asList(b['file[]']), asList(b.files), asList(b['files[]']));
+  const files = await Promise.all(raw.map(typed));
+  for (const f of raw) console.info(`[skann] mottatt ${f.name || '(uten navn)'} · oppgitt ${f.type || 'ingen type'} · ${Math.round(f.size / 1024)} kB`);
   if (target === 'sub' && files.length && files.every((f) => MIME[f.type] || isMail(f))) {
     const ids = [];
     for (const f of files) ids.push(MIME[f.type] ? await saveReceipt(f, null, null, null, target) : await mailReceipt(f, target));
     runQueue();
     return c.json({ ...receiptOut(origSelect.get(ids[0])), jobs: ids.map((id) => jobOut(origSelect.get(id))) });
   }
-  if (!files.length || files.some((f) => !MIME[f.type])) return bad(c, 'Last opp bilder (JPEG, PNG, WebP, HEIC) eller PDF-er');
+  if (!files.length) return bad(c, 'Fant ingen fil i opplastingen (feltet heter «file»)');
+  const wrong = files.find((f) => !MIME[f.type]);
+  if (wrong) return bad(c, `${wrong.name || 'Filen'} er ikke et bilde eller en PDF (${wrong.type || 'ukjent type'}). Last opp JPEG, PNG, WebP, HEIC eller PDF.`);
   if (files.length > 30) return bad(c, 'Maks 30 filer om gangen');
-  const scans = asList(b.scan), thumbs = asList(b.thumb);
+  const scans = await Promise.all(asList(b.scan).map(typed)), thumbs = await Promise.all(asList(b.thumb).map(typed));
   const pair = scans.length === files.length;
   const acc = +b.accountId || q('SELECT id FROM fh_accounts ORDER BY sort, id LIMIT 1').get()?.id || null;
   const ids = [];
@@ -661,6 +702,7 @@ async function saveReceipt(f, scanFile, thumbFile, acc, target) {
   q("INSERT INTO fh_receipts(id,file,scan,thumb,mime,status,date,account_id,name,target,created) VALUES(?,?,?,?,?,'pending',?,?,?,?,?)")
     .run(id, file, scan, thumb, f.type, today(), acc, str(f.name, 120) || null, target, Date.now());
   queue.push({ id });
+  scanLog(id, 'mottatt', `${f.name || 'kvittering'} · ${f.type} · ${Math.round(f.size / 1024)} kB${scan ? ' + JPEG-kopi' : ''}${thumb ? ' + miniatyr' : ''}`);
   const tm = String(target ?? '').match(/^tx:(\d+)$/);
   if (tm) q('UPDATE fh_receipts SET transaction_id=? WHERE id=?').run(+tm[1], id);
   // Mappe: posten vises med en gang («Gemini leser …») og fylles ut når AI-en er ferdig.
@@ -700,7 +742,7 @@ api.post('/transactions/:id/receipt', need('receipts:write'), upload, (c) => {
 function jobOut(r) {
   const progress = r.status === 'pending' ? 0 : r.status === 'processing' ? Math.min(92, Math.round(((Date.now() - (r.started ?? Date.now())) / 12000) * 90) + 5) : 100;
   return { id: r.id, name: r.name ?? r.merchant ?? 'Kvittering', status: r.status === 'failed' ? 'error' : r.status, progress, merchant: r.merchant, total: r.total != null ? r.total / 100 : null,
-    error: r.error ?? null, thumb: r.thumb ? `/finans/api/receipts/${r.id}/thumb` : null, aiShort: r.ai_short ?? null, created: r.created };
+    error: r.error ?? null, thumb: r.thumb ? `/finans/api/receipts/${r.id}/thumb` : null, aiShort: r.ai_short ?? null, created: r.created, ...reanalyzeInfo(r) };
 }
 api.get('/receipts/jobs', R, (c) => {
   const a = c.get('access');
@@ -783,9 +825,68 @@ api.post('/receipts/:id/reprocess', W, (c) => {
   const r = origSelect.get(c.req.param('id'));
   if (!r) return c.notFound();
   const p = c.req.query('provider');
-  q("UPDATE fh_receipts SET status='pending' WHERE id=?").run(r.id);
+  q("UPDATE fh_receipts SET status='pending', candidate=NULL WHERE id=?").run(r.id);
+  scanLog(r.id, 'les-på-nytt', ['ollama', 'gemini'].includes(p) ? providerName(p) : 'valgt motor');
   queue.push({ id: r.id, force: ['ollama', 'gemini'].includes(p) ? p : undefined });
   runQueue();
+  return c.json(receiptOut(origSelect.get(r.id)));
+});
+
+// «✦ Analyser på nytt med Gemini»: originalfilen sendes til Gemini. Resultatet lagres som kandidat og vises
+// side om side med det forrige; brukeren velger hvilket som beholdes (POST …/reanalyze/apply).
+const readOut = (o) => ({ merchant: o.merchant ?? null, date: o.date ?? null, total: o.total ?? null, items: (o.lines ?? []).map((l) => ({ description: l.description, amount: l.amount, quantity: l.quantity ?? null })),
+  confidence: o.confidence ?? null, engine: o.engine ?? null, model: o.model ?? null, category: o.category ?? null, error: o.error ?? null });
+api.post('/receipts/:id/reanalyze', W, async (c) => {
+  const r = origSelect.get(c.req.param('id'));
+  if (!r) return c.notFound();
+  if (['booked', 'rejected'].includes(r.status)) return bad(c, 'Kvitteringen er allerede bokført eller avvist');
+  if (r.status === 'pending' || r.status === 'processing') return bad(c, 'Kvitteringen leses fortsatt');
+  if (!secret('geminiKey')) return bad(c, 'Legg inn en Gemini-nøkkel under Innstillinger → AI-motor for å analysere på nytt.');
+  const log = (step, detail) => scanLog(r.id, step, detail);
+  log('reanalyse', 'Gemini, originalfilen');
+  let ex = null; try { ex = JSON.parse(r.extraction ?? 'null'); } catch { /* ugyldig */ }
+  const previous = readOut({ merchant: r.merchant, date: r.date, total: r.total != null ? r.total / 100 : null, lines: ex?.lines, confidence: r.confidence,
+    engine: r.provider ? providerName(r.provider) : null, model: r.model, category: catById().get(r.category_id)?.name, error: r.error });
+  let res;
+  try {
+    const img = await readFile(join(DIR, r.file));
+    const cats = q("SELECT name FROM fh_categories WHERE kind='expense' ORDER BY sort").all().map((x) => x.name);
+    res = r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats) : await extract(img, r.mime, cats, 'gemini', { log });
+  } catch (e) {
+    log('feil', `Gemini: ${e.message}`);
+    return bad(c, `Gemini kunne ikke lese kvitteringen: ${e.message}`, 502);
+  }
+  const d = res.data;
+  const candidateId = randomUUID();
+  q('UPDATE fh_receipts SET candidate=? WHERE id=?').run(JSON.stringify({ id: candidateId, at: Date.now(), provider: res.provider === 'tekst' ? 'gemini' : res.provider, model: res.model, seconds: res.seconds, data: d }), r.id);
+  log('reanalyse-ferdig', `${d.merchant ?? 'ukjent butikk'} · ${d.total ?? '–'} kr · sikkerhet ${Math.round((d.confidence.total ?? 0) * 100)} %`);
+  return c.json({ previous, result: readOut({ ...d, confidence: Math.min(d.confidence.total, d.confidence.merchant || 1), engine: 'Gemini', model: res.model, category: d.suggested_category }), candidateId });
+});
+api.post('/receipts/:id/reanalyze/apply', W, async (c) => {
+  const r = origSelect.get(c.req.param('id'));
+  if (!r) return c.notFound();
+  const b = await c.req.json().catch(() => ({}));
+  let cand = null; try { cand = JSON.parse(r.candidate ?? 'null'); } catch { /* ugyldig */ }
+  if (!cand || cand.id !== b.candidateId) return bad(c, 'Resultatet er utløpt. Analyser på nytt.');
+  if (b.keep === 'new') {
+    if (['booked', 'rejected'].includes(r.status)) return bad(c, 'Kvitteringen er allerede bokført eller avvist');
+    const d = cand.data, st = settings();
+    const totalOre = d.total != null ? Math.round(d.total * 100) : null;
+    const catId = (st.autoCat && ruleFor(d.merchant)) || catIdByName(d.suggested_category) || r.category_id;
+    const acc = d.card_last4 ? q('SELECT id FROM fh_accounts WHERE last4=?').get(d.card_last4)?.id : null;
+    const tm = String(r.target ?? '').match(/^tx:(\d+)$/);
+    const match = tm ? { id: +tm[1] } : findMatch(totalOre, d.date, d.card_last4);
+    q(`UPDATE fh_receipts SET status='needs_review', error=NULL, provider=?, model=?, seconds=?, extraction=?, merchant=?, date=?, total=?, category_id=?,
+       account_id=COALESCE(?, account_id), confidence=?, transaction_id=?, candidate=NULL WHERE id=?`)
+      .run(cand.provider, cand.model, cand.seconds, JSON.stringify(d), d.merchant, d.date ?? r.date, totalOre, catId,
+        acc ?? match?.account_id ?? null, Math.min(d.confidence.total, d.confidence.merchant || 1), match?.id ?? r.transaction_id ?? null, r.id);
+    try { const sum = await summarizeReceipt(d, catById().get(catId)?.name); q('UPDATE fh_receipts SET ai_short=?, ai_long=?, domain=? WHERE id=?').run(sum.short, sum.long, sum.domain, r.id); } catch { /* sammendraget er valgfritt */ }
+    try { routeTarget(r.id); } catch { /* mappen kan være slettet */ }
+    scanLog(r.id, 'reanalyse-valgt', 'Gemini-resultatet beholdes');
+  } else {
+    q('UPDATE fh_receipts SET candidate=NULL WHERE id=?').run(r.id);
+    scanLog(r.id, 'reanalyse-valgt', 'forrige resultat beholdes');
+  }
   return c.json(receiptOut(origSelect.get(r.id)));
 });
 
@@ -1482,6 +1583,7 @@ async function finnFromMail(text, parsed) {
   attachParsed(f, parsed);
   return f;
 }
+mountFinnImport(api, { R, W, upload, finnFromMail });
 mountFinn(api, { R, W, upload, saveFinn });
 
 /* --- Kvitteringer fra e-post (Proton Mail Bridge / IMAP) --- */
@@ -1519,18 +1621,24 @@ api.post('/mail/run', sessionOnly, async (c) => c.json(await runMail(mailDeps)))
 /* --- Import (XLSX, CSV, tekst) --- */
 // Uten ?commit=1: forhåndsvisning. Med commit: lagres (duplikater hoppes over), AI kategoriserer og beskriver i bakgrunnen.
 
-api.post('/import', W, upload, async (c) => {
+async function importHandler(c) {
   const b = await c.req.parseBody({ all: true });
   const files = asList(b.files).concat(asList(b['files[]']), asList(b.file));
   const text = typeof b.text === 'string' ? b.text : '';
   if (!files.length && !text.trim()) return bad(c, 'Velg filer eller lim inn tekst');
   const accountId = +b.accountId || q("SELECT id FROM fh_accounts WHERE type='checking' ORDER BY sort, id LIMIT 1").get()?.id || null;
-  const rows = [], errors = [];
+  const rows = [], errors = [], formats = [];
   let skipped = 0;
-  const take = (cells, source, file = null) => { const r = rowsToTx(cells, accountId ?? 0); rows.push(...r.rows.map((x) => ({ ...x, bank: { ...x.bank, source, file } }))); skipped += r.skipped.length; };
-  for (const f of files.slice(0, 20)) { try { take(await parseFile(f), /\.xlsx$/i.test(f.name ?? '') ? 'XLSX' : 'CSV', str(f.name, 120) || null); } catch (e) { errors.push(e.message); } }
-  if (text.trim()) take(readText(text), 'Innlimt tekst');
-  if (!rows.length) return bad(c, errors[0] ?? 'Fant ingen rader med dato, tekst og beløp');
+  // Formatet finnes med importmaler (innebygde, lagrede eller ✦ AI-tolket); se import-templates.js.
+  const take = async (cells, source, file = null) => {
+    const r = await importRows(cells, accountId ?? 0);
+    rows.push(...r.rows.map((x) => ({ ...x, bank: { ...x.bank, source, file, template: r.format?.template.name ?? null } })));
+    skipped += r.skipped.length;
+    if (r.format) formats.push({ file: file ?? source, rows: r.rows.length, ...r.format });
+  };
+  for (const f of files.slice(0, 20)) { try { await take(await parseFile(f), /\.xlsx$/i.test(f.name ?? '') ? 'XLSX' : 'CSV', str(f.name, 120) || null); } catch (e) { errors.push(e.message); } }
+  if (text.trim()) await take(splitRows(text), 'Innlimt tekst');
+  if (!rows.length) return bad(c, errors[0] ?? (formats[0] ? `Fant ingen rader med dato, tekst og beløp (format: ${formats[0].template.name})` : 'Fant ingen rader med dato, tekst og beløp'));
   const cats = catById();
   const auto = settings().autoCat;
   const preview = rows.map((r) => {
@@ -1539,15 +1647,32 @@ api.post('/import', W, upload, async (c) => {
     return { ...r, amount: r.amount / 100, categoryId: catId, category: cats.get(catId)?.name ?? null, domain: domainFor(r.description) ?? domainFor(r.raw),
       aiShort: heuristic({ merchant: r.raw, amount: r.amount / 100, category: cats.get(catId)?.name }).short, duplicate: dup };
   });
-  if (c.req.query('commit') !== '1') return c.json({ rows: preview, imported: 0, skipped, errors });
+  if (c.req.query('commit') !== '1') return c.json({ rows: preview, imported: 0, skipped, errors, formats, format: formats[0] ?? null });
   if (!accountId) return bad(c, 'Opprett en konto først');
   const ins = q("INSERT OR IGNORE INTO fh_transactions(account_id,date,amount,description,merchant,category_id,source,external_id,domain,raw_bank_row,created) VALUES(?,?,?,?,?,?,'import',?,?,?,?)");
   const bankMeta = { account: accName(accountId), importedAt: Date.now() };
   let imported = 0;
   db.transaction(() => { for (const r of preview) imported += ins.run(accountId, r.date, Math.round(r.amount * 100), r.description, r.description, r.categoryId, r.external_id, r.domain, bankJson(r.bank, bankMeta), Date.now()).changes; })();
   kickAi();
-  return c.json({ rows: preview, imported, duplicates: preview.length - imported, skipped, errors });
+  return c.json({ rows: preview, imported, duplicates: preview.length - imported, skipped, errors, formats, format: formats[0] ?? null });
+}
+api.post('/import', W, upload, importHandler);
+api.post('/import/xlsx', W, upload, importHandler);
+
+// Forhåndsvisning av formatet uten transaksjonene: hvilken mal, hvilke kolonner, og de første radene.
+api.post('/import/preview', W, upload, async (c) => {
+  const ct = c.req.header('content-type') ?? '';
+  let cells;
+  try {
+    if (ct.includes('application/json')) { const b = await c.req.json().catch(() => ({})); cells = splitRows(String(b.text ?? '')); }
+    else { const b = await c.req.parseBody(); const f = asList(b.file).concat(asList(b.files))[0]; cells = f ? await parseFile(f) : splitRows(typeof b.text === 'string' ? b.text : ''); }
+  } catch (e) { return bad(c, e.message); }
+  if (!cells.length) return bad(c, 'Velg en fil eller lim inn tekst');
+  const r = await importRows(cells, 0);
+  return c.json({ ...r.format, sample: r.sample, rows: r.rows.length, skipped: r.skipped.length });
 });
+api.get('/import/templates', R, (c) => c.json(listTemplates()));
+api.delete('/import/templates/:id', W, (c) => (deleteTemplate(c.req.param('id')) ? c.json({ ok: true }) : bad(c, 'Innebygde maler kan ikke slettes', 404)));
 
 
 /* --- Data --- */

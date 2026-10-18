@@ -9,7 +9,9 @@ struct DomainsView: View {
         ScrollView {
             VStack(spacing: 12) {
                 // Tannhjulet ligger i fanelinja (iPhone); på iPad og i Material-utseendet står det her.
+                // Domenevelgeren (bare ikonet) og Oppdater står ved siden av profilbildet.
                 ModuleHeader(title: "Domener", trailing: {
+                    picker
                     Button { store.reloadDomain() } label: { Image(systemName: "arrow.clockwise").frame(width: 40, height: 40) }.buttonStyle(.plain).glass(20).foregroundStyle(Color.domPink)
                         .accessibilityLabel("Oppdater")
                     if hSize == .regular || DesignStyle.material {
@@ -17,7 +19,13 @@ struct DomainsView: View {
                             .accessibilityLabel("Administrer domener")
                     }
                 })
-                picker
+                if let d = store.domain {
+                    HStack(spacing: 8) {
+                        Circle().fill(statusColor(store.analytics?.status)).frame(width: 8, height: 8)
+                        Text(d).font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.8)).lineLimit(1)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
+                }
                 if hSize == .regular {
                     Picker("Fane", selection: Binding(get: { store.domTab }, set: { store.domTab = $0 })) { ForEach(DomTab.allCases) { Text($0.rawValue).tag($0) } }.pickerStyle(.segmented)
                 }
@@ -49,15 +57,10 @@ struct DomainsView: View {
             Divider()
             Button { store.domainManager = true } label: { Label("Administrer domener", systemImage: "plus") }
         } label: {
-            HStack(spacing: 8) {
-                Circle().fill(statusColor(store.analytics?.status)).frame(width: 8, height: 8)
-                Text(store.domain ?? "Velg domene").fontWeight(.semibold)
-                Image(systemName: "chevron.down").font(.caption)
-            }
-            .padding(.horizontal, 16).frame(height: 40).glass(20)
+            Image(systemName: "globe").frame(width: 40, height: 40).glass(20)
         }
         .foregroundStyle(.white)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityLabel("Velg domene, nå \(store.domain ?? "ingen")")
     }
 
     private func statusColor(_ s: String?) -> Color {
@@ -71,16 +74,17 @@ struct DomainsView: View {
     /* ---------- Faner ---------- */
 
     @ViewBuilder private func traffic(_ a: Analytics) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        // Live-kortet er ca. 20 % lavere enn før (mindre tall, graf og luft).
+        VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) { Circle().fill(Color.positive).frame(width: 8, height: 8); Text("Live · akkurat nå").fontWeight(.semibold) }
             HStack(alignment: .firstTextBaseline, spacing: 0) {
-                Text(count(a.live?.visitors ?? 0)).font(.system(size: 44, weight: .semibold, design: .monospaced))
+                Text(count(a.live?.visitors ?? 0)).font(.system(size: 36, weight: .semibold, design: .monospaced))
                 Text(" besøkende").foregroundStyle(.white.opacity(0.7))
             }
             Text("\(count(a.live?.requests ?? 0)) forespørsler · \(String(format: "%.1f", a.live?.mb ?? 0).replacingOccurrences(of: ".", with: ",")) MB").font(.subheadline).foregroundStyle(.white.opacity(0.75))
-            Spark(values: a.live?.spark ?? (a.series ?? []).map { $0.visitors ?? 0 }, color: .domPink).frame(height: 56)
+            Spark(values: a.live?.spark ?? (a.series ?? []).map { $0.visitors ?? 0 }, color: .domPink).frame(height: 44)
         }
-        .padding(20).frame(maxWidth: .infinity, alignment: .leading).glass(28, tint: Color.domPink.opacity(0.35))
+        .padding(16).frame(maxWidth: .infinity, alignment: .leading).glass(28, tint: Color.domPink.opacity(0.35))
         ranges([("24h", "Siste 24 t"), ("today", "I dag")])
         LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
             Kpi(label: "Besøk", value: count(a.visitors ?? 0))
@@ -137,7 +141,7 @@ struct DomainsView: View {
             Text((a.uptimePct ?? 0) > 0 ? pct(a.uptimePct ?? 0) : "–").font(.system(.title2, design: .monospaced))
             HStack(spacing: 1) {
                 ForEach(Array(days.enumerated()), id: \.offset) { _, u in
-                    RoundedRectangle(cornerRadius: 2).fill(u >= 0.999 ? Color.positive : u >= 0.98 ? Color(hex: "#F2C14E") : .domRed)
+                    RoundedRectangle(cornerRadius: 2).fill(u < 0 ? Color.white.opacity(0.15) : u >= 0.999 ? Color.positive : u >= 0.98 ? Color(hex: "#F2C14E") : .domRed)
                 }
             }
             .frame(height: 28)

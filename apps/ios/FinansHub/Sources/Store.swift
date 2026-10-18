@@ -122,6 +122,8 @@ final class Store {
         return boot?.settings.name ?? ""
     }
     private(set) var base = ""
+    /// Skann fra widgeten eller en deep link: «camera» eller «files». RootView åpner riktig velger.
+    var pendingScan: String?
     private(set) var route = "–"
     private(set) var lastSync: Date?
     var addingAccount = false
@@ -346,6 +348,7 @@ final class Store {
     func didEnterBackground() { backgroundAt = Date() }
     /// Bare etter at appen har vært i bakgrunnen (Face ID-dialogen gjør den bare inaktiv, så avbryt gir ingen løkke).
     func didBecomeActive() {
+        takePendingScan()
         guard let at = backgroundAt else { return }
         backgroundAt = nil
         if hideAmounts { Privacy.shared.hidden = true }
@@ -423,6 +426,7 @@ final class Store {
 
     private func remove(_ id: String) {
         accounts.removeAll { $0.id == id }
+        defer { syncWidgets() }
         if activeId == id {
             activeId = accounts.first?.id
             clearData()
@@ -481,6 +485,7 @@ final class Store {
 
     func reload() async throws {
         await resolveBase()
+        syncWidgets()
         boot = try await api.get("/bootstrap")
         summary = try? await api.get("/summary", as: Summary.self)
         await loadMe()

@@ -49,7 +49,8 @@ const embedModel = () => {
   const st = settings();
   if (!st.aiSearchEmbed) return null;
   if (st.embedModel) return { kind: 'ollama', model: st.embedModel };
-  if (secret('geminiKey')) return { kind: 'gemini', model: 'text-embedding-004' };
+  // text-embedding-004 ble slått av hos Google i januar 2026; gemini-embedding-001 er etterfølgeren (768 dimensjoner holder lagringen liten).
+  if (secret('geminiKey')) return { kind: 'gemini', model: 'gemini-embedding-001' };
   return null;
 };
 async function embed(texts, m) {
@@ -60,7 +61,7 @@ async function embed(texts, m) {
   }
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m.model}:batchEmbedContents`, {
     method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': secret('geminiKey') }, signal: AbortSignal.timeout(30_000),
-    body: JSON.stringify({ requests: texts.map((t) => ({ model: `models/${m.model}`, content: { parts: [{ text: t }] } })) }),
+    body: JSON.stringify({ requests: texts.map((t) => ({ model: `models/${m.model}`, content: { parts: [{ text: t }] }, outputDimensionality: 768 })) }),
   });
   if (!res.ok) throw new Error(`Gemini embed ${res.status}`);
   return (await res.json()).embeddings.map((e) => e.values);

@@ -169,7 +169,7 @@ ICONS.mat = 'M7 3v8a2 2 0 0 0 2 2v8M5 3v6M9 3v6M17 21V3c-2 0-4 2-4 7v4h4';
 ICONS.close = 'M6 6l12 12M18 6L6 18';
 
 // Logoer som ikke finnes: vis forbokstaven (CSP stopper inline onerror).
-document.addEventListener('error', (e) => { const img = e.target; if (img?.tagName === 'IMG' && (img.parentNode?.classList?.contains('m-logo') || img.parentNode?.classList?.contains('hlic'))) { img.parentNode.classList.add('err'); img.remove(); } }, true);
+document.addEventListener('error', (e) => { const img = e.target; if (img?.tagName === 'IMG' && ['m-logo', 'hlic', 'trk-badge'].some((c) => img.parentNode?.classList?.contains(c))) { img.parentNode.classList.add('err'); img.remove(); } }, true);
 
 // Mobil (prompt 06): Homelab-fanen, Mer-siden, redigering og originaler.
 Object.assign(ICONS, {
