@@ -101,6 +101,48 @@ export const getSchool = async () => {
   return { configured: true, events };
 };
 
+/* ---------------- Prompt 26: Kalender (iCal-tekst, så calendar.js tolker den som en ekte kalender) ---------------- */
+// Timeplan for Vg3 (studiespesialisering) med ukentlige gjentakelser (RRULE), lærer i DESCRIPTION/ORGANIZER og rom i LOCATION.
+// Testtilfellene fra claude-code-kalender.md: Prøve i engelsk tor. 22.10 kl. 10 (erstatter engelsktimen), Foreldremøte 22.10
+// kl. 18 (utenfor 08–16), Planleggingsdag fre. 30.10 (ingen timer) og Heldagsprøve R2 fre. 06.11. Høstferie og juleferie er fri.
+const MOCK_TT = {
+  MO: [['0815', '0945', 'Matematikk R2', 'A-112', 'Kari Hansen'], ['1000', '1130', 'Fysikk 2', 'B-204', 'Ola Berg', 'Lab B'], ['1215', '1345', 'Norsk', 'A-305', 'Ingrid Lie'], ['1400', '1500', 'Spansk', 'C-210', '@Lucía García']],
+  TU: [['0815', '0945', 'Engelsk', 'C-301', 'John Smith'], ['1000', '1130', 'Kjemi 2', 'B-110', 'Per Dahl'], ['1215', '1345', 'Historie', 'A-208', 'Anne Moen']],
+  WE: [['0815', '0945', 'Fysikk 2', 'B-204', 'Ola Berg'], ['1000', '1130', 'Matematikk R2', 'A-112', 'Kari Hansen'], ['1215', '1300', 'Studietid', 'Biblioteket', ''], ['1315', '1445', 'Kroppsøving', 'Hall 2', 'Even Nilsen', 'Ta med innesko']],
+  TH: [['0815', '0945', 'Norsk', 'A-305', 'Ingrid Lie'], ['1000', '1130', 'Engelsk', 'C-301', 'John Smith'], ['1215', '1345', 'Kjemi 2', 'B-110', 'Per Dahl'], ['1400', '1500', 'Spansk', 'C-210', '@Lucía García']],
+  FR: [['0815', '0945', 'Matematikk R2', 'A-112', 'Kari Hansen'], ['1000', '1130', 'Historie', 'A-208', 'Anne Moen'], ['1215', '1345', 'Fysikk 2', 'B-204', 'Ola Berg', 'Lab B']],
+};
+const FIRST_DAY = { MO: '20260817', TU: '20260818', WE: '20260819', TH: '20260820', FR: '20260821' };
+const icsEsc = (t) => String(t).replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+const VTZ = ['BEGIN:VTIMEZONE', 'TZID:Europe/Oslo', 'BEGIN:DAYLIGHT', 'TZOFFSETFROM:+0100', 'TZOFFSETTO:+0200', 'DTSTART:19700329T020000', 'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU', 'END:DAYLIGHT',
+  'BEGIN:STANDARD', 'TZOFFSETFROM:+0200', 'TZOFFSETTO:+0100', 'DTSTART:19701025T030000', 'RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU', 'END:STANDARD', 'END:VTIMEZONE'];
+const vevent = (uid, lines) => ['BEGIN:VEVENT', `UID:${uid}`, 'DTSTAMP:20260801T000000Z', ...lines, 'END:VEVENT'];
+const timed = (d, s, e) => [`DTSTART;TZID=Europe/Oslo:${d}T${s}00`, `DTEND;TZID=Europe/Oslo:${d}T${e}00`];
+const allDay = (d1, d2) => [`DTSTART;VALUE=DATE:${d1}`, `DTEND;VALUE=DATE:${d2}`];
+const cal = (name, evs) => ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Homelab//Mock//NO', `X-WR-CALNAME:${name}`, ...VTZ, ...evs.flat(), 'END:VCALENDAR'].join('\r\n') + '\r\n';
+export function mockSchoolIcs() {
+  const evs = [];
+  for (const [day, list] of Object.entries(MOCK_TT)) list.forEach(([s, e, subj, room, teacher, note], i) => {
+    const org = teacher.startsWith('@') ? [`ORGANIZER;CN="${teacher.slice(1)}":mailto:spansk@skole.example.no`] : [];
+    const desc = [teacher && !teacher.startsWith('@') ? `Lærer: ${teacher}` : '', note ?? ''].filter(Boolean).join('\n');
+    evs.push(vevent(`tt-${day}-${i}@skole.example.no`, [...timed(FIRST_DAY[day], s, e), `RRULE:FREQ=WEEKLY;BYDAY=${day};UNTIL=20270618T220000Z`, `SUMMARY:${icsEsc(subj)}`, `LOCATION:${icsEsc(room)}`, ...(desc ? [`DESCRIPTION:${icsEsc(desc)}`] : []), ...org]));
+  });
+  evs.push(vevent('prove-eng-1@skole.example.no', [...timed('20261022', '1000', '1130'), 'SUMMARY:Prøve i engelsk', 'LOCATION:C-301', 'DESCRIPTION:Lærer: John Smith\\nKap. 3–5 · ordbok tillatt', 'CATEGORIES:Prøve']));
+  evs.push(vevent('heldag-r2@skole.example.no', [...timed('20261106', '0815', '1400'), 'SUMMARY:Heldagsprøve R2', 'LOCATION:Gymsalen', 'DESCRIPTION:Lærer: Kari Hansen\\nKalkulator og formelark']));
+  evs.push(vevent('muntlig-nor@skole.example.no', [...timed('20261112', '1215', '1345'), 'SUMMARY:Muntlig norsk', 'LOCATION:A-305', 'DESCRIPTION:Lærer: Ingrid Lie\\nFremføring\\, 10 min']));
+  evs.push(vevent('foreldremote@skole.example.no', [...timed('20261022', '1800', '1930'), 'SUMMARY:Foreldremøte', 'LOCATION:Aula', 'DESCRIPTION:Vg3\\, alle klasser']));
+  evs.push(vevent('plandag-1030@skole.example.no', [...allDay('20261030', '20261031'), 'SUMMARY:Planleggingsdag', 'DESCRIPTION:Ingen undervisning']));
+  evs.push(vevent('hostferie@skole.example.no', [...allDay('20260928', '20261003'), 'SUMMARY:Høstferie (fri)']));
+  evs.push(vevent('juleferie@skole.example.no', [...allDay('20261221', '20270102'), 'SUMMARY:Juleferie (fri)']));
+  return cal('Timeplan 3STA', evs);
+}
+export function mockCanvasIcs() {
+  return cal('Canvas', [
+    vevent('assignment_9001@canvas', ['DTSTART;TZID=Europe/Oslo:20261028T235900', 'DTEND;TZID=Europe/Oslo:20261028T235900', 'SUMMARY:Innlevering historie [Historie 3STA]', 'DESCRIPTION:Essay om den kalde krigen\\, 1500 ord', 'URL:https://skole.instructure.com/courses/12/assignments/9001']),
+    vevent('assignment_9002@canvas', ['DTSTART;TZID=Europe/Oslo:20261104T235900', 'DTEND;TZID=Europe/Oslo:20261104T235900', 'SUMMARY:Labrapport fysikk [Fysikk 2]', 'DESCRIPTION:Rapport fra forsøk 4', 'URL:https://skole.instructure.com/courses/14/assignments/9002']),
+  ]);
+}
+
 export const getTrading = async () => ({
   configured: true, currency: 'NOK', total: 48312, ppl: 5340, invested: 42972, free: 0, pplPct: 12.4,
   positions: [['AAPL', 12840, 2.1], ['NVDA', 15220, 3.4], ['EQNR', 9410, -0.6], ['VUSA', 10842, 0.9]].map(([ticker, value, pct]) => ({ ticker, value, pct, ppl: value * pct / 100 })),

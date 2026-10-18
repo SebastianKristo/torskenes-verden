@@ -40,8 +40,16 @@ export const SCHEMA = [
     ['ruter_routes', 'Strekninger – én per linje: Fra (NSR-ID) > Til (NSR-ID)', e('RUTER_ROUTES', DEFAULT_ROUTES), false, 'textarea'],
     ['ruter_count', 'Antall avganger', '3'],
   ]],
-  ['Kalender / timeplan', { id: 'calendar', scope: 'personal', domain: 'calendar.google.com', category: 'Skole', help: 'Lim inn iCal-adressen fra Canvas (Kalender → Kalenderfeed) eller Outlook (Publiser kalender → ICS).' }, [
+  // Prompt 26: Kalender-modulen leser skolens iCal (timeplan, prøver) og en valgfri Canvas-iCal (innleveringer), per bruker.
+  ['Kalender / timeplan', { id: 'calendar', scope: 'personal', domain: 'calendar.google.com', category: 'Skole', help: 'Lim inn iCal-adressen fra Canvas (Kalender → Kalenderfeed) eller Outlook (Publiser kalender → ICS).', guide: [
+    ['Finn skolens iCal-adresse', 'Timeplanen ligger i skolens system (Visma InSchool, Outlook eller Teams). Se etter «Abonner på kalender», «Publiser kalender» eller «Eksporter til kalender», og kopier adressen som slutter på .ics.', 'https://skole.example.no/kalender/elev/abc123.ics'],
+    ['Canvas (valgfritt)', 'I Canvas: Kalender → Kalenderfeed nederst til høyre. Kopier adressen. Den gir innleveringer og frister fra alle fagene.', 'https://skole.instructure.com/feeds/calendars/user_abc123.ics'],
+    ['Lim inn', 'Lim inn adressene under Skole-iCal og Canvas-iCal. webcal:// gjøres om til https:// automatisk. Kalenderen hentes på nytt hver time.'],
+    ['MazeMap (valgfritt)', 'Campus-ID-en står i adressen når du åpner skolen i use.mazemap.com (campusid=…). Da får hvert rom en lenke «Finn rommet i MazeMap».'],
+    ['Test', 'Trykk Test tilkobling. Testen henter kalenderne og teller hendelsene.'],
+  ] }, [
     ['cal_ics', 'iCal-URL (skole)', e('SCHOOL_ICAL_URL'), true],
+    ['canvas_ics', 'Canvas-iCal (valgfri)', e('CANVAS_ICAL_URL'), true],
     ['cal_mazemap', 'MazeMap campus-ID', e('MAZEMAP_CAMPUS_ID')],
     ['school_url', 'Skolens nettside', e('SCHOOL_URL', 'https://www.vilbli.no')],
   ]],
@@ -237,9 +245,10 @@ export function setUserCfg(user, changes) {
       if (user === OWNER) { const old = kv.get(OWNER, 'cfg', {}) ?? {}; if (key in old || (LEGACY_OF[key] && LEGACY_OF[key] in old)) { delete old[key]; if (LEGACY_OF[key]) delete old[LEGACY_OF[key]]; kv.set(OWNER, 'cfg', old); } }
       continue;
     }
-    const v = String(raw).trim().slice(0, 4000);
+    let v = String(raw).trim().slice(0, 4000);
     if (f.secret && v === '') continue;
-    if (v && /_url$|cal_ics/.test(key) && !isUrl(v)) throw new Error(`${f.label}: ugyldig URL`);
+    if (/_ics$/.test(key)) v = v.replace(/^webcals?:\/\//i, 'https://'); // prompt 26: abonnementslenker (webcal://) hentes over https
+    if (v && /_url$|_ics$/.test(key) && !isUrl(v)) throw new Error(`${f.label}: ugyldig URL`);
     if (v && VALID[key] && !VALID[key](v)) throw new Error(`${f.label}: ugyldig verdi`);
     over[key] = f.secret ? sealSecret(v) : v;
   }
@@ -332,7 +341,7 @@ export function updateConfig(changes, user = undefined, { admin = true } = {}) {
     if (raw === null) { delete over[key]; if (LEGACY_OF[key]) delete over[LEGACY_OF[key]]; continue; }
     const v = String(raw).trim().slice(0, 4000);
     if (f.secret && v === '') continue; // tomt felt = behold lagret hemmelighet
-    if (v && /_url$|cal_ics/.test(key) && !isUrl(v)) throw new Error(`${f.label}: ugyldig URL`);
+    if (v && /_url$|_ics$/.test(key) && !isUrl(v)) throw new Error(`${f.label}: ugyldig URL`);
     if (v && VALID[key] && !VALID[key](v)) throw new Error(`${f.label}: ugyldig verdi`);
     over[key] = f.secret ? sealSecret(v) : v;
   }

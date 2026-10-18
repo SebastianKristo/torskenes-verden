@@ -325,6 +325,36 @@ export function syncGoogle(user, { full = false } = {}) {
   return p;
 }
 
+/* ---------------- Prompt 26: Kalender (calendar.js) leser Google og koblingene ---------------- */
+
+/** Kalender-koblingene til user (Innstillinger → Kalendere): Google og Home Assistant. */
+export function calendarLinks(user) {
+  const g = gconf(user), h = haConf(user);
+  return {
+    google: { connected: !!g.refresh, configured: !!googleClient().id || mockGoogle(), email: g.email ?? null, calendarId: g.calendarId ?? (g.refresh ? 'primary' : null), error: g.error ?? null },
+    ha: { connected: !!h.entityId, entityId: h.entityId ?? null, configured: !!(haBase() && haToken()) || mockHa(), allowed: isAdmin(user) },
+  };
+}
+/** Hendelser fra brukerens valgte Google-kalender i [from, to) (ikke bursdager, de kommer fra Bursdager). null = ikke koblet. */
+export async function googleCalendarEvents(user, from, to) {
+  if (!gConnected(user)) return null;
+  const cal = gconf(user).calendarId || 'primary', out = [];
+  let pageToken = null;
+  for (let i = 0; i < 5; i++) {
+    const query = new URLSearchParams({ singleEvents: 'true', orderBy: 'startTime', timeMin: new Date(from).toISOString(), timeMax: new Date(to).toISOString(), maxResults: '250' });
+    if (pageToken) query.set('pageToken', pageToken);
+    const r = await gapi(user, 'GET', `/calendars/${encodeURIComponent(cal)}/events`, { query });
+    if (!r.ok) throw gfail(r, 'Kunne ikke hente Google Kalender');
+    for (const ev of r.json?.items ?? []) {
+      if (ev.status === 'cancelled' || ev.eventType === 'birthday' || ev.extendedProperties?.private?.homelab_id) continue;
+      out.push(ev);
+    }
+    pageToken = r.json?.nextPageToken ?? null;
+    if (!pageToken) break;
+  }
+  return out;
+}
+
 /* ---------------- Google: OAuth (PKCE) ---------------- */
 
 const pending = new Map(); // state → { user, verifier, ret, redirect, exp }

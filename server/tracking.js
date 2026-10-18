@@ -55,7 +55,8 @@ CREATE INDEX IF NOT EXISTS hl_shipment_events_s ON hl_shipment_events(shipment_i
 // Prompt 21: butikkens domene (fra e-postavsender, Finn eller ParcelsApp) til logoen. Idempotent.
 if (!db.prepare('PRAGMA table_info(hl_shipments)').all().some((c) => c.name === 'shop_domain')) db.exec("ALTER TABLE hl_shipments ADD COLUMN shop_domain TEXT NOT NULL DEFAULT ''");
 // Prompt 22: datoen på e-posten (gamle e-poster går rett i Arkiv), siste vellykkede oppslag og frist på hentestedet. Idempotent.
-for (const [col, type] of [['source_date', 'INTEGER'], ['ok_at', 'INTEGER'], ['pickup_deadline', 'TEXT']]) {
+// Prompt 26: carrier_override = transportøren brukeren har valgt (null = automatisk gjenkjent, som i carrier).
+for (const [col, type] of [['source_date', 'INTEGER'], ['ok_at', 'INTEGER'], ['pickup_deadline', 'TEXT'], ['carrier_override', 'TEXT']]) {
   if (!db.prepare('PRAGMA table_info(hl_shipments)').all().some((c) => c.name === col)) db.exec(`ALTER TABLE hl_shipments ADD COLUMN ${col} ${type}`);
 }
 
@@ -89,6 +90,23 @@ for (const [col, type] of [['source_date', 'INTEGER'], ['ok_at', 'INTEGER'], ['p
 
 const q = (sql) => db.prepare(sql);
 const now = () => Date.now();
+
+/* ---------------- Overstyrt transportør (prompt 26) ---------------- */
+// Valgene i appene: Posten, Bring, PostNord, DHL, Helthjem, UPS, Budbee, Instabox og ParcelsApp. null = Auto (gjenkjent).
+export const OVERRIDES = ['posten', 'bring', 'postnord', 'dhl', 'helthjem', 'ups', 'budbee', 'instabox', 'parcelsapp'];
+const PARCELSAPP = { id: 'parcelsapp', name: 'ParcelsApp' };
+/** Transportøren som brukes: overstyringen først (ParcelsApp er en tjeneste, ikke et selskap: da vises den gjenkjente). */
+const carrierOf = (r) => (r.carrier_override && r.carrier_override !== 'parcelsapp' && CARRIER[r.carrier_override] ? r.carrier_override : r.carrier);
+const overrideName = (o) => (o === 'parcelsapp' ? PARCELSAPP.name : CARRIER[o]?.name ?? o);
+/** {carrierDetected, carrierOverride, carrierLabel} – «Bring · valgt» eller «Auto · Bring». */
+export function carrierInfo(r) {
+  const o = OVERRIDES.includes(r.carrier_override) ? r.carrier_override : null;
+  const det = r.carrier;
+  return { carrierDetected: det, carrierDetectedName: (CARRIER[det] ?? CARRIER.other).name, carrierOverride: o,
+    carrierLabel: o ? `${overrideName(o)} · valgt` : `Auto · ${(CARRIER[det] ?? CARRIER.other).name}` };
+}
+/** Gyldig verdi for carrierOverride: id, null (auto) eller undefined (ugyldig). «auto» og tom streng = null. */
+const overrideVal = (v) => (v === null || v === '' || v === 'auto' ? null : typeof v === 'string' && OVERRIDES.includes(v.toLowerCase()) ? v.toLowerCase() : undefined);
 const ACTIVE = ['registered', 'picked_up', 'in_transit', 'ready_for_pickup', 'out_for_delivery', 'delayed', 'unknown'];
 const DAY_MS = 86400_000;
 // Hvor ofte statusen sjekkes (prompt 22). null = aldri mer (Levert/Returnert).
@@ -182,7 +200,7 @@ export function packageTitle(r) {
 /* ---------------- Lagring ---------------- */
 
 // Hendelser vi har laget selv (ikke fra transportøren). De vises i listen, men ikke som «siste hendelse».
-const LOCAL_EVENT = /^(Lagt til i Sporing|Funnet i e-post|Funnet i Finn-handel)$|· Oppdatert fra (Finn-handelen|e-post)$|^Ikke funnet hos transportøren/;
+const LOCAL_EVENT = /^(Lagt til i Sporing|Funnet i e-post|Funnet i Finn-handel)$|· Oppdatert fra (Finn-handelen|e-post)$|^Ikke funnet hos transportøren|^Spores (nå )?via /;
 const hhmm = (t) => new Intl.DateTimeFormat('nb-NO', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(t));
 const ddmm = (t) => { const p = Object.fromEntries(new Intl.DateTimeFormat('nb-NO', { timeZone: 'Europe/Oslo', day: '2-digit', month: '2-digit' }).formatToParts(new Date(t)).map((x) => [x.type, x.value])); return `${p.day}.${p.month}`; };
 /** Siste hendelse fra transportøren: {text, place, time, line} – «Ankommet terminal · Oslo · 18.10 06:12». */
@@ -203,7 +221,8 @@ function timelineOf(r, labels, step, events) {
   });
 }
 
-function view(r) {
+function view(r0) {
+  const r = { ...r0, carrier: carrierOf(r0) }; // logo, lenke og navn følger valgt transportør
   const c = CARRIER[r.carrier] ?? CARRIER.other;
   const events = q('SELECT ts, status, location, raw FROM hl_shipment_events WHERE shipment_id=? ORDER BY ts DESC, id DESC LIMIT 40').all(r.id);
   const out = r.direction === 'out';
@@ -218,7 +237,7 @@ function view(r) {
   // Feil fra API-et: «Kunne ikke oppdatere · prøver igjen 20:15». Uten et eneste vellykket oppslag er statusen ikke bekreftet.
   const updateError = r.last_error ? { text: next ? `Kunne ikke oppdatere · prøver igjen ${hhmm(Math.max(next, now()))}` : 'Kunne ikke oppdatere', reason: r.last_error, retryAt: next ? new Date(Math.max(next, now())).toISOString() : null } : null;
   return {
-    id: r.id, trackingNo: r.tracking_no, carrier: r.carrier, carrierName: c.name, carrierIni: c.ini, carrierColor: c.color, carrierFg: c.fg, carrierLogo: c.manual ? logo.kind === 'carrier' ? logo.svg : logo.carrierLogo?.svg ?? null : c.logo,
+    id: r.id, trackingNo: r.tracking_no, carrier: r.carrier, ...carrierInfo(r0), carrierName: c.name, carrierIni: c.ini, carrierColor: c.color, carrierFg: c.fg, carrierLogo: c.manual ? logo.kind === 'carrier' ? logo.svg : logo.carrierLogo?.svg ?? null : c.logo,
     name: packageTitle(r), title: packageTitle(r), shop: r.shop, shopDomain: shopDomainFor(r.shop, r.shop_domain) || null, logo, source: r.source, sourceRef: r.source_ref, sourceNote: r.source_note,
     direction: r.direction, status, statusText, step, steps, timeline: timelineOf(r, steps, step, events),
     eta: r.eta, estimatedDelivery: r.eta ?? null, pickupPoint: r.pickup_point,
@@ -235,7 +254,7 @@ const mineById = (u, id) => q('SELECT * FROM hl_shipments WHERE id=? AND user_id
 
 // Legger til eller slår sammen på sporingsnummer. Eksisterende felt overskrives bare når de er tomme,
 // slik at et navn du har gitt selv ikke byttes ut av e-posten.
-export function upsertShipment({ user = OWNER, trackingNo, carrier, name = '', shop = '', shopDomain = '', source = 'manual', sourceRef = null, sourceNote = '', direction = 'in', status, eta = null, pickupPoint = null, sourceDate = null }) {
+export function upsertShipment({ user = OWNER, trackingNo, carrier, carrierOverride = null, name = '', shop = '', shopDomain = '', source = 'manual', sourceRef = null, sourceNote = '', direction = 'in', status, eta = null, pickupPoint = null, sourceDate = null }) {
   const no = normNo(trackingNo);
   if (no.length < 6 || no.length > 40) throw new Error('Ugyldig sporingsnummer');
   const car = CARRIER[carrier] ? carrier : detect(no);
@@ -249,8 +268,9 @@ export function upsertShipment({ user = OWNER, trackingNo, carrier, name = '', s
     if (status && promote(ex, status, source === 'finn' ? 'Oppdatert fra Finn-handelen' : source === 'email' ? 'Oppdatert fra e-post' : '')) return { shipment: byId(ex.id), created: false, promoted: true };
     return { shipment: byId(ex.id), created: false };
   }
-  const r = q(`INSERT INTO hl_shipments(user_id,tracking_no,carrier,name,shop,shop_domain,source,source_ref,source_note,direction,status,eta,pickup_point,source_date,updated_at,created_at)
-    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING *`).get(user, no, car, str(name, 120), str(shop, 80), str(shopDomain || shopDomainFor(shop, ''), 120), source, sourceRef, str(sourceNote, 200), direction === 'out' ? 'out' : 'in',
+  // E-post og Finn sender aldri carrierOverride; en eksisterende sending (over) får aldri byttet transportør herfra.
+  const r = q(`INSERT INTO hl_shipments(user_id,tracking_no,carrier,carrier_override,name,shop,shop_domain,source,source_ref,source_note,direction,status,eta,pickup_point,source_date,updated_at,created_at)
+    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) RETURNING *`).get(user, no, car, overrideVal(carrierOverride) ?? null, str(name, 120), str(shop, 80), str(shopDomain || shopDomainFor(shop, ''), 120), source, sourceRef, str(sourceNote, 200), direction === 'out' ? 'out' : 'in',
     status && STATUS_TEXT[status] ? status : 'registered', eta, pickupPoint, validDate(sourceDate), now(), now());
   addEvent(r.id, now(), source === 'manual' ? 'Lagt til i Sporing' : source === 'finn' ? 'Funnet i Finn-handel' : 'Funnet i e-post', '');
   if (source !== 'manual') notify(user, 'found', `Nytt sporingsnummer: ${r.name || r.tracking_no} (${(CARRIER[car] ?? CARRIER.other).name})`, r.id);
@@ -297,7 +317,12 @@ function archiveIfOld(r) {
 // allowParcelsapp: bare når brukeren selv ber om status (ny sending, «Oppdater»), så ParcelsApp-kvoten spares.
 async function refresh(r, { allowParcelsapp = false } = {}) {
   if (MOCK) return mockAdvance(r);
-  try { applyResult(r, await fetchStatus(r.carrier, r.tracking_no, { allowParcelsapp }), { api: true }); return true; }
+  // Overstyringen først (prompt 26): valgt selskaps API, eller ParcelsApp direkte med den gjenkjente transportøren som hint.
+  const o = OVERRIDES.includes(r.carrier_override) ? r.carrier_override : null;
+  // ParcelsApp har bare 3 oppslag i måneden: valgt ParcelsApp spores når du selv ber om det (ny, «Spor via», «Oppdater»), ikke i bakgrunnen.
+  if (o === 'parcelsapp' && !allowParcelsapp) { q('UPDATE hl_shipments SET checked_at=? WHERE id=?').run(now(), r.id); return false; }
+  const opts = { allowParcelsapp, ...(o ? { override: o, hint: r.carrier } : {}) };
+  try { applyResult(r, await fetchStatus(carrierOf(r), r.tracking_no, opts), { api: true }); return true; }
   catch (e) {
     // Ikke funnet hos transportøren etter 30 dager: regnes som levert og arkiveres (ikke aktiv «Registrert» for alltid).
     if (e.status === 404 && ageOf(r) > 30 * DAY_MS && !FINAL.includes(r.status)) {
@@ -483,6 +508,8 @@ const listOut = (uid, archived = 'all') => {
     counts: { active: all.filter((s) => !s.archived && !FINAL.includes(s.status)).length, pickup: all.filter((s) => !s.archived && s.status === 'ready_for_pickup' && s.direction === 'in').length,
       delivered: all.filter((s) => s.archived || FINAL.includes(s.status)).length, archived: all.filter((s) => s.archived).length },
     parcelsapp: parcelsappUsage(),
+    // Prompt 26: valgene under «Spor via» / ny pakke (null = Auto).
+    overrides: OVERRIDES.map((id) => (id === 'parcelsapp' ? { id, name: PARCELSAPP.name, ini: 'PA', color: '#4B5BD6', fg: '#fff' } : { id, name: CARRIER[id].name, ini: CARRIER[id].ini, color: CARRIER[id].color, fg: CARRIER[id].fg })),
     moreCount: Math.max(0, all.filter((s) => !s.archived && !FINAL.includes(s.status)).length - 1),
   };
 };
@@ -498,7 +525,10 @@ api.post('/', async (c) => {
   const u = uidOf(c);
   if (q('SELECT 1 FROM hl_shipments WHERE tracking_no=? AND user_id=?').get(no, u)) return bad(c, 'Sendingen spores allerede', 409);
   let r;
-  try { ({ shipment: r } = upsertShipment({ user: u, trackingNo: no, carrier: b.carrier, name: str(b.name, 120), direction: b.direction })); } catch (e) { return bad(c, e.message); }
+  const ov = 'carrierOverride' in b ? overrideVal(b.carrierOverride) : null;
+  if (ov === undefined) return bad(c, `carrierOverride må være ${OVERRIDES.join(', ')} eller null`);
+  try { ({ shipment: r } = upsertShipment({ user: u, trackingNo: no, carrier: b.carrier, carrierOverride: ov, name: str(b.name, 120), direction: b.direction })); } catch (e) { return bad(c, e.message); }
+  if (ov) addEvent(r.id, now(), `Spores via ${overrideName(ov)} (valgt)`, '');
   await refresh(r, { allowParcelsapp: true });
   const v = view(byId(r.id));
   changed(u, 'created', { id: v.id });
@@ -513,9 +543,22 @@ api.patch('/:id', async (c) => {
   if ('carrier' in b && CARRIER[b.carrier]) q('UPDATE hl_shipments SET carrier=?, checked_at=NULL WHERE id=?').run(b.carrier, r.id);
   if ('archived' in b) q('UPDATE hl_shipments SET archived=? WHERE id=?').run(b.archived ? 1 : 0, r.id);
   if ('direction' in b) q('UPDATE hl_shipments SET direction=? WHERE id=?').run(b.direction === 'out' ? 'out' : 'in', r.id);
+  // Prompt 26: «Spor via». Endringen gir et nytt oppslag med en gang (ParcelsApp tillatt, som når du legger til en sending).
+  let message;
+  if ('carrierOverride' in b) {
+    const ov = overrideVal(b.carrierOverride);
+    if (ov === undefined) return bad(c, `carrierOverride må være ${OVERRIDES.join(', ')} eller null`);
+    if (ov !== (r.carrier_override ?? null)) {
+      q('UPDATE hl_shipments SET carrier_override=?, checked_at=NULL, last_error=NULL WHERE id=?').run(ov, r.id);
+      addEvent(r.id, now(), ov ? `Spores via ${overrideName(ov)} (valgt)` : `Spores via ${(CARRIER[r.carrier] ?? CARRIER.other).name} (auto)`, '');
+      await refresh(byId(r.id), { allowParcelsapp: true });
+      const v = view(byId(r.id));
+      message = v.lastError ? `Spores via ${ov ? overrideName(ov) : 'Auto'}. Statusen kan ikke hentes ennå: ${v.lastError}` : `Spores via ${ov ? overrideName(ov) : `Auto (${v.carrierDetectedName})`} · ${v.statusText}`;
+    }
+  }
   q('UPDATE hl_shipments SET updated_at=? WHERE id=?').run(now(), r.id);
   changed(r.user_id, 'updated', { id: r.id });
-  return c.json({ item: view(byId(r.id)) });
+  return c.json({ item: view(byId(r.id)), ...(message ? { message } : {}) });
 });
 
 // Hent status for én sending nå. Her kan ParcelsApp brukes som siste reserve (teller mot månedskvoten).

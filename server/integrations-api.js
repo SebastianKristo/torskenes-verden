@@ -1,5 +1,8 @@
 // Integrasjoner (prompt 24, per bruker fra ISO2): én liste med oppsettene, for appene og nettsiden.
-//   GET    /api/integrations                  → [{id, name, group, scope, status, fields:[{key,label,type,value|null,saved,help}], canTest, message?}]
+//   GET    /api/integrations                  → [{id, name, group, scope, status, category, badge, color, description, statusText,
+//                                                 guide:[{n,title,text,code?}], fields:[{key,label,type,value|null,saved,help}], canTest, message?,
+//                                                 hidden?, replacedBy?, links? (bare «calendars»: Google Kalender og Home Assistant)}]
+//   Prompt 26: også under /api/integrasjoner (samme ruter).
 //   PUT    /api/integrations/:id {key: value}  → lagrer (hemmeligheter kryptert), svarer med integrasjonen
 //   POST   /api/integrations/:id/test          → {ok, message, ms}
 //   DELETE /api/integrations/:id/:key          → fjerner verdien (tilbake til standard), svarer med integrasjonen
@@ -11,7 +14,9 @@
 // og FinansHubs AI-innstillinger (fh_settings/fh_secret hos OWNER). Hemmelige verdier sendes aldri ut, bare saved:true/false.
 import { Hono } from 'hono';
 import { kv, OWNER } from './db.js';
-import { cfg, updateConfig, userCfg, userCfgOverride, setUserCfg, runAsUser } from './settings.js';
+import { cfg, updateConfig, userCfg, userCfgOverride, setUserCfg, runAsUser, SCHEMA } from './settings.js';
+import { testCalendars } from './calendar.js';
+import { calendarLinks } from './birthdays.js';
 import { isAdmin, sessionUser, userInfo } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { authOrToken } from './mobile.js';
@@ -99,7 +104,14 @@ export const INTEGRATIONS = [
     F('radarr_url', 'Adresse', 'url', mine('radarr_url'), { required: true }),
     F('radarr_key', 'API-nøkkel', 'secret', mine('radarr_key', true), { required: true, help: 'Settings → General → Security → API Key' }),
   ] },
-  { id: 'calendar', name: 'Skolekalender (iCal)', group: 'Skole', scope: P, test: viaGroup('Kalender / timeplan'), fields: [
+  // Prompt 26: Kalendere (Skole-iCal og Canvas-iCal, med Google Kalender og Home Assistant som lenker). Erstatter «calendar»,
+  // som fortsatt svarer på /api/integrations/calendar og står i listen med hidden:true for eldre klienter.
+  { id: 'calendars', name: 'Kalendere', group: 'Skole', scope: P, test: (u) => testCalendars(u), anyOf: ['cal_ics', 'canvas_ics'], fields: [
+    F('cal_ics', 'Skole-iCal', 'secret', mine('cal_ics', true), { help: 'Timeplan og prøver. Visma InSchool, Outlook eller Teams → Abonner på kalender (.ics)' }),
+    F('canvas_ics', 'Canvas-iCal', 'secret', mine('canvas_ics', true), { help: 'Innleveringer og frister. Canvas → Kalender → Kalenderfeed' }),
+    F('cal_mazemap', 'MazeMap campus-ID', 'text', mine('cal_mazemap'), { help: 'Valgfri. Gir lenken «Finn rommet i MazeMap».' }),
+  ] },
+  { id: 'calendar', name: 'Skolekalender (iCal)', group: 'Skole', scope: P, hidden: true, replacedBy: 'calendars', test: viaGroup('Kalender / timeplan'), fields: [
     F('cal_ics', 'iCal-URL', 'secret', mine('cal_ics', true), { required: true, help: 'Canvas → Kalender → Kalenderfeed, eller Outlook → Publiser kalender → ICS' }),
     F('cal_mazemap', 'MazeMap campus-ID', 'text', mine('cal_mazemap')),
     F('school_url', 'Skolens nettside', 'url', mine('school_url')),
@@ -174,6 +186,64 @@ export const INTEGRATIONS = [
   ] },
 ];
 const byId = new Map(INTEGRATIONS.map((x) => [x.id, x]));
+
+/* ---------------- Metadata som på web (prompt 26) ---------------- */
+// id → [kategori, merke, farge, kort beskrivelse, SCHEMA-gruppe for guiden (settings.js), titler fra den guiden (tom = alle)].
+// Kategoriene: Smarthjem · Transport og pakker · Økonomi · AI · Informasjon · Annet (rekkefølgen i CATEGORIES).
+export const CATEGORIES = ['Smarthjem', 'Transport og pakker', 'Økonomi', 'AI', 'Informasjon', 'Annet'];
+const META = {
+  ha: ['Smarthjem', 'HA', '#18bcf2', 'Lokal server og to-do-lister', 'ha'],
+  entur: ['Transport og pakker', 'R', '#d0605a', 'Sanntid for avganger', 'ruter'],
+  mybring: ['Transport og pakker', 'B', '#7BC144', 'Sporing hos Posten og Bring', 'tracking', ['Posten og Bring']],
+  postnord: ['Transport og pakker', 'PN', '#00A0D6', 'Sporing hos PostNord', 'tracking', ['PostNord']],
+  parcelsapp: ['Transport og pakker', 'PA', '#4B5BD6', 'Reserve for alle transportører', 'tracking', ['ParcelsApp (siste reserve)', '17TRACK (reserve)']],
+  t212: ['Økonomi', 'T', '#13a37f', 'Aksjer og kontoer', 't212'],
+  bank: ['Økonomi', 'BK', '#2b5d8a', 'Banker og filimport', null],
+  imap: ['Økonomi', '@', '#6d4aff', 'IMAP eller Proton Mail Bridge', null],
+  finn: ['Økonomi', 'F', '#0063FB', 'Varsler og handler', null],
+  ai: ['AI', 'G', '#4b6cf0', 'AI-tolkning av kvitteringer og søk', null],
+  calendars: ['Informasjon', '31', '#4285F4', 'Skole-iCal, Canvas, Google og Home Assistant', 'calendar'],
+  calendar: ['Informasjon', '31', '#4285F4', 'Timeplan fra skolens iCal', 'calendar'],
+  google: ['Informasjon', '31', '#4285F4', 'OAuth-klient for Google Kalender', 'google'],
+  cloudflare: ['Informasjon', 'CF', '#F38020', 'Domener, trafikk og oppetid', 'cloudflare'],
+  met: ['Informasjon', 'Yr', '#1f8fd6', 'Værvarsel', 'weather'],
+  map: ['Informasjon', '◎', '#3f7a6e', 'Kartverket, MapTiler og Stadia', 'map'],
+  plex: ['Annet', 'P', '#e5a00d', 'Mediaserver', 'plex'],
+  jellyfin: ['Annet', 'J', '#7b4fd6', 'Mediaserver', 'jellyfin'],
+  sonarr: ['Annet', 'S', '#2f8fd8', 'Serier', 'sonarr'],
+  radarr: ['Annet', 'R', '#e0a325', 'Filmer', 'radarr'],
+  icons: ['Annet', '✦', '#5b6478', 'Iconify via Homelab-cache', null],
+  photos: ['Annet', 'U', '#3a3a3a', 'Bakgrunner fra Unsplash og Pexels', 'backgrounds'],
+};
+// Guider for integrasjoner som ikke har en SCHEMA-gruppe (samme tekster som i designet / web).
+const OWN_GUIDE = {
+  bank: [['Eksporter fra banken', 'Last ned kontoutskriften som CSV fra nettbanken.'], ['Velg profil', 'Kolonnene finnes automatisk. Er filen tvetydig, velg banken under CSV-profil.']],
+  imap: [
+    ['Sjekk abonnementet', 'Proton Mail har ingen vanlig IMAP-server. Tilgang går gjennom Proton Mail Bridge, som bare finnes på betalte planer. Gmail og andre: bruk et app-passord.'],
+    ['Start Bridge på homelaben', 'Legg Bridge i samme docker-compose som FinansHub, på samme nettverk. Ikke åpne portene mot internett.', 'protonmail-bridge:\n  image: shenxn/protonmail-bridge\n  restart: unless-stopped\n  volumes:\n    - ./proton:/root'],
+    ['Hent brukernavn og passord', 'Kjør info i Bridge. Brukernavn er Proton-adressen, og passordet er Bridge-passordet (ikke Proton-passordet ditt).', '>>> info'],
+    ['Finn vert og port', 'Fra FinansHub-containeren er verten protonmail-bridge og porten 143. Kjører Bridge-appen på samme maskin uten Docker, bruk 127.0.0.1 og 1143.'],
+    ['Fyll ut feltene og test', 'Lim inn verdiene og trykk Test tilkobling.'],
+  ],
+  finn: [['Varsler', 'Lagre søk på Finn med varsel til e-posten, og la et filter flytte Finn-e-postene til en egen mappe.'], ['Mappen', 'Skriv navnet på mappen (samme e-postkonto som Kvitteringer).']],
+  ai: [['Gemini', 'Gå til aistudio.google.com → Get API key og lag en nøkkel. Gratisnivået holder for vanlig bruk.'], ['Groq (valgfritt)', 'console.groq.com → API Keys.'], ['Ollama (valgfritt)', 'Adressen til din egen Ollama-server, for eksempel http://192.168.1.30:11434.']],
+  icons: [['Ingen nøkkel', 'Ikonene hentes fra Iconify og lagres på serveren. Test henter ett ikon.']],
+};
+const GROUPS = new Map(SCHEMA.map(([name, meta]) => [meta.id, { name, ...meta }]));
+const stepsOf = (list) => list.map(([title, text, code], i) => ({ n: i + 1, title, text, ...(code ? { code } : {}) }));
+function guideOf(x) {
+  const m = META[x.id];
+  if (OWN_GUIDE[x.id]) return stepsOf(OWN_GUIDE[x.id]);
+  const g = m?.[4] ? GROUPS.get(m[4]) : null;
+  if (!g) return [];
+  if (g.guide?.length) return stepsOf(m[5] ? g.guide.filter(([t]) => m[5].includes(t)) : g.guide);
+  return g.help ? stepsOf([['Slik gjør du', g.help]]) : [];
+}
+function metaOut(x, status) {
+  const [category, badge, color, description] = META[x.id] ?? ['Annet', x.name.slice(0, 2).toUpperCase(), '#5b6478', ''];
+  const statusText = status === 'ok' ? 'Tilkoblet' : status === 'error' ? 'Tilkoblingen feilet' : x.id === 'calendars' || x.id === 'calendar' ? 'Mangler iCal-adresse' : 'Mangler API-nøkkel';
+  return { category, badge, color, description, statusText, guide: guideOf(x) };
+}
 /** 'personal' | 'server' for en integrasjon (id eller navn), null hvis ukjent. */
 export const integrationScope = (key) => { const k = String(key ?? '').trim().toLowerCase(); return INTEGRATIONS.find((i) => i.id === k || i.name.toLowerCase() === k)?.scope ?? null; };
 // IMAP-test med brukerens egne verdier. finans/mail.js fyller manglende felt fra eierens oppsett, så andre brukere må ha
@@ -230,10 +300,21 @@ function fieldOut(f, u) {
 }
 export function integrationOut(x, u = OWNER) {
   const fields = x.fields.map((f) => fieldOut(f, u));
-  const missing = x.fields.some((f, i) => f.required && !fields[i].saved);
+  const missing = x.fields.some((f, i) => f.required && !fields[i].saved) || (x.anyOf && !x.anyOf.some((k) => fields.find((f) => f.key === k)?.saved));
   const t = lastTests(testsOwner(x, u))[x.id];
   const status = missing ? 'missing' : t && t.ok === false ? 'error' : 'ok';
-  return { id: x.id, name: x.name, group: x.group, scope: x.scope, status, fields, canTest: !!x.test, ...(t ? { lastTest: t } : {}), ...(status === 'error' ? { message: t.message } : {}) };
+  return { id: x.id, name: x.name, group: x.group, scope: x.scope, status, ...metaOut(x, status), fields, canTest: !!x.test, ...(t ? { lastTest: t } : {}), ...(status === 'error' ? { message: t.message } : {}),
+    ...(x.hidden ? { hidden: true, replacedBy: x.replacedBy } : {}), ...(x.id === 'calendars' ? { links: calendarLinksOut(u) } : {}) };
+}
+// Kalendere: Google Kalender og Home Assistant er lenker til Innstillinger → Kalendere (oppsettet ligger under Bursdager-API-et).
+function calendarLinksOut(u) {
+  const l = calendarLinks(u);
+  return [
+    { id: 'google', name: 'Google Kalender', badge: '31', color: '#4285F4', connected: l.google.connected, configured: l.google.configured, detail: l.google.email ?? null,
+      statusText: l.google.connected ? 'Tilkoblet' : 'Ikke koblet', route: 'innstillinger/kalendere', api: '/api/birthdays' },
+    { id: 'ha', name: 'Home Assistant', badge: 'HA', color: '#18bcf2', connected: l.ha.connected, configured: l.ha.configured, detail: l.ha.entityId ?? null, allowed: l.ha.allowed,
+      statusText: l.ha.connected ? 'Tilkoblet' : 'Ikke koblet', route: 'innstillinger/kalendere', api: '/api/birthdays' },
+  ];
 }
 /** Integrasjonene user ser: egne personlige, og serveroppsettet bare for administratorer. */
 export const listIntegrations = (u = OWNER, admin = isAdmin(u)) => INTEGRATIONS.filter((x) => admin || x.scope === P).map((x) => integrationOut(x, u));

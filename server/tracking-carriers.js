@@ -246,14 +246,16 @@ export function parcelsappUsage() {
 }
 const countParcelsapp = () => { const u = parcelsappUsage(); kv.set(activeUser() ?? OWNER, 'parcelsapp_usage', { month: u.month, used: u.used + 1 }); };
 const sleepMs = (ms) => new Promise((r) => setTimeout(r, ms));
-async function parcelsapp(no) {
+// carrier-hint (prompt 26): transportøren brukeren har valgt eller som er gjenkjent, som ParcelsApp-navn.
+const PARCELSAPP_CARRIER = { posten: 'Posten Norge', bring: 'Bring', postnord: 'PostNord', dhl: 'DHL', ups: 'UPS', fedex: 'FedEx', gls: 'GLS', schenker: 'DB Schenker', helthjem: 'Helthjem', budbee: 'Budbee', instabox: 'Instabox', porterbuddy: 'Porterbuddy' };
+async function parcelsapp(no, hint = null) {
   const key = cfg('trk_parcelsapp_key');
   if (!key) throw new CarrierError('Mangler API-nøkkel for ParcelsApp');
   if (parcelsappUsage().used >= PARCELSAPP_LIMIT) throw new CarrierError(`ParcelsApp: månedskvoten (${PARCELSAPP_LIMIT} oppslag) er brukt opp`, 429);
   const base = 'https://parcelsapp.com/api/v3/shipments/tracking';
   countParcelsapp(); // telles før kallet, så et kall som henger ikke gir gratis forsøk
   let d = await getJson(base, { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ shipments: [{ trackingId: no, language: 'en', country: 'Norway' }], apiKey: key }) });
+    body: JSON.stringify({ shipments: [{ trackingId: no, language: 'en', country: 'Norway', ...(PARCELSAPP_CARRIER[hint] ? { carrier: PARCELSAPP_CARRIER[hint] } : {}) }], apiKey: key }) });
   if (d.error) throw new CarrierError(`ParcelsApp: ${d.error}`);
   // Svaret kan komme med en gang (fra hurtigbuffer) eller som en uuid som må hentes til «done» er sant.
   for (let i = 0; i < 6 && !(d.done || d.shipments?.[0]?.states?.length) && d.uuid; i++) {
@@ -286,8 +288,15 @@ export function missingKeyText(carrier) {
 
 // Henter status fra transportøren. Mangler egen klient eller nøkkel, prøves 17TRACK, og til slutt ParcelsApp
 // (bare når allowParcelsapp er satt, dvs. når brukeren selv ber om status).
-export async function fetchStatus(carrier, no, { allowParcelsapp = false } = {}) {
+// override (prompt 26): transportøren brukeren har valgt. «parcelsapp» går rett til ParcelsApp med hint (gjenkjent transportør);
+// et selskap med egen klient (Posten/Bring, PostNord, DHL, UPS) bruker sitt API først, ellers reservene med selskapet som hint.
+export async function fetchStatus(carrier, no, { allowParcelsapp = false, override = null, hint = null } = {}) {
   const n = normNo(no);
+  if (override === 'parcelsapp') {
+    if (!cfg('trk_parcelsapp_key')) throw new CarrierError('Mangler API-nøkkel for ParcelsApp');
+    return parcelsapp(n, hint ?? carrier);
+  }
+  if (override && override !== carrier) carrier = override;
   const own = CLIENT[carrier];
   let err = null;
   // Selskapets eget API først. Feiler det (ikke «fant ikke»), prøves reservene (prompt 22).
@@ -299,7 +308,7 @@ export async function fetchStatus(carrier, no, { allowParcelsapp = false } = {})
     try { return await postnordWeb(n); } catch (e) { console.debug?.(`[sporing] postnord-web: ${e.message}`); err ??= e.status === 404 ? null : e; }
   }
   if (isConfigured('other')) { try { return await track17(n); } catch (e) { err ??= e; } }
-  if (allowParcelsapp && cfg('trk_parcelsapp_key') && parcelsappUsage().used < PARCELSAPP_LIMIT) return parcelsapp(n);
+  if (allowParcelsapp && cfg('trk_parcelsapp_key') && parcelsappUsage().used < PARCELSAPP_LIMIT) return parcelsapp(n, override ? carrier : hint ?? carrier);
   if (err) throw err;
   throw new CarrierError(own ? `Mangler nøkkel for ${CARRIER[carrier]?.name ?? carrier}` : 'Ingen nøkkel for 17TRACK eller ParcelsApp (reserve)');
 }

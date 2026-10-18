@@ -30,6 +30,7 @@ import { attachRealtime } from './realtime.js';
 import { revokeUserTokens } from './finans/routes.js';
 import birthdaysApi, { startBirthdayWorker, widgetOut as birthdaysWidget } from './birthdays.js';
 import integrationsApi, { settingsSearchApi, testByIdOrName, integrationScope } from './integrations-api.js';
+import calendarApi, { widgetApi as calendarWidgetApi } from './calendar.js';
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
 
 const api = process.env.MOCK_DATA === '1' ? await import('./mock.js') : integrations;
@@ -561,6 +562,10 @@ app.route('/api/background', backgroundApi); // Bakgrunner (prompt 19): Vær, Pl
 app.route('/api/birthdays', birthdaysApi);
 app.get('/api/widgets/birthdays', authOrToken, (c) => c.json(birthdaysWidget(c.get('user'))));
 app.route('/api/integrations', integrationsApi);
+app.route('/api/integrasjoner', integrationsApi); // prompt 26: samme liste under norsk navn
+// Prompt 26: Kalender (skolens iCal, Canvas, Bursdager og Google) og kompakt widget-svar. Sesjon eller app-token, per bruker.
+app.route('/api/kalender', calendarApi);
+app.route('/api/widgets/calendar', calendarWidgetApi);
 app.route('/api/settings', settingsSearchApi);
 const domainPill = async (c) => {
   if (!isAdmin(c.get('user'))) return c.json({ error: 'Bare administratorer har tilgang', restricted: true }, 403);

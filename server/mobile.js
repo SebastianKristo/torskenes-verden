@@ -138,11 +138,47 @@ const SCALAR = {
   // Prompt 25: fanelinje-stil. text = navn på alle (ikon på valgt), icons = bare ikoner, icons_active_label = ikoner + navn på valgt.
   navStyle: (v) => NAV_STYLES.includes(v),
   appName: (v) => typeof v === 'string' && v.trim().length >= 1 && v.trim().length <= 20 && !/[<>\u0000-\u001f]/.test(v),
+  // Prompt 26: Kalender per bruker. Kortrekkefølge og skjulte kort (rediger-modus), filtre, visning, påminnelser og fagfarger.
+  // Kortene A–E som i designet (A Nå-kort, B Prøver og frister, C Kalendere-lenken, D Kalenderen, E Widgets).
+  kalOrder: (v) => Array.isArray(v) && v.length <= KAL_CARDS.length && new Set(v).size === v.length && v.every((x) => KAL_CARDS.includes(x)),
+  kalHidden: (v) => Array.isArray(v) ? v.length <= KAL_CARDS.length && v.every((x) => KAL_CARDS.includes(x))
+    : !!v && typeof v === 'object' && Object.entries(v).every(([k, b]) => KAL_CARDS.includes(k) && typeof b === 'boolean'),
+  // {timeplan, prover, bursdager, skole: bool} (true = vises), eller en liste med skjulte nøkler.
+  kalFilters: (v) => Array.isArray(v) ? v.length <= KAL_FILTERS.length && v.every((x) => KAL_FILTERS.includes(x))
+    : !!v && typeof v === 'object' && Object.entries(v).every(([k, b]) => KAL_FILTERS.includes(k) && typeof b === 'boolean'),
+  kalView: (v) => ['uke', 'maaned', 'agenda'].includes(v),
+  kalReminders: (v) => !!v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length <= 1000
+    && Object.entries(v).every(([k, r]) => k.length >= 1 && k.length <= 120 && !/[<>]/.test(k) && ['none', '15m', '1h', 'day'].includes(r)),
+  subjectColors: (v) => !!v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length <= 60
+    && Object.entries(v).every(([k, col]) => KAL_KEY.test(k) && typeof col === 'string' && /^#[0-9a-f]{6}$/i.test(col)),
 };
+// Filternavn og fag: bokstaver (også æøå), tall, mellomrom og noen tegn, 1–40 tegn.
+const KAL_CARDS = ['A', 'B', 'C', 'D', 'E'];
+const KAL_FILTERS = ['timeplan', 'prover', 'bursdager', 'skole'];
+const KAL_KEY = /^[\p{L}\p{N} ._&+()\/-]{1,40}$/u;
+// Felt som flettes per nøkkel (en klient kan lagre én påminnelse eller én fagfarge uten å sende resten; null fjerner nøkkelen).
+const MERGE_MAP = ['kalReminders', 'subjectColors'];
 // finNav som liste (prompt 24): fanene i Finans i profilen. Lagres som finNavList, så sidemenyen på desktop (finNav-objektet
 // {order, hidden, labels}) beholdes uendret. GET /api/me/layout svarer med finNav = listen og finSideNav = objektet.
 const FIN_NAV_IDS = ['oversikt', 'liste', 'finn', 'sok', 'budsjett', 'kvitteringer', 'aksjer', 'abonnementer', 'kontoer', 'boliger', 'mer'];
-const finNavList = (v) => Array.isArray(v) && v.length >= 1 && v.length <= 6 && new Set(v).size === v.length && v.every((x) => FIN_NAV_IDS.includes(x));
+// Prompt 26: finNav kan også være [{key, label?, icon?}] (egne navn og ikoner fra «Rediger fanelinjen»). Maks 5 faner;
+// Mer ligger alltid sist i appene og lagres ikke (fjernes fra listen). Lagres som finNavList (nøklene) og finNavMeta.
+const FIN_NAV_MAX = 5;
+function finNavParse(v) {
+  if (!Array.isArray(v) || v.length > FIN_NAV_MAX + 1) return null;
+  const items = [];
+  for (const x of v) {
+    const it = typeof x === 'string' ? { key: x } : x && typeof x === 'object' && !Array.isArray(x) ? x : null;
+    if (!it || !Object.keys(it).every((f) => ['key', 'label', 'icon'].includes(f)) || !FIN_NAV_IDS.includes(it.key)) return null;
+    if (it.label !== undefined && it.label !== null && (typeof it.label !== 'string' || it.label.trim().length > 24 || /[<>\u0000-\u001f]/.test(it.label))) return null;
+    if (it.icon !== undefined && it.icon !== null && (typeof it.icon !== 'string' || !/^[\w.:-]{1,60}$/.test(it.icon))) return null;
+    if (it.key === 'mer') continue;
+    items.push({ key: it.key, ...(it.label?.trim() ? { label: it.label.trim().replace(/\s+/g, ' ') } : {}), ...(it.icon ? { icon: it.icon } : {}) });
+  }
+  if (!items.length || items.length > FIN_NAV_MAX || new Set(items.map((x) => x.key)).size !== items.length) return null;
+  return items;
+}
+const finNavList = (v) => !!finNavParse(v);
 export const PROFILES = {
   standard: { startRoute: 'hjem', homeNav: ['hjem', 'finans', 'mat', 'mer'], finNav: ['oversikt', 'liste', 'finn', 'sok'] },
   finans_boliger: { startRoute: 'finans/boliger', homeNav: ['finans'], finNav: ['boliger', 'sok', 'liste', 'oversikt', 'kvitteringer'] },
@@ -153,8 +189,11 @@ const sameList = (a, b) => Array.isArray(a) && Array.isArray(b) && a.length === 
 /** Profilfeltene med standardverdier: valgt profil, eller Standard. */
 export function profileOf(id) {
   const l = layoutOf(id), p = PROFILES[l.profile] ?? PROFILES.standard;
+  const finNav = l.finNavList ?? (l.profile && PROFILES[l.profile] ? p.finNav : l.finTabs ?? p.finNav);
+  const meta = l.finNavList && l.finNavMeta && typeof l.finNavMeta === 'object' ? l.finNavMeta : {};
   return { profile: PROFILE_IDS.includes(l.profile) ? l.profile : 'standard', startRoute: l.startRoute ?? p.startRoute, homeNav: l.homeNav ?? p.homeNav,
-    finNav: l.finNavList ?? (l.profile && PROFILES[l.profile] ? p.finNav : l.finTabs ?? p.finNav), appIcon: l.appIcon ?? null, appName: l.appName ?? null, finSideNav: l.finNav ?? null };
+    finNav, finNavItems: finNav.filter((k) => k !== 'mer').slice(0, FIN_NAV_MAX).map((key) => ({ key, ...(meta[key] ?? {}) })),
+    appIcon: l.appIcon ?? null, appName: l.appName ?? null, finSideNav: l.finNav ?? null };
 }
 const SUB_HOME_CARDS = ['ai', 'next7', 'check', 'list'];
 export const NAV_STYLES = ['text', 'icons', 'icons_active_label'];
@@ -327,7 +366,7 @@ api.delete('/me/avatar', authOrToken, async (c) => {
 api.get('/users/:id/avatar', authOrToken, (c) => sendAvatar(c, c.req.param('id')));
 
 // Lagret oppsett med standardverdiene for utseendet fylt inn (de avhenger av om installasjonen er ny, se designOf).
-api.get('/me/layout', authOrToken, (c) => { const id = c.get('user'); const { finNavList: _l, ...l } = layoutOf(id); return c.json({ ...l, ...designOf(id), ...profileOf(id) }); });
+api.get('/me/layout', authOrToken, (c) => { const id = c.get('user'); const { finNavList: _l, finNavMeta: _m, ...l } = layoutOf(id); return c.json({ ...l, ...designOf(id), ...profileOf(id) }); });
 api.put('/me/layout', authOrToken, async (c) => {
   const b = await json(c);
   if (!b || typeof b !== 'object' || Array.isArray(b)) return c.json({ error: 'Forventet et objekt' }, 400);
@@ -336,16 +375,28 @@ api.put('/me/layout', authOrToken, async (c) => {
   if (b.profile !== undefined && b.profile !== null) {
     if (!SCALAR.profile(b.profile)) return c.json({ error: 'Ugyldig verdi for profile' }, 400);
     const p = PROFILES[b.profile];
-    if (p) Object.assign(next, { startRoute: p.startRoute, homeNav: [...p.homeNav], finNavList: [...p.finNav] });
+    if (p) { Object.assign(next, { startRoute: p.startRoute, homeNav: [...p.homeNav], finNavList: [...p.finNav] }); delete next.finNavMeta; }
   }
   const custom = ['startRoute', 'homeNav', 'finNav'].some((k) => b[k] !== undefined && !(k === 'finNav' && !Array.isArray(b[k]) && b[k] !== null));
   for (const [k, v] of Object.entries(b)) {
     if (!LAYOUT[k] && !SCALAR[k]) return c.json({ error: `Ukjent nøkkel ${k}` }, 400);
     if (k === 'finNav' && (Array.isArray(v) || v === null)) {
-      if (v === null) { delete next.finNavList; continue; }
-      if (!finNavList(v)) return c.json({ error: 'Ugyldig verdi for finNav' }, 400);
-      next.finNavList = v; continue;
+      if (v === null) { delete next.finNavList; delete next.finNavMeta; continue; }
+      const items = finNavParse(v);
+      if (!items) return c.json({ error: `Ugyldig verdi for finNav (1–${FIN_NAV_MAX} faner, Mer kommer alltid sist)` }, 400);
+      next.finNavList = items.map((x) => x.key);
+      const meta = Object.fromEntries(items.filter((x) => x.label || x.icon).map(({ key, ...m }) => [key, m]));
+      if (Object.keys(meta).length) next.finNavMeta = meta; else delete next.finNavMeta;
+      continue;
     }
+    if (MERGE_MAP.includes(k) && v && typeof v === 'object' && !Array.isArray(v)) {
+      // Fletting: {id: verdi} legges til, {id: null} fjernes.
+      const merged = { ...(next[k] ?? {}), ...v };
+      for (const [id, x] of Object.entries(merged)) if (x === null) delete merged[id];
+      if (!SCALAR[k](merged)) return c.json({ error: `Ugyldig verdi for ${k}` }, 400);
+      next[k] = merged; continue;
+    }
+    if (k === 'kalView' && v === 'mnd') { next.kalView = 'maaned'; continue; }
     if (k === 'appName' && typeof v === 'string') { if (!SCALAR.appName(v)) return c.json({ error: 'Navnet på appen må være 1–20 tegn' }, 400); next.appName = v.trim().replace(/\s+/g, ' '); continue; }
     if (v === null) { delete next[k]; continue; }
     if (SCALAR[k]) {
@@ -365,11 +416,11 @@ api.put('/me/layout', authOrToken, async (c) => {
   // Egne endringer i fanene eller startsiden: «Egendefinert», med mindre de er lik den valgte profilen.
   if (custom) {
     const p = PROFILES[next.profile ?? 'standard'];
-    const same = p && (next.startRoute ?? p.startRoute) === p.startRoute && sameList(next.homeNav ?? p.homeNav, p.homeNav) && sameList(next.finNavList ?? p.finNav, p.finNav);
+    const same = p && (next.startRoute ?? p.startRoute) === p.startRoute && sameList(next.homeNav ?? p.homeNav, p.homeNav) && sameList(next.finNavList ?? p.finNav, p.finNav) && !next.finNavMeta;
     if (!same) next.profile = 'custom';
   }
   kv.set(c.get('user'), 'layout', next);
-  const { finNavList: _l, finNav: _side, ...rest } = next;
+  const { finNavList: _l, finNavMeta: _m, finNav: _side, ...rest } = next;
   return c.json({ ...rest, ...profileOf(c.get('user')) });
 });
 // Ferdige profiler (Innstillinger → PROFIL): Standard, Finans + Boliger og Boliger-profil.
