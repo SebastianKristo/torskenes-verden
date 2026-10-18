@@ -9,72 +9,50 @@
 <x-dc>
 <helmet>
 <meta name="design_doc_mode" content="canvas">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap">
-<style>body{margin:0;background:#E9E7E3;font-family:'Geist',system-ui,sans-serif}a{color:#C2410C}a:hover{color:#9A3412}</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500&amp;family=Manrope:wght@500;700&amp;display=swap">
+<style>body{margin:0;background:#e9e4d8}a{color:#b23a2a}a:hover{color:#1b1a17}</style>
 </helmet>
-<section style="display:flex;flex-direction:column;gap:40px;padding:56px;max-width:1500px">
-<div style="display:flex;flex-direction:column;gap:8px;max-width:820px"><div style="font-size:13px;letter-spacing:.12em;color:#6B6862;font-weight:600">APP-IKON · HOMELAB</div><div style="font-size:36px;font-weight:600;letter-spacing:-.02em;color:#1A1917">Tak over tre stigende søyler</div><div style="font-size:16px;color:#55524D;line-height:1.55;text-wrap:pretty">Hjemmet, serveren og økonomien i ett merke. Oransje fra FinansHub. Ikonet har alle utseendene iOS lar brukeren velge under Tilpass, og et adaptivt ikon med tematisk variant for Material You på Android.</div></div>
+<section style="padding:48px;display:flex;flex-direction:column;gap:28px;font-family:Manrope,sans-serif;color:#1b1a17">
+<div style="display:flex;flex-direction:column;gap:6px"><span style="font:700 11px Manrope;letter-spacing:.14em;color:#b23a2a">APP-IKON · RUNDE 1</span><span style="font:500 34px Newsreader,serif">Tre retninger for Homelab</span></div>
+<div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start">
 
-<div style="display:flex;gap:40px;align-items:flex-end;flex-wrap:wrap">
-<sc-for list="{{ hero }}" as="v"><div style="display:flex;flex-direction:column;align-items:center;gap:14px"><div style="width:{{ v.sz }};height:{{ v.sz }};border-radius:{{ v.r }};background:{{ v.bg }};box-shadow:0 18px 40px rgba(0,0,0,.22),inset 0 0 0 1px rgba(255,255,255,.08);display:grid;place-items:center;overflow:hidden"><svg viewBox="0 0 1024 1024" width="100%" height="100%"><path d="M232 486 L512 262 L792 486" fill="none" stroke="{{ v.g }}" stroke-width="72" stroke-linecap="round" stroke-linejoin="round"></path><rect x="352" y="606" width="80" height="168" rx="40" fill="{{ v.b }}"></rect><rect x="472" y="530" width="80" height="244" rx="40" fill="{{ v.b }}"></rect><rect x="592" y="454" width="80" height="320" rx="40" fill="{{ v.b }}"></rect></svg></div><span style="font-size:14px;color:#55524D">{{ v.l }}</span></div></sc-for>
+<div id="1a" style="width:340px;padding:24px;border-radius:24px;background:#f3efe6;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;justify-content:space-between;align-items:center"><b style="font:500 22px Newsreader,serif">Huset med stativ</b><span style="padding:3px 10px;border-radius:8px;background:#1b1a17;color:#f3efe6;font-size:12px;font-weight:700">1a</span></div>
+<svg viewBox="0 0 1024 1024" width="200" height="200" style="align-self:center;border-radius:46px;box-shadow:0 18px 40px rgba(0,0,0,.18)"><rect width="1024" height="1024" fill="#f3efe6"></rect><path d="M232 470 512 236 792 470" fill="none" stroke="#1b1a17" stroke-width="56" stroke-linecap="round" stroke-linejoin="round"></path><rect x="312" y="480" width="400" height="300" rx="28" fill="#1b1a17"></rect><rect x="352" y="526" width="320" height="56" rx="12" fill="#f3efe6"></rect><rect x="352" y="604" width="320" height="56" rx="12" fill="#f3efe6"></rect><rect x="352" y="682" width="320" height="56" rx="12" fill="#f3efe6"></rect><circle cx="628" cy="554" r="14" fill="#b23a2a"></circle><circle cx="628" cy="632" r="14" fill="#1b1a17"></circle><circle cx="628" cy="710" r="14" fill="#1b1a17"></circle></svg>
+<span style="font-size:14px;line-height:1.5;color:#4a463e">Et hus med et serverstativ inni. Sier «hjem» og «homelab» på en gang. Den røde lampen er appens aksentfarge.</span>
 </div>
 
-<div style="display:flex;flex-direction:column;gap:18px">
-<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap"><div><div style="font-size:22px;font-weight:600;color:#1A1917">iPhone · Tilpass</div><div style="font-size:15px;color:#55524D;margin-top:4px">Hjem-skjerm → hold inne → Rediger → Tilpass. Standard, Mørk, Tonet og Klar (iOS 26).</div></div>
-<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:14px;color:#55524D">Tonet farge</span><sc-for list="{{ tints }}" as="t"><button onClick="{{ t.go }}" aria-label="{{ t.n }}" style="width:34px;height:34px;border-radius:17px;border:3px solid {{ t.bd }};background:{{ t.c }};cursor:pointer;padding:0"></button></sc-for></div></div>
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px">
-<sc-for list="{{ ios }}" as="w"><div style="border-radius:32px;padding:26px 22px 22px;background:{{ w.wall }};display:flex;flex-direction:column;gap:18px;min-height:250px">
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px 14px;justify-items:center"><sc-for list="{{ w.apps }}" as="a"><div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:62px;height:62px;border-radius:16px;background:{{ a.bg }};box-shadow:{{ a.sh }};backdrop-filter:{{ a.bf }};-webkit-backdrop-filter:{{ a.bf }};overflow:hidden;display:grid;place-items:center"><sc-if value="{{ a.me }}"><svg viewBox="0 0 1024 1024" width="100%" height="100%"><path d="M232 486 L512 262 L792 486" fill="none" stroke="{{ a.g }}" stroke-width="72" stroke-linecap="round" stroke-linejoin="round"></path><rect x="352" y="606" width="80" height="168" rx="40" fill="{{ a.b }}"></rect><rect x="472" y="530" width="80" height="244" rx="40" fill="{{ a.b }}"></rect><rect x="592" y="454" width="80" height="320" rx="40" fill="{{ a.b }}"></rect></svg></sc-if><sc-if value="{{ a.other }}"><span style="width:26px;height:26px;border-radius:8px;background:{{ a.g }};opacity:.9"></span></sc-if></div><span style="font-size:11.5px;color:{{ w.fg }};font-weight:{{ a.fw }};text-shadow:0 1px 2px rgba(0,0,0,.25)">{{ a.n }}</span></div></sc-for></div>
-<div style="margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;gap:10px"><b style="font-size:16px;color:{{ w.fg }}">{{ w.t }}</b><span style="font-size:12.5px;color:{{ w.fg }};opacity:.8;text-align:right">{{ w.s }}</span></div>
-</div></sc-for>
-</div></div>
-
-<div style="display:flex;flex-direction:column;gap:18px">
-<div><div style="font-size:22px;font-weight:600;color:#1A1917">Android · adaptivt ikon</div><div style="font-size:15px;color:#55524D;margin-top:4px">Bakgrunn og forgrunn er egne lag på 108 dp. Glyph-en ligger innenfor sikker sone på 66 dp, så den tåler alle masker.</div></div>
-<div style="display:flex;gap:28px;flex-wrap:wrap;align-items:flex-end">
-<div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div style="position:relative;width:216px;height:216px;background:linear-gradient(135deg,#FF9A5C,#EE5A1E);overflow:hidden"><svg viewBox="0 0 1024 1024" style="position:absolute;inset:0" width="100%" height="100%"><g transform="translate(512 512) scale(0.556) translate(-512 -518)"><path d="M232 486 L512 262 L792 486" fill="none" stroke="#fff" stroke-width="72" stroke-linecap="round" stroke-linejoin="round"></path><rect x="352" y="606" width="80" height="168" rx="40" fill="#fff"></rect><rect x="472" y="530" width="80" height="244" rx="40" fill="#fff"></rect><rect x="592" y="454" width="80" height="320" rx="40" fill="#fff"></rect></g></svg><span style="position:absolute;left:36px;top:36px;width:144px;height:144px;border-radius:50%;border:2px dashed rgba(255,255,255,.7)"></span><span style="position:absolute;inset:0;border:2px solid rgba(0,0,0,.25)"></span></div><span style="font-size:13.5px;color:#55524D">Lag og sikker sone (66 dp)</span></div>
-<sc-for list="{{ masks }}" as="m"><div style="display:flex;flex-direction:column;align-items:center;gap:10px"><div style="width:120px;height:120px;border-radius:{{ m.r }};background:linear-gradient(135deg,#FF9A5C,#EE5A1E);overflow:hidden;box-shadow:0 10px 24px rgba(0,0,0,.18)"><svg viewBox="0 0 1024 1024" width="100%" height="100%"><g transform="translate(512 512) scale(0.556) translate(-512 -518)"><path d="M232 486 L512 262 L792 486" fill="none" stroke="#fff" stroke-width="72" stroke-linecap="round" stroke-linejoin="round"></path><rect x="352" y="606" width="80" height="168" rx="40" fill="#fff"></rect><rect x="472" y="530" width="80" height="244" rx="40" fill="#fff"></rect><rect x="592" y="454" width="80" height="320" rx="40" fill="#fff"></rect></g></svg></div><span style="font-size:13.5px;color:#55524D">{{ m.n }}</span></div></sc-for>
-</div></div>
-
-<div style="display:flex;flex-direction:column;gap:18px">
-<div style="display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap"><div><div style="font-size:22px;font-weight:600;color:#1A1917">Android · tematiske ikoner (Material You)</div><div style="font-size:15px;color:#55524D;margin-top:4px">Den monokrome varianten farges av systemet ut fra bakgrunnsbildet når «Tematiske ikoner» er på.</div></div>
-<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:14px;color:#55524D">Bakgrunnsbilde</span><sc-for list="{{ seeds }}" as="t"><button onClick="{{ t.go }}" aria-label="{{ t.n }}" style="width:34px;height:34px;border-radius:17px;border:3px solid {{ t.bd }};background:{{ t.c }};cursor:pointer;padding:0"></button></sc-for></div></div>
-<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px">
-<sc-for list="{{ andr }}" as="w"><div style="border-radius:32px;padding:26px 22px 22px;background:{{ w.wall }};display:flex;flex-direction:column;gap:18px;min-height:230px">
-<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:18px 14px;justify-items:center"><sc-for list="{{ w.apps }}" as="a"><div style="display:flex;flex-direction:column;align-items:center;gap:6px"><div style="width:60px;height:60px;border-radius:50%;background:{{ a.bg }};overflow:hidden;display:grid;place-items:center"><sc-if value="{{ a.me }}"><svg viewBox="0 0 1024 1024" width="100%" height="100%"><g transform="translate(512 512) scale(0.62) translate(-512 -518)"><path d="M232 486 L512 262 L792 486" fill="none" stroke="{{ a.g }}" stroke-width="72" stroke-linecap="round" stroke-linejoin="round"></path><rect x="352" y="606" width="80" height="168" rx="40" fill="{{ a.g }}"></rect><rect x="472" y="530" width="80" height="244" rx="40" fill="{{ a.g }}"></rect><rect x="592" y="454" width="80" height="320" rx="40" fill="{{ a.g }}"></rect></g></svg></sc-if><sc-if value="{{ a.other }}"><span style="width:24px;height:24px;border-radius:7px;background:{{ a.g }}"></span></sc-if></div><span style="font-size:11.5px;color:{{ w.fg }};font-weight:{{ a.fw }}">{{ a.n }}</span></div></sc-for></div>
-<div style="margin-top:auto;display:flex;justify-content:space-between;align-items:baseline;gap:10px"><b style="font-size:16px;color:{{ w.fg }}">{{ w.t }}</b><span style="font-size:12.5px;color:{{ w.fg }};opacity:.8">{{ w.s }}</span></div>
-</div></sc-for>
-</div></div>
-
-<div style="display:flex;flex-direction:column;gap:10px;padding:22px 24px;border-radius:24px;background:#F6F4F0;max-width:900px">
-<b style="font-size:17px;color:#1A1917">Filer i pakken · design_handoff_homelab/app-icon/</b>
-<sc-for list="{{ files }}" as="f"><div style="display:flex;gap:14px;font-size:14.5px;line-height:1.45;color:#3A3834"><code style="flex:none;min-width:220px;font-size:13px;color:#9A3412">{{ f.n }}</code><span>{{ f.d }}</span></div></sc-for>
+<div id="1b" style="width:340px;padding:24px;border-radius:24px;background:#f3efe6;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;justify-content:space-between;align-items:center"><b style="font:500 22px Newsreader,serif">Papir-monogram</b><span style="padding:3px 10px;border-radius:8px;background:#1b1a17;color:#f3efe6;font-size:12px;font-weight:700">1b</span></div>
+<svg viewBox="0 0 1024 1024" width="200" height="200" style="align-self:center;border-radius:46px;box-shadow:0 18px 40px rgba(0,0,0,.18)"><rect width="1024" height="1024" fill="#b23a2a"></rect><path d="M1024 760 760 1024H1024z" fill="#8e2b1e"></path><path d="M760 1024V760h264" fill="#f3efe6" opacity=".18"></path><text x="500" y="690" text-anchor="middle" font-family="Newsreader,serif" font-size="560" font-weight="500" fill="#f3efe6">H</text><circle cx="742" cy="350" r="34" fill="#f3efe6"></circle></svg>
+<span style="font-size:14px;line-height:1.5;color:#4a463e">En stor H i appens serif på rødt papir, med et brettet hjørne. Fungerer også hvis appen heter Torskenes Verden: bokstaven byttes ut.</span>
 </div>
+
+<div id="1c" style="width:340px;padding:24px;border-radius:24px;background:#f3efe6;display:flex;flex-direction:column;gap:18px">
+<div style="display:flex;justify-content:space-between;align-items:center"><b style="font:500 22px Newsreader,serif">Fire rom</b><span style="padding:3px 10px;border-radius:8px;background:#1b1a17;color:#f3efe6;font-size:12px;font-weight:700">1c</span></div>
+<svg viewBox="0 0 1024 1024" width="200" height="200" style="align-self:center;border-radius:46px;box-shadow:0 18px 40px rgba(0,0,0,.18)"><rect width="1024" height="1024" fill="#1b1a17"></rect><path d="M512 196 820 452V828H204V452z" fill="#f3efe6"></path><rect x="276" y="500" width="216" height="140" rx="18" fill="#b23a2a"></rect><rect x="532" y="500" width="216" height="140" rx="18" fill="#1b1a17"></rect><rect x="276" y="672" width="216" height="104" rx="18" fill="#1b1a17"></rect><rect x="532" y="672" width="216" height="104" rx="18" fill="#1b1a17"></rect></svg>
+<span style="font-size:14px;line-height:1.5;color:#4a463e">Et hus delt i fire rom, slik appen er delt i Finans, Hjem, Sporing og Familie. Det røde rommet er det du bruker mest.</span>
+</div>
+</div>
+
+<div style="display:flex;flex-direction:column;gap:12px"><span style="font:700 11px Manrope;letter-spacing:.14em;color:#b23a2a">PÅ HJEMSKJERMEN</span>
+<div style="display:flex;gap:24px;flex-wrap:wrap">
+<div style="width:340px;height:220px;border-radius:28px;background:linear-gradient(160deg,#7b8a98,#2e3a46);display:grid;grid-template-columns:repeat(3,1fr);align-content:center;justify-items:center;gap:14px 0;padding:0 14px;box-sizing:border-box">
+<sc-for list="{{ home }}" as="h"><div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:60px;height:60px;border-radius:14px;overflow:hidden;background:{{ h.bg }};display:block">{{ h.svg }}</span><span style="font-size:11px;color:#fff;font-weight:600">{{ h.n }}</span></div></sc-for>
+</div>
+<div style="width:340px;height:220px;border-radius:28px;background:#3b2a26;display:grid;grid-template-columns:repeat(3,1fr);align-content:center;justify-items:center;gap:14px 0;padding:0 14px;box-sizing:border-box">
+<sc-for list="{{ home }}" as="h"><div style="display:flex;flex-direction:column;align-items:center;gap:6px"><span style="width:58px;height:58px;border-radius:29px;overflow:hidden;background:{{ h.bg }};display:block">{{ h.svg }}</span><span style="font-size:11px;color:#fff;font-weight:600">{{ h.n }}</span></div></sc-for>
+</div>
+</div><span style="font-size:13px;color:#4a463e">iOS til venstre, Android (rund maske) til høyre. Si hvilken du vil ha, så lager jeg ferdige filer i alle størrelser.</span></div>
 </section>
 </x-dc>
 <script type="text/x-dc" data-dc-script>
-const OTH=['Kalender','Bilder','Kart','Meldinger','Musikk','Notater','Vær'];
-const mix=(a,b,t)=>{const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),x=p(a),y=p(b);return'#'+x.map((v,i)=>Math.round(v+(y[i]-v)*t).toString(16).padStart(2,'0')).join('')};
 class Component extends DCLogic {
-  state={tint:'#7FB2FF',seed:'#C9A7FF'};
-  renderVals(){const s=this.state,T=s.tint,S=s.seed;
-    const ORG='linear-gradient(135deg,#FF9A5C,#EE5A1E)',DRK='linear-gradient(135deg,#232327,#0D0D0F)';
-    const hero=[{l:'Standard',bg:ORG,g:'#FFFFFF',b:'#FFFFFF',sz:'168px',r:'38px'},{l:'Mørk',bg:DRK,g:'#FF9A5C',b:'#FF7A3D',sz:'168px',r:'38px'},{l:'Tonet',bg:mix(T,'#000000',.82),g:T,b:mix(T,'#000000',.22),sz:'168px',r:'38px'},{l:'Klar',bg:'linear-gradient(135deg,rgba(255,255,255,.55),rgba(255,255,255,.18))',g:'#FFFFFF',b:'rgba(255,255,255,.85)',sz:'168px',r:'38px'},{l:'Android tematisk',bg:mix(S,'#FFFFFF',.55),g:mix(S,'#000000',.62),b:mix(S,'#000000',.62),sz:'140px',r:'50%'}];
-    const grid=(me,oth)=>[...OTH.slice(0,3).map(n=>({n,me:false,other:true,fw:400,...oth})),{n:'Homelab',me:true,other:false,fw:600,...me},...OTH.slice(3,7).map(n=>({n,me:false,other:true,fw:400,...oth}))];
-    const ios=[
-      {t:'Standard',s:'Lyst utseende',wall:'linear-gradient(160deg,#BFD6F2,#E9D7C8)',fg:'#1A1917',apps:grid({bg:ORG,g:'#fff',b:'#fff',sh:'0 4px 10px rgba(0,0,0,.18)',bf:'none'},{bg:'#fff',g:'#C9CED6',sh:'0 4px 10px rgba(0,0,0,.12)',bf:'none'})},
-      {t:'Mørk',s:'Oransje glyph på mørk flate',wall:'linear-gradient(160deg,#1B2333,#2B1F1A)',fg:'#F4F4F6',apps:grid({bg:DRK,g:'#FF9A5C',b:'#FF7A3D',sh:'0 4px 12px rgba(0,0,0,.45)',bf:'none'},{bg:'#1F1F23',g:'#4A4A52',sh:'0 4px 12px rgba(0,0,0,.4)',bf:'none'})},
-      {t:'Tonet',s:'Systemet farger alle ikoner',wall:'linear-gradient(160deg,'+mix(T,'#000000',.7)+','+mix(T,'#000000',.88)+')',fg:'#F4F4F6',apps:grid({bg:mix(T,'#000000',.82),g:T,b:mix(T,'#000000',.22),sh:'none',bf:'none'},{bg:mix(T,'#000000',.82),g:mix(T,'#000000',.35),sh:'none',bf:'none'})},
-      {t:'Klar',s:'Liquid Glass, iOS 26',wall:'linear-gradient(160deg,#6A8FC7,#C98F7A)',fg:'#FFFFFF',apps:grid({bg:'linear-gradient(135deg,rgba(255,255,255,.42),rgba(255,255,255,.12))',g:'#fff',b:'rgba(255,255,255,.85)',sh:'inset 0 0 0 1px rgba(255,255,255,.45),0 6px 16px rgba(0,0,0,.15)',bf:'blur(14px) saturate(1.6)'},{bg:'linear-gradient(135deg,rgba(255,255,255,.42),rgba(255,255,255,.12))',g:'rgba(255,255,255,.7)',sh:'inset 0 0 0 1px rgba(255,255,255,.45)',bf:'blur(14px)'})}];
-    const tints=[['Blå','#7FB2FF'],['Grønn','#7BE3A0'],['Rosa','#FF9EBE'],['Gul','#F2D26B'],['Oransje','#FFB08A']].map(([n,c])=>({n,c,bd:T===c?'#1A1917':'transparent',go:()=>this.setState({tint:c})}));
-    const seeds=[['Lilla','#C9A7FF'],['Grønn','#9AD1A8'],['Blå','#9CC3F0'],['Oransje','#F6B48F']].map(([n,c])=>({n,c,bd:S===c?'#1A1917':'transparent',go:()=>this.setState({seed:c})}));
-    const andr=[{t:'Standard',s:'Adaptivt ikon, sirkelmaske',wall:'linear-gradient(160deg,'+mix(S,'#FFFFFF',.3)+','+mix(S,'#FFFFFF',.7)+')',fg:'#1A1917',apps:grid({bg:ORG,g:'#fff'},{bg:'#fff',g:'#C9CED6'})},
-      {t:'Tematisk · lys',s:'Monokrom, farget fra bakgrunnen',wall:'linear-gradient(160deg,'+mix(S,'#FFFFFF',.3)+','+mix(S,'#FFFFFF',.7)+')',fg:'#1A1917',apps:grid({bg:mix(S,'#FFFFFF',.55),g:mix(S,'#000000',.62)},{bg:mix(S,'#FFFFFF',.55),g:mix(S,'#000000',.45)})},
-      {t:'Tematisk · mørk',s:'Samme lag i mørk modus',wall:'linear-gradient(160deg,'+mix(S,'#000000',.7)+','+mix(S,'#000000',.85)+')',fg:'#F4F4F6',apps:grid({bg:mix(S,'#000000',.62),g:mix(S,'#FFFFFF',.55)},{bg:mix(S,'#000000',.62),g:mix(S,'#FFFFFF',.35)})}];
-    const masks=[['Sirkel','50%'],['Squircle','34%'],['Avrundet firkant','22%'],['Dråpe','50% 50% 50% 14%']].map(([n,r])=>({n,r}));
-    const files=[['ios-light.svg','Standard, 1024 × 1024'],['ios-dark.svg','Mørk'],['ios-tinted.svg','Tonet, gråtone på svart'],['ios-clear-glyph.svg','Klar, hvit glyph uten bakgrunn til Icon Composer'],['android-background.svg','Bakgrunnslag 108 dp'],['android-foreground.svg','Forgrunnslag innenfor 66 dp'],['android-monochrome.svg','Tematisk ikon (Android 13+)'],['ic_launcher.xml','adaptive-icon med monochrome'],['README.md','Oppsett i Xcode, Android Studio og PWA-manifest']].map(([n,d])=>({n,d}));
-    return{hero,ios,tints,seeds,andr,masks,files};
-  }
+  renderVals(){const e=React.createElement,S=(kids,bg)=>e('svg',{viewBox:'0 0 1024 1024',width:'100%',height:'100%'},e('rect',{width:1024,height:1024,fill:bg}),...kids);
+    const A=S([e('path',{key:1,d:'M232 470 512 236 792 470',fill:'none',stroke:'#1b1a17',strokeWidth:56,strokeLinecap:'round',strokeLinejoin:'round'}),e('rect',{key:2,x:312,y:480,width:400,height:300,rx:28,fill:'#1b1a17'}),...[526,604,682].map((y,i)=>e('rect',{key:'r'+i,x:352,y,width:320,height:56,rx:12,fill:'#f3efe6'})),e('circle',{key:3,cx:628,cy:554,r:14,fill:'#b23a2a'})],'#f3efe6');
+    const B=S([e('path',{key:1,d:'M1024 760 760 1024H1024z',fill:'#8e2b1e'}),e('text',{key:2,x:500,y:690,textAnchor:'middle',fontFamily:'Newsreader,serif',fontSize:560,fontWeight:500,fill:'#f3efe6'},'H'),e('circle',{key:3,cx:742,cy:350,r:34,fill:'#f3efe6'})],'#b23a2a');
+    const C=S([e('path',{key:1,d:'M512 196 820 452V828H204V452z',fill:'#f3efe6'}),e('rect',{key:2,x:276,y:500,width:216,height:140,rx:18,fill:'#b23a2a'}),...[[532,500,140],[276,672,104],[532,672,104]].map(([x,y,h],i)=>e('rect',{key:'c'+i,x,y,width:216,height:h,rx:18,fill:'#1b1a17'}))],'#1b1a17');
+    return{home:[{n:'1a',svg:A,bg:'#f3efe6'},{n:'1b',svg:B,bg:'#b23a2a'},{n:'1c',svg:C,bg:'#1b1a17'}]}}
 }
 </script>
 </body>

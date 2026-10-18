@@ -1073,3 +1073,143 @@ Sammenlign alltid med `design/FinansHub Mobil v2.dc.html`. Designet er fasiten.
   - «Skann strekkode» (kamera, leser strekkode/QR)
   - «Lim inn» (fra utklippstavlen)
   På andre sider er FAB-en skanning som før.
+
+## Alle skjermer i Papir (18.10.2026)
+- **Regel:** når Papir er valgt, skal ALLE skjermer, menyer, ark og undersider bruke Papir-tokens (papir #f3efe6 / kort #fff / blekk #1b1a17 / aksent #b23a2a, mørk variant #14130f / #211f19 / #ece7dc / #f08a76). Fonter: Newsreader og Manrope, med IBM Plex Mono til etiketter.
+- **Ingen gamle skjermer i Papir:** ingen skjerm i Klassisk/Material-farger skal vises inne i Papir-skallet. I skjermbildet fra 18.10 var Innstillinger fortsatt mørk/brun. Gå gjennom alle ruter og bruk ett felles theme-objekt.
+- **Innstillinger (Papir)**, se `design/Mobil Papir App.dc.html` → side `innst`:
+  - **Toppen:** profilkort (avatar, navn, @bruker · rolle, server) som åpner Kontoer og brukere.
+  - **Grupper:** etiketter i Plex Mono og hvite kort med rader (ikon i rute, tittel, undertekst, verdi, ›).
+  - **KONTO:** Kontoer og brukere, Sikkerhet, API-tokens.
+  - **FINANS:** AI og tolkning, Kategorier og budsjett, Regler, Bankimport, Aksjer · Trading 212, Fanelinje og Mer i Finans, Subscription OS.
+  - **HOMELAB:** Moduler, Nyhetsleser.
+  - **APP:** Utseende og fanelinje, Varsler og haptikk.
+  - **Bunnen:** Logg ut, og versjon nederst.
+  - **Undersider:** samme radstil, med «‹ Alle innstillinger».
+- **FinansHub web, brukerchip:** vis brukerens profilbilde (samme som i Homelab, `users.avatar_url`), med initial som fallback. Under navnet står «@brukernavn · rolle», ikke «Privat».
+- **AI-søk virker ikke i bygget app.** Sjekk dette:
+  - **Bryteren:** et trykk på ✦ AI med tekst i feltet kjører AI-søket med en gang (`force`). Enter kjører også.
+  - **Endepunkt:** `POST /api/ai/search {q}` skal kalle valgt motor (Gemini med nøkkelen fra Innstillinger → AI, ellers Ollama). Konteksten er transaksjoner, kvitteringer og varelinjer for perioden. Svaret er `{answer, items[], sum}`.
+  - **Feil skal vises:** vis tydelig feilmelding i svar-kortet ved manglende nøkkel, 401/403, timeout (20 s) eller modellfeil. Aldri stille feil.
+  - **Logg:** `ai_log` med prompt-lengde, modell, ms og status, så det kan feilsøkes.
+  - **Enkle søk:** enkle ord går til vanlig søk først.
+
+## Flere AI-motorer (18.10.2026)
+- **Motorer:** Innstillinger → AI og tolkning har fire: Ollama (lokalt), Gemini, **Groq** og **Roboflow**.
+- **Groq:** nøkkel fra https://console.groq.com/keys (`gsk_…`). OpenAI-kompatibelt API: `POST https://api.groq.com/openai/v1/chat/completions` med `Authorization: Bearer <key>`.
+  - **Modeller:** `llama-3.3-70b-versatile` (standard), `llama-3.1-8b-instant`, `meta-llama/llama-4-scout-17b-16e-instruct` (tar bilder) og `qwen/qwen3-32b`.
+  - **Bruk:** AI-søk, sammendrag, RSS-sammendrag og kategorisering (raskt).
+- **Roboflow:** Private API Key fra https://app.roboflow.com/sebastians-workspace-y3jnc/settings/api. Arbeidsområde `sebastians-workspace-y3jnc`, felt for modell/versjon (`workspace/prosjekt/versjon`).
+  - **Kall:** `POST https://detect.roboflow.com/<prosjekt>/<versjon>?api_key=…` (eller serverless `https://serverless.roboflow.com`) med bilde (base64 eller URL).
+  - **Bruk:** finne kvitteringen i bildet (beskjæring før OCR), og lese strekkoder, QR og pakkelapper i Sporing → «Skann strekkode».
+- **«Hvem gjør hva»:** egen velger per oppgave (Les kvitteringer, AI-søk, Kategorisering, Strekkoder). Standard: Gemini, Groq, Groq, Roboflow. Ved feil prøves neste motor automatisk (fallback-kjede), og hvert kall logges i `ai_log`.
+- **Sikkerhet:** nøklene lagres kryptert på serveren (`settings.ai.*`) og vises bare maskert. «Test tilkobling» gjør et ekte minimalt kall per motor og viser modell og responstid.
+- **Mobil:** samme valg under Innstillinger → AI og tolkning.
+
+---
+
+## Endringer fra prompt 16 og 17 (18.10.2026)
+Brukerens ordrette ønsker står i `prompts/prompt-16.md` og `prompts/prompt-17.md`. Design ligger i `design/`. Kopier de nye filene dit: `Familie.dc.html`, `Huskeliste.dc.html`, `App-ikon.dc.html`, og de oppdaterte `Mobil Papir App.dc.html`, `Sporing.dc.html`, `Vaer.dc.html`, `Boliger.dc.html`, `Aksjer Mobil.dc.html` og `Homelab v2.dc.html`.
+
+### Generelt i mobilappen
+- **Ny side åpner alltid øverst.** Scroll-posisjonen nullstilles ved hvert sidebytte og hver undermeny i Innstillinger.
+- **Dra for å oppdatere:** fra toppen når scroll er 0. Ved 70 px står det «Slipp for å oppdatere», og da hentes data på nytt (i prototypen lastes siden på nytt).
+- **Innhold bak den røde +-knappen:** med flytende navbar har innholdet ingen margin nederst, bare en innvendig avstand på 112 px. Kortene scroller bak menylinjen.
+- **Navn på appen:** Innstillinger → Navn på appen. Fritt navn eller forslagene «Homelab» og «Torskenes Verden». Lagres i `settings.app_name` og vises på Hjem, i innloggingen, i varsler og i nettleserfanen. Web må lese samme verdi.
+- **App-ikon:** Innstillinger → App-ikon. Tre ikoner: «Huset med stativ», «Papir-monogram» (første bokstav i appnavnet) og «Fire rom».
+  - **iPhone:** Standard, Mørk og Tonet. Lever `AppIcon`, `AppIcon-Dark` og `AppIcon-Tinted` (gråtonelag) per ikon i asset catalog (iOS 18). Bytt med `setAlternateIconName`.
+  - **Android:** adaptivt ikon (forgrunn og bakgrunn) og et `<monochrome>`-lag for tematiske ikoner (Material You). Bytt med `activity-alias`.
+  - **Web/PWA:** generer SVG og sett `<link rel="icon">` og `apple-touch-icon`.
+
+### Varsler (Innstillinger → Varsler)
+- Alle varselinnstillinger ligger samlet her. Pakkevarsler er flyttet ut av Sporing, og Sporing har bare en lenke hit.
+- **Øverst:** hovedbryter, stille timer (22–07), tillatelse på enheten (Notification API / FCM / APNs) og «Test varsel», som spiller lyd, vibrerer og viser varselet.
+- **Varsellyd:** fem innebygde lyder (Klokke, Pling, Papir, Dobbel, Dyp), «Egen lyd» (last opp MP3/WAV/M4A under 1 MB) og «Stille», pluss volum. Egen lyd lagres per bruker på serveren.
+- **Grupper:** Pakker, Finans og hjem, Familie, reise og vær, og Haptikk.
+
+### Hjem på mobil
+- **Nye widgets:**
+  - Posisjon (familien, åpner Familie)
+  - Bolig (brukt av budsjett denne måneden, ting til gjennomgang og neste faste utgift; åpner Boliger)
+  - Huskeliste (de tre neste oppgavene, med avkrysning)
+- Widgetene kan flyttes og skjules i redigering av Hjem, som de andre.
+
+### Huskeliste (ny fane)
+- **Lister:** Alle, Hjem, Handel, Hytta og Jobb.
+- **Oppgaver:** navn, liste, forfall (I dag, I morgen, Neste uke eller uten dato) og hvem som skal gjøre den. Gruppert i «I dag og forfalt», «Senere» og «Ferdig».
+- **API:** `/api/tasks` med CRUD, delt i familien. Oppdatering i sanntid via websocket.
+- **Widgets på hjemskjermen:**
+  - iOS: WidgetKit, liten og medium, med `AppIntent` for avkrysning.
+  - Android: Glance-widget med Material You-farger, avkrysning i widgeten og + som åpner appen med tastaturet klart.
+
+### Familie og kart (ny)
+- **Tre faner:** Kart, Soner og Helse.
+- **Kart:**
+  - OpenStreetMap-fliser, med dra og zoom.
+  - Pin per person med fart og sporet de har gått.
+  - Personkort med batteri, lading, aktivitet, fart, nøyaktighet, enhet og koordinater, pluss veibeskrivelse og «Spill av lyd».
+  - En hendelseslogg og «Min deling» (pause, nøyaktig eller omtrentlig posisjon, sensortilgang).
+- **Sanntid:** appen sender posisjon og sensorer i bakgrunnen.
+  - iOS: Core Location significant-change og region monitoring, og Core Motion for aktivitet.
+  - Android: Fused Location og Activity Recognition.
+  - Send til `/api/family/location`. Websocket ut til de andre.
+- **Soner:** trykk på kartet, så navn, radius (50–2000 m) og farge. Varsel per person ved inn og ut. Bruk geofencing i OS-et, ikke bare serveren.
+- **Helse:**
+  - Apple Health (HealthKit) og Health Connect.
+  - Data: skritt mot mål, hvilepuls, puls nå, søvn, aktive kalorier og 7 dager.
+  - Bare et sammendrag synkes, hvert 15. minutt. Hver person slår deling av og på selv.
+- **Personvern:** alle må samtykke i appen. Andre ser når noen har pauset delingen.
+
+### Sporing
+- **Ekte logoer** for Posten, Bring, PostNord, DHL og Helthjem i 44 px-kortet, med bokstav-merket som reserve.
+- **Velge flere:**
+  - Hold inne en pakke (mobil) eller klikk på ikonet (web) for å velge.
+  - Menyen har Velg alle, Arkiver (eller Gjenopprett i Arkiv) og Slett, som må bekreftes med et ekstra trykk.
+  - Ny fane «Arkiv».
+- **ParcelsApp** som reserve-tracker for ukjente transportører:
+  - `POST https://parcelsapp.com/api/v3/shipments/tracking` med `{shipments:[{trackingId,language:'en',country:'Norway'}],apiKey}`, og deretter `GET …?uuid=&apiKey=` til svaret er ferdig.
+  - Gratisplanen har 3 oppslag i måneden. Tell på serveren.
+  - Nøkkelen lagres kryptert. Kallet må gå via serveren (CORS).
+
+### Avganger (Ruter)
+- Hold inne på stoppene eller trykk «+ Stopp». Søk via Entur Geocoder (`/geocoder/v1/autocomplete?layers=venue`), flytt med ▲▼ og fjern.
+- Sanntid fra Entur JourneyPlanner GraphQL (`ET-Client-Name`-header).
+
+### Vær
+- **«Sammenlign Yr og Storm»:**
+  - En graf for neste 24 timer med temperatur som to linjer og nedbør som søyler.
+  - En 7-dagerstabell med avvik i makstemperatur og et mål på hvor enige de er.
+  - **Kilder:** Yr fra api.met.no. Storm har ikke et åpent API, så ECMWF fra Open-Meteo brukes som nærmeste kilde.
+
+### Finans → Boliger
+- Når du står i en bolig og skanner, legges kvitteringen i den boligen med status `review`.
+- **API:** `POST /api/homes/:id/expenses`. AI fyller inn beløp og kategori etterpå.
+
+### Skanner (+-knappen)
+- **Trykk:** åpner kameraet med en gang (`capture=environment`). I Mat skannes det som oppskrift.
+- **Hold inne:** viser et ark med Kvittering, Oppskrift, Bilder og Fil.
+- I Sporing, Abonnement og Domener har + egne funksjoner som før.
+
+### Aksjer på mobil
+- Ingen «Portefølje»-tittel og ikke noe tannhjul. Innstillingene ligger under Innstillinger → Aksjer.
+- Kortet øverst ligger delvis opp i bakgrunnsbildet, som i Sporing.
+
+### Web (Homelab)
+- **Markere tekst:** kort som kan dras starter først å flytte seg når du holder inne museknappen i 280 ms. Ellers kan du markere, kopiere og lime inn tekst som normalt.
+- **Skjemafelt inne i kort som kan dras:** dra slås av mens feltet har fokus.
+- **Overlegg:** lukkes bare hvis trykket både startet og sluttet på bakgrunnen. Det hindrer at nedtrekkslister på Android lukker innstillingene.
+
+### Lokal OCR-reserve (backend)
+- Ferdige filer ligger i `backend/ocr_fallback/` (Dockerfile, requirements.txt, ocr_fallback.py, main_integration.py, README.md).
+- Tesseract (nor+eng) og OpenCV. Bildet forbehandles med gråtoner, støyfjerning, oppretting av skjevhet og adaptiv terskel.
+- **Regex:**
+  - Org.nr: 9 siffer med MOD11-sjekk.
+  - Totalbeløp: prioritert «Å betale» › «Til betaling» › «Betalt» › «Total» › «Sum».
+  - Dato, MVA og butikk.
+- Brukes automatisk når AI-kallet feiler. Resultatet får alltid `needs_review=true` og `provider="tesseract"`.
+- **Av/på:**
+  - `OCR_FALLBACK=on|off`, og Innstillinger → AI og tolkning → «Lokal OCR-reserve», som overstyrer miljøvariabelen.
+  - Valgfritt «Bruk ved lav AI-sikkerhet» (under `AI_MIN_CONFIDENCE`).
+
+### Ikke mulig
+- Bilder fra Getty Images kan ikke brukes uten lisens. Bruk egne bilder eller lisensierte bilder i bakgrunnene.
