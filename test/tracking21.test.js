@@ -35,7 +35,9 @@ test('Bring uten butikk: Bring-logo og «Pakke fra Bring»', async () => {
   assert.equal(s.logo.kind, 'carrier');
   assert.equal(s.logo.domain, 'bring.no');
   assert.equal(s.logo.id, 'bring');
-  assert.equal(s.logo.url, '/finans/api/logos/file/bring');
+  // Prompt 22: Bring har manuelt kontrollert logo. Uten den kontrollerte filen (files/manuell/bring.png) gis ingen URL: fargefyll med navn.
+  assert.equal(s.logo.url, null);
+  assert.equal(s.logo.label, 'Bring');
   assert.equal(s.logo.carrierLogo, null);
   // Eldre autogenerert navn («Bring · 1234») regnes som tomt.
   db.prepare("UPDATE hl_shipments SET name='Bring · 1234' WHERE tracking_no='70712345678901234'").run();

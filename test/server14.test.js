@@ -84,12 +84,14 @@ test('APOD lastes ned én gang og leveres lokalt; video gir planetbilde', async 
 });
 
 test('transportørlogoer ligger lokalt', async () => {
-  for (const id of ['postnord', 'posten', 'bring', 'dhl', 'helthjem', 'ups', 'gls', 'instabox', 'budbee']) {
+  // Prompt 22: fraktselskapene med manuelt kontrollert logo bruker ikke lenger de tegnede SVG-ene (logo er null uten kontrollert fil).
+  for (const id of ['gls']) {
     assert.equal(car.CARRIER[id].logo, `/assets/carriers/${id}.svg`);
     assert.ok(existsSync(join('public', 'carriers', `${id}.svg`)), id);
   }
+  for (const id of ['postnord', 'posten', 'bring', 'dhl', 'helthjem', 'ups', 'instabox', 'budbee', 'fedex']) assert.equal(car.CARRIER[id].logo, null, id);
   const r = (await T('/')).body;
-  assert.ok(r.carriers.every((c) => c.logo.startsWith('/assets/carriers/')));
+  assert.ok(r.carriers.every((c) => c.manual ? c.logo === null || c.logo.startsWith('/finans/api/logos/file/') : c.logo.startsWith('/assets/carriers/')));
 });
 
 test('Ruter: linjefarge fra Entur, ellers Ruters standardfarger', () => {

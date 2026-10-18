@@ -28,7 +28,13 @@ export const DOMAIN = { posten: 'posten.no', bring: 'bring.no', postnord: 'postn
   schenker: 'dbschenker.com', helthjem: 'helthjem.no', budbee: 'budbee.com', instabox: 'instabox.io', porterbuddy: 'porterbuddy.com', other: '17track.net' };
 // Logoene ligger lokalt i public/carriers (prompt 14): enkle merke-SVG-er i transportørens farger, offentlige under /assets/carriers/.
 // Klientene viser initialer på merkefargen hvis bildet ikke laster.
-for (const c of CARRIERS) { c.domain = DOMAIN[c.id]; c.logo = `/assets/carriers/${c.id}.svg`; c.favicon = `/finans/api/logo/${DOMAIN[c.id]}`; }
+// Prompt 22: disse har manuelt kontrollerte logoer i logobiblioteket (registry.json, kilde «manuell»). De bruker aldri
+// en tegnet SVG eller et tilfeldig favicon: mangler den kontrollerte filen, viser klientene fargefyll med selskapsnavnet.
+export const MANUAL_LOGOS = ['posten', 'bring', 'postnord', 'dhl', 'helthjem', 'instabox', 'budbee', 'ups', 'fedex'];
+for (const c of CARRIERS) {
+  c.domain = DOMAIN[c.id]; c.manual = MANUAL_LOGOS.includes(c.id);
+  c.logo = c.manual ? null : `/assets/carriers/${c.id}.svg`; c.favicon = c.manual ? null : `/finans/api/logo/${DOMAIN[c.id]}`;
+}
 export const CARRIER = Object.fromEntries(CARRIERS.map((c) => [c.id, c]));
 
 export const normNo = (no) => String(no ?? '').replace(/[\s-]+/g, '').toUpperCase();
@@ -57,17 +63,20 @@ export function findTrackingNumbers(text) {
 // Felles statuser (kontrakten): registered → picked_up → in_transit → ready_for_pickup / out_for_delivery → delivered.
 export const STATUS_TEXT = {
   registered: 'Registrert', picked_up: 'Hentet', in_transit: 'I transport', ready_for_pickup: 'Klar for henting',
-  out_for_delivery: 'Ute for levering', delivered: 'Levert', delayed: 'Forsinket', unknown: 'Ukjent status',
+  out_for_delivery: 'Ute for levering', delivered: 'Levert', delayed: 'Forsinket', returned: 'Returnert', unknown: 'Ukjent status',
 };
-export const STEPS_IN = ['Registrert', 'Hentet', 'I transport', 'Klar for henting', 'Levert'];
+// Sluttstatuser: statusen sjekkes ikke mer (prompt 22).
+export const FINAL = ['delivered', 'returned'];
+export const STEPS_IN = ['Registrert', 'Hentet', 'I transport', 'Hentested', 'Levert']; // prompt 22: «Hentested» i tidslinjen
 export const STEPS_OUT = ['Registrert', 'Levert inn', 'I transport', 'Ute for levering', 'Levert'];
-const STEP = { registered: 0, picked_up: 1, in_transit: 2, delayed: 2, unknown: 0, ready_for_pickup: 3, out_for_delivery: 3, delivered: 4 };
+const STEP = { registered: 0, picked_up: 1, in_transit: 2, delayed: 2, unknown: 0, ready_for_pickup: 3, out_for_delivery: 3, delivered: 4, returned: 4 };
 export const stepOf = (status) => STEP[status] ?? 0;
 
 // Fritekst eller transportørkode → felles status. Brukes for alle transportører, så små forskjeller i ordlyd ikke betyr noe.
 export function normStatus(s) {
   // Koder som DELIVERED, AvailableForPickup og EN_ROUTE gjøres om til ord («available for pickup») før mønstrene under.
   const t = String(s ?? '').replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ').toLowerCase().trim();
+  if (/^return(ed)?$|^returned|returnert|return(ed)? to sender|retur til avsender|sendt i retur/.test(t)) return 'returned';
   if (/not delivered|ikke levert|delivery failure|attempted delivery|failed attempt|returned|retur/.test(t)) return 'delayed';
   if (/^deliver(ed)?$|^delivered|levert til mottaker|er levert|utlevert|ble levert|hentet av mottaker|er hentet|collected|picked up by (the )?(recipient|customer)|delivered/.test(t) && !/out for delivery|ute for levering|for delivery/.test(t)) return 'delivered';
   if (/ready.?for.?pickup|klar for henting|kan hentes|klar til henting|available for (pick ?up|collection)|ligger klar|awaiting.?collection|ankommet hentested|notification sent|arrived at pick ?up/.test(t)) return 'ready_for_pickup';
@@ -95,29 +104,43 @@ async function getJson(url, init = {}) {
 const ev = (ts, status, location) => ({ ts: ts ? new Date(ts).getTime() || Date.now() : Date.now(), status: String(status ?? '').slice(0, 200), location: String(location ?? '').slice(0, 120) });
 
 // Posten og Bring: samme Tracking API (developer.bring.com, «Tracking API»). Krever Mybring-bruker (e-post) og API-nøkkel.
+// Mybring Tracking API v2: eventSet[].status → felles status (claude-code-sporing-status.md).
+export const MYBRING_STATUS = {
+  PRE_NOTIFIED: 'registered', IN_TRANSIT: 'in_transit', TRANSPORT_TO_RECIPIENT: 'in_transit', HANDED_IN: 'picked_up', READY_FOR_PICKUP: 'ready_for_pickup',
+  DELIVERED: 'delivered', DELIVERED_SENDER: 'delivered', RETURN: 'returned', NOTIFICATION_SENT: 'ready_for_pickup', ATTEMPTED_DELIVERY: 'delayed', DEVIATION: 'delayed',
+  CUSTOMS: 'in_transit', COLLECTED: 'delivered',
+};
+export const mybringStatus = (code, text) => MYBRING_STATUS[String(code ?? '').toUpperCase()] ?? normStatus(code ?? text);
 async function bring(no) {
-  const uid = cfg('trk_bring_uid'), key = cfg('trk_bring_key');
+  const uid = cfg('mybringUid'), key = cfg('mybringKey');
   if (!uid || !key) throw new CarrierError('Mangler Mybring-bruker og API-nøkkel');
   const d = await getJson(`https://api.bring.com/tracking/api/v2/tracking.json?q=${encodeURIComponent(no)}&lang=no`, {
     headers: { 'X-Mybring-API-Uid': uid, 'X-Mybring-API-Key': key, 'X-Bring-Client-URL': 'https://github.com/SebastianKristo/torskenes-verden', Accept: 'application/json' } });
   const set = d.consignmentSet?.[0], pkg = set?.consignment?.[0]?.packageSet?.[0];
   if (set?.error || !pkg) throw new CarrierError(set?.error?.message ?? 'Fant ikke sendingen', 404);
   const events = (pkg.eventSet ?? []).map((e) => ev(e.dateIso, e.description ?? e.status, [e.city, e.country].filter(Boolean).join(', ')));
-  const pickup = (pkg.eventSet ?? []).find((e) => /READY_FOR_PICKUP/.test(e.status ?? ''));
-  return { status: normStatus(pkg.eventSet?.[0]?.status ?? events[0]?.status), eta: pkg.dateOfEstimatedDelivery ?? null, pickupPoint: pickup?.unitInformation?.name ?? null, events };
+  const pickup = (pkg.eventSet ?? []).find((e) => /READY_FOR_PICKUP|NOTIFICATION_SENT/.test(e.status ?? ''));
+  const top = pkg.eventSet?.[0];
+  const status = mybringStatus(top?.status, top?.description);
+  const unit = pickup?.unitInformation ?? {};
+  const deadline = pkg.dateOfReturn ?? pkg.lastRetrievalDate ?? pickup?.lastRetrievalDate ?? null;
+  return { status, eta: pkg.dateOfEstimatedDelivery ?? null, pickupPoint: unit.name ?? null,
+    pickup: status === 'ready_for_pickup' && (unit.name || deadline) ? { name: unit.name ?? null, deadline: deadline ? String(deadline).slice(0, 10) : null } : null, events };
 }
 
 // PostNord Track & Trace (developer.postnord.com). API-nøkkel som query-parameter.
 async function postnord(no) {
-  const key = cfg('trk_postnord_key');
+  const key = cfg('postnordKey');
   if (!key) throw new CarrierError('Mangler API-nøkkel fra PostNord');
   const d = await getJson(`https://api2.postnord.com/rest/shipment/v5/trackandtrace/findByIdentifier.json?apikey=${encodeURIComponent(key)}&id=${encodeURIComponent(no)}&locale=no`);
   const sh = d.TrackingInformationResponse?.shipments?.[0];
   if (!sh) throw new CarrierError('Fant ikke sendingen', 404);
   const items = sh.items?.[0];
   const events = (items?.events ?? []).map((e) => ev(e.eventTime, e.eventDescription, e.location?.displayName ?? e.location?.city)).reverse();
-  return { status: normStatus(sh.status ?? items?.status ?? events[0]?.status), eta: sh.estimatedTimeOfArrival ?? sh.deliveryDate ?? null,
-    pickupPoint: sh.deliveryPoint?.displayName ?? sh.deliveryPoint?.name ?? null, events };
+  const status = normStatus(sh.status ?? items?.status ?? events[0]?.status);
+  const pp = sh.deliveryPoint?.displayName ?? sh.deliveryPoint?.name ?? null;
+  return { status, eta: sh.estimatedTimeOfArrival ?? sh.deliveryDate ?? null, pickupPoint: pp,
+    pickup: status === 'ready_for_pickup' && pp ? { name: pp, deadline: sh.returnDate ? String(sh.returnDate).slice(0, 10) : null } : null, events };
 }
 
 // DHL Shipment Tracking – Unified (developer.dhl.com). Header DHL-API-Key.
@@ -207,19 +230,28 @@ async function parcelsapp(no) {
 
 const CLIENT = { posten: bring, bring, postnord, dhl, ups };
 export const configured = {
-  posten: () => !!(cfg('trk_bring_uid') && cfg('trk_bring_key')), bring: () => !!(cfg('trk_bring_uid') && cfg('trk_bring_key')),
-  postnord: () => !!cfg('trk_postnord_key'), dhl: () => !!cfg('trk_dhl_key'), ups: () => !!(cfg('trk_ups_id') && cfg('trk_ups_secret')), other: () => !!cfg('trk_17_key'),
+  posten: () => !!(cfg('mybringUid') && cfg('mybringKey')), bring: () => !!(cfg('mybringUid') && cfg('mybringKey')),
+  postnord: () => !!cfg('postnordKey'), dhl: () => !!cfg('trk_dhl_key'), ups: () => !!(cfg('trk_ups_id') && cfg('trk_ups_secret')), other: () => !!cfg('trk_17_key'),
 };
 export const isConfigured = (carrier) => (configured[carrier] ?? configured.other)();
+// Tydelig melding når selskapets egen nøkkel mangler (vises i Sporing og under Integrasjoner → Sporing).
+export function missingKeyText(carrier) {
+  if (carrier === 'posten' || carrier === 'bring') return configured.posten() ? null : 'Mangler Mybring-nøkkel (mybringUid og mybringKey) under Integrasjoner → Sporing. ParcelsApp brukes som reserve.';
+  if (carrier === 'postnord') return configured.postnord() ? null : 'Mangler PostNord-nøkkel (postnordKey) under Integrasjoner → Sporing. ParcelsApp brukes som reserve.';
+  return null;
+}
 
 // Henter status fra transportøren. Mangler egen klient eller nøkkel, prøves 17TRACK, og til slutt ParcelsApp
 // (bare når allowParcelsapp er satt, dvs. når brukeren selv ber om status).
 export async function fetchStatus(carrier, no, { allowParcelsapp = false } = {}) {
   const n = normNo(no);
   const own = CLIENT[carrier];
-  if (own && isConfigured(carrier)) return own(n);
   let err = null;
-  if (isConfigured('other')) { try { return await track17(n); } catch (e) { err = e; } }
+  // Selskapets eget API først. Feiler det (ikke «fant ikke»), prøves reservene (prompt 22).
+  if (own && isConfigured(carrier)) {
+    try { return await own(n); } catch (e) { if (e.status === 404 || !(isConfigured('other') || (allowParcelsapp && cfg('trk_parcelsapp_key')))) throw e; err = e; }
+  }
+  if (isConfigured('other')) { try { return await track17(n); } catch (e) { err ??= e; } }
   if (allowParcelsapp && cfg('trk_parcelsapp_key') && parcelsappUsage().used < PARCELSAPP_LIMIT) return parcelsapp(n);
   if (err) throw err;
   throw new CarrierError(own ? `Mangler nøkkel for ${CARRIER[carrier]?.name ?? carrier}` : 'Ingen nøkkel for 17TRACK eller ParcelsApp (reserve)');

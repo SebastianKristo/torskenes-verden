@@ -152,7 +152,7 @@ test('layout godtar tema- og designvalg og avviser ukjente verdier', async () =>
   assert.equal(g.body.design, 'glod');
   assert.equal(g.body.photo, 'oslo');
   await M('/me/layout', 'PUT', { design: null });
-  assert.equal((await M('/me/layout')).body.design, 'v2', 'standardverdien fylles inn');
+  assert.equal((await M('/me/layout')).body.design, 'lys', 'standardverdien fylles inn (Lys hovedbok, prompt 22)');
 });
 
 test('fotovindu: Oslo, vær, planeter med reserve og eget bilde', async () => {

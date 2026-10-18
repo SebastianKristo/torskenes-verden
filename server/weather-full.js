@@ -251,6 +251,94 @@ export async function searchPlaces(q) {
 
 const MOCK = process.env.MOCK_DATA === '1';
 
+/* ---------------- Prompt 22: detaljark, sol og måne, Yr mot Pent ---------------- */
+
+/** WMO-kode → ikonnøkkel (samme for alle klienter): clear, partly, cloudy, fog, drizzle, rain, sleet, snow, thunder. */
+export function iconOf(code) {
+  const c = Number(code) || 0;
+  if (c >= 95) return 'thunder';
+  if (c === 56 || c === 57 || c === 66 || c === 67) return 'sleet';
+  if ((c >= 71 && c <= 77) || c === 85 || c === 86) return 'snow';
+  if ((c >= 61 && c <= 65) || (c >= 80 && c <= 82)) return 'rain';
+  if (c >= 51 && c <= 55) return 'drizzle';
+  if (c === 45 || c === 48) return 'fog';
+  if (c === 3) return 'cloudy';
+  if (c === 1 || c === 2) return 'partly';
+  return 'clear';
+}
+const todayOslo = () => osloNowLocal().slice(0, 10);
+const addDays = (date, n) => new Date(Date.parse(`${date}T12:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
+
+/**
+ * Timedata for detaljarkene, 7 dager (i dag + 6) × 24 timer: luftfuktighet, UV, nedbør (mm og sannsynlighet), vind og
+ * vindkast, lufttrykk, sikt (km) og føles som. MET (Yr) først; timer MET ikke har (MET gir 6-timers steg etter ca. 2,5
+ * døgn, og mangler sikt), fylles fra Open-Meteo. src per time sier hvor temperaturen kom fra.
+ */
+export function buildDetail(primary, fill, from = todayOslo(), nDays = 7) {
+  const idx = (raw) => new Map((raw?.hourly?.time ?? []).map((t, i) => [t.slice(0, 13), i]));
+  const P = primary?.hourly ?? {}, F = fill?.hourly ?? {}, pi = idx(primary), fi = idx(fill);
+  const val = (key, t) => { const i = pi.get(t), j = fi.get(t); const a = i != null ? P[key]?.[i] : null; return a != null ? a : j != null ? F[key]?.[j] ?? null : null; };
+  const days = [];
+  for (let d = 0; d < nDays; d++) {
+    const date = addDays(from, d), hours = [];
+    for (let h = 0; h < 24; h++) {
+      const t = `${date}T${String(h).padStart(2, '0')}`;
+      const metHas = pi.has(t) && P.temperature_2m?.[pi.get(t)] != null;
+      const vis = val('visibility', t);
+      hours.push({ time: `${t}:00`, temp: r1(val('temperature_2m', t)), feels: r1(val('apparent_temperature', t)), humidity: val('relative_humidity_2m', t) == null ? null : Math.round(val('relative_humidity_2m', t)),
+        uv: r1(val('uv_index', t)), precip: r1(val('precipitation', t)), precipProb: val('precipitation_probability', t) == null ? null : Math.round(val('precipitation_probability', t)),
+        wind: r1(val('wind_speed_10m', t)), gust: r1(val('wind_gusts_10m', t)), windDir: val('wind_direction_10m', t), pressure: r1(val('pressure_msl', t)),
+        visibility: vis == null ? null : Math.round(vis / 100) / 10, code: val('weather_code', t), src: metHas ? 'met' : fi.has(t) ? 'open-meteo' : null });
+    }
+    days.push({ date, hours });
+  }
+  return { days, sources: { primary: 'MET Norge (yr.no)', fill: 'Open-Meteo (timer MET ikke har, og sikt)' } };
+}
+
+/** Sol og måne for 7 dager: soloppgang, solnedgang, dagslengde (min), månefase og belyst andel. */
+export function buildSunMoon(raw, place, from = todayOslo(), nDays = 7) {
+  const D = raw?.daily ?? {};
+  const out = [];
+  for (let d = 0; d < nDays; d++) {
+    const date = addDays(from, d), i = (D.time ?? []).indexOf(date);
+    let sunrise = i >= 0 ? D.sunrise?.[i] ?? null : null, sunset = i >= 0 ? D.sunset?.[i] ?? null : null;
+    if (!sunrise && place) { const up = sunTime(date, place.lat, place.lon, -0.833, true); sunrise = up ? osloLocalMin(up) : null; }
+    if (!sunset && place) { const dn = sunTime(date, place.lat, place.lon, -0.833, false); sunset = dn ? osloLocalMin(dn) : null; }
+    const daylight = sunrise && sunset ? Math.round((Date.parse(sunset) - Date.parse(sunrise)) / 60000) : null;
+    const m = moonOf(new Date(`${date}T12:00:00Z`));
+    out.push({ date, sunrise, sunset, daylight, moon: { phase: m.phase, illum: m.illum, name: m.name } });
+  }
+  return out;
+}
+
+/**
+ * Yr mot Pent (prompt 22). Pent (pent.no / StormGeo) har ikke åpent API: Pent = ECMWF IFS 0,25° fra Open-Meteo
+ * (models=ecmwf_ifs025), merket «Pent (StormGeo-modell)». Yr = MET Locationforecast.
+ * agreement etter snittavviket i makstemperatur (som i Vaer.dc.html): < 1,5° good, < 3° mid, ellers bad.
+ * diff per dag = Yr maks − Pent maks (avrundet til hele grader).
+ */
+export const PENT_LABEL = 'Pent (StormGeo-modell)';
+export function buildPentCompare(yrRaw, pentRaw, now = osloNowLocal()) {
+  const day = (raw) => new Map((raw?.daily?.time ?? []).map((d, i) => [d, { icon: iconOf(raw.daily.weather_code?.[i]), code: raw.daily.weather_code?.[i] ?? null,
+    max: c1(raw.daily.temperature_2m_max?.[i]), min: c1(raw.daily.temperature_2m_min?.[i]), precip: c1(raw.daily.precipitation_sum?.[i] ?? 0) }]));
+  const Y = day(yrRaw), E = day(pentRaw), today = now.slice(0, 10);
+  const dates = [...new Set([...Y.keys(), ...E.keys()])].filter((d) => d >= today).sort().slice(0, 7);
+  const diffs = [];
+  const days = dates.map((date) => {
+    const yr = Y.get(date) ?? null, pent = E.get(date) ?? null;
+    const diff = yr?.max != null && pent?.max != null ? Math.round(yr.max - pent.max) : null;
+    if (yr?.max != null && pent?.max != null) diffs.push(Math.abs(yr.max - pent.max));
+    return { date, yr, pent, diff };
+  });
+  const hs = (raw) => new Map((raw?.hourly?.time ?? []).map((t, i) => [t.slice(0, 13), { temp: c1(raw.hourly.temperature_2m?.[i]), precip: c1(raw.hourly.precipitation?.[i] ?? 0), icon: raw.hourly.weather_code ? iconOf(raw.hourly.weather_code[i]) : null }]));
+  const YH = hs(yrRaw), EH = hs(pentRaw);
+  const times = [...new Set([...YH.keys(), ...EH.keys()])].filter((t) => t >= now.slice(0, 13)).sort().slice(0, 24);
+  const hours = times.map((t) => ({ time: `${t}:00`, yr: YH.get(t) ?? null, pent: EH.get(t) ?? null }));
+  const avg = diffs.length ? diffs.reduce((a, b) => a + b, 0) / diffs.length : null;
+  return { agreement: avg == null ? null : avg < 1.5 ? 'good' : avg < 3 ? 'mid' : 'bad', avgDiff: avg == null ? null : c1(avg), days, hours,
+    label: PENT_LABEL, sources: { yr: 'MET Norge (yr.no)', pent: `${PENT_LABEL}: ECMWF IFS 0,25° via Open-Meteo (models=ecmwf_ifs025)` } };
+}
+
 /** GET /api/weather/full: ?place=oslo|bergen|trondheim|tromso eller ?lat=&lon=. */
 export async function weatherFull({ place, lat, lon, name, source = 'met' } = {}) {
   let p = PLACES[String(place ?? '').toLowerCase()];
@@ -258,15 +346,23 @@ export async function weatherFull({ place, lat, lon, name, source = 'met' } = {}
     p = { id: 'pos', name: name || 'Min posisjon', lat: Math.round(+lat * 1e4) / 1e4, lon: Math.round(+lon * 1e4) / 1e4 };
   }
   p ??= PLACES.oslo;
-  if (MOCK) return { ...buildFull(mockRaw(p), p), source: 'mock' };
+  // Prompt 22 (bakoverkompatibelt, nye felt): detail (timedata 7 dager), sunMoon (7 dager) og compare (Yr mot Pent).
+  const extra = (raw, fill, pentRaw, pentErr) => { const detail = buildDetail(raw, fill); return { detail, hours7: detail.days.flatMap((d) => d.hours), sunMoon: buildSunMoon(raw, p),
+    compare: pentRaw ? buildPentCompare(raw, pentRaw) : { agreement: null, avgDiff: null, days: [], hours: [], label: PENT_LABEL, error: pentErr ?? 'Pent svarte ikke' } }; };
+  if (MOCK) { const raw = mockRaw(p); return { ...buildFull(raw, p), ...extra(raw, null, mockEcmwf(p)), source: 'mock' }; }
   return cached(`wfull:${source}:${p.lat},${p.lon}`, 10 * 60_000, async () => {
-    const [met, om] = await Promise.allSettled([source === 'open-meteo' ? Promise.reject(new Error('av')) : fetchMet(p), fetchRaw(p)]);
+    const [met, om, ec] = await Promise.allSettled([source === 'open-meteo' ? Promise.reject(new Error('av')) : fetchMet(p), fetchRaw(p), fetchEcmwf(p)]);
+    const omRaw = om.status === 'fulfilled' ? om.value : null, ecRaw = ec.status === 'fulfilled' ? ec.value : null;
+    if (ec.status === 'rejected') console.warn('[weather/full] Pent (ECMWF):', ec.reason?.message);
     if (met.status === 'fulfilled') {
-      try { return { ...buildFull(mergeRaw(metToRaw(met.value, p), om.status === 'fulfilled' ? om.value : null), p), source: om.status === 'fulfilled' ? 'met+open-meteo' : 'met', credit: 'Data fra MET Norge (yr.no)' }; }
-      catch (e) { console.warn('[weather/full] MET-tolking:', e.message); }
+      try {
+        const raw = mergeRaw(metToRaw(met.value, p), omRaw);
+        return { ...buildFull(raw, p), ...extra(raw, omRaw, ecRaw), source: omRaw ? 'met+open-meteo' : 'met', credit: 'Data fra MET Norge (yr.no)' };
+      } catch (e) { console.warn('[weather/full] MET-tolking:', e.message); }
     } else if (source !== 'open-meteo') console.warn('[weather/full] MET:', met.reason?.message);
-    if (om.status === 'fulfilled') return { ...buildFull(om.value, p), source: 'open-meteo', credit: 'Data fra Open-Meteo' };
-    return { ...buildFull(mockRaw(p), p), mock: true, source: 'mock', error: 'Fikk ikke kontakt med MET eller Open-Meteo – viser eksempeldata' };
+    if (omRaw) return { ...buildFull(omRaw, p), ...extra(omRaw, null, ecRaw), source: 'open-meteo', credit: 'Data fra Open-Meteo' };
+    const raw = mockRaw(p);
+    return { ...buildFull(raw, p), ...extra(raw, null, null, 'Fikk ikke kontakt med Open-Meteo'), mock: true, source: 'mock', error: 'Fikk ikke kontakt med MET eller Open-Meteo – viser eksempeldata' };
   });
 }
 
@@ -277,7 +373,7 @@ export async function weatherFull({ place, lat, lon, name, source = 'met' } = {}
 
 async function fetchEcmwf(p) {
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}&timezone=Europe%2FOslo&forecast_days=8&models=ecmwf_ifs025`
-    + '&hourly=temperature_2m,precipitation&daily=temperature_2m_max,temperature_2m_min,precipitation_sum';
+    + '&hourly=temperature_2m,precipitation,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code';
   return fetchJson(url, { headers: { 'User-Agent': 'homelab-os', Accept: 'application/json' } }, 8000);
 }
 const c1 = (v) => (v == null || !Number.isFinite(v) ? null : Math.round(v * 10) / 10);
@@ -311,8 +407,9 @@ function mockEcmwf(p) {
   const y = mockRaw(p);
   const H = y.hourly, D = y.daily;
   return {
-    hourly: { time: H.time, temperature_2m: H.temperature_2m.map((v, i) => (v == null ? null : v + 0.4 + Math.sin(i / 5) * 0.8)), precipitation: H.precipitation.map((v, i) => Math.max(0, (v ?? 0) * 1.25 + (i % 9 === 0 ? 0.2 : 0))) },
-    daily: { time: D.time, temperature_2m_max: D.temperature_2m_max.map((v, i) => (v == null ? null : v + 0.3 * i)), temperature_2m_min: D.temperature_2m_min.map((v, i) => (v == null ? null : v - 0.2 * i)),
+    hourly: { time: H.time, temperature_2m: H.temperature_2m.map((v, i) => (v == null ? null : v + 0.4 + Math.sin(i / 5) * 0.8)), precipitation: H.precipitation.map((v, i) => Math.max(0, (v ?? 0) * 1.25 + (i % 9 === 0 ? 0.2 : 0))),
+      weather_code: H.weather_code.map((v, i) => (i % 7 === 0 && v < 3 ? 3 : v)) },
+    daily: { time: D.time, weather_code: D.weather_code.map((v, i) => (i % 3 === 2 ? 61 : v)), temperature_2m_max: D.temperature_2m_max.map((v, i) => (v == null ? null : v + 0.3 * i)), temperature_2m_min: D.temperature_2m_min.map((v, i) => (v == null ? null : v - 0.2 * i)),
       precipitation_sum: D.precipitation_sum.map((v, i) => Math.max(0, (v ?? 0) + (i % 3 === 1 ? 1.4 : -0.3))) },
   };
 }

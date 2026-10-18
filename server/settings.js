@@ -108,9 +108,10 @@ export const SCHEMA = [
     ['17TRACK (reserve)', 'Lag en konto på api.17track.net. Den dekker FedEx, GLS, DB Schenker, Helthjem, Budbee, Instabox og de fleste andre. Gratisplanen har en månedlig kvote.'],
     ['ParcelsApp (siste reserve)', 'Lag en API-nøkkel på parcelsapp.com/developers/console/api-keys. Gratisplanen har 3 oppslag i måneden, så den brukes bare når du selv legger til eller oppdaterer en sending som ingen annen kilde kjenner. Serveren teller oppslagene.'],
   ] }, [
-    ['trk_bring_uid', 'Posten/Bring: Mybring-bruker (e-post)', e('BRING_API_UID')],
-    ['trk_bring_key', 'Posten/Bring: API-nøkkel', e('BRING_API_KEY'), true],
-    ['trk_postnord_key', 'PostNord: API-nøkkel', e('POSTNORD_API_KEY'), true],
+    // Prompt 22: nøklene heter mybringUid, mybringKey og postnordKey. De gamle navnene (trk_bring_uid …) leses fortsatt, se LEGACY.
+    ['mybringUid', 'Posten/Bring: Mybring-bruker (X-Mybring-API-Uid, e-post)', e('BRING_API_UID')],
+    ['mybringKey', 'Posten/Bring: Mybring API-nøkkel (X-Mybring-API-Key)', e('BRING_API_KEY'), true],
+    ['postnordKey', 'PostNord: API-nøkkel', e('POSTNORD_API_KEY'), true],
     ['trk_dhl_key', 'DHL: API-nøkkel', e('DHL_API_KEY'), true],
     ['trk_ups_id', 'UPS: Client ID', e('UPS_CLIENT_ID')],
     ['trk_ups_secret', 'UPS: Client Secret', e('UPS_CLIENT_SECRET'), true],
@@ -129,17 +130,25 @@ export const SCHEMA = [
   ]],
 ];
 
+// Gamle nøkkelnavn → nye (prompt 22). Lagrede verdier under det gamle navnet brukes til noe lagres under det nye,
+// og PUT med det gamle navnet lagres under det nye. Ingenting slettes.
+export const LEGACY = { trk_bring_uid: 'mybringUid', trk_bring_key: 'mybringKey', trk_postnord_key: 'postnordKey' };
+const LEGACY_OF = Object.fromEntries(Object.entries(LEGACY).map(([o, n]) => [n, o]));
+const stored = (over, key) => (over[key] != null ? over[key] : LEGACY_OF[key] && over[LEGACY_OF[key]] != null ? over[LEGACY_OF[key]] : undefined);
+
 const FIELDS = new Map(SCHEMA.flatMap(([, , fs]) => fs.map((f) => [f[0], { key: f[0], label: f[1], def: f[2], secret: !!f[3], type: f[4] }])));
 
 /** Verdien som er lagret fra siden (dekryptert), uten fallback til miljø/standard. undefined hvis ingen. */
 export function cfgOverride(key) {
-  const v = kv.get(OWNER, 'cfg', {})[key];
+  key = LEGACY[key] ?? key;
+  const v = stored(kv.get(OWNER, 'cfg', {}), key);
   return v == null ? undefined : openSecret(v);
 }
 
 export function cfg(key) {
-  const over = kv.get(OWNER, 'cfg', {});
-  return over[key] != null ? openSecret(over[key]) : FIELDS.get(key)?.def ?? '';
+  key = LEGACY[key] ?? key;
+  const v = stored(kv.get(OWNER, 'cfg', {}), key);
+  return v != null ? openSecret(v) : FIELDS.get(key)?.def ?? '';
 }
 
 // Til nettleseren: hemmeligheter vises bare som «satt / ikke satt».
@@ -148,9 +157,9 @@ export function publicConfig() {
   return SCHEMA.map(([name, meta, fs]) => ({
     name, id: meta.id, domain: meta.domain, category: meta.category, help: meta.help ?? '', guide: meta.guide ?? [],
     fields: fs.map(([key]) => {
-      const f = FIELDS.get(key), v = over[key] ?? f.def;
+      const f = FIELDS.get(key), own = stored(over, key), v = own ?? f.def;
       return { key, label: f.label, type: f.secret ? 'password' : f.type ?? 'text', secret: f.secret, set: !!v,
-        value: f.secret ? '' : v, custom: key in over };
+        value: f.secret ? '' : v, custom: own !== undefined };
     }),
   }));
 }
@@ -168,10 +177,11 @@ const isUrl = (v) => /^https?:\/\/[^\s]+$/.test(v);
 // value === null fjerner overstyringen (tilbake til env/standard).
 export function updateConfig(changes) {
   const over = kv.get(OWNER, 'cfg', {});
-  for (const [key, raw] of Object.entries(changes)) {
+  for (const [k0, raw] of Object.entries(changes)) {
+    const key = LEGACY[k0] ?? k0;
     const f = FIELDS.get(key);
     if (!f) throw new Error(`Ukjent innstilling: ${key}`);
-    if (raw === null) { delete over[key]; continue; }
+    if (raw === null) { delete over[key]; if (LEGACY_OF[key]) delete over[LEGACY_OF[key]]; continue; }
     const v = String(raw).trim().slice(0, 4000);
     if (f.secret && v === '') continue; // tomt felt = behold lagret hemmelighet
     if (v && /_url$|cal_ics/.test(key) && !isUrl(v)) throw new Error(`${f.label}: ugyldig URL`);

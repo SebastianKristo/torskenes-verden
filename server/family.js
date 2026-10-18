@@ -3,7 +3,10 @@
 // ingen ser hvor du er; med «omtrentlig» får de andre bare posisjonen avrundet til ca. 1 km og ingen fart.
 // Posisjoner beholdes i 7 dager, helse i 30. Alle ruter godtar sesjon eller app-token.
 import { Hono } from 'hono';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, unlink } from 'node:fs/promises';
+import { join } from 'node:path';
+import { bodyLimit } from 'hono/body-limit';
+import { config } from './config.js';
 import { db, kv, OWNER } from './db.js';
 import { userInfo, listUsers, sessionUser } from './auth.js';
 import { bearerOk } from './finans/routes.js';
@@ -44,11 +47,27 @@ if (!db.prepare('PRAGMA table_info(family_pos)').all().some((c) => c.name === 'd
 // Prompt 21: soner tilhører den som lagde dem og er private til eieren deler dem med familien (shared=1).
 if (!db.prepare('PRAGMA table_info(family_zone)').all().some((c) => c.name === 'shared')) db.exec('ALTER TABLE family_zone ADD COLUMN shared INTEGER NOT NULL DEFAULT 0');
 db.prepare('UPDATE family_zone SET created_by=? WHERE created_by IS NULL').run(OWNER);
+// Prompt 22: ikon per sone (nøkkel). Fargen fantes fra før (color, #rrggbb). Eksisterende soner får ikon etter navnet.
+if (!db.prepare('PRAGMA table_info(family_zone)').all().some((c) => c.name === 'icon')) {
+  db.exec('ALTER TABLE family_zone ADD COLUMN icon TEXT');
+}
 
 const q = (sql) => db.prepare(sql);
 const HEALTH_KEYS = ['steps', 'restingHr', 'hr', 'sleep', 'activeKcal', 'week'];
 const ACTIVITIES = ['still', 'walking', 'running', 'cycling', 'driving'];
 const COLOR = /^#[0-9a-f]{6}$/i;
+// Soneikoner (claude-code-familie-design.md): nøkkel → SF Symbol / Material Symbol i appene.
+export const ZONE_ICONS = ['home', 'work', 'school', 'heart', 'cabin', 'gym', 'shop', 'ball', 'coffee', 'tree', 'plane', 'star', 'pin'];
+/** Standardikon etter navn: Hjem → home, Jobb → work, Skole → school, Mormor → heart, ellers pin. */
+export function defaultZoneIcon(name) {
+  const n = String(name ?? '').trim().toLowerCase();
+  if (/^hjem|hjemme/.test(n)) return 'home';
+  if (/^jobb|kontor/.test(n)) return 'work';
+  if (/^skole|skolen|barnehage/.test(n)) return 'school';
+  if (/^(mormor|morfar|farmor|farfar|besteforeldre)/.test(n)) return 'heart';
+  return 'pin';
+}
+db.transaction(() => { for (const z of db.prepare('SELECT id, name FROM family_zone WHERE icon IS NULL').all()) db.prepare('UPDATE family_zone SET icon=? WHERE id=?').run(defaultZoneIcon(z.name), z.id); })();
 
 /* ---------------- Innstillinger per bruker ---------------- */
 
@@ -132,7 +151,7 @@ const zonesFor = (viewer) => q('SELECT * FROM family_zone WHERE created_by=? OR 
 const zoneVisible = (z, viewer) => !!z && (z.created_by === viewer || !!z.shared);
 const zoneOut = (z, viewer) => {
   const n = q('SELECT target, enter, leave FROM family_notify WHERE zone_id=? AND viewer=?').all(z.id, viewer);
-  return { id: z.id, name: z.name, lat: z.lat, lon: z.lon, radius: z.radius, color: z.color, createdBy: z.created_by, mine: z.created_by === viewer, shared: !!z.shared,
+  return { id: z.id, name: z.name, lat: z.lat, lon: z.lon, radius: z.radius, color: String(z.color).toLowerCase(), icon: ZONE_ICONS.includes(z.icon) ? z.icon : defaultZoneIcon(z.name), createdBy: z.created_by, mine: z.created_by === viewer, shared: !!z.shared,
     notify: Object.fromEntries(n.map((x) => [x.target, { enter: !!x.enter, leave: !!x.leave }]).filter(([t]) => t === viewer || canSee(viewer, t))) };
 };
 // Deler personen posisjon med deg? «on» gjelder hele familien; en selv ser alltid seg selv.
@@ -216,7 +235,7 @@ function memberOut(u, viewer) {
   const share = self ? Object.fromEntries(HEALTH_KEYS.map((k) => [k, true])) : pr.shareHealth;
   const healthOn = self || (pr.sharing === 'on' && HEALTH_KEYS.some((k) => k !== 'week' && share[k]));
   return {
-    userId: u.id, name: u.displayName ?? u.name, username: u.username, avatarUrl: u.avatarUrl ?? null, self, color: colorOf(u.id),
+    userId: u.id, name: u.displayName ?? u.name, username: u.username, avatarUrl: u.avatarUrl ?? null, photoUrl: photoUrlFor(viewer, u.id, u.avatarUrl ?? null), photoOverride: hasPhoto(viewer, u.id), self, color: colorOf(u.id),
     sharing: pr.sharing, precision: pr.precision,
     last: visible ? posOut(lastPos(u.id), self || pr.precision === 'exact', viewer) : null,
     health: healthOn ? healthOut(u.id, share) : null,
@@ -247,7 +266,7 @@ function mockMember(m, viewer) {
   const raw = { ts: now - 40_000, lat, lon, acc: m.activity === 'still' ? 12 : 8, speed: m.speed, heading: 75, alt: 40, battery: m.battery, charging: m.charging ? 1 : 0, activity: m.activity };
   const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(now - (6 - i) * DAY).toISOString().slice(0, 10); return { date: d, steps: 4200 + ((i * 1777 + m.id.length * 991) % 7400), sleepMin: 380 + ((i * 37) % 90), activeKcal: 260 + ((i * 53) % 340), restingHr: 56 + (i % 5) }; });
   return {
-    userId: m.id, name: m.name, username: m.username, avatarUrl: null, self: false, color: m.color, sharing: m.sharing, precision: m.precision, mock: true,
+    userId: m.id, name: m.name, username: m.username, avatarUrl: null, photoUrl: photoUrlFor(viewer, m.id, null), photoOverride: hasPhoto(viewer, m.id), self: false, color: m.color, sharing: m.sharing, precision: m.precision, mock: true,
     last: m.sharing === 'on' ? posOut(raw, m.precision === 'exact', viewer) : null,
     health: { today: { ...days[6], hr: 72 }, week: days, updatedAt: now - 9 * 60_000 },
   };
@@ -261,12 +280,13 @@ function seedMock(viewer) {
   if (!MOCK || kv.get(viewer, 'family_mock_seeded')) return;
   kv.set(viewer, 'family_mock_seeded', true);
   if (!zonesFor(viewer).length) {
-    const ins = q('INSERT INTO family_zone(name, lat, lon, radius, color, created_by, created, shared) VALUES(?,?,?,?,?,?,?,1)');
-    ins.run('Hjem', 59.9275, 10.7160, 150, '#2f7a4f', viewer, Date.now());
-    ins.run('Jobb', 59.9110, 10.7610, 200, '#b23a2a', viewer, Date.now());
-    ins.run('Skole', 59.9395, 10.7310, 180, '#2f5d8a', viewer, Date.now());
+    const ins = q('INSERT INTO family_zone(name, lat, lon, radius, color, created_by, created, shared, icon) VALUES(?,?,?,?,?,?,?,1,?)');
+    ins.run('Hjem', 59.9275, 10.7160, 150, '#2f7a4f', viewer, Date.now(), 'home');
+    ins.run('Jobb', 59.9110, 10.7610, 200, '#b23a2a', viewer, Date.now(), 'work');
+    ins.run('Skole', 59.9395, 10.7310, 180, '#2f5d8a', viewer, Date.now(), 'school');
   }
   const z = zonesFor(viewer), now = Date.now();
+  if (z.length < 3) return; // brukeren har laget egne soner før første visning: ingen eksempelhendelser
   const ev = q('INSERT INTO family_event(user, zone_id, zone_name, kind, ts) VALUES(?,?,?,?,?)');
   ev.run('mock-ingrid', z[0].id, z[0].name, 'leave', now - 95 * 60_000);
   ev.run('mock-jonas', z[2].id, z[2].name, 'enter', now - 70 * 60_000);
@@ -362,7 +382,7 @@ async function positionRow(m, now = Date.now()) {
   else linje2 = sted ?? `Sist sett ${clock(last.ts, now)}`;
   const navn = m.self ? 'Du' : m.name;
   return {
-    id: m.userId, userId: m.userId, navn, name: m.name, farge: m.color, bilde: m.avatarUrl ?? null, initialer: m.self ? 'Du' : initials(m.name),
+    id: m.userId, userId: m.userId, navn, name: m.name, farge: m.color, bilde: m.photoUrl ?? m.avatarUrl ?? null, photoUrl: m.photoUrl ?? m.avatarUrl ?? null, initialer: m.self ? 'Du' : initials(m.name),
     sone, aktivitet: akt, sted: status === 'off' ? null : sted, oppdatert: last?.ts ? new Date(last.ts).toISOString() : null, oppdatertMs: last?.ts ?? null,
     status, linje2, self: !!m.self, sharing: m.sharing, ...(m.mock ? { mock: true } : {}),
   };
@@ -376,6 +396,49 @@ export async function positions(me) {
   if (MOCK) for (const m of MOCKS) if (!seen.has(m.id) && m.sharing === 'on') { seen.add(m.id); list.push(mockMember(m, me)); }
   return Promise.all(list.map((m) => positionRow(m)));
 }
+
+/* ---------------- Profilbilde per person (prompt 22) ---------------- */
+// Hver seer kan overstyre bildet for en person i Familie, bare for seg selv. Lagres som DATA_DIR/family-photos/<seer>/<person>.<type>
+// med versjon i kv (fam_photos: {personId: versjon}). Standard er personens kontobilde (/api/users/:id/avatar).
+const PHOTOS = join(config.dataDir, 'family-photos');
+const safeId = (id) => String(id).replace(/[^\w-]/g, '').slice(0, 80);
+const photoDir = (viewer) => join(PHOTOS, safeId(viewer));
+const photoFile = (viewer, target) => join(photoDir(viewer), `${safeId(target)}.img`);
+const photoMap = (viewer) => kv.get(viewer, 'fam_photos', {}) ?? {};
+const hasPhoto = (viewer, target) => !!(viewer && photoMap(viewer)[target]);
+function photoUrlFor(viewer, target, avatarUrl) {
+  const v = viewer && photoMap(viewer)[target];
+  return v ? `/api/family/photo/${encodeURIComponent(target)}?v=${v}` : avatarUrl;
+}
+function imageKind(b) {
+  if (b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';
+  if (b.length > 8 && b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'image/png';
+  if (b.length > 12 && b.subarray(0, 4).toString() === 'RIFF' && b.subarray(8, 12).toString() === 'WEBP') return 'image/webp';
+  return null;
+}
+// Bredde og høyde fra filhodet (JPEG/PNG/WebP), for å sjekke at bildet er kvadratisk og lite (klientene beskjærer til 160 px).
+export function imageSize(b) {
+  const k = imageKind(b);
+  if (k === 'image/png') return { w: b.readUInt32BE(16), h: b.readUInt32BE(20) };
+  if (k === 'image/webp') {
+    const t = b.toString('ascii', 12, 16);
+    if (t === 'VP8X') return { w: 1 + b.readUIntLE(24, 3), h: 1 + b.readUIntLE(27, 3) };
+    if (t === 'VP8 ') return { w: b.readUInt16LE(26) & 0x3fff, h: b.readUInt16LE(28) & 0x3fff };
+    if (t === 'VP8L') { const v = b.readUInt32LE(21); return { w: (v & 0x3fff) + 1, h: ((v >> 14) & 0x3fff) + 1 }; }
+    return null;
+  }
+  if (k === 'image/jpeg') {
+    let i = 2;
+    while (i + 9 < b.length) {
+      if (b[i] !== 0xff) { i++; continue; }
+      const m = b[i + 1];
+      if (m >= 0xc0 && m <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(m)) return { w: b.readUInt16BE(i + 7), h: b.readUInt16BE(i + 5) };
+      i += 2 + b.readUInt16BE(i + 2);
+    }
+  }
+  return null;
+}
+export const PHOTO_SIZE = 160, PHOTO_MAX_BYTES = 512 * 1024;
 
 /* ---------------- Ruter ---------------- */
 
@@ -487,7 +550,9 @@ function zoneInput(b, partial = false) {
   if (b.lat !== undefined || !partial) { const v = num(b.lat, -90, 90); if (v == null) return 'Ugyldig breddegrad'; z.lat = v; }
   if (b.lon !== undefined || !partial) { const v = num(b.lon, -180, 180); if (v == null) return 'Ugyldig lengdegrad'; z.lon = v; }
   if (b.radius !== undefined || !partial) { const v = num(Number(b.radius ?? 150), 25, 20_000); if (v == null) return 'Radius må være mellom 25 m og 20 km'; z.radius = Math.round(v); }
-  if (b.color !== undefined || !partial) { const v = String(b.color ?? '#b23a2a'); if (!COLOR.test(v)) return 'Ugyldig farge'; z.color = v; }
+  if (b.color !== undefined || !partial) { const v = String(b.color ?? '#b23a2a'); if (!COLOR.test(v)) return 'Ugyldig farge (bruk #rrggbb)'; z.color = v.toLowerCase(); }
+  if (b.icon !== undefined && b.icon !== null) { if (!ZONE_ICONS.includes(b.icon)) return `Ukjent ikon (bruk ${ZONE_ICONS.join(', ')})`; z.icon = b.icon; }
+  else if (!partial) z.icon = defaultZoneIcon(z.name);
   if (b.shared !== undefined || !partial) z.shared = b.shared === true || b.shared === 1 ? 1 : 0; // «Del med familien», av som standard
   return z;
 }
@@ -495,7 +560,7 @@ function zoneInput(b, partial = false) {
 api.post('/zones', async (c) => {
   const z = zoneInput(await body(c));
   if (typeof z === 'string') return bad(c, z);
-  const r = q('INSERT INTO family_zone(name, lat, lon, radius, color, created_by, created, shared) VALUES(?,?,?,?,?,?,?,?) RETURNING *').get(z.name, z.lat, z.lon, z.radius, z.color, c.get('user'), Date.now(), z.shared);
+  const r = q('INSERT INTO family_zone(name, lat, lon, radius, color, created_by, created, shared, icon) VALUES(?,?,?,?,?,?,?,?,?) RETURNING *').get(z.name, z.lat, z.lon, z.radius, z.color, c.get('user'), Date.now(), z.shared, z.icon);
   return c.json(zoneOut(r, c.get('user')), 201);
 });
 // Sonen må være synlig (ellers 404) og din egen for å endres eller slettes (ellers 403).
@@ -507,10 +572,15 @@ function ownZone(c) {
 }
 api.patch('/zones/:id', async (c) => {
   const { id, cur, err } = ownZone(c); if (err) return err;
-  const z = zoneInput(await body(c), true);
+  const zb = await body(c);
+  c.set('zoneBody', zb);
+  const z = zoneInput(zb, true);
   if (typeof z === 'string') return bad(c, z);
   const n = { ...cur, ...z };
-  q('UPDATE family_zone SET name=?, lat=?, lon=?, radius=?, color=?, shared=? WHERE id=?').run(n.name, n.lat, n.lon, n.radius, n.color, n.shared ? 1 : 0, id);
+  // icon: null i PATCH = tilbake til standardikonet for navnet.
+  const b0 = c.get('zoneBody') ?? {};
+  if (b0.icon === null) n.icon = defaultZoneIcon(n.name);
+  q('UPDATE family_zone SET name=?, lat=?, lon=?, radius=?, color=?, shared=?, icon=? WHERE id=?').run(n.name, n.lat, n.lon, n.radius, n.color, n.shared ? 1 : 0, ZONE_ICONS.includes(n.icon) ? n.icon : defaultZoneIcon(n.name), id);
   if (z.lat != null || z.lon != null || z.radius != null) q('DELETE FROM family_inside WHERE zone_id=?').run(id); // ny form: start på nytt
   // Ikke delt lenger: andres varsler for sonen fjernes.
   if (cur.shared && !n.shared) q('DELETE FROM family_notify WHERE zone_id=? AND viewer<>?').run(id, cur.created_by);
@@ -574,6 +644,56 @@ api.get('/events', (c) => {
   const rows = q(`SELECT e.* FROM family_event e JOIN family_notify n ON n.zone_id=e.zone_id AND n.target=e.user AND n.viewer=?
     WHERE e.ts > ? AND e.user != ? AND ((e.kind='enter' AND n.enter=1) OR (e.kind='leave' AND n.leave=1)) ORDER BY e.ts LIMIT 300`).all(me, since, me);
   return c.json({ events: rows.filter((e) => eventVisible(e, me)).slice(0, 100).map(eventOut), now: Date.now() });
+});
+
+// Profilbilde per person (prompt 22): PUT multipart (felt «file» eller «photo») eller JSON {image: base64/data-URL}.
+// Klientene beskjærer til kvadrat 160 × 160. Serveren har ikke bildebehandling, så den godtar bare et kvadratisk bilde
+// på 64–512 px (JPEG/PNG/WebP, maks 512 KB) og lagrer det som det er. Bare for seeren selv; ingen andre ser det.
+api.put('/photo/:userId', bodyLimit({ maxSize: PHOTO_MAX_BYTES * 1.4 + 64 * 1024, onError: (c) => c.json({ error: 'Bildet er for stort (maks 512 KB)' }, 413) }), async (c) => {
+  const me = c.get('user'), target = c.req.param('userId');
+  if (!isMember(target)) return notVisible(c);
+  let buf = null;
+  const type = c.req.header('content-type') ?? '';
+  if (/multipart\/form-data/i.test(type)) {
+    const f = await c.req.parseBody().catch(() => ({}));
+    const file = f.file ?? f.photo ?? f.image;
+    if (file instanceof File) buf = Buffer.from(await file.arrayBuffer());
+    else if (typeof file === 'string') buf = Buffer.from(file.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+  } else if (/^image\//i.test(type)) {
+    buf = Buffer.from(await c.req.arrayBuffer());
+  } else {
+    const b = await body(c);
+    const raw = b.image ?? b.photo ?? b.data;
+    if (typeof raw === 'string') buf = Buffer.from(raw.replace(/^data:image\/\w+;base64,/, ''), 'base64');
+  }
+  if (!buf || !buf.length) return bad(c, 'Mangler bilde (multipart «file» eller JSON {image: base64})');
+  if (buf.length > PHOTO_MAX_BYTES) return c.json({ error: 'Bildet er for stort (maks 512 KB)' }, 413);
+  if (!imageKind(buf)) return bad(c, 'Bruk et JPEG-, PNG- eller WebP-bilde');
+  const sz = imageSize(buf);
+  if (!sz || Math.abs(sz.w - sz.h) > 2) return bad(c, `Bildet må være kvadratisk (beskjær til ${PHOTO_SIZE} × ${PHOTO_SIZE} px)`);
+  if (sz.w < 64 || sz.w > 512) return bad(c, `Bildet må være mellom 64 og 512 px (beskjær til ${PHOTO_SIZE} × ${PHOTO_SIZE} px)`);
+  await mkdir(photoDir(me), { recursive: true });
+  await writeFile(photoFile(me, target), buf);
+  const v = Date.now();
+  kv.set(me, 'fam_photos', { ...photoMap(me), [target]: v });
+  return c.json({ ok: true, userId: target, photoUrl: photoUrlFor(me, target, null), width: sz.w, height: sz.h });
+});
+api.delete('/photo/:userId', async (c) => {
+  const me = c.get('user'), target = c.req.param('userId');
+  const m = photoMap(me);
+  if (m[target]) { delete m[target]; kv.set(me, 'fam_photos', m); }
+  await unlink(photoFile(me, target)).catch(() => {});
+  const u = userInfo(target);
+  return c.json({ ok: true, userId: target, photoUrl: u?.avatarUrl ?? null });
+});
+// Bare seerens egen overstyring. Andre får 404 (de har ikke lagt inn noe bilde for personen).
+api.get('/photo/:userId', async (c) => {
+  const me = c.get('user'), target = c.req.param('userId');
+  if (!hasPhoto(me, target)) return c.json({ error: 'Ingen bilde' }, 404);
+  try {
+    const b = await readFile(photoFile(me, target));
+    return c.body(b, 200, { 'Content-Type': imageKind(b) ?? 'image/jpeg', 'Cache-Control': 'private, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff' });
+  } catch { return c.json({ error: 'Ingen bilde' }, 404); }
 });
 
 export default api;

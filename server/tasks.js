@@ -9,6 +9,7 @@ import { db, kv, OWNER } from './db.js';
 import { userInfo, listUsers, sessionUser, isAdmin } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { broadcast } from './realtime.js';
+import { initHa, mountHa, onLocal as haLocal, haInfo } from './tasks-ha.js';
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS hl_task_lists (
@@ -117,7 +118,7 @@ const listOut = (r, uid) => {
     members: mem.map(person) };
 };
 const itemOut = (r) => ({ id: r.id, title: r.title, list: r.list || null, due: r.due ?? null, assignee: r.assignee ?? null, note: r.note, done: !!r.done,
-  doneAt: r.done_at ?? null, createdBy: r.created_by ?? null, createdAt: r.created_at, updatedAt: r.updated_at });
+  doneAt: r.done_at ?? null, createdBy: r.created_by ?? null, createdAt: r.created_at, updatedAt: r.updated_at, ...haInfo(r) });
 const lists = (uid) => listsOf(uid).map((l) => listOut(l, uid));
 // Personer man kan dele med og tildele til: id, navn og profilbilde (brukernavn bare for administratorer).
 const members = (uid) => { const admin = isAdmin(uid); return listUsers().map((u) => ({ id: u.id, name: u.displayName, avatarUrl: u.avatarUrl, ...(admin ? { username: u.username } : {}) })); };
@@ -158,6 +159,9 @@ function cleanTask(b, partial, uid, listId) {
 
 const send = (users, action, extra = {}) => { const ids = [...new Set(users.filter(Boolean))]; if (ids.length) broadcast('tasks', { action, ...extra }, ids); };
 
+// Prompt 22: synk med Home Assistant To-do (tasks-ha.js). Får de samme tilgangsreglene og sendingen som resten av Huskeliste.
+initHa({ listRow, canSeeList, audienceOfTask, send, itemOut, userInfo, isAdmin });
+
 /* ---------------- API (/api/tasks) ---------------- */
 
 const api = new Hono();
@@ -196,6 +200,7 @@ api.post('/', async (c) => {
     .get(t.title, t.list ?? defaultList(u), t.due ?? null, t.assignee ?? null, t.note ?? '', t.done ?? 0, t.done ? now : null, u, now, now);
   const item = itemOut(r);
   send(audienceOfTask(r), 'created', { item });
+  haLocal('created', null, r);
   return c.json({ item }, 201);
 });
 
@@ -212,6 +217,7 @@ api.patch('/:id{[0-9]+}', async (c) => {
   send(after, 'updated', { item });
   // Flyttet til en annen liste: de som ikke ser den lenger, får bare beskjed om at den er borte.
   send(before.filter((x) => !after.includes(x)), 'deleted', { id: cur.id });
+  if (keys.length) haLocal('updated', cur, row);
   return c.json({ item });
 });
 
@@ -223,6 +229,7 @@ api.delete('/:id{[0-9]+}', (c) => {
   const aud = audienceOfTask(cur);
   q('DELETE FROM hl_tasks WHERE id=?').run(cur.id);
   send(aud, 'deleted', { id: cur.id });
+  haLocal('deleted', cur);
   return c.json({ ok: true });
 });
 
@@ -235,9 +242,13 @@ api.post('/clear-done', async (c) => {
   const aud = new Set();
   db.transaction(() => { for (const t of rows) { audienceOfTask(t).forEach((x) => aud.add(x)); q('DELETE FROM hl_tasks WHERE id=?').run(t.id); } })();
   aud.add(u);
+  for (const t of rows) haLocal('deleted', t);
   send([...aud], 'cleared', { list: b.list ?? null, ids: rows.map((t) => t.id) });
   return c.json({ ok: true, removed: rows.length });
 });
+
+/* Synk med Home Assistant (bare administratorer): GET/PUT /ha, PUT /ha/map, POST /ha/sync, POST /ha/create */
+mountHa(api);
 
 /* Lister */
 api.get('/lists', (c) => c.json({ lists: lists(c.get('user')), members: members(c.get('user')) }));
@@ -311,6 +322,7 @@ api.delete('/lists/:id', (c) => {
   const aud = audienceOfList(cur);
   // Eierens oppgaver flyttes til eierens første gjenværende liste. Andres oppgaver blir uten liste og tilhører dem som lagde dem.
   const to = q('SELECT id FROM hl_task_lists WHERE owner=? AND id != ? ORDER BY sort, created LIMIT 1').get(u, cur.id).id;
+  haLocal('listDeleted', cur.id); // koblingen til HA fjernes; HA-listen beholdes
   db.transaction(() => {
     q('UPDATE hl_tasks SET list=? WHERE list=? AND (created_by=? OR created_by IS NULL)').run(to, cur.id, u);
     q("UPDATE hl_tasks SET list='', assignee=CASE WHEN assignee=created_by THEN assignee ELSE NULL END WHERE list=?").run(cur.id);

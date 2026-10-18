@@ -154,8 +154,9 @@ test('statuskoder fra alle transportører gir riktig felles status', () => {
     DeliveryFailure: 'delayed', ATTEMPTED_DELIVERY: 'delayed', 'Pakken er ikke levert': 'delayed',
   };
   for (const [s, want] of Object.entries(cases)) assert.equal(car.normStatus(s), want, s);
-  assert.equal(car.CARRIER.posten.logo, "/assets/carriers/posten.svg");
-  assert.match(car.CARRIER.posten.favicon, /\/finans\/api\/logo\/posten\.no$/);
+  // Prompt 22: Posten har manuelt kontrollert logo – ingen tegnet SVG og aldri favicon.
+  assert.equal(car.CARRIER.posten.logo, null);
+  assert.equal(car.CARRIER.posten.favicon, null);
 });
 
 test('Finn-handel som er mottatt gjør pakken levert, også uten nøkkel hos transportøren', () => {

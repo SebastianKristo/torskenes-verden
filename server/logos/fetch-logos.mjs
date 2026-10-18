@@ -12,6 +12,11 @@
 // Det som mangler, skrives til missing.txt. kilde/hentet oppdateres i registeret.
 //
 // Valg: --only id1,id2   bare disse   --limit N   bare de N første   --keep   hopp over oppføringer som allerede har fil
+//
+// Prompt 22: oppføringer med kilde «manuell» (fraktselskapene) har en eksplisitt src-URL (Wikimedia Commons
+// Special:FilePath eller merkevaresiden). De hentes bare fra src, lagres i files/manuell/<id>.png og overskrives
+// aldri fra favicon-kildene. Feiler src, beholdes forrige kontrollerte fil. Til slutt lages preview.html med alle
+// logoene i et rutenett, som skal ses over før commit.
 import { readFile, writeFile, mkdir, rm, stat } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { execFile } from 'node:child_process';
@@ -23,6 +28,7 @@ import { join } from 'node:path';
 const run = promisify(execFile);
 const HERE = new URL('.', import.meta.url).pathname;
 const REG = join(HERE, 'registry.json'), FILES = join(HERE, 'files'), MISSING = join(HERE, 'missing.txt');
+const MANUAL = join(FILES, 'manuell'), PREVIEW = join(HERE, 'preview.html');
 const UA = 'Mozilla/5.0 (compatible; KristoHomelab-logos/1.0; +https://kristo.no) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36';
 const MIN = 32, SIZE = 128, CONCURRENCY = 8, TIMEOUT = 12_000, MAX_BYTES = 3_000_000;
 const today = new Date().toISOString().slice(0, 10);
@@ -202,6 +208,31 @@ async function fetchOne(item) {
   return { reasons };
 }
 
+// Manuell logo: src er enten selve bildet (Commons Special:FilePath) eller merkevaresiden (største ikon derfra).
+async function fetchManual(item) {
+  if (!item.src) return { reasons: ['mangler src'] };
+  const r = await get(item.src, { accept: 'image/svg+xml,image/png,image/*,text/html;q=0.8' });
+  if (!r.ok) return { reasons: [`src:${r.status || r.error || 'feil'}`] };
+  const tryImg = async (buf, kind, url) => {
+    const info = probe(buf);
+    if (!info) return null;
+    if (info.fmt !== 'svg' && info.w && (info.w < MIN || info.h < MIN)) return null;
+    const png = await toPng(buf, info);
+    return png ? { png, kind, url } : null;
+  };
+  const direct = await tryImg(r.buf, 'manuell', r.url);
+  if (direct) return direct;
+  if (!/html/i.test(r.type)) return { reasons: ['src:ikke-bilde'] };
+  const host = new URL(r.url).hostname.replace(/^www\./, '');
+  for (const s of (await htmlIcons(host)).slice(0, 6)) {
+    const x = await get(s.url, { accept: 'image/*' });
+    if (!x.ok) continue;
+    const got = await tryImg(x.buf, 'manuell', s.url);
+    if (got) return got;
+  }
+  return { reasons: ['src:fant ikke ikon på merkevaresiden'] };
+}
+
 /* ---------------- Hovedløkke ---------------- */
 
 function serialize(reg) {
@@ -210,6 +241,7 @@ function serialize(reg) {
 
 const reg = JSON.parse(await readFile(REG, 'utf8'));
 await mkdir(FILES, { recursive: true });
+await mkdir(MANUAL, { recursive: true });
 await imageMagick();
 await learnGlobes();
 
@@ -220,6 +252,17 @@ let i = 0;
 async function worker() {
   while (i < todo.length) {
     const it = todo[i++];
+    if (it.kilde === 'manuell') {
+      const mf = join(MANUAL, `${it.id}.png`);
+      if (KEEP && existsSync(mf)) { got.push(it); continue; }
+      const r = await fetchManual(it);
+      if (r.png) { await writeFile(mf, r.png); it.hentet = today; got.push(it); console.log(`✓ ${it.id.padEnd(24)} manuell        ${r.url}`); continue; }
+      const had = await stat(mf).then((x) => x.size > 0).catch(() => false);
+      if (had) { got.push(it); console.log(`= ${it.id.padEnd(24)} beholdt kontrollert fil (${r.reasons.join(', ')})`); continue; }
+      missing.push({ it, reasons: r.reasons }); // kilde forblir «manuell»: klientene viser fargefyll med navnet
+      console.log(`✗ ${it.id.padEnd(24)} manuell: ${r.reasons.join(', ')}`);
+      continue;
+    }
     const file = join(FILES, `${it.id}.png`);
     if (it.kilde === 'bokstav' || !it.domene) { letters.push(it); continue; } // felles favicon (Coop-kjedene) eller ukjent domene
     if (KEEP && existsSync(file)) { got.push(it); continue; }
@@ -250,6 +293,29 @@ const lines = [
   ...letters.sort((a, b) => a.id.localeCompare(b.id)).map((it) => `${it.id}\t${it.navn}\t${it.domene || '-'}\tbokstav`),
 ];
 await writeFile(MISSING, lines.join('\n') + '\n');
+await writeFile(PREVIEW, previewHtml(reg.items));
+console.log(`[logos] ${PREVIEW} – se over logoene før commit.`);
 const share = got.length / Math.max(1, got.length + missing.length);
 console.log(`\n[logos] ${got.length} av ${got.length + missing.length} med domene har logo (${(share * 100).toFixed(1)} %), ${letters.length} bruker bokstav.`);
 if (share < 0.95) console.warn('[logos] Under 95 % – se missing.txt.');
+
+/* ---------------- Visuell sjekk (preview.html) ---------------- */
+// Alle logoene i et rutenett (manuelle først). Mangler filen, vises fargefyll med navnet, slik klientene gjør.
+function previewHtml(items) {
+  const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+  const sorted = [...items].sort((a, b) => (b.kilde === 'manuell') - (a.kilde === 'manuell') || a.id.localeCompare(b.id));
+  const cell = (it) => {
+    const rel = it.kilde === 'manuell' ? `files/manuell/${it.id}.png` : `files/${it.id}.png`;
+    const has = existsSync(join(HERE, rel));
+    const img = has ? `<img src="${esc(rel)}" alt="">` : `<span class="fill" style="background:${esc(it.farge || '#3A4252')}">${esc(it.navn)}</span>`;
+    return `<figure class="${it.kilde === 'manuell' ? 'man' : ''}">${img}<figcaption><b>${esc(it.navn)}</b><br>${esc(it.id)} · ${esc(it.kilde || 'mangler')}${it.src ? `<br><a href="${esc(it.src)}">src</a>` : ''}</figcaption></figure>`;
+  };
+  return `<!doctype html><meta charset="utf-8"><title>Logobibliotek</title>
+<style>body{font:13px system-ui,sans-serif;margin:16px;background:#f3efe6;color:#1b1a17}h1{font-size:18px}.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px}
+figure{margin:0;background:#fff;border:1px solid #d8d1c2;border-radius:14px;padding:10px;text-align:center}figure.man{outline:2px solid #2f7a4f}
+img,.fill{width:64px;height:64px;object-fit:contain;display:inline-grid;place-items:center;border-radius:12px;color:#fff;font-weight:700;font-size:11px;overflow:hidden}
+figcaption{margin-top:6px;color:#7a7468;word-break:break-word}</style>
+<h1>Logobibliotek · ${items.length} oppføringer · ${today}</h1><p>Grønn ramme = manuelt kontrollert (kilde «manuell»). Se over før commit.</p>
+<div class="g">${sorted.map(cell).join('')}</div>
+`;
+}

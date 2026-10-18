@@ -9,6 +9,9 @@ const HERE = new URL('.', import.meta.url).pathname;
 export const REGISTRY_FILE = join(HERE, 'registry.json');
 // LOGO_FILES_DIR: egen mappe (testene), ellers filene som følger med i repoet og imaget.
 export const FILES_DIR = process.env.LOGO_FILES_DIR || join(HERE, 'files');
+// Prompt 22: manuelt kontrollerte logoer (kilde «manuell», f.eks. fraktselskapene) ligger i files/manuell/<id>.png.
+// For disse brukes bare den kontrollerte filen, aldri files/<id>.png (som kan være et tilfeldig favicon).
+export const MANUAL_DIR = join(FILES_DIR, 'manuell');
 
 /* ---------------- Normalisering ---------------- */
 
@@ -83,9 +86,10 @@ function load() {
   return REG;
 }
 export const registry = () => load();
-export const itemById = (id) => load().items.find((x) => x.id === id) ?? null;
+let BYID = null;
+export const itemById = (id) => { const r = load(); if (!BYID || BYID.reg !== r) BYID = { reg: r, map: new Map(r.items.map((x) => [x.id, x])) }; return BYID.map.get(id) ?? null; };
 // Til testene: les registeret på nytt.
-export function reloadRegistry() { REG = null; INDEX = null; filesSeen = null; return load(); }
+export function reloadRegistry() { REG = null; INDEX = null; filesSeen = null; manualSeen = null; return load(); }
 
 // Filer som finnes, lest på nytt når mappen endres (fetch-logos.mjs eller en ny versjon av imaget).
 let filesSeen = null, filesMtime = -1;
@@ -97,14 +101,34 @@ export function filesPresent() {
   filesSeen = new Set(readdirSync(FILES_DIR).filter((f) => /^[a-z0-9-]+\.png$/.test(f)).map((f) => f.slice(0, -4)));
   return filesSeen;
 }
-export const hasFile = (id) => filesPresent().has(id);
-export const filePath = (id) => (/^[a-z0-9-]+$/.test(String(id)) && hasFile(id) ? join(FILES_DIR, `${id}.png`) : null);
+let manualSeen = null, manualMtime = -1;
+export function manualPresent() {
+  let m = 0;
+  try { m = statSync(MANUAL_DIR).mtimeMs; } catch { return (manualSeen = new Set()); }
+  if (manualSeen && m === manualMtime) return manualSeen;
+  manualMtime = m;
+  manualSeen = new Set(readdirSync(MANUAL_DIR).filter((f) => /^[a-z0-9-]+\.png$/.test(f)).map((f) => f.slice(0, -4)));
+  return manualSeen;
+}
+export const isManual = (id) => itemById(id)?.kilde === 'manuell';
+export const hasFile = (id) => (isManual(id) ? manualPresent().has(id) : filesPresent().has(id));
+export const filePath = (id) => (/^[a-z0-9-]+$/.test(String(id)) && hasFile(id) ? join(isManual(id) ? MANUAL_DIR : FILES_DIR, `${id}.png`) : null);
+/** Domenet tilhører et selskap med manuelt kontrollert logo: da skal det aldri hentes favicon for det. */
+export function isManualDomain(domain) {
+  let d = String(domain ?? '').toLowerCase().replace(/^www\./, '').trim();
+  while (d.includes('.')) {
+    if (load().items.some((it) => it.domene === d && it.kilde === 'manuell')) return true;
+    d = d.slice(d.indexOf('.') + 1);
+    if (!d.includes('.')) break;
+  }
+  return false;
+}
 
 // Ferdig nedlastet logo for et domene (første oppføring med fil). www. ignoreres.
 export function fileForDomain(domain) {
   const d = String(domain ?? '').toLowerCase().replace(/^www\./, '');
   if (!d) return null;
-  for (const it of load().items) if (it.domene === d && it.kilde !== 'bokstav' && hasFile(it.id)) return join(FILES_DIR, `${it.id}.png`);
+  for (const it of load().items) if (it.domene === d && it.kilde !== 'bokstav' && hasFile(it.id)) return filePath(it.id);
   return null;
 }
 
@@ -130,12 +154,13 @@ export const overrides = () => Object.fromEntries(OVERRIDES);
 // Til appene: liten liste med ETag (endres når registeret eller filene endres).
 let pubCache = null;
 export function publicRegistry() {
-  const reg = load(), files = filesPresent();
-  if (pubCache && pubCache.files === files) return pubCache.out;
-  const items = reg.items.map((x) => ({ id: x.id, navn: x.navn, domene: x.domene || null, alias: x.alias, kategori: x.kategori, farge: x.farge, hasFile: x.kilde !== 'bokstav' && files.has(x.id) }));
+  const reg = load(), files = filesPresent(), man = manualPresent();
+  if (pubCache && pubCache.files === files && pubCache.man === man) return pubCache.out;
+  const items = reg.items.map((x) => ({ id: x.id, navn: x.navn, domene: x.domene || null, alias: x.alias, kategori: x.kategori, farge: x.farge,
+    hasFile: x.kilde === 'manuell' ? man.has(x.id) : x.kilde !== 'bokstav' && files.has(x.id), ...(x.kilde === 'manuell' ? { manual: true } : {}) }));
   const hash = createHash('sha1').update(JSON.stringify(items)).digest('hex').slice(0, 12);
   const out = { body: { version: `${reg.version}-${hash}`, items }, etag: `"lr-${hash}"` };
-  pubCache = { files, out };
+  pubCache = { files, man, out };
   return out;
 }
 

@@ -7,7 +7,7 @@ import { db, OWNER, kv } from '../db.js';
 import { config } from '../config.js';
 import { settings } from './db.js';
 import { askJson } from './ai.js';
-import { matchMerchant, fileForDomain } from '../logos/match.js';
+import { matchMerchant, fileForDomain, isManualDomain } from '../logos/match.js';
 
 const q = (sql) => db.prepare(sql);
 
@@ -113,6 +113,7 @@ export async function logo(domain) {
   // Prompt 20: ferdig nedlastet logo fra biblioteket (server/logos/files) før cache og nett.
   const bundled = fileForDomain(d);
   if (bundled) { try { return await readFile(bundled); } catch { /* fjernet etter oppstart */ } }
+  if (isManualDomain(d)) return null; // prompt 22: manuelt kontrollert logo (f.eks. Posten) får aldri et tilfeldig favicon
   const file = join(LOGOS, d + '.png');
   try { const s = await stat(file); if (Date.now() - s.mtimeMs < MAX_AGE) return s.size ? await readFile(file) : null; } catch { /* mangler */ }
   if (inflight.has(d)) return inflight.get(d);

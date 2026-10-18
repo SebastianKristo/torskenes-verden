@@ -46,6 +46,8 @@ app.use('*', secureHeaders({
     imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
     connectSrc: ["'self'"],
     frameAncestors: ["'none'"],
+    // Værkartet på værsiden (prompt 22) er Windy-innbyggingen.
+    frameSrc: ["'self'", 'https://embed.windy.com'],
     formAction: ["'self'", 'https:'],
     baseUri: ["'self'"],
   },
