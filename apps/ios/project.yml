@@ -29,6 +29,8 @@ targets:
         # Familie: helsesammendrag fra Apple Helse (bare det brukeren velger å dele).
         com.apple.developer.healthkit: true
         com.apple.developer.healthkit.access: []
+        # Prompt 20: HKObserverQuery + enableBackgroundDelivery (skritt og puls, hver time) krever denne på iOS 15+.
+        com.apple.developer.healthkit.background-delivery: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: no.kristo.finanshub
@@ -50,7 +52,9 @@ targets:
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Posisjonen din deles med familien i Familie og kart når du har slått på deling."
         INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription: "Med «Alltid» oppdateres posisjonen din for familien også når appen er lukket, og du får varsler når noen kommer til eller forlater en sone."
         INFOPLIST_KEY_NSMotionUsageDescription: "Aktivitet (går, sykler, kjører) vises for familien sammen med posisjonen din."
-        INFOPLIST_KEY_NSHealthShareUsageDescription: "Skritt, puls, søvn og aktive kalorier deles med familien bare hvis du velger det under Familie → Helse."
+        INFOPLIST_KEY_NSHealthShareUsageDescription: "Appen leser skritt, puls, søvn og aktivitet for å vise dem i Familie."
+        # Appen skriver ikke til Helse, men teksten må finnes hvis en senere versjon gjør det (ellers krasj ved forespørsel).
+        INFOPLIST_KEY_NSHealthUpdateUsageDescription: "Appen skriver ikke til Apple Health. Den leser bare det du velger å dele i Familie."
     info:
       path: FinansHub/Info.plist
       properties:

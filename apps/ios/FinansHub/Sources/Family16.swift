@@ -64,6 +64,8 @@ struct FamMember: Identifiable, Hashable {
     var precision: String
     var last: FamPos?
     var health: FamHealth?
+    /// Personens egen farge fra Familie (prompt 20). Tom = lages fra paletten.
+    var color: String
 
     init(_ o: [String: Any]) {
         id = JS.str(o, "userId") ?? JS.str(o, "id") ?? UUID().uuidString
@@ -74,6 +76,7 @@ struct FamMember: Identifiable, Hashable {
         precision = JS.str(o, "precision") ?? "exact"
         last = FamPos(JS.dict(o, "last"))
         health = FamHealth(JS.dict(o, "health"))
+        color = JS.str(o, "color") ?? JS.str(o, "farge") ?? ""
     }
 
     var initial: String { String(name.prefix(1)).uppercased() }
@@ -433,14 +436,16 @@ final class FamilyLocation: NSObject, CLLocationManagerDelegate {
     @MainActor private func send(_ loc: CLLocation, activity: String) {
         guard !server.isEmpty, UserDefaults.standard.string(forKey: "fh_fam_sharing") == "on" else { return }
         let dev = UIDevice.current
+        // «Batteri og bevegelse» (Innstillinger → App → Helse og posisjon): av = uten batteri og aktivitet.
+        let extras: Bool = (UserDefaults.standard.object(forKey: "fh_share_battery") as? Bool) ?? true
         var body: [String: Any] = [
             "lat": loc.coordinate.latitude, "lon": loc.coordinate.longitude, "acc": loc.horizontalAccuracy,
-            "alt": loc.altitude, "activity": activity, "ts": Int(loc.timestamp.timeIntervalSince1970 * 1000),
-            "charging": dev.batteryState == .charging || dev.batteryState == .full,
+            "alt": loc.altitude, "activity": extras ? activity : "still", "ts": Int(loc.timestamp.timeIntervalSince1970 * 1000),
         ]
+        if extras { body["charging"] = dev.batteryState == .charging || dev.batteryState == .full }
         if loc.speed >= 0 { body["speed"] = loc.speed }
         if loc.course >= 0 { body["heading"] = loc.course }
-        if dev.batteryLevel >= 0 { body["battery"] = Double(dev.batteryLevel) * 100 }
+        if extras && dev.batteryLevel >= 0 { body["battery"] = Double(dev.batteryLevel) * 100 }
         body["device"] = "\(dev.model) · iOS \(dev.systemVersion)"
         let api = API(base: server, token: token)
         let app = UIApplication.shared
@@ -1099,7 +1104,7 @@ struct FamilyHealthView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Button { store.paperGo("innst-fam") } label: {
+            Button { store.paperGo("innst-helse") } label: {
                 HStack(spacing: 12) {
                     Image(systemName: "heart.fill").foregroundStyle(p.lab)
                     VStack(alignment: .leading, spacing: 1) {
@@ -1113,6 +1118,7 @@ struct FamilyHealthView: View {
                 .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             }
             .buttonStyle(.plain)
+            if HealthNoData20.shouldShow(m) { HealthNoData20() }
             let withHealth = m.members.filter { $0.health != nil }
             if withHealth.isEmpty {
                 PCard { Text(m.loaded ? "Ingen deler helsedata ennå." : "Henter …").font(PF.ui(13.5)).foregroundStyle(p.mut) }

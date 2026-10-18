@@ -431,6 +431,10 @@ struct PaperFinMoreGrid: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
     @Environment(\.paperWide) private var wide
+    /// Prompt 20: hold inne ~0,45 s → flisene vugger og kan dras til ny plass.
+    @State private var editing: Bool = false
+    @State private var wiggle: Bool = false
+    @State private var order: [String] = FinTileOrder20.load()
 
     private struct Tile: Identifiable {
         let id: String
@@ -444,10 +448,12 @@ struct PaperFinMoreGrid: View {
     var body: some View {
         let cols = wide ? 4 : 2
         VStack(alignment: .leading, spacing: 10) {
+            if editing { FinTileEditBar20(done: { stopEditing() }, reset: { resetOrder() }) }
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: cols), spacing: 10) {
-                ForEach(tiles) { t in tile(t) }
+                ForEach(sortedTiles) { t in cell(t) }
             }
         }
+        .onAppear { order = FinTileOrder20.load() }
         .task {
             await store.loadPaperFinance()
             if store.subsX == nil { try? await store.loadSubs() }
@@ -482,12 +488,73 @@ struct PaperFinMoreGrid: View {
         return x.valueText
     }
 
+    /// Flisene i lagret rekkefølge; nye fliser havner sist.
+    private var sortedTiles: [Tile] {
+        let list: [Tile] = tiles
+        var out: [Tile] = []
+        for id in order {
+            if let t = list.first(where: { $0.id == id }), !out.contains(where: { $0.id == id }) { out.append(t) }
+        }
+        for t in list where !out.contains(where: { $0.id == t.id }) { out.append(t) }
+        return out
+    }
+
+    @ViewBuilder private func cell(_ t: Tile) -> some View {
+        if editing {
+            tile(t)
+                .rotationEffect(.degrees(wiggle ? 1.4 : -1.4))
+                .animation(.easeInOut(duration: 0.14).repeatForever(autoreverses: true), value: wiggle)
+                .draggable(t.id)
+                .dropDestination(for: String.self) { items, _ in
+                    drop(items.first, on: t.id)
+                    return true
+                }
+        } else {
+            tile(t)
+                .simultaneousGesture(LongPressGesture(minimumDuration: 0.45).onEnded { _ in startEditing() })
+        }
+    }
+
+    private func startEditing() {
+        guard !editing else { return }
+        Haptics.shared.tick()
+        order = sortedTiles.map(\.id)
+        editing = true
+        DispatchQueue.main.async { wiggle = true }
+    }
+
+    private func stopEditing() {
+        Haptics.shared.success()
+        wiggle = false
+        editing = false
+        FinTileOrder20.save(order, store)
+    }
+
+    private func resetOrder() {
+        Haptics.shared.select()
+        FinTileOrder20.reset(store)
+        let defaults: [String] = tiles.map(\.id)
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { order = defaults }
+    }
+
+    private func drop(_ src: String?, on target: String) {
+        guard let src else { return }
+        let ids: [String] = sortedTiles.map(\.id)
+        let next: [String] = FinTileOrder20.moved(ids, src, before: target)
+        guard next != ids else { return }
+        Haptics.shared.tick()
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { order = next }
+    }
+
     private func tile(_ t: Tile) -> some View {
-        Button(action: t.act) {
+        let tint: Color = FinTileColor20.color(t.id)
+        return Button {
+            if !editing { t.act() }
+        } label: {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top) {
-                    Image(systemName: t.icon).font(.system(size: 17, weight: .semibold)).foregroundStyle(p.onLab)
-                        .frame(width: 38, height: 38).background(p.lab, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    Image(systemName: t.icon).font(.system(size: 17, weight: .semibold)).foregroundStyle(tint)
+                        .frame(width: 38, height: 38).background(tint.opacity(p.dark ? 0.24 : 0.13), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     Spacer()
                     if t.badge > 0 {
                         Text("\(t.badge)").font(PF.ui(11.5, .bold)).foregroundStyle(.white).frame(minWidth: 22, minHeight: 22)

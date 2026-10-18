@@ -451,50 +451,7 @@ struct PaperTasksCard: View {
     }
 }
 
-/// «POSISJON»: hvor familien er (åpner Familie).
-struct PaperFamilyCard: View {
-    @Environment(Store.self) private var store
-    @Environment(\.paper) private var p
-    @MainActor private var m: FamilyModel { FamilyModel.shared }
-
-    var body: some View {
-        Button { store.paperGo("familie") } label: {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .firstTextBaseline) {
-                    PLabel(text: "Posisjon")
-                    Spacer()
-                    Text("Familie ›").font(PF.ui(12)).foregroundStyle(p.mut)
-                }
-                let shown = Array(m.members.prefix(4))
-                if shown.isEmpty {
-                    Text(m.loaded ? "Ingen deler posisjonen ennå." : "Henter familien …").font(PF.ui(14)).foregroundStyle(p.mut)
-                }
-                ForEach(shown) { mem in
-                    HStack(spacing: 10) {
-                        Text(mem.initial).font(.system(size: 12, weight: .bold)).foregroundStyle(.white)
-                            .frame(width: 26, height: 26).background(Color(hex: "#1b1a17"), in: Circle())
-                        Text(mem.first).font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink)
-                        Spacer(minLength: 4)
-                        Text(place(mem)).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(1)
-                    }
-                }
-            }
-            .padding(.horizontal, 16).padding(.vertical, 14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        }
-        .buttonStyle(.plain)
-        .task { if !m.loaded { await m.load(store) } }
-    }
-
-    private func place(_ mem: FamMember) -> String {
-        if mem.sharing == "paused" { return "Pauset" }
-        if mem.sharing != "on" { return "Deler ikke" }
-        guard let pos = mem.last else { return "Ukjent sted" }
-        if let z = m.zones.first(where: { famDistance($0.coord, pos.coord) <= $0.radius }) { return z.name }
-        return pos.place.isEmpty ? "Ukjent sted" : pos.place
-    }
-}
+// «POSISJON · FAMILIE»-kortet (PaperFamilyCard) ligger i Positions20.swift (prompt 20).
 
 /// «BOLIG»: brukt mot budsjett denne måneden, ting til gjennomgang og neste faste utgift (åpner Boliger).
 struct PaperHomeBoligCard: View {

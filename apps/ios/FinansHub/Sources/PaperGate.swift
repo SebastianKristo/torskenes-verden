@@ -1,6 +1,7 @@
 import SwiftUI
 import UserNotifications
 import AVFoundation
+import HealthKit
 
 /* ---------------- Papir: innlogging, totrinn og onboarding ---------------- */
 
@@ -142,6 +143,9 @@ struct PaperOnboardingView: View {
     @State private var cam = true
     @State private var bio = true
     @State private var hap = true
+    /// Prompt 20: posisjon for Familie og Apple Health.
+    @State private var loc = true
+    @State private var health = true
 
     var body: some View {
         let step = store.onboarding ?? 0
@@ -161,7 +165,7 @@ struct PaperOnboardingView: View {
                         PInkButton(title: step < 2 ? "Neste" : "Ferdig", height: 50, full: true) { next(step) }
                     }
                     .padding(.top, 6)
-                    Button("Hopp over") { finish() }.font(PF.ui(13, .semibold)).foregroundStyle(p.mut).frame(maxWidth: .infinity)
+                    Button("Hopp over") { finish(skip: true) }.font(PF.ui(13, .semibold)).foregroundStyle(p.mut).frame(maxWidth: .infinity)
                 }
                 .padding(.horizontal, 22).padding(.top, 20).padding(.bottom, 40)
             }
@@ -211,6 +215,12 @@ struct PaperOnboardingView: View {
             toggle("Face ID / fingeravtrykk", "Lås opp uten passord", $bio, p)
             Rectangle().fill(p.line).frame(height: 1)
             toggle("Haptisk tilbakemelding", "Små vibrasjoner ved trykk", $hap, p)
+            Rectangle().fill(p.line).frame(height: 1)
+            toggle("Posisjon", "Del hvor du er med familien i Familie", $loc, p)
+            if HKHealthStore.isHealthDataAvailable() {
+                Rectangle().fill(p.line).frame(height: 1)
+                toggle("Apple Health", "Skritt, puls, søvn og aktivitet i Familie", $health, p)
+            }
         }
         .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         Text("Alt kan endres senere under Innstillinger. «Logg ut» ligger under Innstillinger → Konto.").font(PF.ui(12.5)).foregroundStyle(p.mut)
@@ -254,12 +264,19 @@ struct PaperOnboardingView: View {
     }
 
     /// Lagrer valgene: design, haptikk, lås og tillatelser (systemets egne spørsmål).
-    private func finish() {
+    private func finish(skip: Bool = false) {
         Haptics.shared.on = hap
+        if !skip { finishFamily() }
         if bio { store.lockEnabled = true }
         if push { UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in } }
         if cam { AVCaptureDevice.requestAccess(for: .video) { _ in } }
         if design == "klassisk" { store.setMobileDesign("klassisk") } else { store.setPaperMode(design) }
         store.finishOnboarding()
+    }
+
+    /// «Ferdig»: posisjonsdeling (iOS spør om posisjon) og Apple Health (iOS-dialogen med alle typene).
+    private func finishFamily() {
+        if loc && FamilyModel.shared.sharing != "on" { FamilyModel.shared.setSharing("on", store) }
+        if health && HKHealthStore.isHealthDataAvailable() { HealthSync.shared.enableFromOnboarding(store) }
     }
 }

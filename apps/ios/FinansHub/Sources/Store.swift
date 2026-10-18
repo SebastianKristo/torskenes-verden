@@ -1317,6 +1317,11 @@ final class Store {
     func logo(_ domain: String?) async -> UIImage? {
         guard let domain, !domain.isEmpty else { return nil }
         if let l = logos[domain] { return l }
+        // Prompt 20: ferdig nedlastet logo fra logobiblioteket (disk-cache) før favicon via serveren.
+        if let reg = await LogoRegistry20.shared.image(domain: domain, api: api) {
+            logos[domain] = reg
+            return reg
+        }
         let enc = domain.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? domain
         let img = await image("/finans/api/logo/\(enc)")
         if let img { logos[domain] = img }
@@ -1620,7 +1625,7 @@ final class Store {
 
     /* ---------- Data og lagring ---------- */
 
-    func clearCache() { logos = [:]; URLCache.shared.removeAllCachedResponses(); flash("Hurtigbuffer tømt") }
+    func clearCache() { logos = [:]; LogoRegistry20.shared.clear(); URLCache.shared.removeAllCachedResponses(); flash("Hurtigbuffer tømt") }
 
     /// Alle transaksjoner som CSV (semikolon, UTF-8 med BOM) i en midlertidig fil for delingsarket.
     func exportCsv() async -> URL? {

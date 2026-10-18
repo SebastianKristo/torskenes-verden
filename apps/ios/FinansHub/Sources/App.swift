@@ -9,6 +9,8 @@ struct FinansHubApp: App {
     init() {
         // Bakgrunnsoppgavene (helse og familie) må registreres før appen er ferdig startet.
         HealthSync.registerBackground()
+        // Prompt 20: HealthKit vekker appen ved nye skritt og puls (enableBackgroundDelivery, hver time).
+        HealthObserver20.shared.start()
     }
 
     var body: some Scene {

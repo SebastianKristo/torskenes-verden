@@ -24,6 +24,7 @@ extension Store {
         applyPaper15(o)
         applyPaper16(o)
         applyPaper19(o)
+        FinTileOrder20.apply(o)
     }
 
     nonisolated static let trkKeys = ["add", "shipments", "notify", "carriers"]

@@ -114,7 +114,9 @@ struct Logo: View {
     }
     private func load() async {
         if let u = logoUrl, !u.isEmpty, let i = await store.image(u) { img = i; return }
-        img = await store.logo(domain)
+        var d: String? = domain
+        if d == nil || d?.isEmpty == true { d = await LogoRegistry20.shared.domain(forName: name, api: store.api) }
+        img = await store.logo(d)
     }
 }
 

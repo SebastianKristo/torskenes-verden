@@ -87,26 +87,56 @@ enum PaperIconTheme {
 struct PaperTabIcon: View {
     let icon: String
     var size: CGFloat = 14
+    /// Prompt 20: fast boks (18×18 ved 14 pt) så ikonet står midt på teksten. Tegn som ◎ sitter høyt i
+    /// Newsreader, så de flyttes 1,5 pt ned.
     var body: some View {
+        let box: CGFloat = size + 4
         if PaperTabIcon.isSymbol(icon) {
             Image(systemName: icon).font(.system(size: size, weight: .semibold))
+                .frame(width: box, height: box)
         } else {
-            Text(icon).font(PF.serif(size + 2, medium: true))
+            Text(icon).font(.system(size: size + 1, weight: .semibold)).lineLimit(1).fixedSize()
+                .offset(y: 1.5)
+                .frame(width: box, height: box)
         }
     }
     static func isSymbol(_ s: String) -> Bool { s.count > 2 && s.unicodeScalars.allSatisfy { $0.isASCII } }
 }
 
 /// Google-logoen i søkefeltet (den firefargede «G»-en).
+/// Prompt 20: tegnet som buer i de fire fargene (som SVG-en i designet), ikke som en tonet bokstav.
 struct GoogleG: View {
     var size: CGFloat = 18
     var body: some View {
-        Text("G")
-            .font(.system(size: size, weight: .bold, design: .rounded))
-            .foregroundStyle(AngularGradient(colors: [Color(hex: "#EA4335"), Color(hex: "#FBBC05"), Color(hex: "#34A853"), Color(hex: "#4285F4"), Color(hex: "#EA4335")],
-                                             center: .center, startAngle: .degrees(-45), endAngle: .degrees(315)))
-            .frame(width: size + 4, height: size + 4)
-            .accessibilityLabel("Google")
+        let w: CGFloat = size * 0.22
+        ZStack {
+            GoogleArc20(from: 0.0, to: 0.13, color: Color(hex: "#4285F4"), width: w)
+            GoogleArc20(from: 0.13, to: 0.40, color: Color(hex: "#34A853"), width: w)
+            GoogleArc20(from: 0.40, to: 0.58, color: Color(hex: "#FBBC05"), width: w)
+            GoogleArc20(from: 0.58, to: 0.875, color: Color(hex: "#EA4335"), width: w)
+            // Tverrstreken mot midten.
+            Rectangle().fill(Color(hex: "#4285F4"))
+                .frame(width: size * 0.48, height: w)
+                .offset(x: size * 0.24 - w * 0.25)
+        }
+        .frame(width: size, height: size)
+        .padding(2)
+        .accessibilityElement()
+        .accessibilityLabel("Google")
+    }
+}
+
+/// Én bue av G-en. trim starter kl. 3 og går med klokka.
+struct GoogleArc20: View {
+    let from: CGFloat
+    let to: CGFloat
+    let color: Color
+    let width: CGFloat
+    var body: some View {
+        Circle()
+            .trim(from: from, to: to)
+            .stroke(color, style: StrokeStyle(lineWidth: width, lineCap: .butt))
+            .padding(width / 2)
     }
 }
 
@@ -201,6 +231,7 @@ extension Store {
         case "innst-ut": return "Utseende"
         case "innst-tab": return "Fanelinje"
         case "innst-fam": return "Familie og helse"
+        case "innst-helse": return "Helse og posisjon"
         case "huske": return "Huskeliste"
         default:
             if paperTab.hasPrefix("innst-") { return PaperSettingsSub.titles[String(paperTab.dropFirst(6))]?.0 }
@@ -218,6 +249,7 @@ extension Store {
         case "innst-ut": return "Tema, bakgrunn og ikonfarger"
         case "innst-tab": return "Faner, navn og ikoner"
         case "innst-fam": return "Deling, personvern og Apple Helse"
+        case "innst-helse": return "Apple Health, datatyper og posisjon"
         case "huske": return "Oppgaver for hele familien"
         default:
             if paperTab.hasPrefix("innst-") { return PaperSettingsSub.titles[String(paperTab.dropFirst(6))]?.1 }

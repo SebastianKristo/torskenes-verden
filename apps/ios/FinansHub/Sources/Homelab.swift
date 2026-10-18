@@ -155,8 +155,7 @@ struct GoogleSearch: View {
         let items = empty ? Array(store.history.prefix(6)) : store.suggestions
         VStack(spacing: 0) {
             HStack(spacing: 12) {
-                Text("G").font(.system(size: 22, weight: .bold))
-                    .foregroundStyle(LinearGradient(colors: [Color(hex: "#4285F4"), Color(hex: "#EA4335"), Color(hex: "#FBBC05"), Color(hex: "#34A853")], startPoint: .topLeading, endPoint: .bottomTrailing))
+                GoogleG(size: 20)
                 TextField("Søk på Google eller skriv en adresse", text: $q)
                     .keyboardType(.webSearch).submitLabel(.search).textInputAutocapitalization(.never).autocorrectionDisabled()
                     .focused($focused)

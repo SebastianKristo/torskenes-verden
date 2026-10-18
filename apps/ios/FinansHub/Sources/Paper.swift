@@ -766,6 +766,7 @@ struct PaperPage: View {
         case "profil": PaperProfile()
         case "innst-ut": PaperLookSettings()
         case "innst-fam": FamilySettingsView()
+        case "innst-helse": HealthPosSettings20()
         case let t where t.hasPrefix("innst-"): PaperSettingsSub(key: String(t.dropFirst(6)))
         default: PaperHome()
         }

@@ -30,9 +30,20 @@ final class HealthSync {
     }
     var lastSent: Date? = UserDefaults.standard.object(forKey: "fh_health_sent") as? Date
     var lastError: String?
+    /// Prompt 20: hovedbryteren «Del helsedata». Av = ingen synk, og serverdataene er slettet.
+    var master: Bool = (UserDefaults.standard.object(forKey: "fh_health_master") as? Bool) ?? true {
+        didSet { UserDefaults.standard.set(master, forKey: "fh_health_master") }
+    }
+    /// iOS sier ikke om lesetilgang er gitt, så vi husker bare at dialogen er vist.
+    var asked: Bool = UserDefaults.standard.bool(forKey: "fh_health_asked") {
+        didSet { UserDefaults.standard.set(asked, forKey: "fh_health_asked") }
+    }
+    /// Samme standard som serveren (DEF_PREFS i server/family.js).
+    nonisolated static let defaultShare: [String: Bool] = ["steps": true, "restingHr": true, "hr": false, "sleep": true, "activeKcal": true, "week": true]
     var available: Bool { HKHealthStore.isHealthDataAvailable() }
 
     var statusText: String {
+        if !master { return "Deling av helsedata er av. Ingenting sendes, og dataene dine er slettet fra serveren." }
         if let e = lastError { return "Kunne ikke sende: \(e)" }
         if !share.values.contains(true) { return "Ingenting deles. Slå på det du vil at familien skal se. Bare et sammendrag sendes, aldri enkeltmålinger." }
         guard let d = lastSent else { return "Sammendraget sendes omtrent hvert 15. minutt når iOS tillater det." }
@@ -41,6 +52,8 @@ final class HealthSync {
 
     /// shareHealth fra serveren (valgt på en annen enhet).
     func applyServer(_ o: [String: Any]) {
+        // Hovedbryteren av: serveren har alt slått av, men de lokale valgene beholdes til den slås på igjen.
+        guard master else { return }
         var s = share
         for k in HealthSync.kinds.map(\.0) {
             if let v = JS.bool(o, k) { s[k] = v }
@@ -71,14 +84,108 @@ final class HealthSync {
         if on["hr"] == true, let t = HKObjectType.quantityType(forIdentifier: .heartRate) { out.insert(t) }
         if on["sleep"] == true || week, let t = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) { out.insert(t) }
         if on["activeKcal"] == true || week, let t = HKObjectType.quantityType(forIdentifier: .activeEnergyBurned) { out.insert(t) }
+        if on["activeKcal"] == true, let t = HKObjectType.quantityType(forIdentifier: .appleExerciseTime) { out.insert(t) }
         return out
+    }
+
+    /// Alle typene appen kan lese (onboarding og «Be om tilgang»): skritt, puls, hvilepuls, søvn, aktive kalorier og treningsminutter.
+    private func allReadTypes() -> Set<HKObjectType> {
+        var out = Set<HKObjectType>()
+        let ids: [HKQuantityTypeIdentifier] = [.stepCount, .heartRate, .restingHeartRate, .activeEnergyBurned, .appleExerciseTime]
+        for id in ids {
+            if let t = HKObjectType.quantityType(forIdentifier: id) { out.insert(t) }
+        }
+        if let t = HKObjectType.categoryType(forIdentifier: .sleepAnalysis) { out.insert(t) }
+        return out
+    }
+
+    /// Viser iOS-dialogen for alle typene. Etterpå ligger appen under Helse → Profil → Apper.
+    func requestAll() async {
+        guard available else { return }
+        do {
+            try await hk.requestAuthorization(toShare: [], read: allReadTypes())
+            asked = true
+            HealthObserver20.shared.start()
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    /// Slår på eller av flere nøkler samtidig (én bryter per datatype i «Helse og posisjon»).
+    func setShareGroup(_ keys: [String], _ on: Bool, _ store: Store) {
+        var s = share
+        for k in keys { s[k] = on }
+        share = s
+        Haptics.shared.select()
+        let api = store.api
+        let body: [String: Any] = shareBody(master ? s : [:])
+        Task {
+            _ = try? await api.callAt("/api", "PUT", "/family/me", json: ["shareHealth": body])
+            if on && self.master { await self.requestAuth(); await self.syncNow(api) }
+        }
+    }
+
+    private func shareBody(_ s: [String: Bool]) -> [String: Any] {
+        var body: [String: Any] = [:]
+        for k in HealthSync.kinds.map(\.0) { body[k] = s[k] ?? false }
+        return body
+    }
+
+    /// Hovedbryteren. Av: stopp observatørene og slett egne helsedata på serveren.
+    func setMaster(_ on: Bool, _ store: Store) {
+        master = on
+        Haptics.shared.select()
+        let api = store.api
+        if on {
+            if !share.values.contains(true) { share = HealthSync.defaultShare }
+            let body: [String: Any] = shareBody(share)
+            HealthObserver20.shared.start()
+            HealthSync.schedule()
+            Task {
+                _ = try? await api.callAt("/api", "PUT", "/family/me", json: ["shareHealth": body])
+                await self.requestAll()
+                await self.syncNow(api)
+            }
+        } else {
+            HealthObserver20.shared.stop()
+            Task { await self.deleteServerData(api) }
+        }
+    }
+
+    /// DELETE /api/family/health/me. Eldre servere (404): slå av all deling og send en tom dag, så serveren nuller feltene.
+    func deleteServerData(_ api: API) async {
+        guard !api.base.isEmpty else { return }
+        let off: [String: Any] = shareBody([:])
+        _ = try? await api.callAt("/api", "PUT", "/family/me", json: ["shareHealth": off])
+        do {
+            _ = try await api.callAt("/api", "DELETE", "/family/health/me", timeout: 20)
+            lastError = nil
+        } catch let e as APIError where e.status == 404 || e.status == 405 {
+            _ = try? await api.callAt("/api", "POST", "/family/health", json: ["date": isoDay(Date())], timeout: 20)
+        } catch {
+            lastError = error.localizedDescription
+        }
+    }
+
+    /// Fra onboarding: hovedbryteren på, standardvalgene hvis ingenting er valgt, og iOS-dialogen.
+    func enableFromOnboarding(_ store: Store) {
+        setMaster(true, store)
+    }
+
+    /// Fra HKObserverQuery: høyst hvert 10. minutt.
+    func syncIfDue(_ api: API) async {
+        if let d = lastSent, Date().timeIntervalSince(d) < 600 { return }
+        await syncNow(api)
     }
 
     func requestAuth() async {
         guard available else { return }
         let types = readTypes()
         guard !types.isEmpty else { return }
-        do { try await hk.requestAuthorization(toShare: [], read: types) } catch { lastError = error.localizedDescription }
+        do {
+            try await hk.requestAuthorization(toShare: [], read: types)
+            asked = true
+        } catch { lastError = error.localizedDescription }
     }
 
     /* ---------- Sammendrag ---------- */
@@ -135,6 +242,7 @@ final class HealthSync {
         let bpm = HKUnit.count().unitDivided(by: .minute())
         if on["steps"] == true, let v = await sum(.stepCount, count, from: today, to: now) { body["steps"] = Int(v) }
         if on["activeKcal"] == true, let v = await sum(.activeEnergyBurned, .kilocalorie(), from: today, to: now) { body["activeKcal"] = Int(v) }
+        if on["activeKcal"] == true, let v = await sum(.appleExerciseTime, HKUnit.minute(), from: today, to: now) { body["exerciseMin"] = Int(v) }
         if on["restingHr"] == true, let v = await latest(.restingHeartRate, bpm, since: cal.date(byAdding: .day, value: -2, to: today) ?? today) { body["restingHr"] = Int(v) }
         if on["hr"] == true, let v = await latest(.heartRate, bpm, since: cal.date(byAdding: .hour, value: -3, to: now) ?? now) { body["hr"] = Int(v) }
         if on["sleep"] == true, let v = await sleepMinutes(now) { body["sleepMin"] = Int(v) }
@@ -155,7 +263,7 @@ final class HealthSync {
     }
 
     func syncNow(_ api: API) async {
-        guard available, share.values.contains(true), !api.base.isEmpty else { return }
+        guard available, master, share.values.contains(true), !api.base.isEmpty else { return }
         let body = await summary()
         do {
             _ = try await api.callAt("/api", "POST", "/family/health", json: body, timeout: 20)

@@ -188,10 +188,12 @@ struct PaperDepartures: View {
                     .buttonStyle(.plain)
                 }
                 Button { Haptics.shared.tap(); m.searchOpen = true } label: {
-                    Text("+ Legg til stopp").font(PF.ui(13, .semibold)).foregroundStyle(p.lab)
+                    // Prompt 20: kortbakgrunn og mørkere stiplet kant, så teksten er lesbar også over bilder.
+                    Text("+ Legg til stopp").font(PF.ui(13, .bold)).foregroundStyle(p.ink)
                         .fixedSize()
                         .padding(.horizontal, 14).frame(height: 36)
-                        .overlay(Capsule().stroke(p.lab, lineWidth: 1))
+                        .background(p.card, in: Capsule())
+                        .overlay(Capsule().stroke(p.ink.opacity(0.55), style: StrokeStyle(lineWidth: 1.5, dash: [4, 3])))
                 }
                 .buttonStyle(.plain)
             }
