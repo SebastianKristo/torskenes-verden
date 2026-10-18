@@ -2,6 +2,34 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.8.0] – 18.10.2026 · prompt 15
+- **Tilpass hver side (Papir):** hold inne et kort, så vugger det dempet. Hvert kort får ▲, ▼ og − (skjul), og «Ferdig» står øverst. Det gjelder Hjem, Finans, Mat og Sporing, og valgene lagres per side og bruker.
+- **Fanelinja:**
+  - Flytende skanneknapp med Søk-fane. Du kan velge «I linjen» i stedet.
+  - På Sporing blir knappen «Ny sending».
+  - Fjerde fane er Domener, eller Sporing automatisk når pakker er på vei.
+  - Finans-fanelinja kan tilpasses (opptil 4 faner + Mer).
+- **Fold og iPad:** fanelinja blir en skinne til venstre, med bildet bak. Hjem får to kolonner, og Finn får flere kort i bredden.
+- **Værapp i appene:** trykk på temperaturen. Du får timer, 7 dager, vind, måne, sol, UV og flere fliser, og et «Forhold»-ark med grafer. Dataene kommer fra Open-Meteo via serveren (`/api/weather/full`).
+- **Finans:**
+  - Banner for kvitteringer til gjennomgang.
+  - 15 siste transaksjoner.
+  - Detaljside med kvitteringen som papirlapp, endring av kategori og bankutskrift.
+  - Søk med ✦ AI og Mer som rutenett.
+  - Subscription OS på mobil.
+  - Finn får en rad for «På vei».
+- **Domener på mobil:** nytt toppkort med domenekort og perioder, og ett kort per domene i stedet for tabell. Tilbake går alltid til Hjem.
+- **Hilsen etter tid på døgnet overalt** (God morgen / formiddag / ettermiddag / kveld / natt), på to linjer som krymper i stedet for å brytes.
+- **Samsung-widgets:** navnet står under widgeten, og du kan slå det av og på under «Rediger widget».
+
+### Gjenstår
+- **Strekkodeskanning i «Ny sending»:**
+  - iOS: virker med VisionKit.
+  - Android: ikke bygget.
+  - PWA: bare i nettlesere med BarcodeDetector.
+- **PWA:** headerbildet scroller bort i stedet for at innholdet klippes under det. Rekkefølgen i Sporing er nullstilt én gang.
+- **iOS:** arkene for å redigere abonnementer har fortsatt mørk stil.
+
 ## [4.7.1] – 18.10.2026
 - **iOS Papir:** fanelinja står nå nederst, 12 pt over safe area i stedet for å flyte høyt over bunnen. Fotovinduet går helt opp under statuslinja, og innholdet i det tilpasser seg høyden på statuslinja.
 

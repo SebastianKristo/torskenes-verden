@@ -47,7 +47,7 @@ export const cap = (s) => String(s).replace(/^./, (c) => c.toUpperCase());
 export const shiftMonth = (m, n) => { const [y, mo] = m.split('-').map(Number); const d = new Date(y, mo - 1 + n, 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`; };
 export const ini = (t) => (String(t ?? '').replace(/[^A-Za-zÆØÅæøå0-9]/g, '').slice(0, 1) || '•').toUpperCase();
 export const rgba = (h, a) => { const n = parseInt(String(h).slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
-export const greet = () => { const h = new Date().getHours(); return h < 10 ? 'God morgen' : h < 18 ? 'Hei' : 'God kveld'; };
+export const greet = () => { const h = new Date().getHours(); return (h < 5 ? 'God natt' : h < 10 ? 'God morgen' : h < 12 ? 'God formiddag' : h < 18 ? 'God ettermiddag' : h < 23 ? 'God kveld' : 'God natt'); };
 export const pctChange = (a, b) => (b ? ((a - b) / b) * 100 : null);
 
 /* ---------- Tilstand ---------- */

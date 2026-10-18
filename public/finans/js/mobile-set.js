@@ -6,6 +6,7 @@ import { LAY, saveLayout } from './mobile-hl.js';
 import { SEEDS, MODES } from './mobile-theme.js';
 import { haptic, hpref, setHap, canVibrate, HAP_TYPES } from './mobile-haptics.js';
 import { paper, saveDesign, paperState } from './mobile-paper.js';
+import { navSettings } from './mobile-paper3.js';
 import { TR, trkLoad, trkPrefRows, setTrkPref } from './mobile-track.js';
 
 const T = { f: {}, ai: null, bk: null, srch: null, tokens: null, devices: null, newTok: '', nt: { name: '', scopes: ['receipts:write'], exp: '90' }, ping: '', lastSync: null, usage: null };
@@ -60,6 +61,7 @@ function paperTop() {
   const md = pref('paperMode'), r = (k, n, s2) => `<button class="opt-row" data-sact="ppmode" data-v="${k}"><span class="m-grow"><b style="font-weight:600">${n}</b><br><span style="font-size:13px;opacity:.65">${s2}</span></span><span class="sval" style="${md === k ? 'color:var(--pp-pos);opacity:1;font-weight:600' : ''}">${md === k ? '✓ Valgt' : ''}</span></button>`;
   return `${G('Tema', [r('lys', 'Papir · lys', 'Lyst papir og svart fanelinje'), r('mork', 'Papir · mørk', 'Kveldspapir og lys fanelinje'), r('auto', 'Papir · følg systemet', 'Lys om dagen, mørk når telefonen er mørk'),
     `<button class="opt-row" data-sact="design" data-v="klassisk"><span class="m-grow"><b style="font-weight:600">Klassisk (Liquid Glass / Material You)</b><br><span style="font-size:13px;opacity:.65">Bytt tilbake til det forrige mobildesignet</span></span><span class="sval" style="color:var(--pp-lab);opacity:1;font-weight:600">Bytt ›</span></button>`])}
+    <div class="pp-col pp-navset" style="gap:8px">${navSettings()}</div>
     ${G('Forside', [`<button class="opt-row" data-sact="ppphoto"><span class="m-grow"><b style="font-weight:600">Bakgrunn</b><br><span style="font-size:13px;opacity:.65">${PHOTO_N[pref('photo')] ?? 'Nåværende'}</span></span><span class="sval">Endre ›</span></button>`, link('<b style="font-weight:600">Nyhetsleser</b>', '#/nyheter', 'Kilder, kategorier og AI')])}
     ${G('Konto', [`<button class="opt-row" data-mact="logout"><span class="m-grow"><b style="font-weight:600">Logg ut</b><br><span style="font-size:13px;opacity:.65">Du må logge inn igjen${m.me?.totp ? ' med 2FA' : ''}</span></span><span class="sval" style="color:var(--pp-lab);opacity:1;font-weight:600">Logg ut</span></button>`])}`;
 }

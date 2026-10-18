@@ -1393,3 +1393,255 @@ a.wx-r{color:inherit;text-decoration:none}
 .pp-trksec:first-child .pp-trkadd .pp-in.dash{background:var(--pp-card);border:0;box-shadow:0 10px 30px -14px rgba(0,0,0,.35)}
 .pp-gform>.pp-gbtn{flex:none}
 .m .sb-edit{z-index:91}.m .sheet-bg:has(+ .sb-edit){z-index:90}
+
+/* ================= Prompt 15 · Papir: tilpassbare sider, flytende skann, Fold, Søk, detaljer, Domener, vær ================= */
+/* Hilsen på to linjer (31 pt, skaleres ned i stedet for å brytes) og temperaturen ved siden av (52 pt). Headeren er 226 pt. */
+.pp-hero.home{height:calc(env(safe-area-inset-top) + 226px)}
+.pp-title.big{font-size:clamp(23px,7.6vw,31px);line-height:1.04}
+.pp-gl{display:block;white-space:nowrap}
+.pp-hero.home .pp-bottom>.m-grow{min-width:0}
+.pp-temp b{font-size:52px}
+.pp-temp span{white-space:nowrap}
+
+/* Tilpass hver side: hold inne → dempet vugging (±0,2°, 0,6 s), ▲ ▼ − per kort og «Ferdig»-linja øverst. */
+@keyframes pWigA{0%,100%{transform:rotate(-.2deg)}50%{transform:rotate(.2deg)}}
+@keyframes pWigB{0%,100%{transform:rotate(.2deg)}50%{transform:rotate(-.2deg)}}
+.pp-ed{position:relative;display:flex;flex-direction:column;gap:10px;flex:none;min-width:0;-webkit-touch-callout:none}
+.pp-ed.on{animation:pWigA .6s ease-in-out infinite;transform-origin:50% 50%;user-select:none;-webkit-user-select:none}
+.pp-ed.on:nth-of-type(2n){animation-name:pWigB}
+.pp-ed.on>:not(.pp-edc){pointer-events:none}
+@media (prefers-reduced-motion:reduce){.pp-ed.on{animation:none}}
+.pp-edc{position:absolute;top:-8px;right:-4px;z-index:3;display:flex;gap:4px}
+.pp-edc button{width:30px;height:30px;border-radius:15px;background:var(--pp-ink)!important;color:var(--pp-bg)!important;font-size:11px;box-shadow:0 4px 12px rgba(0,0,0,.3);display:grid;place-items:center}
+.pp-edc button.hide{background:var(--pp-lab)!important;color:var(--pp-onLab)!important;font-size:15px;font-weight:700}
+.pp-edc button:disabled{opacity:.4}
+.pp-edbar{position:sticky;top:calc(env(safe-area-inset-top) + 8px);z-index:6;display:flex;flex-direction:column;gap:8px;padding:10px 10px 10px 16px;border-radius:22px;background:var(--pp-ink);color:var(--pp-bg);box-shadow:0 10px 24px -8px rgba(0,0,0,.4);font-size:13.5px;font-weight:600;flex:none}
+.pp-edbar .pp-btn.sm{background:var(--pp-bg)!important;color:var(--pp-ink)!important;border:0!important;height:34px;padding:0 16px;font-weight:700;font-size:13.5px}
+.pp-edhid{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.pp-edhid>span{font-size:12px;opacity:.7}
+.pp-edhid button{height:30px;padding:0 12px;border-radius:999px;border:1px solid currentColor!important;color:inherit;font:600 12.5px Manrope,sans-serif}
+.pp-edhint{flex:none;font-size:12px;color:var(--pp-mut);text-align:center;padding:2px 0 4px}
+.mat2 .pp-ed{gap:12px}
+.pp-trk{display:flex;flex-direction:column;gap:10px}
+
+/* Fanelinja: ikonet vises bare på aktiv fane (på Fold på alle). Flytende skann over linja nederst til høyre. */
+.pp-nav a:not([aria-current=page]) i{display:none}
+.pp-navbg{height:calc(var(--pp-navb) + 62px)}
+.pp-fab{position:fixed;z-index:21;right:18px;bottom:calc(var(--pp-navb) + 62px + 14px);width:60px;height:60px;border-radius:22px;background:var(--pp-lab)!important;color:var(--pp-onLab)!important;display:grid;place-items:center;box-shadow:0 14px 30px -8px rgba(0,0,0,.5),0 2px 6px rgba(0,0,0,.2);transition:transform .15s;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:pointer}
+.pp-fab.down{transform:scale(.88)}
+.m.papir.flyt .m-scroll{padding-bottom:calc(var(--pp-navb) + 62px + 86px)}
+.m.papir.flyt .pp-hint{bottom:calc(var(--pp-navb) + 62px + 84px)}
+.pp-hero .pp-back{max-width:60vw;overflow:hidden;text-overflow:ellipsis}
+
+/* Finans → Oversikt: banneret «N kvitteringer til gjennomgang» */
+.pp-cta a{color:#fff;text-decoration:none;min-width:0}
+.pp-cta button{color:#fff!important;font:inherit;font-weight:700;flex:none;padding:0 0 0 12px!important}
+
+/* Finans → Mer: rutenett med live-tall */
+.pp-fmgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;flex:none}
+.pp-fmt{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:10px;min-height:132px;padding:14px;border-radius:20px;background:var(--pp-card);color:var(--pp-ink);text-decoration:none;box-shadow:0 1px 0 var(--pp-line);box-sizing:border-box;min-width:0}
+.pp-fmi{width:42px;height:42px;border-radius:12px;background:var(--pp-bg);display:grid;place-items:center;color:var(--pp-lab)}
+.pp-fmb{position:absolute;top:14px;right:14px;min-width:24px;height:24px;padding:0 7px;border-radius:12px;background:var(--pp-lab);color:var(--pp-onLab);display:grid;place-items:center;font:800 12.5px Manrope,sans-serif;box-sizing:border-box}
+.pp-fmn{margin-top:auto;display:flex;flex-direction:column;gap:2px;min-width:0;width:100%}
+.pp-fmn b{font-size:20px;line-height:1.1}
+.pp-fmn span{font-size:12.5px;color:var(--pp-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Finans → Søk */
+.pp-fsq{height:50px;padding:0 6px 0 16px}
+.pp-aitog{flex:none;white-space:nowrap;height:38px;padding:0 14px!important;border-radius:999px;border:1px solid var(--pp-line)!important;background:transparent;color:var(--pp-ink);font:700 13px Manrope,sans-serif;cursor:pointer}
+.pp-aitog.on{background:var(--pp-lab)!important;border-color:var(--pp-lab)!important;color:#fff}
+.pp-aians{border:1.5px solid var(--pp-lab);gap:6px}
+.pp-aians .pp-serif{font-weight:400;font-size:18px;line-height:1.4;text-wrap:pretty}
+
+/* Transaksjonsdetaljer med original kvittering */
+.pp-txd{gap:6px;padding:16px;box-shadow:0 10px 30px -14px rgba(0,0,0,.3)}
+.pp-ti.big{width:46px;height:46px;border-radius:13px;font-size:12px}
+.pp-txamt{font-size:40px;line-height:1;font-weight:400;margin-top:6px}
+.pp-slip{flex:none;display:flex;flex-direction:column;gap:5px;width:100%;border-radius:6px;background:#fbf8f1!important;color:#1b1a17;padding:16px 18px!important;font:500 13px 'IBM Plex Mono',monospace;box-shadow:0 1px 0 #d8d1c2;text-align:left;cursor:pointer}
+.pp-slip:disabled{cursor:default;opacity:1}
+.pp-slip i{display:block;border-top:1px dashed #b0a998;margin:4px 0}
+.pp-slipn{text-align:center;font-weight:600}
+.pp-slipd{text-align:center;color:#8f897c;font-size:11.5px}
+.pp-slipl{display:flex;justify-content:space-between;gap:10px}.pp-slipl.tot{font-weight:600}
+.pp-slipo{text-align:center;color:#8f897c;font-size:11px;padding-top:4px;font-family:Manrope,sans-serif}
+.pp-full{position:fixed;inset:0;z-index:95;background:rgba(0,0,0,.92);display:flex;flex-direction:column}
+.pp-fullx{position:absolute;z-index:2;top:calc(env(safe-area-inset-top) + 12px);right:16px}
+.pp-fullsc{flex:1;overflow:auto;touch-action:pan-x pan-y pinch-zoom;display:grid;place-items:center;padding:calc(env(safe-area-inset-top) + 56px) 0 calc(env(safe-area-inset-bottom) + 16px)}
+.pp-fullsc img{max-width:100%;height:auto;display:block}
+.pp-fullsc iframe{width:100%;height:100%;border:0;background:#fff}
+.pp-kv{display:flex;justify-content:space-between;align-items:baseline;gap:14px;padding:11px 14px}.pp-kv+.pp-kv{border-top:1px solid var(--pp-line)}
+.pp-kv .pp-mono{text-align:right;word-break:break-word;display:block}
+.pp-cdot{display:inline-block;width:8px;height:8px;border-radius:4px;margin-right:6px;vertical-align:middle}
+
+/* Finn: «På vei» mellom Netto i år og filtrene */
+.pp-way{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px 2px;scroll-snap-type:x proximity;flex:none}
+.pp-wayc{flex:none;scroll-snap-align:start;width:220px;display:flex;gap:10px;align-items:center;padding:10px!important;border-radius:18px;background:var(--pp-card)!important;color:var(--pp-ink);text-align:left;cursor:pointer}
+.pp-wayi{flex:none;width:56px;height:56px;border-radius:12px;background-size:cover;background-position:center;display:grid;place-items:center;color:rgba(255,255,255,.45);font:800 15px Manrope,sans-serif}
+.pp-wayb{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.pp-wayb b{font-size:13.5px;font-weight:600}
+.pp-fbars.static{position:static;display:flex;gap:3px}
+.pp-link{color:var(--pp-mut)!important;font:600 12.5px Manrope,sans-serif;background:none;padding:0!important;cursor:pointer}
+
+/* Sporing: «Ny sending» */
+.pp-nsno{height:50px;font:600 16px 'IBM Plex Mono',monospace}
+
+/* Innstillinger → Fanelinje og Finans-fanelinje */
+.pp-navset .pp-lab{padding:6px 4px 0}
+.pp-srow{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px!important;text-align:left;color:var(--pp-ink);cursor:pointer}
+.pp-srow+.pp-srow{border-top:1px solid var(--pp-line)!important}
+.pp-srow b{display:block;font-size:14.5px;font-weight:600}
+.pp-sv{flex:none;font-size:12.5px;font-weight:600;color:var(--pp-mut);white-space:nowrap}
+.pp-sv.pos{color:var(--pp-pos)}.pp-sv.lab{color:var(--pp-lab)}
+
+/* Domener: toppkortet (domenevelger + periode) og «Alle domener» som kort */
+.pp-domtop{padding:16px 0 14px;gap:14px;box-shadow:0 10px 30px -14px rgba(0,0,0,.3)}
+.pp-domtop>.pp-row{padding:0 18px}
+.pp-dompills{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:0 18px;scroll-padding:0 18px;scroll-snap-type:x proximity}
+.pp-dompills button{flex:none;scroll-snap-align:start;display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:128px;max-width:200px;padding:12px 14px!important;border-radius:16px;border:1px solid var(--pp-line)!important;background:transparent;color:var(--pp-ink);text-align:left;cursor:pointer}
+.pp-dompills button[aria-selected=true]{background:var(--pp-ink)!important;border-color:var(--pp-ink)!important;color:var(--pp-bg)}
+.pp-dompills span{display:flex;align-items:center;gap:7px;font-size:11.5px;opacity:.75}
+.pp-dompills i{width:7px;height:7px;border-radius:4px}
+.pp-dompills b{font-size:15px;font-weight:600;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.pp-pend{flex:none;width:10px}
+.pp-domper{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:0 18px;padding:4px;border-radius:12px;background:var(--pp-surf2)}
+.pp-domper button{height:34px;border-radius:9px;color:var(--pp-mut);font:600 13px 'IBM Plex Mono',monospace;cursor:pointer}
+.pp-domper button[aria-pressed=true]{background:var(--pp-card)!important;color:var(--pp-ink);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.pp-domkpi{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;flex:none}
+.pp-domkpi .pp-card{gap:4px;padding:16px 18px}
+.pp-domkpi b{font:600 24px 'IBM Plex Mono',monospace;letter-spacing:-.02em;white-space:nowrap}
+.pp-domrow{gap:12px;padding:16px 18px!important;text-align:left;width:100%;cursor:pointer}
+.pp-dn{display:block;font:600 17px 'IBM Plex Mono',monospace}
+.pp-st{flex:none;display:flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:rgba(47,122,79,.12);color:var(--pp-pos);font-size:12.5px;font-weight:600}
+.pp-st i{width:6px;height:6px;border-radius:3px;background:currentColor}
+.pp-st.bad{background:rgba(178,58,42,.12);color:var(--pp-lab)}
+.pp-dnums{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;width:100%}
+.pp-dnums>span{min-width:0}.pp-dnums .pp-mut{display:block;font-size:11.5px}
+.pp-dnums b{font:600 16px 'IBM Plex Mono',monospace;white-space:nowrap}
+.pp-dfoot{display:flex;justify-content:space-between;gap:10px;width:100%;padding-top:10px;border-top:1px solid var(--pp-line);font-size:12.5px;color:var(--pp-mut)}
+.pp-dfoot b{color:var(--pp-ink);font-weight:600}
+
+/* Subscription OS i Papir: papirfarger, AI-kortet i mørk gradient */
+.m.papir .sb{--x-card:var(--pp-card);--x-card2:var(--pp-surf2);--x-fg:var(--pp-ink);--x-mut:var(--pp-mut);--x-bd:var(--pp-line);--x-pill:var(--pp-ink);--x-onpill:var(--pp-bg);--x-up:var(--pp-pos);--x-dn:var(--pp-lab);--x-acc:var(--pp-lab);--x-acc2:var(--pp-lab);--x-seg:var(--pp-line);--sb-acc:var(--pp-lab);color:var(--pp-ink)}
+.m.papir .sb-card{border-radius:22px!important;border-color:transparent;box-shadow:0 1px 0 var(--pp-line)}
+.m.papir .sb-hero{background:radial-gradient(120% 100% at 100% 0%,#6A3218 0%,#2A160C 50%,#17161B 85%)!important;color:#fff!important;border-radius:28px!important}
+.m.papir .sb-hero .sb-pill{background:#fff;color:#1b1a17}
+.m.papir.ph .sb>.m-row:first-child{display:none}
+.m.papir .sb-tabs button[aria-selected=true]{background:var(--pp-ink);color:var(--pp-bg)}
+
+/* Fold og nettbrett (≥ 600 px): fanelinja blir en loddrett skinne til venstre, bildet går helt ut bak den. */
+@media (min-width:600px){
+  .m.papir .pp-nav{top:12px;bottom:12px;left:12px;right:auto;width:84px;height:auto;max-width:none;margin:0;flex-direction:column;align-items:stretch;justify-content:flex-start;gap:4px;padding:12px 6px;border-radius:28px;background:rgba(27,26,23,.82);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+  .m.papir .pp-nav a,.m.papir .pp-nav a[aria-current=page]{flex:none;height:58px;padding:0 2px;border-radius:18px;flex-direction:column;justify-content:center;gap:2px;font-size:11.5px;width:100%}
+  .m.papir .pp-nav a i{display:block!important;font-size:17px;line-height:1}
+  .m.papir .pp-nav .pp-scan{margin:auto auto 0}
+  .m.papir .pp-navbg{display:none}
+  .m.papir .pp-hero{padding-left:130px}
+  .m.papir .m-scroll{max-width:none;margin:0 auto;padding-left:124px;box-sizing:border-box}
+  .m.papir .m-scroll>*{width:100%;max-width:720px;margin-left:auto;margin-right:auto;box-sizing:border-box}
+  .m.papir.hlp .m-scroll>.pp-home{max-width:960px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start}
+  .m.papir.hlp .pp-home>.pp-ed.full,.m.papir.hlp .pp-home>.pp-edbar,.m.papir.hlp .pp-home>.pp-edhint{grid-column:1 / -1}
+  .m.papir .pp-fgrid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+  .m.papir .pp-fab{right:24px;bottom:24px}
+  .m.papir.flyt .m-scroll,.m.papir .m-scroll{padding-bottom:calc(env(safe-area-inset-bottom) + 110px)}
+  .m.papir .m-toast{bottom:24px}
+  .m.papir .pp-hint{bottom:96px}
+  .m.papir .pp-sheet,.m.papir .sb-edit{left:108px}
+  .m.papir .pp-chips,.m.papir .pp-way{margin:0;padding:0}
+}
+
+/* ================= Værvisning (Vaer.dc.html) ================= */
+.m.vaer{background:#1b2a40!important}
+.vx{position:relative;min-height:100dvh;color:#fff;font-family:Manrope,system-ui,sans-serif;--wxh:1;padding:0 0 calc(env(safe-area-inset-bottom) + 90px);width:100%!important;max-width:none!important}
+.m.vaer .m-scroll,.m.papir.vaer .m-scroll{padding:0!important;margin:0!important;max-width:none!important;gap:0}
+.vx-glow{position:absolute;inset:0;pointer-events:none}
+.vx-bar{position:fixed;left:0;right:0;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 16px 10px;transition:background .2s}
+.vx.sc .vx-bar{background:rgba(10,20,35,.35);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.vx-back{height:36px;padding:0 14px 0 10px!important;border-radius:999px;background:rgba(255,255,255,.18)!important;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);color:#fff!important;font:600 13.5px Manrope,sans-serif;flex:none}
+.vx-compact{display:flex;flex-direction:column;align-items:center;opacity:0;transition:opacity .2s;min-width:0}
+.vx.sc .vx-compact{opacity:1}
+.vx-compact b{font-size:17px;font-weight:700}.vx-compact span{font-size:13px;opacity:.9;white-space:nowrap}
+.vx-src{width:72px;text-align:right;font-size:11.5px;opacity:.75;flex:none}
+.vx-in{position:relative;padding:calc(env(safe-area-inset-top) + 62px) 16px 0;display:flex;flex-direction:column;gap:12px;max-width:720px;margin:0 auto}
+.vx-head{display:flex;flex-direction:column;align-items:center;padding:6px 0 26px;text-shadow:0 2px 20px rgba(0,0,0,.18);opacity:var(--wxh)}
+.vx-pos{font-size:12px;font-weight:800;letter-spacing:.16em;opacity:.85}
+.vx-city{font:500 38px/1.1 Newsreader,serif}
+.vx-temp{font:300 112px/1 Newsreader,serif;letter-spacing:-.04em;margin:2px 0 0 22px}
+.vx-desc{font-size:19px;font-weight:700;margin-top:4px}
+.vx-hl{font-size:16px;font-weight:600;opacity:.9;white-space:pre}
+.vx-card{border-radius:24px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.16);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);flex:none;box-sizing:border-box}
+.vx-pad{padding:16px}
+.vx-hours{padding:14px 0 12px;display:flex;flex-direction:column;gap:10px}
+.vx-hrow{display:flex;justify-content:space-between;align-items:center;padding:0 16px;gap:10px}
+.vx-forh{color:#fff!important;text-align:left;padding:0!important;min-width:0}
+.vx-forh b{display:block;font-size:16px}.vx-forh span{font-size:12.5px;color:#9fe0ff}
+.vx-modes{display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(0,0,0,.18);flex:none}
+.vx-modes button{width:44px;height:30px;border-radius:999px;color:#fff!important;display:grid;place-items:center}
+.vx-modes button[aria-pressed=true]{background:rgba(255,255,255,.28)!important}
+.vx-hs{display:flex;overflow-x:auto;scrollbar-width:none;padding:0 8px}
+.vx-h{flex:none;width:56px;display:flex;flex-direction:column;align-items:center;gap:8px;padding:4px 0}
+.vx-h>span:first-child{font-size:14px;font-weight:600}.vx-h>span.b{font-weight:800}
+.vx-pp{font-size:11px;font-weight:700;color:#9fe0ff;min-height:13px}
+.vx-h b{font-size:17px;font-weight:700}
+.vx-days{padding:4px 16px}
+.vx-d{display:grid!important;width:100%;grid-template-columns:52px 40px 38px minmax(0,1fr) 38px;align-items:center;gap:8px;padding:12px 0!important;color:#fff!important;text-align:left}
+.vx-d+.vx-d{border-top:1px solid rgba(255,255,255,.16)!important}
+.vx-dn{font-size:17px;font-weight:700}
+.vx-di{display:flex;flex-direction:column;align-items:center;gap:1px}.vx-di small{font-size:10.5px;font-weight:800;color:#9fe0ff;min-height:12px}
+.vx-lo{font-size:17px;font-weight:700;color:#bfe6ff;text-align:right}.vx-hi{font-size:17px;font-weight:700;text-align:right}
+.vx-rng{position:relative;height:6px;border-radius:3px;background:rgba(0,0,0,.18)}
+.vx-rng i{position:absolute;top:0;bottom:0;border-radius:3px;background:linear-gradient(90deg,#7fd6f5,#a6e3b0,#ffd36b)}
+.vx-rng em{position:absolute;top:-3px;width:12px;height:12px;border-radius:6px;background:#fff;border:2px solid rgba(40,90,150,.6);box-sizing:border-box;margin-left:-6px}
+.vx-split{padding:14px 16px;display:grid;grid-template-columns:minmax(0,1fr) 124px;gap:14px;align-items:center}
+.vx-col{display:flex;flex-direction:column;min-width:0}
+.vx-t{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:800;letter-spacing:.08em;opacity:.7;padding-bottom:6px}
+.vx-t.pad{padding:0 16px 4px}
+.vx-r{display:flex;justify-content:space-between;gap:8px;padding:10px 0;font-size:15.5px;font-weight:700}
+.vx-r.bt{border-top:1px solid rgba(255,255,255,.16)}
+.vx-r span+span{color:#bfe6ff;white-space:nowrap}
+.vx-comp,.vx-moon{width:124px;height:124px}
+.vx-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:none}
+.vx-tile{padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-height:176px;min-width:0}
+.vx-sun{padding:14px 0;gap:4px;overflow:hidden}
+.vx-sun .pad{padding:0 16px}
+.vx-big{font-size:32px;font-weight:700}
+.vx-mid{font-size:18px;font-weight:700}
+.vx-sm{font-size:13.5px;font-weight:600;line-height:1.35}.vx-sm.b{font-weight:700}
+.vx-sunc{width:100%;height:52px;margin-top:auto}
+.vx-uvb{position:relative;height:6px;border-radius:3px;background:linear-gradient(90deg,#5bd08a,#ffe066,#ff9a3d,#ff4d6d,#c86bff);margin-top:auto}
+.vx-uvb em{position:absolute;top:-2px;width:10px;height:10px;border-radius:5px;background:#fff;margin-left:-5px;box-shadow:0 0 0 2px rgba(0,0,0,.15)}
+.vx-yd{margin-top:auto;display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:13.5px;font-weight:700}
+.vx-yd span:nth-child(odd){opacity:.7}
+.vx-pres{width:100%;height:118px}
+.vx-yr{align-self:center;font-size:12.5px;opacity:.85;padding-top:4px;color:#fff}
+.vx-places{position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom) + 18px);z-index:6;display:flex;justify-content:center;pointer-events:none}
+.vx-places>button{pointer-events:auto}
+.vx-places{gap:2px}
+.vx-places button{height:36px;padding:0 14px!important;border-radius:999px;color:#fff!important;font:700 13px Manrope,sans-serif;background:rgba(10,20,35,.5)!important;-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px)}
+.vx-places button[aria-selected=true]{background:#fff!important;color:#1b2a40!important}
+.vx-shbg{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.35)}
+.vx-sh{position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top) + 44px);bottom:0;z-index:21;border-radius:28px 28px 0 0;background:#17191e;color:#fff;overflow-y:auto;scrollbar-width:none;padding:14px 16px calc(env(safe-area-inset-bottom) + 30px);box-sizing:border-box;display:flex;flex-direction:column;gap:14px;max-width:720px;margin:0 auto;animation:up .28s cubic-bezier(.3,1.2,.5,1)}
+.vx-shtop{display:grid;grid-template-columns:44px 1fr 44px;align-items:center}.vx-shtop b{text-align:center;font-size:18px}
+.vx-x{width:40px;height:40px;border-radius:20px;background:#2a2d34!important;color:#fff!important;font-size:18px}
+.vx-shdays{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+.vx-shdays button{display:flex;flex-direction:column;align-items:center;gap:6px;color:#fff!important;padding:0!important}
+.vx-shdays span{font-size:12px;font-weight:800;opacity:.8}
+.vx-shdays b{width:38px;height:38px;border-radius:19px;display:grid;place-items:center;font-size:17px;font-weight:700}
+.vx-shdays button[aria-pressed=true] b{background:#fff;color:#17191e}
+.vx-shdate{text-align:center;font-size:16px;font-weight:600;padding-bottom:10px;border-bottom:1px solid #2a2d34}
+.vx-shnow{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.vx-shnow .vx-row{display:flex;align-items:center;gap:8px}.vx-shnow b{font-size:40px;font-weight:700;line-height:1}
+.vx-shnow span{font-size:15px;font-weight:600;opacity:.6}
+.vx-chart{border-top:1px solid #2a2d34;border-bottom:1px solid #2a2d34;padding:8px 0}
+.vx-chart svg{width:100%;height:auto;display:block}
+.vx-cic{display:grid;grid-template-columns:repeat(12,1fr);margin-right:11%;padding-bottom:6px;justify-items:center}
+.vx-seg2{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:12px;background:#2a2d34}
+.vx-seg2 button{height:34px;border-radius:9px;color:#c7ccd4!important;font:700 13px Manrope,sans-serif}
+.vx-seg2 button[aria-pressed=true]{background:#3c414b!important;color:#fff!important}
+.vx-shh{font-size:16px}
+.vx-ppb{display:grid;grid-template-columns:repeat(24,1fr);gap:2px;height:90px;align-items:end;border-bottom:1px solid #2c3038}
+.vx-ppb span{height:100%;display:flex;align-items:flex-end}
+.vx-ppb i{display:block;width:100%;background:#5ec8d8;border-radius:2px 2px 0 0}
+.vx-ppx{display:flex;justify-content:space-between;font-size:12px;font-weight:700;color:#9aa0aa;margin-top:-8px}
+.pp-hero button.pp-pill{background:rgba(27,26,23,.55)!important;color:#fff!important;padding:0 14px 0 12px!important}
+.pp-fmn b{color:var(--pp-ink)}
+.m.papir.ph .sb .m-row>.title{visibility:hidden}

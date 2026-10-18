@@ -1,7 +1,7 @@
 // Homelab som forside i mobilappen: hilsen, klokke og vær, Google-søk (forslag og historikk), snarveier,
 // «Andre OS» og valgfrie widgets (Serverstatus, Ruter). «Rediger forsiden» fungerer som hjemskjermen på iPhone/Android:
 // widgetene vugger, «−» skjuler, ▲▼ eller dra flytter, «+» åpner galleriet. Oppsettet lagres per bruker (/api/me/layout).
-import { S, esc, n0, ini, icon, ICONS, hlApi, matApi, domApi, loadSummary } from './core.js';
+import { S, esc, n0, ini, icon, ICONS, hlApi, matApi, domApi, loadSummary, greet } from './core.js';
 import { TR, trkLoad, trkWatch, topPackages, pkgCard } from './mobile-track.js';
 import { m, draw, flash, avInner, avatarUrl, meName, HLTABS, FINTABS, FIXED_HL, FIXED_FIN } from './mobile.js';
 import { c3 } from './mobile-theme.js';
@@ -115,7 +115,8 @@ export async function hlLoad() {
 /* ---------- Visning ---------- */
 
 const isI = (th) => th === 'ios';
-const greetTxt = (h) => (h < 5 ? 'God natt' : h < 10 ? 'God morgen' : h < 17 ? 'God dag' : 'God kveld');
+// Hilsen etter tid på døgnet (core.js): God morgen / formiddag / ettermiddag / kveld / natt.
+const greetTxt = () => greet();
 const timeTxt = () => new Date().toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' });
 const card = (th, inner, cls = '') => `<div class="hcard ${isI(th) ? 'glass2' : ''} ${cls}">${inner}</div>`;
 const isoWeek = (d = new Date()) => { const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day); return Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7); };

@@ -5,6 +5,7 @@ import { S, api, esc, n0, ini, today, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { TR, trkLoad, trkPrefs, setTrkPref, badge, carOf, stepOf, isDone, isReady, STXT, normNo, detectLocal } from './mobile-track.js';
+import { edBlocks, finnWay } from './mobile-paper3.js';
 
 const lab = (t, r = '') => `<div class="pp-sec"><span>${esc(t)}</span>${r ? `<span>${r}</span>` : ''}</div>`;
 const kr = (v) => `${n0(v)} kr`;
@@ -69,6 +70,7 @@ export function paperFinn() {
   return `<div class="pp-card pp-saldo"><div class="pp-row"><span class="pp-lab">NETTO I ÅR</span><span class="pp-mut">${D.length} handler</span></div><b class="pp-serif pp-huge ${net >= 0 ? 'pp-pos' : 'pp-lab-c'}">${net >= 0 ? '+' : '−'}${kr(Math.abs(net))}</b>
       <div class="pp-two" style="gap:12px"><div class="pp-col" style="gap:5px"><span class="pp-mut">Kjøpt · ${PF.d.nBought ?? D.filter((x) => x.role !== 'sold').length}</span><b class="pp-serif" style="font-size:18px">${kr(buy)}</b><span class="pp-bar thin"><i style="width:${(buy / mx) * 100}%;background:var(--pp-ink)"></i></span></div>
         <div class="pp-col" style="gap:5px"><span class="pp-mut">Solgt · ${PF.d.nSold ?? D.filter((x) => x.role === 'sold').length}</span><b class="pp-serif" style="font-size:18px">${kr(sell)}</b><span class="pp-bar thin"><i style="width:${(sell / mx) * 100}%;background:var(--pp-pos)"></i></span></div></div></div>
+    ${finnWay(D)}
     <div class="pp-chips">${SEG.map(([n, fn]) => `<button class="pp-fchip" data-ppfn="seg" data-k="${n}" aria-pressed="${PF.seg === n}">${n} <span style="opacity:.6">${D.filter(fn).length}</span></button>`).join('')}</div>
     <button class="pp-btn dash" data-ppfn="add">${PF.add ? 'Lukk' : '+ Legg til kjøp eller salg'}</button>
     ${PF.add ? `<form class="pp-card pp-col" data-ppfnform>
@@ -154,25 +156,11 @@ export async function paperFinnBind(e, t) {
 
 /* ---------- Sporing ---------- */
 
-const TT = { tab: 'act', set: false, edit: false, nv: '', busy: false, order: null };
+const TT = { tab: 'act', set: false, nv: '', busy: false };
 const TABS = [['act', 'Aktive', (p) => !p.archived && !isDone(p)], ['pick', 'Klar for henting', (p) => !p.archived && isReady(p)], ['way', 'På vei', (p) => !p.archived && !isDone(p) && !isReady(p) && stepOf(p) >= 1],
   ['reg', 'Registrert', (p) => !p.archived && !isDone(p) && stepOf(p) === 0], ['done', 'Levert', (p) => isDone(p)], ['all', 'Alle', () => true]];
-// Standardrekkefølge som i Papir-designet: sendingene øverst, så Legg til og kilder, Varsler og Transportører.
-export const TRK_KEYS = ['shipments', 'add', 'notify', 'carriers'];
 const NOTIFY = [['found', 'Ny pakke funnet', 'Når et sporingsnummer dukker opp i e-post eller Finn'], ['pickup', 'Klar for henting', 'Med hentested og frist'], ['out', 'Ute for levering', 'Når budet er på vei til deg'], ['delayed', 'Forsinket', 'Når leveringen er forsinket'], ['delivered', 'Levert', 'Når pakken er levert']];
 const SOURCES = [['email', 'E-post (Proton Mail)', 'Ordre- og fraktbekreftelser'], ['finn', 'Finn', 'Fiks ferdig-handler med sporingsnummer'], ['autoArchive', 'Arkiver leverte automatisk', 'Etter 7 dager']];
-
-export function trkOrder() {
-  if (!TT.order) { try { const v = JSON.parse(localStorage.getItem('fh_trk_order') || 'null'); if (Array.isArray(v)) TT.order = v; } catch {} }
-  const o = (TT.order ?? []).filter((k) => TRK_KEYS.includes(k));
-  return [...o, ...TRK_KEYS.filter((k) => !o.includes(k))];
-}
-/** Rekkefølgen per bruker fra /api/me/layout (trkOrder). */
-export function takeTrkOrder(r) { if (Array.isArray(r?.trkOrder) && r.trkOrder.length) { TT.order = r.trkOrder; try { localStorage.setItem('fh_trk_order', JSON.stringify(r.trkOrder)); } catch {} } }
-function saveOrder(o) {
-  TT.order = o; try { localStorage.setItem('fh_trk_order', JSON.stringify(o)); } catch {}
-  hlApi('/me/layout', { method: 'PUT', json: { trkOrder: o } }).catch(() => {});
-}
 const srcOn = (k) => { const s = TR.data?.sources?.[k]; return k === 'autoArchive' ? s?.on === true || s === true : s?.on !== false && s !== false; };
 const pkUrl = (p) => p.url || `${carOf(p.carrier).url}${encodeURIComponent(p.trackingNo ?? '')}`;
 const stTxt = (p) => (isDone(p) ? (p.direction === 'out' ? 'Levert til kjøper' : 'Levert') : isReady(p) ? 'Klar for henting' : p.statusText || STXT[p.status] || 'Ukjent status');
@@ -196,12 +184,14 @@ function pkCard(p) {
 
 function secHtml(k) {
   const items = TR.data?.items ?? null;
+  if (k === 'tabs') {
+    return `<div class="pp-trktabs"><div class="pp-trktabs-s" role="tablist">${TABS.map(([id, n, f]) => `<button role="tab" data-pptrk="tab" data-k="${id}" aria-selected="${TT.tab === id}">${n}<span>${(items ?? []).filter(f).length}</span></button>`).join('')}</div>
+      <button class="pp-trkset" data-pptrk="set" aria-label="Varsler og kilder"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8M14 4v6M8 14v6"/></svg></button></div>`;
+  }
   if (k === 'shipments') {
     const fn = (TABS.find(([id]) => id === TT.tab) ?? TABS[0])[2];
     const L = (items ?? []).filter(fn).sort((a, b) => (isReady(b) - isReady(a)) || (stepOf(b) - stepOf(a)));
-    return `<div class="pp-trktabs"><div class="pp-trktabs-s" role="tablist">${TABS.map(([id, n, f]) => `<button role="tab" data-pptrk="tab" data-k="${id}" aria-selected="${TT.tab === id}">${n}<span>${(items ?? []).filter(f).length}</span></button>`).join('')}</div>
-      <button class="pp-trkset" data-pptrk="set" aria-label="Varsler og kilder"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8M14 4v6M8 14v6"/></svg></button></div>
-      ${TR.err ? `<div class="pp-card pp-mut">${esc(TR.err)}</div>` : ''}${TR.missing ? '<div class="pp-card pp-mut">Serveren har ikke Sporing ennå. Oppdater Homelab for å spore pakker.</div>' : ''}
+    return `${TR.err ? `<div class="pp-card pp-mut">${esc(TR.err)}</div>` : ''}${TR.missing ? '<div class="pp-card pp-mut">Serveren har ikke Sporing ennå. Oppdater Homelab for å spore pakker.</div>' : ''}
       ${items === null ? '<div class="m-spin"></div>' : L.map(pkCard).join('') || '<div class="pp-mut" style="padding:16px 4px;font-size:14px">Ingen pakker her.</div>'}`;
   }
   if (k === 'add') {
@@ -217,13 +207,9 @@ function secHtml(k) {
   }
   return '';
 }
-const SEC_NAME = { add: 'Legg til og kilder', shipments: 'Sendinger', notify: 'Varsler', carriers: 'Transportører' };
-
+// Hold inne et kort for å flytte det: fanene, pakkelisten og Legg til (Varsler og kilder ligger i arket bak ⚙).
 export function paperTrk() {
-  const o = trkOrder();
-  return `${TT.edit ? '<div class="pp-editbar"><span>Endre rekkefølge · bruk ▲ og ▼</span><button class="pp-btn ink sm" data-pptrk="done">Ferdig</button></div>' : ''}
-    <div class="pp-trk${TT.edit ? ' editing' : ''}">${o.map((k, i) => `<section class="pp-trksec" data-trksec="${k}" aria-label="${SEC_NAME[k]}">${TT.edit ? `<div class="pp-mv"><b>${SEC_NAME[k]}</b><span class="m-grow"></span><button data-pptrk="mv" data-k="${k}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Flytt ${SEC_NAME[k]} opp">▲</button><button data-pptrk="mv" data-k="${k}" data-d="1" ${i === o.length - 1 ? 'disabled' : ''} aria-label="Flytt ${SEC_NAME[k]} ned">▼</button></div>` : ''}${secHtml(k)}</section>`).join('')}</div>
-    ${TT.edit ? '' : '<span class="pp-mut" style="text-align:center;font-size:11.5px;padding:4px">Hold inne på et kort for å endre rekkefølgen.</span>'}`;
+  return `<div class="pp-trk">${edBlocks('spor', { t1: secHtml('tabs'), t2: `<div class="pp-col" style="gap:10px">${secHtml('shipments')}</div>`, t3: `<div class="pp-col" style="gap:8px">${secHtml('add')}</div>` })}</div>`;
 }
 
 export function paperTrkSheet() {
@@ -232,22 +218,9 @@ export function paperTrkSheet() {
     <div class="pp-row"><div><div class="pp-lab">SPORING</div><div class="pp-sh">Varsler og kilder</div></div><button class="pp-btn ink sm" data-pptrk="setx">Ferdig</button></div>
     <span class="pp-lab">VARSLER</span><div class="pp-card pp-tight">${notifyRows()}</div>
     <span class="pp-lab">KILDER</span><div class="pp-card pp-tight">${sourceRows()}</div>
+    ${secHtml('carriers')}
     <span class="pp-mut" style="line-height:1.45">E-post leses via Proton Mail Bridge hvert 15. minutt. Finn-handler med Fiks ferdig hentes automatisk.</span></div>`;
 }
-
-/* Langt trykk (500 ms) på et kort setter siden i redigeringsmodus: kortene vugger og får ▲/▼. */
-let lpT = null, lpX = 0, lpY = 0, lpFired = false;
-export function trkDown(e) {
-  lpFired = false; // et nytt trykk: klikket etter forrige lange trykk er brukt opp (eller kom aldri)
-  if (m.screen !== 'spor' || TT.edit) return false;
-  const sec = e.target.closest?.('[data-trksec]');
-  if (!sec || e.target.closest('input,textarea,select')) return false;
-  lpX = e.clientX; lpY = e.clientY; lpFired = false; clearTimeout(lpT);
-  lpT = setTimeout(() => { lpFired = true; TT.edit = true; haptic('ok'); navigator.vibrate?.(14); draw(); }, 500);
-  return false;
-}
-export function trkMove(e) { if (lpT && (Math.abs(e.clientX - lpX) > 10 || Math.abs(e.clientY - lpY) > 10)) { clearTimeout(lpT); lpT = null; } return false; }
-export function trkUp() { clearTimeout(lpT); lpT = null; return false; }
 
 export async function paperTrkBind(e, t) {
   if (m.screen !== 'spor') return false;
@@ -263,9 +236,6 @@ export async function paperTrkBind(e, t) {
     TT.busy = false; draw(); return true;
   }
   if (e.type !== 'click') return false;
-  // Klikket som avslutter et langt trykk skal ikke åpne pakken.
-  if (lpFired) { lpFired = false; e.preventDefault(); return true; }
-  if (TT.edit && t.closest?.('.pp-trk a, .pp-trk form, .pp-trk [data-trkpref]')) { e.preventDefault(); return true; }
   const x = t.closest?.('[data-pptrk]');
   if (!x) return false;
   e.preventDefault();
@@ -273,12 +243,7 @@ export async function paperTrkBind(e, t) {
   if (k === 'tab') { TT.tab = x.dataset.k; haptic('tab'); }
   else if (k === 'set') TT.set = true;
   else if (k === 'setx') TT.set = false;
-  else if (k === 'done') { TT.edit = false; haptic('ok'); }
-  else if (k === 'mv') {
-    const o = trkOrder(), i = o.indexOf(x.dataset.k), j = i + +x.dataset.d;
-    if (i < 0 || j < 0 || j >= o.length) return true;
-    [o[i], o[j]] = [o[j], o[i]]; saveOrder(o); haptic('tab'); navigator.vibrate?.(8);
-  } else if (k === 'src') {
+  else if (k === 'src') {
     const id = x.dataset.k, on = srcOn(id), s = { ...(TR.data?.sources ?? {}) };
     s[id] = { ...(typeof s[id] === 'object' ? s[id] : {}), on: !on }; if (TR.data) TR.data.sources = s; haptic('tab'); draw();
     await hlApi('/tracking/sources', { method: 'PUT', json: { [id]: !on } }).catch((err) => flash(TR.missing ? 'Serveren har ikke Sporing ennå' : err.message));

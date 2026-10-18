@@ -164,7 +164,15 @@ async function domLoad(force = false) {
     dm.list = Array.isArray(l) ? l : l?.items ?? [];
   }
   if (!dm.list.length) return;
+  const pp = pref('mDesign') === 'papir';
+  // Papir: «Alle domener» (*) henter tallene for hvert domene; ellers ett domene av gangen.
+  if (pp && dm.sel === '*') {
+    if (!DPER.some(([k]) => k === dm.per)) dm.per = '24h';
+    await Promise.all(dm.list.map(async (d) => { const k = `${d.name}|${dm.per}`; if (!dm.data[k] || force) dm.data[k] = await domApi(`/${encodeURIComponent(d.name)}/analytics?range=${encodeURIComponent(dm.per)}`).catch((e) => ({ error: e.message })); }));
+    return;
+  }
   if (!dm.list.some((d) => d.name === dm.sel)) dm.sel = dm.list[0].name;
+  if (pp && !DPER.some(([k]) => k === dm.per)) dm.per = '24h';
   const need = [dm.per, ...(tabOf() === 'traf' ? [dm.hist] : [])];
   await Promise.all(need.map(async (r) => {
     const k = `${dm.sel}|${r}`;
@@ -200,8 +208,42 @@ function domManage(th) {
     <div class="snote" style="padding:0 6px">Listen er den samme som i Homelab. Cloudflare bruker standard-tokenet fra Integrasjoner; eget API-token per domene legges inn på web (Homelab → Innstillinger → Domener).</div>`;
 }
 
+// Papir på mobil: bare toppkortet (domenevelger + periode) ligger i et hvitt kort over bildeheaderen. Resten er egne
+// kort i full bredde. «Alle domener» viser ett kort per domene i stedet for tabellen på web.
+const DPER = [['1h', '1t'], ['24h', '24t'], ['7d', '7d'], ['30d', '30d']];
+function domTop() {
+  const list = dm.list ?? [], pills = [{ n: 'Alle domener', k: '*', sub: 'Samlet' }, ...list.map((d) => ({ n: d.name, k: d.name, sub: DSRC[d.source] ?? d.source ?? 'Cloudflare' }))];
+  return `<div class="pp-card pp-domtop"><div class="pp-row"><span class="pp-lab">DOMENE</span><span class="pp-mut">${list.length} domene${list.length === 1 ? '' : 'r'} · <button class="pp-link" data-dom="refresh">Oppdater</button></span></div>
+    <div class="pp-dompills" role="tablist">${pills.map((p) => `<button role="tab" data-dom="sel" data-name="${esc(p.k)}" aria-selected="${dm.sel === p.k}"><span><i style="background:${p.k === '*' ? 'var(--pp-lab)' : 'var(--pp-pos)'}"></i>${esc(p.sub)}</span><b>${esc(p.n)}</b></button>`).join('')}<span class="pp-pend"></span></div>
+    <div class="pp-domper" role="group" aria-label="Periode">${DPER.map(([k, n]) => `<button data-dom="per" data-v="${k}" aria-pressed="${dm.per === k}">${n}</button>`).join('')}</div></div>`;
+}
+function domAll() {
+  const rows = (dm.list ?? []).map((d) => ({ d, a: dm.data[`${d.name}|${dm.per}`] }));
+  if (rows.some(({ a }) => !a)) return '<div class="m-spin"></div>';
+  const ok = rows.filter(({ a }) => !a.error), sum = (f) => ok.reduce((x, { a }) => x + (Number(f(a)) || 0), 0);
+  const ups = ok.map(({ a }) => a.uptimePct ?? (a.uptime90?.length ? (a.uptime90.filter((v) => v != null).reduce((x, y) => x + y, 0) / a.uptime90.filter((v) => v != null).length) * 100 : null)).filter((v) => v != null);
+  const kp = [['Forespørsler', nbx(sum((a) => a.requests ?? a.live?.requests)), DPER.find(([k]) => k === dm.per)?.[1] ?? ''], ['Besøkende', nbx(sum((a) => a.visitors ?? a.live?.visitors)), 'unike'], ['Oppetid', ups.length ? pct(ups.reduce((x, y) => x + y, 0) / ups.length) : '–', 'snitt'], ['Oppe', `${ok.filter(({ a }) => a.status !== 'down').length} av ${rows.length}`, 'domener']];
+  return `<div class="pp-domkpi">${kp.map(([l, v, s2]) => `<div class="pp-card"><span class="pp-mut">${l}</span><b>${v}</b><span class="pp-mut" style="font-size:11.5px">${s2}</span></div>`).join('')}</div>
+    ${rows.map(({ d, a }) => { const down = a.status === 'down' || !!a.error, up = a.uptimePct ?? null, cert = a.sslExpires ?? a.security?.certExpires, cd = daysTo(cert);
+      return `<button class="pp-card pp-domrow" data-dom="sel" data-name="${esc(d.name)}"><span class="pp-row" style="align-items:flex-start"><span style="min-width:0"><b class="pp-dn m-ell">${esc(d.name)}</b><span class="pp-mut">${esc(DSRC[d.source] ?? d.source ?? '')}</span></span><span class="pp-st${down ? ' bad' : ''}"><i></i>${a.error ? 'Feil' : down ? 'Nede' : 'Aktiv'}</span></span>
+        <span class="pp-dnums"><span><span class="pp-mut">Forespørsler</span><b>${nbx(a.requests ?? a.live?.requests)}</b></span><span><span class="pp-mut">Besøkende</span><b>${nbx(a.visitors ?? a.live?.visitors)}</b></span><span><span class="pp-mut">Oppetid</span><b class="${up != null && up < 99 ? 'pp-lab-c' : 'pp-pos'}">${up != null ? pct(up) : '–'}</b></span></span>
+        <span class="pp-dfoot"><span>Bufret <b>${a.cachedPct != null ? pct(a.cachedPct) : '–'}</b></span><span class="${cd != null && cd < 30 ? 'pp-lab-c' : ''}">SSL ${cert ? `${dLong(String(cert).slice(0, 10))} · ${cd} d` : '–'}</span></span></button>`; }).join('')}`;
+}
+
 function domView(th) {
   if (dm.manage || m.sub === 'admin') return domManage(th);
+  if (pref('mDesign') === 'papir') {
+    if (!dm.list) return '<div class="m-spin"></div>';
+    if (!dm.list.length) return `<div class="pp-card pp-col"><b class="pp-serif" style="font-size:20px">Ingen domener ennå</b><span class="pp-mut">Legg til et domene for å se trafikk, oppetid og SSL.</span><a class="pp-btn ink" href="#/dom/admin">+ Legg til domene</a></div>`;
+    if (dm.sel === '*') return `${domTop()}${domAll()}`;
+    const a = dm.data[`${dm.sel}|${dm.per}`];
+    if (!a) return `${domTop()}<div class="m-spin"></div>`;
+    const ps = ['pub', 'ytl', 'inf'].includes(m.sub) ? m.sub : 'ov';
+    liveTimer(ps === 'ov');
+    const mk = a.mock ? '<div style="font-size:12px;opacity:.55;text-align:center">Eksempeldata – legg inn Cloudflare-token i Homelab for ekte tall.</div>' : '';
+    const body = ps === 'pub' ? domBes(th, a) : ps === 'ytl' ? domYt(th, a, { uptime: false }) + domSik(th, a, { dns: false }) : ps === 'inf' ? domUp(th, a) + domDns(th, a) + domCard(th, a) : domTraf(th, a, { card: false, chips: false });
+    return `${domTop()}${a.error ? `<div class="m-empty" style="padding:8px">${esc(a.error)}${a.stale ? ' · viser sist hentede tall' : ''}</div>` : ''}${body}${mk}`;
+  }
   // Prompt 12: domenevelgeren er bare et ikon, og ligger sammen med Oppdater ved siden av profilbildet.
   const pickBtn = `<button class="mini dpick-ic${dm.pick ? ' on' : ''}" data-dom="pick" aria-expanded="${dm.pick}" aria-label="Velg domene (${esc(dm.sel ?? 'ingen valgt')})">${icon('globe', 18)}</button>`;
   // iPhone: tannhjulet ligger i fanelinjen (samme plass som Skann i Finans), ikke øverst.
@@ -230,14 +272,14 @@ function domView(th) {
   return `${top}<div class="title" style="font-size:${isIos(th) ? 30 : 32}px">${DOMTABS.find(([k]) => k === `dom/${tab}`)[1]}</div><div style="font-size:13px;opacity:.75;padding:0 4px">${meta}</div>${a.error ? `<div class="m-empty" style="padding:8px">${esc(a.error)}${a.stale ? ' · viser sist hentede tall' : ''}</div>` : ''}${body}${mock}`;
 }
 const chipRow = (opts, cur, key) => `<div style="display:flex;gap:8px;overflow-x:auto">${opts.map(([k, n]) => `<button class="chip" data-dom="${key}" data-v="${k}" aria-pressed="${cur === k}">${cur === k ? '✓ ' : ''}${n}</button>`).join('')}</div>`;
-function domTraf(th, a, { card = true } = {}) {
+function domTraf(th, a, { card = true, chips = true } = {}) {
   const live = a.live ?? {}, [mb, unit] = bytes(a.bytes ?? (live.mb ?? 0) * 1e6), h = dm.data[`${dm.sel}|${dm.hist}`];
   const sp = live.spark ?? (a.series ?? []).map((x) => x.requests), sl = path(sp, 300, 70);
   const ser = h?.series ?? [];
-  return `<div class="dhero ${gl(th, 'glass')}"><div class="m-row" style="justify-content:space-between"><span class="live"><i></i>Live nå</span><span style="opacity:.75;font-size:13px">${dm.per === 'today' ? 'I dag' : 'Siste 24 timer'}</span></div>
+  return `<div class="dhero ${gl(th, 'glass')}"><div class="m-row" style="justify-content:space-between"><span class="live"><i></i>Live nå</span><span style="opacity:.75;font-size:13px">${({ today: 'I dag', '1h': 'Siste time', '7d': 'Siste 7 dager', '30d': 'Siste 30 dager' })[dm.per] ?? 'Siste 24 timer'}</span></div>
       <div class="dlive"><div><b class="m-mono">${nbx(live.visitors ?? a.visitors)}</b><span>besøk</span></div><div><b class="m-mono">${nbx(live.requests ?? a.requests)}</b><span>forespørsler</span></div><div><b class="m-mono">${live.mb != null ? nbx(live.mb) : mb}</b><span>${live.mb != null ? 'MB' : unit}</span></div></div>
       ${sl ? `<svg viewBox="0 0 300 70" preserveAspectRatio="none" class="dspark" aria-hidden="true"><path d="${sl} L300 70 L0 70 Z" class="ar"/><path d="${sl}" class="ln"/></svg>` : ''}</div>
-    ${chipRow([['24h', 'Siste 24 t'], ['today', 'I dag']], dm.per, 'per')}
+    ${chips ? chipRow([['24h', 'Siste 24 t'], ['today', 'I dag']], dm.per, 'per') : ''}
     <div class="dcards">${[['Besøk', nbx(a.visitors), 'bes', '#FF9EBE', 'dom/bes'], ['Forespørsler', nbx(a.requests), 'req', '#8AB4F8', 'dom/yt'], ['Dataoverføring', `${mb} ${unit}`, 'dl', '#F2B56B', 'dom/yt'], ['Land', String((a.countries ?? []).length), 'globe', '#7BE3A0', 'dom/bes']].map(([l, v, ic, c, go]) => `<a class="dcard ${gl(th)}" href="#/${go}"><span style="color:${c}">${icon(ic, 18)}</span><span class="l">${l}</span><b class="m-mono">${v}</b></a>`).join('')}</div>
     <div class="sec">Historikk</div>
     ${chipRow([['7d', '7 d'], ['30d', '30 d'], ['90d', '90 d'], ['1y', '1 år']], dm.hist, 'hist')}

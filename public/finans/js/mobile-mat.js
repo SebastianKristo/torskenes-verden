@@ -4,6 +4,8 @@
 // Samme data som Mat på web (/mat/api). Eldre servere uten mapper eller import får standardmappene og en melding.
 import { esc, matApi, today } from './core.js';
 import { m, draw, flash, meName } from './mobile.js';
+import { paper } from './mobile-paper.js';
+import { edBlocks } from './mobile-paper3.js';
 
 const M = { w: null, err: '', sel: null, busy: false, folders: null, fLocal: false, folder: '', jobs: [], step: {}, imp: { url: '', busy: false, prev: null, err: '', folderId: '' }, newF: null, link: null, all: false, checked: {} };
 const AB = ['MAN', 'TIR', 'ONS', 'TOR', 'FRE', 'LØR', 'SØN'];
@@ -83,6 +85,8 @@ function main() {
   const w = M.w;
   if (M.err && !w) return `<div class="mat mat2">${head()}<div class="mp-card mp-empty">${esc(M.err)}</div><a class="mp-cta" href="/#/mat">Åpne Mat i nettleseren</a></div>`;
   if (!w) return `<div class="mat mat2">${head()}<div class="mp-card mp-empty"><div class="m-spin"></div></div></div>`;
+  // Papir: kortene kan flyttes og skjules med hold inne (Dagens middag, Ukeplan, Mapper, Skann og import).
+  if (paper()) return `<div class="mat mat2">${head()}${edBlocks('mat', { m1: `${todayCard()}${jobsCard()}`, m2: weekList(), m3: library(false), m4: scanBtns() })}${shopCard()}</div>`;
   return `<div class="mat mat2">${head()}${todayCard()}${jobsCard()}${weekList()}${library()}${shopCard()}</div>`;
 }
 
@@ -114,7 +118,8 @@ function weekList() {
       <span class="mp2-wc">${esc(d.cook || '')}${d.fixed ? '<em>Fast</em>' : ''}</span></button>`).join('')}</div>`;
 }
 
-function library() {
+const scanBtns = () => '<div class="mp2-two"><label class="mp2-big pri">Skann oppskrift<input class="m-file" type="file" accept="image/*,application/pdf,.heic,.heif" multiple data-mpscan></label><a class="mp2-big" href="#/mat/import">Importer lenke</a></div>';
+function library(withScan = true) {
   const all = M.w.dishes ?? [], f = M.folder;
   const list = f === '__none' ? all.filter((d) => !d.folderId) : f ? all.filter((d) => d.folderId === f) : all;
   const count = (id) => all.filter((d) => d.folderId === id).length;
@@ -129,7 +134,7 @@ function library() {
     ${M.fLocal ? '<div class="mp-sub" style="padding:0 4px">Mapper kommer når serveren er oppdatert.</div>' : ''}
     <div class="mp-card mp2-list">${rows || '<div class="mp-sub" style="padding:14px 6px">Ingen retter i denne mappen ennå.</div>'}
       ${list.length > 8 ? `<button class="mp-more" data-mp="all">${M.all ? 'Vis færre' : `Vis alle ${list.length}`}</button>` : ''}</div>
-    <div class="mp2-two"><label class="mp2-big pri">Skann oppskrift<input class="m-file" type="file" accept="image/*,application/pdf,.heic,.heif" multiple data-mpscan></label><a class="mp2-big" href="#/mat/import">Importer lenke</a></div>`;
+    ${withScan ? scanBtns() : ''}`;
 }
 
 function shopCard() {

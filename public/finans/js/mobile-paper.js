@@ -3,12 +3,13 @@
 // pillefanelinje nederst med Hjem, Finans, Mat, Sporing, Mer og +Skann. Ingen Liquid Glass og ingen Material You.
 // Alle eksisterende sider tegnes i Papir ved at Android-fargerollene (--m3-*) får papirfarger (se mobile-theme.js).
 // Her ligger skallet (fotovindu og fanelinje), Papir-forsiden, Finans-oversikten, Mer, Media og nyhetsleseren.
-import { S, esc, n0, hlApi, ini, today } from './core.js';
+import { S, esc, n0, hlApi, ini, today, greet } from './core.js';
 import { m, draw, flash, pref, setPref, meName, avInner, avatarUrl, openSheet, upload, ACTIVE_JOBS } from './mobile.js';
-import { hlData, hlDom, yrUrl, ruterUrl } from './mobile-hl.js';
+import { hlData, hlDom, ruterUrl } from './mobile-hl.js';
 import { TR, active, badge, carName } from './mobile-track.js';
 import { haptic } from './mobile-haptics.js';
 import { matToday, matTitle } from './mobile-mat.js';
+import { edBlocks, finKeys, finScreens, fabStyle, fourth, onWay, rcBanner, FX, openNewShip } from './mobile-paper3.js';
 
 /* ---------- Valg (per bruker i /api/me/layout, med lokal kopi) ---------- */
 
@@ -82,11 +83,11 @@ const thumbOf = (kind) => { const u = P.img[kind]; return u ? `background-image:
 
 const PAGE = {
   hjem: ['Finans', () => { const s = S.summary; return s ? `${cap(new Date(s.month + '-15').toLocaleDateString('nb-NO', { month: 'long' }))} · ${s.daysLeft} dager igjen` : 'Denne måneden'; }],
-  liste: ['Liste', 'Alle kontoer'], budsjett: ['Budsjett', 'Denne måneden'], sok: ['Søk', '✦ Spør om alt'], fmer: ['Mer', 'Finans'],
+  liste: ['Liste', 'Alle kontoer'], budsjett: ['Budsjett', 'Denne måneden'], sok: ['Søk', '✦ Med AI'], fmer: ['Mer', 'Alt fra FinansHub på nettsiden'],
   mat: ['Mat', () => { const t = matToday(); return t?.week ? `Uke ${t.week}` : 'Ukeplan og oppskrifter'; }],
-  spor: ['Sporing', () => { const a = active(TR.data?.items ?? []), r = a.filter((p) => p.status === 'ready_for_pickup').length; return TR.data ? `${a.length} på vei${r ? ` · ${r} klar` : ''}` : 'Pakker og sendinger'; }],
+  spor: ['Sporing', 'Pakker og sendinger'],
   mer: ['Mer', 'Alle moduler'], set: ['Innstillinger', 'Konto og utseende'], media: ['Media', 'Plex · Jellyfin'],
-  dom: ['Domener', 'Siste 24 timer'], 'dom/pub': ['Publikum', 'Kart, land og enheter'], 'dom/ytl': ['Ytelse', 'Statuskoder, fart og sikkerhet'], 'dom/inf': ['Infrastruktur', 'Oppetid, DNS og domeneinfo'], 'dom/admin': ['Domener', 'Legg til og fjern'],
+  dom: ['Domener', 'Trafikk, besøk og oppetid'], 'dom/pub': ['Publikum', 'Kart, land og enheter'], 'dom/ytl': ['Ytelse', 'Statuskoder, fart og sikkerhet'], 'dom/inf': ['Infrastruktur', 'Oppetid, DNS og domeneinfo'], 'dom/admin': ['Domener', 'Legg til og fjern'],
   aks: ['Aksjer', 'Trading 212'], sub: ['Abonnementer', 'Subscription OS'], dir: ['Boliger', 'Utgifter og prosjekter'], finn: ['Finn', 'Kjøp og salg'],
   kv: ['Kvitteringer', 'Til gjennomgang'], fast: ['Faste trekk', 'Neste 30 dager'], konto: ['Kontoer', 'Saldo'], rap: ['Rapporter', 'Måned og år'], imp: ['Import', 'Bank, Excel og Finn'],
   skann: ['Kvittering', 'Bekreft'], opp: ['Kø', 'Kvitteringer'], hl: ['', ''],
@@ -96,32 +97,34 @@ const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 export const FIN_MAIN = ['hjem', 'liste', 'finn', 'fmer'];
 export const FIN_SUB = ['budsjett', 'kv', 'fast', 'konto', 'aks', 'sub', 'dir', 'imp', 'rap', 'sok', 'skann', 'opp'];
 export const ctxOf = (scr) => (scr === 'dom' ? 'dom' : FIN_MAIN.includes(scr) || FIN_SUB.includes(scr) ? 'fin' : 'main');
-const NAMES = { hl: 'Hjem', mer: 'Mer', fmer: 'Mer', hjem: 'Oversikt', liste: 'Liste', finn: 'Finn', mat: 'Mat', spor: 'Sporing', set: 'Innstillinger' };
+const NAMES = { hl: 'Hjem', mer: 'Mer', fmer: 'Mer', hjem: 'Oversikt', liste: 'Liste', finn: 'Finn', mat: 'Mat', spor: 'Sporing', set: 'Innstillinger', sok: 'Søk', dom: 'Domener' };
 // Hvor pila øverst til venstre går: Finans-fanene og de andre hovedfanene går hjem, undersider til forelderen.
 function parentOf(scr) {
-  if (scr === 'liste' && m.detail) return ['txback', 'Liste'];
+  if (m.detail && ['liste', 'sok', 'hjem'].includes(scr)) return ['txback', NAMES[scr]];
   if (scr === 'finn' && m.sub) return ['finn', 'Finn'];
   if (scr === 'set' && m.sub) return ['set', 'Innstillinger'];
   if (scr === 'mat' && m.sub) return ['mat', 'Mat'];
-  if (scr === 'dom') { if (m.sub === 'admin') return ['dom', 'Domener']; const f = m.domFrom && m.domFrom !== 'dom' ? m.domFrom : 'hl'; return [f, NAMES[f] ?? 'Tilbake']; }
+  // Domener: pila (og sveip tilbake) går alltid hjem, også når Domener ble åpnet fra Mer.
+  if (scr === 'dom') return m.sub === 'admin' ? ['dom', 'Domener'] : ['hl', 'Hjem'];
   if (scr === 'skann' && m.rc) return ['back', 'Kvitteringer'];
+  if (finScreens().includes(scr) || scr === 'fmer') return ['hl', 'Hjem'];
   if (FIN_SUB.includes(scr)) return ['fmer', 'Mer'];
   if (['media', 'nyheter'].includes(scr)) return ['mer', 'Mer'];
   if (scr === 'set') return [m.setFrom && m.setFrom !== 'set' ? m.setFrom : 'hl', NAMES[m.setFrom] ?? 'Hjem'];
   return ['hl', 'Hjem'];
 }
-const greetTxt = (h) => (h < 5 ? 'God natt' : h < 10 ? 'God morgen' : h < 17 ? 'God dag' : 'God kveld');
 
 export function paperHero(scr) {
   const home = scr === 'hl', kind = photoKind();
   const key = scr === 'dom' && m.sub ? `dom/${m.sub}` : scr;
-  const [title, kick] = (scr === 'mat' && matTitle()) || (PAGE[key] ?? PAGE[scr] ?? [cap(scr), '']);
+  const [title, kick] = (m.detail && ['liste', 'sok', 'hjem'].includes(scr) && ['Detaljer', 'Transaksjon']) || (scr === 'mat' && matTitle()) || (PAGE[key] ?? PAGE[scr] ?? [cap(scr), '']);
   const kicker = home ? cap(new Date().toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' })) : typeof kick === 'function' ? kick() : kick;
-  const ttl = home ? `${greetTxt(new Date().getHours())},<br>${esc(meName().split(' ')[0])}` : esc(title);
+  // Hilsen etter tid på døgnet, alltid på to linjer: «God ettermiddag,» og navnet. Lange hilsener skaleres ned i stedet for å brytes.
+  const ttl = home ? `<span class="pp-gl">${esc(greet())},</span><span class="pp-gl">${esc(meName().split(' ')[0])}</span>` : esc(title);
   const [pk, pl] = parentOf(scr);
   const w = hlData()?.weather;
   const backBtn = home ? '<span class="pp-brand">Homelab</span>'
-    : ['txback', 'back'].includes(pk) ? `<button class="pp-pill" data-mact="${pk}">‹ ${esc(pl)}</button>` : `<a class="pp-pill" href="#/${pk}">‹ ${esc(pl)}</a>`;
+    : ['txback', 'back'].includes(pk) ? `<button class="pp-pill pp-back" data-mact="${pk}">‹ ${esc(pl)}</button>` : `<a class="pp-pill pp-back" href="#/${pk}">‹ ${esc(pl)}</a>`;
   const failNote = home && P.fail[kind] ? '<button class="pp-pill pp-fail" data-pp="retry">Fikk ikke lastet bildet · trykk for å prøve igjen</button>' : '';
   return `<header class="pp-hero${home ? ' home' : ''}" style="${bgOf(kind)}">
     <div class="pp-top">${backBtn}<span class="m-grow"></span>
@@ -129,7 +132,7 @@ export function paperHero(scr) {
       <a class="pp-av${avatarUrl() ? ' img' : ''}" href="#/set" aria-label="Innstillinger">${avInner()}</a></div>
     ${home ? photoMenu(kind) : ''}${failNote}
     <div class="pp-bottom"><div class="m-grow"><div class="pp-kick">${esc(kicker)}</div><h1 class="pp-title${home ? ' big' : ''}">${ttl}</h1></div>
-      ${home && w ? `<a class="pp-temp" href="${esc(yrUrl(w))}" target="_blank" rel="noopener"><b>${w.temp != null ? Math.round(w.temp) + '°' : '–'}</b><span>${esc(w.text ?? '')}${w.updated ? ` · ${esc(new Date(w.updated).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }))}` : ''} ›</span></a>` : ''}</div>
+      ${home && w ? `<a class="pp-temp" href="#/vaer" aria-label="Åpne værvisningen"><b>${w.temp != null ? Math.round(w.temp) + '°' : '–'}</b><span>${esc(w.text ?? '')}${w.updated ? ` · ${esc(new Date(w.updated).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }))}` : ''} ›</span></a>` : ''}</div>
     ${P.photo[kind]?.credit && home ? `<span class="pp-credit">${esc(P.photo[kind].credit)}</span>` : ''}
   </header>`;
 }
@@ -146,24 +149,37 @@ function photoMenu(kind) {
     <label class="pp-own"><span class="pp-th dash">+</span><span class="m-grow pp-mi"><span>Eget bilde</span>${kind === 'custom' ? '<small>Valgt</small>' : ''}</span><span class="pp-ck">${kind === 'custom' ? '✓' : ''}</span><input class="m-file" type="file" accept="image/jpeg,image/png,image/webp" data-ppfile></label></div>`;
 }
 
-// Fanelinja: jevnt fordelte faner (aktiv fane har ikon og egen bredde), og +-knappen rett etter Mer.
-// Hjem vises bare på Hjem; ellers går pila øverst til venstre hjem. Finans og Domener har sine egne faner.
+// Fanelinja: jevnt fordelte faner (aktiv fane har ikon og egen bredde). Hjem vises bare på Hjem; ellers går pila
+// øverst til venstre hjem. Finans og Domener har egne faner. Fjerde fane er Domener eller Sporing (automatisk ut fra
+// pakker på vei). Med flytende skann (standard) står «⌕ Søk» rett før Mer og skanneknappen flyter over linja; ellers
+// ligger + i linja. På Fold (≥ 600 px) blir linja en loddrett skinne til venstre (CSS).
+const SCAN_IC = 'M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M8 12h8';
 export function paperNav(scr) {
-  const ctx = ctxOf(scr);
+  const ctx = ctxOf(scr), flyt = fabStyle() === 'float';
   let tabs, cur, plus;
   if (ctx === 'fin') {
-    tabs = [['hjem', 'Oversikt', '◎'], ['liste', 'Liste', '≡'], ['finn', 'Finn', '⇄'], ['fmer', 'Mer', '⋯']];
-    cur = FIN_MAIN.includes(scr) ? scr : 'fmer'; plus = ['Legg til kvittering', 'fin'];
+    const fk = finKeys(), FTN = { oversikt: ['hjem', 'Oversikt', '◎'], liste: ['liste', 'Liste', '≡'], finn: ['finn', 'Finn', '⇄'], sok: ['sok', 'Søk', '⌕'], budsjett: ['budsjett', 'Budsjett', '◔'], kvitteringer: ['kv', 'Kvitteringer', '▢'], aksjer: ['aks', 'Aksjer', '↗'], abonnementer: ['sub', 'Abonnementer', '↻'], kontoer: ['konto', 'Kontoer', '▤'], boliger: ['dir', 'Boliger', '⌂'] };
+    tabs = fk.map((k) => FTN[k]).filter(Boolean);
+    if (flyt && !tabs.some(([k]) => k === 'sok')) tabs.push(['sok', 'Søk', '⌕']);
+    tabs.push(['fmer', 'Mer', '⋯']);
+    cur = tabs.some(([k]) => k === scr) ? scr : 'fmer'; plus = ['Legg til kvittering', 'fin'];
   } else if (ctx === 'dom') {
     tabs = [['dom', 'Oversikt', '◎'], ['dom/pub', 'Publikum', '◍'], ['dom/ytl', 'Ytelse', '⚡'], ['dom/inf', 'Infra', '▤']];
     cur = ['pub', 'ytl', 'inf'].includes(m.sub) ? `dom/${m.sub}` : 'dom'; plus = ['Legg til domene', 'dom'];
   } else {
-    tabs = [['hl', 'Hjem', '⌂'], ['hjem', 'Finans', 'kr'], ['mat', 'Mat', '◐'], ['spor', 'Sporing', '▣'], ['mer', 'Mer', '⋯']].filter(([k]) => k !== 'hl' || scr === 'hl');
-    cur = ['hl', 'mat', 'spor'].includes(scr) ? scr : 'mer'; plus = [scr === 'mat' ? 'Skann oppskrift' : 'Skann', scr === 'mat' ? 'mat' : 'main'];
+    const t4 = fourth() === 'spor' ? ['spor', 'Sporing', '▣'] : ['dom', 'Domener', '◎'];
+    tabs = [['hl', 'Hjem', '⌂'], ['hjem', 'Finans', 'kr'], ['mat', 'Mat', '◐'], t4].filter(([k]) => k !== 'hl' || scr === 'hl');
+    if (flyt) tabs.push(['sok', 'Søk', '⌕']);
+    tabs.push(['mer', 'Mer', '⋯']);
+    cur = ['hl', 'mat', 'spor', 'dom'].includes(scr) ? scr : 'mer';
+    plus = scr === 'spor' ? ['Ny sending', 'spor'] : [scr === 'mat' ? 'Skann oppskrift' : 'Skann', scr === 'mat' ? 'mat' : 'main'];
   }
-  return `<div class="pp-navbg" aria-hidden="true"></div><nav class="pp-nav" aria-label="Faner">${tabs.map(([k, n, ic]) => `<a href="#/${k}" data-tab="${k}" ${cur === k ? 'aria-current="page"' : ''}>${cur === k ? `<i>${ic}</i>` : ''}<span>${n}</span></a>`).join('')}
-    <button class="pp-scan${P.press ? ' down' : ''}" data-ppplus="${plus[1]}" aria-label="${plus[0]} (trykk for valg, hold inne for å laste opp)" title="Trykk for valg · hold inne for å laste opp">+</button></nav>
-    <input class="m-file" id="pp-quick" type="file" multiple accept="${plus[1] === 'mat' ? 'image/*,application/pdf' : 'application/pdf,image/jpeg,image/png,image/heic,image/heif,.heic,.heif'}" data-ppquick="${plus[1]}">
+  if (ctx === 'dom') plus = ['Legg til domene', 'dom'];
+  const fabIc = plus[1] === 'spor' || plus[1] === 'dom' ? 'M12 5v14M5 12h14' : SCAN_IC;
+  const fab = flyt ? `<button class="pp-fab${P.press ? ' down' : ''}" data-ppplus="${plus[1]}" aria-label="${plus[0]}${plus[1] === 'spor' || plus[1] === 'dom' ? '' : ' (trykk for valg, hold inne for å laste opp)'}" title="${esc(plus[0])}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${fabIc}"/></svg></button>` : '';
+  return `<div class="pp-navbg" aria-hidden="true"></div><nav class="pp-nav${flyt ? ' flyt' : ''}" aria-label="Faner">${tabs.map(([k, n, ic]) => `<a href="#/${k}" data-tab="${k}" ${cur === k ? 'aria-current="page"' : ''}><i>${ic}</i><span>${n}</span></a>`).join('')}
+    ${flyt ? '' : `<button class="pp-scan${P.press ? ' down' : ''}" data-ppplus="${plus[1]}" aria-label="${plus[0]} (trykk for valg, hold inne for å laste opp)" title="Trykk for valg · hold inne for å laste opp">+</button>`}</nav>${fab}
+    <input class="m-file" id="pp-quick" type="file" multiple accept="${plus[1] === 'mat' ? 'image/*,application/pdf' : 'application/pdf,image/jpeg,image/png,image/heic,image/heif,.heic,.heif'}" data-ppquick="${plus[1] === 'spor' ? 'main' : plus[1]}">
     ${P.hint ? `<div class="pp-hint" role="status">${esc(P.hint)}</div>` : ''}`;
 }
 
@@ -192,6 +208,7 @@ export function paperDown(e) {
   if (!x) return false;
   plusEl = x; plusLong = false; P.press = true; x.classList.add('down');
   clearTimeout(plusT);
+  if (['spor', 'dom'].includes(x.dataset.ppplus)) return true; // Ny sending og Legg til domene har ikke hold inne
   plusT = setTimeout(() => { plusLong = true; haptic('tap'); navigator.vibrate?.(12); P.hint = 'Slipp for å velge filer'; showHint(); }, 450);
   return true;
 }
@@ -226,14 +243,16 @@ export function paperHome() {
   const minis = [
     ['FINANS', s ? n0(s.left) : '–', rv ? `${rv} kvittering${rv > 1 ? 'er' : ''}` : 'igjen å bruke', rv ? 'lab' : 'mut', '#/hjem', '20px'],
     ['MAT', mt?.name || 'Ingen rett', mt?.cook ? `${mt.cook} lager` : '', 'mut', '#/mat', '16px'],
-    ['DOMENER', dom?.visitors != null ? n0(dom.visitors) : dom?.total != null ? String(dom.total) : '–', dom ? (dom.down ? `${dom.down} nede` : 'alle oppe') : '', dom?.down ? 'lab' : 'pos', '#/dom', '20px'],
+    fourth() === 'spor' ? ['DOMENER', dom?.visitors != null ? n0(dom.visitors) : dom?.total != null ? String(dom.total) : '–', dom ? (dom.down ? `${dom.down} nede` : 'alle oppe') : '', dom?.down ? 'lab' : 'pos', '#/dom', '20px']
+      : ['SPORING', String(onWay() || active(TR.data?.items ?? []).length || 0), onWay() ? 'på vei' : 'ingen på vei', onWay() ? 'lab' : 'mut', '#/spor', '20px'],
   ];
-  return `<div class="pp-home">
-    <form class="pp-search" data-ppsearch role="search"><span aria-hidden="true">⌕</span><input class="m-input" name="q" type="search" enterkeyhint="search" placeholder="Søk på Google" aria-label="Søk på Google" autocomplete="off"></form>
-    ${pkg}${ruter}
-    <div class="pp-minis">${minis.map(([k, v, sub, c, href, fs]) => `<a class="pp-card pp-mini" href="${href}"><span class="pp-lab mut">${k}</span><b class="pp-serif m-ell" style="font-size:${fs}">${esc(v)}</b><span class="${c === 'lab' ? 'pp-lab-c' : `pp-${c}`}" style="font-size:11px">${esc(sub)}</span></a>`).join('')}</div>
-    ${newsCard(H?.news)}
-  </div>`;
+  // Hold inne et kort for å flytte eller skjule det (Søk, Pakker, Avganger, Snarveier, Siste nytt).
+  return `<div class="pp-home">${edBlocks('hl', {
+    h1: '<form class="pp-search" data-ppsearch role="search"><span aria-hidden="true">⌕</span><input class="m-input" name="q" type="search" enterkeyhint="search" placeholder="Søk på Google" aria-label="Søk på Google" autocomplete="off"></form>',
+    h2: pkg, h3: ruter,
+    h4: `<div class="pp-minis">${minis.map(([k, v, sub, c, href, fs]) => `<a class="pp-card pp-mini" href="${href}"><span class="pp-lab mut">${k}</span><b class="pp-serif m-ell" style="font-size:${fs}">${esc(v)}</b><span class="${c === 'lab' ? 'pp-lab-c' : `pp-${c}`}" style="font-size:11px">${esc(sub)}</span></a>`).join('')}</div>`,
+    h5: newsCard(H?.news),
+  }, { full: ['h1', 'h4', 'h5'] })}</div>`;
 }
 // Ruters egne linjefarger (fra Entur via serveren), med Ruters standardfarger per transportmiddel som reserve.
 const RUTER = { metro: '#EC700C', tram: '#0B91EF', bus: '#E60000', regionbus: '#75A300', water: '#682C88', ferry: '#682C88', rail: '#003087', train: '#003087' };
@@ -254,22 +273,26 @@ export function paperFin() {
   const s = S.summary;
   if (!s) return '<div class="m-spin"></div>';
   const bal = (S.boot?.accounts ?? []).reduce((a, x) => a + (x.balance ?? 0), 0);
-  const rv = (s.review ?? []).filter((r) => r.status === 'needs_review').length;
   const bud = (s.budgets ?? []).filter((b) => b.budget).sort((a, b) => b.used / b.budget - a.used / a.budget).slice(0, 5);
   const month = new Date(s.month + '-15').toLocaleDateString('nb-NO', { month: 'long' }).toUpperCase();
-  return `<div class="pp-card pp-saldo"><span class="pp-lab">SALDO · ALLE KONTOER</span><b class="pp-serif pp-huge" data-mact="reveal">${pref('hideAmt') && !m.reveal ? '••••' : `${bal < 0 ? '−' : ''}${n0(bal)} kr`}</b>
-      <div class="pp-kpi"><div><span>Inn</span><b class="pp-pos">${n0(s.inn ?? 0)}</b></div><div><span>Brukt</span><b>${n0(s.budgetUsed ?? 0)}</b></div><div><span>Igjen</span><b>${n0(s.left ?? 0)}</b></div></div></div>
-    ${rv ? `<a class="pp-cta" href="#/kv"><span>${rv} kvittering${rv > 1 ? 'er' : ''} til gjennomgang</span><span>Skann ›</span></a>` : ''}
-    ${lab('SISTE TRANSAKSJONER', '<a href="#/liste">Alle ›</a>')}
-    <div class="pp-rows">${(s.recent ?? []).slice(0, 5).map((t) => `<button class="pp-tx" data-tx="${t.id}"><span class="pp-ti" style="background:${esc(t.color ?? '#6b665c')}">${esc(ini(t.description))}</span><span class="m-grow"><b class="m-ell">${esc(t.description)}</b><span class="pp-mut">${esc(t.category ?? '')} · ${esc(t.date === today() ? 'I dag' : t.date?.slice(8, 10) + '.' + t.date?.slice(5, 7))}</span></span><span class="pp-serif ${t.amount > 0 ? 'pp-pos' : ''}">${t.amount < 0 ? '−' : '+'}${n0(t.amount)}</span></button>`).join('') || '<div class="pp-mut">Ingen transaksjoner ennå.</div>'}</div>
-    ${bud.length ? `${lab(`BUDSJETT · ${month}`, `${n0(s.budgetUsed)} av ${n0(s.budgetTotal)}`)}<div class="pp-rows">${bud.map((b) => { const p = Math.round((b.used / b.budget) * 100); return `<a class="pp-bud" href="#/budsjett"><span>${esc(b.category)}</span><span class="pp-bar"><i style="width:${Math.min(100, p)}%;background:${p > 90 ? 'var(--pp-lab)' : 'var(--pp-ink)'}"></i></span><span class="pp-mut">${p} %</span></a>`; }).join('')}</div>` : ''}
-    <div class="pp-two"><a class="pp-btn" href="#/budsjett">Budsjett</a><a class="pp-btn" href="#/sok">✦ Søk</a></div>`;
+  const tx = (FX.recent ?? s.recent ?? []).slice(0, 15);
+  // Kortene kan flyttes og skjules med hold inne: Saldo, Kvitteringer (f2), Siste transaksjoner (de 15 siste) og Budsjett.
+  return edBlocks('hjem', {
+    f1: `<div class="pp-card pp-saldo"><span class="pp-lab">SALDO · ALLE KONTOER</span><b class="pp-serif pp-huge" data-mact="reveal">${pref('hideAmt') && !m.reveal ? '••••' : `${bal < 0 ? '−' : ''}${n0(bal)} kr`}</b>
+      <div class="pp-kpi"><div><span>Inn</span><b class="pp-pos">${n0(s.inn ?? 0)}</b></div><div><span>Brukt</span><b>${n0(s.budgetUsed ?? 0)}</b></div><div><span>Igjen</span><b>${n0(s.left ?? 0)}</b></div></div></div>`,
+    f2: rcBanner(),
+    f3: `${lab(`SISTE TRANSAKSJONER · ${tx.length}`, '<a href="#/liste">Vis alle ›</a>')}
+      <div class="pp-rows">${tx.map((t) => `<button class="pp-tx" data-tx="${t.id}"><span class="pp-ti" style="background:${esc(t.color ?? '#6b665c')}">${esc(ini(t.merchant || t.description))}</span><span class="m-grow" style="min-width:0"><b class="m-ell">${esc(t.merchant || t.description)}</b><span class="pp-mut">${esc(t.category ?? '')} · ${esc(t.date === today() ? 'I dag' : t.date?.slice(8, 10) + '.' + t.date?.slice(5, 7))}</span></span><span class="pp-serif ${t.amount > 0 ? 'pp-pos' : ''}">${t.amount < 0 ? '−' : '+'}${n0(t.amount)}</span></button>`).join('') || '<div class="pp-mut">Ingen transaksjoner ennå.</div>'}</div>`,
+    f4: bud.length ? `${lab(`BUDSJETT · ${month}`, `${n0(s.budgetUsed)} av ${n0(s.budgetTotal)}`)}<div class="pp-rows">${bud.map((b) => { const p = Math.round((b.used / b.budget) * 100); return `<a class="pp-bud" href="#/budsjett"><span>${esc(b.category)}</span><span class="pp-bar"><i style="width:${Math.min(100, p)}%;background:${p > 90 ? 'var(--pp-lab)' : 'var(--pp-ink)'}"></i></span><span class="pp-mut">${p} %</span></a>`; }).join('')}</div>` : '',
+  });
 }
 
 /* ---------- Mer ---------- */
 
 export function paperMer() {
-  const rows = [['dom', 'Domener', 'Trafikk, besøk og oppetid'], ['media', 'Media', 'Spilles nå og historikk'], ['hjem', 'Finans', 'Oversikt, liste, Finn og mer'],
+  // Modulen som ikke står i fanelinja (Domener eller Sporing) ligger øverst i Mer.
+  const n = onWay(), mod = fourth() === 'spor' ? ['dom', 'Domener', 'Trafikk, besøk og oppetid'] : ['spor', 'Sporing', n ? `${n} pakke${n === 1 ? '' : 'r'} på vei` : 'Pakker og sendinger'];
+  const rows = [mod, ['media', 'Media', 'Spilles nå og historikk'], ['hjem', 'Finans', 'Oversikt, liste, Finn og mer'],
     ['nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag'], ['set', 'Innstillinger', 'Tema, bakgrunn og konto']];
   return `<div class="pp-card pp-list">${rows.map(([k, n, s]) => `<a href="#/${k}"><span class="m-grow"><b class="pp-serif">${n}</b><span class="pp-mut">${s}</span></span><span class="pp-mut">›</span></a>`).join('')}</div>`;
 }
@@ -380,6 +403,7 @@ export async function paperBind(e, t) {
     e.preventDefault();
     if (plusLong) { plusLong = false; return true; } // holdt inne: filvelgeren er allerede åpnet
     if (plus.dataset.ppplus === 'dom') { location.hash = '#/dom/admin'; return true; }
+    if (plus.dataset.ppplus === 'spor') { openNewShip(); return true; }
     P.scan = true; P.qShow = (m.jobs ?? []).some((j) => ACTIVE_JOBS.includes(j.status)); draw(); return true;
   }
   const x = t.closest?.('[data-pp]');
