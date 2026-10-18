@@ -127,8 +127,6 @@ internal fun SetRow(vm: AppViewModel, i: Int, icon: ImageVector, title: String, 
 
 /* ---------------- Innstillinger i Papir ---------------- */
 
-private fun photoLabel(k: String) = when (k) { "cur" -> "Nåværende"; "weather" -> "Vær nå"; "planets" -> "Planeter"; "custom" -> "Eget bilde"; else -> "Oslo" }
-
 /**
  * Innstillinger i Papir-stil: Profil øverst (trykk på profilbildet åpner hit), Utseende (tema, ikonfarger og bakgrunn,
  * som før lå i «Oslo ▾» på Hjem), Fanelinje, Moduler (Familie, Avganger, Vær, Nyhetsleser) og Konto.
@@ -170,36 +168,7 @@ internal fun PaperSettings16(vm: AppViewModel, navBottom: Dp) {
             }
         }
         item { PLabel("Bakgrunn på Hjem", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
-        item {
-            PCard {
-                listOf("cur", "oslo", "weather", "planets").forEachIndexed { i, k ->
-                    val on = vm.photoKind == k
-                    val failed = k in vm.photoFailed
-                    Column {
-                        if (i > 0) Box(Modifier.fillMaxWidth().padding(start = 60.dp).height(1.dp).background(p.line))
-                        Row(
-                            Modifier.fillMaxWidth().clickable { if (failed) vm.retryPhoto(k); vm.setPhotoKind(k) }.padding(14.dp, 10.dp),
-                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
-                        ) {
-                            Box(Modifier.size(32.dp).clip(RoundedCornerShape(9.dp)).background(Brush.linearGradient(listOf(Color(0xFF4A5A6A), Color(0xFF1D242C))))) {
-                                vm.photoThumbs[k]?.let { Image(it.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize()) }
-                            }
-                            Column(Modifier.weight(1f)) {
-                                Text(photoLabel(k), color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                                Text(if (failed) "Fikk ikke lastet bildet · trykk for å prøve igjen" else when (k) {
-                                    "cur" -> "Gradienten fra før"; "oslo" -> "Fast bilde av Oslo"; "weather" -> "Skifter med været"; else -> "Dagens NASA-bilde"
-                                }, color = if (failed) p.lab else p.mut, fontSize = 12.5.sp, maxLines = 1)
-                            }
-                            if (on) Text("✓", color = p.ink, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
-                Box(Modifier.fillMaxWidth().padding(start = 60.dp).height(1.dp).background(p.line))
-                SetRow(vm, 4, Icons.Filled.Image, "Eget bilde", "Lastes opp til serveren og synkes mellom enhetene", if (vm.photoKind == "custom") "✓" else "Velg ›") {
-                    own.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                }
-            }
-        }
+        item { PaperBgSettings(vm) { own.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) } }
         item { PLabel("Fanelinje", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
         item {
             PCard {

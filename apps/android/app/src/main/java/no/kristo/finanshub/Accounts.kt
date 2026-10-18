@@ -101,6 +101,12 @@ class AppPrefs(ctx: Context) {
         const val MOBILE_DESIGN = "mobile_design" // klassisk | papir
         const val PAPER_MODE = "paper_mode"     // auto | lys | mork
         const val PHOTO = "photo_window"        // cur | oslo | weather | planets | custom
+        const val BG_PLANET = "bg_planet"       // auto | earth | moon | jupiter | mars (prompt 19)
+        const val BG_ROTATE = "bg_rotate"       // daily | hourly
+        const val BG_BLUR = "bg_blur"           // 0–20 px
+        const val BG_DIM = "bg_dim"             // 0–60 %
+        const val BG_WIFI = "bg_wifi_only"      // nye bakgrunnsbilder bare på Wi-Fi
+        const val BG_ANIMATE = "bg_animate"     // regn/snø over bakgrunnen
         const val DESIGN_SYNCED = "design_synced" // valgene over er hentet fra serveren én gang
         const val FRESH_PAPIR = "fresh_papir"   // appen ble installert med Papir som standard
         const val PAGES_LAYOUT = "pages_layout_" // + konto-ID: rekkefølge og skjulte kort per side i Papir (layout.pages)

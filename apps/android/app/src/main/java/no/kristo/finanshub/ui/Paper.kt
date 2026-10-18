@@ -394,18 +394,18 @@ private fun PaneBox(navBottom: Dp, content: @Composable () -> Unit) {
 @Composable
 private fun Hero(vm: AppViewModel, home: Boolean, wide: Boolean, toggleMenu: () -> Unit) {
     val (kicker, title) = heroText(vm)
-    val bmp: Bitmap? = if (vm.photoKind == "cur") null else vm.photo
+    val bmp: Bitmap? = if (vm.photoKind == "cur" || vm.photoKind == "none") null else vm.photo
+    val fg = bgForeground(vm, bmp != null)
     val grad = vm.photoGradient.takeIf { it.size >= 2 }?.map { Color(it) } ?: listOf(Color(0xFF4A5A6A), Color(0xFF2A3440), Color(0xFF1D242C))
     val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     // Hjem: 226 dp (250 på Fold), så navnet aldri havner bak søkefeltet.
     val h = (if (home) (if (wide) 214.dp else 190.dp) else 132.dp) + statusTop
     Box(Modifier.fillMaxWidth().height(h).background(Brush.linearGradient(grad)).animateContentSize()) {
-        if (bmp != null) Image(bmp.asImageBitmap(), null, contentScale = ContentScale.Crop, modifier = Modifier.matchParentSize())
-        // Skygge øverst og nederst så teksten alltid kan leses (OV i designet).
-        Box(Modifier.matchParentSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = .25f), .35f to Color.Transparent, 1f to Color.Black.copy(alpha = .45f))))
+        // Bilde med blur, demping, scrim, papirtekstur og partikler (prompt 19).
+        BgLayer(vm, bmp)
         Column(Modifier.fillMaxSize().padding(top = statusTop + 8.dp, start = if (wide) 130.dp else 22.dp, end = 22.dp, bottom = if (home) 40.dp else 32.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (home) PSerif(vm.appName, 22.sp, Color.White, Modifier.weight(1f), maxLines = 1)
+                if (home) PSerif(vm.appName, 22.sp, fg, Modifier.weight(1f), maxLines = 1)
                 else {
                     Box(
                         Modifier.height(34.dp).clip(CircleShape).background(Color(0x8C1B1A17)).clickable(onClickLabel = "Tilbake") { vm.back() }.padding(start = 10.dp, end = 14.dp),
@@ -423,34 +423,35 @@ private fun Hero(vm: AppViewModel, home: Boolean, wide: Boolean, toggleMenu: () 
             Spacer(Modifier.weight(1f))
             Row(verticalAlignment = Alignment.Bottom) {
                 Column(Modifier.weight(1f)) {
-                    PSerif(kicker, 15.sp, Color.White.copy(alpha = .9f), italic = true, weight = FontWeight.Normal, maxLines = 1)
+                    PSerif(kicker, 15.sp, fg.copy(alpha = .9f), italic = true, weight = FontWeight.Normal, maxLines = 1)
                     Spacer(Modifier.height(4.dp))
                     // Hilsen + komma på linje 1 og navnet på linje 2; lange hilsener skaleres ned i stedet for å brytes.
-                    if (home) AutoSerif(title, if (wide) 44.sp else 31.sp, Color.White, min = 20.sp)
-                    else PSerif(title, 36.sp, Color.White, maxLines = 2)
+                    if (home) AutoSerif(title, if (wide) 44.sp else 31.sp, fg, min = 20.sp)
+                    else PSerif(title, 36.sp, fg, maxLines = 2)
                 }
                 val w = vm.mobileHome?.weather
                 if (home && w?.temp != null) Column(
                     Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClickLabel = "Åpne været") { vm.openWeather() }.padding(start = 8.dp),
                     horizontalAlignment = Alignment.End,
                 ) {
-                    PSerif("${Math.round(w.temp)}°", 52.sp, Color.White, weight = FontWeight.Normal, maxLines = 1)
-                    Text("${w.text ?: w.place} · ${LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))} ›", color = Color.White.copy(alpha = .9f), fontSize = 13.sp, maxLines = 1)
+                    PSerif("${Math.round(w.temp)}°", 52.sp, fg, weight = FontWeight.Normal, maxLines = 1)
+                    Text("${w.text ?: w.place} · ${LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))} ›", color = fg.copy(alpha = .9f), fontSize = 13.sp, maxLines = 1)
                 }
             }
-            vm.photoCredit?.takeIf { home && bmp != null }?.let { Text(it, color = Color.White.copy(alpha = .55f), fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            vm.photoCredit?.takeIf { home && bmp != null }?.let { Text(it, color = fg.copy(alpha = .7f), fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         }
     }
 }
 
-private fun photoName(k: String) = when (k) { "cur" -> "Nåværende"; "weather" -> "Vær nå"; "planets" -> "Planeter"; "custom" -> "Eget bilde"; else -> "Oslo" }
+private fun photoName(k: String) = when (k) { "cur" -> "Nåværende"; "none" -> "Ingen"; "weather" -> "Vær nå"; "planets" -> "Planeter"; "custom" -> "Eget bilde"; else -> "Oslo" }
 
 private fun photoSub(vm: AppViewModel, k: String): String = when {
     k == "cur" -> "Mørk gradient"
+    k == "none" -> "Bare gradient, ingen bilder"
     k in vm.photoFailed -> "Fikk ikke lastet bildet · trykk for å prøve igjen"
     k == "oslo" -> "Bilde av Oslo"
     k == "weather" -> "Følger været nå"
-    k == "planets" -> "Ny planet hver dag (NASA)"
+    k == "planets" -> if (vm.bgRotate == "hourly") "Ny planet hver time (NASA)" else "Ny planet hver dag (NASA)"
     else -> "Ditt eget bilde"
 }
 

@@ -1672,7 +1672,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private fun pushDesign() {
         viewModelScope.launch {
             runCatching {
-                api.hlPut("/me/layout", JSONObject().put("mobileDesign", option(AppPrefs.MOBILE_DESIGN, "klassisk")).put("paperMode", paperMode).put("photo", photoKind))
+                api.hlPut("/me/layout", JSONObject().put("mobileDesign", option(AppPrefs.MOBILE_DESIGN, "klassisk")).put("paperMode", paperMode)
+                    .put("photo", if (photoKind == "none") "cur" else photoKind).put("bgType", photoKind))
             }
         }
     }
@@ -1685,6 +1686,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (x.trkOrder.isNotEmpty()) trkOrder = normalizeTrkOrder(x.trkOrder)
         applyLayout15(raw)
         applyLayout16(raw)
+        applyLayout19(raw)
         val obKey = AppPrefs.ONBOARDED + (account?.id ?: "")
         onboardNeeded = x.onboarded == false && !prefs.bool(obKey)
         if (prefs.bool(AppPrefs.DESIGN_SYNCED)) return
@@ -1692,6 +1694,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         x.mobileDesign?.takeIf { it == "papir" || (it == "klassisk" && !prefs.bool(AppPrefs.FRESH_PAPIR)) }?.let { prefs.set(AppPrefs.MOBILE_DESIGN, it) }
         x.paperMode?.takeIf { it in setOf("auto", "lys", "mork") }?.let { prefs.set(AppPrefs.PAPER_MODE, it) }
         x.photo?.takeIf { it in setOf("cur", "oslo", "weather", "planets", "custom") }?.let { prefs.set(AppPrefs.PHOTO, it) }
+        runCatching { parseBgSettings(raw).type }.getOrNull()?.takeIf { it in BG_KINDS }?.let { prefs.set(AppPrefs.PHOTO, it) }
         prefs.set(AppPrefs.DESIGN_SYNCED, true)
         prefTick++
     }
@@ -1700,7 +1703,23 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     private suspend fun loadPhotoNow() {
         val kind = photoKind
-        if (kind == "cur") { photo = null; photoGradient = emptyList(); photoCredit = null; photoError = null; return }
+        if (kind == "cur" || kind == "none") { photo = null; photoGradient = emptyList(); photoCredit = null; photoError = null; bgInfo = null; return }
+        // Prompt 19: felles bakgrunnstjeneste. Eldre servere uten /api/background faller tilbake til /api/photo-window.
+        val bg = backgroundFor(kind)
+        if (bg != null) {
+            val (info, bmp) = bg
+            bgInfo = info
+            photoGradient = info.colors
+            photoCredit = info.credit?.line
+            photo = bmp
+            photoThumbs = photoThumbs + (kind to bmp)
+            if (bmp == null && info.imageUrl != null) {
+                photoFailed = photoFailed + kind
+                photoError = if (bgCacheOnly()) "Nye bilder lastes bare ned på Wi-Fi" else "Fikk ikke lastet bildet · trykk for å prøve igjen"
+            } else { photoFailed = photoFailed - kind; photoError = null }
+            return
+        }
+        bgInfo = null
         val (pw, bmp) = photoFor(kind)
         photoGradient = pw?.gradient ?: emptyList()
         photoCredit = pw?.credit
@@ -1738,6 +1757,78 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             photoGradient = emptyList()
             flash("Bakgrunnen er oppdatert")
         } finally { busy = false }
+    }
+
+    /* ---------- Prompt 19: dynamiske bakgrunner (GET /api/background) ---------- */
+
+    /** Siste svar fra bakgrunnstjenesten (tema-hint, partikler, kreditering). null = gammel server eller ingen bakgrunn. */
+    var bgInfo by mutableStateOf<BgInfo?>(null)
+        private set
+    /** Forhåndsvisningene i Innstillinger → Bakgrunn (kreditering og tema-hint per type). */
+    var bgPreviewInfo by mutableStateOf<Map<String, BgInfo>>(emptyMap())
+        private set
+    val bgPlanet: String get() = option(AppPrefs.BG_PLANET, "auto")
+    val bgRotate: String get() = option(AppPrefs.BG_ROTATE, "daily")
+    val bgBlur: Int get() = optionInt(AppPrefs.BG_BLUR, 0).coerceIn(0, 20)
+    val bgDim: Int get() = optionInt(AppPrefs.BG_DIM, 0).coerceIn(0, 60)
+    val bgWifiOnly: Boolean get() = flag(AppPrefs.BG_WIFI, false)
+    val bgAnimate: Boolean get() = flag(AppPrefs.BG_ANIMATE, true)
+
+    /** Lagrer ett bakgrunnsvalg lokalt og på serveren (synkes til web). Planet og bytte henter et nytt bilde. */
+    fun updateBgSetting(key: String, value: Any) {
+        setPref(key, value)
+        viewModelScope.launch {
+            runCatching {
+                api.hlPut("/me/layout", JSONObject().put("bgType", photoKind).put("bgPlanet", bgPlanet).put("bgRotate", bgRotate)
+                    .put("bgBlur", bgBlur).put("bgDim", bgDim).put("bgWifiOnly", bgWifiOnly).put("bgAnimate", bgAnimate))
+            }
+        }
+        if (key == AppPrefs.BG_PLANET || key == AppPrefs.BG_ROTATE) { photoThumbs = photoThumbs - "planets"; if (photoKind == "planets") loadPhoto() else loadPhotoThumbs() }
+        if (key == AppPrefs.BG_WIFI && value == false) loadPhoto()
+    }
+
+    /** Valgene fra serveren (satt på web eller en annen enhet). */
+    fun applyLayout19(raw: String) {
+        val b = runCatching { parseBgSettings(raw) }.getOrNull() ?: return
+        b.planet?.takeIf { it in BG_PLANETS.map { p -> p.first } }?.let { prefs.set(AppPrefs.BG_PLANET, it) }
+        b.rotate?.takeIf { it == "daily" || it == "hourly" }?.let { prefs.set(AppPrefs.BG_ROTATE, it) }
+        b.blur?.let { prefs.set(AppPrefs.BG_BLUR, it.coerceIn(0, 20)) }
+        b.dim?.let { prefs.set(AppPrefs.BG_DIM, it.coerceIn(0, 60)) }
+        b.wifiOnly?.let { prefs.set(AppPrefs.BG_WIFI, it) }
+        b.animate?.let { prefs.set(AppPrefs.BG_ANIMATE, it) }
+        prefTick++
+    }
+
+    /** På mobildata med «Kun på Wi-Fi»: ingen nye nedlastinger, bare hurtigbufferen. */
+    fun bgCacheOnly(): Boolean {
+        if (!bgWifiOnly) return false
+        val cm = getApplication<Application>().getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return true
+        return !caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+    }
+
+    /** Batterisparing eller «Fjern animasjoner» i systemet: ingen regn/snø over bakgrunnen. */
+    fun bgReduceMotion(): Boolean {
+        val ctx = getApplication<Application>()
+        val pm = ctx.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+        val scale = runCatching { android.provider.Settings.Global.getFloat(ctx.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) }.getOrDefault(1f)
+        return pm?.isPowerSaveMode == true || scale == 0f
+    }
+
+    private fun withSize(url: String, w: Int): String =
+        if (url.contains("/api/background/img/")) url + (if (url.contains('?')) "&" else "?") + "w=$w" else url
+
+    /** Bakgrunnen fra den felles tjenesten: svaret og bildet (skalert til skjermbredden). null = serveren mangler tjenesten. */
+    private suspend fun backgroundFor(kind: String): Pair<BgInfo, Bitmap?>? {
+        val dm = getApplication<Application>().resources.displayMetrics
+        val w = minOf(dm.widthPixels, 2560)
+        val q = "type=" + URLEncoder.encode(kind, "UTF-8") + "&w=$w&h=${minOf(dm.heightPixels, 2560)}&dpr=1"
+        val info = runCatching { parseBackground(api.hlGet("/background?$q", timeout = 8000)) }.getOrNull() ?: return null
+        for (u in listOfNotNull(info.imageUrl) + info.fallbacks) {
+            if (u.isBlank() || u.substringBefore('?').endsWith(".svg", true)) continue
+            bgImage(u)?.let { return info to it }
+        }
+        return info to null
     }
 
     /* ---------- Nyhetsleser (/api/rss) ---------- */
@@ -2004,7 +2095,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val ctx = getApplication<Application>()
         val dir = File(ctx.cacheDir, "bg").apply { mkdirs() }
         val f = File(dir, Integer.toHexString(url.hashCode()) + ".img")
-        val fresh = f.exists() && System.currentTimeMillis() - f.lastModified() < 3_600_000L
+        // «Kun på Wi-Fi»: på mobildata brukes bare det som allerede ligger i hurtigbufferen.
+        val fresh = f.exists() && (bgCacheOnly() || System.currentTimeMillis() - f.lastModified() < 3_600_000L)
+        if (!f.exists() && bgCacheOnly()) return null
         val data: ByteArray? = if (fresh) withContext(Dispatchers.IO) { runCatching { f.readBytes() }.getOrNull() } else runCatching {
             val b = base.trimEnd('/')
             when {
@@ -2031,6 +2124,24 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Miniatyrene i bakgrunnsvelgeren (hentes når menyen åpnes). */
     fun loadPhotoThumbs() {
+        viewModelScope.launch {
+            val pv = runCatching { parseBgPreviews(api.hlGet("/background/previews", timeout = 8000)) }.getOrNull()
+            if (pv.isNullOrEmpty()) { loadPhotoThumbsOld(); return@launch }
+            bgPreviewInfo = pv
+            for ((k, info) in pv) {
+                if (photoThumbs[k] != null && k !in photoFailed) continue
+                viewModelScope.launch {
+                    var b: Bitmap? = null
+                    for (u in listOfNotNull(info.imageUrl) + info.fallbacks) { if (u.isBlank() || u.substringBefore('?').endsWith(".svg", true)) continue; b = bgImage(withSize(u, 320)); if (b != null) break }
+                    photoThumbs = photoThumbs + (k to b)
+                    photoFailed = if (b == null && info.imageUrl != null) photoFailed + k else photoFailed - k
+                }
+            }
+            if (photoKind == "custom" && photo != null) photoThumbs = photoThumbs + ("custom" to photo)
+        }
+    }
+
+    private fun loadPhotoThumbsOld() {
         for (k in listOf("oslo", "weather", "planets")) {
             if (photoThumbs.containsKey(k) && k !in photoFailed) continue
             viewModelScope.launch {
