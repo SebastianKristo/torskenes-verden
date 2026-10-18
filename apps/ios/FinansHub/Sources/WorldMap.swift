@@ -87,7 +87,7 @@ struct WorldMapView: View {
                     let v = values[id]
                     VStack(alignment: .leading, spacing: 2) {
                         Text(v?.name.isEmpty == false ? v!.name : c.name).font(.footnote.weight(.semibold))
-                        Text(v.map { "\(count($0.visitors)) besøk" } ?? "Ingen besøk").font(.caption).foregroundStyle(.white.opacity(0.75))
+                        Text(v.map { "\(count($0.visitors)) besøk" } ?? "Ingen besøk").font(.caption).foregroundStyle(Color.skinFg.opacity(0.75))
                     }
                     .padding(.horizontal, 12).padding(.vertical, 8).glass(14).padding(6)
                 }
@@ -143,13 +143,13 @@ struct VisitsMap: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("BESØK PER LAND").font(.footnote.weight(.semibold)).foregroundStyle(Color.domPink)
             if countries.isEmpty {
-                Text(loaded ? "Kartet kunne ikke lastes." : "Laster kartet …").font(.footnote).foregroundStyle(.white.opacity(0.6)).frame(maxWidth: .infinity, minHeight: 120)
+                Text(loaded ? "Kartet kunne ikke lastes." : "Laster kartet …").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).frame(maxWidth: .infinity, minHeight: 120)
             } else {
                 WorldMapView(countries: countries, values: vals)
                 HStack(spacing: 6) {
-                    Text("Få").font(.caption2).foregroundStyle(.white.opacity(0.6))
+                    Text("Få").font(.caption2).foregroundStyle(Color.skinFg.opacity(0.6))
                     LinearGradient(colors: [Color(hex: "#4a2433"), Color(hex: "#FFB1C8")], startPoint: .leading, endPoint: .trailing).frame(height: 6).clipShape(Capsule())
-                    Text("Mange").font(.caption2).foregroundStyle(.white.opacity(0.6))
+                    Text("Mange").font(.caption2).foregroundStyle(Color.skinFg.opacity(0.6))
                 }
             }
         }

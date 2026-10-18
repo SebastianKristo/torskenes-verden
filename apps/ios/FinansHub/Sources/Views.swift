@@ -7,7 +7,8 @@ import UniformTypeIdentifiers
 extension View {
     /// iOS 26 Liquid Glass når tilgjengelig, ellers uskarpt materiale med lys kant (samme uttrykk som designet 1a).
     @ViewBuilder func glass(_ radius: CGFloat = 24, tint: Color? = nil) -> some View {
-        if DesignStyle.material { materialSurface(radius, tint: tint) } else { glassIOS(radius, tint: tint) }
+        if let p = PaperSkin.palette { paperSurface(p, radius, tint: tint) }
+        else if DesignStyle.material { materialSurface(radius, tint: tint) } else { glassIOS(radius, tint: tint) }
     }
 
     /// Material 3: tonal flate (kort #261E19), tint som containerfarge.
@@ -30,7 +31,7 @@ extension View {
     func fallbackGlass(_ radius: CGFloat, tint: Color?) -> some View {
         self.background((tint ?? .white).opacity(tint == nil ? 0.08 : 0.55), in: RoundedRectangle(cornerRadius: radius))
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: radius))
-            .overlay(RoundedRectangle(cornerRadius: radius).stroke(.white.opacity(0.2), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: radius).stroke(Color.skinFg.opacity(0.2), lineWidth: 1))
     }
 }
 
@@ -39,8 +40,8 @@ struct Backdrop: View {
     @Environment(Store.self) private var store
     var body: some View {
         ZStack {
-            Color(hex: DesignStyle.material ? "#19120E" : "#07070A")
-            if store.colorBg && !DesignStyle.material {
+            if let p = PaperSkin.palette { p.bg } else { Color(hex: DesignStyle.material ? "#19120E" : "#07070A") }
+            if store.colorBg && !DesignStyle.material && PaperSkin.palette == nil {
             Circle().fill(Color.accent).frame(width: 300).blur(radius: 90).opacity(0.55).offset(x: -140, y: -220)
             Circle().fill(Color(hex: "#4D6BFF")).frame(width: 260).blur(radius: 90).opacity(0.45).offset(x: 150, y: 80)
             Circle().fill(Color(hex: "#C24E17")).frame(width: 220).blur(radius: 80).opacity(0.4).offset(x: -40, y: 360)
@@ -59,7 +60,14 @@ struct Empty: View {
 
 struct SectionLabel: View {
     let text: String
-    var body: some View { Text(text.uppercased()).font(.footnote.weight(.semibold)).foregroundStyle(.white.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 6).padding(.top, 6) }
+    var body: some View {
+        if let p = PaperSkin.palette {
+            // I Papir: etikett i IBM Plex Mono med aksentfarge, som i designet.
+            Text(text.uppercased()).font(PF.mono(10.5)).tracking(1.2).foregroundStyle(p.lab).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4).padding(.top, 8)
+        } else {
+            Text(text.uppercased()).font(.footnote.weight(.semibold)).foregroundStyle(Color.skinFg.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 6).padding(.top, 6)
+        }
+    }
 }
 
 struct Initial: View {
@@ -106,14 +114,14 @@ struct TxRow: View {
             Logo(domain: tx.domain, name: tx.description, color: tx.color)
             VStack(alignment: .leading, spacing: 2) {
                 Text(tx.description).fontWeight(.medium).lineLimit(1)
-                Text("\(ddmm(tx.date)) · \(tx.category)").font(.footnote).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
+                Text("\(ddmm(tx.date)) · \(tx.category)").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).lineLimit(1)
                 AiLine(text: tx.aiShort)
             }
             Spacer(minLength: 8)
-            Text(signed(tx.amount)).font(.system(.body, design: .monospaced).weight(.semibold)).foregroundStyle(tx.amount > 0 ? Color.positive : .white)
+            Text(signed(tx.amount)).font(.system(.body, design: .monospaced).weight(.semibold)).foregroundStyle(tx.amount > 0 ? Color.positive : Color.skinFg)
         }
         .padding(.horizontal, 16).padding(.vertical, 12)
-        .background(selected ? Color.white.opacity(0.1) : .clear)
+        .background(selected ? Color.skinFg.opacity(0.1) : .clear)
         .contentShape(Rectangle())
     }
 }
@@ -124,7 +132,7 @@ struct TxList: View {
     var body: some View {
         VStack(spacing: 0) {
             ForEach(Array(items.enumerated()), id: \.element.id) { i, t in
-                if i > 0 { Divider().overlay(.white.opacity(0.12)) }
+                if i > 0 { Divider().overlay(Color.skinFg.opacity(0.12)) }
                 TxRow(tx: t, selected: store.selectedTx == t.id).onTapGesture { store.selectedTx = t.id }
             }
         }
@@ -138,19 +146,19 @@ struct Hero: View {
         if let s = store.summary {
             let pct = s.budgetTotal > 0 ? min(1, s.budgetUsed / s.budgetTotal) : 0
             VStack(alignment: .leading, spacing: 12) {
-                Text("Igjen å bruke i \(monthLabel(s.month).lowercased())").font(.subheadline).foregroundStyle(.white.opacity(0.75))
+                Text("Igjen å bruke i \(monthLabel(s.month).lowercased())").font(.subheadline).foregroundStyle(Color.skinFg.opacity(0.75))
                 HStack(alignment: .firstTextBaseline, spacing: 0) {
                     Text(neg0(s.left)).font(.system(size: 42, weight: .semibold, design: .monospaced))
-                    Text(" kr").font(.title3).foregroundStyle(.white.opacity(0.65))
+                    Text(" kr").font(.title3).foregroundStyle(Color.skinFg.opacity(0.65))
                 }
                 GeometryReader { g in
                     ZStack(alignment: .leading) {
-                        Capsule().fill(.white.opacity(0.14))
+                        Capsule().fill(Color.skinFg.opacity(0.14))
                         Capsule().fill(Color(hex: "#FF8A4C")).frame(width: g.size.width * pct)
                     }
                 }.frame(height: 10)
                 HStack { Text("Brukt \(n0(s.budgetUsed)) kr"); Spacer(); Text("\(n0(max(0, s.left) / Double(max(1, s.daysLeft)))) kr/dag") }
-                    .font(.footnote).foregroundStyle(.white.opacity(0.7))
+                    .font(.footnote).foregroundStyle(Color.skinFg.opacity(0.7))
             }
             .padding(22).glass(30)
         } else {
@@ -169,10 +177,10 @@ struct ReviewCTA: View {
                     Text("\(q.count)").fontWeight(.bold).foregroundStyle(Color.ink).frame(width: 36, height: 36).background(Color.accent, in: Circle())
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Kvitteringer til gjennomgang").fontWeight(.semibold).foregroundStyle(Color.accentLight)
-                        Text(q.map { $0.merchant ?? "Ny" }.joined(separator: " · ")).font(.footnote).foregroundStyle(.white.opacity(0.75)).lineLimit(1)
+                        Text(q.map { $0.merchant ?? "Ny" }.joined(separator: " · ")).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.75)).lineLimit(1)
                     }
                     Spacer()
-                    Image(systemName: "chevron.right").foregroundStyle(.white.opacity(0.6))
+                    Image(systemName: "chevron.right").foregroundStyle(Color.skinFg.opacity(0.6))
                 }
                 .padding(14).glass(24)
             }
@@ -190,7 +198,7 @@ struct HomeView: View {
             VStack(spacing: 14) {
                 HStack(alignment: .bottom) {
                     VStack(alignment: .leading) {
-                        Text("\(greetingWord()), \(store.displayName.split(separator: " ").first.map(String.init) ?? store.displayName)").font(.subheadline).foregroundStyle(.white.opacity(0.7))
+                        Text("\(greetingWord()), \(store.displayName.split(separator: " ").first.map(String.init) ?? store.displayName)").font(.subheadline).foregroundStyle(Color.skinFg.opacity(0.7))
                         Text(monthLabel(store.summary?.month ?? "")).font(.system(size: 34, weight: .bold))
                     }
                     Spacer()
@@ -224,14 +232,14 @@ struct ListView: View {
                     Text("Transaksjoner").font(.system(size: 34, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7)
                     Spacer()
                     Button { store.newTx() } label: {
-                        Image(systemName: "plus").font(.system(size: 17, weight: .semibold)).foregroundStyle(.white).frame(width: 44, height: 44).contentShape(Circle())
+                        Image(systemName: "plus").font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.skinFg).frame(width: 44, height: 44).contentShape(Circle())
                     }
                     .buttonStyle(GlassPress()).glassRound().accessibilityLabel("Ny transaksjon")
                     Avatar()
                 }
                 .padding(.top, 6)
                 HStack(spacing: 10) {
-                    Image(systemName: "magnifyingglass").font(.system(size: 18)).foregroundStyle(.white.opacity(0.6))
+                    Image(systemName: "magnifyingglass").font(.system(size: 18)).foregroundStyle(Color.skinFg.opacity(0.6))
                     TextField("Søk i transaksjoner", text: $s.query).submitLabel(.search).onSubmit { store.search() }
                         .textInputAutocapitalization(.never)
                 }
@@ -241,7 +249,7 @@ struct ListView: View {
                         ForEach([("", "Alle"), ("ut", "Utgifter"), ("inn", "Inntekter")], id: \.0) { k, n in
                             Button { store.filter = k; store.search() } label: {
                                 Text(n).font(.subheadline).padding(.horizontal, 14).frame(height: 36)
-                                    .foregroundStyle(store.filter == k ? Color.ink : .white)
+                                    .foregroundStyle(store.filter == k ? Color.ink : Color.skinFg)
                             }
                             .glass(18, tint: store.filter == k ? .accent : nil)
                         }
@@ -283,26 +291,26 @@ struct BudgetView: View {
                         HStack {
                             Text(b.category).fontWeight(.semibold)
                             Spacer()
-                            Text("\(n0(b.used)) / \(n0(b.budget))").font(.system(.subheadline, design: .monospaced)).foregroundStyle(over ? Color.accentLight : .white.opacity(0.7))
+                            Text("\(n0(b.used)) / \(n0(b.budget))").font(.system(.subheadline, design: .monospaced)).foregroundStyle(over ? Color.accentLight : Color.skinFg.opacity(0.7))
                         }
                         GeometryReader { g in
                             ZStack(alignment: .leading) {
-                                Capsule().fill(.white.opacity(0.14))
+                                Capsule().fill(Color.skinFg.opacity(0.14))
                                 Capsule().fill(over ? Color.accent : Color(hex: b.color)).frame(width: g.size.width * min(1, b.used / b.budget))
                             }
                         }.frame(height: 8)
                         let days = Double(max(1, store.summary?.daysLeft ?? 1))
                         HStack {
                             Text(over ? "Over med \(n0(b.used - b.budget)) kr" : "\(n0(b.budget - b.used)) kr igjen · \(n0((b.budget - b.used) / days)) kr/dag")
-                                .foregroundStyle(over ? Color.accentLight : .white.opacity(0.7))
+                                .foregroundStyle(over ? Color.accentLight : Color.skinFg.opacity(0.7))
                             Spacer()
-                            Text("\(Int(b.used / b.budget * 100)) % brukt").foregroundStyle(.white.opacity(0.6))
+                            Text("\(Int(b.used / b.budget * 100)) % brukt").foregroundStyle(Color.skinFg.opacity(0.6))
                         }
                         .font(.footnote)
                         let chips = budgetChips(b)
                         if !chips.isEmpty {
                             ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 6) { ForEach(chips, id: \.self) { Text($0).font(.caption).padding(.horizontal, 8).padding(.vertical, 4).background(.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 8)) } }
+                                HStack(spacing: 6) { ForEach(chips, id: \.self) { Text($0).font(.caption).padding(.horizontal, 8).padding(.vertical, 4).background(Color.skinFg.opacity(0.1), in: RoundedRectangle(cornerRadius: 8)) } }
                             }
                         }
                     }
@@ -317,7 +325,7 @@ struct BudgetView: View {
         .refreshable { try? await store.reload() }
     }
     private func stat(_ k: String, _ v: String) -> some View {
-        VStack(spacing: 2) { Text(k).font(.caption).foregroundStyle(.white.opacity(0.6)); Text(v).font(.system(.headline, design: .monospaced)) }.frame(maxWidth: .infinity)
+        VStack(spacing: 2) { Text(k).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)); Text(v).font(.system(.headline, design: .monospaced)) }.frame(maxWidth: .infinity)
     }
     private func budgetChips(_ b: Budget) -> [String] {
         var c: [String] = []
@@ -337,9 +345,9 @@ struct BudgetDetail: View {
                 VStack(alignment: .leading, spacing: 14) {
                     Text(b.category).font(.title.weight(.bold))
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Brukt av \(n0(b.budget)) kr").foregroundStyle(.white.opacity(0.7))
+                        Text("Brukt av \(n0(b.budget)) kr").foregroundStyle(Color.skinFg.opacity(0.7))
                         Text("\(n0(b.used)) kr").font(.system(size: 36, weight: .semibold, design: .monospaced))
-                        Text(b.used > b.budget ? "Over budsjett med \(n0(b.used - b.budget)) kr." : "\(n0(b.budget - b.used)) kr igjen denne måneden.").foregroundStyle(.white.opacity(0.75))
+                        Text(b.used > b.budget ? "Over budsjett med \(n0(b.used - b.budget)) kr." : "\(n0(b.budget - b.used)) kr igjen denne måneden.").foregroundStyle(Color.skinFg.opacity(0.75))
                     }
                     .padding(20).frame(maxWidth: .infinity, alignment: .leading).glass(28)
                     if !items.isEmpty { SectionLabel(text: "Transaksjoner"); TxList(items: items) }
@@ -363,11 +371,11 @@ struct TxDetail: View {
                     if back { HStack { GlassBack { store.back() }; Spacer(); Avatar() } }
                     HStack(spacing: 14) {
                         Logo(domain: t.domain, name: t.description, color: t.color, size: 60)
-                        VStack(alignment: .leading) { Text(t.description).font(.title2.weight(.bold)); Text(dayLabel(t.date)).foregroundStyle(.white.opacity(0.7)) }
+                        VStack(alignment: .leading) { Text(t.description).font(.title2.weight(.bold)); Text(dayLabel(t.date)).foregroundStyle(Color.skinFg.opacity(0.7)) }
                     }
                     HStack(alignment: .firstTextBaseline, spacing: 0) {
-                        Text(signed(t.amount)).font(.system(size: 40, weight: .semibold, design: .monospaced)).foregroundStyle(t.amount > 0 ? Color.positive : .white)
-                        Text(" kr").font(.title3).foregroundStyle(.white.opacity(0.6))
+                        Text(signed(t.amount)).font(.system(size: 40, weight: .semibold, design: .monospaced)).foregroundStyle(t.amount > 0 ? Color.positive : Color.skinFg)
+                        Text(" kr").font(.title3).foregroundStyle(Color.skinFg.opacity(0.6))
                     }
                     if let ai = t.aiLong ?? t.aiShort {
                         VStack(alignment: .leading, spacing: 6) {
@@ -390,17 +398,17 @@ struct TxDetail: View {
                         original("Original kvittering", hasReceipt ? (t.receipt == "booked" || t.receiptId != nil ? "Bilde eller PDF" : "Til gjennomgang") : "Ingen vedlagt", "doc.text.image", enabled: hasReceipt) {
                             store.openOriginal(t.id, "receipt")
                         }
-                        Divider().overlay(.white.opacity(0.12))
+                        Divider().overlay(Color.skinFg.opacity(0.12))
                         original("Banktransaksjon", "Slik den kom fra banken", "building.columns", enabled: true) { store.openOriginal(t.id, "bank") }
                     }
                     .glass(24)
                     VStack(spacing: 0) {
-                        row("Dato", ddmmyyyy(t.date)); Divider().overlay(.white.opacity(0.12))
-                        row("Kategori", t.category); Divider().overlay(.white.opacity(0.12))
-                        row("Konto", t.account); Divider().overlay(.white.opacity(0.12))
-                        row("Kvittering", t.receipt == "booked" ? "Vedlagt" : t.receipt == nil ? "–" : "Til gjennomgang"); Divider().overlay(.white.opacity(0.12))
+                        row("Dato", ddmmyyyy(t.date)); Divider().overlay(Color.skinFg.opacity(0.12))
+                        row("Kategori", t.category); Divider().overlay(Color.skinFg.opacity(0.12))
+                        row("Konto", t.account); Divider().overlay(Color.skinFg.opacity(0.12))
+                        row("Kvittering", t.receipt == "booked" ? "Vedlagt" : t.receipt == nil ? "–" : "Til gjennomgang"); Divider().overlay(Color.skinFg.opacity(0.12))
                         row("Bolig", t.folder ?? "–")
-                        if !t.note.isEmpty { Divider().overlay(.white.opacity(0.12)); row("Notat", t.note) }
+                        if !t.note.isEmpty { Divider().overlay(Color.skinFg.opacity(0.12)); row("Notat", t.note) }
                     }
                     .glass(24)
                     Menu {
@@ -425,15 +433,15 @@ struct TxDetail: View {
         } else { Empty(text: "Ingen transaksjon valgt.") }
     }
     private func row(_ k: String, _ v: String) -> some View {
-        HStack { Text(k).foregroundStyle(.white.opacity(0.65)); Spacer(); Text(v).fontWeight(.medium) }.padding(.horizontal, 16).padding(.vertical, 14)
+        HStack { Text(k).foregroundStyle(Color.skinFg.opacity(0.65)); Spacer(); Text(v).fontWeight(.medium) }.padding(.horizontal, 16).padding(.vertical, 14)
     }
     private func original(_ title: String, _ sub: String, _ icon: String, enabled: Bool, _ act: @escaping () -> Void) -> some View {
         Button(action: act) {
             HStack(spacing: 12) {
-                Image(systemName: icon).foregroundStyle(Color.accentLight).frame(width: 36, height: 36).background(.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 11))
-                VStack(alignment: .leading, spacing: 2) { Text(title).fontWeight(.medium); Text(sub).font(.footnote).foregroundStyle(.white.opacity(0.6)) }
+                Image(systemName: icon).foregroundStyle(Color.accentLight).frame(width: 36, height: 36).background(Color.skinFg.opacity(0.1), in: RoundedRectangle(cornerRadius: 11))
+                VStack(alignment: .leading, spacing: 2) { Text(title).fontWeight(.medium); Text(sub).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)) }
                 Spacer()
-                Image(systemName: "chevron.right").foregroundStyle(.white.opacity(0.45))
+                Image(systemName: "chevron.right").foregroundStyle(Color.skinFg.opacity(0.45))
             }
             .padding(.horizontal, 16).padding(.vertical, 12).contentShape(Rectangle())
         }
@@ -451,12 +459,12 @@ struct ScanView: View {
             VStack(spacing: 12) {
                 ModuleHeader(title: "Kvitteringer")
                 if !store.offline.isEmpty {
-                    Text("\(store.offline.count) venter på nett\(store.wifiOnly ? " (bare Wi-Fi)" : "") · lastes opp ved neste synk").font(.footnote).foregroundStyle(.white.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading)
+                    Text("\(store.offline.count) venter på nett\(store.wifiOnly ? " (bare Wi-Fi)" : "") · lastes opp ved neste synk").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading)
                 }
                 Button(action: scan) {
                     HStack(spacing: 14) {
                         Image(systemName: "camera.fill").foregroundStyle(Color.ink).frame(width: 36, height: 36).background(Color.accent, in: Circle())
-                        VStack(alignment: .leading) { Text("Ta bilde av kvittering").fontWeight(.semibold); Text("Bakkamera").font(.footnote).foregroundStyle(.white.opacity(0.7)) }
+                        VStack(alignment: .leading) { Text("Ta bilde av kvittering").fontWeight(.semibold); Text("Bakkamera").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.7)) }
                         Spacer()
                     }
                     .padding(14).glass(24)
@@ -475,19 +483,19 @@ struct ScanView: View {
                     SectionLabel(text: "Til gjennomgang")
                     VStack(spacing: 0) {
                         ForEach(Array(q.enumerated()), id: \.element.id) { i, r in
-                            if i > 0 { Divider().overlay(.white.opacity(0.12)) }
+                            if i > 0 { Divider().overlay(Color.skinFg.opacity(0.12)) }
                             Button { store.selectedReceipt = r.id } label: {
                                 HStack(spacing: 12) {
                                     Thumb(path: r.thumb)
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(r.merchant ?? "Ny kvittering").fontWeight(.medium)
-                                        Text(r.status == "needs_review" ? "\(ddmm(r.date)) · \(r.provider ?? "manuell")" : "Leser …").font(.footnote).foregroundStyle(.white.opacity(0.6))
+                                        Text(r.status == "needs_review" ? "\(ddmm(r.date)) · \(r.provider ?? "manuell")" : "Leser …").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6))
                                     }
                                     Spacer()
                                     if let t = r.total { Text(n2(t)).font(.system(.body, design: .monospaced)) }
                                 }
                                 .padding(.horizontal, 16).padding(.vertical, 12)
-                                .background(store.selectedReceipt == r.id ? Color.white.opacity(0.1) : .clear)
+                                .background(store.selectedReceipt == r.id ? Color.skinFg.opacity(0.1) : .clear)
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
@@ -531,11 +539,11 @@ struct ConfirmView: View {
                     HStack {
                         if back { GlassBack { store.selectedReceipt = nil } }
                         Spacer()
-                        if let i = queue.firstIndex(where: { $0.id == r.id }) { Text("\(i + 1) av \(queue.count)").foregroundStyle(.white.opacity(0.7)) }
+                        if let i = queue.firstIndex(where: { $0.id == r.id }) { Text("\(i + 1) av \(queue.count)").foregroundStyle(Color.skinFg.opacity(0.7)) }
                     }
                     Text("Bekreft kvittering").font(.system(size: 28, weight: .bold))
                     if r.status != "needs_review" && r.status != "error" {
-                        VStack(spacing: 14) { ProgressView().controlSize(.large); Text("Leser kvitteringen …").foregroundStyle(.white.opacity(0.7)) }.frame(maxWidth: .infinity).padding(50)
+                        VStack(spacing: 14) { ProgressView().controlSize(.large); Text("Leser kvitteringen …").foregroundStyle(Color.skinFg.opacity(0.7)) }.frame(maxWidth: .infinity).padding(50)
                     } else {
                         paper(r)
                         let minC = Double(store.boot?.settings.minConf ?? 85) / 100
@@ -545,23 +553,23 @@ struct ConfirmView: View {
                             Spacer()
                             Text("● " + (r.error != nil ? "Fyll ut" : high ? "Høy sikkerhet" : "Sjekk beløp")).foregroundStyle(high ? Color.positive : Color.accentLight).fontWeight(.semibold)
                         }
-                        .font(.footnote).foregroundStyle(.white.opacity(0.7)).padding(.horizontal, 6)
+                        .font(.footnote).foregroundStyle(Color.skinFg.opacity(0.7)).padding(.horizontal, 6)
                         if let e = r.error { Text(e).font(.footnote).foregroundStyle(Color.accentLight).padding(.horizontal, 6) }
                         if store.canReanalyze(r) {
                             ReanalyzeButton(receiptId: r.id)
                         } else if let why = r.reanalyzeReason, r.error != nil {
-                            Text(why).font(.caption).foregroundStyle(.white.opacity(0.55)).padding(.horizontal, 6)
+                            Text(why).font(.caption).foregroundStyle(Color.skinFg.opacity(0.55)).padding(.horizontal, 6)
                         }
                         VStack(spacing: 0) {
                             field("Butikk") { TextField("Butikk", text: $merchant).multilineTextAlignment(.trailing).onSubmit { store.update(r.id, "merchant", merchant) } }
-                            Divider().overlay(.white.opacity(0.12))
+                            Divider().overlay(Color.skinFg.opacity(0.12))
                             field("Dato") { DatePicker("", selection: $date, displayedComponents: .date).labelsHidden().onChange(of: date) { _, d in store.update(r.id, "date", iso(d)) } }
-                            Divider().overlay(.white.opacity(0.12))
+                            Divider().overlay(Color.skinFg.opacity(0.12))
                             field("Total") {
                                 TextField("0,00", text: $total).keyboardType(.decimalPad).multilineTextAlignment(.trailing).font(.system(.body, design: .monospaced)).foregroundStyle(Color.accentLight)
                                     .onSubmit { saveTotal(r) }
                             }
-                            Divider().overlay(.white.opacity(0.12))
+                            Divider().overlay(Color.skinFg.opacity(0.12))
                             field("Konto") {
                                 Menu((store.boot?.accounts.first { $0.id == r.accountId })?.name ?? "Velg") {
                                     ForEach(store.boot?.accounts ?? []) { a in Button(a.name) { store.update(r.id, "accountId", a.id) } }
@@ -571,12 +579,12 @@ struct ConfirmView: View {
                         .glass(24)
                         FlowChips(cats: (store.boot?.categories ?? []).filter { $0.kind == "expense" }, selected: r.categoryId) { store.update(r.id, "categoryId", $0) }
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(r.match != nil ? "Matchet mot kortkjøp" : "Ingen bankmatch").fontWeight(.semibold).foregroundStyle(r.match != nil ? Color.positive : .white)
-                            Text(r.match.map { "\(ddmm($0.date)) · \(signed($0.amount)) kr · \($0.account)" } ?? "Bokføres som ny transaksjon").foregroundStyle(.white.opacity(0.75))
+                            Text(r.match != nil ? "Matchet mot kortkjøp" : "Ingen bankmatch").fontWeight(.semibold).foregroundStyle(r.match != nil ? Color.positive : Color.skinFg)
+                            Text(r.match.map { "\(ddmm($0.date)) · \(signed($0.amount)) kr · \($0.account)" } ?? "Bokføres som ny transaksjon").foregroundStyle(Color.skinFg.opacity(0.75))
                         }
                         .font(.subheadline).padding(.horizontal, 16).padding(.vertical, 12).frame(maxWidth: .infinity, alignment: .leading)
-                        .background((r.match != nil ? Color.positive : .white).opacity(0.12), in: RoundedRectangle(cornerRadius: 20))
-                        .overlay(RoundedRectangle(cornerRadius: 20).stroke((r.match != nil ? Color.positive : .white).opacity(0.3)))
+                        .background((r.match != nil ? Color.positive : Color.skinFg).opacity(0.12), in: RoundedRectangle(cornerRadius: 20))
+                        .overlay(RoundedRectangle(cornerRadius: 20).stroke((r.match != nil ? Color.positive : Color.skinFg).opacity(0.3)))
                         HStack(spacing: 10) {
                             Button { store.reject(r.id) } label: { Text("Avvis").fontWeight(.semibold).frame(maxWidth: .infinity, minHeight: 52) }.glass(26)
                             Button { saveTotal(r); store.book(r.id) } label: { Text("Bokfør").fontWeight(.bold).foregroundStyle(Color.ink).frame(maxWidth: .infinity, minHeight: 52) }
@@ -621,7 +629,7 @@ struct ConfirmView: View {
     }
 
     private func field<C: View>(_ label: String, @ViewBuilder _ content: () -> C) -> some View {
-        HStack { Text(label).foregroundStyle(.white.opacity(0.65)); Spacer(); content() }.padding(.horizontal, 16).padding(.vertical, 10).frame(minHeight: 48)
+        HStack { Text(label).foregroundStyle(Color.skinFg.opacity(0.65)); Spacer(); content() }.padding(.horizontal, 16).padding(.vertical, 10).frame(minHeight: 48)
     }
 }
 
@@ -637,7 +645,7 @@ struct FlowChips: View {
         Flow(spacing: 8) {
             ForEach(cats) { c in
                 Button { pick(c.id) } label: {
-                    Text(c.name).font(.subheadline).padding(.horizontal, 14).frame(height: 36).foregroundStyle(selected == c.id ? Color.ink : .white)
+                    Text(c.name).font(.subheadline).padding(.horizontal, 14).frame(height: 36).foregroundStyle(selected == c.id ? Color.ink : Color.skinFg)
                 }
                 .buttonStyle(.plain)
                 .glass(18, tint: selected == c.id ? .accent : nil)
@@ -683,7 +691,7 @@ struct UploadPill: View {
                     if !active.isEmpty || store.uploading > 0 { ProgressView() } else { Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.positive) }
                     Text(label(active, ready)).fontWeight(.medium)
                     Spacer()
-                    Image(systemName: "chevron.right").foregroundStyle(.white.opacity(0.6))
+                    Image(systemName: "chevron.right").foregroundStyle(Color.skinFg.opacity(0.6))
                 }
                 .padding(.horizontal, 16).padding(.vertical, 12).glass(24)
             }
@@ -709,7 +717,7 @@ struct JobQueue: View {
             VStack(spacing: 0) {
                 if store.uploading > 0 { row("Laster opp \(store.uploading) fil" + (store.uploading > 1 ? "er" : ""), "Sender til serveren …", nil) }
                 ForEach(jobs) { j in
-                    Divider().overlay(.white.opacity(0.12))
+                    Divider().overlay(Color.skinFg.opacity(0.12))
                     HStack(spacing: 0) {
                         jobButton(j)
                         if showReanalyze(j) { ReanalyzeButton(receiptId: j.id, compact: true).padding(.trailing, 12) }
@@ -742,7 +750,7 @@ struct JobQueue: View {
     private func row(_ t: String, _ sub: String, _ p: Double?, ready: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(t).fontWeight(.medium).lineLimit(1)
-            Text(sub).font(.footnote).foregroundStyle(ready ? Color.positive : .white.opacity(0.6))
+            Text(sub).font(.footnote).foregroundStyle(ready ? Color.positive : Color.skinFg.opacity(0.6))
             if let p { ProgressView(value: p).tint(Color.accent) }
         }
         .padding(.horizontal, 16).padding(.vertical, 12).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
@@ -771,27 +779,27 @@ struct MatWeekView: View {
                     .buttonStyle(.plain).glass(26, tint: .accent)
                 if let w = store.week {
                     Text("Estimert ukekost \(n0(w.weekCost ?? 0)) kr" + ((w.auto ?? false) ? " · automatisk hver søndag" : ""))
-                        .font(.footnote).foregroundStyle(.white.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 6)
+                        .font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 6)
                     ForEach(w.days) { d in
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
-                                Text(d.weekday ?? ddmm(d.date)).font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.7))
+                                Text(d.weekday ?? ddmm(d.date)).font(.subheadline.weight(.semibold)).foregroundStyle(Color.skinFg.opacity(0.7))
                                 Spacer()
-                                if let src = d.source { Text(sourceLabel[src] ?? src).font(.caption.weight(.semibold)).padding(.horizontal, 8).padding(.vertical, 3).background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 8)) }
+                                if let src = d.source { Text(sourceLabel[src] ?? src).font(.caption.weight(.semibold)).padding(.horizontal, 8).padding(.vertical, 3).background(Color.skinFg.opacity(0.12), in: RoundedRectangle(cornerRadius: 8)) }
                             }
-                            Text(d.name ?? "Ingen rett ennå").font(.title3.weight(.semibold)).foregroundStyle(d.name == nil ? Color.white.opacity(0.5) : Color.white)
+                            Text(d.name ?? "Ingen rett ennå").font(.title3.weight(.semibold)).foregroundStyle(d.name == nil ? Color.skinFg.opacity(0.5) : Color.skinFg)
                             HStack(spacing: 10) {
                                 Menu {
                                     ForEach(w.cooks ?? [], id: \.self) { c in Button(c) { store.setCook(d.date, c) } }
                                 } label: { Label(d.cook ?? "Velg kokk", systemImage: "person").font(.subheadline) }
-                                if let c = d.cost { Text("\(n0(c)) kr").font(.system(.subheadline, design: .monospaced)).foregroundStyle(.white.opacity(0.7)) }
+                                if let c = d.cost { Text("\(n0(c)) kr").font(.system(.subheadline, design: .monospaced)).foregroundStyle(Color.skinFg.opacity(0.7)) }
                                 Spacer()
                                 Button { store.toggleFixed(d) } label: {
                                     Text("Fast").font(.subheadline.weight(.semibold)).padding(.horizontal, 12).frame(height: 32)
-                                        .foregroundStyle((d.fixed ?? false) ? Color.positive : .white)
-                                        .background(((d.fixed ?? false) ? Color.positive : .white).opacity(0.14), in: Capsule())
+                                        .foregroundStyle((d.fixed ?? false) ? Color.positive : Color.skinFg)
+                                        .background(((d.fixed ?? false) ? Color.positive : Color.skinFg).opacity(0.14), in: Capsule())
                                 }
-                                Button { store.planDay(d.date) } label: { Text("✦").frame(width: 32, height: 32).background(.white.opacity(0.14), in: Circle()) }
+                                Button { store.planDay(d.date) } label: { Text("✦").frame(width: 32, height: 32).background(Color.skinFg.opacity(0.14), in: Circle()) }
                             }
                             .buttonStyle(.plain)
                         }
@@ -803,11 +811,11 @@ struct MatWeekView: View {
                         SectionLabel(text: "Alle retter (\(dishes.count))")
                         VStack(spacing: 0) {
                             ForEach(Array(dishes.enumerated()), id: \.element.id) { i, d in
-                                if i > 0 { Divider().overlay(.white.opacity(0.12)) }
+                                if i > 0 { Divider().overlay(Color.skinFg.opacity(0.12)) }
                                 HStack {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(d.name).fontWeight(.semibold).lineLimit(1)
-                                        Text("\((d.ing ?? []).count) ingredienser" + (d.src == "hellofresh" ? " · HelloFresh" : "")).font(.caption).foregroundStyle(.white.opacity(0.6))
+                                        Text("\((d.ing ?? []).count) ingredienser" + (d.src == "hellofresh" ? " · HelloFresh" : "")).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6))
                                     }
                                     Spacer()
                                 }
@@ -836,8 +844,8 @@ struct ShoppingList: View {
                 ForEach(items) { it in
                     Button { store.toggleShop(it.id) } label: {
                         HStack(spacing: 12) {
-                            Image(systemName: it.done ? "checkmark.circle.fill" : "circle").foregroundStyle(it.done ? Color.accent : .white.opacity(0.6))
-                            Text(it.text).strikethrough(it.done).foregroundStyle(it.done ? Color.white.opacity(0.5) : Color.white)
+                            Image(systemName: it.done ? "checkmark.circle.fill" : "circle").foregroundStyle(it.done ? Color.accent : Color.skinFg.opacity(0.6))
+                            Text(it.text).strikethrough(it.done).foregroundStyle(it.done ? Color.skinFg.opacity(0.5) : Color.skinFg)
                             Spacer()
                         }
                         .padding(.horizontal, 16).padding(.vertical, 12).contentShape(Rectangle())

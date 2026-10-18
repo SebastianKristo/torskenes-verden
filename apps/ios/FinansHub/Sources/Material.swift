@@ -89,7 +89,7 @@ struct M3NavBar: View {
     var body: some View {
         HStack(spacing: 0) {
             ForEach(Array(items.enumerated()), id: \.offset) { i, it in
-                if divider && i == 1 { Rectangle().fill(.white.opacity(0.16)).frame(width: 1, height: 32) }
+                if divider && i == 1 { Rectangle().fill(Color.skinFg.opacity(0.16)).frame(width: 1, height: 32) }
                 Button { if !it.2 { Haptics.shared.select() }; it.3() } label: {
                     VStack(spacing: 4) {
                         Image(systemName: it.1).font(.system(size: 18, weight: .semibold))

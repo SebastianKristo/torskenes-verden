@@ -52,7 +52,7 @@ struct SubView: View {
                     if s.items.isEmpty { Empty(text: "Ingen abonnementer ennå.") }
                     VStack(spacing: 0) {
                         ForEach(Array(s.items.enumerated()), id: \.element.id) { i, sub in
-                            if i > 0 { Divider().overlay(.white.opacity(0.12)) }
+                            if i > 0 { Divider().overlay(Color.skinFg.opacity(0.12)) }
                             row(sub)
                         }
                     }
@@ -77,13 +77,13 @@ struct SubView: View {
             Picker("Trekk", selection: $cycle) { ForEach(cycles, id: \.0) { Text($0.1).tag($0.0) } }.pickerStyle(.segmented)
             if let p {
                 Text(cycle == "yearly" ? "= \(n0(p / 12)) kr/mnd · \(n0(p)) kr/år" : cycle == "biennial" ? "= \(n0(p / 24)) kr/mnd · \(n0(p / 2)) kr/år" : "= \(n0(p)) kr/mnd · \(n0(p * 12)) kr/år")
-                    .font(.footnote).foregroundStyle(.white.opacity(0.65))
+                    .font(.footnote).foregroundStyle(Color.skinFg.opacity(0.65))
             }
             Button { store.addSub(name: name, plan: plan, price: price, cycle: cycle, next: next); adding = false; name = ""; plan = ""; price = ""; next = "" } label: {
                 Text("Legg til").fontWeight(.bold).foregroundStyle(Color.ink).frame(maxWidth: .infinity, minHeight: 48)
             }
             .buttonStyle(.plain).glass(24, tint: .accent).disabled(name.isEmpty || p == nil)
-            Text("Fra kvittering eller transaksjoner: bruk FinansHub på PC.").font(.caption).foregroundStyle(.white.opacity(0.55))
+            Text("Fra kvittering eller transaksjoner: bruk FinansHub på PC.").font(.caption).foregroundStyle(Color.skinFg.opacity(0.55))
         }
         .padding(16).glass(24)
     }
@@ -95,7 +95,7 @@ struct SubView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(s.name + (s.plan.map { " · \($0)" } ?? "")).fontWeight(.medium).lineLimit(1)
                 Text([s.nextDate.map { "Neste \(ddmm($0))" }, s.usageNote, cycles.first { $0.0 == s.cycle }?.1].compactMap { $0 }.joined(separator: " · "))
-                    .font(.footnote).foregroundStyle(low ? Color.accentLight : .white.opacity(0.6)).lineLimit(1)
+                    .font(.footnote).foregroundStyle(low ? Color.accentLight : Color.skinFg.opacity(0.6)).lineLimit(1)
                 AiLine(text: s.aiShort)
             }
             Spacer(minLength: 6)
@@ -123,7 +123,7 @@ struct FoldersView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     ModuleHeader(title: "Boliger")
-                    Text("Boliger, hytter og felles utgifter. Brukere ser bare mapper de er medlem av.").font(.footnote).foregroundStyle(.white.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading)
+                    Text("Boliger, hytter og felles utgifter. Brukere ser bare mapper de er medlem av.").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading)
                     if let e = store.moduleError { Empty(text: e) }
                     if let list = store.folders {
                         if list.isEmpty { Empty(text: "Ingen boliger ennå. Opprett en i FinansHub på PC.") }
@@ -134,7 +134,7 @@ struct FoldersView: View {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(f.name).fontWeight(.semibold).lineLimit(1)
                                         Text([f.type, f.address, (f.members ?? []).map(\.display).joined(separator: ", ")].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
-                                            .font(.footnote).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
+                                            .font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).lineLimit(1)
                                     }
                                     Spacer()
                                     Text("\(n0(f.total ?? 0)) kr").font(.system(.body, design: .monospaced).weight(.semibold))
@@ -168,7 +168,7 @@ struct FolderDetailView: View {
                 ModuleHeader(title: f.name, back: { store.folder = nil }, trailing: {
                     if !f.readOnly { Button { adding.toggle() } label: { Image(systemName: adding ? "xmark" : "plus").frame(width: 40, height: 40) }.buttonStyle(.plain).glass(20) }
                 })
-                Text([f.type, f.address, f.access.map { roleLabel[$0] ?? $0 }].compactMap { $0 }.joined(separator: " · ")).font(.footnote).foregroundStyle(.white.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading)
+                Text([f.type, f.address, f.access.map { roleLabel[$0] ?? $0 }].compactMap { $0 }.joined(separator: " · ")).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading)
                 if f.readOnly {
                     Text("Du har lesetilgang. Be en eier om redigeringstilgang for å legge til utgifter.").font(.footnote).padding(14).frame(maxWidth: .infinity, alignment: .leading).glass(18, tint: Color.accent.opacity(0.3))
                 }
@@ -189,7 +189,7 @@ struct FolderDetailView: View {
                         TextField("Beskrivelse", text: $desc).padding(.horizontal, 14).frame(height: 46).glass(16)
                         TextField("Beløp", text: $amount).keyboardType(.decimalPad).padding(.horizontal, 14).frame(height: 46).glass(16)
                         if targets.count > 1 {
-                            Text("Legg i bolig").font(.footnote).foregroundStyle(.white.opacity(0.65))
+                            Text("Legg i bolig").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.65))
                             Flow(spacing: 8) {
                                 ForEach(targets) { t in
                                     choice(t.name, (target ?? f.id) == t.id) { target = t.id; store.uploadFolder = t.id }
@@ -197,7 +197,7 @@ struct FolderDetailView: View {
                             }
                         }
                         Menu { ForEach(f.members ?? [], id: \.self) { m in Button(m.display) { payer = m.display } } } label: { Label("Betalt av \(payer ?? "meg")", systemImage: "person") }
-                        Text("Kategori").font(.footnote).foregroundStyle(.white.opacity(0.65))
+                        Text("Kategori").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.65))
                         Flow(spacing: 8) {
                             choice("✦ La AI velge", cat == nil) { cat = nil }
                             ForEach(store.boligCats) { c in
@@ -212,7 +212,7 @@ struct FolderDetailView: View {
                     }
                     .padding(16).glass(24)
                     .task { await store.loadBoligCategories() }
-                    Text("Skann her inne legger kvitteringen i boligen du har valgt, og AI velger kategori og underkategori.").font(.caption).foregroundStyle(.white.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading)
+                    Text("Skann her inne legger kvitteringen i boligen du har valgt, og AI velger kategori og underkategori.").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading)
                 }
                 if let cats = f.categories, !cats.isEmpty {
                     SectionLabel(text: "Kategorier")
@@ -225,7 +225,7 @@ struct FolderDetailView: View {
                                 // Fordeling på underkategorier («Hage og uteområde › Blomster»).
                                 ForEach(Array((c.children ?? []).enumerated()), id: \.offset) { _, k in
                                     HStack { Text("› \(k.name ?? "–")"); Spacer(); Text("\(n0(k.amount ?? 0)) kr").font(.system(.footnote, design: .monospaced)) }
-                                        .font(.footnote).foregroundStyle(.white.opacity(0.65)).padding(.leading, 12)
+                                        .font(.footnote).foregroundStyle(Color.skinFg.opacity(0.65)).padding(.leading, 12)
                                 }
                             }
                         }
@@ -236,10 +236,10 @@ struct FolderDetailView: View {
                     SectionLabel(text: "Prosjekter")
                     ForEach(Array(ps.enumerated()), id: \.offset) { _, p in
                         VStack(alignment: .leading, spacing: 8) {
-                            HStack { Text(p.name ?? "–").fontWeight(.semibold); Spacer(); Text("\(n0(p.spent ?? 0)) / \(n0(p.budget ?? 0))").font(.system(.subheadline, design: .monospaced)).foregroundStyle(.white.opacity(0.7)) }
-                            if let v = p.vendor { Text(v).font(.footnote).foregroundStyle(.white.opacity(0.6)) }
+                            HStack { Text(p.name ?? "–").fontWeight(.semibold); Spacer(); Text("\(n0(p.spent ?? 0)) / \(n0(p.budget ?? 0))").font(.system(.subheadline, design: .monospaced)).foregroundStyle(Color.skinFg.opacity(0.7)) }
+                            if let v = p.vendor { Text(v).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)) }
                             if let b = p.budget, b > 0 { Bar(value: (p.spent ?? 0) / b, color: .accent) }
-                            Text("\(n0(Swift.max(0, (p.budget ?? 0) - (p.spent ?? 0)))) kr gjenstår").font(.footnote).foregroundStyle(.white.opacity(0.6))
+                            Text("\(n0(Swift.max(0, (p.budget ?? 0) - (p.spent ?? 0)))) kr gjenstår").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6))
                             ForEach(Array((p.installments ?? []).enumerated()), id: \.offset) { _, ins in
                                 HStack {
                                     Image(systemName: ins.isPaid ? "checkmark.circle.fill" : "clock").foregroundStyle(ins.isPaid ? Color.positive : .accentLight)
@@ -256,11 +256,11 @@ struct FolderDetailView: View {
                     SectionLabel(text: "Faste regninger")
                     VStack(spacing: 0) {
                         ForEach(Array(bills.enumerated()), id: \.offset) { i, b in
-                            if i > 0 { Divider().overlay(.white.opacity(0.12)) }
+                            if i > 0 { Divider().overlay(Color.skinFg.opacity(0.12)) }
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(b.name ?? "–").fontWeight(.medium)
-                                    Text([b.freq, b.payer.map { "betales av \($0)" }, b.lastPaid.map { "sist \(ddmm($0))" }].compactMap { $0 }.joined(separator: " · ")).font(.footnote).foregroundStyle(.white.opacity(0.6))
+                                    Text([b.freq, b.payer.map { "betales av \($0)" }, b.lastPaid.map { "sist \(ddmm($0))" }].compactMap { $0 }.joined(separator: " · ")).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6))
                                 }
                                 Spacer()
                                 VStack(alignment: .trailing, spacing: 2) {
@@ -278,12 +278,12 @@ struct FolderDetailView: View {
                 if entries.isEmpty { Empty(text: "Ingen utgifter i mappen ennå.") } else {
                     VStack(spacing: 0) {
                         ForEach(Array(entries.enumerated()), id: \.element.id) { i, e in
-                            if i > 0 { Divider().overlay(.white.opacity(0.12)) }
+                            if i > 0 { Divider().overlay(Color.skinFg.opacity(0.12)) }
                             HStack(spacing: 12) {
                                 Logo(domain: e.domain, name: e.description ?? "", color: "#FF7A3D", size: 36)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(e.description ?? "–").fontWeight(.medium).lineLimit(1)
-                                    Text([ddmm(e.date), e.paidBy.map { "betalt av \($0)" }, e.split, e.categoryPath].compactMap { $0 }.joined(separator: " · ")).font(.footnote).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
+                                    Text([ddmm(e.date), e.paidBy.map { "betalt av \($0)" }, e.split, e.categoryPath].compactMap { $0 }.joined(separator: " · ")).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).lineLimit(1)
                                     AiLine(text: e.aiShort)
                                 }
                                 Spacer(minLength: 6)
@@ -302,7 +302,7 @@ struct FolderDetailView: View {
 
 private func choice(_ t: String, _ on: Bool, _ act: @escaping () -> Void) -> some View {
     Button(action: act) {
-        Text(t).font(.subheadline).lineLimit(1).padding(.horizontal, 12).frame(height: 34).foregroundStyle(on ? Color.ink : .white).contentShape(Capsule())
+        Text(t).font(.subheadline).lineLimit(1).padding(.horizontal, 12).frame(height: 34).foregroundStyle(on ? Color.ink : Color.skinFg).contentShape(Capsule())
     }
     .buttonStyle(.plain).glass(17, tint: on ? .accent : nil)
 }
@@ -313,7 +313,7 @@ struct Bar: View {
     var body: some View {
         GeometryReader { g in
             ZStack(alignment: .leading) {
-                Capsule().fill(.white.opacity(0.12))
+                Capsule().fill(Color.skinFg.opacity(0.12))
                 Capsule().fill(color).frame(width: g.size.width * Swift.min(1, Swift.max(0.02, value)))
             }
         }

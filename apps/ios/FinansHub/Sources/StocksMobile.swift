@@ -132,7 +132,7 @@ private struct StockTheme {
         return StockTheme(up: Color(hex: "#7BE3A0"), down: Color(hex: "#FF8A80"), upBg: Color(hex: "#7BE3A0").opacity(0.16), downBg: Color(hex: "#FF8A80").opacity(0.16),
                           blue: Color(hex: "#A9C3FF"), blueBg: Color(hex: "#8FB3FF").opacity(0.18), pill: .white, onPill: .black,
                           tints: [Color(hex: "#7BE3A0").opacity(0.22), Color(hex: "#BEAAFF").opacity(0.24), Color(hex: "#FFBE78").opacity(0.22),
-                                  Color(hex: "#78BEF0").opacity(0.22), Color(hex: "#FF9682").opacity(0.22), Color.white.opacity(0.12)])
+                                  Color(hex: "#78BEF0").opacity(0.22), Color(hex: "#FF9682").opacity(0.22), Color.skinFg.opacity(0.12)])
     }
     func tint(_ i: Int) -> Color { tints[((i % tints.count) + tints.count) % tints.count] }
 }
@@ -160,7 +160,7 @@ struct AreaChart: View {
                         let i = at ?? (values.firstIndex(of: hi) ?? pts.count - 1)
                         let pt = pts[Swift.min(i, pts.count - 1)]
                         Path { p in p.move(to: CGPoint(x: pt.x, y: 0)); p.addLine(to: CGPoint(x: pt.x, y: g.size.height)) }
-                            .stroke(.white.opacity(0.35), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                            .stroke(Color.skinFg.opacity(0.35), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
                         Circle().fill(color).frame(width: 10, height: 10).overlay(Circle().stroke(.white, lineWidth: 2)).position(pt)
                         Text(label(i)).font(.caption.weight(.semibold)).foregroundStyle(.black).padding(.horizontal, 8).padding(.vertical, 4)
                             .background(.white, in: Capsule()).fixedSize()
@@ -209,7 +209,7 @@ struct StocksMobileView: View {
             VStack(spacing: 14) {
                 ModuleHeader(title: "Aksjer", trailing: {
                     Button { store.syncStocks() } label: {
-                        Image(systemName: "arrow.triangle.2.circlepath").font(.system(size: 16, weight: .semibold)).foregroundStyle(.white).frame(width: 44, height: 44).contentShape(Circle())
+                        Image(systemName: "arrow.triangle.2.circlepath").font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.skinFg).frame(width: 44, height: 44).contentShape(Circle())
                     }
                     .buttonStyle(GlassPress()).glassRound().accessibilityLabel("Synk nå")
                 })
@@ -219,7 +219,7 @@ struct StocksMobileView: View {
                     if !x.configured && !x.mock && x.positions.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Ikke koblet til Trading 212").fontWeight(.semibold)
-                            Text("Legg inn API-nøkkel og secret i FinansHub på web under Innstillinger → Aksjer · Trading 212. Gi bare lesetilgang.").font(.footnote).foregroundStyle(.white.opacity(0.7))
+                            Text("Legg inn API-nøkkel og secret i FinansHub på web under Innstillinger → Aksjer · Trading 212. Gi bare lesetilgang.").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.7))
                         }
                         .padding(16).frame(maxWidth: .infinity, alignment: .leading).glass(24)
                     }
@@ -241,7 +241,7 @@ struct StocksMobileView: View {
         return Button { store.openSub(.settings); store.settingsPage = "stocks" } label: {
             HStack(spacing: 8) {
                 Circle().fill(ok ? th.up : th.down).frame(width: 8, height: 8)
-                Text(txt).font(.footnote).foregroundStyle(.white.opacity(0.75)).lineLimit(1)
+                Text(txt).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.75)).lineLimit(1)
                 Spacer(minLength: 6)
                 Text("Innstillinger ›").font(.footnote.weight(.semibold)).foregroundStyle(Color.accentLight)
             }
@@ -263,9 +263,9 @@ struct StocksMobileView: View {
         let label = ranges.first { $0.0 == range }?.1 ?? ""
         return VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Verdi i dag").font(.subheadline).foregroundStyle(.white.opacity(0.7))
+                Text("Verdi i dag").font(.subheadline).foregroundStyle(Color.skinFg.opacity(0.7))
                 Spacer()
-                Text(x.mock ? "Demo" : x.env.lowercased() == "demo" ? "Demo" : "Live").font(.caption.weight(.semibold)).padding(.horizontal, 8).padding(.vertical, 3).background(.white.opacity(0.12), in: Capsule())
+                Text(x.mock ? "Demo" : x.env.lowercased() == "demo" ? "Demo" : "Live").font(.caption.weight(.semibold)).padding(.horizontal, 8).padding(.vertical, 3).background(Color.skinFg.opacity(0.12), in: Capsule())
             }
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text(krs(x.total)).font(.system(size: 34, weight: .semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
@@ -289,7 +289,7 @@ struct StocksMobileView: View {
 
     private func mini(_ l: String, _ v: String, _ c: Color) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(l).font(.caption2).foregroundStyle(.white.opacity(0.6))
+            Text(l).font(.caption2).foregroundStyle(Color.skinFg.opacity(0.6))
             Text(v).font(.footnote.weight(.semibold)).foregroundStyle(c).lineLimit(1).minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -299,15 +299,15 @@ struct StocksMobileView: View {
         HStack(spacing: 4) {
             ForEach(ranges, id: \.0) { k, _, _ in
                 Button { Haptics.shared.select(); range = k } label: {
-                    Text(k).font(.footnote.weight(.semibold)).foregroundStyle(range == k ? Color.white : Color.white.opacity(0.6))
+                    Text(k).font(.footnote.weight(.semibold)).foregroundStyle(range == k ? Color.white : Color.skinFg.opacity(0.6))
                         .frame(maxWidth: .infinity, minHeight: 32)
-                        .background(range == k ? Color.white.opacity(0.16) : .clear, in: RoundedRectangle(cornerRadius: 10))
+                        .background(range == k ? Color.skinFg.opacity(0.16) : .clear, in: RoundedRectangle(cornerRadius: 10))
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(3).background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 13))
+        .padding(3).background(Color.skinFg.opacity(0.06), in: RoundedRectangle(cornerRadius: 13))
     }
 
     private func segments(_ list: [String], _ sel: Binding<String>, _ th: StockTheme) -> some View {
@@ -316,9 +316,9 @@ struct StocksMobileView: View {
                 ForEach(list, id: \.self) { n in
                     let on = sel.wrappedValue == n
                     Button { Haptics.shared.select(); sel.wrappedValue = n } label: {
-                        Text(n).font(.subheadline.weight(.semibold)).foregroundStyle(on ? th.onPill : .white).padding(.horizontal, 16).frame(height: 36)
+                        Text(n).font(.subheadline.weight(.semibold)).foregroundStyle(on ? th.onPill : Color.skinFg).padding(.horizontal, 16).frame(height: 36)
                             .background(on ? th.pill : .clear, in: Capsule())
-                            .overlay(Capsule().stroke(on ? Color.clear : Color.white.opacity(0.18), lineWidth: 1))
+                            .overlay(Capsule().stroke(on ? Color.clear : Color.skinFg.opacity(0.18), lineWidth: 1))
                             .contentShape(Capsule())
                     }
                     .buttonStyle(.plain)
@@ -331,7 +331,7 @@ struct StocksMobileView: View {
         let vis = seg == "Kontanter" ? [] : x.positions.filter { seg == "Alle" || (seg == "ETF") == $0.etf }
         let idx = Dictionary(x.positions.enumerated().map { ($1.ticker, $0) }, uniquingKeysWith: { a, _ in a })
         if !vis.isEmpty {
-            HStack { Text("Største posisjoner").font(.headline); Spacer(); Text("\(x.positions.count) totalt").font(.footnote).foregroundStyle(.white.opacity(0.6)) }
+            HStack { Text("Største posisjoner").font(.headline); Spacer(); Text("\(x.positions.count) totalt").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)) }
                 .padding(.horizontal, 4)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
@@ -347,7 +347,7 @@ struct StocksMobileView: View {
             .padding(.horizontal, 4).padding(.top, 4)
             VStack(spacing: 0) {
                 ForEach(Array(vis.enumerated()), id: \.element.id) { i, p in
-                    if i > 0 { Divider().overlay(.white.opacity(0.1)) }
+                    if i > 0 { Divider().overlay(Color.skinFg.opacity(0.1)) }
                     Button { open(p) } label: { row(p, th.tint(idx[p.ticker] ?? 0), th) }.buttonStyle(.plain)
                 }
             }
@@ -357,7 +357,7 @@ struct StocksMobileView: View {
         }
         if seg == "Alle" || seg == "Kontanter" {
             HStack {
-                Image(systemName: "banknote").foregroundStyle(Color.accentLight).frame(width: 40, height: 40).background(.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+                Image(systemName: "banknote").foregroundStyle(Color.accentLight).frame(width: 40, height: 40).background(Color.skinFg.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
                 Text("Kontanter").fontWeight(.medium)
                 Spacer()
                 Text(krs(x.cash)).font(.system(.body, design: .monospaced).weight(.semibold))
@@ -368,7 +368,7 @@ struct StocksMobileView: View {
             Button { store.stockScreen = "tx" } label: { Text("Transaksjoner ›").font(.footnote.weight(.semibold)).foregroundStyle(Color.accentLight) }.buttonStyle(.plain)
         }
         Text("Kjøp og Selg åpner ordren i Trading 212. Tallene synkes fra API-et. Nøkkel og miljø endres i Innstillinger.")
-            .font(.caption).foregroundStyle(.white.opacity(0.55)).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
+            .font(.caption).foregroundStyle(Color.skinFg.opacity(0.55)).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
     }
 
     private func open(_ p: StockPos) {
@@ -379,14 +379,14 @@ struct StocksMobileView: View {
     }
 
     private func tickerBadge(_ ini: String, _ tint: Color, _ size: CGFloat = 40) -> some View {
-        Text(ini).font(.system(size: size * 0.34, weight: .bold)).foregroundStyle(.white).frame(width: size, height: size)
-            .background(tint, in: RoundedRectangle(cornerRadius: size * 0.3)).overlay(RoundedRectangle(cornerRadius: size * 0.3).stroke(.white.opacity(0.12), lineWidth: 1))
+        Text(ini).font(.system(size: size * 0.34, weight: .bold)).foregroundStyle(Color.skinFg).frame(width: size, height: size)
+            .background(tint, in: RoundedRectangle(cornerRadius: size * 0.3)).overlay(RoundedRectangle(cornerRadius: size * 0.3).stroke(Color.skinFg.opacity(0.12), lineWidth: 1))
     }
 
     private func changePill(_ v: Double?, _ th: StockTheme) -> some View {
         let c = v ?? 0
         return Text(v.map(chg) ?? "–").font(.caption.weight(.semibold)).foregroundStyle(v == nil ? .white.opacity(0.6) : c < 0 ? th.down : th.up)
-            .padding(.horizontal, 7).padding(.vertical, 3).background(v == nil ? Color.white.opacity(0.08) : c < 0 ? th.downBg : th.upBg, in: Capsule())
+            .padding(.horizontal, 7).padding(.vertical, 3).background(v == nil ? Color.skinFg.opacity(0.08) : c < 0 ? th.downBg : th.upBg, in: Capsule())
     }
 
     private func topCard(_ p: StockPos, _ tint: Color, _ th: StockTheme) -> some View {
@@ -397,11 +397,11 @@ struct StocksMobileView: View {
                         tickerBadge(p.ini, Color.black.opacity(0.25), 36)
                         VStack(alignment: .leading, spacing: 0) {
                             Text(p.symbol).font(.subheadline.weight(.bold)).lineLimit(1)
-                            Text(p.name).font(.caption).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
+                            Text(p.name).font(.caption).foregroundStyle(Color.skinFg.opacity(0.7)).lineLimit(1)
                         }
                     }
                     Text(krs(p.value)).font(.title3.weight(.semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.7)
-                    HStack { Text("\(qtyText(p.qty)) stk").font(.caption).foregroundStyle(.white.opacity(0.7)); Spacer(); changePill(p.dayPct ?? p.plPct, th) }
+                    HStack { Text("\(qtyText(p.qty)) stk").font(.caption).foregroundStyle(Color.skinFg.opacity(0.7)); Spacer(); changePill(p.dayPct ?? p.plPct, th) }
                 }
                 .contentShape(Rectangle())
             }
@@ -411,18 +411,18 @@ struct StocksMobileView: View {
                 tradeButton("Selg", p, buy: false, th)
             }
         }
-        .foregroundStyle(.white)
+        .foregroundStyle(Color.skinFg)
         .padding(14).frame(width: 200, alignment: .leading)
         .background(tint, in: RoundedRectangle(cornerRadius: 24))
-        .overlay(RoundedRectangle(cornerRadius: 24).stroke(.white.opacity(0.1), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 24).stroke(Color.skinFg.opacity(0.1), lineWidth: 1))
     }
 
     private func tradeButton(_ t: String, _ p: StockPos, buy: Bool, _ th: StockTheme, big: Bool = false) -> some View {
         Button { trade(p, buy: buy) } label: {
-            Text(t).font((big ? Font.body : Font.footnote).weight(.bold)).foregroundStyle(buy ? th.onPill : .white)
+            Text(t).font((big ? Font.body : Font.footnote).weight(.bold)).foregroundStyle(buy ? th.onPill : Color.skinFg)
                 .frame(maxWidth: .infinity, minHeight: big ? 50 : 34)
                 .background(buy ? th.pill : Color.black.opacity(0.25), in: Capsule())
-                .overlay(Capsule().stroke(buy ? Color.clear : Color.white.opacity(0.25), lineWidth: 1))
+                .overlay(Capsule().stroke(buy ? Color.clear : Color.skinFg.opacity(0.25), lineWidth: 1))
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -441,7 +441,7 @@ struct StocksMobileView: View {
             tickerBadge(p.ini, tint)
             VStack(alignment: .leading, spacing: 1) {
                 Text(p.symbol).fontWeight(.semibold).lineLimit(1)
-                Text(p.name).font(.caption).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
+                Text(p.name).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)).lineLimit(1)
             }
             Spacer(minLength: 6)
             if p.series.count > 1 {
@@ -469,10 +469,10 @@ struct StocksMobileView: View {
                     tickerBadge(p.ini, th.tint(i), 48)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(p.symbol).font(.headline)
-                        Text(p.name).font(.footnote).foregroundStyle(.white.opacity(0.65)).lineLimit(1)
+                        Text(p.name).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.65)).lineLimit(1)
                     }
                     Spacer()
-                    Text(ranges.first { $0.0 == range }?.1 ?? "").font(.caption).foregroundStyle(.white.opacity(0.6))
+                    Text(ranges.first { $0.0 == range }?.1 ?? "").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6))
                 }
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
                     Text("\(n2(p.price)) kr").font(.system(size: 32, weight: .semibold)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
@@ -484,7 +484,7 @@ struct StocksMobileView: View {
                     } else {
                         VStack(alignment: .leading, spacing: 6) {
                             BarLine(label: "Snittkurs \(n2(p.avg)) → kurs nå \(n2(p.price))", value: chg(p.plPct), fraction: p.avg > 0 ? Swift.min(1, p.price / (p.avg * 2)) : 0, color: p.plPct < 0 ? th.down : th.up)
-                            Text("Kursgraf vises når serveren sender kurshistorikk for aksjen.").font(.caption).foregroundStyle(.white.opacity(0.5))
+                            Text("Kursgraf vises når serveren sender kurshistorikk for aksjen.").font(.caption).foregroundStyle(Color.skinFg.opacity(0.5))
                         }
                     }
                     rangePicker(th)
@@ -499,13 +499,13 @@ struct StocksMobileView: View {
                 }
                 Text("Handler i \(p.symbol)").font(.headline).padding(.horizontal, 4)
                 VStack(spacing: 0) {
-                    if tx.isEmpty { Text("Ingen handler ennå.").font(.footnote).foregroundStyle(.white.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading).padding(16) }
+                    if tx.isEmpty { Text("Ingen handler ennå.").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading).padding(16) }
                     ForEach(Array(tx.enumerated()), id: \.element.id) { j, t in
-                        if j > 0 { Divider().overlay(.white.opacity(0.1)) }
+                        if j > 0 { Divider().overlay(Color.skinFg.opacity(0.1)) }
                         HStack {
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(t.kind + (t.qty > 0 ? " · \(qtyText(t.qty)) stk" : "")).fontWeight(.medium)
-                                Text(ddmmyyyy(t.date) + (t.time.isEmpty ? "" : " kl. \(t.time)")).font(.caption).foregroundStyle(.white.opacity(0.6))
+                                Text(ddmmyyyy(t.date) + (t.time.isEmpty ? "" : " kl. \(t.time)")).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6))
                             }
                             Spacer()
                             Text(krs(t.amount)).font(.subheadline.weight(.semibold)).monospacedDigit()
@@ -541,17 +541,17 @@ struct StocksMobileView: View {
             VStack(alignment: .leading, spacing: 12) {
                 ModuleHeader(title: "Transaksjoner", back: { store.back() })
                 HStack(spacing: 10) {
-                    Image(systemName: "magnifyingglass").foregroundStyle(.white.opacity(0.6))
+                    Image(systemName: "magnifyingglass").foregroundStyle(Color.skinFg.opacity(0.6))
                     TextField("Søk i ticker, navn eller type", text: $q).textInputAutocapitalization(.never).autocorrectionDisabled()
                 }
                 .padding(.horizontal, 16).frame(height: 48).glass(24)
                 segments(["Alle", "Kjøp", "Salg", "Utbytte"], $tseg, th)
                 if list.isEmpty { Empty(text: "Ingen transaksjoner passer.") }
                 ForEach(days, id: \.self) { d in
-                    Text(dayName(d)).font(.footnote.weight(.semibold)).foregroundStyle(.white.opacity(0.6)).padding(.horizontal, 6).padding(.top, 4)
+                    Text(dayName(d)).font(.footnote.weight(.semibold)).foregroundStyle(Color.skinFg.opacity(0.6)).padding(.horizontal, 6).padding(.top, 4)
                     VStack(spacing: 0) {
                         ForEach(Array(list.filter { $0.date == d }.enumerated()), id: \.element.id) { j, t in
-                            if j > 0 { Divider().overlay(.white.opacity(0.1)) }
+                            if j > 0 { Divider().overlay(Color.skinFg.opacity(0.1)) }
                             txRow(t, names[t.ticker] ?? "", th.tint(idx[t.ticker] ?? 5), th)
                         }
                     }
@@ -582,12 +582,12 @@ struct StocksMobileView: View {
                         Text(t.symbol).fontWeight(.semibold).lineLimit(1)
                         Text(t.status).font(.caption2.weight(.semibold)).foregroundStyle(fg).padding(.horizontal, 6).padding(.vertical, 2).background(bg, in: Capsule())
                     }
-                    Text([name, t.kind + (t.qty > 0 ? " · \(qtyText(t.qty)) stk" : "")].filter { !$0.isEmpty }.joined(separator: " · ")).font(.caption).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
+                    Text([name, t.kind + (t.qty > 0 ? " · \(qtyText(t.qty)) stk" : "")].filter { !$0.isEmpty }.joined(separator: " · ")).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)).lineLimit(1)
                 }
                 Spacer(minLength: 6)
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text((t.kind == "Kjøp" ? "−" : "+") + krs(t.amount)).font(.subheadline.weight(.semibold)).monospacedDigit().foregroundStyle(t.kind == "Kjøp" ? .white : th.up)
-                    if !t.time.isEmpty { Text(t.time).font(.caption2).foregroundStyle(.white.opacity(0.5)) }
+                    Text((t.kind == "Kjøp" ? "−" : "+") + krs(t.amount)).font(.subheadline.weight(.semibold)).monospacedDigit().foregroundStyle(t.kind == "Kjøp" ? Color.skinFg : th.up)
+                    if !t.time.isEmpty { Text(t.time).font(.caption2).foregroundStyle(Color.skinFg.opacity(0.5)) }
                 }
             }
             .padding(.horizontal, 14).padding(.vertical, 11).contentShape(Rectangle())

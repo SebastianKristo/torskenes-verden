@@ -197,6 +197,7 @@ struct PaperWeatherView: View {
     @State private var mode = "temp"
     @State private var compact = false
     @State private var sheetDay: String?
+    @State private var comparing = false
 
 
     var body: some View {
@@ -212,6 +213,17 @@ struct PaperWeatherView: View {
                         WxWindTile(w: w)
                         WxMoonTile(w: w)
                         tiles(w)
+                        Button { comparing = true } label: {
+                            HStack {
+                                Image(systemName: "chart.xyaxis.line")
+                                Text("Sammenlign Yr og Storm").font(PF.ui(14, .semibold))
+                                Spacer()
+                                Text("›")
+                            }
+                            .padding(.horizontal, 16).frame(minHeight: 50)
+                            .background(Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        }
+                        .buttonStyle(.plain)
                         Button { store.openLink(w.yrUrl) } label: {
                             Text("Data: MET Norge · Åpne i yr.no ↗").font(PF.ui(12.5, .semibold)).foregroundStyle(.white.opacity(0.85)).padding(.vertical, 10)
                         }
@@ -236,6 +248,9 @@ struct PaperWeatherView: View {
         .environment(\.colorScheme, .dark)
         .sheet(item: Binding(get: { sheetDay.map { WxDayRef(id: $0) } }, set: { sheetDay = $0?.id })) { ref in
             if let w = store.weatherFull { WxConditionsSheet(w: w, day: ref.id).presentationDetents([.large]) }
+        }
+        .sheet(isPresented: $comparing) {
+            WxCompareSheet(place: store.weatherFull?.placeId ?? "oslo").presentationDetents([.large])
         }
         .task { await store.loadWeatherFull() }
     }
@@ -837,5 +852,166 @@ struct WxRainChart: View {
         .chartYScale(domain: 0...100)
         .chartYAxis { AxisMarks(position: .trailing, values: [0, 50, 100]) { _ in AxisGridLine().foregroundStyle(Color.white.opacity(0.12)); AxisValueLabel() } }
         .chartXAxis { AxisMarks(values: .stride(by: .hour, count: 6)) { _ in AxisValueLabel(format: .dateTime.hour()) } }
+    }
+}
+
+
+/* ---------- Yr mot Storm (ECMWF) ---------- */
+
+/// Neste 24 timer (temperatur som to linjer og nedbør som søyler) og 7 dager med avvik i maks og hvor enige de er.
+/// Storm har ikke åpent API, så ECMWF fra Open-Meteo brukes som nærmeste kilde (GET /api/weather/compare).
+struct WxCompareSheet: View {
+    @Environment(Store.self) private var store
+    let place: String
+    @State private var hours: [WxCmpHour] = []
+    @State private var days: [WxCmpDay] = []
+    @State private var agreement: Double?
+    @State private var placeName = ""
+    @State private var error: String?
+    @State private var loaded = false
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Yr mot Storm").font(PF.serif(28, medium: true))
+                Text(placeName.isEmpty ? "Neste 24 timer og 7 dager" : "\(placeName) · neste 24 timer og 7 dager").font(PF.ui(13)).opacity(0.8)
+                if let error { Text(error).font(PF.ui(13)).foregroundStyle(Color(hex: "#f08a76")) }
+                if !loaded { ProgressView().tint(.white).frame(maxWidth: .infinity).padding(40) }
+                if !hours.isEmpty { chartCard }
+                if !days.isEmpty { tableCard }
+                Text("Yr: api.met.no. Storm har ikke et åpent API, så ECMWF (Open-Meteo) brukes som nærmeste kilde.")
+                    .font(PF.ui(11.5)).opacity(0.7).fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(20)
+        }
+        .foregroundStyle(.white)
+        .background(LinearGradient(colors: [Color(hex: "#2b4f7a"), Color(hex: "#162438")], startPoint: .top, endPoint: .bottom).ignoresSafeArea())
+        .environment(\.colorScheme, .dark)
+        .task { await load() }
+    }
+
+    private var chartCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 14) {
+                legend(Color(hex: "#7fd6e3"), "Yr")
+                legend(Color(hex: "#f2b36b"), "Storm (ECMWF)")
+                Spacer()
+                if let a = agreement { Text("Enighet \(Int(a.rounded())) %").font(PF.ui(12, .semibold)) }
+            }
+            Chart {
+                ForEach(hours) { h in
+                    BarMark(x: .value("Tid", h.t), y: .value("mm", h.yrMm), width: .ratio(0.4))
+                        .foregroundStyle(Color(hex: "#7fd6e3").opacity(0.35))
+                        .position(by: .value("Kilde", "Yr"))
+                    BarMark(x: .value("Tid", h.t), y: .value("mm", h.ecMm), width: .ratio(0.4))
+                        .foregroundStyle(Color(hex: "#f2b36b").opacity(0.35))
+                        .position(by: .value("Kilde", "Storm"))
+                }
+            }
+            .frame(height: 60)
+            .chartYAxis(.hidden)
+            .chartXAxis(.hidden)
+            Chart {
+                ForEach(hours) { h in
+                    LineMark(x: .value("Tid", h.t), y: .value("Temp", h.yrTemp), series: .value("Kilde", "Yr"))
+                        .foregroundStyle(Color(hex: "#7fd6e3")).interpolationMethod(.catmullRom)
+                }
+                ForEach(hours) { h in
+                    LineMark(x: .value("Tid", h.t), y: .value("Temp", h.ecTemp), series: .value("Kilde", "Storm"))
+                        .foregroundStyle(Color(hex: "#f2b36b")).interpolationMethod(.catmullRom)
+                }
+            }
+            .frame(height: 160)
+            .chartXAxis { AxisMarks(values: .stride(by: .hour, count: 6)) { _ in AxisValueLabel(format: .dateTime.hour()) } }
+            .chartYAxis { AxisMarks(position: .trailing) { _ in AxisGridLine().foregroundStyle(Color.white.opacity(0.12)); AxisValueLabel() } }
+        }
+        .padding(14)
+        .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private func legend(_ c: Color, _ t: String) -> some View {
+        HStack(spacing: 5) {
+            Capsule().fill(c).frame(width: 14, height: 4)
+            Text(t).font(PF.ui(12, .semibold))
+        }
+    }
+
+    private var tableCard: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("DAG").frame(maxWidth: .infinity, alignment: .leading)
+                Text("YR").frame(width: 70, alignment: .trailing)
+                Text("STORM").frame(width: 70, alignment: .trailing)
+                Text("ENIG").frame(width: 50, alignment: .trailing)
+            }
+            .font(PF.mono(10)).opacity(0.7).padding(.horizontal, 14).padding(.vertical, 10)
+            ForEach(days) { d in
+                Rectangle().fill(Color.white.opacity(0.12)).frame(height: 1)
+                HStack {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(d.label).font(PF.ui(14, .semibold))
+                        if abs(d.diffHi) >= 1 { Text(String(format: "%+.0f° i maks", d.diffHi)).font(PF.ui(11)).foregroundStyle(abs(d.diffHi) >= 3 ? Color(hex: "#f08a76") : Color.white.opacity(0.7)) }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Text("\(Int(d.yrHi.rounded()))° / \(Int(d.yrLo.rounded()))°").font(PF.ui(13)).frame(width: 70, alignment: .trailing)
+                    Text("\(Int(d.ecHi.rounded()))° / \(Int(d.ecLo.rounded()))°").font(PF.ui(13)).frame(width: 70, alignment: .trailing)
+                    Text("\(Int(d.agree.rounded())) %").font(PF.ui(13, .semibold)).foregroundStyle(d.agree >= 75 ? Color(hex: "#8fd9a8") : d.agree >= 50 ? Color.white : Color(hex: "#f08a76"))
+                        .frame(width: 50, alignment: .trailing)
+                }
+                .padding(.horizontal, 14).padding(.vertical, 10)
+            }
+        }
+        .background(Color.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private func load() async {
+        let e = place.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? place
+        do {
+            let d = try await store.api.callAt("/api", "GET", "/weather/compare?place=\(e)", timeout: 20)
+            let o = JS.obj(d)
+            placeName = JS.str(JS.dict(o, "place"), "name") ?? ""
+            hours = JS.list(o, "hours").compactMap { WxCmpHour($0) }
+            days = JS.list(o, "days").compactMap { WxCmpDay($0) }
+            agreement = JS.num(o, "agreement")
+            error = nil
+        } catch let e as APIError {
+            error = e.status == 404 ? "Sammenligningen finnes ikke på serveren ennå. Oppdater homelab." : e.message
+        } catch {
+            self.error = error.localizedDescription
+        }
+        loaded = true
+    }
+}
+
+struct WxCmpHour: Identifiable {
+    let t: Date
+    let yrTemp, ecTemp, yrMm, ecMm: Double
+    var id: Date { t }
+    init?(_ o: [String: Any]) {
+        guard let t = JS.date(o["t"]) else { return nil }
+        self.t = t
+        let y = JS.dict(o, "yr"), e = JS.dict(o, "ecmwf")
+        yrTemp = JS.num(y, "temp") ?? 0; ecTemp = JS.num(e, "temp") ?? 0
+        yrMm = JS.num(y, "mm") ?? 0; ecMm = JS.num(e, "mm") ?? 0
+    }
+}
+
+struct WxCmpDay: Identifiable {
+    let date: String
+    let yrHi, yrLo, ecHi, ecLo, diffHi, agree: Double
+    var id: String { date }
+    init?(_ o: [String: Any]) {
+        guard let d = JS.str(o, "date") else { return nil }
+        date = d
+        let y = JS.dict(o, "yr"), e = JS.dict(o, "ecmwf")
+        yrHi = JS.num(y, "hi") ?? 0; yrLo = JS.num(y, "lo") ?? 0
+        ecHi = JS.num(e, "hi") ?? 0; ecLo = JS.num(e, "lo") ?? 0
+        diffHi = JS.num(o, "diffHi") ?? (yrHi - ecHi)
+        agree = JS.num(o, "agree") ?? 0
+    }
+    var label: String {
+        guard let d = parseDay(date) else { return date }
+        if Calendar.current.isDateInToday(d) { return "I dag" }
+        return JS.fmt(d, "EEE d.").capitalized(with: Locale(identifier: "nb_NO"))
     }
 }

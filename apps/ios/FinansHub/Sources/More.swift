@@ -14,7 +14,7 @@ private func qty(_ q: Double) -> String {
 /// Undertekst under tittelen.
 struct SubLine: View {
     let text: String
-    var body: some View { Text(text).font(.footnote).foregroundStyle(.white.opacity(0.65)).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 6) }
+    var body: some View { Text(text).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.65)).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 6) }
 }
 
 /// Stort tall øverst på en side (oransje glass).
@@ -28,9 +28,9 @@ struct PageHero<Extra: View>: View {
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(label).font(.subheadline).foregroundStyle(.white.opacity(0.8))
+            Text(label).font(.subheadline).foregroundStyle(Color.skinFg.opacity(0.8))
             Text(value).font(.system(size: 36, weight: .semibold, design: .monospaced)).lineLimit(1).minimumScaleFactor(0.5)
-            if let sub, !sub.isEmpty { Text(sub).font(.footnote).foregroundStyle(.white.opacity(0.75)) }
+            if let sub, !sub.isEmpty { Text(sub).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.75)) }
             extra
         }
         .padding(20).frame(maxWidth: .infinity, alignment: .leading).glass(28, tint: Color.accent.opacity(0.35))
@@ -49,7 +49,7 @@ struct CardList<Item, Row: View>: View {
     var body: some View {
         VStack(spacing: 0) {
             ForEach(Array(items.enumerated()), id: \.offset) { i, it in
-                if i > 0 { Divider().overlay(.white.opacity(0.12)) }
+                if i > 0 { Divider().overlay(Color.skinFg.opacity(0.12)) }
                 row(it)
             }
         }
@@ -71,12 +71,12 @@ struct ItemLine: View {
             if let domain { Logo(domain: domain, name: title, color: "#FF7A3D", size: 36) }
             VStack(alignment: .leading, spacing: 2) {
                 Text(title).fontWeight(.medium).lineLimit(1)
-                if let sub, !sub.isEmpty { Text(sub).font(.footnote).foregroundStyle(.white.opacity(0.6)).lineLimit(2) }
+                if let sub, !sub.isEmpty { Text(sub).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).lineLimit(2) }
                 AiLine(text: ai)
             }
             Spacer(minLength: 8)
             if let value { Text(value).font(.system(.subheadline, design: .monospaced).weight(.semibold)).foregroundStyle(valueColor).lineLimit(1) }
-            if chevron { Image(systemName: "chevron.right").font(.footnote).foregroundStyle(.white.opacity(0.45)) }
+            if chevron { Image(systemName: "chevron.right").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.45)) }
         }
         .padding(.horizontal, 16).padding(.vertical, 12).contentShape(Rectangle())
     }
@@ -91,16 +91,16 @@ struct BarLine: View {
     var sub: String? = nil
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack { Text(label).lineLimit(1); Spacer(); Text(value).font(.system(.footnote, design: .monospaced)).foregroundStyle(.white.opacity(0.75)) }
+            HStack { Text(label).lineLimit(1); Spacer(); Text(value).font(.system(.footnote, design: .monospaced)).foregroundStyle(Color.skinFg.opacity(0.75)) }
             Bar(value: fraction.isFinite ? fraction : 0, color: color)
-            if let sub { Text(sub).font(.caption).foregroundStyle(.white.opacity(0.6)) }
+            if let sub { Text(sub).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)) }
         }
     }
 }
 
 private func chip(_ t: String, _ on: Bool, _ act: @escaping () -> Void) -> some View {
     Button(action: act) {
-        Text(t).font(.subheadline).lineLimit(1).padding(.horizontal, 14).frame(height: 36).foregroundStyle(on ? Color.ink : .white).contentShape(Capsule())
+        Text(t).font(.subheadline).lineLimit(1).padding(.horizontal, 14).frame(height: 36).foregroundStyle(on ? Color.ink : Color.skinFg).contentShape(Capsule())
     }
     .buttonStyle(.plain).glass(18, tint: on ? .accent : nil)
 }
@@ -168,7 +168,7 @@ struct MoreView: View {
                 }
                 VStack(alignment: .leading, spacing: 10) {
                     Text("✦ Spør AI").fontWeight(.semibold).foregroundStyle(Color.accentLight)
-                    Text("Søker i transaksjoner, kvitteringer og varelinjer").font(.footnote).foregroundStyle(.white.opacity(0.65))
+                    Text("Søker i transaksjoner, kvitteringer og varelinjer").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.65))
                     TextField("Hvor mye brukte jeg på kaffe?", text: $q).submitLabel(.search).onSubmit(ask)
                         .padding(.horizontal, 16).frame(height: 48).glass(24)
                     primary("Spør", enabled: !q.trimmingCharacters(in: .whitespaces).isEmpty, ask)
@@ -186,16 +186,16 @@ struct MoreView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: t.icon).font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.accentLight)
-                    .frame(width: 40, height: 40).background(.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 13))
+                    .frame(width: 40, height: 40).background(Color.skinFg.opacity(0.1), in: RoundedRectangle(cornerRadius: 13))
                 Spacer()
                 if t.badge > 0 {
                     Text("\(t.badge)").font(.caption.weight(.bold)).foregroundStyle(Color.ink).padding(.horizontal, 8).padding(.vertical, 2).background(Color.accent, in: Capsule())
                 }
             }
             Text(t.title).fontWeight(.semibold).lineLimit(1).minimumScaleFactor(0.8)
-            Text(t.sub).font(.caption).foregroundStyle(.white.opacity(0.65)).lineLimit(1)
+            Text(t.sub).font(.caption).foregroundStyle(Color.skinFg.opacity(0.65)).lineLimit(1)
         }
-        .foregroundStyle(.white)
+        .foregroundStyle(Color.skinFg)
         .padding(16).frame(maxWidth: .infinity, alignment: .leading).glass(24)
     }
 
@@ -238,11 +238,11 @@ struct SearchView: View {
                 .pickerStyle(.segmented)
                 SubLine(text: ai ? "\(provider) · leser også innholdet i kvitteringene" : "Butikker, kategorier, notater og varelinjer i kvitteringene")
                 HStack(spacing: 10) {
-                    if ai { Text("✦").font(.system(size: 18)).foregroundStyle(Color.accentLight) } else { Image(systemName: "magnifyingglass").foregroundStyle(.white.opacity(0.6)) }
+                    if ai { Text("✦").font(.system(size: 18)).foregroundStyle(Color.accentLight) } else { Image(systemName: "magnifyingglass").foregroundStyle(Color.skinFg.opacity(0.6)) }
                     TextField(ai ? "f.eks. Når kjøpte jeg lyspærer?" : "f.eks. tomater, Biltema, over 500 kr", text: $q).focused($focused).submitLabel(.search).onSubmit { send(q) }
                         .textInputAutocapitalization(.never)
                     if !q.isEmpty {
-                        Button { q = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.white.opacity(0.5)).frame(width: 30, height: 30) }.buttonStyle(.plain).accessibilityLabel("Tøm feltet")
+                        Button { q = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Color.skinFg.opacity(0.5)).frame(width: 30, height: 30) }.buttonStyle(.plain).accessibilityLabel("Tøm feltet")
                     }
                 }
                 .padding(.horizontal, 18).frame(height: 56).glass(28)
@@ -267,7 +267,7 @@ struct SearchView: View {
                     CardList(Array(store.aiHistory.prefix(8))) { t in
                         Button { q = t; send(t) } label: {
                             HStack(spacing: 12) {
-                                Image(systemName: "clock.arrow.circlepath").foregroundStyle(.white.opacity(0.55))
+                                Image(systemName: "clock.arrow.circlepath").foregroundStyle(Color.skinFg.opacity(0.55))
                                 Text(t).lineLimit(1)
                                 Spacer()
                             }
@@ -292,7 +292,7 @@ struct SearchView: View {
         let plain = r.mode == "plain"
         if r.plainFirst == true {
             VStack(alignment: .leading, spacing: 10) {
-                Label(r.notice ?? "Fant \((r.hits ?? []).count) treff med vanlig søk, så AI ble ikke brukt", systemImage: "bolt.horizontal.circle").font(.footnote).foregroundStyle(.white.opacity(0.85))
+                Label(r.notice ?? "Fant \((r.hits ?? []).count) treff med vanlig søk, så AI ble ikke brukt", systemImage: "bolt.horizontal.circle").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.85))
                 Button { focused = false; Haptics.shared.tap(); store.ask(r.q ?? store.aiQuery, force: true) } label: {
                     Text("✦ Spør AI likevel").font(.subheadline.weight(.semibold)).foregroundStyle(Color.ink).padding(.horizontal, 16).frame(height: 40).contentShape(Capsule())
                 }
@@ -363,7 +363,7 @@ struct FastView: View {
                             HStack(spacing: 0) {
                                 Button { store.openDetail(detail(r)) } label: {
                                     ItemLine(title: r.name, sub: [r.day.map { "Den \($0). hver måned" }, r.category].compactMap { $0 }.joined(separator: " · "),
-                                             value: kr(abs(r.amount)), valueColor: r.isActive ? .white : .white.opacity(0.5))
+                                             value: kr(abs(r.amount)), valueColor: r.isActive ? Color.skinFg : Color.skinFg.opacity(0.5))
                                 }
                                 .buttonStyle(.plain)
                                 Toggle(r.name, isOn: Binding(get: { r.isActive }, set: { store.setRecurring(r, active: $0) })).labelsHidden().tint(.accent).padding(.trailing, 14)
@@ -450,7 +450,7 @@ struct StocksView: View {
             VStack(spacing: 12) {
                 ModuleHeader(title: "Aksjer", trailing: {
                     Button { store.syncStocks() } label: {
-                        Image(systemName: "arrow.triangle.2.circlepath").font(.system(size: 16, weight: .semibold)).foregroundStyle(.white).frame(width: 44, height: 44).contentShape(Circle())
+                        Image(systemName: "arrow.triangle.2.circlepath").font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.skinFg).frame(width: 44, height: 44).contentShape(Circle())
                     }
                     .buttonStyle(GlassPress()).glassRound().accessibilityLabel("Synk nå")
                 })
@@ -461,7 +461,7 @@ struct StocksView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Ikke koblet til Trading 212").fontWeight(.semibold)
                             Text("Lag en API-nøkkel hos Trading 212 under Innstillinger → API (Beta). Gi bare lesetilgang (account, portfolio, history:orders, history:dividends), og lås den gjerne til IP-en til homelaben. Nøkkel og secret legges inn i FinansHub på PC og lagres bare på serveren.")
-                                .font(.footnote).foregroundStyle(.white.opacity(0.7))
+                                .font(.footnote).foregroundStyle(Color.skinFg.opacity(0.7))
                             if let e = st.error, !e.isEmpty { Text(e).font(.footnote).foregroundStyle(Color.accentLight) }
                         }
                         .padding(16).frame(maxWidth: .infinity, alignment: .leading).glass(24)
@@ -488,13 +488,13 @@ struct StocksView: View {
         let year = String(Calendar.current.component(.year, from: Date()))
         let divYear = (st.dividends ?? []).filter { ($0.date ?? "").hasPrefix(year) }
         PageHero("Porteføljeverdi", kr(value), "\(sgn(result))\(kr(abs(result)))" + (invested > 0 ? " (\(pct(result / invested * 100)))" : "") + " totalt") {
-            if hist.count > 1 { Spark(values: hist.map { $0 - low }, color: .white).frame(height: 56).padding(.vertical, 4) }
+            if hist.count > 1 { Spark(values: hist.map { $0 - low }, color: Color.skinFg).frame(height: 56).padding(.vertical, 4) }
             HStack(spacing: 6) {
                 ForEach(periods, id: \.0) { k, _ in
                     Button { store.stockPeriod = k } label: {
-                        Text(k).font(.footnote.weight(.semibold)).foregroundStyle(store.stockPeriod == k ? Color.ink : .white)
+                        Text(k).font(.footnote.weight(.semibold)).foregroundStyle(store.stockPeriod == k ? Color.ink : Color.skinFg)
                             .padding(.horizontal, 10).padding(.vertical, 5)
-                            .background(store.stockPeriod == k ? Color.white : Color.white.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
+                            .background(store.stockPeriod == k ? Color.white : Color.skinFg.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
                     }
                     .buttonStyle(.plain)
                 }
@@ -662,11 +662,11 @@ struct ImportView: View {
                 if !store.importFiles.isEmpty {
                     CardList(Array(store.importFiles.enumerated()).map { ($0.offset, $0.element.name) }) { f in
                         HStack {
-                            Image(systemName: "doc").foregroundStyle(.white.opacity(0.6))
+                            Image(systemName: "doc").foregroundStyle(Color.skinFg.opacity(0.6))
                             Text(f.1).lineLimit(1)
                             Spacer()
                             Button { if f.0 < store.importFiles.count { store.importFiles.remove(at: f.0); store.importResult = nil } } label: {
-                                Image(systemName: "xmark").font(.footnote.weight(.semibold)).foregroundStyle(.white.opacity(0.6)).frame(width: 32, height: 32)
+                                Image(systemName: "xmark").font(.footnote.weight(.semibold)).foregroundStyle(Color.skinFg.opacity(0.6)).frame(width: 32, height: 32)
                             }
                             .buttonStyle(.plain).accessibilityLabel("Fjern \(f.1)")
                         }
@@ -675,7 +675,7 @@ struct ImportView: View {
                 }
                 ZStack(alignment: .topLeading) {
                     if store.importText.isEmpty {
-                        Text("…eller lim inn tekst fra nettbanken").foregroundStyle(.white.opacity(0.4)).padding(.horizontal, 5).padding(.vertical, 8).allowsHitTesting(false)
+                        Text("…eller lim inn tekst fra nettbanken").foregroundStyle(Color.skinFg.opacity(0.4)).padding(.horizontal, 5).padding(.vertical, 8).allowsHitTesting(false)
                     }
                     TextEditor(text: $s.importText).scrollContentBackground(.hidden).frame(minHeight: 120).font(.system(.footnote, design: .monospaced))
                 }
@@ -733,7 +733,7 @@ struct DetailView: View {
                             SectionLabel(text: g.title)
                             CardList(g.rows) { r in
                                 HStack(alignment: .firstTextBaseline) {
-                                    Text(r.k).foregroundStyle(.white.opacity(0.65))
+                                    Text(r.k).foregroundStyle(Color.skinFg.opacity(0.65))
                                     Spacer(minLength: 12)
                                     Text(r.v).fontWeight(.medium).multilineTextAlignment(.trailing)
                                 }
@@ -872,7 +872,7 @@ struct OriginalView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 12) {
                             CardList(b.rows) { r in
-                                HStack(alignment: .firstTextBaseline) { Text(r.k).foregroundStyle(.white.opacity(0.65)); Spacer(minLength: 12); Text(r.v).fontWeight(.medium).multilineTextAlignment(.trailing) }
+                                HStack(alignment: .firstTextBaseline) { Text(r.k).foregroundStyle(Color.skinFg.opacity(0.65)); Spacer(minLength: 12); Text(r.v).fontWeight(.medium).multilineTextAlignment(.trailing) }
                                     .padding(.horizontal, 16).padding(.vertical, 12)
                             }
                             if !b.raw.isEmpty {
@@ -908,9 +908,9 @@ struct OriginalView: View {
     private func missing(_ title: String, _ text: String) -> some View {
         VStack(spacing: 8) {
             Spacer()
-            Image(systemName: "doc.questionmark").font(.system(size: 34)).foregroundStyle(.white.opacity(0.5))
+            Image(systemName: "doc.questionmark").font(.system(size: 34)).foregroundStyle(Color.skinFg.opacity(0.5))
             Text(title).fontWeight(.semibold)
-            Text(text).font(.footnote).foregroundStyle(.white.opacity(0.65)).multilineTextAlignment(.center)
+            Text(text).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.65)).multilineTextAlignment(.center)
             Spacer()
         }
         .frame(maxWidth: .infinity)
@@ -997,7 +997,7 @@ struct ZoomImage: View {
                     if scale > 1 { scale = 1; last = 1; offset = .zero; lastOffset = .zero } else { scale = 2.5; last = 2.5 }
                 }
             }
-            .background(Color.white.opacity(0.04))
+            .background(Color.skinFg.opacity(0.04))
             .clipShape(RoundedRectangle(cornerRadius: 22))
             .accessibilityLabel("Kvittering. Knip for å zoome, dobbelttrykk for å zoome inn eller ut.")
     }

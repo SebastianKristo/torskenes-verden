@@ -129,7 +129,7 @@ struct ReanalyzeCompare: View {
                     Button { dismiss() } label: { Text("Lukk").fontWeight(.semibold).foregroundStyle(Color.accentLight).frame(height: 44) }.buttonStyle(.plain)
                 }
                 Text("Velg hvilket resultat som skal beholdes. Originalbildet er lest på nytt av Gemini.")
-                    .font(.footnote).foregroundStyle(.white.opacity(0.65))
+                    .font(.footnote).foregroundStyle(Color.skinFg.opacity(0.65))
                 HStack(alignment: .top, spacing: 10) {
                     column("Forrige", result.previous, fresh: false)
                     column("Gemini", result.result, fresh: true)
@@ -152,16 +152,16 @@ struct ReanalyzeCompare: View {
     private func column(_ title: String, _ r: ReadResult, fresh: Bool) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text(title).font(.footnote.weight(.bold)).foregroundStyle(fresh ? Color.accentLight : .white.opacity(0.7))
+                Text(title).font(.footnote.weight(.bold)).foregroundStyle(fresh ? Color.accentLight : Color.skinFg.opacity(0.7))
                 Spacer(minLength: 0)
-                if let c = r.confidencePct { Text("\(c) %").font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.6)) }
+                if let c = r.confidencePct { Text("\(c) %").font(.caption.weight(.semibold)).foregroundStyle(Color.skinFg.opacity(0.6)) }
             }
-            if !r.engine.isEmpty { Text(r.engine).font(.caption2).foregroundStyle(.white.opacity(0.5)) }
+            if !r.engine.isEmpty { Text(r.engine).font(.caption2).foregroundStyle(Color.skinFg.opacity(0.5)) }
             Text(r.merchant.isEmpty ? "–" : r.merchant).fontWeight(.semibold).lineLimit(2)
-            Text(r.date.isEmpty ? "–" : ddmm(r.date)).font(.footnote).foregroundStyle(.white.opacity(0.7))
+            Text(r.date.isEmpty ? "–" : ddmm(r.date)).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.7))
             Text(r.total.map { n2($0) + " kr" } ?? "–").font(.system(.body, design: .monospaced).weight(.semibold))
             if !r.items.isEmpty {
-                Divider().overlay(.white.opacity(0.12))
+                Divider().overlay(Color.skinFg.opacity(0.12))
                 ForEach(Array(r.items.prefix(12).enumerated()), id: \.offset) { _, it in
                     HStack(alignment: .top) {
                         Text(it.name).font(.caption).lineLimit(2)

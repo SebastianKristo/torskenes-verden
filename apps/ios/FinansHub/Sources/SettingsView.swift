@@ -59,11 +59,11 @@ struct SettingsView: View {
                     AvatarImage(size: 56, tint: .accent)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(store.displayName).font(.title3.weight(.bold))
-                        Text("\(store.account?.username ?? "–") · \(store.me?.role ?? store.account?.role ?? "")").font(.footnote).foregroundStyle(.white.opacity(0.7))
-                        Text(host(store.base)).font(.caption).foregroundStyle(.white.opacity(0.55))
+                        Text("\(store.account?.username ?? "–") · \(store.me?.role ?? store.account?.role ?? "")").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.7))
+                        Text(host(store.base)).font(.caption).foregroundStyle(Color.skinFg.opacity(0.55))
                     }
                     Spacer()
-                    Image(systemName: "chevron.right").foregroundStyle(.white.opacity(0.6))
+                    Image(systemName: "chevron.right").foregroundStyle(Color.skinFg.opacity(0.6))
                 }
                 .padding(18).glass(28, tint: Color.accent.opacity(0.35))
             }
@@ -72,7 +72,7 @@ struct SettingsView: View {
                 SectionLabel(text: g.0)
                 VStack(spacing: 0) {
                     ForEach(Array(g.1.enumerated()), id: \.offset) { i, item in
-                        if i > 0 { Divider().overlay(.white.opacity(0.12)) }
+                        if i > 0 { Divider().overlay(Color.skinFg.opacity(0.12)) }
                         Button {
                             if item.0 == "bank" { store.openSub(.imports) } else { store.settingsPage = item.0 }
                             if item.0 == "tokens" { store.loadTokens() }
@@ -81,7 +81,7 @@ struct SettingsView: View {
                                 Image(systemName: item.2).frame(width: 24).foregroundStyle(Color.accent)
                                 Text(item.1)
                                 Spacer()
-                                Image(systemName: "chevron.right").foregroundStyle(.white.opacity(0.5))
+                                Image(systemName: "chevron.right").foregroundStyle(Color.skinFg.opacity(0.5))
                             }
                             .padding(16).contentShape(Rectangle())
                         }
@@ -96,6 +96,33 @@ struct SettingsView: View {
     }
 }
 
+/// En underside fra innstillingene uten egen tittel. Papir viser tittelen i toppbildet og «‹ Alle innstillinger».
+struct SettingsSubpage: View {
+    let page: String
+    var body: some View {
+        VStack(spacing: 12) {
+            switch page {
+            case "accounts": AccountsPage()
+            case "security": SecurityPage()
+            case "tokens": TokensPage()
+            case "look": LookPage()
+            case "scan": ScanPrefsPage()
+            case "notify": NotifyPage()
+            case "haptics": HapticsPage()
+            case "widgets": WidgetsPage()
+            case "server": ServerPage()
+            case "data": DataPage()
+            case "ai": AiPage()
+            case "cats": CategoriesPage()
+            case "rules": RulesPage()
+            case "stocks": StocksPrefsPage()
+            case "backup": BackupPage()
+            default: AboutPage()
+            }
+        }
+    }
+}
+
 /* ---------------- Byggeklosser ---------------- */
 
 private struct Card<C: View>: View {
@@ -106,7 +133,7 @@ private struct Card<C: View>: View {
 private struct Row: View {
     let label: String
     let value: String
-    var body: some View { HStack { Text(label).foregroundStyle(.white.opacity(0.65)); Spacer(); Text(value).fontWeight(.medium).lineLimit(1) }.padding(.horizontal, 16).padding(.vertical, 13) }
+    var body: some View { HStack { Text(label).foregroundStyle(Color.skinFg.opacity(0.65)); Spacer(); Text(value).fontWeight(.medium).lineLimit(1) }.padding(.horizontal, 16).padding(.vertical, 13) }
 }
 
 private struct Switch: View {
@@ -115,7 +142,7 @@ private struct Switch: View {
     @Binding var on: Bool
     var body: some View {
         Toggle(isOn: $on) {
-            VStack(alignment: .leading, spacing: 2) { Text(label); if let sub { Text(sub).font(.caption).foregroundStyle(.white.opacity(0.6)) } }
+            VStack(alignment: .leading, spacing: 2) { Text(label); if let sub { Text(sub).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)) } }
         }
         .padding(.horizontal, 16).padding(.vertical, 8)
     }
@@ -129,7 +156,7 @@ private struct Choice: View {
     var body: some View {
         Button(action: act) {
             HStack {
-                VStack(alignment: .leading, spacing: 2) { Text(label); if let sub { Text(sub).font(.caption).foregroundStyle(.white.opacity(0.6)) } }
+                VStack(alignment: .leading, spacing: 2) { Text(label); if let sub { Text(sub).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)) } }
                 Spacer()
                 if on { Image(systemName: "checkmark").foregroundStyle(Color.accent) }
             }
@@ -141,15 +168,15 @@ private struct Choice: View {
 
 private struct Note: View {
     let text: String
-    var body: some View { Text(text).font(.caption).foregroundStyle(.white.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 6) }
+    var body: some View { Text(text).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 6) }
 }
 
 private struct Sep: View {
-    var body: some View { Divider().overlay(.white.opacity(0.12)) }
+    var body: some View { Divider().overlay(Color.skinFg.opacity(0.12)) }
 }
 
 private func link(_ label: String, _ act: @escaping () -> Void) -> some View {
-    Button(action: act) { HStack { Text(label).foregroundStyle(Color.accentLight); Spacer(); Image(systemName: "arrow.up.right").foregroundStyle(.white.opacity(0.5)) }.padding(16).contentShape(Rectangle()) }
+    Button(action: act) { HStack { Text(label).foregroundStyle(Color.accentLight); Spacer(); Image(systemName: "arrow.up.right").foregroundStyle(Color.skinFg.opacity(0.5)) }.padding(16).contentShape(Rectangle()) }
         .buttonStyle(.plain)
 }
 
@@ -168,7 +195,7 @@ private struct AccountsPage: View {
                     AvatarImage(size: 72, tint: .accent)
                     VStack(alignment: .leading, spacing: 4) {
                         Text(store.displayName).font(.headline)
-                        Text("Vises i appen og i Homelab. Beskjæres til et kvadrat.").font(.caption).foregroundStyle(.white.opacity(0.6))
+                        Text("Vises i appen og i Homelab. Beskjæres til et kvadrat.").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6))
                     }
                     Spacer(minLength: 0)
                 }
@@ -191,10 +218,10 @@ private struct AccountsPage: View {
                     if i > 0 { Sep() }
                     let active = a.id == store.account?.id
                     HStack(spacing: 12) {
-                        Text(initial(a.label)).fontWeight(.bold).foregroundStyle(active ? Color.ink : .white).frame(width: 40, height: 40).background(active ? Color.accent : .white.opacity(0.14), in: Circle())
+                        Text(initial(a.label)).fontWeight(.bold).foregroundStyle(active ? Color.ink : Color.skinFg).frame(width: 40, height: 40).background(active ? Color.accent : Color.skinFg.opacity(0.14), in: Circle())
                         VStack(alignment: .leading, spacing: 2) {
                             Text(a.label + (active ? " · aktiv" : "")).fontWeight(.medium)
-                            Text("\(a.username.isEmpty ? "–" : a.username) · \(a.role) · \(host(a.server))").font(.caption).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
+                            Text("\(a.username.isEmpty ? "–" : a.username) · \(a.role) · \(host(a.server))").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)).lineLimit(1)
                         }
                         Spacer()
                         Button("Logg ut") { store.logout(a.id) }.foregroundStyle(Color.accentLight)
@@ -295,9 +322,9 @@ private struct TokensPage: View {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(t.name ?? "Token").fontWeight(.medium)
-                                    Text((t.scopes ?? []).joined(separator: ", ")).font(.caption).foregroundStyle(.white.opacity(0.6)).lineLimit(2)
+                                    Text((t.scopes ?? []).joined(separator: ", ")).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)).lineLimit(2)
                                     Text("Laget \(stamp(t.created?.date)) · sist brukt \(stamp((t.lastUsed ?? t.last_used)?.date)) · utløper \((t.expires ?? t.expiresAt)?.date.map { stamp($0) } ?? "aldri")")
-                                        .font(.caption2).foregroundStyle(.white.opacity(0.5))
+                                        .font(.caption2).foregroundStyle(Color.skinFg.opacity(0.5))
                                 }
                                 Spacer()
                                 Button("Trekk tilbake") { store.revokeToken(t.id.value) }.font(.footnote).foregroundStyle(Color.accentLight)
@@ -311,16 +338,16 @@ private struct TokensPage: View {
                 SectionLabel(text: "Lag nytt token")
                 VStack(alignment: .leading, spacing: 10) {
                     TextField("Navn, f.eks. iOS-snarvei", text: $name).padding(.horizontal, 14).frame(height: 46).glass(16)
-                    Text("Tilganger").font(.footnote).foregroundStyle(.white.opacity(0.6))
+                    Text("Tilganger").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6))
                     Flow(spacing: 8) {
                         ForEach(allScopes, id: \.0) { k, n in
                             Button { if scopes.contains(k) { scopes.remove(k) } else { scopes.insert(k) } } label: {
-                                Text(n).font(.subheadline).padding(.horizontal, 12).frame(height: 34).foregroundStyle(scopes.contains(k) ? Color.ink : .white)
+                                Text(n).font(.subheadline).padding(.horizontal, 12).frame(height: 34).foregroundStyle(scopes.contains(k) ? Color.ink : Color.skinFg)
                             }
                             .buttonStyle(.plain).glass(17, tint: scopes.contains(k) ? .accent : nil)
                         }
                     }
-                    Text("Utløper").font(.footnote).foregroundStyle(.white.opacity(0.6))
+                    Text("Utløper").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6))
                     Picker("Utløper", selection: $days) {
                         Text("30 d").tag(Int?.some(30)); Text("90 d").tag(Int?.some(90)); Text("1 år").tag(Int?.some(365)); Text("Aldri").tag(Int?.none)
                     }
@@ -400,7 +427,7 @@ private struct NavigationBarPrefs: View {
     var body: some View {
         VStack(spacing: 12) {
             SectionLabel(text: "Navigasjonslinje")
-            Text("Endre navn, rekkefølge og skjul faner. Et tomt felt gir standardnavnet.").font(.footnote).foregroundStyle(.white.opacity(0.6))
+            Text("Endre navn, rekkefølge og skjul faner. Et tomt felt gir standardnavnet.").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6))
                 .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 6)
             SectionLabel(text: "Homelab")
             NavEditor(list: "hlTabs", ids: store.layout.hlTabs, fixed: HomeLayout.fixedHl, prefix: "hl.",
@@ -520,8 +547,8 @@ private struct WidgetsPage: View {
         VStack(spacing: 12) {
             Card {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(WidgetShared.linked ? "Widgetene er koblet til appen" : "Widgetene når ikke appen").font(.system(size: 16, weight: .semibold)).foregroundStyle(.white)
-                    Text(WidgetShared.group ?? "Ingen App Group i signeringen").font(.system(size: 13)).foregroundStyle(.white.opacity(0.6))
+                    Text(WidgetShared.linked ? "Widgetene er koblet til appen" : "Widgetene når ikke appen").font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.skinFg)
+                    Text(WidgetShared.group ?? "Ingen App Group i signeringen").font(.system(size: 13)).foregroundStyle(Color.skinFg.opacity(0.6))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
@@ -582,9 +609,9 @@ private struct DataPage: View {
     var body: some View {
         VStack(spacing: 12) {
             Card {
-                Button { store.clearCache() } label: { HStack { Text("Tøm hurtigbuffer"); Spacer(); Text("Logoer og bilder").font(.footnote).foregroundStyle(.white.opacity(0.6)) }.padding(16).contentShape(Rectangle()) }.buttonStyle(.plain)
+                Button { store.clearCache() } label: { HStack { Text("Tøm hurtigbuffer"); Spacer(); Text("Logoer og bilder").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)) }.padding(16).contentShape(Rectangle()) }.buttonStyle(.plain)
                 Sep()
-                Button { store.refresh() } label: { HStack { Text("Synk nå"); Spacer(); Text(stamp(store.lastSync)).font(.footnote).foregroundStyle(.white.opacity(0.6)) }.padding(16).contentShape(Rectangle()) }.buttonStyle(.plain)
+                Button { store.refresh() } label: { HStack { Text("Synk nå"); Spacer(); Text(stamp(store.lastSync)).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)) }.padding(16).contentShape(Rectangle()) }.buttonStyle(.plain)
                 Sep()
                 if let csv {
                     ShareLink(item: csv) { HStack { Text("Del CSV-filen"); Spacer(); Image(systemName: "square.and.arrow.up") }.padding(16).contentShape(Rectangle()) }
@@ -663,7 +690,7 @@ private struct CategoriesPage: View {
                                 Text(c.name)
                                 Spacer()
                                 if let b = budgets.first(where: { $0.categoryId == c.id }), b.budget > 0 {
-                                    Text("\(n0(b.budget)) kr/mnd").font(.system(.footnote, design: .monospaced)).foregroundStyle(.white.opacity(0.65))
+                                    Text("\(n0(b.budget)) kr/mnd").font(.system(.footnote, design: .monospaced)).foregroundStyle(Color.skinFg.opacity(0.65))
                                 }
                             }
                             .padding(.horizontal, 16).padding(.vertical, 13)

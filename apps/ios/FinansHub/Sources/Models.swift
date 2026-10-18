@@ -738,10 +738,11 @@ extension Color {
         let v = UInt64(hex.trimmingCharacters(in: CharacterSet(charactersIn: "#")), radix: 16) ?? 0xA0A0AA
         self.init(red: Double((v >> 16) & 0xFF) / 255, green: Double((v >> 8) & 0xFF) / 255, blue: Double(v & 0xFF) / 255)
     }
-    static let accent = Color(hex: "#FF7A3D")
-    static let accentLight = Color(hex: "#FFB08A")
-    static let positive = Color(hex: "#9FE3C6")
-    static let ink = Color(hex: "#1A0C04")
+    // I Papir (PaperSkin) brukes Papir-aksenten, grønnfargen og teksten på aksent, så de klassiske skjermene er lesbare på papir.
+    static var accent: Color { PaperSkin.palette?.lab ?? Color(hex: "#FF7A3D") }
+    static var accentLight: Color { PaperSkin.palette?.lab ?? Color(hex: "#FFB08A") }
+    static var positive: Color { PaperSkin.palette?.pos ?? Color(hex: "#9FE3C6") }
+    static var ink: Color { PaperSkin.palette?.onLab ?? Color(hex: "#1A0C04") }
     static let paper = Color(hex: "#ECE8E0")
     /// Domener: mørkt glass med rosa aksent.
     static let domPink = Color(hex: "#FF9EBE")

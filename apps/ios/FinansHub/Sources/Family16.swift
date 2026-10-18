@@ -18,6 +18,7 @@ struct FamPos: Hashable {
     var charging: Bool
     var activity: String
     var place: String
+    var device: String
 
     init?(_ o: [String: Any]?) {
         guard let o, let la = JS.num(o, "lat"), let lo = JS.num(o, "lon") else { return nil }
@@ -28,6 +29,7 @@ struct FamPos: Hashable {
         charging = JS.bool(o, "charging") ?? false
         activity = JS.str(o, "activity") ?? ""
         place = JS.str(o, "place") ?? ""
+        device = JS.str(o, "device") ?? ""
     }
 
     var coord: CLLocationCoordinate2D { CLLocationCoordinate2D(latitude: lat, longitude: lon) }
@@ -159,6 +161,7 @@ final class FamilyModel {
     func zone(_ id: String) -> FamZone? { zones.first { $0.id == id } }
 
     func load(_ store: Store) async {
+        pingStore = store
         FamilyLocation.shared.attach(store)
         do {
             let d = try await store.api.callAt("/api", "GET", "/family", timeout: 20)
@@ -182,6 +185,8 @@ final class FamilyModel {
         }
         members = JS.list(o, "members").map { FamMember($0) }
         zones = JS.list(o, "zones").map { FamZone($0) }
+        // Geofencing i iOS: inn og ut av sonene sendes til serveren med en gang, også når appen er lukket.
+        FamilyLocation.shared.syncZones(zones)
         events = JS.list(o, "events").map { FamEvent($0) }
         if selected == nil { selected = members.first { $0.last != nil }?.id }
     }
@@ -253,6 +258,25 @@ final class FamilyModel {
         if enter || leave { UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in } }
     }
 
+    /* ---------- «Spill av lyd» på en annens telefon ---------- */
+
+    var pingStore: Store?
+
+    func ping(_ mem: FamMember) {
+        guard let store = pingStore else { return }
+        Haptics.shared.tap()
+        let e = mem.id.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? mem.id
+        Task { @MainActor in
+            do {
+                let d = try await store.api.callAt("/api", "POST", "/family/ping/\(e)")
+                let ok = JS.bool(JS.obj(d), "delivered") ?? false
+                store.flash(ok ? "\(mem.first) sin telefon spiller lyd nå" : "Sendt. \(mem.first) får lyden neste gang appen er tilkoblet.")
+            } catch {
+                store.flash("Kunne ikke nå \(mem.first): \(error.localizedDescription)")
+            }
+        }
+    }
+
     /* ---------- Hendelser (soner) ---------- */
 
     /// Nye hendelser siden sist: vises som lokale varsler (når appen er åpen eller vekkes i bakgrunnen).
@@ -273,10 +297,11 @@ final class FamilyModel {
     }
 
     private func notify(_ ev: FamEvent) {
+        guard NotifyModel.allowed("familie") else { return }
         let c = UNMutableNotificationContent()
         c.title = "Familie"
         c.body = eventText(ev)
-        c.sound = .default
+        c.sound = NotifyModel.currentSound()
         let r = UNNotificationRequest(identifier: "fam-\(ev.id)", content: c, trigger: nil)
         UNUserNotificationCenter.current().add(r)
     }
@@ -378,6 +403,33 @@ final class FamilyLocation: NSObject, CLLocationManagerDelegate {
 
     func locationManager(_ m: CLLocationManager, didFailWithError error: Error) {}
 
+    /* ---------- Geofencing (soner) ---------- */
+
+    /// Overvåker sonene med CLCircularRegion (maks 18; iOS tillater 20 per app). Bare når delingen er på.
+    func syncZones(_ zones: [FamZone]) {
+        for r in manager.monitoredRegions where r.identifier.hasPrefix("fam-") { manager.stopMonitoring(for: r) }
+        guard running, CLLocationManager.isMonitoringAvailable(for: CLCircularRegion.self) else { return }
+        let maxR = manager.maximumRegionMonitoringDistance
+        for z in zones.prefix(18) {
+            let radius = Swift.min(Swift.max(z.radius, 50), maxR)
+            let r = CLCircularRegion(center: z.coord, radius: radius, identifier: "fam-" + z.id)
+            r.notifyOnEntry = true
+            r.notifyOnExit = true
+            manager.startMonitoring(for: r)
+        }
+    }
+
+    func locationManager(_ m: CLLocationManager, didEnterRegion region: CLRegion) { regionChanged(region) }
+    func locationManager(_ m: CLLocationManager, didExitRegion region: CLRegion) { regionChanged(region) }
+
+    /// Inn eller ut av en sone: hent en fersk posisjon og send den uten å vente på de vanlige 60 sekundene.
+    private func regionChanged(_ r: CLRegion) {
+        guard r.identifier.hasPrefix("fam-") else { return }
+        lastSentAt = .distantPast
+        lastSent = nil
+        manager.requestLocation()
+    }
+
     @MainActor private func send(_ loc: CLLocation, activity: String) {
         guard !server.isEmpty, UserDefaults.standard.string(forKey: "fh_fam_sharing") == "on" else { return }
         let dev = UIDevice.current
@@ -389,6 +441,7 @@ final class FamilyLocation: NSObject, CLLocationManagerDelegate {
         if loc.speed >= 0 { body["speed"] = loc.speed }
         if loc.course >= 0 { body["heading"] = loc.course }
         if dev.batteryLevel >= 0 { body["battery"] = Double(dev.batteryLevel) * 100 }
+        body["device"] = "\(dev.model) · iOS \(dev.systemVersion)"
         let api = API(base: server, token: token)
         let app = UIApplication.shared
         let task = app.applicationState != .active ? app.beginBackgroundTask(withName: "familie-posisjon", expirationHandler: nil) : .invalid
@@ -430,23 +483,55 @@ struct FamilyView: View {
     @State private var camera: MapCameraPosition = .automatic
     @MainActor private var m: FamilyModel { FamilyModel.shared }
 
+    @State private var tab = "kart"
+
     var body: some View {
         VStack(spacing: 10) {
-            mapCard
+            tabs
             if let e = m.error { PCard { Text(e).font(PF.ui(13)).foregroundStyle(p.lab).fixedSize(horizontal: false, vertical: true) } }
-            mySharing
-            people
-            zonesCard
-            eventsCard
+            switch tab {
+            case "soner":
+                mapCard
+                zonesCard
+            case "helse":
+                FamilyHealthView()
+            default:
+                mapCard
+                mySharing
+                people
+                eventsCard
+            }
         }
         .task {
             await m.load(store)
-            focusSelected()
+            if pinned.isEmpty {
+                // Ingen posisjoner ennå: vis Oslo i stedet for et tomt verdenskart.
+                camera = .region(MKCoordinateRegion(center: CLLocationCoordinate2D(latitude: 59.9139, longitude: 10.7522), latitudinalMeters: 12000, longitudinalMeters: 12000))
+            } else {
+                focusSelected()
+            }
         }
         .sheet(isPresented: Binding(get: { m.addingZone }, set: { m.addingZone = $0 })) {
             FamilyZoneSheet(zone: m.zoneEdit, coord: m.zoneDraft ?? m.zoneEdit?.coord)
                 .environment(\.paper, p).presentationDetents([.medium, .large]).presentationBackground(p.bg)
         }
+    }
+
+    /* ---------- Faner: Kart, Soner og Helse ---------- */
+
+    private var tabs: some View {
+        HStack(spacing: 4) {
+            ForEach([("kart", "Kart"), ("soner", "Soner"), ("helse", "Helse")], id: \.0) { t in
+                Button { tab = t.0; Haptics.shared.select() } label: {
+                    Text(t.1).font(PF.ui(14, .semibold)).foregroundStyle(tab == t.0 ? p.bg : p.ink)
+                        .frame(maxWidth: .infinity, minHeight: 38)
+                        .background(tab == t.0 ? p.ink : Color.clear, in: Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(p.card, in: Capsule())
     }
 
     /* ---------- Kart ---------- */
@@ -657,6 +742,7 @@ struct FamilyMemberCard: View {
                 header
                 if member.sharing == "on", let pos = member.last { sensors(pos) }
                 if let h = member.health { health(h) }
+                if selected, member.sharing == "on", let pos = member.last { details(pos) }
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -693,11 +779,47 @@ struct FamilyMemberCard: View {
     }
 
     private func sensors(_ pos: FamPos) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) { sensorRow(pos) }
+    }
+
+    private func sensorRow(_ pos: FamPos) -> some View {
         HStack(spacing: 6) {
             chip(icon: activityIcon(pos.activity), text: activityName(pos.activity))
             if let s = pos.speed, s > 0.5 { chip(icon: "speedometer", text: "\(Int((s * 3.6).rounded())) km/t") }
             if let b = pos.battery { chip(icon: pos.charging ? "battery.100.bolt" : batteryIcon(b), text: "\(Int(b.rounded())) %") }
             if let a = pos.acc { chip(icon: "scope", text: "±\(Int(a.rounded())) m") }
+        }
+    }
+
+    /// Valgt person: koordinater, nøyaktighet, sist oppdatert og veibeskrivelse i Kart.
+    private func details(_ pos: FamPos) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Rectangle().fill(p.line).frame(height: 1)
+            HStack(spacing: 8) {
+                stat("Koordinater", String(format: "%.4f, %.4f", pos.lat, pos.lon))
+                if let a = pos.acc { stat("Nøyaktighet", "±\(Int(a.rounded())) m") }
+            }
+            HStack(spacing: 8) {
+                if let t = pos.ts { stat("Oppdatert", ago(t)) }
+                stat("Presisjon", member.precision == "approx" ? "Omtrentlig" : "Nøyaktig")
+            }
+            if !pos.device.isEmpty { stat("Enhet", pos.device) }
+            HStack(spacing: 8) {
+                Button {
+                    if let u = URL(string: "http://maps.apple.com/?daddr=\(pos.lat),\(pos.lon)&dirflg=d") { UIApplication.shared.open(u) }
+                } label: {
+                    Text("Veibeskrivelse").font(PF.ui(13.5, .bold)).foregroundStyle(p.bg).frame(maxWidth: .infinity, minHeight: 40)
+                        .background(p.ink, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                if member.id != FamilyModel.shared.meId {
+                    Button { FamilyModel.shared.ping(member) } label: {
+                        Text("Spill av lyd").font(PF.ui(13.5, .bold)).foregroundStyle(p.ink).frame(maxWidth: .infinity, minHeight: 40)
+                            .overlay(Capsule().stroke(p.line, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
         }
     }
 
@@ -964,5 +1086,107 @@ struct FamilySettingsView: View {
         .padding(4)
         .background(p.card, in: Capsule())
         .padding(.top, 8)
+    }
+}
+
+/* ---------- Helse (fanen i Familie) ---------- */
+
+/// Helse per person: skritt mot mål, hvilepuls, puls nå, søvn i natt, aktive kalorier og snitt siste 7 dager.
+struct FamilyHealthView: View {
+    @Environment(Store.self) private var store
+    @Environment(\.paper) private var p
+    @MainActor private var m: FamilyModel { FamilyModel.shared }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button { store.paperGo("innst-fam") } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "heart.fill").foregroundStyle(p.lab)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Apple Helse").font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink)
+                        Text("Velg hva du deler med familien. Bare et sammendrag synkes, omtrent hvert 15. minutt.").font(PF.ui(12)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer()
+                    Text("›").foregroundStyle(p.mut)
+                }
+                .padding(14)
+                .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            let withHealth = m.members.filter { $0.health != nil }
+            if withHealth.isEmpty {
+                PCard { Text(m.loaded ? "Ingen deler helsedata ennå." : "Henter …").font(PF.ui(13.5)).foregroundStyle(p.mut) }
+            }
+            ForEach(withHealth) { mem in card(mem) }
+        }
+    }
+
+    private func card(_ mem: FamMember) -> some View {
+        let h = mem.health
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text(mem.name).font(PF.serif(19, medium: true)).foregroundStyle(p.ink)
+                Spacer()
+                if let u = h?.updated { Text(JS.fmt(u, Calendar.current.isDateInToday(u) ? "'i dag' HH:mm" : "dd.MM HH:mm")).font(PF.ui(11.5)).foregroundStyle(p.mut) }
+            }
+            if let steps = h?.steps { progress("Skritt", n0(steps), "mål 10 000", Swift.min(1, steps / 10000)) }
+            if let sleep = h?.sleepMin { progress("Søvn i natt", "\(Int(sleep) / 60) t \(Int(sleep) % 60) m", "mål 8 t", Swift.min(1, sleep / 480)) }
+            HStack(spacing: 8) {
+                if let r = h?.restingHr { tile("Hvilepuls", "\(Int(r))", "slag/min") }
+                if let r = h?.hr { tile("Puls nå", "\(Int(r))", "slag/min") }
+                if let k = h?.activeKcal { tile("Aktive kalorier", n0(k), "kcal") }
+            }
+            if let week = h?.week, !week.isEmpty { weekBars(week) }
+        }
+        .padding(14)
+        .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    private func progress(_ k: String, _ v: String, _ goal: String, _ frac: Double) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(k.uppercased()).font(PF.mono(9.5)).tracking(1).foregroundStyle(p.mut)
+                Spacer()
+                Text(goal).font(PF.ui(11.5)).foregroundStyle(p.mut)
+            }
+            Text(v).font(PF.serif(22, medium: true)).foregroundStyle(p.ink)
+            GeometryReader { g in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(p.line)
+                    Capsule().fill(frac >= 1 ? p.pos : p.lab).frame(width: g.size.width * frac)
+                }
+            }
+            .frame(height: 6)
+        }
+    }
+
+    private func tile(_ k: String, _ v: String, _ unit: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(k.uppercased()).font(PF.mono(9)).tracking(0.8).foregroundStyle(p.mut).lineLimit(1).minimumScaleFactor(0.7)
+            Text(v).font(PF.serif(20, medium: true)).foregroundStyle(p.ink)
+            Text(unit).font(PF.ui(11)).foregroundStyle(p.mut)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(10)
+        .background(p.bg, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private func weekBars(_ week: [Double]) -> some View {
+        let top = Swift.max(1, week.max() ?? 1)
+        let avg = week.reduce(0, +) / Double(week.count)
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text("SNITT SISTE 7 DAGER").font(PF.mono(9.5)).tracking(1).foregroundStyle(p.mut)
+                Spacer()
+                Text("\(n0(avg)) skritt").font(PF.ui(12, .semibold)).foregroundStyle(p.ink)
+            }
+            HStack(alignment: .bottom, spacing: 6) {
+                ForEach(Array(week.suffix(7).enumerated()), id: \.offset) { _, v in
+                    RoundedRectangle(cornerRadius: 4, style: .continuous).fill(p.ink.opacity(0.8)).frame(height: Swift.max(4, 54 * v / top))
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .frame(height: 56, alignment: .bottom)
+        }
     }
 }

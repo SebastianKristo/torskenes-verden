@@ -1050,18 +1050,26 @@ final class Store {
                 try await self.plainSearch(t)
             } else {
                 do {
-                    var body: [String: Any] = ["q": t]
-                    if force { body["force"] = true }
+                    // ✦ AI er på: kjør AI-søket med en gang (force), også for korte søk.
+                    let body: [String: Any] = ["q": t, "force": true]
                     let d = try await self.api.callAt("/finans/api", "POST", "/search/ai", json: body, timeout: 25)
+                    let raw = JS.obj(d)
                     let r = try JSONDecoder().decode(AiAnswer.self, from: d)
-                    if r.aiUnavailable == true {
-                        self.aiNote = "AI-motoren er av eller nede. Viser vanlig søk."
+                    if let kind = JS.str(raw, "aiErrorKind"), !kind.isEmpty {
+                        // Tydelig årsak: nøkkel mangler, ingen tilgang, tidsavbrudd, modellfeil, kvote eller nett.
+                        self.aiNote = "✦ AI: " + (JS.str(raw, "aiErrorText") ?? "AI-motoren feilet (\(kind)).")
+                        if (r.hits ?? []).isEmpty { try await self.plainSearch(t) } else { self.ai = r }
+                    } else if r.aiUnavailable == true {
+                        self.aiNote = (JS.str(raw, "aiErrorText") ?? "AI-motoren er av eller nede.") + " Viser vanlig søk."
                         try await self.plainSearch(t)
                     } else { self.ai = r }
                 } catch let e as APIError where e.status == 401 && !e.needsTotp {
                     throw e
+                } catch let e as APIError {
+                    self.aiNote = "✦ AI svarte ikke: \(e.message). Viser vanlig søk."
+                    try await self.plainSearch(t)
                 } catch {
-                    self.aiNote = "AI-motoren svarte ikke. Viser vanlig søk."
+                    self.aiNote = "✦ AI svarte ikke: \(error.localizedDescription). Viser vanlig søk."
                     try await self.plainSearch(t)
                 }
             }

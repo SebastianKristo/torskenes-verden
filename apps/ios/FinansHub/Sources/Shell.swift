@@ -19,7 +19,8 @@ extension View {
 
     /// Interaktiv glassknapp med oransje tint (iOS 26), ellers tonet materiale.
     @ViewBuilder func glassCircle(tint: Color) -> some View {
-        if DesignStyle.material { self.background(tint, in: Circle()) } else { glassCircleIOS(tint: tint) }
+        if PaperSkin.palette != nil { self.background(tint, in: Circle()) }
+        else if DesignStyle.material { self.background(tint, in: Circle()) } else { glassCircleIOS(tint: tint) }
     }
 
     @ViewBuilder private func glassCircleIOS(tint: Color) -> some View {
@@ -27,16 +28,17 @@ extension View {
         if #available(iOS 26.0, *) {
             self.glassEffect(.regular.tint(tint).interactive(), in: .circle)
         } else {
-            self.background(tint.opacity(0.85), in: Circle()).background(.ultraThinMaterial, in: Circle()).overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 1))
+            self.background(tint.opacity(0.85), in: Circle()).background(.ultraThinMaterial, in: Circle()).overlay(Circle().stroke(Color.skinFg.opacity(0.25), lineWidth: 1))
         }
         #else
-        self.background(tint.opacity(0.85), in: Circle()).background(.ultraThinMaterial, in: Circle()).overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 1))
+        self.background(tint.opacity(0.85), in: Circle()).background(.ultraThinMaterial, in: Circle()).overlay(Circle().stroke(Color.skinFg.opacity(0.25), lineWidth: 1))
         #endif
     }
 
     /// Rund glassflate uten tint (tilbake- og hjemknapper): lys kant og diagonal glans som i designet.
     @ViewBuilder func glassRound() -> some View {
-        if DesignStyle.material { self.background(M3.field, in: Circle()) } else { glassRoundIOS() }
+        if let p = PaperSkin.palette { self.background(p.card, in: Circle()).overlay(Circle().stroke(p.line, lineWidth: 1)) }
+        else if DesignStyle.material { self.background(M3.field, in: Circle()) } else { glassRoundIOS() }
     }
 
     @ViewBuilder private func glassRoundIOS() -> some View {
@@ -48,10 +50,10 @@ extension View {
     }
 
     func fallbackRound() -> some View {
-        self.background(.white.opacity(0.08), in: Circle())
+        self.background(Color.skinFg.opacity(0.08), in: Circle())
             .background(.ultraThinMaterial, in: Circle())
             .overlay(Circle().fill(LinearGradient(colors: [.white.opacity(0.22), .clear, .white.opacity(0.06)], startPoint: .topLeading, endPoint: .bottomTrailing)).allowsHitTesting(false))
-            .overlay(Circle().stroke(.white.opacity(0.24), lineWidth: 1))
+            .overlay(Circle().stroke(Color.skinFg.opacity(0.24), lineWidth: 1))
     }
 
     /// Fanelinja krymper til en sirkel når man scroller ned, og utvides når man scroller opp (iOS 18+).
@@ -81,7 +83,7 @@ struct GlassBack: View {
     let action: () -> Void
     var body: some View {
         Button(action: action) {
-            Image(systemName: "chevron.left").font(.system(size: 17, weight: .semibold)).foregroundStyle(.white).frame(width: 44, height: 44).contentShape(Circle())
+            Image(systemName: "chevron.left").font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.skinFg).frame(width: 44, height: 44).contentShape(Circle())
         }
         .buttonStyle(GlassPress()).glassRound().accessibilityLabel(label)
     }
@@ -93,7 +95,7 @@ struct HomeGlassButton: View {
     var size: CGFloat = 62
     var body: some View {
         Button { store.goStart() } label: {
-            Image(systemName: "house.fill").font(.system(size: size * 0.32, weight: .semibold)).foregroundStyle(.white).frame(width: size, height: size).contentShape(Circle())
+            Image(systemName: "house.fill").font(.system(size: size * 0.32, weight: .semibold)).foregroundStyle(Color.skinFg).frame(width: size, height: size).contentShape(Circle())
         }
         .buttonStyle(GlassPress()).glassRound().accessibilityLabel("Tilbake til \(store.startLabel)")
     }
@@ -114,7 +116,7 @@ struct ScanButton: View {
     let scan: ScanActions
     var size: CGFloat = 60
     var body: some View {
-        Image(systemName: "doc.viewfinder").font(.system(size: size * 0.4, weight: .semibold)).foregroundStyle(.white)
+        Image(systemName: "doc.viewfinder").font(.system(size: size * 0.4, weight: .semibold)).foregroundStyle(Color.skinFg)
             .frame(width: size, height: size).contentShape(Circle())
             .glassCircle(tint: .accent)
             .onTapGesture { scan.tap() }
@@ -133,7 +135,7 @@ struct ScanPill: View {
             Image(systemName: "doc.viewfinder").font(.system(size: 18, weight: .semibold))
             Text("Skann").fontWeight(.bold)
         }
-        .foregroundStyle(.white).padding(.horizontal, 20).frame(height: 58).contentShape(Capsule())
+        .foregroundStyle(Color.skinFg).padding(.horizontal, 20).frame(height: 58).contentShape(Capsule())
         .glass(29, tint: Color.accent.opacity(0.5))
         .onTapGesture { scan.tap() }
         .onLongPressGesture(minimumDuration: 0.48) { Haptics.shared.tap(); scan.hold() }
@@ -214,7 +216,7 @@ struct SystemBar<Content: View>: View {
         }
         .overlay(alignment: .bottomTrailing) {
             if let a = action {
-                Image(systemName: a.icon).font(.system(size: 22, weight: .semibold)).foregroundStyle(.white)
+                Image(systemName: a.icon).font(.system(size: 22, weight: .semibold)).foregroundStyle(Color.skinFg)
                     .frame(width: 58, height: 58).contentShape(Circle())
                     .glassCircle(tint: a.tint)
                     .onTapGesture { a.tap() }
@@ -316,7 +318,7 @@ struct TopBackRow: View {
                     Image(systemName: "chevron.left").font(.system(size: 15, weight: .semibold))
                     Text(title).font(.system(size: 16, weight: .semibold)).lineLimit(1)
                 }
-                .foregroundStyle(light ? Color(hex: "#1E241C") : .white)
+                .foregroundStyle(light ? Color(hex: "#1E241C") : Color.skinFg)
                 .padding(.leading, 12).padding(.trailing, 16).frame(height: 44).contentShape(Capsule())
             }
             .buttonStyle(GlassPress())
@@ -389,6 +391,9 @@ struct RootView: View {
     }
 
     var body: some View {
+        let pal = PaperPalette.of(store.paperMode, system: paperSystemScheme(phase))
+        // Papir: alle skjermer (også de klassiske) tegnes med Papir-fargene.
+        let _ = PaperSkin.use(store.paper ? pal : nil)
         ZStack {
             Backdrop()
             if !store.loggedIn || store.addingAccount {
@@ -417,14 +422,15 @@ struct RootView: View {
             }
             // «Skjul beløp i appveksleren»: dekker innholdet når appen ikke er aktiv.
             if store.hideSwitcher && phase != .active && store.loggedIn {
-                ZStack { Rectangle().fill(.ultraThinMaterial); Image(systemName: "lock.fill").font(.largeTitle).foregroundStyle(.white.opacity(0.8)) }.ignoresSafeArea()
+                ZStack { Rectangle().fill(.ultraThinMaterial); Image(systemName: "lock.fill").font(.largeTitle).foregroundStyle(Color.skinFg.opacity(0.8)) }.ignoresSafeArea()
             }
         }
         .edgeSwipeBack(enabled: store.loggedIn && !store.locked && !store.addingAccount && (store.paper ? store.paperCanSwipeBack : store.canSwipeBack)) {
             if store.paper { store.paperBack() } else { store.back() }
         }
-        .preferredColorScheme(.dark)
-        .tint(.accent)
+        // Papir følger valget lys/mørk (eller systemet); Klassisk er alltid mørk.
+        .preferredColorScheme(store.paper ? (pal.dark ? .dark : .light) : .dark)
+        .tint(store.paper ? pal.lab : Color.accent)
         .task(id: store.loggedIn) {
             // Sporing: henter status hvert 5. minutt mens appen er åpen og gir lokale varsler (ekte push er ikke bygget).
             UNUserNotificationCenter.current().delegate = NotifyDelegate.shared
@@ -559,7 +565,7 @@ struct PadShell: View {
                 FinnView().frame(maxWidth: .infinity)
             } else {
                 PadMain().frame(maxWidth: .infinity)
-                Divider().overlay(.white.opacity(0.1))
+                Divider().overlay(Color.skinFg.opacity(0.1))
                 PadDetail().frame(maxWidth: .infinity)
             }
         }
@@ -609,7 +615,7 @@ struct Sidebar: View {
             }
             if let m = store.module, m.isFinance || m == .settings {
                 VStack(spacing: 4) { Image(systemName: m.icon).font(.title3); Text(m.rawValue).font(.caption.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.7) }
-                    .frame(width: 70, height: 56).foregroundStyle(Color.accentLight).background(Color.white.opacity(0.16), in: RoundedRectangle(cornerRadius: 16))
+                    .frame(width: 70, height: 56).foregroundStyle(Color.accentLight).background(Color.skinFg.opacity(0.16), in: RoundedRectangle(cornerRadius: 16))
             }
             Spacer()
             Avatar()
@@ -620,8 +626,8 @@ struct Sidebar: View {
         Button(action: act) {
             VStack(spacing: 4) { Image(systemName: icon).font(.title3); Text(label).font(.caption.weight(.semibold)).lineLimit(1).minimumScaleFactor(0.7) }
                 .frame(width: 70, height: 56)
-                .foregroundStyle(on ? Color.accentLight : .white.opacity(0.85))
-                .background(on ? Color.white.opacity(0.16) : .clear, in: RoundedRectangle(cornerRadius: 16))
+                .foregroundStyle(on ? Color.accentLight : Color.skinFg.opacity(0.85))
+                .background(on ? Color.skinFg.opacity(0.16) : .clear, in: RoundedRectangle(cornerRadius: 16))
         }
         .buttonStyle(.plain)
     }
@@ -645,7 +651,7 @@ struct ModuleView: View {
                 if hSize == .regular {
                     HStack(spacing: 0) {
                         ScanView(scan: scan.camera, photos: $photos, pdf: $files).frame(maxWidth: .infinity)
-                        Divider().overlay(.white.opacity(0.1))
+                        Divider().overlay(Color.skinFg.opacity(0.1))
                         Group { if store.selectedReceipt != nil { ConfirmView(back: false) } else { Empty(text: "Velg en kvittering.") } }.frame(maxWidth: .infinity)
                     }
                 } else if store.selectedReceipt != nil { ConfirmView(back: true) } else { ScanView(scan: scan.camera, photos: $photos, pdf: $files) }
@@ -721,7 +727,7 @@ struct AvatarImage: View {
     var tint: Color? = nil
     var body: some View {
         if let img = store.avatar {
-            Image(uiImage: img).resizable().scaledToFill().frame(width: size, height: size).clipShape(Circle()).overlay(Circle().stroke(.white.opacity(0.25), lineWidth: 1))
+            Image(uiImage: img).resizable().scaledToFill().frame(width: size, height: size).clipShape(Circle()).overlay(Circle().stroke(Color.skinFg.opacity(0.25), lineWidth: 1))
         } else {
             Text(initial(store.displayName.isEmpty ? "•" : store.displayName)).font(.system(size: size * 0.38, weight: .semibold)).foregroundStyle(tint == nil ? Color.white : Color.ink)
                 .frame(width: size, height: size).glass(size / 2, tint: tint)
@@ -742,20 +748,20 @@ struct ProfileMenu: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(store.displayName).font(.title3.weight(.bold))
                         Text("\(store.account?.username.isEmpty == false ? store.account!.username : "konto") · \(store.me?.role ?? store.account?.role ?? "") · \(store.me?.serverName ?? store.mobileHome?.serverName ?? host(store.base))")
-                            .font(.footnote).foregroundStyle(.white.opacity(0.65)).lineLimit(1)
+                            .font(.footnote).foregroundStyle(Color.skinFg.opacity(0.65)).lineLimit(1)
                     }
                 }
                 row("Homelab", "Dashbord, søk og snarveier", "square.grid.3x3.fill", store.module == .homelab) { store.open(.homelab) }.glass(24)
                 SectionLabel(text: "Andre OS")
                 VStack(spacing: 0) {
                     row("Finans", "Hjem, liste, budsjett og mer", "banknote", store.module == nil || store.module?.isFinance == true) { store.go(Tab.home) }
-                    Divider().overlay(.white.opacity(0.12))
+                    Divider().overlay(Color.skinFg.opacity(0.12))
                     row("Mat", "Ukemeny, oppskrifter og handleliste", "fork.knife", store.module == .mat) { store.open(.mat) }
-                    Divider().overlay(.white.opacity(0.12))
+                    Divider().overlay(Color.skinFg.opacity(0.12))
                     row("Domener", "Trafikk, besøk, ytelse og sikkerhet", "globe", store.module == .domains) { store.open(.domains) }
-                    Divider().overlay(.white.opacity(0.12))
+                    Divider().overlay(Color.skinFg.opacity(0.12))
                     row("Sporing", "Pakker på vei, henting og varsler", "shippingbox", store.module == .tracking) { store.open(.tracking) }
-                    Divider().overlay(.white.opacity(0.12))
+                    Divider().overlay(Color.skinFg.opacity(0.12))
                     row("Nyhetsleser", "Siste nytt fra RSS, med ✦ AI-sammendrag", "newspaper", store.newsOpen) { store.menuOpen = false; store.openNews() }
                 }
                 .glass(24)
@@ -764,7 +770,7 @@ struct ProfileMenu: View {
                     SectionLabel(text: "Kontoer")
                     VStack(spacing: 0) {
                         ForEach(Array(store.accounts.enumerated()), id: \.element.id) { i, a in
-                            if i > 0 { Divider().overlay(.white.opacity(0.12)) }
+                            if i > 0 { Divider().overlay(Color.skinFg.opacity(0.12)) }
                             row("\(a.label) · \(host(a.server))", nil, "person.circle", a.id == store.account?.id) { if a.id != store.account?.id { store.switchTo(a.id) } }
                         }
                     }
@@ -772,7 +778,7 @@ struct ProfileMenu: View {
                 }
                 VStack(spacing: 0) {
                     row("Innstillinger", nil, "gearshape", store.module == .settings) { store.openSub(.settings) }
-                    Divider().overlay(.white.opacity(0.12))
+                    Divider().overlay(Color.skinFg.opacity(0.12))
                     row("Legg til konto", nil, "person.badge.plus", false) { store.menuOpen = false; store.addingAccount = true }
                 }
                 .glass(24)
@@ -784,10 +790,10 @@ struct ProfileMenu: View {
     private func row(_ t: String, _ sub: String?, _ icon: String, _ on: Bool, _ act: @escaping () -> Void) -> some View {
         Button(action: act) {
             HStack(spacing: 14) {
-                Image(systemName: icon).frame(width: 24).foregroundStyle(on ? Color.accent : .white.opacity(0.7))
+                Image(systemName: icon).frame(width: 24).foregroundStyle(on ? Color.accent : Color.skinFg.opacity(0.7))
                 VStack(alignment: .leading, spacing: 1) {
                     Text(t).fontWeight(on ? .semibold : .regular).lineLimit(1)
-                    if let sub { Text(sub).font(.caption).foregroundStyle(.white.opacity(0.6)).lineLimit(1) }
+                    if let sub { Text(sub).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)).lineLimit(1) }
                 }
                 Spacer()
                 if on { Image(systemName: "checkmark").foregroundStyle(Color.accent) }
@@ -821,18 +827,18 @@ struct LoginView: View {
                     .frame(width: 56, height: 56).background(Color.accent, in: RoundedRectangle(cornerRadius: 18))
                 if let p = store.pending {
                     Text("Tofaktor").font(.system(size: 34, weight: .bold))
-                    Text("Tofaktor er på for \(p.username.isEmpty ? "kontoen" : p.username). Skriv inn den 6-sifrede koden fra autentiseringsappen.").foregroundStyle(.white.opacity(0.7))
+                    Text("Tofaktor er på for \(p.username.isEmpty ? "kontoen" : p.username). Skriv inn den 6-sifrede koden fra autentiseringsappen.").foregroundStyle(Color.skinFg.opacity(0.7))
                     TextField("000000", text: $code).keyboardType(.numberPad).textContentType(.oneTimeCode).font(.system(size: 26, weight: .semibold, design: .monospaced))
                         .multilineTextAlignment(.center).padding(.horizontal, 18).frame(height: 60).glass(30)
                     Button { store.login(server: p.server, username: p.username, password: p.password, code: code) } label: {
                         Text(store.busy ? "Bekrefter …" : "Bekreft").fontWeight(.bold).foregroundStyle(Color.ink).frame(maxWidth: .infinity, minHeight: 54)
                     }
                     .buttonStyle(.plain).glass(27, tint: .accent).disabled(code.count < 6 || store.busy)
-                    Text("Har du mistet telefonen, kan du bruke en gjenopprettingskode.").font(.footnote).foregroundStyle(.white.opacity(0.55))
+                    Text("Har du mistet telefonen, kan du bruke en gjenopprettingskode.").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.55))
                     Button("← Tilbake") { store.cancelTotp(); code = "" }.foregroundStyle(Color.accentLight)
                 } else {
                     Text(store.addingAccount ? "Legg til konto" : "FinansHub").font(.system(size: 34, weight: .bold))
-                    Text("Logg inn på homelab-serveren din med brukernavn og passord. Appen får bare tilgang til økonomidelen.").foregroundStyle(.white.opacity(0.7))
+                    Text("Logg inn på homelab-serveren din med brukernavn og passord. Appen får bare tilgang til økonomidelen.").foregroundStyle(Color.skinFg.opacity(0.7))
                     TextField("192.168.1.20:8080 eller os.dittdomene.no", text: $server).textContentType(.URL).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
                         .padding(.horizontal, 18).frame(height: 54).glass(27)
                     TextField("Brukernavn", text: $username).textContentType(.username).textInputAutocapitalization(.never).autocorrectionDisabled()
@@ -841,7 +847,7 @@ struct LoginView: View {
                         .padding(.horizontal, 18).frame(height: 54).glass(27)
                     Button(action: submit) { Text(store.busy ? "Logger inn …" : "Logg inn").fontWeight(.bold).foregroundStyle(Color.ink).frame(maxWidth: .infinity, minHeight: 54) }
                         .buttonStyle(.plain).glass(27, tint: .accent).disabled(server.isEmpty || password.isEmpty || store.busy)
-                    Text("Nye brukere opprettes av admin i Homelab → Innstillinger → Innlogging.").font(.footnote).foregroundStyle(.white.opacity(0.55))
+                    Text("Nye brukere opprettes av admin i Homelab → Innstillinger → Innlogging.").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.55))
                 }
             }
             .padding(24).frame(maxWidth: 480)
@@ -858,7 +864,7 @@ struct LockView: View {
         VStack(spacing: 18) {
             Image(systemName: "lock.fill").font(.system(size: 30)).foregroundStyle(Color.ink).frame(width: 72, height: 72).background(Color.accent, in: RoundedRectangle(cornerRadius: 24))
             Text("FinansHub er låst").font(.title.weight(.bold))
-            Text(store.displayName).foregroundStyle(.white.opacity(0.7))
+            Text(store.displayName).foregroundStyle(Color.skinFg.opacity(0.7))
             Button { store.unlock() } label: { Label("Lås opp", systemImage: "faceid").fontWeight(.bold).foregroundStyle(Color.ink).frame(maxWidth: 320, minHeight: 54) }
                 .buttonStyle(.plain).glass(27, tint: .accent)
         }

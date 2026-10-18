@@ -213,11 +213,13 @@ enum LocalNotify {
     static func ask() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in }
     }
-    static func post(_ title: String, _ body: String, id: String) {
+    static func post(_ title: String, _ body: String, id: String, group: String? = nil) {
+        // Innstillinger → Varsler: hovedbryter, grupper, lyd og stille timer.
+        guard NotifyModel.allowed(group) else { return }
         let c = UNMutableNotificationContent()
         c.title = title
         c.body = body
-        c.sound = .default
+        c.sound = NotifyModel.currentSound()
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: c, trigger: nil)) { _ in }
     }
 }

@@ -51,6 +51,8 @@ extension Store {
     /// Samme dyplenker i Papir: fanene og sidene i Papir-skallet.
     private func paperDeepLink(_ page: String, _ sub: String) {
         switch page {
+        case "huske", "tasks", "huskeliste": paperGo("huske")
+        case "familie", "family", "posisjon": paperGo("familie")
         case "tracking", "packages", "sporing": paperGo("sporing")
         case "mat", "matplan": paperGo("mat")
         case "home", "finance", "finans": paperGo("finans")
@@ -61,7 +63,7 @@ extension Store {
         case "subs", "nextcharge", "abonnement": paperGo("fmer"); paperOpen(.sub)
         case "stocks", "aksjer": paperGo("fmer"); paperOpen(.stocks)
         case "domains", "domener": paperOpenDomains(from: "hjem")
-        case "boliger", "folders": paperGo("fmer"); paperOpen(.folders)
+        case "boliger", "folders": paperFinGo("boliger")
         case "news", "nyheter", "rss": openNews()
         case "scan", "skann": pendingScan = sub == "files" ? "files" : "camera"
         default: paperGo("hjem")

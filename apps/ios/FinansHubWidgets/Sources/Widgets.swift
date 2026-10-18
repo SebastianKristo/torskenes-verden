@@ -18,6 +18,8 @@ struct FinansHubWidgetBundle: WidgetBundle {
         FinnWidget()
         BoligWidget()
         ScanWidget()
+        TasksWidget()
+        PositionWidget()
     }
 }
 

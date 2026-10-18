@@ -126,6 +126,7 @@ extension Store {
         case "boliger": Task { await self.loadBoligerList() }
         case "familie": Task { await FamilyModel.shared.load(self) }
         case "avg": Task { await RuterModel.shared.load(self) }
+        case "huske": Task { await TasksModel.shared.load(self) }
         case "mat": open(.mat)
         case "sporing": open(.tracking)
         case "domener", "dpub", "dytl", "dinf":
@@ -154,6 +155,7 @@ extension Store {
         if paperTab == "abo" && !finNav.contains("abonnementer") { paperGo("fmer"); return }
         if paperTab == "innst" { paperGo("mer"); return }
         if paperTab.hasPrefix("innst-") || paperTab == "profil" { paperGo("innst"); return }
+        if paperTab == "huske" { paperGo("mer"); return }
         if paperTab == "boliger" && folder != nil { folder = nil; return }
         if (paperTab == "aksjer" && !finNav.contains("aksjer")) || (paperTab == "boliger" && !finNav.contains("boliger")) { paperGo("fmer"); return }
         paperGo("hjem")
@@ -200,6 +202,7 @@ extension Store {
         if paperTab == "abo" && !finNav.contains("abonnementer") { paperGo("fmer"); return }
         if paperTab == "boliger" && folder != nil { folder = nil; return }
         if paperTab.hasPrefix("innst-") || paperTab == "profil" { paperGo("innst"); return }
+        if paperTab == "huske" { paperGo("mer"); return }
         if paperFin != nil { paperFin = nil; go(.home); return }
         if paperTrackFull { paperTrackFull = false; return }
         if paperClassic != nil { back(); return }
@@ -219,7 +222,7 @@ extension Store {
     var paperCanSwipeBack: Bool {
         newsOpen || dishSel != nil || paperInner || paperFin != nil || paperTrackFull || paperClassic != nil || paperInDomains
             || paperTab == "ftx" || paperEditPage != nil || (paperTab == "abo" && !finNav.contains("abonnementer"))
-            || paperTab.hasPrefix("innst-") || paperTab == "profil" || (paperTab == "boliger" && folder != nil)
+            || paperTab.hasPrefix("innst-") || paperTab == "profil" || paperTab == "huske" || (paperTab == "boliger" && folder != nil)
     }
 
     /// Oversikt og kontoer til Papir-Finans (uten feilmelding når serveren ikke svarer).

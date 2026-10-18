@@ -34,7 +34,7 @@ struct HomelabView: View {
                 if secs.isEmpty { Empty(text: store.editHome ? "Trykk + for å legge til widgets." : "Forsiden er tom. Trykk på profilbildet → Rediger forsiden.") }
                 if store.editHome {
                     Text("Trykk − for å skjule og ▲ ▼ for å flytte. + legger til widgets og endrer fanelinjene.")
-                        .font(.footnote).foregroundStyle(.white.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 6)
+                        .font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 6)
                 }
             }
             .padding(.horizontal, 18).padding(.top, 6).padding(.bottom, 40)
@@ -49,13 +49,13 @@ struct HomelabView: View {
         let hello = first.isEmpty ? greet() : "\(greet()), \(first)"
         return HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(store.editHome ? "Homelab" : longDate()).font(.subheadline).foregroundStyle(.white.opacity(0.7))
+                Text(store.editHome ? "Homelab" : longDate()).font(.subheadline).foregroundStyle(Color.skinFg.opacity(0.7))
                 greetingText(store.editHome ? "Rediger forsiden" : hello)
             }
             Spacer()
             if store.editHome {
                 Button { store.gallery = true } label: {
-                    Image(systemName: "plus").font(.system(size: 17, weight: .semibold)).foregroundStyle(.white).frame(width: 44, height: 44).contentShape(Circle())
+                    Image(systemName: "plus").font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.skinFg).frame(width: 44, height: 44).contentShape(Circle())
                 }
                 .buttonStyle(GlassPress()).glassRound().accessibilityLabel("Legg til widget")
                 Button { withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { store.editHome = false } } label: {
@@ -107,11 +107,11 @@ struct EditFrame<Content: View>: View {
         let odd = index % 2 == 1
         content
             .allowsHitTesting(false)
-            .overlay(RoundedRectangle(cornerRadius: 28).stroke(.white.opacity(0.4), style: StrokeStyle(lineWidth: 1.5, dash: [6, 5])).padding(-5).allowsHitTesting(false))
+            .overlay(RoundedRectangle(cornerRadius: 28).stroke(Color.skinFg.opacity(0.4), style: StrokeStyle(lineWidth: 1.5, dash: [6, 5])).padding(-5).allowsHitTesting(false))
             .overlay(alignment: .topLeading) {
                 Button { withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { store.setHidden(id, true) } } label: {
-                    Image(systemName: "minus").font(.system(size: 14, weight: .bold)).foregroundStyle(.white)
-                        .frame(width: 28, height: 28).background(Color(hex: "#FF5A4E"), in: Circle()).overlay(Circle().stroke(.white.opacity(0.5), lineWidth: 1))
+                    Image(systemName: "minus").font(.system(size: 14, weight: .bold)).foregroundStyle(Color.skinFg)
+                        .frame(width: 28, height: 28).background(Color(hex: "#FF5A4E"), in: Circle()).overlay(Circle().stroke(Color.skinFg.opacity(0.5), lineWidth: 1))
                         .frame(width: 44, height: 44).contentShape(Circle())
                 }
                 .buttonStyle(.plain).offset(x: -18, y: -18).accessibilityLabel("Skjul \(sectionName[id] ?? id)")
@@ -133,8 +133,8 @@ struct EditFrame<Content: View>: View {
 
     private func arrow(_ icon: String, _ dir: Int, enabled: Bool) -> some View {
         Button { withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { store.move("sec", id, dir) } } label: {
-            Image(systemName: icon).font(.system(size: 12, weight: .bold)).foregroundStyle(.white)
-                .frame(width: 30, height: 30).background(Color.black.opacity(0.55), in: Circle()).overlay(Circle().stroke(.white.opacity(0.35), lineWidth: 1))
+            Image(systemName: icon).font(.system(size: 12, weight: .bold)).foregroundStyle(Color.skinFg)
+                .frame(width: 30, height: 30).background(Color.black.opacity(0.55), in: Circle()).overlay(Circle().stroke(Color.skinFg.opacity(0.35), lineWidth: 1))
                 .frame(width: 40, height: 44).contentShape(Rectangle())
         }
         .buttonStyle(.plain).disabled(!enabled).opacity(enabled ? 1 : 0.35)
@@ -163,22 +163,22 @@ struct GoogleSearch: View {
                     .onSubmit { open(q) }
                     .onChange(of: q) { _, v in store.suggest(v) }
                 if !q.isEmpty {
-                    Button { q = ""; store.suggestions = [] } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.white.opacity(0.5)).frame(width: 30, height: 30) }
+                    Button { q = ""; store.suggestions = [] } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Color.skinFg.opacity(0.5)).frame(width: 30, height: 30) }
                         .buttonStyle(.plain).accessibilityLabel("Tøm feltet")
                 }
             }
             .padding(.horizontal, 18).frame(height: 56)
             if focused && !items.isEmpty {
-                Divider().overlay(.white.opacity(0.12))
+                Divider().overlay(Color.skinFg.opacity(0.12))
                 ForEach(items, id: \.self) { s in
                     HStack(spacing: 12) {
-                        Image(systemName: empty ? "clock.arrow.circlepath" : "magnifyingglass").font(.system(size: 14)).foregroundStyle(.white.opacity(0.55)).frame(width: 22)
+                        Image(systemName: empty ? "clock.arrow.circlepath" : "magnifyingglass").font(.system(size: 14)).foregroundStyle(Color.skinFg.opacity(0.55)).frame(width: 22)
                         Button { open(s) } label: { Text(s).lineLimit(1).frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle()) }.buttonStyle(.plain)
                         if empty {
-                            Button { store.removeHistory(s) } label: { Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)).foregroundStyle(.white.opacity(0.55)).frame(width: 32, height: 32) }
+                            Button { store.removeHistory(s) } label: { Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.skinFg.opacity(0.55)).frame(width: 32, height: 32) }
                                 .buttonStyle(.plain).accessibilityLabel("Fjern \(s) fra historikken")
                         } else {
-                            Button { q = s } label: { Image(systemName: "arrow.up.left").font(.system(size: 12, weight: .semibold)).foregroundStyle(.white.opacity(0.55)).frame(width: 32, height: 32) }
+                            Button { q = s } label: { Image(systemName: "arrow.up.left").font(.system(size: 12, weight: .semibold)).foregroundStyle(Color.skinFg.opacity(0.55)).frame(width: 32, height: 32) }
                                 .buttonStyle(.plain).accessibilityLabel("Fyll inn \(s)")
                         }
                     }
@@ -212,14 +212,14 @@ struct Shortcuts: View {
             SectionLabel(text: "Snarveier")
             if list.isEmpty {
                 Text(store.mobileHome == nil ? "Henter snarveier …" : "Ingen snarveier ennå. Legg dem til i Homelab på PC.")
-                    .font(.footnote).foregroundStyle(.white.opacity(0.6)).padding(16).frame(maxWidth: .infinity, alignment: .leading).glass(22)
+                    .font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).padding(16).frame(maxWidth: .infinity, alignment: .leading).glass(22)
             } else {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 14) {
                     ForEach(Array(list.enumerated()), id: \.offset) { _, s in
                         Button { if let u = link(s.url) { openURL(u) } } label: {
                             VStack(spacing: 6) {
                                 ShortcutIcon(shortcut: s)
-                                Text(s.name).font(.caption).foregroundStyle(.white.opacity(0.9)).lineLimit(1).minimumScaleFactor(0.8)
+                                Text(s.name).font(.caption).foregroundStyle(Color.skinFg.opacity(0.9)).lineLimit(1).minimumScaleFactor(0.8)
                             }
                             .frame(maxWidth: .infinity)
                         }
@@ -278,18 +278,18 @@ struct OtherOs: View {
                 Text("Finans").fontWeight(.semibold)
                 Spacer()
                 if review > 0 { Pill(text: "\(review) til gjennomgang", color: .accentLight) }
-                Image(systemName: "chevron.right").foregroundStyle(.white.opacity(0.5))
+                Image(systemName: "chevron.right").foregroundStyle(Color.skinFg.opacity(0.5))
             }
             if let s {
-                Text("Igjen å bruke i \(monthLabel(s.month).lowercased())").font(.footnote).foregroundStyle(.white.opacity(0.7))
+                Text("Igjen å bruke i \(monthLabel(s.month).lowercased())").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.7))
                 Text(kr(s.left)).font(.system(size: 30, weight: .semibold, design: .monospaced)).lineLimit(1).minimumScaleFactor(0.6)
                 Bar(value: used, color: Color(hex: "#FF8A4C"))
-                Text("Brukt \(n0(s.budgetUsed)) av \(n0(s.budgetTotal)) kr · \(s.daysLeft) dager igjen").font(.caption).foregroundStyle(.white.opacity(0.6))
+                Text("Brukt \(n0(s.budgetUsed)) av \(n0(s.budgetTotal)) kr · \(s.daysLeft) dager igjen").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6))
             } else {
-                Text("Hjem, liste, budsjett og mer").font(.footnote).foregroundStyle(.white.opacity(0.7))
+                Text("Hjem, liste, budsjett og mer").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.7))
             }
         }
-        .foregroundStyle(.white)
+        .foregroundStyle(Color.skinFg)
         .padding(18).frame(maxWidth: .infinity, alignment: .leading).glass(26)
     }
 
@@ -298,10 +298,10 @@ struct OtherOs: View {
             VStack(alignment: .leading, spacing: 8) {
                 Image(systemName: icon).font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.ink).frame(width: 32, height: 32).background(tint, in: RoundedRectangle(cornerRadius: 10))
                 Text(title).fontWeight(.semibold)
-                Text(text).font(.footnote).foregroundStyle(.white.opacity(0.75)).lineLimit(2, reservesSpace: true)
-                Text(sub ?? " ").font(.caption).foregroundStyle(.white.opacity(0.5)).lineLimit(1)
+                Text(text).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.75)).lineLimit(2, reservesSpace: true)
+                Text(sub ?? " ").font(.caption).foregroundStyle(Color.skinFg.opacity(0.5)).lineLimit(1)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(Color.skinFg)
             .padding(16).frame(maxWidth: .infinity, alignment: .leading).glass(24)
         }
         .buttonStyle(GlassPress())
@@ -318,15 +318,15 @@ struct ServerCard: View {
                 Image(systemName: "server.rack").foregroundStyle(Color.accentLight)
                 Text(store.mobileHome?.serverName ?? store.me?.serverName ?? "Server").fontWeight(.semibold).lineLimit(1)
                 Spacer()
-                if let u = st?.uptimeText, !u.isEmpty { Text("Oppe \(u)").font(.caption).foregroundStyle(.white.opacity(0.6)) }
+                if let u = st?.uptimeText, !u.isEmpty { Text("Oppe \(u)").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)) }
             }
             if let st {
                 gauge("CPU", st.cpu)
                 gauge("Minne", st.mem)
                 gauge("Disk", st.disk)
-                if let t = st.temp { Text("Temperatur \(Int(t.rounded())) °C").font(.caption).foregroundStyle(t >= 75 ? Color.accentLight : .white.opacity(0.6)) }
+                if let t = st.temp { Text("Temperatur \(Int(t.rounded())) °C").font(.caption).foregroundStyle(t >= 75 ? Color.accentLight : Color.skinFg.opacity(0.6)) }
             } else {
-                Text("Ingen serverstatus fra Homelab.").font(.footnote).foregroundStyle(.white.opacity(0.6))
+                Text("Ingen serverstatus fra Homelab.").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6))
             }
         }
         .padding(18).frame(maxWidth: .infinity, alignment: .leading).glass(24)
@@ -334,7 +334,7 @@ struct ServerCard: View {
 
     private func gauge(_ label: String, _ v: Double?) -> some View {
         VStack(alignment: .leading, spacing: 5) {
-            HStack { Text(label).font(.footnote); Spacer(); Text(v.map { "\(Int($0.rounded())) %" } ?? "–").font(.system(.footnote, design: .monospaced)).foregroundStyle(.white.opacity(0.75)) }
+            HStack { Text(label).font(.footnote); Spacer(); Text(v.map { "\(Int($0.rounded())) %" } ?? "–").font(.system(.footnote, design: .monospaced)).foregroundStyle(Color.skinFg.opacity(0.75)) }
             Bar(value: (v ?? 0) / 100, color: (v ?? 0) >= 85 ? Color.accent : Color.positive)
         }
     }
@@ -346,7 +346,7 @@ struct RuterCard: View {
     var body: some View {
         let lines = store.mobileHome?.ruter ?? []
         if lines.isEmpty {
-            Text("Ingen strekninger. Legg dem til i Homelab på PC.").font(.footnote).foregroundStyle(.white.opacity(0.6)).padding(16).frame(maxWidth: .infinity, alignment: .leading).glass(24)
+            Text("Ingen strekninger. Legg dem til i Homelab på PC.").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).padding(16).frame(maxWidth: .infinity, alignment: .leading).glass(24)
         } else {
             VStack(spacing: 10) {
                 ForEach(Array(lines.enumerated()), id: \.offset) { _, r in
@@ -364,11 +364,11 @@ private struct RuterBlock: View {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text("Ruter · \(line.from)").font(.system(size: 16, weight: .bold)).lineLimit(1)
                 Spacer(minLength: 0)
-                Text("Sanntid").font(.system(size: 12.5)).foregroundStyle(.white.opacity(0.62))
+                Text("Sanntid").font(.system(size: 12.5)).foregroundStyle(Color.skinFg.opacity(0.62))
             }
             .padding(.bottom, 6)
             if line.departures.isEmpty {
-                Text("Ingen avganger nå").font(.footnote).foregroundStyle(.white.opacity(0.6)).frame(minHeight: 40)
+                Text("Ingen avganger nå").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).frame(minHeight: 40)
             }
             ForEach(Array(line.departures.prefix(4).enumerated()), id: \.offset) { _, d in
                 RuterRow(dep: d, fallback: line.to)
@@ -416,11 +416,11 @@ struct WidgetGallery: View {
                         let on = store.layout.visible(id)
                         VStack(alignment: .leading, spacing: 8) {
                             Image(systemName: sectionIcon[id] ?? "square").font(.system(size: 18, weight: .semibold)).foregroundStyle(Color.accentLight)
-                                .frame(width: 40, height: 40).background(.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+                                .frame(width: 40, height: 40).background(Color.skinFg.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
                             Text(sectionName[id] ?? id).fontWeight(.semibold).lineLimit(1)
-                            Text(sectionDesc[id] ?? "").font(.caption).foregroundStyle(.white.opacity(0.6)).lineLimit(2, reservesSpace: true)
+                            Text(sectionDesc[id] ?? "").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)).lineLimit(2, reservesSpace: true)
                             Button { withAnimation { store.setHidden(id, on) } } label: {
-                                Text(on ? "Lagt til ✓" : "Legg til").font(.subheadline.weight(.semibold)).foregroundStyle(on ? Color.white.opacity(0.7) : Color.ink)
+                                Text(on ? "Lagt til ✓" : "Legg til").font(.subheadline.weight(.semibold)).foregroundStyle(on ? Color.skinFg.opacity(0.7) : Color.ink)
                                     .frame(maxWidth: .infinity, minHeight: 36)
                             }
                             .buttonStyle(.plain).glass(18, tint: on ? nil : .accent)
@@ -435,7 +435,7 @@ struct WidgetGallery: View {
                 SectionLabel(text: "Fanelinja i Finans")
                 NavEditor(list: "finTabs", ids: store.layout.finTabs, fixed: HomeLayout.fixedFin, prefix: "fin.",
                           label: { Tab.from(key: $0)?.rawValue ?? $0 }, icon: { Tab.from(key: $0)?.icon ?? "square" })
-                Text("Oppsettet lagres for denne brukeren og følger med til andre enheter.").font(.footnote).foregroundStyle(.white.opacity(0.6)).padding(.horizontal, 6)
+                Text("Oppsettet lagres for denne brukeren og følger med til andre enheter.").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).padding(.horizontal, 6)
                 Button { store.resetLayout() } label: { Text("Tilbakestill forsiden").fontWeight(.semibold).frame(maxWidth: .infinity, minHeight: 50) }
                     .buttonStyle(.plain).glass(25)
             }
@@ -459,9 +459,9 @@ struct NavEditor: View {
     var body: some View {
         VStack(spacing: 0) {
             ForEach(Array(ids.enumerated()), id: \.element) { i, id in
-                if i > 0 { Divider().overlay(.white.opacity(0.12)) }
+                if i > 0 { Divider().overlay(Color.skinFg.opacity(0.12)) }
                 HStack(spacing: 10) {
-                    Image(systemName: icon(id)).frame(width: 24).foregroundStyle(.white.opacity(0.7))
+                    Image(systemName: icon(id)).frame(width: 24).foregroundStyle(Color.skinFg.opacity(0.7))
                     if prefix.isEmpty { Text(label(id)).lineLimit(1) } else { TabNameField(key: prefix + id, placeholder: label(id)) }
                     Spacer()
                     Button { withAnimation { store.move(list, id, -1) } } label: { Image(systemName: "chevron.up").frame(width: 34, height: 34).contentShape(Rectangle()) }
@@ -469,7 +469,7 @@ struct NavEditor: View {
                     Button { withAnimation { store.move(list, id, 1) } } label: { Image(systemName: "chevron.down").frame(width: 34, height: 34).contentShape(Rectangle()) }
                         .buttonStyle(.plain).disabled(i == ids.count - 1).opacity(i == ids.count - 1 ? 0.3 : 1).accessibilityLabel("Flytt \(label(id)) ned")
                     if fixed.contains(id) {
-                        Text("Alltid").font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.55)).frame(width: 51)
+                        Text("Alltid").font(.caption.weight(.semibold)).foregroundStyle(Color.skinFg.opacity(0.55)).frame(width: 51)
                     } else {
                         Toggle(label(id), isOn: Binding(get: { store.layout.visible(id) }, set: { store.setHidden(id, !$0) })).labelsHidden().tint(.accent)
                     }

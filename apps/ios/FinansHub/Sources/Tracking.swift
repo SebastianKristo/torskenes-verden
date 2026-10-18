@@ -361,7 +361,7 @@ extension Store {
         }
         UserDefaults.standard.set(Array(seen.suffix(400)), forKey: key)
         guard !first, !fresh.isEmpty else { return }
-        for f in fresh.suffix(3) { LocalNotify.post(f.0, f.1, id: f.2) }
+        for f in fresh.suffix(3) { LocalNotify.post(f.0, f.1, id: f.2, group: "pakker") }
         Haptics.shared.package()
     }
 }
@@ -412,7 +412,7 @@ struct StepBar: View {
     var body: some View {
         HStack(spacing: 4) {
             ForEach(0..<5, id: \.self) { i in
-                Capsule().fill(i <= step ? color : Color.white.opacity(0.15)).frame(height: 5)
+                Capsule().fill(i <= step ? color : Color.skinFg.opacity(0.15)).frame(height: 5)
             }
         }
     }
@@ -424,7 +424,7 @@ private let trkPrefs: [(String, String, String?)] = [("found", "Nytt sporingsnum
 
 private func trkChip(_ t: String, _ on: Bool, _ act: @escaping () -> Void) -> some View {
     Button { Haptics.shared.select(); act() } label: {
-        Text(t).font(.subheadline.weight(on ? .semibold : .regular)).lineLimit(1).padding(.horizontal, 14).frame(height: 36).foregroundStyle(on ? Color.ink : .white).contentShape(Capsule())
+        Text(t).font(.subheadline.weight(on ? .semibold : .regular)).lineLimit(1).padding(.horizontal, 14).frame(height: 36).foregroundStyle(on ? Color.ink : Color.skinFg).contentShape(Capsule())
     }
     .buttonStyle(.plain).glass(18, tint: on ? .accent : nil)
 }
@@ -469,7 +469,7 @@ struct TrackingView: View {
 
     private var arrangeBar: some View {
         HStack {
-            Text("Flytt kortene med ▲/▼ eller dra dem").font(.footnote).foregroundStyle(.white.opacity(0.75))
+            Text("Flytt kortene med ▲/▼ eller dra dem").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.75))
             Spacer()
             Button { stopArranging() } label: {
                 Text("Ferdig").fontWeight(.bold).foregroundStyle(Color.ink).padding(.horizontal, 16).frame(height: 36).contentShape(Capsule())
@@ -519,7 +519,7 @@ struct TrackingView: View {
             let odd = (TrackingView.allSections.firstIndex(of: k) ?? 0) % 2 == 1
             section(k, t)
                 .allowsHitTesting(false)
-                .overlay(RoundedRectangle(cornerRadius: 24).stroke(dropTarget == k ? Color.accent : Color.white.opacity(0.25), lineWidth: dropTarget == k ? 2 : 1))
+                .overlay(RoundedRectangle(cornerRadius: 24).stroke(dropTarget == k ? Color.accent : Color.skinFg.opacity(0.25), lineWidth: dropTarget == k ? 2 : 1))
                 .overlay(alignment: .topTrailing) { arrows(k) }
                 .rotationEffect(.degrees(wiggle ? (odd ? 0.7 : -0.7) : 0))
                 .contentShape(RoundedRectangle(cornerRadius: 24))
@@ -548,7 +548,7 @@ struct TrackingView: View {
     private func arrow(_ icon: String, enabled: Bool, _ act: @escaping () -> Void) -> some View {
         Button(action: act) {
             Image(systemName: icon).font(.system(size: 14, weight: .bold)).foregroundStyle(Color.ink)
-                .frame(width: 34, height: 34).background(Color.white.opacity(enabled ? 0.92 : 0.35), in: Circle())
+                .frame(width: 34, height: 34).background(Color.skinFg.opacity(enabled ? 0.92 : 0.35), in: Circle())
         }
         .buttonStyle(.plain)
         .disabled(!enabled)
@@ -560,7 +560,7 @@ struct TrackingView: View {
         return HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(store.hlName(.trk)).font(.system(size: 30, weight: .bold)).lineLimit(1)
-                Text(sum).font(.subheadline).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
+                Text(sum).font(.subheadline).foregroundStyle(Color.skinFg.opacity(0.7)).lineLimit(1)
             }
             Spacer()
             Avatar()
@@ -585,14 +585,14 @@ struct TrackingView: View {
                     }
                     .buttonStyle(.plain)
                 } else {
-                    Button { no = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.white.opacity(0.5)).frame(width: 30, height: 30) }.buttonStyle(.plain).accessibilityLabel("Tøm feltet")
+                    Button { no = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(Color.skinFg.opacity(0.5)).frame(width: 30, height: 30) }.buttonStyle(.plain).accessibilityLabel("Tøm feltet")
                 }
             }
             .padding(.horizontal, 16).frame(height: 52).glass(26)
             if !clean.isEmpty {
                 TextField("Navn (valgfritt), f.eks. Zalando · jakke", text: $name).padding(.horizontal, 16).frame(height: 46).glass(23)
                 Text(guess == "other" ? "Ukjent format. Velg transportør, eller la reservetjenesten finne den." : "Gjenkjent: \(guessName). Trykk for å velge en annen.")
-                    .font(.caption).foregroundStyle(.white.opacity(0.6))
+                    .font(.caption).foregroundStyle(Color.skinFg.opacity(0.6))
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach(carriers) { c in
@@ -601,7 +601,7 @@ struct TrackingView: View {
                                     CarrierBadge(ini: c.ini, color: c.color, fg: c.fg, size: 22, carrier: c.id)
                                     Text(c.name).font(.footnote.weight(pick == c.id ? .semibold : .regular)).lineLimit(1)
                                 }
-                                .padding(.leading, 6).padding(.trailing, 12).frame(height: 34).foregroundStyle(pick == c.id ? Color.ink : .white).contentShape(Capsule())
+                                .padding(.leading, 6).padding(.trailing, 12).frame(height: 34).foregroundStyle(pick == c.id ? Color.ink : Color.skinFg).contentShape(Capsule())
                             }
                             .buttonStyle(.plain).glass(17, tint: pick == c.id ? .accent : nil)
                         }
@@ -631,7 +631,7 @@ struct TrackingView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Kilder").fontWeight(.semibold)
                     Text(t.lastCheck.map { "Sist sjekket " + JS.fmt($0, Calendar.current.isDateInToday($0) ? "HH:mm" : "dd.MM HH:mm") } ?? "Ikke sjekket ennå")
-                        .font(.caption).foregroundStyle(.white.opacity(0.6))
+                        .font(.caption).foregroundStyle(Color.skinFg.opacity(0.6))
                 }
                 Spacer()
                 Button { Haptics.shared.tap(); store.checkTracking() } label: {
@@ -644,11 +644,11 @@ struct TrackingView: View {
                 .buttonStyle(.plain).glass(18)
             }
             Toggle(isOn: Binding(get: { t.finn.on }, set: { store.setTrackingSource("finn", $0) })) {
-                VStack(alignment: .leading, spacing: 1) { Text("Finn"); Text("Fiks ferdig-handler med sporingsnummer").font(.caption).foregroundStyle(.white.opacity(0.6)) }
+                VStack(alignment: .leading, spacing: 1) { Text("Finn"); Text("Fiks ferdig-handler med sporingsnummer").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)) }
             }
             .padding(.top, 6)
             Toggle(isOn: Binding(get: { t.email.on }, set: { store.setTrackingSource("email", $0) })) {
-                VStack(alignment: .leading, spacing: 1) { Text("E-post (Proton Mail)"); Text("Ordre- og fraktbekreftelser hvert 15. minutt").font(.caption).foregroundStyle(.white.opacity(0.6)) }
+                VStack(alignment: .leading, spacing: 1) { Text("E-post (Proton Mail)"); Text("Ordre- og fraktbekreftelser hvert 15. minutt").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)) }
             }
         }
         .tint(.accent)
@@ -688,25 +688,25 @@ struct TrackingView: View {
                         CarrierBadge(ini: s.carrierIni, color: s.carrierColor, fg: s.carrierFg, carrier: s.carrier)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(s.name).fontWeight(.semibold).lineLimit(1)
-                            Text("\(s.carrierName) · \(s.trackingNo)").font(.caption).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
+                            Text("\(s.carrierName) · \(s.trackingNo)").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)).lineLimit(1)
                         }
                         Spacer(minLength: 6)
-                        Pill(text: s.outgoing ? "Ut · \(s.sourceLabel)" : s.sourceLabel, color: .white.opacity(0.8))
+                        Pill(text: s.outgoing ? "Ut · \(s.sourceLabel)" : s.sourceLabel, color: Color.skinFg.opacity(0.8))
                     }
                     HStack(alignment: .firstTextBaseline) {
                         Text(s.statusText).font(.subheadline.weight(.semibold)).foregroundStyle(s.color).lineLimit(1)
                         Spacer(minLength: 8)
-                        Text(s.etaText).font(.caption).foregroundStyle(.white.opacity(0.65)).lineLimit(1)
+                        Text(s.etaText).font(.caption).foregroundStyle(Color.skinFg.opacity(0.65)).lineLimit(1)
                     }
                     StepBar(step: s.step, color: s.done ? .positive : .accent)
                     HStack(spacing: 2) {
                         ForEach(Array(s.steps.enumerated()), id: \.offset) { i, l in
-                            Text(l).font(.system(size: 9.5, weight: i == s.step ? .semibold : .regular)).foregroundStyle(.white.opacity(i <= s.step ? 0.85 : 0.4))
+                            Text(l).font(.system(size: 9.5, weight: i == s.step ? .semibold : .regular)).foregroundStyle(Color.skinFg.opacity(i <= s.step ? 0.85 : 0.4))
                                 .lineLimit(1).minimumScaleFactor(0.6).frame(maxWidth: .infinity)
                         }
                     }
                     if !open, let e = s.events.first {
-                        Text([e.status, e.location, e.when].filter { !$0.isEmpty }.joined(separator: " · ")).font(.caption).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
+                        Text([e.status, e.location, e.when].filter { !$0.isEmpty }.joined(separator: " · ")).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)).lineLimit(1)
                     }
                 }
                 .contentShape(Rectangle())
@@ -718,21 +718,21 @@ struct TrackingView: View {
     }
 
     @ViewBuilder private func detail(_ s: Shipment) -> some View {
-        Divider().overlay(.white.opacity(0.12))
+        Divider().overlay(Color.skinFg.opacity(0.12))
         if s.events.isEmpty {
-            Text("Ingen hendelser ennå.").font(.footnote).foregroundStyle(.white.opacity(0.6))
+            Text("Ingen hendelser ennå.").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6))
         } else {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(s.events.enumerated()), id: \.offset) { i, e in
                     HStack(alignment: .top, spacing: 12) {
                         VStack(spacing: 0) {
-                            Circle().fill(i == 0 ? s.color : Color.white.opacity(0.35)).frame(width: 10, height: 10).padding(.top, 4)
-                            if i < s.events.count - 1 { Rectangle().fill(.white.opacity(0.18)).frame(width: 2).frame(maxHeight: .infinity) }
+                            Circle().fill(i == 0 ? s.color : Color.skinFg.opacity(0.35)).frame(width: 10, height: 10).padding(.top, 4)
+                            if i < s.events.count - 1 { Rectangle().fill(Color.skinFg.opacity(0.18)).frame(width: 2).frame(maxHeight: .infinity) }
                         }
                         .frame(width: 12)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(e.status).font(.subheadline.weight(i == 0 ? .semibold : .regular))
-                            Text([e.when, e.location].filter { !$0.isEmpty }.joined(separator: " · ")).font(.caption).foregroundStyle(.white.opacity(0.6))
+                            Text([e.when, e.location].filter { !$0.isEmpty }.joined(separator: " · ")).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6))
                         }
                         .padding(.bottom, 12)
                         Spacer(minLength: 0)
@@ -758,7 +758,7 @@ struct TrackingView: View {
 
     private func trkAction(_ t: String, primary: Bool = false, danger: Bool = false, _ act: @escaping () -> Void) -> some View {
         Button { Haptics.shared.tap(); act() } label: {
-            Text(t).font(.footnote.weight(.semibold)).foregroundStyle(primary ? Color.ink : danger ? Color(hex: "#FF8A80") : .white).lineLimit(1)
+            Text(t).font(.footnote.weight(.semibold)).foregroundStyle(primary ? Color.ink : danger ? Color(hex: "#FF8A80") : Color.skinFg).lineLimit(1)
                 .padding(.horizontal, 14).frame(height: 36).contentShape(Capsule())
         }
         .buttonStyle(.plain).glass(18, tint: primary ? .accent : nil)
@@ -767,19 +767,19 @@ struct TrackingView: View {
     private func prefsCard(_ t: TrackingData) -> some View {
         @Bindable var h = Haptics.shared
         return VStack(alignment: .leading, spacing: 2) {
-            HStack { Text("Varsler og haptikk").fontWeight(.semibold); Spacer(); Text("Varsel når appen henter status").font(.caption).foregroundStyle(.white.opacity(0.55)) }
+            HStack { Text("Varsler og haptikk").fontWeight(.semibold); Spacer(); Text("Varsel når appen henter status").font(.caption).foregroundStyle(Color.skinFg.opacity(0.55)) }
                 .padding(.bottom, 6)
             ForEach(trkPrefs, id: \.0) { k, label, sub in
                 Toggle(isOn: Binding(get: { t.prefs[k] ?? (k != "delayed") }, set: { store.setTrackingPref(k, $0) })) {
-                    VStack(alignment: .leading, spacing: 1) { Text(label); if let sub { Text(sub).font(.caption).foregroundStyle(.white.opacity(0.6)) } }
+                    VStack(alignment: .leading, spacing: 1) { Text(label); if let sub { Text(sub).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)) } }
                 }
                 .padding(.vertical, 3)
             }
             Toggle(isOn: $h.packages) {
-                VStack(alignment: .leading, spacing: 1) { Text("Haptikk ved pakkevarsler"); Text("Lagres på denne enheten").font(.caption).foregroundStyle(.white.opacity(0.6)) }
+                VStack(alignment: .leading, spacing: 1) { Text("Haptikk ved pakkevarsler"); Text("Lagres på denne enheten").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)) }
             }
             .padding(.vertical, 3)
-            Text("Ekte push fra serveren er ikke bygget ennå. Varslene kommer når appen er åpen eller henter status.").font(.caption).foregroundStyle(.white.opacity(0.5)).padding(.top, 6)
+            Text("Ekte push fra serveren er ikke bygget ennå. Varslene kommer når appen er åpen eller henter status.").font(.caption).foregroundStyle(Color.skinFg.opacity(0.5)).padding(.top, 6)
         }
         .tint(.accent)
         .padding(16).glass(24)
@@ -790,17 +790,17 @@ struct TrackingView: View {
         return VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 2) {
                 Text("Transportører").fontWeight(.semibold)
-                Text("Nøkler legges inn i Innstillinger → Integrasjoner → Sporing (web)").font(.caption).foregroundStyle(.white.opacity(0.6))
+                Text("Nøkler legges inn i Innstillinger → Integrasjoner → Sporing (web)").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6))
             }
             .padding(.bottom, 8)
             ForEach(Array(list.enumerated()), id: \.element.id) { i, c in
-                if i > 0 { Divider().overlay(.white.opacity(0.1)) }
+                if i > 0 { Divider().overlay(Color.skinFg.opacity(0.1)) }
                 HStack(spacing: 12) {
                     CarrierBadge(ini: c.ini, color: c.color, fg: c.fg, size: 30, carrier: c.id)
                     Text(c.name).lineLimit(1)
                     Spacer()
                     if let ok = c.configured {
-                        Text(ok ? "Nøkkel ✓" : "Mangler nøkkel").font(.caption.weight(.semibold)).foregroundStyle(ok ? Color.positive : .white.opacity(0.5))
+                        Text(ok ? "Nøkkel ✓" : "Mangler nøkkel").font(.caption.weight(.semibold)).foregroundStyle(ok ? Color.positive : Color.skinFg.opacity(0.5))
                     }
                 }
                 .padding(.vertical, 8)
@@ -825,7 +825,7 @@ struct PackagesCard: View {
                 }
                 if items.isEmpty {
                     Spacer(minLength: 0)
-                    Text("Ingen pakker på vei.").font(.subheadline).foregroundStyle(.white.opacity(0.65)).frame(maxWidth: .infinity)
+                    Text("Ingen pakker på vei.").font(.subheadline).foregroundStyle(Color.skinFg.opacity(0.65)).frame(maxWidth: .infinity)
                     Spacer(minLength: 0)
                 } else {
                     ForEach(items.prefix(2)) { s in
@@ -834,19 +834,19 @@ struct PackagesCard: View {
                                 CarrierBadge(ini: s.carrierIni, color: s.carrierColor, fg: s.carrierFg, size: 34, carrier: s.carrier)
                                 VStack(alignment: .leading, spacing: 1) {
                                     Text(s.name).fontWeight(.semibold).lineLimit(1)
-                                    Text(s.statusText + (s.etaText.isEmpty ? "" : " · \(s.etaText)")).font(.caption).foregroundStyle(s.ready ? Color.accentLight : .white.opacity(0.65)).lineLimit(1)
+                                    Text(s.statusText + (s.etaText.isEmpty ? "" : " · \(s.etaText)")).font(.caption).foregroundStyle(s.ready ? Color.accentLight : Color.skinFg.opacity(0.65)).lineLimit(1)
                                 }
                                 Spacer(minLength: 0)
                             }
                             StepBar(step: s.step, color: s.done ? .positive : .accent)
                         }
-                        .padding(10).background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 18))
+                        .padding(10).background(Color.skinFg.opacity(0.06), in: RoundedRectangle(cornerRadius: 18))
                     }
                     Spacer(minLength: 0)
                 }
                 HStack { Spacer(); Text("Åpne sporing ›").font(.footnote.weight(.semibold)).foregroundStyle(Color.accentLight) }
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(Color.skinFg)
             .padding(18).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading).glass(28)
             .contentShape(RoundedRectangle(cornerRadius: 28))
         }

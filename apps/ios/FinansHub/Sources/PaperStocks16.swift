@@ -93,7 +93,7 @@ struct PaperStocks: View {
     }
 
     private var notLinked: some View {
-        Button { store.paperOpen(.settings); store.settingsPage = "stocks" } label: {
+        Button { store.paperGo("innst-aksjer") } label: {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Ikke koblet til Trading 212").font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink)
                 Text("Legg inn API-nøkkel og secret under Innstillinger → Aksjer · Trading 212. Gi bare lesetilgang.")

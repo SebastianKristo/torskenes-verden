@@ -1,0 +1,1148 @@
+import SwiftUI
+import UIKit
+import AVFoundation
+import AudioToolbox
+import UserNotifications
+import UniformTypeIdentifiers
+
+/* ---------------- Prompt 16–17: appnavn, app-ikon, varsler, sanntid og innstillinger i Papir ---------------- */
+
+/* ---------- Appnavn og app-ikon ---------- */
+
+/// Navnet på appen (settings.app_name på serveren, vises på Hjem og i innloggingen) og valgt app-ikon (per enhet).
+@MainActor
+@Observable
+final class AppMeta {
+    static let shared = AppMeta()
+
+    var name: String = UserDefaults.standard.string(forKey: "fh_app_name") ?? "Homelab" {
+        didSet { UserDefaults.standard.set(name, forKey: "fh_app_name") }
+    }
+    var icon: String = UserDefaults.standard.string(forKey: "fh_app_icon") ?? "hus" {
+        didSet { UserDefaults.standard.set(icon, forKey: "fh_app_icon") }
+    }
+
+    /// (id, navn, forhåndsvisning i asset-katalogen, alternativt ikon i iOS).
+    static let icons: [(String, String, String, String?)] = [
+        ("hus", "Huset med stativ", "IconPreviewHus", nil),
+        ("monogram", "Papir-monogram", "IconPreviewMonogram", "AppIcon-Monogram"),
+        ("rom", "Fire rom", "IconPreviewRom", "AppIcon-Rom"),
+    ]
+    static let suggestions = ["Homelab", "Torskenes Verden"]
+
+    var iconName: String { AppMeta.icons.first { $0.0 == icon }?.1 ?? "Huset med stativ" }
+
+    func load(_ store: Store) async {
+        guard let d = try? await store.api.callAt("/api", "GET", "/app", timeout: 10) else { return }
+        let o = JS.obj(d)
+        if let n = JS.str(o, "name"), !n.isEmpty, n != name { name = n }
+    }
+
+    func setName(_ n: String, _ store: Store) {
+        let v = n.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !v.isEmpty else { return }
+        let old = name
+        name = String(v.prefix(40))
+        Haptics.shared.success()
+        Task {
+            do {
+                _ = try await store.api.callAt("/api", "PUT", "/app", json: ["name": self.name])
+                store.flash("Appen heter nå «\(self.name)»")
+            } catch let e as APIError {
+                if e.status == 403 {
+                    self.name = old
+                    store.flash("Bare admin kan endre navnet på appen")
+                } else {
+                    store.flash("Navnet er lagret på denne enheten. Serveren svarte: \(e.message)")
+                }
+            } catch {
+                store.flash(error.localizedDescription)
+            }
+        }
+    }
+
+    /// Bytter ikon på hjemskjermen (iOS viser selv en bekreftelse). Mørk og tonet variant følger med hvert ikon.
+    func setIcon(_ id: String, _ store: Store) {
+        guard let entry = AppMeta.icons.first(where: { $0.0 == id }) else { return }
+        guard UIApplication.shared.supportsAlternateIcons else {
+            store.flash("Denne enheten støtter ikke å bytte app-ikon")
+            return
+        }
+        let target = entry.3
+        UIApplication.shared.setAlternateIconName(target) { err in
+            Task { @MainActor in
+                if let err {
+                    store.flash("Kunne ikke bytte ikon: \(err.localizedDescription)")
+                } else {
+                    AppMeta.shared.icon = id
+                    Haptics.shared.success()
+                }
+            }
+        }
+        Task { _ = try? await store.api.callAt("/api", "PUT", "/app", json: ["icon": id]) }
+    }
+}
+
+/* ---------- Varsler ---------- */
+
+/// Innstillinger → Varsler: hovedbryter, stille timer, lyd, volum og grupper. Lagres i /api/me/notify.
+@MainActor
+@Observable
+final class NotifyModel {
+    static let shared = NotifyModel()
+
+    var on = true
+    var quietOn = false
+    var quietFrom = "22:00"
+    var quietTo = "07:00"
+    var sound = "klokke"
+    var volume: Double = 80
+    var groups: [String: Bool] = ["pakker": true, "finans": true, "familie": true, "reise": true, "haptikk": true]
+    var hasCustom = false
+    var authorized: UNAuthorizationStatus = .notDetermined
+    var loaded = false
+    private var player: AVAudioPlayer?
+
+    static let sounds: [(String, String)] = [("klokke", "Klokke"), ("pling", "Pling"), ("papir", "Papir"), ("dobbel", "Dobbel"), ("dyp", "Dyp"), ("egen", "Egen lyd"), ("stille", "Stille")]
+    static let groupNames: [(String, String, String)] = [
+        ("pakker", "Pakker", "Ny sending, klar for henting, levert og forsinket"),
+        ("finans", "Finans og hjem", "Kvitteringer, budsjett, abonnementer og boliger"),
+        ("familie", "Familie", "Når noen kommer til eller forlater en sone"),
+        ("reise", "Reise og vær", "Avganger og værvarsler"),
+        ("haptikk", "Haptikk", "Vibrasjon sammen med varslene"),
+    ]
+
+    init() {
+        let d = UserDefaults.standard
+        if let o = d.dictionary(forKey: "fh_notify") { apply(o) }
+    }
+
+    func apply(_ o: [String: Any]) {
+        if let v = JS.bool(o, "on") { on = v }
+        if let v = JS.str(o, "quietFrom") { quietFrom = v }
+        if let v = JS.str(o, "quietTo") { quietTo = v }
+        if let v = JS.bool(o, "quietOn") { quietOn = v }
+        if let v = JS.str(o, "sound") { sound = v }
+        if let v = JS.num(o, "volume") { volume = v }
+        if let g = JS.dict(o, "groups") { for (k, v) in g { if let b = v as? Bool { groups[k] = b } } }
+        if let v = JS.bool(o, "customSound") { hasCustom = v }
+    }
+
+    private var body: [String: Any] {
+        ["on": on, "quietOn": quietOn, "quietFrom": quietFrom, "quietTo": quietTo, "sound": sound, "volume": Int(volume), "groups": groups]
+    }
+
+    func load(_ store: Store) async {
+        refreshAuth()
+        if let d = try? await store.api.callAt("/api", "GET", "/me/notify", timeout: 10) {
+            apply(JS.obj(d))
+            UserDefaults.standard.set(body, forKey: "fh_notify")
+        }
+        loaded = true
+        await ensureSound(store)
+    }
+
+    func save(_ store: Store) {
+        UserDefaults.standard.set(body, forKey: "fh_notify")
+        let b = body
+        Task { _ = try? await store.api.callAt("/api", "PUT", "/me/notify", json: b) }
+    }
+
+    func refreshAuth() {
+        UNUserNotificationCenter.current().getNotificationSettings { s in
+            let st = s.authorizationStatus
+            Task { @MainActor in NotifyModel.shared.authorized = st }
+        }
+    }
+
+    func requestAuth() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { _, _ in
+            Task { @MainActor in NotifyModel.shared.refreshAuth() }
+        }
+    }
+
+    /// Stille timer: true når klokka er innenfor intervallet (kan gå over midnatt).
+    var inQuietHours: Bool {
+        guard quietOn else { return false }
+        let now = Calendar.current.dateComponents([.hour, .minute], from: Date())
+        let n = (now.hour ?? 0) * 60 + (now.minute ?? 0)
+        let a = minutes(quietFrom), b = minutes(quietTo)
+        if a == b { return false }
+        return a < b ? (n >= a && n < b) : (n >= a || n < b)
+    }
+
+    private func minutes(_ s: String) -> Int {
+        let p = s.split(separator: ":").compactMap { Int($0) }
+        return (p.first ?? 0) * 60 + (p.count > 1 ? p[1] : 0)
+    }
+
+    /// Skal et varsel i gruppen vises?
+    func allows(_ group: String?) -> Bool {
+        guard on else { return false }
+        if let group, groups[group] == false { return false }
+        return true
+    }
+
+    /// Lyden til varslene: den valgte lyden ligger i Library/Sounds (lastet ned fra serveren), ellers standardlyden.
+    var notificationSound: UNNotificationSound? {
+        if sound == "stille" || inQuietHours { return nil }
+        let file = NotifyModel.soundFile(sound)
+        if FileManager.default.fileExists(atPath: NotifyModel.soundsDir.appendingPathComponent(file).path) {
+            return UNNotificationSound(named: UNNotificationSoundName(file))
+        }
+        return .default
+    }
+
+    /* Lest direkte fra UserDefaults, så varsler fra bakgrunnen (sporing, familie) kan bruke valgene uten hovedtråden. */
+
+    nonisolated static func stored() -> [String: Any] { UserDefaults.standard.dictionary(forKey: "fh_notify") ?? [:] }
+
+    nonisolated static func allowed(_ group: String?) -> Bool {
+        let o = stored()
+        if (o["on"] as? Bool) == false { return false }
+        if let group, let g = o["groups"] as? [String: Any], (g[group] as? Bool) == false { return false }
+        return true
+    }
+
+    nonisolated static func currentSound() -> UNNotificationSound? {
+        let o = stored()
+        let id = (o["sound"] as? String) ?? "klokke"
+        if id == "stille" { return nil }
+        if (o["quietOn"] as? Bool) == true, let a = o["quietFrom"] as? String, let b = o["quietTo"] as? String, quiet(a, b) { return nil }
+        let file = soundFile(id)
+        if FileManager.default.fileExists(atPath: soundsDir.appendingPathComponent(file).path) { return UNNotificationSound(named: UNNotificationSoundName(file)) }
+        return .default
+    }
+
+    nonisolated static func quiet(_ from: String, _ to: String) -> Bool {
+        func mins(_ s: String) -> Int {
+            let p = s.split(separator: ":").compactMap { Int($0) }
+            return (p.first ?? 0) * 60 + (p.count > 1 ? p[1] : 0)
+        }
+        let c = Calendar.current.dateComponents([.hour, .minute], from: Date())
+        let n = (c.hour ?? 0) * 60 + (c.minute ?? 0)
+        let a = mins(from), b = mins(to)
+        if a == b { return false }
+        return a < b ? (n >= a && n < b) : (n >= a || n < b)
+    }
+
+    nonisolated static var soundsDir: URL {
+        let lib = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0].appendingPathComponent("Sounds", isDirectory: true)
+        try? FileManager.default.createDirectory(at: lib, withIntermediateDirectories: true)
+        return lib
+    }
+    nonisolated static func soundFile(_ id: String) -> String { id == "egen" ? "fh-egen.caf" : "fh-\(id).wav" }
+
+    /// Laster ned den valgte lyden til Library/Sounds, så iOS kan spille den i varslene.
+    func ensureSound(_ store: Store) async {
+        guard sound != "stille" else { return }
+        let url = NotifyModel.soundsDir.appendingPathComponent(NotifyModel.soundFile(sound))
+        if FileManager.default.fileExists(atPath: url.path) && sound != "egen" { return }
+        let path = sound == "egen" ? "/api/me/notify/sound" : "/assets/sounds/\(sound).wav"
+        if let d = try? await store.api.bytes(path), d.count > 100 { try? d.write(to: url) }
+    }
+
+    func pick(_ id: String, _ store: Store) {
+        sound = id
+        save(store)
+        Task {
+            await ensureSound(store)
+            self.preview()
+        }
+    }
+
+    /// Spiller lyden i appen (med volum) og vibrerer.
+    func preview() {
+        guard sound != "stille" else { Haptics.shared.tick(); return }
+        let url = NotifyModel.soundsDir.appendingPathComponent(NotifyModel.soundFile(sound))
+        if let pl = try? AVAudioPlayer(contentsOf: url) {
+            pl.volume = Float(volume / 100)
+            pl.play()
+            player = pl
+        } else {
+            AudioServicesPlaySystemSound(1007)
+        }
+        if groups["haptikk"] != false { Haptics.shared.success() }
+    }
+
+    /// «Test varsel»: lyd, vibrasjon og et ekte varsel om 2 sekunder.
+    func test(_ store: Store) {
+        requestAuth()
+        preview()
+        let c = UNMutableNotificationContent()
+        c.title = AppMeta.shared.name
+        c.body = "Slik ser varslene ut. Lyd: \(NotifyModel.sounds.first { $0.0 == sound }?.1 ?? sound)."
+        c.sound = notificationSound
+        let t = UNTimeIntervalNotificationTrigger(timeInterval: 2, repeats: false)
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "fh-test-\(Date().timeIntervalSince1970)", content: c, trigger: t))
+        store.flash("Test-varselet kommer om 2 sekunder")
+    }
+
+    /// Egen lyd: MP3, WAV eller M4A under 1 MB. Lagres på serveren og lastes ned hit.
+    func uploadCustom(_ url: URL, _ store: Store) {
+        let ok = url.startAccessingSecurityScopedResource()
+        defer { if ok { url.stopAccessingSecurityScopedResource() } }
+        guard let data = try? Data(contentsOf: url) else { store.flash("Kunne ikke lese lydfilen"); return }
+        guard data.count < 1_000_000 else { store.flash("Lydfilen må være under 1 MB"); return }
+        let ext = url.pathExtension.lowercased()
+        let mime = ext == "mp3" ? "audio/mpeg" : ext == "m4a" ? "audio/mp4" : "audio/wav"
+        // iOS spiller bare korte lyder i formatene aiff/wav/caf i varsler; vi lagrer filen lokalt med .caf-navn
+        // hvis den er wav, ellers brukes den i appen (forhåndsvisning) og standardlyden i varselet.
+        let local = NotifyModel.soundsDir.appendingPathComponent(NotifyModel.soundFile("egen"))
+        try? data.write(to: local)
+        Task {
+            do {
+                _ = try await store.api.upload("/me/notify/sound", parts: [API.Part(name: "file", filename: "egen.\(ext)", mime: mime, data: data)], prefix: "/api")
+                self.hasCustom = true
+                self.sound = "egen"
+                self.save(store)
+                self.preview()
+                store.flash("Egen lyd er lagret")
+            } catch {
+                store.flash("Kunne ikke laste opp lyden: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    func removeCustom(_ store: Store) {
+        hasCustom = false
+        if sound == "egen" { sound = "klokke" }
+        try? FileManager.default.removeItem(at: NotifyModel.soundsDir.appendingPathComponent(NotifyModel.soundFile("egen")))
+        save(store)
+        Task { _ = try? await store.api.callAt("/api", "DELETE", "/me/notify/sound") }
+    }
+}
+
+struct PaperNotifySettings: View {
+    @Environment(Store.self) private var store
+    @Environment(\.paper) private var p
+    @State private var importing = false
+    @MainActor private var n: NotifyModel { NotifyModel.shared }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            PLabel(text: "Varsler").padding(.leading, 4).padding(.top, 6)
+            PCard(padding: 0) {
+                VStack(spacing: 0) {
+                    toggleRow("Varsler", "Hovedbryter for alle varsler fra appen", n.on) { n.on = $0; n.save(store) }
+                    sep
+                    toggleRow("Stille timer", "\(n.quietFrom)–\(n.quietTo): ingen lyd", n.quietOn) { n.quietOn = $0; n.save(store) }
+                    if n.quietOn { quietRow; sep }
+                    if !n.quietOn { sep }
+                    permissionRow
+                    sep
+                    Button { n.test(store) } label: {
+                        HStack {
+                            Text("Test varsel").font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
+                            Spacer()
+                            Text("Spill av ›").font(PF.ui(13, .semibold)).foregroundStyle(p.lab)
+                        }
+                        .padding(.horizontal, 14).padding(.vertical, 14)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            PLabel(text: "Varsellyd").padding(.leading, 4).padding(.top, 14)
+            PCard(padding: 0) {
+                VStack(spacing: 0) {
+                    ForEach(Array(NotifyModel.sounds.enumerated()), id: \.element.0) { i, s in
+                        if i > 0 { sep }
+                        soundRow(s.0, s.1)
+                    }
+                    sep
+                    volumeRow
+                }
+            }
+            PLabel(text: "Grupper").padding(.leading, 4).padding(.top, 14)
+            PCard(padding: 0) {
+                VStack(spacing: 0) {
+                    ForEach(Array(NotifyModel.groupNames.enumerated()), id: \.element.0) { i, g in
+                        if i > 0 { sep }
+                        toggleRow(g.1, g.2, n.groups[g.0] ?? true) { n.groups[g.0] = $0; n.save(store) }
+                    }
+                }
+            }
+            PaperLinkList(rows: [
+                PaperLinkRow(name: "Pakkevarsler", sub: "Nytt sporingsnummer, ute for levering, klar for henting, levert og forsinket", icon: "shippingbox") { store.paperGo("innst-trk") },
+                PaperLinkRow(name: "Haptikk", sub: "Styrke og når appen skal vibrere", icon: "hand.tap", colorOffset: 1) { store.paperGo("innst-haptikk") },
+            ])
+            Text("Varslene vises som lokale varsler når appen henter nye data. Ekte push fra serveren er ikke bygget ennå.")
+                .font(PF.ui(12)).foregroundStyle(p.mut).padding(.horizontal, 6).padding(.top, 10).fixedSize(horizontal: false, vertical: true)
+        }
+        .task { await n.load(store) }
+        .fileImporter(isPresented: $importing, allowedContentTypes: [.mp3, .wav, .mpeg4Audio, .audio]) { r in
+            if case .success(let url) = r { n.uploadCustom(url, store) }
+        }
+    }
+
+    private var sep: some View { Rectangle().fill(p.line).frame(height: 1) }
+
+    private func toggleRow(_ t: String, _ sub: String, _ on: Bool, _ set: @escaping (Bool) -> Void) -> some View {
+        Toggle(isOn: Binding(get: { on }, set: { set($0); Haptics.shared.select() })) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(t).font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
+                Text(sub).font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .tint(p.pos)
+        .padding(.horizontal, 14).padding(.vertical, 10)
+    }
+
+    private var quietRow: some View {
+        HStack(spacing: 10) {
+            Text("Fra").font(PF.ui(13)).foregroundStyle(p.mut)
+            timeField(n.quietFrom) { n.quietFrom = $0; n.save(store) }
+            Text("til").font(PF.ui(13)).foregroundStyle(p.mut)
+            timeField(n.quietTo) { n.quietTo = $0; n.save(store) }
+            Spacer()
+        }
+        .padding(.horizontal, 14).padding(.bottom, 10)
+    }
+
+    private func timeField(_ v: String, _ set: @escaping (String) -> Void) -> some View {
+        let parts = v.split(separator: ":").compactMap { Int($0) }
+        let date = Calendar.current.date(bySettingHour: parts.first ?? 22, minute: parts.count > 1 ? parts[1] : 0, second: 0, of: Date()) ?? Date()
+        return DatePicker("", selection: Binding(get: { date }, set: { d in
+            let c = Calendar.current.dateComponents([.hour, .minute], from: d)
+            set(String(format: "%02d:%02d", c.hour ?? 0, c.minute ?? 0))
+        }), displayedComponents: .hourAndMinute)
+        .labelsHidden()
+    }
+
+    private var permissionRow: some View {
+        let st = n.authorized
+        let text: String
+        switch st {
+        case .authorized, .provisional, .ephemeral: text = "Tillatt"
+        case .denied: text = "Avslått · åpne Innstillinger"
+        default: text = "Be om tillatelse ›"
+        }
+        return Button {
+            if st == .denied, let u = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(u) } else { n.requestAuth() }
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Tillatelse på enheten").font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
+                    Text("iOS-varsler (lokale varsler i appen)").font(PF.ui(12.5)).foregroundStyle(p.mut)
+                }
+                Spacer()
+                Text(text).font(PF.ui(13, .semibold)).foregroundStyle(st == .authorized ? p.pos : p.lab)
+            }
+            .padding(.horizontal, 14).padding(.vertical, 12)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func soundRow(_ id: String, _ name: String) -> some View {
+        let on = n.sound == id
+        return Button {
+            if id == "egen" && !n.hasCustom { importing = true } else { n.pick(id, store) }
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: id == "stille" ? "speaker.slash" : id == "egen" ? "music.note" : "speaker.wave.2")
+                    .font(.system(size: 14, weight: .semibold)).foregroundStyle(on ? p.lab : p.mut).frame(width: 24)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(name).font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
+                    if id == "egen" {
+                        Text(n.hasCustom ? "Lastet opp · trykk for å bruke" : "Last opp MP3, WAV eller M4A under 1 MB").font(PF.ui(12)).foregroundStyle(p.mut)
+                    }
+                }
+                Spacer()
+                if id == "egen" && n.hasCustom {
+                    Button { importing = true } label: { Text("Bytt").font(PF.ui(12.5, .semibold)).foregroundStyle(p.lab) }.buttonStyle(.plain)
+                    Button { n.removeCustom(store) } label: { Text("Fjern").font(PF.ui(12.5, .semibold)).foregroundStyle(p.mut) }.buttonStyle(.plain)
+                }
+                if on { Text("✓").font(PF.ui(14, .bold)).foregroundStyle(p.pos) }
+            }
+            .padding(.horizontal, 14).padding(.vertical, 11)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var volumeRow: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "speaker.fill").foregroundStyle(p.mut)
+            Slider(value: Binding(get: { n.volume }, set: { n.volume = $0 }), in: 0...100, onEditingChanged: { editing in
+                if !editing { n.save(store); n.preview() }
+            })
+            .tint(p.lab)
+            Image(systemName: "speaker.wave.3.fill").foregroundStyle(p.mut)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 12)
+    }
+}
+
+/* ---------- Sanntid (WebSocket /api/ws) ---------- */
+
+/// Én felles WebSocket mot serveren. Meldingene {type:'tasks'|'family'|'tracking'} gjør at listene hentes på nytt.
+@MainActor
+final class Realtime: NSObject {
+    static let shared = Realtime()
+    private var task: URLSessionWebSocketTask?
+    private weak var store: Store?
+    private var key = ""
+    private var retry: Double = 2
+
+    func connect(_ store: Store) {
+        self.store = store
+        guard let token = store.account?.token, !store.api.base.isEmpty else { return }
+        let base = store.api.base.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let ws = base.replacingOccurrences(of: "https://", with: "wss://").replacingOccurrences(of: "http://", with: "ws://")
+        let enc = token.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? token
+        guard let url = URL(string: ws + "/api/ws?token=" + enc) else { return }
+        if key == url.absoluteString, task != nil { return }
+        disconnect()
+        key = url.absoluteString
+        let t = URLSession.shared.webSocketTask(with: url)
+        task = t
+        t.resume()
+        receive(t)
+    }
+
+    func disconnect() {
+        task?.cancel(with: .goingAway, reason: nil)
+        task = nil
+        key = ""
+    }
+
+    private func receive(_ t: URLSessionWebSocketTask) {
+        t.receive { result in
+            Task { @MainActor in
+                guard t === Realtime.shared.task else { return }
+                switch result {
+                case .success(let msg):
+                    Realtime.shared.retry = 2
+                    var data: Data?
+                    switch msg {
+                    case .string(let s): data = s.data(using: .utf8)
+                    case .data(let d): data = d
+                    @unknown default: data = nil
+                    }
+                    if let data { Realtime.shared.handle(JS.obj(data)) }
+                    Realtime.shared.receive(t)
+                case .failure:
+                    Realtime.shared.reconnectLater()
+                }
+            }
+        }
+    }
+
+    private func reconnectLater() {
+        task = nil
+        let k = key
+        key = ""
+        let wait = retry
+        retry = Swift.min(60, retry * 2)
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(wait))
+            guard Realtime.shared.task == nil, !k.isEmpty, let s = Realtime.shared.store, s.loggedIn else { return }
+            Realtime.shared.connect(s)
+        }
+    }
+
+    private func handle(_ o: [String: Any]) {
+        guard let store else { return }
+        switch JS.str(o, "type") ?? "" {
+        case "tasks": Task { await TasksModel.shared.load(store) }
+        case "family":
+            if JS.str(o, "kind") == "ping" {
+                // Noen i familien ber telefonen spille lyd («Finn telefonen»).
+                NotifyModel.shared.preview()
+                LocalNotify.post("Familie", "\(JS.str(o, "fromName") ?? "Noen") vil finne telefonen din", id: "ping-\(Date().timeIntervalSince1970)", group: nil)
+                return
+            }
+            Task { await FamilyModel.shared.load(store); await FamilyModel.shared.pollEvents(store.api) }
+        case "tracking": Task { try? await store.loadTracking() }
+        default: break
+        }
+    }
+}
+
+/* ---------- Innstillinger (Papir): gruppert som i designet ---------- */
+
+struct PaperSettings17: View {
+    @Environment(Store.self) private var store
+    @Environment(\.paper) private var p
+    @State private var naming = false
+    @State private var picking = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            profileCard
+            group("Konto", 0, [
+                PaperLinkRow(name: "Kontoer og brukere", sub: "Profil, brukere og flere kontoer", icon: "person.2") { store.paperGo("innst-konto") },
+                PaperLinkRow(name: "Sikkerhet", sub: store.lockEnabled ? "Lås med Face ID er på" : "2FA, Face ID og pålitelige enheter", icon: "lock") { store.paperGo("innst-sik") },
+                PaperLinkRow(name: "API-tokens", sub: "Snarveier og integrasjoner", icon: "key") { store.loadTokens(); store.paperGo("innst-api") },
+            ])
+            group("Finans", 3, [
+                PaperLinkRow(name: "AI og tolkning", sub: "Gemini · Groq · Roboflow · Ollama", icon: "sparkles") { store.paperGo("innst-ai") },
+                PaperLinkRow(name: "Kategorier og budsjett", sub: "\(store.boot?.categories.count ?? 0) kategorier", icon: "tag") { store.paperGo("innst-kat") },
+                PaperLinkRow(name: "Regler", sub: "Auto-kategorisering", icon: "list.bullet.rectangle") { store.paperGo("innst-regler") },
+                PaperLinkRow(name: "Bankimport", sub: "DNB · CSV · ✦ AI", icon: "building.columns") { store.paperOpen(.imports) },
+                PaperLinkRow(name: "Aksjer · Trading 212", sub: "Nøkkel, miljø og synk", icon: "chart.line.uptrend.xyaxis") { store.paperGo("innst-aksjer") },
+                PaperLinkRow(name: "Fanelinje og Mer i Finans", sub: "\(store.finNav.count) faner", icon: "dock.rectangle") { store.paperGo("innst-fin") },
+                PaperLinkRow(name: "Subscription OS", sub: "Abonnementer og AI-sparing", icon: "repeat") { store.paperFinGo("abo") },
+                PaperLinkRow(name: "Boliger-profil", sub: "Bare Finans og Domener, med Boliger først. For den som mest laster opp kvitteringer.",
+                             value: boligerProfile ? "På" : "Av", valueColor: boligerProfile ? p.pos : p.mut, icon: "house") { toggleBoligerProfile() },
+            ])
+            group(AppMeta.shared.name, 1, [
+                PaperLinkRow(name: "Navn på appen", sub: AppMeta.shared.name, value: "Endre ›", icon: "character.cursor.ibeam") { naming = true },
+                PaperLinkRow(name: "App-ikon", sub: AppMeta.shared.iconName, value: "Endre ›", icon: "app.badge") { picking = true },
+                PaperLinkRow(name: "Fanelinje i Hjem", sub: "Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen", icon: "dock.rectangle") { store.tabBarEditing = true },
+                PaperLinkRow(name: "Moduler", sub: "Sporing, Domener, Mat, Familie, Avganger og Vær", icon: "square.grid.2x2") { store.paperGo("innst-hl") },
+                PaperLinkRow(name: "Nyhetsleser", sub: "Kilder og AI", icon: "newspaper") { store.openNews() },
+            ])
+            group("App", 2, [
+                PaperLinkRow(name: "Utseende og fanelinje", sub: themeSub, icon: "paintpalette") { store.paperGo("innst-ut") },
+                PaperLinkRow(name: "Varsler og haptikk", sub: NotifyModel.shared.on ? "På · \(NotifyModel.sounds.first { $0.0 == NotifyModel.shared.sound }?.1 ?? "")" : "Av", icon: "bell") { store.paperGo("innst-varsler") },
+                PaperLinkRow(name: "Avansert", sub: "Skanning, widgets, server og data", icon: "gearshape.2") { store.paperGo("innst-avansert") },
+            ])
+            PaperLinkList(rows: [
+                PaperLinkRow(name: "Logg ut", sub: "", value: "", valueColor: p.lab, icon: "rectangle.portrait.and.arrow.right") { store.logout() },
+            ])
+            Text("\(AppMeta.shared.name) · versjon \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "–")")
+                .font(PF.mono(10.5, bold: false)).foregroundStyle(p.mut).frame(maxWidth: .infinity).padding(.top, 14)
+        }
+        .sheet(isPresented: $naming) {
+            AppNameSheet { naming = false }.environment(\.paper, p).presentationDetents([.medium]).presentationBackground(p.bg)
+        }
+        .sheet(isPresented: $picking) {
+            AppIconSheet { picking = false }.environment(\.paper, p).presentationDetents([.medium, .large]).presentationBackground(p.bg)
+        }
+        .task { await NotifyModel.shared.load(store) }
+    }
+
+    private var themeSub: String {
+        let m = store.paperMode == "lys" ? "Papir lys" : store.paperMode == "mork" ? "Papir mørk" : "Følger systemet"
+        return "\(m) · bakgrunn · fanelinje"
+    }
+
+    private var boligerProfile: Bool { UserDefaults.standard.bool(forKey: "fh_bol_profile") }
+
+    /// «Boliger-profil»: Finans og Domener i hovedlinjen, Boliger først i Finans. Av igjen gir vanlig oppsett.
+    private func toggleBoligerProfile() {
+        let on = !boligerProfile
+        UserDefaults.standard.set(on, forKey: "fh_bol_profile")
+        if on {
+            let items = ["finans", "domener"].compactMap { id in PaperTabItem.all.first { $0.id == id } }
+            store.setTabBar(items)
+            store.setFinNav(["boliger", "kvitteringer", "oversikt", "sok"])
+            store.flash("Boliger-profil på")
+        } else {
+            store.resetTabBar()
+            store.setFinNav(["oversikt", "liste", "finn", "sok"])
+            store.flash("Vanlig oppsett er tilbake")
+        }
+    }
+
+    private var profileCard: some View {
+        Button { store.paperGo("innst-konto") } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle().fill(p.popSel)
+                    if let a = store.avatar {
+                        Image(uiImage: a).resizable().scaledToFill().clipShape(Circle())
+                    } else {
+                        Text(String(store.displayName.prefix(1)).uppercased()).font(PF.serif(22, medium: true)).foregroundStyle(p.ink)
+                    }
+                }
+                .frame(width: 54, height: 54)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(store.displayName.isEmpty ? "Konto" : store.displayName).font(PF.serif(20, medium: true)).foregroundStyle(p.ink).lineLimit(1)
+                    Text(accountSub).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(1)
+                    Text(serverHost).font(PF.ui(11.5)).foregroundStyle(p.mut).lineLimit(1)
+                }
+                Spacer()
+                Text("›").font(PF.ui(17)).foregroundStyle(p.mut)
+            }
+            .padding(14)
+            .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 8)
+    }
+
+    private var accountSub: String {
+        let u = store.account?.username ?? ""
+        let r = (store.me?.role ?? store.account?.role ?? "") == "admin" ? "Admin" : "Bruker"
+        return u.isEmpty ? r : "@\(u) · \(r)"
+    }
+
+    private var serverHost: String {
+        URL(string: store.api.base)?.host ?? store.api.base
+    }
+
+    private func group(_ t: String, _ offset: Int, _ rows: [PaperLinkRow]) -> some View {
+        let shifted = rows.map { r -> PaperLinkRow in
+            var x = r
+            x.colorOffset = offset
+            return x
+        }
+        return VStack(alignment: .leading, spacing: 0) {
+            PLabel(text: t).padding(.top, 12).padding(.leading, 4)
+            PaperLinkList(rows: shifted)
+        }
+    }
+}
+
+/// En underside i Innstillinger (Papir). De som finnes i den klassiske appen tegnes med Papir-fargene.
+struct PaperSettingsSub: View {
+    @Environment(Store.self) private var store
+    let key: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            switch key {
+            case "konto": SettingsSubpage(page: "accounts")
+            case "sik": SettingsSubpage(page: "security")
+            case "api": SettingsSubpage(page: "tokens")
+            case "ai": PaperAiSettings()
+            case "kat": SettingsSubpage(page: "cats")
+            case "regler": SettingsSubpage(page: "rules")
+            case "aksjer": SettingsSubpage(page: "stocks")
+            case "fin": PaperFinNavSettings()
+            case "hl": PaperModulesSettings()
+            case "varsler": PaperNotifySettings()
+            case "haptikk": SettingsSubpage(page: "haptics")
+            case "trk": SettingsSubpage(page: "notify")
+            case "avansert": PaperAdvancedSettings()
+            case "skann": SettingsSubpage(page: "scan")
+            case "widgets": SettingsSubpage(page: "widgets")
+            case "server": SettingsSubpage(page: "server")
+            case "data": SettingsSubpage(page: "data")
+            case "backup": SettingsSubpage(page: "backup")
+            case "om": SettingsSubpage(page: "about")
+            default: SettingsSubpage(page: key)
+            }
+        }
+    }
+
+    static let titles: [String: (String, String)] = [
+        "konto": ("Kontoer og brukere", "Profil, brukere og kontoer"),
+        "sik": ("Sikkerhet", "2FA, Face ID og enheter"),
+        "api": ("API-tokens", "Snarveier og integrasjoner"),
+        "ai": ("AI og tolkning", "Motorer, roller og sikkerhet"),
+        "kat": ("Kategorier og budsjett", "Farger og budsjett per måned"),
+        "regler": ("Regler", "Tekst inneholder … → kategori"),
+        "aksjer": ("Aksjer · Trading 212", "Nøkkel, miljø og synk"),
+        "fin": ("Fanelinje og Mer", "Finans"),
+        "hl": ("Moduler", "Sporing, Domener, Mat og mer"),
+        "varsler": ("Varsler og haptikk", "Lyd, stille timer og grupper"),
+        "haptikk": ("Haptikk", "Vibrasjon og styrke"),
+        "trk": ("Pakkevarsler", "Sporing og kvitteringer"),
+        "avansert": ("Avansert", "Skanning, widgets, server og data"),
+        "skann": ("Skanning", "Kamera og AI"),
+        "widgets": ("Widgets", "Hjemskjermen"),
+        "server": ("Server og synk", "Adresser og status"),
+        "data": ("Data og lagring", "Buffer og nedlastinger"),
+        "backup": ("Backup og data", "Eksport og gjenoppretting"),
+        "om": ("Om appen", "Versjon og lisenser"),
+    ]
+}
+
+struct PaperAdvancedSettings: View {
+    @Environment(Store.self) private var store
+    var body: some View {
+        PaperLinkList(rows: [
+            PaperLinkRow(name: "Skanning", sub: "Kamera, beskjæring og AI", icon: "doc.viewfinder") { store.paperGo("innst-skann") },
+            PaperLinkRow(name: "Widgets", sub: "Hjemskjermen og App Group", icon: "square.grid.2x2") { store.paperGo("innst-widgets") },
+            PaperLinkRow(name: "Server og synk", sub: "Lokal og ekstern adresse", icon: "server.rack") { store.paperGo("innst-server") },
+            PaperLinkRow(name: "Data og lagring", sub: "Buffer og nedlastinger", icon: "internaldrive") { store.paperGo("innst-data") },
+            PaperLinkRow(name: "Backup og data", sub: "Eksport og gjenoppretting", icon: "externaldrive") { store.paperGo("innst-backup") },
+            PaperLinkRow(name: "Om appen", sub: "Versjon, personvern og lisenser", icon: "info.circle") { store.paperGo("innst-om") },
+        ])
+    }
+}
+
+/// «Fanelinje og Mer i Finans»: opptil 4 faner, resten ligger i Mer.
+struct PaperFinNavSettings: View {
+    @Environment(Store.self) private var store
+    @Environment(\.paper) private var p
+
+    var body: some View {
+        let nav = store.finNav
+        var rows: [PaperLinkRow] = Store.finNavAll.map { f in
+            let i = nav.firstIndex(of: f.id)
+            let sub = i.map { "I fanelinjen, plass \($0 + 1)" + ($0 > 0 ? " · trykk for å flytte til venstre" : "") } ?? "Ligger i Mer"
+            let value = i.map { $0 > 0 ? "◂ Fane \($0 + 1)" : "Fane 1" } ?? "+ Legg til"
+            return PaperLinkRow(name: f.name, sub: sub, value: value, valueColor: i == nil ? p.lab : p.pos) { toggle(f.id) }
+        }
+        let last = nav.last.flatMap { id in Store.finNavAll.first { $0.id == id }?.name } ?? "–"
+        rows.append(PaperLinkRow(name: "Fjern fra fanelinjen", sub: "Flytter siste fane til Mer", value: nav.count > 1 ? "Fjern \(last)" : "–", valueColor: p.lab) {
+            if nav.count > 1 { store.setFinNav(Array(nav.dropLast())) }
+        })
+        rows.append(PaperLinkRow(name: "Tilbakestill", sub: "Oversikt, Liste, Finn, Søk", value: "Nullstill") { store.setFinNav(["oversikt", "liste", "finn", "sok"]) })
+        return VStack(alignment: .leading, spacing: 4) {
+            PLabel(text: "Finans · fanelinje").padding(.leading, 4).padding(.top, 6)
+            PaperLinkList(rows: rows)
+        }
+    }
+
+    private func toggle(_ id: String) {
+        var nav = store.finNav
+        if let i = nav.firstIndex(of: id) {
+            guard i > 0 else { return }
+            nav.swapAt(i - 1, i)
+            store.setFinNav(nav)
+        } else {
+            guard nav.count < 4 else { store.flash("Maks 4 faner. Fjern en først."); return }
+            nav.append(id)
+            store.setFinNav(nav)
+        }
+    }
+}
+
+/// Moduler: Hjem-oppsettet, fanen Domener/Sporing og innstillingene for hver modul.
+struct PaperModulesSettings: View {
+    @Environment(Store.self) private var store
+    @Environment(\.paper) private var p
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            PLabel(text: "Fanelinje").padding(.leading, 4).padding(.top, 6)
+            PaperLinkList(rows: [
+                PaperLinkRow(name: "Skanneknapp", sub: store.fabMode == "float" ? "Flyter over linjen, søk ligger i linjen" : "Ligger i linjen som +",
+                             value: store.fabMode == "float" ? "Flytende ›" : "I linjen ›", icon: "doc.viewfinder") { store.setFabMode(store.fabMode == "float" ? "inline" : "float") },
+                PaperLinkRow(name: "Fjerde fane", sub: fourthSub, value: fourthName + " ›", icon: "square.grid.2x2") { cycleFourth() },
+            ])
+            PLabel(text: "Moduler").padding(.leading, 4).padding(.top, 14)
+            PaperLinkList(rows: [
+                PaperLinkRow(name: "Huskeliste", sub: "Oppgaver for hele familien", value: "Åpne ›", icon: "checklist") { store.paperGo("huske") },
+                PaperLinkRow(name: "Familie og helse", sub: "Deling av posisjon, personvern og Apple Helse", icon: "person.2") { store.paperGo("innst-fam") },
+                PaperLinkRow(name: "Værsteder", sub: "Legg til, fjern og søk etter steder", value: "Åpne ›", icon: "cloud.sun") { store.openWeather() },
+                PaperLinkRow(name: "Avganger", sub: "Stopp fra Ruter og Entur", value: "Åpne ›", icon: "tram") { store.paperGo("avg") },
+                PaperLinkRow(name: "Sporing", sub: "Kilder, transportører og pakkevarsler", value: "Åpne ›", icon: "shippingbox") { store.paperGo("sporing") },
+                PaperLinkRow(name: "Domener", sub: "Cloudflare-statistikk", value: "Åpne ›", icon: "globe") { store.paperOpenDomains(from: "mer") },
+            ])
+        }
+    }
+
+    private var fourthName: String {
+        switch store.fourthTab {
+        case "domener": return "Domener"
+        case "sporing": return "Sporing"
+        default: return "Automatisk"
+        }
+    }
+
+    private var fourthSub: String {
+        switch store.fourthTab {
+        case "domener": return "Alltid Domener"
+        case "sporing": return "Alltid Sporing"
+        default: return "Domener, eller Sporing når pakker er på vei"
+        }
+    }
+
+    private func cycleFourth() {
+        let order = ["auto", "domener", "sporing"]
+        let i = order.firstIndex(of: store.fourthTab) ?? 0
+        store.setFourthTab(order[(i + 1) % order.count])
+    }
+}
+
+/* ---------- AI og tolkning ---------- */
+
+/// Fire motorer (Ollama, Gemini, Groq, Roboflow), «Hvem gjør hva» per oppgave, lokal OCR-reserve og test.
+@MainActor
+@Observable
+final class AiSettingsModel {
+    static let shared = AiSettingsModel()
+    var health: [String: Any] = [:]
+    var settings: [String: Any] = [:]
+    var testing: String?
+    var results: [String: String] = [:]
+    var log: [[String: Any]] = []
+
+    static let engines: [(String, String, String)] = [("gemini", "Gemini", "Kvitteringer og bilder"), ("groq", "Groq", "AI-søk og kategorier (raskt)"),
+                                                     ("roboflow", "Roboflow", "Strekkoder og pakkelapper"), ("ollama", "Ollama", "Lokalt · reserve")]
+    static let tasks: [(String, String, String)] = [("receipts", "Les kvitteringer", "gemini"), ("search", "AI-søk og sammendrag", "groq"),
+                                                   ("categorize", "Kategorisering", "groq"), ("barcode", "Strekkoder", "roboflow")]
+
+    func load(_ store: Store) async {
+        if let d = try? await store.api.call("GET", "/health/ai") { health = JS.obj(d) }
+        if let d = try? await store.api.call("GET", "/bootstrap"), let s = JS.dict(JS.obj(d), "settings") { settings = s }
+        if let d = try? await store.api.call("GET", "/ai/log?limit=20") {
+            let o = (try? JSONSerialization.jsonObject(with: d)) as? [Any] ?? JS.list(JS.obj(d), "items")
+            log = o.compactMap { $0 as? [String: Any] }
+        }
+    }
+
+    func status(_ engine: String) -> (String, Bool) {
+        let o = JS.dict(health, engine)
+        if JS.bool(o, "ok") == true { return ("Tilkoblet", true) }
+        if JS.bool(o, "configured") == false { return (engine == "ollama" ? "Ikke satt opp" : "Mangler nøkkel", false) }
+        if let e = JS.str(o, "error") ?? JS.str(o, "message") { return (e, false) }
+        return (o == nil ? "Ukjent" : "Svarer ikke", false)
+    }
+
+    func model(_ engine: String) -> String {
+        switch engine {
+        case "gemini": return JS.str(JS.dict(health, "gemini"), "resolved") ?? JS.str(settings, "geminiModel") ?? "gemini"
+        case "groq": return JS.str(settings, "groqModel") ?? "llama-3.3-70b-versatile"
+        case "roboflow": return JS.str(settings, "roboflowWorkflow") ?? "sebastians-workspace-y3jnc"
+        default: return JS.str(settings, "ollamaModel") ?? "qwen2.5vl"
+        }
+    }
+
+    func engineFor(_ task: String, default d: String) -> String {
+        JS.str(JS.dict(settings, "aiTasks"), task) ?? d
+    }
+
+    func setTask(_ task: String, _ engine: String, _ store: Store) {
+        var t = JS.dict(settings, "aiTasks") ?? [:]
+        t[task] = engine
+        settings["aiTasks"] = t
+        store.save("aiTasks", t)
+        Haptics.shared.select()
+    }
+
+    func flag(_ key: String, default d: Bool) -> Bool { JS.bool(settings, key) ?? d }
+
+    func setFlag(_ key: String, _ v: Bool, _ store: Store) {
+        settings[key] = v
+        store.save(key, v)
+    }
+
+    func test(_ engine: String, _ store: Store) {
+        testing = engine
+        Task {
+            let path = engine == "roboflow" ? "/ai/roboflow/test" : "/ai/test"
+            let body: [String: Any]? = engine == "roboflow" ? nil : ["provider": engine]
+            do {
+                let d = try await store.api.call("POST", path, json: body)
+                let o = JS.obj(d)
+                let ok = JS.bool(o, "ok") ?? false
+                let ms = JS.num(o, "ms").map { " · \(Int($0)) ms" } ?? ""
+                self.results[engine] = (ok ? "✓ " : "✕ ") + (JS.str(o, "message") ?? JS.str(o, "model") ?? (ok ? "Virker" : "Feilet")) + ms
+            } catch {
+                self.results[engine] = "✕ " + error.localizedDescription
+            }
+            self.testing = nil
+            await self.load(store)
+        }
+    }
+}
+
+struct PaperAiSettings: View {
+    @Environment(Store.self) private var store
+    @Environment(\.paper) private var p
+    @MainActor private var m: AiSettingsModel { AiSettingsModel.shared }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            PLabel(text: "Motorer").padding(.leading, 4).padding(.top, 6)
+            PCard(padding: 0) {
+                VStack(spacing: 0) {
+                    ForEach(Array(AiSettingsModel.engines.enumerated()), id: \.element.0) { i, e in
+                        if i > 0 { Rectangle().fill(p.line).frame(height: 1) }
+                        engineRow(e.0, e.1, e.2)
+                    }
+                }
+            }
+            PLabel(text: "Hvem gjør hva").padding(.leading, 4).padding(.top, 14)
+            PCard(padding: 0) {
+                VStack(spacing: 0) {
+                    ForEach(Array(AiSettingsModel.tasks.enumerated()), id: \.element.0) { i, t in
+                        if i > 0 { Rectangle().fill(p.line).frame(height: 1) }
+                        taskRow(t.0, t.1, t.2)
+                    }
+                }
+            }
+            Text("Feiler motoren, prøves neste automatisk. Hvert kall logges.").font(PF.ui(12)).foregroundStyle(p.mut).padding(.horizontal, 6).padding(.top, 6)
+            PLabel(text: "Lokal OCR-reserve").padding(.leading, 4).padding(.top, 14)
+            PCard(padding: 0) {
+                VStack(spacing: 0) {
+                    flagRow("Lokal OCR-reserve", "Tesseract leser kvitteringen offline hvis AI feiler", "ocrFallback", true)
+                    Rectangle().fill(p.line).frame(height: 1)
+                    flagRow("Bruk ved lav AI-sikkerhet", "Sammenlign med lokal OCR under grensen", "ocrLowConf", false)
+                    Rectangle().fill(p.line).frame(height: 1)
+                    flagRow("Kategoriser automatisk", "AI foreslår kategori for nye transaksjoner", "autoCat", true)
+                }
+            }
+            PLabel(text: "Minste sikkerhet").padding(.leading, 4).padding(.top, 14)
+            confRow
+            if !m.log.isEmpty {
+                PLabel(text: "Siste kall").padding(.leading, 4).padding(.top, 14)
+                PCard(padding: 0) {
+                    VStack(spacing: 0) {
+                        ForEach(Array(m.log.prefix(12).enumerated()), id: \.offset) { i, l in
+                            if i > 0 { Rectangle().fill(p.line).frame(height: 1) }
+                            logRow(l)
+                        }
+                    }
+                }
+            }
+            Text("Nøkler for Gemini, Groq og Roboflow legges inn i FinansHub i nettleseren (Innstillinger → AI-motor). De lagres kryptert på serveren.")
+                .font(PF.ui(12)).foregroundStyle(p.mut).padding(.horizontal, 6).padding(.top, 10).fixedSize(horizontal: false, vertical: true)
+        }
+        .task { await m.load(store) }
+    }
+
+    private func engineRow(_ id: String, _ name: String, _ sub: String) -> some View {
+        let st = m.status(id)
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 10) {
+                Circle().fill(st.1 ? p.pos : p.mut.opacity(0.5)).frame(width: 9, height: 9)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(name).font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
+                    Text("\(m.model(id)) · \(sub)").font(PF.ui(12)).foregroundStyle(p.mut).lineLimit(1)
+                }
+                Spacer(minLength: 6)
+                Button { m.test(id, store) } label: {
+                    Text(m.testing == id ? "Tester …" : "Test").font(PF.ui(12.5, .semibold)).foregroundStyle(p.ink)
+                        .padding(.horizontal, 12).frame(height: 30).overlay(Capsule().stroke(p.line, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .disabled(m.testing != nil)
+            }
+            Text(m.results[id] ?? st.0).font(PF.ui(12)).foregroundStyle(st.1 ? p.pos : p.lab).lineLimit(2)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 11)
+    }
+
+    private func taskRow(_ task: String, _ name: String, _ def: String) -> some View {
+        let cur = m.engineFor(task, default: def)
+        let curName = AiSettingsModel.engines.first { $0.0 == cur }?.1 ?? cur
+        return Menu {
+            ForEach(AiSettingsModel.engines, id: \.0) { e in
+                Button { m.setTask(task, e.0, store) } label: { Text(e.1 + (e.0 == cur ? " ✓" : "")) }
+            }
+        } label: {
+            HStack {
+                Text(name).font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
+                Spacer()
+                Text(curName + " ›").font(PF.ui(13, .semibold)).foregroundStyle(p.lab)
+            }
+            .padding(.horizontal, 14).padding(.vertical, 13)
+            .contentShape(Rectangle())
+        }
+    }
+
+    private func flagRow(_ t: String, _ sub: String, _ key: String, _ def: Bool) -> some View {
+        Toggle(isOn: Binding(get: { m.flag(key, default: def) }, set: { m.setFlag(key, $0, store) })) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(t).font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
+                Text(sub).font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .tint(p.pos)
+        .padding(.horizontal, 14).padding(.vertical, 10)
+    }
+
+    private var confRow: some View {
+        let cur = Int(JS.num(m.settings, "minConf") ?? 85)
+        return HStack(spacing: 6) {
+            ForEach([70, 80, 85, 90, 95], id: \.self) { v in
+                Button {
+                    m.settings["minConf"] = v
+                    store.save("minConf", v)
+                    Haptics.shared.select()
+                } label: {
+                    Text("\(v) %").font(PF.ui(13, .semibold)).foregroundStyle(cur == v ? p.bg : p.ink)
+                        .frame(maxWidth: .infinity, minHeight: 36)
+                        .background(cur == v ? p.ink : p.card, in: Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.top, 8)
+    }
+
+    private func logRow(_ l: [String: Any]) -> some View {
+        let ok = (JS.str(l, "status") ?? "ok") == "ok"
+        let when = JS.date(l["ts"]).map { JS.fmt($0, "dd.MM HH:mm") } ?? ""
+        return HStack(spacing: 8) {
+            Circle().fill(ok ? p.pos : p.lab).frame(width: 7, height: 7)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("\(JS.str(l, "task") ?? "–") · \(JS.str(l, "engine") ?? "")").font(PF.ui(13, .semibold)).foregroundStyle(p.ink).lineLimit(1)
+                Text((JS.str(l, "model") ?? "") + (JS.str(l, "error").map { " · " + $0 } ?? "")).font(PF.ui(11.5)).foregroundStyle(p.mut).lineLimit(1)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 1) {
+                Text(JS.num(l, "ms").map { "\(Int($0)) ms" } ?? "").font(PF.mono(11, bold: false)).foregroundStyle(p.mut)
+                Text(when).font(PF.ui(11)).foregroundStyle(p.mut)
+            }
+        }
+        .padding(.horizontal, 14).padding(.vertical, 8)
+    }
+}
+
+/* ---------- Navn på appen og app-ikon ---------- */
+
+struct AppNameSheet: View {
+    @Environment(Store.self) private var store
+    @Environment(\.paper) private var p
+    let close: () -> Void
+    @State private var name = AppMeta.shared.name
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Navn på appen").font(PF.serif(24, medium: true)).foregroundStyle(p.ink)
+            Text("Vises på Hjem, i innloggingen, i varsler og i nettleserfanen.").font(PF.ui(13)).foregroundStyle(p.mut)
+            TextField("Navn", text: $name)
+                .font(PF.serif(20))
+                .padding(.vertical, 8)
+                .overlay(alignment: .bottom) { Rectangle().fill(p.lab).frame(height: 2) }
+                .textInputAutocapitalization(.words)
+            HStack(spacing: 8) {
+                ForEach(AppMeta.suggestions, id: \.self) { s in
+                    Button { name = s } label: {
+                        Text(s).font(PF.ui(13, .semibold)).foregroundStyle(name == s ? p.bg : p.ink).padding(.horizontal, 14).frame(height: 34)
+                            .background(name == s ? p.ink : p.card, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            Spacer()
+            HStack(spacing: 10) {
+                PLineButton(title: "Avbryt", height: 48, full: true) { close() }
+                PInkButton(title: "Lagre", height: 48, full: true) {
+                    AppMeta.shared.setName(name, store)
+                    close()
+                }
+            }
+        }
+        .padding(20)
+        .environment(\.colorScheme, p.dark ? .dark : .light)
+    }
+}
+
+struct AppIconSheet: View {
+    @Environment(Store.self) private var store
+    @Environment(\.paper) private var p
+    let close: () -> Void
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("App-ikon").font(PF.serif(24, medium: true)).foregroundStyle(p.ink)
+                Text("Hvert ikon har lys, mørk og tonet variant, som iOS bytter mellom selv.").font(PF.ui(13)).foregroundStyle(p.mut)
+                ForEach(AppMeta.icons, id: \.0) { ic in
+                    Button { AppMeta.shared.setIcon(ic.0, store) } label: {
+                        HStack(spacing: 14) {
+                            Image(ic.2).resizable().scaledToFit().frame(width: 64, height: 64)
+                                .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+                                .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(ic.1).font(PF.ui(15.5, .semibold)).foregroundStyle(p.ink)
+                                Text(ic.0 == "hus" ? "Standard" : "Alternativt ikon").font(PF.ui(12.5)).foregroundStyle(p.mut)
+                            }
+                            Spacer()
+                            if AppMeta.shared.icon == ic.0 { Text("✓").font(PF.ui(16, .bold)).foregroundStyle(p.pos) }
+                        }
+                        .padding(12)
+                        .background(p.card, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(AppMeta.shared.icon == ic.0 ? p.ink : Color.clear, lineWidth: 2))
+                    }
+                    .buttonStyle(.plain)
+                }
+                PLineButton(title: "Ferdig", height: 46, full: true) { close() }.padding(.top, 6)
+            }
+            .padding(20)
+        }
+        .environment(\.colorScheme, p.dark ? .dark : .light)
+    }
+}

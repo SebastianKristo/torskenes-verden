@@ -22,7 +22,7 @@ struct DomainsView: View {
                 if let d = store.domain {
                     HStack(spacing: 8) {
                         Circle().fill(statusColor(store.analytics?.status)).frame(width: 8, height: 8)
-                        Text(d).font(.subheadline.weight(.semibold)).foregroundStyle(.white.opacity(0.8)).lineLimit(1)
+                        Text(d).font(.subheadline.weight(.semibold)).foregroundStyle(Color.skinFg.opacity(0.8)).lineLimit(1)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 4)
                 }
@@ -36,7 +36,7 @@ struct DomainsView: View {
                         .buttonStyle(.plain).glass(25, tint: .domPink)
                 }
                 if let a = store.analytics {
-                    if a.mock == true { Text("Eksempeldata – legg inn Cloudflare-token i Homelab for ekte tall.").font(.caption).foregroundStyle(.white.opacity(0.55)).frame(maxWidth: .infinity, alignment: .leading) }
+                    if a.mock == true { Text("Eksempeldata – legg inn Cloudflare-token i Homelab for ekte tall.").font(.caption).foregroundStyle(Color.skinFg.opacity(0.55)).frame(maxWidth: .infinity, alignment: .leading) }
                     switch store.domTab {
                     case .traffic: traffic(a)
                     case .visits: visits(a)
@@ -59,7 +59,7 @@ struct DomainsView: View {
         } label: {
             Image(systemName: "globe").frame(width: 40, height: 40).glass(20)
         }
-        .foregroundStyle(.white)
+        .foregroundStyle(Color.skinFg)
         .accessibilityLabel("Velg domene, nå \(store.domain ?? "ingen")")
     }
 
@@ -79,9 +79,9 @@ struct DomainsView: View {
             HStack(spacing: 8) { Circle().fill(Color.positive).frame(width: 8, height: 8); Text("Live · akkurat nå").fontWeight(.semibold) }
             HStack(alignment: .firstTextBaseline, spacing: 0) {
                 Text(count(a.live?.visitors ?? 0)).font(.system(size: 36, weight: .semibold, design: .monospaced))
-                Text(" besøkende").foregroundStyle(.white.opacity(0.7))
+                Text(" besøkende").foregroundStyle(Color.skinFg.opacity(0.7))
             }
-            Text("\(count(a.live?.requests ?? 0)) forespørsler · \(String(format: "%.1f", a.live?.mb ?? 0).replacingOccurrences(of: ".", with: ",")) MB").font(.subheadline).foregroundStyle(.white.opacity(0.75))
+            Text("\(count(a.live?.requests ?? 0)) forespørsler · \(String(format: "%.1f", a.live?.mb ?? 0).replacingOccurrences(of: ".", with: ",")) MB").font(.subheadline).foregroundStyle(Color.skinFg.opacity(0.75))
             Spark(values: a.live?.spark ?? (a.series ?? []).map { $0.visitors ?? 0 }, color: .domPink).frame(height: 44)
         }
         .padding(16).frame(maxWidth: .infinity, alignment: .leading).glass(28, tint: Color.domPink.opacity(0.35))
@@ -96,10 +96,10 @@ struct DomainsView: View {
         SectionLabel(text: "Historikk")
         ranges([("7d", "7 d"), ("30d", "30 d"), ("90d", "90 d"), ("1y", "1 år")])
         VStack(alignment: .leading, spacing: 8) {
-            HStack { Text("Forespørsler"); Spacer(); Text("bufret \(pct(a.cachedPct ?? 0))").font(.footnote).foregroundStyle(.white.opacity(0.6)) }
+            HStack { Text("Forespørsler"); Spacer(); Text("bufret \(pct(a.cachedPct ?? 0))").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)) }
             Spark(values: (a.series ?? []).map { $0.requests ?? 0 }, second: (a.series ?? []).map { $0.cached ?? 0 }, color: .domPink).frame(height: 120)
             if let s = a.series, s.count >= 2 {
-                HStack { Text(String((s.first?.t ?? "").prefix(10))); Spacer(); Text(String((s.last?.t ?? "").prefix(10))) }.font(.caption2).foregroundStyle(.white.opacity(0.5))
+                HStack { Text(String((s.first?.t ?? "").prefix(10))); Spacer(); Text(String((s.last?.t ?? "").prefix(10))) }.font(.caption2).foregroundStyle(Color.skinFg.opacity(0.5))
             }
         }
         .padding(16).glass(24)
@@ -133,7 +133,7 @@ struct DomainsView: View {
         }
         card("Protokoll") {
             Bars(rows: (a.http ?? []).map { ($0.label, $0.value) }, percent: true)
-            Divider().overlay(.white.opacity(0.12))
+            Divider().overlay(Color.skinFg.opacity(0.12))
             Bars(rows: (a.tls ?? []).map { ($0.label, $0.value) }, percent: true)
         }
         card("Oppetid siste 90 dager") {
@@ -141,30 +141,30 @@ struct DomainsView: View {
             Text((a.uptimePct ?? 0) > 0 ? pct(a.uptimePct ?? 0) : "–").font(.system(.title2, design: .monospaced))
             HStack(spacing: 1) {
                 ForEach(Array(days.enumerated()), id: \.offset) { _, u in
-                    RoundedRectangle(cornerRadius: 2).fill(u < 0 ? Color.white.opacity(0.15) : u >= 0.999 ? Color.positive : u >= 0.98 ? Color(hex: "#F2C14E") : .domRed)
+                    RoundedRectangle(cornerRadius: 2).fill(u < 0 ? Color.skinFg.opacity(0.15) : u >= 0.999 ? Color.positive : u >= 0.98 ? Color(hex: "#F2C14E") : .domRed)
                 }
             }
             .frame(height: 28)
-            if days.isEmpty { Text("Ingen målinger ennå").font(.footnote).foregroundStyle(.white.opacity(0.6)) }
+            if days.isEmpty { Text("Ingen målinger ennå").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)) }
         }
     }
 
     @ViewBuilder private func security(_ a: Analytics) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Trusler stoppet").foregroundStyle(.white.opacity(0.75))
+            Text("Trusler stoppet").foregroundStyle(Color.skinFg.opacity(0.75))
             Text(count(a.threats?.total ?? 0)).font(.system(size: 40, weight: .semibold, design: .monospaced))
         }
         .padding(20).frame(maxWidth: .infinity, alignment: .leading).glass(28, tint: Color.domPink.opacity(0.35))
         card("Hva ble stoppet") { Bars(rows: (a.threats?.types ?? []).map { ($0.label, $0.value) }) }
         card("Siste hendelser") {
             let ev = Array((a.threats?.events ?? []).prefix(10))
-            if ev.isEmpty { Text("Ingen hendelser").font(.footnote).foregroundStyle(.white.opacity(0.6)) }
+            if ev.isEmpty { Text("Ingen hendelser").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)) }
             ForEach(Array(ev.enumerated()), id: \.offset) { _, e in
                 HStack(spacing: 10) {
                     Pill(text: e.action ?? "–", color: e.action == "Blokkert" ? .domRed : Color(hex: "#F2C14E"))
                     VStack(alignment: .leading, spacing: 2) {
                         Text((e.path ?? "").isEmpty ? "/" : e.path!).font(.system(.footnote, design: .monospaced)).lineLimit(1)
-                        Text("\(flag(e.country)) \(e.ip ?? "") · \(String((e.time ?? "").suffix(8).prefix(5)))").font(.caption).foregroundStyle(.white.opacity(0.6))
+                        Text("\(flag(e.country)) \(e.ip ?? "") · \(String((e.time ?? "").suffix(8).prefix(5)))").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6))
                     }
                     Spacer()
                 }
@@ -184,17 +184,17 @@ struct DomainsView: View {
         }
         card("DNS-poster") {
             let recs = a.dns ?? []
-            if recs.isEmpty { Text("Ingen DNS-poster").font(.footnote).foregroundStyle(.white.opacity(0.6)) }
+            if recs.isEmpty { Text("Ingen DNS-poster").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)) }
             ForEach(Array(recs.prefix(30).enumerated()), id: \.offset) { i, r in
-                if i > 0 { Divider().overlay(.white.opacity(0.1)) }
+                if i > 0 { Divider().overlay(Color.skinFg.opacity(0.1)) }
                 HStack(alignment: .top, spacing: 10) {
                     Text(r.type ?? "–").font(.system(.caption, design: .monospaced).weight(.bold)).foregroundStyle(Color.domPink).frame(width: 52, alignment: .leading)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(r.name ?? "–").font(.footnote.weight(.semibold)).lineLimit(1)
-                        Text(r.content ?? "").font(.system(.caption, design: .monospaced)).foregroundStyle(.white.opacity(0.65)).lineLimit(2)
+                        Text(r.content ?? "").font(.system(.caption, design: .monospaced)).foregroundStyle(Color.skinFg.opacity(0.65)).lineLimit(2)
                     }
                     Spacer(minLength: 4)
-                    Pill(text: r.proxied == true ? "Proxy" : "Kun DNS", color: r.proxied == true ? Color(hex: "#F6A04D") : .white.opacity(0.7))
+                    Pill(text: r.proxied == true ? "Proxy" : "Kun DNS", color: r.proxied == true ? Color(hex: "#F6A04D") : Color.skinFg.opacity(0.7))
                 }
             }
         }
@@ -212,11 +212,11 @@ struct DomainsView: View {
             kv("Registrar", a.registrar ?? "–")
             kv("Fornyes", a.renews.map { "\(ddmm($0)).\($0.prefix(4))" } ?? "–")
             HStack {
-                Text("SSL-sertifikat").foregroundStyle(.white.opacity(0.65)); Spacer()
+                Text("SSL-sertifikat").foregroundStyle(Color.skinFg.opacity(0.65)); Spacer()
                 Text(left.map { "\($0) dager igjen" } ?? "–").fontWeight(.medium).foregroundStyle(left.map { $0 < 30 ? Color(hex: "#F2C14E") : Color.positive } ?? .white)
             }
             HStack(alignment: .top) {
-                Text("Navnetjenere").foregroundStyle(.white.opacity(0.65)); Spacer()
+                Text("Navnetjenere").foregroundStyle(Color.skinFg.opacity(0.65)); Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
                     ForEach((a.nameServers ?? []).isEmpty ? ["–"] : a.nameServers ?? [], id: \.self) { Text($0).font(.system(.footnote, design: .monospaced)).lineLimit(1) }
                 }
@@ -234,7 +234,7 @@ struct DomainsView: View {
             HStack(spacing: 8) {
                 ForEach(opts, id: \.0) { k, n in
                     Button { store.setRange(k) } label: {
-                        Text(n).font(.subheadline).padding(.horizontal, 14).frame(height: 34).foregroundStyle(store.domRange == k ? Color.ink : .white)
+                        Text(n).font(.subheadline).padding(.horizontal, 14).frame(height: 34).foregroundStyle(store.domRange == k ? Color.ink : Color.skinFg)
                     }
                     .buttonStyle(.plain).glass(17, tint: store.domRange == k ? .domPink : nil)
                 }
@@ -251,7 +251,7 @@ struct DomainsView: View {
     }
 
     private func kv(_ k: String, _ v: String, good: Bool? = nil) -> some View {
-        HStack { Text(k).foregroundStyle(.white.opacity(0.65)); Spacer(); Text(v).fontWeight(.medium).foregroundStyle(good == true ? Color.positive : good == false ? .domRed : .white) }
+        HStack { Text(k).foregroundStyle(Color.skinFg.opacity(0.65)); Spacer(); Text(v).fontWeight(.medium).foregroundStyle(good == true ? Color.positive : good == false ? .domRed : Color.skinFg) }
     }
 
     private func onOff(_ b: Bool?) -> String { b.map { $0 ? "På" : "Av" } ?? "–" }
@@ -268,12 +268,12 @@ struct Bars: View {
     var percent = false
     var color: Color = .domPink
     var body: some View {
-        if rows.isEmpty { Text("Ingen data").font(.footnote).foregroundStyle(.white.opacity(0.6)) } else {
+        if rows.isEmpty { Text("Ingen data").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)) } else {
             let max = rows.map(\.1).max() ?? 1
             VStack(spacing: 10) {
                 ForEach(Array(rows.prefix(8).enumerated()), id: \.offset) { _, r in
                     VStack(alignment: .leading, spacing: 4) {
-                        HStack { Text(r.0).lineLimit(1); Spacer(); Text(percent ? pct(r.1) : count(r.1)).font(.system(.footnote, design: .monospaced)).foregroundStyle(.white.opacity(0.7)) }
+                        HStack { Text(r.0).lineLimit(1); Spacer(); Text(percent ? pct(r.1) : count(r.1)).font(.system(.footnote, design: .monospaced)).foregroundStyle(Color.skinFg.opacity(0.7)) }
                         Bar(value: r.1 / Swift.max(1, max), color: color)
                     }
                 }
@@ -303,7 +303,7 @@ struct Spark: View {
                     Path { p in p.addLines(main) }.stroke(color, style: StrokeStyle(lineWidth: 2.5, lineCap: .round, lineJoin: .round))
                 }
                 let sec = pts(second)
-                if sec.count > 1 { Path { p in p.addLines(sec) }.stroke(.white.opacity(0.45), lineWidth: 1.5) }
+                if sec.count > 1 { Path { p in p.addLines(sec) }.stroke(Color.skinFg.opacity(0.45), lineWidth: 1.5) }
             }
         }
     }
@@ -336,14 +336,14 @@ struct DomainManager: View {
                 SectionLabel(text: "Domener")
                 VStack(spacing: 0) {
                     let list = store.domains ?? []
-                    if list.isEmpty { Text("Ingen domener ennå.").foregroundStyle(.white.opacity(0.6)).padding(16) }
+                    if list.isEmpty { Text("Ingen domener ennå.").foregroundStyle(Color.skinFg.opacity(0.6)).padding(16) }
                     ForEach(Array(list.enumerated()), id: \.element.name) { i, d in
-                        if i > 0 { Divider().overlay(.white.opacity(0.12)) }
+                        if i > 0 { Divider().overlay(Color.skinFg.opacity(0.12)) }
                         HStack(spacing: 12) {
                             Image(systemName: "globe").foregroundStyle(Color.domPink).frame(width: 24)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(d.name).fontWeight(.semibold).lineLimit(1)
-                                Text(sourceName(d.source)).font(.caption).foregroundStyle(.white.opacity(0.6))
+                                Text(sourceName(d.source)).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6))
                             }
                             Spacer()
                             Button("Fjern") { store.removeDomain(d) }.font(.subheadline.weight(.semibold)).foregroundStyle(Color.domRed)
@@ -363,7 +363,7 @@ struct DomainManager: View {
                     }
                     .buttonStyle(.plain).glass(25, tint: .domPink).disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
                     Text(source == "plausible" || source == "umami" ? "Plausible og Umami trenger API-token. Legg det inn i Homelab på web etterpå." : "API-token (Cloudflare) legges inn i Homelab på web. Uten eget token brukes standard-tokenet.")
-                        .font(.footnote).foregroundStyle(.white.opacity(0.6))
+                        .font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6))
                 }
             }
             .padding(20)

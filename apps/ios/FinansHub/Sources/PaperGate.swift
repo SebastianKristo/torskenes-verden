@@ -61,7 +61,7 @@ struct PaperLoginView: View {
         let p = PaperPalette.of(store.paperMode, system: paperSystemScheme(phase))
         ScrollView {
             VStack(spacing: 0) {
-                GateHeader(kicker: store.pending != nil ? "Homelab · \(host)" : "Homelab · \(host.isEmpty ? "logg inn" : host)",
+                GateHeader(kicker: store.pending != nil ? "\(AppMeta.shared.name) · \(host)" : "\(AppMeta.shared.name) · \(host.isEmpty ? "logg inn" : host)",
                            title: store.pending != nil ? "Totrinns-\nbekreftelse" : store.addingAccount ? "Legg til\nkonto" : "Hei,\nvelkommen hjem")
                 VStack(alignment: .leading, spacing: 18) {
                     if let pd = store.pending { twoFactor(pd, p) } else { form(p) }

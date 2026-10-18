@@ -229,6 +229,8 @@ struct PaperShell: View {
             PaperWeatherView()
         }
         .task(id: store.account?.id) {
+            Realtime.shared.connect(store)
+            await AppMeta.shared.load(store)
             await store.loadPhotoWindow()
             if store.mobileHome == nil { await store.loadHome() }
             if store.tracking == nil { try? await store.loadTracking() }
@@ -236,24 +238,22 @@ struct PaperShell: View {
     }
 
     /// Den flytende knappen: «Ny sending» på Sporing, ellers skann-arket (Legg til domene i Domener).
+    /// Den flytende knappen: trykk åpner kameraet med en gang, hold inne gir valgarket.
     private func fabTap() {
         Haptics.shared.tap()
         if store.paperInDomains { store.domainManager = true; return }
         if store.paperTab == "sporing" && store.paperClassic == nil { store.trackAddOpen = true; return }
-        store.paperScanOpen = true
+        if store.paperTab == "abo" { store.subAdding = true; return }
+        store.scanTarget = store.paperTab == "mat" ? "recipe" : "receipt"
+        scan.camera()
     }
 
     private func fabHold() {
         Haptics.shared.tick()
         if store.paperInDomains { store.domainManager = true; return }
         if store.paperTab == "sporing" && store.paperClassic == nil { store.trackAddOpen = true; return }
-        store.scanTarget = store.paperTab == "mat" ? "recipe" : "receipt"
-        store.paperHint = "Velg filer å laste opp"
-        scan.files()
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(1600))
-            store.paperHint = nil
-        }
+        if store.paperTab == "abo" { store.subAdding = true; return }
+        store.paperScanOpen = true
     }
 
     @ViewBuilder private func content(_ p: PaperPalette) -> some View {
@@ -272,15 +272,17 @@ struct PaperShell: View {
         }
     }
 
-    /// En side fra den klassiske appen: mørk bakgrunn over papiret. Sidene under Mer har egen tilbakeknapp i toppen;
+    /// En side fra den klassiske appen, tegnet med Papir-fargene (PaperSkin). Sidene under Mer har egen tilbakeknapp i toppen;
     /// Finans-sidene og Domener får «‹ …» i Papir-stil.
     private func classic<C: View>(back: String?, @ViewBuilder _ c: () -> C) -> some View {
-        VStack(spacing: 0) {
+        let p = PaperSkin.palette ?? PaperPalette.light
+        return VStack(spacing: 0) {
             if let back {
                 HStack {
                     Button { store.paperUp() } label: {
-                        Text("‹ \(back)").font(PF.ui(13, .semibold)).foregroundStyle(.white).padding(.leading, 10).padding(.trailing, 14).frame(height: 34)
-                            .background(Color.white.opacity(0.12), in: Capsule())
+                        Text("‹ \(back)").font(PF.ui(13, .semibold)).foregroundStyle(p.ink).padding(.leading, 10).padding(.trailing, 14).frame(height: 34)
+                            .background(p.card, in: Capsule())
+                            .overlay(Capsule().stroke(p.line, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
                     Spacer()
@@ -289,8 +291,8 @@ struct PaperShell: View {
             }
             c().frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .background { ZStack { Color(hex: "#14130f"); Backdrop() }.ignoresSafeArea() }
-        .environment(\.colorScheme, .dark)
+        .background { p.bg.ignoresSafeArea() }
+        .environment(\.colorScheme, p.dark ? .dark : .light)
     }
 }
 
@@ -392,24 +394,20 @@ struct PaperTabBar: View {
         return store.paperTab == "mat" ? "Skann oppskrift" : "Skann"
     }
 
+    /// Trykk: kameraet åpnes med en gang (i Mat som oppskrift). Hold inne: arket med Kvittering, Oppskrift, Bilder og Fil.
     private func plusTap() {
         Haptics.shared.tap()
         if store.paperTab == "abo" { store.subAdding = true; return }
         if store.paperInDomains { store.domainManager = true; return }
-        store.paperScanOpen = true
+        store.scanTarget = store.paperTab == "mat" ? "recipe" : "receipt"
+        scan.camera()
     }
 
     private func plusHold() {
         Haptics.shared.tick()
         if store.paperTab == "abo" { store.subAdding = true; return }
         if store.paperInDomains { store.domainManager = true; return }
-        store.scanTarget = store.paperTab == "mat" ? "recipe" : "receipt"
-        store.paperHint = "Velg filer å laste opp"
-        scan.files()
-        Task { @MainActor in
-            try? await Task.sleep(for: .milliseconds(1600))
-            store.paperHint = nil
-        }
+        store.paperScanOpen = true
     }
 
     private func tab(_ id: String, _ name: String, _ icon: String, on: Bool) -> some View {
@@ -483,19 +481,16 @@ struct PaperScanSheet: View {
             VStack(alignment: .leading, spacing: 10) {
                 Text(title).font(PF.serif(24, medium: true)).foregroundStyle(p.ink)
                 Text(sub).font(PF.ui(13)).foregroundStyle(p.mut)
-                if !store.paperInFinance {
-                    HStack(spacing: 6) {
-                        choice("Kvittering", !recipe) { recipe = false }
-                        choice("Oppskrift", recipe) { recipe = true }
-                    }
-                }
-                Button { go { scan.camera() } } label: {
-                    Text("Kamera").font(PF.ui(15, .bold)).foregroundStyle(p.bg).frame(maxWidth: .infinity, minHeight: 54)
+                Button { go(recipe: false) { scan.camera() } } label: {
+                    Text("Kvittering").font(PF.ui(15, .bold)).foregroundStyle(p.bg).frame(maxWidth: .infinity, minHeight: 54)
                         .background(p.ink, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 }
                 .buttonStyle(.plain)
-                lineButton("Bilder eller filer") { go { scan.files() } }
-                lineButton("Fra Bilder") { go { scan.photos() } }
+                if !store.paperInFinance {
+                    lineButton("Oppskrift") { go(recipe: true) { scan.camera() } }
+                }
+                lineButton("Bilder") { go(recipe: recipe) { scan.photos() } }
+                lineButton("Fil") { go(recipe: recipe) { scan.files() } }
                 queue
             }
             .padding(.horizontal, 18).padding(.top, 22).padding(.bottom, 10)
@@ -505,7 +500,10 @@ struct PaperScanSheet: View {
         .environment(\.colorScheme, p.dark ? .dark : .light)
     }
 
-    private var title: String { store.paperInFinance ? "Legg til kvittering" : recipe ? "Skann oppskrift" : "Skann" }
+    private var title: String {
+        if store.paperTab == "boliger", let f = store.folder { return "Skann til \(f.name)" }
+        return store.paperInFinance ? "Legg til kvittering" : "Skann"
+    }
     private var sub: String {
         store.paperInFinance ? "Ta bilde, velg filer eller del fra e-post. ✦ Gemini leser i bakgrunnen og kobler mot transaksjonen."
             : "Kvittering, oppskrift eller dokument. ✦ Gemini leser i bakgrunnen."
@@ -544,8 +542,8 @@ struct PaperScanSheet: View {
         .background(p.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
-    private func go(_ act: @escaping () -> Void) {
-        store.scanTarget = recipe ? "recipe" : "receipt"
+    private func go(recipe r: Bool, _ act: @escaping () -> Void) {
+        store.scanTarget = r ? "recipe" : "receipt"
         close()
         Task {
             try? await Task.sleep(for: .milliseconds(450))
@@ -717,7 +715,7 @@ struct PaperPage: View {
                         .padding(.horizontal, 16)
                         .frame(maxWidth: .infinity)
                         .padding(.leading, wide ? 108 : 0)
-                        .padding(.bottom, store.fabMode == "float" && !wide ? 86 : 20)
+                        .padding(.bottom, store.fabMode == "float" && !wide ? 112 : 20)
                 }
             }
             .coordinateSpace(name: "ppage")
@@ -756,7 +754,8 @@ struct PaperPage: View {
         case "mat": MatView(pal: MatPal.paper(p), paperMode: true)
         case "sporing": PaperTracking()
         case "mer": PaperMore()
-        case "innst": PaperSettings()
+        case "innst": PaperSettings17()
+        case "huske": PaperTasksView()
         case "domener", "dpub", "dytl", "dinf": PaperDomains()
         case "aksjer": PaperStocks()
         case "boliger": PaperBoliger()
@@ -765,6 +764,7 @@ struct PaperPage: View {
         case "profil": PaperProfile()
         case "innst-ut": PaperLookSettings()
         case "innst-fam": FamilySettingsView()
+        case let t where t.hasPrefix("innst-"): PaperSettingsSub(key: String(t.dropFirst(6)))
         default: PaperHome()
         }
     }
@@ -861,7 +861,7 @@ struct PaperHero: View {
     private var topRow: some View {
         HStack(spacing: 8) {
             if home {
-                Text("Homelab").font(PF.serif(22, medium: true)).foregroundStyle(.white).shadow(color: .black.opacity(0.4), radius: 6)
+                Text(AppMeta.shared.name).font(PF.serif(22, medium: true)).foregroundStyle(.white).lineLimit(1).minimumScaleFactor(0.7).shadow(color: .black.opacity(0.4), radius: 6)
             } else {
                 pill("‹ \(store.paperUpLabel)") { store.paperUp() }
             }
@@ -956,7 +956,7 @@ struct PaperHero: View {
         case "mat": return "Uke \(Calendar(identifier: .iso8601).component(.weekOfYear, from: Date()))"
         case "sporing": return "Pakker og sendinger"
         case "mer": return "Alle moduler"
-        case "innst": return "Konto og utseende"
+        case "innst": return "Konto, Finans, \(AppMeta.shared.name) og app"
         default: return store.paper16Kicker ?? ""
         }
     }

@@ -512,8 +512,9 @@ extension Store {
         case "abo": return finNav.contains("abonnementer") ? "Hjem" : "Mer"
         case "aksjer": return finNav.contains("aksjer") ? "Hjem" : "Mer"
         case "boliger": return folder != nil ? "Boliger" : (finNav.contains("boliger") ? "Hjem" : "Mer")
-        case "profil": return "Innstillinger"
-        default: return paperTab.hasPrefix("innst-") ? "Innstillinger" : "Hjem"
+        case "profil": return "Alle innstillinger"
+        case "huske": return "Mer"
+        default: return paperTab.hasPrefix("innst-") ? "Alle innstillinger" : "Hjem"
         }
     }
 }

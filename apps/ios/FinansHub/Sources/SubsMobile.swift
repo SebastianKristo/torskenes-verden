@@ -246,13 +246,13 @@ private struct HealthGauge: View {
                     var p = Path()
                     p.move(to: CGPoint(x: cx + r1 * cos(a), y: cy - r1 * sin(a)))
                     p.addLine(to: CGPoint(x: cx + r2 * cos(a), y: cy - r2 * sin(a)))
-                    let c: Color = on ? (i < 10 ? Color(hex: "#C85A26") : i < 20 ? Color.accent : Color.accentLight) : Color.white.opacity(0.14)
+                    let c: Color = on ? (i < 10 ? Color(hex: "#C85A26") : i < 20 ? Color.accent : Color.accentLight) : Color.skinFg.opacity(0.14)
                     ctx.stroke(p, with: .color(c), style: StrokeStyle(lineWidth: 4, lineCap: .round))
                 }
             }
             VStack(spacing: 0) {
                 Text("\(Int(score))").font(.system(size: 36, weight: .bold)).monospacedDigit()
-                Text("/100").font(.caption).foregroundStyle(.white.opacity(0.6))
+                Text("/100").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6))
             }
         }
     }
@@ -269,7 +269,7 @@ struct SubsMobileView: View {
             VStack(spacing: 12) {
                 ModuleHeader(title: "Subscription OS", trailing: {
                     Button { Haptics.shared.tap(); adding = true } label: {
-                        Image(systemName: "plus").font(.system(size: 17, weight: .semibold)).foregroundStyle(.white).frame(width: 44, height: 44).contentShape(Circle())
+                        Image(systemName: "plus").font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.skinFg).frame(width: 44, height: 44).contentShape(Circle())
                     }
                     .buttonStyle(GlassPress()).glassRound().accessibilityLabel("Legg til abonnement")
                 })
@@ -301,9 +301,9 @@ struct SubsMobileView: View {
                 let on = store.subTab == k
                 Button { Haptics.shared.select(); store.subTab = k } label: {
                     HStack(spacing: 6) { Image(systemName: icon).font(.system(size: 13, weight: .semibold)); Text(n).font(.subheadline.weight(.semibold)) }
-                        .foregroundStyle(on ? (DesignStyle.material ? M3.onPrimary : Color.black) : .white.opacity(0.7))
+                        .foregroundStyle(on ? (DesignStyle.material ? M3.onPrimary : Color.black) : Color.skinFg.opacity(0.7))
                         .frame(maxWidth: .infinity, minHeight: 38)
-                        .background(on ? (DesignStyle.material ? M3.primary : Color.white) : Color.clear, in: Capsule())
+                        .background(on ? (DesignStyle.material ? M3.primary : Color.skinFg) : Color.clear, in: Capsule())
                         .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
@@ -323,9 +323,9 @@ struct SubsMobileView: View {
                 HStack {
                     Text("♛ Abonnementssjekk").fontWeight(.semibold)
                     Spacer()
-                    Text("Gå gjennom før fornyelse").font(.caption).foregroundStyle(.white.opacity(0.6))
+                    Text("Gå gjennom før fornyelse").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6))
                 }
-                Text("\(flagged.count) abonnement\(flagged.count == 1 ? "" : "er") trenger en titt · spar opptil \(krs(x.saveMonthly))/mnd").font(.footnote).foregroundStyle(.white.opacity(0.75))
+                Text("\(flagged.count) abonnement\(flagged.count == 1 ? "" : "er") trenger en titt · spar opptil \(krs(x.saveMonthly))/mnd").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.75))
                 ForEach(flagged) { s in
                     HStack(spacing: 12) {
                         Logo(domain: s.domain, name: s.name, color: "#FF7A3D", size: 34)
@@ -357,11 +357,11 @@ struct SubsMobileView: View {
 
     private func savingsCard(_ x: SubsX) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("✦ AI-SPARING").font(.caption.weight(.bold)).foregroundStyle(.white.opacity(0.85))
+            Text("✦ AI-SPARING").font(.caption.weight(.bold)).foregroundStyle(Color.skinFg.opacity(0.85))
             Text(x.saveMonthly > 0 ? "Spar \(krs(x.saveMonthly)) i måneden" : "Ingen sparetips akkurat nå").font(.title2.weight(.bold))
-            Text(x.suggestions.first?.text ?? (x.healthText.isEmpty ? "Alle abonnementene ser ut til å være i bruk." : x.healthText)).font(.footnote).foregroundStyle(.white.opacity(0.8)).lineLimit(3)
+            Text(x.suggestions.first?.text ?? (x.healthText.isEmpty ? "Alle abonnementene ser ut til å være i bruk." : x.healthText)).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.8)).lineLimit(3)
             HStack {
-                Text("\(krs(x.monthly))/mnd · \(krs(x.yearly))/år").font(.footnote.weight(.semibold)).foregroundStyle(.white.opacity(0.85))
+                Text("\(krs(x.monthly))/mnd · \(krs(x.yearly))/år").font(.footnote.weight(.semibold)).foregroundStyle(Color.skinFg.opacity(0.85))
                 Spacer()
                 if !x.suggestions.isEmpty {
                     Button { Haptics.shared.select(); store.subTab = "hist" } label: {
@@ -384,15 +384,15 @@ struct SubsMobileView: View {
             HStack {
                 Text("Neste 7 dager").fontWeight(.semibold)
                 Spacer()
-                Text("\(krs(sums.reduce(0, +))) · \(x.upcoming.count) trekk").font(.footnote).foregroundStyle(.white.opacity(0.7))
+                Text("\(krs(sums.reduce(0, +))) · \(x.upcoming.count) trekk").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.7))
             }
             HStack(alignment: .bottom, spacing: 8) {
                 ForEach(Array(days.enumerated()), id: \.offset) { i, d in
                     VStack(spacing: 4) {
-                        if sums[i] > 0 { Text(n0(sums[i])).font(.system(size: 9)).foregroundStyle(.white.opacity(0.7)).lineLimit(1).minimumScaleFactor(0.6) }
-                        RoundedRectangle(cornerRadius: 5).fill(sums[i] > 0 ? Color.accent : Color.white.opacity(0.1))
+                        if sums[i] > 0 { Text(n0(sums[i])).font(.system(size: 9)).foregroundStyle(Color.skinFg.opacity(0.7)).lineLimit(1).minimumScaleFactor(0.6) }
+                        RoundedRectangle(cornerRadius: 5).fill(sums[i] > 0 ? Color.accent : Color.skinFg.opacity(0.1))
                             .frame(height: Swift.max(6, CGFloat(sums[i] / mx) * 70))
-                        Text(i == 0 ? "I dag" : JS.fmt(d, "EEE").capitalized).font(.system(size: 10)).foregroundStyle(.white.opacity(i == 0 ? 0.9 : 0.6)).lineLimit(1)
+                        Text(i == 0 ? "I dag" : JS.fmt(d, "EEE").capitalized).font(.system(size: 10)).foregroundStyle(Color.skinFg.opacity(i == 0 ? 0.9 : 0.6)).lineLimit(1)
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -414,7 +414,7 @@ struct SubsMobileView: View {
             Logo(domain: s.domain, name: s.name, color: "#FF7A3D", size: 36)
             VStack(alignment: .leading, spacing: 2) {
                 Text(s.name + (s.plan.isEmpty ? "" : " · \(s.plan)")).fontWeight(.medium).lineLimit(1)
-                Text([s.cycleName, s.nextDate.isEmpty ? nil : "Neste \(ddmm(s.nextDate))", s.category].compactMap { $0 }.joined(separator: " · ")).font(.footnote).foregroundStyle(.white.opacity(0.6)).lineLimit(1)
+                Text([s.cycleName, s.nextDate.isEmpty ? nil : "Neste \(ddmm(s.nextDate))", s.category].compactMap { $0 }.joined(separator: " · ")).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)).lineLimit(1)
                 AiLine(text: s.aiShort)
             }
             Spacer(minLength: 6)
@@ -453,11 +453,11 @@ struct SubsMobileView: View {
                             VStack(spacing: 4) {
                                 Text(i == sel ? n0(m.1) : " ").font(.system(size: 9, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.6)
                                 Group {
-                                    if i == sel { Stripes(color: .accent) } else { Color.white.opacity(0.14) }
+                                    if i == sel { Stripes(color: .accent) } else { Color.skinFg.opacity(0.14) }
                                 }
                                 .frame(height: Swift.max(6, CGFloat(m.1 / mx) * 90)).clipShape(RoundedRectangle(cornerRadius: 6))
                                 let mi = Int(m.0.suffix(2)) ?? 0
-                                Text((1...12).contains(mi) ? monthShort[mi - 1] : m.0).font(.caption2).foregroundStyle(.white.opacity(i == sel ? 0.95 : 0.6))
+                                Text((1...12).contains(mi) ? monthShort[mi - 1] : m.0).font(.caption2).foregroundStyle(Color.skinFg.opacity(i == sel ? 0.95 : 0.6))
                             }
                             .frame(maxWidth: .infinity).contentShape(Rectangle())
                         }
@@ -472,7 +472,7 @@ struct SubsMobileView: View {
             VStack(spacing: 8) {
                 HStack { Text("Abonnementshelse").fontWeight(.semibold); Spacer(); Text(x.healthLabel).font(.footnote.weight(.semibold)).foregroundStyle(Color.accentLight) }
                 HealthGauge(score: score).frame(height: 120)
-                Text(x.healthText.isEmpty ? x.notes.joined(separator: " · ") : x.healthText).font(.footnote).foregroundStyle(.white.opacity(0.7)).multilineTextAlignment(.center)
+                Text(x.healthText.isEmpty ? x.notes.joined(separator: " · ") : x.healthText).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.7)).multilineTextAlignment(.center)
             }
             .padding(16).glass(24)
         }
@@ -487,15 +487,15 @@ struct SubsMobileView: View {
         let mx = Swift.max(list.first?.value ?? 0, 1)
         let order = x.categories.isEmpty ? list.map(\.key) : x.categories
         return VStack(alignment: .leading, spacing: 12) {
-            HStack { Text("Per kategori").fontWeight(.semibold); Spacer(); Text("per måned").font(.caption).foregroundStyle(.white.opacity(0.6)) }
-            if list.isEmpty { Text("Ingen aktive abonnementer.").font(.footnote).foregroundStyle(.white.opacity(0.6)) }
+            HStack { Text("Per kategori").fontWeight(.semibold); Spacer(); Text("per måned").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)) }
+            if list.isEmpty { Text("Ingen aktive abonnementer.").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.6)) }
             ForEach(list, id: \.key) { k, v in
                 let c = Color(hex: catColors[(order.firstIndex(of: k) ?? 7) % catColors.count])
                 VStack(alignment: .leading, spacing: 5) {
                     HStack { Text(k).font(.subheadline).lineLimit(1); Spacer(); Text(krs(v)).font(.system(.footnote, design: .monospaced).weight(.semibold)) }
                     GeometryReader { g in
                         ZStack(alignment: .leading) {
-                            Capsule().fill(.white.opacity(0.1))
+                            Capsule().fill(Color.skinFg.opacity(0.1))
                             Stripes(color: c).frame(width: Swift.max(8, g.size.width * CGFloat(v / mx))).clipShape(Capsule())
                         }
                     }
@@ -515,23 +515,23 @@ struct SubsMobileView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("✦ Smart sparing").fontWeight(.semibold)
-                Text("AI-agent").font(.caption2.weight(.bold)).padding(.horizontal, 6).padding(.vertical, 2).background(.white.opacity(0.14), in: Capsule())
+                Text("AI-agent").font(.caption2.weight(.bold)).padding(.horizontal, 6).padding(.vertical, 2).background(Color.skinFg.opacity(0.14), in: Capsule())
                 Spacer()
-                Text("⏳ \(tasks.count - doneCount) igjen").font(.caption).foregroundStyle(.white.opacity(0.7))
+                Text("⏳ \(tasks.count - doneCount) igjen").font(.caption).foregroundStyle(Color.skinFg.opacity(0.7))
             }
             Bar(value: tasks.isEmpty ? 1 : Double(doneCount) / Double(tasks.count))
             HStack(spacing: 10) {
                 Kpi(label: "Spart per måned", value: krs(saved), tint: saved > 0 ? Color.positive : nil)
                 Kpi(label: "Mulig per måned", value: krs(x.saveMonthly))
             }
-            if tasks.isEmpty { Text("Ingen forslag. Abonnementene ser ut til å være i bruk.").font(.footnote).foregroundStyle(.white.opacity(0.65)) }
+            if tasks.isEmpty { Text("Ingen forslag. Abonnementene ser ut til å være i bruk.").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.65)) }
             ForEach(tasks) { t in
                 let on = done.contains(t.id)
                 Button { toggle(t.id) } label: {
                     HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: on ? "checkmark.circle.fill" : "circle").font(.title3).foregroundStyle(on ? Color.positive : .white.opacity(0.5))
+                        Image(systemName: on ? "checkmark.circle.fill" : "circle").font(.title3).foregroundStyle(on ? Color.positive : Color.skinFg.opacity(0.5))
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(t.text).font(.subheadline).strikethrough(on).foregroundStyle(.white.opacity(on ? 0.55 : 1)).multilineTextAlignment(.leading)
+                            Text(t.text).font(.subheadline).strikethrough(on).foregroundStyle(Color.skinFg.opacity(on ? 0.55 : 1)).multilineTextAlignment(.leading)
                             if t.amount > 0 { Text("−\(krs(t.amount))/mnd").font(.caption.weight(.semibold)).foregroundStyle(Color.accentLight) }
                         }
                         Spacer(minLength: 0)
@@ -540,7 +540,7 @@ struct SubsMobileView: View {
                 }
                 .buttonStyle(.plain)
             }
-            Text("Status: " + (tasks.isEmpty ? "Ferdig" : doneCount == tasks.count ? "Alle forslag er gjennomgått ✓" : "Venter på \(tasks.count - doneCount) forslag")).font(.caption).foregroundStyle(.white.opacity(0.6))
+            Text("Status: " + (tasks.isEmpty ? "Ferdig" : doneCount == tasks.count ? "Alle forslag er gjennomgått ✓" : "Venter på \(tasks.count - doneCount) forslag")).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6))
         }
         .padding(16).glass(24)
         thisMonth(x)
@@ -560,7 +560,7 @@ struct SubsMobileView: View {
         }.sorted { $0.date < $1.date }
         HStack {
             SectionLabel(text: "Denne måneden")
-            Text(krs(x.monthTotal ?? list.map(\.amount).reduce(0, +))).font(.footnote.weight(.semibold)).foregroundStyle(.white.opacity(0.75)).padding(.top, 6)
+            Text(krs(x.monthTotal ?? list.map(\.amount).reduce(0, +))).font(.footnote.weight(.semibold)).foregroundStyle(Color.skinFg.opacity(0.75)).padding(.top, 6)
         }
         if list.isEmpty { Empty(text: "Ingen trekk denne måneden.") } else {
             CardList(list) { c in
@@ -630,9 +630,9 @@ struct SubAddSheet: View {
                     store.subNew = true
                 }
             }
-            Divider().overlay(.white.opacity(0.12))
+            Divider().overlay(Color.skinFg.opacity(0.12))
             option("doc.viewfinder", "Fra kvittering", "✦ AI leser bilde eller PDF og fyller inn") { mode = "receipt" }
-            Divider().overlay(.white.opacity(0.12))
+            Divider().overlay(Color.skinFg.opacity(0.12))
             option("arrow.triangle.2.circlepath", "Fra transaksjoner", "✦ Faste trekk sett minst 3 ganger, ikke registrert") { mode = "tx"; store.loadSubCandidates() }
         }
         .glass(24)
@@ -641,10 +641,10 @@ struct SubAddSheet: View {
     private func option(_ icon: String, _ t: String, _ s: String, _ act: @escaping () -> Void) -> some View {
         Button { Haptics.shared.select(); act() } label: {
             HStack(spacing: 14) {
-                Image(systemName: icon).font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.accentLight).frame(width: 40, height: 40).background(.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
-                VStack(alignment: .leading, spacing: 2) { Text(t).fontWeight(.semibold); Text(s).font(.caption).foregroundStyle(.white.opacity(0.65)) }
+                Image(systemName: icon).font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.accentLight).frame(width: 40, height: 40).background(Color.skinFg.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+                VStack(alignment: .leading, spacing: 2) { Text(t).fontWeight(.semibold); Text(s).font(.caption).foregroundStyle(Color.skinFg.opacity(0.65)) }
                 Spacer()
-                Image(systemName: "chevron.right").foregroundStyle(.white.opacity(0.45))
+                Image(systemName: "chevron.right").foregroundStyle(Color.skinFg.opacity(0.45))
             }
             .padding(14).contentShape(Rectangle())
         }
@@ -668,7 +668,7 @@ struct SubAddSheet: View {
             }
             .pickerStyle(.segmented)
             if let p {
-                Text(cycle == "yearly" ? "= \(n0(p / 12)) kr/mnd" : cycle == "biennial" ? "= \(n0(p / 24)) kr/mnd" : "= \(n0(p * 12)) kr/år").font(.footnote).foregroundStyle(.white.opacity(0.65))
+                Text(cycle == "yearly" ? "= \(n0(p / 12)) kr/mnd" : cycle == "biennial" ? "= \(n0(p / 24)) kr/mnd" : "= \(n0(p * 12)) kr/år").font(.footnote).foregroundStyle(Color.skinFg.opacity(0.65))
             }
             Button {
                 Haptics.shared.tap()
@@ -684,7 +684,7 @@ struct SubAddSheet: View {
     private var receipt: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("✦ AI leser kvitteringen eller fakturaen, finner tjeneste, beløp, syklus og trekkdag, og lager abonnementet. E-poster i kvitteringsmappen i Proton Mail leses automatisk.")
-                .font(.footnote).foregroundStyle(.white.opacity(0.7))
+                .font(.footnote).foregroundStyle(Color.skinFg.opacity(0.7))
             PhotosPicker(selection: $photo, matching: .images) {
                 Label("Velg bilde", systemImage: "photo").fontWeight(.semibold).frame(maxWidth: .infinity, minHeight: 50).contentShape(Capsule())
             }
@@ -704,7 +704,7 @@ struct SubAddSheet: View {
                     Logo(domain: c.domain, name: c.merchant, color: "#FF7A3D", size: 36)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(c.merchant).fontWeight(.medium).lineLimit(1)
-                        Text("\(c.count) trekk · \(c.cycle == "yearly" ? "årlig" : "månedlig")" + (c.lastDate.isEmpty ? "" : " · sist \(ddmm(c.lastDate))")).font(.caption).foregroundStyle(.white.opacity(0.6))
+                        Text("\(c.count) trekk · \(c.cycle == "yearly" ? "årlig" : "månedlig")" + (c.lastDate.isEmpty ? "" : " · sist \(ddmm(c.lastDate))")).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6))
                     }
                     Spacer(minLength: 6)
                     Text(n0(c.amount)).font(.system(.subheadline, design: .monospaced).weight(.semibold))
@@ -766,14 +766,14 @@ struct SubEditSheet: View {
                 Picker("Kategori", selection: $category) { ForEach(SubEditSheet.cats + extraCat, id: \.self) { Text($0).tag($0) } }
                     .pickerStyle(.menu).tint(.white)
                     .padding(.horizontal, 10).frame(maxWidth: .infinity, minHeight: 46, alignment: .leading).glass(16)
-                Text("Hvor ofte").font(.footnote.weight(.semibold)).foregroundStyle(.white.opacity(0.7))
+                Text("Hvor ofte").font(.footnote.weight(.semibold)).foregroundStyle(Color.skinFg.opacity(0.7))
                 Picker("Hvor ofte", selection: $cycle) {
                     Text("Månedlig").tag("monthly")
                     Text("Årlig").tag("yearly")
                     Text("Hvert 2. år").tag("biennial")
                 }
                 .pickerStyle(.segmented)
-                Text("Faktureringsdato").font(.footnote.weight(.semibold)).foregroundStyle(.white.opacity(0.7))
+                Text("Faktureringsdato").font(.footnote.weight(.semibold)).foregroundStyle(Color.skinFg.opacity(0.7))
                 HStack(spacing: 10) {
                     Picker("Dag", selection: $day) { ForEach(1...31, id: \.self) { Text("\($0).").tag($0) } }
                         .pickerStyle(.menu).tint(.white).padding(.horizontal, 10).frame(maxWidth: .infinity, minHeight: 46).glass(16)
@@ -781,8 +781,8 @@ struct SubEditSheet: View {
                         .pickerStyle(.menu).tint(.white).padding(.horizontal, 10).frame(maxWidth: .infinity, minHeight: 46).glass(16)
                         .disabled(cycle == "monthly").opacity(cycle == "monthly" ? 0.5 : 1)
                 }
-                Text(nextText).font(.footnote).foregroundStyle(.white.opacity(0.65))
-                Text("Status").font(.footnote.weight(.semibold)).foregroundStyle(.white.opacity(0.7))
+                Text(nextText).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.65))
+                Text("Status").font(.footnote.weight(.semibold)).foregroundStyle(Color.skinFg.opacity(0.7))
                 Picker("Status", selection: $status) {
                     Text("Aktiv").tag("active")
                     Text("Pause").tag("paused")
@@ -850,7 +850,7 @@ struct SubEditSheet: View {
             Spacer()
         }
         .overlay(alignment: .bottomLeading) {
-            if item == nil { Text("Logo kan legges til etter lagring").font(.caption2).foregroundStyle(.white.opacity(0.5)).offset(y: 16) }
+            if item == nil { Text("Logo kan legges til etter lagring").font(.caption2).foregroundStyle(Color.skinFg.opacity(0.5)).offset(y: 16) }
         }
         .padding(.bottom, item == nil ? 12 : 0)
     }

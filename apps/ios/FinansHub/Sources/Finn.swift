@@ -11,7 +11,7 @@ private let nb = Locale(identifier: "nb_NO")
 private let buyC = Color(hex: "#8FB3FF")
 private let sellC = Color(hex: "#7BE3A0")
 private let dim = Color(hex: "#3A3A44")
-private let text2 = Color.white.opacity(0.6)
+private var text2: Color { Color.skinFg.opacity(0.6) }
 
 private extension FinnDeal {
     var col: Color { sold ? sellC : buyC }
@@ -72,7 +72,7 @@ private struct FinnImage: View {
             if let img {
                 Image(uiImage: img).resizable().scaledToFill()
             } else {
-                Text(initials(label)).font(.system(size: ini, weight: .bold)).foregroundStyle(.white.opacity(0.2))
+                Text(initials(label)).font(.system(size: ini, weight: .bold)).foregroundStyle(Color.skinFg.opacity(0.2))
             }
         }
         .clipped()
@@ -92,7 +92,7 @@ private struct TrackPoints: View {
                 let cur = j == lvl - 1 && !d.finished
                 VStack(alignment: .leading, spacing: big ? 8 : 7) {
                     HStack(spacing: 0) {
-                        Circle().fill(done ? (cur ? Color.accent : .white) : dim).frame(width: big ? 14 : 12, height: big ? 14 : 12)
+                        Circle().fill(done ? (cur ? Color.accent : Color.skinFg) : dim).frame(width: big ? 14 : 12, height: big ? 14 : 12)
                             .overlay { if cur { Circle().stroke(Color.accent.opacity(0.35), lineWidth: 3).padding(-3) } }
                         Rectangle().fill(j == 3 ? Color.clear : (j + 1 < lvl ? Color.white : dim)).frame(height: big ? 3 : 2)
                     }
@@ -135,7 +135,7 @@ struct FinnView: View {
                     Text(store.tabName(.finn)).font(.system(size: 34, weight: .bold)).lineLimit(1).minimumScaleFactor(0.7)
                     Spacer()
                     Button { qOpen.toggle(); q = "" } label: {
-                        Image(systemName: qOpen ? "xmark" : "magnifyingglass").font(.system(size: 16, weight: .semibold)).foregroundStyle(.white).frame(width: 44, height: 44).contentShape(Circle())
+                        Image(systemName: qOpen ? "xmark" : "magnifyingglass").font(.system(size: 16, weight: .semibold)).foregroundStyle(Color.skinFg).frame(width: 44, height: 44).contentShape(Circle())
                     }
                     .buttonStyle(GlassPress()).glassRound().accessibilityLabel(qOpen ? "Lukk søk" : "Søk i handler")
                     Avatar()
@@ -264,12 +264,12 @@ private struct OnTheWayCard: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text(d.title).font(.system(size: 16, weight: .semibold)).lineLimit(1)
                     TrackPoints(d: d)
-                    Divider().overlay(.white.opacity(0.15))
+                    Divider().overlay(Color.skinFg.opacity(0.15))
                     Text("Neste: \(d.nextText)").font(.system(size: 13)).lineLimit(2).multilineTextAlignment(.leading)
                 }
                 .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 16)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(Color.skinFg)
             .frame(width: 262, alignment: .leading)
             .clipShape(RoundedRectangle(cornerRadius: 26))
             .glass(26)
@@ -288,7 +288,7 @@ private struct GridCard: View {
                     .overlay { FinnImage(path: d.image, id: d.id, label: d.title) }
                     .clipped()
                     .overlay(alignment: .topLeading) {
-                        FinnPill(text: d.status, bg: d.finished ? Color.black.opacity(0.55) : Color.accent, fg: d.finished ? Color.white.opacity(0.85) : Color.ink).padding(10)
+                        FinnPill(text: d.status, bg: d.finished ? Color.black.opacity(0.55) : Color.accent, fg: d.finished ? Color.skinFg.opacity(0.85) : Color.ink).padding(10)
                     }
                 VStack(alignment: .leading, spacing: 3) {
                     Text(d.valueText).font(.system(size: 15, weight: .bold, design: .monospaced)).foregroundStyle(d.col).lineLimit(1).minimumScaleFactor(0.7)
@@ -298,7 +298,7 @@ private struct GridCard: View {
                 }
                 .padding(.horizontal, 12).padding(.top, 11).padding(.bottom, 13)
             }
-            .foregroundStyle(.white)
+            .foregroundStyle(Color.skinFg)
             .frame(maxWidth: .infinity, alignment: .leading)
             .clipShape(RoundedRectangle(cornerRadius: 22))
             .glass(22)
@@ -411,13 +411,13 @@ private struct FinnDealView: View {
         .overlay(alignment: .top) {
             HStack {
                 Button { store.back() } label: {
-                    Image(systemName: "chevron.left").font(.system(size: 17, weight: .semibold)).foregroundStyle(.white).frame(width: 44, height: 44)
+                    Image(systemName: "chevron.left").font(.system(size: 17, weight: .semibold)).foregroundStyle(Color.skinFg).frame(width: 44, height: 44)
                         .background(.black.opacity(0.45), in: Circle()).contentShape(Circle())
                 }
                 .buttonStyle(GlassPress()).accessibilityLabel("Tilbake til Finn")
                 Spacer()
                 if n > 1 {
-                    Text("\(cur + 1) / \(n)").font(.system(size: 13)).foregroundStyle(.white).padding(.horizontal, 14).padding(.vertical, 12).background(.black.opacity(0.45), in: Capsule())
+                    Text("\(cur + 1) / \(n)").font(.system(size: 13)).foregroundStyle(Color.skinFg).padding(.horizontal, 14).padding(.vertical, 12).background(.black.opacity(0.45), in: Capsule())
                 }
             }
             .padding(14)
@@ -426,7 +426,7 @@ private struct FinnDealView: View {
             if n > 1 {
                 HStack(spacing: 6) {
                     ForEach(0..<Swift.min(n, 8), id: \.self) { k in
-                        Capsule().fill(k == cur ? Color.white : .white.opacity(0.45)).frame(width: k == cur ? 22 : 6, height: 6)
+                        Capsule().fill(k == cur ? Color.white : Color.skinFg.opacity(0.45)).frame(width: k == cur ? 22 : 6, height: 6)
                     }
                 }
                 .padding(16)
@@ -470,8 +470,8 @@ private struct FinnDealView: View {
 
     private func tile(_ icon: String, _ title: String, _ sub: String, _ subColor: Color) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            Image(systemName: icon).font(.system(size: 18)).foregroundStyle(.white)
-            Text(title).font(.system(size: 13.5, weight: .semibold)).foregroundStyle(.white).lineLimit(1)
+            Image(systemName: icon).font(.system(size: 18)).foregroundStyle(Color.skinFg)
+            Text(title).font(.system(size: 13.5, weight: .semibold)).foregroundStyle(Color.skinFg).lineLimit(1)
             Text(sub).font(.system(size: 12)).foregroundStyle(subColor).lineLimit(1)
         }
         .padding(.horizontal, 12).padding(.vertical, 14).frame(maxWidth: .infinity, alignment: .leading).glass(18)
@@ -494,15 +494,15 @@ private struct FinnDealView: View {
     private func receipts(_ list: [FinnFile]) -> some View {
         VStack(spacing: 0) {
             ForEach(Array(list.enumerated()), id: \.element.id) { k, r in
-                if k > 0 { Divider().overlay(.white.opacity(0.12)) }
+                if k > 0 { Divider().overlay(Color.skinFg.opacity(0.12)) }
                 HStack(spacing: 12) {
                     Text(fileExt(r.name))
                         .font(.system(size: 10.5, weight: .bold)).foregroundStyle(Color.accentLight)
-                        .frame(width: 34, height: 34).background(.white.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
+                        .frame(width: 34, height: 34).background(Color.skinFg.opacity(0.1), in: RoundedRectangle(cornerRadius: 10))
                     Text(r.name).font(.system(size: 14)).lineLimit(1)
                     Spacer()
                     Button { store.finnRemove("receipts", r.id) } label: {
-                        Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)).foregroundStyle(text2).frame(width: 32, height: 32).background(.white.opacity(0.1), in: Circle())
+                        Image(systemName: "xmark").font(.system(size: 12, weight: .semibold)).foregroundStyle(text2).frame(width: 32, height: 32).background(Color.skinFg.opacity(0.1), in: Circle())
                     }
                     .buttonStyle(.plain).accessibilityLabel("Fjern \(r.name)")
                 }
@@ -520,7 +520,7 @@ private struct FinnDealView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                         .overlay(alignment: .topTrailing) {
                             Button { store.finnRemove("photos", p.id) } label: {
-                                Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.white).frame(width: 22, height: 22).background(.black.opacity(0.55), in: Circle())
+                                Image(systemName: "xmark").font(.system(size: 10, weight: .bold)).foregroundStyle(Color.skinFg).frame(width: 22, height: 22).background(.black.opacity(0.55), in: Circle())
                             }
                             .buttonStyle(.plain).padding(4).accessibilityLabel("Fjern bildet")
                         }
@@ -580,10 +580,10 @@ private struct FinnDealView: View {
             ForEach(Array(tl.enumerated()), id: \.element.id) { j, e in
                 HStack(alignment: .top, spacing: 14) {
                     VStack(spacing: 3) {
-                        Circle().fill(j == 0 ? Color.accent : e.mail ? Color(hex: "#07070A") : Color.white).frame(width: 12, height: 12)
-                            .overlay(Circle().stroke(j == 0 ? Color.accent : e.mail ? Color.white.opacity(0.35) : Color.white, lineWidth: 2))
+                        Circle().fill(j == 0 ? Color.accent : e.mail ? Color(hex: "#07070A") : Color.skinFg).frame(width: 12, height: 12)
+                            .overlay(Circle().stroke(j == 0 ? Color.accent : e.mail ? Color.skinFg.opacity(0.35) : Color.white, lineWidth: 2))
                             .padding(.top, 4)
-                        if j < tl.count - 1 { Rectangle().fill(.white.opacity(0.15)).frame(width: 2).frame(minHeight: 40, maxHeight: .infinity) }
+                        if j < tl.count - 1 { Rectangle().fill(Color.skinFg.opacity(0.15)).frame(width: 2).frame(minHeight: 40, maxHeight: .infinity) }
                     }
                     .frame(width: 14)
                     VStack(alignment: .leading, spacing: 2) {

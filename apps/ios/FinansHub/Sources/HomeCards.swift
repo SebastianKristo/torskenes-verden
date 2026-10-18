@@ -130,7 +130,7 @@ struct ClockWeather: View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 0) {
                 Text(JS.fmt(date, "HH:mm")).font(.system(size: 46, weight: .light)).monospacedDigit()
-                Text(longDate(date)).font(.subheadline).foregroundStyle(.white.opacity(0.7)).lineLimit(1)
+                Text(longDate(date)).font(.subheadline).foregroundStyle(Color.skinFg.opacity(0.7)).lineLimit(1)
             }
             Spacer(minLength: 0)
             tempBlock
@@ -156,15 +156,15 @@ struct ClockWeather: View {
                     Image(systemName: symbolName).symbolRenderingMode(.multicolor).font(.system(size: 24))
                     Text(tempText).font(.system(size: 30, weight: .semibold)).monospacedDigit()
                 }
-                if !stateText.isEmpty { Text(stateText).font(.footnote).foregroundStyle(.white.opacity(0.8)).lineLimit(1) }
-                if !extraText.isEmpty { Text(extraText).font(.caption).foregroundStyle(.white.opacity(0.6)).lineLimit(1) }
+                if !stateText.isEmpty { Text(stateText).font(.footnote).foregroundStyle(Color.skinFg.opacity(0.8)).lineLimit(1) }
+                if !extraText.isEmpty { Text(extraText).font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)).lineLimit(1) }
             }
         }
     }
 
     @ViewBuilder private func details(_ x: WeatherX) -> some View {
         let line = shortLine(x)
-        if !line.isEmpty { Text(line.joined(separator: " · ")).font(.caption).foregroundStyle(.white.opacity(0.7)).lineLimit(1).minimumScaleFactor(0.8) }
+        if !line.isEmpty { Text(line.joined(separator: " · ")).font(.caption).foregroundStyle(Color.skinFg.opacity(0.7)).lineLimit(1).minimumScaleFactor(0.8) }
         if fill { Spacer(minLength: 0) }
         if !x.hours.isEmpty { hourStrip(Array(x.hours.prefix(6))) }
     }
@@ -173,14 +173,14 @@ struct ClockWeather: View {
         HStack(spacing: 0) {
             ForEach(Array(hours.enumerated()), id: \.offset) { _, h in
                 VStack(spacing: 3) {
-                    Text(h.label).font(.caption2).foregroundStyle(.white.opacity(0.65)).lineLimit(1)
+                    Text(h.label).font(.caption2).foregroundStyle(Color.skinFg.opacity(0.65)).lineLimit(1)
                     Image(systemName: weatherSymbol(h.symbol)).symbolRenderingMode(.multicolor).font(.system(size: 16)).frame(height: 18)
                     Text(degText(h.temp)).font(.caption.weight(.semibold)).monospacedDigit()
                 }
                 .frame(maxWidth: .infinity)
             }
         }
-        .padding(.vertical, 6).background(.white.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
+        .padding(.vertical, 6).background(Color.skinFg.opacity(0.06), in: RoundedRectangle(cornerRadius: 14))
     }
 
     private func shortLine(_ x: WeatherX) -> [String] {
@@ -219,7 +219,7 @@ struct HomeCarousel: View {
             .onChange(of: page) { _, _ in Haptics.shared.select() }
             HStack(spacing: 6) {
                 ForEach(0..<2, id: \.self) { i in
-                    Capsule().fill(.white.opacity(page == i ? 0.9 : 0.3)).frame(width: page == i ? 18 : 7, height: 7)
+                    Capsule().fill(Color.skinFg.opacity(page == i ? 0.9 : 0.3)).frame(width: page == i ? 18 : 7, height: 7)
                         .frame(height: 24).contentShape(Rectangle())
                         .onTapGesture { withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { page = i } }
                         .accessibilityLabel(i == 0 ? "Klokke og vær" : "Pakker").accessibilityAddTraits(.isButton)

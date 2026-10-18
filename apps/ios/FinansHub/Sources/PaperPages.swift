@@ -20,6 +20,9 @@ struct PaperHome: View {
                 PaperCardDef(key: "h3", label: "Avganger", view: AnyView(ruter)),
                 PaperCardDef(key: "h4", label: "Snarveier", view: AnyView(shortcuts)),
                 PaperCardDef(key: "h5", label: "Siste nytt", view: AnyView(newsCard)),
+                PaperCardDef(key: "h6", label: "Huskeliste", view: AnyView(PaperTasksCard())),
+                PaperCardDef(key: "h7", label: "Posisjon", view: AnyView(PaperFamilyCard())),
+                PaperCardDef(key: "h8", label: "Bolig", view: AnyView(PaperHomeBoligCard())),
             ], fullWidth: ["h1", "h5"], twoColumns: true)
             if let e = store.homeError { Text(e).font(PF.ui(12.5)).foregroundStyle(p.lab).frame(maxWidth: .infinity, alignment: .leading) }
         }
@@ -420,6 +423,8 @@ struct PaperLinkRow: Identifiable {
     var valueColor: Color? = nil
     /// SF Symbol i en farget rute (fargen følger ikontemaet i Innstillinger → Utseende).
     var icon: String? = nil
+    /// Forskyver ikonfargen, så grupper etter hverandre får forskjellige farger.
+    var colorOffset: Int = 0
     let act: () -> Void
 }
 
@@ -434,9 +439,10 @@ struct PaperLinkList: View {
                 Button(action: r.act) {
                     HStack(spacing: 10) {
                         if let ic = r.icon {
-                            Image(systemName: ic).font(.system(size: 14, weight: .semibold)).foregroundStyle(.white)
-                                .frame(width: 30, height: 30)
-                                .background(PaperIconTheme.color(store.iconTheme, i), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            // Som i designet: farget ikon i en papirfarget rute (fargen følger ikontemaet).
+                            Image(systemName: ic).font(.system(size: 15, weight: .semibold)).foregroundStyle(PaperIconTheme.color(store.iconTheme, i + r.colorOffset))
+                                .frame(width: 34, height: 34)
+                                .background(p.bg, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                         }
                         VStack(alignment: .leading, spacing: 2) {
                             Text(r.name).font(PF.ui(15, .semibold)).foregroundStyle(p.ink)
@@ -466,7 +472,7 @@ struct PaperTracking: View {
     @Environment(\.paper) private var p
     @State private var no = ""
 
-    static let tabs = ["Aktive", "Klar for henting", "På vei", "Registrert", "Levert", "Alle"]
+    static let tabs = ["Aktive", "Klar for henting", "På vei", "Registrert", "Levert", "Alle", "Arkiv"]
 
     static func inTab(_ s: Shipment, _ t: String) -> Bool {
         switch t {
@@ -475,29 +481,44 @@ struct PaperTracking: View {
         case "På vei": return !s.archived && ["picked_up", "in_transit", "out_for_delivery", "delayed"].contains(s.status)
         case "Registrert": return !s.archived && (s.status == "registered" || s.status == "unknown")
         case "Levert": return s.status == "delivered"
+        case "Arkiv": return s.archived
         default: return true
         }
     }
 
     var body: some View {
-        let all = store.tracking?.items ?? store.homePackages ?? []
+        let base = store.tracking?.items ?? store.homePackages ?? []
+        // Arkivet hentes for seg (GET /api/tracking?archived=1).
+        let extra = TrackSelect.shared.archived.filter { a in !base.contains { $0.id == a.id } }
+        let all = base + extra
         let list = all.filter { PaperTracking.inTab($0, store.trkTab) }.sorted { a, b in a.ready != b.ready ? a.ready : a.step > b.step }
         VStack(spacing: 10) {
+            if TrackSelect.shared.active { TrackSelectBar(all: list, inArchive: store.trkTab == "Arkiv") }
             // Hold inne fanene, pakkelisten eller Legg til for å endre rekkefølgen (lagres per bruker).
             PaperCardStack(page: "sporing", cards: [
                 PaperCardDef(key: "A", label: "Faner", view: AnyView(tabBar(all))),
                 PaperCardDef(key: "B", label: "Pakkelisten", view: AnyView(shipments(all, list))),
                 PaperCardDef(key: "C", label: "Legg til", view: AnyView(addField)),
             ])
-            if store.paperEditPage != "sporing" {
-                Text("Hold inne et kort for å endre rekkefølgen").font(PF.ui(12)).foregroundStyle(p.mut).frame(maxWidth: .infinity)
+            if store.paperEditPage != "sporing" && !TrackSelect.shared.active {
+                Text("Hold inne en pakke for å velge flere · hold inne et kort for å flytte det").font(PF.ui(12)).foregroundStyle(p.mut).frame(maxWidth: .infinity).multilineTextAlignment(.center)
             }
             HStack(spacing: 8) {
                 PLineButton(title: store.trkChecking ? "Sjekker …" : "Sjekk nå", height: 44, full: true) { store.checkTracking() }
-                PLineButton(title: "⚙ Varsler og kilder", height: 44, full: true) { store.trkSettings = true }
+                PLineButton(title: "⚙ Kilder", height: 44, full: true) { store.trkSettings = true }
             }
+            // Pakkevarslene ligger samlet under Innstillinger → Varsler.
+            Button { store.paperGo("innst-varsler") } label: {
+                Text("Pakkevarsler ligger i Innstillinger → Varsler ›").font(PF.ui(12.5, .semibold)).foregroundStyle(p.lab)
+            }
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity)
         }
-        .task { if store.tracking == nil { try? await store.loadTracking() } }
+        .task {
+            if store.tracking == nil { try? await store.loadTracking() }
+            await TrackSelect.shared.loadArchived(store)
+        }
+        .onDisappear { TrackSelect.shared.end() }
         .sheet(isPresented: Binding(get: { store.trkSettings }, set: { store.trkSettings = $0 })) {
             PaperTrackSettings()
                 .environment(\.paper, p)
@@ -582,15 +603,14 @@ struct PaperTrackSettings: View {
         let t = store.tracking ?? TrackingData()
         ScrollView {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Varsler og kilder").font(PF.serif(24, medium: true)).foregroundStyle(p.ink).padding(.bottom, 4)
-                PLabel(text: "Varsler")
-                group([
-                    row("Ny pakke funnet", "Når et sporingsnummer dukker opp i e-post eller Finn", t.prefs["found"] ?? true) { store.setTrackingPref("found", $0) },
-                    row("Klar for henting", "Med hentested og frist", t.prefs["pickup"] ?? true) { store.setTrackingPref("pickup", $0) },
-                    row("Ute for levering", "Når budet er på vei til deg", t.prefs["out"] ?? true) { store.setTrackingPref("out", $0) },
-                    row("Forsinket", "Når leveringen er forsinket", t.prefs["delayed"] ?? true) { store.setTrackingPref("delayed", $0) },
-                    row("Levert", "Når pakken er levert", t.prefs["delivered"] ?? false) { store.setTrackingPref("delivered", $0) },
-                ])
+                Text("Kilder").font(PF.serif(24, medium: true)).foregroundStyle(p.ink).padding(.bottom, 4)
+                Button {
+                    store.trkSettings = false
+                    store.paperGo("innst-varsler")
+                } label: {
+                    Text("Pakkevarslene ligger i Innstillinger → Varsler ›").font(PF.ui(13, .semibold)).foregroundStyle(p.lab)
+                }
+                .buttonStyle(.plain)
                 PLabel(text: "Kilder").padding(.top, 8)
                 group([
                     row("E-post (Proton)", "Sporingsnumre i ordre- og fraktbekreftelser", t.email.on) { store.setTrackingSource("email", $0) },
@@ -641,7 +661,7 @@ struct PaperShipmentCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
-                PaperCarrierBadge(s: s)
+                PaperCarrierBadge(s: s, size: 44)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(s.name).font(PF.serif(18, medium: true)).foregroundStyle(p.ink).lineLimit(1)
                     Text("\(s.carrierName) · \(s.trackingNo)").font(PF.ui(12)).foregroundStyle(p.mut).lineLimit(1)
@@ -667,11 +687,27 @@ struct PaperShipmentCard: View {
         }
         .padding(14)
         .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(s.status == "ready_for_pickup" ? p.lab : Color.clear, lineWidth: 1.5))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(borderColor, lineWidth: picked ? 2.5 : 1.5))
+        .overlay(alignment: .topTrailing) {
+            if TrackSelect.shared.active {
+                Image(systemName: picked ? "checkmark.circle.fill" : "circle").font(.system(size: 22)).foregroundStyle(picked ? p.lab : p.mut).padding(10)
+            }
+        }
         .contentShape(Rectangle())
         .onTapGesture {
+            if TrackSelect.shared.active { TrackSelect.shared.toggle(s.id); return }
             if !s.url.isEmpty { store.openLink(s.url) } else { withAnimation(.easeOut(duration: 0.2)) { open.toggle() } }
         }
+        .onLongPressGesture(minimumDuration: 0.5) {
+            if TrackSelect.shared.active { TrackSelect.shared.toggle(s.id) } else { TrackSelect.shared.start(s.id) }
+        }
+    }
+
+    private var picked: Bool { TrackSelect.shared.ids.contains(s.id) }
+
+    private var borderColor: Color {
+        if picked { return p.lab }
+        return s.status == "ready_for_pickup" ? p.lab : Color.clear
     }
 
     private func small(_ t: String, _ act: @escaping () -> Void) -> some View {
@@ -727,6 +763,7 @@ struct PaperMore: View {
         let inBar = Set(store.mainTabs(floating: store.fabMode == "float", onHome: true).map(\.0))
         if fourth != "domener" || !inBar.contains("domener") { rows.append(PaperLinkRow(name: "Domener", sub: "Trafikk, besøk og oppetid", icon: "globe") { store.paperOpenDomains(from: "mer") }) }
         if fourth != "sporing" || !inBar.contains("sporing") { rows.append(PaperLinkRow(name: "Sporing", sub: store.paperOnWay > 0 ? "\(store.paperOnWay) på vei" : "Pakker, varsler og kilder", icon: "shippingbox") { store.paperGo("sporing") }) }
+        rows.append(PaperLinkRow(name: "Huskeliste", sub: TasksModel.shared.openCount > 0 ? "\(TasksModel.shared.openCount) åpne oppgaver" : "Oppgaver og widgets", icon: "checklist") { store.paperGo("huske") })
         rows.append(PaperLinkRow(name: "Familie og kart", sub: "Posisjon, soner og helse", icon: "person.2") { store.paperGo("familie") })
         rows.append(PaperLinkRow(name: "Avganger", sub: "Ruter i sanntid", icon: "tram") { store.paperGo("avg") })
         rows.append(PaperLinkRow(name: "Aksjer", sub: "Trading 212", icon: "chart.line.uptrend.xyaxis") { store.paperFinGo("aksjer") })

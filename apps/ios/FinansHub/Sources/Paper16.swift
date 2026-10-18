@@ -201,13 +201,16 @@ extension Store {
         case "innst-ut": return "Utseende"
         case "innst-tab": return "Fanelinje"
         case "innst-fam": return "Familie og helse"
-        default: return nil
+        case "huske": return "Huskeliste"
+        default:
+            if paperTab.hasPrefix("innst-") { return PaperSettingsSub.titles[String(paperTab.dropFirst(6))]?.0 }
+            return nil
         }
     }
 
     var paper16Kicker: String? {
         switch paperTab {
-        case "aksjer": return "Trading 212 · " + (stocksX?.mock == true ? "demodata" : "portefølje")
+        case "aksjer": return "Trading 212" + (stocksX?.mock == true ? " · demodata" : "")
         case "boliger": return folder.map { $0.address ?? "Bolig" } ?? "Utgifter, prosjekter og regninger"
         case "familie": return "Kart, soner og helse"
         case "avg": return "Ruter · sanntid fra Entur"
@@ -215,7 +218,10 @@ extension Store {
         case "innst-ut": return "Tema, bakgrunn og ikonfarger"
         case "innst-tab": return "Faner, navn og ikoner"
         case "innst-fam": return "Deling, personvern og Apple Helse"
-        default: return nil
+        case "huske": return "Oppgaver for hele familien"
+        default:
+            if paperTab.hasPrefix("innst-") { return PaperSettingsSub.titles[String(paperTab.dropFirst(6))]?.1 }
+            return nil
         }
     }
 
@@ -409,7 +415,7 @@ struct PaperProfile: View {
                 PaperLinkRow(name: "Brukernavn", sub: "Vises som @\(store.account?.username ?? "") i Finans", value: "", icon: "at") {},
                 PaperLinkRow(name: "Rolle", sub: role, value: "", icon: "person.badge.shield.checkmark") {},
                 PaperLinkRow(name: "Server", sub: store.account?.server ?? "", value: "", icon: "server.rack") {},
-                PaperLinkRow(name: "Kontoer og brukere", sub: "Legg til eller bytt konto", icon: "person.2") { store.paperOpen(.settings); store.settingsPage = "accounts" },
+                PaperLinkRow(name: "Kontoer og brukere", sub: "Legg til eller bytt konto", icon: "person.2") { store.paperGo("innst-konto") },
                 PaperLinkRow(name: "Logg ut", sub: "Du må logge inn igjen med 2FA", value: "Logg ut", valueColor: p.lab, icon: "rectangle.portrait.and.arrow.right") { store.logout() },
             ])
         }
@@ -560,16 +566,33 @@ struct CarrierMark: View {
     var size: CGFloat = 42
     var radius: CGFloat = 12
 
-    static func known(_ c: String) -> Bool { ["dhl", "posten", "postnord", "helthjem", "bring"].contains(c.lowercased()) }
+    static func known(_ c: String) -> Bool { logo(c.lowercased()) != nil || ["dhl", "posten", "postnord", "helthjem", "bring"].contains(c.lowercased()) }
 
     var body: some View {
         let c = carrier.lowercased()
         ZStack {
-            RoundedRectangle(cornerRadius: radius, style: .continuous).fill(bg(c))
-            mark(c)
+            if let img = CarrierMark.logo(c) {
+                // Logoen fra serveren (public/carriers/*.svg), lagt inn i appen som bilde.
+                Image(uiImage: img).resizable().scaledToFill()
+            } else {
+                RoundedRectangle(cornerRadius: radius, style: .continuous).fill(bg(c))
+                mark(c)
+            }
         }
         .frame(width: size, height: size)
+        .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
         .accessibilityLabel(name(c))
+    }
+
+    /// Ekte logo i asset-katalogen (Carrier-<id>), ellers nil og bokstav-merket brukes.
+    static func logo(_ c: String) -> UIImage? {
+        let id: String
+        switch c {
+        case "17track", "track17", "parcelsapp", "": id = "other"
+        case "db", "dbschenker": id = "schenker"
+        default: id = c
+        }
+        return UIImage(named: "Carrier-" + id)
     }
 
     @ViewBuilder private func mark(_ c: String) -> some View {
