@@ -179,12 +179,16 @@ private fun SubItemRow(vm: AppViewModel, s: SubItem, i: Int, n: Int) {
 
 @Composable
 private fun SavingsCard(vm: AppViewModel, x: SubsX) {
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).background(C.heroAi).padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("✦ AI-SPARING", color = C.onContainer, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-        Text(if (x.saveMonthly > 0) "Spar ${kr0(x.saveMonthly)} i måneden" else "Ingen sparetips akkurat nå", color = C.onContainer, style = MaterialTheme.typography.titleLarge)
-        Text(x.suggestions.firstOrNull()?.text ?: x.healthText.ifBlank { "Alle abonnementene ser ut til å være i bruk." }, color = C.onContainer.copy(alpha = .85f), fontSize = 13.sp, maxLines = 3)
+    // I Papir: AI-kortet i mørk gradient (som i Subscription OS-designet), ellers appens tonale farger.
+    val bg = if (Tone.paper) Modifier.background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF1B1A17), Color(0xFF3A2F4A))))
+        else Modifier.background(C.heroAi)
+    val fg = if (Tone.paper) Color(0xFFF3EFE6) else C.onContainer
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(26.dp)).then(bg).padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("✦ AI-SPARING", color = fg, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+        Text(if (x.saveMonthly > 0) "Spar ${kr0(x.saveMonthly)} i måneden" else "Ingen sparetips akkurat nå", color = fg, style = MaterialTheme.typography.titleLarge)
+        Text(x.suggestions.firstOrNull()?.text ?: x.healthText.ifBlank { "Alle abonnementene ser ut til å være i bruk." }, color = fg.copy(alpha = .85f), fontSize = 13.sp, maxLines = 3)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("${kr0(x.monthly)}/mnd · ${kr0(x.yearly)}/år", color = C.onContainer, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Text("${kr0(x.monthly)}/mnd · ${kr0(x.yearly)}/år", color = fg, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             if (x.suggestions.isNotEmpty()) Button(onClick = { Haptics.select(); vm.subTab = "hist" }, colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) {
                 Text("Gå gjennom ${x.suggestions.size} forslag", fontSize = 13.sp)
             }

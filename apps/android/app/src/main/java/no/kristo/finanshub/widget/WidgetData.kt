@@ -146,4 +146,14 @@ object WidgetStore {
     }
 
     fun reloadStyle(ctx: Context) { _style.value = WidgetStyle.load(ctx) }
+
+    /* «Vis navn under widget» (Samsung/One UI): lagres per widget-instans, standard på. */
+    private val _labels = MutableStateFlow<Map<Int, Boolean>>(emptyMap())
+    val labels: StateFlow<Map<Int, Boolean>> get() = _labels
+    fun label(ctx: Context, id: Int): Boolean =
+        _labels.value[id] ?: ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).getBoolean("label_$id", true).also { v -> _labels.value = _labels.value + (id to v) }
+    fun setLabel(ctx: Context, id: Int, on: Boolean) {
+        ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().putBoolean("label_$id", on).apply()
+        _labels.value = _labels.value + (id to on)
+    }
 }

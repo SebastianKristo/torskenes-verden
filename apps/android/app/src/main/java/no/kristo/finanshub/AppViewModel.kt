@@ -226,7 +226,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onBackground() { backgroundAt = System.currentTimeMillis(); stopTrackingPoll() }
     fun onForeground() {
-        if (loggedIn) startTrackingPoll()
+        if (loggedIn) { startTrackingPoll(); viewModelScope.launch { loadReviewCount() } }
         val at = backgroundAt ?: return
         backgroundAt = null
         if (loggedIn && prefs.bool(AppPrefs.LOCK) && System.currentTimeMillis() - at >= prefs.int(AppPrefs.LOCK_AFTER, 0) * 60_000L) locked = true
@@ -246,6 +246,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         }
         Privacy.hidden = prefs.bool(AppPrefs.HIDE_AMOUNTS)
         layout = localLayout()
+        loadLocalLayout15()
         if (loggedIn) refresh()
     }
 
@@ -463,7 +464,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         try {
             when (s) {
                 Screen.Homelab -> loadHome()
-                Screen.Home -> summary = parseSummary(api.get("/summary"))
+                Screen.Home -> { summary = parseSummary(api.get("/summary")); loadReviewCount(); loadRecent15() }
                 Screen.List, Screen.Budget -> if (txs == null || s == Screen.List) loadTx()
                 Screen.Search -> { loadAiHistory(); loadSuggestGroups() }
                 Screen.More -> loadMore()
@@ -532,7 +533,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             screen == Screen.Mat && dishOpen != null -> dishOpen = null
             paper && paperPage == "fmer" -> { paperPage = null; navigate(Screen.Homelab, null) }
             paper && paperFromFinMer -> { navigate(Screen.Home, null); paperFin = true; paperPage = "fmer" }
-            paper && paperFin && screen in setOf(Screen.Home, Screen.List, Screen.Finn) -> navigate(Screen.Homelab, null)
+            paper && paperPage == "fsok" -> { paperPage = null; navigate(Screen.Homelab, null) }
+            paper && paperFin && screen in PAPER_FIN_SCREENS -> navigate(Screen.Homelab, null)
+            // Domener i Papir: pila og kantsveipet går alltid til Hjem, også når siden ble åpnet fra Mer.
+            paper && screen == Screen.Domains -> { domAll = false; navigate(Screen.Homelab, null) }
             paper && paperPage != null && paperPage != "mer" -> paperPage = "mer"
             paper && paperPage == "mer" -> { paperPage = null; navigate(Screen.Homelab, null) }
             paper && paperFromMer -> { paperFromMer = false; paperPage = "mer" }
@@ -577,7 +581,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (uri.scheme != "finanshub" || !loggedIn) return
         menuOpen = false
         when (uri.host ?: "") {
-            "homelab", "weather" -> go(Screen.Homelab)
+            "homelab" -> go(Screen.Homelab)
+            // Vær-widgetene åpner værappen i Papir (Klassisk: Homelab-forsiden).
+            "weather", "vaer" -> { go(Screen.Homelab); if (paper) openWeather() }
             "tracking", "packages" -> go(Screen.Tracking)
             "budget" -> go(Screen.Budget)
             "finance", "home" -> go(Screen.Home)
@@ -1544,6 +1550,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "fin" -> { go(Screen.Home); paperFin = true }
             "mat" -> go(Screen.Mat)
             "trk" -> go(Screen.Tracking)
+            "dom" -> { domSection = "oversikt"; go(Screen.Domains) }
+            "sok" -> { paperFinTab("sok"); return }
             "mer" -> { if (screen !in setOf(Screen.Homelab, Screen.Home, Screen.Mat, Screen.Tracking)) go(Screen.Homelab); paperPage = "mer" }
         }
         Haptics.select()
@@ -1569,6 +1577,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val x = runCatching { parseLayoutExtras(raw) }.getOrNull() ?: return
         // Rekkefølgen på Sporing og onboarding følger brukeren, så de leses hver gang.
         if (x.trkOrder.isNotEmpty()) trkOrder = normalizeTrkOrder(x.trkOrder)
+        applyLayout15(raw)
         val obKey = AppPrefs.ONBOARDED + (account?.id ?: "")
         onboardNeeded = x.onboarded == false && !prefs.bool(obKey)
         if (prefs.bool(AppPrefs.DESIGN_SYNCED)) return
@@ -1852,7 +1861,14 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         when (k) {
             "liste" -> go(Screen.List)
             "finn" -> go(Screen.Finn)
-            "mer" -> { if (!screen.isFinance) go(Screen.Home); paperPage = "fmer" }
+            "budsjett" -> go(Screen.Budget)
+            "kvitt" -> go(Screen.Scan)
+            "aksjer" -> go(Screen.Stocks)
+            "abo" -> go(Screen.Sub)
+            "kontoer" -> go(Screen.Accounts)
+            "boliger" -> go(Screen.Folders)
+            "sok" -> { if (!screen.isFinance) go(Screen.Home); paperPage = "fsok" }
+            "mer", "fmer" -> { if (!screen.isFinance) go(Screen.Home); paperPage = "fmer" }
             else -> go(Screen.Home)
         }
         paperFin = true
@@ -2056,5 +2072,242 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
 
     /** «1 234,50», «1234.5» eller «−200» som tall. */
     private fun parseAmountNo(s: String): Double? = s.replace(" ", "").replace("\u00a0", "").replace("kr", "").replace("−", "-").replace(',', '.').trim().toDoubleOrNull()
+
+    /* ---------- Prompt 15: tilpassede sider, Finans-fanelinja, fjerde fane, flytende skann, vær og detaljer ---------- */
+
+    /** Rekkefølge og skjulte kort per side (layout.pages). Lagres per bruker; serveren fletter én side om gangen. */
+    var pageLayouts by mutableStateOf<Map<String, PageLay>>(emptyMap())
+        private set
+    /** Siden som er i redigeringsmodus (langt trykk på et kort), ellers null. */
+    var editPage by mutableStateOf<String?>(null)
+
+    fun pageOrder(page: String, keys: List<String>): List<String> {
+        val saved = (pageLayouts[page]?.order ?: emptyList()).filter { it in keys }.distinct()
+        return saved + keys.filter { it !in saved }
+    }
+    fun pageHidden(page: String): Set<String> = pageLayouts[page]?.hidden?.toSet() ?: emptySet()
+
+    /** Flytter et synlig kort opp (−1) eller ned (+1) forbi nabokortet som vises. */
+    fun movePageItem(page: String, keys: List<String>, key: String, dir: Int) {
+        val order = pageOrder(page, keys).toMutableList()
+        val hid = pageHidden(page)
+        val vis = order.filter { it !in hid }
+        val v = vis.indexOf(key)
+        val other = vis.getOrNull(v + dir) ?: return
+        val a = order.indexOf(key); val b = order.indexOf(other)
+        order[a] = other; order[b] = key
+        savePage(page, PageLay(order, hid.toList()))
+    }
+    fun hidePageItem(page: String, keys: List<String>, key: String) {
+        savePage(page, PageLay(pageOrder(page, keys), (pageHidden(page) + key).toList()))
+    }
+    fun showPageItem(page: String, keys: List<String>, key: String) {
+        savePage(page, PageLay(pageOrder(page, keys), (pageHidden(page) - key).toList()))
+    }
+    fun resetPage(page: String) { savePage(page, PageLay()) }
+
+    private fun savePage(page: String, l: PageLay) {
+        pageLayouts = pageLayouts + (page to l)
+        Haptics.select()
+        prefs.set(AppPrefs.PAGES_LAYOUT + (account?.id ?: ""), JSONObject().apply { pageLayouts.forEach { (k, v) -> put(k, v.toJson()) } }.toString())
+        viewModelScope.launch { runCatching { api.hlPut("/me/layout", JSONObject().put("pages", JSONObject().put(page, l.toJson()))) } }
+    }
+
+    /** Fanene i Finans-linja (opptil 4, «Mer» er alltid sist). */
+    var paperFinTabs by mutableStateOf(FIN_TABS_DEFAULT)
+        private set
+    fun setPaperFinTabs(l: List<String>) {
+        val v = l.distinct().filter { k -> FIN_TABS.any { it.first == k } }.take(4).ifEmpty { listOf("oversikt") }
+        paperFinTabs = v
+        prefs.set(AppPrefs.FIN_TABS + (account?.id ?: ""), v.joinToString(","))
+        viewModelScope.launch { runCatching { api.hlPut("/me/layout", JSONObject().put("finTabs", JSONArray(v))) } }
+    }
+
+    /** Fjerde fane i hovedlinja: «auto» (Domener, eller Sporing når pakker er på vei), «domener» eller «sporing». */
+    val fourthTab: String get() = option(AppPrefs.FOURTH_TAB, "auto")
+    fun setFourthTab(v: String) {
+        setPref(AppPrefs.FOURTH_TAB, v)
+        viewModelScope.launch { runCatching { api.hlPut("/me/layout", JSONObject().put("fourthTab", v)) } }
+    }
+    /** Pakker som er hentet, i transport eller klar for henting. */
+    val packagesOnWay: Int get() = (tracking?.items ?: homePackages ?: emptyList()).count { !it.archived && !it.done && it.step in 1..3 }
+    /** Hvilken modul som står i fanelinja: «sporing» eller «domener». */
+    val tab4: String get() = when (fourthTab) { "sporing" -> "sporing"; "domener" -> "domener"; else -> if (packagesOnWay > 0) "sporing" else "domener" }
+
+    /** Skanneknappen: «float» (flytende over linja, Søk i linja) eller «inline» (+ i linja). */
+    val fabStyle: String get() = option(AppPrefs.FAB_STYLE, "float")
+    fun setFabStyle(v: String) {
+        setPref(AppPrefs.FAB_STYLE, v)
+        viewModelScope.launch { runCatching { api.hlPut("/me/layout", JSONObject().put("fab", v)) } }
+    }
+
+    /** Leses fra layout ved oppstart (og fra enheten først, så siden ikke hopper). */
+    fun applyLayout15(raw: String) {
+        val l = runCatching { parseLayout15(raw) }.getOrNull() ?: return
+        if (l.pages.isNotEmpty()) pageLayouts = pageLayouts + l.pages
+        if (l.finTabs.isNotEmpty()) paperFinTabs = l.finTabs
+        l.fourthTab?.let { prefs.set(AppPrefs.FOURTH_TAB, it) }
+        l.fab?.let { prefs.set(AppPrefs.FAB_STYLE, it) }
+    }
+    fun loadLocalLayout15() {
+        val id = account?.id ?: ""
+        prefs.str(AppPrefs.PAGES_LAYOUT + id, "").takeIf { it.isNotBlank() }?.let { raw ->
+            runCatching {
+                val o = JSONObject(raw)
+                pageLayouts = o.keys().asSequence().associateWith { k -> o.getJSONObject(k).let { v -> PageLay(v.optJSONArray("order").strings(), v.optJSONArray("hidden").strings()) } }
+            }
+        }
+        prefs.str(AppPrefs.FIN_TABS + id, "").takeIf { it.isNotBlank() }?.let { paperFinTabs = it.split(',').filter { k -> FIN_TABS.any { t -> t.first == k } }.ifEmpty { FIN_TABS_DEFAULT } }
+    }
+
+    /* Antall kvitteringer til gjennomgang (banneret i Finans → Oversikt). */
+    var reviewCount by mutableStateOf<Int?>(null)
+        private set
+    suspend fun loadReviewCount() {
+        if (!loggedIn) return
+        runCatching { JSONObject(api.get("/receipts?status=needs_review&count=1")).optInt("count", -1) }.getOrNull()?.takeIf { it >= 0 }?.let { reviewCount = it }
+    }
+    /** Banneret: trykk på teksten åpner køen filtrert på «Til gjennomgang». */
+    fun openReview() {
+        reviewFilter = true
+        if (paper) openFromFinMer(Screen.Scan) else open(Screen.Scan)
+        // Køen åpnes på første kvittering som er lest av AI og venter på bekreftelse.
+        launch { if (receipts == null) loadReceipts(); selectedReceipt = receipts?.firstOrNull { it.status == "needs_review" }?.id }
+    }
+    var reviewFilter by mutableStateOf(false)
+
+    /** De 15 siste transaksjonene i Finans → Oversikt. */
+    var recent15 by mutableStateOf<List<Tx>?>(null)
+        private set
+    suspend fun loadRecent15() { runCatching { parseTxList(api.get("/transactions?limit=15")) }.getOrNull()?.let { recent15 = it.take(15) } }
+
+    /* Transaksjonsdetaljer i Papir (Finans → Liste → trykk på en rad). */
+    var txDetail by mutableStateOf<TxDetail?>(null)
+        private set
+    var txDetailError by mutableStateOf<String?>(null)
+        private set
+    var txCatSheet by mutableStateOf(false)
+    var txBankSheet by mutableStateOf(false)
+    var receiptFull by mutableStateOf<Bitmap?>(null)
+
+    /** Åpner detaljene for en transaksjon (fra Liste, Oversikt eller Søk). */
+    fun openTx(id: Int) {
+        selectedTx = id
+        if (txDetail?.tx?.id != id) txDetail = null
+        txDetailError = null
+        launch { loadTxDetail(id) }
+    }
+    suspend fun loadTxDetail(id: Int) {
+        try {
+            txDetail = parseTxDetail(api.get("/transactions/$id"))
+        } catch (e: ApiException) {
+            // Eldre server uten GET /transactions/:id: bygg detaljene av listen og originalen.
+            val t = (txs ?: emptyList()).firstOrNull { it.id == id } ?: recent15?.firstOrNull { it.id == id } ?: summary?.recent?.firstOrNull { it.id == id }
+            if (t == null) { txDetailError = e.message; return }
+            val orig = runCatching { parseOriginal(api.get("/transactions/$id/original")) }.getOrNull()
+            txDetail = TxDetail(t, t.aiLong ?: t.aiShort,
+                if (t.receipt == null && orig?.receipt == null) null else TxReceipt(orig?.receipt?.id ?: t.receiptId, if (t.receipt == "booked") "attached" else "needs_review",
+                    orig?.receipt?.fileUrl, orig?.receipt?.mime, t.lines, null, t.aiShort),
+                orig?.bankRow?.let { b -> TxBank(b.bookingDate, b.valueDate, b.description, null, b.amount, b.account, b.archiveReference) })
+        }
+    }
+    /** «Endre kategori», eventuelt med en regel for fremtidige transaksjoner fra samme butikk. */
+    fun setTxCategoryRule(id: Int, categoryId: Int, rule: Boolean) = launch {
+        api.patch("/transactions/$id", JSONObject().put("categoryId", categoryId))
+        val t = txDetail?.tx
+        if (rule && t != null) {
+            val pattern = (t.merchant ?: t.description).trim().uppercase().split(Regex("\\s+")).take(2).joinToString(" ").take(60)
+            runCatching { api.post("/rules", JSONObject().put("pattern", pattern).put("categoryId", categoryId)) }
+        }
+        txCatSheet = false
+        loadTxDetail(id)
+        runCatching { loadTx() }
+        summary = runCatching { parseSummary(api.get("/summary")) }.getOrDefault(summary)
+        flash(if (rule) "Kategori endret, og regelen gjelder fremover" else "Kategori endret")
+    }
+    /** Originalbildet av kvitteringen i fullskjerm (med zoom). PDF åpnes i en annen app. */
+    fun openReceiptFull(r: TxReceipt) = launch {
+        val url = r.fileUrl ?: return@launch
+        if (r.mime?.contains("pdf") == true) {
+            val data = api.bytes(url)
+            val ctx = getApplication<Application>()
+            val f = File(File(ctx.cacheDir, "scans").apply { mkdirs() }, "kvittering-${r.id ?: "x"}.pdf").apply { writeBytes(data) }
+            val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", f)
+            val view = Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/pdf").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            runCatching { ctx.startActivity(view) }.onFailure { shareFile(f.name, "application/pdf", data) }
+            return@launch
+        }
+        receiptFull = image(url) ?: run { flash("Fikk ikke hentet kvitteringen"); null }
+    }
+
+    /* Finans → Søk i Papir: vanlig søk, eller ✦ AI med svar-kort øverst. */
+    var finSearchQ by mutableStateOf("")
+    var finSearchAi by mutableStateOf(false)
+    var finSearch by mutableStateOf<AiAnswer?>(null)
+        private set
+    var finSearchBusy by mutableStateOf(false)
+        private set
+    fun runFinSearch(q: String = finSearchQ, ai: Boolean = finSearchAi) {
+        val t = q.trim()
+        if (t.isBlank()) { finSearch = null; return }
+        finSearchBusy = true
+        launch {
+            try {
+                // Enkle enkeltord søkes alltid vanlig først.
+                val simple = !t.contains(' ') && t.length < 20
+                finSearch = if (!ai || simple) plainSearchPublic(t).let { a -> if (ai && a.hits.isEmpty()) aiSearch(t) ?: a else a } else aiSearch(t) ?: plainSearchPublic(t)
+            } finally { finSearchBusy = false }
+        }
+    }
+    private suspend fun aiSearch(q: String): AiAnswer? = runCatching {
+        parseAi(api.request("POST", "/search/ai", JSONObject().put("q", q).put("force", true), timeout = 25_000), q)
+    }.getOrNull()?.takeIf { !it.aiUnavailable }
+    private suspend fun plainSearchPublic(q: String): AiAnswer {
+        val enc = URLEncoder.encode(q, "UTF-8")
+        return try { parsePlain(api.get("/search?q=$enc"), q) } catch (e: ApiException) {
+            val list = parseTxList(api.get("/transactions?limit=40&q=$enc"))
+            AiAnswer(q, if (list.isEmpty()) "Ingen treff." else "${list.size} treff.",
+                list.map { SearchHit("tx", it.id, it.receiptId, it.merchant ?: it.description, it.date, it.amount, it.source, "${it.category} · navn") },
+                null, emptyList(), mode = "plain")
+        }
+    }
+
+    /* Vær i appen (trykk på temperaturen på Hjem). */
+    var weatherOpen by mutableStateOf(false)
+    var weatherFull by mutableStateOf<WeatherFull?>(null)
+        private set
+    var weatherError by mutableStateOf<String?>(null)
+        private set
+    var weatherPlace by mutableStateOf("oslo")
+        private set
+    /** «Forhold»-arket: valgt dag (0 = i dag), null = lukket. */
+    var weatherSheetDay by mutableStateOf<Int?>(null)
+    fun openWeather() { weatherOpen = true; if (weatherFull == null || weatherFull?.placeId != weatherPlace) loadWeather(weatherPlace) }
+    fun loadWeather(place: String) {
+        weatherPlace = place
+        weatherError = null
+        launch {
+            try { weatherFull = parseWeatherFull(api.hlGet("/weather/full?place=$place", timeout = 15_000)) }
+            catch (e: ApiException) { weatherError = if (e.status == 404) "Værappen trenger en nyere Homelab-server." else e.message }
+        }
+    }
+
+    /* Ny sending (den flytende knappen på Sporing). */
+    var trkAddOpen by mutableStateOf(false)
+
+    /* Domener i Papir: «Alle domener» som kort, ett per domene. */
+    var domAll by mutableStateOf(false)
+    var domAllStats by mutableStateOf<Map<String, Analytics?>>(emptyMap())
+        private set
+    fun showAllDomains() {
+        domAll = true
+        val list = domains ?: return
+        for (d in list) if (!domAllStats.containsKey(d.name)) viewModelScope.launch {
+            val a = runCatching { parseAnalytics(api.domGet("/" + URLEncoder.encode(d.name, "UTF-8") + "/analytics?range=$domRange")) }.getOrNull()
+            domAllStats = domAllStats + (d.name to a)
+        }
+    }
+    fun pickDomainPaper(name: String) { domAll = false; pickDomain(name) }
+    fun setRangePaper(r: String) { domAllStats = emptyMap(); setRange(r); if (domAll) showAllDomains() }
 }
 

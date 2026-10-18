@@ -103,6 +103,10 @@ class AppPrefs(ctx: Context) {
         const val PHOTO = "photo_window"        // cur | oslo | weather | planets | custom
         const val DESIGN_SYNCED = "design_synced" // valgene over er hentet fra serveren én gang
         const val FRESH_PAPIR = "fresh_papir"   // appen ble installert med Papir som standard
+        const val PAGES_LAYOUT = "pages_layout_" // + konto-ID: rekkefølge og skjulte kort per side i Papir (layout.pages)
+        const val FIN_TABS = "fin_tabs_"        // + konto-ID: fanene i Finans-linja (opptil 4)
+        const val FOURTH_TAB = "fourth_tab"     // auto | domener | sporing
+        const val FAB_STYLE = "fab_style"       // float | inline
         const val ONBOARDED = "onboarded_"      // + konto-ID: onboardingen i Papir er fullført på denne enheten
     }
 }

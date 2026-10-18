@@ -3,6 +3,7 @@ package no.kristo.finanshub.ui
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -33,11 +34,12 @@ import no.kristo.finanshub.*
  * Trafikk, Besøk, Ytelse og Sikkerhet; på brettbar vises fanene øverst.
  */
 @Composable
-internal fun DomainsScreen(vm: AppViewModel, twoPane: Boolean, section: String? = null) {
+internal fun DomainsScreen(vm: AppViewModel, twoPane: Boolean, section: String? = null, paper: Boolean = false) {
     val a = vm.analytics
     Page {
-        // Papir har egen fanelinje (Oversikt, Publikum, Ytelse og Infra) i stedet for fanene her.
-        if (section == null || section == "oversikt") item { DomainHeader(vm) }
+        // Papir har egen fanelinje (Oversikt, Publikum, Ytelse og Infra) og et hvitt toppkort med domenevelger og periode.
+        if (paper) item { PaperDomTop(vm) }
+        else if (section == null || section == "oversikt") item { DomainHeader(vm) }
         if (twoPane && section == null) item {
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(P.card).padding(4.dp)) {
                 DomTab.entries.forEach { t ->
@@ -57,11 +59,12 @@ internal fun DomainsScreen(vm: AppViewModel, twoPane: Boolean, section: String? 
                 }
             }
         }
+        if (paper && vm.domAll) { allDomains(vm); return@Page }
         if (a == null && vm.moduleError == null && vm.domains?.isEmpty() != true) item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = P.accent) } }
         if (a != null) {
             if (a.mock) item { Text("Eksempeldata – legg inn Cloudflare-token i Homelab for ekte tall.", color = P.text2, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp)) }
             when (section) {
-                "oversikt" -> traffic(vm, a, withCard = false)
+                "oversikt" -> traffic(vm, a, withCard = false, ranges = !paper)
                 "publikum" -> visits(vm, a)
                 "ytelse" -> { perf(a, withUptime = false); item { Title("Sikkerhet") }; security(a) }
                 "infra" -> infra(vm, a)
@@ -187,7 +190,7 @@ private fun KV(k: String, v: String, good: Boolean? = null) {
 
 /* ---------------- Faner ---------------- */
 
-private fun androidx.compose.foundation.lazy.LazyListScope.traffic(vm: AppViewModel, a: Analytics, withCard: Boolean = true) {
+private fun androidx.compose.foundation.lazy.LazyListScope.traffic(vm: AppViewModel, a: Analytics, withCard: Boolean = true, ranges: Boolean = true) {
     item {
         // Ca. 20 % lavere enn før: mindre polstring, tall og kurve.
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp, 28.dp, 28.dp, 10.dp)).background(P.hero).padding(18.dp, 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -203,7 +206,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.traffic(vm: AppViewMo
             Area(a.liveSpark.ifEmpty { a.series.map { it.visitors } }, height = 42, color = P.onHero)
         }
     }
-    item { RangeChips(vm, listOf("24h" to "Siste 24 t", "today" to "I dag")) }
+    if (ranges) item { RangeChips(vm, listOf("24h" to "Siste 24 t", "today" to "I dag")) }
     item {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -218,7 +221,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.traffic(vm: AppViewMo
     }
     if (withCard) item { DomainCard(vm, a) }
     item { Title("Historikk") }
-    item { RangeChips(vm, listOf("7d" to "7 d", "30d" to "30 d", "90d" to "90 d", "1y" to "1 år")) }
+    if (ranges) item { RangeChips(vm, listOf("7d" to "7 d", "30d" to "30 d", "90d" to "90 d", "1y" to "1 år")) }
     item {
         PinkCard {
             Row { Text("Forespørsler", Modifier.weight(1f), color = P.onHero); Text("bufret ${pct(a.cachedPct)}", color = P.text2, fontSize = 13.sp) }
@@ -464,4 +467,100 @@ private fun flag(iso2: String): String {
     if (iso2.length != 2 || !iso2.all { it.isLetter() }) return ""
     val u = iso2.uppercase()
     return String(Character.toChars(0x1F1E6 + (u[0] - 'A'))) + String(Character.toChars(0x1F1E6 + (u[1] - 'A')))
+}
+
+
+/* ---------------- Papir: toppkortet og «Alle domener» som kort ---------------- */
+
+/**
+ * Toppkortet i Papir (hvitt, overlapper bildeheaderen): «DOMENE» med antall, domenene som en vannrett rad med kort
+ * (kilde over navnet, valgt kort er svart, sideveis scroll med snap) og periodene 1t, 24t, 7d og 30d i full bredde.
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+internal fun PaperDomTop(vm: AppViewModel) {
+    val p = PaperPal.current
+    val list = vm.domains ?: emptyList()
+    val state = androidx.compose.foundation.lazy.rememberLazyListState()
+    PCard(shadow = true) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                PLabel("Domene · ${list.size}", modifier = Modifier.weight(1f))
+                Text("⟳", color = p.ink, fontSize = 17.sp, modifier = Modifier.clip(CircleShape).clickable { vm.reloadDomain() }.padding(8.dp, 2.dp))
+                Text("+ Legg til", color = p.lab, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clip(CircleShape).clickable { vm.domainManager = true }.padding(8.dp, 4.dp))
+            }
+            androidx.compose.foundation.lazy.LazyRow(
+                state = state, flingBehavior = androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior(state),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                item {
+                    DomChip("Oversikt", "Alle domener", vm.domAll) { vm.showAllDomains() }
+                }
+                items(list.size) { i ->
+                    val d = list[i]
+                    DomChip(sourceName(d.source), d.name, !vm.domAll && d.name == vm.domain) { vm.pickDomainPaper(d.name) }
+                }
+            }
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).border(1.dp, p.line, RoundedCornerShape(12.dp)).padding(3.dp)) {
+                listOf("1h" to "1t", "24h" to "24t", "7d" to "7d", "30d" to "30d").forEach { (k, n) ->
+                    val on = vm.domRange == k
+                    Box(Modifier.weight(1f).height(34.dp).clip(RoundedCornerShape(9.dp)).background(if (on) p.ink else Color.Transparent).clickable { Haptics.select(); vm.setRangePaper(k) },
+                        contentAlignment = Alignment.Center) { Text(n, color = if (on) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.sp) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DomChip(kicker: String, name: String, on: Boolean, onClick: () -> Unit) {
+    val p = PaperPal.current
+    Column(
+        Modifier.width(156.dp).clip(RoundedCornerShape(14.dp)).background(if (on) p.ink else p.surf2).clickable(onClick = onClick).padding(12.dp, 10.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Text(kicker.uppercase(), color = if (on) p.bg.copy(alpha = .7f) else p.mut, fontFamily = PaperFonts.mono, fontSize = 9.5.sp, maxLines = 1)
+        Text(name, color = if (on) p.bg else p.ink, fontFamily = PaperFonts.serif, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** «Alle domener» på mobil: ett kort per domene (ingen tabell). */
+private fun androidx.compose.foundation.lazy.LazyListScope.allDomains(vm: AppViewModel) {
+    val list = vm.domains ?: emptyList()
+    items(list.size) { i ->
+        val d = list[i]
+        val a = vm.domAllStats[d.name]
+        val p = PaperPal.current
+        PCard(onClick = { vm.pickDomainPaper(d.name) }) {
+            Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        PSerif(d.name, 18.sp, maxLines = 1)
+                        Text(sourceName(d.source), color = p.mut, fontSize = 12.sp)
+                    }
+                    val st = a?.status ?: if (vm.domAllStats.containsKey(d.name)) "unknown" else null
+                    if (st != null) Box(Modifier.clip(CircleShape).background(if (st == "active") p.pos.copy(alpha = .15f) else p.lab.copy(alpha = .15f)).padding(10.dp, 3.dp)) {
+                        Text(statusText[st] ?: st, color = if (st == "active") p.pos else p.lab, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+                if (a == null) Text(if (vm.domAllStats.containsKey(d.name)) "Fikk ikke hentet tall." else "Henter …", color = p.mut, fontSize = 12.5.sp)
+                else {
+                    Row(Modifier.fillMaxWidth()) {
+                        listOf("Forespørsler" to count(a.requests), "Besøkende" to count(a.visitors), "Oppetid" to if (a.uptimePct > 0) pct(a.uptimePct) else "–").forEach { (k, v) ->
+                            Column(Modifier.weight(1f)) {
+                                Text(k, color = p.mut, fontSize = 11.5.sp, maxLines = 1)
+                                PSerif(v, 19.sp, maxLines = 1)
+                            }
+                        }
+                    }
+                    Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
+                    val ssl = daysLeft(a.certExpires ?: a.sslExpires)
+                    Row {
+                        Text("Bufret ${pct(a.cachedPct)}", color = p.mut, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                        Text(ssl?.let { "SSL utløper om $it d" } ?: "SSL –", color = if ((ssl ?: 99) < 14) p.lab else p.mut, fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+    }
 }

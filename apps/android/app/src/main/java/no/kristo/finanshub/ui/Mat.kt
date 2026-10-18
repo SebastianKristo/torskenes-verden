@@ -106,6 +106,9 @@ internal fun MatSurface(vm: AppViewModel, paper: Boolean = false) {
         vm.moduleError?.let { e -> item { Text(e, color = p.accent, fontSize = 13.sp) } }
         if (w == null || w.days.isEmpty()) {
             if (vm.moduleError == null) item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.text) } }
+        } else if (paper) {
+            // Papir: kortene kan flyttes og skjules (hold inne), og rekkefølgen lagres per bruker.
+            pageSecs(vm, "mat", MAT_SECS) { k -> MatPaperSec(vm, w, k, p, linkOpen) { linkOpen = it } }
         } else {
             val todayIso = LocalDate.now().toString()
             val ti = w.days.indexOfFirst { it.today || it.date == todayIso }.coerceAtLeast(0)
@@ -448,6 +451,90 @@ private fun DishSheet(vm: AppViewModel, p: MatPalette) {
                 Text("Regneark, PDF, Word, bilder og video. Filene lagres med retten på serveren.", color = p.muted, fontSize = 12.sp)
             } else if (day != null) {
                 Text("Ingen rett denne dagen ennå. Trykk ✦ for et forslag.", color = p.muted, fontSize = 14.sp)
+            }
+        }
+    }
+}
+
+
+private val MAT_SECS = listOf(PSec("m1", "Dagens middag"), PSec("m2", "Ukeplan"), PSec("m3", "Mapper"), PSec("m4", "Skann og import"), PSec("m5", "Handleliste"))
+
+/** Ett av kortene på Mat-siden i Papir. */
+@Composable
+private fun MatPaperSec(vm: AppViewModel, w: Week, k: String, p: MatPalette, linkOpen: Boolean, setLink: (Boolean) -> Unit) {
+    val todayIso = LocalDate.now().toString()
+    val ti = w.days.indexOfFirst { it.today || it.date == todayIso }.coerceAtLeast(0)
+    when (k) {
+        "m1" -> {
+            val today = w.days[ti]
+            val todayDish = w.dishes.firstOrNull { it.id == today.dishId } ?: w.dishes.firstOrNull { it.name == today.name }
+            TodayCard(vm, today, todayDish, p) { vm.matDay = ti; vm.dishOpen = todayDish?.id ?: "" }
+        }
+        "m2" -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            MHead("Uka", w.week?.let { "Uke $it" }, p)
+            w.days.forEachIndexed { i, d ->
+                val dish = w.dishes.firstOrNull { it.id == d.dishId } ?: w.dishes.firstOrNull { it.name == d.name }
+                Row(
+                    Modifier.fillMaxWidth().clickable { vm.matDay = i; vm.dishOpen = dish?.id ?: "" }.padding(2.dp, 8.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    MLabel(shortDay[dayIdx(d.date)], if (i == ti) p.accent else p.muted, Modifier.width(36.dp))
+                    MSerif(d.name ?: "Ingen rett ennå", 18, if (d.name == null) p.muted else p.text, Modifier.weight(1f), maxLines = 1)
+                    Text(listOfNotNull(d.cook, if (d.fixed) "fast" else null).joinToString(" · "), color = p.muted, fontSize = 12.sp, maxLines = 1)
+                }
+                Box(Modifier.fillMaxWidth().height(1.dp).background(p.border))
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MatButton("✦ Ny plan for uka", p, Modifier.weight(1f), accent = true) { vm.planWeek() }
+                MatButton("Hele uka", p, Modifier.weight(1f), outline = true) { vm.matFull = true }
+            }
+        }
+        "m3" -> Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            FolderChips(vm, p)
+            val sel = vm.matFolderSel
+            val dishes = w.dishes.filter { sel == null || it.folderId == sel }
+            MHead(if (sel == null) "Retter" else vm.matFolders.firstOrNull { it.id == sel }?.name ?: "Retter", "${dishes.size}", p)
+            if (dishes.isEmpty()) Text("Ingen retter i denne mappen ennå. Skann en oppskrift eller importer en lenke.", color = p.muted, fontSize = 14.sp, modifier = Modifier.padding(4.dp))
+            dishes.forEach { dish ->
+                Row(
+                    Modifier.fillMaxWidth().clickable { vm.matDay = null; vm.dishOpen = dish.id }.padding(2.dp, 9.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        MSerif(dish.name, 18, p.text, maxLines = 1)
+                        Text(listOfNotNull(
+                            vm.matFolders.firstOrNull { it.id == dish.folderId }?.name?.takeIf { sel == null },
+                            if (dish.ing.isNotEmpty()) "${dish.ing.size} ingredienser" else null, dish.time,
+                            if (dish.src == "hellofresh") "HelloFresh" else null, if (dish.links.isNotEmpty()) "${dish.links.size} vedlegg" else null,
+                        ).joinToString(" · "), color = p.muted, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    Text("›", color = p.muted)
+                }
+                Box(Modifier.fillMaxWidth().height(1.dp).background(p.border))
+            }
+        }
+        "m4" -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MatButton("Skann oppskrift", p, Modifier.weight(1f)) { vm.scanTarget = "recipe"; vm.scanSheet = true }
+                MatButton("Importer lenke", p, Modifier.weight(1f), outline = true) { setLink(!linkOpen) }
+            }
+            if (linkOpen || vm.recipeBusy) ImportField(vm, p) { setLink(false) }
+            if (vm.recipeJobs.isNotEmpty()) RecipeJobs(vm, p)
+        }
+        "m5" -> Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            MHead("Handleliste", "${w.shopping.count { !it.done }} igjen", p)
+            if (w.shopping.isEmpty()) Text("Handlelisten er tom.", color = p.muted, fontSize = 14.sp, modifier = Modifier.padding(4.dp))
+            w.shopping.forEach { sh ->
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable(role = Role.Checkbox) { vm.toggleShop(sh.id) }.padding(vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Box(Modifier.size(24.dp).clip(RoundedCornerShape(7.dp)).background(if (sh.done) p.lime else Color.Transparent)
+                        .border(1.5.dp, if (sh.done) p.lime else p.muted, RoundedCornerShape(7.dp)), contentAlignment = Alignment.Center) {
+                        if (sh.done) Text("✓", color = p.onLime, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
+                    Text(sh.text, color = if (sh.done) p.muted else p.text, textDecoration = if (sh.done) TextDecoration.LineThrough else null)
+                }
             }
         }
     }

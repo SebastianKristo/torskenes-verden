@@ -118,7 +118,7 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
 
     // Mobildesign «Papir»: eget skall med fotovindu og fanelinje, samme sider og API-er som Klassisk.
     if (vm.paper) {
-        PaperApp(vm, snack, takePhoto, pickPhotos, pickFiles, onPrivacyChanged)
+        PaperApp(vm, snack, takePhoto, pickPhotos, pickFiles, onPrivacyChanged, wide = width != WindowWidthSizeClass.Compact)
         if (vm.menuOpen) ProfileSheet(vm)
         if (vm.widgetGallery) WidgetGallery(vm)
         return

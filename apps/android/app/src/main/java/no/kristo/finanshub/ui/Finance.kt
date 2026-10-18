@@ -173,7 +173,7 @@ internal fun HomeScreen(vm: AppViewModel) {
         item {
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.Bottom) {
                 Column(Modifier.weight(1f)) {
-                    Text("Hei, $name", color = C.text2, fontSize = 16.sp)
+                    Text("${greetingFor()}, $name", color = C.text2, fontSize = 16.sp)
                     Text(monthLabel(s?.month ?: ""), style = MaterialTheme.typography.displaySmall)
                 }
                 if (vm.flag(AppPrefs.HIDE_AMOUNTS)) IconButton(onClick = { Privacy.hidden = !Privacy.hidden }) {
@@ -184,6 +184,10 @@ internal fun HomeScreen(vm: AppViewModel) {
             }
         }
         item { Hero(vm) }
+        // «N kvitteringer til gjennomgang» rett under saldokortet: teksten åpner køen, «Skann ›» åpner skannearket.
+        (vm.reviewCount ?: s?.review?.count { it.status == "needs_review" })?.takeIf { it > 0 }?.let { n ->
+            item { ReviewBanner(n, open = { vm.openReview() }, scan = { vm.scanSheet = true }, bg = C.accent, fg = Color.White) }
+        }
         if (s != null) item {
             Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 InnCard(s, Modifier.weight(1f).fillMaxHeight())
@@ -191,7 +195,6 @@ internal fun HomeScreen(vm: AppViewModel) {
             }
         }
         item { UploadPill(vm) }
-        item { ReviewCta(vm) }
         item { SectionLabel("Siste") }
         item { s?.recent?.take(6)?.let { TxGroup(it, vm) } ?: Empty("Laster …") }
     }

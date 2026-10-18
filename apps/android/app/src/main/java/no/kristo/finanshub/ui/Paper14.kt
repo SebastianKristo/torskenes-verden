@@ -1,5 +1,7 @@
 package no.kristo.finanshub.ui
 
+import androidx.compose.animation.core.FastOutSlowInEasing
+
 import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -246,7 +248,7 @@ internal fun PaperList(vm: AppViewModel, navBottom: Dp) {
             val t = list[i]
             val rc = when (t.receipt) { "booked" -> "kvittering"; null -> "ingen kvittering"; else -> "til gjennomgang" }
             Column {
-                Row(Modifier.fillMaxWidth().clickable { vm.selectedTx = t.id }.padding(2.dp, 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(Modifier.fillMaxWidth().clickable { vm.openTx(t.id) }.padding(2.dp, 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Logo(vm, t.domain, t.merchant ?: t.description, t.color, 38, RoundedCornerShape(11.dp))
                     Column(Modifier.weight(1f)) {
                         Text(t.merchant ?: t.description, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -264,7 +266,7 @@ internal fun PaperList(vm: AppViewModel, navBottom: Dp) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun PaperFinn(vm: AppViewModel, navBottom: Dp) {
+internal fun PaperFinn(vm: AppViewModel, navBottom: Dp, wide: Boolean = false) {
     val p = PaperPal.current
     val ctx = LocalContext.current
     val data = vm.finn
@@ -288,6 +290,8 @@ internal fun PaperFinn(vm: AppViewModel, navBottom: Dp) {
                 }
             }
         }
+        // Handler som er underveis, mellom Netto i år og filterraden.
+        item { FinnWayRow(vm, all) }
         item {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 FINN_SEGS.forEach { (k, n) -> PChip(n, vm.finnSeg == k, "${all.count { finnSegMatch(k, it) }}") { vm.finnSeg = k } }
@@ -300,14 +304,15 @@ internal fun PaperFinn(vm: AppViewModel, navBottom: Dp) {
         vm.moduleError?.let { e -> item { Text(e, color = p.lab, fontSize = 13.sp) } }
         if (data == null && vm.moduleError == null) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
         else if (list.isEmpty()) item { Text("Ingen handler her ennå.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(6.dp)) }
-        // Rutenett med to kort i bredden.
-        val rows = list.chunked(2)
+        // Rutenett med to kort i bredden (3–4 på Fold).
+        val cols = if (wide) 4 else 2
+        val rows = list.chunked(cols)
         items(rows.size) { r ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 rows[r].forEach { d ->
                     FinnCard(vm, d, Modifier.weight(1f)) { openLink(ctx, d.adUrl ?: d.code?.takeIf { c -> c.all(Char::isDigit) }?.let { "https://www.finn.no/recommerce/forsale/item/$it" } ?: "https://www.finn.no/") }
                 }
-                if (rows[r].size == 1) Spacer(Modifier.weight(1f))
+                repeat(cols - rows[r].size) { Spacer(Modifier.weight(1f)) }
             }
         }
         // Redigering under rutenettet (✎ på kortet).
@@ -452,9 +457,10 @@ internal fun ReorderCard(vm: AppViewModel, id: String, title: String, index: Int
 internal fun ReorderWrap(vm: AppViewModel, id: String, title: String, index: Int, count: Int, barBg: Color, barFg: Color, content: @Composable () -> Unit) {
     val edit = vm.trkEdit
     val wob = rememberInfiniteTransition(label = "vugge")
+    // Dempet vugging: ±0,2° med periode 0,6 s, annenhver i motsatt fase.
     val angle by wob.animateFloat(
-        initialValue = -0.8f, targetValue = 0.8f,
-        animationSpec = infiniteRepeatable(tween(140 + (index % 3) * 20), RepeatMode.Reverse), label = "vinkel",
+        initialValue = if (index % 2 == 0) -0.2f else 0.2f, targetValue = if (index % 2 == 0) 0.2f else -0.2f,
+        animationSpec = infiniteRepeatable(tween(300, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "vinkel",
     )
     Box(Modifier.fillMaxWidth().then(if (edit) Modifier.rotate(angle) else Modifier).longPressEdit(!edit) { Haptics.tap(); vm.trkEdit = true }) {
         Column {
@@ -483,44 +489,40 @@ internal fun ReorderDoneBar(vm: AppViewModel) {
     }
 }
 
+private val TRK_SECS = listOf(PSec("s1", "Faner"), PSec("s2", "Pakkelisten"), PSec("s3", "Legg til"), PSec("s4", "Varsler"), PSec("s5", "Transportører"))
+
 @Composable
 internal fun PaperTracking(vm: AppViewModel, navBottom: Dp) {
     val p = PaperPal.current
     val t = vm.tracking
     val items = t?.items ?: emptyList()
-    val order = vm.trkOrder
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (vm.trkEdit) item { ReorderDoneBar(vm) }
-        // Fanene øverst, med antall.
-        item {
-            PCard {
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    TRK_TABS.forEach { (k, n) ->
-                        val on = vm.trkTab == k
-                        Row(
-                            Modifier.height(34.dp).clip(CircleShape).background(if (on) p.ink else Color.Transparent).clickable { Haptics.select(); vm.trkTab = k }.padding(horizontal = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp),
-                        ) {
-                            Text(n, color = if (on) p.bg else p.mut, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1)
-                            Text("${items.count { trkTabMatch(k, it) }}", color = if (on) p.bg.copy(alpha = .7f) else p.mut, fontFamily = PaperFonts.mono, fontSize = 11.5.sp)
-                        }
-                    }
-                    Box(Modifier.size(34.dp).clip(CircleShape).clickable { vm.trkSettings = true }, contentAlignment = Alignment.Center) { Text("⚙", color = p.ink, fontSize = 16.sp) }
-                }
-            }
-        }
         if (t == null && vm.moduleError == null) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
         vm.moduleError?.let { e -> item { Text(e, color = p.lab, fontSize = 13.sp) } }
-        order.forEachIndexed { idx, id ->
-            val title = TRK_CARDS.firstOrNull { it.first == id }?.second ?: id
-            when (id) {
-                "add" -> item { ReorderCard(vm, id, title, idx, order.size) { TrkAdd(vm, t) } }
-                "shipments" -> item { ReorderCard(vm, id, title, idx, order.size) { TrkShipments(vm, items) } }
-                "notify" -> if (t != null) item { ReorderCard(vm, id, title, idx, order.size) { TrkNotify(vm, t) } }
-                "carriers" -> if (t != null) item { ReorderCard(vm, id, title, idx, order.size) { TrkCarriers(t) } }
+        // Hold inne på fanene, pakkelisten eller Legg til for å flytte eller skjule dem (lagres per bruker).
+        pageSecs(vm, "sporing", TRK_SECS) { k ->
+            when (k) {
+                "s1" -> PCard {
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        TRK_TABS.forEach { (tk, n) ->
+                            val on = vm.trkTab == tk
+                            Row(
+                                Modifier.height(34.dp).clip(CircleShape).background(if (on) p.ink else Color.Transparent).clickable { Haptics.select(); vm.trkTab = tk }.padding(horizontal = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp),
+                            ) {
+                                Text(n, color = if (on) p.bg else p.mut, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1)
+                                Text("${items.count { trkTabMatch(tk, it) }}", color = if (on) p.bg.copy(alpha = .7f) else p.mut, fontFamily = PaperFonts.mono, fontSize = 11.5.sp)
+                            }
+                        }
+                        Box(Modifier.size(34.dp).clip(CircleShape).clickable { vm.trkSettings = true }, contentAlignment = Alignment.Center) { Text("⚙", color = p.ink, fontSize = 16.sp) }
+                    }
+                }
+                "s2" -> TrkShipments(vm, items)
+                "s3" -> TrkAdd(vm, t)
+                "s4" -> if (t != null) TrkNotify(vm, t)
+                "s5" -> if (t != null) TrkCarriers(t)
             }
         }
-        item { Text("Hold inne på et kort for å endre rekkefølgen.", color = p.mut, fontSize = 11.5.sp, modifier = Modifier.padding(4.dp)) }
     }
 }
 
@@ -667,7 +669,7 @@ internal fun PaperLogin(vm: AppViewModel) {
     val pend = vm.pending
     Box(Modifier.fillMaxSize().background(p.bg)) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).imePadding()) {
-            GateHero(if (pend != null) "Homelab · ${pend.server.substringAfter("://")}" else "Homelab", if (pend != null) "Totrinns-\nbekreftelse" else "Hei,\nvelkommen hjem")
+            GateHero(if (pend != null) "Homelab · ${pend.server.substringAfter("://")}" else "Homelab", if (pend != null) "Totrinns-\nbekreftelse" else "${greetingFor()},\nvelkommen hjem")
             Column(Modifier.widthIn(max = 520.dp).fillMaxWidth().padding(26.dp, 24.dp), verticalArrangement = Arrangement.spacedBy(18.dp)) {
                 if (pend == null) {
                     PField("Server", server, { server = it }, placeholder = "home.dittdomene.no", keyboard = ServerKeyboard)
@@ -705,7 +707,7 @@ private fun GateHero(kicker: String, title: String) {
         Column(Modifier.align(Alignment.BottomStart).padding(26.dp, 0.dp, 26.dp, 28.dp)) {
             PSerif(kicker, 17.sp, Color.White.copy(alpha = .9f), italic = true, weight = FontWeight.Normal, maxLines = 1)
             Spacer(Modifier.height(4.dp))
-            PSerif(title, 42.sp, Color.White, maxLines = 3)
+            AutoSerif(title, 42.sp, Color.White, min = 24.sp)
         }
     }
 }

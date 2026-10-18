@@ -30,6 +30,7 @@ import androidx.glance.action.Action
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.AndroidRemoteViews
 import androidx.glance.appwidget.GlanceAppWidget
+import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
 import androidx.glance.appwidget.LinearProgressIndicator
 import androidx.glance.appwidget.SizeMode
@@ -78,12 +79,19 @@ import androidx.glance.color.ColorProvider as DayNight
  */
 
 enum class WKind(val route: String) {
-    WEATHER("homelab"), PACKAGES("tracking"), BUDGET("budget"), FINANCE("finance"), NEXT("subs"), STOCKS("stocks"),
+    WEATHER("weather"), PACKAGES("tracking"), BUDGET("budget"), FINANCE("finance"), NEXT("subs"), STOCKS("stocks"),
     DOMAINS("domains"), MAT("mat"), FINN("finn"), BOLIG("boliger"), SCAN("scan"),
-    UI_SEARCH("search"), UI_WEATHER("homelab"), UI_CLOCK("homelab"), UI_PACKAGES("tracking"), UI_SCAN("scan"), UI_BUDGET("budget"),
+    UI_SEARCH("search"), UI_WEATHER("weather"), UI_CLOCK("homelab"), UI_PACKAGES("tracking"), UI_SCAN("scan"), UI_BUDGET("budget"),
     UI_STOCKS("stocks"), UI_MAT("mat"), UI_FINANCE("finance"), UI_DOMAINS("domains"), UI_FINN("finn");
 
     val oneUi get() = name.startsWith("UI_")
+
+    /** Navnet under Samsung-widgeten (søkefeltet har ikke navn, som hos Samsung). */
+    val label: String? get() = when (this) {
+        UI_WEATHER -> "Vær"; UI_CLOCK -> "Klokke"; UI_PACKAGES -> "Pakker"; UI_SCAN -> "Skann"; UI_BUDGET -> "Budsjett"
+        UI_STOCKS -> "Aksjer"; UI_MAT -> "Middag"; UI_FINANCE -> "FinansHub"; UI_DOMAINS -> "Domener"; UI_FINN -> "Finn"
+        else -> null
+    }
 }
 
 /** Felles for alle widgetene: data fra WidgetStore, tegnes på nytt når dataene eller utseendet endres. */
@@ -93,10 +101,13 @@ abstract class HubWidget(private val kind: WKind) : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val first = WidgetStore.current(context)
         val firstStyle = WidgetStore.currentStyle(context)
+        val appId = runCatching { GlanceAppWidgetManager(context).getAppWidgetId(id) }.getOrDefault(0)
+        val firstLabel = WidgetStore.label(context, appId)
         provideContent {
             val data by WidgetStore.data.collectAsState()
             val style by WidgetStore.style.collectAsState()
-            GlanceTheme { WidgetBody(kind, data ?: first, style ?: firstStyle) }
+            val labels by WidgetStore.labels.collectAsState()
+            GlanceTheme { WidgetBody(kind, data ?: first, style ?: firstStyle, labels[appId] ?: firstLabel) }
         }
     }
 }
@@ -264,10 +275,19 @@ private fun sparkline(values: List<Double>, color: Int): Bitmap? {
 private fun isNight(ctx: Context) = (ctx.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
 
 @Composable
-private fun WidgetBody(kind: WKind, d: WidgetData, style: WidgetStyle) {
+private fun WidgetBody(kind: WKind, d: WidgetData, style: WidgetStyle, label: Boolean = true) {
     val ctx = LocalContext.current
     val f = Fmt(AppPrefs(ctx).bool(AppPrefs.HIDE_AMOUNTS))
-    if (kind.oneUi) OneUi(kind, d, style, f) else Material(kind, d, f)
+    if (!kind.oneUi) { Material(kind, d, f); return }
+    // Samsung-widgets: navnet står under widgeten (13 sp, sentrert, hvitt), som på One UI. Kan slås av i «Rediger widget».
+    val name = kind.label
+    if (!label || name == null) { OneUi(kind, d, style, f); return }
+    Column(GlanceModifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(GlanceModifier.fillMaxWidth().defaultWeight()) { OneUi(kind, d, style, f) }
+        Spacer(GlanceModifier.height(5.dp))
+        Text(name, style = TextStyle(color = fixed(Color.White), fontSize = 13.sp, textAlign = TextAlign.Center), maxLines = 1,
+            modifier = GlanceModifier.fillMaxWidth().height(19.dp))
+    }
 }
 
 /* ---------------- 1b · Material You ---------------- */

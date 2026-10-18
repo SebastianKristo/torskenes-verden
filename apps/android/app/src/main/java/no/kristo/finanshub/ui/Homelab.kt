@@ -60,7 +60,7 @@ private val WIDGETS: Map<String, Triple<String, String, ImageVector>> = mapOf(
 private val HL_NAMES = mapOf("hl" to "Homelab", "home" to "Finans", "trk" to "Sporing", "dom" to "Domener", "mat" to "Mat")
 private val FIN_NAMES = mapOf("home" to "Oversikt", "list" to "Liste", "finn" to "Finn", "bud" to "Budsjett", "ai" to "Søk", "mer" to "Mer")
 
-private fun greeting(): String = when (LocalTime.now().hour) { in 5..9 -> "God morgen"; in 10..17 -> "Hei"; else -> "God kveld" }
+private fun greeting(): String = greetingFor()
 
 /**
  * Homelab-forsiden på mobil: hilsen, klokke og vær, Google-søk, snarveier, Andre OS og valgfrie widgets.
@@ -77,7 +77,7 @@ internal fun HomelabScreen(vm: AppViewModel, twoPane: Boolean) {
                 Column(Modifier.weight(1f)) {
                     Text(longDate(), color = C.text2, fontSize = 13.sp)
                     // Alltid to linjer: «God kveld,» over navnet.
-                    Text("${h?.greeting ?: greeting()},", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis, lineHeight = 34.sp)
+                    Text("${greeting()},", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis, lineHeight = 34.sp)
                     Text(vm.displayName.ifBlank { "du" }, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis, lineHeight = 34.sp)
                 }
                 if (edit) {
