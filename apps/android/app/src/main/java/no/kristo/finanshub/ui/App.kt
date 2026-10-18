@@ -101,6 +101,14 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
         camera.launch(uri)
     }
     val scan = ScanActions(takePhoto, { vm.scanSheet = true }, vm.option(AppPrefs.SCAN_TAP, "camera") == "camera")
+    // Skann-widgeten: finanshub://scan/camera eller /files.
+    LaunchedEffect(vm.pendingScan) {
+        when (vm.pendingScan) {
+            "camera" -> takePhoto()
+            "files" -> files.launch(arrayOf("application/pdf", "image/jpeg", "image/heic", "image/heif", "image/png"))
+        }
+        vm.pendingScan = null
+    }
 
     val twoPane = width != WindowWidthSizeClass.Compact
     val s = vm.screen
@@ -122,7 +130,8 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
             if (!twoPane && fab) ScanFab(scan)
         },
     ) { pad ->
-        Row(Modifier.fillMaxSize().padding(pad)) {
+        // Matplan går helt ned til kanten (listen legger selv på plass til navigasjonslinja), så ingenting kuttes nederst.
+        Row(Modifier.fillMaxSize().padding(if (matSurface) PaddingValues(top = pad.calculateTopPadding()) else pad)) {
             if (twoPane && s != Screen.Mat) Rail(vm, scan)
             when {
                 vm.original != null -> Box(Modifier.weight(1f).fillMaxHeight()) { OriginalScreen(vm) }

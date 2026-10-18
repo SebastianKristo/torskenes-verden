@@ -27,12 +27,12 @@ class Api(private val baseUrl: String, private val token: String?) {
 
     private fun url(path: String, prefix: String) = URL(baseUrl.trimEnd('/') + prefix + path)
 
-    suspend fun request(method: String, path: String, json: JSONObject? = null, prefix: String = FINANS, timeout: Int = 10_000): String = withContext(Dispatchers.IO) {
+    suspend fun request(method: String, path: String, json: JSONObject? = null, prefix: String = FINANS, timeout: Int = 10_000, read: Int = 30_000): String = withContext(Dispatchers.IO) {
         val conn = url(path, prefix).openConnection() as HttpURLConnection
         try { net {
             conn.requestMethod = method
             conn.connectTimeout = timeout
-            conn.readTimeout = 30_000
+            conn.readTimeout = read
             conn.setRequestProperty("Accept", "application/json")
             token?.let { conn.setRequestProperty("Authorization", "Bearer $it") }
             if (json != null) {
@@ -65,6 +65,8 @@ class Api(private val baseUrl: String, private val token: String?) {
             val msg = o?.optString("error")?.takeIf { it.isNotBlank() } ?: "Feil $code"
             throw ApiException(msg, code, o?.optBoolean("needsTotp") == true)
         }
+        // En nettside (innloggingssiden, en proxy eller Cloudflare) i stedet for data: si det tydelig i stedet for en JSON-feil.
+        if (body.trimStart().startsWith("<")) throw ApiException("Uventet svar fra serveren: fikk en nettside i stedet for data fra ${conn.url.path}. Oppdater homelab eller logg inn på nytt.", 502)
         return body
     }
 

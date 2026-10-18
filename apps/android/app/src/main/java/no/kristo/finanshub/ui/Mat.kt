@@ -1,11 +1,9 @@
 package no.kristo.finanshub.ui
 
-import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
@@ -17,7 +15,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -27,36 +24,26 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.view.WindowCompat
 import no.kristo.finanshub.*
 import java.time.LocalDate
 
 /* ---------------- Matplan på mobil: egen flate i «matapp»-utseendet ---------------- */
 
-/** Fargene i Matplan, lys (standard) og mørk. Følger ikke aksentfargen. */
+/** Fargene i Matplan. Utledes fra appens tema (Material You eller frøfargen, lys eller mørk), som resten av appen. */
 internal data class MatPalette(
     val dark: Boolean, val bg: Color, val text: Color, val sub: Color, val muted: Color, val card: Color, val accent: Color,
     val lime: Color, val cream: Color, val border: Color, val black: Color, val onBlack: Color, val tagBg: Color, val tagFg: Color, val row: Color,
     val tiles: List<Color>, val checkOn: Color, val checkOff: Color,
-) {
-    companion object {
-        private fun c(v: Long) = Color(v)
-        val Light = MatPalette(false, c(0xFFF1F2EC), c(0xFF1E241C), c(0xFF5B6158), c(0xFF7A8077), Color.White, c(0xFFF2552C),
-            c(0xFFE4F0A9), c(0xFFFBEACB), c(0xFFD9DCD2), c(0xFF1E1F1C), c(0xFFF1F2EC), c(0xFFF4DDA9), c(0xFF8A5A1E), c(0xFFF6F7F2),
-            listOf(c(0xFFE4F0A9), c(0xFFFBEACB), c(0xFFDCEBE6), c(0xFFF6D9CF), c(0xFFE8E2F4)), c(0xFFC9DB7A), c(0xFFC9CDC1))
-        val Night = MatPalette(true, c(0xFF141612), c(0xFFECEFE6), c(0xFFAEB4A7), c(0xFF959B8E), c(0xFF1E211B), c(0xFFFF7A55),
-            c(0xFF3B4421), c(0xFF3D3323), c(0xFF363A31), c(0xFFECEFE6), c(0xFF141612), c(0xFF2C2519), c(0xFFF0B470), c(0xFF252821),
-            listOf(c(0xFF3B4421), c(0xFF3D3323), c(0xFF24403A), c(0xFF4A2E26), c(0xFF36304A)), c(0xFF6A7A35), c(0xFF4A4F44))
-    }
-}
+)
 
-/** Lys, mørk eller som systemet (Innstillinger → Utseende → Matplan, eller ☾/☀ øverst). */
+/** Matplan følger appens tema: rollene i designet (1b) byttes mot de samme rollene som resten av appen bruker. */
 @Composable
-internal fun matPalette(vm: AppViewModel): MatPalette = when (vm.layout.matTheme) {
-    "dark" -> MatPalette.Night
-    "system" -> if (isSystemInDarkTheme()) MatPalette.Night else MatPalette.Light
-    else -> MatPalette.Light
-}
+internal fun matPalette(@Suppress("UNUSED_PARAMETER") vm: AppViewModel): MatPalette = MatPalette(
+    dark = !Tone.light, bg = C.bg, text = C.text, sub = C.text2, muted = C.outline, card = C.surface1, accent = C.accent,
+    lime = C.heroAi, cream = C.container, border = C.surface3, black = C.primary, onBlack = C.onPrimary,
+    tagBg = tc(0xFF45462A), tagFg = tc(0xFFE6E6AE), row = C.surface2,
+    tiles = listOf(C.heroAi, C.container, tc(0xFF45462A), C.surface3, C.surface2), checkOn = C.primary, checkOff = C.outline,
+)
 
 private val shortDay = listOf("Ma", "Ti", "On", "To", "Fr", "Lø", "Sø")
 private val longDay = listOf("Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag", "Søndag")
@@ -74,18 +61,11 @@ private fun ingInitial(s: String) = initial(s.replace(amount, "").ifBlank { s })
 @Composable
 internal fun MatSurface(vm: AppViewModel) {
     val p = matPalette(vm)
-    // Mørke ikoner i statuslinja på den lyse flaten.
-    val view = LocalView.current
-    DisposableEffect(p.dark) {
-        val window = (view.context as? Activity)?.window
-        val ctl = window?.let { WindowCompat.getInsetsController(it, view) }
-        val before = ctl?.isAppearanceLightStatusBars
-        ctl?.isAppearanceLightStatusBars = !p.dark
-        onDispose { if (before != null) ctl?.isAppearanceLightStatusBars = before }
-    }
     val w = vm.week
+    // Hele høyden: listen går helt ned, og det siste kortet havner over navigasjonslinja (også med tre knapper).
+    val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     LazyColumn(
-        Modifier.fillMaxSize().background(p.bg), contentPadding = PaddingValues(18.dp, 4.dp, 18.dp, 48.dp), verticalArrangement = Arrangement.spacedBy(16.dp),
+        Modifier.fillMaxSize().background(p.bg), contentPadding = PaddingValues(18.dp, 4.dp, 18.dp, 48.dp + navBottom), verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         vm.topRowTitle(true)?.let { t -> item { TopBackRow(vm, t, p.text, p.card, p.border) } }
         item { MatHeader(vm, p) }
@@ -182,12 +162,6 @@ private fun MatHeader(vm: AppViewModel, p: MatPalette) {
             Text(if (first.isBlank()) "Hei" else "Hei, $first", color = p.sub, fontSize = 15.sp)
             Text("Middag denne uka", color = p.text, fontSize = 30.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Box(
-            Modifier.size(44.dp).clip(CircleShape).background(p.card).border(1.dp, p.border, CircleShape)
-                .clickable(role = Role.Button) { vm.setMatTheme(if (p.dark) "light" else "dark") }
-                .semantics { contentDescription = if (p.dark) "Bytt til lyst utseende" else "Bytt til mørkt utseende" },
-            contentAlignment = Alignment.Center,
-        ) { Text(if (p.dark) "☀" else "☾", color = p.text, fontSize = 18.sp) }
         Box(
             Modifier.size(44.dp).clip(CircleShape).background(p.black).clickable(role = Role.Button) { vm.planWeek() }.semantics { contentDescription = "Ny ukeplan" },
             contentAlignment = Alignment.Center,

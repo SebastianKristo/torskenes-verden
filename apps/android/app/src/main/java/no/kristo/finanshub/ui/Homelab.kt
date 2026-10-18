@@ -76,10 +76,9 @@ internal fun HomelabScreen(vm: AppViewModel, twoPane: Boolean) {
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(longDate(), color = C.text2, fontSize = 13.sp)
-                    Row {
-                        Text("${h?.greeting ?: greeting()}, ", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Normal)
-                        Text(vm.displayName.ifBlank { "du" }, style = MaterialTheme.typography.headlineMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
+                    // Alltid to linjer: «God kveld,» over navnet.
+                    Text("${h?.greeting ?: greeting()},", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis, lineHeight = 34.sp)
+                    Text(vm.displayName.ifBlank { "du" }, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, maxLines = 1, overflow = TextOverflow.Ellipsis, lineHeight = 34.sp)
                 }
                 if (edit) {
                     FilledTonalIconButton(onClick = { vm.widgetGallery = true }) { Icon(Icons.Filled.Add, "Legg til widget") }
@@ -288,23 +287,26 @@ private fun ServerCard(st: ServerStatus?) {
     }
 }
 
+/** Ruter: kompakt som i designet. Én rad per avgang med farget linjemerke, destinasjon og minutter, maks 4 avganger. */
 @Composable
 private fun RuterCard(lines: List<RuterLine>) {
-    HCard {
-        Text("Ruter-avganger", fontWeight = FontWeight.Bold)
-        if (lines.isEmpty()) Text("Ingen avganger. Sett opp strekninger i Homelab → Innstillinger → Integrasjoner.", color = C.text2, fontSize = 13.sp)
-        lines.forEach { l ->
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("${l.from} → ${l.to}", fontSize = 13.sp, color = C.text2, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    l.departures.take(3).forEach { d ->
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(d.line, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold,
-                                modifier = Modifier.clip(RoundedCornerShape(6.dp)).background(d.color?.let { Color(it) } ?: tc(0xFFE60000)).padding(6.dp, 2.dp))
-                            Text(d.min?.let { if (it <= 0) "nå" else "$it min" } ?: d.time ?: "–", fontFamily = Mono, fontSize = 14.sp)
-                        }
-                    }
+    val rows = lines.flatMap { l -> l.departures.map { d -> l to d } }
+        .sortedBy { (_, d) -> d.min ?: Int.MAX_VALUE }.take(4)
+    val stop = lines.map { it.from }.distinct().singleOrNull()
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(C.surface1).padding(18.dp, 16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), verticalAlignment = Alignment.Bottom) {
+            Text(if (stop.isNullOrBlank()) "Ruter" else "Ruter · $stop", fontWeight = FontWeight.Bold, fontSize = 16.sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("Sanntid", color = C.text2, fontSize = 12.5.sp)
+        }
+        if (rows.isEmpty()) Text("Ingen avganger. Sett opp strekninger i Homelab → Innstillinger → Integrasjoner.", color = C.text2, fontSize = 13.sp)
+        rows.forEach { (l, d) ->
+            Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(Modifier.widthIn(min = 32.dp).height(24.dp).clip(RoundedCornerShape(6.dp)).background(d.color?.let { Color(it) } ?: tc(0xFFE60000)).padding(horizontal = 6.dp),
+                    contentAlignment = Alignment.Center) {
+                    Text(d.line, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 }
+                Text(d.to ?: l.to, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text(d.min?.let { if (it <= 0) "nå" else "$it min" } ?: d.time ?: "–", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }

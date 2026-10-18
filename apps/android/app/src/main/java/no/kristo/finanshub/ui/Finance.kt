@@ -483,7 +483,7 @@ internal fun ScanQueue(vm: AppViewModel, scan: () -> Unit, pick: () -> Unit) {
                             "pending" -> j.name to "I kø"
                             "processing" -> j.name to "Gemini leser … ${j.progress} %"
                             "needs_review" -> (j.merchant ?: j.name) to "Klar · trykk for å bekrefte"
-                            "error" -> j.name to "Feilet – fyll ut manuelt"
+                            "error" -> j.name to "Feilet · trykk for å analysere på nytt med Gemini"
                             else -> j.name to j.status
                         }
                         JobRow(title, sub, j.progress.takeIf { j.status == "processing" }, itemShape(idx, n)) { vm.selectedReceipt = j.id }
@@ -510,6 +510,9 @@ internal fun ScanQueue(vm: AppViewModel, scan: () -> Unit, pick: () -> Unit) {
                                     Text(if (r.status == "needs_review") "${ddmm(r.date)} · ${r.provider ?: "manuell"}" else "Leser …", color = C.text2, fontSize = 13.sp)
                                 }
                                 r.total?.let { Text(n2(it), fontFamily = Mono) }
+                                if (r.canReanalyze || r.status == "error") IconButton(onClick = { vm.selectedReceipt = r.id; vm.reanalyze(r.id) }, enabled = vm.reanalyzing == null) {
+                                    if (vm.reanalyzing == r.id) CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp)) else Text("✦", color = C.primary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
                     }
@@ -551,7 +554,7 @@ internal fun ReceiptConfirm(vm: AppViewModel, back: (() -> Unit)?) {
             val idx = queue.indexOfFirst { it.id == r.id }
             if (idx >= 0) Text("${idx + 1} av ${queue.size}", color = C.text2)
         }
-        if (r.status != "needs_review") {
+        if (r.status == "pending" || r.status == "processing") {
             Column(Modifier.fillMaxWidth().padding(40.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 CircularProgressIndicator(color = C.primary); Text("Leser kvitteringen med ${if (st?.provider == "gemini") "Gemini" else "Ollama"} …", color = C.text2)
             }
@@ -559,6 +562,8 @@ internal fun ReceiptConfirm(vm: AppViewModel, back: (() -> Unit)?) {
         }
         ReceiptImage(vm, r)
         val high = r.error == null && r.flag == null && r.confidence >= (st?.minConf ?: 85) / 100.0
+        // Feilet, lav sikkerhet eller usikker Ollama: la Gemini lese originalbildet på nytt.
+        if (r.canReanalyze || r.status == "error" || !high) ReanalyzeButton(vm, r)
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(r.provider?.let { p -> "$p${r.seconds?.let { " · ${n2(it)} s" } ?: ""}" } ?: "Manuell utfylling", color = C.text2, fontSize = 13.sp)
             Text(if (r.error != null) "Fyll ut" else if (high) "Høy sikkerhet" else "Sjekk beløp", color = if (high) C.positive else C.primary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
@@ -625,3 +630,53 @@ internal fun EditField(label: String, value: String, key: Any, number: Boolean =
     DisposableEffect(key) { onDispose { if (text != value) onSave(text) } }
 }
 
+
+/** «✦ Analyser på nytt med Gemini» på bekreftelsessiden. */
+@Composable
+internal fun ReanalyzeButton(vm: AppViewModel, r: Receipt) {
+    val busy = vm.reanalyzing == r.id
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        FilledTonalButton(onClick = { vm.reanalyze(r.id) }, enabled = !busy, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp)) {
+            if (busy) { CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(18.dp)); Spacer(Modifier.width(10.dp)); Text("Gemini leser kvitteringen …") }
+            else Text("✦ Analyser på nytt med Gemini", fontWeight = FontWeight.SemiBold)
+        }
+        r.reanalyzeReason?.let { Text(it, color = C.text2, fontSize = 12.sp, modifier = Modifier.padding(start = 8.dp)) }
+    }
+    vm.reanalysis?.takeIf { it.receiptId == r.id }?.let { ReanalysisDialog(vm, it) }
+}
+
+/** Forrige tolkning og Gemini side om side. Brukeren velger hvilken som beholdes. */
+@Composable
+private fun ReanalysisDialog(vm: AppViewModel, a: Reanalysis) {
+    AlertDialog(
+        onDismissRequest = { vm.reanalysis = null },
+        containerColor = C.surface1,
+        title = { Text("Sammenlign tolkningene") },
+        text = {
+            Row(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ExtractColumn("Forrige", a.previous, a.result, Modifier.weight(1f))
+                ExtractColumn("Gemini", a.result, a.previous, Modifier.weight(1f))
+            }
+        },
+        confirmButton = { Button(onClick = { vm.applyReanalysis("new") }, colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) { Text("Bruk Gemini") } },
+        dismissButton = { TextButton(onClick = { vm.applyReanalysis("old") }) { Text("Behold forrige") } },
+    )
+}
+
+@Composable
+private fun ExtractColumn(title: String, e: ReExtract, other: ReExtract, modifier: Modifier) {
+    Column(modifier.clip(RoundedCornerShape(18.dp)).background(C.surface2).padding(12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Text(title + (e.engine?.let { " · $it" } ?: ""), fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        ExtractField("Butikk", e.merchant ?: "–", e.merchant != other.merchant)
+        ExtractField("Dato", e.date?.let(::ddmmyyyy) ?: "–", e.date != other.date)
+        ExtractField("Total", e.total?.let { n2(it) + " kr" } ?: "–", e.total != other.total)
+        ExtractField("Varelinjer", "${e.items.size}", e.items.size != other.items.size)
+        ExtractField("Sikkerhet", e.confidence?.let { "${(if (it <= 1) it * 100 else it).toInt()} %" } ?: "–", false)
+    }
+}
+
+@Composable
+private fun ExtractField(label: String, v: String, diff: Boolean) {
+    Text(label, color = C.text2, fontSize = 11.sp)
+    Text(v, fontWeight = if (diff) FontWeight.Bold else FontWeight.Normal, color = if (diff) C.primary else C.text, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+}

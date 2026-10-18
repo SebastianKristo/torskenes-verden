@@ -303,23 +303,27 @@ internal fun weatherIcon(code: String, text: String = ""): ImageVector {
 private fun deg(v: Double?) = v?.let { "${Math.round(it)}°" } ?: "–"
 private fun mm(v: Double) = String.format(java.util.Locale("nb", "NO"), if (v < 10) "%.1f" else "%.0f", v)
 
-/** Klokke og vær (kompakt, like stort som Pakker-kortet). */
+/**
+ * Klokke og vær på Homelab-hjem (designet 1b): klokke og dato, temperatur, tilstand, føles som / høy / lav, vindlinjen og
+ * en liten bar nederst med de neste 6 timene. Nowcast, dagene og chipsene hører bare til på web-Dashboard.
+ */
 @Composable
 internal fun WeatherCard(vm: AppViewModel, modifier: Modifier = Modifier) {
     var now by remember { mutableStateOf(LocalTime.now()) }
     LaunchedEffect(Unit) { while (true) { now = LocalTime.now(); delay(1000) } }
     val w = vm.mobileHome?.weather
     val x = vm.mobileHome?.weatherX
-    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(C.surface1).padding(18.dp, 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    Column(modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(C.surface1).padding(20.dp, 18.dp, 20.dp, 14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(Modifier.weight(1f)) {
-                Text(now.format(DateTimeFormatter.ofPattern("HH:mm")), fontSize = 44.sp, fontWeight = FontWeight.Light, fontFamily = Mono)
-                Text(longDate(), color = C.text2, fontSize = 13.sp, maxLines = 1)
+                Text(now.format(DateTimeFormatter.ofPattern("HH:mm")), fontSize = 52.sp, fontWeight = FontWeight.Light, lineHeight = 54.sp, maxLines = 1)
+                Text(longDate(), color = C.text2, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (w == null) Text("Vær mangler", color = C.text2, fontSize = 13.sp)
             else Column(horizontalAlignment = Alignment.End) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Icon(weatherIcon(x?.symbol ?: "", w.text ?: ""), null, tint = C.primary, modifier = Modifier.size(26.dp))
+                    Icon(weatherIcon(x?.symbol ?: "", w.text ?: ""), null, tint = C.primary, modifier = Modifier.size(24.dp))
                     Text(deg(w.temp), fontSize = 28.sp, fontWeight = FontWeight.SemiBold)
                 }
                 w.text?.let { Text(it, color = C.text2, fontSize = 13.sp, maxLines = 1) }
@@ -327,41 +331,26 @@ internal fun WeatherCard(vm: AppViewModel, modifier: Modifier = Modifier) {
                 if (extra.isNotEmpty()) Text(extra.joinToString(" · "), color = C.text2, fontSize = 12.sp, maxLines = 1)
             }
         }
-        if (x != null) {
-            val line = listOfNotNull((x.wind ?: w?.wind)?.let { "Vind ${Math.round(it)} m/s${if (x.windDir.isNotBlank()) " ${x.windDir}" else ""}${x.gust?.let { g -> " (kast ${Math.round(g)})" } ?: ""}" },
-                x.precip24?.let { "Nedbør ${mm(it)} mm" }, x.humidity?.let { "Fukt ${Math.round(it)} %" })
-            if (line.isNotEmpty()) Text(line.joinToString(" · "), color = C.text2, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            if (x.hours.isNotEmpty()) Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(C.surface2).padding(vertical = 6.dp)) {
+        val wind = (x?.wind ?: w?.wind)?.let { "Vind ${Math.round(it)} m/s${if (x?.windDir?.isNotBlank() == true) " ${x.windDir}" else ""}${x?.gust?.let { g -> " (kast ${Math.round(g)})" } ?: ""}" }
+        val line = listOfNotNull(w?.place?.takeIf { it.isNotBlank() }, wind)
+        if (line.isNotEmpty()) Text(line.joinToString(" · "), color = C.text2, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (x != null && x.hours.isNotEmpty()) {
+            HorizontalDivider(color = C.surface3)
+            Row(Modifier.fillMaxWidth()) {
                 x.hours.take(6).forEach { h ->
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(h.label, color = C.text2, fontSize = 11.sp, maxLines = 1)
+                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        Text(h.label, color = C.text2, fontSize = 11.5.sp, maxLines = 1)
                         Icon(weatherIcon(h.symbol), null, tint = C.primary, modifier = Modifier.size(16.dp))
-                        Text(deg(h.temp), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                        Text(if (h.mm > 0) mm(h.mm) else " ", fontSize = 9.sp, color = tc(0xFF8FC1FF))
+                        Text(deg(h.temp), fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold)
+                        Text(if (h.mm > 0) mm(h.mm) else " ", fontSize = 10.sp, color = C.text2, maxLines = 1)
                     }
                 }
             }
-            if (x.nowcast.isNotBlank()) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(Icons.Filled.Umbrella, null, tint = C.accentLight, modifier = Modifier.size(14.dp))
-                Text(x.nowcast, color = C.accentLight, fontSize = 12.sp, maxLines = 2)
-            }
-            val days = if (x.days.size > 3) x.days.drop(1).take(3) else x.days
-            days.forEach { d ->
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(d.label, fontSize = 12.sp, modifier = Modifier.width(52.dp), maxLines = 1)
-                    Icon(weatherIcon(d.symbol), null, tint = C.primary, modifier = Modifier.size(16.dp))
-                    Text("${deg(d.max)} / ${deg(d.min)}", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                    if (d.mm > 0) Text("${mm(d.mm)} mm", fontSize = 11.sp, color = tc(0xFF8FC1FF))
-                }
-            }
-            val chips = listOfNotNull(x.sunrise?.let { "↑ " + fmtTime(it, "HH:mm") }, x.sunset?.let { "↓ " + fmtTime(it, "HH:mm") }, x.uv?.let { "UV ${Math.round(it)}" },
-                x.pressure?.let { "${Math.round(it)} hPa" + when (x.pressureTrend) { "Stigende" -> " ↑"; "Synkende" -> " ↓"; else -> "" } })
-            if (chips.isNotEmpty()) Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { chips.forEach { Chip(it, C.surface2, C.text) } }
         }
     }
 }
 
-/** «Pakker» i karusellen: de 2 viktigste. Trykk åpner Sporing. */
+/** «Pakker» i karusellen: de 2 viktigste. Like høyt som klokkekortet, også med 0 eller 1 pakke. Trykk åpner Sporing. */
 @Composable
 internal fun PackagesCard(vm: AppViewModel, modifier: Modifier = Modifier) {
     val items = vm.homePackages ?: vm.tracking?.top(2) ?: emptyList()
@@ -371,13 +360,14 @@ internal fun PackagesCard(vm: AppViewModel, modifier: Modifier = Modifier) {
             Icon(Icons.Filled.LocalShipping, null, tint = C.primary)
             Text("Pakker", fontWeight = FontWeight.SemiBold, fontSize = 17.sp, modifier = Modifier.weight(1f))
             vm.tracking?.activeCount?.takeIf { it > 0 }?.let { Chip("$it", C.container, C.onContainer) }
+            Text("Åpne ›", color = C.primary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
         }
         if (items.isEmpty()) Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) { Text("Ingen pakker på vei.", color = C.text2) }
         else {
             items.take(2).forEach { s ->
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(C.surface2).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(C.surface2).padding(12.dp, 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        CarrierBadge(s.carrierIni, s.carrierColor, s.carrierFg, 34)
+                        CarrierBadge(s.carrierIni, s.carrierColor, s.carrierFg, 32)
                         Column(Modifier.weight(1f)) {
                             Text(s.name, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(s.statusText + if (s.etaText.isBlank()) "" else " · ${s.etaText}", color = if (s.ready) C.accentLight else C.text2, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -388,7 +378,6 @@ internal fun PackagesCard(vm: AppViewModel, modifier: Modifier = Modifier) {
             }
             Spacer(Modifier.weight(1f))
         }
-        Text("Åpne sporing ›", color = C.primary, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, modifier = Modifier.align(Alignment.End))
     }
 }
 
@@ -399,7 +388,8 @@ internal fun HomeCarousel(vm: AppViewModel) {
     val state = rememberPagerState(pageCount = { 2 })
     val scope = rememberCoroutineScope()
     LaunchedEffect(state) { snapshotFlow { state.currentPage }.drop(1).collect { Haptics.select() } }
-    val h = if (vm.mobileHome?.weatherX != null) 420.dp else 240.dp
+    // Fast høyde: begge kortene er like høye, uansett antall pakker. Uten timestripe blir klokkekortet lavere.
+    val h = if (vm.mobileHome?.weatherX?.hours?.isNotEmpty() == true) 232.dp else 216.dp
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         HorizontalPager(state, Modifier.fillMaxWidth().height(h), pageSpacing = 12.dp) { p ->
             if (p == 0) WeatherCard(vm, Modifier.fillMaxHeight()) else PackagesCard(vm, Modifier.fillMaxHeight())

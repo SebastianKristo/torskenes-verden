@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Samsung-stil klokke (Widgets.dc.html 1c): dato over stor klokke. TextClock oppdaterer seg selv uten at widgeten tegnes på nytt. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center_vertical">
+    <TextClock
+        android:id="@+id/clock_date"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:format12Hour="EEE d. MMM"
+        android:format24Hour="EEE d. MMM"
+        android:textSize="14sp"
+        android:textColor="#BFFFFFFF" />
+    <TextClock
+        android:id="@+id/clock_time"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:format12Hour="HH:mm"
+        android:format24Hour="HH:mm"
+        android:fontFamily="sans-serif-light"
+        android:includeFontPadding="false"
+        android:textSize="46sp"
+        android:textColor="#FFFFFFFF" />
+</LinearLayout>

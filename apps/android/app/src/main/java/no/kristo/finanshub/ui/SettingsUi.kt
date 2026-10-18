@@ -338,12 +338,12 @@ private fun LookPage(vm: AppViewModel) = Pages {
         }
         if (open) NavEditors(vm)
     }
-    Section("Matplan") {
+    Section("Sider") {
         Group {
-            listOf("light" to "Lys", "dark" to "Mørk", "system" to "Som systemet").forEach { (k, n) ->
-                Choice(n, on = vm.layout.matTheme == k) { vm.setMatTheme(k) }
-            }
+            Choice("Samme overalt", "Alle sidene, også Domener og Matplan, bruker fargetemaet under", on = vm.option(AppPrefs.PAGES, "same") == "same") { vm.setPref(AppPrefs.PAGES, "same") }
+            Choice("Egen farge per side", "Domener er rosa, og modulene beholder sine egne kulører", on = vm.option(AppPrefs.PAGES, "same") == "own") { vm.setPref(AppPrefs.PAGES, "own") }
         }
+        Note("Matplan følger alltid appens tema og lys/mørk-valget.")
     }
     Group {
         Toggle("Skjul beløp til jeg trykker", "Beløp vises som prikker til du trykker på saldoen eller øyet", vm.flag(AppPrefs.HIDE_AMOUNTS)) { vm.setPref(AppPrefs.HIDE_AMOUNTS, it) }
@@ -364,6 +364,22 @@ private fun LookPage(vm: AppViewModel) = Pages {
     }
     Section("Lys eller mørk") {
         Group { MODES.forEach { (k, n) -> Choice(n, on = vm.option(AppPrefs.MODE, "dark") == k) { vm.setPref(AppPrefs.MODE, k) } } }
+    }
+    Section("Widgets · One UI-stil") {
+        val ctx = LocalContext.current
+        var alpha by remember { mutableStateOf(vm.optionInt(AppPrefs.W_ALPHA, 75).toFloat()) }
+        Group {
+            listOf("system" to "Som systemet", "dark" to "Mørk", "light" to "Lys").forEach { (k, n) ->
+                Choice(n, on = vm.option(AppPrefs.W_THEME, "system") == k) { vm.setPref(AppPrefs.W_THEME, k); no.kristo.finanshub.widget.WidgetSync.styleChanged(ctx) }
+            }
+            Column(Modifier.fillMaxWidth().padding(16.dp, 8.dp)) {
+                Row { Text("Bakgrunn", Modifier.weight(1f)); Text("${alpha.toInt()} %", color = C.text2) }
+                Slider(value = alpha, onValueChange = { alpha = it }, valueRange = 0f..100f, steps = 9,
+                    onValueChangeFinished = { vm.setPref(AppPrefs.W_ALPHA, alpha.toInt()); no.kristo.finanshub.widget.WidgetSync.styleChanged(ctx) },
+                    colors = SliderDefaults.colors(thumbColor = C.primary, activeTrackColor = C.primary))
+            }
+        }
+        Note("Gjelder Samsung-widgetene (Søk, Klokke, Vær, Pakker, Skann, Budsjett, Aksjer, Middag, FinansHub, Domener og Finn). Material You-widgetene følger fargene fra bakgrunnsbildet.")
     }
     Note("Fargebakgrunn (lysflekker bak glasset) finnes i iPhone-appen.")
 }

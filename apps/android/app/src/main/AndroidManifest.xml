@@ -26,6 +26,13 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Widgetene og snarveier åpner riktig side: finanshub://tracking, finanshub://scan/camera … -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="finanshub" />
+            </intent-filter>
             <!-- «Del → FinansHub» fra Galleri: kvitteringen lastes opp direkte. -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
@@ -43,6 +50,96 @@
                 <data android:mimeType="image/*" />
             </intent-filter>
         </activity>
+
+        <!-- Hjemskjerm-widgets (Glance): Material You (1b) og Samsung One UI-stil (1c). -->
+        <receiver android:name=".widget.WeatherReceiver" android:exported="true" android:label="Vær">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather" />
+        </receiver>
+        <receiver android:name=".widget.PackagesReceiver" android:exported="true" android:label="Pakker">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_packages" />
+        </receiver>
+        <receiver android:name=".widget.BudgetReceiver" android:exported="true" android:label="Budsjett">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_budget" />
+        </receiver>
+        <receiver android:name=".widget.FinanceReceiver" android:exported="true" android:label="Finans">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_finance" />
+        </receiver>
+        <receiver android:name=".widget.NextChargeReceiver" android:exported="true" android:label="Neste trekk">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_next" />
+        </receiver>
+        <receiver android:name=".widget.StocksReceiver" android:exported="true" android:label="Aksjer">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_stocks" />
+        </receiver>
+        <receiver android:name=".widget.DomainsReceiver" android:exported="true" android:label="Domener">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_domains" />
+        </receiver>
+        <receiver android:name=".widget.MatReceiver" android:exported="true" android:label="Matplan">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_mat" />
+        </receiver>
+        <receiver android:name=".widget.FinnReceiver" android:exported="true" android:label="Finn">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_finn" />
+        </receiver>
+        <receiver android:name=".widget.BoligReceiver" android:exported="true" android:label="Boliger">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_bolig" />
+        </receiver>
+        <receiver android:name=".widget.ScanReceiver" android:exported="true" android:label="Skann">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_scan" />
+        </receiver>
+        <receiver android:name=".widget.OneUiSearchReceiver" android:exported="true" android:label="Søk · One UI">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ui_search" />
+        </receiver>
+        <receiver android:name=".widget.OneUiWeatherReceiver" android:exported="true" android:label="Vær · One UI">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ui_weather" />
+        </receiver>
+        <receiver android:name=".widget.OneUiClockReceiver" android:exported="true" android:label="Klokke · One UI">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ui_clock" />
+        </receiver>
+        <receiver android:name=".widget.OneUiPackagesReceiver" android:exported="true" android:label="Pakker · One UI">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ui_packages" />
+        </receiver>
+        <receiver android:name=".widget.OneUiScanReceiver" android:exported="true" android:label="Skann · One UI">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ui_scan" />
+        </receiver>
+        <receiver android:name=".widget.OneUiBudgetReceiver" android:exported="true" android:label="Budsjett · One UI">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ui_budget" />
+        </receiver>
+        <receiver android:name=".widget.OneUiStocksReceiver" android:exported="true" android:label="Aksjer · One UI">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ui_stocks" />
+        </receiver>
+        <receiver android:name=".widget.OneUiMatReceiver" android:exported="true" android:label="Middag · One UI">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ui_mat" />
+        </receiver>
+        <receiver android:name=".widget.OneUiFinanceReceiver" android:exported="true" android:label="FinansHub · One UI">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ui_finance" />
+        </receiver>
+        <receiver android:name=".widget.OneUiDomainsReceiver" android:exported="true" android:label="Domener · One UI">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ui_domains" />
+        </receiver>
+        <receiver android:name=".widget.OneUiFinnReceiver" android:exported="true" android:label="Finn · One UI">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ui_finn" />
+        </receiver>
 
         <provider
             android:name="androidx.core.content.FileProvider"

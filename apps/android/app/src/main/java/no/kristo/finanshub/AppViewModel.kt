@@ -475,7 +475,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         } catch (e: ApiException) {
             if (e.status == 401 || e.status == 403) moduleError = "${s.label} er ikke tilgjengelig for denne kontoen (${e.message})."
             else if (e.status == 404) moduleError = "${s.label} finnes ikke på serveren ennå. Oppdater homelab."
+            else if (e.status == 502) moduleError = "${s.label}: ${e.message}"
             else throw e
+        } catch (e: org.json.JSONException) {
+            moduleError = "${s.label}: uventet svar fra serveren (${e.message?.take(80)}). Oppdater homelab."
         }
     }
 
@@ -541,6 +544,57 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun updateReceipt(id: String, field: String, value: Any?) = launch {
         val r = parseReceipt(JSONObject(api.patch("/receipts/$id", JSONObject().put(field, value ?: JSONObject.NULL))))
         receipts = receipts?.map { if (it.id == id) r else it }
+    }
+
+    /* ---------- Lenker fra widgetene (finanshub://<side>) ---------- */
+
+    /** «camera» eller «files»: FinansApp åpner kameraet eller filvelgeren når denne settes. */
+    var pendingScan by mutableStateOf<String?>(null)
+
+    fun deepLink(uri: Uri) {
+        if (uri.scheme != "finanshub" || !loggedIn) return
+        menuOpen = false
+        when (uri.host ?: "") {
+            "homelab", "weather" -> go(Screen.Homelab)
+            "tracking", "packages" -> go(Screen.Tracking)
+            "budget" -> go(Screen.Budget)
+            "finance", "home" -> go(Screen.Home)
+            "list" -> go(Screen.List)
+            "review" -> open(Screen.Scan)
+            "subs" -> open(Screen.Sub)
+            "stocks" -> open(Screen.Stocks)
+            "domains" -> go(Screen.Domains)
+            "mat" -> go(Screen.Mat)
+            "finn" -> go(Screen.Finn)
+            "boliger" -> open(Screen.Folders)
+            "search" -> go(Screen.Search)
+            "scan" -> { open(Screen.Scan); pendingScan = when (uri.path?.trim('/')) { "camera" -> "camera"; "files" -> "files"; else -> null } }
+        }
+    }
+
+    /* ---------- ✦ Analyser på nytt med Gemini ---------- */
+
+    var reanalysis by mutableStateOf<Reanalysis?>(null)
+    var reanalyzing by mutableStateOf<String?>(null)
+
+    /** Sender originalbildet til Gemini (modell fra innstillingene) og viser resultatet side om side med det forrige. */
+    fun reanalyze(id: String) = launch {
+        if (reanalyzing != null) return@launch
+        reanalyzing = id
+        try {
+            val res = api.request("POST", "/receipts/$id/reanalyze", JSONObject().put("engine", "gemini"), read = 90_000)
+            reanalysis = parseReanalysis(id, res)
+            Haptics.success()
+        } finally { reanalyzing = null }
+    }
+
+    /** keep = "new" bruker Gemini-resultatet, "old" beholder det forrige. */
+    fun applyReanalysis(keep: String) = launch {
+        val r = reanalysis ?: return@launch
+        api.post("/receipts/${r.receiptId}/reanalyze/apply", JSONObject().put("candidateId", r.candidateId).put("keep", keep))
+        reanalysis = null
+        message = if (keep == "new") "Gemini-resultatet er lagret" else "Beholdt forrige tolkning"
+        loadReceipts()
     }
 
     fun book(id: String) = launch { api.post("/receipts/$id/book"); message = "Bokført ✓"; afterReceiptAction(id) }
@@ -1043,7 +1097,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val parts = mutableListOf<Api.Part>()
         // «Lagre originalbildet» av: send bare skanneversjonen som fil.
         val scan = if (image) withContext(Dispatchers.Default) { scaled(original, 1600, 85) } else null
-        if (!image || prefs.bool(AppPrefs.KEEP_ORIGINAL, true) || scan == null) parts += Api.Part("file", if (mime == "application/pdf") "kvittering.pdf" else "kvittering.jpg", mime, original)
+        // Filnavnet må passe til filtypen (HEIC sendes som .heic, ikke som .jpg), og JPEG-kopien lages alltid lokalt.
+        val ext = when (mime.lowercase()) {
+            "application/pdf" -> "pdf"; "image/heic" -> "heic"; "image/heif" -> "heif"; "image/png" -> "png"; "image/webp" -> "webp"; else -> "jpg"
+        }
+        if (!image || prefs.bool(AppPrefs.KEEP_ORIGINAL, true) || scan == null) parts += Api.Part("file", "kvittering.$ext", if (ext == "jpg") "image/jpeg" else mime, original)
         else parts += Api.Part("file", "kvittering.jpg", "image/jpeg", scan)
         if (image) withContext(Dispatchers.Default) {
             scan?.let { parts += Api.Part("scan", "scan.jpg", "image/jpeg", it) }
@@ -1088,7 +1146,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         BitmapFactory.decodeByteArray(data, 0, data.size, opts)
         var sample = 1
         while (maxOf(opts.outWidth, opts.outHeight) / (sample * 2) >= max) sample *= 2
-        val bmp = BitmapFactory.decodeByteArray(data, 0, data.size, BitmapFactory.Options().apply { inSampleSize = sample }) ?: return null
+        // HEIC/HEIF som BitmapFactory ikke klarer: ImageDecoder (Android 9+) med nedskalering.
+        val bmp = BitmapFactory.decodeByteArray(data, 0, data.size, BitmapFactory.Options().apply { inSampleSize = sample })
+            ?: (if (Build.VERSION.SDK_INT >= 28) runCatching {
+                android.graphics.ImageDecoder.decodeBitmap(android.graphics.ImageDecoder.createSource(java.nio.ByteBuffer.wrap(data))) { dec, info, _ ->
+                    val big = maxOf(info.size.width, info.size.height)
+                    if (big > max) { val k = max.toFloat() / big; dec.setTargetSize((info.size.width * k).toInt().coerceAtLeast(1), (info.size.height * k).toInt().coerceAtLeast(1)) }
+                    dec.allocator = android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE
+                }
+            }.getOrNull() else null) ?: return null
         val rot = rotation(data)
         val s = minOf(1f, max.toFloat() / maxOf(bmp.width, bmp.height))
         val m = Matrix().apply { postScale(s, s); postRotate(rot) }

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_weather_desc">Temperatur, vær og høy/lav</string>
+    <string name="widget_packages_desc">Pakker på vei og klar for henting</string>
+    <string name="widget_budget_desc">Brukt denne måneden</string>
+    <string name="widget_finance_desc">Saldo, siste transaksjoner og kvitteringer</string>
+    <string name="widget_next_desc">Neste abonnementstrekk</string>
+    <string name="widget_stocks_desc">Trading 212 i dag</string>
+    <string name="widget_domains_desc">Besøk og oppetid</string>
+    <string name="widget_mat_desc">Middag i dag og i morgen</string>
+    <string name="widget_finn_desc">Pågående Finn-handler</string>
+    <string name="widget_bolig_desc">Utgifter og regninger</string>
+    <string name="widget_scan_desc">Skann kvittering med kamera eller fra filer</string>
+    <string name="widget_ui_search_desc">Søk i Homelab og FinansHub</string>
+    <string name="widget_ui_weather_desc">Vær i Samsung-stil</string>
+    <string name="widget_ui_clock_desc">Dato, klokke og neste alarm</string>
+    <string name="widget_ui_packages_desc">Neste pakke</string>
+    <string name="widget_ui_scan_desc">Kamera og filer</string>
+    <string name="widget_ui_budget_desc">Budsjett med kategorier</string>
+    <string name="widget_ui_stocks_desc">Trading 212 i dag</string>
+    <string name="widget_ui_mat_desc">Middag i dag</string>
+    <string name="widget_ui_finance_desc">Saldo, trekk, kvitteringer og siste kjøp</string>
+    <string name="widget_ui_domains_desc">Besøk og oppetid</string>
+    <string name="widget_ui_finn_desc">Pågående Finn-handler</string>
+</resources>

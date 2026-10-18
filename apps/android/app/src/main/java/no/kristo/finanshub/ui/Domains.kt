@@ -69,31 +69,31 @@ internal fun DomainsScreen(vm: AppViewModel, twoPane: Boolean) {
     }
 }
 
+/** Overskrift: domenevelgeren (bare ikonet, med statusprikk) og Oppdater står ved siden av profilbildet. */
 @Composable
 private fun DomainHeader(vm: AppViewModel) {
     var pick by remember { mutableStateOf(false) }
-    Column {
     ModuleHeader(vm, "Domener", actions = {
-        IconButton(onClick = { vm.reloadDomain() }) { Icon(Icons.Filled.Refresh, "Oppdater", tint = P.accent) }
-        IconButton(onClick = { vm.settingsPage = null; vm.open(Screen.Settings) }) { Icon(Icons.Filled.Settings, "Innstillinger", tint = P.text2) }
-    })
-    Spacer(Modifier.height(8.dp))
-    Box {
-        Row(Modifier.clip(RoundedCornerShape(20.dp)).background(P.card).clickable { pick = true }.padding(16.dp, 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(Modifier.size(8.dp).clip(CircleShape).background(when (vm.analytics?.status) { null, "active" -> C.positive; "pending", "unknown" -> tc(0xFFF2C14E); else -> P.red }))
-            Text(vm.domain ?: "Velg domene", fontWeight = FontWeight.SemiBold, color = P.onHero)
-            Icon(Icons.Filled.ExpandMore, null, tint = P.text2)
-        }
-        DropdownMenu(expanded = pick, onDismissRequest = { pick = false }) {
-            vm.domains?.forEach { d ->
-                DropdownMenuItem(text = { Column { Text(d.name); Text(sourceName(d.source), fontSize = 12.sp, color = C.text2) } }, onClick = { pick = false; vm.pickDomain(d.name) })
+        Box {
+            IconButton(onClick = { pick = true }) {
+                Box {
+                    Icon(Icons.Filled.Public, "Velg domene${vm.domain?.let { " (nå $it)" } ?: ""}", tint = P.accent)
+                    Box(Modifier.align(Alignment.TopEnd).size(8.dp).clip(CircleShape).background(when (vm.analytics?.status) { null, "active" -> C.positive; "pending", "unknown" -> tc(0xFFF2C14E); else -> P.red }))
+                }
             }
-            HorizontalDivider()
-            DropdownMenuItem(text = { Text("Administrer domener", color = P.accent, fontWeight = FontWeight.SemiBold) }, leadingIcon = { Icon(Icons.Filled.Add, null, tint = P.accent) },
-                onClick = { pick = false; vm.domainManager = true })
+            DropdownMenu(expanded = pick, onDismissRequest = { pick = false }) {
+                vm.domains?.forEach { d ->
+                    DropdownMenuItem(text = { Column { Text(d.name, fontWeight = if (d.name == vm.domain) FontWeight.SemiBold else FontWeight.Normal); Text(sourceName(d.source), fontSize = 12.sp, color = C.text2) } },
+                        leadingIcon = { if (d.name == vm.domain) Icon(Icons.Filled.Check, null, tint = P.accent) else Spacer(Modifier.size(24.dp)) },
+                        onClick = { pick = false; vm.pickDomain(d.name) })
+                }
+                HorizontalDivider()
+                DropdownMenuItem(text = { Text("Administrer domener", color = P.accent, fontWeight = FontWeight.SemiBold) }, leadingIcon = { Icon(Icons.Filled.Add, null, tint = P.accent) },
+                    onClick = { pick = false; vm.domainManager = true })
+            }
         }
-    }
-    }
+        IconButton(onClick = { vm.reloadDomain() }) { Icon(Icons.Filled.Refresh, "Oppdater", tint = P.accent) }
+    })
 }
 
 private val statusText = mapOf("active" to "Aktiv", "down" to "Nede", "pending" to "Venter", "unknown" to "Ukjent")
@@ -182,17 +182,18 @@ private fun KV(k: String, v: String, good: Boolean? = null) {
 
 private fun androidx.compose.foundation.lazy.LazyListScope.traffic(vm: AppViewModel, a: Analytics) {
     item {
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(32.dp, 32.dp, 32.dp, 10.dp)).background(P.hero).padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // Ca. 20 % lavere enn før: mindre polstring, tall og kurve.
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp, 28.dp, 28.dp, 10.dp)).background(P.hero).padding(18.dp, 14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.size(8.dp).clip(CircleShape).background(C.positive))
-                Text("Live · akkurat nå", color = P.onHero, fontWeight = FontWeight.SemiBold)
+                Text("Live · ${vm.domain ?: "akkurat nå"}", color = P.onHero, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Row(verticalAlignment = Alignment.Bottom) {
-                Text(count(a.liveVisitors), color = P.onHero, fontFamily = Mono, fontSize = 44.sp, fontWeight = FontWeight.SemiBold)
-                Text(" besøkende", color = P.onHero.copy(alpha = .75f), modifier = Modifier.padding(bottom = 8.dp))
+                Text(count(a.liveVisitors), color = P.onHero, fontFamily = Mono, fontSize = 36.sp, fontWeight = FontWeight.SemiBold, lineHeight = 38.sp)
+                Text(" besøkende", color = P.onHero.copy(alpha = .75f), modifier = Modifier.padding(bottom = 5.dp))
             }
-            Text("${count(a.liveRequests)} forespørsler · ${String.format(java.util.Locale("nb", "NO"), "%.1f", a.liveMb)} MB", color = P.onHero.copy(alpha = .8f), fontSize = 14.sp)
-            Area(a.liveSpark.ifEmpty { a.series.map { it.visitors } }, height = 56, color = P.onHero)
+            Text("${count(a.liveRequests)} forespørsler · ${String.format(java.util.Locale("nb", "NO"), "%.1f", a.liveMb)} MB", color = P.onHero.copy(alpha = .8f), fontSize = 13.sp)
+            Area(a.liveSpark.ifEmpty { a.series.map { it.visitors } }, height = 42, color = P.onHero)
         }
     }
     item { RangeChips(vm, listOf("24h" to "Siste 24 t", "today" to "I dag")) }

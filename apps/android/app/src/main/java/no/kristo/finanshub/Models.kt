@@ -41,7 +41,24 @@ data class Receipt(
     val total: Double?, val categoryId: Int?, val accountId: Int?, val confidence: Double, val flag: String?, val error: String?,
     val mime: String?, val file: String?, val thumb: String?, val lines: List<Pair<String, Double>>, val match: Tx?,
     val aiShort: String? = null, val domain: String? = null,
+    /** Serveren sier at «✦ Analyser på nytt med Gemini» kan brukes (feil, lav sikkerhet eller usikker Ollama). */
+    val canReanalyze: Boolean = false, val reanalyzeReason: String? = null,
 )
+
+/** Én tolkning av en kvittering (forrige eller ny fra Gemini) i sammenligningen. */
+data class ReExtract(val merchant: String?, val date: String?, val total: Double?, val items: List<Pair<String, Double>>, val confidence: Double?, val engine: String?)
+data class Reanalysis(val receiptId: String, val previous: ReExtract, val result: ReExtract, val candidateId: String)
+
+private fun parseReExtract(o: JSONObject?): ReExtract = ReExtract(
+    o?.optStr("merchant"), o?.optStr("date"), o?.optDoubleOrNull("total"),
+    (o?.optJSONArray("items") ?: o?.optJSONArray("lines"))?.map { (it.optStr("name") ?: it.optStr("description") ?: it.optString("text")) to it.num(if (it.has("amount")) "amount" else "price") } ?: emptyList(),
+    o?.optDoubleOrNull("confidence"), o?.optStr("engine") ?: o?.optStr("provider"),
+)
+
+fun parseReanalysis(id: String, s: String): Reanalysis {
+    val o = JSONObject(s)
+    return Reanalysis(id, parseReExtract(o.optJSONObject("previous")), parseReExtract(o.optJSONObject("result")), o.optString("candidateId"))
+}
 
 data class Summary(
     val month: String, val from: String, val to: String, val daysLeft: Int, val inn: Double, val ut: Double,
@@ -60,7 +77,7 @@ data class Me(
 
 data class Weather(val place: String, val temp: Double?, val text: String?, val wind: Double?, val max: Double?, val min: Double?, val code: Int?)
 data class Shortcut(val name: String, val url: String, val local: Boolean)
-data class Departure(val line: String, val color: Long?, val min: Int?, val time: String?)
+data class Departure(val line: String, val color: Long?, val min: Int?, val time: String?, val to: String? = null)
 data class RuterLine(val from: String, val to: String, val departures: List<Departure>)
 data class ServerStatus(val cpu: Double?, val mem: Double?, val disk: Double?, val temp: Double?, val uptime: String?)
 data class MobileHome(
@@ -341,6 +358,7 @@ fun parseReceipt(o: JSONObject): Receipt = Receipt(
     o.optDoubleOrNull("total"), o.optIntOrNull("categoryId"), o.optIntOrNull("accountId"), o.optDouble("confidence", 0.0),
     o.optStr("flag"), o.optStr("error"), o.optStr("mime"), o.optStr("file"), o.optStr("thumb"), lines(o.optJSONObject("extraction")?.optJSONArray("lines")),
     o.optJSONObject("match")?.let(::parseTx), o.optStr("aiShort"), o.optStr("domain"),
+    o.optBoolean("canReanalyze", false), o.optStr("reanalyzeReason") ?: o.optStr("reason"),
 )
 
 fun parseReceipts(s: String): List<Receipt> = JSONArray(s).map(::parseReceipt)
@@ -381,7 +399,7 @@ fun parseMobileHome(s: String): MobileHome {
         o.optJSONArray("shortcuts")?.map { Shortcut(it.optString("name"), it.optString("url"), it.optBoolean("local")) } ?: emptyList(),
         o.optJSONArray("ruter")?.map { r ->
             RuterLine(r.optString("from"), r.optString("to"), r.optJSONArray("departures")?.map {
-                Departure(it.optString("line"), it.optStr("color")?.let(::color), it.optIntOrNull("min"), it.optStr("time"))
+                Departure(it.optString("line"), it.optStr("color")?.let(::color), it.optIntOrNull("min"), it.optStr("time"), it.optStr("to") ?: it.optStr("destination"))
             } ?: emptyList())
         } ?: emptyList(),
         st?.let { ServerStatus(it.optDoubleOrNull("cpu"), it.optDoubleOrNull("mem"), it.optDoubleOrNull("disk"), it.optDoubleOrNull("temp"), it.optStr("uptimeText") ?: when (val u = it.opt("uptime")) { is Number -> uptimeLabel(u.toDouble()); is String -> u; else -> null }) },

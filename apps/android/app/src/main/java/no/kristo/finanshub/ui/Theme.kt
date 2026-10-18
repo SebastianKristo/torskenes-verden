@@ -42,7 +42,9 @@ import kotlin.math.roundToInt
  * (flate, kort, tekst, primær, container …). Med «Følg systemet» (Android 12+) hentes rollene rett fra
  * dynamicDarkColorScheme / dynamicLightColorScheme. De andre frøfargene lager rollene i OKLCH: bare kulørtonen
  * byttes, og hver rolle har egen lyshet og metning i lys og mørk modus (ikke invertering). Statusfarger
- * (grønn, rød, gul) og Domener-rosa følger ikke aksentfargen.
+ * (grønn, rød, gul) følger ikke aksentfargen. Med «Samme overalt» (Innstillinger → Utseende → Sider, standard) får alle
+ * sidene samme fargetema: øvrige designfarger flyttes til frøfargens kulør, og Domener bruker de samme rollene i stedet for rosa.
+ * Med «Egen farge per side» beholder hver side sin kulør (Domener rosa, Subscription lilla osv.).
  */
 
 /** Frøfarger i Innstillinger → Utseende → Farger. «system» = dynamiske farger fra bakgrunnsbildet (Android 12+). */
@@ -132,18 +134,20 @@ object Tone {
     var seed by mutableStateOf(BASE_SEED)
     var light by mutableStateOf(false)
     var dynamic by mutableStateOf<ColorScheme?>(null)
+    /** «Samme overalt»: alle sider i samme fargetema (standard). */
+    var samePages by mutableStateOf(true)
     private val cache = HashMap<Long, Color>()
     private var cacheKey: Any? = null
 
     fun map(c: Long): Color {
-        val s = seed; val l = light; val d = dynamic
-        if (s == BASE_SEED && !l && d == null) return Color(c)
-        val key = Triple(s, l, d)
+        val s = seed; val l = light; val d = dynamic; val same = samePages
+        if (s == BASE_SEED && !l && d == null && !same) return Color(c)
+        val key = listOf(s, l, d, same)
         if (key != cacheKey) { cache.clear(); cacheKey = key }
-        return cache.getOrPut(c) { resolve(c, s, l, d) }
+        return cache.getOrPut(c) { resolve(c, s, l, d, same) }
     }
 
-    private fun resolve(c: Long, seed: Long, light: Boolean, d: ColorScheme?): Color {
+    private fun resolve(c: Long, seed: Long, light: Boolean, d: ColorScheme?, same: Boolean): Color {
         val argb = 0xFF000000 or (c and 0xFFFFFF)
         val alpha = (c shr 24) and 0xFF
         val role = if (argb in FIXED) null else ROLE_OF[argb]
@@ -156,9 +160,14 @@ object Tone {
             return Color(Ok.color(L, C, sh[2] + role.dh, alpha))
         }
         // Øvrige designfarger: behold lyshet og metning, flytt kulør (unntatt faste), og egne toner i lys modus.
+        // «Samme overalt» legger dem på frøfargens kulør, så alle sidene får samme tema.
         val o = Ok.lch(argb)
         val fixed = argb in FIXED
-        val h = if (fixed || o[1] < 0.02) o[2] else o[2] + (Ok.lch(seed)[2] - Ok.lch(BASE_SEED)[2])
+        val h = when {
+            fixed || o[1] < 0.02 -> o[2]
+            same -> Ok.lch(seed)[2]
+            else -> o[2] + (Ok.lch(seed)[2] - Ok.lch(BASE_SEED)[2])
+        }
         val L = if (!light) o[0] else if (o[0] < 0.5) 0.98 - o[0] * 0.25 else (1.17 - o[0]).coerceIn(0.22, 0.6)
         return Color(Ok.color(L, o[1], h, alpha))
     }
@@ -209,16 +218,19 @@ object C {
     val red: Color get() = tc(0xFFFF8A80)
 }
 
-// Domener: rosa tonal palett (designet 1b, Cloudflare-statistikk).
+// Domener: rosa tonal palett (designet 1b, Cloudflare-statistikk). Med «Samme overalt» brukes appens roller.
 object P {
-    val hero: Color get() = tc(0xFF7B2949)
-    val onHero: Color get() = tc(0xFFFFD9E2)
-    val accent: Color get() = tc(0xFFFFB1C8)
-    val card: Color get() = tc(0xFF2A2024)
-    val card2: Color get() = tc(0xFF3A2C31)
-    val text2: Color get() = tc(0xFFD5C2C6)
+    val hero: Color get() = if (Tone.samePages) C.heroAi else tc(0xFF7B2949)
+    val onHero: Color get() = if (Tone.samePages) C.onContainer else tc(0xFFFFD9E2)
+    val accent: Color get() = if (Tone.samePages) C.primary else tc(0xFFFFB1C8)
+    val card: Color get() = if (Tone.samePages) C.surface1 else tc(0xFF2A2024)
+    val card2: Color get() = if (Tone.samePages) C.surface3 else tc(0xFF3A2C31)
+    val text2: Color get() = if (Tone.samePages) C.text2 else tc(0xFFD5C2C6)
     val red: Color get() = tc(0xFFFF8A80)
 }
+
+/** Valgene i Innstillinger → Utseende → Sider. */
+val PAGE_COLORS: List<Pair<String, String>> = listOf("same" to "Samme overalt", "own" to "Egen farge per side")
 
 /** «Skjul beløp til jeg trykker»: formaterte beløp vises som prikker mens dette er på. */
 object Privacy {
@@ -262,7 +274,7 @@ private val shapes = Shapes(
  * hentes fra rollene i dynamicDark/LightColorScheme. Eldre Android faller tilbake til oransje.
  */
 @Composable
-fun FinansTheme(color: String = "system", mode: String = "dark", content: @Composable () -> Unit) {
+fun FinansTheme(color: String = "system", mode: String = "dark", samePages: Boolean = true, content: @Composable () -> Unit) {
     val ctx = LocalContext.current
     val light = when (mode) { "light" -> true; "system" -> !isSystemInDarkTheme(); else -> false }
     val dynamic = color == "system" && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
@@ -281,6 +293,7 @@ fun FinansTheme(color: String = "system", mode: String = "dark", content: @Compo
     if (Tone.seed != seed) Tone.seed = seed
     if (Tone.light != light) Tone.light = light
     if (Tone.dynamic != dyn) Tone.dynamic = dyn
+    if (Tone.samePages != samePages) Tone.samePages = samePages
     val scheme = dyn ?: schemeFromPalette(light)
     val view = LocalView.current
     if (!view.isInEditMode) SideEffect {

@@ -37,12 +37,15 @@ class MainActivity : FragmentActivity() {
             // Brettbare: bredde ≥ 600 dp (Medium/Expanded) gir navigasjonsrail og to paneler.
             val size = calculateWindowSizeClass(this)
             // Farger og lys/mørk fra Innstillinger → Utseende (Material You når «Følg systemet»).
-            FinansTheme(vm.option(AppPrefs.COLOR, "system"), vm.option(AppPrefs.MODE, "dark")) {
+            FinansTheme(vm.option(AppPrefs.COLOR, "system"), vm.option(AppPrefs.MODE, "dark"), vm.option(AppPrefs.PAGES, "same") == "same") {
                 FinansApp(vm, size.widthSizeClass, unlock = ::unlock, onPrivacyChanged = ::applySwitcherPrivacy)
             }
         }
         // Haptikk går via vinduets rotvisning (følger «Vibrasjon og haptikk» i systemet).
         Haptics.attach(window.decorView, vm.prefs)
+        // Widgetene: henting hvert 15. minutt, og ferske data når appen åpnes.
+        no.kristo.finanshub.widget.WidgetSync.schedule(this)
+        intent?.data?.let(vm::deepLink)
     }
 
     override fun onResume() {
@@ -50,7 +53,12 @@ class MainActivity : FragmentActivity() {
         if (vm.locked) unlock()
     }
 
-    override fun onStop() { super.onStop(); vm.onBackground() }
+    override fun onStop() {
+        super.onStop()
+        vm.onBackground()
+        // Endringer i appen (bokført kvittering, ny pakke) vises i widgetene.
+        if (vm.loggedIn) no.kristo.finanshub.widget.WidgetSync.refresh(this)
+    }
 
     override fun onStart() {
         super.onStart()
@@ -60,6 +68,7 @@ class MainActivity : FragmentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleShare(intent)
+        intent.data?.let(vm::deepLink)
     }
 
     /** «Skjul beløp i appveksleren»: blankt bilde i oversikten over åpne apper. */

@@ -82,6 +82,9 @@ class AppPrefs(ctx: Context) {
         const val START = "start"               // homelab | home | list | budget
         const val COLOR = "m3_seed"             // system | orange | blue | green | purple | pink | yellow
         const val MODE = "m3_mode"              // system | light | dark
+        const val PAGES = "m3_pages"            // same | own: samme farger på alle sider, eller egen farge per side
+        const val W_ALPHA = "w_alpha"           // Samsung-widgetene: dekkevne på bakgrunnen i prosent (0–100)
+        const val W_THEME = "w_theme"           // Samsung-widgetene: system | dark | light
         const val LAYOUT = "layout_"            // + konto-ID: oppsettet av mobilforsiden (per bruker og enhet)
         const val SCAN_TAP = "scan_tap"         // camera | choices
         const val AUTO_CROP = "auto_crop"
