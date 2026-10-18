@@ -60,9 +60,9 @@ const doneSet = () => { if (!SB.done) { try { SB.done = JSON.parse(localStorage.
 
 /* ---------- Byggeklosser ---------- */
 
-const lg = (x, size = 38) => logo({ ...x, description: x.name }, size, isI() ? size / 2 : 12);
+const lg = (x, size = 38) => (x.logoUrl ? `<span class="sb-logo" style="width:${size}px;height:${size}px;border-radius:${isI() ? size / 2 : 12}px;background-image:url('${esc(x.logoUrl)}')" aria-hidden="true"></span>` : logo({ ...x, description: x.name }, size, isI() ? size / 2 : 12));
 const card = (inner, cls = '') => `<div class="sb-card ${isI() ? 'glass2' : ''} ${cls}">${inner}</div>`;
-const row = (x, right, sub) => `<div class="sb-row">${lg(x)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(x.name)}${x.plan ? ` <span class="sb-dim" style="font-weight:400">· ${esc(x.plan)}</span>` : ''}</b><span class="sb-dim m-ell">${esc(sub)}</span></span>${right}</div>`;
+const row = (x, right, sub) => `<div class="sb-row"${x.id != null ? ` data-sbed="${esc(x.id)}" role="button" tabindex="0"` : ''}>${lg(x)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(x.name)}${x.plan ? ` <span class="sb-dim" style="font-weight:400">· ${esc(x.plan)}</span>` : ''}</b><span class="sb-dim m-ell">${esc(sub)}</span></span>${right}</div>`;
 const whenTxt = (d) => { if (!d) return ''; const days = Math.round((new Date(d + 'T12:00') - new Date(today() + 'T12:00')) / 864e5); return days === 0 ? 'I dag' : days === 1 ? 'I morgen' : days > 1 && days < 7 ? new Date(d + 'T12:00').toLocaleDateString('nb-NO', { weekday: 'long' }).replace(/^./, (c) => c.toUpperCase()) : `${+d.slice(8, 10)}. ${MND[+d.slice(5, 7) - 1]}`; };
 
 function head() {
@@ -146,10 +146,65 @@ function history() {
     ${off.length ? `<div class="sec">Sagt opp</div>${card(off.map((x) => row(x, `<button class="stchip off" data-subtog="${x.id}">Gjenoppta</button>`, `Sparer ${kr(per(x))}/mnd`)).join(''))}` : ''}`;
 }
 
+/* ---------- Rediger og legg til (ark nedenfra) ---------- */
+// Logo (last opp eller ✦ finn med AI), navn, pris, plan, kategori, hvor ofte, faktureringsdato (dag + måned) og status.
+const MNL = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
+const STS = [['active', 'Aktiv'], ['low_use', 'Lite brukt'], ['cancelled', 'Sagt opp']];
+function openEditor(x) {
+  const d = new Date(), nd = x?.nextDate ? new Date(x.nextDate + 'T12:00') : null;
+  SB.ed = { id: x?.id ?? null, name: x?.name ?? '', plan: x?.plan ?? '', price: x ? String(x.price).replace('.', ',') : '', cycle: x?.cycle ?? 'monthly',
+    day: String(x?.billDay ?? x?.chargeDay ?? (nd ? nd.getDate() : d.getDate())), mon: String(x?.billMonth ?? (nd ? nd.getMonth() + 1 : ((d.getMonth() + 1) % 12) + 1)),
+    category: x ? catOf(x) : 'Annet', status: x ? (x.state === 'cancelled' || x.active === false ? 'cancelled' : x.status === 'low_use' ? 'low_use' : 'active') : 'active',
+    logoUrl: x?.logoUrl ?? null, domain: x?.domain ?? null, file: null, busy: false, del: false };
+}
+function nextCharge(day, mon, cycle) {
+  const t = new Date(); t.setHours(12, 0, 0, 0);
+  const mk = (y, mo) => new Date(y, mo, Math.min(day, new Date(y, mo + 1, 0).getDate()), 12);
+  let d;
+  if (cycle === 'monthly') { d = mk(t.getFullYear(), t.getMonth()); if (d < t) d = mk(t.getFullYear(), t.getMonth() + 1); }
+  else { d = mk(t.getFullYear(), mon - 1); if (d < t) d = mk(t.getFullYear() + 1, mon - 1); }
+  return d.toLocaleDateString('sv-SE');
+}
+function editor() {
+  const e = SB.ed;
+  if (!e) return '';
+  const day = Math.min(31, Math.max(1, parseInt(e.day, 10) || 1)), mon = Math.min(12, Math.max(1, parseInt(e.mon, 10) || 1));
+  const nx = nextCharge(day, mon, e.cycle), ndt = new Date(nx + 'T12:00');
+  const when = `Neste trekk ${ndt.getDate()}. ${MNL[ndt.getMonth()]}${e.cycle === 'monthly' ? ', deretter hver måned' : e.cycle === 'yearly' ? ', deretter hvert år' : ', deretter hvert 2. år'}`;
+  const chip = (attr, on, n) => `<button type="button" class="chip" ${attr} aria-pressed="${on}">${n}</button>`;
+  const lgBox = e.logoUrl || e.file ? `<span class="sb-elogo" style="background-image:url('${esc(e.file ? URL.createObjectURL(e.file) : e.logoUrl)}')"></span>` : `<span class="sb-elogo ini">${esc((e.name || '?').trim().charAt(0).toUpperCase())}</span>`;
+  return `<div class="sheet-bg" data-sbx="close"></div><div class="sb-edit ${isI() ? 'glass' : ''}" role="dialog" aria-label="${e.id ? 'Rediger abonnement' : 'Nytt abonnement'}"><span class="sb-grab"></span>
+    <div class="m-row" style="justify-content:space-between"><b class="sb-st">${e.id ? `Rediger ${esc(e.name)}` : 'Nytt abonnement'}</b><button class="sb-x" data-sbx="close" aria-label="Lukk">×</button></div>
+    <div class="sb-erow">${lgBox}<div class="m-grow"><span class="sb-dim sm">Logo</span><div class="schips"><label class="chip">↑ Last opp<input class="m-file" type="file" accept="image/*" data-sblogo></label><button type="button" class="chip" data-sbx="ailogo" ${e.busy ? 'disabled' : ''}>${e.busy === 'logo' ? '✦ Leter …' : '✦ Finn logo med AI'}</button>${e.logoUrl || e.file ? '<button type="button" class="chip" data-sbx="nologo">Fjern</button>' : ''}</div></div></div>
+    <div class="sb-two"><label class="sb-lab">Navn<input class="sinp" id="m-sbe-name" data-sbe="name" value="${esc(e.name)}" placeholder="F.eks. HBO Max" autocomplete="off"></label><label class="sb-lab">Pris (kr)<input class="sinp m-mono" id="m-sbe-price" data-sbe="price" value="${esc(e.price)}" inputmode="decimal" placeholder="149"></label></div>
+    <div class="sb-two"><label class="sb-lab">Plan<input class="sinp" id="m-sbe-plan" data-sbe="plan" value="${esc(e.plan)}" placeholder="Standard" autocomplete="off"></label><label class="sb-lab">Kategori<select class="sinp" data-sbe="category">${Object.keys(CAT_C).map((c) => `<option ${c === e.category ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label></div>
+    <div class="sb-lab">Hvor ofte<div class="schips">${Object.entries(CYC).map(([k, [n]]) => chip(`data-sbx="cyc" data-v="${k}"`, e.cycle === k, n)).join('')}</div></div>
+    <div class="sb-lab">Faktureringsdato<div class="sb-two"><select class="sinp" data-sbe="day" aria-label="Dag">${Array.from({ length: 31 }, (_, i) => `<option value="${i + 1}" ${day === i + 1 ? 'selected' : ''}>${i + 1}.</option>`).join('')}</select><select class="sinp" data-sbe="mon" aria-label="Måned">${MNL.map((n, i) => `<option value="${i + 1}" ${mon === i + 1 ? 'selected' : ''}>${n.charAt(0).toUpperCase() + n.slice(1)}</option>`).join('')}</select></div><span class="sb-dim sm">${esc(when)}</span></div>
+    <div class="sb-lab">Status<div class="schips">${STS.map(([k, n]) => chip(`data-sbx="st" data-v="${k}"`, e.status === k, n)).join('')}</div></div>
+    <div class="m-row" style="gap:8px"><button class="pri-b" style="flex:1" data-sbx="save" ${e.busy ? 'disabled' : ''}>${e.busy === 'save' ? 'Lagrer …' : 'Lagre'}</button>${e.id ? `<button class="sb-del" data-sbx="del">${e.del ? 'Trykk igjen' : 'Slett'}</button>` : ''}</div></div>`;
+}
+const DOMS = { netflix: 'netflix.com', spotify: 'spotify.com', viaplay: 'viaplay.no', 'disney+': 'disneyplus.com', 'hbo max': 'max.com', max: 'max.com', 'youtube premium': 'youtube.com', 'icloud+': 'icloud.com', 'google one': 'one.google.com', 'chatgpt plus': 'openai.com', 'claude pro': 'claude.ai', 'tv 2 play': 'tv2.no', strava: 'strava.com', proton: 'proton.me', 'microsoft 365': 'microsoft.com', sats: 'sats.no' };
+const guessDomain = (n) => DOMS[n.toLowerCase()] ?? n.toLowerCase().replace(/[^a-z0-9]+/g, '') + '.com';
+async function saveEditor() {
+  const e = SB.ed, price = parseAmount(e.price);
+  if (!e.name.trim() || !(price >= 0) || price === null) { haptic('err'); flash('Fyll inn navn og pris'); return; }
+  const day = Math.min(31, Math.max(1, parseInt(e.day, 10) || 1)), mon = Math.min(12, Math.max(1, parseInt(e.mon, 10) || 1));
+  const body = { name: e.name.trim(), plan: e.plan.trim(), price, cycle: e.cycle, billDay: day, billMonth: mon, chargeDay: day, nextDate: nextCharge(day, mon, e.cycle),
+    category: e.category, status: e.status, active: e.status !== 'cancelled', logoUrl: e.file ? undefined : e.logoUrl ?? null, domain: e.domain ?? undefined };
+  e.busy = 'save'; draw();
+  try {
+    const r = e.id ? await api(`/subscriptions/${e.id}`, { method: 'PATCH', json: body }) : await api('/subscriptions', { method: 'POST', json: body });
+    const id = e.id ?? r?.id ?? r?.item?.id;
+    if (e.file && id != null) { const fd = new FormData(); fd.append('file', e.file, e.file.name || 'logo.png'); await api(`/subscriptions/${id}/logo`, { method: 'POST', body: fd }).catch((err) => flash(`Logoen ble ikke lagret: ${err.message}`)); }
+    SB.ed = null; await subsLoad(); flash(`${body.name} er lagret`);
+  } catch (err) { haptic('err'); flash(err.message); if (SB.ed) SB.ed.busy = false; }
+  draw();
+}
+
 export function subsView() {
   if (SB.err && !SB.d) return `${head()}<div class="m-empty">Subscription OS er ikke tilgjengelig: ${esc(SB.err)}</div>`;
   if (!SB.d) return `<div class="sb">${head()}<div class="m-spin"></div></div>`;
-  return `<div class="sb">${head()}${sheet()}${SB.tab === 'ins' ? insights() : SB.tab === 'hist' ? history() : home()}</div>`;
+  return `<div class="sb">${head()}${sheet()}${SB.tab === 'ins' ? insights() : SB.tab === 'hist' ? history() : home()}</div>${editor()}`;
 }
 
 /* ---------- Hendelser ---------- */
@@ -165,6 +220,33 @@ export async function subsBind(e, t) {
   if (m.screen !== 'sub' || m.sub) return false;
   const d = (s) => t.closest?.(s);
   let x;
+  if (SB.ed) {
+    if ((e.type === 'input' || e.type === 'change') && t.dataset?.sbe) { SB.ed[t.dataset.sbe] = t.value; if (e.type === 'change') draw(); return true; }
+    if (e.type === 'change' && t.matches?.('[data-sblogo]')) { const f = t.files?.[0]; t.value = ''; if (f) { SB.ed.file = f; SB.ed.logoUrl = null; } draw(); return true; }
+    if (e.type === 'click' && (x = d('[data-sbx]'))) {
+      e.preventDefault();
+      const k = x.dataset.sbx, ed = SB.ed;
+      if (k === 'close') SB.ed = null;
+      else if (k === 'cyc') ed.cycle = x.dataset.v;
+      else if (k === 'st') ed.status = x.dataset.v;
+      else if (k === 'nologo') { ed.logoUrl = null; ed.file = null; }
+      else if (k === 'save') { await saveEditor(); return true; }
+      else if (k === 'del') {
+        if (!ed.del) { ed.del = true; haptic('err'); }
+        else { await api(`/subscriptions/${ed.id}`, { method: 'DELETE' }); const n = ed.name; SB.ed = null; await subsLoad(); flash(`${n} er slettet`); }
+      } else if (k === 'ailogo') {
+        if (!ed.name.trim()) { flash('Skriv inn navnet først'); return true; }
+        ed.busy = 'logo'; draw();
+        let url = null;
+        if (ed.id != null) { try { const r = await api(`/subscriptions/${ed.id}/logo/ai`, { method: 'POST', json: { name: ed.name.trim() } }); url = r?.logoUrl ?? null; if (r?.domain) ed.domain = r.domain; } catch {} }
+        if (!url) { const dom = guessDomain(ed.name.trim()); url = await new Promise((res) => { const im = new Image(); im.onload = () => res(im.naturalWidth > 16 ? `/finans/api/logo/${dom}` : null); im.onerror = () => res(null); im.src = `/finans/api/logo/${dom}`; }); if (url) ed.domain = dom; }
+        if (!SB.ed) return true;
+        ed.busy = false;
+        if (url) { ed.logoUrl = url; ed.file = null; flash(`✦ Fant logo for ${ed.name.trim()}`); } else flash('Fant ingen logo. Last opp et bilde.');
+      }
+      draw(); return true;
+    }
+  }
   const fk = { 'm-sb-name': 'name', 'm-sb-price': 'price', 'm-sb-day': 'day' }[t.id];
   if (fk && (e.type === 'input' || e.type === 'change')) { SB.f[fk] = t.value; return true; }
   if (e.type === 'input') return false;
@@ -201,12 +283,13 @@ export async function subsBind(e, t) {
     await api(`/subscriptions/${it.id}`, { method: 'PATCH', json: { active: !it.active } });
     await subsLoad(); flash(it.active ? `${it.name} er sagt opp` : `${it.name} er aktiv igjen`); return true;
   }
+  if ((x = d('[data-sbed]')) && !d('[data-sb]')) { const it = items().find((y) => String(y.id) === x.dataset.sbed); if (it) { openEditor(it); haptic('tap'); draw(); } return true; }
   if (!(x = d('[data-sb]'))) return false;
   e.preventDefault();
   const k = x.dataset.sb, v = x.dataset.v;
   if (k === 'tab') { SB.tab = v; SB.sheet = false; window.scrollTo(0, 0); }
-  else if (k === 'sheet') { SB.sheet = !SB.sheet; SB.mode = SB.sheet ? 'man' : null; }
-  else if (k === 'mode') { SB.mode = v; if (v === 'tx') { await loadCand(); return true; } }
+  else if (k === 'sheet') { SB.sheet = !SB.sheet; SB.mode = null; }
+  else if (k === 'mode') { if (v === 'man') { SB.sheet = false; SB.mode = null; openEditor(null); draw(); return true; } SB.mode = v; if (v === 'tx') { await loadCand(); return true; } }
   else if (k === 'cyc') SB.f.cycle = v;
   else if (k === 'mon') SB.mon = +v;
   else if (k === 'task') { const dn = doneSet(); dn[v] = !dn[v]; try { localStorage.setItem('fh_sub_done', JSON.stringify(dn)); } catch {} if (dn[v]) haptic('ok'); }

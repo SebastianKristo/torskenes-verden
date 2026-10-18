@@ -28,9 +28,8 @@ export const CAR = [
   ['other', 'Annen (17TRACK)', '17', '#3A4252', '#eef0f4', [], 'https://t.17track.net/no#nums='],
 ].map(([id, name, ini, c, fg, re, url]) => ({ id, name, ini, c, fg, re, url }));
 const CM = Object.fromEntries(CAR.map((c) => [c.id, c]));
-// Logoer som i Sporing-designet: favicon fra transportørens domene på hvit bakgrunn, initialene vises hvis bildet ikke lastes.
-const CDOM = { posten: 'posten.no', bring: 'bring.no', postnord: 'postnord.no', dhl: 'dhl.com', ups: 'ups.com', fedex: 'fedex.com', gls: 'gls-group.eu', schenker: 'dbschenker.com', helthjem: 'helthjem.no', budbee: 'budbee.com', instabox: 'instabox.io', other: '17track.net' };
-const cLogo = (id) => `https://www.google.com/s2/favicons?domain=${CDOM[id] ?? CDOM.other}&sz=128`;
+// Logoer fra serveren (/assets/carriers/<id>.svg, prompt 14) på hvit bakgrunn; initialene på merkefarge vises hvis bildet ikke lastes.
+export const cLogo = (id) => `/assets/carriers/${encodeURIComponent(CM[id] ? id : 'other')}.svg`;
 const carOf = (id) => CM[id] ?? CM.other;
 export const carName = (id) => carOf(id).name;
 const normNo = (no) => String(no ?? '').replace(/[\s-]+/g, '').toUpperCase();
@@ -103,7 +102,8 @@ const isI = () => theme() === 'ios';
 const gl = (c = 'glass2') => (isI() ? c : '');
 const hm = (t) => (t ? new Date(t).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }) : '–');
 const dm = (t) => { if (!t) return ''; const d = new Date(t); return Number.isNaN(+d) ? String(t) : `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')} ${hm(t)}`; };
-export const badge = (car, size = 42) => { const c = carOf(car); return `<span class="trk-badge" style="width:${size}px;height:${size}px;background:${c.c};color:${c.fg};font-size:${c.ini.length > 2 ? size * 0.27 : size * 0.36}px;border-radius:${Math.round(size * 0.29)}px" aria-hidden="true">${esc(c.ini)}<img src="${cLogo(c.id)}" alt="" loading="lazy"></span>`; };
+export const badge = (car, size = 42, logo = null) => { const c = carOf(car); return `<span class="trk-badge" style="width:${size}px;height:${size}px;background:${c.c};color:${c.fg};font-size:${c.ini.length > 2 ? size * 0.27 : size * 0.36}px;border-radius:${Math.round(size * 0.29)}px" aria-hidden="true">${esc(c.ini)}<img src="${esc(logo || cLogo(c.id))}" alt="" loading="lazy"></span>`; };
+export { carOf, stepOf, isDone, isReady, STXT, normNo, detectLocal, PREFS };
 const statusTxt = (p) => (isDone(p) ? (p.direction === 'out' ? 'Levert til kjøper' : 'Levert') : p.statusText || STXT[p.status] || 'Ukjent status');
 const statusCls = (p) => (isReady(p) ? 'ready' : isDone(p) ? 'done' : p.status === 'delayed' ? 'late' : '');
 const etaTxt = (p) => {
@@ -130,7 +130,7 @@ export function pkgCard(th, list, { loading = false, missing = false } = {}) {
   const all = TR.data?.items ? active(TR.data.items) : items;
   const ready = all.filter(isReady).length;
   const count = all.length ? `${all.length} på vei${ready ? ` · ${ready} klar` : ''}` : '';
-  const rows = items.slice(0, 2).map((p) => `<span class="pkg-row">${badge(p.carrier, 34)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(p.name || p.trackingNo)}</b><span class="m-ell ${statusCls(p)}">${esc(statusTxt(p))}${etaTxt(p) ? ` · ${esc(etaTxt(p))}` : ''}</span>${bars(p)}</span></span>`).join('');
+  const rows = items.slice(0, 2).map((p) => `<span class="pkg-row">${badge(p.carrier, 34, p.carrierLogo)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(p.name || p.trackingNo)}</b><span class="m-ell ${statusCls(p)}">${esc(statusTxt(p))}${etaTxt(p) ? ` · ${esc(etaTxt(p))}` : ''}</span>${bars(p)}</span></span>`).join('');
   return `<a class="hcard pkgcard ${th === 'ios' ? 'glass2' : ''}" href="#/spor" aria-label="Pakker – åpne Sporing">
     <span class="pkg-head"><span class="pkg-ic">${icon('box', 18)}</span><b class="m-grow">Pakker</b><span class="dim">${esc(count)}</span></span>
     ${rows || `<span class="pkg-none">${loading ? 'Henter pakker …' : missing ? 'Sporing krever nyere server.' : 'Ingen pakker på vei.'}</span>`}
@@ -176,7 +176,7 @@ function card(p) {
   const open = TR.open === p.id, ev = [...(p.events ?? [])].sort((a, b) => String(b.ts).localeCompare(String(a.ts))), c = carOf(p.carrier);
   const url = p.url || c.url + encodeURIComponent(p.trackingNo ?? '');
   return `<div class="trk-card ${gl()}${isReady(p) ? ' ready' : ''}${open ? ' open' : ''}">
-    <button class="trk-top" data-trkopen="${esc(p.id)}" aria-expanded="${open}">${badge(p.carrier)}
+    <button class="trk-top" data-trkopen="${esc(p.id)}" aria-expanded="${open}">${badge(p.carrier, 42, p.carrierLogo)}
       <span class="m-grow" style="min-width:0"><b class="m-ell">${esc(p.name || c.name)}</b><span class="m-ell trk-no"><span>${esc(p.carrierName || c.name)}</span> · <span class="m-mono">${esc(p.trackingNo)}</span></span></span>
       <span class="trk-pills">${srcPill(p)}${p.direction === 'out' ? '<em class="trk-src out">Utgående</em>' : ''}</span></button>
     <div class="trk-stat"><b class="${statusCls(p)}">${esc(statusTxt(p))}</b>${etaTxt(p) ? `<span>${esc(etaTxt(p))}</span>` : ''}</div>
@@ -207,7 +207,7 @@ export function trkView(th) {
     ${items === null ? '<div class="m-spin"></div>' : list.map(card).join('') || `<div class="m-empty">${TR.seg === 'act' ? 'Ingen pakker på vei. Lim inn et sporingsnummer over, eller slå på Finn og E-post.' : 'Ingen pakker her.'}</div>`}
     <div class="sec">Varsler og haptikk</div><div class="list ${gl()}">${trkPrefRows().join('')}${tog('data-trkhap', 'Haptisk tilbakemelding', 'Vibrasjon ved nye pakker og statusendringer', hpref('hap') && hpref('hapPkg'))}</div>
     <div class="snote">Varslene vises mens appen er åpen eller i bakgrunnen. Push når appen er lukket krever de native appene.</div>
-    ${carriers.length ? `<div class="sec">Transportører</div><div class="list ${gl()}">${carriers.map((c) => `<div class="opt-row">${badge(c.id, 32)}<span class="m-grow">${esc(c.name ?? carOf(c.id).name)}</span><span class="sval" style="color:${c.configured ? '#8fe0b0' : '#f3b54a'};opacity:1">${c.configured ? 'Tilkoblet' : 'Mangler nøkkel'}</span></div>`).join('')}</div>
+    ${carriers.length ? `<div class="sec">Transportører</div><div class="list ${gl()}">${carriers.map((c) => `<div class="opt-row">${badge(c.id, 32, c.logo)}<span class="m-grow">${esc(c.name ?? carOf(c.id).name)}</span><span class="sval" style="color:${c.configured ? '#8fe0b0' : '#f3b54a'};opacity:1">${c.configured ? 'Tilkoblet' : 'Mangler nøkkel'}</span></div>`).join('')}</div>
       <div class="snote">Nøklene legges inn i Homelab → Innstillinger → Integrasjoner → Sporing.</div>` : ''}`;
 }
 

@@ -1223,3 +1223,173 @@ a.wx-r{color:inherit;text-decoration:none}
 .m.papir.ph .mat2>.mp2-hero:first-of-type,.m.papir.ph .mat2>.mp-card:first-child{margin-top:0}
 .pp-row .pp-btn.sm{flex:none;white-space:nowrap}
 .pp-rhead .pp-lab{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ================= Prompt 14 · Papir: fanelinje, Finans, Finn, Sporing, Domener, innlogging ================= */
+/* Fanelinja ligger 12 pt over safe area-bunnen. Fanene fordeles jevnt (aktiv fane flex:none), +-knappen rett etter Mer. */
+.m.papir{--pp-navb:max(12px,calc(env(safe-area-inset-bottom) - 8px))}
+.pp-nav{left:12px;right:12px;bottom:var(--pp-navb);justify-content:flex-start;gap:2px;padding:0 8px;max-width:536px}
+.pp-nav a{flex:1 1 0;min-width:0;justify-content:center;padding:0 6px;overflow:hidden}
+.pp-nav a span{overflow:hidden;text-overflow:ellipsis}
+.pp-nav a[aria-current=page]{flex:none;padding:0 16px}
+.pp-nav .pp-scan{margin-left:4px;color:var(--pp-onLab)!important;transition:transform .15s;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.pp-nav .pp-scan.down{transform:scale(.88)}
+/* Innholdet stopper over linja: en flate i papirfarge dekker alt bak og under fanelinja. */
+.pp-navbg{position:fixed;z-index:19;left:0;right:0;bottom:0;height:calc(var(--pp-navb) + 70px);background:var(--pp-bg);pointer-events:none}
+.m.papir .m-scroll{padding-bottom:calc(var(--pp-navb) + 62px + 20px)}
+.m.papir.matp .m-scroll{padding-bottom:calc(var(--pp-navb) + 62px + 20px)}
+.m.papir .m-toast{bottom:calc(var(--pp-navb) + 62px + 12px);background:var(--pp-ink);color:var(--pp-bg);z-index:70}
+.pp-hint{position:fixed;z-index:22;right:16px;bottom:calc(var(--pp-navb) + 72px);padding:8px 12px;border-radius:12px;background:var(--pp-ink);color:var(--pp-bg);font-size:12.5px;font-weight:600;animation:fadein .15s ease-out}
+@keyframes fadein{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* Bakgrunnsvelgeren: egen nedtrekksmeny som åpnes under pillen med fade og skalering fra 0,96. */
+.pp-menu{width:236px;background:var(--pp-pop,#f3efe6);color:var(--pp-ink);opacity:0;transform:scale(.96);transform-origin:top right;pointer-events:none;visibility:hidden;transition:opacity .16s ease,transform .16s ease,visibility 0s .16s}
+.pp-menu.open{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition:opacity .16s ease,transform .16s ease}
+.pp-menu button,.pp-menu label{height:50px;color:var(--pp-ink)}
+.pp-menu [aria-checked=true]{background:var(--pp-popSel,#e6e0d2)}
+.pp-mi{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+.pp-mi small{font:500 11.5px Manrope,sans-serif;color:var(--pp-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pp-mi small.bad,.pp-ck.bad{color:var(--pp-lab)}
+.pp-ck{font-size:13px;font-weight:700;min-width:12px;text-align:right}
+.pp-msep{display:block;height:1px;background:var(--pp-popLine,#ddd6c7);margin:2px 8px}
+.pp-fail{position:absolute;left:22px;right:22px;bottom:96px;justify-content:center;font-size:12px;z-index:2;white-space:normal;height:auto;min-height:30px;padding:6px 12px}
+.m.papir.pd .pp-th.dash{border-color:#5e594f;color:var(--pp-mut)}
+
+/* Finans → Liste og Mer */
+.pp-search .pp-ai{flex:none;font:600 11px 'IBM Plex Mono',monospace;color:var(--pp-lab);text-decoration:none;padding:6px 0 6px 8px}
+.pp-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px;flex:none}
+.pp-chips.pp-wrap{flex-direction:row;flex-wrap:wrap;overflow:visible;margin:0;padding:0}
+.pp-fchip{flex:none;height:34px;padding:0 14px;border-radius:999px;border:1px solid var(--pp-line)!important;background:transparent;color:var(--pp-ink);font:600 13px Manrope,sans-serif;white-space:nowrap;cursor:pointer}
+.pp-fchip.sm{height:32px;padding:0 11px;font-size:12px}
+.pp-fchip[aria-pressed=true]{background:var(--pp-ink)!important;color:var(--pp-bg)!important;border-color:var(--pp-ink)!important}
+.pp-grp{display:flex;flex-direction:column;gap:6px;flex:none}.pp-grp>.pp-lab{padding:6px 4px 0}
+.pp-list b.pp-serif{font-size:18px}
+
+/* Finn: rutenett med to kort i bredden */
+.pp-bar.thin{height:6px;border-radius:3px}
+.pp-btn.dash{border:1.5px dashed var(--pp-line)!important;font-weight:700;height:46px;flex:none}
+.pp-seg{height:38px;border-radius:10px;border:1px solid var(--pp-line)!important;background:transparent;color:var(--pp-ink);font:700 13px Manrope,sans-serif;cursor:pointer}
+.pp-seg[aria-pressed=true]{background:var(--pp-ink)!important;color:var(--pp-bg)!important;border-color:var(--pp-ink)!important}
+.pp-fgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;flex:none}
+.pp-fcard{position:relative;min-width:0}
+.pp-fcard>a,.pp-fcard>button:first-child{display:flex;flex-direction:column;width:100%;border-radius:18px;background:var(--pp-card);overflow:hidden;color:inherit;text-decoration:none;text-align:left;padding:0;cursor:pointer;font:inherit}
+.pp-fcard.on>a,.pp-fcard.on>button:first-child{outline:2px solid var(--pp-lab);outline-offset:2px}
+.pp-fcard.act>a,.pp-fcard.act>button:first-child{box-shadow:inset 0 0 0 1.5px #FF8A4C}
+.pp-fimg{aspect-ratio:1;background-size:cover;background-position:center;position:relative;display:grid;place-items:center}
+.pp-fini{font:700 26px Manrope,sans-serif;color:rgba(255,255,255,.35)}
+.pp-fpill{position:absolute;left:8px;top:8px;padding:3px 8px;border-radius:8px;font:700 10.5px Manrope,sans-serif;letter-spacing:.04em;max-width:calc(100% - 56px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pp-fbars{position:absolute;left:8px;right:8px;bottom:8px;display:flex;gap:3px}.pp-fbars i{flex:1;height:3px;border-radius:2px}
+.pp-fbody{padding:9px 11px 11px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.pp-fv{font-size:18px}.pp-ft{font-size:13.5px;line-height:1.25}
+.pp-fnext{font-size:11.5px;color:var(--pp-mut)}.pp-fnext.hot{color:var(--pp-lab);font-weight:600}
+.pp-fed{position:absolute;top:8px;right:8px;width:32px;height:32px;border-radius:16px;background:rgba(27,26,23,.6)!important;color:#fff!important;font-size:14px;display:grid;place-items:center;cursor:pointer}
+.pp-three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.pp-btn.sq{height:40px;border-radius:10px;font-size:12.5px;padding:0 6px}
+.pp-btn.lab-o{color:var(--pp-lab)!important;font-weight:700;height:42px;border-radius:12px}
+.pp-sheet .pp-btn.ink{height:42px;border-radius:12px}
+
+/* Kø i +-arket */
+.pp-q{display:flex;flex-direction:column;gap:5px;padding:10px 12px;border-radius:12px;background:var(--pp-card);font-size:13.5px}
+.pp-q .pp-bar{height:4px}
+
+/* Sporing */
+.pp-trk{display:flex;flex-direction:column;gap:10px;-webkit-touch-callout:none}
+.pp-trksec{display:flex;flex-direction:column;gap:10px;border-radius:22px;transition:transform .2s}
+.pp-trksec>.pp-lab{padding:4px 4px 0}
+.pp-trktabs{display:flex;align-items:center;gap:4px;height:46px;padding:0 4px;border-radius:999px;background:var(--pp-card);box-shadow:0 10px 30px -14px rgba(0,0,0,.35);flex:none}
+.pp-trktabs-s{flex:1;min-width:0;display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}
+.pp-trktabs-s button{flex:none;height:38px;padding:0 13px;border-radius:999px;color:var(--pp-mut);font:600 13px Manrope,sans-serif;white-space:nowrap}
+.pp-trktabs-s button span{margin-left:5px;font:600 11px 'IBM Plex Mono',monospace;opacity:.55}
+.pp-trktabs-s button[aria-selected=true]{background:var(--pp-ink)!important;color:var(--pp-bg)}
+.pp-trkset{flex:none;width:38px;height:38px;border-radius:19px;border-left:1px solid var(--pp-line)!important;color:var(--pp-ink);display:grid;place-items:center}
+.pp-pk{padding:14px;gap:10px;color:var(--pp-ink)}
+.pp-pk.ready{outline:1.5px solid var(--pp-lab)}
+.pp-pkt{display:flex;align-items:center;gap:12px}
+.pp-pkt .trk-badge{border:1px solid var(--pp-line)}
+.pp-pkt b{display:block;font-size:18px}
+.pp-src{flex:none;padding:3px 8px;border-radius:8px;border:1px solid var(--pp-line);font:600 10.5px 'IBM Plex Mono',monospace;color:var(--pp-mut)}
+.pp-pks{font-size:15px}
+.pp-pkb{display:flex;gap:4px}.pp-pkb i{flex:1;height:4px;border-radius:2px}
+.pp-trkadd{display:flex;gap:6px;flex:none}
+.pp-trkadd .pp-in{flex:1;min-width:0}.pp-trkadd .pp-btn{height:46px;border-radius:14px;flex:none}
+.pp-in.dash{border:1.5px dashed var(--pp-line);background:transparent}
+.pp-editbar{position:sticky;top:8px;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 8px 8px 16px;border-radius:999px;background:var(--pp-ink);color:var(--pp-bg);font-size:13px;font-weight:600;flex:none}
+.pp-editbar .pp-btn.ink{background:var(--pp-bg)!important;color:var(--pp-ink)!important;border-color:var(--pp-bg)!important}
+.pp-trk.editing .pp-trksec{padding:10px;background:var(--pp-surf2);animation:wiggle .28s ease-in-out infinite alternate}
+.pp-trk.editing .pp-trksec:nth-child(2n){animation-delay:-.14s}
+.pp-trk.editing .pp-trksec>:not(.pp-mv){pointer-events:none}
+@keyframes wiggle{from{transform:rotate(-.6deg)}to{transform:rotate(.6deg)}}
+@media (prefers-reduced-motion:reduce){.pp-trk.editing .pp-trksec{animation:none}}
+.pp-mv{display:flex;align-items:center;gap:6px}
+.pp-mv b{font:500 18px Newsreader,serif}
+.pp-mv button{width:40px;height:36px;border-radius:12px;background:var(--pp-card)!important;color:var(--pp-ink);font-size:14px}
+.pp-mv button:disabled{opacity:.35}
+
+/* Domener i Papir: kortene får papirfarger */
+.m.papir.dom .dhero,.m.papir.dom .dcard,.m.papir.dom .dchart{background:var(--pp-card)!important;color:var(--pp-ink)}
+
+/* Abonnement: ark for å redigere og legge til (begge design) */
+.sb-edit{position:fixed;left:0;right:0;bottom:0;z-index:61;max-width:560px;margin:0 auto;max-height:90dvh;overflow-y:auto;border-radius:28px 28px 0 0;padding:12px 18px calc(env(safe-area-inset-bottom) + 22px);display:flex;flex-direction:column;gap:12px;box-sizing:border-box;background:var(--x-card2,#1F1712);color:var(--x-fg,#fff);animation:up .28s cubic-bezier(.3,1.2,.5,1)}
+.ios .sb-edit{background:rgba(28,28,34,.92);-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px)}
+.m.papir .sb-edit{background:var(--pp-bg);color:var(--pp-ink)}
+.sheet-bg:has(+ .sb-edit){z-index:60}
+.sb-grab{align-self:center;width:40px;height:5px;border-radius:3px;background:var(--x-bd,#3A2F29)}
+.sb-x{width:32px;height:32px;border-radius:16px;font-size:18px;color:var(--x-mut)}
+.sb-erow{display:flex;align-items:center;gap:12px}
+.sb-elogo{flex:none;width:56px;height:56px;border-radius:16px;background:#fff center/contain no-repeat;display:grid;place-items:center;font-weight:800;font-size:22px;color:#1b1a17}
+.sb-elogo.ini{background:var(--x-card,#261E19);color:var(--x-fg)}
+.sb-lab{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--x-mut);min-width:0}
+.sb-lab .sinp{color:var(--x-fg)}
+.m.papir .sb-lab,.m.papir .sb-x{color:var(--pp-mut)}.m.papir .sb-lab .sinp{color:var(--pp-ink);background:var(--pp-card);border:1px solid var(--pp-line)}
+.sb-del{height:48px;padding:0 16px;border-radius:14px;border:1px solid var(--x-bd)!important;color:#FF8A80;font-weight:700}
+.m.papir .sb-del{color:var(--pp-lab);border-color:var(--pp-line)!important}
+.sb-logo{flex:none;background:#fff center/70% no-repeat;display:block}
+.sb-row[data-sbed]{cursor:pointer}
+
+/* Papir-innlogging og onboarding */
+.pp-gate{position:fixed;inset:0;z-index:100;overflow-y:auto;background:#f3efe6;color:#1b1a17;font-family:Manrope,system-ui,sans-serif;--g-line:#d8d1c2;--g-lab:#b23a2a;--g-mut:#7a7468;--g-card:#fff;--g-ink:#1b1a17;--g-bg:#f3efe6}
+.pp-gate.pd{background:#14130f;color:#ece7dc;--g-line:#3a372e;--g-lab:#f08a76;--g-mut:#a39d90;--g-card:#211f19;--g-ink:#ece7dc;--g-bg:#14130f}
+.pp-ghero{height:calc(env(safe-area-inset-top) + 280px);background-color:#2a3440;background-size:cover;background-position:center;color:#fff;padding:calc(env(safe-area-inset-top) + 14px) 26px 30px;display:flex;flex-direction:column;box-sizing:border-box}
+.pp-gk{margin-top:auto;text-shadow:0 2px 14px rgba(0,0,0,.4)}
+.pp-gk div{font:italic 400 17px Newsreader,serif;opacity:.9}
+.pp-gk h1{font:500 42px/1.02 Newsreader,serif;margin:4px 0 0}
+.pp-gform{padding:28px 26px calc(env(safe-area-inset-bottom) + 34px);display:flex;flex-direction:column;gap:18px;max-width:520px;margin:0 auto;box-sizing:border-box}
+.pp-gform>label:not(.pp-gchk){display:flex;flex-direction:column;font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--g-lab)}
+.pp-gform input:not([type=checkbox]){height:48px;padding:0 2px;border:0;border-bottom:1.5px solid var(--g-ink);border-radius:0;background:transparent;color:var(--g-ink);font:400 20px Newsreader,serif;outline:none;width:100%;box-sizing:border-box}
+.pp-gform input[readonly]{font-size:17px;color:var(--g-mut);border-bottom-color:var(--g-line)}
+.pp-gform input:focus{border-bottom:2px solid var(--g-lab)}
+.pp-gcode{letter-spacing:.3em;text-align:center}
+.pp-gerr{font-size:13.5px;color:var(--g-lab)}
+.pp-gchk{display:flex;align-items:center;gap:10px;font-size:14px;cursor:pointer}
+.pp-gchk input{width:18px;height:18px;accent-color:var(--g-ink)}
+.pp-gbtn{height:54px;border-radius:999px;border:0;background:var(--g-ink);color:var(--g-bg);font:700 16px Manrope,sans-serif;cursor:pointer;flex:1}
+.pp-gbtn.line{flex:none;padding:0 20px;background:transparent;color:var(--g-ink);border:1px solid var(--g-line);font-weight:600}
+.pp-gbtn:disabled{opacity:.6}
+.pp-gback{border:0;background:transparent;color:var(--g-mut);font:600 14px Manrope,sans-serif;cursor:pointer}
+.pp-glink{font-size:12.5px;color:var(--g-mut);text-align:center}
+.pp-gdots{display:flex;gap:6px}.pp-gdots span{flex:1;height:4px;border-radius:2px;background:var(--g-line)}.pp-gdots span.on{background:var(--g-ink)}
+.pp-glab{font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--g-lab)}
+.pp-gopt{display:flex;align-items:center;gap:14px;padding:12px;border-radius:18px;border:1.5px solid transparent;background:var(--g-card);color:var(--g-ink);text-align:left;cursor:pointer;font:inherit}
+.pp-gopt.on{border-color:var(--g-ink)}
+.pp-gsw{flex:none;width:52px;height:68px;border-radius:12px}
+.pp-gmi{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.pp-gmi b{font:500 19px Newsreader,serif}.pp-gmi span{font-size:12.5px;color:var(--g-mut);line-height:1.35}
+.pp-gperm .pp-gmi b{font:600 14.5px Manrope,sans-serif}
+.pp-gck{font-weight:800}
+.pp-ggrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pp-gbg{display:flex;flex-direction:column;gap:6px;padding:0;border:0;background:transparent;color:var(--g-ink);text-align:left;cursor:pointer;font:inherit}
+.pp-gbg span{aspect-ratio:4/3;border-radius:14px;background-size:cover;background-position:center}
+.pp-gbg.on span{outline:2px solid var(--g-ink);outline-offset:2px}
+.pp-gbg b{font-size:13.5px;font-weight:600}
+.pp-gcard{border-radius:18px;background:var(--g-card);overflow:hidden}
+.pp-gperm{display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;border:0;background:transparent;color:var(--g-ink);text-align:left;cursor:pointer;font:inherit}
+.pp-gperm+.pp-gperm{border-top:1px solid var(--g-line)}
+.pp-grow{display:flex;gap:8px;margin-top:6px}
+.pp-gmut{font-size:12.5px;color:var(--g-mut);text-align:center}
+/* Knappene over nullstilles av «.m button»; gi dem polstringen tilbake. */
+.m .pp-fchip{padding:0 14px}.m .pp-fchip.sm{padding:0 11px}.m .pp-tog{padding:12px 14px}.m .pp-btn{padding:0 18px}.m .pp-btn.sq{padding:0 6px}.m .sb-del{padding:0 16px}
+.m .pp-trkadd .pp-btn{padding:0 18px}
+.pp-hero:has(.pp-menu.open){z-index:30}
+.pp-bar.thin{flex:none;width:100%}
+@media (max-width:420px){ .pp-nav a{font-size:12px;padding:0 4px} .pp-nav a[aria-current=page]{padding:0 13px;gap:6px} }
+.pp-trksec:first-child .pp-trkadd .pp-in.dash{background:var(--pp-card);border:0;box-shadow:0 10px 30px -14px rgba(0,0,0,.35)}
+.pp-gform>.pp-gbtn{flex:none}
+.m .sb-edit{z-index:91}.m .sheet-bg:has(+ .sb-edit){z-index:90}

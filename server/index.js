@@ -57,7 +57,10 @@ app.get('/login', async (c) => sessionUser(c) ? c.redirect('/') : html(c, await 
 app.get('/cv', async (c) => html(c, await page('cv.html')));
 // FinansHub: egen fullskjerm-app (desktop og mobil/PWA). API-et har egen tilgangskontroll (sesjon eller token).
 app.get('/finans', (c) => c.redirect('/finans/'));
-app.get('/finans/', async (c) => sessionUser(c) ? html(c, await page('finans/index.html')) : c.redirect('/login?next=/finans/'));
+// Mobil uten innlogging får appskallet, som viser sin egen Papir-innlogging (mobile-gate.js). Desktop og en tom server går til /login.
+const MOBILE_UA = /iPhone|iPad|iPod|Android|Mobile/i;
+app.get('/finans/', async (c) => (sessionUser(c) || (!needsSetup() && MOBILE_UA.test(c.req.header('user-agent') ?? '')))
+  ? html(c, await page('finans/index.html')) : c.redirect('/login?next=/finans/'));
 app.get('/finans/manifest.webmanifest', async (c) => c.body(await page('finans/manifest.webmanifest'), 200, { 'Content-Type': 'application/manifest+json' }));
 app.get('/finans/sw.js', async (c) => c.body(await page('finans/sw.js'), 200, { 'Content-Type': 'text/javascript', 'Cache-Control': 'no-cache' }));
 app.route('/finans/api', finansApi);

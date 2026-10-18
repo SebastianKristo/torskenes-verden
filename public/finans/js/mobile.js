@@ -15,7 +15,8 @@ import { finnView, finnLoad, finnBind } from './mobile-finn.js';
 import { trkView, trkLoad, trkBind, trkWatch } from './mobile-track.js';
 import { haptic } from './mobile-haptics.js';
 import { subsBind } from './mobile-subs.js';
-import { paper, paperDark, paperHero, paperNav, paperScanSheet, paperHome, paperFin, paperMer, mediaView, mediaLoad, newsView, newsLoad, paperBind, photoLoad, takeDesign, paperState } from './mobile-paper.js';
+import { paper, paperDark, paperHero, paperNav, paperScanSheet, paperHome, paperFin, paperMer, mediaView, mediaLoad, newsView, newsLoad, paperBind, photoLoad, takeDesign, paperState, paperDown, paperUp, paperMove } from './mobile-paper.js';
+import { paperList, paperFMer, paperFinn, paperFinnSheet, paperFinnLoad, paperFinnBind, paperTrk, paperTrkSheet, paperTrkBind, trkDown, trkMove, trkUp, takeTrkOrder } from './mobile-paper2.js';
 
 const u = S.ui;
 export const m = {
@@ -28,6 +29,7 @@ export const theme = () => { if (paper()) return 'and'; try { const t = localSto
 export const two = () => matchMedia('(min-width: 600px)').matches;
 export const iosBg = () => { if (paper()) return false; try { return localStorage.getItem('fh_ios_bg') !== '0'; } catch { return true; } };
 const ACTIVE = ['pending', 'processing'];
+export const ACTIVE_JOBS = ACTIVE;
 export const amtC = (v, th) => (v > 0 ? '#9FE3C6' : th === 'and' ? c3('#F0DFD7') : 'inherit');
 
 /* ---------- Skjermer og faner ---------- */
@@ -40,7 +42,7 @@ const FINMODS = ['sub', 'dir', 'finn'];
 export const FIN = ['hjem', 'liste', 'budsjett', 'sok', 'skann', 'opp', ...PAGES, ...FINMODS];
 const TWO = ['hjem', 'liste', 'budsjett', 'skann', 'opp', 'sok'];
 const HLG = ['hl', 'spor', 'set'];
-const ALL = [...new Set([...FIN, 'hl', 'spor', 'mat', 'dom', 'set', 'media', 'nyheter'])];
+const ALL = [...new Set([...FIN, 'hl', 'spor', 'mat', 'dom', 'set', 'media', 'nyheter', 'fmer'])];
 // Oversikt, Liste og Budsjett bruker egne navn fra Sidemeny; Søk og Mer beholder de korte navnene i fanelinja.
 const RENAME = ['home', 'list', 'bud', 'finn'];
 // Egne navn fra Innstillinger → Utseende → Navigasjonslinje (LAY.names) går foran; tomt felt gir standardnavnet.
@@ -65,7 +67,8 @@ export const hide = (txt) => (pref('hideAmt') && !m.reveal ? '••••' : tx
 const START = { homelab: 'hl', 'fin-hjem': 'hjem', 'fin-liste': 'liste', 'fin-budsjett': 'budsjett' };
 export const startScr = () => START[LAY().start] ?? (['hl', 'hjem', 'liste', 'budsjett'].includes(pref('start')) ? pref('start') : 'hl');
 export const startFin = () => startScr() !== 'hl';
-export const backStyle = () => LAY().backStyle ?? 'arrow';
+// Prompt 14: «Knapp i linjen» er fjernet. Pila øverst til venstre går alltid til startsiden.
+export const backStyle = () => 'arrow';
 const FINMAIN = ['hjem', 'liste', 'budsjett', 'finn', 'sok', 'mer'];
 /** Pil øverst («‹ Homelab»/«‹ Finans») i moduler og Finans-fanene. Matplan har alltid pilen (den har ingen fanelinje). */
 export function backTop(scr = m.screen) {
@@ -358,7 +361,9 @@ export function draw() {
   const fin = FIN.includes(scr), twoPane = wide && TWO.includes(scr) && !(S.boot?.restricted);
   const confirmView = scr === 'skann' && m.rc && !wide;
   const scrs = { hjem: home, liste: list, budsjett: budget, opp: uploadScreen };
-  const ppMain = !pp ? null : scr === 'hl' ? paperHome() : scr === 'hjem' && !S.boot?.restricted && !m.detail && !m.edit ? paperFin() : scr === 'mer' ? paperMer() : null;
+  const plain = !m.detail && !m.edit;
+  const ppMain = !pp ? null : scr === 'hl' ? paperHome() : scr === 'hjem' && !S.boot?.restricted && plain ? paperFin() : scr === 'mer' ? paperMer()
+    : scr === 'fmer' ? paperFMer() : scr === 'liste' && plain ? paperList() : scr === 'finn' && !m.sub ? paperFinn() : scr === 'spor' ? paperTrk() : null;
   const main = scr === 'nyheter' ? newsView()
     : scr === 'media' ? (pp ? '' : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Media</div></div>') + mediaView()
     : ppMain ?? (scr === 'set' ? settingsView(th, m.sub)
@@ -377,7 +382,7 @@ export function draw() {
   const ae = document.activeElement, keep = ae?.id && root().contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
   root().innerHTML = `<div class="m ${th}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
     ${pp ? '' : rail(n)}${hero ? paperHero(scr) : ''}<div class="m-scroll">${bt ? topRow(th) : ''}${main}</div><div class="m-detail">${twoPane ? detail(th) : ''}</div>${nav}
-    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() : ''}${origOverlay(th)}${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
+    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() : ''}${origOverlay(th)}${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
     <input class="m-file" id="m-capture" type="file" accept="image/*" capture="environment" data-mupload data-confirm></div>`;
   if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', pp ? (m.light ? '#f3efe6' : '#14130f') : th === 'ios' ? '#07070A' : getComputedStyle(root().firstElementChild).backgroundColor || '#19120E');
@@ -398,7 +403,10 @@ export function draw() {
 let toastT;
 // Fullførte handlinger gir en kort «suksess»-vibrasjon; feil kommer via safe() eller haptic('err') der de oppstår.
 const OK_RE = /✓|lagt til|lagret|slettet|bokført|importert|synket|opprettet|oppdatert|er aktiv|sagt opp|arkivert|kopiert/i;
-export const flash = (t, kind) => { m.toast = t; if (kind || OK_RE.test(t)) haptic(kind || 'ok'); draw(); clearTimeout(toastT); toastT = setTimeout(() => { m.toast = ''; draw(); }, 1800); };
+export const flash = (t, kind) => {
+  // Innloggingen tas av Papir-innloggingen (core.js), ikke av en toast midt i innholdet.
+  if (t === 'Ikke innlogget') return;
+  m.toast = t; if (kind || OK_RE.test(t)) haptic(kind || 'ok'); draw(); clearTimeout(toastT); toastT = setTimeout(() => { m.toast = ''; draw(); }, 1800); };
 
 export async function loadMe() {
   // Kontoinfo: /finans/api/me, ellers Homelabs /api/me (samme sesjon). avatarUrl og serverName kommer fra Homelab.
@@ -423,12 +431,14 @@ async function load() {
     else if (scr === 'mat') jobs.push(matLoad());
     else if (scr === 'media') jobs.push(mediaLoad());
     else if (scr === 'nyheter') jobs.push(newsLoad());
-    else if (scr === 'finn') jobs.push(finnLoad(m.sub));
+    else if (scr === 'finn') jobs.push(paper() && !m.sub ? paperFinnLoad() : finnLoad(m.sub));
+    else if (scr === 'fmer') jobs.push(loadSummary().catch(() => {}));
     else if ((!FIN.includes(scr) || FINMODS.includes(scr)) && !['media', 'nyheter'].includes(scr)) jobs.push(modLoad(scr, m.sub));
     if (paper()) {
       jobs.push(photoLoad().then(() => draw()).catch(() => {}));
       if (scr === 'hl') jobs.push(matLoad().catch(() => {}), loadSummary().catch(() => {}), newsLoad().catch(() => {}));
       if (scr === 'mer' || scr === 'hjem') jobs.push(loadSummary().catch(() => {}));
+      if (scr === 'liste' && !S.summary) jobs.push(loadSummary().catch(() => {}));
     }
     if (!m.me) jobs.push(loadMe().catch(() => { m.me = { name: S.boot?.settings?.name }; }));
     await Promise.all(jobs);
@@ -461,10 +471,11 @@ export function route() {
   const map = { ov: 'hjem', tx: 'liste', bud: 'budsjett', inn: 'set', meg: 'set', homelab: 'hl', ai: 'sok', matplan: 'mat', domener: 'dom', aksjer: 'aks', abonnement: 'sub', mapper: 'dir', sporing: 'spor', trk: 'spor', news: 'nyheter', nyhetsleser: 'nyheter', rss: 'nyheter' };
   const start = startScr();
   let next = map[h] ?? (ALL.includes(h) ? h : start);
+  if (next === 'fmer' && !paper()) next = 'mer';
   if (S.boot?.restricted && FIN.includes(next) && next !== 'dir') next = next === 'hjem' ? 'hjem' : 'dir';
   const sub = parts.slice(1).join('/');
   if (next !== m.screen || sub !== m.sub) {
-    if (next !== m.screen) { m.edit = null; m.pdet = null; }
+    if (next !== m.screen) { m.edit = null; m.pdet = null; if (next === 'dom') m.domFrom = m.screen === 'dom' ? m.domFrom : m.screen; if (next === 'set') m.setFrom = m.screen === 'set' ? m.setFrom : m.screen; }
     m.screen = next; m.sub = sub; m.detail = false; m.menu = false; m.sheet = false; m.min = false; m.orig = null; paperState.scan = false; paperState.open = paperState.open && next === 'hl';
     if (next !== 'skann' && next !== 'opp') m.rc = null;
     window.scrollTo(0, 0);
@@ -477,11 +488,11 @@ export function route() {
 /* ---------- Opplasting (med kø uten nett / bare på Wi-Fi) ---------- */
 
 const onWifi = () => { const c = navigator.connection; return !c?.type || c.type === 'wifi' || c.type === 'ethernet'; };
-export async function upload(files, { confirm = false } = {}) {
+export async function upload(files, { confirm = false, stay = false } = {}) {
   if (!files.length) return;
   m.sheet = false;
   if (pref('wifi') && !onWifi()) { m.offline.push(...files); if (location.hash !== '#/opp') location.hash = '#/opp'; return flash('Venter på Wi-Fi før opplasting'); }
-  if (!confirm && location.hash !== '#/opp') location.hash = '#/opp';
+  if (!confirm && !stay && location.hash !== '#/opp') location.hash = '#/opp';
   m.uploading = files.length; draw();
   let first = null;
   for (const f of files) {
@@ -690,10 +701,17 @@ function bindGlobal() {
 export function bind() {
   const el = root();
   bindGlobal();
-  addEventListener('fh-design', (e) => { const was = pref('mDesign'); takeDesign(e.detail); if (pref('mDesign') !== was) draw(); });
-  loadLayout().then((r) => { takeDesign(r); if (document.documentElement.dataset.ui === 'mobile') draw(); }).catch(() => {});
+  addEventListener('fh-design', (e) => { const d = e.detail ?? {}; takeDesign(d); if (typeof d.lock === 'boolean') setPref('lock', d.lock); if (typeof d.hap === 'boolean') setPref('hap', d.hap); if (d.photo) photoLoad(d.photo).then(draw).catch(() => {}); draw(); });
+  loadLayout().then((r) => {
+    takeDesign(r); takeTrkOrder(r);
+    // Første gang etter innlogging (nye installasjoner): onboarding i tre steg.
+    if (r && r.onboarded === false) import('./mobile-gate.js').then((g) => g.showOnboarding(r)).catch(() => {});
+    if (document.documentElement.dataset.ui === 'mobile') draw();
+  }).catch(() => {});
   // Skanneknappen: trykk = kamera (eller valg), hold inne ~480 ms = arket med Bilder/Filer.
   el.addEventListener('pointerdown', (e) => {
+    if (paperDown(e)) return;
+    trkDown(e);
     if (swDown(e)) return;
     if (tabDown(e)) return;
     if (hlBind(e, e.target)) return;
@@ -703,6 +721,8 @@ export function bind() {
   });
   const cancelLp = () => clearTimeout(lpTimer);
   el.addEventListener('pointerup', cancelLp); el.addEventListener('pointercancel', cancelLp);
+  el.addEventListener('pointerup', (e) => { paperUp(e); trkUp(e); }); el.addEventListener('pointercancel', (e) => { paperUp(e); trkUp(e); });
+  el.addEventListener('contextmenu', (e) => { if (e.target.closest('[data-ppplus], [data-trksec]')) e.preventDefault(); });
   el.addEventListener('contextmenu', (e) => { if (e.target.closest('[data-scan]')) e.preventDefault(); });
   el.addEventListener('click', safe(async (e) => {
     const t = e.target, d = (s) => t.closest(s);
@@ -726,6 +746,8 @@ export function bind() {
     if ((x = d('[data-bud]'))) { m.budSel = +x.dataset.bud; if (!S.tx) await loadTx(); return draw(); }
     if ((x = d('[data-filter]'))) { m.filter = x.dataset.filter; u.type = m.filter; await loadTx(); return draw(); }
     if ((x = d('[data-mcat]'))) { const r = await api(`/receipts/${m.rc}`, { method: 'PATCH', json: { categoryId: +x.dataset.mcat } }); S.receipts = S.receipts.map((y) => (y.id === r.id ? r : y)); return draw(); }
+    if (paper() && await paperFinnBind(e, t)) return;
+    if (paper() && await paperTrkBind(e, t)) return;
     if (await paperBind(e, t)) return;
     if (await matBind(e, t)) return;
     if (await finnBind(e, t)) return;
@@ -757,7 +779,7 @@ export function bind() {
     }
     if (act === 'logout') { await fetch('/api/logout', { method: 'POST' }); location.href = '/login?next=/finans/'; }
   }));
-  el.addEventListener('input', (e) => { paperBind(e, e.target); matBind(e, e.target); if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
+  el.addEventListener('input', (e) => { if (paper()) { paperFinnBind(e, e.target); paperTrkBind(e, e.target); } paperBind(e, e.target); matBind(e, e.target); if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
   el.addEventListener('change', safe(async (e) => {
     const t = e.target;
     if (t.matches('[data-mupload]')) { const f = [...t.files]; t.value = ''; await upload(f, { confirm: t.hasAttribute('data-confirm') && f.length === 1 }); return; }
@@ -766,6 +788,7 @@ export function bind() {
       const r = await api(`/receipts/${m.rc}`, { method: 'PATCH', json: { [f]: f === 'total' ? parseAmount(t.value) : f === 'accountId' ? +t.value : t.value } });
       S.receipts = S.receipts.map((y) => (y.id === r.id ? r : y)); return draw();
     }
+    if (paper() && await paperFinnBind(e, t)) return;
     if (await paperBind(e, t)) return;
     if (await matBind(e, t)) return;
     if (await finnBind(e, t)) return;
@@ -776,6 +799,8 @@ export function bind() {
   }));
   el.addEventListener('submit', safe(async (e) => {
     if (e.target.matches('[data-msearch]')) { e.preventDefault(); u.q = e.target.q.value; await loadTx(); return draw(); }
+    if (paper() && await paperFinnBind(e, e.target)) return;
+    if (paper() && await paperTrkBind(e, e.target)) return;
     if (await paperBind(e, e.target)) return;
     if (await matBind(e, e.target)) return;
     if (await finnBind(e, e.target)) return;
@@ -789,7 +814,7 @@ export function bind() {
   el.addEventListener('keydown', (e) => { hlBind(e, e.target); });
   el.addEventListener('focusin', (e) => { hlBind(e, e.target); });
   el.addEventListener('focusout', (e) => { hlBind(e, e.target); });
-  el.addEventListener('pointermove', (e) => { if (swMove(e)) return; if (tabMove(e)) return; hlBind(e, e.target); }, { passive: false });
+  el.addEventListener('pointermove', (e) => { paperMove(e); trkMove(e); if (swMove(e)) return; if (tabMove(e)) return; hlBind(e, e.target); }, { passive: false });
   el.addEventListener('pointerup', (e) => { if (swEnd(e)) return; if (tabUp(e)) return; hlBind(e, e.target); });
   el.addEventListener('pointercancel', (e) => { if (swEnd(e)) return; tabUp(e); });
   // Hindrer at nettleseren tar over berøringen (og sender pointercancel) mens man sveiper tilbake.

@@ -3,11 +3,26 @@
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 export const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 
+// 401: sjekk at økten faktisk er borte (ikke bare manglende tilgang til ett endepunkt). På mobil vises Papir-innloggingen
+// i appen (mobile-gate.js); på desktop sendes brukeren til /login som før. Feilen vises ikke som en toast.
+const mobileUi = () => !new URLSearchParams(location.search).has('desktop') && (matchMedia('(max-width: 899px)').matches || (matchMedia('(pointer: coarse)').matches && matchMedia('(max-width: 1100px)').matches));
+let gateShown = false;
+async function authLost() {
+  const st = await fetch('/api/me', { cache: 'no-store' }).then((r) => r.status).catch(() => 0);
+  if (st !== 401) { const e = new Error('Ingen tilgang'); e.status = 401; throw e; }
+  if (!gateShown) {
+    gateShown = true;
+    if (mobileUi()) import('./mobile-gate.js').then((g) => g.showLogin()).catch(() => { location.href = '/login?next=/finans/'; });
+    else location.href = '/login?next=/finans/';
+  }
+  const e = new Error('Ikke innlogget'); e.auth = true; throw e;
+}
+
 export async function api(path, opts = {}) {
   const init = { ...opts, headers: { ...(opts.headers ?? {}) } };
   if (opts.json !== undefined) { init.body = JSON.stringify(opts.json); init.headers['Content-Type'] = 'application/json'; delete init.json; }
   const res = await fetch('/finans/api' + path, init);
-  if (res.status === 401) { location.href = '/login?next=/finans/'; throw new Error('Ikke innlogget'); }
+  if (res.status === 401) await authLost();
   const data = res.headers.get('content-type')?.includes('json') ? await res.json() : await res.text();
   if (!res.ok) throw new Error(data?.error || `Feil ${res.status}`);
   return data;

@@ -1,7 +1,7 @@
 // Moduler i mobilappen («Andre OS»): Matplan, Domener, Subscription OS, Delte mapper og Finn-handler.
 // Hver modul fyller hele skjermen og henter fra sitt eget API. Feiler API-et, vises en lenke til desktop-siden.
 import { api, esc, n0, n2, dd, dWeek, today, icon, logo, aiLine, matApi, domApi, parseAmount, navName } from './core.js';
-import { m, draw, flash, avatar, backBtn } from './mobile.js';
+import { m, draw, flash, avatar, backBtn, pref } from './mobile.js';
 import { subsLoad, subsView, subsBind } from './mobile-subs.js';
 
 export const MODS = [
@@ -213,6 +213,14 @@ function domView(th) {
   if (!dm.list.length) return `${top}<div class="m-empty">Ingen domener lagt til ennå.</div>${listBox(th, manageRow)}`;
   const a = dm.data[`${dm.sel}|${dm.per}`];
   if (!a) return `${top}<div class="m-spin"></div>`;
+  // Papir (prompt 14): egen fanelinje med Oversikt, Publikum, Ytelse og Infra, med all statistikken fordelt på de fire.
+  if (pref('mDesign') === 'papir') {
+    const ps = ['pub', 'ytl', 'inf'].includes(m.sub) ? m.sub : 'ov';
+    liveTimer(ps === 'ov');
+    const mk = a.mock ? '<div style="font-size:12px;opacity:.55;text-align:center">Eksempeldata – legg inn Cloudflare-token i Homelab for ekte tall.</div>' : '';
+    const body = ps === 'pub' ? domBes(th, a) : ps === 'ytl' ? domYt(th, a, { uptime: false }) + domSik(th, a, { dns: false }) : ps === 'inf' ? domUp(th, a) + domDns(th, a) + domCard(th, a) : domTraf(th, a, { card: false });
+    return `${top}${a.error ? `<div class="m-empty" style="padding:8px">${esc(a.error)}${a.stale ? ' · viser sist hentede tall' : ''}</div>` : ''}${body}${mk}`;
+  }
   const tab = tabOf();
   const mock = a.mock ? '<div style="font-size:12px;opacity:.55;text-align:center">Eksempeldata – legg inn Cloudflare-token i Homelab for ekte tall.</div>' : '';
   const body = tab === 'bes' ? domBes(th, a) : tab === 'yt' ? domYt(th, a) : tab === 'sik' ? domSik(th, a) : domTraf(th, a);
@@ -222,7 +230,7 @@ function domView(th) {
   return `${top}<div class="title" style="font-size:${isIos(th) ? 30 : 32}px">${DOMTABS.find(([k]) => k === `dom/${tab}`)[1]}</div><div style="font-size:13px;opacity:.75;padding:0 4px">${meta}</div>${a.error ? `<div class="m-empty" style="padding:8px">${esc(a.error)}${a.stale ? ' · viser sist hentede tall' : ''}</div>` : ''}${body}${mock}`;
 }
 const chipRow = (opts, cur, key) => `<div style="display:flex;gap:8px;overflow-x:auto">${opts.map(([k, n]) => `<button class="chip" data-dom="${key}" data-v="${k}" aria-pressed="${cur === k}">${cur === k ? '✓ ' : ''}${n}</button>`).join('')}</div>`;
-function domTraf(th, a) {
+function domTraf(th, a, { card = true } = {}) {
   const live = a.live ?? {}, [mb, unit] = bytes(a.bytes ?? (live.mb ?? 0) * 1e6), h = dm.data[`${dm.sel}|${dm.hist}`];
   const sp = live.spark ?? (a.series ?? []).map((x) => x.requests), sl = path(sp, 300, 70);
   const ser = h?.series ?? [];
@@ -234,7 +242,7 @@ function domTraf(th, a) {
     <div class="sec">Historikk</div>
     ${chipRow([['7d', '7 d'], ['30d', '30 d'], ['90d', '90 d'], ['1y', '1 år']], dm.hist, 'hist')}
     ${h ? [['Besøk', ser.map((x) => x.visitors ?? 0)], ['Forespørsler', ser.map((x) => x.requests ?? 0)]].map(([l, arr]) => `<div class="dchart ${gl(th)}"><div class="m-row" style="justify-content:space-between"><span style="opacity:.75">${l}</span><b class="m-mono">${nbx(arr.reduce((x, y) => x + y, 0))}</b></div>${bars(arr)}</div>`).join('') : '<div class="m-spin"></div>'}
-    ${domCard(th, a)}`;
+    ${card ? domCard(th, a) : ''}`;
 }
 const dLong = (v) => (v && /^\d{4}-\d{2}-\d{2}/.test(v) ? `${v.slice(8, 10)}.${v.slice(5, 7)}.${v.slice(0, 4)}` : '–');
 const daysTo = (v) => (v ? Math.round((new Date(String(v).slice(0, 10) + 'T12:00:00') - Date.now()) / 864e5) : null);
@@ -260,18 +268,21 @@ function domBes(th, a) {
     ${sec('Henvisere')}${shareRows(th, (a.referrers ?? []).slice(0, 6), 0, 'name', 'count')}
     ${(a.browsers ?? []).length ? `${sec('Nettlesere')}${shareRows(th, a.browsers, 0, 'name', 'pct')}` : ''}`;
 }
-function domYt(th, a) {
+function domYt(th, a, { uptime = true } = {}) {
   const st = a.statusCodes ?? (typeof a.status === 'object' ? a.status : {}), tot = Object.values(st).reduce((x, y) => x + (Number(y) || 0), 0) || 1;
   const [mb, unit] = bytes(a.bytes);
   const SC = [['2xx', 'OK', '#7BE3A0'], ['3xx', 'Videresendt', '#8AB4F8'], ['4xx', 'Ikke funnet o.l.', '#F2B56B'], ['5xx', 'Serverfeil', '#FF8A80']];
-  const up = (a.uptime90 ?? []).slice(-90);
   return `<div class="dchart ${gl(th)}"><div class="m-row" style="justify-content:space-between"><span style="opacity:.75">Bufret</span><b class="m-mono" style="font-size:24px">${pct(a.cachedPct)}</b></div><span class="sbar" style="height:10px"><i style="width:${Math.min(100, a.cachedPct ?? 0)}%"></i></span><span style="font-size:13px;opacity:.65">av ${mb} ${unit} levert fra Cloudflare-kanten</span></div>
     <div class="dcards">${[['Median TTFB', `${Math.round(a.ttfb?.p50 ?? 0)} ms`, 'Fra kanten'], ['95. persentil', `${Math.round(a.ttfb?.p95 ?? 0)} ms`, 'De tregeste 5 %'], ['Fra opprinnelse', a.originMs != null ? `${Math.round(a.originMs)} ms` : '–', 'Når cache bommer'], ['Feilrate', pct(a.errorPct), '5xx']].map(([l, v, s2]) => `<div class="dcard ${gl(th)}"><span class="l">${l}</span><b class="m-mono">${v}</b><span style="font-size:12px;opacity:.6">${s2}</span></div>`).join('')}</div>
     ${sec('Statuskoder')}${listBox(th, SC.map(([k, n, c]) => { const v = Number(st[k]) || 0; return `<div class="opt-row share"><span class="m-grow"><span class="m-row" style="justify-content:space-between"><span><b style="color:${c};font-weight:600">${k}</b> <span style="opacity:.65">${n}</span></span><span class="m-mono">${pct((v / tot) * 100)}</span></span><span class="sbar"><i style="width:${Math.max(1, (v / tot) * 100)}%;background:${c}"></i></span></span></div>`; }).join(''))}
     ${(a.http ?? []).length || (a.tls ?? []).length ? `${sec('Protokoller')}${listBox(th, [...(a.http ?? []), ...(a.tls ?? [])].map((x) => `<div class="opt-row"><span class="m-grow">${esc(x.name)}</span><span class="m-mono">${pct(x.pct)}</span></div>`).join(''))}` : ''}
-    ${up.length ? `${sec(`Oppetid siste ${up.length} dager`)}<div class="dchart ${gl(th)}"><div class="upt">${up.map((v) => `<i style="background:${v >= 0.999 ? '#7BE3A0' : v >= 0.98 ? '#F2B56B' : '#FF8A80'}" title="${pct(v * 100)}"></i>`).join('')}</div><span style="font-size:13px;opacity:.65">${pct(a.uptimePct ?? (up.reduce((x, y) => x + y, 0) / up.length) * 100)} oppetid</span></div>` : ''}`;
+    ${uptime ? domUp(th, a) : ''}`;
 }
-function domSik(th, a) {
+function domUp(th, a) {
+  const up = (a.uptime90 ?? []).filter((v) => v != null).slice(-90);
+  return `${up.length ? `${sec(`Oppetid siste ${up.length} dager`)}<div class="dchart ${gl(th)}"><div class="upt">${up.map((v) => `<i style="background:${v >= 0.999 ? '#7BE3A0' : v >= 0.98 ? '#F2B56B' : '#FF8A80'}" title="${pct(v * 100)}"></i>`).join('')}</div><span style="font-size:13px;opacity:.65">${pct(a.uptimePct ?? (up.reduce((x, y) => x + y, 0) / up.length) * 100)} oppetid</span></div>` : ''}`;
+}
+function domSik(th, a, { dns = true } = {}) {
   const t = a.threats ?? {}, s = a.security ?? {};
   const yes = (v) => (v === true ? 'På' : v === false ? 'Av' : esc(v ?? '–'));
   const byC = (a.countries ?? []).filter((c) => c.threats).sort((x, y) => y.threats - x.threats).slice(0, 6);
@@ -279,8 +290,11 @@ function domSik(th, a) {
     ${(t.types ?? []).length ? `${sec('Typer')}${shareRows(th, t.types, 0, 'name', 'count')}` : ''}
     ${sec('Siste hendelser')}${listBox(th, (t.events ?? []).slice(0, 10).map((e) => `<div class="opt-row"><em class="role ${e.action === 'Blokkert' ? 'blk' : 'chl'}">${esc(e.action)}</em><span class="m-grow"><span class="m-ell">${esc(e.path ?? '/')}</span><span class="m-ell" style="font-size:12px;opacity:.6">${esc([e.country, e.ip].filter(Boolean).join(' · '))}</span></span><span style="font-size:12px;opacity:.6">${e.time ? new Date(e.time).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }) : ''}</span></div>`).join('') || '<div class="m-empty">Ingen hendelser.</div>')}
     ${byC.length ? `${sec('Trusler per land')}${shareRows(th, byC, 0, 'name', 'threats')}` : ''}
-    ${sec('DNS-poster')}${listBox(th, (a.dns ?? []).map((r) => `<div class="opt-row"><em class="role dns">${esc(r.type)}</em><span class="m-grow" style="min-width:0"><span class="m-ell">${esc(r.name)}</span><span class="m-ell m-mono" style="font-size:12px;opacity:.65">${esc(r.content)}</span></span><span style="font-size:12px;flex:none;color:${r.proxied ? '#F2B56B' : 'inherit'};opacity:${r.proxied ? 1 : 0.6}">${r.proxied ? 'Proxy' : 'Kun DNS'}</span></div>`).join('') || '<div class="m-empty">Ingen DNS-poster.</div>')}
+    ${dns ? domDns(th, a) : ''}
     ${sec('Innstillinger')}${listBox(th, [['SSL-modus', esc(s.sslMode ?? '–')], ['Alltid HTTPS', yes(s.alwaysHttps)], ['Minimum TLS', esc(s.minTls ?? '–')], ['DNSSEC', yes(s.dnssec)], ['Bot Fight Mode', yes(s.botFight)], ['Sertifikat utløper', s.certExpires ? dd(String(s.certExpires).slice(0, 10)) + '.' + String(s.certExpires).slice(0, 4) : '–']].map(([k, v]) => `<div class="opt-row"><span class="m-grow" style="opacity:.75">${k}</span><b style="font-weight:500">${v}</b></div>`).join(''))}`;
+}
+function domDns(th, a) {
+  return `${sec('DNS-poster')}${listBox(th, (a.dns ?? []).map((r) => `<div class="opt-row"><em class="role dns">${esc(r.type)}</em><span class="m-grow" style="min-width:0"><span class="m-ell">${esc(r.name)}</span><span class="m-ell m-mono" style="font-size:12px;opacity:.65">${esc(r.content)}</span></span><span style="font-size:12px;flex:none;color:${r.proxied ? '#F2B56B' : 'inherit'};opacity:${r.proxied ? 1 : 0.6}">${r.proxied ? 'Proxy' : 'Kun DNS'}</span></div>`).join('') || '<div class="m-empty">Ingen DNS-poster.</div>')}`;
 }
 
 /* ---------- Hendelser for modulene. Returnerer true når hendelsen er håndtert. ---------- */

@@ -1,7 +1,7 @@
 // Innstillinger i mobilappen: hovedside med gruppene Konto, App og System, og én underside per gruppe.
 // Valg som bare gjelder denne enheten lagres i localStorage (fh_mprefs); AI og varsler for kvitteringer/budsjett på serveren.
 import { S, api, esc, n0, ini, icon, loadBoot, loadSummary, hlApi } from './core.js';
-import { m, draw, flash, pref, setPref, theme, iosBg, isIOS, meName, avInner, avatarUrl, loadMe, startScr, backStyle, HLTABS, FINTABS, FIXED_HL, FIXED_FIN, tabName } from './mobile.js';
+import { m, draw, flash, pref, setPref, theme, iosBg, isIOS, meName, avInner, avatarUrl, loadMe, startScr, HLTABS, FINTABS, FIXED_HL, FIXED_FIN, tabName } from './mobile.js';
 import { LAY, saveLayout } from './mobile-hl.js';
 import { SEEDS, MODES } from './mobile-theme.js';
 import { haptic, hpref, setHap, canVibrate, HAP_TYPES } from './mobile-haptics.js';
@@ -60,7 +60,8 @@ function paperTop() {
   const md = pref('paperMode'), r = (k, n, s2) => `<button class="opt-row" data-sact="ppmode" data-v="${k}"><span class="m-grow"><b style="font-weight:600">${n}</b><br><span style="font-size:13px;opacity:.65">${s2}</span></span><span class="sval" style="${md === k ? 'color:var(--pp-pos);opacity:1;font-weight:600' : ''}">${md === k ? '✓ Valgt' : ''}</span></button>`;
   return `${G('Tema', [r('lys', 'Papir · lys', 'Lyst papir og svart fanelinje'), r('mork', 'Papir · mørk', 'Kveldspapir og lys fanelinje'), r('auto', 'Papir · følg systemet', 'Lys om dagen, mørk når telefonen er mørk'),
     `<button class="opt-row" data-sact="design" data-v="klassisk"><span class="m-grow"><b style="font-weight:600">Klassisk (Liquid Glass / Material You)</b><br><span style="font-size:13px;opacity:.65">Bytt tilbake til det forrige mobildesignet</span></span><span class="sval" style="color:var(--pp-lab);opacity:1;font-weight:600">Bytt ›</span></button>`])}
-    ${G('Forside', [`<button class="opt-row" data-sact="ppphoto"><span class="m-grow"><b style="font-weight:600">Bakgrunn</b><br><span style="font-size:13px;opacity:.65">${PHOTO_N[pref('photo')] ?? 'Nåværende'}</span></span><span class="sval">Endre ›</span></button>`, link('<b style="font-weight:600">Nyhetsleser</b>', '#/nyheter', 'Kilder, kategorier og AI')])}`;
+    ${G('Forside', [`<button class="opt-row" data-sact="ppphoto"><span class="m-grow"><b style="font-weight:600">Bakgrunn</b><br><span style="font-size:13px;opacity:.65">${PHOTO_N[pref('photo')] ?? 'Nåværende'}</span></span><span class="sval">Endre ›</span></button>`, link('<b style="font-weight:600">Nyhetsleser</b>', '#/nyheter', 'Kilder, kategorier og AI')])}
+    ${G('Konto', [`<button class="opt-row" data-mact="logout"><span class="m-grow"><b style="font-weight:600">Logg ut</b><br><span style="font-size:13px;opacity:.65">Du må logge inn igjen${m.me?.totp ? ' med 2FA' : ''}</span></span><span class="sval" style="color:var(--pp-lab);opacity:1;font-weight:600">Logg ut</span></button>`])}`;
 }
 
 function main() {
@@ -117,8 +118,8 @@ const PAGE = {
       ${G('Sider', [chips('pageColors', 'Farger på sidene', [['same', 'Samme overalt'], ['per', 'Egen farge per side']], pref('pageColors'))], '«Samme overalt» gir Domener, Mat, Finans og resten samme fargetema. «Egen farge per side» gir Domener sin rosa farge.')}` : ''}
       `}${G('Oppstart', [chips('startL', 'Startside', [['homelab', 'Homelab'], ['fin-hjem', 'Finans · Hjem'], ['fin-liste', 'Finans · Liste'], ['fin-budsjett', 'Finans · Budsjett']], st)],
         st === 'homelab' ? 'Appen åpner på Homelab. Finans, Mat og Domener ligger bak profilbildet.' : 'Appen åpner i Finans, og hjem-knappen går til Finans. Homelab og de andre modulene ligger bak profilbildet.')}
-      ${G('Navigasjonslinje', [chips('backStyle', 'Tilbake til startsiden', [['arrow', 'Pil øverst'], ['bar', 'Knapp i linjen']], backStyle()), nav('nav', 'Endre navn, rekkefølge og skjul faner', '', 'list', '#5E5CE6')],
-        '«Pil øverst» viser «‹ Homelab» eller «‹ Finans» øverst i moduler som Domener og Mat, med profilbildet på samme rad.')}
+      ${G('Navigasjonslinje', [nav('nav', 'Endre navn, rekkefølge og skjul faner', '', 'list', '#5E5CE6')],
+        'Pila øverst til venstre («‹ Homelab» eller «‹ Finans») går alltid tilbake til startsiden.')}
       ${G('Personvern', [tog('hideAmt', 'Skjul beløp til jeg trykker', 'Viser •••• i stedet for tall på Hjem', pref('hideAmt'))])}`;
   },
 

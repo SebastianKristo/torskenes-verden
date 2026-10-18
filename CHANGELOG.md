@@ -2,6 +2,31 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.7.0] – 18.10.2026 · prompt 14
+- **Papir på mobil (PWA, iOS, Android):**
+  - Hjem-fanen vises bare på Hjem. Finans har egen fanelinje (Oversikt, Liste, Finn, Mer, +), og Domener har sin (Oversikt, Publikum, Ytelse, Infra).
+  - +-knappen: trykk for valg, hold inne for opplasting.
+  - Finn som rutenett med bilder, netto i år, filtre og redigering av handler.
+  - Sporing med faner, varsler og kilder, og omorganisering med langt trykk.
+  - Fanelinja er senket og jevnt fordelt, og bakgrunnsvelgeren er egen.
+  - Papir-innlogging med onboarding i 3 steg, og rettede farger i mørk Papir.
+- **Bakgrunner** lagres på serveren (`/api/bg`) i stedet for å hente bildene fra Wikimedia. Oslo og Vær nå er illustrasjoner. Planeter er dagens NASA-bilde når serveren har nett.
+- **Transportørlogoer** (PostNord, Posten, Bring, DHL, Helthjem, UPS, GLS, Instabox, Budbee) og **Ruter-farger** per linje.
+- **Homelab Papir Web fullført:**
+  - Flytende layout, egen bakgrunnsvelger og profilmeny.
+  - Alle sider i avisstil, Rom med Starlink-kart og NASA-gallerier, og Domener med all statistikken.
+  - Økonomi åpner FinansHub direkte.
+- **FinansHub web:**
+  - Finn-handler i nytt design (2a), og ny detaljvisning med lesbare overskrifter.
+  - Innholdet starter ved sidemenyen, og Import er fjernet fra sidemenyen.
+  - AI-knappen har fått riktig form.
+  - Abonnementer kan redigeres og legges til med fakturadag og -måned, og med logo fra opplasting eller ✦ AI.
+- **Nye installasjoner** får Papir som standard på web og mobil. Eksisterende valg beholdes.
+
+### Gjenstår
+- **iOS:** Domener i Papir bruker fortsatt den mørke klassiske visningen, og transportørlogoene vises som initialer.
+- **Testing:** bevegelsene (hold inne og langt trykk) er bare testet i nettleseren, ikke på en telefon.
+
 ## [4.6.1] – 18.10.2026
 - **Android-oppdatering uten å avinstallere:** APK-en signeres nå med en fast nøkkel (i stedet for en ny debug-nøkkel for hvert bygg), så nye versjoner installeres rett over den forrige. Fra 4.6.0 eller eldre må du avinstallere én siste gang.
 
