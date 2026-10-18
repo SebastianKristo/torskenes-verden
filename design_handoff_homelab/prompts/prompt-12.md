@@ -1,0 +1,32 @@
+# Prompt 12
+
+Startet: 2026-10-17
+- 17.10.2026: domener på mobil viser bare uventet svar fra serveren for domener. og samme med matplan la den følge appens tema,
+- 17.10.2026: ikke vis den i domener (skjermbilde: «4 kvitteringer klare til bekreftelse»-banneret)
+- 17.10.2026: i domener legg vedsidna profil (skjermbilde: oppdater-knappen)
+- 17.10.2026: og domenenavn velger hvis heller bare ikonet og vis den vedsidna reload
+- 17.10.2026: i finn også ikke vis denne (skjermbilde: «Gemini leser i bakgrunnen · 2 av 4 ferdig»)
+- 17.10.2026: legg til liten bar under med vær (skjermbilde: klokke- og værkortet på Homelab mobil)
+- 17.10.2026: gjør denne litt lavere ca 20% lavere. (skjermbilde: Live-kortet i Domener på mobil)
+- 17.10.2026: gjør den like høy selvom den ikke har fult av pakker. eller ingen pakker. (skjermbilde: Pakker-kortet i karusellen på Homelab mobil)
+- 17.10.2026: ikke vis den i matplan siden den skal følge temaet til appen. (skjermbilde: sol-knappen for lys/mørk)
+- 17.10.2026: vis fult på skjeremn (skjermbilde: Matplan på Android kuttes av nederst)
+- 17.10.2026: la alt i android appen ha samme farger, nå eller la meg sette det i instligner, for nå har de forksjllige sidene forskjlige farger.
+- 17.10.2026: og vis teksten her alltid i to linjer. (skjermbilde: «God kveld, Sebastian» på Homelab mobil)
+- 17.10.2026: la meg importere slik excel format også (DNB-kontoutskrift med kolonnene Utført dato, Bokført dato, Rentedato, Beskrivelse, Type, Undertype, Fra konto, Avsender, Til konto, Mottakernavn, Beløp inn, Beløp ut, Valuta, Status, Melding/KID/Fakt.nr). hvis den ikke skjønner format få ai til lese første radene og finn formen og støtt malen.
+- 17.10.2026: fjern den fra været (skjermbilde: «yr.no ↗»-lenken i Værmelding)
+- 17.10.2026: fjern den og. (skjermbilde: «· yr.no» i undertittelen på Værmelding)
+- 17.10.2026: minsk mellomrommet mellom de to radene. (skjermbilde: chips for sol/UV/trykk og «Mer vær»-knappen)
+- 17.10.2026: fjern denne også (skjermbilde: «Regnet gir seg rundt 02:00 …»-linjen i Værmelding)
+- 17.10.2026: gi pakker lik høyde også (skjermbilde: Pakker-kortet i karusellen på Homelab web)
+- 17.10.2026: vis slik for media historikk (skjermbilde: «Media server history» med plakater, bruker, tid siden, serie, sesong/episode og tittel)
+- 17.10.2026: vis det media kortet som eget kort
+- 17.10.2026: tracking viser pakker som er levert bare som registerert vis også logoen til postselskpnene.
+- 17.10.2026: bruk den innebygde swipe sånn som man kan gjøre i innstligner og mange apple apper på iphone. jeg vil ikke ha den swipe ikonet som ios appen har.
+- 17.10.2026: i sporing ios. la meg rearenge rekkefølge på ting la meg holde inne for wiggle og flytte den og det andre. (skjermbilde: Kilder-kortet)
+- 17.10.2026: lag også widgets for alle deler av appen både for ios og android.
+- 17.10.2026: fjern denne delen fra vær widget på mobil. (skjermbilde: nowcast «Opphold de neste 90 minuttene», 3 dager og chips for sol/UV/trykk)
+- 17.10.2026: legg til alle disse android widgets, lag også widgets for android lag også noen som bruker samme design og størrelser som samsung widgets.
+- 17.10.2026: for samsung widgets er litt høyere, her ser du tesla widget er som google widget men vær er samsung den er litt høyere. (skjermbilde: One UI-hjemskjerm)
+- 17.10.2026: samle også alt av import i finans i en egen import-meny i innstillinger, la meg importere inn tidligere finn-eposter, kjøp og annonser fra finn.no-annonselenker som https://www.finn.no/recommerce/forsale/item/476377764
+- 18.10.2026: Nå funker ikke google ai søk eller skanning av dokumenter. I skanning av kvittering i mobil app, la meg få gemini til å reanalysere kvittering hvis den mislyktes. Fargebakgrunn i iOS app funker ikke. I finn i finans i iOS app gi netto i år-kortet samme farge som i FinansHub Mobil v2. Ruter-kortet på mobil app vis samme kort som Ruter i FinansHub Mobil v2. Den er mye større nå, den skal være som i FinansHub Mobil v2.
