@@ -82,4 +82,6 @@ dependencies {
     // Familie: kart med OpenStreetMap-fliser, og helse fra Health Connect.
     implementation("org.osmdroid:osmdroid-android:6.1.20")
     implementation("androidx.health.connect:connect-client:1.1.0-alpha07")
+    // Sanntid (Huskeliste, Familie, Sporing): én WebSocket mot /api/ws.
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }

@@ -10,6 +10,7 @@
     <string name="widget_mat_desc">Middag i dag og i morgen</string>
     <string name="widget_finn_desc">Pågående Finn-handler</string>
     <string name="widget_bolig_desc">Utgifter og regninger</string>
+    <string name="widget_tasks_desc">De neste oppgavene, med avkrysning</string>
     <string name="widget_scan_desc">Skann kvittering med kamera eller fra filer</string>
     <string name="widget_ui_search_desc">Søk i Homelab og FinansHub</string>
     <string name="widget_ui_weather_desc">Vær i Samsung-stil</string>

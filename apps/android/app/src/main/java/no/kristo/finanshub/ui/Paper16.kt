@@ -136,23 +136,11 @@ private fun photoLabel(k: String) = when (k) { "cur" -> "Nåværende"; "weather"
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun PaperSettings16(vm: AppViewModel, navBottom: Dp) {
+    // Innstillinger → Utseende og fanelinje: tema, ikonfarger, bakgrunn på Hjem og fanelinjen.
     val p = PaperPal.current
     val own = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(vm::uploadPhoto) }
     LaunchedEffect(Unit) { vm.loadPhotoThumbs() }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        // Profil
-        item {
-            PCard(shadow = true) {
-                Row(Modifier.fillMaxWidth().clickable { vm.menuOpen = true }.padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    AvatarImage(vm, 56, p.surf2, p.ink)
-                    Column(Modifier.weight(1f)) {
-                        PSerif(vm.displayName.ifBlank { "Profil" }, 22.sp, maxLines = 1)
-                        Text("@${vm.account?.username?.ifBlank { null } ?: "konto"} · ${vm.me?.role ?: vm.account?.role ?: ""}", color = p.mut, fontSize = 13.sp, maxLines = 1)
-                    }
-                    Text("Kontoer ›", color = p.lab, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                }
-            }
-        }
         item { PLabel("Utseende", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
         item {
             PCard {
@@ -219,25 +207,6 @@ internal fun PaperSettings16(vm: AppViewModel, navBottom: Dp) {
             }
         }
         item { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) { PaperNavSettings(vm) } }
-        item { PLabel("Moduler", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
-        item {
-            PCard {
-                SetRow(vm, 0, Icons.Filled.MyLocation, "Familie og kart", "Deling, soner, personvern og helse") { vm.openFamily() }
-                SetRow(vm, 1, Icons.Filled.DirectionsBus, "Avganger", "Holdeplasser og sanntid fra Ruter", top = true) { vm.openRuter() }
-                SetRow(vm, 2, Icons.Filled.WbSunny, "Vær", "Steder og data fra MET (yr.no)", top = true) { vm.openWeather(); vm.wxPlacesSheet = true }
-                SetRow(vm, 3, Icons.Filled.Newspaper, "Nyhetsleser", "Kilder, kategorier og AI", top = true) { vm.openNews(settings = true) }
-                SetRow(vm, 4, Icons.AutoMirrored.Filled.ShowChart, "Aksjer · Trading 212", "Nøkkel, miljø og synk", top = true) { vm.settingsPage = "stocks"; vm.openFromMer(Screen.Settings) }
-            }
-        }
-        item { PLabel("Konto", modifier = Modifier.padding(start = 4.dp, top = 10.dp)) }
-        item {
-            PCard {
-                SetRow(vm, 5, Icons.Filled.Lock, "Totrinnsbekreftelse", "Autentiseringsapp", if (vm.me?.totp == true) "På" else "Av") { vm.settingsPage = "security"; vm.openFromMer(Screen.Settings) }
-                SetRow(vm, 0, Icons.Filled.Vibration, "Haptisk tilbakemelding", "Ved trykk og skann", top = true) { vm.settingsPage = "haptics"; vm.openFromMer(Screen.Settings) }
-                SetRow(vm, 1, Icons.Filled.AccountCircle, "Kontoer og brukere", "Bytt konto eller logg ut", top = true) { vm.menuOpen = true }
-                SetRow(vm, 2, Icons.Filled.Settings, "Alle innstillinger", "Skanning, AI-motor, varsler, server og data", top = true) { vm.settingsPage = null; vm.openFromMer(Screen.Settings) }
-            }
-        }
     }
 }
 
@@ -261,7 +230,7 @@ internal fun TabBarEditor(vm: AppViewModel) {
                             Box(
                                 Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(if (iconFor == t.id) p.ink else p.surf2).clickable { iconFor = if (iconFor == t.id) null else t.id },
                                 contentAlignment = Alignment.Center,
-                            ) { Text(t.icon, color = if (iconFor == t.id) p.bg else p.ink, fontFamily = PaperFonts.serif, fontSize = 18.sp) }
+                            ) { GlyphIcon(t.icon, if (iconFor == t.id) p.bg else p.ink, 19.dp) }
                             BasicTextField(
                                 t.label, { v -> items = items.map { if (it.id == t.id) it.copy(label = v.take(18)) else it } }, singleLine = true,
                                 textStyle = TextStyle(color = p.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, fontFamily = PaperFonts.sans),
@@ -277,7 +246,7 @@ internal fun TabBarEditor(vm: AppViewModel) {
                             TAB_ICONS.forEach { ic ->
                                 Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(if (ic == t.icon) p.ink else p.surf2)
                                     .clickable { items = items.map { if (it.id == t.id) it.copy(icon = ic) else it }; iconFor = null }, contentAlignment = Alignment.Center) {
-                                    Text(ic, color = if (ic == t.icon) p.bg else p.ink, fontFamily = PaperFonts.serif, fontSize = 16.sp)
+                                    GlyphIcon(ic, if (ic == t.icon) p.bg else p.ink)
                                 }
                             }
                         }

@@ -37,6 +37,8 @@ class WidgetWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx
                 val json = Api(base, acc.token).hlGet("/mobile/widgets", timeout = 8_000)
                 WidgetStore.save(ctx, json, System.currentTimeMillis())
                 WidgetSync.redraw(ctx)
+                // Huskeliste-widgeten har egne data (/api/tasks/next).
+                runCatching { TasksStore.save(ctx, Api(base, acc.token).hlGet("/tasks/next?n=6", timeout = 8_000)); TasksWidgetSync.redraw(ctx) }
                 return Result.success()
             } catch (e: ApiException) {
                 err = e.message

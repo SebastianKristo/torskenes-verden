@@ -102,8 +102,11 @@ class FamilyService : Service() {
     private fun onFix(loc: Location) {
         val now = System.currentTimeMillis()
         val prev = lastSent
+        // Geofencing på telefonen: krysser man en sonekant, sendes posisjonen med en gang (ellers kan serveren
+        // først se det ved neste sending), og telefonen husker om man er inne eller ute.
+        val crossed = FamilyPrefs.crossedZone(this, loc.latitude, loc.longitude)
         // Spar strøm og data: send når man har flyttet seg 25 m, eller hvert 5. minutt i ro.
-        if (prev != null && loc.distanceTo(prev) < MIN_DIST_M && now - lastSentAt < 5 * 60_000) return
+        if (!crossed && prev != null && loc.distanceTo(prev) < MIN_DIST_M && now - lastSentAt < 5 * 60_000) return
         lastSent = loc; lastSentAt = now
         val speed = if (loc.hasSpeed()) loc.speed.toDouble() else null
         val o = JSONObject()
@@ -113,6 +116,7 @@ class FamilyService : Service() {
             .put("heading", if (loc.hasBearing()) loc.bearing.toDouble() else JSONObject.NULL)
             .put("alt", if (loc.hasAltitude()) loc.altitude else JSONObject.NULL)
             .put("activity", activityFromSpeed(speed))
+            .put("device", Build.MODEL)
             .put("ts", loc.time.takeIf { it > 0 } ?: now)
         battery(this)?.let { (lvl, ch) -> o.put("battery", lvl).put("charging", ch) }
         synchronized(queue) { queue += o; while (queue.size > 200) queue.removeAt(0) }
@@ -182,7 +186,7 @@ class FamilyService : Service() {
                 val who = e.optString("name").ifBlank { e.optString("username").ifBlank { "Noen" } }
                 val zone = e.optString("zoneName").ifBlank { e.optString("zone").ifBlank { "sonen" } }
                 val text = if (e.optString("kind") == "leave") "$who forlot $zone" else "$who kom til $zone"
-                Notify.post(ctx, "Familie", text, "fam-" + e.optString("id", text))
+                Notify.post(ctx, "Familie", text, "fam-" + e.optString("id", text), "familie")
             }
         }
     }
@@ -196,6 +200,32 @@ object FamilyPrefs {
     fun setSharing(ctx: Context, on: Boolean) { sp(ctx).edit().putBoolean("sharing", on).apply() }
     fun setPrecise(ctx: Context, on: Boolean) { sp(ctx).edit().putBoolean("precise", on).apply() }
     fun health(ctx: Context): Set<String> = sp(ctx).getStringSet("health", emptySet()) ?: emptySet()
+
+    /** Sonene (lat, lon, radius) fra siste henting, så tjenesten kan sjekke sonekanter uten nett. */
+    fun setZones(ctx: Context, zones: List<Triple<String, Pair<Double, Double>, Double>>) {
+        val a = JSONArray()
+        zones.forEach { (id, ll, r) -> a.put(JSONObject().put("id", id).put("lat", ll.first).put("lon", ll.second).put("r", r)) }
+        sp(ctx).edit().putString("zones", a.toString()).apply()
+    }
+
+    /** true når posisjonen har gått inn i eller ut av en sone siden forrige gang (15 % slingringsmonn ut, som på serveren). */
+    fun crossedZone(ctx: Context, lat: Double, lon: Double): Boolean {
+        val a = runCatching { JSONArray(sp(ctx).getString("zones", "[]")) }.getOrNull() ?: return false
+        val inside = sp(ctx).getStringSet("inside", emptySet())?.toMutableSet() ?: mutableSetOf()
+        var changed = false
+        val d = FloatArray(1)
+        for (i in 0 until a.length()) {
+            val z = a.optJSONObject(i) ?: continue
+            val id = z.optString("id")
+            Location.distanceBetween(lat, lon, z.optDouble("lat"), z.optDouble("lon"), d)
+            val r = z.optDouble("r", 100.0)
+            val was = id in inside
+            val now = if (was) d[0] <= r * 1.15 else d[0] <= r
+            if (now != was) { changed = true; if (now) inside += id else inside -= id }
+        }
+        if (changed) sp(ctx).edit().putStringSet("inside", inside).apply()
+        return changed
+    }
     fun setHealth(ctx: Context, keys: Set<String>) { sp(ctx).edit().putStringSet("health", keys).apply() }
 
     /** Den aktive kontoen (samme som widgetene bruker). */

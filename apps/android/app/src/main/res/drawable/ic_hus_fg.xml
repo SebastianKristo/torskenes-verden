@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- App-ikon «Huset med stativ»: tak over et serverstativ med tre hyller. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="1024" android:viewportHeight="1024">
+    <group android:pivotX="512" android:pivotY="512" android:scaleX="1" android:scaleY="1">
+        <path android:strokeColor="#1B1A17" android:strokeWidth="56" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M232,470L512,236L792,470" />
+        <path android:fillColor="#1B1A17" android:pathData="M340,480h344a28,28 0 0 1 28,28v244a28,28 0 0 1 -28,28h-344a28,28 0 0 1 -28,-28v-244a28,28 0 0 1 28,-28z" />
+        <path android:fillColor="#F3EFE6" android:pathData="M364,526h296a12,12 0 0 1 12,12v32a12,12 0 0 1 -12,12h-296a12,12 0 0 1 -12,-12v-32a12,12 0 0 1 12,-12z" />
+        <path android:fillColor="#F3EFE6" android:pathData="M364,604h296a12,12 0 0 1 12,12v32a12,12 0 0 1 -12,12h-296a12,12 0 0 1 -12,-12v-32a12,12 0 0 1 12,-12z" />
+        <path android:fillColor="#F3EFE6" android:pathData="M364,682h296a12,12 0 0 1 12,12v32a12,12 0 0 1 -12,12h-296a12,12 0 0 1 -12,-12v-32a12,12 0 0 1 12,-12z" />
+        <path android:fillColor="#B23A2A" android:pathData="M614,554a14,14 0 1 0 28,0a14,14 0 1 0 -28,0z" />
+        <path android:fillColor="#1B1A17" android:pathData="M614,632a14,14 0 1 0 28,0a14,14 0 1 0 -28,0z" />
+        <path android:fillColor="#1B1A17" android:pathData="M614,710a14,14 0 1 0 28,0a14,14 0 1 0 -28,0z" />
+    </group>
+</vector>

@@ -32,6 +32,11 @@ import no.kristo.finanshub.*
 /** Tittel med tilbakeknapp og profilbildet (menyen med Andre OS). */
 @Composable
 internal fun ModuleHeader(vm: AppViewModel, title: String, back: (() -> Unit)? = null, actions: @Composable RowScope.() -> Unit = {}) {
+    // Papir: tittelen og tilbakeveien står i fotovinduet øverst, så bare knappene på siden vises her.
+    if (Tone.paper && LocalTopRow.current) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) { actions() }
+        return
+    }
     Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         // Med toppraden («‹ Homelab») står tilbakeveien der.
         if (back != null || !LocalTopRow.current) FilledTonalIconButton(onClick = back ?: { vm.back(); Unit }, modifier = Modifier.size(44.dp)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Tilbake") }

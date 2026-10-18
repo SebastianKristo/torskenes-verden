@@ -432,6 +432,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         boot = parseBoot(api.get("/bootstrap"))
         summary = runCatching { parseSummary(api.get("/summary")) }.getOrNull() ?: summary
         loadMe()
+        // Navnet på appen, ikonet og varselvalgene (stille timer, lyd) hentes fra serveren.
+        loadAppInfo()
+        if (!notifyLoaded) loadNotify()
         lastSync = System.currentTimeMillis()
         if (offline.isNotEmpty() && canUpload()) { val q = offline; offline = emptyList(); uploadUris(q) }
         loadFor(screen)
@@ -523,6 +526,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             detail != null -> { detail = null; detailTx = null }
             editHome -> editHome = false
             screen == Screen.Settings && settingsPage != null -> settingsPage = null
+            paper && paperPage == "set" && settingsPage != null -> settingsPage = null
+            tasksOpen -> closeTasks()
+            compareOpen -> compareOpen = false
             screen == Screen.Folders && folder != null -> folder = null
             screen == Screen.Scan && selectedReceipt != null -> selectedReceipt = null
             screen == Screen.Finn && finnSel != null -> { finnSel = null; finnDetail = null }
@@ -595,6 +601,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "domains" -> go(Screen.Domains)
             "mat" -> go(Screen.Mat)
             "news", "rss", "nyheter" -> openNews()
+            "huske", "tasks" -> openTasks(newTask = uri.path?.trim('/') == "new")
+            "familie", "family" -> openFamily()
             "finn" -> go(Screen.Finn)
             "boliger" -> open(Screen.Folders)
             "search" -> go(Screen.Search)
@@ -813,15 +821,22 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         launch {
             try {
                 ai = if (searchMode == "plain" && !force) plainSearch(t) else {
-                    val body = JSONObject().put("q", t).apply { if (force) put("force", true) }
-                    val a = try { parseAi(api.request("POST", "/search/ai", body, timeout = 25_000), t) } catch (e: ApiException) {
+                    // ✦ AI på: be alltid om AI (force). Serveren forklarer feil i aiErrorText (nøkkel, tilgang, tidsavbrudd, modell …).
+                    val body = JSONObject().put("q", t).put("force", force || searchMode != "plain")
+                    var why: String? = null
+                    val a = try {
+                        val raw = api.request("POST", "/search/ai", body, timeout = 25_000)
+                        runCatching { JSONObject(raw) }.getOrNull()?.let { o -> if (o.optStr("aiErrorKind") != null) why = o.optStr("aiErrorText") ?: o.optStr("notice") }
+                        parseAi(raw, t)
+                    } catch (e: ApiException) {
                         if (e.status == 401) throw e
+                        why = e.message
                         null
-                    } catch (e: Exception) { null }
+                    } catch (e: Exception) { why = e.message; null }
                     if (a == null || a.aiUnavailable) {
-                        aiNote = "AI-søket er ikke tilgjengelig nå. Viser vanlig søk."
+                        aiNote = (why?.let { "✦ AI svarte ikke: $it" } ?: "AI-søket er ikke tilgjengelig nå.") + " Viser vanlig søk."
                         plainSearch(t)
-                    } else a
+                    } else { if (why != null) aiNote = "✦ $why"; a }
                 }
                 aiHistory = (listOf(t) + aiHistory.filter { it != t }).take(20)
                 loadAiHistory()
@@ -1354,10 +1369,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     private var trackPoll: kotlinx.coroutines.Job? = null
     /** Startes når appen kommer i forgrunnen og stoppes i bakgrunnen (ekte push fra serveren er ikke bygget). */
     fun startTrackingPoll() {
+        startRealtime()
         if (trackPoll?.isActive == true) return
         trackPoll = viewModelScope.launch { while (true) { delay(300_000); pollTracking() } }
     }
-    fun stopTrackingPoll() { trackPoll?.cancel(); trackPoll = null }
+    fun stopTrackingPoll() { trackPoll?.cancel(); trackPoll = null; stopRealtime() }
 
     fun addTracking(no: String, name: String, carrier: String?, out: Boolean) = launch {
         val n = no.trim()
@@ -1570,6 +1586,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun openFromMer(s: Screen) { go(s); paperFromMer = true }
     fun openPaperPage(p: String) {
         paperPage = p
+        if (p == "set") settingsPage = null
         if (p == "media") loadMedia()
     }
 
@@ -2546,6 +2563,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             val f = parseFamily(api.hlGet("/family", timeout = 12_000))
             family = f
             familyError = null
+            no.kristo.finanshub.family.FamilyPrefs.setZones(appCtx, f.zones.map { Triple(it.id, it.lat to it.lon, it.radius) })
             f.me?.let { me ->
                 no.kristo.finanshub.family.FamilyPrefs.setSharing(appCtx, me.sharing == "on")
                 no.kristo.finanshub.family.FamilyPrefs.setPrecise(appCtx, me.precision != "approx")
@@ -2555,7 +2573,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             if (!first) for (e in fresh) {
                 val who = f.members.firstOrNull { it.userId == e.userId }?.name?.split(' ')?.firstOrNull() ?: "Noen"
                 val zone = e.zoneName ?: f.zones.firstOrNull { it.id == e.zoneId }?.name ?: "sonen"
-                Notify.post(appCtx, "Familie", if (e.kind == "leave") "$who forlot $zone" else "$who kom til $zone", "fam-${e.id}")
+                Notify.post(appCtx, "Familie", if (e.kind == "leave") "$who forlot $zone" else "$who kom til $zone", "fam-${e.id}", "familie")
             }
             famSeen.addAll(f.events.map { it.id })
             if (famSel == null) famSel = f.members.firstOrNull { it.last != null }?.userId
@@ -2606,5 +2624,291 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun famZoneNotify(zoneId: String, userId: String, enter: Boolean, leave: Boolean) = launch {
         api.hlPut("/family/zones/" + URLEncoder.encode(zoneId, "UTF-8") + "/notify", JSONObject().put("userId", userId).put("enter", enter).put("leave", leave))
         loadFamilyNow(first = false)
+    }
+
+    /* ---------- Prompt 16–17: huskeliste, varsler, appnavn og -ikon, vær sammenlignet, sanntid, dra for å oppdatere ---------- */
+
+    var appNameEdit by mutableStateOf(false)
+    var appIconEdit by mutableStateOf(false)
+    var taskEditId by mutableStateOf<String?>(null)
+
+    // Huskeliste: egen side (åpnes fra Mer, Hjem-kortet og widgeten). Delt med alle på serveren, oppdateres via WebSocket.
+    var tasksOpen by mutableStateOf(false)
+    var tasks by mutableStateOf<TasksData?>(null)
+        private set
+    var tasksError by mutableStateOf<String?>(null)
+    var taskFilter by mutableStateOf("alle")
+    /** + i widgeten: siden åpnes med feltet for ny oppgave i fokus. */
+    var taskFocus by mutableStateOf(false)
+    var taskNext by mutableStateOf<List<TaskItem>>(emptyList())
+        private set
+
+    fun openTasks(newTask: Boolean = false) {
+        tasksOpen = true
+        taskFocus = newTask
+        loadTasks()
+    }
+    fun closeTasks() { tasksOpen = false; taskFocus = false }
+    fun loadTasks() = launch {
+        try {
+            val t = parseTasks(api.hlGet("/tasks"))
+            tasks = t
+            tasksError = null
+            taskNext = nextTasks(t)
+        } catch (e: ApiException) {
+            tasksError = if (e.status == 404) "Huskeliste trenger en nyere Homelab-server." else e.message
+        }
+    }
+    private fun nextTasks(t: TasksData): List<TaskItem> =
+        t.items.filter { !it.done }.sortedWith(compareBy<TaskItem> { it.due ?: "9999" }.thenBy { it.title.lowercase() }).take(3)
+    /** De tre neste oppgavene til Hjem-kortet (hentes sammen med forsiden). */
+    fun loadTaskNext() = viewModelScope.launch {
+        runCatching { parseTasks(api.hlGet("/tasks")) }.getOrNull()?.let { tasks = it; taskNext = nextTasks(it) }
+    }
+    fun addTask(title: String, list: String?, due: String?, assignee: String?) = launch {
+        if (title.isBlank()) return@launch
+        val body = JSONObject().put("title", title.trim()).put("list", list).put("due", due).put("assignee", assignee)
+        api.hlPost("/tasks", body)
+        Haptics.success()
+        loadTasksNow()
+    }
+    /** Avkryssing vises med en gang, og serveren oppdateres etterpå. */
+    fun toggleTask(id: String) {
+        val t = tasks ?: return
+        val it0 = t.items.firstOrNull { it.id == id } ?: return
+        val done = !it0.done
+        tasks = t.copy(items = t.items.map { if (it.id == id) it.copy(done = done) else it })
+        taskNext = nextTasks(tasks!!)
+        if (done) Haptics.success() else Haptics.select()
+        launch {
+            api.request("PATCH", "/tasks/" + URLEncoder.encode(id, "UTF-8"), JSONObject().put("done", done), prefix = Api.HOMELAB)
+            loadTasksNow()
+            no.kristo.finanshub.widget.TasksWidgetSync.refresh(appCtx)
+        }
+    }
+    fun updateTask(id: String, title: String, list: String?, due: String?, assignee: String?) = launch {
+        api.request("PATCH", "/tasks/" + URLEncoder.encode(id, "UTF-8"),
+            JSONObject().put("title", title.trim()).put("list", list).put("due", due).put("assignee", assignee), prefix = Api.HOMELAB)
+        loadTasksNow()
+    }
+    fun deleteTask(id: String) = launch {
+        api.hlDelete("/tasks/" + URLEncoder.encode(id, "UTF-8"))
+        loadTasksNow()
+        flash("Oppgaven er slettet")
+    }
+    private suspend fun loadTasksNow() {
+        runCatching { parseTasks(api.hlGet("/tasks")) }.getOrNull()?.let { tasks = it; taskNext = nextTasks(it) }
+    }
+
+    // Varsler: alt samlet i Innstillinger → Varsler (lagres per bruker på serveren, og lokalt for lyd og stille timer).
+    var notifyPrefs by mutableStateOf(NotifyPrefs())
+        private set
+    var notifyLoaded by mutableStateOf(false)
+        private set
+    fun loadNotify() = launch {
+        val n = runCatching { parseNotifyPrefs(api.hlGet("/me/notify")) }.getOrNull()
+        if (n != null) { notifyPrefs = n; Notify.applyPrefs(appCtx, n) }
+        notifyLoaded = true
+    }
+    fun saveNotify(n: NotifyPrefs) {
+        notifyPrefs = n
+        Notify.applyPrefs(appCtx, n)
+        Haptics.select()
+        viewModelScope.launch { runCatching { api.hlPut("/me/notify", n.toJson()) } }
+    }
+    /** Egen varsellyd (MP3/WAV/M4A under 1 MB): lastes opp til serveren og lagres lokalt for varslene på denne telefonen. */
+    fun uploadSound(uri: Uri) = launch {
+        val ctx = appCtx
+        val data = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes() } }
+        if (data.size > 1_000_000) { flash("Kunne ikke bruke lyden: filen må være under 1 MB"); return@launch }
+        val mime = ctx.contentResolver.getType(uri) ?: "audio/mpeg"
+        val ext = when { mime.contains("wav") -> "wav"; mime.contains("mp4") || mime.contains("m4a") || mime.contains("aac") -> "m4a"; else -> "mp3" }
+        api.upload("/me/notify/sound", listOf(Api.Part("file", "varsel.$ext", mime, data)), prefix = Api.HOMELAB)
+        withContext(Dispatchers.IO) { Notify.saveCustomSound(ctx, data, ext) }
+        saveNotify(notifyPrefs.copy(sound = "egen", customSound = true))
+        flash("Egen varsellyd er lagret")
+    }
+    fun deleteSound() = launch {
+        runCatching { api.hlDelete("/me/notify/sound") }
+        Notify.deleteCustomSound(appCtx)
+        saveNotify(notifyPrefs.copy(sound = "klokke", customSound = false))
+    }
+    /** «Test varsel»: spiller lyden, vibrerer og viser et varsel. */
+    fun testNotify() {
+        Haptics.test()
+        if (!Notify.allowed(appCtx)) { message = "Varsler er ikke tillatt. Slå det på i Android-innstillingene for appen."; return }
+        Notify.test(appCtx, notifyPrefs)
+    }
+
+    // Appnavn og -ikon (Innstillinger → Navn på appen / App-ikon). Navnet ligger på serveren og vises også på web.
+    var appInfo by mutableStateOf(AppInfo("Homelab", "hus"))
+        private set
+    val appName: String get() = appInfo.name.ifBlank { "Homelab" }
+    fun loadAppInfo() = viewModelScope.launch {
+        runCatching { parseAppInfo(api.hlGet("/app")) }.getOrNull()?.let { a ->
+            appInfo = a.copy(icon = prefs.str("app_icon", a.icon))
+        }
+    }
+    fun saveAppName(name: String) = launch {
+        val v = name.trim().take(40).ifBlank { "Homelab" }
+        appInfo = appInfo.copy(name = v)
+        try { api.hlPut("/app", JSONObject().put("name", v)); flash("Appen heter nå «$v»") }
+        catch (e: ApiException) { if (e.status == 403) message = "Bare administrator kan endre navnet på appen" else throw e }
+    }
+    /** Bytter ikonet i appskuffen (activity-alias). Launcheren kan bruke noen sekunder på å vise det nye ikonet. */
+    fun setAppIcon(key: String) {
+        val ctx = appCtx
+        val pm = ctx.packageManager
+        APP_ICONS.forEach { (k, _, alias) ->
+            val cn = android.content.ComponentName(ctx, "${ctx.packageName}.$alias")
+            val state = if (k == key) android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED else android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+            runCatching { pm.setComponentEnabledSetting(cn, state, android.content.pm.PackageManager.DONT_KILL_APP) }
+        }
+        prefs.set("app_icon", key)
+        appInfo = appInfo.copy(icon = key)
+        Haptics.success()
+        message = "App-ikonet er byttet. Det kan ta noen sekunder før hjemskjermen viser det nye."
+        viewModelScope.launch { runCatching { api.hlPut("/app", JSONObject().put("icon", key)) } }
+    }
+
+    // Vær: «Sammenlign Yr og Storm» (Yr fra MET, Storm har ikke åpent API, så ECMWF fra Open-Meteo brukes).
+    var compareOpen by mutableStateOf(false)
+    var wxCompare by mutableStateOf<WxCompare?>(null)
+        private set
+    var wxCompareError by mutableStateOf<String?>(null)
+        private set
+    fun openCompare() {
+        compareOpen = true
+        wxCompare = null
+        wxCompareError = null
+        val place = weatherPlace
+        viewModelScope.launch {
+            try { wxCompare = parseWxCompare(api.hlGet("/weather/compare?place=" + URLEncoder.encode(place, "UTF-8"), timeout = 15_000)) }
+            catch (e: ApiException) { wxCompareError = if (e.status == 404) "Sammenligning trenger en nyere Homelab-server." else e.message }
+            catch (e: Exception) { wxCompareError = e.message ?: "Fikk ikke hentet sammenligningen" }
+        }
+    }
+
+    // Sporing: velg flere (hold inne på en pakke), og arkiver, gjenopprett eller slett dem samlet.
+    var trkPicked by mutableStateOf<Set<String>>(emptySet())
+    var trkPicking by mutableStateOf(false)
+    var trkConfirmDelete by mutableStateOf(false)
+    fun trkPick(id: String) {
+        trkPicking = true
+        trkPicked = if (id in trkPicked) trkPicked - id else trkPicked + id
+        Haptics.select()
+        if (trkPicked.isEmpty()) trkPicking = false
+    }
+    fun trkPickAll(ids: List<String>) { trkPicked = if (trkPicked.containsAll(ids)) emptySet() else ids.toSet(); trkPicking = trkPicked.isNotEmpty() }
+    fun trkPickDone() { trkPicked = emptySet(); trkPicking = false; trkConfirmDelete = false }
+    fun trkBulk(action: String) = launch {
+        val ids = trkPicked.toList()
+        if (ids.isEmpty()) return@launch
+        api.hlPost("/tracking/bulk", JSONObject().put("ids", JSONArray(ids)).put("action", action))
+        trkPickDone()
+        loadTracking()
+        flash(when (action) {
+            "archive" -> if (ids.size == 1) "Sendingen er arkivert" else "${ids.size} sendinger er arkivert"
+            "unarchive" -> if (ids.size == 1) "Sendingen er gjenopprettet" else "${ids.size} sendinger er gjenopprettet"
+            else -> if (ids.size == 1) "Sendingen er slettet" else "${ids.size} sendinger er slettet"
+        })
+    }
+
+    // Hjem: kortene Posisjon (familien) og Bolig (forbruk denne måneden, til gjennomgang og neste faste utgift).
+    var homeBolig by mutableStateOf<HomeBolig?>(null)
+        private set
+    fun loadHomeExtras() = viewModelScope.launch {
+        if (family == null) runCatching { family = parseFamily(api.hlGet("/family", timeout = 8_000)) }
+        runCatching {
+            val list = folders ?: parseFolders(api.get("/folders")).also { folders = it }
+            val f = list.firstOrNull() ?: return@runCatching
+            val o = JSONObject(api.get("/folders/${f.id}"))
+            val kpi = o.optJSONObject("kpi")
+            val up = o.optJSONArray("upcoming")?.optJSONObject(0)
+            val month = java.time.LocalDate.now().toString().take(7)
+            val months = o.optJSONArray("months")
+            var spent = kpi?.optDoubleOrNull("month") ?: kpi?.optDoubleOrNull("thisMonth") ?: 0.0
+            if (spent == 0.0 && months != null) for (i in 0 until months.length()) {
+                val m = months.optJSONObject(i) ?: continue
+                if ((m.optStr("month") ?: "").startsWith(month)) spent = m.optDoubleOrNull("total") ?: m.optDoubleOrNull("amount") ?: 0.0
+            }
+            val receipts = o.optJSONArray("receipts")
+            var review = 0
+            if (receipts != null) for (i in 0 until receipts.length()) if (receipts.optJSONObject(i)?.optBoolean("pending") == true) review++
+            if (kpi?.has("review") == true) review = kpi.optInt("review", review)
+            homeBolig = HomeBolig(f.id.toString(), f.name, spent, kpi?.optDoubleOrNull("budget") ?: o.optDoubleOrNull("budget"), review,
+                up?.optStr("title"), up?.optDoubleOrNull("amount"), up?.optStr("date"))
+        }
+        loadTaskNext()
+    }
+
+    // Dra for å oppdatere (fra toppen når siden står øverst): henter siden på nytt.
+    var pullRefreshing by mutableStateOf(false)
+        private set
+    fun pullRefresh() {
+        if (pullRefreshing) return
+        pullRefreshing = true
+        Haptics.tap()
+        viewModelScope.launch {
+            try {
+                runCatching { loadFor(screen) }
+                if (screen == Screen.Homelab) { runCatching { loadHome() }; loadHomeExtras() }
+                if (tasksOpen) loadTasksNow()
+                if (familyOpen) loadFamily()
+            } finally { delay(350); pullRefreshing = false }
+        }
+    }
+
+    // Sanntid: én WebSocket mot /api/ws mens appen er i forgrunnen.
+    private val realtime = Realtime { type, msg ->
+        when (type) {
+            "tasks" -> if (tasks != null) viewModelScope.launch { loadTasksNow(); no.kristo.finanshub.widget.TasksWidgetSync.refresh(appCtx) }
+            "family" -> if (msg.optString("kind") == "ping") {
+                // Noen i familien ber denne telefonen spille av lyd.
+                Notify.test(appCtx, notifyPrefs.copy(sound = notifyPrefs.sound.takeIf { it != "stille" } ?: "klokke"))
+                Haptics.test()
+                message = "${msg.optString("fromName").ifBlank { "Noen" }} ber telefonen spille av lyd"
+            } else if (familyOpen || family != null) loadFamily()
+            "tracking" -> viewModelScope.launch { pollTracking() }
+        }
+    }
+    fun startRealtime() { if (loggedIn && !locked) realtime.start(base.ifBlank { account?.server ?: "" }, account?.token) }
+    fun stopRealtime() = realtime.stop()
+
+    // Sporing → Arkiv: arkiverte sendinger hentes for seg (GET /api/tracking?archived=1).
+    var trkArchived by mutableStateOf<List<Shipment>?>(null)
+        private set
+    fun loadArchived() = viewModelScope.launch {
+        trkArchived = runCatching { parseTracking(api.hlGet("/tracking?archived=1", timeout = 15_000)).items.filter { it.archived } }.getOrNull() ?: trkArchived
+    }
+
+    /** «Spill av lyd» på en annens telefon: serveren sender meldingen videre via sanntid når appen er åpen der. */
+    fun famPing(userId: String, name: String) = launch {
+        try {
+            val r = JSONObject(api.hlPost("/family/ping/" + URLEncoder.encode(userId, "UTF-8")))
+            if (r.optBoolean("delivered", true)) flash("Ber $name sin telefon spille av lyd")
+            else message = "Åpne Homelab-appen på $name sin telefon for å spille av lyd."
+        } catch (e: ApiException) {
+            message = if (e.status == 404) "Åpne Homelab-appen på $name sin telefon for å spille av lyd." else e.message
+        }
+    }
+
+    /** Strekkode eller QR på pakkelappen: bildet sendes til serveren (Roboflow). 501 = ikke satt opp, skriv eller lim inn selv. */
+    var barcodeBusy by mutableStateOf(false)
+        private set
+    fun scanBarcode(uri: Uri, onCode: (String) -> Unit) = launch {
+        barcodeBusy = true
+        try {
+            val ctx = appCtx
+            val data = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes() } }
+            val jpeg = withContext(Dispatchers.Default) { scaled(data, 1600, 85) } ?: data
+            val r = JSONObject(api.upload("/scan/barcode", listOf(Api.Part("file", "pakkelapp.jpg", "image/jpeg", jpeg))))
+            val codes = r.optJSONArray("codes")
+            val v = (0 until (codes?.length() ?: 0)).mapNotNull { codes!!.optJSONObject(it)?.optStr("value") }
+                .maxByOrNull { c -> if (Carrier.detect(c.uppercase()) != "other") 100 + c.length else c.length }
+            if (v == null) flash("Fant ingen strekkode i bildet. Skriv inn eller lim inn nummeret.") else { onCode(v.uppercase()); Haptics.success() }
+        } catch (e: ApiException) {
+            message = if (e.status == 501) "Strekkodelesing er ikke satt opp på serveren (Roboflow). Skriv inn eller lim inn nummeret." else e.message
+        } finally { barcodeBusy = false }
     }
 }

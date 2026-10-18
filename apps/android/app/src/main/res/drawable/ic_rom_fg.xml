@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- App-ikon «Fire rom»: hus med fire rom, ett i aksentfarge. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="1024" android:viewportHeight="1024">
+    <group android:pivotX="512" android:pivotY="512" android:scaleX="1" android:scaleY="1">
+        <path android:fillColor="#F3EFE6" android:pathData="M512,196L820,452V828H204V452z" />
+        <path android:fillColor="#B23A2A" android:pathData="M294,500h180a18,18 0 0 1 18,18v104a18,18 0 0 1 -18,18h-180a18,18 0 0 1 -18,-18v-104a18,18 0 0 1 18,-18z" />
+        <path android:fillColor="#1B1A17" android:pathData="M550,500h180a18,18 0 0 1 18,18v104a18,18 0 0 1 -18,18h-180a18,18 0 0 1 -18,-18v-104a18,18 0 0 1 18,-18z" />
+        <path android:fillColor="#1B1A17" android:pathData="M294,672h180a18,18 0 0 1 18,18v68a18,18 0 0 1 -18,18h-180a18,18 0 0 1 -18,-18v-68a18,18 0 0 1 18,-18z" />
+        <path android:fillColor="#1B1A17" android:pathData="M550,672h180a18,18 0 0 1 18,18v68a18,18 0 0 1 -18,18h-180a18,18 0 0 1 -18,-18v-68a18,18 0 0 1 18,-18z" />
+    </group>
+</vector>

@@ -127,10 +127,12 @@ internal fun SettingsScreen(vm: AppViewModel, onPrivacyChanged: () -> Unit) {
 
 @Composable
 private fun Group(content: @Composable ColumnScope.() -> Unit) =
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(C.surface1).padding(vertical = 4.dp), content = content)
+    // Papir: hvite kort med 20 dp runding (samme som PCard), ellers Material-gruppen.
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(if (Tone.paper) 20.dp else 24.dp)).background(C.surface1).padding(vertical = 4.dp), content = content)
 
 @Composable
 private fun Toggle(label: String, sub: String?, on: Boolean, onChange: (Boolean) -> Unit) {
+    if (Tone.paper) { PToggle(label, sub, on, onChange = onChange); return }
     Row(Modifier.fillMaxWidth().clickable { onChange(!on) }.padding(16.dp, 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) { Text(label); sub?.let { Text(it, color = C.text2, fontSize = 12.sp) } }
         Switch(checked = on, onCheckedChange = onChange, colors = SwitchDefaults.colors(checkedTrackColor = C.primary, checkedThumbColor = C.onPrimary))
@@ -166,7 +168,7 @@ private fun homelab(vm: AppViewModel) = vm.base.trimEnd('/') + "/"
 /* ---------------- Sider ---------------- */
 
 @Composable
-private fun AccountsPage(vm: AppViewModel) = Pages {
+internal fun AccountsPage(vm: AppViewModel) = Pages {
     val ctx = LocalContext.current
     var shot by remember { mutableStateOf<android.net.Uri?>(null) }
     val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(vm::uploadAvatar) }
@@ -215,7 +217,7 @@ private fun AccountsPage(vm: AppViewModel) = Pages {
 }
 
 @Composable
-private fun SecurityPage(vm: AppViewModel, onPrivacyChanged: () -> Unit) = Pages {
+internal fun SecurityPage(vm: AppViewModel, onPrivacyChanged: () -> Unit) = Pages {
     val uri = LocalUriHandler.current
     Group {
         Toggle("Lås med fingeravtrykk eller ansikt", "Kreves når appen åpnes. PIN/mønster kan brukes som reserve.", vm.flag(AppPrefs.LOCK)) { vm.setPref(AppPrefs.LOCK, it) }
@@ -259,7 +261,7 @@ private val allScopes = listOf(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun TokensPage(vm: AppViewModel) = Pages {
+internal fun TokensPage(vm: AppViewModel) = Pages {
     val clip = LocalClipboardManager.current
     Note("Tokens brukes av iOS-snarveien for kvitteringer, Home Assistant, Excel Power Query og skript. De gir bare tilgangen du velger og kan trekkes tilbake når som helst.")
     vm.newToken?.let { t ->
@@ -399,7 +401,7 @@ private fun LookPage(vm: AppViewModel) = Pages {
 }
 
 @Composable
-private fun ScanPage(vm: AppViewModel) = Pages {
+internal fun ScanPage(vm: AppViewModel) = Pages {
     Section("Skanneknappen") {
         Group {
             Choice("Trykk åpner kameraet", "Hold inne for å velge fra Bilder eller Filer", vm.option(AppPrefs.SCAN_TAP, "camera") == "camera") { vm.setPref(AppPrefs.SCAN_TAP, "camera") }
@@ -443,7 +445,7 @@ private fun NotifyPage(vm: AppViewModel) = Pages {
 
 /** Innstillinger → App → Haptikk: hovedbryter, styrke, brytere per type og test. */
 @Composable
-private fun HapticsPage(vm: AppViewModel) = Pages {
+internal fun HapticsPage(vm: AppViewModel) = Pages {
     val on = vm.flag(Haptics.ON, true)
     Group { Toggle("Haptisk tilbakemelding", "Vibrasjon ved trykk, fullførte handlinger og varsler", on) { vm.setPref(Haptics.ON, it) } }
     if (on) {
@@ -469,7 +471,7 @@ private fun HapticsPage(vm: AppViewModel) = Pages {
 }
 
 @Composable
-private fun ServerPage(vm: AppViewModel) = Pages {
+internal fun ServerPage(vm: AppViewModel) = Pages {
     val a = vm.account
     var local by remember(a?.id) { mutableStateOf(a?.local ?: "") }
     var external by remember(a?.id) { mutableStateOf(a?.let { it.external.ifBlank { it.server } } ?: "") }
@@ -497,7 +499,7 @@ private fun ServerPage(vm: AppViewModel) = Pages {
 }
 
 @Composable
-private fun DataPage(vm: AppViewModel) = Pages {
+internal fun DataPage(vm: AppViewModel) = Pages {
     Group {
         Row(Modifier.fillMaxWidth().clickable { vm.clearCache() }.padding(16.dp, 14.dp)) { Text("Tøm hurtigbuffer", Modifier.weight(1f)); Text("Logoer og bilder", color = C.text2, fontSize = 13.sp) }
         Row(Modifier.fillMaxWidth().clickable { vm.refresh() }.padding(16.dp, 14.dp)) { Text("Synk nå", Modifier.weight(1f)); Text(time(vm.lastSync), color = C.text2, fontSize = 13.sp) }
@@ -507,7 +509,7 @@ private fun DataPage(vm: AppViewModel) = Pages {
 }
 
 @Composable
-private fun AboutPage(vm: AppViewModel) = Pages {
+internal fun AboutPage(vm: AppViewModel) = Pages {
     val ctx = LocalContext.current
     val version = remember { runCatching { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName }.getOrNull() ?: "–" }
     Group {
@@ -527,7 +529,7 @@ private fun AboutPage(vm: AppViewModel) = Pages {
 /* ---------------- Finans ---------------- */
 
 @Composable
-private fun AiPage(vm: AppViewModel) = Pages {
+internal fun AiPage(vm: AppViewModel) = Pages {
     val st = vm.boot?.settings
     Group {
         Choice("Ollama lokalt", "Bildet forlater aldri huset", st?.provider == "ollama" && st?.fallback != true) { vm.saveSetting("provider", "ollama"); vm.saveSetting("fallback", false) }
@@ -542,7 +544,7 @@ private fun AiPage(vm: AppViewModel) = Pages {
 }
 
 @Composable
-private fun CategoriesPage(vm: AppViewModel) = Pages {
+internal fun CategoriesPage(vm: AppViewModel) = Pages {
     val cats = vm.boot?.categories.orEmpty()
     if (cats.isEmpty()) Note("Ingen kategorier.") else Group {
         cats.forEach { c ->
@@ -557,7 +559,7 @@ private fun CategoriesPage(vm: AppViewModel) = Pages {
 }
 
 @Composable
-private fun RulesPage(vm: AppViewModel) = Pages {
+internal fun RulesPage(vm: AppViewModel) = Pages {
     val rules = vm.boot?.rules.orEmpty()
     if (rules.isEmpty()) Note("Ingen regler ennå. Regler lages når du retter en kategori, eller i FinansHub på PC.") else Group {
         rules.forEach { r -> Info(r.pattern, r.category ?: "–") }
@@ -566,7 +568,7 @@ private fun RulesPage(vm: AppViewModel) = Pages {
 }
 
 @Composable
-private fun StocksPrefsPage(vm: AppViewModel) = Pages {
+internal fun StocksPrefsPage(vm: AppViewModel) = Pages {
     LaunchedEffect(Unit) { if (vm.stocks == null) vm.syncStocks() }
     val s = vm.stocks
     Group {
@@ -580,7 +582,7 @@ private fun StocksPrefsPage(vm: AppViewModel) = Pages {
 }
 
 @Composable
-private fun BackupPage(vm: AppViewModel) = Pages {
+internal fun BackupPage(vm: AppViewModel) = Pages {
     val uri = LocalUriHandler.current
     Group {
         Row(Modifier.fillMaxWidth().clickable { vm.exportCsv() }.padding(16.dp, 14.dp)) { Text("Eksporter transaksjoner som CSV", Modifier.weight(1f)); Icon(Icons.Filled.IosShare, null, tint = C.text2) }

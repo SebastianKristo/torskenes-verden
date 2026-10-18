@@ -135,6 +135,10 @@ internal fun WeatherApp(vm: AppViewModel) {
                     }
                 }
                 item {
+                    Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp).height(48.dp).clip(RoundedCornerShape(16.dp)).background(glass).clickable { Haptics.select(); vm.openCompare() },
+                        contentAlignment = Alignment.Center) { Text("Sammenlign Yr og Storm ›", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp) }
+                }
+                item {
                     Text("Data: MET Norge${if (w.mock) " (eksempeldata)" else ""} · Se også yr.no ↗", color = dim, fontSize = 12.sp, textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth().clickable { openLink(ctx, w.yrUrl ?: "https://www.yr.no/nb") }.padding(8.dp))
                 }

@@ -48,10 +48,15 @@ import java.time.format.DateTimeFormatter
 
 /** Transportørmerket: initialer på merkefargen. */
 @Composable
-internal fun CarrierBadge(ini: String, color: Long, fg: Long, size: Int = 40) {
-    // Standardmerker for de vanligste: Posten (rød med posthorn-ring), PostNord (blå ordmerke), DHL (gul med røde striper)
-    // og Helthjem (lilla ordmerke). Andre får initialer på merkefargen.
-    when (ini.uppercase()) {
+internal fun CarrierBadge(ini: String, color: Long, fg: Long, size: Int = 40, id: String? = null) {
+    // Standardmerker for de vanligste: Posten (rød med posthorn-ring), Bring (grønt ordmerke), PostNord (blå ordmerke),
+    // DHL (gul med røde striper) og Helthjem (lilla ordmerke). Transportøren gjenkjennes på id først, så på initialene.
+    // Andre får initialer på merkefargen.
+    val key = when (id?.lowercase()) { "posten" -> "P"; "bring" -> "B"; "postnord" -> "PN"; "dhl" -> "DHL"; "helthjem" -> "HH"; else -> ini.uppercase() }
+    when (key) {
+        "B" -> Box(Modifier.size(size.dp).clip(RoundedCornerShape((size * 0.28f).dp)).background(Color(0xFF7BC144)), contentAlignment = Alignment.Center) {
+            Text("bring", color = Color.White, fontWeight = FontWeight.Black, fontSize = (size * 0.27f).sp, maxLines = 1, letterSpacing = (-0.4).sp)
+        }
         "P" -> Box(Modifier.size(size.dp).clip(RoundedCornerShape((size * 0.28f).dp)).background(Color(0xFFE32D22)), contentAlignment = Alignment.Center) {
             Box(Modifier.size((size * 0.62f).dp).clip(CircleShape).border((size * 0.07f).dp, Color.White, CircleShape), contentAlignment = Alignment.Center) {
                 Text("P", color = Color.White, fontWeight = FontWeight.Black, fontSize = (size * 0.32f).sp, maxLines = 1)
@@ -188,7 +193,7 @@ private fun AddCard(vm: AppViewModel, t: TrackingData?) {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 carriers.forEach { c ->
                     FilterChip(selected = pick == c.id, onClick = { Haptics.select(); carrier = c.id }, label = { Text(c.name) },
-                        leadingIcon = { CarrierBadge(c.ini, c.color, c.fg, 20) },
+                        leadingIcon = { CarrierBadge(c.ini, c.color, c.fg, 20, c.id) },
                         colors = FilterChipDefaults.filterChipColors(selectedContainerColor = C.container, selectedLabelColor = C.onContainer))
                 }
             }
@@ -248,7 +253,7 @@ private fun ShipmentCard(vm: AppViewModel, s: Shipment) {
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(C.surface1).animateContentSize()) {
         Column(Modifier.fillMaxWidth().clickable { Haptics.select(); vm.trkSel = if (open) null else s.id }.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                CarrierBadge(s.carrierIni, s.carrierColor, s.carrierFg)
+                CarrierBadge(s.carrierIni, s.carrierColor, s.carrierFg, 44, s.carrier)
                 Column(Modifier.weight(1f)) {
                     Text(s.name, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text("${s.carrierName} · ${s.trackingNo}", color = C.text2, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -319,7 +324,7 @@ private fun CarriersCard(t: TrackingData) {
         }
         list.forEach { c ->
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                CarrierBadge(c.ini, c.color, c.fg, 30)
+                CarrierBadge(c.ini, c.color, c.fg, 30, c.id)
                 Text(c.name, modifier = Modifier.weight(1f), maxLines = 1)
                 c.configured?.let { ok -> Text(if (ok) "Nøkkel ✓" else "Mangler nøkkel", color = if (ok) C.positive else C.text2, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
             }
@@ -412,7 +417,7 @@ internal fun PackagesCard(vm: AppViewModel, modifier: Modifier = Modifier) {
             items.take(2).forEach { s ->
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(C.surface2).padding(12.dp, 10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        CarrierBadge(s.carrierIni, s.carrierColor, s.carrierFg, 32)
+                        CarrierBadge(s.carrierIni, s.carrierColor, s.carrierFg, 32, s.carrier)
                         Column(Modifier.weight(1f)) {
                             Text(s.name, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(s.statusText + if (s.etaText.isBlank()) "" else " · ${s.etaText}", color = if (s.ready) C.accentLight else C.text2, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)

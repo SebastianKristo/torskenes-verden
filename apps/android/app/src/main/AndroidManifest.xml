@@ -40,10 +40,7 @@
             android:exported="true"
             android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
+            <!-- Ikonet i appskuffen kommer fra en av aliasene under (Innstillinger → App-ikon). -->
             <!-- Widgetene og snarveier åpner riktig side: finanshub://tracking, finanshub://scan/camera … -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -68,6 +65,45 @@
                 <data android:mimeType="image/*" />
             </intent-filter>
         </activity>
+
+        <!-- App-ikon: «Huset med stativ» (standard), «Papir-monogram» og «Fire rom». Bare ett alias er slått på om gangen.
+             Hvert ikon er adaptivt med eget monokromt lag (tematiske ikoner i Material You). -->
+        <activity-alias
+            android:name=".IconHus"
+            android:enabled="true"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_hus"
+            android:roundIcon="@mipmap/ic_launcher_hus_round"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconMonogram"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_mono"
+            android:roundIcon="@mipmap/ic_launcher_mono_round"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias
+            android:name=".IconRom"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_rom"
+            android:roundIcon="@mipmap/ic_launcher_rom_round"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
 
         <!-- Familie: posisjonsdeling i bakgrunnen. -->
         <service
@@ -143,6 +179,10 @@
         <receiver android:name=".widget.FinnReceiver" android:exported="true" android:label="Finn">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_finn" />
+        </receiver>
+        <receiver android:name=".widget.TasksReceiver" android:exported="true" android:label="Huskeliste">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_tasks" />
         </receiver>
         <receiver android:name=".widget.BoligReceiver" android:exported="true" android:label="Boliger">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>

@@ -54,15 +54,16 @@ fun carrierTrackUrl(carrier: String, no: String): String {
 
 /** Fanene i Papir → Sporing. */
 val TRK_TABS: List<Pair<String, String>> = listOf(
-    "active" to "Aktive", "pickup" to "Klar for henting", "way" to "På vei", "reg" to "Registrert", "done" to "Levert", "all" to "Alle",
+    "active" to "Aktive", "pickup" to "Klar for henting", "way" to "På vei", "reg" to "Registrert", "done" to "Levert", "all" to "Alle", "arkiv" to "Arkiv",
 )
 
 fun trkTabMatch(tab: String, s: Shipment): Boolean = when (tab) {
     "pickup" -> !s.archived && s.ready
     "way" -> !s.archived && !s.done && (s.step == 1 || s.step == 2 || s.status == "out_for_delivery")
     "reg" -> !s.archived && !s.done && s.step == 0
-    "done" -> s.done || s.archived
-    "all" -> true
+    "done" -> s.done && !s.archived
+    "arkiv" -> s.archived
+    "all" -> !s.archived
     else -> s.active
 }
 

@@ -66,7 +66,11 @@ internal typealias LazyListScopeContent = androidx.compose.foundation.lazy.LazyL
 internal fun Empty(text: String) = Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) { Text(text, color = C.text2) }
 
 @Composable
-internal fun SectionLabel(text: String) = Text(text, color = C.primary, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp, top = 8.dp))
+internal fun SectionLabel(text: String) {
+    // Papir: etiketter i IBM Plex Mono, versaler og aksentfarge, som i designet.
+    if (Tone.paper) PLabel(text, modifier = Modifier.padding(start = 6.dp, top = 10.dp))
+    else Text(text, color = C.primary, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp, top = 8.dp))
+}
 
 @Composable
 internal fun Initial(text: String, color: Long, size: Int = 40, shape: RoundedCornerShape = CircleShape) {

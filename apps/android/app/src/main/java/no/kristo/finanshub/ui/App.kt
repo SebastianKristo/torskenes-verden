@@ -175,6 +175,8 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
     if (vm.weatherOpen) WeatherApp(vm)
     if (vm.ruterOpen) RuterPage(vm)
     if (vm.familyOpen) FamilyScreen(vm)
+    if (vm.tasksOpen) TasksScreen(vm)
+    if (vm.compareOpen) CompareScreen(vm)
 }
 
 @Composable
@@ -367,13 +369,14 @@ private fun MenuContent(vm: AppViewModel) {
         MenuRow("Homelab", "Dashbord, søk og snarveier", Icons.Filled.Dashboard, vm.screen == Screen.Homelab, 0, 1) { vm.editHome = false; vm.go(Screen.Homelab) }
         SectionLabel("Andre OS")
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            MenuRow("Finans", "Hjem, liste, budsjett og mer", Icons.Filled.Savings, vm.screen.isFinance, 0, 7) { vm.go(if (vm.financeStart) vm.startPage else Screen.Home) }
-            MenuRow("Mat", "Ukemeny, oppskrifter og handleliste", Icons.Filled.Restaurant, vm.screen == Screen.Mat, 1, 7) { vm.go(Screen.Mat) }
-            MenuRow("Domener", "Trafikk, besøk, ytelse og sikkerhet", Icons.Filled.Language, vm.screen == Screen.Domains, 2, 7) { vm.go(Screen.Domains) }
-            MenuRow("Sporing", "Pakker på vei, henting og varsler", Icons.Filled.LocalShipping, vm.screen == Screen.Tracking, 3, 7) { vm.go(Screen.Tracking) }
-            MenuRow("Nyhetsleser", "RSS med ✦ AI-sammendrag", Icons.Filled.Newspaper, vm.newsOpen, 4, 7) { vm.openNews() }
-            MenuRow("Familie og kart", "Posisjon, soner og helse", Icons.Filled.MyLocation, vm.familyOpen, 5, 7) { vm.menuOpen = false; vm.openFamily() }
-            MenuRow("Avganger", "Ruter i sanntid og egne stopp", Icons.Filled.DirectionsBus, vm.ruterOpen, 6, 7) { vm.menuOpen = false; vm.openRuter() }
+            MenuRow("Finans", "Hjem, liste, budsjett og mer", Icons.Filled.Savings, vm.screen.isFinance, 0, 8) { vm.go(if (vm.financeStart) vm.startPage else Screen.Home) }
+            MenuRow("Mat", "Ukemeny, oppskrifter og handleliste", Icons.Filled.Restaurant, vm.screen == Screen.Mat, 1, 8) { vm.go(Screen.Mat) }
+            MenuRow("Domener", "Trafikk, besøk, ytelse og sikkerhet", Icons.Filled.Language, vm.screen == Screen.Domains, 2, 8) { vm.go(Screen.Domains) }
+            MenuRow("Sporing", "Pakker på vei, henting og varsler", Icons.Filled.LocalShipping, vm.screen == Screen.Tracking, 3, 8) { vm.go(Screen.Tracking) }
+            MenuRow("Nyhetsleser", "RSS med ✦ AI-sammendrag", Icons.Filled.Newspaper, vm.newsOpen, 4, 8) { vm.openNews() }
+            MenuRow("Familie og kart", "Posisjon, soner og helse", Icons.Filled.MyLocation, vm.familyOpen, 5, 8) { vm.menuOpen = false; vm.openFamily() }
+            MenuRow("Avganger", "Ruter i sanntid og egne stopp", Icons.Filled.DirectionsBus, vm.ruterOpen, 6, 8) { vm.menuOpen = false; vm.openRuter() }
+            MenuRow("Huskeliste", "Oppgaver for hele familien", Icons.Filled.Checklist, vm.tasksOpen, 7, 8) { vm.menuOpen = false; vm.openTasks() }
         }
         Spacer(Modifier.height(4.dp))
         MenuRow("Rediger forsiden", "Widgets og fanelinjer", Icons.Filled.Edit, vm.editHome, 0, 1) { vm.go(Screen.Homelab); vm.editHome = true }

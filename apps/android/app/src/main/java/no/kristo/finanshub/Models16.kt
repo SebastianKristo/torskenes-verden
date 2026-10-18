@@ -120,6 +120,8 @@ fun parseStopDeps(s: String): StopDeps {
 data class FamPos(
     val lat: Double, val lon: Double, val acc: Double?, val speed: Double?, val heading: Double?, val ts: String?,
     val battery: Int?, val charging: Boolean?, val activity: String?, val place: String?,
+    /** Telefonen som sendte posisjonen (f.eks. «Pixel 8»), når serveren har den. */
+    val device: String? = null,
 )
 data class FamHealthDay(val date: String, val steps: Int?, val sleepMin: Int?, val activeKcal: Int?, val restingHr: Int?)
 data class FamHealth(val steps: Int?, val restingHr: Int?, val hr: Int?, val sleepMin: Int?, val activeKcal: Int?, val week: List<FamHealthDay>, val updatedAt: String?)
@@ -164,7 +166,7 @@ private fun parsePos(o: JSONObject?): FamPos? {
     val lat = o.optDoubleOrNull("lat") ?: return null
     val lon = o.optDoubleOrNull("lon") ?: return null
     return FamPos(lat, lon, o.optDoubleOrNull("acc"), o.optDoubleOrNull("speed"), o.optDoubleOrNull("heading"), o.tsIso("ts"),
-        o.optIntOrNull("battery"), o.optBoolOrNull("charging"), o.optStr("activity"), o.optStr("place"))
+        o.optIntOrNull("battery"), o.optBoolOrNull("charging"), o.optStr("activity"), o.optStr("place"), o.optStr("device") ?: o.optStr("model"))
 }
 
 fun parseFamEvents(a: JSONArray?): List<FamEvent> = if (a == null) emptyList() else (0 until a.length()).mapNotNull { i ->

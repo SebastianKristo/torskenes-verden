@@ -40,6 +40,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -186,7 +187,7 @@ private fun heroText(vm: AppViewModel): Pair<String, String> {
     return when (vm.paperPage) {
         "mer" -> "Alle moduler" to "Mer"
         "fmer" -> "Finans" to "Mer"
-        "set" -> "Konto og utseende" to "Innstillinger"
+        "set" -> if (vm.settingsPage == null) "Konto og utseende" to "Innstillinger" else "Alle innstillinger" to (PAPER_SET_TITLES[vm.settingsPage] ?: "Innstillinger")
         "fsok" -> "Finans · ✦ AI" to "Søk"
         "media" -> "Plex · Jellyfin" to "Media"
         else -> when (vm.screen) {
@@ -213,7 +214,7 @@ private fun heroText(vm: AppViewModel): Pair<String, String> {
             Screen.Sub -> "Subscription OS" to "Abonnementer"
             Screen.Folders -> "Utgifter og regninger" to "Boliger"
             Screen.Finn -> "Kjøp og salg" to "Finn"
-            Screen.Settings -> "Alle innstillinger" to "Innstillinger"
+            Screen.Settings -> if (vm.settingsPage == null) "Konto og utseende" to "Innstillinger" else "Alle innstillinger" to (PAPER_SET_TITLES[vm.settingsPage] ?: "Innstillinger")
             Screen.List -> "Alle kontoer" to "Liste"
             Screen.Search -> "Finans · ✦ AI" to "Søk"
             Screen.Scan -> "Finans" to "Kvitteringer"
@@ -223,6 +224,7 @@ private fun heroText(vm: AppViewModel): Pair<String, String> {
 }
 
 private fun backLabel(vm: AppViewModel): String = when {
+    vm.settingsPage != null && (vm.paperPage == "set" || vm.screen == Screen.Settings) -> "Alle innstillinger"
     vm.selectedTx != null && vm.paperPage == "fsok" -> "Søk"
     vm.selectedTx != null && vm.paperPage == null -> when (vm.screen) { Screen.List -> "Liste"; Screen.Home -> "Oversikt"; else -> "Tilbake" }
     vm.screen == Screen.Domains && vm.paperPage == null -> "Hjem"
@@ -276,13 +278,15 @@ internal fun PaperApp(
             bar == "dom" -> vm.domainManager = true
             bar == "sub" -> vm.subAdding = true
             vm.screen == Screen.Tracking && bar == "main" -> vm.trkAddOpen = true
-            else -> { vm.scanTarget = if (vm.screen == Screen.Mat) "recipe" else "receipt"; vm.scanSheet = true }
+            // Trykk: kameraet åpnes med en gang (i Mat som oppskrift, i en bolig rett inn i boligen).
+            else -> { vm.scanTarget = if (vm.screen == Screen.Mat) "recipe" else "receipt"; takePhoto() }
         }
     }
     val onHold: () -> Unit = {
+        // Hold inne: arket med Kvittering, Oppskrift, Bilder og Fil.
         if (bar != "dom" && bar != "sub") {
             vm.scanTarget = if (vm.screen == Screen.Mat) "recipe" else "receipt"
-            holdFiles.launch(arrayOf("image/*", "application/pdf"))
+            vm.scanSheet = true
         }
     }
 
@@ -297,6 +301,8 @@ internal fun PaperApp(
                     contentAlignment = Alignment.TopCenter,
                 ) {
                     // Ny side åpner alltid helt øverst: alt innhold (og rulleposisjonen) bygges på nytt ved hvert sidebytte.
+                    // Dra for å oppdatere: fra toppen når siden står øverst (ca. 70 dp), så hentes siden på nytt.
+                    PullToRefreshBox(isRefreshing = vm.pullRefreshing, onRefresh = { vm.pullRefresh() }, modifier = Modifier.fillMaxHeight()) {
                     Box(Modifier.fillMaxHeight().widthIn(max = if (!wide) 10_000.dp else if (home) 960.dp else 720.dp)) { key(pageKey) {
                         when {
                             vm.original != null -> PaneBox(navBottom) { OriginalScreen(vm) }
@@ -305,7 +311,7 @@ internal fun PaperApp(
                             vm.paperPage == "mer" -> PaperMore(vm, navBottom)
                             vm.paperPage == "fmer" -> PaperFinMoreGrid(vm, navBottom, wide)
                             vm.paperPage == "fsok" && vm.selectedTx == null -> PaperFinSearch(vm, navBottom)
-                            vm.paperPage == "set" -> PaperSettings16(vm, navBottom)
+                            vm.paperPage == "set" -> PaperSettings17(vm, navBottom, onPrivacyChanged)
                             vm.paperPage == "media" -> PaperMedia(vm, navBottom)
                             vm.selectedTx != null && (s.isFinance || vm.paperPage == "fsok") -> PaperTxDetail(vm, navBottom, takePhoto, pickFiles)
                             s == Screen.Homelab -> PaperHome(vm, navBottom, wide)
@@ -317,11 +323,14 @@ internal fun PaperApp(
                             s == Screen.Domains -> Box(Modifier.fillMaxSize().padding(bottom = PAPER_BAR + navBottom)) { DomainsScreen(vm, false, section = vm.domSection, paper = true) }
                             s == Screen.Mat && !vm.matFull -> MatSurface(vm, paper = true)
                             // Verdikortet ligger delvis oppe i bildeheaderen, som på Sporing.
-                            s == Screen.Stocks -> Box(Modifier.fillMaxSize().padding(bottom = PAPER_BAR + navBottom)) { MainPane(vm, false, scan, onPrivacyChanged) }
+                            s == Screen.Stocks -> Box(Modifier.fillMaxSize()) { MainPane(vm, false, scan, onPrivacyChanged) }
                             s == Screen.Folders -> PaperBoliger(vm, navBottom) { vm.scanTarget = "receipt"; vm.scanSheet = true }
+                            // Innstillinger i Papir: aldri den klassiske skjermen.
+                            s == Screen.Settings -> PaperSettings17(vm, navBottom, onPrivacyChanged)
                             else -> PaneBox(navBottom) { MainPane(vm, false, scan, onPrivacyChanged) }
                         }
                     } }
+                    }
                 }
             }
             if (wide) {
@@ -355,6 +364,8 @@ internal fun PaperApp(
             if (vm.weatherOpen) WeatherApp(vm)
             if (vm.ruterOpen) RuterPage(vm)
             if (vm.familyOpen) FamilyScreen(vm)
+            if (vm.tasksOpen) TasksScreen(vm)
+            if (vm.compareOpen) CompareScreen(vm)
         }
     }
     if (vm.tabEdit) TabBarEditor(vm)
@@ -373,7 +384,8 @@ internal val PAPER_BAR = 82.dp
 /** De vanlige skjermene i Papir: plass til fanelinjen nederst. */
 @Composable
 private fun PaneBox(navBottom: Dp, content: @Composable () -> Unit) {
-    Box(Modifier.fillMaxSize().padding(top = 23.dp, bottom = PAPER_BAR + navBottom)) { content() }
+    // Innholdet går helt ned og scroller bak fanelinja og den røde +-knappen (listene har egen luft nederst).
+    Box(Modifier.fillMaxSize().padding(top = 23.dp)) { content() }
 }
 
 /** Fotovinduet: bilde (Oslo, Vær nå, Planeter, eget) eller gradient, med hilsen eller sidetittel nederst. */
@@ -391,7 +403,7 @@ private fun Hero(vm: AppViewModel, home: Boolean, wide: Boolean, toggleMenu: () 
         Box(Modifier.matchParentSize().background(Brush.verticalGradient(0f to Color.Black.copy(alpha = .25f), .35f to Color.Transparent, 1f to Color.Black.copy(alpha = .45f))))
         Column(Modifier.fillMaxSize().padding(top = statusTop + 8.dp, start = if (wide) 130.dp else 22.dp, end = 22.dp, bottom = if (home) 40.dp else 32.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (home) PSerif("Homelab", 22.sp, Color.White, Modifier.weight(1f))
+                if (home) PSerif(vm.appName, 22.sp, Color.White, Modifier.weight(1f), maxLines = 1)
                 else {
                     Box(
                         Modifier.height(34.dp).clip(CircleShape).background(Color(0x8C1B1A17)).clickable(onClickLabel = "Tilbake") { vm.back() }.padding(start = 10.dp, end = 14.dp),
@@ -508,7 +520,7 @@ private fun PaperNav(vm: AppViewModel, bar: String, float: Boolean, modifier: Mo
                     .clickable(role = Role.Tab, onClickLabel = t.label) { t.go(); Haptics.select() }.padding(horizontal = if (on) 14.dp else 2.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
             ) {
-                if (on || t.key == "sok") Text(t.icon, color = if (on) p.navActInk else p.navInk, fontFamily = PaperFonts.serif, fontSize = 16.sp)
+                if (on || t.key == "sok") GlyphIcon(t.icon, if (on) p.navActInk else p.navInk)
                 Text(t.label, color = if (on) p.navActInk else p.navInk, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Clip)
             }
         }
@@ -537,7 +549,7 @@ private fun PaperScanSheet(vm: AppViewModel, camera: () -> Unit, photos: () -> U
             ScanQueue(vm)
             PButton("Kamera", Modifier.fillMaxWidth(), height = 54.dp) { vm.scanSheet = false; camera() }
             PButton("Bilder", Modifier.fillMaxWidth(), kind = "line", height = 54.dp) { vm.scanSheet = false; photos() }
-            PButton("Bilder eller filer (PDF, JPG, HEIC)", Modifier.fillMaxWidth(), kind = "line", height = 54.dp) { vm.scanSheet = false; files() }
+            PButton("Fil (PDF, JPG, HEIC)", Modifier.fillMaxWidth(), kind = "line", height = 54.dp) { vm.scanSheet = false; files() }
         }
     }
 }
@@ -572,6 +584,7 @@ private fun ScanQueue(vm: AppViewModel) {
 
 private val HOME_SECS = listOf(
     PSec("h1", "Søk", full = true), PSec("h2", "Pakker"), PSec("h3", "Avganger"), PSec("hm", "Moduler", full = true),
+    PSec("h8", "Huskeliste"), PSec("h6", "Posisjon"), PSec("h7", "Bolig"),
     PSec("h5", "Siste nytt", full = true), PSec("h4", "Snarveier", full = true), PSec("hs", "Server"),
 )
 
@@ -580,6 +593,7 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
     val p = PaperPal.current
     val ctx = LocalContext.current
     val h = vm.mobileHome
+    LaunchedEffect(vm.base) { vm.loadHomeExtras() }
     LazyVerticalGrid(
         GridCells.Fixed(if (wide) 2 else 1), Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom),
         verticalArrangement = Arrangement.spacedBy(10.dp), horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -596,7 +610,7 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
                     if (pk == null) PCard(cardMod, onClick = { vm.paperTab("trk") }) { Text("Ingen pakker på vei.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(16.dp, 14.dp)) }
                     else PCard(cardMod, onClick = { vm.paperTab("trk") }) {
                         Row(Modifier.padding(14.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                            CarrierBadge(pk.carrierIni, pk.carrierColor, pk.carrierFg, 52)
+                            CarrierBadge(pk.carrierIni, pk.carrierColor, pk.carrierFg, 52, pk.carrier)
                             Column(Modifier.weight(1f)) {
                                 PLabel(if (pk.ready) "Hent i dag" else pk.statusText.ifBlank { "På vei" })
                                 PSerif(pk.name.ifBlank { pk.shop.ifBlank { pk.trackingNo } }, 20.sp, maxLines = 1)
@@ -614,6 +628,10 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
                     else PCard(if (wide) Modifier.height(FOLD_CARD) else Modifier, onClick = { vm.openRuter() }) { Text("Ingen avganger ennå. Trykk for å legge til en holdeplass.", color = p.mut, fontSize = 13.sp, modifier = Modifier.padding(16.dp, 14.dp)) }
                 }
                 "hm" -> PaperMinis(vm)
+                // Nye kort: Huskeliste (de tre neste med avkrysning), Posisjon (familien) og Bolig.
+                "h8" -> HomeTasksCard(vm)
+                "h6" -> HomePositionCard(vm)
+                "h7" -> HomeBoligCard(vm)
                 "h5" -> PaperNewsCard(vm)
                 "h4" -> if (!h?.shortcuts.isNullOrEmpty()) Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     PHead("Snarveier")
@@ -858,6 +876,7 @@ private fun PaperMore(vm: AppViewModel, navBottom: Dp) {
                 val rows: List<Triple<String, String, () -> Unit>> = listOf(
                     if (vm.tab4 == "sporing") Triple("Domener", "Trafikk, besøk og oppetid", { vm.domSection = "oversikt"; vm.openFromMer(Screen.Domains) })
                     else Triple("Sporing", if (onWay > 0) "$onWay pakker på vei" else "Pakker og sendinger", { vm.openFromMer(Screen.Tracking) }),
+                    Triple("Huskeliste", "Oppgaver og widgets", { vm.openTasks() }),
                     Triple("Familie og kart", "Hvor alle er, soner og helse", { vm.openFamily() }),
                     Triple("Avganger", "Ruter i sanntid og egne stopp", { vm.openRuter() }),
                     Triple("Vær", "Steder og varsel fra MET (yr.no)", { vm.openWeather() }),

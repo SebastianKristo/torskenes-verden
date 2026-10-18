@@ -105,7 +105,8 @@ import no.kristo.finanshub.*
 /* ---------------- Tilpass siden ---------------- */
 
 /** Et kort på en side som kan flyttes eller skjules. full = over hele bredden på Fold (Hjem i to kolonner). */
-data class PSec(val key: String, val label: String, val full: Boolean = false)
+/** hold = langt trykk på kortet starter redigering (av for pakkelisten, der langt trykk velger pakker). */
+data class PSec(val key: String, val label: String, val full: Boolean = false, val hold: Boolean = true)
 
 /** Dempet vugging: ±0,2° med periode 0,6 s (ease-in-out), annenhver i motsatt fase. */
 @Composable
@@ -137,7 +138,7 @@ internal fun EditWrap(vm: AppViewModel, page: String, sec: PSec, keys: List<Stri
     val angle = wobbleAngle(edit, index)
     Box(
         Modifier.fillMaxWidth().graphicsLayer { rotationZ = angle }
-            .longPressEdit(!edit) { Haptics.tap(); vm.editPage = page },
+            .longPressEdit(!edit && sec.hold) { Haptics.tap(); vm.editPage = page },
     ) {
         content()
         if (edit) {
@@ -386,7 +387,7 @@ internal fun PaperRail(vm: AppViewModel, bar: String, float: Boolean, modifier: 
                         .clickable(role = Role.Tab, onClickLabel = t.label) { t.go(); Haptics.select() },
                     horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
                 ) {
-                    Text(t.icon, color = if (on) Color(0xFF1B1A17) else Color(0xFFD8D1C2), fontFamily = PaperFonts.serif, fontSize = 17.sp, maxLines = 1)
+                    GlyphIcon(t.icon, if (on) Color(0xFF1B1A17) else Color(0xFFD8D1C2), 19.dp)
                     Text(t.label, color = if (on) Color(0xFF1B1A17) else Color(0xFFD8D1C2), fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Clip)
                 }
             }
@@ -721,6 +722,16 @@ internal fun NewShipmentSheet(vm: AppViewModel) {
     val guess = if (clean.length >= 6) Carrier.detect(clean) else null
     val car = guess?.let { g -> Carrier.KNOWN.firstOrNull { it.id == g } }?.takeIf { it.id != "other" }
     val submit = { if (clean.length >= 6) { vm.addTracking(clean, "", guess, false); vm.trkAddOpen = false } }
+    // «Skann strekkode»: bilde av pakkelappen, som serveren leser (Roboflow). Uten oppsett skriver eller limer man inn selv.
+    var shot by remember { mutableStateOf<android.net.Uri?>(null) }
+    val cam = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok -> if (ok) shot?.let { u -> vm.scanBarcode(u) { code -> no = code } } }
+    val takeLabel: () -> Unit = {
+        val dir = java.io.File(ctx.cacheDir, "scans").apply { mkdirs() }
+        val f = java.io.File(dir, "pakkelapp-${System.currentTimeMillis()}.jpg")
+        val u = androidx.core.content.FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", f)
+        shot = u
+        runCatching { cam.launch(u) }
+    }
     ModalBottomSheet(onDismissRequest = { vm.trkAddOpen = false }, containerColor = p.bg, contentColor = p.ink) {
         Column(Modifier.fillMaxWidth().imePadding().padding(18.dp, 0.dp, 18.dp, 30.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             PSerif("Ny sending", 24.sp)
@@ -738,10 +749,11 @@ internal fun NewShipmentSheet(vm: AppViewModel) {
                 Box(Modifier.fillMaxWidth().height(2.dp).background(p.lab))
             }
             if (car != null) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                CarrierBadge(car.ini, car.color, car.fg, 24)
+                CarrierBadge(car.ini, car.color, car.fg, 24, car.id)
                 Text("✓ ${car.name} gjenkjent", color = p.pos, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             }
             PButton("Spor sending", Modifier.fillMaxWidth(), height = 52.dp) { submit() }
+            PButton(if (vm.barcodeBusy) "Leser strekkoden …" else "Skann strekkode", Modifier.fillMaxWidth(), kind = "line", height = 48.dp) { if (!vm.barcodeBusy) takeLabel() }
             PButton("Lim inn", Modifier.fillMaxWidth(), kind = "line", height = 48.dp) {
                 val cm = ctx.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                 val txt = cm?.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(ctx)?.toString()?.trim()

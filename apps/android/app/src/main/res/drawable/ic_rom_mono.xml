@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Monokromt lag for «Fire rom». -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="1024" android:viewportHeight="1024">
+    <group android:pivotX="512" android:pivotY="512" android:scaleX="1" android:scaleY="1">
+        <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd" android:pathData="M512,196L820,452V828H204V452zM550,500h180a18,18 0 0 1 18,18v104a18,18 0 0 1 -18,18h-180a18,18 0 0 1 -18,-18v-104a18,18 0 0 1 18,-18zM294,672h180a18,18 0 0 1 18,18v68a18,18 0 0 1 -18,18h-180a18,18 0 0 1 -18,-18v-68a18,18 0 0 1 18,-18zM550,672h180a18,18 0 0 1 18,18v68a18,18 0 0 1 -18,18h-180a18,18 0 0 1 -18,-18v-68a18,18 0 0 1 18,-18z" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M294,500h180a18,18 0 0 1 18,18v104a18,18 0 0 1 -18,18h-180a18,18 0 0 1 -18,-18v-104a18,18 0 0 1 18,-18z" />
+    </group>
+</vector>

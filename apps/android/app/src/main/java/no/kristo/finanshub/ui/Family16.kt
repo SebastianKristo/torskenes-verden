@@ -86,10 +86,11 @@ internal fun FamilyScreen(vm: AppViewModel) {
         else locPerm.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
     }
 
+    var tab by remember { mutableStateOf("kart") }
     Box(Modifier.fillMaxSize().background(p.bg)) {
         Column(Modifier.fillMaxSize()) {
-            // Kartet øverst (40 % av høyden), med tilbake og tittel oppå.
-            Box(Modifier.fillMaxWidth().fillMaxHeight(0.42f)) {
+            // Kartet øverst (40 % av høyden på Kart, mindre på Soner og Helse), med tilbake og tittel oppå.
+            if (tab != "helse") Box(Modifier.fillMaxWidth().fillMaxHeight(if (tab == "kart") 0.42f else 0.3f)) {
                 FamilyMap(vm, Modifier.matchParentSize())
                 Row(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.height(34.dp).clip(CircleShape).background(Color(0xCC1B1A17)).clickable { vm.closeFamily() }.padding(start = 10.dp, end = 14.dp), contentAlignment = Alignment.Center) {
@@ -97,130 +98,56 @@ internal fun FamilyScreen(vm: AppViewModel) {
                     }
                     Spacer(Modifier.weight(1f))
                     Box(Modifier.clip(CircleShape).background(Color(0xCC1B1A17)).padding(12.dp, 7.dp)) {
-                        Text("Trykk på kartet for ny sone", color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
+                        Text(if (vm.famZoneDraft != null) "Trykk på kartet der sonen skal være" else "Trykk på kartet for ny sone", color = Color.White, fontSize = 11.5.sp, fontWeight = FontWeight.SemiBold)
                     }
+                }
+                Text("© OpenStreetMap", color = Color(0xFF1B1A17), fontSize = 9.sp,
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).clip(RoundedCornerShape(4.dp)).background(Color.White.copy(alpha = .75f)).padding(4.dp, 1.dp))
+            } else Row(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.height(34.dp).clip(CircleShape).background(p.ink).clickable { vm.closeFamily() }.padding(start = 10.dp, end = 14.dp), contentAlignment = Alignment.Center) {
+                    Text("‹ Hjem", color = p.bg, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
                 }
             }
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 40.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 item {
                     Row(verticalAlignment = Alignment.Bottom) {
                         PSerif("Familie", 30.sp, modifier = Modifier.weight(1f))
-                        Text("Personvern ›", color = p.lab, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clip(CircleShape).clickable { vm.famPrivacy = true }.padding(8.dp, 4.dp))
+                        Text("Min deling ›", color = p.lab, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.clip(CircleShape).clickable { vm.famPrivacy = true }.padding(8.dp, 4.dp))
+                    }
+                }
+                // Tre faner: Kart, Soner og Helse.
+                item {
+                    Row(Modifier.fillMaxWidth().clip(CircleShape).border(1.dp, p.line, CircleShape).padding(3.dp)) {
+                        listOf("kart" to "Kart", "soner" to "Soner", "helse" to "Helse").forEach { (k, n) ->
+                            val on = tab == k
+                            Box(Modifier.weight(1f).height(36.dp).clip(CircleShape).background(if (on) p.ink else Color.Transparent).clickable { Haptics.select(); tab = k }, contentAlignment = Alignment.Center) {
+                                Text(n, color = if (on) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp)
+                            }
+                        }
                     }
                 }
                 vm.familyError?.let { e -> item { Text(e, color = p.lab, fontSize = 13.sp) } }
                 if (f == null && vm.familyError == null) item { Box(Modifier.fillMaxWidth().padding(20.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.ink) } }
-                // Min deling
-                if (me != null) item {
-                    val on = me.sharing == "on"
-                    Row(
-                        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(if (on) p.posSoft else p.surf2).padding(14.dp, 12.dp),
-                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        Box(Modifier.size(10.dp).clip(CircleShape).background(if (on) p.pos else p.mut))
-                        Column(Modifier.weight(1f)) {
-                            Text(when (me.sharing) { "on" -> "Du deler posisjonen"; "paused" -> "Delingen er satt på pause"; else -> "Du deler ikke posisjonen" }, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                            Text(if (me.precision == "approx") "Omtrentlig (ca. 1 km)" else "Nøyaktig", color = p.mut, fontSize = 12.sp)
-                        }
-                        if (on) PButton("Pause", height = 36.dp, kind = "line") { vm.famSetSharing("paused") }
-                        else PButton("Del", height = 36.dp) { startSharing() }
+                when (tab) {
+                    "kart" -> {
+                        if (me != null) item { MySharing(vm, me, startSharing) }
+                        item { PeopleChips(vm) }
+                        if (sel != null) item { PersonCard(vm, sel) }
+                        item { PHead("Hendelser") }
+                        if (f != null && f.events.isEmpty()) item { Text("Ingen hendelser ennå.", color = p.mut, fontSize = 13.sp) }
+                        items((f?.events ?: emptyList()).take(30).size) { i -> EventRow(f!!, f.events[i]) }
                     }
-                }
-                // Personene
-                item {
-                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        (f?.members ?: emptyList()).forEach { m ->
-                            val on = m.userId == vm.famSel
-                            Row(
-                                Modifier.clip(CircleShape).background(if (on) p.ink else p.card).border(1.dp, p.line, CircleShape).clickable { vm.famSelect(m.userId) }.padding(start = 4.dp, end = 14.dp, top = 4.dp, bottom = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            ) {
-                                ServerImage(vm, m.avatarUrl, Modifier.size(32.dp).clip(CircleShape).background(p.surf2)) {
-                                    Text(m.name.take(1).uppercase(), color = p.ink, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
-                                }
-                                Column {
-                                    Text(m.name.split(' ').first(), color = if (on) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, maxLines = 1)
-                                    Text(when (m.sharing) { "paused" -> "Pause"; "off" -> "Deler ikke"; else -> ago(m.last?.ts).ifBlank { "Ingen posisjon" } },
-                                        color = if (on) p.bg.copy(alpha = .75f) else if (m.sharing != "on") p.lab else p.mut, fontSize = 11.sp, maxLines = 1)
-                                }
-                            }
-                        }
+                    "soner" -> {
+                        item { PHead("Soner", "+ Ny sone") { vm.famZoneDraft = (sel?.last?.lat ?: 59.9139) to (sel?.last?.lon ?: 10.7522) } }
+                        item { Text("Trykk på en person i en sone for å slå varsel av eller på når de kommer og går.", color = p.mut, fontSize = 12.5.sp) }
+                        if (f != null && f.zones.isEmpty()) item { Text("Ingen soner. Trykk på kartet for å lage en, f.eks. Hjem eller Skole.", color = p.mut, fontSize = 13.sp) }
+                        items((f?.zones ?: emptyList()).size) { i -> ZoneCard(vm, f!!, f.zones[i]) }
                     }
-                }
-                // Sensorer for valgt person
-                if (sel != null) item {
-                    val l = sel.last
-                    PCard {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Row(verticalAlignment = Alignment.Bottom) {
-                                PSerif(sel.name, 22.sp, modifier = Modifier.weight(1f), maxLines = 1)
-                                Text("@${sel.username}", color = p.mut, fontSize = 12.5.sp)
-                            }
-                            if (sel.sharing != "on") Text(if (sel.sharing == "paused") "${sel.name.split(' ').first()} har satt delingen på pause." else "${sel.name.split(' ').first()} deler ikke posisjonen.", color = p.lab, fontSize = 13.sp)
-                            else if (l == null) Text("Ingen posisjon ennå.", color = p.mut, fontSize = 13.sp)
-                            else {
-                                Text(listOfNotNull(l.place, ago(l.ts)).filter { it.isNotBlank() }.joinToString(" · "), color = p.mut, fontSize = 12.5.sp)
-                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Sensor("Batteri", l.battery?.let { "$it %" } ?: "–", if (l.charging == true) "Lader" else null)
-                                    Sensor("Aktivitet", activityText(l.activity), null)
-                                    Sensor("Fart", kmh(l.speed) ?: "–", null)
-                                    Sensor("Nøyaktighet", l.acc?.let { "± ${Math.round(it)} m" } ?: if (sel.precision == "approx") "ca. 1 km" else "–", null)
-                                }
-                                if (vm.famTrack.size > 1) Text("Spor siste 24 t: ${vm.famTrack.size} punkter · toppfart ${kmh(vm.famTrack.mapNotNull { it.speed }.maxOrNull()) ?: "–"}", color = p.mut, fontSize = 12.sp)
-                            }
-                            sel.health?.let { h ->
-                                Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-                                PLabel("Helse")
-                                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    h.steps?.let { Sensor("Skritt", n0(it.toDouble()), "i dag") }
-                                    h.restingHr?.let { Sensor("Hvilepuls", "$it", "slag/min") }
-                                    h.hr?.let { Sensor("Puls", "$it", "snitt") }
-                                    h.sleepMin?.let { Sensor("Søvn", "${it / 60} t ${it % 60} m", null) }
-                                    h.activeKcal?.let { Sensor("Aktive kcal", "$it", null) }
-                                }
-                                if (h.week.isNotEmpty()) {
-                                    val mx = (h.week.mapNotNull { it.steps }.maxOrNull() ?: 1).coerceAtLeast(1)
-                                    Row(Modifier.fillMaxWidth().height(70.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Bottom) {
-                                        h.week.takeLast(7).forEach { d ->
-                                            Column(Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Bottom) {
-                                                Box(Modifier.fillMaxWidth().fillMaxHeight(((d.steps ?: 0).toFloat() / mx).coerceIn(0.03f, 0.8f)).clip(RoundedCornerShape(5.dp)).background(p.ink.copy(alpha = .8f)))
-                                                Text(runCatching { java.time.LocalDate.parse(d.date.take(10)).dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, NB16).take(2) }.getOrDefault(""), color = p.mut, fontSize = 10.sp)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                // Soner
-                item { PHead("Soner", "+ Ny") { vm.famZoneDraft = (sel?.last?.lat ?: 59.9139) to (sel?.last?.lon ?: 10.7522) } }
-                if (f != null && f.zones.isEmpty()) item { Text("Ingen soner. Trykk på kartet for å lage en, f.eks. Hjemme eller Skolen.", color = p.mut, fontSize = 13.sp) }
-                items((f?.zones ?: emptyList()).size) { i ->
-                    val z = f!!.zones[i]
-                    PCard(onClick = { vm.famZoneEdit = z }) {
-                        Row(Modifier.padding(14.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Box(Modifier.size(14.dp).clip(CircleShape).background(Color(z.color)))
-                            Column(Modifier.weight(1f)) {
-                                Text(z.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                                val n = z.notify.count { it.value.first || it.value.second }
-                                Text("${Math.round(z.radius)} m · ${if (n == 0) "ingen varsler" else "varsel for $n"}", color = p.mut, fontSize = 12.sp)
-                            }
-                            Text("›", color = p.mut)
-                        }
-                    }
-                }
-                // Hendelser
-                item { PHead("Hendelser") }
-                if (f != null && f.events.isEmpty()) item { Text("Ingen hendelser ennå.", color = p.mut, fontSize = 13.sp) }
-                items((f?.events ?: emptyList()).take(30).size) { i ->
-                    val e = f!!.events[i]
-                    val who = f.members.firstOrNull { it.userId == e.userId }?.name?.split(' ')?.firstOrNull() ?: "Noen"
-                    val zone = e.zoneName ?: f.zones.firstOrNull { it.id == e.zoneId }?.name ?: "sonen"
-                    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(if (e.kind == "leave") "↗" else "↘", color = if (e.kind == "leave") p.lab else p.pos, fontSize = 16.sp)
-                        Text(if (e.kind == "leave") "$who forlot $zone" else "$who kom til $zone", color = p.ink, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(ago(e.ts), color = p.mut, fontSize = 12.sp)
+                    else -> {
+                        item { HealthHeader(vm) }
+                        val ms = (f?.members ?: emptyList())
+                        if (f != null && ms.none { it.health != null }) item { Text("Ingen deler helsedata ennå. Slå det på under Min deling.", color = p.mut, fontSize = 13.sp) }
+                        items(ms.size) { i -> ms[i].health?.let { h -> HealthCard(ms[i], h) } }
                     }
                 }
             }
@@ -228,6 +155,194 @@ internal fun FamilyScreen(vm: AppViewModel) {
     }
     if (vm.famZoneDraft != null || vm.famZoneEdit != null) ZoneSheet(vm)
     if (vm.famPrivacy) PrivacySheet(vm, startSharing)
+}
+
+@Composable
+private fun MySharing(vm: AppViewModel, me: FamMe, startSharing: () -> Unit) {
+    val p = PaperPal.current
+    val on = me.sharing == "on"
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(if (on) p.posSoft else p.surf2).padding(14.dp, 12.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(Modifier.size(10.dp).clip(CircleShape).background(if (on) p.pos else p.mut))
+        Column(Modifier.weight(1f)) {
+            Text(when (me.sharing) { "on" -> "Familien ser hvor du er"; "paused" -> "Pauset · de andre ser at du har pauset"; else -> "Du deler ikke posisjonen" }, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+            Text(if (me.precision == "approx") "Omtrentlig, rundt 1 km" else "Nøyaktig punkt", color = p.mut, fontSize = 12.sp)
+        }
+        if (on) PButton("Pause", height = 36.dp, kind = "line") { vm.famSetSharing("paused") }
+        else PButton("Del", height = 36.dp) { startSharing() }
+    }
+}
+
+@Composable
+private fun PeopleChips(vm: AppViewModel) {
+    val p = PaperPal.current
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        (vm.family?.members ?: emptyList()).forEach { m ->
+            val on = m.userId == vm.famSel
+            Row(
+                Modifier.clip(CircleShape).background(if (on) p.ink else p.card).border(1.dp, p.line, CircleShape).clickable { vm.famSelect(m.userId) }.padding(start = 4.dp, end = 14.dp, top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                ServerImage(vm, m.avatarUrl, Modifier.size(32.dp).clip(CircleShape).background(p.surf2)) {
+                    Text(m.name.take(1).uppercase(), color = p.ink, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
+                }
+                Column {
+                    Text(m.name.split(' ').first(), color = if (on) p.bg else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, maxLines = 1)
+                    Text(when (m.sharing) { "paused" -> "Pauset"; "off" -> "Deler ikke"; else -> ago(m.last?.ts).ifBlank { "Ingen posisjon" } },
+                        color = if (on) p.bg.copy(alpha = .75f) else if (m.sharing != "on") p.lab else p.mut, fontSize = 11.sp, maxLines = 1)
+                }
+            }
+        }
+    }
+}
+
+/** Personkortet: batteri, lading, aktivitet, fart, nøyaktighet, enhet og koordinater, med veibeskrivelse og «Spill av lyd». */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun PersonCard(vm: AppViewModel, sel: FamMember) {
+    val p = PaperPal.current
+    val ctx = LocalContext.current
+    val l = sel.last
+    val first = sel.name.split(' ').first()
+    PCard {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                PSerif(sel.name, 22.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                Text("@${sel.username}", color = p.mut, fontSize = 12.5.sp)
+            }
+            if (sel.sharing != "on") Text(if (sel.sharing == "paused") "$first har satt delingen på pause." else "$first deler ikke posisjonen.", color = p.lab, fontSize = 13.sp)
+            else if (l == null) Text("Ingen posisjon ennå.", color = p.mut, fontSize = 13.sp)
+            else {
+                Text(listOfNotNull(l.place ?: "Ukjent sted", ago(l.ts)).filter { it.isNotBlank() }.joinToString(" · "), color = p.mut, fontSize = 12.5.sp)
+                PLabel("Sensorer fra mobilen")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Sensor("Batteri", l.battery?.let { "$it %" } ?: "–", if (l.charging == true) "Lader" else null)
+                    Sensor("Aktivitet", activityText(l.activity), null)
+                    Sensor("Fart", kmh(l.speed) ?: "–", null)
+                    Sensor("Nøyaktighet", l.acc?.let { "± ${Math.round(it)} m" } ?: if (sel.precision == "approx") "ca. 1 km" else "–", null)
+                    l.device?.let { Sensor("Enhet", it, null) }
+                    Sensor("Koordinater", String.format(java.util.Locale.US, "%.4f, %.4f", l.lat, l.lon), if (sel.precision == "approx") "Omtrentlig" else null)
+                }
+                if (vm.famTrack.size > 1) Text("Spor siste 24 t: ${vm.famTrack.size} punkter · toppfart ${kmh(vm.famTrack.mapNotNull { it.speed }.maxOrNull()) ?: "–"}", color = p.mut, fontSize = 12.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PButton("Veibeskrivelse", Modifier.weight(1f), kind = "line", height = 42.dp) {
+                        openLink(ctx, String.format(java.util.Locale.US, "https://www.google.com/maps/dir/?api=1&destination=%.6f,%.6f", l.lat, l.lon))
+                    }
+                    PButton("Spill av lyd", Modifier.weight(1f), kind = "line", height = 42.dp) { vm.famPing(sel.userId, first) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EventRow(f: Family, e: FamEvent) {
+    val p = PaperPal.current
+    val who = f.members.firstOrNull { it.userId == e.userId }?.name?.split(' ')?.firstOrNull() ?: "Noen"
+    val zone = e.zoneName ?: f.zones.firstOrNull { it.id == e.zoneId }?.name ?: "sonen"
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(if (e.kind == "leave") "↗" else "↘", color = if (e.kind == "leave") p.lab else p.pos, fontSize = 16.sp)
+        Text(if (e.kind == "leave") "$who forlot $zone" else "$who kom til $zone", color = p.ink, fontSize = 14.sp, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(ago(e.ts), color = p.mut, fontSize = 12.sp)
+    }
+}
+
+/** Sone med hvem som er der nå, og varsel per person (Kommer / Forlater). */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ZoneCard(vm: AppViewModel, f: Family, z: FamZone) {
+    val p = PaperPal.current
+    val d = FloatArray(1)
+    val here = f.members.filter { m ->
+        val l = m.last ?: return@filter false
+        if (m.sharing != "on") return@filter false
+        android.location.Location.distanceBetween(l.lat, l.lon, z.lat, z.lon, d)
+        d[0] <= z.radius
+    }
+    PCard(onClick = { vm.famZoneEdit = z }) {
+        Column(Modifier.padding(14.dp, 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(Modifier.size(14.dp).clip(CircleShape).background(Color(z.color)))
+                Column(Modifier.weight(1f)) {
+                    Text(z.name, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                    Text("${Math.round(z.radius)} m · ${if (here.isEmpty()) "ingen der nå" else here.joinToString(", ") { it.name.split(' ').first() }}", color = p.mut, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                Text("›", color = p.mut)
+            }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                f.members.forEach { m ->
+                    val cur = z.notify[m.userId] ?: (false to false)
+                    val on = cur.first || cur.second
+                    PChip((if (on) "🔔 " else "") + m.name.split(' ').first(), on) { vm.famZoneNotify(z.id, m.userId, !on, !on) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HealthHeader(vm: AppViewModel) {
+    val p = PaperPal.current
+    val ctx = LocalContext.current
+    val st = remember { runCatching { HealthSync.status(ctx) }.getOrDefault(2) }
+    val shared = vm.family?.me?.shareHealth?.filterValues { it }?.keys ?: emptySet()
+    PCard(onClick = { vm.famPrivacy = true }) {
+        Row(Modifier.padding(14.dp, 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.weight(1f)) {
+                Text("Health Connect", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                Text(when {
+                    st != 0 -> "Ikke koblet til · trykk for å koble"
+                    shared.isEmpty() -> "Du deler ingen helsedata · trykk for å velge"
+                    else -> "Koblet til via appen · ${shared.size} felt deles"
+                }, color = p.mut, fontSize = 12.5.sp)
+            }
+            Text("›", color = p.mut)
+        }
+    }
+}
+
+/** Helse per person: skritt mot mål, hvilepuls, puls nå, søvn i natt, aktive kalorier og siste 7 dager. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun HealthCard(m: FamMember, h: FamHealth) {
+    val p = PaperPal.current
+    val goal = 8000
+    PCard {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                PSerif(m.name.split(' ').first(), 22.sp, modifier = Modifier.weight(1f))
+                Text(ago(h.updatedAt).let { if (it.isBlank()) "I dag" else "synket $it" }, color = p.mut, fontSize = 12.sp)
+            }
+            h.steps?.let { st ->
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row { Text("Skritt", color = p.mut, fontSize = 12.sp, modifier = Modifier.weight(1f)); Text("${n0(st.toDouble())} av ${n0(goal.toDouble())}", color = p.ink, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold) }
+                    Box(Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(p.line)) {
+                        Box(Modifier.fillMaxHeight().fillMaxWidth((st.toFloat() / goal).coerceIn(0.02f, 1f)).clip(CircleShape).background(p.pos))
+                    }
+                }
+            }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                h.restingHr?.let { Sensor("Hvilepuls", "$it", "slag/min") }
+                h.hr?.let { Sensor("Puls nå", "$it", "slag/min") }
+                h.sleepMin?.let { Sensor("Søvn i natt", "${it / 60} t ${it % 60} m", "Mål 8 t") }
+                h.activeKcal?.let { Sensor("Aktive kalorier", "$it", "kcal") }
+            }
+            if (h.week.isNotEmpty()) {
+                PLabel("Snitt siste 7 dager")
+                val mx = (h.week.mapNotNull { it.steps }.maxOrNull() ?: 1).coerceAtLeast(1)
+                Row(Modifier.fillMaxWidth().height(70.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Bottom) {
+                    h.week.takeLast(7).forEach { d ->
+                        Column(Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Bottom) {
+                            Box(Modifier.fillMaxWidth().fillMaxHeight(((d.steps ?: 0).toFloat() / mx).coerceIn(0.03f, 0.8f)).clip(RoundedCornerShape(5.dp)).background(p.ink.copy(alpha = .8f)))
+                            Text(runCatching { java.time.LocalDate.parse(d.date.take(10)).dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, NB16).take(2) }.getOrDefault(""), color = p.mut, fontSize = 10.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -249,18 +364,31 @@ private fun FamilyMap(vm: AppViewModel, modifier: Modifier) {
     val ink = PaperPal.current.ink.toArgb()
     val lab = PaperPal.current.lab.toArgb()
     var centered by remember { mutableStateOf(false) }
+    var mapRef by remember { mutableStateOf<MapView?>(null) }
+    // osmdroid må få onResume/onPause, ellers lastes ikke flisene (kartet ble stående tomt).
+    DisposableEffect(mapRef) {
+        val m = mapRef
+        m?.onResume()
+        onDispose { m?.onPause(); m?.onDetach() }
+    }
     AndroidView(
         modifier = modifier,
         factory = { c ->
-            Configuration.getInstance().userAgentValue = c.packageName
-            Configuration.getInstance().osmdroidBasePath = c.cacheDir
-            Configuration.getInstance().osmdroidTileCache = java.io.File(c.cacheDir, "osm-tiles")
+            val cfg = Configuration.getInstance()
+            cfg.load(c, c.getSharedPreferences("osmdroid", android.content.Context.MODE_PRIVATE))
+            // OSM krever en egen User-Agent; uten den blokkeres flisene.
+            cfg.userAgentValue = "FinansHub/" + (runCatching { c.packageManager.getPackageInfo(c.packageName, 0).versionName }.getOrNull() ?: "1") + " (" + c.packageName + ")"
+            cfg.osmdroidBasePath = c.cacheDir
+            cfg.osmdroidTileCache = java.io.File(c.cacheDir, "osm-tiles")
             MapView(c).apply {
                 setTileSource(TileSourceFactory.MAPNIK)
+                setUseDataConnection(true)
                 setMultiTouchControls(true)
+                isTilesScaledToDpi = true
                 zoomController.setVisibility(org.osmdroid.views.CustomZoomButtonsController.Visibility.NEVER)
                 controller.setZoom(12.0)
                 controller.setCenter(GeoPoint(59.9139, 10.7522))
+                mapRef = this
             }
         },
         update = { map ->
