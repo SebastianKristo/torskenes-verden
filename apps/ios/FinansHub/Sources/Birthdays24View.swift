@@ -35,7 +35,8 @@ struct BirthdaysPage24: View {
                 HStack(spacing: 8) { ProgressView(); Text("Henter bursdager …").font(PF.ui(13)).foregroundStyle(p.mut) }.padding(.horizontal, 4)
             }
             ForEach(groups, id: \.title) { g in group(g) }
-            BirthdayCalendars24()
+            // Prompt 26: kalenderoppsettet ligger i Innstillinger → Kalendere. Her er bare lenkeraden.
+            BirthdayCalLink26()
         }
         .padding(.top, 2)
         .animation(.easeOut(duration: 0.2), value: adding)

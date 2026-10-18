@@ -56,6 +56,7 @@ extension Store {
         if let v = JS.str(o, "fourthTab"), ["auto", "domener", "sporing"].contains(v), v != fourthTab { fourthTab = v }
         if let v = JS.str(o, "fab"), ["float", "inline"].contains(v), v != fabMode { fabMode = v }
         migrateHome24()
+        FinNav26.shared.apply(o, self)
     }
 
     /* ---------- Tilpass hver side ---------- */
@@ -132,13 +133,19 @@ extension Store {
 
     var finNavItems: [FinNavItem] {
         let list = finNav.compactMap { id in Store.finNavAll.first { $0.id == id } }
-        return list.isEmpty ? Array(Store.finNavAll.prefix(4)) : list
+        let base: [FinNavItem] = list.isEmpty ? Array(Store.finNavAll.prefix(4)) : list
+        // Prompt 26: egne navn og ikoner fra «Rediger fanelinjen» (FinNav26.swift).
+        let lb: FinNav26 = FinNav26.shared
+        return base.map { (f: FinNavItem) -> FinNavItem in
+            FinNavItem(id: f.id, name: lb.label(f.id) ?? f.name, icon: lb.icon(f.id) ?? f.icon, page: f.page)
+        }
     }
 
     func setFinNav(_ v: [String]) {
         // Prompt 24: Finans + Boliger har fem faner (Boliger · Søk · Liste · Oversikt · Kvitteringer).
         finNav = Array(v.prefix(5))
-        savePaperLayout(["finTabs": finNav])
+        // Prompt 26: finNav ([{key, label?, icon?}]) med finTabs som reserve for eldre server (FinNav26.swift).
+        FinNav26.shared.push(self)
         Haptics.shared.select()
     }
 
@@ -553,8 +560,11 @@ extension Store {
         case "kvitt": return finNav.contains("kvitteringer") ? "Hjem" : "Mer"
         case "boliger": return folder != nil ? "Boliger" : (finNav.contains("boliger") ? "Hjem" : "Mer")
         case "profil": return "Alle innstillinger"
-        case "huske", "bursdag": return "Mer"
-        default: return paperTab.hasPrefix("innst-") ? "Alle innstillinger" : "Hjem"
+        case "huske", "bursdag", "kalender": return "Mer"
+        default:
+            // Prompt 26: «‹ Integrasjoner» fra en integrasjonsside, «‹ Bursdager» fra Kalendere åpnet der.
+            if let l = nav26UpLabel { return l }
+            return paperTab.hasPrefix("innst-") ? "Alle innstillinger" : "Hjem"
         }
     }
 }

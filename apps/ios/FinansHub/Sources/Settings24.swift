@@ -76,6 +76,7 @@ final class Set24Model {
         add("varsler", "Varsler og haptikk", "Lyd, stille timer, grupper og Bursdager", "App", "innst-varsler")
         add("haptikk", "Haptikk", "Vibrasjon og styrke", "Varsler og haptikk", "innst-haptikk")
         add("trk", "Pakkevarsler", "Sporing og kvitteringer", "Varsler og haptikk", "innst-trk")
+        add("kal", "Kalendere", "Google Kalender, Home Assistant, Skole-iCal og Canvas", "App", "innst-kal")
         add("integ", "Integrasjoner", "Home Assistant, Google, Entur, Bring og flere", "App", "innst-integ")
         add("helse", "Helse og posisjon", "Apple Health, posisjon og bakgrunn", "App", "innst-helse")
         add("fam", "Familie og helse", "Deling i Familie", "App", "innst-fam")
@@ -90,7 +91,7 @@ final class Set24Model {
         if integ.isEmpty {
             for n in Int24Model.fallbackNames { add("integ." + n.lowercased(), n, "Status, felt og test", "Integrasjoner", "integ:" + n.lowercased()) }
         } else {
-            for it in integ {
+            for it in integ where !it.hidden {
                 let fields: String = it.fields.map(\.label).joined(separator: ", ")
                 add("integ." + it.id, it.name, fields.isEmpty ? it.group : fields, "Integrasjoner", "integ:" + it.id)
             }
@@ -186,6 +187,8 @@ final class Set24Model {
         aiIds = []
         if r.hasPrefix("profile:") { Prof24.shared.pick(String(r.dropFirst(8)), store); return }
         if r.hasPrefix("integ:") {
+            // Prompt 26: rett til siden for integrasjonen når den er kjent.
+            if Int24Model.shared.open26(String(r.dropFirst(6)), store) { return }
             Int24Model.shared.focus = String(r.dropFirst(6))
             store.paperGo("innst-integ")
             Set25Focus.shared.flash(it.title)
@@ -197,6 +200,7 @@ final class Set24Model {
         case "imports": store.paperOpen(.imports)
         case "abo": store.paperFinGo("abo")
         case "naming", "icon": break
+        case "innst-kal": Int26Nav.openKal(from: nil, store)
         default: store.paperGo(r)
         }
         // Prompt 25: samme fremheving som «Ta meg dit →» (raden fremheves hvis den står på siden).

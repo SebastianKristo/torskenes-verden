@@ -16,7 +16,9 @@ struct Int24Field: Identifiable, Hashable {
     var help: String
 
     var id: String { key }
-    var secret: Bool { type == "secret" }
+    var secret: Bool { type == "secret" || type == "password" || secretFlag }
+    /// Prompt 26: serveren kan også sende secret: true.
+    var secretFlag: Bool = false
 
     init(_ o: [String: Any]) {
         key = JS.str(o, "key") ?? "value"
@@ -25,6 +27,7 @@ struct Int24Field: Identifiable, Hashable {
         value = JS.str(o, "value")
         saved = JS.bool(o, "saved") ?? (value != nil)
         help = JS.str(o, "help") ?? ""
+        secretFlag = JS.bool(o, "secret") ?? false
     }
 
     var isSet: Bool { saved || !(value ?? "").isEmpty }
@@ -46,6 +49,17 @@ struct Int24Item: Identifiable, Hashable {
     var fields: [Int24Field]
     var canTest: Bool
     var message: String
+    /// Prompt 26: metadata som på web (kategori, merke, farge, kort beskrivelse, statustekst, guide og lenke).
+    var category: String = ""
+    var badge: String = ""
+    var color: String = ""
+    var desc: String = ""
+    var statusText: String = ""
+    var guide: [Int26Step] = []
+    var link: String = ""
+    var hidden: Bool = false
+    /// Kalendere: lenkene som er koblet til («Google», «HA»).
+    var kalLinks: [String] = []
 
     init(_ o: [String: Any]) {
         id = JS.str(o, "id") ?? UUID().uuidString
@@ -56,6 +70,15 @@ struct Int24Item: Identifiable, Hashable {
         fields = JS.list(o, "fields").map { Int24Field($0) }
         canTest = JS.bool(o, "canTest") ?? false
         message = JS.str(o, "error") ?? JS.str(o, "message") ?? ""
+        category = JS.str(o, "category") ?? ""
+        badge = JS.str(o, "badge") ?? ""
+        color = JS.str(o, "color") ?? ""
+        desc = JS.str(o, "description") ?? JS.str(o, "desc") ?? ""
+        statusText = JS.str(o, "statusText") ?? ""
+        guide = Int26Step.parse(o["guide"])
+        link = JS.str(o, "link") ?? ""
+        hidden = JS.bool(o, "hidden") ?? false
+        kalLinks = Int26Step.connectedLinks(JS.list(o, "links"))
     }
 
     var missing: [Int24Field] { fields.filter { !$0.isSet } }
@@ -178,6 +201,9 @@ struct PaperIntegrations24: View {
         Group {
             if m.state == 404 {
                 PaperIntegrations23()
+            } else if m.state == 0 && m.loaded && !m.items.isEmpty {
+                // Prompt 26: gruppert liste som på web, med egen side per integrasjon (Integrations26.swift).
+                Int26List()
             } else {
                 list
             }

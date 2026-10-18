@@ -619,7 +619,8 @@ struct PaperSettings17: View {
             group("App", 2, [
                 PaperLinkRow(name: "Utseende og fanelinje", sub: themeSub, icon: "paintpalette") { store.paperGo("innst-ut") },
                 PaperLinkRow(name: "Varsler og haptikk", sub: NotifyModel.shared.on ? "På · \(NotifyModel.sounds.first { $0.0 == NotifyModel.shared.sound }?.1 ?? "")" : "Av", icon: "bell") { store.paperGo("innst-varsler") },
-                PaperLinkRow(name: "Integrasjoner", sub: "Home Assistant, Google, Entur, Bring og 12 til", icon: "point.3.connected.trianglepath.dotted") { store.paperGo("innst-integ") },
+                PaperLinkRow(name: "Kalendere", sub: "Google Kalender · Home Assistant · Skole-iCal", icon: "calendar") { Int26Nav.openKal(from: nil, store) },
+                PaperLinkRow(name: "Integrasjoner", sub: "Home Assistant, Kalendere, Entur, Bring og flere", icon: "point.3.connected.trianglepath.dotted") { store.paperGo("innst-integ") },
                 PaperLinkRow(name: "Helse og posisjon", sub: HealthSync.shared.master ? "Apple Health er på · posisjon og bakgrunn" : "Apple Health er av · posisjon og bakgrunn", icon: "heart.text.square") { store.paperGo("innst-helse") },
                 PaperLinkRow(name: "Avansert", sub: "Skanning, widgets, server og data", icon: "gearshape.2") { store.paperGo("innst-avansert") },
             ])
@@ -716,6 +717,9 @@ struct PaperSettingsSub: View {
             case "api": SettingsSubpage(page: "tokens")
             case "ai": PaperAiSettings()
             case "integ": PaperIntegrations24()
+            // Prompt 26: Kalendere og én side per integrasjon (Integrations26.swift).
+            case "kal": PaperCalendars26()
+            case let k where k.hasPrefix("int:"): Int26Detail(id: String(k.dropFirst(4)))
             case "kat": SettingsSubpage(page: "cats")
             case "regler": SettingsSubpage(page: "rules")
             case "aksjer": SettingsSubpage(page: "stocks")
@@ -788,6 +792,10 @@ struct PaperFinNavSettings: View {
             return PaperLinkRow(name: f.name, sub: sub, value: value, valueColor: i == nil ? p.lab : p.pos) { toggle(f.id) }
         }
         let last = nav.last.flatMap { id in Store.finNavAll.first { $0.id == id }?.name } ?? "–"
+        // Prompt 26: samme editor som når du holder inne på fanelinjen i Finans.
+        rows.insert(PaperLinkRow(name: "Rediger fanelinjen", sub: "Navn, ikon, rekkefølge og stil · eller hold inne på fanelinjen", value: "Rediger ›", valueColor: p.lab) {
+            FinNav26.shared.editing = true
+        }, at: 0)
         rows.append(PaperLinkRow(name: "Fjern fra fanelinjen", sub: "Flytter siste fane til Mer", value: nav.count > 1 ? "Fjern \(last)" : "–", valueColor: p.lab) {
             if nav.count > 1 { store.setFinNav(Array(nav.dropLast())) }
         })

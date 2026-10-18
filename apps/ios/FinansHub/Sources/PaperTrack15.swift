@@ -12,6 +12,8 @@ struct PaperNewShipmentSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var no = ""
     @State private var scanning = false
+    /// Prompt 26: valgt tjeneste ("" = automatisk gjenkjenning).
+    @State private var car26: String = ""
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -33,9 +35,10 @@ struct PaperNewShipmentSheet: View {
                 .padding(.horizontal, 16).frame(height: 50)
                 .background(p.card, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(p.line, lineWidth: 1))
-            if clean.count >= 6, let name, car != "other" {
+            if clean.count >= 6, let name, car != "other", car26.isEmpty {
                 Text("✓ \(name) gjenkjent").font(PF.ui(13, .semibold)).foregroundStyle(p.pos)
             }
+            TrackCarrierChips26(number: no, selected: $car26)
             PInkButton(title: "Spor sending", height: 50, full: true, act: add)
                 .disabled(clean.count < 6)
                 .opacity(clean.count < 6 ? 0.5 : 1)
@@ -75,7 +78,7 @@ struct PaperNewShipmentSheet: View {
         let n = no.replacingOccurrences(of: " ", with: "").uppercased()
         guard n.count >= 6 else { return }
         let car = Carrier.detect(n)
-        store.addTracking(no: n, name: "", carrier: car == "other" ? nil : car, out: false)
+        store.addTracking(no: n, name: "", carrier: car == "other" ? nil : car, out: false, carrierOverride: car26.isEmpty ? nil : car26)
         Haptics.shared.success()
         dismiss()
     }

@@ -122,6 +122,10 @@ struct Shipment: Identifiable, Hashable {
     /// shop | carrier | letter (logo.kind) og om logoen er manuelt kontrollert.
     var logoKind: String = ""
     var logoManual: Bool = false
+    /// Prompt 26: valgt tjeneste (tom = automatisk), det som ble gjenkjent, og undertekst som «Bring · valgt».
+    var carrierOverride: String = ""
+    var carrierDetected: String = ""
+    var carrierLabel: String = ""
 
     init(_ o: [String: Any]) {
         id = JS.str(o, "id") ?? UUID().uuidString
@@ -162,6 +166,9 @@ struct Shipment: Identifiable, Hashable {
         archived = JS.bool(o, "archived") ?? false
         url = JS.str(o, "url") ?? ""
         events = JS.list(o, "events").map(TrackEvent.init)
+        carrierOverride = JS.str(o, "carrierOverride") ?? JS.str(o, "carrier_override") ?? ""
+        carrierDetected = JS.str(o, "carrierDetected") ?? ""
+        carrierLabel = JS.str(o, "carrierLabel") ?? ""
         logoKind = JS.str(lg, "kind") ?? ""
         logoManual = JS.bool(lg, "manual") ?? ((JS.str(lg, "kilde") ?? JS.str(lg, "source") ?? "") == "manuell")
         let le: [String: Any]? = JS.dict(o, "lastEvent")
@@ -326,7 +333,7 @@ extension Store {
         notifyTracking(t)
     }
 
-    func addTracking(no: String, name: String, carrier: String?, out: Bool) {
+    func addTracking(no: String, name: String, carrier: String?, out: Bool, carrierOverride: String? = nil) {
         let n = no.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !n.isEmpty else { flash("Skriv inn et sporingsnummer"); return }
         run {
@@ -334,6 +341,11 @@ extension Store {
             let nm = name.trimmingCharacters(in: .whitespacesAndNewlines)
             if !nm.isEmpty { body["name"] = nm }
             if let carrier, carrier != "other" { body["carrier"] = carrier }
+            // Prompt 26: valgt tjeneste overstyrer gjenkjenningen (eldre server leser bare carrier).
+            if let ov = carrierOverride, !ov.isEmpty {
+                body["carrierOverride"] = ov
+                if ov != "parcelsapp" { body["carrier"] = ov }
+            }
             let d = try await self.api.callAt("/api", "POST", "/tracking", json: body, timeout: 30)
             let o = JS.obj(d)
             if let item = JS.dict(o, "item") { self.trkSel = Shipment(item).id }
@@ -739,7 +751,7 @@ struct TrackingView: View {
                         CarrierBadge(ini: s.carrierIni, color: s.carrierColor, fg: s.carrierFg, carrier: s.carrier)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(s.name).fontWeight(.semibold).lineLimit(1)
-                            Text("\(s.carrierName) · \(s.trackingNo)").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)).lineLimit(1)
+                            Text("\(s.carrierLine26) · \(s.trackingNo)").font(.caption).foregroundStyle(Color.skinFg.opacity(0.6)).lineLimit(1)
                         }
                         Spacer(minLength: 6)
                         Pill(text: s.outgoing ? "Ut · \(s.sourceLabel)" : s.sourceLabel, color: Color.skinFg.opacity(0.8))

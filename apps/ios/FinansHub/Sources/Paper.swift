@@ -237,6 +237,13 @@ struct PaperShell: View {
                 .presentationDetents([.large])
                 .presentationBackground(p.bg)
         }
+        // Prompt 26: «Rediger fanelinjen» for Finans (hold inne på fanelinjen i Finans).
+        .sheet(isPresented: Binding(get: { FinNav26.shared.editing }, set: { FinNav26.shared.editing = $0 })) {
+            FinNavEditor26()
+                .environment(\.paper, p)
+                .presentationDetents([.large])
+                .presentationBackground(p.bg)
+        }
         .fullScreenCover(isPresented: Binding(get: { store.weatherOpen }, set: { store.weatherOpen = $0 })) {
             PaperWeatherView()
         }
@@ -403,7 +410,15 @@ struct PaperTabBar: View {
             .background(p.nav, in: Capsule())
             .shadow(color: .black.opacity(0.35), radius: 15, y: 10)
             .simultaneousGesture(LongPressGesture(minimumDuration: 0.6).onEnded { _ in
+                // Prompt 26: Finans har egen editor (FinNav26.swift). Klikket når fingeren slippes slukes én gang.
+                if store.paperInFinance && !store.paperInDomains && store.paperTab != "abo" {
+                    Nav26.shared.markHold()
+                    Haptics.shared.tick()
+                    FinNav26.shared.editing = true
+                    return
+                }
                 guard editable else { return }
+                Nav26.shared.markHold()
                 Haptics.shared.tick()
                 store.tabBarEditing = true
             })
@@ -447,6 +462,8 @@ struct PaperTabBar: View {
     }
 
     private func tapTab(_ id: String, on: Bool) {
+        // Prompt 26: trykket som kommer når fingeren slippes etter hold inne, navigerer ikke (bare én gang).
+        if Nav26.shared.consumeHold() { return }
         if id.hasPrefix("abo:") {
             Haptics.shared.select()
             store.subTab = String(id.dropFirst(4))
@@ -459,11 +476,9 @@ struct PaperTabBar: View {
         }
         if id == "mer" && store.paperTab == "familie" { store.paperMainTab("mer"); return }
         // Prompt 23: «Mer» på en Finans-underside åpner Finans → Mer (ikke den globale Mer, og ikke tilbake).
-        if id == "fmer" && store.paperInFinance { store.nav23FinMore(); return }
-        if on {
-            if store.paperInner || store.paperFin != nil || store.paperClassic != nil { store.paperBack() }
-            return
-        }
+        if id == "fmer" && store.paperInFinance { store.nav26FinMore(); return }
+        // Prompt 26: aktiv fane → fanens rot, og et nytt trykk scroller til toppen (Nav26.swift).
+        if on { store.nav26TapActive(id); return }
         if id == "domener" && !store.paperInDomains { store.paperOpenDomains(from: "hjem"); return }
         if !store.paperInFinance && !store.paperInDomains { store.paperMainTab(id); return }
         store.paperFinGo(id)
@@ -739,6 +754,7 @@ struct PaperPage: View {
                         Color.clear.preference(key: PaperScrollKey.self, value: g.frame(in: .named("ppage")).minY)
                     }
                     .frame(height: 0)
+                    .id("nav26top")
                     VStack(spacing: wide ? 12 : 10) { page }
                         .frame(maxWidth: maxW)
                         .padding(.horizontal, 16)
@@ -763,6 +779,10 @@ struct PaperPage: View {
             )
             .padding(.top, -23)
             .refreshable { await refresh() }
+            // Prompt 26: nytt trykk på aktiv fane på roten scroller til toppen (Nav26.swift).
+            .onChange(of: Nav26.shared.topTick) { _, _ in
+                withAnimation(.easeOut(duration: 0.3)) { proxy.scrollTo("nav26top", anchor: .top) }
+            }
             .task(id: "\(pageKey)#\(Set25Focus.shared.tick)") { await scrollToFocus25(proxy) }
             }
         }
@@ -794,6 +814,7 @@ struct PaperPage: View {
         case "sporing": PaperTracking()
         case "mer": PaperMore24()
         case "bursdag": BirthdaysPage24()
+        case "kalender": Cal26Page()
         case "innst": PaperSettings17()
         case "huske": PaperTasksView()
         case "domener", "dpub", "dytl", "dinf": PaperDomains()
@@ -822,6 +843,7 @@ struct PaperPage: View {
         case "domener", "dpub", "dytl", "dinf": store.reloadDomain(); if store.domAllMode { await store.loadDomAll() }
         case "ftx": if let id = store.paperTxId { store.openPaperTx(id) }
         case "boliger": await Bol24Model.shared.load(store)
+        case "kalender": await Cal26Model.shared.load(store, force: true)
         default: await store.loadHome(); await store.loadPhotoWindow()
         }
     }

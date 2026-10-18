@@ -18,6 +18,8 @@ struct PaperHome: View {
                 PaperCardDef(key: "h1", label: "Søk", view: AnyView(VStack(spacing: 10) { PaperSearch(); minis })),
                 PaperCardDef(key: "h2", label: "Pakker", view: AnyView(packages)),
                 PaperCardDef(key: "h3", label: "Avganger", view: AnyView(ruter)),
+                // Prompt 26: KALENDER etter Avganger (med lagret oppsett legger pageCards den nederst).
+                PaperCardDef(key: "h10", label: "Kalender", view: AnyView(Cal26HomeCard())),
                 PaperCardDef(key: "h4", label: "Snarveier", view: AnyView(shortcuts)),
                 PaperCardDef(key: "h5", label: "Siste nytt", view: AnyView(newsCard)),
                 PaperCardDef(key: "h6", label: "Huskeliste", view: AnyView(PaperTasksCard())),
@@ -470,6 +472,8 @@ struct PaperTracking: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
     @State private var no = ""
+    /// Prompt 26: valgt tjeneste for ny pakke ("" = automatisk).
+    @State private var car26: String = ""
 
     static let tabs = ["Aktive", "Klar for henting", "På vei", "Registrert", "Levert", "Alle", "Arkiv"]
 
@@ -493,6 +497,10 @@ struct PaperTracking: View {
         let list = all.filter { PaperTracking.inTab($0, store.trkTab) }.sorted { a, b in a.ready != b.ready ? a.ready : a.step > b.step }
         VStack(spacing: 10) {
             if TrackSelect.shared.active { TrackSelectBar(all: list, inArchive: store.trkTab == "Arkiv") }
+            // Prompt 26: én pakke valgt → SPOR VIA (Track26.swift).
+            if TrackSelect.shared.active && TrackSelect.shared.ids.count == 1, let one = all.first(where: { TrackSelect.shared.ids.contains($0.id) }) {
+                TrackSporVia26(s: one)
+            }
             // Hold inne fanene, pakkelisten eller Legg til for å endre rekkefølgen (lagres per bruker).
             PaperCardStack(page: "sporing", cards: [
                 PaperCardDef(key: "A", label: "Faner", view: AnyView(tabBar(all))),
@@ -560,6 +568,13 @@ struct PaperTracking: View {
     }
 
     private var addField: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            addInput
+            TrackCarrierChips26(number: no, selected: $car26)
+        }
+    }
+
+    private var addInput: some View {
         let car = Carrier.detect(no)
         let name = Carrier.known.first { $0.id == car }?.name
         return HStack(spacing: 8) {
@@ -587,8 +602,9 @@ struct PaperTracking: View {
         let n = no.replacingOccurrences(of: " ", with: "").uppercased()
         guard n.count >= 6 else { return }
         let car = Carrier.detect(n)
-        store.addTracking(no: n, name: "", carrier: car == "other" ? nil : car, out: false)
+        store.addTracking(no: n, name: "", carrier: car == "other" ? nil : car, out: false, carrierOverride: car26.isEmpty ? nil : car26)
         no = ""
+        car26 = ""
     }
 }
 
@@ -663,7 +679,7 @@ struct PaperShipmentCard: View {
                 PaperCarrierBadge(s: s, size: 44)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(s.displayTitle).font(PF.serif(18, medium: true)).foregroundStyle(p.ink).lineLimit(1)
-                    Text("\(s.carrierName) · \(s.trackingNo)").font(PF.ui(12)).foregroundStyle(p.mut).lineLimit(1)
+                    Text("\(s.carrierLine26) · \(s.trackingNo)").font(PF.ui(12)).foregroundStyle(p.mut).lineLimit(1)
                 }
                 Spacer(minLength: 0)
                 Button { withAnimation(.easeOut(duration: 0.2)) { open.toggle() } } label: {

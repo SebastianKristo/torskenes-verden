@@ -231,8 +231,9 @@ extension Store {
         case "innst-fam": return "Familie og helse"
         case "innst-helse": return "Helse og posisjon"
         case "huske": return "Huskeliste"
+        case "kalender": return "Kalender"
         default:
-            if paperTab.hasPrefix("innst-") { return PaperSettingsSub.titles[String(paperTab.dropFirst(6))]?.0 }
+            if paperTab.hasPrefix("innst-") { return PaperSettingsSub.title26(String(paperTab.dropFirst(6)))?.0 }
             return nil
         }
     }
@@ -249,8 +250,9 @@ extension Store {
         case "innst-fam": return "Deling, personvern og Apple Helse"
         case "innst-helse": return "Apple Health, datatyper og posisjon"
         case "huske": return "Oppgaver for hele familien"
+        case "kalender": return Cal26Model.shared.kicker
         default:
-            if paperTab.hasPrefix("innst-") { return PaperSettingsSub.titles[String(paperTab.dropFirst(6))]?.1 }
+            if paperTab.hasPrefix("innst-") { return PaperSettingsSub.title26(String(paperTab.dropFirst(6)))?.1 }
             return nil
         }
     }

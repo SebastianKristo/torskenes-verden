@@ -161,8 +161,9 @@ extension Store {
         if paperTab == "ftx" { paperGo("fliste"); return }
         if paperTab == "abo" && !finNav.contains("abonnementer") { paperGo("fmer"); return }
         if paperTab == "innst" { paperGo("mer"); return }
+        if let t = nav26BackTarget() { paperGo(t); return }
         if paperTab.hasPrefix("innst-") || paperTab == "profil" { paperGo("innst"); return }
-        if paperTab == "huske" || paperTab == "bursdag" { paperGo("mer"); return }
+        if paperTab == "huske" || paperTab == "bursdag" || paperTab == "kalender" { paperGo("mer"); return }
         if paperTab == "boliger" && folder != nil { folder = nil; return }
         if (paperTab == "aksjer" && !finNav.contains("aksjer")) || (paperTab == "boliger" && !finNav.contains("boliger")) { paperGo("fmer"); return }
         if paperTab == "kvitt" && !finNav.contains("kvitteringer") { paperGo("fmer"); return }
@@ -214,8 +215,9 @@ extension Store {
         if paperTab == "ftx" { paperGo("fliste"); return }
         if paperTab == "abo" && !finNav.contains("abonnementer") { paperGo("fmer"); return }
         if paperTab == "boliger" && folder != nil { folder = nil; return }
+        if let t = nav26BackTarget() { paperGo(t); return }
         if paperTab.hasPrefix("innst-") || paperTab == "profil" { paperGo("innst"); return }
-        if paperTab == "huske" || paperTab == "bursdag" { paperGo("mer"); return }
+        if paperTab == "huske" || paperTab == "bursdag" || paperTab == "kalender" { paperGo("mer"); return }
         if nav23SubOfFinMore { paperGo("fmer"); return }
         if paperFin != nil { paperFin = nil; go(.home); return }
         if paperTrackFull { paperTrackFull = false; return }
@@ -236,7 +238,7 @@ extension Store {
     var paperCanSwipeBack: Bool {
         newsOpen || dishSel != nil || paperInner || paperFin != nil || paperTrackFull || paperClassic != nil || paperInDomains
             || paperTab == "ftx" || paperEditPage != nil || (paperTab == "abo" && !finNav.contains("abonnementer"))
-            || paperTab.hasPrefix("innst-") || paperTab == "profil" || paperTab == "huske" || (paperTab == "boliger" && folder != nil)
+            || paperTab.hasPrefix("innst-") || paperTab == "profil" || paperTab == "huske" || paperTab == "kalender" || (paperTab == "boliger" && folder != nil)
             || nav23SubOfFinMore
     }
 

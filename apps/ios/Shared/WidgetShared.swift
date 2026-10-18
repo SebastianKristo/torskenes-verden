@@ -69,7 +69,7 @@ enum WidgetShared {
     /// Bufrede svar for alle widgetene (finans, huskeliste og familie).
     static func clearCaches() {
         let d = defaults
-        for k in ["w.cache", "w.tasks", "w.family", "w.birthdays"] { d.removeObject(forKey: k) }
+        for k in ["w.cache", "w.tasks", "w.family", "w.birthdays", "w.calendar"] { d.removeObject(forKey: k) }
     }
 
     static var token: String? { defaults.string(forKey: "w.token") }

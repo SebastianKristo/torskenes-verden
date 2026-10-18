@@ -22,6 +22,7 @@ struct FinansHubWidgetBundle: WidgetBundle {
         TasksWidget()
         PositionWidget()
         BirthdaysWidget()
+        CalendarWidget26()
     }
 }
 

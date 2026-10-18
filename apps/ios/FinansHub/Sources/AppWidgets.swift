@@ -28,6 +28,8 @@ extension Store {
         guard url.scheme == "finanshub", loggedIn else { return }
         let page = (url.host ?? "").lowercased()
         let sub = url.pathComponents.dropFirst().first?.lowercased() ?? ""
+        // Prompt 26: finanshub://kalender[/<id>] åpner Kalender (og detaljkortet for timen).
+        if page == "kalender" || page == "calendar" { Cal26Model.shared.openLink(url, self); return }
         if paper { paperDeepLink(page, sub); return }
         switch page {
         case "homelab", "weather", "vaer": open(.homelab)

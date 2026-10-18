@@ -96,7 +96,8 @@ final class Prof24 {
             }
             if !items.isEmpty { store.setTabBar(items) }
         }
-        store.setFinNav(d.finNav)
+        // Prompt 26: ikke setFinNav her (den lagrer finNav for seg og gjør profilen «Egendefinert»).
+        store.finNav = Array(d.finNav.prefix(5))
         store.savePaperLayout(["profile": key, "startRoute": d.startRoute, "homeNav": d.homeNav, "finNav": d.finNav])
         if d.startRoute == "finans/boliger" {
             store.paperFinGo("boliger")

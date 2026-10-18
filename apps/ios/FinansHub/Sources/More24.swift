@@ -64,6 +64,7 @@ struct PaperMore24: View {
         if !inBar.contains("domener") {
             out.append(More24Row(id: "domener", name: "Domener", sub: "Trafikk, besøk og oppetid", icon: "globe") { store.paperOpenDomains(from: "mer") })
         }
+        out.append(More24Row(id: "kalender", name: "Kalender", sub: "Timeplan, prøver og frister", icon: "calendar") { store.paperGo("kalender") })
         out.append(More24Row(id: "bursdag", name: "Bursdager", sub: "Hvem har bursdag snart", icon: "gift") { store.paperGo("bursdag") })
         if !inBar.contains("huske") {
             out.append(More24Row(id: "huske", name: "Huskeliste", sub: "Oppgaver og widgets", icon: "checklist") { store.paperGo("huske") })
