@@ -62,7 +62,7 @@ enum TasksFetch {
         let linked = !(WidgetShared.token ?? "").isEmpty
         var data = await request("/api/tasks/next?n=4")
         if let data { WidgetShared.defaults.set(data, forKey: cacheKey) } else { data = WidgetShared.defaults.data(forKey: cacheKey) }
-        let p = data.map { parse($0) } ?? ([], 0, [:])
+        let p: (items: [TaskW], open: Int, colors: [String: String]) = data.map { parse($0) } ?? ([], 0, [:])
         return TasksEntry(date: Date(), items: p.items, open: p.open, colors: p.colors, linked: linked)
     }
 }
