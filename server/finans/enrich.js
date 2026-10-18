@@ -7,6 +7,7 @@ import { db, OWNER, kv } from '../db.js';
 import { config } from '../config.js';
 import { settings } from './db.js';
 import { askJson } from './ai.js';
+import { matchMerchant, fileForDomain } from '../logos/match.js';
 
 const q = (sql) => db.prepare(sql);
 
@@ -68,6 +69,9 @@ const keyOf = (name) => String(name ?? '').toLowerCase().replace(/\s+/g, ' ').tr
 export function domainFor(name) {
   const l = ' ' + keyOf(name) + ' ';
   if (l.trim().length < 2) return null;
+  // Prompt 20: det interne logobiblioteket først (banktekster som «VIPPS*KIWI 123» og «IZ *RUTER»).
+  const hit = matchMerchant(name);
+  if (hit?.domene) return hit.domene;
   const L = learned();
   for (const [k, v] of Object.entries(L)) if (l.includes(' ' + k + ' ') || l.trim() === k) return v;
   let best, len = 0;
@@ -106,6 +110,9 @@ const inflight = new Map();
 export async function logo(domain) {
   const d = validDomain(domain);
   if (!d) return null;
+  // Prompt 20: ferdig nedlastet logo fra biblioteket (server/logos/files) før cache og nett.
+  const bundled = fileForDomain(d);
+  if (bundled) { try { return await readFile(bundled); } catch { /* fjernet etter oppstart */ } }
   const file = join(LOGOS, d + '.png');
   try { const s = await stat(file); if (Date.now() - s.mtimeMs < MAX_AGE) return s.size ? await readFile(file) : null; } catch { /* mangler */ }
   if (inflight.has(d)) return inflight.get(d);

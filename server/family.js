@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS family_event (
   id INTEGER PRIMARY KEY AUTOINCREMENT, user TEXT NOT NULL, zone_id INTEGER NOT NULL, zone_name TEXT NOT NULL, kind TEXT NOT NULL, ts INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS family_event_ts ON family_event(ts);
+CREATE TABLE IF NOT EXISTS family_geo (key TEXT PRIMARY KEY, place TEXT, ts INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS family_health (
   user TEXT NOT NULL, date TEXT NOT NULL, steps INTEGER, resting_hr REAL, hr REAL, sleep_min INTEGER, active_kcal INTEGER, updated INTEGER NOT NULL,
   PRIMARY KEY (user, date)
@@ -55,7 +56,18 @@ export function prefsOf(id) {
     sharing: ['on', 'paused', 'off'].includes(p.sharing) ? p.sharing : DEF_PREFS.sharing,
     precision: p.precision === 'approx' ? 'approx' : 'exact',
     shareHealth: Object.fromEntries(HEALTH_KEYS.map((k) => [k, typeof p.shareHealth?.[k] === 'boolean' ? p.shareHealth[k] : DEF_PREFS.shareHealth[k]])),
+    color: COLOR.test(p.color ?? '') ? p.color.toLowerCase() : null,
   };
+}
+
+// Prompt 20: hver person har sin egen farge. Valgt farge (PUT /me {color}), ellers en stabil farge fra paletten.
+export const PALETTE = ['#b23a2a', '#2f5d8a', '#2f7a4f', '#c27a1a', '#6a4a8a', '#2a7a7a', '#a8456b', '#5a6b2a', '#8a5a2f', '#3f4f8f'];
+export function colorOf(id) {
+  const own = prefsOf(id).color;
+  if (own) return own;
+  let h = 0;
+  for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return PALETTE[h % PALETTE.length];
 }
 
 /* ---------------- Hjelpere ---------------- */
@@ -166,7 +178,7 @@ function memberOut(u, viewer) {
   const visible = self || pr.sharing === 'on';
   const share = self ? Object.fromEntries(HEALTH_KEYS.map((k) => [k, true])) : pr.shareHealth;
   return {
-    userId: u.id, name: u.displayName ?? u.name, username: u.username, avatarUrl: u.avatarUrl ?? null, self,
+    userId: u.id, name: u.displayName ?? u.name, username: u.username, avatarUrl: u.avatarUrl ?? null, self, color: colorOf(u.id),
     sharing: pr.sharing, precision: pr.precision,
     last: visible ? posOut(lastPos(u.id), self || pr.precision === 'exact') : null,
     health: healthOut(u.id, share),
@@ -177,9 +189,9 @@ function memberOut(u, viewer) {
 // Tre familiemedlemmer som beveger seg rundt i Oslo, så kart, spor, soner og hendelser kan vises uten telefoner.
 
 const MOCKS = [
-  { id: 'mock-ingrid', username: 'ingrid', name: 'Ingrid', home: [59.9275, 10.7160], route: [[59.9275, 10.7160], [59.9220, 10.7340], [59.9139, 10.7522], [59.9110, 10.7610]], activity: 'driving', speed: 11, battery: 64, charging: false, sharing: 'on', precision: 'exact' },
-  { id: 'mock-jonas', username: 'jonas', name: 'Jonas', home: [59.9275, 10.7160], route: [[59.9330, 10.7110], [59.9360, 10.7230], [59.9395, 10.7310]], activity: 'cycling', speed: 5.2, battery: 22, charging: false, sharing: 'on', precision: 'approx' },
-  { id: 'mock-mormor', username: 'mormor', name: 'Mormor', home: [59.9500, 10.7650], route: [[59.9500, 10.7650]], activity: 'still', speed: 0, battery: 91, charging: true, sharing: 'paused', precision: 'exact' },
+  { id: 'mock-ingrid', username: 'ingrid', name: 'Ingrid', home: [59.9275, 10.7160], route: [[59.9275, 10.7160], [59.9220, 10.7340], [59.9139, 10.7522], [59.9110, 10.7610]], activity: 'driving', speed: 11, battery: 64, charging: false, sharing: 'on', precision: 'exact', color: '#2f5d8a' },
+  { id: 'mock-jonas', username: 'jonas', name: 'Jonas', home: [59.9275, 10.7160], route: [[59.9330, 10.7110], [59.9360, 10.7230], [59.9395, 10.7310]], activity: 'cycling', speed: 5.2, battery: 22, charging: false, sharing: 'on', precision: 'approx', color: '#2f7a4f' },
+  { id: 'mock-mormor', username: 'mormor', name: 'Mormor', home: [59.9500, 10.7650], route: [[59.9500, 10.7650]], activity: 'still', speed: 0, battery: 91, charging: true, sharing: 'paused', precision: 'exact', color: '#a8456b' },
 ];
 const mockName = (id) => MOCKS.find((m) => m.id === id)?.name ?? null;
 const lerp = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
@@ -195,7 +207,7 @@ function mockMember(m, viewer) {
   const raw = { ts: now - 40_000, lat, lon, acc: m.activity === 'still' ? 12 : 8, speed: m.speed, heading: 75, alt: 40, battery: m.battery, charging: m.charging ? 1 : 0, activity: m.activity };
   const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(now - (6 - i) * DAY).toISOString().slice(0, 10); return { date: d, steps: 4200 + ((i * 1777 + m.id.length * 991) % 7400), sleepMin: 380 + ((i * 37) % 90), activeKcal: 260 + ((i * 53) % 340), restingHr: 56 + (i % 5) }; });
   return {
-    userId: m.id, name: m.name, username: m.username, avatarUrl: null, self: false, sharing: m.sharing, precision: m.precision, mock: true,
+    userId: m.id, name: m.name, username: m.username, avatarUrl: null, self: false, color: m.color, sharing: m.sharing, precision: m.precision, mock: true,
     last: m.sharing === 'on' ? posOut(raw, m.precision === 'exact') : null,
     health: { today: { ...days[6], hr: 72 }, week: days, updatedAt: now - 9 * 60_000 },
   };
@@ -221,6 +233,108 @@ function seedMock(viewer) {
   ev.run('mock-ingrid', z[1].id, z[1].name, 'enter', now - 50 * 60_000);
   ev.run('mock-mormor', z[0].id, z[0].name, 'leave', now - 30 * 60_000);
   for (const m of MOCKS) q('INSERT OR IGNORE INTO family_notify(zone_id, viewer, target, enter, leave) VALUES(?,?,?,1,1)').run(z[0].id, viewer, m.id);
+}
+
+/* ---------------- Posisjonskortet (prompt 20) ---------------- */
+// GET /api/family/positions: deg selv først («Du», bare én gang), så familien i rekkefølgen fra Familie → Personer.
+// Hver rad har ferdig linje 2 (sone, «Går · Bislett», strøk/by, «Sist sett 14:32» eller «Deler ikke posisjon»).
+
+const FRESH = 15 * 60_000, GEO_KEEP = DAY;
+export const NOMINATIM_UA = 'KristoHomelab/1.0 (kontakt@kristo.no)';
+const AKT = { walking: 'går', running: 'går', cycling: 'sykler', driving: 'i bil', still: 'stille' };
+function aktivitet(p) {
+  if (!p) return null;
+  if (p.activity && AKT[p.activity]) return AKT[p.activity];
+  if (typeof p.speed === 'number') return p.speed < 0.6 ? 'stille' : p.speed < 2.8 ? 'går' : p.speed < 8 ? 'sykler' : 'i bil';
+  return null;
+}
+export function initials(name) {
+  const w = String(name ?? '').trim().split(/\s+/)[0] ?? '';
+  const ch = [...w];
+  if (!ch.length) return '?';
+  return (ch[0].toUpperCase() + (ch[1] ?? '').toLowerCase());
+}
+function clock(ts, now = Date.now()) {
+  const tz = 'Europe/Oslo';
+  const p = Object.fromEntries(new Intl.DateTimeFormat('nb-NO', { timeZone: tz, day: 'numeric', month: 'numeric', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+    .formatToParts(new Date(ts)).map((x) => [x.type, x.value]));
+  const day = (t) => new Intl.DateTimeFormat('sv-SE', { timeZone: tz }).format(new Date(t));
+  return day(ts) === day(now) ? `${p.hour}:${p.minute}` : `${p.day}.${p.month}. ${p.hour}:${p.minute}`;
+}
+
+// Strøk i Oslo for mockdata (og som svar uten nett i MOCK_DATA). Nærmeste sentrum innen 2,5 km.
+const MOCK_PLACES = [['Grünerløkka', 59.9230, 10.7590], ['Majorstuen', 59.9290, 10.7150], ['Bislett', 59.9250, 10.7330], ['Sentrum', 59.9127, 10.7461],
+  ['St. Hanshaugen', 59.9270, 10.7400], ['Frogner', 59.9200, 10.7050], ['Tøyen', 59.9150, 10.7720], ['Sagene', 59.9380, 10.7560], ['Ullevål', 59.9400, 10.7300],
+  ['Torshov', 59.9340, 10.7650], ['Grønland', 59.9120, 10.7620], ['Bjølsen', 59.9420, 10.7470], ['Nydalen', 59.9500, 10.7650], ['Blindern', 59.9400, 10.7200]];
+function mockPlace(lat, lon) {
+  let best = null;
+  for (const [name, a, b] of MOCK_PLACES) { const d = dist({ lat, lon }, { lat: a, lon: b }); if (!best || d < best.d) best = { name, d }; }
+  return best && best.d < 2500 ? best.name : 'Oslo';
+}
+
+// Omvendt geokoding via Nominatim (med User-Agent, maks ett kall i sekundet), cache 24 t i databasen per ~100 m.
+let geoChain = Promise.resolve(), lastGeo = 0;
+const geoInflight = new Map();
+function nominatim(lat, lon) {
+  const run = async () => {
+    const wait = lastGeo + 1100 - Date.now();
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    lastGeo = Date.now();
+    const u = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=16&addressdetails=1&accept-language=nb&lat=${lat}&lon=${lon}`;
+    const r = await fetch(u, { headers: { 'User-Agent': NOMINATIM_UA, Accept: 'application/json' }, signal: AbortSignal.timeout(6000) });
+    if (!r.ok) throw new Error(`Nominatim ${r.status}`);
+    const a = (await r.json())?.address ?? {};
+    return a.neighbourhood && a.suburb ? a.suburb : a.suburb ?? a.quarter ?? a.neighbourhood ?? a.city_district ?? a.village ?? a.town ?? a.city ?? a.municipality ?? null;
+  };
+  const p = geoChain.then(run, run);
+  geoChain = p.catch(() => {});
+  return p;
+}
+export async function placeFor(lat, lon, { waitMs = 2500 } = {}) {
+  if (lat == null || lon == null) return null;
+  if (MOCK) return mockPlace(lat, lon);
+  const key = `${lat.toFixed(3)},${lon.toFixed(3)}`;
+  const hit = q('SELECT place, ts FROM family_geo WHERE key=?').get(key);
+  if (hit && Date.now() - hit.ts < GEO_KEEP) return hit.place;
+  if (!geoInflight.has(key)) {
+    geoInflight.set(key, nominatim(+lat.toFixed(3), +lon.toFixed(3))
+      .then((place) => { q('INSERT INTO family_geo(key, place, ts) VALUES(?,?,?) ON CONFLICT(key) DO UPDATE SET place=excluded.place, ts=excluded.ts').run(key, place, Date.now()); return place; })
+      .catch((e) => { console.warn('[family] geokoding:', e.message); return hit?.place ?? null; })
+      .finally(() => geoInflight.delete(key)));
+  }
+  // Ikke la kortet vente lenge: svaret caches og kommer med neste gang.
+  return Promise.race([geoInflight.get(key), new Promise((r) => setTimeout(() => r(hit?.place ?? null), waitMs))]);
+}
+
+async function positionRow(m, now = Date.now()) {
+  const last = m.last;
+  const status = m.sharing !== 'on' || !last ? 'off' : now - last.ts < FRESH ? 'fresh' : 'stale';
+  const sone = status === 'off' ? null : last.place ?? null;
+  const akt = status === 'fresh' ? aktivitet(last) : null;
+  // Inne i en sone trengs stedet bare som tillegg, så kortet venter kortere på geokodingen.
+  const sted = status === 'off' ? null : await placeFor(last.lat, last.lon, { waitMs: sone ? 300 : 2500 });
+  const moving = akt && akt !== 'stille';
+  let linje2;
+  if (status === 'off') linje2 = 'Deler ikke posisjon';
+  else if (status === 'stale' && now - last.ts > 2 * 3_600_000) linje2 = `Sist sett ${clock(last.ts, now)}`;
+  else if (sone) linje2 = sone;
+  else if (moving) linje2 = sted ? `${akt[0].toUpperCase()}${akt.slice(1)} · ${sted}` : `${akt[0].toUpperCase()}${akt.slice(1)}`;
+  else linje2 = sted ?? `Sist sett ${clock(last.ts, now)}`;
+  const navn = m.self ? 'Du' : m.name;
+  return {
+    id: m.userId, userId: m.userId, navn, name: m.name, farge: m.color, bilde: m.avatarUrl ?? null, initialer: m.self ? 'Du' : initials(m.name),
+    sone, aktivitet: akt, sted: status === 'off' ? null : sted, oppdatert: last?.ts ? new Date(last.ts).toISOString() : null, oppdatertMs: last?.ts ?? null,
+    status, linje2, self: !!m.self, sharing: m.sharing, ...(m.mock ? { mock: true } : {}),
+  };
+}
+
+export async function positions(me) {
+  const seen = new Set([me]);
+  const self = userInfo(me);
+  const list = self ? [memberOut(self, me)] : [];
+  for (const u of listUsers()) { if (seen.has(u.id)) continue; seen.add(u.id); list.push(memberOut(u, me)); }
+  if (MOCK) for (const m of MOCKS) if (!seen.has(m.id)) { seen.add(m.id); list.push(mockMember(m, me)); }
+  return Promise.all(list.map((m) => positionRow(m)));
 }
 
 /* ---------------- Ruter ---------------- */
@@ -281,7 +395,7 @@ api.get('/', (c) => {
   const members = listUsers().map((u) => memberOut(u, me));
   if (MOCK) members.push(...MOCKS.map((m) => mockMember(m, me)));
   const events = q('SELECT * FROM family_event ORDER BY ts DESC LIMIT 30').all().filter((e) => isMember(e.user)).map(eventOut);
-  return c.json({ me: { userId: me, ...prefsOf(me) }, members, zones: zones().map((z) => zoneOut(z, me)), events, updatedAt: Date.now() });
+  return c.json({ me: { userId: me, ...prefsOf(me), color: colorOf(me) }, members, zones: zones().map((z) => zoneOut(z, me)), events, updatedAt: Date.now() });
 });
 
 api.get('/track/:userId', (c) => {
@@ -307,13 +421,16 @@ api.put('/me', async (c) => {
   const me = c.get('user'), b = await body(c), cur = prefsOf(me);
   if (b.sharing !== undefined && !['on', 'paused', 'off'].includes(b.sharing)) return bad(c, 'sharing må være on, paused eller off');
   if (b.precision !== undefined && !['exact', 'approx'].includes(b.precision)) return bad(c, 'precision må være exact eller approx');
+  if (b.color !== undefined && b.color !== null && !COLOR.test(String(b.color))) return bad(c, 'Ugyldig farge (bruk #rrggbb)');
   const next = { ...cur, ...(b.sharing ? { sharing: b.sharing } : {}), ...(b.precision ? { precision: b.precision } : {}) };
+  if (b.color !== undefined) next.color = b.color ? String(b.color).toLowerCase() : null; // null = tilbake til palettfargen
   if (b.shareHealth && typeof b.shareHealth === 'object') for (const k of HEALTH_KEYS) if (typeof b.shareHealth[k] === 'boolean') next.shareHealth[k] = b.shareHealth[k];
   kv.set(me, 'family_prefs', next);
   // «Av»: slett lagrede posisjoner, så ingenting ligger igjen.
   if (next.sharing === 'off' && cur.sharing !== 'off') { q('DELETE FROM family_pos WHERE user=?').run(me); q('DELETE FROM family_inside WHERE user=?').run(me); }
   if (next.sharing !== cur.sharing || next.precision !== cur.precision) broadcast('family', { kind: 'sharing', userId: me, sharing: next.sharing });
-  return c.json({ me: { userId: me, ...prefsOf(me) } });
+  if (b.color !== undefined) broadcast('family', { kind: 'color', userId: me, color: colorOf(me) });
+  return c.json({ me: { userId: me, ...prefsOf(me), color: colorOf(me) } });
 });
 
 function zoneInput(b, partial = false) {
@@ -381,6 +498,18 @@ api.post('/health', async (c) => {
   if (off.length) q(`UPDATE family_health SET ${off.join(', ')} WHERE user=?`).run(me);
   prune();
   return c.json({ ok: true, stored: rows.length, health: healthOut(me, Object.fromEntries(HEALTH_KEYS.map((k) => [k, true]))) });
+});
+
+// Hovedbryteren for helse slått av i appen: slett alle egne helsedata.
+api.delete('/health/me', (c) => {
+  const n = q('DELETE FROM family_health WHERE user=?').run(c.get('user')).changes;
+  return c.json({ ok: true, deleted: n });
+});
+
+api.get('/positions', async (c) => {
+  const me = c.get('user');
+  seedMock(me);
+  return c.json(await positions(me));
 });
 
 // Varsler: hendelser for soner der seeren har slått på varsel for personen (inn og/eller ut). Egne hendelser utelates.

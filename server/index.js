@@ -22,6 +22,7 @@ import backgroundApi, { hasBackgroundTest, testBackgrounds } from './background.
 import mobileApi, { meOut, removeAvatar, shortcutsFor, layoutOf, authOrToken, designOf } from './mobile.js';
 import rssApi, { startRssWorker } from './rss.js';
 import familyApi from './family.js';
+import tilesApi, { hasMapTest, testMap } from './tiles.js';
 import tasksApi from './tasks.js';
 import notifyApi, { appMeta } from './notify.js';
 import { attachRealtime } from './realtime.js';
@@ -309,6 +310,7 @@ authed.post('/config/test/:group', requireAdmin, async (c) => {
   const group = c.req.param('group');
   if (hasTrackingTest(group)) return c.json(await testTracking());
   if (hasBackgroundTest(group)) return c.json(await testBackgrounds());
+  if (hasMapTest(group)) return c.json(await testMap());
   if (!integrations.hasTest(group)) return c.json({ error: 'Ukjent integrasjon' }, 404);
   return c.json(await integrations.testIntegration(group));
 });
@@ -486,6 +488,8 @@ app.route('/api/tracking', trackingApi); // Sporing (prompt 11): pakker fra Finn
 app.route('/api/matplan', matApi); // samme Matplan-API som /mat/api (prompt 10: Matplan hører til Homelab)
 // Profil, oppsett, søk, mobilforside og widgets: sesjon ELLER FinansHub-token (må stå før /api med requireAuth).
 app.route('/api/rss', rssApi); // Nyhetsleser (prompt 13): RSS/Atom med ✦ AI-sammendrag og -kategorisering
+// Kartfliser (prompt 20): /tiles/:style/:z/:x/:y.png og /api/config/map, sesjon eller app-token (header eller ?token=).
+app.route('/', tilesApi);
 app.route('/api/family', familyApi); // Familie og kart (prompt 16): posisjon, soner, varsler og helse
 app.route('/api/tasks', tasksApi); // Huskeliste (prompt 17): delt i familien, sanntid via /api/ws
 app.route('/api', notifyApi); // Varsler (/api/me/notify) og appnavn (/api/app) (prompt 17)

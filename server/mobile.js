@@ -101,6 +101,8 @@ const SCALAR = {
   paperMode: (v) => ['auto', 'lys', 'mork'].includes(v),
   photo: (v) => PHOTO_KINDS.includes(v),
   onboarded: (v) => typeof v === 'boolean',
+  // Prompt 20: rekkefølgen på Finans-flisene i appene (iOS, Android, PWA). Maks 30 id-er på 1–40 tegn [a-z0-9-], uten duplikater.
+  fmOrder: (v) => Array.isArray(v) && v.length <= 30 && new Set(v).size === v.length && v.every((x) => typeof x === 'string' && /^[a-z0-9-]{1,40}$/.test(x)),
   // Rekkefølgen på kortene i Sporing (prompt 14): Legg til + kilder, Sendinger, Varsler og Transportører.
   trkOrder: (v) => Array.isArray(v) && v.length <= TRK_CARDS.length && new Set(v).size === v.length && v.every((x) => TRK_CARDS.includes(x)),
   // Prompt 15: tilpassede sider (rekkefølge og skjulte kort per side), Finans-fanelinjen, fjerde fane og skanneknapp.

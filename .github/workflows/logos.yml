@@ -1,0 +1,44 @@
+name: Logoer
+# Laster ned logobiblioteket (server/logos/fetch-logos.mjs) og committer filene til main.
+# Push med GITHUB_TOKEN starter ikke andre workflows: kjør «Docker-image» manuelt etterpå for å få logoene med i imaget.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 4 1 * *' # den 1. hver måned
+permissions:
+  contents: write
+concurrency:
+  group: logos
+  cancel-in-progress: false
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: ImageMagick
+        run: |
+          if ! command -v magick >/dev/null && ! command -v convert >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y --no-install-recommends imagemagick librsvg2-bin
+          fi
+          (command -v magick || command -v convert) && (magick -version 2>/dev/null || convert -version) | head -1
+      - name: Hent logoer
+        run: node server/logos/fetch-logos.mjs
+      - name: Commit til main
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add server/logos/files server/logos/registry.json server/logos/missing.txt
+          if git diff --cached --quiet; then
+            echo 'Ingen endringer.'
+            exit 0
+          fi
+          git commit -m "Logoer: oppdatert logobibliotek"
+          git pull --rebase origin main
+          git push origin HEAD:main

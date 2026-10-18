@@ -117,6 +117,13 @@ export const SCHEMA = [
     ['trk_17_key', '17TRACK: API-nøkkel (reserve)', e('TRACK17_API_KEY'), true],
     ['trk_parcelsapp_key', 'ParcelsApp: API-nøkkel (reserve, 3 oppslag i måneden)', e('PARCELSAPP_API_KEY'), true],
   ]],
+  ['Kart', { id: 'map', domain: 'maptiler.com', category: 'Generelt', help: 'Kartet bruker CARTO og Kartverket (topo) via serverens egen kartproxy (/tiles), uten nøkkel. Med en nøkkel kan du også velge MapTiler eller Stadia Maps.', guide: [
+    ['MapTiler', 'Lag en gratis konto på cloud.maptiler.com og kopier nøkkelen under Account → API keys.'],
+    ['Stadia Maps (valgfritt)', 'Lag en gratis konto på client.stadiamaps.com og lag en API-nøkkel for eiendommen din.'],
+  ] }, [
+    ['maptilerKey', 'MapTiler API-nøkkel', e('MAPTILER_KEY'), true],
+    ['stadiaKey', 'Stadia Maps API-nøkkel (valgfri)', e('STADIA_KEY'), true],
+  ]],
   ['Søk', { id: 'search', domain: 'google.com', category: 'Generelt', help: 'Søket legges til på slutten av adressen, for eksempel https://www.google.com/search?q=' }, [
     ['search_url', 'Søke-URL (søket legges til på slutten)', e('SEARCH_URL', 'https://www.google.com/search?q=')],
   ]],

@@ -12,6 +12,7 @@ import { ollamaModels, startPull, pullStatus, deleteModel } from './ollama-model
 import { sniffMime, isHeic, scanLog, scanLogOf } from './scan.js';
 import { mailConfig, mailStatus, testMail, runMail, recentImports, startMailWorker } from './mail.js';
 import { parseCsv, PROFILES } from './csv.js';
+import { mountLogoRoutes } from '../logos/routes.js';
 import { domainFor, learnDomain, validDomain, logo, heuristic, kick as kickAi, summarizeReceipt } from './enrich.js';
 import { parseFile } from './importer.js';
 import { importRows, splitRows, listTemplates, deleteTemplate } from './import-templates.js';
@@ -333,6 +334,8 @@ api.get('/logo/:domain', async (c) => {
   if (type === 'text/plain') return c.body(null, 404);
   return c.body(img, 200, { 'Content-Type': type, 'Cache-Control': 'public, max-age=604800', 'X-Content-Type-Options': 'nosniff' });
 });
+// Logobiblioteket (prompt 20): /logos/registry, /logos/file/:id og /logos/match, offentlig som /logo/:domain.
+mountLogoRoutes(api);
 // Appen logger ut ved å trekke tilbake sitt eget token.
 api.post('/auth/logout', async (c) => {
   const m = c.req.header('authorization')?.match(TOKEN_RE);
