@@ -106,3 +106,13 @@ test('førstegangsoppsett virker bare på en tom server, og visningsnavn kan end
   assert.throws(() => auth.updateUser(u.id, { displayName: '  ' }), /tomt/);
   auth.deleteUser(u.id, 'owner');
 });
+
+test('brukernavn kan endres (små bokstaver, unikt), og innlogging bruker det nye', () => {
+  const a = auth.createUser({ username: 'benjamin', password: 'passord123', role: 'admin', name: 'Sebastian' });
+  auth.createUser({ username: 'opptatt', password: 'passord123' });
+  assert.equal(auth.updateUser(a.id, { username: '@Sebbe' }).username, 'sebbe');
+  assert.throws(() => auth.updateUser(a.id, { username: 'opptatt' }), /i bruk/);
+  assert.throws(() => auth.updateUser(a.id, { username: 'a b' }), /Brukernavn/);
+  assert.equal(auth.verifyLogin('sebbe', 'passord123').ok, true);
+  assert.equal(auth.verifyLogin('benjamin', 'passord123').ok, false);
+});

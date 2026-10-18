@@ -120,8 +120,9 @@ function nameForm(u) {
   const ed = nameEd?.id === u.id ? nameEd : null;
   return `<form class="sg" data-name-form="${esc(u.id)}"><div class="sg-t">Navn</div><div class="sg-box">
       <label class="sg-field"><span>Visningsnavn</span><input name="name" value="${esc(ed?.value ?? u.name ?? '')}" placeholder="Navn" maxlength="60" required></label>
-      <div class="sg-field"><span>Brukernavn</span><span class="mono muted" style="flex:1;text-align:right">@${esc(u.username)}</span></div></div>
-    <div class="sg-acts"><button class="sg-btn pri" type="submit">Lagre navn</button>${ed?.err ? `<span class="red" style="font-size:13px">${esc(ed.err)}</span>` : ed?.ok ? '<span class="green" style="font-size:13px">Lagret ✓</span>' : ''}</div></form>`;
+      <label class="sg-field"><span>Brukernavn</span><input name="username" class="mono" value="${esc(ed?.username ?? u.username ?? '')}" placeholder="brukernavn" maxlength="32" autocapitalize="none" autocomplete="off" spellcheck="false" required></label></div>
+    <div class="sg-note" style="font-size:12.5px;padding:0 4px">Brukernavnet brukes når du logger inn. Bokstaver, tall, punktum, bindestrek eller understrek.</div>
+    <div class="sg-acts"><button class="sg-btn pri" type="submit">Lagre</button>${ed?.err ? `<span class="red" style="font-size:13px">${esc(ed.err)}</span>` : ed?.ok ? '<span class="green" style="font-size:13px">Lagret ✓</span>' : ''}</div></form>`;
 }
 
 function meView() {
@@ -278,15 +279,16 @@ export async function loginSubmit(e) {
   }
   if (f.matches('[data-name-form]')) {
     e.preventDefault();
-    const id = f.dataset.nameForm, name = f.name.value.trim();
-    if (!name) { nameEd = { id, value: '', err: 'Skriv inn et navn' }; rerender(); return true; }
+    const id = f.dataset.nameForm, name = f.name.value.trim(), username = f.username?.value.trim().toLowerCase().replace(/^@/, '');
+    if (!name) { nameEd = { id, value: '', username, err: 'Skriv inn et navn' }; rerender(); return true; }
     try {
-      const u = await api(`/users/${id}`, { method: 'PATCH', json: { displayName: name } });
+      const u = await api(`/users/${id}`, { method: 'PATCH', json: { displayName: name, ...(username ? { username } : {}) } });
+      if (id === data.me?.id && u.username) store.me.me = { ...store.me.me, username: u.username };
       nameEd = { id, ok: true };
       // Eget navn slår inn med en gang i hilsen og meny.
       if (id === data.me?.id) { store.me.me = { ...store.me.me, name: u.name, displayName: u.name }; store.me.user = u.name; applyProfile(); document.dispatchEvent(new CustomEvent('hl:name')); }
       await loadLogin();
-    } catch (err) { nameEd = { id, value: name, err: err.message }; rerender(); }
+    } catch (err) { nameEd = { id, value: name, username, err: err.message }; rerender(); }
     return true;
   }
   if (f.matches('[data-server-form]')) {

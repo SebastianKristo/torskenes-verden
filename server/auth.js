@@ -120,7 +120,7 @@ export function deleteUser(id, actingId) {
   })();
 }
 
-export function updateUser(id, { role, password, name, displayName, resetTotp }) {
+export function updateUser(id, { role, password, name, displayName, resetTotp, username }) {
   name = displayName ?? name;
   const u = userRow(id);
   if (!u) throw httpError('Fant ikke brukeren', 404);
@@ -133,6 +133,14 @@ export function updateUser(id, { role, password, name, displayName, resetTotp })
   if (name !== undefined) {
     if (typeof name !== 'string' || !name.trim()) throw httpError('Navnet kan ikke være tomt', 400);
     db.prepare('UPDATE users SET name=? WHERE id=?').run(name.trim().slice(0, 60), id);
+  }
+  if (username !== undefined) {
+    const un = String(username ?? '').trim().toLowerCase().replace(/^@/, '');
+    if (!USERNAME_RE.test(un)) throw httpError('Brukernavn: 2–32 tegn, bokstaver, tall, punktum, bindestrek eller understrek', 400);
+    if (un !== u.username) {
+      if (db.prepare('SELECT 1 FROM users WHERE username=? AND id<>?').get(un, id)) throw httpError('Brukernavnet er allerede i bruk', 409);
+      db.prepare('UPDATE users SET username=? WHERE id=?').run(un, id);
+    }
   }
   if (resetTotp) db.prepare("UPDATE users SET totp_enabled=0, totp_secret_enc=NULL, recovery_hashes='[]', totp_last_step=-1 WHERE id=?").run(id);
   return userInfo(id);

@@ -253,9 +253,9 @@ authed.patch('/users/:id', async (c) => {
   const b = await c.req.json().catch(() => ({}));
   const id = c.req.param('id'), self = id === c.get('user');
   if (c.get('role') !== 'admin') {
-    if (!self || b.role !== undefined || b.password !== undefined || b.resetTotp) return c.json({ error: 'Du kan bare endre ditt eget navn' }, 403);
+    if (!self || b.role !== undefined || b.password !== undefined || b.resetTotp) return c.json({ error: 'Du kan bare endre ditt eget navn og brukernavn' }, 403);
   }
-  try { return c.json(updateUser(id, { role: b.role, password: b.password, name: b.displayName ?? b.name, resetTotp: !!b.resetTotp })); } catch (e) { return fail(c, e); }
+  try { return c.json(updateUser(id, { role: b.role, password: b.password, name: b.displayName ?? b.name, resetTotp: !!b.resetTotp, username: b.username })); } catch (e) { return fail(c, e); }
 });
 authed.put('/server', requireAdmin, async (c) => {
   try { return c.json({ serverName: setServerName((await c.req.json().catch(() => ({}))).name) }); } catch (e) { return fail(c, e); }
