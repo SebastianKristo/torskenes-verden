@@ -1,0 +1,121 @@
+# Prompt 24
+
+Startet: 2026-10-18
+
+- 2026-10-18: «lag for nett og app for bursdager, hent og skriv data i en google kalender, la meg logge inn på google kalender, eller importere kalender fra homeassisatnt. la meg legge til og se hvem som har bursdag.»
+  - Ny `Bursdager.dc.html` (mobil og web) med kortet «Neste bursdag», søk og en liste («Neste 30 dager» og per måned) med alder, dager igjen og kilde. Trykk på en rad gir påminnelse, «Åpne i Google Kalender», Rediger og Slett.
+  - «+ Legg til»: navn, dato, år, hvem, påminnelse og «Lagre i» (Google / Home Assistant / Bare her).
+  - Kalendere: «Logg inn med Google» (velg kalender, skriv nye, hent fra kontakter, synk, logg ut) og Home Assistant (velg `calendar.*`, importer, synk to veier). Lagres i `bd_v1`.
+  - App: Mer → **Bursdager**. Web: ny fane **Bursdager**.
+  - Skrevet `prompts/claude-code-bursdager.md`: OAuth, Calendar API (bursdager, årlige heldagshendelser, syncToken), HA-kalender, datamodell, varsler og test.
+- 2026-10-18: «lag widgets for andriod og ios og for hjem i appen»
+  - `Mobil Papir App.dc.html` → Hjem: ny widget **BURSDAGER · NESTE** med de tre neste (avatar, navn, dato og alder, «om N d» i rødt når det er 7 dager eller mindre) og «alle ›» som åpner Bursdager. Den kan flyttes og skjules som de andre widgetene. Leser samme data (`bd_v1`).
+  - `Bursdager.dc.html`: seksjonen «WIDGETS PÅ TELEFONEN» viser iOS liten (neste bursdag med dager igjen), iOS medium (tre neste) og Android Material You (tre neste og + for ny).
+  - `claude-code-bursdager.md`: lagt til avsnittet Widgets (WidgetKit small, medium og låseskjerm, Glance med Material You, oppdatering og dyplenke).
+- 2026-10-18: «lag også widget for samsung, men for alle samsung widgets gjør de like store som smasung sine egene widgtes, mål samsung vær widget og gjør alle de andre like store for samsung one ui widgets.» (vedlegg: Galaxy-hjemskjerm med Samsung Vær 2×2 og vår «Skann»-widget, som er for bred)
+  - Målt: Samsung Vær ≈ 134 × 155 dp (forhold 0,865), radius ≈ 20 dp, padding ≈ 12 dp. Vår Skann ≈ 148 × 155 dp, altså for bred.
+  - `Bursdager.dc.html` og `Huskeliste.dc.html`: nye forhåndsvisninger **«Samsung One UI · 2×2»** i samme forhold og radius. Bursdager: rød, gaveikon og dager igjen nederst. Huskeliste: hvit, tre oppgaver og «+ Ny oppgave».
+  - Skrevet `prompts/claude-code-samsung-widgets.md`: målene, `AppWidgetProviderInfo` (2×2 låst, 134 × 155 dp, padding så kortet flukter med Samsungs), radius, typografi, One UI-farger, egne providere bare på Samsung, og test side om side med Vær.
+- 2026-10-18: «gjør ruter på andorid og iphone lik, her er android den er ikke like den du lagde eller den på iphone.» (vedlegg: Android-visning med «Ruter#»-logo, «Sanntid fra Ruter og Entur», eget HOLDEPLASSER-kort med «Rediger», «NESTE AVGANGER · Oppdater ↻» og ett kort per avgang med store minutter)
+  - Feilen er i appen. Skrevet `prompts/claude-code-ruter-lik.md`: eksakt struktur fra designet (topp med «‹ Hjem» og «↻ tid», «Sanntid · Ruter», overlapp −34, stopp-piller i scrollrad med «+ Stopp» og hold inne for «Mine stopp», filtersegment, avvik, én liste i ett kort med 24 pt minutter, utvidet stoppliste og fotnote). Ingen logo og ingen separate kort. Felles verdier for SwiftUI og Compose, linjefarger fra Entur og test side om side.
+- 2026-10-18: «detter er på iphone, fjern også navbaren fra ruter siden på iphone og android.» (vedlegg: Ruter-visningen i designet på iPhone)
+  - `Mobil Papir App.dc.html`: fanelinjen og skann-knappen skjules mens Ruter-visningen er åpen. Det samme gjelder Vær og Finn-annonsen, som også er fullskjerm.
+  - `claude-code-ruter-lik.md`: lagt til at det ikke skal være fanelinje eller FAB (fullskjerm-overlegg på iOS og Android), og at iPhone-skjermbildet er fasit som Android skal matche.
+- 2026-10-18: «mer menyen på android ser heller ikke ut som på iphone. de skal også være like.»
+  - Feilen er i appen. Skrevet `prompts/claude-code-mer-lik.md`: global Mer (ett kort, Newsreader-titler 19, undertekster, «›», skillelinjer bare mellom rader, rekkefølge og tekster, overlapp −23, «Mer» markert i fanelinjen) og Finans → Mer (rutenett, fargede ikoner med eksakte farger, hold inne og dra). Felles komponent uten Material-listekomponenter, med mørkt tema og test side om side.
+- 2026-10-18: «samme med navbar i familie på android. ikonene vedsidna navnene er litt feil høyde og litt små iforhold til iphone og ditt orginal design»
+  - Feilen er i appen. Lagt til avsnittet «Fanelinje – ikon ved siden av tekst» i `claude-code-familie-design.md` (gjelder alle fanelinjer): ikonboks 18 pt, glyf 16 pt, sentrert og 1,5 pt ned, 7 pt mellomrom, bare valgt fane viser ikon. Android: egen Row i stedet for NavigationBarItem, med `includeFontPadding = false`. Kode for SwiftUI og Compose, og forstørret test side om side. Henvist fra `claude-code-mer-lik.md`.
+- 2026-10-18: «i familie, vis bare en person om gangen, hvis samme person feks er logget inn på flere mobiler vis en person.»
+  - `Familie.dc.html`: hver person vises én gang. Har noen flere enheter, står det «· 2 enheter» i listen (eksempel: Sebastian med iPhone 15 Pro og Galaxy S24).
+  - `claude-code-familie-design.md`: nytt avsnitt «Én person = én oppføring». Grupper på user_id, ta posisjonen fra den nyeste og mest nøyaktige enheten, enhetsliste i personkortet med valg av kilde, sammenslåing av helsedata uten dobbeltelling, og ett API-svar per person.
+- 2026-10-18: «lag en preset for finans på mobil, lag en som bare har søk, liste, oversikt, kviteringer, boliger som main page.»
+  - `Mobil Papir App.dc.html` → Innstillinger → Finans: ny bryter **«Finans-profil»**. På gir fanelinjen i Finans Søk · Liste · Oversikt · Kvitteringer · Boliger (+ Mer for resten). Av gir de vanlige fanene igjen (Oversikt · Liste · Finn · Søk). Slår av Boliger-profil hvis den er på. Lagres i `papir_fin_prof` / `papir_fin_nav`.
+  - For Claude Code: profiler er ferdige oppsett av `fin_nav` (og eventuelt `home_nav`) i brukerinnstillingene, synket mellom enheter. Vis dem i Innstillinger → Finans → Profiler: Standard, Finans-profil og Boliger-profil, der bare én er aktiv om gangen. Brukeren kan fortsatt tilpasse fanene manuelt etterpå.
+- 2026-10-18: «for kart, på iphone og ipad kan du bruke apple sin kart tjeneste,»
+  - `claude-code-familie-design.md`: iPhone og iPad bruker Apple Maps (MapKit, flat standardstil uten POI-er, soner som `MapCircle` og personer som `Annotation`). Android og web bruker Kartverket. Alt over kartet er likt på begge.
+  - `claude-code-kart-fiks.md`: lagt til at iOS og iPadOS bruker MapKit, og at flisleverandøren gjelder Android og web.
+- 2026-10-18: «den skal ha boliger som det sentrale, og at forsidn i appen er finans ikke hjem siden»
+  - Finans-profil endret: fanelinjen er Søk · Liste · **Boliger** · Oversikt · Kvitteringer, med Boliger i midten. Appen **åpner rett i Finans → Boliger** i stedet for Hjem (også ved ny oppstart), og Hjem er tatt ut av hovedfanene (`papir_home_nav` = bare Finans). Slås profilen av, kommer Hjem og de vanlige fanene tilbake.
+  - For Claude Code: profilen setter `start_route = finans/boliger`, `fin_nav = [sok, liste, boliger, oversikt, kvitteringer]` og `home_nav = [finans]`. «‹ Tilbake» fra Finans-undersider går til Boliger, ikke Hjem.
+- 2026-10-18: «ikke vis da tilbake til hjem siden bolig og finans er hjem i den profilen. legg da hjem bak mer menyen»
+  - Finans-profil: «‹ Hjem» er fjernet på Finans-fanene (Søk, Liste, Boliger, Oversikt, Kvitteringer) og Finans → Mer. Boliger og Finans er rotsidene. **Hjem** ligger nå som egen flis i Finans → Mer og som første rad i Mer.
+  - Rettet også fra kontrollen: alle fem fanene vises nå (grensen var 4, så Boliger falt ut), og profilen leses ved oppstart (fanerekkefølge og at Hjem er skjult), så oppsettet er riktig også uten å trykke på bryteren igjen.
+- 2026-10-18: «legg til dette bldet for å velge mllom som bakgrunn for en av bolignee. strømstad.» (vedlegg: foto av havna i Strømstad, lagret som `assets/stromstad.png`)
+  - `Boliger.dc.html`: bildeknapp nede til høyre på bolig-kortet åpner «Bakgrunn for …» med valgene **Farge** (som før), **Strømstad** (bildet) og **Last opp** (eget bilde, skaleres til 1200 px). Valget lagres per bolig. Boliger med «Strømstad» i navn eller adresse får bildet som standard. Bildet har mørk gradient så teksten er lesbar.
+  - For Claude Code: `homes.background` = `color` | `preset:stromstad` | `upload:<fil-id>`. Bildet pakkes med appen (`assets/stromstad.jpg`, WebP for web). Opplastede bilder lagres i `/data/boliger/<id>/bg.jpg`. Samme valg på web og i appen.
+- 2026-10-18: «legg da boliger som første i navbaren» (vedlegg: Finans-profil med Søk · Liste · Boliger · Oversikt · Kvitteringer · Mer)
+  - Finans-profil: fanerekkefølgen er nå **Boliger** · Søk · Liste · Oversikt · Kvitteringer · Mer. For Claude Code: `fin_nav = [boliger, sok, liste, oversikt, kvitteringer]`.
+- 2026-10-18: «og legg profilbildet tilbake til høyere side» (vedlegg: Boliger i Finans-profilen med profilbildet «S» til venstre, siden tilbake-knappen er skjult)
+  - `Mobil Papir App.dc.html`: profilbildet står alltid øverst til høyre, også når det ikke er noen tilbake-knapp (et tomt mellomrom skyver det til høyre).
+- 2026-10-18: «litt under profil og vedsidna boliger, hvis en slags pille med statestikk for domene som også åpner domene siden» (vedlegg: toppen av Boliger med profilbildet øverst til høyre)
+  - `Mobil Papir App.dc.html` (Finans-profil, Boliger): mørk glass-pille i toppbildet til høyre for tittelen «Boliger», under profilbildet. Den har globus-ikon, **48 597** (Plex Mono) og «besøk i dag · 5 domener», med grønn prikk når alle er oppe (gul eller rød ved feil). Trykk åpner Domener, og tilbake går til Boliger.
+  - For Claude Code: tallet hentes fra Cloudflare Analytics (`/api/domener/sammendrag`: besøk i dag, antall domener og status), oppdateres hvert 5. minutt og vises bare i Finans-profilen på Boliger.
+- 2026-10-18: «for å redigere boliger lam eg holde inne på en bolig for å få opp meny for bolgier redigering av bilde og navn og boliger»
+  - `Boliger.dc.html`: hold inne 0,5 s på en bolig (Hytta / Leiligheten) for å åpne arket **«Rediger bolig»**. Det har forhåndsvisning med bakgrunn og navn, Navn, Adresse, Budsjett per måned, Farge (7 + fri fargevelger), Bakgrunn (Farge / Strømstad / eget bilde / Last opp), Lagre og «Slett bolig» (to trykk, siste bolig kan ikke slettes). Vanlig trykk bytter bolig som før.
+  - Bildeknappen på bolig-kortet er fjernet. Bakgrunn velges nå i dette arket, så den dekker ikke lenger «5 890 kr over».
+  - For Claude Code: samme hold-inne-meny i appen (iOS `.contextMenu` eller egen long press + sheet, Android `combinedClickable(onLongClick)` + `ModalBottomSheet` med Papir-stil). Endringer lagres via `PATCH /api/boliger/:id`, og sletting krever bekreftelse.
+- 2026-10-18: «det funka ikke» (hold inne på bolig)
+  - Rettet i `Boliger.dc.html`: hold inne lytter nå på pointer-, mus- og berøringshendelser. Den avbrytes bare hvis fingeren flyttes mer enn 10 px, og ikke lenger når pekeren forlater knappen. Android-telefoners eget lange trykk (`contextmenu`) åpner også menyen. Testet: hold inne på «Hytta» i 0,5 s åpner «Rediger bolig».
+- 2026-10-18: «når man da med denne profiel har åpne domene tlbakekanppen skal da gå tilbake til boliger»
+  - Finans-profil: på Domener (alle fanene) står det «‹ Boliger», og knappen går tilbake til Boliger i stedet for Hjem. For Claude Code: i profilen er «rot» = `finans/boliger`, og all «tilbake til Hjem»-logikk går dit i stedet.
+- 2026-10-18: «redigerin kommer slik for boliger» (vedlegg: «Rediger bolig» la seg utenfor og bak telefonrammen)
+  - `Boliger.dc.html`: «Rediger bolig» er nå et kort rett under bolig-pillene (rød kant og skygge), ikke et ark over hele skjermen. Det holder seg inne i telefonen og appen. Innhold og knapper er som før.
+  - For Claude Code: i native app brukes et ekte bunnark (iOS `.sheet` med `.presentationDetents([.large])`, Android `ModalBottomSheet`) i Papir-stil. Designet viser innholdet.
+- 2026-10-18: «jeg tnekte bakgrunnen kunne væer bak boliger på toppen og at den endrer sge basert på hvilke bolig man er på.» (vedlegg: Strømstad-bildet i bolig-kortet, og toppen som fortsatt viste Oslo)
+  - `Mobil Papir App.dc.html`: på Boliger viser **toppbildet** bakgrunnen til valgt bolig (Strømstad-bildet, eget bilde, eller vanlig bakgrunn når boligen har «Farge»). Det skifter med en gang du bytter bolig eller endrer bakgrunn. Undertittelen viser boligenes faktiske navn («Strømstad · Leiligheten»).
+  - `Boliger.dc.html`: i appen er bolig-kortet tilbake i boligens farge, siden bildet nå ligger i toppen. På web og frittstående visning har kortet fortsatt bildet. Boliger sender `bol-update` ved endring, så appen oppdaterer toppen.
+  - For Claude Code: toppbildet på Boliger hentes fra `homes[cur].background` med samme mørke gradient som andre toppbilder, og bytter med en kort krysstoning (200 ms) når boligen endres.
+- 2026-10-18: «tilbake til vanelig lagre denne profilen.»
+  - `Mobil Papir App.dc.html` → Innstillinger: ny gruppe **PROFIL** øverst med tre lagrede oppsett, der ett er valgt (✓):
+    - **Standard:** Hjem, Finans, Mat og Mer, med vanlige Finans-faner.
+    - **Finans + Boliger:** profilen fra i dag. Åpner i Boliger med fanene Boliger · Søk · Liste · Oversikt · Kvitteringer, og Hjem ligger under Mer.
+    - **Boliger-profil.**
+  - Trykk på «Standard» for å gå tilbake til vanlig. «Finans + Boliger» er lagret og kan velges igjen når som helst.
+  - For Claude Code: `user_settings.profile` = `standard` | `finans_boliger` | `boliger`, synket mellom enheter. Hver profil er et ferdig sett med `start_route`, `home_nav` og `fin_nav`. Egne endringer i fanene etter valg lagres som «Egendefinert».
+- 2026-10-18: «sørg for at boliger i finans både for profil og for vanelig er nøyaktig lik for begge mobil appene,»
+  - Skrevet `prompts/claude-code-boliger-lik.md`. Den beskriver Boliger-siden nøyaktig (toppbilde per bolig, piller med hold inne for redigering, fanevelger, bolig-kort, handlinger og Til gjennomgang), og en tabell med forskjellene mellom Standard og Finans + Boliger: fanelinje, tilbake-knapp, domene-pille, startside og Hjem. Testen tar skjermbilder i begge profiler på iPhone og Android.
+- 2026-10-18: «for ikoner i nyhetsleser, de viste seg ikke før jeg hadd etrykket på alle fanene verden, norge, sport etc»
+  - `Nyhetsleser.dc.html`: ikonene ble tegnet med CSS-maske, og nettleseren tegnet dem ikke før fanen ble tegnet på nytt. De er nå vanlige bilder fra Iconify, med fargen lagt inn i adressen (`?color=`, aktiv = blekk, inaktiv = dempet). Alle faneikoner lastes inn på forhånd, så de vises med en gang. Det samme gjelder ikonene i innstillingene og i ikonvelgeren.
+  - For Claude Code: ikke bruk `mask-image` for ikoner. Hent SVG via backend-cachen og vis den som `<img>` / `Image`, eller tegn den direkte inline. På iOS og Android: SVG → mal-bilde med tint. Forhåndslast ved oppstart.
+- 2026-10-18: «i mobill ser ikke lenger sporting widget i hjem»
+  - Sjekket i designet: Pakker-widgeten («HENT I DAG · Komplett · skjerm») ligger øverst på Hjem og er ikke skjult i lagret oppsett. Venter på svar om feilen er i den installerte appen.
+  - For Claude Code (hvis det er i appen): Hjem-widgetene skal ha `h1–h9`. Nye widgets (Bursdager `h9`) legges til **i tillegg** til lagret rekkefølge og skal ikke erstatte den. Sjekk at migreringen av `home_layout` ikke mistet `h2` (Pakker), og at widgeten vises også når ingen pakker er aktive («Ingen aktive pakker · Legg til et sporingsnummer»).
+- 2026-10-18: «jeg får ikke byttet ikon på appen på android. la meg også endre navn på appen i appen.»
+  - Designet har allerede **Navn på appen** og **App-ikon** under Innstillinger → HOMELAB. Feilen er i Android-appen.
+  - Skrevet `prompts/claude-code-app-ikon-navn.md`:
+    - Android: `activity-alias` per ikon (slå på det nye før det gamle slås av), adaptive og tematiske ikoner, og navn via `android:label` per alias med ferdige navn. Fritt navn vises inne i appen, eller som festet snarvei med `ShortcutManager`.
+    - iOS: `setAlternateIconName`, og fritt navn i appen.
+    - Lagring og test.
+- 2026-10-18: «la meg også søke i innstlinger legg da også til ai søk for instligner. og legg til alle integration config også under integration i mobil appene,»
+  - `Mobil Papir App.dc.html` → Innstillinger:
+    - **Søk** øverst («Søk i innstillinger») finner treff i alle innstillinger og undersider. Hvert treff viser hvor det ligger («Integrasjoner · Mybring …»), og et trykk åpner riktig underside.
+    - **✦ AI** gjør om søket til spørsmål med vanlige ord («hvor bytter jeg ikon?», «bring-nøkkel», «mørkt tema») og svarer med en setning om hvor innstillingen ligger, pluss forslag.
+  - **Integrasjoner** har nå alle oppsett. Hver har status, felt som kan redigeres (hemmelige verdier vises som «•••• lagret»), Test tilkobling og Fjern verdi:
+    - Home Assistant
+    - Google Kalender (bursdager)
+    - AI (Gemini)
+    - Finans (Trading 212, Bankimport)
+    - Kvitteringer på e-post (IMAP)
+    - Entur
+    - Mybring
+    - PostNord
+    - ParcelsApp
+    - Cloudflare
+    - Finn
+    - MET/Yr
+    - Kart
+    - Ikoner
+  - Synk med Home Assistant er beholdt. Verdiene lagres i `papir_integ`.
+  - For Claude Code: samme i iOS og Android. Hemmeligheter sendes til backend (`PUT /api/integrasjoner/:id`) og lagres kryptert der, ikke i appen. «Test» kaller `POST /api/integrasjoner/:id/test`. Søket indekserer alle innstillinger lokalt. AI-søk sender spørsmålet og listen over innstillinger til Gemini, som returnerer id-er og en kort forklaring.
+
+## Tilhørende filer
+- `claude-code-prompt-24-START.md` (= `00-START-HER.md` i pakken)
+- `claude-code-app-ikon-navn.md`
+- `claude-code-boliger-lik.md`
+- `claude-code-kart-fiks.md` (oppdatert)
+- `claude-code-familie-design.md` (oppdatert)
+- `claude-code-mer-lik.md`
+- `claude-code-ruter-lik.md`
+- `claude-code-avgang-stopp.md` (fra prompt 21)
+- `claude-code-samsung-widgets.md`
+- `claude-code-bursdager.md`
