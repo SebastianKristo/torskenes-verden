@@ -4,6 +4,7 @@
 import { S, api, esc, n0, ini, today, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
+import { pkgLogo, pkgTitle } from './mobile-p21.js';
 import { TR, trkLoad, trkPrefs, setTrkPref, badge, carOf, stepOf, isDone, isReady, STXT, normNo, detectLocal } from './mobile-track.js';
 import { edBlocks, finnWay } from './mobile-paper3.js';
 import { ppTi } from './mobile-p20.js';
@@ -211,7 +212,7 @@ function pkCard(p) {
   const st = stepOf(p), done = isDone(p), ready = isReady(p), on = TT.sel?.has(String(p.id));
   const bars = [0, 1, 2, 3, 4].map((j) => `<i style="background:${done ? 'var(--pp-pos)' : j < st ? 'var(--pp-ink)' : j === st ? 'var(--pp-lab)' : 'var(--pp-line)'}"></i>`).join('');
   const src = p.source === 'finn' ? 'Finn' : p.source === 'email' ? 'E-post' : 'Manuelt';
-  return `<a class="pp-card pp-pk${ready ? ' ready' : ''}${TT.sel ? ' pksel' : ''}${on ? ' on' : ''}" data-pk="${esc(p.id)}" href="${esc(pkUrl(p))}" target="_blank" rel="noopener"><div class="pp-pkt"><span class="p17-pkb" data-pksel="${esc(p.id)}" title="Velg">${badge(p.carrier, 44, p.carrierLogo)}${TT.sel ? `<i class="p17-pkc" aria-hidden="true">${on ? '✓' : ''}</i>` : ''}</span><span class="m-grow" style="min-width:0"><b class="pp-serif m-ell">${esc(p.name || p.shop || p.trackingNo)}</b><span class="pp-mut m-ell">${esc(carOf(p.carrier).name)} · ${esc(p.trackingNo ?? '')}</span></span><span class="pp-src">${src}</span></div>
+  return `<a class="pp-card pp-pk${ready ? ' ready' : ''}${TT.sel ? ' pksel' : ''}${on ? ' on' : ''}" data-pk="${esc(p.id)}" href="${esc(pkUrl(p))}" target="_blank" rel="noopener"><div class="pp-pkt"><span class="p17-pkb" data-pksel="${esc(p.id)}" title="Velg">${pkgLogo(p, 44)}${TT.sel ? `<i class="p17-pkc" aria-hidden="true">${on ? '✓' : ''}</i>` : ''}</span><span class="m-grow" style="min-width:0"><b class="pp-serif m-ell">${esc(pkgTitle(p))}</b><span class="pp-mut m-ell">${esc(carOf(p.carrier).name)} · ${esc(p.trackingNo ?? '')}</span></span><span class="pp-src">${src}</span></div>
     <div class="pp-row"><b class="pp-pks ${ready ? 'pp-lab-c' : done ? 'pp-pos' : ''}">${esc(stTxt(p))}</b><span class="pp-mut" style="text-align:right">${esc(etaTxt(p))}</span></div><span class="pp-pkb">${bars}</span></a>`;
 }
 

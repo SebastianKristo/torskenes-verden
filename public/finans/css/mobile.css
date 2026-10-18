@@ -2061,3 +2061,67 @@ a.wx-r{color:inherit;text-decoration:none}
 .pp-ti.p20-lg img{position:absolute;inset:4px;width:calc(100% - 8px);height:calc(100% - 8px);object-fit:contain}
 /* Ruter: «+ Stopp» lesbar også over trikkebildet. */
 .m.papir .p16-stopchips>button{background:var(--pp-card);color:var(--pp-ink);border:1.5px dashed color-mix(in srgb,var(--pp-ink) 55%,transparent)}
+
+/* ---------- Prompt 21 ---------- */
+/* Kvitteringer m.fl.: ingen strek under seksjonsetiketten; listen er ett kort med skillelinjer bare mellom radene. */
+.m.papir .sec{border-bottom:0!important;padding-bottom:4px}
+.m.papir .list{gap:0!important;background:var(--pp-card);border-radius:20px!important;overflow:hidden}
+.m.papir .list>.item,.m.papir .list>.opt-row,.m.papir .list>a,.m.papir .list>button{border-radius:0!important;background:transparent!important;box-shadow:none!important}
+.m.papir .list>*+*{border-top:1px solid var(--pp-line)!important}
+.m.papir .list>.item.on{background:color-mix(in oklab,var(--pp-lab) 8%,var(--pp-card))!important}
+/* Finans-flisene: ikonboks med 14 % av fargen i kortbakgrunnen (som designet, i begge temaer). */
+.pp-fmt .pp-fmi,.m.papir:not(.light) .pp-fmt .pp-fmi{color:var(--fc,var(--pp-lab));background:color-mix(in oklab,var(--fc,var(--pp-lab)) 14%,var(--pp-card))}
+/* Redigeringslinja over flisene: hvit Papir-pille med skygge. */
+.p21-fmbar{position:sticky;top:calc(env(safe-area-inset-top) + 8px);z-index:6;flex:none;display:flex;align-items:center;gap:8px;padding:8px 8px 8px 14px;border-radius:999px;background:var(--pp-card);color:var(--pp-ink);box-shadow:0 10px 30px -14px rgba(0,0,0,.35),0 1px 0 var(--pp-line)}
+.p21-fmbar>span{min-width:0;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--pp-ink)}
+.p21-fmbar button{flex:none;height:34px;padding:0 14px;border-radius:17px;border:0;font:600 13px Manrope,sans-serif;cursor:pointer}
+.p21-fmr{background:var(--pp-bg)!important;color:var(--pp-ink)!important}
+.p21-fmd{padding:0 16px!important;background:var(--pp-ink)!important;color:var(--pp-bg)!important;font-weight:700!important}
+/* Dra: kortet følger fingeren, litt forstørret og gjennomsiktig, og vugger ikke. */
+.pp-ed.on{touch-action:none}
+.p21-drag{position:relative;z-index:30;opacity:.6;animation:none!important;transition:none!important;will-change:transform}
+.pp-fmgrid.edit .pp-fmt.p21-drag{opacity:.75;box-shadow:0 18px 40px -12px rgba(0,0,0,.45)}
+/* Pakkelogo: butikk i hvit boks, fraktselskap som liten rund merkelapp nede til høyre. */
+.p21-pl{position:relative;flex:none;display:inline-block}
+.p21-pl>.trk-badge{border:1px solid var(--pp-line,rgba(0,0,0,.08));box-sizing:border-box}
+.p21-shop img{padding:14%!important;background:#fff!important;object-fit:contain!important}
+.p21-pcb{position:absolute;right:-4px;bottom:-4px;width:18px;height:18px;border-radius:50%;border:2px solid #fff;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.2);background:#fff}
+.p21-pcb .trk-badge{width:18px!important;height:18px!important;border-radius:50%!important;font-size:7px!important;border:0!important}
+.p21-pcb .trk-badge img{padding:8%!important}
+.p21-more{flex:none;font-weight:600;white-space:nowrap}
+/* Avganger: utvidbar rad med holdeplassene. */
+.p21-dep{display:block;padding:0}
+.p21-dh{width:100%;display:flex;align-items:center;gap:12px;padding:10px 0;background:none;border:0;color:inherit;text-align:left;font:inherit;cursor:pointer}
+.p21-min{flex-direction:column;align-items:flex-end;gap:1px}
+.p21-min b{font-size:24px;line-height:1;white-space:nowrap}
+.p21-sl{display:flex;flex-direction:column;padding:2px 0 12px 50px;animation:p21open .2s ease-out;overflow:hidden}
+@keyframes p21open{from{max-height:0;opacity:0}to{max-height:900px;opacity:1}}
+@media (prefers-reduced-motion:reduce){.p21-sl{animation:none}}
+.p21-st{display:flex;align-items:center;gap:10px;min-height:30px;font-size:13.5px;font-weight:500;background:none;border:0;color:inherit;text-align:left;padding:0;font-family:inherit}
+.p21-st.p21-end{font-weight:700}
+.p21-st.more{color:var(--pp-mut);cursor:pointer}
+.p21-dt{flex:none;width:10px;align-self:stretch;display:flex;flex-direction:column;align-items:center}
+.p21-dt i{flex:1;width:2px;background:var(--lc)}
+.p21-st.more .p21-dt i{background:repeating-linear-gradient(var(--lc) 0 3px,transparent 3px 6px)}
+.p21-dd{flex:none;width:10px;height:10px;border-radius:50%;border:2px solid var(--lc);background:var(--pp-card);box-sizing:border-box}
+.p21-dd.fill{background:var(--lc)}
+.p21-st.more .p21-dd{visibility:hidden;height:4px}
+.p21-tm{flex:none;font:600 13px 'IBM Plex Mono',monospace;color:var(--pp-mut)}
+.p21-ru{margin-top:8px;align-self:flex-start;font:600 12.5px Manrope,sans-serif;color:var(--pp-lab);text-decoration:underline}
+/* Kart: filter på flislaget (mørkt tema / Papir). */
+.p21-tf .leaflet-tile-pane{filter:var(--p21-tf)}
+/* Huskeliste: eier, delt med og «Del liste». */
+.p21-lsh{flex-direction:row!important;align-items:center;gap:12px;padding:12px 14px!important}
+.p21-lsh>span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.p21-lsh b{font-size:14.5px}
+.p21-lsh .pp-mut{font-size:12.5px}
+.p21-shr{font-weight:700;opacity:.7;font-size:11px}
+.p21-sheet{display:flex;flex-direction:column;gap:10px}
+.p21-pr{gap:12px;align-items:center}
+.p21-av{flex:none;width:34px;height:34px;border-radius:50%;background:var(--pp-ink);color:var(--pp-bg);display:grid;place-items:center;font:800 12px Manrope,sans-serif;overflow:hidden}
+.p21-av img{width:100%;height:100%;object-fit:cover}
+/* Familie: tom tilstand og «Del med familien». */
+.p21-empty{display:flex;flex-direction:column;gap:6px;padding:16px!important}
+.p21-empty b{font-size:19px}
+.p21-zsh{margin-top:8px;border-top:1px solid var(--pp-line);padding-top:10px}
+.p21-pe{display:block;margin-top:8px;font-size:12.5px}

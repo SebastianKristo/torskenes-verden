@@ -2,6 +2,7 @@
 // i Innstillinger, Avganger (egen side i nyhetsleser-stil med flere stopp fra Entur og sanntid), Familie og kart
 // (OpenStreetMap via Leaflet, soner, personvern) og Boliger i full mobilversjon. Valgene lagres per bruker i /api/me/layout.
 import { FT, famTabs, personCard, healthView } from './mobile-p17.js';
+const famTop = () => (paper() ? '' : famTabs()); // Papir: fanene ligger i fanelinja nederst
 import { api, esc, n0, ini, hlApi, dd, today, cap } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
@@ -9,6 +10,7 @@ import { fourth, fabStyle } from './mobile-paper3.js';
 import { hlData, ruterUrl } from './mobile-hl.js';
 import { paper, paperDark } from './mobile-paper.js';
 import { setTiles } from './mobile-p20.js';
+import { DEP, depKey, depStatus, stopList } from './mobile-p21.js';
 
 /* ---------- Valg (lokal kopi + /api/me/layout) ---------- */
 
@@ -143,25 +145,40 @@ export async function avgLoad(force = false) {
   clearTimeout(avTimer);
   avTimer = setTimeout(() => { if (m.screen === 'avg' && !AV.edit && !AV.add) avgLoad(true).then(draw).catch(() => {}); }, 30000);
 }
-const RUTER = { metro: '#EC700C', tram: '#0B91EF', bus: '#E60000', regionbus: '#75A300', water: '#682C88', ferry: '#682C88', rail: '#003087', train: '#003087' };
+const RUTER = { Trikk: '#0B91EF', Buss: '#E60000', 'T-bane': '#EC700C', Tog: '#003087', 'Båt': '#682C88', metro: '#EC700C', tram: '#0B91EF', bus: '#E60000', regionbus: '#75A300', water: '#682C88', ferry: '#682C88', rail: '#003087', train: '#003087' };
 const lineBg = (d) => d.color || RUTER[d.mode] || (/^\d$/.test(String(d.line)) ? RUTER.metro : /^1[1-9]$/.test(String(d.line)) ? RUTER.tram : RUTER.bus);
 const hm = (t) => (t ? new Date(t).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }) : '');
 const minOf = (d) => d.minutes ?? d.min ?? (d.expected ? Math.round((new Date(d.expected) - Date.now()) / 60000) : null);
-// Ruter-bildet øverst: tegnet trikk og buss i Ruters røde farge (ingen eksterne bilder).
-const RUTER_ART = `url('data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200" preserveAspectRatio="xMaxYMin slice"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff3b30"/><stop offset="1" stop-color="#b10b0b"/></linearGradient></defs><rect width="400" height="200" fill="url(#g)"/><g fill="#fff" opacity=".1"><circle cx="340" cy="20" r="70"/><circle cx="40" cy="0" r="40"/></g><g opacity=".9" transform="translate(170 34) scale(.82)"><path d="M-20 64h300" stroke="#fff" stroke-opacity=".45" stroke-width="2"/><rect width="150" height="44" rx="9" fill="#fff"/><rect y="30" width="150" height="5" fill="#0B91EF"/><g fill="#1b1a17" opacity=".7"><rect x="10" y="8" width="22" height="16" rx="3"/><rect x="38" y="8" width="22" height="16" rx="3"/><rect x="66" y="8" width="22" height="16" rx="3"/><rect x="94" y="8" width="22" height="16" rx="3"/><rect x="122" y="8" width="20" height="16" rx="3"/></g><circle cx="28" cy="48" r="6" fill="#1b1a17"/><circle cx="122" cy="48" r="6" fill="#1b1a17"/><g transform="translate(162 8)"><rect width="104" height="36" rx="9" fill="#fff"/><g fill="#1b1a17" opacity=".7"><rect x="9" y="7" width="19" height="13" rx="3"/><rect x="33" y="7" width="19" height="13" rx="3"/><rect x="57" y="7" width="19" height="13" rx="3"/><rect x="81" y="7" width="16" height="13" rx="3"/></g><circle cx="22" cy="40" r="6" fill="#1b1a17"/><circle cx="84" cy="40" r="6" fill="#1b1a17"/></g></g></svg>')}')`;
+// Ruter-bildet øverst (prompt 21): ekte foto fra serveren (GET /api/background?type=ruter), ellers rolig gradient.
+const RB = { url: null, t: 0, busy: false };
+function ruterBg() {
+  if (!RB.busy && Date.now() - RB.t > 30 * 60000) {
+    RB.busy = true; RB.t = Date.now();
+    const w = Math.min(1600, Math.round((innerWidth || 400) * Math.min(2, devicePixelRatio || 1)));
+    hlApi(`/background?type=ruter&w=${w}`).then((r) => {
+      const list = [r?.image_url ?? r?.url, ...(r?.fallbacks ?? [])].filter(Boolean);
+      const next = (i) => { if (i >= list.length) return; const im = new Image(), to = setTimeout(() => { im.onload = im.onerror = null; next(i + 1); }, 9000); im.onload = () => { clearTimeout(to); RB.url = list[i]; if (m.screen === 'avg') draw(); }; im.onerror = () => { clearTimeout(to); next(i + 1); }; im.src = list[i]; };
+      next(0);
+    }).catch(() => {}).finally(() => { RB.busy = false; });
+  }
+  return RB.url ? `url('${esc(RB.url)}')` : 'linear-gradient(170deg,#4a5a6a,#2a3440 60%,#1d242c)';
+}
 /** Bakgrunn i toppbildet for sider med eget bilde (Avganger). null = brukerens bakgrunn. */
 export function heroBg(scr) {
-  if (scr === 'avg') return `background-image:linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,0) 40%,rgba(0,0,0,.4)),${RUTER_ART};background-size:cover;background-position:right top`;
+  if (scr === 'avg') return `background-image:linear-gradient(180deg,rgba(0,0,0,.25),rgba(0,0,0,0) 35%,rgba(0,0,0,.45)),${ruterBg()};background-size:cover;background-position:center 40%`;
   if (scr === 'fam') return 'background-image:linear-gradient(180deg,rgba(0,0,0,.2),rgba(0,0,0,0) 40%,rgba(0,0,0,.45)),linear-gradient(160deg,#5c7a5a 0%,#3d5a6b 55%,#26323d 100%)';
   return null;
 }
 
-function depRow(d) {
-  const mn = minOf(d), late = d.aimed && d.expected && new Date(d.expected) - new Date(d.aimed) > 90000;
-  return `<div class="p16-dep${d.cancelled ? ' x' : ''}"><span class="pp-line" style="background:${esc(lineBg(d))};color:${esc(d.textColor || '#fff')}">${esc(d.line)}</span>
-    <span class="m-grow p16-dt"><b>${esc(d.to ?? '')}</b><span class="pp-mut">${[d.platform ? `Plattform ${esc(d.platform)}` : '', d.aimed ? `${late ? `<s>${hm(d.aimed)}</s> ` : ''}${hm(d.expected || d.aimed)}` : '', d.realtime === false ? 'rutetid' : d.realtime ? '<span class="p16-rt">● sanntid</span>' : '', d.cancelled ? '<span class="pp-lab-c">Innstilt</span>' : ''].filter(Boolean).join(' · ')}</span>
+// Prompt 21: trykk på en avgang utvider raden med holdeplassene fra stoppet til endestasjonen (bare én åpen).
+function depRow(d, key, from) {
+  const mn = minOf(d), { txt, late } = depStatus(d), open = DEP.open === key, c = lineBg(d);
+  const clock = hm(d.expected || d.aimed || d.time);
+  return `<div class="p16-dep p21-dep${d.cancelled ? ' x' : ''}${open ? ' open' : ''}"><button class="p21-dh" data-p21="dep" data-k="${esc(key)}" aria-expanded="${open}"><span class="pp-line" style="background:${esc(c)};color:${esc(d.textColor || '#fff')}">${esc(d.line)}</span>
+    <span class="m-grow p16-dt"><b>${esc(d.to ?? '')}</b><span class="${late ? 'pp-lab-c' : 'pp-mut'}">${esc(txt)}</span>
       ${d.situation ? `<span class="p16-sit">${esc(d.situation)}</span>` : ''}</span>
-    <span class="p16-min"><b class="pp-serif">${mn == null ? '–' : mn <= 0 ? 'nå' : mn}</b>${mn > 0 ? '<small>min</small>' : ''}</span></div>`;
+    <span class="p16-min p21-min"><b class="pp-serif">${mn == null ? '–' : mn <= 0 ? 'Nå' : `${mn} min`}</b>${clock ? `<small>${esc(clock)}</small>` : ''}</span></button>
+    ${open ? stopList(d, key, c, from) : ''}</div>`;
 }
 function stopCard(s, i, n) {
   const key = s.id ?? s.name, D = AV.deps[key] ?? {}, list = D.departures ?? [], more = AV.more[key];
@@ -170,7 +187,7 @@ function stopCard(s, i, n) {
     <div class="pp-row" style="align-items:center"><span class="m-grow" style="min-width:0"><span class="pp-lab">${esc((D.stop?.locality || s.locality || 'STOPP').toUpperCase())}</span><h2 class="pp-serif p16-sn">${esc(D.stop?.name || s.name)}</h2></span>
       <a class="pp-btn sm" href="${esc(ruterUrl(s.name))}" target="_blank" rel="noopener">Ruter ↗</a></div>
     ${D.error ? `<div class="pp-mut">${esc(D.error)}</div>` : ''}
-    <div class="p16-deps">${list.slice(0, more ? 20 : 6).map(depRow).join('') || (D.error ? '' : '<div class="pp-mut" style="padding:8px 0">Ingen avganger den neste timen.</div>')}</div>
+    <div class="p16-deps">${list.slice(0, more ? 20 : 6).map((d, j) => depRow(d, depKey(key, d, j), D.stop?.name || s.name)).join('') || (D.error ? '' : '<div class="pp-mut" style="padding:8px 0">Ingen avganger den neste timen.</div>')}</div>
     ${list.length > 6 ? `<button class="pp-btn sm ghost" data-p16="avmore" data-k="${esc(key)}">${more ? 'Vis færre' : `Vis ${Math.min(20, list.length) - 6} flere ›`}</button>` : ''}</div></div>`;
 }
 export function avgView() {
@@ -248,7 +265,7 @@ function avOf(p, size = 40) {
   return `<span class="p16-av" style="width:${size}px;height:${size}px">${u ? `<img src="${esc(u)}" alt="">` : esc(ini(p.name || p.username))}</span>`;
 }
 function memberCard(p) {
-  const L0 = p.last, [sn, sc] = SHARE[p.sharing] ?? SHARE.on, h = p.health?.today ?? p.health, on = String(FM.sel) === String(p.userId);
+  const L0 = p.last, [sn, sc] = SHARE[p.sharing] ?? SHARE.off, h = p.self || p.sharing === 'on' ? p.health?.today ?? p.health : null, on = String(FM.sel) === String(p.userId);
   const sens = L0 ? [L0.battery != null ? `${L0.charging ? '⚡ ' : ''}${Math.round(L0.battery * (L0.battery <= 1 ? 100 : 1))} %` : '', ACT[L0.activity] ?? '', L0.speed != null && p.precision !== 'approx' ? `${Math.round(L0.speed * 3.6)} km/t` : '', L0.acc != null ? `±${Math.round(L0.acc)} m` : ''].filter(Boolean) : [];
   return `<button class="pp-card p16-mem${on ? ' on' : ''}" data-p16="famsel" data-id="${esc(p.userId)}">
     <div class="pp-row" style="align-items:center">${avOf(p)}<span class="m-grow" style="min-width:0"><b class="pp-serif p16-mn">${esc(p.name || p.username)}${p.self ? ' <span class="pp-mut">(deg)</span>' : ''}</b><span class="pp-mut">${p.username ? `@${esc(p.username)} · ` : ''}${L0 && p.sharing === 'on' ? `${esc(L0.place || (p.precision === 'approx' ? 'Omtrentlig posisjon' : 'Posisjon'))} · ${ago(L0.ts)}` : p.sharing === 'paused' ? 'Har pauset delingen' : p.sharing === 'off' ? 'Deler ikke posisjon' : 'Ingen posisjon ennå'}</span></span><span class="p16-st ${sc}">${sn}</span></div>
@@ -256,30 +273,35 @@ function memberCard(p) {
     ${h ? `<div class="p16-hl">${[['Skritt', h.steps != null ? n0(h.steps) : null], ['Hvilepuls', h.restingHr != null ? `${Math.round(h.restingHr)}` : null], ['Puls', h.hr != null ? `${Math.round(h.hr)}` : null], ['Søvn', h.sleepMin != null ? `${Math.floor(h.sleepMin / 60)} t ${h.sleepMin % 60} m` : null], ['Aktive kcal', h.activeKcal != null ? n0(h.activeKcal) : null]].filter(([, v]) => v != null).map(([k, v]) => `<span><small>${k}</small><b>${esc(v)}</b></span>`).join('')}</div>` : ''}</button>`;
 }
 function zoneCard(z) {
+  // Soner tilhører den som lagde dem (prompt 21). Eldre server uten «mine»: alle kan endre.
+  const mineZ = z.mine ?? (z.createdBy == null || String(z.createdBy) === String(FM.d?.me?.userId));
   const me = FM.d?.me?.userId, others = (FM.d?.members ?? []).filter((p) => String(p.userId) !== String(me));
   const nt = z.notify ?? {};
-  return `<div class="pp-card p16-zone"><div class="pp-row" style="align-items:center"><span class="p16-zd" style="background:${esc(z.color || '#b23a2a')}"></span><span class="m-grow"><b>${esc(z.name)}</b><span class="pp-mut">Radius ${n0(z.radius)} m</span></span><button class="mini danger" data-p16="zdel" data-id="${esc(z.id)}" aria-label="Slett ${esc(z.name)}">Slett</button></div>
+  return `<div class="pp-card p16-zone"><div class="pp-row" style="align-items:center"><span class="p16-zd" style="background:${esc(z.color || '#b23a2a')}"></span><span class="m-grow"><b>${esc(z.name)}</b><span class="pp-mut">Radius ${n0(z.radius)} m${mineZ ? (z.shared ? ' · delt med familien' : ' · bare deg') : ` · delt av ${esc(((memOf(z.createdBy)?.name) ?? 'familien').split(' ')[0])}`}</span></span>${mineZ ? `<button class="mini danger" data-p16="zdel" data-id="${esc(z.id)}" aria-label="Slett ${esc(z.name)}">Slett</button>` : ''}</div>
+    ${mineZ && 'shared' in z ? `<button class="pp-srow p21-zsh" data-p16="zshare" data-id="${esc(z.id)}" role="switch" aria-checked="${!!z.shared}"><span class="m-grow"><b>Del med familien</b><span class="pp-mut">${z.shared ? 'Familien ser sonen og kan få varsel.' : 'Av: bare du ser sonen.'}</span></span><span class="sw" aria-checked="${!!z.shared}"></span></button>` : ''}
     ${others.length ? `<div class="p16-zn">${others.map((p) => { const v = nt[p.userId] ?? {}; return `<div class="p16-znr"><span class="m-grow m-ell">${esc((p.name || p.username || '').split(' ')[0])}</span><button class="p16-tg" data-p16="znot" data-z="${esc(z.id)}" data-u="${esc(p.userId)}" data-k="enter" aria-pressed="${!!v.enter}">Kommer</button><button class="p16-tg" data-p16="znot" data-z="${esc(z.id)}" data-u="${esc(p.userId)}" data-k="leave" aria-pressed="${!!v.leave}">Drar</button></div>`; }).join('')}</div>` : ''}</div>`;
 }
 export function famView() {
   if (FM.err && !FM.d) return `<div class="pp-card"><div class="pp-mut">${esc(FM.err)}</div></div>`;
   if (!FM.d) return '<div class="m-spin"></div>';
   const me = FM.d.me ?? {}, mem = FM.d.members ?? [], zones = FM.d.zones ?? [], ev = (FM.d.events ?? []).slice(0, 12);
-  const sh = me.sharing ?? 'on', pr = me.precision ?? 'exact';
+  const sh = me.sharing ?? 'off', pr = me.precision ?? 'exact';
+  // Bare personer som deler med deg (prompt 21). Deling er av som standard.
+  const others = mem.filter((p) => !p.self && String(p.userId) !== String(me.userId)), sharers = others.filter((p) => p.sharing === 'on');
   // Fanene Kart, Soner og Helse (design/Familie.dc.html). Kartet ligger på Kart og Soner.
   const tab = FT.tab;
-  if (tab === 'helse') return famTabs() + healthView();
+  if (tab === 'helse') return famTop() + healthView();
   const mapCard = `<div class="pp-card p16-mapc"><div id="fam-slot" class="p16-map"></div>
       <div class="pp-row p16-mapbar"><button class="pp-btn sm${FM.zoneMode ? ' ink' : ''}" data-p16="zmode">${FM.zoneMode ? 'Trykk på kartet …' : '+ Ny sone'}</button><button class="pp-btn sm" data-p16="famfit">Vis alle</button></div></div>`;
-  if (tab === 'soner') return `${famTabs()}${mapCard}<span class="pp-lab">SONER</span>${zones.map(zoneCard).join('') || '<div class="pp-card"><div class="pp-mut">Ingen soner ennå. Trykk «+ Ny sone» og så på kartet, for eksempel hjemme, skolen eller jobben.</div></div>'}
+  if (tab === 'soner') return `${famTop()}${mapCard}<span class="pp-lab">SONER</span>${zones.map(zoneCard).join('') || '<div class="pp-card"><div class="pp-mut">Ingen soner ennå. Trykk «+ Ny sone» og så på kartet, for eksempel hjemme, skolen eller jobben.</div></div>'}
     <span class="pp-mut" style="font-size:12px;padding:0 4px">Trykk «Kommer» eller «Drar» for å få varsel når en person kommer til eller forlater sonen.</span>`;
-  return `${famTabs()}${personCard()}<div class="pp-card p16-mapc"><div id="fam-slot" class="p16-map"></div>
+  return `${famTop()}${personCard()}<div class="pp-card p16-mapc"><div id="fam-slot" class="p16-map"></div>
       <div class="pp-row p16-mapbar"><button class="pp-btn sm${FM.zoneMode ? ' ink' : ''}" data-p16="zmode">${FM.zoneMode ? 'Trykk på kartet …' : '+ Ny sone'}</button><button class="pp-btn sm" data-p16="famfit">Vis alle</button></div></div>
-    <span class="pp-lab">FAMILIEN</span>${mem.map(memberCard).join('') || '<div class="pp-card"><div class="pp-mut">Ingen andre deler posisjon ennå. Alle med en bruker på serveren og appen kan bli med.</div></div>'}
+    <span class="pp-lab">FAMILIEN</span>${mem.map(memberCard).join('')}${sharers.length ? '' : '<div class="pp-card p21-empty"><b class="pp-serif">Ingen deler posisjon med deg ennå</b><div class="pp-mut">Deling er av som standard. Når noen i familien slår på deling i sin app, vises de her og på kartet.</div></div>'}
     <span class="pp-lab">DIN DELING</span><div class="pp-card p16-me">
       <div class="p16-seg">${Object.entries(SHARE).map(([k, [n]]) => `<button data-p16="famshare" data-k="${k}" aria-pressed="${sh === k}">${n}</button>`).join('')}</div>
       <div class="p16-seg">${[['exact', 'Nøyaktig'], ['approx', 'Omtrentlig']].map(([k, n]) => `<button data-p16="famprec" data-k="${k}" aria-pressed="${pr === k}">${n}</button>`).join('')}</div>
-      <div class="pp-mut">${sh === 'paused' ? 'De andre ser at du har pauset delingen.' : sh === 'off' ? 'Posisjonen din vises ikke for noen.' : pr === 'approx' ? 'De andre ser bare et område på ca. 1 km, og ikke farten din.' : 'De andre ser posisjonen, sporet og farten din.'}</div>
+      <div class="pp-mut">${sh === 'paused' ? 'De andre ser at du har pauset delingen.' : sh === 'off' ? 'Av som standard: posisjonen og helsedataene dine vises ikke for noen før du slår på deling.' : pr === 'approx' ? 'De andre ser bare et område på ca. 1 km, og ikke farten din.' : 'De andre ser posisjonen, sporet og farten din.'}</div>
       <button class="pp-srow" data-p16="famgeo"><span class="m-grow"><b>Del fra denne nettleseren</b><span class="pp-mut">${FM.geoErr ? esc(FM.geoErr) : FM.geo ? 'På · sender mens siden er åpen' : 'Posisjon sendes bare mens appen er åpen her'}</span></span><span class="sw" aria-checked="${FM.geo}"></span></button>
       <div class="pp-mut">Helsedata (skritt, puls, søvn og kalorier) kan bare leses av iOS- og Android-appene med ditt samtykke. Nettleseren har ikke tilgang til dem.</div></div>
     <span class="pp-lab">HENDELSER</span><div class="pp-card">${ev.map((x) => `<div class="p16-ev"><span class="p16-zd" style="background:${esc(zoneOf(x.zoneId)?.color || '#b23a2a')}"></span><span class="m-grow">${esc(evText(x))}</span><span class="pp-mut">${ago(x.ts)}</span></div>`).join('') || '<div class="pp-mut">Ingen hendelser ennå.</div>'}</div>`;
@@ -321,8 +343,8 @@ export function famAfterDraw() {
       map.on('click', (ev) => { if (!FM.zoneMode) return; FM.zoneMode = false; FM.zone = { lat: ev.latlng.lat, lon: ev.latlng.lng, name: '', radius: 200, color: ZCOL[0] }; draw(); setTimeout(() => document.getElementById('p16-zn')?.focus(), 50); });
       paint(Lf, true);
     } else { paint(Lf, false); }
-    // Fliser via serverens /tiles (prompt 20): mørkt tema = dark, Papir = light med sepia, ellers voyager.
-    setTiles(Lf, map, mapEl, paper() ? (paperDark() ? 'dark' : 'light') : 'voyager').catch(() => {});
+    // Fliser via serverens /tiles: Kartverket topo, med mørkt filter i mørkt tema og papirfilter i Papir (prompt 21).
+    setTiles(Lf, map, mapEl, paper() ? (paperDark() ? 'dark' : 'paper') : 'dark').catch(() => {});
     setTimeout(() => map?.invalidateSize(), 30);
   }).catch((e) => { mapEl.innerHTML = `<div class="p16-mapmsg">${esc(e.message)} · listen under virker likevel</div>`; });
 }
@@ -529,6 +551,12 @@ export async function p16Bind(e, t) {
     case 'zx': FM.zone = null; break;
     case 'zcol': FM.zone.color = x.dataset.c; break;
     case 'zsave': { const z = FM.zone; try { await hlApi('/family/zones', { method: 'POST', json: { name: z.name.trim(), lat: z.lat, lon: z.lon, radius: z.radius, color: z.color } }); FM.zone = null; await famLoad(); flash('Sonen er lagret ✓'); } catch (err) { flash(err.message); } break; }
+    case 'zshare': {
+      const z = zoneOf(x.dataset.id); if (!z) break;
+      z.shared = !z.shared; draw();
+      try { await hlApi(`/family/zones/${x.dataset.id}`, { method: 'PATCH', json: { shared: z.shared } }); haptic('ok'); await famLoad(); } catch (err) { z.shared = !z.shared; flash(err.message); }
+      break;
+    }
     case 'zdel': try { await hlApi(`/family/zones/${x.dataset.id}`, { method: 'DELETE' }); await famLoad(); } catch (err) { flash(err.message); } break;
     case 'znot': {
       const z = zoneOf(x.dataset.z), u = x.dataset.u, cur = z?.notify?.[u] ?? {}, nv = { enter: !!cur.enter, leave: !!cur.leave, [x.dataset.k]: !cur[x.dataset.k] };

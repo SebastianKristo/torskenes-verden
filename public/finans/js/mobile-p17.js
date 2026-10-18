@@ -6,6 +6,8 @@ import { S, api, esc, n0, ini, hlApi, icon } from './core.js';
 import { m, draw, flash, meName, avInner, avatarUrl, route, isIOS } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { iconColor, iconInk, FM, famLoad, BO, bolLoad, bolUpload } from './mobile-p16.js';
+import { listShareLine } from './mobile-p21.js';
+import { currentUser } from './mobile-upq.js';
 
 const LS = 'fh_p17';
 const L = (() => { try { return JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch { return {}; } })();
@@ -132,7 +134,7 @@ export function p17SetMain(T = {}) {
 /** Moduler: snarveier til modulene (de kan også legges i fanelinja). */
 export function p17Modules() {
   const M = [['#/spor', 'Sporing', 'Pakker fra e-post og Finn', 'globe'], ['#/dom', 'Domener', 'Cloudflare-statistikk', 'globe'], ['#/mat', 'Mat', 'Ukeplan og oppskrifter', 'home'], ['#/nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag', 'look'],
-    ['#/huske', 'Huskeliste', 'Oppgaver for hele familien', 'list'], ['#/fam', 'Familie og kart', 'Posisjon, soner og helse', 'users'], ['#/avg', 'Avganger', 'Sanntid fra Entur', 'globe'], ['#/vaer', 'Vær', 'MET og Yr mot Storm', 'look']];
+    ['#/huske', 'Huskeliste', 'Egne og delte lister', 'list'], ['#/fam', 'Familie og kart', 'Posisjon, soner og helse', 'users'], ['#/avg', 'Avganger', 'Sanntid fra Entur', 'globe'], ['#/vaer', 'Vær', 'MET og Yr mot Storm', 'look']];
   return grp('MODULER', M.map(([h, n, s, ic]) => row(h, n, s, '', ic, `mod-${n}`))) + '<div class="snote">Modulene kan også legges i fanelinja under Fanelinje i Hjem.</div>';
 }
 
@@ -272,11 +274,12 @@ export function huskeView() {
   const groups = [['I DAG OG FORFALT', soon], ['SENERE', later], ['FERDIG', done.slice(0, 12)]].filter(([, a]) => a.length);
   return `<div class="pp-col p17-hk">
     <form class="pp-card p17-hadd" data-p17form="task"><input class="sinp" id="p17-tk" data-p17in="tk" value="${esc(HK.nv)}" placeholder="Ny oppgave i ${esc(curN)}" autocomplete="off" aria-label="Ny oppgave"><button class="p17-plus" type="submit" aria-label="Legg til">+</button></form>
-    <div class="pp-chips p17-lists" role="tablist"><button class="pp-fchip" data-p17="hlist" data-k="alle" aria-pressed="${all}">Alle <span>${items.filter((x) => !x.done).length}</span></button>${lists.map((l) => `<button class="pp-fchip" data-p17="hlist" data-k="${esc(l.id)}" aria-pressed="${String(HK.cur) === String(l.id)}"><i style="background:${esc(l.color)}"></i>${esc(l.name)} <span>${items.filter((x) => !x.done && String(x.list) === String(l.id)).length}</span></button>`).join('')}</div>
+    <div class="pp-chips p17-lists" role="tablist"><button class="pp-fchip" data-p17="hlist" data-k="alle" aria-pressed="${all}">Alle <span>${items.filter((x) => !x.done).length}</span></button>${lists.map((l) => `<button class="pp-fchip" data-p17="hlist" data-k="${esc(l.id)}" aria-pressed="${String(HK.cur) === String(l.id)}"><i style="background:${esc(l.color)}"></i>${esc(l.name)}${l.shared || (l.members ?? []).length || l.mine === false ? ' <b class="p21-shr" aria-label="Delt">⇄</b>' : ''} <span>${items.filter((x) => !x.done && String(x.list) === String(l.id)).length}</span></button>`).join('')}</div>
     <div class="pp-chips p17-due">${[[0, 'I dag'], [1, 'I morgen'], [7, 'Neste uke'], [null, 'Uten dato']].map(([v, n]) => `<button class="pp-fchip sm" data-p17="tdue" data-v="${v ?? ''}" aria-pressed="${HK.due === v}">${n}</button>`).join('')}${mem.length ? `<span class="p17-sep"></span>${[['', 'Alle'], ...mem.map((p) => [String(p.userId ?? p.id), (p.name ?? p.username ?? '').split(' ')[0]])].map(([v, n]) => `<button class="pp-fchip sm" data-p17="twho" data-v="${esc(v)}" aria-pressed="${HK.who === v}">${esc(n)}</button>`).join('')}` : ''}</div>
+    ${all || HK.local ? '' : listShareLine(listOf(HK.cur), mem, m.me?.id ?? currentUser())}
     ${HK.err ? `<div class="pp-card pp-mut">${esc(HK.err)}</div>` : ''}
     ${groups.map(([t, a]) => `<span class="pp-lab">${t}</span><div class="pp-card p17-tks">${a.map((x) => taskRow(x, all)).join('')}</div>`).join('') || `<div class="pp-card pp-mut">Ingen oppgaver i ${esc(curN)}.</div>`}
-    ${HK.local ? '<span class="pp-mut" style="font-size:12px;padding:0 4px">Lagres på denne enheten til serveren har Huskeliste. Oppdater Homelab for å dele listen med familien.</span>' : '<span class="pp-mut" style="font-size:12px;padding:0 4px">Listen deles med alle i familien og oppdateres med en gang.</span>'}</div>`;
+    ${HK.local ? '<span class="pp-mut" style="font-size:12px;padding:0 4px">Lagres på denne enheten til serveren har Huskeliste. Oppdater Homelab for å dele listen med familien.</span>' : '<span class="pp-mut" style="font-size:12px;padding:0 4px">Listene dine er private. Velg en liste og trykk «Del liste» for å dele den med navngitte personer.</span>'}</div>`;
 }
 /** Hjem-kortet: de tre neste oppgavene med avkrysning. */
 export function huskeWidget() {
@@ -337,7 +340,9 @@ export function healthView() {
   const mem = FM.d?.members ?? [], goal = 8000;
   const me = FM.d?.me ?? {}, sh = me.shareHealth ?? {};
   const src = isIOS() ? 'Apple Health' : 'Health Connect';
-  const cards = mem.map((p) => {
+  // Helse vises bare for deg selv og dem som deler med deg (aldri når delingen er av eller pauset).
+  const vis = mem.filter((p) => p.self || String(p.userId) === String(me.userId) || p.sharing === 'on');
+  const cards = vis.map((p) => {
     const h = p.health?.today ?? null, wk = p.health?.week ?? [];
     if (!h) return `<div class="pp-card p17-hc"><div class="pp-row" style="align-items:center"><span class="p16-av" style="width:36px;height:36px">${p.avatarUrl ? `<img src="${esc(p.avatarUrl)}" alt="">` : esc(ini(p.name))}</span><span class="m-grow"><b>${esc((p.name || p.username || '').split(' ')[0])}</b></span><span class="p16-st mut">Deler ikke</span></div><span class="pp-mut">Deler ikke helsedata. ${esc((p.name || '').split(' ')[0])} kan slå det på i sin app.</span></div>`;
     const st = h.steps ?? 0, frac = Math.min(1, st / goal), C = 2 * Math.PI * 26, mx = Math.max(goal, ...wk.map((d) => d.steps ?? 0));
@@ -349,7 +354,7 @@ export function healthView() {
   const tog = (k, n) => `<button class="pp-fchip sm" data-p17="hshare" data-k="${k}" aria-pressed="${!!sh[k]}">${sh[k] ? '✓ ' : ''}${n}</button>`;
   return `<div class="pp-card p17-hsrc"><span class="pp-lab">DIN DELING · ${esc(src.toUpperCase())}</span><div class="pp-chips">${tog('steps', 'Skritt')}${tog('restingHr', 'Hvilepuls')}${tog('hr', 'Puls')}${tog('sleep', 'Søvn')}${tog('activeKcal', 'Aktive kalorier')}${tog('week', 'Siste 7 dager')}</div>
       <span class="pp-mut">Apple Health og Health Connect kan bare leses av appen på telefonen. Den sender et sammendrag hit hvert 15. minutt, og bare det du har valgt å dele. Nettleseren har ikke tilgang til helsedata.</span></div>
-    ${cards || '<div class="pp-card pp-mut">Ingen i familien ennå.</div>'}`;
+    ${cards || ''}${vis.some((p) => !(p.self || String(p.userId) === String(me.userId))) ? '' : '<div class="pp-card p21-empty"><b class="pp-serif">Ingen deler helse med deg ennå</b><div class="pp-mut">Helsedeling er av som standard. Velg selv over hva du vil dele.</div></div>'}`;
 }
 
 /* ---------- Yr mot Storm (GET /api/weather/compare) ---------- */

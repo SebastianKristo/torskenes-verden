@@ -6,12 +6,12 @@ import { pref, setPref } from './mobile.js';
 
 export const BG_TYPES = [
   ['weather', 'Vær', 'Følger været der du er (MET)'],
-  ['planets', 'Planeter', 'Jorda, Månen, Jupiter og Mars (NASA)'],
+  ['planets', 'Planeter', 'Jorda, Månen, Jupiter, Mars og Saturn (NASA)'],
   ['oslo', 'Oslo', 'Oslo fra luften'],
   ['custom', 'Eget bilde', 'Last opp fra Bilder eller Filer'],
   ['cur', 'Ingen', 'Bare mørk gradient'],
 ];
-export const PLANETS = [['auto', 'Bytt automatisk'], ['earth', 'Jorda'], ['moon', 'Månen'], ['jupiter', 'Jupiter'], ['mars', 'Mars']];
+export const PLANETS = [['auto', 'Bytt automatisk'], ['earth', 'Jorda'], ['moon', 'Månen'], ['jupiter', 'Jupiter'], ['mars', 'Mars'], ['saturn', 'Saturn']];
 
 export const bgSet = () => ({
   blur: Math.max(0, Math.min(20, +(pref('bgBlur') ?? 0) || 0)),

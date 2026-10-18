@@ -6,6 +6,7 @@ import {
   loadBoot, loadSummary, loadTx, loadReceipts, cats, accs, uploadReceipt, icon, aiLine, conic, navName } from './core.js';
 import { logo, posLoad, regLoad, take20, p20Down, p20Move, p20Up, p20Click, p20Screen } from './mobile-p20.js';
 import * as UPQ from './mobile-upq.js';
+import { accountInit, logout, p21Bind, p21Sheets, dragMove, dragEnd } from './mobile-p21.js';
 import { MODS, modView, modLoad, domNav, modBind, modAfterDraw } from './mobile-mods.js';
 import { settingsView, settingsLoad, settingsBind } from './mobile-set.js';
 import { hlView, hlLoad, hlBind, hlAfterDraw, LAY, loadLayout } from './mobile-hl.js';
@@ -21,7 +22,7 @@ import { paper, paperDark, paperHero, paperNav, paperScanSheet, paperHome, paper
 import { paperList, paperFinn, paperFinnSheet, paperFinnLoad, paperFinnBind, paperTrk, paperTrkSheet, paperTrkBind } from './mobile-paper2.js';
 import { take15, edDown, edMove, edUp, edClick, edReset, paperSearch, fsBind, paperTx, txLoad, txBind15, finMerGrid, fmerLoad, rcCount, recentLoad, newShipSheet, nsBind, navSetBind, fabStyle } from './mobile-paper3.js';
 import { wxView, wxLoad, wxBind, wxBindScroll, WX } from './mobile-wx.js';
-import { p17Bind, p17Sheets, huskeView, tasksLoad, posWidget, bolWidgetLoad, appLoad, applyIcon, ptrBind, wsConnect, onRealtime } from './mobile-p17.js';
+import { HK, p17Bind, p17Sheets, huskeView, tasksLoad, posWidget, bolWidgetLoad, appLoad, applyIcon, ptrBind, wsConnect, onRealtime } from './mobile-p17.js';
 import { trkDown, trkMove, trkUp } from './mobile-paper2.js';
 import { take16, p16Bind, p16Pointer, p16Move, p16Up, tabSheet, avgView, avgLoad, avgSheet, famView, famLoad, famSheet, famAfterDraw, bolView, bolLoad, AV, BO } from './mobile-p16.js';
 
@@ -216,7 +217,7 @@ const kb = (n) => (n > 1e6 ? `${(n / 1e6).toFixed(1).replace('.', ',')} MB` : `$
 export function upqList(th, compact = false) {
   const q = m.offline;
   if (!q.length) return '';
-  const why = (x) => (x.error ? `Feilet: ${x.error}` : x.reason === 'wifi' ? 'Venter på Wi-Fi' : 'Venter på nett');
+  const why = (x) => (x.legacy ? 'Lagt i køen før kontoene ble skilt · lastes bare opp når du trykker' : x.error ? `Feilet: ${x.error}` : x.reason === 'wifi' ? 'Venter på Wi-Fi' : 'Venter på nett');
   if (compact) return `<a class="upq-banner ${th === 'ios' ? 'glass2' : ''}" href="#/opp"><span class="upq-dot"></span><span class="m-grow"><b>${q.length} kvittering${q.length > 1 ? 'er' : ''} venter på opplasting</b><span>${navigator.onLine ? 'Trykk for å se køen' : 'Lastes opp når du er på nett igjen'}</span></span><span style="opacity:.6">›</span></a>`;
   return `<div class="sec">Venter på opplasting · ${q.length}</div><div class="list upq ${th === 'ios' ? 'glass2' : ''}">${q.map((x) => `<div class="item upq-it"><span class="m-ini upq-ic">↑</span><span class="m-grow" style="min-width:0"><span class="m-ell" style="font-weight:500">${esc(x.name)}</span><span class="m-ell s">${esc(why(x))} · ${kb(x.size)}${x.tries ? ` · ${x.tries} forsøk` : ''}</span></span><button class="upq-b" data-mact="upq-retry" data-id="${esc(x.id)}">Prøv igjen</button><button class="upq-b x" data-mact="upq-del" data-id="${esc(x.id)}" aria-label="Fjern fra køen">Fjern</button></div>`).join('')}</div>
     ${q.length > 1 ? `<button class="sec-b upq-all" data-mact="upq-all">Last opp alle nå</button>` : ''}`;
@@ -406,7 +407,7 @@ export function draw() {
   const ae = document.activeElement, keep = ae?.id && root().contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
   root().innerHTML = `<div class="m ${th}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}${fabStyle() === 'float' ? ' flyt' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${scr === 'vaer' ? ' vaer' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
     ${pp ? '' : rail(n)}${hero ? paperHero(scr) : ''}<div class="m-scroll">${bt ? topRow(th) : ''}${main}</div><div class="m-detail">${twoPane ? detail(th) : ''}</div>${nav}
-    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() : ''}${avgSheet()}${famSheet()}${p17Sheets()}${origOverlay(th)}${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
+    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() : ''}${avgSheet()}${famSheet()}${p17Sheets()}${p21Sheets(HK)}${origOverlay(th)}${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
     <input class="m-file" id="m-capture" type="file" accept="image/*" capture="environment" data-mupload data-confirm></div>`;
   if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', pp ? (m.light ? '#f3efe6' : '#14130f') : th === 'ios' ? '#07070A' : getComputedStyle(root().firstElementChild).backgroundColor || '#19120E');
@@ -734,7 +735,8 @@ function bindGlobal() {
   addEventListener('online', () => retryOffline());
   navigator.connection?.addEventListener?.('change', () => retryOffline());
   // Køen fra forrige gang (appen ble lukket uten nett), og et nytt forsøk hvert minutt så lenge noe venter.
-  refreshQueue().then(() => { if (m.offline.length) { draw(); retryOffline(); } });
+  // Køen er per bruker (prompt 21): først når kontoen er kjent, vises og sendes den innloggede brukerens filer.
+  accountInit().then(() => refreshQueue()).then(() => { if (m.offline.length) { draw(); retryOffline(); } });
   setInterval(() => { if (m.offline.length && navigator.onLine) retryOffline(); }, 60_000);
   // Skjul beløp i appveksleren og lås etter valgt tid i bakgrunnen.
   document.addEventListener('visibilitychange', () => {
@@ -776,7 +778,7 @@ export function bind() {
   });
   const cancelLp = () => clearTimeout(lpTimer);
   el.addEventListener('pointerup', cancelLp); el.addEventListener('pointercancel', cancelLp);
-  el.addEventListener('pointerup', (e) => { paperUp(e); edUp(e); p16Up(e); trkUp(e); p20Up(e); }); el.addEventListener('pointercancel', (e) => { paperUp(e); edUp(e); p16Up(e); trkUp(e); p20Up(e); });
+  el.addEventListener('pointerup', (e) => { dragEnd(e); paperUp(e); edUp(e); p16Up(e); trkUp(e); p20Up(e); }); el.addEventListener('pointercancel', (e) => { dragEnd(e); paperUp(e); edUp(e); p16Up(e); trkUp(e); p20Up(e); });
   el.addEventListener('dragover', (e) => { if (e.target.closest('[data-p16drop]')) e.preventDefault(); });
   el.addEventListener('drop', safe(async (e) => { await p16Bind(e, e.target); }));
   el.addEventListener('contextmenu', (e) => { if (e.target.closest('[data-ppplus], [data-edk], [data-pk], [data-fmk]')) e.preventDefault(); });
@@ -789,6 +791,7 @@ export function bind() {
     if (paper() && m.screen === 'spor' && await paperTrkBind(e, t)) return; // velg flere pakker går foran tilpass siden
     if (paper() && p20Click(e, t)) return; // Finans-flisene (flytt) og Posisjon-kortet
     if (paper() && edClick(e, t)) return; // tilpass siden: ▲ ▼ −, Ferdig, og klikket etter et langt trykk
+    if (await p21Bind(e, t, { HK, reload: () => import('./mobile-p17.js').then((x) => x.tasksLoad(true)) })) return;
     if (await p17Bind(e, t)) return;
     if (await p16Bind(e, t)) return;
     if (await wxBind(e, t)) return;
@@ -846,7 +849,7 @@ export function bind() {
       await Promise.all([loadReceipts(), loadBoot(), loadSummary()]);
       return flash(act === 'book' ? 'Bokført ✓' : 'Kvittering avvist');
     }
-    if (act === 'logout') { await fetch('/api/logout', { method: 'POST' }); location.href = '/login?next=/finans/'; }
+    if (act === 'logout') { await logout(); }
   }));
   el.addEventListener('input', (e) => { p17Bind(e, e.target); p16Bind(e, e.target); wxBind(e, e.target); if (paper()) { paperFinnBind(e, e.target); paperTrkBind(e, e.target); nsBind(e, e.target); fsBind(e, e.target); } paperBind(e, e.target); matBind(e, e.target); if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
   el.addEventListener('change', safe(async (e) => {
@@ -888,7 +891,7 @@ export function bind() {
   el.addEventListener('keydown', (e) => { hlBind(e, e.target); });
   el.addEventListener('focusin', (e) => { hlBind(e, e.target); });
   el.addEventListener('focusout', (e) => { hlBind(e, e.target); });
-  el.addEventListener('pointermove', (e) => { p20Move(e); paperMove(e); edMove(e); p16Move(e); trkMove(e); if (swMove(e)) return; if (tabMove(e)) return; hlBind(e, e.target); }, { passive: false });
+  el.addEventListener('pointermove', (e) => { if (dragMove(e)) return; p20Move(e); paperMove(e); edMove(e); p16Move(e); trkMove(e); if (swMove(e)) return; if (tabMove(e)) return; hlBind(e, e.target); }, { passive: false });
   el.addEventListener('pointerup', (e) => { if (swEnd(e)) return; if (tabUp(e)) return; hlBind(e, e.target); });
   el.addEventListener('pointercancel', (e) => { if (swEnd(e)) return; tabUp(e); });
   // Hindrer at nettleseren tar over berøringen (og sender pointercancel) mens man sveiper tilbake.

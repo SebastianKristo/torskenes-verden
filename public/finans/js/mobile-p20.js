@@ -6,6 +6,7 @@ import { m, draw } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { FM, famLoad } from './mobile-p16.js';
 import { FT } from './mobile-p17.js';
+import { dragStart } from './mobile-p21.js';
 
 const ls = {
   get: (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } },
@@ -77,33 +78,41 @@ export function posCard() {
   const show = rows.length > 4 ? rows.slice(0, 3) : rows, more = rows.length - show.length;
   const cell = (p) => `<span class="p20-pp"><span class="p20-av" style="background:${esc(p.color)}">${p.img ? `<img src="${esc(p.img)}" alt="">` : esc(p.ini)}<i class="${p.status}" aria-label="${p.status === 'fresh' ? 'Delt nå' : p.status === 'stale' ? 'Eldre enn 15 min' : 'Deler ikke'}"></i></span><span class="p20-rt"><b>${esc(p.name)}</b><small>${esc(p.line2)}</small></span></span>`;
   return `<a class="pp-card p17-pw p20-pw" href="#/fam" data-p20="pos">${head}
-    <div class="p20-ppl">${show.map(cell).join('')}${more > 0 ? `<span class="p20-pp"><span class="p20-av more">+${more}</span><span class="p20-rt"><b>Flere</b><small>Åpne Familie</small></span></span>` : ''}${rows.length ? '' : '<span class="pp-mut">Ingen i familien ennå.</span>'}</div></a>`;
+    <div class="p20-ppl">${show.map(cell).join('')}${more > 0 ? `<span class="p20-pp"><span class="p20-av more">+${more}</span><span class="p20-rt"><b>Flere</b><small>Åpne Familie</small></span></span>` : ''}</div>${rows.some((p) => !p.self && p.status !== 'off') ? '' : '<span class="pp-mut p21-pe">Ingen deler posisjon med deg ennå</span>'}</a>`;
 }
 
 /* ---------- Kartfliser: /tiles via /api/config/map ---------- */
 
 const ERR_TILE = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="#d9d6cf"/></svg>')}`;
-const CARTO = { voyager: 'rastertiles/voyager', dark: 'dark_all', light: 'light_all' };
+// Prompt 21: standard er Kartverket topo (gratis, uten nøkkel) via serverens /tiles. Mørkt tema = topo med
+// mørkt CSS-filter (darkFilter), Papir = paperFilter. Eldre server uten /api/config/map: Kartverket direkte.
+const KV_TOPO = 'https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png';
+const DARK_F = 'invert(.92) hue-rotate(180deg) brightness(.92) contrast(.9) saturate(.6)';
 let mapCfg;
 async function mapConfig() {
   if (mapCfg) return mapCfg;
   try { const r = await fetch('/api/config/map', { cache: 'no-store' }); if (r.ok) { const j = await r.json(); if (j?.tiles) return (mapCfg = j); } } catch {}
-  // Eldre server uten /tiles: CARTO direkte (aldri tile.openstreetmap.org).
-  return (mapCfg = { fallback: true, tiles: Object.fromEntries(Object.entries(CARTO).map(([k, p]) => [k, `https://{s}.basemaps.cartocdn.com/${p}/{z}/{x}/{y}{r}.png`])), attribution: '© OpenStreetMap-bidragsytere © CARTO', default: 'voyager', maxZoom: 19 });
+  return (mapCfg = { fallback: true, tiles: { topo: KV_TOPO }, attribution: '© Kartverket', default: 'topo', dark: 'topo', paper: 'topo', darkFilter: DARK_F, paperFilter: 'sepia(.25) saturate(.8)', maxZoom: 18 });
 }
-/** style: 'dark' (mørkt tema), 'light' (Papir, med sepia i CSS) eller 'voyager'. Bytter laget når temaet endres. */
-export async function setTiles(Lf, map, el, style) {
-  const c = await mapConfig(), st = c.tiles[style] ? style : c.default || 'voyager', url = c.tiles[st] || Object.values(c.tiles)[0];
-  el?.classList.toggle('p20-sepia', st === 'light');
+/** mode: 'dark' (mørkt tema), 'paper' (lyst Papir) eller 'default'. Bytter laget og filteret når temaet endres. */
+export async function setTiles(Lf, map, el, mode) {
+  const c = await mapConfig();
+  const want = mode === 'dark' ? c.dark ?? c.default : mode === 'paper' || mode === 'light' ? c.paper ?? c.default : c.default;
+  const st = c.tiles[want] ? want : c.tiles[c.default] ? c.default : Object.keys(c.tiles)[0], url = c.tiles[st];
+  // Filter: et eget mørkt kartlag (f.eks. CARTO dark) trenger ikke filter; topo i mørkt tema gjør det.
+  const darkStyle = /dark/i.test(st);
+  const f = mode === 'dark' ? (darkStyle ? '' : c.darkFilter || DARK_F) : mode === 'paper' || mode === 'light' ? c.paperFilter || '' : '';
+  if (el) { el.classList.toggle('p21-tf', !!f); el.style.setProperty('--p21-tf', f || 'none'); el.classList.remove('p20-sepia'); }
   if (map._p20 && map._p20.key === url) return;
   map._p20?.layer.remove();
-  const layer = Lf.tileLayer(url, { maxZoom: c.maxZoom ?? 19, subdomains: 'abcd', crossOrigin: true, errorTileUrl: ERR_TILE, attribution: c.attribution || '© OpenStreetMap-bidragsytere © CARTO' }).addTo(map);
+  const err = mode === 'dark' && c.errorTileUrlDark ? c.errorTileUrlDark : c.errorTileUrl || ERR_TILE;
+  const layer = Lf.tileLayer(url, { maxZoom: c.maxZooms?.[st] ?? c.maxZoom ?? 19, subdomains: 'abcd', crossOrigin: true, detectRetina: !c.fallback, errorTileUrl: err, attribution: c.attributions?.[st] || c.attribution || '© Kartverket' }).addTo(map);
   map._p20 = { key: url, layer };
 }
 
 /* ---------- Finans-flisene: farger og egen rekkefølge (papir_fm_order) ---------- */
 
-export const FCOL = { budsjett: '#d9772b', kv: '#c0392b', fast: '#7b4fb0', konto: '#2f6fb5', aks: '#2f8a57', rap: '#b8892a', sub: '#c94f86', dir: '#2a8a8a', imp: '#4b55b0', finn: '#1f7fd1', sok: '#8a3b6e', set: '#77736a', liste: '#4a5a6a' };
+export const FCOL = { budsjett: '#c0562a', kv: '#b23a2a', fast: '#7a5ad6', konto: '#2b5d8a', aks: '#2f7d4f', rap: '#a8661a', sub: '#c2417a', dir: '#3f7a6e', imp: '#4a5bbf', finn: '#2b6cb0', sok: '#7a3b6b', set: '#6b6558', liste: '#5b6470' };
 const OKEY = 'papir_fm_order';
 export const FO = { edit: false, order: Array.isArray(ls.get(OKEY)) ? ls.get(OKEY) : null };
 /** Fra /api/me/layout (fmOrder), hvis serveren har lagret den. */
@@ -112,57 +121,39 @@ export function fmSort(T) {
   const o = FO.live ?? FO.order ?? [], ix = (k) => { const i = o.indexOf(k); return i < 0 ? 1e3 : i; };
   return T.map((t, i) => [t, i]).sort((a, b) => ix(a[0][0]) - ix(b[0][0]) || a[1] - b[1]).map(([t]) => t);
 }
-export const fmBar = () => (FO.edit ? '<div class="pp-edbar p20-fmbar" role="toolbar" aria-label="Flytt flisene"><div class="pp-row" style="align-items:center"><span>Dra flisene til ny plass</span><span class="p20-fmb"><button class="pp-btn sm ghost" data-p20="fmreset">Tilbakestill</button><button class="pp-btn sm" data-p20="fmdone">Ferdig</button></span></div></div>' : '');
+// Redigeringslinja (prompt 21): egen Papir-pille med kortbakgrunn og skygge, lesbar over toppbildet i lyst og mørkt.
+export const fmBar = () => (FO.edit ? '<div class="p21-fmbar" role="toolbar" aria-label="Flytt flisene"><span class="m-grow">Dra for å flytte</span><button class="p21-fmr" data-p20="fmreset">Tilbakestill</button><button class="p21-fmd" data-p20="fmdone">Ferdig</button></div>' : '');
 function fmSave(order) {
   FO.order = order; ls.set(OKEY, order);
   hlApi('/me/layout', { method: 'PUT', json: { fmOrder: order } }).catch(() => {}); // eldre server: bare lokalt
 }
+const fmDrop = (vis) => {
+  // Faner som ligger i fanelinja er skjult her; de beholder plassen sin bakerst i rekkefølgen.
+  const rest = (FO.order ?? []).filter((k) => !vis.includes(k));
+  fmSave([...vis, ...rest]); draw();
+};
+const fmDrag = (e, el) => dragStart(e, el, { sel: '.pp-fmt[data-fmk]', attr: 'data-fmk', drop: fmDrop });
 
-let lp = null, lpFired = false, dr = null;
+// Hold inne 500 ms på en flis: redigering, og draget starter med en gang (som på iOS). Flytter fingeren seg mer
+// enn 8 px før det, er det scrolling. Klikket etter et langt trykk åpner ikke siden.
+let lp = null, lpFired = false;
 export function p20Down(e) {
   lpFired = false;
   if ((e.button ?? 0) > 0) return;
   const t = e.target.closest?.('.pp-fmt[data-fmk]');
   if (!t) return;
-  if (FO.edit) return dragStart(e, t);
-  lp = { x: e.clientX, y: e.clientY, t: setTimeout(() => { lp = null; lpFired = true; FO.edit = true; haptic('ok'); navigator.vibrate?.(15); draw(); }, 450) };
+  if (FO.edit) return fmDrag(e, t);
+  const k = t.dataset.fmk, ev = { pointerId: e.pointerId, clientX: e.clientX, clientY: e.clientY };
+  lp = { x: e.clientX, y: e.clientY, t: setTimeout(() => {
+    lp = null; lpFired = true; FO.edit = true; haptic('ok'); navigator.vibrate?.(15); draw();
+    const n = document.querySelector(`.pp-fmt[data-fmk="${k}"]`);
+    if (n) fmDrag(ev, n);
+  }, 500) };
 }
 export function p20Move(e) {
-  if (lp && (Math.abs(e.clientX - lp.x) > 10 || Math.abs(e.clientY - lp.y) > 10)) { clearTimeout(lp.t); lp = null; }
-  if (!dr || e.pointerId !== dr.id) return;
-  e.preventDefault();
-  // Appen kan tegne på nytt midt i et drag (data som kommer inn): fortsett med den nye flisen.
-  if (!dr.el.isConnected) { const n = document.querySelector(`.pp-fmt[data-fmk="${dr.k}"]`); if (!n) { dr = null; return; } dr.el = n; n.classList.add('drag'); }
-  const over = document.elementsFromPoint(e.clientX, e.clientY).find((x) => x !== dr.el && !dr.el.contains(x) && x.matches?.('.pp-fmt[data-fmk]'));
-  if (over && over.parentNode === dr.el.parentNode) {
-    const kids = [...dr.el.parentNode.children], a = kids.indexOf(dr.el), b = kids.indexOf(over);
-    dr.el.parentNode.insertBefore(dr.el, a < b ? over.nextSibling : over);
-    FO.live = [...dr.el.parentNode.querySelectorAll('.pp-fmt[data-fmk]')].map((x) => x.dataset.fmk).concat((FO.order ?? []).filter((k) => !document.querySelector(`.pp-fmt[data-fmk="${k}"]`)));
-    haptic('tab'); navigator.vibrate?.(6);
-  }
-  dr.el.style.transform = '';
-  const r = dr.el.getBoundingClientRect();
-  dr.el.style.transform = `translate(${e.clientX - dr.ox - r.left}px,${e.clientY - dr.oy - r.top}px) scale(1.04)`;
+  if (lp && (Math.abs(e.clientX - lp.x) > 8 || Math.abs(e.clientY - lp.y) > 8)) { clearTimeout(lp.t); lp = null; }
 }
-export function p20Up(e) {
-  if (lp) clearTimeout(lp.t); lp = null;
-  if (!dr || (e && e.pointerId !== dr.id)) return;
-  if (!dr.el.isConnected) dr.el = document.querySelector(`.pp-fmt[data-fmk="${dr.k}"]`) ?? dr.el;
-  const g = dr.el.parentNode; dr.el.classList.remove('drag'); dr.el.style.transform = '';
-  dr = null; FO.live = null;
-  if (!g) return;
-  const vis = [...g.querySelectorAll('.pp-fmt[data-fmk]')].map((x) => x.dataset.fmk);
-  // Faner som ligger i fanelinja er skjult her; de beholder plassen sin bakerst i rekkefølgen.
-  const rest = (FO.order ?? []).filter((k) => !vis.includes(k));
-  fmSave([...vis, ...rest]);
-}
-function dragStart(e, el) {
-  e.preventDefault();
-  const r = el.getBoundingClientRect();
-  dr = { el, k: el.dataset.fmk, id: e.pointerId, ox: e.clientX - r.left, oy: e.clientY - r.top };
-  el.classList.add('drag');
-  try { el.setPointerCapture?.(e.pointerId); } catch {}
-}
+export function p20Up() { if (lp) clearTimeout(lp.t); lp = null; }
 /** Klikk: Ferdig, Tilbakestill, Posisjon-kortet (åpner Familie → Kart). Mens flisene redigeres, åpner de ingenting. */
 export function p20Click(e, t) {
   if (lpFired && t.closest?.('.pp-fmt')) { lpFired = false; e.preventDefault(); return true; }
@@ -171,6 +162,7 @@ export function p20Click(e, t) {
   if (x?.dataset.p20 === 'fmreset') { e.preventDefault(); FO.order = null; ls.set(OKEY, null); hlApi('/me/layout', { method: 'PUT', json: { fmOrder: [] } }).catch(() => {}); haptic('tap'); draw(); return true; }
   if (x?.dataset.p20 === 'pos') { FT.tab = 'kart'; return false; }
   if (FO.edit && t.closest?.('.pp-fmt')) { e.preventDefault(); return true; }
+  if (FO.edit && !t.closest?.('[data-p20]') && t.closest?.('.pp-fmgrid')) { e.preventDefault(); return true; }
   return false;
 }
 /** Når man går fra Mer, avsluttes redigeringen. */

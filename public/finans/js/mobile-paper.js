@@ -7,6 +7,7 @@ import { S, esc, n0, hlApi, ini, today, greet } from './core.js';
 import { m, draw, flash, pref, setPref, meName, avInner, avatarUrl, openSheet, upload, ACTIVE_JOBS } from './mobile.js';
 import { hlData, hlDom, ruterUrl } from './mobile-hl.js';
 import { TR, active, badge, carName } from './mobile-track.js';
+import { pkgLogo, pkgTitle, pkgMore } from './mobile-p21.js';
 import { haptic } from './mobile-haptics.js';
 import { matToday, matTitle } from './mobile-mat.js';
 import { edBlocks, finKeys, finScreens, fabStyle, fourth, onWay, rcBanner, FX, openNewShip } from './mobile-paper3.js';
@@ -14,7 +15,7 @@ import { mainTabs, heroBg, bolTitle } from './mobile-p16.js';
 import { SB } from './mobile-subs.js';
 import { aksTitle } from './mobile-aks.js';
 import { setTitle } from './mobile-set.js';
-import { appName, huskeWidget, bolWidget, scanCtx, homeUpload } from './mobile-p17.js';
+import { appName, huskeWidget, bolWidget, scanCtx, homeUpload, FT } from './mobile-p17.js';
 import { posCard, ppTi } from './mobile-p20.js';
 import { bgFetch, bgLayers, bgControls, saveBg, takeBg, bgSet } from './mobile-bg.js';
 
@@ -23,7 +24,7 @@ import { bgFetch, bgLayers, bgControls, saveBg, takeBg, bgSet } from './mobile-b
 export const paper = () => pref('mDesign') === 'papir';
 export const paperDark = () => { const v = pref('paperMode'); return v === 'mork' || (v === 'auto' && !!matchMedia('(prefers-color-scheme: dark)').matches); };
 const PHOTOS = [['weather', 'Vær'], ['planets', 'Planeter'], ['oslo', 'Oslo'], ['cur', 'Ingen']];
-const PHOTO_SUB = { cur: 'Bare mørk gradient', oslo: 'Oslo fra luften', weather: 'Følger været der du er (MET)', planets: 'Jorda, Månen, Jupiter og Mars (NASA)', custom: 'Ditt eget bilde' };
+const PHOTO_SUB = { cur: 'Bare mørk gradient', oslo: 'Oslo fra luften', weather: 'Følger været der du er (MET)', planets: 'Jorda, Månen, Jupiter, Mars og Saturn (NASA)', custom: 'Ditt eget bilde' };
 const WX_NB = { clear: 'klart', klart: 'klart', cloudy: 'skyet', sky: 'skyet', rain: 'regn', regn: 'regn', snow: 'snø', fog: 'tåke', night: 'natt' };
 export const photoKind = () => pref('photo') || 'cur';
 
@@ -45,13 +46,9 @@ export function takeDesign(r) {
 /* ---------- Fotovindu ---------- */
 
 const P = { photo: {}, img: {}, fail: {}, open: false, news: null, newsErr: '', cat: 'siste', set: false, nf: '', media: null, busy: false, press: false, hint: '' };
-const FALLBACK = {
-  cur: 'linear-gradient(170deg,#4a5a6a,#2a3440 60%,#1d242c)',
-  oslo: 'linear-gradient(170deg,#f2b36b 0%,#d7766a 45%,#4a3a5e 100%)',
-  weather: 'linear-gradient(170deg,#4a5a6c 0%,#7d8b99 55%,#b7c0c8 100%)',
-  planets: 'linear-gradient(170deg,#05060d 0%,#141a33 100%)',
-  custom: 'linear-gradient(170deg,#4a5a6a,#2a3440 60%,#1d242c)',
-};
+// Når ingen bilder kan lastes: rolig gradient (prompt 21), aldri en tegning.
+const CALM = 'linear-gradient(170deg,#4a5a6a,#2a3440 60%,#1d242c)';
+const FALLBACK = { cur: CALM, oslo: CALM, weather: CALM, planets: CALM, custom: CALM };
 
 // Bildene kommer fra serveren (/api/bg/…, lastet ned og cachet der), med reservebilder i «fallbacks».
 // Hvert bilde prøves i rekkefølge; feiler alle, vises gradienten og «Fikk ikke lastet bildet · trykk for å prøve igjen».
@@ -71,7 +68,7 @@ function probe(kind, force) {
     const next = (i) => {
       if (i >= list.length) { P.img[kind] = null; P.fail[kind] = true; console.warn(`[papir] fikk ikke lastet bakgrunnen «${kind}»`); return done(); }
       const im = new Image(), u = list[i] + (force ? `${list[i].includes('?') ? '&' : '?'}r=${Date.now()}` : '');
-      const to = setTimeout(() => { im.onload = im.onerror = null; next(i + 1); }, 8000);
+      const to = setTimeout(() => { im.onload = im.onerror = null; next(i + 1); }, 9000);
       im.onload = () => { clearTimeout(to); P.img[kind] = u; P.fail[kind] = false; done(); };
       im.onerror = () => { clearTimeout(to); next(i + 1); };
       im.src = u;
@@ -209,6 +206,10 @@ export function paperNav(scr) {
     return `<div class="pp-navbg" aria-hidden="true"></div><nav class="pp-nav sb-nav" data-ctx="sub" aria-label="Abonnementer">${[['home', 'Hjem', '⌂'], ['ins', 'Innsikt', '◔'], ['hist', 'Historikk', '↻']].map(([k, n, ic]) => `<button data-sb="tab" data-v="${k}" ${SB.tab === k ? 'aria-current="page"' : ''}><i>${ic}</i><span>${n}</span></button>`).join('')}
       <button class="pp-scan sb-red${SB.sheet ? ' on' : ''}" data-sb="sheet" aria-label="${SB.sheet ? 'Lukk' : 'Legg til abonnement'}" aria-expanded="${SB.sheet}">${SB.sheet ? '×' : '+'}</button></nav>`;
   }
+  // Familie (prompt 21): Kart, Soner og Helse i fanelinja, pluss Mer (som Abonnementer). Knappene øverst er skjult.
+  if (scr === 'fam') {
+    return `<div class="pp-navbg" aria-hidden="true"></div><nav class="pp-nav p21-fnav" data-ctx="fam" aria-label="Familie">${[['kart', 'Kart', '◎'], ['soner', 'Soner', '◌'], ['helse', 'Helse', '♡']].map(([k, n, ic]) => `<a href="#/fam" data-p17="ftab" data-k="${k}" role="tab" aria-selected="${FT.tab === k}" ${FT.tab === k ? 'aria-current="page"' : ''}><i>${ic}</i><span>${n}</span></a>`).join('')}<a href="#/mer" data-tab="mer"><i>⋯</i><span>Mer</span></a></nav>`;
+  }
   if (ctx === 'dom') plus = ['Legg til domene', 'dom'];
   const fabIc = plus[1] === 'spor' || plus[1] === 'dom' ? 'M12 5v14M5 12h14' : SCAN_IC;
   const fab = flyt ? `<button class="pp-fab${P.press ? ' down' : ''}" data-ppplus="${plus[1]}" aria-label="${plus[0]}${plus[1] === 'spor' || plus[1] === 'dom' ? '' : ' (trykk for kamera, hold inne for valg)'}" title="${esc(plus[0])}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${fabIc}"/></svg></button>` : '';
@@ -274,7 +275,7 @@ export function paperHome() {
   const H = hlData(), w = H?.weather;
   const pk = active(TR.data?.items ?? []).sort((a, b) => (a.status === 'ready_for_pickup' ? -1 : 0) - (b.status === 'ready_for_pickup' ? -1 : 0));
   const p0 = pk[0];
-  const pkg = p0 ? `<a class="pp-card pp-pkg" href="#/spor">${badge(p0.carrier, 52, p0.carrierLogo)}<span class="m-grow"><span class="pp-lab">${p0.status === 'ready_for_pickup' ? 'HENT I DAG' : 'PÅ VEI'}</span><b class="pp-serif">${esc(p0.name || p0.shop || p0.trackingNo)}</b><span class="pp-mut m-ell">${esc(p0.pickupPoint || p0.statusText || carName(p0.carrier))}${p0.eta ? ` · ${esc(/^\d{4}-\d\d-\d\d/.test(p0.eta) ? (p0.status === 'ready_for_pickup' ? 'innen ' : '') + new Date(p0.eta.slice(0, 10) + 'T12:00').toLocaleDateString('nb-NO', { day: 'numeric', month: 'numeric' }) : p0.eta)}` : ''}</span></span>${pk.length > 1 ? `<span class="pp-mut">${pk.length - 1} til ›</span>` : ''}</a>` : '';
+  const pkg = p0 ? `<a class="pp-card pp-pkg" href="#/spor">${pkgLogo(p0, 52)}<span class="m-grow" style="min-width:0"><span class="pp-lab">${p0.status === 'ready_for_pickup' ? 'HENT I DAG' : 'PÅ VEI'}</span><b class="pp-serif m-ell" style="display:block">${esc(pkgTitle(p0))}</b><span class="pp-mut m-ell">${esc(p0.pickupPoint || p0.statusText || carName(p0.carrier))}${p0.eta ? ` · ${esc(/^\d{4}-\d\d-\d\d/.test(p0.eta) ? (p0.status === 'ready_for_pickup' ? 'innen ' : '') + new Date(p0.eta.slice(0, 10) + 'T12:00').toLocaleDateString('nb-NO', { day: 'numeric', month: 'numeric' }) : p0.eta)}` : ''}</span></span>${pkgMore(p0, pk.length) ? `<span class="pp-mut p21-more">${pkgMore(p0, pk.length)}</span>` : ''}</a>` : '';
   // Brukerens egne stopp (Entur, prompt 16) går foran stoppene fra Homelab-oppsettet. Et trykk åpner Avganger.
   const src = H?.stops?.length ? H.stops.map((x) => ({ from: x.name, departures: x.departures })) : H?.ruter ?? [];
   const trips = src.flatMap((x) => (x.departures ?? []).slice(0, 2).map((d) => ({ ...d, min: d.min ?? d.minutes, to: d.to ?? x.to, from: x.from }))).sort((a, b) => (a.min ?? 99) - (b.min ?? 99)).slice(0, 3);

@@ -7,6 +7,7 @@ import { haptic } from './mobile-haptics.js';
 import { TR, trkLoad, carOf, normNo, detectLocal } from './mobile-track.js';
 import { hlData } from './mobile-hl.js';
 import { FCOL, FO, fmSort, fmBar, ppTi } from './mobile-p20.js';
+import { dragStart } from './mobile-p21.js';
 
 /* ---------- Valg (lokal kopi + /api/me/layout) ---------- */
 
@@ -76,27 +77,42 @@ export function edBlocks(page, blocks, { full = [] } = {}) {
   const { order, hidden } = pageCfg(page), on = ED.page === page, lab = Object.fromEntries(PG[page]);
   const vis = order.filter((k) => !hidden.includes(k) && blocks[k]);
   ED.vis[page] = vis;
-  const bar = on ? `<div class="pp-edbar" role="toolbar" aria-label="Tilpass siden"><div class="pp-row" style="align-items:center"><span>Flytt med ▲ ▼, skjul med −</span><button class="pp-btn sm" data-ped="done">Ferdig</button></div>
+  const bar = on ? `<div class="pp-edbar" role="toolbar" aria-label="Tilpass siden"><div class="pp-row" style="align-items:center"><span>Dra for å flytte · ▲ ▼ · skjul med −</span><button class="pp-btn sm" data-ped="done">Ferdig</button></div>
       ${hidden.length ? `<div class="pp-edhid"><span>Skjult:</span>${hidden.map((k) => `<button data-ped="show" data-k="${k}">+ ${esc(lab[k])}</button>`).join('')}</div>` : ''}</div>` : '';
   const html = vis.map((k, i) => `<div class="pp-ed${on ? ' on' : ''}${full.includes(k) ? ' full' : ''}" data-edk="${k}" data-edp="${page}">${on ? `<div class="pp-edc">
       <button data-ped="mv" data-k="${k}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Flytt ${esc(lab[k])} opp">▲</button><button data-ped="mv" data-k="${k}" data-d="1" ${i === vis.length - 1 ? 'disabled' : ''} aria-label="Flytt ${esc(lab[k])} ned">▼</button><button class="hide" data-ped="hide" data-k="${k}" aria-label="Skjul ${esc(lab[k])}">−</button></div>` : ''}${blocks[k]}</div>`).join('');
   return bar + html + (on ? '' : '<span class="pp-edhint">Hold inne et kort for å flytte eller skjule det</span>');
 }
+// Prompt 21: hold inne 500 ms virker på hele kortet, også på lenker og knapper, og draget starter med en gang.
+// Flyttes fingeren mer enn 8 px før det, avbrytes trykket (vanlig scrolling). I redigeringsmodus drar man kortene
+// direkte; ▲ ▼ − virker fortsatt. Rekkefølgen lagres per side (/api/me/layout.pages) når fingeren slippes.
 let lp = null, lpFired = false;
+const edDrop = (page) => (keys) => {
+  const { order, hidden } = pageCfg(page);
+  const vis = keys.filter((k) => order.includes(k));
+  savePage(page, [...vis, ...order.filter((k) => !vis.includes(k))], hidden); haptic('ok'); draw();
+};
+const edDrag = (e, el) => dragStart(e, el, { sel: '.pp-ed[data-edk]', attr: 'data-edk', drop: edDrop(el.dataset.edp) });
 export function edDown(e) {
   lpFired = false;
-  if ((e.button ?? 0) > 0 || ED.page) return;
+  if ((e.button ?? 0) > 0) return;
   const b = e.target.closest?.('[data-edk]');
-  // En pakke i Sporing har sitt eget lange trykk (velg flere); hold inne et annet kort for å flytte det.
-  if (!b || e.target.closest('input,textarea,select,label,[data-ped],[data-ppplus],[data-pk],.p17-chk')) return;
-  const page = b.dataset.edp;
-  lp = { x: e.clientX, y: e.clientY, t: setTimeout(() => { lp = null; lpFired = true; ED.page = page; haptic('ok'); navigator.vibrate?.(15); draw(); }, 500) };
+  if (!b || e.target.closest('input,textarea,select,[data-ped],[data-ppplus]')) return;
+  // En pakke i Sporing har sitt eget lange trykk (velg flere).
+  if (m.screen === 'spor' && e.target.closest('[data-pk]')) return;
+  if (ED.page) { if (ED.page === b.dataset.edp) edDrag(e, b); return; }
+  const page = b.dataset.edp, k = b.dataset.edk, ev = { pointerId: e.pointerId, clientX: e.clientX, clientY: e.clientY };
+  lp = { x: e.clientX, y: e.clientY, t: setTimeout(() => {
+    lp = null; lpFired = true; ED.page = page; haptic('ok'); navigator.vibrate?.(15); draw();
+    const n = document.querySelector(`.pp-ed[data-edk="${k}"]`);
+    if (n) edDrag(ev, n);
+  }, 500) };
 }
-export function edMove(e) { if (lp && (Math.abs(e.clientX - lp.x) > 10 || Math.abs(e.clientY - lp.y) > 10)) { clearTimeout(lp.t); lp = null; } }
+export function edMove(e) { if (lp && (Math.abs(e.clientX - lp.x) > 8 || Math.abs(e.clientY - lp.y) > 8)) { clearTimeout(lp.t); lp = null; } }
 export function edUp() { if (lp) clearTimeout(lp.t); lp = null; }
 /** Klikk: «Ferdig», ▲ ▼ − og «+ skjult kort». Mens siden redigeres, åpner ikke kortene noe. */
 export function edClick(e, t) {
-  if (lpFired) { lpFired = false; e.preventDefault(); return true; }
+  if (lpFired) { lpFired = false; e.preventDefault(); e.stopPropagation(); return true; }
   const x = t.closest?.('[data-ped]');
   if (x) {
     e.preventDefault();
@@ -114,7 +130,7 @@ export function edClick(e, t) {
     }
     draw(); return true;
   }
-  if (ED.page && t.closest?.('[data-edk]')) { e.preventDefault(); return true; }
+  if (ED.page && t.closest?.('[data-edk]')) { e.preventDefault(); e.stopPropagation(); return true; }
   return false;
 }
 
@@ -181,8 +197,8 @@ export function finMerGrid() {
   ].filter(([k]) => !inTabs.includes(k));
   // Prompt 20: egen ikonfarge per flis, og rekkefølgen brukeren har valgt (hold inne for å flytte). Linja med
   // Ferdig/Tilbakestill ligger under flisene, så de ikke flytter seg under fingeren når redigeringen starter.
-  return `<div class="pp-fmgrid${FO.edit ? ' edit' : ''}">${fmSort(T).map(([k, n, v, badge]) => `<a class="pp-fmt" href="#/${k === 'set' ? 'set' : k}" data-fmk="${k}" style="--fc:${FCOL[k] ?? 'var(--pp-lab)'}"><span class="pp-fmi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="${IC[k]}"/></svg></span>
-    ${badge ? `<span class="pp-fmb">${badge}</span>` : ''}<span class="pp-fmn"><b class="pp-serif">${esc(n)}</b><span class="${/▲/.test(v) ? 'pp-pos' : ''}">${esc(v)}</span></span></a>`).join('')}</div>${FO.edit ? fmBar() : '<span class="pp-edhint">Hold inne en flis for å endre rekkefølgen</span>'}`;
+  return `${FO.edit ? fmBar() : ''}<div class="pp-fmgrid${FO.edit ? ' edit' : ''}">${fmSort(T).map(([k, n, v, badge]) => `<a class="pp-fmt" href="#/${k === 'set' ? 'set' : k}" data-fmk="${k}" style="--fc:${FCOL[k] ?? 'var(--pp-lab)'}"><span class="pp-fmi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="${IC[k]}"/></svg></span>
+    ${badge ? `<span class="pp-fmb">${badge}</span>` : ''}<span class="pp-fmn"><b class="pp-serif">${esc(n)}</b><span class="${/▲/.test(v) ? 'pp-pos' : ''}">${esc(v)}</span></span></a>`).join('')}</div>${FO.edit ? '' : '<span class="pp-edhint">Hold inne en flis for å flytte den</span>'}`;
 }
 
 /* ---------- Finans → Søk med ✦ AI ---------- */

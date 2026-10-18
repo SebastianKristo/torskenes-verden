@@ -97,7 +97,7 @@ const PAGE = {
       ${G('', [nav('konto', 'Kontoer og brukere', '', 'users', '#5E8BFF'), nav('sik', 'Sikkerhet', me.totp ? '2FA på' : '', 'shield', '#34C759')])}
       ${G('', [btn('Logg ut', 'logout', '#b23a2a')])}`;
   },
-  bakgrunn: () => `${photoChoices()}<div class="snote">Bakgrunnen vises øverst på Hjem, i Papir og klassisk. «Vær» følger været der du er (MET), «Planeter» viser Jorda, Månen, Jupiter og Mars fra NASA, og «Oslo» er Oslo fra luften. Bildene lastes ned og skaleres av serveren din, og appen lagrer dem for bruk uten nett. «Kun på Wi-Fi» finnes i de native appene.</div>`,
+  bakgrunn: () => `${photoChoices()}<div class="snote">Bakgrunnen vises øverst på Hjem, i Papir og klassisk. «Vær» følger været der du er (MET), «Planeter» viser Jorda, Månen, Jupiter, Mars og Saturn fra NASA (ny hver dag), og «Oslo» er Oslo fra luften. Bildene lastes ned og skaleres av serveren din, og appen lagrer dem for bruk uten nett. «Kun på Wi-Fi» finnes i de native appene.</div>`,
   fanelinje: () => `<div class="sec">Hovedlinja</div>${tabEditor()}<div class="pp-col pp-navset" style="gap:8px">${navSettings()}</div>`,
   konto: () => `${G('Profilbilde', [`<label class="opt-row"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:44px;height:44px">${avInner()}</span><span class="m-grow" style="color:var(--m-acc);font-weight:500">${avatarUrl() ? 'Bytt profilbilde' : 'Last opp profilbilde'}</span><input class="m-file" type="file" accept="image/*" data-avatar></label>`, avatarUrl() ? btn('Fjern bildet', 'avdel', '#FF8A80') : ''], 'Velg fra Bilder, Filer eller ta et nytt bilde. Samme bilde vises i Homelab.')}
     ${G('På denne enheten', [profile(), val('Status', '✓ Aktiv', '#7BE3A0')],
@@ -297,7 +297,7 @@ export async function settingsBind(e, t) {
     seq.forEach((k, i) => setTimeout(() => haptic(k, { force: true }), i * 450));
     flash(seq.length ? `Tester: ${HAP_TYPES.filter(([k]) => hpref(k)).map(([, n]) => n.toLowerCase()).join(', ')}` : 'Alle typer er slått av'); return true;
   }
-  if (act === 'logout') { await fetch('/api/logout', { method: 'POST' }); location.href = '/login?next=/finans/'; return true; }
+  if (act === 'logout') { const { logout } = await import('./mobile-p21.js'); await logout(); return true; }
   if (act === 'design') { saveDesign({ mobileDesign: d('[data-sact]').dataset.v }); return true; }
   if (act === 'ppmode') { saveDesign({ paperMode: d('[data-sact]').dataset.v }); return true; }
   if (act === 'ppphoto') { paperState.open = true; location.hash = '#/hl'; return true; }

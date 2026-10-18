@@ -1,6 +1,7 @@
 // Sporing i mobilappen (prompt 11): egen fane i Homelab og «Pakker»-kortet i karusellen på Homelab-hjem.
 // Data fra /api/tracking (SPORING-arbeidet). Mangler endepunktet (eldre server), vises en forklaring i stedet for feil.
 // «Push» betyr her lokale varsler (Notification) mens appen er åpen i bakgrunnen; ekte server-push finnes ikke ennå.
+import { pkgLogo, pkgTitle } from './mobile-p21.js';
 import { esc, icon, ICONS, hlApi } from './core.js';
 import { m, draw, flash, avatar, theme } from './mobile.js';
 import { haptic, hpref, setHap } from './mobile-haptics.js';
@@ -130,7 +131,7 @@ export function pkgCard(th, list, { loading = false, missing = false } = {}) {
   const all = TR.data?.items ? active(TR.data.items) : items;
   const ready = all.filter(isReady).length;
   const count = all.length ? `${all.length} på vei${ready ? ` · ${ready} klar` : ''}` : '';
-  const rows = items.slice(0, 2).map((p) => `<span class="pkg-row">${badge(p.carrier, 34, p.carrierLogo)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(p.name || p.trackingNo)}</b><span class="m-ell ${statusCls(p)}">${esc(statusTxt(p))}${etaTxt(p) ? ` · ${esc(etaTxt(p))}` : ''}</span>${bars(p)}</span></span>`).join('');
+  const rows = items.slice(0, 2).map((p) => `<span class="pkg-row">${pkgLogo(p, 34)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(pkgTitle(p))}</b><span class="m-ell ${statusCls(p)}">${esc(statusTxt(p))}${etaTxt(p) ? ` · ${esc(etaTxt(p))}` : ''}</span>${bars(p)}</span></span>`).join('');
   return `<a class="hcard pkgcard ${th === 'ios' ? 'glass2' : ''}" href="#/spor" aria-label="Pakker – åpne Sporing">
     <span class="pkg-head"><span class="pkg-ic">${icon('box', 18)}</span><b class="m-grow">Pakker</b><span class="dim">${esc(count)}</span></span>
     ${rows || `<span class="pkg-none">${loading ? 'Henter pakker …' : missing ? 'Sporing krever nyere server.' : 'Ingen pakker på vei.'}</span>`}
@@ -176,8 +177,8 @@ function card(p) {
   const open = TR.open === p.id, ev = [...(p.events ?? [])].sort((a, b) => String(b.ts).localeCompare(String(a.ts))), c = carOf(p.carrier);
   const url = p.url || c.url + encodeURIComponent(p.trackingNo ?? '');
   return `<div class="trk-card ${gl()}${isReady(p) ? ' ready' : ''}${open ? ' open' : ''}">
-    <button class="trk-top" data-trkopen="${esc(p.id)}" aria-expanded="${open}">${badge(p.carrier, 42, p.carrierLogo)}
-      <span class="m-grow" style="min-width:0"><b class="m-ell">${esc(p.name || c.name)}</b><span class="m-ell trk-no"><span>${esc(p.carrierName || c.name)}</span> · <span class="m-mono">${esc(p.trackingNo)}</span></span></span>
+    <button class="trk-top" data-trkopen="${esc(p.id)}" aria-expanded="${open}">${pkgLogo(p, 42)}
+      <span class="m-grow" style="min-width:0"><b class="m-ell">${esc(pkgTitle(p))}</b><span class="m-ell trk-no"><span>${esc(p.carrierName || c.name)}</span> · <span class="m-mono">${esc(p.trackingNo)}</span></span></span>
       <span class="trk-pills">${srcPill(p)}${p.direction === 'out' ? '<em class="trk-src out">Utgående</em>' : ''}</span></button>
     <div class="trk-stat"><b class="${statusCls(p)}">${esc(statusTxt(p))}</b>${etaTxt(p) ? `<span>${esc(etaTxt(p))}</span>` : ''}</div>
     ${steps(p)}
