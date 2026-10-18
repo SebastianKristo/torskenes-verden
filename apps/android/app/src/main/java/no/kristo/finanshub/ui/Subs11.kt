@@ -127,7 +127,7 @@ internal fun SubsMobileScreen(vm: AppViewModel) {
             }
         }
     }
-    if (vm.subAdding) ModalBottomSheet(onDismissRequest = { vm.subAdding = false }, containerColor = C.surface1) { AddSubSheet(vm) { vm.subAdding = false } }
+    if (vm.subAdding) ModalBottomSheet(onDismissRequest = { vm.subAdding = false }, containerColor = sheetBg(), contentColor = sheetInk()) { AddSubSheet(vm) { vm.subAdding = false } }
 }
 
 private fun whenText(date: String): String {

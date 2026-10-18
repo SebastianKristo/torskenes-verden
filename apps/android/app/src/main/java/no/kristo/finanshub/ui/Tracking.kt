@@ -49,35 +49,11 @@ import java.time.format.DateTimeFormatter
 /** Transportørmerket: initialer på merkefargen. */
 @Composable
 internal fun CarrierBadge(ini: String, color: Long, fg: Long, size: Int = 40, id: String? = null) {
-    // Standardmerker for de vanligste: Posten (rød med posthorn-ring), Bring (grønt ordmerke), PostNord (blå ordmerke),
-    // DHL (gul med røde striper) og Helthjem (lilla ordmerke). Transportøren gjenkjennes på id først, så på initialene.
-    // Andre får initialer på merkefargen.
-    val key = when (id?.lowercase()) { "posten" -> "P"; "bring" -> "B"; "postnord" -> "PN"; "dhl" -> "DHL"; "helthjem" -> "HH"; else -> ini.uppercase() }
-    when (key) {
-        "B" -> Box(Modifier.size(size.dp).clip(RoundedCornerShape((size * 0.28f).dp)).background(Color(0xFF7BC144)), contentAlignment = Alignment.Center) {
-            Text("bring", color = Color.White, fontWeight = FontWeight.Black, fontSize = (size * 0.27f).sp, maxLines = 1, letterSpacing = (-0.4).sp)
-        }
-        "P" -> Box(Modifier.size(size.dp).clip(RoundedCornerShape((size * 0.28f).dp)).background(Color(0xFFE32D22)), contentAlignment = Alignment.Center) {
-            Box(Modifier.size((size * 0.62f).dp).clip(CircleShape).border((size * 0.07f).dp, Color.White, CircleShape), contentAlignment = Alignment.Center) {
-                Text("P", color = Color.White, fontWeight = FontWeight.Black, fontSize = (size * 0.32f).sp, maxLines = 1)
-            }
-        }
-        "PN" -> Box(Modifier.size(size.dp).clip(RoundedCornerShape((size * 0.28f).dp)).background(Color(0xFF00A0D6)), contentAlignment = Alignment.Center) {
-            Text("postnord", color = Color.White, fontWeight = FontWeight.Bold, fontSize = (size * 0.2f).sp, maxLines = 1, letterSpacing = (-0.3).sp)
-        }
-        "DHL" -> Box(Modifier.size(size.dp).clip(RoundedCornerShape((size * 0.28f).dp)).background(Color(0xFFFFCC00)), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy((size * 0.03f).dp)) {
-                Box(Modifier.width((size * 0.7f).dp).height((size * 0.05f).dp).background(Color(0xFFD40511)))
-                Text("DHL", color = Color(0xFFD40511), fontWeight = FontWeight.Black, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic, fontSize = (size * 0.3f).sp, maxLines = 1)
-                Box(Modifier.width((size * 0.7f).dp).height((size * 0.05f).dp).background(Color(0xFFD40511)))
-            }
-        }
-        "HH" -> Box(Modifier.size(size.dp).clip(RoundedCornerShape((size * 0.28f).dp)).background(Color(0xFF2E2A6B)), contentAlignment = Alignment.Center) {
-            Text("helthjem", color = Color.White, fontWeight = FontWeight.Bold, fontSize = (size * 0.19f).sp, maxLines = 1, letterSpacing = (-0.3).sp)
-        }
-        else -> Box(Modifier.size(size.dp).clip(RoundedCornerShape((size * 0.28f).dp)).background(Color(color)), contentAlignment = Alignment.Center) {
-            Text(ini, color = Color(fg), fontWeight = FontWeight.Black, fontSize = (size * if (ini.length > 2) 0.28f else 0.36f).sp, maxLines = 1)
-        }
+    // Kjente transportører får merket fra serverens SVG (tegnet i CarrierMark); andre får initialer på merkefargen.
+    val key = carrierMarkId(id, ini)
+    if (key != null) { CarrierMark(key, size); return }
+    Box(Modifier.size(size.dp).clip(RoundedCornerShape((size * 0.22f).dp)).background(Color(color)), contentAlignment = Alignment.Center) {
+        Text(ini, color = Color(fg), fontWeight = FontWeight.Black, fontSize = (size * if (ini.length > 2) 0.28f else 0.36f).sp, maxLines = 1)
     }
 }
 

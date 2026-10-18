@@ -7,6 +7,9 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.net.ConnectivityManager
+import android.net.Network
+import no.kristo.finanshub.upload.PendingUpload
+import no.kristo.finanshub.upload.PendingUploads
 import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
@@ -248,8 +251,66 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         layout = localLayout()
         loadLocalLayout15()
         loadLocalLayout16()
+        refreshPending()
+        watchNetwork()
         if (loggedIn) refresh()
     }
+
+    /* ---------- Venter på opplasting (prompt 18) ---------- */
+
+    /** Kvitteringer som ikke kom fram (uten nett, tapt forbindelse eller serverfeil). Lagres på telefonen til de er lastet opp. */
+    var pendingUploads by mutableStateOf<List<PendingUpload>>(emptyList())
+        private set
+    var pendingBusy by mutableStateOf(false)
+        private set
+    private var netCallback: ConnectivityManager.NetworkCallback? = null
+
+    fun refreshPending() { pendingUploads = runCatching { PendingUploads.list(getApplication()) }.getOrDefault(emptyList()) }
+
+    /** Nettet kom tilbake: last opp det som venter (bare på Wi-Fi hvis det er valgt). */
+    private fun watchNetwork() {
+        val cm = getApplication<Application>().getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return
+        val cb = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                if (pendingUploads.isNotEmpty() && loggedIn) viewModelScope.launch { delay(1500); if (canUpload()) flushPending(quiet = true) }
+            }
+        }
+        runCatching { cm.registerDefaultNetworkCallback(cb); netCallback = cb }
+    }
+
+    override fun onCleared() {
+        val cm = getApplication<Application>().getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+        netCallback?.let { cb -> runCatching { cm?.unregisterNetworkCallback(cb) } }
+        super.onCleared()
+    }
+
+    /** «Prøv igjen»: laster opp alt som venter nå. */
+    fun retryPending() = viewModelScope.launch { flushPending(quiet = false) }
+
+    private suspend fun flushPending(quiet: Boolean) {
+        if (pendingBusy || !loggedIn) return
+        if (!canUpload()) { if (!quiet) message = "Venter på Wi-Fi (Innstillinger → Skanning)"; return }
+        pendingBusy = true
+        try {
+            val n = withContext(Dispatchers.IO) { PendingUploads.flush(getApplication(), api) }
+            refreshPending()
+            if (n > 0) { message = if (n == 1) "1 kvittering som ventet er lastet opp" else "$n kvitteringer som ventet er lastet opp"; loadReceipts(); loadJobs() }
+            else if (!quiet && pendingUploads.isNotEmpty()) message = pendingUploads.first().lastError ?: "Fikk ikke lastet opp ennå"
+        } finally { pendingBusy = false }
+    }
+
+    fun removePending(id: String) { PendingUploads.remove(getApplication(), id); refreshPending() }
+
+    private suspend fun queuePending(path: String, parts: List<Api.Part>, name: String, error: String?) {
+        withContext(Dispatchers.IO) { PendingUploads.add(getApplication(), path, name, parts, error) }
+        refreshPending()
+        PendingUploads.schedule(getApplication(), prefs.bool(AppPrefs.WIFI_ONLY))
+        message = "Ingen forbindelse med serveren. Kvitteringen venter på opplasting og sendes når nettet er tilbake."
+    }
+
+    private fun nameOf(uri: Uri): String = runCatching {
+        getApplication<Application>().contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+    }.getOrNull() ?: "Kvittering"
 
     private fun startScreen() = when (prefs.str(AppPrefs.START, "homelab")) {
         "home" -> Screen.Home; "list" -> Screen.List; "budget" -> Screen.Budget; else -> Screen.Homelab
@@ -437,6 +498,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (!notifyLoaded) loadNotify()
         lastSync = System.currentTimeMillis()
         if (offline.isNotEmpty() && canUpload()) { val q = offline; offline = emptyList(); uploadUris(q) }
+        if (pendingUploads.isNotEmpty()) launch { flushPending(quiet = true) }
         loadFor(screen)
         if (screen != Screen.Homelab) launch { loadHome() }
     }
@@ -1114,13 +1176,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         // Fra «Legg ved kvittering» i skjemaet: bli stående, kvitteringen kobles når den bokføres.
         if (editing != null) message = "Kvitteringen er lagt i opplastingskøen"
         else if (screen != Screen.Scan && !stay) this.open(Screen.Scan)
-        if (!canUpload()) { offline = offline + uris; message = "${uris.size} kvittering(er) venter på Wi-Fi"; return }
+        if (!canUpload()) {
+            launch { for (u in uris) runCatching { queuePending("/receipts", receiptParts(u), nameOf(u), "Venter på Wi-Fi") } }
+            message = "${uris.size} kvittering(er) venter på Wi-Fi"; return
+        }
         uploading += uris.size
         launch {
             try {
                 for (u in uris) {
                     try { uploadOne(u) } catch (e: ApiException) {
-                        if (e.status == 0) offline = offline + u // uten nett: prøv igjen ved neste synk
                         message = e.message
                     } finally { uploading = maxOf(0, uploading - 1) }
                 }
@@ -1141,6 +1205,19 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private suspend fun uploadOne(uri: Uri, path: String = "/receipts") {
+        val parts = receiptParts(uri)
+        try {
+            api.upload(path, parts)
+        } catch (e: ApiException) {
+            // Uten nett, tapt forbindelse eller feil på serveren: legg kvitteringen i «Venter på opplasting».
+            if (e.status == 0 || e.status >= 500) { queuePending(path, parts, nameOf(uri), e.message); return }
+            throw e
+        }
+        loadJobs()
+    }
+
+    /** Delene som sendes: originalen (eller skannekopien), JPEG-kopi og miniatyr. */
+    private suspend fun receiptParts(uri: Uri): List<Api.Part> {
         val ctx = getApplication<Application>()
         val mime = ctx.contentResolver.getType(uri) ?: "image/jpeg"
         val original = withContext(Dispatchers.IO) { ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes() } }
@@ -1158,16 +1235,18 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             scan?.let { parts += Api.Part("scan", "scan.jpg", "image/jpeg", it) }
             scaled(original, 240, 75)?.let { parts += Api.Part("thumb", "thumb.jpg", "image/jpeg", it) }
         }
-        val r = runCatching { parseReceipt(JSONObject(api.upload(path, parts))) }
-        r.exceptionOrNull()?.let { if (it is ApiException) throw it }
-        loadJobs()
+        return parts
     }
 
+    // Butikklogoer: hentes én gang og huskes. En logo som ikke kom (uten nett, eller serveren hadde ikke rukket å hente den)
+    // prøves igjen etter to minutter i stedet for å vises som bokstav resten av økten.
+    private val logoMiss = mutableMapOf<String, Long>()
     suspend fun logo(domain: String?): Bitmap? {
         if (domain.isNullOrBlank()) return null
-        if (logos.containsKey(domain)) return logos[domain]
-        val b = image("/finans/api/logo/" + URLEncoder.encode(domain, "UTF-8"))
-        logos[domain] = b
+        logos[domain]?.let { return it }
+        logoMiss[domain]?.let { if (System.currentTimeMillis() - it < 120_000) return null }
+        val b = image("/finans/api/logo/" + URLEncoder.encode(domain.trim().lowercase(), "UTF-8"))
+        if (b != null) { logos[domain] = b; logoMiss.remove(domain) } else logoMiss[domain] = System.currentTimeMillis()
         return b
     }
 

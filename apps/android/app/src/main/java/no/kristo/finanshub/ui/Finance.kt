@@ -478,8 +478,25 @@ internal fun ScanQueue(vm: AppViewModel, scan: () -> Unit, pick: () -> Unit) {
                 OutlinedButton(onClick = pick, modifier = Modifier.weight(1f).height(64.dp), shape = RoundedCornerShape(8.dp, 28.dp, 28.dp, 8.dp)) { Text("Bilder / filer") }
             }
         }
-        if (vm.offline.isNotEmpty()) item {
-            Text("${vm.offline.size} venter på nett${if (vm.flag(AppPrefs.WIFI_ONLY)) " (bare Wi-Fi)" else ""} · lastes opp ved neste synk", color = C.text2, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp))
+        if (vm.pendingUploads.isNotEmpty()) {
+            item { SectionLabel("Venter på opplasting${if (vm.flag(AppPrefs.WIFI_ONLY)) " (bare Wi-Fi)" else ""}") }
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    val n = vm.pendingUploads.size
+                    vm.pendingUploads.forEachIndexed { i, u ->
+                        Row(Modifier.fillMaxWidth().clip(itemShape(i, n)).background(C.surface1).padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(u.name.ifBlank { "Kvittering" }, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(pendingSub(u), color = C.text2, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            }
+                            TextButton(onClick = { vm.removePending(u.id) }) { Text("Fjern") }
+                        }
+                    }
+                }
+            }
+            item {
+                OutlinedButton(onClick = { vm.retryPending() }, enabled = !vm.pendingBusy, modifier = Modifier.fillMaxWidth()) { Text(if (vm.pendingBusy) "Prøver …" else "Prøv igjen") }
+            }
         }
         val jobs = vm.jobs.filter { it.status != "booked" }
         if (jobs.isNotEmpty() || vm.uploading > 0) {

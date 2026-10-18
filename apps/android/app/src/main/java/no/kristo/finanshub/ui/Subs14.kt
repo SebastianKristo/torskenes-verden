@@ -155,5 +155,5 @@ internal fun SubEditForm(vm: AppViewModel, s: SubItem?, close: () -> Unit, embed
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SubEditSheet(vm: AppViewModel, s: SubItem?, close: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = close, containerColor = C.surface1) { SubEditForm(vm, s, close) }
+    ModalBottomSheet(onDismissRequest = close, containerColor = sheetBg(), contentColor = sheetInk()) { SubEditForm(vm, s, close) }
 }

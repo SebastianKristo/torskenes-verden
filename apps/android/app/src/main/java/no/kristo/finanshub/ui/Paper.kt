@@ -327,6 +327,8 @@ internal fun PaperApp(
                             s == Screen.Folders -> PaperBoliger(vm, navBottom) { vm.scanTarget = "receipt"; vm.scanSheet = true }
                             // Innstillinger i Papir: aldri den klassiske skjermen.
                             s == Screen.Settings -> PaperSettings17(vm, navBottom, onPrivacyChanged)
+                            // Kvitteringer i Papir (prompt 18). Bekreftelsen av én kvittering bruker fortsatt den felles skjermen.
+                            s == Screen.Scan && vm.selectedReceipt == null -> PaperReceipts(vm, navBottom, takePhoto, pickFiles)
                             else -> PaneBox(navBottom) { MainPane(vm, false, scan, onPrivacyChanged) }
                         }
                     } }
