@@ -157,7 +157,6 @@ struct Fam22MapView: View {
             }
         }
         .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll, showsTraffic: false))
-        .annotationTitles(.hidden)
         .safeAreaPadding(.bottom, 40)
         .environment(\.colorScheme, p.dark ? ColorScheme.dark : ColorScheme.light)
         .onMapCameraChange(frequency: .onEnd) { ctx in
