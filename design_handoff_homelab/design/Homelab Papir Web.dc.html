@@ -9,7 +9,7 @@
 <x-dc>
 <helmet>
 <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&amp;family=Manrope:wght@400;500;600;700;800&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
-<style>body{margin:0;background:#f3efe6}a{color:#b23a2a;text-decoration:none}a:hover{color:#8a2a1d}</style>
+<style>@keyframes finLoad{0%{transform:translateX(-100%)}100%{transform:translateX(250%)}}body{margin:0;background:#f3efe6}a{color:#b23a2a;text-decoration:none}a:hover{color:#8a2a1d}</style>
 </helmet>
 <div style="min-height:100vh;background:#f3efe6;color:#1b1a17;font-family:Manrope,system-ui,sans-serif;overflow-x:hidden">
 
@@ -109,13 +109,13 @@
 </sc-if>
 
 </div>
-<sc-if value="{{ fin }}"><div style="position:fixed;inset:0;z-index:110;overflow-y:auto;background:#0D0F12"><dc-import name="FinansHub v2" on-close="{{ closeFin }}" hint-size="100%,100vh"></dc-import></div></sc-if>
+<sc-if value="{{ fin }}"><div style="position:fixed;inset:0;z-index:110;overflow-y:auto;background:#f3efe6"><div style="position:fixed;inset:0;z-index:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;box-sizing:border-box;background:#f3efe6;color:#1b1a17;font-family:Manrope,system-ui,sans-serif"><button onClick="{{ closeFin }}" style="position:absolute;top:20px;left:clamp(16px,3vw,44px);height:38px;padding:0 16px 0 12px;border-radius:999px;border:1px solid #d8d1c2;background:#fff;color:#1b1a17;cursor:pointer;font:600 13.5px Manrope">‹ Hjem</button><span style="width:56px;height:56px;border-radius:16px;background:#b23a2a;color:#fff;display:grid;place-items:center;font:500 24px Newsreader,serif">kr</span><span style="font:500 44px/1 Newsreader,serif;letter-spacing:-.01em">Økonomi</span><span style="display:block;width:220px;max-width:70vw;height:3px;border-radius:2px;background:#e3dccd;overflow:hidden">{{ finBar }}</span><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#8f897c;text-align:center">HENTER KONTOER, BUDSJETT OG KVITTERINGER</span></div><div style="position:relative;z-index:1"><dc-import name="FinansHub v2" on-close="{{ closeFin }}" hint-size="100%,100vh"></dc-import></div></div></sc-if>
 <sc-if value="{{ rss }}"><div onClick="{{ closeRss }}" style="position:fixed;inset:0;z-index:120;background:rgba(4,6,10,.5);backdrop-filter:blur(6px);display:grid;place-items:center;padding:24px"><div onClick="{{ stop }}" style="width:100%;max-width:1180px;height:min(860px,92vh)"><dc-import name="Nyhetsleser" variant="web" on-back="{{ closeRss }}" style="display:block;height:100%" hint-size="100%,100%"></dc-import></div></div></sc-if>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;startPage&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;dash&quot;,&quot;studie&quot;,&quot;rom&quot;,&quot;okonomi&quot;,&quot;hjem&quot;,&quot;mat&quot;,&quot;sporing&quot;,&quot;domener&quot;,&quot;nettverk&quot;],&quot;default&quot;:&quot;dash&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;onExit&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onSettings&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onLogout&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;},&quot;onFinans&quot;:{&quot;editor&quot;:null,&quot;tsType&quot;:&quot;() =&gt; void&quot;}}">
 const FPW=(f,w)=>'https://commons.wikimedia.org/wiki/Special:FilePath/'+encodeURIComponent(f)+'?width='+w;
-const BGSET={oslo:['Oslo_S_aerial.jpg','Oslo_Opera_House.jpg','Oslofjord.jpg'],vaer_klart:['Sky_with_clouds.jpg','Cumulus_clouds_in_fair_weather.jpeg'],vaer_sky:['Cloudy_Sky_Background.jpg','Clouds_over_the_Atlantic_Ocean.jpg'],vaer_regn:['Clouds_over_the_Atlantic_Ocean.jpg','Cloudy_Sky_Background.jpg'],planet:['PIA21641-Jupiter-SouthernStorms-JunoCam-20170525.jpg','Saturn_during_Equinox.jpg','The_Earth_seen_from_Apollo_17.jpg']};
+const BGSET={oslo:['Oslo_S_aerial.jpg','Oslo_Opera_House.jpg','Oslofjord.jpg'],vaer_klart:['Sky_with_clouds.jpg','Cumulus_clouds_in_fair_weather.jpeg'],vaer_sky:['Cloudy_Sky_Background.jpg','Clouds_over_the_Atlantic_Ocean.jpg'],vaer_regn:['Clouds_over_the_Atlantic_Ocean.jpg','Cloudy_Sky_Background.jpg'],planet:['PIA21641-Jupiter-SouthernStorms-JunoCam-20170525.jpg','The_Earth_seen_from_Apollo_17.jpg','FullMoon2010.jpg','OSIRIS_Mars_true_color.jpg','Saturn_during_Equinox.jpg']};
 const OV='linear-gradient(180deg,rgba(0,0,0,.28),rgba(0,0,0,0) 35%,rgba(0,0,0,.4))';
 const TABS=[['dash','Dashboard'],['studie','Studie'],['rom','Rom'],['okonomi','Økonomi'],['hjem','Hjem'],['mat','Mat'],['sporing','Sporing'],['domener','Domener'],['nettverk','Nettverk']];
 const HEAD={studie:['Uke 42 · 3 frister','Studie'],rom:['NASA · dagens rombilde','Satellitt og teleskop'],okonomi:['Oktober · 14 dager igjen','Økonomi'],hjem:['Home Assistant · 21 enheter','Hjem'],mat:['Uke 42','Mat'],sporing:['Pakker og sendinger','Sporing'],domener:['Siste 24 timer','Domener'],nettverk:['UniFi · 34 klienter','Nettverk']};
@@ -175,7 +175,7 @@ class Component extends DCLogic {
     const TB=[['Aktive',x=>x[3]<4],['Klar for henting',x=>x[3]===3],['På vei',x=>x[3]===1||x[3]===2],['Registrert',x=>x[3]===0],['Levert',x=>x[3]>=4],['Alle',()=>true]],ST=['Registrert','Hentet','I transport','Klar for henting','Levert'];
     const ff=(TB.find(t=>t[0]===s.tkTab)||TB[0])[1],TL=I0.filter(ff);
     const sd=pg==='rom'||pg==='domener'?null:SEC[pg];
-    return{heroH:dash?'clamp(320px,38vw,420px)':'240px',heroPb:dash?'46px':'30px',bgImg,bgName:(BG.find(b=>b[0]===s.bg)||BG[0])[1],bgOpen:s.bgOpen,meOpen:s.meOpen,
+    return{finBar:React.createElement('span',{style:{display:'block',width:'40%',height:'100%',borderRadius:2,background:'#b23a2a',animation:'finLoad 1.1s cubic-bezier(.4,0,.2,1) infinite'}}),heroH:dash?'clamp(320px,38vw,420px)':'240px',heroPb:dash?'46px':'30px',bgImg,bgName:(BG.find(b=>b[0]===s.bg)||BG[0])[1],bgOpen:s.bgOpen,meOpen:s.meOpen,
       toggleBg:()=>this.setState({bgOpen:!s.bgOpen,meOpen:false}),toggleMe:()=>this.setState({meOpen:!s.meOpen,bgOpen:false}),
       bgOpts:BG.map(([k,n,sub])=>{const kk=this.bgKey(k),ok=(s.bgOk||{})[kk],fail=(s.bgFail||{})[kk];return{n,sub:fail&&k!=='grad'?'Fikk ikke lastet bildet':sub,thumb:k!=='grad'&&ok?'url("'+ok+'")':'linear-gradient(170deg,#7d93aa,#4a5f76)',bg:s.bg===k?'#e6e0d2':'transparent',ck:s.bg===k?'✓':'',go:()=>this.sv({bg:k,bgOpen:false})}}),
       meItems:[['Innstillinger',p.onSettings],['Bytt til nåværende tema',p.onExit],['Logg ut',p.onLogout]].map(([n,f],i)=>({n,c:i===2?'#b23a2a':'#1b1a17',go:()=>{this.setState({meOpen:false});f&&f()}})),
