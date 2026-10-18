@@ -100,9 +100,24 @@ struct Shipment: Identifiable, Hashable {
     var archived: Bool
     var url: String
     var events: [TrackEvent]
+    /// Prompt 21: tittel fra serveren (varenavn eller butikk, aldri sporingsnummer), butikkens domene,
+    /// logoen ({id|domain, carrierLogo}) og antall andre pakker. Tomme fra eldre servere.
+    var title: String = ""
+    var shopDomain: String = ""
+    var logoId: String = ""
+    var logoDomain: String = ""
+    var carrierLogo: String = ""
+    var moreCount: Int? = nil
 
     init(_ o: [String: Any]) {
         id = JS.str(o, "id") ?? UUID().uuidString
+        title = JS.str(o, "title") ?? ""
+        shopDomain = JS.str(o, "shop_domain") ?? JS.str(o, "shopDomain") ?? ""
+        let lg: [String: Any]? = JS.dict(o, "logo")
+        logoId = JS.str(lg, "id") ?? ""
+        logoDomain = JS.str(lg, "domain") ?? ""
+        carrierLogo = JS.str(lg, "carrierLogo") ?? ""
+        moreCount = JS.int(o, "moreCount")
         // Lokale variabler: «??» lager closures, og de kan ikke lese self før alle felt er satt.
         let no = JS.str(o, "trackingNo") ?? JS.str(o, "no") ?? ""
         let car = JS.str(o, "carrier") ?? "other"
@@ -372,7 +387,7 @@ extension Store {
 let carrierDomains: [String: String] = [
     "posten": "posten.no", "bring": "bring.no", "postnord": "postnord.no", "dhl": "dhl.com", "ups": "ups.com",
     "fedex": "fedex.com", "gls": "gls-group.com", "schenker": "dbschenker.com", "helthjem": "helthjem.no",
-    "budbee": "budbee.com", "instabox": "instabox.io",
+    "budbee": "budbee.com", "instabox": "instabox.io", "porterbuddy": "porterbuddy.com", "db": "dbschenker.com", "dbschenker": "dbschenker.com",
 ]
 
 /// Transportørmerket: logoen når den finnes, ellers initialer på merkefargen.

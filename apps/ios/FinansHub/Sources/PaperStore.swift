@@ -98,6 +98,7 @@ extension Store {
 
     /// Bytter Papir-fane. Data lastes som i den klassiske appen.
     func paperGo(_ t: String) {
+        if paperTapBlocked { return }
         Haptics.shared.select()
         // Mellom Domener-fanene byttes bare seksjonen (dataene er de samme).
         if paperInDomains && Store.paperDomTabs.contains(t) && module == .domains {
@@ -172,12 +173,14 @@ extension Store {
 
     /// En Finans-fane fra den klassiske appen (Liste, Budsjett, Søk, Finn).
     func paperOpenFin(_ t: Tab) {
+        if paperTapBlocked { return }
         go(t)
         paperFin = t
     }
 
     /// En hel side fra den klassiske appen (Domener, Aksjer, Abonnementer, Boliger, Innstillinger …).
     func paperOpen(_ m: Module) {
+        if paperTapBlocked { return }
         paperFin = nil
         openSub(m)
     }
@@ -269,6 +272,7 @@ extension Store {
     }
 
     func openURL(_ u: URL?) {
+        if paperTapBlocked { return }
         guard let u else { return }
         Haptics.shared.tap()
         UIApplication.shared.open(u, options: [:], completionHandler: nil)
@@ -373,6 +377,7 @@ extension Store {
     }
 
     func openNews() {
+        if paperTapBlocked { return }
         newsOpen = true
         Task { await self.loadNews() }
     }

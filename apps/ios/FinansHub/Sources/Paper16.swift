@@ -524,7 +524,7 @@ struct PaperLookSettings: View {
 
     private var bgGrid: some View {
         let kinds: [(String, String, String)] = [("cur", "Ingen bilde", "Mørk gradient"), ("oslo", "Oslo", "Byen fra luften"),
-                                                  ("weather", "Vær nå", "Følger været der du er"), ("planets", "Planeter", "Jorda, Månen, Jupiter, Mars")]
+                                                  ("weather", "Vær nå", "Følger været der du er"), ("planets", "Planeter", "Jorda, Månen, Jupiter, Mars, Saturn")]
         return VStack(spacing: 8) {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
                 ForEach(kinds, id: \.0) { k in bgTile(k.0, k.1, k.2) }

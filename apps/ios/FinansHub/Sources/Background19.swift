@@ -25,7 +25,7 @@ struct BgPrefs: Codable, Equatable {
         if let d = try? JSONEncoder().encode(self) { UserDefaults.standard.set(d, forKey: "fh_bg_prefs") }
     }
 
-    static let planets: [(String, String)] = [("auto", "Bytt automatisk"), ("earth", "Jorda"), ("moon", "Månen"), ("jupiter", "Jupiter"), ("mars", "Mars")]
+    static let planets: [(String, String)] = [("auto", "Bytt automatisk"), ("earth", "Jorda"), ("moon", "Månen"), ("jupiter", "Jupiter"), ("mars", "Mars"), ("saturn", "Saturn")]
 }
 
 /// Svaret fra /api/background.
@@ -118,6 +118,28 @@ extension Store {
         print("[Papir] Fikk ikke lastet bakgrunnsbildet (\(kind)): \(urls.joined(separator: ", "))")
         if photoImage == nil { photoFailed = true }
         return true
+    }
+
+    /// Prompt 21: ekte foto i Ruter-visningen (/api/background?type=ruter). Hentes én gang per oppstart;
+    /// uten svar (eldre server) vises den rolige røde gradienten.
+    func loadRuterBackground() async {
+        if ruterBgTried { return }
+        ruterBgTried = true
+        let size: (w: Int, dpr: Int) = Store.bgPixelWidth()
+        guard let d = try? await api.callAt("/api", "GET", "/background?type=ruter&w=\(size.w)&dpr=\(size.dpr)") else { return }
+        let info: BgInfo = BgInfo(JS.obj(d))
+        let urls: [String] = info.urls
+        guard let first = urls.first else { return }
+        if UserDefaults.standard.string(forKey: "fh_bg_url_ruter") == first, ruterImage != nil { return }
+        if bgPrefs.wifiOnly && !onWifi { return }
+        for u in urls {
+            if let img = await loadBg(u) {
+                ruterImage = img
+                Store.storeBg("ruter", img)
+                UserDefaults.standard.set(first, forKey: "fh_bg_url_ruter")
+                return
+            }
+        }
     }
 
     /// Forhåndsvisning av hver type i Innstillinger → Bakgrunn (/api/background/previews).

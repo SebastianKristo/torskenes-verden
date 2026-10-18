@@ -71,6 +71,8 @@ extension Store {
     func enterPaperEdit(_ page: String) {
         guard paperEditPage != page else { return }
         Haptics.shared.tick()
+        // Prompt 21: klikket som kommer når fingeren slippes etter det lange trykket, skal ikke åpne siden.
+        paperEditAt = Date()
         withAnimation(.easeOut(duration: 0.2)) { paperEditPage = page }
     }
 
@@ -165,6 +167,7 @@ extension Store {
 
     /// Papir-siden for en Finans-fane: Papir-sider vises direkte, de andre er sider fra den klassiske appen.
     func paperFinGo(_ page: String) {
+        if paperTapBlocked { return }
         switch page {
         case "budsjett": paperGo("finans"); paperOpenFin(.budget)
         case "kvitt": paperGo("finans"); paperOpen(.upload)
@@ -213,6 +216,7 @@ extension Store {
 
     /// Transaksjonen med kvittering og bankrad (Detaljer).
     func openPaperTx(_ id: Int) {
+        if paperTapBlocked { return }
         paperTxId = id
         txDetail = nil
         paperGo("ftx")
@@ -317,7 +321,7 @@ struct PaperEditBar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                Text("Flytt med ▲ ▼ · skjul med −").font(PF.ui(13.5, .semibold)).foregroundStyle(p.bg).lineLimit(1).minimumScaleFactor(0.8)
+                Text("Dra for å flytte · ▲ ▼ · skjul med −").font(PF.ui(13.5, .semibold)).foregroundStyle(p.bg).lineLimit(1).minimumScaleFactor(0.8)
                 Spacer(minLength: 4)
                 Button { store.exitPaperEdit() } label: {
                     Text("Ferdig").font(PF.ui(13, .bold)).foregroundStyle(p.ink).padding(.horizontal, 16).frame(height: 34)
@@ -359,17 +363,42 @@ struct PaperEditableCard<C: View>: View {
     let keys: [String]
     @ViewBuilder let content: () -> C
     @State private var wig = false
+    @State private var width: CGFloat = 320
+
+    private var dragShield: some View {
+        Color.white.opacity(0.001)
+            .contentShape(Rectangle())
+            .onTapGesture { }
+            .draggable(key) {
+                content()
+                    .frame(width: width)
+                    .scaleEffect(1.03)
+                    .opacity(0.85)
+            }
+            .dropDestination(for: String.self) { items, _ in
+                guard let src = items.first else { return false }
+                store.dropPaperCard(page, src, on: key, keys)
+                return true
+            }
+    }
 
     var body: some View {
         let editing = store.paperEditPage == page
         let sign: Double = index % 2 == 0 ? 1 : -1
         content()
+            .disabled(editing)
             .allowsHitTesting(!editing)
+            .background(GeometryReader { g in Color.clear.onAppear { width = g.size.width } })
+            .overlay {
+                // Prompt 21: i redigeringsmodus fanger et usynlig lag alle trykk (ingen lenker åpnes),
+                // og kortet kan dras til en ny plass. ▲ ▼ − ligger over laget.
+                if editing { dragShield }
+            }
             .overlay(alignment: .topTrailing) {
                 if editing { controls.offset(x: 4, y: -8) }
             }
             .rotationEffect(.degrees(editing ? (wig ? 0.2 : -0.2) * sign : 0))
-            .simultaneousGesture(LongPressGesture(minimumDuration: 0.5).onEnded { _ in
+            .simultaneousGesture(LongPressGesture(minimumDuration: 0.5, maximumDistance: 8).onEnded { _ in
                 if !editing { store.enterPaperEdit(page) }
             })
             .onChange(of: editing) { _, on in startWiggle(on) }

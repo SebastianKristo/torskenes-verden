@@ -25,14 +25,25 @@ final class HealthSync {
     nonisolated static let familyTaskId = "no.kristo.finanshub.family"
 
     private let hk = HKHealthStore()
-    var share: [String: Bool] = (UserDefaults.standard.dictionary(forKey: "fh_health_share") as? [String: Bool]) ?? [:] {
-        didSet { UserDefaults.standard.set(share, forKey: "fh_health_share") }
+    // Prompt 21: valgene lagres per konto (AcctScope). Ingenting deles før brukeren slår det på.
+    var share: [String: Bool] = (UserDefaults.standard.dictionary(forKey: AcctScope.key("fh_health_share")) as? [String: Bool]) ?? [:] {
+        didSet { UserDefaults.standard.set(share, forKey: AcctScope.key("fh_health_share")) }
     }
-    var lastSent: Date? = UserDefaults.standard.object(forKey: "fh_health_sent") as? Date
+    var lastSent: Date? = UserDefaults.standard.object(forKey: AcctScope.key("fh_health_sent")) as? Date
     var lastError: String?
     /// Prompt 20: hovedbryteren «Del helsedata». Av = ingen synk, og serverdataene er slettet.
-    var master: Bool = (UserDefaults.standard.object(forKey: "fh_health_master") as? Bool) ?? true {
-        didSet { UserDefaults.standard.set(master, forKey: "fh_health_master") }
+    var master: Bool = (UserDefaults.standard.object(forKey: AcctScope.key("fh_health_master")) as? Bool) ?? false {
+        didSet { UserDefaults.standard.set(master, forKey: AcctScope.key("fh_health_master")) }
+    }
+
+    /// Kontobytte: les valgene til den nye kontoen. Observatørene stoppes når den nye kontoen ikke deler.
+    func reloadForAccount() {
+        let ud = UserDefaults.standard
+        share = (ud.dictionary(forKey: AcctScope.key("fh_health_share")) as? [String: Bool]) ?? [:]
+        lastSent = ud.object(forKey: AcctScope.key("fh_health_sent")) as? Date
+        master = (ud.object(forKey: AcctScope.key("fh_health_master")) as? Bool) ?? false
+        lastError = nil
+        if master { HealthObserver20.shared.start() } else { HealthObserver20.shared.stop() }
     }
     /// iOS sier ikke om lesetilgang er gitt, så vi husker bare at dialogen er vist.
     var asked: Bool = UserDefaults.standard.bool(forKey: "fh_health_asked") {
@@ -268,7 +279,7 @@ final class HealthSync {
         do {
             _ = try await api.callAt("/api", "POST", "/family/health", json: body, timeout: 20)
             lastSent = Date()
-            UserDefaults.standard.set(lastSent, forKey: "fh_health_sent")
+            UserDefaults.standard.set(lastSent, forKey: AcctScope.key("fh_health_sent"))
             lastError = nil
         } catch {
             lastError = error.localizedDescription

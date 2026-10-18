@@ -50,6 +50,10 @@ enum WidgetShared {
     /// Adressene i rekkefølgen widgeten prøver dem: hovedadressen, ekstern og lokal.
     static func save(server: String, external: String, local: String, token: String?) {
         let d = defaults
+        // Prompt 21: ny konto (eller ny innlogging) → tøm svarene fra forrige konto, så widgeten aldri viser
+        // en annen brukers data mens den venter på første henting.
+        let old: String? = d.string(forKey: "w.token")
+        if old != token { clearCaches() }
         d.set(server, forKey: "w.server")
         d.set(external, forKey: "w.external")
         d.set(local, forKey: "w.local")
@@ -58,7 +62,14 @@ enum WidgetShared {
 
     static func clear() {
         let d = defaults
-        for k in ["w.server", "w.external", "w.local", "w.token", "w.cache"] { d.removeObject(forKey: k) }
+        for k in ["w.server", "w.external", "w.local", "w.token"] { d.removeObject(forKey: k) }
+        clearCaches()
+    }
+
+    /// Bufrede svar for alle widgetene (finans, huskeliste og familie).
+    static func clearCaches() {
+        let d = defaults
+        for k in ["w.cache", "w.tasks", "w.family"] { d.removeObject(forKey: k) }
     }
 
     static var token: String? { defaults.string(forKey: "w.token") }

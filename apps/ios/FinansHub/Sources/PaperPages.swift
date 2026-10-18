@@ -38,17 +38,18 @@ struct PaperHome: View {
     }
 
     private func packageCard(_ s: Shipment) -> some View {
-        let more = Swift.max(0, ((store.tracking?.items ?? store.homePackages ?? []).filter { !$0.archived && $0.status != "delivered" }.count) - 1)
+        let counted: Int = Swift.max(0, ((store.tracking?.items ?? store.homePackages ?? []).filter { !$0.archived && $0.status != "delivered" }.count) - 1)
+        let more: Int = s.moreCount ?? counted
         return Button { store.paperGo("sporing") } label: {
             HStack(spacing: 14) {
                 PaperCarrierBadge(s: s, size: 52, radius: 14)
                 VStack(alignment: .leading, spacing: 2) {
                     PLabel(text: s.status == "ready_for_pickup" ? "Hent nå" : s.statusText)
-                    Text(s.name).font(PF.serif(20, medium: true)).foregroundStyle(p.ink).lineLimit(1)
+                    Text(s.displayTitle).font(PF.serif(20, medium: true)).foregroundStyle(p.ink).lineLimit(1)
                     Text([s.pickupPoint, s.eta].filter { !$0.isEmpty }.joined(separator: " · ")).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(1)
                 }
                 Spacer(minLength: 4)
-                Text(more > 0 ? "\(more) til ›" : "›").font(PF.ui(13)).foregroundStyle(p.mut)
+                Text(more > 0 ? (more == 1 ? "+1 pakke ›" : "+\(more) pakker ›") : "›").font(PF.ui(13)).foregroundStyle(p.mut)
             }
             .padding(.horizontal, 14).padding(.vertical, 12)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
@@ -263,13 +264,8 @@ struct PaperCarrierBadge: View {
     var size: CGFloat = 42
     var radius: CGFloat = 12
     var body: some View {
-        if CarrierMark.known(s.carrier) {
-            CarrierMark(carrier: s.carrier, size: size, radius: radius)
-        } else {
-            Text(s.carrierIni).font(PF.ui(size > 46 ? 13 : 12, .heavy)).foregroundStyle(Color(hex: s.carrierFg))
-                .frame(width: size, height: size)
-                .background(Color(hex: s.carrierColor), in: RoundedRectangle(cornerRadius: radius, style: .continuous))
-        }
+        // Prompt 21: butikklogo med fraktmerke, ellers fraktselskapets logo, til slutt bokstav på selskapets farge.
+        PackageLogo21(s: s, size: size, radius: radius)
     }
 }
 
@@ -662,7 +658,7 @@ struct PaperShipmentCard: View {
             HStack(spacing: 12) {
                 PaperCarrierBadge(s: s, size: 44)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(s.name).font(PF.serif(18, medium: true)).foregroundStyle(p.ink).lineLimit(1)
+                    Text(s.displayTitle).font(PF.serif(18, medium: true)).foregroundStyle(p.ink).lineLimit(1)
                     Text("\(s.carrierName) · \(s.trackingNo)").font(PF.ui(12)).foregroundStyle(p.mut).lineLimit(1)
                 }
                 Spacer(minLength: 0)

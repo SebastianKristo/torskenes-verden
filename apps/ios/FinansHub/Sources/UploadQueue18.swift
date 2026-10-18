@@ -14,6 +14,8 @@ struct PendingUpload: Codable, Identifiable, Hashable {
     var folderId: Int?
     var attempts: Int
     var lastError: String?
+    /// Prompt 21: kontoen som la filen i køen (AcctScope-nøkkel). Bare den kontoen laster den opp.
+    var accountId: String?
 }
 
 enum PendingQueue {
@@ -59,18 +61,20 @@ extension Store {
             data = d; kind = "pdf"; ext = "pdf"
         }
         guard let data, let name = PendingQueue.write(data, ext: ext) else { return }
-        let item = PendingUpload(id: UUID().uuidString, created: Date(), kind: kind, file: name, folderId: folder, attempts: 0, lastError: error)
+        let owner: String? = account?.scopeKey
+        let item = PendingUpload(id: UUID().uuidString, created: Date(), kind: kind, file: name, folderId: folder, attempts: 0, lastError: error, accountId: owner)
         pendingUploads.append(item)
         PendingQueue.save(pendingUploads)
     }
 
     /// Prøver å laste opp alt som venter. Stopper ved første nettverksfeil (da er det ingen vits å prøve resten nå).
     func flushPending() async {
-        if pendingBusy || pendingUploads.isEmpty || !canUploadNow || !loggedIn { return }
+        let mine: [PendingUpload] = myPendingUploads
+        if pendingBusy || mine.isEmpty || !canUploadNow || !loggedIn { return }
         pendingBusy = true
         defer { pendingBusy = false }
         var done = 0
-        for item in pendingUploads {
+        for item in mine {
             guard let data = PendingQueue.read(item) else { removePending(item.id); continue }
             let parts: [API.Part]
             if item.kind == "pdf" {
@@ -122,14 +126,14 @@ extension Store {
 struct PendingUploadsList: View {
     @Environment(Store.self) private var store
     var body: some View {
-        if !store.pendingUploads.isEmpty {
+        if !store.myPendingUploads.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("Venter på opplasting · \(store.pendingUploads.count)").font(.footnote.weight(.semibold)).foregroundStyle(Color.skinFg.opacity(0.75))
+                    Text("Venter på opplasting · \(store.myPendingUploads.count)").font(.footnote.weight(.semibold)).foregroundStyle(Color.skinFg.opacity(0.75))
                     Spacer()
                     Button("Prøv alle") { Task { await store.flushPending() } }.font(.footnote.weight(.semibold))
                 }
-                ForEach(store.pendingUploads) { p in row(p) }
+                ForEach(store.myPendingUploads) { p in row(p) }
                 Text(store.wifiOnly && !store.onWifi ? "Lastes opp når du er på Wi-Fi." : "Lastes opp av seg selv når forbindelsen er tilbake.")
                     .font(.caption).foregroundStyle(Color.skinFg.opacity(0.55))
             }

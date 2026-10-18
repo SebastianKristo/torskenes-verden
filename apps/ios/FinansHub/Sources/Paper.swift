@@ -335,6 +335,8 @@ struct PaperTabBar: View {
         if store.paperInDomains { return [("domener", "Oversikt", "◎"), ("dpub", "Publikum", "◍"), ("dytl", "Ytelse", "⚡"), ("dinf", "Infra", "▤")] }
         // Subscription OS: Hjem, Innsikt og Historikk i linja (med den røde +-sirkelen).
         if store.paperTab == "abo" { return [("abo:home", "Hjem", "house"), ("abo:ins", "Innsikt", "chart.bar"), ("abo:hist", "Historikk", "clock")] }
+        // Prompt 21: Familie har Kart, Soner og Helse i linja (som Subscription OS), pluss Mer.
+        if store.paperTab == "familie" { return [("fam:kart", "Kart", "map"), ("fam:soner", "Soner", "circle.dashed"), ("fam:helse", "Helse", "heart"), ("mer", "Mer", "ellipsis")] }
         var t: [(String, String, String)] = []
         if store.paperInFinance {
             for f in store.finNavItems { t.append((f.page, f.name, f.icon)) }
@@ -348,6 +350,7 @@ struct PaperTabBar: View {
     private var current: String {
         if store.paperInDomains { return store.paperTab }
         if store.paperTab == "abo" { return "abo:" + store.subTab }
+        if store.paperTab == "familie" { return "fam:" + FamilyModel.shared.tab }
         if store.paperInFinance {
             let c = store.paperFinCurrent
             let ids = tabs.map(\.0)
@@ -360,7 +363,7 @@ struct PaperTabBar: View {
     }
 
     /// Hovedlinja kan redigeres (hold inne); Finans-, Domener- og abonnementslinjene følger siden.
-    private var editable: Bool { !store.paperInFinance && !store.paperInDomains && store.paperTab != "abo" }
+    private var editable: Bool { !store.paperInFinance && !store.paperInDomains && store.paperTab != "abo" && store.paperTab != "familie" }
 
     var body: some View {
         let cur = current
@@ -369,7 +372,7 @@ struct PaperTabBar: View {
         } else {
             HStack(spacing: 2) {
                 ForEach(tabs, id: \.0) { t in tab(t.0, t.1, t.2, on: cur == t.0) }
-                if !floating || store.paperTab == "abo" {
+                if (!floating && store.paperTab != "familie") || store.paperTab == "abo" {
                     PaperPlusButton(label: plusLabel, tap: plusTap, hold: plusHold)
                         .padding(.leading, 4)
                 }
@@ -435,6 +438,12 @@ struct PaperTabBar: View {
             store.subTab = String(id.dropFirst(4))
             return
         }
+        if id.hasPrefix("fam:") {
+            Haptics.shared.select()
+            FamilyModel.shared.tab = String(id.dropFirst(4))
+            return
+        }
+        if id == "mer" && store.paperTab == "familie" { store.paperMainTab("mer"); return }
         if on {
             if store.paperInner || store.paperFin != nil || store.paperClassic != nil { store.paperBack() }
             return
@@ -835,23 +844,14 @@ struct PaperHero: View {
             // Bildet med uskarphet, mørklegging, dempede farger, papirtekstur og ev. regn/snø (Background19.swift).
             BgPhotoLayer(image: img)
         } else {
-            LinearGradient(colors: gradientColors, startPoint: .topLeading, endPoint: .bottomTrailing)
+            LinearGradient(colors: gradientColors, startPoint: UnitPoint(x: 0.42, y: 0), endPoint: UnitPoint(x: 0.58, y: 1))
         }
     }
 
-    /// Reserve uten bilde: gradient etter været («Vær nå») eller den nåværende blågrå.
+    /// Reserve uten bilde: gradienten fra serveren, ellers den rolige blågrå (aldri en tegning).
     private var gradientColors: [Color] {
         if let c = store.photoWindow?.colors, c.count >= 2, store.photo != "cur" { return c }
-        if store.photo == "oslo" { return [Color(hex: "#6f86a0"), Color(hex: "#c9a27a"), Color(hex: "#3a4250")] }
-        if store.photo == "weather" {
-            switch store.weatherWord {
-            case "regn": return [Color(hex: "#3d4a57"), Color(hex: "#1f2730")]
-            case "snø": return [Color(hex: "#9fb0c0"), Color(hex: "#4f5f70")]
-            case "klart": return [Color(hex: "#5d8fc9"), Color(hex: "#d9a86a")]
-            default: return [Color(hex: "#6c7a88"), Color(hex: "#323c46")]
-            }
-        }
-        if store.photo == "planets" { return [Color(hex: "#1b1530"), Color(hex: "#5a3a2a")] }
+        // Prompt 21: ingen tegnet planet; når fotoet ikke kan lastes, vises den rolige gradienten.
         return [Color(hex: "#4a5a6a"), Color(hex: "#2a3440"), Color(hex: "#1d242c")]
     }
 

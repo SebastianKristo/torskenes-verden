@@ -92,9 +92,16 @@ struct FamZone: Identifiable, Hashable {
     var color: String
     /// userId → (enter, leave) for den som ser på.
     var notify: [String: [Bool]]
+    /// Prompt 21: sonen er delt med familien (standard av), hvem som lagde den, og om den er din.
+    var shared: Bool = false
+    var createdBy: String = ""
+    var mineFlag: Bool? = nil
 
     init(_ o: [String: Any]) {
         id = JS.str(o, "id") ?? UUID().uuidString
+        shared = JS.bool(o, "shared") ?? false
+        createdBy = JS.str(o, "created_by") ?? JS.str(o, "createdBy") ?? JS.str(o, "owner") ?? ""
+        mineFlag = JS.bool(o, "mine")
         name = JS.str(o, "name") ?? "Sone"
         lat = JS.num(o, "lat") ?? 0
         lon = JS.num(o, "lon") ?? 0
@@ -142,11 +149,14 @@ final class FamilyModel {
     static let shared = FamilyModel()
 
     var meId = ""
-    var sharing = UserDefaults.standard.string(forKey: "fh_fam_sharing") ?? "off" {
-        didSet { UserDefaults.standard.set(sharing, forKey: "fh_fam_sharing") }
+    /// Fanen i Familie (Kart, Soner eller Helse). Velges i fanelinja nederst (prompt 21).
+    var tab: String = "kart"
+    // Prompt 21: valgene lagres per konto (AcctScope), og deling er av som standard.
+    var sharing: String = UserDefaults.standard.string(forKey: AcctScope.key("fh_fam_sharing")) ?? "off" {
+        didSet { UserDefaults.standard.set(sharing, forKey: AcctScope.key("fh_fam_sharing")) }
     }
-    var precision = UserDefaults.standard.string(forKey: "fh_fam_precision") ?? "exact" {
-        didSet { UserDefaults.standard.set(precision, forKey: "fh_fam_precision") }
+    var precision: String = UserDefaults.standard.string(forKey: AcctScope.key("fh_fam_precision")) ?? "exact" {
+        didSet { UserDefaults.standard.set(precision, forKey: AcctScope.key("fh_fam_precision")) }
     }
     var members: [FamMember] = []
     var zones: [FamZone] = []
@@ -158,7 +168,17 @@ final class FamilyModel {
     var zoneDraft: CLLocationCoordinate2D?
     var zoneEdit: FamZone?
     var addingZone = false
-    private var lastEventTs: Double = UserDefaults.standard.double(forKey: "fh_fam_events_since")
+    private var lastEventTs: Double = UserDefaults.standard.double(forKey: AcctScope.key("fh_fam_events_since"))
+
+    /// Kontobytte: tøm alt fra forrige konto og les valgene for den nye.
+    func resetForAccount() {
+        members = []; zones = []; events = []; selected = nil; track = []
+        loaded = false; error = nil; zoneDraft = nil; zoneEdit = nil; addingZone = false
+        meId = ""
+        sharing = UserDefaults.standard.string(forKey: AcctScope.key("fh_fam_sharing")) ?? "off"
+        precision = UserDefaults.standard.string(forKey: AcctScope.key("fh_fam_precision")) ?? "exact"
+        lastEventTs = UserDefaults.standard.double(forKey: AcctScope.key("fh_fam_events_since"))
+    }
 
     func member(_ id: String) -> FamMember? { members.first { $0.id == id } }
     func zone(_ id: String) -> FamZone? { zones.first { $0.id == id } }
@@ -229,8 +249,15 @@ final class FamilyModel {
 
     /* ---------- Soner ---------- */
 
-    func saveZone(name: String, coord: CLLocationCoordinate2D, radius: Double, color: String, id: String?, _ store: Store) {
-        let body: [String: Any] = ["name": name, "lat": coord.latitude, "lon": coord.longitude, "radius": radius, "color": color]
+    /// Bare den som lagde sonen kan endre eller slette den. Eldre servere uten eier: alle soner regnes som egne.
+    func zoneIsMine(_ z: FamZone) -> Bool {
+        if let f = z.mineFlag { return f }
+        if z.createdBy.isEmpty || meId.isEmpty { return true }
+        return z.createdBy == meId
+    }
+
+    func saveZone(name: String, coord: CLLocationCoordinate2D, radius: Double, color: String, id: String?, shared: Bool = false, _ store: Store) {
+        let body: [String: Any] = ["name": name, "lat": coord.latitude, "lon": coord.longitude, "radius": radius, "color": color, "shared": shared]
         Task {
             do {
                 if let id {
@@ -296,7 +323,7 @@ final class FamilyModel {
             if lastEventTs > 0 { notify(ev) }
         }
         lastEventTs = newest > 0 ? newest : Date().timeIntervalSince1970 * 1000
-        UserDefaults.standard.set(lastEventTs, forKey: "fh_fam_events_since")
+        UserDefaults.standard.set(lastEventTs, forKey: AcctScope.key("fh_fam_events_since"))
     }
 
     private func notify(_ ev: FamEvent) {
@@ -343,16 +370,20 @@ final class FamilyLocation: NSObject, CLLocationManagerDelegate {
 
     var status: CLAuthorizationStatus { manager.authorizationStatus }
 
+    /// Kontoen posisjonen sendes til (AcctScope-nøkkelen da delingen ble startet).
+    private var boundScope: String = ""
+
     @MainActor func attach(_ store: Store) {
         server = store.api.base
         token = store.api.token
+        boundScope = store.account?.scopeKey ?? ""
     }
 
     /// Starter delingen etter avtalen (sharing == "on" lokalt). Kalles ved oppstart og når valget endres.
     @MainActor func resume(_ store: Store) {
         attach(store)
-        if UserDefaults.standard.string(forKey: "fh_fam_sharing") == "on" {
-            start(store, precise: (UserDefaults.standard.string(forKey: "fh_fam_precision") ?? "exact") == "exact")
+        if UserDefaults.standard.string(forKey: AcctScope.key("fh_fam_sharing")) == "on" {
+            start(store, precise: (UserDefaults.standard.string(forKey: AcctScope.key("fh_fam_precision")) ?? "exact") == "exact")
         }
     }
 
@@ -434,10 +465,12 @@ final class FamilyLocation: NSObject, CLLocationManagerDelegate {
     }
 
     @MainActor private func send(_ loc: CLLocation, activity: String) {
-        guard !server.isEmpty, UserDefaults.standard.string(forKey: "fh_fam_sharing") == "on" else { return }
+        // Prompt 21: bare for kontoen som slo på delingen (og som fortsatt er den aktive).
+        guard !server.isEmpty, !boundScope.isEmpty, boundScope == AcctScope.current,
+              UserDefaults.standard.string(forKey: "fh_fam_sharing@" + boundScope) == "on" else { return }
         let dev = UIDevice.current
         // «Batteri og bevegelse» (Innstillinger → App → Helse og posisjon): av = uten batteri og aktivitet.
-        let extras: Bool = (UserDefaults.standard.object(forKey: "fh_share_battery") as? Bool) ?? true
+        let extras: Bool = (UserDefaults.standard.object(forKey: AcctScope.key("fh_share_battery")) as? Bool) ?? true
         var body: [String: Any] = [
             "lat": loc.coordinate.latitude, "lon": loc.coordinate.longitude, "acc": loc.horizontalAccuracy,
             "alt": loc.altitude, "activity": extras ? activity : "still", "ts": Int(loc.timestamp.timeIntervalSince1970 * 1000),
@@ -488,11 +521,11 @@ struct FamilyView: View {
     @State private var camera: MapCameraPosition = .automatic
     @MainActor private var m: FamilyModel { FamilyModel.shared }
 
-    @State private var tab = "kart"
+    private var tab: String { m.tab }
 
     var body: some View {
         VStack(spacing: 10) {
-            tabs
+            // Prompt 21: fanene ligger i fanelinja nederst, så knappene øverst er skjult i appen.
             if let e = m.error { PCard { Text(e).font(PF.ui(13)).foregroundStyle(p.lab).fixedSize(horizontal: false, vertical: true) } }
             switch tab {
             case "soner":
@@ -527,7 +560,7 @@ struct FamilyView: View {
     private var tabs: some View {
         HStack(spacing: 4) {
             ForEach([("kart", "Kart"), ("soner", "Soner"), ("helse", "Helse")], id: \.0) { t in
-                Button { tab = t.0; Haptics.shared.select() } label: {
+                Button { m.tab = t.0; Haptics.shared.select() } label: {
                     Text(t.1).font(PF.ui(14, .semibold)).foregroundStyle(tab == t.0 ? p.bg : p.ink)
                         .frame(maxWidth: .infinity, minHeight: 38)
                         .background(tab == t.0 ? p.ink : Color.clear, in: Capsule())
@@ -629,7 +662,7 @@ struct FamilyView: View {
                 Circle().fill(m.sharing == "on" ? p.pos : m.sharing == "paused" ? Color(hex: "#c27a1a") : p.mut).frame(width: 10, height: 10)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(sharingTitle).font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink)
-                    Text(m.precision == "approx" ? "Omtrentlig posisjon (ca. 1 km)" : "Nøyaktig posisjon").font(PF.ui(12)).foregroundStyle(p.mut)
+                    Text(m.sharing == "on" ? (m.precision == "approx" ? "Omtrentlig posisjon (ca. 1 km)" : "Nøyaktig posisjon") : "Av som standard · trykk for å slå på").font(PF.ui(12)).foregroundStyle(p.mut)
                 }
                 Spacer()
                 Text("Personvern ›").font(PF.ui(13, .semibold)).foregroundStyle(p.mut)
@@ -638,6 +671,10 @@ struct FamilyView: View {
             .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
         .buttonStyle(.plain)
+    }
+
+    private var othersSharing: [FamMember] {
+        m.members.filter { $0.id != m.meId && $0.sharing == "on" }
     }
 
     private var sharingTitle: String {
@@ -652,8 +689,11 @@ struct FamilyView: View {
 
     @ViewBuilder private var people: some View {
         PSection(title: "Familien", trailing: "\(m.members.count)")
-        if m.members.isEmpty {
-            PCard { Text(m.loaded ? "Ingen andre deler ennå. Alle som logger inn på serveren med appen, vises her." : "Henter familien …").font(PF.ui(13.5)).foregroundStyle(p.mut) }
+        if !m.loaded && m.members.isEmpty {
+            PCard { Text("Henter familien …").font(PF.ui(13.5)).foregroundStyle(p.mut) }
+        } else if othersSharing.isEmpty {
+            // Prompt 21: deling er av som standard. Bare de som selv slår på deling, vises med posisjon.
+            FamilyEmptyShare21()
         }
         ForEach(m.members) { mem in
             FamilyMemberCard(member: mem, selected: m.selected == mem.id) {
@@ -678,7 +718,7 @@ struct FamilyView: View {
                             Circle().fill(Color(hex: z.color)).frame(width: 14, height: 14)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(z.name).font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink)
-                                Text("Radius \(Int(z.radius)) m · " + notifyText(z)).font(PF.ui(12)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
+                                Text("Radius \(Int(z.radius)) m · " + zoneShareText(z) + " · " + notifyText(z)).font(PF.ui(12)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
                             }
                             Spacer()
                             Text("›").foregroundStyle(p.mut)
@@ -691,6 +731,11 @@ struct FamilyView: View {
             }
             .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         }
+    }
+
+    private func zoneShareText(_ z: FamZone) -> String {
+        if !m.zoneIsMine(z) { return "delt med deg" }
+        return z.shared ? "delt med familien" : "bare deg"
     }
 
     private func notifyText(_ z: FamZone) -> String {
@@ -898,6 +943,7 @@ struct FamilyZoneSheet: View {
     @State private var name = ""
     @State private var radius: Double = 150
     @State private var color = "#b23a2a"
+    @State private var shared: Bool = false
     @MainActor private var m: FamilyModel { FamilyModel.shared }
     private static let colors = ["#b23a2a", "#2f7a4f", "#2f5d8a", "#c27a1a", "#6b4fa0", "#1f7a7a"]
 
@@ -921,18 +967,24 @@ struct FamilyZoneSheet: View {
                         }
                     }
                 }
+                if canEdit { FamilyZoneShareRow21(on: $shared) }
                 if let z = zone { notifyList(z) }
-                HStack(spacing: 8) {
-                    if let z = zone {
-                        PLineButton(title: "Slett", height: 44) { m.deleteZone(z, store); close() }
+                if canEdit {
+                    HStack(spacing: 8) {
+                        if let z = zone {
+                            PLineButton(title: "Slett", height: 44) { m.deleteZone(z, store); close() }
+                        }
+                        PInkButton(title: "Lagre", height: 44, full: true) { save() }
                     }
-                    PInkButton(title: "Lagre", height: 44, full: true) { save() }
+                } else {
+                    Text("Sonen er delt med deg. Bare den som lagde den kan endre eller slette den.")
+                        .font(PF.ui(12.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
                 }
             }
             .padding(18)
         }
         .onAppear {
-            if let z = zone { name = z.name; radius = z.radius; color = z.color }
+            if let z = zone { name = z.name; radius = z.radius; color = z.color; shared = z.shared }
         }
     }
 
@@ -982,8 +1034,13 @@ struct FamilyZoneSheet: View {
     private func save() {
         let n = name.trimmingCharacters(in: .whitespaces)
         guard !n.isEmpty, let c = coord ?? zone?.coord else { store.flash("Skriv inn et navn på sonen"); return }
-        m.saveZone(name: n, coord: c, radius: radius, color: color, id: zone?.id, store)
+        m.saveZone(name: n, coord: c, radius: radius, color: color, id: zone?.id, shared: shared, store)
         close()
+    }
+
+    private var canEdit: Bool {
+        guard let z = zone else { return true }
+        return m.zoneIsMine(z)
     }
 
     private func close() {
@@ -1005,7 +1062,7 @@ struct FamilySettingsView: View {
         VStack(alignment: .leading, spacing: 4) {
             PLabel(text: "Deling av posisjon").padding(.leading, 4).padding(.top, 6)
             segment([("on", "På"), ("paused", "Pause"), ("off", "Av")], m.sharing) { m.setSharing($0, store) }
-            Text("De andre i familien ser når delingen er pauset eller slått av, men ikke hvor du er.").font(PF.ui(12)).foregroundStyle(p.mut).padding(.horizontal, 4)
+            Text("Av som standard. Bare de du deler med ser hvor du er, og helse vises aldri når delingen er av eller pauset.").font(PF.ui(12)).foregroundStyle(p.mut).padding(.horizontal, 4)
                 .fixedSize(horizontal: false, vertical: true)
             PLabel(text: "Hvor nøyaktig").padding(.leading, 4).padding(.top, 14)
             segment([("exact", "Nøyaktig"), ("approx", "Omtrentlig (ca. 1 km)")], m.precision) { m.setPrecision($0, store) }

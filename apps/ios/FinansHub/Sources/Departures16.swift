@@ -22,8 +22,18 @@ struct RuterDeparture: Identifiable, Hashable {
     var platform: String
     var cancelled: Bool
     var situation: String
+    /// Prompt 21: holdeplassene fra valgt stopp til endestasjonen, status («i rute» / «N min forsinket»),
+    /// forsinkelse fra serveren og lenke til Ruter. Tomme fra eldre servere.
+    var stops: [RuterCall21] = []
+    var status: String = ""
+    var delayMin: Int? = nil
+    var ruterUrl: String = ""
 
     init(_ o: [String: Any], _ i: Int) {
+        stops = JS.list(o, "stops").map { RuterCall21($0) }
+        status = JS.str(o, "status") ?? ""
+        delayMin = JS.int(o, "delayMin")
+        ruterUrl = JS.str(o, "ruterUrl") ?? ""
         line = JS.str(o, "line") ?? JS.str(o, "publicCode") ?? "?"
         to = JS.str(o, "to") ?? JS.str(o, "destination") ?? ""
         mode = JS.str(o, "mode") ?? ""
@@ -41,6 +51,7 @@ struct RuterDeparture: Identifiable, Hashable {
 
     /// Forsinkelse i minutter (sanntid mot rutetid).
     var delay: Int {
+        if let d = delayMin { return d }
         guard let a = aimed, let e = expected else { return 0 }
         return Int((e.timeIntervalSince(a) / 60).rounded())
     }
@@ -160,6 +171,8 @@ struct PaperDepartures: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
     @MainActor private var m: RuterModel { RuterModel.shared }
+    /// Prompt 21: avgangen som er utvidet med stopplisten (bare én om gangen).
+    @State private var openDep: String? = nil
 
     var body: some View {
         VStack(spacing: 10) {
@@ -169,6 +182,14 @@ struct PaperDepartures: View {
             if let s = m.current { board(s) } else { emptyCard }
         }
         .task { if m.stops.isEmpty || m.departures.isEmpty { await m.load(store) } }
+        .task {
+            // Sanntid: oppdater hvert 30. sekund mens visningen er åpen.
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                if Task.isCancelled { break }
+                await m.refresh(store)
+            }
+        }
         .sheet(isPresented: Binding(get: { m.searchOpen }, set: { m.searchOpen = $0 })) {
             RuterSearchSheet().environment(\.paper, p).presentationDetents([.medium, .large]).presentationBackground(p.bg)
         }
@@ -274,6 +295,12 @@ struct PaperDepartures: View {
             ForEach(Array(list.enumerated()), id: \.element.id) { i, d in
                 if i > 0 { Rectangle().fill(p.line).frame(height: 1).padding(.horizontal, 14) }
                 depRow(d)
+                    .contentShape(Rectangle())
+                    .onTapGesture { toggleDep(d) }
+                if openDep == d.openKey {
+                    RuterStopList21(dep: d, color: lineColor(d), stopName: s.name)
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                }
             }
             Button { Task { await m.refresh(store) } } label: {
                 Text("Oppdater ↻").font(PF.ui(13, .bold)).foregroundStyle(p.bg).padding(.horizontal, 18).frame(height: 36).background(p.ink, in: Capsule())
@@ -290,6 +317,12 @@ struct PaperDepartures: View {
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
 
+    private func toggleDep(_ d: RuterDeparture) {
+        Haptics.shared.select()
+        let k: String = d.openKey
+        withAnimation(.easeOut(duration: 0.2)) { openDep = openDep == k ? nil : k }
+    }
+
     private var updatedText: String {
         guard let u = m.updated else { return "Sanntid fra Entur" }
         return "Oppdatert " + JS.fmt(u, "HH:mm")
@@ -302,9 +335,9 @@ struct PaperDepartures: View {
                 .frame(minWidth: 34).frame(height: 26).padding(.horizontal, 4)
                 .background(lineColor(d), in: RoundedRectangle(cornerRadius: 7))
             VStack(alignment: .leading, spacing: 2) {
-                Text(d.to).font(PF.serif(17, medium: true)).foregroundStyle(d.cancelled ? p.mut : p.ink).strikethrough(d.cancelled)
+                Text(d.to).font(PF.ui(16, .bold)).foregroundStyle(d.cancelled ? p.mut : p.ink).strikethrough(d.cancelled)
                     .fixedSize(horizontal: false, vertical: true)
-                Text(detail(d)).font(PF.ui(12)).foregroundStyle(d.cancelled || d.delay > 2 ? p.lab : p.mut)
+                Text(detail(d)).font(PF.ui(12.5)).foregroundStyle(d.cancelled || d.delay > 0 ? p.lab : p.mut)
                     .fixedSize(horizontal: false, vertical: true)
                 if !d.situation.isEmpty {
                     Text("⚠ " + d.situation).font(PF.ui(12)).foregroundStyle(p.lab).fixedSize(horizontal: false, vertical: true)
@@ -312,8 +345,8 @@ struct PaperDepartures: View {
             }
             Spacer(minLength: 6)
             VStack(alignment: .trailing, spacing: 0) {
-                Text(minText(d)).font(PF.serif(22, medium: true)).foregroundStyle(p.ink).fixedSize()
-                Text(d.expected.map { JS.fmt($0, "HH:mm") } ?? "").font(PF.ui(11.5)).foregroundStyle(p.mut).fixedSize()
+                Text(minText(d)).font(PF.serif(26, medium: true)).foregroundStyle(p.ink).fixedSize()
+                Text(d.expected.map { JS.fmt($0, "HH:mm") } ?? "").font(PF.ui(12)).foregroundStyle(p.mut).fixedSize()
             }
         }
         .padding(.horizontal, 14).padding(.vertical, 10)
@@ -326,6 +359,14 @@ struct PaperDepartures: View {
 
     private func detail(_ d: RuterDeparture) -> String {
         var parts: [String] = []
+        // Prompt 21: «Trikk · plattform B · i rute» når serveren sender transportmåte og status.
+        if !d.status.isEmpty {
+            let mode: String = RuterCall21.modeName(d.mode)
+            if !mode.isEmpty { parts.append(mode) }
+            if !d.platform.isEmpty { parts.append("plattform \(d.platform)") }
+            parts.append(d.cancelled ? "innstilt" : d.status)
+            return parts.joined(separator: " · ")
+        }
         if !d.platform.isEmpty { parts.append("Plattform \(d.platform)") }
         if d.cancelled { parts.append("Innstilt") }
         else if d.realtime { parts.append(d.delay > 1 ? "\(d.delay) min forsinket" : "● Sanntid") }
@@ -336,11 +377,11 @@ struct PaperDepartures: View {
 
     private func lineColor(_ d: RuterDeparture) -> Color {
         if let c = d.color, !c.isEmpty { return Color(hex: c) }
-        switch d.mode {
-        case "metro": return Color(hex: "#EC700C")
-        case "tram": return Color(hex: "#0B91EF")
-        case "water": return Color(hex: "#682C88")
-        case "rail": return Color(hex: "#003087")
+        switch d.mode.lowercased() {
+        case "metro", "t-bane": return Color(hex: "#EC700C")
+        case "tram", "trikk": return Color(hex: "#0B91EF")
+        case "water", "båt": return Color(hex: "#682C88")
+        case "rail", "tog": return Color(hex: "#003087")
         default: return Color(hex: "#E60000")
         }
     }
@@ -400,26 +441,21 @@ struct RuterSearchSheet: View {
     }
 }
 
-/// Toppbildet på Avganger: Ruter-rødt med trikk og T-bane-linjer.
+/// Toppbildet på Avganger: ekte foto av trikken (/api/background?type=ruter). Uten bilde: rolig Ruter-rød gradient.
+/// Prompt 21: ingen tegnede linjer eller ikoner.
 struct RuterHeroArt: View {
+    @Environment(Store.self) private var store
+
     var body: some View {
         ZStack {
             LinearGradient(colors: [Color(hex: "#E60000"), Color(hex: "#9A0F0F"), Color(hex: "#3a0d0d")], startPoint: .topLeading, endPoint: .bottomTrailing)
-            GeometryReader { g in
-                let w = g.size.width, h = g.size.height
-                Path { p in
-                    p.move(to: CGPoint(x: -20, y: h * 0.78))
-                    p.addCurve(to: CGPoint(x: w + 20, y: h * 0.52), control1: CGPoint(x: w * 0.3, y: h * 0.95), control2: CGPoint(x: w * 0.6, y: h * 0.4))
+            if let img = store.ruterImage {
+                Color.clear.overlay {
+                    Image(uiImage: img).resizable().scaledToFill()
                 }
-                .stroke(Color(hex: "#EC700C").opacity(0.8), lineWidth: 5)
-                Path { p in
-                    p.move(to: CGPoint(x: -20, y: h * 0.9))
-                    p.addCurve(to: CGPoint(x: w + 20, y: h * 0.68), control1: CGPoint(x: w * 0.35, y: h * 1.05), control2: CGPoint(x: w * 0.7, y: h * 0.55))
-                }
-                .stroke(Color(hex: "#0B91EF").opacity(0.8), lineWidth: 5)
-                Image(systemName: "tram.fill").font(.system(size: h * 0.42, weight: .regular)).foregroundStyle(.white.opacity(0.14))
-                    .position(x: w * 0.8, y: h * 0.42)
+                .clipped()
             }
         }
+        .task { await store.loadRuterBackground() }
     }
 }

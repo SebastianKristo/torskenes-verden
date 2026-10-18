@@ -178,6 +178,7 @@ extension Store {
     }
 
     func openWeather() {
+        if paperTapBlocked { return }
         Haptics.shared.tap()
         weatherOpen = true
         Task { await self.loadWeatherFull() }

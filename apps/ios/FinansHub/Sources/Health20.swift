@@ -18,7 +18,7 @@ final class HealthObserver20 {
     func start() {
         guard HKHealthStore.isHealthDataAvailable() else { return }
         let ud = UserDefaults.standard
-        let master: Bool = (ud.object(forKey: "fh_health_master") as? Bool) ?? true
+        let master: Bool = (ud.object(forKey: AcctScope.key("fh_health_master")) as? Bool) ?? false
         guard master, ud.bool(forKey: "fh_health_asked") else { return }
         lock.lock()
         defer { lock.unlock() }
@@ -159,7 +159,7 @@ struct HealthPosSettings20: View {
     @MainActor private var h: HealthSync { HealthSync.shared }
     @MainActor private var m: FamilyModel { FamilyModel.shared }
     @State private var tick: Int = 0
-    @State private var battery: Bool = (UserDefaults.standard.object(forKey: "fh_share_battery") as? Bool) ?? true
+    @State private var battery: Bool = (UserDefaults.standard.object(forKey: AcctScope.key("fh_share_battery")) as? Bool) ?? true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -208,7 +208,7 @@ struct HealthPosSettings20: View {
             HealthDivider20()
             HealthToggleRow20(title: "Batteri og bevegelse", sub: "Batterinivå og om du går, sykler eller kjører", icon: "battery.75percent", on: battery) {
                 battery.toggle()
-                UserDefaults.standard.set(battery, forKey: "fh_share_battery")
+                UserDefaults.standard.set(battery, forKey: AcctScope.key("fh_share_battery"))
                 Haptics.shared.select()
             }
         }

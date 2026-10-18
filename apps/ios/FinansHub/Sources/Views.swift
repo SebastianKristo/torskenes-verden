@@ -735,14 +735,16 @@ struct JobQueue: View {
             SectionLabel(text: "Kø")
             VStack(spacing: 0) {
                 if store.uploading > 0 { row("Laster opp \(store.uploading) fil" + (store.uploading > 1 ? "er" : ""), "Sender til serveren …", nil) }
-                ForEach(jobs) { j in
-                    Divider().overlay(Color.skinFg.opacity(0.12))
+                // Prompt 21: skillelinjer bare mellom radene, aldri over den første (samme som «Til gjennomgang»).
+                ForEach(Array(jobs.enumerated()), id: \.element.id) { i, j in
+                    if i > 0 || store.uploading > 0 { Divider().overlay(Color.skinFg.opacity(0.12)) }
                     HStack(spacing: 0) {
                         jobButton(j)
                         if showReanalyze(j) { ReanalyzeButton(receiptId: j.id, compact: true).padding(.trailing, 12) }
                     }
                 }
             }
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
             .glass(24)
         }
     }

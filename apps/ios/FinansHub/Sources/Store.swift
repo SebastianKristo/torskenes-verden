@@ -279,6 +279,9 @@ final class Store {
     var bgPrefs = BgPrefs.load() { didSet { bgPrefs.save() } }
     /// Forhåndsvisning per type i Innstillinger → Bakgrunn.
     var bgPreviews: [String: UIImage] = [:]
+    /// Prompt 21: fotoet i Ruter-visningen (/api/background?type=ruter). nil = rød gradient.
+    var ruterImage: UIImage? = Store.cachedBg("ruter")
+    @ObservationIgnored var ruterBgTried: Bool = false
 
     /* ---------- Papir, prompt 14 ---------- */
 
@@ -314,6 +317,8 @@ final class Store {
     }
     /// Siden som er i redigeringsmodus (hold inne et kort), nil = ingen.
     var paperEditPage: String?
+    /// Prompt 21: når redigeringsmodus ble slått på (et langt trykk). Navigasjon like etter blokkeres.
+    @ObservationIgnored var paperEditAt: Date = .distantPast
     /// Finans-fanelinjen i Papir (opptil 4 av oversikt, liste, finn, sok, budsjett …). Mer er alltid sist.
     var finNav: [String] = UserDefaults.standard.stringArray(forKey: "fh_fin_nav") ?? ["oversikt", "liste", "finn", "sok"] {
         didSet { UserDefaults.standard.set(finNav, forKey: "fh_fin_nav") }
@@ -441,6 +446,9 @@ final class Store {
 
     init() {
         base = account?.server ?? ""
+        // Prompt 21: personlige valg på telefonen har nøkkel per konto.
+        AcctScope.current = account?.scopeKey ?? ""
+        AcctScope.migrate(accountCount: accounts.count)
         applyStart()
         locked = loggedIn && lockEnabled
         Privacy.shared.hidden = hideAmounts
@@ -557,6 +565,7 @@ final class Store {
         saveAccounts()
         clearData()
         base = account?.server ?? ""
+        applyAccountScope21()
         menuOpen = false
         backTo = nil
         applyStart()
@@ -583,12 +592,15 @@ final class Store {
     }
 
     private func remove(_ id: String) {
+        // Prompt 21: utlogging tømmer kontoens personlige valg på telefonen (familie og helse).
+        if let gone = accounts.first(where: { $0.id == id }) { AcctScope.forget(gone.scopeKey) }
         accounts.removeAll { $0.id == id }
         defer { syncWidgets() }
         if activeId == id {
             activeId = accounts.first?.id
             clearData()
             base = account?.server ?? ""
+            applyAccountScope21()
             layout = localLayout()
             if loggedIn { refresh() }
         }

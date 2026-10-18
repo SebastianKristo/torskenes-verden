@@ -13,10 +13,23 @@ struct TaskList17: Identifiable, Hashable {
     var id: String
     var name: String
     var color: String
+    /// Prompt 21: eier (bruker-id) og navn, og hvem listen er delt med. Tomt fra eldre servere.
+    var owner: String = ""
+    var ownerName: String = ""
+    var memberIds: [String] = []
+    var memberNames: [String] = []
+    /// `mine` fra serveren. nil = eldre server (alle lister regnes som egne).
+    var mineFlag: Bool? = nil
     init(_ o: [String: Any]) {
         id = JS.str(o, "id") ?? UUID().uuidString
         name = JS.str(o, "name") ?? "Liste"
         color = JS.str(o, "color") ?? "#1b1a17"
+        let share: TaskListShare21 = TaskListShare21(o)
+        owner = share.owner
+        ownerName = share.ownerName
+        memberIds = share.ids
+        memberNames = share.names
+        mineFlag = JS.bool(o, "mine")
     }
     init(id: String, name: String, color: String) { self.id = id; self.name = name; self.color = color }
 }
@@ -43,9 +56,11 @@ struct TaskItem17: Identifiable, Hashable {
 struct TaskMember17: Identifiable, Hashable {
     var id: String
     var name: String
+    var username: String = ""
     init(_ o: [String: Any]) {
         id = JS.str(o, "id") ?? ""
         name = JS.str(o, "name") ?? JS.str(o, "username") ?? "–"
+        username = JS.str(o, "username") ?? ""
     }
     var first: String { name.split(separator: " ").first.map(String.init) ?? name }
 }
@@ -81,6 +96,8 @@ final class TasksModel {
             items = JS.list(o, "items").map { TaskItem17($0) }
             members = JS.list(o, "members").map { TaskMember17($0) }
             error = nil
+            // Prompt 21: eier og deling fra /api/tasks/lists (eldre servere: 404, da beholdes listene over).
+            await loadListSharing(store)
         } catch let e as APIError {
             error = e.status == 404 ? "Huskelisten finnes ikke på serveren ennå. Oppdater homelab." : e.message
         } catch {
@@ -177,6 +194,7 @@ struct PaperTasksView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             listChips
+            if let l = m.lists.first(where: { $0.id == cur }) { TaskListHeader21(list: l) }
             addField
             options
             if let e = m.error { PCard { Text(e).font(PF.ui(13)).foregroundStyle(p.lab).fixedSize(horizontal: false, vertical: true) } }

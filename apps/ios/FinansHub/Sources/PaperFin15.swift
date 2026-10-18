@@ -511,7 +511,7 @@ struct PaperFinMoreGrid: View {
                 }
         } else {
             tile(t)
-                .simultaneousGesture(LongPressGesture(minimumDuration: 0.45).onEnded { _ in startEditing() })
+                .simultaneousGesture(LongPressGesture(minimumDuration: 0.45, maximumDistance: 8).onEnded { _ in startEditing() })
         }
     }
 
@@ -554,7 +554,7 @@ struct PaperFinMoreGrid: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top) {
                     Image(systemName: t.icon).font(.system(size: 17, weight: .semibold)).foregroundStyle(tint)
-                        .frame(width: 38, height: 38).background(tint.opacity(p.dark ? 0.24 : 0.13), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .frame(width: 38, height: 38).background(tint.opacity(0.14), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                     Spacer()
                     if t.badge > 0 {
                         Text("\(t.badge)").font(PF.ui(11.5, .bold)).foregroundStyle(.white).frame(minWidth: 22, minHeight: 22)
