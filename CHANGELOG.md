@@ -2,6 +2,32 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.14.0] – 18.10.2026 · prompt 22
+- **Familie har fått nytt design**, likt på iOS, Android og web:
+  - Fanelinje nederst med Kart · Soner · Helse · Mer, uten skann-knapp. Verktøyraden ligger over kartet.
+  - Kartet bruker Kartverket topo. Hver sone har ikon og farge, og personene vises med profilbilde, fart og spor.
+  - Soner kan nå få ett av 13 ikoner og en hvilken som helst farge.
+  - Du kan sette et eget bilde på hver person. Bildet er bare synlig for deg.
+- **Ny værside**:
+  - Egen systemfont på værsiden.
+  - Kartknapp nede til venstre åpner Windy med nedbør, temperatur, vind og skyer.
+  - ☰ nede til høyre åpner Steder. Hold inne og dra for å endre rekkefølgen, og sveip mot høyre for å slette.
+  - Animert bakgrunn etter været, med stjerner, dempet sol, skyer, regn, snø, tåke og lyn.
+  - Kortet «Yr og Pent» sammenligner Yr med Pent (StormGeo-modell). Pent vises i oransje i timeraden.
+  - Alle kort har detaljark med 7-dagers velger og graf: UV, føles som, nedbør, sikt, luftfuktighet, lufttrykk, vind, sol og måne.
+- **Lys hovedbok er standardtema** i FinansHub for nye brukere og enheter. Det gamle designet heter nå «Nåværende (FinansHub v2)» under Utseende. Brukere som har valgt tema selv, beholder valget.
+- **Huskeliste:**
+  - «Ny oppgave …» ligger fast over fanelinjen, og knappen er nå «+».
+  - Valgte chips er fylt.
+  - Synk med Home Assistant To-do går begge veier, både lister og oppgaver. Bare admin kan koble listene.
+- **Sporing:**
+  - Status hentes fra Mybring og PostNord, med ParcelsApp som reserve. Den sjekkes straks pakken er funnet og deretter jevnlig.
+  - Pakker som allerede er levert, går rett til Arkiv.
+  - Siste hendelse, tidslinje og feilmelding vises.
+  - Logoene til fraktselskapene er kontrollert manuelt. Posten får ikke lenger feil logo.
+  - Legg inn Mybring- og PostNord-nøkler under Integrasjoner → Sporing.
+- **Google-«G»** i søket bruker de offisielle banene.
+
 ## [4.13.0] – 18.10.2026 · brukerskille og prompt 21
 - **Android krasjet ved oppstart:** appen krasjet hver gang den ble åpnet, sannsynligvis siden 4.11.0. Oppstartskoden brukte deler av appen som ikke var klare ennå. Dette er rettet.
 - **Brukerskille:** hver bruker ser bare sine egne data. Unntakene er det som deles i FinansHub (Boliger og Delte mapper) og det du selv velger å dele.
