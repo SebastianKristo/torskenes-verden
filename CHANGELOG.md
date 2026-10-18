@@ -2,6 +2,25 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.17.0] – 18.10.2026 · prompt 25
+- **AI-søket stopper ikke lenger etter 30 s.** Søket venter så lenge tidsgrensen du har satt for motoren, også i Android-appen, iOS-appen og på serveren. Har du satt Ollama til 60 s, venter søket opptil 60 s.
+  - Ollama strømmer svaret og holder modellen lastet i 10 minutter, så den ikke må lastes på nytt mellom hvert søk.
+  - Lange søk kjøres som jobb, med «✦ Ollama tenker … 34 s av 60 s», fremdriftslinje og Avbryt.
+  - Svarer ikke motoren i tide, står det hvilken motor og hvilken grense, for eksempel «Ollama svarte ikke innen 60 s», og søket går videre til neste motor.
+- **Galaxy Fold og iPad:**
+  - Ikonene i sidelinjen vises som ikoner igjen, ikke som teksten «cre», «for» og «squ».
+  - Sidelinjen har samme farge som fanelinjen på telefonen.
+  - En rød Hjem-knapp ligger øverst når du ikke er på Hjem.
+  - Værsiden bruker to kolonner, med værkart rett på siden og detaljark i et sidepanel.
+- **Fanelinje-stil:** velg mellom «Tekst», «Bare ikoner» og «Ikoner + navn på valgt», under Innstillinger eller «Rediger fanelinjen», med forhåndsvisning.
+- **Mer** har ikoner ved hver rad.
+- **«Ta meg dit →»** etter AI-søk i Innstillinger åpner riktig side og markerer innstillingen.
+- **Innlogging og oppsett på web** i Papir-design: tofaktor, og oppsett i fire steg.
+- **Apple Health på iOS:** viser hvorfor appen ikke får spørre om tilgang. Vanligste grunn er at sideloading-verktøyet har fjernet HealthKit fra profilen.
+- **Google Kalender:**
+  - «Test tilkobling» virker på web.
+  - Etter innlogging via en offentlig adresse kommer du tilbake til adressen du startet fra.
+
 ## [4.16.0] – 18.10.2026 · prompt 24
 - **Bursdager (ny):** finnes på web, i appene og i PWA.
   - Viser neste bursdag, søk, en liste per måned med alder og dager igjen, og legg til, rediger og slett.
