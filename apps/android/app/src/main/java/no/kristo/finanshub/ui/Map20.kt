@@ -339,7 +339,7 @@ private class Fam22Overlay(ctx: Context) : Overlay() {
     var onPin: (String) -> Unit = {}
     var onTap: (Double, Double) -> Unit = { _, _ -> }
     private val d = ctx.resources.displayMetrics.density
-    private val bold: Typeface = runCatching { ResourcesCompat.getFont(ctx, R.font.manrope_bold) }.getOrNull() ?: Typeface.DEFAULT_BOLD
+    private val bold: Typeface = runCatching { ResourcesCompat.getFont(ctx, no.kristo.finanshub.R.font.manrope_bold) }.getOrNull() ?: Typeface.DEFAULT_BOLD
     private val pt = Point()
     private val pt2 = Point()
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
