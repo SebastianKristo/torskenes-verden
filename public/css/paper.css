@@ -631,3 +631,24 @@ html[data-hl="2c"] .lg.logo-lg{background:#f3efe6;color:var(--ink2);box-shadow:i
 html[data-hl="2c"] .lg.logo-lg.has{background:#fff}
 /* Huskeliste og Familie: fotovinduet har tittelen, så sidetittelen skjules. */
 html[data-hl="2c"] body.pw-low .tk-top,html[data-hl="2c"] body.pw-low .fam-top{display:none}
+
+/* Bakgrunn i Vindu og papir: uskarphet, mørklegging, litt dempet farge og papirtekstur over bildet. Teksten blir mørk
+   når bildet er lyst (theme_hint), med lys skygge for kontrast. */
+html[data-hl="2c"] .pw-img{filter:saturate(.75) blur(var(--bg-blur,0px));transform:scale(calc(1 + var(--bg-blur,0px) / 400px))}
+html[data-hl="2c"] .pw-img::before{content:'';position:absolute;inset:0;background:#000;opacity:var(--bg-dim,0)}
+html[data-hl="2c"] .pw::before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.22;mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .5 0 0 0 0 .42 0 0 0 .9 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E")}
+html[data-hl="2c"] .pw>.bg-particles{position:absolute;inset:0;z-index:1}
+html[data-hl="2c"] .pw>*:not(.pw-img):not(.bg-particles){position:relative;z-index:2}
+html[data-hl="2c"] .pw.pw-light{color:#1b1a17;text-shadow:0 1px 12px rgba(255,255,255,.55)}
+html[data-hl="2c"] .pw.pw-light .pw-img::after{background:linear-gradient(180deg,rgba(255,255,255,.35),transparent 35%,rgba(255,255,255,.4))}
+html[data-hl="2c"] .pw.pw-light .pw-wx{color:#1b1a17}
+html[data-hl="2c"] .pw-credit a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+html[data-hl="2c"] .hl-bgdd-more{display:block;padding:10px 10px 8px;border-top:1px solid var(--rule);margin-top:4px;color:var(--ink2);font:500 13px var(--sans);text-decoration:none}
+html[data-hl="2c"] .hl-bgdd-more:hover{color:var(--ink)}
+html[data-hl="2c"] .bgc-img{border-color:var(--rule);border-radius:4px}
+html[data-hl="2c"] .bgc[aria-pressed=true] .bgc-img{border-color:var(--ink)}
+html[data-hl="2c"] .bgc-img i{background:var(--ink);color:var(--pp)}
+html[data-hl="2c"] .bgc small{color:var(--ink2)}
+html[data-hl="2c"] .bg-chips .chip[aria-pressed=true]{background:var(--ink);color:var(--pp);border-color:var(--ink)}
+html[data-hl="2c"] .bg-range input[type=range]{accent-color:var(--ink)}

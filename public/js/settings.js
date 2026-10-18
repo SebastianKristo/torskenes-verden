@@ -2,7 +2,8 @@
 // med overskrift over et innrammet kort; radene har tekst til venstre, verdi til høyre og en knapp eller bryter.
 import { esc, api, cssUrl, logoImg, initials, backdropClick } from './util.js';
 import { store, emit, load } from './store.js';
-import { OPTIONS, srcFor, applyBackground, preloadAll } from './background.js';
+import { applyBackground } from './background.js';
+import { BG_TYPES, PLANETS, bgState, saveBg, resolveBg, cachedBg, creditOf, typeToLegacy } from './bgsvc.js';
 import { SEARCH_STYLES, GWORD, renderTicker, applyTicker, menuLabels, loadHistory, searchState, setHistory } from './extras.js';
 import { DASH_WIDGETS, MOBILE_WIDGETS, TABS as NAV_TABS, FIXED_TABS, hiddenWidgets, hiddenTabs, tabAllowed, saveLayout, applyNav } from './profile.js';
 import { orderOf, setOrder } from './dnd.js';
@@ -11,7 +12,7 @@ import { loginView, loadLogin, loginClick, loginSubmit, loginChange, loginData, 
 import { domainsPane, loadDomains, domainsClick, domainsChange, domainsSubmit, domainCount } from './settings-domains.js';
 import { loadNotify, notifyView, notifyClick, notifyChange, notifyInput } from './settings-notify.js';
 import { loadApp, appView, appClick, appInput, appKey } from './settings-app.js';
-import { themeCards, setHlTheme, hlTheme, THEMES } from './hltheme.js';
+import { themeCards, setHlTheme, hlTheme, THEMES, uploadCustomPhoto } from './hltheme.js';
 
 const modal = () => document.getElementById('settings');
 
@@ -126,7 +127,51 @@ function usersView() {
 
 /* ---------- Utseende ---------- */
 
-const BGN = Object.fromEntries(OPTIONS.map(([k, n]) => [k, n]));
+const BGN = Object.fromEntries(BG_TYPES.map(([k, n]) => [k, n]));
+
+/* Bakgrunn: forhåndsvisninger fra GET /api/background/previews (reserve: ett kall per type), og egne Oslo-bilder. */
+let bgPrev = null, bgPrevAt = 0, osloList = null, bgMsg = '';
+const safeUrl = (u) => `url("${String(u).replace(/["\\\s()]/g, (c) => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'))}")`;
+function loadBgPreviews(force) {
+  if (!force && bgPrev && Date.now() - bgPrevAt < 10 * 60_000) return;
+  bgPrevAt = Date.now(); bgPrev ??= {};
+  const redraw = () => { if (!modal().hidden && sub === 'bg') render(); };
+  api(`/background/previews?w=${Math.round(320 * (devicePixelRatio || 1))}`).then((r) => { bgPrev = { ...bgPrev, ...r }; redraw(); })
+    .catch(() => Promise.all(BG_TYPES.filter(([k]) => k !== 'none').map(([k]) => resolveBg(k).then((e) => { bgPrev[k] = { image_url: e.url, credit: e.r?.credit, theme_hint: e.r?.theme_hint, gradient: e.r?.gradient }; })))
+      .then(redraw));
+  if (isAdmin()) api('/background/oslo').then((r) => { osloList = r.items ?? []; redraw(); }).catch(() => { osloList = null; });
+}
+function bgCard([k, name, desc], cur) {
+  const p = bgPrev?.[k], e = cachedBg(k);
+  const url = k === 'none' ? null : (k === cur && e?.url) || p?.image_url;
+  const style = url ? `background-image:${safeUrl(url)}` : `background:${p?.gradient || 'linear-gradient(170deg,#7d93aa,#4a5f76)'}`;
+  const empty = k === 'custom' && !url ? '<em>Last opp et bilde</em>' : '';
+  return `<button type="button" class="bgc" data-bgtype="${k}" aria-pressed="${cur === k}"><span class="bgc-img" style="${esc(style)}">${empty}${cur === k ? '<i>✓</i>' : ''}</span>
+    <b>${esc(name)}</b><small>${esc(desc)}</small></button>`;
+}
+function bgView() {
+  const b = bgState(), cur = b.type;
+  loadBgPreviews();
+  const chips = (attr, list, val) => `<div class="bg-chips">${list.map(([k, n]) => `<button type="button" class="chip" data-${attr}="${k}" aria-pressed="${val === k}">${esc(n)}</button>`).join('')}</div>`;
+  const slider = (k, n, max, unit, v) => `<label class="sg-row bg-range"><span class="sg-txt"><b>${n}</b></span><input type="range" min="0" max="${max}" step="1" value="${v}" data-bgrange="${k}" aria-label="${n}"><span class="sg-v" data-bgrange-v="${k}">${v} ${unit}</span></label>`;
+  const cr = cur === 'none' ? { text: '' } : creditOf(cachedBg(cur));
+  const credit = cr.text ? `Kreditering: ${cr.url ? `<a href="${esc(cr.url)}" target="_blank" rel="noopener noreferrer">${esc(cr.text)}</a>` : esc(cr.text)}` : '';
+  const planet = cur === 'planets' ? box('Planet', `<div class="sg-row bg-sub">${chips('bgplanet', PLANETS, b.planet)}</div>
+      ${b.planet === 'auto' ? `<div class="sg-row bg-sub"><span class="sg-txt"><b>Bytt</b></span>${chips('bgrotate', [['daily', 'Daglig'], ['hourly', 'Hver time']], b.rotate)}</div>` : ''}`,
+    'Bilder fra NASA Image and Video Library (fritt til bruk).') : '';
+  const own = box('Egne bilder', `<label class="sg-row" style="cursor:pointer"><span class="sg-txt"><b>Eget bilde</b><span>Vises når «Eget bilde» er valgt. Deles med appene.</span></span><span class="sg-btn2">Last opp</span><input type="file" accept="image/*" hidden data-bg-custom></label>
+    ${isAdmin() ? `<label class="sg-row" style="cursor:pointer"><span class="sg-txt"><b>Oslo-bilder</b><span>${osloList ? `${osloList.length} egne bilder` : 'Egne bilder av Oslo, for eksempel fra drone. Maks 15 MB per bilde.'}</span></span><span class="sg-btn2">Legg til</span><input type="file" accept="image/*" multiple hidden data-bg-oslo></label>
+      ${osloList?.length ? `<div class="sg-row bg-oslo">${osloList.map((o) => `<span class="bg-oslo-th" style="background-image:${esc(safeUrl(o.url))}"><button type="button" data-bg-oslo-del="${esc(o.id)}" aria-label="Slett bildet">×</button></span>`).join('')}</div>` : ''}` : ''}`,
+    'Oslo hentes fra Unsplash eller Pexels når en nøkkel er lagt inn under Integrasjoner → Bakgrunner, ellers fra egne og medfølgende bilder. Getty Images brukes ikke, siden bildene krever kjøpt lisens.');
+  return { title: 'Bakgrunn', sub: hlTheme() === '2c' ? 'Fotovinduet øverst på alle sider. Valget deles med mobilappene.' : 'Bak Dashboard. Valget deles med fotovinduet og mobilappene.',
+    html: `<div class="bg-cards">${BG_TYPES.map((t) => bgCard(t, cur)).join('')}</div>
+      ${bgMsg ? `<div class="sg-note green">${esc(bgMsg)}</div>` : ''}
+      ${planet}
+      ${box('Visning', `${slider('blur', 'Uskarphet', 20, 'px', b.blur)}${slider('dim', 'Mørklegging', 60, '%', b.dim)}
+        ${row({ t: 'Animasjon', s: 'Diskret regn og snø når været tilsier det. Slås av når «Reduser bevegelse» er på.', tog: b.animate, act: 'data-bg-anim' }).html}`)}
+      ${own}
+      ${credit ? note(credit) : ''}` };
+}
 const SRN = Object.fromEntries(SEARCH_STYLES);
 
 function srchPreview([k, name]) {
@@ -141,7 +186,7 @@ function lookView() {
   const s = store.me, sq = searchState();
   if (!sub) return { groups: [
     { ...group('Tema', [{ html: themeCards(), q: `tema ${THEMES.map((t) => t[1]).join(' ')} papir vindu` }], 'Byttet skjer med en gang og lagres på brukeren din. Alt virker likt i begge temaene.'), cls: 'sg-theme' },
-    group('Bakgrunn', [row({ t: 'Bakgrunnsbilde', s: hlTheme() === '2c' ? 'Vises i fotovinduet øverst på Dashboard.' : 'Vises bare på Dashboard. De andre sidene har en rolig, mørk bakgrunn.', v: BGN[s.bg] ?? 'Måne', go: 'look|bg' })]),
+    group('Bakgrunn', [row({ t: 'Bakgrunnsbilde', s: hlTheme() === '2c' ? 'Vises i fotovinduet øverst på Dashboard.' : 'Vises bare på Dashboard. De andre sidene har en rolig, mørk bakgrunn.', v: BGN[bgState().type] ?? 'Oslo', k: 'vær planeter jorda månen jupiter mars oslo uskarphet mørklegging', go: 'look|bg' })]),
     group('Søkebar', [
       row({ t: 'Vis søkebar', s: 'Kan dras mellom avgangene og klokka.', tog: !s.hideSearch, act: 'data-toggle="search"' }),
       row({ t: 'Stil', v: SRN[s.searchStyle] ?? 'Lys', go: 'look|style' }),
@@ -151,19 +196,7 @@ function lookView() {
     ]),
     group('Kvitteringer', [row({ t: 'Kategorier', s: 'Navn og farger på kvitteringene i Homelab.', v: String(s.categories?.length ?? 0), go: 'look|cats' })]),
   ] };
-  if (sub === 'bg') {
-    const c = s.bgCustom, kind = store.data.weather?.kind ?? 'sol', kindName = { sol: 'sol', sky: 'skyet', regn: 'regn' }[kind];
-    const opts = OPTIONS.map(([k, name, upl]) => {
-      const img = srcFor(k);
-      return `<div class="bg-opt"><button data-bg="${k}" aria-pressed="${s.bg === k}" style="${img ? `background-image:${esc(cssUrl(img))}` : ''}">${img || k === 'ingen' ? '' : 'last opp bilde'}</button>
-        <div><span>${name}</span>${upl && k !== 'vaer' ? `<label class="upl">${k === 'oslo' ? 'Legg til' : 'Last opp'}<input type="file" accept="image/*" data-slot="${k}"></label>` : ''}</div></div>`;
-    }).join('');
-    const wslots = [['sol', 'Sol'], ['sky', 'Skyet'], ['regn', 'Regn']].map(([k, n]) =>
-      `<label class="chip" style="cursor:pointer;color:${c['vaer_' + k] ? 'var(--green)' : 'var(--text)'}">${c['vaer_' + k] ? '✓' : '+'} ${n}<input type="file" accept="image/*" data-slot="vaer_${k}" hidden></label>`).join('');
-    return { title: 'Bakgrunnsbilde', sub: 'Vises bare på Dashboard.', html: `<div class="bg-opts">${opts}</div>
-      ${note(`«Oslo» bytter mellom bilder av byen hvert 15. sekund${c.oslo?.length ? ` (${c.oslo.length} egne bilder, <button class="sg-link" data-clear="oslo">fjern</button>)` : ''}. «Vær» viser et bilde som passer dagens vær (nå: ${kindName}). Du kan erstatte værbildene med egne:`)}
-      <div class="chips" style="padding:0 4px">${wslots}</div>` };
-  }
+  if (sub === 'bg') return bgView();
   if (sub === 'style') return { title: 'Stil på søkebar', sub: 'Utseende · Søkebar', html: `<div class="srch-opts">${SEARCH_STYLES.map(srchPreview).join('')}</div>` };
   if (sub === 'hist') return { title: 'Søkehistorikk', sub: 'Utseende · Søkebar', html: box(`${sq.hist?.length ?? 0} søk lagret`,
     `<label class="sg-row" style="cursor:pointer"><span class="sg-txt"><b>Importer Google-historikk</b><span>Google Takeout → Mine aktiviteter → Søk (JSON)</span></span><span class="sg-btn2">Velg fil</span><input type="file" accept=".json,application/json" data-sq-import hidden></label>
@@ -594,6 +627,8 @@ async function signOut(forget) {
 
 export function bindSettings() {
   const m = modal();
+  // «Flere valg …» i bakgrunnsmenyen i fotovinduet.
+  document.addEventListener('hl:open-settings', (e) => { const [a, b] = String(e.detail ?? 'look/bg').split('/'); openSettings(a, b ?? null); });
   m.addEventListener('click', async (e) => {
     if (backdropClick(e, m) || e.target.closest('[data-close]')) return closeSettings();
     const t = e.target.closest('[data-tab]');
@@ -651,14 +686,31 @@ export function bindSettings() {
     if (e.target.closest('[data-sc-reset]')) { if (confirm('Tilbakestille snarveiene til standardlisten?')) await saveShortcuts(null); return; }
 
     /* Utseende */
-    const th = e.target.closest('[data-hl-theme]');
+    const th = e.target.closest('button[data-hl-theme]'); // <html> har også data-hl-theme
     if (th) { await setHlTheme(th.dataset.hlTheme); render(); return; }
     if (e.target.closest('[data-sq-clearall]')) {
       if (!confirm('Tømme hele søkehistorikken?')) return;
       await api('/search/history', { method: 'DELETE' }).catch(() => {}); setHistory([]); sqMsg = 'Historikken er tømt'; render(); return;
     }
-    const bg = e.target.closest('[data-bg]');
-    if (bg) { store.me.bg = bg.dataset.bg; api('/settings/bg', { method: 'PUT', json: { value: store.me.bg } }); applyBackground(); render(); return; }
+    const bgt = e.target.closest('[data-bgtype],[data-bgplanet],[data-bgrotate],[data-bg-anim]');
+    if (bgt) {
+      const d = bgt.dataset;
+      if (d.bgtype === 'custom' && !store.me.layout?.photoCustom && !cachedBg('custom')?.url && !bgPrev?.custom?.image_url) { m.querySelector('[data-bg-custom]')?.click(); return; }
+      const patch = d.bgtype ? { type: d.bgtype } : d.bgplanet ? { planet: d.bgplanet } : d.bgrotate ? { rotate: d.bgrotate } : { animate: !bgState().animate };
+      bgMsg = '';
+      await saveBg(patch);
+      const b = bgState();
+      store.me.bg = typeToLegacy(b.type, b.planet);
+      api('/settings/bg', { method: 'PUT', json: { value: store.me.bg } }).catch(() => {});
+      render(); resolveBg(b.type).then(() => { if (!m.hidden && sub === 'bg') render(); });
+      return;
+    }
+    const od = e.target.closest('[data-bg-oslo-del]');
+    if (od) {
+      if (!confirm('Slette dette Oslo-bildet?')) return;
+      try { osloList = (await api(`/background/oslo/${encodeURIComponent(od.dataset.bgOsloDel)}`, { method: 'DELETE' })).items ?? []; } catch (err) { alert(err.message); }
+      render(); return;
+    }
     const sr = e.target.closest('[data-srch]');
     if (sr) {
       store.me.searchStyle = sr.dataset.srch;
@@ -692,7 +744,7 @@ export function bindSettings() {
       render(); return;
     }
     const clr = e.target.closest('[data-clear]');
-    if (clr) { store.me.bgCustom = (await api(`/backgrounds/${clr.dataset.clear}`, { method: 'DELETE' })).bgCustom; applyBackground(); render(); return; }
+    if (clr) { store.me.bgCustom = (await api(`/backgrounds/${clr.dataset.clear}`, { method: 'DELETE' })).bgCustom; applyBackground(true); render(); return; }
     if (e.target.closest('[data-cadd]')) { store.me.categories.push({ name: 'Ny', color: '#a8d4fb' }); await saveCats(); render(); return; }
     const del = e.target.closest('[data-cdel]');
     if (del && store.me.categories.length > 1) { store.me.categories.splice(+del.dataset.cdel, 1); await saveCats(); render(); }
@@ -730,6 +782,13 @@ export function bindSettings() {
       store.me.ui.newsSpeed = v; applyTicker();
       m.querySelector('[data-speed-n]').textContent = v; m.querySelector('[data-speed-t]').textContent = speedTxt(v);
       m.querySelectorAll('[data-speed-set]').forEach((b) => b.setAttribute('aria-pressed', String(+b.dataset.speedSet === v)));
+      return;
+    }
+    const br = e.target.dataset?.bgrange;
+    if (br) {
+      const v = +e.target.value, r = document.documentElement.style;
+      if (br === 'blur') r.setProperty('--bg-blur', `${v}px`); else r.setProperty('--bg-dim', String(v / 100));
+      m.querySelector(`[data-bgrange-v="${br}"]`).textContent = `${v} ${br === 'blur' ? 'px' : '%'}`;
       return;
     }
     const k = e.target.dataset?.top;
@@ -771,16 +830,29 @@ export function bindSettings() {
       render(); return;
     }
     if (t.dataset.top) { const [, key] = TOP.find(([kk]) => kk === t.dataset.top); api(`/settings/${key}`, { method: 'PUT', json: { value: +t.value } }); return; }
-    if (t.dataset.slot) {
+    if (t.dataset.bgrange) { await saveBg({ [t.dataset.bgrange]: +t.value }); return; }
+    if (t.matches('[data-bg-custom]')) {
       const f = t.files[0];
       if (!f) return;
-      const fd = new FormData(); fd.append('file', f);
+      try { bgMsg = ''; await uploadCustomPhoto(f); bgPrev && delete bgPrev.custom; bgPrevAt = 0; bgMsg = 'Bildet er lastet opp og valgt'; } catch (err) { alert('Kunne ikke laste opp bildet: ' + err.message); }
+      render(); return;
+    }
+    if (t.matches('[data-bg-oslo]')) {
+      const files = [...t.files];
+      if (!files.length) return;
+      const fd = new FormData(); files.forEach((f) => fd.append('file', f));
       try {
-        store.me.bgCustom = (await api(`/backgrounds/${t.dataset.slot}`, { method: 'POST', body: fd })).bgCustom;
-        if (!t.dataset.slot.startsWith('vaer_')) { store.me.bg = t.dataset.slot; api('/settings/bg', { method: 'PUT', json: { value: store.me.bg } }); }
-        preloadAll(); applyBackground(); render();
+        const r = await api('/background/oslo', { method: 'POST', body: fd }).catch(async (err) => {
+          if (err.status !== 404) throw err;
+          // Eldre server: ett og ett bilde til de gamle Oslo-plassene.
+          for (const f of files) { const one = new FormData(); one.append('file', f); store.me.bgCustom = (await api('/backgrounds/oslo', { method: 'POST', body: one })).bgCustom; }
+          return { added: files, items: null };
+        });
+        if (r.items) osloList = r.items;
+        bgMsg = `${r.added?.length ?? files.length} bilde${(r.added?.length ?? files.length) === 1 ? '' : 'r'} lagt til${r.errors?.length ? ` · ${r.errors.join(', ')}` : ''}`;
+        if (bgState().type === 'oslo') { bgPrevAt = 0; document.dispatchEvent(new Event('hl:bg')); }
       } catch (err) { alert(err.message); }
-      return;
+      render(); return;
     }
     if (t.dataset.ci !== undefined) {
       const cat = store.me.categories[+t.dataset.ci];

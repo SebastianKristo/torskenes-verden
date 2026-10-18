@@ -2,6 +2,7 @@ import { api, esc, isMobile } from './util.js';
 import { store, on, load, mountAll } from './store.js';
 import { setupDnd, resetLayouts } from './dnd.js';
 import { applyBackground, preloadAll } from './background.js';
+import { bgState } from './bgsvc.js';
 import { openSettings, bindSettings, applyTop } from './settings.js';
 import { bindPopup, bindSearch, menuLabels, toggle, renderTicker } from './extras.js';
 import { applyHead, toggleHeadEdit, uiDefaults } from './topedit.js';
@@ -140,7 +141,7 @@ async function main() {
   poll('finans', 5 * 60_000, '/../finans/api/summary');
   study.loadStudy();
 
-  on('weather', () => { weatherPill(); if (store.me.bg === 'vaer') applyBackground(); });
+  on('weather', () => { weatherPill(); if (bgState().type === 'weather') { applyBackground(); paintPhoto(); } });
   on('route', renderRoute);
 
   setInterval(() => { store.now = new Date(); if (route === 'dash') dash.tick(); }, 1000);

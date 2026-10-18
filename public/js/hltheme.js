@@ -3,6 +3,7 @@
 import { appName } from './appicon.js';
 import { api, esc } from './util.js';
 import { store } from './store.js';
+import { BG_TYPES, FALLBACK_GRAD, bgState, setBgFromLayout, saveBg, resolveBg, cachedBg, forgetBg, creditOf, particles } from './bgsvc.js';
 
 const KEY = 'hl_theme';
 const FONTS = 'https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap';
@@ -43,7 +44,7 @@ export function applyHlTheme() {
 export async function loadHlTheme() {
   const l = await api('/me/layout').catch(() => null);
   if (l && (l.hlTheme === '2c' || l.hlTheme === 'cur') && l.hlTheme !== theme) { theme = l.hlTheme; remember(theme); }
-  if (l && PHOTO_KINDS.includes(l.photo)) photo = l.photo;
+  if (l) setBgFromLayout(l);
   applyHlTheme();
   return theme;
 }
@@ -61,68 +62,38 @@ export const themeCards = () => `<div class="hl-themes">${THEMES.map(([k, n, s])
   <span class="hl-theme-prev ${k}"><i></i><i></i><i></i></span><b>${esc(n)}</b><span>${esc(s)}</span></button>`).join('')}</div>`;
 
 /* ---------- Fotovinduet ---------- */
-// Bildet øverst på alle sider i Vindu og papir. Valget deles med mobilappene (/api/me/layout.photo) og hentes fra serveren
-// (GET /api/photo-window), som laster ned og cacher bildene selv, så ingenting hotlinkes. Feiler et bilde, prøves neste
-// i settet; feiler alle, vises gradienten med en liten melding.
-const PHOTO_KINDS = ['cur', 'oslo', 'weather', 'planets', 'custom'];
-const PHOTO_MENU = [['oslo', 'Oslo', 'Byen fra lufta'], ['weather', 'Vær nå', 'Følger været ute'], ['planets', 'Planeter', 'Dagens bilde fra NASA'], ['cur', 'Ingen bilde', 'Bare fargeovergang']];
-const FALLBACK_GRAD = 'linear-gradient(170deg,#7d93aa,#4a5f76)';
-let photo = 'oslo';
-const cache = new Map(); // kind → { r, at, url, failed }
+// Bildet øverst på alle sider i Vindu og papir. Valget deles med mobilappene og den klassiske bakgrunnen (bgsvc.js):
+// GET /api/background gir bildet (lastet ned og cachet på serveren), kreditering og theme_hint. Feiler et bilde,
+// prøves neste i settet; feiler alle, vises gradienten med en liten melding.
 let bgOpen = false;
 
-export const photoKind = () => photo;
-const photoName = (k) => (k === 'custom' ? 'Eget bilde' : PHOTO_MENU.find((x) => x[0] === k)?.[1] ?? 'Bakgrunn');
-
-function tryLoad(urls) {
-  return new Promise((res) => {
-    const next = (i) => {
-      if (i >= urls.length) return res(null);
-      const img = new Image();
-      img.onload = () => res(urls[i]);
-      img.onerror = () => { console.warn('[fotovindu] fikk ikke lastet', urls[i]); next(i + 1); };
-      img.src = urls[i];
-    };
-    next(0);
-  });
-}
-
-async function resolvePhoto(kind, force) {
-  const hit = cache.get(kind);
-  // «Vær nå» kan bytte bilde når været endrer seg: hentes på nytt hver time.
-  if (hit && !force && (kind !== 'weather' || Date.now() - hit.at < 3600_000)) return hit;
-  const ent = { at: Date.now(), r: null, url: null, failed: false, pending: true };
-  cache.set(kind, ent);
-  if (kind !== 'cur') {
-    ent.r = await api(`/photo-window?kind=${kind}`).catch(() => null);
-    const urls = [ent.r?.url, ...(ent.r?.fallbacks ?? [])].filter(Boolean);
-    ent.url = urls.length ? await tryLoad(urls) : null;
-    ent.failed = !ent.url && (urls.length > 0 || !ent.r);
-  }
-  ent.pending = false;
-  return ent;
-}
+export const photoKind = () => bgState().type;
+const photoName = (k) => BG_TYPES.find((x) => x[0] === k)?.[1] ?? 'Bakgrunn';
 
 /** Laget med bildet; tegnes i fotovinduet og fylles når bildet er lastet. */
 export const pwImg = () => `<div class="pw-img" aria-hidden="true"></div>`;
 
 export function pwCredit() {
-  const e = cache.get(photo);
-  if (photo === 'cur') return '';
-  if (e?.failed) return '';
-  return e?.r?.credit ?? '';
+  const t = bgState().type;
+  return t === 'none' ? '' : creditOf(cachedBg(t)).text;
 }
 
-/** Fyller alle fotovinduer på siden med valgt bilde (eller gradienten). */
+/** Fyller alle fotovinduer på siden med valgt bilde (eller gradienten), med theme_hint og partikler. */
 export async function paintPhoto(force) {
   if (!is2c()) return;
-  const e = await resolvePhoto(photo, force);
+  const t = bgState().type;
+  const e = await resolveBg(t, force);
   const grad = e.r?.gradient || FALLBACK_GRAD;
+  const light = e.url && e.r?.theme_hint === 'light';
   document.querySelectorAll('.pw-img').forEach((el) => {
     el.style.backgroundImage = e.url ? `url("${e.url.replace(/"/g, '%22')}")` : grad;
     el.classList.add('on');
   });
-  document.querySelectorAll('.pw-credit').forEach((el) => { el.textContent = pwCredit(); });
+  document.querySelectorAll('.pw').forEach((el) => { el.classList.toggle('pw-light', !!light); particles(el, e.url || t === 'weather' ? e.r?.particles ?? null : null); });
+  const cr = creditOf(e);
+  document.querySelectorAll('.pw-credit').forEach((el) => {
+    el.innerHTML = cr.url ? `<a href="${esc(cr.url)}" target="_blank" rel="noopener noreferrer">${esc(cr.text)}</a>` : esc(cr.text);
+  });
   document.querySelectorAll('.pw-fail').forEach((el) => { el.hidden = !e.failed; });
   renderBgMenu();
 }
@@ -132,24 +103,35 @@ export function renderBgMenu() {
   const host = document.getElementById('hl-bgdd');
   if (!host) return;
   if (!is2c()) { host.innerHTML = ''; return; }
-  const custom = store.me?.layout?.photoCustom || cache.get('custom')?.url || photo === 'custom';
-  const rows = [...PHOTO_MENU.slice(0, 3), ...(custom ? [['custom', 'Eget bilde', 'Ditt opplastede bilde']] : []), PHOTO_MENU[3]];
-  const thumb = (k) => { const e = cache.get(k); return k !== 'cur' && e?.url ? `url('${e.url.replace(/['"()\s]/g, (c) => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'))}')` : FALLBACK_GRAD; };
-  host.innerHTML = `<button type="button" class="hl-bgdd-btn" data-bgdd aria-haspopup="menu" aria-expanded="${bgOpen}">${esc(photoName(photo))} ▾</button>
+  const cur = bgState().type;
+  const custom = store.me?.layout?.photoCustom || cachedBg('custom')?.url || cur === 'custom';
+  const rows = BG_TYPES.filter(([k]) => k !== 'custom' || custom);
+  const thumb = (k) => { const e = cachedBg(k); return k !== 'none' && e?.url ? `url('${e.url.replace(/['"()\s]/g, (c) => '%' + c.charCodeAt(0).toString(16).padStart(2, '0'))}')` : FALLBACK_GRAD; };
+  host.innerHTML = `<button type="button" class="hl-bgdd-btn" data-bgdd aria-haspopup="menu" aria-expanded="${bgOpen}">${esc(photoName(cur))} ▾</button>
     <div class="hl-bgdd-menu${bgOpen ? ' open' : ''}" role="menu">${rows.map(([k, n, s]) => {
-      const fail = cache.get(k)?.failed && k !== 'cur';
-      return `<button type="button" role="menuitemradio" aria-checked="${photo === k}" data-photo="${k}"><span class="th" style="background-image:${thumb(k)}"></span><span class="tx"><span>${esc(n)}</span><small>${esc(fail ? 'Fikk ikke lastet bildet' : s)}</small></span><b>${photo === k ? '✓' : ''}</b></button>`;
+      const fail = cachedBg(k)?.failed && k !== 'none';
+      return `<button type="button" role="menuitemradio" aria-checked="${cur === k}" data-photo="${k}"><span class="th" style="background-image:${thumb(k)}"></span><span class="tx"><span>${esc(n)}</span><small>${esc(fail ? 'Fikk ikke lastet bildet' : s)}</small></span><b>${cur === k ? '✓' : ''}</b></button>`;
     }).join('')}
-      <label class="hl-bgdd-up">+ Eget bilde<input type="file" accept="image/*" hidden data-photo-up></label></div>`;
+      <label class="hl-bgdd-up">+ Eget bilde<input type="file" accept="image/*" hidden data-photo-up></label>
+      <a class="hl-bgdd-more" href="#/innstillinger/look/bg" data-bg-more>Flere valg …</a></div>`;
   // Miniatyrene lastes i bakgrunnen første gang menyen åpnes.
-  if (bgOpen) for (const [k] of rows) if (k !== 'cur' && !cache.has(k)) resolvePhoto(k).then(() => bgOpen && renderBgMenu());
+  if (bgOpen) for (const [k] of rows) if (k !== 'none' && !cachedBg(k)) resolveBg(k).then(() => bgOpen && renderBgMenu());
 }
 
-async function pickPhoto(k) {
-  photo = k; bgOpen = false;
-  (store.me.layout ??= {});
+export async function pickPhoto(k) {
+  bgOpen = false;
+  await saveBg({ type: k });
   paintPhoto();
-  api('/me/layout', { method: 'PUT', json: { photo: k } }).catch(() => {});
+}
+
+/** Laster opp eget bilde og velger det. Brukes av menyen og av Innstillinger → Utseende → Bakgrunn. */
+export async function uploadCustomPhoto(file) {
+  const fd = new FormData();
+  fd.append('file', file);
+  await api('/me/photo-window', { method: 'POST', body: fd });
+  forgetBg('custom');
+  (store.me.layout ??= {}).photoCustom = true;
+  await pickPhoto('custom');
 }
 
 /** Kobler bakgrunnsvelgeren og «trykk for å prøve igjen». Kalles én gang. */
@@ -157,24 +139,21 @@ export function bindPhoto() {
   document.addEventListener('click', (e) => {
     const host = document.getElementById('hl-bgdd');
     if (e.target.closest('[data-bgdd]')) { bgOpen = !bgOpen; document.getElementById('menu')?.setAttribute('hidden', ''); renderBgMenu(); return; }
+    if (e.target.closest('[data-bg-more]')) { e.preventDefault(); bgOpen = false; renderBgMenu(); document.dispatchEvent(new CustomEvent('hl:open-settings', { detail: 'look/bg' })); return; }
     const p = e.target.closest('[data-photo]');
     if (p) { pickPhoto(p.dataset.photo); return; }
-    if (e.target.closest('.pw-fail')) { cache.delete(photo); paintPhoto(true); return; }
+    if (e.target.closest('.pw-fail')) { forgetBg(bgState().type); paintPhoto(true); return; }
     if (bgOpen && host && !host.contains(e.target)) { bgOpen = false; renderBgMenu(); }
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && bgOpen) { bgOpen = false; renderBgMenu(); } });
   document.addEventListener('change', async (e) => {
     const inp = e.target.closest('[data-photo-up]');
     if (!inp?.files?.[0]) return;
-    const fd = new FormData();
-    fd.append('file', inp.files[0]);
-    try {
-      await api('/me/photo-window', { method: 'POST', body: fd });
-      cache.delete('custom');
-      (store.me.layout ??= {}).photoCustom = true;
-      await pickPhoto('custom');
-    } catch (err) { console.warn('[fotovindu] opplasting feilet', err); alert('Kunne ikke laste opp bildet: ' + err.message); }
+    try { await uploadCustomPhoto(inp.files[0]); } catch (err) { console.warn('[fotovindu] opplasting feilet', err); alert('Kunne ikke laste opp bildet: ' + err.message); }
   });
+  document.addEventListener('hl:bg', () => paintPhoto());
+  // Vær og planeter («hver time») bytter bilde av seg selv.
+  setInterval(() => { if (!document.hidden) paintPhoto(); }, 10 * 60_000);
 }
 
 /* ---------- Toppen av hver side ---------- */

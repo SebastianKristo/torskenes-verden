@@ -1,50 +1,15 @@
-// Bakgrunnsbilder med forhåndslasting, lysbildeserie (Oslo) og værbasert bilde.
+// Bakgrunnen i det klassiske temaet (bak Dashboard): samme valg og bilder som fotovinduet i Vindu og papir og appene
+// (bgsvc.js → GET /api/background). Bildene lastes fra serveren, så ingenting hotlinkes fra Wikimedia. To lag gir myk
+// overgang; uskarphet og mørklegging kommer fra brukerens valg (--bg-blur / --bg-dim).
 import { store } from './store.js';
 import { cssUrl } from './util.js';
+import { bgState, bgKnown, resolveBg, legacyToType, setBgFromLayout, particles } from './bgsvc.js';
 
-const FP = (f, w = 2400) => `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(f)}?width=${w}`;
-const W = () => (matchMedia('(max-width: 767px)').matches ? 1200 : 2400);
+let front = 0, current = null, timer = null;
 
-export const PRESETS = {
-  mane: 'https://upload.wikimedia.org/wikipedia/commons/e/e1/FullMoon2010.jpg',
-  jorda: 'https://upload.wikimedia.org/wikipedia/commons/9/97/The_Earth_seen_from_Apollo_17.jpg',
-  saturn: 'https://upload.wikimedia.org/wikipedia/commons/c/c7/Saturn_during_Equinox.jpg',
-};
-const OSLO = () => ['Oslo_Opera_House_-_2025.jpg', 'Panorama_taken_from_top_of_the_Oslo_Opera_House_(Operahuset)_(29585739880).jpg',
-  'Oslo_Opera_House_seen_from_Langkaia.JPG', 'The_Oslo_Opera_House_(Operahuset)_(29585744210).jpg'].map((f) => FP(f, W()));
-const WEATHER = () => ({ sol: FP('Blue-skies-cumulus-clouds.jpg', W()), sky: FP('Cumulus_congestus_cloud_in_sky.jpg', W()), regn: FP('Raindrops_on_a_window.jpg', W()) });
-
-export const OPTIONS = [['mane', 'Måne'], ['jorda', 'Jorda'], ['saturn', 'Saturn'], ['oslo', 'Oslo', true], ['vaer', 'Vær', true], ['egen', 'Eget bilde', true], ['ingen', 'Ingen']];
-
-const file = (n) => (n ? `/api/files/${n}` : null);
-const weatherKind = () => store.data.weather?.kind ?? 'sol';
-
-function osloList() {
-  const c = store.me.bgCustom.oslo;
-  return c?.length ? c.map(file) : OSLO();
-}
-
-export function srcFor(key, slide = 0) {
-  const c = store.me.bgCustom;
-  if (key === 'oslo') { const l = osloList(); return l[slide % l.length]; }
-  if (key === 'vaer') { const k = weatherKind(); return file(c['vaer_' + k]) ?? WEATHER()[k]; }
-  if (key === 'egen') return file(c.egen);
-  return PRESETS[key] ?? null;
-}
-
-const preloaded = new Map();
 function preload(url) {
-  if (!url || preloaded.has(url)) return preloaded.get(url);
-  const p = new Promise((res) => { const i = new Image(); i.onload = i.onerror = () => res(url); i.src = url; });
-  preloaded.set(url, p);
-  return p;
+  return new Promise((res) => { const i = new Image(); i.onload = i.onerror = () => res(url); i.src = url; });
 }
-
-export function preloadAll() {
-  [...Object.values(PRESETS), ...osloList(), ...Object.values(WEATHER()), ...Object.values(store.me.bgCustom).flat().map(file)].forEach(preload);
-}
-
-let front = 0, current = null, slideTimer = null;
 
 async function show(url) {
   if (url === current) return;
@@ -54,18 +19,31 @@ async function show(url) {
   await preload(url);
   if (current !== url) return;
   const next = layers[1 - front];
+  if (!next) return;
   next.style.backgroundImage = cssUrl(url);
   next.classList.add('on');
   layers[front].classList.remove('on');
   front = 1 - front;
 }
 
-export function applyBackground() {
-  clearInterval(slideTimer);
-  const key = store.me.bg;
-  if (key === 'oslo') {
-    const tick = () => show(srcFor('oslo', Math.floor(Date.now() / 15000)));
-    tick();
-    slideTimer = setInterval(tick, 1000);
-  } else show(srcFor(key));
+/** Forhåndslaster ingenting lenger (serveren cacher), men beholdes for eldre kall. */
+export function preloadAll() {}
+
+export async function applyBackground(force = false) {
+  clearInterval(timer);
+  // Eldre klassisk valg (store.me.bg) brukes bare når brukeren ikke har valgt i den nye bakgrunnstjenesten.
+  if (!bgKnown()) {
+    const m = legacyToType(store.me?.bg);
+    if (m) setBgFromLayout({ bgType: m[0], ...(m[1] ? { bgPlanet: m[1] } : {}) });
+  }
+  const t = bgState().type;
+  const host = document.querySelector('.bg');
+  if (t === 'none') { show(null); particles(host, null); return; }
+  const e = await resolveBg(t, force);
+  await show(e.url);
+  host?.classList.toggle('bg-light', e.r?.theme_hint === 'light');
+  particles(host, e.url ? e.r?.particles ?? null : null);
+  // Vær og planeter («hver time») sjekkes hvert 10. minutt.
+  timer = setInterval(() => { if (!document.hidden) applyBackground(); }, 10 * 60_000);
 }
+document.addEventListener('hl:bg', () => applyBackground());

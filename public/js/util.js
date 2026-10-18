@@ -35,7 +35,7 @@ export async function api(path, opts = {}) {
   const res = await fetch('/api' + path, init);
   if (res.status === 401 && !path.startsWith('/login') && !path.startsWith('/cv')) { location.href = '/login'; throw new Error('Ikke innlogget'); }
   const data = res.headers.get('content-type')?.includes('json') ? await res.json() : await res.text();
-  if (!res.ok) throw new Error(data?.error || `Feil ${res.status}`);
+  if (!res.ok) throw Object.assign(new Error(data?.error || `Feil ${res.status}`), { status: res.status });
   return data;
 }
 
