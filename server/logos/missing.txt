@@ -1,15 +1,15 @@
 # Logoer som mangler (2026-10-18). Generert av server/logos/fetch-logos.mjs.
 # 343 hentet, 16 mangler, 9 bruker bokstav (felles favicon eller ukjent domene).
 7-eleven	7-Eleven	7-eleven.no	apple-touch-icon:404, apple-touch-icon:404, html-icon:16px, html-icon:16px, google:16px, duckduckgo:16px
-aleris	Aleris	aleris.no	apple-touch-icon:404, apple-touch-icon:404, html-icon:31px, google:31px, duckduckgo:31px
-biltema	Biltema	biltema.no	apple-touch-icon:403, apple-touch-icon:403, google:16px, duckduckgo:404
+aleris	Aleris	aleris.no	apple-touch-icon:404, apple-touch-icon:404, html-icon:31px, google:31px, duckduckgo:404
+biltema	Biltema	biltema.no	apple-touch-icon:403, apple-touch-icon:403, google:16px, duckduckgo:16px
 bokklubben	Bokklubben	bokklubben.no	apple-touch-icon:403, apple-touch-icon:403, google:404, duckduckgo:404
 deli-de-luca	Deli de Luca	delideluca.no	apple-touch-icon:ikke-bilde, apple-touch-icon:ikke-bilde, google:404, duckduckgo:404
 dhl	DHL	dhl.com	apple-touch-icon:The operation was aborted due to timeout, apple-touch-icon:The operation was aborted due to timeout, google:16px, duckduckgo:16px
 eurosko	Eurosko	eurosko.no	apple-touch-icon:404, apple-touch-icon:404, google:404, duckduckgo:404
 gresvig	Gresvig	gresvig.no	apple-touch-icon:fetch failed, apple-touch-icon:fetch failed, google:404, duckduckgo:404
 lindex	Lindex	lindex.com	apple-touch-icon:403, apple-touch-icon:403, google:404, duckduckgo:16px
-matkroken	Matkroken	matkroken.no	apple-touch-icon:fetch failed, apple-touch-icon:fetch failed, google:404, duckduckgo:404
+matkroken	Matkroken	matkroken.no	apple-touch-icon:404, apple-touch-icon:404, google:404, duckduckgo:404
 narvesen	Narvesen	narvesen.no	apple-touch-icon:404, apple-touch-icon:404, html-icon:16px, html-icon:16px, google:16px, duckduckgo:16px
 nordic-feet	Nordic Feet	nordicfeet.com	apple-touch-icon:fetch failed, apple-touch-icon:fetch failed, google:404, duckduckgo:16px
 pizzabakeren	Pizzabakeren	pizzabakeren.no	apple-touch-icon:ikke-bilde, apple-touch-icon:ikke-bilde, html-icon:16px, google:16px, duckduckgo:16px
