@@ -42,14 +42,27 @@ struct TaskItem17: Identifiable, Hashable {
     var assignee: String?
     var note: String
     var done: Bool
+    /// Prompt 37: feltene i detaljarket (Tasks37Detail.swift). Tomme/standard fra eldre servere.
+    var time: String = ""
+    var urgent: Bool = false
+    var rep: String = "never"
+    var early: String = "none"
+    var prio: Int = 0
+    var flag: Bool = false
+    var tags: [String] = []
+    var subs: [TaskSub37] = []
+    var by: String = ""
+    var place: String = ""
+    var doneAt: Date? = nil
     init(_ o: [String: Any]) {
         id = JS.str(o, "id") ?? UUID().uuidString
-        title = JS.str(o, "title") ?? ""
-        list = JS.str(o, "list") ?? "hjem"
+        title = JS.str(o, "title") ?? JS.str(o, "n") ?? ""
+        list = JS.str(o, "list") ?? JS.str(o, "l") ?? "hjem"
         due = JS.str(o, "due").flatMap { parseDay($0) }
-        assignee = JS.str(o, "assignee")
-        note = JS.str(o, "note") ?? ""
+        assignee = JS.str(o, "assignee") ?? JS.str(o, "who")
+        note = JS.str(o, "note") ?? JS.str(o, "notes") ?? ""
         done = JS.bool(o, "done") ?? false
+        Tasks37.fill(&self, o)
     }
 }
 
@@ -99,7 +112,7 @@ final class TasksModel {
             // Prompt 21: eier og deling fra /api/tasks/lists (eldre servere: 404, da beholdes listene over).
             await loadListSharing(store)
         } catch let e as APIError {
-            error = e.status == 404 ? "Huskelisten finnes ikke på serveren ennå. Oppdater homelab." : e.message
+            error = e.status == 404 ? "Gjøremål finnes ikke på serveren ennå. Oppdater homelab." : e.message
         } catch {
             self.error = error.localizedDescription
         }
@@ -209,10 +222,13 @@ struct PaperTasksView: View {
             if cur == Tasks32b.archId {
                 Tasks32bArchiveView()
             } else {
-            if let l = m.lists.first(where: { $0.id == cur }) { TaskListHeader21(list: l) }
+            // Prompt 37: infokort for valgt liste (privat/delt + Del/Administrer), Tasks37Lists.swift.
+            if let l = m.lists.first(where: { $0.id == cur }) { Task37ListInfo(list: l) }
             // Prompt 22: på telefon ligger feltet fast over fanelinjen (TaskDockField22), ikke øverst.
             if wide { addField }
             options
+            // Prompt 37: Glimt-kortene (like oppgaver, forfalte), Tasks37Glimt.swift.
+            Task37GlimtCards(cur: cur)
             if let e = m.error { PCard { Text(e).font(PF.ui(13)).foregroundStyle(p.lab).fixedSize(horizontal: false, vertical: true) } }
             ForEach(groups, id: \.0) { g in
                 HStack {
@@ -239,7 +255,7 @@ struct PaperTasksView: View {
                 .buttonStyle(.plain).padding(.leading, 4)
             }
             TaskHASection22()
-            Text("Widgeten «Huskeliste» på hjemskjermen viser de tre neste oppgavene, og du kan krysse av rett i den.")
+            Text("Widgeten «Gjøremål» på hjemskjermen viser de tre neste oppgavene, og du kan krysse av rett i den.")
                 .font(PF.ui(12)).foregroundStyle(p.mut).padding(.horizontal, 4).padding(.top, 6).fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -247,8 +263,28 @@ struct PaperTasksView: View {
             await m.load(store)
             await Tasks32b.shared.load(store)
         }
-        .sheet(item: $editing) { t in
-            TaskEditSheet(task: t) { editing = nil }.environment(\.paper, p).presentationDetents([.medium, .large]).sheetEdge30(p.bg)
+        // Prompt 37: detaljarket, listearket og Glimt-arket er ark i appen (Tasks37*.swift). Mens et ark er åpent,
+        // skjules det dokkede feltet og ✦-knappen (Tasks37UI.anySheet).
+        .sheet(item: Binding<TaskItem17?>(get: { Tasks37UI.shared.detail }, set: { Tasks37UI.shared.detail = $0 })) { (t: TaskItem17) in
+            Task37DetailSheet(task: t) { Tasks37UI.shared.detail = nil }
+                .environment(\.paper, p)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .sheetEdge30(p.bg)
+        }
+        .sheet(isPresented: Binding<Bool>(get: { Tasks37UI.shared.listSheet }, set: { Tasks37UI.shared.listSheet = $0 })) {
+            Task37ListSheet(list: Tasks37UI.shared.listEdit) { Tasks37UI.shared.listSheet = false }
+                .environment(\.paper, p)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .sheetEdge30(p.bg)
+        }
+        .sheet(isPresented: Binding<Bool>(get: { Tasks37UI.shared.glimtOpen }, set: { Tasks37UI.shared.glimtOpen = $0 })) {
+            Task37GlimtSheet()
+                .environment(\.paper, p)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+                .sheetEdge30(p.bg)
         }
     }
 
@@ -275,10 +311,32 @@ struct PaperTasksView: View {
             HStack(spacing: 6) {
                 chip("alle", "Alle", p.ink, m.openCount)
                 ForEach(m.lists) { l in
-                    chip(l.id, l.name, Color(hex: l.color), m.items.filter { $0.list == l.id && !$0.done }.count)
+                    chip37(l)
+                }
+                // Prompt 37: + Ny liste (stiplet).
+                Task37NewListChip {
+                    Haptics.shared.tap()
+                    Tasks37UI.shared.listEdit = nil
+                    Tasks37UI.shared.listSheet = true
                 }
                 // Prompt 32: «Arkivert · N» sist i listevelgeren.
                 Tasks32bChip(on: cur == Tasks32b.archId) { cur = Tasks32b.archId; Haptics.shared.select() }
+            }
+        }
+    }
+
+    /// Prompt 37: liste-chip med avatarer for delte lister. Trykk på den aktive chipen åpner listearket.
+    private func chip37(_ l: TaskList17) -> some View {
+        let n: Int = m.items.filter { $0.list == l.id && !$0.done }.count
+        let names: [String] = m.isPrivate37(l) ? [] : l.memberIds.map { (id: String) -> String in m.memberName(id) ?? "?" }
+        let on: Bool = cur == l.id
+        return Task37ListChip(name: l.name, color: Color(hex: l.color), count: n, avatars: names, on: on) {
+            Haptics.shared.select()
+            if on {
+                Tasks37UI.shared.listEdit = l
+                Tasks37UI.shared.listSheet = true
+            } else {
+                cur = l.id
             }
         }
     }
@@ -315,6 +373,17 @@ struct PaperTasksView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Legg til")
+            // Prompt 37: Glimt på brett (uten dokket felt).
+            Button {
+                TaskDock22.shared.text = text
+                text = ""
+                Tasks37Glimt.shared.open(store)
+            } label: {
+                Image(systemName: "sparkle").font(.system(size: 18, weight: .bold)).foregroundStyle(p.ink)
+                    .frame(width: 48, height: 48).background(p.card, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Glimt · skriv eller spør")
         }
     }
 
@@ -364,7 +433,7 @@ struct PaperTasksView: View {
     private func row(_ t: TaskItem17) -> some View {
         let c = m.color(t.list)
         let dt = TasksModel.dueText(t.due)
-        let meta = [dt.0, m.memberName(t.assignee) ?? "", cur == "alle" ? m.listName(t.list) : ""].filter { !$0.isEmpty }.joined(separator: " · ")
+        let meta: String = Task37Row.meta(t, dt.0, cur, m)
         return HStack(spacing: 12) {
             Button { m.toggle(t, store) } label: {
                 ZStack {
@@ -378,9 +447,10 @@ struct PaperTasksView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(t.done ? "Marker som ikke ferdig" : "Fullfør")
-            Button { editing = t } label: {
+            Button { Tasks37UI.shared.detail = t } label: {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(t.title).font(PF.ui(15, .semibold)).foregroundStyle(p.ink).strikethrough(t.done).lineLimit(2)
+                    // Prompt 37: ⚑ og ! / !! / !!! foran tittelen.
+                    Task37Row.title(t, p).lineLimit(2)
                     if !meta.isEmpty { Text(meta).font(PF.ui(12)).foregroundStyle(t.done ? p.mut : (dt.1 ? p.lab : p.mut)) }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -393,7 +463,7 @@ struct PaperTasksView: View {
         .opacity(t.done ? 0.55 : 1)
         .frame(minHeight: 54)
         .contextMenu {
-            Button { editing = t } label: { Label("Endre", systemImage: "pencil") }
+            Button { Tasks37UI.shared.detail = t } label: { Label("Detaljer", systemImage: "pencil") }
             if t.done { Button { Tasks32b.shared.archive(t, store) } label: { Label("Arkiver", systemImage: "archivebox") } }
             Button(role: .destructive) { m.delete(t, store) } label: { Label("Slett", systemImage: "trash") }
         }
@@ -480,7 +550,7 @@ struct PaperTasksCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
-                PLabel(text: "Huskeliste · \(m.openCount) igjen")
+                PLabel(text: "Gjøremål · \(m.openCount) igjen")
                 Spacer()
                 Button { store.paperGo("huske") } label: { Text("alle ›").font(PF.ui(12)).foregroundStyle(p.mut) }.buttonStyle(.plain)
             }

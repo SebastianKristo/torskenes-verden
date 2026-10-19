@@ -161,6 +161,10 @@ struct Brief35Page: View {
             Glimt35SettingsSheet(close: { cfgOpen = false })
                 .presentationDetents([.large])
         }
+        // Prompt 37: Vær som fullskjerm over briefen (rot-dekket i PaperShell er av mens briefen er åpen).
+        .fullScreenCover(isPresented: Binding<Bool>(get: { store.weatherOpen && m.open }, set: { (v: Bool) in if !v { store.weatherOpen = false } })) {
+            PaperWeatherView().edgeSwipeClose30 { store.weatherOpen = false }
+        }
         .onChange(of: m.step) { (_: Int, s: Int) in
             if s <= 0 { v.stop(); return }
             let i: Int = Swift.min(s - 1, steps.count - 1)
@@ -203,12 +207,18 @@ struct Brief35Content: View {
                 }
             }
             // Prompt 36: ringen følger kortets hjørner nøyaktig (Brief36Ring) og settes på selve kortet.
-            Brief34Weather(b: b).brief36Ring(target == "vaer").id("gb35-vaer")
+            // Prompt 37: hele Vær-kortet åpner Vær over briefen (Brief37.swift); ✕ går tilbake hit.
+            Brief37WeatherButton(b: b).brief36Ring(target == "vaer").id("gb35-vaer")
+            // Prompt 37: dagens bibelvers etter Vær (morgen og kveld), eller nederst når det er lest/sveipet bort på Hjem.
+            if Bible37Model.shared.briefPlace == "top" { Bible37BriefCard() }
             Brief34Calendar(b: b).brief36Ring(target == "kal").id("gb35-kal")
+            // Prompt 37: Gjøremål i dag (forfalt + i dag) med avkrysning (Brief37.swift).
+            Brief37TodosCard()
             if !g.extra.trials.isEmpty {
                 Brief35TrialsCard(trials: g.extra.trials).brief36Ring(target == "abo").id("gb35-abo")
             }
             Brief35NewsCard(b: b, extra: g.extra).brief36Ring(target == "nyh").id("gb35-nyh")
+            if Bible37Model.shared.briefPlace == "bottom" { Bible37BriefCard() }
             Text(footer).font(PF.ui(12)).foregroundStyle(Brief34C.rgb(0x8a8478))
                 .frame(maxWidth: .infinity).multilineTextAlignment(.center)
         }
@@ -233,7 +243,7 @@ struct Brief35Top: View {
     var body: some View {
         let on: Bool = g.cfg.readAloud
         HStack(spacing: 6) {
-            Text("GLIMT · " + kick.uppercased()).font(PF.mono(10.5)).tracking(1.4).foregroundStyle(Brief34C.red).lineLimit(1)
+            // Prompt 37: etiketten «GLIMT · KVELDSBRIEF» er fjernet (dobbelt med tittelen). Knappene står høyrejustert.
             Spacer(minLength: 8)
             Button { g.setBool("readAloud", !on, store) } label: {
                 Image(systemName: on ? "speaker.wave.2.fill" : "speaker.slash")

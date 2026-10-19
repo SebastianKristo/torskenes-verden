@@ -164,7 +164,8 @@ struct PaperShell: View {
             let shift: CGFloat = kb28 ? -8 : g.safeAreaInsets.bottom - bottom
             // Prompt 24: Ruter-visningen er fullskjerm uten fanelinje og skann-knapp.
             // Prompt 32: Innstillinger og undersidene har heller ingen fanelinje eller skann-knapp (Settings32.swift).
-            let showBar = !store.newsOpen && store.dishSel == nil && !store.ruter24Full && !store.full27 && !store.inSettings32b
+            // Prompt 37: Gjøremål har heller ingen fanelinje (tilbake med ‹ Mer eller kantsveip), Tasks37Model.swift.
+            let showBar = !store.newsOpen && store.dishSel == nil && !store.ruter24Full && !store.full27 && !store.inSettings32b && !store.inTasks37
             // Prompt 23: ingen skann-knapp på Aksjer.
             let fab = showBar && store.fabMode == "float" && store.paperTab != "abo" && store.paperTab != "familie" && !store.nav23NoScan
             ZStack(alignment: wide ? .topLeading : .bottom) {
@@ -201,12 +202,16 @@ struct PaperShell: View {
                 }
             }
             .overlay(alignment: .bottom) {
-                // Prompt 22: «Ny oppgave …» fast over fanelinjen på Huskeliste, ved siden av FAB-en (+).
-                if showBar && !wide && store.paperTab == "huske" && store.paperClassic == nil && store.paperFin == nil && TaskDock22.shared.cur != Tasks32b.archId {
-                    TaskDockField22(ownButton: !fab)
-                        .padding(.leading, 16).padding(.trailing, fab ? 96 : 16)
-                        .padding(.bottom, 62 + 14)
-                        .offset(y: shift)
+                // Prompt 37: Gjøremål uten fanelinje – «Ny oppgave …» og den runde ✦-knappen (Glimt) helt nede:
+                // max(18, safe area + 8) over skjermkanten, og rett over tastaturet når det er oppe. Skjules mens et ark er åpent.
+                if !wide && store.inTasks37 && TaskDock22.shared.cur != Tasks32b.archId && !Tasks37UI.shared.anySheet {
+                    HStack(alignment: .center, spacing: 10) {
+                        TaskDockField22(ownButton: false)
+                        Task37GlimtButton()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, kb28 ? 8 : (g.safeAreaInsets.bottom < 10 ? 18 : 8))
+                    .transition(.opacity)
                 }
             }
             .overlay(alignment: .bottomTrailing) {
@@ -267,7 +272,8 @@ struct PaperShell: View {
                 .presentationDragIndicator(.hidden)
                 .sheetEdge30(p.bg)
         }
-        .fullScreenCover(isPresented: Binding(get: { store.weatherOpen }, set: { store.weatherOpen = $0 })) {
+        // Prompt 37: mens briefen er åpen, vises Vær fra briefen selv (Brief35Page), så den legges over briefen.
+        .fullScreenCover(isPresented: Binding(get: { store.weatherOpen && !Brief34Model.shared.open }, set: { store.weatherOpen = $0 })) {
             // Prompt 30: kantsveip fra venstre lukker Vær (fullskjerm har ikke appens egen tilbakegest).
             PaperWeatherView().edgeSwipeClose30 { store.weatherOpen = false }
         }
@@ -809,11 +815,20 @@ struct PaperPage: View {
                         .frame(maxWidth: .infinity)
                         .padding(.leading, wide ? 108 : 0)
                         // Prompt 32: Innstillinger har ingen fanelinje eller skann-knapp: 28 pt + safe area nederst.
-                        .padding(.bottom, store.inSettings32b ? 28 : (store.fabMode == "float" && !wide ? 112 : 20))
+                        // Prompt 37: Gjøremål – plass til feltet nederst (60 + bunnmarg + 16).
+                        .padding(.bottom, store.inSettings32b ? 28 : (store.inTasks37 && !wide ? 124 : (store.fabMode == "float" && !wide ? 112 : 20)))
                 }
             }
             .coordinateSpace(name: "ppage")
             .scrollIndicators(.hidden)
+            // Prompt 37: ingen scroll mens et kort dras (gesten og scroll kjempet om samme berøring); auto-scroll nær kantene.
+            .scrollDisabled(Drag37.shared.active)
+            .background(Drag37Viewport())
+            .onChange(of: Drag37.shared.scrollTick) { _, _ in
+                let k: String = Drag37.shared.scrollTarget
+                let top: Bool = Drag37.shared.scrollTop
+                if !k.isEmpty { withAnimation(.easeOut(duration: 0.35)) { proxy.scrollTo("card37-" + k, anchor: top ? .top : .bottom) } }
+            }
             // Ny side (eller ny bolig, transaksjon …) åpner alltid helt øverst.
             .id(pageKey)
             .onPreferenceChange(PaperScrollKey.self) { v in
@@ -871,6 +886,8 @@ struct PaperPage: View {
         case "kalender": Cal26Page()
         case "innst": PaperSettings17()
         case "huske": PaperTasksView()
+        // Prompt 37: Bibel-siden (Mer → Bibel, bare med modulen).
+        case "bibel": Bible37Page()
         case "domener", "dpub", "dytl", "dinf": PaperDomains()
         case "aksjer": Stocks23Page()
         case "kvitt": Receipts23Page()
@@ -898,6 +915,7 @@ struct PaperPage: View {
         case "ftx": if let id = store.paperTxId { store.openPaperTx(id) }
         case "boliger": await Bol24Model.shared.load(store)
         case "kalender": await Cal26Model.shared.load(store, force: true)
+        case "bibel": await Bible37Model.shared.load(store, force: true)
         default: await store.loadHome(); await store.loadPhotoWindow()
         }
     }
@@ -997,7 +1015,8 @@ struct PaperHero: View {
                 pill(bgName + " ▾") { store.paperBgOpen.toggle(); Haptics.shared.select() }
                     .accessibilityLabel("Bakgrunn: \(bgName)")
             }
-            Button { store.paperGo("profil") } label: {
+            // Prompt 37: profilbildet øverst åpner Innstillinger (oversikten), ikke Konto. Konto nås fra profilkortet der.
+            Button { store.paperGo("innst") } label: {
                 ZStack {
                     Circle().fill(Color(hex: "#f3efe6"))
                     if let a = store.avatar {

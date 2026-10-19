@@ -31,7 +31,7 @@ struct FinansHubWidgetsA: WidgetBundle {
     }
 }
 
-/// Gruppe 2: resten (9 widgets).
+/// Gruppe 2: resten (9 widgets, maks 10).
 struct FinansHubWidgetsB: WidgetBundle {
     var body: some Widget {
         BoligWidget()
@@ -44,6 +44,8 @@ struct FinansHubWidgetsB: WidgetBundle {
         RuterWidget27()
         // Prompt 32: Prøveperioder (liten, medium med ✓ Avsluttet, låseskjerm rund og rektangel).
         TrialsWidget32b()
+        // Prompt 37: Dagens bibelvers (liten, medium og låseskjerm), BibleWidget37.swift. Gruppen har nå 9 av maks 10.
+        BibleWidget37()
     }
 }
 

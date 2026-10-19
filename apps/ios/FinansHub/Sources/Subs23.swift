@@ -154,12 +154,14 @@ enum SubCalc23 {
 /// Rekkefølgen på kortene på Hjem (ai, next7, check, list). Lokalt i sub_home_order og per bruker som subHomeOrder.
 enum SubHomeOrder23 {
     static let key: String = "sub_home_order"
-    static let all: [String] = ["ai", "next7", "check", "list"]
+    /// Prompt 37: «trials» (Gratis prøveperioder) øverst, før AI-sparing.
+    static let all: [String] = ["trials", "ai", "next7", "check", "list"]
 
     static func full(_ o: [String]) -> [String] {
         var out: [String] = o.map { $0 == "next" ? "next7" : $0 }.filter { all.contains($0) }
         var seen: Set<String> = []
         out = out.filter { seen.insert($0).inserted }
+        if !out.isEmpty && !out.contains("trials") { out.insert("trials", at: 0) }
         for k in all where !out.contains(k) { out.append(k) }
         return out
     }
@@ -400,8 +402,15 @@ struct SubListCard23: View {
             HStack(spacing: 12) {
                 SubLogo23(name: s.name, domain: s.domain, logoUrl: s.logoUrl, category: s.category, size: 34)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(s.name).font(PF.ui(14.5, .medium)).foregroundStyle(t.fg).lineLimit(1)
+                    HStack(spacing: 6) {
+                        Text(s.name).font(PF.ui(14.5, .medium)).foregroundStyle(t.fg).lineLimit(1)
+                        // Prompt 37: delte abonnementer – små avatarer etter navnet.
+                        if s.shared37 { Task37Avatars(names: s.members.map(\.name)) }
+                    }
                     Text(sub(s)).font(PF.ui(12.5)).foregroundStyle(t.mut).lineLimit(1)
+                    if s.shared37 {
+                        Text(Subs37.shareLine(s)).font(PF.ui(12, .semibold)).foregroundStyle(Subs37.green).lineLimit(1)
+                    }
                 }
                 Spacer(minLength: 6)
                 Text(SubCalc23.kr(s.price)).font(PF.mono(14)).foregroundStyle(s.active ? t.fg : t.mut)
@@ -458,14 +467,37 @@ struct SubHome23: View {
     @Environment(\.paper) private var p
     let x: SubsX
     @State private var order: [String] = SubHomeOrder23.load()
+    /// Prompt 37: skjulte kort (− i wiggle-modus), ＋ henter dem tilbake.
+    @State private var hid: [String] = SubHid37.load()
+    @State private var addOpen: Bool = false
+    @State private var wig: Bool = false
     @State private var editing: Bool = false
     @State private var pressAt: Date = .distantPast
     @State private var width: CGFloat = 358
 
     var body: some View {
         VStack(spacing: 14) {
-            if editing { SubOrderBar23(reset: { resetOrder() }, done: { stopEditing() }) }
-            ForEach(order, id: \.self) { k in cell(k) }
+            if editing {
+                HStack(spacing: 8) {
+                    // Prompt 37: ＋ med antall skjulte kort.
+                    Edit28Pill(kind: .add, text: hid.isEmpty ? "" : "\(hid.count)") {
+                        Haptics.shared.tap()
+                        addOpen = true
+                    }
+                    SubOrderBar23(reset: { resetOrder() }, done: { stopEditing() })
+                }
+            }
+            ForEach(order.filter { !hid.contains($0) }, id: \.self) { k in cell(k) }
+        }
+        .sheet(isPresented: $addOpen) {
+            Sub37AddCardsSheet(hidden: hid, show: { (k: String) in
+                Haptics.shared.tick()
+                withAnimation(.easeOut(duration: 0.2)) { hid.removeAll { $0 == k } }
+                SubHid37.save(hid, store)
+            }, close: { addOpen = false })
+            .environment(\.paper, p)
+            .presentationDetents([.medium])
+            .presentationDragIndicator(.visible)
         }
         .background(GeometryReader { g in Color.clear.onAppear { width = g.size.width } })
         .task {
@@ -475,6 +507,8 @@ struct SubHome23: View {
 
     @ViewBuilder private func card(_ k: String) -> some View {
         switch k {
+        // Prompt 37: Gratis prøveperioder (Subs37.swift).
+        case "trials": Sub37TrialsCard(editing: editing)
         case "ai": SubAiCard23(x: x) { act { store.subTab = "hist" } }
         case "next7": SubNextCard23(x: x)
         case "check": SubCheckCard23(x: x).contentShape(Rectangle()).onTapGesture { act { store.subTab = "hist" } }
@@ -485,8 +519,11 @@ struct SubHome23: View {
     @ViewBuilder private func cell(_ k: String) -> some View {
         let t: SubTok23 = SubTok23.of(p)
         let r: CGFloat = k == "ai" ? 28 : 24
+        let i: Int = order.firstIndex(of: k) ?? 0
+        let sign: Double = i % 2 == 0 ? 1 : -1
         if editing {
             card(k)
+                .allowsHitTesting(false)
                 // Trykk inne i kortet er blokkert mens du redigerer (act() sjekker også editing).
                 .overlay(Color.white.opacity(0.001))
                 .overlay(
@@ -494,6 +531,16 @@ struct SubHome23: View {
                         .stroke(t.bd, style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
                         .padding(-3)
                 )
+                // Prompt 37: − skjuler kortet, og kortene vugger (±0,6°, 0,6 s, annenhver retning).
+                .overlay(alignment: .topLeading) {
+                    Edit28Minus(label: "Skjul " + SubHid37.label(k)) {
+                        Haptics.shared.tick()
+                        withAnimation(.easeOut(duration: 0.2)) { hid.append(k) }
+                        SubHid37.save(hid, store)
+                    }
+                    .offset(x: -9, y: -9)
+                }
+                .rotationEffect(.degrees((wig ? 0.6 : -0.6) * sign))
                 .contentShape(Rectangle())
                 .draggable(k) {
                     card(k).frame(width: width).scaleEffect(1.03).opacity(0.85).environment(\.paper, p).environment(store)
@@ -520,11 +567,13 @@ struct SubHome23: View {
         pressAt = Date()
         Haptics.shared.tick()
         withAnimation(.easeOut(duration: 0.15)) { editing = true }
+        wig = false
+        withAnimation(.easeInOut(duration: 0.3).repeatForever(autoreverses: true)) { wig = true }
     }
 
     private func stopEditing() {
         Haptics.shared.success()
-        withAnimation(.easeOut(duration: 0.15)) { editing = false }
+        withAnimation(.easeOut(duration: 0.15)) { editing = false; wig = false }
         pressAt = Date()
         SubHomeOrder23.save(order, store)
     }
@@ -532,7 +581,8 @@ struct SubHome23: View {
     private func resetOrder() {
         Haptics.shared.select()
         SubHomeOrder23.reset(store)
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { order = SubHomeOrder23.all }
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { order = SubHomeOrder23.all; hid = [] }
+        SubHid37.save([], store)
     }
 
     private func drop(_ src: String?, on target: String) {

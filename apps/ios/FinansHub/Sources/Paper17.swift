@@ -895,7 +895,7 @@ struct PaperModulesSettings: View {
             ])
             PLabel(text: "Moduler").padding(.leading, 4).padding(.top, 14)
             PaperLinkList(rows: [
-                PaperLinkRow(name: "Huskeliste", sub: "Oppgaver for hele familien", value: "Åpne ›", icon: "checklist") { store.paperGo("huske") },
+                PaperLinkRow(name: "Gjøremål", sub: "To-do for hele familien", value: "Åpne ›", icon: "checklist") { store.paperGo("huske") },
                 PaperLinkRow(name: "Familie og helse", sub: "Deling av posisjon, personvern og Apple Helse", icon: "person.2") { store.paperGo("innst-fam") },
                 PaperLinkRow(name: "Værsteder", sub: "Legg til, fjern og søk etter steder", value: "Åpne ›", icon: "cloud.sun") { store.openWeather() },
                 PaperLinkRow(name: "Avganger", sub: "Stopp fra Ruter og Entur", value: "Åpne ›", icon: "tram") { store.paperGo("avg") },

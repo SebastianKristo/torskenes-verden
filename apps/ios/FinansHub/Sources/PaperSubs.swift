@@ -16,8 +16,8 @@ struct PaperSubs: View {
                 case "ins": insights(x)
                 case "hist": history(x)
                 default:
-                    // Prompt 31: aktive prøveperioder («Prøve · 12 dager igjen», Trial31.swift).
-                    Trial31Strip()
+                    // Prompt 37: prøveperiodene står nå i kortet «Gratis prøveperioder» øverst i SubHome23 (Subs37.swift),
+                    // som kan flyttes og skjules i wiggle-modus. Trial31Strip brukes ikke her lenger.
                     SubHome23(x: x)
                 }
             } else {

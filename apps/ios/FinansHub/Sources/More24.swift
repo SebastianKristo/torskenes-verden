@@ -69,7 +69,7 @@ struct PaperMore24: View {
         out.append(More24Row(id: "kalender", name: "Kalender", sub: "Timeplan, prøver og frister", icon: "calendar") { store.paperGo("kalender") })
         out.append(More24Row(id: "bursdag", name: "Bursdager", sub: "Hvem har bursdag snart", icon: "gift") { store.paperGo("bursdag") })
         if !inBar.contains("huske") {
-            out.append(More24Row(id: "huske", name: "Huskeliste", sub: "Oppgaver og widgets", icon: "checklist") { store.paperGo("huske") })
+            out.append(More24Row(id: "huske", name: "Gjøremål", sub: "Oppgaver og widgets", icon: "checklist") { store.paperGo("huske") })
         }
         if !inBar.contains("familie") {
             out.append(More24Row(id: "familie", name: "Familie og kart", sub: "Posisjon, soner og helse", icon: "mappin.and.ellipse") { store.paperGo("familie") })

@@ -37,7 +37,7 @@ enum Chat31 {
         if i.hasPrefix("departures") { return "Avganger" }
         if i.hasPrefix("packages") { return "Pakker" }
         if i.hasPrefix("finance") { return "Finans" }
-        if i.hasPrefix("tasks") { return "Huskeliste" }
+        if i.hasPrefix("tasks") { return "Gjøremål" }
         if i.hasPrefix("trial") { return "Abonnementer" }
         return ""
     }
@@ -517,7 +517,7 @@ struct Chat31Tasks: View {
 
     var body: some View {
         let rows: [[String: Any]] = JS.list(o, "items").isEmpty ? JS.list(o, "tasks") : JS.list(o, "items")
-        Chat31Box(title: JS.str(o, "title") ?? "Huskeliste", c: c) {
+        Chat31Box(title: JS.str(o, "title") ?? "Gjøremål", c: c) {
             ForEach(Array(rows.prefix(8).enumerated()), id: \.offset) { (pair: (offset: Int, element: [String: Any])) in
                 Chat31TaskRow(o: pair.element, c: c, first: pair.offset == 0)
             }

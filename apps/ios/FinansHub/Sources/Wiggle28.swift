@@ -15,6 +15,8 @@ final class Edit28 {
 
     var addOpen: Bool = false
     var ruterOpen: Bool = false
+    /// Prompt 37: panelet «Sporing» på Pakker-kortet (Pkg37.swift).
+    var pkgOpen: Bool = false
     /// Økes av «↺ Tilbakestill» i Finans → Mer; rutenettet lytter.
     var resetTick: Int = 0
     /// Etikettene til kortene på hver side (settes av PaperCardStack), til «Legg til widget».
@@ -23,7 +25,7 @@ final class Edit28 {
     /// Sidene med pillene.
     static let pages: Set<String> = ["hjem", "mat", "finans", "sporing", "fmer"]
     /// Kort med egne innstillinger («✎ Rediger widget»).
-    static let settingsCards: Set<String> = ["h3", "h10"]
+    static let settingsCards: Set<String> = ["h2", "h3", "h10"]
 
     static let angle: Double = 0.45
     static let half: Double = 0.3
@@ -31,6 +33,7 @@ final class Edit28 {
     func editWidget(_ key: String, _ store: Store) {
         Haptics.shared.tap()
         switch key {
+        case "h2": pkgOpen = true
         case "h3": ruterOpen = true
         case "h10": store.paperGo("innst-kal")
         default: break
@@ -272,6 +275,12 @@ struct Edit28Layer: ViewModifier {
             .sheet(isPresented: Binding<Bool>(get: { e.addOpen }, set: { e.addOpen = $0 })) {
                 Edit28AddSheet().environment(\.paper, p)
                     .presentationDetents([.medium])
+                    .presentationDragIndicator(.visible)
+                    .sheetEdge30(p.bg)
+            }
+            .sheet(isPresented: Binding<Bool>(get: { e.pkgOpen }, set: { e.pkgOpen = $0 })) {
+                Pkg37OptionsSheet(close: { e.pkgOpen = false }).environment(\.paper, p)
+                    .presentationDetents([.height(300)])
                     .presentationDragIndicator(.visible)
                     .sheetEdge30(p.bg)
             }

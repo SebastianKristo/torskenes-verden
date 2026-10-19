@@ -228,6 +228,8 @@ struct Int26List: View {
                 PLabel(text: g.0).padding(.leading, 4).padding(.top, 12)
                 Int26Card(rows: g.1)
             }
+            // Prompt 37: sporingsnøklene er delt i husstanden (maskert, bare admin endrer), TrackKeys37.swift.
+            TrackKeys37Card()
         }
     }
 

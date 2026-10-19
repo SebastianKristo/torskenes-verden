@@ -155,17 +155,22 @@ struct PaperOnboardingView: View {
                 GateHeader(kicker: "Steg \(step + 1) av 3", title: titles[Swift.min(2, step)])
                 VStack(alignment: .leading, spacing: 14) {
                     dots(step, p)
-                    switch step {
-                    case 0: themes(p)
-                    case 1: backgrounds(p)
-                    default: perms(p)
+                    // Prompt 37: først «Hvem er du?» – koble brukeren til en profil i husstanden (Profile37.swift).
+                    if step == 0 && Profile37Model.shared.needsLink {
+                        Profile37LinkView()
+                    } else {
+                        switch step {
+                        case 0: themes(p)
+                        case 1: backgrounds(p)
+                        default: perms(p)
+                        }
+                        HStack(spacing: 10) {
+                            if step > 0 { PLineButton(title: "Tilbake", height: 50, full: true) { store.onboarding = step - 1 } }
+                            PInkButton(title: step < 2 ? "Neste" : "Ferdig", height: 50, full: true) { next(step) }
+                        }
+                        .padding(.top, 6)
+                        Button("Hopp over") { finish(skip: true) }.font(PF.ui(13, .semibold)).foregroundStyle(p.mut).frame(maxWidth: .infinity)
                     }
-                    HStack(spacing: 10) {
-                        if step > 0 { PLineButton(title: "Tilbake", height: 50, full: true) { store.onboarding = step - 1 } }
-                        PInkButton(title: step < 2 ? "Neste" : "Ferdig", height: 50, full: true) { next(step) }
-                    }
-                    .padding(.top, 6)
-                    Button("Hopp over") { finish(skip: true) }.font(PF.ui(13, .semibold)).foregroundStyle(p.mut).frame(maxWidth: .infinity)
                 }
                 .padding(.horizontal, 22).padding(.top, 20).padding(.bottom, 40)
             }
@@ -175,6 +180,7 @@ struct PaperOnboardingView: View {
         .environment(\.paper, p)
         .environment(\.colorScheme, p.dark ? .dark : .light)
         .onAppear { design = store.paperMode == "mork" ? "mork" : "lys" }
+        .task { await Profile37Model.shared.load(store) }
     }
 
     private var palette: PaperPalette { design == "mork" ? .night : .light }

@@ -41,6 +41,7 @@ final class Mer28 {
         if loadedFor == acct { return }
         loadedFor = acct
         readLocal()
+        if migrate37() { save(store) }
         guard let d = try? await store.api.callAt("/api", "GET", "/prefs/mer") else { return }
         let r: [String: Any] = JS.obj(d)
         let o: [String: Any] = JS.dict(r, "mer") ?? JS.dict(r, "prefs") ?? r
@@ -50,6 +51,22 @@ final class Mer28 {
         order = oo
         hidden = hh.filter { $0 != Mer28.locked }
         writeLocal()
+        if hidden.contains("huske") && !UserDefaults.standard.bool(forKey: AcctScope.key("papir_mer_huske_v1_srv")) {
+            UserDefaults.standard.set(true, forKey: AcctScope.key("papir_mer_huske_v1_srv"))
+            hidden.removeAll { $0 == "huske" }
+            save(store)
+        }
+    }
+
+    /// Prompt 37: Gjøremål var skjult i noens Mer-oppsett. Én gang (papir_mer_huske_v1) tas den ut av skjult-listen;
+    /// etterpå kan brukeren skjule den igjen selv. true = endret.
+    private func migrate37() -> Bool {
+        let k: String = AcctScope.key("papir_mer_huske_v1")
+        if UserDefaults.standard.bool(forKey: k) { return false }
+        UserDefaults.standard.set(true, forKey: k)
+        if !hidden.contains("huske") { return false }
+        hidden.removeAll { $0 == "huske" }
+        return true
     }
 
     private func readLocal() {
@@ -214,8 +231,13 @@ struct PaperMore28: View {
         out.append(More28Row(id: "chat", name: "Chat", sub: "Ollama lokalt, Gemini og Groq", icon: "bubble.left.and.bubble.right") { store.openChat() })
         out.append(More28Row(id: "kalender", name: "Kalender", sub: "Timeplan, prøver og frister", icon: "calendar") { store.paperGo("kalender") })
         out.append(More28Row(id: "bursdag", name: "Bursdager", sub: "Hvem har bursdag snart", icon: "gift") { store.paperGo("bursdag") })
-        if !inBar.contains("huske") {
-            out.append(More28Row(id: "huske", name: "Huskeliste", sub: "Oppgaver og widgets", icon: "checklist") { store.paperGo("huske") })
+        // Prompt 37: Gjøremål står alltid i Mer (også når den er i fanelinjen).
+        out.append(More28Row(id: "huske", name: "Gjøremål", sub: "To-do for hele familien", icon: "checklist") { store.paperGo("huske") })
+        // Prompt 37: Bibel (bare for brukere med bibelvers-modulen).
+        if Bible37Model.shared.enabled {
+            let st: Int = Bible37Model.shared.streak
+            let sub: String = st > 0 ? "🔥 \(st) " + (st == 1 ? "dag" : "dager") + " på rad" : "Dagens vers, rekke og leseplan"
+            out.append(More28Row(id: "bibel", name: "Bibel", sub: sub, icon: "book") { store.paperGo("bibel") })
         }
         if !inBar.contains("familie") {
             out.append(More28Row(id: "kart", name: "Familie og kart", sub: "Posisjon, soner og helse", icon: "mappin.and.ellipse") { store.paperGo("familie") })

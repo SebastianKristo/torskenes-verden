@@ -56,6 +56,8 @@ extension Store {
         if let v = JS.str(o, "fourthTab"), ["auto", "domener", "sporing"].contains(v), v != fourthTab { fourthTab = v }
         if let v = JS.str(o, "fab"), ["float", "inline"].contains(v), v != fabMode { fabMode = v }
         migrateHome24()
+        // Prompt 37: valgene på Pakker-kortet (papir_wopt).
+        Wopt37.shared.apply(o)
         FinNav26.shared.apply(o, self)
         // Prompt 32: fanelinjene på Domener, Abonnement og Familie (secNav) og Glimt-grensen (hs_timeout_s).
         Nav32b.shared.take(o)
@@ -72,7 +74,10 @@ extension Store {
             // Prompt 32: Prøveperioder (h11) kommer rett under Avganger også med lagret oppsett.
             if k == "h11", let i = order.firstIndex(of: "h3") { order.insert(k, at: i + 1) }
             // Prompt 34: Glimt-brief (h12) står øverst også med lagret oppsett.
-            else if k == "h12" { order.insert(k, at: 0) } else { order.append(k) }
+            else if k == "h12" { order.insert(k, at: 0) }
+            // Prompt 37: Dagens bibelvers (h13) rett under Glimt-brief.
+            else if k == "h13", let i = order.firstIndex(of: "h12") { order.insert(k, at: i + 1) }
+            else { order.append(k) }
         }
         let hid = l.hidden.filter { keys.contains($0) }
         return (order.filter { !hid.contains($0) }, hid)
@@ -276,19 +281,22 @@ struct PaperCardStack: View {
         let keys = cards.map(\.key)
         let cur = store.pageCards(page, keys)
         let editing = store.paperEditPage == page
+        // Prompt 37: levende rekkefølge mens et kort dras (Reorder37.swift), og Pakker som skjules uten pakker (Pkg37.swift).
+        let order: [String] = editing ? (Drag37.shared.page == page ? (Drag37.shared.live ?? cur.visible) : cur.visible) : cur.visible
+        let shown: [String] = Pkg37.visible(page, order, editing, store)
         VStack(spacing: 10) {
             // Prompt 28: ingen mørk instruksjonslinje; pillene ＋ / ✓ flyter over listen (Wiggle28.swift). Plass til dem her.
             // Prompt 30: plassen til pillene er nå 64 pt padding-top i PaperPage (Wiggle30.topPad).
             if wide && twoColumns && !editing {
-                ForEach(segments(cur.visible)) { seg in
+                ForEach(segments(shown)) { seg in
                     if seg.full {
-                        ForEach(seg.keys, id: \.self) { k in cardView(k, cur.visible, keys) }
+                        ForEach(seg.keys, id: \.self) { k in cardView(k, shown, keys) }
                     } else {
                         // To og to kort ved siden av hverandre, like høye (f.eks. Pakker og Avganger på Fold/iPad).
                         ForEach(pairs(seg.keys), id: \.self) { pair in
                             HStack(alignment: .top, spacing: 12) {
                                 ForEach(pair, id: \.self) { k in
-                                    cardView(k, cur.visible, keys).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                                    cardView(k, shown, keys).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                                 }
                                 if pair.count == 1 { Color.clear.frame(maxWidth: .infinity) }
                             }
@@ -297,9 +305,17 @@ struct PaperCardStack: View {
                     }
                 }
             } else {
-                ForEach(cur.visible, id: \.self) { k in cardView(k, cur.visible, keys) }
+                ForEach(shown, id: \.self) { k in
+                    cardView(k, shown, keys)
+                        .id("card37-" + k)
+                        .zIndex(Drag37.shared.isDragging(page, k) ? 10 : 0)
+                        .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                }
             }
         }
+        .coordinateSpace(name: Drag37.space(page))
+        .background(Drag37StackTop(page: page))
+        .animation(.easeOut(duration: 0.3), value: Pkg37.animKey(page, editing, store))
         .onAppear { Edit28.shared.labels[page] = cards.map { ($0.key, $0.label) } }
     }
 
@@ -326,7 +342,7 @@ struct PaperCardStack: View {
     @ViewBuilder private func cardView(_ k: String, _ vis: [String], _ keys: [String]) -> some View {
         if let c = cards.first(where: { $0.key == k }) {
             let i = vis.firstIndex(of: k) ?? 0
-            PaperEditableCard(page: page, key: k, index: i, count: vis.count, keys: keys) { c.view }
+            PaperEditableCard(page: page, key: k, index: i, count: vis.count, keys: keys, vis: vis) { c.view }
         }
     }
 }
@@ -382,35 +398,30 @@ struct PaperEditableCard<C: View>: View {
     let index: Int
     let count: Int
     let keys: [String]
+    /// Prompt 37: de synlige kortene i rekkefølge (til dra-gesten).
+    var vis: [String] = []
     @ViewBuilder let content: () -> C
     @State private var wig = false
-    @State private var width: CGFloat = 320
 
+    /// Prompt 37: egen gest i stedet for `.draggable` (forhåndsvisningen uten miljø krasjet appen). Reorder37.swift.
     private var dragShield: some View {
-        Color.white.opacity(0.001)
-            .contentShape(Rectangle())
-            .onTapGesture { }
-            .draggable(key) {
-                content()
-                    .frame(width: width)
-                    .scaleEffect(1.03)
-                    .opacity(0.6)
-            }
-            .dropDestination(for: String.self) { items, _ in
-                guard let src = items.first else { return false }
-                store.dropPaperCard(page, src, on: key, keys)
-                return true
-            }
+        Drag37Shield(page: page, key: key, visible: vis, keys: keys)
     }
 
     var body: some View {
         let editing = store.paperEditPage == page
         let sign: Double = index % 2 == 0 ? 1 : -1
         let a: Double = Edit28.angle
+        let dragging: Bool = editing && Drag37.shared.isDragging(page, key)
+        let dy: CGFloat = dragging ? Drag37.shared.offsetY : 0
+        let dim: Bool = editing && Pkg37.dimmed(page, key, store)
         content()
             .disabled(editing)
             .allowsHitTesting(!editing)
-            .background(GeometryReader { g in Color.clear.onAppear { width = g.size.width } })
+            // Prompt 37: Pakker med «vis bare når det er pakker» og 0 pakker vises dempet i redigeringsmodus.
+            .grayscale(dim ? 0.6 : 0)
+            .opacity(dim ? 0.65 : 1)
+            .background(Drag37Frame(page: page, key: key))
             .overlay {
                 // Prompt 21: i redigeringsmodus fanger et usynlig lag alle trykk (ingen lenker åpnes),
                 // og kortet kan dras til en ny plass. Kontrollene ligger over laget.
@@ -418,8 +429,11 @@ struct PaperEditableCard<C: View>: View {
             }
             .overlay {
                 // Prompt 28: «✎ Rediger widget» midt på kort med innstillinger.
-                if editing && Edit28.settingsCards.contains(key) && page == "hjem" {
-                    Edit28WidgetPill { Edit28.shared.editWidget(key, store) }
+                if editing && !dragging && Edit28.settingsCards.contains(key) && page == "hjem" {
+                    VStack(spacing: 6) {
+                        Edit28WidgetPill { Edit28.shared.editWidget(key, store) }
+                        if dim { Pkg37HiddenBadge() }
+                    }
                 }
             }
             .overlay(alignment: .topLeading) {
@@ -433,11 +447,21 @@ struct PaperEditableCard<C: View>: View {
                 // Sporing: midlertidig ▲ ▼ i Papir-stil til dra er på plass.
                 if editing && page == "sporing" { controls.offset(x: 4, y: -8) }
             }
-            .rotationEffect(.degrees(editing ? (wig ? a : -a) * sign : 0))
+            .rotationEffect(.degrees(editing && !dragging ? (wig ? a : -a) * sign : 0))
+            // Prompt 37: kortet som dras følger fingeren (uten animasjon), litt større og med skygge, over de andre.
+            .scaleEffect(dragging ? 1.03 : 1)
+            .shadow(color: .black.opacity(dragging ? 0.3 : 0), radius: dragging ? 16 : 0, y: dragging ? 10 : 0)
+            .offset(y: dy)
+            .transaction { (t: inout Transaction) in if dragging { t.animation = nil } }
+            .zIndex(dragging ? 10 : 0)
             .simultaneousGesture(LongPressGesture(minimumDuration: 0.5, maximumDistance: 8).onEnded { _ in
                 if !editing { store.enterPaperEdit(page) }
             })
-            .onChange(of: editing) { _, on in startWiggle(on) }
+            .onChange(of: editing) { _, on in
+                if !on && Drag37.shared.page == page { Drag37.shared.end(store) }
+                startWiggle(on)
+            }
+            .onChange(of: dragging) { _, d in if !d && editing { startWiggle(true) } }
             .onAppear { startWiggle(editing) }
     }
 
@@ -586,7 +610,7 @@ extension Store {
         case "kvitt": return finNav.contains("kvitteringer") ? "Hjem" : "Mer"
         case "boliger": return folder != nil ? "Boliger" : (finNav.contains("boliger") ? "Hjem" : "Mer")
         case "profil": return "Alle innstillinger"
-        case "huske", "bursdag", "kalender": return "Mer"
+        case "huske", "bursdag", "kalender", "bibel": return "Mer"
         default:
             // Prompt 26: «‹ Integrasjoner» fra en integrasjonsside, «‹ Bursdager» fra Kalendere åpnet der.
             if let l = nav26UpLabel { return l }

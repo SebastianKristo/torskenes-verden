@@ -62,7 +62,7 @@ final class Backup29Model {
         ("familie", "Familie", "Posisjoner, soner og helse"),
         ("mat", "Mat", "Oppskrifter og ukeplan"),
         ("sporing", "Sporing", "Pakker og historikk"),
-        ("huske", "Huskeliste", "Lister og oppgaver"),
+        ("huske", "Gjøremål", "Lister og oppgaver"),
         ("bursdager", "Bursdager", ""),
         ("chat", "Chat", "Samtaler og kunnskapsbase"),
         ("domener", "Domener", "Oppsett og statistikk"),

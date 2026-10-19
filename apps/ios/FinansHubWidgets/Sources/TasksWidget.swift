@@ -114,7 +114,7 @@ struct TasksProvider: TimelineProvider {
 struct TasksWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "no.kristo.finanshub.tasks", provider: TasksProvider()) { e in TasksWidgetView(entry: e) }
-            .configurationDisplayName("Huskeliste")
+            .configurationDisplayName("Gjøremål")
             .description("De neste oppgavene. Kryss av rett i widgeten.")
             .supportedFamilies([.systemSmall, .systemMedium])
     }
@@ -139,7 +139,7 @@ struct TasksWidgetView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 7) {
             HStack(alignment: .firstTextBaseline) {
-                Text("Huskeliste").font(.system(size: 14, weight: .bold, design: .serif))
+                Text("Gjøremål").font(.system(size: 14, weight: .bold, design: .serif))
                 Spacer()
                 Text("\(entry.open) igjen").font(.system(size: 11, weight: .semibold, design: .monospaced)).foregroundStyle(paperLab)
             }

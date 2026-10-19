@@ -34,6 +34,10 @@ struct Assist31Answer: Equatable {
     var wx35Lat: Double = 0
     var wx35Lon: Double = 0
     var wx35: Bool { !wx35Name.isEmpty }
+    /// Prompt 37: «hvor er Ingrid» → {intent:'family.where', person, place, open:{route:'familie', person}} (Assist37.swift).
+    var fam37Person: String = ""
+    var fam37Name: String = ""
+    var fam37: Bool { !fam37Person.isEmpty || intent == "family.where" }
 
     var plain: String { text.replacingOccurrences(of: "**", with: "").trimmingCharacters(in: .whitespacesAndNewlines) }
 
@@ -56,6 +60,7 @@ struct Assist31Answer: Equatable {
             a.wx35Lat = la
             a.wx35Lon = lo
         }
+        Assist37.take(&a, o, raw)
         if let c = o["card"] as? [String: Any], let d = try? JSONSerialization.data(withJSONObject: c) {
             a.cardJSON = String(data: d, encoding: .utf8) ?? ""
         }
@@ -354,6 +359,9 @@ struct Assist31Bubble: View {
                 } else if a.wx35 {
                     // Prompt 35: vær for et sted → «Åpne Vær for New York ›» (Assist35.swift).
                     Assist35WxFoot(a: a)
+                } else if a.fam37 {
+                    // Prompt 37: «hvor er Ingrid» → «Familie · posisjon» og «Vis på kart ›» (Assist37.swift).
+                    Assist37FamFoot(a: a)
                 } else {
                     Assist31BubbleFoot(source: a.source)
                 }
@@ -375,6 +383,11 @@ struct Assist31Bubble: View {
             if let a = m.homeAnswer, a.wx35 {
                 m.closeHome()
                 store.openWeather35(name: a.wx35Name, lat: a.wx35Lat, lon: a.wx35Lon)
+                return
+            }
+            if let a = m.homeAnswer, a.fam37 {
+                m.closeHome()
+                Assist37.openFamily(a, store)
                 return
             }
             withAnimation(.easeOut(duration: 0.18)) { m.closeHome() }

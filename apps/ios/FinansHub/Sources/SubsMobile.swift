@@ -25,6 +25,12 @@ struct SubItem: Identifiable, Hashable {
     var billMonth: Int?
     var logoUrl: String?
     var nextCharge: String
+    /// Prompt 37: delte abonnementer (Subs37.swift). Tomt for private.
+    var members: [SubMember37] = []
+    var split: String = "equal"
+    var payerId: String = ""
+    var myShare: Double? = nil
+    var shared37: Bool { members.count > 1 }
     init(_ o: [String: Any]) {
         id = JS.int(o, "id") ?? 0
         name = JS.str(o, "name") ?? "Abonnement"
@@ -45,6 +51,7 @@ struct SubItem: Identifiable, Hashable {
         billMonth = JS.int(o, "billMonth") ?? (nd.count >= 7 ? Int(nd.dropFirst(5).prefix(2)) : nil)
         logoUrl = JS.str(o, "logoUrl")
         nextCharge = JS.str(o, "nextCharge") ?? nd
+        Subs37.fill(&self, o)
     }
     var cycleName: String { cycle == "yearly" ? "Årlig" : cycle == "biennial" ? "Hvert 2. år" : "Månedlig" }
     var flagged: Bool { active && (status == "low_use" || status == "price_up") }

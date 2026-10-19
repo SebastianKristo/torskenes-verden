@@ -60,7 +60,7 @@ final class Search32b {
         (["domene"], "domener", "Domener"),
         (["familie", "posisjon", "hvor er"], "familie", "Familie"),
         (["mat", "middag", "oppskrift", "matplan"], "mat", "Mat"),
-        (["huskeliste", "handleliste", "oppgave"], "huske", "Huskeliste"),
+        (["gjøremål", "gjoremal", "to-do", "todo", "huskeliste", "handleliste", "oppgave"], "huske", "Gjøremål"),
         (["bursdag"], "bursdag", "Bursdager"),
         (["chat"], "chat", "Chat"),
     ]

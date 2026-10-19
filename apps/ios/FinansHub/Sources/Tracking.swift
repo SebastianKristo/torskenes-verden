@@ -586,7 +586,8 @@ struct TrackingView: View {
                 .overlay(alignment: .topTrailing) { arrows(k) }
                 .rotationEffect(.degrees(wiggle ? (odd ? 0.7 : -0.7) : 0))
                 .contentShape(RoundedRectangle(cornerRadius: 24))
-                .draggable(k) { section(k, t).frame(width: 320).opacity(0.9) }
+                // Prompt 37: forhåndsvisningen får ikke miljøet fra appen – uten Store krasjer den (samme feil som på Hjem).
+                .draggable(k) { section(k, t).frame(width: 320).opacity(0.9).environment(store) }
                 .dropDestination(for: String.self) { items, _ in
                     if let from = items.first { move(from, before: k) }
                     dropTarget = nil

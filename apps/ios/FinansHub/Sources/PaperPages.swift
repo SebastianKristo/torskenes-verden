@@ -16,7 +16,19 @@ struct PaperHome: View {
             // Prompt 30: oppdateringsbanneret øverst, over søkefeltet (bare admin, ✕ skjuler i 24 t). Update30.swift.
             Update30Banner(home: true)
             // Hold inne et kort for å flytte eller skjule det (Søk, Pakker, Avganger, Snarveier og Siste nytt).
-            PaperCardStack(page: "hjem", cards: [
+            PaperCardStack(page: "hjem", cards: homeCards, fullWidth: ["h1", "h5", "h12", "h13"], twoColumns: true)
+            if let e = store.homeError { Text(e).font(PF.ui(12.5)).foregroundStyle(p.lab).frame(maxWidth: .infinity, alignment: .leading) }
+        }
+        .update30Sheet()
+        // Prompt 37: arket med hele bibelverset, og modulen lastes (avgjør om h13 finnes).
+        .bible37Sheet(p)
+        .task { await Update30Model.shared.load(store) }
+        .task { await Bible37Model.shared.load(store) }
+    }
+
+    /// Kortene på Hjem. Prompt 37: «Dagens bibelvers» (h13) finnes bare for brukere med modulen (Bible37Views.swift).
+    private var homeCards: [PaperCardDef] {
+        var out: [PaperCardDef] = [
                 // Prompt 34: Glimt-brief øverst (blått kort med figuren), flyttes og skjules i wiggle-modus (Brief34Page.swift).
                 PaperCardDef(key: "h12", label: "Glimt-brief", view: AnyView(Brief36SwipeCard())), // prompt 36: sveip bort (Brief36.swift)
                 // Prompt 29: søkefelt med søkemotor-meny (System-AI/Google/DuckDuckGo) og timer til kalenderen (HomeSearch29.swift).
@@ -30,20 +42,26 @@ struct PaperHome: View {
                 PaperCardDef(key: "h10", label: "Kalender", view: AnyView(Cal26HomeCard())),
                 PaperCardDef(key: "h4", label: "Snarveier", view: AnyView(shortcuts)),
                 PaperCardDef(key: "h5", label: "Siste nytt", view: AnyView(newsCard)),
-                PaperCardDef(key: "h6", label: "Huskeliste", view: AnyView(PaperTasksCard())),
+                PaperCardDef(key: "h6", label: "Gjøremål", view: AnyView(PaperTasksCard())),
                 PaperCardDef(key: "h7", label: "Posisjon", view: AnyView(PaperFamilyCard())),
                 PaperCardDef(key: "h8", label: "Bolig", view: AnyView(PaperHomeBoligCard())),
                 PaperCardDef(key: "h9", label: "Bursdager", view: AnyView(PaperBirthdaysCard24())),
-            ], fullWidth: ["h1", "h5", "h12"], twoColumns: true)
-            if let e = store.homeError { Text(e).font(PF.ui(12.5)).foregroundStyle(p.lab).frame(maxWidth: .infinity, alignment: .leading) }
+        ]
+        if Bible37Model.shared.enabled {
+            let i: Int = (out.firstIndex { $0.key == "h12" } ?? -1) + 1
+            out.insert(PaperCardDef(key: "h13", label: "Bibelvers", view: AnyView(Bible37HomeCard())), at: i)
         }
-        .update30Sheet()
-        .task { await Update30Model.shared.load(store) }
+        return out
     }
 
-    /// Prompt 24: Pakker vises alltid, også uten aktive pakker («Ingen aktive pakker · Legg til et sporingsnummer»).
+    /// Prompt 24: Pakker vises også uten aktive pakker («Ingen aktive pakker · Legg til et sporingsnummer»), med mindre
+    /// «Vis bare når det er pakker» er på (prompt 37). Prompt 37: 2 eller 3 pakker når det er valgt i «Rediger widget» (Pkg37.swift).
     @ViewBuilder private var packages: some View {
-        if let s = topPackage { packageCard(s) } else { PaperNoPackagesCard24() }
+        let n: Int = Wopt37.shared.h2N
+        let list: [Shipment] = Pkg37.sorted(store)
+        if n > 1 && list.count > 1 {
+            Pkg37ListCard(items: Array(list.prefix(n)), more: Swift.max(0, list.count - n))
+        } else if let s = topPackage { packageCard(s) } else { PaperNoPackagesCard24() }
     }
 
     private var topPackage: Shipment? {
@@ -542,6 +560,8 @@ struct PaperTracking: View {
                 PLineButton(title: store.trkChecking ? "Sjekker …" : "Sjekk nå", height: 44, full: true) { Task { await store.refreshTracking22() } }
                 PLineButton(title: "⚙ Kilder", height: 44, full: true) { store.trkSettings = true }
             }
+            // Prompt 37: «Bruker husstandens ParcelsApp-nøkkel · 17 oppslag igjen» (TrackKeys37.swift).
+            TrackKeys37Line()
             // Pakkevarslene ligger samlet under Innstillinger → Varsler.
             Button { store.paperGo("innst-varsler") } label: {
                 Text("Pakkevarsler ligger i Innstillinger → Varsler ›").font(PF.ui(12.5, .semibold)).foregroundStyle(p.lab)
@@ -798,7 +818,7 @@ struct PaperMore: View {
         let inBar = Set(store.mainTabs(floating: store.fabMode == "float", onHome: true).map(\.0))
         if fourth != "domener" || !inBar.contains("domener") { rows.append(PaperLinkRow(name: "Domener", sub: "Trafikk, besøk og oppetid", icon: "globe") { store.paperOpenDomains(from: "mer") }) }
         if fourth != "sporing" || !inBar.contains("sporing") { rows.append(PaperLinkRow(name: "Sporing", sub: store.paperOnWay > 0 ? "\(store.paperOnWay) på vei" : "Pakker, varsler og kilder", icon: "shippingbox") { store.paperGo("sporing") }) }
-        rows.append(PaperLinkRow(name: "Huskeliste", sub: TasksModel.shared.openCount > 0 ? "\(TasksModel.shared.openCount) åpne oppgaver" : "Oppgaver og widgets", icon: "checklist") { store.paperGo("huske") })
+        rows.append(PaperLinkRow(name: "Gjøremål", sub: TasksModel.shared.openCount > 0 ? "\(TasksModel.shared.openCount) åpne oppgaver" : "Oppgaver og widgets", icon: "checklist") { store.paperGo("huske") })
         rows.append(PaperLinkRow(name: "Familie og kart", sub: "Posisjon, soner og helse", icon: "person.2") { store.paperGo("familie") })
         rows.append(PaperLinkRow(name: "Avganger", sub: "Ruter i sanntid", icon: "tram") { store.paperGo("avg") })
         rows.append(PaperLinkRow(name: "Aksjer", sub: "Trading 212", icon: "chart.line.uptrend.xyaxis") { store.paperFinGo("aksjer") })

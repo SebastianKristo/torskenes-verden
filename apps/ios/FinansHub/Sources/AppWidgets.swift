@@ -36,6 +36,8 @@ extension Store {
         if page == "kalender-login" { KalCompanion33.loginLink(self); return }
         // Prompt 34: finanshub://brief (Glimt-brief-widgetene) åpner briefen i fullskjerm.
         if page == "brief" { if paper { paperGo("hjem") }; Brief34Model.shared.show(); return }
+        // Prompt 37: bibelvers-widgetene (finanshub://bibel) åpner Bibel-siden.
+        if page == "bibel" || page == "bible" { if paper { paperGo("bibel") } else { goStart() }; return }
         // Prompt 35: fra Kalender-appen – finanshub://glimt (Innstillinger → Glimt) og finanshub://integrasjoner.
         if page == "glimt" { if paper { paperGo("hjem") }; Glimt35Model.shared.showPage = true; return }
         if page == "integrasjoner" || page == "integrations" { if paper { paperGo("innst-integ") } else { goStart() }; return }
@@ -64,7 +66,7 @@ extension Store {
     /// Samme dyplenker i Papir: fanene og sidene i Papir-skallet.
     private func paperDeepLink(_ page: String, _ sub: String) {
         switch page {
-        case "huske", "tasks", "huskeliste": paperGo("huske")
+        case "huske", "tasks", "huskeliste", "gjoremal", "todo": paperGo("huske")
         case "bursdager", "bursdag", "birthdays": paperGo("bursdag")
         case "avganger", "ruter", "avg": paperGo("avg")
         case "familie", "family", "posisjon": paperGo("familie")

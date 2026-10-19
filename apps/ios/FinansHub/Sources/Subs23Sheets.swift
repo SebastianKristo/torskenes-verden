@@ -107,6 +107,8 @@ struct SubEdit23Sheet: View {
                 cycleBox(t)
                 dateBox(t)
                 statusBox(t)
+                // Prompt 37: Del med husstanden (Del likt / Jeg betaler), Subs37.swift.
+                if let item { Sub37ShareSection(item: item) }
                 buttons(t)
             }
             .padding(.horizontal, 20).padding(.top, 18).padding(.bottom, 26)

@@ -232,7 +232,9 @@ extension Store {
         case "innst-tab": return "Fanelinje"
         case "innst-fam": return "Familie og helse"
         case "innst-helse": return "Helse og posisjon"
-        case "huske": return "Huskeliste"
+        // Prompt 37: modulen heter Gjøremål (intern nøkkel er fortsatt «huske»).
+        case "huske": return "Gjøremål"
+        case "bibel": return "Bibel"
         case "kalender": return "Kalender"
         default:
             if paperTab.hasPrefix("innst-") { return PaperSettingsSub.title26(String(paperTab.dropFirst(6)))?.0 }
@@ -251,7 +253,8 @@ extension Store {
         case "innst-tab": return "Faner, navn og ikoner"
         case "innst-fam": return "Deling, personvern og Apple Helse"
         case "innst-helse": return "Apple Health, datatyper og posisjon"
-        case "huske": return "Oppgaver for hele familien"
+        case "huske": return "To-do for hele familien"
+        case "bibel": return "Dagens vers, rekke og leseplan"
         case "kalender": return Cal26Model.shared.kicker
         default:
             if paperTab.hasPrefix("innst-") { return PaperSettingsSub.title26(String(paperTab.dropFirst(6)))?.1 }
