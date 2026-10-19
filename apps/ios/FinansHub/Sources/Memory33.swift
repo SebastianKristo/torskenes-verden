@@ -71,7 +71,7 @@ final class Memory33Model {
             loaded = true; missing = false; error = ""
         } catch let e as APIError {
             loaded = true; missing = e.status == 404; error = e.status == 404 ? "Krever nyere server." : e.message
-        } catch { loaded = true; error = error.localizedDescription }
+        } catch let e { loaded = true; self.error = e.localizedDescription }
     }
 
     /// Lagrer et alias. → (item, antall avtaler som kan få ny tittel)
