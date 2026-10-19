@@ -17,6 +17,19 @@ final class MacWin: ObservableObject {
     }
 
     weak var window: NSWindow? = nil
+    /// Prompt 38: web-kalenderen i dette vinduet. Når den er aktiv, sendes navigering og snarveier dit (window.kalApp.cmd).
+    weak var web38: MacWeb38Model? = nil
+
+    /// Web-kalenderen viser vinduet (ikke den innebygde reservekalenderen).
+    var webOn: Bool { web38?.active ?? false }
+
+    /// Sender kommandoen til web-kalenderen. false = ikke i web-modus (bruk den innebygde visningen).
+    @discardableResult
+    func web38Cmd(_ c: String) -> Bool {
+        guard let m = web38, m.active else { return false }
+        m.cmd(c)
+        return true
+    }
 
     /// dag | 3d | uke | mnd | ar | liste
     /// Prompt 35: Innstillinger → «Åpne i» (ellers siste brukte).
@@ -59,6 +72,7 @@ final class MacWin: ObservableObject {
     var modal: Bool { searchOpen || glimtOpen || detId != nil || newForm != nil || quickOpen || gotoOpen }
 
     func closeAll() {
+        if web38Cmd("close") { return }
         searchOpen = false
         glimtOpen = false
         detId = nil
@@ -72,6 +86,11 @@ final class MacWin: ObservableObject {
 
     /// Prompt 35: fanene bruker samme zoom-animasjon (retning etter rekkefølgen År … Dag).
     func go(view v: String, day: String? = nil) {
+        if webOn {
+            web38Cmd("view:" + v)
+            if let day { web38Cmd("date:" + day) }
+            return
+        }
         let order: [String] = MacZoom35.order
         let a: Int = order.firstIndex(of: view) ?? 0
         let b: Int = order.firstIndex(of: v) ?? 0
@@ -79,6 +98,7 @@ final class MacWin: ObservableObject {
     }
 
     func step(_ dir: Int) {
+        if web38Cmd(dir < 0 ? "prev" : "next") { return }
         let A: Date = KalD.date(anchor)
         let n: Date
         switch view {
@@ -94,11 +114,13 @@ final class MacWin: ObservableObject {
     }
 
     func goToday() {
+        if web38Cmd("today") { return }
         withAnimation(.easeOut(duration: 0.18)) { anchor = KalD.todayKey() }
         miniMonth = KalD.firstOfMonth(Date())
     }
 
     func goTo(_ d: Date) {
+        if web38Cmd("date:" + KalD.key(d)) { return }
         anchor = KalD.key(d)
         miniMonth = KalD.firstOfMonth(d)
         if view == "liste" || view == "ar" { view = "dag" }
@@ -123,6 +145,7 @@ final class MacWin: ObservableObject {
     }
 
     func openDetail(_ e: KalEvent) {
+        if web38Cmd("event:" + e.id) { return }
         if MacStore.shared.event(e.id) == nil { linkEvent = e }
         detId = e.id
     }
@@ -135,10 +158,41 @@ final class MacWin: ObservableObject {
     }
 
     func openNew(day: String? = nil, s: Int? = nil, e: Int? = nil) {
+        if web38Cmd(day == nil ? "new" : "new:" + (day ?? "")) { return }
         let tk: String = KalD.todayKey()
         var base: String = (view == "mnd" || view == "ar" || view == "liste") ? tk : anchor
         if let day { base = day }
         newForm = MacStore.shared.makeForm(day: base, s: s, e: e)
+    }
+
+    /* ---------- Prompt 38: paneler (web eller innebygd) ---------- */
+
+    func openSearch() {
+        if web38Cmd("search") { return }
+        searchOpen = true
+    }
+
+    /// «Spør Glimt» (⌘K), valgfritt med et spørsmål fra menylinja eller kalender://glimt?q=…
+    func openGlimt(_ q: String?) {
+        let text: String = (q ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if web38Cmd(text.isEmpty ? "glimt" : "glimt:" + text) { return }
+        if !text.isEmpty { MacGlimtModel.shared.send(text) }
+        glimtOpen = true
+    }
+
+    func toggleSidebar() {
+        if web38Cmd("sidebar") { return }
+        sidebar.toggle()
+    }
+
+    func openGoto() {
+        if web38Cmd("goto") { return }
+        gotoOpen = true
+    }
+
+    func openNewCal() {
+        if web38Cmd("newcal") { return }
+        newCalOpen = true
     }
 
     func saveNew(_ f: MacNewForm) {
@@ -189,8 +243,10 @@ final class MacWin: ObservableObject {
 struct MacWinFocus: Equatable {
     let win: MacWin
     let modal: Bool
+    /// Prompt 38: web-kalenderen vises (⌘← / ⌘→ går da til tekstfeltene på siden).
+    var web: Bool = false
 
-    static func == (a: MacWinFocus, b: MacWinFocus) -> Bool { a.win === b.win && a.modal == b.modal }
+    static func == (a: MacWinFocus, b: MacWinFocus) -> Bool { a.win === b.win && a.modal == b.modal && a.web == b.web }
 }
 
 struct MacWinFocusKey: FocusedValueKey {

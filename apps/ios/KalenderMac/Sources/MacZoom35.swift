@@ -34,6 +34,8 @@ enum MacZoom35 {
             return false
         }
         guard let nsw = ev.window, let w = MacWin.all.first(where: { (x: MacWin) -> Bool in x.window === nsw }) else { return false }
+        // Prompt 38: web-kalenderen zoomer selv (klyp / ctrl + hjul).
+        if w.webOn { return false }
         if w.modal { return false }
         let now: Date = Date()
         if now.timeIntervalSince(lastEvent) > 0.6 { acc = 0 }

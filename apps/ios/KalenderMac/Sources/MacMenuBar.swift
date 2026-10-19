@@ -82,11 +82,15 @@ struct MacMenuBarPanel: View {
             if store.loggedIn {
                 agenda
                 MacComposer(text: $text, compact: true, onAsk: { (q: String) in
-                    MacGlimtModel.shared.send(q)
                     MacApp.showMain()
                     Task { @MainActor in
                         try? await Task.sleep(nanoseconds: 200_000_000)
-                        MacWin.key?.glimtOpen = true
+                        // Prompt 38: spørsmålet går til Glimt i web-kalenderen (eller det innebygde panelet).
+                        if let w = MacWin.key {
+                            w.openGlimt(q)
+                        } else {
+                            MacGlimtModel.shared.send(q)
+                        }
                     }
                 }, onAdded: { (_: String) in })
             } else {
@@ -235,8 +239,7 @@ enum MacLinks {
                 win.openNew()
             }
         case "glimt", "spor":
-            win.glimtOpen = true
-            if let text = q("q") { MacGlimtModel.shared.send(text) }
+            win.openGlimt(q("q"))
         default:
             break
         }

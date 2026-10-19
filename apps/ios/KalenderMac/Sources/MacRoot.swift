@@ -17,14 +17,17 @@ struct MacThemed<Content: View>: View {
 
 struct MacMainWindow: View {
     @StateObject private var win: MacWin = MacWin()
+    /// Prompt 38: web-kalenderen i dette vinduet (WKWebView mot <server>/kalender?app=mac).
+    @StateObject private var web: MacWeb38Model = MacWeb38Model()
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
-        MacThemed { MacRoot(win: win) }
+        MacThemed { MacRoot(win: win, web: web) }
             .frame(minWidth: 980, minHeight: 640)
-            .focusedSceneValue(\.macWin, MacWinFocus(win: win, modal: win.modal))
+            .focusedSceneValue(\.macWin, MacWinFocus(win: win, modal: win.modal, web: web.active))
             .onAppear {
                 MacApp.opener = openWindow
+                if win.web38 !== web { win.web38 = web }
                 if !MacWin.all.contains(where: { (x: MacWin) -> Bool in x === win }) { MacWin.all.append(win) }
             }
             .onDisappear { win.forget() }
@@ -34,14 +37,20 @@ struct MacMainWindow: View {
 struct MacRoot: View {
     @Environment(\.mk) private var t
     @ObservedObject var win: MacWin
+    @ObservedObject var web: MacWeb38Model
     @ObservedObject var store: MacStore = MacStore.shared
 
     var body: some View {
         ZStack {
             t.bg
             if store.loggedIn {
-                main
-                overlays
+                // Prompt 38: web-kalenderen er hovedvisningen; den innebygde kalenderen er reserve uten nett / eldre server.
+                if store.useWeb38 && web.phase != .failed {
+                    MacWeb38Host(model: web)
+                } else {
+                    main
+                    overlays
+                }
             } else {
                 MacLoginView()
             }
@@ -70,6 +79,7 @@ struct MacRoot: View {
 
     private var main: some View {
         VStack(spacing: 0) {
+            if store.useWeb38 && web.phase == .failed { MacWeb38Banner(model: web) }
             MacToolbar(win: win)
             MacNextBanner(win: win)
             Rectangle().fill(t.line).frame(height: 1)

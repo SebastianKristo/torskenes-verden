@@ -80,6 +80,8 @@ struct KalLoginView: View {
     @State private var needsCode: Bool = false
     @State private var busy: Bool = false
     @State private var error: String = ""
+    /// Prompt 38: «Logg inn med QR fra mobilen» (nyttig på iPad).
+    @State private var qrMode: Bool = false
 
     private var homelabReady: Bool { KalGroup.homelabToken != nil }
     private var homelabInstalled: Bool {
@@ -96,27 +98,11 @@ struct KalLoginView: View {
                     .font(KalFont.ui(14)).foregroundStyle(t.mut).fixedSize(horizontal: false, vertical: true)
                 if homelabReady || homelabInstalled { homelabButton }
                 field("Serveradresse", text: $server, keyboard: .URL)
-                field("Brukernavn", text: $user, keyboard: .default)
-                SecureField("Passord", text: $pass)
-                    .font(KalFont.ui(16, .medium)).foregroundStyle(t.ink)
-                    .padding(.horizontal, 14).frame(height: 50)
-                    .background(RoundedRectangle(cornerRadius: 16).fill(t.card))
-                    .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(t.line, lineWidth: 1))
-                if needsCode { field("Kode (6 sifre)", text: $code, keyboard: .numberPad) }
-                if !error.isEmpty {
-                    Text(error).font(KalFont.ui(13)).foregroundStyle(t.acc).fixedSize(horizontal: false, vertical: true)
+                if qrMode {
+                    KalQRLogin38Panel(base: KalAuth.normalize(server), onPassword: { qrMode = false })
+                } else {
+                    passwordForm
                 }
-                Button(action: { submit() }) {
-                    HStack {
-                        if busy { ProgressView().tint(t.bg) }
-                        Text(busy ? "Logger inn …" : "Logg inn").font(KalFont.ui(15, .bold))
-                    }
-                    .foregroundStyle(t.bg)
-                    .frame(maxWidth: .infinity).frame(height: 50)
-                    .background(Capsule().fill(canSubmit ? t.ink : t.mut2))
-                }
-                .buttonStyle(.plain)
-                .disabled(!canSubmit || busy)
                 if !KalGroup.linked {
                     Text("App Group er ikke tilgjengelig i denne installasjonen (vanlig ved sideloading). Logg inn her, så virker appen – widgetene trenger App Group-en.")
                         .font(KalFont.ui(12)).foregroundStyle(t.mut2).fixedSize(horizontal: false, vertical: true)
@@ -127,6 +113,37 @@ struct KalLoginView: View {
         }
         .scrollDismissesKeyboard(.interactively)
         .background(t.bg.ignoresSafeArea())
+    }
+
+    private var hasServer: Bool { !server.trimmingCharacters(in: .whitespaces).isEmpty }
+
+    @ViewBuilder private var passwordForm: some View {
+        field("Brukernavn", text: $user, keyboard: .default)
+        SecureField("Passord", text: $pass)
+            .font(KalFont.ui(16, .medium)).foregroundStyle(t.ink)
+            .padding(.horizontal, 14).frame(height: 50)
+            .background(RoundedRectangle(cornerRadius: 16).fill(t.card))
+            .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(t.line, lineWidth: 1))
+        if needsCode { field("Kode (6 sifre)", text: $code, keyboard: .numberPad) }
+        if !error.isEmpty {
+            Text(error).font(KalFont.ui(13)).foregroundStyle(t.acc).fixedSize(horizontal: false, vertical: true)
+        }
+        Button(action: { submit() }) {
+            HStack {
+                if busy { ProgressView().tint(t.bg) }
+                Text(busy ? "Logger inn …" : "Logg inn").font(KalFont.ui(15, .bold))
+            }
+            .foregroundStyle(t.bg)
+            .frame(maxWidth: .infinity).frame(height: 50)
+            .background(Capsule().fill(canSubmit ? t.ink : t.mut2))
+        }
+        .buttonStyle(.plain)
+        .disabled(!canSubmit || busy)
+        Button(action: { qrMode = true }) {
+            Text("Logg inn med QR fra mobilen").font(KalFont.ui(14, .semibold)).foregroundStyle(hasServer ? t.acc : t.mut2)
+        }
+        .buttonStyle(.plain)
+        .disabled(!hasServer)
     }
 
     private var canSubmit: Bool { !server.trimmingCharacters(in: .whitespaces).isEmpty && !pass.isEmpty }

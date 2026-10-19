@@ -290,7 +290,7 @@ final class MacNotifyDelegate: NSObject, UNUserNotificationCenterDelegate {
             MacApp.showMain()
             guard let w = MacWin.key else { return }
             if glimt {
-                w.glimtOpen = true
+                w.openGlimt(nil)
                 return
             }
             if KalD.valid(day) { w.go(view: "dag", day: day) }
@@ -321,6 +321,8 @@ enum MacKeys {
         // Tekstfelt har fokus (feltredigereren er NSText / NSTextView).
         if win.firstResponder is NSText { return false }
         guard let w = MacWin.all.first(where: { (x: MacWin) -> Bool in x.window === win }) else { return false }
+        // Prompt 38: web-kalenderen har egne tastatursnarveier (samme som på web).
+        if w.webOn { return false }
         if ev.keyCode == 53 {
             if w.modal {
                 withAnimation(.easeOut(duration: 0.18)) { w.closeAll() }

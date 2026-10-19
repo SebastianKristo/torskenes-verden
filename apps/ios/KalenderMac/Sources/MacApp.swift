@@ -137,6 +137,8 @@ struct MacCommands: Commands {
     private var off: Bool { win == nil || !MacStore.shared.loggedIn }
     /// Ark og søk er åpne: ⌘← / ⌘→ skal virke i tekstfeltene.
     private var busy: Bool { off || (focus?.modal ?? true) }
+    /// Prompt 38: web-kalenderen vises – ⌘← / ⌘→ overlates til siden (tekstfelt og egne snarveier).
+    private var webMode: Bool { focus?.web ?? false }
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
@@ -146,11 +148,17 @@ struct MacCommands: Commands {
             }
         }
         CommandGroup(replacing: .appSettings) {
+            // Prompt 38: ⌘, åpner Innstillinger i web-kalenderen; Mac-valgene (menylinje, Dock, oppstart) ligger under ⌥⌘,.
             Button("Innstillinger …") {
+                MacApp.activate()
+                if !(win?.web38Cmd("settings") ?? false) { openWindow(id: "innst") }
+            }
+            .keyboardShortcut(",", modifiers: [.command])
+            Button("Mac-innstillinger …") {
                 MacApp.activate()
                 openWindow(id: "innst")
             }
-            .keyboardShortcut(",", modifiers: [.command])
+            .keyboardShortcut(",", modifiers: [.command, .option])
         }
         CommandGroup(replacing: .newItem) {
             Button("Ny hendelse") { win?.openNew() }
@@ -158,7 +166,7 @@ struct MacCommands: Commands {
                 .disabled(off)
             Button("Nytt vindu") { openWindow(id: "main") }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
-            Button("Ny kalender …") { win?.newCalOpen = true }
+            Button("Ny kalender …") { win?.openNewCal() }
                 .disabled(off)
             Divider()
             Button("Importer .ics …") { MacImport.run() }
@@ -169,22 +177,27 @@ struct MacCommands: Commands {
             viewButtons
             Divider()
             Button("I dag") { win?.goToday() }.keyboardShortcut("t", modifiers: [.command]).disabled(off)
-            Button("Søk") { win?.searchOpen = true }.keyboardShortcut("f", modifiers: [.command]).disabled(off)
-            Button("Spør Glimt") { win?.glimtOpen = true }.keyboardShortcut("k", modifiers: [.command]).disabled(off)
+            Button("Søk") { win?.openSearch() }.keyboardShortcut("f", modifiers: [.command]).disabled(off)
+            Button("Spør Glimt") { win?.openGlimt(nil) }.keyboardShortcut("k", modifiers: [.command]).disabled(off)
             Divider()
-            Button("Vis/skjul sidemeny") { win?.sidebar.toggle() }
+            Button("Vis/skjul sidemeny") { win?.toggleSidebar() }
                 .keyboardShortcut("s", modifiers: [.command, .option])
                 .disabled(off)
             Toggle("Ukenummer", isOn: Binding<Bool>(get: { showWeeks }, set: { (v: Bool) in
                 if MacStore.shared.showWeeks != v { MacStore.shared.showWeeks = v }
+                win?.web38Cmd(v ? "weeks:1" : "weeks:0")
             }))
             Divider()
         }
         CommandMenu("Gå") {
-            Button("Forrige") { win?.step(-1) }.keyboardShortcut(.leftArrow, modifiers: [.command]).disabled(busy)
-            Button("Neste") { win?.step(1) }.keyboardShortcut(.rightArrow, modifiers: [.command]).disabled(busy)
+            Button("Forrige") { win?.step(-1) }
+                .keyboardShortcut(webMode ? nil : KeyboardShortcut(.leftArrow, modifiers: [.command]))
+                .disabled(busy)
+            Button("Neste") { win?.step(1) }
+                .keyboardShortcut(webMode ? nil : KeyboardShortcut(.rightArrow, modifiers: [.command]))
+                .disabled(busy)
             Divider()
-            Button("Gå til dato …") { win?.gotoOpen = true }.keyboardShortcut("t", modifiers: [.command, .shift]).disabled(off)
+            Button("Gå til dato …") { win?.openGoto() }.keyboardShortcut("t", modifiers: [.command, .shift]).disabled(off)
         }
         CommandGroup(before: .windowList) {
             Button("Kalender") { MacApp.showMain() }.keyboardShortcut("0", modifiers: [.command])

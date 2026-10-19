@@ -49,7 +49,7 @@ targets:
         INFOPLIST_KEY_UIUserInterfaceStyle: Dark
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
-        INFOPLIST_KEY_NSCameraUsageDescription: "Kameraet brukes til å ta bilde av kvitteringer."
+        INFOPLIST_KEY_NSCameraUsageDescription: "Kameraet brukes til å ta bilde av kvitteringer og skanne QR-koder for å logge inn på en ny enhet."
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Velg kvitteringsbilder fra biblioteket."
         INFOPLIST_KEY_NSFaceIDUsageDescription: "Face ID brukes til å låse opp FinansHub."
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: "FinansHub kobler til homelab-serveren din på lokalt nett."
@@ -89,9 +89,10 @@ targets:
         # Prompt 31: no.kristo.finanshub.notify henter /api/notify/pending (Glimt-svar, prøve-varsler) når appen er lukket.
         BGTaskSchedulerPermittedIdentifiers: [no.kristo.finanshub.health, no.kristo.finanshub.family, no.kristo.finanshub.notify]
         # Deep links fra widgetene: finanshub://<side>
+        # Prompt 38: homelab://login?c=<sid>.<nonce> – QR-innlogging på ny enhet (QrLogin38.swift).
         CFBundleURLTypes:
           - CFBundleURLName: no.kristo.finanshub
-            CFBundleURLSchemes: [finanshub]
+            CFBundleURLSchemes: [finanshub, homelab]
         # Prompt 33: canOpenURL(kalender://) – åpne Kalender-appen når den er installert, ellers Homelabs egen kalender.
         LSApplicationQueriesSchemes: [kalender]
 
@@ -232,6 +233,9 @@ targets:
       - path: Kalender/Sources/KalQuick.swift
       # Prompt 37: adresse og kart (geokoding + kartvisning) deles med iPhone-appen.
       - path: Kalender/Sources/KalGeo37.swift
+    # Prompt 38: hovedvinduet viser web-kalenderen (WKWebView mot <server>/kalender?app=mac).
+    dependencies:
+      - sdk: WebKit.framework
     entitlements:
       path: KalenderMac/KalenderMac.entitlements
       properties:

@@ -60,6 +60,13 @@ final class MacStore: ObservableObject {
     @Published var menuBarMode: String = UserDefaults.standard.string(forKey: "mac.mbMode") ?? "next" {
         didSet { UserDefaults.standard.set(menuBarMode, forKey: "mac.mbMode") }
     }
+    /// Prompt 38: hovedvinduet viser web-kalenderen (<server>/kalender?app=mac). Av = den innebygde kalenderen (reserve).
+    @Published var useWeb38: Bool = MacStore.boolPref("mac.web38", true) {
+        didSet {
+            MacStore.setPref("mac.web38", useWeb38)
+            MacWeb38Model.prefChanged()
+        }
+    }
     /// Antall hendelser i dag som merke på Dock-ikonet.
     @Published var dockBadge: Bool = MacStore.boolPref("mac.badge", true) { didSet { MacStore.setPref("mac.badge", dockBadge); MacDock.refresh() } }
     /// Standardvarsel (minutter, -1 = ingen).
@@ -138,6 +145,8 @@ final class MacStore: ObservableObject {
             Task { _ = try? await KalNet.send("POST", "/finans/api/logout", json: [:], timeout: 8, bases: MacSession.bases, token: t) }
         }
         MacLive.shared.stop()
+        // Prompt 38: glem økt-cookien i web-visningen.
+        MacWeb38Model.signOutAll()
         MacSession.clear()
         loggedIn = false
         events = []
