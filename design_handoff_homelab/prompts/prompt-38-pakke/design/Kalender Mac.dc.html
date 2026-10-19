@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500&amp;family=Manrope:wght@500;600;700;800&amp;family=IBM+Plex+Mono:wght@600&amp;display=swap">
+<style>body{margin:0;background:#e9e3d6}a{color:#b23a2a}a:hover{color:#8a2a1d}@keyframes mbIn{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}</style>
+</helmet>
+<section style="padding:56px;display:flex;flex-direction:column;gap:36px;font-family:Manrope,sans-serif;color:#1b1a17">
+<div style="display:flex;align-items:center;gap:22px"><div style="width:96px;height:96px;border-radius:22px;background:#fffdf8;overflow:hidden;display:flex;flex-direction:column;align-items:center;box-shadow:0 6px 20px rgba(27,26,23,.18)"><span style="width:100%;height:28px;background:#b23a2a;color:#fff;font:600 13px/28px 'IBM Plex Mono',monospace;letter-spacing:.12em;text-align:center">{{ wdS }}</span><b style="font:500 50px/68px Newsreader,serif">{{ dn }}</b></div><div style="display:flex;flex-direction:column;gap:4px"><b style="font:500 46px/1 Newsreader,serif">Kalender for Mac</b><span style="font-size:15px;color:#6b665c;max-width:760px">Samme kalender som på web og iPhone, som egen Mac-app med eget vindu, menylinje-kalender, varsler og widgets. Leveres som Kalender.dmg.</span></div></div>
+
+<div data-screen-label="Mac skrivebord" style="display:flex;flex-direction:column;gap:10px"><b style="font-size:14px">Skrivebord · app-vindu og menylinje (trykk på datoen oppe til høyre)</b>
+<div style="position:relative;width:1512px;height:982px;border-radius:18px;overflow:hidden;background:#3f4a3a;box-shadow:0 40px 80px -20px rgba(27,26,23,.45)">
+<div style="position:absolute;left:0;right:0;top:0;height:30px;z-index:10;display:flex;align-items:center;gap:20px;padding:0 16px;background:rgba(243,239,230,.72);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);font:500 13.5px -apple-system,BlinkMacSystemFont,'SF Pro Text',Manrope,sans-serif;color:#1b1a17">
+<span style="width:14px;height:14px;border-radius:4px;background:#1b1a17"></span><b style="font-weight:700">Kalender</b><span>Arkiv</span><span>Rediger</span><span>Vis</span><span>Gå</span><span>Vindu</span><span>Hjelp</span><span style="flex:1"></span>
+<svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 2.3c2.4 0 4.6.9 6.2 2.5l1.2-1.3A10.3 10.3 0 0 0 8 .5C5.1.5 2.5 1.6.6 3.5l1.2 1.3A8.6 8.6 0 0 1 8 2.3zm0 3.5c1.5 0 2.8.6 3.8 1.5l1.2-1.3A7 7 0 0 0 8 4a7 7 0 0 0-5 2l1.2 1.3c1-1 2.3-1.5 3.8-1.5zM8 9.3c-.6 0-1.1.2-1.5.6L8 11.5l1.5-1.6c-.4-.4-.9-.6-1.5-.6z"></path></svg>
+<button onClick="{{ togMb }}" style="display:flex;align-items:center;gap:6px;height:22px;padding:0 8px;border-radius:6px;border:0;background:{{ mbBg }};color:#1b1a17;font:600 13px -apple-system,BlinkMacSystemFont,Manrope,sans-serif;cursor:pointer"><span style="width:16px;height:15px;border-radius:3px;border:1.5px solid currentColor;box-sizing:border-box;display:grid;place-items:center;font:800 8px/1 Manrope;padding-top:2px">{{ dn }}</span>{{ mbNext }}</button>
+<span>{{ clockL }}</span></div>
+
+<sc-if value="{{ mbOpen }}"><div style="position:absolute;right:120px;top:36px;z-index:12;width:340px;border-radius:14px;background:rgba(255,253,248,.94);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);box-shadow:0 20px 50px rgba(0,0,0,.28),0 0 0 .5px rgba(0,0,0,.15);padding:14px;display:flex;flex-direction:column;gap:10px;animation:mbIn .18s ease both">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><b style="font:500 22px Newsreader,serif">{{ todayL }}</b><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#b23a2a">UKE {{ wk }}</span></div>
+<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));row-gap:2px"><sc-for list="{{ wl }}" as="l"><span style="text-align:center;font:700 10px Manrope;color:{{ l.c }}">{{ l.l }}</span></sc-for><sc-for list="{{ cells }}" as="d"><span style="height:24px;display:grid;place-items:center"><span style="width:22px;height:22px;border-radius:11px;display:grid;place-items:center;background:{{ d.bg }};color:{{ d.c }};font:{{ d.f }}">{{ d.n }}</span></span></sc-for></div>
+<div style="display:flex;flex-direction:column;border-top:1px solid #e6dfd1"><sc-for list="{{ agenda }}" as="e"><div style="display:grid;grid-template-columns:4px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #e6dfd1"><span style="height:30px;border-radius:2px;background:{{ e.c }}"></span><span style="display:flex;flex-direction:column;min-width:0"><b style="font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ e.t }}</b><span style="font-size:11.5px;color:#6b665c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ e.loc }}</span></span><span style="font:600 11.5px 'IBM Plex Mono',monospace;color:#6b665c;white-space:nowrap">{{ e.tm }}</span></div></sc-for></div>
+<div style="display:flex;align-items:center;gap:8px;height:40px;padding:0 6px 0 12px;border-radius:20px;background:#f3efe6;border:1px solid #ddd5c5"><span style="color:#b23a2a;font-size:15px">✦</span><input placeholder="Spør Glimt eller skriv en hendelse …" style="flex:1;min-width:0;border:0;outline:0;background:transparent;font:500 13.5px Manrope;color:#1b1a17"><span style="flex:none;width:30px;height:30px;border-radius:15px;background:#b23a2a;color:#fff;display:grid;place-items:center;font:700 16px Manrope">+</span></div>
+<div style="display:flex;justify-content:space-between;font-size:12px;color:#6b665c"><span>Åpne Kalender  ⌘0</span><span>Innstillinger …  ⌘,</span></div>
+</div></sc-if>
+
+<div style="position:absolute;left:96px;top:66px;width:1320px;height:860px;border-radius:14px;overflow:hidden;background:#f3efe6;box-shadow:0 30px 70px rgba(0,0,0,.4),0 0 0 .5px rgba(0,0,0,.3);display:flex;flex-direction:column">
+<div style="flex:none;height:38px;display:flex;align-items:center;gap:8px;padding:0 14px;background:#ece6da;border-bottom:1px solid #ddd5c5"><span style="width:12px;height:12px;border-radius:6px;background:#ff5f57;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.2)"></span><span style="width:12px;height:12px;border-radius:6px;background:#febc2e;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.2)"></span><span style="width:12px;height:12px;border-radius:6px;background:#28c840;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.2)"></span><span style="flex:1;text-align:center;font:600 13px -apple-system,BlinkMacSystemFont,Manrope,sans-serif;color:#6b665c;margin-right:52px">Kalender</span></div>
+<div style="flex:1;min-height:0;position:relative"><dc-import name="Kalender" variant="web" full="{{ true }}" style="display:block;width:100%;height:100%" hint-size="100%,100%"></dc-import></div>
+</div>
+
+<div style="position:absolute;left:50%;bottom:8px;transform:translateX(-50%);z-index:9;display:flex;align-items:flex-end;gap:8px;padding:6px 8px;border-radius:20px;background:rgba(243,239,230,.45);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);box-shadow:0 0 0 .5px rgba(255,255,255,.4)"><sc-for list="{{ dock }}" as="i"><span style="width:50px;height:50px;border-radius:12px;background:{{ i.bg }}"></span></sc-for><div style="display:flex;flex-direction:column;align-items:center;gap:3px"><div style="width:50px;height:50px;border-radius:12px;background:#fffdf8;overflow:hidden;display:flex;flex-direction:column;align-items:center;box-shadow:0 2px 6px rgba(0,0,0,.2)"><span style="width:100%;height:15px;background:#b23a2a;color:#fff;font:700 7.5px/15px 'IBM Plex Mono',monospace;letter-spacing:.1em;text-align:center">{{ wdS }}</span><b style="font:500 25px/34px Newsreader,serif">{{ dn }}</b></div><span style="width:4px;height:4px;border-radius:2px;background:#1b1a17"></span></div></div>
+</div></div>
+
+<div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+<div data-screen-label="DMG" style="display:flex;flex-direction:column;gap:10px"><b style="font-size:14px">Kalender.dmg · installasjonsvindu</b>
+<div style="width:640px;height:420px;border-radius:12px;overflow:hidden;background:#f3efe6;box-shadow:0 30px 60px rgba(27,26,23,.3),0 0 0 .5px rgba(0,0,0,.25);display:flex;flex-direction:column">
+<div style="flex:none;height:30px;display:flex;align-items:center;gap:8px;padding:0 12px;background:#ece6da;border-bottom:1px solid #ddd5c5"><span style="width:12px;height:12px;border-radius:6px;background:#ff5f57"></span><span style="width:12px;height:12px;border-radius:6px;background:#febc2e"></span><span style="width:12px;height:12px;border-radius:6px;background:#28c840"></span><span style="flex:1;text-align:center;font:600 12.5px -apple-system,BlinkMacSystemFont,Manrope,sans-serif;color:#6b665c;margin-right:52px">Kalender</span></div>
+<div style="flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px"><b style="font:500 30px Newsreader,serif">Dra Kalender til Programmer</b>
+<div style="display:flex;align-items:center;gap:56px"><div style="display:flex;flex-direction:column;align-items:center;gap:8px"><div style="width:120px;height:120px;border-radius:27px;background:#fffdf8;overflow:hidden;display:flex;flex-direction:column;align-items:center;box-shadow:0 8px 24px rgba(27,26,23,.22)"><span style="width:100%;height:34px;background:#b23a2a;color:#fff;font:600 15px/34px 'IBM Plex Mono',monospace;letter-spacing:.12em;text-align:center">{{ wdS }}</span><b style="font:500 62px/86px Newsreader,serif">{{ dn }}</b></div><span style="font-size:13px;font-weight:600">Kalender</span></div>
+<svg width="90" height="24" viewBox="0 0 90 24" fill="none" stroke="#b23a2a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="2 8"><path d="M4 12h76"></path><path d="M72 4l10 8-10 8" stroke-dasharray="none"></path></svg>
+<div style="display:flex;flex-direction:column;align-items:center;gap:8px"><div style="width:120px;height:100px;border-radius:14px;background:#2b5d8a;position:relative;box-shadow:0 8px 24px rgba(27,26,23,.22)"><span style="position:absolute;left:12px;top:-10px;width:44px;height:18px;border-radius:6px 6px 0 0;background:#2b5d8a"></span><span style="position:absolute;inset:0;display:grid;place-items:center;color:#fff;font:700 34px Manrope">A</span></div><span style="font-size:13px;font-weight:600">Programmer</span></div></div>
+<span style="font-size:12.5px;color:#6b665c">Versjon 1.0 · Apple Silicon og Intel · macOS 13 eller nyere · signert og notarisert</span></div></div></div>
+
+<div data-screen-label="Mac varsel" style="display:flex;flex-direction:column;gap:10px"><b style="font-size:14px">Varsel (Varslingssenter)</b>
+<div style="width:380px;border-radius:16px;background:rgba(255,253,248,.92);box-shadow:0 20px 50px rgba(0,0,0,.2),0 0 0 .5px rgba(0,0,0,.12);padding:12px 14px;display:grid;grid-template-columns:38px minmax(0,1fr);gap:12px;align-items:center"><div style="width:38px;height:38px;border-radius:9px;background:#fffdf8;overflow:hidden;display:flex;flex-direction:column;align-items:center;box-shadow:0 1px 3px rgba(0,0,0,.15)"><span style="width:100%;height:11px;background:#b23a2a;color:#fff;font:700 6.5px/11px 'IBM Plex Mono',monospace;text-align:center">{{ wdS }}</span><b style="font:500 19px/27px Newsreader,serif">{{ dn }}</b></div><div style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="display:flex;justify-content:space-between;font-size:12px;color:#6b665c"><b style="letter-spacing:.04em">KALENDER</b><span>om 15 min</span></span><b style="font-size:14px">Tannlege</b><span style="font-size:12.5px;color:#3d3a33">15:15–16:00 · Tannhelse Bislett</span><span style="display:flex;gap:6px;margin-top:6px"><span style="height:26px;padding:0 10px;border-radius:13px;background:#ece6da;font:700 12px/26px Manrope">Utsett 10 min</span><span style="height:26px;padding:0 10px;border-radius:13px;background:#ece6da;font:700 12px/26px Manrope">Vis vei</span></span></div></div></div>
+</div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const WS=['SØN','MAN','TIR','ONS','TOR','FRE','LØR'],WD=['Søndag','Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Lørdag'],MN=['januar','februar','mars','april','mai','juni','juli','august','september','oktober','november','desember'],pad=n=>String(n).padStart(2,'0');
+const isoW=d=>{const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const n=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-n);const y=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil(((t-y)/864e5+1)/7)};
+class Component extends DCLogic {
+  state={mb:true};
+  componentDidMount(){this._t=setInterval(()=>this.forceUpdate(),30000)}
+  componentWillUnmount(){clearInterval(this._t)}
+  renderVals(){const n=new Date(),T=new Date(n.getFullYear(),n.getMonth(),n.getDate()),f=new Date(T.getFullYear(),T.getMonth(),1),st=new Date(f.getFullYear(),f.getMonth(),1-((f.getDay()+6)%7)),dim=new Date(T.getFullYear(),T.getMonth()+1,0).getDate(),nw=Math.ceil((((f.getDay()+6)%7)+dim)/7),cells=[];
+    for(let i=0;i<nw*7;i++){const d=new Date(st.getFullYear(),st.getMonth(),st.getDate()+i),inM=d.getMonth()===T.getMonth(),td=d.getTime()===T.getTime();cells.push({n:d.getDate(),bg:td?'#b23a2a':'transparent',c:td?'#fff':!inM?'#c9c1b1':d.getDay()===0?'#b23a2a':'#1b1a17',f:td?'800 11.5px Manrope':'600 11.5px Manrope'})}
+    const ag=[['Tannlege','15:15','Tannhelse Bislett','#3d7f8a'],['Hent pakke','17:00','Coop Mega','#b23a2a'],['Kino · Dune 3','I morgen 20:00','Colosseum','#b23a2a']];
+    return{wdS:WS[T.getDay()],dn:T.getDate(),wk:isoW(T),todayL:WD[T.getDay()]+' '+T.getDate()+'. '+MN[T.getMonth()],clockL:WS[T.getDay()].toLowerCase()+'. '+T.getDate()+'. '+MN[T.getMonth()].slice(0,3)+'  '+pad(n.getHours())+':'+pad(n.getMinutes()),
+      mbNext:'Tannlege 15:15',mbOpen:this.state.mb,mbBg:this.state.mb?'rgba(27,26,23,.12)':'transparent',togMb:()=>this.setState({mb:!this.state.mb}),
+      wl:['M','T','O','T','F','L','S'].map((l,i)=>({l,c:i===6?'#b23a2a':'#6b665c'})),cells,agenda:ag.map(([t,tm,loc,c])=>({t,tm,loc,c})),
+      dock:['#2b5d8a','#e8794a','#2f7a4f','#6b665c','#a8661a','#7a3b6b'].map(bg=>({bg}))}}
+}
+</script>
+</body>
+</html>
