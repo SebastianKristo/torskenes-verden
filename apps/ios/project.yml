@@ -17,6 +17,8 @@ targets:
       - FinansHub/Sources
       - FinansHub/Resources
       - Shared
+      # Prompt 33: App Group-nøklene som Kalender-appen leser (companion-token).
+      - SharedKal/Group
     dependencies:
       # Widgetene (WidgetKit) bygges som utvidelse og legges i FinansHub.app/PlugIns.
       - target: FinansHubWidgets
@@ -88,6 +90,8 @@ targets:
         CFBundleURLTypes:
           - CFBundleURLName: no.kristo.finanshub
             CFBundleURLSchemes: [finanshub]
+        # Prompt 33: canOpenURL(kalender://) – åpne Kalender-appen når den er installert, ellers Homelabs egen kalender.
+        LSApplicationQueriesSchemes: [kalender]
 
   FinansHubWidgets:
     type: app-extension
@@ -117,3 +121,93 @@ targets:
         # Widgetene henter fra serveren selv, også på lokal adresse (http://192.168…).
         NSAppTransportSecurity:
           NSAllowsLocalNetworking: true
+
+  # Prompt 33: Kalender – egen app (no.kristo.kalender) som deler server, konto og App Group med Homelab-appen.
+  Kalender:
+    type: application
+    platform: iOS
+    sources:
+      - Kalender/Sources
+      - Kalender/Resources
+      # Delt med KalenderWidgets (og Group med Homelab-appen). Fonts: Newsreader, Manrope og IBM Plex Mono (kopi av Papir-fontene, OFL).
+      - SharedKal/Group
+      - SharedKal/Core
+      - SharedKal/Fonts
+    dependencies:
+      - target: KalenderWidgets
+        embed: true
+    entitlements:
+      path: Kalender/Kalender.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.no.kristo.finanshub
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: no.kristo.kalender
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        INFOPLIST_KEY_CFBundleDisplayName: Kalender
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Kalender kobler til Homelab-serveren din på lokalt nett."
+    info:
+      path: Kalender/Info.plist
+      properties:
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        UIAppFonts:
+          - IBMPlexMono-SemiBold.ttf
+          - Manrope-Bold.ttf
+          - Manrope-ExtraBold.ttf
+          - Manrope-Medium.ttf
+          - Manrope-Regular.ttf
+          - Manrope-SemiBold.ttf
+          - Newsreader-Medium.ttf
+          - Newsreader-Regular.ttf
+        # kalender://, kalender://dag/2026-10-21, kalender://hendelse?id=…, kalender://liste, kalender://ny?text=…
+        CFBundleURLTypes:
+          - CFBundleURLName: no.kristo.kalender
+            CFBundleURLSchemes: [kalender]
+        # «Logg inn med Homelab-appen» (finanshub://kalender-login).
+        LSApplicationQueriesSchemes: [finanshub]
+
+  KalenderWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - KalenderWidgets/Sources
+      - SharedKal/Group
+      - SharedKal/Core
+      - SharedKal/Fonts
+    entitlements:
+      path: KalenderWidgets/KalenderWidgets.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.no.kristo.finanshub
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: no.kristo.kalender.widgets
+        TARGETED_DEVICE_FAMILY: "1"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Kalender
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
+    info:
+      path: KalenderWidgets/Info.plist
+      properties:
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        UIAppFonts:
+          - IBMPlexMono-SemiBold.ttf
+          - Manrope-Bold.ttf
+          - Manrope-ExtraBold.ttf
+          - Manrope-Medium.ttf
+          - Manrope-Regular.ttf
+          - Manrope-SemiBold.ttf
+          - Newsreader-Medium.ttf
+          - Newsreader-Regular.ttf

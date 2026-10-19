@@ -92,6 +92,23 @@ jobs:
           codesign -f -s - --entitlements FinansHub/FinansHub.entitlements Payload/FinansHub.app
           codesign -d --entitlements - Payload/FinansHub.app 2>/dev/null | grep -q application-groups || { echo "Mangler App Group i signaturen"; exit 1; }
           zip -qry "../../dist/FinansHub-$V-unsigned.ipa" Payload
+      - name: Usignert IPA for Kalender-appen
+        # Egen app (no.kristo.kalender) med egne widgets. Feiler den, lages FinansHub-releasen likevel.
+        continue-on-error: true
+        run: |
+          V="${TAG#v}"
+          xcodebuild -project FinansHub.xcodeproj -scheme Kalender -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
+            MARKETING_VERSION="$V" CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build | tail -20
+          test ${PIPESTATUS[0]} -eq 0
+          rm -rf kal && mkdir -p kal/Payload ../../dist
+          cp -R build/Build/Products/Release-iphoneos/Kalender.app kal/Payload/
+          ls kal/Payload/Kalender.app/PlugIns || echo "Advarsel: fant ingen widget-utvidelse i Kalender"
+          APPX=kal/Payload/Kalender.app/PlugIns/KalenderWidgets.appex
+          [ -d "$APPX" ] && codesign -f -s - --entitlements KalenderWidgets/KalenderWidgets.entitlements "$APPX"
+          codesign -f -s - --entitlements Kalender/Kalender.entitlements kal/Payload/Kalender.app
+          (cd kal && zip -qry "../../../dist/Kalender-$V-unsigned.ipa" Payload)
       - name: Signert IPA (bare med sertifikat i secrets)
         # Widget-utvidelsen trenger egen profil (no.kristo.finanshub.widgets); uten den hoppes signert IPA over.
         continue-on-error: true

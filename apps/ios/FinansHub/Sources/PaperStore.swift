@@ -104,6 +104,8 @@ extension Store {
         if paperTapBlocked { return }
         // Prompt 32: den gamle oppdateringssiden finnes ikke lenger; lenker dit åpner Nordlys OS (System31.swift).
         if t == "innst-oppdatering" { System31Model.shared.show(); return }
+        // Prompt 33: kalenderfanen, Mer → Kalender, varsler og Glimt åpner Kalender-appen når den er installert (KalLink33.swift).
+        if t == "kalender" && paperTab != "kalender" && KalLink33.today() { return }
         Haptics.shared.select()
         // Mellom Domener-fanene byttes bare seksjonen (dataene er de samme).
         if paperInDomains && Store.paperDomTabs.contains(t) && module == .domains {

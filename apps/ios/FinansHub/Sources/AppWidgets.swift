@@ -8,8 +8,11 @@ extension Store {
     func syncWidgets(force: Bool = false) {
         guard let a = account else {
             if WidgetShared.token != nil { WidgetShared.clear(); WidgetCenter.shared.reloadAllTimelines() }
+            KalCompanion33.clear()
             return
         }
+        // Prompt 33: eget app-token for Kalender-appen i App Group-en (KalLink33.swift).
+        KalCompanion33.sync(self)
         let changed = WidgetShared.token != a.token || WidgetShared.bases.first != (base.isEmpty ? a.server : base)
         WidgetShared.save(server: base.isEmpty ? a.server : base, external: a.external, local: a.local, token: a.token)
         if changed || force { WidgetCenter.shared.reloadAllTimelines() }
@@ -29,6 +32,9 @@ extension Store {
         let page = (url.host ?? "").lowercased()
         let sub = url.pathComponents.dropFirst().first?.lowercased() ?? ""
         // Prompt 26: finanshub://kalender[/<id>] åpner Kalender (og detaljkortet for timen).
+        // Prompt 33: kalender-login fra Kalender-appen, og widget-lenkene videre til Kalender-appen når den er installert.
+        if page == "kalender-login" { KalCompanion33.loginLink(self); return }
+        if (page == "kalender" || page == "calendar") && KalLink33.forward(url) { return }
         if page == "kalender" || page == "calendar" { Cal26Model.shared.openLink(url, self); return }
         if paper { paperDeepLink(page, sub); return }
         switch page {

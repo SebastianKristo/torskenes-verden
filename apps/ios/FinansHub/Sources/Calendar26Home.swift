@@ -24,9 +24,16 @@ struct Cal26HomeCardBody: View {
     @MainActor private var m: Cal26Model { Cal26Model.shared }
     let now: Date
 
+    /// Prompt 33: timen/hendelsen på kortet → kalender://hendelse?…, ellers kalender://dag/<i dag>. Uten Kalender-appen: Homelabs side.
+    private func cal33Open(_ w: CalWidgetState26) {
+        if !w.eventId.isEmpty, let e = m.events.first(where: { (x: CalEvent26) -> Bool in x.id == w.eventId }), KalLink33.event(e) { return }
+        if KalLink33.day(Cal26.key(now)) { return }
+        store.paperGo("kalender")
+    }
+
     var body: some View {
         let w: CalWidgetState26 = Cal26.widget(m.events, now: now, colors: m.subjectColors)
-        Button { store.paperGo("kalender") } label: {
+        Button { cal33Open(w) } label: {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .firstTextBaseline) {
                     Text("KALENDER · " + w.kicker).font(PF.mono(10.5)).tracking(1.2).foregroundStyle(p.lab).lineLimit(1)

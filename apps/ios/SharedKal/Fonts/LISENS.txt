@@ -1,0 +1,3 @@
+Fontene i denne mappen er lisensiert under SIL Open Font License 1.1 (https://openfontlicense.org):
+Newsreader, Manrope, IBM Plex Mono, Instrument Serif og Bricolage Grotesque (fra github.com/google/fonts).
+Newsreader, Manrope og Bricolage Grotesque er statiske utgaver laget fra de variable fontene.

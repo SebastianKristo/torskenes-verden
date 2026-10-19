@@ -309,7 +309,10 @@ final class Quick29Model {
         form.reminder = "1h"
         form.note = text
         form.error = error
+        // Prompt 33: skjemaet finnes bare i Homelab, så kalendersiden her brukes selv om Kalender-appen er installert.
+        KalLink33.stayInHomelab = true
         if store.paperTab != "kalender" { store.paperGo("kalender") }
+        KalLink33.stayInHomelab = false
         Task {
             try? await Task.sleep(nanoseconds: 350_000_000)
             Cal27Model.shared.form = form
@@ -328,6 +331,7 @@ final class Quick29Model {
     func openLink(_ url: URL, _ store: Store) -> Bool {
         let items: [URLQueryItem] = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
         if let d = items.first(where: { $0.name == "date" })?.value, d.count >= 10 {
+            if KalLink33.day(d) { return true }
             if store.paperTab != "kalender" { store.paperGo("kalender") }
             Cal27Model.shared.goDay(String(d.prefix(10)))
             return true
@@ -350,6 +354,7 @@ final class Quick29Model {
             let why: String = j.error.isEmpty ? "Fant ikke dato." : j.error
             openForm(j.found, text: j.text, error: why + " Velg dato og lagre.", store)
         } else if j.state == "done" && j.date.count >= 10 {
+            if KalLink33.day(j.date) { return }
             if store.paperTab != "kalender" { store.paperGo("kalender") }
             Cal27Model.shared.goDay(String(j.date.prefix(10)))
         }
@@ -378,6 +383,7 @@ final class Quick29Model {
         guard let j = banner else { return }
         banner = nil
         bannerTask?.cancel()
+        if j.date.count >= 10 && KalLink33.day(j.date) { return }
         if store.paperTab != "kalender" { store.paperGo("kalender") }
         if j.date.count >= 10 { Cal27Model.shared.goDay(String(j.date.prefix(10))) }
     }
