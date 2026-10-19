@@ -14,7 +14,7 @@ import WidgetKit
 
 enum Glimt35Net {
     /// Kall mot serveren med svarhodene (for /api/tts).
-    static func request(_ store: Store, _ method: String, _ path: String, json: [String: Any]?, timeout: TimeInterval = 30) async throws -> (Data, HTTPURLResponse) {
+    @MainActor static func request(_ store: Store, _ method: String, _ path: String, json: [String: Any]?, timeout: TimeInterval = 30) async throws -> (Data, HTTPURLResponse) {
         let base: String = store.api.base.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard let url = URL(string: base + path) else { throw APIError(message: "Ugyldig serveradresse", status: 0) }
         var r: URLRequest = URLRequest(url: url)
