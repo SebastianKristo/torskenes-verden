@@ -76,7 +76,7 @@ const TABS = [
   ['top', 'Startside', 'Topplinje, faner, nyhetsbar og forsiden.', 'Generelt', P.top],
   ['dom', 'Domener', 'Domener, statistikkilder og verdenskart.', 'Generelt', P.map],
   ['varsel', 'Varsler', 'Lyd, stille timer, grupper og test.', 'Generelt', P.bell],
-  ['app', 'App', 'Navn på appen og app-ikon.', 'Generelt', P.app],
+  ['app', 'App', 'Navn på appen, app-ikon, widgets og Kalender-appen.', 'Generelt', P.app],
   ['int', 'Integrasjoner', 'Adresser og API-nøkler for tjenestene.', 'Tilkoblinger', P.plug],
   ['kal', 'Kalendere', 'Skolens iCal, Canvas, Google Kalender og Home Assistant.', 'Tilkoblinger', P.cal],
   ['ai', 'AI', 'Chat, personvern og logoer.', 'Tilkoblinger', P.ai],
@@ -89,7 +89,7 @@ const tabsFor = () => TABS.filter((t) => !t[5] || isAdmin());
 const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai', sys: 'system', oppdatering: 'system', update: 'system', sikkerhetskopi: 'backup', backups: 'backup' };
 // Hvilken fane en underside hører til, så «go('tfa')» virker uansett hvor den kalles fra.
 const SUB_TAB = { me: 'konto', tfa: 'konto', pw: 'konto', devices: 'konto', server: 'konto', add: 'users', bg: 'look', style: 'look', hist: 'look', cats: 'look',
-  tabs: 'top', head: 'top', speed: 'top', dash: 'top', mob: 'top', sc: 'top', doms: 'dom', mail: 'int' };
+  tabs: 'top', head: 'top', speed: 'top', dash: 'top', mob: 'top', sc: 'top', doms: 'dom', mail: 'int', widgets: 'app', kalapp: 'app' };
 const subTab = (sub) => SUB_TAB[sub] ?? (sub?.startsWith('cfg:') || sub?.startsWith('i24:') ? 'int' : sub?.startsWith('user:') ? 'users' : null);
 const tabOf = (k) => TABS.find(([id]) => id === k) ?? TABS[0];
 
@@ -527,7 +527,7 @@ async function saveGroup(name, changes) {
 /* ---------- Søk på tvers av sidene ---------- */
 
 const H = { group, row, note };
-const VIEWS = { konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => notifyView(H), app: () => appView(H), int: intView, kal: () => kalView({ ...H, cfg }), ai: () => aiView(H), users: usersView, system: () => systemView(H), backup: () => backupView(H) };
+const VIEWS = { konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => notifyView(H), app: () => appView({ ...H, sub }), int: intView, kal: () => kalView({ ...H, cfg }), ai: () => aiView(H), users: usersView, system: () => systemView(H), backup: () => backupView(H) };
 function searchView() {
   const words = q.toLowerCase().split(/\s+/).filter(Boolean), out = [];
   const saved = sub; sub = null;

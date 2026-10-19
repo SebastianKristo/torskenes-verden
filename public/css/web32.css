@@ -2,10 +2,12 @@
    månedsbrikker, Spotlight-søk, Beskriv med Glimt), Innstillinger (AI-knapp, ingen scrollbar), Nylige søk og toast. */
 
 /* ---------- Chat i fullskjerm (claude-code-chat-web-fullskjerm.md, fasit chW) ---------- */
-/* Under Innstillinger (z 30), over toppmenyen – samme lag som Kalender i fullskjerm. */
-#chat.ch.ch-fs,html[data-hl] body[data-route] #chat.ch-fs{position:fixed;inset:0;z-index:26;height:auto!important;min-height:0;margin:0!important;border-radius:0;border:0;box-shadow:none}
-body.chat-fs{overflow:hidden}
-body.chat-fs .bottomnav{display:none}
+/* Prompt 33: alltid fullskjerm, over toppmeny, hero, Vær-pillen og profilbildet (z 110, chW). Innstillinger og popup
+   (z 30/40) som åpnes oppå Chat legger seg likevel over. */
+#chat.ch.ch-fs,html[data-hl] body[data-route] #chat.ch-fs{position:fixed;inset:0;z-index:110;height:auto!important;min-height:0;max-width:none;margin:0!important;border-radius:0;border:0;box-shadow:none}
+body:has(#settings:not([hidden])) #chat.ch-fs,body:has(#popup:not([hidden])) #chat.ch-fs{z-index:26}
+body.chat-fs,body[data-route="chat"]{overflow:hidden}
+body[data-route="chat"] header.top,body[data-route="chat"] .ticker,body[data-route="chat"] .bottomnav,body.chat-fs .bottomnav{display:none!important}
 .ch-fsb{flex:none;width:40px;height:40px;margin-left:2px;border-radius:20px;border:1px solid var(--cl);background:var(--cc);color:var(--ci)!important;cursor:pointer;display:grid;place-items:center;padding:0}
 .ch-fsb.ink{margin-left:6px;border:0;background:var(--ci);color:var(--cb)!important}
 .ch-fsb:hover{filter:brightness(.97)}
@@ -97,3 +99,12 @@ html[data-hl="2c"] .dm-gsc-cbtn{background:#fff;border-color:#d8d1c2}
 .dm-gsc-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--dm-mut)}
 .dm-gsc-foot button{height:30px;padding:0 12px;border-radius:15px;border:1px solid var(--dm-line);background:transparent;color:var(--dm-mut);cursor:pointer;font:600 12px Manrope,Outfit,system-ui,sans-serif}
 @media (max-width:520px){.dm-sum{padding:16px}.dm-sum-b{padding:0 12px}.dm-gsc-r{padding:9px 16px}.dm-gsc-th{padding:0 16px 6px}}
+
+/* ---------- Prompt 33: Innstillinger → App → Widgets / Kalender-appen ---------- */
+.wh-steps{margin:0;padding:14px 18px 14px 40px;display:flex;flex-direction:column;gap:8px;font-size:14.5px;line-height:1.5;color:inherit}
+.wh-steps li{padding-left:2px}
+.wh-steps li::marker{font-weight:700;color:var(--w30-mut,#8a93a6)}
+.wh-lead{display:block;font-size:14.5px;line-height:1.5;white-space:normal}
+a.wh-link{text-decoration:none;color:inherit}
+html[data-hl="2c"] .wh-steps{padding:6px 0 6px 22px;font:400 14px/1.55 var(--sans);color:var(--ink,#1b1a17)}
+html[data-hl="2c"] .wh-steps li::marker{color:var(--ink2,#6b6457)}

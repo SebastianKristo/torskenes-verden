@@ -58,7 +58,7 @@ function renderRoute() {
   const tk = document.getElementById('ticker');
   if (tk && view.contains(tk)) document.querySelector('header.top').after(tk);
   // Værsiden er en egen fullskjermside (systemfont, animert himmel) uten fotovindu.
-  view.innerHTML = (is2c() && route !== 'vaer' && route !== 'rom' ? pwHeader(route) : '') + ROUTES[route](); // Vær og Rom er fullskjerm (prompt 32)
+  view.innerHTML = (is2c() && route !== 'vaer' && route !== 'rom' && route !== 'chat' ? pwHeader(route) : '') + ROUTES[route](); // Vær, Rom (prompt 32) og Chat (prompt 33) er fullskjerm
   placeTicker();
   paintPhoto();
   mountAll(view);

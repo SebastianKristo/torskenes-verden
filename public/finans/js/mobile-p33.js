@@ -5,6 +5,7 @@
 import { esc } from './core.js';
 import { draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
+import { RELEASES, WIDGET_STEPS, WIDGET_NOTE, KAL_APP } from '/assets/js/widget-help.js';
 import { LEARN_TYPES, typeName, memoryLine, loadMemory, addMemory, deleteMemory, applyMemory } from '/assets/js/glimt-memory.js';
 
 const GM = { list: null, err: '', loading: false, add: false, type: 'frisør', busy: false, ask: null, msg: '' };
@@ -72,4 +73,20 @@ export async function submit33(e, t) {
     GM.ask = d.matches ? { id: d.item.id, count: d.matches, title: d.item.title || `${typeName(GM.type)} · ${match}` } : null;
   } catch (err) { GM.msg = `Kunne ikke lagre: ${err.message}`; }
   GM.busy = false; draw(); return true;
+}
+
+/* ---------- Prompt 33: Innstillinger → Widgets og Kalender-appen ---------- */
+const stepList = (l) => `<ol class="p33-steps" style="margin:0;padding:2px 0 2px 20px;display:flex;flex-direction:column;gap:7px;font-size:14.5px;line-height:1.5;flex:1;min-width:0">${l.map((t) => `<li>${esc(t)}</li>`).join('')}</ol>`;
+/** «Slik legger du til widget» med steg for iPhone, Samsung og Android. */
+export function widgetsPage() {
+  return `<div class="snote">Widgets krever Homelab- eller Kalender-appen fra App Store/APK. En nettapp (PWA) lagt på Hjem-skjermen kan ikke ha widgets.</div>
+    ${WIDGET_STEPS.map(([, n, l]) => `<span class="pp-lab p17-gl">${esc(n.toUpperCase())}</span><div class="list p17-list p33-list"><div class="opt-row">${stepList(l)}</div></div>`).join('')}
+    <div class="snote">${esc(WIDGET_NOTE)}</div>`;
+}
+/** Kalender-appen: forklaring og lenke til release (IPA/APK). PWA-en beholder sin egen kalender. */
+export function kalAppPage() {
+  return `<div class="list p17-list p33-list"><div class="opt-row"><span class="m-grow p17-rt"><b>Kalender</b><small>${esc(KAL_APP.lead)}</small></span></div><div class="opt-row">${stepList(KAL_APP.points)}</div></div>
+    <span class="pp-lab p17-gl">LAST NED</span><div class="list p17-list p33-list"><a class="opt-row p17-row" href="${RELEASES}" target="_blank" rel="noopener"><span class="m-grow p17-rt"><b>Siste versjon på GitHub</b><small>Kalender-…-unsigned.ipa · Kalender-….apk</small></span><span class="p17-chev" aria-hidden="true">↗</span></a>
+    <a class="opt-row p17-row" href="#/kal"><span class="m-grow p17-rt"><b>Åpne kalenderen her</b><small>Kalenderen i denne appen</small></span><span class="p17-chev" aria-hidden="true">›</span></a></div>
+    <div class="snote">${esc(KAL_APP.pwa)}</div>`;
 }

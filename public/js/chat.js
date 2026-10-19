@@ -64,15 +64,19 @@ const C = {
 };
 let toastT = 0, copyT = 0, qT = 0, qCtl = null, recog = null, mediaRec = null, pendingPrompt = null;
 const host = () => document.getElementById('chat');
-// Prompt 32: Chat i fullskjerm på web (claude-code-chat-web-fullskjerm.md, fasit chW). Standard på («hl_chat_full» = «1»).
-const chFull = () => { if (isMobile()) return false; try { return localStorage.getItem('hl_chat_full') !== '0'; } catch { return true; } };
-function setChFull(v) { try { localStorage.setItem('hl_chat_full', v ? '1' : '0'); } catch { /* privat modus */ } applyChFull(); paint(); }
-function applyChFull() { const h = host(), on = !!h && chFull(); h?.classList.toggle('ch-fs', on); document.body.classList.toggle('chat-fs', on); }
-const FS_IN = 'M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7', FS_OUT = 'M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7';
+// Prompt 33: Chat er ALLTID fullskjerm på web (claude-code-chat-web-alltid-fullskjerm.md, fasit chW: full:true).
+// «Vis i siden» og localStorage-nøkkelen «hl_chat_full» er fjernet; slett den så ingen står fast i gammel visning.
+try { localStorage.removeItem('hl_chat_full'); } catch { /* privat modus */ }
+function applyChFull() { const h = host(), on = !!h; h?.classList.add('ch-fs'); document.body.classList.toggle('chat-fs', on); }
+// ✕ og Esc går tilbake til forrige side i appen (Dashboard hvis det ikke finnes noen).
+let chPrev = '';
+window.addEventListener('hashchange', (e) => {
+  const r = (u) => { try { return new URL(u).hash.replace(/^#\/?/, '').split(/[/?]/)[0]; } catch { return ''; } };
+  if (r(e.newURL) === 'chat' && r(e.oldURL) !== 'chat') chPrev = r(e.oldURL) && r(e.oldURL) !== 'okonomi' ? new URL(e.oldURL).hash : '';
+});
+function closeChat() { document.body.classList.remove('chat-fs'); const to = chPrev || '#/dash'; chPrev = ''; location.hash = to; }
 function fsBtns() {
-  if (isMobile()) return '';
-  const f = chFull(), l = f ? 'Vis i siden' : 'Fullskjerm';
-  return `<button type="button" class="ch-fsb" data-ch-fs aria-label="${l}" title="${l}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${f ? FS_IN : FS_OUT}"/></svg></button>${f ? '<button type="button" class="ch-fsb ink" data-ch-fsclose aria-label="Lukk chat" title="Lukk (Esc)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' : ''}`;
+  return '<button type="button" class="ch-fsb ink" data-ch-fsclose aria-label="Lukk chat" title="Lukk (Esc)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>';
 }
 
 /* ---------------- Lagring og nett ---------------- */
@@ -352,7 +356,7 @@ function paint() {
   const gs = h.querySelector('[data-ch-groups]')?.scrollTop ?? 0;
   const ae = document.activeElement, fk = ae && h.contains(ae) ? ['data-ch-in', 'data-ch-q', 'data-ch-edv', 'data-ch-sys'].find((a) => ae.hasAttribute(a)) : null;
   const sel = fk ? [ae.selectionStart, ae.selectionEnd] : null;
-  h.className = `ch ${C.theme === 'noytral' ? 'noytral' : 'papir'}${chFull() ? ' ch-fs' : ''}`;
+  h.className = `ch ch-fs ${C.theme === 'noytral' ? 'noytral' : 'papir'}`;
   h.innerHTML = body();
   const sc2 = h.querySelector('[data-ch-sc]');
   if (sc2) sc2.scrollTop = atBottom ? sc2.scrollHeight : y;
@@ -692,8 +696,7 @@ function bind(h) {
     if (d.chMenu) { e.stopPropagation(); C.menuId = d.chMenu; C.rn = ''; C.delArm = false; C.sheet = 'menu'; paint(); return; }
     if (d.chOpen) { C.drawer = false; C.edit = null; loadChat(d.chOpen); return; }
     if ('chNew' in d) return newChat();
-    if ('chFs' in d) return setChFull(!chFull());
-    if ('chFsclose' in d) { document.body.classList.remove('chat-fs'); location.hash = '#/dash'; return; }
+    if ('chFsclose' in d) return closeChat();
     if ('chDrawer' in d) { C.drawer = true; paint(); return; }
     if (d.chFold) { const f = C.list.folders.find((x) => x.id === d.chFold), open = !(C.open[d.chFold] ?? f?.open !== false); C.open = { ...C.open, [d.chFold]: open }; writeLocal(); call(`/folders/${encodeURIComponent(d.chFold)}`, { method: 'PATCH', json: { open } }).catch(() => {}); paintSide(); return; }
     if (d.chSheet) { C.sheet = d.chSheet; C.drawer = false; if (d.chSheet === 'kb') loadKb(); paint(); return; }
@@ -793,7 +796,8 @@ export function render() {
     else { paint(); refreshList(); if (pendingPrompt && C.models) { const p = pendingPrompt; pendingPrompt = null; newChat(); send(p); } }
     void locale;
   });
-  return `<div id="chat" class="ch ${C.theme === 'noytral' ? 'noytral' : 'papir'}${chFull() ? ' ch-fs' : ''}">${C.booted ? body() : '<div class="ch-miss"><span>Laster Chat …</span></div>'}</div>`;
+  document.body.classList.add('chat-fs');
+  return `<div id="chat" class="ch ch-fs ${C.theme === 'noytral' ? 'noytral' : 'papir'}">${C.booted ? body() : '<div class="ch-miss"><span>Laster Chat …</span></div>'}</div>`;
 }
 let wasMob = isMobile();
 window.addEventListener('resize', () => { if (host() && isMobile() !== wasMob) { wasMob = isMobile(); C.drawer = false; applyChFull(); paint(); } });
@@ -801,9 +805,9 @@ window.addEventListener('resize', () => { if (host() && isMobile() !== wasMob) {
 window.addEventListener('hashchange', () => setTimeout(() => { if (!host()) document.body.classList.remove('chat-fs'); }));
 // Esc lukker ark og skuff (uansett hvor fokus er).
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && host() && chFull() && !(C.sheet || C.drawer || C.edit) && !document.querySelector('#settings:not([hidden])')) {
+  if (e.key === 'Escape' && host() && !(C.sheet || C.drawer || C.edit) && !document.querySelector('#settings:not([hidden])')) {
     if (e.target?.matches?.('input,textarea') && e.target.value) return;
-    e.preventDefault(); document.body.classList.remove('chat-fs'); location.hash = '#/dash'; return;
+    e.preventDefault(); closeChat(); return;
   }
   if (e.key !== 'Escape' || !host() || !(C.sheet || C.drawer || C.edit)) return;
   if (e.target?.closest?.('[data-sf]') && e.target.value) return; // søkefeltet tømmes først

@@ -64,7 +64,7 @@ function profile(big = false) {
   const sz = big ? 58 : 44;
   return `<a class="opt-row" href="#/set/konto"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:${sz}px;height:${sz}px;font-size:${big ? 22 : 17}px">${avInner()}</span><span class="m-grow"><b style="font-size:${big ? 19 : 16}px;font-weight:600">${esc(meName())}</b><br><span style="font-size:13px;opacity:.65">${me.username ? `@${esc(me.username)}` : 'FinansHub'}${me.role ? ` · ${esc(me.role)}` : ''} · ${esc(me.serverName || location.host)}</span></span><span style="opacity:.5">›</span></a>`;
 }
-const PAGES = { integ: 'Integrasjoner', kal: 'Kalendere', varsler: 'Varsler og haptikk', mod: 'Moduler', profil: 'Profil', bakgrunn: 'Bakgrunn', fanelinje: 'Fanelinje', konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', nav: 'Navigasjonslinje', dom: 'Domener', scan: 'Skanning og AI', notif: 'Varsler', hap: 'Haptikk', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI og tolkning', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data', oppd: 'Oppdatering', sysbk: 'Backup' };
+const PAGES = { integ: 'Integrasjoner', kal: 'Kalendere', varsler: 'Varsler og haptikk', mod: 'Moduler', profil: 'Profil', bakgrunn: 'Bakgrunn', fanelinje: 'Fanelinje', konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', nav: 'Navigasjonslinje', dom: 'Domener', scan: 'Skanning og AI', notif: 'Varsler', hap: 'Haptikk', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI og tolkning', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data', oppd: 'Oppdatering', sysbk: 'Backup', widgets: 'Widgets', kalapp: 'Kalender-appen' };
 const when = (t) => (t ? new Date(t).toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'aldri');
 const aiMode = () => { const st = S.boot?.settings ?? {}; return st.provider === 'gemini' ? 'gemini' : st.provider === 'groq' ? 'groq' : st.fallback ? 'both' : 'ollama'; };
 
@@ -97,7 +97,7 @@ function main() {
   const st = S.boot?.settings ?? {};
   return `${paper() ? paperTop() : ''}${G('', [profile(true)])}
     ${G('Konto', [nav('konto', 'Kontoer og brukere', '1 på enheten', 'users', '#5E8BFF'), nav('sik', 'Sikkerhet', m.me?.totp ? '2FA på' : '', 'shield', '#34C759'), nav('tok', 'API-tokens', T.tokens ? `${T.tokens.length} aktive` : '', 'key', '#FF9F0A')])}
-    ${G('App', [nav('look', 'Utseende', '', 'look', '#BF5AF2'), nav('scan', 'Skanning og AI', pref('scanTap') === 'cam' ? 'Kamera' : 'Vis valg', 'cam', '#FF7A3D'), nav('notif', 'Varsler', st.nRc ? 'På' : '', 'bell', '#FF453A'), nav('hap', 'Haptikk', hpref('hap') ? 'På' : 'Av', 'vib', '#FF2D55'), nav('sokbar', 'Søkebar', 'Google', 'search', '#0A84FF')])}
+    ${G('App', [nav('look', 'Utseende', '', 'look', '#BF5AF2'), nav('scan', 'Skanning og AI', pref('scanTap') === 'cam' ? 'Kamera' : 'Vis valg', 'cam', '#FF7A3D'), nav('notif', 'Varsler', st.nRc ? 'På' : '', 'bell', '#FF453A'), nav('hap', 'Haptikk', hpref('hap') ? 'På' : 'Av', 'vib', '#FF2D55'), nav('sokbar', 'Søkebar', 'Google', 'search', '#0A84FF'), nav('widgets', 'Widgets', 'Slik legger du til', 'list', '#30D158'), nav('kalapp', 'Kalender-appen', 'iPhone · Android', 'down', '#b23a2a')])}
     ${G('Finans', [nav('fai', 'AI-motor', !canSrv() ? ADMIN_NOTE : st.provider === 'gemini' ? 'Gemini' : st.fallback ? 'Ollama + Gemini' : 'Ollama', 'ai', '#FF7A3D'), nav('kat', 'Kategorier', String((S.boot?.categories ?? []).length), 'cat', '#30D158'), nav('regel', 'Regler', String((S.boot?.rules ?? []).length), 'rule', '#5E5CE6'), nav('bank', 'Bank og import', st.csvProfile ?? '', 'bank', '#0A84FF'), nav('t212', 'Aksjer · Trading 212', st.t212Set ? (st.t212Env === 'demo' ? 'Demo' : 'Live') : 'Ikke koblet', 'aks', '#64D2FF'), nav('bk', 'Backup og data', '', 'backup', '#8E8E93')])}
     ${G('System', [nav('srv', 'Server og synk', '', 'srv', '#64D2FF'), nav('data', 'Data og lagring', '', 'db', '#8E8E93'), nav('om', 'Om FinansHub', VERSION, 'info', '#8E8E93')])}
     ${G('', [btn(`Logg ut ${esc(meName())}`, 'logout', '#FF8A80')])}`;
@@ -107,6 +107,8 @@ const PAGE = {
   // Prompt 26: gruppert liste som på web og egen side per integrasjon (#/set/integ/<id>). Eldre server: forrige side.
   integ: (th, sub) => P26.integPage26(P23.integPage(haSection()), sub),
   kal: () => P26.kalSetPage(),
+  widgets: () => P33.widgetsPage(), // Prompt 33: Slik legger du til widget
+  kalapp: () => P33.kalAppPage(), // Prompt 33: Kalender-appen (IPA/APK)
   sysbk: () => P29.backupPage(), // Prompt 29: backup av hele systemet (bare admin)
   oppd: () => updPage(G), // Prompt 28: oppdater hele systemet (bare admin) // Prompt 26: Innstillinger → Kalendere (Skole-iCal, Canvas, Google Kalender og Home Assistant)
   varsler: () => p17Varsler(trkPrefRows()),
