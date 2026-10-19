@@ -22,6 +22,7 @@ struct MacSettingsView: View {
                 section("UTSEENDE") { appearance }
                 section("VISNING") { display }
                 section("KONTO") { account }
+                section("KONTOER OG SYNK") { MacGoogle36Section() }
                 section("OPPDATERING") { update }
             }
             .padding(24)

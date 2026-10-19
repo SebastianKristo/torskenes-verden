@@ -230,7 +230,8 @@ struct MacGridColumn: View {
         .overlay(alignment: .leading) { Rectangle().fill(t.line).frame(width: 1) }
         .contentShape(Rectangle())
         .onTapGesture(count: 2) { (p: CGPoint) in
-            let m: Int = Int(p.y / hourH * 60)
+            let raw: CGFloat = p.y / hourH * 60
+            let m: Int = raw.isFinite ? Swift.max(0, Swift.min(1439, Int(raw))) : 0
             let s: Int = Swift.min(23 * 60, (m / 30) * 30)
             win.openNew(day: k, s: s, e: s + 60)
         }
@@ -247,7 +248,7 @@ struct MacGridColumn: View {
     private func block(_ l: MacLaid, width: CGFloat) -> some View {
         let e: KalEvent = l.ev
         let c: KalCal? = store.cal(e.cal)
-        let lw: CGFloat = (width - 4) / CGFloat(l.lanes)
+        let lw: CGFloat = Swift.max(0, width - 4) / CGFloat(Swift.max(1, l.lanes))
         let y: CGFloat = CGFloat(e.startMin) / 60 * hourH
         let h: CGFloat = Swift.max(18, CGFloat(e.endMin - e.startMin) / 60 * hourH - 2)
         let x: CGFloat = 2 + lw * CGFloat(l.lane)

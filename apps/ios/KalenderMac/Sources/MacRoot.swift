@@ -22,7 +22,7 @@ struct MacMainWindow: View {
     var body: some View {
         MacThemed { MacRoot(win: win) }
             .frame(minWidth: 980, minHeight: 640)
-            .focusedSceneObject(win)
+            .focusedSceneValue(\.macWin, MacWinFocus(win: win, modal: win.modal))
             .onAppear {
                 MacApp.opener = openWindow
                 if !MacWin.all.contains(where: { (x: MacWin) -> Bool in x === win }) { MacWin.all.append(win) }

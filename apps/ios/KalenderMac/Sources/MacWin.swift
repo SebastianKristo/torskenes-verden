@@ -183,6 +183,27 @@ final class MacWin: ObservableObject {
     }
 }
 
+/// Vinduet i fokus for menyene (Commands). Ikke @FocusedObject: da bygges alle menyene (og scene-lista) på nytt ved hver
+/// @Published-endring i vinduet (hover, zoom, minikalender …), som på macOS 26/27 kan gå i løkke med AppKit-vinduskontrolleren.
+/// Her endres verdien bare når fokusvinduet eller «ark/panel oppe» endres.
+struct MacWinFocus: Equatable {
+    let win: MacWin
+    let modal: Bool
+
+    static func == (a: MacWinFocus, b: MacWinFocus) -> Bool { a.win === b.win && a.modal == b.modal }
+}
+
+struct MacWinFocusKey: FocusedValueKey {
+    typealias Value = MacWinFocus
+}
+
+extension FocusedValues {
+    var macWin: MacWinFocus? {
+        get { self[MacWinFocusKey.self] }
+        set { self[MacWinFocusKey.self] = newValue }
+    }
+}
+
 /// Henter NSWindow-en til et SwiftUI-vindu (for MacWin.window og vindusutseendet).
 struct MacWindowReader: NSViewRepresentable {
     let onWindow: (NSWindow) -> Void

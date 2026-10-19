@@ -1,21 +1,58 @@
 import SwiftUI
 import AppKit
+import Combine
 
 /* ---------------- Prompt 34: Menylinje-kalenderen (MenuBarExtra) og dyplenker ---------------- */
 // Ikon med dagens dato og neste hendelse («Tannlege 15:15»). Panel (340 pt): dato og ukenummer, minimåned, dagens og morgendagens
 // hendelser, Glimt-felt med rød +, «Åpne Kalender ⌘0» og «Innstillinger …». Kan slås av, og vise bare ikon / dato / neste hendelse.
 
+/// Det menylinje-etiketten viser. Egen liten modell i stedet for hele MacStore: etiketten er en del av scenen
+/// (MenuBarExtra), og å observere MacStore der bygget scenen på nytt ved hver dataendring (macOS 26/27: løkke i AppGraph).
+/// Verdiene settes bare når de faktisk endres, og alltid etter at MacStore er ferdig med oppdateringen (async).
+@MainActor
+final class MacBarModel: ObservableObject {
+    static let shared: MacBarModel = MacBarModel()
+
+    @Published private(set) var day: Int = KalD.dayOfMonth(Date())
+    @Published private(set) var mode: String = "next"
+    @Published private(set) var next: String = ""
+    private var sub: AnyCancellable? = nil
+    private var queued: Bool = false
+
+    init() {
+        refresh()
+        sub = MacStore.shared.objectWillChange.sink { [weak self] (_: Void) in
+            guard let self, !self.queued else { return }
+            self.queued = true
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.queued = false
+                self.refresh()
+            }
+        }
+    }
+
+    func refresh() {
+        let s: MacStore = MacStore.shared
+        let d: Int = KalD.dayOfMonth(Date())
+        var n: String = ""
+        if s.menuBarMode == "next", s.loggedIn, let e = s.nextTimed(), e.day == KalD.todayKey() {
+            n = MacMenuBarLabel.short(e.title) + " " + KalD.hm(e.startMin)
+        }
+        if d != day { day = d }
+        if s.menuBarMode != mode { mode = s.menuBarMode }
+        if n != next { next = n }
+    }
+}
+
 struct MacMenuBarLabel: View {
-    @ObservedObject var store: MacStore = MacStore.shared
+    @ObservedObject var bar: MacBarModel = MacBarModel.shared
 
     var body: some View {
-        let n: Int = KalD.dayOfMonth(Date())
-        let _: Int = store.tick
-        let icon: Image = Image(systemName: String(n) + ".square")
-        if store.menuBarMode == "next", let e = store.nextTimed(), e.day == KalD.todayKey() {
-            let label: String = MacMenuBarLabel.short(e.title) + " " + KalD.hm(e.startMin)
-            Text(icon) + Text(" " + label)
-        } else if store.menuBarMode == "icon" {
+        let icon: Image = Image(systemName: String(bar.day) + ".square")
+        if bar.mode == "next" && !bar.next.isEmpty {
+            Text(icon) + Text(" " + bar.next)
+        } else if bar.mode == "icon" {
             Image(systemName: "calendar")
         } else {
             icon
@@ -88,8 +125,8 @@ struct MacMenuBarPanel: View {
                 Text("Ingenting i dag eller i morgen.").font(MacFont.ui(12.5)).foregroundColor(t.mut)
                     .frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 8)
             }
-            ForEach(Array(today.prefix(5))) { (e: KalEvent) in MacMenuRow(e: e, prefix: "") { open(event: e) } }
-            ForEach(Array(tomorrow.prefix(3))) { (e: KalEvent) in MacMenuRow(e: e, prefix: "I morgen ") { open(event: e) } }
+            ForEach(Array(today.uniqueIds().prefix(5))) { (e: KalEvent) in MacMenuRow(e: e, prefix: "") { open(event: e) } }
+            ForEach(Array(tomorrow.uniqueIds().prefix(3))) { (e: KalEvent) in MacMenuRow(e: e, prefix: "I morgen ") { open(event: e) } }
         }
     }
 
@@ -185,14 +222,15 @@ enum MacLinks {
         case "liste", "agenda":
             win.go(view: "liste")
         case "mnd", "maned", "month":
-            win.go(view: "mnd", day: q("date") ?? KalD.todayKey())
+            let d: String = q("date") ?? ""
+            win.go(view: "mnd", day: KalD.valid(d) ? d : KalD.todayKey())
         case "ar", "year":
             win.go(view: "ar")
         case "ny", "new":
             if let text = q("text") {
                 let p: KalParsed = KalQuick.parse(text, defaultRem: MacStore.shared.defRem)
                 Task { await MacStore.shared.add(p, toastPrefix: "Glimt la til") }
-                win.anchor = p.day
+                if KalD.valid(p.day) { win.anchor = p.day }
             } else {
                 win.openNew()
             }

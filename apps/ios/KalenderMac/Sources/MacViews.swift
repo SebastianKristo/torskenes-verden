@@ -91,7 +91,7 @@ struct MacMonthCell: View {
         let today: Bool = k == KalD.todayKey()
         let inMonth: Bool = KalD.month(day) == month
         GeometryReader { (g: GeometryProxy) in
-            let maxChips: Int = Swift.max(1, Int((g.size.height - 30) / 19))
+            let maxChips: Int = MacMonthCellMath.chips(g.size.height)
             VStack(alignment: .leading, spacing: 2) {
                 top(k, today: today, inMonth: inMonth)
                 ForEach(Array(list.prefix(maxChips))) { (e: KalEvent) in
@@ -339,5 +339,14 @@ struct MacListRow: View {
                 .padding(.horizontal, 7).frame(height: 20)
                 .background(Capsule().fill(label == "FRIST" ? t.red : t.chip))
         }
+    }
+}
+
+/// Antall hendelser som får plass i en måneds-celle. Int(…) av et uendelig/ugyldig tall krasjer, så det sjekkes først.
+enum MacMonthCellMath {
+    static func chips(_ height: CGFloat) -> Int {
+        let v: CGFloat = (height - 30) / 19
+        if !v.isFinite { return 1 }
+        return Swift.max(1, Swift.min(40, Int(v)))
     }
 }

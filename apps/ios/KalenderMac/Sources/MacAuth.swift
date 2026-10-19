@@ -51,10 +51,15 @@ enum MacKeychain {
 
 /// Mac-innloggingen: token i Nøkkelringen, adresser og navn i UserDefaults.
 enum MacSession {
+    // Leses fra bakgrunnstråder (KalNet.send via sessionProvider) og skrives på hovedtråden: lås rundt bufferen,
+    // ellers datakappløp på String-en (sporadisk EXC_BAD_ACCESS).
+    private static let lock: NSLock = NSLock()
     private static var cachedToken: String? = nil
     private static var loaded: Bool = false
 
     static var token: String? {
+        lock.lock()
+        defer { lock.unlock() }
         if !loaded {
             cachedToken = MacKeychain.read("token")
             loaded = true
@@ -72,16 +77,20 @@ enum MacSession {
 
     static func save(bases: [String], token: String, user: String) {
         MacKeychain.write("token", token)
+        lock.lock()
         cachedToken = token
         loaded = true
+        lock.unlock()
         UserDefaults.standard.set(bases, forKey: "mac.bases")
         UserDefaults.standard.set(user, forKey: "mac.user")
     }
 
     static func clear() {
         MacKeychain.delete("token")
+        lock.lock()
         cachedToken = nil
         loaded = true
+        lock.unlock()
         UserDefaults.standard.removeObject(forKey: "mac.bases")
         UserDefaults.standard.removeObject(forKey: "mac.user")
     }

@@ -28,6 +28,11 @@ enum KalGroup {
     }
 
     private static func resolve() -> String? {
+        #if os(macOS)
+        // Mac-appen har ingen App Group (tokenet ligger i Nøkkelringen). På macOS 15+ gir oppslag i andre apper sine
+        // gruppe-containere en systemdialog («… vil få tilgang til data fra andre apper») – derfor ingen gruppe her.
+        return nil
+        #else
         var cands: [String] = []
         var bundles: [Bundle] = [Bundle.main]
         let url: URL = Bundle.main.bundleURL
@@ -49,6 +54,7 @@ enum KalGroup {
         let fm: FileManager = FileManager.default
         for g in cands where fm.containerURL(forSecurityApplicationGroupIdentifier: g) != nil { return g }
         return nil
+        #endif
     }
 
     /// Stabilt fingeravtrykk (FNV-1a), ikke selve tokenet.

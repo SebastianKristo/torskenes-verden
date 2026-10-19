@@ -186,6 +186,8 @@ final class MacStore: ObservableObject {
         } catch {
             lastError = error.localizedDescription
         }
+        // Logget ut underveis (401): ikke skriv bufferen eller send køen på nytt.
+        if !loggedIn { return }
         let w: [KalWxDay] = await KalNet.weather(from: tk, to: KalD.addKey(tk, 15))
         if !w.isEmpty {
             var o: [String: KalWxDay] = [:]
@@ -247,8 +249,11 @@ final class MacStore: ObservableObject {
 
     func rebuild(sideEffects: Bool = true) {
         var list: [KalEvent] = []
+        // Samme id to ganger (serveren + lokal kø, eller dobbel import) gir dupliserte id-er i ForEach – det kan krasje SwiftUI.
+        var seen: Set<String> = []
         for var e in events + pending {
-            if hiddenIds.contains(e.id) { continue }
+            if hiddenIds.contains(e.id) || seen.contains(e.id) { continue }
+            seen.insert(e.id)
             if let r = remOverride[e.id] { e.rem = r < 0 ? nil : r }
             if let c = calOverride[e.id] { e.cal = c }
             if let s = srcOf[e.id], e.src.isEmpty { e.src = s }
@@ -257,7 +262,8 @@ final class MacStore: ObservableObject {
         all = list
         var map: [String: [KalEvent]] = [:]
         for e in list where isOn(e.cal) {
-            let n: Int = Swift.max(1, e.days)
+            // Maks ett år per hendelse (feil sluttdato fra en kilde skal ikke gi millioner av dager).
+            let n: Int = Swift.min(366, Swift.max(1, e.days))
             for i in 0..<n {
                 let k: String = i == 0 ? e.day : KalD.addKey(e.day, i)
                 var x: KalEvent = e

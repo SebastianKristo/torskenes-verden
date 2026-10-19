@@ -97,9 +97,14 @@ enum MacDock {
         let tile: NSDockTile = NSApp.dockTile
         if lastKey != tk || tile.contentView == nil {
             lastKey = tk
-            let host: NSHostingView<MacDockIcon> = NSHostingView(rootView: MacDockIcon(date: Date()))
-            host.frame = NSRect(x: 0, y: 0, width: 128, height: 128)
-            tile.contentView = host
+            // Et ferdig bilde (ImageRenderer) i stedet for en levende NSHostingView: Dock-flisen tegnes utenfor vinduene,
+            // og en SwiftUI-vert der kan oppdatere seg selv i løkke / krasje på nyere macOS.
+            let r: ImageRenderer<MacDockIcon> = ImageRenderer(content: MacDockIcon(date: Date()))
+            r.scale = 2
+            let iv: NSImageView = NSImageView(frame: NSRect(x: 0, y: 0, width: 128, height: 128))
+            iv.imageScaling = .scaleProportionallyUpOrDown
+            iv.image = r.nsImage ?? NSApp.applicationIconImage
+            tile.contentView = iv
         }
         var badge: String? = nil
         if s.dockBadge && s.loggedIn {

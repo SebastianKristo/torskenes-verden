@@ -239,7 +239,7 @@ struct MacNewSheet: View {
         VStack(alignment: .leading, spacing: 8) {
             MacLabel(text: "KALENDER", color: t.acc)
             MacFlow(spacing: 6) {
-                ForEach(store.cals.filter { (c: KalCal) -> Bool in c.writable }) { (c: KalCal) in
+                ForEach(store.cals.filter { (c: KalCal) -> Bool in c.writable }.uniqueIds()) { (c: KalCal) in
                     MacChip(title: c.name, on: f.cal == c.id, dot: t.calColor(c)) { f.cal = c.id }
                 }
             }

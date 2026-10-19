@@ -422,8 +422,9 @@ enum KalParse {
 
     /// Serverens reminder («none», «15m», «1h», «day») eller minutter.
     static func reminder(_ o: [String: Any]) -> Int? {
-        if let m = int(o, "remindMinutes") ?? int(o, "remMin") { return m > 0 ? m : nil }
-        if let n = o["rem"] as? NSNumber { return n.intValue > 0 ? n.intValue : nil }
+        // Maks 30 dager (varseltidspunktet regnes ut med m * 60 – et absurd tall fra en kilde skal ikke gi overflyt).
+        if let m = int(o, "remindMinutes") ?? int(o, "remMin") { return m > 0 ? Swift.min(m, 43_200) : nil }
+        if let n = o["rem"] as? NSNumber { return n.intValue > 0 ? Swift.min(n.intValue, 43_200) : nil }
         switch str(o, "reminder") {
         case "10m": return 10
         case "15m": return 15
@@ -453,9 +454,9 @@ enum KalParse {
         if explicitAll == true || (startT == nil && (o["s"] == nil || o["s"] is NSNull)) {
             if day.isEmpty, let sd = startRaw as? String, sd.count >= 10 { day = String(sd.prefix(10)) }
             if let ed = endRaw as? String, ed.count == 10, KalD.valid(day) {
-                days = Swift.max(1, KalD.daysBetween(day, ed))
+                days = Swift.min(366, Swift.max(1, KalD.daysBetween(day, ed)))
             }
-            if let n = int(o, "days"), n > 1 { days = n }
+            if let n = int(o, "days"), n > 1 { days = Swift.min(n, 366) }
             if type == "innl", let et = endT {
                 // Innlevering med klokkeslett: fristen er slutten.
                 day = KalD.key(et)
@@ -525,9 +526,12 @@ enum KalParse {
         let any: Any? = try? JSONSerialization.jsonObject(with: data)
         let raw: [[String: Any]] = list(any, "calendars")
         var out: [KalCal] = []
+        var seen: Set<String> = []
         for o in raw {
             let id: String = str(o, "id")
-            if id.isEmpty { continue }
+            // Samme id to ganger ville gitt dupliserte id-er i ForEach (sidemenyen).
+            if id.isEmpty || seen.contains(id) { continue }
+            seen.insert(id)
             var name: String = str(o, "name")
             if name.isEmpty { name = str(o, "title") }
             var hex: String = str(o, "color")

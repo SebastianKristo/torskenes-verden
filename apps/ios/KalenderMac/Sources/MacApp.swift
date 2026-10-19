@@ -128,13 +128,15 @@ final class MacAppDelegate: NSObject, NSApplicationDelegate {
 /* ---------- Menyene (norsk) ---------- */
 
 struct MacCommands: Commands {
-    @FocusedObject private var win: MacWin?
+    // Ikke @FocusedObject (observerer alle @Published i vinduet): bare vinduet og om et ark er oppe.
+    @FocusedValue(\.macWin) private var focus: MacWinFocus?
+    private var win: MacWin? { focus?.win }
     @Environment(\.openWindow) private var openWindow
     @AppStorage("mac.sw") private var showWeeks: Bool = true
 
     private var off: Bool { win == nil || !MacStore.shared.loggedIn }
     /// Ark og søk er åpne: ⌘← / ⌘→ skal virke i tekstfeltene.
-    private var busy: Bool { off || (win?.modal ?? true) }
+    private var busy: Bool { off || (focus?.modal ?? true) }
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
@@ -173,7 +175,9 @@ struct MacCommands: Commands {
             Button("Vis/skjul sidemeny") { win?.sidebar.toggle() }
                 .keyboardShortcut("s", modifiers: [.command, .option])
                 .disabled(off)
-            Toggle("Ukenummer", isOn: Binding<Bool>(get: { showWeeks }, set: { (v: Bool) in MacStore.shared.showWeeks = v }))
+            Toggle("Ukenummer", isOn: Binding<Bool>(get: { showWeeks }, set: { (v: Bool) in
+                if MacStore.shared.showWeeks != v { MacStore.shared.showWeeks = v }
+            }))
             Divider()
         }
         CommandMenu("Gå") {

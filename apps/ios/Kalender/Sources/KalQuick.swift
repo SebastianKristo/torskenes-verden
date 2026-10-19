@@ -114,7 +114,8 @@ enum KalQuick {
         }
         // varsle 30 min før / påminn meg 1 dag før
         if let m = KalRx.first("(?:påminn(?:else)?|varsle?|varsel)\\s*(?:meg\\s*)?(\\d+)\\s*(min|minutter|t|time|timer|dag|dager|døgn)\\s*før", s) {
-            let n: Int = Int(m.g(1) ?? "0") ?? 0
+            // Maks 30 dager: «varsle 99999999999999 dager før» skal ikke gi heltallsoverflyt (krasj).
+            let n: Int = Swift.min(Int(m.g(1) ?? "0") ?? 0, 43_200)
             let unit: String = m.g(2) ?? "min"
             rem = unit.hasPrefix("d") ? n * 1440 : unit.hasPrefix("t") ? n * 60 : n
             remSet = true
@@ -122,7 +123,8 @@ enum KalQuick {
         }
         // i 2 timer / i 45 min
         if let m = KalRx.first("\\bi\\s+(\\d+(?:[.,]5)?)\\s*(t|timer|time|min|minutter)\\b", s) {
-            let n: Double = Double((m.g(1) ?? "1").replacingOccurrences(of: ",", with: ".")) ?? 1
+            // Int(Double) krasjer for tall utenfor Int-området: maks 24 timer.
+            let n: Double = Swift.min(Double((m.g(1) ?? "1").replacingOccurrences(of: ",", with: ".")) ?? 1, 1440)
             dur = (m.g(2) ?? "t").hasPrefix("m") ? Int(n) : Int(n * 60)
             s = KalRx.cut(s, m.whole)
         }

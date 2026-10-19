@@ -323,7 +323,7 @@ enum KalCalAPI35 {
             out.connected = KalParse.bool(o, "connected") ?? false
             for e in KalParse.list(o, "entities") {
                 let id: String = KalParse.str(e, "entity_id").isEmpty ? KalParse.str(e, "id") : KalParse.str(e, "entity_id")
-                if id.isEmpty { continue }
+                if id.isEmpty || out.entities.contains(where: { (x: KalHaEntity35) -> Bool in x.id == id }) { continue }
                 let name: String = KalParse.str(e, "name")
                 out.entities.append(KalHaEntity35(id: id, name: name.isEmpty ? id : name, added: KalParse.bool(e, "added") ?? false))
             }
@@ -371,5 +371,34 @@ enum KalCalAPI35 {
         case "1d", "day": return 1440
         default: return nil
         }
+    }
+}
+
+/* ---------- Unike id-er (ForEach) ---------- */
+
+extension Array where Element == KalEvent {
+    /// Første forekomst av hver id. Flerdagshendelser ligger på hver dag med samme id, og samlet over flere dager
+    /// (Glimt-kort, søk) ga det dupliserte id-er i ForEach – udefinert oppførsel som kan krasje SwiftUI.
+    func uniqueIds() -> [KalEvent] {
+        var seen: Set<String> = []
+        var out: [KalEvent] = []
+        for e in self where !seen.contains(e.id) {
+            seen.insert(e.id)
+            out.append(e)
+        }
+        return out
+    }
+}
+
+extension Array where Element == KalCal {
+    /// Første forekomst av hver kalender-id.
+    func uniqueIds() -> [KalCal] {
+        var seen: Set<String> = []
+        var out: [KalCal] = []
+        for c in self where !seen.contains(c.id) {
+            seen.insert(c.id)
+            out.append(c)
+        }
+        return out
     }
 }

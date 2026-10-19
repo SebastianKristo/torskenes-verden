@@ -438,7 +438,7 @@ struct MacGlimtRow: View {
     }
 
     @ViewBuilder private var extras: some View {
-        ForEach(m.cards) { (e: KalEvent) in MacGlimtCard(e: e, win: win) }
+        ForEach(m.cards.uniqueIds()) { (e: KalEvent) in MacGlimtCard(e: e, win: win) }
         if !m.slots.isEmpty {
             MacFlow(spacing: 6) {
                 ForEach(m.slots, id: \.self) { (sl: MacSlot) in MacSlotChip(slot: sl, win: win) }

@@ -133,7 +133,7 @@ struct MacSearchView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
                 MacChip(title: "Alle", on: m.cal == nil) { m.cal = nil }
-                ForEach(store.cals) { (c: KalCal) in
+                ForEach(store.cals.uniqueIds()) { (c: KalCal) in
                     MacChip(title: c.name, on: m.cal == c.id, dot: t.calColor(c)) { m.cal = m.cal == c.id ? nil : c.id }
                 }
             }
@@ -155,7 +155,7 @@ struct MacSearchView: View {
             }
             MacLabel(text: "SNART").padding(.top, 6)
             VStack(spacing: 2) {
-                ForEach(store.upcoming(limit: 6)) { (e: KalEvent) in
+                ForEach(store.upcoming(limit: 6).uniqueIds()) { (e: KalEvent) in
                     MacSearchRow(e: e) { open(e) }
                 }
             }
@@ -167,7 +167,7 @@ struct MacSearchView: View {
         let tk: String = KalD.todayKey()
         let coming: [KalEvent] = list.filter { (e: KalEvent) -> Bool in e.day >= tk }
         let past: [KalEvent] = list.filter { (e: KalEvent) -> Bool in e.day < tk }.reversed()
-        let ordered: [KalEvent] = Array((coming + past).prefix(80))
+        let ordered: [KalEvent] = Array((coming + past).uniqueIds().prefix(80))
         let days: [String] = MacSearchView.uniqueDays(ordered)
         return VStack(alignment: .leading, spacing: 10) {
             Text(list.isEmpty ? "Ingen treff. Trykk Enter for å spørre Glimt." : String(list.count) + " treff")
@@ -227,7 +227,7 @@ struct MacSearchAnswer: View {
                 if !a.error.isEmpty {
                     Text(a.error).font(MacFont.ui(12.5, .semibold)).foregroundColor(t.acc)
                 }
-                ForEach(a.cards) { (e: KalEvent) in MacGlimtCard(e: e, win: win) }
+                ForEach(a.cards.uniqueIds()) { (e: KalEvent) in MacGlimtCard(e: e, win: win) }
                 if !a.slots.isEmpty {
                     MacFlow(spacing: 6) {
                         ForEach(a.slots, id: \.self) { (sl: MacSlot) in MacSlotChip(slot: sl, win: win) }

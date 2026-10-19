@@ -312,7 +312,8 @@ private fun AddCalPanel35(vm: KalVm) {
                 }
             }
             else -> {
-                listOf("Google Kalender" to "Koble til", "iCloud" to "App-spesifikt passord", "Outlook / Microsoft 365" to "Koble til").forEach { (n, sub) ->
+                Google36Panel(vm)
+                listOf("iCloud" to "App-spesifikt passord", "Outlook / Microsoft 365" to "Koble til").forEach { (n, sub) ->
                     Row(
                         Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(12.dp)).background(k.card).border(1.dp, k.line, RoundedCornerShape(12.dp)).tap(n) { vm.openAccount(n) }.padding(horizontal = 14.dp),
                         verticalAlignment = Alignment.CenterVertically,

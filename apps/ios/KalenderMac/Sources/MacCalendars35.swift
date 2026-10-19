@@ -28,7 +28,7 @@ struct MacCalendars35: View {
                     .foregroundColor(t.acc)
             }
             .padding(.bottom, 4)
-            ForEach(visible) { (c: KalCal) in
+            ForEach(visible.uniqueIds()) { (c: KalCal) in
                 MacCalRow35(cal: c, editing: editing)
             }
             let n: Int = store.hiddenFromMenu.count
@@ -293,10 +293,13 @@ struct MacAddCal35Sheet: View {
 
     private var accTab: some View {
         VStack(alignment: .leading, spacing: 8) {
-            accRow("Google Kalender", "Koble til")
+            ScrollView {
+                MacGoogle36Section()
+            }
+            .frame(maxHeight: 300)
             accRow("iCloud", "App-spesifikt passord")
             accRow("Outlook / Microsoft 365", "Koble til")
-            Text("Kontoer kobles til i Homelab → Innstillinger → Integrasjoner. Etter innlogging velger du flere kalendere fra kontoen, og de vises her.")
+            Text("Kontoer kobles til i Homelab → Innstillinger → Integrasjoner. Google-kalenderne du velger her vises i sidemenyen med merket «Google».")
                 .font(MacFont.ui(11.5)).foregroundColor(t.mut).fixedSize(horizontal: false, vertical: true)
         }
     }

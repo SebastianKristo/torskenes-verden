@@ -110,6 +110,8 @@ class KalVm(app: Application) : AndroidViewModel(app) {
     var pickC by mutableStateOf<String?>(null)
     /** «+ Legg til kalender»-panelet (null = lukket). */
     var ac by mutableStateOf<KAdd35?>(null)
+    /** Prompt 36: Google-kortet i Konto-fanen (hovedkalender og flere Google-kalendere). */
+    val g36 = no.kristo.kalender.ui.KGoogleUi36()
     var colO by mutableStateOf(Kal35Prefs.colors(app))
     var hmO by mutableStateOf(Kal35Prefs.hidMenu(app))
     /** Zoom-animasjonen: retning (in/out), teller (ny animasjon) og punktet den vokser fra (andel av visningen). */

@@ -414,10 +414,10 @@ struct KalAddCal35: View {
 
     private var accTab: some View {
         VStack(alignment: .leading, spacing: 6) {
-            accRow("Google Kalender", "Koble til")
+            KalGoogle36Section()
             accRow("iCloud", "App-spesifikt passord")
             accRow("Outlook / Microsoft 365", "Koble til")
-            Text("Kontoer kobles til i Homelab → Innstillinger → Integrasjoner. Etter innlogging velger du flere kalendere fra kontoen, og de vises her.")
+            Text("Kontoer kobles til i Homelab → Innstillinger → Integrasjoner. Google-kalenderne du velger her vises i menyen med merket «Google».")
                 .font(KalFont.ui(12)).foregroundStyle(t.mut).fixedSize(horizontal: false, vertical: true)
         }
     }
