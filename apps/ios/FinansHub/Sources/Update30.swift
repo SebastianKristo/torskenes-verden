@@ -47,6 +47,18 @@ final class Update30Model {
     var busy: Bool = false
     var askError: String = ""
     var hideAt: Double = UserDefaults.standard.double(forKey: Update30Model.hideKey)
+    /* Prompt 31: Nordlys OS (System31.swift). */
+    /// require_password i /api/system/update/settings: av = admin oppdaterer med ett trykk.
+    var requirePassword: Bool = false
+    var osName: String = "Nordlys OS"
+    var tagline: String = "Lys i mørket, kjørt hjemme."
+    var sizeBytes: Int = 0
+    var sha: String = ""
+    var publishedAt: String = ""
+    /// «Se etter oppdatering» pågår.
+    var checking: Bool = false
+    /// Sist sjekket mot GitHub.
+    var checkedAt: Date? = nil
 
     @ObservationIgnored private var loadedAt: Date = .distantPast
     @ObservationIgnored private var poll: Task<Void, Never>? = nil
@@ -85,10 +97,10 @@ final class Update30Model {
 
     var title: String {
         switch phase {
-        case .done: return "Oppdatert til " + (latest.isEmpty ? current : latest)
-        case .run: return "Oppdaterer Homelab"
+        case .done: return "Oppdatert til Nordlys " + (latest.isEmpty ? current : latest)
+        case .run: return "Oppdaterer " + osName
         case .failed: return "Oppdateringen feilet"
-        default: return "Ny versjon " + latest
+        default: return "Nordlys " + latest + " er klar"
         }
     }
 
@@ -112,7 +124,7 @@ final class Update30Model {
 
     /// «Homelab 2.3.1» / «Ny versjon 2.4.0 er klar» i PROGRAMVARE.
     var versionRow: (String, String) {
-        let name: String = "Homelab " + (current.isEmpty ? "–" : current)
+        let name: String = osName + " " + (current.isEmpty ? "–" : current)
         if phase == .avail || phase == .failed { return (name, "Ny versjon \(latest) er klar") }
         if phase == .run { return (name, "Oppdaterer til \(latest) …") }
         return (name, "Siste versjon")
@@ -140,8 +152,16 @@ final class Update30Model {
         let o: [String: Any] = JS.obj(d)
         current = Update30Model.ver(o["current"]) ?? current
         latest = Update30Model.ver(o["latest"]) ?? latest
-        let n: [String] = JS.strings(o, "notes")
+        let n: [String] = Update30Model.cleanNotes(JS.strings(o, "notes"))
         if !n.isEmpty { notes = Array(n.prefix(12)) }
+        // Prompt 31: name, tagline, sizeBytes (SERVER31), sha og dato.
+        if let v = JS.str(o, "name") { osName = v }
+        if let v = JS.str(o, "tagline") { tagline = v }
+        sizeBytes = JS.int(o, "sizeBytes") ?? sizeBytes
+        let lat: [String: Any]? = JS.dict(o, "latest")
+        sha = String((JS.str(lat, "sha") ?? JS.str(o, "sha") ?? sha).prefix(7))
+        publishedAt = JS.str(o, "publishedAt") ?? JS.str(lat, "publishedAt") ?? publishedAt
+        checkedAt = Date()
         let avail: Bool = JS.bool(o, "updateAvailable") ?? false
         if phase == .idle || phase == .avail { phase = avail ? .avail : .idle }
     }
@@ -155,7 +175,7 @@ final class Update30Model {
         if latest.isEmpty { latest = Update30Model.ver(o["latest"]) ?? "" }
         if notes.isEmpty {
             let ch: [[String: Any]] = JS.list(o, "changes")
-            notes = Array(ch.flatMap { JS.strings($0, "items") }.prefix(12))
+            notes = Array(Update30Model.cleanNotes(ch.flatMap { JS.strings($0, "items") }).prefix(12))
         }
         let running: Bool = JS.bool(o, "running") ?? false
         let st: [String: Any] = JS.dict(o, "status") ?? [:]
@@ -175,12 +195,13 @@ final class Update30Model {
         let s: [String: Any] = JS.dict(o, "settings") ?? o
         autoUpdate = JS.bool(s, "auto_update") ?? false
         notifyUpdates = JS.bool(s, "notify_updates") ?? true
+        requirePassword = JS.bool(s, "require_password") ?? false
         settingsLoaded = true
     }
 
     func setSetting(_ key: String, _ on: Bool, _ store: Store) {
         Haptics.shared.select()
-        if key == "auto_update" { autoUpdate = on } else { notifyUpdates = on }
+        if key == "auto_update" { autoUpdate = on } else if key == "require_password" { requirePassword = on } else { notifyUpdates = on }
         let body: [String: Any] = [key: on]
         Task {
             do { _ = try await store.api.callAt("/api", "PUT", "/system/update/settings", json: body) } catch {
@@ -206,11 +227,34 @@ final class Update30Model {
     func confirm(_ password: String, _ store: Store) async {
         guard let action = askAction, !busy else { return }
         if password.isEmpty { askError = "Skriv passordet ditt"; return }
+        let ok: Bool = await start(action, body: ["password": password], store)
+        if ok && rememberPassword { System31Auth.savePassword(password, store) }
+    }
+
+    /// Prompt 31: «Huske passordet for Face ID» i passordarket (lagres i nøkkelringen på enheten).
+    var rememberPassword: Bool = false
+
+    /// Prompt 31: «Oppdater nå» (banner, PROGRAMVARE og System-siden). Uten «Krev passord» starter oppdateringen med en gang;
+    /// med bryteren på: Face ID først (lagret passord → /api/auth/reauth), ellers passordarket.
+    func begin(_ action: String, _ store: Store) {
+        Haptics.shared.tap()
+        if busy || phase == .run { return }
+        if !requirePassword {
+            Task { _ = await self.start(action, body: [:], store) }
+            return
+        }
+        Task { await System31Auth.run(action, store) }
+    }
+
+    /// POST /system/update/start eller /rollback. body: {} · {password} · {reauthToken}. true = startet.
+    @discardableResult
+    func start(_ action: String, body: [String: Any], _ store: Store) async -> Bool {
+        if busy { return false }
         busy = true
         defer { busy = false }
         let path: String = action == "rollback" ? "/system/update/rollback" : "/system/update/start"
         do {
-            let d: Data = try await store.api.callAt("/api", "POST", path, json: ["password": password], timeout: 60)
+            let d: Data = try await store.api.callAt("/api", "POST", path, json: body, timeout: 60)
             let o: [String: Any] = JS.obj(d)
             jobId = JS.str(o, "id") ?? ""
             fromVersion = current
@@ -221,12 +265,48 @@ final class Update30Model {
             showNotes = false
             withAnimation(.easeOut(duration: 0.2)) { phase = .run }
             startPolling(store)
+            return true
         } catch let e as APIError {
+            // Serveren krever passord likevel (bryteren ble slått på et annet sted): be om det.
+            if (e.status == 401 || e.status == 403) && body.isEmpty {
+                requirePassword = true
+                askError = ""
+                askAction = action
+                return false
+            }
             askError = e.message.isEmpty ? "Kunne ikke starte (\(e.status))" : e.message
+            if askAction == nil { store.flash(askError) }
             Haptics.shared.error()
+            return false
         } catch {
             askError = error.localizedDescription
+            if askAction == nil { store.flash(askError) }
             Haptics.shared.error()
+            return false
+        }
+    }
+
+    /// Prompt 31: tomme punkter («Kalender:» uten innhold) hoppes over.
+    nonisolated static func cleanNotes(_ list: [String]) -> [String] {
+        list.compactMap { (raw: String) -> String? in
+            let t: String = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            if t.isEmpty { return nil }
+            if t.hasSuffix(":") && !t.dropLast().contains(" ") { return nil }
+            let rest: String = t.split(separator: ":", maxSplits: 1).dropFirst().first.map { String($0) } ?? "x"
+            if t.contains(":") && rest.trimmingCharacters(in: .whitespaces).isEmpty { return nil }
+            return t
+        }
+    }
+
+    /// «Se etter oppdatering» (henter fra GitHub på nytt).
+    func check(_ store: Store) {
+        if checking || phase == .run { return }
+        Haptics.shared.tap()
+        checking = true
+        Task {
+            await self.load(store, force: true)
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            self.checking = false
         }
     }
 
@@ -389,6 +469,9 @@ struct Update30Banner: View {
             .padding(.leading, 16).padding(.trailing, 14).padding(.vertical, 14)
             .background(p.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
             .shadow(color: Color.black.opacity(0.35), radius: 15, x: 0, y: 10)
+            // Prompt 31: trykk hvor som helst på kortet åpner System-siden; knappene beholder sin egen handling.
+            .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .onTapGesture { System31Model.shared.show() }
             .transition(.opacity)
         }
     }
@@ -507,13 +590,14 @@ struct Update30Notes: View {
 
 struct Update30Actions: View {
     @Environment(\.paper) private var p
+    @Environment(Store.self) private var store
     @MainActor private var m: Update30Model { Update30Model.shared }
 
     var body: some View {
         switch m.phase {
         case .avail:
             HStack(spacing: 8) {
-                Update30Pill(title: "Oppdater nå", primary: true, full: true) { m.ask("update") }
+                Update30Pill(title: "Oppdater nå", primary: true, full: true) { m.begin("update", store) }
                 Update30Pill(title: m.showNotes ? "Skjul" : "Hva er nytt", primary: false, full: false) {
                     Haptics.shared.select()
                     withAnimation(.easeOut(duration: 0.2)) { m.showNotes.toggle() }
@@ -523,8 +607,8 @@ struct Update30Actions: View {
             Update30Pill(title: "Ferdig", primary: true, full: true) { m.acknowledge() }
         case .failed:
             HStack(spacing: 8) {
-                Update30Pill(title: "Prøv igjen", primary: true, full: true) { m.ask("update") }
-                Update30Pill(title: "Gjenopprett " + (m.current.isEmpty ? "forrige" : m.current), primary: false, full: true) { m.ask("rollback") }
+                Update30Pill(title: "Prøv igjen", primary: true, full: true) { m.begin("update", store) }
+                Update30Pill(title: "Gjenopprett " + (m.current.isEmpty ? "forrige" : m.current), primary: false, full: true) { m.begin("rollback", store) }
             }
         default:
             EmptyView()
@@ -564,7 +648,7 @@ struct Update30PasswordSheet: View {
     var body: some View {
         let rollback: Bool = m.askAction == "rollback"
         VStack(alignment: .leading, spacing: 14) {
-            SheetHeader30(title: rollback ? "Gjenopprett" : "Oppdater Homelab", closeTitle: "Avbryt", closeKind: .secondary) {
+            SheetHeader30(title: rollback ? "Gjenopprett" : "Bekreft med passord", closeTitle: "Avbryt", closeKind: .secondary) {
                 m.askAction = nil
             }
             Text(info(rollback)).font(PF.ui(13.5)).foregroundStyle(p.mut).fixedSize(horizontal: false, vertical: true)
@@ -580,6 +664,13 @@ struct Update30PasswordSheet: View {
                 .onSubmit { go() }
             if !m.askError.isEmpty {
                 Text(m.askError).font(PF.ui(13, .semibold)).foregroundStyle(p.lab)
+            }
+            // Prompt 31: valgfritt – passordet lagres i nøkkelringen (bare denne enheten) og brukes etter Face ID neste gang.
+            if System31Auth.biometryName != "" {
+                Toggle(isOn: Binding<Bool>(get: { m.rememberPassword }, set: { (v: Bool) in m.rememberPassword = v })) {
+                    Text("Bruk " + System31Auth.biometryName + " neste gang").font(PF.ui(14, .semibold)).foregroundStyle(p.ink)
+                }
+                .tint(p.pos)
             }
             PInkButton(title: m.busy ? "Starter …" : (rollback ? "Gjenopprett" : "Oppdater nå"), height: 48, full: true) { go() }
                 .disabled(m.busy)
@@ -639,8 +730,9 @@ struct Update30Software: View {
         VStack(alignment: .leading, spacing: 0) {
             PLabel(text: "Programvare").padding(.top, 12).padding(.leading, 4)
             VStack(spacing: 0) {
+                // Prompt 31: navigasjonsrad til System-siden «Nordlys OS» (System31.swift).
                 Button {
-                    if canUpdate { m.ask("update") } else { store.paperGo("innst-oppdatering") }
+                    System31Model.shared.show()
                 } label: {
                     HStack(spacing: 10) {
                         Set30Icon(symbol: "arrow.down.circle", tint: Set30Colors.system)
@@ -649,7 +741,8 @@ struct Update30Software: View {
                             Text(row.1).font(PF.ui(12.5)).foregroundStyle(p.mut)
                         }
                         Spacer(minLength: 6)
-                        Text(canUpdate ? "Oppdater ›" : "✓").font(PF.ui(14, .bold)).foregroundStyle(canUpdate ? p.lab : p.pos)
+                        Text(canUpdate ? "Oppdater" : "✓").font(PF.ui(14, .bold)).foregroundStyle(canUpdate ? p.lab : p.pos)
+                        Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(p.mut)
                     }
                     .padding(.horizontal, 14).padding(.vertical, 10)
                     .contentShape(Rectangle())

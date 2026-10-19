@@ -16,6 +16,9 @@ struct Cal27Page: View {
         TimelineView(.everyMinute) { ctx in
             Cal27Body(now: ctx.date)
         }
+        // Prompt 31: ingen tekst kan gjøre kalenderen bredere enn skjermen (fanelinja nederst kuttes ellers).
+        .frame(maxWidth: .infinity)
+        .clipped()
         .background(p.bg.ignoresSafeArea())
         .environment(\.colorScheme, p.dark ? .dark : .light)
         .task(id: store.account?.id ?? "") { await m.boot(store) }

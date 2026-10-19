@@ -123,6 +123,8 @@ struct SubAdd28Sheet: View {
                                     manual: { form = SubForm28(); step = "form" }, pick: $shotItem)
         case "rc": SubReceipt28View(c: c, done: { dismiss() })
         case "tx": SubTx28View(c: c)
+        // Prompt 31: Gratis prøveperiode (Trial31.swift).
+        case "trial": Trial31Form(c: c, done: { dismiss() })
         default: menu(c)
         }
     }
@@ -141,6 +143,11 @@ struct SubAdd28Sheet: View {
                 .buttonStyle(SubAdd28Press(c: c))
                 Button { go("tx"); store.loadSubCandidates() } label: {
                     SubAdd28Option(c: c, icon: "arrow.left.arrow.right", title: "Fra transaksjon", ai: false, desc: "Velg et gjentakende trekk fra banken.", first: false)
+                }
+                .buttonStyle(SubAdd28Press(c: c))
+                Button { go("trial") } label: {
+                    SubAdd28Option(c: c, icon: "clock", title: "Gratis prøveperiode", ai: true,
+                                   desc: "Få varsel før prøven går over til betalt. Skriv det med egne ord eller fyll ut.", first: false)
                 }
                 .buttonStyle(SubAdd28Press(c: c))
                 Button { form = SubForm28(); go("form") } label: {
@@ -162,6 +169,7 @@ struct SubAdd28Sheet: View {
         case "shot": return "Skjermbilde"
         case "rc": return "Kvittering"
         case "tx": return "Fra transaksjon"
+        case "trial": return "Prøveperiode"
         default: return "Legg til abonnement"
         }
     }
@@ -172,6 +180,7 @@ struct SubAdd28Sheet: View {
         case "shot": return "Ollama leser tjeneste, pris og trekkdato lokalt."
         case "rc": return "Ta bilde eller velg PDF. Ollama leser beløp og syklus."
         case "tx": return "Velg et gjentakende trekk fra banken."
+        case "trial": return "Vi minner deg på å avslutte før den blir betalt."
         default: return "Velg hvordan du vil legge det inn."
         }
     }

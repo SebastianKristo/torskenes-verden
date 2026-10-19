@@ -100,6 +100,8 @@ final class NotifyModel {
     var volume: Double = 80
     var groups: [String: Bool] = ["pakker": true, "finans": true, "familie": true, "reise": true, "birthdays": true, "haptikk": true]
     var hasCustom = false
+    /// Prompt 31: «AI-svar i bakgrunnen» (ai_bg_notify, på som standard).
+    var aiBg = true
     var authorized: UNAuthorizationStatus = .notDetermined
     var loaded = false
     private var player: AVAudioPlayer?
@@ -128,10 +130,12 @@ final class NotifyModel {
         if let v = JS.num(o, "volume") { volume = v }
         if let g = JS.dict(o, "groups") { for (k, v) in g { if let b = v as? Bool { groups[k] = b } } }
         if let v = JS.bool(o, "customSound") { hasCustom = v }
+        if let v = JS.bool(o, "ai_bg_notify") { aiBg = v }
     }
 
     private var body: [String: Any] {
-        ["on": on, "quietOn": quietOn, "quietFrom": quietFrom, "quietTo": quietTo, "sound": sound, "volume": Int(volume), "groups": groups]
+        ["on": on, "quietOn": quietOn, "quietFrom": quietFrom, "quietTo": quietTo, "sound": sound, "volume": Int(volume), "groups": groups,
+         "ai_bg_notify": aiBg]
     }
 
     func load(_ store: Store) async {
@@ -328,6 +332,11 @@ struct PaperNotifySettings: View {
                 VStack(spacing: 0) {
                     toggleRow("Varsler", "Hovedbryter for alle varsler fra appen", n.on) { n.on = $0; n.save(store) }
                     sep
+                    // Prompt 31: Glimt-svar som varsel når appen er lukket (Assist31.swift / Notify31.swift).
+                    if n.on {
+                        toggleRow("AI-svar i bakgrunnen", "Får du svar mens du er ute av appen, kommer det som varsel", n.aiBg) { n.aiBg = $0; n.save(store) }
+                        sep
+                    }
                     toggleRow("Stille timer", "\(n.quietFrom)–\(n.quietTo): ingen lyd", n.quietOn) { n.quietOn = $0; n.save(store) }
                     if n.quietOn { quietRow; sep }
                     if !n.quietOn { sep }
@@ -559,7 +568,12 @@ final class Realtime: NSObject {
             Task { await FamilyModel.shared.load(store); await FamilyModel.shared.pollEvents(store.api) }
         case "tracking": Task { try? await store.loadTracking() }
         // Prompt 29: rask time ferdig eller feilet (Quick29Model.swift).
-        case "calendar-quick": Quick29Model.shared.poke(store)
+        case "calendar-quick":
+            // Prompt 31: steg, felt og fremdrift til glassboblen (AiJob31.swift).
+            AiJobs31.shared.update(JS.dict(o, "data") ?? o, kind: "quick")
+            Quick29Model.shared.poke(store)
+        // Prompt 31: Glimt-svar (POST /api/assist som serverjobb, Assist31.swift).
+        case "assist": Assist31.shared.realtime(JS.dict(o, "data") ?? o, store)
         default: break
         }
     }

@@ -147,8 +147,10 @@ struct Cal29NowMiddle: View {
             }
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Text(n.title).font(PF.serif(20, medium: true)).foregroundStyle(p.ink).lineLimit(1)
+                    .layoutPriority(1)
                 if !n.place.isEmpty {
-                    Text(n.place).font(PF.ui(12, .semibold)).foregroundStyle(p.ink).lineLimit(1).fixedSize()
+                    // Prompt 31: stedspillen kuttes med … (aldri fixedSize), så lange steder ikke gjør kortet bredere enn skjermen.
+                    Text(n.place).font(PF.ui(12, .semibold)).foregroundStyle(p.ink).lineLimit(1).truncationMode(.tail)
                         .padding(.horizontal, 8).padding(.vertical, 2)
                         .background(p.bg, in: Capsule())
                 }

@@ -55,6 +55,8 @@ struct ChatMsg27: Identifiable, Hashable {
     /// Navn på vedlegg (bruker).
     var attach: [String] = []
     var images: [String] = []
+    /// Prompt 31: kortet fra Glimt (vær, kalender …) som JSON, tomt = uten kort (Chat31Cards.swift).
+    var card31: String = ""
 }
 
 struct ChatSettings27: Hashable {
@@ -193,6 +195,8 @@ final class ChatStore27 {
     var busy: Bool = false
     var streamText: String = ""
     var streamTool: [String] = []
+    /// Prompt 31: Glimt-ruteren jobber (verktøy-spørsmål), Chat31Cards.swift.
+    var pendingTool31: Bool = false
     var scrollTick: Int = 0
 
     /* ---------- Ark ---------- */
@@ -404,6 +408,11 @@ final class ChatStore27 {
             msg.model = JS.str(m, "model") ?? ""
             msg.used = JS.strings(m, "used")
             msg.attach = JS.strings(m, "files")
+            // Prompt 31: kort og verktøy lagret i meldingen.
+            if let cd = m["card"] as? [String: Any], let cj = try? JSONSerialization.data(withJSONObject: cd) {
+                msg.card31 = String(data: cj, encoding: .utf8) ?? ""
+            }
+            if let tool = JS.str(m, "tool"), msg.used.isEmpty { msg.used = [tool] }
             if let tps = JS.num(m, "tokensPerSec") {
                 msg.stats = ChatStore27.stats(tps: tps, ms: JS.num(m, "ms") ?? 0, stopped: false)
             }
@@ -618,6 +627,13 @@ final class ChatStore27 {
         msgs.append(m)
         if title.isEmpty { title = String(t.prefix(48)) }
         input = ""
+        // Prompt 31: vær, kalender, avganger … svarer Glimt med et kort (Chat31Cards.swift).
+        if toolRun31(t, store) { return }
+        run(store, editFrom: nil)
+    }
+
+    /// Prompt 31: Glimt-ruteren ga ikke svar – strøm fra valgt modell som vanlig.
+    func runAfterTool31(_ store: Store) {
         run(store, editFrom: nil)
     }
 

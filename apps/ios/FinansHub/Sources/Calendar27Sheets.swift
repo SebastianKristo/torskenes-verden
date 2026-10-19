@@ -124,7 +124,7 @@ struct Cal27Detail: View {
             HStack(spacing: 8) {
                 if let u = mapURL {
                     Link(destination: u) {
-                        Text("Vis rom på kart ↗").font(PF.ui(14, .bold)).foregroundStyle(p.ink)
+                        Text(e.mazemap.isEmpty ? "Vis rom på kart ↗" : "Åpne kart ↗").font(PF.ui(14, .bold)).foregroundStyle(p.ink)
                             .frame(maxWidth: .infinity).frame(height: 46)
                             .overlay(Capsule().stroke(p.line, lineWidth: 1))
                     }

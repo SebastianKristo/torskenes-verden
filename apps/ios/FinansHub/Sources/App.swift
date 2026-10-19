@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import UserNotifications
 
 @main
 struct FinansHubApp: App {
@@ -11,6 +12,10 @@ struct FinansHubApp: App {
         HealthSync.registerBackground()
         // Prompt 20: HealthKit vekker appen ved nye skritt og puls (enableBackgroundDelivery, hver time).
         HealthObserver20.shared.start()
+        // Prompt 31: varselkategorier (Glimt-svar, prøveperioder) og bakgrunnshenting av /api/notify/pending (Notify31.swift).
+        Notify31.setup()
+        // Trykk på et varsel som starter appen: delegaten må være satt før appen er ferdig startet.
+        UNUserNotificationCenter.current().delegate = NotifyDelegate.shared
     }
 
     var body: some Scene {

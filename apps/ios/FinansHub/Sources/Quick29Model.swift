@@ -197,6 +197,8 @@ final class Quick29Model {
         preview = nil
         let tmp: String = "tmp-" + UUID().uuidString
         pending.append(tmp)
+        // Prompt 31: Glimt-toasten og glassboblen (AiJob31.swift).
+        AiJobs31.shared.begin(id: tmp, kind: "quick", title: "Legger til i kalenderen", input: t, steps: AiJobs31.quickSteps)
         Haptics.shared.tap()
         Task {
             do {
@@ -204,11 +206,13 @@ final class Quick29Model {
                 let o: [String: Any] = JS.obj(d)
                 let id: String = JS.str(o, "jobId") ?? JS.str(o, "id") ?? ""
                 self.pending.removeAll { $0 == tmp }
-                if id.isEmpty { return }
+                if id.isEmpty { AiJobs31.shared.end(tmp); return }
+                AiJobs31.shared.rename(tmp, to: id)
                 self.pending.append(id)
                 self.startPolling(store)
             } catch let e as APIError {
                 self.pending.removeAll { $0 == tmp }
+                AiJobs31.shared.end(tmp)
                 if e.status == 404 || e.status == 405 {
                     self.openForm(Quick29Preview(), text: t, error: "Serveren kan ikke legge til timer i bakgrunnen ennå. Fyll ut og lagre.", store)
                 } else {
@@ -216,6 +220,7 @@ final class Quick29Model {
                 }
             } catch {
                 self.pending.removeAll { $0 == tmp }
+                AiJobs31.shared.end(tmp)
                 store.flash("Kunne ikke legge til timen: " + error.localizedDescription)
             }
         }
@@ -232,7 +237,10 @@ final class Quick29Model {
                 await self.check(store)
                 rounds += 1
             }
-            if rounds >= 150 { self.pending.removeAll { !$0.hasPrefix("tmp-") } }
+            if rounds >= 150 {
+                for id in self.pending where !id.hasPrefix("tmp-") { AiJobs31.shared.end(id) }
+                self.pending.removeAll { !$0.hasPrefix("tmp-") }
+            }
             self.pollTask = nil
         }
     }
@@ -258,6 +266,7 @@ final class Quick29Model {
 
     private func finish(_ j: Quick29Job, _ store: Store) {
         pending.removeAll { $0 == j.id }
+        AiJobs31.shared.end(j.id)
         if handled.contains(j.id) { return }
         handled.insert(j.id)
         showBanner(j)
@@ -267,6 +276,7 @@ final class Quick29Model {
 
     private func fail(_ j: Quick29Job, _ store: Store) {
         pending.removeAll { $0 == j.id }
+        AiJobs31.shared.end(j.id)
         if handled.contains(j.id) { return }
         handled.insert(j.id)
         Haptics.shared.error()

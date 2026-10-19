@@ -175,9 +175,9 @@ struct Quick29Overlay: View {
             if let b = q.banner {
                 Quick29Banner(job: b)
                     .transition(.move(edge: .top).combined(with: .opacity))
-            } else if q.busy {
-                Quick29Pill(text: q.busyText)
-                    .transition(.opacity)
+            } else {
+                // Prompt 31: Glimt-toasten (animert merke, trykk = glassboble) i stedet for den statiske pillen (AiJob31.swift).
+                Glimt31Overlay()
             }
         }
         .padding(.top, 6)

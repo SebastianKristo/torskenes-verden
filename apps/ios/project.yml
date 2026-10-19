@@ -82,7 +82,8 @@ targets:
           - Newsreader-Regular.ttf
         # Familie: posisjon i bakgrunnen og helsesammendrag omtrent hvert 15. minutt.
         UIBackgroundModes: [location, fetch, processing]
-        BGTaskSchedulerPermittedIdentifiers: [no.kristo.finanshub.health, no.kristo.finanshub.family]
+        # Prompt 31: no.kristo.finanshub.notify henter /api/notify/pending (Glimt-svar, prøve-varsler) når appen er lukket.
+        BGTaskSchedulerPermittedIdentifiers: [no.kristo.finanshub.health, no.kristo.finanshub.family, no.kristo.finanshub.notify]
         # Deep links fra widgetene: finanshub://<side>
         CFBundleURLTypes:
           - CFBundleURLName: no.kristo.finanshub

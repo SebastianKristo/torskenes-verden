@@ -330,7 +330,7 @@ final class Cal27Model {
         f.date = Cal26.day(e.dayKey)
         f.start = e.startMin >= 0 ? e.start : Cal27Model.at(f.date, 9 * 60)
         f.end = e.startMin >= 0 ? e.end : Cal27Model.at(f.date, 10 * 60)
-        f.location = e.room
+        f.location = e.roomFull.isEmpty ? e.room : e.roomFull
         f.calendar = e.group == "familie" ? "familie" : "privat"
         f.note = e.note
         f.reminder = base.reminder(e)

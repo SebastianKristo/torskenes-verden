@@ -258,6 +258,8 @@ struct PaperShell: View {
             PaperWeatherView().edgeSwipeClose30 { store.weatherOpen = false }
         }
         .dismissHaptic30(store.weatherOpen)
+        // Prompt 31: System-siden «Nordlys OS» i fullskjerm, varsel-trykk og prøve-varsler (System31.swift).
+        .system31Host(p)
         .task(id: store.account?.id) {
             Realtime.shared.connect(store)
             await AppMeta.shared.load(store)

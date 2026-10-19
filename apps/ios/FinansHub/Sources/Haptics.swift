@@ -83,6 +83,13 @@ final class NotifyDelegate: NSObject, UNUserNotificationCenterDelegate {
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         completionHandler([.banner, .list, .sound])
     }
+
+    /// Prompt 31: trykk på varsler og handlingene på prøve-varsler (Notify31.swift).
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+                                withCompletionHandler completionHandler: @escaping () -> Void) {
+        Notify31.handle(response)
+        completionHandler()
+    }
 }
 
 enum LocalNotify {

@@ -35,6 +35,8 @@ struct CalEvent26: Hashable, Identifiable {
     var editable: Bool = false
     var googleId: String = ""
     var recurrence: String = ""
+    /// Prompt 31: stedet slik det kom fra kilden (med URL), brukes når hendelsen redigeres.
+    var roomFull: String = ""
 
     var isTest: Bool { type == "prove" || type == "innl" }
     /// Timer og prøver med klokkeslett (det widgetene og nå-kortet viser).
@@ -360,7 +362,11 @@ enum Cal26 {
         if short.isEmpty { short = subjects[subject]?.0 ?? subjects[title]?.0 ?? title }
         var teacher: String = str(o, "teacher")
         if teacher.isEmpty && type == "time" { teacher = subjects[subject]?.2 ?? "" }
-        let room: String = str(o, "room").isEmpty ? str(o, "location") : str(o, "room")
+        let roomRaw: String = str(o, "room").isEmpty ? str(o, "location") : str(o, "room")
+        // Prompt 31: URL-er (mazemap-lenker fra timeplanen) fjernes fra stedsteksten, så korte visninger aldri blir for brede.
+        // Lenken beholdes i mazemap og vises som «Åpne kart ↗» i detaljarket.
+        let roomSplit: (String, String) = Cal26.splitUrl31(roomRaw)
+        let room: String = roomSplit.0
         let note: String = str(o, "note").isEmpty ? str(o, "description") : str(o, "note")
         var id: String = str(o, "id")
         if id.isEmpty { id = key(start) + "|" + hm(minutes(start)) + "|" + title }
@@ -369,9 +375,10 @@ enum Cal26 {
         if !allDay && eMin == 0 && end > start { eMin = 24 * 60 - 1 }
         var ev = CalEvent26(id: id, title: title, short: short, subject: subject, room: room, teacher: teacher, note: note,
                             start: start, end: end, allDay: allDay, type: type, color: str(o, "color"), source: str(o, "source"),
-                            url: str(o, "url"), mazemap: str(o, "mazemap"), dayKey: key(type == "innl" && sp == nil ? end : start),
+                            url: str(o, "url"), mazemap: str(o, "mazemap").isEmpty ? roomSplit.1 : str(o, "mazemap"), dayKey: key(type == "innl" && sp == nil ? end : start),
                             startMin: sMin, endMin: eMin)
         ev.calendar = str(o, "calendar")
+        ev.roomFull = roomRaw
         ev.editable = bool(o, "editable") ?? false
         ev.googleId = str(o, "googleId")
         if let rr = o["recurrence"] as? [Any] {
@@ -609,5 +616,26 @@ enum Cal26 {
         }
         out.sort { a, b in a.start < b.start }
         return out
+    }
+}
+
+/* ---------- Prompt 31: URL-er i stedsteksten ---------- */
+
+extension Cal26 {
+    /// («Pilestredet park 35 U2005», «https://link.mazemap.com/…») fra «Pilestredet park 35 U2005 https://link.mazemap.com/…».
+    static func splitUrl31(_ raw: String) -> (String, String) {
+        if !raw.contains("http") { return (raw, "") }
+        var keep: [String] = []
+        var url: String = ""
+        for w in raw.split(separator: " ", omittingEmptySubsequences: true) {
+            let s: String = String(w)
+            if s.hasPrefix("http://") || s.hasPrefix("https://") {
+                if url.isEmpty { url = s }
+            } else {
+                keep.append(s)
+            }
+        }
+        let text: String = keep.joined(separator: " ").trimmingCharacters(in: CharacterSet(charactersIn: " ,·-–\n\t"))
+        return (text, url)
     }
 }

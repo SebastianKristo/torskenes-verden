@@ -15,7 +15,10 @@ struct PaperSubs: View {
                 switch store.subTab {
                 case "ins": insights(x)
                 case "hist": history(x)
-                default: SubHome23(x: x)
+                default:
+                    // Prompt 31: aktive prøveperioder («Prøve · 12 dager igjen», Trial31.swift).
+                    Trial31Strip()
+                    SubHome23(x: x)
                 }
             } else {
                 ProgressView().padding(30)

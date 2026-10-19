@@ -93,7 +93,7 @@ struct Update28Page: View {
                 PaperLinkList(rows: rows)
                 Update28Note(text: note)
                 if m.updateAvailable && m.available && !m.running {
-                    PInkButton(title: "Oppdater nå", height: 44, full: true) { Update30Model.shared.ask("update") }
+                    PInkButton(title: "Oppdater nå", height: 44, full: true) { Update30Model.shared.begin("update", store) }
                         .padding(.top, 4)
                 }
                 PLineButton(title: "Oppdater i nettleseren ›", height: 40, full: true) {

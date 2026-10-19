@@ -1,12 +1,12 @@
 import SwiftUI
 import UIKit
 
-/* ---------------- Prompt 29: Hjem → søkefelt med valgfri søkemotor og System-AI ---------------- */
+/* ---------------- Prompt 29: Hjem → søkefelt med valgfri søkemotor og Glimt (prompt 31: tidligere System-AI) ---------------- */
 // Fasit: design/Mobil Papir App.dc.html → Hjem (hsVals) og prompts/prompt-29-pakke/claude-code-hjem-sok-ai.md.
-// Ikonet til venstre (med ▾) åpner «SØK MED»: System-AI (standard), Google eller DuckDuckGo. Menyen er systemets Menu,
+// Ikonet til venstre (med ▾) åpner «SØK MED»: Glimt (standard), Google eller DuckDuckGo. Menyen er systemets Menu,
 // så den tegnes over alle kortene. Valget lagres per bruker som search_engine i /api/me/layout (og lokalt).
 // Timer gjenkjennes uansett søkemotor (POST /api/kalender/quick/parse): et mørkt forslag «Legg i kalender» under feltet,
-// og ↵ legger timen til i bakgrunnen (Quick29Model). Ellers: System-AI → ny samtale i Chat, Google/DuckDuckGo → nettleseren.
+// og ↵ legger timen til i bakgrunnen (Quick29Model). Ellers: Glimt → svarboble (prompt 31), Google/DuckDuckGo → nettleseren.
 // ✦ AI til høyre åpner alltid Chat.
 
 struct Search29Engine: Identifiable {
@@ -17,7 +17,8 @@ struct Search29Engine: Identifiable {
     let icon: String
 
     static let all: [Search29Engine] = [
-        Search29Engine(id: "ai", name: "System-AI", sub: "Svarer i Chat og legger til timer", placeholder: "Spør AI eller skriv «time hos …»", icon: "sparkles"),
+        // Prompt 31: AI-agenten heter Glimt, og svaret vises i en boble under feltet (Assist31.swift).
+        Search29Engine(id: "ai", name: "Glimt", sub: "Svarer i Chat og legger til timer", placeholder: "Spør om været, eller skriv «time hos …»", icon: "sparkles"),
         Search29Engine(id: "google", name: "Google", sub: "Åpner google.com", placeholder: "Søk på Google", icon: "g.circle"),
         Search29Engine(id: "ddg", name: "DuckDuckGo", sub: "Åpner duckduckgo.com", placeholder: "Søk med DuckDuckGo", icon: "d.circle"),
     ]
@@ -111,7 +112,8 @@ final class Search29Model {
             store.openURL(URL(string: "https://duckduckgo.com/?q=" + enc))
         default:
             store.suggestions = []
-            store.openChat(prompt: t)
+            // Prompt 31: svarboble under feltet via POST /api/assist (eldre server: Chat som før).
+            if Assist31.shared.missing { store.openChat(prompt: t) } else { Assist31.shared.askHome(t, store) }
         }
     }
 }
@@ -131,8 +133,13 @@ struct HomeSearch29: View {
                 HomeSearch29Appt(appt: a) { submit() }
                     .transition(.opacity)
             }
+            if Assist31.shared.homeOpen {
+                Assist31Bubble()
+                    .transition(.scale(scale: 0.96, anchor: .top).combined(with: .opacity))
+            }
         }
         .animation(.easeOut(duration: 0.15), value: m.appt)
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: Assist31.shared.homeOpen)
         .task(id: store.account?.id ?? "") { await m.boot(store) }
     }
 
@@ -196,6 +203,7 @@ struct HomeSearch29: View {
 
     private func changed(_ v: String) {
         if m.engine != "ai" { store.suggest(v) }
+        if !v.isEmpty && Assist31.shared.homeAnswer != nil { Assist31.shared.closeHome() }
         m.changed(v, store)
     }
 
@@ -225,54 +233,110 @@ struct HomeSearch29: View {
     }
 }
 
-/// Ikonet til venstre med ▾: systemets Menu «SØK MED» (over alle kortene).
+/// Ikonet til venstre med ▾: «SØK MED» som popover (tegnes over alle kortene). Prompt 31: ekte logoer (assets, ikke tint),
+/// hake til høyre for valgt motor – haken erstatter aldri logoen (claude-code-sokemotor-logoer.md).
 struct HomeSearch29Menu: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
     @MainActor private var m: Search29Model { Search29Model.shared }
+    @State private var open: Bool = false
 
     var body: some View {
-        Menu {
-            Section("Søk med") {
-                ForEach(Search29Engine.all) { e in
-                    Button { m.set(e.id, store) } label: {
-                        Label {
-                            Text(e.name)
-                            Text(e.sub)
-                        } icon: {
-                            Image(systemName: m.engine == e.id ? "checkmark" : e.icon)
-                        }
-                    }
-                }
-            }
+        Button {
+            Haptics.shared.select()
+            open = true
         } label: {
             HStack(spacing: 3) {
-                HomeSearch29EngineIcon(engine: m.engine)
+                HomeSearch29EngineIcon(engine: m.engine, size: 20)
                 Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold)).foregroundStyle(p.mut)
             }
             .padding(.leading, 8).padding(.trailing, 6).frame(height: 34)
             .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .accessibilityLabel("Velg søkemotor")
+        .popover(isPresented: $open, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
+            Search31EngineList { (id: String) in
+                m.set(id, store)
+                open = false
+            }
+            .environment(\.paper, p)
+            .presentationCompactAdaptation(.popover)
+        }
     }
 }
 
+/// Logoen for valgt motor: Glimt-merket, Google-G eller DuckDuckGo-anda.
 struct HomeSearch29EngineIcon: View {
-    @Environment(\.paper) private var p
     let engine: String
+    var size: CGFloat = 20
 
     var body: some View {
         if engine == "google" {
-            GoogleG(size: 18)
+            Image("search-google").renderingMode(.original).resizable().scaledToFit()
+                .frame(width: size - 2, height: size - 2)
+                .frame(width: size, height: size)
         } else if engine == "ddg" {
-            Text("D").font(PF.ui(11, .heavy)).foregroundStyle(Color.white)
-                .frame(width: 20, height: 20)
-                .background(Color(hex: "#de5833"), in: Circle())
+            Image("search-duckduckgo").renderingMode(.original).resizable().scaledToFit()
+                .frame(width: size, height: size)
         } else {
-            Text("✦").font(PF.ui(11, .bold)).foregroundStyle(Color.white)
-                .frame(width: 20, height: 20)
-                .background(p.lab, in: Circle())
+            Glimt31Mark(size: size + 2, state: Assist31.shared.homeBusy ? .thinking : .ready)
         }
+    }
+}
+
+/// «SØK MED»: logo (22) · navn + undertekst · hake (lab, 16) til høyre.
+struct Search31EngineList: View {
+    @Environment(\.paper) private var p
+    @MainActor private var m: Search29Model { Search29Model.shared }
+    let pick: (String) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text("SØK MED").font(PF.mono(10.5)).tracking(1.2).foregroundStyle(p.lab)
+                .padding(.horizontal, 14).padding(.top, 12).padding(.bottom, 6)
+            ForEach(Array(Search29Engine.all.enumerated()), id: \.element.id) { (pair: (offset: Int, element: Search29Engine)) in
+                Search31EngineRow(e: pair.element, on: m.engine == pair.element.id, first: pair.offset == 0) { pick(pair.element.id) }
+            }
+        }
+        .padding(.bottom, 4)
+        .frame(width: 280)
+        .background(p.card)
+        .environment(\.colorScheme, p.dark ? .dark : .light)
+    }
+}
+
+struct Search31EngineRow: View {
+    @Environment(\.paper) private var p
+    let e: Search29Engine
+    let on: Bool
+    let first: Bool
+    let tap: () -> Void
+
+    var body: some View {
+        Button(action: tap) {
+            HStack(spacing: 12) {
+                if e.id == "ai" {
+                    Glimt31Badge(size: 22)
+                } else {
+                    HomeSearch29EngineIcon(engine: e.id, size: 22)
+                }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(e.name).font(PF.ui(14.5, .bold)).foregroundStyle(p.ink)
+                    Text(e.sub).font(PF.ui(12)).foregroundStyle(p.mut)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "checkmark").font(.system(size: 14, weight: .bold)).foregroundStyle(p.lab)
+                    .frame(width: 16, height: 16)
+                    .opacity(on ? 1 : 0)
+            }
+            .padding(.horizontal, 14).padding(.vertical, 8)
+            .frame(minHeight: 54)
+            .overlay(alignment: .top) { if !first { Rectangle().fill(p.line).frame(height: 1) } }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(on ? .isSelected : [])
     }
 }
 

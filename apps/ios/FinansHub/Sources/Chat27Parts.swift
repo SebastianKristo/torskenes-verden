@@ -182,6 +182,8 @@ struct Chat27Answer: View {
         VStack(alignment: .leading, spacing: 10) {
             Chat27AnswerHead(title: headName, tools: m.used, prefix: "Brukte", c: c)
             Chat27Blocks(text: m.content, c: c)
+            // Prompt 31: kortet fra Glimt (vær, kalender, avganger …), lagret i meldingen (Chat31Cards.swift).
+            if !m.card31.isEmpty { Chat31Card(json: m.card31, c: c) }
             Flow(spacing: 2) {
                 action("doc.on.doc", s.copied == m.id ? "Kopiert" : "Kopier") { s.copy(m) }
                 if last && !s.busy { action("arrow.clockwise", "Nytt svar") { s.regenerate(store) } }
@@ -238,12 +240,20 @@ struct Chat27Streaming: View {
     @MainActor private var s: ChatStore27 { ChatStore27.shared }
     let c: ChatPal27
 
+    /// «GLIMT · TENKER» mens Glimt-ruteren jobber, ellers modellnavnet.
+    @MainActor private var headTitle31: String {
+        if s.pendingTool31 { return "GLIMT · TENKER" }
+        return s.current.label.uppercased()
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Chat27AnswerHead(title: s.current.label.uppercased(), tools: s.streamTool, prefix: "Leser", c: c)
-            if s.streamText.isEmpty {
-                Text("Tenker …").font(c.ui(15)).foregroundStyle(c.mut)
-            } else {
+            // Prompt 31: Glimt-merket animeres ved siden av modellnavnet i stedet for «Tenker …» (Glimt31.swift).
+            HStack(alignment: .center, spacing: 8) {
+                Glimt31Mark(size: 22, state: s.streamText.isEmpty ? .thinking : .answering)
+                Chat27AnswerHead(title: headTitle31, tools: s.streamTool, prefix: "Leser", c: c)
+            }
+            if !s.streamText.isEmpty {
                 Chat27Blocks(text: s.streamText, c: c)
             }
         }
