@@ -42,6 +42,9 @@ import { reauthHandler } from './reauth.js'; // prompt 31: POST /api/auth/reauth
 import glimtMemoryApi from './glimt-memory.js'; // prompt 33: «Glimt husker» (alias per bruker)
 import assistApi from './assist.js'; // prompt 31: Glimt – POST /api/assist (vær, kalender, … før LLM), serverjobb
 import aiApi, { glimtApi } from './ai-api.js';
+import { settingsApi as glimtSettingsApi, ttsApi, imgApi } from './glimt35.js'; // prompt 35: /api/glimt/settings, /api/tts, /api/img
+import weather35Api from './weather35.js'; // prompt 35: /api/weather/place?q=
+import { haApi as kal35HaApi } from './kalender35.js'; // prompt 35: /api/kalender/ha/calendars
 import briefApi from './brief34.js'; // prompt 34: Glimt-brief /api/brief (+ /widget, /settings) og daglig generering // prompt 34: AI-kontroll /api/ai/* (status, modeller, ruting, jobber, forbruk, nøkler, selvtest)
 import { startTrialScheduler } from './trials-notify.js'; // prompt 31: varsler for gratis prøveperioder
 import { installCacheBust } from './cache-bust.js'; // prompt 32 (SERVER32)
@@ -613,6 +616,7 @@ app.route('/api/kalender/describe', calendarDescribeApi); // prompt 32: «Beskri
 app.use('/api/kalender/search', calendarSearchAi); // prompt 32: ?ai=1 → Glimt-svar, ellers det vanlige søket
 app.route('/api/kalender/quick', calendarQuickApi); // prompt 29: før /api/kalender
 // Prompt 33 (SERVER33): Kalender-appen – kalendere (visning, farger, egne), vær 16 dager, appCalendar på hendelser, widgets.
+app.route('/api/kalender/ha', kal35HaApi); // prompt 35
 app.route('/api/kalender/calendars', kalCalendarsApi);
 app.route('/api/kalender/weather', kalWeatherApi);
 app.use('/api/kalender/events', kalEventsMw);
@@ -633,6 +637,10 @@ app.route('/api/glimt/memory', glimtMemoryApi); // prompt 33: GET/POST/DELETE, P
 app.route('/api/search-history', searchHistoryApi); // prompt 32: søkehistorikk per bruker (mobil logger, web viser)
 app.route('/api/ai', aiApi); // prompt 34: AI-kontroll
 app.route('/api/brief', briefApi); // prompt 34: Glimt-brief
+app.route('/api/glimt/settings', glimtSettingsApi); // prompt 35
+app.route('/api/tts', ttsApi); // prompt 35
+app.route('/api/img', imgApi); // prompt 35
+app.route('/api/weather/place', weather35Api); // prompt 35
 app.route('/api/glimt', glimtApi); // prompt 34: POST /api/glimt {prompt, tool:'calendar'} (etter /api/glimt/memory)
 app.route('/api/assist', assistApi); // prompt 31: Glimt-ruteren (sesjon eller app-token, per bruker)
 app.route('/api/chat', chatApi); // prompt 27: Chat (Open WebUI eller Ollama/Gemini/Groq direkte), sesjon eller app-token

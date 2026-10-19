@@ -400,7 +400,7 @@ export function newsFor(user, n = 5) {
   try {
     const items = latest(user, { limit: n });
     if (!items.length) refresh(user).catch(() => {});
-    return items.map(({ id, title, url, feed, published, category, image, readMin }) => ({ id, title, url, feed, published, category, image, readMin }));
+    return items.map(({ id, title, url, feed, published, category, image, readMin, excerpt }) => ({ id, title, url, feed, published, category, image, readMin, excerpt: excerpt || '' })); // prompt 35: excerpt (ingress i briefen)
   } catch { return []; }
 }
 

@@ -13,7 +13,10 @@
 //   (lege/tannlege/trening… → helse, møte/jobb/vakt… → jobb, frist/eksamen/forelesning… → studie, mormor/hytta… → familie,
 //   bursdag → bursdager). Brukerens eget valg per hendelse (appCalendar) vinner alltid.
 // POST   /api/kalender/calendars {name, color:'#rrggbb', visible?} → 201 {calendar}
-// PATCH  /api/kalender/calendars/:id {name?, color?, visible?} → {calendar}   (innebygde: farge, navn og synlighet)
+// PATCH  /api/kalender/calendars/:id {name?, color?, visible?, hidMenu?} → {calendar}   (innebygde: farge, navn og synlighet)
+//   Prompt 35: hver kalender har også hidMenu (skjult fra menyen), source:'builtin'|'own'|'ical'|'ha' og badge:null|'Abonnement'|'HA';
+//   iCal/HA-kalendere (writable:false) kommer fra kalender35.js. prefs har også weekStart:'mon'|'sun', openView:'mnd'|'uke'|'3d'|'dag'|'liste',
+//   defaultDuration:30|60|90|120, timelineStart:'now'|'06'|'08', notifyBirthdays, notifyDeadlines, notifyBrief, travelTime (bool).
 // DELETE /api/kalender/calendars/:id → {ok}  (bare egne; 403 for innebygde). Hendelsene slettes IKKE, de får standardkalenderen.
 // PUT    /api/kalender/calendars/prefs {defaultCalendar?, defaultReminder?:'none'|'10m'|'30m'|'1h'|'1d', weekNumbers?:bool,
 //                                      weather?:bool, theme?:'system'|'light'|'dark'} → {prefs}
@@ -80,6 +83,9 @@ import { askCalendar } from './calendar-glimt.js';
 import { weatherFull, wmoText, iconOf, PLACES } from './weather-full.js';
 import { aliasesOf, typeOfWord, eventHitsAlias } from './glimt-memory.js';
 import { parseQuick, osloTodayISO } from '../public/js/quick-time.js';
+import { parseDay } from './parse-day35.js'; // prompt 35: felles dag-tolkning
+import { extCalendarsOf, mountExt, patchExt, removeExt, isExtId, shades } from './kalender35.js'; // prompt 35: iCal og Home Assistant
+import { extractPlace, placeWeather } from './weather35.js'; // prompt 35: været for et sted
 import { tokenAccessOf, issueToken, tokensById, revokeTokenOf, TOKEN_SCOPES } from './finans/routes.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
@@ -125,7 +131,10 @@ export const APP_CALENDARS = [
 const BUILTIN = new Map(APP_CALENDARS.map((c) => [c.id, c]));
 const CUSTOM_ID = /^c-[0-9a-f]{10}$/;
 const MAX_CUSTOM = 20;
-const PREF_DEFAULTS = { defaultCalendar: 'personlig', defaultReminder: '1h', weekNumbers: true, weather: true, theme: 'system' };
+const PREF_DEFAULTS = { defaultCalendar: 'personlig', defaultReminder: '1h', weekNumbers: true, weather: true, theme: 'system',
+  // Prompt 35: Innstillinger nederst i sidemenyen.
+  weekStart: 'mon', openView: 'mnd', defaultDuration: 60, timelineStart: 'now', notifyBirthdays: true, notifyDeadlines: true, notifyBrief: true, travelTime: false };
+const PREF_ENUM = { weekStart: ['mon', 'sun'], openView: ['mnd', 'uke', '3d', 'dag', 'liste'], timelineStart: ['now', '06', '08'] };
 
 const store = (user) => { const v = kv.get(user, 'kal33_cals', null); return v && typeof v === 'object' ? { builtin: v.builtin ?? {}, custom: Array.isArray(v.custom) ? v.custom : [], prefs: v.prefs ?? {} } : { builtin: {}, custom: [], prefs: {} }; };
 const saveStore = (user, s) => kv.set(user, 'kal33_cals', s);
@@ -135,8 +144,9 @@ const prefsOf = (s) => ({ ...PREF_DEFAULTS, ...s.prefs });
 /** Kalenderne for user (uten antall). */
 export function appCalendarsOf(user) {
   const s = store(user);
-  const out = APP_CALENDARS.map((c) => { const o = s.builtin[c.id] ?? {}; return { ...c, name: o.name ?? c.name, color: o.color ?? c.color, visible: o.visible !== false, builtin: true, writable: true }; });
-  for (const c of s.custom) out.push({ id: c.id, key: c.id, name: c.name, color: c.color, textColor: c.color, lightColor: c.color, backend: 'privat', sources: [], visible: c.visible !== false, builtin: false, writable: true });
+  const out = APP_CALENDARS.map((c) => { const o = s.builtin[c.id] ?? {}; const color = o.color ?? c.color; return { ...c, name: o.name ?? c.name, color, ...(o.color ? shades(o.color) : {}), visible: o.visible !== false, hidMenu: !!o.hidMenu, builtin: true, writable: true, source: 'builtin', badge: null }; });
+  for (const c of s.custom) out.push({ id: c.id, key: c.id, name: c.name, color: c.color, ...shades(c.color), backend: 'privat', sources: [], visible: c.visible !== false, hidMenu: !!c.hidMenu, builtin: false, writable: true, source: 'own', badge: null });
+  out.push(...extCalendarsOf(user)); // prompt 35: iCal-abonnement og Home Assistant (writable:false)
   return out;
 }
 
@@ -168,7 +178,7 @@ function decorate(user, events) {
   const map = evMap(user);
   for (const e of events) {
     const want = map[eventKey(e.id)];
-    const id = want && cals.has(want) ? want : defaultCalendar(e);
+    const id = e.extCalendar && cals.has(e.extCalendar) ? e.extCalendar : want && cals.has(want) ? want : defaultCalendar(e);
     e.appCalendar = id;
     e.appColor = cals.get(id)?.color ?? BUILTIN.get('personlig').color;
   }
@@ -184,7 +194,7 @@ function setEventCalendar(user, id, cal) {
   if (keys.length > 5000) for (const x of keys.slice(0, keys.length - 5000)) delete map[x];
   kv.set(user, 'kal33_evcal', map);
 }
-const validCalendar = (user, id) => typeof id === 'string' && appCalendarsOf(user).some((c) => c.id === id);
+const validCalendar = (user, id) => typeof id === 'string' && appCalendarsOf(user).some((c) => c.id === id && c.writable);
 const backendOf = (user, id) => appCalendarsOf(user).find((c) => c.id === id)?.backend ?? 'privat';
 const changed = (user, action, id) => { try { broadcast('kalender', { action, ...(id ? { id } : {}) }, [user]); } catch { /* sanntid er best effort */ } };
 
@@ -212,7 +222,9 @@ calendarsApi.put('/prefs', async (c) => {
   for (const [k, v] of Object.entries(b)) {
     if (k === 'defaultCalendar') { if (!validCalendar(user, v)) return bad(c, 'Ukjent kalender'); p[k] = v; }
     else if (k === 'defaultReminder') { if (!['none', '10m', '30m', '1h', '1d'].includes(v)) return bad(c, 'defaultReminder må være none, 10m, 30m, 1h eller 1d'); p[k] = v; }
-    else if (k === 'weekNumbers' || k === 'weather') { if (typeof v !== 'boolean') return bad(c, `${k} må være true eller false`); p[k] = v; }
+    else if (['weekNumbers', 'weather', 'notifyBirthdays', 'notifyDeadlines', 'notifyBrief', 'travelTime'].includes(k)) { if (typeof v !== 'boolean') return bad(c, `${k} må være true eller false`); p[k] = v; }
+    else if (PREF_ENUM[k]) { if (!PREF_ENUM[k].includes(v)) return bad(c, `${k} må være ${PREF_ENUM[k].join(', ')}`); p[k] = v; }
+    else if (k === 'defaultDuration') { if (![30, 60, 90, 120].includes(v)) return bad(c, 'defaultDuration må være 30, 60, 90 eller 120'); p[k] = v; }
     else if (k === 'theme') { if (!['system', 'light', 'dark'].includes(v)) return bad(c, 'theme må være system, light eller dark'); p[k] = v; }
     else return bad(c, `Ukjent nøkkel ${k}`);
   }
@@ -220,6 +232,7 @@ calendarsApi.put('/prefs', async (c) => {
   changed(user, 'calendars');
   return c.json({ prefs: prefsOf({ prefs: p }) });
 });
+mountExt(calendarsApi); // prompt 35: POST /ical, /ical/:id/refresh, /ha
 calendarsApi.post('/', async (c) => {
   const user = c.get('user'), b = await c.req.json().catch(() => null);
   const name = cleanName(b?.name);
@@ -237,6 +250,7 @@ calendarsApi.post('/', async (c) => {
 calendarsApi.patch('/:id', async (c) => {
   const user = c.get('user'), id = c.req.param('id'), b = await c.req.json().catch(() => null);
   if (!b || typeof b !== 'object' || Array.isArray(b)) return bad(c, 'Forventet et objekt');
+  if (isExtId(id)) { const r = patchExt(user, id, b); if (r.error) return bad(c, r.error, r.status ?? 400); changed(user, 'calendars'); return c.json(r); }
   const s = store(user);
   const builtin = BUILTIN.has(id), idx = s.custom.findIndex((x) => x.id === id);
   if (!builtin && idx < 0) return bad(c, 'Fant ikke kalenderen', 404);
@@ -244,6 +258,7 @@ calendarsApi.patch('/:id', async (c) => {
   if (b.name !== undefined) { const n = cleanName(b.name); if (!n || n.length > 40) return bad(c, 'Navnet må være 1–40 tegn'); patch.name = n; }
   if (b.color !== undefined) { if (!COLOR.test(String(b.color))) return bad(c, 'Farge må være #rrggbb'); patch.color = b.color.toLowerCase(); }
   if (b.visible !== undefined) { if (typeof b.visible !== 'boolean') return bad(c, 'visible må være true eller false'); patch.visible = b.visible; }
+  if (b.hidMenu !== undefined) { if (typeof b.hidMenu !== 'boolean') return bad(c, 'hidMenu må være true eller false'); patch.hidMenu = b.hidMenu; }
   if (builtin) s.builtin = { ...s.builtin, [id]: { ...(s.builtin[id] ?? {}), ...patch } };
   else s.custom = s.custom.map((x, i) => (i === idx ? { ...x, ...patch } : x));
   saveStore(user, s);
@@ -253,6 +268,7 @@ calendarsApi.patch('/:id', async (c) => {
 calendarsApi.delete('/:id', (c) => {
   const user = c.get('user'), id = c.req.param('id');
   if (BUILTIN.has(id)) return bad(c, 'De innebygde kalenderne kan ikke slettes. Skjul den i stedet.', 403);
+  if (isExtId(id)) { if (!removeExt(user, id)) return bad(c, 'Fant ikke kalenderen', 404); changed(user, 'calendars'); return c.json({ ok: true }); }
   const s = store(user);
   if (!CUSTOM_ID.test(id) || !s.custom.some((x) => x.id === id)) return bad(c, 'Fant ikke kalenderen', 404);
   saveStore(user, { ...s, custom: s.custom.filter((x) => x.id !== id), prefs: s.prefs.defaultCalendar === id ? { ...s.prefs, defaultCalendar: 'personlig' } : s.prefs });
@@ -521,22 +537,9 @@ const REM_TEXT = { '15m': '15 min før', '1h': '1 t før', day: '1 dag før' };
 const evTime = (e) => (e.allDay ? osloAt(e.date) : Date.parse(e.start));
 const sortEv = (a, b) => evTime(a) - evTime(b) || String(a.title).localeCompare(String(b.title), 'nb');
 
-/** Dagen spørsmålet gjelder (fasitens dayOf), eller null. */
+/** Dagen spørsmålet gjelder (fasitens dayOf), eller null. Prompt 35: felles parseDay() (i morgen?/imorgen/tomorrow/…). */
 export function dayOfQuestion(text, today) {
-  const n = ` ${String(text ?? '').toLowerCase().replace(/[?!,]/g, ' ').replace(/\.(?=\s|$)/g, ' ')} `;
-  if (/ (i )?overmorgen /.test(n)) return addDays(today, 2);
-  if (/ (i morgen|imorgen) /.test(n)) return addDays(today, 1);
-  if (/ (i dag|idag|i kveld) /.test(n)) return today;
-  const m = n.match(/(neste\s+)?(søndag|mandag|tirsdag|onsdag|torsdag|fredag|lørdag)/);
-  if (m) { let df = (WD.indexOf(m[2]) - wdOf(today) + 7) % 7 || 7; if (m[1] && df < 7) df += 7; return addDays(today, df); }
-  const m2 = n.match(/\b(\d{1,2})\.(\d{1,2})(?:\.(\d{2,4}))?\b/);
-  if (m2 && +m2[2] >= 1 && +m2[2] <= 12 && +m2[1] >= 1 && +m2[1] <= 31) {
-    const [ty] = ymd(today); let yy = m2[3] ? (+m2[3] < 100 ? 2000 + +m2[3] : +m2[3]) : ty;
-    let d = `${yy}-${pad(+m2[2])}-${pad(+m2[1])}`;
-    if (!m2[3] && d < today) { yy += 1; d = `${yy}-${pad(+m2[2])}-${pad(+m2[1])}`; }
-    return d;
-  }
-  return null;
+  return parseDay(text, today)?.date ?? null;
 }
 
 /** calendar.free_slots: hull ≥ minMin minutter mellom 08 og 21 på date. → [{date, start, end, gapStart, gapEnd, minutes, label}] */
@@ -668,13 +671,18 @@ export async function calendarAnswer(user, text, { today = osloTodayISO(), now =
     }
   } else if (/v(æ|ae)r(et|meldingen)?\b|regn|paraply|snø|grader|temperatur/.test(ql)) {
     const d = dayOfQuestion(text, today) ?? today;
-    const labels = [`Henter værvarsel for ${place}`];
+    // Prompt 35: «været i Bergen i morgen» → stedet i teksten (samme som Homelab-søket).
+    const named = extractPlace(text);
+    let other = null;
+    if (named) { try { other = await placeWeather(named); } catch (e) { other = { error: e.message, suggest: e.suggest ?? null }; } }
+    const labels = [`Henter værvarsel for ${other?.place?.label ?? named ?? place}`];
     step(labels, 'weather.daily');
-    const w = await wx(d, d);
+    if (other?.error) r = { intent: 'weather.daily', tools: ['weather.daily'], steps: labels, weather: [], events: [], text: `${other.error}${other.suggest ? ` Mente du **${other.suggest}**?` : ''}` };
+    const w = other?.days ? other.days.filter((x) => x.date === d).map((x) => ({ ...x, text: x.cond, place: other.place.label })) : other?.error ? [] : await wx(d, d);
     const x = w[0];
     const rain = x && (x.precipProb >= 50 || ['rain', 'drizzle', 'sleet', 'thunder'].includes(x.icon));
-    r = { intent: 'weather.daily', tools: ['weather.daily'], steps: labels, weather: w, events: [],
-      text: x ? `${cap(relDay(d, today))}: **${x.text.toLowerCase()}, ${x.lo}–${x.hi} grader**, ${x.precipProb} % sjanse for nedbør.${/regn|paraply/.test(ql) ? (rain ? ' **Ta med paraply.**' : ' Du klarer deg uten paraply.') : ''}` : 'Har ikke værvarsel for den dagen ennå (16 dager frem).' };
+    if (!r) r = { intent: 'weather.daily', tools: ['weather.daily'], steps: labels, weather: w, events: [], ...(other?.place ? { place: other.place, open: other.open } : {}),
+      text: x ? `${cap(relDay(d, today))}${other?.place ? ` i ${other.place.label}` : ''}: **${x.text.toLowerCase()}, ${x.lo}–${x.hi} grader**, ${x.precipProb} % sjanse for nedbør.${/regn|paraply/.test(ql) ? (rain ? ' **Ta med paraply.**' : ' Du klarer deg uten paraply.') : ''}` : 'Har ikke værvarsel for den dagen ennå (16 dager frem).' };
   } else if (/neste|når er|når har|når skal|når må/.test(ql)) {
     const terms = termsOf(text);
     const labels = [`Søker etter «${terms.join(' ') || 'neste'}»`];
@@ -727,7 +735,7 @@ export async function calendarAnswer(user, text, { today = osloTodayISO(), now =
   }
   onStep(2, r.intent, r.steps);
   const out = { text: r.text, bold: boldOf(r.text), steps: r.steps, events: r.events ?? [], slots: r.slots ?? [], ...(r.created ? { created: r.created } : {}), ...(r.summary ? { summary: r.summary } : {}),
-    ...(r.weather ? { weather: r.weather } : {}), ...(r.reconnect ? { reconnect: true } : {}), ...(r.error ? { error: r.error, fix: r.fix, actions: r.actions } : {}), intent: r.intent, tools: r.tools, source: 'Kalender', tool: 'Kalender',
+    ...(r.weather ? { weather: r.weather } : {}), ...(r.place ? { place: r.place, open: r.open } : {}), ...(r.reconnect ? { reconnect: true } : {}), ...(r.error ? { error: r.error, fix: r.fix, actions: r.actions } : {}), intent: r.intent, tools: r.tools, source: 'Kalender', tool: 'Kalender',
     model: r.engine === 'ollama' ? 'Glimt · lokal' : 'Glimt · kalender', engine: r.engine ?? 'tool', ms: Date.now() - t0, deepLink: 'kalender://liste' };
   out.chatContext = { q: text, intent: out.intent, messages: [{ role: 'user', content: text }, { role: 'assistant', content: out.text, tool: 'Kalender' }] };
   return out;

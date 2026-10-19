@@ -42,6 +42,7 @@ import { db, OWNER } from './db.js';
 import { settings as fhSettings, saveSettings, secret, setSecret, secretSource } from './finans/db.js';
 import { geminiKeys } from './finans/gemini-keys.js';
 import * as ai from './ai-run.js';
+import { getAzureRegion, setAzureRegion } from './glimt35.js'; // prompt 35: Azure-region for TTS
 
 const api = new Hono();
 api.use('*', authOrToken);
@@ -287,8 +288,8 @@ api.get('/usage', (c) => c.json(ai.usage(c.get('user'), { days: c.req.query('day
 
 /* ---------------- API og nøkler ---------------- */
 
-const KEYS = { gemini: 'geminiKey', groq: 'groqKey', openrouter: 'openrouterKey', roboflow: 'roboflowKey' };
-const LINKS = { ollama: 'https://ollama.com/library', gemini: 'https://aistudio.google.com/apikey', groq: 'https://console.groq.com/keys', openrouter: 'https://openrouter.ai/keys', roboflow: 'https://app.roboflow.com/settings/api' };
+const KEYS = { gemini: 'geminiKey', groq: 'groqKey', openrouter: 'openrouterKey', roboflow: 'roboflowKey', openai: 'openaiKey', elevenlabs: 'elevenlabsKey', azure: 'azureSpeechKey' }; // prompt 35: TTS-nøkler
+const LINKS = { openai: 'https://platform.openai.com/api-keys', elevenlabs: 'https://elevenlabs.io/app/settings/api-keys', azure: 'https://portal.azure.com/#create/Microsoft.CognitiveServicesSpeechServices', ollama: 'https://ollama.com/library', gemini: 'https://aistudio.google.com/apikey', groq: 'https://console.groq.com/keys', openrouter: 'https://openrouter.ai/keys', roboflow: 'https://app.roboflow.com/settings/api' };
 const tail = (s) => (s ? String(s).slice(-4) : null);
 function keysOut() {
   const st = fhSettings(OWNER);
@@ -298,6 +299,10 @@ function keysOut() {
     { id: 'groq', name: 'Groq', set: !!secret('groqKey'), tail: tail(secret('groqKey')), source: secretSource('groqKey'), link: LINKS.groq },
     { id: 'openrouter', name: 'OpenRouter', set: !!secret('openrouterKey'), tail: tail(secret('openrouterKey')), source: secretSource('openrouterKey'), optional: true, link: LINKS.openrouter },
     { id: 'roboflow', name: 'Roboflow', set: !!secret('roboflowKey'), tail: tail(secret('roboflowKey')), source: secretSource('roboflowKey'), model: st.roboflowModel || st.roboflowBarcodeModel || null, link: LINKS.roboflow },
+    // Prompt 35: stemmemotorer for Glimt (POST /api/tts). Azure trenger også region.
+    { id: 'openai', name: 'OpenAI (stemme)', set: !!secret('openaiKey'), tail: tail(secret('openaiKey')), source: secretSource('openaiKey'), kind: 'tts', model: 'gpt-4o-mini-tts', link: LINKS.openai },
+    { id: 'elevenlabs', name: 'ElevenLabs (stemme)', set: !!secret('elevenlabsKey'), tail: tail(secret('elevenlabsKey')), source: secretSource('elevenlabsKey'), kind: 'tts', model: 'eleven_multilingual_v2', link: LINKS.elevenlabs },
+    { id: 'azure', name: 'Azure Speech (stemme)', set: !!secret('azureSpeechKey'), tail: tail(secret('azureSpeechKey')), source: secretSource('azureSpeechKey'), kind: 'tts', region: getAzureRegion() || null, link: LINKS.azure },
   ] };
 }
 api.get('/keys', (c) => c.json(keysOut()));
@@ -316,12 +321,23 @@ api.put('/keys/:provider', adminOnly, async (c) => {
       setSecret(KEYS[p], key, OWNER);
     }
     if (p === 'roboflow' && b?.model !== undefined) saveSettings({ roboflowModel: String(b.model ?? '').trim().slice(0, 120) }, OWNER);
+    if (p === 'azure' && b?.region !== undefined) {
+      const region = String(b.region ?? '').trim().toLowerCase();
+      if (region && !/^[a-z0-9]{3,30}$/.test(region)) return bad(c, 'Regionen ser ikke riktig ut (f.eks. norwayeast eller westeurope)');
+      setAzureRegion(region);
+    }
   }
   ai.invalidateInventory(); ai.invalidateStatus();
   return c.json({ ...keysOut(), selftestSuggested: true });
 });
 api.post('/keys/:provider/test', async (c) => {
   const p = c.req.param('provider');
+  if (['openai', 'elevenlabs', 'azure'].includes(p)) { // prompt 35: ekte kort opplesning med motoren
+    const { speakWith } = await import('./glimt35.js');
+    const t0 = Date.now();
+    try { const r = await speakWith(c.get('user'), p, 'Hei! Jeg er Glimt.'); return c.json({ ok: true, state: 'ok', label: 'Svarer', ms: Date.now() - t0, model: r.model, error: null }); }
+    catch (e) { return c.json({ ok: false, state: 'off', label: 'Svarer ikke', ms: Date.now() - t0, model: null, error: e.message }); }
+  }
   const st = await ai.providerStatus({ user: c.get('user'), force: true });
   const x = st.providers.find((v) => v.id === p);
   if (!x) return bad(c, 'Ukjent leverandør', 404);

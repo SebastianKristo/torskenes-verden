@@ -406,7 +406,7 @@ export function saveSettings(patch, u = me()) {
 
 // Hemmeligheter for FinansHub (Gemini, Trading 212, SMB, IMAP) lagres separat, kryptert med AES-256-GCM, og sendes aldri ut.
 // Nøkkelen avledes fra SECRET_KEY (eller SESSION_SECRET). Byttes den, må hemmelighetene legges inn på nytt.
-const SECRET_ENV = { geminiKey: 'GEMINI_API_KEY', groqKey: 'GROQ_API_KEY', roboflowKey: 'ROBOFLOW_API_KEY', imapPass: ['IMAP_PASSWORD', 'FINN_IMAP_PASSWORD'], t212Key: 'TRADING212_API_KEY', t212Secret: 'TRADING212_API_SECRET', smbPass: 'SMB_PASSWORD', backupPhrase: 'BACKUP_PASSPHRASE' };
+const SECRET_ENV = { openaiKey: 'OPENAI_API_KEY', elevenlabsKey: 'ELEVENLABS_API_KEY', azureSpeechKey: 'AZURE_SPEECH_KEY', geminiKey: 'GEMINI_API_KEY', groqKey: 'GROQ_API_KEY', roboflowKey: 'ROBOFLOW_API_KEY', imapPass: ['IMAP_PASSWORD', 'FINN_IMAP_PASSWORD'], t212Key: 'TRADING212_API_KEY', t212Secret: 'TRADING212_API_SECRET', smbPass: 'SMB_PASSWORD', backupPhrase: 'BACKUP_PASSPHRASE' };
 const sealKey = () => createHash('sha256').update('fh-secret:' + (process.env.SECRET_KEY || config.sessionSecret || 'dev')).digest();
 export function seal(text) {
   const iv = randomBytes(12), c = createCipheriv('aes-256-gcm', sealKey(), iv);

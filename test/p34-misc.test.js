@@ -139,7 +139,7 @@ test('Glimt-brief: tittel etter tid, vær med nedbør 12 t og «i går», tre ne
   assert.deepEqual(b.weather.vsYesterday, { diff: -2, text: '2° kaldere enn i går' });
   assert.equal(b.weather.sunset, '18:04');
   assert.ok(b.events.length <= 3);
-  assert.ok(b.news.length <= 3);
+  assert.ok(b.news.length <= 7); // prompt 35: 7 saker (toppsak + 6)
   assert.deepEqual(b.figure.guide.map((g) => g.k).slice(0, 2), ['hello', 'weather']);
   assert.equal(b.figure.mood, 'rainy');
   assert.match(b.footer, /^Laget av Glimt \d\d:\d\d · Vær: MET Norge · Nyheter: /);

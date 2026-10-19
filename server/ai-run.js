@@ -49,8 +49,10 @@ const TASK = Object.fromEntries(AI_TASKS.map((t) => [t.id, t]));
 export const TASK_ALIAS = { assist: 'sok', search: 'sok', text: 'sok', 'settings-ask': 'sok', settings: 'sok', test: 'sok', calendar: 'glimt', kalender: 'glimt',
   'calendar-quick': 'glimt', 'calendar-glimt': 'glimt', receipts: 'rc', receipt: 'rc', screenshot: 'rc', logo: 'rc', categorize: 'kat', 'finance-search': 'fsok',
   finans: 'fsok', barcode: 'bar', label: 'bar', domains: 'dom', domener: 'dom', embed: 'kb', embeddings: 'kb' };
-export const taskId = (t) => (TASK[t] ? t : TASK_ALIAS[t] ?? 'sok');
-export const taskName = (t) => TASK[taskId(t)]?.name ?? String(t);
+// Prompt 35: oppgaver som ikke går gjennom run() (ingen ruting), men logges i jobbloggen og forbruket.
+export const EXTRA_TASKS = { tts: 'Glimt · stemme (TTS)' };
+export const taskId = (t) => (TASK[t] || EXTRA_TASKS[t] ? t : TASK_ALIAS[t] ?? 'sok');
+export const taskName = (t) => TASK[taskId(t)]?.name ?? EXTRA_TASKS[t] ?? String(t);
 
 /* ---------------- Nett (injiserbart i tester) ---------------- */
 
@@ -228,8 +230,10 @@ export function providerOf(raw) {
   if (GROQ_IDS.includes(id) || /^(llama-3\.\d+-\d+b-|meta-llama\/|qwen\/|openai\/gpt-oss|moonshotai\/|deepseek-r1-distill|gemma2-9b-it|mixtral-8x7b)/i.test(id)) return { provider: 'groq', id };
   return { provider: 'ollama', id };
 }
-export const isCloud = (p) => p === 'gemini' || p === 'groq' || p === 'openrouter';
-export const providerLabel = (p) => ({ ollama: 'Ollama', gemini: 'Gemini', groq: 'Groq', openrouter: 'OpenRouter', roboflow: 'Roboflow' }[p] ?? p);
+// Prompt 35: TTS-leverandørene (OpenAI, ElevenLabs, Azure) regnes også som sky (budsjett og forbruk).
+export const CLOUD_PROVIDERS = ['gemini', 'groq', 'openrouter', 'openai', 'elevenlabs', 'azure'];
+export const isCloud = (p) => CLOUD_PROVIDERS.includes(p);
+export const providerLabel = (p) => ({ ollama: 'Ollama', gemini: 'Gemini', groq: 'Groq', openrouter: 'OpenRouter', roboflow: 'Roboflow', openai: 'OpenAI', elevenlabs: 'ElevenLabs', azure: 'Azure' }[p] ?? p);
 const sameModel = (a, b) => a === b || a === `${b}:latest` || `${a}:latest` === b;
 export const modelKind = (name, details = {}) => {
   const n = String(name).toLowerCase(), fam = (details.families ?? []).map((x) => String(x).toLowerCase());
@@ -277,7 +281,7 @@ export function costKr(provider, model, tin = 0, tout = 0) {
   return Math.round(((tin * p[0] + tout * p[1]) / 1e6) * USD_NOK * 10000) / 10000;
 }
 const monthStart = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1).getTime(); };
-export const monthCloudKr = () => db.prepare("SELECT COALESCE(sum(cost_kr),0) FROM ai_runs WHERE ts>=? AND provider IN ('gemini','groq','openrouter')").pluck().get(monthStart()) || 0;
+export const monthCloudKr = () => db.prepare(`SELECT COALESCE(sum(cost_kr),0) FROM ai_runs WHERE ts>=? AND provider IN (${CLOUD_PROVIDERS.map((p) => `'${p}'`).join(',')})`).pluck().get(monthStart()) || 0;
 /** Budsjett: 0 (eller ugyldig/NaN) = ingen grense. → {monthlyKr, monthCostKr, pct, blocked, warn} */
 export function budgetState(r = serverRouting()) {
   const lim = Number(r.budget?.monthlyKr);

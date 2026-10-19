@@ -80,7 +80,7 @@ test('bursdager: per bruker, sortert etter dager igjen, neste, alder, validering
   const nx = r.body.next;
   if (nx.date === ing.nextDate) { assert.deepEqual(nx.names.sort(), ['Ingrid', 'Rune']); assert.equal(nx.label.includes(' og '), true); }
   assert.ok(Array.isArray(nx.then));
-  assert.deepEqual(Object.keys(r.body.google).sort(), ['calendarId', 'configured', 'connected', 'contacts', 'email', 'error', 'syncedAt', 'writeNew'].sort());
+  assert.deepEqual(Object.keys(r.body.google).sort(), ['calendarId', 'calendarIds', 'configured', 'connected', 'contacts', 'email', 'error', 'syncedAt', 'writeNew'].sort());
   assert.equal(r.body.google.connected, false);
   assert.ok('entityId' in r.body.ha && 'twoWay' in r.body.ha && 'syncedAt' in r.body.ha);
 

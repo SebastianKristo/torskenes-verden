@@ -191,6 +191,8 @@ const mockGoogle = () => MOCK && !gFetch && !googleClient().id;
 const fetchG = (url, init) => (gFetch ?? (mockGoogle() ? fakeGoogle : fetch))(url, { ...init, signal: init?.signal ?? AbortSignal.timeout(15_000) });
 
 const gconf = (user) => ({ calendarId: null, writeNew: true, contacts: true, syncedAt: null, ...(kv.get(user, 'bd_google', {}) ?? {}) });
+/** Prompt 35: valgte kalendere (minst én). calendarId (= første) beholdes for eldre klienter. */
+const calIdsOf = (g) => (Array.isArray(g.calendarIds) && g.calendarIds.length ? g.calendarIds : [g.calendarId || 'primary']);
 const setG = (user, patch) => kv.set(user, 'bd_google', { ...gconf(user), ...patch });
 const gConnected = (user) => !!gconf(user).refresh;
 
@@ -317,10 +319,12 @@ export function syncGoogle(user, { full = false } = {}) {
   if (syncing.has(user)) return syncing.get(user);
   const p = (async () => {
     if (full) setG(user, { syncToken: null, syncTokenContacts: null });
-    const conf = gconf(user), cal = conf.calendarId || 'primary';
+    const conf = gconf(user), ids = calIdsOf(conf), cal = ids[0];
     let n = await syncCalendar(user, cal, 'syncToken', conf.contacts ? ['birthday', 'default'] : ['default']);
+    // Prompt 35: flere valgte kalendere (calendarIds) hentes og slås sammen.
+    for (const extra of ids.slice(1)) n += await syncCalendar(user, extra, `syncToken:${extra}`, extra === 'primary' && conf.contacts ? ['birthday', 'default'] : ['default']);
     // Bursdager fra Google-kontakter ligger i hovedkalenderen (eventType=birthday).
-    if (conf.contacts && cal !== 'primary') n += await syncCalendar(user, 'primary', 'syncTokenContacts', ['birthday']);
+    if (conf.contacts && !ids.includes('primary')) n += await syncCalendar(user, 'primary', 'syncTokenContacts', ['birthday']);
     setG(user, { syncedAt: new Date().toISOString(), error: null });
     return { ok: true, changed: n };
   })().catch((e) => { setG(user, { error: e.message }); return { ok: false, error: e.message }; }).finally(() => syncing.delete(user));
@@ -699,7 +703,7 @@ function stateOut(user) {
   const items = listFor(user), g = gconf(user), h = haConf(user), client = googleClient();
   return {
     items, next: nextOf(items),
-    google: { connected: !!g.refresh, configured: !!client.id || mockGoogle(), calendarId: g.calendarId ?? (g.refresh ? 'primary' : null), email: g.email ?? null,
+    google: { connected: !!g.refresh, configured: !!client.id || mockGoogle(), calendarId: g.calendarId ?? (g.refresh ? 'primary' : null), calendarIds: g.refresh || g.calendarIds ? calIdsOf(g) : [], email: g.email ?? null,
       writeNew: g.writeNew !== false, contacts: g.contacts !== false, syncedAt: g.syncedAt ?? null, error: g.error ?? null, mock: mockGoogle() || undefined },
     ha: { entityId: h.entityId ?? null, twoWay: !!h.twoWay, syncedAt: h.syncedAt ?? null, error: h.error ?? null, allowed: isAdmin(user), configured: !!(haBase() && haToken()) || mockHa() },
     relations: RELATIONS.map((id) => ({ id, label: RELATION_LABEL[id], color: RELATION_COLOR[id] })), reminders: [0, 1, 7, null],
@@ -840,16 +844,24 @@ api.get('/google/calendars', async (c) => {
   try {
     const r = await gapi(user, 'GET', '/users/me/calendarList', { query: { minAccessRole: 'reader' } });
     if (!r.ok) throw gfail(r, 'Kunne ikke hente kalendere');
-    const sel = gconf(user).calendarId || 'primary';
-    return c.json({ items: (r.json?.items ?? []).map((x) => ({ id: x.primary ? 'primary' : x.id, googleId: x.id, name: x.summaryOverride ?? x.summary ?? x.id, primary: !!x.primary, writable: ['owner', 'writer'].includes(x.accessRole), selected: (x.primary ? 'primary' : x.id) === sel })) });
+    const sel = calIdsOf(gconf(user));
+    return c.json({ items: (r.json?.items ?? []).map((x) => ({ id: x.primary ? 'primary' : x.id, googleId: x.id, name: x.summaryOverride ?? x.summary ?? x.id, primary: !!x.primary, writable: ['owner', 'writer'].includes(x.accessRole), selected: sel.includes(x.primary ? 'primary' : x.id), color: x.backgroundColor ?? null })) });
   } catch (e) { return fail(c, e); }
 });
 api.put('/google', async (c) => {
   const user = c.get('user'), b = await body(c), patch = {};
-  if (b.calendarId !== undefined) { const id = String(b.calendarId ?? '').trim(); if (!id || id.length > 300) return bad(c, 'Ugyldig kalender'); if (id !== gconf(user).calendarId) Object.assign(patch, { calendarId: id, syncToken: null }); }
+  if (b.calendarId !== undefined) { const id = String(b.calendarId ?? '').trim(); if (!id || id.length > 300) return bad(c, 'Ugyldig kalender'); if (id !== gconf(user).calendarId) Object.assign(patch, { calendarId: id, syncToken: null, calendarIds: [id] }); }
+  // Prompt 35: «velg flere kalendere» – calendarIds (eller cals) er en liste, minst én; calendarId = første.
+  const many = b.calendarIds ?? b.cals;
+  if (many !== undefined) {
+    if (!Array.isArray(many) || !many.length || many.length > 20 || many.some((x) => typeof x !== 'string' || !x.trim() || x.length > 300)) return bad(c, 'Velg minst én kalender (calendarIds)');
+    const ids = [...new Set(many.map((x) => x.trim()))];
+    delete patch.calendarIds; delete patch.calendarId;
+    if (JSON.stringify(ids) !== JSON.stringify(calIdsOf(gconf(user)))) Object.assign(patch, { calendarIds: ids, calendarId: ids[0], syncToken: null });
+  }
   for (const k of ['writeNew', 'contacts']) if (b[k] !== undefined) { if (typeof b[k] !== 'boolean') return bad(c, `${k} må være true/false`); patch[k] = b[k]; if (k === 'contacts') patch.syncTokenContacts = null; }
   setG(user, patch);
-  if (gConnected(user) && (patch.calendarId || patch.contacts !== undefined)) await syncGoogle(user, { full: true });
+  if (gConnected(user) && (patch.calendarId || patch.calendarIds || patch.contacts !== undefined)) await syncGoogle(user, { full: true });
   return c.json(stateOut(user));
 });
 api.post('/google/sync', async (c) => {

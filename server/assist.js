@@ -73,6 +73,8 @@ import { aliasesOf, aliasPrompt, parseMemoryIntent, learnFromAssist, typeOfWord,
 import { parseTrial, serviceOf, trialSentence, MONTHS, WEEKDAYS, addDaysISO, daysBetween } from '../public/js/trial-parse.js';
 import * as integrations from './integrations.js';
 import { calendarAnswer } from './kalender33.js'; // prompt 33: source:'calendar'
+import { parseDay } from './parse-day35.js'; // prompt 35: felles dag-tolkning
+import { extractPlace, placeWeather, PlaceNotFound } from './weather35.js'; // prompt 35: været for et sted
 import { run as aiRun, routing as aiRouting, AiRunError, isCloud, providerOf, providerLabel } from './ai-run.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
@@ -131,7 +133,7 @@ const RE = {
   trial: /pr(ø|o)ve|gratis|avslutt|si opp|oppsig|trial/,
   next: /neste|når (er|skal|har)|når.*time/,
   nextWhat: /time|avtale|frisør|lege|tannlege|møte|trening|prøve|eksamen|hos\b/,
-  weather: /v(æ|ae)r(et|meldingen)?\b|regn|paraply|grader|temperatur|snø|vind|sol(a|en)?\b|kaldt|varmt|jakke|ute i dag|i morgen.*(ute|tur)/,
+  weather: /v(æ|ae)r(et|meldingen)?\b|regn|paraply|grader|temperatur|snø|vind|sol(a|en)?\b|kaldt|varmt|jakke|ute i dag|i morgen.*(ute|tur)|\bweather\b|\bforecast\b/,
   calDay: /hva (skjer|har jeg|står på)|kalender(en)?|planer|program(met)?\b|avtaler|opptatt|ledig/,
   departures: /når går|avgang(er|en)?|neste (buss|trikk|bane|t-bane|tog)|\bbuss(en)?\b|\btrikk(en)?\b|t-?bane(n)?\b|\btog(et)?\b/,
   packages: /pakke(n|r|ne)?\b|sending(en|er)?\b|sporing|levert|hentes/,
@@ -192,11 +194,13 @@ export const hasUserData = (text) => USER_DATA.test(String(text ?? ''));
 
 /* ---------------- Testkroker ---------------- */
 
-let llmImpl = null, weatherImpl = null, directMs = DIRECT_MS;
+let llmImpl = null, weatherImpl = null, placeImpl = null, directMs = DIRECT_MS;
 /** Bare for tester: ({q, user, engine:'ollama'|'gemini'}) → tekst, eller kast. null = standard. */
 export const _setAssistLlm = (fn) => { llmImpl = fn; };
 /** Bare for tester: (place) → svaret fra weatherFull. */
 export const _setAssistWeather = (fn) => { weatherImpl = fn; };
+/** Bare for tester (prompt 35): (navn, {offset}) → placeWeather-svaret. */
+export const _setAssistPlace = (fn) => { placeImpl = fn; };
 export const _setDirectMs = (ms) => { directMs = ms ?? DIRECT_MS; };
 
 /* ---------------- Verktøy ---------------- */
@@ -206,12 +210,33 @@ const icOf = (code, isDay = true) => { const k = iconOf(code); return { icon: k,
 
 async function toolWeather(user, text) {
   const n = text.toLowerCase();
+  // Prompt 35: «været i New York» → stedet i teksten (Open-Meteo/Nominatim + timezone=auto), ellers brukerens sted (Oslo).
+  const pd = parseDay(text, osloNow().date);
+  const offset = pd && pd.offset >= 0 && pd.offset <= 6 ? pd.offset : 0;
+  const named = extractPlace(text);
+  if (named && !(weatherImpl && !placeImpl)) {
+    let r;
+    try { r = await (placeImpl ? placeImpl(named, { offset }) : placeWeather(named, { offset })); }
+    catch (e) {
+      if (e instanceof PlaceNotFound || e?.status === 404) return { text: `${e.message}${e.suggest ? ` Mente du **${e.suggest}**?` : ''}`, source: 'Open-Meteo · stedssøk', tool: 'Vær', ...(e.suggest ? { suggest: e.suggest } : {}), notFound: true };
+      throw e;
+    }
+    const d = r.days[offset] ?? r.today ?? {};
+    const umbrellaQ = /paraply|regn/.test(n);
+    const rain = (d.precipProb ?? 0) >= 50;
+    const day = offset === 0 ? 'I dag' : offset === 1 ? 'I morgen' : r.text.split(' ')[0];
+    const t2 = umbrellaQ ? `${day} er det ${d.precipProb ?? 0} % sjanse for nedbør i ${r.place.label}. **${rain ? 'Ta med paraply.' : 'Du klarer deg uten paraply.'}** ${d.lo}–${d.hi}°.` : r.text;
+    const card = { k: 'weather', city: r.place.label, t: offset ? d.hi : r.now.temp, icon: offset ? d.icon : r.now.icon, ic: offset ? d.ic : r.now.ic, d: offset ? d.cond : r.now.cond, hi: d.hi, lo: d.lo,
+      night: !offset && r.now.isDay === false, kind: null, precipProb: d.precipProb ?? 0, wind: r.now.wind, day: offset === 1 ? 'tomorrow' : offset ? d.date : 'today', umbrella: rain, h: [],
+      place: r.place, open: r.open };
+    return { text: t2, source: r.source === 'met' ? 'MET Norway' : 'Open-Meteo', tool: 'Vær', card, place: r.place, open: r.open };
+  }
   const list = kv.get(user, 'wx_places', null);
   const own = Array.isArray(list) && list[0]?.lat != null ? list[0] : null;
   const place = own ? { lat: own.lat, lon: own.lon, name: own.name } : { place: 'oslo' };
   const w = await (weatherImpl ? weatherImpl(place) : weatherFull(place));
   const city = own?.name ?? w.place?.name ?? PLACES.oslo.name;
-  const tomorrow = /i morgen/.test(n);
+  const tomorrow = offset === 1 || /i morgen/.test(n);
   const d = (tomorrow ? w.days?.[1] : w.days?.[0]) ?? {};
   const cur = w.current ?? {};
   const p = r0(d.precipProb ?? w.today?.precipProb ?? 0) ?? 0;
@@ -235,13 +260,15 @@ async function toolWeather(user, text) {
   const night = !tomorrow && cur.isDay === false;
   const card = { k: 'weather', city, t: tomorrow ? hi : r0(cur.temp), ...icOf(tomorrow ? d.code : cur.code, tomorrow ? true : cur.isDay !== false), d: wmoText(tomorrow ? d.code : cur.code), hi, lo,
     night, kind: w.kind ?? null, precipProb: p, wind: r0(cur.wind), day: tomorrow ? 'tomorrow' : 'today', umbrella: rain, h };
-  return { text: text2, source: 'Open-Meteo · MET Norway', tool: 'Vær', card };
+  const lat = own?.lat ?? w.place?.lat ?? PLACES.oslo.lat, lon = own?.lon ?? w.place?.lon ?? PLACES.oslo.lon;
+  const open = { route: 'vaer', name: city, lat, lon };
+  return { text: text2, source: 'Open-Meteo · MET Norway', tool: 'Vær', card: { ...card, open }, place: { name: city, country: 'Norge', label: city, lat, lon, tz: 'Europe/Oslo', norway: true }, open };
 }
 
 const calItem = (e) => ({ id: e.id, time: e.allDay ? 'Hele' : hmOf(e.start), title: e.title, color: e.color, place: e.room || null });
 async function toolCalendarDay(user, text, today) {
   const pq = parseQuick(text, today);
-  const date = /\bi dag\b/.test(text.toLowerCase()) ? today : pq.date && pq.date >= today ? pq.date : today;
+  const date = parseDay(text, today)?.date ?? (pq.date && pq.date >= today ? pq.date : today); // prompt 35: felles parseDay()
   const { events } = await runAsUser(user, () => eventsFor(user, date, date));
   const list = events.filter((e) => (e.allDay ? e.date <= date && e.end > date : e.date === date));
   const label = dayWord(date, today);
@@ -441,7 +468,7 @@ export async function answer(user, text, { today = osloTodayISO(), onStep = () =
   onStep(2, intent);
   const out = { text: r.text, bold: boldOf(r.text), source: r.source, intent, ...(r.tool ? { tool: r.tool } : {}), ...(r.card ? { card: r.card } : {}), ms: Date.now() - t0,
     model: r.model ?? 'Glimt · verktøy', engine: r.engine ?? (intent === 'llm' ? 'none' : 'tool') };
-  for (const k of ['followUp', 'trial', 'missing', 'quickJobId', 'memory', 'apply', 'error', 'fix', 'actions', 'warning', 'notice', 'modelId', 'aiJobId']) if (r[k] !== undefined) out[k] = r[k];
+  for (const k of ['followUp', 'trial', 'missing', 'quickJobId', 'memory', 'apply', 'error', 'fix', 'actions', 'warning', 'notice', 'modelId', 'aiJobId', 'place', 'open', 'suggest', 'notFound']) if (r[k] !== undefined) out[k] = r[k];
   if (r.nav) { out.target = r.nav.target; out.nav = r.nav; }
   out.chatContext = { q: text, intent, messages: [{ role: 'user', content: text }, { role: 'assistant', content: r.text, ...(r.card ? { card: r.card } : {}), ...(r.tool ? { tool: r.tool } : {}) }] };
   return out;

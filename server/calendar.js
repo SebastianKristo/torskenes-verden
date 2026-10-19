@@ -389,6 +389,11 @@ export async function eventsFor(user, fromDate, toDate) {
       endDate: addDays(t.date, 1), desc: t.note, url: t.url, cal: 'privat', localId: t.id, origin: 'Abonnementer · prøveperiode' }, ctx));
     if (tr.length) { events.push(...tr); sources.push({ id: 'trials', name: 'Prøveperioder', configured: true, ok: true, count: tr.length }); }
   } catch (e) { console.warn('[kalender] prøveperioder:', e.message); }
+  // Prompt 35: ekstra kilder (iCal-abonnement og Home Assistant i kalender35.js).
+  for (const fn of extraSources) {
+    try { const r = await fn(user, fromDate, toDate, from, to); if (r?.events) { events.push(...r.events); sources.push({ id: r.id, name: r.name, configured: true, ok: true, count: r.events.length }); } }
+    catch (e) { console.warn('[kalender] ekstra kilde:', e.message); }
+  }
   events = applyRules(events).filter((e) => (e.allDay ? e.end > fromDate && e.date <= toDate : e.date >= fromDate && e.date <= toDate));
   for (const s of sources) if (s.ok) s.count = events.filter((e) => e.source === s.id).length; // antall i perioden, etter reglene
   if (decorator) { try { decorator(user, events); } catch (e) { console.warn('[kalender] app-kalendere:', e.message); } }
@@ -396,6 +401,9 @@ export async function eventsFor(user, fromDate, toDate) {
 }
 // Prompt 33 (SERVER33): Kalender-appen setter appCalendar/appColor på hver hendelse (server/kalender33.js registrerer seg her).
 let decorator = null;
+const extraSources = [];
+/** Prompt 35: fn(user, fromDate, toDate, fromMs, toMs) → {id, name, events:[hendelse]} | null */
+export const addEventSource = (fn) => { extraSources.push(fn); };
 export const setEventDecorator = (fn) => { decorator = fn; };
 
 const minutes = (ms) => Math.max(0, Math.round(ms / 60_000));

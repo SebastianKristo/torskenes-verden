@@ -21,6 +21,7 @@ import { eventsFor, matchScore, normText } from './calendar.js';
 import { settings as fhSettings } from './finans/db.js';
 import { parseQuick, osloTodayISO } from '../public/js/quick-time.js';
 import { run as aiRun } from './ai-run.js';
+import { parseDay } from './parse-day35.js'; // prompt 35
 
 const MOCK = process.env.MOCK_DATA === '1';
 const LLM_MS = 12_000;
@@ -143,18 +144,17 @@ export function localAnswer(q, events, today = osloTodayISO(), nm = nowMin()) {
   const n = String(q ?? '').toLowerCase().replace(/[?!.,]/g, ' ').replace(/\s+/g, ' ').trim();
   const out = (text, kind, items = [], extra = {}) => ({ text, kind, engine: 'lokal', items: items.slice(0, 6), ...extra });
   let from = null, to = null, lbl = '';
-  if (/i overmorgen/.test(n)) { from = to = addDays(today, 2); lbl = 'i overmorgen'; }
-  else if (/i morgen/.test(n)) { from = to = addDays(today, 1); lbl = 'i morgen'; }
-  else if (/\bi dag\b|\bidag\b/.test(n)) { from = to = today; lbl = 'i dag'; }
+  const pd = parseDay(q, today); // prompt 35: felles parseDay() – «i morgen?», «imorgen», «tomorrow» …
+  if (pd && pd.kind === 'rel') { from = to = pd.date; lbl = pd.label; }
   else if (/neste uke/.test(n)) { const m = addDays(today, 7 - ((wdOf(today) + 6) % 7)); from = m; to = addDays(m, 6); lbl = 'neste uke'; }
   else if (/denne uk|resten av uk/.test(n)) { from = today; to = addDays(today, 6 - ((wdOf(today) + 6) % 7)); lbl = 'resten av uka'; }
-  else { const w = WD.findIndex((x) => new RegExp(`\\b${x}`).test(n)); if (w >= 0) { from = to = addDays(today, (w - wdOf(today) + 7) % 7); lbl = WD[w]; } }
+  else if (pd) { from = to = pd.date; lbl = pd.label; }
   const month = !from ? monthRange(n, today) : null;
   const span = (a, b, all = false) => { const L = []; for (let d = a; d <= b; d = addDays(d, 1)) dayList(events, d).forEach((e) => { if (all || d !== today || !endHm(e) || mins(endHm(e)) > nm) L.push(e); }); return L.sort(sortEv); };
 
   // Ledig tid (08–20, ettermiddag 12–20, formiddag 08–12, minst 30 min).
   if (/ledig|fri tid|tid til|opptatt/.test(n)) {
-    const d = from || today, pm = /ettermiddag|kveld/.test(n), am = /formiddag|morgen\b/.test(n) && !/i morgen/.test(n);
+    const d = from || today, pm = /ettermiddag|kveld/.test(n), am = /formiddag|morgen\b/.test(n) && !/i morgen|imorgen|i morra|imorra/.test(n);
     const A0 = pm ? 720 : 480, B0 = pm || !am ? 1200 : 720;
     const L = dayList(events, d).filter((e) => !e.allDay && hmOf(e) && endHm(e)).map((e) => [mins(hmOf(e)), mins(endHm(e))]).sort((a, b) => a[0] - b[0]);
     let t = A0; if (d === today) t = Math.max(t, Math.ceil(nm / 15) * 15);
