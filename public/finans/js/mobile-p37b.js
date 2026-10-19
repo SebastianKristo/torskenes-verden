@@ -404,6 +404,7 @@ export async function household() {
 }
 /** Din del av abonnementet (myShare fra serveren, ellers lik deling / betaler). */
 export function myShare(x) {
+  if (x.myShareMonthly != null) return +x.myShareMonthly; // kr/mnd (myShare er per trekk)
   if (x.myShare != null) return +x.myShare;
   const mem = Array.isArray(x.members) ? x.members : [], per = x.monthly ?? (x.cycle === 'yearly' ? x.price / 12 : x.price);
   if (mem.length < 2) return per;

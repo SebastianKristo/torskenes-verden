@@ -123,7 +123,7 @@ function so37Css() { if (document.getElementById('so37-css')) return; const st =
 const memOf = (s) => (Array.isArray(s?.members) ? s.members : []).map((m) => ({ id: m.userId ?? m.id, name: m.name, color: m.color || colorFor(m.name) }));
 const isShared = (s) => memOf(s).length > 1;
 const shareTxt = (s) => {
-  const my = s.myShare ?? (s.split === 'payer' ? (s.payerId && s.payerId === S.boot?.me?.id ? s.monthly : 0) : (s.monthly ?? s.price) / Math.max(1, memOf(s).length));
+  const my = s.myShareMonthly ?? s.myShare ?? (s.split === 'payer' ? (s.payerId && s.payerId === S.boot?.me?.id ? s.monthly : 0) : (s.monthly ?? s.price) / Math.max(1, memOf(s).length));
   return `Delt · din del ${kr(Math.round(my))}/mnd`;
 };
 

@@ -2,6 +2,15 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.31.0] – 20.10.2026 · prompt 37 – Gjøremål, bibelvers og husstanden
+- **iOS-krasj i wiggle-modus rettet:** dra-forhåndsvisningen ble tegnet uten appens data, og appen stoppet når man begynte å flytte et kort. Ny dra-funksjon som bytter bare i midtre del av målkortet (maks hver 140 ms) og lagrer ved slipp. Samme opprydding på Android og web-appen.
+- **Gjøremål** (nytt navn på Huskeliste): uten navbar og alltid i Mer, detaljark (dato, tid, viktig, gjenta, tidlig påminnelse, liste, ansvarlig, prioritet, flagg, tagger, deloppgaver), **private lister per bruker og delte lister**, og Glimt bak ✦-knappen (tekst → oppgave, lim inn/bilde, matplan → handel, del opp, slå sammen, rydd forfalte, pakkeliste, spørsmål). Viktige oppgaver ringer som alarm på Android.
+- **Dagens bibelvers** (Bibelen 1930, bare for Sebastian): morgen- og kveldsvers i briefen og på Hjem, Bibel-side med rekke og leseplan, og widgets for iPhone, Android og Samsung.
+- **Abonnementer:** gratis prøveperioder øverst, wiggle-redigering av kortene og **delte abonnementer** (f.eks. Starlink) der totalen bruker din del.
+- **Husstanden:** onboarding kobler brukeren til en profil, sporings-API-nøkler deles (pakkene er private), og «Hvor er Ingrid?» svarer med posisjon.
+- **Hjem og brief:** Sporing-widgeten vises bare når det er pakker, Vær-kortet i briefen åpner Vær, etiketten «GLIMT · KVELDSBRIEF» er borte, nytt Gjøremål-kort, og profilbildet åpner Innstillinger.
+- **Kalender:** «neste prøve på skolen» gir skoleprøven (ikke prøveperioder), farge per fag, adresse og kart når Glimt legger til en hendelse, mer plass nederst i Glimt-arket, riktig farge bak tastaturet i Ny hendelse, og ingen tastatur når en hendelse åpnes fra søk.
+
 ## [4.30.0] – 20.10.2026 · prompt 36 – Nordlys-oppstart, wiggle på PC og ekte backup
 - **Backup til nettverksdisk virker:** «tatt, men tom mappe» skyldtes at jobben ble merket ferdig før kopien til disken, og at filen havnet i roten av delingen. Nå lages mappen først, filen skrives i riktig mappe og verifiseres (størrelse og SHA-256) før det står OK. Synlig filnavn `homelab-…tar.zst` + `.json`. Du kan åpne mapper, gå inn i undermapper og lage ny mappe.
 - **Oppdatering:** endringsnotatene vises igjen, og det finnes en liste over **tidligere versjoner**. Sherlock-Glimt leter når du trykker «Se etter oppdatering», snekker-Glimt jobber på fremdriftslinja, og en **«Starter opp»-side** med Glimt vises mens serveren starter på nytt.

@@ -145,7 +145,7 @@ export const PACK_TPL = {
   bursdag: ['Gave', 'Kort', 'Gavepapir', 'Kake', 'Lys', 'Ballonger'],
   eksamen: ['Studentkort', 'Kalkulator', 'Blyanter og viskelær', 'Vannflaske', 'Matpakke', 'Klokke'],
 };
-const kindOfEvent = (e) => { const t = norm(`${e.title} ${e.room ?? ''} ${e.place ?? ''}`); return /hytt|hafjell|fjell/.test(t) ? 'hytte' : /fly|reis|ferie|tur\b|gardermoen/.test(t) ? 'reise' : /bursdag/.test(t) || e.appCalendar === 'bursdager' ? 'bursdag' : /eksamen|prøve|tentamen/.test(t) ? 'eksamen' : null; };
+const kindOfEvent = (e) => { if (e.kind === 'trial' || e.source === 'trials' || /prøveperiode|-prøven|prøve slutter/i.test(String(e.title ?? ''))) return null; const t = norm(`${e.title} ${e.room ?? ''} ${e.place ?? ''}`); return /hytt|hafjell|fjell/.test(t) ? 'hytte' : /fly|reis|ferie|tur\b|gardermoen/.test(t) ? 'reise' : /bursdag/.test(t) || e.appCalendar === 'bursdager' ? 'bursdag' : /eksamen|prøve|tentamen/.test(t) ? 'eksamen' : null; };
 
 /* ---------------- Montering ---------------- */
 
