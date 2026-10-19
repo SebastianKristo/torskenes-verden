@@ -44,7 +44,7 @@ export const TB = {
   hjem: ['hl', 'Hjem', '⌂'], finans: ['hjem', 'Finans', 'kr'], mat: ['mat', 'Mat', '◐'], auto: [null, 'Domener / Sporing', '◎'],
   domener: ['dom', 'Domener', '◎'], sporing: ['spor', 'Sporing', '▣'], sok: ['sok', 'Søk', '⌕'], boliger: ['dir', 'Boliger', '⌂'],
   avganger: ['avg', 'Avganger', '⇆'], familie: ['fam', 'Familie', '◉'], vaer: ['vaer', 'Vær', '☼'], nyheter: ['nyheter', 'Nyheter', '▤'],
-  aksjer: ['aks', 'Aksjer', '↗'], abonnementer: ['sub', 'Abonnementer', '↻'], media: ['media', 'Media', '♪'], huske: ['huske', 'Huskeliste', '☑'], mer: ['mer', 'Mer', '⋯'],
+  aksjer: ['aks', 'Aksjer', '↗'], abonnementer: ['sub', 'Abonnementer', '↻'], media: ['media', 'Media', '♪'], huske: ['huske', 'Huskeliste', '☑'], chat: ['chat', 'Chat', '✦'], mer: ['mer', 'Mer', '⋯'],
 };
 export const TB_ICONS = ['☑', '⌂', 'kr', '◐', '◎', '▣', '⌕', '⇆', '◉', '☼', '▤', '↗', '↻', '♥', '★', '✦', '◔', '≡', '⇄', '▢', '✉', '♪', '⚑'];
 const defItems = () => ['hjem', 'finans', 'mat', 'auto', ...(fabStyle() === 'float' ? ['sok'] : []), 'mer'].map((id) => ({ id }));

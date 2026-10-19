@@ -11,6 +11,7 @@ import { dragStart } from './mobile-p21.js';
 import * as P24 from './mobile-p24.js';
 import * as P25 from './mobile-p25.js';
 import * as P26 from './mobile-p26.js';
+import * as P27 from './mobile-p27.js';
 
 /* ---------- Valg (lokal kopi + /api/me/layout) ---------- */
 
@@ -37,7 +38,7 @@ export function save15(patch) {
 // Finans-fanene brukeren kan velge (opptil 4); Mer er alltid siste fane.
 export const FT = {
   oversikt: ['hjem', 'Oversikt', '◎'], liste: ['liste', 'Liste', '≡'], finn: ['finn', 'Finn', '⇄'], sok: ['sok', 'Søk', '⌕'], budsjett: ['budsjett', 'Budsjett', '◔'],
-  kvitteringer: ['kv', 'Kvitteringer', '▢'], aksjer: ['aks', 'Aksjer', '↗'], abonnementer: ['sub', 'Abonnementer', '↻'], kontoer: ['konto', 'Kontoer', '▤'], boliger: ['dir', 'Boliger', '⌂'],
+  kvitteringer: ['kv', 'Kvitteringer', '▢'], aksjer: ['aks', 'Aksjer', '↗'], abonnementer: ['sub', 'Abonnementer', '↻'], kontoer: ['konto', 'Kontoer', '▤'], boliger: ['dir', 'Boliger', '⌂'], chat: ['chat', 'Chat', '✦'],
 };
 export const FT_DEF = ['oversikt', 'liste', 'finn', 'sok'];
 // Prompt 24: profilene (Finans + Boliger) har fem Finans-faner; ellers fire.
@@ -263,7 +264,7 @@ export function paperSearch() {
   const src = r?.cancelled ? 'Søk på nytt med ✦ AI for å prøve igjen.' : r?.aiDown ? 'Viser treffene fra vanlig søk. Sjekk nøkkel og motor under Innstillinger → AI og tolkning.' : r?.ai ? `✦ ${r.engine || r.provider || 'AI'} leste transaksjoner, kvitteringer og varelinjer.` : 'Fant vanlige treff først, AI oppsummerte.';
   const sugg = ['rema', 'spotify', 'kyllingfilet', 'hvor mye brukte jeg på mat?', 'strøm i oktober'];
   return `<form class="pp-search pp-fsq" data-ppfs role="search"><span aria-hidden="true">⌕</span><input class="m-input" id="pp-fsq" name="q" type="search" value="${esc(FS.q)}" enterkeyhint="search" placeholder="${FS.ai ? 'Spør, f.eks. «hva brukte jeg på kaffe?»' : 'Søk i transaksjoner og kvitteringer'}" aria-label="Søk i Finans" autocomplete="off">
-      <button type="button" class="pp-aitog${FS.ai ? ' on' : ''}" data-ppfsk="ai" aria-pressed="${FS.ai}">✦ AI</button></form>
+      <button type="button" class="pp-aitog${FS.ai ? ' on' : ''}" data-ppfsk="ai" aria-pressed="${FS.ai}">✦ AI</button></form>${P27.sugBox(FS)}
     ${!q && !r ? `<div class="pp-col" style="gap:8px"><span class="pp-lab" style="padding:4px 2px 0">PRØV</span><div class="pp-chips pp-wrap">${sugg.map((n) => `<button class="pp-fchip" data-ppfsk="sugg" data-q="${esc(n)}">${esc(n)}</button>`).join('')}</div>
       <span class="pp-mut" style="line-height:1.45;padding:2px">Enkle ord som «rema» eller «spotify» søkes vanlig først. Med ✦ AI kan du spørre fritt, og AI leser også varelinjene i kvitteringene.</span></div>` : ''}
     ${FS.busy ? (P25.JOB.cur ? P25.jobCard() : '<div class="m-spin"></div>') : ''}${FS.err ? `<div class="pp-card pp-mut">${esc(FS.err)}</div>` : ''}

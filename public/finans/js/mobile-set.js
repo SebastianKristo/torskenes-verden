@@ -15,6 +15,7 @@ import * as P26 from './mobile-p26.js';
 import { row, grp } from './mobile-p17.js';
 import { haSection } from './mobile-p22.js';
 import { p17SetMain, p17Modules, p17AiExtra, p17Varsler, aiLoad, notifyLoad, NT, canSrv, ADMIN_NOTE } from './mobile-p17.js';
+import * as P27 from './mobile-p27.js';
 
 const T = { f: {}, ai: null, bk: null, srch: null, tokens: null, devices: null, newTok: '', nt: { name: '', scopes: ['receipts:write'], exp: '90' }, ping: '', lastSync: null, usage: null };
 const SCOPES = ['receipts:write', 'read:transactions', 'read:summary', 'read:budget', 'write:transactions', 'finance:read'];
@@ -213,6 +214,7 @@ const PAGE = {
     if (!canSrv()) {
       const MODE = { ollama: 'Ollama lokalt', gemini: 'Gemini', groq: 'Groq', both: 'Ollama + Gemini' };
       return `${G('Motor', [val('Hovedmotor', esc(MODE[aiMode()] ?? '–')), val('Minste sikkerhet', `0,${String(st.minConf ?? 85).padStart(2, '0')}`)], `🔒 ${ADMIN_NOTE}. Under minste sikkerhet markeres kvitteringen «Sjekk beløp».`)}
+      ${P27.aiSections()}
       ${paper() ? P23.aiTimeoutsView() : ''}
       ${p17AiExtra()}`;
     }
@@ -220,6 +222,7 @@ const PAGE = {
       ${G('Ollama', [inp('ollamaUrl', 'Adresse', f.ollamaUrl ?? st.ollamaUrl, 'http://192.168.1.40:11434', 'url'), inp('ollamaModel', 'Modell', f.ollamaModel ?? st.ollamaModel, 'qwen2.5vl:7b')])}
       ${G('Gemini', [inp('geminiModel', 'Modell', f.geminiModel ?? st.geminiModel, 'gemini-2.5-flash'), inp('geminiKey', st.geminiKeySet ? 'API-nøkkel (lagret – skriv for å bytte)' : 'API-nøkkel', f.geminiKey ?? '', '••••••••', 'password')])}
       ${G('', [btn('Lagre', 'aisave'), btn('Test motor', 'aitest')], T.ai ?? '')}
+      ${P27.aiSections()}
       ${paper() ? P23.aiTimeoutsView() : ''}
       ${p17AiExtra()}`;
   },

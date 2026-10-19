@@ -6,6 +6,7 @@ import { api, hlApi, esc, n0, dd, today, icon, ICONS, logo, parseAmount, navName
 import { m, draw, flash, avatar, backBtn, theme } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { paper } from './mobile-paper.js';
+import * as P27 from './mobile-p27.js';
 
 Object.assign(ICONS, { sins: 'M4 20V10M10 20V4M16 20v-7M22 20H2', shist: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2', shome: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z' });
 
@@ -126,10 +127,12 @@ function sheet() {
   const f = SB.f, opt = (k, ic, t, s, tm) => `<span class="sb-opt${SB.mode === k ? ' on' : ''}"><span class="sb-oic">${ic}</span><b>${tm}</b><small>${t}</small><small class="sb-dim">${s}</small></span>`;
   return card(`<b class="sb-st">Legg til abonnement</b>
     <div class="sb-opts">
+      <label>${opt('sk', '▣', 'Fra skjermbilde', '✦ Ollama finner tjeneste, plan, pris og trekkdato', 'Skjermbilde')}<input class="m-file" type="file" accept="image/*" data-p27shot></label>
       <button type="button" data-sb="mode" data-v="man">${opt('man', '✎', 'Skriv inn selv', 'Tjeneste, beløp og trekkdag', 'Manuelt')}</button>
       <label>${opt('rc', '⎙', 'Fra kvittering', '✦ AI leser bilde, PDF eller e-post', 'Kvittering')}<input class="m-file" type="file" multiple accept="image/*,application/pdf" data-sbfile></label>
       <button type="button" data-sb="mode" data-v="tx">${opt('tx', '⇄', 'Fra transaksjoner', '✦ Finn faste trekk i banken', 'Transaksjon')}</button>
     </div>
+    ${P27.shotView()}
     ${SB.mode === 'man' ? `<form class="sb-form" data-sbform>
       <input class="sinp" id="m-sb-name" value="${esc(f.name)}" placeholder="Tjeneste, f.eks. HBO Max" autocomplete="off" required>
       <div class="sb-two"><input class="sinp m-mono" id="m-sb-price" value="${esc(f.price)}" placeholder="Beløp kr" inputmode="decimal" required><input class="sinp" id="m-sb-day" value="${esc(f.day)}" placeholder="Trekkdag (1–31)" inputmode="numeric"></div>
@@ -204,7 +207,7 @@ function history() {
 // Logo (last opp eller ✦ finn med AI), navn, pris, plan, kategori, hvor ofte, faktureringsdato (dag + måned) og status.
 const MNL = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 const STS = [['active', 'Aktiv'], ['low_use', 'Lite brukt'], ['cancelled', 'Sagt opp']];
-function openEditor(x) {
+export function openEditor(x) {
   const d = new Date(), nd = x?.nextDate ? new Date(x.nextDate + 'T12:00') : null;
   SB.ed = { id: x?.id ?? null, name: x?.name ?? '', plan: x?.plan ?? '', price: x ? String(x.price).replace('.', ',') : '', cycle: x?.cycle ?? 'monthly',
     day: String(x?.billDay ?? x?.chargeDay ?? (nd ? nd.getDate() : d.getDate())), mon: String(x?.billMonth ?? (nd ? nd.getMonth() + 1 : ((d.getMonth() + 1) % 12) + 1)),
