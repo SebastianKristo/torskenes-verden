@@ -6,6 +6,7 @@ import { esc, matApi, today } from './core.js';
 import { m, draw, flash, meName } from './mobile.js';
 import { paper } from './mobile-paper.js';
 import { edBlocks } from './mobile-paper3.js';
+import { matShared } from './mobile-p36.js'; // prompt 36: matplanen er felles for husstanden
 
 const M = { w: null, err: '', sel: null, busy: false, folders: null, fLocal: false, folder: '', jobs: [], step: {}, imp: { url: '', busy: false, prev: null, err: '', folderId: '' }, newF: null, link: null, all: false, checked: {} };
 const AB = ['MAN', 'TIR', 'ONS', 'TOR', 'FRE', 'LØR', 'SØN'];
@@ -77,7 +78,7 @@ export function matView() {
 function head() {
   const w = M.w, s = w ? d8(w.start) : null, e = w ? d8(w.end) : null;
   const wk = w ? `UKE ${w.week} · ${s.getDate()}.–${e.getDate()}. ${MON[e.getMonth()].toUpperCase()}` : 'UKA';
-  return `<div class="mp2-head"><div class="m-grow"><div class="mp2-lab">${wk}</div><h1 class="mp2-h1">Mat</h1></div>
+  return `<div class="mp2-head"><div class="m-grow"><div class="mp2-lab">${wk}</div><h1 class="mp2-h1">Mat</h1>${w ? matShared(w) : ''}</div>
     <div class="mp-btns"><button class="mp2-pill" data-mp="week" ${M.busy ? 'disabled' : ''} aria-label="Lag ny uke med AI">✦ Ny uke</button></div></div>`;
 }
 

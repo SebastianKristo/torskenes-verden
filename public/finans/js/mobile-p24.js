@@ -2,6 +2,7 @@
 // fullskjerm uten fanelinje og FAB, profiler (Innstillinger → PROFIL), Boliger (toppbilde per bolig, domene-pille og
 // «Rediger bolig» med hold inne), søk og ✦ AI-søk i Innstillinger, alle integrasjoner via /api/integrations og
 // ikoner i Nyhetsleser som <img>. Endepunktene kommer fra serveren i samme prompt; mangler de (404), faller vi tilbake.
+import * as P36 from './mobile-p36.js'; // prompt 36: Hovedkalender og Vis også i Kalender (Google)
 import * as P30 from './mobile-p30.js';
 import { api, esc, n0, ini, hlApi } from './core.js';
 import { m, draw, flash, domOk } from './mobile.js';
@@ -311,7 +312,7 @@ export function calCard() {
   return `<div class="p24-bdcal"><span class="p24-lab">KALENDERE</span><div class="p24-card p24-cal">
     <div class="p24-ch"><span class="p24-ci g">${GSVG.replace('18', '20').replace('18', '20')}</span><span class="m-grow"><b>Google Kalender</b><small style="color:${gOn ? 'var(--pp-pos)' : 'var(--pp-mut)'}">${gOn ? `${esc(G.email ?? 'Tilkoblet')} · ${G.syncedAt ? `synket ${hm(G.syncedAt)}` : 'kobler til …'}` : BD.local ? 'Krever nyere server' : 'Ikke koblet til'}</small></span></div>
     ${gOn ? `<span class="p24-fl">Kalendere · ${gSel(G).length} valgt</span><div class="p24-chips">${(BD.cals ?? []).map(cal).map((c) => chip(gSel(G).includes(c.id), `data-p24="gcal" data-v="${esc(c.id)}"`, `${gSel(G).includes(c.id) ? '✓ ' : ''}${c.n}`)).join('') || '<span class="p24-mut">Henter kalendere …</span>'}</div>
-      ${tog(G.writeNew !== false, 'data-p24="gtog" data-k="writeNew"', 'Skriv nye bursdager til Google', 'Årlig heldagshendelse med påminnelse')}${tog(G.contacts !== false, 'data-p24="gtog" data-k="contacts"', 'Hent bursdager fra Google-kontakter', 'Fra kontaktlisten din')}
+      ${P36.gcalSection()}${tog(G.writeNew !== false, 'data-p24="gtog" data-k="writeNew"', 'Skriv nye bursdager til Google', 'Årlig heldagshendelse med påminnelse')}${tog(G.contacts !== false, 'data-p24="gtog" data-k="contacts"', 'Hent bursdager fra Google-kontakter', 'Fra kontaktlisten din')}
       <div class="p24-row8"><button class="p24-b lab m-grow" data-p24="gsync" ${BD.busy === 'g' ? 'disabled' : ''}>${BD.busy === 'g' ? 'Synker …' : '↻ Synk nå'}</button><button class="p24-b" data-p24="glogout">Logg ut</button></div>`
     : `<button class="p24-glog" data-p24="glogin" ${BD.local ? 'disabled' : ''}>${GSVG}Logg inn med Google</button>${G.configured === false ? '<span class="p24-mut">Google-klienten er ikke satt opp. Admin legger den inn under Innstillinger → Integrasjoner → Google Kalender.</span>' : ''}`}${G.error ? `<span class="p24-mut" style="color:var(--pp-lab)">${esc(G.error)}</span>` : ''}
     ${haOk ? `    <i class="p24-hr"></i>

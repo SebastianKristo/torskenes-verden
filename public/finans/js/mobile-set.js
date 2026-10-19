@@ -1,5 +1,6 @@
 // Innstillinger i mobilappen: hovedside med gruppene Konto, App og System, og én underside per gruppe.
 // Valg som bare gjelder denne enheten lagres i localStorage (fh_mprefs); AI og varsler for kvitteringer/budsjett på serveren.
+import * as P36 from './mobile-p36.js'; // prompt 36: Konto med profilbilde
 import * as P29 from './mobile-p29.js';
 import { S, api, esc, n0, ini, icon, loadBoot, loadSummary, hlApi } from './core.js';
 import { m, draw, flash, pref, setPref, theme, iosBg, isIOS, meName, avInner, avatarUrl, loadMe, startScr, domOk, HLTABS, FINTABS, FIXED_HL, FIXED_FIN, tabName } from './mobile.js';
@@ -115,15 +116,14 @@ const PAGE = {
   mod: () => p17Modules(),
   profil: () => {
     const me = m.me ?? {};
-    return `<div class="pp-card p16-prof"><label class="p16-pav"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:84px;height:84px;font-size:32px">${avInner()}</span><span class="p16-pedit">Bytt bilde</span><input class="m-file" type="file" accept="image/*" data-avatar></label>
-        <b class="pp-serif" style="font-size:24px">${me.username ? `@${esc(me.username)}` : esc(meName())}</b><span class="pp-mut">${esc(meName())}${me.role ? ` · ${me.role === 'admin' ? 'Administrator' : 'Bruker'}` : ''}</span></div>
-      ${G('Konto', [val('Brukernavn', me.username ? `@${esc(me.username)}` : '–'), val('Rolle', me.role === 'admin' ? 'Administrator' : me.role ? 'Bruker' : '–'), val('Tofaktor', me.totp ? '● På' : '○ Av', me.totp ? '#2f7a4f' : ''), avatarUrl() ? btn('Fjern profilbildet', 'avdel', '#b23a2a') : ''], 'Profilbildet vises i alle appene og i Homelab på PC. Navn og brukernavn endres av admin i Homelab → Innstillinger → Brukere.')}
+    return `${P36.kontoTop()}
+      ${G('Konto', [val('Brukernavn', me.username ? `@${esc(me.username)}` : '–'), val('Rolle', me.role === 'admin' ? 'Administrator' : me.role ? 'Bruker' : '–'), val('Tofaktor', me.totp ? '● På' : '○ Av', me.totp ? '#2f7a4f' : '')], 'Profilbildet vises i alle appene og i Homelab på PC. Navn og brukernavn endres av admin i Homelab → Innstillinger → Brukere.')}
       ${G('', [nav('konto', 'Kontoer og brukere', '', 'users', '#5E8BFF'), nav('sik', 'Sikkerhet', me.totp ? '2FA på' : '', 'shield', '#34C759')])}
       ${G('', [btn('Logg ut', 'logout', '#b23a2a')])}`;
   },
   bakgrunn: () => `${photoChoices()}<div class="snote">Bakgrunnen vises øverst på Hjem, i Papir og klassisk. «Vær» følger været der du er (MET), «Planeter» viser Jorda, Månen, Jupiter, Mars og Saturn fra NASA (ny hver dag), og «Oslo» er Oslo fra luften. Bildene lastes ned og skaleres av serveren din, og appen lagrer dem for bruk uten nett. «Kun på Wi-Fi» finnes i de native appene.</div>`,
   fanelinje: () => `<div class="sec">Hovedlinja</div>${tabEditor()}<div class="pp-col pp-navset" style="gap:8px">${navSettings()}</div>`,
-  konto: () => `${G('Profilbilde', [`<label class="opt-row"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:44px;height:44px">${avInner()}</span><span class="m-grow" style="color:var(--m-acc);font-weight:500">${avatarUrl() ? 'Bytt profilbilde' : 'Last opp profilbilde'}</span><input class="m-file" type="file" accept="image/*" data-avatar></label>`, avatarUrl() ? btn('Fjern bildet', 'avdel', '#FF8A80') : ''], 'Velg fra Bilder, Filer eller ta et nytt bilde. Samme bilde vises i Homelab.')}
+  konto: () => `${P36.kontoTop() /* prompt 36: profilbildet øverst, miniatyr i raden, Last opp nytt · Ta bilde · Fjern */}
     ${G('På denne enheten', [profile(), val('Status', '✓ Aktiv', '#7BE3A0')],
     'Nettappen er logget inn med én konto om gangen. Flere kontoer i samme app, og raskt bytte ved å holde inne profilbildet, finnes i iOS- og Android-appene.')}
     ${G('Brukere', [link('Administrer brukere', '/', 'Homelab → Innstillinger → Innlogging')], 'Nye brukere opprettes av admin i Homelab. Hver bruker har egne tokens og varsler.')}

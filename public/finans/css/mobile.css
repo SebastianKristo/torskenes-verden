@@ -4651,3 +4651,157 @@ html[data-ui=mobile] body:has(#app > .m.p34-brpg){background:var(--pp-bg)}
 .mat2 .mp2-wcn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 .mat2 .mp2-wc em{flex:none}
 .m.pd .p35-guide .p34-gb{box-shadow:0 0 0 1px rgba(255,255,255,.14),0 14px 30px rgba(0,0,0,.45)}
+
+/* =====================================================================
+   Prompt 36 (PWA36)
+   ===================================================================== */
+/* Brief: fast bredde mens Glimt guider (figur, boble og venner ligger i et fast lag utenfor scroll-innholdet). */
+html:has(#app > .m.p34-brpg),html:has(#app > .m.p34-brpg) body{overflow-x:hidden;overscroll-behavior-x:none}
+.m.p34-brpg{overflow-x:clip;max-width:100vw}
+.m.p34-brpg .m-scroll{overflow-x:clip;overscroll-behavior-x:none;touch-action:pan-y;max-width:100vw}
+.m.p34-brpg .p34-br{min-width:0;max-width:100%}
+.m.p34-brpg .p34-br>*{min-width:0;max-width:100%}
+.m.p34-brpg .p34-guide{max-width:min(560px,calc(100vw - 32px));overflow:visible}
+/* Ringen: outline som følger kortets border-radius nøyaktig, på selve kortet, og starter når scrollen er ferdig. */
+.m .p34-on{animation:p36Ring 1.3s ease-in-out .35s infinite;box-shadow:none;transform:none!important;outline:2.5px solid transparent;outline-offset:4px}
+@keyframes p36Ring{0%,100%{outline:2.5px solid #b23a2a;outline-offset:4px}50%{outline:2.5px solid rgba(178,58,42,.45);outline-offset:8px}}
+@media (prefers-reduced-motion:reduce){ .m .p34-on{animation:none;outline:2.5px solid #b23a2a;outline-offset:4px} }
+
+/* Sveip bort brief-kortet (h12) */
+.m .p36-bs{position:relative;border-radius:24px}
+.m .p36-bsr{position:absolute;inset:0;border-radius:24px;background:#1b1a17;color:#f3efe6;display:flex;align-items:center;gap:10px;padding:0 22px;opacity:0;overflow:hidden;transition:background .2s;pointer-events:none}
+.m .p36-bs.arm .p36-bsr{background:#2f7a4f}
+.m .p36-bsi{flex:none;width:30px;height:30px;border-radius:15px;background:rgba(255,255,255,.14);display:grid;place-items:center;transform:scale(.7);transition:transform .2s cubic-bezier(.3,1.6,.5,1)}
+.m .p36-bst{display:flex;flex-direction:column;gap:1px;min-width:0}.m .p36-bst b{font:700 14.5px Manrope,sans-serif}.m .p36-bst span{font:500 12px Manrope,sans-serif;color:rgba(243,239,230,.7)}
+.m .p36-bsc{position:relative;touch-action:pan-y;will-change:transform;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.m .p36-bs.hint .p36-bsr{opacity:1}
+.m .p36-bs.hint .p36-bsc{animation:bsNudge 2.4s cubic-bezier(.3,.7,.3,1) .4s both}
+@keyframes bsNudge{0%,100%{transform:none}22%,40%{transform:translateX(72px) rotate(1.2deg)}52%{transform:none}64%,74%{transform:translateX(40px) rotate(.6deg)}86%{transform:none}}
+.p36-bstoast{position:fixed;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 104px);z-index:80;display:flex;align-items:center;gap:12px;padding:10px 10px 10px 16px;border-radius:18px;background:#1b1a17;color:#f3efe6;box-shadow:0 16px 34px -14px rgba(0,0,0,.55);animation:p34In .3s cubic-bezier(.2,.8,.2,1) both;max-width:520px;margin:0 auto}
+.p36-bstoast span{flex:1;min-width:0;font:600 13.5px Manrope,sans-serif}
+.p36-bstoast button{flex:none;height:34px;padding:0 14px;border-radius:17px;border:0;background:#f3efe6;color:#1b1a17;cursor:pointer;font:700 13px Manrope,sans-serif}
+.m.pd .p36-bstoast,.m.pd~.p36-bstoast{box-shadow:0 0 0 1px rgba(255,255,255,.14),0 16px 34px -14px rgba(0,0,0,.7)}
+
+/* Drakter (Sherlock og snekker) */
+.p36-fig{position:relative;display:inline-block;line-height:0}
+.p36-fig>svg,.p36-fig>span[class^="p36-"]{position:absolute;overflow:visible;pointer-events:none}
+.p36-shh{filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));z-index:2}.p36-shc{z-index:0}
+.p36-shg{transform-origin:15% 85%;animation:shScan 1.1s ease-in-out infinite;z-index:3}.p36-shg svg{overflow:visible;filter:drop-shadow(0 2px 4px rgba(0,0,0,.4))}
+.m .n31-hero .p36-sher{position:absolute;right:62px;top:70px;z-index:3;pointer-events:none;animation:shFlyM 3.6s cubic-bezier(.45,.05,.3,1) both}
+.p36-shbob{position:relative;display:inline-block;animation:shBob .45s ease-in-out infinite alternate}
+.p36-shb{position:absolute;right:62px;top:-12px;white-space:nowrap;padding:8px 12px;border-radius:14px;background:#fff;color:#1b1a17;font:700 12.5px Manrope,sans-serif;box-shadow:0 10px 24px -12px rgba(0,0,0,.5);animation:shTalk 3.6s ease both;line-height:1.2}
+.m .n31-hero .p36-sher.rm{animation:p36ShFade 3.6s ease both}.p36-sher.rm .p36-shbob,.p36-sher.rm .p36-shg{animation:none}
+@keyframes shFlyM{0%{transform:translate(200px,-220px) rotate(-28deg) scale(.45);opacity:0}12%{opacity:1}30%{transform:translate(0,0) rotate(8deg) scale(1)}40%{transform:translate(-20px,8px) rotate(-4deg) scale(1)}54%{transform:translate(-110px,-6px) rotate(-8deg) scale(1)}68%{transform:translate(-60px,16px) rotate(5deg) scale(1)}80%{transform:translate(-10px,0) rotate(0deg) scale(1)}90%{transform:translate(-10px,0) scale(1);opacity:1}100%{transform:translate(220px,-240px) rotate(24deg) scale(.45);opacity:0}}
+@keyframes shBob{from{transform:translateY(0)}to{transform:translateY(-6px)}}
+@keyframes shScan{0%,100%{transform:rotate(-24deg)}50%{transform:rotate(18deg) translate(-4px,-6px)}}
+@keyframes shTalk{0%,68%{opacity:0;transform:translateY(6px) scale(.9)}74%,92%{opacity:1;transform:none}100%{opacity:0}}
+@keyframes p36ShFade{0%,100%{opacity:0}12%,88%{opacity:1}}
+.m .p36-cpw{position:relative;padding-top:40px}
+.m .p30-upp.p36-cpw{padding-top:38px}
+.p36-carp{position:absolute;top:0;z-index:2;pointer-events:none;transition:left .4s ease;line-height:0}
+.p36-cp.run{animation:cpBob .62s ease-in-out infinite}
+.p36-cph{filter:drop-shadow(0 2px 2px rgba(0,0,0,.3));z-index:2}
+.p36-cpm{transform-origin:20% 90%;animation:cpHam .62s cubic-bezier(.5,0,.75,0) infinite;z-index:3}.p36-cpm svg{overflow:visible;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}
+.p36-cpc{position:absolute;bottom:-2px;width:4px;height:3px;border-radius:1px;animation:cpChip .62s ease-out infinite}
+.p36-cp.done{animation:p36Wave .8s ease both}.p36-cp.fail{animation:p36Scratch 1.2s ease-in-out infinite}
+.p36-cpq{position:absolute;right:-8px;top:-10px;font:800 14px Manrope,sans-serif;color:#b23a2a;line-height:1}
+@keyframes cpHam{0%{transform:rotate(-55deg)}55%{transform:rotate(-55deg)}82%{transform:rotate(18deg)}100%{transform:rotate(-55deg)}}
+@keyframes cpBob{0%,70%,100%{transform:translateY(0)}82%{transform:translateY(1.5px) scaleY(.97)}}
+@keyframes cpChip{0%,78%{opacity:0;transform:translate(0,0)}82%{opacity:1}100%{opacity:0;transform:translate(var(--cx),var(--cy)) rotate(160deg)}}
+@keyframes p36Wave{0%{transform:none}25%{transform:rotate(-10deg)}50%{transform:rotate(10deg)}75%{transform:rotate(-6deg)}100%{transform:translateY(-6px);opacity:0}}
+@keyframes p36Scratch{0%,100%{transform:rotate(0)}50%{transform:rotate(-8deg)}}
+@media (prefers-reduced-motion:reduce){ .p36-cp,.p36-cpm,.p36-cpc,.p36-shg,.p36-shbob{animation:none!important} .p36-cpc{display:none} }
+
+/* TIDLIGERE VERSJONER */
+.m .p36-hl{margin-top:18px;display:block;font:500 11px 'IBM Plex Mono',monospace;color:var(--pp-mut);letter-spacing:.08em}
+.m .p36-hist{display:flex;flex-direction:column;border-radius:20px;background:var(--pp-card);overflow:hidden;margin-top:8px}
+.m .p36-hv+.p36-hv{border-top:1px solid var(--pp-line)}
+.m .p36-hr{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:8px 16px;border:0;background:transparent;color:var(--pp-ink);text-align:left;cursor:pointer;font-family:inherit}
+.m .p36-hr .m-grow{display:flex;flex-direction:column;gap:2px;min-width:0}.m .p36-hr b{font:600 14.5px 'IBM Plex Mono',monospace}.m .p36-hr span span{font-size:12.5px;color:var(--pp-mut)}
+.m .p36-hc{flex:none;color:var(--pp-mut);transition:transform .2s;display:grid}.m .p36-hv.open .p36-hc{transform:rotate(90deg)}
+.m .p36-hn{margin:0;padding:0 16px 12px 34px;display:flex;flex-direction:column;gap:6px;font-size:14px;line-height:1.4;color:var(--pp-ink)}
+.m .p36-fail{font-style:normal;color:#b23a2a;font-weight:700}
+.m .p36-hmore{height:44px;border:0;border-top:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);font:700 13.5px Manrope,sans-serif;cursor:pointer}
+.m .p36-hld{padding:14px 16px;color:var(--pp-mut);font-size:13px}
+.m .p36-prev{display:block;font-weight:700}
+
+/* «Starter opp» */
+.p36-boot{position:fixed;inset:0;z-index:9999;overflow:hidden;color:#fff;font-family:Manrope,system-ui,sans-serif;background:linear-gradient(160deg,#101a2e 0%,#1b2340 100%);display:flex;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top,0px) + 30px) 20px calc(env(safe-area-inset-bottom,0px) + 30px);box-sizing:border-box;animation:p35Fade .3s ease both}
+.p36-boot.bye{opacity:0;transition:opacity .35s}
+html.p36-booting body{overflow:hidden}
+.p36-baur{position:absolute;inset:-20%;pointer-events:none}.p36-baur i{position:absolute;inset:0;background:radial-gradient(50% 40% at 80% 10%,oklch(.62 .17 300 / .7) 0%,transparent 70%),radial-gradient(50% 45% at 15% 90%,oklch(.72 .16 165 / .6) 0%,transparent 70%),radial-gradient(40% 35% at 90% 90%,oklch(.6 .19 30 / .5) 0%,transparent 70%);animation:nsAur 14s ease-in-out infinite;filter:blur(10px)}
+.p36-bin{position:relative;z-index:2;width:100%;max-width:440px;display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center}
+.p36-bhero{position:relative;width:208px;height:208px;display:grid;place-items:center}
+.p36-bring{position:absolute;inset:0;transform:rotate(-90deg)}.p36-bprog{transition:stroke-dashoffset .6s cubic-bezier(.2,.8,.2,1)}
+.p36-borb{position:absolute;inset:0;animation:nsOrbit 9s linear infinite}.p36-borb i{position:absolute;left:50%;top:50%;width:7px;height:7px;margin:-3.5px 0 0 -3.5px;border-radius:4px;box-shadow:0 0 10px currentColor}
+.p36-bfig{display:inline-block;line-height:0}.p36-boot.awake .p36-bfig{animation:nsFloat 3.2s ease-in-out infinite}
+.p36-bz{position:absolute;right:28px;top:30px;display:none}.p36-boot.sleep .p36-bz{display:block}
+.p36-bz i{position:absolute;right:0;top:0;font:800 14px Manrope,sans-serif;font-style:normal;color:#ffd9c2;opacity:0;animation:nsZ 2.4s ease-out infinite}.p36-bz i:nth-child(2){font-size:18px;animation-delay:.8s}.p36-bz i:nth-child(3){font-size:22px;animation-delay:1.6s}
+.p36-bpct{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);padding:3px 10px;border-radius:999px;background:rgba(16,26,46,.8);border:1px solid rgba(255,255,255,.18);font:600 12px 'IBM Plex Mono',monospace}
+.p36-bt{display:flex;flex-direction:column;align-items:center;gap:8px}.p36-bk{font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.16em;color:#ffd9c2}
+.p36-bt b{font:800 38px/1 Manrope,sans-serif;letter-spacing:-.02em}.p36-bt b span{font-weight:500;opacity:.75}.p36-bv{font-style:normal;background:linear-gradient(180deg,#fff 0%,#ffd9c2 45%,#ff8a5c 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.p36-bl{font:500 16px/1.45 Manrope,sans-serif;color:rgba(255,255,255,.82);text-wrap:pretty;min-height:46px}
+.p36-bsteps{width:100%;display:flex;flex-direction:column;border-radius:20px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);padding:6px 16px;box-sizing:border-box}
+.p36-brow{display:flex;align-items:center;gap:12px;min-height:44px;opacity:.45;transition:opacity .3s}.p36-brow+.p36-brow{border-top:1px solid rgba(255,255,255,.1)}.p36-brow.ok,.p36-brow.on{opacity:1}
+.p36-bic{flex:none;width:22px;height:22px;display:grid;place-items:center}.p36-bok{animation:nsPop .35s cubic-bezier(.3,1.6,.5,1) both}
+.p36-bsp{display:block;width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(255,255,255,.2);border-top-color:#ffd9c2;animation:nsSpin .8s linear infinite;box-sizing:border-box}.p36-bw{display:block;width:8px;height:8px;border-radius:4px;background:rgba(255,255,255,.3)}
+.p36-bn{flex:1;min-width:0;text-align:left;font:600 14.5px Manrope,sans-serif}.p36-bms{font:500 12px 'IBM Plex Mono',monospace;color:rgba(255,255,255,.6)}
+.p36-bf{display:flex;flex-direction:column;align-items:center;gap:8px}.p36-bft{font:500 13px Manrope,sans-serif;color:rgba(255,255,255,.65)}
+.p36-brl,.p36-blog{border:0;background:transparent;color:#ffd9c2;font:700 13px Manrope,sans-serif;cursor:pointer;text-decoration:underline;padding:4px}
+@keyframes nsAur{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(4%,-3%) scale(1.08)}}
+@keyframes nsFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes nsOrbit{to{transform:rotate(360deg)}}
+@keyframes nsZ{0%{opacity:0;transform:translate(0,0) scale(.6)}30%{opacity:1}100%{opacity:0;transform:translate(26px,-46px) scale(1.2)}}
+@keyframes nsPop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.15)}100%{transform:none;opacity:1}}
+@keyframes nsSpin{to{transform:rotate(360deg)}}
+.p36-boot.rm *,.p36-boot.rm{animation:none!important}.p36-boot.rm .p36-borb{display:none}
+
+/* Konto: profilbildet */
+.m .p36-kt{display:flex;flex-direction:column;align-items:center;gap:6px;padding:26px 0 16px;text-align:center}
+.m .p36-kt>b{font-size:24px;margin-top:6px}.m .p36-kt>span{font-size:13.5px;color:var(--pp-mut,#8a8478)}
+.m .p36-avb{position:relative;display:block;border-radius:50%;overflow:hidden;cursor:pointer;box-shadow:0 0 0 3px #f3efe6,0 0 0 4px #d8d1c2;flex:none}
+.m.pd .p36-avb{box-shadow:0 0 0 3px #14130f,0 0 0 4px #3a372f}
+.m .p36-avb img{width:100%;height:100%;object-fit:cover;display:block}
+.m .p36-avi{width:100%;height:100%;display:grid;place-items:center;background:#2b5d8a;color:#fff;font-weight:700}
+.m .p36-avo{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:rgba(0,0,0,.45);color:#fff;font:700 12px Manrope,sans-serif;opacity:0;transition:opacity .15s}
+.m .p36-avb:hover .p36-avo,.m .p36-avb:active .p36-avo,.m .p36-avb:focus-within .p36-avo{opacity:1}
+.m .p36-ktb{font:700 14px Manrope,sans-serif;color:var(--pp-lab,#b23a2a);cursor:pointer;padding:6px 10px}
+.m .p36-pbt{flex:none;width:40px;height:40px;border-radius:20px;overflow:hidden;margin-right:2px}.m .p36-pbt img{width:100%;height:100%;object-fit:cover;display:block}
+.m .p36-pbr{cursor:pointer}
+.m .opt-row.p36-pbb{display:flex;gap:8px;flex-wrap:wrap}
+.m .p36-pbk{flex:1;min-width:0;height:38px;border-radius:19px;border:0;background:var(--pp-line,rgba(127,127,127,.18));color:var(--pp-ink,inherit);font:700 13px Manrope,sans-serif;display:grid;place-items:center;cursor:pointer;white-space:nowrap;padding:0 10px}
+.m .p36-pbk.red{color:#b23a2a}
+.m .p36-crop{display:flex;flex-direction:column;gap:14px;align-items:stretch}
+.m .p36-cv{position:relative;align-self:center;border-radius:20px;overflow:hidden;background:#111;touch-action:none;cursor:grab;flex:none}
+.m .p36-cv img{position:absolute;left:50%;top:50%;max-width:none;user-select:none;-webkit-user-drag:none;pointer-events:none}
+.m .p36-cm{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 999px rgba(0,0,0,.55);outline:2px solid rgba(255,255,255,.8);outline-offset:-2px;pointer-events:none}
+.m .p36-cz{display:flex;align-items:center;gap:12px;font:600 13px Manrope,sans-serif}.m .p36-cz input{flex:1;min-width:0}
+
+/* Ikon på hver rad i Innstillinger */
+.m .p36-ic{flex:none;width:30px;height:30px;border-radius:10px;display:grid;place-items:center;color:var(--c);background:color-mix(in srgb,var(--c) 12%,transparent);margin-right:2px}
+.m.pd .p36-ic,.m.ios .p36-ic{background:color-mix(in srgb,var(--c) 18%,transparent);color:color-mix(in srgb,var(--c) 55%,#fff)}
+.m .opt-row.p36-hasic{gap:12px}
+.m .opt-row.p36-danger .m-grow,.m .opt-row.p36-danger .m-grow b,.m .opt-row.p36-danger .p17-rt b{color:#b23a2a!important}
+
+/* Temperaturen: trykk → Vær, hold inne → Yr */
+.m [data-p36temp]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;transition:transform .18s ease;transform-origin:100% 100%}
+.m [data-p36temp].p36-hold{transform:scale(.94)}
+
+/* Mat: felles for husstanden */
+.m .p36-mshared{font:600 12px Manrope,sans-serif;opacity:.7;margin-top:4px}
+
+/* Backup: kvittering */
+.m .opt-row.p36-bkr{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+.m .p36-bkt{font:600 12.5px 'IBM Plex Mono',monospace;word-break:break-all;line-height:1.45}
+.m .p36-bkr.ok .p36-bkt{color:#2f7d4f}.m .p36-bkr.bad .p36-bkt{color:#b23a2a}
+.m .p36-bka{display:flex;gap:8px;flex-wrap:wrap}.m .p36-bka button{height:32px;padding:0 12px;border-radius:16px;border:0;background:var(--pp-line,rgba(127,127,127,.18));color:var(--pp-ink,inherit);font:700 12.5px Manrope,sans-serif;cursor:pointer}
+.m .p36-bkl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;margin:0;font-size:12.5px}.m .p36-bkl dt{color:var(--pp-mut,#8a8478)}.m .p36-bkl dd{margin:0;word-break:break-all;font-family:'IBM Plex Mono',monospace}
+
+/* Google: Hovedkalender og Vis også i Kalender */
+.m .p36-gc{display:flex;flex-direction:column;gap:6px}
+.m .p36-gcl{display:flex;flex-direction:column;border-radius:16px;border:1px solid var(--pp-line);overflow:hidden}
+.m .p36-gcr{display:flex;align-items:center;gap:10px;min-height:50px;padding:6px 12px;border:0;background:transparent;color:var(--pp-ink);text-align:left;font-family:inherit;cursor:pointer;width:100%}
+.m .p36-gcr+.p36-gcr{border-top:1px solid var(--pp-line)}
+.m .p36-gcr .m-grow{display:flex;flex-direction:column;min-width:0}.m .p36-gcr b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.m .p36-gcr small{font-size:12px;color:var(--pp-mut)}
+.m .p36-gro{flex:none;width:20px;height:20px;border-radius:10px;border:2px solid var(--pp-mut);box-sizing:border-box}.m .p36-gro.on{border:6px solid var(--pp-ink)}
+.m .p36-gcd{flex:none;width:12px;height:12px;border-radius:6px}

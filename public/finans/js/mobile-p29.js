@@ -13,6 +13,7 @@ import * as KAL from './mobile-kal.js';
 import { parseQuick, quickLabel } from '/assets/js/quick-time.js';
 import * as P31 from './mobile-p31.js';
 import * as P32 from './mobile-p32.js';
+import * as P36 from './mobile-p36.js'; // prompt 36: spørsmål med dato er ikke avtaler, én Glimt-visning, backup-kvittering
 
 const svg = (d, s = 16, w = 2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -38,8 +39,13 @@ function setEng(k) {
 function apptOf(q) {
   const t = String(q ?? '').trim();
   if (t.length <= 4) return null;
+  // Prompt 36: spørsmålsvakt før avtaletolkning («hvor mange timer med dagslys er det 29.06.2027?» er et spørsmål).
+  if (P36.isQ(t)) return null;
   const r = parseQuick(t, todayKey());
-  return r.ok && r.isAppointment ? r : null;
+  if (!(r.ok && r.isAppointment)) return null;
+  // Intensjonsordet må være et helt ord: «timer», «timeplan» og «sommertid» teller ikke som «time».
+  if (/time/i.test(t) && !P36.hasApptWord(t) && !/(frisør|lege|tannlege|møte|trening|kl\.?\s*\d|\d{1,2}[.:]\d{2})/i.test(t)) return null;
+  return r;
 }
 const apptHtml = (r) => (r ? `<button type="button" class="p29-ap" data-p29="addq"><span class="p29-apic">${svg('M4 5h16v15H4zM4 10h16M9 3v4M15 3v4', 16)}</span><span class="m-grow"><b>${esc(r.title)}</b><span>${esc(quickLabel(r))}</span></span><span class="p29-apb">Legg i kalender</span></button>` : '');
 
@@ -80,6 +86,8 @@ function searchGo() {
   // Prompt 32: snarveier først (lokalt, umiddelbart), så lokale verktøy og Glimt med grense før Chat tar over.
   SE.q = ''; const sc = P32.shortcut(t);
   if (sc) { P31.navAns(t, sc.href, sc.label, 'Snarvei'); return; }
+  // Prompt 36: handlinger («påminn meg …», «legg til melk») vises bare i pillen øverst; spørsmål bare under søket.
+  if (P36.isAction(t)) { draw(); P31.ask(t, { surface: 'pill' }); return; }
   draw(); P31.ask(t);
 }
 
@@ -281,7 +289,7 @@ export function backupPage() {
   const auto = s.auto !== false, custom = s.scope === 'custom', mods = new Set(s.modules ?? []), cloud = s.cloud ?? {};
   const lastTxt = last ? [when(last.at ?? last.finishedAt ?? last.started), size(last.size), scopeOf(last)].filter(Boolean).join(' · ') : 'Ingen backup ennå';
   const okV = last ? (last.ok === false ? '<span class="p29-bad">Feilet</span>' : '<span class="p29-ok">✓ OK</span>') : '';
-  const status = [rw('Siste backup', lastTxt + (last?.ok === false && last.error ? ` · ${last.error}` : ''), okV, null, IC.bk),
+  const status = [rw('Siste backup', lastTxt + (last?.ok === false && last.error ? ` · ${last.error}` : ''), okV, null, IC.bk), P36.bkReceipt(last), // prompt 36: verifisert fil på nettverksdisken
     run ? `<div class="opt-row p17-row p29-run"><span class="set-ic fill p29-bic">${svg(IC.bk, 16)}</span><span class="m-grow p17-rt"><b>Tar backup … ${run.pct} %</b><small>Du kan lukke appen, den fortsetter i bakgrunnen.</small><span class="p29-bar"><i style="width:${run.pct}%"></i></span></span></div>`
       : rw('Ta backup nå', nm(SCOPE, s.scope ?? 'all'), '<span class="p29-lab">Start ›</span>', 'bkrun', IC.bk)];
   const autoRows = [tg('auto', 'Automatisk backup', 'Kjører i bakgrunnen på hjemmeserveren', auto, IC.bk),
@@ -291,7 +299,7 @@ export function backupPage() {
   const gdNo = cloud.provider === 'gdrive' && (cloud.providers?.find((p) => p.id === 'gdrive')?.supported === false || cloud.supported === false);
   const sm = s.target?.smb;
   const smbRows = !sm ? [] : !sm.share ? [rw('SMB / nettverksdisk', 'Kopier hver backup til en NAS på hjemmenettet', '<span class="p29-lab">Sett opp ›</span>', 'bksmb', IC.nas)]
-    : [tg('smb', 'Kopi til nettverksdisk', `${sm.label}${sm.lastError ? ` · feilet: ${sm.lastError}` : sm.lastUpload ? ` · sist ${when(sm.lastUpload)}` : ''}`, !!sm.enabled, IC.nas),
+    : [tg('smb', 'Kopi til nettverksdisk', `${sm.host ? P36.smbUrl(sm) : sm.label}${sm.lastError ? ` · feilet: ${sm.lastError}` : sm.lastUpload ? ` · sist ${when(sm.lastUpload)}` : ''}`, !!sm.enabled, IC.nas),
       rw('Sett opp nettverksdisk', 'Bytt server, bruker eller mappe', '<span class="p29-lab">Veiviser ›</span>', 'bksmb'),
       ...(sm.enabled && !s.encrypt ? ['<div class="opt-row p17-row p29-smbw"><span class="m-grow pp-mut">Kopieres ukryptert. Greit på eget hjemmenett, men «Krypter backup» anbefales.</span></div>'] : [])];
   const where = [rw('Lagres på', `Homelab-disk · ${s.target?.path ?? '/srv/backup'}`, '<span class="pp-mut">Lokal</span>', null, IC.disk),

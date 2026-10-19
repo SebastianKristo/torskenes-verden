@@ -41,7 +41,7 @@ async function merSave() {
 /** Sorterer radene etter lagret rekkefølge; nye moduler legges sist i standardrekkefølge. Innstillinger kan ikke skjules. */
 function apply(rows) {
   const P = MER.p ?? lsGet() ?? { o: [], h: [] }, o = P.o ?? [], hd = new Set((P.h ?? []).filter((k) => k !== 'set'));
-  const R = rows.map((r, i) => ({ k: r[0], n: r[1], s: r[2], i })).sort((a, b) => { const ia = o.indexOf(a.k), ib = o.indexOf(b.k); return (ia < 0 ? 999 + a.i : ia) - (ib < 0 ? 999 + b.i : ib); });
+  const R = rows.map((r, i) => ({ k: r[0], n: r[1], s: r[2], i })).sort((a, b) => { const ia = o.indexOf(a.k), ib = o.indexOf(b.k); const rk = (r, x) => (x >= 0 ? x : r.k === 'brief' ? -1 : 999 + r.i); return rk(a, ia) - rk(b, ib); }); // prompt 36: Now Brief nytt øverst
   return { vis: R.filter((r) => !hd.has(r.k)), hid: R.filter((r) => hd.has(r.k)) };
 }
 const IC = (d, size = 21) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;

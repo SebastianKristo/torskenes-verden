@@ -70,6 +70,7 @@ const PG = {
   spor: [['t1', 'Faner'], ['t2', 'Pakkelisten'], ['t3', 'Legg til']],
 };
 const ED = { page: null, vis: {}, add: false };
+export const edOn = (page) => ED.page === page; // prompt 36: brief-kortet sveipes ikke i redigeringsmodus
 export const editing = (page) => ED.page === page;
 export const edReset = () => { ED.page = null; ED.add = false; };
 function fixH2() {

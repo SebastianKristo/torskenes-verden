@@ -14,7 +14,8 @@ import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { hsTimeout, NAV_T } from './mobile-p32.js'; // prompt 32: GLIMT I SØKEFELTET
 import * as P34 from './mobile-p34.js';
-import * as P35 from './mobile-p35.js'; // prompt 35: været for et sted i AI-søket // prompt 34: tydelige AI-feil i boblen
+import * as P35 from './mobile-p35.js';
+import * as P36 from './mobile-p36.js'; // prompt 36: spørsmål vs. handling, dagslys lokalt // prompt 35: været for et sted i AI-søket // prompt 34: tydelige AI-feil i boblen
 
 const lsGet = (k, d = null) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } };
 const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch {} };
@@ -149,7 +150,8 @@ function waitJob(jobId, meta) {
   return new Promise((ok, no) => {
     const k = String(jobId), w = { ok, no, t: null, n: 0 };
     waiters.set(k, w);
-    jobPut(k, { kind: 'assist', title: meta.title ?? 'Glimt tenker', model: meta.model ?? 'Glimt · lokal', input: meta.q, dur: 6000 }); ensureTick(); draw();
+    // Prompt 36: et spørsmål vises bare i kortet under søket (surface:'inline'), aldri også i pillen.
+    if (!meta.inline) { jobPut(k, { kind: 'assist', title: meta.title ?? 'Glimt tenker', model: meta.model ?? 'Glimt · lokal', input: meta.q, dur: 6000 }); ensureTick(); draw(); }
     const poll = async () => {
       if (!waiters.has(k)) return;
       try {
@@ -157,7 +159,7 @@ function waitJob(jobId, meta) {
         const st = r?.state ?? r?.status;
         if (st === 'done' || (st == null && r?.text != null)) { finishJob(k, r?.answer ?? r?.result ?? r); return; }
         if (st === 'failed' || st === 'error' || st === 'cancelled') { failJob(k, r?.error ?? 'Glimt fikk ikke svar'); return; }
-        if (r) jobPut(k, { steps: r.steps, fields: r.fields, progress: r.progress, title: r.title, model: r.model });
+        if (r && !meta.inline) jobPut(k, { steps: r.steps, fields: r.fields, progress: r.progress, title: r.title, model: r.model });
       } catch (e) { if (++w.n > 4) { failJob(k, e.message); return; } }
       w.t = setTimeout(poll, 1200);
     };
@@ -180,8 +182,27 @@ export function onQuickRealtime31(d) {
   if (G.open) draw();
 }
 const normAns = (r) => ({ text: r?.text ?? r?.answer ?? (r?.bold ? `**${r.bold}**` : ''), src: r?.source ?? 'Glimt', card: r?.card ?? null, intent: r?.intent ?? '', tool: r?.tool ?? null, chatContext: r?.chatContext ?? null, chatId: r?.chatId ?? null, memory: r?.memory ?? null, apply: r?.apply ?? null, open: r?.open ?? (() => { const P = r?.place ?? r?.card?.place; return r?.intent === 'weather' && P?.lat != null ? { route: 'vaer', name: P.name, lat: P.lat, lon: P.lon, label: P.label } : null; })() });
-export async function ask(q) {
+/** Prompt 36: handling/beskjed – bare Glimt-pillen øverst («Glimt jobber …» → «✓ …» med Angre). Ingen kort under søket. */
+async function askPill(q, jobId0 = null, r0 = null) {
+  const tmp = jobId0 ? String(jobId0) : `p36a${Date.now()}`;
+  jobPut(tmp, { kind: 'assist', title: r0?.title ?? 'Glimt jobber', model: r0?.model ?? 'Glimt · lokal', input: q, dur: 5000 }); ensureTick(); draw();
+  let r = r0;
+  try {
+    if (!jobId0) { r = await assistCall(q, 'search', { kind: 'action' }); if (r?.jobId && r.text == null) { jobDrop(tmp); r = await waitJob(r.jobId, { q, title: r.title ?? 'Glimt jobber' }); } else jobDrop(tmp); }
+    else { jobDrop(tmp); r = await waitJob(jobId0, { q, title: r0?.title ?? 'Glimt jobber' }); }
+  } catch (e) {
+    jobDrop(tmp);
+    if (e.status === 404 || e.status === 405) { aiDone('Glimt fikk ikke gjort dette her. Prøv i Chat.', { ms: 4000 }); return; }
+    haptic('err'); aiDone(`Fikk ikke til: ${String(e.message ?? '').slice(0, 60)}`, { ms: 4500 }); return;
+  }
+  const A = normAns(r);
+  aiDone(String(A.text || 'Ferdig').replace(/\*\*/g, '').slice(0, 90), { undo: r?.undo ? async () => { try { await hlApi(r.undo.url ?? r.undo, { method: r.undo.method ?? 'POST', json: {} }); } catch {} } : null, ms: 4000 });
+}
+export async function ask(q, o = {}) {
+  if (o.surface === 'pill') { G.ans = null; return askPill(q); }
   const id = ++G.aid; G.ans = { q, busy: true }; draw();
+  // Prompt 36: dagslys, soloppgang og solnedgang for en dato regnes ut lokalt (suncalc), med «Åpne Vær ›».
+  if (P36.isSunQ(q)) { const S0 = await P36.sunAnswer(q).catch(() => null); if (S0 && G.aid === id) { G.ans = { q, busy: false, ...S0 }; haptic('ok'); draw(); return; } }
   const set = (o) => { if (G.aid !== id) return; G.ans = { q, busy: false, ...o }; haptic('ok'); draw(); bgNotify(q, o.text, '#/hl'); };
   // Prompt 32 (claude-code-sok-fullfor-forst.md): svaret skal komme i boblen. Tar det lengre enn grensen (hs_timeout_s,
   // standard 8 s), flyttes jobben til en Chat-tråd (POST /api/assist/:id/handoff → {chatId}) og Chat åpnes.
@@ -189,8 +210,10 @@ export async function ask(q) {
   const timer = setTimeout(() => { if (G.aid === id) { moved = true; handoff(q, id, () => jobId, 'Dette tar litt tid.'); } }, hsTimeout() * 1000);
   let r;
   try {
-    r = await assistCall(q, 'search');
-    if (r?.jobId && r.text == null) { jobId = r.jobId; r = await waitJob(r.jobId, { q, title: 'Glimt tenker' }); }
+    r = await assistCall(q, 'search', P36.isQ(q) ? { kind: 'question' } : {});
+    // Serveren klassifiserte innsendingen som handling: kortet under søket forsvinner, og jobben flyttes til pillen.
+    if (r?.kind === 'action' && G.aid === id) { clearTimeout(timer); G.ans = null; draw(); if (r.jobId && r.text == null) { askPill(q, r.jobId, r); return; } aiDone(String(normAns(r).text || 'Ferdig').replace(/\*\*/g, '').slice(0, 90), { ms: 4000 }); return; }
+    if (r?.jobId && r.text == null) { jobId = r.jobId; r = await waitJob(r.jobId, { q, title: 'Glimt tenker', inline: true }); }
   } catch (e) {
     clearTimeout(timer); if (moved) return;
     if (e.status === 404 || e.status === 405) {

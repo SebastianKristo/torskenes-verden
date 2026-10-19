@@ -13,6 +13,7 @@ import { updAdmin } from './mobile-upd.js';
 import * as P23 from './mobile-p23.js';
 import { U, loadUpdate, startUpdate, checkUpdate, running, state, watch, onUpdate } from '/assets/js/sysupdate.js';
 import { glimt } from './mobile-p31.js';
+import * as P36 from './mobile-p36.js'; // prompt 36: Sherlock-/snekker-Glimt, oppstartsside, tidligere versjoner
 
 const ls = {
   get: (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } },
@@ -101,9 +102,12 @@ const X = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="c
 // Prompt 31: tomme punkter («Kalender:» uten innhold) hoppes over.
 const okNote = (t) => { const v = String(t ?? '').replace(/^[-*•\s]+/, '').trim(); return v && !/^[^:]{1,40}:\s*$/.test(v); };
 export const notesOf = () => {
-  const n = UP.v?.notes;
-  if (Array.isArray(n) && n.length) return n.map((x) => (typeof x === 'string' ? x : x?.text ?? '')).filter(okNote).slice(0, 12);
-  return (U.d?.changes ?? []).flatMap((c) => c.items ?? []).map((x) => (typeof x === 'string' ? x : x?.text ?? '')).filter(okNote).slice(0, 12);
+  // Prompt 36: underpunkter flates ut («Kalender: …»), tomme hoppes over. Notatene gjelder den NYE versjonen.
+  const n = UP.v?.notes ?? UP.v?.latestNotes;
+  if (Array.isArray(n) && n.length) { const L = P36.flatNotes(n).filter(okNote); if (L.length) return L.slice(0, 12); }
+  const lat = String(ver().lat || '').replace(/^v/, ''), ch = U.d?.changes ?? [];
+  const sec = ch.find((c) => String(c.version ?? '').replace(/^v/, '') === lat) ?? null;
+  return P36.flatNotes(sec ? sec.items ?? [] : ch.flatMap((c) => c.items ?? [])).filter(okNote).slice(0, 12);
 };
 /** «4.22» av «4.22.0». */
 const short = (v) => String(v ?? '').replace(/^v/, '').split('.').slice(0, 2).join('.');
@@ -115,12 +119,13 @@ export function updBanner(where) {
   const { cur, lat } = ver(), job = ls.get(JOB) ?? {}, P = k === 'run' ? progress() : null;
   const title = k === 'done' ? (job.rollback ? `Gjenopprettet til ${cur || job.to || ''}` : `Oppdatert til Nordlys ${cur || job.to || lat}`) : k === 'run' ? (job.rollback ? 'Gjenoppretter Nordlys OS' : 'Oppdaterer Nordlys OS') : k === 'fail' ? 'Oppdateringen feilet' : `Nordlys ${lat} er klar`;
   const sub = k === 'done' ? 'Alt kjører. Endringene er aktive i appen og på web.' : k === 'run' ? 'Du kan bruke appen mens den oppdateres.' : k === 'fail' ? (U.d?.status?.error || 'Noe gikk galt under oppdateringen.') : `Du har ${cur || 'en eldre versjon'}. Oppdaterer hjemmeserveren, web og appen.`;
-  const notes = notesOf();
+  const notes = notesOf(), cm = P36.carpState(k, P?.pct ?? 0);
+  bootWatch(k);
   return `<div class="p30-up p31-upc${k === 'fail' ? ' fail' : ''}" role="status" aria-live="polite" data-p30up="${k}" data-p31sys title="Åpne System">
     <div class="p30-uph"><span class="p30-upi">${k === 'done' ? IC_OK : k === 'fail' ? IC_ERR : IC_DOWN}</span><span class="m-grow"><b>${esc(title)}</b><span>${esc(sub)}</span></span>${where === 'home' && k === 'avail' ? `<button type="button" class="p30-upx" data-p30="uplater" aria-label="Skjul i 24 timer">${X}</button>` : ''}</div>
-    ${P ? `<div class="p30-upp"><span class="p30-upb"><i style="width:${P.pct}%"></i></span><span class="p30-ups"><span>${esc(P.text)}</span><span class="p30-mono">${P.pct} %</span></span></div>` : ''}
-    ${k === 'avail' && UP.notes && notes.length ? `<ul class="p30-upn">${notes.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
-    ${k === 'avail' ? `<div class="p30-upa"><button type="button" class="p30-upbtn pri" data-p30="upopen">Oppdater nå</button>${notes.length ? `<button type="button" class="p30-upbtn" data-p30="upnotes" aria-expanded="${UP.notes}">${UP.notes ? 'Skjul' : 'Hva er nytt'}</button>` : ''}</div>` : ''}
+    ${P || cm ? `<div class="p30-upp p36-cpw">${cm ? P36.carpOnBar(P?.pct ?? 100, 28, cm, 38) : ''}<span class="p30-upb"><i style="width:${P?.pct ?? 100}%"></i></span>${P ? `<span class="p30-ups"><span>${esc(P.text)}</span><span class="p30-mono">${P.pct} %</span></span>` : ''}</div>` : ''}
+    ${k === 'avail' && UP.notes ? `${notes.length ? `<ul class="p30-upn">${notes.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}<a class="p30-uplink p36-prev" href="#/nordlys">Tidligere versjoner ›</a>` : ''}
+    ${k === 'avail' ? `<div class="p30-upa"><button type="button" class="p30-upbtn pri" data-p30="upopen">Oppdater nå</button><button type="button" class="p30-upbtn" data-p30="upnotes" aria-expanded="${UP.notes}">${UP.notes ? 'Skjul' : 'Hva er nytt'}</button></div>` : ''}
     ${k === 'done' ? '<button type="button" class="p30-upbtn pri" data-p30="upok">Ferdig</button>' : ''}
     ${k === 'fail' ? `<div class="p30-upa"><button type="button" class="p30-upbtn pri" data-p30="upopen">Prøv igjen</button><button type="button" class="p30-upbtn" data-p30="uprb">Gjenopprett ${esc(job.from || cur || 'forrige')}</button></div>` : ''}
     ${updLinkRow(where)}</div>`;
@@ -377,18 +382,20 @@ export function sysView() {
   const STEPS = [['backup', 'Tar backup av databasen'], ['download', `Laster ned ${nv}`], ['install', 'Bygger'], ['restart', 'Starter serveren på nytt']];
   const si = P ? Math.max(0, STEPS.findIndex(([x]) => x === (P.key === 'download' && P.pct >= 35 ? 'backup' : P.key))) : -1;
   const back = NS.from && NS.from !== 'nordlys' ? `#/${NS.from === 'set' ? 'set' : NS.from}` : '#/set';
+  const cm = adm ? P36.carpState(k, P?.pct ?? 0) : null; bootWatch(k);
   return `<div class="n31">
     <div class="n31-top"><a class="n31-back" href="${back}" data-swipeback aria-label="Tilbake">${CHEV}<span>Tilbake</span></a><span class="n31-k">Programvareoppdatering</span><h1 class="n31-h">System</h1></div>
-    <section class="n31-hero" aria-label="Nordlys OS ${esc(nv)}"><i class="n31-arc a1" aria-hidden="true"></i><i class="n31-arc a2" aria-hidden="true"></i>
+    <section class="n31-hero" aria-label="Nordlys OS ${esc(nv)}"><i class="n31-arc a1" aria-hidden="true"></i><i class="n31-arc a2" aria-hidden="true"></i>${P36.sherlockHtml()}
       <div class="n31-hr"><span class="n31-big">${esc(big)}</span>${adm ? `<button type="button" class="n31-chk" data-p30="upchk" ${k === 'run' || UP.chk ? 'disabled' : ''}>${UP.chk ? 'Ser etter …' : 'Se etter'}</button>` : ''}</div>
       <div class="n31-hb"><span class="n31-hs">${esc(hstate)}</span><span class="n31-name">Nordlys<span>OS</span></span><span class="n31-host">Homelab · ${esc(location.hostname)}</span>
-        ${P ? `<div class="n31-prog"><span class="n31-bar"><i style="width:${P.pct}%"></i></span><span class="n31-pl"><span>${esc(P.text)}</span><span class="p30-mono">${P.pct} %</span></span>
+        ${P ? `<div class="n31-prog p36-cpw">${cm ? P36.carpOnBar(P.pct, 34, cm) : ''}<span class="n31-bar"><i style="width:${P.pct}%"></i></span><span class="n31-pl"><span>${esc(P.text)}</span><span class="p30-mono">${P.pct} %</span></span>
           <div class="n31-steps">${STEPS.map(([, n], i) => `<span class="${i < si ? 'ok' : i === si ? 'on' : ''}">${i < si ? '✓' : i === si ? glimt(14, 'think') : '○'} ${esc(n)}</span>`).join('')}</div></div>` : ''}</div></section>
     <div class="n31-card"><div class="n31-row"><span class="m-grow"><b>Programvareversjon</b><span class="p30-mono">${esc(verLine)}</span></span><span class="n31-inst${fresh ? ' ok' : ''}">${esc(inst)}</span></div>
       ${adm && UP.cfg && typeof UP.cfg === 'object' ? `<button type="button" class="n31-row n31-tg" data-p30="uptog" data-k="require_password" role="switch" aria-checked="${req}"><span class="m-grow"><b>Krev passord for å oppdatere</b><span>${req ? 'Passord kreves før oppdateringen starter' : 'Av · admin kan oppdatere med ett trykk'}</span></span><span class="sw" aria-hidden="true" aria-checked="${req}"></span></button>` : ''}</div>
     <span class="n31-note">Oppdateringen gjøres av updater-containeren på serveren. .env, data/ og proton/ røres ikke.</span>
     <div class="n31-new"><b class="n31-tag">Dette er Nordlys ${esc(short(nv))}. ${esc(V.tagline || 'Lys i mørket, kjørt hjemme.')}</b>
       ${notes.length ? `<span class="n31-lab">NYTT I ${esc(nv)}${date ? ` · ${esc(date)}` : ''}</span><ul>${notes.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
+      ${P36.histSection(nv)}
       ${cur ? `<span class="p32-inst"><span class="p30-mono">Installert ${esc(cur)}${instSha() ? ` · build ${esc(instSha())}` : ''}</span><button type="button" class="p32-copy" data-p30="instcopy">Kopier</button></span>` : ''}</div></div>`;
 }
 /** Knappen fast nederst (utenfor scroll-innholdet), med fade fra bakgrunnsfargen. */
@@ -418,7 +425,21 @@ export function boot30(cb) {
     if (e.key === 'Enter' && e.target.matches?.('[data-p30pw]')) { e.preventDefault(); upGo(); }
   });
 }
-export function afterDraw30() { try { histSync(); } catch {} }
+// Prompt 36: Sherlock-Glimt flyr inn i heroen og leter (minst 2,6 s), så kommer svaret i en boble.
+async function sherlockCheck() {
+  UP.chk = true; P36.sherlockStart(); haptic('tap'); draw();
+  await Promise.all([checkUpdate().catch(() => {}), new Promise((ok) => setTimeout(ok, 2600))]);
+  UP.vt = 0;
+  try { UP.v = await hlApi('/system/version'); UP.vt = Date.now(); } catch {}
+  UP.chk = false;
+  const k = upState(); P36.sherlockResult(k !== 'avail', ver().lat); draw();
+}
+// Prompt 36: «Starter opp»-siden mens serveren starter på nytt etter oppdateringen (steget restart, eller ingen svar).
+function bootWatch(k) {
+  const restart = k === 'run' && (U.waiting || progress().key === 'restart' || state() === 'restarting');
+  if (restart && !P36.startingOn()) setTimeout(() => P36.startingShow('update', ver().lat), 0);
+}
+export function afterDraw30() { try { histSync(); } catch {} try { if (updAdmin() && U.d && running()) bootWatch(upState()); } catch {} }
 export function leave30() { UP.sheet = null; UP.notes = false; }
 export function input30(e, t) { if (t.matches?.('[data-p30pw]')) { UP.pw = t.value; return true; } return false; }
 export async function bind30(e, t) {
@@ -432,8 +453,8 @@ export async function bind30(e, t) {
   if (a === 'upnotes') { UP.notes = !UP.notes; draw(); return true; }
   if (a === 'instcopy') { const v = ver().cur, t = `Nordlys OS ${v}${instSha() ? ` · build ${instSha()}` : ''}`; try { await navigator.clipboard.writeText(t); flash('Kopiert ✓'); } catch { flash(t); } return true; }
   if (a === 'upopen' || a === 'uprb') { await upNow(a === 'uprb'); return true; }
-  if (a === 'upchk') { if (running()) return true; UP.chk = true; draw(); await checkUpdate().catch(() => {}); UP.vt = 0; upLoad(); UP.chk = false; hapLight(); draw(); return true; }
-  if (a === 'upbig') { const k = upState(); if (k === 'avail' || k === 'fail') await upNow(); else if (k === 'done') { ls.set(JOB, null); hapLight(); draw(); } else if (k === 'fresh') { UP.chk = true; draw(); await checkUpdate().catch(() => {}); UP.vt = 0; upLoad(); UP.chk = false; draw(); } return true; }
+  if (a === 'upchk') { if (running() || UP.chk) return true; await sherlockCheck(); return true; }
+  if (a === 'upbig') { const k = upState(); if (k === 'avail' || k === 'fail') await upNow(); else if (k === 'done') { ls.set(JOB, null); hapLight(); draw(); } else if (k === 'fresh' && !UP.chk) await sherlockCheck(); return true; }
   if (a === 'upx') { UP.sheet = null; draw(); return true; }
   if (a === 'upgo') { await upGo(); return true; }
   if (a === 'upok') { ls.set(JOB, null); try { navigator.vibrate?.([10, 40, 10]); } catch {} draw(); return true; }

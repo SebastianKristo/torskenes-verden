@@ -163,7 +163,7 @@ function wWeather(th) {
   const sub = [w.feels != null ? `Føles ${deg(w.feels)}` : '', hi != null ? `${deg(hi)} / ${deg(lo)}` : ''].filter(Boolean).join(' · ');
   const hours = (w.hours ?? []).slice(0, 6);
   return card(th, `<div class="wx-top"><span class="wx-l"><b class="hclock" data-clock>${timeTxt()}</b><span class="dim wx-date">${esc(date)}</span></span>
-      <a class="wx-r" href="${esc(yrUrl(w))}" target="_blank" rel="noopener" aria-label="Åpne været i Yr"><span class="wx-now"><span class="wx-ic">${wi(w, 26)}</span><b>${deg(w.temp)}</b></span><span class="wx-cnd">${esc(w.text ?? WXT[w.code] ?? 'Skiftende')}</span><span class="dim">${esc(sub)}</span></a></div>
+      <a class="wx-r" href="${esc(yrUrl(w))}" target="_blank" rel="noopener" data-p36temp title="Trykk: Vær · Hold inne: åpne Yr" aria-label="Åpne værvisningen (hold inne for Yr)"><span class="wx-now"><span class="wx-ic">${wi(w, 26)}</span><b>${deg(w.temp)}</b></span><span class="wx-cnd">${esc(w.text ?? WXT[w.code] ?? 'Skiftende')}</span><span class="dim">${esc(sub)}</span></a></div>
     ${wind ? `<div class="dim wx-wind">${icon('w_wind', 13, 'currentColor', 1.8)}<span class="m-ell">${esc(wind)} · ${esc(w.place ?? 'Oslo')}</span></div>` : ''}
     ${hours.length ? `<div class="wx-hours">${hours.map((x, i) => `<span><small>${esc(x.t ?? x.label ?? (i ? '' : 'Nå'))}</small>${wi(x, 16)}<b>${deg(x.temp)}</b><small class="mm">${x.mm ? String(Math.round(x.mm * 10) / 10).replace('.', ',') : ''}</small></span>`).join('')}</div>` : ''}`, 'wxcard');
 }

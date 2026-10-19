@@ -554,7 +554,8 @@ export function wsConnect(onMsg) {
 let rtT = null;
 export function onRealtime(d) {
   if (d.type === 'calendar-quick') { P29.onQuickRealtime(d); return; } // Prompt 29: rask time ferdig/feilet (31: steg og felt)
-  if (d.type === 'assist') { P31.onAssistRealtime(d); return; } // Prompt 31: Glimt-jobber (svarboble, Chat)
+  if (d.type === 'assist') { P31.onAssistRealtime(d); return; }
+  if (d.type === 'meal:changed' || d.type === 'meal') { import('./mobile-p36.js').then((x) => x.onMeal(d)).catch(() => {}); return; } // Prompt 36: matplanen er felles, oppdater uten refresh // Prompt 31: Glimt-jobber (svarboble, Chat)
   clearTimeout(rtT);
   rtT = setTimeout(async () => {
     if (d.type === 'tasks') { HK.t = 0; await tasksLoad(true); if (m.screen === 'huske' || m.screen === 'hl') draw(); }
