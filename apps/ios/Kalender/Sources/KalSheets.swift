@@ -76,26 +76,44 @@ struct KalDetailSheet: View {
                 KalInfoRow(label: "Sted", value: e.loc)
             }
             if let wx {
-                HStack(spacing: 10) {
-                    Text("Vær").font(KalFont.ui(14)).foregroundStyle(t.mut)
-                    Spacer()
-                    Image(systemName: KalWx.symbol(wx.kind)).font(.system(size: 14, weight: .semibold)).foregroundStyle(KalWx.color(wx.kind, mut: t.mut))
-                    Text((KalWx.text[wx.kind] ?? "") + " · " + String(wx.hi) + "° / " + String(wx.lo) + "°").font(KalFont.ui(14, .bold)).foregroundStyle(t.ink)
-                }
-                .padding(.vertical, 11)
-                .overlay(alignment: .bottom) { Rectangle().fill(t.line2).frame(height: 1) }
+                wxRow(wx)
             }
             if !e.src.isEmpty {
-                HStack(alignment: .top, spacing: 10) {
-                    Text("Lagt til av Glimt").font(KalFont.ui(14)).foregroundStyle(t.mut)
-                    Spacer()
-                    Text("«" + e.src + "»").font(KalFont.ui(14)).italic().foregroundStyle(t.mut).multilineTextAlignment(.trailing)
-                }
-                .padding(.vertical, 11)
-                .overlay(alignment: .bottom) { Rectangle().fill(t.line2).frame(height: 1) }
+                srcRow
             }
         }
         .overlay(alignment: .top) { Rectangle().fill(t.line2).frame(height: 1) }
+    }
+
+    private func wxLabel(_ wx: KalWxDay) -> String {
+        let desc: String = KalWx.text[wx.kind] ?? ""
+        let hi: String = String(wx.hi)
+        let lo: String = String(wx.lo)
+        return desc + " · " + hi + "° / " + lo + "°"
+    }
+
+    private func wxRow(_ wx: KalWxDay) -> some View {
+        let label: String = wxLabel(wx)
+        let tint: Color = KalWx.color(wx.kind, mut: t.mut)
+        return HStack(spacing: 10) {
+            Text("Vær").font(KalFont.ui(14)).foregroundStyle(t.mut)
+            Spacer()
+            Image(systemName: KalWx.symbol(wx.kind)).font(.system(size: 14, weight: .semibold)).foregroundStyle(tint)
+            Text(label).font(KalFont.ui(14, .bold)).foregroundStyle(t.ink)
+        }
+        .padding(.vertical, 11)
+        .overlay(alignment: .bottom) { Rectangle().fill(t.line2).frame(height: 1) }
+    }
+
+    private var srcRow: some View {
+        let quoted: String = "«" + e.src + "»"
+        return HStack(alignment: .top, spacing: 10) {
+            Text("Lagt til av Glimt").font(KalFont.ui(14)).foregroundStyle(t.mut)
+            Spacer()
+            Text(quoted).font(KalFont.ui(14)).italic().foregroundStyle(t.mut).multilineTextAlignment(.trailing)
+        }
+        .padding(.vertical, 11)
+        .overlay(alignment: .bottom) { Rectangle().fill(t.line2).frame(height: 1) }
     }
 
     private var reminders: some View {
