@@ -117,16 +117,30 @@ export async function setTiles(Lf, map, el, mode) {
 
 export const FCOL = { hl: '#3d4652', budsjett: '#c0562a', kv: '#b23a2a', fast: '#7a5ad6', konto: '#2b5d8a', aks: '#2f7d4f', rap: '#a8661a', sub: '#c2417a', dir: '#3f7a6e', imp: '#4a5bbf', finn: '#2b6cb0', sok: '#7a3b6b', set: '#6b6558', liste: '#5b6470' };
 const OKEY = 'papir_fm_order';
-export const FO = { edit: false, order: Array.isArray(ls.get(OKEY)) ? ls.get(OKEY) : null };
+export const FO = { edit: false, add: false, order: Array.isArray(ls.get(OKEY)) ? ls.get(OKEY) : null, hid: Array.isArray(ls.get('papir_fm_hid')) ? ls.get('papir_fm_hid') : [] };
+// Prompt 30: skjulte Finans → Mer-fliser per bruker (finance_more_hidden i /api/me/layout, nøklene fra MER_KEYS.fin).
+const FM_TO = { sok: 'fsok', liste: 'fliste', finn: 'finn', budsjett: 'budsjett', kv: 'kvitt', fast: 'faste', konto: 'kontoer', aks: 'aksjer', rap: 'rapp', sub: 'abo', dir: 'boliger', imp: 'fimport', set: 'innst' };
+const FM_FROM = Object.fromEntries(Object.entries(FM_TO).map(([a, b]) => [b, a]));
+FM_FROM.abonnementer = 'sub';
+function fmHidSave(H) {
+  FO.hid = H; ls.set('papir_fm_hid', H);
+  hlApi('/me/layout', { method: 'PUT', json: { finance_more_hidden: H.map((k) => FM_TO[k]).filter(Boolean) } }).catch(() => {}); // eldre server: bare lokalt
+}
 /** Fra /api/me/layout (fmOrder), hvis serveren har lagret den. */
-export function take20(r) { if (Array.isArray(r?.fmOrder) && r.fmOrder.length) { FO.order = r.fmOrder.map(String); ls.set(OKEY, FO.order); } }
+export function take20(r) {
+  if (Array.isArray(r?.fmOrder) && r.fmOrder.length) { FO.order = r.fmOrder.map(String); ls.set(OKEY, FO.order); }
+  if (Array.isArray(r?.finance_more_hidden)) { FO.hid = [...new Set(r.finance_more_hidden.map((k) => FM_FROM[k]).filter((k) => k && k !== 'set'))]; ls.set('papir_fm_hid', FO.hid); }
+}
 export function fmSort(T) {
   const o = FO.live ?? FO.order ?? [], ix = (k) => { const i = o.indexOf(k); return i < 0 ? 1e3 : i; };
   return T.map((t, i) => [t, i]).sort((a, b) => ix(a[0][0]) - ix(b[0][0]) || a[1] - b[1]).map(([t]) => t);
 }
 // Redigeringslinja (prompt 21): egen Papir-pille med kortbakgrunn og skygge, lesbar over toppbildet i lyst og mørkt.
 // Prompt 28: samme wiggle-design som Hjem: flytende piller (↺ Tilbakestill · ✓), ingen mørk instruksjonslinje.
-export const fmBar = () => (FO.edit ? '<div class="p28-pills" role="toolbar" aria-label="Flytt flisene"><button class="p28-pill plus" data-p20="fmreset">↺ Tilbakestill</button><button class="p28-pill ok" data-p20="fmdone" aria-label="Ferdig"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></div>' : '');
+const SV = (d, w = 3.2) => `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+export const FM_MINUS = SV('M5 12h14'), FM_PLUS = SV('M12 5v14M5 12h14'), FM_LOCK = SV('M6 11h12v9H6zM9 11V8a3 3 0 0 1 6 0v3', 2.4);
+// Prompt 30: + N (skjulte) til venstre, ✓ til høyre. «Tilbakestill rekkefølge» ligger i Skjult-seksjonen.
+export const fmBar = (nHid = 0) => (FO.edit ? `<div class="p28-pills" role="toolbar" aria-label="Rediger Mer">${nHid ? `<button class="p28-pill plus${FO.add ? ' on' : ''}" data-p20="fmadd" aria-expanded="${FO.add}" aria-label="Vis skjulte (${nHid})"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><b>${nHid}</b></button>` : '<span></span>'}<button class="p28-pill ok" data-p20="fmdone" aria-label="Ferdig"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></div>` : '');
 function fmSave(order) {
   FO.order = order; ls.set(OKEY, order);
   hlApi('/me/layout', { method: 'PUT', json: { fmOrder: order } }).catch(() => {}); // eldre server: bare lokalt
@@ -146,7 +160,7 @@ export function p20Down(e) {
   if ((e.button ?? 0) > 0) return;
   const t = e.target.closest?.('.pp-fmt[data-fmk]');
   if (!t) return;
-  if (FO.edit) return fmDrag(e, t);
+  if (FO.edit) { if (e.target.closest('.p30-wb')) return; return fmDrag(e, t); }
   const k = t.dataset.fmk, ev = { pointerId: e.pointerId, clientX: e.clientX, clientY: e.clientY };
   lp = { x: e.clientX, y: e.clientY, t: setTimeout(() => {
     lp = null; lpFired = true; FO.edit = true; haptic('ok'); navigator.vibrate?.(15); draw();
@@ -162,7 +176,15 @@ export function p20Up() { if (lp) clearTimeout(lp.t); lp = null; }
 export function p20Click(e, t) {
   if (lpFired && t.closest?.('.pp-fmt')) { lpFired = false; e.preventDefault(); return true; }
   const x = t.closest?.('[data-p20]');
-  if (x?.dataset.p20 === 'fmdone') { e.preventDefault(); FO.edit = false; haptic('ok'); draw(); return true; }
+  if (x?.dataset.p20 === 'fmdone') { e.preventDefault(); FO.edit = false; FO.add = false; haptic('ok'); draw(); return true; }
+  if (x?.dataset.p20 === 'fmadd') { e.preventDefault(); FO.add = !FO.add; haptic('tap'); draw(); return true; }
+  if (x?.dataset.p20 === 'fmhide' && x.dataset.k !== 'set') { e.preventDefault(); e.stopPropagation(); navigator.vibrate?.(8); fmHidSave([...FO.hid.filter((k) => k !== x.dataset.k), x.dataset.k]); draw(); return true; }
+  if (x?.dataset.p20 === 'fmshow') {
+    e.preventDefault(); e.stopPropagation(); navigator.vibrate?.(8); const k = x.dataset.k;
+    fmHidSave(FO.hid.filter((y) => y !== k)); if (!FO.hid.length) FO.add = false;
+    if (FO.order) fmSave([...FO.order.filter((y) => y !== k), k]); // vises igjen sist
+    draw(); return true;
+  }
   if (x?.dataset.p20 === 'fmreset') { e.preventDefault(); FO.order = null; ls.set(OKEY, null); hlApi('/me/layout', { method: 'PUT', json: { fmOrder: [] } }).catch(() => {}); haptic('tap'); draw(); return true; }
   if (x?.dataset.p20 === 'pos') { FT.tab = 'kart'; return false; }
   if (FO.edit && t.closest?.('.pp-fmt')) { e.preventDefault(); return true; }
@@ -170,7 +192,7 @@ export function p20Click(e, t) {
   return false;
 }
 /** Når man går fra Mer, avsluttes redigeringen. */
-export function p20Screen(scr) { if (scr !== 'fmer' && FO.edit) FO.edit = false; }
+export function p20Screen(scr) { if (scr !== 'fmer' && FO.edit) { FO.edit = false; FO.add = false; } }
 
 /* ---------- Logoer fra registeret ---------- */
 

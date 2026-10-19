@@ -211,7 +211,7 @@ function hdSheet() {
   if (!HD.open) return '';
   const all = HD.stops ?? [], sel = homeSel();
   return `<div class="sheet-bg" data-p27="hdclose"></div><div class="pp-sheet p27-hds" role="dialog" aria-label="Velg stopp">
-    <div class="pp-row"><div><div class="pp-lab">HJEM · RUTER-KORTET</div><div class="pp-sh">Rediger widget</div></div><button class="pp-btn ink sm" data-p27="hdclose">Ferdig</button></div>
+    <div class="pp-row"><div><div class="pp-lab">HJEM · RUTER-KORTET</div><div class="pp-sh">Rediger widget</div></div><button type="button" class="p30-sb p30-pri" data-p27="hdclose">Ferdig</button></div>
     <span class="pp-mut">Velg opptil 3 stopp. Rekkefølgen følger Mine stopp.</span>
     <div class="pp-card pp-tight p27-hdl">${all.map((s) => { const on = sel.stops.includes(s.id); return `<button data-p27="hdtog" data-id="${esc(s.id)}" role="checkbox" aria-checked="${on}"><span class="p27-cb${on ? ' on' : ''}">✓</span><span class="m-grow"><b>${esc(s.name)}</b><span class="pp-mut">${esc([s.locality, s.lines?.length ? `${s.lines.length} linjer` : ''].filter(Boolean).join(' · ') || 'Sanntid fra Entur')}</span></span></button>`; }).join('') || '<span class="pp-mut" style="padding:12px">Ingen stopp ennå.</span>'}</div>
     <div class="pp-lab">AVGANGER PER STOPP</div><div class="p27-ns">${[1, 2, 3, 4].map((k) => `<button data-p27="hdn" data-n="${k}" aria-pressed="${sel.n === k}">${k}</button>`).join('')}</div>
@@ -234,7 +234,7 @@ export function shotView() {
   const val = (k) => k === 'pris' ? (r.pris != null ? `${r.prisOriginal && r.valuta && r.valuta !== 'NOK' ? '≈ ' : ''}${n0(Math.round(r.pris / 100))} kr${r.prisOriginal ? ` (${r.prisOriginal})` : ''}` : '–') : k === 'syklus' ? (r.syklus === 'år' ? 'Årlig' : 'Månedlig') : k === 'neste_trekk' ? (r.neste_trekk ? new Date(`${r.neste_trekk}T12:00`).toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric' }) : '–') : r[k] || '–';
   const bad = (k) => chk.has(k) || (conf[k] != null && conf[k] < 0.8);
   const ex = r.existingId != null ? (SB.d?.items ?? SB.d?.subscriptions ?? []).find((x) => String(x.id) === String(r.existingId)) : null;
-  return `<div class="p27-shot"><div class="p27-shh"><b>✦ Ollama leser skjermbildet</b><button type="button" data-p27="shotx">Lukk</button></div>
+  return `<div class="p27-shot"><div class="p27-shh"><b>✦ Ollama leser skjermbildet</b><button type="button" class="p30-sb" data-p27="shotx">Lukk</button></div>
     <div class="p27-shb">${SH.thumb ? `<span class="p27-shi" style="background-image:url('${SH.thumb}')"></span>` : ''}<div class="m-grow">
       ${SH.busy ? `<span class="pp-mut">Finner tjeneste, plan, pris og trekkdato …</span><span class="p27-prog"><i></i></span><span class="pp-mut sm">${esc(SH.name)}</span>` : SH.err ? `<span class="p27-err">${esc(SH.err)}</span>`
         : ROWS.map(([k, n]) => `<div class="p27-shr"><span>${n}</span><b>${esc(val(k))}</b>${bad(k) ? '<em class="chk">Sjekk</em>' : '<em>✓</em>'}</div>`).join('')}</div></div>

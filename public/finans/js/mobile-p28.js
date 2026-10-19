@@ -17,7 +17,7 @@ const TO = { hl: 'hjem', dom: 'domener', spor: 'sporing', chat: 'chat', kal: 'ka
 const FROM = Object.fromEntries(Object.entries(TO).map(([a, b]) => [b, a]));
 FROM.abonnementer = 'sub'; FROM.innstillinger = 'set'; FROM.familie = 'fam'; FROM.nyheter = 'nyheter';
 const LS = 'papir_mer';
-const MER = { p: null, loaded: false, server: null, edit: false, lp: null, lpAt: 0, drag: null };
+const MER = { p: null, loaded: false, server: null, edit: false, add: false, lp: null, lpAt: 0, drag: null };
 const lsGet = () => { try { const v = JSON.parse(localStorage.getItem(LS) || 'null'); return v && Array.isArray(v.o) ? v : null; } catch { return null; } };
 const lsSet = (v) => { try { localStorage.setItem(LS, JSON.stringify(v)); } catch {} };
 const toLocal = (r) => ({ o: (r?.o ?? []).map((k) => FROM[k] ?? k), h: (r?.h ?? []).map((k) => FROM[k] ?? k) });
@@ -46,19 +46,29 @@ function apply(rows) {
 }
 const IC = (d, size = 21) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 const LOCK = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3"/></svg>';
-/** Mer-lista. rows = [[rute, navn, undertekst], …] i standardrekkefølge (Subscription OS står rett etter Finans). */
+/** Mer-lista. rows = [[rute, navn, undertekst], …] i standardrekkefølge (Subscription OS står rett etter Finans).
+ *  Prompt 30: redigering med samme WiggleEditor-utseende som Hjem (claude-code-mer-wiggle.md): flytende verktøylinje
+ *  (+ antall skjulte · ✓), separate kort som vugger, minus-merke øverst til venstre, lås på Innstillinger, og + viser
+ *  «SKJULT · TRYKK + FOR Å VISE» under. */
 export function merView(rows) {
   merLoad();
   const { vis, hid } = apply(rows), dark = !m.light, pal = ICP[dark ? 'dark' : 'light'], ed = MER.edit;
   const icon = (r) => `<span class="p25-mic" style="color:${pal[r.i % pal.length]}">${IC(MER_IC[r.k] ?? 'M12 12h.01')}</span>`;
   const text = (r) => `<span class="m-grow"><b class="pp-serif">${esc(r.n)}</b><span class="pp-mut">${esc(r.s)}</span></span>`;
-  const row = (r) => ed
-    ? `<div class="p28-mr" data-mer28="${r.k}">${r.k === 'set' ? `<span class="p28-lock" title="Kan ikke skjules" aria-label="Innstillinger kan ikke skjules">${LOCK}</span>` : `<button class="p28-mh" data-p28="merhide" data-k="${r.k}" aria-label="Skjul ${esc(r.n)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>`}${icon(r)}${text(r)}<span class="p28-grab" data-mergrab="${r.k}" aria-label="Flytt ${esc(r.n)}" role="button" tabindex="0">${IC('M4 8h16M4 12h16M4 16h16', 20)}</span></div>`
+  const badge = (r) => (r.k === 'set'
+    ? `<span class="p30-wb lock" title="Kan ikke skjules" aria-label="Innstillinger kan ikke skjules">${LOCK}</span>`
+    : `<button class="p30-wb" data-p28="merhide" data-k="${r.k}" aria-label="Skjul ${esc(r.n)}">${MINUS}</button>`);
+  const row = (r, i) => ed
+    ? `<div class="p28-mr p30-wc${i % 2 ? ' odd' : ''}" data-mer28="${r.k}">${badge(r)}${icon(r)}${text(r)}<span class="p28-grab" data-mergrab="${r.k}" aria-label="Flytt ${esc(r.n)}" role="button" tabindex="0">${IC('M4 8h16M4 12h16M4 16h16', 20)}</span></div>`
     : `<a href="#/${r.k}" class="p28-mr" data-mer28="${r.k}">${icon(r)}${text(r)}<span class="pp-mut" aria-hidden="true">›</span></a>`;
-  const top = ed ? `<div class="p28-mtop"><span class="m-grow"><span class="p28-mlab">REDIGERER MER</span><span class="p28-mtx">Dra ≡ for å flytte. Trykk − for å skjule.</span></span><button class="p28-mdone" data-p28="merdone">Ferdig</button></div>` : '';
-  const hidden = hid.length ? `<span class="p28-mhl">SKJULT</span><div class="pp-card pp-list p24-mer p25-mer p28-mer p28-mhid">${hid.map((r) => `<div class="p28-mr"><button class="p28-ms" data-p28="mershow" data-k="${r.k}" aria-label="Vis ${esc(r.n)}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button><span class="p28-dim">${icon(r)}${text(r)}</span></div>`).join('')}</div>` : '';
-  return `<div class="p28-merw${ed ? ' ed' : ''}">${top}<div class="pp-card pp-list p24-mer p25-mer p28-mer" data-merlist>${vis.map(row).join('')}</div>${hidden}${ed ? '' : '<span class="p28-mhint">Hold inne for å endre rekkefølgen eller skjule moduler.</span>'}</div>`;
+  const pills = ed ? `<div class="p28-pills" role="toolbar" aria-label="Rediger Mer">${hid.length ? `<button class="p28-pill plus${MER.add ? ' on' : ''}" data-p28="meradd" aria-expanded="${!!MER.add}" aria-label="Vis skjulte (${hid.length})">${PLUS}<b>${hid.length}</b></button>` : '<span></span>'}<button class="p28-pill ok" data-p28="merdone" aria-label="Ferdig">${CHECK}</button></div>` : '';
+  const hidden = ed && MER.add && hid.length ? `<span class="p28-mhl">SKJULT · TRYKK + FOR Å VISE</span><div class="p30-wlist p30-whid">${hid.map((r) => `<div class="p28-mr p30-wc" data-p28="mershow" data-k="${r.k}" role="button" tabindex="0" aria-label="Vis ${esc(r.n)}"><span class="p30-wb">${PLUS}</span><span class="p28-dim">${icon(r)}${text(r)}</span></div>`).join('')}</div>` : '';
+  const list = ed ? `<div class="p30-wlist" data-merlist>${vis.map(row).join('')}</div>` : `<div class="pp-card pp-list p24-mer p25-mer p28-mer" data-merlist>${vis.map(row).join('')}</div>`;
+  return `${pills}<div class="p28-merw${ed ? ' ed p28-mer' : ''}">${list}${hidden}${ed ? '' : '<span class="p28-mhint">Hold inne for å endre rekkefølgen eller skjule moduler.</span>'}</div>`;
 }
+const MINUS = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>';
+const PLUS = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>';
+const CHECK = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 function setOrder(vis, hid) { MER.p = { o: [...vis, ...hid], h: hid }; merSave(); }
 const curKeys = () => ({ vis: [...document.querySelectorAll('[data-merlist] [data-mer28]')].map((x) => x.dataset.mer28), hid: [...(MER.p?.h ?? [])].filter((k) => k !== 'set') });
 
@@ -68,7 +78,7 @@ function merDown(e) {
   const g = e.target.closest?.('[data-mergrab]');
   if (g && MER.edit) {
     const row = g.closest('[data-mer28]'), list = row.parentElement, rows = [...list.querySelectorAll('[data-mer28]')];
-    const i = rows.indexOf(row), h = row.offsetHeight;
+    const i = rows.indexOf(row), h = row.offsetHeight + (parseFloat(getComputedStyle(list).rowGap) || 0);
     MER.drag = { row, rows, i, to: i, h, y: e.clientY, pid: e.pointerId };
     row.classList.add('lift'); haptic('tab');
     try { g.setPointerCapture?.(e.pointerId); } catch {}
@@ -107,9 +117,10 @@ function merClick(e, t) {
   if (!x) { if (MER.edit && t.closest?.('[data-mer28]')) { e.preventDefault(); return true; } return false; }
   e.preventDefault();
   const a = x.dataset.p28, k = x.dataset.k, { vis, hid } = curKeys();
-  if (a === 'merdone') { MER.edit = false; haptic('ok'); }
+  if (a === 'merdone') { MER.edit = false; MER.add = false; haptic('ok'); }
+  else if (a === 'meradd') { MER.add = !MER.add; haptic('tap'); }
   else if (a === 'merhide' && k !== 'set') { setOrder(vis.filter((y) => y !== k), [...hid, k]); haptic('tap'); }
-  else if (a === 'mershow') { setOrder([...vis, k], hid.filter((y) => y !== k)); haptic('ok'); }
+  else if (a === 'mershow') { setOrder([...vis, k], hid.filter((y) => y !== k)); if (hid.length <= 1) MER.add = false; haptic('ok'); }
   else return false;
   draw(); return true;
 }
@@ -141,18 +152,31 @@ function kbBoot() {
 /* =====================================================================
    Kroker fra mobile.js
    ===================================================================== */
-// Pillene i wiggle-modus ligger i et eget lag (position:fixed) over lista; de følger innholdskolonnen, også på Fold med sidefelt.
+// Prompt 30 (claude-code-wiggle-verktoylinje.md): verktøylinja (+ · ✓) ligger øverst i scroll-innholdet, 8 px under
+// toppen, og innholdet får 64 px padding-top (animert 280 ms) så den aldri dekker søkefeltet eller minus-merket.
+// Linja flyttes derfor til første barn av .m-scroll uansett hvilken modul som tegnet den (Hjem, Finans, Mat, Mer).
+const PL = { on: false, scr: '' };
 function pillsPlace() {
-  for (const el of document.querySelectorAll('.p28-pills')) {
-    const host = el.parentElement, r = host?.getBoundingClientRect();
-    if (!r || !r.width) continue;
-    el.style.left = `${Math.max(8, r.left)}px`; el.style.right = 'auto'; el.style.width = `${Math.min(r.width, innerWidth - 16)}px`; el.style.margin = '0';
+  const sc = document.querySelector('#app .m-scroll'), el = sc?.querySelector('.p28-pills');
+  if (el && el.parentElement !== sc) sc.prepend(el);
+  if (el) {
+    // Samme bredde som innholdet under (kortene/flisene), også når kolonnen er midtstilt på Fold/nettbrett.
+    const ref = [...sc.children].find((x) => x !== el && x.offsetWidth > 0), cs = getComputedStyle(sc);
+    el.style.left = ref ? `${ref.offsetLeft}px` : cs.paddingLeft; el.style.width = ref ? `${ref.offsetWidth}px` : `calc(100% - ${cs.paddingLeft} - ${cs.paddingRight})`; el.style.right = 'auto';
   }
+  const on = !!el, same = PL.scr === m.screen;
+  if (sc && on !== PL.on && same && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const base = getComputedStyle(sc).paddingTop;
+    sc.animate?.([{ paddingTop: on ? '0px' : 'calc(64px + 0px)' }, { paddingTop: base }], { duration: 280, easing: 'cubic-bezier(.2,.8,.2,1)' });
+    if (el) el.animate?.([{ opacity: 0, transform: 'translateY(-6px)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing: 'ease-out' });
+  }
+  PL.on = on; PL.scr = m.screen;
 }
 export function afterDraw28() { pillsPlace(); }
 let booted = false;
 export function boot28() { if (booted) return; booted = true; kbBoot(); addEventListener('resize', pillsPlace); }
-export function leave28(next) { if (next !== 'mer') { MER.edit = false; MER.drag = null; } }
+export function leave28(next) { if (next !== 'mer') { MER.edit = false; MER.add = false; MER.drag = null; } }
+export const merEditing = () => MER.edit;
 export const down28 = (e) => merDown(e);
 export const move28 = (e) => merMove(e);
 export const up28 = (e) => merUp(e);

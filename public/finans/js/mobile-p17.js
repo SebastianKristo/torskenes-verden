@@ -3,6 +3,7 @@
 // Posisjon og Bolig på Hjem, Familie med fanene Kart, Soner og Helse, Yr mot Storm, dra for å oppdatere og sanntid
 // via én felles WebSocket (/api/ws). Alt tåler en eldre server: data som mangler vises som en forklaring, ikke en feil.
 import * as P29 from './mobile-p29.js';
+import * as P30 from './mobile-p30.js';
 import { S, api, esc, n0, ini, hlApi, icon } from './core.js';
 import { m, draw, flash, meName, avInner, avatarUrl, route, isIOS, domOk } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
@@ -133,6 +134,7 @@ export function p17SetMain(T = {}) {
   const prof = `<a class="pp-card p17-prof" href="#/set/konto"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:56px;height:56px;font-size:22px">${avInner()}</span><span class="m-grow p17-rt"><b class="pp-serif" style="font-size:21px">${esc(meName())}</b><small>${me.username ? `@${esc(me.username)}` : ''}${me.role ? ` · ${me.role === 'admin' ? 'Admin' : 'Bruker'}` : ''}</small><small>${esc(me.serverName || location.host)}</small></span><span class="p17-chev" aria-hidden="true">›</span></a>`;
   const t212 = st.t212Set ? 'Tilkoblet' : 'Ikke satt opp';
   return `${prof}
+    ${P30.progGroup(grp, row)}
     ${grp('KONTO', [row('#/set/konto', 'Kontoer og brukere', '', '', 'users', 'konto'), row('#/set/sik', 'Sikkerhet', me.totp ? '2FA på' : '2FA av', '', 'shield', 'sik'), row('#/set/tok', 'API-tokens', T.tokens ? `${T.tokens.length} aktive` : '', '', 'key', 'tok'), P29.isAdmin() ? row('#/set/sysbk', 'Backup', P29.bkSummary(), '', 'backup', 'sysbk') : ''])}
     ${grp('FINANS', [row('#/set/fai', 'AI og tolkning', canSrv() ? [ENG[st.provider] ?? 'Ollama', st.groqKeySet ? 'Groq' : '', st.roboflowKeySet ? 'Roboflow' : '', st.geminiKeySet && st.provider !== 'gemini' ? 'Gemini' : ''].filter(Boolean).join(' · ') : ADMIN_NOTE, '', 'ai', 'fai'),
       row('#/set/kat', 'Kategorier og budsjett', `${(S.boot?.categories ?? []).length} kategorier`, '', 'cat', 'kat'), row('#/set/regel', 'Regler', `${(S.boot?.rules ?? []).length} regler`, '', 'rule', 'regel'),
@@ -142,7 +144,6 @@ export function p17SetMain(T = {}) {
       row('', 'Fanelinje-stil', P25.NAV_STYLES.find(([k]) => k === P25.navStyle())[2], P25.navStyleName(), 'list', 'navstil', 'data-p25="nscycle"'),
       row('#/set/fanelinje', 'Fanelinje i Hjem', 'Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen', '', 'list', 'hjemnav'), row('#/set/mod', 'Moduler', domOk() ? 'Sporing, Domener, Mat, Nyheter' : 'Sporing, Mat, Nyheter', '', 'globe', 'mod'), row('#/nyheter', 'Nyhetsleser', 'Kilder og AI', '', 'look', 'rss')])}
     ${grp('APP', [row('#/set/look', 'Utseende og fanelinje', 'Papir · bakgrunn · ikonfarger', '', 'look', 'look'), row('#/set/varsler', 'Varsler og haptikk', NT.d ? (NT.d.on === false ? 'Av' : 'På') : '', '', 'bell', 'varsler'), row('#/set/kal', 'Kalendere', 'Google Kalender · Home Assistant', '', 'users', 'kal'), row('#/set/integ', 'Integrasjoner', 'Home Assistant, Kalendere, Entur, Bring og flere', '', 'home', 'integ')])}
-    ${updAdmin() ? grp('SYSTEM', [row('#/set/oppd', 'Oppdatering', 'Oppdater serveren til nyeste versjon', updSummary(), 'backup', 'oppd')]) : ''}
     ${grp('', [`<button class="opt-row p17-row" data-sact="logout"><span class="m-grow" style="color:var(--pp-lab);font-weight:700">Logg ut</span></button>`])}
     <span class="p17-ver">${esc(appName())} ${VERSION} · Papir</span>`;
 }
@@ -382,7 +383,10 @@ export function healthView() {
     ${cards || ''}${vis.some((p) => !(p.self || String(p.userId) === String(me.userId))) ? '' : '<div class="pp-card p21-empty"><b class="pp-serif">Ingen deler helse med deg ennå</b><div class="pp-mut">Helsedeling er av som standard. Velg selv over hva du vil dele.</div></div>'}`;
 }
 
-/* ---------- Yr mot Pent (GET /api/weather/compare) ---------- */
+/* ---------- Yr mot Storm (GET /api/weather/compare) ---------- */
+// Prompt 30: Storm i stedet for det gamle navnet overalt, fullskjerm med Ferdig-pille, logoene fra /assets/brands/ (yr.png, storm.png).
+export const YR_LOGO = '/assets/brands/yr.png', STORM_LOGO = '/assets/brands/storm.png';
+export const brandImg = (src, size) => `<img class="p30-bl" src="${src}" alt="" width="${size}" height="${size}" style="width:${size}px;height:${size}px;border-radius:${size / 2}px">`;
 
 export const CMP = { open: false, d: {}, err: '', busy: false };
 export async function cmpLoad(place) {
@@ -391,13 +395,13 @@ export async function cmpLoad(place) {
   catch (e) { CMP.err = e.status === 404 ? 'Sammenligningen krever en nyere server. Oppdater Homelab.' : e.message; }
   CMP.busy = false; draw();
 }
-export const cmpEntry = () => `<button class="vx-card p17-cmpb" data-p17="cmp"><span class="p17-cmpi"><span style="background:#0a6ac2">Yr</span><span style="background:#ff8a3d">St</span></span><span class="m-grow p17-rt"><b>Sammenlign Yr og Pent</b><small>Temperatur og nedbør side om side</small></span><span aria-hidden="true">›</span></button>`;
+export const cmpEntry = () => `<button class="vx-card p17-cmpb" data-p17="cmp"><span class="p17-cmpi p30-logos">${brandImg(YR_LOGO, 30)}${brandImg(STORM_LOGO, 30)}</span><span class="m-grow p17-rt"><b>Sammenlign Yr og Storm</b><small>Temperatur og nedbør side om side</small></span><span aria-hidden="true">›</span></button>`;
 const f1 = (v) => (v == null ? '–' : (Math.round(v * 10) / 10).toLocaleString('nb-NO'));
 export function cmpView(place, placeName) {
   if (!CMP.open) return '';
   const D = CMP.d[place];
   let body = '';
-  if (CMP.busy && !D) body = '<span class="vx-sm">Henter Pent-data …</span>';
+  if (CMP.busy && !D) body = '<span class="vx-sm">Henter Storm-data …</span>';
   else if (CMP.err && !D) body = `<div class="vx-card vx-pad">${esc(CMP.err)}</div>`;
   else if (D) {
     const hrs = (D.hours ?? []).slice(0, 24), W = 300, H = 150, n = Math.max(1, hrs.length - 1);
@@ -409,16 +413,17 @@ export function cmpView(place, placeName) {
     const hx = hrs.map((h, i) => (i % 4 ? '' : `<text x="${X(i).toFixed(1)}" y="${H - 4}" fill="rgba(255,255,255,.75)" font-size="9" font-weight="700" text-anchor="middle">${String(new Date(h.t).getHours()).padStart(2, '0')}</text>`)).join('');
     const days = D.days ?? [], ag = D.agreement ?? (days.length ? Math.round(days.reduce((a, d) => a + (d.agree ?? 0), 0) / days.length) : null);
     const avgDiff = days.length ? days.reduce((a, d) => a + Math.abs(d.diffHi ?? 0), 0) / days.length : 0;
-    const agC = avgDiff < 1.5 ? '#6fdc8c' : avgDiff < 3 ? '#ffb347' : '#f26b5e', agT = avgDiff < 1.5 ? 'Yr og Pent er enige' : avgDiff < 3 ? 'Litt uenige' : 'Uenige denne uken';
+    const agC = avgDiff < 1.5 ? '#6fdc8c' : avgDiff < 3 ? '#ffb347' : '#f26b5e', agT = avgDiff < 1.5 ? 'Yr og Storm er enige' : avgDiff < 3 ? 'Litt uenige' : 'Uenige denne uken';
     body = `<div class="vx-card p17-agree"><span style="background:${agC}"></span><div class="p17-rt"><b>${agT}${ag != null ? ` · ${ag} %` : ''}</b><small>Snitt avvik i makstemperatur: ${f1(avgDiff)}° over ${days.length} dager</small></div></div>
-      <div class="vx-card vx-pad"><div class="p17-leg"><span><i style="background:#0a6ac2"></i>Yr</span><span><i style="background:#ff8a3d"></i>Pent (StormGeo-modell)</span></div>
+      <div class="vx-card vx-pad"><div class="p17-leg"><span>${brandImg(YR_LOGO, 16)}<i style="background:#5aa9ff"></i>Yr</span><span>${brandImg(STORM_LOGO, 16)}<i style="background:#ff8a3d"></i>Storm</span></div>
         <svg viewBox="0 0 ${W} ${H}" class="p17-cmpc" aria-label="Temperatur og nedbør neste 24 timer">${bars}<path d="${ln('yr')}" fill="none" stroke="#5aa9ff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><path d="${ln('ecmwf')}" fill="none" stroke="#ff8a3d" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="5 4"/>${hx}</svg>
-        <span class="vx-sm">Søyler viser nedbør per time. Yr til venstre, Pent til høyre.</span></div>
-      <div class="vx-card p17-cmpt"><div class="p17-cr h"><span></span><span>YR</span><span>PENT</span><span>AVVIK</span></div>${days.slice(0, 7).map((d, i) => `<div class="p17-cr"><span>${i === 0 ? 'I dag' : esc(new Date(d.date + 'T12:00').toLocaleDateString('nb-NO', { weekday: 'short' }))}</span><span>${f1(d.yr?.lo)}° / <b>${f1(d.yr?.hi)}°</b><small>${f1(d.yr?.mm)} mm</small></span><span>${f1(d.ecmwf?.lo)}° / <b>${f1(d.ecmwf?.hi)}°</b><small>${f1(d.ecmwf?.mm)} mm</small></span><span class="${Math.abs(d.diffHi ?? 0) >= 3 ? 'bad' : ''}">${d.diffHi != null ? `${d.diffHi > 0 ? '+' : ''}${f1(d.diffHi)}°` : '–'}</span></div>`).join('')}</div>
-      <a class="vx-yr" href="https://www.pent.no/" target="_blank" rel="noopener">Åpne pent.no ↗</a>
-      <span class="vx-sm" style="line-height:1.45">Yr er MET Norway (api.met.no). Pent (StormGeo) har ikke et åpent API, så Pent-kolonnen viser ECMWF-modellen fra Open-Meteo, som er nærmeste åpne kilde. Avvik er forskjellen i makstemperatur.</span>`;
+        <span class="vx-sm">Søyler viser nedbør per time. Yr til venstre, Storm til høyre.</span></div>
+      <div class="vx-card p17-cmpt"><div class="p17-cr h"><span></span><span class="p30-th">${brandImg(YR_LOGO, 18)}YR</span><span class="p30-th">${brandImg(STORM_LOGO, 18)}STORM</span><span>AVVIK</span></div>${days.slice(0, 7).map((d, i) => `<div class="p17-cr"><span>${i === 0 ? 'I dag' : esc(new Date(d.date + 'T12:00').toLocaleDateString('nb-NO', { weekday: 'short' }))}</span><span>${f1(d.yr?.lo)}° / <b>${f1(d.yr?.hi)}°</b><small>${f1(d.yr?.mm)} mm</small></span><span>${f1(d.ecmwf?.lo)}° / <b>${f1(d.ecmwf?.hi)}°</b><small>${f1(d.ecmwf?.mm)} mm</small></span><span class="${Math.abs(d.diffHi ?? 0) >= 3 ? 'bad' : ''}">${d.diffHi != null ? `${d.diffHi > 0 ? '+' : ''}${f1(d.diffHi)}°` : '–'}</span></div>`).join('')}</div>
+      <a class="vx-yr" href="https://www.storm.no/" target="_blank" rel="noopener">Åpne storm.no ↗</a>
+      <span class="vx-sm" style="line-height:1.45">Yr er MET Norway (api.met.no). Storm (StormGeo) har ikke et åpent API, så Storm-kolonnen viser ECMWF-modellen fra Open-Meteo, som er nærmeste åpne kilde. Avvik er forskjellen i makstemperatur.</span>`;
   }
-  return `<div class="p17-cmp" role="dialog" aria-label="Yr mot Pent"><div class="p17-cmpin"><div class="pp-row" style="align-items:center"><div class="p17-rt"><b class="pp-serif" style="font-size:26px;color:#fff">Yr mot Pent</b><small style="color:rgba(255,255,255,.75)">${esc(placeName ?? '')}</small></div><button class="pp-btn sm ink p17-done" data-p17="cmpx">Ferdig</button></div>${body}</div></div>`;
+  // Fullskjerm (ikke ark): #17191e helt ut, innhold maks 760 px, topp = safe area + 48 px, ingen logoer i headeren.
+  return `<div class="p17-cmp p30-cmpfs" role="dialog" aria-label="Yr mot Storm"><div class="p17-cmpin"><div class="p30-cmph"><div class="p17-rt"><b class="p30-cmpt">Yr mot Storm</b><small>${esc(placeName ?? '')}</small></div><button type="button" class="p30-sb p30-pri" data-p17="cmpx">Ferdig</button></div>${body}</div></div>`;
 }
 
 /* ---------- Skanneknappen: trykk = kamera, hold inne = valg (Kvittering, Oppskrift, Bilder, Fil) ---------- */

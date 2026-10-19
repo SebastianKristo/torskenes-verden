@@ -85,7 +85,7 @@ export const stackInfo = () => ST.stack.map((e) => ({ vk: e.vk, y: e.y, hash: e.
 // Fingeren starter innenfor 24 px fra venstre kant. Siden følger fingeren 1:1 med skygge; forrige side ligger bak,
 // forskjøvet −30 % og med 10 % slør, og glir til 0 i takt. Slipp etter 50 % av bredden eller over 500 px/s fullfører
 // (0,25 s ease-out), ellers fjærer siden tilbake. Toppbildet og fanelinjen følger siden de hører til.
-const EDGE = 24, SW = { g: null, up: 0, done: false };
+const EDGE = 28, SW = { g: null, up: 0, done: false };
 export const swGuard = () => Date.now() - SW.up < 400;
 export const swOn = () => !!SW.g?.on;
 const rootPage = () => {
@@ -124,8 +124,9 @@ export function swMove(e, cancelOthers) {
   const t = e.timeStamp || performance.now(), dt = Math.max(1, t - g.lt);
   g.v = g.v * 0.4 + (((e.clientX - g.lx) / dt) * 1000) * 0.6; g.lx = e.clientX; g.lt = t; g.x = x;
   paint(g, x, p);
-  if (!g.armed && x >= W * 0.5) { g.armed = true; haptic('tick'); }
-  else if (g.armed && x < W * 0.5) g.armed = false;
+  const thr = Math.min(110, W * 0.28); // prompt 30: terskel min(110 px, 28 %)
+  if (!g.armed && x >= thr) { g.armed = true; haptic('tick'); }
+  else if (g.armed && x < thr) g.armed = false;
   if (e.cancelable) e.preventDefault();
   return true;
 }
@@ -159,7 +160,7 @@ export function swEnd(e) {
   try { root().releasePointerCapture(e.pointerId); } catch {}
   const W = innerWidth, x = g.x ?? 0;
   if ((e.timeStamp || performance.now()) - g.lt > 90) g.v = 0; // fingeren sto stille før slipp
-  const go = e.type !== 'pointercancel' && g.v > -200 && (x > W * 0.5 || g.v > 500);
+  const go = e.type !== 'pointercancel' && g.v > -200 && (x > Math.min(110, W * 0.28) || g.v > 500);
   const u = under(), cur = g.cur;
   cur.classList.add('p23-anim'); u.classList.add('p23-anim');
   cur.style.transform = go ? `translate3d(${W}px,0,0)` : 'translate3d(0,0,0)';
@@ -172,7 +173,12 @@ export function swEnd(e) {
     const ent = g.entry, here = location.hash;
     // Det som vises bak er målet: ligger det på en annen rute, går vi dit; ellers gjør tilbakeknappen jobben.
     if (ent && ent.hash && ent.hash !== here) location.hash = ent.hash;
-    else { SW.up = 0; g.to.click(); }
+    else {
+      SW.up = 0;
+      // Prompt 30: ble siden tegnet på nytt under sveipet (data kom inn), er knappen byttet ut – bruk den som står der nå.
+      const to = g.to.isConnected ? g.to : root().querySelector('.pp-hero .pp-back, .m-scroll .gback, .m-scroll .back, .m-scroll .gtop, .m-scroll .atop, [data-mact="txback"], [data-mact="pdback"], [data-swipeback]');
+      to?.click();
+    }
     // Ble det ingen ny visning (f.eks. knappen gjorde ingenting), ryddes siden tilbake.
     setTimeout(() => { if (SW.done && SW.done.cur === cur) { SW.done = false; restore(cur, g.y); } }, 700);
   }, 250);

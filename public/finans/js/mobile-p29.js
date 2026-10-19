@@ -219,6 +219,12 @@ function bkPoll() {
     if (m.screen === 'set' && String(m.sub ?? '').startsWith('sysbk')) draw();
   }, 1500);
 }
+/** Prompt 30: felles SMB-veiviser (/assets/js/smb-wizard.js). Lagrer til systembackupen og/eller FinansHub-backupen. */
+export async function openSmb(use, onDone = null) {
+  haptic('tap');
+  const { openSmbWizard } = await import('/assets/js/smb-wizard.js');
+  openSmbWizard({ use, encrypted: !!BK.s?.encrypt, onDone: async () => { if (BK.s) { BK.st = 'idle'; await bkLoad(); } if (onDone) await onDone(); draw(); } });
+}
 async function bkRun() {
   if (BK.run) return;
   BK.run = { pct: 0 }; haptic('tap'); draw();
@@ -234,7 +240,7 @@ async function bkEncrypt(on) {
 }
 const tg = (k, label, sub, on, ic) => `<button class="opt-row p17-row p29-tg" data-p29="bktog" data-k="${k}" role="switch" aria-checked="${!!on}">${ic ? `<span class="set-ic fill p29-bic">${svg(ic, 16)}</span>` : ''}<span class="m-grow p17-rt"><b>${esc(label)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="sw" aria-hidden="true" aria-checked="${!!on}"></span></button>`;
 const rw = (label, sub, val, act, ic, cls = '', extra = '') => `<${act ? `button class="opt-row p17-row ${cls}" data-p29="${act}" ${extra}` : `div class="opt-row p17-row ${cls}"`}>${ic ? `<span class="set-ic fill p29-bic">${svg(ic, 16)}</span>` : ''}<span class="m-grow p17-rt"><b>${esc(label)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>${val ? `<span class="sval p29-bv ${cls}">${val}</span>` : ''}</${act ? 'button' : 'div'}>`;
-const IC = { bk: 'M12 3a9 9 0 1 1-8.5 6M3 4v5h5M12 8v4l3 2', lock: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3', cloud: 'M7 18h10a4 4 0 0 0 .6-7.96A6 6 0 0 0 6.1 9.2 4.5 4.5 0 0 0 7 18z', disk: 'M4 6h16v5H4zM4 13h16v5H4zM8 8.5h.01M8 15.5h.01', bell: 'M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0' };
+const IC = { bk: 'M12 3a9 9 0 1 1-8.5 6M3 4v5h5M12 8v4l3 2', lock: 'M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3', cloud: 'M7 18h10a4 4 0 0 0 .6-7.96A6 6 0 0 0 6.1 9.2 4.5 4.5 0 0 0 7 18z', disk: 'M4 6h16v5H4zM4 13h16v5H4zM8 8.5h.01M8 15.5h.01', bell: 'M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0', nas: 'M5 4h14v16H5zM8 8h8M8 12h8M9 16.5h.01M12 16.5h.01' };
 
 export function backupPage() {
   if (!isAdmin()) return '<div class="pp-card p29-note"><span class="pp-mut">Backup av hele systemet settes opp av administrator.</span></div>';
@@ -254,7 +260,13 @@ export function backupPage() {
   const what = `<div class="p29-seg" role="radiogroup" aria-label="Omfang">${SCOPE.map(([k, n]) => `<button data-p29="bkscope" data-k="${k}" role="radio" aria-checked="${(s.scope ?? 'all') === k}">${n}</button>`).join('')}</div>`;
   const modRows = MODS.map(([k, n, sub]) => { const on = s.scope === 'finans' ? k === 'finans' : custom ? mods.has(k) : true; return `<button class="opt-row p17-row p29-mod" data-p29="bkmod" data-k="${k}" role="checkbox" aria-checked="${on}"${custom ? '' : ' aria-disabled="true"'}><span class="p29-cb${on ? ' on' : ''}">${on ? '✓' : ''}</span><span class="m-grow p17-rt"><b>${esc(n)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span></button>`; });
   const gdNo = cloud.provider === 'gdrive' && (cloud.providers?.find((p) => p.id === 'gdrive')?.supported === false || cloud.supported === false);
+  const sm = s.target?.smb;
+  const smbRows = !sm ? [] : !sm.share ? [rw('SMB / nettverksdisk', 'Kopier hver backup til en NAS på hjemmenettet', '<span class="p29-lab">Sett opp ›</span>', 'bksmb', IC.nas)]
+    : [tg('smb', 'Kopi til nettverksdisk', `${sm.label}${sm.lastError ? ` · feilet: ${sm.lastError}` : sm.lastUpload ? ` · sist ${when(sm.lastUpload)}` : ''}`, !!sm.enabled, IC.nas),
+      rw('Sett opp nettverksdisk', 'Bytt server, bruker eller mappe', '<span class="p29-lab">Veiviser ›</span>', 'bksmb'),
+      ...(sm.enabled && !s.encrypt ? ['<div class="opt-row p17-row p29-smbw"><span class="m-grow pp-mut">Kopieres ukryptert. Greit på eget hjemmenett, men «Krypter backup» anbefales.</span></div>'] : [])];
   const where = [rw('Lagres på', `Homelab-disk · ${s.target?.path ?? '/srv/backup'}`, '<span class="pp-mut">Lokal</span>', null, IC.disk),
+    ...smbRows,
     tg('cloud', 'Kopi til sky', `${cloud.provider === 'gdrive' ? 'Google Drive' : 'Backblaze B2'} · kryptert før opplasting${cloud.lastError ? ` · feilet: ${cloud.lastError}` : cloud.lastUpload ? ` · sist ${when(cloud.lastUpload)}` : ''}`, !!cloud.enabled, IC.cloud),
     ...(cloud.enabled || BK.cloudOpen ? [`<div class="opt-row p17-row col p29-cl"><div class="p29-seg sm">${[['b2', 'Backblaze B2'], ['gdrive', 'Google Drive']].map(([k, n]) => `<button data-p29="bkprov" data-k="${k}" aria-checked="${(cloud.provider ?? 'b2') === k}" role="radio">${n}</button>`).join('')}</div>${gdNo ? '<span class="pp-mut">Google Drive: Kommer. Koble Google på nytt med Drive-tilgang når det støttes.</span>' : (cloud.provider ?? 'b2') === 'b2' ? `${[['bucket', 'Bucket', 'mitt-homelab'], ['endpoint', 'Endepunkt', 's3.eu-central-003.backblazeb2.com'], ['keyId', 'Key ID', cloud.keySet ? '•••• lagret' : ''], ['appKey', 'Application key', cloud.keySet ? '•••• lagret' : '']].map(([k, n, ph]) => `<label class="p29-in"><span>${n}</span><input data-p29in="${k}" type="${k === 'appKey' ? 'password' : 'text'}" value="${esc(BK.f[k] ?? (k === 'bucket' || k === 'endpoint' ? cloud[k] ?? '' : ''))}" placeholder="${esc(ph)}" autocomplete="off" autocapitalize="off"></label>`).join('')}<button class="pp-btn sm" data-p29="bkcloud">Lagre sky-oppsett</button>` : ''}</div>`] : []),
     tg('encrypt', 'Krypter backup', s.keySet ? 'AES-256 · nøkkel lagres hos deg' : 'AES-256 · gjenopprettingsnøkkel vises én gang', !!s.encrypt, IC.lock),
@@ -332,11 +344,13 @@ export async function bind29(e, t) {
     case 'show': { const T = QJ.toast; QJ.toast = null; if (T?.date) KAL.kalShowDay(T.date); else draw(); return true; }
     case 'bkreload': BK.st = 'idle'; draw(); return true;
     case 'bkrun': await bkRun(); return true;
+    case 'bksmb': openSmb(['system']); return true;
     case 'bktog': {
       const k = x.dataset.k, s = BK.s ?? {};
       if (k === 'auto') return bkSave({ auto: s.auto === false }), true;
       if (k === 'notifyFail') return bkSave({ notifyFail: s.notifyFail === false }), true;
       if (k === 'encrypt') { await bkEncrypt(!s.encrypt); return true; }
+      if (k === 'smb') { haptic('tap'); try { BK.s = (await hlApi('/backup/settings', { method: 'PUT', json: { target: { smb: { enabled: !s.target?.smb?.enabled } } } })) ?? BK.s; } catch (err) { flash(err.message); } draw(); return true; }
       if (k === 'cloud') {
         const on = !s.cloud?.enabled;
         if (on && !s.encrypt) { flash('Slå på «Krypter backup» først – ingenting sendes ukryptert til sky.'); return true; }

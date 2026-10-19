@@ -6,6 +6,7 @@
 import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
+import { YR_LOGO, STORM_LOGO, brandImg } from './mobile-p17.js';
 import { dragStart, dragging } from './mobile-p21.js';
 
 export const WX2 = { map: false, layer: 'rain', pl: false, q: '', res: null, busy: false, err: '', ms: null, msD: 0, sw: null, open: null, lp: false };
@@ -38,7 +39,7 @@ export function normCmp(r) {
   const ag = ['good', 'mid', 'bad'].includes(r.agreement) ? r.agreement : avg < 1.5 ? 'good' : avg < 3 ? 'mid' : 'bad';
   return { days, hours, agreement: ag, avgDiff: +avg, n: ds.length };
 }
-const AG = { good: ['#6fdc8c', () => 'Yr og Pent er enige'], mid: ['#ffb347', (a) => `Litt uenige · ${f1(a)}° i snitt`], bad: ['#f26b5e', (a) => `Uenige · ${f1(a)}° i snitt`] };
+const AG = { good: ['#6fdc8c', () => 'Yr og Storm er enige'], mid: ['#ffb347', (a) => `Litt uenige · ${f1(a)}° i snitt`], bad: ['#f26b5e', (a) => `Uenige · ${f1(a)}° i snitt`] };
 /** Pent-temperatur for en time (oransje under Yr i timeraden). */
 export function pentAt(C, t) {
   if (!C) return null;
@@ -46,8 +47,8 @@ export function pentAt(C, t) {
   return h?.pent ?? null;
 }
 export function cmpCard(C, D, { IC, ICC, kindOf, busy, err }) {
-  const head = (c, t) => `<div class="w22-ch"><span class="w22-yp"><span style="background:#00b9f1">Yr</span><span style="background:#ff8a3d">P</span></span><span class="m-grow" style="min-width:0"><b>Yr og Pent</b><span class="w22-ag"><i style="background:${c}"></i>${esc(t)}</span></span></div>`;
-  if (!C) return `<div class="vx-card w22-cmp">${head('#9aa3ae', err ? 'Pent svarte ikke' : 'Henter …')}${busy ? '<span class="w22-busy">Henter Pent …</span>' : ''}<button class="w22-more" data-p17="cmp"><span>Time for time og hele uka</span><span style="opacity:.7">›</span></button></div>`;
+  const head = (c, t) => `<div class="w22-ch"><span class="w22-yp p30-logos">${brandImg(YR_LOGO, 30)}${brandImg(STORM_LOGO, 30)}</span><span class="m-grow" style="min-width:0"><b>Yr og Storm</b><span class="w22-ag"><i style="background:${c}"></i>${esc(t)}</span></span></div>`;
+  if (!C) return `<div class="vx-card w22-cmp p30-cmpcard" data-p17="cmp" role="button" tabindex="0" aria-label="Åpne Yr mot Storm">${head('#9aa3ae', err ? 'Storm svarte ikke' : 'Henter …')}${busy ? '<span class="w22-busy">Henter Storm …</span>' : ''}<span class="w22-more"><span>Time for time og hele uka</span><span style="opacity:.7">›</span></span></div>`;
   const [c, t] = AG[C.agreement] ?? AG.good, mm = (v) => (v == null ? '–' : `${f1(v)} mm`), r = (v) => (v == null ? '–' : `${Math.round(v)}°`);
   const yCode = (date) => (D.days ?? []).find((d) => d.date === date)?.code;
   const ic = (code) => { const k = code == null ? 'cloudy' : kindOf(code); return ico(IC[k] ?? IC.cloudy, 22, ICC[k] ?? '#fff'); };
@@ -59,23 +60,23 @@ export function cmpCard(C, D, { IC, ICC, kindOf, busy, err }) {
       <span class="w22-cc">${ic(d.pent?.code ?? d.yr?.code ?? yCode(d.date))}<span><b>${r(d.pent?.max)} / ${r(d.pent?.min)}</b><small>${mm(d.pent?.precip)}</small></span></span>
       <span class="w22-df" style="background:${bg}">${df == null ? '–' : `${df > 0 ? '+' : ''}${df}°`}</span></div>`;
   }).join('');
-  return `<div class="vx-card w22-cmp">${head(c, t(C.avgDiff))}<div class="w22-cr h"><span></span><span style="color:#7fd6f5">YR</span><span style="color:#ffb27a">PENT</span><span style="text-align:right">AVVIK</span></div>${rows}
-    <button class="w22-more" data-p17="cmp"><span>Time for time og hele uka</span><span style="opacity:.7">›</span></button></div>`;
+  return `<div class="vx-card w22-cmp p30-cmpcard" data-p17="cmp" role="button" tabindex="0" aria-label="Åpne Yr mot Storm">${head(c, t(C.avgDiff))}<div class="w22-cr h"><span></span><span style="color:#7fd6f5">YR</span><span style="color:#ffb27a">STORM</span><span style="text-align:right">AVVIK</span></div>${rows}
+    <span class="w22-more"><span>Time for time og hele uka</span><span style="opacity:.7">›</span></span></div>`;
 }
 
 /* ---------- Knappene nederst og værkartet ---------- */
 
 const MAPIC = 'M9 4L3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5zM9 4v13.5M15 6.5V20';
-// Prompt 28: kart- og steder-ikonet i en frostet bunnlinje helt nederst (full bredde, safe area), ikke flytende sirkler.
-export const bottomBtns = () => `<nav class="w22-bot w28-bot" aria-label="Vær"><button class="w28-bb" data-wx2="map" aria-label="Værkart" title="Værkart"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${MAPIC}"/></svg></button><span class="m-grow"></span>
-  <button class="w28-bb" data-wx2="pl" aria-label="Steder" title="Steder og søk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></nav>`;
+// Prompt 30 (claude-code-vaer-bunnknapper.md): to separate runde glassknapper nær bunnen (6 px + safe area), ingen linje.
+export const bottomBtns = () => `<nav class="w22-bot w30-bot" aria-label="Vær"><button class="w30-bb" data-wx2="map" aria-label="Værkart" title="Værkart"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${MAPIC}"/></svg></button><span class="m-grow"></span>
+  <button class="w30-bb" data-wx2="pl" aria-label="Steder" title="Steder og søk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></nav>`;
 const LAYERS = [['rain', 'Nedbør'], ['temp', 'Temperatur'], ['wind', 'Vind'], ['clouds', 'Skyer']];
 export function mapView(P, city) {
   if (!WX2.map) return '';
   const la = (+P?.lat || 59.91).toFixed(3), lo = (+P?.lon || 10.75).toFixed(3);
   const src = `https://embed.windy.com/embed2.html?lat=${la}&lon=${lo}&detailLat=${la}&detailLon=${lo}&zoom=7&level=surface&overlay=${WX2.layer}&product=ecmwf&menu=&message=true&marker=true&calendar=now&type=map&location=coordinates&metricWind=m%2Fs&metricTemp=%C2%B0C`;
   return `<div class="w22-map" role="dialog" aria-label="Værkart"><iframe src="${esc(src)}" title="Værkart" allowfullscreen></iframe>
-    <div class="w22-mtop"><button data-wx2="mapx">Ferdig</button><b>${esc(city ?? '')}</b><span></span></div>
+    <div class="w22-mtop"><button type="button" class="p30-sb w30-mapx" data-wx2="mapx">Ferdig</button><b>${esc(city ?? '')}</b><span></span></div>
     <div class="w22-mlay"><div>${LAYERS.map(([k, n]) => `<button data-wx2="layer" data-k="${k}" aria-pressed="${WX2.layer === k}">${n}</button>`).join('')}</div></div></div>`;
 }
 
@@ -93,7 +94,7 @@ export function placesSheet(WX, plist) {
       <div class="w22-plin" data-wx2="sel" data-k="${esc(id)}" style="transform:translateX(${dx}px);transition:${sw != null ? 'none' : 'transform .2s ease-out'}"><span class="m-grow" style="min-width:0"><b>${esc(n)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span><span class="w22-hdl" aria-hidden="true">≡</span></div></div>`;
   }).join('');
   return `<div class="vx-shbg w22-bg" data-wx2="plx"></div><div class="vx-sh w22-sh" role="dialog" aria-label="Steder">
-    <div class="w22-shh"><b>Steder</b><button class="w22-done" data-wx2="plx">Ferdig</button></div>
+    <div class="w22-shh"><b>Steder</b><button type="button" class="w22-done p30-sb p30-pri" data-wx2="plx">Ferdig</button></div>
     <form class="w22-q" data-wx2form><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9aa3ae" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="w22-q" data-wx2q value="${esc(WX2.q)}" placeholder="Søk etter by eller sted" autocomplete="off" enterkeyhint="search" aria-label="Søk etter sted"></form>
     ${WX2.busy ? '<span class="w22-m">Søker …</span>' : ''}${WX2.err ? `<span class="w22-m">${esc(WX2.err)}</span>` : ''}${resHtml}${WX2.res && !res.length && !WX2.busy && !WX2.err ? `<span class="w22-m">Fant ingen steder som heter «${esc(WX2.q.trim())}»</span>` : ''}
     <span class="w22-lab">MINE STEDER</span><div class="w22-pls">${rows}</div>

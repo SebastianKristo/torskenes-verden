@@ -233,7 +233,7 @@ export function feSheet() {
   const adds = Object.keys(FT).filter((k) => !cur.includes(k));
   const pv = [...cur.map((k) => finTab(k, FT[k])), ['fmer', 'Mer', '⋯']].map(([r, n, ic]) => [r, n, ic]);
   return `<div class="sheet-bg" data-p26="fex"></div><div class="pp-sheet p26-fe" role="dialog" aria-label="Rediger fanelinjen"><span class="pp-grab"></span>
-    <div class="p26-feh"><div><span class="pp-lab">FINANS · FANELINJE</span><b class="pp-serif">Rediger fanelinjen</b></div><button class="pp-btn ink sm" data-p26="fex">Ferdig</button></div>
+    <div class="p26-feh"><div><span class="pp-lab">FINANS · FANELINJE</span><b class="pp-serif">Rediger fanelinjen</b></div><button type="button" class="p30-sb p30-pri" data-p26="fex">Ferdig</button></div>
     <span class="pp-mut" style="font-size:12.5px">${cur.length} av 5 faner · Mer ligger alltid sist</span>
     <div class="p26-frs">${rows}</div>
     ${P25.styleSection(pv)}

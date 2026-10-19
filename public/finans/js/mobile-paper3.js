@@ -1,12 +1,13 @@
 // Papir (prompt 15): tilpassbare sider (hold inne → vugging, ▲ ▼ og −), fanelinja (fjerde fane, flytende skann og Søk),
 // Finans-fanelinja og Mer-rutenettet, Finans → Søk med ✦ AI, transaksjonsdetaljer med original kvittering,
 // kvitteringsbanneret, Finn «På vei» og arket «Ny sending» i Sporing. Valgene lagres per bruker i /api/me/layout.
+import * as P30B from './mobile-p30b.js';
 import { S, api, esc, n0, ini, hlApi, dd, cats, uploadReceipt } from './core.js';
 import { m, draw, flash, domOk } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { TR, trkLoad, carOf, normNo, detectLocal } from './mobile-track.js';
 import { hlData } from './mobile-hl.js';
-import { FCOL, FO, fmSort, fmBar, ppTi } from './mobile-p20.js';
+import { FCOL, FO, fmSort, fmBar, ppTi, FM_MINUS, FM_PLUS, FM_LOCK } from './mobile-p20.js';
 import { dragStart } from './mobile-p21.js';
 import * as P24 from './mobile-p24.js';
 import * as P25 from './mobile-p25.js';
@@ -231,8 +232,13 @@ export function finMerGrid() {
   ].filter(([k]) => !inTabs.includes(k));
   // Prompt 20: egen ikonfarge per flis, og rekkefølgen brukeren har valgt (hold inne for å flytte). Linja med
   // Ferdig/Tilbakestill ligger under flisene, så de ikke flytter seg under fingeren når redigeringen starter.
-  return `${FO.edit ? fmBar() : ''}<div class="pp-fmgrid${FO.edit ? ' edit' : ''}">${fmSort(T).map(([k, n, v, badge]) => `<a class="pp-fmt" href="#/${k === 'set' ? 'set' : k}" data-fmk="${k}" style="--fc:${FCOL[k] ?? 'var(--pp-lab)'}"><span class="pp-fmi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="${IC[k]}"/></svg></span>
-    ${badge ? `<span class="pp-fmb">${badge}</span>` : ''}<span class="pp-fmn"><b class="pp-serif">${esc(n)}</b><span class="${/▲/.test(v) ? 'pp-pos' : ''}">${esc(v)}</span></span></a>`).join('')}</div>${FO.edit ? '' : '<span class="pp-edhint">Hold inne en flis for å flytte den</span>'}`;
+  // Prompt 30: samme WiggleEditor som Hjem: minus-merke (skjul), lås på Innstillinger, + viser skjulte under rutenettet.
+  const hidK = T.filter(([k]) => k !== 'set' && FO.hid.includes(k)), visT = T.filter((t) => !hidK.includes(t));
+  const tile = ([k, n, v, badge], tag, extra) => `${tag === 'a' ? `<a class="pp-fmt" href="#/${k === 'set' ? 'set' : k}" data-fmk="${k}"` : `<button type="button" class="pp-fmt p30-fmh" data-p20="fmshow" data-k="${k}" aria-label="Vis ${esc(n)}"`} style="--fc:${FCOL[k] ?? 'var(--pp-lab)'}">${extra}<span class="pp-fmi"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="${IC[k]}"/></svg></span>
+    ${badge ? `<span class="pp-fmb">${badge}</span>` : ''}<span class="pp-fmn"><b class="pp-serif">${esc(n)}</b><span class="${/▲/.test(v) ? 'pp-pos' : ''}">${esc(v)}</span></span></${tag === 'a' ? 'a' : 'button'}>`;
+  const mark = (k, n) => (!FO.edit ? '' : k === 'set' ? `<span class="p30-wb lock" title="Kan ikke skjules" aria-label="Innstillinger kan ikke skjules">${FM_LOCK}</span>` : `<span class="p30-wb" role="button" tabindex="0" data-p20="fmhide" data-k="${k}" aria-label="Skjul ${esc(n)}">${FM_MINUS}</span>`);
+  const hidSec = FO.edit && FO.add && hidK.length ? `<div class="p30-fmhh"><span class="p28-mhl">SKJULT · TRYKK + FOR Å VISE</span><button type="button" class="p30-reset" data-p20="fmreset">Tilbakestill rekkefølge</button></div><div class="pp-fmgrid p30-fmhid">${hidK.map((t) => tile(t, 'b', `<span class="p30-wb">${FM_PLUS}</span>`)).join('')}</div>` : '';
+  return `${FO.edit ? fmBar(hidK.length) : ''}<div class="pp-fmgrid${FO.edit ? ' edit' : ''}">${fmSort(visT).map((t) => tile(t, 'a', mark(t[0], t[1]))).join('')}</div>${hidSec}${FO.edit ? (!hidK.length ? '<div class="p30-fmhh end"><button type="button" class="p30-reset" data-p20="fmreset">Tilbakestill rekkefølge</button></div>' : '') : '<span class="pp-edhint">Hold inne en flis for å flytte eller skjule den</span>'}`;
 }
 
 /* ---------- Finans → Søk med ✦ AI ---------- */
@@ -286,16 +292,16 @@ export function paperSearch() {
     ${!FS.busy && aiTxt ? `<div class="pp-card pp-aians"><span class="pp-lab">✦ AI-SVAR</span><span class="pp-serif">${esc(aiTxt)}</span><span class="pp-mut">${esc(src)}</span></div>` : ''}
     ${!FS.busy && hits.length ? `<div class="pp-sec"><span>TREFF · ${hits.length}</span><span>Netto ${sum < 0 ? '−' : '+'}${n0(sum)} kr</span></div>
       <div class="pp-rows">${hits.slice(0, 60).map((h) => { const id = h.txId ?? (h.type === 'tx' ? h.id : null), name = h.description ?? h.merchant ?? h.title ?? 'Treff';
-        return `<button class="pp-tx" ${id != null ? `data-tx="${esc(id)}"` : ''}>${ppTi({ ...h, merchant: name }, ini(name), h.color)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(name)}</b><span class="pp-mut m-ell">${esc([h.date ? dd(h.date) : '', h.reason || h.why || h.category || ''].filter(Boolean).join(' · '))}</span></span><span class="pp-serif ${h.amount > 0 ? 'pp-pos' : ''}">${h.amount != null ? `${h.amount < 0 ? '−' : '+'}${n0(h.amount)}` : ''}</span></button>`; }).join('')}</div>` : ''}
+        return `<button class="pp-tx" ${id != null ? `data-tx="${esc(id)}" data-hl="${esc(q)}"` : ''}>${ppTi({ ...h, merchant: name }, ini(name), h.color)}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(name)}</b><span class="pp-mut m-ell">${esc([h.date ? dd(h.date) : '', h.reason || h.why || h.category || ''].filter(Boolean).join(' · '))}</span></span><span class="pp-serif ${h.amount > 0 ? 'pp-pos' : ''}">${h.amount != null ? `${h.amount < 0 ? '−' : '+'}${n0(h.amount)}` : ''}</span></button>`; }).join('')}</div>` : ''}
     ${!FS.busy && r && !hits.length && !FS.ai ? '<div class="pp-mut" style="padding:16px 4px;font-size:14px">Ingen treff. Slå på ✦ AI for å søke i innholdet i kvitteringene.</div>' : ''}`;
 }
 
 /* ---------- Transaksjonsdetaljer med original kvittering ---------- */
 
 export const TX = { d: {}, err: {}, full: null, cat: false, bank: false, rule: true, busy: false };
-export async function txLoad(id, force = false) {
+export async function txLoad(id, force = false, hl = '') {
   if (id == null || (!force && TX.d[id])) return;
-  try { TX.d[id] = await api(`/transactions/${id}`); delete TX.err[id]; }
+  try { TX.d[id] = await api(`/transactions/${id}${hl ? `?hl=${encodeURIComponent(hl)}` : ''}`); delete TX.err[id]; } // prompt 30: ?hl= markerer treffet
   catch (e) {
     // Eldre server: bruk raden vi har og /original for kvittering og bankrad.
     const base = [...(S.tx?.items ?? []), ...(FX.recent ?? []), ...(S.summary?.recent ?? [])].find((t) => t.id === id) ?? null;
@@ -311,10 +317,12 @@ export function paperTx(id) {
   const name = t.merchant || t.description || 'Transaksjon', r = t.receipt, amt = Number(t.amount) || 0;
   const st = !r ? 'Mangler' : r.status === 'needs_review' ? 'Til gjennomgang' : 'Vedlagt';
   const dtxt = t.date ? new Date(t.date + 'T12:00').toLocaleDateString('nb-NO', { day: 'numeric', month: 'short', year: 'numeric' }).replace('.', '') : '';
-  const lines = (r?.lines ?? []).filter((l) => l && l.name);
+  // Prompt 30: linjene beholder sin opprinnelige indeks, så markeringen (receipt.highlight.lineIndex) treffer riktig linje.
+  const hl = P30B.hlInfo(id, t), hix = new Set(hl?.lineIndex ?? []);
+  const lines = (r?.lines ?? []).map((l, i) => (l ? { ...l, i } : null)).filter((l) => l && l.name);
   const pdf = /pdf/i.test(r?.mime ?? '') || /\.pdf($|\?)/i.test(r?.fileUrl ?? '');
   const slip = r ? `<button class="pp-slip" data-pptx="full" ${r.fileUrl ? '' : 'disabled'} aria-label="Åpne original kvittering"><span class="pp-slipn">${esc(name.toUpperCase())}</span><span class="pp-slipd">${esc(t.date ? `${dd(t.date)}.${t.date.slice(0, 4)}` : '')} · KVITTERING</span><i></i>
-      ${lines.length ? lines.map((l) => `<span class="pp-slipl"><span>${esc(l.name)}</span><span>${l.price != null ? kr2(Math.abs(l.price)) : ''}</span></span>`).join('') : `<span class="pp-slipl"><span>${r.fileUrl ? 'Trykk for å se originalen' : 'Varelinjene er ikke lest ennå'}</span><span></span></span>`}<i></i>
+      ${lines.length ? lines.map((l) => (hix.has(l.i) ? `<span class="pp-slipl p30-hl"${l.i === hl.lineIndex[0] ? ' data-p30hl="1"' : ''}><span>${P30B.markWord(l.name, hl.query, hl.matchedText)}</span><span>${l.price != null ? kr2(Math.abs(l.price)) : ''}</span></span>` : `<span class="pp-slipl"><span>${esc(l.name)}</span><span>${l.price != null ? kr2(Math.abs(l.price)) : ''}</span></span>`)).join('') : `<span class="pp-slipl"><span>${r.fileUrl ? 'Trykk for å se originalen' : 'Varelinjene er ikke lest ennå'}</span><span></span></span>`}<i></i>
       <span class="pp-slipl tot"><span>TOTAL</span><span>${kr2(r.total ?? Math.abs(amt))}</span></span>${r.fileUrl ? `<span class="pp-slipo">${pdf ? 'Åpne PDF ↗' : 'Trykk for originalbildet'}</span>` : ''}</button>`
     : `<div class="pp-card pp-col" style="gap:8px"><span class="pp-mut">Ingen kvittering er lagt ved denne transaksjonen.</span><div class="pp-two"><label class="pp-btn ink">Kamera<input class="m-file" type="file" accept="image/*" capture="environment" data-pptxfile></label><label class="pp-btn">Filer<input class="m-file" type="file" accept="application/pdf,image/*,.heic,.heif" data-pptxfile></label></div></div>`;
   const catList = cats(amt > 0 ? 'income' : 'expense');
@@ -326,11 +334,11 @@ export function paperTx(id) {
       <div class="pp-row"><div class="pp-sh">Bankutskrift</div><button class="pp-x" data-pptx="bankx" aria-label="Lukk">×</button></div>
       ${b ? `<div class="pp-card pp-tight">${[['Tekst', b.description], ['KID / melding', b.message], ['Beløp', b.amount != null ? `${kr2(b.amount)} kr` : null], ['Bokført', b.bookingDate ? dd(b.bookingDate) + '.' + String(b.bookingDate).slice(0, 4) : null], ['Rentedato', b.valueDate ? dd(b.valueDate) + '.' + String(b.valueDate).slice(0, 4) : null], ['Konto', b.account], ['Arkivreferanse', b.archiveReference]].filter(([, v]) => v != null && v !== '').map(([k, v]) => `<div class="pp-kv"><span class="pp-mut">${k}</span><span class="pp-mono" style="color:var(--pp-ink);font-size:13px">${esc(v)}</span></div>`).join('')}</div>`
         : '<div class="pp-mut">Ingen bankrad er lagret. Transaksjonen er lagt inn manuelt eller fra en kvittering.</div>'}</div>` : '';
-  const full = TX.full ? `<div class="pp-full" role="dialog" aria-label="Original kvittering"><button class="pp-pill pp-fullx" data-pptx="fullx">Lukk</button><div class="pp-fullsc">${pdf ? `<iframe src="${esc(TX.full)}" title="Kvittering"></iframe>` : `<img src="${esc(TX.full)}" alt="Original kvittering">`}</div></div>` : '';
+  const full = TX.full ? `<div class="pp-full" role="dialog" aria-label="Original kvittering"><button type="button" class="p30-sb pp-fullx" data-pptx="fullx">Lukk</button><div class="pp-fullsc">${pdf ? `<iframe src="${esc(TX.full)}" title="Kvittering"></iframe>` : `<img src="${esc(TX.full)}" alt="Original kvittering">`}</div></div>` : '';
   return `<div class="pp-card pp-txd"><div class="pp-row" style="align-items:center;justify-content:flex-start;gap:12px"><span class="pp-ti big" style="background:${esc(t.color ?? '#6b665c')}">${esc(ini(name))}</span><div style="min-width:0"><b class="pp-serif m-ell" style="display:block;font-size:22px">${esc(name)}</b><span class="pp-mut">${esc([t.category, dtxt, t.account].filter(Boolean).join(' · '))}</span></div></div>
       <span class="pp-serif pp-txamt ${amt > 0 ? 'pp-pos' : ''}">${amt < 0 ? '−' : '+'}${kr2(Math.abs(amt))} kr</span>${t.aiSummary || r?.aiSummary ? `<span class="pp-lab-c" style="font-size:13px">✦ ${esc(t.aiSummary || r.aiSummary)}</span>` : ''}</div>
     <div class="pp-sec"><span>ORIGINAL KVITTERING</span><span class="${st === 'Vedlagt' ? '' : 'pp-lab-c'}">${st}</span></div>
-    ${slip}
+    ${P30B.hlBanner(id, t)}${P30B.hlImage(id, t)}${slip}
     <div class="pp-two"><button class="pp-btn" data-pptx="cat">Endre kategori</button><button class="pp-btn" data-pptx="bank">Bankutskrift</button></div>
     ${cat}${bank}${full}`;
 }

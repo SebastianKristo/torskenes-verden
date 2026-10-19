@@ -2,6 +2,7 @@
 // fullskjerm uten fanelinje og FAB, profiler (Innstillinger → PROFIL), Boliger (toppbilde per bolig, domene-pille og
 // «Rediger bolig» med hold inne), søk og ✦ AI-søk i Innstillinger, alle integrasjoner via /api/integrations og
 // ikoner i Nyhetsleser som <img>. Endepunktene kommer fra serveren i samme prompt; mangler de (404), faller vi tilbake.
+import * as P30 from './mobile-p30.js';
 import { api, esc, n0, ini, hlApi } from './core.js';
 import { m, draw, flash, domOk } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
@@ -159,7 +160,7 @@ async function aiSearch() {
 }
 /** Toppen av Innstillinger i Papir: søk, ✦ AI og PROFIL. Ved søk vises bare treffene. */
 export function setTop(row, grp, rest) {
-  return `${searchBar()}${SS.q.trim() ? searchResults() : profGroup(row, grp) + rest}`;
+  return `${SS.q.trim() ? '' : P30.updBanner('set')}${searchBar()}${SS.q.trim() ? searchResults() : profGroup(row, grp) + rest}`; // prompt 30: oppdateringsbanner øverst
 }
 
 /* =====================================================================

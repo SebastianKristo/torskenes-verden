@@ -528,7 +528,8 @@ export async function kalBind(e, t) {
     case 'mini': if (!wide()) { K.mini = !K.mini; K.miniOff = 0; } break;
     case 'mprev': K.miniOff--; break;
     case 'mnext': K.miniOff++; break;
-    case 'mday': K.cur = x.dataset.k; K.mini = false; K.miniOff = 0; K.sel = null; break;
+    // Prompt 30 (claude-code-kalender-dag-klikk.md): i Dag, 3 dager og Uke beholdes visningen og den hopper til datoen; fra Måned eller Liste → Dag.
+    case 'mday': K.cur = x.dataset.k; K.mini = false; K.miniOff = 0; K.sel = null; navigator.vibrate?.(8); if (view() === 'maaned' || view() === 'liste') { setView('dag'); return true; } break;
     case 'dday': K.cur = x.dataset.k; K.sel = null; setView('dag'); return true;
     case 'wk': K.cur = x.dataset.k; K.sel = null; K.mini = false; K.miniOff = 0; setView('uke'); return true; // Prompt 29: ukenummer → Uke
     case 'cal': { const id = x.dataset.id; L.hidCal = { ...hidCal(), [id]: !hidCal()[id] }; keep(); saveFilters(); haptic('tab'); break; }

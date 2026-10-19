@@ -16,6 +16,7 @@ import { SB } from './mobile-subs.js';
 import { aksTitle } from './mobile-aks.js';
 import * as P23 from './mobile-p23.js';
 import * as P29 from './mobile-p29.js';
+import * as P30 from './mobile-p30.js';
 import * as P24 from './mobile-p24.js';
 import * as P25 from './mobile-p25.js';
 import * as P26 from './mobile-p26.js';
@@ -163,14 +164,13 @@ export function paperHero(scr) {
     : ['txback', 'back'].includes(pk) ? `<button class="pp-pill pp-back" data-mact="${pk}">‹ ${esc(pl)}</button>` : `<a class="pp-pill pp-back${pk === 'hl' || pk === startScr() ? ' to-home' : ''}" href="#/${pk}">‹ ${esc(pl)}</a>`;
   const failNote = home && P.fail[kind] ? '<button class="pp-pill pp-fail" data-pp="retry">Fikk ikke lastet bildet · trykk for å prøve igjen</button>' : '';
   // Bakgrunnsvelgeren ligger under Innstillinger → Bakgrunn. Profilbildet åpner Innstillinger → Profil.
-  // I Finans vises profilbildet og @brukernavn, ikke fullt navn.
-  const un = m.me?.username, fin = ctxOf(scr) === 'fin';
+  // Prompt 30: bare profilbildet (38 px) – ingen @brukernavn-pille i toppen (brukernavnet står under Innstillinger → Konto).
   // Prompt 29: «Planeter ▾» på Hjem og øverst i Innstillinger (claude-code-innst-bakgrunn.md), samme meny begge steder.
   const bgPill = home || (scr === 'set' && !m.sub);
   const own = heroBg(scr), bolK = scr === 'dir' && !m.sub ? P24.bolKicker() : null;
   return `<header class="pp-hero${home ? ' home' : ''}${bgPill && P.open ? ' p29-open' : ''}${own ? ' own' : ''}${!own && heroHint(kind) === 'light' ? ' hint-light' : ''}" style="${own ?? ''}">${own ? '' : bgOf(kind)}${scr === 'dir' ? P24.bolFade() : ''}
     <div class="pp-top">${backBtn}<span class="m-grow"></span>
-      ${bgPill ? `<button class="p29-bgp" data-pp="photo" aria-haspopup="menu" aria-expanded="${P.open}">${esc(BG_N[kind] ?? 'Nåværende')} ▾</button>` : ''}<a class="pp-av${avatarUrl() ? ' img' : ''}${fin && un ? ' chip' : ''}" href="#/set/profil" aria-label="Profil">${fin && un ? `<span class="pp-avi">${avInner()}</span><span class="pp-un">@${esc(un)}</span>` : avInner()}</a></div>
+      ${bgPill ? `<button class="p29-bgp" data-pp="photo" aria-haspopup="menu" aria-expanded="${P.open}">${esc(BG_N[kind] ?? 'Nåværende')} ▾</button>` : ''}<a class="pp-av${avatarUrl() ? ' img' : ''}" href="#/set/profil" aria-label="Profil">${avInner()}</a></div>
     ${failNote}${bgPill && P.open ? bgMenu(kind) : ''}
     <div class="pp-bottom"><div class="m-grow"><div class="pp-kick">${esc(bolK ?? kicker)}</div><h1 class="pp-title${home ? ' big' : ''}">${ttl}</h1></div>${scr === 'dir' ? P24.domPill() : ''}
       ${home && w ? `<a class="pp-temp" href="#/vaer" aria-label="Åpne værvisningen"><b>${w.temp != null ? Math.round(w.temp) + '°' : '–'}</b><span>${esc(w.text ?? '')}${w.updated ? ` · ${esc(new Date(w.updated).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }))}` : ''} ›</span></a>` : ''}</div>
@@ -325,7 +325,7 @@ export function paperHome() {
   // Hold inne et kort for å flytte eller skjule det (Søk, Pakker, Avganger, Snarveier, Siste nytt).
   // Prompt 24: Pakker vises alltid, også uten aktive pakker.
   const pkgCard = pkg || `<a class="pp-card pp-pkg p24-nopkg" href="#/spor"><span class="m-grow" style="min-width:0"><span class="pp-lab">PAKKER</span><b class="pp-serif m-ell" style="display:block">Ingen aktive pakker</b><span class="pp-mut m-ell">Legg til et sporingsnummer ›</span></span></a>`;
-  return `<div class="pp-home">${edBlocks('hl', {
+  return `<div class="pp-home">${P30.updBanner('home')}${edBlocks('hl', {
     h1: P29.searchCard(), // Prompt 29: søkemotor-valg (System-AI / Google / DuckDuckGo) og timer som gjenkjennes
     h2: pkgCard, h3: P27.ruterCard(ruter),
     h4: `<div class="pp-minis">${minis.map(([k, v, sub, c, href, fs]) => `<a class="pp-card pp-mini" href="${href}"><span class="pp-lab mut">${k}</span><b class="pp-serif m-ell" style="font-size:${fs}">${esc(v)}</b><span class="${c === 'lab' ? 'pp-lab-c' : `pp-${c}`}" style="font-size:11px">${esc(sub)}</span></a>`).join('')}</div>`,
@@ -418,7 +418,7 @@ export function newsView() {
   const lead = st.aiSummary && N?.digest?.text ? N.digest.text : items[0]?.title ?? '';
   const catName = (id) => cats.find(([k]) => k === id)?.[1] ?? id ?? '';
   return `<div class="pp-reader">
-    <div class="pp-rhead"><a class="pp-pill line" href="#/${m.sub === 'hl' ? 'hl' : 'mer'}" data-pp="newsback">‹ Tilbake</a><div class="m-grow"><div class="pp-lab">NYHETSLESER · ${feeds.length} KILDER${upd ? ` · OPPDATERT ${upd}` : ''}</div><div class="pp-serif pp-rtitle">Siste nytt</div></div>
+    <div class="pp-rhead"><a class="p30-sb p30-back" href="#/${m.sub === 'hl' ? 'hl' : 'mer'}" data-pp="newsback"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Tilbake</a><div class="m-grow"><div class="pp-lab">NYHETSLESER · ${feeds.length} KILDER${upd ? ` · OPPDATERT ${upd}` : ''}</div><div class="pp-serif pp-rtitle">Siste nytt</div></div>
       <button class="pp-gear" data-pp="newsset" aria-label="Kilder og AI"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM4 12h2M18 12h2M12 4v2M12 18v2M6.3 6.3l1.4 1.4M16.3 16.3l1.4 1.4M6.3 17.7l1.4-1.4M16.3 7.7l1.4-1.4"/></svg></button></div>
     ${P23.newsTabs(P, cats)}
     ${P.newsErr ? `<div class="pp-card pp-mut">${esc(P.newsErr)}</div>` : !N ? '<div class="m-spin"></div>' : `
@@ -430,7 +430,7 @@ export function newsView() {
 function newsSheet(feeds, st, cats) {
   const tog = (k, n, s, on) => `<button class="pp-tog" data-pp="newstog" data-k="${k}" role="switch" aria-checked="${on}"><span class="m-grow"><b>${n}</b><span class="pp-mut">${s}</span></span><span class="pp-sw${on ? ' on' : ''}"><i></i></span></button>`;
   return `<div class="sheet-bg" data-pp="newssetx"></div><div class="pp-sheet tall" role="dialog" aria-label="Kilder og AI">
-    <div class="pp-row"><div><div class="pp-lab">NYHETSLESER</div><div class="pp-sh">Kilder og AI</div></div><button class="pp-btn ink sm" data-pp="newssetx">Ferdig</button></div>
+    <div class="pp-row"><div><div class="pp-lab">NYHETSLESER</div><div class="pp-sh">Kilder og AI</div></div><button type="button" class="p30-sb p30-pri" data-pp="newssetx">Ferdig</button></div>
     <div class="pp-card pp-tight">${tog('aiSummary', '✦ AI-sammendrag', 'Lager en kort ingress over de viktigste sakene øverst.', st.aiSummary !== false)}${tog('aiCategorize', '✦ AI-kategorisering', 'Setter kategori per sak når kilden står på Auto.', st.aiCategorize !== false)}</div>
     ${P23.newsIconSection(P, cats)}
     <div class="pp-row"><span class="pp-lab">ADRESSER · ${feeds.length}</span><span class="pp-mut">Trykk på kategorien for å endre</span></div>

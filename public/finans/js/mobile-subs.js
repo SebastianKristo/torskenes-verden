@@ -157,10 +157,10 @@ function sheet() {
       ? `<b class="s28-st">${sh.slow ? 'Laster bildemodellen …' : `${sh.engine === 'gemini' ? 'Gemini' : 'Ollama'} leser skjermbildet …`}</b><span class="s28-od">${sh.slow ? 'Første gang tar det 30–60 sekunder.' : 'Finner tjeneste, plan, pris og trekkdato.'}</span><span class="s28-bar"><i></i></span>`
       : sh?.err ? errCardHtml(sh.err, { admin: (m.me?.role ?? 'admin') === 'admin', install: sh.inst }) : ''}</div></div>`;
   }
-  const back = mode ? '<button type="button" class="s28-lnk s28-back" data-sb="back28"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Tilbake</button>' : '';
+  const back = mode ? '<button type="button" class="p30-sb p30-back s28-back" data-sb="back28"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Tilbake</button>' : '';
   return `<div class="s28-scrim" data-sb="sheet" aria-hidden="true"></div><div class="s28-sh${paper() ? '' : ' s28-np'}${m.light ? ' s28-l' : ''}" role="dialog" aria-modal="true" aria-label="${title}">
     <span class="s28-grip" aria-hidden="true"></span>
-    <div class="s28-hd">${back}<h2>${title}</h2><button type="button" class="s28-lnk" data-sb="sheet">Lukk</button></div>
+    <div class="s28-hd">${back}<h2>${title}</h2><button type="button" class="p30-sb" data-sb="sheet">Lukk</button></div>
     <p class="s28-sub">${sub}</p>${body}</div>`;
 }
 

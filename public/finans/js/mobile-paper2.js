@@ -278,7 +278,7 @@ export function paperTrk() {
 export function paperTrkSheet() {
   if (!TT.set || m.screen !== 'spor') return '';
   return `<div class="sheet-bg" data-pptrk="setx"></div><div class="pp-sheet tall" role="dialog" aria-label="Varsler og kilder"><span class="pp-grab"></span>
-    <div class="pp-row"><div><div class="pp-lab">SPORING</div><div class="pp-sh">Kilder</div></div><button class="pp-btn ink sm" data-pptrk="setx">Ferdig</button></div>
+    <div class="pp-row"><div><div class="pp-lab">SPORING</div><div class="pp-sh">Kilder</div></div><button type="button" class="p30-sb p30-pri" data-pptrk="setx">Ferdig</button></div>
     <a class="pp-card p17-golink" href="#/set/varsler"><span class="m-grow"><b>Varsler</b><span class="pp-mut">Pakkevarsler ligger nå under Innstillinger → Varsler</span></span><span aria-hidden="true">›</span></a>
     <span class="pp-lab">KILDER</span><div class="pp-card pp-tight">${sourceRows()}</div>
     <span class="pp-lab">PARCELSAPP</span><div class="pp-card pp-tight"><div class="pp-tog"><span class="m-grow"><b>Reserve for ukjente transportører</b><span class="pp-mut">${TR.data?.parcelsapp?.configured ? `${n0(TR.data.parcelsapp.used ?? 0)} av ${n0(TR.data.parcelsapp.limit ?? 3)} oppslag brukt denne måneden` : 'Legg inn nøkkelen i Homelab → Innstillinger → Integrasjoner → Sporing. Gratisplanen har 3 oppslag i måneden.'}</span></span><span class="${TR.data?.parcelsapp?.configured ? 'pp-pos' : 'pp-mut'}" style="font-size:12.5px">${TR.data?.parcelsapp?.configured ? 'Tilkoblet' : 'Mangler nøkkel'}</span></div></div>

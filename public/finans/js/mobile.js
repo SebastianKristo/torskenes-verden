@@ -21,7 +21,7 @@ import { haptic } from './mobile-haptics.js';
 import { subsBind, soDown, soMove, soUp } from './mobile-subs.js';
 import { paper, paperDark, paperHero, paperNav, paperScanSheet, paperHome, paperFin, paperMer, mediaView, mediaLoad, newsView, newsLoad, paperBind, photoLoad, takeDesign, paperState, paperDown, paperUp, paperMove } from './mobile-paper.js';
 import { paperList, paperFinn, paperFinnSheet, paperFinnLoad, paperFinnBind, paperTrk, paperTrkSheet, paperTrkBind } from './mobile-paper2.js';
-import { take15, edDown, edMove, edUp, edClick, edReset, paperSearch, fsBind, paperTx, txLoad, txBind15, finMerGrid, fmerLoad, rcCount, recentLoad, newShipSheet, nsBind, navSetBind, fabStyle } from './mobile-paper3.js';
+import { take15, edDown, edMove, edUp, edClick, edReset, paperSearch, fsBind, paperTx, txLoad, txBind15, TX, finMerGrid, fmerLoad, rcCount, recentLoad, newShipSheet, nsBind, navSetBind, fabStyle } from './mobile-paper3.js';
 import { wxView, wxLoad, wxBind, wxBindScroll, WX, wxAfterDraw, wxPlaces } from './mobile-wx.js';
 import { wx22Down, wx22Move, wx22Up } from './mobile-wx22.js';
 import * as P22 from './mobile-p22.js';
@@ -33,6 +33,8 @@ import * as KAL from './mobile-kal.js';
 import * as P27 from './mobile-p27.js';
 import * as P28 from './mobile-p28.js';
 import * as P29 from './mobile-p29.js';
+import * as P30 from './mobile-p30.js';
+import * as P30B from './mobile-p30b.js';
 import * as CHAT from './mobile-chat.js';
 import { takeApp, HK, p17Bind, p17Sheets, huskeView, tasksLoad, posWidget, bolWidgetLoad, appLoad, applyIcon, ptrBind, wsConnect, onRealtime } from './mobile-p17.js';
 import { trkDown, trkMove, trkUp } from './mobile-paper2.js';
@@ -427,7 +429,7 @@ export function draw() {
   const ae = document.activeElement, keep = ae?.id && root().contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
   root().innerHTML = `<div class="m ${th}${fad ? ' p23-fad' : ''}${rv ? ' p24-rvm' : ''}${fsx ? ' p27-fs' : ''}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}${fabStyle() === 'float' ? ' flyt' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${scr === 'vaer' ? ' vaer' : ''}${scr === 'mer' ? ' p28-mer' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
     ${pp ? '' : rail(n)}${hero ? paperHero(scr) : ''}<div class="m-scroll">${bt ? topRow(th) : ''}${main}</div><div class="m-detail">${twoPane ? detail(th) : ''}</div>${nav}
-    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() + P26.sheets26() + P27.sheets27() : ''}${avgSheet()}${pp ? "" : famSheet()}${p17Sheets()}${updSheet()}${p21Sheets(HK)}${P22.p22Sheets()}${pp ? P24.sheets24() : ''}${origOverlay(th)}${pp ? P29.searchLayer() : ''}${P29.sheets29()}${P29.quickLayer()}${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
+    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() + P26.sheets26() + P27.sheets27() : ''}${avgSheet()}${pp ? "" : famSheet()}${p17Sheets()}${updSheet()}${p21Sheets(HK)}${P22.p22Sheets()}${pp ? P24.sheets24() : ''}${origOverlay(th)}${pp ? P29.searchLayer() : ''}${P29.sheets29()}${P29.quickLayer()}${P30.sheets30()}<div class="p30-edge" aria-hidden="true"></div>${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
     <input class="m-file" id="m-capture" type="file" accept="image/*" capture="environment" data-mupload data-confirm></div>`;
   if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', pp ? (m.light ? '#f3efe6' : '#14130f') : th === 'ios' ? '#07070A' : getComputedStyle(root().firstElementChild).backgroundColor || '#19120E');
@@ -435,7 +437,7 @@ export function draw() {
   if (fad) P23.finnAdAfterDraw();
   P23.arrive(vk, vkChanged);
   P25.afterDraw();
-  P27.afterDraw27(); P28.afterDraw28();
+  P27.afterDraw27(); P28.afterDraw28(); P30.afterDraw30(); P30B.hlAfter();
   // Glassmarkøren glir med fjæring mellom fanene. Fanelinja tegnes på nytt ved hver oppdatering, så animasjonen
   // (Web Animations) gjenopptas med medgått tid hvis en ny tegning kommer midt i den.
   const mk = root().querySelector('.tabs .mark');
@@ -538,7 +540,7 @@ export function route() {
   if (!domOk() && (next === 'dom' || (next === 'set' && parts[1] === 'dom'))) { next = next === 'dom' ? 'hl' : 'set'; if (location.hash !== `#/${next}`) { history.replaceState(null, '', `#/${next}`); parts.length = 1; } }
   const sub = parts.slice(1).join('/');
   if (next !== m.screen || sub !== m.sub) {
-    if (next !== m.screen) { edReset(); P26.leave26(); P27.leave27(next); P28.leave28(next); P29.leave29(); if (m.screen === 'chat') CHAT.chatLeave(); if (next === 'chat') CHAT.chatEnter(m.screen); if (next === 'kal') m.kalFrom = m.screen; if (next === 'vaer') WX.from = m.screen; m.edit = null; m.pdet = null; if (next === 'dom') m.domFrom = m.screen === 'dom' ? m.domFrom : m.screen; if (next === 'set') m.setFrom = m.screen === 'set' ? m.setFrom : m.screen; }
+    if (next !== m.screen) { edReset(); P26.leave26(); P27.leave27(next); P28.leave28(next); P29.leave29(); P30.leave30(); P30B.leave30b(); if (m.screen === 'chat') CHAT.chatLeave(); if (next === 'chat') CHAT.chatEnter(m.screen); if (next === 'kal') m.kalFrom = m.screen; if (next === 'vaer') WX.from = m.screen; m.edit = null; m.pdet = null; if (next === 'dom') m.domFrom = m.screen === 'dom' ? m.domFrom : m.screen; if (next === 'set') m.setFrom = m.screen === 'set' ? m.setFrom : m.screen; }
     p20Screen(next);
     m.screen = next; m.sub = sub; m.detail = false; m.menu = false; m.sheet = false; m.min = false; m.orig = null; paperState.scan = false; paperState.open = paperState.open && next === 'hl';
     if (next !== 'skann' && next !== 'opp') m.rc = null;
@@ -698,7 +700,8 @@ function cancelOthers(e) {
   const c = { type: 'pointercancel', pointerId: e.pointerId, clientX: e.clientX, clientY: e.clientY, target: e.target, button: 0, preventDefault() {}, stopPropagation() {} };
   for (const f of [dragEnd, (x) => wx22Up(x, wxPlaces()), P22.up, paperUp, edUp, p16Up, trkUp, p20Up]) { try { f(c); } catch { /* hver modul rydder selv */ } }
 }
-const swDown = (e) => P23.swDown(e, backTarget());
+// Prompt 30: på berøringsskjerm tar kantsveipet i capture-fasen over (mobile-p30.js swInit); pekerveien gjelder mus/penn.
+const swDown = (e) => (e.pointerType === 'touch' && P30.touchSwipe() ? false : P23.swDown(e, backTarget()));
 const swMove = (e) => P23.swMove(e, cancelOthers);
 const swEnd = (e) => P23.swEnd(e);
 
@@ -746,7 +749,7 @@ export function bind() {
   bindGlobal();
   // Prompt 17: navn og ikon på appen, dra for å oppdatere og sanntid (Huskeliste, Familie og Sporing).
   applyIcon(); appLoad().then(() => draw()).catch(() => {}); ptrBind(); wsConnect(onRealtime);
-  wxBindScroll(); P23.icBoot(); P25.boot(); P26.boot26(); P27.boot27(); P28.boot28();
+  wxBindScroll(); P23.icBoot(); P25.boot(); P26.boot26(); P27.boot27(); P28.boot28(); P30.boot30({ target: backTarget, cancel: cancelOthers });
   addEventListener('fh-design', (e) => { const d = e.detail ?? {}; takeDesign(d); if (typeof d.lock === 'boolean') setPref('lock', d.lock); if (typeof d.hap === 'boolean') setPref('hap', d.hap); if (d.photo) photoLoad(d.photo).then(draw).catch(() => {}); draw(); });
   loadLayout().then((r) => {
     takeDesign(r); take15(r); take16(r); take20(r); P24.take24(r); P25.take25(r); P26.take26(r); P27.take27(r); P29.take29(r); takeApp(r);
@@ -783,6 +786,9 @@ export function bind() {
     let x;
     if (Date.now() - tsup < 400 && d('.tabs')) { e.preventDefault(); e.stopPropagation(); return; }
     if (P23.swGuard()) { e.preventDefault(); e.stopPropagation(); return; } // klikket etter et sveip tilbake
+    if (await P30.bind30(e, t)) return; // Prompt 30: oppdateringsbanner, PROGRAMVARE
+    if (await P30B.bind30b(e, t)) return; // Prompt 30: Boliger (gjennomgang, rediger utgift, del boligen)
+    if (paper() && await P30B.hlBind(e, t, { TX, txLoad })) return; // Prompt 30: kvitteringsmarkering
     if (P28.bind28(e, t)) return; // Prompt 28: Mer – flytt/skjul
     if (await P27.bind27(e, t)) return; // Prompt 27: Chat, Kalender v2-ark, ✕ i søk, søkeforslag, Ruter-kortet, nyheter, abonnement fra skjermbilde
     if (await P26.bind26(e, t, { items: () => TR.data?.items ?? [], reload: () => trkLoad() })) return; // Prompt 26: Kalender, Integrasjoner, SPOR VIA, Finans-fanelinja og aktiv fane
@@ -810,7 +816,14 @@ export function bind() {
     if (d('.tabbar.min .tabs')) { e.preventDefault(); return setMin(false); }
     // Søk-fanen: bytt skjerm i samme trykk, så tastaturet kommer opp med en gang (iOS krever brukerhandling).
     if ((x = d('[data-tab="sok"]'))) { e.preventDefault(); history.pushState(null, '', '#/sok'); route(); (document.getElementById('pp-fsq') ?? document.getElementById('m-aiq'))?.focus(); return; }
-    if ((x = d('[data-tx]'))) { m.sel = +x.dataset.tx; m.edit = null; m.detail = true; window.scrollTo(0, 0); if (paper()) txLoad(m.sel).then(draw).catch(() => {}); return draw(); }
+    if ((x = d('[data-tx]'))) {
+      m.sel = +x.dataset.tx; m.edit = null; m.detail = true; window.scrollTo(0, 0);
+      // Prompt 30: fra Søk (data-hl) eller Liste med søketekst sendes søkeordet med, så treffet markeres i kvitteringen.
+      const hl = x.dataset.hl ?? (m.screen === 'liste' ? u.q ?? '' : '');
+      P30B.hlOpen(m.sel, hl);
+      if (paper()) txLoad(m.sel, !!hl.trim(), hl.trim()).then(draw).catch(() => {});
+      return draw();
+    }
     if ((x = d('[data-reanalyze]'))) { e.preventDefault(); return reanalyze(x.dataset.reanalyze, x.dataset.engine === 'tesseract' ? 'tesseract' : 'gemini'); }
     if ((x = d('[data-job]'))) { const j = m.jobs.find((y) => y.id === x.dataset.job); if (j && j.status !== 'booked' && !ACTIVE.includes(j.status)) { m.rc = j.id; if (two()) { await loadReceipts(); return draw(); } location.hash = '#/skann'; } return; }
     if ((x = d('[data-rc]'))) { m.rc = x.dataset.rc; if (m.screen !== 'skann') { location.hash = '#/skann'; return; } return draw(); }
@@ -854,10 +867,11 @@ export function bind() {
     }
     if (act === 'logout') { await logout(); }
   }));
-  el.addEventListener('input', (e) => { if (P29.input29(e, e.target)) return; if (P27.input27(e, e.target)) return; if (P26.input26(e, e.target)) return; if (P24.bind24(e, e.target) === true) return; P23.bind(e, e.target); P22.bind(e, e.target); p17Bind(e, e.target); p16Bind(e, e.target); wxBind(e, e.target); if (paper()) { paperFinnBind(e, e.target); paperTrkBind(e, e.target); nsBind(e, e.target); fsBind(e, e.target); } paperBind(e, e.target); matBind(e, e.target); if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
+  el.addEventListener('input', (e) => { if (P30.input30(e, e.target)) return; if (P30B.input30b(e, e.target)) return; if (P29.input29(e, e.target)) return; if (P27.input27(e, e.target)) return; if (P26.input26(e, e.target)) return; if (P24.bind24(e, e.target) === true) return; P23.bind(e, e.target); P22.bind(e, e.target); p17Bind(e, e.target); p16Bind(e, e.target); wxBind(e, e.target); if (paper()) { paperFinnBind(e, e.target); paperTrkBind(e, e.target); nsBind(e, e.target); fsBind(e, e.target); } paperBind(e, e.target); matBind(e, e.target); if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
   el.addEventListener('change', safe(async (e) => {
     const t = e.target;
     if (await P27.change27(e, t)) return;
+    if (await P30B.change30b(e, t)) return;
     if (t.matches('[data-mupload]')) { const f = [...t.files]; t.value = ''; await upload(f, { confirm: t.hasAttribute('data-confirm') && f.length === 1, stay: t.hasAttribute('data-stay') }); return; }
     if (t.dataset.mf) {
       const f = t.dataset.mf;
@@ -880,6 +894,7 @@ export function bind() {
   }));
   el.addEventListener('submit', safe(async (e) => {
     if (await P29.submit29(e, e.target)) return;
+    if (await P30B.bind30b(e, e.target)) return;
     if (await P27.submit27(e, e.target)) return;
     if (e.target.matches('[data-msearch]')) { e.preventDefault(); u.q = e.target.q.value; await loadTx(); return draw(); }
     if (await P24.bind24(e, e.target)) return;

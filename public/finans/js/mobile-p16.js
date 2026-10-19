@@ -1,6 +1,7 @@
 // Papir (prompt 16): redigerbar fanelinje (hold inne på linja, eller Innstillinger → Fanelinje), fargetema for ikonene
 // i Innstillinger, Avganger (egen side i nyhetsleser-stil med flere stopp fra Entur og sanntid), Familie og kart
 // (OpenStreetMap via Leaflet, soner, personvern) og Boliger i full mobilversjon. Valgene lagres per bruker i /api/me/layout.
+import * as P30B from './mobile-p30b.js';
 import { FT, famTabs, personCard, healthView } from './mobile-p17.js';
 const famTop = () => (paper() ? '' : famTabs()); // Papir: fanene ligger i fanelinja nederst
 import { api, esc, n0, ini, hlApi, dd, today, cap } from './core.js';
@@ -103,7 +104,7 @@ export function tabEditor() {
 export function tabSheet() {
   if (!TBE.open) return '';
   return `<div class="sheet-bg" data-p16="tbx"></div><div class="pp-sheet p16-sheet" role="dialog" aria-label="Rediger fanelinja"><span class="pp-grab"></span>
-    <div class="pp-row" style="align-items:center"><div class="pp-sh">Rediger fanelinja</div><button class="pp-btn sm ink" data-p16="tbx">Ferdig</button></div>${tabEditor()}</div>`;
+    <div class="pp-row" style="align-items:center"><div class="pp-sh">Rediger fanelinja</div><button type="button" class="p30-sb p30-pri" data-p16="tbx">Ferdig</button></div>${tabEditor()}</div>`;
 }
 function setItems(items) {
   const clean = items.map(({ id, label, icon }) => ({ id, ...(label ? { label } : {}), ...(icon ? { icon } : {}) }));
@@ -124,9 +125,11 @@ export const ICON_THEMES = {
 export const iconTheme = () => L.iconTheme ?? 'standard';
 const hash = (s) => [...String(s)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
 /** Fargen på et ikon i Innstillinger: dagens farge i «Standard», ellers fra valgt fargetema. */
+// Prompt 30: «Standard» bruker samme farger som sidemenyen i web-innstillingene (Innstillinger Web.dc.html → NAV).
+const WEB_COL = { konto: '#2b5d8a', look: '#7a5ad6', appikon: '#7a5ad6', hjemnav: '#3f7a6e', appnavn: '#3f7a6e', mod: '#c0562a', dom: '#c0562a', varsler: '#b23a2a', navstil: '#5b6470', fanelinje: '#5b6470', integ: '#4a5bbf', kal: '#2f7d4f', t212: '#2f7d4f', fai: '#7a3b6b', tok: '#a8661a', sik: '#1f6f78', oppd: '#6b6558', sysbk: '#2f6b45', kat: '#c0562a', regel: '#5b6470', bank: '#2b5d8a', sub: '#c2417a', rss: '#a8661a' };
 export function iconColor(key, orig) {
   const pal = ICON_THEMES[iconTheme()]?.[1];
-  if (!pal) return orig;
+  if (!pal) return WEB_COL[key] ?? orig;
   if (iconTheme() === 'mono') return document.querySelector('.m.papir.pd') ? '#ece7dc' : '#1b1a17';
   return pal[hash(key) % pal.length];
 }
@@ -396,7 +399,7 @@ async function famGeo(on) {
 /* ---------- Boliger (full mobilversjon) ---------- */
 
 export const BO = { list: null, err: '', d: {}, tab: 'over', add: false, ny: false, f: { description: '', amount: '', date: '', categoryId: '' }, nf: { name: '', type: 'Hytte', address: '' }, q: '', busy: false, up: 0 };
-const BTABS = [['over', 'Oversikt'], ['utg', 'Utgifter'], ['proj', 'Prosjekter'], ['reg', 'Regninger'], ['kv', 'Kvitteringer']];
+const BTABS = [['over', 'Oversikt'], ['utg', 'Utgifter'], ['proj', 'Prosjekter'], ['reg', 'Regninger'], ['kv', 'Kvitteringer'], ['tilg', 'Tilgang']]; // prompt 30: Tilgang (Del boligen)
 const TYPE_IC = { Enebolig: '⌂', Leilighet: '▦', Rekkehus: '▥', Hytte: '△', Fritidsbolig: '△', Utleie: '⚿', Annet: '◇' };
 const kr = (v) => `${(v ?? 0) < 0 ? '−' : ''}${n0(v)} kr`;
 export async function bolLoad(sub) {
@@ -433,12 +436,12 @@ function bolDetail(d) {
       <div class="p16-qa">${d.canEdit ? `<label class="pp-btn sm ink">↑ Last opp kvittering<input class="m-file" type="file" multiple accept="image/*,application/pdf,.heic" data-p16up="${d.id}"></label><button class="pp-btn sm" data-p16="boladd">+ Utgift</button>` : ''}</div>
       ${BO.up ? `<div class="pp-mut">✦ Laster opp ${BO.up} …</div>` : ''}</div>
     <div class="p16-tabs" role="tablist">${BTABS.map(([t, n]) => `<button role="tab" data-p16="boltab" data-k="${t}" aria-selected="${BO.tab === t}">${n}</button>`).join('')}</div>`;
-  const body = { over: bolOver, utg: bolEntries, proj: bolProj, reg: bolBills, kv: bolRc }[BO.tab] ?? bolOver;
-  return head + body(d) + (BO.add ? addSheet(d) : '');
+  const body = { over: bolOver, utg: bolEntries, proj: bolProj, reg: bolBills, kv: bolRc, tilg: P30B.accessTab }[BO.tab] ?? bolOver;
+  return head + body(d) + (BO.add ? addSheet(d) : '') + P30B.entSheet(d); // prompt 30: detaljarket for en utgift
 }
 function bolOver(d) {
   const cats = d.categories ?? [], up = d.upcoming ?? [], bal = (d.balances ?? []).filter((b) => Math.abs(b.balance) > 0.5);
-  return `${d.months?.length ? `<div class="pp-card"><span class="pp-lab">MÅNED FOR MÅNED</span>${bars(d.months)}</div>` : ''}
+  return `${P30B.reviewCard(d)}${d.months?.length ? `<div class="pp-card"><span class="pp-lab">MÅNED FOR MÅNED</span>${bars(d.months)}</div>` : ''}
     ${cats.length ? `<div class="pp-card"><span class="pp-lab">KATEGORIER</span>${cats.slice(0, 8).map((c) => `<div class="p16-cat"><span class="p16-zd" style="background:${esc(c.color || '#a0a0aa')}"></span><span class="m-grow">${esc(c.name)}</span><b>${kr(c.sum)}</b></div><span class="p16-pb"><i style="width:${Math.max(2, c.pct ?? 0)}%;background:${esc(c.color || '#a0a0aa')}"></i></span>`).join('')}</div>` : ''}
     ${up.length ? `<div class="pp-card"><span class="pp-lab">KOMMER</span>${up.slice(0, 5).map((x) => `<div class="p16-cat"><span class="m-grow">${esc(x.name ?? x.title ?? x.label ?? '')}</span><span class="pp-mut">${x.date || x.due ? dd(x.date || x.due) : ''}</span>${x.amount != null ? `<b>${kr(x.amount)}</b>` : ''}</div>`).join('')}</div>` : ''}
     ${bal.length ? `<div class="pp-card"><span class="pp-lab">FORDELING</span>${bal.map((b) => `<div class="p16-cat"><span class="m-grow">${esc(b.name)}</span><b class="${b.balance > 0 ? 'pp-pos' : 'pp-lab-c'}">${b.balance > 0 ? 'Har til gode ' : 'Skylder '}${kr(Math.abs(b.balance))}</b></div>`).join('')}</div>` : ''}
@@ -449,7 +452,7 @@ function bolEntries(d) {
   const by = {};
   for (const e of rows) (by[e.date.slice(0, 7)] ??= []).push(e);
   return `<input class="sinp p16-inp" id="p16-boq" data-p16b="q" value="${esc(BO.q)}" placeholder="Søk i utgiftene" type="search">
-    ${Object.entries(by).map(([mo, list]) => `<span class="pp-lab">${esc(cap(new Date(mo + '-15').toLocaleDateString('nb-NO', { month: 'long', year: 'numeric' })).toUpperCase())}</span><div class="pp-card pp-tight">${list.map((e) => `<div class="p16-ent"><span class="p16-zd" style="background:${esc(e.color || '#a0a0aa')}"></span><span class="m-grow" style="min-width:0"><b>${esc(e.description)}</b><span class="pp-mut">${esc([dd(e.date), e.categoryLabel ?? e.category, e.project, e.paidBy].filter(Boolean).join(' · '))}</span>${e.aiShort ? `<span class="p16-ai">✦ ${esc(e.aiShort)}</span>` : ''}</span><b class="p16-amt">${kr(e.amount)}</b></div>`).join('')}</div>`).join('') || '<div class="pp-card"><div class="pp-mut">Ingen treff.</div></div>'}`;
+    ${Object.entries(by).map(([mo, list]) => `<span class="pp-lab">${esc(cap(new Date(mo + '-15').toLocaleDateString('nb-NO', { month: 'long', year: 'numeric' })).toUpperCase())}</span><div class="pp-card pp-tight">${list.map((e) => `<button type="button" class="p16-ent b30-ent" data-b30="ent" data-id="${e.id}"><span class="p16-zd" style="background:${esc(e.color || '#a0a0aa')}"></span><span class="m-grow" style="min-width:0"><b>${esc(e.description)}</b><span class="pp-mut">${esc([dd(e.date), e.categoryLabel ?? e.category, e.project, e.paidBy].filter(Boolean).join(' · '))}</span>${e.aiShort ? `<span class="p16-ai">✦ ${esc(e.aiShort)}</span>` : ''}</span><b class="p16-amt">${kr(e.amount)}</b>${e.status === 'review' ? '<span class="b30-rv">Til gjennomgang</span>' : ''}</button>`).join('')}</div>`).join('') || '<div class="pp-card"><div class="pp-mut">Ingen treff.</div></div>'}`;
 }
 function bolProj(d) {
   return (d.projects ?? []).map((p) => {
@@ -466,12 +469,12 @@ function bolBills(d) {
 function bolRc(d) {
   const rc = d.receipts ?? [];
   return `${d.canEdit ? `<label class="pp-card p16-drop" data-p16drop="${d.id}"><b>Slipp kvitteringer her</b><span class="pp-mut">eller trykk for å ta bilde eller velge filer. ✦ AI leser og velger kategori.</span><input class="m-file" type="file" multiple accept="image/*,application/pdf,.heic" data-p16up="${d.id}"></label>` : ''}
-    <div class="p16-rcg">${rc.map((r) => `<a class="p16-rc" href="${esc(r.fileUrl)}" target="_blank" rel="noopener"><span class="p16-rci" style="background-image:url('${esc(r.thumbUrl)}')"></span><b class="m-ell">${esc(r.description)}</b><span class="pp-mut">${r.pending ? '✦ Leser …' : `${dd(r.date)} · ${kr(r.amount)}`}</span></a>`).join('')}</div>
+    <div class="p16-rcg">${rc.map((r) => `<a class="p16-rc" href="${esc(r.fileUrl)}" target="_blank" rel="noopener"${r.entryId ? ` data-b30="ent" data-id="${r.entryId}"` : ''}><span class="p16-rci" style="background-image:url('${esc(r.thumbUrl)}')"></span><b class="m-ell">${esc(r.description)}</b><span class="pp-mut">${r.pending ? '✦ Leser …' : `${dd(r.date)} · ${kr(r.amount)}`}</span></a>`).join('')}</div>
     ${rc.length ? '' : '<div class="pp-card"><div class="pp-mut">Ingen kvitteringer i denne boligen ennå.</div></div>'}`;
 }
 function addSheet(d) {
   const f = BO.f, tree = d.catTree ?? [];
-  const opts = tree.flatMap((t) => [[t.id, t.name], ...(t.children ?? t.subs ?? []).map((c) => [c.id, `${t.name} › ${c.name}`])]);
+  const opts = tree.flatMap((t) => [[t.id, t.label ?? t.name], ...(t.children ?? t.subs ?? []).map((c) => [c.id, `${t.label ?? t.name} › ${c.label ?? c.name}`])]);
   return `<div class="sheet-bg" data-p16="boladdx"></div><div class="pp-sheet p16-sheet" role="dialog" aria-label="Ny utgift"><span class="pp-grab"></span><div class="pp-sh">Ny utgift i ${esc(d.name)}</div>
     <input class="sinp p16-inp" data-p16f="description" value="${esc(f.description)}" placeholder="Beskrivelse, f.eks. Maling til terrassen" maxlength="120">
     <div class="p16-two"><input class="sinp p16-inp" data-p16f="amount" value="${esc(f.amount)}" placeholder="Beløp" inputmode="decimal"><input class="sinp p16-inp" data-p16f="date" type="date" value="${esc(f.date || today())}"></div>
