@@ -232,22 +232,13 @@ struct SubAdd28Header: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .center, spacing: 12) {
+                // Prompt 30: felles piller (‹ Tilbake / Lukk) i stedet for røde tekstlenker.
                 if let back {
-                    Button(action: back) {
-                        HStack(spacing: 2) {
-                            Image(systemName: "chevron.left").font(.system(size: 15, weight: .semibold))
-                            Text("Tilbake").font(PF.ui(16, .semibold))
-                        }
-                        .foregroundStyle(c.lab).frame(minHeight: 44).contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
+                    SheetButton30(kind: .back, title: "Tilbake", ink: c.ink, paper: c.bg, dark: c.dark, action: back)
                 }
                 Text(title).font(PF.serif(26, medium: true)).foregroundStyle(c.ink).lineLimit(1).minimumScaleFactor(0.7)
                 Spacer(minLength: 4)
-                Button(action: close) {
-                    Text("Lukk").font(PF.ui(16, .semibold)).foregroundStyle(c.lab).frame(minWidth: 44, minHeight: 44).contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
+                SheetButton30(kind: .secondary, title: "Lukk", ink: c.ink, paper: c.bg, dark: c.dark, action: close)
             }
             Text(sub).font(PF.ui(14)).foregroundStyle(c.mut).fixedSize(horizontal: false, vertical: true).padding(.horizontal, 4)
         }

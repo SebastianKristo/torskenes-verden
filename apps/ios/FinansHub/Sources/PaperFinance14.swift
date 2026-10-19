@@ -125,7 +125,11 @@ struct PaperFinList: View {
     }
 
     private func row(_ t: Tx) -> some View {
-        Button { store.openPaperTx(t.id) } label: {
+        Button {
+            // Prompt 30: søketeksten følger med, så treffet markeres i kvitteringen (Receipt30.swift).
+            Hl30.shared.open(t.id, term: store.query)
+            store.openPaperTx(t.id)
+        } label: {
             HStack(spacing: 12) {
                 PaperLogo(domain: t.domain, name: t.merchant ?? t.description, color: t.color, size: 38, radius: 11)
                 VStack(alignment: .leading, spacing: 1) {
@@ -189,6 +193,7 @@ struct PaperFinn: View {
             if let id = FinnAd23Model.shared.openId, let d = all.first(where: { $0.id == id }) {
                 FinnAd23View(deal: d) { openEdit(d) }
                     .environment(\.paper, p)
+                    .edgeSwipeClose30 { FinnAd23Model.shared.openId = nil }
             } else {
                 Color.clear.onAppear { FinnAd23Model.shared.openId = nil }
             }

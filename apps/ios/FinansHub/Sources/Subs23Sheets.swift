@@ -138,10 +138,7 @@ struct SubEdit23Sheet: View {
         HStack(spacing: 10) {
             Text(item.map { "Rediger \($0.name)" } ?? "Nytt abonnement").font(PF.ui(20, .semibold)).foregroundStyle(t.fg).lineLimit(1)
             Spacer(minLength: 6)
-            Button { dismiss() } label: {
-                Text("Lukk").font(PF.ui(15, .semibold)).foregroundStyle(t.neg).frame(minHeight: 36)
-            }
-            .buttonStyle(.plain)
+            SheetButton30(kind: .secondary, title: "Lukk", ink: t.fg, paper: t.bg, dark: t.dark) { dismiss() }
         }
     }
 
@@ -371,7 +368,7 @@ struct SubAdd23Sheet: View {
                 HStack {
                     Text("Legg til abonnement").font(PF.ui(17, .semibold)).foregroundStyle(t.fg)
                     Spacer()
-                    Button { dismiss() } label: { Text("Lukk").font(PF.ui(15, .semibold)).foregroundStyle(t.neg) }.buttonStyle(.plain)
+                    SheetButton30(kind: .secondary, title: "Lukk", ink: t.fg, paper: t.bg, dark: t.dark) { dismiss() }
                 }
                 // Prompt 27: «Fra skjermbilde» først (SubsShot27.swift).
                 HStack(spacing: 8) {

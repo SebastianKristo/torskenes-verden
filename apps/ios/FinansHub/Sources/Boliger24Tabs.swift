@@ -104,7 +104,8 @@ struct Bol24Access: View {
     var body: some View {
         VStack(spacing: 14) {
             members
-            if home.isOwner { invite }
+            // Prompt 30: «Del boligen» med rutenett av brukere i Homelab (uten brukernavn) og e-post som reserve (Boliger30.swift).
+            if home.isOwner { Bol30ShareCard(home: home) }
             toggles
         }
     }

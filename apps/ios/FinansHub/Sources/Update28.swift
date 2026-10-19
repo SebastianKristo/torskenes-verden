@@ -88,18 +88,29 @@ struct Update28Page: View {
             if !Update28Model.isAdmin(store) {
                 Update28Note(text: "Oppdatering av serveren gjøres av en administrator.")
             } else {
+                // Prompt 30: banneret og «Oppdater nå» med passord fra appen (Update30.swift). Nettleseren er en sekundær vei.
+                Update30Banner(home: false)
                 PaperLinkList(rows: rows)
                 Update28Note(text: note)
-                PInkButton(title: "Oppdater i nettleseren ›", height: 44, full: true) {
+                if m.updateAvailable && m.available && !m.running {
+                    PInkButton(title: "Oppdater nå", height: 44, full: true) { Update30Model.shared.ask("update") }
+                        .padding(.top, 4)
+                }
+                PLineButton(title: "Oppdater i nettleseren ›", height: 40, full: true) {
                     store.openURL(Update28Model.webURL(store))
                 }
-                .padding(.top, 4)
                 PLineButton(title: m.loading ? "Henter …" : "Se etter på nytt", height: 40, full: true) {
                     Task { await m.load(store) }
                 }
             }
         }
-        .task { if Update28Model.isAdmin(store) { await m.load(store) } }
+        .task {
+            if Update28Model.isAdmin(store) {
+                await m.load(store)
+                await Update30Model.shared.load(store, force: true)
+            }
+        }
+        .update30Sheet()
     }
 
     private var rows: [PaperLinkRow] {
@@ -127,7 +138,7 @@ struct Update28Page: View {
         if m.missing || (m.loaded && !m.available) {
             return "Kjør update.sh én gang fra Proxmox for å slå på oppdatering fra appen. Kommandoen finnes på nettsiden under Innstillinger → System."
         }
-        return "Oppdateringen startes fra nettleseren, der du skriver passordet ditt på nytt. Serveren tar backup av databasen og starter på nytt (vanligvis 2–5 minutter)."
+        return "Trykk Oppdater nå og skriv passordet ditt på nytt. Serveren tar backup av databasen og starter på nytt (vanligvis 2–5 minutter). Du kan også starte oppdateringen fra nettleseren."
     }
 }
 

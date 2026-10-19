@@ -36,12 +36,14 @@ struct NewsReaderView: View {
         .sheet(isPresented: $sources) {
             NewsSourcesSheet().environment(\.paper, p)
                 .presentationDetents([.fraction(0.86), .large])
-                .presentationBackground(p.bg)
+                .sheetEdge30(p.bg)
         }
         .fullScreenCover(item: $article27) { x in
             NewsArticleView27(start: x, catName: { c in (store.news ?? NewsData()).name(of: c) }, close: { article27 = nil })
                 .environment(\.paper, p)
                 .environment(store)
+                // Prompt 30: kantsveip lukker artikkelen.
+                .edgeSwipeClose30 { article27 = nil }
         }
         .task { if store.news == nil { await store.loadNews() } }
         .task { await NewsIcons23.shared.preload(store) }
@@ -198,7 +200,7 @@ struct NewsSourcesSheet: View {
         .sheet(item: $iconFor) { c in
             NewsIconPicker23(cat: c).environment(\.paper, p)
                 .presentationDetents([.fraction(0.86), .large])
-                .presentationBackground(p.bg)
+                .sheetEdge30(p.bg)
         }
     }
 

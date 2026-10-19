@@ -224,7 +224,12 @@ struct Bol24Review: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Text(e.pending ? "…" : bol24kr(e.amount)).font(PF.mono(15)).foregroundStyle(p.ink).lineLimit(1).fixedSize()
+                Text("›").font(PF.ui(17)).foregroundStyle(p.mut)
             }
+            // Prompt 30: hele toppraden (miniatyr · butikk · forslag · beløp · ›) åpner detaljarket, også mens AI leser.
+            .contentShape(Rectangle())
+            .onTapGesture { Haptics.shared.tap(); open(e) }
+            .accessibilityAddTraits(.isButton)
             if !e.pending && home.canEdit {
                 chips(e)
                 HStack(spacing: 8) {

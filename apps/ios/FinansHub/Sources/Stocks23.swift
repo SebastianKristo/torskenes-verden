@@ -49,10 +49,10 @@ struct Stocks23Page: View {
         .padding(.horizontal, 10)
         .task { if store.stocksX == nil { await store.loadStocksQuiet() } }
         .sheet(item: $sel) { s in
-            PaperStockDetail(pos: s).environment(\.paper, p).presentationDetents([.medium, .large]).presentationBackground(p.bg)
+            PaperStockDetail(pos: s).environment(\.paper, p).presentationDetents([.medium, .large]).sheetEdge30(p.bg)
         }
         .sheet(isPresented: $showTx) {
-            Stocks23TxSheet(txns: store.stocksX?.txns ?? []).environment(\.paper, p).presentationDetents([.large]).presentationBackground(p.bg)
+            Stocks23TxSheet(txns: store.stocksX?.txns ?? []).environment(\.paper, p).presentationDetents([.large]).sheetEdge30(p.bg)
         }
     }
 

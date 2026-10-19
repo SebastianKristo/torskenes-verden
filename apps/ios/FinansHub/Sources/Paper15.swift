@@ -270,7 +270,7 @@ struct PaperCardStack: View {
         let editing = store.paperEditPage == page
         VStack(spacing: 10) {
             // Prompt 28: ingen mørk instruksjonslinje; pillene ＋ / ✓ flyter over listen (Wiggle28.swift). Plass til dem her.
-            if editing { Color.clear.frame(height: 48) }
+            // Prompt 30: plassen til pillene er nå 64 pt padding-top i PaperPage (Wiggle30.topPad).
             if wide && twoColumns && !editing {
                 ForEach(segments(cur.visible)) { seg in
                     if seg.full {

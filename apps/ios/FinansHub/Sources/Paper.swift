@@ -232,30 +232,32 @@ struct PaperShell: View {
             PaperScanSheet(scan: scan, recipe: store.paperTab == "mat") { store.paperScanOpen = false }
                 .environment(\.paper, p)
                 .presentationDetents([.height(360), .medium])
-                .presentationBackground(p.bg)
+                .sheetEdge30(p.bg)
         }
         .sheet(isPresented: Binding(get: { store.trackAddOpen }, set: { store.trackAddOpen = $0 })) {
             PaperNewShipmentSheet()
                 .environment(\.paper, p)
                 .presentationDetents([.medium, .large])
-                .presentationBackground(p.bg)
+                .sheetEdge30(p.bg)
         }
         .sheet(isPresented: Binding(get: { store.tabBarEditing }, set: { store.tabBarEditing = $0 })) {
             PaperTabBarEditor()
                 .environment(\.paper, p)
                 .presentationDetents([.large])
-                .presentationBackground(p.bg)
+                .sheetEdge30(p.bg)
         }
         // Prompt 26: «Rediger fanelinjen» for Finans (hold inne på fanelinjen i Finans).
         .sheet(isPresented: Binding(get: { FinNav26.shared.editing }, set: { FinNav26.shared.editing = $0 })) {
             FinNavEditor26()
                 .environment(\.paper, p)
                 .presentationDetents([.large])
-                .presentationBackground(p.bg)
+                .sheetEdge30(p.bg)
         }
         .fullScreenCover(isPresented: Binding(get: { store.weatherOpen }, set: { store.weatherOpen = $0 })) {
-            PaperWeatherView()
+            // Prompt 30: kantsveip fra venstre lukker Vær (fullskjerm har ikke appens egen tilbakegest).
+            PaperWeatherView().edgeSwipeClose30 { store.weatherOpen = false }
         }
+        .dismissHaptic30(store.weatherOpen)
         .task(id: store.account?.id) {
             Realtime.shared.connect(store)
             await AppMeta.shared.load(store)
@@ -768,6 +770,9 @@ struct PaperPage: View {
                     .frame(height: 0)
                     .id("nav26top")
                     VStack(spacing: wide ? 12 : 10) { page }
+                        // Prompt 30: 64 pt luft øverst i redigeringsmodus, så ＋ / ✓ aldri dekker søkefeltet eller minus-merket.
+                        .padding(.top, Wiggle30.topPad(store))
+                        .animation(Wiggle30.anim, value: Wiggle30.topPad(store))
                         .frame(maxWidth: maxW)
                         .padding(.horizontal, 16)
                         .frame(maxWidth: .infinity)
@@ -792,6 +797,7 @@ struct PaperPage: View {
             .padding(.top, -23)
             // Prompt 28: pillene i redigeringsmodus ligger over listen, utenfor scroll-innholdet (Wiggle28.swift).
             .edit28Layer(p)
+            .overlay(alignment: .top) { Mer30Pills() }
             .refreshable { await refresh() }
             // Prompt 26: nytt trykk på aktiv fane på roten scroller til toppen (Nav26.swift).
             .onChange(of: Nav26.shared.topTick) { _, _ in
@@ -950,8 +956,8 @@ struct PaperHero: View {
                 pill("‹ \(store.prof24UpLabel)") { store.paperUp() }
             }
             Spacer()
-            // Finans viser @brukernavn ved profilbildet (ikke fullt navn). Bakgrunnen velges under Innstillinger → Utseende.
-            if store.paperInFinance, let u = store.account?.username, !u.isEmpty { pill("@\(u)") { store.paperGo("profil") } }
+            // Prompt 30: ingen @brukernavn-pille ved profilbildet (Finans, Subscription OS, Boliger, Aksjer …). Brukernavnet
+            // vises bare i Innstillinger → Konto → Profil.
             // Prompt 29: «Planeter ▾» rett til venstre for profilbildet på Hjem og i Innstillinger (samme meny, gjelder hele appen).
             if (home || store.paperTab == "innst") && !store.paperInFinance {
                 pill(bgName + " ▾") { store.paperBgOpen.toggle(); Haptics.shared.select() }

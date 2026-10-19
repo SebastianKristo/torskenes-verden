@@ -310,7 +310,8 @@ struct PaperWeatherView: View {
                     scrollBody(w)
                 }
                 WxTopBar22(w: w, scrolled: isWide ? false : scroll > 200)
-                WxBottomBar28(map: { Haptics.shared.tap(); map = true }, places: { Haptics.shared.tap(); places = true })
+                // Prompt 30: to flytende glassknapper nær bunnen (ingen linje).
+                WxBottomButtons30(map: { Haptics.shared.tap(); map = true }, places: { Haptics.shared.tap(); places = true })
                 if isWide { WxSidePanel25(width: g.size.width) }
             }
             .frame(width: g.size.width, height: g.size.height)
@@ -328,9 +329,10 @@ struct PaperWeatherView: View {
                 WxDetailSheet22(w: w, kind: ref.id, day: ref.day).presentationDetents([.large]).presentationBackground(Color(hex: "#17191e"))
             }
         }
-        .sheet(isPresented: $comparing) {
+        // Prompt 30: Yr mot Storm i fullskjerm (Ferdig-pille øverst til høyre, kantsveip lukker).
+        .fullScreenCover(isPresented: $comparing) {
             if let w = store.weatherFull {
-                WxCompareSheet22(w: w).presentationDetents([.large]).presentationBackground(Color(hex: "#17191e"))
+                WxCompareSheet22(w: w).edgeSwipeClose30 { comparing = false }
             }
         }
         .sheet(isPresented: $places) {
@@ -340,6 +342,12 @@ struct PaperWeatherView: View {
             WxMapView22(name: w?.placeName ?? store.weatherPlaceObj?.name ?? "Kart", lat: w?.lat ?? store.weatherPlaceObj?.lat ?? 59.91,
                         lon: w?.lon ?? store.weatherPlaceObj?.lon ?? 10.75)
         }
+        // Prompt 30: ett lett haptisk tikk når et ark, kartet, Steder eller Yr mot Storm lukkes (ikke ved åpning).
+        .dismissHaptic30(sheet != nil)
+        .dismissHaptic30(comparing)
+        .dismissHaptic30(places)
+        .dismissHaptic30(map)
+        .dismissHaptic30(WxPanel25.shared.isOpen)
         .task {
             await store.loadWeatherFull()
             await store.loadWeatherPlaces()
@@ -359,7 +367,7 @@ struct PaperWeatherView: View {
                     ProgressView().tint(.white).padding(.top, 160)
                 }
             }
-            .padding(.horizontal, 16).padding(.top, 56).padding(.bottom, WxBottomBar28.height + 16)
+            .padding(.horizontal, 16).padding(.top, 56).padding(.bottom, WxBottomButtons30.height + 16)
         }
         .scrollIndicators(.hidden)
         .coordinateSpace(name: "wxscroll")
@@ -405,7 +413,9 @@ struct PaperWeatherView: View {
         if wide { Haptics.shared.tap(); WxPanel25.shared.open(WxSheetRef22(id: "forhold", day: i)) } else { sheet = WxSheetRef22(id: "forhold", day: i) }
     }
 
+    /// Prompt 30: alltid fullskjerm (også på bred skjerm, innholdet maks 760 pt midtstilt).
     private func openCompare() {
-        if wide { Haptics.shared.tap(); WxPanel25.shared.openCompare() } else { comparing = true }
+        Haptics.shared.tap()
+        comparing = true
     }
 }

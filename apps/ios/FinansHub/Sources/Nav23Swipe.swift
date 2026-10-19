@@ -71,7 +71,8 @@ struct EdgeSwipeBack: ViewModifier {
             Nav23History.shared.swiping = true
         }
         dx = Swift.max(0, t)
-        let over: Bool = dx > w * 0.5
+        // Prompt 30: terskel min(110 pt, 28 % av bredden) som fasiten (swInit).
+        let over: Bool = dx > Swift.min(110, w * 0.28)
         if over != crossed {
             crossed = over
             if over { Nav23History.lightTick() }
@@ -79,10 +80,10 @@ struct EdgeSwipeBack: ViewModifier {
     }
 
     private func ended(_ t: CGFloat, _ v: CGFloat, _ w: CGFloat) {
-        let go: Bool = t > w * 0.5 || (v > 500 && t > 10)
+        let go: Bool = t > Swift.min(110, w * 0.28) || (v > 500 && t > 10)
         if go {
             if !crossed { Nav23History.lightTick() }
-            withAnimation(.easeOut(duration: 0.25)) { dx = w }
+            withAnimation(.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.26)) { dx = w }
             Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(250))
                 var tr = Transaction()

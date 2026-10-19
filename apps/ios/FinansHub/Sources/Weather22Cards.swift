@@ -263,7 +263,7 @@ struct WxDayBar22: View {
     }
 }
 
-/* ---------- Yr og Pent ---------- */
+/* ---------- Yr og Storm (prompt 30: «Pent» heter Storm i alt som vises) ---------- */
 
 struct WxCompareCard22: View {
     let w: WeatherFull
@@ -272,12 +272,13 @@ struct WxCompareCard22: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 10) {
+                // Prompt 30: ekte logoer (assets YrLogo/StormLogo), to overlappende sirkler på 30 pt.
                 HStack(spacing: -8) {
-                    badge("Yr", "#00b9f1")
-                    badge("P", "#ff8a3d")
+                    WxLogo30(asset: "YrLogo", size: 30)
+                    WxLogo30(asset: "StormLogo", size: 30)
                 }
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("Yr og Pent").font(.system(size: 16, weight: .bold))
+                    Text("Yr og Storm").font(.system(size: 16, weight: .bold))
                     HStack(spacing: 6) {
                         Circle().fill(dotColor).frame(width: 8, height: 8)
                         Text(statusText).font(.system(size: 12.5)).opacity(0.85)
@@ -289,7 +290,7 @@ struct WxCompareCard22: View {
             if let c = w.compare, !c.days.isEmpty {
                 WxCompareTable22(c: c, rows: 4, line: Color.white.opacity(0.18), header: 0.8)
             } else if w.compareState == 0 {
-                Text("Henter Pent …").font(.system(size: 13)).opacity(0.75).padding(.top, 8).padding(.bottom, 10)
+                Text("Henter Storm …").font(.system(size: 13)).opacity(0.75).padding(.top, 8).padding(.bottom, 10)
             }
             Rectangle().fill(Color.white.opacity(0.18)).frame(height: 1)
             Button(action: open) {
@@ -305,13 +306,17 @@ struct WxCompareCard22: View {
         }
         .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 6)
         .wxCard22()
+        // Prompt 30: hele kortet (logoer, enighet, tabellen og lenken) åpner Yr mot Storm i fullskjerm.
+        .contentShape(Rectangle())
+        .onTapGesture { open() }
+        .accessibilityAddTraits(.isButton)
     }
 
     private var dotColor: Color { w.compare?.color ?? Color(hex: "#9aa3ae") }
 
     private var statusText: String {
         if let c = w.compare { return c.title }
-        return w.compareState == 2 ? "Pent svarte ikke" : "Henter …"
+        return w.compareState == 2 ? "Storm svarte ikke" : "Henter …"
     }
 
     private func badge(_ t: String, _ c: String) -> some View {
@@ -322,7 +327,7 @@ struct WxCompareCard22: View {
     }
 }
 
-/// Tabellen Yr | Pent | Avvik, brukt både på kortet (4 dager) og i arket (alle dager).
+/// Tabellen Yr | Storm | Avvik, brukt både på kortet (4 dager) og i arket (alle dager).
 struct WxCompareTable22: View {
     let c: WxCompare22
     let rows: Int
@@ -333,8 +338,8 @@ struct WxCompareTable22: View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
                 Color.clear.frame(width: 44, height: 1)
-                Text("YR").foregroundStyle(Color(hex: "#7fd6f5")).frame(maxWidth: .infinity, alignment: .leading)
-                Text("PENT").foregroundStyle(Color(hex: "#ffb27a")).frame(maxWidth: .infinity, alignment: .leading)
+                WxLogoLabel30(asset: "YrLogo", text: "YR", color: Color(hex: "#7fd6f5"))
+                WxLogoLabel30(asset: "StormLogo", text: "STORM", color: Color(hex: "#ffb27a"))
                 Text("AVVIK").frame(width: 44, alignment: .trailing)
             }
             .font(.system(size: 11, weight: .heavy)).tracking(0.88).opacity(header)

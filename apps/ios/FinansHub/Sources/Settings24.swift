@@ -269,10 +269,10 @@ struct Set24Results: View {
             }
         }
         .sheet(isPresented: $naming) {
-            AppName24Sheet { naming = false }.environment(\.paper, p).presentationDetents([.medium, .large]).presentationBackground(p.bg)
+            AppName24Sheet { naming = false }.environment(\.paper, p).presentationDetents([.medium, .large]).sheetEdge30(p.bg)
         }
         .sheet(isPresented: $picking) {
-            AppIconSheet { picking = false }.environment(\.paper, p).presentationDetents([.medium, .large]).presentationBackground(p.bg)
+            AppIconSheet { picking = false }.environment(\.paper, p).presentationDetents([.medium, .large]).sheetEdge30(p.bg)
         }
     }
 

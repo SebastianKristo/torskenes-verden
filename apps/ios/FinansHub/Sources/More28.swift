@@ -88,6 +88,7 @@ final class Mer28 {
 
     func start() {
         if editing { return }
+        Mer30.shared.showHidden = false
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         withAnimation(.easeOut(duration: 0.2)) { editing = true }
     }
@@ -132,7 +133,8 @@ final class Mer28 {
         let cur = arrange(all)
         var keys: [String] = cur.visible.map(\.id)
         guard let i = keys.firstIndex(of: k) else { return }
-        let h: CGFloat = Mer28.rowH
+        // Prompt 30: separate kort med 10 pt mellomrom i redigeringsmodus.
+        let h: CGFloat = Mer28.rowH + Wiggle30.gap
         var sw: Int = 0
         if dy > h / 2 && i < keys.count - 1 { sw = 1 } else if dy < -h / 2 && i > 0 { sw = -1 }
         if sw != 0 {
@@ -174,18 +176,19 @@ struct PaperMore28: View {
         let all: [More28Row] = rows
         let cur = m.arrange(all)
         VStack(alignment: .leading, spacing: 10) {
-            if m.editing { More28EditCard(done: { m.done(store) }) }
-            More28List(rows: cur.visible, all: all, hiddenList: false)
-            if m.editing && !cur.hidden.isEmpty {
-                Text("SKJULT").font(PF.ui(11.5, .heavy)).tracking(1.4).foregroundStyle(p.lab)
-                    .padding(.horizontal, 4).padding(.top, 8)
-                More28List(rows: cur.hidden, all: all, hiddenList: true)
+            // Prompt 30: ingen header-kort. ＋ N / ✓ flyter over listen (Mer30Pills), separate kort som vugger (Wiggle30.swift).
+            if m.editing {
+                Mer30EditList(visible: cur.visible, hidden: cur.hidden, all: all)
+            } else {
+                More28List(rows: cur.visible, all: all, hiddenList: false)
             }
             if !m.editing {
                 Text("Hold inne for å endre rekkefølgen eller skjule moduler.").font(PF.ui(12)).foregroundStyle(p.mut)
                     .frame(maxWidth: .infinity).multilineTextAlignment(.center).padding(.top, 2)
             }
         }
+        .onAppear { Mer30.shared.hiddenCount = cur.hidden.count }
+        .onChange(of: cur.hidden.count) { _, n in Mer30.shared.hiddenCount = n }
         .task(id: store.account?.id ?? "") { await m.load(store) }
         .onDisappear { if m.editing { m.done(store) } }
     }

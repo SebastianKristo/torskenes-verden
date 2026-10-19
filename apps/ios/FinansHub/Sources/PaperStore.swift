@@ -26,6 +26,7 @@ extension Store {
         applyPaper19(o)
         applyPaper22(o)
         FinTileOrder20.apply(o)
+        FinHidden30.shared.apply(o)
         Prof24.shared.apply(o, self)
     }
 
@@ -244,6 +245,8 @@ extension Store {
             || paperTab == "ftx" || paperEditPage != nil || (paperTab == "abo" && !finNav.contains("abonnementer"))
             || paperTab.hasPrefix("innst-") || paperTab == "profil" || paperTab == "huske" || paperTab == "kalender" || (paperTab == "boliger" && folder != nil)
             || nav23SubOfFinMore
+            // Prompt 30: Chat (fullskjerm) og Bursdager fra Mer kan også sveipes tilbake.
+            || paperTab == "chat" || (paperTab == "bursdag" && !mainTabItems.contains(where: { $0.id == "bursdag" }))
     }
 
     /// Oversikt og kontoer til Papir-Finans (uten feilmelding når serveren ikke svarer).

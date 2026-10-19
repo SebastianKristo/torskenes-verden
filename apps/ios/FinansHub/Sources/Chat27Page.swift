@@ -126,11 +126,15 @@ struct Chat27Main: View {
     let c: ChatPal27
 
     var body: some View {
+        // Prompt 30: skriveboksen ligger i .safeAreaInset(edge: .bottom), så den alltid står rett over tastaturet
+        // (meldingslisten krymper). Ingen .ignoresSafeArea(.keyboard) her (claude-code-chat-tastatur.md).
         VStack(spacing: 0) {
             Chat27TopBar(c: c)
             Chat27Messages(c: c)
                 .frame(maxHeight: .infinity)
-            Chat27Composer(c: c)
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    Chat27Composer(c: c)
+                }
         }
         .frame(maxWidth: .infinity)
     }
@@ -234,6 +238,10 @@ struct Chat27Messages: View {
                 withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("c27bottom", anchor: .bottom) }
             }
             .onChange(of: s.streamText.count / 80) { _, _ in proxy.scrollTo("c27bottom", anchor: .bottom) }
+            // Prompt 30: tastaturet opp → siste melding rett over skriveboksen.
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { (_: Notification) in
+                withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo("c27bottom", anchor: .bottom) }
+            }
         }
     }
 }

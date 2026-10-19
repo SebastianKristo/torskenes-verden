@@ -164,6 +164,10 @@ struct Cal27ListDay: View {
                 Text(Cal26.monthsShort[Cal26.cal.component(.month, from: d) - 1].uppercased()).font(PF.mono(10, bold: false)).foregroundStyle(p.mut)
             }
             .frame(width: 46)
+            // Prompt 30: trykk på datoen åpner dagen i Dag-visning.
+            .contentShape(Rectangle())
+            .onTapGesture { m.goDay(Cal26.key(d)) }
+            .accessibilityAddTraits(.isButton)
             VStack(spacing: 6) {
                 if grp.items.isEmpty {
                     Text("Ingen hendelser").font(PF.ui(14)).foregroundStyle(p.mut)

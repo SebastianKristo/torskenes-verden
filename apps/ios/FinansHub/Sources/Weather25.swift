@@ -65,7 +65,7 @@ struct WxWide25: View {
                 footer
             }
             .frame(maxWidth: 1280)
-            .padding(.horizontal, 24).padding(.top, 56).padding(.bottom, WxBottomBar28.height + 16)
+            .padding(.horizontal, 24).padding(.top, 56).padding(.bottom, WxBottomButtons30.height + 16)
             .frame(maxWidth: .infinity)
         }
         .scrollIndicators(.hidden)

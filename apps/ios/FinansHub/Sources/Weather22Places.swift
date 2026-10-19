@@ -93,11 +93,8 @@ struct WxPlacesSheet22: View {
         HStack {
             Text("Steder").font(.system(size: 24, weight: .bold))
             Spacer()
-            Button { dismiss() } label: {
-                Text("Ferdig").font(.system(size: 13.5, weight: .bold)).foregroundStyle(Color(hex: "#17191e"))
-                    .padding(.horizontal, 16).frame(height: 38).background(Color.white, in: Capsule())
-            }
-            .buttonStyle(.borderless)
+            SheetButton30(kind: .primary, title: "Ferdig", dark: true) { dismiss() }
+                .buttonStyle(.borderless)
         }
         .plainRow22()
         .padding(.top, 14)

@@ -263,8 +263,10 @@ final class Cal27Model {
         ensure(Cal26.day(key))
     }
 
+    /// Prompt 30: fra nedtrekks-minikalenderen beholdes Dag/3 dager/Uke; fra Måned eller Liste går den til Dag.
     func pickMini(_ key: String) {
         cur = key
+        if !isGrid { view = "dag" }
         mini = false
         miniOff = 0
         scrollTick += 1

@@ -182,7 +182,7 @@ struct MerchantLogo27Button: View {
         .sheet(isPresented: $open) {
             MerchantLogo27Sheet(name: name, receiptId: receiptId, done: { open = false; onDone() }).environment(\.paper, p)
                 .presentationDetents([.medium, .large])
-                .presentationBackground(p.bg)
+                .sheetEdge30(p.bg)
         }
     }
 }

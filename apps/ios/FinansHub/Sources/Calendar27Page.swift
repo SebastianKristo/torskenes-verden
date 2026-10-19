@@ -23,19 +23,19 @@ struct Cal27Page: View {
             Cal27Detail(e: e)
                 .environment(\.paper, p)
                 .presentationDetents([.medium, .large])
-                .presentationBackground(p.bg)
+                .sheetEdge30(p.bg)
         }
         .sheet(item: Binding<Cal27Form?>(get: { m.form }, set: { m.form = $0 })) { f in
             Cal27FormSheet(start: f)
                 .environment(\.paper, p)
                 .presentationDetents([.large])
-                .presentationBackground(p.bg)
+                .sheetEdge30(p.bg)
         }
         .sheet(isPresented: Binding<Bool>(get: { m.searchOpen }, set: { m.searchOpen = $0 })) {
             Cal27SearchSheet()
                 .environment(\.paper, p)
                 .presentationDetents([.large])
-                .presentationBackground(p.bg)
+                .sheetEdge30(p.bg)
         }
         // Prompt 29: + åpner «Legg til time» (Quick29Views.swift).
         .sheet(isPresented: Binding<Bool>(get: { Quick29Model.shared.sheetOpen }, set: { Quick29Model.shared.sheetOpen = $0 })) {
@@ -43,7 +43,7 @@ struct Cal27Page: View {
                 .environment(\.paper, p)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
-                .presentationBackground(p.bg)
+                .sheetEdge30(p.bg)
         }
     }
 }

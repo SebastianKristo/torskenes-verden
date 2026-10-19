@@ -13,6 +13,8 @@ struct PaperHome: View {
 
     var body: some View {
         VStack(spacing: 10) {
+            // Prompt 30: oppdateringsbanneret øverst, over søkefeltet (bare admin, ✕ skjuler i 24 t). Update30.swift.
+            Update30Banner(home: true)
             // Hold inne et kort for å flytte eller skjule det (Søk, Pakker, Avganger, Snarveier og Siste nytt).
             PaperCardStack(page: "hjem", cards: [
                 // Prompt 29: søkefelt med søkemotor-meny (System-AI/Google/DuckDuckGo) og timer til kalenderen (HomeSearch29.swift).
@@ -31,6 +33,8 @@ struct PaperHome: View {
             ], fullWidth: ["h1", "h5"], twoColumns: true)
             if let e = store.homeError { Text(e).font(PF.ui(12.5)).foregroundStyle(p.lab).frame(maxWidth: .infinity, alignment: .leading) }
         }
+        .update30Sheet()
+        .task { await Update30Model.shared.load(store) }
     }
 
     /// Prompt 24: Pakker vises alltid, også uten aktive pakker («Ingen aktive pakker · Legg til et sporingsnummer»).
@@ -440,6 +444,8 @@ struct PaperLinkRow: Identifiable {
     var icon: String? = nil
     /// Forskyver ikonfargen, så grupper etter hverandre får forskjellige farger.
     var colorOffset: Int = 0
+    /// Prompt 30: fast farge som på web (hvitt ikon i farget rute). nil = ikontemaet.
+    var tint30: Color? = nil
     let act: () -> Void
 }
 
@@ -453,7 +459,9 @@ struct PaperLinkList: View {
                 if i > 0 { Rectangle().fill(p.line).frame(height: 1) }
                 Button(action: r.act) {
                     HStack(spacing: 10) {
-                        if let ic = r.icon {
+                        if let ic = r.icon, let t = r.tint30 {
+                            Set30Icon(symbol: ic, tint: t)
+                        } else if let ic = r.icon {
                             // Som i designet: farget ikon i en papirfarget rute (fargen følger ikontemaet).
                             Image(systemName: ic).font(.system(size: 15, weight: .semibold)).foregroundStyle(PaperIconTheme.color(store.iconTheme, i + r.colorOffset))
                                 .frame(width: 34, height: 34)
@@ -546,7 +554,7 @@ struct PaperTracking: View {
             PaperTrackSettings()
                 .environment(\.paper, p)
                 .presentationDetents([.medium, .large])
-                .presentationBackground(p.bg)
+                .sheetEdge30(p.bg)
         }
     }
 

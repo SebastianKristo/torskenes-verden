@@ -191,7 +191,7 @@ struct PaperDepartures: View {
             }
         }
         .sheet(isPresented: Binding(get: { m.searchOpen }, set: { m.searchOpen = $0 })) {
-            RuterSearchSheet().environment(\.paper, p).presentationDetents([.medium, .large]).presentationBackground(p.bg)
+            RuterSearchSheet().environment(\.paper, p).presentationDetents([.medium, .large]).sheetEdge30(p.bg)
         }
     }
 

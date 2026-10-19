@@ -187,7 +187,7 @@ struct WxCompare22 {
 
     var title: String {
         switch level {
-        case "good": return "Yr og Pent er enige"
+        case "good": return "Yr og Storm er enige"
         case "mid": return "Litt uenige · " + WxFmt22.f1(avg) + "° i snitt"
         default: return "Uenige · " + WxFmt22.f1(avg) + "° i snitt"
         }

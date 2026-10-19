@@ -397,17 +397,12 @@ struct Bol24EntrySheet: View {
         HStack(alignment: .top, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
                 PLabel(text: kick, size: 11)
-                Text(e.description).font(PF.serif(26, medium: true)).foregroundStyle(p.ink).fixedSize(horizontal: false, vertical: true)
+                // Prompt 30: butikk/beskrivelse kan redigeres (lagres fortløpende, Boliger30.swift).
+                Bol30TitleField(hid: home.id, eid: e.id, initial: e.description, editable: home.canEdit && !e.pending)
             }
             Spacer(minLength: 0)
-            Button(action: close) {
-                Text("×").font(.system(size: 16)).foregroundStyle(p.ink)
-                    .frame(width: 38, height: 38)
-                    .background(Circle().fill(p.card))
-                    .overlay(Circle().strokeBorder(p.line, lineWidth: 1))
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Lukk")
+            // Prompt 30: felles Ferdig-pille.
+            SheetButton30(kind: .primary, title: "Ferdig", action: close)
         }
     }
 
@@ -415,8 +410,14 @@ struct Bol24EntrySheet: View {
         HStack(alignment: .top, spacing: 12) {
             receipt
             VStack(alignment: .leading, spacing: 6) {
-                Text(e.pending ? "…" : bol24kr(e.amount)).font(PF.serif(34, medium: true)).foregroundStyle(p.ink).lineLimit(1).minimumScaleFactor(0.6)
-                Text(ddmmyyyy(e.date) + (e.paidBy.isEmpty ? "" : " · lagt til av " + e.paidBy)).font(PF.ui(13)).foregroundStyle(p.mut)
+                if home.canEdit && !e.pending {
+                    // Prompt 30: beløp (34 pt, «kr») og dato kan endres.
+                    Bol30AmountDate(hid: home.id, eid: e.id, amount: e.amount, date: e.date)
+                    if !e.paidBy.isEmpty { Text("Lagt til av " + e.paidBy).font(PF.ui(13)).foregroundStyle(p.mut) }
+                } else {
+                    Text(e.pending ? "…" : bol24kr(e.amount)).font(PF.serif(34, medium: true)).foregroundStyle(p.ink).lineLimit(1).minimumScaleFactor(0.6)
+                    Text(ddmmyyyy(e.date) + (e.paidBy.isEmpty ? "" : " · lagt til av " + e.paidBy)).font(PF.ui(13)).foregroundStyle(p.mut)
+                }
                 if !e.aiShort.isEmpty {
                     Text("✦ " + e.aiShort).font(PF.ui(13)).foregroundStyle(p.ink).lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)

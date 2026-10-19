@@ -6,7 +6,8 @@ private func pkr(_ v: Double) -> String { "\(neg0(v)) kr" }
 
 /// GET /finans/api/transactions/:id: transaksjonen med kvittering (varelinjer) og bankrad.
 struct PaperTxData {
-    struct ReceiptLine: Hashable { let name: String; let price: Double? }
+    /// Prompt 30: bbox = [x, y, w, h] i prosent av bildet (nil for eldre kvitteringer).
+    struct ReceiptLine: Hashable { let name: String; let price: Double?; var bbox: [Double]? = nil }
     var failed = false
     var id = 0
     var merchant = ""
@@ -23,6 +24,8 @@ struct PaperTxData {
     var receiptFile: String?
     var receiptMime: String?
     var lines: [ReceiptLine] = []
+    /// Prompt 30: kvitteringens id (til «Les kvitteringen på nytt»).
+    var receiptId: String = ""
     var total: Double?
     var bankText = ""
     var bankMessage = ""
@@ -44,7 +47,8 @@ struct PaperTxData {
             receiptStatus = JS.str(r, "status") ?? "attached"
             receiptFile = JS.str(r, "fileUrl")
             receiptMime = JS.str(r, "mime")
-            lines = JS.list(r, "lines").map { ReceiptLine(name: JS.str($0, "name") ?? "", price: JS.num($0, "price")) }
+            lines = JS.list(r, "lines").map { (l: [String: Any]) -> ReceiptLine in PaperTxData.line30(l) }
+            receiptId = JS.str(r, "id") ?? JS.str(o, "receiptId") ?? ""
             total = JS.num(r, "total")
             aiSummary = JS.str(r, "aiSummary") ?? ""
         }
@@ -55,6 +59,14 @@ struct PaperTxData {
             booked = JS.str(b, "bookingDate") ?? ""
             valueDate = JS.str(b, "valueDate") ?? ""
         }
+    }
+
+    /// Én varelinje: name/text, price og bbox (prosent, 4 tall).
+    static func line30(_ l: [String: Any]) -> ReceiptLine {
+        let name: String = JS.str(l, "name") ?? JS.str(l, "text") ?? ""
+        let raw: [Double] = ((l["bbox"] as? [Any]) ?? []).compactMap { (v: Any) -> Double? in (v as? NSNumber)?.doubleValue }
+        let box: [Double]? = raw.count == 4 ? raw : nil
+        return ReceiptLine(name: name, price: JS.num(l, "price"), bbox: box)
     }
 
     var statusText: String {
@@ -91,7 +103,11 @@ struct PaperTxDetailView: View {
                         Text(d.statusText).font(PF.ui(12, .semibold)).foregroundStyle(d.receiptStatus == "attached" ? p.pos : p.lab)
                     }
                     .padding(.horizontal, 2).padding(.top, 4)
-                    if d.hasReceipt { receipt(d) } else { attach }
+                    if d.hasReceipt {
+                        // Prompt 30: gult banner, bildet med markerte felt og «Les kvitteringen på nytt».
+                        hl30Top(d)
+                        receipt(d)
+                    } else { attach }
                     HStack(spacing: 8) {
                         PLineButton(title: "Endre kategori", height: 46, full: true) { catSheet = true }
                         PLineButton(title: "Bankutskrift", height: 46, full: true) { store.openOriginal(d.id, "bank") }
@@ -107,7 +123,7 @@ struct PaperTxDetailView: View {
                 PaperCategorySheet(detail: d) { catSheet = false }
                     .environment(\.paper, p)
                     .presentationDetents([.medium, .large])
-                    .presentationBackground(p.bg)
+                    .sheetEdge30(p.bg)
             }
         }
     }
@@ -154,12 +170,10 @@ struct PaperTxDetailView: View {
                 if d.lines.isEmpty {
                     Text(d.receiptFile == nil ? "Ingen varelinjer lest ennå" : "Trykk for å se originalen").font(.system(size: 12, design: .monospaced)).foregroundStyle(ink.opacity(0.7))
                 }
-                ForEach(Array(d.lines.prefix(40).enumerated()), id: \.offset) { _, l in
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(l.name.uppercased()).font(.system(size: 12, design: .monospaced)).foregroundStyle(ink).lineLimit(1)
-                        Spacer(minLength: 6)
-                        Text(l.price.map { n2(abs($0)) } ?? "").font(.system(size: 12, design: .monospaced)).foregroundStyle(ink)
-                    }
+                // Prompt 30: linjene som matcher søket markeres gult (Receipt30.swift).
+                let hl: (idx: [Int], word: String) = hl30(d)
+                ForEach(Array(d.lines.prefix(40).enumerated()), id: \.offset) { i, l in
+                    Hl30Line(name: l.name, price: l.price, hit: hl.idx.contains(i), word: hl.word, first: hl.idx.first == i)
                 }
                 dashed(ink)
                 HStack {
@@ -180,6 +194,27 @@ struct PaperTxDetailView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Original kvittering, \(d.lines.count) varelinjer")
+    }
+
+    private func hl30(_ d: PaperTxData) -> (idx: [Int], word: String) {
+        let h: Hl30 = Hl30.shared
+        if !h.active(d.id) { return ([], "") }
+        let names: [String] = d.lines.prefix(40).map(\.name)
+        return h.matches(names)
+    }
+
+    @ViewBuilder private func hl30Top(_ d: PaperTxData) -> some View {
+        let hl: (idx: [Int], word: String) = hl30(d)
+        if let first = hl.idx.first {
+            let boxes: [[Double]] = hl.idx.compactMap { (i: Int) -> [Double]? in d.lines[i].bbox }
+            Hl30Banner(first: first, count: hl.idx.count, price: d.lines[first].price)
+                .onAppear { Set25Focus.shared.flash("hl30") }
+            if let file = d.receiptFile, !boxes.isEmpty, !(d.receiptMime ?? "").contains("pdf") {
+                Hl30Image(path: file, boxes: boxes)
+            } else if d.receiptFile != nil && !d.receiptId.isEmpty {
+                Hl30Reread(receiptId: d.receiptId, txId: d.id)
+            }
+        }
     }
 
     private func dashed(_ c: Color) -> some View {
@@ -407,7 +442,11 @@ struct PaperFinSearch: View {
     private func hitRow(_ h: AiHit) -> some View {
         let name = h.description ?? "Treff"
         return Button {
-            if let id = h.txId { store.openPaperTx(id) }
+            if let id = h.txId {
+                // Prompt 30: marker treffet i kvitteringen (?hl=…).
+                Hl30.shared.open(id, term: h.matchedText ?? q, lines: h.lineIndex ?? [])
+                store.openPaperTx(id)
+            }
         } label: {
             HStack(spacing: 12) {
                 Text(String(name.prefix(1)).uppercased()).font(PF.ui(11, .heavy)).foregroundStyle(.white)
@@ -505,10 +544,12 @@ struct PaperFinMoreGrid: View {
     var body: some View {
         let cols = wide ? 4 : 2
         VStack(alignment: .leading, spacing: 10) {
-            if editing { Color.clear.frame(height: 48) }
+            // Prompt 30: plassen til pillene er nå 64 pt padding-top i PaperPage (Wiggle30.topPad).
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: cols), spacing: 10) {
-                ForEach(Array(sortedTiles.enumerated()), id: \.element.id) { i, t in cell(t, i) }
+                ForEach(Array(visibleTiles.enumerated()), id: \.element.id) { i, t in cell(t, i) }
             }
+            // Prompt 30: skjulte sider under rutenettet når ＋ er trykket (55 % opasitet, hvitt ＋-merke).
+            if editing && FinHidden30.shared.showHidden { hiddenSection(cols) }
         }
         .onAppear { order = FinTileOrder20.load() }
         .onChange(of: editing) { old, on in if old && !on { stopEditing() } }
@@ -561,12 +602,54 @@ struct PaperFinMoreGrid: View {
         return out
     }
 
+    /// Prompt 30: synlige fliser (skjulte tas ut, Innstillinger kan ikke skjules).
+    private var visibleTiles: [Tile] {
+        let h: FinHidden30 = FinHidden30.shared
+        return sortedTiles.filter { !h.isHidden($0.id) }
+    }
+
+    private func hiddenSection(_ cols: Int) -> some View {
+        let list: [Tile] = sortedTiles.filter { FinHidden30.shared.isHidden($0.id) }
+        return VStack(alignment: .leading, spacing: 10) {
+            WiggleHiddenLabel30()
+            if list.isEmpty {
+                Text("Ingen skjulte sider. Trykk − på en flis for å skjule den.").font(PF.ui(13)).foregroundStyle(p.mut)
+                    .padding(.horizontal, 4)
+            } else {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: cols), spacing: 10) {
+                    ForEach(list) { t in
+                        tile(t).opacity(0.55)
+                            .overlay(alignment: .topLeading) {
+                                WiggleBadge30(kind: .plus, label: "Vis \(t.name)") { showTile(t.id) }.offset(x: -9, y: -9)
+                            }
+                    }
+                }
+            }
+            FinResetOrder30 { resetOrder() }
+        }
+    }
+
+    /// Vis igjen: legges sist i rekkefølgen.
+    private func showTile(_ id: String) {
+        FinHidden30.shared.show(id, store)
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { order = order.filter { $0 != id } + [id] }
+    }
+
+    @ViewBuilder private func badge30(_ t: Tile) -> some View {
+        if t.id == FinHidden30.locked {
+            WiggleBadge30(kind: .lock, label: "Innstillinger kan ikke skjules") {}
+        } else {
+            WiggleBadge30(kind: .minus, label: "Skjul \(t.name)") { FinHidden30.shared.hide(t.id, store) }
+        }
+    }
+
     @ViewBuilder private func cell(_ t: Tile, _ i: Int) -> some View {
         let sign: Double = i % 2 == 0 ? 1 : -1
         if editing {
             tile(t)
                 .rotationEffect(.degrees((wiggle ? Edit28.angle : -Edit28.angle) * sign))
                 .animation(.easeInOut(duration: Edit28.half).repeatForever(autoreverses: true), value: wiggle)
+                .overlay(alignment: .topLeading) { badge30(t).offset(x: -9, y: -9) }
                 .draggable(t.id)
                 .dropDestination(for: String.self) { items, _ in
                     drop(items.first, on: t.id)
@@ -580,6 +663,7 @@ struct PaperFinMoreGrid: View {
 
     private func startEditing() {
         guard !editing else { return }
+        FinHidden30.shared.showHidden = false
         order = sortedTiles.map(\.id)
         store.enterPaperEdit("fmer")
         DispatchQueue.main.async { wiggle = true }

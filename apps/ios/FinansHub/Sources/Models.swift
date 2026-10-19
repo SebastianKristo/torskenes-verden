@@ -980,7 +980,8 @@ struct Report: Decodable { var mode: String?; var total: Double?; var byCategory
 struct ImportRow: Decodable, Hashable { var date: String?; var description: String?; var raw: String?; var amount: Double?; var category: String?; var domain: String?; var aiShort: String?; var duplicate: Bool? }
 struct ImportResult: Decodable { var rows: [ImportRow]?; var imported: Int?; var skipped: Int?; var errors: [String]? }
 
-struct AiHit: Decodable, Hashable { var type: String?; var txId: Int?; var description: String?; var date: String?; var amount: Double?; var source: String?; var reason: String? }
+/// Prompt 30: lineIndex/matchedText fra finanssøket (hvilke kvitteringslinjer som traff, for markering).
+struct AiHit: Decodable, Hashable { var type: String?; var txId: Int?; var description: String?; var date: String?; var amount: Double?; var source: String?; var reason: String?; var lineIndex: [Int]?; var matchedText: String? }
 struct StoreHit: Decodable, Hashable { var name: String?; var count: Int?; var last: String? }
 /// Svar fra ✦ AI-søk (POST /search/ai) eller vanlig søk (GET /search?q=).
 struct AiAnswer: Decodable {

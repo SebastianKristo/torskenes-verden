@@ -32,7 +32,7 @@ struct PaperStocks: View {
         }
         .task { if store.stocksX == nil { await store.loadStocksQuiet() } }
         .sheet(item: $sel) { s in
-            PaperStockDetail(pos: s).environment(\.paper, p).presentationDetents([.medium, .large]).presentationBackground(p.bg)
+            PaperStockDetail(pos: s).environment(\.paper, p).presentationDetents([.medium, .large]).sheetEdge30(p.bg)
         }
     }
 

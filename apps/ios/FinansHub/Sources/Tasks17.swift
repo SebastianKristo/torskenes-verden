@@ -229,7 +229,7 @@ struct PaperTasksView: View {
         }
         .task { await m.load(store) }
         .sheet(item: $editing) { t in
-            TaskEditSheet(task: t) { editing = nil }.environment(\.paper, p).presentationDetents([.medium, .large]).presentationBackground(p.bg)
+            TaskEditSheet(task: t) { editing = nil }.environment(\.paper, p).presentationDetents([.medium, .large]).sheetEdge30(p.bg)
         }
     }
 

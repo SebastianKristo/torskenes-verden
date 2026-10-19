@@ -46,8 +46,9 @@ struct Bol24Page: View {
             sheetView(s)
                 .environment(\.paper, p)
                 .presentationDetents([.large])
-                .presentationBackground(p.bg)
+                .sheetEdge30(p.bg)
         }
+        .dismissHaptic30(sheet != nil)
     }
 
     @ViewBuilder private func tabContent(_ h: Bol24Home) -> some View {

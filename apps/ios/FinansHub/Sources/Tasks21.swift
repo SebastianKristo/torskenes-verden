@@ -141,7 +141,7 @@ struct TaskListHeader21: View {
             TaskShareSheet21(list: list) { sharing = false }
                 .environment(\.paper, p)
                 .presentationDetents([.medium, .large])
-                .presentationBackground(p.bg)
+                .sheetEdge30(p.bg)
         }
     }
 }

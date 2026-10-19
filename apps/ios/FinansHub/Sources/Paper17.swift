@@ -584,19 +584,23 @@ struct PaperSettings17: View {
             }
         }
         .sheet(isPresented: $naming) {
-            AppName24Sheet { naming = false }.environment(\.paper, p).presentationDetents([.medium, .large]).presentationBackground(p.bg)
+            AppName24Sheet { naming = false }.environment(\.paper, p).presentationDetents([.medium, .large]).sheetEdge30(p.bg)
         }
         .sheet(isPresented: $picking) {
-            AppIconSheet { picking = false }.environment(\.paper, p).presentationDetents([.medium, .large]).presentationBackground(p.bg)
+            AppIconSheet { picking = false }.environment(\.paper, p).presentationDetents([.medium, .large]).sheetEdge30(p.bg)
         }
         .task {
             await NotifyModel.shared.load(store)
             if Update28Model.isAdmin(store) { await Update28Model.shared.load(store) }
             if Backup29Model.isAdmin(store) && !Backup29Model.shared.loaded { await Backup29Model.shared.load(store) }
+            await Update30Model.shared.load(store)
         }
+        .update30Sheet()
     }
 
     @ViewBuilder private var mainGroups: some View {
+            // Prompt 30: oppdateringsbanneret øverst i Innstillinger (kan ikke skjules her).
+            Update30Banner(home: false).padding(.top, 8)
             profileCard
             // Prompt 24: PROFIL – Standard · Finans + Boliger · Boliger-profil (Profiles24.swift).
             group("Profil", 4, store.prof24Rows(p))
@@ -628,6 +632,8 @@ struct PaperSettings17: View {
             ])
             // Prompt 28: oppdatering av hele systemet (bare admin; startes i nettleseren). Update28.swift.
             if Update28Model.isAdmin(store) {
+                // Prompt 30: PROGRAMVARE (Oppdater ›, automatiske oppdateringer, varsle om nye versjoner). Update30.swift.
+                Update30Software()
                 group("System", 5, [
                     PaperLinkRow(name: "Oppdatering", sub: Update28Model.shared.summary, icon: "arrow.down.circle") { store.paperGo("innst-oppdatering") },
                 ])
@@ -705,7 +711,9 @@ struct PaperSettings17: View {
     private var accountSub: String {
         let u = store.account?.username ?? ""
         let r = (store.me?.role ?? store.account?.role ?? "") == "admin" ? "Admin" : "Bruker"
-        return u.isEmpty ? r : "@\(u) · \(r)"
+        // Prompt 30: ikke @brukernavn her (vises bare i Konto → Profil). Hele kortet åpner Konto.
+        _ = u
+        return "\(r) · Se konto ›"
     }
 
     private var serverHost: String {
@@ -716,6 +724,8 @@ struct PaperSettings17: View {
         let shifted = rows.map { r -> PaperLinkRow in
             var x = r
             x.colorOffset = offset
+            // Prompt 30: samme ikonfarger som web (Settings30.swift).
+            if x.tint30 == nil { x.tint30 = Set30Colors.tint(r.name) }
             return x
         }
         return VStack(alignment: .leading, spacing: 0) {

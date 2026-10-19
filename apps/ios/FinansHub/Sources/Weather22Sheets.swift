@@ -667,15 +667,14 @@ struct WxCompareSheet22: View {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(alignment: .center, spacing: 10) {
                     VStack(alignment: .leading, spacing: 0) {
-                        Text("Yr mot Pent").font(.system(size: 24, weight: .bold))
+                        Text("Yr mot Storm").font(.system(size: 30, weight: .bold))
                         Text(w.placeName).font(.system(size: 13)).foregroundStyle(Color(hex: "#9aa3ae"))
                     }
                     Spacer()
-                    Button { if inPanel { WxPanel25.shared.close() } else { dismiss() } } label: {
-                        Text("Ferdig").font(.system(size: 13.5, weight: .bold)).foregroundStyle(Color(hex: "#17191e"))
-                            .padding(.horizontal, 16).frame(height: 38).background(Color.white, in: Capsule())
+                    // Prompt 30: felles Ferdig-pille (hvit på mørk flate), lett haptikk ved lukking.
+                    SheetButton30(kind: .primary, title: "Ferdig", dark: true) {
+                        if inPanel { WxPanel25.shared.close() } else { dismiss() }
                     }
-                    .buttonStyle(.plain)
                 }
                 if let c = w.compare {
                     agreeCard(c)
@@ -686,16 +685,18 @@ struct WxCompareSheet22: View {
                     .padding(.horizontal, 14).padding(.top, 10).padding(.bottom, 4)
                     .background(Color(hex: "#20232a"), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                 } else {
-                    Text(w.compareState == 2 ? "Pent svarte ikke. Prøv igjen senere." : "Henter Pent-data …").font(.system(size: 13)).foregroundStyle(Color(hex: "#9aa3ae"))
+                    Text(w.compareState == 2 ? "Storm svarte ikke. Prøv igjen senere." : "Henter Storm-data …").font(.system(size: 13)).foregroundStyle(Color(hex: "#9aa3ae"))
                 }
                 HStack(spacing: 8) {
                     link("Åpne yr.no ↗", w.yrUrl)
                     link("Åpne storm.no ↗", "https://www.storm.no/")
                 }
-                Text("Yr er MET Norway (api.met.no). Pent (StormGeo-modell) har ikke et åpent API, så Pent-kolonnen viser ECMWF-modellen fra Open-Meteo, som er nærmeste åpne kilde. Avvik er forskjellen i makstemperatur.")
+                Text("Yr er MET Norway (api.met.no). Storm (StormGeo) har ikke et åpent API, så Storm-kolonnen viser ECMWF-modellen fra Open-Meteo, som er nærmeste åpne kilde. Avvik er forskjellen i makstemperatur.")
                     .font(.system(size: 12)).lineSpacing(4).foregroundStyle(Color(hex: "#9aa3ae")).fixedSize(horizontal: false, vertical: true)
             }
-            .padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 30)
+            .padding(.horizontal, 16).padding(.top, inPanel ? 14 : 48).padding(.bottom, 30)
+            .frame(maxWidth: 760)
+            .frame(maxWidth: .infinity)
         }
         .foregroundStyle(.white)
         .background(Color(hex: "#17191e").ignoresSafeArea())
@@ -721,13 +722,13 @@ struct WxCompareSheet22: View {
                 Text("NESTE 24 TIMER").font(.system(size: 11, weight: .semibold)).tracking(1.32).foregroundStyle(Color(hex: "#9aa3ae"))
                 Spacer()
                 HStack(spacing: 12) {
-                    legend("#5ec8f2", "Yr")
-                    legend("#ff8a3d", "Pent")
+                    legend("#5ec8f2", "Yr", logo: "YrLogo")
+                    legend("#ff8a3d", "Storm", logo: "StormLogo")
                 }
                 .font(.system(size: 12, weight: .bold))
             }
             WxCompareChart22(hours: next24(c))
-            Text("Søyler viser nedbør per time. Yr til venstre, Pent til høyre.").font(.system(size: 11.5)).foregroundStyle(Color(hex: "#9aa3ae"))
+            Text("Søyler viser nedbør per time. Yr til venstre, Storm til høyre.").font(.system(size: 11.5)).foregroundStyle(Color(hex: "#9aa3ae"))
         }
         .padding(.horizontal, 14).padding(.top, 14).padding(.bottom, 10)
         .background(Color(hex: "#20232a"), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
@@ -744,8 +745,9 @@ struct WxCompareSheet22: View {
         }
     }
 
-    private func legend(_ c: String, _ t: String) -> some View {
+    private func legend(_ c: String, _ t: String, logo: String) -> some View {
         HStack(spacing: 5) {
+            WxLogo30(asset: logo, size: 16)
             Capsule().fill(Color(hex: c)).frame(width: 14, height: 3)
             Text(t)
         }

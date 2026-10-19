@@ -60,9 +60,11 @@ struct Edit28Pills: View {
 
     @ViewBuilder private func left(_ page: String) -> some View {
         if page == "fmer" {
-            Edit28Pill(kind: .reset, text: "Tilbakestill") {
-                Haptics.shared.select()
-                e.resetTick += 1
+            // Prompt 30: ＋ N (skjulte sider) i stedet for «Tilbakestill», som er flyttet ned i SKJULT-seksjonen.
+            let n: Int = FinHidden30.shared.hidden.count
+            Edit28Pill(kind: .add, text: n > 0 ? "\(n)" : "") {
+                Haptics.shared.tap()
+                withAnimation(.easeOut(duration: 0.2)) { FinHidden30.shared.showHidden.toggle() }
             }
         } else if page != "sporing" {
             let n: Int = hiddenCount(page)
@@ -203,12 +205,8 @@ struct Edit28AddSheet: View {
             HStack(spacing: 10) {
                 Text("Legg til widget").font(PF.serif(24, medium: true)).foregroundStyle(p.ink)
                 Spacer(minLength: 4)
-                Button { e.addOpen = false } label: {
-                    Image(systemName: "xmark").font(.system(size: 13, weight: .bold)).foregroundStyle(p.ink)
-                        .frame(width: 36, height: 36).background(p.card, in: Circle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Lukk")
+                // Prompt 30: felles Ferdig-pille.
+                SheetButton30(kind: .primary, title: "Ferdig") { e.addOpen = false }
             }
             if hidden.isEmpty {
                 Text("Alle widgets vises allerede. Trykk − på en widget for å skjule den.").font(PF.ui(14)).foregroundStyle(p.mut)
@@ -275,13 +273,13 @@ struct Edit28Layer: ViewModifier {
                 Edit28AddSheet().environment(\.paper, p)
                     .presentationDetents([.medium])
                     .presentationDragIndicator(.visible)
-                    .presentationBackground(p.bg)
+                    .sheetEdge30(p.bg)
             }
             .sheet(isPresented: Binding<Bool>(get: { e.ruterOpen }, set: { e.ruterOpen = $0 })) {
                 RuterPick27Sheet(close: { e.ruterOpen = false }).environment(\.paper, p)
                     .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
-                    .presentationBackground(p.bg)
+                    .sheetEdge30(p.bg)
             }
     }
 }
