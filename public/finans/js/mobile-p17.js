@@ -147,7 +147,7 @@ export function p17SetMain(T = {}) {
     ${grp('GLIMT', [row('#/glimt', 'Glimt', 'Figur, brief, stemme og venner', '', 'ai', 'glimt')])}
     ${grp('APP', [row('#/set/look', 'Utseende og fanelinje', 'Papir · bakgrunn · ikonfarger', '', 'look', 'look'), row('#/aictl', 'AI og modeller', 'Modeller, jobber, forbruk og nøkler', '', 'ai', 'aictl'), /* prompt 34: AI-kontroll */ row('#/set/varsler', 'Varsler og haptikk', NT.d ? (NT.d.on === false ? 'Av' : 'På') : '', '', 'bell', 'varsler'), row('#/set/kal', 'Kalendere', 'Google Kalender · Home Assistant', '', 'users', 'kal'), row('#/set/integ', 'Integrasjoner', 'Home Assistant, Kalendere, Entur, Bring og flere', '', 'home', 'integ'),
       row('#/set/widgets', 'Widgets', 'Slik legger du til widget · iPhone, Samsung, Android', '', 'list', 'widgets'), row('#/set/kalapp', 'Kalender-appen', 'Egen app med samme konto · IPA og APK', '', 'down', 'kalapp')])}
-    ${grp('', [`<button class="opt-row p17-row" data-sact="logout"><span class="m-grow" style="color:var(--pp-lab);font-weight:700">Logg ut</span></button>`])}
+    ${'' /* Prompt 38: Logg ut er flyttet til Konto → Økt */}
     <span class="p17-ver">${esc(appName())} ${VERSION} · Papir</span>`;
 }
 /** Moduler: snarveier til modulene (de kan også legges i fanelinja). */

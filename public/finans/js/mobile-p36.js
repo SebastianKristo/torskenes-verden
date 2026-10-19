@@ -279,8 +279,11 @@ export function startingShow(why = 'update', ver = '') {
     <div class="p36-bf"><span class="p36-bft"></span><button type="button" class="p36-brl" hidden>Last inn på nytt nå</button><a class="p36-blog" href="#/nordlys" hidden>Vis logg</a></div></div>`;
   el.querySelector('.p36-brl').addEventListener('click', () => location.reload());
   el.querySelector('.p36-blog').addEventListener('click', () => startingHide(true));
-  document.body.appendChild(el); BOOT.el = el;
+  document.body.appendChild(el); BOOT.el = el; BOOT.sig = '';
   document.documentElement.classList.add('p36-booting');
+  // Prompt 38: samme farge bak overlegget og i statuslinja, så overgangene ikke blinker hvitt.
+  BOOT.tc = document.querySelector('meta[name=theme-color]')?.getAttribute('content') ?? null;
+  document.querySelector('meta[name=theme-color]')?.setAttribute('content', '#101a2e');
   bootPaint(); clearInterval(BOOT.tick); BOOT.tick = setInterval(bootPaint, 1000);
   clearTimeout(BOOT.poll); bootPoll();
 }
@@ -288,6 +291,7 @@ export function startingHide(now = false) {
   clearInterval(BOOT.tick); clearTimeout(BOOT.poll);
   const el = BOOT.el; BOOT.el = null; document.documentElement.classList.remove('p36-booting');
   if (!el) return;
+  if (BOOT.tc) document.querySelector('meta[name=theme-color]')?.setAttribute('content', BOOT.tc);
   if (now || reduce()) el.remove(); else { el.classList.add('bye'); setTimeout(() => el.remove(), 380); }
 }
 export const startingOn = () => !!BOOT.el;
@@ -311,10 +315,12 @@ function bootPaint() {
   el.querySelector('.p36-bv').textContent = String(BOOT.ver || '').replace(/^v/, '').split('.').slice(0, 2).join('.');
   el.querySelector('.p36-bl').textContent = LINES[phase];
   const S = BOOT.steps ?? [];
-  el.querySelector('.p36-bsteps').innerHTML = ST_STEPS.map(([id, n], k) => {
+  // Prompt 38 (flimmer): steglista bygges bare på nytt når status endres – ellers startet ✓-animasjonen hvert sekund.
+  const S0 = BOOT.steps ?? [], sig = `${i}|${done}|${S0.map((x) => `${x.id}:${x.status}:${x.ms ?? ''}`).join(',')}`;
+  if (sig !== BOOT.sig) { BOOT.sig = sig; el.querySelector('.p36-bsteps').innerHTML = ST_STEPS.map(([id, n], k) => {
     const x = S.find((y) => y.id === id), ok = done || k < i, on = !ok && k === i, ms = x?.ms ?? null;
     return `<div class="p36-brow${ok ? ' ok' : on ? ' on' : ''}"><span class="p36-bic">${ok ? `<svg width="20" height="20" viewBox="0 0 24 24" class="p36-bok"><circle cx="12" cy="12" r="11" fill="#2f7d4f"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>` : on ? '<i class="p36-bsp"></i>' : '<i class="p36-bw"></i>'}</span><span class="p36-bn">${esc(x?.label || n)}</span><span class="p36-bms">${ok && ms != null ? `${(ms / 1000).toFixed(1).replace('.', ',')} s` : on ? '…' : ''}</span></div>`;
-  }).join('');
+  }).join(''); }
   const s = Math.floor((Date.now() - BOOT.t0) / 1000);
   el.querySelector('.p36-bft').textContent = done ? 'Laster inn siden …' : s >= 180 ? 'Det tar lengre tid enn vanlig' : `Siden lastes inn automatisk når serveren svarer · ${s} s`;
   el.querySelector('.p36-brl').hidden = done || s < 40;
@@ -336,12 +342,16 @@ async function bootPoll() {
   } catch { ready = false; }
   if (!BOOT.el) return;
   if (ready) {
-    BOOT.ready = true; bootPaint(); haptic('ok');
+    BOOT.ready = true; clearInterval(BOOT.tick); bootPaint(); haptic('ok');
     setTimeout(async () => {
       // Mobil: hent versjonen på nytt og fjern overlegget. Ny versjon → nytt appskall (service worker) og ny innlasting.
       let v = null; try { v = await hlApi('/system/version'); } catch {}
       const cur = v?.current ?? v?.version ?? null;
-      if (BOOT.why === 'update' && cur && BOOT.ver && cur !== BOOT.ver) { try { (await navigator.serviceWorker?.getRegistration?.('/finans/'))?.update(); } catch {} location.reload(); return; }
+      if (BOOT.why === 'update' && cur && BOOT.ver && cur !== BOOT.ver) {
+        try { const reg = await navigator.serviceWorker?.getRegistration?.('/finans/'); await reg?.update(); reg?.waiting?.postMessage('skipWaiting'); } catch {}
+        // Prompt 38: fade ut 0,3 s før innlastingen (mørk bakgrunn i mellomtiden), så det ikke blinker hvitt.
+        document.documentElement.classList.add('p38-reload'); BOOT.el?.classList.add('bye'); setTimeout(() => location.reload(), 300); return;
+      }
       startingHide(); draw();
     }, 800);
     return;

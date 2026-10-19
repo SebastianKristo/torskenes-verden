@@ -136,8 +136,9 @@ export function hintToast(t) {
 export function ansBubble() {
   const A = G.ans; if (!A) return '';
   if (A.busy) return `<div class="p31-ans" data-p31="ansx" role="status">${glimt(22, 'think')}<span class="p31-at busy">Tenker på «${esc(A.q)}» …</span></div>`;
-  return `<div class="p31-ans ready" data-p31="ansx" role="status" aria-live="polite"><span class="p31-at">${bold(A.text)}</span>${A.card ? cardHtml(A.card, true) : ''}
-    ${A.err ? P34.errButtons(A.q) : ''}${A.open ? (A.open.route === 'familie' ? P37B.famOpenBtn(A.open) : P35.wxOpenBtn(A.open)) : ''}<div class="p31-af"><span class="m-ell">✦ ${esc(A.src || 'Glimt')}</span>${A.apply?.count && !A.applied ? `<button type="button" data-p31="ansapply">Endre ${A.apply.count} ${A.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${A.src === 'Snarvei' ? '' : '<button type="button" data-p31="anschat">Fortsett i Chat ›</button>'}</div></div>`;
+  // Prompt 38: trykk i boblen lukker den ikke lenger (tekst kan markeres). ✕, sveip opp og trykk utenfor lukker (mobile-p38.js).
+  return `<div class="p31-ans ready p38-ans" role="status" aria-live="polite"><button type="button" class="p38-ax" data-p31="ansx" aria-label="Lukk svar">${svg('M6 6l12 12M18 6L6 18', 12, 2.8)}</button><span class="p31-at">${bold(A.text)}</span>${A.card ? cardHtml(A.card, true) : ''}
+    ${A.err ? P34.errButtons(A.q) : ''}${A.open ? (A.open.route === 'familie' ? P37B.famOpenBtn(A.open) : P35.wxOpenBtn(A.open)) : ''}<div class="p31-af"><span class="m-ell">✦ ${esc(A.src || 'Glimt')}</span>${A.apply?.count && !A.applied ? `<button type="button" data-p31="ansapply">Endre ${A.apply.count} ${A.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${A.src === 'Snarvei' ? '' : '<button type="button" data-p31="anschat">Fortsett i Chat ›</button>'}</div><span class="p38-ah" aria-hidden="true"></span></div>`;
 }
 const ASSIST_MISSING = { v: false };
 async function assistCall(q, source, extra = {}) {
@@ -581,7 +582,7 @@ export function hooks31(cb) { CB = { ...CB, ...cb }; }
 export async function bind31(e, t) {
   const x = t.closest?.('[data-p31]'); if (!x) return false;
   const a = x.dataset.p31;
-  if (a === 'ansx' && t.closest('button')) return false;
+  if (a === 'ansx' && t.closest('button') && !x.matches('button')) return false;
   e.preventDefault(); e.stopPropagation?.();
   switch (a) {
     case 'aitog': { if (!curJob()) return true; try { navigator.vibrate?.(6); } catch {} haptic('tap'); G.open = !G.open; draw(); return true; }

@@ -40,7 +40,7 @@ export async function aiLoad(force = false) {
     if (k === 'st') P.push(get('st', '/ai/status', force, 60000));
     if (k === 'md') P.push(get('md', '/ai/models', force));
     if (k === 'lib') P.push(get('lib', `/ai/library?q=${encodeURIComponent(AC.q.trim())}&cat=${AC.cat === 'alle' ? '' : AC.cat}`, force, 60000));
-    if (k === 'rt') P.push(get('rt', '/ai/routing', force));
+    if (k === 'rt') { P.push(get('rt', '/ai/routing', force)); if (AC.fin) P.push(get('rtf', '/ai/routing?scope=finans', force)); } // prompt 38: 4 Finans-rader
     if (k === 'jobs') P.push(get('jobs', `/ai/jobs?limit=40${AC.fin ? '&fin=1' : ''}`, force, 2500));
     if (k === 'use') P.push(get('use', `/ai/usage?days=${AC.per}`, force));
     if (k === 'use30') P.push(get('use30', '/ai/usage?days=30', force, 60000));
@@ -119,15 +119,20 @@ function ov() {
     ['TOKENS 30 D', U ? tk((U.totals?.tokIn ?? 0) + (U.totals?.tokOut ?? 0)) : '–', U?.totals?.localShare != null ? `${U.totals.localShare} % lokalt, gratis` : 'ingen bruk ennå', 'use'],
     ['SKY-KOSTNAD', U ? kr(U.totals?.costKr) : '–', U?.budget?.monthlyKr ? `av ${nb(U.budget.monthlyKr)} kr budsjett` : 'ingen grense', 'use']];
   const vt = g.vramGb ?? 8, vu = srv.vramUsedGb ?? loaded.reduce((a, x) => a + (x.vramGb ?? x.sizeGb ?? 0), 0), disk = srv.diskGb ?? (md?.installed ?? []).reduce((a, x) => a + (x.sizeGb ?? 0), 0), B = st?.budget ?? U?.budget ?? {};
-  const bars = [['VRAM i bruk', `${gb(vu).replace(' GB', '')} / ${nb(vt)} GB`, Math.min(100, (vu / Math.max(1, vt)) * 100), vu > vt * 0.9 ? 'var(--pp-warn)' : 'var(--pp-pos)'],
-    ['Modeller på disk', gb(disk), Math.min(100, (disk / 500) * 100), 'var(--pp-ink)'],
+  // Prompt 38: maskinen hentes fra Ollama-verten (server.hw): Mac mini M4 · 16 GB samlet minne · 2 TB ekstern disk.
+  const hw = srv.hw ?? null, gpuB = hw?.gpuBudgetGb ?? null, dk = hw?.disk ?? null, dTot = dk?.totalGb ?? null, dUsed = dk && dk.totalGb != null && dk.freeGb != null ? dk.totalGb - dk.freeGb : disk;
+  const bars = [hw && gpuB ? ['Minne til modeller (GPU)', `${gb(vu).replace(' GB', '')} / ${String(gpuB).replace('.', ',')} GB`, Math.min(100, (vu / Math.max(1, gpuB)) * 100), vu > 9.5 ? 'var(--pp-warn)' : 'var(--pp-pos)'] : ['VRAM i bruk', `${gb(vu).replace(' GB', '')} / ${nb(vt)} GB`, Math.min(100, (vu / Math.max(1, vt)) * 100), vu > vt * 0.9 ? 'var(--pp-warn)' : 'var(--pp-pos)'],
+    hw && dTot ? [`Modeller på ${dk.external === false ? 'disk' : 'ekstern disk'}`, `${nb(Math.round(dUsed))} / ${nb(dTot)} GB`, Math.min(100, (dUsed / Math.max(1, dTot)) * 100), 'var(--pp-ink)'] : ['Modeller på disk', gb(disk), Math.min(100, (disk / 500) * 100), 'var(--pp-ink)'],
     ['Sky-budsjett denne måneden', B.monthlyKr ? `${kr(B.monthCostKr)} / ${nb(B.monthlyKr)} kr` : `${kr(B.monthCostKr)} · ingen grense`, B.monthlyKr ? Math.min(100, (B.monthCostKr / B.monthlyKr) * 100) : 0, 'var(--pp-lab)']];
   const prov = (st?.providers ?? []).map((p, i) => `<button type="button" class="p34a-prow" data-ai="tab" data-k="api" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><span class="p34a-dot" style="background:${STC[p.state] ?? STC.off}"></span><span class="m-grow"><b>${esc(p.name)}</b><span>${esc([p.label, p.model, p.keyTail ? `nøkkel ••${p.keyTail}` : '', p.state !== 'ok' && p.error ? p.error : ''].filter(Boolean).join(' · '))}</span></span><span class="p34a-mono">${p.ms != null ? esc(sec(p.ms)) : '–'}</span></button>`).join('');
   const routes = (st?.routes ?? []).map((r, i) => `<div class="p34a-prow" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><span class="p34a-dot" style="background:${STC[r.state] ?? STC.off}"></span><span class="m-grow"><b>${esc(r.name)}</b><span${r.state !== 'ok' ? ' class="bad"' : ''}>${esc([r.model, r.label, r.state !== 'ok' ? r.error : '', r.warning].filter(Boolean).join(' · '))}</span></span><span class="p34a-mono">${r.ms != null ? esc(sec(r.ms)) : ''}</span></div>`).join('');
   return `<div class="p34a-card${bad ? ' bad' : ''}" data-hl="selftest"><div class="p34a-row"><span class="m-grow"><b>${esc(sh)}</b><span>Sender en liten prompt gjennom hver funksjon (chat, AI-søk, Glimt, kvitteringer …) og sjekker at modellen faktisk svarer, ikke bare at serveren kan nås.</span></span><button type="button" class="p34-ink" data-ai="selftest" ${S0 && !S0.done ? 'disabled' : ''}>${S0 && !S0.done ? 'Tester …' : 'Kjør selvtest'}</button></div>${sRows ? `<div class="p34a-sts">${sRows}</div>` : ''}</div>
     <div class="p34a-kpi">${kpi.map(([l, v, s, k]) => `<button type="button" data-ai="tab" data-k="${k}"><span class="p34a-k2">${l}</span><b>${esc(v)}</b><span>${esc(s)}</span></button>`).join('')}</div>
-    <div class="p34a-card"><span class="p34a-row2"><b>Hjemmeserver</b><span class="p34a-mono">${esc([g.name, g.vramGb ? `${g.vramGb} GB` : ''].filter(Boolean).join(' · ') || '–')}</span></span>
-      ${bars.map(([l, v, w, c]) => `<div class="p34a-bar"><span><span>${esc(l)}</span><b>${esc(v)}</b></span><span class="p34a-bt"><i style="width:${w}%;background:${c}"></i></span></div>`).join('')}</div>
+    <div class="p34a-card"><span class="p34a-row2"><b>${hw ? esc(hw.model ?? 'AI-maskin') : 'Hjemmeserver'}</b><span class="p34a-mono">${esc(hw ? [hw.memGb ? `${hw.memGb} GB samlet minne` : '', dTot ? `${dTot >= 1000 ? `${String(Math.round(dTot / 100) / 10).replace('.', ',')} TB` : `${dTot} GB`}${dk?.external === false ? ' disk' : ' ekstern disk'}` : ''].filter(Boolean).join(' · ') : [g.name, g.vramGb ? `${g.vramGb} GB` : ''].filter(Boolean).join(' · ') || '–')}</span></span>
+      ${hw && dk && dk.mounted === false ? '<span class="p34a-warn bad">Ekstern disk mangler · Ollama finner ikke modellene</span>' : ''}
+      ${bars.map(([l, v, w, c]) => `<div class="p34a-bar"><span><span>${esc(l)}</span><b>${esc(v)}</b></span><span class="p34a-bt"><i style="width:${w}%;background:${c}"></i></span></div>`).join('')}
+      ${hw && gpuB ? `<span class="p34a-s">Apple Silicon gir GPU-en ca. ⅔ av minnet (${String(gpuB).replace('.', ',')} GB). Resten trengs til macOS og serveren. Første kall etter at en modell er lastet ut kan ta opptil 60 s («Laster modellen fra disk …»).</span>` : ''}</div>
+    ${Array.isArray(st?.server?.recommend ?? st?.recommend) && (st.server?.recommend ?? st.recommend).length ? `${lab('ANBEFALT FOR DENNE MASKINEN')}<div class="p34a-list">${(st.server?.recommend ?? st.recommend).map((r, i) => `<div class="p34a-prow" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><span class="m-grow"><b>${esc(r.text ?? r.key ?? '')}</b>${r.env ? `<span class="p34a-mono">${esc(r.env)}</span>` : ''}</span></div>`).join('')}</div>` : ''}
     ${prov ? `${lab('LEVERANDØRER')}<div class="p34a-list">${prov}</div>` : ''}
     ${routes ? `${lab('RUTER', st?.cached ? 'sjekket for under 5 min siden' : 'sjekket nå')}<div class="p34a-list">${routes}</div><button type="button" class="p34-ghost" data-ai="refresh" style="align-self:flex-start">Sjekk på nytt</button>` : ''}`;
 }
@@ -163,6 +168,37 @@ function mod() {
 }
 
 // Valg (ruting)
+/* Prompt 38: «HVILKEN MODELL GJØR HVA I FINANS» – alltid 4 rader (GET /api/ai/routing?scope=finans → rader med model,
+   fallback, options:[{id, label, local}], warning). Eldre server: Finans-oppgavene fra /ai/routing, ellers standardene.
+   Ingen modeller installert eller tilkoblet → «Ingen modeller ennå» + Installer modell ›, aldri et tomt kort. */
+const FIN4 = [['rc', 'Kvitteringer (bilde)', 'Leser butikk, beløp og varelinjer', 'qwen2.5vl:7b', 'gemini-2.5-flash', 'vision'], ['kat', 'Kategorisering', 'Foreslår kategori for transaksjoner', 'llama3.2:3b', 'llama-3.3-70b-versatile', 'text'],
+  ['fsok', 'Finans · spør', '«Har jeg et musikkabonnement?»', 'gemma4:latest', 'gemini-2.5-flash', 'text'], ['bar', 'Strekkoder og pakkelapper', 'Bildefelt fra kamera', 'roboflow/kvittering/1', 'qwen2.5vl:7b', 'vision']];
+function finTasks(R) {
+  const F = AC.rtf, L = Array.isArray(F?.tasks) ? F.tasks : Array.isArray(F?.rows) ? F.rows : Array.isArray(F) ? F : null;
+  const own = (R?.tasks ?? []).filter((t) => t.fin);
+  const src = L?.length ? L : own;
+  return FIN4.map(([id, name, desc, dm, df, kind], i) => {
+    const t = src.find((x) => x.id === id) ?? (src.length === 4 && !src.some((x) => FIN4.some(([k]) => k === x.id)) ? src[i] : null) ?? {};
+    return { id: t.id ?? id, name: t.name ?? name, desc: t.desc ?? desc, kind: t.kind ?? kind, model: t.model ?? '', fallback: t.fallback ?? '', resolved: t.resolved ?? null, def: [t.defaultModel ?? dm, t.defaultFallback ?? df],
+      options: Array.isArray(t.options) ? t.options : null, warning: t.warning ?? t.error ?? (t.finCloud ? 'Finansdata skal holdes lokalt, men denne bruker en sky-modell. Bytt til en lokal modell.' : null), personal: !!t.personal };
+  });
+}
+function finRows(R, A) {
+  const M = R?.models ?? [], T = finTasks(R);
+  const optsOf = (t) => t.options ?? M.filter((x) => (t.kind === 'vision' ? x.kind === 'bilde' || x.kind === 'tekst' || !x.local : x.kind !== 'embedding')).map((x) => ({ id: x.id, label: x.id, local: !!x.local }));
+  if (!T.some((t) => optsOf(t).length)) return `<div class="p34a-empty p38-aie"><b>Ingen modeller ennå</b><span>Installer en lokal modell eller koble til en sky-tjeneste, så kan du velge hvem som gjør hva i Finans.</span><a class="p34-ink" href="#/aictl/mod">Installer modell ›</a></div>`;
+  const finLocal = !!(R?.rules?.finLocal);
+  return T.map((t, i) => {
+    const O = optsOf(t), can = A || t.personal;
+    const tag = (o) => (o.local ? 'LOKAL' : 'SKY');
+    const sel = (field, cur) => `<select data-ai="route" data-id="${esc(t.id)}" data-f="${field}" ${can ? '' : 'disabled'} aria-label="${field === 'model' ? 'Modell' : 'Reserve'} for ${esc(t.name)}"><option value=""${cur ? '' : ' selected'}>${field === 'model' ? esc(t.resolved ?? t.def[0]) : esc(t.def[1])}</option>${cur && !O.some((o) => o.id === cur) ? `<option value="${esc(cur)}" selected>${esc(cur)} · finnes ikke</option>` : ''}${O.map((o) => `<option value="${esc(o.id)}"${o.id === cur ? ' selected' : ''}>${esc(o.label ?? o.id)} · ${tag(o)}</option>`).join('')}</select>`;
+    const cloudSel = finLocal && [t.model, t.fallback].some((v) => v && O.find((o) => o.id === v)?.local === false);
+    const warn = t.warning || (cloudSel ? '«Finansdata forlater aldri huset» er på: sky-modellen brukes ikke. Velg en lokal modell.' : '');
+    return `<div class="p34a-rt p38-frt" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><span class="p34a-rtn"><b>${esc(t.name)}</b><span>${esc(t.desc)}</span></span>
+      <label><span>MODELL</span>${sel('model', t.model)}</label><label><span>RESERVE</span>${sel('fallback', t.fallback)}</label>
+      ${warn ? `<span class="p34a-warn bad">${esc(warn)}</span>` : ''}</div>`;
+  }).join('');
+}
 const KEEP = [['5m', '5 min'], ['30m', '30 min'], [-1, 'Alltid'], [0, 'Aldri']];
 const CTX = [[8192, '8k'], [32768, '32k'], [131072, '128k']];
 const TEMP = [[0.2, '0,2'], [0.7, '0,7'], [1, '1,0']];
@@ -172,7 +208,7 @@ function rt() {
   const A = admin(), M = R.models ?? [];
   const tasks = (R.tasks ?? []).filter((t) => (AC.fin ? t.fin : true));
   const opt = (v, cur) => `<option value="${esc(v)}"${String(v) === String(cur) ? ' selected' : ''}>`;
-  const rows = tasks.map((t, i) => {
+  const rows = AC.fin ? finRows(R, A) : tasks.map((t, i) => {
     const can = A || t.personal, ms = M.filter((x) => (t.kind === 'embed' ? x.kind === 'embedding' : t.kind === 'vision' ? x.kind === 'bilde' || x.kind === 'tekst' || !x.local : x.kind !== 'embedding'));
     const sel = (field, cur) => `<select data-ai="route" data-id="${esc(t.id)}" data-f="${field}" ${can ? '' : 'disabled'} aria-label="${field === 'model' ? 'Modell' : 'Reserve'} for ${esc(t.name)}">${opt('', cur)}${field === 'model' ? `Auto${t.resolved ? ` · ${esc(t.resolved)}` : ''}` : 'Ingen'}</option>${cur && !ms.some((x) => x.id === cur) ? `${opt(cur, cur)}${esc(cur)} · finnes ikke</option>` : ''}${ms.map((x) => `${opt(x.id, cur)}${esc(x.id)} · ${x.local ? 'lokal' : esc(x.provider)}</option>`).join('')}</select>`;
     const warn = t.error || t.warning || (t.finCloud ? 'Finansdata skal holdes lokalt, men denne bruker en sky-modell. Bytt til en lokal modell.' : '') || t.notice;
@@ -366,6 +402,6 @@ export async function bindAi(e, t) {
 export function changeAi(e, t) {
   const x = t?.closest?.('select[data-ai="route"]'); if (!x) return false;
   const T = (AC.rt?.tasks ?? []).find((y) => y.id === x.dataset.id);
-  routingPut({ tasks: { [x.dataset.id]: { [x.dataset.f]: x.value } }, ...(admin() && !T?.personal ? { scope: 'server' } : {}) });
+  routingPut({ tasks: { [x.dataset.id]: { [x.dataset.f]: x.value } }, ...(admin() && !T?.personal ? { scope: 'server' } : {}) }).then(() => (AC.fin ? get('rtf', '/ai/routing?scope=finans', true).then(draw) : null));
   return true;
 }

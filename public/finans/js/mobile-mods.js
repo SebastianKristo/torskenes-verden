@@ -4,6 +4,7 @@ import { api, esc, n0, n2, dd, dWeek, today, icon, aiLine, matApi, domApi, parse
 import { logo } from './mobile-p20.js'; // logoregisteret (prompt 20), ellers core.logo
 import { m, draw, flash, avatar, backBtn, pref } from './mobile.js';
 import { subsLoad, subsView, subsBind } from './mobile-subs.js';
+import * as P38 from './mobile-p38.js'; // prompt 38: Glimt-oppsummering og alt lastet ved åpning
 
 export const MODS = [
   ['mat', 'Mat', 'Ukemeny, kokk og handleliste', 'mat'],
@@ -39,7 +40,7 @@ export async function modLoad(key, sub) {
     else if (key === 'sub') await subsLoad();
     else if (key === 'finn') D.finn = await api('/finn');
     else if (key === 'dir') { D.dirs = await api('/folders'); if (sub) { D.dir[sub] = await api(`/folders/${encodeURIComponent(sub)}`); D.users ??= await api('/users').catch(() => []); } }
-    else if (key === 'dom') await domLoad();
+    else if (key === 'dom') { await domLoad(); dSave(); }
   } catch (e) { D.err[key] = `${MODS.find(([k]) => k === key)?.[1] ?? 'Modulen'} er ikke tilgjengelig: ${e.message}`; }
 }
 
@@ -159,7 +160,29 @@ const tabOf = () => (DOMTABS.some(([k]) => k === `dom/${m.sub}`) ? m.sub : 'traf
 export const domNav = () => DOMTABS;
 domNav.cur = () => `dom/${tabOf()}`;
 
+// Prompt 38: alt lastet ved åpning. Siste liste og tall caches på enheten (vises med en gang), forhåndshentes når appen
+// er ledig og ved retur (maks hvert 5. min), og byttes stille når ferske tall kommer. Glimt-oppsummeringen hentes for seg.
+const DCACHE = 'fh_dom38';
+try { const c = JSON.parse(localStorage.getItem(DCACHE) || 'null'); if (c && Date.now() - (c.t ?? 0) < 864e5) { dm.list = c.list ?? null; dm.data = c.data ?? {}; dm.stale = true; } } catch {}
+const dSave = () => { try { const keep = {}; for (const [k, v] of Object.entries(dm.data)) if (v && !v.error) keep[k] = v; localStorage.setItem(DCACHE, JSON.stringify({ t: Date.now(), list: dm.list, data: keep })); } catch {} };
+let preT = 0;
+/** Forhåndshent Domener (liste, valgt domene i alle perioder, historikk, kart og dagens oppsummering). */
+export async function domPrefetch(force = false) {
+  if (!force && Date.now() - preT < 5 * 60e3) return; preT = Date.now();
+  try {
+    await domLoad(true);
+    const sel = dm.sel === '*' ? null : dm.sel;
+    if (sel) await Promise.all(['24h', '7d', '30d'].map(async (r) => { const k = `${sel}|${r}`; if (!dm.data[k] || dm.stale) dm.data[k] = await domApi(`/${encodeURIComponent(sel)}/analytics?range=${encodeURIComponent(r)}`).catch(() => dm.data[k]); }));
+    dm.stale = false; dSave();
+    import('/assets/js/worldmap.js').catch(() => {});
+    P38.domSumLoad(dm.sel ?? '*').catch?.(() => {});
+    if (m.screen === 'dom') draw();
+  } catch {}
+}
+P38.domSelHook(() => dm.sel ?? '*');
 async function domLoad(force = false) {
+  // Prompt 38: med cache vises tallene straks; ferske hentes i bakgrunnen (ingen spinner).
+  if (!force && dm.stale && dm.list?.length && dm.data[`${dm.sel}|${dm.per}`]) { dm.stale = false; domLoad(true).then(() => { dSave(); if (m.screen === 'dom') draw(); }).catch(() => {}); return; }
   if (!dm.list || force) {
     const l = await domApi('/domains');
     dm.list = Array.isArray(l) ? l : l?.items ?? [];
@@ -214,7 +237,7 @@ function domManage(th) {
 const DPER = [['1h', '1t'], ['24h', '24t'], ['7d', '7d'], ['30d', '30d']];
 function domTop() {
   const list = dm.list ?? [], pills = [{ n: 'Alle domener', k: '*', sub: 'Samlet' }, ...list.map((d) => ({ n: d.name, k: d.name, sub: DSRC[d.source] ?? d.source ?? 'Cloudflare' }))];
-  return `<div class="pp-card pp-domtop"><div class="pp-row"><span class="pp-lab">DOMENE</span><span class="pp-mut">${list.length} domene${list.length === 1 ? '' : 'r'} · <button class="pp-link" data-dom="refresh">Oppdater</button></span></div>
+  return `<div class="pp-card pp-domtop"><div class="pp-row"><span class="pp-lab">DOMENE</span><span class="pp-mut">${list.length} domene${list.length === 1 ? '' : 'r'} · <button class="pp-link" data-dom="refresh">Oppdater</button> · <a class="pp-link" href="#/dom/admin">Rediger</a></span></div>
     <div class="pp-dompills" role="tablist">${pills.map((p) => `<button role="tab" data-dom="sel" data-name="${esc(p.k)}" aria-selected="${dm.sel === p.k}"><span><i style="background:${p.k === '*' ? 'var(--pp-lab)' : 'var(--pp-pos)'}"></i>${esc(p.sub)}</span><b>${esc(p.n)}</b></button>`).join('')}<span class="pp-pend"></span></div>
     <div class="pp-domper" role="group" aria-label="Periode">${DPER.map(([k, n]) => `<button data-dom="per" data-v="${k}" aria-pressed="${dm.per === k}">${n}</button>`).join('')}</div></div>`;
 }
@@ -236,14 +259,15 @@ function domView(th) {
   if (pref('mDesign') === 'papir') {
     if (!dm.list) return '<div class="m-spin"></div>';
     if (!dm.list.length) return `<div class="pp-card pp-col"><b class="pp-serif" style="font-size:20px">Ingen domener ennå</b><span class="pp-mut">Legg til et domene for å se trafikk, oppetid og SSL.</span><a class="pp-btn ink" href="#/dom/admin">+ Legg til domene</a></div>`;
-    if (dm.sel === '*') return `${domTop()}${domAll()}`;
+    const dg = ['pub', 'ytl', 'inf'].includes(m.sub) ? '' : P38.domGlimt(dm.sel); // Prompt 38: Glimt-oppsummeringen øverst på Oversikt
+    if (dm.sel === '*') return `${domTop()}${dg}${domAll()}`;
     const a = dm.data[`${dm.sel}|${dm.per}`];
     if (!a) return `${domTop()}<div class="m-spin"></div>`;
     const ps = ['pub', 'ytl', 'inf'].includes(m.sub) ? m.sub : 'ov';
     liveTimer(ps === 'ov');
     const mk = a.mock ? '<div style="font-size:12px;opacity:.55;text-align:center">Eksempeldata – legg inn Cloudflare-token i Homelab for ekte tall.</div>' : '';
     const body = ps === 'pub' ? domBes(th, a) : ps === 'ytl' ? domYt(th, a, { uptime: false }) + domSik(th, a, { dns: false }) : ps === 'inf' ? domUp(th, a) + domDns(th, a) + domCard(th, a) : domTraf(th, a, { card: false, chips: false });
-    return `${domTop()}${a.error ? `<div class="m-empty" style="padding:8px">${esc(a.error)}${a.stale ? ' · viser sist hentede tall' : ''}</div>` : ''}${body}${mk}`;
+    return `${domTop()}${dg}${a.error ? `<div class="m-empty" style="padding:8px">${esc(a.error)}${a.stale ? ' · viser sist hentede tall' : ''}</div>` : ''}${body}${mk}`;
   }
   // Prompt 12: domenevelgeren er bare et ikon, og ligger sammen med Oppdater ved siden av profilbildet.
   const pickBtn = `<button class="mini dpick-ic${dm.pick ? ' on' : ''}" data-dom="pick" aria-expanded="${dm.pick}" aria-label="Velg domene (${esc(dm.sel ?? 'ingen valgt')})">${icon('globe', 18)}</button>`;

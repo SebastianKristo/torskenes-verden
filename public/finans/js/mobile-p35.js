@@ -18,6 +18,7 @@ import * as P34 from './mobile-p34.js';
 import * as P31 from './mobile-p31.js';
 import { isAdmin } from './mobile-p29.js';
 import * as P37 from './mobile-p37.js'; // prompt 37: Gjøremål-kortet i briefen
+import * as P38 from './mobile-p38.js';
 import * as P37B from './mobile-p37b.js'; // prompt 37: bibelvers i briefen
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -86,7 +87,7 @@ export async function cfgLoad(force = false) {
 }
 let putT = null, putBody = {};
 /** Delvis oppdatering: lagres lokalt med en gang, og sendes til serveren (samlet etter 300 ms). */
-function cfgPut(patch) {
+export function cfgPut(patch) {
   GS.c = merge(cfg(), patch); keep(); draw();
   putBody = merge({ briefs: {}, tts: {} }, { ...putBody, ...patch, briefs: { ...(putBody.briefs ?? {}), ...(patch.briefs ?? {}) }, tts: { ...(putBody.tts ?? {}), ...(patch.tts ?? {}) } });
   clearTimeout(putT);
@@ -219,7 +220,8 @@ function norm(r) {
   const trials = (Array.isArray(r?.trials) ? r.trials : (P31.G.trials ?? [])).map(trialNorm).filter((t) => t.daysLeft >= 0 && t.daysLeft <= 7).sort((a, b) => a.daysLeft - b.daysLeft).slice(0, 3);
   const guide = Array.isArray(r?.guide) && r.guide.length ? r.guide : null;
   return { kind, title: r?.title ?? P34.KICK[kind], summary: r?.summary || localSummary(kind, wx, ev), wx, ev, news, trials, guide, host: r?.host && IDS.includes(r.host) ? r.host : null,
-    at: r?.generatedAt ? P34.hm(r.generatedAt) : P34.hm(new Date().toISOString()), foot: r?.footer ?? null, src: r ? 'glimt' : 'lokal' };
+    at: r?.generatedAt ? P34.hm(r.generatedAt) : P34.hm(new Date().toISOString()), foot: r?.footer ?? null, src: r ? 'glimt' : 'lokal',
+    x: r ? { packages: r.packages ?? null, family: r.family ?? null, school: r.school ?? null, birthdays: r.birthdays ?? null, aurora: r.aurora ?? null } : null };
 }
 function localSummary(kind, wx, ev) {
   const nm = P34.firstName(), hi = kind === 'morning' ? `God morgen${nm ? `, ${nm}` : ''}. ` : kind === 'evening' ? `God kveld${nm ? `, ${nm}` : ''}. ` : '';
@@ -313,12 +315,8 @@ export function briefView() {
   const notes = [w.vsYesterday ? ['Sammenlignet med i går', w.vsYesterday] : null, w.sunset ? ['Solnedgang', `Sola går ned ${w.sunset}`] : null].filter(Boolean);
   const srcs = [...new Set(b.news.map((n) => n.source).filter(Boolean))].slice(0, 4).join(', ') || 'Nyhetsleser';
   return `<div class="p34-br p35-br">
-    <div class="p34-brh p37-brh"><span></span><span class="p35-hb">
-      <button type="button" class="p35-ib${c.readAloud ? ' on' : ''}" data-p35="voice" aria-label="${c.readAloud ? 'Slå av opplesning' : 'Slå på opplesning'}" aria-pressed="${c.readAloud}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${SPK}"/><path d="${c.readAloud ? SPK_ON : SPK_OFF}"/></svg></button>
-      <button type="button" class="p35-ib" data-p35="cfgopen" aria-label="Brief-innstillinger"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
-      <button type="button" class="p34-done" data-p34="brclose" data-p34back>Ferdig</button></span></div>
-    ${speakPill()}
-    <div class="p34-brt"><b>${esc(b.title)}</b><span>${esc(b.summary)}</span></div>
+    <div class="p34-brt p38-brt"><span class="p38-brl"><b>${esc(b.title)}</b><button type="button" class="p34-done" data-p34="brclose" data-p34back>Ferdig</button></span><span>${esc(b.summary)}</span></div>
+    ${speakPill() /* Prompt 38: lyd (🔇) og ⚙ er fjernet fra toppen – de ligger i Innstillinger → Glimt. Tittel og Ferdig på samme linje. */}
     ${P37B.bibleBrief('top')}
     <div class="p34-wx p37-wxb${ring('vaer')}" data-gb="vaer" data-p35="brwx" role="button" tabindex="0" aria-label="Åpne Vær">
       <div class="p34-wxh"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="${w.code === 'sol' ? '#ffd27a' : w.code === 'regn' ? '#9cc8ff' : '#e6eef7'}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${P34.WXP[w.code] ?? P34.WXP.sky}"/></svg>
@@ -331,6 +329,7 @@ export function briefView() {
         : '<span class="p34-none">Ingen avtaler i dag eller i morgen.</span>'}</div>
     ${P37.briefTodos(B5.d?.todos)}
     ${trialsCard(b)}
+    ${P38.briefCards(b.x) /* Prompt 38: Pakker, Familie, Skole og jobb, Bursdager, Nordlys i natt */}
     ${newsCard(b)}
     ${P37B.bibleBrief('bottom')}
     <span class="p34-foot">${esc(b.foot || `Laget av Glimt ${b.at} · Vær: MET / Open-Meteo · Nyheter: ${srcs}`)}</span>
@@ -411,7 +410,7 @@ export function glimtView() {
     <span class="p35-lab">GLIMT-FIGUR</span>
     <div class="p35-figs" data-hl="gl-fig">${FIGS.map(([k, n]) => `<button type="button" class="p35-fg${k === 'natt' ? ' dark' : ''}" data-p35="char" data-v="${k}" aria-pressed="${sel === k}"><span class="p35-fgi">${fig(k, 54, sel === k ? 'glad' : 'idle')}</span><b>${esc(n)}</b></button>`).join('')}</div>
     <span class="p35-note">Figuren er verten i briefen, på Hjem-kortet, i widgets og i Glimt-chat. Er «Glimt» valgt, blir verten Glimt Natt mellom 21 og 06. Vennene (Sky, Dråpe, Ugle, Gris …) tar over når temaet passer, om det er slått på under.</span>
-    ${cfgBody(false)}${P37B.bibleSettings()}</div>`;
+    ${cfgBody(false)}${P38.cardsCfg()}${P37B.bibleSettings()}</div>`;
 }
 
 /* =====================================================================

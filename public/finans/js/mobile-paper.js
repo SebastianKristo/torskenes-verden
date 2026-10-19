@@ -126,6 +126,7 @@ const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 export const FIN_MAIN = ['hjem', 'liste', 'finn', 'fmer'];
 export const FIN_SUB = ['budsjett', 'kv', 'fast', 'konto', 'aks', 'sub', 'dir', 'imp', 'rap', 'sok', 'skann', 'opp'];
 export const ctxOf = (scr) => (scr === 'dom' ? 'dom' : FIN_MAIN.includes(scr) || FIN_SUB.includes(scr) ? 'fin' : 'main');
+const ABO_BACK = { mer: 'Mer', hl: 'Hjem', hjem: 'Oversikt', fmer: 'Mer', liste: 'Liste', finn: 'Finn', sok: 'Søk', set: 'Innstillinger', brief: 'Brief', huske: 'Gjøremål', kal: 'Kalender' };
 const NAMES = { hl: 'Hjem', mer: 'Mer', fmer: 'Mer', hjem: 'Oversikt', liste: 'Liste', finn: 'Finn', mat: 'Mat', spor: 'Sporing', set: 'Innstillinger', sok: 'Søk', dom: 'Domener' };
 // Hvor pila øverst til venstre går: Finans-fanene og de andre hovedfanene går hjem, undersider til forelderen.
 // Prompt 24: i profilene Finans + Boliger og Boliger-profil er Boliger roten. Finans-fanene og Finans → Mer har ingen
@@ -150,6 +151,8 @@ function parentOf0(scr) {
   if (scr === 'dir' && m.sub) return ['dir', 'Boliger'];
   if (['avg', 'fam', 'vaer', 'huske'].includes(scr)) return ['hl', 'Hjem'];
   if (finScreens().includes(scr) || scr === 'fmer') return ['hl', 'Hjem'];
+  // Prompt 38: Abonnement går tilbake dit det ble åpnet fra (Mer, Hjem, Oversikt, Finans → Mer, Innstillinger, brief).
+  if (scr === 'sub' && m.aboFrom && m.aboFrom !== 'sub' && ABO_BACK[m.aboFrom]) return [m.aboFrom, ABO_BACK[m.aboFrom]];
   if (FIN_SUB.includes(scr)) return ['fmer', 'Mer'];
   if (['media', 'nyheter'].includes(scr)) return ['mer', 'Mer'];
   if (scr === 'set') return [m.setFrom && m.setFrom !== 'set' ? m.setFrom : 'hl', NAMES[m.setFrom] ?? 'Hjem'];
@@ -252,9 +255,12 @@ export function paperNav(scr) {
   const fabIc = plus[1] === 'spor' || plus[1] === 'dom' ? 'M12 5v14M5 12h14' : SCAN_IC;
   // Aksjer har ingen skanneknapp (prompt 23).
   const noPlus = scr === 'aks';
-  const fab = flyt && !noPlus ? `<button class="pp-fab${P.press ? ' down' : ''}" data-ppplus="${plus[1]}" aria-label="${plus[0]}${plus[1] === 'spor' || plus[1] === 'dom' ? '' : ' (trykk for kamera, hold inne for valg)'}" title="${esc(plus[0])}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${fabIc}"/></svg></button>` : '';
+  // Prompt 38: Domener har ingen Skann/+ – den runde knappen er Glimt (fylt ✦) med oppsummering av domenene.
+  const domG = ctx === 'dom' && m.sub !== 'admin';
+  const gBtn = (cls) => `<button type="button" class="${cls} p38-domg" data-p38="domg" aria-label="Glimt · oppsummering av domenene" title="Glimt · oppsummering av domenene"><svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5l2.3 6.4 6.7.6-5.1 4.4 1.6 6.6L12 17l-5.5 3.5 1.6-6.6L3 9.5l6.7-.6z" fill="currentColor"/></svg></button>`;
+  const fab = domG ? (flyt ? gBtn('pp-fab') : '') : flyt && !noPlus ? `<button class="pp-fab${P.press ? ' down' : ''}" data-ppplus="${plus[1]}" aria-label="${plus[0]}${plus[1] === 'spor' || plus[1] === 'dom' ? '' : ' (trykk for kamera, hold inne for valg)'}" title="${esc(plus[0])}"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${fabIc}"/></svg></button>` : '';
   return `<div class="pp-navbg" aria-hidden="true"></div><nav class="pp-nav${flyt ? ' flyt' : ''}" data-ctx="${ctx}" aria-label="Faner${ctx === 'main' || ctx === 'dom' ? ' (hold inne for å redigere)' : ''}">${tabs.map(([k, n, ic]) => `<a href="#/${k}" data-tab="${k}" ${cur === k ? 'aria-current="page"' : ''}><i>${ic}</i><span>${n}</span></a>`).join('')}
-    ${flyt || noPlus ? '' : `<button class="pp-scan${P.press ? ' down' : ''}" data-ppplus="${plus[1]}" aria-label="${plus[0]} (trykk for kamera, hold inne for valg)" title="Trykk for kamera · hold inne for valg">+</button>`}</nav>${fab}
+    ${domG && !flyt ? gBtn('pp-scan') : flyt || noPlus ? '' : `<button class="pp-scan${P.press ? ' down' : ''}" data-ppplus="${plus[1]}" aria-label="${plus[0]} (trykk for kamera, hold inne for valg)" title="Trykk for kamera · hold inne for valg">+</button>`}</nav>${fab}
     <input class="m-file" id="pp-cam" type="file" accept="image/*" capture="environment" data-ppquick="${['spor', 'dom', 'main'].includes(plus[1]) ? 'fin' : plus[1]}">
     ${P.hint ? `<div class="pp-hint" role="status">${esc(P.hint)}</div>` : ''}`;
 }

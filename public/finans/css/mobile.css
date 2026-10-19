@@ -5171,3 +5171,151 @@ html.p36-booting body{overflow:hidden}
 .m.papir.ph .p37-hk{padding-top:37px}
 .sb-home.so-on .sb-blk .p37-som{pointer-events:auto}
 .m:has(.p37-sheet) .pp-nav,.m:has(.p37-sheet) .pp-scan,.m:has(.p37-sheet) .pp-fab,.m:has(.p37-sheet) .p25-home{visibility:hidden}
+
+/* ===================== Prompt 38 (PWA38) ===================== */
+/* AI-svarboblen: ✕, håndtak, sveip opp; trykk i boblen lukker ikke */
+.m .p31-ans.p38-ans{cursor:default;padding-right:46px;touch-action:pan-x;-webkit-user-select:text;user-select:text}
+.m .p38-ax{position:absolute;top:10px;right:10px;width:30px;height:30px;border-radius:15px;border:0;background:rgba(255,255,255,.14);color:#fff;cursor:pointer;display:grid;place-items:center;padding:0;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.m .p38-ax:active{background:rgba(255,255,255,.26)}
+.m .p38-ah{align-self:center;width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,.28);margin:2px 0 -4px}
+/* Brief: tittel og Ferdig på samme linje, ingen 🔇/⚙ */
+.m .p38-brl{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.m .p34-brt .p38-brl b{min-width:0}
+.m .p34-brt .p38-brl .p34-done{font:700 13.5px Manrope,sans-serif;color:var(--pp-bg)}
+.m.p34-brpg .p34-br.p35-br{padding-top:calc(env(safe-area-inset-top,0px) + 18px)}
+/* Nye brief-kort */
+.m .p38-bc{flex:none;border-radius:24px;background:var(--pp-card);color:var(--pp-ink);padding:18px;display:flex;flex-direction:column;gap:10px}
+.m .p38-bch{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.m .p38-bch b{font:500 26px Newsreader,serif}
+.m .p38-bch span{font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:var(--pp-lab);text-align:right}
+.m .p38-br{display:flex;align-items:center;gap:12px;min-height:50px;border-top:1px solid var(--pp-line);color:inherit;text-decoration:none}
+.m .p38-lg{flex:none;width:36px;height:36px;border-radius:11px;color:#fff;font:800 12px Manrope,sans-serif;display:grid;place-items:center;overflow:hidden}
+.m .p38-lg img{width:100%;height:100%;object-fit:cover}
+.m .p38-av{flex:none;position:relative;width:36px;height:36px;border-radius:18px;color:#fff;font:800 13px Manrope,sans-serif;display:grid;place-items:center}
+.m .p38-av img{width:100%;height:100%;border-radius:50%;object-fit:cover}
+.m .p38-av i{position:absolute;right:-1px;bottom:-1px;width:11px;height:11px;border-radius:6px;box-shadow:0 0 0 2px var(--pp-card)}
+.m .p38-bt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.m .p38-bt b{font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m .p38-bt span{font-size:12.5px;color:var(--pp-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m .p38-bm{flex:none;max-width:42%;font:600 12px 'IBM Plex Mono',monospace;text-align:right}
+.m .p38-bm.red,.m .p38-bdl b.red{color:var(--pp-lab)}
+.m .p38-bar{flex:none;width:6px;align-self:stretch;margin:8px 0;border-radius:3px}
+.m .p38-bdl{flex:none;text-align:right;display:flex;flex-direction:column;align-items:flex-end}
+.m .p38-bdl b{font:600 18px Newsreader,serif}.m .p38-bdl span{font-size:11px;color:var(--pp-mut)}
+.m .p38-fam{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}
+.m .p38-fp{display:flex;align-items:center;gap:10px;min-width:0;color:inherit;text-decoration:none}
+.m .p38-fp .p38-bt b{font-size:14.5px}.m .p38-fp .p38-bt span{font-size:12px}
+.m .p38-gift{align-self:flex-start;height:32px;padding:0 13px;border-radius:16px;border:1px solid var(--pp-line);background:transparent;color:inherit;cursor:pointer;font:700 12.5px Manrope,sans-serif}
+.m .p38-gift:disabled{opacity:.7;cursor:default}
+.m .p38-nl{position:relative;overflow:hidden;color:#fff;background:radial-gradient(120% 90% at 85% 0%,oklch(.62 .17 300 / .9) 0%,transparent 55%),radial-gradient(90% 80% at 10% 100%,oklch(.72 .16 165 / .85) 0%,transparent 60%),linear-gradient(160deg,#0f1a2e 0%,#1b2340 100%)}
+.m .p38-nlt{font-size:14.5px;line-height:1.5;color:rgba(255,255,255,.9);text-wrap:pretty}
+.m .p38-nls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.m .p38-nls div{border-radius:14px;background:rgba(255,255,255,.1);padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.m .p38-nls span{font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:rgba(255,255,255,.7)}
+.m .p38-nls b{font:600 17px Manrope,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m .p38-nlf{font-size:12px;color:rgba(255,255,255,.65)}
+/* Innstillinger → Glimt → kort i briefen */
+.m .p38-crow{gap:8px}
+.m .p38-mv{display:flex;gap:4px;flex:none}
+.m .p38-mv button{width:30px;height:30px;border-radius:15px;border:1px solid var(--pp-line);background:transparent;color:inherit;font-size:11px;cursor:pointer;padding:0}
+.m .p38-mv button:disabled{opacity:.3;cursor:default}
+.m .p38-swb{flex:none;border:0;background:transparent;padding:6px 0 6px 4px;cursor:pointer}
+/* Glimt i prestedrakt (bibelvers) */
+.p38-pr{position:relative;display:inline-block;flex:none;line-height:0;animation:p38Bob 3s ease-in-out infinite}
+.p38-pr>span:not(.p38-halo):not(.p38-bk){position:relative;z-index:1}
+.p38-halo{position:absolute;left:50%;z-index:2;border-style:solid;border-color:#f2c14e;border-radius:50%;box-sizing:border-box;pointer-events:none;animation:p38Halo 2.8s ease-in-out infinite}
+.p38-robe{position:absolute;left:50%;z-index:2;overflow:visible}
+.p38-bk{position:absolute;z-index:3;border-radius:3px;background:#3b2a1a;box-shadow:inset 0 0 0 2px #6b4a2a;display:grid;place-items:center;transform:rotate(-10deg)}
+.p38-bk span{color:#f2c14e;font-weight:800;line-height:1}
+@keyframes p38Bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes p38Halo{0%,100%{opacity:.75;transform:scale(1)}50%{opacity:1;transform:scale(1.06)}}
+@media (prefers-reduced-motion:reduce){.p38-pr,.p38-halo{animation:none}}
+.m .p38-bvh{align-items:flex-start}
+.m .p38-bvk{display:flex;flex-direction:column;gap:4px;min-width:0}
+.m .p38-bvr{font:500 12.5px Manrope,sans-serif;letter-spacing:0;max-width:200px;text-wrap:pretty;margin-top:6px}
+.m .p38-bvf{flex:none;padding:8px 6px 0 0}.m .p38-bvf.pg{padding:14px 10px 0 0}
+/* Konto → Økt og ark */
+.m .p38-shb{position:fixed;inset:0;z-index:950;background:rgba(27,26,23,.4);animation:p35Fade .2s ease both}
+.m .p38-sh{position:fixed;left:0;right:0;bottom:0;z-index:951;max-width:560px;margin:0 auto;max-height:92dvh;overflow-y:auto;box-sizing:border-box;background:var(--pp-card,#fffdf8);color:var(--pp-ink,#1b1a17);border-radius:28px 28px 0 0;padding:10px 18px calc(26px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:12px;box-shadow:0 -14px 40px rgba(0,0,0,.2);animation:p38Up .3s cubic-bezier(.2,.8,.2,1) both}
+.m:not(.papir) .p38-sh{background:#1c1b18;color:#f3efe6;--pp-line:rgba(255,255,255,.14);--pp-mut:rgba(255,255,255,.6);--pp-bg:#14130f;--pp-lab:#ff8a80}
+@keyframes p38Up{from{transform:translateY(40px);opacity:0}to{transform:none;opacity:1}}
+.m .p38-grab{align-self:center;width:36px;height:5px;border-radius:3px;background:var(--pp-line)}
+.m .p38-shf{display:flex;flex-direction:column;gap:12px}
+.m .p38-sht{font:500 22px Newsreader,serif}.m .p38-sht.c,.m .p38-shs.c{text-align:center}
+.m .p38-shs{font-size:13px;color:var(--pp-mut);text-wrap:pretty;line-height:1.45}
+.m .p38-ink{height:50px;border-radius:25px;border:0;background:var(--pp-ink);color:var(--pp-bg);cursor:pointer;font:800 15px Manrope,sans-serif}
+.m .p38-ink.red{background:#b23a2a;color:#fff}
+.m .p38-gh{height:44px;border-radius:22px;border:1px solid var(--pp-line);background:transparent;color:inherit;cursor:pointer;font:700 14px Manrope,sans-serif}
+.m .p38-gh.red{color:var(--pp-lab)}
+.m .p38-ink:disabled,.m .p38-gh:disabled{opacity:.55;cursor:default}
+.m .p38-pw{display:flex;flex-direction:column;gap:6px}
+.m .p38-pw span{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--pp-lab)}
+.m .p38-pw input{height:46px;border-radius:14px;border:1px solid var(--pp-line);background:var(--pp-bg);color:inherit;padding:0 14px;font:500 16px Manrope,sans-serif;box-sizing:border-box;width:100%}
+.m .p38-err{font-size:13px;font-weight:700;color:var(--pp-lab)}
+.m .p38-qi{border-radius:16px;background:var(--pp-bg);padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.m .p38-qi>span{display:flex;justify-content:space-between;gap:12px}.m .p38-qi>span>span{color:var(--pp-mut);flex:none}.m .p38-qi b{text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m .p38-mono{font-family:'IBM Plex Mono',monospace}
+.m .p38-match{display:flex;justify-content:center;gap:10px}
+.m .p38-match span{width:54px;height:66px;border-radius:16px;background:var(--pp-bg);border:1px solid var(--pp-line);display:grid;place-items:center;font:600 34px 'IBM Plex Mono',monospace}
+.m .p38-ok{align-self:center;width:60px;height:60px;border-radius:30px;background:#2f7a4f;color:#fff;font:800 26px Manrope,sans-serif;display:grid;place-items:center;animation:p38Pop .4s cubic-bezier(.3,1.5,.5,1) both}
+@keyframes p38Pop{from{transform:scale(.4);opacity:0}to{transform:none;opacity:1}}
+/* Lås skjermen */
+.p38-lock{position:fixed;inset:0;z-index:9998;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;background:rgba(243,239,230,.82);-webkit-backdrop-filter:blur(26px) saturate(1.2);backdrop-filter:blur(26px) saturate(1.2);color:#1b1a17;font-family:Manrope,system-ui,sans-serif;animation:p35Fade .2s ease both}
+.p38-lock.pd{background:rgba(20,19,15,.86);color:#f3efe6}
+html.p38-locked body{overflow:hidden}
+.p38-lin{width:100%;max-width:340px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.p38-lav{width:84px;height:84px;border-radius:42px;background:#2b5d8a;color:#fff;font:800 32px Manrope,sans-serif;display:grid;place-items:center;overflow:hidden;margin-bottom:6px}.p38-lav img{width:100%;height:100%;object-fit:cover}
+.p38-lin>b{font:500 30px Newsreader,serif}.p38-lin>span{font-size:14px;opacity:.7}
+.p38-lf{display:flex;gap:8px;width:100%;margin-top:12px}
+.p38-lf input{flex:1;min-width:0;height:48px;border-radius:24px;border:1px solid rgba(127,120,105,.4);background:rgba(255,255,255,.7);color:inherit;padding:0 18px;font:500 16px Manrope,sans-serif}
+.p38-lock.pd .p38-lf input{background:rgba(255,255,255,.08)}
+.p38-lf button,.p38-lbio{height:48px;padding:0 18px;border-radius:24px;border:0;background:#1b1a17;color:#f3efe6;font:800 14px Manrope,sans-serif;cursor:pointer}
+.p38-lock.pd .p38-lf button,.p38-lock.pd .p38-lbio{background:#f3efe6;color:#1b1a17}
+.p38-lbio{width:100%}
+.p38-lerr{min-height:18px;font-size:13px;font-weight:700;color:#b23a2a}.p38-lock.pd .p38-lerr{color:#ff8a80}
+.p38-lout{border:0;background:transparent;color:inherit;opacity:.65;font:700 13px Manrope,sans-serif;text-decoration:underline;cursor:pointer}
+/* QR-skanner */
+.p38-cam{position:fixed;inset:0;z-index:9990;background:#0e0e10;color:#fff;font-family:Manrope,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center}
+html.p38-camon body{overflow:hidden}
+.p38-cam video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.p38-ctop{position:absolute;left:0;right:0;top:0;display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:8px;padding:calc(env(safe-area-inset-top,0px) + 12px) 14px 12px;background:linear-gradient(rgba(0,0,0,.55),transparent);text-align:center;z-index:2}
+.p38-ctop b{font-size:15px}
+.p38-ctop button{width:44px;height:44px;border-radius:22px;border:0;background:rgba(255,255,255,.16);color:#fff;display:grid;place-items:center;cursor:pointer}
+.p38-cfr{position:relative;z-index:1;width:min(64vw,250px);aspect-ratio:1;border-radius:24px;border:3px solid rgba(255,255,255,.85);box-shadow:0 0 0 100vmax rgba(0,0,0,.42);overflow:hidden}
+.p38-cln{position:absolute;left:8%;right:8%;top:10%;height:2px;background:#ff8a5c;box-shadow:0 0 12px #ff8a5c;animation:p38Scan 1.4s ease-in-out infinite alternate}
+@keyframes p38Scan{from{top:10%}to{top:88%}}
+.p38-cmsg{position:relative;z-index:1;margin:22px 24px 0;max-width:340px;text-align:center;font:600 13.5px/1.45 Manrope,sans-serif;text-wrap:pretty}
+.p38-cpaste{position:absolute;z-index:2;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);display:flex;gap:8px;max-width:520px;margin:0 auto}
+.p38-cpaste input{flex:1;min-width:0;height:48px;border-radius:24px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);color:#fff;padding:0 18px;font:500 15px Manrope,sans-serif}
+.p38-cpaste input::placeholder{color:rgba(255,255,255,.6)}
+.p38-cpaste button{height:48px;padding:0 18px;border-radius:24px;border:0;background:#fff;color:#1b1a17;font:800 14px Manrope,sans-serif;cursor:pointer}
+/* Domener: Glimt-knappen og oppsummeringen */
+.m .p38-domg svg{display:block}
+.m .pp-scan.p38-domg{display:grid;place-items:center;font-size:0}
+.m .p38-dgc{display:flex;justify-content:center;padding:6px 0 2px}
+.m .p38-dgo{display:flex;align-items:center;gap:10px;height:46px;padding:0 22px;border-radius:999px;border:0;background:var(--pp-ink);color:var(--pp-bg);cursor:pointer;font:700 14.5px Manrope,sans-serif;box-shadow:0 10px 26px -12px rgba(27,26,23,.55);max-width:100%;white-space:nowrap}
+.m .p38-dgo span{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#e8a593}
+.m .p38-dg{display:flex;flex-direction:column;gap:14px;padding:18px 18px 20px;animation:p38Up .32s cubic-bezier(.2,.8,.2,1) both}
+.m .p38-dgh{display:flex;align-items:center;gap:10px}
+.m .p38-dgm{flex:none;line-height:0}
+.m .p38-dgh .m-grow{min-width:0;display:flex;flex-direction:column;gap:2px}
+.m .p38-dgk{font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--pp-lab)}
+.m .p38-dgt{font-size:12.5px;color:var(--pp-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.m .p38-dgb{flex:none;display:flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:17px;border:1px solid var(--pp-line);background:transparent;color:inherit;cursor:pointer;font:700 12.5px Manrope,sans-serif}
+.m .p38-dgb:disabled{opacity:.55}
+.m .p38-dgx{flex:none;width:34px;height:34px;border-radius:17px;border:1px solid var(--pp-line);background:transparent;color:inherit;cursor:pointer;display:grid;place-items:center;padding:0}
+.m .p38-dghd{font:600 18px/1.35 Manrope,sans-serif;text-wrap:pretty}
+.m .p38-dgp{display:flex;flex-direction:column;gap:9px}
+.m .p38-dgp span{display:flex;gap:10px;font-size:14px;line-height:1.5;color:var(--pp-ink);opacity:.88;text-wrap:pretty}
+.m .p38-dgp i{flex:none;width:7px;height:7px;border-radius:4px;margin-top:7px}
+.m .p38-sk{display:flex;flex-direction:column;gap:10px}.m .p38-sk i{display:block;height:14px;border-radius:7px;background:var(--pp-line);opacity:.6}
+/* Oppstartssiden uten flimmer: ingen blur på animerte lag, myke gradienter og eget lag på GPU-en */
+.p36-baur i{filter:none!important;background:radial-gradient(50% 40% at 80% 10%,oklch(.62 .17 300 / .7) 0%,transparent 72%),radial-gradient(50% 45% at 15% 90%,oklch(.72 .16 165 / .6) 0%,transparent 72%),radial-gradient(40% 35% at 90% 90%,oklch(.6 .19 30 / .5) 0%,transparent 72%)!important;animation-duration:18s!important;will-change:transform;transform:translateZ(0);backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.p36-boot{background-color:#101a2e}
+.p36-boot.bye{transition:opacity .3s}
+html.p36-booting,html.p38-reload{background:#101a2e}
+html.p38-reload body{opacity:0;transition:opacity .3s}
+.m .p38-aie{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:18px}
+.m .p38-aie b{font:500 20px Newsreader,serif}.m .p38-aie span{font-size:13.5px;color:var(--pp-mut);text-wrap:pretty}
+.m .p38-aie .p34-ink{text-decoration:none;display:inline-flex;align-items:center;margin-top:4px}
+.m .p38-dgk{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

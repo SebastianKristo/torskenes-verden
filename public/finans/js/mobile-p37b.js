@@ -9,6 +9,10 @@ import { esc, hlApi, api } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 
+import * as P38 from './mobile-p38.js'; // prompt 38: Glimt i prestedrakt
+import { TT as TT35 } from './mobile-p35.js';
+const TTalk = () => TT35?.who != null;
+
 const pad = (n) => String(n).padStart(2, '0');
 const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 const todayIso = () => iso(new Date());
@@ -97,7 +101,7 @@ export function bibleBrief(place) {
   if (place === 'top' && BB.set && BB.set[p === 'm' ? 'morning' : 'evening'] === false) return '';
   const v = verse(p), L = look(p);
   return `<div class="p37-bv" data-gb="bibel" style="background:${L.bg};color:${L.fg}"><i class="p37-bvg" style="background:${L.glow}"></i>
-    <div class="p37-bvh"><span style="color:${L.lab}">${L.kick}</span><span style="color:${L.mut}">${esc(dateLbl())}</span></div>
+    <div class="p37-bvh p38-bvh"><span class="p38-bvk"><span style="color:${L.lab}">${L.kick}</span><span style="color:${L.mut}">${esc(dateLbl())}</span></span><span class="p38-bvf">${P38.priest(46, TTalk() ? 'talk' : 'idle') /* prompt 38: Glimt i prestedrakt */}</span></div>
     <span class="p37-bvt">«${esc(v.text)}»</span>
     <div class="p37-bvf"><b>${esc(v.ref)}</b><span><button type="button" style="background:${L.chip};color:${L.fg}" data-p37b="bcopy">${BB.copied ? 'Kopiert' : 'Kopier'}</button><button type="button" class="ic" style="background:${L.chip};color:${L.fg}" data-p37b="bnext" aria-label="Nytt vers">${svg('M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7', 14, 2.4)}</button></span></div></div>`;
 }
@@ -218,7 +222,7 @@ export function bibleView() {
     <div class="p37-stk"><i class="p37-stg"></i><div class="p37-sth"><span class="p37-flm${readToday ? ' on' : ''}"><svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4 5 5.5 5 11a5 5 0 0 1-10 0c0-2.6 1.4-4 2.5-5 .3 1.6 1 2.6 2 3 .4-3-1-6.5.5-9z" fill="currentColor"/></svg></span>
       <span class="p37-stn"><b>${n}</b><span>${n === 1 ? 'dag på rad' : 'dager på rad'}</span></span><span class="p37-stb"><small>LENGSTE</small><b>${best} dager</b></span></div>
       <div class="p37-wk">${week}</div><span class="p37-stt">${esc(tip)}</span></div>
-    <div class="p37-bv page" style="background:${L.bg};color:${L.fg}"><div class="p37-bvh"><span style="color:${L.lab}">DAGENS VERS</span><span style="color:${L.mut}">${esc(dateLbl())}</span></div><span class="p37-bvt big">«${esc(v.text)}»</span><b>${esc(v.ref)}</b>
+    <div class="p37-bv page" style="background:${L.bg};color:${L.fg}"><div class="p37-bvh p38-bvh"><span class="p38-bvk"><span style="color:${L.lab}">DAGENS VERS</span><span style="color:${L.mut}">${esc(dateLbl())}</span><span class="p38-bvr" style="color:${L.mut}">Glimt leser dagens vers med deg.</span></span><span class="p38-bvf pg">${P38.priest(72, TTalk() ? 'talk' : 'idle')}</span></div><span class="p37-bvt big">«${esc(v.text)}»</span><b>${esc(v.ref)}</b>
       <div class="p37-bvb"><button type="button" data-p37b="bread" style="background:${readToday ? '#2f7a4f' : L.fg};color:${readToday ? '#fff' : L.fg === '#f3efe6' ? '#1b1a17' : '#fff'}">${readToday ? '✓ Lest i dag' : 'Jeg har lest'}</button><button type="button" data-p37b="bsave" style="background:${L.chip};color:${L.fg}">${isSaved ? '♥ Lagret' : '♡ Lagre'}</button><button type="button" data-p37b="bex" style="background:${L.chip};color:${L.fg}">✦ Forklar</button><button type="button" data-p37b="bcopy" style="background:${L.chip};color:${L.fg}">${BB.copied ? 'Kopiert' : 'Kopier'}</button></div>
       ${BB.ex ? `<div class="p37-bex" style="background:${L.chip}"><small style="color:${L.lab}">GLIMT</small><span>${esc(BB.ex)}</span></div>` : ''}</div>
     <span class="p37-lab">LESEPLAN</span>

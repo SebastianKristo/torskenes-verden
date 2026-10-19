@@ -20,6 +20,7 @@ import { p17SetMain, p17Modules, p17AiExtra, p17Varsler, aiLoad, notifyLoad, NT,
 import * as P27 from './mobile-p27.js';
 import * as P33 from './mobile-p33.js'; // prompt 33: GLIMT HUSKER
 import * as P32 from './mobile-p32.js'; // prompt 32: GLIMT I SØKEFELTET, fanelinje på andre sider
+import * as P38 from './mobile-p38.js'; // prompt 38: ØKT i Konto og Logg inn på ny enhet
 import { updLoad, updPage, updSummary, updAdmin, updBind } from './mobile-upd.js';
 
 const T = { f: {}, ai: null, bk: null, srch: null, tokens: null, devices: null, newTok: '', nt: { name: '', scopes: ['receipts:write'], exp: '90' }, ping: '', lastSync: null, usage: null };
@@ -101,7 +102,7 @@ function main() {
     ${G('App', [nav('look', 'Utseende', '', 'look', '#BF5AF2'), nav('scan', 'Skanning og AI', pref('scanTap') === 'cam' ? 'Kamera' : 'Vis valg', 'cam', '#FF7A3D'), nav('notif', 'Varsler', st.nRc ? 'På' : '', 'bell', '#FF453A'), nav('hap', 'Haptikk', hpref('hap') ? 'På' : 'Av', 'vib', '#FF2D55'), nav('sokbar', 'Søkebar', 'Google', 'search', '#0A84FF'), nav('widgets', 'Widgets', 'Slik legger du til', 'list', '#30D158'), nav('kalapp', 'Kalender-appen', 'iPhone · Android', 'down', '#b23a2a')])}
     ${G('Finans', [nav('fai', 'AI-motor', !canSrv() ? ADMIN_NOTE : st.provider === 'gemini' ? 'Gemini' : st.fallback ? 'Ollama + Gemini' : 'Ollama', 'ai', '#FF7A3D'), nav('kat', 'Kategorier', String((S.boot?.categories ?? []).length), 'cat', '#30D158'), nav('regel', 'Regler', String((S.boot?.rules ?? []).length), 'rule', '#5E5CE6'), nav('bank', 'Bank og import', st.csvProfile ?? '', 'bank', '#0A84FF'), nav('t212', 'Aksjer · Trading 212', st.t212Set ? (st.t212Env === 'demo' ? 'Demo' : 'Live') : 'Ikke koblet', 'aks', '#64D2FF'), nav('bk', 'Backup og data', '', 'backup', '#8E8E93')])}
     ${G('System', [nav('srv', 'Server og synk', '', 'srv', '#64D2FF'), nav('data', 'Data og lagring', '', 'db', '#8E8E93'), nav('om', 'Om FinansHub', VERSION, 'info', '#8E8E93')])}
-    ${G('', [btn(`Logg ut ${esc(meName())}`, 'logout', '#FF8A80')])}`;
+`; // Prompt 38: Logg ut ligger under Konto → Økt
 }
 
 const PAGE = {
@@ -119,7 +120,7 @@ const PAGE = {
     return `${P36.kontoTop()}
       ${G('Konto', [val('Brukernavn', me.username ? `@${esc(me.username)}` : '–'), val('Rolle', me.role === 'admin' ? 'Administrator' : me.role ? 'Bruker' : '–'), val('Tofaktor', me.totp ? '● På' : '○ Av', me.totp ? '#2f7a4f' : '')], 'Profilbildet vises i alle appene og i Homelab på PC. Navn og brukernavn endres av admin i Homelab → Innstillinger → Brukere.')}
       ${G('', [nav('konto', 'Kontoer og brukere', '', 'users', '#5E8BFF'), nav('sik', 'Sikkerhet', me.totp ? '2FA på' : '', 'shield', '#34C759')])}
-      ${G('', [btn('Logg ut', 'logout', '#b23a2a')])}`;
+      ${G('', [P38.qrRow()])}${P38.oktGroup(G) /* prompt 38: ØKT */}`;
   },
   bakgrunn: () => `${photoChoices()}<div class="snote">Bakgrunnen vises øverst på Hjem, i Papir og klassisk. «Vær» følger været der du er (MET), «Planeter» viser Jorda, Månen, Jupiter, Mars og Saturn fra NASA (ny hver dag), og «Oslo» er Oslo fra luften. Bildene lastes ned og skaleres av serveren din, og appen lagrer dem for bruk uten nett. «Kun på Wi-Fi» finnes i de native appene.</div>`,
   fanelinje: () => `<div class="sec">Hovedlinja</div>${tabEditor()}<div class="pp-col pp-navset" style="gap:8px">${navSettings()}</div>`,
@@ -127,7 +128,7 @@ const PAGE = {
     ${G('På denne enheten', [profile(), val('Status', '✓ Aktiv', '#7BE3A0')],
     'Nettappen er logget inn med én konto om gangen. Flere kontoer i samme app, og raskt bytte ved å holde inne profilbildet, finnes i iOS- og Android-appene.')}
     ${G('Brukere', [link('Administrer brukere', '/', 'Homelab → Innstillinger → Innlogging')], 'Nye brukere opprettes av admin i Homelab. Hver bruker har egne tokens og varsler.')}
-    ${G('', [btn('Logg ut', 'logout', '#FF8A80')])}`,
+    ${G('', [P38.qrRow()])}${P38.oktGroup(G) /* prompt 38: ØKT – Lås skjermen, Logg ut, Logg ut av alle enheter */}`,
 
   sik: () => {
     const d = T.devices;

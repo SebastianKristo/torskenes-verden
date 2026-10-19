@@ -43,6 +43,7 @@ import * as P34 from './mobile-p34.js'; // prompt 34: haptikk tilbake, kvitterin
 import * as P34AI from './mobile-p34ai.js'; // prompt 34: AI-kontroll (#/aictl)
 import * as P37 from './mobile-p37.js'; // prompt 37: Gjøremål (uten fanelinje, detaljark, delte lister, Glimt i ✦-knappen)
 import * as P37B from './mobile-p37b.js'; // prompt 37: bibelvers, onboarding med profil, «hvor er X», Pakker-widget, prøveperioder
+import * as P38 from './mobile-p38.js'; // prompt 38: AI-svar lukk, nye brief-kort, prestedrakt, ØKT, QR-innlogging, Glimt i Domener
 import * as P36 from './mobile-p36.js'; // prompt 36: sveip bort brief, Sherlock/snekker-Glimt, oppstartsside, profilbilde, ikoner, temperatur trykk/hold
 import * as P35 from './mobile-p35.js'; // prompt 35: Glimt-familien, brief med venner og opplesning, Innstillinger → Glimt (#/glimt), vær for sted
 import { takeApp, HK, p17Bind, p17Sheets, huskeView, tasksLoad, posWidget, bolWidgetLoad, appLoad, applyIcon, ptrBind, wsConnect, onRealtime } from './mobile-p17.js';
@@ -439,7 +440,7 @@ export function draw() {
   const ae = document.activeElement, keep = ae?.id && root().contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
   root().innerHTML = `<div class="m ${th}${fad ? ' p23-fad' : ''}${rv ? ' p24-rvm' : ''}${fsx ? ' p27-fs' : ''}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}${fabStyle() === 'float' ? ' flyt' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${scr === 'vaer' ? ' vaer' : ''}${scr === 'mer' ? ' p28-mer' : ''}${scr === 'nordlys' ? ' n31-pg' : ''}${scr === 'aictl' ? ' p34-aipg' : ''}${scr === 'brief' ? ' p34-brpg' : ''}${scr === 'glimt' ? ' p35-glpg' : ''}${pp && scr === 'set' ? ' p32-nonav' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
     ${pp ? '' : rail(n)}${hero ? paperHero(scr) : ''}<div class="m-scroll">${bt ? topRow(th) : ''}${main}</div><div class="m-detail">${twoPane ? detail(th) : ''}</div>${nav}
-    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() + P26.sheets26() + P27.sheets27() : ''}${avgSheet()}${pp ? "" : famSheet()}${p17Sheets()}${updSheet()}${p21Sheets(HK)}${P22.p22Sheets()}${pp ? P24.sheets24() : ''}${origOverlay(th)}${pp ? P29.searchLayer() : ''}${P29.sheets29()}${P29.quickLayer()}${pp ? P32.sheets32() : ''}${P31.aiLayer()}${P36.layer36()}${P37.layer37()}${P37B.layer37b(P37B.H2.pk ?? 0)}${P31.bannerHtml()}${P30.sysBottom()}${P30.sheets30()}<div class="p30-edge" aria-hidden="true"></div>${m.toast ? P31.hintToast(m.toast) ?? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
+    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() + P26.sheets26() + P27.sheets27() : ''}${avgSheet()}${pp ? "" : famSheet()}${p17Sheets()}${updSheet()}${p21Sheets(HK)}${P22.p22Sheets()}${pp ? P24.sheets24() : ''}${origOverlay(th)}${pp ? P29.searchLayer() : ''}${P29.sheets29()}${P29.quickLayer()}${pp ? P32.sheets32() : ''}${P31.aiLayer()}${P36.layer36()}${P37.layer37()}${P37B.layer37b(P37B.H2.pk ?? 0)}${P38.layer38()}${P31.bannerHtml()}${P30.sysBottom()}${P30.sheets30()}<div class="p30-edge" aria-hidden="true"></div>${m.toast ? P31.hintToast(m.toast) ?? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
     <input class="m-file" id="m-capture" type="file" accept="image/*" capture="environment" data-mupload data-confirm></div>`;
   if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', pp ? (m.light ? '#f3efe6' : '#14130f') : th === 'ios' ? '#07070A' : getComputedStyle(root().firstElementChild).backgroundColor || '#19120E');
@@ -544,6 +545,7 @@ function poll() {
 }
 
 export function route() {
+  if (P38.route38(location.hash)) return route(); // Prompt 38: #/l/<sid>.<nonce> fra kameraet → godkjenn-arket
   // Prompt 24: Google-innloggingen kommer tilbake til #/bd?ok=1&google=ok (eller ?error=…).
   const [path, qs] = location.hash.replace(/^#\/?/, '').split('?'), parts = path.split('/');
   if (qs) { history.replaceState(null, '', `#/${path}`); if (/google=ok/.test(qs)) setTimeout(() => flash('Koblet til Google Kalender ✓'), 300); else if (/google=error/.test(qs)) setTimeout(() => flash(`Google: ${decodeURIComponent((qs.match(/error=([^&]*)/) ?? [])[1] ?? 'innloggingen feilet')}`), 300); }
@@ -558,7 +560,7 @@ export function route() {
   if (!domOk() && (next === 'dom' || (next === 'set' && parts[1] === 'dom'))) { next = next === 'dom' ? 'hl' : 'set'; if (location.hash !== `#/${next}`) { history.replaceState(null, '', `#/${next}`); parts.length = 1; } }
   const sub = parts.slice(1).join('/');
   if (next !== m.screen || sub !== m.sub) {
-    if (next !== m.screen) { edReset(); P26.leave26(); P27.leave27(next); P28.leave28(next); P29.leave29(); P30.leave30(); P32.leave32(); P30B.leave30b(); if (m.screen === 'chat') CHAT.chatLeave(); if (next === 'chat') CHAT.chatEnter(m.screen); if (next === 'kal') m.kalFrom = m.screen; if (next === 'nordlys') P30.sysEnter(m.screen); if (m.screen === 'aictl') P34AI.aiLeave(); if (next === 'aictl') P34AI.aiEnter(m.screen, sub); P35.leave35(m.screen, next); if (next === 'vaer') WX.from = m.screen; m.edit = null; m.pdet = null; if (next === 'dom') m.domFrom = m.screen === 'dom' ? m.domFrom : m.screen; if (next === 'set') m.setFrom = m.screen === 'set' ? m.setFrom : m.screen; }
+    if (next !== m.screen) { edReset(); P26.leave26(); P27.leave27(next); P28.leave28(next); P29.leave29(); P30.leave30(); P32.leave32(); P30B.leave30b(); if (m.screen === 'chat') CHAT.chatLeave(); if (next === 'chat') CHAT.chatEnter(m.screen); if (next === 'kal') m.kalFrom = m.screen; if (next === 'nordlys') P30.sysEnter(m.screen); if (m.screen === 'aictl') P34AI.aiLeave(); if (next === 'aictl') P34AI.aiEnter(m.screen, sub); P35.leave35(m.screen, next); if (next === 'vaer') WX.from = m.screen; m.edit = null; m.pdet = null; if (next === 'dom') m.domFrom = m.screen === 'dom' ? m.domFrom : m.screen; if (next === 'set') m.setFrom = m.screen === 'set' ? m.setFrom : m.screen; if (next === 'sub') m.aboFrom = m.screen === 'sub' ? m.aboFrom : m.screen; }
     if (next === 'aictl' && next === m.screen) P34AI.aiSub(sub);
     p20Screen(next);
     m.screen = next; m.sub = sub; m.detail = false; m.menu = false; m.sheet = false; m.min = false; m.orig = null; paperState.scan = false; paperState.open = paperState.open && next === 'hl';
@@ -768,7 +770,7 @@ export function bind() {
   bindGlobal();
   // Prompt 17: navn og ikon på appen, dra for å oppdatere og sanntid (Huskeliste, Familie og Sporing).
   applyIcon(); appLoad().then(() => draw()).catch(() => {}); ptrBind(); wsConnect(onRealtime);
-  wxBindScroll(); P23.icBoot(); P25.boot(); P26.boot26(); P27.boot27(); P28.boot28(); P30.boot30({ target: backTarget, cancel: cancelOthers }); P31.boot31(); P32.boot32(); P34.boot34(); P35.boot35(); P36.boot36(); P37.boot37(); P37B.boot37b();
+  wxBindScroll(); P23.icBoot(); P25.boot(); P26.boot26(); P27.boot27(); P28.boot28(); P30.boot30({ target: backTarget, cancel: cancelOthers }); P31.boot31(); P32.boot32(); P34.boot34(); P35.boot35(); P36.boot36(); P37.boot37(); P37B.boot37b(); P38.boot38();
   addEventListener('fh-design', (e) => { const d = e.detail ?? {}; takeDesign(d); if (typeof d.lock === 'boolean') setPref('lock', d.lock); if (typeof d.hap === 'boolean') setPref('hap', d.hap); if (d.photo) photoLoad(d.photo).then(draw).catch(() => {}); draw(); });
   loadLayout().then((r) => {
     takeDesign(r); P37B.takeWopt(r); take15(r); take16(r); take20(r); P24.take24(r); P25.take25(r); P26.take26(r); P27.take27(r); P29.take29(r); P32.take32(r); takeApp(r);
@@ -807,6 +809,7 @@ export function bind() {
     if (Date.now() - tsup < 400 && d('.tabs')) { e.preventDefault(); e.stopPropagation(); return; }
     if (P23.swGuard()) { e.preventDefault(); e.stopPropagation(); return; } // klikket etter et sveip tilbake
     if (m.screen === 'aictl' && await P34AI.bindAi(e, t)) return; // Prompt 34: AI-kontroll
+    if (await P38.bind38(e, t)) return; // Prompt 38: ØKT, QR-innlogging, brief-kort, Glimt i Domener
     if (await P37B.bind37b(e, t)) return; // Prompt 37: bibelvers, onboarding, «hvor er X», Pakker-widget, prøveperioder
     if (m.screen === 'huske' || m.screen === 'hl' || m.screen === 'brief') { if (await P37.bind37(e, t)) return; } // Prompt 37: Gjøremål
     if (await P36.bind36(e, t)) return; // Prompt 36: angre brief, tidligere versjoner, profilbilde, temperatur, Google-kalendere
@@ -929,6 +932,7 @@ export function bind() {
     await settingsBind(e, t);
   }));
   el.addEventListener('submit', safe(async (e) => {
+    if (await P38.submit38(e, e.target)) return; // Prompt 38
     if (await P37.submit37(e, e.target) || await P37B.submit37b(e, e.target)) return; // Prompt 37
     if (await P34AI.submitAi(e, e.target)) return;
     if (await P31.submit31(e, e.target)) return;
