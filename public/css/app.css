@@ -994,3 +994,36 @@ html[data-hl="2c"] .dx{--dx-ink:#1b1a17;--dx-mut:#6b665c;--dx-lab:#b23a2a;--dx-c
   .upd-cmd{flex-direction:column;align-items:stretch}
   .upd-btns .sg-btn{flex:1;justify-content:center}
 }
+
+/* Prompt 29: søkemotor-valg i søkefeltet (extras.js, claude-code-hjem-sok-ai.md). Knappen til venstre (ikon + ▾),
+   menyen «SØK MED» på <body> over alle kort, og det mørke forslaget «Legg i kalender» når teksten er en time. */
+.sbar button.sq-eng.sq-eng{flex:none;display:flex;align-items:center;gap:3px;height:34px;margin-left:-8px;padding:0 6px 0 8px;border:0;border-radius:17px;background:transparent;color:inherit;cursor:pointer;box-shadow:none}
+.sbar button.sq-eng.sq-eng:hover,.sbar button.sq-eng[aria-expanded=true]{background:rgba(127,140,160,.16)}
+.sq-caret{font-size:10px;opacity:.6}
+.sq-ei{flex:none;width:20px;height:20px;border-radius:10px;display:grid;place-items:center;line-height:1}
+.sq-ei.ai{background:#b23a2a;color:#fff;font-size:12px}
+.sq-ei.ddg{background:#de5833;color:#fff;font:800 12px Manrope,system-ui,sans-serif}
+.sq-eng-menu .sq-ei{width:22px;height:22px;border-radius:11px;font-size:13px}
+.sq-eng-menu{position:fixed;z-index:60;width:270px;max-width:calc(100vw - 16px);border-radius:18px;background:rgba(18,25,38,.98);color:#eef0f4;border:1px solid #232938;box-shadow:0 18px 40px -12px rgba(0,0,0,.5);overflow:hidden;font-family:Manrope,system-ui,sans-serif}
+.sq-eng-menu.paper{background:#fff;color:#1b1a17;border-color:#d8d1c2}
+.sq-eng-h{display:block;padding:12px 14px 6px;font:600 10.5px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;color:#f59a8f}
+.sq-eng-menu.paper .sq-eng-h{color:#b23a2a}
+.sq-eng-menu button{display:flex;align-items:center;gap:12px;width:100%;min-height:54px;padding:8px 14px;border:0;border-top:1px solid rgba(127,140,160,.18);background:transparent;color:inherit;cursor:pointer;text-align:left;font-family:inherit}
+.sq-eng-menu .sq-eng-h+button{border-top:0}
+.sq-eng-menu button:hover,.sq-eng-menu button:focus-visible{background:rgba(127,140,160,.12);outline:none}
+.sq-eng-t{flex:1;min-width:0;display:flex;flex-direction:column}
+.sq-eng-t b{font-size:14.5px;font-weight:700}
+.sq-eng-t span{font-size:12px;opacity:.65}
+.sq-eng-ck{flex:none;color:#f59a8f;opacity:0}
+.sq-eng-menu.paper .sq-eng-ck{color:#b23a2a}
+.sq-eng-menu [aria-checked=true] .sq-eng-ck{opacity:1}
+.sq-appt{display:flex;align-items:center;gap:10px;min-height:44px;margin:0 8px 6px;padding:6px 8px 6px 14px;border-radius:16px;background:#1b1a17;color:#f3efe6;cursor:pointer}
+html:not([data-hl="2c"]) .sq-appt{background:#eef0f4;color:#0c1119}
+.sq-appt svg{flex:none}
+.sq-appt-t{flex:1;min-width:0;display:flex;flex-direction:column}
+.sq-appt-t b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sq-appt-t span{font-size:12px;opacity:.8}
+.sq-appt-b{flex:none;height:32px;padding:0 12px;border-radius:16px;background:#f3efe6;color:#1b1a17;display:grid;place-items:center;font:700 12.5px Manrope,system-ui,sans-serif}
+html:not([data-hl="2c"]) .sq-appt-b{background:#0c1119;color:#eef0f4}
+.sq-appt:hover{filter:brightness(1.08)}
+.gword[hidden]{display:none}

@@ -2,6 +2,7 @@
 import { esc, hm, api, backdropClick } from './util.js';
 import { store, on, emit } from './store.js';
 import { clearBtn, syncSearch, bindSearchFields } from './searchfield.js';
+import { addQuick, preview, quickLabel } from './kal-quick.js';
 
 /* ---------- Popup ---------- */
 
@@ -24,7 +25,7 @@ export function popHandler(prefix, fn) { handlers.set(prefix, fn); }
 export function bindPopup() {
   pop().addEventListener('click', (e) => { if (backdropClick(e, pop()) || e.target.closest('[data-pop-close]')) closePopup(); });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !pop().hidden) closePopup();
+    if (e.key === 'Escape' && !pop().hidden) { e.preventDefault(); closePopup(); }
     if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[data-pop]')) { e.preventDefault(); e.target.click(); }
   });
   document.addEventListener('click', (e) => {
@@ -42,23 +43,74 @@ export function bindPopup() {
 /* ---------- Søkebar ---------- */
 
 export const GWORD = '<span class="gword" aria-label="Google"><i>G</i><i>o</i><i>o</i><i>g</i><i>l</i><i>e</i></span>';
-const ICON = (c) => `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${c}" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>`;
 export const SEARCH_STYLES = [['light', 'Lys, sentrert'], ['dark', 'Mørk, sentrert'], ['wideLight', 'Full bredde, lys'], ['wide', 'Full bredde, mørk']];
 
-const isGoogle = () => /google\./.test(store.me.searchUrl);
-// Prompt 22: den offisielle Google-«G» (48×48, fire baner) som egen fil. /assets/google-g.svg = public/google-g.svg (kopi av public/assets/google-g.svg).
-const GICON = '<img class="sbar-g" src="/assets/google-g.svg" width="20" height="20" alt="" aria-hidden="true">';
+const isGoogle = () => /google\./.test(store.me.searchUrl ?? 'google.');
+
+/* Prompt 29 (claude-code-hjem-sok-ai.md): søkemotor-valg til venstre (ikon + ▾) med menyen «SØK MED» i et eget lag over
+   alt annet: System-AI (standard, svarer i Chat og legger til timer), Google, DuckDuckGo. Valget lagres per bruker
+   (search_engine i /api/me/layout, nettleseren som reserve). Timer gjenkjennes uansett motor (quick-time.js) og legges
+   til i bakgrunnen (kal-quick.js). ✦ AI åpner alltid Chat. */
+export const ENGINES = { ai: ['System-AI', 'Spør AI eller skriv «time hos …»', 'Svarer i Chat og legger til timer'], google: ['Google', 'Søk på Google', 'Åpner google.com'], ddg: ['DuckDuckGo', 'Søk med DuckDuckGo', 'Åpner duckduckgo.com'] };
+const EKEY = 'hl_search_engine';
+let engine = (() => { try { const v = localStorage.getItem(EKEY); return ENGINES[v] ? v : 'ai'; } catch { return 'ai'; } })();
+export const searchEngine = () => engine;
+const engIcon = (k, big = false) => k === 'google' ? `<img class="sbar-g" src="/assets/google-g.svg" width="${big ? 20 : 18}" height="${big ? 20 : 18}" alt="" aria-hidden="true">`
+  : k === 'ddg' ? '<span class="sq-ei ddg" aria-hidden="true">D</span>' : '<span class="sq-ei ai" aria-hidden="true">✦</span>';
+export async function setSearchEngine(k, save = true) {
+  if (!ENGINES[k]) return;
+  engine = k;
+  try { localStorage.setItem(EKEY, k); } catch { /* privat modus */ }
+  if (save) api('/me/layout', { method: 'PUT', json: { search_engine: k } }).catch(() => {});
+  // Feltene som står på siden får nytt ikon og ny plassholder uten å tegnes på nytt (teksten i feltet beholdes).
+  document.querySelectorAll('[data-search]').forEach((f) => {
+    const b = f.querySelector('[data-sq-eng]'); if (b) b.innerHTML = `${engIcon(k)}<span class="sq-caret" aria-hidden="true">▾</span>`;
+    if (f.q) f.q.placeholder = ENGINES[k][1];
+    f.closest('.search-wrap')?.querySelector('.gword')?.toggleAttribute('hidden', k !== 'google');
+  });
+}
+let engLoaded = false;
+function loadEngine() {
+  if (engLoaded) return; engLoaded = true;
+  api('/me/layout').then((l) => { const v = l?.search_engine ?? l?.searchEngine; if (ENGINES[v] && v !== engine) setSearchEngine(v, false); }).catch(() => {});
+}
 
 export function renderSearch() {
-  const st = store.me.searchStyle, light = st === 'light' || st === 'wideLight';
-  const ph = isGoogle() ? 'Søk på Google eller skriv inn en adresse' : 'Søk eller skriv inn en adresse';
-  const ai = aiOn();
-  // Prompt 27: ✕ til venstre for feltet (etter Google-«G») når det står tekst i det (searchfield.js).
-  const form = (inner) => `<form class="sbar ${st}${ai ? ' ai' : ''}" data-search data-sf role="search">${inner}${clearBtn()}<input name="q" placeholder="${ai ? 'Spør ✦ AI om hva som helst' : ph}" autocomplete="off" aria-label="Søk" role="combobox" aria-autocomplete="list" aria-expanded="false" enterkeyhint="search"><button type="button" class="sq-ai-tog" data-sq-ai aria-label="Spør AI" title="Spør AI i Chat">✦ AI</button><button type="submit">Søk</button><div class="sq-drop" role="listbox" hidden></div></form>`;
+  const st = store.me.searchStyle;
+  loadEngine();
+  // Prompt 27: ✕ til venstre for feltet (etter motor-ikonet) når det står tekst i det (searchfield.js).
+  const pick = `<button type="button" class="sq-eng" data-sq-eng aria-label="Velg søkemotor" title="Velg søkemotor" aria-haspopup="menu" aria-expanded="false">${engIcon(engine)}<span class="sq-caret" aria-hidden="true">▾</span></button>`;
+  const form = (inner) => `<form class="sbar ${st}" data-search data-sf role="search">${inner}${clearBtn()}<input name="q" placeholder="${esc(ENGINES[engine][1])}" autocomplete="off" aria-label="Søk" role="combobox" aria-autocomplete="list" aria-expanded="false" enterkeyhint="go"><button type="button" class="sq-ai-tog" data-sq-ai aria-label="Spør AI" title="Spør AI i Chat">✦ AI</button><button type="submit">Søk</button><div class="sq-drop" role="listbox" hidden></div></form>`;
   bindSearchFields();
-  const glass = `<span class="sf-ic" style="opacity:1">${ICON(light ? '#5f6368' : '#8a93a6')}</span>`;
-  if (st === 'light' || st === 'dark') return `<div class="search-wrap">${isGoogle() ? GWORD : ''}${form(isGoogle() ? GICON : glass)}</div>`;
-  return `<div>${form(isGoogle() ? `${GICON}<span class="sep"></span>` : glass)}</div>`;
+  if (st === 'light' || st === 'dark') return `<div class="search-wrap">${isGoogle() ? GWORD.replace('class="gword"', `class="gword"${engine === 'google' ? '' : ' hidden'}`) : ''}${form(pick)}</div>`;
+  return `<div>${form(`${pick}<span class="sep"></span>`)}</div>`;
+}
+
+/* Menyen «SØK MED»: eget lag på <body> (position:fixed, z-index over kortene), plassert under motor-knappen. */
+function closeEngMenu() { document.getElementById('sq-eng-menu')?.remove(); document.querySelectorAll('[data-sq-eng][aria-expanded=true]').forEach((b) => b.setAttribute('aria-expanded', 'false')); }
+function openEngMenu(btn) {
+  closeEngMenu();
+  const r = btn.getBoundingClientRect(), m = document.createElement('div');
+  m.id = 'sq-eng-menu'; m.className = `sq-eng-menu${document.documentElement.dataset.hl === '2c' ? ' paper' : ''}`; m.setAttribute('role', 'menu');
+  m.innerHTML = `<span class="sq-eng-h">SØK MED</span>${Object.entries(ENGINES).map(([k, [n, , sub]]) => `<button type="button" role="menuitemradio" aria-checked="${engine === k}" data-sq-pick="${k}">${engIcon(k, true)}<span class="sq-eng-t"><b>${esc(n)}</b><span>${esc(sub)}</span></span><svg class="sq-eng-ck" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg></button>`).join('')}`;
+  document.body.appendChild(m);
+  const w = m.offsetWidth, left = Math.max(8, Math.min(r.left - 6, innerWidth - w - 8));
+  m.style.left = `${left}px`; m.style.top = `${r.bottom + 10}px`;
+  btn.setAttribute('aria-expanded', 'true');
+  m.querySelector('[aria-checked=true]')?.focus({ preventScroll: true });
+}
+
+/** Timen i feltet, hvis teksten ser ut som en avtale (dato + intensjon eller kjent type). */
+function apptOf(v) {
+  v = String(v ?? '').trim();
+  if (v.length <= 4 || isUrl(v)) return null;
+  const p = preview(v);
+  return p.ok && p.isAppointment ? p : null;
+}
+function addAppt(form, q) {
+  addQuick(q);
+  form.q.value = ''; syncSearch(form.q); form.q.blur();
+  const d = form.querySelector('.sq-drop'); if (d) d.hidden = true;
 }
 
 /* Forslag fra Google (via serveren) og søkehistorikk per bruker, delt med mobilappen. */
@@ -87,14 +139,17 @@ function drawDrop(form) {
   if (sq.sel >= sq.items.length) sq.sel = -1;
   const ai = sq.ai && sq.ai.q === v.trim() ? sq.ai : null;
   const err = lv && !sq.items.length && sq.suggErr ? sq.suggErr : '';
-  const open = document.activeElement === input && (sq.items.length > 0 || !lv || !!ai || !!err);
+  const ap = apptOf(v);
+  const open = document.activeElement === input && (sq.items.length > 0 || !lv || !!ai || !!err || !!ap);
   drop.hidden = !open;
   input.setAttribute('aria-expanded', String(open));
   if (!open) return;
   if (ai) { drop.innerHTML = aiPanel(ai); return; }
-  if (err) { drop.innerHTML = `<div class="sq-empty">Forslag utilgjengelig: ${esc(err)}</div>`; return; }
+  // Mørkt forslag øverst: kalender-ikon · «Nina frisør» · «fre 25. sep · 14:30» · Legg i kalender (↵ gjør det samme).
+  const apH = ap ? `<div class="sq-appt" role="option" data-sq-appt aria-label="Legg i kalender: ${esc(ap.title)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v15H4zM4 10h16M9 3v4M15 3v4"/></svg><span class="sq-appt-t"><b data-no-i18n>${esc(ap.title)}</b><span>${esc(quickLabel(ap))}</span></span><span class="sq-appt-b">Legg i kalender</span></div>` : '';
+  if (err) { drop.innerHTML = apH + (apH ? '' : `<div class="sq-empty">Forslag utilgjengelig: ${esc(err)}</div>`); return; }
   const split = (t) => { const i = lv ? t.toLowerCase().indexOf(lv) : -1; return i === 0 ? `<span>${esc(t.slice(0, lv.length))}</span><b>${esc(t.slice(lv.length))}</b>` : `<b>${esc(t)}</b>`; };
-  drop.innerHTML = (!lv && hist.length ? '<div class="sq-head"><span>Nylige søk</span><button type="button" data-sq-clear>Tøm historikk</button></div>' : '')
+  drop.innerHTML = apH + (!lv && hist.length ? '<div class="sq-head"><span>Nylige søk</span><button type="button" data-sq-clear>Tøm historikk</button></div>' : '')
     + sq.items.map((x, i) => `<div class="sq-item" role="option" id="sq-${i}" aria-selected="${sq.sel === i}" data-sq-i="${i}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${x.h ? HIC : SIC}"/></svg><span class="sq-t">${split(x.t)}</span>${x.h ? `<button type="button" class="sq-del" data-sq-del="${i}" aria-label="Fjern fra historikk">×</button>` : ''}</div>`).join('')
     + (!lv && !hist.length ? '<div class="sq-empty">Ingen søkehistorikk ennå</div>' : '');
   if (sq.sel >= 0) input.setAttribute('aria-activedescendant', `sq-${sq.sel}`); else input.removeAttribute('aria-activedescendant');
@@ -122,8 +177,10 @@ function runSearch(q) {
     // keepalive: lagringen fullføres selv om siden byttes ut med søkeresultatet.
     fetch('/api/search/history', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q }), keepalive: true }).catch(() => {});
   }
-  // Ser det ut som en adresse, gå rett dit.
-  location.href = isUrl(q) ? (/^https?:\/\//i.test(q) ? q : `https://${q}`) : store.me.searchUrl + encodeURIComponent(q);
+  // Ser det ut som en adresse, gå rett dit. Ellers valgt søkemotor (System-AI → ny samtale i Chat).
+  if (isUrl(q)) { location.href = /^https?:\/\//i.test(q) ? q : `https://${q}`; return; }
+  if (engine === 'ai') { document.querySelectorAll('[data-search]').forEach((f) => { f.q.value = ''; syncSearch(f.q); f.q.blur(); }); import('./chat.js').then((m) => m.openChat(q)).catch(() => { location.hash = '#/chat'; }); return; }
+  location.href = engine === 'ddg' ? `https://duckduckgo.com/?q=${encodeURIComponent(q)}` : (isGoogle() && store.me.searchUrl ? store.me.searchUrl : 'https://www.google.com/search?q=') + encodeURIComponent(q);
 }
 
 /* ✦ AI: korte søk går til vanlig søk; ellers vises svaret fra AI-motoren i nedtrekket, med årsak hvis det feiler. */
@@ -164,8 +221,31 @@ export function bindSearch() {
     e.preventDefault();
     const it = sq.items[sq.sel];
     const q = it ? it.t : e.target.q.value;
+    // Timer gjenkjennes uansett søkemotor og legges til i bakgrunnen.
+    if (!it && apptOf(q)) { addAppt(e.target, q.trim()); return; }
     if (aiOn()) askAi(e.target, q); else runSearch(q);
   });
+  // Søkemotor-menyen.
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest?.('[data-sq-eng]');
+    if (b) { e.preventDefault(); if (b.getAttribute('aria-expanded') === 'true') closeEngMenu(); else openEngMenu(b); return; }
+    const pk = e.target.closest?.('[data-sq-pick]');
+    if (pk) { e.preventDefault(); setSearchEngine(pk.dataset.sqPick); closeEngMenu(); document.querySelector('[data-search] input[name=q]')?.focus(); return; }
+    if (!e.target.closest?.('#sq-eng-menu')) closeEngMenu();
+  });
+  document.addEventListener('keydown', (e) => {
+    const m = document.getElementById('sq-eng-menu');
+    if (!m) return;
+    if (e.key === 'Escape') { e.stopPropagation(); closeEngMenu(); document.querySelector('[data-sq-eng]')?.focus(); }
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const L = [...m.querySelectorAll('[data-sq-pick]')], i = L.indexOf(document.activeElement);
+      L[(i + (e.key === 'ArrowDown' ? 1 : -1) + L.length) % L.length]?.focus();
+    }
+  }, true);
+  window.addEventListener('resize', closeEngMenu);
+  window.addEventListener('hashchange', closeEngMenu);
+  document.addEventListener('scroll', (e) => { if (!e.target?.closest?.('#sq-eng-menu')) closeEngMenu(); }, true);
   // ✦ AI (prompt 27): åpner Chat og starter en ny samtale med teksten i feltet (tomt felt = bare åpne Chat).
   document.addEventListener('click', (e) => {
     const tog = e.target.closest?.('[data-sq-ai]');
@@ -211,6 +291,7 @@ export function bindSearch() {
     const f = formOf(e);
     if (!f || !e.target.closest('.sq-drop')) return;
     e.preventDefault();
+    if (e.target.closest('[data-sq-appt]')) return addAppt(f, f.q.value.trim());
     const del = e.target.closest('[data-sq-del]');
     if (del) return removeHist(f, sq.items[+del.dataset.sqDel]?.t);
     if (e.target.closest('[data-sq-clear]')) { sq.hist = []; drawDrop(f); api('/search/history', { method: 'DELETE' }).catch(() => {}); return; }

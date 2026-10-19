@@ -9,12 +9,16 @@
 // Data: GET /api/kalender (skolens iCal med RRULE ekspandert, Canvas, Bursdager, Google). Svarer serveren 404 (eldre
 // versjon), bygges kalenderen fra /api/school og Bursdager her i nettleseren.
 // Valg per bruker i /api/me/layout: kalView, kalFilters, kalReminders, subjectColors (og i nettleseren som reserve).
+// Prompt 29: kalenderen fyller hele vinduet under toppmenyen (claude-code-kalender-web-full.md), eller fullskjerm uten
+// toppmeny (⤢/⤡, ✕ og Esc; calendar_web_layout = menu | full). Under 820 px er sidepanelet en skuff. Nytt Nå/Neste-kort,
+// ukenummer i Måned og minikalender (trykk → Uke), og «✦ Skriv time» (rask time i bakgrunnen, kal-quick.js).
 import { api, esc, isMobile } from './util.js';
 import { store, widget, refresh, emit, on } from './store.js';
 import { openSettings } from './settings.js';
 import { loadBirthdays } from './birthdays.js';
 import { searchField } from './searchfield.js';
 import { t, locale, dayName, monthName, fmtDate } from './i18n.js';
+import { addQuick, preview, quickLabel, setQuickHooks } from './kal-quick.js';
 
 const MN = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 const MS = MN.map((m) => m.slice(0, 3));
@@ -44,8 +48,12 @@ const LKEY = 'hl_kal_v1';
 const FONTS = 'https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap';
 
 const K = { data: null, err: '', loading: null, at: 0, fallback: false, prefs: false, range: null,
-  view: 'uke', cur: null, filt: {}, rem: {}, subjC: {}, sel: null, form: null, srch: null, miniOff: 0, mini: false, delArm: false, toast: '', busy: false };
-let tickT = null, toastT = null, keyBound = false, gridKey = '';
+  view: 'uke', cur: null, filt: {}, rem: {}, subjC: {}, sel: null, form: null, srch: null, miniOff: 0, mini: false, delArm: false, toast: '', busy: false,
+  full: false, drawer: false, qa: null };
+const QA_CHIPS = ['Frisør', 'Lege', 'Tannlege', 'Fysio'];
+// Smalt vindu (under 820 px, men ikke mobil): sidepanelet blir en skuff.
+const narrow = () => !isMobile() && matchMedia('(max-width: 819px)').matches;
+let tickT = null, toastT = null, keyBound = false, gridKey = '', qaT = 0;
 const host = () => document.getElementById('kal');
 
 /* ---------------- Datoer ---------------- */
@@ -73,9 +81,10 @@ export const semester = (d = new Date()) => `Skole · ${d.getMonth() >= 6 ? 'hø
 /* ---------------- Innstillinger per bruker ---------------- */
 
 function readLocal() { try { return JSON.parse(localStorage.getItem(LKEY) || 'null') ?? {}; } catch { return {}; } }
-function writeLocal() { try { localStorage.setItem(LKEY, JSON.stringify({ view: K.view, filt: K.filt, rem: K.rem, subjC: K.subjC })); } catch { /* privat modus */ } }
+function writeLocal() { try { localStorage.setItem(LKEY, JSON.stringify({ view: K.view, filt: K.filt, rem: K.rem, subjC: K.subjC, full: K.full })); } catch { /* privat modus */ } }
 function applyPrefs(p) {
   if (p.view && VIEW_LOC[p.view]) K.view = VIEW_LOC[p.view];
+  if (p.full === 'full' || p.full === 'menu') K.full = p.full === 'full'; else if (typeof p.full === 'boolean') K.full = p.full;
   if (p.filt && typeof p.filt === 'object') K.filt = p.filt;
   if (p.rem && typeof p.rem === 'object') K.rem = p.rem;
   if (p.subjC && typeof p.subjC === 'object') K.subjC = p.subjC;
@@ -86,7 +95,7 @@ async function loadPrefs() {
   applyPrefs(readLocal());
   try {
     const l = await api('/me/layout');
-    applyPrefs({ view: l.kalView, filt: l.kalFilters, rem: l.kalReminders, subjC: l.subjectColors });
+    applyPrefs({ view: l.kalView, filt: l.kalFilters, rem: l.kalReminders, subjC: l.subjectColors, full: l.calendar_web_layout ?? l.calendar?.web_layout });
     writeLocal();
   } catch { /* eldre server: bare nettleseren */ }
 }
@@ -96,6 +105,15 @@ function savePref(field, value) {
   api('/me/layout', { method: 'PUT', json: { [field]: value } }).catch(() => {});
 }
 export const subjectColors = () => K.subjC;
+/** Oppsettet på web: 'menu' (med toppmeny) eller 'full' (fullskjerm). Brukes også av Innstillinger → Kalendere. */
+export const webLayout = () => (K.full ? 'full' : 'menu');
+export async function setWebLayout(v) {
+  await loadPrefs();
+  K.full = v === 'full';
+  savePref('calendar_web_layout', K.full ? 'full' : 'menu');
+  applyFull();
+  paint();
+}
 export async function setSubjectColor(name, c) {
   await loadPrefs();
   if (c) K.subjC = { ...K.subjC, [name]: c }; else { const x = { ...K.subjC }; delete x[name]; K.subjC = x; }
@@ -271,10 +289,14 @@ function nextModel(now, today) {
     const L = evOn(d).filter((e) => e.s && e.e && e.kind !== 'innl').sort((a, b) => mm(a.s) - mm(b.s) || (a.kind === 'time' ? -1 : b.kind === 'time' ? 1 : 0));
     for (const e of L) { const a = mm(e.s) + i * 1440, b = mm(e.e) + i * 1440; if (b > nm) { nx = { e, cur: a <= nm, a, b, i, d }; break; } }
   }
-  if (!nx) return { k: '', t: 'Ingen kommende hendelser', c: '#7a7468', sub: K.data && !K.data.configured ? 'Legg inn skolens iCal under Innstillinger → Kalendere' : 'De neste tre ukene', when: '', id: '' };
-  const e = nx.e, day = nx.i === 0 ? 'I dag' : nx.i === 1 ? 'I morgen' : longDate(nx.d);
+  if (!nx) return { k: '', t: 'Ingen kommende hendelser', c: '#7a7468', sub: K.data && !K.data.configured ? 'Legg inn skolens iCal under Innstillinger → Kalendere' : 'De neste tre ukene', when: '', id: '', tm: '', day: '', pl: '', wB: '', wS: '', prog: false, pct: 0 };
+  const e = nx.e, day = nx.i === 0 ? 'I dag' : nx.i === 1 ? 'I morgen' : longDate(nx.d), soon = nx.a - nm < 1440;
   return { k: nx.cur ? 'NÅ' : 'NESTE', t: e.t, c: col(e), sub: sub2(day, `${e.s}–${e.e}`, e.r), id: e.id,
-    when: nx.cur ? `${dur2(nx.b - nm)} igjen` : nx.a - nm < 1440 ? `om ${dur2(nx.a - nm)}` : capf(dayName(nx.d.getDay(), 'short').replace('.', '')) };
+    tm: `${e.s}–${e.e}`, day: nx.i === 0 ? 'i dag' : nx.i === 1 ? 'i morgen' : longDate(nx.d), pl: e.r || '',
+    wB: nx.cur ? dur2(nx.b - nm) : soon ? dur2(nx.a - nm) : capf(dayName(nx.d.getDay(), 'short').replace('.', '')).slice(0, 3),
+    wS: nx.cur ? 'igjen' : soon ? 'til start' : e.s,
+    prog: nx.cur, pct: nx.cur ? Math.max(0, Math.min(100, Math.round((nm - nx.a) / Math.max(1, nx.b - nx.a) * 100))) : 0,
+    when: nx.cur ? `${dur2(nx.b - nm)} igjen` : soon ? `om ${dur2(nx.a - nm)}` : capf(dayName(nx.d.getDay(), 'short').replace('.', '')) };
 }
 
 /* ---------------- Visningene ---------------- */
@@ -318,12 +340,13 @@ function monthView(today) {
   const cur = curD(), m0 = new Date(cur.getFullYear(), cur.getMonth(), 1, 12), st = add(m0, -((m0.getDay() + 6) % 7)), tk = key(today), web = !isMobile();
   let cells = '';
   for (let i = 0; i < 42; i++) {
+    if (i % 7 === 0) { const wk = isoW(add(st, i)); cells += `<button type="button" class="k2-mwk" data-k-wk="${key(add(st, i))}" aria-label="${esc(t('Uke'))} ${wk}" title="${esc(t('Uke'))} ${wk}">${wk}</button>`; }
     const d = add(st, i), k = key(d), L = evOn(d), inM = d.getMonth() === m0.getMonth(), les = L.filter((e) => e.kind === 'time').length, oth = L.filter((e) => e.kind !== 'time'), mx = web ? 4 : 3, sh = oth.slice(0, les ? mx - 1 : mx);
     const chips = sh.map((e) => { const solid = e.kind === 'prove' || !e.s || e.kind === 'innl'; return `<span class="k2-mch${solid ? ' solid' : ''}" style="--c:${esc(col(e))}" data-no-i18n>${esc((e.s && e.kind !== 'innl' && web ? `${e.s} ` : '') + short(e))}</span>`; });
     if (les) chips.push(`<span class="k2-mch les">${les} ${web ? (les === 1 ? 'time' : 'timer') : 't'}</span>`);
     cells += `<button type="button" class="k2-mc${inM ? '' : ' out'}${k === tk ? ' today' : ''}" data-k-day="${k}" aria-label="${esc(longDate(d))}"><span class="k2-mn">${d.getDate()}</span>${chips.join('')}${oth.length > sh.length ? `<span class="k2-more">+${oth.length - sh.length}</span>` : ''}</button>`;
   }
-  const head = [1, 2, 3, 4, 5, 6, 0].map((i) => `<span>${esc(web ? dayName(i, 'short').replace('.', '').slice(0, 3).toUpperCase() : dayName(i, 'narrow'))}</span>`).join('');
+  const head = `<span>${esc(t('U'))}</span>` + [1, 2, 3, 4, 5, 6, 0].map((i) => `<span>${esc(web ? dayName(i, 'short').replace('.', '').slice(0, 3).toUpperCase() : dayName(i, 'narrow'))}</span>`).join('');
   return { st: m0, end: m0, html: `<div class="k2-month"><div class="k2-mh">${head}</div><div class="k2-mg">${cells}</div></div>` };
 }
 
@@ -346,11 +369,12 @@ function miniCal(today, vis) {
   const inVis = (k) => vis && k >= key(vis.st) && k <= key(vis.end);
   let cells = '';
   for (let i = 0; i < 42; i++) {
+    if (i % 7 === 0) { const wk = isoW(add(mSt, i)); cells += `<button type="button" class="k2-mini-wk" data-k-wk="${key(add(mSt, i))}" aria-label="${esc(t('Uke'))} ${wk}">${wk}</button>`; }
     const d = add(mSt, i), k = key(d), L = evOn(d).filter((e) => e.kind !== 'time');
     cells += `<button type="button" class="k2-mini-c${d.getMonth() === mB.getMonth() ? '' : ' out'}${k === tk ? ' today' : inVis(k) ? ' vis' : ''}" data-k-go="${k}">${d.getDate()}<i style="background:${L.length ? esc(k === tk ? '#fff' : col(L[0])) : 'transparent'}"></i></button>`;
   }
   return `<div class="k2-mini"><div class="k2-mini-h"><b>${esc(capf(monthName(mB.getMonth())))} ${mB.getFullYear()}</b><button type="button" data-k-mini="-1" aria-label="Forrige måned">‹</button><button type="button" data-k-mini="1" aria-label="Neste måned">›</button></div>
-    <div class="k2-mini-g">${[1, 2, 3, 4, 5, 6, 0].map((i) => `<span>${esc(dayName(i, 'narrow'))}</span>`).join('')}${cells}</div></div>`;
+    <div class="k2-mini-g"><span>${esc(t('U'))}</span>${[1, 2, 3, 4, 5, 6, 0].map((i) => `<span>${esc(dayName(i, 'narrow'))}</span>`).join('')}${cells}</div></div>`;
 }
 function calFilters(chips = false) {
   return calList().map((c) => {
@@ -413,6 +437,51 @@ function formSheet() {
   </div></div>`;
 }
 
+/** «Legg til time» (✦ AI · RASK TIME): tekstfelt, chips, live forhåndsvisning med parseQuick. */
+function qaSheet() {
+  const Q = K.qa;
+  if (!Q) return '';
+  return `<div class="k2-sheet-bg" data-k-qclose><div class="k2-sheet k2-qa" role="dialog" aria-modal="true" aria-label="Legg til time">
+    <span class="k2-grip" aria-hidden="true"></span>
+    <div class="k2-qa-h"><div class="k2-grow"><span class="k2-lab">✦ AI · RASK TIME</span><b>Legg til time</b></div><button type="button" class="k2-x sm" data-k-qclose aria-label="Lukk"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    <form class="k2-form" data-k-qform>
+      <textarea class="k2-in k2-qa-in" name="qa" rows="3" data-k-qtxt placeholder="F.eks. «time hos Nina frisør 14.30 25.09» eller lim inn meldingen fra legekontoret">${esc(Q.txt)}</textarea>
+      <div class="k2-chips"><button type="button" class="k2-chip sm on" data-k-qpaste><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6v3H9zM7 5H5v16h14V5h-2"/></svg>Lim inn melding</button>${QA_CHIPS.map((n) => `<button type="button" class="k2-chip sm" data-k-qchip="${esc(n)}">${esc(n)}</button>`).join('')}</div>
+      <div data-k-qpv>${qaPreview()}</div>
+      ${Q.err ? `<span class="k2-err">${esc(Q.err)}</span>` : ''}
+      <button type="submit" class="k2-qa-go"${(Q.txt ?? '').trim() ? '' : ' aria-disabled="true"'}>Legg til i kalenderen</button>
+      <button type="button" class="k2-qa-man" data-k-qman>Fyll ut selv</button>
+      <span class="k2-qa-foot">Du kan lukke appen. Timen legges til i bakgrunnen.</span>
+    </form>
+  </div></div>`;
+}
+function qaPreview() {
+  const v = (K.qa?.txt ?? '').trim();
+  if (v.length <= 3) return '';
+  const p = preview(v);
+  if (!p.ok) return `<span class="k2-qa-bad">${esc(p.why || 'Fant ikke dato.')}</span>`;
+  const dt = `${quickLabel({ date: p.date })}${p.start ? ` · ${p.start}–${p.end}` : ' · hele dagen'}`;
+  return `<div class="k2-qa-pv"><span class="k2-strip" style="background:${esc(calById('privat').color)}"></span><div class="k2-grow"><b data-no-i18n>${esc(p.title)}</b><span>${esc(dt)}</span>${p.place ? `<span data-no-i18n>${esc(p.place)}</span>` : ''}<span class="k2-qa-cal">Privat · varsel 1 time før</span></div></div>`;
+}
+function paintQa() { const el = host()?.querySelector('[data-k-qpv]'); if (el) el.innerHTML = qaPreview(); const b = host()?.querySelector('.k2-qa-go'); if (b) { if ((K.qa?.txt ?? '').trim()) b.removeAttribute('aria-disabled'); else b.setAttribute('aria-disabled', 'true'); } }
+function openQa(txt = '') { K.sel = null; K.form = null; K.srch = null; K.drawer = false; K.qa = { txt, err: '', focus: true }; paint(); }
+function submitQa() {
+  const v = (K.qa?.txt ?? '').trim();
+  if (!v) { if (K.qa) { K.qa.err = 'Skriv hva timen gjelder.'; paint(); } return; }
+  // Arket lukkes med en gang; jobben går i bakgrunnen.
+  K.qa = null; paint();
+  addQuick(v);
+}
+/** Feilet tolkning: skjemaet ferdig utfylt med det som ble funnet, feilmelding og originalteksten i notat. */
+function failForm({ found = {}, text = '', error = '' }) {
+  if (document.body.dataset.route !== 'kalender') location.hash = '#/kalender';
+  const go = () => {
+    openForm({ t: found.title || '', ...(found.date ? { k: found.date } : {}), ...(found.start ? { s: found.start, e: found.end || hmM(Math.min(mm(found.start) + 60, 23 * 60 + 59)) } : {}), r: found.place || '', n: text, rem: '1h' });
+    if (K.form) { K.form.err = `${error}${/[.!]$/.test(error) ? '' : '.'} Velg dato og lagre.`; paint(); }
+  };
+  if (host()) go(); else setTimeout(go, 80);
+}
+
 function searchSheet() {
   const S = K.srch;
   if (!S) return '';
@@ -446,21 +515,32 @@ function body() {
   const now = new Date(), today = d0(now), mob = isMobile(), V = K.view;
   const vis = V === 'mnd' ? monthView(today) : V === 'liste' ? listView(today) : gridView(now, today);
   ensureRange(key(add(vis.st, -7)), key(add(vis.end, 7)));
-  const nx = nextModel(now, today), tt = titleOf(vis);
+  const nx = nextModel(now, today), tt = titleOf(vis), nar = narrow();
   const tabs = `<div class="k2-tabs" role="tablist">${VIEWS.map(([k, n, kk]) => `<button type="button" role="tab" aria-selected="${V === k}" class="${V === k ? 'on' : ''}" data-k-view="${k}" title="Hurtigtast ${kk}">${n}</button>`).join('')}</div>`;
+  const FULL_IC = K.full ? 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5' : 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5', fullL = K.full ? 'Vis med toppmeny' : 'Fullskjerm';
   const top = `<div class="k2-top">
+    ${nar ? `<button type="button" class="k2-ic k2-drw" data-k-drawer aria-label="Minikalender og kalendere" aria-expanded="${K.drawer}" title="Minikalender og kalendere"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16v14H4zM4 10h16M8 3.5v4M16 3.5v4M9 10v10"/></svg></button>` : ''}
     <button type="button" class="k2-title" data-k-titl aria-expanded="${K.mini}"><span data-no-i18n>${esc(tt.t)}</span><span class="k2-year">${esc(tt.y)}</span>${mob ? `<span class="k2-arr">${K.mini ? '▲' : '▼'}</span>` : ''}</button>
     <span class="k2-sp"></span>
-    ${mob ? '' : `<div class="k2-nav"><button type="button" class="k2-circ" data-k-nav="-1" aria-label="Forrige">‹</button><button type="button" class="k2-circ" data-k-nav="1" aria-label="Neste">›</button></div>${tabs}`}
+    ${mob || nar ? '' : `<div class="k2-nav"><button type="button" class="k2-circ" data-k-nav="-1" aria-label="Forrige">‹</button><button type="button" class="k2-circ" data-k-nav="1" aria-label="Neste">›</button></div>${tabs}`}
     <button type="button" class="k2-ic" data-k-search aria-label="Søk i kalenderen" title="Søk ( / )"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button>
     <button type="button" class="k2-ic k2-today" data-k-today aria-label="I dag" title="I dag (T)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 6h16v14H4zM4 10h16M8 3.5v4M16 3.5v4"/></svg><span>${today.getDate()}</span></button>
-    <button type="button" class="k2-new" data-k-new title="Ny hendelse (N)">${mob ? '+' : '+ Ny hendelse'}</button>
-  </div>${mob ? `<div class="k2-mtabs"><div class="k2-nav"><button type="button" class="k2-circ" data-k-nav="-1" aria-label="Forrige">‹</button><button type="button" class="k2-circ" data-k-nav="1" aria-label="Neste">›</button></div>${tabs}</div>` : ''}`;
+    <button type="button" class="k2-qbtn" data-k-qa title="Skriv time med AI">${mob ? '✦' : '✦ Skriv time'}</button>
+    <button type="button" class="k2-new" data-k-new title="Ny hendelse (N)">${mob ? '+' : '<span class="k2-lg">+ Ny hendelse</span><span class="k2-sm">+ Ny</span>'}</button>
+    ${mob ? '' : `<button type="button" class="k2-sq" data-k-full aria-label="${fullL}" title="${fullL}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${FULL_IC}"/></svg></button>
+    <button type="button" class="k2-sq ink" data-k-closecal aria-label="Lukk kalenderen" title="Lukk${K.full ? ' (Esc)' : ''}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>`}
+  </div>${mob || nar ? `<div class="k2-mtabs"><div class="k2-nav"><button type="button" class="k2-circ" data-k-nav="-1" aria-label="Forrige">‹</button><button type="button" class="k2-circ" data-k-nav="1" aria-label="Neste">›</button></div>${tabs}</div>` : ''}`;
   const drop = mob && K.mini ? `<div class="k2-drop">${miniCal(today, vis)}<div class="k2-cchips">${calFilters(true)}</div></div>` : '';
-  const strip = `<button type="button" class="k2-next"${nx.id ? ` data-k-sel="${esc(nx.id)}"` : ''}><span class="k2-strip" style="background:${esc(nx.c)}"></span>${nx.k ? `<span class="k2-nk">${nx.k}</span>` : ''}<span class="k2-grow"><b data-no-i18n>${esc(nx.t)}</b><span>${esc(nx.sub)}</span></span><span class="k2-nw">${esc(nx.when)}</span></button>`;
-  const side = mob ? '' : `<aside class="k2-side">${miniCal(today, vis)}<div class="k2-cals"><span class="k2-lab">KALENDERE</span>${calFilters()}<button type="button" class="k2-b line sm" data-k-set>Administrer kalendere ›</button></div>
+  // Nå/Neste-kort (prompt 29): lyst kort, ikonflis i fargen, NÅ/NESTE + tid, tittel + rom, stort tall til høyre, fremdrift.
+  const strip = `<button type="button" class="k2-now-c${nx.id ? '' : ' empty'}"${nx.id ? ` data-k-sel="${esc(nx.id)}"` : ''} style="--c:${esc(nx.c)}">
+    <span class="k2-now-ic" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7.5V12l3 2"/></svg></span>
+    <span class="k2-grow k2-now-m">${nx.k ? `<span class="k2-now-k"><span>${nx.k}</span><span>${esc(`${nx.tm} · ${nx.day}`)}</span></span>` : `<span class="k2-now-k"><span>${esc(nx.sub)}</span></span>`}
+      <span class="k2-now-t"><b data-no-i18n>${esc(nx.t)}</b>${nx.pl ? `<span class="k2-now-pl" data-no-i18n>${esc(nx.pl)}</span>` : ''}</span></span>
+    ${nx.wB ? `<span class="k2-now-r"><b>${esc(nx.wB)}</b><span>${esc(nx.wS)}</span></span>` : ''}
+    ${nx.prog ? `<span class="k2-now-p" aria-hidden="true"><i style="width:${nx.pct}%"></i></span>` : ''}</button>`;
+  const side = mob ? '' : `${nar && K.drawer ? '<div class="k2-drw-bg" data-k-drawer></div>' : ''}<aside class="k2-side${nar ? ` drawer${K.drawer ? ' open' : ''}` : ''}">${miniCal(today, vis)}<div class="k2-cals"><span class="k2-lab">KALENDERE</span>${calFilters()}<button type="button" class="k2-b line sm" data-k-set>Administrer kalendere ›</button></div>
     <span class="k2-keys">Hurtigtaster: ← → bla · T i dag · D dag · W uke · M måned · L liste · N ny · / søk</span>${K.fallback ? '<span class="k2-keys">Eldre server: bare skolens iCal og Bursdager.</span>' : ''}</aside>`;
-  return `${K.toast ? `<div class="k2-toast" role="status">${esc(K.toast)}</div>` : ''}${top}${drop}${strip}<div class="k2-main">${side}<div class="k2-view" data-k-swipe>${vis.html}</div></div>${detailSheet()}${formSheet()}${searchSheet()}`;
+  return `${K.toast ? `<div class="k2-toast" role="status">${esc(K.toast)}</div>` : ''}${top}${drop}${strip}<div class="k2-main">${side}<div class="k2-view" data-k-swipe>${vis.html}</div></div>${detailSheet()}${formSheet()}${searchSheet()}${qaSheet()}`;
 }
 
 function scrollGrid(h) {
@@ -479,12 +559,35 @@ function paint() {
   if (!h) return;
   const sc = h.querySelector('[data-k-scroll]'), y = sc?.scrollTop ?? 0, lst = h.querySelector('[data-k-list]')?.scrollTop ?? 0;
   const ae = document.activeElement, focusQ = ae?.matches?.('[data-k-q]'), selS = focusQ ? ae.selectionStart : 0;
+  const focusQa = ae?.matches?.('[data-k-qtxt]'), selQa = focusQa ? ae.selectionStart : 0;
+  applyFull();
   h.innerHTML = body();
+  fitHeight();
   const sc2 = h.querySelector('[data-k-scroll]');
   if (sc2 && gridKey === `${K.view}|${K.cur ?? ''}|${isMobile()}`) sc2.scrollTop = y; else scrollGrid(h);
   const l2 = h.querySelector('[data-k-list]'); if (l2 && lst) l2.scrollTop = lst;
   if (focusQ || (K.srch && K.srch.focus)) { const q = h.querySelector('[data-k-q]'); if (q) { q.focus(); try { q.setSelectionRange(selS || q.value.length, selS || q.value.length); } catch { /* */ } } if (K.srch) K.srch.focus = false; }
   if (K.form?.focus) { K.form.focus = false; h.querySelector('[data-k-form] [name=title]')?.focus(); }
+  if (focusQa || K.qa?.focus) { const q = h.querySelector('[data-k-qtxt]'); if (q) { q.focus(); const n = focusQa ? selQa : q.value.length; try { q.setSelectionRange(n, n); } catch { /* */ } } if (K.qa) K.qa.focus = false; }
+}
+/** Fullskjerm: kalenderen dekker hele vinduet (position:fixed) og siden bak ruller ikke. */
+function applyFull() {
+  const h = host(), on = !!h && K.full && !isMobile();
+  h?.classList.toggle('k2-fs', on);
+  document.body.classList.toggle('kal-fs', on);
+}
+/** Med toppmeny: høyden er vinduet minus det som ligger over kalenderen (toppmenyen), minst 620 px. */
+function fitHeight() {
+  const h = host();
+  if (!h) return;
+  if (h.classList.contains('k2-fs') || isMobile()) { h.style.removeProperty('--k2-top'); return; }
+  const top = Math.max(0, Math.round(h.getBoundingClientRect().top + window.scrollY));
+  h.style.setProperty('--k2-top', `${top}px`);
+}
+function closeCal() {
+  closeSheets(); K.drawer = false;
+  document.body.classList.remove('kal-fs');
+  location.hash = '#/dash';
 }
 function flash(tx) { K.toast = tx; paint(); clearTimeout(toastT); toastT = setTimeout(() => { K.toast = ''; paint(); }, 2600); }
 
@@ -618,17 +721,33 @@ function bind(h) {
     const dx = e.changedTouches[0].clientX - sw.x, dy = e.changedTouches[0].clientY - sw.y; sw = null;
     if (Math.abs(dx) > 70 && Math.abs(dy) < 45) shift(dx < 0 ? 1 : -1);
   });
-  h.addEventListener('input', (e) => { if (e.target.matches('[data-k-q]')) runSearch(e.target.value); });
-  h.addEventListener('submit', (e) => { const f = e.target.closest('[data-k-form]'); if (f) { e.preventDefault(); saveForm(f); } });
+  h.addEventListener('input', (e) => {
+    if (e.target.matches('[data-k-q]')) runSearch(e.target.value);
+    if (e.target.matches('[data-k-qtxt]') && K.qa) { K.qa.txt = e.target.value; K.qa.err = ''; clearTimeout(qaT); qaT = setTimeout(paintQa, 120); }
+  });
+  h.addEventListener('keydown', (e) => { if (e.target.matches?.('[data-k-qtxt]') && e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submitQa(); } });
+  h.addEventListener('submit', (e) => {
+    if (e.target.closest('[data-k-qform]')) { e.preventDefault(); submitQa(); return; }
+    const f = e.target.closest('[data-k-form]'); if (f) { e.preventDefault(); saveForm(f); }
+  });
   h.addEventListener('click', (e) => {
     const tg = e.target;
     // Klikk på bakgrunnen lukker arkene (ikke klikk inne i arket).
     const bg = tg.closest('.k2-sheet-bg');
     if (bg && tg === bg) { closeSheets(); return; }
+    if (tg.closest('.k2-drw-bg')) { K.drawer = false; paint(); return; }
     const b = tg.closest('button,[data-k-tap]');
     if (!b || !h.contains(b)) return;
     const d = b.dataset;
-    if ('kClose' in d || 'kSclose' in d || 'kFclose' in d) { closeSheets(); return; }
+    if ('kClose' in d || 'kSclose' in d || 'kFclose' in d || 'kQclose' in d) { closeSheets(); return; }
+    if ('kQa' in d) return openQa();
+    if ('kQpaste' in d) { navigator.clipboard?.readText?.().then((v) => { if (v && K.qa) { K.qa.txt = v; K.qa.focus = true; paint(); } }).catch(() => { if (K.qa) { K.qa.err = 'Fikk ikke lese utklippstavlen. Lim inn med ⌘V / Ctrl+V.'; K.qa.focus = true; paint(); } }); return; }
+    if (d.kQchip) { if (K.qa) { K.qa.txt = `Time hos ${d.kQchip.toLowerCase()} `; K.qa.focus = true; K.qa.err = ''; paint(); } return; }
+    if ('kQman' in d) { const v = (K.qa?.txt ?? '').trim(), p = v ? preview(v) : null; K.qa = null; return openForm(p ? { t: p.title || '', ...(p.date ? { k: p.date } : {}), ...(p.start ? { s: p.start, e: p.end } : {}), r: p.place || '', n: v.length > 60 ? v : '', rem: '1h' } : {}); }
+    if ('kFull' in d) return setWebLayout(K.full ? 'menu' : 'full');
+    if ('kClosecal' in d) return closeCal();
+    if ('kDrawer' in d) { K.drawer = !K.drawer; return paint(); }
+    if (d.kWk) { K.drawer = false; K.miniOff = 0; return setView('uke', d.kWk); }
     if ('kRetry' in d) { ensureKal(true); return; }
     if ('kSet' in d) { openSettings('kal'); return; }
     if ('kReconnect' in d) { K.form = null; paint(); openSettings('kal'); return; }
@@ -639,7 +758,7 @@ function bind(h) {
     if ('kSearch' in d) { K.srch = { q: '', res: [], focus: true }; K.mini = false; return paint(); }
     if ('kTitl' in d) { if (isMobile()) { K.mini = !K.mini; K.miniOff = 0; paint(); } return; }
     if (d.kMini) { K.miniOff += +d.kMini; return paint(); }
-    if (d.kGo) { K.cur = d.kGo; K.mini = false; K.miniOff = 0; if (K.view === 'mnd' || K.view === 'liste') K.view = K.view; return paint(); }
+    if (d.kGo) { K.cur = d.kGo; K.mini = false; K.drawer = false; K.miniOff = 0; if (K.view === 'mnd' || K.view === 'liste') K.view = K.view; return paint(); }
     if (d.kCal) { K.filt = { ...K.filt, [d.kCal]: !shownCal(d.kCal) }; savePref('kalFilters', K.filt); return paint(); }
     if (d.kDay) return setView('dag', d.kDay);
     if (d.kSel) { K.sel = d.kSel; K.delArm = false; K.err2 = ''; return paint(); }
@@ -661,8 +780,8 @@ function bind(h) {
 }
 function readFormSafe() { const f = host()?.querySelector('[data-k-form]'); if (f && K.form) readForm(f); }
 function closeSheets() {
-  if (!K.sel && !K.form && !K.srch && !K.mini) return false;
-  K.sel = null; K.form = null; K.srch = null; K.mini = false; K.delArm = false; K.err2 = '';
+  if (!K.sel && !K.form && !K.srch && !K.mini && !K.qa && !K.drawer) return false;
+  K.sel = null; K.form = null; K.srch = null; K.mini = false; K.qa = null; K.drawer = false; K.delArm = false; K.err2 = '';
   clearTimeout(sTimer); sCtl?.abort();
   paint();
   return true;
@@ -672,12 +791,18 @@ function bindKeys() {
   if (keyBound) return;
   keyBound = true;
   window.addEventListener('keydown', (e) => {
-    if (!host() || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (!host() || e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
     if (document.getElementById('settings') && !document.getElementById('settings').hidden) return;
     const tag = e.target?.tagName ?? '';
-    if (e.key === 'Escape') { if (/INPUT|TEXTAREA|SELECT/.test(tag) && e.target.value && e.target.closest('[data-sf]')) return; if (closeSheets()) e.preventDefault(); return; }
+    if (e.key === 'Escape') {
+      if (/INPUT|TEXTAREA|SELECT/.test(tag) && e.target.value && e.target.closest('[data-sf]')) return;
+      if (closeSheets()) { e.preventDefault(); return; }
+      // Esc i fullskjerm = ✕ (lukker kalenderen og går til Dashboard).
+      if (K.full && !isMobile()) { e.preventDefault(); closeCal(); }
+      return;
+    }
     if (/INPUT|TEXTAREA|SELECT/.test(tag) || e.target?.isContentEditable) return;
-    if (K.form || K.srch || K.sel) return;
+    if (K.form || K.srch || K.sel || K.qa) return;
     const k = e.key.toLowerCase(), V = { d: 'dag', 3: '3d', w: 'uke', m: 'mnd', l: 'liste' };
     if (e.key === 'ArrowLeft') shift(-1);
     else if (e.key === 'ArrowRight') shift(1);
@@ -703,7 +828,7 @@ function startTick() {
     const h = host(), w = document.querySelector('[data-w="d_kal"],[data-w="p_kal"]');
     if (!h && !w) return;
     if (Date.now() - K.at > 10 * 60_000) ensureKal();
-    if (h && !K.form && !K.srch) paint();
+    if (h && !K.form && !K.srch && !K.qa) paint();
     refresh('d_kal', 'p_kal');
   }, 30_000);
 }
@@ -712,6 +837,7 @@ export function render() {
   loadFonts();
   bindKeys();
   gridKey = '';
+  K.drawer = false;
   setTimeout(() => {
     const h = host();
     if (!h) return;
@@ -728,13 +854,29 @@ export function render() {
     ensureKal();
     startTick();
   });
-  return `<div id="kal" class="kal k2">${body()}</div>`;
+  return `<div id="kal" class="kal k2${K.full && !isMobile() ? ' k2-fs' : ''}">${body()}</div>`;
 }
+// Ut av Kalender: fullskjerm-låsen på siden fjernes.
+window.addEventListener('hashchange', () => { if (!/^#\/kalender/.test(location.hash)) document.body.classList.remove('kal-fs'); });
+// Rask time (kal-quick.js): Vis hopper til dagen, feil åpner skjemaet, ferdig henter kalenderen på nytt.
+setQuickHooks({
+  show: (k) => { K.cur = k; K.sel = null; gridKey = ''; if (K.view === 'liste') K.view = 'dag'; if (document.body.dataset.route !== 'kalender') location.hash = '#/kalender'; else paint(); },
+  fail: failForm,
+  changed: () => { K.at = 0; ensureKal(true); },
+});
 
 on('kalender', () => { paint(); refresh('d_kal', 'p_kal'); });
 // Ny iCal-adresse eller ny timeplan fra skolen: hent kalenderen på nytt.
 on('school', () => { if (K.data && !K.loading) ensureKal(true); });
-window.addEventListener('resize', () => { if (host()) { gridKey = ''; } });
+let narrowWas = null;
+window.addEventListener('resize', () => {
+  if (!host()) return;
+  gridKey = '';
+  fitHeight();
+  const n = narrow();
+  if (narrowWas !== null && n !== narrowWas) { K.drawer = false; paint(); }
+  narrowWas = n;
+});
 
 /* ---------------- Hjem-widget KALENDER (uendret) ---------------- */
 

@@ -633,7 +633,8 @@ export async function createEvent(user, v) {
     if (list.length >= 2000) throw Object.assign(new Error('For mange lokale hendelser'), { status: 400 });
     kv.set(user, 'kal_local_events', [...list, e]);
     clearCalendarCache(user);
-    return (await eventsFor(user, v.date, v.date)).events.find((x) => String(x.id).split('~')[0] === e.id) ?? null;
+    // Filtre (kalFilters) eller fri-regler kan skjule hendelsen i visningen; svar likevel med id-en så rask time kan angre.
+    return (await eventsFor(user, v.date, v.date)).events.find((x) => String(x.id).split('~')[0] === e.id) ?? { ...v, id: e.id, source: 'local', editable: true };
   }
   const ids = await googleCalendarIds(user);
   const calId = v.calendar === 'familie' ? ids.familie : ids.privat;
@@ -695,6 +696,12 @@ api.delete('/events/:id', async (c) => {
 });
 /** Prompt 29 (angre rask time): sletter en egen hendelse. → {ok} eller kaster {status}. */
 export async function deleteEvent(user, id) {
+  const base0 = String(id).split('~')[0];
+  if (/^loc-[0-9a-f]{10}$/.test(base0) && localList(user).some((e) => e.id === base0)) {
+    kv.set(user, 'kal_local_events', localList(user).filter((e) => e.id !== base0));
+    clearCalendarCache(user);
+    return { ok: true };
+  }
   const ev = await findEvent(user, id);
   if (!ev) throw Object.assign(new Error('Fant ikke hendelsen'), { status: 404 });
   if (!ev.editable) throw Object.assign(new Error('Skolens hendelser kan ikke slettes.'), { status: 403 });

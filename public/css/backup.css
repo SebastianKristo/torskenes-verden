@@ -1,0 +1,36 @@
+/* Prompt 29: Innstillinger → Backup (settings-backup.js) og segmentkontrollen «Med toppmeny · Fullskjerm»
+   i Innstillinger → Kalendere. Fargene følger #settings-variablene fra Oppdatering (--upd-*). */
+#settings{--bk-pos:var(--upd-pos,#8fe0b0);--bk-neg:var(--upd-acc,#f59a8f);--bk-seg:rgba(255,255,255,.07);--bk-on:#eef0f4;--bk-onfg:#0c1119}
+html[data-hl="2c"] #settings{--bk-seg:rgba(27,26,23,.07);--bk-on:var(--ink,#1b1a17);--bk-onfg:var(--pp,#f3efe6)}
+.kal-seg{flex:none;display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:var(--bk-seg,rgba(127,127,127,.16));max-width:100%;overflow-x:auto;scrollbar-width:none}
+.kal-seg-b{flex:none;height:34px;padding:0 14px;border:0;border-radius:999px;background:transparent;color:inherit;cursor:pointer;font:600 13.5px inherit;font-family:inherit;white-space:nowrap}
+.kal-seg-b[aria-pressed=true]{background:var(--bk-on,#eef0f4);color:var(--bk-onfg,#0c1119)}
+.kal-seg-b:disabled{opacity:.5;cursor:default}
+.sg-row.bk-wrap{flex-wrap:wrap}
+.sg-row.bk-wrap .sg-txt{min-width:200px}
+.bk-sel{flex:none;height:40px;max-width:60%;padding:0 30px 0 14px;border-radius:999px;border:1px solid var(--upd-line,#2c3548);background:transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237a7468' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E") right 12px center no-repeat;color:inherit;font:600 14px inherit;font-family:inherit;cursor:pointer;-webkit-appearance:none;appearance:none}
+.bk-sel option{background:var(--upd-sheet,#111723);color:inherit}
+.sg-row.bk-run{align-items:flex-start}
+.bk-bar{display:block;height:6px;margin-top:8px;border-radius:3px;background:var(--upd-line,#1f2736);overflow:hidden}
+.bk-bar i{display:block;height:100%;border-radius:3px;background:var(--bk-pos);transition:width .4s ease}
+.sg-row.bk-msg{min-height:0;color:var(--bk-pos);font-weight:600}
+.sg-row.bk-err{min-height:0;color:var(--bk-neg);font-size:14px;line-height:1.5}
+.sg-row.bk-mod:disabled{cursor:default;opacity:.75}
+.bk-cb{flex:none;width:20px;height:20px;border-radius:6px;border:2px solid var(--upd-mute,#8a93a6);color:transparent;display:grid;place-items:center;font-size:12px;box-sizing:border-box}
+.bk-mod.on .bk-cb{background:var(--bk-pos);border-color:var(--bk-pos);color:var(--bk-onfg)}
+.bk-mod .sg-v{color:var(--upd-mute)}
+.bk-mod.on .sg-v{color:var(--bk-pos)}
+.sg-row.bk-key{align-items:flex-start}
+.bk-key code{display:block;margin-top:8px;padding:10px 12px;border-radius:10px;background:var(--upd-code,#0a0e16);border:1px solid var(--upd-line);font:13px/1.5 var(--mono,monospace);word-break:break-all;user-select:all;color:inherit}
+a.sg-row.bk-dl{text-decoration:none;color:inherit}
+.bk-sheet .kal-seg{align-self:flex-start}
+.bk-chips{display:flex;flex-wrap:wrap;gap:6px}
+.bk-chip{height:34px;padding:0 12px;border-radius:17px;border:1px solid var(--upd-line);background:transparent;color:inherit;cursor:pointer;font:600 13px inherit;font-family:inherit}
+.bk-chip.on{background:var(--bk-on);border-color:var(--bk-on);color:var(--bk-onfg)}
+.bk-warn{padding:10px 12px;border-radius:12px;background:color-mix(in oklab,var(--bk-neg) 14%,transparent);font-size:13.5px;line-height:1.5}
+.bk-warn b{color:var(--bk-neg)}
+.bk-msg2{color:var(--bk-pos);font-weight:600;font-size:14px}
+.sg-btn.pri.red{background:#b23a2a;color:#fff}
+html[data-hl="2c"] .bk-sel,html[data-hl="2c"] .kal-seg,html[data-hl="2c"] .bk-chip,html[data-hl="2c"] .bk-key code{border-radius:0}
+html[data-hl="2c"] .kal-seg-b{border-radius:0;font-family:var(--sans)}
+@media (max-width:767px){.bk-sel{max-width:55%}.sg-row.bk-wrap .kal-seg{width:100%}}

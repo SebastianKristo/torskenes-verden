@@ -5,7 +5,7 @@ import { esc } from './util.js';
 import { store } from './store.js';
 import { integById } from './settings-integ.js';
 import { mountBdCalendars, bdCalSummary } from './birthdays.js';
-import { ensureKal, subjectColors, setSubjectColor } from './kalender.js';
+import { ensureKal, subjectColors, setSubjectColor, webLayout, setWebLayout } from './kalender.js';
 
 const CFG_GROUP = 'Kalender / timeplan';
 
@@ -42,11 +42,19 @@ function colorsBox() {
   return `<section class="sg"><h3 class="sg-t">Fagfarger</h3><div class="sg-box">${rows}</div><div class="sg-note">Fargene brukes i uke, måned, agenda og widgetene. Prøver vises alltid i rødt.</div></section>`;
 }
 
+/** Prompt 29: Kalender på web med toppmeny eller i fullskjerm (calendar_web_layout). */
+function layoutBox() {
+  const v = webLayout(), seg = (k, n) => `<button type="button" class="kal-seg-b" data-kal-layout="${k}" aria-pressed="${v === k}">${n}</button>`;
+  return `<section class="sg"><h3 class="sg-t">Kalender på web</h3><div class="sg-box"><div class="sg-row"><span class="sg-txt"><b>Visning</b><span>${v === 'full' ? 'Kalenderen dekker hele vinduet uten Homelab-menyen. ✕ eller Esc lukker.' : 'Homelab-menyen øverst, kalenderen fyller resten.'}</span></span>
+    <span class="kal-seg" role="group" aria-label="Visning">${seg('menu', 'Med toppmeny')}${seg('full', 'Fullskjerm')}</span></div></div>
+    <div class="sg-note">Valget huskes for deg og brukes neste gang Kalender åpnes. Kan også byttes med ⤢ / ⤡ i kalenderen.</div></section>`;
+}
+
 /** Siden. search er radene innstillingssøket leter i. */
 export function kalView({ row, note, cfg }) {
   const s = bdCalSummary();
   return {
-    html: `${schoolForm(cfg, note)}
+    html: `${layoutBox()}${schoolForm(cfg, note)}
       <section class="sg"><h3 class="sg-t">Google Kalender og Home Assistant</h3><div data-mount-host></div>
         <div class="sg-note">Bursdager og hendelser fra Google Kalender vises i Kalender og Bursdager. Home Assistant kan importere og synke bursdager to veier.</div></section>
       ${colorsBox()}`,
@@ -57,11 +65,14 @@ export function kalView({ row, note, cfg }) {
       row({ t: 'Google Kalender', s: s.g, k: 'google kalender logg inn synk kontakter', go: 'kal', btn: 'Åpne' }),
       row({ t: 'Home Assistant', s: s.ha, k: 'home assistant calendar import', go: 'kal', btn: 'Åpne' }),
       row({ t: 'Fagfarger', s: 'Farge per fag i Kalender', k: 'farge fag', go: 'kal', btn: 'Åpne' }),
+      row({ t: 'Kalender på web', s: 'Med toppmeny eller fullskjerm', v: webLayout() === 'full' ? 'Fullskjerm' : 'Med toppmeny', k: 'fullskjerm toppmeny visning oppsett layout', go: 'kal', btn: 'Åpne' }),
     ] }],
   };
 }
 
 export function kalClick(e, rerender) {
+  const lb = e.target.closest('[data-kal-layout]');
+  if (lb) { e.preventDefault(); setWebLayout(lb.dataset.kalLayout).then(rerender); return true; }
   const r = e.target.closest('[data-kal-subj-reset]');
   if (!r) return false;
   e.preventDefault();

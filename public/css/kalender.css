@@ -10,11 +10,20 @@ html[data-hl="2c"] .kal{--k-ink:#1b1a17;--k-mut:#7a7468;--k-line:#d8d1c2;--k-lab
 /* Lav toppstripe: fotovinduet uten tittel (Vindu og papir). */
 html[data-hl="2c"] body[data-route="kalender"]{--pw-h:84px}
 html[data-hl="2c"] body[data-route="kalender"] .pw-low{padding-bottom:0;margin-bottom:12px}
+html[data-hl="2c"] body.pw-low[data-route="kalender"]{padding-bottom:0;margin-bottom:0}
 html[data-hl="2c"] body[data-route="kalender"] .pw-low .pw-bottom{display:none}
 
-/* Flaten */
-.k2{position:relative;display:flex;flex-direction:column;height:max(620px,calc(100vh - 120px));height:max(620px,calc(100dvh - 120px));border-radius:24px;overflow:hidden;border:1px solid var(--k-line);background:var(--k-bg);color:var(--k-ink);font-family:Manrope,system-ui,sans-serif;box-shadow:var(--k-shadow)}
-html:not([data-hl="2c"]) .k2{height:max(620px,calc(100dvh - 150px))}
+/* Flaten. Prompt 29 (claude-code-kalender-web-full.md): hele vinduet under toppmenyen, kant til kant, uten kort, ramme,
+   skygge, sidemarg eller max-width. Høyde = vinduet minus toppmenyen (--k2-top måles i kalender.js), minst 620 px.
+   En tynn linje skiller toppmenyen fra kalenderen. Ingen side-scroll; bare rutenettet scroller. */
+.k2{position:relative;display:flex;flex-direction:column;margin:0 calc(-1 * var(--side));height:max(620px,calc(100vh - var(--k2-top,112px)));height:max(620px,calc(100dvh - var(--k2-top,112px)));border-radius:0;overflow:hidden;border:0;border-top:1px solid var(--k-line);background:var(--k-bg);color:var(--k-ink);font-family:Manrope,system-ui,sans-serif;box-shadow:none;padding-top:6px}
+body[data-route="kalender"] .shell{padding-bottom:0!important;gap:14px}
+html[data-hl="2c"] body[data-route="kalender"] .shell{max-width:none}
+html:not([data-hl="2c"]) body[data-route="kalender"] .shell{gap:12px}
+/* Fullskjerm: ingen Homelab-toppmeny, kalenderen dekker hele vinduet (som Økonomi/Finans). Under Innstillinger (z 30). */
+.k2.k2-fs{position:fixed;inset:0;z-index:25;margin:0;height:auto;border-top:0;padding-top:8px}
+body.kal-fs{overflow:hidden}
+body.kal-fs .bottomnav{display:none}
 .k2 *{box-sizing:border-box}
 .k2 button,.k2 a,.k2 input,.k2 textarea{font-family:inherit}
 .k2-grow{flex:1;min-width:0}
@@ -40,6 +49,13 @@ html:not([data-hl="2c"]) .k2{height:max(620px,calc(100dvh - 150px))}
 .k2-today span{position:absolute;left:0;right:0;top:19px;text-align:center;font:800 9.5px Manrope,system-ui,sans-serif}
 .k2-new{flex:none;height:40px;margin-left:6px;padding:0 16px;border-radius:20px;border:0;background:var(--k-lab);color:#fff;cursor:pointer;font:700 13.5px Manrope,system-ui,sans-serif;white-space:nowrap}
 .k2-new:hover{filter:brightness(1.08)}
+.k2-qbtn{flex:none;height:40px;margin-left:6px;padding:0 14px;border-radius:20px;border:1px solid var(--k-line);background:var(--k-card);color:var(--k-ink);cursor:pointer;font:700 13.5px Manrope,system-ui,sans-serif;white-space:nowrap}
+.k2-qbtn:hover{border-color:var(--k-ink)}
+.k2-sq{flex:none;width:40px;height:40px;margin-left:6px;padding:0;border-radius:20px;border:1px solid var(--k-line);background:var(--k-card);color:var(--k-ink);cursor:pointer;display:grid;place-items:center}
+.k2-sq:hover{border-color:var(--k-ink)}
+.k2-sq.ink{border:0;background:var(--k-ink);color:var(--k-bg)}
+.k2-sq.ink:hover{filter:brightness(1.15)}
+.k2-top{flex-wrap:wrap;row-gap:6px}
 .k2-mtabs{flex:none;display:flex;align-items:center;gap:6px;padding:0 12px 8px;overflow-x:auto;scrollbar-width:none}
 .k2-mtabs .k2-tabs{margin:0}
 .k2-mtabs .k2-tabs button{padding:0 11px}
@@ -49,14 +65,22 @@ html:not([data-hl="2c"]) .k2{height:max(620px,calc(100dvh - 150px))}
 .k2-cchip i{width:9px;height:9px;border-radius:5px}
 .k2-cchip.off{opacity:.45}
 
-/* NESTE / NÅ */
-.k2-next{flex:none;margin:0 12px 8px;display:flex;align-items:center;gap:10px;min-height:46px;padding:6px 14px;border:0;border-radius:16px;background:var(--k-hero);color:var(--k-herofg);cursor:pointer;text-align:left}
-.k2-next .k2-strip{width:4px}
-.k2-nk{flex:none;font:600 10.5px 'IBM Plex Mono',var(--mono,monospace);letter-spacing:.12em;color:#ff9c8c}
-.k2-next .k2-grow{display:flex;flex-direction:column}
-.k2-next b{font-size:14.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.k2-next .k2-grow span{font-size:12px;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.k2-nw{flex:none;font:500 18px Newsreader,Georgia,serif}
+/* Nå / Neste-kort (prompt 29, claude-code-kalender-na-kort.md): lyst kort, ikke svart flate. */
+.k2-now-c{flex:none;position:relative;overflow:hidden;margin:0 12px 10px;display:flex;align-items:center;gap:14px;min-height:60px;padding:10px 18px 12px 12px;border:1px solid var(--k-line);border-radius:18px;background:var(--k-card);color:var(--k-ink);cursor:pointer;text-align:left;font-family:inherit;box-shadow:0 8px 22px -16px rgba(0,0,0,.35)}
+.k2-now-c.empty{cursor:default}
+.k2-now-ic{flex:none;width:40px;height:40px;border-radius:12px;background:color-mix(in oklab,var(--c) 16%,var(--k-card));color:var(--c);display:grid;place-items:center}
+.k2-now-m{display:flex;flex-direction:column;gap:2px}
+.k2-now-k{display:flex;align-items:center;gap:8px;min-width:0;font:600 10.5px 'IBM Plex Mono',var(--mono,monospace);letter-spacing:.12em;color:var(--k-labt);white-space:nowrap;overflow:hidden}
+.k2-now-k span+span{color:var(--k-mut);letter-spacing:.04em;overflow:hidden;text-overflow:ellipsis}
+.k2-now-c.empty .k2-now-k span{color:var(--k-mut);letter-spacing:.04em}
+.k2-now-t{display:flex;align-items:baseline;gap:10px;min-width:0}
+.k2-now-t b{font:500 20px/1.15 Newsreader,Georgia,serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k2-now-pl{flex:none;padding:2px 8px;border-radius:999px;background:var(--k-bg);font:600 12px Manrope,system-ui,sans-serif;color:var(--k-ink)}
+.k2-now-r{flex:none;display:flex;flex-direction:column;align-items:flex-end;line-height:1}
+.k2-now-r b{font:500 24px Newsreader,Georgia,serif;white-space:nowrap}
+.k2-now-r span{font-size:11.5px;color:var(--k-mut);margin-top:3px}
+.k2-now-p{position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--k-line)}
+.k2-now-p i{display:block;height:100%;background:var(--c)}
 .k2-strip{flex:none;width:6px;align-self:stretch;border-radius:3px;background:var(--c)}
 
 /* Hoveddel: sidepanel + visning */
@@ -67,7 +91,9 @@ html:not([data-hl="2c"]) .k2{height:max(620px,calc(100dvh - 150px))}
 .k2-mini-h b{flex:1;font:700 14px Manrope,system-ui,sans-serif;padding-left:4px}
 .k2-mini-h button{width:34px;height:34px;border-radius:17px;border:0;background:transparent;color:var(--k-ink);cursor:pointer;font-size:17px}
 .k2-mini-h button:hover{background:var(--k-card)}
-.k2-mini-g{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}
+.k2-mini-g{display:grid;grid-template-columns:22px repeat(7,minmax(0,1fr));gap:2px}
+.k2-mini-wk{height:34px;padding:0;border:0;border-radius:8px;background:transparent;color:var(--k-mut);cursor:pointer;display:grid;place-items:center;font:600 9.5px 'IBM Plex Mono',var(--mono,monospace)}
+.k2-mini-wk:hover,.k2-mwk:hover{color:var(--k-ink);background:color-mix(in oklab,var(--k-ink) 7%,transparent)}
 .k2-mini-g>span{text-align:center;font:600 9.5px 'IBM Plex Mono',var(--mono,monospace);color:var(--k-mut);padding:2px 0;text-transform:uppercase}
 .k2-mini-c{height:34px;padding:0;border:0;border-radius:17px;background:transparent;color:var(--k-ink);cursor:pointer;font:600 12.5px Manrope,system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
 .k2-mini-c i{width:4px;height:4px;border-radius:2px}
@@ -121,9 +147,10 @@ html:not([data-hl="2c"]) .k2-ev{background:color-mix(in oklab,var(--c) 34%,#141a
 
 /* Måned */
 .k2-month{flex:1;min-height:0;display:flex;flex-direction:column}
-.k2-mh{flex:none;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));padding:0 6px;border-bottom:1px solid var(--k-line)}
+.k2-mh{flex:none;display:grid;grid-template-columns:24px repeat(7,minmax(0,1fr));padding:0 6px;border-bottom:1px solid var(--k-line)}
 .k2-mh span{text-align:center;font:600 10px 'IBM Plex Mono',var(--mono,monospace);letter-spacing:.08em;color:var(--k-mut);padding:4px 0 6px}
-.k2-mg{flex:1;min-height:0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:repeat(6,minmax(0,1fr));padding:0 6px 16px}
+.k2-mg{flex:1;min-height:0;display:grid;grid-template-columns:24px repeat(7,minmax(0,1fr));grid-template-rows:repeat(6,minmax(0,1fr));padding:0 6px 16px}
+.k2-mwk{min-width:0;border:0;border-bottom:1px solid var(--k-line);background:transparent;color:var(--k-mut);cursor:pointer;padding:8px 0 0;display:flex;justify-content:center;align-items:flex-start;font:600 10px 'IBM Plex Mono',var(--mono,monospace)}
 .k2-mc{min-width:0;min-height:0;overflow:hidden;display:flex;flex-direction:column;align-items:stretch;gap:2px;padding:4px 2px;border:0;border-bottom:1px solid var(--k-line);background:transparent;color:var(--k-ink);cursor:pointer;text-align:left}
 .k2-mc:hover{background:color-mix(in oklab,var(--k-ink) 4%,transparent)}
 .k2-mc.out{opacity:.4}
@@ -208,8 +235,64 @@ textarea.k2-in{height:auto;padding:12px 16px;resize:vertical}
 .k2-sr b{font-size:14.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .k2-sr .k2-grow>span{font-size:12px;color:var(--k-mut)}
 
+/* Under 820 px: sidepanelet som skuff fra kalender-ikonet. */
+.k2-side.drawer{position:absolute;z-index:16;left:0;top:0;bottom:0;width:280px;padding-top:14px;background:var(--k-bg);border-right:1px solid var(--k-line);box-shadow:20px 0 40px -20px rgba(0,0,0,.4);transform:translateX(-105%);transition:transform .2s ease;visibility:hidden}
+.k2-side.drawer.open{transform:none;visibility:visible}
+.k2-drw-bg{position:absolute;inset:0;z-index:15;background:rgba(0,0,0,.3)}
+.k2-drw[aria-expanded=true]{background:var(--k-card)}
+
+/* «Legg til time» (✦ AI · RASK TIME) */
+.k2-qa{padding-top:8px}
+.k2-grip{align-self:center;width:36px;height:5px;border-radius:3px;background:var(--k-line)}
+.k2-qa-h{display:flex;align-items:center;gap:10px}
+.k2-qa-h .k2-grow{display:flex;flex-direction:column;gap:2px}
+.k2-qa-h b{font:500 24px/1.1 Newsreader,Georgia,serif}
+.k2-x.sm{width:36px;height:36px;border-radius:18px;display:grid;place-items:center;padding:0}
+.k2-form textarea.k2-qa-in{min-height:96px;padding:14px 16px;font:500 16px/1.45 Manrope,system-ui,sans-serif;resize:none}
+.k2-chip.sm{height:34px;padding:0 12px;border-radius:17px;font-size:12.5px}
+.k2-chip.sm.on{font-weight:700}
+.k2-qa-pv{display:flex;gap:12px;align-items:stretch;padding:12px 14px;border-radius:16px;background:var(--k-card)}
+.k2-qa-pv .k2-strip{width:4px;border-radius:2px}
+.k2-qa-pv .k2-grow{display:flex;flex-direction:column;gap:2px}
+.k2-qa-pv b{font-size:15px;font-weight:700}
+.k2-qa-pv .k2-grow>span{font-size:13px;color:var(--k-mut)}
+.k2-qa-pv .k2-grow>span.k2-qa-cal{font-size:12px}
+.k2-qa-bad{display:block;font-size:13px;color:var(--k-labt);padding:0 4px}
+.k2-qa-go{min-height:52px;border:0;border-radius:16px;background:var(--k-lab);color:#fff;cursor:pointer;font:700 16px Manrope,system-ui,sans-serif}
+.k2-qa-go[aria-disabled=true]{opacity:.45}
+.k2-qa-man{min-height:44px;border:0;background:transparent;color:var(--k-ink);cursor:pointer;font:600 14px Manrope,system-ui,sans-serif}
+.k2-qa-foot{font-size:12px;line-height:1.45;color:var(--k-mut);text-align:center}
+
+/* Rask time i bakgrunnen (kal-quick.js): pille og banner øverst over alt. */
+.kq-layer{position:fixed;z-index:45;left:0;right:0;top:calc(env(safe-area-inset-top) + 14px);display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;padding:0 12px;font-family:Manrope,system-ui,sans-serif}
+.kq-layer[hidden]{display:none}
+.kq-layer>*{pointer-events:auto}
+.kq-pill{display:flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:18px;background:var(--k-ink);color:var(--k-bg);font:600 13px Manrope,system-ui,sans-serif;white-space:nowrap;box-shadow:0 10px 24px -10px rgba(0,0,0,.45)}
+.kq-pill span{color:#f08a76}
+.kq-toast{width:100%;max-width:440px;display:flex;align-items:center;gap:10px;padding:10px 10px 10px 14px;border-radius:18px;background:var(--k-ink);color:var(--k-bg);box-shadow:0 14px 30px -10px rgba(0,0,0,.5)}
+.kq-tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.kq-tx b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kq-tx span{font-size:12.5px;opacity:.8}
+.kq-b{flex:none;height:34px;padding:0 12px;border-radius:17px;border:0;background:transparent;color:var(--k-bg);cursor:pointer;font:700 13px Manrope,system-ui,sans-serif}
+.kq-b.on{padding:0 14px;background:var(--k-bg);color:var(--k-ink)}
+.kq-toast.err .kq-tx b{color:#b23a2a}
+html[data-hl="2c"] .kq-toast.err .kq-tx b{color:#f59a8f}
+html:not([data-hl="2c"]) .kq-layer{--k-ink:#f3efe6;--k-bg:#141a26}
+
+.k2-new .k2-sm{display:none}
+@media (max-width:1199px){
+  .k2-tabs button{padding:0 11px}
+  .k2-new .k2-lg{display:none}
+  .k2-new .k2-sm{display:inline}
+  .k2-title>span:first-child{font-size:26px}
+}
 @media (max-width:767px){
-  .k2{height:calc(100dvh - 200px);min-height:520px;border-radius:20px}
+  .k2{height:calc(100dvh - 200px);min-height:520px;border-radius:20px;margin:0;border:1px solid var(--k-line);padding-top:0}
+  .k2-top{flex-wrap:nowrap}
+  .k2-qbtn{width:40px;padding:0;font-size:16px}
+  .k2-now-c{margin:0 8px 8px;gap:10px;padding:8px 12px 10px 10px}
+  .k2-now-t b{font-size:18px}
+  .k2-now-r b{font-size:20px}
   .k2-mtabs{gap:4px;padding:0 8px 8px}
   .k2-mtabs .k2-nav{gap:4px;margin:0}
   .k2-mtabs .k2-circ{width:32px;height:32px;font-size:16px}

@@ -2,6 +2,26 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.22.0] – 19.10.2026 · prompt 29
+- **Backup av hele systemet:** Innstillinger → Backup. Bare admin har tilgang.
+  - Ta backup nå, med fremdrift.
+  - Automatisk backup hver natt, hver 6. time, hver uke eller hver måned. Du velger hvor mange som beholdes.
+  - Velg hva som tas med: hele systemet, bare Finans eller egne moduler.
+  - Lagres lokalt (`/srv/backup` kan monteres inn). Kan krypteres med AES-256, og nøkkelen vises én gang.
+  - Kryptert kopi til Backblaze B2. Google Drive kommer.
+  - Gjenoppretting av alt eller enkeltmoduler. Krever passord, og det tas en sikkerhetskopi først.
+- **Rask time med AI:** skriv «time hos Nina frisør 14.30 25.09» eller lim inn en melding fra legekontoret.
+  - Du ser timen mens du skriver.
+  - Den legges i kalenderen i bakgrunnen, med Angre og Vis.
+  - Virker uten Ollama og uten Google-kobling (lagres da i Privat på serveren).
+  - Web: «✦ Skriv time». Snarveier/Siri på iPhone og Del til appen på Android.
+- **Søkefeltet på Hjem og Dashboard:** velg System-AI, Google eller DuckDuckGo. Timer gjenkjennes og legges i kalenderen uansett hvilken du velger. Menyen ligger over kortene.
+- **Kalender på web:** fyller hele vinduet. Kan også vises i fullskjerm uten toppmeny, med ✕ og Esc. Valget huskes.
+- **Kalender:**
+  - Nytt Nå/Neste-kort i Papir-stil, med fremdriftslinje.
+  - Ukenummer i Måned og i minikalenderen.
+- **Bakgrunnsvelgeren** («Planeter ▾») vises også øverst i Innstillinger.
+
 ## [4.21.0] – 19.10.2026 · prompt 28 og oppdatering fra appen
 - **Oppdater fra appen eller nettsiden.** Finnes under Innstillinger → System → Oppdatering, bare for admin.
   - Siden viser installert og nyeste versjon og hva som er nytt. Du oppdaterer med passord, og det tas backup av databasen først.
