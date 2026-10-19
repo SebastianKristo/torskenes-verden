@@ -1,0 +1,145 @@
+# Dokumentasjonssiden (MkDocs Material) – publiseres til https://sebastiankristo.github.io/torskenes-verden/
+# av .github/workflows/docs.yml. Innholdet ligger i docs/site/. GitHub-wikien bygges separat fra docs/wiki/.
+# Lokalt: pip install mkdocs-material==9.7.7 && mkdocs serve
+site_name: Homelab OS
+site_description: Selvhostet «operativsystem» for hjemmet – dashboard, FinansHub og native mobilapper.
+site_url: https://sebastiankristo.github.io/torskenes-verden/
+repo_url: https://github.com/SebastianKristo/torskenes-verden
+repo_name: SebastianKristo/torskenes-verden
+edit_uri: edit/main/docs/site/
+docs_dir: docs/site
+copyright: Homelab OS · selvhostet, nøklene forlater aldri serveren
+
+theme:
+  name: material
+  language: nb
+  logo: assets/icon.svg
+  favicon: assets/favicon.png
+  font: false            # Manrope, Newsreader og IBM Plex Mono lastes i stylesheets/extra.css
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil
+    admonition:
+      note: material/information-outline
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - navigation.footer
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+    - content.action.edit
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: papir
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Bytt til mørkt tema
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Bytt til lyst tema
+
+extra_css:
+  - stylesheets/extra.css
+
+plugins:
+  - search:
+      lang:
+        - "no"
+        - en
+
+markdown_extensions:
+  - abbr
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+      slugify: !!python/object/apply:pymdownx.slugs.slugify
+        kwds:
+          case: lower
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/SebastianKristo/torskenes-verden
+      name: Kildekoden på GitHub
+    - icon: material/package-variant-closed
+      link: https://github.com/SebastianKristo/torskenes-verden/releases
+      name: Releases (APK og IPA)
+    - icon: material/book-open-variant
+      link: https://github.com/SebastianKristo/torskenes-verden/wiki
+      name: GitHub-wikien
+
+nav:
+  - Hjem: index.md
+  - Oppsett:
+      - oppsett/index.md
+      - Installasjon: oppsett/installasjon.md
+      - Oppdatering og backup: oppsett/oppdatering-og-backup.md
+      - Mobilapper: oppsett/mobilapper.md
+      - Brukere og personvern: oppsett/brukere-og-personvern.md
+  - Bruk:
+      - bruk/index.md
+      - FinansHub: bruk/finanshub.md
+      - Kalender og Bursdager: bruk/kalender-og-bursdager.md
+      - Sporing: bruk/sporing.md
+      - Familie og kart: bruk/familie-og-kart.md
+      - Integrasjoner: bruk/integrasjoner.md
+      - AI og tidsgrenser: bruk/ai-og-tidsgrenser.md
+      - Chat: bruk/chat.md
+  - Utvikling:
+      - utvikling/index.md
+      - Arkitektur: utvikling/arkitektur.md
+      - API: utvikling/api.md
+      - Bidra: utvikling/bidra.md
+      - Prompt og designhandoff: utvikling/arbeidsflyt.md
+  - Feilsøking og FAQ: feilsoking.md
+
+validation:
+  nav:
+    omitted_files: warn
+    not_found: warn
+  links:
+    not_found: warn
+    anchors: warn
+    absolute_links: warn
+    unrecognized_links: warn

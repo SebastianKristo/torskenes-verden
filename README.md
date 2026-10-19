@@ -10,6 +10,7 @@
   <img src="https://img.shields.io/badge/iOS-SwiftUI-F05138?logo=swift&logoColor=white" alt="SwiftUI">
   <img src="https://img.shields.io/badge/Android-Compose-3DDC84?logo=android&logoColor=white" alt="Jetpack Compose">
   <img src="https://img.shields.io/badge/spr%C3%A5k-norsk-BA0C2F" alt="Norsk">
+  <a href="https://sebastiankristo.github.io/torskenes-verden/"><img src="https://img.shields.io/badge/dokumentasjon-les%20her-b23a2a?logo=materialformkdocs&logoColor=white" alt="Dokumentasjon"></a>
 </p>
 
 <p align="center">
@@ -22,6 +23,7 @@
   <a href="#-skjermbilder">Skjermbilder</a> ·
   <a href="#-mobilappene">Mobilapper</a> ·
   <a href="#-oppdatering-og-backup">Oppdatering</a> ·
+  <a href="https://sebastiankristo.github.io/torskenes-verden/"><b>Dokumentasjon</b></a> ·
   <a href="https://github.com/SebastianKristo/torskenes-verden/wiki">Wiki</a>
 </p>
 
@@ -270,6 +272,8 @@ Mer om widgets, Fold, app-ikon og Health Connect står i [Mobilapper](https://gi
 Gjenoppretting, SMB-backup og migreringer står i [Oppdatering og backup](https://github.com/SebastianKristo/torskenes-verden/wiki/Oppdatering-og-backup).
 
 ## 📚 Dokumentasjon
+
+**[Dokumentasjonssiden](https://sebastiankristo.github.io/torskenes-verden/)** samler alt under med søk, faner og mørkt tema.
 
 **Wikien** har guider med eksempler:
 

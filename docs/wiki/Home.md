@@ -2,6 +2,9 @@
 
 # Homelab OS – wiki
 
+> [!TIP]
+> Den samme dokumentasjonen finnes som nettside med søk, faner og mørkt tema: **[sebastiankristo.github.io/torskenes-verden](https://sebastiankristo.github.io/torskenes-verden/)**.
+
 Homelab OS er et selvhostet «operativsystem» for hjemmet. Du får **Homelab-dashboardet** i nettleseren, økonomiappen **FinansHub** på `/finans/`, en **PWA**, og native apper for **iOS** og **Android**. Alt kjører på én Node-server med SQLite, i Docker på din egen maskin.
 
 <img src="https://raw.githubusercontent.com/SebastianKristo/torskenes-verden/main/docs/images/hero.webp" alt="Dashboardet og tre telefoner" width="100%">
