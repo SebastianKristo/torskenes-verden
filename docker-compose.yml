@@ -12,6 +12,25 @@ services:
     ports:
       - "${BIND_ADDR:-127.0.0.1}:${HOST_PORT:-3000}:3000"   # BIND_ADDR=0.0.0.0 for LAN-tilgang
 
+  # Updater: «Oppdater nå» i Innstillinger → System (se deploy/updater/updater.sh).
+  # Den har Docker-socketen, og det er i praksis root i LXC-en. Derfor er den skilt ut fra os, som aldri får Docker-tilgang:
+  # ingen porter, den leser bare data/update/request.json (bare en id), og repo/branch kommer fra miljøet her, aldri fra appen.
+  # .env, data/ og proton/ røres ikke. Prosjektmappen monteres på SAMME sti som på verten (${PWD}), så ./data-stiene compose
+  # sender videre til Docker stemmer. Kjør derfor alltid compose fra prosjektmappen: cd /opt/homelab-os && docker compose …
+  updater:
+    build: ./deploy/updater
+    image: homelab-updater:local
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - .:${PWD}
+    environment:
+      HOST_DIR: ${PWD}
+      UPDATE_REPO: ${UPDATE_REPO:-SebastianKristo/torskenes-verden}
+      UPDATE_BRANCH: ${UPDATE_BRANCH:-main}
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME:-}
+      TZ: Europe/Oslo
+
   cloudflared:
     profiles: [tunnel]   # start med: docker compose --profile tunnel up -d
     image: cloudflare/cloudflared:2025.10.0

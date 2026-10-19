@@ -17,7 +17,7 @@ export function audit(engine, purpose, fields, u = me()) {
   } catch (e) { console.warn('[ai-audit]', e.message); }
 }
 
-const PURPOSE = { logo: 'Finn logo', chat: 'Chat' };
+const PURPOSE = { logo: 'Finn logo', chat: 'Chat', subscreenshot: 'Abonnement fra skjermbilde' };
 const ENGINE = { gemini: 'Gemini', groq: 'Groq', openwebui: 'Open WebUI' };
 /** Brukerens egne rader, nyeste først: [{id, ts, at, engine, engineName, purpose, purposeName, fieldsSent, fields}]. */
 export function auditList(u = me(), limit = 100) {

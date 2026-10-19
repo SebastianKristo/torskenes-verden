@@ -31,6 +31,13 @@ pct exec "$CTID" -- bash -c "tar -xzf /tmp/os.tgz -C /opt/homelab-os --strip-com
 c "Bygger og starter på nytt …"
 PROFILE=""
 pct exec "$CTID" -- grep -qE '^CLOUDFLARE_TUNNEL_TOKEN=.+' /opt/homelab-os/.env && PROFILE="--profile tunnel"
-pct exec "$CTID" -- bash -c "cd /opt/homelab-os && docker compose $PROFILE up -d --build && docker image prune -f >/dev/null"
+# Compose kjøres fra prosjektmappen med PWD satt: updater-tjenesten monterer ${PWD} på samme sti som på verten.
+# up -d --build starter også updater, så «Oppdater nå» i Innstillinger → System virker etter første kjøring.
+pct exec "$CTID" -- bash -c "cd /opt/homelab-os && export PWD=/opt/homelab-os && docker compose $PROFILE up -d --build && docker image prune -f >/dev/null"
 
 c "Ferdig! Container $CTID kjører nyeste versjon."
+if pct exec "$CTID" -- bash -c "cd /opt/homelab-os && docker compose ps --status running --services 2>/dev/null | grep -qx updater"; then
+  echo "  Oppdatering fra appen er slått på: Innstillinger → System → Oppdatering."
+else
+  echo "  Updater-tjenesten kjører ikke, så oppdatering fra appen er ikke tilgjengelig. Se: docker compose logs updater"
+fi

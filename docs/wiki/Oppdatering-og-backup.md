@@ -4,7 +4,7 @@
 > **Ta backup før oppdatering.** Databasen migreres automatisk når serveren starter. Noen versjoner bygger den om, for eksempel 4.18.0, som flyttet alle data til én eier per bruker. En migrering kan ikke angres uten backup.
 
 **På denne siden:**
-[Hva må tas vare på](#hva-må-tas-vare-på) · [Backup før oppdatering](#backup-før-oppdatering) · [Oppdatere](#oppdatere) · [Migreringer](#migreringer) · [Automatisk backup til SMB](#automatisk-backup-til-smb-share) · [Gjenoppretting](#gjenoppretting) · [Rulle tilbake](#rulle-tilbake-en-oppdatering)
+[Hva må tas vare på](#hva-må-tas-vare-på) · [Backup før oppdatering](#backup-før-oppdatering) · [Oppdatere](#oppdatere) · [Oppdater fra appen](#oppdater-fra-appen) · [Migreringer](#migreringer) · [Automatisk backup til SMB](#automatisk-backup-til-smb-share) · [Gjenoppretting](#gjenoppretting) · [Rulle tilbake](#rulle-tilbake-en-oppdatering)
 
 ## Hva må tas vare på
 
@@ -41,6 +41,30 @@ pct listsnapshot 150
 
 ## Oppdatere
 
+### Oppdater fra appen
+
+En admin kan oppdatere hele systemet fra nettleseren, uten Proxmox-shell: **Innstillinger → System → Oppdatering**. Siden viser installert og nyeste versjon og hva som er nytt (fra endringsloggen). Trykk **Oppdater nå** og skriv passordet ditt.
+
+**Første gang:** kjør `update.sh` én gang fra Proxmox, se [under](#proxmox-updatesh). Det henter den nye `docker-compose.yml` og starter den lille tjenesten `updater`. Etter det virker knappen. Frem til da står det «Oppdatering fra appen er ikke satt opp».
+
+Slik foregår en oppdatering:
+
+1. Serveren sjekker at du er admin, er logget inn i nettleseren og har skrevet riktig passord. Appene (iOS og Android) kan vise versjonen, men ikke starte en oppdatering.
+2. Databasen kopieres til `data/backups/pre-update-<tidspunkt>.db`. De fem siste beholdes.
+3. Updateren laster ned siste commit fra `main` på GitHub og kopierer filene inn i `/opt/homelab-os`. **`.env`, `data/` og `proton/` røres ikke.** Ingen filer slettes.
+4. Den bygger ny versjon av `os`. Den gamle kjører videre så lenge bygget pågår.
+5. Den starter `os` på nytt (og `cloudflared` hvis tunnelen er i bruk) og venter på at `/healthz` svarer, i opptil 3 minutter. Siden laster seg selv på nytt når den nye versjonen svarer. Vanligvis tar alt 2–5 minutter.
+6. Til slutt oppdaterer updateren seg selv og rydder bort gamle images.
+
+**Hva updateren har tilgang til.** `updater` er en egen container med Docker-socketen. Det er i praksis root i LXC-en, og derfor er den skilt ut fra `os`, som aldri får Docker-tilgang. Den har ingen porter. Den leser bare `data/update/request.json`, og der brukes bare en id. Repo og branch bestemmer updateren selv (`UPDATE_REPO` og `UPDATE_BRANCH` i `.env`, standard `SebastianKristo/torskenes-verden` og `main`), så serveren kan ikke be den hente noe annet eller kjøre kommandoer. Prosjektmappen er montert på samme sti som på verten, så kjør alltid compose fra mappen: `cd /opt/homelab-os && docker compose …`.
+
+**Hvis noe går galt.** Status og logg vises på siden (og ligger i `data/update/status.json` og `data/update/log.txt`).
+- *Bygget feiler:* den gamle versjonen kjører videre. De nye filene er likevel kopiert inn, så en `docker compose up -d --build` for hånd vil prøve samme versjon. Neste vellykkede oppdatering retter det. Du kan også kjøre `update.sh` fra Proxmox.
+- *Ny versjon starter ikke:* se `docker compose logs --tail 100 os`. Rull tilbake som beskrevet [nederst](#fra-pre-update-backupen).
+- *«Ikke satt opp» selv om du har kjørt `update.sh`:* se `docker compose ps updater` og `docker compose logs updater`. Updateren nekter å starte hvis compose er kjørt fra en annen mappe enn prosjektmappen.
+
+**Unraid** har ingen `updater`. Der står det at oppdatering fra appen ikke er tilgjengelig. Bruk **Check for updates** som før.
+
 ### Proxmox: `update.sh`
 
 Kjør på **verten** (ikke inne i containeren):
@@ -55,7 +79,7 @@ Skriptet gjør dette:
 2. Starter containeren hvis den er stoppet.
 3. Laster ned siste kode fra `main` som en tarball. Det trengs ikke git eller innlogging.
 4. Pakker den ut over `/opt/homelab-os`. **`.env` og `data/` røres ikke.**
-5. Bygger og starter på nytt med `docker compose up -d --build`, og med `--profile tunnel` hvis `CLOUDFLARE_TUNNEL_TOKEN` er satt.
+5. Bygger og starter på nytt med `docker compose up -d --build`, og med `--profile tunnel` hvis `CLOUDFLARE_TUNNEL_TOKEN` er satt. Dette starter også `updater`, så [Oppdater fra appen](#oppdater-fra-appen) virker etterpå.
 6. Rydder bort gamle images.
 
 Vil du ha en annen branch, sett `BRANCH=navn` foran kommandoen.
@@ -68,6 +92,8 @@ git pull
 docker compose up -d --build                   # eller: docker compose --profile tunnel up -d --build
 docker image prune -f
 ```
+
+Har du brukt [Oppdater fra appen](#oppdater-fra-appen) i en git-klon, er filene endret uten commit, og `git pull` kan klage på lokale endringer. Bruk da `git fetch && git reset --hard origin/main`. Det rører ikke `.env`, `data/` eller `proton/`, som ikke er i git.
 
 ### Unraid
 
@@ -137,6 +163,23 @@ docker compose up -d
 ## Rulle tilbake en oppdatering
 
 Databasen er allerede migrert framover, så du må ta tilbake **både** koden og dataene.
+
+### Fra pre-update-backupen
+
+En oppdatering startet fra appen lagrer databasen i `data/backups/pre-update-<tidspunkt>.db` først. Slik går du tilbake:
+
+```bash
+cd /opt/homelab-os
+docker compose stop os
+cp data/homelab.db data/homelab.db.feil
+cp data/backups/pre-update-2026-10-20T10-00-00-000Z.db data/homelab.db   # velg riktig fil (ls data/backups)
+rm -f data/homelab.db-wal data/homelab.db-shm
+docker compose start os
+```
+
+Kjører den nye koden ikke med den gamle databasen, må du også ta tilbake koden: bruk snapshot (Proxmox) eller `git checkout` (Docker) som under. Kvitteringsbilder og opplastinger ligger ikke i denne backupen, men de endres ikke av en oppdatering.
+
+### Snapshot eller git
 
 **Proxmox:** `pct rollback 150 for-oppdatering`
 

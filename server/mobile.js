@@ -19,6 +19,7 @@ import { domainOverview } from './domains.js';
 import { readBg, weatherImages, weatherKind, planetsToday, osloImages, apodImage } from './bg.js';
 import { uiPrefs, saveUiPrefs } from './ui.js';
 import { weatherFull, searchPlaces, DEFAULT_PLACES, weatherCompare, PLACES as WX_PLACES } from './weather-full.js';
+import { searchPlacesV2 } from './weather-places.js';
 import { appMeta } from './notify.js';
 import { nextTasks } from './tasks.js';
 import * as integrations from './integrations.js';
@@ -473,7 +474,13 @@ api.get('/weather/compare', authOrToken, async (c) => {
 // Steder i værappen, per bruker: standard Oslo, Bergen, Trondheim og Tromsø. Søk via Kartverket (Open-Meteo som reserve).
 const placesOf = (u) => { const v = kv.get(u, 'wx_places', null); return Array.isArray(v) ? v : DEFAULT_PLACES; };
 const coord = (v, lim) => { const n = Number(v); return Number.isFinite(n) && Math.abs(n) <= lim ? Math.round(n * 1e4) / 1e4 : null; };
-api.get('/weather/places', authOrToken, (c) => c.json(placesOf(c.get('user'))));
+// Prompt 28: ?q= gir stedssøk (Open-Meteo + foldet + Nominatim) → [{name, sub, lat, lon, country, source, region}];
+// uten q: brukerens lagrede steder som før. /weather/search (Kartverket først) beholdes for eldre klienter.
+api.get('/weather/places', authOrToken, async (c) => {
+  const q = c.req.query('q');
+  if (q === undefined) return c.json(placesOf(c.get('user')));
+  try { return c.json(await searchPlacesV2(q)); } catch (e) { return c.json({ error: 'Får ikke søkt nå. Prøv igjen.', detail: e.message }, 502); }
+});
 api.get('/weather/search', authOrToken, async (c) => {
   try { return c.json(await searchPlaces(c.req.query('q'))); } catch (e) { return c.json({ error: `Stedssøket svarte ikke (${e.message})` }, 502); }
 });
@@ -502,6 +509,30 @@ api.put('/weather/places/order', authOrToken, async (c) => {
   const next = [...list].sort((a, b) => (pos.get(a.id) ?? 999) - (pos.get(b.id) ?? 999));
   kv.set(c.get('user'), 'wx_places', next);
   return c.json(next);
+});
+
+/* ---------------- Prompt 28: Mer-rekkefølge per konto ---------------- */
+// GET /api/prefs/mer[?scope=hl|fin] → {o:[nøkler], h:[skjulte], scope, keys:[gyldige], locked:['innst','innstillinger'], updated}
+// PUT /api/prefs/mer[?scope=…] {o, h} → samme form. Ukjente nøkler tas ut (ignored:[…] i svaret), duplikater fjernes,
+// Innstillinger kan ikke skjules. scope=hl er Homelab-Mer (standard), scope=fin er Finans → Mer. Lagres i kv «mer_order».
+// Nøklene følger fasiten (Mobil Papir App.dc.html); «abonnementer» er et gyldig alias for Subscription OS («abo»).
+export const MER_KEYS = {
+  hl: ['hjem', 'domener', 'sporing', 'chat', 'kalender', 'bursdag', 'huske', 'kart', 'familie', 'media', 'finans', 'abo', 'abonnementer', 'rss', 'nyheter', 'vaer', 'mat', 'sok', 'fsok', 'innst', 'innstillinger'],
+  fin: ['fsok', 'fliste', 'finn', 'budsjett', 'kvitt', 'faste', 'kontoer', 'aksjer', 'rapp', 'abo', 'abonnementer', 'boliger', 'fimport', 'chat', 'innst', 'innstillinger'],
+};
+const MER_LOCKED = ['innst', 'innstillinger'];
+const merScope = (c) => (c.req.query('scope') === 'fin' ? 'fin' : 'hl');
+const merOut = (u, scope, extra = {}) => { const v = kv.get(u, 'mer_order', {})?.[scope] ?? {}; return { o: v.o ?? [], h: v.h ?? [], scope, keys: MER_KEYS[scope], locked: MER_LOCKED, updated: v.updated ?? null, ...extra }; };
+api.get('/prefs/mer', authOrToken, (c) => c.json(merOut(c.get('user'), merScope(c))));
+api.put('/prefs/mer', authOrToken, async (c) => {
+  const b = await json(c);
+  if (!b || typeof b !== 'object' || Array.isArray(b) || (b.o !== undefined && !Array.isArray(b.o)) || (b.h !== undefined && !Array.isArray(b.h))) return c.json({ error: 'Forventet {o:[nøkler], h:[skjulte nøkler]}' }, 400);
+  const scope = merScope(c), ok = new Set(MER_KEYS[scope]), ignored = [];
+  const clean = (list) => [...new Set((list ?? []).map((k) => String(k ?? '').trim().toLowerCase()))].filter((k) => { if (ok.has(k)) return true; if (k) ignored.push(k.slice(0, 40)); return false; }).slice(0, 40);
+  const o = clean(b.o), h = clean(b.h).filter((k) => !MER_LOCKED.includes(k));
+  const all = kv.get(c.get('user'), 'mer_order', {}) ?? {};
+  kv.set(c.get('user'), 'mer_order', { ...all, [scope]: { o, h, updated: Date.now() } });
+  return c.json(merOut(c.get('user'), scope, ignored.length ? { ignored: [...new Set(ignored)] } : {}));
 });
 
 api.get('/me/shortcuts', authOrToken, (c) => c.json(shortcutsFor(c.get('user'))));

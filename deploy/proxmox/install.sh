@@ -69,7 +69,7 @@ c "Henter koden og bygger …"
 SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/../.." 2>/dev/null && pwd || true)"
 if [ -n "$SRC_DIR" ] && [ -f "$SRC_DIR/package.json" ] && [ -f "$SRC_DIR/server/index.js" ]; then
   TAR=$(mktemp --suffix=.tgz)
-  tar -C "$SRC_DIR" --exclude=node_modules --exclude=data --exclude=.env -czf "$TAR" .
+  tar -C "$SRC_DIR" --exclude=node_modules --exclude=data --exclude=.env --exclude=proton --exclude=.git -czf "$TAR" .
   pct push "$CTID" "$TAR" /tmp/src.tgz
   rm -f "$TAR"
   run "mkdir -p /opt/homelab-os && tar -xzf /tmp/src.tgz -C /opt/homelab-os && rm /tmp/src.tgz"
@@ -80,7 +80,8 @@ else
     || die "Kunne ikke klone $REPO. Er repoet privat? Sett GITHUB_TOKEN eller kjør skriptet fra en lokal kopi."
   run "cd /opt/homelab-os && git remote set-url origin '$REPO'"
 fi
-run "cd /opt/homelab-os && docker compose build -q"
+# PWD må være prosjektmappen: updater-tjenesten monterer ${PWD} på samme sti som på verten (se docker-compose.yml).
+run "cd /opt/homelab-os && export PWD=/opt/homelab-os && docker compose build -q"
 
 c "Lager .env …"
 HASH=$(pct exec "$CTID" -- docker run --rm --entrypoint node homelab-os:local scripts/hash-password.js "$APP_PW" | sed 's/^APP_PASSWORD_HASH=//')
@@ -101,10 +102,10 @@ rm -f "$TMP_ENV"
 
 c "Starter …"
 PROFILE=""; [ -n "$TUNNEL_TOKEN" ] && PROFILE="--profile tunnel"
-run "cd /opt/homelab-os && docker compose $PROFILE up -d"
+run "cd /opt/homelab-os && export PWD=/opt/homelab-os && docker compose $PROFILE up -d"
 
 CT_IP=$(pct exec "$CTID" -- hostname -I | awk '{print $1}')
 c "Ferdig!"
 echo "  Dashboard:     http://$CT_IP:$PORT"
 echo "  Konfigurasjon: pct enter $CTID → nano /opt/homelab-os/.env → docker compose up -d"
-echo "  Oppdatering:   se «Oppdatere Proxmox-installasjonen» i README"
+echo "  Oppdatering:   Innstillinger → System → Oppdatering (eller update.sh fra Proxmox, se wikien)"

@@ -120,6 +120,9 @@ test('vanlig søk bruker samme uklare matching: «blosm» finner Blomsterlandet'
 test('abonnement fra skjermbilde: Ollama lokalt, kjent tjeneste, valuta regnes om (≈), manglende dato → i dag + syklus og «Sjekk»', async () => {
   const sent = [];
   shot._setScreenshotFetch(async (url, init) => {
+    // Prompt 28: vision-modellen velges via /api/tags + /api/show (capabilities).
+    if (String(url).endsWith('/api/tags')) return Response.json({ models: [{ name: 'qwen2.5vl:7b' }] });
+    if (String(url).endsWith('/api/show')) return Response.json({ capabilities: ['completion', 'vision'] });
     sent.push({ url: String(url), body: JSON.parse(init.body) });
     return Response.json({ message: { content: JSON.stringify({ tjeneste: 'NETFLIX.COM', plan: 'Standard', pris: 15.49, valuta: 'USD', syklus: 'mnd', neste_trekk: null, sikkerhet: { tjeneste: 0.95, plan: 0.9, pris: 0.95, syklus: 0.85, neste_trekk: 0 } }) } });
   });

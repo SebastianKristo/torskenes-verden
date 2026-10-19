@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends smbclient tesse
   && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY package.json ./
+COPY package.json CHANGELOG.md ./
 COPY server ./server
 COPY public ./public
 COPY scripts ./scripts

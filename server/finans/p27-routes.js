@@ -9,7 +9,10 @@ import { db } from './db.js';
 import { forslag } from './forslag.js';
 import { auditList } from './ai-audit.js';
 import { findLogo, setManualLogo, clearLogo, isLogoFile, LOGO_DIR } from './logo-lookup.js';
-import { readScreenshot, normalizeSub } from './sub-screenshot.js';
+import { streamSSE } from 'hono/streaming';
+import { readScreenshot, decodeImageField, imageKind, errorBody, shotError, pickVisionModel, clearVisionCache, VISION_INSTALL } from './sub-screenshot.js';
+import { startPull, pullStatus } from './ollama-models.js';
+import { hasGemini } from './gemini-keys.js';
 
 const q = (sql) => db.prepare(sql);
 const bad = (c, msg, code = 400) => c.json({ error: msg }, code);
@@ -81,19 +84,63 @@ export function mountP27(api, { R, W }) {
     return c.json(res);
   });
 
-  /* --- Abonnement fra skjermbilde --- */
-  api.post('/subscriptions/from-screenshot', W, bodyLimit({ maxSize: 15 * 1024 * 1024, onError: (c) => bad(c, 'Bildet kan være maks 15 MB', 413) }), async (c) => {
+  /* --- Abonnement fra skjermbilde (prompt 27, fikset i prompt 28) --- */
+  // POST /subscriptions/from-screenshot[?engine=gemini]: multipart «image»/«file» (fil eller data-URL/base64-tekst),
+  // JSON {image:"<base64 eller data-URL>"} eller rått image/*-innhold. HEIC, PNG, JPEG, WebP og GIF godtas.
+  // 200 → normalisert abonnement + {engine, model, image:{w,h,bytes,converted}}.
+  // Feil → {error, code:'ollama_down'|'no_vision'|'timeout'|'not_found'|'bad_image'|'no_gemini'|'gemini_failed', canGemini, detail?, install?}.
+  // Gemini brukes bare med ?engine=gemini (brukeren trykket «Les med Gemini»), aldri automatisk; kallet logges i ai_audit.
+  api.post('/subscriptions/from-screenshot', W, bodyLimit({ maxSize: 15 * 1024 * 1024, onError: (c) => c.json({ error: 'Bildet kan være maks 15 MB', code: 'bad_image', canGemini: false }, 413) }), async (c) => {
     let image = null;
+    const type = c.req.header('content-type') ?? '';
     try {
-      const body = await c.req.parseBody();
-      const f = body.image ?? body.file;
-      if (f instanceof File && f.size) image = Buffer.from(await f.arrayBuffer());
+      if (/multipart\/form-data|application\/x-www-form-urlencoded/i.test(type)) {
+        const body = await c.req.parseBody();
+        const f = body.image ?? body.file ?? body.photo;
+        if (f instanceof File && f.size) image = Buffer.from(await f.arrayBuffer());
+        else if (typeof f === 'string') image = decodeImageField(f);
+      } else if (/json/i.test(type)) {
+        const b = await c.req.json();
+        image = decodeImageField(b?.image ?? b?.file ?? b?.data);
+      } else if (/^image\//i.test(type) || /octet-stream/i.test(type)) image = Buffer.from(await c.req.arrayBuffer());
     } catch { /* ugyldig skjema */ }
-    if (!image) return bad(c, 'Velg et skjermbilde');
-    if (!typeOf(image) || typeOf(image) === TYPES.ico) return bad(c, 'Skjermbildet må være PNG, JPEG, WebP eller GIF');
+    if (!image?.length) return bad(c, 'Velg et skjermbilde');
+    if (!imageKind(image)) { image.fill(0); return c.json({ error: 'Skjermbildet må være JPEG, PNG, HEIC, WebP eller GIF', code: 'bad_image', canGemini: false }, 400); }
+    const engine = c.req.query('engine') === 'gemini' ? 'gemini' : 'ollama';
     try {
-      const raw = await readScreenshot(image);
-      return c.json(normalizeSub(raw, { u: c.get('user') }));
-    } catch (e) { return bad(c, e.message, e.status ?? 502); } finally { image.fill(0); image = null; } // bildet lagres aldri; bufferen nullstilles
+      return c.json(await readScreenshot(image, { engine, u: c.get('user'), mock: c.req.query('mock') ?? null }));
+    } catch (e) {
+      const err = e.code ? e : shotError('ollama_down', e.message);
+      console.warn(`[abo-skjermbilde] feil code=${err.code} engine=${engine}${err.detail ? ` detail=${JSON.stringify(String(err.detail).slice(0, 200))}` : ''}`);
+      return c.json(errorBody(err), err.status ?? 502);
+    } finally { image.fill(0); image = null; } // bildet lagres aldri; bufferen nullstilles
+  });
+
+  // GET /ai/vision → {ok:true, model, canGemini} | {ok:false, error, code, canGemini, install?}: hvilken bildemodell som brukes.
+  api.get('/ai/vision', R, async (c) => {
+    try { return c.json({ ok: true, model: await pickVisionModel({ fresh: c.req.query('fresh') === '1' }), canGemini: hasGemini() }); }
+    catch (e) { return c.json({ ok: false, ...errorBody(e.code ? e : shotError('ollama_down', e.message)) }); }
+  });
+  // POST /ai/vision/install (admin) → SSE: data = {name, status, pct, completed, total, done, error} hvert sekund til done;
+  // siste melding har event «done» og {ok, model, error}.
+  api.post('/ai/vision/install', W, async (c) => {
+    if (!c.get('access')?.admin) return bad(c, 'Bare administratorer kan installere modeller', 403);
+    const name = VISION_INSTALL;
+    try { startPull(name); } catch (e) { return bad(c, e.message, e.status ?? 400); }
+    c.header('Cache-Control', 'no-cache');
+    c.header('X-Accel-Buffering', 'no');
+    const cur = () => pullStatus().find((p) => p.name === name) ?? { name, status: 'ukjent', done: true, error: 'Fant ikke installeringen' };
+    return streamSSE(c, async (sse) => {
+      let id = 0, p = cur();
+      const out = (x) => ({ name, status: x.status, pct: x.pct ?? null, completed: x.completed ?? 0, total: x.total ?? 0, done: !!x.done, error: x.error ?? null });
+      await sse.writeSSE({ data: JSON.stringify(out(p)), id: String(id++) });
+      while (!p.done && !sse.aborted) {
+        await new Promise((r) => setTimeout(r, Number(process.env.VISION_PULL_POLL_MS ?? 1000)));
+        p = cur();
+        if (!sse.aborted) await sse.writeSSE({ data: JSON.stringify(out(p)), id: String(id++) });
+      }
+      clearVisionCache();
+      if (!sse.aborted) await sse.writeSSE({ event: 'done', data: JSON.stringify({ ok: !p.error, model: p.error ? null : name, error: p.error ?? null }), id: String(id++) });
+    });
   });
 }
