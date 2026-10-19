@@ -245,7 +245,8 @@ function monthView() {
   ensure(a, b);
   const cells = Array.from({ length: 42 }, (_, i) => {
     const d = add(st, i), k = key(d), L0 = evOn(d), isT = k === tk, inM = d.getMonth() === cur.getMonth(), les = L0.filter((e) => e.kind === 'time').length, oth = L0.filter((e) => e.kind !== 'time'), mx = w ? 4 : 3, sh = oth.slice(0, les ? mx - 1 : mx);
-    const chips = sh.map((e) => { reg(e); const solid = e.kind === 'prove' || !e.s || e.kind === 'innl'; return `<span style="background:${solid ? col(e) : 'transparent'};color:${solid ? '#fff' : col(e)}">${esc(`${e.s && e.kind !== 'innl' && w ? `${e.s} ` : ''}${short(e)}`)}</span>`; });
+    const chips = sh.map((e) => { reg(e); const solid = e.kind === 'prove' || !e.s || e.kind === 'innl'; // Prompt 30: hendelsen i dagruta åpner hendelsen (detaljarket); handleren tar nærmeste [data-k27], så ruta selv (dday → Dag) får ikke trykket.
+      return `<span class="k30-mev" role="button" tabindex="0" ${evAttr(e)} style="background:${solid ? col(e) : 'transparent'};color:${solid ? '#fff' : col(e)}">${esc(`${e.s && e.kind !== 'innl' && w ? `${e.s} ` : ''}${short(e)}`)}</span>`; });
     if (les) chips.push(`<span class="les">${les}${w ? ' timer' : ' t'}</span>`);
     const wk = i % 7 === 0 ? `<button class="k29-wk" data-k27="wk" data-k="${k}" aria-label="Uke ${isoW(d)}">${isoW(d)}</button>` : '';
     return `${wk}<button class="k27-md${isT ? ' t' : ''}${inM ? '' : ' o'}" data-k27="dday" data-k="${k}"><b>${d.getDate()}</b>${chips.join('')}${oth.length > sh.length ? `<em>+${oth.length - sh.length}</em>` : ''}</button>`;
