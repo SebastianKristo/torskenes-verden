@@ -36,7 +36,8 @@ struct Brief34Host: ViewModifier {
     func body(content: Content) -> some View {
         content
             .fullScreenCover(isPresented: Binding<Bool>(get: { m.open }, set: { (v: Bool) in if !v { m.close() } })) {
-                Brief34Page()
+                // Prompt 35: briefen med Glimt og venner, opplesning, nyheter med bilder og prøveperioder (Brief35Page.swift).
+                Brief35Page()
                     .environment(\.paper, p)
                     .edgeSwipeClose30 { m.close() }
             }
@@ -65,7 +66,8 @@ struct Brief34HomeCard: View {
                     Brief34Chips(chips: b.chips).padding(.top, 2)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                Glimt34Live(size: 56)
+                // Prompt 35: verten (brukerens figur, Glimt Natt 21–06).
+                Glimt35Live(id: Glimt35Model.shared.cfg.host, size: 56, mood: Glimt35Char.sleeping() ? .sover : .idle)
                     .frame(width: 64)
             }
             .padding(16)
@@ -75,7 +77,11 @@ struct Brief34HomeCard: View {
             .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         }
         .buttonStyle(.plain)
-        .task { await m.load(store) }
+        .task {
+            await m.load(store)
+            Glimt35Model.shared.refreshExtra()
+            await Glimt35Model.shared.load(store)
+        }
         .accessibilityLabel(b.kick + ". " + b.summary)
     }
 }

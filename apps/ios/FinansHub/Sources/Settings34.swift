@@ -135,6 +135,11 @@ extension Set24Model {
         out.append(Set24Item(id: "ai.key", title: "API og nøkler", sub: "Ollama, Gemini, Groq, OpenRouter og Roboflow", path: "AI og modeller", route: "aictl:api", anchor: ""))
         out.append(Set24Item(id: "ai.use", title: "Tokenforbruk og budsjett", sub: "Tokens og sky-kostnad per dag", path: "AI og modeller", route: "aictl:use", anchor: ""))
         out.append(Set24Item(id: "ai.test", title: "Selvtest av AI", sub: "Sjekk at Glimt, AI-søk og chat svarer", path: "AI og modeller", route: "aictl:ov", anchor: ""))
+        // Prompt 35: GLIMT → Glimt (søket kjenner glimt, brief, stemme og figur).
+        out.append(Set24Item(id: "glimt.page", title: "Glimt", sub: "Figur, brief, stemme og venner", path: "Glimt", route: "glimt35", anchor: ""))
+        out.append(Set24Item(id: "glimt.fig", title: "Glimt-figur", sub: "Velg figur: Glimt, Halo, Sky, Ugle, Gris …", path: "Glimt", route: "glimt35", anchor: ""))
+        out.append(Set24Item(id: "glimt.brief", title: "Glimt-brief", sub: "Morgen-, dags-, kvelds- og nattbrief med klokkeslett", path: "Glimt", route: "glimt35", anchor: ""))
+        out.append(Set24Item(id: "glimt.voice", title: "Stemme og opplesning", sub: "Les opp, stemmemotor, stemme, tempo og språk", path: "Glimt", route: "glimt35", anchor: ""))
         return out
     }
 
@@ -189,6 +194,10 @@ extension Set24Model {
 
     /// Åpner siden for en oppføring med mål-id og markerer kontrollen. false = ikke en prompt 34-rute.
     func open34(_ it: Set24Item, _ store: Store) -> Bool {
+        if it.route == "glimt35" {
+            Glimt35Model.shared.showPage = true
+            return true
+        }
         if it.route.hasPrefix("aictl:") {
             AiCtl34.shared.show(String(it.route.dropFirst(6)))
             return true

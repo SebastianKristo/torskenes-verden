@@ -292,7 +292,12 @@ struct WxBottomButtons30: View {
     /// Plassen innholdet må holde fri nederst (52 + 6 + litt luft).
     static let height: CGFloat = 64
 
+    /// Prompt 35 (claude-code-vaer-web.md → iOS): knappene står helt nede i hjørnene, på høyde med hjemstreken.
+    /// Før la vi safe area to ganger (GeometryReader-ens bunn-inset + 6 pt), så de havnet ca. 40 pt for høyt.
+    /// Nå: bunnen av skjermen + max(10, safe-area-inset − 22) ≈ 12 pt over bunnen med hjemstrek, 10 pt uten (som fasiten).
     var body: some View {
+        // Hjemstreken leses fra vinduet (samme som Cal32b), så foreldrenes safe area ikke kan legge den til én gang til.
+        let sb: CGFloat = Cal32b.bottomInset
         VStack(spacing: 0) {
             Spacer(minLength: 0)
             HStack(spacing: 10) {
@@ -301,8 +306,10 @@ struct WxBottomButtons30: View {
                 WxGlassButton30(icon: "menu", stroke: 2.2, label: "Steder og søk", action: places)
             }
             .padding(.horizontal, 18)
-            .padding(.bottom, 6)
+            .padding(.bottom, Swift.max(10, sb - 22))
         }
+        .ignoresSafeArea(.container, edges: .bottom)
+        .ignoresSafeArea(.keyboard)
     }
 }
 

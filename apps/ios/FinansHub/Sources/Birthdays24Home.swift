@@ -66,9 +66,15 @@ struct BirthdayCalendars24: View {
             .disabled(m.busy == "g")
         } else {
             if !m.gCalendars.isEmpty {
-                Text("Kalender").font(PF.ui(12.5)).foregroundStyle(p.mut)
-                BdChipRow24(options: m.gCalendars.map { ($0.id, $0.name) }, selected: m.gCalendarId, height: 32) { id in
-                    m.setGoogle(calendarId: id, store)
+                // Prompt 35 (Bursdager.dc.html): «Kalendere som hentes (velg flere)» med antall valgt.
+                let sel: [String] = m.gCalendarIds.isEmpty ? (m.gCalendarId.isEmpty ? [] : [m.gCalendarId]) : m.gCalendarIds
+                HStack {
+                    Text("Kalendere som hentes (velg flere)").font(PF.ui(12.5)).foregroundStyle(p.mut)
+                    Spacer()
+                    Text(String(sel.count) + " valgt").font(PF.ui(12.5)).foregroundStyle(p.mut)
+                }
+                BdMultiChips35(options: m.gCalendars.map { ($0.id, $0.name) }, selected: sel) { (id: String) in
+                    m.toggleGoogleCalendar(id, store)
                 }
             }
             VStack(spacing: 0) {
@@ -176,6 +182,30 @@ struct PaperBirthdaysCard24: View {
             }
             Spacer(minLength: 4)
             Text(b.whenText).font(PF.serif(18, medium: true)).foregroundStyle(b.daysLeft <= 7 ? p.lab : p.ink).lineLimit(1).fixedSize()
+        }
+    }
+}
+
+/// Prompt 35: flervalg av kalendere (✓ foran valgte).
+struct BdMultiChips35: View {
+    @Environment(\.paper) private var p
+    let options: [(String, String)]
+    let selected: [String]
+    let toggle: (String) -> Void
+
+    var body: some View {
+        BdFlow24(spacing: 6) {
+            ForEach(options, id: \.0) { (o: (String, String)) in
+                let on: Bool = selected.contains(o.0)
+                Button { Haptics.shared.select(); toggle(o.0) } label: {
+                    Text((on ? "✓ " : "") + o.1).font(PF.ui(12.5, .semibold)).foregroundStyle(on ? p.bg : p.ink).lineLimit(1)
+                        .padding(.horizontal, 12).frame(height: 32)
+                        .background(on ? p.ink : Color.clear, in: Capsule())
+                        .overlay(Capsule().stroke(on ? p.ink : p.line, lineWidth: 1))
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 }

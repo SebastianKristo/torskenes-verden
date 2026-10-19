@@ -29,6 +29,11 @@ struct Assist31Answer: Equatable {
     var target32b: String = ""
     /// Prompt 34: svaret er en feilmelding («Glimt fikk ikke svar fra {modell}: {feil}») → Prøv igjen / Åpne AI-kontroll.
     var failed34: Bool = false
+    /// Prompt 35: «været i New York» → open{route:'vaer', name, lat, lon}. Trykk på svaret åpner Vær for stedet.
+    var wx35Name: String = ""
+    var wx35Lat: Double = 0
+    var wx35Lon: Double = 0
+    var wx35: Bool { !wx35Name.isEmpty }
 
     var plain: String { text.replacingOccurrences(of: "**", with: "").trimmingCharacters(in: .whitespacesAndNewlines) }
 
@@ -44,6 +49,13 @@ struct Assist31Answer: Equatable {
         a.chatId = JS.str(o, "chatId") ?? JS.str(raw, "chatId") ?? ""
         a.target32b = JS.str(o, "target") ?? JS.str(raw, "target") ?? ""
         if let ap = JS.dict(o, "apply") { a.applyId = JS.int(ap, "memoryId") ?? 0; a.applyCount = JS.int(ap, "count") ?? 0; a.applyTitle = JS.str(ap, "title") ?? "" }
+        if let op = JS.dict(o, "open") ?? JS.dict(raw, "open"), (JS.str(op, "route") ?? "vaer") == "vaer",
+           let la = JS.num(op, "lat"), let lo = JS.num(op, "lon") {
+            let pl: [String: Any] = JS.dict(o, "place") ?? [:]
+            a.wx35Name = JS.str(op, "name") ?? JS.str(pl, "label") ?? JS.str(pl, "name") ?? "Stedet"
+            a.wx35Lat = la
+            a.wx35Lon = lo
+        }
         if let c = o["card"] as? [String: Any], let d = try? JSONSerialization.data(withJSONObject: c) {
             a.cardJSON = String(data: d, encoding: .utf8) ?? ""
         }
@@ -311,7 +323,14 @@ struct Assist31Bubble: View {
                     .fixedSize(horizontal: false, vertical: true)
                 if a.applyId > 0 && a.applyCount > 0 { Memory33ApplyButton(a: a) }
                 // Prompt 34: feil → Prøv igjen og Åpne AI-kontroll (Assist34.swift).
-                if a.failed34 { Assist34ErrorFoot() } else { Assist31BubbleFoot(source: a.source) }
+                if a.failed34 {
+                    Assist34ErrorFoot()
+                } else if a.wx35 {
+                    // Prompt 35: vær for et sted → «Åpne Vær for New York ›» (Assist35.swift).
+                    Assist35WxFoot(a: a)
+                } else {
+                    Assist31BubbleFoot(source: a.source)
+                }
             }
         }
         .padding(.horizontal, 18).padding(.top, 16).padding(.bottom, 14)
@@ -327,6 +346,11 @@ struct Assist31Bubble: View {
         .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
         .onTapGesture {
             Haptics.shared.select()
+            if let a = m.homeAnswer, a.wx35 {
+                m.closeHome()
+                store.openWeather35(name: a.wx35Name, lat: a.wx35Lat, lon: a.wx35Lon)
+                return
+            }
             withAnimation(.easeOut(duration: 0.18)) { m.closeHome() }
         }
         .accessibilityElement(children: .contain)

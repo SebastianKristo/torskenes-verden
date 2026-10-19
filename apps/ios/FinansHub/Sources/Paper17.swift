@@ -637,6 +637,10 @@ struct PaperSettings17: View {
                 PaperLinkRow(name: "Moduler", sub: "Sporing, Domener, Mat, Familie, Avganger og Vær", icon: "square.grid.2x2") { store.paperGo("innst-hl") },
                 PaperLinkRow(name: "Nyhetsleser", sub: "Kilder og AI", icon: "newspaper") { store.openNews() },
             ])
+            // Prompt 35: ny gruppe GLIMT → «Glimt» (figur, brief, stemme og venner) i fullskjerm (Glimt35Settings.swift).
+            group("Glimt", 5, [
+                PaperLinkRow(name: "Glimt", sub: "Figur, brief, stemme og venner", icon: "sparkle", tint30: Color(hex: "#b23a2a")) { Glimt35Model.shared.showPage = true },
+            ])
             group("App", 2, [
                 PaperLinkRow(name: "Utseende og fanelinje", sub: themeSub, icon: "paintpalette") { store.paperGo("innst-ut") },
                 // Prompt 34: APP → AI og modeller (AI-kontroll i fullskjerm).

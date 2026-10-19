@@ -96,16 +96,30 @@ enum Brief34Pose {
 }
 
 /// Glimt-figuren i widgeten. Trykk → vinker (interaktiv widget, iOS 17).
+/// Prompt 35: temafiguren for innholdet (Dråpe på regndager når vennene er på), ellers verten (brukerens figur, Natt 21–06).
+/// Etter et trykk hopper figuren glad og snakker (rammene i Brief34Pose), ellers står den i idle-positur.
 struct BriefGlimt34: View {
     let e: Brief34Entry
     let size: CGFloat
 
     var body: some View {
+        let cfg: Glimt35Cfg = Glimt35Cfg.cached ?? Glimt35Cfg()
+        let fig: String = Brief34.themeFig35(e.brief, cfg)
         Button(intent: GlimtPoke34Intent()) {
-            Glimt34Figure(size: size, mood: e.mood, t: e.phase)
+            Glimt35Fig(id: fig, size: size, mood: BriefGlimt34.mood35(e.mood), t: e.phase, still: e.mood == .idle && e.phase == 0)
+                .frame(width: size, height: size * Glimt35Fig.heightFactor(fig), alignment: .topLeading)
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Hils på Glimt")
+        .accessibilityLabel("Hils på " + Glimt35Char.get(fig).name)
+    }
+
+    /// Prompt 34-posituren → humøret til Glimt-familien (vinke = glad hopp).
+    static func mood35(_ m: Glimt34Mood) -> Glimt35Mood {
+        switch m {
+        case .wave: return .glad
+        case .talk: return .talk
+        default: return .idle
+        }
     }
 }
 
@@ -337,7 +351,8 @@ struct BriefLarge34: View {
             }
             BriefLargeWeather34(b: b)
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(b.events.prefix(3)) { (e: Brief34Event) in
+                // Prompt 35 (fasit «Stor»): 2 neste avtaler og 2 nyheter.
+                ForEach(b.events.prefix(2)) { (e: Brief34Event) in
                     BriefLargeRow34(left: e.time, title: e.title, sub: e.day + (e.place.isEmpty ? "" : " · " + e.place))
                 }
                 ForEach(b.news.prefix(2)) { (n: Brief34News) in
@@ -365,7 +380,10 @@ struct BriefLargeWeather34: View {
         let mx: Double = Swift.max(0.6, vals.max() ?? 0.6)
         HStack(spacing: 12) {
             Brief34WxIcon(icon: b.icon, size: 30, color: Brief34WxIcon.tint(b.icon))
-            Text(b.temp.isEmpty ? "–" : b.temp).font(.custom("Newsreader-Medium", size: 28)).foregroundStyle(Color.white)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(b.temp.isEmpty ? "–" : b.temp).font(.custom("Newsreader-Medium", size: 28)).foregroundStyle(Color.white)
+                if !b.hi.isEmpty { Text(b.hiLo).font(.system(size: 10.5, weight: .semibold, design: .monospaced)).foregroundStyle(Color.white.opacity(0.85)) }
+            }
             HStack(alignment: .bottom, spacing: 2) {
                 ForEach(Array(vals.enumerated()), id: \.offset) { (pair: (offset: Int, element: Double)) in
                     BriefRainBar34(frac: Swift.max(0.08, pair.element / mx), wet: pair.element >= 0.2)
@@ -416,12 +434,26 @@ struct BriefRect34: View {
     let b: Brief34
 
     var body: some View {
+        // Prompt 35 (fasit): «✦ KVELDSBRIEF» · «8° · Tannlege» · «15:15».
         VStack(alignment: .leading, spacing: 1) {
-            Text(b.lockTitle).font(.system(size: 13, weight: .bold)).lineLimit(1)
-            Text(b.nextLine).font(.system(size: 13)).lineLimit(1)
-            Text(b.news.first?.title ?? b.cond).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1)
+            Text("✦ " + b.kick.uppercased()).font(.system(size: 11, weight: .semibold, design: .monospaced)).lineLimit(1)
+            Text(rectMain).font(.system(size: 14, weight: .bold)).lineLimit(1)
+            Text(rectSub).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Prompt 35: rund låseskjerm-widget med figuren (temafiguren, stillestående).
+extension BriefRect34 {
+    var rectMain: String {
+        let t: String = b.temp.isEmpty ? "" : b.temp + " · "
+        return t + (b.next?.title ?? "Fri dag")
+    }
+
+    var rectSub: String {
+        guard let e = b.next else { return b.cond.isEmpty ? (b.news.first?.title ?? "") : b.cond }
+        return e.day == "i dag" || e.day.isEmpty ? e.time : e.day + " " + e.time
     }
 }
 
@@ -429,13 +461,15 @@ struct BriefCircle34: View {
     let b: Brief34
 
     var body: some View {
+        let cfg: Glimt35Cfg = Glimt35Cfg.cached ?? Glimt35Cfg()
+        let fig: String = Brief34.themeFig35(b, cfg)
         ZStack {
             AccessoryWidgetBackground()
-            VStack(spacing: 0) {
-                Image(systemName: Brief34WxIcon.symbol(b.icon)).font(.system(size: 13, weight: .semibold))
-                Text(b.temp.isEmpty ? "–" : b.temp).font(.system(size: 15, weight: .bold))
-            }
+            Glimt35Fig(id: fig, size: 34, still: true)
+                .frame(width: 34, height: 34 * Glimt35Fig.heightFactor(fig), alignment: .topLeading)
+                .offset(y: -1)
         }
+        .accessibilityLabel(b.kick + (b.temp.isEmpty ? "" : ", " + b.temp))
     }
 }
 

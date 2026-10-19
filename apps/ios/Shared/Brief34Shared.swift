@@ -96,6 +96,8 @@ struct Brief34: Hashable {
         case "morning": return "Morgenbrief"
         case "day": return "Dagsbrief"
         case "evening": return "Kveldsbrief"
+        // Prompt 35: Nattbrief (22:30, av som standard).
+        case "night": return "Nattbrief"
         default: return title.isEmpty ? Brief34.kickFor() : title
         }
     }

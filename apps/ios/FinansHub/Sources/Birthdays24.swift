@@ -125,6 +125,8 @@ final class BirthdayModel24 {
     var gContacts: Bool = true
     var gSyncedAt: Date? = nil
     var gCalendars: [BirthdayCal24] = []
+    /// Prompt 35: flere Google-kalendere som hentes (calendarIds / cals). gCalendarId (første) beholdes for eldre server.
+    var gCalendarIds: [String] = []
 
     var haEntity: String = ""
     var haTwoWay: Bool = true
@@ -185,6 +187,8 @@ final class BirthdayModel24 {
             gConnected = JS.bool(g, "connected") ?? false
             gEmail = JS.str(g, "email") ?? ""
             gCalendarId = JS.str(g, "calendarId") ?? gCalendarId
+            let ids: [String] = JS.strings(g, "calendarIds").isEmpty ? JS.strings(g, "cals") : JS.strings(g, "calendarIds")
+            gCalendarIds = ids.isEmpty ? (gCalendarId.isEmpty ? [] : [gCalendarId]) : ids
             gWriteNew = JS.bool(g, "writeNew") ?? gWriteNew
             gContacts = JS.bool(g, "contacts") ?? gContacts
             gSyncedAt = JS.date(g["syncedAt"])
@@ -335,8 +339,23 @@ final class BirthdayModel24 {
         if let calendarId { gCalendarId = calendarId }
         if let writeNew { gWriteNew = writeNew }
         if let contacts { gContacts = contacts }
-        let body: [String: Any] = ["calendarId": gCalendarId, "writeNew": gWriteNew, "contacts": gContacts]
+        if gCalendarIds.isEmpty && !gCalendarId.isEmpty { gCalendarIds = [gCalendarId] }
+        let body: [String: Any] = ["calendarId": gCalendarId, "calendarIds": gCalendarIds, "cals": gCalendarIds, "writeNew": gWriteNew, "contacts": gContacts]
         Task { _ = try? await store.api.callAt("/api", "PUT", "/birthdays/google", json: body) }
+    }
+
+    /// Prompt 35: slå en kalender av/på i «Kalendere som hentes (velg flere)». Minst én er alltid valgt.
+    func toggleGoogleCalendar(_ id: String, _ store: Store) {
+        var ids: [String] = gCalendarIds.isEmpty ? (gCalendarId.isEmpty ? [] : [gCalendarId]) : gCalendarIds
+        if ids.contains(id) {
+            if ids.count <= 1 { store.flash("Minst én kalender må være valgt"); return }
+            ids.removeAll { $0 == id }
+        } else {
+            ids.append(id)
+        }
+        gCalendarIds = ids
+        // Nye bursdager skrives til den første valgte.
+        setGoogle(calendarId: ids.first ?? id, store)
     }
 
     func googleSync(_ store: Store) async {

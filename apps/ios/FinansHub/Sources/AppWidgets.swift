@@ -36,6 +36,9 @@ extension Store {
         if page == "kalender-login" { KalCompanion33.loginLink(self); return }
         // Prompt 34: finanshub://brief (Glimt-brief-widgetene) åpner briefen i fullskjerm.
         if page == "brief" { if paper { paperGo("hjem") }; Brief34Model.shared.show(); return }
+        // Prompt 35: fra Kalender-appen – finanshub://glimt (Innstillinger → Glimt) og finanshub://integrasjoner.
+        if page == "glimt" { if paper { paperGo("hjem") }; Glimt35Model.shared.showPage = true; return }
+        if page == "integrasjoner" || page == "integrations" { if paper { paperGo("innst-integ") } else { goStart() }; return }
         if (page == "kalender" || page == "calendar") && KalLink33.forward(url) { return }
         if page == "kalender" || page == "calendar" { Cal26Model.shared.openLink(url, self); return }
         if paper { paperDeepLink(page, sub); return }

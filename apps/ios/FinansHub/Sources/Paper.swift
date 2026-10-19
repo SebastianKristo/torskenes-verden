@@ -277,6 +277,8 @@ struct PaperShell: View {
         // Prompt 34: AI-kontroll i fullskjerm (AiCtl34Page.swift) og Glimt-briefen (Brief34Page.swift).
         .aiCtl34Host(p)
         .brief34Host(p)
+        // Prompt 35: Innstillinger → GLIMT → Glimt i fullskjerm (Glimt35Settings.swift).
+        .glimt35Host(p)
         .task(id: store.account?.id) {
             Realtime.shared.connect(store)
             await AppMeta.shared.load(store)
