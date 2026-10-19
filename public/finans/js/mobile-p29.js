@@ -1,4 +1,4 @@
-// Prompt 29 (PWA): Hjem-søkefelt med valgfri søkemotor (System-AI / Google / DuckDuckGo) og menyen i eget lag over
+// Prompt 29 (PWA): Hjem-søkefelt med valgfri søkemotor (Glimt / Google / DuckDuckGo) og menyen i eget lag over
 // kortene, timer som gjenkjennes og legges i kalenderen i bakgrunnen (pille «✦ Legger til i kalenderen …» og banner med
 // Angre / Vis), og Innstillinger → KONTO → Backup (hele systemet, bare admin).
 // Fasit: design/Mobil Papir App.dc.html (Hjem-søket, Innstillinger → Backup) og Kalender.dc.html (rask time).
@@ -11,6 +11,7 @@ import { grp } from './mobile-p17.js';
 import * as CHAT from './mobile-chat.js';
 import * as KAL from './mobile-kal.js';
 import { parseQuick, quickLabel } from '/assets/js/quick-time.js';
+import * as P31 from './mobile-p31.js';
 
 const svg = (d, s = 16, w = 2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 const todayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -20,9 +21,10 @@ const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
 /* =====================================================================
    1. Hjem: søkefelt med søkemotor
    ===================================================================== */
-const ENG = { ai: ['System-AI', 'Spør AI eller skriv «time hos …»', 'Svarer i Chat og legger til timer'], google: ['Google', 'Søk på Google', 'Åpner google.com'], ddg: ['DuckDuckGo', 'Søk med DuckDuckGo', 'Åpner duckduckgo.com'] };
-const GLOGO = (s) => `<svg width="${s}" height="${s}" viewBox="0 0 48 48" aria-hidden="true" class="p29-gl"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>`;
-const engIcon = (k, big) => (k === 'google' ? GLOGO(big ? 20 : 18) : k === 'ddg' ? `<span class="p29-ei ddg${big ? ' big' : ''}">D</span>` : `<span class="p29-ei ai${big ? ' big' : ''}">✦</span>`);
+const ENG = { ai: ['Glimt', 'Spør om været, eller skriv «time hos …»', 'Svarer her og legger til timer'], google: ['Google', 'Søk på Google', 'Åpner google.com'], ddg: ['DuckDuckGo', 'Søk med DuckDuckGo', 'Åpner duckduckgo.com'] };
+const GLOGO = P31.GLOGO; // Prompt 31: logoene ligger i mobile-p31.js (ekte Google-G og DuckDuckGo-and)
+// Prompt 31: Glimt-merket (Klar; Tenker mens svaret hentes) i stedet for ✦, ekte logoer for Google og DuckDuckGo.
+const engIcon = (k, big) => (k === 'google' ? GLOGO(big ? 22 : 20) : k === 'ddg' ? P31.DLOGO(big ? 22 : 20) : P31.glimt(big ? 24 : 24, !big && P31.G.ans?.busy ? 'think' : 'ready', 'p31-eng'));
 
 export const SE = { eng: ENG[lsGet('papir_search')] ? lsGet('papir_search') : 'ai', q: '', open: false, pos: null };
 /** Fra GET /api/me/layout (search_engine er personlig). */
@@ -48,7 +50,7 @@ export function searchCard() {
     <input id="p29-q" name="q" type="text" enterkeyhint="go" value="${esc(SE.q)}" placeholder="${esc(ENG[e][1])}" aria-label="${esc(ENG[e][1])}" autocomplete="off" autocapitalize="sentences">
     <button type="button" class="p29-clr${SE.q ? '' : ' off'}" data-p29="clr" aria-label="Tøm">${svg('M6 6l12 12M18 6L6 18', 11, 3.2)}</button>
     <button type="button" class="p29-ai" data-p29="chat" aria-label="Åpne Chat">✦ AI</button></form>
-    <div id="p29-apw">${apptHtml(r)}</div></div>`;
+    <div id="p29-apw">${apptHtml(r)}</div>${P31.ansBubble()}</div>`;
 }
 /** Eget overlay-lag (fast posisjon) så menyen alltid ligger over kortene på Hjem. */
 export function searchLayer() {
@@ -72,7 +74,8 @@ function searchGo() {
     const url = SE.eng === 'google' ? `https://www.google.com/search?q=${encodeURIComponent(t)}` : `https://duckduckgo.com/?q=${encodeURIComponent(t)}`;
     SE.q = ''; draw(); window.open(url, '_blank', 'noopener'); return;
   }
-  SE.q = ''; CHAT.openChat(t);
+  // Prompt 31: Glimt svarer i en boble under søkefeltet (ikke hopp til Chat). «Fortsett i Chat ›» åpner samtalen.
+  SE.q = ''; draw(); P31.ask(t);
 }
 
 /* =====================================================================
@@ -87,15 +90,23 @@ const shortTxt = (t) => (t.length > 40 ? `${t.slice(0, 38)}…` : t);
 export async function quickRun(text, parsed) {
   const t = String(text ?? '').trim(); if (!t) return;
   const tmp = { id: `tmp${Date.now()}`, text: t };
-  QJ.jobs.push(tmp); haptic('tap'); draw();
+  QJ.jobs.push(tmp); haptic('tap');
+  // Prompt 31: jobben vises i Glimt-toasten (trykk → glassboble med steg og det AI har funnet).
+  const pr = parsed?.ok ? parsed : (() => { try { return parseQuick(t, todayKey()); } catch { return null; } })();
+  P31.jobPut(tmp.id, { kind: 'quick', title: 'Legger til i kalenderen', model: 'Glimt · lokal', input: t, dur: 2600,
+    fields: pr?.ok ? [['Hva', pr.title], ['Når', quickLabel(pr)], ['Kalender', 'Privat'], ['Varsel', pr.start ? '1 time før' : 'Ingen']] : [] });
+  draw();
   if (!QJ.missing) {
     try {
       const r = await hlApi('/kalender/quick', { method: 'POST', json: { text: t } });
-      tmp.id = String(r?.jobId ?? r?.id ?? tmp.id); startPoll(); return;
+      const nid = String(r?.jobId ?? r?.id ?? tmp.id); P31.jobRename(tmp.id, nid); tmp.id = nid;
+      if (tmp.cancelled) { cancelQuick({ id: nid }); return; }
+      startPoll(); return;
     } catch (e) { if (e.status !== 404 && e.status !== 405) { dropJob(tmp.id); fail(t, null, e.message); return; } QJ.missing = true; }
   }
   // Reserve: lokal tolkning (samme regler) og vanlig lagring.
   await new Promise((ok) => setTimeout(ok, 600));
+  if (tmp.cancelled) { dropJob(tmp.id); return; }
   const r = parsed?.ok ? parsed : parseQuick(t, todayKey());
   if (!r.ok) { dropJob(tmp.id); fail(t, r, r.why); return; }
   const body = EV_BODY(r, t);
@@ -108,11 +119,24 @@ export async function quickRun(text, parsed) {
   dropJob(tmp.id);
   done({ t: r.title, l: quickLabel(r), w: r.start ? '' : 'Fant ikke klokkeslett, lagt inn som hele dagen.', eventId, date: r.date, local });
 }
-function dropJob(id) { QJ.jobs = QJ.jobs.filter((j) => j.id !== id); }
+function dropJob(id) { QJ.jobs = QJ.jobs.filter((j) => j.id !== id); P31.jobDrop(id); }
 function done(toast) {
-  QJ.toast = toast; haptic('ok'); clearTimeout(QJ.tt); QJ.tt = setTimeout(() => { QJ.toast = null; draw(); }, 6000);
+  // Prompt 31: toasten bytter til «✓ Nina frisør · fre 25. sep · 14:30 lagt i kalenderen» (Angre / Vis) og forsvinner etter 3 s.
+  QJ.toast = null;
+  P31.aiDone(`${toast.t} · ${toast.l} lagt i kalenderen`, { undo: () => { QJ.toast = toast; return undo(); }, show: () => { if (toast.date) KAL.kalShowDay(toast.date); }, ms: toast.w ? 5000 : 3200 });
+  if (toast.w) flash(toast.w);
   KAL.kalLoad(true).then(draw).catch(() => draw()); draw();
 }
+/** Avbryt fra glassboblen: POST /api/kalender/quick/:id/cancel (reserven lagrer da ingenting). */
+async function cancelQuick(j) {
+  const id = String(j?.id ?? ''); const q = QJ.jobs.find((x) => x.id === id);
+  if (q) q.cancelled = true;
+  QJ.seen.add(id); dropJob(id);
+  if (id && !id.startsWith('tmp')) await hlApi(`/kalender/quick/${encodeURIComponent(id)}/cancel`, { method: 'POST', json: {} }).catch(() => {});
+  else if (q) QJ.jobs.push(q); // venter på svar fra POST; quickRun ser cancelled og rydder selv
+  P31.jobDrop(id); draw();
+}
+P31.hooks31({ quickCancel: cancelQuick });
 function fail(text, found, why) {
   haptic('err');
   const f = found ?? {};
@@ -137,7 +161,7 @@ function startPoll() {
   QJ.poll = setInterval(tick, 2000);
 }
 /** Sanntid (calendar-quick over /api/ws): sjekk køen med en gang. */
-export function onQuickRealtime() { if (QJ.jobs.length) { clearInterval(QJ.poll); QJ.poll = null; startPoll(); hlApi('/kalender/quick/jobs').then(() => {}).catch(() => {}); } else KAL.kalLoad(true).then(() => { if (m.screen === 'kal' || m.screen === 'hl') draw(); }).catch(() => {}); }
+export function onQuickRealtime(d) { if (d) P31.onQuickRealtime31(d); if (QJ.jobs.length) { clearInterval(QJ.poll); QJ.poll = null; startPoll(); hlApi('/kalender/quick/jobs').then(() => {}).catch(() => {}); } else KAL.kalLoad(true).then(() => { if (m.screen === 'kal' || m.screen === 'hl') draw(); }).catch(() => {}); }
 async function undo() {
   const T = QJ.toast; if (!T) return;
   QJ.toast = null; draw();
@@ -152,7 +176,7 @@ async function undo() {
 /** Pille og banner øverst (alle sider). */
 export function quickLayer() {
   const n = QJ.jobs.length, T = QJ.toast;
-  const pill = n ? `<div class="p29-pill" role="status"><span class="p29-spark">✦</span>${n > 1 ? `Legger til ${n} timer …` : 'Legger til i kalenderen …'}</div>` : '';
+  const pill = ''; // Prompt 31: pillen er erstattet av Glimt-toasten (mobile-p31.js aiLayer)
   const ban = T && !n ? `<div class="p29-ban" role="status"><span class="m-grow"><b>✓ ${esc(T.t)}</b><span>${esc(T.l)}${m.screen === 'hl' ? ' · lagt i kalenderen' : ''}</span>${T.w ? `<span>${esc(T.w)}</span>` : ''}</span><button data-p29="undo">Angre</button><button class="pri" data-p29="show">Vis</button></div>` : '';
   return pill + ban;
 }

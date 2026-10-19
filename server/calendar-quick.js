@@ -9,13 +9,16 @@
 //                                  {action, job, title, body, category, url}).
 //   GET  /jobs                  → [{id, state, text, result?, error?, found?, engine, created, updated}] (siste 20)
 //   POST /:id/undo              → {ok} (sletter hendelsen jobben laget)
+//   Prompt 31: POST /:id/cancel → {ok, state} (stopper en jobb som venter/kjører: «Avbrutt · ingenting ble lagt til»; 409 når ferdig)
+//   «calendar-quick»-hendelsen har samme struktur som Glimt-jobbene (assist): {jobId, state, steps[], fields[], progress, title,
+//   model, input} i tillegg til de gamle feltene, og sendes også underveis (action 'progress'). Ferdig → notifyUser (kø/Web Push).
 import { Hono } from 'hono';
 import { randomBytes } from 'node:crypto';
 import { db } from './db.js';
 import { authOrToken } from './mobile.js';
 import { runAsUser } from './settings.js';
 import { broadcast } from './realtime.js';
-import { notifyOf } from './notify.js';
+import { notifyOf, notifyUser } from './notify.js';
 import { eventInput, createEvent, deleteEvent } from './calendar.js';
 import { settings } from './finans/db.js';
 import { aiTimeoutsOf, _aiTest, logAi } from './finans/ai.js';
@@ -44,7 +47,10 @@ db.exec(`CREATE TABLE IF NOT EXISTS cal_quick_jobs (
   updated INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS cal_quick_jobs_user ON cal_quick_jobs(user_id, created);`);
+// Prompt 31: avbryt (Avbryt-knappen i AI-boblen).
+if (!db.prepare('PRAGMA table_info(cal_quick_jobs)').all().some((c) => c.name === 'cancelled')) db.exec('ALTER TABLE cal_quick_jobs ADD COLUMN cancelled INTEGER NOT NULL DEFAULT 0');
 const q = (sql) => db.prepare(sql);
+export const CANCELLED = 'Avbrutt · ingenting ble lagt til';
 
 /* ---------------- Ollama ---------------- */
 
@@ -128,8 +134,22 @@ export function jobOut(row) {
   if (result) o.result = result;
   if (row.error) o.error = row.error;
   if (found) o.found = found;
+  if (row.cancelled) o.cancelled = true;
   return o;
 }
+
+/* Prompt 31: samme struktur som Glimt-jobbene (AI-boblen viser steg, funn og prosent live). */
+const STEPS = [['read', 'Leser teksten'], ['parse', 'Finner dato og klokkeslett'], ['check', 'Sjekker kalenderen'], ['save', 'Lagrer avtalen']];
+const PCT = [8, 35, 70, 90];
+export function quickProgress(job, at = 0) {
+  const done = job.state === 'done', failed = job.state === 'failed';
+  const steps = STEPS.map(([key, label], i) => ({ key, label, state: done || i < at ? 'done' : i === at ? (failed ? 'failed' : 'active') : 'pending' }));
+  const r = job.result ?? job.found ?? null;
+  const fields = r ? [{ k: 'Hva', v: r.title || '–' }, { k: 'Når', v: r.label || quickLabel({ date: r.date, start: r.start }) || '–' }, { k: 'Kalender', v: 'Privat' }, { k: 'Varsel', v: r.start ? '1 t før' : 'Ingen' }] : [];
+  return { jobId: job.id, state: job.state, steps, fields, progress: done ? 100 : failed ? PCT[at] ?? 0 : PCT[at] ?? 0, title: 'Legger til i kalenderen',
+    model: job.engine === 'ollama' ? 'Glimt · lokal' : 'Glimt · lokal tolker', input: job.text };
+}
+const progressEvent = (user, id, at) => { const job = jobOut(getJob(id)); broadcast('calendar-quick', { action: 'progress', job, ...quickProgress(job, at) }, [user]); };
 const getJob = (id) => q('SELECT * FROM cal_quick_jobs WHERE id=?').get(id);
 const setJob = (id, f) => { const keys = Object.keys(f); q(`UPDATE cal_quick_jobs SET ${keys.map((k) => `${k}=@${k}`).join(', ')}, updated=@updated WHERE id=@id`).run({ ...f, id, updated: Date.now() }); };
 
@@ -137,8 +157,12 @@ function announce(user, job) {
   let n; try { n = notifyOf(user); } catch { n = { on: true }; }
   const ok = job.state === 'done';
   const body = ok ? `✓ ${job.result.title} · ${job.result.label}` : `Fant ikke alt i «${job.text.slice(0, 60)}». Åpne skjemaet for å fullføre.`;
-  broadcast('calendar-quick', { action: ok ? 'done' : 'failed', job, title: ok ? 'Lagt i kalenderen' : 'Rask time', body, category: 'kalender',
-    url: ok ? `finanshub://kalender?date=${job.result.date}` : 'finanshub://kalender?quick=' + job.id, silent: n?.on === false }, [user]);
+  const url = ok ? `finanshub://kalender?date=${job.result.date}` : 'finanshub://kalender?quick=' + job.id;
+  const title = ok ? 'Lagt i kalenderen' : job.cancelled ? 'Avbrutt' : 'Rask time';
+  // progress/steps fra quickProgress; title/body/url som før (varselteksten).
+  broadcast('calendar-quick', { action: ok ? 'done' : 'failed', job, ...quickProgress(job, ok ? 4 : 1), title, body: job.cancelled ? CANCELLED : body, category: 'kalender', url, silent: n?.on === false }, [user]);
+  if (!job.cancelled) notifyUser(user, { title, body, url: ok ? `/#/kalender?date=${job.result.date}` : '/#/kalender', tag: `quick-${job.id}`, category: 'kalender', data: { kind: 'calendar-quick', jobId: job.id, deepLink: url } }, { realtime: false })
+    .catch((e) => console.warn('[rask time] varsel:', e.message));
 }
 
 async function runJob(id) {
@@ -146,9 +170,18 @@ async function runJob(id) {
   if (!row || row.state !== 'queued') return;
   const user = row.user_id;
   setJob(id, { state: 'running' });
+  progressEvent(user, id, 0);
   const text = row.text;
   let r, engine = 'lokal';
+  progressEvent(user, id, 1);
   try { ({ r, engine } = await interpret(text, user)); } catch (e) { r = parseQuick(text); }
+  if (getJob(id)?.cancelled) {
+    setJob(id, { state: 'failed', error: CANCELLED, engine });
+    announce(user, jobOut(getJob(id)));
+    return;
+  }
+  setJob(id, { engine, found: JSON.stringify({ title: r.title || '', date: r.date ?? null, start: r.start ?? null, label: r.date ? quickLabel(r) : '' }) });
+  progressEvent(user, id, 2);
   const found = { title: r.title || '', date: r.date ?? null, start: r.start ?? null, end: r.end ?? null, place: r.place ?? null, type: r.type ?? 'annet', note: text, calendar: 'privat', reminder: r.start ? '1h' : 'none' };
   if (!r.ok || !r.date) {
     setJob(id, { state: 'failed', error: r.why || NO_DATE, found: JSON.stringify(found), engine });
@@ -162,6 +195,12 @@ async function runJob(id) {
     announce(user, jobOut(getJob(id)));
     return;
   }
+  if (getJob(id)?.cancelled) {
+    setJob(id, { state: 'failed', error: CANCELLED, found: null, engine });
+    announce(user, jobOut(getJob(id)));
+    return;
+  }
+  progressEvent(user, id, 3);
   try {
     const ev = await runAsUser(user, () => createEvent(user, { ...v.value, origin: ORIGIN }));
     const result = { eventId: ev?.id ?? null, title: v.value.title, date: v.value.date, start: v.value.start, end: v.value.end, place: v.value.location || null, label: quickLabel({ date: v.value.date, start: v.value.start }) };
@@ -207,21 +246,27 @@ api.post('/parse', async (c) => {
   return c.json({ ...r, label: quickLabel(r) });
 });
 
-api.post('/', async (c) => {
-  const user = c.get('user');
-  const b = await body(c);
-  const text = typeof b?.text === 'string' ? b.text.replace(/\r\n?/g, '\n').trim() : '';
-  if (!text) return c.json({ error: 'Skriv hva timen gjelder.' }, 400);
-  if (text.length > MAX_TEXT) return c.json({ error: `Teksten er for lang (maks ${MAX_TEXT} tegn)` }, 400);
+/** Legger en rask time i køen. → {jobId} eller {error, status}. Brukes også av Glimt (intent appointment.create). */
+export function startQuickJob(user, rawText) {
+  const text = typeof rawText === 'string' ? rawText.replace(/\r\n?/g, '\n').trim() : '';
+  if (!text) return { error: 'Skriv hva timen gjelder.', status: 400 };
+  if (text.length > MAX_TEXT) return { error: `Teksten er for lang (maks ${MAX_TEXT} tegn)`, status: 400 };
   const pending = q("SELECT count(*) FROM cal_quick_jobs WHERE user_id=? AND state IN ('queued','running')").pluck().get(user);
-  if (pending >= MAX_PENDING) return c.json({ error: 'For mange timer i køen. Vent litt.' }, 429);
+  if (pending >= MAX_PENDING) return { error: 'For mange timer i køen. Vent litt.', status: 429 };
   const id = 'q' + randomBytes(6).toString('hex');
   const now = Date.now();
   q('INSERT INTO cal_quick_jobs(id, user_id, state, text, created, updated) VALUES(?,?,?,?,?,?)').run(id, user, 'queued', text, now, now);
   // Rydd: behold de 100 siste per bruker.
   q('DELETE FROM cal_quick_jobs WHERE user_id=? AND id NOT IN (SELECT id FROM cal_quick_jobs WHERE user_id=? ORDER BY created DESC LIMIT 100)').run(user, user);
   enqueue(id);
-  return c.json({ jobId: id }, 202);
+  return { jobId: id };
+}
+
+api.post('/', async (c) => {
+  const b = await body(c);
+  const r = startQuickJob(c.get('user'), b?.text);
+  if (r.error) return c.json({ error: r.error }, r.status);
+  return c.json({ jobId: r.jobId }, 202);
 });
 
 api.get('/jobs', (c) => c.json(q('SELECT * FROM cal_quick_jobs WHERE user_id=? ORDER BY created DESC, rowid DESC LIMIT 20').all(c.get('user')).map(jobOut)));
@@ -239,6 +284,19 @@ api.post('/:id/undo', async (c) => {
   }
   setJob(id, { result: JSON.stringify({ ...res, undone: true }) });
   return c.json({ ok: true });
+});
+
+// Prompt 31: Avbryt. Venter jobben, avsluttes den med en gang; kjører den, stopper den før noe lagres.
+api.post('/:id/cancel', (c) => {
+  const user = c.get('user'), id = c.req.param('id');
+  if (!ID.test(id)) return c.json({ error: 'Ugyldig id' }, 400);
+  const row = getJob(id);
+  if (!row || row.user_id !== user) return c.json({ error: 'Fant ikke jobben' }, 404);
+  if (row.state === 'done') return c.json({ error: 'Timen er allerede lagt til. Bruk Angre.', state: 'done' }, 409);
+  if (row.state === 'failed') return c.json({ ok: true, state: 'failed', cancelled: !!row.cancelled });
+  q('UPDATE cal_quick_jobs SET cancelled=1, updated=? WHERE id=?').run(Date.now(), id);
+  if (row.state === 'queued') { setJob(id, { state: 'failed', error: CANCELLED }); announce(user, jobOut(getJob(id))); }
+  return c.json({ ok: true, state: getJob(id).state, cancelled: true });
 });
 
 export default api;

@@ -4,6 +4,7 @@
 // via én felles WebSocket (/api/ws). Alt tåler en eldre server: data som mangler vises som en forklaring, ikke en feil.
 import * as P29 from './mobile-p29.js';
 import * as P30 from './mobile-p30.js';
+import * as P31 from './mobile-p31.js';
 import { S, api, esc, n0, ini, hlApi, icon } from './core.js';
 import { m, draw, flash, meName, avInner, avatarUrl, route, isIOS, domOk } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
@@ -230,6 +231,7 @@ export function p17Varsler(trkRows = '') {
   const tg = (attr, n, s, on) => `<button class="opt-row" ${attr} role="switch" aria-checked="${!!on}"><span class="m-grow"><b style="font-weight:500">${esc(n)}</b>${s ? `<br><span style="font-size:13px;opacity:.65">${esc(s)}</span>` : ''}</span><span class="sw" aria-hidden="true" aria-checked="${!!on}"></span></button>`;
   const permTxt = perm === 'granted' ? 'Tillatt' : perm === 'denied' ? 'Blokkert i nettleseren' : perm === 'unsupported' ? 'Ikke støttet' : 'Ikke spurt ennå';
   return `<div class="list">${tg('data-p17="non"', 'Varsler', 'Hovedbryter for alle varsler', d.on !== false)}
+      ${d.on !== false ? P31.varslerRows(tg) : ''}
       ${tg('data-p17="nquiet"', 'Stille timer', `${d.quietFrom}–${d.quietTo} · ingen lyd eller vibrasjon`, d.quietOn !== false)}
       ${d.quietOn !== false ? `<div class="opt-row"><span class="m-grow pp-mut">Fra og til</span><input class="sinp p17-time" type="time" data-p17in="qf" value="${esc(d.quietFrom)}" aria-label="Stille fra"><span class="pp-mut">–</span><input class="sinp p17-time" type="time" data-p17in="qt" value="${esc(d.quietTo)}" aria-label="Stille til"></div>` : ''}
       <button class="opt-row" data-p17="nperm"><span class="m-grow"><b style="font-weight:500">Tillatelse på enheten</b><br><span style="font-size:13px;opacity:.65">${esc(permTxt)}</span></span><span class="sval">${perm === 'default' ? 'Spør ›' : ''}</span></button>
@@ -241,7 +243,7 @@ export function p17Varsler(trkRows = '') {
     <div class="sec">Grupper</div><div class="list">${NGROUPS.map(([k, n, s]) => tg(`data-p17="ngrp" data-k="${k}"`, n, s, d.groups?.[k] !== false)).join('')}</div>
     ${trkRows ? `<div class="sec">Pakker</div><div class="list">${trkRows}</div>` : ''}
     <div class="list"><a class="opt-row" href="#/set/hap"><span class="m-grow">Haptikk</span><span style="opacity:.5">›</span></a></div>
-    <div class="snote">Nettappen varsler mens den er åpen. Push-varsler når appen er lukket kommer i iOS- og Android-appene.</div>`;
+    <div class="snote">${P31.pushSupported() ? 'Med «Varsler på denne enheten» kan Glimt, prøveperioder og oppdateringer varsle også når appen er lukket.' : 'Denne nettleseren støtter ikke push. På iPhone: legg appen på Hjem-skjermen for å få varsler når den er lukket.'}</div>`;
 }
 
 /* ---------- Huskeliste (/api/tasks, delt i familien, sanntid via WebSocket) ---------- */
@@ -522,7 +524,8 @@ export function wsConnect(onMsg) {
 }
 let rtT = null;
 export function onRealtime(d) {
-  if (d.type === 'calendar-quick') { P29.onQuickRealtime(d); return; } // Prompt 29: rask time ferdig/feilet
+  if (d.type === 'calendar-quick') { P29.onQuickRealtime(d); return; } // Prompt 29: rask time ferdig/feilet (31: steg og felt)
+  if (d.type === 'assist') { P31.onAssistRealtime(d); return; } // Prompt 31: Glimt-jobber (svarboble, Chat)
   clearTimeout(rtT);
   rtT = setTimeout(async () => {
     if (d.type === 'tasks') { HK.t = 0; await tasksLoad(true); if (m.screen === 'huske' || m.screen === 'hl') draw(); }

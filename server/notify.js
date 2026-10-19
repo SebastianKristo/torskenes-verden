@@ -9,9 +9,11 @@ import { bodyLimit } from 'hono/body-limit';
 import { readFile, writeFile, unlink, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { config } from './config.js';
-import { kv, OWNER } from './db.js';
+import { db, kv, OWNER } from './db.js';
 import { sessionUser, userInfo, isAdmin } from './auth.js';
 import { bearerOk } from './finans/routes.js';
+import { broadcast } from './realtime.js';
+import { vapidPublicKey, sendPush, validEndpoint } from './webpush.js';
 
 const SOUNDS_DIR = join(config.dataDir, 'sounds');
 await mkdir(SOUNDS_DIR, { recursive: true });
@@ -21,7 +23,7 @@ const SOUND_IDS = [...BUILTIN_SOUNDS.map(([id]) => id), 'egen', 'stille'];
 const GROUPS = ['pakker', 'finans', 'familie', 'reise', 'haptikk', 'birthdays'];
 // Visningsnavn i Innstillinger → Varsler. Prompt 24: «Bursdager» (påminnelse kl. 09:00, N dager før).
 export const GROUP_LABELS = { pakker: 'Pakker', finans: 'Finans', familie: 'Familie', reise: 'Reise', haptikk: 'Haptikk', birthdays: 'Bursdager' };
-const DEFAULT_NOTIFY = { on: true, quietOn: true, quietFrom: '22:00', quietTo: '07:00', sound: 'klokke', volume: 70, groups: Object.fromEntries(GROUPS.map((g) => [g, true])) };
+const DEFAULT_NOTIFY = { on: true, quietOn: true, quietFrom: '22:00', quietTo: '07:00', sound: 'klokke', volume: 70, groups: Object.fromEntries(GROUPS.map((g) => [g, true])), ai_bg_notify: true };
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 export function notifyOf(id) {
@@ -35,6 +37,8 @@ export function notifyOf(id) {
     sound: SOUND_IDS.includes(s.sound) && (s.sound !== 'egen' || custom) ? s.sound : DEFAULT_NOTIFY.sound,
     volume: Number.isInteger(s.volume) && s.volume >= 0 && s.volume <= 100 ? s.volume : DEFAULT_NOTIFY.volume,
     groups: Object.fromEntries(GROUPS.map((g) => [g, typeof s.groups?.[g] === 'boolean' ? s.groups[g] : true])),
+    // Prompt 31: «AI-svar i bakgrunnen» (på). Følger hovedbryteren «Varsler».
+    ai_bg_notify: typeof s.ai_bg_notify === 'boolean' ? s.ai_bg_notify : DEFAULT_NOTIFY.ai_bg_notify,
     groupList: GROUPS.map((id) => ({ id, label: GROUP_LABELS[id] })),
     customSound: custom ? { name: custom.name, type: custom.type, size: custom.size, url: `/api/me/notify/sound?v=${custom.v}` } : null,
     sounds: [...BUILTIN_SOUNDS.map(([id, name]) => ({ id, name, url: `/assets/sounds/${id}.wav` })), { id: 'egen', name: 'Egen lyd', url: custom ? `/api/me/notify/sound?v=${custom.v}` : null }, { id: 'stille', name: 'Stille', url: null }],
@@ -67,7 +71,7 @@ api.get('/me/notify', anyAuth, (c) => c.json(notifyOf(c.get('user'))));
 api.put('/me/notify', anyAuth, async (c) => {
   const id = c.get('user'), b = await c.req.json().catch(() => ({})), cur = kv.get(id, 'notify', {}) ?? {};
   const next = { ...cur };
-  for (const k of ['on', 'quietOn']) if (k in b) { if (typeof b[k] !== 'boolean') return bad(c, `${k} må være true/false`); next[k] = b[k]; }
+  for (const k of ['on', 'quietOn', 'ai_bg_notify']) if (k in b) { if (typeof b[k] !== 'boolean') return bad(c, `${k} må være true/false`); next[k] = b[k]; }
   for (const k of ['quietFrom', 'quietTo']) if (k in b) { if (!TIME.test(b[k])) return bad(c, `${k} må være TT:MM`); next[k] = b[k]; }
   if ('sound' in b) {
     if (!SOUND_IDS.includes(b.sound)) return bad(c, 'Ukjent lyd');
@@ -129,6 +133,128 @@ api.put('/app', anyAuth, async (c) => {
   if ('icon' in b) { if (!APP_ICONS.includes(b.icon)) return bad(c, 'Ukjent ikon'); next.icon = b.icon; }
   kv.set(OWNER, 'app_meta', next);
   return c.json(appMeta());
+});
+
+/* ---------------- Prompt 31: varsler når appen er lukket ---------------- */
+// Én sentral notifyUser(user, {title, body, url, tag, category}) for alt som skal varsles (AI-svar, prøveperioder,
+// oppdatering, rask time):
+//   1. realtime «notify» over /api/ws (appen viser det i appen hvis den er åpen)
+//   2. kø per bruker (notify_queue) som de native appene henter i bakgrunnen: GET /api/notify/pending?since=<id>
+//   3. Web Push (PWA og web) til brukerens abonnementer – men ikke når en klient har sendt «synlig»-heartbeat
+//      (POST /api/push/presence {visible:true}) de siste 30 s, og ikke i stille timer.
+// Hovedbryteren «Varsler» av → bare realtime. Kategori 'ai' følger i tillegg «AI-svar i bakgrunnen» (ai_bg_notify).
+//   GET    /api/push/vapid      → {publicKey}
+//   POST   /api/push/subscribe  {endpoint, keys:{p256dh, auth}} (PushSubscription.toJSON()) → {ok, id}
+//   DELETE /api/push/subscribe  {endpoint} → {ok, removed}
+//   POST   /api/push/presence   {visible} → {ok, visible, holdSeconds:30}
+//   GET    /api/notify/pending?since=<id> → {items:[{id, ts, title, body, url, tag, category, data}], cursor, serverTime}
+db.exec(`CREATE TABLE IF NOT EXISTS push_subscriptions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  endpoint TEXT NOT NULL UNIQUE,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  ua TEXT,
+  created INTEGER NOT NULL,
+  last_ok INTEGER,
+  fails INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS push_subscriptions_user ON push_subscriptions(user_id);
+CREATE TABLE IF NOT EXISTS notify_queue (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id TEXT NOT NULL,
+  ts INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL DEFAULT '',
+  url TEXT,
+  tag TEXT,
+  category TEXT,
+  data TEXT
+);
+CREATE INDEX IF NOT EXISTS notify_queue_user ON notify_queue(user_id, id);`);
+
+const PRESENCE_HOLD_MS = 30_000;
+const presence = new Map(); // user → siste «synlig»-heartbeat (ms)
+export const isForeground = (user, now = Date.now()) => now - (presence.get(user) ?? 0) < PRESENCE_HOLD_MS;
+export function setPresence(user, visible, now = Date.now()) { if (visible) presence.set(user, now); else presence.delete(user); }
+
+const GROUP_OF = { pakker: 'pakker', tracking: 'pakker', finans: 'finans', abonnement: 'finans', familie: 'familie', reise: 'reise', birthdays: 'birthdays' };
+const hmMin = (hm) => { const [h, m] = hm.split(':').map(Number); return h * 60 + m; };
+function inQuiet(n, now = Date.now()) {
+  if (!n.quietOn) return false;
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(now)).map((x) => [x.type, x.value]));
+  const t = Number(p.hour) * 60 + Number(p.minute), a = hmMin(n.quietFrom), b = hmMin(n.quietTo);
+  return a === b ? false : a < b ? t >= a && t < b : t >= a || t < b;
+}
+const clip = (v, n) => String(v ?? '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim().slice(0, n);
+
+/**
+ * Varsler én bruker. → {id (kø-id eller null), realtime (antall klienter), pushed (antall), skipped?: grunn}
+ * opts.now er for tester og planlagte varsler; opts.realtime=false hopper over realtime «notify».
+ */
+export async function notifyUser(user, { title, body = '', url = null, tag = null, category = 'system', data = null } = {}, { now = Date.now(), realtime: sendRealtime = true } = {}) {
+  if (!user || !title) return { id: null, realtime: 0, pushed: 0, skipped: 'mangler' };
+  let n; try { n = notifyOf(user); } catch { n = { ...DEFAULT_NOTIFY }; }
+  const item = { title: clip(title, 120), body: clip(body, 600), url: url ? String(url).slice(0, 500) : null, tag: tag ? String(tag).slice(0, 80) : null, category: String(category ?? 'system').slice(0, 30), data: data ?? null };
+  const group = GROUP_OF[item.category];
+  const off = !n.on ? 'varsler av' : item.category === 'ai' && n.ai_bg_notify === false ? 'AI-svar i bakgrunnen av' : group && n.groups?.[group] === false ? `${group} av` : null;
+  let id = null;
+  if (!off) {
+    id = Number(db.prepare('INSERT INTO notify_queue(user_id, ts, title, body, url, tag, category, data) VALUES(?,?,?,?,?,?,?,?)')
+      .run(user, now, item.title, item.body, item.url, item.tag, item.category, item.data ? JSON.stringify(item.data) : null).lastInsertRowid);
+    // Rydd: 7 dager / 200 per bruker.
+    db.prepare('DELETE FROM notify_queue WHERE user_id=? AND (ts < ? OR id NOT IN (SELECT id FROM notify_queue WHERE user_id=? ORDER BY id DESC LIMIT 200))').run(user, now - 7 * 86400_000, user);
+  }
+  // realtime:false når modulen allerede har sendt sin egen hendelse (assist, calendar-quick), så appen ikke viser det to ganger.
+  const realtime = sendRealtime ? broadcast('notify', { id, ...item, silent: !!off }, [user]) : 0;
+  if (off) return { id, realtime, pushed: 0, skipped: off };
+  if (isForeground(user, now)) return { id, realtime, pushed: 0, skipped: 'i forgrunnen' };
+  if (inQuiet(n, now)) return { id, realtime, pushed: 0, skipped: 'stille timer' };
+  const subs = db.prepare('SELECT * FROM push_subscriptions WHERE user_id=?').all(user);
+  let pushed = 0;
+  for (const s of subs) {
+    const r = await sendPush(s, { id, ...item }, { urgency: item.category === 'ai' || item.category === 'abonnement' ? 'high' : 'normal', topic: item.tag });
+    if (r.ok) { pushed++; db.prepare('UPDATE push_subscriptions SET last_ok=?, fails=0 WHERE id=?').run(now, s.id); }
+    else if (r.gone || s.fails >= 9) db.prepare('DELETE FROM push_subscriptions WHERE id=?').run(s.id);
+    else db.prepare('UPDATE push_subscriptions SET fails=fails+1 WHERE id=?').run(s.id);
+  }
+  return { id, realtime, pushed, ...(subs.length ? {} : { skipped: 'ingen abonnement' }) };
+}
+
+const pendingOut = (r) => ({ id: r.id, ts: r.ts, title: r.title, body: r.body, url: r.url, tag: r.tag, category: r.category, data: r.data ? JSON.parse(r.data) : null });
+export const pendingFor = (user, since = 0, limit = 50) => db.prepare('SELECT * FROM notify_queue WHERE user_id=? AND id>? ORDER BY id LIMIT ?').all(user, since, limit).map(pendingOut);
+
+const B64U = /^[A-Za-z0-9_-]+=*$/;
+api.get('/push/vapid', anyAuth, (c) => c.json({ publicKey: vapidPublicKey() }));
+api.post('/push/subscribe', anyAuth, async (c) => {
+  const b = await c.req.json().catch(() => null);
+  const endpoint = String(b?.endpoint ?? ''), p256dh = String(b?.keys?.p256dh ?? b?.p256dh ?? ''), auth = String(b?.keys?.auth ?? b?.auth ?? '');
+  if (!validEndpoint(endpoint)) return bad(c, 'Ukjent push-tjeneste (bare https-endepunkt fra nettleserens push-tjeneste)');
+  if (!B64U.test(p256dh) || Buffer.from(p256dh, 'base64url').length !== 65 || !B64U.test(auth) || Buffer.from(auth, 'base64url').length < 16) return bad(c, 'Ugyldige nøkler i abonnementet');
+  const u = c.get('user');
+  // Samme endepunkt fra en annen bruker på samme nettleser: flyttes til den som er innlogget nå.
+  db.prepare('INSERT INTO push_subscriptions(user_id, endpoint, p256dh, auth, ua, created) VALUES(?,?,?,?,?,?) ON CONFLICT(endpoint) DO UPDATE SET user_id=excluded.user_id, p256dh=excluded.p256dh, auth=excluded.auth, ua=excluded.ua, fails=0')
+    .run(u, endpoint, p256dh, auth, String(c.req.header('user-agent') ?? '').slice(0, 200), Date.now());
+  const n = db.prepare('SELECT count(*) FROM push_subscriptions WHERE user_id=?').pluck().get(u);
+  if (n > 20) db.prepare('DELETE FROM push_subscriptions WHERE user_id=? AND id NOT IN (SELECT id FROM push_subscriptions WHERE user_id=? ORDER BY created DESC LIMIT 20)').run(u, u);
+  return c.json({ ok: true, id: db.prepare('SELECT id FROM push_subscriptions WHERE endpoint=?').pluck().get(endpoint) });
+});
+api.delete('/push/subscribe', anyAuth, async (c) => {
+  const b = await c.req.json().catch(() => null);
+  const removed = db.prepare('DELETE FROM push_subscriptions WHERE endpoint=? AND user_id=?').run(String(b?.endpoint ?? ''), c.get('user')).changes;
+  return c.json({ ok: true, removed });
+});
+api.post('/push/presence', anyAuth, async (c) => {
+  const b = await c.req.json().catch(() => ({}));
+  const visible = b?.visible !== false;
+  setPresence(c.get('user'), visible);
+  return c.json({ ok: true, visible, holdSeconds: PRESENCE_HOLD_MS / 1000 });
+});
+api.get('/notify/pending', anyAuth, (c) => {
+  const since = Math.max(0, parseInt(c.req.query('since') ?? '0', 10) || 0);
+  const items = pendingFor(c.get('user'), since);
+  const last = db.prepare('SELECT max(id) FROM notify_queue WHERE user_id=?').pluck().get(c.get('user')) ?? 0;
+  return c.json({ items, cursor: items.length ? items[items.length - 1].id : Math.min(since, last), serverTime: new Date().toISOString() });
 });
 
 export default api;

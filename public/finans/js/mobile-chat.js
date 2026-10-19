@@ -8,6 +8,7 @@ import { esc, hlApi } from './core.js';
 import { m, draw } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { IG, integLoad24 } from './mobile-p24.js';
+import * as P31 from './mobile-p31.js';
 
 /* ---------- Faste lister (reserve når serveren ikke svarer) ---------- */
 const LOC0 = [['llama3.1:8b', 'Llama 3.1', '8B · 4,9 GB', 'Tekst'], ['gemma3:12b', 'Gemma 3', '12B · 8,1 GB', 'Tekst og bilde'], ['qwen2.5vl:7b', 'Qwen 2.5 VL', '7B · 6,0 GB', 'Leser bilder og kvitteringer'], ['deepseek-r1:8b', 'DeepSeek R1', '8B · 5,2 GB', 'Tenker før den svarer']];
@@ -74,7 +75,8 @@ function normChat(x) {
 }
 function normMsg(x) {
   if (x.r) return x;
-  return { r: x.role === 'user' ? 'u' : 'a', t: x.content ?? x.text ?? '', m: x.model ?? '', tool: x.used ?? x.tool ?? [], st: x.st ?? statLine(x), att: x.att ?? (x.files ?? []).map((f) => f.name ?? f) };
+  // Prompt 31: Glimt-kort (vær, kalender …) lagres i meldingen (card) og vises igjen i historikken.
+  return { r: x.role === 'user' ? 'u' : 'a', t: x.content ?? x.text ?? '', m: x.model ?? '', tool: [].concat(x.used ?? x.tool ?? []), st: x.st ?? statLine(x), att: x.att ?? (x.files ?? []).map((f) => f.name ?? f), card: x.card ?? null };
 }
 const statLine = (x) => (x.tokensPerSec ? `${Math.round(x.tokensPerSec)} tok/s · ${(x.ms / 1000).toFixed(1).replace('.', ',')} s` : '');
 export async function chatLoad(force = false) {
@@ -173,6 +175,12 @@ async function send(text, opt = {}) {
   cur.messages.push({ r: 'u', t, att: att.map((a) => a.name), images: att.filter((a) => a.kind === 'img').map((a) => a.data), files: att.filter((a) => a.id).map((a) => a.id) });
   if (!cur.title) cur.title = t.length > 42 ? `${t.slice(0, 40)} …` : t;
   C.inp = ''; C.att = []; C.sh = null; C.pend = ''; C.guard = null; C.rem = false;
+  // Prompt 31: Glimt ruter spørsmålet til et verktøy før LLM (vær, kalender, avganger, pakker, finans, huskeliste, prøveperiode).
+  if (!att.length && await P31.chatTool(t, cur.id && !String(cur.id).startsWith('l') ? cur.id : null, {
+    busy: (tool) => { C.busy = true; C.stream = ''; C.used = tool; C.g31 = true; C.bottom = true; draw(); },
+    put: (msg) => { C.busy = false; C.used = []; C.g31 = false; if (msg.chatId) cur.id = msg.chatId; delete msg.chatId; cur.messages.push(msg); haptic('ok'); commit(cur); },
+    done: () => { C.busy = false; C.used = []; C.g31 = false; },
+  })) return;
   await run({ confirmCloud: !!opt.ok, withoutMyData: !!opt.noData, myData: useData && !opt.noData });
 }
 const toApi = (x) => ({ role: x.r === 'u' ? 'user' : 'assistant', content: x.t, ...(x.images?.length ? { images: x.images } : {}) });
@@ -220,6 +228,11 @@ async function run(o = {}) {
   const toks = stats?.tokensPerSec ?? Math.max(1, Math.round(full.length / 4 / Math.max(0.5, sec)));
   if (full || stopped) cur.messages.push({ r: 'a', t: full + (stopped ? ' …' : ''), m: model, tool: stats?.used ?? C.used ?? [], st: `${stopped ? 'Stoppet · ' : ''}${Math.round(toks)} tok/s · ${((stats?.ms ?? sec * 1000) / 1000).toFixed(1).replace('.', ',')} s` });
   if (err) cur.messages.push({ r: 'a', t: err, m: model, tool: [], st: 'Feil', err: true });
+  if (stopped) haptic('tap'); else if (!err) haptic('ok');
+  commit(cur);
+}
+/** Oppdater historikken etter et svar: ny samtale øverst. Uten server lagres den på enheten. */
+function commit(cur) {
   cur.up = nowMs();
   // Oppdater historikken: ny samtale øverst. Uten server lagres den på enheten.
   if (!cur.id) cur.id = `l${Date.now()}`;
@@ -228,7 +241,6 @@ async function run(o = {}) {
   if (i >= 0) C.list.chats[i] = { ...C.list.chats[i], ...row }; else C.list.chats.unshift(row);
   if (C.srv) C.list.chats = C.list.chats.map((x) => (x.id === cur.id ? { ...x, messages: null } : x));
   saveLocal();
-  if (stopped) haptic('tap'); else if (!err) haptic('ok');
   C.bottom = true; draw();
 }
 function stopRun() { C.ctrl?.abort(); }
@@ -238,6 +250,8 @@ function paintStream() {
   if (!el) return;
   el.innerHTML = md(C.stream);
   const th = document.getElementById('ch27-think'); if (th) th.remove();
+  const gl = document.querySelector('#ch27-gl .g31'); if (gl) gl.className = gl.className.replace('g31-think', 'g31-answer'); // Glimt «Svarer»
+  const ghl = document.getElementById('ch27-ghl'); if (ghl) ghl.textContent = ghl.textContent.replace(' · TENKER', '');
   const sc = document.getElementById('ch27-sc');
   if (sc && sc.scrollHeight - sc.scrollTop - sc.clientHeight < 140) sc.scrollTop = sc.scrollHeight;
 }
@@ -360,8 +374,8 @@ function msgView(x, i, lastA) {
       ${ed ? `<div class="ch27-edit"><textarea id="ch27-ed" rows="3">${esc(C.ed.v)}</textarea><div><button data-c27="edx">Avbryt</button><button class="ink" data-c27="eds" data-i="${i}">Lagre og send</button></div></div>`
         : `<div class="ch27-ub">${esc(x.t)}</div><div class="ch27-acts r"><button data-c27="edit" data-i="${i}">Rediger</button><button data-c27="copy" data-i="${i}">${C.cop === key ? 'Kopiert' : 'Kopier'}</button></div>`}</div>`;
   }
-  return `<div class="ch27-a"><div class="ch27-ah"><span>✦ ${esc((x.m ? mLbl(x.m) : 'AI').toUpperCase())}</span>${(x.tool ?? []).map((n) => `<em>Brukte ${esc(n)}</em>`).join('')}</div>
-    <div class="ch27-md${x.err ? ' err' : ''}">${md(x.t)}</div>
+  return `<div class="ch27-a"><div class="ch27-ah"><span>✦ ${esc((x.m === 'glimt' ? 'Glimt' : x.m ? mLbl(x.m) : 'Glimt').toUpperCase())}</span>${(x.tool ?? []).map((n) => `<em>Brukte ${esc(n)}</em>`).join('')}</div>
+    <div class="ch27-md${x.err ? ' err' : ''}">${md(x.t)}</div>${x.card ? `<div class="p31-chc">${P31.cardHtml(x.card)}</div>` : ''}
     <div class="ch27-acts"><button data-c27="copy" data-i="${i}">${svg(IC.copy, 15)}${C.cop === key ? 'Kopiert' : 'Kopier'}</button>${i === lastA && !C.busy ? `<button data-c27="regen" data-i="${i}">${svg(IC.regen, 15)}Nytt svar</button>` : ''}<button data-c27="speak" data-i="${i}">${svg(IC.spk, 15)}${C.spk === key ? 'Stopp' : 'Les høyt'}</button><span class="ch27-st">${esc(x.st || '')}</span></div></div>`;
 }
 const chip = (on) => (on ? ' on' : '');
@@ -436,7 +450,7 @@ export function chatView() {
   const body = C.cur && C.cur.messages === null ? '<div class="m-spin"></div>' : empty ? `<div class="ch27-empty"><div><span class="ch27-ml">${esc((sky ? `${M.name} · ${M.size || M.provider}` : `${M.id} · lokalt på hjemmeserveren`).toUpperCase())}</span><span class="ch27-hi">Hva kan jeg hjelpe med?</span></div>
       <div class="ch27-chips sc">${PERS.map(([k, n]) => `<button class="ch27-pc${chip(((C.cur?.settings ?? L.def ?? DEF).persona || 'std') === k)}" data-c27="per" data-k="${k}">${n}</button>`).join('')}</div>
       <div class="ch27-sug">${SUGG.map(([t, s2, x], i) => `<button data-c27="sugg" data-i="${i}"><b>${esc(t)}</b>${s2 ? `<span>${esc(s2)}</span>` : ''}</button>`).join('')}</div></div>`
-    : `${msgs.map((x, i) => msgView(x, i, lastA)).join('')}${C.busy ? `<div class="ch27-a"><div class="ch27-ah"><span>✦ ${esc(mLbl(model).toUpperCase())}</span>${(C.used ?? []).map((n) => `<em>Leser ${esc(n)}</em>`).join('')}</div>${C.stream ? '' : '<span class="ch27-think" id="ch27-think">Tenker …</span>'}<div class="ch27-md" id="ch27-stream">${md(C.stream)}</div></div>` : ''}`;
+    : `${msgs.map((x, i) => msgView(x, i, lastA)).join('')}${C.busy ? `<div class="ch27-a"><div class="ch27-ah p31-cha"><span id="ch27-gl">${P31.glimt(22, C.stream ? 'answer' : 'think')}</span><span id="ch27-ghl">${esc((C.g31 ? 'Glimt' : mLbl(model)).toUpperCase())}${C.stream ? '' : ' · TENKER'}</span>${(C.used ?? []).map((n) => `<em>${C.g31 ? '' : 'Leser '}${esc(n)}</em>`).join('')}</div>${C.stream ? '' : '<span class="m-sr" id="ch27-think">Glimt tenker …</span>'}<div class="ch27-md" id="ch27-stream">${md(C.stream)}</div></div>` : ''}`;
   const rows = Math.min(6, Math.max(1, C.inp.split('\n').length));
   return `<div class="ch27 ${th}${w ? ' wide' : ''}" data-c27root>
     ${w ? side(false) : ''}

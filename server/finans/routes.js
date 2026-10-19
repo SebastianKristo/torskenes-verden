@@ -31,6 +31,7 @@ import { answer as aiAnswer, plainSearch, suggestionGroups, AiUnavailable, isSim
 import * as backup from './backup.js';
 import * as subsOs from './subs.js';
 import { mountP27, mountP27Public } from './p27-routes.js';
+import { mountTrials, trialsFor } from './trials.js'; // prompt 31: gratis prøveperioder
 import { findLogo } from './logo-lookup.js';
 import { storeLines, receiptLines, matchLines, annotateSearch } from './highlight30.js';
 import { shareableUsers, logEntryChange, entryHistory } from './boliger30.js';
@@ -432,6 +433,9 @@ function mockDemo(u) {
 }
 const R = need('finance:read'), W = need('finance:write');
 mountP27(api, { R, W }); // prompt 27: /forslag, /ai-audit, /merchants/logo, /receipts/:id/logo/ai, /subscriptions/from-screenshot
+// Prompt 31: /subscriptions/trials (før /subscriptions/:id). «Behold» gjør prøven om til et vanlig abonnement.
+mountTrials(api, { R, W, toSubscription: (u, t) => subOut(q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,domain,charge_day,category,created,user_id) VALUES(?,?,?,?,?,?,?,?,?,?,?) RETURNING *')
+  .get(t.service.slice(0, 80), '', Math.round((t.price_after ?? 0) * 100), 'monthly', t.ends_at, 'Fra prøveperiode', domainFor(t.service), +t.ends_at.slice(8, 10), subsOs.categoryFor(t.service), Date.now(), u)) });
 // Original + JPEG-kopi + miniatyr i samme forespørsel; et 48 MP-bilde fra iPhone kan alene være over 15 MB.
 const upload = bodyLimit({ maxSize: Number(process.env.MAX_UPLOAD_MB ?? 40) * 1024 * 1024 + 4096, onError: (c) => bad(c, `Filen er for stor (maks ${process.env.MAX_UPLOAD_MB ?? 40} MB)`, 413) });
 
@@ -1541,7 +1545,8 @@ api.get('/subscriptions', R, (c) => {
     lowUse: Math.round(act.filter((s) => s.lowUse).reduce((a, s) => a + s.monthly, 0) * 100) / 100,
     categories: subsOs.SUB_CATEGORIES, year, byMonth: subsOs.byMonth(raw, year), health: subsOs.health(raw), savings: subsOs.savings(raw),
     prevMonthly: Math.round(prevMonthly * 100) / 100, upcoming: subsOs.upcoming(raw, 7), month, thisMonth, monthTotal: sum(thisMonth), prevMonthTotal: sum(subsOs.chargesInMonth(raw, prevMonth)),
-    today: now.toLocaleDateString('sv-SE') });
+    today: now.toLocaleDateString('sv-SE'),
+    trials: trialsFor(c.get('user')) }); // prompt 31: aktive prøveperioder («Prøve · 12 dager igjen»)
 });
 api.get('/subscriptions/candidates', R, (c) => c.json(subsOs.candidates(q('SELECT * FROM fh_subscriptions WHERE user_id=?').all(c.get('user')))
   .map((x) => ({ ...x, domain: x.domain || domainFor(x.merchant) }))));

@@ -31,6 +31,8 @@ const dom = await import('../server/domains.js');
 const fr = await import('../server/finans/routes.js');
 const { db, kv, OWNER } = await import('../server/db.js');
 const { validate } = await import('../server/finans/ai.js');
+// Prompt 31: passord kreves bare når «Krev passord for å oppdatere» er på (av som standard). Testene her gjelder bryteren på.
+kv.set(OWNER, 'update_settings', { require_password: true });
 
 const SHA = 'a'.repeat(40);
 su._setFetch(async (url) => {
@@ -72,7 +74,7 @@ const status = (s) => writeFileSync(join(UPD, 'status.json'), JSON.stringify(s))
 test('GET /api/system/version: kort svar med notes fra nyere versjoner, bare admin', async () => {
   const r = await TR('/api/system/version');
   assert.equal(r.status, 200, r.text);
-  assert.deepEqual(Object.keys(r.body).sort(), ['current', 'latest', 'notes', 'publishedAt', 'updateAvailable']);
+  assert.deepEqual(Object.keys(r.body).sort(), ['codename', 'current', 'latest', 'name', 'notes', 'publishedAt', 'sizeBytes', 'tagline', 'updateAvailable']); // prompt 31: + Nordlys OS
   assert.equal(r.body.latest, '99.1.0');
   assert.deepEqual(r.body.notes, ['Oppdater fra mobilen', 'Rollback']);
   assert.equal(r.body.publishedAt, '2026-10-19T10:00:00Z');
@@ -151,12 +153,12 @@ test('rollback: action i request.json, aldri sha/repo; 409 uten tidligere versjo
 });
 
 test('brukervalg: auto_update av og notify_updates på som standard; validering', async () => {
-  assert.deepEqual((await A('/api/system/update/settings')).body, { auto_update: false, notify_updates: true });
+  assert.deepEqual((await A('/api/system/update/settings')).body, { auto_update: false, notify_updates: true, require_password: true }); // prompt 31: satt på øverst
   assert.equal((await K('/api/system/update/settings')).status, 403);
   assert.equal((await TR('/api/system/update/settings', 'PUT', { auto_update: true })).status, 403);
   assert.equal((await A('/api/system/update/settings', 'PUT', { auto_update: 'ja' })).status, 400);
   assert.equal((await A('/api/system/update/settings', 'PUT', { annet: true })).status, 400);
-  assert.deepEqual((await TW('/api/system/update/settings', 'PUT', { auto_update: true })).body, { auto_update: true, notify_updates: true });
+  assert.deepEqual((await TW('/api/system/update/settings', 'PUT', { auto_update: true })).body, { auto_update: true, notify_updates: true, require_password: true });
 });
 
 test('varsel om ny versjon sendes én gang; auto-oppdatering 03:30 Oslo', async () => {

@@ -26,6 +26,11 @@ const LS = 'fh_kal';
 const L = (() => { try { return JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch { return {}; } })();
 const keep = () => { try { localStorage.setItem(LS, JSON.stringify(L)); } catch {} };
 
+// Prompt 31: URL-er fjernes fra stedsteksten i alle korte visninger (timeplan-import har «Pilestredet park 35 U2005 https://link.mazemap.com/…»).
+// Lenken beholdes i hendelsen og vises som «Åpne kart ↗» i detaljarket.
+const URL_RE = /\s*https?:\/\/\S+/g;
+export const noUrl = (t) => String(t ?? '').replace(URL_RE, '').replace(/\s{2,}/g, ' ').trim();
+const urlOf = (t) => (String(t ?? '').match(/https?:\/\/\S+/) ?? [null])[0];
 export const K = { ev: null, subjects: {}, cals: null, from: null, to: null, err: '', miss: false, t: 0, busy: false, cur: null, sel: null, form: null, srch: false, q: '', res: null, mini: false, miniOff: 0, delArm: false, sw: null, swiped: 0, gk: '', gs: null, off: 0 };
 
 /* ---------- Datoer ---------- */
@@ -85,7 +90,7 @@ function norm(x) {
   const g = x.calendar === 'privat' || x.calendar === 'familie' || /google/i.test(x.source ?? '');
   const kind = TYPES.includes(x.type) ? x.type : g ? 'g' : 'skole', all = !!x.allDay || !a.hm;
   const cal = x.calendar ?? (g ? 'privat' : KCAL[kind] ?? 'skole');
-  const base = { id: String(x.id ?? `${a.k}|${x.title}`), t: x.title ?? x.subject ?? '', short: x.short || '', subj: x.subject ?? '', r: x.room ?? x.location ?? '', teacher: x.teacher ?? '', n: x.note ?? x.description ?? '', kind, cal, color: x.color ?? null, url: x.url ?? null, maze: x.mazemap ?? null, src: x.source ?? '', editable: !!x.editable, rep: x.recurrence ?? null, reminder: x.reminder ?? null, raw: x };
+  const base = { id: String(x.id ?? `${a.k}|${x.title}`), t: x.title ?? x.subject ?? '', short: x.short || '', subj: x.subject ?? '', r: noUrl(x.room ?? x.location ?? ''), rl: x.room ?? x.location ?? '', teacher: x.teacher ?? '', n: x.note ?? x.description ?? '', kind, cal, color: x.color ?? null, url: x.url ?? null, maze: x.mazemap ?? urlOf(x.location) ?? urlOf(x.room) ?? null, src: x.source ?? '', editable: !!x.editable, rep: x.recurrence ?? null, reminder: x.reminder ?? null, raw: x };
   if (!all) return [{ ...base, k: a.k, s: kind === 'innl' && a.hm === b?.hm ? '' : a.hm, e: b?.hm || a.hm }];
   const out = [], end = b && b.k > a.k ? ofKey(b.k) : add(ofKey(a.k), 1);
   for (let d = ofKey(a.k), i = 0; d < end && i < 62; d = add(d, 1), i++) out.push({ ...base, id: i ? `${base.id}|${i}` : base.id, base: base.id, cont: i > 0, k: key(d), s: '', e: '' });
@@ -123,7 +128,7 @@ const ue = () => L.ue ?? [];
 function ueOn(k) {
   const wd = ofKey(k).getDay();
   return ue().filter((u) => (u.repeat === 'daily' ? k >= u.date : u.repeat === 'weekly' ? k >= u.date && ofKey(u.date).getDay() === wd : u.repeat === 'monthly' ? k >= u.date && u.date.slice(8) === k.slice(8) : k >= u.date && k <= (u.endDate || u.date)))
-    .map((u) => ({ id: `u|${u.id}|${k}`, uid: u.id, k, s: u.allDay ? '' : u.start, e: u.allDay ? '' : u.end, t: u.title, short: '', subj: '', r: u.location || '', teacher: '', n: u.note || '', kind: 'g', cal: u.calendar, color: null, src: 'local', editable: true, rep: u.repeat, reminder: u.reminder, local: true }));
+    .map((u) => ({ id: `u|${u.id}|${k}`, uid: u.id, k, s: u.allDay ? '' : u.start, e: u.allDay ? '' : u.end, t: u.title, short: '', subj: '', r: noUrl(u.location || ''), rl: u.location || '', maze: urlOf(u.location), teacher: '', n: u.note || '', kind: 'g', cal: u.calendar, color: null, src: 'local', editable: true, rep: u.repeat, reminder: u.reminder, local: true }));
 }
 
 const col = (e) => (e.kind === 'prove' || e.kind === 'innl' ? LAB : e.kind === 'time' ? subjCol()[e.subj] ?? e.color ?? K.subjects[e.subj] ?? '#5c5850' : e.color ?? calOf(e.cal).color);
@@ -279,7 +284,7 @@ function detSheet() {
     <div class="k27-rows">${rows.map(([a, b]) => `<div><span>${esc(a)}</span><b>${esc(b)}</b></div>`).join('')}</div>
     <span class="k27-lab">VARSEL</span><div class="k27-chips">${REMS.map(([v, n]) => `<button class="${r === v ? 'on' : ''}" data-k27="rem" data-v="${v}" aria-pressed="${r === v}">${n}</button>`).join('')}</div>
     ${src ? `<span class="k27-mut sm">${esc(src)}</span>` : ''}
-    <div class="k27-btns">${e.editable ? `<button class="ink" data-k27="edit">Rediger</button><button class="red" data-k27="del">${K.delArm ? 'Trykk igjen' : 'Slett'}</button>` : ''}${map ? `<a href="${esc(map)}" target="_blank" rel="noopener">Vis rom på kart ↗</a>` : ''}${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">Åpne i ${e.src === 'canvas' ? 'Canvas' : 'kilden'} ↗</a>` : ''}${e.editable || e.kind === 'bursdag' ? '' : '<button data-k27="dup">Kopier til Privat</button>'}</div>`);
+    <div class="k27-btns">${e.editable ? `<button class="ink" data-k27="edit">Rediger</button><button class="red" data-k27="del">${K.delArm ? 'Trykk igjen' : 'Slett'}</button>` : ''}${map ? `<a href="${esc(map)}" target="_blank" rel="noopener">Åpne kart ↗</a>` : ''}${e.url ? `<a href="${esc(e.url)}" target="_blank" rel="noopener">Åpne i ${e.src === 'canvas' ? 'Canvas' : 'kilden'} ↗</a>` : ''}${e.editable || e.kind === 'bursdag' ? '' : '<button data-k27="dup">Kopier til Privat</button>'}</div>`);
 }
 function formSheet() {
   const F = K.form; if (!F) return '';
@@ -472,11 +477,11 @@ async function delEvent(e) {
 function editForm(e) {
   const u = e.local ? ue().find((x) => x.id === e.uid) : null, raw = e.raw ?? {};
   K.sel = null;
-  openForm(u ? { ...u, uid: u.id, local: true, id: null, endDate: u.endDate || '' } : { id: e.base ?? e.id, title: e.t, allDay: !e.s, date: e.k, start: e.s || '09:00', end: e.e || '10:00', location: e.r, calendar: e.cal === 'familie' ? 'familie' : 'privat', repeat: raw.repeat ?? (e.rep && REPS.some(([k]) => k === e.rep) ? e.rep : 'none'), reminder: remOf(e), note: e.n });
+  openForm(u ? { ...u, uid: u.id, local: true, id: null, endDate: u.endDate || '' } : { id: e.base ?? e.id, title: e.t, allDay: !e.s, date: e.k, start: e.s || '09:00', end: e.e || '10:00', location: e.rl ?? e.r, calendar: e.cal === 'familie' ? 'familie' : 'privat', repeat: raw.repeat ?? (e.rep && REPS.some(([k]) => k === e.rep) ? e.rep : 'none'), reminder: remOf(e), note: e.n });
 }
 async function copyEvent(e) {
   try { await hlApi(`/kalender/events/${encodeURIComponent(e.base ?? e.id)}/copy`, { method: 'POST', json: { calendar: 'privat' } }); K.sel = null; flash('Kopiert til Privat ✓'); await kalLoad(true).catch(() => {}); draw(); }
-  catch (err) { if (err.status === 409) { flash('Google må kobles til på nytt med skrivetilgang'); return; } K.sel = null; openForm({ title: e.t, date: e.k, start: e.s || '09:00', end: e.e || '10:00', allDay: !e.s, location: e.r, note: e.n, calendar: 'privat', local: err.status === 404 }); }
+  catch (err) { if (err.status === 409) { flash('Google må kobles til på nytt med skrivetilgang'); return; } K.sel = null; openForm({ title: e.t, date: e.k, start: e.s || '09:00', end: e.e || '10:00', allDay: !e.s, location: e.rl ?? e.r, note: e.n, calendar: 'privat', local: err.status === 404 }); }
 }
 
 /* ---------- Sveip og klikk ---------- */

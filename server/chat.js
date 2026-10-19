@@ -169,7 +169,8 @@ const parse = (s, d) => { try { return JSON.parse(s) ?? d; } catch { return d; }
 const chatRow = (u, id) => q('SELECT * FROM hl_chats WHERE id=? AND user_id=?').get(String(id ?? ''), u);
 const iso = (t) => new Date(t).toISOString();
 const brief = (r) => ({ id: r.id, title: r.title, model: r.model, updatedAt: iso(r.updated), pinned: !!r.pinned, folderId: r.folder_id ?? null });
-const msgOut = (m) => ({ role: m.role, content: m.content, ...(m.images?.length ? { images: m.images } : {}), ...(m.files?.length ? { files: m.files } : {}), ...(m.ts ? { ts: m.ts } : {}), ...(m.meta ? { meta: m.meta } : {}) });
+const msgOut = (m) => ({ role: m.role, content: m.content, ...(m.images?.length ? { images: m.images } : {}), ...(m.files?.length ? { files: m.files } : {}), ...(m.ts ? { ts: m.ts } : {}), ...(m.meta ? { meta: m.meta } : {}),
+  ...(m.card ? { card: m.card } : {}), ...(m.tool ? { tool: m.tool } : {}) }); // prompt 31: Glimt-kort (vær, kalender …) og verktøy-chip lagres i meldingen
 const full = (r) => ({ ...brief(r), createdAt: iso(r.created), settings: cleanSettings(parse(r.settings, {})), messages: parse(r.messages, []).map(msgOut), shared: !!r.share_token });
 const norm = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 

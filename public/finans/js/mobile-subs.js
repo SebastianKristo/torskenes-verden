@@ -9,6 +9,10 @@ import { haptic } from './mobile-haptics.js';
 import { paper } from './mobile-paper.js';
 import * as P27 from './mobile-p27.js';
 import { toJpeg, readShot, errCardHtml, installVision, SLOW_MS } from './sub-shot.js';
+import * as P31 from './mobile-p31.js';
+
+// Prompt 31: Gratis prøveperiode (arket og lagring ligger i mobile-p31.js). Etter Lagre lukkes arket.
+P31.hooks31({ trialSaved: () => { SB.sheet = false; SB.mode = null; }, subsReload: () => subsLoad() });
 
 Object.assign(ICONS, { sins: 'M4 20V10M10 20V4M16 20v-7M22 20H2', shist: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2', shome: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z' });
 
@@ -125,7 +129,7 @@ function head() {
 }
 
 /* ---------- «Legg til abonnement»-arket (prompt 28) ---------- */
-const A_IC = { sk: 'M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M8 12h8', rc: 'M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6', tx: 'M4 8h13l-3-3M20 16H7l3 3', man: 'M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4' };
+const A_IC = { sk: 'M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M8 12h8', rc: 'M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6', tx: 'M4 8h13l-3-3M20 16H7l3 3', man: 'M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4', trial: 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z' };
 const aIco = (k, size = 22) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${A_IC[k]}"/></svg>`;
 const CHEV = '<svg class="s28-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
 const CYC3 = [['weekly', 'Uke'], ['monthly', 'Måned'], ['yearly', 'År']];
@@ -133,13 +137,14 @@ function sheet() {
   if (!SB.sheet) return '';
   const f = SB.f, sh = SB.sh, mode = SB.mode === 'sk' && !P27.SH.r && !sh?.busy && !sh?.err ? null : SB.mode;
   const opt = (k, t, d, ai, inner = '') => `${inner ? '<label' : `<button type="button" data-sb="mode" data-v="${k}"`} class="s28-opt"><span class="s28-oic">${aIco(k)}</span><span class="s28-ot"><span class="s28-on"><b>${t}</b>${ai ? '<span class="s28-ai">✦ AI</span>' : ''}</span><span class="s28-od">${d}</span></span>${CHEV}${inner}${inner ? '</label>' : '</button>'}`;
-  const title = mode === 'man' ? 'Skriv inn selv' : mode === 'tx' ? 'Fra transaksjon' : mode === 'sk' ? 'Skjermbilde' : 'Legg til abonnement';
-  const sub = mode === 'man' ? 'Du kan endre alt senere.' : mode === 'tx' ? 'Velg et gjentakende trekk fra banken.' : mode === 'sk' ? 'Tjeneste, pris og trekkdato fylles ut.' : 'Velg hvordan du vil legge det inn.';
+  const title = mode === 'man' ? 'Skriv inn selv' : mode === 'tx' ? 'Fra transaksjon' : mode === 'sk' ? 'Skjermbilde' : mode === 'trial' ? 'Prøveperiode' : 'Legg til abonnement';
+  const sub = mode === 'man' ? 'Du kan endre alt senere.' : mode === 'tx' ? 'Velg et gjentakende trekk fra banken.' : mode === 'sk' ? 'Tjeneste, pris og trekkdato fylles ut.' : mode === 'trial' ? 'Vi minner deg på å avslutte før den blir betalt.' : 'Velg hvordan du vil legge det inn.';
   let body = '';
   if (!mode) {
     body = `<div class="s28-list">${opt('sk', 'Skjermbilde', 'Fra App Store, e-post eller kontoside. Tjeneste, pris og trekkdato fylles ut.', true, '<input class="m-file" type="file" accept="image/*,.heic,.heif" data-sbshot>')}
       ${opt('rc', 'Kvittering', 'Ta bilde eller velg PDF. Ollama leser beløp og syklus.', true, '<input class="m-file" type="file" multiple accept="image/*,application/pdf" data-sbfile>')}
       ${opt('tx', 'Fra transaksjon', 'Velg et gjentakende trekk fra banken.', false)}
+      ${opt('trial', 'Gratis prøveperiode', 'Få varsel før prøven går over til betalt. Skriv det med egne ord eller fyll ut.', true)}
       ${opt('man', 'Skriv inn selv', 'Tjeneste, beløp, syklus og trekkdag.', false)}</div>
       <p class="s28-foot">Bilder og kvitteringer leses lokalt av Ollama. Ingenting sendes ut av Homelab.</p>`;
   } else if (mode === 'man') {
@@ -147,6 +152,8 @@ function sheet() {
     body = `<form class="s28-form" data-sbform><div class="s28-list">${fld('Tjeneste', 'm-sb-name', f.name, 'HBO Max', 'text', 0)}${fld('Beløp', 'm-sb-price', f.price, '129 kr', 'decimal', 1)}${fld('Trekkdag', 'm-sb-day', f.day, '15.', 'numeric', 2)}</div>
       <div class="s28-cyc"><span class="s28-lab">SYKLUS</span><div class="s28-seg" role="radiogroup" aria-label="Syklus">${CYC3.map(([k, n]) => `<button type="button" role="radio" data-sb="cyc" data-v="${k}" aria-checked="${f.cycle === k}">${n}</button>`).join('')}</div></div>
       <button class="s28-pri" type="submit" ${SB.busy ? 'disabled' : ''}>${SB.busy ? 'Legger til …' : 'Legg til abonnement'}</button></form>`;
+  } else if (mode === 'trial') {
+    body = `<div class="s28-form p31-trial">${P31.trialBody()}</div>`;
   } else if (mode === 'tx') {
     body = `<div class="s28-list s28-cand">${SB.cand === null ? (SB.candErr ? `<div class="s28-pad">${esc(SB.candErr)}</div>` : '<div class="m-spin"></div>') : SB.cand.length ? SB.cand.map((c, i) => {
       const have = items().some((x) => x.name.toLowerCase() === String(c.merchant).toLowerCase());
@@ -154,7 +161,7 @@ function sheet() {
     }).join('') : '<div class="s28-pad">Fant ingen nye faste trekk i transaksjonene.</div>'}</div>`;
   } else if (mode === 'sk') {
     body = P27.SH.r ? P27.shotView() : `<div class="s28-shot">${sh?.thumb ? `<span class="s28-thumb" style="background-image:url('${sh.thumb}')"></span>` : ''}<div class="m-grow">${sh?.busy
-      ? `<b class="s28-st">${sh.slow ? 'Laster bildemodellen …' : `${sh.engine === 'gemini' ? 'Gemini' : 'Ollama'} leser skjermbildet …`}</b><span class="s28-od">${sh.slow ? 'Første gang tar det 30–60 sekunder.' : 'Finner tjeneste, plan, pris og trekkdato.'}</span><span class="s28-bar"><i></i></span>`
+      ? `<b class="s28-st">${P31.glimt(18, 'think', 'p31-inl')}${sh.slow ? 'Laster bildemodellen …' : `${sh.engine === 'gemini' ? 'Gemini' : 'Ollama'} leser skjermbildet …`}</b><span class="s28-od">${sh.slow ? 'Første gang tar det 30–60 sekunder.' : 'Finner tjeneste, plan, pris og trekkdato.'}</span><span class="s28-bar"><i></i></span>`
       : sh?.err ? errCardHtml(sh.err, { admin: (m.me?.role ?? 'admin') === 'admin', install: sh.inst }) : ''}</div></div>`;
   }
   const back = mode ? '<button type="button" class="p30-sb p30-back s28-back" data-sb="back28"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Tilbake</button>' : '';
@@ -202,7 +209,7 @@ function home() {
     ai: `<div class="${cls('ai')} sb-hero" ${soAttr('ai')}><span class="sb-k">✦ AI-SPARING</span><div class="sb-big">Spar ${kr(sv.monthly ?? 0)}<br>i måneden</div><div class="sb-hs">${nAi ? `AI fant ${nAi} abonnement${nAi === 1 ? '' : 'er'} å se på${pu ? `, og ${num[pu] ?? pu} prisøkning${pu > 1 ? 'er' : ''}` : ''}.` : 'AI fant ingenting å spare akkurat nå.'}</div><button class="sb-pill" data-sb="tab" data-v="ins">Gå gjennom</button></div>`,
     next7: `<div class="${cls('next7')} sb-card ${isI() ? 'glass2' : ''}" ${soAttr('next7')}><div class="sb-wk"><div><span class="sb-dim">Neste 7 dager</span><b class="sb-wkv">${kr(wk)}</b><span class="sb-dim">${up.length} trekk</span></div><div class="sb-bars" aria-hidden="true">${bars.map((v, i) => `<i style="height:${v ? Math.max(8, (v / bmx) * 56) : 4}px" class="${v ? 'on' : ''}${i % 2 ? ' gap' : ''}"></i>`).join('')}</div></div></div>`,
     check: `<div class="${cls('check')} sb-card ${isI() ? 'glass2' : ''}" ${soAttr('check')}><div class="sb-chk"><span class="sb-crown">♛</span><div class="m-grow"><b>Abonnementssjekk</b><span class="sb-dim">Gå gjennom før fornyelse</span></div></div><div class="sb-chk2">${low.length ? `<span><b>${low.length} abonnement${low.length > 1 ? 'er' : ''}</b> trenger en titt · spar opptil <span class="sb-acc">${kr(low.reduce((a, x) => a + per(x), 0))}</span></span><span class="sb-avs">${low.slice(0, 4).map((x) => lg(x, 26)).join('')}</span>` : '<span>Alt ser bra ut · ingen trenger en titt</span>'}</div></div>`,
-    list: `<div class="${cls('list')} sb-lblk" ${soAttr('list')}><div class="sec">Alle abonnementer · ${kr(SB.d?.monthly ?? 0)}/mnd</div>
+    list: `<div class="${cls('list')} sb-lblk" ${soAttr('list')}>${P31.trialCard()}<div class="sec">Alle abonnementer · ${kr(SB.d?.monthly ?? 0)}/mnd</div>
     ${card(all.map((x) => { const [n, c] = ST[statusOf(x)] ?? ST.active, [cl, pr] = CYC[x.cycle] ?? CYC.monthly;
       return row(x, `<span class="sb-r"><b class="m-mono">${n0(x.price)} kr<small class="sb-dim">${pr}</small></b><button class="stchip ${c}" data-subtog="${x.id}" aria-label="${x.active ? 'Si opp' : 'Gjenoppta'} ${esc(x.name)}">${x.active ? (c === 'ok' ? 'Aktiv' : 'Si opp') : 'Sagt opp'}</button></span>`, `${cl}${x.nextDate ? ` · neste ${dd(x.nextDate)}` : ''} · ${catOf(x)}${c !== 'ok' && x.active ? ` · ${n.replace(/^\W+ /, '')}` : ''}`);
     }).join('') || '<div class="m-empty">Ingen abonnementer ennå. Trykk + for å legge til.</div>')}
@@ -407,7 +414,7 @@ export async function subsBind(e, t) {
   if (k === 'tab') { SB.tab = v; SB.sheet = false; window.scrollTo(0, 0); }
   else if (k === 'sheet') { SB.sheet = !SB.sheet; SB.mode = null; SB.sh = null; P27.SH.r = null; if (SB.sheet) haptic('tap'); }
   else if (k === 'back28') { SB.mode = null; SB.sh = null; P27.SH.r = null; }
-  else if (k === 'mode') { SB.mode = v; if (v === 'tx') { await loadCand(); return true; } if (v === 'man') { draw(); setTimeout(() => document.getElementById('m-sb-name')?.focus(), 60); return true; } }
+  else if (k === 'mode') { SB.mode = v; if (v === 'trial') { P31.trialOpen(); draw(); setTimeout(() => document.getElementById('p31-trai')?.focus(), 60); return true; } if (v === 'tx') { await loadCand(); return true; } if (v === 'man') { draw(); setTimeout(() => document.getElementById('m-sb-name')?.focus(), 60); return true; } }
   else if (k === 'cyc') SB.f.cycle = v;
   else if (k === 'mon') SB.mon = +v;
   else if (k === 'task') { const dn = doneSet(); dn[v] = !dn[v]; try { localStorage.setItem('fh_sub_done', JSON.stringify(dn)); } catch {} if (dn[v]) haptic('ok'); }

@@ -25,6 +25,15 @@
 //   Bakgrunn: ny versjon sjekkes hver 6. time. Er notify_updates på og versjonen ikke varslet før, sendes realtime
 //   «system-update-available» (med title/body for push) til administratorene. auto_update: kl. 03:30–03:40 Europe/Oslo
 //   (etter nattlig backup kl. 03:00) skrives en vanlig forespørsel hvis ny versjon finnes og updateren er tilgjengelig.
+//
+// Prompt 31 (SERVER31), claude-code-system-oppdatering-nordlys.md – Nordlys OS:
+//   Brukervalget require_password (av) i /settings. POST /start og /rollback krever fortsatt admin (økt eller admin-token
+//   med finance:write), men passord BARE når require_password er på: {password} eller {reauthToken} fra
+//   POST /api/auth/reauth (engangstoken, 5 min, bundet til brukeren – for Face ID/fingeravtrykk i appene).
+//   Endring av bryteren logges (console + kv update_audit, vises som settingsLog i GET /).
+//   GET /api/system/version: + name 'Nordlys OS', codename 'Nordlys', tagline, sizeBytes (release-tarball fra GitHub
+//   eller null), notes uten tomme punkter («**Kalender:**» med underpunkter blir «Kalender: a. b.», uten dem hoppes det over).
+//   Varsel om ny versjon: «Nordlys 4.22 er klar» (realtime + notifyUser til administratorene: Web Push og kø).
 import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
@@ -34,6 +43,13 @@ import { db, kv, OWNER } from './db.js';
 import { sessionUser, isAdmin, checkPassword, clientIp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { broadcast } from './realtime.js';
+import { listUsers } from './auth.js';
+import { consumeReauth } from './reauth.js';
+import { notifyUser } from './notify.js';
+
+export const OS_NAME = 'Nordlys OS', OS_CODENAME = 'Nordlys', OS_TAGLINE = 'Lys i mørket, kjørt hjemme.';
+/** «4.22.0» → «Nordlys 4.22» */
+export const shortName = (v) => `${OS_CODENAME}${v ? ' ' + String(v).split('.').slice(0, 2).join('.') : ''}`;
 
 const DATA = resolve(config.dataDir);
 const UPD = join(DATA, 'update');
@@ -62,16 +78,36 @@ export function compareVersions(a, b) {
 const clean = (s) => s.replace(/\*\*|__|`/g, '').replace(/\[([^\]]+)\]\([^)]*\)/g, '$1').trim();
 
 /** «## [4.20.0] – 19.10.2026 · tittel» + punktlister → [{version, date, title, items}]. Bare toppnivåpunkter tas med. */
+// Prompt 31: et toppunkt som bare er en overskrift («**Kalender:**») er tomt alene. Underpunktene slås da sammen inn i det
+// («Kalender: Nytt Nå/Neste-kort. Ukenummer i Måned.»); uten underpunkter hoppes det over. Andre underpunkter tas ikke med.
+const headingOnly = (t) => /^[^.!?]{1,60}:$/.test(t);
+const sentence = (t) => (/[.!?…]$/.test(t) ? t : t + '.');
 export function parseChangelog(text) {
   const out = [];
-  let cur = null;
+  let cur = null, head = null;
+  const flush = () => {
+    if (!head) return;
+    if (head.subs.length && cur.items.length < 40) cur.items.push(`${head.text} ${head.subs.map(sentence).join(' ')}`.slice(0, 400));
+    head = null;
+  };
   for (const line of String(text ?? '').split(/\r?\n/)) {
     const h = line.match(/^##\s*\[(\d+\.\d+\.\d+)\]\s*(?:[–-]\s*([^·]*?))?\s*(?:·\s*(.*))?$/);
-    if (h) { cur = { version: h[1], date: (h[2] ?? '').trim() || null, title: (h[3] ?? '').trim() || null, items: [] }; out.push(cur); continue; }
-    if (/^#\s/.test(line)) { cur = null; continue; }
-    const it = cur && line.match(/^[-*]\s+(.+)$/);
-    if (it && cur.items.length < 40) cur.items.push(clean(it[1]).slice(0, 400));
+    if (h) { if (cur) flush(); cur = { version: h[1], date: (h[2] ?? '').trim() || null, title: (h[3] ?? '').trim() || null, items: [] }; out.push(cur); continue; }
+    if (/^#\s/.test(line)) { if (cur) flush(); cur = null; continue; }
+    if (!cur) continue;
+    const it = line.match(/^[-*]\s+(.+)$/);
+    if (it) {
+      flush();
+      const t = clean(it[1]);
+      if (!t || /^[-–:.\s]*$/.test(t)) continue; // tomt punkt
+      if (headingOnly(t)) { head = { text: t, subs: [] }; continue; }
+      if (cur.items.length < 40) cur.items.push(t.slice(0, 400));
+      continue;
+    }
+    const sub = head && line.match(/^\s+[-*]\s+(.+)$/);
+    if (sub) { const t = clean(sub[1]); if (t) head.subs.push(t); }
   }
+  if (cur) flush();
   return out;
 }
 
@@ -178,6 +214,19 @@ async function fetchLatest() {
   }
   return latest;
 }
+// Prompt 31: størrelsen på release-tarballen (GitHub-API, siste release). Egen cache (1 t), null når den ikke finnes.
+let release = null; // {at, sizeBytes}
+export async function releaseSize(force = false) {
+  if (!force && release && Date.now() - release.at < (release.sizeBytes == null ? 10 * 60_000 : 3_600_000)) return release.sizeBytes;
+  let sizeBytes = null;
+  try {
+    const r = await (await gh(`https://api.github.com/repos/${REPO}/releases/latest`, 'application/vnd.github+json')).json();
+    const a = (Array.isArray(r?.assets) ? r.assets : []).find((x) => /\.(tar\.gz|tgz)$/i.test(String(x?.name ?? '')));
+    sizeBytes = Number.isFinite(Number(a?.size)) && Number(a.size) > 0 ? Number(a.size) : null;
+  } catch { sizeBytes = null; }
+  release = { at: Date.now(), sizeBytes };
+  return sizeBytes;
+}
 const getLatest = async (force) => (!force && latest && Date.now() - latest.at < latest.ttl ? latest : fetchLatest()) // feil prøves igjen etter 1 min;
 
 /* ---------------- Backup ---------------- */
@@ -249,7 +298,8 @@ async function overview(c, force) {
     changes: lv ? newerSections(lv.sections, inst.version).map(({ version, date, title, items }) => ({ version, date, title, items })) : [],
     status: statusOut(status), running,
     log: status.state !== 'idle' ? readLog(60) : undefined,
-    canStart: !reason, reason, needsPassword: true,
+    canStart: !reason, reason, needsPassword: !!updateSettings().require_password,
+    name: OS_NAME, codename: OS_CODENAME, tagline: OS_TAGLINE, settingsLog: updateAudit().slice(0, 10),
     rollback: { available: !!rb && available && !running && canWrite(c), version: rb?.version ?? null },
     settings: updateSettings(),
   });
@@ -260,14 +310,24 @@ export async function versionInfo(force = false) {
   const inst = installed();
   const l = await getLatest(force);
   const lv = l.value;
-  const notes = lv ? newerSections(lv.sections, inst.version).flatMap((x) => x.items).slice(0, 40) : [];
-  return { current: inst.version, latest: lv?.version ?? null, notes, publishedAt: lv?.date ?? null, updateAvailable: availability(inst, lv) };
+  const notes = lv ? newerSections(lv.sections, inst.version).flatMap((x) => x.items).filter((t) => t && !headingOnly(t)).slice(0, 40) : [];
+  const updateAvailable = availability(inst, lv);
+  const sizeBytes = updateAvailable ? await releaseSize(force) : null;
+  return { current: inst.version, latest: lv?.version ?? null, notes, publishedAt: lv?.date ?? null, updateAvailable,
+    name: OS_NAME, codename: OS_CODENAME, tagline: OS_TAGLINE, sizeBytes };
 }
 
 /* ---------------- Brukervalg (serveroppsett, bare admin) ---------------- */
 
-const SETTINGS_DEFAULT = { auto_update: false, notify_updates: true };
+const SETTINGS_DEFAULT = { auto_update: false, notify_updates: true, require_password: false };
 export const updateSettings = () => ({ ...SETTINGS_DEFAULT, ...(kv.get(OWNER, 'update_settings', {}) ?? {}) });
+// Endringer i brukervalgene (hvem, når, hva): nyeste først, maks 50.
+export const updateAudit = () => { const v = kv.get(OWNER, 'update_audit', []); return Array.isArray(v) ? v : []; };
+function logSettingChange(user, key, from, to, via) {
+  const e = { at: Date.now(), user: String(user).slice(0, 64), key, from, to, via };
+  kv.set(OWNER, 'update_audit', [e, ...updateAudit()].slice(0, 50));
+  console.warn(`[system-update] ${key}: ${from} → ${to} av ${e.user} (${via})`);
+}
 
 /* ---------------- Start / rollback ---------------- */
 
@@ -279,8 +339,15 @@ async function startJob(c, action) {
   const ip = clientIp(c), wait = loginBlocked(ip);
   if (wait) return c.json({ error: `For mange forsøk. Prøv igjen om ${Math.ceil(wait / 60)} min.` }, 429);
   const b = await c.req.json().catch(() => ({}));
-  if (!checkPassword(a.user, b?.password)) { loginFailed(ip); return c.json({ error: 'Feil passord' }, 403); }
-  loginSucceeded(ip);
+  // Prompt 31: passord bare når «Krev passord for å oppdatere» er på. Da godtas også et ferskt reauthToken (biometri).
+  if (updateSettings().require_password) {
+    const viaToken = typeof b?.reauthToken === 'string' && consumeReauth(b.reauthToken, a.user);
+    if (!viaToken && !checkPassword(a.user, b?.password)) {
+      loginFailed(ip);
+      return c.json({ error: b?.reauthToken ? 'Bekreftelsen er utløpt. Prøv igjen.' : 'Feil passord', needsPassword: true }, 403);
+    }
+    loginSucceeded(ip);
+  }
   if (!updaterAvailable()) return c.json({ error: 'Oppdatering fra appen er ikke satt opp. Kjør update.sh én gang fra Proxmox for å slå det på.' }, 409);
   if (isRunning()) return c.json({ error: 'En oppdatering pågår allerede' }, 409);
   const target = action === 'rollback' ? rollbackTarget() : null;
@@ -325,8 +392,13 @@ export async function checkAndNotify() {
   const key = lv.sha || lv.version;
   if (!st.notify_updates || kv.get(OWNER, 'update_notified', null) === key) return false;
   kv.set(OWNER, 'update_notified', key);
-  broadcast('system-update-available', { title: 'Ny versjon av Homelab', body: `Versjon ${lv.version ?? 'ny'} er klar. Du har ${inst.version ?? 'ukjent'}.`, category: 'system',
+  const title = `${shortName(lv.version)} er klar`, body = `${OS_NAME} ${lv.version ?? 'ny versjon'} er klar. Du har ${inst.version ?? 'ukjent'}.`;
+  broadcast('system-update-available', { title, body, category: 'system',
     current: inst.version, latest: lv.version, publishedAt: lv.date, url: 'finanshub://innstillinger/system' });
+  for (const u of listUsers().filter((x) => x.role === 'admin')) {
+    notifyUser(u.id, { title, body, url: '/#/innstillinger/system', tag: `update-${lv.version ?? key.slice(0, 12)}`, category: 'system', data: { kind: 'update', version: lv.version, deepLink: 'finanshub://innstillinger/system' } })
+      .catch((e) => console.warn('[system-update] varsel:', e.message));
+  }
   return true;
 }
 
@@ -369,14 +441,16 @@ api.get('/settings', (c) => c.json(updateSettings()));
 api.put('/settings', async (c) => {
   if (!canWrite(c)) return c.json({ error: 'Tokenet mangler tilgangen finance:write' }, 403);
   const b = await c.req.json().catch(() => null);
-  if (!b || typeof b !== 'object' || Array.isArray(b)) return c.json({ error: 'Forventet {auto_update, notify_updates}' }, 400);
-  const next = updateSettings();
+  if (!b || typeof b !== 'object' || Array.isArray(b)) return c.json({ error: 'Forventet {auto_update, notify_updates, require_password}' }, 400);
+  const prev = updateSettings(), next = { ...prev };
   for (const k of Object.keys(b)) {
     if (!(k in SETTINGS_DEFAULT)) return c.json({ error: `Ukjent nøkkel ${k}` }, 400);
     if (typeof b[k] !== 'boolean') return c.json({ error: `${k} må være true eller false` }, 400);
     next[k] = b[k];
   }
   kv.set(OWNER, 'update_settings', next);
+  const a = c.get('access');
+  for (const k of Object.keys(SETTINGS_DEFAULT)) if (prev[k] !== next[k]) logSettingChange(a.user, k, prev[k], next[k], `${a.session ? 'økt' : 'app-token'} fra ${clientIp(c)}`);
   return c.json(next);
 });
 api.post('/start', (c) => startJob(c, 'update'));

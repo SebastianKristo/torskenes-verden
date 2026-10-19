@@ -11,7 +11,8 @@ import { m, draw, flash, isIOS } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { updAdmin } from './mobile-upd.js';
 import * as P23 from './mobile-p23.js';
-import { U, loadUpdate, startUpdate, running, state, watch, onUpdate } from '/assets/js/sysupdate.js';
+import { U, loadUpdate, startUpdate, checkUpdate, running, state, watch, onUpdate } from '/assets/js/sysupdate.js';
+import { glimt } from './mobile-p31.js';
 
 const ls = {
   get: (k) => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } },
@@ -62,13 +63,13 @@ function upLoad() {
     hlApi('/system/update/settings').then((c) => { UP.cfg = c ?? {}; draw(); }).catch((e) => { UP.cfg = e.status === 404 ? false : null; });
   }
 }
-const ver = () => {
+export const ver = () => {
   const d = U.d ?? {};
   return { cur: d.installed?.version ?? UP.v?.current ?? '', lat: d.latest?.version ?? UP.v?.latest ?? '' };
 };
 const STEP_T = { download: (v) => `Laster ned ${v} …`, backup: () => 'Tar backup før oppdatering …', install: () => 'Installerer på hjemmeserveren …', restart: () => 'Starter tjenestene på nytt …' };
 const STEP_PCT = { download: 10, backup: 40, install: 65, restart: 88 };
-function progress() {
+export function progress() {
   const s = U.d?.status ?? {}, st = state();
   let key = (s.steps ?? []).find((x) => /run|active|on|pending/.test(x.state ?? '') && x.state !== 'pending')?.key
     ?? (st === 'restarting' ? 'restart' : st === 'building' ? 'install' : 'download');
@@ -79,7 +80,7 @@ function progress() {
   return { key, pct: Math.max(0, Math.min(100, Math.round(pct))), text: U.reloading ? 'Ny versjon svarer. Laster appen på nytt …' : (STEP_T[key] ?? STEP_T.download)(ver().lat || 'ny versjon') };
 }
 /** Tilstand: avail | run | done | fail | fresh | null (ikke admin / ikke lastet). */
-function upState() {
+export function upState() {
   if (!updAdmin()) return null;
   upLoad();
   if (U.st !== 'ok' || !U.d) return UP.v?.updateAvailable ? 'avail' : null;
@@ -96,21 +97,25 @@ const IC_DOWN = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" str
 const IC_OK = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
 const IC_ERR = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 7v6M12 17h.01"/></svg>';
 const X = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
-const notesOf = () => {
+// Prompt 31: tomme punkter («Kalender:» uten innhold) hoppes over.
+const okNote = (t) => { const v = String(t ?? '').replace(/^[-*•\s]+/, '').trim(); return v && !/^[^:]{1,40}:\s*$/.test(v); };
+export const notesOf = () => {
   const n = UP.v?.notes;
-  if (Array.isArray(n) && n.length) return n.map((x) => (typeof x === 'string' ? x : x?.text ?? '')).filter(Boolean).slice(0, 12);
-  return (U.d?.changes ?? []).flatMap((c) => c.items ?? []).slice(0, 12);
+  if (Array.isArray(n) && n.length) return n.map((x) => (typeof x === 'string' ? x : x?.text ?? '')).filter(okNote).slice(0, 12);
+  return (U.d?.changes ?? []).flatMap((c) => c.items ?? []).map((x) => (typeof x === 'string' ? x : x?.text ?? '')).filter(okNote).slice(0, 12);
 };
+/** «4.22» av «4.22.0». */
+const short = (v) => String(v ?? '').replace(/^v/, '').split('.').slice(0, 2).join('.');
 /** where: 'home' (kan skjules i 24 t) | 'set' (alltid, unntatt «siste versjon»). */
 export function updBanner(where) {
   const k = upState();
   if (!k || k === 'fresh') return '';
   if (where === 'home' && k === 'avail' && (Date.now() - UP.hide < 864e5 || UP.cfg?.notify_updates === false)) return '';
   const { cur, lat } = ver(), job = ls.get(JOB) ?? {}, P = k === 'run' ? progress() : null;
-  const title = k === 'done' ? (job.rollback ? `Gjenopprettet til ${cur || job.to || ''}` : `Oppdatert til ${cur || job.to || lat}`) : k === 'run' ? (job.rollback ? 'Gjenoppretter Homelab' : 'Oppdaterer Homelab') : k === 'fail' ? 'Oppdateringen feilet' : `Ny versjon ${lat}`;
+  const title = k === 'done' ? (job.rollback ? `Gjenopprettet til ${cur || job.to || ''}` : `Oppdatert til Nordlys ${cur || job.to || lat}`) : k === 'run' ? (job.rollback ? 'Gjenoppretter Nordlys OS' : 'Oppdaterer Nordlys OS') : k === 'fail' ? 'Oppdateringen feilet' : `Nordlys ${lat} er klar`;
   const sub = k === 'done' ? 'Alt kjører. Endringene er aktive i appen og på web.' : k === 'run' ? 'Du kan bruke appen mens den oppdateres.' : k === 'fail' ? (U.d?.status?.error || 'Noe gikk galt under oppdateringen.') : `Du har ${cur || 'en eldre versjon'}. Oppdaterer hjemmeserveren, web og appen.`;
   const notes = notesOf();
-  return `<div class="p30-up${k === 'fail' ? ' fail' : ''}" role="status" aria-live="polite" data-p30up="${k}">
+  return `<div class="p30-up p31-upc${k === 'fail' ? ' fail' : ''}" role="status" aria-live="polite" data-p30up="${k}" data-p31sys title="Åpne System">
     <div class="p30-uph"><span class="p30-upi">${k === 'done' ? IC_OK : k === 'fail' ? IC_ERR : IC_DOWN}</span><span class="m-grow"><b>${esc(title)}</b><span>${esc(sub)}</span></span>${where === 'home' && k === 'avail' ? `<button type="button" class="p30-upx" data-p30="uplater" aria-label="Skjul i 24 timer">${X}</button>` : ''}</div>
     ${P ? `<div class="p30-upp"><span class="p30-upb"><i style="width:${P.pct}%"></i></span><span class="p30-ups"><span>${esc(P.text)}</span><span class="p30-mono">${P.pct} %</span></span></div>` : ''}
     ${k === 'avail' && UP.notes && notes.length ? `<ul class="p30-upn">${notes.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}
@@ -127,9 +132,9 @@ const tog = (key, label, sub, on) => `<button type="button" class="opt-row p17-r
 export function progGroup(grp, row) {
   if (!updAdmin()) return '';
   const k = upState(), { cur, lat } = ver(), c = UP.cfg;
-  const vrow = k === 'avail'
-    ? row('', `Homelab ${cur}`.trim(), `Ny versjon ${lat} er klar`, 'Oppdater ›', 'backup', 'oppd', 'data-p30="upopen"')
-    : row('#/set/oppd', `Homelab ${cur || ''}`.trim(), k === 'run' ? 'Oppdaterer …' : k === 'fail' ? 'Oppdateringen feilet' : 'Siste versjon', k === 'run' ? `${progress().pct} %` : k === 'fail' ? '' : '✓', 'backup', 'oppd');
+  // Prompt 31: navigasjonsrad (›) til System-siden «Nordlys OS». Høyre: «Oppdater» (rød) når ny versjon finnes, ✓ ellers.
+  const vrow = row('#/nordlys', `Nordlys OS ${cur || ''}`.trim(), k === 'avail' ? `Ny versjon ${lat} er klar` : k === 'run' ? 'Oppdaterer …' : k === 'fail' ? 'Oppdateringen feilet' : k === 'done' ? 'Oppdatert · siste versjon' : 'Siste versjon', k === 'avail' ? 'Oppdater' : k === 'run' ? `${progress().pct} %` : k === 'fail' ? '!' : '✓', 'backup', 'oppd')
+    .replace('<span class="sval">', `<span class="sval${k === 'avail' || k === 'fail' ? ' p31-red' : ' p31-ok'}">`);
   const rows = [vrow];
   if (c && typeof c === 'object') rows.push(tog('auto_update', 'Automatiske oppdateringer', 'Installeres om natten kl. 03:30, etter backup', c.auto_update === true), tog('notify_updates', 'Varsle om nye versjoner', 'Banner på Hjem og push', c.notify_updates !== false));
   return grp('PROGRAMVARE', rows).replace('<div class="list p17-list">', '<div class="list p17-list p30-prog">');
@@ -139,39 +144,65 @@ export function progGroup(grp, row) {
 export function sheets30() {
   if (!UP.sheet) return '';
   const rb = UP.sheet === 'rollback', { cur, lat } = ver(), job = ls.get(JOB) ?? {};
-  const t = rb ? `Gjenopprett ${job.from || 'forrige versjon'}` : `Oppdater til ${lat || 'ny versjon'}`;
+  const t = rb ? `Gjenopprett ${job.from || 'forrige versjon'}` : 'Bekreft med passord';
   return `<div class="sheet-bg" data-p30="upx"></div><div class="pp-sheet p30-sheet" role="dialog" aria-modal="true" aria-label="${esc(t)}"><span class="pp-grab" aria-hidden="true"></span>
     <div class="p30-shh"><b class="pp-sh">${esc(t)}</b>${sheetBtn('Avbryt', 'sec', 'data-p30="upx"')}</div>
-    <span class="pp-mut p30-sht">${rb ? `Går tilbake til forrige vellykkede versjon${cur ? ` (fra ${esc(cur)})` : ''}. Dataene dine beholdes – databasen rulles ikke tilbake.` : 'Hjemmeserveren, web og appen oppdateres. Det tas backup før installasjonen, og tjenestene starter på nytt (vanligvis 2–5 minutter).'}</span>
+    <span class="pp-mut p30-sht">${rb ? `Går tilbake til forrige vellykkede versjon${cur ? ` (fra ${esc(cur)})` : ''}. Dataene dine beholdes – databasen rulles ikke tilbake.` : `Nordlys ${esc(lat || '')} installeres på hjemmeserveren, web og i appen. Det tas backup først, og serveren starter på nytt (ca. 2 minutter).`}</span>
     <input class="sinp" type="password" id="p30-pw" data-p30pw value="${esc(UP.pw)}" placeholder="Passord" autocomplete="current-password" aria-label="Passord" enterkeyhint="go">
     ${UP.err ? `<div class="upd-merr" role="alert">${esc(UP.err)}</div>` : ''}
-    <button type="button" class="pp-btn ink p30-shgo" data-p30="upgo" ${UP.busy ? 'disabled' : ''}>${UP.busy ? 'Starter …' : rb ? 'Gjenopprett' : 'Oppdater nå'}</button></div>`;
+    <button type="button" class="pp-btn ink p30-shgo" data-p30="upgo" ${UP.busy ? 'disabled' : ''}>${UP.busy ? 'Starter …' : rb ? 'Gjenopprett' : 'Oppdater'}</button></div>`;
 }
-async function upGo() {
-  const pw = document.getElementById('p30-pw')?.value ?? UP.pw;
-  if (!pw) { UP.err = 'Skriv inn passordet ditt.'; return draw(); }
+/** Prompt 31: krever serveren passord (require_password på)? Eldre server uten bryteren: ja. */
+const needPw = () => U.d?.needsPassword === true || (UP.cfg && typeof UP.cfg === 'object' ? UP.cfg.require_password === true : UP.cfg === false && U.d?.needsPassword !== false);
+const pwErr = (e) => e && (e.status === 401 || e.status === 403 || e.status === 428) && /passord|password|reauth/i.test(e.message ?? '');
+/** Start uten passord (standard). Samme tilstandsoppdatering som startUpdate() i sysupdate.js. */
+async function startNoPw() {
+  U.starting = true; U.startErr = '';
+  try {
+    const r = await hlApi('/system/update/start', { method: 'POST', json: {} });
+    U.prev = { sha: U.d?.installed?.sha ?? null, version: U.d?.installed?.version ?? null }; U.jobId = r?.id ?? null; U.backup = r?.backup ?? null;
+    U.d = { ...(U.d ?? {}), status: { ...(U.d?.status ?? {}), id: r?.id, state: 'downloading', step: 'downloading', error: null, startedAt: new Date().toISOString(), finishedAt: null } };
+    U.starting = false; watch(); return true;
+  } catch (e) { U.starting = false; U.startErr = e.message; if (pwErr(e)) throw e; return false; }
+}
+/** «Oppdater nå» (banner, System-siden): ett trykk, eller passordarket når admin har slått på «Krev passord». */
+export async function upNow(rb = false) {
+  if (UP.busy || running()) return;
+  if (needPw()) { UP.sheet = rb ? 'rollback' : 'start'; UP.pw = ''; UP.err = ''; draw(); setTimeout(() => document.getElementById('p30-pw')?.focus(), 60); return; }
+  UP.sheet = rb ? 'rollback' : 'start'; UP.pw = '';
+  await upGo('');
+}
+async function upGo(pwIn) {
+  const pw = pwIn ?? document.getElementById('p30-pw')?.value ?? UP.pw;
+  if (!pw && needPw()) { UP.err = 'Skriv inn passordet ditt.'; return draw(); }
   const { cur, lat } = ver(), rb = UP.sheet === 'rollback';
   UP.busy = true; UP.err = ''; draw();
   if (!rb) {
-    const ok = await startUpdate(pw);
+    let ok;
+    try { ok = pw ? await startUpdate(pw) : await startNoPw(); }
+    catch (e) { UP.busy = false; UP.cfg = { ...(UP.cfg || {}), require_password: true }; UP.sheet = 'start'; UP.err = 'Serveren krever passord for å oppdatere.'; draw(); setTimeout(() => document.getElementById('p30-pw')?.focus(), 60); return; }
     UP.busy = false;
-    if (!ok) { UP.err = U.startErr || 'Kunne ikke starte oppdateringen.'; return draw(); }
+    if (!ok) { UP.err = U.startErr || 'Kunne ikke starte oppdateringen.'; if (!pw) { UP.sheet = null; flash(UP.err, 'err'); } return draw(); }
     ls.set(JOB, { from: cur, to: lat, at: Date.now() });
   } else {
     try {
-      const r = await hlApi('/system/update/rollback', { method: 'POST', json: { password: pw } });
+      const r = await hlApi('/system/update/rollback', { method: 'POST', json: pw ? { password: pw } : {} });
       U.prev = { sha: U.d?.installed?.sha ?? null, version: U.d?.installed?.version ?? null }; U.jobId = r?.id ?? null;
       U.d = { ...(U.d ?? {}), running: true, status: { ...(U.d?.status ?? {}), id: r?.id, state: 'downloading', step: 'downloading', error: null, startedAt: new Date().toISOString(), finishedAt: null } };
       ls.set(JOB, { from: cur, to: (ls.get(JOB) ?? {}).from || '', rollback: true, at: Date.now() });
       watch();
-    } catch (e) { UP.busy = false; UP.err = e.status === 404 ? 'Serveren kan ikke gjenopprette fra appen ennå.' : e.message; return draw(); }
+    } catch (e) {
+      UP.busy = false; UP.err = e.status === 404 ? 'Serveren kan ikke gjenopprette fra appen ennå.' : e.message;
+      if (!pw && pwErr(e)) { UP.cfg = { ...(UP.cfg || {}), require_password: true }; UP.sheet = 'rollback'; UP.err = 'Serveren krever passord.'; } else if (!pw) { UP.sheet = null; flash(UP.err, 'err'); }
+      return draw();
+    }
     UP.busy = false;
   }
   UP.sheet = null; UP.pw = ''; hapLight(); draw();
 }
 async function upTog(k) {
   const c = UP.cfg; if (!c || typeof c !== 'object') return;
-  const next = { ...c, [k]: k === 'auto_update' ? !(c.auto_update === true) : !(c.notify_updates !== false) };
+  const next = { ...c, [k]: k === 'notify_updates' ? !(c.notify_updates !== false) : !(c[k] === true) };
   UP.cfg = next; draw();
   try { UP.cfg = { ...next, ...((await hlApi('/system/update/settings', { method: 'PUT', json: { [k]: next[k] } })) ?? {}) }; flash(next[k] ? 'Slått på ✓' : 'Slått av'); }
   catch (e) { UP.cfg = c; flash(e.message, 'err'); }
@@ -314,6 +345,53 @@ function onPop(e) {
 }
 
 /* =====================================================================
+   Prompt 31: System-siden «Nordlys OS» (Innstillinger → PROGRAMVARE, banneret på Hjem)
+   ===================================================================== */
+// Ren visning: papirfarget topp (‹ Tilbake · Programvareoppdatering · System), ingen bakgrunnsbilde, ingen bunnmeny
+// eller skanneknapp. Hero-kortet med nordlys-gradient er det eneste fargede. «Oppdater nå» ligger fast nederst med fade.
+const size = (b) => (b ? `${Math.round(+b / 1e6)} MB` : '');
+const dNo = (v) => { const d = new Date(v ?? ''); return Number.isNaN(+d) ? '' : `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`; };
+export const NS = { from: 'set' };
+export function sysEnter(prev) { if (prev && prev !== 'nordlys') NS.from = prev; }
+export function sysView() {
+  const adm = updAdmin(), k = adm ? upState() : null, { cur, lat } = ver(), V = UP.v ?? {}, L = U.d?.latest ?? {}, P = k === 'run' ? progress() : null;
+  const fresh = k === 'fresh' || k === 'done' || (!lat && cur), nv = lat || cur || '';
+  const big = short(fresh ? cur || nv : nv) || '–';
+  const hstate = k === 'run' ? 'Oppdaterer …' : k === 'done' ? 'Oppdatert' : UP.chk ? 'Ser etter oppdatering …' : k === 'fail' ? 'Oppdateringen feilet' : k === 'avail' ? 'Oppdatering tilgjengelig' : k === 'fresh' ? 'Du har siste versjon' : adm ? 'Henter versjon …' : 'Bare administrator kan oppdatere';
+  const sha = String(L.sha ?? V.sha ?? V.latestSha ?? '').slice(0, 7), sz = k === 'avail' ? size(V.sizeBytes ?? L.sizeBytes) : '';
+  const verLine = [nv, sha, sz].filter(Boolean).join(' · ') || '–';
+  const inst = fresh ? 'Installert' : cur ? `Du har ${cur}` : '';
+  const req = UP.cfg && typeof UP.cfg === 'object' && UP.cfg.require_password === true;
+  const notes = notesOf(), date = dNo(V.publishedAt ?? V.date ?? L.date ?? L.publishedAt) || dNo(Date.now());
+  const STEPS = [['backup', 'Tar backup av databasen'], ['download', `Laster ned ${nv}`], ['install', 'Bygger'], ['restart', 'Starter serveren på nytt']];
+  const si = P ? Math.max(0, STEPS.findIndex(([x]) => x === (P.key === 'download' && P.pct >= 35 ? 'backup' : P.key))) : -1;
+  const back = NS.from && NS.from !== 'nordlys' ? `#/${NS.from === 'set' ? 'set' : NS.from}` : '#/set';
+  return `<div class="n31">
+    <div class="n31-top"><a class="n31-back" href="${back}" data-swipeback aria-label="Tilbake">${CHEV}<span>Tilbake</span></a><span class="n31-k">Programvareoppdatering</span><h1 class="n31-h">System</h1></div>
+    <section class="n31-hero" aria-label="Nordlys OS ${esc(nv)}"><i class="n31-arc a1" aria-hidden="true"></i><i class="n31-arc a2" aria-hidden="true"></i>
+      <div class="n31-hr"><span class="n31-big">${esc(big)}</span>${adm ? `<button type="button" class="n31-chk" data-p30="upchk" ${k === 'run' || UP.chk ? 'disabled' : ''}>${UP.chk ? 'Ser etter …' : 'Se etter'}</button>` : ''}</div>
+      <div class="n31-hb"><span class="n31-hs">${esc(hstate)}</span><span class="n31-name">Nordlys<span>OS</span></span><span class="n31-host">Homelab · ${esc(location.hostname)}</span>
+        ${P ? `<div class="n31-prog"><span class="n31-bar"><i style="width:${P.pct}%"></i></span><span class="n31-pl"><span>${esc(P.text)}</span><span class="p30-mono">${P.pct} %</span></span>
+          <div class="n31-steps">${STEPS.map(([, n], i) => `<span class="${i < si ? 'ok' : i === si ? 'on' : ''}">${i < si ? '✓' : i === si ? glimt(14, 'think') : '○'} ${esc(n)}</span>`).join('')}</div></div>` : ''}</div></section>
+    <div class="n31-card"><div class="n31-row"><span class="m-grow"><b>Programvareversjon</b><span class="p30-mono">${esc(verLine)}</span></span><span class="n31-inst${fresh ? ' ok' : ''}">${esc(inst)}</span></div>
+      ${adm && UP.cfg && typeof UP.cfg === 'object' ? `<button type="button" class="n31-row n31-tg" data-p30="uptog" data-k="require_password" role="switch" aria-checked="${req}"><span class="m-grow"><b>Krev passord for å oppdatere</b><span>${req ? 'Passord kreves før oppdateringen starter' : 'Av · admin kan oppdatere med ett trykk'}</span></span><span class="sw" aria-hidden="true" aria-checked="${req}"></span></button>` : ''}</div>
+    <span class="n31-note">Oppdateringen gjøres av updater-containeren på serveren. .env, data/ og proton/ røres ikke.</span>
+    <div class="n31-new"><b class="n31-tag">Dette er Nordlys ${esc(short(nv))}. ${esc(V.tagline || 'Lys i mørket, kjørt hjemme.')}</b>
+      ${notes.length ? `<span class="n31-lab">NYTT I ${esc(nv)}${date ? ` · ${esc(date)}` : ''}</span><ul>${notes.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}</div></div>`;
+}
+/** Knappen fast nederst (utenfor scroll-innholdet), med fade fra bakgrunnsfargen. */
+export function sysBottom() {
+  if (m.screen !== 'nordlys' || !updAdmin()) return '';
+  const k = upState(), P = k === 'run' ? progress() : null;
+  const [lab, sub, cls] = k === 'run' ? [`Oppdaterer … ${P.pct} %`, 'Du kan bruke Homelab mens den oppdateres.', 'run']
+    : k === 'done' ? ['Ferdig', 'Endringene er aktive på web og i appen.', 'ok']
+    : k === 'fresh' ? [UP.chk ? 'Ser etter …' : 'Du har siste versjon', 'Sist sjekket nå', 'off']
+    : k === 'fail' ? ['Prøv igjen', U.d?.status?.error || 'Oppdateringen feilet', '']
+    : k === 'avail' ? ['Oppdater nå', 'Tar backup først · ca. 2 minutter · serveren starter på nytt', ''] : ['Henter versjon …', '', 'off'];
+  return `<div class="n31-bot"><button type="button" class="n31-go ${cls}" data-p30="upbig" ${k === 'run' || UP.busy ? 'disabled' : ''}>${esc(UP.busy ? 'Starter …' : lab)}</button>${sub ? `<span>${esc(sub)}</span>` : ''}</div>`;
+}
+
+/* =====================================================================
    Kroker fra mobile.js
    ===================================================================== */
 let booted = false;
@@ -333,12 +411,16 @@ export function leave30() { UP.sheet = null; UP.notes = false; }
 export function input30(e, t) { if (t.matches?.('[data-p30pw]')) { UP.pw = t.value; return true; } return false; }
 export async function bind30(e, t) {
   const x = t.closest?.('[data-p30]');
+  // Prompt 31: trykk hvor som helst på oppdateringskortet åpner System-siden (knappene beholder egen handling).
+  if (!x && t.closest?.('[data-p31sys]') && !t.closest('a,button')) { e.preventDefault(); location.hash = '#/nordlys'; return true; }
   if (!x) return false;
   const a = x.dataset.p30;
   e.preventDefault();
   if (a === 'uplater') { UP.hide = Date.now(); ls.set('papir_upd_hide', UP.hide); flash('Du finner oppdateringen i Innstillinger'); return true; }
   if (a === 'upnotes') { UP.notes = !UP.notes; draw(); return true; }
-  if (a === 'upopen' || a === 'uprb') { UP.sheet = a === 'uprb' ? 'rollback' : 'start'; UP.pw = ''; UP.err = ''; draw(); setTimeout(() => document.getElementById('p30-pw')?.focus(), 60); return true; }
+  if (a === 'upopen' || a === 'uprb') { await upNow(a === 'uprb'); return true; }
+  if (a === 'upchk') { if (running()) return true; UP.chk = true; draw(); await checkUpdate().catch(() => {}); UP.vt = 0; upLoad(); UP.chk = false; hapLight(); draw(); return true; }
+  if (a === 'upbig') { const k = upState(); if (k === 'avail' || k === 'fail') await upNow(); else if (k === 'done') { ls.set(JOB, null); hapLight(); draw(); } else if (k === 'fresh') { UP.chk = true; draw(); await checkUpdate().catch(() => {}); UP.vt = 0; upLoad(); UP.chk = false; draw(); } return true; }
   if (a === 'upx') { UP.sheet = null; draw(); return true; }
   if (a === 'upgo') { await upGo(); return true; }
   if (a === 'upok') { ls.set(JOB, null); try { navigator.vibrate?.([10, 40, 10]); } catch {} draw(); return true; }

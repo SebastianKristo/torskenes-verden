@@ -33,10 +33,14 @@ import integrationsApi, { settingsSearchApi, testByIdOrName, integrationScope } 
 import settingsAsk30Api from './settings-ask30.js';
 import calendarApi, { widgetApi as calendarWidgetApi } from './calendar.js';
 import chatApi from './chat.js'; // prompt 27 (SERVER-B): Chat
+import appUpdateApi from './app-update.js'; // prompt 32: Android-appen oppdaterer seg selv (GitHub-release via serveren)
 import systemUpdateApi, { startUpdateScheduler } from './system-update.js'; // Oppdater fra appen: data/update/ ↔ updater-containeren
 import systemBackupApi, { startSystemBackupScheduler } from './system-backup.js'; // prompt 29: systembackup (bare admin)
 import smbBrowseApi from './smb-browse.js'; // prompt 30: SMB-veiviser (finn server, shares, mapper, test, lagre) – bare admin
 import calendarQuickApi from './calendar-quick.js'; // prompt 29: Kalender → rask time (AI-jobbkø)
+import { reauthHandler } from './reauth.js'; // prompt 31: POST /api/auth/reauth
+import assistApi from './assist.js'; // prompt 31: Glimt – POST /api/assist (vær, kalender, … før LLM), serverjobb
+import { startTrialScheduler } from './trials-notify.js'; // prompt 31: varsler for gratis prøveperioder
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
 
 const api = process.env.MOCK_DATA === '1' ? await import('./mock.js') : integrations;
@@ -131,6 +135,8 @@ const totpStep = async (c) => {
 };
 app.post('/api/auth/totp', totpStep);
 app.post('/api/auth/2fa', totpStep); // prompt 25: samme steg under navnet i designet
+// Prompt 31: bekreft passordet på nytt → kortlivet engangstoken (5 min, bundet til brukeren) for biometri-flyten i appene.
+app.post('/api/auth/reauth', authOrToken, reauthHandler);
 
 /* ---------------- Førstegangsoppsett ---------------- */
 
@@ -556,6 +562,7 @@ app.route('/api/icons', iconsApi); // Ikoner (prompt 23): Iconify-søk, SVG cach
 app.route('/', tilesApi);
 app.route('/api/family', familyApi); // Familie og kart (prompt 16): posisjon, soner, varsler og helse
 app.route('/api/tasks', tasksApi); // Huskeliste (prompt 17): delt i familien, sanntid via /api/ws
+app.route('/api/app/android', appUpdateApi); // prompt 32: /latest og /apk/:version, sesjon eller app-token, alle brukere
 app.route('/api', notifyApi); // Varsler (/api/me/notify) og appnavn (/api/app) (prompt 17)
 // Boliger (prompt 17): skann rett inn i en bolig. Alias for FinansHub-rutene, samme tilgang (sesjon eller token).
 const toFinans = async (c, path) => {
@@ -594,6 +601,7 @@ app.route('/api/backup', systemBackupApi); // prompt 29: bare admin; endringer k
 app.route('/api/system/update', systemUpdateApi); // bare admin; start/rollback krever passordet og økt eller admin-token (finance:write)
 // Prompt 30: kort versjonssvar for oppdateringsbanneret (samme tilgang som /api/system/update).
 app.get('/api/system/version', (c) => { const u = new URL(c.req.url); u.pathname = '/api/system/update/version'; return app.fetch(new Request(u, { headers: c.req.raw.headers }), c.env); });
+app.route('/api/assist', assistApi); // prompt 31: Glimt-ruteren (sesjon eller app-token, per bruker)
 app.route('/api/chat', chatApi); // prompt 27: Chat (Open WebUI eller Ollama/Gemini/Groq direkte), sesjon eller app-token
 const domainPill = async (c) => {
   if (!isAdmin(c.get('user'))) return c.json({ error: 'Bare administratorer har tilgang', restricted: true }, 403);
@@ -609,7 +617,7 @@ app.route('/home/api', homeApi);
 app.route('/mat/api', matApi);
 app.route('/domains/api', domainsApi);
 app.get('/mat/calendar.ics', matCalendar);
-if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); }
+if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); }
 
 app.onError((err, c) => {
   console.error(err);

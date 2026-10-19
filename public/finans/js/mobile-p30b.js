@@ -9,6 +9,7 @@ import { api, esc, n0, dd, parseAmount } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { BO } from './mobile-p16.js';
 import { sheetBtn, hapLight } from './mobile-p30.js';
+import { glimt } from './mobile-p31.js';
 
 export const B30 = { ent: null, edit: {}, t: null, saving: false, hist: {}, sh: {}, sel: [], role: 'editor', email: '', busy: false };
 const kr = (v) => `${(v ?? 0) < 0 ? '−' : ''}${n0(v)} kr`;
@@ -26,7 +27,7 @@ export function reviewCard(d) {
   const rows = (d.entries ?? []).filter((e) => e.status === 'review' || e.pending);
   if (!rows.length) return '';
   return `<div class="pp-card b30-rev"><span class="pp-lab">TIL GJENNOMGANG · ${rows.length}</span>${rows.slice(0, 6).map((e) => `<div class="b30-rr">
-      <button type="button" class="b30-rtop" data-b30="ent" data-id="${e.id}" aria-label="Åpne ${esc(e.description)}">${thumb(d, e)}<span class="m-grow"><b class="m-ell">${esc(e.description)}</b><span class="pp-mut m-ell">${e.pending ? '✦ AI leser kvitteringen …' : `✦ ${esc(e.categoryLabel ?? e.category ?? 'Forslag')}`}</span></span><b class="b30-amt">${kr(e.amount)}</b>${CHEVR}</button>
+      <button type="button" class="b30-rtop" data-b30="ent" data-id="${e.id}" aria-label="Åpne ${esc(e.description)}">${thumb(d, e)}<span class="m-grow"><b class="m-ell">${esc(e.description)}</b><span class="pp-mut m-ell">${e.pending ? `${glimt(14, 'think', 'p31-inl')}Glimt leser kvitteringen …` : `✦ ${esc(e.categoryLabel ?? e.category ?? 'Forslag')}`}</span></span><b class="b30-amt">${kr(e.amount)}</b>${CHEVR}</button>
       ${d.canEdit && !e.pending ? `<div class="b30-chips">${topCats(d).map((c) => `<button type="button" class="b30-chip" data-b30="cat" data-id="${e.id}" data-c="${esc(c.id)}" aria-pressed="${e.category === c.name}">${esc(c.name)}</button>`).join('')}</div>
       <div class="b30-two"><button type="button" class="pp-btn sm" data-b30="ent" data-id="${e.id}">Detaljer</button><button type="button" class="pp-btn sm ink" data-b30="ok" data-id="${e.id}">Godkjenn</button></div>` : ''}</div>`).join('')}</div>`;
 }

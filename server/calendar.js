@@ -38,6 +38,7 @@ import { cached } from './cache.js';
 import { authOrToken, layoutOf } from './mobile.js';
 import { listFor as birthdaysOf, googleCalendarEvents, googleConnected, googleCalendarIds, googleEventWrite, googleCanWrite } from './birthdays.js';
 import { parseIcs, expandIcs as expandCal } from './ical-expand.js';
+import { trialCalendarItems } from './finans/trials.js'; // prompt 31: gratis prøveperioder som heldagshendelser i Privat
 
 const MOCK = process.env.MOCK_DATA === '1';
 const TZ = 'Europe/Oslo';
@@ -99,6 +100,7 @@ export function subjectOf(title, own = {}) {
 
 /** Typen etter reglene i claude-code-kalender.md. */
 export function typeOf({ title = '', categories = [], allDay = false, source = 'ical', recurring = false, subjectKnown = false, durationMs = 0, lessonLike = false }) {
+  if (source === 'trials') return 'skole'; // prompt 31: «Viaplay-prøven slutter» er ikke en skoleprøve
   const t = `${title} ${[categories].flat().filter(Boolean).join(' ')}`;
   if (/prøve|heldag|muntlig|eksamen|\btentamen|\bquiz\b|\btest\b/i.test(t)) return 'prove';
   if (/innlever|\bfrist|deadline|\bdue\b/i.test(t)) return 'innl';
@@ -380,6 +382,12 @@ export async function eventsFor(user, fromDate, toDate) {
   } catch (e) { sources.push({ id: 'google', name: 'Google Kalender', configured: true, ok: false, count: 0, error: srcErr(e) }); }
   const loc = localEvents(user, from, to, ctx);
   if (loc.length || MOCK) { events.push(...loc); sources.push({ id: 'local', name: 'Privat (lokalt)', configured: true, ok: true, count: loc.length }); }
+  // Prompt 31: aktive prøveperioder (virtuell kilde «trials», bare lesing; endres i Abonnementer).
+  try {
+    const tr = trialCalendarItems(user, fromDate, toDate).map((t) => eventOut({ src: 'trials', uid: t.id, title: t.title, start: osloAt(t.date), end: osloAt(addDays(t.date, 1)), allDay: true, date: t.date,
+      endDate: addDays(t.date, 1), desc: t.note, url: t.url, cal: 'privat', localId: t.id, origin: 'Abonnementer · prøveperiode' }, ctx));
+    if (tr.length) { events.push(...tr); sources.push({ id: 'trials', name: 'Prøveperioder', configured: true, ok: true, count: tr.length }); }
+  } catch (e) { console.warn('[kalender] prøveperioder:', e.message); }
   events = applyRules(events).filter((e) => (e.allDay ? e.end > fromDate && e.date <= toDate : e.date >= fromDate && e.date <= toDate));
   for (const s of sources) if (s.ok) s.count = events.filter((e) => e.source === s.id).length; // antall i perioden, etter reglene
   return { events, sources, ctx };

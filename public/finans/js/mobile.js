@@ -35,6 +35,7 @@ import * as P28 from './mobile-p28.js';
 import * as P29 from './mobile-p29.js';
 import * as P30 from './mobile-p30.js';
 import * as P30B from './mobile-p30b.js';
+import * as P31 from './mobile-p31.js';
 import * as CHAT from './mobile-chat.js';
 import { takeApp, HK, p17Bind, p17Sheets, huskeView, tasksLoad, posWidget, bolWidgetLoad, appLoad, applyIcon, ptrBind, wsConnect, onRealtime } from './mobile-p17.js';
 import { trkDown, trkMove, trkUp } from './mobile-paper2.js';
@@ -66,7 +67,7 @@ const FINMODS = ['sub', 'dir', 'finn'];
 export const FIN = ['hjem', 'liste', 'budsjett', 'sok', 'skann', 'opp', ...PAGES, ...FINMODS];
 const TWO = ['hjem', 'liste', 'budsjett', 'skann', 'opp', 'sok'];
 const HLG = ['hl', 'spor', 'set'];
-const ALL = [...new Set([...FIN, 'hl', 'spor', 'mat', 'dom', 'set', 'media', 'nyheter', 'fmer', 'vaer', 'avg', 'fam', 'huske', 'bd', 'kal', 'chat'])];
+const ALL = [...new Set([...FIN, 'hl', 'spor', 'mat', 'dom', 'set', 'media', 'nyheter', 'fmer', 'vaer', 'avg', 'fam', 'huske', 'bd', 'kal', 'chat', 'nordlys'])];
 // Oversikt, Liste og Budsjett bruker egne navn fra Sidemeny; Søk og Mer beholder de korte navnene i fanelinja.
 const RENAME = ['home', 'list', 'bud', 'finn'];
 // Egne navn fra Innstillinger → Utseende → Navigasjonslinje (LAY.names) går foran; tomt felt gir standardnavnet.
@@ -409,7 +410,7 @@ export function draw() {
   const ppMain = !pp ? null : scr === 'hl' ? paperHome() : m.detail && !m.edit && m.sel != null && ['liste', 'sok', 'hjem'].includes(scr) ? paperTx(m.sel)
     : scr === 'hjem' && plain ? paperFin() : scr === 'mer' ? paperMer()
     : scr === 'bd' ? P24.bdView() : scr === 'kal' ? KAL.kalView() : scr === 'fmer' ? finMerGrid() : scr === 'kv' && plain ? P23.kvView() : fad ? P23.finnAdView() : scr === 'sok' && plain ? paperSearch() : scr === 'liste' && plain ? paperList() : scr === 'finn' && !m.sub ? paperFinn() : scr === 'spor' ? paperTrk() : scr === 'dir' ? bolView() : scr === 'avg' ? P24.ruterView() : scr === 'fam' ? P22.famView22() : null;
-  const main = scr === 'chat' ? CHAT.chatView() : scr === 'vaer' ? wxView() : scr === 'nyheter' ? newsView() : scr === 'huske' ? (pp ? P22.huske22() : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Huskeliste</div></div>' + huskeView()) : !pp && scr === 'avg' ? avgView() : !pp && scr === 'fam' ? famView()
+  const main = scr === 'nordlys' ? P30.sysView() : scr === 'chat' ? CHAT.chatView() : scr === 'vaer' ? wxView() : scr === 'nyheter' ? newsView() : scr === 'huske' ? (pp ? P22.huske22() : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Huskeliste</div></div>' + huskeView()) : !pp && scr === 'avg' ? avgView() : !pp && scr === 'fam' ? famView()
     : scr === 'kal' && !pp ? KAL.kalView() : scr === 'media' ? (pp ? '' : '<div class="m-row" style="padding:6px 4px 0"><div class="title">Media</div></div>') + mediaView()
     : ppMain ?? (scr === 'set' ? settingsView(th, m.sub)
     : scr === 'hl' ? hlView(th)
@@ -422,14 +423,14 @@ export function draw() {
     : !fin || FINMODS.includes(scr) ? modView(scr, th, m.sub)
     : scrs[scr] ? scrs[scr](th) : confirmView ? confirmRc(th) : scanQueue(th));
   // Prompt 24: Ruter-visningen (Avganger) er et fullskjerm-overlegg uten fanelinje og skanneknapp, med eget toppbilde.
-  const rv = pp && scr === 'avg', fsx = scr === 'chat' || scr === 'kal'; // Prompt 27: Chat og Kalender i fullskjerm
+  const rv = pp && scr === 'avg', fsx = scr === 'chat' || scr === 'kal' || scr === 'nordlys'; // Prompt 27: Chat og Kalender i fullskjerm (31: System-siden uten bunnmeny og skann)
   const n = navModel(), dom = scr === 'dom', bt = !pp && backTop(scr) && scr !== 'vaer', hero = pp && scr !== 'nyheter' && scr !== 'vaer' && !fad && !rv && !fsx;
   const nav = scr === 'nyheter' || scr === 'vaer' || fad || rv || fsx ? '' : pp ? P25.nav25(scr === 'huske' ? P22.huskeNav(paperNav(scr)) + P22.huskeDock() : paperNav(scr), scr) : th === 'ios' ? iosNav(n) : andNav(n);
   // Bevar fokus og markør i et felt når skjermen tegnes på nytt (f.eks. søk mens forslag kommer inn).
   const ae = document.activeElement, keep = ae?.id && root().contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
-  root().innerHTML = `<div class="m ${th}${fad ? ' p23-fad' : ''}${rv ? ' p24-rvm' : ''}${fsx ? ' p27-fs' : ''}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}${fabStyle() === 'float' ? ' flyt' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${scr === 'vaer' ? ' vaer' : ''}${scr === 'mer' ? ' p28-mer' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
+  root().innerHTML = `<div class="m ${th}${fad ? ' p23-fad' : ''}${rv ? ' p24-rvm' : ''}${fsx ? ' p27-fs' : ''}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}${fabStyle() === 'float' ? ' flyt' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${scr === 'vaer' ? ' vaer' : ''}${scr === 'mer' ? ' p28-mer' : ''}${scr === 'nordlys' ? ' n31-pg' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
     ${pp ? '' : rail(n)}${hero ? paperHero(scr) : ''}<div class="m-scroll">${bt ? topRow(th) : ''}${main}</div><div class="m-detail">${twoPane ? detail(th) : ''}</div>${nav}
-    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() + P26.sheets26() + P27.sheets27() : ''}${avgSheet()}${pp ? "" : famSheet()}${p17Sheets()}${updSheet()}${p21Sheets(HK)}${P22.p22Sheets()}${pp ? P24.sheets24() : ''}${origOverlay(th)}${pp ? P29.searchLayer() : ''}${P29.sheets29()}${P29.quickLayer()}${P30.sheets30()}<div class="p30-edge" aria-hidden="true"></div>${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
+    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() + P26.sheets26() + P27.sheets27() : ''}${avgSheet()}${pp ? "" : famSheet()}${p17Sheets()}${updSheet()}${p21Sheets(HK)}${P22.p22Sheets()}${pp ? P24.sheets24() : ''}${origOverlay(th)}${pp ? P29.searchLayer() : ''}${P29.sheets29()}${P29.quickLayer()}${P31.aiLayer()}${P31.bannerHtml()}${P30.sysBottom()}${P30.sheets30()}<div class="p30-edge" aria-hidden="true"></div>${m.toast ? P31.hintToast(m.toast) ?? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
     <input class="m-file" id="m-capture" type="file" accept="image/*" capture="environment" data-mupload data-confirm></div>`;
   if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', pp ? (m.light ? '#f3efe6' : '#14130f') : th === 'ios' ? '#07070A' : getComputedStyle(root().firstElementChild).backgroundColor || '#19120E');
@@ -533,14 +534,14 @@ export function route() {
   if (qs) { history.replaceState(null, '', `#/${path}`); if (/google=ok/.test(qs)) setTimeout(() => flash('Koblet til Google Kalender ✓'), 300); else if (/google=error/.test(qs)) setTimeout(() => flash(`Google: ${decodeURIComponent((qs.match(/error=([^&]*)/) ?? [])[1] ?? 'innloggingen feilet')}`), 300); }
   const h = parts[0];
   // Desktop- og eldre lenker
-  const map = { ov: 'hjem', tx: 'liste', bud: 'budsjett', inn: 'set', meg: 'set', homelab: 'hl', ai: 'sok', matplan: 'mat', domener: 'dom', aksjer: 'aks', abonnement: 'sub', mapper: 'dir', sporing: 'spor', trk: 'spor', news: 'nyheter', nyhetsleser: 'nyheter', rss: 'nyheter', bursdager: 'bd', bursdag: 'bd', birthdays: 'bd', ruter: 'avg', avganger: 'avg', kalender: 'kal', calendar: 'kal', timeplan: 'kal', ollama: 'chat' };
+  const map = { ov: 'hjem', tx: 'liste', bud: 'budsjett', inn: 'set', meg: 'set', homelab: 'hl', ai: 'sok', matplan: 'mat', domener: 'dom', aksjer: 'aks', abonnement: 'sub', mapper: 'dir', sporing: 'spor', trk: 'spor', news: 'nyheter', nyhetsleser: 'nyheter', rss: 'nyheter', bursdager: 'bd', bursdag: 'bd', birthdays: 'bd', ruter: 'avg', avganger: 'avg', kalender: 'kal', calendar: 'kal', timeplan: 'kal', ollama: 'chat', system: 'nordlys', nordlysos: 'nordlys', programvare: 'nordlys' };
   const start = startScr();
   let next = map[h] ?? (ALL.includes(h) ? h : start);
   if (next === 'fmer' && !paper()) next = 'mer';
   if (!domOk() && (next === 'dom' || (next === 'set' && parts[1] === 'dom'))) { next = next === 'dom' ? 'hl' : 'set'; if (location.hash !== `#/${next}`) { history.replaceState(null, '', `#/${next}`); parts.length = 1; } }
   const sub = parts.slice(1).join('/');
   if (next !== m.screen || sub !== m.sub) {
-    if (next !== m.screen) { edReset(); P26.leave26(); P27.leave27(next); P28.leave28(next); P29.leave29(); P30.leave30(); P30B.leave30b(); if (m.screen === 'chat') CHAT.chatLeave(); if (next === 'chat') CHAT.chatEnter(m.screen); if (next === 'kal') m.kalFrom = m.screen; if (next === 'vaer') WX.from = m.screen; m.edit = null; m.pdet = null; if (next === 'dom') m.domFrom = m.screen === 'dom' ? m.domFrom : m.screen; if (next === 'set') m.setFrom = m.screen === 'set' ? m.setFrom : m.screen; }
+    if (next !== m.screen) { edReset(); P26.leave26(); P27.leave27(next); P28.leave28(next); P29.leave29(); P30.leave30(); P30B.leave30b(); if (m.screen === 'chat') CHAT.chatLeave(); if (next === 'chat') CHAT.chatEnter(m.screen); if (next === 'kal') m.kalFrom = m.screen; if (next === 'nordlys') P30.sysEnter(m.screen); if (next === 'vaer') WX.from = m.screen; m.edit = null; m.pdet = null; if (next === 'dom') m.domFrom = m.screen === 'dom' ? m.domFrom : m.screen; if (next === 'set') m.setFrom = m.screen === 'set' ? m.setFrom : m.screen; }
     p20Screen(next);
     m.screen = next; m.sub = sub; m.detail = false; m.menu = false; m.sheet = false; m.min = false; m.orig = null; paperState.scan = false; paperState.open = paperState.open && next === 'hl';
     if (next !== 'skann' && next !== 'opp') m.rc = null;
@@ -749,7 +750,7 @@ export function bind() {
   bindGlobal();
   // Prompt 17: navn og ikon på appen, dra for å oppdatere og sanntid (Huskeliste, Familie og Sporing).
   applyIcon(); appLoad().then(() => draw()).catch(() => {}); ptrBind(); wsConnect(onRealtime);
-  wxBindScroll(); P23.icBoot(); P25.boot(); P26.boot26(); P27.boot27(); P28.boot28(); P30.boot30({ target: backTarget, cancel: cancelOthers });
+  wxBindScroll(); P23.icBoot(); P25.boot(); P26.boot26(); P27.boot27(); P28.boot28(); P30.boot30({ target: backTarget, cancel: cancelOthers }); P31.boot31();
   addEventListener('fh-design', (e) => { const d = e.detail ?? {}; takeDesign(d); if (typeof d.lock === 'boolean') setPref('lock', d.lock); if (typeof d.hap === 'boolean') setPref('hap', d.hap); if (d.photo) photoLoad(d.photo).then(draw).catch(() => {}); draw(); });
   loadLayout().then((r) => {
     takeDesign(r); take15(r); take16(r); take20(r); P24.take24(r); P25.take25(r); P26.take26(r); P27.take27(r); P29.take29(r); takeApp(r);
@@ -786,7 +787,8 @@ export function bind() {
     let x;
     if (Date.now() - tsup < 400 && d('.tabs')) { e.preventDefault(); e.stopPropagation(); return; }
     if (P23.swGuard()) { e.preventDefault(); e.stopPropagation(); return; } // klikket etter et sveip tilbake
-    if (await P30.bind30(e, t)) return; // Prompt 30: oppdateringsbanner, PROGRAMVARE
+    if (await P31.bind31(e, t)) return; // Prompt 31: Glimt (toast, boble, svarboble, kort), varsler, prøveperioder
+    if (await P30.bind30(e, t)) return; // Prompt 30: oppdateringsbanner, PROGRAMVARE (31: System-siden)
     if (await P30B.bind30b(e, t)) return; // Prompt 30: Boliger (gjennomgang, rediger utgift, del boligen)
     if (paper() && await P30B.hlBind(e, t, { TX, txLoad })) return; // Prompt 30: kvitteringsmarkering
     if (P28.bind28(e, t)) return; // Prompt 28: Mer – flytt/skjul
@@ -867,9 +869,10 @@ export function bind() {
     }
     if (act === 'logout') { await logout(); }
   }));
-  el.addEventListener('input', (e) => { if (P30.input30(e, e.target)) return; if (P30B.input30b(e, e.target)) return; if (P29.input29(e, e.target)) return; if (P27.input27(e, e.target)) return; if (P26.input26(e, e.target)) return; if (P24.bind24(e, e.target) === true) return; P23.bind(e, e.target); P22.bind(e, e.target); p17Bind(e, e.target); p16Bind(e, e.target); wxBind(e, e.target); if (paper()) { paperFinnBind(e, e.target); paperTrkBind(e, e.target); nsBind(e, e.target); fsBind(e, e.target); } paperBind(e, e.target); matBind(e, e.target); if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
+  el.addEventListener('input', (e) => { if (P31.input31(e, e.target)) return; if (P30.input30(e, e.target)) return; if (P30B.input30b(e, e.target)) return; if (P29.input29(e, e.target)) return; if (P27.input27(e, e.target)) return; if (P26.input26(e, e.target)) return; if (P24.bind24(e, e.target) === true) return; P23.bind(e, e.target); P22.bind(e, e.target); p17Bind(e, e.target); p16Bind(e, e.target); wxBind(e, e.target); if (paper()) { paperFinnBind(e, e.target); paperTrkBind(e, e.target); nsBind(e, e.target); fsBind(e, e.target); } paperBind(e, e.target); matBind(e, e.target); if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
   el.addEventListener('change', safe(async (e) => {
     const t = e.target;
+    if (P31.input31(e, t)) return;
     if (await P27.change27(e, t)) return;
     if (await P30B.change30b(e, t)) return;
     if (t.matches('[data-mupload]')) { const f = [...t.files]; t.value = ''; await upload(f, { confirm: t.hasAttribute('data-confirm') && f.length === 1, stay: t.hasAttribute('data-stay') }); return; }
@@ -893,6 +896,7 @@ export function bind() {
     await settingsBind(e, t);
   }));
   el.addEventListener('submit', safe(async (e) => {
+    if (await P31.submit31(e, e.target)) return;
     if (await P29.submit29(e, e.target)) return;
     if (await P30B.bind30b(e, e.target)) return;
     if (await P27.submit27(e, e.target)) return;
