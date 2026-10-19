@@ -373,7 +373,7 @@ export function googleCanWrite(user) {
 /** Kalender-id-ene for Privat (valgt kalender) og Familie (egen innstilling, ellers en skrivbar kalender som heter «Familie…»). */
 export async function googleCalendarIds(user) {
   const g = gconf(user);
-  const privat = g.calendarId || 'primary';
+  const privat = g.mainCalendarId || g.calendarId || 'primary'; // prompt 36b: valgt hovedkalender (Personlig)
   if (g.familyCalendarId !== undefined) return { privat, familie: g.familyCalendarId };
   let familie = null;
   try {
@@ -393,6 +393,17 @@ export async function googleEventWrite(user, method, calId, eventId, body) {
   if (r.status === 403 && /insufficient|scope|permission/i.test(JSON.stringify(r.json ?? {}))) { setG(user, { scope: 'readonly' }); throw reconnect(); }
   if (!r.ok && !(method === 'DELETE' && (r.status === 404 || r.status === 410))) throw gfail(r, 'Kunne ikke lagre i Google Kalender');
   return r.json;
+}
+
+/* ---------------- Prompt 36b: hovedkalender og flere Google-kalendere i Kalender ---------------- */
+export const googleConfOf = (user) => gconf(user);
+export const googleConfSet = (user, patch) => setG(user, patch);
+/** Alle kalendere i Google-kontoen (minst lesetilgang). id 'primary' for hovedkalenderen i kontoen. */
+export async function googleCalendarList(user) {
+  const r = await gapi(user, 'GET', '/users/me/calendarList', { query: { minAccessRole: 'reader' } });
+  if (!r.ok) throw gfail(r, 'Kunne ikke hente kalendere');
+  return (r.json?.items ?? []).map((x) => ({ id: x.primary ? 'primary' : x.id, googleId: x.id, name: x.summaryOverride ?? x.summary ?? x.id, primary: !!x.primary,
+    writable: ['owner', 'writer'].includes(x.accessRole), access: x.accessRole ?? 'reader', color: x.backgroundColor ?? null }));
 }
 
 /* ---------------- Google: OAuth (PKCE) ---------------- */

@@ -85,6 +85,7 @@ import { aliasesOf, typeOfWord, eventHitsAlias } from './glimt-memory.js';
 import { parseQuick, osloTodayISO } from '../public/js/quick-time.js';
 import { parseDay } from './parse-day35.js'; // prompt 35: felles dag-tolkning
 import { extCalendarsOf, mountExt, patchExt, removeExt, isExtId, shades } from './kalender35.js'; // prompt 35: iCal og Home Assistant
+import { googleKalApi, googleCalendarsOf, isGoogleCalId, patchGoogleCal, removeGoogleCal } from './kalender36g.js'; // prompt 36b: Google-kalendere
 import { extractPlace, placeWeather } from './weather35.js'; // prompt 35: været for et sted
 import { tokenAccessOf, issueToken, tokensById, revokeTokenOf, TOKEN_SCOPES } from './finans/routes.js';
 
@@ -147,6 +148,7 @@ export function appCalendarsOf(user) {
   const out = APP_CALENDARS.map((c) => { const o = s.builtin[c.id] ?? {}; const color = o.color ?? c.color; return { ...c, name: o.name ?? c.name, color, ...(o.color ? shades(o.color) : {}), visible: o.visible !== false, hidMenu: !!o.hidMenu, builtin: true, writable: true, source: 'builtin', badge: null }; });
   for (const c of s.custom) out.push({ id: c.id, key: c.id, name: c.name, color: c.color, ...shades(c.color), backend: 'privat', sources: [], visible: c.visible !== false, hidMenu: !!c.hidMenu, builtin: false, writable: true, source: 'own', badge: null });
   out.push(...extCalendarsOf(user)); // prompt 35: iCal-abonnement og Home Assistant (writable:false)
+  out.push(...googleCalendarsOf(user)); // prompt 36b: andre Google-kalendere (writable:false i appen)
   return out;
 }
 
@@ -233,6 +235,7 @@ calendarsApi.put('/prefs', async (c) => {
   return c.json({ prefs: prefsOf({ prefs: p }) });
 });
 mountExt(calendarsApi); // prompt 35: POST /ical, /ical/:id/refresh, /ha
+calendarsApi.route('/google', googleKalApi); // prompt 36b: GET/PUT /api/kalender/calendars/google (hovedkalender + flere Google-kalendere)
 calendarsApi.post('/', async (c) => {
   const user = c.get('user'), b = await c.req.json().catch(() => null);
   const name = cleanName(b?.name);
@@ -251,6 +254,7 @@ calendarsApi.patch('/:id', async (c) => {
   const user = c.get('user'), id = c.req.param('id'), b = await c.req.json().catch(() => null);
   if (!b || typeof b !== 'object' || Array.isArray(b)) return bad(c, 'Forventet et objekt');
   if (isExtId(id)) { const r = patchExt(user, id, b); if (r.error) return bad(c, r.error, r.status ?? 400); changed(user, 'calendars'); return c.json(r); }
+  if (isGoogleCalId(id)) { const r = patchGoogleCal(user, id, b); if (r.error) return bad(c, r.error, r.status ?? 400); changed(user, 'calendars'); return c.json(r); }
   const s = store(user);
   const builtin = BUILTIN.has(id), idx = s.custom.findIndex((x) => x.id === id);
   if (!builtin && idx < 0) return bad(c, 'Fant ikke kalenderen', 404);
@@ -269,6 +273,7 @@ calendarsApi.delete('/:id', (c) => {
   const user = c.get('user'), id = c.req.param('id');
   if (BUILTIN.has(id)) return bad(c, 'De innebygde kalenderne kan ikke slettes. Skjul den i stedet.', 403);
   if (isExtId(id)) { if (!removeExt(user, id)) return bad(c, 'Fant ikke kalenderen', 404); changed(user, 'calendars'); return c.json({ ok: true }); }
+  if (isGoogleCalId(id)) { if (!removeGoogleCal(user, id)) return bad(c, 'Fant ikke kalenderen', 404); changed(user, 'calendars'); return c.json({ ok: true }); }
   const s = store(user);
   if (!CUSTOM_ID.test(id) || !s.custom.some((x) => x.id === id)) return bad(c, 'Fant ikke kalenderen', 404);
   saveStore(user, { ...s, custom: s.custom.filter((x) => x.id !== id), prefs: s.prefs.defaultCalendar === id ? { ...s.prefs, defaultCalendar: 'personlig' } : s.prefs });

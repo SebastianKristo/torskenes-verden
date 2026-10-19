@@ -36,7 +36,9 @@ import { OWNER, kv } from './db.js';
 import { userCfg, userCfgSet } from './settings.js';
 import { cached } from './cache.js';
 import { authOrToken, layoutOf } from './mobile.js';
-import { listFor as birthdaysOf, googleCalendarEvents, googleConnected, googleCalendarIds, googleEventWrite, googleCanWrite } from './birthdays.js';
+import { listFor as birthdaysOf, googleCalendarEvents, googleConnected, googleCalendarIds, googleEventWrite, googleCanWrite, googleConfOf } from './birthdays.js';
+/** Prompt 36b: ekstra Google-kalendere som vises som egne kalendere ({id:'g-…', calId, name, color, visible, hidMenu, writable}). */
+export const googleExtraOf = (user) => { const v = googleConfOf(user).extraCalendars; return Array.isArray(v) ? v : []; };
 import { parseIcs, expandIcs as expandCal } from './ical-expand.js';
 import { rememberShown, memorySuggestion } from './glimt-memory.js'; // prompt 33: «Glimt husker»
 import { trialCalendarItems } from './finans/trials.js'; // prompt 31: gratis prøveperioder som heldagshendelser i Privat
@@ -375,9 +377,18 @@ export async function eventsFor(user, fromDate, toDate) {
       const ids = await googleCalendarIds(user);
       const privat = await googleCalendarEvents(user, from, to, ids.privat);
       const familie = ids.familie && ids.familie !== ids.privat ? await googleCalendarEvents(user, from, to, ids.familie).catch(() => []) : [];
-      return { list: privat, familie, ids };
+      // Prompt 36b: andre Google-kalendere brukeren har valgt å vise (egne kalendere i Kalender, appCalendar 'g-…').
+      const extra = [];
+      for (const x of googleExtraOf(user)) {
+        if (x.visible === false || x.calId === ids.privat || x.calId === ids.familie) continue;
+        try { extra.push({ x, items: await googleCalendarEvents(user, from, to, x.calId) }); } catch (e) { console.warn('[kalender] google-kalender', x.calId, e.message); }
+      }
+      return { list: privat, familie, ids, extra };
     });
     const list = items.list ? [...googleOut(user, items.list, 'privat', items.ids.privat, ctx), ...googleOut(user, items.familie ?? [], 'familie', items.ids.familie, ctx)] : [];
+    for (const { x, items: ex } of items.extra ?? []) {
+      for (const ev of googleOut(user, ex, 'privat', x.calId, ctx)) { ev.extCalendar = x.id; if (!x.writable) ev.editable = false; list.push(ev); }
+    }
     events.push(...list);
     sources.push({ id: 'google', name: 'Google Kalender', configured: !!items.list, ok: true, count: list.length });
   } catch (e) { sources.push({ id: 'google', name: 'Google Kalender', configured: true, ok: false, count: 0, error: srcErr(e) }); }
