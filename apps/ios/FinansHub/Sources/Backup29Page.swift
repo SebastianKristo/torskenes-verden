@@ -185,6 +185,7 @@ struct Backup29Where: View {
                 VStack(spacing: 0) {
                     Backup29Cycle(title: "Lagres på", sub: "Homelab-disk · " + m.path, value: "Lokal") {}
                     Backup29Sep()
+                    if m.smbKnown { Backup29Smb() }
                     Backup29Toggle(title: "Kopi til sky", sub: cloudSub, on: m.cloudOn) { m.setCloud($0, store) }
                     Backup29Sep()
                     Backup29Cycle(title: "Skytjeneste", sub: m.cloudSupported ? "Kryptert før opplasting" : "Kommer", value: m.providerName + " ›") { m.nextProvider(store) }
@@ -203,6 +204,38 @@ struct Backup29Where: View {
     private var cloudSub: String {
         let base: String = m.providerName + " · kryptert før opplasting"
         return m.encrypt ? base : base + " · krever kryptering"
+    }
+}
+
+/// Prompt 30: HVOR → SMB / nettverksdisk. Veiviseren åpnes som ark (Smb30Sheet).
+struct Backup29Smb: View {
+    @Environment(Store.self) private var store
+    @Environment(\.paper) private var p
+    @MainActor private var m: Backup29Model { Backup29Model.shared }
+    @MainActor private var w: Smb30Model { Smb30Model.shared }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if m.smbShare.isEmpty {
+                Backup29Cycle(title: "SMB / nettverksdisk", sub: "Kopier hver backup til en NAS på hjemmenettet", value: "Sett opp ›") { m.openSmb(store) }
+            } else {
+                Backup29Toggle(title: "Kopi til nettverksdisk", sub: m.smbSub, on: m.smbOn) { m.setSmb($0, store) }
+                Backup29Sep()
+                Backup29Cycle(title: "Sett opp nettverksdisk", sub: "Bytt server, bruker eller mappe", value: "Veiviser ›") { m.openSmb(store) }
+                if m.smbOn && !m.encrypt {
+                    Backup29Sep()
+                    Backup29Note(text: "Kopieres ukryptert. Greit på eget hjemmenett, men «Krypter backup» anbefales.").padding(.horizontal, 10).padding(.bottom, 8)
+                }
+            }
+            Backup29Sep()
+        }
+        .sheet(isPresented: Binding<Bool>(get: { w.open }, set: { if !$0 { w.close() } })) {
+            Smb30Sheet()
+                .environment(\.paper, p)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(p.bg)
+        }
     }
 }
 

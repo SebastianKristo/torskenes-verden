@@ -123,6 +123,41 @@ En administrator kan oppdatere rett fra appen. Første gang må du likevel kjør
 - Etter 4.18.0 tilhører eksisterende data eieren av serveren (hovedadmin). Andre brukere starter med tomt regnskap.
 - Gamle nøkkelnavn leses fortsatt. `trk_bring_uid` leses for eksempel som `mybringUid`.
 
+## Nettverksdisk (SMB)
+
+Den enkleste måten å få backupen over på en NAS eller PC er veiviseren **Sett opp nettverksdisk**. Du slipper å skrive stier som `//server/share` for hånd.
+
+Den finnes tre steder (bare admin):
+
+- **Innstillinger → Backup → Hvor → SMB / nettverksdisk** (web, app og mobilapper) – kopi av systembackupen.
+- **FinansHub → Innstillinger → Backup og data → SMB-share → Sett opp med veiviser** – FinansHub-backupen. De manuelle feltene ligger under **Avansert**.
+- **FinansHub i mobilen → Innstillinger → Backup og data**.
+
+Fem steg:
+
+1. **Finn server.** Homelab leter etter maskiner med SMB (port 445) på hjemmenettet i noen sekunder. Trykk ↻ for å lete igjen, eller skriv IP-adressen (`192.168.1.20`) eller navnet (`nas.local`).
+2. **Logg inn.** Brukernavn og passord på NAS-en. Domene trengs sjelden. **Gjest** prøver uten passord.
+3. **Velg delt mappe.** Listen viser sharene brukeren har tilgang til. Skjulte admin-shares (`IPC$`, `print$`, `C$` …) vises ikke.
+4. **Velg mappe.** Bla deg ned, gå **‹ Opp**, eller lag en **+ Ny mappe** (for eksempel `homelab`). Trykk **Velg denne mappen**.
+5. **Test og lagre.** Homelab skriver og sletter en liten testfil. Velg om **FinansHub-backup** og/eller **Systembackup** skal bruke disken, og trykk **Lagre**. Til slutt står det for eksempel *Koblet til //nas.local/backup/homelab ✓*.
+
+Systembackupen kopierer hver ferdige backup til nettverksdisken etter at den er lagret lokalt. Gamle `bk-*`-filer der slettes etter samme **Behold**-regel som lokalt. Andre filer i mappen røres aldri. Status for siste kopi står under **Hvor**.
+
+Passordet til NAS-en brukes bare mens du går gjennom veiviseren, og lagres kryptert på serveren når du trykker **Lagre**. Det sendes aldri tilbake til appen.
+
+Kryptering er ikke påkrevd på eget hjemmenett, men det anbefales. Slå på **Krypter backup** under **Hvor**, så kan ikke andre med tilgang til NAS-en lese backupen.
+
+### Feilsøking
+
+| Melding | Hva du gjør |
+|---|---|
+| *Fant ikke serveren … er SMB slått på?* | Sjekk adressen og at NAS-en er på. Slå på SMB: Synology **Kontrollpanel → Filtjenester → SMB**, QNAP **Nettverks- og filtjenester → Win/Mac/NFS**, Windows **Innstillinger → Nettverk → Deling**. Homelab og NAS-en må være på samme nett. |
+| *Feil brukernavn eller passord* | Bruk en bruker som finnes på NAS-en. Prøv **Gjest** hvis sharen er åpen. |
+| *Ingen tilgang* / *Kan ikke skrive* | Gi brukeren lese- og skrivetilgang til den delte mappen på NAS-en, eller velg en annen mappe. |
+| *Ble ikke enige om SMB-versjon* | Slå på SMB3 (eller minst SMB2) på NAS-en. Veiviseren prøver SMB3 først og SMB2 etterpå. SMB1 støttes ikke. |
+| Fant ingen servere | Skriv inn IP-adressen. I Docker med eget nett ser serveren ikke alltid hjemmenettet. Da virker det å skrive adressen. |
+| *smbclient er ikke installert* | Docker-imaget har det. På andre installasjoner: `apt install smbclient`. |
+
 ## Automatisk backup til SMB-share
 
 Gå til **FinansHub → Innstillinger → Backup og data → SMB-share**. SMB-backup er serveroppsett, så bare admin kan endre det. Andre brukere kan laste ned backup av sine egne data.
@@ -139,7 +174,7 @@ Gå til **FinansHub → Innstillinger → Backup og data → SMB-share**. SMB-ba
 | Kryptering | AES-256-GCM med passfrase |
 
 1. Lag en egen bruker på NAS-en med skrivetilgang til sharen.
-2. Fyll inn feltene og trykk **Test tilkobling**.
+2. Bruk veiviseren over (**Sett opp med veiviser**), eller fyll inn feltene under **Avansert** og trykk **Test tilkobling**.
 3. Trykk **Lagre**, og deretter **Ta backup nå** for å sjekke at det virker.
 4. Listen nederst viser backupene på sharen med fil, tid, type, størrelse og status.
 

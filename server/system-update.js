@@ -2,20 +2,35 @@
 //
 // Hovedserveren har IKKE Docker-tilgang. Selve jobben gjøres av den lille updater-containeren (deploy/updater), som
 // har Docker-socketen. De snakker bare via filer i data/update/:
-//   request.json   skrevet her: {id, requestedBy, at}. Ingen repo, branch eller kommando – updateren bestemmer det selv.
-//   status.json    skrevet av updateren: {id, state, step, startedAt, finishedAt, error, sha, version}
+//   request.json   skrevet her: {id, requestedBy, at} (oppdatering) eller {id, requestedBy, at, action:'rollback'}.
+//                  Ingen repo, branch, sha eller kommando – updateren bestemmer det selv.
+//   status.json    skrevet av updateren: {id, state, step, action, startedAt, finishedAt, error, sha, version}
+//   history.json   skrevet av updateren: {entries:[{sha, version, at}]} (vellykkede installasjoner, nyeste først). Ved rollback
+//                  laster updateren ned entries[1].sha. Serveren leser bare versjonene herfra (for «Gjenopprett 2.3.1»).
 //   log.txt        updaterens logg for siste kjøring
 //   heartbeat      updaterens tidsstempel (sekunder), skrives hvert 5. s
 //   installed.json {sha, version, at} etter en vellykket oppdatering
 //
-// Tilgang: alt krever admin. GET virker også med app-token (appene viser versjonen), men å starte en oppdatering krever
-// økt i nettleseren og passordet på nytt. Databasen kopieres til data/backups/pre-update-*.db før forespørselen skrives.
+// Tilgang: alt krever admin. GET virker også med app-token (appene viser versjonen). Å starte en oppdatering krever
+// passordet på nytt, og enten økt i nettleseren eller (prompt 30) et admin-app-token med finance:write eller bredere.
+// Samme sperre mot gjentatte forsøk som innloggingen (429). Databasen kopieres til data/backups/pre-update-*.db før
+// forespørselen skrives, også ved rollback – men den gjenopprettes ikke automatisk (data-migreringer går bare fremover).
+//
+// Prompt 30 (SERVER30), claude-code-oppdatering-mobil.md:
+//   GET  /api/system/version          → {current, latest, notes[], publishedAt, updateAvailable}
+//   GET  /api/system/update/status    → {state, step, action, error, steps:[{key, label, state}], pct, running, id, version}
+//        steps: download | backup | install | restart, state: pending | active | done | failed. pct er grove anslag.
+//   GET/PUT /api/system/update/settings {auto_update (av), notify_updates (på)} → samme form
+//   POST /api/system/update/rollback {password} → {ok, id, backup, target:{version}}  (409 uten tidligere versjon)
+//   Bakgrunn: ny versjon sjekkes hver 6. time. Er notify_updates på og versjonen ikke varslet før, sendes realtime
+//   «system-update-available» (med title/body for push) til administratorene. auto_update: kl. 03:30–03:40 Europe/Oslo
+//   (etter nattlig backup kl. 03:00) skrives en vanlig forespørsel hvis ny versjon finnes og updateren er tilgjengelig.
 import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { config } from './config.js';
-import { db } from './db.js';
+import { db, kv, OWNER } from './db.js';
 import { sessionUser, isAdmin, checkPassword, clientIp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { broadcast } from './realtime.js';
@@ -84,8 +99,28 @@ export function readStatus() {
   const s = readJson('status.json');
   if (!s || typeof s !== 'object') return { state: 'idle' };
   const str = (v, n = 2000) => (typeof v === 'string' ? v.slice(0, n) : null);
-  return { id: str(s.id, 80), state: str(s.state, 20) || 'idle', step: str(s.step, 200), startedAt: Number(s.startedAt) || null,
+  return { id: str(s.id, 80), state: str(s.state, 20) || 'idle', step: str(s.step, 200), action: s.action === 'rollback' ? 'rollback' : 'update', startedAt: Number(s.startedAt) || null,
     finishedAt: Number(s.finishedAt) || null, error: str(s.error), sha: str(s.sha, 40), version: str(s.version, 20) };
+}
+
+// Fremdrift for banneret: fire steg og en grov prosent. Backupen tas av serveren før forespørselen skrives, så den er
+// ferdig når updateren begynner å installere.
+const STEP_KEYS = [['download', 'Laster ned'], ['backup', 'Tar backup før oppdatering'], ['install', 'Installerer på hjemmeserveren'], ['restart', 'Starter tjenestene på nytt']];
+const STATE_AT = { queued: [0, 3], downloading: [0, 15], building: [2, 55], restarting: [3, 85] };
+export function progressOf(status, pending = false) {
+  let state = status.state;
+  if (pending) state = 'queued';
+  const done = state === 'done';
+  let at = STATE_AT[state]?.[0] ?? (done ? 4 : -1);
+  if (state === 'failed') {
+    // Hvor stoppet det? Gjettes fra steg-teksten.
+    const t = String(status.step ?? '') + ' ' + String(status.error ?? '');
+    at = /start/i.test(t) && !/laster|nedlast|github/i.test(t) ? 3 : /bygg|build|kopier|pakke/i.test(t) ? 2 : 0;
+  }
+  const steps = STEP_KEYS.map(([key, label], i) => ({ key, label,
+    state: done || i < at ? 'done' : i === at ? (state === 'failed' ? 'failed' : 'active') : 'pending' }));
+  const pct = done ? 100 : state === 'failed' ? (STATE_AT[['downloading', 'downloading', 'building', 'restarting'][at]]?.[1] ?? 0) : STATE_AT[state]?.[1] ?? 0;
+  return { steps, pct };
 }
 
 function readLog(lines) {
@@ -100,6 +135,18 @@ function pendingRequest(status) {
   return !!r?.id && r.id !== status.id && Date.now() - Number(r.at || 0) < 2 * 60_000;
 }
 const isRunning = (status = readStatus()) => RUNNING.has(status.state) || pendingRequest(status);
+export function statusOut(status = readStatus()) {
+  const pending = pendingRequest(status);
+  const req = pending ? readJson('request.json') : null;
+  return { ...status, ...(pending ? { state: 'queued', step: 'Venter på updateren', action: req?.action === 'rollback' ? 'rollback' : 'update', error: null } : {}), ...progressOf(status, pending), running: RUNNING.has(status.state) || pending };
+}
+
+// Updaterens historikk: bare versjonene leses (sha sendes aldri videre som instruks).
+function rollbackTarget() {
+  const h = readJson('history.json');
+  const e = Array.isArray(h?.entries) ? h.entries.filter((x) => x && /^[0-9a-f]{40}$/.test(String(x.sha ?? ''))) : [];
+  return e.length >= 2 ? { version: typeof e[1].version === 'string' ? e[1].version.slice(0, 20) : null, at: Number(e[1].at) || null } : null;
+}
 
 function installed() {
   const version = ownVersion();
@@ -153,7 +200,7 @@ function watchStatus() {
   watch = setInterval(() => {
     const s = readStatus();
     const key = `${s.id}|${s.state}|${s.step}`;
-    if (key !== lastSent) { lastSent = key; broadcast('system-update', { status: s }); }
+    if (key !== lastSent) { lastSent = key; broadcast('system-update', { status: statusOut(s) }); }
     if ((!isRunning(s) && Date.now() - started > 10_000) || Date.now() - started > 30 * 60_000) { clearInterval(watch); watch = null; }
   }, 2000);
   watch.unref?.();
@@ -175,38 +222,58 @@ api.use('*', async (c, next) => {
   await next();
 });
 
+function availability(inst, lv) {
+  return !!lv && (inst.sha && lv.sha ? inst.sha !== lv.sha : !!lv.version && !!inst.version && compareVersions(lv.version, inst.version) > 0);
+}
+// Kan denne forespørselen starte en jobb? Økt i nettleseren, eller admin-app-token med finance:write (eller bredere).
+const canWrite = (c) => c.get('access').session || bearerOk(c, 'finance:write');
+
 async function overview(c, force) {
-  const a = c.get('access');
   const status = readStatus();
   const inst = installed();
   const l = await getLatest(force);
   const lv = l.value;
   const available = updaterAvailable();
   const running = isRunning(status);
-  const updateAvailable = !!lv && (inst.sha && lv.sha ? inst.sha !== lv.sha : !!lv.version && !!inst.version && compareVersions(lv.version, inst.version) > 0);
+  const updateAvailable = availability(inst, lv);
   let reason = null;
   if (!available) reason = 'Oppdatering fra appen er ikke satt opp. Kjør update.sh én gang fra Proxmox for å slå det på.';
   else if (running) reason = 'En oppdatering pågår allerede.';
-  else if (!a.session) reason = 'Oppdatering må startes fra nettleseren.';
+  else if (!canWrite(c)) reason = 'Tokenet mangler tilgangen finance:write. Logg inn på nytt i appen, eller oppdater fra nettleseren.';
+  const rb = rollbackTarget();
   return c.json({
     available, installed: inst,
     latest: lv ? { version: lv.version, sha: lv.sha, date: lv.date, message: lv.message } : null,
     latestError: l.error, checkedAt: l.at, repo: REPO, branch: BRANCH,
     updateAvailable,
     changes: lv ? newerSections(lv.sections, inst.version).map(({ version, date, title, items }) => ({ version, date, title, items })) : [],
-    status, running,
+    status: statusOut(status), running,
     log: status.state !== 'idle' ? readLog(60) : undefined,
-    canStart: !reason, reason,
+    canStart: !reason, reason, needsPassword: true,
+    rollback: { available: !!rb && available && !running && canWrite(c), version: rb?.version ?? null },
+    settings: updateSettings(),
   });
 }
 
-api.get('/', (c) => overview(c, false));
-api.post('/check', (c) => overview(c, true));
-api.get('/log', (c) => c.text(readLog(0), 200, { 'Cache-Control': 'no-store', 'Content-Type': 'text/plain; charset=utf-8' }));
+/** GET /api/system/version: kort svar for banneret. */
+export async function versionInfo(force = false) {
+  const inst = installed();
+  const l = await getLatest(force);
+  const lv = l.value;
+  const notes = lv ? newerSections(lv.sections, inst.version).flatMap((x) => x.items).slice(0, 40) : [];
+  return { current: inst.version, latest: lv?.version ?? null, notes, publishedAt: lv?.date ?? null, updateAvailable: availability(inst, lv) };
+}
 
-api.post('/start', async (c) => {
+/* ---------------- Brukervalg (serveroppsett, bare admin) ---------------- */
+
+const SETTINGS_DEFAULT = { auto_update: false, notify_updates: true };
+export const updateSettings = () => ({ ...SETTINGS_DEFAULT, ...(kv.get(OWNER, 'update_settings', {}) ?? {}) });
+
+/* ---------------- Start / rollback ---------------- */
+
+async function startJob(c, action) {
   const a = c.get('access');
-  if (!a.session) return c.json({ error: 'Oppdatering må startes fra nettleseren' }, 403);
+  if (!canWrite(c)) return c.json({ error: 'Tokenet mangler tilgangen finance:write' }, 403);
   // JSON-kropp kreves (en vanlig skjema-POST fra et annet nettsted kan ikke sette den uten CORS-forespørsel).
   if (!/^application\/json\b/i.test(c.req.header('content-type') ?? '')) return c.json({ error: 'Forventet JSON' }, 415);
   const ip = clientIp(c), wait = loginBlocked(ip);
@@ -216,21 +283,104 @@ api.post('/start', async (c) => {
   loginSucceeded(ip);
   if (!updaterAvailable()) return c.json({ error: 'Oppdatering fra appen er ikke satt opp. Kjør update.sh én gang fra Proxmox for å slå det på.' }, 409);
   if (isRunning()) return c.json({ error: 'En oppdatering pågår allerede' }, 409);
+  const target = action === 'rollback' ? rollbackTarget() : null;
+  if (action === 'rollback' && !target) return c.json({ error: 'Fant ingen tidligere versjon å gå tilbake til' }, 409);
+  const r = await writeRequest(String(a.user), action, `${a.session ? 'økt' : 'app-token'} fra ${ip}`);
+  if (r.error) return c.json({ error: r.error }, 500);
+  return c.json({ ok: true, id: r.id, backup: r.backup, ...(target ? { target: { version: target.version } } : {}) });
+}
+
+async function writeRequest(by, action, from) {
   let backup;
   try { backup = await preUpdateBackup(); } catch (e) {
     console.error('[system-update] backup feilet:', e.message);
-    return c.json({ error: `Kunne ikke ta backup av databasen, oppdateringen er ikke startet: ${e.message}` }, 500);
+    return { error: `Kunne ikke ta backup av databasen, ${action === 'rollback' ? 'tilbakerullingen' : 'oppdateringen'} er ikke startet: ${e.message}` };
   }
-  // Bare id, hvem og når. Alt annet i kroppen ignoreres.
-  const req = { id: randomUUID(), requestedBy: String(a.user).slice(0, 64), at: Date.now() };
+  // Bare id, hvem, når (og action ved rollback). Alt annet i kroppen ignoreres.
+  const req = { id: randomUUID(), requestedBy: by.slice(0, 64), at: Date.now(), ...(action === 'rollback' ? { action: 'rollback' } : {}) };
   mkdirSync(UPD, { recursive: true });
   const tmp = join(UPD, `.request-${req.id}.tmp`);
   writeFileSync(tmp, JSON.stringify(req), { mode: 0o644 });
   renameSync(tmp, join(UPD, 'request.json'));
-  console.warn(`[system-update] oppdatering ${req.id} startet av ${req.requestedBy} fra ${ip}, backup ${backup}`);
+  console.warn(`[system-update] ${action === 'rollback' ? 'tilbakerulling' : 'oppdatering'} ${req.id} startet av ${req.requestedBy} (${from}), backup ${backup}`);
   watchStatus();
-  return c.json({ ok: true, id: req.id, backup });
+  return { id: req.id, backup };
+}
+
+/* ---------------- Bakgrunn: sjekk hver 6. time og auto-oppdatering 03:30 ---------------- */
+
+const TZ = 'Europe/Oslo';
+function osloParts(t) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: TZ, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+    .formatToParts(new Date(t)).map((x) => [x.type, x.value]));
+  return { date: `${p.year}-${p.month}-${p.day}`, hh: Number(p.hour), mm: Number(p.minute) };
+}
+
+/** Sjekker GitHub og varsler administratorene én gang per ny versjon. → true når et varsel ble sendt. */
+export async function checkAndNotify() {
+  const l = await getLatest(true);
+  const inst = installed(), lv = l.value;
+  if (!availability(inst, lv)) return false;
+  const st = updateSettings();
+  const key = lv.sha || lv.version;
+  if (!st.notify_updates || kv.get(OWNER, 'update_notified', null) === key) return false;
+  kv.set(OWNER, 'update_notified', key);
+  broadcast('system-update-available', { title: 'Ny versjon av Homelab', body: `Versjon ${lv.version ?? 'ny'} er klar. Du har ${inst.version ?? 'ukjent'}.`, category: 'system',
+    current: inst.version, latest: lv.version, publishedAt: lv.date, url: 'finanshub://innstillinger/system' });
+  return true;
+}
+
+/** Kalles hvert minutt. Kl. 03:30–03:40 (Oslo) med auto_update på: start en vanlig oppdatering. → id eller null. */
+export async function autoUpdateTick(t = Date.now()) {
+  const st = updateSettings();
+  if (!st.auto_update) return null;
+  const o = osloParts(t);
+  if (o.hh !== 3 || o.mm < 30 || o.mm >= 40) return null;
+  if (kv.get(OWNER, 'update_auto_slot', null) === o.date) return null;
+  if (!updaterAvailable() || isRunning()) return null;
+  // Venter på en nattlig backup som fortsatt kjører.
+  try { if (db.prepare("SELECT 1 FROM backup_jobs WHERE state IN ('queued','running') LIMIT 1").get()) return null; } catch { /* ingen tabell */ }
+  kv.set(OWNER, 'update_auto_slot', o.date);
+  const l = await getLatest(true);
+  if (!availability(installed(), l.value)) return null;
+  const r = await writeRequest('auto', 'update', 'automatisk oppdatering');
+  return r.id ?? null;
+}
+
+let schedTimers = [];
+export function startUpdateScheduler() {
+  if (schedTimers.length) return;
+  const check = () => checkAndNotify().catch((e) => console.warn('[system-update] sjekk:', e.message));
+  const first = setTimeout(check, 60_000);
+  const six = setInterval(check, 6 * 3_600_000);
+  const tick = setInterval(() => autoUpdateTick().catch((e) => console.warn('[system-update] auto:', e.message)), 60_000);
+  schedTimers = [first, six, tick];
+  for (const x of schedTimers) x.unref?.();
+}
+
+/* ---------------- Ruter ---------------- */
+
+api.get('/', (c) => overview(c, false));
+api.post('/check', (c) => overview(c, true));
+api.get('/log', (c) => c.text(readLog(0), 200, { 'Cache-Control': 'no-store', 'Content-Type': 'text/plain; charset=utf-8' }));
+api.get('/status', (c) => c.json({ ...statusOut(), current: installed().version }, 200, { 'Cache-Control': 'no-store' }));
+api.get('/version', async (c) => c.json(await versionInfo(c.req.query('force') === '1')));
+api.get('/settings', (c) => c.json(updateSettings()));
+api.put('/settings', async (c) => {
+  if (!canWrite(c)) return c.json({ error: 'Tokenet mangler tilgangen finance:write' }, 403);
+  const b = await c.req.json().catch(() => null);
+  if (!b || typeof b !== 'object' || Array.isArray(b)) return c.json({ error: 'Forventet {auto_update, notify_updates}' }, 400);
+  const next = updateSettings();
+  for (const k of Object.keys(b)) {
+    if (!(k in SETTINGS_DEFAULT)) return c.json({ error: `Ukjent nøkkel ${k}` }, 400);
+    if (typeof b[k] !== 'boolean') return c.json({ error: `${k} må være true eller false` }, 400);
+    next[k] = b[k];
+  }
+  kv.set(OWNER, 'update_settings', next);
+  return c.json(next);
 });
+api.post('/start', (c) => startJob(c, 'update'));
+api.post('/rollback', (c) => startJob(c, 'rollback'));
 
 export const _paths = { UPD, BACKUPS };
 export const _hasRequest = () => existsSync(join(UPD, 'request.json'));

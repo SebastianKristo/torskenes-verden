@@ -2,10 +2,12 @@
 // Systembackup er serveroppsett: bare admin ser og endrer. Fem seksjoner: STATUS, AUTOMATISK, HVA SKAL TAS MED, HVOR,
 // GJENOPPRETT. API (server/system-backup.js): GET/PUT /api/backup/settings, POST /api/backup/run, GET /api/backup/status,
 // GET /api/backup/list, POST /api/backup/key, POST /api/backup/restore {id, modules, password}, GET /api/backup/:id/download.
+// Prompt 30: HVOR → «SMB / nettverksdisk» åpner veiviseren (smb-wizard.js, /api/smb/*); av/på via PUT target.smb.enabled.
 // 404 (eldre server) → «ikke tilgjengelig». Under en kjøring hentes status hvert 1,5 s.
 import { esc } from './util.js';
 import { store } from './store.js';
 import { fmtDate, fmtTime } from './i18n.js';
+import { openSmbWizard } from './smb-wizard.js';
 
 const BASE = '/api/backup';
 export const MODULES = [
@@ -146,6 +148,7 @@ export function backupView(h) {
   const fld = (name, label, v, ph, secret = false) => `<label class="sg-field"><span>${esc(label)}</span><input name="${name}" data-bk-cl="${name}" type="${secret ? 'password' : 'text'}" value="${secret ? '' : esc(v ?? '')}" placeholder="${esc(ph)}" autocomplete="off" spellcheck="false"></label>`;
   const where = [
     h.row({ t: 'Lagres på', s: `Homelab-disk · ${S.target?.path || '/srv/backup'}`, v: 'Lokal' }),
+    ...smbRows(h, S),
     tog(h, { t: 'Krypter backup', k: 'kryptering aes nøkkel', s: 'AES-256 · gjenopprettingsnøkkelen vises én gang.', key: 'encrypt', on: S.encrypt }),
     S.encrypt || S.keySet ? h.row({ t: 'Gjenopprettingsnøkkel', s: S.keySet ? 'Lagret. Lag en ny hvis du har mistet den (eldre backuper trenger den gamle).' : 'Ikke laget ennå. Kreves for kryptering.', btn: S.keySet ? 'Ny nøkkel' : 'Lag nøkkel', act: 'data-bk="key"' }) : '',
     B.key ? `<div class="sg-row bk-key"><span class="sg-txt"><b>Skriv ned nøkkelen nå</b><span>Den vises bare denne ene gangen. Uten den kan krypterte backuper ikke gjenopprettes andre steder.</span><code data-no-i18n>${esc(B.key)}</code></span><button type="button" class="sg-btn" data-bk="copy">${B.copied ? 'Kopiert ✓' : 'Kopier'}</button></div>` : '',
@@ -172,6 +175,23 @@ export function backupView(h) {
   ];
   if (B.err) { const gi = { auto: 1, what: 2, where: 3 }[B.errAt] ?? 0; groups[gi].rows.unshift({ html: `<div class="sg-row bk-err" role="alert">${esc(B.err)}</div>`, q: '' }); }
   return { groups, extra: restoreSheet() + keySheet() };
+}
+
+/** Prompt 30: HVOR → SMB / nettverksdisk (veiviseren i smb-wizard.js). */
+function smbRows(h, S) {
+  const m = S.target?.smb;
+  if (!m) return [];
+  const k = 'smb nas nettverksdisk nettverk share samba windows deling';
+  if (!m.share) return [h.row({ t: 'SMB / nettverksdisk', k, s: 'Kopier hver backup til en NAS eller PC på hjemmenettet.', btn: 'Sett opp nettverksdisk', act: 'data-bk="smb"' })];
+  const st = m.lastError ? `Siste kopi feilet: ${m.lastError}` : m.lastUpload ? `Sist kopiert ${when(m.lastUpload)}` : m.enabled ? 'Kopieres etter hver backup.' : 'Av';
+  return [
+    tog(h, { t: 'Kopi til nettverksdisk', k, s: `${m.label} · ${st}`, key: 'smb', on: m.enabled }),
+    h.row({ t: 'SMB / nettverksdisk', k, s: 'Bytt server, bruker eller mappe.', btn: 'Sett opp nettverksdisk', act: 'data-bk="smb"' }),
+    m.enabled && !S.encrypt ? '<div class="sg-row bk-warnrow" data-no-i18n>Backupen kopieres ukryptert til nettverksdisken. Det er greit på eget hjemmenett, men vi anbefaler «Krypter backup».</div>' : '',
+  ];
+}
+function smbWizard() {
+  openSmbWizard({ use: ['system'], encrypted: !!B.s?.encrypt, onDone: () => { B.st = 'ok'; req('/settings').then((s) => { B.s = norm(s); rerender(); }).catch(() => {}); } });
 }
 
 /** Ny gjenopprettingsnøkkel når en finnes fra før: krever passordet. */
@@ -227,6 +247,12 @@ export async function backupClick(e) {
   if (d.bkTog) {
     const k = d.bkTog, S = B.s;
     const grp = k === 'auto' || k === 'notifyFail' ? 'auto' : 'where';
+    if (k === 'smb') {
+      B.saving = true;
+      try { B.s = norm(await req('/settings', { method: 'PUT', json: { target: { smb: { enabled: !S.target.smb.enabled } } } })); B.err = ''; } catch (err) { B.err = err.message; B.errAt = grp; }
+      B.saving = false; rerender();
+      return true;
+    }
     if (k === 'cloud') {
       if (S.cloud.enabled) { B.cloudOpen = false; await save({ cloud: { enabled: false } }, grp); }
       else if (B.cloudOpen) { B.cloudOpen = false; rerender(); }
@@ -250,6 +276,7 @@ export async function backupClick(e) {
   if (d.bkRmod && B.restore) { const m = new Set(B.restore.mods); m.has(d.bkRmod) ? m.delete(d.bkRmod) : m.add(d.bkRmod); B.restore.mods = [...m]; rerender(); return true; }
   const a = d.bk;
   if (a === 'reload') { B.st = 'loading'; rerender(); loadBackup(); }
+  else if (a === 'smb') smbWizard();
   else if (a === 'run') {
     B.err = '';
     try { await req('/run', { method: 'POST', json: { scope: B.s.scope, modules: B.s.scope === 'custom' ? B.s.modules : undefined } }); B.status = { ...(B.status ?? {}), running: { pct: 0, state: 'running' } }; watch(); }

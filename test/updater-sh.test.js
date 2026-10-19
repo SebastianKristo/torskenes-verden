@@ -165,3 +165,48 @@ test('nekter å starte når compose ble kjørt fra en annen mappe', { skip }, ()
   assert.match(r.stderr, /cd til prosjektmappen/);
   assert.equal(existsSync(join(t.host, 'data', 'update', 'heartbeat')), false);
 });
+
+// Prompt 30: rollback. Updateren husker selv vellykkede sha-er i history.json; forespørselen har bare {id, action}.
+const OLD = 'beef'.padEnd(40, '1');
+test('vellykket oppdatering skriver history.json (med tidligere installed.json som forrige)', { skip }, () => {
+  const t = setup();
+  writeFileSync(join(t.host, 'data', 'update', 'installed.json'), JSON.stringify({ sha: OLD, version: '9.9.8', at: 1 }));
+  const r = run(t, { id: 'req-h', at: Date.now() });
+  assert.equal(r.status?.state, 'done', r.stderr);
+  assert.equal(r.status.action, 'update');
+  const h = JSON.parse(readFileSync(join(t.host, 'data', 'update', 'history.json'), 'utf8'));
+  assert.deepEqual(h.entries.map((e) => e.sha), [SHA, OLD]);
+});
+
+test('rollback laster ned forrige sha fra historikken, aldri fra forespørselen', { skip }, () => {
+  const t = setup();
+  writeFileSync(join(t.host, 'data', 'update', 'history.json'), JSON.stringify({ entries: [{ sha: SHA, version: '9.9.9', at: 2 }, { sha: OLD, version: '9.9.8', at: 1 }] }));
+  // Den falske curl gir samme arkiv uansett sha; vi sjekker hvilken sha som ble bedt om.
+  const r = run(t, { id: 'req-rb', at: Date.now(), action: 'rollback', sha: 'f'.repeat(40), repo: 'evil/evil' });
+  assert.equal(r.status?.state, 'done', `${r.stderr}\n${readFileSync(join(t.host, 'data', 'update', 'log.txt'), 'utf8')}`);
+  assert.equal(r.status.action, 'rollback');
+  assert.equal(r.status.sha, OLD);
+  assert.match(r.calls, new RegExp(`codeload.github.com/SebastianKristo/torskenes-verden/tar.gz/${OLD}`));
+  assert.doesNotMatch(r.calls, /api\.github\.com|evil|ffffffff/);
+  assert.doesNotMatch(r.calls, /selfupdate/, 'updateren oppdaterer ikke seg selv ved rollback');
+  assert.equal(r.installed.sha, OLD);
+  const h = JSON.parse(readFileSync(join(t.host, 'data', 'update', 'history.json'), 'utf8'));
+  assert.deepEqual(h.entries.map((e) => e.sha), [OLD]);
+  untouched(t);
+});
+
+test('rollback uten historikk feiler uten å røre noe', { skip }, () => {
+  const t = setup();
+  const r = run(t, { id: 'req-rb2', at: Date.now(), action: 'rollback' });
+  assert.equal(r.status?.state, 'failed', r.stderr);
+  assert.match(r.status.error, /ingen tidligere versjon/);
+  assert.doesNotMatch(r.calls, /codeload|docker compose /);
+  assert.equal(readFileSync(join(t.host, 'server', 'index.js'), 'utf8'), '// gammel');
+});
+
+test('ukjent action ignoreres', { skip }, () => {
+  const t = setup();
+  const r = run(t, { id: 'req-x9', at: Date.now(), action: 'rm -rf' });
+  assert.equal(r.status, null);
+  assert.doesNotMatch(r.calls, /docker compose |codeload/);
+});

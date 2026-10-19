@@ -32,6 +32,9 @@ import * as backup from './backup.js';
 import * as subsOs from './subs.js';
 import { mountP27, mountP27Public } from './p27-routes.js';
 import { findLogo } from './logo-lookup.js';
+import { storeLines, receiptLines, matchLines, annotateSearch } from './highlight30.js';
+import { shareableUsers, logEntryChange, entryHistory } from './boliger30.js';
+import { broadcast } from '../realtime.js';
 import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor, upcomingOf, backgroundOf, validBackground } from './boliger.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
@@ -207,6 +210,7 @@ function receiptOut(r, cats = catById(), accs = accById()) {
     accountId: r.account_id, account: accs.get(r.account_id)?.name ?? null, confidence: r.confidence, flag, error: r.error, mime: r.mime,
     file: r.file ? `/finans/api/receipts/${r.id}/file` : null, thumb: r.thumb ? `/finans/api/receipts/${r.id}/thumb` : null,
     extraction: ex, match: match ? txOut(match, cats, accs) : null, created: r.created, name: r.name ?? null,
+    lines: receiptLines(r), hasBoxes: receiptLines(r).some((l) => l.bbox),
     aiShort: r.ai_short ?? (r.status === 'pending' || r.status === 'processing' ? `${providerName(st.provider)} leser kvitteringen …` : null), aiLong: r.ai_long ?? null,
     ...reanalyzeInfo(r, st), log: scanLogOf(r), timeoutEngine: r.timeout_engine ?? null, retryAt: r.retry_at ?? null,
     domain: r.domain || domainFor(r.merchant), target: r.target ?? null, source: r.source ?? 'upload', ...(r.meta ? { email: (() => { try { const m = JSON.parse(r.meta); return { from: m.from, subject: m.subject, date: m.date }; } catch { return null; } })() } : {}) };
@@ -297,6 +301,7 @@ async function processReceipt(r, id, force) {
          account_id=COALESCE(?, account_id), confidence=?, transaction_id=? WHERE id=? AND status='processing'`)
         .run(res.provider, res.model, res.seconds, JSON.stringify(d), d.merchant, d.date ?? r.date, totalOre, catId,
           acc ?? match?.account_id ?? null, Math.min(d.confidence.total, d.confidence.merchant || 1), match?.id ?? null, id);
+      storeLines(id); // prompt 30: linjer med bbox
       const sum = await summarizeReceipt(d, catById().get(catId)?.name);
       q('UPDATE fh_receipts SET ai_short=?, ai_long=?, domain=? WHERE id=?').run(sum.short, sum.long, sum.domain, id);
       routeTarget(id);
@@ -675,7 +680,7 @@ api.delete('/transactions/:id', need('write:transactions'), (c) => {
 api.get('/transactions/:id/original', need('read:transactions'), (c) => {
   const t = own('fh_transactions', +c.req.param('id'));
   if (!t) return c.notFound();
-  const r = q('SELECT id, mime, file, thumb, merchant, date, total, extraction, status FROM fh_receipts WHERE transaction_id=? AND user_id=? ORDER BY created DESC LIMIT 1').get(t.id, t.user_id);
+  const r = q('SELECT id, mime, file, thumb, merchant, date, total, extraction, line_boxes, status FROM fh_receipts WHERE transaction_id=? AND user_id=? ORDER BY created DESC LIMIT 1').get(t.id, t.user_id);
   let ex = null; try { ex = r?.extraction ? JSON.parse(r.extraction) : null; } catch { ex = null; }
   let bank = null;
   try { bank = t.raw_bank_row ? JSON.parse(t.raw_bank_row) : null; } catch { bank = null; }
@@ -685,7 +690,7 @@ api.get('/transactions/:id/original', need('read:transactions'), (c) => {
   return c.json({
     receipt: r ? { id: r.id, mime: r.mime, status: r.status, fileUrl: r.file ? `/finans/api/receipts/${r.id}/file` : null, thumbUrl: r.thumb ? `/finans/api/receipts/${r.id}/thumb` : null,
       merchant: r.merchant, date: r.date, total: r.total != null ? r.total / 100 : null,
-      lines: (ex?.lines ?? []).map((l) => ({ description: l.description, amount: l.amount })), vat: ex?.vat ?? [] } : null,
+      lines: receiptLines(r).map((l) => ({ description: l.text, amount: l.price, ...(l.bbox ? { bbox: l.bbox } : {}) })), hasBoxes: receiptLines(r).some((l) => l.bbox), vat: ex?.vat ?? [] } : null,
     bankRow,
   });
 });
@@ -698,14 +703,17 @@ api.get('/transactions/:id', need('read:transactions'), (c) => {
   const t = q(`${TX_SELECT} WHERE t.id=? AND t.user_id=?`).get(id, c.get('user'));
   if (!t) return c.notFound();
   const out = txOut(t);
-  const r = q('SELECT id, mime, file, total, extraction, status, ai_short FROM fh_receipts WHERE transaction_id=? AND user_id=? ORDER BY created DESC LIMIT 1').get(id, t.user_id);
+  const r = q('SELECT id, mime, file, total, extraction, line_boxes, status, ai_short FROM fh_receipts WHERE transaction_id=? AND user_id=? ORDER BY created DESC LIMIT 1').get(id, t.user_id);
+  // Prompt 30: ?hl=tomat → hvilke linjer som skal markeres (og om bildet har posisjoner).
+  const rl = r ? receiptLines(r) : [], hl = str(c.req.query('hl'), 100);
   let ex = null; try { ex = r?.extraction ? JSON.parse(r.extraction) : null; } catch { ex = null; }
   let bank = null; try { bank = t.raw_bank_row ? JSON.parse(t.raw_bank_row) : null; } catch { bank = null; }
   return c.json({
     ...out,
     aiSummary: out.aiLong ?? out.aiShort ?? null,
     receipt: r ? { id: r.id, status: RECEIPT_STATE(r.status), mime: r.mime, fileUrl: r.file ? `/finans/api/receipts/${r.id}/file` : null,
-      lines: (ex?.lines ?? []).map((l) => ({ name: l.description, price: l.amount })), total: r.total != null ? r.total / 100 : null,
+      lines: rl.map((l) => ({ name: l.text, price: l.price, ...(l.bbox ? { bbox: l.bbox } : {}) })), hasBoxes: rl.some((l) => l.bbox), total: r.total != null ? r.total / 100 : null,
+      ...(hl ? { highlight: { query: hl, ...matchLines(rl, hl), hasBoxes: rl.some((l) => l.bbox) } } : {}),
       aiSummary: r.ai_short ?? out.aiShort ?? null } : null,
     bank: bank ? { bookingDate: bank.bookingDate ?? null, valueDate: bank.valueDate ?? null, description: bank.description ?? t.description,
       message: bank.message ?? bank.raw?.['Melding/KID/Fakt.nr'] ?? null, amount: bank.amount ?? t.amount / 100, account: bank.account ?? null,
@@ -976,6 +984,39 @@ api.post('/receipts/:id/reprocess', W, (c) => {
   return c.json(receiptOut(origSelect.get(r.id)));
 });
 
+// Prompt 30: «Les kvitteringen på nytt» for å få posisjoner (bbox) til markeringen. Leser originalfilen med valgt motor i
+// bakgrunnen og bytter bare ut varelinjene (med bbox) – status, beløp, kategori og bokføring røres ikke.
+// → 202 {queued:true, receiptId}. Klienten henter GET /receipts/:id (hasBoxes, lines) etterpå. Feil havner i skanneloggen.
+const rereading = new Set();
+let rereadImpl = null;
+export const _setReread = (fn) => { rereadImpl = fn; };
+api.post('/receipts/:id/reread', W, async (c) => {
+  const r = rcGet(c);
+  if (!r) return c.notFound();
+  if (r.status === 'pending' || r.status === 'processing' || rereading.has(r.id)) return bad(c, 'Kvitteringen leses allerede', 409);
+  if (r.mime === 'text/plain') return bad(c, 'E-postkvitteringer har ikke bilde, så posisjoner finnes ikke');
+  if (!r.file) return bad(c, 'Kvitteringen har ingen fil å lese');
+  rereading.add(r.id);
+  scanLog(r.id, 'les-på-nytt', 'posisjoner for markering');
+  const u = c.get('user');
+  const job = (async () => {
+    try {
+      const img = await readFile(join(DIR, r.scan || r.file));
+      const mime = r.scan ? 'image/jpeg' : r.mime;
+      const cats = q("SELECT name FROM fh_categories WHERE kind='expense' AND user_id=? ORDER BY sort").all(u).map((x) => x.name);
+      const res = rereadImpl ? await rereadImpl(img, mime) : await extract(img, mime, cats, undefined, { log: (step, d) => scanLog(r.id, step, d) });
+      const cur = origSelect.get(r.id);
+      let ex = {}; try { ex = JSON.parse(cur?.extraction ?? '{}') ?? {}; } catch { ex = {}; }
+      q('UPDATE fh_receipts SET extraction=? WHERE id=?').run(JSON.stringify({ ...ex, lines: res.data?.lines ?? ex.lines ?? [] }), r.id);
+      storeLines(r.id);
+      const n = receiptLines(origSelect.get(r.id)).filter((l) => l.bbox).length;
+      scanLog(r.id, 'les-på-nytt-ferdig', n ? `${n} linjer med posisjon` : 'motoren ga ingen posisjoner');
+    } catch (e) { scanLog(r.id, 'feil', `Les på nytt: ${e.message}`); } finally { rereading.delete(r.id); }
+  })();
+  if (rereadImpl) await job; // tester venter på resultatet
+  return c.json({ queued: true, receiptId: r.id }, 202);
+});
+
 // «✦ Analyser på nytt med Gemini»: originalfilen sendes til Gemini. Resultatet lagres som kandidat og vises
 // side om side med det forrige; brukeren velger hvilket som beholdes (POST …/reanalyze/apply).
 const readOut = (o) => ({ merchant: o.merchant ?? null, date: o.date ?? null, total: o.total ?? null, items: (o.lines ?? []).map((l) => ({ description: l.description, amount: l.amount, quantity: l.quantity ?? null })),
@@ -1040,6 +1081,7 @@ async function applyCandidate(r, cand) {
        account_id=COALESCE(?, account_id), confidence=?, transaction_id=?, candidate=NULL WHERE id=?`)
       .run(cand.provider, cand.model, cand.seconds, JSON.stringify(d), d.merchant, d.date ?? r.date, totalOre, catId,
         acc ?? match?.account_id ?? null, Math.min(d.confidence.total, d.confidence.merchant || 1), match?.id ?? r.transaction_id ?? null, r.id);
+    storeLines(r.id); // prompt 30: linjer med bbox
     try { const sum = await summarizeReceipt(d, catById().get(catId)?.name); q('UPDATE fh_receipts SET ai_short=?, ai_long=?, domain=? WHERE id=?').run(sum.short, sum.long, sum.domain, r.id); } catch { /* sammendraget er valgfritt */ }
     try { routeTarget(r.id); } catch { /* mappen kan være slettet */ }
   }
@@ -1641,7 +1683,7 @@ export const FOLDER_CATS = [['Strøm', '#F2C14E'], ['Vann og avløp', '#7AA7FF']
 const FCAT = Object.fromEntries(FOLDER_CATS);
 const FOLDER_TYPES = ['Enebolig', 'Leilighet', 'Hytte', 'Utleie', 'Annet'];
 const ROLES = { owner: 'Eier', editor: 'Kan redigere', viewer: 'Kan se' };
-const ROLE_IN = { Eier: 'owner', 'Kan redigere': 'editor', 'Kan se': 'viewer', owner: 'owner', editor: 'editor', viewer: 'viewer', member: 'editor' };
+const ROLE_IN = { Eier: 'owner', 'Kan redigere': 'editor', 'Kan laste opp': 'editor', 'Kan se': 'viewer', owner: 'owner', editor: 'editor', uploader: 'editor', viewer: 'viewer', member: 'editor' };
 const FREQS = ['Månedlig', 'Kvartalsvis', 'Halvårlig', 'Årlig', 'Annenhver måned'];
 export function folderCategory(text) {
   const s = String(text ?? '');
@@ -1655,8 +1697,8 @@ const MONTHS_SHORT = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 's
 
 const memberOf = (fid, uid) => q('SELECT * FROM fh_folder_members WHERE folder_id=? AND user_id=?').get(fid, uid);
 // Henter mappen og sjekker tilgang. need: 'view' | 'edit' | 'owner'.
-function folderFor(c, need = 'view') {
-  const f = q('SELECT * FROM fh_folders WHERE id=?').get(+c.req.param('id'));
+function folderFor(c, need = 'view', id = c.req.param('id')) {
+  const f = q('SELECT * FROM fh_folders WHERE id=?').get(+id);
   if (!f) return { err: c.json({ error: 'Fant ikke boligen' }, 404) };
   const m = memberOf(f.id, c.get('user'));
   if (!m) return { err: c.json({ error: 'Fant ikke boligen' }, 404) };
@@ -1751,7 +1793,7 @@ function folderOut(f, uid, full = false) {
     const r = e.receipt_id ? origSelect.get(e.receipt_id) : null;
     const pending = r && (r.status === 'pending' || r.status === 'processing');
     return { id: e.id, description: e.description, date: e.date, amount: e.amount / 100, paidBy: e.paid_by, ...entryCat(e), project: e.project, projectId: e.project_id,
-      txId: e.tx_id, receiptId: e.receipt_id, pending: !!pending, status: e.status === 'review' ? 'review' : 'ok', domain: t?.domain || r?.domain || domainFor(e.description),
+      txId: e.tx_id, receiptId: e.receipt_id, editedBy: e.edited_by ?? null, editedAt: e.edited_at ?? null, pending: !!pending, status: e.status === 'review' ? 'review' : 'ok', domain: t?.domain || r?.domain || domainFor(e.description),
       aiShort: pending ? 'Gemini leser kvitteringen …' : t?.ai_short || r?.ai_short || heuristic({ merchant: e.description, amount: -e.amount / 100 }).short };
   });
   // Hovedkategorier (prosjekter og faste regninger) og hele treet med ID-er (utgifter).
@@ -1883,17 +1925,38 @@ api.get('/folders/:id/bg', async (c) => {
 });
 api.delete('/folders/:id', (c) => { const { f, err } = folderFor(c, 'owner'); if (err) return err; q('DELETE FROM fh_folders WHERE id=?').run(f.id); return ok(c); });
 // Del med en bruker (eier). Bakoverkompatibelt: /invite med navn legger til en navngitt person uten innlogging.
+// Prompt 30: {userIds[], role} deler med flere på én gang (rutenettet «Brukere i Homelab»), og mottakerne får push.
 api.post('/folders/:id/members', async (c) => {
-  const { f, err } = folderFor(c, 'owner'); if (err) return err;
-  const b = await c.req.json();
-  const u = listUsers().find((x) => x.id === b.userId || x.username === b.username);
-  if (!u) return bad(c, 'Fant ikke brukeren. Nye brukere legges til av admin under Innstillinger → Innlogging i Homelab.');
-  if (memberOf(f.id, u.id)) return bad(c, `${displayName(u)} har allerede tilgang`);
-  // En navngitt person med samme navn (uten innlogging) kobles til kontoen i stedet for å få en ny rad.
-  const named = q('SELECT id FROM fh_folder_members WHERE folder_id=? AND user_id IS NULL AND lower(name)=lower(?)').get(f.id, displayName(u));
-  if (named) q('UPDATE fh_folder_members SET user_id=?, role=? WHERE id=?').run(u.id, ROLE_IN[b.role] ?? 'editor', named.id);
-  else q("INSERT INTO fh_folder_members(folder_id,name,email,role,status,user_id) VALUES(?,?,?,?,'active',?)").run(f.id, displayName(u), null, ROLE_IN[b.role] ?? 'editor', u.id);
+  const { f, me: mine, err } = folderFor(c, 'owner'); if (err) return err;
+  const b = await c.req.json().catch(() => ({}));
+  const users = listUsers();
+  const many = Array.isArray(b.userIds);
+  const picked = many ? [...new Set(b.userIds.map(String))].slice(0, 50).map((id) => users.find((x) => x.id === id)) : [users.find((x) => x.id === b.userId || (b.username && x.username === b.username))];
+  if (!picked.length || picked.some((u) => !u)) return bad(c, 'Fant ikke brukeren. Nye brukere legges til av admin under Innstillinger → Innlogging i Homelab.');
+  if (b.role !== undefined && !ROLE_IN[b.role]) return bad(c, 'Ugyldig rolle');
+  const role = ROLE_IN[b.role] ?? 'editor';
+  const fresh = picked.filter((u) => u.id !== c.get('user') && !memberOf(f.id, u.id));
+  if (!many && !fresh.length) return bad(c, `${displayName(picked[0])} har allerede tilgang`);
+  for (const u of fresh) {
+    // En navngitt person med samme navn (uten innlogging) kobles til kontoen i stedet for å få en ny rad.
+    const named = q('SELECT id FROM fh_folder_members WHERE folder_id=? AND user_id IS NULL AND lower(name)=lower(?)').get(f.id, displayName(u));
+    if (named) q('UPDATE fh_folder_members SET user_id=?, role=? WHERE id=?').run(u.id, role, named.id);
+    else q("INSERT INTO fh_folder_members(folder_id,name,email,role,status,user_id) VALUES(?,?,?,?,'active',?)").run(f.id, displayName(u), null, role, u.id);
+  }
+  const from = mine?.name || 'Noen';
+  for (const u of fresh) broadcast('boliger', { action: 'shared', folderId: f.id, title: 'Boliger', body: `${from} delte ${f.name} med deg`, category: 'finans', url: `finanshub://boliger/${f.id}` }, [u.id]);
   return fullOut(c, f);
+});
+api.get('/users/shareable', (c) => {
+  const { f, err } = folderFor(c, 'view', c.req.query('home')); if (err) return err;
+  return c.json(shareableUsers(c.get('user'), f.id));
+});
+api.get('/folders/:id/shareable', (c) => { const { f, err } = folderFor(c); if (err) return err; return c.json(shareableUsers(c.get('user'), f.id)); });
+api.get('/folders/:id/entries/:eid/history', (c) => {
+  const { f, err } = folderFor(c); if (err) return err;
+  const e = q('SELECT id FROM fh_folder_entries WHERE id=? AND folder_id=?').get(+c.req.param('eid'), f.id);
+  if (!e) return c.notFound();
+  return c.json(entryHistory(e.id).map((h) => ({ ...h, you: h.userId === c.get('user') })));
 });
 api.patch('/folders/:id/members/:mid', async (c) => {
   const { f, err } = folderFor(c, 'owner'); if (err) return err;
@@ -1954,14 +2017,33 @@ api.post('/folders/:id/entries', async (c) => {
   return fullOut(c, f);
 });
 api.patch('/folders/:id/entries/:eid', async (c) => {
-  const { f, err } = folderFor(c, 'edit'); if (err) return err;
+  const { f, me: mine, err } = folderFor(c, 'edit'); if (err) return err;
   const e = q('SELECT * FROM fh_folder_entries WHERE id=? AND folder_id=?').get(+c.req.param('eid'), f.id);
   if (!e) return c.notFound();
   const b = await c.req.json();
+  // Prompt 30: butikk/beskrivelse, beløp og dato kan endres (debounce i klientene), og alt logges med «endret av».
+  const changes = {};
+  const merchant = b.merchant !== undefined ? b.merchant : b.description;
+  if (merchant !== undefined) {
+    const v = str(merchant, 120);
+    if (!v) return bad(c, 'Butikk/beskrivelse kan ikke være tom');
+    if (v !== e.description) { q('UPDATE fh_folder_entries SET description=? WHERE id=?').run(v, e.id); changes.merchant = { from: e.description, to: v }; }
+  }
+  if (b.amount !== undefined) {
+    const a = ore(b.amount);
+    if (a === null || Math.abs(a) > 1e11) return bad(c, 'Ugyldig beløp');
+    if (Math.abs(a) !== e.amount) { q('UPDATE fh_folder_entries SET amount=? WHERE id=?').run(Math.abs(a), e.id); changes.amount = { from: e.amount / 100, to: Math.abs(a) / 100 }; }
+  }
+  if (b.date !== undefined) {
+    if (!isDate(b.date) || Number.isNaN(Date.parse(b.date))) return bad(c, 'Ugyldig dato (YYYY-MM-DD)');
+    if (b.date !== e.date) { q('UPDATE fh_folder_entries SET date=? WHERE id=?').run(b.date, e.id); changes.date = { from: e.date, to: b.date }; }
+  }
   if (b.categoryId !== undefined || b.category !== undefined) {
     const cid = b.categoryId ? bolCat(+b.categoryId)?.id : b.category ? catTree().find((t) => t.name === b.category)?.id : null;
-    if (cid) assignCategory(e.id, e.description, cid);
+    const before = entryCat(e);
+    if (cid) { assignCategory(e.id, e.description, cid); const after = entryCat(q('SELECT * FROM fh_folder_entries WHERE id=?').get(e.id)); if (after.categoryId !== before.categoryId) changes.category = { from: before.categoryLabel ?? before.category, to: after.categoryLabel ?? after.category }; }
   }
+  logEntryChange(e, c.get('user'), mine?.name || 'Ukjent', changes);
   if (b.projectId !== undefined) q('UPDATE fh_folder_entries SET project_id=? WHERE id=?').run(q('SELECT id FROM fh_folder_projects WHERE id=? AND folder_id=?').get(+b.projectId, f.id)?.id ?? null, e.id);
   if (b.paidBy && q('SELECT 1 FROM fh_folder_members WHERE folder_id=? AND name=?').get(f.id, b.paidBy)) q('UPDATE fh_folder_entries SET paid_by=? WHERE id=?').run(b.paidBy, e.id);
   if (b.status !== undefined) {
@@ -2235,12 +2317,14 @@ const flatSugg = () => suggestionGroups().flatMap((g) => g.items);
 api.get('/search', R, (c) => {
   const text = str(c.req.query('q'), 300);
   if (!text) return c.json({ mode: 'plain', query: '', summary: '', hits: [], followUps: [], suggestions: flatSugg(), groups: suggestionGroups() });
-  return c.json(plainSearch(text));
+  return c.json(annotateSearch(plainSearch(text), text, c.get('user')));
 });
 // ✦ AI-søk. Er motoren av eller nede, svares det med vanlig søk og aiUnavailable:true i stedet for en feil.
 // Prompt 25: med «Prefer: respond-async», ?async=1 eller {async:true} blir et søk som tar mer enn ca. 4 s en jobb: 202 {jobId}.
 // Raske svar (og eldre klienter uten jobbmodus) får det vanlige svaret direkte.
-async function aiSearch(uid, b, { signal = null, onEngine, status } = {}) {
+// Prompt 30: alle svar får {txId, receiptId, lineIndex[], matchedText} per treff.
+async function aiSearch(uid, b, ctx = {}) { return annotateSearch(await aiSearch0(uid, b, ctx), str(b?.q, 300), uid); }
+async function aiSearch0(uid, b, { signal = null, onEngine, status } = {}) {
   const text = str(b.q, 300);
   if (!text) return { answer: '', hits: [], followUps: [], suggestions: flatSugg(), groups: suggestionGroups() };
   if (b.save !== false) kv.set(uid, AI_HIST, [text, ...aiHistory(uid).filter((x) => x.toLowerCase() !== text.toLowerCase())].slice(0, 20));

@@ -306,41 +306,110 @@ export async function buildArchive(c, phrase) {
 }
 
 /* ---------------- SMB ---------------- */
+// Felles for FinansHub-backupen, systembackupen (server/system-backup.js) og SMB-veiviseren (server/smb-browse.js).
+// smbclient kjøres alltid med execFile (ingen skall), brukernavn/passord i en midlertidig auth-fil (0600) og alt som går inn i
+// smbclients lille kommandospråk (-c) er validert mot SMB_SEG først (ingen anførselstegn, semikolon, skråstreker eller kontrolltegn).
 
-const PROTO = { '3.1.1': 'SMB3_11', '3.0': 'SMB3_00', '2.1': 'SMB2_10' };
-export const normShare = (s) => { const v = String(s ?? '').trim().replace(/\\/g, '/').replace(/^\/*/, '//').replace(/\/+$/, ''); return /^\/\/[A-Za-z0-9.\-]+\/[^/'"`;|&$]+(\/[^'"`;|&$]+)?$/.test(v) ? v : null; };
-const safeDir = (d) => String(d ?? '').replace(/\\/g, '/').split('/').map((x) => x.trim()).filter((x) => x && x !== '.' && x !== '..' && /^[\w .\-æøåÆØÅ]+$/.test(x)).join('/');
+// Høyeste versjon er alltid SMB3; innstillingen gir laveste versjon som godtas.
+const PROTO = { '3.1.1': 'SMB3_11', '3.0': 'SMB3_00', '2.1': 'SMB2_10', SMB3: 'SMB3_00', SMB2: 'SMB2_02' };
+/** Ett mappenavn (eller share-navn) som trygt kan stå i anførselstegn i smbclient -c. Avvis heller enn å escape. */
+export const SMB_SEG = /^(?![.]+$)(?! )(?!.* $)[\p{L}\p{N} ._\-()+,=@#~!]{1,120}$/u;
+/** Vertsnavn eller IPv4-adresse. */
+export const SMB_HOST = /^(?=.{1,253}$)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62})(?:\.[A-Za-z0-9-]{1,63})*$/;
+export const normShare = (s) => {
+  const v = String(s ?? '').trim().replace(/\\/g, '/').replace(/^\/*/, '//').replace(/\/+$/, '');
+  // Eldre oppsett kan ha en undermappe i selve sharen (//server/share/mappe); den legges foran smbDir.
+  const m = v.match(/^\/\/([^/]+)\/([^/]+)((?:\/[^/]+)*)$/);
+  return m && SMB_HOST.test(m[1]) && SMB_SEG.test(m[2]) && m[3].split('/').filter(Boolean).every((x) => SMB_SEG.test(x)) ? v : null;
+};
+/** '//host/share/a/b' → {share:'//host/share', sub:'a/b'} */
+export const splitShare = (v) => { const p = String(v ?? '').split('/'); return { share: p.slice(0, 4).join('/'), sub: p.slice(4).join('/') }; };
+export const safeDir = (d) => String(d ?? '').replace(/\\/g, '/').split('/').map((x) => x.trim()).filter((x) => x && SMB_SEG.test(x)).join('/');
 export const smbConfig = () => { const st = settings(); return { on: st.smbOn, share: st.smbShare, dir: st.smbDir, version: st.smbVersion, user: st.smbUser, domain: st.smbDomain, schedule: st.smbSchedule, keep: st.smbKeep,
   db: st.smbDb, receipts: st.smbReceipts, settings: st.smbSettings, encrypt: st.smbEncrypt, pwSet: !!secret('smbPass'), phraseSet: !!secret('backupPhrase') }; };
 
+// exec: (args, {timeout}) → Promise<{code, stdout, stderr, missing?, killed?}>. Byttes ut i tester og med MOCK_DATA=1 (falsk NAS).
+const realSmbExec = (args, { timeout = 120_000 } = {}) => new Promise((res) => execFile('smbclient', args, { timeout, maxBuffer: 8 * 1024 * 1024 }, (e, stdout, stderr) =>
+  res({ code: e ? (typeof e.code === 'number' ? e.code : 1) : 0, stdout: String(stdout ?? ''), stderr: String(stderr ?? ''), missing: e?.code === 'ENOENT', killed: !!e?.killed })));
+let smbExec = realSmbExec;
 let hasSmbclient = null;
+/** Bare for tester (og MOCK_DATA): bytt ut smbclient. null = ekte. */
+export const _setSmbExec = (fn) => { smbExec = fn ?? realSmbExec; hasSmbclient = null; };
+if (process.env.MOCK_DATA === '1' && process.env.NODE_ENV !== 'test') _setSmbExec((await import('../smb-mock.js')).mockSmbExec);
+
 export async function smbAvailable() {
   if (hasSmbclient !== null) return hasSmbclient;
-  hasSmbclient = await new Promise((r) => execFile('smbclient', ['--version'], { timeout: 5000 }, (e) => r(!e)));
+  hasSmbclient = await smbExec(['--version'], { timeout: 5000 }).then((r) => r.code === 0, () => false);
   return hasSmbclient;
 }
+
+/** Feilteksten (norsk, med forslag) for utdata fra smbclient. → {kind, message} */
+export function smbErrorText(out, { missing = false, killed = false } = {}) {
+  const s = String(out ?? '');
+  const E = (kind, message) => ({ kind, message });
+  if (missing) return E('missing', 'smbclient er ikke installert på serveren (apt install smbclient). Docker-imaget har det.');
+  if (/LOGON_FAILURE|WRONG_PASSWORD|NO_SUCH_USER/.test(s)) return E('auth', 'Feil brukernavn eller passord. Sjekk at brukeren finnes på NAS-en (ikke bare på PC-en).');
+  if (/ACCOUNT_(DISABLED|LOCKED_OUT|EXPIRED|RESTRICTION)|PASSWORD_(EXPIRED|MUST_CHANGE)/.test(s)) return E('auth', 'Kontoen er låst, deaktivert eller passordet må byttes på NAS-en.');
+  if (/BAD_NETWORK_NAME/.test(s)) return E('share', 'Fant ikke den delte mappen på serveren. Velg en annen, eller sjekk navnet på NAS-en.');
+  if (/OBJECT_NAME_COLLISION/.test(s)) return E('exists', 'Det finnes allerede en mappe med det navnet.');
+  if (/OBJECT_(NAME|PATH)_NOT_FOUND|NO_SUCH_FILE|NOT_A_DIRECTORY/.test(s)) return E('notfound', 'Fant ikke mappen. Den kan være flyttet eller slettet.');
+  if (/DISK_FULL|QUOTA_EXCEEDED/.test(s)) return E('full', 'Det er ikke plass på NAS-en (disken eller kvoten er full).');
+  if (/ACCESS_DENIED|MEDIA_WRITE_PROTECTED|NETWORK_ACCESS_DENIED|CANNOT_DELETE/.test(s)) return E('access', 'Ingen tilgang. Gi brukeren lese- og skrivetilgang til den delte mappen på NAS-en, eller logg inn med en annen bruker.');
+  if (/protocol negotiation failed|NOT_SUPPORTED|INVALID_NETWORK_RESPONSE|CONNECTION_RESET|CONNECTION_DISCONNECTED|NT_STATUS_REVISION_MISMATCH|INVALID_PARAMETER_MIX/.test(s))
+    return E('proto', 'Serveren og Homelab ble ikke enige om SMB-versjon. Slå på SMB2 eller SMB3 på NAS-en (det gamle SMB1 støttes ikke).');
+  if (/HOST_UNREACHABLE|IO_TIMEOUT|CONNECTION_REFUSED|NETWORK_UNREACHABLE|Connection to .* failed|resolve_name|NT_STATUS_UNSUCCESSFUL|BAD_NETWORK_PATH|NOT_FOUND\b/.test(s) || killed)
+    return E('host', 'Fant ikke serveren. Sjekk IP-adressen eller navnet, at NAS-en er på, og at SMB (fildeling for Windows) er slått på.');
+  const line = s.split('\n').find((l) => /NT_STATUS|ERR|error/i.test(l));
+  return E('other', (line || 'smbclient feilet').trim().slice(0, 200));
+}
+/** NT_STATUS-feil fra en kommando i -c (smbclient avslutter ofte med 0 selv om en kommando feilet). */
+export const smbCmdError = (out) => { const m = String(out ?? '').match(/NT_STATUS_[A-Z_]+/); return m && !/NT_STATUS_OK\b/.test(m[0]) ? m[0] : null; };
+
+/**
+ * Kjører smbclient. target: {share:'//host/share'} eller {list:'host'} (smbclient -L -g). dir: startmappe (--directory), cmd: -c.
+ * user tom = gjest. proto: '3.1.1' | '3.0' | '2.1' | 'SMB3' | 'SMB2'. → stdout (kaster Error med .kind og .raw ved feil)
+ */
+export async function smbRun({ share, list, user, password, domain, proto, dir, cmd, timeout = 120_000 }) {
+  const auth = join(WORK, `.smbauth-${randomUUID()}`);
+  const clean = (v) => String(v ?? '').replace(/[\r\n\0]/g, '');
+  writeFileSync(auth, `username = ${clean(user) || 'guest'}\npassword = ${clean(password)}\ndomain = ${clean(domain) || 'WORKGROUP'}\n`, { mode: 0o600 });
+  chmodSync(auth, 0o600);
+  const min = PROTO[proto] ?? 'SMB2_10';
+  const args = [...(list ? ['-L', `//${list}`, '-g'] : [share]), '-A', auth, '-m', 'SMB3', '--option=client min protocol=' + min];
+  if (dir) args.push(`--directory=${dir}`); // én argv-verdi: et mappenavn som starter med «-» kan aldri bli et flagg
+  if (cmd) args.push('-c', cmd);
+  let r;
+  try { r = await smbExec(args, { timeout }); }
+  finally { rmSync(auth, { force: true }); }
+  if (r.code !== 0 || r.missing) {
+    const raw = `${r.stderr || ''}${r.stdout || ''}`;
+    const e = smbErrorText(raw, r);
+    throw Object.assign(new Error(e.message), { kind: e.kind, raw: raw.slice(0, 500) });
+  }
+  return r.stdout;
+}
+
 function smb(cmd, { timeout = 120_000 } = {}) {
   const st = settings(), share = normShare(st.smbShare);
   if (!share) return Promise.reject(new Error('Ugyldig share. Bruk formen //server/share eller \\\\server\\share'));
-  // Brukernavn og passord går via en midlertidig autentiseringsfil (mode 600), aldri på kommandolinjen.
-  const auth = join(WORK, `.smbauth-${randomUUID()}`);
-  writeFileSync(auth, `username = ${st.smbUser || 'guest'}\npassword = ${secret('smbPass')}\ndomain = ${st.smbDomain || 'WORKGROUP'}\n`, { mode: 0o600 });
-  chmodSync(auth, 0o600);
-  const args = [share, '-A', auth, '-m', PROTO[st.smbVersion] ?? 'SMB3', '--option=client min protocol=' + (PROTO[st.smbVersion] ?? 'SMB2_10'), '-c', cmd];
-  return new Promise((res, rej) => execFile('smbclient', args, { timeout, maxBuffer: 8 * 1024 * 1024 }, (e, stdout, stderr) => {
-    rmSync(auth, { force: true });
-    if (e) {
-      const msg = `${stderr || ''}${stdout || ''}`;
-      if (e.code === 'ENOENT') return rej(new Error('smbclient er ikke installert på serveren (apt install smbclient)'));
-      if (/LOGON_FAILURE/.test(msg)) return rej(new Error('Feil brukernavn eller passord for sharen'));
-      if (/BAD_NETWORK_NAME/.test(msg)) return rej(new Error('Fant ikke sharen på serveren'));
-      if (/HOST_UNREACHABLE|Connection to .* failed|NT_STATUS_IO_TIMEOUT|CONNECTION_REFUSED/.test(msg)) return rej(new Error('Fikk ikke kontakt med serveren'));
-      return rej(new Error((msg.split('\n').find((l) => /NT_STATUS|ERR|error/i.test(l)) || e.message).trim().slice(0, 200)));
-    }
-    res(stdout);
-  }));
+  return smbRun({ share: splitShare(share).share, user: st.smbUser, password: secret('smbPass'), domain: st.smbDomain, proto: st.smbVersion, cmd, timeout });
 }
-const cdDir = () => { const d = safeDir(settings().smbDir); return d ? d.split('/').map((p) => `mkdir "${p}"; cd "${p}"`).join('; ') + '; ' : ''; };
+/** Parser «ls» fra smbclient. → [{name, type:'dir'|'file', size, when}] uten . og .. */
+const LS_RE = /^ {2}(.+?)\s+([ADHNRSV]*)\s+(\d+)\s+((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) \w{3}\s+\d+ \d\d:\d\d:\d\d \d{4})\s*$/;
+export function parseSmbLs(out) {
+  const rows = [];
+  for (const l of String(out ?? '').split('\n')) {
+    const m = l.match(LS_RE);
+    if (!m || m[1] === '.' || m[1] === '..') continue;
+    rows.push({ name: m[1], type: m[2].includes('D') ? 'dir' : 'file', size: +m[3], when: Date.parse(m[4].replace(/\s+/g, ' ')) || null });
+  }
+  return rows;
+}
+/** En lokal filsti som skal stå i anførselstegn i smbclient -c (put/get). */
+export const localArg = (p) => { if (/["\r\n\0;]/.test(String(p))) throw new Error('Mappen på serveren (DATA_DIR/BACKUP_DIR) inneholder tegn smbclient ikke kan bruke (" eller ;)'); return p; };
+/** smbclient-kommandoer som lager og går inn i mappen d (relativ til sharen). Mappenavnene er validert med SMB_SEG. */
+export const cdDirOf = (d) => { const s = safeDir(d); return s ? s.split('/').map((p) => `mkdir "${p}"; cd "${p}"`).join('; ') + '; ' : ''; };
+const cdDir = () => cdDirOf([splitShare(normShare(settings().smbShare) ?? '').sub, settings().smbDir].filter(Boolean).join('/'));
 
 export async function smbTest() {
   if (!(await smbAvailable())) return { ok: false, message: 'smbclient er ikke installert på serveren (apt install smbclient)' };

@@ -2,6 +2,7 @@
 // Svaret valideres; ugyldig svar gir ett nytt forsøk før bilaget markeres for manuell utfylling.
 import { settings, secret, db, me, addUserCol } from './db.js';
 import { geminiFetch, hasGemini, usableKeys } from './gemini-keys.js';
+import { cleanBbox } from './bbox30.js';
 import { ocrEnabled, ocrReceipt, cropImage, decodeBarcodes, ocrTools } from '../ocr-fallback.js';
 
 export const PROMPT = (cats) => `Du leser en norsk kvittering. Returner KUN JSON etter skjemaet.
@@ -10,7 +11,8 @@ export const PROMPT = (cats) => `Du leser en norsk kvittering. Returner KUN JSON
 - vat: summer per sats (25, 15, 12, 0) hvis oppgitt.
 - Foreslå kategori fra listen: ${cats.join(', ')}.
 - Sett confidence (0–1) per felt (merchant, date, total). Gjett ikke: ukjent felt = null.
-- Ta aldri med fullt kortnummer, bare de fire siste sifrene i card_last4.`;
+- Ta aldri med fullt kortnummer, bare de fire siste sifrene i card_last4.
+- lines: hver varelinje med description, amount og bbox = [x, y, bredde, høyde] i prosent (0–100) av bildet, målt fra øvre venstre hjørne, rundt hele linjen (tekst og pris). bbox = null hvis du ikke ser bildet eller er usikker.`;
 
 const num = { type: 'number', nullable: true };
 const str = { type: 'string', nullable: true };
@@ -20,7 +22,8 @@ export const SCHEMA = {
   properties: {
     merchant: str, org_number: str, date: str, total: num, currency: { type: 'string' },
     vat: { type: 'array', items: { type: 'object', properties: { rate: { type: 'integer' }, amount: { type: 'number' } }, required: ['rate', 'amount'] } },
-    lines: { type: 'array', items: { type: 'object', properties: { description: { type: 'string' }, quantity: num, amount: { type: 'number' } }, required: ['description', 'amount'] } },
+    // Prompt 30: bbox per linje i prosent av bildet ([x, y, w, h]) for markering av søketreff i kvitteringen.
+    lines: { type: 'array', items: { type: 'object', properties: { description: { type: 'string' }, quantity: num, amount: { type: 'number' }, bbox: { type: 'array', items: { type: 'number' }, nullable: true } }, required: ['description', 'amount'] } },
     payment_method: str, card_last4: str, suggested_category: str,
     confidence: { type: 'object', properties: { merchant: { type: 'number' }, date: { type: 'number' }, total: { type: 'number' } } },
   },
@@ -53,7 +56,11 @@ export function validate(x) {
     total: Number.isFinite(+x.total) && x.total !== null ? Math.round(+x.total * 100) / 100 : null,
     currency: typeof x.currency === 'string' ? x.currency.slice(0, 3).toUpperCase() : 'NOK',
     vat: Array.isArray(x.vat) ? x.vat.filter((v) => Number.isFinite(+v.rate) && Number.isFinite(+v.amount)).map((v) => ({ rate: +v.rate, amount: +v.amount })) : [],
-    lines: Array.isArray(x.lines) ? x.lines.filter((l) => l && Number.isFinite(+l.amount)).slice(0, 80).map((l) => ({ description: String(l.description ?? '').slice(0, 120), quantity: Number.isFinite(+l.quantity) && l.quantity !== null ? +l.quantity : null, amount: +l.amount })) : [],
+    // text/price godtas som alias for description/amount (prompt 30), bbox beholdes når den er gyldig.
+    lines: Array.isArray(x.lines) ? x.lines.map((l) => (l && l.amount == null && l.price != null ? { ...l, amount: l.price } : l)).filter((l) => l && l.amount !== null && Number.isFinite(+l.amount)).slice(0, 80).map((l) => {
+      const bbox = cleanBbox(l.bbox);
+      return { description: String(l.description ?? l.text ?? '').slice(0, 120), quantity: Number.isFinite(+l.quantity) && l.quantity !== null ? +l.quantity : null, amount: +l.amount, ...(bbox ? { bbox } : {}) };
+    }) : [],
     payment_method: typeof x.payment_method === 'string' ? x.payment_method.slice(0, 20) : null,
     card_last4: typeof x.card_last4 === 'string' && /^\d{4}$/.test(x.card_last4.slice(-4)) ? x.card_last4.slice(-4) : null,
     suggested_category: typeof x.suggested_category === 'string' ? x.suggested_category.slice(0, 60) : null,

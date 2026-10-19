@@ -9,13 +9,15 @@
 //   - Id-er er strenge (bk-YYYYMMDD-HHMMSS-xxxxxx) og filnavnet hentes fra tabellen, aldri fra forespørselen.
 //
 // Ruter:
-//   GET  /settings  → {auto, schedule, keep, notifyFail, scope, modules, target:{local:true, path}, cloud:{…}, encrypt, keySet,
+//   GET  /settings  → {auto, schedule, keep, notifyFail, scope, modules, target:{local:true, path, smb:{enabled, share, path, label,
+//                      lastUpload, lastError, unencrypted}}, cloud:{…}, encrypt, keySet,
 //                      moduleList:[{id, name, desc}], format}
 //   PUT  /settings  (delvis) → samme form
 //   POST /key       {rotate?, password?} → {key, keyId} bare første gang / ved ny nøkkel (rotate krever passord)
 //   POST /run       {scope?, modules?} → 202 {id}
 //   GET  /status    → {last, running, next, summary}
-//   GET  /list      → [{id, at, size, scope, modules, ok, error?, encrypted, cloud?, kind}]
+//   GET  /list      → [{id, at, size, scope, modules, ok, error?, encrypted, cloud?, smb?:{ok, at, path, error?}, kind}]
+//   (prompt 30) PUT /settings {target:{smb:{enabled, share, path}}}; oppsettet gjøres med veiviseren under /api/smb.
 //   POST /restore   {id, modules[], password, key?} → {ok, safetyId, modules, reload:true}
 //   GET  /:id/download → fila (attachment)
 //
@@ -46,7 +48,8 @@ import { db, kv, OWNER } from './db.js';
 import { sessionUser, isAdmin, checkPassword, clientIp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { seal, unseal } from './finans/db.js';
-import { tarHeader, untar, encryptStream, decryptFile } from './finans/backup.js';
+import { tarHeader, untar, encryptStream, decryptFile, smbRun, cdDirOf, parseSmbLs, localArg, normShare, splitShare, SMB_SEG } from './finans/backup.js';
+import { settings as fhSettings, secret as fhSecret } from './finans/db.js';
 import { broadcast } from './realtime.js';
 import { parseChangelog } from './system-update.js';
 
@@ -77,6 +80,8 @@ db.exec(`CREATE TABLE IF NOT EXISTS backup_jobs (
   error TEXT,
   by_user TEXT
 );`);
+// Prompt 30: kopi til nettverksdisk (SMB). {ok, at, path, file?, removed?, error?}
+if (!db.prepare('PRAGMA table_info(backup_jobs)').all().some((c) => c.name === 'smb')) db.exec('ALTER TABLE backup_jobs ADD COLUMN smb TEXT');
 
 /* ---------------- Moduler → tabeller, kv-nøkler og filmapper ---------------- */
 
@@ -130,11 +135,11 @@ const SCHEDULES = ['nightly', '6h', 'weekly', 'monthly'];
 const KEEPS = ['7', '30', '90d', '1y'];
 const SCOPES = ['all', 'finans', 'custom'];
 const DEFAULTS = { auto: true, schedule: 'nightly', keep: '30', notifyFail: true, scope: 'all', modules: [...MODULE_IDS], encrypt: false,
-  cloud: { enabled: false, provider: 'b2', bucket: '', endpoint: '', region: '', prefix: '' } };
+  cloud: { enabled: false, provider: 'b2', bucket: '', endpoint: '', region: '', prefix: '' }, smb: { enabled: false, share: '', path: '' } };
 const rawSettings = () => kv.get(OWNER, 'sys_backup', {}) ?? {};
 export function backupSettings() {
   const s = rawSettings();
-  const o = { ...DEFAULTS, ...s, cloud: { ...DEFAULTS.cloud, ...(s.cloud ?? {}) } };
+  const o = { ...DEFAULTS, ...s, cloud: { ...DEFAULTS.cloud, ...(s.cloud ?? {}) }, smb: { ...DEFAULTS.smb, ...(s.smb ?? {}) } };
   o.modules = Array.isArray(o.modules) ? o.modules.filter((m) => MODULE_IDS.includes(m)) : [...MODULE_IDS];
   return o;
 }
@@ -166,9 +171,12 @@ function settingsOut() {
   try { const f = statfsSync(BACKUP_DIR); free = f.bavail * f.bsize; } catch { /* ukjent */ }
   const last = q("SELECT * FROM backup_jobs WHERE cloud IS NOT NULL ORDER BY started DESC LIMIT 1").get();
   const lc = last ? JSON.parse(last.cloud) : null;
+  const lastSmb = q("SELECT * FROM backup_jobs WHERE smb IS NOT NULL ORDER BY started DESC LIMIT 1").get();
+  const ls = lastSmb ? JSON.parse(lastSmb.smb) : null;
   return {
     auto: !!s.auto, schedule: s.schedule, keep: s.keep, notifyFail: !!s.notifyFail, scope: s.scope, modules: s.scope === 'all' ? [...MODULE_IDS] : s.scope === 'finans' ? ['finans'] : s.modules,
-    target: { local: true, path: BACKUP_DIR, docker: '/srv/backup', free },
+    target: { local: true, path: BACKUP_DIR, docker: '/srv/backup', free,
+      smb: { ...smbTarget(), lastUpload: ls?.ok ? ls.at : null, lastError: ls && !ls.ok ? ls.error : null, unencrypted: !s.encrypt } },
     cloud: { enabled: !!s.cloud.enabled, provider: s.cloud.provider, bucket: s.cloud.bucket, endpoint: s.cloud.endpoint, region: s.cloud.region, prefix: s.cloud.prefix,
       keySet: !!(getSecret('b2KeyId') && getSecret('b2AppKey')), lastUpload: lc?.ok ? lc.at : null, lastError: lc && !lc.ok ? lc.error : null,
       providers: [{ id: 'b2', name: 'Backblaze B2', supported: true }, { id: 'gdrive', name: 'Google Drive', supported: false, note: 'Kommer' }] },
@@ -194,6 +202,15 @@ export function settingsInput(b) {
     }
     if (v.scope === 'custom' && !v.modules.length) throw new Error('Velg minst én modul');
     if (b.target !== undefined && b.target?.path !== undefined && b.target.path !== BACKUP_DIR) throw new Error('Lagringsstedet settes med BACKUP_DIR på serveren');
+    if (b.target?.smb !== undefined) {
+      const m = b.target.smb;
+      if (!m || typeof m !== 'object' || Array.isArray(m)) throw new Error('target.smb må være et objekt');
+      v.smb = { ...cur.smb };
+      if (m.enabled !== undefined) { if (typeof m.enabled !== 'boolean') throw new Error('target.smb.enabled må være true/false'); v.smb.enabled = m.enabled; }
+      if (m.share !== undefined) { const sh = m.share ? normShare(m.share) : ''; if (sh === null) throw new Error('Ugyldig share. Bruk formen //server/share'); v.smb.share = sh; }
+      if (m.path !== undefined) v.smb.path = smbPathOf(m.path);
+      if (v.smb.enabled && !v.smb.share) throw new Error('Sett opp nettverksdisken først (Sett opp nettverksdisk)');
+    }
     if (b.cloud !== undefined) {
       const c = b.cloud;
       if (!c || typeof c !== 'object' || Array.isArray(c)) throw new Error('cloud må være et objekt');
@@ -231,6 +248,7 @@ export function jobOut(r) {
     modules: JSON.parse(r.modules), ok: r.state === 'done', state: r.state, pct: r.pct, encrypted: !!r.encrypted, kind: r.kind, format: r.file?.includes('.tar.zst') ? 'tar.zst' : 'tar.gz' };
   if (r.error) o.error = r.error;
   if (r.cloud) o.cloud = JSON.parse(r.cloud);
+  if (r.smb) o.smb = JSON.parse(r.smb);
   return o;
 }
 const modulesOf = (scope, modules) => (scope === 'all' ? [...MODULE_IDS] : scope === 'finans' ? ['finans'] : MODULE_IDS.filter((m) => (modules ?? []).includes(m)));
@@ -384,6 +402,7 @@ export function startBackup({ scope = 'all', modules = null, kind = 'manual', by
       if (kind !== 'safety') rotate(st.keep);
       else rotateSafety();
       if (st.cloud.enabled && kind !== 'safety') await cloudUpload(id).catch(() => {});
+      if (st.smb.enabled && kind !== 'safety') await smbUpload(id).catch(() => {});
       const job = jobOut(getJob(id));
       broadcast('system-backup', { action: 'done', id, job, title: 'Backup', body: '✓ Backup ferdig', category: 'system' });
       return job;
@@ -514,6 +533,60 @@ export async function cloudUpload(id) {
     if (!res.ok) throw new Error(`B2 svarte ${res.status}`);
     return mark({ ok: true, key: keyName });
   } catch (e) { return mark({ ok: false, error: String(e.message).slice(0, 200) }); }
+}
+
+/* ---------------- Nettverksdisk (SMB, prompt 30) ---------------- */
+// Pålogging (bruker, domene, versjon, passord) er felles med FinansHub-backupen (smbUser/smbDomain/smbVersion/smbPass);
+// selve målet (share + mappe) ligger i sys_backup.smb. Settes opp med veiviseren (server/smb-browse.js).
+// Ferdig backupfil kopieres dit etter lokal lagring (kryptert eller ikke – på eget LAN er kryptering anbefalt, ikke påkrevd),
+// og gamle bk-*-filer der roteres etter samme keep som lokalt. Andre filer i mappen røres aldri.
+
+/** Mappe relativ til sharen; kaster ved ugyldige navn (samme regler som veiviseren). */
+export function smbPathOf(p) {
+  const segs = String(p ?? '').replace(/\\/g, '/').split('/').filter(Boolean);
+  if (segs.length > 24 || !segs.every((x) => SMB_SEG.test(x))) throw new Error('Ugyldig mappe på nettverksdisken');
+  return segs.join('/');
+}
+export const smbTarget = () => { const m = backupSettings().smb; return { enabled: !!m.enabled, share: m.share || '', path: m.path || '', label: m.share ? `${m.share}${m.path ? '/' + m.path : ''}` : '' }; };
+export function setSmbTarget(o) {
+  const cur = backupSettings();
+  const next = { ...cur.smb, ...(o.enabled !== undefined ? { enabled: !!o.enabled } : {}), ...(o.share !== undefined ? { share: o.share ? normShare(o.share) ?? '' : '' } : {}), ...(o.path !== undefined ? { path: smbPathOf(o.path) } : {}) };
+  if (next.enabled && !next.share) throw new Error('Mangler share');
+  kv.set(OWNER, 'sys_backup', { ...rawSettings(), smb: next });
+  return smbTarget();
+}
+const smbConn = () => { const f = fhSettings(OWNER); return { user: f.smbUser, password: fhSecret('smbPass', OWNER), domain: f.smbDomain, proto: f.smbVersion }; };
+const smbWhere = (m) => { const { share, sub } = splitShare(m.share); return { share, dir: [sub, m.path].filter(Boolean).join('/') }; };
+/** Navnene som skal slettes på nettverksdisken etter keep (nyeste først; den nyeste beholdes alltid). */
+export function smbRotateList(names, keep, now = Date.now()) {
+  const list = names.filter((n) => FILE.test(n)).sort().reverse();
+  if (keep === '7' || keep === '30') return list.slice(Number(keep));
+  const days = keep === '1y' ? 365 : 90;
+  return list.slice(1).filter((n) => { const m = n.match(/^bk-(\d{4})(\d\d)(\d\d)-(\d\d)(\d\d)(\d\d)/); return m && now - Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +m[6]) > days * 86_400_000; });
+}
+/** Kopierer backupen id til nettverksdisken og roterer der. Feil lagres i jobben (smb). */
+export async function smbUpload(id) {
+  const r = getJob(id);
+  const st = backupSettings();
+  const mark = (o) => { setJob(id, { smb: JSON.stringify({ at: new Date().toISOString(), path: smbTarget().label, ...o }) }); return o; };
+  if (!r || r.state !== 'done' || !r.file || !FILE.test(r.file)) throw new Error('Fant ikke backupen');
+  if (!st.smb.share) return mark({ ok: false, error: 'Nettverksdisken er ikke satt opp' });
+  const { share, dir } = smbWhere(st.smb);
+  const c = smbConn();
+  try {
+    await smbRun({ share, ...c, cmd: `${cdDirOf(dir)}put "${localArg(join(BACKUP_DIR, r.file))}" "${r.file}"`, timeout: 6 * 3_600_000 });
+    let removed = 0;
+    try {
+      const names = parseSmbLs(await smbRun({ share, ...c, cmd: `${cdDirOf(dir)}ls`, timeout: 60_000 })).filter((x) => x.type === 'file').map((x) => x.name);
+      if (!names.includes(r.file)) throw new Error('Fila kom ikke fram på nettverksdisken');
+      const old = smbRotateList(names, st.keep);
+      if (old.length) { await smbRun({ share, ...c, cmd: `${cdDirOf(dir)}${old.map((n) => `del "${n}"`).join('; ')}`, timeout: 120_000 }); removed = old.length; }
+    } catch (e) { if (/kom ikke fram/.test(e.message)) throw e; console.warn('[system-backup] rotasjon på nettverksdisk:', e.message); }
+    return mark({ ok: true, file: r.file, removed });
+  } catch (e) {
+    console.error(`[system-backup] ${id} kopi til nettverksdisk feilet: ${e.message}`);
+    return mark({ ok: false, error: String(e.message).slice(0, 300) });
+  }
 }
 
 /* ---------------- Gjenoppretting ---------------- */

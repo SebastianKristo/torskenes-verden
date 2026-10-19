@@ -30,10 +30,12 @@ import { attachRealtime } from './realtime.js';
 import { revokeUserTokens } from './finans/routes.js';
 import birthdaysApi, { startBirthdayWorker, widgetOut as birthdaysWidget } from './birthdays.js';
 import integrationsApi, { settingsSearchApi, testByIdOrName, integrationScope } from './integrations-api.js';
+import settingsAsk30Api from './settings-ask30.js';
 import calendarApi, { widgetApi as calendarWidgetApi } from './calendar.js';
 import chatApi from './chat.js'; // prompt 27 (SERVER-B): Chat
-import systemUpdateApi from './system-update.js'; // Oppdater fra appen: data/update/ ↔ updater-containeren
+import systemUpdateApi, { startUpdateScheduler } from './system-update.js'; // Oppdater fra appen: data/update/ ↔ updater-containeren
 import systemBackupApi, { startSystemBackupScheduler } from './system-backup.js'; // prompt 29: systembackup (bare admin)
+import smbBrowseApi from './smb-browse.js'; // prompt 30: SMB-veiviser (finn server, shares, mapper, test, lagre) – bare admin
 import calendarQuickApi from './calendar-quick.js'; // prompt 29: Kalender → rask time (AI-jobbkø)
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
 
@@ -91,6 +93,8 @@ app.post('/finans/share', async (c) => {
 
 // Statiske filer revalideres alltid (304 når de er uendret), så en oppdatering slår inn med en gang.
 app.use('/assets/*', async (c, next) => { await next(); if (c.res.ok) c.header('Cache-Control', 'no-cache'); });
+// Prompt 30: Yr- og Storm-logoene ligger i public/assets/brands/ (samme sti som URL-en, /assets/brands/yr.png).
+app.use('/assets/brands/*', serveStatic({ root: './public' }));
 app.use('/assets/*', serveStatic({ root: './public', rewriteRequestPath: (p) => p.replace(/^\/assets/, '') }));
 app.use('/vendor/satellite/*', serveStatic({ root: './node_modules/satellite.js/dist', rewriteRequestPath: (p) => p.replace(/^\/vendor\/satellite/, '') }));
 app.get('/manifest.webmanifest', async (c) => c.body(await page('manifest.webmanifest'), 200, { 'Content-Type': 'application/manifest+json' }));
@@ -559,6 +563,17 @@ const toFinans = async (c, path) => {
   u.pathname = `/finans/api${path}`;
   return app.fetch(new Request(u, { method: 'POST', headers: c.req.raw.headers, body: await c.req.arrayBuffer() }), c.env);
 };
+// Prompt 30: del med brukere og rediger utgifter (samme tilgang som FinansHub-rutene).
+const toFinansAny = async (c, path) => {
+  const u = new URL(c.req.url);
+  u.pathname = `/finans/api${path}`;
+  const m = c.req.method;
+  return app.fetch(new Request(u, { method: m, headers: c.req.raw.headers, body: m === 'GET' || m === 'HEAD' ? undefined : await c.req.arrayBuffer() }), c.env);
+};
+app.get('/api/homes/:id{[0-9]+}/shareable', (c) => toFinansAny(c, `/folders/${c.req.param('id')}/shareable`));
+app.post('/api/homes/:id{[0-9]+}/members', (c) => toFinansAny(c, `/folders/${c.req.param('id')}/members`));
+app.patch('/api/homes/:id{[0-9]+}/expenses/:eid{[0-9]+}', (c) => toFinansAny(c, `/folders/${c.req.param('id')}/entries/${c.req.param('eid')}`));
+app.get('/api/homes/:id{[0-9]+}/expenses/:eid{[0-9]+}/history', (c) => toFinansAny(c, `/folders/${c.req.param('id')}/entries/${c.req.param('eid')}/history`));
 app.post('/api/homes/:id{[0-9]+}/expenses', (c) => toFinans(c, (c.req.header('content-type') ?? '').startsWith('multipart/') ? `/folders/${c.req.param('id')}/receipts` : `/folders/${c.req.param('id')}/entries`));
 app.route('/api/background', backgroundApi); // Bakgrunner (prompt 19): Vær, Planeter, Oslo, eget bilde
 // Prompt 24: Bursdager (per bruker, Google Kalender og Home Assistant), widget-svaret, alle integrasjoner (bare admin),
@@ -573,14 +588,20 @@ app.route('/api/calendar/quick', calendarQuickApi);
 app.route('/api/kalender', calendarApi);
 app.route('/api/widgets/calendar', calendarWidgetApi);
 app.route('/api/settings', settingsSearchApi);
+app.route('/api/settings', settingsAsk30Api); // prompt 30: GET /index og POST /ask (✦ AI-søk med indeks fra serveren)
+app.route('/api/smb', smbBrowseApi); // prompt 30: bare admin; økt (JSON) eller admin-token med finance:write
 app.route('/api/backup', systemBackupApi); // prompt 29: bare admin; endringer krever økt eller admin-token, gjenoppretting passordet
-app.route('/api/system/update', systemUpdateApi); // bare admin; start krever økt i nettleseren og passordet
+app.route('/api/system/update', systemUpdateApi); // bare admin; start/rollback krever passordet og økt eller admin-token (finance:write)
+// Prompt 30: kort versjonssvar for oppdateringsbanneret (samme tilgang som /api/system/update).
+app.get('/api/system/version', (c) => { const u = new URL(c.req.url); u.pathname = '/api/system/update/version'; return app.fetch(new Request(u, { headers: c.req.raw.headers }), c.env); });
 app.route('/api/chat', chatApi); // prompt 27: Chat (Open WebUI eller Ollama/Gemini/Groq direkte), sesjon eller app-token
 const domainPill = async (c) => {
   if (!isAdmin(c.get('user'))) return c.json({ error: 'Bare administratorer har tilgang', restricted: true }, 403);
   try { return c.json(await domainSummary()); } catch (e) { return c.json({ error: e.message }, 502); }
 };
 app.get('/api/domains/summary', authOrToken, domainPill);
+// Prompt 30: Test token i Innstillinger → Domener (samme tilgang som /domains/api: bare admin).
+app.post('/api/domains/token/verify', async (c) => { const u = new URL(c.req.url); u.pathname = '/domains/api/token/verify'; return app.fetch(new Request(u, { method: 'POST', headers: c.req.raw.headers, body: await c.req.arrayBuffer() }), c.env); });
 app.get('/api/domener/sammendrag', authOrToken, domainPill);
 app.route('/api', mobileApi);
 app.route('/api', authed);
@@ -588,7 +609,7 @@ app.route('/home/api', homeApi);
 app.route('/mat/api', matApi);
 app.route('/domains/api', domainsApi);
 app.get('/mat/calendar.ics', matCalendar);
-if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); }
+if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); }
 
 app.onError((err, c) => {
   console.error(err);

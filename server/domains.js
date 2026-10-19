@@ -526,6 +526,64 @@ const isAdmin = (c) => {
 
 api.get('/domains', (c) => c.json(listRows().map(pub)));
 
+/* ---------- Prompt 30: Test token (Innstillinger → Domener) ---------- */
+// POST /domains/api/token/verify og /api/domains/token/verify {token?, domain?} (bare admin – domenene er serveroppsett)
+//   → {ok, active, permissions:[{name, ok, error?}], okCount, total, zone?, message}
+// Tomt token = standard-tokenet fra Integrasjoner → Cloudflare. ok = tokenet er aktivt og alle fem tillatelsene virker.
+// Tokenet logges eller lagres ikke her.
+let cfFetch = (...a) => fetch(...a);
+export const _setCfFetch = (fn) => { cfFetch = fn ?? ((...a) => fetch(...a)); };
+const CF_PERMS = ['Zone · Zone', 'Zone · DNS', 'Zone · Analytics', 'Zone · Firewall Services', 'Account · Registrar: Domains'];
+async function cfTry(path, token, init = {}) {
+  const res = await cfFetch(CF + path, { ...init, headers: { Authorization: `Bearer ${token}`, ...(init.headers ?? {}) }, signal: AbortSignal.timeout(10_000) });
+  const d = await res.json().catch(() => ({}));
+  if (!res.ok || d.success === false || d.errors?.length) throw new Error(d.errors?.[0]?.message || `Cloudflare svarte ${res.status}`);
+  return d;
+}
+export async function verifyCfToken(token, domain = '') {
+  const perms = CF_PERMS.map((name) => ({ name, ok: false }));
+  const out = (active, message, zone) => {
+    const okCount = perms.filter((x) => x.ok).length;
+    return { ok: active && okCount === perms.length, active, permissions: perms, okCount, total: perms.length, ...(zone ? { zone } : {}), message };
+  };
+  let v;
+  try { v = await cfTry('/user/tokens/verify', token); } catch (e) { return out(false, `Tokenet virker ikke: ${e.message}`); }
+  const active = v.result?.status === 'active';
+  if (!active) return out(false, `Tokenet er ${v.result?.status ?? 'ikke aktivt'}`);
+  const fail = (i, e) => { perms[i].error = String(e?.message ?? e).slice(0, 200); };
+  let z = null;
+  try {
+    const name = String(domain ?? '').toLowerCase().trim();
+    const list = (await cfTry(`/zones?per_page=50${name ? `&name=${encodeURIComponent(name.split('.').slice(-2).join('.'))}` : ''}`, token)).result ?? [];
+    z = list[0] ?? null;
+    if (!z) throw new Error(name ? `Fant ingen sone for ${name}` : 'Tokenet ser ingen soner');
+    perms[0].ok = true;
+  } catch (e) { fail(0, e); }
+  if (z) {
+    await Promise.all([
+      cfTry(`/zones/${z.id}/dns_records?per_page=1`, token).then(() => { perms[1].ok = true; }, (e) => fail(1, e)),
+      cfTry('/graphql', token, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: 'query($z:String!,$d:Date!){viewer{zones(filter:{zoneTag:$z}){g:httpRequests1dGroups(limit:1,filter:{date_geq:$d}){sum{requests}}}}}', variables: { z: z.id, d: new Date(Date.now() - 86400_000).toISOString().slice(0, 10) } }) })
+        .then(() => { perms[2].ok = true; }, (e) => fail(2, e)),
+      cfTry(`/zones/${z.id}/firewall/access_rules/rules?per_page=1`, token).then(() => { perms[3].ok = true; }, (e) => fail(3, e)),
+      z.account?.id ? cfTry(`/accounts/${z.account.id}/registrar/domains?per_page=1`, token).then(() => { perms[4].ok = true; }, (e) => fail(4, e)) : Promise.resolve(fail(4, 'Fant ikke kontoen')),
+    ]);
+  } else for (let i = 1; i < perms.length; i++) fail(i, 'Krever Zone · Zone');
+  const n = perms.filter((x) => x.ok).length;
+  return out(true, n === perms.length ? `✓ Tokenet virker · ${n} av ${n} tillatelser` : `Tokenet virker, men mangler ${perms.filter((x) => !x.ok).map((x) => x.name).join(', ')}`, z ? { id: z.id, name: z.name } : null);
+}
+api.post('/token/verify', async (c) => {
+  if (!isAdmin(c)) return c.json({ error: 'Bare administratorer kan teste Cloudflare-tokenet' }, 403);
+  const b = await readJson(c);
+  const given = str(b?.token, 400).trim();
+  const token = given || cfg('cf_token');
+  if (!token) {
+    if (MOCK) return c.json({ ok: true, active: true, permissions: CF_PERMS.map((name) => ({ name, ok: true })), okCount: CF_PERMS.length, total: CF_PERMS.length, mock: true, message: `✓ Tokenet virker · ${CF_PERMS.length} av ${CF_PERMS.length} tillatelser (eksempeldata)` });
+    return c.json({ error: 'Lim inn et token, eller legg inn et standard-token under Integrasjoner → Cloudflare' }, 400);
+  }
+  return c.json({ ...(await verifyCfToken(token, str(b?.domain, 253))), source: given ? 'token' : 'default' });
+});
+
 api.post('/domains', async (c) => {
   if (!isAdmin(c)) return c.json({ error: 'Bare administratorer kan legge til domener' }, 403);
   const b = await readJson(c);

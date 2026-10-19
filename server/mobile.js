@@ -152,6 +152,11 @@ const SCALAR = {
   // Prompt 29 (SERVER29): søkemotor på Hjem/Dashboard og Kalender på web (med toppmeny eller fullskjerm).
   search_engine: (v) => ['ai', 'google', 'ddg'].includes(v),
   calendar_web_layout: (v) => ['menu', 'full'].includes(v),
+  // Prompt 30 (SERVER30): profilmenyen på web/app ({order[], hidden[]} med kjente nøkler; Logg ut ligger alltid nederst
+  // og er ikke en nøkkel) og skjulte kort i Finans → Mer (nøklene fra MER_KEYS.fin; Innstillinger kan ikke skjules).
+  profile_menu: (v) => !!v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).every((k) => k === 'order' || k === 'hidden')
+    && ['order', 'hidden'].every((k) => v[k] === undefined || (Array.isArray(v[k]) && v[k].length <= PROFILE_MENU_KEYS.length && new Set(v[k]).size === v[k].length && v[k].every((x) => PROFILE_MENU_KEYS.includes(x)))),
+  finance_more_hidden: (v) => Array.isArray(v) && v.length <= 40 && new Set(v).size === v.length && v.every((x) => typeof x === 'string' && MER_KEYS.fin.includes(x) && !MER_LOCKED.includes(x)),
   // Prompt 27: språk (nb | en) for web-dashboardet og AI-svar. Også i /api/me og PATCH /api/me.
   language: (v) => LANGUAGES.includes(v),
   // Prompt 27: Ruter-kortet på Hjem: opptil 3 av Mine stopp og 1–4 avganger per stopp.
@@ -165,6 +170,9 @@ const SCALAR = {
 };
 // Filternavn og fag: bokstaver (også æøå), tall, mellomrom og noen tegn, 1–40 tegn.
 const KAL_CARDS = ['A', 'B', 'C', 'D', 'E'];
+export const PROFILE_MENU_KEYS = ['innstillinger', 'tema', 'sprak', 'sokebar', 'nyhetslinje', 'tilpass', 'cv', 'las'];
+// Standard: alle i fast rekkefølge, søkebar, nyhetslinje og lås skjermen skjult.
+const layoutDefaults30 = () => ({ profile_menu: { order: [...PROFILE_MENU_KEYS], hidden: ['sokebar', 'nyhetslinje', 'las'] }, finance_more_hidden: [] });
 const KAL_FILTERS = ['timeplan', 'prover', 'bursdager', 'skole', 'privat', 'familie'];
 const KAL_VIEWS = ['dag', '3dager', 'uke', 'maaned', 'liste'];
 export const LANGUAGES = ['nb', 'en'];
@@ -393,7 +401,7 @@ api.delete('/me/avatar', authOrToken, async (c) => {
 api.get('/users/:id/avatar', authOrToken, (c) => sendAvatar(c, c.req.param('id')));
 
 // Lagret oppsett med standardverdiene for utseendet fylt inn (de avhenger av om installasjonen er ny, se designOf).
-api.get('/me/layout', authOrToken, (c) => { const id = c.get('user'); const { finNavList: _l, finNavMeta: _m, ...l } = layoutOf(id); if (l.kalView === 'agenda') l.kalView = 'liste'; return c.json({ search_engine: 'ai', calendar_web_layout: 'menu', ...l, language: languageOf(id), ...designOf(id), ...profileOf(id) }); });
+api.get('/me/layout', authOrToken, (c) => { const id = c.get('user'); const { finNavList: _l, finNavMeta: _m, ...l } = layoutOf(id); if (l.kalView === 'agenda') l.kalView = 'liste'; return c.json({ search_engine: 'ai', calendar_web_layout: 'menu', ...layoutDefaults30(), ...l, language: languageOf(id), ...designOf(id), ...profileOf(id) }); });
 api.put('/me/layout', authOrToken, async (c) => {
   const b = await json(c);
   if (!b || typeof b !== 'object' || Array.isArray(b)) return c.json({ error: 'Forventet et objekt' }, 400);
@@ -430,7 +438,8 @@ api.put('/me/layout', authOrToken, async (c) => {
     if (SCALAR[k]) {
       if (!SCALAR[k](v)) return c.json({ error: `Ugyldig verdi for ${k}` }, 400);
       // Sidene flettes per side, så en klient kan lagre én side uten å sende resten.
-      next[k] = k === 'pages' ? { ...(next.pages ?? {}), ...v } : v;
+      // Profilmenyen: felt som ikke sendes beholdes (eller får standardverdien).
+      next[k] = k === 'pages' ? { ...(next.pages ?? {}), ...v } : k === 'profile_menu' ? { ...layoutDefaults30().profile_menu, ...(next.profile_menu ?? {}), ...v } : v;
       // Gamle klienter sender photo, nye bgType. «Ingen» finnes bare som bgType og vises som gradient (cur).
       if (k === 'photo') next.bgType = v;
       if (k === 'bgType') next.photo = v === 'none' ? 'cur' : v;
@@ -449,7 +458,7 @@ api.put('/me/layout', authOrToken, async (c) => {
   }
   kv.set(c.get('user'), 'layout', next);
   const { finNavList: _l, finNavMeta: _m, finNav: _side, ...rest } = next;
-  return c.json({ search_engine: 'ai', calendar_web_layout: 'menu', ...rest, ...profileOf(c.get('user')) });
+  return c.json({ search_engine: 'ai', calendar_web_layout: 'menu', ...layoutDefaults30(), ...rest, ...profileOf(c.get('user')) });
 });
 // Ferdige profiler (Innstillinger → PROFIL): Standard, Finans + Boliger og Boliger-profil.
 api.get('/me/profiles', authOrToken, (c) => c.json({ ...PROFILES, current: profileOf(c.get('user')).profile,

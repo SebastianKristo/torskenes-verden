@@ -89,6 +89,26 @@ final class Backup29Model {
     var path: String { JS.str(JS.dict(settings, "target"), "path") ?? "/srv/backup" }
     var cloudOn: Bool { JS.bool(JS.dict(settings, "cloud"), "enabled") ?? false }
     var provider: String { JS.str(JS.dict(settings, "cloud"), "provider") ?? "b2" }
+    /// Prompt 30: nettverksdisk (SMB) – target.smb {enabled, share, path, label, lastUpload, lastError}.
+    var smb: [String: Any]? { JS.dict(JS.dict(settings, "target"), "smb") }
+    var smbKnown: Bool { smb != nil }
+    var smbShare: String { JS.str(smb, "share") ?? "" }
+    var smbOn: Bool { JS.bool(smb, "enabled") ?? false }
+    var smbSub: String {
+        let label: String = JS.str(smb, "label") ?? smbShare
+        if let e = JS.str(smb, "lastError"), !e.isEmpty { return label + " · siste kopi feilet: " + e }
+        if let d = JS.date(smb?["lastUpload"]) { return label + " · sist " + Backup29Model.when(d) }
+        return label + (smbOn ? " · kopieres etter hver backup" : "")
+    }
+    /// Åpner SMB-veiviseren (Smb30Wizard.swift) for systembackupen.
+    func openSmb(_ store: Store) { Smb30Model.shared.start(finans: false, system: true, encrypted: encrypt, store) }
+    func setSmb(_ v: Bool, _ store: Store) {
+        var t: [String: Any] = JS.dict(settings, "target") ?? [:]
+        var s: [String: Any] = smb ?? [:]
+        s["enabled"] = v
+        t["smb"] = s
+        put(["target": t], store)
+    }
     /// Google Drive kan svare {supported:false}.
     var cloudSupported: Bool { JS.bool(JS.dict(settings, "cloud"), "supported") ?? (provider == "b2") }
 

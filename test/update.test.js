@@ -123,16 +123,26 @@ test('GitHub caches i 10 min, /check henter på nytt', async () => {
   assert.equal(calls.length, n + 2);
 });
 
-test('app-token kan lese, men ikke starte', async () => {
+test('app-token: lesetoken kan ikke starte; admin-token med finance:write trenger passordet (prompt 30)', async () => {
   heartbeat();
   const g = await T('/api/system/update');
   assert.equal(g.status, 200, g.text);
   assert.equal(g.body.available, true);
-  assert.equal(g.body.canStart, false);
-  assert.match(g.body.reason, /nettleseren/);
-  const s = await T('/api/system/update/start', 'POST', { password: 'testpassord1' });
-  assert.equal(s.status, 403);
-  assert.match(s.body.error, /Oppdatering må startes fra nettleseren/);
+  assert.equal(g.body.canStart, true);
+  assert.equal(g.body.needsPassword, true);
+  // Uten passord fortsatt 403.
+  assert.equal((await T('/api/system/update/start', 'POST', {})).status, 403);
+  assert.equal(existsSync(join(UPD, 'request.json')), false);
+  // Et token med bare finance:read kan ikke starte, selv med riktig passord.
+  const ro = await S('/finans/api/tokens', 'POST', { name: 'les', scopes: ['finance:read'] });
+  assert.equal(ro.status, 200, ro.text);
+  const R = client({ authorization: `Bearer ${ro.body.token}` });
+  const rg = await R('/api/system/update');
+  assert.equal(rg.body.canStart, false);
+  assert.match(rg.body.reason, /finance:write/);
+  const rs = await R('/api/system/update/start', 'POST', { password: 'testpassord1' });
+  assert.equal(rs.status, 403);
+  assert.match(rs.body.error, /finance:write/);
   assert.equal(existsSync(join(UPD, 'request.json')), false);
 });
 

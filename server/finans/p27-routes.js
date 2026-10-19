@@ -13,6 +13,7 @@ import { streamSSE } from 'hono/streaming';
 import { readScreenshot, decodeImageField, imageKind, errorBody, shotError, pickVisionModel, clearVisionCache, VISION_INSTALL } from './sub-screenshot.js';
 import { startPull, pullStatus } from './ollama-models.js';
 import { hasGemini } from './gemini-keys.js';
+import { annotateForslag } from './highlight30.js';
 
 const q = (sql) => db.prepare(sql);
 const bad = (c, msg, code = 400) => c.json({ error: msg }, code);
@@ -38,7 +39,8 @@ export function mountP27Public(api) {
 
 export function mountP27(api, { R, W }) {
   /* --- Søkeforslag --- */
-  api.get('/forslag', R, (c) => c.json(forslag(str(c.req.query('q'), 100), { limit: c.req.query('limit') ?? 6, u: c.get('user') })));
+  // Prompt 30: varelinje-forslag får {txId, receiptId, lineIndex[], matchedText} (+ matches[]) så treffet kan markeres i kvitteringen.
+  api.get('/forslag', R, (c) => { const t = str(c.req.query('q'), 100); return c.json(annotateForslag(forslag(t, { limit: c.req.query('limit') ?? 6, u: c.get('user') }), t, c.get('user'))); });
 
   /* --- AI-logg og personvernbrytere --- */
   api.get('/ai-audit', R, (c) => c.json(auditList(c.get('user'), Number(c.req.query('limit')) || 100)));

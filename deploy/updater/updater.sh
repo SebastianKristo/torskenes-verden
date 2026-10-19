@@ -2,7 +2,10 @@
 # Updater for Homelab OS: gjør «Oppdater nå» i Innstillinger → System til en oppdatering, akkurat som update.sh.
 #
 # Kjører i sin egen container med Docker-socketen (= root i LXC-en). Derfor:
-# - Ingen nettverksport. Den leser bare data/update/request.json, og bare feltet «id» brukes (validert).
+# - Ingen nettverksport. Den leser bare data/update/request.json, og bare feltene «id» og «action» brukes (validert).
+#   action er 'update' (standard) eller 'rollback'. Ved rollback laster updateren ned forrige vellykkede sha fra sin
+#   egen historikk (data/update/history.json, skrevet bare her) – serveren sender aldri sha, repo eller kommando.
+#   Databasen gjenopprettes IKKE ved rollback (data-migreringer går fremover); forhåndsbackupen ligger i data/backups/.
 # - Repo og branch kommer KUN fra egne miljøvariabler (UPDATE_REPO, UPDATE_BRANCH), aldri fra forespørselen.
 # - .env, data/ og proton/ i prosjektmappen røres aldri.
 # - Prosjektmappen er montert på samme sti som på verten (HOST_DIR), så ./data-stiene compose gir Docker stemmer.
@@ -64,11 +67,11 @@ trim_log() {
 
 write_heartbeat() { date +%s >"$UPD/.heartbeat.tmp" && mv -f "$UPD/.heartbeat.tmp" "$UPD/heartbeat"; }
 
-JOB_ID=""; STARTED=""; FINISHED=""; SHA=""; VERSION=""
+JOB_ID=""; STARTED=""; FINISHED=""; SHA=""; VERSION=""; ACTION="update"
 write_status() { # state step [error]
   jq -n --arg id "$JOB_ID" --arg state "$1" --arg step "$2" --arg error "${3:-}" --arg sha "$SHA" --arg version "$VERSION" \
-    --arg startedAt "$STARTED" --arg finishedAt "$FINISHED" \
-    '{id:$id, state:$state, step:$step,
+    --arg startedAt "$STARTED" --arg finishedAt "$FINISHED" --arg action "$ACTION" \
+    '{id:$id, state:$state, step:$step, action:$action,
       startedAt:(if $startedAt=="" then null else ($startedAt|tonumber) end),
       finishedAt:(if $finishedAt=="" then null else ($finishedAt|tonumber) end),
       error:(if $error=="" then null else $error end), sha:(if $sha=="" then null else $sha end),
@@ -95,18 +98,47 @@ $tail_lines}"
   return 1
 }
 
-run_job() {
-  JOB_ID="$1"; STARTED=$(now_ms); FINISHED=""; SHA=""; VERSION=""
-  : >"$LOG"
-  log "Oppdatering $JOB_ID startet (forespurt av ${2:-ukjent}). Repo $UPDATE_REPO, branch $UPDATE_BRANCH, prosjekt $PROJECT, mappe $HOST_DIR."
+# Historikk over vellykkede installasjoner, nyeste først: {"entries":[{sha, version, at}]} (maks 10). Bare updateren skriver.
+HISTORY="$UPD/history.json"
+history_entries() { jq -c 'if type=="object" and (.entries|type)=="array" then [.entries[] | select(type=="object" and ((.sha // "")|test("^[0-9a-f]{40}$")))] else [] end' "$HISTORY" 2>/dev/null || echo '[]'; }
+write_history() { # json-liste
+  printf '%s' "$1" | jq -c '{entries: (.[0:10])}' >"$UPD/.history.tmp" 2>/dev/null && mv -f "$UPD/.history.tmp" "$HISTORY"
+}
+# Første gang: ta med det som allerede er installert (installed.json fra før historikken fantes).
+seed_history() {
+  local h; h=$(history_entries)
+  if [ "$(printf '%s' "$h" | jq 'length')" = 0 ] && [ -f "$UPD/installed.json" ]; then
+    h=$(jq -c 'if type=="object" and ((.sha // "")|test("^[0-9a-f]{40}$")) then [{sha, version:(.version // null), at:(.at // null)}] else [] end' "$UPD/installed.json" 2>/dev/null || echo '[]')
+    write_history "$h"
+  fi
+}
 
-  # 1. Last ned
-  write_status downloading "Laster ned siste versjon"
+run_job() {
+  JOB_ID="$1"; STARTED=$(now_ms); FINISHED=""; SHA=""; VERSION=""; ACTION="${3:-update}"
+  : >"$LOG"
+  seed_history
+  if [ "$ACTION" = rollback ]; then
+    log "Tilbakerulling $JOB_ID startet (forespurt av ${2:-ukjent}). Repo $UPDATE_REPO, prosjekt $PROJECT, mappe $HOST_DIR."
+  else
+    log "Oppdatering $JOB_ID startet (forespurt av ${2:-ukjent}). Repo $UPDATE_REPO, branch $UPDATE_BRANCH, prosjekt $PROJECT, mappe $HOST_DIR."
+  fi
+
+  # 1. Last ned (rollback: forrige vellykkede sha fra historikken)
+  if [ "$ACTION" = rollback ]; then
+    write_status downloading "Laster ned forrige versjon"
+    SHA=$(history_entries | jq -r '.[1].sha // empty')
+    [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { SHA=""; fail "Fant ingen tidligere versjon å gå tilbake til."; return; }
+    log "Går tilbake til $SHA"
+  else
+    write_status downloading "Laster ned siste versjon"
+  fi
   TMPD=$(mktemp -d "${TMPDIR:-/tmp}/homelab-update.XXXXXX") || { fail "Kunne ikke lage midlertidig mappe."; return; }
+  if [ "$ACTION" != rollback ]; then
   SHA=$(curl -fsSL --max-time 30 -H 'Accept: application/vnd.github+json' -H 'User-Agent: homelab-updater' \
     "https://api.github.com/repos/$UPDATE_REPO/commits/$UPDATE_BRANCH" 2>>"$LOG" | jq -r '.sha // empty' 2>>"$LOG")
   [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { SHA=""; fail "Fant ikke siste versjon på GitHub ($UPDATE_REPO, $UPDATE_BRANCH). Er repoet offentlig og nettet oppe?"; return; }
   log "Siste commit: $SHA"
+  fi
   curl -fsSL --max-time 300 -H 'User-Agent: homelab-updater' -o "$TMPD/src.tgz" \
     "https://codeload.github.com/$UPDATE_REPO/tar.gz/$SHA" 2>>"$LOG" || { fail "Nedlastingen feilet."; return; }
   mkdir "$TMPD/src"
@@ -154,12 +186,19 @@ run_job() {
   FINISHED=$(now_ms)
   jq -n --arg sha "$SHA" --arg version "$VERSION" --argjson at "$FINISHED" '{sha:$sha, version:(if $version=="" then null else $version end), at:$at}' \
     >"$UPD/.installed.tmp" && mv -f "$UPD/.installed.tmp" "$UPD/installed.json"
+  # Historikk: ny versjon øverst. Rollback fjerner versjonen vi gikk bort fra, så neste rollback går enda ett steg tilbake.
+  local h; h=$(history_entries)
+  if [ "$ACTION" = rollback ]; then
+    write_history "$(printf '%s' "$h" | jq -c --arg sha "$SHA" --arg version "$VERSION" --argjson at "$FINISHED" '[{sha:$sha, version:(if $version=="" then null else $version end), at:$at}] + .[2:]')"
+  else
+    write_history "$(printf '%s' "$h" | jq -c --arg sha "$SHA" --arg version "$VERSION" --argjson at "$FINISHED" '[{sha:$sha, version:(if $version=="" then null else $version end), at:$at}] + [.[] | select(.sha != $sha)]')"
+  fi
   log "Ferdig: ${VERSION:-ukjent versjon} (${SHA:0:7})."
   write_status "done" "Ferdig"
 
-  # 6. Rydd, og oppdater til slutt updateren selv.
+  # 6. Rydd, og oppdater til slutt updateren selv (ikke ved rollback: en eldre updater kjenner kanskje ikke historikken).
   docker image prune -f >>"$LOG" 2>&1 || true
-  [ "$SELF_UPDATE" = 1 ] && self_update
+  [ "$SELF_UPDATE" = 1 ] && [ "$ACTION" != rollback ] && self_update
   trim_log
   return 0
 }
@@ -200,6 +239,7 @@ prev_state=$(jq -r '.state // empty' "$UPD/status.json" 2>/dev/null || true)
 case "$prev_state" in downloading|building|restarting)
   JOB_ID="$LAST_ID"; STARTED=$(jq -r '.startedAt // empty' "$UPD/status.json"); FINISHED=$(now_ms)
   SHA=$(jq -r '.sha // empty' "$UPD/status.json"); VERSION=$(jq -r '.version // empty' "$UPD/status.json")
+  ACTION=$(jq -r '(.action // "update") | strings' "$UPD/status.json" 2>/dev/null); case "$ACTION" in update|rollback) ;; *) ACTION=update ;; esac
   write_status failed "Avbrutt" "Oppdateringen ble avbrutt fordi updateren startet på nytt. Prøv igjen."
   ;;
 esac
@@ -215,12 +255,16 @@ while :; do
       else
         at=$(jq -r '(.at // 0) | numbers | floor' "$UPD/request.json" 2>/dev/null || true); [[ "$at" =~ ^[0-9]{1,15}$ ]] || at=0
         by=$(jq -r '(.requestedBy // "") | strings' "$UPD/request.json" 2>/dev/null | tr -cd 'A-Za-z0-9._@-' | head -c 64)
+        act=$(jq -r '(.action // "update") | strings' "$UPD/request.json" 2>/dev/null | head -c 20)
+        case "$act" in update|rollback) ;; *) act="" ;; esac
         age=$(( $(date +%s) - at / 1000 ))
-        if [ "$age" -gt "$REQUEST_MAX_AGE" ]; then
+        if [ -z "$act" ]; then
+          say "Ignorerer forespørsel $id med ukjent action."
+        elif [ "$age" -gt "$REQUEST_MAX_AGE" ]; then
           say "Ignorerer gammel forespørsel $id ($age s)."
         else
-          say "Starter oppdatering $id."
-          if run_job "$id" "$by"; then say "Oppdatering $id ferdig."; else say "Oppdatering $id feilet."; fi
+          if [ "$act" = rollback ]; then say "Starter tilbakerulling $id."; else say "Starter oppdatering $id."; fi
+          if run_job "$id" "$by" "$act"; then say "Oppdatering $id ferdig."; else say "Oppdatering $id feilet."; fi
         fi
       fi
     fi
