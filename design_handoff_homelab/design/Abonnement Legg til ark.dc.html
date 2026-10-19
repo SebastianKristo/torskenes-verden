@@ -50,22 +50,46 @@
 </sc-if>
 </div>
 
+<sc-if value="{{ inTrial }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:14px">
+<form onSubmit="{{ tr.parse }}" style="margin:0;display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:20px;background:#fff;border:1.5px solid #b23a2a"><span style="font-size:11.5px;font-weight:800;letter-spacing:.12em;color:#b23a2a">✦ SKRIV DET MED EGNE ORD</span><div style="display:flex;gap:8px"><input value="{{ tr.ai }}" onChange="{{ tr.onAi }}" placeholder="Viaplay gratis i 14 dager, påminn meg" enterkeyhint="go" style="flex:1;min-width:0;height:44px;padding:0 12px;border-radius:12px;border:1px solid #e4ddcf;background:#faf8f3;color:#1b1a17;font:500 15px Manrope;outline:none"><button type="submit" style="flex:none;height:44px;padding:0 14px;border-radius:12px;border:0;background:#1b1a17;color:#f3efe6;font:700 14px Manrope;cursor:pointer">Fyll ut</button></div></form>
+<div style="background:#fff;border:1px solid #e4ddcf;border-radius:20px;overflow:hidden;display:flex;flex-direction:column"><sc-for list="{{ tr.fields }}" as="f"><label style="display:grid;grid-template-columns:120px minmax(0,1fr);align-items:center;gap:12px;min-height:52px;padding:0 16px;border-top:{{ f.bt }}"><span style="font-size:14px;font-weight:600;color:#7a7468">{{ f.l }}</span><input type="{{ f.type }}" value="{{ f.v }}" onChange="{{ f.on }}" placeholder="{{ f.ph }}" inputmode="{{ f.im }}" style="min-width:0;height:44px;border:0;outline:none;background:transparent;text-align:right;color:#1b1a17;font:600 15px Manrope"></label></sc-for></div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="padding:0 4px;font-size:11.5px;font-weight:800;letter-spacing:.12em;color:#b23a2a">VARSLE MEG</span><div style="display:flex;gap:6px;flex-wrap:wrap"><sc-for list="{{ tr.rems }}" as="r"><button onClick="{{ r.go }}" style="height:38px;padding:0 14px;border-radius:19px;border:1.5px solid {{ r.bd }};background:{{ r.bg }};color:{{ r.fg }};font:700 13.5px Manrope;cursor:pointer">{{ r.n }}</button></sc-for></div></div>
+<div style="display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.7);border:1px solid #e4ddcf"><span style="flex:none;width:34px;height:34px;border-radius:9px;background:#1b1a17;color:#f3efe6;display:grid;place-items:center;font:500 15px Newsreader,serif">H</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="display:flex;justify-content:space-between;gap:8px;font-size:12px;color:#7a7468"><b style="color:#1b1a17;font-weight:700">HOMELAB</b><span>{{ tr.pvWhen }}</span></span><b style="font-size:14px">{{ tr.pvT }}</b><span style="font-size:13px;color:#3d3a33;line-height:1.35">{{ tr.pvB }}</span></span></div>
+<button onClick="{{ tr.save }}" style="min-height:52px;border:0;border-radius:16px;background:#b23a2a;color:#fff;font:700 16px Manrope,system-ui,sans-serif;cursor:pointer" style-active="filter:brightness(.92)">Lagre påminnelse</button>
+</div>
+</sc-if>
 <sc-if value="{{ hasToast }}"><div style="position:absolute;left:50%;top:60px;transform:translateX(-50%);padding:10px 16px;border-radius:999px;background:#1b1a17;color:#f3efe6;font-size:14px;font-weight:600;white-space:nowrap">{{ toast }}</div></sc-if>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;390px&quot;,&quot;height&quot;:&quot;844px&quot;}}">
+const TRP=txt=>{const raw=(txt||'').trim();if(!raw)return null;const t=raw.toLowerCase(),now=new Date();now.setHours(12,0,0,0);let end=null;
+  const m1=t.match(/(\d+)\s*(dag|dager|døgn|uke|uker|måned|måneder|mnd)/);if(m1){const n=+m1[1],u=m1[2];end=new Date(now);if(/uke/.test(u))end.setDate(end.getDate()+7*n);else if(/m(å|a)ned|mnd/.test(u))end.setMonth(end.getMonth()+n);else end.setDate(end.getDate()+n)}
+  const m2=t.match(/(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?/);if(!end&&m2){end=new Date(m2[3]?(+m2[3]<100?2000+ +m2[3]:+m2[3]):now.getFullYear(),+m2[2]-1,+m2[1],12)}
+  if(!end&&/en måned|1 måned|månedlig prøve/.test(t)){end=new Date(now);end.setMonth(end.getMonth()+1)}if(!end)return null;
+  const KN=['Viaplay','Netflix','HBO Max','Max','Disney+','Spotify','TV 2 Play','Storytel','BookBeat','Apple TV+','Apple Music','YouTube Premium','Amazon Prime','Audible','Strava','Tidal','Duolingo','ChatGPT','Adobe','Canva','Discovery+','SkyShowtime','Nextory'];
+  let n=KN.find(k=>t.includes(k.toLowerCase()));if(!n){const w=raw.split(/\s+/).find(x=>/^[A-ZÆØÅ]/.test(x)&&!/^(Gratis|Påminn|Prøve|Minn|Husk|Jeg|Si)$/i.test(x));n=w?w.replace(/[,.:!]/g,''):''}if(!n)return null;
+  const pm=raw.match(/(\d+[.,]?\d*)\s*(kr|,-)/i);return{n,end:end.toISOString().slice(0,10),p:pm?pm[1]+' kr/mnd':''}};
 class Component extends DCLogic {
-  state={step:'menu',n:'',v:'',d:'',cy:'Måned',toast:''};
+  state={step:'menu',n:'',v:'',d:'',cy:'Måned',toast:'',tn:'',te:'',tp:'',tai:'',trem:[1]};
   flash(t){this.setState({toast:t});clearTimeout(this._t);this._t=setTimeout(()=>this.setState({toast:''}),1800)}
   renderVals(){const s=this.state,set=k=>e=>this.setState({[k]:e.target.value});
     const O=[
       ['Skjermbilde','Fra App Store, e-post eller kontoside. Tjeneste, pris og trekkdato fylles ut.','M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M8 12h8',true,()=>this.flash('Velg skjermbilde …')],
       ['Kvittering','Ta bilde eller velg PDF. Ollama leser beløp og syklus.','M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6',true,()=>this.flash('Åpner kamera …')],
       ['Fra transaksjon','Velg et gjentakende trekk fra banken.','M4 8h13l-3-3M20 16H7l3 3',false,()=>this.flash('Henter gjentakende trekk …')],
+      ['Gratis prøveperiode','Få varsel før prøven går over til betalt. Skriv det med egne ord eller fyll ut.','M12 7v5l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z',true,()=>this.setState({step:'trial'})],
       ['Skriv inn selv','Tjeneste, beløp, syklus og trekkdag.','M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4',false,()=>this.setState({step:'form'})]];
     const F=[['Tjeneste','n','HBO Max','text'],['Beløp','v','129 kr','decimal'],['Trekkdag','d','15.','numeric']];
-    const menu=s.step==='menu';
-    return{inMenu:menu,inForm:!menu,title:menu?'Legg til abonnement':'Skriv inn selv',sub:menu?'Velg hvordan du vil legge det inn.':'Du kan endre alt senere.',
+    const menu=s.step==='menu',trial=s.step==='trial';
+    const WD=['søn','man','tir','ons','tor','fre','lør'],MN=['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'],fd=iso=>{if(!iso)return'';const d=new Date(iso+'T12:00');return WD[d.getDay()]+' '+d.getDate()+'. '+MN[d.getMonth()]};
+    const R=[[0,'Samme dag'],[1,'1 dag før'],[3,'3 dager før'],[7,'1 uke før']],first=Math.max(...s.trem,0),pvd=s.te?new Date(new Date(s.te+'T09:00').getTime()-first*864e5):null;
+    return{inMenu:menu,inForm:!menu&&!trial,inTrial:trial,title:menu?'Legg til abonnement':trial?'Prøveperiode':'Skriv inn selv',sub:menu?'Velg hvordan du vil legge det inn.':trial?'Vi minner deg på å avslutte før den blir betalt.':'Du kan endre alt senere.',
+      tr:{ai:s.tai,onAi:e=>this.setState({tai:e.target.value}),parse:e=>{e.preventDefault();const r=TRP(s.tai);if(!r){this.flash('Fant ikke tjeneste eller dato');return}this.setState({tn:r.n,te:r.end,tp:r.p||s.tp})},
+        fields:[['Tjeneste','tn','Viaplay','text','text'],['Prøven slutter','te','','date','text'],['Pris etterpå','tp','149 kr/mnd','text','decimal']].map(([l,k,ph,type,im],i)=>({l,v:s[k],on:set(k),ph,type,im,bt:i?'1px solid #eee8dc':'0'})),
+        rems:R.map(([d,n])=>{const on=s.trem.includes(d);return{n,bg:on?'#1b1a17':'transparent',fg:on?'#f3efe6':'#1b1a17',bd:on?'#1b1a17':'#d8d1c2',go:()=>this.setState({trem:on?s.trem.filter(x=>x!==d):[...s.trem,d]})}}),
+        pvWhen:pvd?fd(pvd.toISOString().slice(0,10))+' 09:00':'',pvT:(s.tn||'Tjenesten')+'-prøven '+(first===0?'slutter i dag':first===1?'slutter i morgen':'slutter om '+first+' dager'),pvB:'Avslutt før '+(fd(s.te)||'sluttdato')+' for å slippe '+(s.tp||'å betale')+'. Trykk for å åpne oppsigelsessiden.',
+        save:()=>{if(!s.tn||!s.te){this.flash('Fyll inn tjeneste og sluttdato');return}let L=[];try{L=JSON.parse(localStorage.getItem('papir_trials')||'[]')}catch(e){}L.push({id:'t'+Date.now(),n:s.tn,end:s.te,p:s.tp,rem:s.trem});try{localStorage.setItem('papir_trials',JSON.stringify(L))}catch(e){}this.flash('Påminnelse lagret · '+s.tn);this.setState({step:'menu',tn:'',te:'',tp:'',tai:''})}},
       close:()=>this.flash('Lukket'),back:()=>this.setState({step:'menu'}),
       opts:O.map(([t,d,ic,ai,go],i)=>({t,d,ic,ai,go,bt:i?'1px solid #eee8dc':'0'})),
       fields:F.map(([l,k,ph,im],i)=>({l,v:s[k],on:set(k),ph,im,bt:i?'1px solid #eee8dc':'0'})),
