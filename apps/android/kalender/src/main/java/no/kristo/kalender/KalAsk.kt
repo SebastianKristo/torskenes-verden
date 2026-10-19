@@ -21,7 +21,7 @@ class KalAsk(private val all: List<KEv>, private val cals: Map<String, KCal>, pr
     private val up: List<KEv> = all.filter { it.d.isAfter(T) || (it.d == T && (it.all || (it.e ?: 0) > nm)) }
         .sortedWith(compareBy<KEv> { it.d }.thenBy { it.s ?: 0 })
 
-    private fun rel(d: LocalDate): String = when (d) { T -> "i dag"; T.plusDays(1) -> "i morgen"; else -> fd(d) }
+    private fun rel(d: LocalDate): String = when (d) { T -> "i dag"; T.plusDays(1) -> "i morgen"; T.minusDays(1) -> "i går"; T.plusDays(2) -> "i overmorgen"; else -> fd(d) }
 
     private fun on(d: LocalDate): List<KEv> = all.filter { it.d == d || (it.days > 1 && !it.d.isAfter(d) && !it.d.plusDays((it.days - 1).toLong()).isBefore(d)) }
         .sortedWith(compareBy<KEv> { if (it.all) 0 else 1 }.thenBy { it.s ?: 0 })
@@ -32,25 +32,15 @@ class KalAsk(private val all: List<KEv>, private val cals: Map<String, KCal>, pr
         return " Været: " + WTXT.getValue(k).lowercase() + ", " + w.lo + "–" + w.hi + " grader" + (if (k == "regn") ", så ta med paraply." else ".")
     }
 
-    private fun dayOf(ql: String): LocalDate? {
-        if (Regex(" (i )?overmorgen ").containsMatchIn(ql)) return T.plusDays(2)
-        if (Regex(" (i morgen|imorgen) ").containsMatchIn(ql)) return T.plusDays(1)
-        if (Regex(" (i dag|idag|i kveld) ").containsMatchIn(ql)) return T
-        Regex("(neste\\s+)?(søndag|mandag|tirsdag|onsdag|torsdag|fredag|lørdag)").find(ql)?.let { m ->
-            var df = ((WD.indexOf(m.groupValues[2]) - T.jsDay + 7) % 7).let { if (it == 0) 7 else it }
-            if (m.groupValues[1].isNotEmpty() && df < 7) df += 7
-            return T.plusDays(df.toLong())
-        }
-        Regex("(\\d{1,2})\\.(\\d{1,2})").find(ql)?.let { m -> return runCatching { LocalDate.of(T.year, m.groupValues[2].toInt(), m.groupValues[1].toInt()) }.getOrNull() }
-        return null
-    }
+    /** Prompt 35: felles dag-tolkning (parseDay35) – «i morgen?», «imorgen», «i morra», «tomorrow», «i går» … */
+    private fun dayOf(ql: String): LocalDate? = parseDay35(ql, T)
 
     private fun stripFrist(t: String) = t.replace(Regex("^Frist: "), "")
 
     /** null = vet ikke lokalt → spør serveren. */
     fun ask(q: String): KAns? {
-        // Tegnsetting skilles fra ordene, så «i morgen?» også treffer « i morgen ».
-        val ql = " " + q.lowercase().replace(Regex("[?!,]"), " ") + " "
+        // Prompt 35 (FEIL: svarte for i dag): normaliser først – små bokstaver, uten ? ! . , : ; « » ", ett mellomrom, polstret.
+        val ql = norm35(q)
         if (Regex("ledig|fri tid|finn tid|når kan jeg|har jeg tid").containsMatchIn(ql)) {
             val d = dayOf(ql) ?: T.plusDays(1)
             val ev = on(d).filter { !it.all }
@@ -76,7 +66,10 @@ class KalAsk(private val all: List<KEv>, private val cals: Map<String, KCal>, pr
                 (if (l.size > 1) " Etter det: " + l.drop(1).joinToString(", ") { stripFrist(it.t) + " " + rel(it.d) } + "." else "")
             return KAns(listOf("Ser i Studie", "Sorterer frister"), txt, l)
         }
-        if (Regex("(oppsummer|hva skjer|hva har jeg|program|plan|hvordan ser|hva står)").containsMatchIn(ql)) {
+        // «i morgen?» / «fredag?» alene, eller «what's on tomorrow»: oppsummer den dagen.
+        val dayOnly = dayOf(ql) != null && !Regex("\\d{1,2}[.:]\\d{2}|kl ?\\d").containsMatchIn(ql) &&
+            ql.replace(Regex(" (i ?morgen|i ?morra|imorgo|tomorrow|i ?dag|i ?kveld|i ?natt|today|tonight|i ?går|overmorgen|i overmorgen|neste|på|on|what|whats|is|do|i|have|har|jeg|skjer|da|så|søndag|mandag|tirsdag|onsdag|torsdag|fredag|lørdag)(?= )"), " ").isBlank()
+        if (dayOnly || Regex("(oppsummer|hva skjer|hva har jeg|program|plan|hvordan ser|hva står|whats on|what is on|what do i have|what have i got|skjer)").containsMatchIn(ql)) {
             if (Regex("uka|uke|denne uken|neste uke").containsMatchIn(ql)) {
                 val d0 = if (ql.contains("neste uke")) mon(T).plusDays(7) else T
                 val days = (0 until 7).map { d0.plusDays(it.toLong()) }

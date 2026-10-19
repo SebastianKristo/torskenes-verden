@@ -94,19 +94,23 @@ fun MonthView(vm: KalVm) {
     val T = today()
     val by = remember(vm.visible) { byDay(vm.visible) }
     val f = A.withDayOfMonth(1)
-    val st = mon(f)
+    // Prompt 35: «Uken starter» (mandag/søndag) gjelder rutenettet, ukedagene og ukenummer-kolonnen.
+    val sun = vm.sun
+    val st = no.kristo.kalender.wkStart35(f, sun)
     val dim = f.lengthOfMonth()
-    val nw = (((f.jsDay + 6) % 7) + dim + 6) / 7
+    val nw = (no.kristo.kalender.daysBetween(st, f) + dim + 6) / 7
     val mx = 4 // Android: opptil fire chips per dag (iOS tre).
+    val wl = if (sun) listOf("S") + WL.dropLast(1) else WL
     Column(Modifier.fillMaxSize().padding(start = 6.dp, end = 6.dp, bottom = 4.dp)) {
         Row(Modifier.fillMaxWidth().padding(bottom = 5.dp)) {
-            if (vm.sw) Tx("U", mono(9.5.sp, k.mut2), Modifier.width(20.dp))
-            WL.forEachIndexed { i, l -> Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { Tx(l, man(11.sp, FontWeight.Bold, if (i == 6) k.sun else k.mut)) } }
+            // Prompt 35: ukenummer tydeligere – IBM Plex Mono 800, full tekstfarge, uten brikke; kolonnen 26 dp.
+            if (vm.sw) Box(Modifier.width(26.dp), contentAlignment = Alignment.Center) { Tx("U", monoX(10.5.sp, k.ink)) }
+            wl.forEachIndexed { i, l -> Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { Tx(l, man(11.sp, FontWeight.Bold, if (i == (if (sun) 0 else 6)) k.sun else k.mut)) } }
         }
         for (w in 0 until nw) {
             val d0 = st.plusDays(7L * w)
             Row(Modifier.fillMaxWidth().weight(1f).drawBehind { drawLine(k.line, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }) {
-                if (vm.sw) Box(Modifier.width(20.dp).padding(top = 6.dp), contentAlignment = Alignment.TopCenter) { Tx("${isoW(d0)}", mono(9.5.sp, k.mut2)) }
+                if (vm.sw) Box(Modifier.width(26.dp).padding(top = 6.dp), contentAlignment = Alignment.TopCenter) { Tx("${no.kristo.kalender.wkNo35(d0, sun)}", monoX(12.5.sp, k.ink)) }
                 for (i in 0 until 7) {
                     val d = d0.plusDays(i.toLong())
                     val L = by[d].orEmpty()
@@ -121,7 +125,7 @@ fun MonthView(vm: KalVm) {
                     ) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 1.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                             Box(Modifier.size(22.dp).clip(CircleShape).background(if (td) Red else Color.Transparent), contentAlignment = Alignment.Center) {
-                                Tx("${d.dayOfMonth}", man(12.sp, FontWeight.Bold, if (td) Color.White else if (i == 6) k.sun else k.ink))
+                                Tx("${d.dayOfMonth}", man(12.sp, FontWeight.Bold, if (td) Color.White else if (d.jsDay == 0) k.sun else k.ink))
                             }
                             if (wx != null && inM) WxIcon(wx, 12.dp)
                         }
@@ -169,7 +173,7 @@ fun GridView(vm: KalVm) {
     val k = LocalK.current
     val T = today()
     val N = when (vm.v) { "dag" -> 1; "3d" -> 3; else -> 7 }
-    val st = if (vm.v == "uke") mon(vm.a) else vm.a
+    val st = if (vm.v == "uke") no.kristo.kalender.wkStart35(vm.a, vm.sun) else vm.a
     val H: Dp = when (N) { 7 -> 44.dp; 3 -> 52.dp; else -> 62.dp }
     val fs = when (N) { 7 -> 9.5f; 3 -> 11f; else -> 13f }
     val by = remember(vm.visible) { byDay(vm.visible) }
@@ -179,18 +183,29 @@ fun GridView(vm: KalVm) {
     val nm = nowMin()
     val scroll = rememberScrollState()
     val density = LocalDensity.current
-    LaunchedEffect(vm.v, st) {
-        val y = with(density) { if (todayIn) maxOf(0f, (nm / 60f) * H.toPx() - 140.dp.toPx()) else 7.5f * H.toPx() }
+    // Prompt 35: «Tidslinje starter» – Nå (nå −2 t, eller 07:30 når i dag ikke vises), 06 eller 08.
+    LaunchedEffect(vm.v, st, vm.tl) {
+        val y = with(density) {
+            when (vm.tl) {
+                "06" -> 6f * H.toPx()
+                "08" -> 8f * H.toPx()
+                else -> if (todayIn) maxOf(0f, (nm / 60f - 2f) * H.toPx()) else 7.5f * H.toPx()
+            }
+        }
         scroll.scrollTo(y.toInt())
     }
     Column(Modifier.fillMaxSize()) {
         // Kolonnehode: ukedag, dato og vær (ikon + maks).
         Row(Modifier.fillMaxWidth().padding(end = 6.dp, bottom = 6.dp)) {
-            Box(Modifier.width(40.dp).align(Alignment.Bottom).padding(bottom = 4.dp), contentAlignment = Alignment.Center) { Tx("U${isoW(st)}", mono(9.5.sp, k.mut2)) }
+            // Prompt 35: «U43» i 800 / --ink (12 sp).
+            Box(Modifier.width(40.dp).align(Alignment.Bottom).padding(bottom = 4.dp), contentAlignment = Alignment.Center) {
+                if (vm.sw) Tx("U${no.kristo.kalender.wkNo35(no.kristo.kalender.wkStart35(st, vm.sun), vm.sun)}", monoX(12.sp, k.ink))
+            }
             days.forEach { d ->
                 val td = d == T
                 val wx = vm.wxOf(d)
-                Column(Modifier.weight(1f).tap(longDate(d)) { vm.openDay(d) }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                // Zoom inn: Uke → 3 dager fra dagen, 3 dager → Dag.
+                Column(Modifier.weight(1f).then(if (N > 1) Modifier.tap(longDate(d)) { vm.openDay(d) } else Modifier), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Tx(WS[d.jsDay].uppercase(), mono(9.5.sp, if (td) Red else if (d.jsDay == 0) k.sun else k.mut, .06f))
                     Box(Modifier.size(28.dp).clip(CircleShape).background(if (td) Red else Color.Transparent), contentAlignment = Alignment.Center) {
                         Tx("${d.dayOfMonth}", man(15.sp, FontWeight.Bold, if (td) Color.White else k.ink))
@@ -270,7 +285,7 @@ fun YearView(vm: KalVm) {
             for (cI in 0 until 3) {
                 val mi = r * 3 + cI
                 val f = LocalDate.of(Y, mi + 1, 1)
-                val off = (f.jsDay + 6) % 7
+                val off = if (vm.sun) f.jsDay else (f.jsDay + 6) % 7
                 Column(Modifier.weight(1f).tap(cap(MN[mi])) { vm.openMonth(f) }, verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     Tx(cap(MN[mi]), news(17.sp, if (Y == T.year && mi + 1 == T.monthValue) Red else k.ink))
                     val cells = List(off) { 0 } + (1..f.lengthOfMonth()).toList()
@@ -346,13 +361,13 @@ fun ListView(vm: KalVm) {
         }
         var lw: Int? = null
         days.forEachIndexed { i, d ->
-            val w = isoW(d)
+            val w = no.kristo.kalender.wkNo35(no.kristo.kalender.wkStart35(d, vm.sun), vm.sun)
             val showWk = w != lw && i > 0
             lw = w
             val L = by[d].orEmpty()
             val wx = vm.wxOf(d)
             val idx = daysBetweenSafe(T, d)
-            if (showWk) item("wk$w-$d") { Tx("UKE $w", mono(10.sp, k.mut2, .14f), Modifier.padding(start = 2.dp, top = 14.dp, bottom = 2.dp)) }
+            if (showWk) item("wk$w-$d") { Tx("UKE $w", monoX(12.sp, k.ink, .12f), Modifier.padding(start = 2.dp, top = 14.dp, bottom = 2.dp)) }
             stickyHeader("h$d") {
                 Row(
                     Modifier.fillMaxWidth().background(k.bg).drawBehind { drawLine(k.line, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }
@@ -386,7 +401,9 @@ fun SearchView(vm: KalVm) {
     LaunchedEffect(Unit) { runCatching { fr.requestFocus() } }
     val ql = vm.q.lowercase().trim()
     val res: List<KEv> = run {
+        val hm = vm.hidMenuIds
         val l = vm.all.filter { e ->
+            if (e.cal in hm) return@filter false
             if (vm.sf != null && e.cal != vm.sf) return@filter false
             if (ql.isEmpty()) return@filter vm.sf != null
             (e.t + " " + (e.loc ?: "") + " " + vm.cal(e.cal).n).lowercase().contains(ql)
@@ -410,7 +427,7 @@ fun SearchView(vm: KalVm) {
             InkPill("Avbryt", { vm.closeSearch() }, h = 40.dp, padH = 16.dp)
         }
         Row(Modifier.horizontalScroll(rememberScrollState()).padding(start = 14.dp, end = 14.dp, bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            vm.cals.forEach { c -> Chip(c.n, vm.sf == c.id, { no.kristo.kalender.Hap.tick(); vm.sf = if (vm.sf == c.id) null else c.id }, dot = c.col, h = 32.dp, bgOff = k.card) }
+            vm.cals.filter { !it.hidMenu }.forEach { c -> Chip(c.n, vm.sf == c.id, { no.kristo.kalender.Hap.tick(); vm.sf = if (vm.sf == c.id) null else c.id }, dot = c.col, h = 32.dp, bgOff = k.card) }
         }
         LazyColumn(Modifier.fillMaxSize().padding(horizontal = 14.dp)) {
             groups.forEach { (d, l) ->

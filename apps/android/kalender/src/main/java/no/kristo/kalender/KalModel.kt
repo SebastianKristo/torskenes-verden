@@ -43,11 +43,19 @@ data class KEv(
     }
 }
 
-/** En kalender i sidemenyen. c = fargen (prikk, stripe), tx = tekst i lyst tema, lt = tekst i mørkt tema. */
+/**
+ * En kalender i sidemenyen. c = fargen (prikk, stripe), tx = tekst i lyst tema, lt = tekst i mørkt tema.
+ * Prompt 35: key = fasitens korte nøkkel (p/j/s/f/h/b) når serverens id er lang («personlig»), src = kilden
+ * (builtin|own|ical|ha|google|caldav), badge = merket i lista («Abonnement», «HA» …), hidMenu = «Skjul fra menyen».
+ */
 data class KCal(
     val id: String, val n: String, val c: Long, val tx: Long, val lt: Long, val writable: Boolean = true,
     val serverVisible: Boolean = true, val count: Int? = null, val own: Boolean = false, val serverId: String? = null,
-)
+    val key: String? = null, val src: String? = null, val badge: String? = null, val hidMenu: Boolean = false,
+) {
+    /** Kalendere man har lagt til selv (egne, iCal, Home Assistant, konto) kan fjernes med ×. */
+    val removable: Boolean get() = own || (src != null && src != "builtin")
+}
 
 /** Fasitens seks kalendere (CALS). */
 val KCALS: List<KCal> = listOf(
@@ -65,6 +73,7 @@ fun mapLegacyCal(id: String?, type: String?, title: String): String {
     val t = type?.lowercase().orEmpty()
     return when {
         c in setOf("p", "j", "s", "f", "h", "b") -> c
+        c == "personlig" -> "p"
         c.contains("bursdag") || c == "birthdays" || t == "bursdag" || t == "birthday" -> "b"
         c in setOf("timeplan", "prover", "skole", "studie", "canvas") || t in setOf("time", "prove", "innl") -> "s"
         c.contains("famil") -> "f"
@@ -199,14 +208,16 @@ fun parseServerEvent(o: JSONObject, cals: Map<String, KCal>): KEv? {
     }
     if (allDay) { s = null; e = null }
     val type = o.optStrOrNull("type")?.lowercase()
-    val rawCal = o.str("calendar", "calendarId", "cal", "view")
+    // Prompt 35: appCalendar (SERVER33/35) først – det er kalenderen hendelsen vises i (også iCal/HA-kalendere).
+    val rawCal = o.str("appCalendar", "calendar", "calendarId", "cal", "view")
     val cal = when {
         rawCal != null && cals.containsKey(rawCal) -> rawCal
-        else -> cals.values.firstOrNull { it.serverId != null && it.serverId == rawCal }?.id ?: mapLegacyCal(rawCal, type, title)
+        else -> cals.values.firstOrNull { it.serverId != null && it.serverId == rawCal }?.id
+            ?: mapLegacyCal(rawCal, type, title).let { k -> if (cals.containsKey(k)) k else cals.values.firstOrNull { it.key == k }?.id ?: k }
     }
     val kind = o.optStrOrNull("kind") ?: when {
         type == "prove" || type == "innl" || Regex("^frist|eksamen|innlevering", RegexOption.IGNORE_CASE).containsMatchIn(title) -> "frist"
-        type == "bursdag" || type == "birthday" || cal == "b" -> "bursdag"
+        type == "bursdag" || type == "birthday" || cal == "b" || cal == "bursdager" || cals[cal]?.key == "b" -> "bursdag"
         else -> null
     }
     val loc = o.str("location", "loc", "room", "place")
@@ -241,12 +252,18 @@ fun parseServerCalendars(raw: String): List<KCal> {
         val o = arr.optJSONObject(i) ?: continue
         val sid = o.str("id") ?: continue
         val name = o.str("name", "n", "title") ?: sid
-        val base = KCALS.firstOrNull { it.id == sid || it.n.equals(name, true) || it.id == o.optStrOrNull("view") || it.n.equals(o.optStrOrNull("view") ?: "", true) }
+        val key0 = o.optStrOrNull("key")
+        val base = KCALS.firstOrNull { it.id == sid || it.id == key0 || it.n.equals(name, true) || it.id == o.optStrOrNull("view") || it.n.equals(o.optStrOrNull("view") ?: "", true) }
         val c = hexIn(o.str("color", "c")) ?: base?.c ?: 0xFF5C5850
+        // Prompt 35: kilde og merke (SERVER35). Uten feltene: egne kalendere = «own», resten innebygde.
+        val builtin = o.optBoolean("builtin", base != null)
+        val src = o.optStrOrNull("source")?.lowercase() ?: if (builtin) "builtin" else "own"
+        val badge = o.optStrOrNull("badge") ?: when (src) { "ical" -> "Abonnement"; "ha" -> "HA"; "google" -> "Google"; "caldav" -> "iCloud"; else -> null }
         out += KCal(
-            id = sid, n = name, c = c, tx = base?.takeIf { it.c == c }?.tx ?: shade(c, .78f), lt = base?.takeIf { it.c == c }?.lt ?: shade(c, 1.45f),
-            writable = o.optBoolean("writable", o.optBoolean("editable", true)), serverVisible = o.optBoolean("visible", o.optBoolean("enabled", true)),
-            count = o.optIntOrNull("count") ?: o.optIntOrNull("next30"), own = o.optBoolean("own", o.optBoolean("local", false)), serverId = sid,
+            id = sid, n = name, c = c, tx = base?.takeIf { it.c == c }?.tx ?: mix35(c, 0xFF000000, .28f), lt = base?.takeIf { it.c == c }?.lt ?: mix35(c, 0xFFFFFFFF, .45f),
+            writable = o.optBoolean("writable", o.optBoolean("editable", src == "builtin" || src == "own")), serverVisible = o.optBoolean("visible", o.optBoolean("enabled", true)),
+            count = o.optIntOrNull("count") ?: o.optIntOrNull("next30"), own = o.optBoolean("own", o.optBoolean("local", !builtin && src == "own")), serverId = sid,
+            key = key0 ?: base?.id, src = src, badge = badge, hidMenu = o.optBoolean("hidMenu", false),
         )
     }
     return out

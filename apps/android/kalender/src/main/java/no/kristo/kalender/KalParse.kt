@@ -36,7 +36,7 @@ private val MX = listOf("jan", "feb", "mar", "apr", "mai", "jun", "jul", "aug", 
 /** Gyldig dato (31.02 → null). */
 private fun safeDate(y: Int, m: Int, d: Int): LocalDate? = runCatching { LocalDate.of(y, m, d) }.getOrNull()
 
-fun parseQuick(txt: String, defRem: Int?, T: LocalDate = today(), nm: Int = nowMin()): KParsed {
+fun parseQuick(txt: String, defRem: Int?, T: LocalDate = today(), nm: Int = nowMin(), defDur: Int = 60): KParsed {
     var s = " " + txt.lowercase().replace(Regex("\\s+"), " ") + " "
     var date: LocalDate? = null
     var time: Int? = null
@@ -106,7 +106,8 @@ fun parseQuick(txt: String, defRem: Int?, T: LocalDate = today(), nm: Int = nowM
     tk.forEachIndexed { i, t -> if (cls[i] == 'd') applyD(t); if (cls[i] == 't') applyT(t) }
     tk.forEachIndexed { i, t -> if (cls[i] != ' ') return@forEachIndexed; if (time == null) applyT(t) else applyD(t) }
 
-    for ((w, n) in listOf("i overmorgen" to 2, "overmorgen" to 2, "i morgen" to 1, "imorgen" to 1, "i dag" to 0, "idag" to 0, "i kveld" to 0)) {
+    // Prompt 35: samme dag-ord som parseDay35 (i morra, imorgo, tomorrow, overimorgen).
+    for ((w, n) in listOf("i overmorgen" to 2, "overmorgen" to 2, "overimorgen" to 2, "i morgen" to 1, "imorgen" to 1, "i morra" to 1, "imorra" to 1, "imorgo" to 1, "tomorrow" to 1, "i dag" to 0, "idag" to 0, "i kveld" to 0)) {
         if (date == null && s.contains(" $w ")) {
             date = T.plusDays(n.toLong())
             s = s.replaceFirst(" $w ", " ")
@@ -137,7 +138,7 @@ fun parseQuick(txt: String, defRem: Int?, T: LocalDate = today(), nm: Int = nowM
     val tm = time
     val d = date ?: if (tm != null && tm <= nm) T.plusDays(1) else T
     val all = tm == null
-    val e = if (all) null else (end ?: (tm!! + (dur ?: 60))).coerceAtMost(24 * 60 - 1)
+    val e = if (all) null else (end ?: (tm!! + (dur ?: defDur))).coerceAtMost(24 * 60 - 1)
     val r = if (remSet) rem else if (all) null else defRem
     return KParsed(t, cal, d, tm, e, if (all) null else r, txt.trim())
 }

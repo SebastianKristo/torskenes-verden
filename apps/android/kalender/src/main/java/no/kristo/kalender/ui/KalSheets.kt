@@ -192,7 +192,7 @@ fun NewSheet(vm: KalVm) {
         }
         Label("KALENDER")
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            vm.cals.filter { it.writable }.forEach { c -> Chip(c.n, f.cal == c.id, { Hap.tick(); vm.nf = f.copy(cal = c.id) }, dot = c.col) }
+            vm.cals.filter { it.writable && !it.hidMenu }.forEach { c -> Chip(c.n, f.cal == c.id, { Hap.tick(); vm.nf = f.copy(cal = c.id) }, dot = c.col) }
         }
         if (!f.all) {
             Label("VARSEL")
@@ -224,91 +224,10 @@ private fun PickBox(text: String, mono: Boolean = false, onClick: () -> Unit) {
     }
 }
 
-/* ---------------- Sidemenyen Kalendere ---------------- */
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun Drawer(vm: KalVm) {
-    val k = LocalK.current
-    val w = LocalConfiguration.current.screenWidthDp.dp
-    val T = no.kristo.kalender.today()
-    val counts = remember(vm.all) { vm.all.filter { !it.d.isBefore(T) && !it.d.isAfter(T.plusDays(30)) }.groupingBy { it.cal }.eachCount() }
-    Box(Modifier.fillMaxHeight().width(minOf(w * .86f, 340.dp))) {
-        Column(
-            Modifier.fillMaxSize().shadow(20.dp, RoundedCornerShape(topEnd = 28.dp, bottomEnd = 28.dp)).clip(RoundedCornerShape(topEnd = 28.dp, bottomEnd = 28.dp)).background(k.card)
-                .tap(null) {}.pointerInput(Unit) {
-                    var acc = 0f
-                    detectHorizontalDragGestures(onDragStart = { acc = 0f }, onDragEnd = { if (acc < -50.dp.toPx()) { Hap.dismiss(); vm.cs = false } }, onHorizontalDrag = { ch, a -> acc += a; ch.consume() })
-                }
-                .verticalScroll(rememberScrollState()).padding(horizontal = 18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            // Går helt til toppen (dekker statuslinjen); innholdet starter under kamerahullet.
-            Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Tx("Kalendere", news(28.sp, k.ink), Modifier.weight(1f))
-                InkPill("Ferdig", { Hap.dismiss(); vm.cs = false })
-            }
-            Column(Modifier.drawBehind { drawLine(k.line2, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }) {
-                vm.cals.forEach { c ->
-                    val on = c.id !in vm.hid
-                    Row(
-                        Modifier.fillMaxWidth().heightIn(min = 44.dp).tap(c.n, Role.Switch) { vm.toggleCal(c) }
-                            .drawBehind { drawLine(k.line2, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }.padding(vertical = 11.dp),
-                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Box(Modifier.size(14.dp).clip(CircleShape).border(2.dp, c.col, CircleShape).background(if (on) c.col else Color.Transparent))
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                            Tx(c.n, man(14.5.sp, FontWeight.Bold, k.ink))
-                            Tx("${c.count ?: counts[c.id] ?: 0} de neste 30 dagene", man(12.sp, FontWeight.Medium, k.mut))
-                        }
-                        Toggle(on)
-                    }
-                }
-                if (vm.data.serverCals) Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).tap("Ny kalender") { Hap.tick(); vm.newCal = true }.padding(vertical = 11.dp),
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Svg(Ic.PLUS, 14.dp, k.acc, 3f)
-                    Tx("Ny kalender", man(14.5.sp, FontWeight.Bold, k.acc))
-                }
-            }
-            Label("VISNING", Modifier.padding(top = 4.dp))
-            Column(Modifier.drawBehind { drawLine(k.line2, Offset(0f, 0f), Offset(size.width, 0f), 1.dp.toPx()) }) {
-                OptRow("Ukenummer", "Vises i måned og uke", vm.sw) { vm.setWeekNo(!vm.sw) }
-                OptRow("Vær", "Oslo · MET / Open-Meteo, 16 dager frem", vm.swx) { vm.setWx(!vm.swx) }
-            }
-            Label("UTSEENDE", Modifier.padding(top = 4.dp))
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(50)).background(k.chip).padding(3.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                listOf("system" to "System", "light" to "Lys", "dark" to "Mørk").forEach { (key, n) ->
-                    val on = vm.th == key
-                    Box(Modifier.weight(1f).height(36.dp).then(if (on) Modifier.shadow(1.5.dp, RoundedCornerShape(50)) else Modifier).clip(RoundedCornerShape(50))
-                        .background(if (on) k.card else Color.Transparent).tap(n, Role.RadioButton) { vm.setTheme(key) }, contentAlignment = Alignment.Center) {
-                        Tx(n, man(12.5.sp, FontWeight.Bold, if (on) k.ink else k.mut))
-                    }
-                }
-            }
-            Label("STANDARDVARSEL FOR NYE HENDELSER", Modifier.padding(top = 4.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                KREMS.forEach { (r, n) -> Chip(n, vm.drem == r, { vm.setDefRem(r) }) }
-            }
-            Label("KONTO", Modifier.padding(top = 4.dp))
-            val s = vm.session
-            if (s != null) Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Tx(s.name.ifBlank { s.username }, man(14.5.sp, FontWeight.Bold, k.ink))
-                Tx(s.server.substringAfter("://") + if (s.via == "homelab") " · via Homelab-appen" else "", man(12.sp, FontWeight.Medium, k.mut), maxLines = 2)
-                vm.syncErr?.let { Tx(it, man(12.sp, FontWeight.Medium, k.acc), maxLines = 3) }
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                LinePill(if (vm.syncing) "Henter …" else "Oppdater", { Hap.tick(); vm.refresh() })
-                LinePill("Logg ut", { vm.logout() })
-            }
-            Spacer(Modifier.height(20.dp).windowInsetsPadding(WindowInsets.navigationBars))
-        }
-    }
-}
+/* ---------------- Sidemenyen Kalendere: se Kal35Ui.kt (prompt 35) ---------------- */
 
 @Composable
-private fun OptRow(n: String, sub: String, on: Boolean, onClick: () -> Unit) {
+fun OptRow(n: String, sub: String, on: Boolean, onClick: () -> Unit) {
     val k = LocalK.current
     Row(
         Modifier.fillMaxWidth().heightIn(min = 44.dp).tap(n, Role.Switch, onClick).drawBehind { drawLine(k.line2, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }.padding(vertical = 11.dp),

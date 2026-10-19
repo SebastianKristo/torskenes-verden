@@ -67,6 +67,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.material3.Text
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -122,9 +123,11 @@ private fun KalApp(vm: KalVm, onBackToHomelab: () -> Unit) {
     val focus = LocalFocusManager.current
     LaunchedEffect(vm.data) { vm.resolvePending() }
     // Tilbake lukker det øverste: ark → sidemeny → søk.
-    BackHandler(vm.glOpen || vm.det != null || vm.nf != null || vm.cs || vm.so || vm.newCal) {
+    BackHandler(vm.glOpen || vm.det != null || vm.nf != null || vm.cs || vm.so || vm.newCal || vm.setOn) {
         when {
             vm.newCal -> vm.newCal = false
+            vm.setOn -> vm.closeSettings()
+            vm.cs && vm.ac != null -> vm.ac = null
             vm.nf != null -> vm.closeNew()
             vm.det != null -> vm.closeDet()
             vm.glOpen -> vm.closeGlimt()
@@ -138,8 +141,10 @@ private fun KalApp(vm: KalVm, onBackToHomelab: () -> Unit) {
             Spacer(Modifier.windowInsetsTopHeight(WindowInsets.statusBars))
             TopBar(vm, onBackToHomelab)
             // Visningen: sveip venstre/høyre bytter periode, sveip inn fra venstre kant (28 dp) åpner Kalendere.
+            // Prompt 35: zoom-animasjonen og pinch ligger rundt visningen (ZoomBox35); berøring lukker tastaturet.
+            ZoomBox35(vm, reduce, onTouch = { focus.clearFocus() }, modifier = Modifier.weight(1f).fillMaxWidth()) {
             Box(
-                Modifier.weight(1f).fillMaxWidth().pointerInput(vm.v) {
+                Modifier.fillMaxSize().pointerInput(vm.v) {
                     var x0 = 0f
                     var acc = 0f
                     detectHorizontalDragGestures(
@@ -161,6 +166,7 @@ private fun KalApp(vm: KalVm, onBackToHomelab: () -> Unit) {
                 }
                 // Systemets tilbakegest tar ikke venstre kant midt på skjermen (Android tillater 200 dp).
                 Box(Modifier.align(Alignment.CenterStart).width(28.dp).height(200.dp).systemGestureExclusion())
+            }
             }
             Composer(vm, Modifier.onGloballyPositioned { composerH = it.size.height })
         }
@@ -201,6 +207,10 @@ private fun KalApp(vm: KalVm, onBackToHomelab: () -> Unit) {
         AnimatedVisibility(vm.cs, enter = if (reduce) fadeIn() else slideInHorizontally(tween(300, easing = EASE)) { -it }, exit = if (reduce) fadeOut() else slideOutHorizontally(tween(300, easing = EASE)) { -it }) {
             Drawer(vm)
         }
+        // Prompt 35: Innstillinger (fra bunnen av sidemenyen) glir inn fra høyre over alt.
+        AnimatedVisibility(vm.setOn, enter = if (reduce) fadeIn() else slideInHorizontally(tween(280, easing = EASE)) { it }, exit = if (reduce) fadeOut() else slideOutHorizontally(tween(240, easing = EASE)) { it }) {
+            SettingsPage35(vm)
+        }
         if (vm.newCal) NewCalendarDialog(vm)
     }
 }
@@ -229,12 +239,13 @@ private class Hd(val k: String, val t: String, val inT: Boolean)
 private fun rng(d0: LocalDate, d1: LocalDate): String = if (d0.monthValue == d1.monthValue) "${d0.dayOfMonth}.–${d1.dayOfMonth}. ${MS[d1.monthValue - 1]}"
     else "${d0.dayOfMonth}. ${MS[d0.monthValue - 1]}–${d1.dayOfMonth}. ${MS[d1.monthValue - 1]}"
 
-private fun header(v: String, A: LocalDate): Hd {
+private fun header(v: String, A: LocalDate, sun: Boolean = false): Hd {
     val T = today()
-    val wk = isoW(A)
+    // Prompt 35: «Uken starter» gjelder også tittelens ukenummer og ukas datoer.
+    val wk = no.kristo.kalender.wkNo35(no.kristo.kalender.wkStart35(A, sun), sun)
     return when (v) {
         "mnd" -> Hd(A.year.toString(), no.kristo.kalender.cap(MN[A.monthValue - 1]), A.monthValue == T.monthValue && A.year == T.year)
-        "uke" -> { val m0 = mon(A); Hd("UKE $wk · ${m0.year}", rng(m0, m0.plusDays(6)), mon(T) == m0) }
+        "uke" -> { val m0 = no.kristo.kalender.wkStart35(A, sun); Hd("UKE $wk · ${m0.year}", rng(m0, m0.plusDays(6)), no.kristo.kalender.wkStart35(T, sun) == m0) }
         "3d" -> Hd("UKE $wk", rng(A, A.plusDays(2)), !T.isBefore(A) && !T.isAfter(A.plusDays(2)))
         "dag" -> Hd(WD[A.jsDay].uppercase() + " · UKE " + wk, "${A.dayOfMonth}. ${MN[A.monthValue - 1]}", A == T)
         "ar" -> Hd("ÅR", A.year.toString(), A.year == T.year)
@@ -245,7 +256,7 @@ private fun header(v: String, A: LocalDate): Hd {
 @Composable
 private fun TopBar(vm: KalVm, onBackToHomelab: () -> Unit) {
     val k = LocalK.current
-    val hd = header(vm.v, vm.a)
+    val hd = header(vm.v, vm.a, vm.sun)
     Column(Modifier.fillMaxWidth().padding(start = 14.dp, end = 14.dp, top = 2.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // Android: «◀ Homelab» når appen ble åpnet fra Homelab (iOS viser systemets tilbake-til-app selv).
         if (vm.back) Row(Modifier.height(30.dp).clip(RoundedCornerShape(15.dp)).tap("Tilbake til Homelab", onClick = onBackToHomelab).padding(end = 8.dp),
@@ -259,15 +270,17 @@ private fun TopBar(vm: KalVm, onBackToHomelab: () -> Unit) {
                 Tx(hd.k, mono(10.5.sp, k.acc, .12f))
                 Tx(hd.t, news(32.sp, k.ink, 33.sp))
             }
+            // Prompt 35 (FEIL: «I dag» viste «…»): knappegruppen krymper aldri (måles før tittelen, som får resten og ellipsis).
+            // Rekkefølge: I dag · ‹ · › · søk. «I dag» er en pille (høyde 34, padding 0 13, radius 17) uten fast bredde.
             Row(Modifier.padding(bottom = 1.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (!hd.inT) Box(Modifier.height(44.dp).padding(end = 4.dp).tap("I dag") { vm.goToday() }, contentAlignment = Alignment.Center) {
+                    Box(Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(k.ink).padding(horizontal = 13.dp), contentAlignment = Alignment.Center) {
+                        Text("I dag", style = man(12.5.sp, FontWeight.Bold, k.bg), maxLines = 1, softWrap = false)
+                    }
+                }
                 if (vm.v != "liste") {
                     RoundBtn("Forrige", no.kristo.kalender.ui.Ic.PREV, { vm.step(-1) })
                     RoundBtn("Neste", no.kristo.kalender.ui.Ic.NEXT, { vm.step(1) })
-                }
-                if (!hd.inT) Box(Modifier.height(44.dp).tap("I dag") { vm.goToday() }, contentAlignment = Alignment.Center) {
-                    Box(Modifier.height(34.dp).clip(RoundedCornerShape(17.dp)).background(k.ink).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                        Tx("I dag", man(12.5.sp, FontWeight.Bold, k.bg))
-                    }
                 }
                 RoundBtn("Søk", no.kristo.kalender.ui.Ic.SEARCH, { vm.openSearch() }, icon = 16.dp, stroke = 2.3f)
             }

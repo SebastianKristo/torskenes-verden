@@ -70,7 +70,8 @@ class KalVm(app: Application) : AndroidViewModel(app) {
     var syncErr by mutableStateOf<String?>(null)
 
     /* ---------- Visning ---------- */
-    var v by mutableStateOf(KalPrefs.view(app).let { if (it in VIEWS.map { x -> x.first }) it else "mnd" })
+    // Prompt 35: appen åpner i «Åpne i» fra Innstillinger (ikke sist brukte visning).
+    var v by mutableStateOf(Kal35Prefs.openView(app).let { if (it in VIEWS.map { x -> x.first }) it else "mnd" })
     var a by mutableStateOf(today())
     var hid by mutableStateOf(KalPrefs.hidden(app))
     var sw by mutableStateOf(KalPrefs.weekNo(app))
@@ -91,6 +92,34 @@ class KalVm(app: Application) : AndroidViewModel(app) {
     var back by mutableStateOf(false)
     var newCal by mutableStateOf(false)
 
+    /* ---------- Prompt 35: Innstillinger, kalendere og zoom ---------- */
+    /** Uken starter på søndag. */
+    var sun by mutableStateOf(Kal35Prefs.sunStart(app))
+    var ov by mutableStateOf(Kal35Prefs.openView(app))
+    var dd by mutableIntStateOf(Kal35Prefs.defDur(app))
+    var tl by mutableStateOf(Kal35Prefs.tlStart(app))
+    var nBd by mutableStateOf(Kal35Prefs.notifyBirthdays(app))
+    var nFr by mutableStateOf(Kal35Prefs.notifyDeadlines(app))
+    var nBr by mutableStateOf(Kal35Prefs.notifyBrief(app))
+    var nTv by mutableStateOf(Kal35Prefs.travelTime(app))
+    /** Innstillinger-siden (glir inn fra høyre). */
+    var setOn by mutableStateOf(false)
+    /** «Rediger» i MINE KALENDERE, «Vis skjulte (N)», kalenderen med åpen fargevelger. */
+    var calEd by mutableStateOf(false)
+    var showHid by mutableStateOf(false)
+    var pickC by mutableStateOf<String?>(null)
+    /** «+ Legg til kalender»-panelet (null = lukket). */
+    var ac by mutableStateOf<KAdd35?>(null)
+    var colO by mutableStateOf(Kal35Prefs.colors(app))
+    var hmO by mutableStateOf(Kal35Prefs.hidMenu(app))
+    /** Zoom-animasjonen: retning (in/out), teller (ny animasjon) og punktet den vokser fra (andel av visningen). */
+    var zDir by mutableStateOf("in")
+    var zN by mutableIntStateOf(0)
+    var zOx by mutableStateOf(.5f)
+    var zOy by mutableStateOf(.4f)
+    private var calsMemo: Triple<List<KCal>, Map<String, Long>, Map<String, Boolean>>? = null
+    private var calsOut: List<KCal> = emptyList()
+
     /* ---------- Glimt ---------- */
     val gm = mutableStateListOf<KGMsg>()
     var glOpen by mutableStateOf(false)
@@ -108,9 +137,27 @@ class KalVm(app: Application) : AndroidViewModel(app) {
 
     /* ---------- Avledet ---------- */
 
-    val cals: List<KCal> get() = data.cals
-    val calMap: Map<String, KCal> get() = data.cals.associateBy { it.id }
-    fun cal(id: String): KCal = calMap[id] ?: KCALS.firstOrNull { it.id == id } ?: KCALS[0]
+    /** Prompt 35: kalenderne med lokale farger og «Skjul fra menyen» lagt på. */
+    val cals: List<KCal> get() {
+        val key = Triple(data.cals, colO, hmO)
+        val m = calsMemo
+        if (m == null || m.first !== key.first || m.second !== key.second || m.third !== key.third) {
+            calsOut = data.cals.map { c ->
+                var x = c
+                colO[c.id]?.let { x = x.withColor35(it) }
+                hmO[c.id]?.let { x = x.copy(hidMenu = it) }
+                x
+            }
+            calsMemo = key
+        }
+        return calsOut
+    }
+    val calMap: Map<String, KCal> get() = cals.associateBy { it.id }
+    fun cal(id: String): KCal = calMap[id] ?: cals.firstOrNull { it.key == id } ?: KCALS.firstOrNull { it.id == id } ?: KCALS[0]
+    /** Fasitens korte nøkkel (p/j/s/f/h/b fra Glimt-tolkningen) → kalenderens id hos serveren. */
+    fun resolveCal(k: String): String = if (calMap.containsKey(k)) k else cals.firstOrNull { it.key == k }?.id ?: k
+    /** Kalendere skjult fra menyen forsvinner også fra visningene. */
+    val hidMenuIds: Set<String> get() = cals.filter { it.hidMenu }.map { it.id }.toSet()
 
     /** Alle hendelser (også skjulte kalendere), med lokale varsel-valg og hendelsen fra en lenke som ikke fantes. */
     val all: List<KEv> get() {
@@ -118,7 +165,7 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         val l = data.events.map { e -> if (o.containsKey(e.id)) e.copy(rem = o[e.id]) else e }
         return ext?.let { x -> if (l.none { it.id == x.id }) l + x else l } ?: l
     }
-    val visible: List<KEv> get() = all.filter { it.cal !in hid }
+    val visible: List<KEv> get() { val hm = hidMenuIds; return all.filter { it.cal !in hid && it.cal !in hm } }
     fun find(id: String?): KEv? = id?.let { i -> all.firstOrNull { it.id == i } }
 
     /* ---------- Innlogging ---------- */
@@ -188,6 +235,7 @@ class KalVm(app: Application) : AndroidViewModel(app) {
             val err = runCatching { KalRepo.sync(ctx, s, from, to) }.getOrElse { it.message }
             syncing = false
             syncErr = err
+            reloadPrefs35()
             if (err?.contains("utløpt") == true) { KalAuth.clear(ctx); session = null; lErr = err }
             changed()
         }
@@ -201,12 +249,44 @@ class KalVm(app: Application) : AndroidViewModel(app) {
 
     /* ---------- Visning ---------- */
 
+    /** Visningsvelgeren: samme zoom-animasjon som kjeden, retning etter rekkefølgen År · Mnd · Uke · 3 d · Dag · Liste. */
     fun setView(k: String) {
-        Hap.tick()
-        v = k
-        if (k == "liste") a = today()
-        KalPrefs.setView(ctx, k)
+        if (k == v) return
+        val L = VIEWS.map { it.first }
+        zoomOrigin(.5f, .4f)
+        zoomTo(k, if (k == "liste") today() else null, if (L.indexOf(k) > L.indexOf(v)) "in" else "out")
     }
+
+    /** Prompt 35: zoom til en visning (fasit: zoomTo). Den nye visningen vokser fra punktet man trykket/klypte (zOx/zOy). */
+    fun zoomTo(nv: String, d: LocalDate? = null, dir: String) {
+        Hap.tick()
+        // Inn fra Måned/År uten valgt dag: i dag når den er i perioden, ellers første dag.
+        val from = v
+        var na = d ?: a
+        if (d == null && dir == "in" && (from == "mnd" || from == "ar") && nv != "mnd") {
+            val T = today()
+            if (T.year == a.year && (from == "ar" || T.monthValue == a.monthValue)) na = T
+        }
+        if (nv == "mnd" && d != null) na = d.withDayOfMonth(1)
+        v = nv
+        a = na
+        zDir = dir
+        zN++
+        KalPrefs.setView(ctx, nv)
+        ensureRange()
+    }
+
+    /** Pinch / ctrl+hjul: ett steg i kjeden År → Måned → Uke → 3 dager → Dag (fasit: zoomStep). */
+    fun zoomStep(dir: String) {
+        val L = listOf("ar", "mnd", "uke", "3d", "dag")
+        val i = L.indexOf(if (v == "liste") "mnd" else v)
+        val j = (i + if (dir == "in") 1 else -1).coerceIn(0, L.size - 1)
+        if (j == i) return
+        zoomTo(L[j], null, dir)
+    }
+
+    /** Hvor neste zoom vokser fra (andel 0–1 av visningen). */
+    fun zoomOrigin(x: Float, y: Float) { zOx = x.coerceIn(0f, 1f); zOy = y.coerceIn(0f, 1f) }
 
     /** ‹ › og sveip: én periode frem eller tilbake. */
     fun step(dir: Int) {
@@ -223,15 +303,24 @@ class KalVm(app: Application) : AndroidViewModel(app) {
 
     fun goToday() { Hap.tick(); a = today() }
 
-    /** Trykk på tittelen zoomer ut: Dag → Uke → Mnd → År. */
+    /** Trykk på tittelen zoomer ut: Dag → 3 dager → Uke → Mnd → År (Liste → Mnd). */
     fun titleTap() {
-        Hap.tick()
-        v = when (v) { "dag", "3d" -> "uke"; "uke" -> "mnd"; "mnd" -> "ar"; "liste" -> "mnd"; else -> "ar" }
-        KalPrefs.setView(ctx, v)
+        val nv = when (v) { "dag" -> "3d"; "3d" -> "uke"; "uke" -> "mnd"; "mnd" -> "ar"; "liste" -> "mnd"; else -> "ar" }
+        if (nv == v) return
+        zoomOrigin(.5f, .1f)
+        zoomTo(nv, if (nv == "mnd" && v != "liste") a.withDayOfMonth(1) else null, "out")
     }
 
-    fun openDay(d: LocalDate) { Hap.tick(); v = "dag"; a = d; ensureRange() }
-    fun openMonth(d: LocalDate) { Hap.tick(); v = "mnd"; a = d.withDayOfMonth(1); ensureRange() }
+    /** Trykk på en dag: Måned → Uke, Uke → 3 dager, 3 dager → Dag. */
+    fun openDay(d: LocalDate) {
+        when (v) {
+            "mnd" -> zoomTo("uke", d, "in")
+            "uke" -> zoomTo("3d", d, "in")
+            "3d" -> zoomTo("dag", d, "in")
+            else -> zoomTo("dag", d, "in")
+        }
+    }
+    fun openMonth(d: LocalDate) { zoomTo("mnd", d.withDayOfMonth(1), "in") }
 
     /** Navigerer man utenfor det som er hentet: hent på nytt rundt den nye datoen. */
     private fun ensureRange() {
@@ -306,11 +395,13 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         val base = d0 ?: if (v == "mnd" || v == "ar" || v == "liste") T else a
         val nm = nowMin()
         val st = s0 ?: minOf(23 * 60, ((nm + 1 + 29) / 30) * 30)
-        nf = KNewForm(d = if (base.isBefore(T)) T else base, s = st, e = e0 ?: minOf(1439, st + 60), cal = writableDefault(), rem = drem)
+        // Prompt 35: «Standard varighet» fra Innstillinger.
+        nf = KNewForm(d = if (base.isBefore(T)) T else base, s = st, e = e0 ?: minOf(1439, st + dd), cal = writableDefault(), rem = drem)
     }
 
     /** Personlig, eller første skrivbare kalender fra serveren. */
-    private fun writableDefault(): String = cals.firstOrNull { it.id == "p" && it.writable }?.id ?: cals.firstOrNull { it.writable }?.id ?: "p"
+    private fun writableDefault(): String = cals.firstOrNull { (it.id == "p" || it.key == "p") && it.writable && !it.hidMenu }?.id
+        ?: cals.firstOrNull { it.writable && !it.hidMenu }?.id ?: "p"
 
     fun closeNew() { Hap.dismiss(); nf = null }
 
@@ -346,7 +437,7 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         // En innlimt melding (SMS/e-post) uten sikkert klokkeslett: Glimt (LLM) i bakgrunnen.
         if (looksPasted(t) && p.s == null) { ct = ""; quick(t); return }
         ct = ""
-        val e = KEv("u" + System.currentTimeMillis(), p.t, p.cal, p.d, p.s, p.e, rem = p.rem, src = p.src)
+        val e = KEv("u" + System.currentTimeMillis(), p.t, resolveCal(p.cal), p.d, p.s, p.e, rem = p.rem, src = p.src)
         a = p.d
         add(e, "Glimt la til «${p.t}» · " + dl(p.d) + (if (p.all) "" else " " + hm(p.s ?: 0)))
     }
@@ -366,7 +457,7 @@ class KalVm(app: Application) : AndroidViewModel(app) {
             }
             if (job == null) {
                 val p = parseQuick(text, drem)
-                add(KEv("u" + System.currentTimeMillis(), p.t, p.cal, p.d, p.s, p.e, rem = p.rem, src = p.src), "Glimt la til «${p.t}» · " + dl(p.d))
+                add(KEv("u" + System.currentTimeMillis(), p.t, resolveCal(p.cal), p.d, p.s, p.e, rem = p.rem, src = p.src), "Glimt la til «${p.t}» · " + dl(p.d))
                 return@launch
             }
             repeat(60) {
@@ -425,7 +516,8 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         glJob = viewModelScope.launch {
             if (local != null) {
                 m.steps = local.steps
-                local.create?.let { ev ->
+                local.create?.let { ev0 ->
+                    val ev = ev0.copy(cal = resolveCal(ev0.cal))
                     val s = session
                     if (s != null) runCatching { KalRepo.create(ctx, s, ev) }.onSuccess { saved -> m.undoId = saved.id; m.cards = listOf(saved); changed() }
                         .onFailure { m.cards = listOf(ev) }
@@ -570,6 +662,7 @@ class KalVm(app: Application) : AndroidViewModel(app) {
     /* ---------- Sidemenyen ---------- */
 
     fun toggleCal(c: KCal) {
+        if (calEd) return
         Hap.tick()
         val on = c.id in hid
         hid = if (on) hid - c.id else hid + c.id
@@ -578,10 +671,166 @@ class KalVm(app: Application) : AndroidViewModel(app) {
         changed()
     }
 
-    fun setWeekNo(on: Boolean) { Hap.tick(); sw = on; KalPrefs.setWeekNo(ctx, on) }
-    fun setWx(on: Boolean) { Hap.tick(); swx = on; KalPrefs.setWeather(ctx, on); changed() }
-    fun setDefRem(r: Int?) { Hap.tick(); drem = r; KalPrefs.setDefRem(ctx, r) }
-    fun setTheme(k: String) { Hap.tick(); th = k; KalPrefs.setTheme(ctx, k); KalTheme.apply(ctx, k) }
+    fun setWeekNo(on: Boolean) { Hap.tick(); sw = on; KalPrefs.setWeekNo(ctx, on); pushPref("weekNumbers", on) }
+    fun setWx(on: Boolean) { Hap.tick(); swx = on; KalPrefs.setWeather(ctx, on); changed(); pushPref("weather", on) }
+    fun setDefRem(r: Int?) { Hap.tick(); drem = r; KalPrefs.setDefRem(ctx, r); pushPref("defaultReminder", Kal35Prefs.remToPref(r)) }
+    fun setTheme(k: String) { Hap.tick(); th = k; KalPrefs.setTheme(ctx, k); KalTheme.apply(ctx, k); pushPref("theme", k) }
+
+    /* ---------- Prompt 35: Innstillinger ---------- */
+
+    private fun pushPref(k: String, value: Any) {
+        val s = session ?: return
+        viewModelScope.launch { Kal35Repo.putPref(ctx, s, k, value) }
+    }
+
+    fun setWeekStart(sunday: Boolean) { Hap.tick(); sun = sunday; Kal35Prefs.setStr(ctx, "p35_ws", if (sunday) "sun" else "mon"); changed(); pushPref("weekStart", if (sunday) "sun" else "mon") }
+    fun setOpenView(k: String) { Hap.tick(); ov = k; Kal35Prefs.setStr(ctx, "p35_ov", k); pushPref("openView", k) }
+    fun setDefDur(m: Int) { Hap.tick(); dd = m; Kal35Prefs.setInt(ctx, "p35_dd", m); pushPref("defaultDuration", m) }
+    fun setTlStart(k: String) { Hap.tick(); tl = k; Kal35Prefs.setStr(ctx, "p35_tl", k); pushPref("timelineStart", k) }
+    fun setNotify(k: String, on: Boolean) {
+        Hap.tick()
+        when (k) {
+            "notifyBirthdays" -> { nBd = on; Kal35Prefs.setBool(ctx, "p35_nbd", on) }
+            "notifyDeadlines" -> { nFr = on; Kal35Prefs.setBool(ctx, "p35_nfr", on) }
+            "notifyBrief" -> { nBr = on; Kal35Prefs.setBool(ctx, "p35_nbr", on) }
+            "travelTime" -> { nTv = on; Kal35Prefs.setBool(ctx, "p35_ntv", on) }
+        }
+        runCatching { KalNotify.reschedule(ctx) }
+        pushPref(k, on)
+    }
+
+    /** Etter synk: valgene fra profilen inn i skjermen. */
+    private fun reloadPrefs35() {
+        sun = Kal35Prefs.sunStart(ctx); ov = Kal35Prefs.openView(ctx); dd = Kal35Prefs.defDur(ctx); tl = Kal35Prefs.tlStart(ctx)
+        nBd = Kal35Prefs.notifyBirthdays(ctx); nFr = Kal35Prefs.notifyDeadlines(ctx); nBr = Kal35Prefs.notifyBrief(ctx); nTv = Kal35Prefs.travelTime(ctx)
+        sw = KalPrefs.weekNo(ctx); swx = KalPrefs.weather(ctx); drem = KalPrefs.defRem(ctx)
+        val t = KalPrefs.theme(ctx)
+        if (t != th) { th = t; KalTheme.apply(ctx, t) }
+    }
+
+    fun openSettings() { Hap.tick(); setOn = true }
+    fun closeSettings() { Hap.dismiss(); setOn = false }
+
+    /** «Glimt» i Innstillinger: Glimt-innstillingene i Homelab (samme som Homelab → Innstillinger → Glimt). */
+    fun openGlimtSettings() {
+        Hap.tick()
+        val c = ctx
+        val i = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse("finanshub://settings/glimt")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        val ok = KalAuth.homelabInstalled(c) && runCatching { c.startActivity(i) }.isSuccess
+        if (!ok) session?.server?.let { s -> runCatching { c.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(s.trimEnd('/') + "/#innstillinger/glimt")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } }
+            ?: showToast("Glimt-innstillingene ligger i Homelab → Innstillinger → Glimt")
+    }
+
+    /** «Kontoer og synk»: sidemenyen med «Legg til kalender → Konto» åpen. */
+    fun openAccounts() { Hap.tick(); setOn = false; cs = true; ac = KAdd35(tab = "acc", c = SWC35[6]) }
+
+    /* ---------- Prompt 35: kalendere (farge, skjul fra menyen, iCal, Home Assistant) ---------- */
+
+    fun pickColor(c: KCal, col: Long) {
+        Hap.tick()
+        pickC = null
+        colO = colO + (c.id to col)
+        Kal35Prefs.setColor(ctx, c.id, col)
+        val s = session
+        changed()
+        if (s != null && data.serverCals) viewModelScope.launch {
+            // Lagret på serveren: den lokale overstyringen trengs ikke lenger (serverens farge kommer ved neste synk).
+            if (Kal35Repo.patchCal(s, c, JSONObject().put("color", hexOut(col)))) {
+                val d = KalStore.current(ctx)
+                KalStore.save(ctx, d.copy(cals = d.cals.map { if (it.id == c.id) it.withColor35(col) else it }))
+                Kal35Prefs.setColor(ctx, c.id, null); colO = Kal35Prefs.colors(ctx)
+            }
+        }
+    }
+
+    fun setHidMenu(c: KCal, hide: Boolean) {
+        Hap.tick()
+        hmO = hmO + (c.id to hide)
+        Kal35Prefs.setHidMenu(ctx, c.id, hide)
+        changed()
+        val s = session
+        if (s != null && data.serverCals) viewModelScope.launch {
+            if (Kal35Repo.patchCal(s, c, JSONObject().put("hidMenu", hide))) {
+                val d = KalStore.current(ctx)
+                KalStore.save(ctx, d.copy(cals = d.cals.map { if (it.id == c.id) it.copy(hidMenu = hide) else it }))
+                Kal35Prefs.setHidMenu(ctx, c.id, null); hmO = Kal35Prefs.hidMenu(ctx)
+            }
+        }
+    }
+
+    fun removeCal(c: KCal) {
+        Hap.tick()
+        val s = session ?: return
+        viewModelScope.launch {
+            try { KalRepo.deleteCalendar(s, c); showToast("«${c.n}» fjernet"); refresh() } catch (e: KalApiException) { showToast(e.message ?: "Kunne ikke fjerne kalenderen") }
+        }
+    }
+
+    fun openAddCal() { Hap.tick(); ac = if (ac != null) null else KAdd35(c = SWC35[(cals.size * 3) % SWC35.size]) }
+
+    fun acTab(t: String) {
+        Hap.tick()
+        val x = ac ?: return
+        ac = x.copy(tab = t)
+        if (t == "ha" && x.ha == null) loadHa()
+    }
+
+    private fun loadHa() {
+        val s = session ?: return
+        ac = ac?.copy(haBusy = true)
+        viewModelScope.launch {
+            val l = Kal35Repo.haList(s)
+            ac = ac?.copy(ha = l, haBusy = false)
+        }
+    }
+
+    fun acSave() {
+        val x = ac ?: return
+        val s = session ?: return
+        when (x.tab) {
+            "ics" -> {
+                if (!icalOk35(x.url) || x.name.isBlank()) return
+                Hap.done()
+                ac = x.copy(busy = true)
+                viewModelScope.launch {
+                    try {
+                        Kal35Repo.addIcal(s, x.url, x.name, x.c)
+                        ac = null
+                        showToast("Abonnerer på «${x.name.trim()}»")
+                        refresh()
+                    } catch (e: KalApiException) {
+                        ac = ac?.copy(busy = false)
+                        showToast(if (e.status == 404 || e.status == 405) "Serveren støtter ikke iCal-abonnement ennå. Oppdater Homelab." else (e.message ?: "Fikk ikke abonnert"))
+                    }
+                }
+            }
+            "ha" -> {
+                if (x.sel.isEmpty()) return
+                Hap.done()
+                ac = x.copy(busy = true)
+                viewModelScope.launch {
+                    try {
+                        Kal35Repo.addHa(s, x.sel, x.c)
+                        ac = null
+                        showToast("${x.sel.size} kalender" + (if (x.sel.size > 1) "e" else "") + " fra Home Assistant lagt til")
+                        refresh()
+                    } catch (e: KalApiException) {
+                        ac = ac?.copy(busy = false)
+                        showToast(e.message ?: "Fikk ikke lagt til kalenderne")
+                    }
+                }
+            }
+        }
+    }
+
+    /** Konto (Google, iCloud, Outlook): innloggingen skjer i Homelab (Innstillinger → Kalendere). */
+    fun openAccount(n: String) {
+        Hap.tick()
+        val c = ctx
+        val i = android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse("finanshub://settings/kalendere")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        val ok = KalAuth.homelabInstalled(c) && runCatching { c.startActivity(i) }.isSuccess
+        showToast(if (ok) "$n: logg inn i Homelab, så velger du kalenderne der" else "$n kobles til i Homelab → Innstillinger → Kalendere")
+    }
 
     fun createCalendar(name: String, color: Long) {
         val s = session ?: return

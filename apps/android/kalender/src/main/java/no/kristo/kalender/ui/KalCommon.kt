@@ -61,6 +61,11 @@ fun news(size: TextUnit, c: Color = Color.Unspecified, lh: TextUnit = TextUnit.U
 fun mono(size: TextUnit, c: Color = Color.Unspecified, ls: Float = 0f) =
     TextStyle(fontFamily = PlexMono, fontSize = size, fontWeight = FontWeight.SemiBold, color = c, letterSpacing = ls.em)
 
+/** Prompt 35: ukenummer – IBM Plex Mono 800 i full tekstfarge (--ink), uten bakgrunn. */
+fun monoX(size: TextUnit, c: Color, ls: Float = 0f) =
+    TextStyle(fontFamily = no.kristo.kalender.PlexMonoX, fontSize = size, fontWeight = FontWeight.ExtraBold, color = c, letterSpacing = ls.em,
+        fontSynthesis = androidx.compose.ui.text.font.FontSynthesis.Weight)
+
 @Composable
 fun Tx(text: String, style: TextStyle, modifier: Modifier = Modifier, maxLines: Int = 1) =
     Text(text, modifier, style = style, maxLines = maxLines, overflow = TextOverflow.Ellipsis, softWrap = maxLines > 1)
@@ -94,6 +99,8 @@ object Ic {
     const val PLUS = "M12 5v14M5 12h14"
     const val UP = "M12 19V5M5 12l7-7 7 7"
     const val BACK = "M8 0v12L0 6z"
+    /** Prompt 35: tannhjulet (Innstillinger nederst i sidemenyen). */
+    const val GEAR = "M12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"
 }
 
 /** Vær-ikonet (WXP) i fasitens farger: sol gul, regn blå, ellers dempet. */

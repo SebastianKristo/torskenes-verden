@@ -63,10 +63,12 @@ object KalStore {
 
     private fun calTo(c: KCal) = JSONObject().put("id", c.id).put("n", c.n).put("c", hexOut(c.c)).put("tx", hexOut(c.tx)).put("lt", hexOut(c.lt))
         .put("writable", c.writable).put("vis", c.serverVisible).put("count", c.count ?: JSONObject.NULL).put("own", c.own).put("sid", c.serverId ?: JSONObject.NULL)
+        .put("key", c.key ?: JSONObject.NULL).put("src", c.src ?: JSONObject.NULL).put("badge", c.badge ?: JSONObject.NULL).put("hm", c.hidMenu)
 
     private fun calFrom(o: JSONObject): KCal? = runCatching {
         KCal(o.getString("id"), o.getString("n"), hexIn(o.optString("c")) ?: 0xFF5C5850, hexIn(o.optString("tx")) ?: 0xFF3D3A33, hexIn(o.optString("lt")) ?: 0xFFD6CFC2,
-            o.optBoolean("writable", true), o.optBoolean("vis", true), o.optIntOrNull("count"), o.optBoolean("own"), o.optStrOrNull("sid"))
+            o.optBoolean("writable", true), o.optBoolean("vis", true), o.optIntOrNull("count"), o.optBoolean("own"), o.optStrOrNull("sid"),
+            o.optStrOrNull("key"), o.optStrOrNull("src"), o.optStrOrNull("badge"), o.optBoolean("hm", false))
     }.getOrNull()
 }
 
@@ -122,6 +124,7 @@ object KalRepo {
         .put("start", e.s?.let(::hm) ?: JSONObject.NULL).put("end", e.e?.let(::hm) ?: JSONObject.NULL)
         .put("endDate", if (e.days > 1) e.d.plusDays((e.days - 1).toLong()).toString() else JSONObject.NULL)
         .put("location", e.loc ?: "").put("calendar", writeCal(d, e.cal)).put("view", e.cal)
+        .apply { if (d.serverCals) put("appCalendar", writeCal(d, e.cal)) }
         .put("reminder", remToLegacy(e.rem)).put("remindMin", e.rem ?: JSONObject.NULL)
         .apply { e.src?.let { put("glimt", JSONObject().put("text", it)); put("origin", "Glimt · Kalender-appen") } }
         .put("source", "kalender-app")
@@ -135,8 +138,12 @@ object KalRepo {
         var serverCals = prev.serverCals
         var cals = prev.cals
         try {
-            val l = parseServerCalendars(api.get("/api/kalender/calendars", timeout = 8_000))
+            val raw = api.get("/api/kalender/calendars", timeout = 8_000)
+            val l = parseServerCalendars(raw)
             if (l.isNotEmpty()) { cals = l; serverCals = true }
+            // Prompt 35: Innstillingene ligger i profilen (prefs). Første gang sendes telefonens valg dit i stedet.
+            if (!Kal35Prefs.pushed(ctx)) Kal35Repo.pushAll(ctx, s)
+            else Kal35Prefs.applyServer(ctx, runCatching { JSONObject(raw).optJSONObject("prefs") }.getOrNull())
         } catch (e: KalApiException) {
             if (e.status == 404 || e.status == 405) { cals = KCALS; serverCals = false }
             if (e.status == 401) return "Innloggingen er utløpt. Logg inn på nytt."

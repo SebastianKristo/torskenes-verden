@@ -135,10 +135,12 @@ object KalSync {
 
 private class WRow(val ev: KEv?, val t: String, val tm: String, val whenL: String, val c: Long, val loc: String)
 
-private class WData(val d: KData, val evs: List<KEv>, showWx: Boolean) {
+private class WData(val d: KData, val evs: List<KEv>, showWx: Boolean, sun: Boolean = false) {
     val T: LocalDate = today()
     private val nm = nowMin()
     private val cals = d.cals.associateBy { it.id }
+    /** Prompt 35: ukenummer etter «Uken starter». */
+    val wk: Int = no.kristo.kalender.wkNo35(no.kristo.kalender.wkStart35(T, sun), sun)
     val up: List<KEv> = evs.filter { it.d.isAfter(T) || (it.d == T && (it.all || (it.e ?: 0) > nm)) }
         .sortedWith(compareBy<KEv> { it.d }.thenBy { if (it.all) 0 else 1 }.thenBy { it.s ?: 0 })
     val next: KEv? = up.firstOrNull { !it.all } ?: up.firstOrNull()
@@ -153,9 +155,11 @@ private class WData(val d: KData, val evs: List<KEv>, showWx: Boolean) {
 
 /** Cachen med skjulte kalendere og lokale varsel-valg lagt på. */
 private fun data(ctx: Context): WData {
-    val d = KalStore.current(ctx)
-    val hid = KalPrefs.hidden(ctx)
-    return WData(d, d.withOverrides(ctx).filter { it.cal !in hid }, KalPrefs.weather(ctx))
+    val d0 = KalStore.current(ctx)
+    // Prompt 35: egne farger og «Skjul fra menyen» gjelder også widgetene.
+    val d = d0.copy(cals = no.kristo.kalender.cals35(ctx, d0.cals))
+    val hid = no.kristo.kalender.hiddenAll35(ctx)
+    return WData(d, d.withOverrides(ctx).filter { it.cal !in hid }, KalPrefs.weather(ctx), no.kristo.kalender.Kal35Prefs.sunStart(ctx))
 }
 
 /* ---------------- Felles ---------------- */
@@ -213,7 +217,8 @@ private fun DateBody(w: WData) {
     Column(GlanceModifier.fillMaxSize().appWidgetBackground().cornerRadius(28.dp).background(P.card).padding(16.dp).clickable(open(ctx, "kalender://dag/$T"))) {
         Tx(WD[T.jsDay].uppercase(), 10.5.sp, P.acc, FontWeight.Bold, FontFamily.Monospace)
         Tx("${T.dayOfMonth}", 52.sp, P.ink, FontWeight.Medium, FontFamily.Serif)
-        Tx(MN[T.monthValue - 1] + " · uke " + isoW(T), 12.sp, P.mut)
+        // Prompt 35: «oktober 2026 · uke 43».
+        Tx(MN[T.monthValue - 1] + " " + T.year + " · uke " + w.wk, 12.sp, P.mut)
         Grow()
         if (w.wx != null) Tx(wxText(w.wx), 13.sp, P.ink2, FontWeight.Medium, FontFamily.Monospace)
     }
@@ -270,6 +275,8 @@ private fun AgendaBody(w: WData) {
         .clickable(open(ctx, "kalender://dag/${w.T}"))) {
         Row(GlanceModifier.fillMaxWidth().padding(bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Tx("I dag og i morgen", 22.sp, P.ink, FontWeight.Medium, FontFamily.Serif, modifier = GlanceModifier.defaultWeight())
+            Tx("UKE " + w.wk, 11.5.sp, P.ink2, FontWeight.Bold, FontFamily.Monospace)
+            Spacer(GlanceModifier.width(10.dp))
             Box(GlanceModifier.size(36.dp).cornerRadius(18.dp).background(P.ink).clickable(open(ctx, "kalender://ny")), contentAlignment = Alignment.Center) {
                 Tx("+", 20.sp, P.bg, FontWeight.Bold)
             }
@@ -319,7 +326,8 @@ private fun ClockBody(w: WData) {
         AndroidRemoteViews(RemoteViews(ctx.packageName, no.kristo.kalender.R.layout.kal_w_clock))
         Spacer(GlanceModifier.width(16.dp))
         Column(GlanceModifier.defaultWeight()) {
-            Tx(cap(WD[T.jsDay]) + " " + T.dayOfMonth + ". " + MN[T.monthValue - 1] + (w.wx?.let { " · " + it.hi + "° " + WTXT[wkd(it.c)] } ?: ""), 14.sp, white, FontWeight.Bold)
+            // Prompt 35: «Man 19. okt · U43» først i linjen.
+            Tx(cap(WS[T.jsDay]) + " " + T.dayOfMonth + ". " + no.kristo.kalender.MS[T.monthValue - 1] + " · U" + w.wk + (w.wx?.let { " · " + it.hi + "° " + WTXT[wkd(it.c)] } ?: ""), 14.sp, white, FontWeight.Bold)
             Spacer(GlanceModifier.height(4.dp))
             Tx(n?.let { "▦ " + it.t + " · " + (if (it.all) "Hele dagen" else hm(it.s ?: 0)) } ?: "Ingen hendelser", 13.sp, soft, maxLines = 2)
         }

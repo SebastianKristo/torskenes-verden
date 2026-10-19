@@ -50,17 +50,18 @@ object KalNotify {
     /** Ett varsel: id (unik per hendelse og type), tidspunkt og innhold. */
     private data class Plan(val key: String, val at: LocalDateTime, val ev: KEv, val kind: String)
 
-    private fun plans(evs: List<KEv>, now: LocalDateTime): List<Plan> {
+    private fun plans(evs: List<KEv>, now: LocalDateTime, bd: Boolean = true, fr: Boolean = true): List<Plan> {
         val out = ArrayList<Plan>()
         val until = now.plusDays(14)
         evs.forEach { e ->
             if (e.pending && e.id.startsWith("x")) return@forEach
             val start = e.d.atTime(e.s?.let { LocalTime.of(it / 60 % 24, it % 60) } ?: LocalTime.of(9, 0))
             when {
-                e.kind == "bursdag" || (e.cal == "b" && e.all) -> out += Plan("b|${e.id}|${e.d}", e.d.atTime(9, 0), e, "bursdag")
+                e.kind == "bursdag" || (e.cal == "b" && e.all) -> if (bd) out += Plan("b|${e.id}|${e.d}", e.d.atTime(9, 0), e, "bursdag")
                 e.kind == "frist" -> {
-                    out += Plan("f3|${e.id}", e.d.minusDays(3).atTime(9, 0), e, "frist3")
-                    out += Plan("f1|${e.id}", e.d.minusDays(1).atTime(9, 0), e, "frist1")
+                    // Prompt 35: Innstillinger → Varsler → Studiefrister (3 d / 1 d) kan slås av.
+                    if (fr) out += Plan("f3|${e.id}", e.d.minusDays(3).atTime(9, 0), e, "frist3")
+                    if (fr) out += Plan("f1|${e.id}", e.d.minusDays(1).atTime(9, 0), e, "frist1")
                     if (!e.all && e.rem != null) out += Plan("r|${e.id}", start.minusMinutes(e.rem.toLong()), e, "rem")
                 }
                 !e.all && e.rem != null -> out += Plan("r|${e.id}", start.minusMinutes(e.rem.toLong()), e, "rem")
@@ -82,8 +83,8 @@ object KalNotify {
         val app = ctx.applicationContext
         val am = app.getSystemService(AlarmManager::class.java) ?: return
         val evs = KalStore.current(app).withOverrides(app)
-        val hidden = KalPrefs.hidden(app)
-        val ps = plans(evs.filter { it.cal !in hidden }, LocalDateTime.now(OSLO))
+        val hidden = hiddenAll35(app)
+        val ps = plans(evs.filter { it.cal !in hidden }, LocalDateTime.now(OSLO), Kal35Prefs.notifyBirthdays(app), Kal35Prefs.notifyDeadlines(app))
         val sp = app.getSharedPreferences(PREF, Context.MODE_PRIVATE)
         val old = sp.getStringSet("keys", emptySet()) ?: emptySet()
         val now = ps.map { it.key }.toSet()

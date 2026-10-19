@@ -59,6 +59,11 @@ val Manrope = FontFamily(
     Font(no.kristo.kalender.R.font.manrope_bold, FontWeight.Bold),
     Font(no.kristo.kalender.R.font.manrope_bold, FontWeight.ExtraBold),
 )
+/**
+ * Prompt 35: ukenummer i IBM Plex Mono 800. Appen har bare SemiBold-filen; den registreres som Normal her, så Compose
+ * syntetiserer fet skrift (FontSynthesis.Weight) når 800 bes om – tydeligere enn 600 uten en ny fontfil.
+ */
+val PlexMonoX = FontFamily(Font(no.kristo.kalender.R.font.plexmono_semibold, FontWeight.Normal))
 val PlexMono = FontFamily(Font(no.kristo.kalender.R.font.plexmono_semibold, FontWeight.SemiBold), Font(no.kristo.kalender.R.font.plexmono_semibold, FontWeight.Medium))
 
 object KalTheme {
