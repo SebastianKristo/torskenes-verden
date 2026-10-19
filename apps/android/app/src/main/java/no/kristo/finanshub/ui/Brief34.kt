@@ -387,10 +387,12 @@ private fun Modifier.ringAnim34(radius: Dp): Modifier = this.composed {
     val v = ringAlpha34()
     this.drawWithContent {
         drawContent()
+        // Prompt 36: «outline» som følger kortets radius nøyaktig: 2,5 dp, offset 4 → 8 → 4 dp (1,3 s), farge 100 % ↔ 45 %.
         val r = radius.toPx()
-        val g = 14.dp.toPx() * v
-        drawRoundRect(RED34.copy(alpha = .45f * (1f - v)), Offset(-g, -g), Size(size.width + 2 * g, size.height + 2 * g), CornerRadius(r + g, r + g), style = Stroke(5.dp.toPx() * (1f - v) + 1f))
-        drawRoundRect(RED34, Offset(1.dp.toPx(), 1.dp.toPx()), Size(size.width - 2.dp.toPx(), size.height - 2.dp.toPx()), CornerRadius(r, r), style = Stroke(2.dp.toPx()))
+        val wave = (0.5f - 0.5f * kotlin.math.cos(2f * Math.PI.toFloat() * v))
+        val sw = 2.5.dp.toPx()
+        val o = (4.dp.toPx() + 4.dp.toPx() * wave) + sw / 2
+        drawRoundRect(RED34.copy(alpha = 1f - .55f * wave), Offset(-o, -o), Size(size.width + 2 * o, size.height + 2 * o), CornerRadius(r + o, r + o), style = Stroke(sw))
     }
 }
 

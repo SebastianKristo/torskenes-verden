@@ -107,6 +107,8 @@ internal fun MatSurface(vm: AppViewModel, paper: Boolean = false) {
         if (w == null || w.days.isEmpty()) {
             if (vm.moduleError == null) item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = p.text) } }
         } else if (paper) {
+            // Prompt 36: matplanen er felles for alle på serveren (ingen dele- eller privat-valg).
+            item { MealNote36(vm, p) }
             // Papir: kortene kan flyttes og skjules (hold inne), og rekkefølgen lagres per bruker.
             pageSecs(vm, "mat", MAT_SECS) { k -> MatPaperSec(vm, w, k, p, linkOpen) { linkOpen = it } }
         } else {
@@ -198,6 +200,7 @@ private fun MatHeader(vm: AppViewModel, p: MatPalette) {
         Column(Modifier.weight(1f)) {
             MLabel(vm.week?.let { w -> "Uke ${w.week ?: ""} · ${ddmm(w.start)}–${ddmm(w.end)}" } ?: "Mat", p.muted)
             Text("Mat", color = p.text, fontFamily = PaperFonts.serif, fontSize = 52.sp, lineHeight = 52.sp)
+            MealNote36(vm, p)
         }
         if (vm.topRowTitle(true) == null) Avatar(vm)
     }
@@ -559,4 +562,11 @@ private fun DishSearch27(q: String, set: (String) -> Unit, p: MatPalette) {
         Modifier.fillMaxWidth().height(48.dp).clip(RoundedCornerShape(14.dp)).background(p.card).border(1.dp, p.border, RoundedCornerShape(14.dp)).padding(horizontal = 14.dp),
         p.text, p.muted, fontSize = 15.sp, cursor = p.accent,
     )
+}
+
+/** «Felles for husstanden · Endret av Nina 18.42» (prompt 36). */
+@Composable
+private fun MealNote36(vm: AppViewModel, p: MatPalette) {
+    Text(vm.p36.mealNote ?: "Felles for husstanden", color = p.muted, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.padding(start = 2.dp, top = 2.dp))
 }

@@ -108,7 +108,12 @@ internal fun NordlysPage31(vm: AppViewModel) {
                 Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                NordHero31(vm, nv, avail, run, done, failed)
+                // Prompt 36: Sherlock-Glimt flyr inn i kortet ved «Se etter» (ui/Glimt36.kt).
+                val sher = vm.p36.sherOn
+                Box(Modifier.fillMaxWidth().then(if (sher) Modifier.clip(RoundedCornerShape(26.dp)) else Modifier)) {
+                    NordHero31(vm, nv, avail, run, done, failed)
+                    if (sher) Sherlock36(vm, Modifier.align(Alignment.TopEnd))
+                }
                 // Programvareversjon og bryteren.
                 Column(Modifier.fillMaxWidth().shadow(12.dp, RoundedCornerShape(22.dp), ambientColor = Color.Black.copy(alpha = .3f), spotColor = Color.Black.copy(alpha = .3f))
                     .clip(RoundedCornerShape(22.dp)).background(p.card)) {
@@ -140,12 +145,16 @@ internal fun NordlysPage31(vm: AppViewModel) {
                     PSerif("Dette er Nordlys $big. ${s.tagline}", 22.sp)
                     Text("NYTT I ${nv.ifBlank { "–" }}" + (relDate31(s.relDate)?.let { " · $it" } ?: ""), color = p.lab, fontFamily = PaperFonts.mono,
                         fontWeight = FontWeight.SemiBold, fontSize = 10.5.sp, letterSpacing = 1.2.sp)
-                    u.notes.filter { it.isNotBlank() && !Regex("^[^:]{1,30}:\\s*$").matches(it.trim()) }.ifEmpty { listOf("Feilrettinger og forbedringer.") }.forEach { n ->
+                    // Prompt 36: notatene for den nye versjonen (fallback fra /system/changelog når /system/version mangler dem).
+                    LaunchedEffect(nv, u.notes.isEmpty()) { if (u.notes.isEmpty()) vm.loadLatestNotes36(nv) }
+                    u.notes.ifEmpty { vm.p36.latestNotes }.filter { it.isNotBlank() && !Regex("^[^:]{1,30}:\\s*$").matches(it.trim()) }.ifEmpty { listOf("Feilrettinger og forbedringer.") }.forEach { n ->
                         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text("•", color = p.lab, fontSize = 14.sp)
                             Text(n, color = p.ink, fontFamily = PaperFonts.sans, fontSize = 14.sp, lineHeight = 21.sp)
                         }
                     }
+                    // Prompt 36: TIDLIGERE VERSJONER (én åpen om gangen, «Vis flere»).
+                    NordHist36(vm, nv)
                     // Prompt 32: fra den gamle Oppdatering-siden (Installert · build, Kopier, Se etter oppdatering, Logg).
                     Spacer(Modifier.height(6.dp))
                     NordlysInstalled32b(vm)
@@ -171,7 +180,7 @@ internal fun NordlysPage31(vm: AppViewModel) {
                             done -> vm.doneUpd30()
                             failed -> vm.startUpd31(ctx, u.action)
                             avail -> vm.startUpd31(ctx, "start")
-                            else -> vm.checkNordlys31()
+                            else -> vm.check36()
                         }
                     },
                 contentAlignment = Alignment.Center,
@@ -226,7 +235,7 @@ private fun NordHero31(vm: AppViewModel, nv: String, avail: Boolean, run: Boolea
             )
             Box(
                 Modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(Color.White.copy(alpha = .12f)).border(1.dp, Color.White.copy(alpha = .3f), RoundedCornerShape(16.dp))
-                    .clickable(enabled = !run, role = Role.Button) { vm.checkNordlys31() }.padding(horizontal = 12.dp),
+                    .clickable(enabled = !run, role = Role.Button) { vm.check36() }.padding(horizontal = 12.dp),
                 contentAlignment = Alignment.Center,
             ) { Text(if (s.checking) "Ser etter …" else "Se etter", color = Color.White, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1) }
         }
@@ -244,6 +253,8 @@ private fun NordHero31(vm: AppViewModel, nv: String, avail: Boolean, run: Boolea
             if (run) {
                 val f by animateFloatAsState(u.pct.coerceIn(0, 100) / 100f, tween(400), label = "nord31")
                 Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // Prompt 36: snekker-Glimt står på linja ved enden av fyllet og hamrer.
+                    Carp36(vm, u.pct, 30.dp)
                     Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(Color.White.copy(alpha = .22f))) {
                         Box(Modifier.fillMaxWidth(f).fillMaxHeight().clip(RoundedCornerShape(3.dp)).background(Color.White))
                     }

@@ -208,7 +208,10 @@ internal fun EngineLogo31(engine: String, size: Dp, busy: Boolean = false) {
 @Composable
 private fun aiJobs31(vm: AppViewModel): List<AiJob31> {
     // Jobber uten livstegn på fem minutter vises ikke lenger (tapt «done»-hendelse).
+    // Prompt 36: aldri både pille og kort – spørsmålet som tenker i kortet under søkefeltet vises ikke i pillen.
+    val inline = vm.p31.ans
     val live = vm.p31.jobs.filter { System.currentTimeMillis() - it.t0 < 300_000L }
+        .filter { j -> j.kind != "assist" || inline == null || !(j.id == inline.jobId || (inline.busy && (j.input.isBlank() || j.input.trim() == inline.q.trim()))) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     val t0s = remember { HashMap<String, Long>() }
     val quick = vm.q29.jobs.filter { q -> live.none { it.id == q.id } }

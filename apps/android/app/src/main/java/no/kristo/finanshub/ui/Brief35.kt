@@ -32,6 +32,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -110,17 +111,22 @@ internal fun BriefPage35(vm: AppViewModel) {
     val cur = if (step >= 0) steps.getOrNull(step) else null
     val ch = cur?.let { if (set.friends) it.char else host } ?: host
     val curText = cur?.let { if (en) it.textEn ?: it.text else it.text }
+    // Prompt 36: ringen starter først når scrollen til kortet er ferdig (så den ikke hopper).
+    var ringOn by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(s.tour, s.tourSeq) {
+        ringOn = null
         val c = cur ?: return@LaunchedEffect
         delay(60)
         c.target?.let { tg -> pos[tg]?.let { y -> scroll.animateScrollTo((y - with(dens) { 90.dp.toPx() }).toInt().coerceAtLeast(0)) } }
+        ringOn = c.target
         delay(40)
         vm.say35(if (en) c.textEn ?: c.text else c.text, ch)
     }
-    val ring = { k: String -> cur?.target == k }
+    val ring = { k: String -> cur?.target == k && ringOn == k }
     val dark = Tone.paperDark
     val trials = vm.briefTrials35(b)
-    Box(Modifier.fillMaxSize().background(if (dark) Brush.verticalGradient(listOf(p.bg, p.bg)) else Brush.verticalGradient(0f to Color(0xFFE6ECEF), .46f to p.bg))
+    // Prompt 36: fast bredde – flaten klipper, så figuren og boblen aldri gjør siden bredere.
+    Box(Modifier.fillMaxSize().clipToBounds().background(if (dark) Brush.verticalGradient(listOf(p.bg, p.bg)) else Brush.verticalGradient(0f to Color(0xFFE6ECEF), .46f to p.bg))
         .clickable(remember { MutableInteractionSource() }, null) {}) {
         Column(
             Modifier.fillMaxSize().verticalScroll(scroll).statusBarsPadding().padding(start = 18.dp, end = 18.dp, top = 14.dp, bottom = 190.dp),

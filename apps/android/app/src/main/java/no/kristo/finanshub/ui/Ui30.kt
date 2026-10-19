@@ -75,6 +75,7 @@ import no.kristo.finanshub.setUpdSetting30
 import no.kristo.finanshub.upd30OnHome
 import no.kristo.finanshub.openNordlys31
 import no.kristo.finanshub.startUpd31
+import no.kristo.finanshub.loadLatestNotes36
 
 /*
  * Prompt 30 (ANDROID30): felles SheetButton30 (Ferdig / Lukk · Avbryt / ‹ Tilbake), haptikk når ark lukkes,
@@ -217,18 +218,23 @@ internal fun UpdateBanner30(vm: AppViewModel, home: Boolean, modifier: Modifier 
                 contentAlignment = Alignment.Center,
             ) { WxIcon(IC_X30, p.ink, 10.dp, stroke = 3.4f) }
         }
-        if (phase == "run") UpdProgress30(u.pct, u.stepText.ifBlank { "Starter …" })
+        // Prompt 36: snekker-Glimt på fremdriftslinja (36–44 dp luft over linja).
+        if (phase == "run") Column { Carp36(vm, u.pct, 28.dp); UpdProgress30(u.pct, u.stepText.ifBlank { "Starter …" }) }
         if (phase == "avail" && u.notesOpen) Column(
             Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(p.bg).padding(12.dp, 10.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            val notes = u.notes.ifEmpty { listOf("Feilrettinger og forbedringer.") }
+            LaunchedEffect(u.latest) { vm.loadLatestNotes36(u.latest) }
+            val notes = u.notes.ifEmpty { vm.p36.latestNotes }.ifEmpty { listOf("Feilrettinger og forbedringer.") }
             notes.forEach { n ->
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("•", color = p.lab, fontSize = 13.sp)
                     Text(n, color = p.ink, fontFamily = PaperFonts.sans, fontSize = 13.sp, lineHeight = 18.sp)
                 }
             }
+            // Prompt 36: «Hva er nytt» viser bare den nye versjonen; resten ligger på Nordlys-siden.
+            Text("Tidligere versjoner ›", color = p.lab, fontFamily = PaperFonts.sans, fontWeight = FontWeight.Bold, fontSize = 13.sp,
+                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button) { vm.openNordlys31() }.padding(vertical = 4.dp))
         }
         when (phase) {
             "avail" -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

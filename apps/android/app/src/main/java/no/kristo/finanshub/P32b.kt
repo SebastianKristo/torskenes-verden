@@ -273,6 +273,8 @@ fun AppViewModel.askHome32b(q: String) {
         }
         return
     }
+    // Prompt 36: dagslys/sol for en dato beregnes lokalt; «været i New York» (prompt 35) før ruteren.
+    if (askSun36(t) || askWeather35(t)) return
     if (s.assistMissing) { openChat(t); return }
     val seq = ++s.ansSeq
     s.ans = HomeAns31(t, busy = true)
@@ -294,7 +296,12 @@ fun AppViewModel.askHome32b(q: String) {
             handoff32b(t, jobId, "Fikk ikke svar her.")
             return@launchJob31
         }
-        s.ans = HomeAns31(t, false, r.text, r.source, r.jobId, r.apply?.optInt("memoryId", 0) ?: 0, r.apply?.optInt("count", 0) ?: 0, r.apply?.optStr("title") ?: "")
+        // Prompt 36: handling (kind:'action' – lagt i kalenderen, påminnelse …) vises i pillen øverst, ikke som kort under søket.
+        if (r.kind == "action") {
+            s.ans = null
+            p31.toastMsg = "✓ " + plain31(r.text).lineSequence().firstOrNull().orEmpty().take(80); p31.toastSeq++
+        } else s.ans = HomeAns31(t, false, r.text, r.source, r.jobId, r.apply?.optInt("memoryId", 0) ?: 0, r.apply?.optInt("count", 0) ?: 0, r.apply?.optStr("title") ?: "",
+            wxGeo = geoOfOpen35(r.open) ?: r.open?.takeIf { it.optString("route") == "vaer" }?.let { mobileHome?.weather?.let { w -> if (w.lat != null && w.lon != null) "geo:${w.lat},${w.lon},${w.place}" else null } })
         if (r.intent.startsWith("trial")) loadTrials31()
         if (r.intent.startsWith("appointment") || r.intent.startsWith("calendar.create")) reloadKal27()
         answered31(r, t, "hjem", null)

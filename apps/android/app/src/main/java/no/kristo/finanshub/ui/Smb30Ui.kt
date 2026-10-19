@@ -158,31 +158,44 @@ private fun Smb30SharesView(vm: AppViewModel) {
 private fun Smb30FoldersView(vm: AppViewModel) {
     val p = PaperPal.current
     val s = vm.smb30
-    val crumbs = listOf(s.share) + s.path
+    // Prompt 36: brødsmulesti smb://vert › share › mappe (trykk hopper opp), Bruk denne mappen øverst, Velg per rad og 🔒 uten tilgang.
+    val crumbs = listOf("smb://" + s.server.host, s.share) + s.path
     Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         crumbs.forEachIndexed { i, c ->
             if (i > 0) Text("›", color = p.mut, fontSize = 14.sp)
             val last = i == crumbs.size - 1
             Text(c, color = if (last) p.ink else p.mut, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, textDecoration = if (last) null else TextDecoration.Underline,
-                modifier = Modifier.heightIn(min = 40.dp).press24(enabled = !last) { vm.smbOpenDir30(s.path.take(i)) }.padding(vertical = 10.dp))
+                fontFamily = if (i == 0) PaperFonts.mono else null,
+                modifier = Modifier.heightIn(min = 40.dp).press24(enabled = !last) { if (i == 0) { s.dirs = null; vm.smbGo30(2) } else vm.smbOpenDir30(s.path.take(i - 1)) }.padding(vertical = 10.dp))
         }
     }
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Smb30Btn("Bruk denne mappen", !s.busy && s.dirs != null, primary = true) { vm.smbGo30(4) }
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Smb30Mini("‹ Opp", s.path.isNotEmpty() && !s.busy) { vm.smbOpenDir30(s.path.dropLast(1)) }
-        Smb30Mini("+ Ny mappe", !s.busy) { s.showNewDir = !s.showNewDir }
+        Smb30Mini("+ Ny mappe", !s.busy) { s.showNewDir = !s.showNewDir; s.showManual = false }
+        Smb30Mini("Skriv sti", !s.busy) { s.showManual = !s.showManual; s.showNewDir = false; if (s.manualPath.isBlank()) s.manualPath = "/" + s.path.joinToString("/") }
+        Smb30Mini(if (s.showHidden) "✓ Vis skjulte" else "Vis skjulte", !s.busy) { s.showHidden = !s.showHidden; vm.smbOpenDir30(s.path) }
     }
     if (s.showNewDir) {
         Smb30Input("Navn på ny mappe", "homelab", s.newDir) { s.newDir = it }
         Smb30Btn("Lag mappe", !s.busy, primary = true) { vm.smbMkdir30() }
     }
+    if (s.showManual) {
+        Smb30Input("Sti i ${s.share}", "/backup/homelab", s.manualPath) { s.manualPath = it }
+        Smb30Btn("Åpne stien", !s.busy, primary = true) { vm.smbManualPath36() }
+    }
     Smb30ListBox {
         val d = s.dirs
         when {
             s.busy && d == null -> Smb30WaitRow("Henter mapper …")
-            d.isNullOrEmpty() -> Smb30EmptyRow("Ingen undermapper her. Velg denne mappen, eller lag en ny.")
-            else -> d.forEach { name -> Smb30Row(name, "") { vm.smbOpenDir30(s.path + name) } }
+            d.isNullOrEmpty() -> Smb30EmptyRow("Tom mappe. Bruk denne mappen, eller lag en ny.")
+            else -> d.forEach { name ->
+                val lock = s.locked[name]
+                Smb30DirRow36(name, lock, !s.busy, open = { vm.smbOpenDir30(s.path + name) }, pick = { vm.smbPickDir36(name) })
+            }
         }
     }
+    if (s.listHint.isNotBlank()) Text(s.listHint, color = p.mut, fontSize = 12.5.sp, lineHeight = 17.sp)
 }
 
 @Composable
@@ -242,7 +255,7 @@ private fun Smb30Foot(vm: AppViewModel) {
             return@Row
         }
         Box(Modifier.weight(1f)) { Smb30Btn(if (s.step == 0) "Avbryt" else "‹ Tilbake", true, primary = false) { vm.smbBack30() } }
-        if (s.step == 3) Box(Modifier.weight(1f)) { Smb30Btn("Velg denne mappen", !s.busy && s.dirs != null, primary = true) { vm.smbGo30(4) } }
+        if (s.step == 3) Box(Modifier.weight(1f)) { Smb30Btn("Bruk denne mappen", !s.busy && s.dirs != null, primary = true) { vm.smbGo30(4) } }
         if (s.step == 4) {
             val can = !s.busy && (s.test?.writable == true) && (s.useFinans || s.useSystem)
             Box(Modifier.weight(1f)) { Smb30Btn(if (s.busy) "Lagrer …" else "Lagre", can, primary = true) { vm.smbSave30() } }
@@ -366,4 +379,26 @@ private fun Smb30ErrBox(e: Smb30Err) {
             e.hints.forEach { Text("• $it", color = p.mut, fontSize = 13.sp) }
         }
     }
+}
+
+/** Prompt 36: mapperad – trykk åpner mappen, «Velg» bruker den. 🔒 = ingen tilgang (vises, skjules ikke). */
+@Composable
+private fun Smb30DirRow36(name: String, lock: String?, enabled: Boolean, open: () -> Unit, pick: () -> Unit) {
+    val p = PaperPal.current
+    Row(Modifier.fillMaxWidth().heightIn(min = 60.dp).press24(enabled = enabled && lock == null, onClick = open).padding(horizontal = 4.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        WxIcon(if (lock != null) "M5 11h14v10H5zM7 11V7a5 5 0 0 1 10 0v4" else "M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z",
+            if (lock != null) p.mut else p.ink, 20.dp, stroke = 1.9f)
+        Column(Modifier.weight(1f)) {
+            Text(name, color = if (lock != null) p.mut else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+            if (lock != null) Text("🔒 $lock", color = p.mut, fontSize = 12.5.sp)
+        }
+        if (lock == null) {
+            Box(Modifier.heightIn(min = 36.dp).border(1.dp, p.line).press24(enabled = enabled, onClick = pick).padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                Text("Velg", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)
+            }
+            Text("›", color = p.mut, fontSize = 22.sp)
+        }
+    }
+    Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
 }

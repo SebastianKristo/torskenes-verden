@@ -127,12 +127,15 @@ internal fun Modifier.longPressEdit(enabled: Boolean, onLong: () -> Unit): Modif
 @Composable
 internal fun PToggle(title: String, sub: String?, on: Boolean, top: Boolean = false, onChange: (Boolean) -> Unit) {
     val p = PaperPal.current
+    // Prompt 36: ikonbrikke i Innstillinger (SetIcons36), skillelinjen under teksten.
+    val icons = setIconsOn36()
     Column {
-        if (top) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
+        if (top) { if (icons) SetRule36() else Box(Modifier.fillMaxWidth().height(1.dp).background(p.line)) }
         Row(
             Modifier.fillMaxWidth().clickable { Haptics.select(); onChange(!on) }.padding(14.dp, 12.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            if (icons) SetChip36(title)
             Column(Modifier.weight(1f)) {
                 Text(title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 sub?.let { Text(it, color = p.mut, fontSize = 12.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis) }

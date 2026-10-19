@@ -180,6 +180,7 @@ fun FinansApp(vm: AppViewModel, width: WindowWidthSizeClass, unlock: () -> Unit,
     if (vm.p34.briefOpen) BriefPage35(vm) // prompt 34/35: Glimt og vennene, opplesning, bilder og prøver (ui/Brief35.kt)
     if (vm.p35.glimtOpen) GlimtPage35(vm) // prompt 35: Innstillinger → Glimt
     if (vm.p34.aiOpen) AiControl34(vm)
+    StartGate36(vm) // prompt 36: «Starter opp» mens serveren starter på nytt etter oppdateringen
 }
 
 @Composable

@@ -46,6 +46,8 @@ data class Assist31(
     val apply: JSONObject? = null,
     /** Prompt 35: open:{route:'vaer', name, lat, lon} («været i New York»). */
     val open: JSONObject? = null,
+    /** Prompt 36: 'question' (kortet under søket) eller 'action' (Glimt-pillen). */
+    val kind: String? = null,
 )
 
 /** Svarboblen under søkefeltet på Hjem. */
@@ -202,7 +204,7 @@ private fun parseAssist31(o0: JSONObject): Assist31? {
     return Assist31(
         text, o.s31("source") ?: "Glimt", o.s31("intent") ?: "llm", o.optJSONObject("card"), o.s31("tool"),
         if (o.has("ms")) o.optLong("ms") else null, ctx?.s31("chatId") ?: o.s31("chatId"), o0.s31("jobId") ?: o0.s31("id"),
-        o.optJSONObject("apply"), o.optJSONObject("open") ?: o0.optJSONObject("open"),
+        o.optJSONObject("apply"), o.optJSONObject("open") ?: o0.optJSONObject("open"), o.s31("kind") ?: o0.s31("kind"),
     )
 }
 

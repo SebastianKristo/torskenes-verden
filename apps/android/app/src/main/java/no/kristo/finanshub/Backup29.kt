@@ -49,7 +49,10 @@ data class Bk29Settings(
     val smbKnown: Boolean = false, val smbShare: String = "", val smbOn: Boolean = false, val smbLabel: String = "", val smbStatus: String = "",
 )
 
-data class Bk29Item(val id: String, val at: String, val size: String, val scope: String, val modules: List<String>, val ok: Boolean, val error: String, val encrypted: Boolean)
+data class Bk29Item(val id: String, val at: String, val size: String, val scope: String, val modules: List<String>, val ok: Boolean, val error: String, val encrypted: Boolean,
+    // Prompt 36: kvitteringen {target, fullPath, method, bytes, sha256, verified, retention[], ms}. verified = null: serveren sender det ikke.
+    val target: String = "", val fullPath: String = "", val method: String = "", val bytes: Long? = null, val sha256: String = "",
+    val verified: Boolean? = null, val retention: List<String> = emptyList(), val ms: Long? = null)
 
 class Bk29State {
     var loaded by mutableStateOf(false)
@@ -115,8 +118,18 @@ fun bkWhen29(raw: String?): String {
 fun bkScopeName29(k: String): String = BK29_SCOPES.firstOrNull { it.first == k }?.second ?: if (k.isBlank()) "" else kalCap(k)
 
 private fun itemOf29(o: JSONObject): Bk29Item = Bk29Item(
-    o.s29("id") ?: "", o.s29("at") ?: o.s29("finishedAt") ?: o.s29("startedAt") ?: o.s29("start") ?: "", bkSize29(o), o.s29("scope") ?: "",
-    strList29(o.optJSONArray("modules")), o.optBoolean("ok", o.s29("error") == null), o.s29("error") ?: "", o.optBoolean("encrypted", false),
+    o.s29("id") ?: "", o.s29("at") ?: o.s29("finishedAt") ?: o.s29("startedAt") ?: o.s29("start") ?: "", bkSize29(o).ifBlank { bkSize29(o, "bytes") }, o.s29("scope") ?: "",
+    strList29(o.optJSONArray("modules")), o.optBoolean("ok", o.s29("error") == null) && (!o.has("verified") || o.isNull("verified") || o.optBoolean("verified")),
+    o.s29("error") ?: "", o.optBoolean("encrypted", false),
+    target = smbUrl36(o.optJSONObject("target")) ?: o.s29("target") ?: "",
+    fullPath = o.s29("fullPath")?.let { fp -> if (fp.startsWith("smb://") || fp.startsWith("/")) fp else (smbUrl36(o.optJSONObject("target"))?.trimEnd('/')?.plus("/")?.plus(fp.trimStart('/')) ?: fp) } ?: "",
+    method = o.s29("method") ?: "", bytes = if (o.has("bytes") && !o.isNull("bytes")) o.optLong("bytes") else null, sha256 = o.s29("sha256") ?: "",
+    verified = if (o.has("verified") && !o.isNull("verified")) o.optBoolean("verified") else null,
+    retention = (0 until (o.optJSONArray("retention")?.length() ?: 0)).mapNotNull { i ->
+        val r = o.optJSONArray("retention")!!.opt(i)
+        when (r) { is JSONObject -> listOfNotNull(r.s29("action") ?: "slettet", r.s29("file") ?: r.s29("name")).joinToString(" "); is String -> r; else -> null }
+    },
+    ms = if (o.has("ms") && !o.isNull("ms")) o.optLong("ms") else null,
 )
 
 private fun settingsOf29(o0: JSONObject): Bk29Settings {

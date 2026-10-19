@@ -1348,6 +1348,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     suspend fun loadWeek() {
         val raw = api.matGet("/week")
         week = parseWeek(raw)
+        p36.mealNote = runCatching { mealNote36(raw) }.getOrNull()
         // Mapper og skannekø finnes bare på nyere servere; feil her stopper ikke uka. /week har også «folders».
         val inWeek = runCatching { org.json.JSONObject(raw).optJSONArray("folders")?.let { parseMatFolders(it.toString()) } }.getOrNull()
         matFolders = inWeek?.takeIf { it.isNotEmpty() } ?: runCatching { parseMatFolders(api.matGet("/folders")) }.getOrDefault(matFolders)
@@ -3467,6 +3468,8 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "assist" -> onAssistEvent31(msg)
             // Prompt 30: ny versjon / status for oppdateringen (bare admin bryr seg).
             "system-update-available", "system-update" -> onUpdEvent30()
+            // Prompt 36: matplanen er felles – endringer fra andre i husstanden vises med en gang.
+            "meal:changed", "meal" -> onMealChanged36(msg)
         }
     }
     fun startRealtime() { if (loggedIn && !locked) realtime.start(base.ifBlank { account?.server ?: "" }, account?.token) }
@@ -3644,6 +3647,16 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal suspend fun <T> api35(f: suspend Api.() -> T): T = api.f()
     internal fun launch35(block: suspend () -> Unit) = launch(block)
     internal val appCtx35: Context get() = appCtx
+
+    /* ---------- Prompt 36 (ANDROID36): felles matplan, Nordlys-notater/tidligere versjoner, Sherlock-/snekker-Glimt, «Starter opp», brief-sveip, profilbilde, Google-hovedkalender (P36.kt og ui-filene med 36) ---------- */
+    val p36 = P36State()
+    val gcal36 = GCal36State()
+    internal suspend fun <T> api36(f: suspend Api.() -> T): T = api.f()
+    internal fun launch36(block: suspend () -> Unit) = launch(block)
+    internal fun launchJob36(block: suspend () -> Unit): kotlinx.coroutines.Job = launch(block)
+    internal fun squareJpeg36(data: ByteArray, size: Int, quality: Int): ByteArray? = squareJpeg(data, size, quality)
+    internal suspend fun reloadMe36() = loadMe()
+    internal fun setAvatar36(b: android.graphics.Bitmap?) { avatar = b }
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.

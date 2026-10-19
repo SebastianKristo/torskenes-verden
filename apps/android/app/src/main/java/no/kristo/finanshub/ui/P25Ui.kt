@@ -51,6 +51,7 @@ internal const val P25_HOUSE = "M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6"
 
 private val MER_PATHS25: Map<String, String> = mapOf(
     "hjem" to P25_HOUSE,
+    "brief" to "M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4zM19 3v3M20.5 4.5h-3", // prompt 36: ✦ Now Brief
     "domener" to "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18",
     "sporing" to "M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10",
     "bursdag" to "M4 11h16v9H4zM2 7h20v4H2zM12 7v13M12 7c-1.5-3-5-3-5-1s3 1 5 1zM12 7c1.5-3 5-3 5-1s-3 1-5 1z",

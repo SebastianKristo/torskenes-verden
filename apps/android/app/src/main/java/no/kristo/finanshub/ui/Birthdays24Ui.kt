@@ -433,6 +433,8 @@ internal fun BdCalendars(vm: AppViewModel, ctx: android.content.Context) {
                 BdToggle("Skriv nye bursdager til Google", "Årlig heldagshendelse med påminnelse", g.writeNew) { vm.googleSettings24(writeNew = !g.writeNew) }
                 BdToggle("Hent bursdager fra Google-kontakter", "Fra kontaktlisten din", g.contacts) { vm.googleSettings24(contacts = !g.contacts) }
             }
+            // Prompt 36: Hovedkalender (der nye hendelser lagres) og «Vis også i Kalender» (GET/PUT /api/kalender/calendars/google).
+            GoogleCals36(vm)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(20.dp)).border(1.dp, p.line, RoundedCornerShape(20.dp)).press24 { vm.googleSync24() }, contentAlignment = Alignment.Center) {
                     Text(if (s.busy == "sync") "Synker …" else "↻ Synk nå", color = p.lab, fontWeight = FontWeight.Bold, fontSize = 13.5.sp)

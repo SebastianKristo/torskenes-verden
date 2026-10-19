@@ -49,6 +49,12 @@ class Smb30State {
     var share by mutableStateOf("")
     var path by mutableStateOf<List<String>>(emptyList())
     var dirs by mutableStateOf<List<String>?>(null)
+    /** Prompt 36 (POST /api/smb/list): mapper med 🔒 (navn → årsak), hint fra serveren, Vis skjulte og Skriv sti manuelt. */
+    var locked by mutableStateOf<Map<String, String>>(emptyMap())
+    var listHint by mutableStateOf("")
+    var showHidden by mutableStateOf(false)
+    var manualPath by mutableStateOf("")
+    var showManual by mutableStateOf(false)
     var newDir by mutableStateOf("")
     var showNewDir by mutableStateOf(false)
     var test by mutableStateOf<Smb30Test?>(null)
@@ -61,10 +67,13 @@ class Smb30State {
     var doneLabel by mutableStateOf("")
 
     val label: String get() = "//${server.host}/$share" + if (path.isEmpty()) "" else "/" + path.joinToString("/")
+    /** Prompt 36: «smb://truenas.local/backup/homelab/2026». */
+    val url36: String get() = "smb://${server.host}/$share" + if (path.isEmpty()) "" else "/" + path.joinToString("/")
 
     fun reset() {
         step = 0; servers = emptyList(); scanning = false; manual = ""; probeFail = ""; server = Smb30Server("", "", "")
         user = ""; password = ""; domain = ""; guest = false; shares = emptyList(); proto = "SMB3"; share = ""; path = emptyList(); dirs = null
+        locked = emptyMap(); listHint = ""; showHidden = false; manualPath = ""; showManual = false
         newDir = ""; showNewDir = false; test = null; testing = false; busy = false; error = null; doneLabel = ""
     }
 }
@@ -211,8 +220,21 @@ fun AppViewModel.smbOpenDir30(path: List<String>) {
     s.showNewDir = false
     launch29 {
         try {
-            val a = arr30(smbPost30("/browse", smbTarget30(path)))
-            s.dirs = (0 until a.length()).mapNotNull { a.optJSONObject(it)?.optString("name")?.takeIf { n -> n.isNotBlank() } }
+            // Prompt 36: POST /list (undermapper, 🔒 uten tilgang, skjulte, hint); eldre server: /browse.
+            val body = smbTarget30(path).put("showHidden", s.showHidden)
+            val raw = try { smbPost30("/list", body) } catch (e: ApiException) { if (e.status == 404 || e.status == 405) null else throw e }
+            if (raw != null && raw.trim().startsWith("{")) {
+                val o = JSONObject(raw)
+                val f = o.optJSONArray("folders") ?: JSONArray()
+                val all = (0 until f.length()).mapNotNull { f.optJSONObject(it) }.filter { it.optString("name").isNotBlank() }
+                s.dirs = all.map { it.optString("name") }
+                s.locked = all.filter { it.optBoolean("locked") }.associate { it.optString("name") to (it.optString("reason").takeIf { r -> r.isNotBlank() && r != "null" } ?: "Ingen tilgang for ${if (s.guest) "gjest" else s.user}") }
+                s.listHint = o.optString("hint").takeIf { it != "null" } ?: ""
+            } else {
+                val a = arr30(raw ?: smbPost30("/browse", body))
+                s.dirs = (0 until a.length()).mapNotNull { a.optJSONObject(it)?.optString("name")?.takeIf { n -> n.isNotBlank() } }
+                s.locked = emptyMap(); s.listHint = ""
+            }
             s.path = path
         } catch (e: Exception) { s.error = smbErr30(e) } finally { s.busy = false }
     }
@@ -245,6 +267,22 @@ fun AppViewModel.smbTest30() {
             s.test = Smb30Test(o.optBoolean("ok"), o.optBoolean("writable"), o.optString("message"))
         } catch (e: Exception) { s.test = Smb30Test(false, false, smbErr30(e).message) } finally { s.testing = false }
     }
+}
+
+/** Prompt 36: «Skriv sti manuelt» (/backup/homelab): åpner stien (også mapper skjult med Access-Based Enumeration). */
+fun AppViewModel.smbManualPath36() {
+    val s = smb30
+    val parts = s.manualPath.trim().replace('\\', '/').split('/').map { it.trim() }.filter { it.isNotEmpty() }
+    if (parts.any { !smbValidName30(it) || it == ".." }) { s.error = Smb30Err("Ugyldig sti. Skriv for eksempel /backup/homelab.", ""); return }
+    s.showManual = false
+    smbOpenDir30(parts)
+}
+
+/** Prompt 36: «Velg» på en rad: bruker undermappen direkte. */
+fun AppViewModel.smbPickDir36(name: String) {
+    val s = smb30
+    s.path = s.path + name
+    smbGo30(4)
 }
 
 fun AppViewModel.smbGo30(step: Int) {

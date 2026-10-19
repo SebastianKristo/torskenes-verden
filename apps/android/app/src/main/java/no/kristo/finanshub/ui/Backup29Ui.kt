@@ -63,6 +63,7 @@ internal fun Backup29Page(vm: AppViewModel) {
                 else -> "Ingen backup ennå"
             }
             PRow("Siste backup", lastSub, when { last == null -> ""; last.ok -> "✓ OK"; else -> "Feilet" }, valueColor = if (last?.ok != false) p.pos else p.lab, serif = false)
+            if (last != null) BackupReceipt36(vm, last) // prompt 36: fullsti, verifisert, Åpne mappe og Vis logg
             if (last != null && !last.ok && last.error.isNotBlank()) Text(last.error, color = p.lab, fontSize = 12.5.sp, modifier = Modifier.padding(start = 14.dp, end = 14.dp, bottom = 10.dp))
             val pct = s.runPct
             if (pct != null) {

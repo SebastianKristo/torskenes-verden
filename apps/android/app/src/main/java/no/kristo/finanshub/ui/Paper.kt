@@ -10,7 +10,9 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -154,14 +156,17 @@ internal fun PButton(text: String, modifier: Modifier = Modifier, kind: String =
 @Composable
 internal fun PRow(title: String, sub: String?, value: String = "›", valueColor: Color = PaperPal.current.mut, serif: Boolean = true, top: Boolean = false, onClick: (() -> Unit)? = null) {
     val p = PaperPal.current
+    // Prompt 36: i Innstillinger får hver rad en ikonbrikke (SetIcons36), skillelinjen starter under teksten og farlige rader er røde.
+    val icons = setIconsOn36()
     Column {
-        if (top) PRule()
+        if (top) { if (icons) SetRule36() else PRule() }
         Row(
             Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(14.dp, 12.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            if (icons) SetChip36(title, value)
             Column(Modifier.weight(1f)) {
-                if (serif) PSerif(title, 19.sp, maxLines = 1) else Text(title, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (serif && !icons) PSerif(title, 19.sp, maxLines = 1) else Text(title, color = if (icons) setTitleColor36(title, p.ink) else p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 sub?.let { Text(it, color = p.mut, fontSize = 12.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis) }
             }
             if (value.isNotEmpty()) Text(value, color = valueColor, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
@@ -413,6 +418,9 @@ internal fun PaperApp(
             Quick29Overlay(vm)
             // Prompt 31: «Glimt svarte mens du var borte».
             AwayBanner31(vm, Modifier.align(Alignment.TopCenter))
+            // Prompt 36: «Brief skjult til …» med Angre, og «Starter opp» mens serveren starter på nytt etter oppdateringen.
+            BriefToast36(vm, Modifier.align(Alignment.BottomCenter).padding(bottom = if (wide) navInset + 24.dp else barBottom + 74.dp))
+            StartGate36(vm)
         }
       }
     }
@@ -447,6 +455,7 @@ private fun PaneBox(navBottom: Dp, pullUp: Boolean = false, content: @Composable
 @Composable
 private fun Hero(vm: AppViewModel, home: Boolean, wide: Boolean, toggleMenu: () -> Unit) {
     val (kicker, title) = heroText(vm)
+    val ctx36 = LocalContext.current
     val bmp: Bitmap? = if (vm.photoKind == "cur" || vm.photoKind == "none") null else vm.photo
     val fg = bgForeground(vm, bmp != null)
     // Prompt 21: toppbildet er alltid et foto. Uten foto (eller når alle filene feiler) vises bare den rolige gradienten
@@ -494,15 +503,20 @@ private fun Hero(vm: AppViewModel, home: Boolean, wide: Boolean, toggleMenu: () 
                 }
                 if (!home) DomainPill24(vm)
                 val w = vm.mobileHome?.weather
+                // Prompt 36: kort trykk åpner Vær, hold inne ≥ 550 ms åpner yr.no for stedet (krymper til 0,94 mens man holder).
+                var wxDown by remember { mutableStateOf(false) }
+                val wxScale by animateFloatAsState(if (wxDown) .94f else 1f, tween(180), label = "wx36")
                 if (home && w?.temp != null) Column(
-                    Modifier.clip(RoundedCornerShape(12.dp)).clickable(onClickLabel = "Åpne været") { vm.openWeather() }.padding(start = 8.dp),
+                    Modifier.graphicsLayer { scaleX = wxScale; scaleY = wxScale }.clip(RoundedCornerShape(12.dp))
+                        .semantics { contentDescription = "Trykk: Vær · Hold inne: åpne Yr" }
+                        .tapHold36(pressed = { wxDown = it }, onTap = { Haptics.tap(); vm.openWeather() }, onHold = { openLink(ctx36, yrLink(w)) }).padding(start = 8.dp),
                     horizontalAlignment = Alignment.End,
                 ) {
                     PSerif("${Math.round(w.temp)}°", 52.sp, fg, weight = FontWeight.Normal, maxLines = 1)
                     Text("${w.text ?: w.place} · ${LocalTime.now().format(DateTimeFormatter.ofPattern("HH:mm"))} ›", color = fg.copy(alpha = .9f), fontSize = 13.sp, maxLines = 1)
                 }
             }
-            vm.photoCredit?.takeIf { home && bmp != null }?.let { Text(it, color = fg.copy(alpha = .7f), fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            // Prompt 36: ingen kreditlinje over bakgrunnen på Hjem; den står i bakgrunnsmenyen.
         }
     }
 }
@@ -566,6 +580,8 @@ private fun PhotoMenu(vm: AppViewModel, modifier: Modifier, own: () -> Unit) {
             Text("+ Eget bilde", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, modifier = Modifier.weight(1f))
             if (vm.photoKind == "custom") Text("✓", color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
+        // Prompt 36: krediteringen (fotograf · lisens · kilde) står her, ikke over bildet.
+        vm.photoCredit?.let { Text(it, color = p.mut, fontSize = 10.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 6.dp, end = 6.dp, top = 4.dp)) }
     }
 }
 
@@ -673,7 +689,7 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
         if (vm.editPage != "hjem" && vm.appUpd32OnHome()) item(key = "appupd32", span = { GridItemSpan(maxLineSpan) }) { AppUpdateBanner32(vm) }
         pageGridSecs(vm, "hjem", HOME_SECS, wide) { k ->
             when (k) {
-                "h12" -> HomeBrief34(vm) // Prompt 34: Glimt-brief med figuren (ui/Brief34.kt)
+                "h12" -> SwipeBrief36(vm) { HomeBrief34(vm) } // Prompt 34: Glimt-brief med figuren (ui/Brief34.kt). Prompt 36: sveip mot høyre skjuler til neste brief
                 "h1" -> PaperSearch29(vm) // Prompt 29: søkemotor-meny (Glimt / Google / DuckDuckGo) og timer (ui/Home29Ui.kt)
                 // Viktigste pakke (klar for henting først).
                 "h2" -> {

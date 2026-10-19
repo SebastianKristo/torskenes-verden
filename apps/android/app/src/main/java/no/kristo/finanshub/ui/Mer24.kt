@@ -108,6 +108,8 @@ internal fun PaperMore24(vm: AppViewModel, navBottom: Dp, barSpace: Dp) {
     var n = 0
     val rows = buildList {
         fun row(key: String, title: String, sub: String, go: () -> Unit) { add(MerItem28(key, title, sub, n++, go)) }
+        // Prompt 36: Now Brief øverst (kan flyttes og skjules som de andre). Sveipet bort på Hjem: «Skjult på Hjem · trykk for å åpne».
+        row("brief", "Now Brief", if (vm.briefHiddenNow36()) "Skjult på Hjem · trykk for å åpne" else "Glimt oppsummerer dagen") { vm.openBrief34() }
         if (vm.b24ProfileOn) row("hjem", "Hjem", "Pakker, avganger og widgets") { vm.paperTab("hjem") }
         if (sporingInBar) { if ("domener" !in inBar) row("domener", "Domener", "Trafikk, besøk og oppetid") { vm.domSection = "oversikt"; vm.openFromMer(Screen.Domains) } }
         else row("sporing", "Sporing", if (onWay > 0) "$onWay pakker på vei" else "Pakker og sendinger") { vm.openFromMer(Screen.Tracking) }

@@ -461,13 +461,15 @@ fun AppViewModel.setHomeQuery29(v: String) {
     if (q.engine != "ai") suggest(v) else suggest("")
     if (t.isNotEmpty() && p31.ans?.busy == false) closeAns31()
     if (t.length <= 4) { q.homeAppt = null; return }
+    // Prompt 36: spørsmålsvakt før avtaletolkning («hvor mange timer med dagslys er det den 29.06.2027» er et spørsmål).
+    if (isQuestion36(t) || isSunQ36(t)) { q.homeAppt = null; return }
     // Lokalt først (rask), serveren etterpå.
     val loc = parseQuickLocal29(t)
     q.homeAppt = loc.takeIf { it.ok && it.isAppointment }
     q.homeJob = viewModelScope.launch {
         delay(200)
         val r = parseQuick29(t)
-        if (q.homeQ.trim() == t) q.homeAppt = r.takeIf { it.ok && it.isAppointment && it.date != null }
+        if (q.homeQ.trim() == t && !isQuestion36(t)) q.homeAppt = r.takeIf { it.ok && it.isAppointment && it.date != null }
     }
 }
 
@@ -477,7 +479,7 @@ fun AppViewModel.goHome29(): String? {
     val t = q.homeQ.trim()
     if (t.isEmpty()) return null
     q.homeJob?.cancel()
-    val appt = q.homeAppt
+    val appt = q.homeAppt?.takeIf { !isQuestion36(t) && !isSunQ36(t) }
     q.homeQ = ""; q.homeAppt = null
     suggest("")
     if (appt != null) { logSearch32b(t, "time"); submitQuick29(t); return null }

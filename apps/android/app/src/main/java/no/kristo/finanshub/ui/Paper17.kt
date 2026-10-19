@@ -74,10 +74,12 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
         when (sub) { "tokens" -> vm.loadTokens(); "notify" -> vm.loadNotify(); null -> { vm.loadAppInfo(); if (vm.userIsAdmin) { vm.loadUpd28(); vm.loadBk29(); vm.loadUpd30(); vm.loadUpdSettings30() } } }
     }
     // Utseende: tema, ikonfarger, bakgrunn og fanelinje (egen liste fra prompt 16).
-    if (sub == "look") { PaperSettings16(vm, navBottom); return }
+    if (sub == "look") { SetIcons36(sub) { PaperSettings16(vm, navBottom) }; return }
     // Prompt 25: «Ta meg dit →» scroller først til gruppen (så raden komponeres), deretter fram til raden (hl25).
     val list = androidx.compose.foundation.lazy.rememberLazyListState()
     LaunchedEffect(vm.p25.hlSeq, sub) { vm.p25.hlIndex?.let { runCatching { list.animateScrollToItem(it) } } }
+    // Prompt 36: ikon på hver rad i undersidene (hovedsiden har egne ikonruter).
+    androidx.compose.runtime.CompositionLocalProvider(LocalSetIcons36 provides (if (sub == null) null else setTint36(sub))) {
     LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 30.dp + navBottom), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         when (sub) {
             null -> settingsMain(vm)
@@ -112,6 +114,7 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
             "sysbackup" -> item { Backup29Page(vm) } // Prompt 29: backup av hele systemet (bare admin)
             else -> sub?.takeIf { it.startsWith("integ:") }?.let { ip -> item { IntegPage26(vm, ip.removePrefix("integ:")) } } ?: settingsMain(vm)
         }
+    }
     }
     if (vm.appNameEdit) AppNameSheet24(vm)
     if (vm.appIconEdit) AppIconSheet24(vm)

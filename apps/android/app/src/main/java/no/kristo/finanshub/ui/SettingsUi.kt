@@ -176,7 +176,8 @@ internal fun AccountsPage(vm: AppViewModel) = Pages {
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok -> if (ok) shot?.let(vm::uploadAvatar) }
     // Prompt 28 (konto-farger): i Papir ligger innholdet 23 dp opp i toppbildet; etiketten PROFILBILDE skal stå under bildet.
     if (Tone.paper) Spacer(Modifier.height(28.dp))
-    Section("Profilbilde") {
+    // Prompt 36: Konto viser profilbildet sentrert (88–96 dp) over navnet, med «Endre bilde» (ui/Ui36.kt).
+    if (Tone.paper) KontoAvatar36(vm) else Section("Profilbilde") {
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(C.surface1).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 AvatarImage(vm, 64)
