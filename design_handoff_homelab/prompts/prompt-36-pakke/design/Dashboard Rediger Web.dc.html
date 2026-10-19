@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&amp;family=Manrope:wght@400;500;600;700;800&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>html,body{margin:0;background:#f3efe6;color:#1b1a17;font-family:Manrope,sans-serif}a{color:#b23a2a}a:hover{color:#8a2a1d}*{box-sizing:border-box}@keyframes wgA{0%,100%{transform:rotate(-.45deg)}50%{transform:rotate(.45deg)}}@keyframes wgB{0%,100%{transform:rotate(.4deg)}50%{transform:rotate(-.4deg)}}@keyframes tbIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}@keyframes ghostP{0%,100%{opacity:.55}50%{opacity:.9}}</style>
+</helmet>
+<div style="min-height:{{ rootMinH }};padding:{{ rootPad }};max-width:1440px;margin:0 auto;display:flex;flex-direction:column;gap:18px;user-select:{{ us }}">
+
+<sc-if value="{{ showHead }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+<div style="display:flex;flex-direction:column;gap:4px"><span style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#b23a2a">HOMELAB · DASHBOARD</span><b style="font:500 40px/1.05 Newsreader,serif">God kveld, Sebastian</b></div>
+<sc-if value="{{ normal }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;gap:12px"><span style="font-size:13px;color:#6b665c">Hold inne en widget for å redigere</span><button onClick="{{ enter }}" style="height:40px;padding:0 18px;border-radius:20px;border:1px solid #d8d1c2;background:#ffffff;color:#1b1a17;cursor:pointer;font:700 14px Manrope;display:flex;align-items:center;gap:8px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><path d="M14 17.5h7M17.5 14v7"></path></svg>Rediger</button></div></sc-if>
+</div></sc-if>
+
+<sc-if value="{{ editing }}"><div style="position:sticky;top:14px;z-index:50;display:flex;justify-content:center;pointer-events:none"><div style="pointer-events:auto;display:flex;align-items:center;gap:6px;padding:6px;border-radius:999px;background:rgba(27,26,23,.92);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);color:#f3efe6;box-shadow:0 18px 40px -16px rgba(27,26,23,.6),inset 0 1px 0 rgba(255,255,255,.08);white-space:nowrap;max-width:100%;overflow-x:auto;scrollbar-width:none;animation:tbIn .28s cubic-bezier(.2,.8,.2,1) both">
+<button onClick="{{ addToggle }}" style="flex:none;display:flex;align-items:center;gap:7px;height:38px;padding:0 15px 0 11px;border-radius:19px;border:0;background:{{ addBg }};color:#f3efe6;cursor:pointer;font:700 13.5px Manrope" style-hover="background:rgba(255,255,255,.16)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>Widget</button>
+<span style="flex:none;width:1px;height:22px;background:rgba(255,255,255,.14);margin:0 2px"></span>
+<span title="Kolonner" style="flex:none;display:grid;place-items:center;width:30px;color:rgba(243,239,230,.6)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2.5"></rect><path d="M9 4v16M15 4v16"></path></svg></span>
+<div style="flex:none;display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(255,255,255,.08)"><sc-for list="{{ colOpts }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.go }}" style="min-width:36px;height:32px;padding:0 8px;border-radius:999px;border:0;background:{{ c.bg }};color:{{ c.fg }};cursor:pointer;font:600 13px 'IBM Plex Mono',monospace">{{ c.n }}</button></sc-for></div>
+<span style="flex:none;width:1px;height:22px;background:rgba(255,255,255,.14);margin:0 2px"></span>
+<button onClick="{{ gridToggle }}" title="Vis rutenett" aria-label="Vis rutenett" style="flex:none;width:38px;height:38px;border-radius:19px;border:0;background:{{ gridBtnBg }};color:{{ gridBtnFg }};cursor:pointer;display:grid;place-items:center" style-hover="background:rgba(255,255,255,.16)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16M4 15h16M9 4v16M15 4v16"></path></svg></button>
+<button onClick="{{ reset }}" title="Tilbakestill oppsett" aria-label="Tilbakestill oppsett" style="flex:none;width:38px;height:38px;border-radius:19px;border:0;background:transparent;color:rgba(243,239,230,.8);cursor:pointer;display:grid;place-items:center" style-hover="background:rgba(255,255,255,.16)"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5"></path></svg></button>
+<button onClick="{{ done }}" style="flex:none;height:38px;padding:0 20px;margin-left:4px;border-radius:19px;border:0;background:#f3efe6;color:#1b1a17;cursor:pointer;font:800 13.5px Manrope">Ferdig</button>
+</div></div></sc-if>
+<sc-if value="{{ dragging }}"><div style="position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60;padding:8px 14px;border-radius:999px;background:#1b1a17;color:#f3efe6;font:600 12.5px 'IBM Plex Mono',monospace;box-shadow:0 12px 28px -12px rgba(0,0,0,.5);pointer-events:none;white-space:nowrap">{{ hint }}</div></sc-if>
+
+<sc-if value="{{ addOpen }}"><div style="display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:20px;background:#ffffff;border:1px solid #e3ddcf">
+<span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#6b665c">LEGG TIL WIDGET</span>
+<sc-if value="{{ noHidden }}"><span style="font-size:14px;color:#6b665c">Alle widgets er allerede på dashboardet. Fjern en med − for å se den her.</span></sc-if>
+<div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ hidden }}" as="h"><button onClick="{{ h.go }}" style="height:38px;padding:0 14px;border-radius:19px;border:1px solid #d8d1c2;background:#f8f5ee;color:#1b1a17;cursor:pointer;font:600 13.5px Manrope;display:flex;align-items:center;gap:8px"><span style="color:#b23a2a;font-weight:800">+</span>{{ h.n }}</button></sc-for></div>
+</div></sc-if>
+
+<div ref="{{ gridRef }}" style="position:relative;display:grid;grid-template-columns:{{ gtc }};grid-auto-rows:{{ rowH }};gap:16px;min-height:{{ minH }}">
+<sc-if value="{{ showGrid }}"><div style="position:absolute;inset:0;display:grid;grid-template-columns:{{ gtc }};gap:16px;pointer-events:none;z-index:0;background-image:{{ rowLines }}"><sc-for list="{{ colGuides }}" as="g"><span style="border-radius:12px;background:rgba(178,58,42,.045);outline:1px dashed rgba(178,58,42,.28);outline-offset:-1px"></span></sc-for></div></sc-if>
+<sc-if value="{{ hasGhost }}"><div style="grid-column:{{ ghost.gc }};grid-row:{{ ghost.gr }};border-radius:20px;border:2px dashed #b23a2a;background:rgba(178,58,42,.08);z-index:1;animation:ghostP 1.2s ease-in-out infinite;display:grid;place-items:center;font:600 13px 'IBM Plex Mono',monospace;color:#b23a2a">{{ ghost.lbl }}</div></sc-if>
+<sc-for list="{{ items }}" as="w" hint-placeholder-count="8">
+<div onPointerDown="{{ w.down }}" style="grid-column:{{ w.gc }};grid-row:{{ w.gr }};position:relative;z-index:{{ w.z }};min-width:0;touch-action:{{ w.ta }};cursor:{{ w.cur }};transform:{{ w.tf }};transition:{{ w.tr }}">
+<div style="position:relative;height:100%;border-radius:20px;background:#ffffff;border:1px solid {{ w.bd }};padding:16px 18px;display:flex;flex-direction:column;gap:6px;overflow:hidden;box-shadow:{{ w.sh }};animation:{{ w.anim }}">
+<span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#b23a2a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ w.k }}</span>
+<b style="font:500 21px/1.2 Newsreader,serif;text-wrap:pretty">{{ w.t }}</b>
+<span style="font-size:13.5px;color:#6b665c;text-wrap:pretty">{{ w.s }}</span>
+<sc-if value="{{ w.ed }}"><div style="position:absolute;inset:0;display:grid;place-items:center;pointer-events:none"><button onPointerDown="{{ w.stop }}" onClick="{{ w.menu }}" style="pointer-events:auto;height:34px;padding:0 14px;border-radius:17px;border:0;background:rgba(27,26,23,.86);color:#f3efe6;cursor:pointer;font:700 12.5px Manrope;display:flex;align-items:center;gap:8px;backdrop-filter:blur(6px)">Rediger widget<span style="font:500 11.5px 'IBM Plex Mono',monospace;color:#e8a593">{{ w.size }}</span></button></div></sc-if>
+</div>
+<sc-if value="{{ w.ed }}"><button onPointerDown="{{ w.stop }}" onClick="{{ w.remove }}" aria-label="Fjern widget" style="position:absolute;left:-9px;top:-9px;width:26px;height:26px;border-radius:13px;border:2px solid #f3efe6;background:#1b1a17;color:#f3efe6;cursor:pointer;display:grid;place-items:center;z-index:3"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"><path d="M5 12h14"></path></svg></button>
+<span onPointerDown="{{ w.rs }}" aria-label="Endre størrelse" style="position:absolute;right:-6px;bottom:-6px;width:30px;height:30px;border-radius:15px;background:#ffffff;border:1px solid #d8d1c2;box-shadow:0 4px 12px -6px rgba(0,0,0,.35);cursor:nwse-resize;display:grid;place-items:center;z-index:3;touch-action:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#1b1a17" stroke-width="2.6" stroke-linecap="round"><path d="M20 9v11H9M14 20l6-6"></path></svg></span>
+<span onPointerDown="{{ w.rsX }}" style="position:absolute;right:-5px;top:24px;bottom:30px;width:10px;cursor:ew-resize;z-index:2;touch-action:none"></span>
+<span onPointerDown="{{ w.rsY }}" style="position:absolute;bottom:-5px;left:24px;right:30px;height:10px;cursor:ns-resize;z-index:2;touch-action:none"></span></sc-if>
+<sc-if value="{{ w.menuOpen }}"><div onPointerDown="{{ w.stop }}" style="position:absolute;left:50%;top:50%;transform:translate(-50%,24px);z-index:20;min-width:220px;padding:12px;border-radius:16px;background:#ffffff;border:1px solid #e3ddcf;box-shadow:0 20px 40px -18px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:10px"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#6b665c">STØRRELSE</span><div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px"><sc-for list="{{ w.presets }}" as="p"><button onClick="{{ p.go }}" style="height:34px;border-radius:9px;border:1px solid {{ p.bd }};background:{{ p.bg }};color:{{ p.fg }};cursor:pointer;font:600 12.5px 'IBM Plex Mono',monospace">{{ p.n }}</button></sc-for></div><button onClick="{{ w.menu }}" style="height:34px;border-radius:17px;border:0;background:#f1ece2;color:#1b1a17;cursor:pointer;font:700 13px Manrope">Lukk</button></div></sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const W=[['skole','I DAG PÅ SKOLEN','Ingen flere timer i dag','I morgen 14:30 · TRE1400',4,4],['avg','AVGANGER','Amagerveien → Majorstuen','9 min · 39 min · 69 min',4,4],['fam','POSISJON · FAMILIE','Du og Sebastian','Begge i Oslo',4,2],['skal','SKOLEKALENDER','Oktober 2026','5 frister denne måneden',4,5],['kal','KALENDER · TIRSDAG','TRE1400 Forelesning','14:30 · første time',4,3],['burs','BURSDAGER · NESTE','Rune om 34 dager','22. nov',4,3],['energi','ENERGI','2,2 kW nå','1,30 kr/kWh',4,2],['penger','PENGER','9 977 kr','Trading 212 · −0,1 %',4,2],['vaer','VÆR · OSLO','6° · Delvis skyet','Føles som 6° · vind 1 m/s',4,4],['snar','SNARVEIER','16 snarveier','NRK, VG, FINN, Yr …',4,2],['pakker','PAKKER','Ingen pakker på vei','Åpne sporing',4,2],['kommer','KOMMER UT','Sonarr · Radarr','Ikke satt opp',4,2],['media','MEDIA','Nylig lagt til','12 nye i Plex',4,6],['trading','TRADING 212','9 977 kr','VUAG · VHYL',4,3],['okonomi','ØKONOMI','340 kr brukt','Oktober · FinansHub',4,3],['hist','MEDIEHISTORIKK','20 siste avspillinger','Plex og Jellyfin',8,4]];
+const META=Object.fromEntries(W.map(([id,k,t,s,w,h])=>[id,{k,t,s,w,h}]));
+const KEY='hl_web_dash_layout_v1';
+const hit=(a,b)=>a.x<b.x+b.w&&b.x<a.x+a.w&&a.y<b.y+b.h&&b.y<a.y+a.h;
+function compact(items,fixed){const out=[];if(fixed)out.push({...fixed});const rest=items.filter(i=>!fixed||i.id!==fixed.id).sort((a,b)=>a.y-b.y||a.x-b.x);for(const it of rest){let y=0;const c={...it};for(;;){c.y=y;if(!out.some(o=>hit(o,c)))break;y++}out.push(c)}return out}
+function autoPlace(cols){const out=[];for(const [id,,,,w0,h] of W){const w=Math.max(1,Math.min(cols,Math.round(w0*cols/12)));let placed=false;for(let y=0;!placed;y++)for(let x=0;x+w<=cols;x++){const c={id,x,y,w,h};if(!out.some(o=>hit(o,c))){out.push(c);placed=true;break}}}return out}
+class Component extends DCLogic{
+  constructor(p){super(p);let sv=null;try{sv=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){}const cols=sv&&sv.cols||12;this.state={cols,lay:sv&&sv.lay||autoPlace(cols),edit:!!p.embedded,grid:true,add:false,drag:null,menu:'',W:1100};this.gridRef=React.createRef()}
+  componentDidMount(){const el=this.gridRef.current;if(el&&window.ResizeObserver){this._ro=new ResizeObserver(()=>this.setState({W:el.getBoundingClientRect().width}));this._ro.observe(el)}if(el)this.setState({W:el.getBoundingClientRect().width})}
+  componentWillUnmount(){this._ro&&this._ro.disconnect();clearTimeout(this._lp);this.unbind()}
+  save(lay,cols){try{localStorage.setItem(KEY,JSON.stringify({lay,cols}))}catch(e){}}
+  metrics(){const g=16,cols=this.state.cols,cw=(this.state.W-g*(cols-1))/cols,rh=this.rowH();return{g,cw,rh,sx:cw+g,sy:rh+g}}
+  rowH(){return this.state.cols>=12?56:this.state.cols>=8?64:72}
+  unbind(){if(this._mv){window.removeEventListener('pointermove',this._mv);window.removeEventListener('pointerup',this._up);window.removeEventListener('pointercancel',this._up);this._mv=null}}
+  begin(e,id,mode){e.stopPropagation();if(e.button&&e.button!==0)return;const it=this.state.lay.find(i=>i.id===id);if(!it)return;const M=this.metrics(),sx0=e.clientX,sy0=e.clientY,cols=this.state.cols;
+    this.setState({drag:{id,mode,dx:0,dy:0,prev:this.state.lay,cand:{...it}},menu:''});
+    this._mv=ev=>{const dx=ev.clientX-sx0,dy=ev.clientY-sy0;let c={...it};if(mode==='move'){c.x=Math.max(0,Math.min(cols-it.w,Math.round((it.x*M.sx+dx)/M.sx)));c.y=Math.max(0,Math.round((it.y*M.sy+dy)/M.sy))}else{if(mode!=='h')c.w=Math.max(2,Math.min(cols-it.x,Math.round((it.w*M.sx+dx)/M.sx)));if(mode!=='w')c.h=Math.max(1,Math.round((it.h*M.sy+dy)/M.sy))}
+      const prev=compact(this.state.lay,c);this.setState({drag:{id,mode,dx,dy,prev,cand:c}})};
+    this._up=()=>{this.unbind();const d=this.state.drag;if(!d)return;const lay=compact(d.prev);this.save(lay,this.state.cols);this.setState({lay,drag:null})};
+    window.addEventListener('pointermove',this._mv);window.addEventListener('pointerup',this._up);window.addEventListener('pointercancel',this._up)}
+  setCols(n){const o=this.state.cols;if(n===o)return;const lay=compact(this.state.lay.map(i=>{const w=Math.max(Math.min(2,n),Math.min(n,Math.round(i.w*n/o)));const x=Math.max(0,Math.min(n-w,Math.round(i.x*n/o)));return{...i,x,w}}));this.save(lay,n);this.setState({cols:n,lay})}
+  renderVals(){const s=this.state,ed=s.edit,d=s.drag,lay=d?d.prev:s.lay,cols=s.cols,M=this.metrics();
+    const maxY=Math.max(6,...lay.map(i=>i.y+i.h)),gc=i=>(i.x+1)+' / span '+i.w,gr=i=>(i.y+1)+' / span '+i.h;
+    const items=lay.map((i,ix)=>{const m=META[i.id]||{k:i.id,t:'',s:''},me=d&&d.id===i.id,mv=me&&d.mode==='move',base=mv?s.lay.find(o=>o.id===i.id):i;
+      return{k:m.k,t:m.t,s:m.s,ed,size:i.w+' × '+i.h,gc:gc(base),gr:gr(base),z:me?30:2,ta:ed?'none':'auto',cur:ed?(mv?'grabbing':'grab'):'default',
+        tf:mv?'translate('+d.dx+'px,'+d.dy+'px) scale(1.03)':'none',tr:me?'none':'transform .2s',bd:me?'#1b1a17':'#e6dfd1',sh:me?'0 26px 50px -20px rgba(27,26,23,.5)':ed?'0 8px 20px -14px rgba(27,26,23,.35)':'none',
+        anim:ed&&!me?(ix%2?'wgB':'wgA')+' '+(0.26+(ix%3)*0.03).toFixed(2)+'s ease-in-out infinite':'none',
+        down:e=>{if(ed){this.begin(e,i.id,'move');return}clearTimeout(this._lp);const x0=e.clientX,y0=e.clientY;this._lp=setTimeout(()=>{try{navigator.vibrate&&navigator.vibrate(10)}catch(_){}this.setState({edit:true})},520);const cancel=ev=>{if(ev.type==='pointermove'&&Math.hypot(ev.clientX-x0,ev.clientY-y0)<6)return;clearTimeout(this._lp);window.removeEventListener('pointermove',cancel);window.removeEventListener('pointerup',cancel)};window.addEventListener('pointermove',cancel);window.addEventListener('pointerup',cancel)},
+        rs:e=>this.begin(e,i.id,'both'),rsX:e=>this.begin(e,i.id,'w'),rsY:e=>this.begin(e,i.id,'h'),stop:e=>e.stopPropagation(),
+        remove:()=>{const lay=compact(s.lay.filter(o=>o.id!==i.id));this.save(lay,cols);this.setState({lay,menu:''})},
+        menu:()=>this.setState({menu:s.menu===i.id?'':i.id}),menuOpen:ed&&s.menu===i.id,
+        presets:[['S',Math.max(2,Math.round(cols/4)),2],['M',Math.max(2,Math.round(cols/3)),3],['L',Math.max(2,Math.round(cols/2)),4],['XL',cols,4]].map(([n,w,h])=>{const on=i.w===w&&i.h===h;return{n,bg:on?'#1b1a17':'#f8f5ee',fg:on?'#f3efe6':'#1b1a17',bd:on?'#1b1a17':'#e3ddcf',go:()=>{const c={...i,w,h,x:Math.min(i.x,cols-w)};const lay=compact(s.lay,c);this.save(lay,cols);this.setState({lay})}}})}});
+    const onLay=new Set(s.lay.map(i=>i.id)),hidden=W.filter(x=>!onLay.has(x[0])).map(([id,k])=>({n:k.charAt(0)+k.slice(1).toLowerCase(),go:()=>{const m=META[id],w=Math.max(2,Math.min(cols,Math.round(m.w*cols/12)));const lay=compact([...s.lay,{id,x:0,y:0,w,h:m.h}],{id,x:0,y:0,w,h:m.h});this.save(lay,cols);this.setState({lay})}}));
+    const g=d?d.cand:null;
+    return{rootMinH:this.props.embedded?'0':'100vh',rootPad:this.props.embedded?'8px 0 24px':'28px clamp(16px,4vw,48px) 80px',normal:!ed,editing:ed,us:ed?'none':'auto',enter:()=>this.setState({edit:true}),done:()=>{this.setState({edit:false,add:false,menu:''});if(this.props.onDone)this.props.onDone()},showHead:!this.props.embedded,
+      addToggle:()=>this.setState({add:!s.add}),addOpen:ed&&s.add,hidden,noHidden:!hidden.length,
+      colOpts:[4,6,8,12].map(n=>({n:String(n),bg:cols===n?'#f3efe6':'transparent',fg:cols===n?'#1b1a17':'rgba(243,239,230,.75)',go:()=>this.setCols(n)})),
+      gridToggle:()=>this.setState({grid:!s.grid}),gridBtnBg:s.grid?'rgba(255,255,255,.18)':'transparent',gridBtnFg:s.grid?'#ffffff':'rgba(243,239,230,.55)',addBg:s.add?'rgba(255,255,255,.18)':'transparent',dragging:!!d,
+      reset:()=>{const lay=autoPlace(cols);this.save(lay,cols);this.setState({lay,menu:''})},
+      hint:d?(d.mode==='move'?'Kolonne '+(g.x+1)+' · rad '+(g.y+1):g.w+' × '+g.h):cols+' kolonner · dra for å flytte, hjørnet for størrelse',
+      gridRef:this.gridRef,gtc:'repeat('+cols+',minmax(0,1fr))',rowH:M.rh+'px',minH:ed?((maxY+2)*M.sy)+'px':'0px',
+      showGrid:ed&&s.grid,colGuides:Array.from({length:cols},()=>({})),rowLines:'repeating-linear-gradient(180deg,transparent 0,transparent '+(M.rh)+'px,rgba(178,58,42,.18) '+(M.rh)+'px,rgba(178,58,42,.18) '+(M.rh+1)+'px,transparent '+(M.rh+1)+'px,transparent '+M.sy+'px)',
+      hasGhost:!!(d&&d.mode==='move'),ghost:g?{gc:gc(g),gr:gr(g),lbl:g.w+' × '+g.h}:{gc:'1',gr:'1',lbl:''},items}}
+}
+</script>
+</body>
+</html>
