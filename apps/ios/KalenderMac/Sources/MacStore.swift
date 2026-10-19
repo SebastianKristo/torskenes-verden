@@ -68,6 +68,27 @@ final class MacStore: ObservableObject {
     }
     var defRem: Int? { defRemRaw < 0 ? nil : defRemRaw }
 
+    /* ---------- Prompt 35: samme valg som iPhone-appen (profilen /api/kalender/calendars/prefs) ---------- */
+    /// mon | sun – måned, år, uke, ukenummer og minikalenderen.
+    @Published var weekStart: String = KalWeek35.raw { didSet { KalWeek35.set(weekStart) } }
+    /// Visningen nye vinduer åpner i: mnd | uke | 3d | dag | liste.
+    @Published var openView: String = UserDefaults.standard.string(forKey: "mac.openView") ?? "mnd" {
+        didSet { UserDefaults.standard.set(openView, forKey: "mac.openView") }
+    }
+    /// Standard varighet (min) for nye hendelser.
+    @Published var defDur: Int = (UserDefaults.standard.object(forKey: "mac.defDur") as? Int) ?? 60 {
+        didSet { UserDefaults.standard.set(defDur, forKey: "mac.defDur") }
+    }
+    /// Tidslinje starter: now | 06 | 08
+    @Published var tlStart: String = UserDefaults.standard.string(forKey: "mac.tlStart") ?? "now" {
+        didSet { UserDefaults.standard.set(tlStart, forKey: "mac.tlStart") }
+    }
+    @Published var nBd: Bool = MacStore.boolPref("mac.nBd", true) { didSet { MacStore.setPref("mac.nBd", nBd) } }
+    @Published var nFr: Bool = MacStore.boolPref("mac.nFr", true) { didSet { MacStore.setPref("mac.nFr", nFr) } }
+    /// Lokale valg til serveren har bekreftet dem.
+    var hidMenuLocal: [String: Bool] = (UserDefaults.standard.dictionary(forKey: "mac.hidMenu") as? [String: Bool]) ?? [:]
+    var colLocal: [String: String] = (UserDefaults.standard.dictionary(forKey: "mac.calCol") as? [String: String]) ?? [:]
+
     /* ---------- Lokale tillegg ---------- */
     private var pending: [KalEvent] = MacStore.loadList("mac.pending")
     private var hiddenIds: Set<String> = Set(UserDefaults.standard.stringArray(forKey: "mac.del") ?? [])
@@ -96,8 +117,8 @@ final class MacStore: ObservableObject {
         rebuild(sideEffects: false)
     }
 
-    private static func boolPref(_ k: String, _ def: Bool) -> Bool { (UserDefaults.standard.object(forKey: k) as? Bool) ?? def }
-    private static func setPref(_ k: String, _ v: Bool) { UserDefaults.standard.set(v, forKey: k) }
+    static func boolPref(_ k: String, _ def: Bool) -> Bool { (UserDefaults.standard.object(forKey: k) as? Bool) ?? def }
+    static func setPref(_ k: String, _ v: Bool) { UserDefaults.standard.set(v, forKey: k) }
 
     /* ---------- Innlogging ---------- */
 
@@ -138,9 +159,10 @@ final class MacStore: ObservableObject {
         if loading && !force { return }
         loading = true
         defer { loading = false }
-        if let list = await KalNet.calendars() {
+        if let res = await KalCalAPI35.fetch() {
             serverCals = true
-            cals = list
+            cals = res.cals
+            applyServerPrefs(res.prefs)
         } else {
             serverCals = false
             mergeLocalCals()
@@ -207,9 +229,12 @@ final class MacStore: ObservableObject {
         cals = list
     }
 
-    private func applyCalOn() {
+    func applyCalOn() {
         for i in 0..<cals.count {
             if let v = calOn[cals[i].id] { cals[i].on = v }
+            // Prompt 35: farge og «skjult fra menyen» lokalt til serveren har bekreftet.
+            if let h = hidMenuLocal[cals[i].id] { cals[i].hidMenu = h }
+            if let c = colLocal[cals[i].id], c.lowercased() != cals[i].hex.lowercased() { cals[i] = KalTone35.apply(cals[i], hex: c) }
         }
     }
 
@@ -217,7 +242,8 @@ final class MacStore: ObservableObject {
 
     func cal(_ id: String) -> KalCal? { cals.first { (c: KalCal) -> Bool in c.id == id } ?? cals.first }
 
-    func isOn(_ id: String) -> Bool { cals.first { (c: KalCal) -> Bool in c.id == id }?.on ?? true }
+    /// Prompt 35: kalendere som er skjult fra menyen vises heller ikke.
+    func isOn(_ id: String) -> Bool { cals.first { (c: KalCal) -> Bool in c.id == id }?.shown ?? true }
 
     func rebuild(sideEffects: Bool = true) {
         var list: [KalEvent] = []
@@ -478,7 +504,7 @@ final class MacStore: ObservableObject {
         let base: String = day < tk ? tk : day
         let next: Int = ((KalD.minutesNow() + 1 + 29) / 30) * 30
         let st: Int = s ?? Swift.min(23 * 60, next)
-        let en: Int = e ?? Swift.min(1439, st + 60)
+        let en: Int = e ?? Swift.min(1439, st + defDur)
         var f: MacNewForm = MacNewForm()
         f.day = KalD.date(base)
         f.start = KalD.at(base, st)

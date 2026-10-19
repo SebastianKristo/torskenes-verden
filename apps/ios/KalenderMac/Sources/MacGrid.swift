@@ -63,7 +63,7 @@ struct MacGridView: View {
     private var hourH: CGFloat { count == 7 ? 48 : (count == 3 ? 56 : 64) }
     private var startDay: Date {
         let A: Date = KalD.date(win.anchor)
-        return win.view == "uke" ? KalD.monday(A) : A
+        return win.view == "uke" ? KalWeek35.start(A) : A
     }
 
     var body: some View {
@@ -86,10 +86,11 @@ struct MacGridHead: View {
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 0) {
-            Text("U" + String(KalD.isoWeek(days.first ?? Date()))).font(MacFont.mono(10)).foregroundColor(t.mut2)
+            // Prompt 35: «U43» i mono 800, 12 pt, full tekstfarge.
+            Text("U" + String(KalWeek35.weekNo(KalWeek35.start(days.first ?? Date())))).font(MacFont.monoHeavy(12)).foregroundColor(t.ink)
                 .frame(width: 52).padding(.bottom, 6)
-            ForEach(days, id: \.self) { (d: Date) in
-                MacGridHeadCell(win: win, day: d)
+            ForEach(0..<days.count, id: \.self) { (i: Int) in
+                MacGridHeadCell(win: win, day: days[i], origin: UnitPoint(x: (CGFloat(i) + 0.5) / CGFloat(days.count), y: 0.06))
             }
         }
         .padding(.trailing, 8)
@@ -103,12 +104,17 @@ struct MacGridHeadCell: View {
     @ObservedObject var win: MacWin
     @ObservedObject var store: MacStore = MacStore.shared
     let day: Date
+    var origin: UnitPoint = .center
 
     var body: some View {
         let k: String = KalD.key(day)
         let today: Bool = k == KalD.todayKey()
         let sunday: Bool = KalD.wd(day) == 0
-        Button(action: { win.go(view: "dag", day: k) }) {
+        // Prompt 35: Uke → 3 dager fra dagen, 3 dager → Dag.
+        Button(action: {
+            if win.view == "uke" { win.zoomTo("3d", day: k, origin: origin, inward: true) }
+            else if win.view == "3d" { win.zoomTo("dag", day: k, origin: origin, inward: true) }
+        }) {
             HStack(spacing: 6) {
                 Text(KalD.weekdaysShort[KalD.wd(day)].uppercased()).font(MacFont.mono(10)).tracking(0.8)
                     .foregroundColor(today ? t.red : (sunday ? t.sunday : t.mut))
@@ -164,8 +170,8 @@ struct MacGridBody: View {
     private var startHour: Int {
         let tk: String = KalD.todayKey()
         let hasToday: Bool = days.contains { (d: Date) -> Bool in KalD.key(d) == tk }
-        if hasToday { return Swift.max(0, KalD.minutesNow() / 60 - 2) }
-        return 7
+        // Prompt 35: Innstillinger → «Tidslinje starter» (Nå / 06 / 08).
+        return MacStore.shared.timelineHour(todayIn: hasToday)
     }
 
     var body: some View {

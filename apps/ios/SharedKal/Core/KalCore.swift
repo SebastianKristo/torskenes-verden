@@ -51,6 +51,14 @@ struct KalCal: Identifiable, Hashable, Codable {
     var count: Int = 0
     var writable: Bool = true
     var local: Bool = false
+    /// Prompt 35: skjult fra menyen (Rediger → Skjul fra menyen). nil = serveren sender ikke feltet.
+    var hidMenu: Bool? = nil
+    /// Prompt 35: builtin | own | ical | ha | google | caldav
+    var source: String? = nil
+    /// Prompt 35: merket ved navnet («Abonnement», «HA» …).
+    var badge: String? = nil
+    /// Prompt 35: innebygd kalender (kan ikke fjernes).
+    var builtin: Bool? = nil
 }
 
 /// Vær for én dag.
@@ -529,6 +537,21 @@ enum KalParse {
             c.count = int(o, "count") ?? int(o, "count30") ?? int(o, "next30") ?? 0
             c.writable = bool(o, "writable") ?? true
             c.local = bool(o, "local") ?? bool(o, "custom") ?? false
+            // Prompt 35: hidMenu, source, badge og builtin (mangler på eldre servere).
+            c.hidMenu = bool(o, "hidMenu")
+            let src: String = str(o, "source")
+            c.source = src.isEmpty ? nil : src
+            let badge: String = str(o, "badge")
+            c.badge = badge.isEmpty ? nil : badge
+            c.builtin = bool(o, "builtin")
+            let lt: String = str(o, "lightColor")
+            let tx: String = str(o, "textColor")
+            if !lt.isEmpty && !tx.isEmpty && lt.lowercased() != hex.lowercased() {
+                c.lightHex = lt
+                c.textHex = tx
+            } else if !hex.isEmpty && c.hex.lowercased() == hex.lowercased() && KalCals.defaults.first(where: { (d: KalCal) -> Bool in d.hex == c.hex }) == nil {
+                c = KalTone35.apply(c, hex: hex)
+            }
             out.append(c)
         }
         return out

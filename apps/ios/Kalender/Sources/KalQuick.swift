@@ -71,7 +71,8 @@ enum KalQuick {
     static func isQuestion(_ t: String) -> Bool {
         let s: String = t.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if s.hasSuffix("?") { return true }
-        return KalRx.test("^(hva|når|hvem|hvor|hvordan|hvilke|hvilken|har jeg|er jeg|finn|oppsummer|kan jeg|skal jeg|blir det)\\b", s)
+        // Prompt 35: også engelsk («what's on tomorrow»).
+        return KalRx.test("^(hva|når|hvem|hvor|hvordan|hvilke|hvilken|har jeg|er jeg|finn|oppsummer|kan jeg|skal jeg|blir det|what|when|whats|do i|is there)\\b", s)
     }
 
     static func makeDate(_ y: Int, _ m: Int, _ d: Int) -> Date? {
@@ -88,7 +89,9 @@ enum KalQuick {
     static func parse(_ txt: String, defaultRem: Int?, now: Date = Date()) -> KalParsed {
         let T: Date = KalD.cal.startOfDay(for: now)
         let nowMin: Int = KalD.minutes(now)
-        let lowered: String = txt.lowercased().replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+        // Prompt 35: tegnsetting rundt dag-ord («i morgen?», «i morgen,») skal ikke hindre treff.
+        let cleaned: String = txt.replacingOccurrences(of: "[?!;«»\"“”]|,(?![0-9])", with: " ", options: .regularExpression)
+        let lowered: String = cleaned.lowercased().replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
         var s: String = " " + lowered + " "
         var date: Date? = nil
         var time: Int? = nil
@@ -176,7 +179,8 @@ enum KalQuick {
             if time == nil { applyTime(tokens[i]) } else { applyDate(tokens[i]) }
         }
         // i dag / i morgen / overmorgen / i kveld
-        let words: [(String, Int)] = [("i overmorgen", 2), ("overmorgen", 2), ("i morgen", 1), ("imorgen", 1), ("i dag", 0), ("idag", 0), ("i kveld", 0)]
+        let words: [(String, Int)] = [("i overmorgen", 2), ("overimorgen", 2), ("overmorgen", 2), ("i morgen", 1), ("imorgen", 1), ("i morra", 1),
+                                      ("imorra", 1), ("tomorrow", 1), ("i dag", 0), ("idag", 0), ("i kveld", 0), ("today", 0)]
         for (w, n) in words where date == nil && s.contains(" " + w + " ") {
             date = KalD.add(T, n)
             s = KalRx.cut(s, " " + w + " ")

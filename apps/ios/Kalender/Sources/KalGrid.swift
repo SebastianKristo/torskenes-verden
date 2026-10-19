@@ -62,7 +62,7 @@ struct KalGridView: View {
     private var hourH: CGFloat { count == 7 ? 44 : (count == 3 ? 52 : 62) }
     private var startDay: Date {
         let A: Date = KalD.date(s.anchor)
-        return s.view == "uke" ? KalD.monday(A) : A
+        return s.view == "uke" ? KalWeek35.start(A) : A
     }
 
     var body: some View {
@@ -83,10 +83,12 @@ struct KalGridHead: View {
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 0) {
-            Text("U" + String(KalD.isoWeek(days.first ?? Date()))).font(KalFont.mono(9.5)).foregroundStyle(t.mut2)
+            // Prompt 35: «U43» i mono 800, 12 pt, full tekstfarge.
+            Text("U" + String(KalWeek35.weekNo(KalWeek35.start(days.first ?? Date())))).font(KalFont.monoHeavy(12)).foregroundStyle(t.ink)
+                .lineLimit(1).minimumScaleFactor(0.8)
                 .frame(width: 40).padding(.bottom, 4)
-            ForEach(days, id: \.self) { (d: Date) in
-                KalGridHeadCell(day: d)
+            ForEach(0..<days.count, id: \.self) { (i: Int) in
+                KalGridHeadCell(day: days[i], origin: UnitPoint(x: (CGFloat(i) + 0.5) / CGFloat(days.count), y: 0.08))
             }
         }
         .padding(.trailing, 6)
@@ -99,13 +101,18 @@ struct KalGridHeadCell: View {
     @Environment(\.kal) private var t
     @MainActor private var s: KalStore { KalStore.shared }
     let day: Date
+    var origin: UnitPoint = .center
 
     var body: some View {
         let k: String = KalD.key(day)
         let today: Bool = k == KalD.todayKey()
         let sunday: Bool = KalD.wd(day) == 0
         let wx: KalWxDay? = s.weather(k)
-        Button(action: { s.go(view: "dag", day: k) }) {
+        // Prompt 35: Uke → 3 dager fra dagen, 3 dager → Dag.
+        Button(action: {
+            if s.view == "uke" { s.zoomTo("3d", day: k, origin: origin, inward: true) }
+            else if s.view == "3d" { s.zoomTo("dag", day: k, origin: origin, inward: true) }
+        }) {
             VStack(spacing: 2) {
                 Text(KalD.weekdaysShort[KalD.wd(day)].uppercased()).font(KalFont.mono(9.5)).tracking(0.6)
                     .foregroundStyle(today ? t.red : (sunday ? t.sunday : t.mut))
@@ -180,7 +187,8 @@ struct KalGridBody: View {
 
     var body: some View {
         let todayIn: Bool = days.contains { (d: Date) -> Bool in KalD.key(d) == KalD.todayKey() }
-        let target: Int = todayIn ? Swift.max(0, KalD.minutesNow() / 60 - 2) : 7
+        // Prompt 35: Innstillinger → «Tidslinje starter» (Nå / 06 / 08).
+        let target: Int = s.timelineHour(todayIn: todayIn)
         ScrollViewReader { (proxy: ScrollViewProxy) in
             ScrollView {
                 ZStack(alignment: .topLeading) {

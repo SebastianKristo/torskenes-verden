@@ -11,15 +11,16 @@ struct KalMonthView: View {
     var body: some View {
         let A: Date = KalD.date(s.anchor)
         let first: Date = KalD.firstOfMonth(A)
-        let start: Date = KalD.monday(first)
-        let dim: Int = KalD.daysInMonth(first)
-        let weeks: Int = (KalD.wdMon(first) + dim + 6) / 7
+        // Prompt 35: «Uken starter» (mandag/søndag).
+        let start: Date = KalWeek35.start(first)
+        let weeks: Int = KalWeek35.rows(first)
         let month: Int = KalD.month(first)
         VStack(spacing: 0) {
             letters
             ForEach(0..<weeks, id: \.self) { (w: Int) in
-                KalMonthWeek(start: KalD.add(start, w * 7), month: month, showWeek: s.showWeeks)
-                    .frame(maxHeight: .infinity)
+                KalMonthWeek(start: KalD.add(start, w * 7), month: month, showWeek: s.showWeeks, row: w, rows: weeks)
+                    .frame(minHeight: 0, maxHeight: .infinity)
+                    .clipped()
             }
         }
         .padding(.horizontal, 6)
@@ -29,11 +30,11 @@ struct KalMonthView: View {
     private var letters: some View {
         HStack(spacing: 0) {
             if s.showWeeks {
-                Text("U").font(KalFont.mono(9.5)).foregroundStyle(t.mut2).frame(width: 20)
+                Text("U").font(KalFont.monoHeavy(10.5)).foregroundStyle(t.ink).frame(width: 26)
             }
             ForEach(0..<7, id: \.self) { (i: Int) in
-                Text(KalD.letters[i]).font(KalFont.ui(11, .bold))
-                    .foregroundStyle(i == 6 ? t.sunday : t.mut)
+                Text(KalWeek35.letters[i]).font(KalFont.ui(11, .bold))
+                    .foregroundStyle(KalWeek35.isSunday(i) ? t.sunday : t.mut)
                     .frame(maxWidth: .infinity)
             }
         }
@@ -46,15 +47,20 @@ struct KalMonthWeek: View {
     let start: Date
     let month: Int
     let showWeek: Bool
+    var row: Int = 0
+    var rows: Int = 5
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
             if showWeek {
-                Text(String(KalD.isoWeek(start))).font(KalFont.mono(9.5)).foregroundStyle(t.mut2)
-                    .frame(width: 20).padding(.top, 6)
+                // Prompt 35: ukenummeret i IBM Plex Mono 800, full tekstfarge, 12,5 pt, uten bakgrunn, kolonne 26 pt.
+                Text(String(KalWeek35.weekNo(start))).font(KalFont.monoHeavy(12.5)).foregroundStyle(t.ink)
+                    .frame(width: 26).padding(.top, 6)
+                    .accessibilityLabel("Uke " + String(KalWeek35.weekNo(start)))
             }
             ForEach(0..<7, id: \.self) { (i: Int) in
-                KalMonthDay(day: KalD.add(start, i), month: month, sunday: i == 6)
+                KalMonthDay(day: KalD.add(start, i), month: month, sunday: KalWeek35.isSunday(i),
+                            origin: UnitPoint(x: (CGFloat(i) + 0.5) / 7, y: (CGFloat(row) + 0.5) / CGFloat(Swift.max(1, rows))))
             }
         }
         .overlay(alignment: .top) { Rectangle().fill(t.line).frame(height: 1) }
@@ -67,6 +73,7 @@ struct KalMonthDay: View {
     let day: Date
     let month: Int
     let sunday: Bool
+    var origin: UnitPoint = .center
 
     var body: some View {
         let k: String = KalD.key(day)
@@ -76,7 +83,8 @@ struct KalMonthDay: View {
         let mx: Int = 3
         let cut: Int = list.count > mx ? mx - 1 : mx
         let wx: KalWxDay? = inMonth ? s.weather(k) : nil
-        Button(action: { s.go(view: "dag", day: k) }) {
+        // Prompt 35: trykk på en dag zoomer inn til Uke (uka med dagen), og den vokser fra dagen.
+        Button(action: { s.zoomTo("uke", day: k, origin: origin, inward: true) }) {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 2) {
                     Text(String(KalD.dayOfMonth(day))).font(KalFont.ui(12, .bold))
@@ -97,7 +105,7 @@ struct KalMonthDay: View {
                 Spacer(minLength: 0)
             }
             .padding(.top, 3).padding(.horizontal, 2).padding(.bottom, 2)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .topLeading)
             .background(today ? t.red.opacity(0.06) : Color.clear)
             .opacity(inMonth ? 1 : 0.38)
             .contentShape(Rectangle())
@@ -133,7 +141,8 @@ struct KalYearView: View {
         ScrollView {
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)], spacing: 16) {
                 ForEach(1...12, id: \.self) { (m: Int) in
-                    KalMiniMonth(year: y, month: m)
+                    KalMiniMonth(year: y, month: m,
+                                 origin: UnitPoint(x: (CGFloat((m - 1) % 3) + 0.5) / 3, y: (CGFloat((m - 1) / 3) + 0.5) / 4))
                 }
             }
             .padding(.horizontal, 14)
@@ -148,14 +157,15 @@ struct KalMiniMonth: View {
     @Environment(\.kal) private var t
     let year: Int
     let month: Int
+    var origin: UnitPoint = .center
 
     var body: some View {
         let first: Date = KalQuick.makeDate(year, month, 1) ?? Date()
-        let off: Int = KalD.wdMon(first)
+        let off: Int = KalWeek35.col(first)
         let dim: Int = KalD.daysInMonth(first)
         let T: Date = KalD.today()
         let current: Bool = KalD.year(T) == year && KalD.month(T) == month
-        Button(action: { KalStore.shared.go(view: "mnd", day: KalD.key(first)) }) {
+        Button(action: { KalStore.shared.zoomTo("mnd", day: KalD.key(first), origin: origin, inward: true) }) {
             VStack(alignment: .leading, spacing: 5) {
                 Text(KalD.cap(KalD.months[month - 1])).font(KalFont.serif(17)).foregroundStyle(current ? t.red : t.ink)
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 2) {

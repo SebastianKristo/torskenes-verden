@@ -57,7 +57,8 @@ enum KalWData {
     static func upcoming(_ s: KalSnapshot, now: Date) -> [KalEvent] {
         let tk: String = KalD.key(now)
         let nm: Int = KalD.minutes(now)
-        let hidden: Set<String> = Set(s.cals.filter { (c: KalCal) -> Bool in !c.on }.map { (c: KalCal) -> String in c.id })
+        // Prompt 35: også kalendere som er skjult fra menyen.
+        let hidden: Set<String> = Set(s.cals.filter { (c: KalCal) -> Bool in !c.shown }.map { (c: KalCal) -> String in c.id })
         let list: [KalEvent] = s.events.filter { (e: KalEvent) -> Bool in
             if hidden.contains(e.cal) || e.cont { return false }
             if e.day > tk { return true }
@@ -142,6 +143,8 @@ struct KalWProvider: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<KalWEntry>) -> Void) {
         Task {
+            // Prompt 35: «Uken starter» kan være endret i appen siden sist.
+            KalWeek35.reload()
             let linked: Bool = KalGroup.token != nil
             let snap: KalSnapshot = linked ? await KalWData.load(force: false) : KalSnapshot()
             let now: Date = Date()
@@ -165,6 +168,8 @@ struct KalWPal {
     let acc: Color
     let sunday: Color
     let dark: Bool
+    /// Prompt 35: ukenummer («UKE 43») i --ink2.
+    var ink2: Color { dark ? Color(kalHex: "#d6cfc2") : Color(kalHex: "#3d3a33") }
 
     static let light: KalWPal = KalWPal(bg: Color(kalHex: "#fffdf8"), ink: Color(kalHex: "#1b1a17"), mut: Color(kalHex: "#6b665c"),
                                         line: Color(kalHex: "#e6dfd1"), acc: Color(kalHex: "#b23a2a"), sunday: Color(kalHex: "#b23a2a"), dark: false)
@@ -258,7 +263,12 @@ struct KalWSmall: View {
         let c: KalCal? = n.flatMap { (e: KalEvent) -> KalCal? in KalWData.cal(entry.snap, e.cal) }
         VStack(alignment: .leading, spacing: 2) {
             Text(KalD.weekdays[KalD.wd(entry.date)].uppercased()).font(KalFont.monoW(10)).tracking(1.2).foregroundStyle(pal.acc)
-            Text(String(KalD.dayOfMonth(entry.date))).font(KalFont.serifW(40)).foregroundStyle(pal.ink)
+            // Prompt 35: «UKE 43» rett til høyre for datoen (baseline-justert), mono 800, 11,5 pt, --ink2.
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(String(KalD.dayOfMonth(entry.date))).font(KalFont.serifW(40)).foregroundStyle(pal.ink)
+                Text("UKE " + String(KalWeek35.weekNo(KalWeek35.start(entry.date)))).font(KalFont.monoHeavyW(11.5)).tracking(0.7).foregroundStyle(pal.ink2)
+                    .lineLimit(1).fixedSize()
+            }
             Spacer(minLength: 0)
             HStack(alignment: .top, spacing: 7) {
                 RoundedRectangle(cornerRadius: 2).fill(n == nil ? pal.line : Color(kalHex: c?.hex ?? "#b23a2a")).frame(width: 4)
@@ -286,6 +296,9 @@ struct KalWMedium: View {
             VStack(alignment: .leading, spacing: 2) {
                 KalWDateBlock(date: entry.date, pal: pal)
                 Text(KalD.months[KalD.month(entry.date) - 1] + " " + String(KalD.year(entry.date))).font(KalFont.uiW(12)).foregroundStyle(pal.mut)
+                // Prompt 35: «UKE 43» under måned og år.
+                Text("UKE " + String(KalWeek35.weekNo(KalWeek35.start(entry.date)))).font(KalFont.monoHeavyW(11.5)).tracking(0.7).foregroundStyle(pal.ink2)
+                    .lineLimit(1).padding(.top, 2)
                 Spacer(minLength: 0)
                 if let w {
                     HStack(spacing: 4) {
@@ -342,7 +355,7 @@ struct KalWLarge: View {
             HStack(alignment: .firstTextBaseline) {
                 Text(KalD.cap(KalD.months[KalD.month(d) - 1])).font(KalFont.serifW(22)).foregroundStyle(pal.ink)
                 Spacer()
-                Text("UKE " + String(KalD.isoWeek(d))).font(KalFont.monoW(10.5)).tracking(1).foregroundStyle(pal.acc)
+                Text("UKE " + String(KalWeek35.weekNo(KalWeek35.start(d)))).font(KalFont.monoHeavyW(11.5)).tracking(1).foregroundStyle(pal.acc)
             }
             KalWMonthGrid(entry: entry, pal: pal)
             Spacer(minLength: 0)
@@ -371,13 +384,14 @@ struct KalWMonthGrid: View {
 
     var body: some View {
         let first: Date = KalD.firstOfMonth(entry.date)
-        let start: Date = KalD.monday(first)
-        let weeks: Int = (KalD.wdMon(first) + KalD.daysInMonth(first) + 6) / 7
+        // Prompt 35: «Uken starter» (mandag/søndag).
+        let start: Date = KalWeek35.start(first)
+        let weeks: Int = KalWeek35.rows(first)
         VStack(spacing: 3) {
             HStack(spacing: 0) {
                 Color.clear.frame(width: 18, height: 12)
                 ForEach(0..<7, id: \.self) { (i: Int) in
-                    Text(KalD.letters[i]).font(KalFont.uiW(10, .bold)).foregroundStyle(i == 6 ? pal.sunday : pal.mut).frame(maxWidth: .infinity)
+                    Text(KalWeek35.letters[i]).font(KalFont.uiW(10, .bold)).foregroundStyle(KalWeek35.isSunday(i) ? pal.sunday : pal.mut).frame(maxWidth: .infinity)
                 }
             }
             ForEach(0..<weeks, id: \.self) { (w: Int) in
@@ -395,9 +409,9 @@ struct KalWWeekRow: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            Text(String(KalD.isoWeek(start))).font(KalFont.monoW(9)).foregroundStyle(pal.mut).frame(width: 18)
+            Text(String(KalWeek35.weekNo(start))).font(KalFont.monoHeavyW(10)).foregroundStyle(pal.ink2).frame(width: 18)
             ForEach(0..<7, id: \.self) { (i: Int) in
-                KalWDayCell(entry: entry, pal: pal, day: KalD.add(start, i), month: month, sunday: i == 6)
+                KalWDayCell(entry: entry, pal: pal, day: KalD.add(start, i), month: month, sunday: KalWeek35.isSunday(i))
             }
         }
     }
@@ -476,13 +490,19 @@ struct KalLockWidgetView: View {
     }
 
     private func rectangular(_ n: KalEvent?) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
+        // Prompt 35: «Man 19. okt · U43» i første linje.
+        let d: Date = entry.date
+        let wdName: String = KalD.cap(KalD.weekdaysShort[KalD.wd(d)])
+        let dateText: String = String(KalD.dayOfMonth(d)) + ". " + KalD.monthsShort[KalD.month(d) - 1]
+        let head: String = wdName + " " + dateText + " · U" + String(KalWeek35.weekNo(KalWeek35.start(d)))
+        return VStack(alignment: .leading, spacing: 1) {
+            Text(head).font(.system(size: 12, weight: .heavy)).opacity(0.8).lineLimit(1)
             if let n {
-                Text(KalWData.whenPrefix(n.day, now: entry.date) + KalWData.timeText(n)).font(.system(size: 12, weight: .semibold)).opacity(0.8).lineLimit(1)
                 Text(n.title).font(.system(size: 15, weight: .bold)).lineLimit(1).widgetAccentable()
-                Text(n.loc.isEmpty ? (KalWData.cal(entry.snap, n.cal)?.name ?? "") : n.loc).font(.system(size: 12)).opacity(0.8).lineLimit(1)
+                let place: String = n.loc.isEmpty ? (KalWData.cal(entry.snap, n.cal)?.name ?? "") : n.loc
+                Text(KalWData.whenPrefix(n.day, now: d) + KalWData.timeText(n) + (place.isEmpty ? "" : " · " + place))
+                    .font(.system(size: 12)).opacity(0.8).lineLimit(1)
             } else {
-                Text("KALENDER").font(.system(size: 11, weight: .bold)).opacity(0.8)
                 Text("Ingenting planlagt").font(.system(size: 15, weight: .bold)).widgetAccentable()
             }
         }
@@ -495,6 +515,8 @@ struct KalLockWidgetView: View {
 enum KalFont {
     static func serifW(_ size: CGFloat) -> Font { .custom("Newsreader-Medium", size: size) }
     static func monoW(_ size: CGFloat) -> Font { .custom("IBMPlexMono-SemiBold", size: size) }
+    /// Prompt 35: mono 800 for ukenummer.
+    static func monoHeavyW(_ size: CGFloat) -> Font { .system(size: size, weight: .heavy, design: .monospaced) }
 
     static func uiW(_ size: CGFloat, _ w: Font.Weight = .regular) -> Font {
         switch w {

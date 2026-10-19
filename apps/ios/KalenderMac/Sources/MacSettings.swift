@@ -17,6 +17,8 @@ struct MacSettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 section("GENERELT") { general }
+                section("KALENDER") { calendarPrefs }
+                section("VARSLER") { notifyPrefs }
                 section("UTSEENDE") { appearance }
                 section("VISNING") { display }
                 section("KONTO") { account }
@@ -24,7 +26,7 @@ struct MacSettingsView: View {
             }
             .padding(24)
         }
-        .frame(width: 520, height: 600)
+        .frame(width: 540, height: 680)
         .background(t.bg)
         .onAppear {
             loginItem = MacLogin.enabled
@@ -67,6 +69,68 @@ struct MacSettingsView: View {
             }
             Text("Kalender kjører videre i menylinjen når vinduet lukkes. Avslutt med ⌘Q.")
                 .font(MacFont.ui(11.5)).foregroundColor(t.mut2)
+        }
+        .font(MacFont.ui(13.5))
+    }
+
+    /// Prompt 35: samme valg som Innstillinger i iPhone-appen (synkes via profilen).
+    private var calendarPrefs: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Picker("Uken starter", selection: Binding<String>(get: { store.weekStart }, set: { (v: String) in
+                store.weekStart = v
+                store.savePrefs(["weekStart": v])
+            })) {
+                Text("Mandag").tag("mon")
+                Text("Søndag").tag("sun")
+            }
+            .pickerStyle(.segmented)
+            Picker("Åpne i", selection: Binding<String>(get: { store.openView }, set: { (v: String) in
+                store.openView = v
+                store.savePrefs(["openView": v])
+            })) {
+                Text("Måned").tag("mnd")
+                Text("Uke").tag("uke")
+                Text("3 dager").tag("3d")
+                Text("Dag").tag("dag")
+                Text("Liste").tag("liste")
+            }
+            Picker("Standard varighet", selection: Binding<Int>(get: { store.defDur }, set: { (v: Int) in
+                store.defDur = v
+                store.savePrefs(["defaultDuration": v])
+            })) {
+                Text("30 min").tag(30)
+                Text("1 t").tag(60)
+                Text("1,5 t").tag(90)
+                Text("2 t").tag(120)
+            }
+            .pickerStyle(.segmented)
+            Picker("Tidslinje starter", selection: Binding<String>(get: { store.tlStart }, set: { (v: String) in
+                store.tlStart = v
+                store.savePrefs(["timelineStart": v])
+            })) {
+                Text("Nå").tag("now")
+                Text("06").tag("06")
+                Text("08").tag("08")
+            }
+            .pickerStyle(.segmented)
+            Text("Kalendere (farge, skjul fra menyen, iCal og Home Assistant) styres i sidemenyen: klikk på prikken eller «Rediger».")
+                .font(MacFont.ui(11.5)).foregroundColor(t.mut2).fixedSize(horizontal: false, vertical: true)
+        }
+        .font(MacFont.ui(13.5))
+    }
+
+    private var notifyPrefs: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Toggle("Bursdager (kl. 09:00 samme dag)", isOn: Binding<Bool>(get: { store.nBd }, set: { (v: Bool) in
+                store.nBd = v
+                store.rebuild()
+                store.savePrefs(["notifyBirthdays": v])
+            }))
+            Toggle("Studiefrister (3 dager og 1 dag før)", isOn: Binding<Bool>(get: { store.nFr }, set: { (v: Bool) in
+                store.nFr = v
+                store.rebuild()
+                store.savePrefs(["notifyDeadlines": v])
+            }))
         }
         .font(MacFont.ui(13.5))
     }

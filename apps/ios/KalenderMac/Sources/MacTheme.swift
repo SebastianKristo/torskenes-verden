@@ -80,6 +80,8 @@ enum MacFont {
     }
 
     static func mono(_ size: CGFloat) -> Font { .custom("IBMPlexMono-SemiBold", size: size) }
+    /// Prompt 35: ukenummer i mono 800.
+    static func monoHeavy(_ size: CGFloat) -> Font { .system(size: size, weight: .heavy, design: .monospaced) }
 }
 
 /// Felles pille (I dag, Ferdig, Legg til …). filled = mørk pille (lys i mørkt tema).

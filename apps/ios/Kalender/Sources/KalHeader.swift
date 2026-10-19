@@ -28,9 +28,10 @@ enum KalHeadText {
             let same: Bool = KalD.month(A) == KalD.month(T) && KalD.year(A) == KalD.year(T)
             return KalHead(kicker: String(KalD.year(A)), title: KalD.cap(KalD.months[KalD.month(A) - 1]), inToday: same, nav: true)
         case "uke":
-            let m0: Date = KalD.monday(A)
-            let inT: Bool = KalD.key(KalD.monday(T)) == KalD.key(m0)
-            return KalHead(kicker: "UKE " + String(wk) + " · " + String(KalD.year(m0)), title: range(m0, KalD.add(m0, 6)), inToday: inT, nav: true)
+            // Prompt 35: «Uken starter» (mandag/søndag).
+            let m0: Date = KalWeek35.start(A)
+            let inT: Bool = KalD.key(KalWeek35.start(T)) == KalD.key(m0)
+            return KalHead(kicker: "UKE " + String(KalWeek35.weekNo(m0)) + " · " + String(KalD.year(m0)), title: range(m0, KalD.add(m0, 6)), inToday: inT, nav: true)
         case "3d":
             let inT: Bool = T >= A && T <= KalD.add(A, 2)
             return KalHead(kicker: "UKE " + String(wk), title: range(A, KalD.add(A, 2)), inToday: inT, nav: true)
@@ -56,29 +57,23 @@ struct KalHeader: View {
             HStack(alignment: .bottom, spacing: 8) {
                 menuButton
                 Button(action: { s.zoomOut() }) {
+                    // Prompt 35: tittelen gir plass (min-width 0 + ellipsis), ikke knappene.
                     VStack(alignment: .leading, spacing: 3) {
                         Text(h.kicker).font(KalFont.mono(10.5)).tracking(1.3).foregroundStyle(t.acc).lineLimit(1)
-                        Text(h.title).font(KalFont.serif(32)).foregroundStyle(t.ink).lineLimit(1).minimumScaleFactor(0.7)
+                        Text(h.title).font(KalFont.serif(32)).foregroundStyle(t.ink).lineLimit(1).minimumScaleFactor(0.7).truncationMode(.tail)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .layoutPriority(0)
                 .accessibilityLabel(h.title + ", zoom ut")
+                // Prompt 35: rekkefølge I dag · ‹ · › · søk. Knappegruppen har fast bredde (flex: none).
                 HStack(spacing: 5) {
+                    if !h.inToday { KalTodayPill35 { s.goToday() } }
                     if h.nav {
                         KalRoundIcon(name: "chevron.left", label: "Forrige") { s.step(-1) }
                         KalRoundIcon(name: "chevron.right", label: "Neste") { s.step(1) }
-                    }
-                    if !h.inToday {
-                        Button(action: { s.goToday() }) {
-                            Text("I dag").font(KalFont.ui(12.5, .bold)).foregroundStyle(t.bg)
-                                .padding(.horizontal, 12).frame(height: 34)
-                                .background(Capsule().fill(t.ink))
-                        }
-                        .buttonStyle(.plain)
-                        .frame(minHeight: 44)
-                        .accessibilityLabel("I dag")
                     }
                     KalRoundIcon(name: "magnifyingglass", label: "Søk") {
                         s.query = ""
@@ -86,6 +81,8 @@ struct KalHeader: View {
                         withAnimation(.easeOut(duration: 0.2)) { s.searchOpen = true }
                     }
                 }
+                .fixedSize()
+                .layoutPriority(2)
                 .padding(.bottom, 1)
             }
             KalViewPicker()
@@ -168,5 +165,29 @@ struct KalViewPicker: View {
         } else {
             Capsule().fill(Color.clear)
         }
+    }
+}
+
+/// Prompt 35: «I dag» er en pille (ikke en ikonknapp): ingen fast bredde, nowrap, 34 høy, padding 0 13, radius 17, mørk med lys tekst.
+struct KalTodayPill35: View {
+    @Environment(\.kal) private var t
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text("I dag")
+                .font(KalFont.ui(12.5, .bold))
+                .lineLimit(1)
+                .fixedSize()
+                .foregroundStyle(t.bg)
+                .padding(.horizontal, 13)
+                .frame(height: 34)
+                .background(Capsule().fill(t.ink))
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .fixedSize()
+        .accessibilityLabel("I dag")
     }
 }

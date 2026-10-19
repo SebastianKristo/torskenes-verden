@@ -49,7 +49,8 @@ final class KalStore {
     private(set) var all: [KalEvent] = []
 
     /* ---------- Visning ---------- */
-    var view: String = UserDefaults.standard.string(forKey: "kal.view") ?? "mnd" {
+    /// Prompt 35: Innstillinger → «Åpne i» bestemmer visningen appen starter i (ellers siste brukte).
+    var view: String = UserDefaults.standard.string(forKey: "kal.openView") ?? UserDefaults.standard.string(forKey: "kal.view") ?? "mnd" {
         didSet { UserDefaults.standard.set(view, forKey: "kal.view") }
     }
     var anchor: String = KalD.todayKey()
@@ -68,6 +69,48 @@ final class KalStore {
     var theme: String = UserDefaults.standard.string(forKey: "kalapp_th") ?? "system" {
         didSet { UserDefaults.standard.set(theme, forKey: "kalapp_th") }
     }
+
+    /* ---------- Prompt 35: Innstillinger (nederst i sidemenyen) ---------- */
+    /// mon | sun – gjelder måned, år, uke, ukenummer-kolonnen og widgetene (App Group kal.weekStart).
+    var weekStart: String = KalWeek35.raw {
+        didSet {
+            KalWeek35.set(weekStart)
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+    }
+    /// mnd | uke | 3d | dag | liste
+    var openView: String = UserDefaults.standard.string(forKey: "kal.openView") ?? "mnd" {
+        didSet { UserDefaults.standard.set(openView, forKey: "kal.openView") }
+    }
+    /// Standard varighet i minutter (30 / 60 / 90 / 120) for rød +.
+    var defDur: Int = (UserDefaults.standard.object(forKey: "kal.defDur") as? Int) ?? 60 {
+        didSet { UserDefaults.standard.set(defDur, forKey: "kal.defDur") }
+    }
+    /// Tidslinje starter: now | 06 | 08
+    var tlStart: String = UserDefaults.standard.string(forKey: "kal.tlStart") ?? "now" {
+        didSet { UserDefaults.standard.set(tlStart, forKey: "kal.tlStart") }
+    }
+    var nBd: Bool = (UserDefaults.standard.object(forKey: "kal.nBd") as? Bool) ?? true {
+        didSet { UserDefaults.standard.set(nBd, forKey: "kal.nBd") }
+    }
+    var nFr: Bool = (UserDefaults.standard.object(forKey: "kal.nFr") as? Bool) ?? true {
+        didSet { UserDefaults.standard.set(nFr, forKey: "kal.nFr") }
+    }
+    var nBrief: Bool = (UserDefaults.standard.object(forKey: "kal.nBrief") as? Bool) ?? true {
+        didSet { UserDefaults.standard.set(nBrief, forKey: "kal.nBrief") }
+    }
+    var nTv: Bool = (UserDefaults.standard.object(forKey: "kal.nTv") as? Bool) ?? false {
+        didSet { UserDefaults.standard.set(nTv, forKey: "kal.nTv") }
+    }
+    var settingsOpen: Bool = false
+    /// «+ Legg til kalender»-panelet i sidemenyen: ics | ha | acc (nil = lukket).
+    var addCalTab: String? = nil
+    /// Zoom mellom visningene: punktet den nye visningen vokser fra, og retningen (inn = fra 0,55, ut = fra 1,6).
+    var zoomOrigin: UnitPoint = .center
+    var zoomInward: Bool = true
+    /// Lokalt valg når serveren ikke lagrer det (ennå): skjult fra menyen og farge per kalender.
+    @ObservationIgnored var hidMenuLocal: [String: Bool] = (UserDefaults.standard.dictionary(forKey: "kal.hidMenu") as? [String: Bool]) ?? [:]
+    @ObservationIgnored var colLocal: [String: String] = (UserDefaults.standard.dictionary(forKey: "kal.calCol") as? [String: String]) ?? [:]
 
     /* ---------- Ark og paneler ---------- */
     var drawerOpen: Bool = false
@@ -161,9 +204,10 @@ final class KalStore {
         if !force && from >= loadedFrom && to <= loadedTo && !loadedFrom.isEmpty { return }
         loading = true
         defer { loading = false }
-        if let list = await KalNet.calendars() {
+        if let res = await KalCalAPI35.fetch() {
             serverCals = true
-            cals = list
+            cals = res.cals
+            applyServerPrefs(res.prefs)
         } else {
             serverCals = false
             mergeLocalCals()
@@ -224,9 +268,12 @@ final class KalStore {
         cals = list
     }
 
-    private func applyCalOn() {
+    func applyCalOn() {
         for i in 0..<cals.count {
             if let v = calOn[cals[i].id] { cals[i].on = v }
+            // Prompt 35: lokale valg (farge, skjult fra menyen) til serveren har bekreftet dem.
+            if let h = hidMenuLocal[cals[i].id] { cals[i].hidMenu = h }
+            if let c = colLocal[cals[i].id], c.lowercased() != cals[i].hex.lowercased() { cals[i] = KalTone35.apply(cals[i], hex: c) }
         }
     }
 
@@ -234,7 +281,8 @@ final class KalStore {
 
     func cal(_ id: String) -> KalCal? { cals.first { (c: KalCal) -> Bool in c.id == id } ?? cals.first }
 
-    private func isOn(_ id: String) -> Bool { cals.first { (c: KalCal) -> Bool in c.id == id }?.on ?? true }
+    /// Prompt 35: kalendere som er skjult fra menyen forsvinner også fra visningene.
+    private func isOn(_ id: String) -> Bool { cals.first { (c: KalCal) -> Bool in c.id == id }?.shown ?? true }
 
     /// Bygger byDay og all etter endringer.
     func rebuild() {
@@ -305,13 +353,12 @@ final class KalStore {
 
     /* ---------- Navigering ---------- */
 
+    /// Visningsvelgeren og lenker: samme zoom-animasjon som trykk/pinch, retning etter rekkefølgen År … Dag.
     func go(view v: String, day: String? = nil) {
-        KalHaptic.tap()
-        withAnimation(.easeOut(duration: 0.2)) {
-            view = v
-            if let day { anchor = day } else if v == "liste" { anchor = KalD.todayKey() }
-        }
-        Task { await load() }
+        let order: [String] = KalZoom35.order
+        let a: Int = order.firstIndex(of: view) ?? 0
+        let b: Int = order.firstIndex(of: v) ?? 0
+        zoomTo(v, day: day, origin: .center, inward: b >= a)
     }
 
     func step(_ dir: Int) {
@@ -334,10 +381,9 @@ final class KalStore {
         withAnimation(.easeOut(duration: 0.2)) { anchor = KalD.todayKey() }
     }
 
-    /// Trykk på tittelen zoomer ut: Dag → Uke → Mnd → År.
+    /// Trykk på tittelen zoomer ut: Dag → 3 dager → Uke → Måned → År (Prompt 35).
     func zoomOut() {
-        let z: [String: String] = ["dag": "uke", "3d": "uke", "uke": "mnd", "mnd": "ar", "ar": "ar", "liste": "mnd"]
-        go(view: z[view] ?? "mnd")
+        zoomOutStep(.center)
     }
 
     func openDetail(_ e: KalEvent) {
@@ -614,7 +660,7 @@ final class KalStore {
         if let day { base = day }
         if base < tk { base = tk }
         let st: Int = s ?? Swift.min(23 * 60, ((KalD.minutesNow() + 1 + 29) / 30) * 30)
-        let en: Int = e ?? Swift.min(1439, st + 60)
+        let en: Int = e ?? Swift.min(1439, st + defDur)
         var f: KalNewForm = KalNewForm()
         f.day = KalD.date(base)
         f.start = KalD.at(base, st)

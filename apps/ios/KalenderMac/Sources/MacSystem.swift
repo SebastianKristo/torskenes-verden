@@ -163,15 +163,19 @@ enum MacNotify {
 
     static func plans(_ events: [KalEvent], now: Date) -> [Plan] {
         var out: [Plan] = []
+        // Prompt 35: Innstillinger → Varsler (Bursdager kl. 09, Studiefrister 3 d / 1 d).
+        let bdOn: Bool = (UserDefaults.standard.object(forKey: "mac.nBd") as? Bool) ?? true
+        let frOn: Bool = (UserDefaults.standard.object(forKey: "mac.nFr") as? Bool) ?? true
         for e in events {
             if e.cont { continue }
             if e.kind == "bursdag" || e.cal == "b" {
+                if !bdOn { continue }
                 let at: Date = KalD.at(e.day, 9 * 60)
                 if at > now { out.append(Plan(id: prefix + "b-" + e.id, at: at, title: e.title, body: "Bursdag i dag", loc: "", eventId: e.id, day: e.day)) }
                 continue
             }
             if e.kind == "frist" {
-                for d in [3, 1] {
+                for d in [3, 1] where frOn {
                     let at: Date = KalD.at(KalD.addKey(e.day, -d), 9 * 60)
                     if at <= now { continue }
                     let when: String = d == 1 ? "I morgen" : "Om 3 dager"
@@ -297,6 +301,8 @@ enum MacKeys {
     private static var monitor: Any? = nil
 
     static func install() {
+        // Prompt 35: ctrl + hjul / pinch på styreflaten zoomer mellom visningene.
+        MacZoom35.install()
         if monitor != nil { return }
         monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { (ev: NSEvent) -> NSEvent? in
             MacKeys.handle(ev) ? nil : ev

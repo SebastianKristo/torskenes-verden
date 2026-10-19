@@ -37,24 +37,9 @@ enum KalAsk {
     }
 
     /// Dagen spørsmålet gjelder (i dag / i morgen / overmorgen / fredag / 25.10), eller nil.
+    /// Prompt 35: felles parseDay() (normaliserer tegnsetting først, så «i morgen?» blir i morgen og ikke i dag).
     static func dayOf(_ ql: String) -> String? {
-        let T: Date = KalD.today()
-        if KalRx.test(" (i )?overmorgen ", ql) { return KalD.key(KalD.add(T, 2)) }
-        if KalRx.test(" (i morgen|imorgen) ", ql) { return KalD.key(KalD.add(T, 1)) }
-        if KalRx.test(" (i dag|idag|i kveld) ", ql) { return KalD.key(T) }
-        if let m = KalRx.first("(neste\\s+)?(søndag|mandag|tirsdag|onsdag|torsdag|fredag|lørdag)", ql) {
-            let w: Int = KalD.weekdays.firstIndex(of: m.g(2) ?? "") ?? 0
-            var df: Int = (w - KalD.wd(T) + 7) % 7
-            if df == 0 { df = 7 }
-            if m.g(1) != nil && df < 7 { df += 7 }
-            return KalD.key(KalD.add(T, df))
-        }
-        if let m = KalRx.first("(\\d{1,2})\\.(\\d{1,2})", ql) {
-            let d: Int = Int(m.g(1) ?? "1") ?? 1
-            let mo: Int = Int(m.g(2) ?? "1") ?? 1
-            if let date = KalQuick.makeDate(KalD.year(T), mo, d) { return KalD.key(date) }
-        }
-        return nil
+        KalDay35.parseDay(ql)
     }
 
     static func wxText(_ k: String) -> String {
@@ -67,7 +52,8 @@ enum KalAsk {
         let st: KalStore = KalStore.shared
         let tk: String = KalD.todayKey()
         let nm: Int = KalD.minutesNow()
-        let ql: String = " " + q.lowercased() + " "
+        // Prompt 35: normalisert (små bokstaver, uten ? ! , ; « » og løse punktum/kolon).
+        let ql: String = KalDay35.norm(q)
         let up: [KalEvent] = st.upcoming(limit: 300).filter { (e: KalEvent) -> Bool in !e.cont }
 
         if KalRx.test("ledig|fri tid|finn tid|når kan jeg|har jeg tid", ql) { return free(ql, tk: tk, nm: nm) }
@@ -92,7 +78,8 @@ enum KalAsk {
             a.cards = list
             return a
         }
-        if KalRx.test("(oppsummer|hva skjer|hva har jeg|program|plan|hvordan ser|hva står)", ql) { return summary(ql, tk: tk) }
+        if KalRx.test("(oppsummer|hva skjer|hva har jeg|program|plan|hvordan ser|hva står|what's on|whats on|what is on|what do i have|agenda)", ql)
+            || KalDay35.isDayQuestion(q) { return summary(ql, tk: tk) }
         if KalRx.test("vær|regn|paraply", ql) {
             let d: String = dayOf(ql) ?? tk
             let w: String = wxText(d).trimmingCharacters(in: .whitespaces)

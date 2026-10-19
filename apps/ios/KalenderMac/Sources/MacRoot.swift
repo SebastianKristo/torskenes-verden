@@ -74,12 +74,26 @@ struct MacRoot: View {
                         .transition(.move(edge: .leading).combined(with: .opacity))
                     Rectangle().fill(t.line).frame(width: 1)
                 }
-                content
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // Prompt 35: zoom – den nye visningen vokser fra punktet man klikket/klypte. «Uken starter» bygger alt på nytt.
+                ZStack {
+                    content
+                        .id(win.view + "|" + store.weekStart)
+                        .transition(zoomTransition)
+                }
+                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+                .clipped()
             }
         }
         .overlay(alignment: .bottom) { toastView }
         .sheet(isPresented: $win.newCalOpen) { MacThemed { MacNewCalendarSheet(open: $win.newCalOpen) } }
+        .sheet(isPresented: $win.addCalOpen) { MacThemed { MacAddCal35Sheet(open: $win.addCalOpen) } }
+    }
+
+    private var zoomTransition: AnyTransition {
+        if NSWorkspace.shared.accessibilityDisplayShouldReduceMotion { return AnyTransition.opacity }
+        let from: CGFloat = win.zoomInward ? 0.55 : 1.6
+        let ins: AnyTransition = AnyTransition.scale(scale: from, anchor: win.zoomOrigin).combined(with: .opacity)
+        return AnyTransition.asymmetric(insertion: ins, removal: .opacity)
     }
 
     @ViewBuilder private var content: some View {
@@ -227,9 +241,9 @@ struct MacToolbar: View {
         .help("Zoom ut")
     }
 
+    /// Prompt 35: Dag → 3 dager → Uke → Måned → År.
     private func zoomOut() {
-        let z: [String: String] = ["dag": "uke", "3d": "uke", "uke": "mnd", "mnd": "ar", "ar": "ar", "liste": "mnd"]
-        win.go(view: z[win.view] ?? "mnd")
+        win.zoomOutStep(.center)
     }
 
     private var tabs: some View {

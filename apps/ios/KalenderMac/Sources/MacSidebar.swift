@@ -28,19 +28,9 @@ struct MacSidebar: View {
         .background(t.bg)
     }
 
+    /// Prompt 35: kalenderne med farge, skjul fra menyen og «+ Legg til kalender».
     private var calendars: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            MacLabel(text: "KALENDERE").padding(.bottom, 4)
-            ForEach(store.cals) { (c: KalCal) in
-                MacCalRow(cal: c) { store.setCal(c.id, on: !c.on) }
-            }
-            Button(action: { win.newCalOpen = true }) {
-                Text("Administrer kalendere ›").font(MacFont.ui(12.5, .bold)).foregroundColor(t.acc)
-                    .padding(.vertical, 6)
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 4)
-        }
+        MacCalendars35(win: win)
     }
 }
 
@@ -105,8 +95,9 @@ struct MacMiniMonth: View {
     }
 
     private var weeks: [Date] {
-        let start: Date = KalD.monday(first)
-        let lead: Int = KalD.wdMon(first)
+        // Prompt 35: «Uken starter».
+        let start: Date = KalWeek35.start(first)
+        let lead: Int = KalWeek35.col(first)
         let n: Int = Int(ceil(Double(lead + KalD.daysInMonth(first)) / 7.0))
         return (0..<n).map { (i: Int) -> Date in KalD.add(start, i * 7) }
     }
@@ -114,10 +105,10 @@ struct MacMiniMonth: View {
     private var grid: some View {
         VStack(spacing: 1) {
             HStack(spacing: 0) {
-                if store.showWeeks { Text("U").font(MacFont.mono(9)).foregroundColor(t.mut2).frame(width: 22) }
+                if store.showWeeks { Text("U").font(MacFont.monoHeavy(9.5)).foregroundColor(t.ink).frame(width: 22) }
                 ForEach(0..<7, id: \.self) { (i: Int) in
-                    Text(KalD.letters[i]).font(MacFont.ui(10, .bold))
-                        .foregroundColor(i == 6 ? t.sunday : t.mut)
+                    Text(KalWeek35.letters[i]).font(MacFont.ui(10, .bold))
+                        .foregroundColor(KalWeek35.isSunday(i) ? t.sunday : t.mut)
                         .frame(maxWidth: .infinity)
                 }
             }
@@ -132,10 +123,10 @@ struct MacMiniMonth: View {
         HStack(spacing: 0) {
             if store.showWeeks {
                 Button(action: { onWeek(KalD.key(w)) }) {
-                    Text(String(KalD.isoWeek(w))).font(MacFont.mono(9)).foregroundColor(t.mut2).frame(width: 22, height: 26)
+                    Text(String(KalWeek35.weekNo(w))).font(MacFont.monoHeavy(10.5)).foregroundColor(t.ink).frame(width: 22, height: 26)
                 }
                 .buttonStyle(.plain)
-                .help("Uke " + String(KalD.isoWeek(w)))
+                .help("Uke " + String(KalWeek35.weekNo(w)))
             }
             ForEach(0..<7, id: \.self) { (i: Int) in
                 MacMiniDay(day: KalD.add(w, i), month: KalD.month(first), selected: selected, onPick: onPick)

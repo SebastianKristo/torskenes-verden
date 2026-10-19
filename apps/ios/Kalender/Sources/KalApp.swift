@@ -97,6 +97,7 @@ struct KalRoot: View {
         .animation(sheetAnim, value: s.detId)
         .animation(sheetAnim, value: s.newForm != nil)
         .animation(sheetAnim, value: s.drawerOpen)
+        .animation(reduce ? Animation.easeOut(duration: 0.2) : Animation.timingCurve(0.2, 0.8, 0.2, 1, duration: 0.28), value: s.settingsOpen)
         .animation(.easeOut(duration: 0.2), value: s.searchOpen)
         .animation(.easeOut(duration: 0.2), value: s.toast)
     }
@@ -108,12 +109,26 @@ struct KalRoot: View {
     }
 
     private var main: some View {
+        // Prompt 35 (tastatur): toppfeltet og skrivefeltet har fast høyde og prioritet; bare visningen krymper når tastaturet kommer.
+        // Uten minHeight 0 kunne innholdet ikke krympe, VStack-en ble høyere enn skjermen og toppen havnet under statuslinjen
+        // mens skrivefeltet havnet bak tastaturet.
         VStack(spacing: 0) {
             KalHeader()
+                .fixedSize(horizontal: false, vertical: true)
+                .layoutPriority(2)
             ZStack(alignment: .bottom) {
-                content
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .simultaneousGesture(swipe)
+                // Prompt 35: zoom mellom visningene – den nye visningen vokser fra trykk-/klypepunktet. «Uken starter» bygger alt på nytt.
+                ZStack {
+                    content
+                        .id(s.view + "|" + s.weekStart)
+                        .transition(zoomTransition)
+                }
+                .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+                .clipped()
+                .contentShape(Rectangle())
+                .simultaneousGesture(swipe)
+                .simultaneousGesture(pinch)
+                .overlay { keyboardCatcher }
                 if let toast = s.toast {
                     KalToastView(toast: toast)
                         .padding(.horizontal, 14)
@@ -121,7 +136,11 @@ struct KalRoot: View {
                         .transition(.opacity.combined(with: .offset(y: 10)))
                 }
             }
+            .frame(minHeight: 0, maxHeight: .infinity)
+            .layoutPriority(0)
             KalComposer()
+                .fixedSize(horizontal: false, vertical: true)
+                .layoutPriority(2)
         }
     }
 
@@ -131,6 +150,34 @@ struct KalRoot: View {
         case "uke", "3d", "dag": KalGridView()
         case "liste": KalListView()
         default: KalMonthView()
+        }
+    }
+
+    /// Prompt 35: inn = scale(.55) → 1 + fade, ut = scale(1.6) → 1, fra punktet man trykket. «Reduser bevegelse»: bare fade.
+    private var zoomTransition: AnyTransition {
+        if reduce { return AnyTransition.opacity }
+        let from: CGFloat = s.zoomInward ? 0.55 : 1.6
+        let ins: AnyTransition = AnyTransition.scale(scale: from, anchor: s.zoomOrigin).combined(with: .opacity)
+        return AnyTransition.asymmetric(insertion: ins, removal: .opacity)
+    }
+
+    /// Spre to fingre (> 1,22×) zoomer inn fra punktet, klyp sammen (< 0,82×) zoomer ut.
+    private var pinch: some Gesture {
+        MagnifyGesture(minimumScaleDelta: 0.05).onEnded { (v: MagnifyGesture.Value) in
+            s.pinch(v.magnification, at: v.startAnchor)
+        }
+    }
+
+    /// Prompt 35: trykk utenfor feltet lukker tastaturet (laget finnes bare mens feltet har fokus).
+    @ViewBuilder private var keyboardCatcher: some View {
+        if KalComposerModel.shared.focused {
+            Color.black.opacity(0.001)
+                .contentShape(Rectangle())
+                .onTapGesture { KalComposerModel.shared.focused = false }
+                .gesture(DragGesture(minimumDistance: 12).onEnded { (v: DragGesture.Value) in
+                    if v.translation.height > 20 { KalComposerModel.shared.focused = false }
+                })
+                .accessibilityHidden(true)
         }
     }
 
@@ -189,6 +236,12 @@ struct KalRoot: View {
                 .ignoresSafeArea(.container, edges: .all)
                 .transition(drawerIn)
                 .zIndex(52)
+        }
+        // Prompt 35: Innstillinger glir inn fra høyre over hele skjermen (0,28 s).
+        if s.settingsOpen {
+            KalSettings35View()
+                .transition(reduce ? AnyTransition.opacity : AnyTransition.move(edge: .trailing))
+                .zIndex(60)
         }
     }
 }

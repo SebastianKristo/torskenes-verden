@@ -11,8 +11,9 @@ struct MacMonthView: View {
 
     private var first: Date { KalD.firstOfMonth(KalD.date(win.anchor)) }
 
+    /// Prompt 35: «Uken starter» (mandag/søndag).
     private var weeks: [Date] {
-        let start: Date = KalD.monday(first)
+        let start: Date = KalWeek35.start(first)
         return (0..<6).map { (i: Int) -> Date in KalD.add(start, i * 7) }
     }
 
@@ -20,8 +21,8 @@ struct MacMonthView: View {
         VStack(spacing: 0) {
             head
             VStack(spacing: 0) {
-                ForEach(weeks, id: \.self) { (w: Date) in
-                    MacMonthRow(win: win, week: w, month: KalD.month(first))
+                ForEach(0..<weeks.count, id: \.self) { (i: Int) in
+                    MacMonthRow(win: win, week: weeks[i], month: KalD.month(first), row: i)
                 }
             }
             .frame(maxHeight: .infinity)
@@ -32,11 +33,11 @@ struct MacMonthView: View {
 
     private var head: some View {
         HStack(spacing: 0) {
-            if store.showWeeks { Text("U").font(MacFont.mono(10)).foregroundColor(t.mut2).frame(width: 28) }
+            if store.showWeeks { Text("U").font(MacFont.monoHeavy(11)).foregroundColor(t.ink).frame(width: 28) }
             ForEach(0..<7, id: \.self) { (i: Int) in
-                Text(KalD.cap(KalD.weekdaysShort[(i + 1) % 7]).uppercased())
+                Text(KalWeek35.shortNames[i].uppercased())
                     .font(MacFont.mono(10)).tracking(1)
-                    .foregroundColor(i == 6 ? t.sunday : t.mut)
+                    .foregroundColor(KalWeek35.isSunday(i) ? t.sunday : t.mut)
                     .frame(maxWidth: .infinity)
             }
         }
@@ -51,19 +52,23 @@ struct MacMonthRow: View {
     @ObservedObject var store: MacStore = MacStore.shared
     let week: Date
     let month: Int
+    var row: Int = 0
 
     var body: some View {
+        let wk: Int = KalWeek35.weekNo(week)
         HStack(spacing: 0) {
             if store.showWeeks {
-                Button(action: { win.go(view: "uke", day: KalD.key(week)) }) {
-                    Text(String(KalD.isoWeek(week))).font(MacFont.mono(10)).foregroundColor(t.mut2)
+                // Prompt 35: ukenummer i mono 800, 12,5 pt, full tekstfarge, uten bakgrunn.
+                Button(action: { win.zoomTo("uke", day: KalD.key(week), origin: UnitPoint(x: 0.05, y: (CGFloat(row) + 0.5) / 6), inward: true) }) {
+                    Text(String(wk)).font(MacFont.monoHeavy(12.5)).foregroundColor(t.ink)
                         .frame(width: 28).frame(maxHeight: .infinity, alignment: .top).padding(.top, 8)
                 }
                 .buttonStyle(.plain)
-                .help("Uke " + String(KalD.isoWeek(week)))
+                .help("Uke " + String(wk))
             }
             ForEach(0..<7, id: \.self) { (i: Int) in
-                MacMonthCell(win: win, day: KalD.add(week, i), month: month)
+                MacMonthCell(win: win, day: KalD.add(week, i), month: month,
+                             origin: UnitPoint(x: (CGFloat(i) + 0.5) / 7, y: (CGFloat(row) + 0.5) / 6))
             }
         }
         .frame(maxHeight: .infinity)
@@ -77,6 +82,7 @@ struct MacMonthCell: View {
     @ObservedObject var store: MacStore = MacStore.shared
     let day: Date
     let month: Int
+    var origin: UnitPoint = .center
     @State private var hover: Bool = false
 
     var body: some View {
@@ -104,7 +110,8 @@ struct MacMonthCell: View {
         .contentShape(Rectangle())
         .onHover { (h: Bool) in hover = h }
         .onTapGesture(count: 2) { win.openNew(day: k) }
-        .onTapGesture { win.go(view: "dag", day: k) }
+        // Prompt 35: klikk på en dag zoomer inn til Uke (uka med dagen), fra dagen.
+        .onTapGesture { win.zoomTo("uke", day: k, origin: origin, inward: true) }
     }
 
     private func top(_ k: String, today: Bool, inMonth: Bool) -> some View {
@@ -177,7 +184,8 @@ struct MacYearView: View {
         ScrollView {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 22), count: 4), spacing: 22) {
                 ForEach(1...12, id: \.self) { (m: Int) in
-                    MacYearMonth(win: win, first: KalQuick.makeDate(year, m, 1) ?? Date())
+                    MacYearMonth(win: win, first: KalQuick.makeDate(year, m, 1) ?? Date(),
+                                 origin: UnitPoint(x: (CGFloat((m - 1) % 4) + 0.5) / 4, y: (CGFloat((m - 1) / 4) + 0.5) / 3))
                 }
             }
             .padding(22)
@@ -189,11 +197,12 @@ struct MacYearMonth: View {
     @Environment(\.mk) private var t
     @ObservedObject var win: MacWin
     let first: Date
+    var origin: UnitPoint = .center
 
     var body: some View {
         let isThis: Bool = KalD.year(first) == KalD.year(Date()) && KalD.month(first) == KalD.month(Date())
         VStack(alignment: .leading, spacing: 6) {
-            Button(action: { win.go(view: "mnd", day: KalD.key(first)) }) {
+            Button(action: { win.zoomTo("mnd", day: KalD.key(first), origin: origin, inward: true) }) {
                 Text(KalD.cap(KalD.months[KalD.month(first) - 1]))
                     .font(MacFont.serif(19)).foregroundColor(isThis ? t.acc : t.ink)
             }
@@ -246,10 +255,12 @@ struct MacListDay: View {
         let d: Date = KalD.date(k)
         let list: [KalEvent] = store.on(k)
         let tk: String = KalD.todayKey()
-        let showWeek: Bool = KalD.wdMon(d) == 0 && k != tk
+        // Prompt 35: «Uken starter» og «UKE 43» i mono 800, 12 pt, full tekstfarge.
+        let showWeek: Bool = KalWeek35.col(d) == 0 && k != tk
         VStack(alignment: .leading, spacing: 0) {
             if showWeek {
-                MacLabel(text: "UKE " + String(KalD.isoWeek(d))).padding(.top, 14).padding(.bottom, 4)
+                Text("UKE " + String(KalWeek35.weekNo(d))).font(MacFont.monoHeavy(12)).tracking(1.2).foregroundColor(t.ink)
+                    .padding(.top, 14).padding(.bottom, 4)
             }
             if !list.isEmpty || k == tk {
                 HStack(alignment: .top, spacing: 16) {

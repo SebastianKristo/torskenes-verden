@@ -79,6 +79,9 @@ enum KalFont {
     }
 
     static func mono(_ size: CGFloat) -> Font { .custom("IBMPlexMono-SemiBold", size: size, relativeTo: .caption) }
+
+    /// Prompt 35: ukenummer i mono 800 (IBM Plex Mono finnes bare i 600 i appen, så systemets mono heavy brukes).
+    static func monoHeavy(_ size: CGFloat) -> Font { .system(size: size, weight: .heavy, design: .monospaced) }
 }
 
 /// Lett haptikk ved alle bytter (vibe() i fasiten).

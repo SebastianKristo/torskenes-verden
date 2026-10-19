@@ -52,15 +52,19 @@ enum KalNotify {
 
     static func plans(_ events: [KalEvent], now: Date) -> [Plan] {
         var out: [Plan] = []
+        // Prompt 35: Innstillinger → VARSLER (Bursdager kl. 09, Studiefrister 3 d / 1 d).
+        let bdOn: Bool = (UserDefaults.standard.object(forKey: "kal.nBd") as? Bool) ?? true
+        let frOn: Bool = (UserDefaults.standard.object(forKey: "kal.nFr") as? Bool) ?? true
         for e in events {
             if e.cont { continue }
             if e.kind == "bursdag" || e.cal == "b" {
+                if !bdOn { continue }
                 let at: Date = KalD.at(e.day, 9 * 60)
                 if at > now { out.append(Plan(id: prefix + "b-" + e.id, at: at, title: e.title, body: "Bursdag i dag", link: link(e), loc: "")) }
                 continue
             }
             if e.kind == "frist" {
-                for d in [3, 1] {
+                for d in [3, 1] where frOn {
                     let at: Date = KalD.at(KalD.addKey(e.day, -d), 9 * 60)
                     if at > now {
                         let body: String = (d == 1 ? "I morgen" : "Om 3 dager") + (e.s == nil ? "" : " kl. " + KalD.hm(e.startMin))

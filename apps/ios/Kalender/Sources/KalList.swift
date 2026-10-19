@@ -23,7 +23,7 @@ struct KalListView: View {
         for i in 0..<42 {
             let k: String = KalD.addKey(tk, i)
             if s.on(k).isEmpty && i > 0 { continue }
-            let w: Int = KalD.isoWeek(KalD.date(k))
+            let w: Int = KalWeek35.weekNo(KalWeek35.start(KalD.date(k)))
             let label: String? = (w != lastWeek && i > 0) ? "UKE " + String(w) : nil
             out.append(KalAgendaDay(key: k, index: i, weekLabel: label))
             lastWeek = w
@@ -92,7 +92,8 @@ struct KalAgendaHeader: View {
         let wx: KalWxDay? = s.weather(day.key)
         VStack(alignment: .leading, spacing: 0) {
             if let w = day.weekLabel {
-                Text(w).font(KalFont.mono(10)).tracking(1.4).foregroundStyle(t.mut2)
+                // Prompt 35: «UKE 43» i mono 800, 12 pt, full tekstfarge.
+                Text(w).font(KalFont.monoHeavy(12)).tracking(1.2).foregroundStyle(t.ink)
                     .padding(.top, 14).padding(.bottom, 2).padding(.horizontal, 2)
             }
             HStack(alignment: .firstTextBaseline, spacing: 10) {
