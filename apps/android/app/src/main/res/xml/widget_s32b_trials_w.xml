@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Prompt 32: Prøveperioder · Samsung 4 × 2 (gjennomsiktig hvit, radius 28, «Avslutt …»-pille). Av til appen ser Samsung. -->
+<!-- Prompt 32: Prøveperioder · Samsung 4 × 2 (gjennomsiktig hvit, radius 28, «Avslutt …»-pille). På fra installasjonen; slås av på andre telefoner (Widgets33.fix). -->
+<!-- Prompt 33: previewLayout/previewImage (eksempeldata i galleriet; uten dem viser One UI og enkelte launchere en tom
+     rute eller sorterer widgeten bort) og keyguard (låseskjerm der telefonen støtter det). -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_s32b_trials_w_desc"
     android:initialLayout="@layout/glance_default_loading_layout"
+    android:previewLayout="@layout/trials33_prev_sw"
+    android:previewImage="@drawable/trials33_prev_sw"
     android:minWidth="296dp"
     android:minHeight="155dp"
     android:minResizeWidth="250dp"
@@ -11,4 +15,4 @@
     android:targetCellHeight="2"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="0"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen|keyguard" />

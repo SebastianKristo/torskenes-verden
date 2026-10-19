@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Tematisk ikon (Material You, Android 13+): topplinje og månedsark i én farge. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M29,30h50v9h-50z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M33,53h6v6h-6zM43,53h6v6h-6zM53,53h6v6h-6zM63,53h6v6h-6zM73,53h6v6h-6zM33,63h6v6h-6zM43,63h6v6h-6zM63,63h6v6h-6zM73,63h6v6h-6zM33,73h6v6h-6zM43,73h6v6h-6zM53,73h6v6h-6zM63,73h6v6h-6z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M51.5,66a4.5,4.5 0 1,0 9,0a4.5,4.5 0 1,0 -9,0z" />
+</vector>

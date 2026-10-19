@@ -421,7 +421,9 @@ private fun AppViewModel.loadKalLayout26() {
 
 /* ---------- Åpne, hente og lukke ---------- */
 
-fun AppViewModel.openKal26(selId: String? = null) {
+/** Prompt 33: native = true åpner Kalender-appen (kalender://…) når den er installert; false = alltid Homelabs egen kalender. */
+fun AppViewModel.openKal26(selId: String? = null, native: Boolean = true) {
+    if (native && openKalApp33(selId)) return
     val s = kal26
     s.open = true
     s.edit = false

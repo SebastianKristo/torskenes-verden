@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Papir lys: bakgrunn #f3efe6. Compose tegner resten (lys/mørk etter valget i sidemenyen → UTSEENDE). -->
+    <style name="Theme.Kalender" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/kal_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

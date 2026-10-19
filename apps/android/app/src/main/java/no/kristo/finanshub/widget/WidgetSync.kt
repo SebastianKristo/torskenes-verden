@@ -87,6 +87,8 @@ object WidgetSync {
         WorkManager.getInstance(ctx).enqueueUniquePeriodicWork(PERIODIC, ExistingPeriodicWorkPolicy.KEEP, req)
         // Prompt 24: Samsung-widgetene (bare på Samsung) og bursdagene like etter midnatt.
         runCatching { S24.enableProviders(ctx) }
+        // Prompt 33: Samsung-variantene av prøveperiode-widgetene er på fra installasjonen; av på andre telefoner.
+        runCatching { no.kristo.finanshub.Widgets33.fix(ctx) }
         runCatching { S24.scheduleMidnight(ctx) }
         // Prompt 27: Ruter-widgetene hentes hvert 5. minutt så lenge en av dem ligger på hjemskjermen.
         runCatching { Ruter27Widgets.ensure(ctx) }

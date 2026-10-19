@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Prompt 32: Prøveperioder 4 × 2 (Material You, ≈ 356 × 170 dp, radius 28): hovedkort med Avsluttet og chips for de neste. -->
+<!-- Prompt 33: previewLayout/previewImage (eksempeldata i galleriet; uten dem viser One UI og enkelte launchere en tom
+     rute eller sorterer widgeten bort) og keyguard (låseskjerm der telefonen støtter det). -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_trials32b_m_desc"
     android:initialLayout="@layout/glance_default_loading_layout"
+    android:previewLayout="@layout/trials33_prev_m"
+    android:previewImage="@drawable/trials33_prev_m"
     android:minWidth="250dp"
     android:minHeight="110dp"
     android:minResizeWidth="180dp"
@@ -11,4 +15,4 @@
     android:targetCellHeight="2"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="0"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen|keyguard" />

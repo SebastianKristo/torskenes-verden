@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 33: forhåndsvisning i widgetgalleriet (Android 12+) med eksempeldata (Viaplay 2 dager · Storytel 9 · HBO Max 23). -->
+<ImageView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:scaleType="fitCenter" android:src="@drawable/trials33_prev_s"
+    android:contentDescription="Prøveperioder" />

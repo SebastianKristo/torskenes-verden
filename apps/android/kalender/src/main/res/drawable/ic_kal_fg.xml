@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Kalender-ikonet, forgrunn (innenfor den trygge sonen 21–87): to ringer i den røde toppen og et lite månedsark
+     med dagens dag som rød sirkel. Android-launchere lar ikke andre apper enn systemkalenderen bytte ikon hver dag,
+     så datoen vises i widgetene og i appen (se rapporten). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- ringer -->
+    <path android:fillColor="#FFFDF8" android:pathData="M40,34a3,3 0 1,0 6,0a3,3 0 1,0 -6,0z" />
+    <path android:fillColor="#FFFDF8" android:pathData="M62,34a3,3 0 1,0 6,0a3,3 0 1,0 -6,0z" />
+    <!-- tre uker à fem dager (blekk) -->
+    <path android:fillColor="#1B1A17" android:pathData="M33,53h6v6h-6zM43,53h6v6h-6zM53,53h6v6h-6zM63,53h6v6h-6zM73,53h6v6h-6z" />
+    <path android:fillColor="#1B1A17" android:pathData="M33,63h6v6h-6zM43,63h6v6h-6zM63,63h6v6h-6zM73,63h6v6h-6z" />
+    <path android:fillColor="#1B1A17" android:pathData="M33,73h6v6h-6zM43,73h6v6h-6zM53,73h6v6h-6z" />
+    <!-- i dag -->
+    <path android:fillColor="#B23A2A" android:pathData="M51.5,66a4.5,4.5 0 1,0 9,0a4.5,4.5 0 1,0 -9,0z" />
+    <!-- søndag i rødt -->
+    <path android:fillColor="#B23A2A" android:pathData="M63,73h6v6h-6z" />
+</vector>

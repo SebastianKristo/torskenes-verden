@@ -43,6 +43,7 @@ import no.kristo.finanshub.Haptics
 import no.kristo.finanshub.Screen
 import no.kristo.finanshub.noUrl31
 import no.kristo.finanshub.openKal26
+import no.kristo.finanshub.openKalApp33
 import org.json.JSONObject
 import java.time.LocalDate
 
@@ -146,7 +147,8 @@ private fun WxGlyph31(ic: String?, size: Int) {
 private fun CalendarCard31(vm: AppViewModel, o: JSONObject, v: ChatV27) {
     val items = o.arr31("items", "events")
     val date = o.c31("date")?.let { runCatching { LocalDate.parse(it.take(10)) }.getOrNull() }
-    val open = { Haptics.select(); vm.openKal26(); if (date != null) vm.kal26.cur = date }
+    // Prompt 33: Kalender-appen på riktig dag (ellers Agenda); uten Kalender-appen Homelabs egen kalender som før.
+    val open = { Haptics.select(); if (!vm.openKalApp33(date = date, list = date == null)) { vm.openKal26(native = false); if (date != null) vm.kal26.cur = date } }
     Column(
         Modifier.widthIn(max = 420.dp).fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(v.card).border(1.dp, v.line, RoundedCornerShape(22.dp))
             .clickable(role = Role.Button, onClickLabel = "Åpne Kalender") { open() }.padding(horizontal = 16.dp, vertical = 14.dp),

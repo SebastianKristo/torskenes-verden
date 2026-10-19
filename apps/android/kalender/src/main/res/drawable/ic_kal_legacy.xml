@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Ikonet på Android 7 (minSdk 26 bruker adaptive-icon; denne er bare reserve for verktøy som ber om en drawable). -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@drawable/ic_kal_bg" />
+    <item android:drawable="@drawable/ic_kal_fg" />
+</layer-list>

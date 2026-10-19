@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Prompt 33: Kalender – egen app (no.kristo.kalender). Deler konto og data med Homelab via samme server og API. -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Varsler for hendelser, bursdager og frister (Android 13+ spør brukeren). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Kalender-apper får bruke eksakte alarmer (Android 13+). Eldre: SCHEDULE_EXACT_ALARM. -->
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" android:maxSdkVersion="32" />
+    <!-- Varslene planlegges på nytt etter omstart. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- «Logg inn med Homelab-appen»: Homelab gir server-adresse og et eget token via en ContentProvider som bare apper
+         signert med samme nøkkel (signing/sideload.jks) får lov til å spørre. Tillatelsen defineres i begge appene,
+         så rekkefølgen de installeres i ikke betyr noe. -->
+    <permission
+        android:name="no.kristo.finanshub.permission.KALENDER_LOGIN"
+        android:label="Innlogging fra Homelab"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="no.kristo.finanshub.permission.KALENDER_LOGIN" />
+
+    <queries>
+        <!-- Homelab-appen (innlogging og «◀ Homelab»). -->
+        <package android:name="no.kristo.finanshub" />
+        <!-- «Vis vei» i varselet. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".KalApplication"
+        android:label="Kalender"
+        android:icon="@mipmap/ic_kal"
+        android:roundIcon="@mipmap/ic_kal_round"
+        android:theme="@style/Theme.Kalender"
+        android:allowBackup="false"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:supportsRtl="true"
+        android:enableOnBackInvokedCallback="true">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- kalender://, kalender://dag/2026-10-21, kalender://hendelse?id=…, kalender://liste, kalender://ny?text=… -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="kalender" />
+            </intent-filter>
+            <!-- https://kalender.kristo.no/d/2026-10-21 (App Links; verifiseres bare hvis domenet har assetlinks.json). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="kalender.kristo.no" />
+            </intent-filter>
+            <!-- Del → Kalender: en SMS eller e-post blir en hendelse (Glimt tolker teksten). -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+            <!-- Snarveien «Ny hendelse» (hold inne på ikonet). -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/kal_shortcuts" />
+        </activity>
+
+        <!-- Varsler: alarmen, «Utsett 10 min» og omstart. Bare appen selv (og systemet ved omstart) sender hit. -->
+        <receiver android:name=".KalAlarmReceiver" android:exported="false" />
+        <receiver android:name=".KalBootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Hjemskjerm-widgets (Glance). exported=true, label, description, previewLayout/previewImage og targetCell* er satt,
+             ellers filtrerer noen launchere (Samsung One UI) dem bort. -->
+        <receiver android:name=".widget.KalDateReceiver" android:exported="true" android:enabled="true" android:label="Kalender · dato">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/kal_widget_date" />
+        </receiver>
+        <receiver android:name=".widget.KalNextReceiver" android:exported="true" android:enabled="true" android:label="Kalender · neste">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/kal_widget_next" />
+        </receiver>
+        <receiver android:name=".widget.KalAgendaReceiver" android:exported="true" android:enabled="true" android:label="Kalender · i dag og i morgen">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/kal_widget_agenda" />
+        </receiver>
+        <receiver android:name=".widget.KalClockReceiver" android:exported="true" android:enabled="true" android:label="Kalender · klokke">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/kal_widget_clock" />
+        </receiver>
+    </application>
+</manifest>

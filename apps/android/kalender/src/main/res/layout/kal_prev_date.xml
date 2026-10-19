@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Forhåndsvisning i widgetgalleriet (Android 12+): eksempeldata. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="16dp" android:background="@drawable/kal_w_card">
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="TIRSDAG"
+        android:textColor="@color/kal_acc" android:textSize="10.5sp" android:fontFamily="monospace" android:letterSpacing="0.12" android:textStyle="bold" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="21"
+        android:textColor="@color/kal_ink" android:textSize="52sp" android:fontFamily="serif" android:includeFontPadding="false" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="oktober 2026 · uke 43"
+        android:textColor="@color/kal_mut" android:textSize="12sp" />
+    <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="☁ 9° / 4°"
+        android:textColor="@color/kal_ink" android:textSize="13sp" android:fontFamily="monospace" />
+</LinearLayout>

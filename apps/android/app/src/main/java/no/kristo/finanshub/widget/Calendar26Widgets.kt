@@ -193,9 +193,11 @@ class S24KalReceiver26L : Receiver24() { override val glanceAppWidget: GlanceApp
 
 /* ---------------- Felles ---------------- */
 
+/** Prompt 33: Kalender-appen (kalender://hendelse?id=… / kalender://) når den er installert, ellers Homelabs kalender. */
 private fun openKal(ctx: Context, id: String? = null): Action = actionStartActivity(
-    Intent(Intent.ACTION_VIEW, Uri.parse("finanshub://kalender" + (id?.let { "?id=" + Uri.encode(it) } ?: "")), ctx, MainActivity::class.java)
-        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),
+    no.kristo.finanshub.KalenderApp33.intent(ctx, if (id != null) no.kristo.finanshub.KalenderApp33.eventPath(Kal26WidgetStore.current(ctx).firstOrNull { it.id == id }, id) else "")
+        ?: Intent(Intent.ACTION_VIEW, Uri.parse("finanshub://kalender" + (id?.let { "?id=" + Uri.encode(it) } ?: "")), ctx, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),
 )
 
 private fun kcp(c: Long) = ColorProvider(Color(c))

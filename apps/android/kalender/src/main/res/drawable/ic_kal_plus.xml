@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Snarveien «Ny hendelse»: rød squircle med +. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp" android:height="48dp" android:viewportWidth="48" android:viewportHeight="48">
+    <path android:fillColor="#B23A2A" android:pathData="M16,0h16a16,16 0 0,1 16,16v16a16,16 0 0,1 -16,16h-16a16,16 0 0,1 -16,-16v-16a16,16 0 0,1 16,-16z" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="4" android:strokeLineCap="round" android:pathData="M24,13v22M13,24h22" />
+</vector>

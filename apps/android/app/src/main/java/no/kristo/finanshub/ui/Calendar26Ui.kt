@@ -92,7 +92,8 @@ internal fun HomeKalCard26(vm: AppViewModel) {
             Text(w.dayT + " ›", color = p.mut, fontSize = 12.sp, maxLines = 1)
         }
         if (s.events == null) { Text("Henter kalenderen …", color = p.mut, fontSize = 13.sp); return@Column }
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Prompt 33: trykk på en time/hendelse åpner den i Kalender-appen (kalender://hendelse?…), resten av kortet i dag.
+        Row(Modifier.fillMaxWidth().then(if (w.evId != null) Modifier.press24 { vm.openKal26(w.evId) } else Modifier), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.size(5.dp, 44.dp).clip(RoundedCornerShape(3.dp)).background(Color(w.color)))
             Column(Modifier.weight(1f)) {
                 PSerif(w.title, 22.sp, maxLines = 1)
@@ -105,7 +106,7 @@ internal fun HomeKalCard26(vm: AppViewModel) {
         }
         if (w.n3.isNotEmpty()) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             w.n3.forEach { e ->
-                Row(Modifier.weight(1f).height(IntrinsicSize.Min).clip(RoundedCornerShape(12.dp)).background(p.bg)) {
+                Row(Modifier.weight(1f).height(IntrinsicSize.Min).clip(RoundedCornerShape(12.dp)).background(p.bg).press24 { vm.openKal26(e.id) }) {
                     Box(Modifier.width(3.dp).fillMaxHeight().background(Color(e.color)))
                     Column(Modifier.padding(start = 6.dp, top = 7.dp, end = 9.dp, bottom = 7.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(e.s, color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Medium, fontSize = 12.sp, maxLines = 1)
@@ -117,7 +118,7 @@ internal fun HomeKalCard26(vm: AppViewModel) {
         w.ex.firstOrNull()?.let { x ->
             Column {
                 Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
-                Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth().press24 { vm.openKal26(x.id) }.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     KMono("NESTE PRØVE", p.lab, 10.sp, spacing = .8.sp)
                     Text(x.title, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     Box(Modifier.clip(CircleShape).background(if (x.red) Color(KAL_LAB) else p.bg).padding(horizontal = 8.dp, vertical = 3.dp)) {

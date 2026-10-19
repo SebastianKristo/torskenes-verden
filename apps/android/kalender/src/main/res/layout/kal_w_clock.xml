@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Stablet klokke (Kalender App.dc.html, Android-låseskjermen: 128 px Newsreader, «14» over «05»). TextClock oppdaterer seg
+     selv hvert minutt uten at widgeten må tegnes på nytt. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content" android:layout_height="wrap_content" android:orientation="vertical">
+    <TextClock android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:format12Hour="HH" android:format24Hour="HH" android:fontFamily="serif" android:textSize="54sp"
+        android:includeFontPadding="false" android:textColor="#FFFFFFFF" android:shadowColor="#66000000" android:shadowRadius="8" android:shadowDy="1" />
+    <TextClock android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:format12Hour="mm" android:format24Hour="mm" android:fontFamily="serif" android:textSize="54sp"
+        android:includeFontPadding="false" android:layout_marginTop="-8dp" android:textColor="#FFFFFFFF" android:shadowColor="#66000000" android:shadowRadius="8" android:shadowDy="1" />
+</LinearLayout>

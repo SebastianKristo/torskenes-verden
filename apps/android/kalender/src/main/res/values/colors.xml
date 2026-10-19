@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="kal_bg">#F3EFE6</color>
+    <color name="kal_card">#FFFDF8</color>
+    <color name="kal_ink">#1B1A17</color>
+    <color name="kal_mut">#6B665C</color>
+    <color name="kal_line">#E6DFD1</color>
+    <color name="kal_acc">#B23A2A</color>
+    <color name="kal_icon_bg">#FFFDF8</color>
+</resources>

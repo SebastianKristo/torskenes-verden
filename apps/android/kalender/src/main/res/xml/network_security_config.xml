@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Homelab nås ofte på http://192.168.x.x eller http://server.local på lokalt nett.
+  Android 9+ blokkerer klartekst uten denne filen. Brukerinstallerte CA-er tillates
+  slik at et selvsignert sertifikat for homelab kan installeres på telefonen.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

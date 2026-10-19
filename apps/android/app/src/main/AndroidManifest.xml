@@ -25,8 +25,16 @@
     <!-- Prompt 32 (APKUPD): appen kan laste ned og installere sin egen oppdatering (PackageInstaller). -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
+    <!-- Prompt 33: «Logg inn med Homelab-appen» i Kalender-appen (no.kristo.kalender). Bare apper med samme signeringsnøkkel. -->
+    <permission
+        android:name="no.kristo.finanshub.permission.KALENDER_LOGIN"
+        android:label="Innlogging fra Homelab"
+        android:protectionLevel="signature" />
+
     <queries>
         <package android:name="com.google.android.apps.healthdata" />
+        <!-- Prompt 33: Kalender-appen (åpnes med kalender://… for alt kalender-relatert, ellers Homelabs egen kalender). -->
+        <package android:name="no.kristo.kalender" />
         <!-- Prompt 27: talegjenkjenning og opplesing (Android 11+ må kunne se tjenestene). -->
         <intent><action android:name="android.speech.RecognitionService" /></intent>
         <intent><action android:name="android.intent.action.TTS_SERVICE" /></intent>
@@ -552,14 +560,23 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_trials32b_m" />
         </receiver>
-        <receiver android:name=".widget.S32bTrialsSmallReceiver" android:exported="true" android:enabled="false" android:label="Prøveperioder · Samsung">
+        <!-- Prompt 33: Samsung-variantene er på fra installasjonen (One UI Home viste dem ikke før den ble startet på nytt når de ble
+             slått på senere) og slås av på andre telefoner (Widgets33.fix). -->
+        <receiver android:name=".widget.S32bTrialsSmallReceiver" android:exported="true" android:enabled="true" android:label="Prøveperioder · Samsung">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s32b_trials_s" />
         </receiver>
-        <receiver android:name=".widget.S32bTrialsWideReceiver" android:exported="true" android:enabled="false" android:label="Prøveperioder 4×2 · Samsung">
+        <receiver android:name=".widget.S32bTrialsWideReceiver" android:exported="true" android:enabled="true" android:label="Prøveperioder 4×2 · Samsung">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_s32b_trials_w" />
         </receiver>
+
+        <!-- Prompt 33: server-adresse og et eget token til Kalender-appen (call «companion»). -->
+        <provider
+            android:name=".KalenderLoginProvider33"
+            android:authorities="no.kristo.finanshub.kalender"
+            android:exported="true"
+            android:permission="no.kristo.finanshub.permission.KALENDER_LOGIN" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

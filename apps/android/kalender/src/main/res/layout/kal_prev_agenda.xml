@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:paddingStart="16dp" android:paddingEnd="16dp" android:paddingTop="16dp" android:paddingBottom="10dp" android:background="@drawable/kal_w_card">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingBottom="6dp">
+        <TextView android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="I dag og i morgen"
+            android:textColor="@color/kal_ink" android:textSize="22sp" android:fontFamily="serif" />
+        <TextView android:layout_width="36dp" android:layout_height="36dp" android:gravity="center" android:text="+" android:textSize="20sp"
+            android:textColor="@color/kal_bg" android:background="@drawable/kal_w_plus" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingTop="7dp" android:paddingBottom="7dp" android:gravity="center_vertical">
+        <FrameLayout android:layout_width="4dp" android:layout_height="28dp" android:background="#3D7F8A" />
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:paddingStart="10dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tannlege" android:textColor="@color/kal_ink" android:textSize="13.5sp" android:textStyle="bold" android:maxLines="1" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Tannhelse Bislett" android:textColor="@color/kal_mut" android:textSize="11.5sp" android:maxLines="1" />
+        </LinearLayout>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="15:15–16:00" android:textColor="@color/kal_mut" android:textSize="11.5sp" android:fontFamily="monospace" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingTop="7dp" android:paddingBottom="7dp" android:gravity="center_vertical">
+        <FrameLayout android:layout_width="4dp" android:layout_height="28dp" android:background="#B23A2A" />
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:paddingStart="10dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Hent pakke" android:textColor="@color/kal_ink" android:textSize="13.5sp" android:textStyle="bold" android:maxLines="1" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Coop Mega" android:textColor="@color/kal_mut" android:textSize="11.5sp" android:maxLines="1" />
+        </LinearLayout>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="17:00–17:15" android:textColor="@color/kal_mut" android:textSize="11.5sp" android:fontFamily="monospace" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:paddingTop="7dp" android:paddingBottom="7dp" android:gravity="center_vertical">
+        <FrameLayout android:layout_width="4dp" android:layout_height="28dp" android:background="#B23A2A" />
+        <LinearLayout android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:orientation="vertical" android:paddingStart="10dp">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Kino · Dune 3" android:textColor="@color/kal_ink" android:textSize="13.5sp" android:textStyle="bold" android:maxLines="1" />
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Colosseum" android:textColor="@color/kal_mut" android:textSize="11.5sp" android:maxLines="1" />
+        </LinearLayout>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="I morgen · 20:00" android:textColor="@color/kal_mut" android:textSize="11.5sp" android:fontFamily="monospace" />
+    </LinearLayout>
+</LinearLayout>

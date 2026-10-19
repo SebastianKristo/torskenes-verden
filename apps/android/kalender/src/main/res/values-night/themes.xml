@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mørkt tema (THM.dark): bakgrunn #161513. -->
+    <style name="Theme.Kalender" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/kal_bg</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hold inne på Kalender-ikonet: «Ny hendelse» (åpner skrivefeltet med Glimt), «I dag» og «Agenda». -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="ny" android:enabled="true" android:icon="@drawable/ic_kal_plus"
+        android:shortcutShortLabel="@string/kal_shortcut_new" android:shortcutLongLabel="@string/kal_shortcut_new_long">
+        <intent android:action="android.intent.action.VIEW" android:data="kalender://ny"
+            android:targetPackage="no.kristo.kalender" android:targetClass="no.kristo.kalender.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="idag" android:enabled="true" android:icon="@mipmap/ic_kal"
+        android:shortcutShortLabel="@string/kal_shortcut_today">
+        <intent android:action="android.intent.action.VIEW" android:data="kalender://dag/idag"
+            android:targetPackage="no.kristo.kalender" android:targetClass="no.kristo.kalender.MainActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="liste" android:enabled="true" android:icon="@drawable/ic_kal_list"
+        android:shortcutShortLabel="@string/kal_shortcut_list">
+        <intent android:action="android.intent.action.VIEW" android:data="kalender://liste"
+            android:targetPackage="no.kristo.kalender" android:targetClass="no.kristo.kalender.MainActivity" />
+    </shortcut>
+</shortcuts>

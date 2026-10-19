@@ -52,12 +52,14 @@ jobs:
               -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
               -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
             cp app/build/outputs/apk/release/app-release.apk "../../dist/FinansHub-$V.apk"
+            cp kalender/build/outputs/apk/release/kalender-release.apk "../../dist/Kalender-$V.apk" || echo "Advarsel: fant ikke Kalender-APK"
             rm -f "$RUNNER_TEMP/release.keystore"
           else
             # Uten egen nøkkel: release-bygg signert med den faste sideload-nøkkelen i repoet,
             # så nye versjoner kan installeres rett over den forrige.
             ./gradlew --no-daemon assembleRelease -PversionName="$V" -PversionCode=$((1000 + ${{ github.run_number }}))
             cp app/build/outputs/apk/release/app-release.apk "../../dist/FinansHub-$V.apk"
+            cp kalender/build/outputs/apk/release/kalender-release.apk "../../dist/Kalender-$V.apk" || echo "Advarsel: fant ikke Kalender-APK"
           fi
       - uses: actions/upload-artifact@v4
         with:

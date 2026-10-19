@@ -14,3 +14,5 @@ dependencyResolutionManagement {
 }
 rootProject.name = "FinansHub"
 include(":app")
+// Prompt 33: Kalender – egen app (no.kristo.kalender) som deler konto og data med Homelab.
+include(":kalender")

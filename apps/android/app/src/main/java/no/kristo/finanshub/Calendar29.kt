@@ -236,7 +236,7 @@ fun AppViewModel.closeQuick29() { q29.open = false; q29.parseJob?.cancel() }
 fun AppViewModel.shareText29(text: String) {
     val t = text.trim()
     if (t.isEmpty()) return
-    if (!kal26.open) openKal26()
+    if (!kal26.open) openKal26(native = false)
     openQuick29(t)
 }
 
@@ -258,7 +258,7 @@ fun AppViewModel.setQuickText29(v: String) {
 fun AppViewModel.quickManual29() {
     val txt = q29.text.trim()
     closeQuick29()
-    if (!kal26.open) openKal26()
+    if (!kal26.open) openKal26(native = false)
     openKalForm27()
     if (txt.length > 60) kal26.form = kal26.form?.copy(note = txt)
 }
@@ -386,7 +386,7 @@ private fun AppViewModel.quickDone29(j: Quick29Job) {
 private fun AppViewModel.quickFailed29(text: String, found: Quick29Parse?, err: String) {
     Haptics.error()
     if (inBackground29) Notify.post(appCtx29, "Fikk ikke lagt til timen", err, "kal29-f" + text.hashCode(), group = "kalender")
-    if (!kal26.open) openKal26()
+    if (!kal26.open) openKal26(native = false)
     openKalForm27(found?.date)
     val f = kal26.form ?: return
     val st = found?.start?.let { runCatching { LocalTime.parse(it) }.getOrNull() }
@@ -420,7 +420,7 @@ fun AppViewModel.undoQuick29() {
 fun AppViewModel.showQuick29() {
     val j = q29.toast ?: return
     q29.toast = null
-    if (!kal26.open) openKal26()
+    if (!kal26.open) openKal26(native = false)
     kal26.cur = j.date
 }
 

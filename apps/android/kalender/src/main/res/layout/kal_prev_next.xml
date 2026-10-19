@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:padding="16dp" android:background="@drawable/kal_w_ink">
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="NESTE"
+        android:textColor="#E8A294" android:textSize="10sp" android:fontFamily="monospace" android:letterSpacing="0.12" android:textStyle="bold" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Nina frisør"
+        android:textColor="@color/kal_bg" android:textSize="22sp" android:fontFamily="serif" android:maxLines="3" />
+    <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="I morgen · 14:30–15:30"
+        android:textColor="@color/kal_bg" android:alpha="0.8" android:textSize="12sp" android:fontFamily="monospace" />
+</LinearLayout>

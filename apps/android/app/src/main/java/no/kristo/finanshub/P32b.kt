@@ -237,7 +237,7 @@ fun navShortcut32b(q: String): Pair<String, String>? {
 fun AppViewModel.openShortcut32b(page: String) {
     when (page) {
         "nordlys" -> openNordlys31()
-        "kalender" -> openKal26()
+        "kalender" -> if (!openKalApp33(list = true)) openKal26(native = false) // prompt 33: «Åpne kalender» → kalender://liste
         "vaer" -> openWeather()
         "innst" -> openPaperPage("set")
         "sporing" -> deepLink(Uri.parse("finanshub://tracking"))

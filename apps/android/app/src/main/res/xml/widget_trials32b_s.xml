@@ -1,8 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Prompt 32: Prøveperioder 2 × 2 (Material You, ≈ 170 × 170 dp, radius 28): prøven som slutter først. -->
+<!-- Prompt 33: previewLayout/previewImage (eksempeldata i galleriet; uten dem viser One UI og enkelte launchere en tom
+     rute eller sorterer widgeten bort) og keyguard (låseskjerm der telefonen støtter det). -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_trials32b_s_desc"
     android:initialLayout="@layout/glance_default_loading_layout"
+    android:previewLayout="@layout/trials33_prev_s"
+    android:previewImage="@drawable/trials33_prev_s"
     android:minWidth="110dp"
     android:minHeight="110dp"
     android:minResizeWidth="110dp"
@@ -11,4 +15,4 @@
     android:targetCellHeight="2"
     android:resizeMode="horizontal|vertical"
     android:updatePeriodMillis="0"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen|keyguard" />
