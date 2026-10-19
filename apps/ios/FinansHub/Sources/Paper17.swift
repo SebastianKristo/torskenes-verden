@@ -587,7 +587,10 @@ struct PaperSettings17: View {
         .sheet(isPresented: $picking) {
             AppIconSheet { picking = false }.environment(\.paper, p).presentationDetents([.medium, .large]).presentationBackground(p.bg)
         }
-        .task { await NotifyModel.shared.load(store) }
+        .task {
+            await NotifyModel.shared.load(store)
+            if Update28Model.isAdmin(store) { await Update28Model.shared.load(store) }
+        }
     }
 
     @ViewBuilder private var mainGroups: some View {
@@ -624,6 +627,12 @@ struct PaperSettings17: View {
                 PaperLinkRow(name: "Helse og posisjon", sub: HealthSync.shared.master ? "Apple Health er på · posisjon og bakgrunn" : "Apple Health er av · posisjon og bakgrunn", icon: "heart.text.square") { store.paperGo("innst-helse") },
                 PaperLinkRow(name: "Avansert", sub: "Skanning, widgets, server og data", icon: "gearshape.2") { store.paperGo("innst-avansert") },
             ])
+            // Prompt 28: oppdatering av hele systemet (bare admin; startes i nettleseren). Update28.swift.
+            if Update28Model.isAdmin(store) {
+                group("System", 5, [
+                    PaperLinkRow(name: "Oppdatering", sub: Update28Model.shared.summary, icon: "arrow.down.circle") { store.paperGo("innst-oppdatering") },
+                ])
+            }
             PaperLinkList(rows: [
                 PaperLinkRow(name: "Logg ut", sub: "", value: "", valueColor: p.lab, icon: "rectangle.portrait.and.arrow.right") { store.logout() },
             ])
@@ -735,6 +744,7 @@ struct PaperSettingsSub: View {
             case "data": SettingsSubpage(page: "data")
             case "backup": SettingsSubpage(page: "backup")
             case "om": SettingsSubpage(page: "about")
+            case "oppdatering": Update28Page()
             default: SettingsSubpage(page: key)
             }
         }
@@ -761,6 +771,7 @@ struct PaperSettingsSub: View {
         "data": ("Data og lagring", "Buffer og nedlastinger"),
         "backup": ("Backup og data", "Eksport og gjenoppretting"),
         "om": ("Om appen", "Versjon og lisenser"),
+        "oppdatering": ("Oppdatering", "Versjon og oppdatering av serveren"),
     ]
 }
 
