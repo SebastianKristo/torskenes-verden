@@ -6,6 +6,7 @@ import { toJpeg, readShot, errCardHtml, installVision, SLOW_MS } from './sub-sho
 import { parseTrial, trialPreview, trialBadge, cancelUrlFor, REMIND_OPTIONS, longDay } from '/assets/js/trial-parse.js';
 import { aiStart, aiDone } from '/assets/js/ai-jobs.js';
 import { glimt } from '/assets/js/glimt.js';
+import { household, householdSync, avatars, avatarCss, colorFor } from '/assets/js/house37.js';
 
 /* Prompt 31 (claude-code-prove-paminnelse.md, fasit «Abonnement Legg til ark.dc.html» → Gratis prøveperiode):
    «+ Legg til abonnement» → Gratis prøveperiode (✦ AI) → arket «Prøveperiode»: «✦ Skriv det med egne ord» + Fyll ut
@@ -61,14 +62,70 @@ function trialSheet() {
     <button type="button" class="str-save" data-str="save" ${T.busy ? 'disabled' : ''}>${T.busy ? 'Lagrer …' : 'Lagre påminnelse'}</button>
   </div></div>`;
 }
+/* Prompt 37 (claude-code-abo-provetid.md → Web): kortet «GRATIS PRØVEPERIODER · N» øverst i høyre kolonne på Oversikt.
+   Én rad per aktiv prøve (færrest dager igjen først): logo, «Slutter fre 24. okt · deretter 149 kr/mnd», stort tall med dager igjen
+   (rød ≤ 2, gul ≤ 7), fremdriftslinje, Avslutt nå ↗ · Behold · legg til og «Varsel tor 23. okt». + Legg til: tjeneste, sluttdato, pris. */
+const activeTrials = (d) => (d.trials ?? []).filter((t) => t.status === 'active').map((t) => ({ ...t, dl: t.daysLeft ?? days(d.today, t.endsAt) })).sort((a, b) => a.dl - b.dl);
+const WDS = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'];
+const shortDay = (iso) => { const x = new Date(`${String(iso).slice(0, 10)}T12:00`); return isNaN(x) ? '' : `${WDS[x.getDay()]} ${x.getDate()}. ${MON_L[x.getMonth()].slice(0, 3)}`; };
 function trialsCard(d) {
-  const L = (d.trials ?? []).filter((t) => t.status === 'active');
-  if (!L.length) return '';
+  const L = activeTrials(d), F = u.subTrAdd;
   trCss();
-  return `<section class="card so-trials"><div class="card-h"><h2>Prøveperioder</h2><span class="muted">${L.length} aktiv${L.length === 1 ? '' : 'e'}</span></div>
-    ${L.map((t) => `<div class="so-li"><span class="grow"><b>${esc(t.service)}</b><small>Slutter ${esc(longDay(t.endsAt))}${t.priceLabel ? ` · deretter ${esc(t.priceLabel)}` : ''}</small></span><span class="so-tr-badge">${esc(t.badge || trialBadge(t.endsAt))}</span>
-      <span class="so-tr-acts">${t.cancelUrl || cancelUrlFor(t.service) ? `<a class="btn sm" href="${esc(t.cancelUrl || cancelUrlFor(t.service))}" target="_blank" rel="noopener" data-str-cancel="${t.id}">Avslutt nå ↗</a>` : `<button class="btn sm" data-str-cancel="${t.id}">Avsluttet</button>`}<button class="btn sm" data-str-keep="${t.id}">Behold</button><button class="btn sm ghost" data-str-snooze="${t.id}">Minn meg i morgen</button></span></div>`).join('')}</section>`;
+  const row = (t) => {
+    const c = t.dl <= 2 ? '#e0533d' : t.dl <= 7 ? '#d08a1c' : 'var(--text)';
+    const tot = t.created ? Math.max(1, Math.round((new Date(`${t.endsAt}T12:00`) - t.created) / 86400_000)) : 14;
+    const pct = Math.min(100, Math.max(4, Math.round((1 - Math.max(0, t.dl) / tot) * 100)));
+    const rem = (t.notifications ?? []).find((n) => !n.sent && n.kind === 'reminder') ?? (t.notifications ?? [])[0];
+    const url = t.cancelUrl || cancelUrlFor(t.service);
+    return `<div class="so37-tr"><div class="so37-tr1">${lg({ name: t.service, domain: t.domain }, 40)}<span class="grow"><b>${esc(t.service)}</b><small>Slutter ${esc(shortDay(t.endsAt))}${t.priceLabel ? ` · deretter ${esc(t.priceLabel)}` : ''}</small></span>
+      <span class="so37-dl" style="color:${c}"><b>${Math.max(0, t.dl)}</b><small>${t.dl === 1 ? 'dag igjen' : 'dager igjen'}</small></span></div>
+      <span class="so37-bar"><i style="width:${pct}%;background:${c}"></i></span>
+      <div class="so37-tra">${url ? `<a class="so37-cut" href="${esc(url)}" target="_blank" rel="noopener" data-str-cancel="${t.id}">Avslutt nå ↗</a>` : `<button type="button" class="so37-cut" data-str-cancel="${t.id}">Avsluttet</button>`}<button type="button" class="so37-keep" data-str-keep="${t.id}">Behold · legg til</button>${rem?.date ? `<span class="so37-rem">Varsel ${esc(shortDay(rem.date))}</span>` : ''}</div></div>`;
+  };
+  return `<section class="card so37-trials" data-so-card="trials"><div class="so37-trh"><span>GRATIS PRØVEPERIODER · ${L.length}</span><button type="button" data-so37="tradd">${F ? 'Lukk' : '+ Legg til'}</button></div>
+    ${F ? `<form class="so37-traf" data-sform="tr37"><input class="inp" name="n" value="${esc(F.n)}" placeholder="Tjeneste, f.eks. Storytel" aria-label="Tjeneste" required>
+      <span class="so37-trr"><input class="inp" type="date" name="e" value="${esc(F.e)}" min="${esc(d.today)}" aria-label="Sluttdato" required><input class="inp" name="p" value="${esc(F.p)}" inputmode="numeric" placeholder="Pris etterpå" aria-label="Pris etterpå"></span>
+      ${F.err ? `<span class="str-err" role="alert">${esc(F.err)}</span>` : ''}<button class="btn pri" ${F.busy ? 'disabled' : ''}>${F.busy ? 'Lagrer …' : 'Legg til · påminn dagen før'}</button></form>` : ''}
+    ${L.length ? L.map(row).join('') : '<span class="so37-empty">Ingen aktive prøveperioder. Legg til en, så minner Glimt deg på å avslutte i tide.</span>'}</section>`;
 }
+const SO37_CSS = `.so37-trials{display:flex;flex-direction:column;gap:10px}
+.so37-trh{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.so37-trh span{white-space:nowrap;font:700 12px var(--mono,'IBM Plex Mono',monospace);letter-spacing:.12em;color:#FF8A3D}
+.so37-trh button{white-space:nowrap;border:0;background:transparent;color:var(--text);cursor:pointer;font-size:13px;font-weight:700;font-family:inherit;padding:0}
+.so37-tr{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:18px;background:var(--inner,rgba(127,127,140,.1))}
+.so37-tr1{display:flex;align-items:center;gap:12px;min-width:0}
+.so37-tr1 .grow{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.so37-tr1 b{font-size:15px}.so37-tr1 small{font-size:12.5px;color:var(--muted)}
+.so37-dl{flex:none;display:flex;flex-direction:column;align-items:flex-end}
+.so37-dl b{font-size:28px;font-weight:600;line-height:1}.so37-dl small{font-size:11px;color:var(--muted)}
+.so37-bar{height:5px;border-radius:3px;background:rgba(127,127,140,.22);overflow:hidden}
+.so37-bar i{display:block;height:100%;border-radius:3px}
+.so37-tra{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.so37-cut,.so37-keep{height:32px;padding:0 13px;border-radius:16px;border:0;font-size:12.5px;font-weight:700;font-family:inherit;display:inline-flex;align-items:center;cursor:pointer;text-decoration:none}
+.so37-cut{background:#FF5A3D;color:#fff}.so37-keep{background:var(--card,#fff);color:var(--text);border:1px solid var(--line2,rgba(127,127,140,.25))}
+.so37-rem{margin-left:auto;font-size:12px;color:var(--muted)}
+.so37-empty{font-size:13.5px;color:var(--muted);line-height:1.45}
+.so37-traf{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:16px;background:var(--inner,rgba(127,127,140,.1));margin:0}
+.so37-trr{display:flex;gap:8px}.so37-trr input:first-child{flex:1;min-width:0;color-scheme:light dark}.so37-trr input:last-child{width:120px}
+.so-tr.so37-trow{border:1.5px dashed rgba(255,138,61,.55);border-radius:14px;margin:4px 0}
+.so37-tg{font:700 11px var(--mono,'IBM Plex Mono',monospace);letter-spacing:.12em;color:#FF8A3D;padding:12px 0 4px}
+.so37-sh{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;font-weight:700;color:#3aa36b;margin-top:2px}
+.so-name .so37-nm{display:flex;flex-direction:column;min-width:0}
+.so37-plus{font-size:12.5px;color:#FF8A3D;font-weight:700}
+.se-f .so37-mem{display:flex;gap:6px;flex-wrap:wrap}
+.so37-mem button{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px 0 4px;border-radius:17px;border:1px solid var(--line2,rgba(127,127,140,.3));background:transparent;color:var(--text);cursor:pointer;font-size:13px;font-weight:700;font-family:inherit}
+.so37-mem button[aria-pressed=true]{background:var(--text);color:var(--bg,#fff);border-color:var(--text)}
+.so37-mem button:disabled{opacity:.75;cursor:default}
+.so37-mem .hs37-av i{box-shadow:none}`;
+function so37Css() { if (document.getElementById('so37-css')) return; const st = document.createElement('style'); st.id = 'so37-css'; st.textContent = SO37_CSS; document.head.appendChild(st); avatarCss(); }
+
+/* Delte abonnementer (Starlink): members [{userId,name,color}], split equal|payer, payerId, myShare. */
+const memOf = (s) => (Array.isArray(s?.members) ? s.members : []).map((m) => ({ id: m.userId ?? m.id, name: m.name, color: m.color || colorFor(m.name) }));
+const isShared = (s) => memOf(s).length > 1;
+const shareTxt = (s) => {
+  const my = s.myShare ?? (s.split === 'payer' ? (s.payerId && s.payerId === S.boot?.me?.id ? s.monthly : 0) : (s.monthly ?? s.price) / Math.max(1, memOf(s).length));
+  return `Delt · din del ${kr(Math.round(my))}/mnd`;
+};
 
 const u = S.ui;
 const kr = (v) => `${n0(v)} kr`;
@@ -201,7 +258,7 @@ function totalCard(d) {
   const hi = by[0], lo = by.at(-1);
   const mini = (l, v, s, cls) => `<div class="so-mini"><span>${l}</span><b class="mono">${v}</b>${s ? `<span class="so-chip ${cls}">${esc(s)}</span>` : ''}</div>`;
   return `<section class="card so-total"><div class="so-total-l"><span class="muted">Faste abonnementer per måned</span><b class="mono so-big">${kr(d.monthly)}</b>
-      <div class="so-row">${pct != null && Math.abs(pct) >= 0.05 ? `<span class="so-trend ${pct > 0 ? 'up' : 'dn'}">${pct > 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(1).replace('.', ',')} %</span><span class="muted">fra forrige måned ·</span>` : ''}<span class="muted"><span class="mono">${kr(d.yearly)}</span> i året</span></div></div>
+      <div class="so-row">${pct != null && Math.abs(pct) >= 0.05 ? `<span class="so-trend ${pct > 0 ? 'up' : 'dn'}">${pct > 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(1).replace('.', ',')} %</span><span class="muted">fra forrige måned ·</span>` : ''}<span class="muted"><span class="mono">${kr(d.yearly)}</span> i året</span></div>${(() => { const tp = activeTrials(d).reduce((a, t) => a + (+t.priceAfter || 0), 0); return tp ? `<span class="so37-plus">+${kr(tp)}/mnd hvis du beholder prøvene</span>` : ''; })()}</div>
     <div class="so-minis">${mini('Aktive', String(act.length), 'Alle tjenester', 'blue')}${mini('Dyreste', hi ? kr(hi.monthly) : '–', hi?.name, 'red')}${mini('Billigste', lo ? kr(lo.monthly) : '–', lo?.name, 'green')}</div></section>`;
 }
 
@@ -269,11 +326,19 @@ function table(d) {
         <button data-msub-low="${s.id}">${s.lowUse ? 'Fjern «Lite brukt»' : 'Marker som lite brukt'}</button>
         <button data-ssub-cut="${s.id}">Si opp</button><button class="so-del" data-msub-del="${s.id}">Slett</button></div>` : '';
     const price = s.status === 'price_up' && s.prevPrice != null ? ` title="Var ${kr(s.prevPrice)} til ${dShort(s.priceChanged)}"` : '';
-    return `<div class="so-tr so-click${s.active ? '' : ' off'}" data-ssub-edit="${s.id}" role="button" tabindex="0" aria-label="Rediger ${esc(s.name)}"><span class="so-name">${lg(s)}<b>${esc(s.name)}</b></span><span class="sub ell">${esc(s.plan || '–')}</span><span class="sub">${s.cycleName}</span>
+    return `<div class="so-tr so-click${s.active ? '' : ' off'}" data-ssub-edit="${s.id}" role="button" tabindex="0" aria-label="Rediger ${esc(s.name)}"><span class="so-name">${lg(s)}${isShared(s) ? `<span class="so37-nm"><b>${esc(s.name)} ${avatars(memOf(s), 18)}</b><span class="so37-sh">${esc(shareTxt(s))}</span></span>` : `<b>${esc(s.name)}</b>`}</span><span class="sub ell">${esc(s.plan || '–')}</span><span class="sub">${s.cycleName}</span>
       <span class="sub">${dShort(s.nextDate)}</span><span class="mono"${price}>${kr(s.price)}</span><span><span class="so-st ${stC}"${s.usageNote ? ` title="${esc(s.usageNote)}"` : ''}>${stT}</span></span><span class="so-hand">${act}${pop}</span></div>`;
   }).join('');
   return `<section class="card so-table"><div class="card-h"><h2>Abonnementer</h2><button class="so-link plain" data-sact="${u.subAdd ? 'add-close' : 'manual'}">${u.subAdd ? 'Lukk' : '⊕ Nytt abonnement'}</button></div>
-    <div class="so-tr so-th">${th}<span>Handling</span></div>${add}${body || '<div class="empty">Ingen abonnementer ennå. Legg til ett med «+ Legg til abonnement».</div>'}</section>`;
+    <div class="so-tr so-th">${th}<span>Handling</span></div>${add}${trialRows(d)}${body || '<div class="empty">Ingen abonnementer ennå. Legg til ett med «+ Legg til abonnement».</div>'}</section>`;
+}
+
+// Egen gruppe «Prøveperioder» øverst i tabellen (stiplet ramme, som i abonnementskalenderen).
+function trialRows(d) {
+  const L = activeTrials(d);
+  if (!L.length) return '';
+  return `<div class="so37-tg">PRØVEPERIODER · ${L.length}</div>${L.map((t) => `<div class="so-tr so37-trow"><span class="so-name">${lg({ name: t.service, domain: t.domain })}<b>${esc(t.service)}</b></span><span class="sub ell">Gratis prøve</span><span class="sub">${t.priceAfter ? 'Månedlig' : '–'}</span>
+    <span class="sub">${dShort(t.endsAt)}</span><span class="mono">${t.priceAfter ? kr(t.priceAfter) : '–'}</span><span><span class="so-tr-badge">${Math.max(0, t.dl)} d igjen</span></span><span class="so-hand"><button class="so-act" data-str-keep="${t.id}">Behold</button></span></div>`).join('')}<div class="so37-tg">ABONNEMENTER</div>`;
 }
 
 function gauge(score) {
@@ -297,9 +362,10 @@ function tipsCard(d, byId) {
 }
 
 function overview(d, byId) {
-  return `<div class="so-r1">${savingsCard(d)}${totalCard(d)}</div>${banner(d)}${trialsCard(d)}
+  so37Css();
+  return `<div class="so-r1">${savingsCard(d)}${totalCard(d)}</div>${banner(d)}
     <div class="so-r2">${yearChart(d)}${monthCard(d, byId)}</div>
-    <div class="so-r3">${table(d)}<div class="so-side">${healthCard(d)}${tipsCard(d, byId)}</div></div>`;
+    <div class="so-r3">${table(d)}<div class="so-side">${trialsCard(d)}${healthCard(d)}${tipsCard(d, byId)}</div></div>`;
 }
 
 /* ---------- Kalender ---------- */
@@ -340,7 +406,8 @@ const CYC_THEN = { monthly: 'deretter hver måned', yearly: 'deretter hvert år'
 function openEd(s) {
   const now = new Date(), next = s?.nextDate;
   u.subEd = s ? { id: s.id, n: s.name, plan: s.plan ?? '', v: String(s.price).replace('.', ','), cyc: s.cycle, day: s.billDay ?? s.chargeDay ?? (next ? +next.slice(8, 10) : now.getDate()),
-    mon: s.billMonth ?? (next ? +next.slice(5, 7) : now.getMonth() + 1), cat: s.category, st: !s.active ? 'cancelled' : s.lowUse ? 'low_use' : 'active', logo: s.logoUrl ?? '', domain: s.domain }
+    mon: s.billMonth ?? (next ? +next.slice(5, 7) : now.getMonth() + 1), cat: s.category, st: !s.active ? 'cancelled' : s.lowUse ? 'low_use' : 'active', logo: s.logoUrl ?? '', domain: s.domain,
+      mem: memOf(s).map((m) => m.id).filter((id) => id !== S.boot?.me?.id), mem0: memOf(s).map((m) => m.id).sort().join(','), split: s.split ?? 'equal', split0: s.split ?? 'equal', owner: s.ownerId ? s.ownerId === S.boot?.me?.id : s.mine !== false }
     : { id: null, n: '', plan: '', v: '', cyc: 'monthly', day: now.getDate(), mon: now.getMonth() + 2 > 12 ? 1 : now.getMonth() + 2, cat: S.subs?.categories?.[0] ?? 'Annet', st: 'active', logo: '' };
   u.subMenu = false; u.subRow = null;
 }
@@ -365,8 +432,25 @@ function editSheet(d) {
     <div class="se-f"><span class="se-l">Faktureringsdato</span><div class="se-date"><select class="sel" name="day" aria-label="Dag">${Array.from({ length: 31 }, (_, i) => `<option value="${i + 1}"${+e.day === i + 1 ? ' selected' : ''}>${i + 1}.</option>`).join('')}</select>
       <select class="sel" name="mon" aria-label="Måned">${MON_L.map((m, i) => `<option value="${i + 1}"${+e.mon === i + 1 ? ' selected' : ''}>${m[0].toUpperCase()}${m.slice(1)}</option>`).join('')}</select></div><small class="se-note" data-sed-date>${esc(dateTxt)}</small></div>
     <div class="se-f"><span class="se-l">Status</span><div class="se-chips">${chips(ST_ED, e.st, 'data-sed-st')}</div></div>
+    ${shareSection(e)}
     <div class="se-btns"><button class="btn pri se-save">Lagre</button>${e.id ? '<button type="button" class="btn se-del" data-sed="del">Slett</button>' : ''}</div>
   </form></div>`;
+}
+
+// «Del med husstanden»: brukerne som chips med avatar (du selv er alltid med), Del likt / Jeg betaler og hint.
+function shareSection(e) {
+  const H = householdSync(), meId = S.boot?.me?.id;
+  if (!H.length) { household().then((x) => { if (x.length && u.subEd) render(); }).catch(() => {}); return ''; }
+  if (H.length < 2 && !e.mem?.length) return '';
+  const chips = (list, cur, attr) => list.map(([k, n2]) => `<button type="button" class="se-chip" ${attr}="${k}" aria-pressed="${cur === k}">${n2}</button>`).join('');
+  const sel = new Set([meId, ...(e.mem ?? [])].filter(Boolean)), n = sel.size, price = parseAmount(e.v) || 0;
+  const per = CYC_M[e.cyc] ? price / CYC_M[e.cyc] : price;
+  const hint = n < 2 ? 'Bare du ser abonnementet. Del det for å fordele prisen.'
+    : e.split === 'payer' ? `Du betaler hele beløpet (${kr(Math.round(per))}/mnd). De andre ser abonnementet, trekkdato og varsler.`
+    : `Hver betaler ${kr(Math.round(per / n))}/mnd. Alle ser abonnementet, trekkdato og varsler. Bare din del teller i ditt budsjett.`;
+  return `<div class="se-f"><span class="se-l">Del med husstanden</span><div class="so37-mem">${H.map((p) => { const on = sel.has(p.id), self = p.id === meId; return `<button type="button" data-sed-mem="${esc(p.id)}" aria-pressed="${on}"${self || e.owner === false ? ' disabled' : ''}>${avatars([p], 24)}${esc(self ? `${p.name} (deg)` : p.name)}</button>`; }).join('')}</div>
+    ${n > 1 && e.owner !== false ? `<div class="se-chips">${chips([['equal', 'Del likt'], ['payer', 'Jeg betaler']], e.split ?? 'equal', 'data-sed-split')}</div>` : ''}<small class="se-note">${esc(e.owner === false ? `${hint} Bare eieren kan endre deling og pris.` : hint)}</small>
+    ${e.id && e.owner === false ? '<button type="button" class="btn sm ghost" data-sed="leave">Forlat abonnementet</button>' : ''}</div>`;
 }
 
 export function subPage() {
@@ -389,6 +473,11 @@ export function bindSubs(el) {
     const s = e2.id ? await api(`/subscriptions/${e2.id}`, { method: 'PATCH', json }) : await api('/subscriptions', { method: 'POST', json });
     if (e2.file) { const fd = new FormData(); fd.append('file', e2.file); await api(`/subscriptions/${s.id}/logo`, { method: 'POST', body: fd }).catch((err) => toast(err.message)); }
     else if (e2.aiPending) await api(`/subscriptions/${s.id}/logo/ai`, { method: 'POST' }).catch(() => toast('Fant ingen logo. Last opp et bilde.'));
+    const meId = S.boot?.me?.id, mem = [...new Set([meId, ...(e2.mem ?? [])].filter(Boolean))];
+    if (mem.slice().sort().join(',') !== (e2.mem0 || meId || '') || (e2.split ?? 'equal') !== (e2.split0 ?? 'equal')) {
+      if (mem.length > 1 || e2.mem0) await api(`/subscriptions/${s.id}/members`, { method: 'PUT', json: { members: mem, split: e2.split ?? 'equal', payerId: e2.split === 'payer' ? meId : null } })
+        .catch((err) => toast(err.status === 404 ? 'Serveren støtter ikke delte abonnementer ennå.' : err.message));
+    }
     toast(e2.id ? `Lagret ${s.name}` : `${s.name} er lagt til`);
     u.subEd = null; return reload();
   };
@@ -399,6 +488,7 @@ export function bindSubs(el) {
     // Menyene lukkes ved klikk utenfor.
     if (u.subMenu && !d('.so-addwrap')) { u.subMenu = false; render(); }
     if (u.subRow && !d('.so-hand')) { u.subRow = null; render(); }
+    if ((x = d('[data-so37="tradd"]'))) { u.subTrAdd = u.subTrAdd ? null : { n: '', e: '', p: '', err: '', busy: false }; render(); if (u.subTrAdd) el.querySelector('[data-sform="tr37"] [name=n]')?.focus(); return; }
     if ((x = d('[data-stab]'))) { u.subTab = x.dataset.stab; u.subMenu = false; return render(); }
     if ((x = d('[data-smon]'))) { u.subMon = +x.dataset.smon; return render(); }
     if ((x = d('[data-sday]'))) { u.subDay = x.dataset.sday; return render(); }
@@ -407,6 +497,10 @@ export function bindSubs(el) {
     if ((x = d('[data-sed]')) && !(x.classList.contains('se-back') && e.target !== x)) {
       const e2 = u.subEd, k = x.dataset.sed;
       if (k === 'close') { u.subEd = null; return render(); }
+      if (k === 'leave') {
+        if (!confirm(`Forlate ${e2.n}? Du ser det ikke lenger, og din del fjernes fra budsjettet.`)) return;
+        await api(`/subscriptions/${e2.id}/leave`, { method: 'POST' }); toast(`Du har forlatt ${e2.n}`); u.subEd = null; return reload();
+      }
       if (k === 'nologo') { e2.logo = ''; e2.file = null; e2.preview = null; e2.aiPending = false; return render(); }
       if (k === 'ai') {
         if (!e2.n.trim()) return toast('Skriv inn navnet først');
@@ -451,6 +545,8 @@ export function bindSubs(el) {
     if (u.subEd && d('.se')) {
       if ((x = d('[data-sed-cyc]'))) { u.subEd.cyc = x.dataset.sedCyc; return render(); }
       if ((x = d('[data-sed-st]'))) { u.subEd.st = x.dataset.sedSt; return render(); }
+      if ((x = d('[data-sed-mem]'))) { const id = x.dataset.sedMem, m = u.subEd.mem ?? []; u.subEd.mem = m.includes(id) ? m.filter((y) => y !== id) : [...m, id]; return render(); }
+      if ((x = d('[data-sed-split]'))) { u.subEd.split = x.dataset.sedSplit; return render(); }
       return;
     }
     // Knappene i Handling-kolonnen (Si opp, Angre) har egne handlinger; resten av raden åpner redigering.
@@ -533,6 +629,7 @@ export function bindSubs(el) {
       if (t.dataset.strF) { T[t.dataset.strF] = t.value; T.err = ''; const pv = el.querySelector('.str-pv'); if (t.dataset.strF !== 'p' || pv) { clearTimeout(T.t); T.t = setTimeout(() => { const a = document.activeElement, nm = a?.name, pos = a?.selectionStart; render(); if (nm) { const n2 = el.querySelector(`.str [name=${nm}]`); n2?.focus(); try { n2?.setSelectionRange(pos, pos); } catch { /* date */ } } }, 350); } return; }
     }
     const f = e.target.closest('[data-sform=new]'); if (f) u.subF = Object.fromEntries(new FormData(f));
+    if (u.subTrAdd && e.target.closest('[data-sform=tr37]') && e.target.name) { u.subTrAdd[e.target.name] = e.target.value; u.subTrAdd.err = ''; }
     if (u.subEd && e.target.closest('[data-sform=ed]') && e.target.name) u.subEd[e.target.name] = e.target.value;
   });
   // Escape lukker arket uansett hvor fokus står (lytteren ligger på document, bare én gang).
@@ -546,6 +643,16 @@ export function bindSubs(el) {
     if (!f) return;
     e.preventDefault();
     if (f.dataset.sform === 'ed') return saveEd();
+    if (f.dataset.sform === 'tr37') {
+      // «Legg til · påminn dagen før»: varsel kl. 09:00 dagen før og morgenen samme dag (serveren lager varslene).
+      const F = u.subTrAdd, price = parseAmount(F.p);
+      if (!F.n.trim() || !F.e) { F.err = 'Fyll inn tjeneste og sluttdato'; return render(); }
+      F.busy = true; render();
+      try {
+        await api('/subscriptions/trials', { method: 'POST', json: { service: F.n.trim(), endsAt: F.e, priceAfter: price > 0 ? price : null, remindOffsetsDays: [1, 0], source: 'skjema' } });
+        toast(`Påminnelse lagret · ${F.n.trim()}`); u.subTrAdd = null; return reload();
+      } catch (err) { F.busy = false; F.err = err.status === 404 ? 'Serveren har ikke prøveperioder ennå.' : err.message; return render(); }
+    }
     if (f.dataset.sform === 'trai') {
       // «Fyll ut»: Glimt tolker teksten (trial-parse.js, samme tolker som serveren) og fyller feltene.
       const T = u.subTr, txt = (T?.ai ?? '').trim();

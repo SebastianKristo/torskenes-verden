@@ -13,7 +13,7 @@ const BASE = '/api/backup';
 export const MODULES = [
   ['finans', 'Finans', 'Transaksjoner, kvitteringer, budsjett, abonnementer'], ['kalender', 'Kalender', 'Egne hendelser og påminnelser'],
   ['familie', 'Familie', 'Posisjoner, soner og helse'], ['mat', 'Mat', 'Oppskrifter og ukeplan'], ['sporing', 'Sporing', 'Pakker og historikk'],
-  ['huske', 'Huskeliste', 'Lister og oppgaver'], ['bursdager', 'Bursdager', ''], ['chat', 'Chat', 'Samtaler og kunnskapsbase'],
+  ['huske', 'Gjøremål', 'Lister og oppgaver'], ['bursdager', 'Bursdager', ''], ['chat', 'Chat', 'Samtaler og kunnskapsbase'],
   ['domener', 'Domener', 'Oppsett og statistikk'], ['innstillinger', 'Innstillinger og brukere', 'Kontoer, tokens og regler'], ['filer', 'Bilder og filer', 'Kvitteringsbilder og vedlegg'],
 ];
 const MOD_IDS = MODULES.map((m) => m[0]);

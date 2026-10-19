@@ -57,7 +57,7 @@ export function aiView({ group, row, note }) {
     const opts = (A.models ?? []).filter((m) => m.installed);
     const sel = `<label class="sg-field"><span>Standardmodell</span><select data-ai-def aria-label="Standardmodell"><option value="">Automatisk (siste brukte)</option>${opts.map((m) => `<option value="${esc(m.id)}"${ch.chat_default_model === m.id ? ' selected' : ''}>${esc(m.kind === 'sky' ? `${m.name} · sky` : `${m.id} · lokal`)}</option>`).join('')}</select></label>`;
     groups.push(group('Chat', [
-      row({ t: 'Chat kan lese mine data', s: 'Finans, Kalender og Huskeliste når «Mine data» er på', tog: !!ch.chat_my_data, act: 'data-ai-tog="chat_my_data"', k: 'chat mine data finans kalender huskeliste' }),
+      row({ t: 'Chat kan lese mine data', s: 'Finans, Kalender og Gjøremål når «Mine data» er på', tog: !!ch.chat_my_data, act: 'data-ai-tog="chat_my_data"', k: 'chat mine data finans kalender huskeliste' }),
       row({ t: 'Spør før sky-modeller får data', s: 'Gemini og Groq må godkjennes per samtale', tog: !!ch.chat_ask_cloud, act: 'data-ai-tog="chat_ask_cloud"', k: 'sky gemini groq personvern' }),
       { html: sel, q: 'standardmodell modell chat' },
       row({ t: 'Åpne chat', s: 'Historikk, modeller og kunnskapsbase', act: 'data-ai-open', btn: 'Åpne', k: 'chat' }),

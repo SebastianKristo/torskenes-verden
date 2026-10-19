@@ -31,6 +31,7 @@ import { scrollMemory } from './scrollmem.js';
 import { startVersionCheck } from './vercheck.js';
 import { mountDash, startEdit } from './dash-edit36.js';
 import { initWeb36 } from './web36.js';
+import { initWeb37 } from './web37.js';
 import { loadHlTheme, applyHlTheme, is2c, setHlTheme, pwHeader, paintPhoto, bindPhoto } from './hltheme.js';
 
 const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, vaer: weatherPage.render, bursdager: birthdays.render, kalender: kalender.render, chat: chat.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
@@ -75,7 +76,7 @@ function renderRoute() {
 }
 
 // Fanetittelen: «Side · Appnavn» (appnavnet fra Innstillinger → App, standard «Homelab»).
-const TITLES = { chat: 'Chat', vaer: 'Vær', studie: 'Studie', rom: 'Rom', hjem: 'Hjem', matplan: 'Mat', sporing: 'Sporing', familie: 'Familie', huskeliste: 'Huskeliste', bursdager: 'Bursdager', kalender: 'Kalender', domener: 'Domener', nettverk: 'Nettverk', mer: 'Mer' };
+const TITLES = { chat: 'Chat', vaer: 'Vær', studie: 'Studie', rom: 'Rom', hjem: 'Hjem', matplan: 'Mat', sporing: 'Sporing', familie: 'Familie', huskeliste: 'Gjøremål', bursdager: 'Bursdager', kalender: 'Kalender', domener: 'Domener', nettverk: 'Nettverk', mer: 'Mer' };
 function setTitle() { document.title = TITLES[route] ? `${TITLES[route]} · ${appName()}` : appName(); }
 
 // Nyhetsbaren ligger under topplinjen, men i Vindu og papir under søkefeltet på papiret.
@@ -165,6 +166,7 @@ async function main() {
   loadUpdBanner(); // prompt 30: oppdateringsbanner (bare admin)
   bindPopup();
   initWeb36();
+  initWeb37();
   bindSearch();
   setupDnd(document.querySelector('header'));
   study.bind(view); space.bind(view); home.bind(view); mat.bind(view); tracking.bind(view); domains.bind(view);

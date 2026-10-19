@@ -28,7 +28,7 @@ export const TOOL_RE = {
   departures: /avgang|avganger|\bnår går\b|buss(en)?\b|trikk(en)?\b|t-?bane(n)?\b|\btog(et)?\b/i,
   packages: /pakke(n|r|ne)?\b|sending(en)?\b|levert\b|hentested/i,
   finance: /brukt på|bruker jeg på|forbruk|kostet|utgifter|hvor mye (har jeg )?brukt/i,
-  tasks: /huskeliste|handleliste|gjøremål|oppgaver|må jeg huske/i,
+  tasks: /huskeliste|handleliste|gjøremål|to-?do|oppgaver|må jeg huske/i,
   trial: /pr(ø|o)ve(periode)?|gratis i|avslutt|si opp|oppsig|trial/i,
   // Prompt 33: «husk at Påhåret er frisøren min», «det var frisør», «dette er for tannlegen»
   memory: /^(husk at\s+)?.{0,60}\b(er|var|gjelder)\s+(for\s+|hos\s+)?(min\s+|en\s+)?(frisør|frisøren|lege|legen|fastlegen|tannlege|tannlegen|fysio|fysioterapeut(en)?|optiker(en)?|psykolog(en)?)(\s+min)?[.!]?$/i,
@@ -67,7 +67,7 @@ export function normAnswer(d = {}, ms0 = 0) {
     chatId: r.chatId ?? r.chatContext?.chatId ?? null, chatContext: r.chatContext ?? null, question: r.question ?? null, jobId: r.jobId ?? null, error: r.error ?? null, memory: r.memory ?? null, apply: r.apply ?? null,
     // Prompt 34 (SERVER34 ai.run): modell, merknad («Sky-budsjettet er brukt opp …») og advarsler.
     // Prompt 35: «været i New York» → place {name, label, lat, lon …} og open {route:'vaer', name, lat, lon}.
-    place: r.place ?? null, open: r.open ?? null,
+    place: r.place ?? null, open: r.open ?? null, person: r.person ?? null,
     model: r.model ?? null, notice: r.notice ?? (Array.isArray(r.warnings) && r.warnings.length ? r.warnings.join(' · ') : null) };
 }
 
@@ -112,7 +112,7 @@ export async function assist(q, o = {}) {
   try { r = await post('/api/assist', { q, source: o.source ?? 'search', ...(o.chatId ? { chatId: o.chatId } : {}) }, o.signal); }
   catch (e) { if (e.name === 'AbortError') throw e; r = { ok: false, status: 0, d: { error: e.message } }; }
   let ans;
-  if (r.status === 404 || r.status === 405) ans = await localAssist(q, o);
+  if (r.status === 404 || r.status === 405) ans = (await whereIs(q, t0)) ?? await localAssist(q, o);
   else if (r.status === 202) {
     const jobId = String(r.d.jobId ?? r.d.id);
     o.onJob?.(jobId);
@@ -125,6 +125,8 @@ export async function assist(q, o = {}) {
     if (aid) aiDone(aid, { silent: true });
   } else if (!r.ok) throw new Error(r.d?.error || `Glimt svarte ikke (feil ${r.status || 'nett'}).`);
   else ans = normAnswer(r.d, t0);
+  // Prompt 37: «hvor er Ingrid» – svarte ikke serveren med family.where (eldre server), svares det fra Familie her.
+  if (WHERE_RE.test(q) && ans.intent !== 'family.where') { const w = await whereIs(q, t0).catch(() => null); if (w) ans = w; }
   // Prompt 35: eldre server svarte med Oslo-været på «været i New York» (uten place): hent været for stedet selv.
   if (/^weather/.test(ans.intent ?? '') && !ans.place && !ans.open) {
     const pl = wxPlaceOf(q);
@@ -133,6 +135,46 @@ export async function assist(q, o = {}) {
   // Svarte Glimt mens fanen var skjult: banner når brukeren kommer tilbake (varselet sendes av serveren).
   if (document.hidden || hiddenAtStart) awayAnswer(q, ans.text);
   return ans;
+}
+
+/* ---------------- Prompt 37: «Hvor er Ingrid?» (claude-code-sok-hvor-er.md) ---------------- */
+// Gjenkjenner «hvor er/kor er/hvor befinner seg X», «er X på skolen/hjemme/på jobb», «posisjonen til X», «where is X», «hvor er jeg».
+// Data fra /api/family (samme personvern som Familie-kartet): sone hvis kjent, ellers stedsnavn/nærmeste sone,
+// avstand fra deg, alder på posisjonen og batteri. → {intent:'family.where', text, person, place, open:{route:'familie', person}}
+export const WHERE_RE = /^\s*(hvor|kor|hvar)\s+(er|befinner|holder)\s+|^\s*er\s+\S+\s+(på|hjemme|i|hos)\b|posisjonen\s+til\s+|^\s*where\s+is\s+/i;
+const ACT37 = { walking: 'til fots', running: 'løper', cycling: 'på sykkel', driving: 'i bil', car: 'i bil', bus: 'på buss', train: 'på tog' };
+// Omvendt geokoding gjør serveren (CSP tillater bare samme opphav); her brukes stedsnavn fra posisjonen eller nærmeste sone.
+const km = (a, b) => { const R = 6371, dLa = (b.lat - a.lat) * Math.PI / 180, dLo = (b.lon - a.lon) * Math.PI / 180; const x = Math.sin(dLa / 2) ** 2 + Math.cos(a.lat * Math.PI / 180) * Math.cos(b.lat * Math.PI / 180) * Math.sin(dLo / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(x)); };
+const ago = (ts) => { const m = Math.max(0, Math.round((Date.now() - ts) / 60000)); return m < 1 ? 'nå nettopp' : m < 60 ? `${m} min siden` : m < 1440 ? `${Math.round(m / 60)} t siden` : `${Math.round(m / 1440)} d siden`; };
+export async function whereIs(q, t0 = Date.now()) {
+  if (!WHERE_RE.test(q)) return null;
+  const low = q.toLowerCase().replace(/[?!.]/g, ' ');
+  let fam;
+  try { fam = await jget('/api/family'); } catch { return null; }
+  const members = fam?.members ?? [], zones = fam?.zones ?? [];
+  const meM = members.find((m) => m.self);
+  const self = /\b(jeg|meg)\b/.test(low) && /hvor er jeg|kor er jeg|where am i|posisjonen min/.test(low);
+  const m = self ? meM : members.filter((x) => !x.self).find((x) => [x.name, x.username, String(x.name ?? '').split(' ')[0]].filter(Boolean).some((n) => new RegExp(`(^|[^a-zæøå])${String(n).toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^a-zæøå]|$)`).test(low)));
+  const sharing = members.filter((x) => !x.self && x.sharing === 'on' && x.last).map((x) => x.name);
+  const base = { source: 'Familie · posisjon', intent: 'family.where', ms: Date.now() - t0, card: null, tool: 'Familie' };
+  if (!m) {
+    const nm = (/(?:hvor|kor)\s+(?:er|befinner\s+seg|holder\s+seg)\s+([a-zæøå]+)|posisjonen\s+til\s+([a-zæøå]+)|where\s+is\s+([a-zæøå]+)|^\s*er\s+([a-zæøå]+)/i.exec(q) ?? []).slice(1).find(Boolean) ?? 'personen';
+    return { ...base, text: `Jeg finner ikke ${nm.replace(/^./, (c) => c.toUpperCase())} i Familie.${sharing.length ? ` Personer med deling: ${sharing.length < 2 ? sharing[0] : `${sharing.slice(0, -1).join(', ')} og ${sharing.at(-1)}`}.` : ''}` };
+  }
+  const who = self ? 'Du' : m.name;
+  if (!self && (m.sharing !== 'on' || !m.last)) return { ...base, text: `**${m.name}** deler ikke posisjon med deg.`, person: { userId: m.userId, name: m.name } };
+  if (!m.last) return { ...base, text: 'Posisjonsdeling er av på denne enheten. Slå den på i Familie for å se hvor du er.', open: { route: 'familie', person: m.userId } };
+  const L = m.last, zone = zones.find((z) => z.lat != null && km(L, z) * 1000 <= (z.radius ?? 150)) ?? (L.place ? { name: L.place } : null);
+  const near = zone ? null : zones.filter((z) => z.lat != null).map((z) => [z, km(L, z)]).sort((x, y) => x[1] - y[1])[0];
+  const geo = zone ? null : L.address ?? L.area ?? (near ? `${near[1] < 1 ? `${Math.round(near[1] * 1000)} m` : `${near[1].toFixed(1).replace('.', ',')} km`} fra ${near[0].name}` : null);
+  const where = zone ? (/^(hjem|hjemme)$/i.test(zone.name) ? 'hjemme' : `på ${zone.name}`) : L.address || L.area ? `ved ${String(L.address ?? L.area).split(',')[0]}` : near ? `${geo}` : 'ute';
+  const act = ACT37[L.activity] && !zone ? `på vei ${ACT37[L.activity]} ` : '';
+  const dist = !self && meM?.last ? km(meM.last, L) : null;
+  const old = Date.now() - L.ts > 3600_000;
+  const extra = [geo && !zone && (L.address || L.area) ? geo : null, dist != null ? `${dist < 1 ? `${Math.round(dist * 1000)} m` : `${dist.toFixed(1).replace('.', ',')} km`} fra deg` : null].filter(Boolean).join(', ');
+  const text = old ? `${who} ble sist sett for ${ago(L.ts).replace(' siden', '')} siden ${where.replace(/^hjemme$/, 'hjemme')}${extra ? ` (${extra})` : ''}.`
+    : `**${who}** er **${act}${where}**${extra ? ` (${extra})` : ''}. Oppdatert ${ago(L.ts)}${L.battery != null ? ` · batteri ${L.battery} %` : ''}.`;
+  return { ...base, text, person: { userId: m.userId, name: m.name }, place: { name: zone?.name ?? geo, lat: L.lat, lon: L.lon }, open: { route: 'familie', person: m.userId } };
 }
 
 /* ---------------- «Glimt svarte mens du var borte» ---------------- */

@@ -598,6 +598,9 @@ function bind(h) {
 }
 
 export function render() {
+  // Prompt 37: «Vis på kart ›» fra «Hvor er Ingrid?» åpner #/familie?person=<userId> med personen valgt.
+  const pq = new URLSearchParams(location.hash.split('?')[1] ?? '').get('person');
+  if (pq) { S.tab = 'kart'; S.sel = pq; S.track = []; }
   setTimeout(async () => {
     const h = host();
     if (!h) return;

@@ -165,7 +165,7 @@ const HEAD = {
   matplan: () => [`Uke ${weekNo()}`, 'Mat'],
   sporing: () => ['Pakker og sendinger', 'Sporing'],
   familie: () => ['Posisjon, soner og helse', 'Familie'],
-  huskeliste: () => ['Delt med familien', 'Huskeliste'],
+  huskeliste: () => ['To-do for hele familien', 'Gjøremål'],
   bursdager: () => ['Familie og venner', 'Bursdager'],
   kalender: () => [`Skole · ${new Date().getMonth() >= 6 ? 'høst' : 'vår'} ${new Date().getFullYear()}`, 'Kalender'],
   domener: () => ['Trafikk, oppetid og sikkerhet', 'Domener'],

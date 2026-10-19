@@ -112,7 +112,7 @@ function finance(c) {
 function tasks(c) {
   const L = (c.items ?? c.tasks ?? []).slice(0, 8);
   return `<div class="gc gc-box">${L.map((x) => { const done = !!(x.done ?? x.checked); return `<div class="gc-row${done ? ' done' : ''}"><button type="button" class="gc-ck" role="checkbox" aria-checked="${done}" data-gc-task="${esc(x.id ?? '')}" aria-label="Kryss av">${done ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7"/></svg>' : ''}</button><span class="gc-tt" data-no-i18n>${esc(x.text ?? x.title ?? x.t ?? '')}</span></div>`; }).join('') || '<span class="gc-none">Huskelisten er tom.</span>'}
-    <button type="button" class="gc-open" data-gc-go="huskeliste">Åpne Huskeliste ›</button></div>`;
+    <button type="button" class="gc-open" data-gc-go="huskeliste">Åpne Gjøremål ›</button></div>`;
 }
 
 const KIND = { weather, wx: weather, vaer: weather, calendar, cal: calendar, kalender: calendar, departures, avganger: departures, packages, pakker: packages, finance, finans: finance, tasks, huskeliste: tasks };

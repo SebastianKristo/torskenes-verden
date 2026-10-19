@@ -14,6 +14,8 @@ import { domainsPane, loadDomains, domainsClick, domainsChange, domainsSubmit, d
 import { loadNotify, notifyView, notifyClick, notifyChange, notifyInput } from './settings-notify.js';
 import { loadApp, appView, appClick, appInput, appKey } from './settings-app.js';
 import { loadInteg, integRows, integSub, integClick, integChange, integCount } from './settings-integ.js';
+import { myProfile, profilesLoaded, hasProfiles, loadProfiles } from './onboard37.js'; // prompt 37: profil i husstanden
+import { loadTrackKeys, trackGroup, trackSub, trackClick, trackChange } from './settings-track37.js'; // prompt 37: delte sporingsnøkler
 import { themeCards, setHlTheme, hlTheme, THEMES, uploadCustomPhoto } from './hltheme.js';
 import { mountHa } from './tasks-ha.js';
 import { kalView, kalClick, kalChange } from './settings-kal.js';
@@ -95,7 +97,7 @@ const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app'
 // Hvilken fane en underside hører til, så «go('tfa')» virker uansett hvor den kalles fra.
 const SUB_TAB = { me: 'konto', tfa: 'konto', pw: 'konto', devices: 'konto', server: 'konto', add: 'users', bg: 'look', style: 'look', hist: 'look', cats: 'look',
   tabs: 'top', head: 'top', speed: 'top', dash: 'top', mob: 'top', sc: 'top', doms: 'dom', mail: 'int', widgets: 'app', kalapp: 'app' };
-const subTab = (sub) => SUB_TAB[sub] ?? (sub?.startsWith('cfg:') || sub?.startsWith('i24:') ? 'int' : sub?.startsWith('user:') ? 'users' : null);
+const subTab = (sub) => SUB_TAB[sub] ?? (sub?.startsWith('cfg:') || sub?.startsWith('i24:') || sub?.startsWith('trk37:') ? 'int' : sub?.startsWith('user:') ? 'users' : null);
 const tabOf = (k) => TABS.find(([id]) => id === k) ?? TABS[0];
 
 let tab = 'konto', sub = null, cfg = null, cfgErr = null, sqMsg = '', q = '', mail = null;
@@ -112,6 +114,13 @@ const ui = () => store.me.ui ?? {};
 
 /* ---------- Konto ---------- */
 
+// Prompt 37: «Profil i husstanden» (koble, bytt). Vises når serveren har profiler (GET /api/profiles).
+function profileRow37() {
+  if (!profilesLoaded()) { loadProfiles().then((d) => { if (d && !modal().hidden && tab === 'konto') render(); }); return null; }
+  if (!hasProfiles()) return null;
+  const p = myProfile();
+  return row({ t: 'Profil i husstanden', k: 'profil koble husstand onboarding', s: p ? 'Posisjon, delte lister, abonnementer og kalendere følger profilen.' : 'Koble brukeren til personen din i husstanden.', v: p ? p.name : 'Ikke koblet', vc: p ? undefined : '#f3b54a', btn: p ? 'Bytt' : 'Koble', act: 'data-onb37' });
+}
 function kontoView() {
   const d = loginData(), me = store.me.me ?? d?.me ?? {}, mu = d?.users?.find((u) => u.id === me.id) ?? me;
   const name = me.name || me.username || '';
@@ -120,6 +129,7 @@ function kontoView() {
       row({ t: 'Navn', v: name, go: 'konto|me' }),
       row({ t: 'Brukernavn', v: me.username ? '@' + me.username : '' }),
       row({ t: 'Rolle', v: `${roleName(me.role)}${me.isMainAdmin ? ' · hovedadmin' : ''}` }),
+      profileRow37(),
       { html: avatarRow(store.me.me ?? me), q: 'Profilbilde avatar bilde last opp fjern' },
     ]),
     group('Innlogging', d ? [
@@ -443,10 +453,12 @@ function intView() {
     return { groups: [
       group('Tilkoblinger', [row({ t: run ? 'Tester …' : 'Test alle tilkoblinger', s: res.length ? `${ok} OK · ${bad} feilet` : 'Sjekker adresse, nøkkel og svar fra hver tjeneste.', btn: run ? 'Tester …' : 'Test alle', act: 'data-test-all', disabled: run })]),
       group('Dine integrasjoner', mineRows, 'Bare du ser og bruker disse verdiene. Hemmeligheter lagres kryptert på serveren og vises aldri igjen.'),
+      trackGroup(row, group),
       srvRows.length ? group('Server (administrator)', srvRows, 'Gjelder hele serveren. Tomme felt bruker verdien fra serverens miljøvariabler (.env).') : null,
     ].filter(Boolean) };
   }
   if (sub === 'mail') return { title: 'Proton Mail', sub: 'Integrasjoner · Kvitteringer fra e-post via Bridge', html: '<div data-mail-host></div>', mount: mountMail };
+  if (sub.startsWith('trk37:')) { const v = trackSub(sub.slice(6), note); if (v) return v; sub = null; return intView(); }
   if (sub.startsWith('i24:')) { const v = integSub(sub.slice(4), note); if (v) return v; sub = null; return intView(); }
   const gname = sub.slice(4), g = cfg.find((x) => x.name === gname);
   if (!g) { sub = null; return intView(); }
@@ -457,7 +469,7 @@ function intView() {
   const res = t && t.st !== 'run' ? `<div class="sg-res"><i style="background:${t.st === 'ok' ? '#34c759' : '#f26b5e'}"></i><div><b>${t.st === 'ok' ? 'Tilkoblet' : 'Tilkoblingen feilet'}</b><span>${esc(t.msg)}</span></div><span class="mono">${when(t.at)}${t.ms ? ` · ${t.ms} ms` : ''}</span></div>` : '';
   const head = `<div class="int-head">${logoImg(m.domain, m.name, 'sg-lg big')}<div><b>${esc(m.name)}</b><span>${esc(m.s)}</span></div></div>`;
   // Prompt 22: Huskeliste ↔ HA To-do under Home Assistant (bare admin, samme innstillinger som på Huskeliste-siden).
-  const haTodo = g.name === 'Home Assistant' && !ro ? '<section class="sg"><h3 class="sg-h">Huskeliste</h3><div data-mount-host></div></section>' : '';
+  const haTodo = g.name === 'Home Assistant' && !ro ? '<section class="sg"><h3 class="sg-h">Gjøremål</h3><div data-mount-host></div></section>' : '';
   return { mount: haTodo ? mountHaTodo : undefined, title: m.name, sub: `Integrasjoner · ${m.s}`, html: `${head}<form class="sg" data-group="${esc(g.name)}"><h3 class="sg-t">Oppsett</h3><div class="sg-box">${fields}</div>
       ${NOTES[g.name] ? note(NOTES[g.name]) : typeof g.help === 'string' && g.help.trim() && !/```|\n\n/.test(g.help) ? note(esc(g.help)) : ''}</form>
       ${ro ? note('Settes opp av administrator.') : `<div class="sg-acts"><button class="sg-btn pri" data-test="${esc(g.name)}"${t?.st === 'run' ? ' disabled' : ''}>${t?.st === 'run' ? 'Tester …' : 'Test tilkobling'}</button>
@@ -687,6 +699,7 @@ function enter() {
   if ((tab === 'int' || tab === 'kal' || q) && !cfg) loadCfg();
   if (tab === 'int' && !mail) loadMail();
   if (tab === 'int' || tab === 'kal' || q) loadInteg(reload);
+  if (tab === 'int' || q) loadTrackKeys(reload);
   if (tab === 'konto' || tab === 'users' || q) loadLogin(reload);
   if (tab === 'dom' || q) loadDomains(reload);
   if (tab === 'varsel' || q) loadNotify(reload);
@@ -810,6 +823,7 @@ export function bindSettings() {
     if (await aiClick(e, render)) return;
     if (kalClick(e, render)) return;
     if (await integClick(e, render)) return;
+    if (await trackClick(e, render)) return;
     const tb = e.target.closest('[data-test]');
     if (tb) { e.preventDefault(); return runTest(tb.dataset.test); }
     if (e.target.closest('[data-test-all]')) { if (cfg) await Promise.all(cfg.filter(canEdit).map((x) => runTest(x.name))); return; }
@@ -978,6 +992,7 @@ export function bindSettings() {
     if (t.matches('[data-news-speed]')) { saveUi({ newsSpeed: +t.value }); return; }
     if (t.matches('[data-tab-label]')) { await saveLabels(t.dataset.tabLabel, t.value); return; }
     if (kalChange(e, render)) return;
+    if (trackChange(e, render)) return;
     if (integChange(e, render)) return;
     const form = t.closest('[data-group]');
     if (form && cfg) {

@@ -1,14 +1,24 @@
-// Huskeliste (prompt 17): lister (Hjem, Handel, Hytta, Jobb …) med forfall og ansvarlig.
-// Prompt 21: hver liste har en eier og er privat til eieren deler den med navngitte personer («Del liste»).
-// Data fra /api/tasks; endringer fra andre kommer i sanntid over /api/ws (type 'tasks'), ellers hentes det hvert 30. s.
+// Gjøremål (tidligere Huskeliste, prompt 17 → 37). Intern nøkkel er fortsatt huske/huskeliste.
+// Prompt 21: lister har en eier og er private til eieren deler dem. Prompt 32: Arkivert.
+// Prompt 37 (claude-code-huskeliste-uten-navbar.md + claude-code-gjoremal-glimt.md, fasit Huskeliste.dc.html):
+//  - Nytt navn «Gjøremål · To-do for hele familien».
+//  - Liste-chips med avatarer for delte lister, «+ Ny liste», infokort for valgt liste (Delt med … / Bare du ser …) og listeark
+//    (navn, 8 farger, DEL MED med brytere, Forlat/Slett).
+//  - Detaljark per oppgave (dato, tid, viktig, gjenta, tidlig påminnelse, sted, liste, ansvarlig, prioritet, flagg, tagger,
+//    deloppgaver, ✦ Del opp, ✦ Glimt foreslår) som lagrer med en gang.
+//  - Glimt-kortet inline øverst (web): tolker tekst, lim inn, bilde, matplan → Handel, pakkeliste, spørsmål, med Angre i 10 s.
+//    POST /api/tasks/glimt {q, list?, image?} → {kind, text, items, undo:{token}}; 404 → lokal tolker (tasks37-glimt.js).
+//  - Glimt-kort i listen: like oppgaver (Slå sammen), forfalte (Flytt til i morgen / Arkiver), butikk, hytte fra kalenderen.
+// Data fra /api/tasks; endringer fra andre kommer i sanntid over /api/ws (type 'tasks' / 'todo:changed'), ellers hvert 30. s.
 import { api, esc } from './util.js';
 import { onLive, liveOn } from './realtime.js';
 import { store } from './store.js';
 import { mountHa } from './tasks-ha.js';
+import { parse as gParse, pasteLines, isAsk, ask as gAsk, splitSugg, guess, dupes, PACK, MAT_FALLBACK, isoDay } from './tasks37-glimt.js';
+import { colorFor } from './house37.js';
 
-const S = { d: null, err: null, cur: 'alle', nv: '', nd: 0, nw: null, busy: false, editId: null, share: null, arch: [] };
-// Prompt 32: Arkivert. Serveren lagrer archived_at (GET /api/tasks?archived=1, PATCH {archived}). Svarer en eldre server uten
-// arkiv, huskes arkiverte oppgaver i denne nettleseren (per bruker). Fullførte oppgaver arkiveres automatisk etter 7 dager.
+const S = { d: null, err: null, cur: 'alle', nv: '', nd: 0, nw: null, busy: false, arch: [], ed: null, lsv: null, g: { q: '', busy: '', ans: null }, tagIn: '', subIn: '' };
+// Prompt 32: Arkivert (archived_at på serveren, ellers lokalt per bruker). Fullførte oppgaver arkiveres automatisk etter 7 dager.
 const WEEK = 7 * 864e5;
 const archKey = () => `tk_arch_${store.me?.me?.id ?? 'x'}`;
 const localArch = () => { try { return new Set(JSON.parse(localStorage.getItem(archKey()) ?? '[]').map(String)); } catch { return new Set(); } };
@@ -17,114 +27,286 @@ const doneMs = (t) => (t.doneAt == null ? null : typeof t.doneAt === 'number' ? 
 const srvArch = (t) => !!(t.archived || t.arch || t.archivedAt || t.archived_at);
 const isArch = (t) => srvArch(t) || localArch().has(String(t.id)) || (t.done && doneMs(t) != null && Date.now() - doneMs(t) > WEEK);
 const ARCH_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5h18v4H3zM5 9v10h14V9M10 13h4"/></svg>';
-let pollT = null, unLive = null;
+let pollT = null, unLive = null, unLive2 = null, saveT = null, undoT = null;
 const host = () => document.getElementById('tasks');
 
-const iso = (n) => { const d = new Date(); d.setHours(12, 0, 0, 0); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv-SE'); };
-const today = () => iso(0);
+const today = () => isoDay(0);
 const daysTo = (d) => Math.round((new Date(d + 'T12:00') - new Date(today() + 'T12:00')) / 864e5);
+// Feltnavn: serveren har title/list/assignee/note; kontrakten for prompt 37 tillater også n/l/who/notes.
+const tTitle = (t) => t.title ?? t.n ?? '';
+const tList = (t) => t.list ?? t.l ?? null;
+const tWho = (t) => t.assignee ?? t.who ?? null;
+const tNotes = (t) => t.notes ?? t.note ?? '';
 const listOf = (id) => S.d?.lists.find((l) => l.id === id || l.name === id);
 const colorOf = (id) => listOf(id)?.color ?? 'var(--t-ink)';
 const myId = () => store.me?.me?.id;
-const uidOf = (m) => (typeof m === 'object' && m ? m.id ?? m.userId ?? m.user_id : m);
-const listMembers = (l) => (Array.isArray(l?.members) ? l.members.map(uidOf).filter((id) => id && id !== uidOf(l.owner)) : []);
-const isMine = (l) => (typeof l?.mine === 'boolean' ? l.mine : !l?.owner || uidOf(l.owner) === myId());
-const nameOf = (uid) => (uid && uid === myId() ? 'Meg' : S.d?.members?.find((m) => (m.id ?? m.userId) === uid)?.name ?? '');
+const uidOf = (m) => (typeof m === 'object' && m ? m.userId ?? m.id ?? m.user_id : m);
+const ownerOf = (l) => uidOf(l?.ownerId ?? l?.owner);
+const listMembers = (l) => (Array.isArray(l?.members) ? l.members.map(uidOf).filter((id) => id && id !== ownerOf(l)) : []);
+const isMine = (l) => (typeof l?.mine === 'boolean' ? l.mine : !ownerOf(l) || ownerOf(l) === myId());
+const PCOL = ['#2b5d8a', '#b23a2a', '#2f6b45', '#a8661a', '#7a5ad6', '#c2477a', '#3d7f8a', '#5b4fc4'];
+const people = () => (S.d?.members ?? []).map((m, i) => ({ id: m.id ?? m.userId, name: m.name, color: m.color || PCOL[i % PCOL.length], avatarUrl: m.avatarUrl }));
+const person = (uid) => people().find((p) => p.id === uid);
+const nameOf = (uid) => (uid && uid === myId() ? 'Meg' : person(uid)?.name ?? '');
+const pColor = (p) => p?.color || colorFor(p?.name);
+// Alle i listen (eier + medlemmer) som personer.
+const listPeople = (l) => {
+  if (!l) return [];
+  const ids = [...new Set([ownerOf(l), ...listMembers(l)].filter(Boolean))];
+  const objs = Array.isArray(l.members) ? l.members.filter((m) => typeof m === 'object' && m) : [];
+  return ids.map((id) => person(id) ?? { id, name: objs.find((m) => uidOf(m) === id)?.name ?? (id === ownerOf(l) ? l.ownerName : '') ?? '?' });
+};
+const isShared = (l) => !!l && (l.shared === true || listMembers(l).length > 0 || !isMine(l));
+const LCOL = ['#b23a2a', '#2f6b45', '#a8661a', '#2b5d8a', '#7a5ad6', '#c2477a', '#3d7f8a', '#1b1a17'];
+const REP = [['none', 'Aldri'], ['daily', 'Hver dag'], ['weekdays', 'Ukedager'], ['weekly', 'Hver uke'], ['biweekly', 'Annenhver uke'], ['monthly', 'Hver måned'], ['yearly', 'Hvert år']];
+const EARLY = [['none', 'Ingen'], ['5m', '5 min før'], ['15m', '15 min før'], ['30m', '30 min før'], ['1h', '1 time før'], ['1d', '1 dag før'], ['2d', '2 dager før'], ['1w', '1 uke før']];
+const PLACE = [['', 'Av'], ['store', 'Ved matbutikk'], ['home', 'Når jeg kommer hjem'], ['leave', 'Når jeg drar hjemmefra'], ['work', 'På jobb'], ['cabin', 'På hytta']];
+const PRIO = [[0, 'Ingen'], [1, 'Lav'], [2, 'Middels'], [3, 'Høy']];
+const avs = (L, size = 18) => (L.length ? `<span class="tk-avs" style="--s:${size}px" aria-hidden="true">${L.slice(0, 3).map((p) => `<i style="background:${esc(pColor(p))}">${esc(String(p.name ?? '?').slice(0, 1).toUpperCase())}</i>`).join('')}</span>` : '');
+const navn = (a) => (a.length < 2 ? a.join('') : `${a.slice(0, -1).join(', ')} og ${a.at(-1)}`);
 
-function dueLabel(d) {
+function dueLabel(t) {
+  const d = t.due;
   if (!d) return ['', ''];
-  const n = daysTo(d);
+  const n = daysTo(d), tm = t.time ? ` ${t.time}` : '';
   if (n < 0) return [`Forfalt ${-n} d`, 'late'];
-  if (n === 0) return ['I dag', 'late'];
-  if (n === 1) return ['I morgen', ''];
-  return [new Date(d + 'T12:00').toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' }), 'mut'];
+  if (n === 0) return [`I dag${tm}`, 'late'];
+  if (n === 1) return [`I morgen${tm}`, ''];
+  return [new Date(d + 'T12:00').toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' }) + tm, 'mut'];
 }
 
 async function load() {
   try {
     S.d = await api('/tasks'); S.err = null;
-    // Arkivet: egen liste fra serveren (eldre server ignorerer ?archived=1 og gir alt; da filtreres det her).
-    const a = await api('/tasks?archived=1').catch(() => null);
+    const [a, st] = await Promise.all([api('/tasks?archived=1').catch(() => null), S.defList === undefined ? api('/tasks/settings').catch(() => null) : null]);
+    if (st !== null || S.defList === undefined) S.defList = st?.defaultList ?? S.defList ?? null;
     const pool = new Map([...(a?.items ?? []), ...(S.d.items ?? [])].map((t) => [String(t.id), t]));
     S.arch = [...pool.values()].filter(isArch).sort((x, y) => (doneMs(y) ?? 0) - (doneMs(x) ?? 0));
     S.d.items = (S.d.items ?? []).filter((t) => !isArch(t));
-    // Eier og deling kan mangle i /api/tasks; /api/tasks/lists har dem (eldre server: 404, da er alt som før).
-    if (S.d.lists?.length && !S.d.lists.some((l) => 'owner' in l || 'members' in l)) {
+    if (S.d.lists?.length && !S.d.lists.some((l) => 'owner' in l || 'ownerId' in l || 'members' in l)) {
       const r = await api('/tasks/lists').catch(() => null);
       if (Array.isArray(r?.lists)) S.d.lists = r.lists;
     }
+    // Lokalt lagrede felter (når serveren ikke kjenner dem ennå) legges oppå.
+    const loc = localExtra();
+    for (const t of S.d.items) Object.assign(t, Object.fromEntries(Object.entries(loc[t.id] ?? {}).filter(([k]) => t[k] === undefined)));
   } catch (e) { S.err = e.message; }
   paint();
+  if (S.cards !== false) loadCards();
 }
+// Felter serveren ikke lagrer ennå (eldre server) huskes i denne nettleseren, så detaljarket ikke mister dem ved omlasting.
+const EXTRA = ['time', 'urgent', 'rep', 'early', 'prio', 'flag', 'tags', 'subs', 'place'];
+const exKey = () => `tk37_extra_${myId() ?? 'x'}`;
+const localExtra = () => { try { return JSON.parse(localStorage.getItem(exKey()) ?? '{}'); } catch { return {}; } };
+function rememberExtra(t) { try { const m = localExtra(); m[t.id] = Object.fromEntries(EXTRA.filter((k) => t[k] !== undefined).map((k) => [k, t[k]])); localStorage.setItem(exKey(), JSON.stringify(m)); } catch { /* */ } }
 
-// Eier, «Delt med …» og «Del liste» for valgt liste. Bare eieren kan dele.
-function shareBar(l) {
+/* ---------- Infokort for valgt liste ---------- */
+function infoCard(l) {
   if (!l) return '';
-  const mine = isMine(l), mem = listMembers(l), objs = Array.isArray(l.members) ? l.members.filter((m) => typeof m === 'object' && m) : [];
-  const names = mem.map((id) => (id === myId() ? 'deg' : nameOf(id) || objs.find((m) => uidOf(m) === id)?.name || 'ukjent'));
-  const owner = mine ? 'Din liste' : `Eies av ${l.ownerName || nameOf(uidOf(l.owner)) || 'en annen'}`;
-  const shared = names.length ? `Delt med ${names.join(', ')}` : mine ? 'Bare du ser denne listen' : 'Delt med deg';
-  const people = (S.d.members ?? []).filter((m) => (m.id ?? m.userId) !== myId());
-  const panel = S.share && S.share.id === l.id ? `<div class="tk-share" role="group" aria-label="Del ${esc(l.name)}">
-      <span class="tk-gt">DEL «${esc(String(l.name).toUpperCase())}» MED</span>
-      ${people.length ? `<div class="tk-opts">${people.map((m) => { const id = m.id ?? m.userId, on = S.share.ids.includes(id); return `<button type="button" class="tk-opt${on ? ' on' : ''}" data-tk-shp="${esc(id)}" aria-pressed="${on}">${on ? '✓ ' : ''}${esc(m.name)}</button>`; }).join('')}</div>` : '<div class="tk-meta">Det finnes ingen andre brukere å dele med.</div>'}
-      <div class="tk-opts"><button type="button" class="tk-btn pri" data-tk-act="share-save"${S.busy ? ' disabled' : ''}>Lagre</button><button type="button" class="tk-btn" data-tk-act="share-close">Avbryt</button></div>
-    </div>` : '';
-  return `<div class="tk-own"><span class="tk-dot" style="background:${esc(l.color ?? 'var(--t-ink)')}"></span><span class="tk-main"><b>${esc(owner)}</b><span class="tk-meta">${esc(shared)}</span></span>
-    ${mine ? `<button type="button" class="tk-btn" data-tk-act="share" aria-expanded="${!!panel}">Del liste</button>` : '<button type="button" class="tk-btn" data-tk-act="leave">Forlat liste</button>'}</div>${panel}`;
+  const ppl = listPeople(l).filter((p) => p.id !== myId());
+  const ic = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">';
+  if (isShared(l)) {
+    const who = ppl.map((p) => p.name).filter(Boolean);
+    return `<div class="tk-info">${ic}<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/></svg><span class="tk-main"><b>${who.length ? `Delt med ${esc(navn(who))}` : 'Delt med deg'}</b><span class="tk-meta">${isMine(l) ? 'Alle i listen kan legge til, endre og krysse av.' : `Eies av ${esc(l.ownerName || nameOf(ownerOf(l)) || 'en annen')} · alle i listen kan legge til, endre og krysse av.`}</span></span><button type="button" class="tk-btn" data-tk-act="lsv">${isMine(l) ? 'Administrer' : 'Liste'}</button></div>`;
+  }
+  return `<div class="tk-info">${ic}<rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg><span class="tk-main"><b>Bare du ser denne listen</b><span class="tk-meta">Privat. Del den for å gjøre den felles.</span></span><button type="button" class="tk-btn" data-tk-act="lsv">Del</button></div>`;
 }
 
+/* ---------- Glimt-kortet (inline på web) ---------- */
+const SUGG = ['Påminn meg å kansellere Overleaf 21.09 kl 9, viktig, hver måned', 'Legg ukas matplan i handlelisten', 'Kjøp melk, egg og kaffe', 'Hva har jeg igjen i dag?', 'Hva er forfalt?', 'Når kjøpte vi sist kaffe?'];
+const spk = (busy) => `<span class="tk-spk${busy ? ' busy' : ''}" aria-hidden="true"><i></i><b>✦</b></span>`;
+function glimtCard() {
+  const g = S.g;
+  const ans = g.ans ? `<div class="tk-gans" role="status"><div class="tk-gat">${spk(false)}<span>${esc(g.ans.text)}</span></div>
+      ${g.ans.items?.length ? `<div class="tk-gres">${g.ans.items.slice(0, 12).map((x) => `<span class="tk-gri"><span class="tk-dot" style="background:${esc(x.c ?? 'var(--t-ink)')}"></span><b>${esc(x.n)}</b>${x.m ? `<span class="tk-meta">${esc(x.m)}</span>` : ''}</span>`).join('')}</div>` : ''}
+      <div class="tk-opts">${g.ans.undo ? '<button type="button" class="tk-gbtn" data-tk-g="undo">Angre</button>' : ''}<button type="button" class="tk-gbtn" data-tk-g="clear">Lukk</button></div></div>` : '';
+  return `<section class="tk-glimt" aria-label="Glimt"><form class="tk-gf" data-tk-gform>${spk(!!g.busy)}<input name="gq" value="${esc(g.q)}" placeholder="${esc(g.busy || 'Spør Glimt eller skriv en oppgave …')}" autocomplete="off" maxlength="2000" aria-label="Spør Glimt eller skriv en oppgave"${g.busy ? ' disabled' : ''}>
+      <label class="tk-gcam" title="Bilde av handlelapp eller oppskrift" aria-label="Legg ved bilde"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg><input type="file" accept="image/*" data-tk-gimg hidden></label>
+      <button type="submit" class="tk-gsend" aria-label="Send til Glimt"${g.busy ? ' disabled' : ''}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></form>
+    <div class="tk-gsug">${SUGG.map((q) => `<button type="button" class="tk-gchip" data-tk-gq="${esc(q)}">${esc(q)}</button>`).join('')}</div>${ans}</section>`;
+}
+
+/* ---------- Glimt-kort i listen (holde orden og huske på) ---------- */
+const tipHide = (k) => { try { return localStorage.getItem(`tk37_tip_${k}`) === '1'; } catch { return false; } };
+const tipSet = (k) => { try { localStorage.setItem(`tk37_tip_${k}`, '1'); } catch { /* */ } };
+// Serverens Glimt-kort (GET /api/tasks/glimt/cards) når de finnes; ellers lokale regler under.
+const CARD_IC = { merge: ['M8 7h11v11H8zM5 4h11v2M5 4v11h2', '#3d7f8a'], overdue: ['M12 7v5l3 2M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18', '#b23a2a'], store: ['M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 7a2.5 2.5 0 1 0 0 5a2.5 2.5 0 0 0 0-5', '#2f6b45'], packlist: ['M3 21h18M5 21V10l7-6 7 6v11M10 21v-5h4v5', '#a8661a'] };
+const CARD_SUB = { merge: 'Slå sammen til én. Tagger og deloppgaver beholdes.', overdue: 'Flytt dem til i morgen, eller arkiver det som ikke trengs lenger.', store: 'Appen varsler når du er ved en matbutikk.', packlist: 'Fra kalenderen.' };
+let cardsFor = null;
+async function loadCards() {
+  const k = S.cur;
+  cardsFor = k;
+  try { const r = await api(`/tasks/glimt/cards${k !== 'alle' && k !== 'arkiv' ? `?list=${encodeURIComponent(k)}` : ''}`); if (cardsFor === k && Array.isArray(r?.cards)) { S.cards = r.cards; paint(); } }
+  catch (er) { if (er.status === 404 && k === 'alle') S.cards = false; }
+}
+function srvTips() {
+  return S.cards.map((c, i) => { const [ic, col] = CARD_IC[c.kind] ?? CARD_IC.merge; return `<div class="tk-tip"><span class="tk-tipi" style="--c:${col}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ic}"/></svg></span><span class="tk-main"><b>${esc(c.text)}</b>${CARD_SUB[c.kind] && !/\?$/.test(c.text) ? `<span class="tk-meta">${esc(c.kind === 'store' && c.list ? `${CARD_SUB.store.replace('Appen', `${c.list.name}: appen`)}` : CARD_SUB[c.kind])}</span>` : ''}</span><span class="tk-tipb">${(c.actions ?? []).map((a, j) => `<button type="button" class="tk-gbtn${j ? '' : ' pri'}" data-tk-card="${i}:${j}">${esc(a.label)}</button>`).join('')}${(c.actions ?? []).some((a) => a.action === 'dismiss') ? '' : `<button type="button" class="tk-gbtn" data-tk-card="${i}:x">Ikke nå</button>`}</span></div>`; }).join('');
+}
+async function cardAct(ref) {
+  const [i, j] = ref.split(':'), c = S.cards?.[+i];
+  if (!c) return;
+  const a = j === 'x' ? { action: 'dismiss' } : c.actions?.[+j];
+  if (!a) return;
+  if (a.action === 'dismiss') { S.cards = S.cards.filter((x) => x !== c); paint(); api('/tasks/glimt/cards/dismiss', { method: 'POST', json: { key: c.key } }).catch(() => {}); return; }
+  S.g.busy = 'Glimt jobber …'; paint();
+  try {
+    const r = await api('/tasks/glimt', { method: 'POST', json: { action: a.action, ids: c.ids, eventId: a.eventId ?? c.event?.id, list: c.list?.id } });
+    setAns({ text: r.text ?? 'Ferdig.', items: (r.items ?? []).map(resItem), undo: r.undo?.token ? { token: r.undo.token } : null });
+  } catch (er) { setAns({ text: er.message, items: [] }); }
+  load();
+}
+function tips(inL) {
+  if (Array.isArray(S.cards)) return srvTips();
+  const out = [], norm = inL.map((t) => ({ id: t.id, n: tTitle(t), l: tList(t), done: t.done }));
+  for (const d of dupes(norm).slice(0, 2)) {
+    const k = `dup_${d.l}_${d.n.toLowerCase()}`;
+    if (!tipHide(k)) out.push({ ic: 'M8 7h11v11H8zM5 4h11v2M5 4v11h2', c: '#3d7f8a', t: `${d.ids.length}× «${d.n}» i ${listOf(d.l)?.name ?? 'listen'}`, s: 'Slå sammen til én. Tagger og deloppgaver beholdes.', b1: ['Slå sammen', `merge:${d.ids.join(',')}`], b2: ['Ikke nå', `hide:${k}`] });
+  }
+  const late = inL.filter((t) => !t.done && t.due && t.due < today());
+  if (late.length >= 2 && !tipHide(`late_${today()}`)) out.push({ ic: 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18', c: '#b23a2a', t: `${late.length} gjøremål er forfalt`, s: 'Flytt dem til i morgen, eller arkiver det som ikke trengs lenger.', b1: ['Flytt til i morgen', 'late-move'], b2: ['Arkiver', 'late-arch'] });
+  const handel = S.d.lists.find((l) => /handel|handle/i.test(l.name));
+  const hItems = handel ? S.d.items.filter((t) => tList(t) === handel.id && !t.done) : [];
+  if (hItems.length >= 2 && (S.cur === 'alle' || S.cur === handel.id) && !hItems.every((t) => t.place === 'store') && !tipHide('store')) {
+    out.push({ ic: 'M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 7a2.5 2.5 0 1 0 0 5a2.5 2.5 0 0 0 0-5', c: '#2f6b45', t: 'Påminn meg ved butikken', s: `${hItems.length} varer i ${handel.name}. Appen varsler når du er ved Kiwi, Rema eller Coop.`, b1: ['Slå på', 'store-on'], b2: ['Ikke nå', 'hide:store'] });
+  }
+  const ev = tripEvent();
+  if (ev && !tipHide(`trip_${ev.key}`)) out.push({ ic: 'M3 21h18M5 21V10l7-6 7 6v11M10 21v-5h4v5', c: '#a8661a', t: `${ev.title} om ${ev.days} dager`, s: 'Fra kalenderen. Lage pakkeliste og huske brøyting?', b1: ['Lag pakkeliste', `pack:${ev.key}`], b2: ['Ikke nå', `hide:trip_${ev.key}`] });
+  return out.map((x) => `<div class="tk-tip"><span class="tk-tipi" style="--c:${x.c}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${x.ic}"/></svg></span><span class="tk-main"><b>${esc(x.t)}</b><span class="tk-meta">${esc(x.s)}</span></span><span class="tk-tipb"><button type="button" class="tk-gbtn pri" data-tk-tip="${esc(x.b1[1])}">${esc(x.b1[0])}</button>${x.b2 ? `<button type="button" class="tk-gbtn" data-tk-tip="${esc(x.b2[1])}">${esc(x.b2[0])}</button>` : ''}</span></div>`).join('');
+}
+// Hytte/reise i kalenderen de neste 3–21 dagene (fra «Kommende» på Dashboard).
+function tripEvent() {
+  const up = store.data?.upcoming;
+  const L = Array.isArray(up) ? up : up?.events ?? up?.items ?? [];
+  for (const e of L) {
+    const title = e.title ?? e.summary ?? '', date = String(e.date ?? e.start ?? '').slice(0, 10);
+    if (!/hytt|hafjell|reise|ferie|fjellet/i.test(title) || !/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    const days = daysTo(date);
+    if (days >= 3 && days <= 21) return { title, days, date, key: `${date}_${title.toLowerCase().replace(/\W+/g, '')}`.slice(0, 60) };
+  }
+  return null;
+}
+
+/* ---------- Rader ---------- */
 function row(t, i) {
-  const [dt, dc] = dueLabel(t.due), c = colorOf(t.list);
-  const meta = [dt, nameOf(t.assignee), S.cur === 'alle' || S.cur === 'arkiv' ? listOf(t.list)?.name ?? '' : ''].filter(Boolean).join(' · ');
+  const [dt, dc] = dueLabel(t), c = colorOf(tList(t));
+  const subs = Array.isArray(t.subs) ? t.subs : [];
+  const meta = [dt, t.rep && t.rep !== 'none' ? '↻' : '', t.urgent ? '⏰' : '', subs.length ? `${subs.filter((x) => x.done).length}/${subs.length}` : '', nameOf(tWho(t)),
+    S.cur === 'alle' || S.cur === 'arkiv' ? listOf(tList(t))?.name ?? '' : '', ...(t.tags ?? []).map((x) => `#${x}`)].filter(Boolean).join(' · ');
+  const pre = `${t.flag ? '<span class="tk-flag" aria-label="Flagget">⚑</span>' : ''}${t.prio ? `<span class="tk-prio">${'!'.repeat(Math.min(3, +t.prio))}</span>` : ''}`;
   return `<div class="tk-row${t.done ? ' done' : ''}${i ? ' bt' : ''}">
     <button type="button" class="tk-chk" style="--c:${esc(c)}" data-tk-tick="${esc(t.id)}" aria-label="${t.done ? 'Marker som ikke gjort' : 'Fullfør'}" aria-pressed="${t.done}">${t.done ? '✓' : ''}</button>
-    <span class="tk-main"><span class="tk-n">${esc(t.title)}</span>${meta ? `<span class="tk-meta ${t.done ? '' : dc}">${esc(meta)}</span>` : ''}</span>
-    ${S.cur === 'arkiv' ? `<button type="button" class="tk-restore" data-tk-restore="${esc(t.id)}">↺ Gjenopprett</button>` : t.done ? `<button type="button" class="tk-x tk-arc" data-tk-arch="${esc(t.id)}" aria-label="Arkiver ${esc(t.title)}" title="Arkiver">${ARCH_SVG}</button>` : ''}
-    <button type="button" class="tk-x" data-tk-del="${esc(t.id)}" aria-label="${S.cur === 'arkiv' ? 'Slett for godt' : 'Slett'} ${esc(t.title)}">×</button>
+    <button type="button" class="tk-main tk-open" data-tk-ed="${esc(t.id)}" aria-label="Detaljer for ${esc(tTitle(t))}"><span class="tk-n">${pre}${esc(tTitle(t))}</span>${meta ? `<span class="tk-meta ${t.done ? '' : dc}">${esc(meta)}</span>` : ''}</button>
+    ${S.cur === 'arkiv' ? `<button type="button" class="tk-restore" data-tk-restore="${esc(t.id)}">↺ Gjenopprett</button>` : t.done ? `<button type="button" class="tk-x tk-arc" data-tk-arch="${esc(t.id)}" aria-label="Arkiver ${esc(tTitle(t))}" title="Arkiver">${ARCH_SVG}</button>` : ''}
+    <button type="button" class="tk-x" data-tk-del="${esc(t.id)}" aria-label="${S.cur === 'arkiv' ? 'Slett for godt' : 'Slett'} ${esc(tTitle(t))}">×</button>
   </div>`;
 }
 
 function body() {
-  if (S.err && !S.d) return `<div class="card tk-card"><div class="tk-empty">Kunne ikke hente huskelisten: ${esc(S.err)}<br><button type="button" class="tk-btn" data-tk-act="retry">Prøv igjen</button></div></div>`;
+  if (S.err && !S.d) return `<div class="card tk-card"><div class="tk-empty">Kunne ikke hente gjøremålene: ${esc(S.err)}<br><button type="button" class="tk-btn" data-tk-act="retry">Prøv igjen</button></div></div>`;
   if (!S.d) return '<div class="card tk-card"><div class="tk-empty">Laster …</div></div>';
   const items = S.d.items ?? [], lists = S.d.lists ?? [], ARC = S.cur === 'arkiv';
-  const inL = ARC ? S.arch : items.filter((t) => S.cur === 'alle' || t.list === S.cur);
+  const inL = ARC ? S.arch : items.filter((t) => S.cur === 'alle' || tList(t) === S.cur);
   const t0 = today();
-  const od = inL.filter((t) => !t.done && t.due && t.due <= t0).sort((a, b) => a.due.localeCompare(b.due));
+  const od = inL.filter((t) => !t.done && t.due && t.due <= t0).sort((a, b) => a.due.localeCompare(b.due) || (b.prio ?? 0) - (a.prio ?? 0));
   const later = inL.filter((t) => !t.done && !(t.due && t.due <= t0)).sort((a, b) => (a.due ?? '9').localeCompare(b.due ?? '9'));
-  const done = inL.filter((t) => t.done).sort((a, b) => (b.doneAt ?? 0) - (a.doneAt ?? 0)).slice(0, 30);
+  const done = inL.filter((t) => t.done).sort((a, b) => (doneMs(b) ?? 0) - (doneMs(a) ?? 0)).slice(0, 30);
   const curName = S.cur === 'alle' ? 'Alle' : ARC ? 'Arkivert' : listOf(S.cur)?.name ?? S.cur;
   const chip = (id, name, color) => {
-    const n = id === 'arkiv' ? S.arch.length : (id === 'alle' ? items : items.filter((t) => t.list === id)).filter((t) => !t.done).length;
-    const l = id === 'alle' ? null : listOf(id), sh = l && (listMembers(l).length || !isMine(l));
-    // «Alle» har ingen fargeprikk (prompt 22).
-    return `<button type="button" class="tk-list${S.cur === id ? ' on' : ''}" data-tk-list="${esc(id)}" aria-pressed="${S.cur === id}"${sh ? ' title="Delt liste"' : ''}>${id === 'alle' || id === 'arkiv' ? '' : `<span class="tk-dot" style="background:${esc(color)}"></span>`}${esc(name)}${sh ? '<span class="tk-shd" aria-label="delt">⇄</span>' : ''}<span class="tk-k">${n}</span></button>`;
+    const n = id === 'arkiv' ? S.arch.length : (id === 'alle' ? items : items.filter((t) => tList(t) === id)).filter((t) => !t.done).length;
+    const l = id === 'alle' || id === 'arkiv' ? null : listOf(id), sh = isShared(l);
+    return `<button type="button" class="tk-list${S.cur === id ? ' on' : ''}" data-tk-list="${esc(id)}" aria-pressed="${S.cur === id}"${sh ? ' title="Delt liste · trykk igjen for å administrere"' : l ? ' title="Trykk igjen for å endre listen"' : ''}>${l ? `<span class="tk-dot" style="background:${esc(color)}"></span>` : ''}${esc(name)}${sh ? avs(listPeople(l)) : ''}<span class="tk-k">${n}</span></button>`;
   };
   const opt = (kind, v, n, on) => `<button type="button" class="tk-opt${on ? ' on' : ''}" data-tk-${kind}="${v ?? ''}" aria-pressed="${on}">${esc(n)}</button>`;
   const group = (title, cls, arr, act = '') => (arr.length ? `<section class="tk-group"><span class="tk-gh"><span class="tk-gt ${cls}">${title}</span>${act}</span><div class="card tk-card">${arr.map(row).join('')}</div></section>` : '');
   const actBtn = (k, n) => `<button type="button" class="tk-gbtn" data-tk-act="${k}"${S.busy ? ' disabled' : ''}>${n}</button>`;
-  const lists2 = `<div class="tk-lists">${chip('alle', 'Alle', 'var(--t-ink)')}${lists.map((l) => chip(l.id, l.name, l.color)).join('')}${chip('arkiv', 'Arkivert', 'var(--t-mut)')}</div>`;
+  const lists2 = `<div class="tk-lists">${chip('alle', 'Alle', 'var(--t-ink)')}${lists.map((l) => chip(l.id, l.name, l.color)).join('')}${chip('arkiv', 'Arkivert', 'var(--t-mut)')}<button type="button" class="tk-list tk-new" data-tk-act="newlist">+ Ny liste</button></div>`;
   if (ARC) {
     return `${lists2}${group(`ARKIVERT · ${S.arch.length}`, 'mut', S.arch, actBtn('arch-clear', 'Tøm arkivet'))}
       ${S.arch.length ? '' : '<div class="tk-empty">Ingenting i arkivet. Fullførte oppgaver arkiveres automatisk etter 7 dager.</div>'}
       <div class="tk-foot">Arkiverte oppgaver telles ikke i lister, widgets eller på Hjem. ↺ Gjenopprett legger oppgaven tilbake som åpen i sin liste.</div>`;
   }
-  // Ansvarlig: deg og dem listen er delt med (eller alle på en eldre server uten deling).
-  const curL = S.cur === 'alle' ? null : listOf(S.cur), hasShare = lists.some((l) => 'members' in l);
-  const allowed = curL && hasShare ? new Set([...listMembers(curL), uidOf(curL.owner)]) : null;
-  const who = [[null, 'Meg'], ...(S.d.members ?? []).filter((m) => (m.id ?? m.userId) !== myId() && (!allowed || allowed.has(m.id ?? m.userId))).map((m) => [m.id ?? m.userId, m.name])];
+  const curL = S.cur === 'alle' ? null : listOf(S.cur);
+  const allowed = curL ? new Set(listPeople(curL).map((p) => p.id)) : null;
+  const who = [[null, 'Meg'], ...people().filter((m) => m.id !== myId() && (!allowed || allowed.has(m.id))).map((m) => [m.id, m.name])];
   return `${lists2}
-    ${shareBar(curL)}
+    ${infoCard(curL)}
+    ${glimtCard()}
+    ${tips(inL)}
     <form class="tk-add" data-tk-form><input name="title" value="${esc(S.nv)}" placeholder="Ny oppgave i ${esc(curName)}" autocomplete="off" maxlength="200" aria-label="Ny oppgave"><button type="submit" aria-label="Legg til"${S.busy ? ' disabled' : ''}>+</button></form>
     <div class="tk-opts">${[[0, 'I dag'], [1, 'I morgen'], [7, 'Neste uke'], [null, 'Uten dato']].map(([v, n]) => opt('due', v, n, S.nd === v)).join('')}<span class="tk-sep"></span>${who.map(([v, n]) => opt('who', v, n, S.nw === v)).join('')}</div>
     ${group('I DAG OG FORFALT', 'late', od)}${group('SENERE', 'mut', later)}${group('FERDIG', 'pos', done, actBtn('arch-all', 'Arkiver alle'))}
     ${inL.length ? '' : `<div class="tk-empty">Ingen oppgaver i ${esc(curName)}.</div>`}
     ${isAdmin() ? '<div class="tk-ha-slot"></div>' : ''}
-    <div class="tk-foot">${liveOn() ? '● Sanntid' : 'Oppdateres automatisk'} · Listene er private til eieren deler dem. Widgets for iPhone og Android finnes i appen.</div>`;
+    <div class="tk-foot">${liveOn() ? '● Sanntid' : 'Oppdateres automatisk'} · Dine lister er private. Delte lister ser alle medlemmene. Trykk på en oppgave for detaljer.</div>`;
 }
 
-// Synk med Home Assistant (prompt 22): bare admin. Seksjonen beholdes mellom omtegninger, så valg og status ikke blinker.
+/* ---------- Detaljarket ---------- */
+const sw = (on, attr) => `<button type="button" class="tk-sw${on ? ' on' : ''}" ${attr} role="switch" aria-checked="${!!on}"><i></i></button>`;
+const ib = (c, d) => `<span class="tk-ib" style="--c:${c}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg></span>`;
+const sel = (k, list, v) => `<select class="tk-sel" data-tk-f="${k}" aria-label="${k}">${list.map(([a, b]) => `<option value="${esc(a)}"${String(v ?? '') === String(a) ? ' selected' : ''}>${esc(b)}</option>`).join('')}</select>`;
+const linkify = (s) => esc(s).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+function edSheet() {
+  const t = S.ed && (S.d?.items.find((x) => String(x.id) === S.ed) ?? S.arch.find((x) => String(x.id) === S.ed));
+  if (!t) return '';
+  const l = listOf(tList(t)), subs = Array.isArray(t.subs) ? t.subs : [], tags = t.tags ?? [];
+  const mem = l ? listPeople(l) : people();
+  const g = guess(tTitle(t), people()), gl = g.l ? S.d.lists.find((x) => x.name.toLowerCase() === g.l) : null;
+  const sugg = [gl && gl.id !== tList(t) ? gl.name : null, g.who && g.who.id !== tWho(t) ? g.who.name : null, ...g.tags.filter((x) => !tags.includes(x)).map((x) => `#${x}`), g.place && t.place !== g.place ? (g.place === 'store' ? 'påminn ved butikk' : 'påminn på hytta') : null].filter(Boolean);
+  const notes = tNotes(t);
+  return `<div class="tk-back" data-tk-close><div class="tk-sheet" role="dialog" aria-modal="true" aria-label="Detaljer">
+    <div class="tk-sh"><button type="button" class="tk-round" data-tk-close aria-label="Lukk">✕</button><b>Detaljer</b><button type="button" class="tk-done" data-tk-close>Ferdig</button></div>
+    <div class="tk-sc">
+    <div class="tk-c"><input class="tk-ti" data-tk-f="title" value="${esc(tTitle(t))}" maxlength="200" aria-label="Tittel"><textarea class="tk-no" data-tk-f="notes" rows="3" placeholder="Notater og lenke" aria-label="Notater og lenke">${esc(notes)}</textarea>${/https?:\/\//.test(notes) ? `<div class="tk-links">${linkify(notes.match(/https?:\/\/\S+/g).join(' '))}</div>` : ''}</div>
+    <span class="tk-gt">DATO OG TID</span>
+    <div class="tk-c">
+      <div class="tk-r">${ib('#b23a2a', 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4')}<span class="tk-rl"><b>Dato</b>${t.due ? `<input type="date" class="tk-in" data-tk-f="due" value="${esc(t.due)}" aria-label="Dato">` : ''}</span>${sw(!!t.due, 'data-tk-sw="due"')}</div>
+      <div class="tk-r">${ib('#2b5d8a', 'M12 7v5l3 2M12 3a9 9 0 1 0 0 18a9 9 0 0 0 0-18')}<span class="tk-rl"><b>Tid</b>${t.time ? `<input type="time" class="tk-in" data-tk-f="time" value="${esc(t.time)}" aria-label="Tid">` : ''}</span>${sw(!!t.time, 'data-tk-sw="time"')}</div>
+      <div class="tk-r">${ib('#e8573a', 'M12 8v4l2 2M5 3L2 6M19 3l3 3M12 4a8 8 0 1 0 0 16a8 8 0 0 0 0-16')}<span class="tk-rl"><b>Viktig</b></span>${sw(!!t.urgent, 'data-tk-sw="urgent"')}</div>
+    </div>
+    <span class="tk-hint">Viktige oppgaver ringer som en alarm, også i Fokus og stille-modus.</span>
+    <div class="tk-c">
+      <div class="tk-r">${ib('#2f6b45', 'M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3')}<span class="tk-rl"><b>Gjenta</b></span>${sel('rep', REP, t.rep ?? 'none')}</div>
+      <div class="tk-r">${ib('#7a5ad6', 'M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10 21h4')}<span class="tk-rl"><b>Tidlig påminnelse</b></span>${sel('early', EARLY, t.early ?? 'none')}</div>
+    </div>
+    <div class="tk-c"><div class="tk-r">${ib('#2f6b45', 'M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21zM12 7a2.5 2.5 0 1 0 0 5a2.5 2.5 0 0 0 0-5')}<span class="tk-rl"><b>Påminn på sted</b></span>${sel('place', PLACE, t.place ?? '')}</div></div>
+    <span class="tk-gt">ORGANISERING</span>
+    <div class="tk-c">
+      ${sugg.length ? `<div class="tk-sugg">${spk(false)}<span>Glimt foreslår: ${esc(sugg.join(' · '))}</span><button type="button" class="tk-gbtn" data-tk-ed-act="sugg">Bruk</button></div>` : ''}
+      <div class="tk-blk"><b>Liste</b><div class="tk-opts">${S.d.lists.map((x) => `<button type="button" class="tk-opt${x.id === tList(t) ? ' on' : ''}" data-tk-edl="${esc(x.id)}" aria-pressed="${x.id === tList(t)}"><span class="tk-dot" style="background:${esc(x.color)}"></span>${esc(x.name)}</button>`).join('')}</div></div>
+      <div class="tk-blk"><b>Ansvarlig</b><div class="tk-opts">${[...mem.map((p) => [p.id, p.id === myId() ? `${p.name || 'Meg'}` : p.name]), [null, 'Ingen']].map(([id, n]) => `<button type="button" class="tk-opt${(tWho(t) ?? null) === id ? ' on' : ''}" data-tk-edw="${esc(id ?? '')}" aria-pressed="${(tWho(t) ?? null) === id}">${esc(n)}</button>`).join('')}</div></div>
+      <div class="tk-blk"><b>Prioritet</b><div class="tk-seg">${PRIO.map(([v, n]) => `<button type="button" class="${(+t.prio || 0) === v ? 'on' : ''}" data-tk-edp="${v}" aria-pressed="${(+t.prio || 0) === v}">${v ? `<i>${'!'.repeat(v)}</i> ` : ''}${n}</button>`).join('')}</div></div>
+      <div class="tk-r">${ib('#e8794a', 'M5 21V4h11l-2 4 2 4H5')}<span class="tk-rl"><b>Flagg</b></span>${sw(!!t.flag, 'data-tk-sw="flag"')}</div>
+      <div class="tk-blk"><b>Tagger</b><div class="tk-opts">${tags.map((x) => `<button type="button" class="tk-tag" data-tk-untag="${esc(x)}" title="Fjern">#${esc(x)} ×</button>`).join('')}<input class="tk-tagin" data-tk-tagin value="${esc(S.tagIn)}" placeholder="#tagg + Enter" aria-label="Ny tagg" maxlength="30"></div></div>
+      <div class="tk-blk"><span class="tk-bh"><b>Deloppgaver</b>${subs.length ? `<span class="tk-meta">${subs.filter((x) => x.done).length} / ${subs.length}</span>` : ''}</span>
+        ${subs.map((x, i) => `<div class="tk-subr"><button type="button" class="tk-chk sm${x.done ? ' on' : ''}" style="--c:${esc(colorOf(tList(t)))}" data-tk-subt="${i}" aria-pressed="${!!x.done}" aria-label="Fullfør deloppgave">${x.done ? '✓' : ''}</button><span class="${x.done ? 'tk-sdone' : ''}">${esc(x.n)}</span><button type="button" class="tk-x sm" data-tk-subx="${i}" aria-label="Fjern deloppgave">×</button></div>`).join('')}
+        <div class="tk-subr"><span class="tk-subp">+</span><input class="tk-subin" data-tk-subin value="${esc(S.subIn)}" placeholder="Ny deloppgave" aria-label="Ny deloppgave" maxlength="120"></div>
+        <button type="button" class="tk-gbtn tk-split" data-tk-ed-act="split"${S.splitBusy ? ' disabled' : ''}>${S.splitBusy ? 'Glimt tenker …' : '✦ Del opp med Glimt'}</button></div>
+    </div>
+    <button type="button" class="tk-delb" data-tk-ed-act="del">Slett oppgave</button>
+    </div></div></div>`;
+}
+
+/* ---------- Listearket ---------- */
+function listSheet() {
+  const v = S.lsv;
+  if (!v) return '';
+  const l = v.id ? listOf(v.id) : null, owner = !l || isMine(l);
+  const ppl = people(), on = new Set([myId(), ...v.mem]);
+  const hint = on.size > 1 ? 'Delt liste: alle her ser og kan endre oppgavene.' : 'Privat liste: bare du ser den.';
+  return `<div class="tk-back" data-tk-lclose><div class="tk-sheet sm" role="dialog" aria-modal="true" aria-label="${l ? 'Liste' : 'Ny liste'}">
+    <div class="tk-sh"><button type="button" class="tk-round" data-tk-lclose aria-label="Lukk">✕</button><b>${l ? 'Liste' : 'Ny liste'}</b>${owner ? `<button type="button" class="tk-done" data-tk-lsave${v.busy ? ' disabled' : ''}>${l ? 'Lagre' : 'Opprett'}</button>` : '<span></span>'}</div>
+    <div class="tk-sc">
+    <div class="tk-c"><input class="tk-ti" data-tk-lname value="${esc(v.name)}" placeholder="Navn på listen" maxlength="40" aria-label="Navn"${owner ? '' : ' readonly'}>
+      <div class="tk-sws">${LCOL.map((c) => `<button type="button" class="tk-swc${v.color === c ? ' on' : ''}" style="--c:${c}" data-tk-lcol="${c}" aria-label="Farge ${c}" aria-pressed="${v.color === c}"${owner ? '' : ' disabled'}></button>`).join('')}</div></div>
+    <span class="tk-gt">DEL MED</span>
+    <div class="tk-c">${ppl.map((p) => { const self = p.id === myId(), o = on.has(p.id); return `<div class="tk-r"><span class="tk-av" style="background:${esc(pColor(p))}">${esc(String(p.name ?? '?').slice(0, 1).toUpperCase())}</span><span class="tk-rl"><b>${esc(p.name)}${self ? ' (deg)' : ''}</b></span>${self || !owner ? `<span class="tk-sw on${self || !owner ? ' ro' : ''}" aria-hidden="true"${o ? '' : ' style="opacity:.35"'}><i></i></span>` : sw(o, `data-tk-lmem="${esc(p.id)}"`)}</div>`; }).join('') || '<div class="tk-r"><span class="tk-meta">Ingen andre i husstanden ennå.</span></div>'}</div>
+    <span class="tk-hint">${esc(owner ? hint : 'Bare eieren kan endre navn, farge og medlemmer.')}</span>
+    ${v.err ? `<span class="tk-hint err" role="alert">${esc(v.err)}</span>` : ''}
+    ${l ? (owner ? '<button type="button" class="tk-delb" data-tk-lact="del">Slett listen</button>' : '<button type="button" class="tk-delb" data-tk-lact="leave">Forlat listen</button>') : ''}
+    </div></div></div>`;
+}
+
+/* ---------- Tegning ---------- */
 const isAdmin = () => store.me?.me?.role === 'admin';
 let haEl = null, haCtl = null;
 function placeHa(h) {
@@ -133,24 +315,182 @@ function placeHa(h) {
   if (!haEl) { haEl = document.createElement('div'); haEl.className = 'tk-group'; haCtl = mountHa(haEl, { lists: () => Promise.resolve(S.d?.lists ?? []) }); }
   slot.replaceWith(haEl);
 }
-
+let layer = null;
+function paintSheets() {
+  const html = edSheet() + listSheet();
+  if (!html) { if (layer) { layer.remove(); layer = null; document.body.classList.remove('tk-sheet-open'); document.dispatchEvent(new CustomEvent('huske-sheet', { detail: { open: false } })); } return; }
+  const first = !layer;
+  if (!layer) { layer = document.createElement('div'); layer.className = 'tk tk-layer'; document.body.appendChild(layer); bindSheet(layer); document.body.classList.add('tk-sheet-open'); document.dispatchEvent(new CustomEvent('huske-sheet', { detail: { open: true } })); }
+  const sc = layer.querySelector('.tk-sc')?.scrollTop ?? 0, a = document.activeElement;
+  const keep = a && layer.contains(a) ? { sel: a.dataset.tkF ? `[data-tk-f="${a.dataset.tkF}"]` : a.matches('[data-tk-tagin]') ? '[data-tk-tagin]' : a.matches('[data-tk-subin]') ? '[data-tk-subin]' : a.matches('[data-tk-lname]') ? '[data-tk-lname]' : null, pos: a.selectionStart } : null;
+  layer.innerHTML = html;
+  const nsc = layer.querySelector('.tk-sc'); if (nsc) nsc.scrollTop = sc;
+  if (keep?.sel) { const n = layer.querySelector(keep.sel); n?.focus(); try { if (keep.pos != null) n.setSelectionRange(keep.pos, keep.pos); } catch { /* */ } }
+  if (first) setTimeout(() => layer?.querySelector(S.lsv && !S.lsv.id ? '[data-tk-lname]' : '.tk-done, [data-tk-close].tk-round')?.focus({ preventScroll: true }), 30);
+}
 function paint() {
   const h = host();
-  if (!h) return;
-  const act = document.activeElement, focusAdd = act?.closest?.('[data-tk-form]') && act.name === 'title';
+  if (!h) { if (layer) { S.ed = null; S.lsv = null; paintSheets(); } return; }
+  const act = document.activeElement, focusAdd = act?.closest?.('[data-tk-form]') && act.name === 'title', focusG = act?.closest?.('[data-tk-gform]');
   if (haEl && h.contains(haEl)) haEl.remove();
   h.innerHTML = body();
   placeHa(h);
   if (focusAdd) { const i = h.querySelector('[data-tk-form] input'); i?.focus(); i?.setSelectionRange(i.value.length, i.value.length); }
+  if (focusG && !S.g.busy) { const i = h.querySelector('[data-tk-gform] input'); i?.focus(); }
+  paintSheets();
 }
 
-// Arkiver: PATCH {archived:true}. Gir serveren ikke arkivfeltet tilbake, huskes arkiveringen lokalt.
+/* ---------- Lagring ---------- */
+// Sender både de gamle feltnavnene (title/list/assignee/note) og de nye for prompt 37.
+function wire(ch) {
+  const o = { ...ch };
+  if ('title' in ch) o.n = ch.title;
+  if ('list' in ch) o.l = ch.list;
+  if ('assignee' in ch) o.who = ch.assignee;
+  if ('notes' in ch) o.note = ch.notes;
+  return o;
+}
+async function patchItem(t, ch) {
+  Object.assign(t, ch);
+  if ('notes' in ch) t.note = ch.notes;
+  rememberExtra(t);
+  try {
+    const r = await api(`/tasks/${encodeURIComponent(t.id)}`, { method: 'PATCH', json: wire(ch) });
+    const it = r?.item ?? r;
+    if (it && it.id === t.id) { const keep = Object.fromEntries(EXTRA.filter((k) => t[k] !== undefined && it[k] === undefined).map((k) => [k, t[k]])); Object.assign(t, it, keep); }
+    // Gjentagende oppgave fullført: serveren lager neste forekomst (nextItem), ellers gjøres det her.
+    if (r?.next?.id && !S.d.items.some((x) => x.id === r.next.id)) S.d.items.unshift(r.next);
+  } catch (er) { flash(er.message); }
+}
+function patchSoon(t, ch) { Object.assign(t, ch); if ('notes' in ch) t.note = ch.notes; clearTimeout(saveT); saveT = setTimeout(() => patchItem(t, ch), 450); }
+const NEXT = { daily: 1, weekly: 7, biweekly: 14 };
+function nextDue(t) {
+  const d = new Date(`${t.due ?? today()}T12:00`);
+  if (NEXT[t.rep]) d.setDate(d.getDate() + NEXT[t.rep]);
+  else if (t.rep === 'weekdays') { do d.setDate(d.getDate() + 1); while (d.getDay() === 0 || d.getDay() === 6); }
+  else if (t.rep === 'monthly') d.setMonth(d.getMonth() + 1);
+  else if (t.rep === 'yearly') d.setFullYear(d.getFullYear() + 1);
+  return d.toLocaleDateString('sv-SE');
+}
+async function createItem(o) {
+  const json = wire({ title: o.n, list: o.list, due: o.due ?? null, assignee: o.who ?? null, ...(o.notes ? { notes: o.notes } : {}), ...Object.fromEntries(EXTRA.filter((k) => o[k] !== undefined && o[k] !== null && !(Array.isArray(o[k]) && !o[k].length)).map((k) => [k, o[k]])) });
+  const r = await api('/tasks', { method: 'POST', json });
+  const it = r.item ?? r;
+  if (it?.id) { for (const k of EXTRA) if (o[k] !== undefined && it[k] === undefined) it[k] = o[k]; rememberExtra(it); if (!S.d.items.some((x) => x.id === it.id)) S.d.items.unshift(it); }
+  return it;
+}
+// Nye oppgaver fra «Alle» havner i standardlisten (GET /api/tasks/settings → defaultList, ellers «Mine», ellers første liste).
+const defaultList = () => (S.cur !== 'alle' && S.cur !== 'arkiv' ? S.cur : (S.defList && listOf(S.defList) ? S.defList : null) ?? S.d.lists.find((l) => l.kind === 'mine' || /^mine$/i.test(l.name))?.id ?? S.d.lists[0]?.id ?? 'hjem');
+const listByKey = (k) => (k ? S.d.lists.find((l) => l.name.toLowerCase() === k || l.id === k) : null);
+
+let flashT = null;
+function flash(msg) {
+  let el = document.getElementById('tk-flash');
+  if (!el) { el = document.createElement('div'); el.id = 'tk-flash'; el.className = 'tk-flash'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+  el.textContent = msg; el.hidden = false; clearTimeout(flashT); flashT = setTimeout(() => { el.hidden = true; }, 3200);
+}
+
+/* ---------- Glimt ---------- */
+const resItem = (t) => { const l = listOf(tList(t)); return { n: tTitle(t), c: l?.color, m: [l?.name, nameOf(tWho(t)), ...(t.tags ?? []).map((x) => `#${x}`)].filter(Boolean).join(' · ') }; };
+function setAns(a) {
+  S.g.ans = a; S.g.busy = ''; clearTimeout(undoT);
+  if (a?.undo) undoT = setTimeout(() => { if (S.g.ans === a) { a.undo = null; paint(); } }, 10_000);
+  paint();
+}
+async function glimtRun(q, { image = null } = {}) {
+  q = String(q ?? '').trim();
+  if (!q && !image) return;
+  S.g.q = ''; S.g.busy = image ? 'Leser bildet …' : isAsk(q) ? 'Tenker …' : 'Glimt jobber …'; paint();
+  try {
+    const r = await api('/tasks/glimt', { method: 'POST', json: { q, list: S.cur !== 'alle' && S.cur !== 'arkiv' ? S.cur : undefined, image: image ?? undefined } });
+    const items = (r.items ?? []).map((x) => (x.id != null && !S.d.items.some((y) => y.id === x.id) && r.kind === 'add' ? (S.d.items.unshift(x), x) : x));
+    setAns({ text: r.text ?? 'Ferdig.', items: items.map((x) => (x.n && !x.title && x.c ? x : resItem(x))), undo: r.undo?.token ? { token: r.undo.token } : null });
+    if (r.kind === 'add' || r.kind === 'action') load();
+    return;
+  } catch (er) {
+    if (er.status !== 404 && er.status !== 405 && er.status !== 501) { setAns({ text: `Glimt fikk ikke svar: ${er.message}`, items: [] }); return; }
+  }
+  // Lokal tolker (eldre server).
+  if (image) return setAns({ text: 'Bildelesing krever Glimt på serveren. Skriv varene i stedet, eller lim inn en liste.', items: [] });
+  try { await localGlimt(q); } catch (er) { setAns({ text: er.message, items: [] }); }
+}
+const norm = (t) => ({ id: t.id, n: tTitle(t), l: tList(t), who: tWho(t), whoName: nameOf(tWho(t)), byName: nameOf(t.createdBy ?? t.by), due: t.due, done: t.done, doneAt: doneMs(t) });
+async function localGlimt(q) {
+  if (/matplan|middagene|ukas mat|handleliste fra mat/i.test(q)) return matplan();
+  if (/hytt.*(pakke|pakkeliste)|pakkeliste/i.test(q)) return packList();
+  if (/rydd|forfalte/i.test(q) && !/\?/.test(q)) return setAns({ text: 'Bruk kortet i listen: flytt de forfalte til i morgen eller arkiver dem.', items: [] });
+  if (isAsk(q)) {
+    const all = [...S.d.items, ...S.arch].map(norm);
+    const A = gAsk(q, all, { lists: S.d.lists, today: today() });
+    return setAns(A ? { text: A.text, items: A.items.map((x) => resItem(S.d.items.find((y) => y.id === x.id) ?? S.arch.find((y) => y.id === x.id) ?? { title: x.n, list: x.l })) } : { text: 'Det vet jeg ikke her. Spør meg i Chat for mer.', items: [] });
+  }
+  return addParsed(gParse(q, { people: people() }));
+}
+async function addParsed(P, tag) {
+  const made = [];
+  for (const p of P) {
+    const l = listByKey(p.lk) ?? listOf(defaultList());
+    made.push(await createItem({ n: p.n, list: l?.id, due: p.due, who: p.who, time: p.time ?? undefined, urgent: p.urgent || undefined, rep: p.rep !== 'none' ? p.rep : undefined, early: p.early !== 'none' ? p.early : undefined, tags: tag ? [...new Set([...(p.tags ?? []), tag])] : p.tags }));
+  }
+  const one = made[0], ln = listOf(tList(one));
+  const p0 = P[0], dd = one?.due ? new Date(`${one.due}T12:00`).toLocaleDateString('nb-NO', { weekday: 'short', day: 'numeric', month: 'short' }) : '';
+  const text = made.length > 1 ? `La ${made.length} gjøremål i ${navn([...new Set(made.map((x) => listOf(tList(x))?.name).filter(Boolean))])}.`
+    : `La til «${tTitle(one)}» i ${ln?.name ?? 'listen'}${dd ? ` · ${dd}` : ''}${p0.time ? ` kl. ${p0.time}` : ''}${p0.urgent ? ' · viktig (alarm)' : ''}${p0.rep !== 'none' ? ' · gjentas' : ''}${p0.who ? ` · ${nameOf(p0.who)}` : ''}.`;
+  setAns({ text, items: made.map(resItem), undo: { ids: made.map((x) => x.id) } });
+}
+async function matplan() {
+  S.g.busy = 'Leser ukas matplan …'; paint();
+  let names = [], ing = [];
+  try {
+    const m = await api('/mat/plan').catch(() => api('/mat'));
+    const wk = m?.week ?? m?.plan ?? m?.days ?? [];
+    for (const d of Array.isArray(wk) ? wk : Object.values(wk)) { const dish = d?.dish ?? d; if (dish?.name || dish?.n) { names.push(dish.name ?? dish.n); for (const i of dish.ingredients ?? dish.ing ?? []) ing.push(typeof i === 'string' ? i : i.name ?? i.n); } }
+  } catch { /* */ }
+  if (!ing.length) { names = MAT_FALLBACK.map((x) => x[0]); ing = MAT_FALLBACK.flatMap((x) => x[1]); }
+  const handel = S.d.lists.find((l) => /handel/i.test(l.name)) ?? listOf(defaultList());
+  const have = new Set(S.d.items.filter((x) => !x.done && tList(x) === handel?.id).map((x) => tTitle(x).toLowerCase())), seen = new Set(), add = [];
+  for (const i of ing.filter(Boolean)) { const k = i.toLowerCase(); if (have.has(k) || seen.has(k)) continue; seen.add(k); add.push(i); }
+  const made = [];
+  for (const n of add) made.push(await createItem({ n, list: handel?.id, due: isoDay(1), tags: ['matplan'] }));
+  const skipped = ing.length - add.length;
+  setAns({ text: `La ${made.length} varer fra ${names.slice(0, 4).join(', ')} i ${handel?.name ?? 'Handel'}${skipped > 0 ? ` (${skipped} sto der allerede)` : ''}.`, items: made.map(resItem), undo: { ids: made.map((x) => x.id) } });
+}
+async function packList(ev = tripEvent()) {
+  const hytta = S.d.lists.find((l) => /hytt/i.test(l.name)) ?? listOf(defaultList());
+  const due = ev ? isoDay(Math.max(0, ev.days - 1)) : isoDay(11), pre = ev ? isoDay(Math.max(0, ev.days - 2)) : isoDay(9);
+  const made = [await createItem({ n: 'Bestill brøyting', list: hytta?.id, due: pre, who: myId(), tags: ['hytte'] })];
+  for (const n of PACK) made.push(await createItem({ n, list: hytta?.id, due, tags: ['pakkeliste'] }));
+  if (ev) tipSet(`trip_${ev.key}`);
+  setAns({ text: `Lagde pakkeliste${ev ? ` for ${ev.title}` : ''} (${PACK.length} ting) og «Bestill brøyting» to dager før.`, items: made.map(resItem), undo: { ids: made.map((x) => x.id) } });
+}
+async function undo() {
+  const u = S.g.ans?.undo;
+  if (!u) return;
+  S.g.ans.undo = null;
+  if (u.token) { try { await api('/tasks/glimt/undo', { method: 'POST', json: { token: u.token } }); } catch (er) { flash(er.message); } setAns({ text: 'Angret.', items: [] }); return load(); }
+  const ids = new Set((u.ids ?? []).map(String));
+  S.d.items = S.d.items.filter((x) => !ids.has(String(x.id)));
+  setAns({ text: 'Angret.', items: [] });
+  await Promise.all([...ids].map((id) => api(`/tasks/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => null)));
+}
+// Slå sammen like: beholder den første, slår sammen tagger og deloppgaver, sletter resten.
+async function merge(ids) {
+  const L = ids.map((id) => S.d.items.find((x) => String(x.id) === id)).filter(Boolean);
+  if (L.length < 2) return;
+  const [keep, ...rest] = L;
+  const tags = [...new Set(L.flatMap((x) => x.tags ?? []))], subs = L.flatMap((x) => x.subs ?? []);
+  S.d.items = S.d.items.filter((x) => !rest.includes(x));
+  await patchItem(keep, { ...(tags.length ? { tags } : {}), ...(subs.length ? { subs } : {}) });
+  await Promise.all(rest.map((x) => api(`/tasks/${encodeURIComponent(x.id)}`, { method: 'DELETE' }).catch(() => null)));
+  flash(`Slo sammen ${L.length}× «${tTitle(keep)}»`); paint();
+}
+
+/* ---------- Arkiv ---------- */
 async function archive(ids) {
   if (!ids.length) return;
   const set = new Set(ids.map(String)), moved = S.d.items.filter((x) => set.has(String(x.id)));
   S.d.items = S.d.items.filter((x) => !set.has(String(x.id)));
   S.arch = [...moved.map((x) => ({ ...x, doneAt: x.doneAt ?? Date.now() })), ...S.arch];
-  // Lokalt først, så en sanntidsmelding om endringen ikke flytter oppgaven tilbake før serveren har svart.
   const loc = localArch(); moved.forEach((x) => loc.add(String(x.id))); saveLocalArch(loc);
   paint();
   await Promise.all(moved.map(async (x) => {
@@ -161,7 +501,6 @@ async function archive(ids) {
   }));
   paint();
 }
-// Gjenopprett: tilbake som åpen oppgave i sin liste.
 async function restore(id) {
   const it = S.arch.find((x) => String(x.id) === id);
   if (!it) return;
@@ -170,55 +509,93 @@ async function restore(id) {
   const back = { ...it, done: false, doneAt: null, archived: false, arch: false, archivedAt: null, archived_at: null };
   S.d.items.unshift(back); paint();
   try { const r = await api(`/tasks/${encodeURIComponent(id)}`, { method: 'PATCH', json: { archived: false, done: false } }); Object.assign(back, r?.item ?? {}); }
-  catch (er) { if (er.status === 400) { try { await api(`/tasks/${encodeURIComponent(id)}`, { method: 'PATCH', json: { done: false } }); } catch { /* */ } } else alert(er.message); }
+  catch (er) { if (er.status === 400) { try { await api(`/tasks/${encodeURIComponent(id)}`, { method: 'PATCH', json: { done: false } }); } catch { /* */ } } else flash(er.message); }
   paint();
 }
 
+async function tick(id) {
+  const it = S.d.items.find((x) => String(x.id) === id);
+  if (!it) return;
+  it.done = !it.done; it.doneAt = it.done ? Date.now() : null; paint();
+  try {
+    const r = await api(`/tasks/${encodeURIComponent(id)}`, { method: 'PATCH', json: { done: it.done } });
+    Object.assign(it, r?.item ?? {});
+    if (r?.next?.id) { if (!S.d.items.some((x) => x.id === r.next.id)) S.d.items.unshift(r.next); }
+    else if (it.done && it.rep && it.rep !== 'none' && !r?.item?.rep) {
+      // Eldre server: neste forekomst lages her.
+      await createItem({ n: tTitle(it), list: tList(it), due: nextDue(it), who: tWho(it), time: it.time, urgent: it.urgent, rep: it.rep, early: it.early, prio: it.prio, flag: it.flag, tags: it.tags, place: it.place, notes: tNotes(it) || undefined });
+    }
+  } catch (er) { it.done = !it.done; flash(er.message); }
+  paint();
+}
+
+/* ---------- Hendelser ---------- */
 function bind(h) {
   if (h.dataset.tkBound) return;
   h.dataset.tkBound = '1';
-  h.addEventListener('input', (e) => { if (e.target.closest('[data-tk-form]')) S.nv = e.target.value; });
+  h.addEventListener('input', (e) => { if (e.target.closest('[data-tk-form]')) S.nv = e.target.value; if (e.target.closest('[data-tk-gform]')) S.g.q = e.target.value; });
+  h.addEventListener('paste', (e) => {
+    if (!e.target.closest('[data-tk-gform]')) return;
+    const txt = e.clipboardData?.getData('text') ?? '';
+    const L = pasteLines(txt);
+    if (L.length < 2) return;
+    e.preventDefault();
+    S.g.busy = 'Leser teksten …'; paint();
+    addParsed(L.flatMap((x) => gParse(x, { people: people() }))).then(() => { if (S.g.ans) S.g.ans.text = `Lagde ${S.g.ans.items.length} gjøremål fra teksten du limte inn.`; paint(); }).catch((er) => setAns({ text: er.message, items: [] }));
+  });
+  h.addEventListener('change', (e) => {
+    const f = e.target.closest('[data-tk-gimg]');
+    if (!f) return;
+    const file = f.files?.[0]; f.value = '';
+    if (!file) return;
+    const rd = new FileReader();
+    rd.onload = () => glimtRun(S.g.q || 'Les handlelappen', { image: rd.result });
+    rd.readAsDataURL(file);
+  });
   h.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (e.target.closest('[data-tk-gform]')) return glimtRun(S.g.q);
     const title = S.nv.trim();
     if (!title || S.busy) return;
-    const list = S.cur === 'alle' ? (S.d.lists[0]?.id ?? 'hjem') : S.cur;
     S.busy = true;
-    try {
-      const r = await api('/tasks', { method: 'POST', json: { title, list, due: S.nd == null ? null : iso(S.nd), assignee: S.nw ?? myId() ?? null } });
-      const it = r.item ?? r;
-      if (it?.id && !S.d.items.some((x) => x.id === it.id)) S.d.items.unshift(it);
-      S.nv = '';
-    } catch (er) { alert(er.message); }
+    try { await createItem({ n: title, list: defaultList(), due: S.nd == null ? null : isoDay(S.nd), who: S.nw ?? myId() ?? null }); S.nv = ''; } catch (er) { flash(er.message); }
     S.busy = false; paint();
   });
   h.addEventListener('click', async (e) => {
     const t = e.target.closest('button');
     if (!t) return;
-    if (t.dataset.tkList) { S.cur = t.dataset.tkList; S.share = null; return paint(); }
+    if (t.dataset.tkList) {
+      const id = t.dataset.tkList;
+      if (S.cur === id && id !== 'alle' && id !== 'arkiv') return openList(id); // trykk på aktiv chip åpner listearket
+      S.cur = id; if (S.cards !== false) { S.cards = null; loadCards(); } return paint();
+    }
+    if (t.dataset.tkEd) { S.ed = t.dataset.tkEd; S.tagIn = ''; S.subIn = ''; return paintSheets(); }
+    if (t.dataset.tkGq) return glimtRun(t.dataset.tkGq);
+    if (t.dataset.tkG === 'undo') return undo();
+    if (t.dataset.tkG === 'clear') { S.g.ans = null; return paint(); }
+    if (t.dataset.tkCard) return cardAct(t.dataset.tkCard);
+    if (t.dataset.tkTip) {
+      const [k, arg] = t.dataset.tkTip.split(/:(.*)/s);
+      if (k === 'hide') { tipSet(arg); return paint(); }
+      if (k === 'merge') return merge(arg.split(','));
+      const late = S.d.items.filter((x) => !x.done && x.due && x.due < today() && (S.cur === 'alle' || tList(x) === S.cur));
+      if (k === 'late-move') { await Promise.all(late.map((x) => patchItem(x, { due: isoDay(1) }))); flash(`Flyttet ${late.length} til i morgen`); return paint(); }
+      if (k === 'late-arch') return archive(late.map((x) => String(x.id)));
+      if (k === 'store-on') {
+        const handel = S.d.lists.find((l) => /handel|handle/i.test(l.name));
+        const L = S.d.items.filter((x) => tList(x) === handel?.id && !x.done);
+        await Promise.all(L.map((x) => patchItem(x, { place: 'store' })));
+        tipSet('store'); flash(`Du får varsel ved butikken: ${L.slice(0, 3).map(tTitle).join(', ')}${L.length > 3 ? ' …' : ''}`); return paint();
+      }
+      if (k === 'pack') return packList();
+    }
     if (t.dataset.tkDue !== undefined) { S.nd = t.dataset.tkDue === '' ? null : +t.dataset.tkDue; return paint(); }
     if (t.dataset.tkWho !== undefined) { S.nw = t.dataset.tkWho || null; return paint(); }
     if (t.dataset.tkAct === 'retry') return load();
-    if (t.dataset.tkAct === 'share') { const l = listOf(S.cur); S.share = S.share?.id === l?.id ? null : { id: l.id, ids: listMembers(l) }; return paint(); }
-    if (t.dataset.tkAct === 'share-close') { S.share = null; return paint(); }
-    if (t.dataset.tkAct === 'leave') {
-      const l = listOf(S.cur);
-      if (!l || !confirm(`Forlate «${l.name}»? Du ser den ikke lenger før eieren deler den med deg igjen.`)) return;
-      try { await api(`/tasks/lists/${encodeURIComponent(l.id)}/members/me`, { method: 'DELETE' }); S.cur = 'alle'; return load(); } catch (er) { return alert(er.message); }
-    }
-    if (t.dataset.tkShp) { const id = t.dataset.tkShp, ids = S.share.ids; S.share.ids = ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]; return paint(); }
-    if (t.dataset.tkAct === 'share-save') {
-      const l = listOf(S.share.id);
-      S.busy = true; paint();
-      try {
-        const r = await api(`/tasks/lists/${encodeURIComponent(l.id)}/members`, { method: 'PUT', json: { userIds: S.share.ids } });
-        Object.assign(l, r?.list ?? (r?.id ? r : { members: S.share.ids }));
-        S.share = null;
-      } catch (er) { alert(er.status === 404 ? 'Serveren støtter ikke deling av lister ennå.' : er.message); }
-      S.busy = false; return paint();
-    }
+    if (t.dataset.tkAct === 'lsv') return openList(S.cur);
+    if (t.dataset.tkAct === 'newlist') { S.lsv = { id: null, name: '', color: LCOL[S.d.lists.length % LCOL.length], mem: [] }; return paintSheets(); }
     if (t.dataset.tkArch) return archive([t.dataset.tkArch]);
-    if (t.dataset.tkAct === 'arch-all') return archive(S.d.items.filter((x) => x.done && (S.cur === 'alle' || x.list === S.cur)).map((x) => String(x.id)));
+    if (t.dataset.tkAct === 'arch-all') return archive(S.d.items.filter((x) => x.done && (S.cur === 'alle' || tList(x) === S.cur)).map((x) => String(x.id)));
     if (t.dataset.tkRestore) return restore(t.dataset.tkRestore);
     if (t.dataset.tkAct === 'arch-clear') {
       if (!S.arch.length || !confirm(`Slette ${S.arch.length} arkiverte oppgaver for godt?`)) return;
@@ -227,22 +604,139 @@ function bind(h) {
       await Promise.all(ids.map((id) => api(`/tasks/${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => null)));
       S.busy = false; return load();
     }
-    const tick = t.dataset.tkTick, del = t.dataset.tkDel;
-    if (tick) {
-      const it = S.d.items.find((x) => String(x.id) === tick);
-      if (!it) return;
-      it.done = !it.done; it.doneAt = it.done ? Date.now() : null; paint();
-      try { Object.assign(it, (await api(`/tasks/${encodeURIComponent(tick)}`, { method: 'PATCH', json: { done: it.done } })).item ?? {}); } catch (er) { it.done = !it.done; paint(); alert(er.message); }
-      return;
-    }
-    if (del) {
-      const it = S.d.items.find((x) => String(x.id) === del) ?? S.arch.find((x) => String(x.id) === del);
-      S.d.items = S.d.items.filter((x) => String(x.id) !== del); S.arch = S.arch.filter((x) => String(x.id) !== del); paint();
-      { const loc = localArch(); if (loc.delete(del)) saveLocalArch(loc); }
-      try { await api(`/tasks/${encodeURIComponent(del)}`, { method: 'DELETE' }); } catch (er) { if (it) S.d.items.push(it); paint(); alert(er.message); }
-    }
+    if (t.dataset.tkTick) return tick(t.dataset.tkTick);
+    if (t.dataset.tkDel) return del(t.dataset.tkDel);
   });
 }
+async function del(id) {
+  const it = S.d.items.find((x) => String(x.id) === id) ?? S.arch.find((x) => String(x.id) === id);
+  S.d.items = S.d.items.filter((x) => String(x.id) !== id); S.arch = S.arch.filter((x) => String(x.id) !== id); paint();
+  { const loc = localArch(); if (loc.delete(id)) saveLocalArch(loc); }
+  try { await api(`/tasks/${encodeURIComponent(id)}`, { method: 'DELETE' }); } catch (er) { if (it) S.d.items.push(it); paint(); flash(er.message); }
+}
+function openList(id) {
+  const l = listOf(id);
+  if (!l) return;
+  S.lsv = { id: l.id, name: l.name, color: l.color, mem: listPeople(l).map((p) => p.id).filter((x) => x !== myId()) };
+  paintSheets();
+}
+
+function bindSheet(el) {
+  const cur = () => S.d?.items.find((x) => String(x.id) === S.ed) ?? S.arch.find((x) => String(x.id) === S.ed);
+  let downT = null;
+  el.addEventListener('pointerdown', (e) => { downT = e.target; });
+  el.addEventListener('click', async (e) => {
+    const back = e.target.closest('.tk-back');
+    if (back && e.target === back && downT === back) { if (back.matches('[data-tk-lclose]')) S.lsv = null; else S.ed = null; return paintSheets(); }
+    const b = e.target.closest('button');
+    if (!b) return;
+    if (b.matches('.tk-sheet [data-tk-close]')) { S.ed = null; return paintSheets(); }
+    if (b.matches('.tk-sheet [data-tk-lclose]')) { S.lsv = null; return paintSheets(); }
+    const t = cur();
+    if (t && S.ed) {
+      if (b.dataset.tkSw) {
+        const k = b.dataset.tkSw;
+        if (k === 'due') await patchItem(t, t.due ? { due: null, time: null } : { due: today() });
+        else if (k === 'time') await patchItem(t, t.time ? { time: null } : { time: '09:00', ...(t.due ? {} : { due: today() }) }); // tid slår på dato
+        else await patchItem(t, { [k]: !t[k] });
+        return paint();
+      }
+      if (b.dataset.tkEdl) { await patchItem(t, { list: b.dataset.tkEdl, ...(tWho(t) && !listPeople(listOf(b.dataset.tkEdl)).some((p) => p.id === tWho(t)) ? { assignee: null } : {}) }); return paint(); }
+      if (b.dataset.tkEdw !== undefined) { await patchItem(t, { assignee: b.dataset.tkEdw || null }); return paint(); }
+      if (b.dataset.tkEdp !== undefined) { await patchItem(t, { prio: +b.dataset.tkEdp }); return paint(); }
+      if (b.dataset.tkUntag) { await patchItem(t, { tags: (t.tags ?? []).filter((x) => x !== b.dataset.tkUntag) }); return paint(); }
+      if (b.dataset.tkSubt !== undefined) { const s = [...(t.subs ?? [])], i = +b.dataset.tkSubt; s[i] = { ...s[i], done: !s[i].done }; await patchItem(t, { subs: s }); return paint(); }
+      if (b.dataset.tkSubx !== undefined) { const s = [...(t.subs ?? [])]; s.splice(+b.dataset.tkSubx, 1); await patchItem(t, { subs: s }); return paint(); }
+      const a = b.dataset.tkEdAct;
+      if (a === 'del') { if (!confirm(`Slette «${tTitle(t)}»?`)) return; S.ed = null; paintSheets(); return del(String(t.id)); }
+      if (a === 'sugg') {
+        const g = guess(tTitle(t), people()), gl = g.l ? S.d.lists.find((x) => x.name.toLowerCase() === g.l) : null;
+        await patchItem(t, { ...(gl ? { list: gl.id } : {}), ...(g.who ? { assignee: g.who.id } : {}), ...(g.tags.length ? { tags: [...new Set([...(t.tags ?? []), ...g.tags])] } : {}), ...(g.place ? { place: g.place } : {}) });
+        return paint();
+      }
+      if (a === 'split') {
+        S.splitBusy = true; paintSheets();
+        let L = null;
+        try { const r = await api(`/tasks/${encodeURIComponent(t.id)}/split`, { method: 'POST' }); L = r?.item?.subs ? null : (r?.subs ?? r?.items ?? []).map((x) => (typeof x === 'string' ? x : x.n ?? x.title)); if (r?.item) Object.assign(t, r.item); }
+        catch { /* lokale maler */ }
+        if (L !== null || !t.subs?.length) { const add = (L && L.length ? L : splitSugg(tTitle(t))).slice(0, 6).map((n) => ({ n, done: false })); await patchItem(t, { subs: [...(t.subs ?? []), ...add] }); }
+        S.splitBusy = false; return paint();
+      }
+    }
+    const v = S.lsv;
+    if (v) {
+      if (b.dataset.tkLcol) { v.color = b.dataset.tkLcol; return paintSheets(); }
+      if (b.dataset.tkLmem) { const id = b.dataset.tkLmem; v.mem = v.mem.includes(id) ? v.mem.filter((x) => x !== id) : [...v.mem, id]; return paintSheets(); }
+      if (b.matches('[data-tk-lsave]')) return saveList();
+      if (b.dataset.tkLact === 'del') {
+        const l = listOf(v.id), n = S.d.items.filter((x) => tList(x) === v.id).length;
+        if (!confirm(`Slette «${l.name}»${n ? ` og ${n} oppgave${n === 1 ? '' : 'r'}` : ''}?`)) return;
+        try { await api(`/tasks/lists/${encodeURIComponent(v.id)}`, { method: 'DELETE' }); S.lsv = null; S.cur = 'alle'; await load(); } catch (er) { v.err = er.message; paintSheets(); }
+        return;
+      }
+      if (b.dataset.tkLact === 'leave') {
+        const l = listOf(v.id);
+        if (!confirm(`Forlate «${l.name}»? Du ser den ikke lenger før eieren deler den med deg igjen.`)) return;
+        try { await api(`/tasks/lists/${encodeURIComponent(v.id)}/leave`, { method: 'POST' }).catch((er) => (er.status === 404 ? api(`/tasks/lists/${encodeURIComponent(v.id)}/members/me`, { method: 'DELETE' }) : Promise.reject(er))); S.lsv = null; S.cur = 'alle'; await load(); }
+        catch (er) { v.err = er.message; paintSheets(); }
+      }
+    }
+  });
+  el.addEventListener('input', (e) => {
+    const t = cur(), f = e.target.dataset.tkF;
+    if (S.lsv && e.target.matches('[data-tk-lname]')) { S.lsv.name = e.target.value; return; }
+    if (e.target.matches('[data-tk-tagin]')) { S.tagIn = e.target.value; return; }
+    if (e.target.matches('[data-tk-subin]')) { S.subIn = e.target.value; return; }
+    if (!t || !f) return;
+    if (f === 'title') { if (e.target.value.trim()) patchSoon(t, { title: e.target.value }); }
+    else if (f === 'notes') patchSoon(t, { notes: e.target.value });
+  });
+  el.addEventListener('change', async (e) => {
+    const t = cur(), f = e.target.dataset.tkF;
+    if (!t || !f || f === 'title' || f === 'notes') return;
+    const v = e.target.value;
+    await patchItem(t, { [f]: f === 'place' ? v || null : v || null }); paint();
+  });
+  el.addEventListener('keydown', async (e) => {
+    const t = cur();
+    if (e.key === 'Enter' && t && e.target.matches('[data-tk-tagin]')) {
+      e.preventDefault();
+      const v = S.tagIn.replace(/^#+/, '').trim().toLowerCase().replace(/\s+/g, '-');
+      S.tagIn = '';
+      if (v && !(t.tags ?? []).includes(v)) await patchItem(t, { tags: [...(t.tags ?? []), v] });
+      return paint();
+    }
+    if (e.key === 'Enter' && t && e.target.matches('[data-tk-subin]')) {
+      e.preventDefault();
+      const v = S.subIn.trim(); S.subIn = '';
+      if (v) await patchItem(t, { subs: [...(t.subs ?? []), { n: v, done: false }] });
+      return paint();
+    }
+    if (e.key === 'Enter' && S.lsv && e.target.matches('[data-tk-lname]')) { e.preventDefault(); saveList(); }
+  });
+}
+async function saveList() {
+  const v = S.lsv;
+  if (!v || v.busy) return;
+  const name = v.name.trim();
+  if (!name) { v.err = 'Gi listen et navn'; return paintSheets(); }
+  v.busy = true; v.err = ''; paintSheets();
+  try {
+    let id = v.id;
+    if (!id) { const r = await api('/tasks/lists', { method: 'POST', json: { name, color: v.color } }); id = r?.list?.id ?? r?.id; }
+    else await api(`/tasks/lists/${encodeURIComponent(id)}`, { method: 'PATCH', json: { name, color: v.color } });
+    const l0 = listOf(id), before = l0 ? listPeople(l0).map((p) => p.id).filter((x) => x !== myId()).sort().join(',') : '';
+    if (id && (v.mem.length || before) && [...v.mem].sort().join(',') !== before) await api(`/tasks/lists/${encodeURIComponent(id)}/members`, { method: 'PUT', json: { userIds: v.mem } });
+    S.lsv = null; S.cur = id ?? S.cur; await load();
+  } catch (er) { v.busy = false; v.err = er.status === 404 ? 'Serveren støtter ikke dette ennå.' : er.message; paintSheets(); }
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || !layer) return;
+  e.stopPropagation();
+  if (S.lsv) S.lsv = null; else S.ed = null;
+  paintSheets();
+}, true);
+window.addEventListener('hashchange', () => { if (layer && !/^#\/huskeliste/.test(location.hash)) { S.ed = null; S.lsv = null; paintSheets(); } });
 
 export function render() {
   setTimeout(() => {
@@ -251,10 +745,10 @@ export function render() {
     bind(h);
     load();
     haCtl?.refresh();
-    unLive?.();
-    unLive = onLive('tasks', (m) => {
-      if (!host()) { unLive?.(); unLive = null; return; }
-      if (!S.d) return load();
+    unLive?.(); unLive2?.();
+    const live = (m) => {
+      if (!host()) { unLive?.(); unLive2?.(); unLive = unLive2 = null; return; }
+      if (!S.d || m.type === 'todo:changed') return load();
       if ((m.action === 'created' || m.action === 'updated') && m.item && isArch(m.item)) {
         S.d.items = S.d.items.filter((x) => x.id !== m.item.id);
         S.arch = [m.item, ...S.arch.filter((x) => x.id !== m.item.id)];
@@ -263,19 +757,21 @@ export function render() {
       if ((m.action === 'created' || m.action === 'updated') && m.item) {
         S.arch = S.arch.filter((x) => x.id !== m.item.id);
         const i = S.d.items.findIndex((x) => x.id === m.item.id);
-        if (i >= 0) S.d.items[i] = m.item; else S.d.items.unshift(m.item);
+        if (i >= 0) { const keep = Object.fromEntries(EXTRA.filter((k) => S.d.items[i][k] !== undefined && m.item[k] === undefined).map((k) => [k, S.d.items[i][k]])); S.d.items[i] = { ...m.item, ...keep }; } else S.d.items.unshift(m.item);
         return paint();
       }
       if (m.action === 'deleted' && m.id != null) { S.d.items = S.d.items.filter((x) => x.id !== m.id); return paint(); }
       if (m.action === 'lists' && m.lists) { S.d.lists = m.lists; haCtl?.refresh(); return paint(); }
       if (m.action === 'ha') { haCtl?.refresh(); return; }
       load();
-    });
+    };
+    unLive = onLive('tasks', live);
+    unLive2 = onLive('todo:changed', live);
     clearInterval(pollT);
     pollT = setInterval(() => {
-      if (!host()) { clearInterval(pollT); unLive?.(); unLive = null; return; }
-      if (!document.hidden && !liveOn()) load();
+      if (!host()) { clearInterval(pollT); unLive?.(); unLive2?.(); unLive = unLive2 = null; return; }
+      if (!document.hidden && !liveOn() && !layer) load();
     }, 30_000);
   });
-  return `<div class="tk-top"><div class="os-title">Huske<b>liste</b></div><div class="tk-sub">Dine lister og lister som er delt med deg</div></div><div id="tasks" class="tk">${body()}</div>`;
+  return `<div class="tk-top"><div class="os-title">Gjøre<b>mål</b></div><div class="tk-sub">To-do for hele familien · dine lister og lister som er delt med deg</div></div><div id="tasks" class="tk">${body()}</div>`;
 }

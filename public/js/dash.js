@@ -202,7 +202,7 @@ widget('d_cal', { render() {
   const dots = {};
   for (const e of events()) {
     const d = new Date(e.start);
-    if (d.getFullYear() === y && d.getMonth() === m) (dots[d.getDate()] ??= new Set()).add(e.color);
+    if (d.getFullYear() === y && d.getMonth() === m) (dots[d.getDate()] ??= new Set()).add(e.subjectColor || e.color);
   }
   let cells = '';
   for (let i = 0; i < first; i++) cells += '<div class="cal-d blank"></div>';
@@ -220,7 +220,7 @@ widget('d_cal', { render() {
 widget('d_agenda', { cls: 'card', render() {
   const list = upcoming(isMobile() ? 4 : 6);
   return `<div><div class="card-title">${isMobile() ? 'I dag' : 'Agenda'}</div>${isMobile() ? '' : '<div class="card-sub">Kommende fra skolen</div>'}</div>
-    ${list.map((e) => `<div class="row" style="justify-content:flex-start" data-pop="ev:${esc(e.start)}|${esc(e.title)}" role="button" tabindex="0"><span class="dot" style="background:${e.color}"></span><span class="mono sub" style="font-size:13px;width:84px;flex:0 0 auto">${esc(e.when)}</span><span style="flex:1;min-width:0">${esc(e.title)}</span><span class="mono" style="font-size:11px;color:var(--blue)">${e.tag}</span></div>`).join('')
+    ${list.map((e) => `<div class="row" style="justify-content:flex-start" data-pop="ev:${esc(e.start)}|${esc(e.title)}" role="button" tabindex="0"><span class="dot" style="background:${esc(e.subjectColor || e.color)}"></span><span class="mono sub" style="font-size:13px;width:84px;flex:0 0 auto">${esc(e.when)}</span><span style="flex:1;min-width:0">${esc(e.title)}</span><span class="mono" style="font-size:11px;color:var(--blue)">${e.tag}</span></div>`).join('')
     || (store.data.school ? '<div class="empty">Ingen kommende hendelser.</div>' : '')}${errBox('school', 'iCal')}`;
 } });
 
@@ -302,7 +302,7 @@ popHandler('up', (key) => {
 
 /* ---------- Popup for kalenderdag, agenda og aksjer ---------- */
 
-const evRow = (e) => `<div class="row" style="justify-content:flex-start"><span class="dot" style="background:${e.color}"></span><span class="mono sub" style="font-size:13px;width:48px;flex:0 0 auto">${e.allDay ? 'hele' : hm(new Date(e.start))}</span><span style="flex:1;min-width:0">${esc(e.title)}</span><span class="muted" style="font-size:12px;min-width:0;max-width:45%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(noUrl(e.location))}</span></div>`;
+const evRow = (e) => `<div class="row" style="justify-content:flex-start"><span class="dot" style="background:${esc(e.subjectColor || e.color)}"></span><span class="mono sub" style="font-size:13px;width:48px;flex:0 0 auto">${e.allDay ? 'hele' : hm(new Date(e.start))}</span><span style="flex:1;min-width:0">${esc(e.title)}</span><span class="muted" style="font-size:12px;min-width:0;max-width:45%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(noUrl(e.location))}</span></div>`;
 
 popHandler('day', (iso) => {
   const list = events().filter((e) => isoDay(new Date(e.start)) === iso);

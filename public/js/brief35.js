@@ -185,7 +185,8 @@ function panelHtml() {
   const h = new Date().getHours(), mood = bubble ? 'talk' : h >= 23 || h < 6 ? 'sov' : 'idle';
   const pop = P.lastCh !== ch; P.lastCh = ch;
   const wx = v.wx;
-  const vaer = wx ? `<section data-gb="vaer" class="gb-wx${ring('vaer')}">
+  // Prompt 37: hele Vær-kortet er trykkbart og åpner Vær i fullskjerm; ✕ der går tilbake til briefen på samme sted.
+  const vaer = wx ? `<section data-gb="vaer" class="gb-wx gb37-tap${ring('vaer')}" role="button" tabindex="0" aria-label="Åpne Vær">
       <div class="gb-wx1"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="${wx.col}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${wx.ic}"/></svg><span class="gb-wxt"><b>${esc(wx.t)}</b><span>${esc(wx.place)} · ${esc(wx.txt)}</span></span><span class="gb-hl">↑${esc(wx.hi)} ↓${esc(wx.lo)}</span></div>
       ${wx.rain.length ? `<div class="gb-rain">${wx.rain.map((r) => `<span title="${esc(r.tt)}" style="height:${r.h.toFixed(0)}%;background:rgba(255,255,255,${r.o})"></span>`).join('')}</div><div class="gb-rl"><span>nå</span><span>nedbør neste 12 t</span><span>+12 t</span></div>` : ''}
       ${wx.notes.length ? `<div class="gb-notes">${wx.notes.map(([k, val]) => `<span><span>${esc(k)}</span><b>${esc(val)}</b></span>`).join('')}</div>` : ''}</section>` : '';
@@ -206,7 +207,7 @@ function panelHtml() {
     <div class="gb-sc"><div class="gb-pad">
       <div class="gb-spkw">${spkHtml()}</div>
       <div class="gb-title"><b>${esc(v.title)}</b><span>${esc(v.summary)}</span></div>
-      ${vaer}${kal}${abo}${nyh}
+      ${vaer}${bibleHtml('top')}${todosHtml(v)}${kal}${abo}${nyh}${bibleHtml('bottom')}
       <span class="gb-foot">${esc(foot)}</span>
     </div></div>
     <div class="gb-guide">${bub}<button type="button" class="gb-figbtn" data-gb-fig aria-label="${bubble ? 'Avslutt guide-runden' : 'Start guide-runden med Glimt'}">${pop ? `<span class="gf-pop">${fig(ch, 82, mood)}</span>` : fig(ch, 82, mood)}</button></div>
@@ -220,7 +221,8 @@ function spkHtml() {
 }
 function headHtml(title) {
   const s = gs(), on = s.readAloud;
-  return `<div class="gb-head"><span class="gb-kick">GLIMT · ${esc(String(title).toUpperCase())}</span><span class="gb-hb">
+  // Prompt 37: etiketten «GLIMT · KVELDSBRIEF» er fjernet (dobbelt med den store tittelen). Knappene står høyrejustert.
+  return `<div class="gb-head" aria-label="${esc(title)}"><span class="gb-hb">
     <button type="button" class="gb-ib${on ? ' on' : ''}" data-gb-voice aria-label="${on ? 'Slå av opplesning' : 'Slå på opplesning'}" title="${on ? 'Slå av opplesning' : 'Slå på opplesning'}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="${on ? 'M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11' : 'M16 9l5 6M21 9l-5 6'}"/></svg></button>
     <button type="button" class="gb-ib" data-gb-cfg aria-label="Brief-innstillinger" title="Brief-innstillinger"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg></button>
     <button type="button" class="gb-done" data-gb-close>Ferdig</button></span></div>`;
@@ -257,6 +259,12 @@ function bindPanel(el) {
     if (t.closest('[data-gb-fig]')) { try { navigator.vibrate?.(8); } catch { /* */ } stopSpeak(); P.lastT = null; P.said = null; P.step = P.step > 0 && P.step < 99 ? 99 : 1; paintPanel(); return; }
     if (t.closest('[data-gb-next]')) { const n = guide(view()).length; stopSpeak(); P.step = P.step >= n ? 99 : P.step + 1; paintPanel(); return; }
     if (t.closest('[data-gb-skip]')) { stopSpeak(); P.lastT = null; P.step = 99; paintPanel(); return; }
+    if (t.closest('[data-gb37-copy]')) { copyVerse(); return; }
+    if (t.closest('[data-gb37-next]')) { nextVerse(); return; }
+    const tk = t.closest('[data-gb37-tick]');
+    if (tk) { tickTodo(tk.dataset.gb37Tick); return; }
+    if (t.closest('[data-gb37-todos]')) { closeBrief(); location.hash = '#/huskeliste'; return; }
+    if (t.closest('[data-gb="vaer"]') && !t.closest('a,button')) { openVaer(); return; }
     const ev = t.closest('[data-gb-ev]');
     if (ev) { const d = ev.dataset.gbEv; closeBrief(); location.hash = d ? `#/kalender/dag/${d}` : '#/kalender'; return; }
     const td = t.closest('[data-gb-trdone]');
@@ -267,10 +275,92 @@ function bindPanel(el) {
       paintPanel(); paintCards(); return;
     }
   });
+  el.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[data-gb="vaer"]')) { e.preventDefault(); openVaer(); } });
   el.addEventListener('change', (e) => { if (glimtChange(e)) paintCards(); });
   el.addEventListener('submit', (e) => glimtSubmit(e, () => paintPanel()));
   // Bilder som ikke lar seg laste skjules (kortet viser da en jevn flate).
   el.addEventListener('error', (e) => { if (e.target.matches?.('img[data-gb-img]')) e.target.remove(); }, true);
+}
+
+/* ---------- Prompt 37: Vær fra briefen, bibelvers og gjøremål ---------- */
+
+// Vær åpnes som fullskjerm-fanen; web37.js viser ✕ som går tilbake hit på samme scroll-posisjon.
+function openVaer() {
+  try { navigator.vibrate?.(6); } catch { /* */ }
+  stopSpeak();
+  const sc = P.el?.querySelector('.gb-sc')?.scrollTop ?? 0;
+  try { sessionStorage.setItem('gb37_back', JSON.stringify({ sc, at: Date.now() })); } catch { /* */ }
+  closeBrief();
+  location.hash = '#/vaer';
+}
+/** Tilbake fra Vær: åpner briefen igjen på samme sted (uten ny guide-runde). */
+export function reopenBrief(sc = 0) {
+  P.scrollTop = sc;
+  const k = `gb_tour_${new Date().toLocaleDateString('sv-SE')}_${B.kind ?? briefKind()}`;
+  try { localStorage.setItem(k, '1'); } catch { /* */ }
+  openBrief({ tapped: true });
+  requestAnimationFrame(() => { const m = P.el?.querySelector('.gb-sc'); if (m) m.scrollTop = sc; });
+}
+
+// Bibelvers (bare for brukere med modulen): morgenbrief 05–11 og kveldsbrief 17–05. Data fra briefen (bible) eller /api/bible/today.
+const BV = { d: undefined, off: 0, alt: null, copied: 0, loading: false };
+const bPeriod = (d = new Date()) => { const h = d.getHours(); return h >= 5 && h < 11 ? 'morning' : h >= 17 || h < 5 ? 'evening' : null; };
+function loadBible(force = false) {
+  const per = bPeriod();
+  if (!per || BV.loading || (BV.d !== undefined && !force && BV.d?.period === per)) return;
+  if (B.data?.bible?.text) { BV.d = { ...B.data.bible, period: B.data.bible.period ?? per }; return; }
+  BV.loading = true;
+  api(`/bible/today?period=${per}`).then((r) => { BV.d = r?.enabled === false || !r?.text ? null : r; }).catch(() => { BV.d = null; })
+    .finally(() => { BV.loading = false; if (P.open) paintPanel(); });
+}
+// Serverens brief har bible {…, placement:'top'|'bottom'} (bottom når verset er lest i dag) eller null (modulen av).
+function bibleHtml(pos) {
+  const srv = B.data && 'bible' in B.data;
+  if (srv && !B.data.bible?.text) return '';
+  const per = srv ? B.data.bible.period ?? bPeriod() ?? 'morning' : bPeriod();
+  if (!per) return '';
+  if ((srv ? B.data.bible.placement ?? 'top' : 'top') !== pos) return '';
+  if (!srv) loadBible();
+  const v = BV.alt ?? (srv ? B.data.bible : BV.d);
+  if (!v?.text) return '';
+  const m = (v.period ?? per) === 'morning';
+  const date = new Date(v.date ? `${v.date}T12:00` : Date.now()).toLocaleDateString('nb-NO', { weekday: 'long', day: 'numeric', month: 'long' });
+  const txt = String(v.text).replace(/^[«"]|[»"]$/g, '');
+  return `<section data-gb="bibel" class="gb37-bv ${m ? 'm' : 'k'}"><span class="gb37-glow" aria-hidden="true"></span>
+    <span class="gb37-bh"><span>${esc(v.kicker ?? `${m ? 'MORGENVERS' : 'KVELDSVERS'} · GLIMT`)}</span><span>${esc(date.replace(/^./, (c) => c.toUpperCase()))}</span></span>
+    <p class="gb37-vt">«${esc(txt)}»</p><b class="gb37-ref">${esc(v.ref ?? '')}</b>
+    <span class="gb37-bb"><button type="button" data-gb37-copy>${Date.now() - BV.copied < 1600 ? 'Kopiert' : 'Kopier'}</button><button type="button" data-gb37-next aria-label="Nytt vers" title="Nytt vers">↻</button></span></section>`;
+}
+async function copyVerse() {
+  const v = BV.alt ?? (B.data?.bible?.text ? B.data.bible : BV.d);
+  if (!v) return;
+  try { await navigator.clipboard.writeText(`«${String(v.text).replace(/^[«"]|[»"]$/g, '')}» ${v.ref ?? ''}`.trim()); } catch { /* */ }
+  BV.copied = Date.now(); paintPanel(); setTimeout(() => { if (P.open) paintPanel(); }, 1650);
+}
+async function nextVerse() {
+  BV.off += 1;
+  try { const r = await api(`/bible/next?offset=${BV.off}&period=${bPeriod() ?? 'morning'}`); if (r?.text) { BV.alt = r; paintPanel(); } } catch { BV.off -= 1; }
+}
+
+// Gjøremål-kortet: de tre første (forfalt + i dag) med avkrysning rett i briefen. Data: brief.todos, /api/tasks/brief eller /api/tasks/next.
+const TD = { d: undefined, loading: false, done: new Set() };
+function todosHtml() {
+  const src = B.data?.todos ?? TD.d;
+  if (src === undefined && !TD.loading) { TD.loading = true; api('/tasks/brief').catch((e) => (e.status === 404 ? api('/tasks/next?n=3').then((r) => ({ items: (r?.items ?? []).filter((x) => x.overdue || x.today), count: (r?.items ?? []).filter((x) => x.overdue || x.today).length })) : Promise.reject(e))).then((r) => { TD.d = r ?? null; }).catch(() => { TD.d = null; }).finally(() => { TD.loading = false; if (P.open) paintPanel(); }); }
+  const items = (src?.items ?? []).filter((x) => !TD.done.has(String(x.id))).slice(0, 3);
+  if (!items.length) return '';
+  const n = src.count ?? items.length, today = new Date().toLocaleDateString('sv-SE');
+  const late = items.filter((x) => x.due && x.due < today).length;
+  const head = `${n} gjøremål i dag${late ? ` · ${late} forfalt` : ''}`.toUpperCase();
+  return `<section data-gb="huske" class="gb-box gb37-td"><span class="gb-bh"><b>Gjøremål</b><span class="gb-mono red">${esc(head)}</span></span>
+    ${items.map((x) => `<div class="gb37-tr"><button type="button" class="gb37-ck" data-gb37-tick="${esc(x.id)}" style="--c:${esc(x.color ?? x.listColor ?? '#b23a2a')}" aria-label="Fullfør ${esc(x.title ?? x.n)}"></button><span>${esc(x.title ?? x.n)}</span><small>${esc(x.due && x.due < today ? 'Forfalt' : x.time ? `I dag ${x.time}` : x.listName ?? x.list ?? '')}</small></div>`).join('')}
+    <button type="button" class="gs-pill" data-gb37-todos>Åpne Gjøremål ›</button></section>`;
+}
+async function tickTodo(id) {
+  TD.done.add(String(id));
+  try { navigator.vibrate?.(8); } catch { /* */ }
+  paintPanel();
+  try { await api(`/tasks/${encodeURIComponent(id)}`, { method: 'PATCH', json: { done: true } }); } catch { TD.done.delete(String(id)); paintPanel(); }
 }
 
 /* ---------- Globale bindinger ---------- */

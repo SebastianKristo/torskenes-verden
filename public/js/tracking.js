@@ -1,4 +1,5 @@
 // Sporing: pakker fra Finn-handler, e-post og manuelt innlimte nummer. Data og status kommer fra /api/tracking.
+import { quotaLine, trackKeys, loadTrackKeys } from './settings-track37.js';
 import { pkgLogo, pkgTitle } from './pkglogo.js';
 import { api, esc, hm } from './util.js';
 import { openSettings } from './settings.js';
@@ -148,7 +149,7 @@ function body2c() {
   return `<div class="p-trk-bar"><div class="p-trk-tabs" role="tablist">${tabs}</div>
       <div class="p-trk-add"><input name="trk-no" value="${esc(S.no)}" placeholder="Legg til sporingsnummer" autocomplete="off" spellcheck="false" aria-label="Sporingsnummer"><button class="trk-go" data-trk-add ${S.adding ? 'disabled' : ''}>${S.adding ? 'Sporer …' : 'Spor'}</button></div></div>
     <div class="trk-guess">${addHint()}</div>
-    ${selBar(shown)}${shown.length ? `<div class="trk-grid">${shown.map(card).join('')}</div>` : '<div class="trk-empty">Ingen pakker her.</div>'}
+    ${selBar(shown)}${shown.length ? `<div class="trk-grid">${shown.map(card).join('')}</div>` : '<div class="trk-empty">Ingen pakker her.</div>'}${keysLine()}
     <div class="p-trk-cols">
       <div class="trk-panel"><div class="trk-ph"><b>KILDER</b><small>${esc(last)} · <button class="trk-link" data-trk-check ${S.busy ? 'disabled' : ''}>${S.busy ? 'Sjekker …' : 'Sjekk nå'}</button></small></div>${rows}</div>
       <div class="trk-panel"><div class="trk-ph"><b>TRANSPORTØRER</b><button class="trk-link" data-trk-keys>Nøkler i Innstillinger ›</button></div>${conns}</div>
@@ -196,7 +197,7 @@ function body() {
     <div class="trk-srcs">${srcs}<span class="trk-sp"></span><span class="trk-sync">${esc(last)}</span><button class="trk-btn" data-trk-check ${S.busy ? 'disabled' : ''}>${S.busy ? 'Sjekker …' : 'Sjekk nå'}</button></div>
   </div>
   <div class="trk-segs" role="tablist">${segs().map((n) => `<button role="tab" aria-selected="${S.seg === n}" class="${S.seg === n ? 'on' : ''}" data-trk-seg="${esc(n)}">${esc(n)} ${L[n].length}</button>`).join('')}</div>
-  ${selBar(shown)}${shown.length ? `<div class="trk-grid">${shown.map(card).join('')}</div>` : '<div class="trk-empty">Ingen sendinger her.</div>'}
+  ${selBar(shown)}${shown.length ? `<div class="trk-grid">${shown.map(card).join('')}</div>` : '<div class="trk-empty">Ingen sendinger her.</div>'}${keysLine()}
   <div class="trk-side">
     <div class="trk-panel"><div class="trk-ph"><b>Varsler</b><small>Samlet under Innstillinger → Varsler</small></div>${notifyLink()}</div>
     <div class="trk-panel"><div class="trk-ph"><b>Transportører</b><button class="trk-link" data-trk-keys>Nøkler i Innstillinger → Integrasjoner ›</button></div>${conns}</div>
@@ -231,8 +232,12 @@ function paintToast() {
   t.hidden = !S.toast; t.textContent = S.toast;
 }
 
+// Prompt 37: nøklene er delt i husstanden (pakkene er private). Diskret linje under listen.
+const keysLine = () => { const q = quotaLine(trackKeys()); return q ? `<div class="trk-keyl" style="font-size:12.5px;opacity:.65;padding:6px 4px">${esc(q)}</div>` : ''; };
+
 /* ---------- Data ---------- */
 async function load() {
+  loadTrackKeys(() => { if (host()) paint(); });
   try {
     // Arkivet hentes for seg (?archived=1) og legges til; eldre servere gir alt i ett kall.
     const [d, ark] = await Promise.all([T(''), T('?archived=1').catch(() => null)]);

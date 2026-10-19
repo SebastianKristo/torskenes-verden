@@ -161,7 +161,7 @@ function normalize(r) {
     const base = { id: String(x.id ?? `${x.start}|${x.title}`), oid: String(x.id ?? ''), kind, cal, t: String(x.title ?? ''), short: x.short || '', subj: x.subject || (kind === 'time' ? String(x.title ?? '') : ''),
       // Prompt 31: URL-er (f.eks. mazemap-lenker fra timeplan-importen) fjernes fra stedsteksten i alle korte visninger;
       // lenken vises som «Åpne kart ↗» i detaljarket. rRaw beholdes til redigering.
-      r: noUrl(x.room || x.location || ''), rRaw: x.room || x.location || '', rUrl: urlIn(x.room || x.location || ''), teacher: x.teacher || '', n: x.note || '', c: x.color || '', src: x.source || '', url: x.url || '', map: x.mazemap || '',
+      r: noUrl(x.room || x.location || ''), rRaw: x.room || x.location || '', rUrl: urlIn(x.room || x.location || ''), teacher: x.teacher || '', n: x.note || '', c: x.color || '', sc: x.subjectColor || '', sk: x.subjectKey || '', src: x.source || '', url: x.url || '', map: x.mazemap || '',
       editable: !!x.editable, rep: x.repeat || (x.recurrence ? 'rec' : ''), recurrence: x.recurrence || null, srvRem: x.reminder || '', all: !!x.allDay, startRaw: x.start, endRaw: x.end };
     if (x.allDay) {
       // Heldagshendelser over flere dager: én oppføring per dag (slutt er eksklusiv).
@@ -248,8 +248,9 @@ function evOn(d, all = false) {
   const L = K.data?.byDay.get(key(d)) ?? [];
   return all ? L : L.filter((e) => shownCal(e.cal));
 }
-const subjColor = (e) => K.subjC[e.subj] || K.data?.subjects?.[e.subj] || e.c || palette(e.subj || e.t);
-const col = (e) => (e.kind === 'time' ? subjColor(e) : e.kind === 'prove' || e.kind === 'innl' ? LAB : e.c && e.kind === 'g' ? e.c : calById(e.cal).color);
+// Prompt 37: egen farge per fag (serverens subjectColor, stabil per bruker). Prøver og frister får samme fag-farge.
+const subjColor = (e) => K.subjC[e.subj] || K.subjC[e.sk] || e.sc || K.data?.subjects?.[e.subj] || e.c || palette(e.subj || e.t);
+const col = (e) => (e.kind === 'time' ? subjColor(e) : e.kind === 'prove' || e.kind === 'innl' ? (e.sc ? K.subjC[e.sk] || e.sc : LAB) : e.c && e.kind === 'g' ? e.c : calById(e.cal).color);
 const short = (e) => (e.kind === 'time' ? e.short || SHORT[e.subj] || e.subj || e.t : e.t);
 const tmOf = (e) => (e.kind === 'innl' ? (e.e ? `Frist ${e.e}` : 'Frist') : e.s ? `${e.s}–${e.e}` : 'Hele dagen');
 const sub2 = (...a) => a.filter(Boolean).join(' · ');
