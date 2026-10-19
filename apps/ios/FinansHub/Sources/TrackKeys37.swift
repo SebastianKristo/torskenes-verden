@@ -23,7 +23,7 @@ struct TrackKey37: Identifiable, Hashable {
         addedBy = JS.str(o, "addedBy") ?? ""
     }
 
-    var masked: String { set ? "••••" + tail : "Ikke satt opp" }
+    var masked: String { self.set ? "••••" + tail : "Ikke satt opp" }
 
     /// Grønn (ok), oransje (kvote) eller rød (feil).
     var dot: Color {
