@@ -336,10 +336,8 @@ struct PaperBoligDetail: View {
         }
         let shown = showAll || !needle.isEmpty ? hits : Array(hits.prefix(12))
         PSection(title: "Alle utgifter", trailing: "\(hits.count)")
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass").foregroundStyle(p.mut)
-            TextField("Søk i utgiftene", text: $q).font(PF.ui(14)).foregroundStyle(p.ink).autocorrectionDisabled()
-        }
+        // Prompt 27: ✕ til venstre (SearchField27).
+        SearchField27(text: $q, placeholder: "Søk i utgiftene", font: PF.ui(14), iconSize: 15)
         .padding(.horizontal, 14).frame(height: 42)
         .background(p.card, in: Capsule())
         if shown.isEmpty {

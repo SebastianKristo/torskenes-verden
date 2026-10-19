@@ -148,6 +148,23 @@ export const SCHEMA = [
   ['Søk', { id: 'search', domain: 'google.com', category: 'Generelt', help: 'Søket legges til på slutten av adressen, for eksempel https://www.google.com/search?q=' }, [
     ['search_url', 'Søke-URL (søket legges til på slutten)', e('SEARCH_URL', 'https://www.google.com/search?q=')],
   ]],
+  // Prompt 27: Chat. Open WebUI er serveroppsett (admin); uten den bruker Chat egen lagring og Ollama/Gemini/Groq direkte.
+  ['Open WebUI', { id: 'openwebui', domain: 'openwebui.com', category: 'AI', help: 'Valgfri motor for Chat (historikk, kunnskapsbase, nettsøk, tale). Lag en API-nøkkel i Open WebUI under Innstillinger → Konto → API-nøkler. Uten Open WebUI virker Chat med Ollama, Gemini og Groq direkte.' }, [
+    ['openwebui_url', 'Adresse', e('OPENWEBUI_URL')],
+    ['openwebui_key', 'API-nøkkel', e('OPENWEBUI_KEY'), true],
+  ]],
+  // Prompt 27: personlige valg for Chat og for logo-oppslag (Innstillinger → AI og tolkning → CHAT / PERSONVERN OG LOGOER).
+  ['Chat', { id: 'chat', scope: 'personal', domain: 'openwebui.com', category: 'AI', help: 'Dine valg for Chat. «Mine data» gir modellen et kort sammendrag fra Finans, Kalender og Huskeliste.' }, [
+    ['chat_my_data', 'Chat kan lese mine data', '0', false, 'bool'],
+    ['chat_ask_cloud', 'Spør før sky-modeller får data', '1', false, 'bool'],
+    ['chat_default_model', 'Standardmodell', ''],
+    ['chat_theme', 'Tema (papir eller noytral)', 'papir'],
+  ]],
+  ['Personvern og logoer', { id: 'privacy', scope: 'personal', domain: 'brreg.no', category: 'AI', help: 'Logoer finnes uten at AI gjetter: Brønnøysundregistrene, nettstedet selv og (valgfritt) Gemini med bare butikknavnet.' }, [
+    ['logo_local_receipts', 'Les kvitteringer lokalt', '1', false, 'bool'],
+    ['logo_gemini', 'Finn logo med Gemini', '1', false, 'bool'],
+    ['logo_verify', 'Sjekk logoen før den lagres', '1', false, 'bool'],
+  ]],
 ];
 
 // Gamle nøkkelnavn → nye (prompt 22). Lagrede verdier under det gamle navnet brukes til noe lagres under det nye,
@@ -178,7 +195,8 @@ for (const [key, label, def, secret] of IMAP_FIELDS) FIELDS.set(key, { key, labe
 export const PERSONAL_KEYS = new Set([...FIELDS.values()].filter((f) => f.personal).map((f) => f.key));
 export const isPersonalKey = (k) => PERSONAL_KEYS.has(LEGACY[k] ?? k);
 // Ufarlige standarder for andre enn eieren (ingen adresser, nøkler eller e-post fra eierens miljø).
-const SAFE_DEF = { t212_env: 'live', sonarr_days: '14', radarr_days: '14', imapPort: '143', imapSecurity: 'starttls', imapFolder: 'Folders/Kvitteringer', imapDoneFolder: 'Folders/Kvitteringer/Lest' };
+const SAFE_DEF = { t212_env: 'live', sonarr_days: '14', radarr_days: '14', imapPort: '143', imapSecurity: 'starttls', imapFolder: 'Folders/Kvitteringer', imapDoneFolder: 'Folders/Kvitteringer/Lest',
+  chat_my_data: '0', chat_ask_cloud: '1', chat_theme: 'papir', logo_local_receipts: '1', logo_gemini: '1', logo_verify: '1' };
 const defFor = (user, f) => (user === OWNER ? f.def ?? '' : SAFE_DEF[f.key] ?? '');
 
 // FinansHub krypterer sine hemmeligheter med «enc:» (finans/db.js). Kopierte verdier derfra åpnes her med samme nøkkel.
@@ -228,6 +246,8 @@ export function userCfg(user, key) {
   return v !== undefined ? v : defFor(user, f);
 }
 export const userSecret = (user, key) => userCfg(user, key) || '';
+/** Prompt 27: av/på-innstilling ('1'/'0', 'true'/'false', 'on'/'off'). */
+export const userBool = (user, key) => /^(1|true|on|ja|yes)$/i.test(String(userCfg(user, key) ?? '').trim());
 /** true hvis brukeren selv har lagret verdien (ikke standard/miljø). */
 export const userCfgSet = (user, key) => { const v = userCfgOverride(user, key); return v !== undefined && v !== ''; };
 
@@ -250,6 +270,8 @@ export function setUserCfg(user, changes) {
     if (/_ics$/.test(key)) v = v.replace(/^webcals?:\/\//i, 'https://'); // prompt 26: abonnementslenker (webcal://) hentes over https
     if (v && /_url$|_ics$/.test(key) && !isUrl(v)) throw new Error(`${f.label}: ugyldig URL`);
     if (v && VALID[key] && !VALID[key](v)) throw new Error(`${f.label}: ugyldig verdi`);
+    if (f.type === 'bool') v = boolText(v);
+    if (key === 'chat_theme') v = v.toLowerCase().replace('ø', 'o');
     over[key] = f.secret ? sealSecret(v) : v;
   }
   kv.set(user, 'cfg_personal', over);
@@ -317,7 +339,12 @@ const VALID = {
   ruter_routes: (v) => parseRoutes(v).length > 0,
   googleRedirectUri: (v) => /^https?:\/\/[^\s]+\/api\/birthdays\/google\/callback$/.test(v),
   googleClientId: (v) => /^[\w.-]{8,200}$/.test(v),
+  chat_theme: (v) => /^(papir|noytral|nøytral)$/i.test(v),
+  chat_default_model: (v) => /^[\w.:\/@+-]{1,120}$/.test(v),
 };
+// Prompt 27: av/på-felt (type 'bool') godtar 1/0, true/false, on/off og lagres som '1' eller '0'.
+for (const f of FIELDS.values()) if (f.type === 'bool') VALID[f.key] = (v) => /^(0|1|true|false|on|off|ja|nei|yes|no)$/i.test(v);
+export const boolText = (v) => (/^(1|true|on|ja|yes)$/i.test(String(v).trim()) ? '1' : '0');
 const isUrl = (v) => /^https?:\/\/[^\s]+$/.test(v);
 
 // value === null fjerner overstyringen (tilbake til env/standard).

@@ -17,7 +17,8 @@ struct PaperHome: View {
             PaperCardStack(page: "hjem", cards: [
                 PaperCardDef(key: "h1", label: "Søk", view: AnyView(VStack(spacing: 10) { PaperSearch(); minis })),
                 PaperCardDef(key: "h2", label: "Pakker", view: AnyView(packages)),
-                PaperCardDef(key: "h3", label: "Avganger", view: AnyView(ruter)),
+                // Prompt 27: «Velg stopp» og én gruppe per stopp (RuterHome27.swift).
+                PaperCardDef(key: "h3", label: "Avganger", view: AnyView(RuterHomeCard27())),
                 // Prompt 26: KALENDER etter Avganger (med lagret oppsett legger pageCards den nederst).
                 PaperCardDef(key: "h10", label: "Kalender", view: AnyView(Cal26HomeCard())),
                 PaperCardDef(key: "h4", label: "Snarveier", view: AnyView(shortcuts)),
@@ -188,17 +189,21 @@ struct PaperSearch: View {
         let items = empty ? Array(store.history.prefix(5)) : Array(store.suggestions.prefix(6))
         VStack(spacing: 0) {
             HStack(spacing: 10) {
-                GoogleG(size: 17)
-                TextField("Søk på Google", text: $q)
-                    .font(PF.ui(14.5)).foregroundStyle(p.ink)
-                    .keyboardType(.webSearch).submitLabel(.search).textInputAutocapitalization(.never).autocorrectionDisabled()
-                    .focused($focused)
-                    .onSubmit { go(q) }
-                    .onChange(of: q) { _, v in store.suggest(v) }
-                if !q.isEmpty {
-                    Button { q = ""; store.suggestions = [] } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(p.mut) }
-                        .buttonStyle(.plain).accessibilityLabel("Tøm feltet")
+                // Prompt 27: ✕ til venstre (SearchField27) og ✦ AI til høyre, som åpner Chat med teksten (store.openChat(prompt:), Chat27Model.swift).
+                SearchField27(text: $q, placeholder: "Søk på Google", font: PF.ui(14.5), keyboard: .webSearch, autocap: .never,
+                              focus: $focused, onClear: { store.suggestions = [] }, onSubmit: { go(q) }, lead: {
+                    GoogleG(size: 17)
+                })
+                .onChange(of: q) { _, v in store.suggest(v) }
+                Button { askAi27() } label: {
+                    Text("✦ AI").font(PF.ui(12.5, .bold)).foregroundStyle(p.ink).lineLimit(1).fixedSize()
+                        .padding(.horizontal, 12).frame(height: 34)
+                        .background(p.bg, in: Capsule())
+                        .contentShape(Capsule())
                 }
+                .buttonStyle(.plain)
+                .padding(.trailing, -10)
+                .accessibilityLabel("Spør AI")
             }
             .padding(.horizontal, 16).frame(height: 46)
             if focused && !items.isEmpty {
@@ -219,6 +224,16 @@ struct PaperSearch: View {
         .background(p.card, in: RoundedRectangle(cornerRadius: 23, style: .continuous))
         .shadow(color: .black.opacity(0.18), radius: 15, y: 10)
         .animation(.easeOut(duration: 0.15), value: focused)
+    }
+
+    /// ✦ AI: ny chat med teksten i feltet (tomt felt åpner bare Chat).
+    private func askAi27() {
+        Haptics.shared.tap()
+        let t: String = q
+        focused = false
+        q = ""
+        store.suggestions = []
+        store.openChat(prompt: t)
     }
 
     private func go(_ s: String) {

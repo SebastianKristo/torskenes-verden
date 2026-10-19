@@ -113,7 +113,7 @@ test('RRULE, EXDATE, RECURRENCE-ID, planleggingsdag, prøve som erstatter timen 
   assert.equal(thu[0].subject, 'Engelsk');
   assert.equal(thu[0].reminder, 'day', 'standard påminnelse for prøver er dagen før');
   assert.equal(thu[0].inAllDayRow, false);
-  assert.equal(thu[1].inAllDayRow, true);
+  assert.equal(thu[1].inAllDayRow, false, 'prompt 27: rutenettet går 00–24, bare heldag og frister står i HELE-raden');
   assert.equal(day(r.body, '2026-10-29')[0].teacher, 'John Smith', 'lærer fra ORGANIZER');
   // Heldagsprøven fredag 06.11 erstatter R2-timen; Canvas-innleveringen er innl med fag og lenke.
   assert.deepEqual(day(r.body, '2026-11-06').map((e) => e.title), ['Heldagsprøve R2']);

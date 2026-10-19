@@ -13,6 +13,8 @@
 //  - Skriv: årlig heldagshendelse (RRULE:FREQ=YEARLY) med extendedProperties.private.homelab_id og birth_year.
 // Home Assistant: GET /api/calendars, GET /api/calendars/<id>?start&end, calendar.create_event med rrule (reserve: årets og
 // neste års hendelse), og WebSocket calendar/event/delete og calendar/event/update for sletting og endring.
+// Prompt 27 (Kalender v2): scope calendar.events lagres fra token-svaret (gconf.scope); googleCanWrite, googleCalendarIds
+// (Privat = valgt kalender, Familie = familyCalendarId eller en skrivbar «Famil…»-kalender) og googleEventWrite brukes av calendar.js.
 // MOCK_DATA=1 uten Google-klient eller HA-token: innebygd Google og HA i minnet (per bruker), så klientene kan utvikles.
 import { Hono } from 'hono';
 import { createHash, randomBytes } from 'node:crypto';
@@ -208,6 +210,7 @@ async function accessToken(user) {
   try {
     const j = await tokenCall({ grant_type: 'refresh_token', refresh_token: refresh, client_id: id, client_secret: secret });
     accessCache.set(user, { token: j.access_token, exp: Date.now() + (Number(j.expires_in) || 3600) * 1000 });
+    if (j.scope && j.scope !== gconf(user).scope) setG(user, { scope: String(j.scope) }); // prompt 27: tilgangene tokenet faktisk har
     return j.access_token;
   } catch (e) {
     if (e.code === 'invalid_grant') { setG(user, { refresh: null, error: 'Google-innloggingen er utløpt eller trukket tilbake. Logg inn på nytt.' }); accessCache.delete(user); }
@@ -335,10 +338,10 @@ export function calendarLinks(user) {
     ha: { connected: !!h.entityId, entityId: h.entityId ?? null, configured: !!(haBase() && haToken()) || mockHa(), allowed: isAdmin(user) },
   };
 }
-/** Hendelser fra brukerens valgte Google-kalender i [from, to) (ikke bursdager, de kommer fra Bursdager). null = ikke koblet. */
-export async function googleCalendarEvents(user, from, to) {
+/** Hendelser fra brukerens valgte Google-kalender (eller calId) i [from, to) (ikke bursdager, de kommer fra Bursdager). null = ikke koblet. */
+export async function googleCalendarEvents(user, from, to, calId = null) {
   if (!gConnected(user)) return null;
-  const cal = gconf(user).calendarId || 'primary', out = [];
+  const cal = calId || gconf(user).calendarId || 'primary', out = [];
   let pageToken = null;
   for (let i = 0; i < 5; i++) {
     const query = new URLSearchParams({ singleEvents: 'true', orderBy: 'startTime', timeMin: new Date(from).toISOString(), timeMax: new Date(to).toISOString(), maxResults: '250' });
@@ -353,6 +356,39 @@ export async function googleCalendarEvents(user, from, to) {
     if (!pageToken) break;
   }
   return out;
+}
+
+/* ---------------- Prompt 27: Kalender v2 skriver til Google (Privat og Familie) ---------------- */
+
+export const googleConnected = (user) => gConnected(user);
+/** Har tokenet skrivetilgang (calendar.events eller calendar)? Ukjent scope (eldre kobling) = prøv og se. */
+export function googleCanWrite(user) {
+  const s = gconf(user).scope;
+  return !s || /auth\/calendar(\.events)?(\s|$)/.test(String(s));
+}
+/** Kalender-id-ene for Privat (valgt kalender) og Familie (egen innstilling, ellers en skrivbar kalender som heter «Familie…»). */
+export async function googleCalendarIds(user) {
+  const g = gconf(user);
+  const privat = g.calendarId || 'primary';
+  if (g.familyCalendarId !== undefined) return { privat, familie: g.familyCalendarId };
+  let familie = null;
+  try {
+    const r = await gapi(user, 'GET', '/users/me/calendarList', { query: { minAccessRole: 'writer' } });
+    if (r.ok) familie = (r.json?.items ?? []).find((x) => !x.primary && /famil/i.test(x.summaryOverride ?? x.summary ?? ''))?.id ?? null;
+    setG(user, { familyCalendarId: familie });
+  } catch { /* uten Familie */ }
+  return { privat, familie };
+}
+const reconnect = () => Object.assign(new Error('Google-koblingen mangler skrivetilgang til kalenderen. Logg inn med Google på nytt.'), { status: 409, reconnect: true });
+/** POST/PATCH/DELETE mot /calendars/{cal}/events[/{id}]. 409 + reconnect når tokenet ikke har skrivetilgang. */
+export async function googleEventWrite(user, method, calId, eventId, body) {
+  if (!gConnected(user)) throw Object.assign(new Error('Logg inn med Google for å lagre i Privat eller Familie.'), { status: 409, reconnect: true });
+  if (!googleCanWrite(user)) throw reconnect();
+  const path = `/calendars/${encodeURIComponent(calId || 'primary')}/events${eventId ? `/${encodeURIComponent(eventId)}` : ''}`;
+  const r = await gapi(user, method, path, body ? { body } : {});
+  if (r.status === 403 && /insufficient|scope|permission/i.test(JSON.stringify(r.json ?? {}))) { setG(user, { scope: 'readonly' }); throw reconnect(); }
+  if (!r.ok && !(method === 'DELETE' && (r.status === 404 || r.status === 410))) throw gfail(r, 'Kunne ikke lagre i Google Kalender');
+  return r.json;
 }
 
 /* ---------------- Google: OAuth (PKCE) ---------------- */
@@ -685,7 +721,7 @@ api.get('/google/callback', async (c) => {
     const cur = gconf(st.user);
     const refresh = j.refresh_token ? seal(j.refresh_token) : cur.refresh;
     if (!refresh) throw new Error('Google ga ikke noe refresh-token. Fjern tilgangen under myaccount.google.com → Sikkerhet og prøv igjen.');
-    setG(st.user, { refresh, email, connectedAt: new Date().toISOString(), error: null, syncToken: null, syncTokenContacts: null, calendarId: cur.calendarId ?? 'primary' });
+    setG(st.user, { refresh, email, connectedAt: new Date().toISOString(), error: null, syncToken: null, syncTokenContacts: null, calendarId: cur.calendarId ?? 'primary', scope: j.scope ? String(j.scope) : (mockGoogle() ? G_SCOPES.join(' ') : null) });
     accessCache.set(st.user, { token: j.access_token, exp: Date.now() + (Number(j.expires_in) || 3600) * 1000 });
     syncGoogle(st.user).catch(() => {});
     return c.redirect(withQuery(st.ret, { ok: '1', google: 'ok' }));

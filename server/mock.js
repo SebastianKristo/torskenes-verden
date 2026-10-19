@@ -198,3 +198,24 @@ export const getMediaHistory = async () => ({ configured: true, mock: true, serv
 ].map(([user, show, season, episode, title, src, h]) => ({ src, kind: season ? 'episode' : 'movie', user, show, title, season: season || null, episode: episode || null,
   playedAt: new Date(Date.now() - h * 3600_000).toISOString(), poster: null, url: '#' })) });
 export const getMediaPoster = async () => null;
+
+// Prompt 27: artikkelvisningen i Nyhetsleser (MOCK_DATA=1). Realistisk norsk tekst ut fra tittelen, med sammendrag og 3 punkter.
+const ARTICLE_BITS = {
+  sport: ['Kampen ble avgjort i de siste minuttene etter en jevn første omgang.', 'Treneren var fornøyd med innsatsen, men mener laget fortsatt har mye å gå på defensivt.', 'Neste kamp spilles på hjemmebane om en uke, og billettsalget er allerede godt i gang.'],
+  okonomi: ['Analytikere peker på lavere renteforventninger og sterkere krone som de viktigste årsakene.', 'Flere store selskaper legger fram kvartalstall denne uken, og markedet venter spent.', 'Sjeføkonomen understreker at usikkerheten fortsatt er stor, særlig rundt energiprisene.'],
+  teknologi: ['Oppdateringen rulles gradvis ut, og det kan ta flere uker før alle brukere får den.', 'Blant nyhetene er bedre batteritid, nye personvernvalg og en raskere kamera-app.', 'Eldre modeller får bare deler av funksjonene, opplyser selskapet.'],
+  kultur: ['Åpningen trakk flere tusen besøkende den første helgen.', 'Kritikerne roser særlig scenografien og de unge skuespillerne.', 'Forestillingen spilles ut november, og det er satt opp ekstraforestillinger.'],
+  verden: ['Delegater fra over hundre land deltar på møtet, som varer i fire dager.', 'Forhandlingene har så langt gått tregt, ifølge kilder nær prosessen.', 'En felles uttalelse ventes først mot slutten av uken.'],
+  norge: ['Meteorologisk institutt har sendt ut farevarsel for flere fylker.', 'Kommunene ber innbyggerne rydde sluk og unngå unødvendig kjøring.', 'Det ventes bedre vær fra søndag, men nye nedbørsområder kan komme neste uke.'],
+};
+export function mockArticle(title, category = 'norge', feed = 'NRK') {
+  const bits = ARTICLE_BITS[category] ?? ARTICLE_BITS.norge;
+  const intro = `${title}. Det bekrefter flere kilder overfor ${feed} torsdag morgen.`;
+  const filler = 'Saken har fått stor oppmerksomhet de siste dagene, og flere aktører har kommet med kommentarer. Det er ventet at det kommer mer informasjon i løpet av dagen, og vi oppdaterer saken fortløpende. Fagfolk vi har snakket med mener utviklingen var ventet, men at tempoet har overrasket mange.';
+  const text = [intro, ...bits, filler, filler.replace('Saken', 'Utviklingen').replace('dagene', 'ukene'), `– Dette er noe vi følger tett, sier en talsperson til ${feed}.`, ...bits.map((b) => b.replace(/\.$/, ', ifølge oversikten.'))].join('\n\n');
+  return {
+    text,
+    summary: `${title}. ${bits[0]} ${bits[2]}`,
+    points: bits.map((b) => b.replace(/,.*$/, '').replace(/\.$/, '')).map((b) => (b.split(' ').length > 15 ? b.split(' ').slice(0, 14).join(' ') + ' …' : b)),
+  };
+}

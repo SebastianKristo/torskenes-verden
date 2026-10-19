@@ -75,6 +75,8 @@ struct SubEdit23Sheet: View {
     @Environment(\.paper) private var p
     @Environment(\.dismiss) private var dismiss
     let item: SubItem?
+    /// Prompt 27: ferdig utfylt nytt abonnement («Rediger først» fra skjermbilde, SubsShot27.swift). Lagres som nytt.
+    var prefill27: SubItem? = nil
     @State private var name: String = ""
     @State private var price: String = ""
     @State private var plan: String = ""
@@ -319,7 +321,7 @@ struct SubEdit23Sheet: View {
     }
 
     private func fill() {
-        guard let s = item else {
+        guard let s = item ?? prefill27 else {
             month = Calendar.current.component(.month, from: Date())
             day = Calendar.current.component(.day, from: Date())
             category = SubCalc23.fallbackCats[0]
@@ -371,11 +373,14 @@ struct SubAdd23Sheet: View {
                     Spacer()
                     Button { dismiss() } label: { Text("Lukk").font(PF.ui(15, .semibold)).foregroundStyle(t.neg) }.buttonStyle(.plain)
                 }
+                // Prompt 27: «Fra skjermbilde» først (SubsShot27.swift).
                 HStack(spacing: 8) {
+                    tile("▣", "Skjermbilde", "sk", t) { mode = "sk" }
                     tile("✎", "Manuelt", "man", t) { manual() }
                     tile("⎙", "Kvittering", "rc", t) { mode = "rc" }
                     tile("⇄", "Transaksjon", "tx", t) { mode = "tx"; store.loadSubCandidates() }
                 }
+                if mode == "sk" { SubShot27Panel(t: t, done: { dismiss() }) }
                 if mode == "rc" { receipt(t) }
                 if mode == "tx" { candidates(t) }
             }
@@ -405,7 +410,7 @@ struct SubAdd23Sheet: View {
         Button { Haptics.shared.select(); act() } label: {
             VStack(alignment: .leading, spacing: 8) {
                 Text(ic).font(.system(size: 18)).foregroundStyle(SubTok23.peach)
-                Text(title).font(PF.ui(13.5, .semibold)).foregroundStyle(t.fg).lineLimit(1).minimumScaleFactor(0.8)
+                Text(title).font(PF.ui(13.5, .semibold)).foregroundStyle(t.fg).lineLimit(1).minimumScaleFactor(0.65)
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)

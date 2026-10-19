@@ -26,6 +26,8 @@ struct PaperTabItem: Codable, Hashable, Identifiable {
         PaperTabItem(id: "boliger", label: "Boliger", icon: "building.2"),
         PaperTabItem(id: "abo", label: "Abonnementer", icon: "repeat"),
         PaperTabItem(id: "fsok", label: "Søk", icon: "magnifyingglass"),
+        // Prompt 27: Chat som valgbar fane (Chat27Page.swift).
+        PaperTabItem(id: "chat", label: "Chat", icon: "bubble.left.and.bubble.right"),
     ]
 
     /// Fane-id-ene på serveren (layout.tabBar) er litt annerledes enn i appen.
@@ -51,7 +53,7 @@ struct PaperTabItem: Codable, Hashable, Identifiable {
     static let defaultIds = ["hjem", "finans", "mat", "auto4", "fsok"]
     static var defaults: [PaperTabItem] { defaultIds.compactMap { id in all.first { $0.id == id } } }
     static let icons = ["house", "creditcard", "fork.knife", "globe", "shippingbox", "person.2", "tram", "cloud.sun", "newspaper",
-                        "magnifyingglass", "square.grid.2x2", "star", "heart", "bolt", "leaf", "map", "chart.bar", "bag", "cart", "calendar"]
+                        "magnifyingglass", "square.grid.2x2", "star", "heart", "bolt", "leaf", "map", "chart.bar", "bag", "cart", "calendar", "bubble.left.and.bubble.right"]
 
     static func loadLocal() -> [PaperTabItem] {
         guard let d = UserDefaults.standard.data(forKey: "fh_tabbar"), let v = try? JSONDecoder().decode([PaperTabItem].self, from: d) else { return [] }

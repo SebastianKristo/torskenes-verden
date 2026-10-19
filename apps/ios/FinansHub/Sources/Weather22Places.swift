@@ -86,12 +86,11 @@ struct WxPlacesSheet22: View {
     }
 
     private var searchField: some View {
-        HStack(spacing: 10) {
+        // Prompt 27: ✕ til venstre (SearchField27). Tømming lukker treffene.
+        SearchField27(text: $q, placeholder: "Søk etter by eller sted", font: .system(size: 16, weight: .medium), ink: Color.white,
+                      placeholderColor: Color(hex: "#9aa3ae"), onClear: { hits = []; searched = false; busy = false }, lead: {
             Glyph22Icon(name: "search", size: 17, color: Color(hex: "#9aa3ae"), stroke: 2.2)
-            TextField("", text: $q, prompt: Text("Søk etter by eller sted").foregroundColor(Color(hex: "#9aa3ae")))
-                .font(.system(size: 16, weight: .medium)).foregroundStyle(.white)
-                .autocorrectionDisabled().submitLabel(.search)
-        }
+        })
         .padding(.horizontal, 14).frame(height: 46)
         .background(Color(hex: "#262a31"), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .plainRow22()

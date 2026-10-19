@@ -400,9 +400,9 @@ struct RuterSearchSheet: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Legg til stopp").font(PF.serif(24, medium: true)).foregroundStyle(p.ink)
             HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass").foregroundStyle(p.mut)
-                TextField("Søk etter stopp, f.eks. Jernbanetorget", text: $q)
-                    .font(PF.ui(15)).foregroundStyle(p.ink).focused($focus).autocorrectionDisabled().submitLabel(.search)
+                // Prompt 27: ✕ til venstre (SearchField27).
+                SearchField27(text: $q, placeholder: "Søk etter stopp, f.eks. Jernbanetorget", font: PF.ui(15), focus: $focus,
+                              onClear: { m.results = [] })
                 if m.searching { ProgressView() }
             }
             .padding(.horizontal, 14).frame(height: 46)

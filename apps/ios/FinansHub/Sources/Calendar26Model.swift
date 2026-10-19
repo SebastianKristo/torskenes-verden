@@ -17,8 +17,10 @@ final class Cal26Model {
     /// Kortene på siden: Nå-kort, Prøver og frister, Kalendere, Kalender og Widgets (som A–E i designet).
     nonisolated static let cardKeys: [String] = ["A", "B", "C", "D", "E"]
     nonisolated static let cardNames: [String: String] = ["A": "Nå-kort", "B": "Prøver og frister", "C": "Kalendere", "D": "Kalender", "E": "Widgets"]
-    nonisolated static let filterKeys: [String] = ["timeplan", "prover", "bursdager", "skole"]
-    nonisolated static let filterNames: [String: String] = ["timeplan": "Timeplan", "prover": "Prøver og frister", "bursdager": "Bursdager", "skole": "Skole"]
+    /// Prompt 27: kalenderne i Kalender v2 (Privat og Familie er Google). Av/på lagres i kalFilters.
+    nonisolated static let filterKeys: [String] = ["timeplan", "prover", "skole", "privat", "familie", "bursdager"]
+    nonisolated static let filterNames: [String: String] = ["timeplan": "Timeplan", "prover": "Prøver og frister", "bursdager": "Bursdager", "skole": "Skole",
+                                                            "privat": "Privat", "familie": "Familie"]
 
     var events: [CalEvent26] = []
     var subjects: [String: String] = [:]
@@ -91,12 +93,15 @@ final class Cal26Model {
             let r = Cal26.parse(d)
             events = r.events
             subjects = r.subjects
+            // Prompt 27: kalenderlisten (calendars) og hentet periode til Kalender v2 (Calendar27Model.swift).
+            Cal27Model.shared.applyServer(JS.obj(d), from: from, to: to)
             demo = false
             error = nil
         } catch let e as APIError {
             if e.status == 404 {
                 demo = true
                 events = Cal26.demo(around: now)
+                Cal27Model.shared.applyServer([:], from: from, to: to)
                 error = nil
             } else {
                 error = e.message
@@ -148,7 +153,10 @@ final class Cal26Model {
         } else if o["kalFilters"] is [Any] {
             hiddenFilters = Set(JS.strings(o, "kalFilters").filter { Cal26Model.filterKeys.contains($0) })
         }
-        if let v = JS.str(o, "kalView") { view = Cal26Model.normView(v) }
+        if let v = JS.str(o, "kalView") {
+            view = Cal26Model.normView(v)
+            Cal27Model.shared.applyView(v)
+        }
         if let r = JS.dict(o, "kalReminders") {
             var out: [String: String] = [:]
             for (k, v) in r { if let s = v as? String, ["none", "15m", "1h", "day"].contains(s) { out[k] = s } }
@@ -343,6 +351,8 @@ final class Cal26Model {
         if let e = events.first(where: { $0.id == id }) {
             sel = e
             if view == "maaned" { selDay = e.dayKey }
+            // Prompt 27: Kalender v2 viser dagen og detaljarket.
+            Cal27Model.shared.openFromLink(e)
         }
     }
 

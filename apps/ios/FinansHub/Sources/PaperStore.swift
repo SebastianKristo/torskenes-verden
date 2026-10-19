@@ -142,6 +142,8 @@ extension Store {
         default: open(.homelab)
         }
         // open/go over setter module; Papir-fanen styrer selve visningen.
+        // Prompt 27: husk hvor Kalender og Chat ble åpnet fra (‹ går tilbake dit, Calendar27Model.swift).
+        Nav27.note(from: paperTab, to: t)
         paperTab = t
         if Store.paperFinTabs.contains(t) || t == "mer" || t == "innst" || t == "hjem" { module = t == "hjem" || t == "mer" || t == "innst" ? .homelab : nil }
         if t != "ftx" { paperTxId = nil }
@@ -163,6 +165,7 @@ extension Store {
         if paperTab == "innst" { paperGo("mer"); return }
         if let t = nav26BackTarget() { paperGo(t); return }
         if paperTab.hasPrefix("innst-") || paperTab == "profil" { paperGo("innst"); return }
+        if paperTab == "kalender" || paperTab == "chat" { Nav27.back(self); return }
         if paperTab == "huske" || paperTab == "bursdag" || paperTab == "kalender" { paperGo("mer"); return }
         if paperTab == "boliger" && folder != nil { folder = nil; return }
         if (paperTab == "aksjer" && !finNav.contains("aksjer")) || (paperTab == "boliger" && !finNav.contains("boliger")) { paperGo("fmer"); return }
@@ -217,6 +220,7 @@ extension Store {
         if paperTab == "boliger" && folder != nil { folder = nil; return }
         if let t = nav26BackTarget() { paperGo(t); return }
         if paperTab.hasPrefix("innst-") || paperTab == "profil" { paperGo("innst"); return }
+        if paperTab == "kalender" || paperTab == "chat" { Nav27.back(self); return }
         if paperTab == "huske" || paperTab == "bursdag" || paperTab == "kalender" { paperGo("mer"); return }
         if nav23SubOfFinMore { paperGo("fmer"); return }
         if paperFin != nil { paperFin = nil; go(.home); return }

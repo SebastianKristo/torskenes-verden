@@ -31,6 +31,7 @@ import { testMap } from './tiles.js';
 import { testBackgrounds } from './background.js';
 import { iconSvg } from './icons.js';
 import { clearCache } from './cache.js';
+import { testOpenWebui } from './chat.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 
@@ -162,6 +163,11 @@ export const INTEGRATIONS = [
     F('ollamaUrl', 'Ollama-adresse', 'url', fhSetting('ollamaUrl', urlOk), { help: 'For eksempel http://192.168.1.30:11434' }),
     F('ollamaModel', 'Ollama-modell', 'text', fhSetting('ollamaModel', (v) => String(v).trim().slice(0, 60) || undefined)),
   ] },
+  // Prompt 27: Open WebUI som motor for Chat (valgfri; uten den brukes Ollama/Gemini/Groq direkte).
+  { id: 'openwebui', name: 'Open WebUI', group: 'AI', scope: S, test: () => testOpenWebui(), fields: [
+    F('openwebui_url', 'Adresse', 'url', cfgStore('openwebui_url'), { required: true, help: 'For eksempel http://192.168.1.30:3000' }),
+    F('openwebui_key', 'API-nøkkel', 'secret', cfgStore('openwebui_key', true), { required: true, help: 'Open WebUI → Innstillinger → Konto → API-nøkler' }),
+  ] },
   { id: 'entur', name: 'Entur (Ruter)', group: 'Reise', scope: S, test: viaGroup('Ruter (Entur)'), fields: [
     F('ruter_routes', 'Strekninger – én per linje: Fra (NSR-ID) > Til (NSR-ID)', 'text', cfgStore('ruter_routes'), { help: 'Stopp-ID finner du på stoppested.entur.org. Egne stopp i appen trenger ingen nøkkel.' }),
     F('ruter_count', 'Antall avganger', 'text', cfgStore('ruter_count')),
@@ -202,6 +208,7 @@ const META = {
   imap: ['Økonomi', '@', '#6d4aff', 'IMAP eller Proton Mail Bridge', null],
   finn: ['Økonomi', 'F', '#0063FB', 'Varsler og handler', null],
   ai: ['AI', 'G', '#4b6cf0', 'AI-tolkning av kvitteringer og søk', null],
+  openwebui: ['AI', 'OW', '#111111', 'Motor for Chat: historikk, kunnskapsbase og nettsøk', 'openwebui'],
   calendars: ['Informasjon', '31', '#4285F4', 'Skole-iCal, Canvas, Google og Home Assistant', 'calendar'],
   calendar: ['Informasjon', '31', '#4285F4', 'Timeplan fra skolens iCal', 'calendar'],
   google: ['Informasjon', '31', '#4285F4', 'OAuth-klient for Google Kalender', 'google'],

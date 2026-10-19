@@ -31,6 +31,7 @@ import { revokeUserTokens } from './finans/routes.js';
 import birthdaysApi, { startBirthdayWorker, widgetOut as birthdaysWidget } from './birthdays.js';
 import integrationsApi, { settingsSearchApi, testByIdOrName, integrationScope } from './integrations-api.js';
 import calendarApi, { widgetApi as calendarWidgetApi } from './calendar.js';
+import chatApi from './chat.js'; // prompt 27 (SERVER-B): Chat
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
 
 const api = process.env.MOCK_DATA === '1' ? await import('./mock.js') : integrations;
@@ -567,6 +568,7 @@ app.route('/api/integrasjoner', integrationsApi); // prompt 26: samme liste unde
 app.route('/api/kalender', calendarApi);
 app.route('/api/widgets/calendar', calendarWidgetApi);
 app.route('/api/settings', settingsSearchApi);
+app.route('/api/chat', chatApi); // prompt 27: Chat (Open WebUI eller Ollama/Gemini/Groq direkte), sesjon eller app-token
 const domainPill = async (c) => {
   if (!isAdmin(c.get('user'))) return c.json({ error: 'Bare administratorer har tilgang', restricted: true }, 403);
   try { return c.json(await domainSummary()); } catch (e) { return c.json({ error: e.message }, 502); }

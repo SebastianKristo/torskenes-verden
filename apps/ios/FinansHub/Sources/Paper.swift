@@ -159,7 +159,7 @@ struct PaperShell: View {
             let wide = g.size.width >= 600
             let bottom = Swift.max(12, g.safeAreaInsets.bottom - 8)
             // Prompt 24: Ruter-visningen er fullskjerm uten fanelinje og skann-knapp.
-            let showBar = !store.newsOpen && store.dishSel == nil && !store.ruter24Full
+            let showBar = !store.newsOpen && store.dishSel == nil && !store.ruter24Full && !store.full27
             // Prompt 23: ingen skann-knapp på Aksjer.
             let fab = showBar && store.fabMode == "float" && store.paperTab != "abo" && store.paperTab != "familie" && !store.nav23NoScan
             ZStack(alignment: wide ? .topLeading : .bottom) {
@@ -294,6 +294,9 @@ struct PaperShell: View {
             classic(back: m == .tracking ? "Sporing" : nil) { ModuleView(module: m, scan: scan, photos: $photos, files: $files) }
         } else if store.ruter24Full {
             RuterView24()
+        } else if store.full27 {
+            // Prompt 27: Kalender v2 og Chat i fullskjerm (Calendar27Page.swift, Chat27Page.swift).
+            if store.paperTab == "chat" { Chat27Page() } else { Cal27Page() }
         } else {
             PaperPage().environment(\.colorScheme, p.dark ? .dark : .light)
         }

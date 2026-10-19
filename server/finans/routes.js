@@ -6,7 +6,7 @@ import { readFile, writeFile, unlink, mkdir } from 'node:fs/promises';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { db, OWNER, settings, saveSettings, secret, setSecret, secretSource, DEFAULT_SETTINGS, me, ensureLedger, SERVER_KEYS, PERSONAL_CFG, serverSettings } from './db.js';
-import { runAsUser } from '../settings.js';
+import { runAsUser, userCfg, setUserCfg } from '../settings.js';
 import { loadDemo } from './demo.js';
 import { extract, extractText, extractOcr, health, providerName, testEngine, testRoboflow, ENGINES, TASKS, aiLog, barcode, aiTimeoutsOf, cleanAiTimeouts, AI_TIMEOUT_DEFAULTS, TIMEOUT_STEPS, ON_TIMEOUT, _aiTest, aiLimits } from './ai.js';
 import { startJob, getJob, cancelJob, jobView, subscribe, runningFor, MAX_RUNNING_PER_USER, _jobTest } from './ai-jobs.js';
@@ -30,6 +30,8 @@ import { stocks, resetStocks, t212Configured, t212Base, cleanCred, testT212 } fr
 import { answer as aiAnswer, plainSearch, suggestionGroups, AiUnavailable, isSimpleQuery } from './search.js';
 import * as backup from './backup.js';
 import * as subsOs from './subs.js';
+import { mountP27, mountP27Public } from './p27-routes.js';
+import { findLogo } from './logo-lookup.js';
 import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor, upcomingOf, backgroundOf, validBackground } from './boliger.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
@@ -398,6 +400,7 @@ api.get('/logo/:domain', async (c) => {
 });
 // Logobiblioteket (prompt 20): /logos/registry, /logos/file/:id og /logos/match, offentlig som /logo/:domain.
 mountLogoRoutes(api);
+mountP27Public(api); // prompt 27: lagrede butikklogoer (/merchants/logo/file/:file), offentlig som /logo/:domain
 // Appen logger ut ved å trekke tilbake sitt eget token.
 api.post('/auth/logout', async (c) => {
   const m = c.req.header('authorization')?.match(TOKEN_RE);
@@ -423,6 +426,7 @@ function mockDemo(u) {
   try { loadDemo(u); } catch (e) { console.warn('[finans] demo', e.message); }
 }
 const R = need('finance:read'), W = need('finance:write');
+mountP27(api, { R, W }); // prompt 27: /forslag, /ai-audit, /merchants/logo, /receipts/:id/logo/ai, /subscriptions/from-screenshot
 // Original + JPEG-kopi + miniatyr i samme forespørsel; et 48 MP-bilde fra iPhone kan alene være over 15 MB.
 const upload = bodyLimit({ maxSize: Number(process.env.MAX_UPLOAD_MB ?? 40) * 1024 * 1024 + 4096, onError: (c) => bad(c, `Filen er for stor (maks ${process.env.MAX_UPLOAD_MB ?? 40} MB)`, 413) });
 
@@ -1307,13 +1311,26 @@ api.put('/settings', W, async (c) => {
     for (const k of ['t212Key', 't212Secret']) if (typeof b[k] === 'string' && b[k].trim() && a.session) setSecret(k, cleanCred(b[k]));
   } catch (e) { return bad(c, e.message); }
   if (b.t212Key || b.t212Secret || b.t212Env) resetStocks();
+  // Prompt 27: Chat- og logo-bryterne er personlige (settings.js), og appene lagrer dem her sammen med resten.
+  const p27 = {};
+  for (const k of P27_BOOL) if (b[k] !== undefined && b[k] !== null) p27[k] = /^(1|true|on)$/i.test(String(b[k])) ? '1' : '0';
+  for (const k of P27_TEXT) if (typeof b[k] === 'string') p27[k] = b[k].trim();
+  if (Object.keys(p27).length) { try { setUserCfg(c.get('user'), p27); } catch (e) { return bad(c, e.message); } }
   return c.json(settingsOut(c));
 });
 // Samme innstillinger som i /bootstrap (prompt 23: også for appene, som leser aiTimeouts her). Hemmeligheter sendes aldri ut.
 // Flatt som før (bakoverkompatibelt), pluss server:{…} (felles serveroppsett, bare admin kan endre) og user:{…} (brukerens egne).
+const P27_BOOL = ['chat_my_data', 'chat_ask_cloud', 'logo_local_receipts', 'logo_gemini', 'logo_verify'];
+const P27_TEXT = ['chat_default_model', 'chat_theme'];
+function p27Out(u) {
+  const o = {};
+  for (const k of P27_BOOL) o[k] = /^(1|true|on)$/i.test(String(userCfg(u, k) ?? ''));
+  for (const k of P27_TEXT) o[k] = userCfg(u, k) ?? '';
+  return o;
+}
 function settingsOut(c) {
   const a = c.get('access');
-  const out = settings();
+  const out = { ...settings(), ...p27Out(c.get('user')) };
   const seen = (k) => a.admin || !SERVER_HIDDEN.has(k);
   const flat = Object.fromEntries(Object.entries(out).filter(([k]) => seen(k)));
   const aiTimeouts = aiTimeoutsOf(out), imapPin = out.imapPin ? { fingerprint: out.imapPin.fingerprint } : null;
@@ -1437,7 +1454,7 @@ function applyStatus(n, st) {
   else if (st === 'low_use' || st === 'Lite brukt') { n.active = 1; n.low_use = 1; }
   else if (st === 'cancelled' || st === 'paused' || st === 'Sagt opp') n.active = 0;
 }
-const logoUrlIn = (v) => { const t = String(v ?? '').trim(); return /^\/finans\/api\/(?:logo\/[a-z0-9.-]+|subscriptions\/\d+\/logo(?:\?v=\d+)?)$/i.test(t) || /^https:\/\/[^\s"'<>]{4,400}$/.test(t) ? t : null; };
+const logoUrlIn = (v) => { const t = String(v ?? '').trim(); return /^\/finans\/api\/(?:logo\/[a-z0-9.-]+|subscriptions\/\d+\/logo(?:\?v=\d+)?|merchants\/logo\/file\/[a-z0-9-]+\.png(?:\?v=\d+)?|logos\/file\/[a-z0-9-]+)$/i.test(t) || /^https:\/\/[^\s"'<>]{4,400}$/.test(t) ? t : null; };
 const dayIn = (v) => { const n = Math.round(+v); return n >= 1 && n <= 31 ? n : null; };
 const catIn = (v) => (subsOs.SUB_CATEGORIES.includes(v) ? v : null);
 // Neste trekk fra trekkdag: denne måneden hvis dagen ikke er passert, ellers neste.
@@ -1585,10 +1602,19 @@ export const _setSubLogoAsk = (fn) => { subLogoAsk = fn; };
 api.post('/subscriptions/:id/logo/ai', W, async (c) => {
   const s = own('fh_subscriptions', +c.req.param('id'));
   if (!s) return c.notFound();
+  // Prompt 27: logo-kjeden (merchant_logos → rydd navnet → Brreg → Gemini med bare navnet → gjett domene → ikon). Ingen
+  // AI-skrevne URL-er; bare domener som er sjekket. Klientens navn (redigeringsarket) brukes hvis det er sendt.
+  const b0 = await c.req.json().catch(() => ({}));
+  const chain = subLogoAsk ? null : await findLogo(str(b0.name, 120) || s.name, { force: true, u: c.get('user') }).catch(() => null);
+  if (chain && !chain.none && chain.logoUrl) {
+    if (chain.domain) learnDomain(s.name, chain.domain);
+    q('UPDATE fh_subscriptions SET logo_url=?, domain=coalesce(?, domain) WHERE id=?').run(chain.logoUrl, chain.domain, s.id);
+    return c.json({ logoUrl: chain.logoUrl, domain: chain.domain, source: chain.source, subscription: subOut(q('SELECT * FROM fh_subscriptions WHERE id=?').get(s.id)) });
+  }
   const cands = [validDomain(s.domain), domainFor(s.name)].filter(Boolean);
   let domain = null;
   for (const d of cands) if (await logo(d)) { domain = d; break; }
-  if (!domain) {
+  if (!domain && subLogoAsk) {
     let ai = null;
     try {
       const { askJson } = await import('./ai.js');

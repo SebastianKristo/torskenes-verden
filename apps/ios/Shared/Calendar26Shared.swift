@@ -29,6 +29,12 @@ struct CalEvent26: Hashable, Identifiable {
     /// Minutter etter midnatt, -1 for hele dagen.
     var startMin: Int
     var endMin: Int
+    /// Prompt 27: kalenderen hendelsen hører til (timeplan, prover, skole, privat, familie, bursdager), tom = utledes av typen.
+    var calendar: String = ""
+    /// Bare Google-hendelser fra Privat og Familie kan redigeres og slettes.
+    var editable: Bool = false
+    var googleId: String = ""
+    var recurrence: String = ""
 
     var isTest: Bool { type == "prove" || type == "innl" }
     /// Timer og prøver med klokkeslett (det widgetene og nå-kortet viser).
@@ -52,8 +58,12 @@ struct CalEvent26: Hashable, Identifiable {
     /// «A-112 · Kari Hansen» for nå-kort og widgets.
     var roomTeacher: String { [room, teacher].filter { !$0.isEmpty }.joined(separator: " · ") }
 
-    /// Filtergruppen: timeplan, prover, bursdager eller skole.
-    var group: String { Cal26.group(type) }
+    /// Filtergruppen (kalenderen): timeplan, prover, skole, privat, familie eller bursdager.
+    var group: String {
+        if !calendar.isEmpty { return Cal26.normCal(calendar) }
+        if source.lowercased().contains("google") && type != "bursdag" { return "privat" }
+        return Cal26.group(type)
+    }
 
     /// Fargen som vises: prøver alltid røde, ellers serverens farge eller fagpaletten.
     func hex(_ user: [String: String] = [:]) -> String {
@@ -71,6 +81,9 @@ struct CalEvent26: Hashable, Identifiable {
                                 "type": type, "color": color, "source": source]
         if !url.isEmpty { o["url"] = url }
         if !mazemap.isEmpty { o["mazemap"] = mazemap }
+        if !calendar.isEmpty { o["calendar"] = calendar }
+        if editable { o["editable"] = true }
+        if !googleId.isEmpty { o["googleId"] = googleId }
         return o
     }
 }
@@ -147,6 +160,18 @@ enum Cal26 {
         var h: Int = 0
         for u in s.unicodeScalars { h = (h &* 31 &+ Int(u.value)) & 0x7fffffff }
         return palette[h % palette.count]
+    }
+
+    /// Kalender-id fra serveren (også korte navn) til timeplan, prover, skole, privat, familie eller bursdager.
+    static func normCal(_ raw: String) -> String {
+        switch raw.lowercased() {
+        case "tt", "timeplan", "time": return "timeplan"
+        case "ex", "prover", "prøver", "prove": return "prover"
+        case "priv", "privat", "private", "google": return "privat"
+        case "fam", "familie", "family": return "familie"
+        case "bd", "bursdager", "bursdag", "birthdays": return "bursdager"
+        default: return "skole"
+        }
     }
 
     static func group(_ type: String) -> String {
@@ -342,10 +367,19 @@ enum Cal26 {
         let sMin: Int = allDay ? -1 : (type == "innl" && sp == nil ? -1 : minutes(start))
         var eMin: Int = allDay ? -1 : minutes(end)
         if !allDay && eMin == 0 && end > start { eMin = 24 * 60 - 1 }
-        return CalEvent26(id: id, title: title, short: short, subject: subject, room: room, teacher: teacher, note: note,
-                          start: start, end: end, allDay: allDay, type: type, color: str(o, "color"), source: str(o, "source"),
-                          url: str(o, "url"), mazemap: str(o, "mazemap"), dayKey: key(type == "innl" && sp == nil ? end : start),
-                          startMin: sMin, endMin: eMin)
+        var ev = CalEvent26(id: id, title: title, short: short, subject: subject, room: room, teacher: teacher, note: note,
+                            start: start, end: end, allDay: allDay, type: type, color: str(o, "color"), source: str(o, "source"),
+                            url: str(o, "url"), mazemap: str(o, "mazemap"), dayKey: key(type == "innl" && sp == nil ? end : start),
+                            startMin: sMin, endMin: eMin)
+        ev.calendar = str(o, "calendar")
+        ev.editable = bool(o, "editable") ?? false
+        ev.googleId = str(o, "googleId")
+        if let rr = o["recurrence"] as? [Any] {
+            ev.recurrence = rr.compactMap { $0 as? String }.joined(separator: ";")
+        } else {
+            ev.recurrence = str(o, "recurrence")
+        }
+        return ev
     }
 
     /// Finner alle hendelser i svaret: {events:[…]} eller (widget-svaret) objekter med title og start/end hvor som helst.

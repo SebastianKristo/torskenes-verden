@@ -69,6 +69,8 @@ struct MatView: View {
     @State private var photos = false
     @State private var files = false
     @State private var photoItems: [PhotosPickerItem] = []
+    /// Prompt 27: søk i retter og ingredienser (SearchField27 med ✕ til venstre).
+    @State private var dishQ27: String = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -383,7 +385,14 @@ struct MatView: View {
     /* ---------- Oppskrifter ---------- */
 
     @ViewBuilder private var recipes: some View {
-        let list = store.matDishes
+        let q27: String = dishQ27.trimmingCharacters(in: .whitespaces).lowercased()
+        let list: [Dish] = q27.isEmpty ? store.matDishes : store.matDishes.filter { d in
+            d.name.lowercased().contains(q27) || (d.ing ?? []).contains { $0.lowercased().contains(q27) }
+        }
+        SearchField27(text: $dishQ27, placeholder: "Søk i retter og ingredienser", font: pal.ui(15, .medium), ink: pal.text, placeholderColor: pal.muted)
+            .padding(.horizontal, 16).frame(height: 48)
+            .background(pal.card, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(pal.line, lineWidth: 1))
         sectionHead(store.matFolder == nil ? "OPPSKRIFTER" : store.folderName(store.matFolder).uppercased(), "\(list.count) retter")
         if list.isEmpty {
             Text(store.matFolder == nil ? "Ingen oppskrifter ennå. Skann eller importer en." : "Ingen retter i denne mappen.").font(pal.ui(13)).foregroundStyle(pal.muted)

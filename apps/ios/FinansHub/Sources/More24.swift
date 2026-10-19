@@ -64,6 +64,8 @@ struct PaperMore24: View {
         if !inBar.contains("domener") {
             out.append(More24Row(id: "domener", name: "Domener", sub: "Trafikk, besøk og oppetid", icon: "globe") { store.paperOpenDomains(from: "mer") })
         }
+        // Prompt 27: Chat (Chat27Page.swift).
+        out.append(More24Row(id: "chat", name: "Chat", sub: "Ollama lokalt, Gemini og Groq", icon: "bubble.left.and.bubble.right") { store.openChat() })
         out.append(More24Row(id: "kalender", name: "Kalender", sub: "Timeplan, prøver og frister", icon: "calendar") { store.paperGo("kalender") })
         out.append(More24Row(id: "bursdag", name: "Bursdager", sub: "Hvem har bursdag snart", icon: "gift") { store.paperGo("bursdag") })
         if !inBar.contains("huske") {

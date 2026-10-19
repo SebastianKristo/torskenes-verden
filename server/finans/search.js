@@ -305,6 +305,52 @@ const PLAIN_STOP = new Set([...STOP, 'kvittering', 'kvitteringer', 'kvitteringen
   'ubekreftet', 'ubekreftede', 'datoen', 'dato', 'når', 'noen', 'kalt', 'heter', 'navn', 'navnet', 'om', 'se', 'alt', 'hele', 'mer', 'enn', 'minst', 'mindre', 'høyeste']);
 
 const escRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/* ---------------- Prompt 27: uklar matching (felles for vanlig søk og søkeforslag) ----------------
+   norm: små bokstaver, uten diakritiske tegn (é→e, ü→u), men æ, ø og å beholdes. Damerau-avstand (optimal string
+   alignment) slik at en ombytting («blosm» ↔ «bloms») teller som én feil. */
+export const norm = (s) => String(s ?? '').toLowerCase().replace(/å/g, '\u0001').normalize('NFD').replace(/[\u0300-\u036f]/g, '').normalize('NFC').replace(/\u0001/g, 'å');
+export function osa(a, b, max = 2) {
+  if (a === b) return 0;
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  const m = a.length, n = b.length;
+  let pp = null, p = Array.from({ length: n + 1 }, (_, j) => j);
+  for (let i = 1; i <= m; i++) {
+    const c = [i];
+    let low = i;
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      let v = Math.min(p[j] + 1, c[j - 1] + 1, p[j - 1] + cost);
+      if (pp && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, pp[j - 2] + 1);
+      c[j] = v; if (v < low) low = v;
+    }
+    if (low > max) return max + 1;
+    pp = p; p = c;
+  }
+  return p[n];
+}
+const WORD_SPLIT = /[^\p{L}\p{N}&+]+/u;
+export const wordsOf = (text) => norm(text).split(WORD_SPLIT).filter(Boolean);
+/** true når q (normalisert, minst 4 tegn) er maks én feil unna starten av et ord i teksten. */
+export function fuzzyStart(text, q) {
+  if (q.length < 4) return false;
+  for (const w of wordsOf(text)) {
+    for (const len of [q.length - 1, q.length, q.length + 1]) {
+      if (len < 3 || len > w.length) continue;
+      if (osa(q, w.slice(0, len), 1) <= 1) return true;
+    }
+  }
+  return false;
+}
+/** Score 4/3/2/1/0: navnet starter med q, et ord starter med q, inneholder q, uklar start (q ≥ 4 tegn). */
+export function matchScore(text, qn) {
+  const t = norm(text).trim();
+  if (!qn || !t) return 0;
+  if (t.startsWith(qn)) return 4;
+  if (wordsOf(t).some((w) => w.startsWith(qn)) || new RegExp(`(^|[^\\p{L}\\p{N}])${escRe(qn)}`, 'u').test(t)) return 3;
+  if (t.includes(qn)) return 2;
+  return fuzzyStart(t, qn) ? 1 : 0;
+}
 // Ord i teksten som begynner med stammen (ordgrense foran).
 const wordHit = (text, st) => new RegExp(`(^|[^\\p{L}\\p{N}])${escRe(st)}`, 'u').test(fold(text));
 const amountOf = (s) => Number(String(s).replace(/[\s ]/g, '').replace(/\.(?=\d{3}\b)/g, '').replace(',', '.'));
@@ -424,6 +470,16 @@ export function plainSearch(text, { limit = 30, now = new Date() } = {}) {
         hits.push({ type: 'line', id: `${r.id}:${i}`, txId: r.transaction_id, receiptId: r.id, description: l.description, date: r.date, amount: l.amount != null ? -Math.abs(l.amount) : null,
           reason: `I kvitteringen · ${lineText(l)}`, source: `Varelinje · ${r.merchant ?? 'kvittering'}`, store: r.merchant ?? null, color: '#FFB08A' });
       });
+    }
+    // Prompt 27: ingen treff → uklar matching mot butikk og kategori («blosm» finner Blomsterlandet).
+    if (!hits.length && st.length) {
+      const fz = d.words.map((w) => norm(w)).filter((w) => w.length >= 4);
+      if (fz.length) for (const t of txs) {
+        if (!inPeriod(t, d) || !amountOk(t.amount / 100, d) || t.ckind === 'transfer') continue;
+        const n = nameOf(t);
+        if (fz.every((w) => fuzzyStart(n, w))) hits.push({ ...txHit(t, `Butikk · ${n}`), fuzzy: true });
+        else if (t.category && fz.every((w) => fuzzyStart(t.category, w))) hits.push({ ...txHit(t, `Kategori · ${t.category}`), fuzzy: true });
+      }
     }
     if (d.largest) hits = hits.filter((h) => (h.amount ?? 0) < 0).sort((a, b) => a.amount - b.amount);
     else hits.sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '') || Math.abs(b.amount ?? 0) - Math.abs(a.amount ?? 0));

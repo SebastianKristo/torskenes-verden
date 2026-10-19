@@ -301,11 +301,9 @@ struct NewsIconPicker23: View {
 
     private var searchBar: some View {
         HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass").font(.system(size: 15, weight: .semibold)).foregroundStyle(p.mut)
-            TextField("", text: $q, prompt: Text("Søk etter ikon (engelsk), f.eks. football").foregroundColor(p.mut))
-                .font(PF.ui(15, .medium)).foregroundStyle(p.ink)
-                .textInputAutocapitalization(.never).autocorrectionDisabled()
-                .submitLabel(.search).onSubmit { search() }
+            // Prompt 27: ✕ til venstre (SearchField27). Tømming avbryter søket (seq) og lukker treffene.
+            SearchField27(text: $q, placeholder: "Søk etter ikon (engelsk), f.eks. football", autocap: .never, iconSize: 15,
+                          onClear: { seq += 1; busy = false; results = nil; err = "" }, onSubmit: { search() })
             Button { search() } label: {
                 Text("Søk").font(PF.ui(13, .bold)).foregroundStyle(p.bg).padding(.horizontal, 14).frame(height: 36).background(p.ink, in: Capsule())
             }

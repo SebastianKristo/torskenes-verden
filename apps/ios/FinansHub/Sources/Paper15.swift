@@ -129,6 +129,8 @@ extension Store {
         FinNavItem(id: "abonnementer", name: "Abonnementer", icon: "↻", page: "abo"),
         FinNavItem(id: "kontoer", name: "Kontoer", icon: "▤", page: "kontoer"),
         FinNavItem(id: "boliger", name: "Boliger", icon: "⌂", page: "boliger"),
+        // Prompt 27: Chat kan også velges i Finans-fanelinjen.
+        FinNavItem(id: "chat", name: "Chat", icon: "✦", page: "chat"),
     ]
 
     var finNavItems: [FinNavItem] {

@@ -427,11 +427,10 @@ struct RuterMyStops24: View {
     }
 
     private var searchField: some View {
-        HStack(spacing: 10) {
+        // Prompt 27: ✕ til venstre (SearchField27). Tømming avbryter søket og lukker treffene.
+        SearchField27(text: $q, placeholder: "Søk etter holdeplass", onClear: { m.results = [] }, lead: {
             Text("⌕").font(PF.ui(15)).foregroundStyle(p.mut)
-            TextField("Søk etter holdeplass", text: $q).font(PF.ui(15, .medium)).foregroundStyle(p.ink)
-                .autocorrectionDisabled().submitLabel(.search)
-        }
+        })
         .padding(.horizontal, 14).frame(height: 44)
         .background(p.bg, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).stroke(p.line, lineWidth: 1))

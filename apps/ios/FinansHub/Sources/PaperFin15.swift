@@ -120,6 +120,11 @@ struct PaperTxDetailView: View {
                     Text(d.merchant).font(PF.serif(22, medium: true)).foregroundStyle(p.ink).lineLimit(2)
                     Text([d.category, dmy(d.date), d.account].filter { !$0.isEmpty }.joined(separator: " · ")).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(2)
                 }
+                // Prompt 27: «Velg logo» når butikken mangler logo (Privacy27.swift).
+                if (d.domain ?? "").isEmpty && !d.merchant.isEmpty {
+                    Spacer(minLength: 4)
+                    MerchantLogo27Button(name: d.merchant) { reloadDetail27(d.id) }
+                }
             }
             Text((d.amount > 0 ? "+" : "") + pkr(d.amount)).font(PF.serif(40)).foregroundStyle(d.amount > 0 ? p.pos : p.ink).lineLimit(1).minimumScaleFactor(0.6)
             if !d.aiSummary.isEmpty {
@@ -130,6 +135,12 @@ struct PaperTxDetailView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .shadow(color: .black.opacity(0.12), radius: 15, y: 10)
+    }
+
+    private func reloadDetail27(_ id: Int) {
+        store.run {
+            if let d = try? await store.api.call("GET", "/transactions/\(id)") { store.txDetail = PaperTxData(JS.obj(d)) }
+        }
     }
 
     /// Kvitteringen som papirlapp. Et trykk åpner originalen i fullskjerm.
@@ -274,33 +285,75 @@ struct PaperFinSearch: View {
     @State private var q = ""
     @State private var aiOn = UserDefaults.standard.object(forKey: "fh_psearch_ai") as? Bool ?? true
     @FocusState private var focused: Bool
+    /// Prompt 27: teksten fra et valgt forslag (ingen nye forslag før brukeren skriver noe annet).
+    @State private var lastPicked27: String = ""
 
     private let tries = ["Rema denne måneden", "kyllingfilet", "Største utgift i oktober", "Over 500 kr", "Abonnementer", "Til gjennomgang"]
 
     var body: some View {
         VStack(spacing: 10) {
             field
+            // Prompt 27: forslag mens du skriver (FinSuggest27.swift).
+            if focused && !aiOn && !sug.items.isEmpty {
+                FinSuggestList27(items: sug.items, typed: q, pick: { s in pickSuggestion(s) }, fill: { s in fillSuggestion(s) })
+                    .padding(.top, -4)
+            }
             // Prompt 25: «✦ Ollama tenker … N s av M s», fremdriftslinje og Avbryt.
             if store.aiBusy { AiJobProgress25() }
             if let n = store.aiNote, !store.aiBusy, n.contains("avbrutt") { Text(n).font(PF.ui(12.5)).foregroundStyle(p.mut) }
             if q.trimmingCharacters(in: .whitespaces).isEmpty && store.ai == nil && !store.aiBusy { suggestions }
             if let a = store.ai, !store.aiBusy { results(a) }
         }
-        .onAppear { if q.isEmpty { q = store.aiQuery } }
+        .onAppear {
+            if q.isEmpty { q = store.aiQuery; lastPicked27 = store.aiQuery }
+            sug.close(suppress: true)
+        }
+        .onChange(of: q) { _, v in
+            if v != lastPicked27 { sug.suppressed = false }
+            sug.update(v, aiOn: aiOn, store)
+        }
+    }
+
+    @MainActor private var sug: FinSuggest27Model { FinSuggest27Model.shared }
+
+    /// Trykk på forslag: søk på navnet og vis treff under.
+    private func pickSuggestion(_ s: FinSug27) {
+        Haptics.shared.select()
+        lastPicked27 = s.name
+        sug.close(suppress: true)
+        q = s.name
+        go(s.name)
+    }
+
+    /// ↖: fyll inn uten å søke (forslagene oppdateres for den nye teksten).
+    private func fillSuggestion(_ s: FinSug27) {
+        Haptics.shared.tick()
+        lastPicked27 = ""
+        q = s.name
+    }
+
+    /// ✕: tøm feltet, avbryt forslag og ventende søk, lukk treffene. Fokus beholdes.
+    private func clear27() {
+        sug.close(suppress: false)
+        lastPicked27 = ""
+        store.ai = nil
+        store.aiNote = nil
+        store.aiQuery = ""
     }
 
     private var field: some View {
         HStack(spacing: 8) {
-            Text("⌕").font(PF.ui(17)).foregroundStyle(p.mut).padding(.leading, 16)
-            TextField(aiOn ? "Spør om økonomien din" : "Søk i navn, kategori og varelinjer", text: $q)
-                .font(PF.ui(14.5)).foregroundStyle(p.ink)
-                .focused($focused)
-                .submitLabel(.search)
-                .onSubmit { go(q) }
+            // Prompt 27: ✕ til venstre (SearchField27).
+            SearchField27(text: $q, placeholder: aiOn ? "Spør om økonomien din" : "Søk i navn, kategori og varelinjer", font: PF.ui(14.5),
+                          focus: $focused, onClear: { clear27() }, onSubmit: { lastPicked27 = q; sug.close(suppress: true); go(q) }, lead: {
+                Text("⌕").font(PF.ui(17)).foregroundStyle(p.mut)
+            })
+            .padding(.leading, 16)
             Button {
                 Haptics.shared.select()
                 aiOn.toggle()
                 UserDefaults.standard.set(aiOn, forKey: "fh_psearch_ai")
+                if aiOn { sug.close(suppress: false) } else { sug.update(q, aiOn: false, store) }
             } label: {
                 Text("✦ AI").font(PF.ui(13, .bold)).foregroundStyle(aiOn ? p.bg : p.mut).padding(.horizontal, 14).frame(height: 38)
                     .background(aiOn ? p.ink : Color.clear, in: Capsule())

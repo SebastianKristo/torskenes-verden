@@ -981,6 +981,10 @@ struct PaperAiSettings: View {
                     }
                 }
             }
+            // Prompt 27: PERSONVERN OG LOGOER (3 brytere) og AI-logg (Privacy27.swift).
+            Privacy27Section()
+            // Prompt 27: CHAT (Chat27Settings.swift).
+            Chat27SettingsGroup()
             // Prompt 23: tidsgrense per motor, nye forsøk og hva som skjer ved tidsavbrudd (AiTimeouts23.swift).
             AiTimeouts23(locked: !canEdit)
             PLabel(text: "Hvem gjør hva").padding(.leading, 4).padding(.top, 14)

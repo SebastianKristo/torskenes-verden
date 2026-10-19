@@ -6,8 +6,23 @@
 //            reminder, url?, mazemap?}], subjects:{navn: farge}, sources:[…], now:{current?, next?, nextSchoolDay?, nextTest?}}
 //   POST /api/kalender/refresh → henter kalenderne på nytt nå (ellers caches de én time per bruker og adresse)
 //   GET  /api/widgets/calendar[?now=ISO] → kompakt til widgets og Hjem: {kind, now, next, today, tests, nextSchoolDay, refreshAt}
+// Prompt 27 (Kalender v2):
+//   Hver hendelse har også calendar:'timeplan'|'prover'|'skole'|'privat'|'familie'|'bursdager', editable (bare Privat/Familie),
+//   googleId?, googleCalendarId?, recurrence? ('daily'|'weekly'|'monthly'). Svaret har calendars:[{id, name, color, writable,
+//   enabled}] (av/på fra layout-feltet kalFilters). now.next = neste hendelse uansett type (time først ved likt klokkeslett)
+//   med inMin; now.current med leftMin. inAllDayRow = heldag eller frist (rutenettet er 00–24).
+//   GET    /api/kalender/search?q= → {q, events} (±180 dager, tittel/sted/lærer, uklart: små bokstaver, uten aksenter, Levenshtein ≤ 1)
+//   POST   /api/kalender/events {title, allDay, date, start:'HH:MM', end:'HH:MM', endDate?, location, calendar:'privat'|'familie',
+//          repeat:'none'|'daily'|'weekly'|'monthly', reminder:'none'|'15m'|'1h'|'day', note} → {event} (201). Skrives til Google
+//          Calendar (koblingen fra Bursdager, scope calendar.events); uten skrivetilgang 409 {error, reconnect:true}.
+//          MOCK_DATA=1 uten Google-kobling: lagres i kv(user,'kal_local_events').
+//   PATCH  /api/kalender/events/:id (samme felt, delvis), DELETE /api/kalender/events/:id – bare editable (ellers 403).
+//   POST   /api/kalender/events/:id/copy → kopi i Privat (skolens hendelser er skrivebeskyttet).
 // Regler (claude-code-kalender.md):
-//  - Gjentakelser (RRULE, EXDATE, RECURRENCE-ID) utvides med node-ical, i norsk tid (Europe/Oslo).
+//  - Gjentakelser (RRULE, RDATE, EXDATE, RECURRENCE-ID) utvides med egen kode (ical-expand.js) i lokal tid (Europe/Oslo).
+//    node-ical ble droppet: den slår sammen VEVENT-er med samme UID (skolesystemer gjenbruker UID per fag), så bare
+//    den siste hendelsen (ofte eksamen) ble igjen og ingen timer vistes.
+//  - Timer som ligger som enkelthendelser (uten RRULE) kjennes igjen på at samme tittel går igjen ≥ 3 ganger, eller «Lærer:».
 //  - Fag fra SUMMARY, rom fra LOCATION, lærer fra DESCRIPTION («Lærer: …») eller ORGANIZER (CN).
 //  - Type: «prøve», «heldag», «muntlig», «eksamen» → prove; «innlevering», «frist» → innl (tittel eller CATEGORIES).
 //    Heldagshendelser med «fri», «planleggingsdag» eller «ferie» → fri, og timene de dagene fjernes.
@@ -16,13 +31,13 @@
 // MOCK_DATA=1: eieren får en realistisk timeplan (mock.js) når cal_ics/canvas_ics ikke er satt. Feiler en adresse i demo,
 // brukes demokalenderen (merket mock). Andre brukere får bare demo når de har lagt inn en adresse selv.
 import { Hono } from 'hono';
-import ical from 'node-ical';
-import { createHash } from 'node:crypto';
-import { OWNER } from './db.js';
+import { createHash, randomBytes } from 'node:crypto';
+import { OWNER, kv } from './db.js';
 import { userCfg, userCfgSet } from './settings.js';
 import { cached } from './cache.js';
 import { authOrToken, layoutOf } from './mobile.js';
-import { listFor as birthdaysOf, googleCalendarEvents } from './birthdays.js';
+import { listFor as birthdaysOf, googleCalendarEvents, googleConnected, googleCalendarIds, googleEventWrite, googleCanWrite } from './birthdays.js';
+import { parseIcs, expandIcs as expandCal } from './ical-expand.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const TZ = 'Europe/Oslo';
@@ -83,14 +98,15 @@ export function subjectOf(title, own = {}) {
 }
 
 /** Typen etter reglene i claude-code-kalender.md. */
-export function typeOf({ title = '', categories = [], allDay = false, source = 'ical', recurring = false, subjectKnown = false, durationMs = 0 }) {
+export function typeOf({ title = '', categories = [], allDay = false, source = 'ical', recurring = false, subjectKnown = false, durationMs = 0, lessonLike = false }) {
   const t = `${title} ${[categories].flat().filter(Boolean).join(' ')}`;
   if (/prøve|heldag|muntlig|eksamen|\btentamen|\bquiz\b|\btest\b/i.test(t)) return 'prove';
   if (/innlever|\bfrist|deadline|\bdue\b/i.test(t)) return 'innl';
   if (allDay && /(^|[\s(–-])(skole)?fri(dag)?\b|planleggingsdag|ferie\b|ferie\s|\bferie|helligdag/i.test(t)) return 'fri';
   if (source === 'canvas') return allDay || durationMs === 0 ? 'innl' : 'skole';
-  if (allDay || source === 'google') return 'skole';
-  if (recurring || subjectKnown) return 'time';
+  if (allDay || source === 'google' || source === 'local') return 'skole';
+  // Timer: gjentakende (RRULE/RDATE), kjent fag, eller tittel som går igjen / har «Lærer:» (timeplan som enkelthendelser).
+  if ((recurring || subjectKnown || lessonLike) && durationMs > 0 && durationMs <= 6 * HOUR) return 'time';
   return 'skole';
 }
 
@@ -131,9 +147,20 @@ async function fetchText(url) {
   if (!r.ok) throw new Error(`Kalenderen svarte ${r.status}`);
   return r.text();
 }
+/** iCal-tekst → kalender (ical-expand.js). Kaster hvis teksten ikke er iCal. */
 const parse = (text) => {
   if (!/BEGIN:VCALENDAR/i.test(text)) throw new Error('Adressen svarte, men det er ikke en iCal-kalender.');
-  return Object.values(ical.sync.parseICS(text)).filter((x) => x && x.type === 'VEVENT' && x.start);
+  const cal = parseIcs(text);
+  // Timeplaner som enkelthendelser: titler (tidfestet, ikke prøver/frister) som går igjen minst 3 ganger.
+  const counts = new Map();
+  for (const e of cal.events) {
+    const t = String(e.props.get('SUMMARY')?.[0]?.value ?? '').trim().toLowerCase();
+    const ds = e.props.get('DTSTART')?.[0];
+    if (!t || !ds || !/T\d{4}/.test(ds.value) || e.props.has('RECURRENCE-ID')) continue;
+    counts.set(t, (counts.get(t) ?? 0) + 1);
+  }
+  cal.repeated = new Set([...counts].filter(([, n]) => n >= 3).map(([t]) => t));
+  return cal;
 };
 
 /** Kilden for user: {url, mock}. url null = ikke satt opp. */
@@ -161,15 +188,12 @@ async function loadIcs(user, kind, key) {
 
 /* ---------------- Tolking ---------------- */
 
-const val = (v) => (v && typeof v === 'object' && 'val' in v ? v.val : v);
-const textOf = (v) => String(val(v) ?? '').trim();
-function teacherOf(ev, desc) {
-  const m = desc.match(/^\s*(?:lærer|faglærer|teacher|underviser)\s*[:–-]\s*(.+)$/im);
+const TEACHER = /^\s*(?:lærer|faglærer|teacher|underviser)\s*[:–-]\s*(.+)$/im;
+function teacherOf(org, desc) {
+  const m = desc.match(TEACHER);
   if (m) return m[1].trim().slice(0, 80);
-  const o = ev.organizer;
-  const cn = o && typeof o === 'object' ? o.params?.CN : null;
-  if (cn) return String(cn).replace(/^"|"$/g, '').trim().slice(0, 80);
-  const mail = String(val(o) ?? '').replace(/^mailto:/i, '');
+  if (org?.cn) return org.cn.slice(0, 80);
+  const mail = String(org?.mail ?? '');
   return mail && !/noreply|no-reply/i.test(mail) ? mail.split('@')[0].replace(/[._]/g, ' ').slice(0, 80) : '';
 }
 const noteOf = (desc) => desc.replace(/^\s*(?:lærer|faglærer|teacher|underviser)\s*[:–-].*$/gim, '').replace(/\n{2,}/g, '\n').trim().slice(0, 500);
@@ -178,48 +202,57 @@ const mazemapOf = (room, campus) => {
   return `https://use.mazemap.com/#v=1${campus ? `&campusid=${encodeURIComponent(campus)}` : ''}&search=${encodeURIComponent(room)}`;
 };
 
-function eventOut({ src, uid, title, subjectHint = '', start, end, allDay, room = '', desc = '', teacher = '', categories = [], recurring = false, url = null }, ctx) {
+// Kalenderne i Kalender v2 (rekkefølgen i filteret). writable = man kan legge til hendelser der.
+export const CALENDARS = [
+  { id: 'timeplan', name: 'Timeplan', color: '#2b5d8a', writable: false },
+  { id: 'prover', name: 'Prøver og frister', color: LAB, writable: false },
+  { id: 'skole', name: 'Skole (iCal)', color: SCHOOL, writable: false },
+  { id: 'privat', name: 'Privat', color: '#2f7a4f', writable: true },
+  { id: 'familie', name: 'Familie (Google)', color: '#7a3b6b', writable: true },
+  { id: 'bursdager', name: 'Bursdager', color: BDAY, writable: false },
+];
+const CAL_COLOR = Object.fromEntries(CALENDARS.map((c) => [c.id, c.color]));
+const calendarOf = (src, type, cal) => (src === 'birthdays' ? 'bursdager' : cal ? cal : type === 'time' ? 'timeplan' : type === 'prove' || type === 'innl' ? 'prover' : 'skole');
+
+function eventOut({ src, uid, title, subjectHint = '', start, end, allDay, date: dateIn = null, endDate: endIn = null, room = '', desc = '', teacher = '', categories = [], recurring = false, lessonLike = false, url = null, cal = null, editable = false, googleId = null, googleCalendarId = null, recurrence = null, localId = null, reminder = null }, ctx) {
   const subj = subjectHint && subjectOf(subjectHint, ctx.colors).known ? subjectOf(subjectHint, ctx.colors) : subjectOf(title, ctx.colors);
   const durationMs = allDay ? 0 : end - start;
-  const type = src === 'birthdays' ? 'bursdag' : typeOf({ title, categories, allDay, source: src, recurring, subjectKnown: subj.known, durationMs });
+  const type = src === 'birthdays' ? 'bursdag' : typeOf({ title, categories, allDay, source: src, recurring, subjectKnown: subj.known, durationMs, lessonLike });
   const lesson = type === 'time';
   const subject = lesson || ((type === 'prove' || type === 'innl') && subj.known) ? subj.name : null;
-  const color = type === 'prove' || type === 'innl' ? LAB : type === 'bursdag' ? BDAY : type === 'time' ? subj.color : SCHOOL;
+  const calendar = calendarOf(src, type, cal);
+  const color = type === 'prove' || type === 'innl' ? LAB : type === 'bursdag' ? BDAY : type === 'time' ? subj.color : calendar === 'privat' || calendar === 'familie' ? CAL_COLOR[calendar] : SCHOOL;
   const s = allDay ? null : oslo(start), e = allDay ? null : oslo(end);
-  const date = allDay ? localYmd(start) : s.date;
-  const endDate = allDay ? localYmd(end) : e.date;
+  const date = allDay ? dateIn ?? localYmd(start) : s.date;
+  const endDate = allDay ? endIn ?? localYmd(end) : e.date;
   const key = allDay ? date.replace(/-/g, '') : `${date.replace(/-/g, '')}T${s.hm.replace(':', '')}`;
-  const id = `${{ ical: 'ical', canvas: 'cv', birthdays: 'bd', google: 'g' }[src]}-${hashOf(uid).slice(0, 10)}-${key}`;
-  const outside = !allDay && (s.min < 8 * 60 || (e.date === s.date ? e.min > 16 * 60 : true) || durationMs === 0);
+  const id = localId ? `${localId}${recurrence ? `~${key}` : ''}` : `${{ ical: 'ical', canvas: 'cv', birthdays: 'bd', google: 'g' }[src]}-${hashOf(uid).slice(0, 10)}-${key}`;
   const ev = {
     id, title, short: lesson ? subj.short : title.length > 18 ? title.slice(0, 17) + '…' : title, subject, room, teacher, note: noteOf(desc),
     start: allDay ? date : new Date(start).toISOString(), end: allDay ? (endDate > date ? endDate : addDays(date, 1)) : new Date(end).toISOString(),
-    allDay, date, time: allDay ? null : durationMs === 0 ? s.hm : `${s.hm}–${e.hm}`, inAllDayRow: allDay || outside,
-    type, color, source: src, reminder: ctx.reminders[id] ?? (type === 'prove' || type === 'innl' ? 'day' : 'none'),
+    // Rutenettet i Kalender v2 går 00–24: bare heldagshendelser og frister (uten varighet) står i HELE-raden.
+    allDay, date, time: allDay ? null : durationMs === 0 ? s.hm : `${s.hm}–${e.hm}`, inAllDayRow: allDay || durationMs === 0,
+    type, color, source: src, calendar, editable: !!editable, reminder: ctx.reminders[id] ?? reminder ?? (type === 'prove' || type === 'innl' ? 'day' : 'none'),
   };
   if (url) ev.url = url;
+  if (googleId) { ev.googleId = googleId; ev.googleCalendarId = googleCalendarId; }
+  if (recurrence) ev.recurrence = recurrence;
   const mz = (lesson || type === 'prove') && mazemapOf(room, ctx.campus);
   if (mz) ev.mazemap = mz;
   return ev;
 }
 
-function expandIcs(items, src, from, to, ctx) {
+function expandIcs(cal, src, from, to, ctx) {
   const out = [];
-  for (const ev of items) {
-    let inst;
-    try { inst = ical.expandRecurringEvent(ev, { from: new Date(from), to: new Date(to), expandOngoing: true }); } catch { continue; }
-    for (const i of inst) {
-      const e = i.event ?? ev;
-      let title = textOf(e.summary) || textOf(ev.summary) || '(uten tittel)';
-      // Canvas legger emnet i klammer bak tittelen («Innlevering historie [Historie 3STA]»): emnet brukes til faget, ikke i tittelen.
-      const course = src === 'canvas' ? title.match(/\s*\[([^\]]+)\]\s*$/) : null;
-      if (course) title = title.slice(0, course.index).trim() || title;
-      const desc = textOf(e.description ?? ev.description);
-      const start = i.start.getTime(), end = Math.max(start, (i.end ?? i.start).getTime());
-      out.push(eventOut({ src, uid: textOf(ev.uid) || title, title, subjectHint: course?.[1], start, end: i.isFullDay && end === start ? start + DAY : end, allDay: !!i.isFullDay,
-        room: textOf(e.location ?? ev.location), desc, teacher: teacherOf(e.organizer ? e : ev, desc), categories: e.categories ?? ev.categories ?? [],
-        recurring: !!ev.rrule, url: textOf(e.url ?? ev.url) || null }, ctx));
-    }
+  for (const i of expandCal(cal, from, to)) {
+    let title = i.summary || '(uten tittel)';
+    // Canvas legger emnet i klammer bak tittelen («Innlevering historie [Historie 3STA]»): emnet brukes til faget, ikke i tittelen.
+    const course = src === 'canvas' ? title.match(/\s*\[([^\]]+)\]\s*$/) : null;
+    if (course) title = title.slice(0, course.index).trim() || title;
+    const desc = i.description ?? '';
+    const lessonLike = cal.repeated?.has(String(i.summary ?? '').trim().toLowerCase()) || (src === 'ical' && TEACHER.test(desc));
+    out.push(eventOut({ src, uid: i.uid || title, title, subjectHint: course?.[1], start: i.startMs, end: Math.max(i.startMs, i.endMs), allDay: i.allDay, date: i.date, endDate: i.endDate,
+      room: i.location ?? '', desc, teacher: teacherOf(i.organizer, desc), categories: i.categories ?? [], recurring: i.recurring, lessonLike, url: i.url || null }, ctx));
   }
   return out;
 }
@@ -234,21 +267,58 @@ function birthdayEvents(user, fromDate, toDate, ctx) {
       if (date < fromDate || date > toDate) continue;
       const age = b.year ? y - b.year : null;
       const s = new Date(`${date}T00:00:00`), e = new Date(`${addDays(date, 1)}T00:00:00`);
-      const ev = eventOut({ src: 'birthdays', uid: `bd${b.id}`, title: `${b.name} har bursdag`, start: s, end: e, allDay: true, desc: age ? `Fyller ${age}` : '', url: b.googleUrl }, ctx);
+      const ev = eventOut({ src: 'birthdays', uid: `bd${b.id}`, title: `${b.name} har bursdag`, start: s, end: e, allDay: true, date, endDate: addDays(date, 1), desc: age ? `Fyller ${age}` : '', url: b.googleUrl }, ctx);
       out.push(ev);
     }
   }
   return out;
 }
 
-function googleOut(items, ctx) {
+// Google: id i svaret → {googleId, calId, calendar} for PATCH/DELETE/kopi (fylles hver gang hendelsene leses).
+const gIndex = new Map();
+const REMINDER_MIN = { '15m': 15, '1h': 60, day: 1440 };
+const reminderOf = (g) => { const m = g.reminders?.overrides?.[0]?.minutes; return m == null ? null : m <= 20 ? '15m' : m <= 90 ? '1h' : 'day'; };
+function googleOut(user, items, calendar, calId, ctx) {
+  if (!gIndex.has(user)) gIndex.set(user, new Map());
+  const idx = gIndex.get(user);
   return items.map((g) => {
     const allDay = !!g.start?.date;
-    const start = allDay ? new Date(`${g.start.date}T00:00:00`) : new Date(g.start?.dateTime ?? g.start);
-    const end = allDay ? new Date(`${g.end?.date ?? addDays(g.start.date, 1)}T00:00:00`) : new Date(g.end?.dateTime ?? start);
-    return eventOut({ src: 'google', uid: g.id, title: String(g.summary ?? '(uten tittel)'), start: start.getTime(), end: end.getTime(), allDay, room: String(g.location ?? ''),
-      desc: String(g.description ?? '').replace(/<[^>]+>/g, ''), teacher: '', url: g.htmlLink ?? null }, ctx);
-  }).filter((e) => e.start && !Number.isNaN(Date.parse(e.allDay ? `${e.start}T00:00:00Z` : e.start)));
+    const start = allDay ? osloAt(g.start.date) : Date.parse(g.start?.dateTime ?? g.start);
+    const endDate = allDay ? g.end?.date ?? addDays(g.start.date, 1) : null;
+    const end = allDay ? osloAt(endDate) : Date.parse(g.end?.dateTime ?? g.start?.dateTime ?? g.start);
+    if (!Number.isFinite(start)) return null;
+    const rep = g.extendedProperties?.private?.hl_repeat ?? (g.recurringEventId || g.recurrence ? 'custom' : null);
+    const ev = eventOut({ src: 'google', uid: g.id, title: String(g.summary ?? '(uten tittel)'), start, end: Number.isFinite(end) ? end : start, allDay, date: allDay ? g.start.date : null, endDate,
+      room: String(g.location ?? ''), desc: String(g.description ?? '').replace(/<[^>]+>/g, ''), teacher: teacherOf(null, String(g.description ?? '').replace(/<[^>]+>/g, '')), url: g.htmlLink ?? null,
+      cal: calendar, editable: true, googleId: g.id, googleCalendarId: calId, recurrence: rep, reminder: reminderOf(g) }, ctx);
+    idx.set(ev.id, { googleId: g.id, calId, calendar, instance: !!g.recurringEventId });
+    if (idx.size > 5000) idx.delete(idx.keys().next().value);
+    return ev;
+  }).filter(Boolean);
+}
+
+/* Lokale hendelser (MOCK_DATA=1 uten Google): kv(user,'kal_local_events') = [{id, title, allDay, date, start, end, endDate,
+   location, calendar, repeat, reminder, note}]. Gjentakelser utvides med samme kode som iCal. */
+const localList = (user) => { const v = kv.get(user, 'kal_local_events', []); return Array.isArray(v) ? v : []; };
+const icsText = (v) => String(v ?? '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+const compact = (d, hm) => `${d.replace(/-/g, '')}${hm ? `T${hm.replace(':', '')}00` : ''}`;
+function localEvents(user, from, to, ctx) {
+  const list = localList(user);
+  if (!list.length) return [];
+  const body = list.map((e) => {
+    const endDate = e.endDate && e.endDate >= e.date ? e.endDate : e.date;
+    const dt = e.allDay ? [`DTSTART;VALUE=DATE:${compact(e.date)}`, `DTEND;VALUE=DATE:${compact(addDays(endDate, 1))}`]
+      : [`DTSTART;TZID=Europe/Oslo:${compact(e.date, e.start)}`, `DTEND;TZID=Europe/Oslo:${compact(endDate > e.date || (e.end ?? e.start) >= e.start ? endDate : addDays(e.date, 1), e.end ?? e.start)}`];
+    const rr = { daily: 'DAILY', weekly: 'WEEKLY', monthly: 'MONTHLY' }[e.repeat];
+    return ['BEGIN:VEVENT', `UID:${e.id}`, ...dt, ...(rr ? [`RRULE:FREQ=${rr}`] : []), `SUMMARY:${icsText(e.title)}`, `LOCATION:${icsText(e.location)}`, `DESCRIPTION:${icsText(e.note)}`, 'END:VEVENT'].join('\r\n');
+  }).join('\r\n');
+  const cal = parseIcs(`BEGIN:VCALENDAR\r\nVERSION:2.0\r\n${body}\r\nEND:VCALENDAR\r\n`);
+  const by = new Map(list.map((e) => [e.id, e]));
+  return expandCal(cal, from, to).map((i) => {
+    const e = by.get(i.uid);
+    return eventOut({ src: 'local', uid: i.uid, title: i.summary || '(uten tittel)', start: i.startMs, end: i.endMs, allDay: i.allDay, date: i.date, endDate: i.endDate, room: i.location ?? '', desc: i.description ?? '',
+      cal: e?.calendar ?? 'privat', editable: true, localId: i.uid, recurrence: e?.repeat && e.repeat !== 'none' ? e.repeat : null, reminder: e?.reminder ?? null }, ctx);
+  });
 }
 
 /** Reglene for fri-dager og prøver som erstatter timer. */
@@ -260,8 +330,9 @@ export function applyRules(events) {
   return events.filter((e) => {
     if (e.type === 'time' && fri.has(e.date)) return false;
     if (e.type === 'time' && tests.some((t) => t.date === e.date && Date.parse(t.start) < Date.parse(e.end) && Date.parse(t.end) > Date.parse(e.start))) return false;
-    // Samme hendelse fra to kilder (f.eks. prøven både i skolekalenderen og Canvas): bare den første.
-    const k = `${e.title.toLowerCase()}|${e.start}`;
+    // Samme hendelse fra to skolekilder (f.eks. prøven både i skolekalenderen og Canvas): bare den første.
+    // Egne kopier (Privat/Familie) av en skolehendelse vises ved siden av.
+    const k = `${e.source === 'ical' || e.source === 'canvas' ? 'skole' : `${e.source}:${e.calendar}`}|${e.title.toLowerCase()}|${e.start}`;
     if (seen.has(k)) return false;
     seen.add(k);
     return true;
@@ -294,11 +365,20 @@ export async function eventsFor(user, fromDate, toDate) {
   events.push(...bd);
   sources.push({ id: 'birthdays', name: 'Bursdager', configured: true, ok: true, count: bd.length });
   try {
-    const items = await cached(`kal:${user}:${genOf(user)}:google:${fromDate}:${toDate}`, 15 * 60_000, async () => ({ list: await googleCalendarEvents(user, from, to) }));
-    const list = items.list ? googleOut(items.list, ctx) : [];
+    // Privat = valgt Google-kalender, Familie = familiekalenderen (prompt 27).
+    const items = await cached(`kal:${user}:${genOf(user)}:google:${fromDate}:${toDate}`, 15 * 60_000, async () => {
+      if (!googleConnected(user)) return { list: null };
+      const ids = await googleCalendarIds(user);
+      const privat = await googleCalendarEvents(user, from, to, ids.privat);
+      const familie = ids.familie && ids.familie !== ids.privat ? await googleCalendarEvents(user, from, to, ids.familie).catch(() => []) : [];
+      return { list: privat, familie, ids };
+    });
+    const list = items.list ? [...googleOut(user, items.list, 'privat', items.ids.privat, ctx), ...googleOut(user, items.familie ?? [], 'familie', items.ids.familie, ctx)] : [];
     events.push(...list);
     sources.push({ id: 'google', name: 'Google Kalender', configured: !!items.list, ok: true, count: list.length });
   } catch (e) { sources.push({ id: 'google', name: 'Google Kalender', configured: true, ok: false, count: 0, error: srcErr(e) }); }
+  const loc = localEvents(user, from, to, ctx);
+  if (loc.length || MOCK) { events.push(...loc); sources.push({ id: 'local', name: 'Privat (lokalt)', configured: true, ok: true, count: loc.length }); }
   events = applyRules(events).filter((e) => (e.allDay ? e.end > fromDate && e.date <= toDate : e.date >= fromDate && e.date <= toDate));
   for (const s of sources) if (s.ok) s.count = events.filter((e) => e.source === s.id).length; // antall i perioden, etter reglene
   return { events, sources, ctx };
@@ -310,16 +390,16 @@ const isLesson = (e) => !e.allDay && (e.type === 'time' || e.type === 'prove');
 const startMs = (e) => (e.allDay ? osloAt(e.date) : Date.parse(e.start));
 const endMs = (e) => (e.allDay ? osloAt(e.end) : Date.parse(e.end));
 
-/** NÅ / NESTE TIME / NESTE SKOLEDAG / neste prøve ut fra hendelsene (som må dekke i dag og fremover). */
-export function nowOf(events, t = Date.now()) {
+/** NÅ / NESTE TIME / NESTE SKOLEDAG / neste prøve ut fra skoletimene (som må dekke i dag og fremover). Widget og Hjem bruker denne. */
+export function lessonNowOf(events, t = Date.now()) {
   const today = oslo(t).date;
   const lessons = events.filter(isLesson);
   const todays = lessons.filter((e) => e.date === today);
   const cur = todays.find((e) => startMs(e) <= t && t < endMs(e));
   const nxt = todays.find((e) => startMs(e) > t);
   const out = {};
-  if (cur) { const len = endMs(cur) - startMs(cur); out.current = { ...cur, minutesLeft: minutes(endMs(cur) - t), progress: len ? Math.min(1, Math.max(0, (t - startMs(cur)) / len)) : 1, label: `${durText(minutes(endMs(cur) - t))} igjen` }; }
-  if (nxt) out.next = { ...nxt, startsIn: minutes(startMs(nxt) - t), label: `om ${durText(minutes(startMs(nxt) - t))}` };
+  if (cur) out.current = currentOut(cur, t);
+  if (nxt) out.next = nextOut(nxt, t);
   const nd = lessons.find((e) => e.date > today);
   if (nd) {
     const list = lessons.filter((e) => e.date === nd.date);
@@ -327,6 +407,29 @@ export function nowOf(events, t = Date.now()) {
   }
   const test = events.find((e) => (e.type === 'prove' || e.type === 'innl') && (e.allDay ? e.date >= today : endMs(e) > t));
   if (test) { const n = daysBetween(today, test.date); out.nextTest = { ...test, daysLeft: n, urgent: n <= 7, label: `${test.title} ${n === 0 ? 'i dag' : n === 1 ? 'i morgen' : `om ${n} dager`}` }; }
+  return out;
+}
+function currentOut(cur, t) {
+  const len = endMs(cur) - startMs(cur), left = minutes(endMs(cur) - t);
+  return { ...cur, minutesLeft: left, leftMin: left, progress: len ? Math.min(1, Math.max(0, (t - startMs(cur)) / len)) : 1, label: `${durText(left)} igjen` };
+}
+function nextOut(nxt, t) {
+  const m = minutes(startMs(nxt) - t), hm = oslo(startMs(nxt)).hm;
+  const label = m < 12 * 60 || nxt.date === oslo(t).date ? `om ${durText(m)}` : nxt.date === addDays(oslo(t).date, 1) ? `i morgen ${hm}` : `${shortDay(nxt.date)} ${hm}`;
+  return { ...nxt, startsIn: m, inMin: m, label };
+}
+// Kalender v2: NÅ og NESTE gjelder alle tidfestede hendelser (ikke heldag og frister uten varighet). Ved likt klokkeslett vinner timen.
+const timedEvent = (e) => !e.allDay && Date.parse(e.end) > Date.parse(e.start);
+const lessonFirst = (a, b) => startMs(a) - startMs(b) || (isLesson(b) ? 1 : 0) - (isLesson(a) ? 1 : 0);
+
+/** NÅ / NESTE (uansett type) / NESTE SKOLEDAG / neste prøve. */
+export function nowOf(events, t = Date.now()) {
+  const out = lessonNowOf(events, t);
+  const timed = events.filter(timedEvent);
+  const cur = timed.filter((e) => startMs(e) <= t && t < endMs(e)).sort((a, b) => (isLesson(b) ? 1 : 0) - (isLesson(a) ? 1 : 0) || startMs(b) - startMs(a))[0];
+  const nxt = timed.filter((e) => startMs(e) > t).sort(lessonFirst)[0];
+  if (cur) out.current = currentOut(cur, t); else delete out.current;
+  if (nxt) out.next = nextOut(nxt, t); else delete out.next;
   return out;
 }
 
@@ -343,17 +446,27 @@ export async function calendarOut(user, { from, to, now = Date.now() } = {}) {
   const subjects = {};
   for (const e of [...events, ...ahead.events]) if (e.type === 'time' && e.subject && !subjects[e.subject]) subjects[e.subject] = e.color;
   for (const [n, c] of Object.entries(ctx.colors)) subjects[n] = c;
-  return { from: fromDate, to: toDate, today, events, subjects, labColor: LAB, sources, now: nowOf(ahead.events, now), updatedAt: new Date().toISOString() };
+  return { from: fromDate, to: toDate, today, events, subjects, labColor: LAB, sources, calendars: calendarsOut(user), now: nowOf(ahead.events, now), updatedAt: new Date().toISOString() };
+}
+
+/** Skrive til Privat/Familie: Google med skrivetilgang, eller lokalt i demo (MOCK_DATA=1 uten Google). */
+const writeMode = (user) => (googleConnected(user) ? (googleCanWrite(user) ? 'google' : 'reconnect') : MOCK ? 'local' : 'none');
+/** Kalenderne med av/på fra layout-feltet kalFilters ({id: bool} der true = vises, eller en liste med skjulte id-er). */
+export function calendarsOut(user) {
+  const f = layoutOf(user).kalFilters;
+  const enabled = (id) => (Array.isArray(f) ? !f.includes(id) : f && typeof f === 'object' && typeof f[id] === 'boolean' ? f[id] : true);
+  const w = writeMode(user) === 'google' || writeMode(user) === 'local';
+  return CALENDARS.map((c) => ({ ...c, writable: c.writable && w, enabled: enabled(c.id) }));
 }
 
 const brief = (e) => e && ({ id: e.id, title: e.title, short: e.short, subject: e.subject, room: e.room, teacher: e.teacher, start: e.start, end: e.end, allDay: e.allDay, date: e.date, time: e.time, type: e.type, color: e.color,
-  ...(e.minutesLeft != null ? { minutesLeft: e.minutesLeft, progress: e.progress } : {}), ...(e.startsIn != null ? { startsIn: e.startsIn } : {}), ...(e.daysLeft != null ? { daysLeft: e.daysLeft, urgent: e.urgent } : {}), ...(e.label ? { label: e.label } : {}) });
+  ...(e.minutesLeft != null ? { minutesLeft: e.minutesLeft, leftMin: e.minutesLeft, progress: e.progress } : {}), ...(e.startsIn != null ? { startsIn: e.startsIn, inMin: e.startsIn } : {}), ...(e.daysLeft != null ? { daysLeft: e.daysLeft, urgent: e.urgent } : {}), ...(e.label ? { label: e.label } : {}) });
 
 /** Widget og Hjem: NÅ, NESTE, dagens timer, de to neste prøvene og neste skoledag etter skoletid. */
 export async function widgetOut(user, now = Date.now()) {
   const today = oslo(now).date;
   const { events, sources } = await eventsFor(user, today, addDays(today, 120));
-  const n = nowOf(events, now);
+  const n = lessonNowOf(events, now);
   const lessons = events.filter((e) => isLesson(e) && e.date === today);
   const after = !n.current && !n.next;
   const next = n.current ? lessons.find((e) => startMs(e) >= endMs(n.current)) : n.next;
@@ -383,8 +496,8 @@ export async function testCalendars(user) {
     if (!url && !mock) { res.push(`${name}: ikke satt opp`); continue; }
     any = true;
     try {
-      const items = url ? parse(await fetchText(url)) : parse(await mockText(id));
-      res.push(`${name}: ${items.length} ${items.length === 1 ? 'hendelse' : 'hendelser'}${url ? '' : ' (demo)'}`); ok = true;
+      const n = (url ? parse(await fetchText(url)) : parse(await mockText(id))).events.filter((e) => !e.props.has('RECURRENCE-ID')).length; // flyttede timer telles ikke
+      res.push(`${name}: ${n} ${n === 1 ? 'hendelse' : 'hendelser'}${url ? '' : ' (demo)'}`); ok = true;
     } catch (e) {
       if (MOCK && !fetchImpl) { res.push(`${name}: demodata (MOCK_DATA=1)`); ok = true; } else res.push(`${name}: ${srcErr(e)}`);
     }
@@ -411,6 +524,184 @@ api.post('/refresh', async (c) => {
   const u = c.get('user');
   clearCalendarCache(u); // bare brukerens egne kalendere hentes på nytt
   return c.json(await calendarOut(u, { now: nowParam(c) }));
+});
+
+/* ---------------- Prompt 27: søk ---------------- */
+
+/** Små bokstaver uten aksenter, men æøå beholdes (samme normalisering som Finans-forslagene). */
+export const normText = (v) => String(v ?? '').toLowerCase().replace(/å/g, '\u0001').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\u0001/g, 'å').replace(/\s+/g, ' ').trim();
+function lev(a, b) {
+  if (Math.abs(a.length - b.length) > 1) return 2;
+  const d = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    let prev = d[0]; d[0] = i;
+    for (let j = 1; j <= b.length; j++) { const t = d[j]; d[j] = Math.min(d[j] + 1, d[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = t; }
+  }
+  return d[b.length];
+}
+/** 4 = tittelen starter med søket, 3 = et ord starter med det, 2 = inneholder, 1 = skrivefeil (Levenshtein ≤ 1, søk ≥ 4 tegn), 0 = nei. */
+export function matchScore(q, ...fields) {
+  const qn = normText(q);
+  if (!qn) return 0;
+  const hay = fields.map(normText).filter(Boolean);
+  if (hay[0]?.startsWith(qn)) return 4;
+  const words = hay.flatMap((h) => h.split(/[\s,.;:()/–-]+/).filter(Boolean));
+  const toks = qn.split(' ');
+  if (toks.every((t) => words.some((w) => w.startsWith(t)))) return 3;
+  if (hay.some((h) => h.includes(qn))) return 2;
+  if (toks.every((t) => words.some((w) => w.startsWith(t) || (t.length >= 4 && (lev(t, w) <= 1 || lev(t, w.slice(0, t.length)) <= 1))))) return 1;
+  return 0;
+}
+api.get('/search', async (c) => {
+  const q = String(c.req.query('q') ?? '').trim().slice(0, 100);
+  if (!q) return c.json({ q, events: [] });
+  const now = nowParam(c), today = oslo(now).date;
+  const { events } = await eventsFor(c.get('user'), addDays(today, -180), addDays(today, 180));
+  const hits = events.map((e) => ({ e, s: matchScore(q, e.title, e.room, e.teacher, e.subject ?? '') })).filter((x) => x.s > 0)
+    .sort((a, b) => b.s - a.s || ((a.e.date >= today) === (b.e.date >= today) ? (a.e.date >= today ? (a.e.date < b.e.date ? -1 : a.e.date > b.e.date ? 1 : 0) : (a.e.date > b.e.date ? -1 : a.e.date < b.e.date ? 1 : 0)) : a.e.date >= today ? -1 : 1));
+  return c.json({ q, events: hits.slice(0, 100).map((x) => x.e), total: hits.length });
+});
+
+/* ---------------- Prompt 27: egne hendelser (Privat/Familie) ---------------- */
+
+const HM = /^([01]\d|2[0-3]):[0-5]\d$/;
+const REPEATS = ['none', 'daily', 'weekly', 'monthly'], REMINDERS = ['none', '15m', '1h', 'day'], WRITABLE = ['privat', 'familie'];
+const addHour = (hm) => { const [h, m] = hm.split(':').map(Number); return `${pad(Math.min(23, h + 1))}:${pad(h + 1 > 23 ? 59 : m)}`; };
+/** Validerer {title, allDay, date, start, end, endDate, location, calendar, repeat, reminder, note} (base = eksisterende verdier). */
+export function eventInput(b, base = {}) {
+  if (!b || typeof b !== 'object' || Array.isArray(b)) return { error: 'Forventet et objekt' };
+  const v = { title: '', allDay: false, date: null, start: null, end: null, endDate: null, location: '', calendar: 'privat', repeat: 'none', reminder: 'none', note: '', ...base };
+  for (const k of Object.keys(v)) if (b[k] !== undefined) v[k] = b[k];
+  v.title = String(v.title ?? '').trim().replace(/\s+/g, ' ');
+  if (!v.title || v.title.length > 200) return { error: 'Tittelen må være 1–200 tegn' };
+  if (typeof v.allDay !== 'boolean') return { error: 'allDay må være true/false' };
+  if (!DATE.test(String(v.date ?? ''))) return { error: 'Ugyldig dato (YYYY-MM-DD)' };
+  if (v.endDate != null && v.endDate !== '' && (!DATE.test(String(v.endDate)) || v.endDate < v.date)) return { error: 'Ugyldig sluttdato' };
+  if (!v.endDate) v.endDate = null;
+  if (v.allDay) { v.start = null; v.end = null; }
+  else {
+    if (!HM.test(String(v.start ?? ''))) return { error: 'Ugyldig starttid (HH:MM)' };
+    if (v.end == null || v.end === '') v.end = addHour(v.start);
+    if (!HM.test(String(v.end))) return { error: 'Ugyldig sluttid (HH:MM)' };
+    if ((v.endDate ?? v.date) === v.date && v.end < v.start) v.endDate = addDays(v.date, 1);
+  }
+  v.location = String(v.location ?? '').trim().slice(0, 200);
+  v.note = String(v.note ?? '').trim().slice(0, 2000);
+  if (!WRITABLE.includes(v.calendar)) return { error: 'Kalenderen må være privat eller familie' };
+  if (!REPEATS.includes(v.repeat)) return { error: 'repeat må være none, daily, weekly eller monthly' };
+  if (!REMINDERS.includes(v.reminder)) return { error: 'reminder må være none, 15m, 1h eller day' };
+  return { value: v };
+}
+function gTime(date, hm) {
+  const [y, m, d] = ymd(date), [h, mi] = hm.split(':').map(Number);
+  const off = Math.round((Date.UTC(y, m - 1, d, h, mi) - osloAt(date, hm)) / 60_000); // +120 sommertid, +60 vintertid
+  return { dateTime: `${date}T${hm}:00${off >= 0 ? '+' : '-'}${pad(Math.floor(Math.abs(off) / 60))}:${pad(Math.abs(off) % 60)}`, timeZone: TZ };
+}
+export const googleBody = (v) => ({
+  summary: v.title, location: v.location, description: v.note,
+  start: v.allDay ? { date: v.date } : gTime(v.date, v.start),
+  end: v.allDay ? { date: addDays(v.endDate ?? v.date, 1) } : gTime(v.endDate ?? v.date, v.end),
+  recurrence: v.repeat === 'none' ? [] : [`RRULE:FREQ=${{ daily: 'DAILY', weekly: 'WEEKLY', monthly: 'MONTHLY' }[v.repeat]}`],
+  reminders: { useDefault: false, overrides: v.reminder === 'none' ? [] : [{ method: 'popup', minutes: REMINDER_MIN[v.reminder] }] },
+  extendedProperties: { private: { hl_kal: '1', hl_repeat: v.repeat } },
+});
+/** Verdiene i skjemaet fra en hendelse i svaret. */
+const inputOf = (e) => ({ title: e.title, allDay: e.allDay, date: e.date, start: e.allDay ? null : oslo(Date.parse(e.start)).hm, end: e.allDay ? null : oslo(Date.parse(e.end)).hm,
+  endDate: e.allDay ? (addDays(e.end, -1) > e.date ? addDays(e.end, -1) : null) : (oslo(Date.parse(e.end)).date > e.date ? oslo(Date.parse(e.end)).date : null),
+  location: e.room ?? '', calendar: WRITABLE.includes(e.calendar) ? e.calendar : 'privat', repeat: REPEATS.includes(e.recurrence) ? e.recurrence : 'none', reminder: REMINDERS.includes(e.reminder) ? e.reminder : 'none', note: e.note ?? '' });
+
+/** Hendelsen med id-en (fra svaret), eller null. Id-ene slutter med datoen, så bare den dagen leses. */
+async function findEvent(user, id) {
+  const base = String(id).split('~')[0];
+  const local = localList(user).find((e) => e.id === base);
+  const m = String(id).match(/(?:-|~)(\d{4})(\d{2})(\d{2})(?:T\d{4})?$/);
+  const date = m ? `${m[1]}-${m[2]}-${m[3]}` : local?.date;
+  if (!date) return null;
+  const { events } = await eventsFor(user, addDays(date, -1), addDays(date, 1));
+  return events.find((e) => e.id === id) ?? (local ? events.find((e) => String(e.id).split('~')[0] === base) ?? null : null);
+}
+const fail = (c, e) => (e?.status === 409 ? c.json({ error: e.message, reconnect: true }, 409) : c.json({ error: String(e?.message ?? e).slice(0, 300) }, e?.status && e.status < 500 ? e.status : 502));
+
+async function createEvent(user, v) {
+  const mode = writeMode(user);
+  if (mode === 'reconnect' || mode === 'none') throw Object.assign(new Error(mode === 'none' ? 'Logg inn med Google (Innstillinger → Kalendere) for å lagre i Privat eller Familie.' : 'Google-koblingen mangler skrivetilgang til kalenderen. Logg inn med Google på nytt.'), { status: 409, reconnect: true });
+  if (mode === 'local') {
+    const e = { id: `loc-${randomBytes(5).toString('hex')}`, ...v, created: new Date().toISOString() };
+    const list = localList(user);
+    if (list.length >= 2000) throw Object.assign(new Error('For mange lokale hendelser'), { status: 400 });
+    kv.set(user, 'kal_local_events', [...list, e]);
+    clearCalendarCache(user);
+    return (await eventsFor(user, v.date, v.date)).events.find((x) => String(x.id).split('~')[0] === e.id) ?? null;
+  }
+  const ids = await googleCalendarIds(user);
+  const calId = v.calendar === 'familie' ? ids.familie : ids.privat;
+  if (!calId) throw Object.assign(new Error('Fant ingen Familie-kalender i Google. Lag en kalender som heter «Familie» og prøv igjen.'), { status: 400 });
+  const g = await googleEventWrite(user, 'POST', calId, null, googleBody(v));
+  clearCalendarCache(user);
+  return googleOut(user, [g], v.calendar, calId, ctxOf(user))[0] ?? null;
+}
+
+api.post('/events', async (c) => {
+  const user = c.get('user');
+  const r = eventInput(await c.req.json().catch(() => null));
+  if (r.error) return c.json({ error: r.error }, 400);
+  try { return c.json({ ok: true, event: await createEvent(user, r.value) }, 201); } catch (e) { return fail(c, e); }
+});
+api.patch('/events/:id', async (c) => {
+  const user = c.get('user'), id = c.req.param('id');
+  const ev = await findEvent(user, id);
+  if (!ev) return c.json({ error: 'Fant ikke hendelsen' }, 404);
+  if (!ev.editable) return c.json({ error: 'Skolens hendelser kan ikke endres. Kopier til Privat for å lage din egen.' }, 403);
+  const r = eventInput(await c.req.json().catch(() => null), inputOf(ev));
+  if (r.error) return c.json({ error: r.error }, 400);
+  const v = r.value;
+  try {
+    if (ev.source === 'local') {
+      const base = String(id).split('~')[0];
+      kv.set(user, 'kal_local_events', localList(user).map((e) => (e.id === base ? { ...e, ...v, updated: new Date().toISOString() } : e)));
+      clearCalendarCache(user);
+      const out = (await eventsFor(user, v.date, v.date)).events.find((x) => String(x.id).split('~')[0] === base) ?? null;
+      return c.json({ ok: true, event: out });
+    }
+    const ids = await googleCalendarIds(user);
+    const target = v.calendar === 'familie' ? ids.familie : ids.privat;
+    if (target && target !== ev.googleCalendarId) { // flyttet mellom Privat og Familie: ny i målkalenderen, slett den gamle
+      const out = await createEvent(user, v);
+      await googleEventWrite(user, 'DELETE', ev.googleCalendarId, ev.googleId);
+      clearCalendarCache(user);
+      return c.json({ ok: true, event: out });
+    }
+    const body = googleBody(v);
+    // Én forekomst i en serie (eller en serie laget utenfor appen): gjentakelsen sendes ikke.
+    if (gIndex.get(user)?.get(id)?.instance || (ev.recurrence === 'custom' && v.repeat === 'none')) delete body.recurrence;
+    const g = await googleEventWrite(user, 'PATCH', ev.googleCalendarId, ev.googleId, body);
+    clearCalendarCache(user);
+    return c.json({ ok: true, event: googleOut(user, [g], ev.calendar, ev.googleCalendarId, ctxOf(user))[0] ?? null });
+  } catch (e) { return fail(c, e); }
+});
+api.delete('/events/:id', async (c) => {
+  const user = c.get('user'), id = c.req.param('id');
+  const ev = await findEvent(user, id);
+  if (!ev) return c.json({ error: 'Fant ikke hendelsen' }, 404);
+  if (!ev.editable) return c.json({ error: 'Skolens hendelser kan ikke slettes.' }, 403);
+  try {
+    if (ev.source === 'local') { const base = String(id).split('~')[0]; kv.set(user, 'kal_local_events', localList(user).filter((e) => e.id !== base)); }
+    else await googleEventWrite(user, 'DELETE', ev.googleCalendarId, ev.googleId);
+    clearCalendarCache(user);
+    return c.json({ ok: true });
+  } catch (e) { return fail(c, e); }
+});
+// Kopier til Privat: skolens hendelse (eller en annen) blir en egen hendelse man kan endre.
+api.post('/events/:id/copy', async (c) => {
+  const user = c.get('user');
+  const ev = await findEvent(user, c.req.param('id'));
+  if (!ev) return c.json({ error: 'Fant ikke hendelsen' }, 404);
+  const b = await c.req.json().catch(() => ({})) ?? {};
+  const base = inputOf(ev);
+  const note = [ev.note, ev.teacher ? `Lærer: ${ev.teacher}` : ''].filter(Boolean).join('\n');
+  const r = eventInput({ ...base, calendar: WRITABLE.includes(b.calendar) ? b.calendar : 'privat', repeat: 'none', reminder: REMINDERS.includes(b.reminder) ? b.reminder : ev.reminder && REMINDERS.includes(ev.reminder) ? ev.reminder : 'none', note });
+  if (r.error) return c.json({ error: r.error }, 400);
+  try { return c.json({ ok: true, event: await createEvent(user, r.value) }, 201); } catch (e) { return fail(c, e); }
 });
 export default api;
 

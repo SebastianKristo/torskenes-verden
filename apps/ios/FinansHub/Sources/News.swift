@@ -10,6 +10,8 @@ struct NewsReaderView: View {
     @Environment(\.paper) private var p
     let back: () -> Void
     @State private var sources = false
+    /// Prompt 27: saken som er åpen i artikkelvisningen.
+    @State private var article27: NewsItem? = nil
 
     var body: some View {
         let data = store.news ?? NewsData()
@@ -35,6 +37,11 @@ struct NewsReaderView: View {
             NewsSourcesSheet().environment(\.paper, p)
                 .presentationDetents([.fraction(0.86), .large])
                 .presentationBackground(p.bg)
+        }
+        .fullScreenCover(item: $article27) { x in
+            NewsArticleView27(start: x, catName: { c in (store.news ?? NewsData()).name(of: c) }, close: { article27 = nil })
+                .environment(\.paper, p)
+                .environment(store)
         }
         .task { if store.news == nil { await store.loadNews() } }
         .task { await NewsIcons23.shared.preload(store) }
@@ -99,7 +106,15 @@ struct NewsReaderView: View {
         }
     }
 
+    /// Prompt 27: bilde 76 × 76 og artikkelvisning i appen (News27.swift).
     private func row(_ x: NewsItem, _ d: NewsData) -> some View {
+        NewsRow27(item: x, category: store.newsCat == "siste" ? d.name(of: x.category) : nil) {
+            Haptics.shared.tap()
+            article27 = x
+        }
+    }
+
+    private func rowOld(_ x: NewsItem, _ d: NewsData) -> some View {
         Button { store.openLink(x.url) } label: {
             HStack(alignment: .firstTextBaseline, spacing: 14) {
                 if store.newsCat == "siste" {

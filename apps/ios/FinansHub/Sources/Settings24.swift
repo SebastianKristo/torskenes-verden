@@ -220,21 +220,8 @@ struct Set24Search: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            HStack(spacing: 10) {
-                Image(systemName: "magnifyingglass").font(.system(size: 16, weight: .semibold)).foregroundStyle(p.mut)
-                TextField(m.ai ? "Spør, f.eks. «hvor bytter jeg ikon?»" : "Søk i innstillinger", text: text)
-                    .font(PF.ui(15, .medium)).foregroundStyle(p.ink)
-                    .autocorrectionDisabled()
-                    .submitLabel(.search)
-                if !m.query.isEmpty {
-                    Button { m.query = "" } label: {
-                        Text("×").font(.system(size: 13)).foregroundStyle(p.ink)
-                            .frame(width: 26, height: 26).background(Circle().fill(p.line))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Tøm")
-                }
-            }
+            // Prompt 27: ✕ til venstre (SearchField27), høyre-× er fjernet.
+            SearchField27(text: text, placeholder: m.ai ? "Spør, f.eks. «hvor bytter jeg ikon?»" : "Søk i innstillinger")
             .padding(.horizontal, 16)
             .frame(height: 46)
             .background(Capsule().fill(p.card))

@@ -23,6 +23,8 @@ struct FinansHubWidgetBundle: WidgetBundle {
         PositionWidget()
         BirthdaysWidget()
         CalendarWidget26()
+        // Prompt 27: Ruter-avganger (liten, medium, stor og låseskjerm), RuterWidget27.swift.
+        RuterWidget27()
     }
 }
 

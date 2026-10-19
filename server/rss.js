@@ -2,11 +2,17 @@
 // ✦ AI-sammendrag lager en kort ingress over de viktigste sakene; ✦ AI-kategorisering setter kategori
 // per sak når kilden står på «Auto» og feeden selv ikke har en kategori vi kjenner igjen.
 // Rutene godtar sesjon eller app-token, så Papir-appen og PWA-en bruker de samme endepunktene.
+// Prompt 27 (Nyhetsleser): hver sak i GET /api/rss har image (RSS media:thumbnail/media:content/enclosure, ellers og:image
+// fra artikkelsiden, hentet i backend og sjekket på nytt etter 24 t; null hvis ingen) og readMin (ord / 230).
+//   GET /api/rss/article?url= → {url, title, source, color, category, image, published, readMin, summary, points:[3], aiNote,
+//       ai, related:[saker i samme kategori]}. Bare adresser fra brukerens egne kilder. Artikkelteksten hentes med enkel
+//       readability (<article>/<p>), ✦ AI lager JSON {sammendrag, punkter} på brukerens språk (language). Cache per bruker og URL.
+//       Uten AI: de første setningene fra saken (ai:false). MOCK_DATA=1: realistisk tekst fra mock.js.
 import { Hono } from 'hono';
 import { db, kv } from './db.js';
 import { config } from './config.js';
 import { aiJson } from './homeos-common.js';
-import { authOrToken } from './mobile.js';
+import { authOrToken, languageOf } from './mobile.js';
 import { ICON_DEFAULTS, validId as validIconId } from './icons.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
@@ -42,7 +48,19 @@ CREATE TABLE IF NOT EXISTS rss_item (
   UNIQUE (feed_id, guid)
 );
 CREATE INDEX IF NOT EXISTS rss_item_pub ON rss_item(feed_id, published);
+CREATE TABLE IF NOT EXISTS rss_article (
+  user TEXT NOT NULL,
+  url TEXT NOT NULL,
+  lang TEXT NOT NULL DEFAULT 'nb',
+  data TEXT NOT NULL,
+  fetched INTEGER NOT NULL,
+  PRIMARY KEY (user, url, lang)
+);
 `);
+// Prompt 27: når og:image sist ble sjekket, og lesetid fra artikkelteksten.
+for (const [col, type] of [['image_checked', 'INTEGER'], ['read_min', 'INTEGER']]) {
+  if (!db.prepare('PRAGMA table_info(rss_item)').all().some((c) => c.name === col)) db.exec(`ALTER TABLE rss_item ADD COLUMN ${col} ${type}`);
+}
 
 export const CATEGORIES = [['siste', 'Siste'], ['norge', 'Norge'], ['verden', 'Verden'], ['okonomi', 'Økonomi'], ['sport', 'Sport'], ['teknologi', 'Teknologi'], ['kultur', 'Kultur']]
   .map(([id, name]) => ({ id, name }));
@@ -164,7 +182,7 @@ function mockFeed(url) {
   const seed = [...host].reduce((a, ch) => a + ch.charCodeAt(0), 0);
   const items = MOCK_NEWS.filter((_, i) => (i + seed) % 3 !== 0).slice(0, 8).map(([t, cat], i) => ({
     guid: `${host}-${i}`, title: t, url: `https://${host}/sak/${seed}-${i}`, published: new Date(Date.now() - (i * 13 + (seed % 9)) * 60_000).toISOString(),
-    category: cat || null, image: null, excerpt: '',
+    category: cat || null, image: (i + seed) % 4 === 3 ? null : `https://picsum.photos/seed/${host.split('.')[0]}${i}/640/360`, excerpt: '',
   }));
   return { title: host.split('.')[0].replace(/^./, (c) => c.toUpperCase()), items };
 }
@@ -203,6 +221,7 @@ export async function refresh(user, { force = false } = {}) {
     .filter((f) => force || !f.last_fetch || Date.now() - f.last_fetch > REFRESH_MS - 30_000);
   await Promise.all(feeds.map(refreshFeed));
   const users = user ? [user] : [...new Set(feeds.map((f) => f.user))];
+  for (const u of users) await enrichImages(u).catch(() => {});
   for (const u of users) {
     if (settingsOf(u).aiCategorize) await aiCategorize(u).catch(() => {});
     if (settingsOf(u).aiSummary) await makeDigest(u, { force }).catch(() => {});
@@ -216,6 +235,100 @@ export function startRssWorker() {
   timer = setInterval(tick, REFRESH_MS);
   timer.unref?.();
   setTimeout(tick, 15_000).unref?.();
+}
+
+/* ---------------- Prompt 27: bilde, lesetid og artikkel ---------------- */
+
+const WPM = 230;
+let pageFetch = null;
+/** Testene kan bytte ut hentingen av artikkelsider: fn(url) → Response eller HTML-tekst. */
+export const _setArticleFetch = (fn) => { pageFetch = fn; };
+async function fetchPage(url) {
+  const r = pageFetch ? await pageFetch(url) : await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (homelab-nyhetsleser)', Accept: 'text/html,application/xhtml+xml' }, redirect: 'follow', signal: AbortSignal.timeout(8000) });
+  if (typeof r === 'string') return r;
+  if (!r.ok) throw new Error(`Siden svarte ${r.status}`);
+  if (!/html|xml|text/i.test(r.headers.get('content-type') ?? 'text/html')) throw new Error('Ikke en nettside');
+  const t = await r.text();
+  return t.slice(0, 3 * 1024 * 1024);
+}
+const metaOf = (html, ...names) => {
+  for (const n of names) {
+    const m = html.match(new RegExp(`<meta[^>]+(?:property|name)=["']${n}["'][^>]*>`, 'i'))?.[0];
+    const v = m?.match(/\bcontent=["']([^"']+)["']/i)?.[1];
+    if (v) return decode(v);
+  }
+  return null;
+};
+/** Enkel readability: teksten i <article> (ellers hele siden) fra <p>-avsnitt, uten skript, meny og bunntekst. */
+export function articleOf(html, base = null) {
+  html = String(html ?? '');
+  const image = (() => { const v = metaOf(html, 'og:image', 'og:image:url', 'twitter:image', 'twitter:image:src'); if (!v) return null; try { return httpUrl(new URL(v, base ?? undefined).href); } catch { return httpUrl(v); } })();
+  const title = metaOf(html, 'og:title', 'twitter:title') ?? tag(html, 'title') ?? null;
+  let body = html.replace(/<(script|style|noscript|nav|header|footer|aside|form|figure|svg)\b[\s\S]*?<\/\1>/gi, ' ');
+  const art = body.match(/<article\b[\s\S]*?<\/article>/gi);
+  if (art?.length) body = art.sort((a, b) => b.length - a.length)[0];
+  const paras = [...body.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)].map((m) => decode(m[1])).filter((p) => p.length >= 40 && !/^(les også|annonse|del artikkelen)/i.test(p));
+  const text = paras.join('\n\n').slice(0, 40_000);
+  const words = text ? text.split(/\s+/).length : 0;
+  return { image, title, text, words, readMin: words ? Math.max(1, Math.round(words / WPM)) : null };
+}
+const readMinOf = (r) => r.read_min ?? Math.max(1, Math.round(((r.excerpt ?? '').split(/\s+/).length * 6) / WPM)); // anslag til teksten er hentet
+
+/** og:image for saker uten bilde (høyst 8 per runde, hver sjekket på nytt etter 24 t). */
+async function enrichImages(user) {
+  const rows = db.prepare(`SELECT i.id, i.url FROM rss_item i JOIN rss_feed f ON f.id=i.feed_id WHERE f.user=? AND f.enabled=1 AND i.image IS NULL AND i.url IS NOT NULL
+    AND (i.image_checked IS NULL OR i.image_checked < ?) ORDER BY i.published DESC LIMIT 8`).all(user, Date.now() - 24 * 3600_000);
+  if (!rows.length) return 0;
+  const set = db.prepare('UPDATE rss_item SET image=COALESCE(?, image), read_min=COALESCE(?, read_min), image_checked=? WHERE id=?');
+  let n = 0;
+  await Promise.race([Promise.all(rows.map(async (r) => {
+    let a = { image: null, readMin: null };
+    if (!MOCK || pageFetch) { try { a = articleOf(await fetchPage(r.url), r.url); } catch { /* prøv igjen om 24 t */ } }
+    set.run(a.image, a.readMin, Date.now(), r.id);
+    if (a.image) n++;
+  })), new Promise((res) => setTimeout(res, 9000).unref?.())]);
+  return n;
+}
+
+const ARTICLE_SCHEMA = { type: 'OBJECT', properties: { sammendrag: { type: 'STRING' }, punkter: { type: 'ARRAY', items: { type: 'STRING' } } }, required: ['sammendrag', 'punkter'] };
+export const AI_NOTE = { nb: 'Laget av AI fra saken. Kan inneholde feil.', en: 'Made by AI from the article. May contain errors.' };
+const sentences = (t) => String(t ?? '').replace(/\s+/g, ' ').match(/[^.!?]+[.!?]+(\s|$)/g)?.map((x) => x.trim()) ?? (t ? [String(t).trim()] : []);
+let mockMod = null;
+
+/** Artikkelvisningen: tekst, bilde, ✦ sammendrag og 3 punkter, og relaterte saker. */
+export async function articleFor(user, url) {
+  ensureFeeds(user);
+  const row = db.prepare(`SELECT i.*, f.name AS feed, f.category AS fcat, f.color FROM rss_item i JOIN rss_feed f ON f.id=i.feed_id WHERE f.user=? AND i.url=? ORDER BY i.published DESC LIMIT 1`).get(user, url);
+  if (!row) return null;
+  const s = settingsOf(user), lang = languageOf(user);
+  const category = catOf(row, s);
+  const related = latest(user, { cat: category, limit: 7 }).filter((x) => x.id !== row.id).slice(0, 6);
+  const hit = db.prepare('SELECT data, fetched FROM rss_article WHERE user=? AND url=? AND lang=?').get(user, url, lang);
+  let d = hit && Date.now() - hit.fetched < 7 * 24 * 3600_000 ? JSON.parse(hit.data) : null;
+  if (!d) {
+    let a = { image: null, title: null, text: '', words: 0, readMin: null }, mock = null;
+    if (MOCK && !pageFetch) { mockMod ??= await import('./mock.js'); mock = mockMod.mockArticle(row.title, category, row.feed); a = { ...a, text: mock.text, words: mock.text.split(/\s+/).length, readMin: Math.max(1, Math.round(mock.text.split(/\s+/).length / WPM)) }; }
+    else { try { a = articleOf(await fetchPage(url), url); } catch { /* bare tittel og ingress */ } }
+    const source = a.text || row.excerpt || row.title;
+    let summary = null, points = [], ai = false, provider = null;
+    if (s.aiSummary && source.length > 60) {
+      try {
+        const r = await aiJson(`${lang === 'en' ? 'Answer in English.' : 'Svar på norsk bokmål.'} Lag et kort sammendrag (2–3 setninger, nøytralt, uten egne meninger) og nøyaktig 3 hovedpunkter (korte, maks 15 ord hver) av nyhetssaken. Bruk bare det som står i teksten.
+Tittel: ${row.title}
+Tekst: ${source.slice(0, 12_000)}`, ARTICLE_SCHEMA, { temperature: 0.2 });
+        summary = String(r.data?.sammendrag ?? '').trim().slice(0, 800) || null;
+        points = (Array.isArray(r.data?.punkter) ? r.data.punkter : []).map((x) => String(x).trim()).filter(Boolean).slice(0, 3);
+        ai = !!summary; provider = r.provider ?? null;
+      } catch { /* uten AI: utdrag */ }
+    }
+    if (!summary && mock) { summary = mock.summary; points = mock.points; ai = true; provider = 'mock'; }
+    if (!summary) { const sn = sentences(source); summary = sn.slice(0, 2).join(' ') || row.title; points = sn.slice(2, 5); }
+    d = { title: a.title && a.title.length > 3 ? a.title : row.title, image: row.image ?? a.image ?? null, readMin: a.readMin ?? readMinOf(row), words: a.words, summary, points, ai, provider };
+    db.prepare('INSERT OR REPLACE INTO rss_article (user, url, lang, data, fetched) VALUES (?,?,?,?,?)').run(user, url, lang, JSON.stringify(d), Date.now());
+    db.prepare('UPDATE rss_item SET image=COALESCE(image, ?), read_min=COALESCE(?, read_min) WHERE id=?').run(d.image, a.readMin, row.id);
+  }
+  return { id: row.id, url, title: row.title, source: row.feed, color: row.color, category, image: d.image ?? row.image ?? null, published: row.published, readMin: d.readMin,
+    summary: d.summary, points: d.points, ai: d.ai, provider: d.provider, aiNote: d.ai ? AI_NOTE[lang] ?? AI_NOTE.nb : null, related };
 }
 
 /* ---------------- AI ---------------- */
@@ -246,7 +359,7 @@ export async function makeDigest(user, { force = false } = {}) {
   const old = kv.get(user, 'rss_digest', null);
   if (!force && old?.key === key) return old;
   if (!force && old?.at && Date.now() - Date.parse(old.at) < 20 * 60_000) return old;
-  const r = await aiJson(`Skriv en kort ingress på norsk bokmål (maks 2 setninger, ca. 35 ord) som oppsummerer de viktigste nyhetene nå, i nøktern morgenavis-stil. Ikke list opp kilder.
+  const r = await aiJson(`${languageOf(user) === 'en' ? 'Write the summary in English. ' : ''}Skriv en kort ingress på norsk bokmål (maks 2 setninger, ca. 35 ord) som oppsummerer de viktigste nyhetene nå, i nøktern morgenavis-stil. Ikke list opp kilder.
 Saker: ${JSON.stringify(top.map((t) => `${t.feed}: ${t.title}`))}`, DIGEST_SCHEMA);
   const text = String(r.data?.text ?? '').trim().slice(0, 400);
   if (!text) return old;
@@ -270,7 +383,7 @@ export function latest(user, { cat = 'siste', feed = null, limit = 40 } = {}) {
     const category = catOf(r, s);
     if (cat && cat !== 'siste' && category !== cat) continue;
     out.push({ id: r.id, feedId: r.feed_id, feed: r.feed, color: r.color, title: r.title, url: r.url, published: r.published, category,
-      ai: r.fcat === 'auto' && !mapCategory(r.category) && s.aiCategorize && !!r.ai_category, image: r.image, excerpt: r.excerpt || '' });
+      ai: r.fcat === 'auto' && !mapCategory(r.category) && s.aiCategorize && !!r.ai_category, image: r.image ?? null, readMin: readMinOf(r), excerpt: r.excerpt || '' });
     if (out.length >= limit) break;
   }
   return out;
@@ -287,7 +400,7 @@ export function newsFor(user, n = 5) {
   try {
     const items = latest(user, { limit: n });
     if (!items.length) refresh(user).catch(() => {});
-    return items.map(({ id, title, url, feed, published, category, image }) => ({ id, title, url, feed, published, category, image }));
+    return items.map(({ id, title, url, feed, published, category, image, readMin }) => ({ id, title, url, feed, published, category, image, readMin }));
   } catch { return []; }
 }
 
@@ -317,6 +430,14 @@ api.get('/', async (c) => {
     categories: CATEGORIES,
     updatedAt: (() => { const t = db.prepare('SELECT MAX(last_fetch) AS t FROM rss_feed WHERE user=?').get(user)?.t; return t ? new Date(t).toISOString() : null; })(),
   });
+});
+
+api.get('/article', async (c) => {
+  const url = httpUrl(String(c.req.query('url') ?? ''));
+  if (!url) return c.json({ error: 'Mangler eller ugyldig url' }, 400);
+  const a = await articleFor(c.get('user'), url);
+  if (!a) return c.json({ error: 'Fant ikke saken i dine kilder' }, 404);
+  return c.json(a);
 });
 
 api.post('/feeds', async (c) => {

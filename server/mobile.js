@@ -50,7 +50,7 @@ export function meOut(id) {
   const u = userInfo(id);
   if (!u) return null;
   const v = avatarV(id);
-  return { ...u, serverName: serverName(), avatarUrl: v ? `/api/me/avatar?v=${v}` : null };
+  return { ...u, serverName: serverName(), avatarUrl: v ? `/api/me/avatar?v=${v}` : null, language: languageOf(id) };
 }
 
 export const removeAvatar = (id) => unlink(avatarFile(id)).catch(() => {});
@@ -146,7 +146,14 @@ const SCALAR = {
   // {timeplan, prover, bursdager, skole: bool} (true = vises), eller en liste med skjulte nøkler.
   kalFilters: (v) => Array.isArray(v) ? v.length <= KAL_FILTERS.length && v.every((x) => KAL_FILTERS.includes(x))
     : !!v && typeof v === 'object' && Object.entries(v).every(([k, b]) => KAL_FILTERS.includes(k) && typeof b === 'boolean'),
-  kalView: (v) => ['uke', 'maaned', 'agenda'].includes(v),
+  // Prompt 27 (Kalender v2): dag, 3dager, uke, maaned, liste. Gamle verdier: agenda → liste, mnd → maaned.
+  kalView: (v) => KAL_VIEWS.includes(v),
+  // Prompt 27: språk (nb | en) for web-dashboardet og AI-svar. Også i /api/me og PATCH /api/me.
+  language: (v) => LANGUAGES.includes(v),
+  // Prompt 27: Ruter-kortet på Hjem: opptil 3 av Mine stopp og 1–4 avganger per stopp.
+  home_departures: (v) => !!v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).every((k) => ['stops', 'n'].includes(k))
+    && (v.stops === undefined || (Array.isArray(v.stops) && v.stops.length <= 3 && new Set(v.stops).size === v.stops.length && v.stops.every((x) => typeof x === 'string' && !!stopIdOf(x))))
+    && (v.n === undefined || (Number.isInteger(v.n) && v.n >= 1 && v.n <= 4)),
   kalReminders: (v) => !!v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length <= 1000
     && Object.entries(v).every(([k, r]) => k.length >= 1 && k.length <= 120 && !/[<>]/.test(k) && ['none', '15m', '1h', 'day'].includes(r)),
   subjectColors: (v) => !!v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length <= 60
@@ -154,13 +161,18 @@ const SCALAR = {
 };
 // Filternavn og fag: bokstaver (også æøå), tall, mellomrom og noen tegn, 1–40 tegn.
 const KAL_CARDS = ['A', 'B', 'C', 'D', 'E'];
-const KAL_FILTERS = ['timeplan', 'prover', 'bursdager', 'skole'];
+const KAL_FILTERS = ['timeplan', 'prover', 'bursdager', 'skole', 'privat', 'familie'];
+const KAL_VIEWS = ['dag', '3dager', 'uke', 'maaned', 'liste'];
+export const LANGUAGES = ['nb', 'en'];
+const stopIdOf = (v) => { const m = String(v ?? '').trim().match(/^(?:NSR:StopPlace:)?(\d{1,9})$/); return m ? `NSR:StopPlace:${m[1]}` : null; };
+/** Brukerens språk (nb | en), standard nb. Brukes i AI-systemprompter (chat, nyhetssammendrag). */
+export const languageOf = (id) => (LANGUAGES.includes(layoutOf(id).language) ? layoutOf(id).language : 'nb');
 const KAL_KEY = /^[\p{L}\p{N} ._&+()\/-]{1,40}$/u;
 // Felt som flettes per nøkkel (en klient kan lagre én påminnelse eller én fagfarge uten å sende resten; null fjerner nøkkelen).
 const MERGE_MAP = ['kalReminders', 'subjectColors'];
 // finNav som liste (prompt 24): fanene i Finans i profilen. Lagres som finNavList, så sidemenyen på desktop (finNav-objektet
 // {order, hidden, labels}) beholdes uendret. GET /api/me/layout svarer med finNav = listen og finSideNav = objektet.
-const FIN_NAV_IDS = ['oversikt', 'liste', 'finn', 'sok', 'budsjett', 'kvitteringer', 'aksjer', 'abonnementer', 'kontoer', 'boliger', 'mer'];
+const FIN_NAV_IDS = ['oversikt', 'liste', 'finn', 'sok', 'budsjett', 'kvitteringer', 'aksjer', 'abonnementer', 'kontoer', 'boliger', 'chat', 'mer'];
 // Prompt 26: finNav kan også være [{key, label?, icon?}] (egne navn og ikoner fra «Rediger fanelinjen»). Maks 5 faner;
 // Mer ligger alltid sist i appene og lagres ikke (fjernes fra listen). Lagres som finNavList (nøklene) og finNavMeta.
 const FIN_NAV_MAX = 5;
@@ -198,7 +210,7 @@ export function profileOf(id) {
 const SUB_HOME_CARDS = ['ai', 'next7', 'check', 'list'];
 export const NAV_STYLES = ['text', 'icons', 'icons_active_label'];
 const BG_TYPES = ['weather', 'planets', 'oslo', 'custom', 'none', 'cur'];
-export const TAB_IDS = ['hjem', 'finans', 'mat', 'sporing', 'domener', 'sok', 'mer', 'vaer', 'nyheter', 'familie', 'avganger', 'aksjer', 'boliger', 'abonnementer', 'media', 'huske'];
+export const TAB_IDS = ['hjem', 'finans', 'mat', 'sporing', 'domener', 'sok', 'mer', 'vaer', 'nyheter', 'familie', 'avganger', 'aksjer', 'boliger', 'abonnementer', 'media', 'huske', 'chat'];
 export const TAB_BAR_DEFAULT = { items: [{ id: 'hjem', label: 'Hjem', icon: 'house' }, { id: 'finans', label: 'Finans', icon: 'wallet' }, { id: 'mat', label: 'Mat', icon: 'fork.knife' }, { id: 'domener', label: 'Domener', icon: 'globe' }, { id: 'sok', label: 'Søk', icon: 'magnifyingglass' }, { id: 'mer', label: 'Mer', icon: 'ellipsis' }] };
 const ICON_THEMES = ['standard', 'varm', 'kjolig', 'mono', 'fargerik'];
 const cardIds = (a) => Array.isArray(a) && a.length <= 40 && a.every((x) => typeof x === 'string' && /^[\w.-]{1,40}$/.test(x));
@@ -342,6 +354,17 @@ const api = new Hono();
 const json = async (c) => c.req.json().catch(() => null);
 
 api.get('/me', authOrToken, (c) => c.json(meOut(c.get('user'))));
+// Prompt 27: språk (nb | en). Lagres i layout-feltet language (samme som PUT /api/me/layout {language}).
+api.patch('/me', authOrToken, async (c) => {
+  const b = await json(c);
+  if (!b || typeof b !== 'object' || Array.isArray(b)) return c.json({ error: 'Forventet et objekt' }, 400);
+  const id = c.get('user');
+  if (b.language !== undefined) {
+    if (!LANGUAGES.includes(b.language)) return c.json({ error: 'language må være nb eller en' }, 400);
+    kv.set(id, 'layout', { ...layoutOf(id), language: b.language });
+  }
+  return c.json(meOut(id));
+});
 api.get('/me/avatar', authOrToken, (c) => sendAvatar(c, c.get('user')));
 api.post('/me/avatar', authOrToken, bodyLimit({ maxSize: 1024 * 1024 + 64 * 1024, onError: (c) => c.json({ error: 'Bildet er for stort (maks 1 MB)' }, 413) }), async (c) => {
   const body = await c.req.parseBody().catch(() => ({}));
@@ -366,7 +389,7 @@ api.delete('/me/avatar', authOrToken, async (c) => {
 api.get('/users/:id/avatar', authOrToken, (c) => sendAvatar(c, c.req.param('id')));
 
 // Lagret oppsett med standardverdiene for utseendet fylt inn (de avhenger av om installasjonen er ny, se designOf).
-api.get('/me/layout', authOrToken, (c) => { const id = c.get('user'); const { finNavList: _l, finNavMeta: _m, ...l } = layoutOf(id); return c.json({ ...l, ...designOf(id), ...profileOf(id) }); });
+api.get('/me/layout', authOrToken, (c) => { const id = c.get('user'); const { finNavList: _l, finNavMeta: _m, ...l } = layoutOf(id); if (l.kalView === 'agenda') l.kalView = 'liste'; return c.json({ ...l, language: languageOf(id), ...designOf(id), ...profileOf(id) }); });
 api.put('/me/layout', authOrToken, async (c) => {
   const b = await json(c);
   if (!b || typeof b !== 'object' || Array.isArray(b)) return c.json({ error: 'Forventet et objekt' }, 400);
@@ -396,7 +419,8 @@ api.put('/me/layout', authOrToken, async (c) => {
       if (!SCALAR[k](merged)) return c.json({ error: `Ugyldig verdi for ${k}` }, 400);
       next[k] = merged; continue;
     }
-    if (k === 'kalView' && v === 'mnd') { next.kalView = 'maaned'; continue; }
+    if (k === 'kalView' && (v === 'mnd' || v === 'agenda')) { next.kalView = v === 'mnd' ? 'maaned' : 'liste'; continue; }
+    if (k === 'home_departures' && v && SCALAR.home_departures(v)) { next.home_departures = { ...(next.home_departures ?? {}), ...v, ...(v.stops ? { stops: v.stops.map(stopIdOf) } : {}) }; continue; }
     if (k === 'appName' && typeof v === 'string') { if (!SCALAR.appName(v)) return c.json({ error: 'Navnet på appen må være 1–20 tegn' }, 400); next.appName = v.trim().replace(/\s+/g, ' '); continue; }
     if (v === null) { delete next[k]; continue; }
     if (SCALAR[k]) {
@@ -608,10 +632,60 @@ api.put('/me/stops', authOrToken, async (c) => {
   kv.set(c.get('user'), 'ruter_stops', out);
   return c.json(out);
 });
-const homeStops = async (u) => Promise.all((await stopsOf(u)).slice(0, 6).map(async (s) => {
-  const d = await safe(() => ext.getStopDepartures(s.id, 6));
-  return { id: s.id, name: s.name, departures: (d?.departures ?? []).filter((x) => !x.cancelled).slice(0, 4), error: d ? undefined : 'Ingen sanntid akkurat nå' };
-}));
+// Prompt 27: Ruter-kortet på Hjem viser de valgte stoppene (layout-feltet home_departures = {stops:[id] ≤ 3, n: 1–4}).
+// Standard (widgets og klientenes «Velg stopp»): første av Mine stopp og 3 avganger. Stopp som ikke lenger er i Mine stopp, hoppes over.
+export async function homeDeparturesOf(u) {
+  const mine = await stopsOf(u), cfg = layoutOf(u).home_departures ?? {};
+  const n = Number.isInteger(cfg.n) && cfg.n >= 1 && cfg.n <= 4 ? cfg.n : 3;
+  const picked = Array.isArray(cfg.stops) ? cfg.stops.map((id) => mine.find((s) => s.id === id)).filter(Boolean).slice(0, 3) : [];
+  return { stops: (picked.length ? picked : mine.slice(0, 1)).map((s) => s.id), n, chosen: picked.length > 0, mine };
+}
+// Uten eget valg: alle Mine stopp (opptil 6) med 4 avganger som før; standarden «første stopp, 3» gjelder bare widgetene.
+const homeStops = async (u) => {
+  const h = await homeDeparturesOf(u);
+  const list = h.chosen ? h.stops.map((id) => h.mine.find((s) => s.id === id)) : h.mine.slice(0, 6);
+  const n = h.chosen ? h.n : 4;
+  return Promise.all(list.map(async (s) => {
+    const d = await safe(() => ext.getStopDepartures(s.id, Math.max(6, n + 3)));
+    return { id: s.id, name: s.name, departures: (d?.departures ?? []).filter((x) => !x.cancelled).slice(0, n), error: d ? undefined : 'Ingen sanntid akkurat nå' };
+  }));
+};
+api.get('/me/home-departures', authOrToken, async (c) => { const { mine: _m, ...h } = await homeDeparturesOf(c.get('user')); return c.json(h); });
+api.put('/me/home-departures', authOrToken, async (c) => {
+  const b = await json(c) ?? {};
+  const v = { ...(b.stops !== undefined ? { stops: b.stops } : {}), ...(b.n !== undefined ? { n: b.n } : {}) };
+  if (!SCALAR.home_departures(v)) return c.json({ error: 'Velg opptil 3 stopp (NSR:StopPlace:…) og 1–4 avganger' }, 400);
+  const id = c.get('user'), l = layoutOf(id);
+  kv.set(id, 'layout', { ...l, home_departures: { ...(l.home_departures ?? {}), ...v, ...(v.stops ? { stops: v.stops.map(stopIdOf) } : {}) } });
+  const { mine: _m, ...h } = await homeDeparturesOf(id);
+  return c.json(h);
+});
+
+// Prompt 27: Ruter-widgets (iOS/Android/Samsung). ?stop=<id>[,<id>] (standard: stoppene fra Hjem-kortet), ?lines=19,12 og ?dir=<retning>
+// (del av endestasjonen eller plattform/kai), ?n= (1–10, standard 6). Kompakt: én gruppe per stopp, avvik samlet, refreshAt om 5 min.
+api.get('/widgets/departures', authOrToken, async (c) => {
+  const u = c.get('user');
+  const q = String(c.req.query('stop') ?? '').split(',').map((x) => x.trim()).filter(Boolean);
+  if (q.some((x) => !stopIdOf(x))) return c.json({ error: 'Ugyldig stopp-ID' }, 400);
+  const lines = String(c.req.query('lines') ?? '').split(',').map((x) => x.trim().toLowerCase()).filter(Boolean);
+  const dir = String(c.req.query('dir') ?? '').trim().toLowerCase();
+  const n = Math.min(10, Math.max(1, parseInt(c.req.query('n') ?? '6', 10) || 6));
+  const h = await homeDeparturesOf(u);
+  const ids = (q.length ? q.map(stopIdOf) : h.stops).slice(0, 3);
+  const name = (id) => h.mine.find((s) => s.id === id)?.name;
+  const deviations = new Set();
+  const stops = await Promise.all(ids.map(async (id) => {
+    const d = await safe(() => ext.getStopDepartures(id, 30));
+    const deps = (d?.departures ?? []).filter((x) => !x.cancelled && Date.parse(x.time) > Date.now() - 60_000)
+      .filter((x) => !lines.length || lines.includes(String(x.line).toLowerCase()))
+      .filter((x) => !dir || String(x.to ?? '').toLowerCase().includes(dir) || String(x.platform ?? '').toLowerCase() === dir);
+    for (const x of deps) if (x.situation) deviations.add(x.situation);
+    return { id, name: d?.stop?.name ?? name(id) ?? id, departures: deps.slice(0, n).map((x) => ({ line: x.line, dest: x.to, time: x.time, clock: hhmm(x.time), minutes: minsTo(x.time),
+      realtime: !!x.realtime, color: x.color ?? MODE_COLOR[x.mode] ?? MODE_COLOR.bus, textColor: x.textColor ?? '#FFFFFF', mode: x.mode ?? 'bus', platform: x.platform ?? null, delayMin: x.delayMin ?? 0 })),
+      ...(d ? {} : { error: 'Ingen sanntid akkurat nå' }) };
+  }));
+  return c.json({ stops, deviations: [...deviations].slice(0, 5), n, refreshAt: new Date(Date.now() + 5 * 60_000).toISOString(), updatedAt: new Date().toISOString(), url: 'finanshub://avganger' });
+});
 
 // Alt mobilforsiden i appene trenger, i ett kall.
 api.get('/mobile/home', authOrToken, async (c) => {
@@ -623,7 +697,8 @@ api.get('/mobile/home', authOrToken, async (c) => {
     weather: w && { ...w, lat: w.lat ?? config.location.lat, lon: w.lon ?? config.location.lon, max: w.hi ?? w.days?.[0]?.max ?? null, min: w.lo ?? w.days?.[0]?.min ?? null, code: w.symbol ?? w.kind ?? null },
     shortcuts: shortcutsFor(id),
     ruter: (ruter?.trips ?? []).map((t) => ({ from: t.from, to: t.to, url: t.url, departures: (t.deps ?? []).filter((d) => new Date(d.time) > Date.now() - 60_000).map(depOut) })),
-    stops, // brukerens egne stopp med sanntid (prompt 16)
+    stops, // stoppene på Ruter-kortet med sanntid (prompt 16; prompt 27: bare valgte stopp, n avganger)
+    homeDepartures: await homeDeparturesOf(id).then(({ mine: _m, ...h }) => h).catch(() => ({ stops: [], n: 3, chosen: false })),
     serverStatus: status,
     layout: layoutOf(id).mobile ?? {},
     search: searchSettings(id),

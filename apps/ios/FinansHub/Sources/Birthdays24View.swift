@@ -83,9 +83,8 @@ struct BirthdaysPage24: View {
     private var searchRow: some View {
         HStack(spacing: 8) {
             HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass").font(.system(size: 15, weight: .semibold)).foregroundStyle(p.mut)
-                TextField("Søk etter navn", text: $q).font(PF.ui(15, .medium)).foregroundStyle(p.ink)
-                    .autocorrectionDisabled().submitLabel(.search)
+                // Prompt 27: ✕ til venstre (SearchField27).
+                SearchField27(text: $q, placeholder: "Søk etter navn", iconSize: 15)
             }
             .padding(.horizontal, 14).frame(height: 46)
             .background(p.card, in: Capsule())

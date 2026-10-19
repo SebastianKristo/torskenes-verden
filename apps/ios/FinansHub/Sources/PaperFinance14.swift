@@ -72,12 +72,10 @@ struct PaperFinList: View {
     /// Feltet er en pille (44 høyt), og AI-knappen inni er også en pille (34 høy, 5 pt fra kanten).
     private var search: some View {
         HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass").foregroundStyle(p.mut).padding(.leading, 14)
-            TextField("Søk i transaksjoner", text: Binding(get: { store.query }, set: { store.query = $0 }))
-                .font(PF.ui(14.5)).foregroundStyle(p.ink)
-                .focused($focused)
-                .submitLabel(.search)
-                .onSubmit { store.search() }
+            // Prompt 27: ✕ til venstre (SearchField27). Tømming viser hele lista igjen.
+            SearchField27(text: Binding(get: { store.query }, set: { store.query = $0 }), placeholder: "Søk i transaksjoner", font: PF.ui(14.5),
+                          focus: $focused, onClear: { store.search() }, onSubmit: { store.search() })
+                .padding(.leading, 14)
             Button {
                 Haptics.shared.tap()
                 let q = store.query

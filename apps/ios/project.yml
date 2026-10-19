@@ -51,6 +51,9 @@ targets:
         INFOPLIST_KEY_NSLocalNetworkUsageDescription: "FinansHub kobler til homelab-serveren din på lokalt nett."
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Posisjonen din deles med familien i Familie og kart når du har slått på deling."
         INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription: "Med «Alltid» oppdateres posisjonen din for familien også når appen er lukket, og du får varsler når noen kommer til eller forlater en sone."
+        # Prompt 27: mikrofonen i Chat (tale til tekst på norsk).
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "Mikrofonen brukes når du snakker til Chat."
+        INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "Talen din gjøres om til tekst på norsk i Chat."
         INFOPLIST_KEY_NSMotionUsageDescription: "Aktivitet (går, sykler, kjører) vises for familien sammen med posisjonen din."
         INFOPLIST_KEY_NSHealthShareUsageDescription: "Appen leser skritt, puls, søvn og aktivitet for å vise dem i Familie."
         # Appen skriver ikke til Helse, men teksten må finnes hvis en senere versjon gjør det (ellers krasj ved forespørsel).
