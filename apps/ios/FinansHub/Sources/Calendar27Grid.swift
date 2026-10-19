@@ -220,39 +220,56 @@ struct Cal27Block: View {
     let hh: CGFloat
     let compact: Bool
 
+    private var e: CalEvent26 { slot.e }
+    private var n: CGFloat { CGFloat(Swift.max(1, slot.n)) }
+    private var ht: CGFloat { CGFloat(slot.b - slot.a) / 60 * hh }
+
     var body: some View {
-        let e: CalEvent26 = slot.e
+        let x: CGFloat = width * CGFloat(slot.c) / n + 1
+        let y: CGFloat = CGFloat(slot.a) / 60 * hh
+        let label: String = e.title + ", " + e.timeText
+        Button { m.open(e) } label: { box }
+            .buttonStyle(.plain)
+            .offset(x: x, y: y)
+            .accessibilityLabel(label)
+    }
+
+    @ViewBuilder private var box: some View {
         let c: Color = Color(hex: m.hex(e))
         let solid: Bool = e.type == "prove"
-        let n: CGFloat = CGFloat(Swift.max(1, slot.n))
-        let x: CGFloat = width * CGFloat(slot.c) / n + 1
         let bw: CGFloat = Swift.max(8, width / n - 3)
-        let ht: CGFloat = CGFloat(slot.b - slot.a) / 60 * hh
         let bh: CGFloat = Swift.max(18, ht - 2)
-        let tall: Bool = ht >= 40 && !(compact && slot.n > 1)
-        let sel: Bool = m.sel?.id == e.id
-        let fg: Color = solid ? Color.white : p.ink
-        Button { m.open(e) } label: {
-            VStack(alignment: .leading, spacing: 1) {
-                Text(e.type == "time" ? e.short : e.title).font(PF.ui(compact ? 10.5 : 12, .bold)).foregroundStyle(fg).lineLimit(1)
-                if tall {
-                    Text(e.startText + "–" + e.endText + (e.room.isEmpty ? "" : " · " + e.room)).font(PF.ui(11))
-                        .foregroundStyle(fg.opacity(0.8)).lineLimit(1)
-                }
-            }
+        let fill: Color = solid ? c : c.opacity(0.17)
+        content
             .padding(.leading, 6).padding(.trailing, 3).padding(.vertical, 3)
             .frame(width: bw, height: bh, alignment: .topLeading)
-            .background(solid ? c : c.opacity(0.17))
+            .background(fill)
             .background(p.card)
             .overlay(alignment: .leading) { Rectangle().fill(c).frame(width: 3) }
             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-            .overlay {
-                if sel { RoundedRectangle(cornerRadius: 7, style: .continuous).stroke(p.ink, lineWidth: 2).padding(-1) }
-            }
+            .overlay { selRing }
             .contentShape(Rectangle())
+    }
+
+    @ViewBuilder private var selRing: some View {
+        if m.sel?.id == e.id {
+            RoundedRectangle(cornerRadius: 7, style: .continuous).stroke(p.ink, lineWidth: 2).padding(-1)
         }
-        .buttonStyle(.plain)
-        .offset(x: x, y: CGFloat(slot.a) / 60 * hh)
-        .accessibilityLabel(e.title + ", " + e.timeText)
+    }
+
+    @ViewBuilder private var content: some View {
+        let solid: Bool = e.type == "prove"
+        let fg: Color = solid ? Color.white : p.ink
+        let tall: Bool = ht >= 40 && !(compact && slot.n > 1)
+        let title: String = e.type == "time" ? e.short : e.title
+        let size: CGFloat = compact ? 10.5 : 12
+        let room: String = e.room.isEmpty ? "" : " · " + e.room
+        let sub: String = e.startText + "–" + e.endText + room
+        VStack(alignment: .leading, spacing: 1) {
+            Text(title).font(PF.ui(size, .bold)).foregroundStyle(fg).lineLimit(1)
+            if tall {
+                Text(sub).font(PF.ui(11)).foregroundStyle(fg.opacity(0.8)).lineLimit(1)
+            }
+        }
     }
 }
