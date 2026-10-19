@@ -22,6 +22,8 @@
     <uses-permission android:name="android.permission.health.READ_EXERCISE" />
     <!-- Prompt 27 (ANDROID-A): mikrofonen i Chat (SpeechRecognizer nb-NO). Spørres om ved første trykk. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- Prompt 32 (APKUPD): appen kan laste ned og installere sin egen oppdatering (PackageInstaller). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <queries>
         <package android:name="com.google.android.apps.healthdata" />
@@ -354,6 +356,8 @@
         </activity>
 
         <!-- Hjemskjerm-widgets (Glance): Material You (1b) og Samsung One UI-stil (1c). -->
+        <!-- Prompt 31: prøve-varsler (AlarmManager) og handlingene Behold / Minn meg i morgen. Bare appen selv sender hit. -->
+        <receiver android:name=".Trial31Receiver" android:exported="false" />
         <receiver android:name=".widget.WeatherReceiver" android:exported="true" android:label="Vær">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather" />

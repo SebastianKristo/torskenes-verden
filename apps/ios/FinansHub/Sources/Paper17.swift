@@ -648,9 +648,12 @@ struct PaperSettings17: View {
             if Update28Model.isAdmin(store) {
                 // Prompt 30: PROGRAMVARE (Oppdater ›, automatiske oppdateringer, varsle om nye versjoner). Update30.swift.
                 Update30Software()
+                AppUpd32Row(label: false) // prompt 32: appens versjon og «Last ned IPA» (AppUpdate32.swift)
                 group("System", 5, [
                     PaperLinkRow(name: "Oppdatering", sub: Update28Model.shared.summary, icon: "arrow.down.circle") { store.paperGo("innst-oppdatering") },
                 ])
+            } else {
+                AppUpd32Row(label: true)
             }
             PaperLinkList(rows: [
                 PaperLinkRow(name: "Logg ut", sub: "", value: "", valueColor: p.lab, icon: "rectangle.portrait.and.arrow.right") { store.logout() },

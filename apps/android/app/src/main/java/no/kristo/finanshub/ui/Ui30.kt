@@ -73,6 +73,8 @@ import no.kristo.finanshub.openCustomTab24
 import no.kristo.finanshub.runUpd30
 import no.kristo.finanshub.setUpdSetting30
 import no.kristo.finanshub.upd30OnHome
+import no.kristo.finanshub.openNordlys31
+import no.kristo.finanshub.startUpd31
 
 /*
  * Prompt 30 (ANDROID30): felles SheetButton30 (Ferdig / Lukk · Avbryt / ‹ Tilbake), haptikk når ark lukkes,
@@ -174,10 +176,10 @@ internal fun UpdateBanner30(vm: AppViewModel, home: Boolean, modifier: Modifier 
     val cur = u.current.ifBlank { "–" }
     val nv = u.latest.ifBlank { "ny versjon" }
     val title: String = when (phase) {
-        "done" -> if (u.action == "rollback") "Gjenopprettet $cur" else "Oppdatert til $cur"
-        "run" -> if (u.action == "rollback") "Gjenoppretter forrige versjon" else "Oppdaterer Homelab"
+        "done" -> if (u.action == "rollback") "Gjenopprettet $cur" else "Oppdatert til Nordlys $cur"
+        "run" -> if (u.action == "rollback") "Gjenoppretter forrige versjon" else "Oppdaterer Nordlys OS"
         "failed" -> "Oppdateringen feilet"
-        else -> "Ny versjon $nv"
+        else -> "Nordlys $nv er klar"
     }
     val sub: String = when (phase) {
         "done" -> "Alt kjører. Endringene er aktive i appen og på web."
@@ -185,9 +187,13 @@ internal fun UpdateBanner30(vm: AppViewModel, home: Boolean, modifier: Modifier 
         "failed" -> u.error.ifBlank { "Noe gikk galt under oppdateringen." }
         else -> "Du har $cur. Oppdaterer hjemmeserveren, web og appen."
     }
+    val ctx = LocalContext.current
     Column(
         modifier.fillMaxWidth().shadow(14.dp, RoundedCornerShape(22.dp), ambientColor = Color.Black.copy(alpha = .35f), spotColor = Color.Black.copy(alpha = .35f))
-            .clip(RoundedCornerShape(22.dp)).background(p.card).padding(start = 16.dp, top = 14.dp, end = 14.dp, bottom = 14.dp),
+            .clip(RoundedCornerShape(22.dp)).background(p.card)
+            // Prompt 31: trykk hvor som helst på kortet åpner System-siden (knappene beholder egen handling).
+            .clickable(role = Role.Button, onClickLabel = "Åpne System") { vm.openNordlys31() }
+            .padding(start = 16.dp, top = 14.dp, end = 14.dp, bottom = 14.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -223,13 +229,13 @@ internal fun UpdateBanner30(vm: AppViewModel, home: Boolean, modifier: Modifier 
         }
         when (phase) {
             "avail" -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                UpdPill30("Oppdater nå", true, Modifier.weight(1f)) { vm.askUpd30("start") }
+                UpdPill30("Oppdater nå", true, Modifier.weight(1f)) { vm.startUpd31(ctx, "start") }
                 UpdPill30(if (u.notesOpen) "Skjul" else "Hva er nytt", false) { u.notesOpen = !u.notesOpen; Haptics.select() }
             }
             "done" -> UpdPill30("Ferdig", true, Modifier.fillMaxWidth()) { vm.doneUpd30() }
             "failed" -> Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                UpdPill30("Prøv igjen", true, Modifier.weight(1f)) { vm.askUpd30(u.action) }
-                UpdPill30("Gjenopprett $cur", false, Modifier.weight(1f)) { vm.askUpd30("rollback") }
+                UpdPill30("Prøv igjen", true, Modifier.weight(1f)) { vm.startUpd31(ctx, u.action) }
+                UpdPill30("Gjenopprett $cur", false, Modifier.weight(1f)) { vm.startUpd31(ctx, "rollback") }
             }
             else -> {}
         }
@@ -322,8 +328,9 @@ internal fun Programvare30(vm: AppViewModel) {
     val avail = u.phase == "avail" || (u.available && u.phase == "none")
     val ver = if (u.phase == "done") u.latest.ifBlank { u.current } else u.current
     Column {
+        // Prompt 31: navigasjonsrad til System-siden («Nordlys OS 4.22.0 ›», «Oppdater» i rødt når ny versjon finnes).
         PRow(
-            "Homelab ${ver.ifBlank { "–" }}",
+            "Nordlys OS ${ver.ifBlank { "–" }}",
             when {
                 !u.loaded -> if (u.missing) "Serveren har ikke denne funksjonen ennå" else "Henter versjon …"
                 u.phase == "run" -> "Oppdaterer …"
@@ -331,9 +338,9 @@ internal fun Programvare30(vm: AppViewModel) {
                 avail -> "Ny versjon ${u.latest} er klar"
                 else -> "Siste versjon"
             },
-            if (avail) "Oppdater ›" else if (u.loaded && u.phase != "failed") "✓" else "›",
+            if (avail) "Oppdater ›" else if (u.loaded && u.phase != "failed") "✓ ›" else "›",
             if (avail) p.lab else p.pos, serif = false,
-        ) { if (avail) vm.askUpd30("start") else vm.settingsPage = "update" }
+        ) { vm.openNordlys31() }
         PToggle("Automatiske oppdateringer", "Installeres om natten kl. 03:30, etter backup", u.autoUpdate, top = true) { vm.setUpdSetting30("auto_update", it) }
         PToggle("Varsle om nye versjoner", "Banner på Hjem og push", u.notifyUpdates, top = true) { vm.setUpdSetting30("notify_updates", it) }
     }

@@ -80,7 +80,8 @@ internal fun K29NowCard(vm: AppViewModel, nx: KalNow29) {
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     PSerif(nx.title, 20.sp, maxLines = 1, modifier = Modifier.weight(1f, fill = false))
-                    if (nx.place.isNotEmpty()) Box(Modifier.clip(CircleShape).background(p.bg).padding(horizontal = 8.dp, vertical = 2.dp)) {
+                    // Prompt 31: stedspillen kan aldri gjøre kortet bredere (maks ~45 %, ellipse; URL-er er fjernet).
+                    if (nx.place.isNotEmpty()) Box(Modifier.weight(.8f, fill = false).clip(CircleShape).background(p.bg).padding(horizontal = 8.dp, vertical = 2.dp)) {
                         Text(nx.place, color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
@@ -106,10 +107,8 @@ internal fun Quick29Overlay(vm: AppViewModel) {
     Box(Modifier.fillMaxSize()) {
         if (q.open) Quick29Sheet(vm)
         val top = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 14.dp)
-        val busy = q.jobs.isNotEmpty()
-        AnimatedVisibility(busy && q.toast == null, top, enter = fadeIn() + slideInVertically { -it }, exit = fadeOut() + slideOutVertically { -it }) {
-            Quick29Pill(q.jobs.size)
-        }
+        // Prompt 31: Glimt-toasten (animert merke, trykk → glassboble med steg) for raske timer og alle andre AI-jobber.
+        if (q.toast == null) AiToast31(vm, Modifier.align(Alignment.TopCenter))
         val t = q.toast
         AnimatedVisibility(t != null, top.padding(horizontal = 12.dp), enter = fadeIn() + slideInVertically { -it }, exit = fadeOut() + slideOutVertically { -it }) {
             // Siste verdi beholdes mens banneret glir ut.

@@ -46,7 +46,7 @@ jobs:
           if [ -n "$KEYSTORE_B64" ]; then
             echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
             ./gradlew --no-daemon assembleRelease \
-              -PversionName="$V" -PversionCode=${{ github.run_number }} \
+              -PversionName="$V" -PversionCode=$((1000 + ${{ github.run_number }})) \
               -Pandroid.injected.signing.store.file="$RUNNER_TEMP/release.keystore" \
               -Pandroid.injected.signing.store.password="$KEYSTORE_PASSWORD" \
               -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \

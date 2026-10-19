@@ -393,8 +393,12 @@ internal fun PaperApp(
             if (vm.compareOpen) CompareScreen(vm)
             // Prompt 23 (MOD): Finn-annonsen i fullskjerm (egen BackHandler, så tilbake lukker den uten forhåndsvisning).
             if (vm.m23.finnAdFor != null) FinnAdScreen23(vm)
-            // Prompt 29: «Legg til time»-arket, pillen og banneret over alt (Kalender og Hjem).
+            // Prompt 31: System-siden «Nordlys OS» i fullskjerm (uten bakgrunnsbilde, fanelinje og skann).
+            if (vm.p31.nordOpen) NordlysPage31(vm)
+            // Prompt 29: «Legg til time»-arket, pillen og banneret over alt (Kalender og Hjem). Prompt 31: Glimt-toasten ligger her.
             Quick29Overlay(vm)
+            // Prompt 31: «Glimt svarte mens du var borte».
+            AwayBanner31(vm, Modifier.align(Alignment.TopCenter))
         }
       }
     }
@@ -637,6 +641,7 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
     val ctx = LocalContext.current
     val h = vm.mobileHome
     LaunchedEffect(vm.base) { vm.loadHomeExtras(); vm.loadUpd30(); vm.loadUpdSettings30() }
+    AppUpd32Effects(vm) // prompt 32: ny versjon av selve appen (ui/AppUpdate32Ui.kt)
     if (vm.p30.upd.pwFor != null) UpdPwSheet30(vm)
     LazyVerticalGrid(
         GridCells.Fixed(if (wide) 2 else 1), Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom),
@@ -645,9 +650,10 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
         vm.homeError?.let { e -> item(span = { GridItemSpan(maxLineSpan) }) { Text(e, color = p.lab, fontSize = 13.sp, modifier = Modifier.padding(4.dp)) } }
         // Prompt 30: oppdateringsbanneret øverst, over søkefeltet (admin; ✕ skjuler «Tilgjengelig» i 24 t).
         if (vm.editPage != "hjem" && upd30Show(vm, home = true)) item(key = "upd30", span = { GridItemSpan(maxLineSpan) }) { UpdateBanner30(vm, home = true) }
+        if (vm.editPage != "hjem" && vm.appUpd32OnHome()) item(key = "appupd32", span = { GridItemSpan(maxLineSpan) }) { AppUpdateBanner32(vm) }
         pageGridSecs(vm, "hjem", HOME_SECS, wide) { k ->
             when (k) {
-                "h1" -> PaperSearch29(vm) // Prompt 29: søkemotor-meny (System-AI / Google / DuckDuckGo) og timer (ui/Home29Ui.kt)
+                "h1" -> PaperSearch29(vm) // Prompt 29: søkemotor-meny (Glimt / Google / DuckDuckGo) og timer (ui/Home29Ui.kt)
                 // Viktigste pakke (klar for henting først).
                 "h2" -> {
                     val pk = (vm.homePackages ?: emptyList()).sortedByDescending { it.ready }.firstOrNull()

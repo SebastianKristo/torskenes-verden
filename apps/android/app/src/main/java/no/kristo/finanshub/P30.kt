@@ -192,7 +192,7 @@ private fun AppViewModel.applyUpdStatus30(o: JSONObject): Boolean {
 }
 
 /** Status hvert 1,5 s. Mister vi forbindelsen: «Starter tjenestene på nytt …» og prøv hvert 2. s i opptil 2 min. */
-private fun AppViewModel.pollUpd30() {
+internal fun AppViewModel.pollUpd30() {
     val u = p30.upd
     u.poll?.cancel()
     u.poll = launch30 {

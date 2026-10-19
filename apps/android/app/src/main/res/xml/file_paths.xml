@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
     <cache-path name="scans" path="scans/" />
+    <!-- Prompt 32: nedlastede app-oppdateringer (ACTION_VIEW-reserven når PackageInstaller-økten ikke virker). -->
+    <cache-path name="updates" path="updates/" />
 </paths>

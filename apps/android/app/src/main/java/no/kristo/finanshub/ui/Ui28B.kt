@@ -98,6 +98,8 @@ private val ADD_OPTS28 = listOf(
     AddOpt28("shot", "Skjermbilde", "Fra App Store, e-post eller kontoside. Tjeneste, pris og trekkdato fylles ut.", "M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M8 12h8", true),
     AddOpt28("rc", "Kvittering", "Ta bilde eller velg PDF. Ollama leser beløp og syklus.", "M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6", true),
     AddOpt28("tx", "Fra transaksjon", "Velg et gjentakende trekk fra banken.", "M4 8h13l-3-3M20 16H7l3 3", false),
+    // Prompt 31: gratis prøveperiode med varsel før den blir betalt (ui/Nordlys31.kt → TrialForm31).
+    AddOpt28("trial", "Gratis prøveperiode", "Få varsel før prøven går over til betalt. Skriv det med egne ord eller fyll ut.", "M12 7v5l3 2M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18z", true),
     AddOpt28("form", "Skriv inn selv", "Tjeneste, beløp, syklus og trekkdag.", "M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4", false),
 )
 
@@ -128,16 +130,17 @@ internal fun AddSubSheet28(vm: AppViewModel) {
             Row(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 // Prompt 30: felles piller (‹ Tilbake til venstre, Lukk til høyre) i stedet for røde tekstlenker.
                 if (step != "menu") SheetButton30("Tilbake", "back") { s.addStep = "menu" }
-                PSerif(when (step) { "form" -> "Skriv inn selv"; "tx" -> "Fra transaksjon"; else -> "Legg til abonnement" }, 26.sp, modifier = Modifier.weight(1f), maxLines = 1)
+                PSerif(when (step) { "form" -> "Skriv inn selv"; "tx" -> "Fra transaksjon"; "trial" -> "Prøveperiode"; else -> "Legg til abonnement" }, 26.sp, modifier = Modifier.weight(1f), maxLines = 1)
                 SheetButton30("Lukk", "secondary", onClick = close)
             }
             Text(
-                when (step) { "form" -> "Du kan endre alt senere."; "tx" -> "Gjentakende trekk fra banken som ikke er registrert."; else -> "Velg hvordan du vil legge det inn." },
+                when (step) { "form" -> "Du kan endre alt senere."; "tx" -> "Gjentakende trekk fra banken som ikke er registrert."; "trial" -> "Vi minner deg på å avslutte før den blir betalt."; else -> "Velg hvordan du vil legge det inn." },
                 color = p.mut, fontFamily = PaperFonts.sans, fontSize = 14.sp, lineHeight = 20.sp, modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 2.dp, bottom = 16.dp),
             )
             when (step) {
                 "form" -> AddSubForm28(vm)
                 "tx" -> AddSubTx28(vm)
+                "trial" -> TrialForm31(vm) { close() }
                 else -> {
                     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).border(1.dp, cardEdge28(p), RoundedCornerShape(20.dp))) {
                         ADD_OPTS28.forEachIndexed { i, o ->
@@ -148,6 +151,7 @@ internal fun AddSubSheet28(vm: AppViewModel) {
                                     "shot" -> shot.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                                     "rc" -> receipt.launch(arrayOf("image/*", "application/pdf"))
                                     "tx" -> { s.addStep = "tx"; vm.loadSubCandidates() }
+                                    "trial" -> { vm.resetTrialForm31(); s.addStep = "trial" }
                                     else -> s.addStep = "form"
                                 }
                             }

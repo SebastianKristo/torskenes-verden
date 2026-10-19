@@ -389,10 +389,16 @@ private fun Ch27Messages(vm: AppViewModel, v: ChatV27, m: ChatModel27?, modifier
                     }
                 } else Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Ch27Mono("✦ " + (msg.model?.let { s.modelLabel27(it) } ?: "").uppercase(), v.acc, modifier = Modifier.align(Alignment.CenterVertically))
+                        // Prompt 31: verktøysvar fra Glimt har merket (Ferdig) og verktøy-chip («Vær», «Kalender» …).
+                        if (msg.tool != null || msg.model == "Glimt") Row(Modifier.align(Alignment.CenterVertically), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            GlimtMark31(18.dp, GLIMT_KLAR)
+                            Ch27Mono("GLIMT", v.acc)
+                        } else Ch27Mono("✦ " + (msg.model?.let { s.modelLabel27(it) } ?: "").uppercase(), v.acc, modifier = Modifier.align(Alignment.CenterVertically))
+                        msg.tool?.let { Ch27Chips(v, "⚙", listOf(it)) }
                         Ch27Chips(v, "Brukte", msg.used)
                     }
                     Ch27Body(v, msg.content)
+                    msg.card?.let { ChatCard31(vm, it, v) }
                     FlowRow(Modifier.offset(x = (-8).dp), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Ch27Act(v, ChIc27.COPY, if (s.copied == key) "Kopiert" else "Kopier") { clip.setText(AnnotatedString(msg.content)); vm.chatCopied27(key) }
                         if (i == lastA && !s.busy) Ch27Act(v, ChIc27.REGEN, "Nytt svar") { vm.regenChat27() }
@@ -407,10 +413,14 @@ private fun Ch27Messages(vm: AppViewModel, v: ChatV27, m: ChatModel27?, modifier
         if (s.busy) item(key = "busy") {
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Ch27Mono("✦ " + (m?.label ?: "").uppercase(), v.acc, modifier = Modifier.align(Alignment.CenterVertically))
+                    // Prompt 31: Glimt-merket (Tenker / Svarer mens teksten strømmer inn) i stedet for «Tenker …»-teksten.
+                    Row(Modifier.align(Alignment.CenterVertically), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        GlimtMark31(22.dp, if (s.stream.isEmpty()) GLIMT_TENKER else GLIMT_SVARER)
+                        Ch27Mono((m?.label ?: "Glimt").uppercase() + if (s.stream.isEmpty()) " · TENKER" else "", v.acc)
+                    }
                     Ch27Chips(v, "Leser", s.streamTools)
                 }
-                if (s.stream.isEmpty()) Text("Tenker …", color = v.mut, fontFamily = v.sans, fontSize = 15.sp) else Ch27Body(v, s.stream)
+                if (s.stream.isNotEmpty()) Ch27Body(v, s.stream)
             }
         }
         if (s.loadingChat && s.msgs.isEmpty()) item(key = "load") { Text("Henter samtalen …", color = v.mut, fontFamily = v.sans, fontSize = 14.sp) }

@@ -103,7 +103,7 @@ private fun whenText23(date: String): String {
 internal fun PaperSubs23(vm: AppViewModel, navBottom: Dp, lift: Dp = 0.dp) {
     val t = subTok
     val x = vm.subsX
-    LaunchedEffect(vm.account?.id) { vm.loadSubOrder23() }
+    LaunchedEffect(vm.account?.id) { vm.loadSubOrder23(); vm.loadTrials31() }
     // Ved bytte av fane: avslutt flytting.
     LaunchedEffect(vm.subTab) { vm.m23.subArrange = false; vm.m23.subDrag = null }
     val ctx = androidx.compose.ui.platform.LocalContext.current
@@ -145,7 +145,11 @@ internal fun PaperSubs23(vm: AppViewModel, navBottom: Dp, lift: Dp = 0.dp) {
                     }
                 }
             }
-            else -> item { HomeCards23(vm, x, t) }
+            else -> {
+                // Prompt 31: aktive prøveperioder («Prøve · 12 dager igjen») øverst på Hjem i Subscription OS.
+                if (vm.p31.trials.any { it.status == "active" }) item { TrialsCard31(vm, t.card, t.fg, t.mut) }
+                item { HomeCards23(vm, x, t) }
+            }
         }
     }
     vm.m23.subEditId?.let { id -> x?.item(id)?.let { s -> SubSheet23(vm, s) { vm.m23.subEditId = null } } ?: run { vm.m23.subEditId = null } }

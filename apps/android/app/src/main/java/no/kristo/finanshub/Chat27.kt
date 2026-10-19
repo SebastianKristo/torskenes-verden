@@ -58,6 +58,8 @@ data class ChatFolder27(val id: String, val name: String, val open: Boolean, val
 data class ChatMsg27(
     val role: String, val content: String, val att: List<String> = emptyList(), val images: List<String> = emptyList(),
     val model: String? = null, val used: List<String> = emptyList(), val stats: String? = null,
+    /** Prompt 31: kortet fra Glimt (JSON {k, …}) og verktøyet («Vær», «Kalender» …). */
+    val card: String? = null, val tool: String? = null,
 )
 
 data class ChatSet27(
@@ -221,8 +223,9 @@ fun parseChatMsg27(o: JSONObject): ChatMsg27? {
     val stopped = meta.optBoolean("stopped", false)
     val stats = o.optStr("stats") ?: if (!tps.isNaN() || !ms.isNaN() || stopped) chatStats27(tps, ms, stopped) else null
     val imgs = o.optJSONArray("images")?.length() ?: 0
+    val card = (o.optJSONObject("card") ?: meta.optJSONObject("card"))?.toString()
     return ChatMsg27(if (role == "assistant") "assistant" else "user", content, att + (if (imgs > 0) List(imgs) { "Bilde ${it + 1}" } else emptyList()),
-        emptyList(), meta.optStr("model") ?: o.optStr("model"), used, stats)
+        emptyList(), meta.optStr("model") ?: o.optStr("model"), used, stats, card, meta.optStr("tool") ?: o.optStr("tool"))
 }
 
 fun chatStats27(tps: Double, ms: Double, stopped: Boolean): String {
@@ -723,11 +726,13 @@ class ChatHttp27(val code: Int, val body: JSONObject?, msg: String) : Exception(
  * Sender en melding. opt: confirm (svaret på «Sende til …?»), noData (send uten mine data), editFrom (Rediger / Nytt svar:
  * meldingene er allerede kuttet, og serveren lagrer fra det punktet).
  */
-fun AppViewModel.sendChat27(text: String, confirm: Boolean = false, noData: Boolean = false, editFrom: Int? = null) {
+fun AppViewModel.sendChat27(text: String, confirm: Boolean = false, noData: Boolean = false, editFrom: Int? = null, tool31: Boolean = true) {
     val s = chat27
     val t = text.trim()
     if (s.busy) return
     if (t.isEmpty() && editFrom == null) return
+    // Prompt 31: Glimt ruter vær, kalender, avganger, pakker, finans, huskeliste og prøveperioder før modellen (svar med kort).
+    if (tool31 && editFrom == null && !confirm && !noData && chatTool31(t)) return
     val m = s.curModel27() ?: run { chatToast27(if (s.unavailable) "Chat er ikke satt opp på serveren" else "Velg en modell først"); return }
     val useData = s.data && s.myDataOn && !noData
     val atts = s.att

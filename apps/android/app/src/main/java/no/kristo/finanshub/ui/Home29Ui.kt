@@ -35,7 +35,7 @@ import no.kristo.finanshub.*
 
 /*
  * Prompt 29 (ANDROID29): søkefeltet øverst på Hjem (Mobil Papir App → Hjem, claude-code-hjem-sok-ai.md).
- * Ikonet til venstre (med ▾) åpner «SØK MED»: System-AI (standard, svarer i Chat og legger til timer), Google og DuckDuckGo.
+ * Ikonet til venstre (med ▾) åpner «SØK MED»: Glimt (standard, svarer i en boble under feltet og legger til timer), Google og DuckDuckGo.
  * Menyen er en DropdownMenu (eget Popup-lag), så den ligger alltid over kortene. Timer gjenkjennes uansett søkemotor
  * (POST /api/kalender/quick/parse, lokal reserve) og legges til i bakgrunnen. ✦ AI til høyre åpner alltid Chat.
  */
@@ -44,23 +44,12 @@ private const val H29_CAL = "M4 6h16v14H4zM4 10h16M8 3.5v4M16 3.5v4"
 private const val H29_CHEV = "M6 9l6 6 6-6"
 private const val H29_CHECK = "M5 12.5l4.5 4.5L19 7"
 private const val H29_X = "M6 6l12 12M18 6L6 18"
-private val DDG29 = Color(0xFFDE5833)
 
-private fun placeholder29(e: String) = when (e) { "google" -> "Søk på Google"; "ddg" -> "Søk med DuckDuckGo"; else -> "Spør AI eller skriv «time hos …»" }
+private fun placeholder29(e: String) = when (e) { "google" -> "Søk på Google"; "ddg" -> "Søk med DuckDuckGo"; else -> "Spør om været, eller skriv «time hos …»" }
 
+/** Prompt 31: ekte logoer (vector drawables) og Glimt-merket; merket tenker mens Glimt svarer i boblen. */
 @Composable
-private fun EngineIcon29(e: String, size: Dp) {
-    val p = PaperPal.current
-    when (e) {
-        "google" -> GoogleG(size)
-        "ddg" -> Box(Modifier.size(size).clip(CircleShape).background(DDG29), contentAlignment = Alignment.Center) {
-            Text("D", color = Color.White, fontWeight = FontWeight.ExtraBold, fontSize = (size.value * .55f).sp)
-        }
-        else -> Box(Modifier.size(size).clip(CircleShape).background(p.lab), contentAlignment = Alignment.Center) {
-            Text("✦", color = p.onLab, fontSize = (size.value * .55f).sp)
-        }
-    }
-}
+private fun EngineIcon29(e: String, size: Dp, busy: Boolean = false) = EngineLogo31(e, size, busy)
 
 @Composable
 internal fun PaperSearch29(vm: AppViewModel) {
@@ -84,7 +73,7 @@ internal fun PaperSearch29(vm: AppViewModel) {
                         .padding(start = 8.dp, end = 6.dp).semantics { contentDescription = "Velg søkemotor" },
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp),
                 ) {
-                    EngineIcon29(q.engine, if (q.engine == "google") 18.dp else 20.dp)
+                    EngineIcon29(q.engine, if (q.engine == "ai") 22.dp else 18.dp, busy = vm.p31.ans?.busy == true)
                     WxIcon(H29_CHEV, p.mut, 10.dp, stroke = 3f)
                 }
                 EngineMenu29(vm)
@@ -110,6 +99,8 @@ internal fun PaperSearch29(vm: AppViewModel) {
             ) { Text("✦ AI", color = p.ink, fontWeight = FontWeight.Bold, fontSize = 12.5.sp, maxLines = 1) }
         }
         val appt = q.homeAppt
+        // Prompt 31: Glimt svarer i en mørk boble rett under feltet (vær, kalender, prøveperioder …).
+        if (vm.p31.ans != null && text.isBlank()) HomeAnswer31(vm)
         if (appt != null && text.isNotBlank()) {
             Row(
                 Modifier.fillMaxWidth().heightIn(min = 44.dp).clip(RoundedCornerShape(16.dp)).background(p.ink).clickable(role = Role.Button, onClickLabel = "Legg i kalender") { go() }
@@ -137,7 +128,7 @@ internal fun PaperSearch29(vm: AppViewModel) {
     }
 }
 
-/** «SØK MED»: System-AI · Google · DuckDuckGo med ✓ på valgt (lagres per bruker i search_engine). */
+/** «SØK MED»: Glimt · Google · DuckDuckGo med ✓ på valgt (lagres per bruker i search_engine). */
 @Composable
 private fun EngineMenu29(vm: AppViewModel) {
     val p = PaperPal.current
@@ -148,7 +139,7 @@ private fun EngineMenu29(vm: AppViewModel) {
     ) {
         PLabel("Søk med", modifier = Modifier.padding(start = 14.dp, top = 6.dp, end = 14.dp, bottom = 6.dp))
         listOf(
-            Triple("ai", "System-AI", "Svarer i Chat og legger til timer"),
+            Triple("ai", "Glimt", "Svarer her og legger til timer"),
             Triple("google", "Google", "Åpner google.com"),
             Triple("ddg", "DuckDuckGo", "Åpner duckduckgo.com"),
         ).forEachIndexed { i, (k, n, sub) ->
@@ -157,7 +148,7 @@ private fun EngineMenu29(vm: AppViewModel) {
                 Modifier.fillMaxWidth().heightIn(min = 54.dp).clickable(role = Role.Button) { vm.setSearchEngine29(k) }.padding(horizontal = 14.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                EngineIcon29(k, if (k == "google") 20.dp else 22.dp)
+                EngineIcon29(k, 22.dp)
                 Column(Modifier.weight(1f)) {
                     Text(n, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.5.sp, maxLines = 1)
                     Text(sub, color = p.mut, fontSize = 12.sp, maxLines = 1)

@@ -459,6 +459,7 @@ fun AppViewModel.setHomeQuery29(v: String) {
     q.homeJob?.cancel()
     val t = v.trim()
     if (q.engine != "ai") suggest(v) else suggest("")
+    if (t.isNotEmpty() && p31.ans?.busy == false) closeAns31()
     if (t.length <= 4) { q.homeAppt = null; return }
     // Lokalt først (rask), serveren etterpå.
     val loc = parseQuickLocal29(t)
@@ -483,7 +484,8 @@ fun AppViewModel.goHome29(): String? {
     return when (q.engine) {
         "google" -> googleUrl(t)
         "ddg" -> "https://duckduckgo.com/?q=" + URLEncoder.encode(t, "UTF-8")
-        else -> { openChat(t); null }
+        // Prompt 31: Glimt svarer i boblen under feltet (POST /api/assist); eldre server: Chat som før.
+        else -> { askHome31(t); null }
     }
 }
 
@@ -517,7 +519,7 @@ fun kalNow29(s: Kal26State, evs: List<Kal26Ev>, now: LocalDateTime): KalNow29 {
             val big = when { cur -> dur29(b - nm); soon -> dur29(a - nm); else -> kalCap(BD_WD[d.dayOfWeek.value - 1]).take(3) }
             val small = when { cur -> "igjen"; soon -> "til start"; else -> e.sText }
             val prog = if (cur) ((nm - a).toFloat() / maxOf(1, b - a)).coerceIn(0f, 1f) else null
-            return KalNow29(if (cur) "NÅ" else "NESTE", "${e.sText}–${e.eText}", day, e.title, e.room?.trim().orEmpty(), big, small, prog, kalColor27(e, s), e)
+            return KalNow29(if (cur) "NÅ" else "NESTE", "${e.sText}–${e.eText}", day, e.title, noUrl31(e.room), big, small, prog, kalColor27(e, s), e)
         }
     }
     return KalNow29("", "", "De neste tre ukene", "Ingen kommende hendelser", "", "", "", null, 0xFF7A7468, null)

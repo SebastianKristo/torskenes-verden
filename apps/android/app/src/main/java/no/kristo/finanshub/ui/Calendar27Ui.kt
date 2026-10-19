@@ -398,7 +398,7 @@ private fun K27Grid(vm: AppViewModel, evs: List<Kal26Ev>, now: LocalDateTime, cu
                                 Column(Modifier.padding(start = 4.dp, top = 3.dp, end = 4.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                                     Text(kalShort(e), color = if (solid) Color.White else p.ink, fontWeight = FontWeight.Bold, fontSize = if (narrow7) 10.5.sp else 12.sp,
                                         lineHeight = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    if (tall) Text(e.sText + "–" + e.eText + (e.room?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
+                                    if (tall) Text(e.sText + "–" + e.eText + (noUrl31(e.room).takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
                                         color = (if (solid) Color.White else p.ink).copy(alpha = .8f), fontSize = 11.sp, lineHeight = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                             }
@@ -519,7 +519,7 @@ private fun K27ListItem(vm: AppViewModel, e: Kal26Ev) {
         Box(Modifier.width(3.dp).fillMaxHeight().background(cc))
         Column(Modifier.weight(1f).padding(start = 9.dp, top = 6.dp, bottom = 6.dp, end = 8.dp), verticalArrangement = Arrangement.spacedBy(1.dp)) {
             Text(e.title, color = fg, fontWeight = FontWeight.Bold, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(listOfNotNull(e.timeText, e.room?.takeIf { it.isNotBlank() }, teacher).joinToString(" · "), color = fg.copy(alpha = .85f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(listOfNotNull(e.timeText, noUrl31(e.room).takeIf { it.isNotBlank() }, teacher).joinToString(" · "), color = fg.copy(alpha = .85f), fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         if (solid) Box(Modifier.padding(end = 10.dp).clip(RoundedCornerShape(6.dp)).background(Color.Black.copy(alpha = .18f)).padding(horizontal = 6.dp, vertical = 3.dp)) {
             Text(if (e.type == "prove") "PRØVE" else "FRIST", color = fg, fontFamily = PaperFonts.mono, fontWeight = FontWeight.Bold, fontSize = 9.5.sp, letterSpacing = .8.sp)
@@ -625,7 +625,7 @@ private fun K27Detail(vm: AppViewModel, e: Kal26Ev) {
         K27Close { s.sel = null; s.delArm = false }
     }
     val rows = listOfNotNull(
-        e.room?.takeIf { it.isNotBlank() }?.let { "Sted" to it },
+        noUrl31(e.room).takeIf { it.isNotBlank() }?.let { "Sted" to it },
         e.teacher?.takeIf { it.isNotBlank() }?.let { "Lærer" to it },
         "Kalender" to calN,
         e.subject?.takeIf { e.type != "time" && it.isNotBlank() }?.let { "Fag" to it },
@@ -647,14 +647,16 @@ private fun K27Detail(vm: AppViewModel, e: Kal26Ev) {
         KAL_REMS.forEach { (v, n) -> K27Chip(n, rem == v, height = 36.dp) { vm.setKalRemind27(e, v) } }
     }
     Text(if (e.editable) "Lagret i Google Kalender ($calN)." else "Fra ${kalSrc27(e.cat)}. Endres i kilden.", color = p.mut, fontSize = 12.5.sp)
-    val room = e.room?.trim().orEmpty()
-    val hasMap = e.mazemap != null || (room.isNotEmpty() && !room.equals("Canvas", true) && !room.startsWith("http") && e.cat in setOf("timeplan", "prover", "skole"))
+    // Prompt 31: lenken i stedsteksten (f.eks. mazemap) vises som «Åpne kart ↗», teksten uten URL.
+    val roomUrl = firstUrl31(e.room)
+    val room = noUrl31(e.room)
+    val hasMap = e.mazemap != null || roomUrl != null || (room.isNotEmpty() && !room.equals("Canvas", true) && e.cat in setOf("timeplan", "prover", "skole"))
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), maxItemsInEachRow = 2) {
         if (e.editable) {
             K27Btn("Rediger", p.ink, p.bg, Modifier.weight(1f)) { vm.editKal27(e) }
             K27Btn(if (s.delArm) "Trykk igjen" else "Slett", Color(KAL_LAB), Color.White, Modifier.weight(1f)) { vm.deleteKal27(e) }
         }
-        if (hasMap) K27Btn("Vis rom på kart ↗", Color.Transparent, p.ink, Modifier.weight(1f), border = p.line) { openLink(ctx, e.mazemap ?: "https://use.mazemap.com/") }
+        if (hasMap) K27Btn(if (roomUrl != null) "Åpne kart ↗" else "Vis rom på kart ↗", Color.Transparent, p.ink, Modifier.weight(1f), border = p.line) { openLink(ctx, e.mazemap ?: roomUrl ?: "https://use.mazemap.com/") }
         K27Btn("Kopier til Privat", Color.Transparent, p.ink, Modifier.weight(1f), border = p.line) { vm.copyKal27(e) }
     }
     e.url?.takeIf { it.startsWith("http") }?.let { u ->
@@ -801,7 +803,7 @@ private fun K27Search(vm: AppViewModel, today: LocalDate) {
                     Box(Modifier.size(6.dp, 34.dp).clip(RoundedCornerShape(3.dp)).background(Color(kalColor27(e, s))))
                     Column(Modifier.weight(1f)) {
                         Text(e.title, color = p.ink, fontWeight = FontWeight.Bold, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(kalCap(kalLong(e.date)) + " · " + e.timeText + (e.room?.takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
+                        Text(kalCap(kalLong(e.date)) + " · " + e.timeText + (noUrl31(e.room).takeIf { it.isNotBlank() }?.let { " · $it" } ?: ""),
                             color = p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     if (e.date == today) K27Mono("I DAG", p.lab, 9.5.sp)

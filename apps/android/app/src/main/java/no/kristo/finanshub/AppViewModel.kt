@@ -228,9 +228,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     var locked by mutableStateOf(loggedIn && prefs.bool(AppPrefs.LOCK))
     private var backgroundAt: Long? = null
 
-    fun onBackground() { backgroundAt = System.currentTimeMillis(); stopTrackingPoll() }
+    fun onBackground() { backgroundAt = System.currentTimeMillis(); stopTrackingPoll(); onBackground31() }
     fun onForeground() {
         if (loggedIn) { startTrackingPoll(); viewModelScope.launch { loadReviewCount() } }
+        if (loggedIn) onForeground31()
         val at = backgroundAt ?: return
         backgroundAt = null
         if (loggedIn && prefs.bool(AppPrefs.LOCK) && System.currentTimeMillis() - at >= prefs.int(AppPrefs.LOCK_AFTER, 0) * 60_000L) locked = true
@@ -704,6 +705,10 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
             "finn" -> go(Screen.Finn)
             "boliger" -> open(Screen.Folders)
             "search" -> go(Screen.Search)
+            // Prompt 31: varslene fra Glimt (svar i søkefeltet / Chat), System-siden og prøveperioder.
+            "glimt" -> { openedFromNotify31(); go(Screen.Homelab) }
+            "chat" -> { openedFromNotify31(); val id = uri.path?.trim('/').orEmpty(); openChat(); if (id.isNotEmpty()) openChatId27(id) }
+            "nordlys", "system" -> openNordlys31()
             "scan" -> { open(Screen.Scan); pendingScan = when (uri.path?.trim('/')) { "camera" -> "camera"; "files" -> "files"; else -> null } }
         }
     }
@@ -3443,7 +3448,9 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 message = "${msg.optString("fromName").ifBlank { "Noen" }} ber telefonen spille av lyd"
             } else if (familyOpen || family != null) loadFamily()
             "tracking" -> viewModelScope.launch { pollTracking() }
-            "calendar-quick" -> onQuickEvent29(msg)
+            "calendar-quick" -> { onQuickEvent31(msg); onQuickEvent29(msg) }
+            // Prompt 31: Glimt-jobbene (steg, felt, fremdrift og svaret).
+            "assist" -> onAssistEvent31(msg)
             // Prompt 30: ny versjon / status for oppdateringen (bare admin bryr seg).
             "system-update-available", "system-update" -> onUpdEvent30()
         }
@@ -3590,6 +3597,12 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val p30 = P30State()
     internal suspend fun <T> api30(f: suspend Api.() -> T): T = api.f()
     internal fun launch30(block: suspend () -> Unit) = launch(block)
+
+    /* ---------- Prompt 31 (ANDROID31): Glimt, Nordlys OS, prøveperioder og varsler når appen er lukket (P31.kt, Notify31.kt og ui-filene med 31) ---------- */
+    val p31 = P31State()
+    internal suspend fun <T> api31(f: suspend Api.() -> T): T = api.f()
+    internal fun launch31(block: suspend () -> Unit) = launch(block)
+    internal fun launchJob31(block: suspend () -> Unit): kotlinx.coroutines.Job = launch(block)
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.

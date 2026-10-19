@@ -176,9 +176,14 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
     }
     // Prompt 28: oppdatering av hele systemet (bare admin; startes i nettleseren). ui/Update28.kt.
     // Prompt 30: PROGRAMVARE med «Oppdater ›» (passord-ark) og bryterne for automatiske oppdateringer og varsler.
-    if (vm.userIsAdmin) group("Programvare") { i ->
-        Programvare30(vm)
-        SetRow(vm, i(), Icons.Filled.SystemUpdate, "Oppdatering", upd28Summary(vm.upd28), top = true) { vm.settingsPage = "update" }
+    // Prompt 32: «FinansHub-appen» (oppdater selve appen) for alle brukere; Homelab-oppdateringen bare for admin.
+    group("Programvare") { i ->
+        AppUpdateRow32(vm)
+        if (vm.userIsAdmin) {
+            Box(Modifier.fillMaxWidth().height(1.dp).background(PaperPal.current.line))
+            Programvare30(vm)
+            SetRow(vm, i(), Icons.Filled.SystemUpdate, "Oppdatering", upd28Summary(vm.upd28), top = true) { vm.settingsPage = "update" }
+        }
     }
     item { Spacer(Modifier.height(4.dp)) }
     item {
@@ -239,6 +244,8 @@ private fun NotifySub(vm: AppViewModel) {
         PCard {
             PToggle("Varsler", "Hovedbryter for alle varsler fra appen", n.on) { vm.saveNotify(n.copy(on = it)) }
             PToggle("Stille timer", "${n.quietFrom}–${n.quietTo}: varsler kommer uten lyd", n.quiet, top = true) { vm.saveNotify(n.copy(quiet = it)) }
+            // Prompt 31: svar fra Glimt som varsel når appen er i bakgrunnen (ai_bg_notify).
+            AiBgToggle31(vm)
             if (n.quiet) Row(Modifier.fillMaxWidth().padding(14.dp, 4.dp, 14.dp, 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TimeChips("Fra", n.quietFrom, listOf("21:00", "22:00", "23:00")) { vm.saveNotify(n.copy(quietFrom = it)) }
                 TimeChips("Til", n.quietTo, listOf("06:00", "07:00", "08:00")) { vm.saveNotify(n.copy(quietTo = it)) }
