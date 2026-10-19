@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/Android-Material%203%20Expressive-3DDC84?logo=android&logoColor=white" alt="Android">
 </p>
 
-<p align="center"><a href="../README.md">← Til hovedsiden</a></p>
+<p align="center"><a href="../README.md">← Til hovedsiden</a> · <a href="https://github.com/SebastianKristo/torskenes-verden/wiki/Mobilapper">Brukerveiledning i wikien</a> (installasjon, widgets, Apple Health og Health Connect)</p>
 
 <img src="../docs/images/mobil-ios.webp" alt="iPhone">
 <img src="../docs/images/mobil-android.webp" alt="Android">

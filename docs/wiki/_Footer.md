@@ -1,0 +1,1 @@
+<sub>Homelab OS · wikien bygges fra [`docs/wiki/`](https://github.com/SebastianKristo/torskenes-verden/tree/main/docs/wiki) i repoet. Endre filene der, ikke her, ellers blir endringene overskrevet ved neste publisering. · [Rapporter en feil](https://github.com/SebastianKristo/torskenes-verden/issues)</sub>

@@ -1,0 +1,57 @@
+# Publiserer docs/wiki/ til GitHub-wikien (https://github.com/<eier>/<repo>/wiki).
+# Wikien må finnes først: åpne Wiki-fanen på github.com og lag første side. Filene i docs/wiki/ overskriver
+# sider med samme navn. Sider som bare finnes i wikien, blir stående.
+name: Wiki
+
+on:
+  push:
+    branches: [main]
+    paths: ['docs/wiki/**']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wiki
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hent repoet
+        uses: actions/checkout@v4
+
+      - name: Hent wikien
+        id: wiki
+        continue-on-error: true
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki
+
+      - name: Finnes wikien?
+        if: steps.wiki.outcome != 'success'
+        run: |
+          echo "::error title=Wikien finnes ikke::Opprett første side i wikien på github.com først (https://github.com/${{ github.repository }}/wiki → «Create the first page»), og kjør workflowen på nytt."
+          exit 1
+
+      - name: Kopier docs/wiki inn i wikien
+        run: rsync -av --exclude '.git' docs/wiki/ wiki/
+
+      - name: Commit og push
+        working-directory: wiki
+        env:
+          MSG: ${{ github.event.head_commit.message || 'manuell publisering' }}
+          SRC: ${{ github.server_url }}/${{ github.repository }}/tree/${{ github.sha }}/docs/wiki
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Ingen endringer i wikien."
+            exit 0
+          fi
+          git commit -m "Wiki fra ${GITHUB_SHA::7}: ${MSG%%$'\n'*}" -m "Kilde: $SRC"
+          git push
