@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#d9d3c6}a{color:#b23a2a}a:hover{color:#8e2b1f}</style>
+</helmet>
+<div style="position:relative;width:390px;height:844px;margin:0 auto;overflow:hidden;background:#f3efe6;font-family:Manrope,system-ui,sans-serif;color:#1b1a17">
+<div style="position:absolute;inset:0;background:rgba(27,26,23,.38)"></div>
+
+<div style="position:absolute;left:0;right:0;bottom:0;background:#f3efe6;border-radius:28px 28px 0 0;box-shadow:0 -10px 40px rgba(27,26,23,.18);display:flex;flex-direction:column;padding:8px 16px 34px">
+<div style="align-self:center;width:36px;height:5px;border-radius:3px;background:#cfc7b6"></div>
+
+<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 4px 4px">
+<sc-if value="{{ inForm }}" hint-placeholder-val="{{ false }}"><button onClick="{{ back }}" style="min-height:44px;padding:0 4px;border:0;background:transparent;color:#b23a2a;font:600 16px Manrope,system-ui,sans-serif;cursor:pointer;display:flex;align-items:center;gap:2px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg>Tilbake</button></sc-if>
+<h2 style="margin:0;font:500 26px/1.15 Newsreader,serif;letter-spacing:-.01em">{{ title }}</h2>
+<button onClick="{{ close }}" style="min-height:44px;padding:0 4px;border:0;background:transparent;color:#b23a2a;font:600 16px Manrope,system-ui,sans-serif;cursor:pointer">Lukk</button>
+</div>
+<p style="margin:2px 4px 16px;font-size:14px;line-height:1.45;color:#7a7468;text-wrap:pretty">{{ sub }}</p>
+
+<sc-if value="{{ inMenu }}" hint-placeholder-val="{{ true }}">
+<div style="background:#fff;border:1px solid #e4ddcf;border-radius:20px;overflow:hidden;display:flex;flex-direction:column">
+<sc-for list="{{ opts }}" as="o" hint-placeholder-count="4">
+<button onClick="{{ o.go }}" style="display:grid;grid-template-columns:44px minmax(0,1fr) 16px;align-items:center;gap:14px;width:100%;min-height:72px;padding:12px 16px;border:0;border-top:{{ o.bt }};background:transparent;text-align:left;cursor:pointer;color:#1b1a17;font-family:Manrope,system-ui,sans-serif" style-active="background:#f7f3ec">
+<span style="width:44px;height:44px;border-radius:12px;background:#f5e4e0;color:#b23a2a;display:grid;place-items:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ o.ic }}"></path></svg></span>
+<span style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="display:flex;align-items:center;gap:8px"><b style="font-size:16px;font-weight:700">{{ o.t }}</b><sc-if value="{{ o.ai }}"><span style="padding:2px 7px;border-radius:999px;background:#1b1a17;color:#f3efe6;font-size:10.5px;font-weight:800;letter-spacing:.06em">✦ AI</span></sc-if></span><span style="font-size:13.5px;line-height:1.35;color:#7a7468">{{ o.d }}</span></span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#a39c8e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"></path></svg>
+</button>
+</sc-for>
+</div>
+<p style="margin:14px 4px 0;font-size:12.5px;line-height:1.45;color:#7a7468">Bilder og kvitteringer leses lokalt av Ollama. Ingenting sendes ut av Homelab.</p>
+</sc-if>
+
+<sc-if value="{{ inForm }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="background:#fff;border:1px solid #e4ddcf;border-radius:20px;overflow:hidden;display:flex;flex-direction:column">
+<sc-for list="{{ fields }}" as="f"><label style="display:grid;grid-template-columns:104px minmax(0,1fr);align-items:center;gap:12px;min-height:52px;padding:0 16px;border-top:{{ f.bt }}"><span style="font-size:14px;font-weight:600;color:#7a7468">{{ f.l }}</span><input value="{{ f.v }}" onChange="{{ f.on }}" placeholder="{{ f.ph }}" inputmode="{{ f.im }}" style="min-width:0;height:44px;border:0;background:transparent;font:600 16px Manrope,system-ui,sans-serif;color:#1b1a17;outline:none"></label></sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:8px"><span style="padding:0 4px;font-size:11.5px;font-weight:800;letter-spacing:.12em;color:#b23a2a">SYKLUS</span>
+<div style="display:flex;gap:4px;padding:4px;border-radius:14px;background:#e9e3d6"><sc-for list="{{ cyc }}" as="c"><button onClick="{{ c.go }}" style="flex:1;min-height:40px;border:0;border-radius:10px;background:{{ c.bg }};color:#1b1a17;font:700 14px Manrope,system-ui,sans-serif;cursor:pointer;box-shadow:{{ c.sh }}">{{ c.n }}</button></sc-for></div></div>
+<button onClick="{{ save }}" style="min-height:52px;border:0;border-radius:16px;background:#b23a2a;color:#fff;font:700 16px Manrope,system-ui,sans-serif;cursor:pointer" style-active="filter:brightness(.92)">Legg til abonnement</button>
+</div>
+</sc-if>
+</div>
+
+<sc-if value="{{ hasToast }}"><div style="position:absolute;left:50%;top:60px;transform:translateX(-50%);padding:10px 16px;border-radius:999px;background:#1b1a17;color:#f3efe6;font-size:14px;font-weight:600;white-space:nowrap">{{ toast }}</div></sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:&quot;390px&quot;,&quot;height&quot;:&quot;844px&quot;}}">
+class Component extends DCLogic {
+  state={step:'menu',n:'',v:'',d:'',cy:'Måned',toast:''};
+  flash(t){this.setState({toast:t});clearTimeout(this._t);this._t=setTimeout(()=>this.setState({toast:''}),1800)}
+  renderVals(){const s=this.state,set=k=>e=>this.setState({[k]:e.target.value});
+    const O=[
+      ['Skjermbilde','Fra App Store, e-post eller kontoside. Tjeneste, pris og trekkdato fylles ut.','M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M8 12h8',true,()=>this.flash('Velg skjermbilde …')],
+      ['Kvittering','Ta bilde eller velg PDF. Ollama leser beløp og syklus.','M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6',true,()=>this.flash('Åpner kamera …')],
+      ['Fra transaksjon','Velg et gjentakende trekk fra banken.','M4 8h13l-3-3M20 16H7l3 3',false,()=>this.flash('Henter gjentakende trekk …')],
+      ['Skriv inn selv','Tjeneste, beløp, syklus og trekkdag.','M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4',false,()=>this.setState({step:'form'})]];
+    const F=[['Tjeneste','n','HBO Max','text'],['Beløp','v','129 kr','decimal'],['Trekkdag','d','15.','numeric']];
+    const menu=s.step==='menu';
+    return{inMenu:menu,inForm:!menu,title:menu?'Legg til abonnement':'Skriv inn selv',sub:menu?'Velg hvordan du vil legge det inn.':'Du kan endre alt senere.',
+      close:()=>this.flash('Lukket'),back:()=>this.setState({step:'menu'}),
+      opts:O.map(([t,d,ic,ai,go],i)=>({t,d,ic,ai,go,bt:i?'1px solid #eee8dc':'0'})),
+      fields:F.map(([l,k,ph,im],i)=>({l,v:s[k],on:set(k),ph,im,bt:i?'1px solid #eee8dc':'0'})),
+      cyc:['Uke','Måned','År'].map(n=>({n,go:()=>this.setState({cy:n}),bg:s.cy===n?'#fff':'transparent',sh:s.cy===n?'0 1px 3px rgba(27,26,23,.12)':'none'})),
+      save:()=>{this.flash((s.n||'Abonnement')+' lagt til');this.setState({step:'menu',n:'',v:'',d:''})},
+      hasToast:!!s.toast,toast:s.toast}}
+}
+</script>
+</body>
+</html>
