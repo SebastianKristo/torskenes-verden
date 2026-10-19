@@ -108,6 +108,8 @@ extension Store {
         if t == "kalender" && paperTab != "kalender" && KalLink33.today() { return }
         // Prompt 34: en tilbake-handling har allerede gitt én lett impuls (Haptic34) – ikke et valg-tikk i tillegg.
         if !Haptic34.recent { Haptics.shared.select() }
+        // Prompt 38: husk hvor Abonnement ble åpnet fra, så ‹ går tilbake dit (Nav38.swift).
+        abo38Note(t)
         // Mellom Domener-fanene byttes bare seksjonen (dataene er de samme).
         if paperInDomains && Store.paperDomTabs.contains(t) && module == .domains {
             paperTab = t
@@ -168,6 +170,7 @@ extension Store {
         // Domener går alltid hjem, også når siden ble åpnet fra Mer (prompt 24: Boliger i Finans + Boliger).
         if paperInDomains { prof24GoRoot(); return }
         if paperTab == "ftx" { paperGo("fliste"); return }
+        if paperTab == "abo", let f = abo38From { paperGo(f); return }
         if paperTab == "abo" && !finNav.contains("abonnementer") { paperGo("fmer"); return }
         if paperTab == "innst" { paperGo("mer"); return }
         if let t = nav26BackTarget() { paperGo(t); return }
@@ -224,6 +227,7 @@ extension Store {
         if paperInner { back(); return }
         if paperInDomains { prof24GoRoot(); return }
         if paperTab == "ftx" { paperGo("fliste"); return }
+        if paperTab == "abo", let f = abo38From { paperGo(f); return }
         if paperTab == "abo" && !finNav.contains("abonnementer") { paperGo("fmer"); return }
         if paperTab == "boliger" && folder != nil { folder = nil; return }
         if let t = nav26BackTarget() { paperGo(t); return }
@@ -249,7 +253,7 @@ extension Store {
 
     var paperCanSwipeBack: Bool {
         newsOpen || dishSel != nil || paperInner || paperFin != nil || paperTrackFull || paperClassic != nil || paperInDomains
-            || paperTab == "ftx" || paperEditPage != nil || (paperTab == "abo" && !finNav.contains("abonnementer"))
+            || paperTab == "ftx" || paperEditPage != nil || (paperTab == "abo" && (!finNav.contains("abonnementer") || abo38From != nil))
             || paperTab.hasPrefix("innst-") || paperTab == "profil" || paperTab == "huske" || paperTab == "kalender" || (paperTab == "boliger" && folder != nil)
             || nav23SubOfFinMore
             // Prompt 30: Chat (fullskjerm) og Bursdager fra Mer kan også sveipes tilbake.

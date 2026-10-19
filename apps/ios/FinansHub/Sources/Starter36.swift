@@ -222,22 +222,28 @@ struct Starter36Screen: View {
     }
 }
 
-/// Nordlys-gradienten med sakte bevegelse (14 s) og blur.
+/// Nordlys-gradienten med sakte bevegelse (18 s).
+/// Prompt 38 (flimmer-fiks, claude-code-nordlys-oppstartsside.md): ingen blur på det animerte laget – blur rasteriseres på nytt
+/// hver frame og blinket. Laget tegnes én gang (drawingGroup) og flyttes bare med transform; bakgrunnen er alltid #101a2e.
 struct Starter36Back: View {
     let reduce: Bool
     @State private var drift: Bool = false
 
     var body: some View {
-        System31Aurora()
-            .scaleEffect(drift ? 1.18 : 1.05)
-            .offset(x: drift ? -18 : 18, y: drift ? 12 : -12)
-            .blur(radius: 18)
-            .background(Color(hex: "#101a2e"))
-            .ignoresSafeArea()
-            .onAppear {
-                if reduce { return }
-                withAnimation(.easeInOut(duration: 14).repeatForever(autoreverses: true)) { drift = true }
-            }
+        ZStack {
+            Color(hex: "#101a2e")
+            System31Aurora()
+                .drawingGroup()
+                .scaleEffect(drift ? 1.14 : 1.06)
+                .offset(x: drift ? -14 : 14, y: drift ? 10 : -10)
+        }
+        .compositingGroup()
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+        .onAppear {
+            if reduce || drift { return }
+            withAnimation(.easeInOut(duration: 18).repeatForever(autoreverses: true)) { drift = true }
+        }
     }
 }
 

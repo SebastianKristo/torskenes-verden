@@ -46,7 +46,7 @@ enum System31Auth {
         }
     }
 
-    @MainActor private static func key(_ store: Store) -> String { "upd31_pw_" + (store.account?.id ?? "") }
+    @MainActor static func key(_ store: Store) -> String { "upd31_pw_" + (store.account?.id ?? "") }
 
     @MainActor static func savePassword(_ pw: String, _ store: Store) {
         Keychain.set(key(store), pw)

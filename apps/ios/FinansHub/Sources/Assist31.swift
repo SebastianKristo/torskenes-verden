@@ -367,7 +367,7 @@ struct Assist31Bubble: View {
                 }
             }
         }
-        .padding(.horizontal, 18).padding(.top, 16).padding(.bottom, 14)
+        .padding(.leading, 18).padding(.trailing, 40).padding(.top, 16).padding(.bottom, 18)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
             RoundedRectangle(cornerRadius: 26, style: .continuous)
@@ -376,22 +376,17 @@ struct Assist31Bubble: View {
         }
         .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(Color.white.opacity(0.1), lineWidth: 1))
         .shadow(color: Color.black.opacity(0.45), radius: 25, y: 16)
+        // Prompt 38: ✕ oppe til høyre, håndtak nederst, sveip opp lukker. Trykk i boblen lukker ikke lenger
+        // (trykk utenfor fanges av Assist38Catcher, så kortet under ikke åpnes). Assist38.swift.
+        .overlay(alignment: .topTrailing) { Assist38CloseButton().padding(.top, 2).padding(.trailing, 2) }
+        .overlay(alignment: .bottom) {
+            Capsule().fill(Color.white.opacity(0.25)).frame(width: 34, height: 4).padding(.bottom, 5)
+                .allowsHitTesting(false)
+        }
         .environment(\.colorScheme, .dark)
         .contentShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-        .onTapGesture {
-            Haptics.shared.select()
-            if let a = m.homeAnswer, a.wx35 {
-                m.closeHome()
-                store.openWeather35(name: a.wx35Name, lat: a.wx35Lat, lon: a.wx35Lon)
-                return
-            }
-            if let a = m.homeAnswer, a.fam37 {
-                m.closeHome()
-                Assist37.openFamily(a, store)
-                return
-            }
-            withAnimation(.easeOut(duration: 0.18)) { m.closeHome() }
-        }
+        .onTapGesture {}
+        .assist38Swipe()
         .accessibilityElement(children: .contain)
     }
 }

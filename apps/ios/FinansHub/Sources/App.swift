@@ -21,16 +21,28 @@ struct FinansHubApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                // Prompt 38: fullskjermen «Logg inn på ny enhet» (må ligge innenfor .environment(store)).
+                .qr38Host()
                 .environment(store)
-                .onOpenURL { store.openDeepLink($0) }
+                // Prompt 38: homelab://login?c=… (QR-innlogging på ny enhet, QrLogin38.swift) før de vanlige dyplenkene.
+                .onOpenURL { (u: URL) in
+                    if Qr38Model.shared.handle(u, store) { return }
+                    store.openDeepLink(u)
+                }
+                // Universal link https://<server>/l/<kode> (krever Associated Domains når det er satt opp).
+                .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { (a: NSUserActivity) in
+                    if let u = a.webpageURL { _ = Qr38Model.shared.handle(u, store) }
+                }
                 .task {
                     if store.locked { store.unlock() }
                     if store.loggedIn { try? await store.reload() }
                     if store.loggedIn { await familyWake() }
+                    // Prompt 38: Domener lastes på forhånd, så tallene står klare når siden åpnes (Nav38.swift).
+                    if store.loggedIn { await store.dom38Preload() }
                 }
         }
         .onChange(of: phase) { _, p in
-            if p == .active && store.loggedIn { Task { await familyWake() } }
+            if p == .active && store.loggedIn { Task { await familyWake(); await store.dom38Preload() } }
         }
     }
 

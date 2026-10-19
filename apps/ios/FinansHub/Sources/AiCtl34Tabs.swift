@@ -324,8 +324,12 @@ struct AiCtl34RoutingTab: View {
         let list: [AiRoute34] = m.routes.filter { !m.fin || $0.fin }
         VStack(alignment: .leading, spacing: 14) {
             AiCard34(title: m.fin ? "HVILKEN MODELL GJØR HVA I FINANS" : "HVILKEN MODELL GJØR HVA") {
+                // Prompt 38: aldri et tomt kort – «Ingen modeller ennå» + Installer modell › når ingenting er installert/tilkoblet.
+                if m.choices.isEmpty && !m.busy {
+                    AiEmpty38()
+                }
                 ForEach(Array(list.enumerated()), id: \.element.id) { (pair: (offset: Int, element: AiRoute34)) in
-                    AiRouteRow34(r: pair.element, first: pair.offset == 0)
+                    AiRouteRow34(r: pair.element, first: pair.offset == 0 && !(m.choices.isEmpty && !m.busy))
                 }
             }
             AiRules34()
@@ -343,7 +347,8 @@ struct AiRouteRow34: View {
 
     var body: some View {
         let cloudUsed: Bool = m.isCloud(r.model) || m.isCloud(r.fallback)
-        let finWarn: Bool = r.fin && (m.rules["finLocal"] ?? false) && cloudUsed
+        // Prompt 38: serverens advarsel (warning) gjelder først; den lokale bare når serveren ikke sendte noen.
+        let finWarn: Bool = r.fin && (m.rules["finLocal"] ?? false) && cloudUsed && r.warning.isEmpty
         VStack(alignment: .leading, spacing: 0) {
             if !first { AiLine34() }
             VStack(alignment: .leading, spacing: 8) {

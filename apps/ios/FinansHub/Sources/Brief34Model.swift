@@ -49,6 +49,8 @@ final class Brief34Model {
         let kind: String = Brief34.kindFor()
         do {
             let d: Data = try await store.api.callAt("/api", "GET", "/brief?kind=" + kind, timeout: 25)
+            // Prompt 38: de nye kortene (pakker, familie, skole, bursdager, nordlys) – Brief38.swift.
+            Brief38Cards.shared.parse(d)
             if let b = Brief34.parse(d) {
                 brief = b
                 error = ""

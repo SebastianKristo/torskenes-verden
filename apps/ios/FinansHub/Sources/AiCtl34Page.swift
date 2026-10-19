@@ -339,8 +339,10 @@ struct AiCtl34OverviewTab: View {
         VStack(alignment: .leading, spacing: 12) {
             AiCtl34Kpis()
             AiCtl34Selftest()
-            AiCtl34Hardware()
+            // Prompt 38: Mac mini M4 · samlet minne · ekstern disk, og anbefalingene for maskinen (AiCtl38.swift).
+            AiHw38Card()
             AiCtl34Providers()
+            AiRecs38Card()
         }
     }
 }
@@ -356,7 +358,7 @@ struct AiCtl34Kpis: View {
         VStack(spacing: 10) {
             HStack(spacing: 10) {
                 AiKpi34(label: "KJØRER NÅ", value: String(m.running), sub: runSub, bad: m.failed > 0) { m.pick("job") }
-                AiKpi34(label: "LASTET I VRAM", value: String(loaded.count), sub: loadedNames.isEmpty ? "ingen" : loadedNames, bad: false) { m.pick("mod") }
+                AiKpi34(label: "LASTET I MINNET", value: String(loaded.count), sub: loadedNames.isEmpty ? "ingen" : loadedNames, bad: false) { m.pick("mod") }
             }
             HStack(spacing: 10) {
                 AiKpi34(label: "TOKENS 30 D", value: AiCtl34.tk(m.tokens30), sub: String(m.localShare) + " % lokalt, gratis", bad: false) { m.pick("use") }

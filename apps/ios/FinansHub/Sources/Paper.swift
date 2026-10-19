@@ -216,7 +216,10 @@ struct PaperShell: View {
             }
             .overlay(alignment: .bottomTrailing) {
                 if fab {
-                    PaperFab(tap: fabTap, hold: fabHold)
+                    // Prompt 38: i Domener er den runde knappen Glimt (✦), ikke Skann (Nav38.swift).
+                    Group {
+                        if store.paperInDomains { Dom38GlimtFab() } else { PaperFab(tap: fabTap, hold: fabHold) }
+                    }
                         .padding(.trailing, wide ? 24 : 18)
                         .padding(.bottom, wide ? Swift.max(0, 24 - bottom) : 62 + 14)
                         .offset(y: shift)
@@ -232,6 +235,8 @@ struct PaperShell: View {
                 // Prompt 29: «✦ Legger til i kalenderen …» og banneret «✓ Nina frisør · …» over hele appen (Quick29Views.swift).
                 Quick29Overlay()
             }
+            // Prompt 38: usynlig lag som lukker AI-svarboblen ved trykk utenfor og fanger trykket (Assist38.swift).
+            .overlay { Assist38Catcher() }
             .environment(\.paperWide, wide)
         }
         .environment(\.paper, p)
@@ -443,7 +448,7 @@ struct PaperTabBar: View {
             HStack(spacing: 2) {
                 ForEach(tabs, id: \.0) { t in tab(t.0, t.1, t.2, on: cur == t.0) }
                 if (!floating && store.paperTab != "familie" && !store.nav23NoScan) || store.paperTab == "abo" {
-                    PaperPlusButton(label: plusLabel, tap: plusTap, hold: plusHold)
+                    PaperPlusButton(label: plusLabel, tap: plusTap, hold: plusHold, glyph: store.paperInDomains ? "✦" : "+")
                         .padding(.leading, 4)
                 }
             }
@@ -477,7 +482,7 @@ struct PaperTabBar: View {
 
     private var plusLabel: String {
         if store.paperTab == "abo" { return "Legg til abonnement" }
-        if store.paperInDomains { return "Legg til domene" }
+        if store.paperInDomains { return "Glimt · oppsummering av domenene" }
         if store.paperInFinance { return "Legg til kvittering" }
         return store.paperTab == "mat" ? "Skann oppskrift" : "Skann"
     }
@@ -486,7 +491,7 @@ struct PaperTabBar: View {
     private func plusTap() {
         Haptics.shared.tap()
         if store.paperTab == "abo" { store.subAdding = true; return }
-        if store.paperInDomains { store.domainManager = true; return }
+        if store.paperInDomains { Dom38Glimt.shared.tap(store); return }
         store.scanTarget = store.paperTab == "mat" ? "recipe" : "receipt"
         scan.camera()
     }
@@ -494,7 +499,7 @@ struct PaperTabBar: View {
     private func plusHold() {
         Haptics.shared.tick()
         if store.paperTab == "abo" { store.subAdding = true; return }
-        if store.paperInDomains { store.domainManager = true; return }
+        if store.paperInDomains { Dom38Glimt.shared.tap(store); return }
         store.paperScanOpen = true
     }
 
@@ -542,10 +547,12 @@ struct PaperPlusButton: View {
     let label: String
     let tap: () -> Void
     let hold: () -> Void
+    /// Prompt 38: «✦» (Glimt) i Domener.
+    var glyph: String = "+"
     @State private var pressed = false
 
     var body: some View {
-        Text("+").font(.system(size: 24, weight: .regular)).foregroundStyle(p.onLab)
+        Text(glyph).font(.system(size: glyph == "+" ? 24 : 20, weight: glyph == "+" ? .regular : .bold)).foregroundStyle(p.onLab)
             .frame(width: 46, height: 46)
             .background(p.lab, in: Circle())
             .scaleEffect(pressed ? 0.88 : 1)

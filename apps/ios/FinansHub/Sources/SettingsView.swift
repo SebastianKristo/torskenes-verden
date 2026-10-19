@@ -256,6 +256,8 @@ private struct AccountsPage: View {
                 Button { store.logoutOthers() } label: { Text("Logg ut andre kontoer").frame(maxWidth: .infinity, minHeight: 48) }.buttonStyle(.plain).glass(24)
             }
             Note(text: "Nye brukere opprettes av admin i Homelab → Innstillinger → Innlogging.")
+            // Prompt 38: «Logg inn på ny enhet» (QR) og ØKT – Lås skjermen, Logg ut, Logg ut av alle enheter (Konto38.swift).
+            Konto38Session()
         }
         .onChange(of: photo) { _, item in
             guard let item else { return }

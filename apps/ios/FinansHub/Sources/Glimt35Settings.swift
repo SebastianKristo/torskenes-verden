@@ -127,6 +127,9 @@ struct Glimt35SettingsContent: View {
             Glimt35Toggles()
             Glimt35Label(text: "BRIEFER GJENNOM DAGEN").padding(.top, 4)
             Glimt35Briefs()
+            // Prompt 38: kortene i briefen – av/på og rekkefølge (cards[{id, on}], Brief38.swift).
+            Glimt35Label(text: "KORT I BRIEFEN").padding(.top, 4)
+            Brief38CardsSettings()
             // Prompt 37: Bibelvers (på/av i morgen- og kveldsbrief, varsel) – bare for brukere med modulen.
             Bible37SettingsBlock().padding(.top, 4)
             Glimt35Label(text: "STEMMEMOTOR").padding(.top, 4)

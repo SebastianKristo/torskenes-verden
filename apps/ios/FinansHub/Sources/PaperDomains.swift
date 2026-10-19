@@ -50,6 +50,8 @@ struct PaperDomains: View {
     var body: some View {
         VStack(spacing: 10) {
             PaperDomTop()
+            // Prompt 38: Glimt-oppsummeringen fra den runde ✦-knappen (Nav38.swift). Blokkerer aldri tallene under.
+            Dom38GlimtCard()
             if let e = store.moduleError { PCard { Text(e).font(PF.ui(13.5)).foregroundStyle(p.lab) } }
             if store.domains?.isEmpty == true {
                 PCard {

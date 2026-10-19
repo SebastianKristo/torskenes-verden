@@ -296,6 +296,7 @@ extension View {
 
 struct Bible37BriefCard: View {
     @Environment(Store.self) private var store
+    @Environment(\.accessibilityReduceMotion) private var reduce
     @MainActor private var m: Bible37Model { Bible37Model.shared }
     @State private var copied: Bool = false
 
@@ -303,10 +304,14 @@ struct Bible37BriefCard: View {
         let v: Verse37 = m.current
         let t: BibleTone37 = BibleTone37(morning: Bible37.period() == "morning")
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Text(t.morning ? "MORGENVERS · GLIMT" : "KVELDSVERS · GLIMT").font(PF.mono(10.5)).tracking(1.4).foregroundStyle(t.lab)
+            HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(t.morning ? "MORGENVERS · GLIMT" : "KVELDSVERS · GLIMT").font(PF.mono(10.5)).tracking(1.4).foregroundStyle(t.lab)
+                    Text(Bible37.dateShort()).font(PF.mono(11, bold: false)).foregroundStyle(t.mut)
+                }
                 Spacer(minLength: 6)
-                Text(Bible37.dateShort()).font(PF.mono(11, bold: false)).foregroundStyle(t.mut)
+                // Prompt 38: Glimt i prestedrakt (46 pt) oppe til høyre (Shared/Glimt38Priest.swift).
+                Glimt38PriestFig(id: Glimt35Model.shared.cfg.host, size: 46, still: reduce)
             }
             Text("«" + v.text + "»").font(PF.italic(22)).foregroundStyle(t.fg).lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)

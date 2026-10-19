@@ -1580,7 +1580,7 @@ final class Store {
 
     /* ---------- Domener ---------- */
 
-    private func loadDomains() async throws {
+    func loadDomains() async throws {
         let list: [DomainRef] = try await decodeList(api.raw("/domains/api", "/domains"))
         domains = list
         if domain == nil || !list.contains(where: { $0.name == domain }) { domain = list.first?.name }

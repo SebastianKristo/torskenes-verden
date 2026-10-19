@@ -211,10 +211,11 @@ final class AiCtl34 {
         ("sok", "AI-søk", "Søkefeltet og spørsmål i hele appen", "", "", false),
         ("glimt", "Glimt · kalender", "Forstå hendelser og svare om kalenderen", "", "", false),
         ("brief", "Glimt · brief", "Morgen-, dags- og kveldsbrief", "", "", false),
-        ("rc", "Kvitteringer (bilde)", "Leser butikk, beløp og varelinjer", "", "", true),
-        ("kat", "Kategorisering", "Foreslår kategori for transaksjoner", "", "", true),
-        ("fsok", "Finans · spør", "«Har jeg et musikkabonnement?»", "", "", true),
-        ("bar", "Strekkoder og pakkelapper", "Bildefelt fra kamera", "", "", true),
+        // Prompt 38: standardene for Finans (claude-code-ai-kontroll-modellvalg-fiks.md).
+        ("rc", "Kvitteringer (bilde)", "Leser butikk, beløp og varelinjer", "qwen2.5vl:7b", "gemini-2.5-flash", true),
+        ("kat", "Kategorisering", "Foreslår kategori for transaksjoner", "llama3.2:3b", "llama-3.3-70b-versatile", true),
+        ("fsok", "Finans · spør", "«Har jeg et musikkabonnement?»", "gemma4:latest", "gemini-2.5-flash", true),
+        ("bar", "Strekkoder og pakkelapper", "Bildefelt fra kamera", "roboflow/kvittering/1", "qwen2.5vl:7b", true),
         ("dom", "Domener · oppsummering", "Daglig sammendrag kl. 06:00", "", "", false),
         ("kb", "Kunnskapsbase", "Embeddings for dokumenter", "", "", false),
     ]
@@ -322,6 +323,8 @@ final class AiCtl34 {
     func loadStatus(_ store: Store) async {
         guard let o = await get("/status", store) else { return }
         notice = ""
+        // Prompt 38: maskinen (Mac mini M4 · 16 GB · ekstern disk) og anbefalingene (AiCtl38.swift).
+        AiHw38.shared.parse(o)
         // SERVER34: server{url, version, gpu{name, vramGb}, vramUsedGb, diskGb, loaded[]}, budget{monthlyKr, monthCostKr}.
         let srv: [String: Any] = JS.dict(o, "server") ?? o
         let g: [String: Any] = JS.dict(srv, "gpu") ?? [:]
@@ -448,12 +451,9 @@ final class AiCtl34 {
         return "for " + String(Int(s / 86_400)) + " dager siden"
     }
 
-    /// PASSER (≤ VRAM), DELVIS CPU (≤ 2,5 × VRAM) eller FOR STOR, regnet fra GPU-en (8 GB når den ikke er kjent).
+    /// Prompt 38: PASSER ≤ 8 GB · TRANGT ≤ 10,5 GB · FOR STOR, regnet fra GPU-budsjettet på Mac mini (AiCtl38.swift).
     func fit(_ gb: Double) -> String {
-        let v: Double = vramTotal > 0 ? vramTotal : 8
-        if gb <= v - 0.5 { return "PASSER" }
-        if gb <= v * 2.5 { return "DELVIS CPU" }
-        return "FOR STOR"
+        AiHw38.shared.fit(gb)
     }
 
     func libraryRows() -> [AiLib34] {
@@ -564,7 +564,8 @@ final class AiCtl34 {
     /* ---------- Ruting ---------- */
 
     func loadRouting(_ store: Store) async {
-        guard let o = await get("/routing", store) else {
+        // Prompt 38: Finans har egen ruting (alltid fire rader: Kvitteringer, Kategorisering, Finans · spør, Strekkoder).
+        guard let o = await get(fin ? "/routing?scope=finans" : "/routing", store) else {
             if routes.isEmpty { routes = AiCtl34.tasks.map { AiRoute34(id: $0.0, name: $0.1, sub: $0.2, model: $0.3, fallback: $0.4, fin: $0.5) } }
             return
         }
@@ -576,12 +577,19 @@ final class AiCtl34 {
                 if let k = JS.str(t, "id") ?? JS.str(t, "task") { byId[k] = t }
             }
         }
+        // Prompt 38: options[{id, label, local}] per rad fyller nedtrekkslistene når /models ikke har svart.
+        AiHw38.shared.takeOptions(Array(byId.values))
         var out: [AiRoute34] = []
         var seen: Set<String> = []
         for t in AiCtl34.tasks {
-            let r: [String: Any] = byId[t.0] ?? [:]
-            out.append(AiCtl34.route(t.0, r, name: t.1, sub: t.2, fin: t.5))
+            let r: [String: Any] = byId[t.0] ?? AiCtl34.alias38(t.0, byId) ?? [:]
+            var x: AiRoute34 = AiCtl34.route(t.0, r, name: t.1, sub: t.2, fin: t.5)
+            // Prompt 38: de fire Finans-radene er alltid Finans (serveren kan sende fin:false eller mangle raden).
+            if t.5 { x.fin = true }
+            if x.model.isEmpty { x.model = t.3 }
+            out.append(x)
             seen.insert(t.0)
+            for a in AiCtl34.aliases38[t.0] ?? [] { seen.insert(a) }
         }
         for (k, r) in byId where !seen.contains(k) {
             out.append(AiCtl34.route(k, r, name: JS.str(r, "name") ?? k, sub: JS.str(r, "sub") ?? "", fin: JS.bool(r, "fin") ?? false))
@@ -606,6 +614,19 @@ final class AiCtl34 {
         return x
     }
 
+    /// Prompt 38: andre navn serveren kan bruke på Finans-oppgavene (GET /api/ai/routing?scope=finans).
+    static let aliases38: [String: [String]] = [
+        "rc": ["receipts", "receipt", "kvitteringer", "kvittering"],
+        "kat": ["categorize", "category", "kategorisering", "cat"],
+        "fsok": ["finance_ask", "finans_spor", "finAsk", "ask"],
+        "bar": ["barcodes", "barcode", "labels", "strekkoder"],
+    ]
+
+    static func alias38(_ id: String, _ byId: [String: [String: Any]]) -> [String: Any]? {
+        for a in aliases38[id] ?? [] { if let r = byId[a] { return r } }
+        return nil
+    }
+
     /// keep_alive som serveren forstår: "5m", "30m", -1 (alltid), 0 (aldri). Aldri strengen «alltid».
     static func keepLabel(_ raw: String) -> String {
         if raw == "-1" || raw == "alltid" { return "alltid" }
@@ -623,12 +644,16 @@ final class AiCtl34 {
     var choices: [(String, String)] {
         var out: [(String, String)] = installed.map { ($0.id, $0.id + " · lokal") }
         for c in cloud where c.on { out.append((c.id, c.id + " · " + (c.provider.isEmpty ? "sky" : c.provider))) }
+        for o in AiHw38.shared.options where !out.contains(where: { (x: (String, String)) -> Bool in x.0 == o.id }) {
+            out.append((o.id, o.text + " · " + o.env))
+        }
         return out
     }
 
     func isCloud(_ id: String) -> Bool {
         if id.isEmpty { return false }
         if installed.contains(where: { $0.id == id }) { return false }
+        if let o = AiHw38.shared.options.first(where: { (x: AiRec38) -> Bool in x.id == id }) { return o.env == "sky" }
         return cloud.contains(where: { $0.id == id }) || id.hasPrefix("gemini") || id.contains("/") || id.contains("versatile")
     }
 

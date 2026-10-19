@@ -153,6 +153,8 @@ struct Brief35Page: View {
             Brief35GuideView(steps: steps, idx: idx, target: target)
                 .padding(.horizontal, 16).padding(.bottom, 20)
                 .frame(width: geo.size.width, alignment: .bottomTrailing)
+            // Prompt 38: korte beskjeder (f.eks. «Kjøp gave til … ligger i Gjøremål»).
+            Glimt35Flash().frame(width: geo.size.width).padding(.bottom, 120)
         }
         .frame(width: geo.size.width, height: geo.size.height)
         }
@@ -195,10 +197,10 @@ struct Brief35Content: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Brief35Top(kick: b.kick, openCfg: openCfg)
+            // Prompt 38: 🔇 og ⚙ er fjernet; tittelen og Ferdig står på samme linje (Brief38.swift).
+            Brief38TitleRow(kick: b.kick)
             Brief35SpeakingPill()
             VStack(alignment: .leading, spacing: 8) {
-                Text(b.kick).font(PF.serif(40, medium: true)).foregroundStyle(Brief34C.ink)
                 Text(b.summary.isEmpty ? (m.loading ? "Glimt lager briefen din …" : "Ingen brief ennå. Dra ned for å prøve igjen.") : b.summary)
                     .font(PF.serif(17)).foregroundStyle(Brief34C.rgb(0x3d3a33)).lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
@@ -217,6 +219,8 @@ struct Brief35Content: View {
             if !g.extra.trials.isEmpty {
                 Brief35TrialsCard(trials: g.extra.trials).brief36Ring(target == "abo").id("gb35-abo")
             }
+            // Prompt 38: Pakker, Familie, Skole og jobb, Bursdager og Nordlys i natt (Brief38.swift).
+            Brief38CardsStack()
             Brief35NewsCard(b: b, extra: g.extra).brief36Ring(target == "nyh").id("gb35-nyh")
             if Bible37Model.shared.briefPlace == "bottom" { Bible37BriefCard() }
             Text(footer).font(PF.ui(12)).foregroundStyle(Brief34C.rgb(0x8a8478))

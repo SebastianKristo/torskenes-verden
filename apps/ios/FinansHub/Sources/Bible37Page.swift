@@ -103,6 +103,7 @@ struct Bible37Dot: View {
 
 struct Bible37TodayCard: View {
     @Environment(Store.self) private var store
+    @Environment(\.accessibilityReduceMotion) private var reduce
     @MainActor private var m: Bible37Model { Bible37Model.shared }
     @State private var copied: Bool = false
 
@@ -118,6 +119,13 @@ struct Bible37TodayCard: View {
             Text("«" + v.text + "»").font(PF.italic(22)).foregroundStyle(t.fg).lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
             Text(v.ref).font(PF.ui(14, .bold)).foregroundStyle(t.fg)
+            // Prompt 38: Glimt i prestedrakt (72 pt) leser verset med deg (Shared/Glimt38Priest.swift).
+            HStack(spacing: 12) {
+                Glimt38PriestFig(id: Glimt35Model.shared.cfg.host, size: 72, mood: Glimt35Voice.shared.speaking == nil ? .idle : .talk, still: reduce)
+                Text("Glimt leser dagens vers med deg").font(PF.ui(13, .semibold)).foregroundStyle(t.mut)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+            }
             readButton(t)
             HStack(spacing: 8) {
                 chip(m.isSaved(v) ? "♥ Lagret" : "♡ Lagre", t) { m.toggleSave(v) }

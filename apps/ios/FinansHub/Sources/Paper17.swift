@@ -663,9 +663,7 @@ struct PaperSettings17: View {
             } else {
                 AppUpd32Row(label: true)
             }
-            PaperLinkList(rows: [
-                PaperLinkRow(name: "Logg ut", sub: "", value: "", valueColor: p.lab, icon: "rectangle.portrait.and.arrow.right") { store.logout() },
-            ])
+            // Prompt 38: «Logg ut» (og Lås skjermen) står nå under ØKT nederst på Konto-siden (Konto38.swift).
             Text("\(AppMeta.shared.name) · versjon \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "–")")
                 .font(PF.mono(10.5, bold: false)).foregroundStyle(p.mut).frame(maxWidth: .infinity).padding(.top, 14)
     }
