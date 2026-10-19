@@ -163,7 +163,8 @@ struct PaperShell: View {
             let kb28: Bool = g.safeAreaInsets.bottom > 120
             let shift: CGFloat = kb28 ? -8 : g.safeAreaInsets.bottom - bottom
             // Prompt 24: Ruter-visningen er fullskjerm uten fanelinje og skann-knapp.
-            let showBar = !store.newsOpen && store.dishSel == nil && !store.ruter24Full && !store.full27
+            // Prompt 32: Innstillinger og undersidene har heller ingen fanelinje eller skann-knapp (Settings32.swift).
+            let showBar = !store.newsOpen && store.dishSel == nil && !store.ruter24Full && !store.full27 && !store.inSettings32b
             // Prompt 23: ingen skann-knapp på Aksjer.
             let fab = showBar && store.fabMode == "float" && store.paperTab != "abo" && store.paperTab != "familie" && !store.nav23NoScan
             ZStack(alignment: wide ? .topLeading : .bottom) {
@@ -198,7 +199,7 @@ struct PaperShell: View {
             }
             .overlay(alignment: .bottom) {
                 // Prompt 22: «Ny oppgave …» fast over fanelinjen på Huskeliste, ved siden av FAB-en (+).
-                if showBar && !wide && store.paperTab == "huske" && store.paperClassic == nil && store.paperFin == nil {
+                if showBar && !wide && store.paperTab == "huske" && store.paperClassic == nil && store.paperFin == nil && TaskDock22.shared.cur != Tasks32b.archId {
                     TaskDockField22(ownButton: !fab)
                         .padding(.leading, 16).padding(.trailing, fab ? 96 : 16)
                         .padding(.bottom, 62 + 14)
@@ -240,17 +241,27 @@ struct PaperShell: View {
                 .presentationDetents([.medium, .large])
                 .sheetEdge30(p.bg)
         }
+        // Prompt 32: samme Papir-ark (Ferdig-pille, ingen Avbryt) for Hjem, Finans, Domener, Abonnement og Familie (Nav32.swift).
         .sheet(isPresented: Binding(get: { store.tabBarEditing }, set: { store.tabBarEditing = $0 })) {
-            PaperTabBarEditor()
+            HomeTabEditor32b()
                 .environment(\.paper, p)
                 .presentationDetents([.large])
+                .presentationDragIndicator(.hidden)
                 .sheetEdge30(p.bg)
         }
         // Prompt 26: «Rediger fanelinjen» for Finans (hold inne på fanelinjen i Finans).
         .sheet(isPresented: Binding(get: { FinNav26.shared.editing }, set: { FinNav26.shared.editing = $0 })) {
-            FinNavEditor26()
+            FinTabEditor32b()
                 .environment(\.paper, p)
                 .presentationDetents([.large])
+                .presentationDragIndicator(.hidden)
+                .sheetEdge30(p.bg)
+        }
+        .sheet(item: Binding<Sec32bId?>(get: { Nav32b.shared.editing.map { Sec32bId(id: $0) } }, set: { Nav32b.shared.editing = $0?.id })) { (s: Sec32bId) in
+            SecTabEditor32b(k: s.id)
+                .environment(\.paper, p)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.hidden)
                 .sheetEdge30(p.bg)
         }
         .fullScreenCover(isPresented: Binding(get: { store.weatherOpen }, set: { store.weatherOpen = $0 })) {
@@ -375,11 +386,12 @@ struct PaperTabBar: View {
     private var floating: Bool { store.fabMode == "float" }
 
     private var tabs: [(String, String, String)] {
-        if store.paperInDomains { return [("domener", "Oversikt", "◎"), ("dpub", "Publikum", "◍"), ("dytl", "Ytelse", "⚡"), ("dinf", "Infra", "▤")] }
+        // Prompt 32: Domener, Abonnement og Familie følger brukerens valg fra «Rediger fanelinjen» (Nav32.swift).
+        if store.paperInDomains { return Nav32b.shared.tabs("dom") }
         // Subscription OS: Hjem, Innsikt og Historikk i linja (med den røde +-sirkelen).
-        if store.paperTab == "abo" { return [("abo:home", "Hjem", "house"), ("abo:ins", "Innsikt", "chart.bar"), ("abo:hist", "Historikk", "clock")] }
-        // Prompt 21: Familie har Kart, Soner og Helse i linja (som Subscription OS), pluss Mer.
-        if store.paperTab == "familie" { return [("fam:kart", "Kart", "◎"), ("fam:soner", "Soner", "◌"), ("fam:helse", "Helse", "♡"), ("mer", "Mer", "⋯")] }
+        if store.paperTab == "abo" { return Nav32b.shared.tabs("abo") }
+        // Prompt 21: Familie har Kart, Soner og Helse i linja (som Subscription OS), pluss Mer (ikke redigerbar, alltid sist).
+        if store.paperTab == "familie" { return Nav32b.shared.tabs("kart") + [("mer", "Mer", "⋯")] }
         var t: [(String, String, String)] = []
         if store.paperInFinance {
             for f in store.finNavItems { t.append((f.page, f.name, f.icon)) }
@@ -425,12 +437,19 @@ struct PaperTabBar: View {
             .frame(height: 62)
             .background(p.nav, in: Capsule())
             .shadow(color: .black.opacity(0.35), radius: 15, y: 10)
-            .simultaneousGesture(LongPressGesture(minimumDuration: 0.6).onEnded { _ in
+            .simultaneousGesture(LongPressGesture(minimumDuration: 0.55).onEnded { _ in
                 // Prompt 26: Finans har egen editor (FinNav26.swift). Klikket når fingeren slippes slukes én gang.
                 if store.paperInFinance && !store.paperInDomains && store.paperTab != "abo" {
                     Nav26.shared.markHold()
                     Haptics.shared.tick()
                     FinNav26.shared.editing = true
+                    return
+                }
+                // Prompt 32: egne fanelinjer (Domener, Abonnement, Familie) får samme ark.
+                if let sec = Nav32b.sec(store) {
+                    Nav26.shared.markHold()
+                    Haptics.shared.tick()
+                    Nav32b.shared.editing = sec
                     return
                 }
                 guard editable else { return }
@@ -779,7 +798,8 @@ struct PaperPage: View {
                         .padding(.horizontal, 16)
                         .frame(maxWidth: .infinity)
                         .padding(.leading, wide ? 108 : 0)
-                        .padding(.bottom, store.fabMode == "float" && !wide ? 112 : 20)
+                        // Prompt 32: Innstillinger har ingen fanelinje eller skann-knapp: 28 pt + safe area nederst.
+                        .padding(.bottom, store.inSettings32b ? 28 : (store.fabMode == "float" && !wide ? 112 : 20))
                 }
             }
             .coordinateSpace(name: "ppage")
@@ -792,7 +812,8 @@ struct PaperPage: View {
             }
             .mask(
                 VStack(spacing: 0) {
-                    Color.clear.frame(height: scrolled ? 23 : 0)
+                    // Prompt 32: i redigeringsmodus klippes innholdet under ＋ / ✓, så kortene aldri glir bak knappene.
+                    Color.clear.frame(height: scrolled ? (Wiggle30.topPad(store) > 0 ? Wiggle30.clipEdit : 23) : 0)
                     Color.black
                 }
             )

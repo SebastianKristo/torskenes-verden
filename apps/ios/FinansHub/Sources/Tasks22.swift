@@ -25,7 +25,8 @@ final class TaskDock22 {
             return
         }
         let m: TasksModel = TasksModel.shared
-        let list: String = cur == "alle" ? (m.lists.first?.id ?? "hjem") : cur
+        // Prompt 32: i Arkivert legges nye oppgaver i første liste.
+        let list: String = (cur == "alle" || cur == Tasks32b.archId) ? (m.lists.first?.id ?? "hjem") : cur
         let due: Date? = dueDays.flatMap { Calendar.current.date(byAdding: .day, value: $0, to: Date()) }
         m.add(t, list: list, due: due, assignee: who.isEmpty ? nil : who, store)
         text = ""

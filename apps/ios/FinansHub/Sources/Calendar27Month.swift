@@ -41,7 +41,7 @@ struct Cal27Month: View {
                 }
             }
             .padding(.horizontal, 6)
-            .padding(.bottom, 90)
+            .padding(.bottom, Cal32b.scrollBottom - 6)
         }
     }
 }
@@ -94,9 +94,12 @@ struct Cal27MonthCell: View {
     private func chip(_ e: CalEvent26) -> some View {
         let c: Color = Color(hex: m.hex(e))
         let solid: Bool = e.type == "prove" || e.type == "innl" || e.startMin < 0 || e.allDay
-        return Text(e.short).font(PF.ui(10, .bold)).foregroundStyle(solid ? Color.white : c).lineLimit(1)
-            .padding(.horizontal, 4).frame(maxWidth: .infinity, alignment: .leading).frame(height: 16)
-            .background(solid ? c : Color.clear, in: RoundedRectangle(cornerRadius: 4, style: .continuous))
+        // Prompt 32: alle hendelser får brikke; avtaler 18 % farge + 78 % fargetekst (claude-code-kalender-maned-brikker.md).
+        let bg: Color = solid ? c : Cal32b.mix(c, 0.18, over: p.card)
+        let fg: Color = solid ? Color.white : Cal32b.mix(c, 0.78, over: p.ink)
+        return Text(e.short).font(PF.ui(10, .bold)).foregroundStyle(fg).lineLimit(1).truncationMode(.tail)
+            .padding(.horizontal, 6).padding(.vertical, 2).frame(maxWidth: .infinity, alignment: .leading).frame(height: 16)
+            .background(bg, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
     }
 }
 
@@ -140,7 +143,7 @@ struct Cal27List: View {
                     }
                     ForEach(g) { grp in Cal27ListDay(grp: grp) }
                 }
-                .padding(.horizontal, 14).padding(.bottom, 96)
+                .padding(.horizontal, 14).padding(.bottom, Cal32b.scrollBottom)
             }
             .onChange(of: Cal26.key(m.curD)) { _, _ in proxy.scrollTo("c27top", anchor: .top) }
         }

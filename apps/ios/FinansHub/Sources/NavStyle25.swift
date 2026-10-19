@@ -170,10 +170,12 @@ struct NavStylePicker25: View {
     @Environment(Store.self) private var store
     @Environment(\.paper) private var p
     let items: [PaperTabItem]
+    /// Prompt 32: sidene med egen fanelinje (Domener, Abonnement, Familie) har ingen Mer-fane, og forhåndsvisningen ingen ⋯.
+    var showMore: Bool = true
 
     private var tabs: [(String, String, String)] {
         var out: [(String, String, String)] = items.prefix(5).map { (it: PaperTabItem) -> (String, String, String) in (it.id, it.label, it.icon) }
-        out.append(("mer", "Mer", "ellipsis"))
+        if showMore { out.append(("mer", "Mer", "ellipsis")) }
         return out
     }
 

@@ -25,6 +25,8 @@ struct Assist31Answer: Equatable {
     var applyId: Int = 0
     var applyCount: Int = 0
     var applyTitle: String = ""
+    /// Prompt 32: intent «nav» (side-snarvei fra serveren): siden som skal åpnes (nordlys, kalender …).
+    var target32b: String = ""
 
     var plain: String { text.replacingOccurrences(of: "**", with: "").trimmingCharacters(in: .whitespacesAndNewlines) }
 
@@ -38,6 +40,7 @@ struct Assist31Answer: Equatable {
         a.tool = JS.str(o, "tool") ?? ""
         a.ms = JS.num(o, "ms") ?? 0
         a.chatId = JS.str(o, "chatId") ?? JS.str(raw, "chatId") ?? ""
+        a.target32b = JS.str(o, "target") ?? JS.str(raw, "target") ?? ""
         if let ap = JS.dict(o, "apply") { a.applyId = JS.int(ap, "memoryId") ?? 0; a.applyCount = JS.int(ap, "count") ?? 0; a.applyTitle = JS.str(ap, "title") ?? "" }
         if let c = o["card"] as? [String: Any], let d = try? JSONSerialization.data(withJSONObject: c) {
             a.cardJSON = String(data: d, encoding: .utf8) ?? ""
@@ -59,6 +62,8 @@ final class Assist31 {
 
     /// Serveren mangler /api/assist (404): søkefeltet går til Chat som før.
     var missing: Bool = false
+    /// Prompt 32: jobb-id-en til spørsmålet fra søkefeltet (for POST /api/assist/:id/handoff, Search32.swift).
+    @ObservationIgnored var homeJob32b: String = ""
 
     @ObservationIgnored private var homeId: Int = 0
     @ObservationIgnored private var waiters: [String: CheckedContinuation<Void, Never>] = [:]
@@ -136,6 +141,7 @@ final class Assist31 {
                 return a
             }
             guard let jobId = JS.str(o, "jobId") ?? JS.str(o, "id") else { return nil }
+            if source == "search" { homeJob32b = jobId }
             AiJobs31.shared.begin(id: jobId, kind: "assist", title: "Glimt tenker", input: q, steps: AiJobs31.assistSteps, page: page)
             let a: Assist31Answer? = await wait(jobId, store, t0: t0)
             AiJobs31.shared.end(jobId)

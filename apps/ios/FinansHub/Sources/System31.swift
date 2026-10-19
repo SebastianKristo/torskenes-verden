@@ -143,6 +143,8 @@ struct System31Page: View {
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 4)
                     System31Notes()
+                    // Prompt 32: versjonsinfo og handlinger fra den gamle «Oppdatering»-siden (Settings32.swift).
+                    System32bInstalled()
                 }
                 .padding(.horizontal, 16).padding(.top, 4)
                 .padding(.bottom, 120)

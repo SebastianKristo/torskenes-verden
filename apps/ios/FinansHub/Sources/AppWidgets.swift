@@ -68,6 +68,9 @@ extension Store {
         case "stocks", "aksjer": paperGo("fmer"); paperOpen(.stocks)
         case "domains", "domener": paperOpenDomains(from: "hjem")
         case "boliger", "folders": paperFinGo("boliger")
+        // Prompt 32: Prøveperiode-widgeten åpner Abonnement; den gamle oppdateringssiden sendes til Nordlys OS.
+        case "abo", "trials", "prover", "proveperioder": paperGo("abo")
+        case "update", "oppdatering", "nordlys", "system": System31Model.shared.show()
         case "news", "nyheter", "rss": openNews()
         case "scan", "skann": pendingScan = sub == "files" ? "files" : "camera"
         default: paperGo("hjem")

@@ -94,6 +94,9 @@ final class Search29Model {
         let t: String = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !t.isEmpty else { return }
         parseTask?.cancel()
+        // Prompt 32: alle søk logges for brukeren (vises bare på web), og snarveier til sider åpnes med en gang (Search32.swift).
+        Search32b.shared.log(t, engine: engine, store)
+        if Search32b.shared.tryShortcut(t, engine: engine, store) { appt = nil; return }
         var isTime: Bool = appt != nil
         if !isTime && t.count > 4 {
             let pv: Quick29Preview? = await Quick29Model.shared.parse(t, store)
@@ -113,7 +116,8 @@ final class Search29Model {
         default:
             store.suggestions = []
             // Prompt 31: svarboble under feltet via POST /api/assist (eldre server: Chat som før).
-            if Assist31.shared.missing { store.openChat(prompt: t) } else { Assist31.shared.askHome(t, store) }
+            // Prompt 32: tar svaret lengre enn hs_timeout_s, fortsetter jobben i Chat (Search32.swift).
+            if Assist31.shared.missing { store.openChat(prompt: t) } else { Search32b.shared.askHome(t, store) }
         }
     }
 }

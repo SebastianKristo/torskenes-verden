@@ -19,6 +19,9 @@ struct Cal27Page: View {
         // Prompt 31: ingen tekst kan gjøre kalenderen bredere enn skjermen (fanelinja nederst kuttes ellers).
         .frame(maxWidth: .infinity)
         .clipped()
+        // Prompt 32: rutenettet går helt ned til skjermkanten bak fanelinja (ingen stripe ved hjemindikatoren,
+        // claude-code-ios-bunnstripe.md). Bunninnrykket legges inn for hånd (Cal32b.bottomInset).
+        .ignoresSafeArea(.container, edges: .bottom)
         .background(p.bg.ignoresSafeArea())
         .environment(\.colorScheme, p.dark ? .dark : .light)
         .task(id: store.account?.id ?? "") { await m.boot(store) }
@@ -41,7 +44,8 @@ struct Cal27Page: View {
                 .sheetEdge30(p.bg)
         }
         .sheet(isPresented: Binding<Bool>(get: { m.searchOpen }, set: { m.searchOpen = $0 })) {
-            Cal27SearchSheet()
+            // Prompt 32: ny søkemeny med filterchips, SPØR GLIMT / SNART og Glimt-svar (Calendar32.swift).
+            Cal32bSearchSheet()
                 .environment(\.paper, p)
                 .presentationDetents([.large])
                 .sheetEdge30(p.bg)
@@ -335,7 +339,8 @@ struct Cal27BottomBar: View {
             .accessibilityLabel("Legg til time")
         }
         .padding(.horizontal, 12)
-        .padding(.bottom, 6)
+        // Prompt 32: siden går helt ned; fanelinja står 8 pt over hjemindikatoren.
+        .padding(.bottom, Cal32b.bottomInset + 8)
     }
 
     private func tab(_ id: String, _ name: String, _ icon: String) -> some View {

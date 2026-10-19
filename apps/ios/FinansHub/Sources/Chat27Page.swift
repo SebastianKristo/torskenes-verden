@@ -32,6 +32,8 @@ struct Chat27Page: View {
             Chat27Main(c: c)
         }
         .background(c.bg.ignoresSafeArea())
+        // Prompt 32: hele Chat-flaten ignorerer tastaturet; skriveboksen løftes av Kb32bLift (Chat32Keyboard.swift).
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .overlay {
             if !wide && s.drawer { drawer(c) }
         }
@@ -126,17 +128,17 @@ struct Chat27Main: View {
     let c: ChatPal27
 
     var body: some View {
-        // Prompt 30: skriveboksen ligger i .safeAreaInset(edge: .bottom), så den alltid står rett over tastaturet
-        // (meldingslisten krymper). Ingen .ignoresSafeArea(.keyboard) her (claude-code-chat-tastatur.md).
+        // Prompt 32: skriveboksen løftes selv med den målte tastatur-overlappen (Chat32Keyboard.swift). Flaten ignorerer
+        // tastatur-regionen, så foreldrene (PaperShell sin GeometryReader m.fl.) ikke kan spise eller doble løftet.
         VStack(spacing: 0) {
             Chat27TopBar(c: c)
             Chat27Messages(c: c)
                 .frame(maxHeight: .infinity)
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    Chat27Composer(c: c)
-                }
+            Chat27Composer(c: c)
         }
-        .frame(maxWidth: .infinity)
+        .keyboardLift32b()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .ignoresSafeArea(.keyboard, edges: .bottom)
     }
 }
 
@@ -238,8 +240,8 @@ struct Chat27Messages: View {
                 withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("c27bottom", anchor: .bottom) }
             }
             .onChange(of: s.streamText.count / 80) { _, _ in proxy.scrollTo("c27bottom", anchor: .bottom) }
-            // Prompt 30: tastaturet opp → siste melding rett over skriveboksen.
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { (_: Notification) in
+            // Prompt 30/32: tastaturet opp → siste melding rett over skriveboksen (også etter QuickType/rotasjon).
+            .onChange(of: Kb32b.shared.settleTick) { (_: Int, _: Int) in
                 withAnimation(.easeOut(duration: 0.25)) { proxy.scrollTo("c27bottom", anchor: .bottom) }
             }
         }

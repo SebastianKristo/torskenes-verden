@@ -7,6 +7,15 @@ import UIKit
 
 @main
 struct FinansHubWidgetBundle: WidgetBundle {
+    // Prompt 32: delt i to grupper (maks 10 per WidgetBundleBuilder-blokk), nå med Prøveperioder (TrialsWidget32b.swift).
+    var body: some Widget {
+        FinansHubWidgetsA().body
+        FinansHubWidgetsB().body
+    }
+}
+
+/// Gruppe 1: økonomi og hjem (9 widgets).
+struct FinansHubWidgetsA: WidgetBundle {
     var body: some Widget {
         WeatherWidget()
         PackagesWidget()
@@ -17,6 +26,12 @@ struct FinansHubWidgetBundle: WidgetBundle {
         DomainsWidget()
         MealWidget()
         FinnWidget()
+    }
+}
+
+/// Gruppe 2: resten (9 widgets).
+struct FinansHubWidgetsB: WidgetBundle {
+    var body: some Widget {
         BoligWidget()
         ScanWidget()
         TasksWidget()
@@ -25,6 +40,8 @@ struct FinansHubWidgetBundle: WidgetBundle {
         CalendarWidget26()
         // Prompt 27: Ruter-avganger (liten, medium, stor og låseskjerm), RuterWidget27.swift.
         RuterWidget27()
+        // Prompt 32: Prøveperioder (liten, medium med ✓ Avsluttet, låseskjerm rund og rektangel).
+        TrialsWidget32b()
     }
 }
 

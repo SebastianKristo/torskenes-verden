@@ -649,9 +649,8 @@ struct PaperSettings17: View {
                 // Prompt 30: PROGRAMVARE (Oppdater ›, automatiske oppdateringer, varsle om nye versjoner). Update30.swift.
                 Update30Software()
                 AppUpd32Row(label: false) // prompt 32: appens versjon og «Last ned IPA» (AppUpdate32.swift)
-                group("System", 5, [
-                    PaperLinkRow(name: "Oppdatering", sub: Update28Model.shared.summary, icon: "arrow.down.circle") { store.paperGo("innst-oppdatering") },
-                ])
+                // Prompt 32: raden «Oppdatering» under SYSTEM er fjernet. PROGRAMVARE → Nordlys OS er eneste sted å oppdatere
+                // (claude-code-fjern-oppdatering-rad.md); SYSTEM-gruppen ble tom og vises ikke.
             } else {
                 AppUpd32Row(label: true)
             }
@@ -1037,6 +1036,8 @@ struct PaperAiSettings: View {
             Privacy27Section()
             // Prompt 27: CHAT (Chat27Settings.swift).
             Chat27SettingsGroup()
+            // Prompt 32: GLIMT I SØKEFELTET – «Send til Chat etter» 5/8/15/30 s (Search32.swift).
+            Search32bSettingsGroup()
             // Prompt 33: GLIMT HUSKER (Memory33.swift).
             Memory33SettingsGroup()
             // Prompt 23: tidsgrense per motor, nye forsøk og hva som skjer ved tidsavbrudd (AiTimeouts23.swift).

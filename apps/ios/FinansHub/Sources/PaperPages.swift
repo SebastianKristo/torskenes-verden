@@ -22,6 +22,8 @@ struct PaperHome: View {
                 PaperCardDef(key: "h2", label: "Pakker", view: AnyView(packages)),
                 // Prompt 27: «Velg stopp» og én gruppe per stopp (RuterHome27.swift).
                 PaperCardDef(key: "h3", label: "Avganger", view: AnyView(RuterHomeCard27())),
+                // Prompt 32: Prøveperioder under Avganger (Trials32App.swift). Flyttes og skjules i wiggle-modus.
+                PaperCardDef(key: "h11", label: "Prøveperioder", view: AnyView(Trial32bHomeCard())),
                 // Prompt 26: KALENDER etter Avganger (med lagret oppsett legger pageCards den nederst).
                 PaperCardDef(key: "h10", label: "Kalender", view: AnyView(Cal26HomeCard())),
                 PaperCardDef(key: "h4", label: "Snarveier", view: AnyView(shortcuts)),

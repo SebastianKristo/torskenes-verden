@@ -102,6 +102,8 @@ extension Store {
     /// Bytter Papir-fane. Data lastes som i den klassiske appen.
     func paperGo(_ t: String) {
         if paperTapBlocked { return }
+        // Prompt 32: den gamle oppdateringssiden finnes ikke lenger; lenker dit åpner Nordlys OS (System31.swift).
+        if t == "innst-oppdatering" { System31Model.shared.show(); return }
         Haptics.shared.select()
         // Mellom Domener-fanene byttes bare seksjonen (dataene er de samme).
         if paperInDomains && Store.paperDomTabs.contains(t) && module == .domains {

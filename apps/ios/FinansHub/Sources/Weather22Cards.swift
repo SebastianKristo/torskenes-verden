@@ -38,13 +38,8 @@ struct WxTopBar22: View {
 
     var body: some View {
         HStack(alignment: .center) {
-            Button { store.weatherOpen = false } label: {
-                Text("‹ Hjem").font(.system(size: 13.5, weight: .semibold)).foregroundStyle(.white)
-                    .padding(.leading, 10).padding(.trailing, 14).frame(height: 36)
-                    .background(.ultraThinMaterial, in: Capsule())
-                    .background(Color.white.opacity(0.18), in: Capsule())
-            }
-            .buttonStyle(.plain)
+            // Prompt 32: ingen «‹ Hjem»; tom plass (42 pt) så bynavnet holder seg midtstilt (claude-code-vaer-lukk-x.md).
+            Color.clear.frame(width: 42, height: 42)
             Spacer(minLength: 4)
             VStack(spacing: 0) {
                 Text(w?.placeName ?? "").font(.system(size: 17, weight: .bold))
@@ -54,8 +49,19 @@ struct WxTopBar22: View {
             .opacity(scrolled ? 1 : 0)
             .animation(.easeOut(duration: 0.2), value: scrolled)
             Spacer(minLength: 4)
-            Text(source).font(.system(size: 11.5)).opacity(0.75).multilineTextAlignment(.trailing)
-                .frame(width: 72, alignment: .trailing).lineLimit(3).minimumScaleFactor(0.8)
+            // ✕ Lukk: rund 42 pt glass, hvitt kryss 17 pt, lett haptikk. Kilden står nå under H/L (WxHeader22).
+            Button {
+                Haptic30.light()
+                store.weatherOpen = false
+            } label: {
+                Image(systemName: "xmark").font(.system(size: 17, weight: .semibold)).foregroundStyle(.white)
+                    .frame(width: 42, height: 42)
+                    .background(.ultraThinMaterial, in: Circle())
+                    .background(Color.white.opacity(0.22), in: Circle())
+                    .contentShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Lukk")
         }
         .padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 8)
     }
@@ -86,6 +92,9 @@ struct WxHeader22: View {
                 .padding(.leading, 22).padding(.top, 2).lineLimit(1)
             Text(WxFmt22.desc(w.code)).font(.system(size: 19, weight: .bold)).padding(.top, 4)
             Text("H:\(WxFmt22.degOpt(w.hi))  L:\(WxFmt22.degOpt(w.lo))").font(.system(size: 16, weight: .semibold)).opacity(0.9)
+            // Prompt 32: kilden og tiden flyttet hit fra toppraden.
+            Text(w.mock ? "Eksempeldata" : "MET Norway · yr.no · " + JS.fmt(w.loadedAt, "HH:mm"))
+                .font(.system(size: 11.5)).opacity(0.7).padding(.top, 4)
         }
         .shadow(color: Color.black.opacity(0.18), radius: 10, y: 2)
         .frame(maxWidth: .infinity)
@@ -104,9 +113,10 @@ struct WxHourCard22: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Button(action: openToday) {
+                    // Prompt 32: fast høyde på tittel (20) og undertittel (17, én linje), så kortet ikke flytter seg ved bytte.
                     VStack(alignment: .leading, spacing: 0) {
-                        Text("Forhold ›").font(.system(size: 16, weight: .bold))
-                        Text(title).font(.system(size: 12.5)).foregroundStyle(Color(hex: "#9fe0ff"))
+                        Text("Forhold ›").font(.system(size: 16, weight: .bold)).frame(height: 20)
+                        Text(title).font(.system(size: 12.5)).foregroundStyle(Color(hex: "#9fe0ff")).lineLimit(1).truncationMode(.tail).frame(height: 17)
                     }
                 }
                 .buttonStyle(.plain)
@@ -121,9 +131,21 @@ struct WxHourCard22: View {
             }
             .padding(.horizontal, 16)
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 0) {
-                    ForEach(Array(w.next24.enumerated()), id: \.element.id) { pair in
-                        WxHourCell22(h: pair.element, first: pair.offset == 0, mode: mode, pent: w.compare?.pentTemp(pair.element.t))
+                // Prompt 32: egne timevisninger for nedbør og vind (Weather32.swift); cellene er alltid 142 pt høye.
+                Group {
+                    if mode == "wind" {
+                        WxWindHours32b(hours: w.next24)
+                    } else {
+                        HStack(spacing: 0) {
+                            ForEach(Array(w.next24.enumerated()), id: \.element.id) { pair in
+                                if mode == "rain" {
+                                    WxRainHourCell32b(h: pair.element, first: pair.offset == 0)
+                                } else {
+                                    WxHourCell22(h: pair.element, first: pair.offset == 0, mode: mode, pent: w.compare?.pentTemp(pair.element.t))
+                                        .frame(height: Wx32b.cellH, alignment: .top)
+                                }
+                            }
+                        }
                     }
                 }
                 .padding(.horizontal, 8)
@@ -133,7 +155,7 @@ struct WxHourCard22: View {
         .wxCard22()
     }
 
-    private var title: String { mode == "temp" ? "Temperatur (°C)" : mode == "rain" ? "Sjanse for nedbør" : "Vind (m/s)" }
+    private var title: String { Wx32b.subtitle(mode) }
 
     private func modeButton(_ m: String, _ icon: String, _ label: String) -> some View {
         Button { Haptics.shared.select(); mode = m } label: {
@@ -185,6 +207,8 @@ struct WxHourCell22: View {
 
 struct WxDaysCard22: View {
     let w: WeatherFull
+    /// Prompt 32: ☁ / 💧 / 🌬 i «Forhold» bytter også dagslisten.
+    var mode: String = "temp"
     let open: (Int) -> Void
 
     var body: some View {
@@ -195,13 +219,23 @@ struct WxDaysCard22: View {
             ForEach(Array(ds.enumerated()), id: \.element.id) { pair in
                 if pair.offset > 0 { Rectangle().fill(Color.white.opacity(0.18)).frame(height: 1) }
                 Button { Haptics.shared.tap(); open(pair.offset) } label: {
-                    WxDayRow22(d: pair.element, today: pair.offset == 0, now: w.temp, lo: lo, hi: hi)
+                    dayRow(pair.element, today: pair.offset == 0, lo: lo, hi: hi)
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 16).padding(.vertical, 4)
         .wxCard22()
+    }
+
+    @ViewBuilder private func dayRow(_ d: WeatherFull.Day, today: Bool, lo: Double, hi: Double) -> some View {
+        if mode == "rain" {
+            WxRainDayRow32b(d: d, hours: w.hours.filter { (h: WeatherFull.Hour) -> Bool in h.day == d.date }, today: today)
+        } else if mode == "wind" {
+            WxWindDayRow32b(d: d, hours: w.hours.filter { (h: WeatherFull.Hour) -> Bool in h.day == d.date }, today: today)
+        } else {
+            WxDayRow22(d: d, today: today, now: w.temp, lo: lo, hi: hi)
+        }
     }
 }
 

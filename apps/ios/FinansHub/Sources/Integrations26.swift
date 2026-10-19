@@ -280,7 +280,8 @@ struct Int26Row: View {
     var body: some View {
         Button { Haptics.shared.select(); Int26Nav.go(item, store) } label: {
             HStack(spacing: 12) {
-                Int26Badge(text: item.badge26, color: item.color26)
+                // Prompt 32: tjenestens ekte logo (Settings32.swift), bokstavmerket bare mens den lastes eller hvis den feiler.
+                IntLogoView32b(item: item, size: 34)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(item.name).font(PF.ui(15, .semibold)).foregroundStyle(p.ink).lineLimit(1)
                     Text(item.desc26).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(2)
@@ -418,7 +419,7 @@ struct Int26Head: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
-                Int26Badge(text: item.badge26, color: item.color26, size: 44)
+                IntLogoView32b(item: item, size: 44)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(item.name).font(PF.serif(19, medium: true)).foregroundStyle(p.ink).lineLimit(2)
                     Text(item.desc26).font(PF.ui(12.5)).foregroundStyle(p.mut).lineLimit(2)

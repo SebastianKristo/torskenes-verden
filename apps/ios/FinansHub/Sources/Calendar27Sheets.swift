@@ -218,6 +218,8 @@ struct Cal27FormSheet: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
                 Cal27SheetHead(title: f.eventId == nil ? "Ny hendelse" : "Rediger hendelse") { m.form = nil }
+                // Prompt 32: «✦ Beskriv med Glimt» fyller ut feltene under (Calendar32.swift). Ingenting lagres automatisk.
+                Cal32bDescribeBox(form: $f)
                 TextField("", text: $f.title, prompt: Text("Tittel").foregroundColor(p.mut))
                     .font(PF.ui(17, .semibold)).foregroundStyle(p.ink)
                     .focused($titleFocus)

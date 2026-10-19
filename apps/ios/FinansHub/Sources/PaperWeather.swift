@@ -381,7 +381,7 @@ struct PaperWeatherView: View {
     @ViewBuilder private func content(_ w: WeatherFull) -> some View {
         WxHeader22(w: w).opacity(Double(Swift.max(0, 1 - scroll / 220)))
         WxHourCard22(w: w, mode: $mode) { openDay(0) }
-        WxDaysCard22(w: w) { i in openDay(i) }
+        WxDaysCard22(w: w, mode: mode) { i in openDay(i) }
         WxCompareCard22(w: w) { openCompare() }
         WxWindCard22(w: w).onTapGesture { open("wind") }
         WxMoonCard22(w: w).onTapGesture { open("moon") }

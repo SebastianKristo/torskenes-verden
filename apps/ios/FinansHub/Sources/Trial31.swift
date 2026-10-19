@@ -255,6 +255,8 @@ final class Trial31Model {
             loaded = true
             missing = false
             Trial31Model.schedule(active)
+            // Prompt 32: widgetene (Prøveperioder) får samme liste med en gang (Trials32App.swift).
+            Trials32b.push(active.map { (t: Trial31) -> TrialW32b in t.widget32b })
         } catch let e as APIError {
             if e.status == 404 { missing = true }
         } catch {}

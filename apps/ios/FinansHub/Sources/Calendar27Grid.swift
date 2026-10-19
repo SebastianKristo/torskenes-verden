@@ -28,7 +28,7 @@ struct Cal27Grid: View {
                             Cal27DayColumn(d: d, now: now, hh: hh, compact: n == 7)
                         }
                     }
-                    .padding(.top, 8).padding(.trailing, 8).padding(.bottom, 96)
+                    .padding(.top, 8).padding(.trailing, 8).padding(.bottom, Cal32b.scrollBottom)
                 }
                 .onAppear { scroll(proxy, dates: dates, animated: false) }
                 .onChange(of: m.scrollTick) { _, _ in scroll(proxy, dates: dates, animated: true) }
@@ -164,7 +164,8 @@ struct Cal27DayColumn: View {
         let we: Bool = Cal26.jsDay(d) % 6 == 0
         let slots: [Cal27Slot] = Cal27Model.layout(m.on(k))
         let nm: Int = Cal26.minutes(now)
-        let bg: Color = isT ? p.lab.opacity(0.05) : (we ? p.line.opacity(0.3) : Color.clear)
+        // Prompt 32: ingen tone på dagens kolonne (i dag = rød dato-sirkel + nålinje), helg beholder svak grå.
+        let bg: Color = (we && !isT) ? p.line.opacity(0.3) : Color.clear
         GeometryReader { g in
             let w: CGFloat = g.size.width
             ZStack(alignment: .topLeading) {
@@ -239,7 +240,8 @@ struct Cal27Block: View {
         let solid: Bool = e.type == "prove"
         let bw: CGFloat = Swift.max(8, width / n - 3)
         let bh: CGFloat = Swift.max(18, ht - 2)
-        let fill: Color = solid ? c : c.opacity(0.17)
+        // Prompt 32: 22 % fagfarge over kortet (claude-code-kalender-fargekontrast.md).
+        let fill: Color = solid ? c : Cal32b.mix(c, 0.22, over: p.card)
         content
             .padding(.leading, 6).padding(.trailing, 3).padding(.vertical, 3)
             .frame(width: bw, height: bh, alignment: .topLeading)

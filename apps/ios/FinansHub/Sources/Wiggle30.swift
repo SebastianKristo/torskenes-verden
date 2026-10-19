@@ -12,7 +12,11 @@ import UIKit
 
 @MainActor
 enum Wiggle30 {
-    static let pad: CGFloat = 64
+    /// Prompt 32: 74 pt fra innholdsområdets topp (hero-kanten) + de 23 pt innholdet overlapper fotovinduet, så første kort
+    /// og «−»-merket (14 pt over kortet) starter under ＋ / ✓ (8 pt + 40 pt) med luft (claude-code-rediger-knapper-plass.md).
+    static let pad: CGFloat = 74 + 23
+    /// Klippet når man scroller i redigeringsmodus: under pillene (23 + 8 + 40 + 6), ellers 23.
+    static let clipEdit: CGFloat = 77
     static let anim: Animation = .timingCurve(0.2, 0.8, 0.2, 1, duration: 0.28)
     static let gap: CGFloat = 10
 

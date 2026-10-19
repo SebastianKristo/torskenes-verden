@@ -515,6 +515,8 @@ struct PaperLookSettings: View {
             }
             .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
             .padding(.top, 8)
+            // Prompt 32: FANELINJE og FANELINJE · ANDRE SIDER (Nav32.swift).
+            Nav32bSettingsGroup()
         }
         .onChange(of: pick) { _, v in
             guard let v else { return }

@@ -76,7 +76,7 @@ struct WxWide25: View {
         VStack(spacing: 12) {
             WxHeader22(w: w)
             WxHourCard22(w: w, mode: $mode) { openDay(0) }
-            WxDaysCard22(w: w) { i in openDay(i) }
+            WxDaysCard22(w: w, mode: mode) { i in openDay(i) }
         }
     }
 

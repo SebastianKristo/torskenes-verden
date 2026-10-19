@@ -87,7 +87,8 @@ final class Set24Model {
         add("data", "Data og lagring", "Buffer og nedlastinger", "Avansert", "innst-data")
         add("backup", "Backup og data", "Eksport og gjenoppretting", "Avansert", "innst-backup")
         add("om", "Om appen", "Versjon og lisenser", "Avansert", "innst-om")
-        if Update28Model.isAdmin(store) { add("oppdatering", "Oppdatering", "Versjon og oppdatering av serveren", "System", "innst-oppdatering") }
+        // Prompt 32: «oppdatering», «versjon», «update» treffer Nordlys OS (innst-oppdatering sendes dit, PaperStore.paperGo).
+        if Update28Model.isAdmin(store) { add("oppdatering", "Nordlys OS", "Oppdatering, versjon og update", "Programvare", "innst-oppdatering") }
         let integ: [Int24Item] = Int24Model.shared.items
         if integ.isEmpty {
             for n in Int24Model.fallbackNames { add("integ." + n.lowercased(), n, "Status, felt og test", "Integrasjoner", "integ:" + n.lowercased()) }

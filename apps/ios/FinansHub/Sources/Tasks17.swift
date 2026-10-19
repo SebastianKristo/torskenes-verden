@@ -205,13 +205,28 @@ struct PaperTasksView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             listChips
+            // Prompt 32: Arkivert (Tasks32.swift) – egen liste, uten «Ny oppgave».
+            if cur == Tasks32b.archId {
+                Tasks32bArchiveView()
+            } else {
             if let l = m.lists.first(where: { $0.id == cur }) { TaskListHeader21(list: l) }
             // Prompt 22: på telefon ligger feltet fast over fanelinjen (TaskDockField22), ikke øverst.
             if wide { addField }
             options
             if let e = m.error { PCard { Text(e).font(PF.ui(13)).foregroundStyle(p.lab).fixedSize(horizontal: false, vertical: true) } }
             ForEach(groups, id: \.0) { g in
-                PLabel(text: g.0, color: g.1).padding(.leading, 4).padding(.top, 2)
+                HStack {
+                    PLabel(text: g.0, color: g.1)
+                    Spacer()
+                    // Prompt 32: «Arkiver alle» i FERDIG.
+                    if g.0 == "Ferdig" {
+                        Button { Tasks32b.shared.archiveDone(cur == "alle" ? nil : cur, store) } label: {
+                            Text("Arkiver alle").font(PF.ui(12.5, .bold)).foregroundStyle(p.mut)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 4).padding(.top, 2)
                 groupCard(g.2)
             }
             if inList.isEmpty && m.loaded {
@@ -226,8 +241,12 @@ struct PaperTasksView: View {
             TaskHASection22()
             Text("Widgeten «Huskeliste» på hjemskjermen viser de tre neste oppgavene, og du kan krysse av rett i den.")
                 .font(PF.ui(12)).foregroundStyle(p.mut).padding(.horizontal, 4).padding(.top, 6).fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .task { await m.load(store) }
+        .task {
+            await m.load(store)
+            await Tasks32b.shared.load(store)
+        }
         .sheet(item: $editing) { t in
             TaskEditSheet(task: t) { editing = nil }.environment(\.paper, p).presentationDetents([.medium, .large]).sheetEdge30(p.bg)
         }
@@ -258,6 +277,8 @@ struct PaperTasksView: View {
                 ForEach(m.lists) { l in
                     chip(l.id, l.name, Color(hex: l.color), m.items.filter { $0.list == l.id && !$0.done }.count)
                 }
+                // Prompt 32: «Arkivert · N» sist i listevelgeren.
+                Tasks32bChip(on: cur == Tasks32b.archId) { cur = Tasks32b.archId; Haptics.shared.select() }
             }
         }
     }
@@ -366,11 +387,14 @@ struct PaperTasksView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            // Prompt 32: arkivikon på fullførte oppgaver.
+            if t.done { Tasks32bArchiveButton(t: t) }
         }
         .opacity(t.done ? 0.55 : 1)
         .frame(minHeight: 54)
         .contextMenu {
             Button { editing = t } label: { Label("Endre", systemImage: "pencil") }
+            if t.done { Button { Tasks32b.shared.archive(t, store) } label: { Label("Arkiver", systemImage: "archivebox") } }
             Button(role: .destructive) { m.delete(t, store) } label: { Label("Slett", systemImage: "trash") }
         }
     }

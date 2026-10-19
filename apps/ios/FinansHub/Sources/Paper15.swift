@@ -57,6 +57,9 @@ extension Store {
         if let v = JS.str(o, "fab"), ["float", "inline"].contains(v), v != fabMode { fabMode = v }
         migrateHome24()
         FinNav26.shared.apply(o, self)
+        // Prompt 32: fanelinjene på Domener, Abonnement og Familie (secNav) og Glimt-grensen (hs_timeout_s).
+        Nav32b.shared.take(o)
+        Search32b.shared.take(o)
     }
 
     /* ---------- Tilpass hver side ---------- */
@@ -65,7 +68,10 @@ extension Store {
     func pageCards(_ page: String, _ keys: [String]) -> (visible: [String], hidden: [String]) {
         let l = paperPages[page] ?? PaperPageLayout()
         var order = l.order.filter { keys.contains($0) }
-        for k in keys where !order.contains(k) { order.append(k) }
+        for k in keys where !order.contains(k) {
+            // Prompt 32: Prøveperioder (h11) kommer rett under Avganger også med lagret oppsett.
+            if k == "h11", let i = order.firstIndex(of: "h3") { order.insert(k, at: i + 1) } else { order.append(k) }
+        }
         let hid = l.hidden.filter { keys.contains($0) }
         return (order.filter { !hid.contains($0) }, hid)
     }
