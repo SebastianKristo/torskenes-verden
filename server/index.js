@@ -48,6 +48,7 @@ import trialWidgetsApi from './trial-widgets.js'; // prompt 32
 import romApi, { startSpaceScheduler, spaceApi } from './space32.js'; // prompt 32
 import { domainGlimtApi, gscApi, startDomainGlimtScheduler } from './domains-glimt.js'; // prompt 32
 import { describeApi as calendarDescribeApi, searchAiMiddleware as calendarSearchAi } from './calendar-glimt.js'; // prompt 32
+import { calendarsApi as kalCalendarsApi, weatherApi as kalWeatherApi, eventsMiddleware as kalEventsMw, widgetMiddleware as kalWidgetMw, companionApi, companionsOf } from './kalender33.js'; // prompt 33 (SERVER33)
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
 
 const api = process.env.MOCK_DATA === '1' ? await import('./mock.js') : integrations;
@@ -89,6 +90,8 @@ app.get('/', async (c) => sessionUser(c) ? html(c, await page('app.html')) : c.r
 // /login viser førstegangsoppsettet når det ikke finnes noen brukere (login.js spør /api/setup/status).
 app.get('/login', async (c) => sessionUser(c) ? c.redirect('/') : html(c, await page('login.html')));
 app.get('/cv', async (c) => html(c, await page('cv.html')));
+// Prompt 33: /chat åpnes direkte (alltid fullskjerm) – webappen ruter med hash.
+app.get('/chat', (c) => c.redirect(sessionUser(c) ? '/#/chat' : '/login'));
 // FinansHub: egen fullskjerm-app (desktop og mobil/PWA). API-et har egen tilgangskontroll (sesjon eller token).
 app.get('/finans', (c) => c.redirect('/finans/'));
 // Mobil uten innlogging får appskallet, som viser sin egen Papir-innlogging (mobile-gate.js). Desktop og en tom server går til /login.
@@ -267,7 +270,8 @@ authed.get('/devices', (c) => {
   const cur = currentDeviceId(c), ip = trustIp(c);
   const list = db.prepare('SELECT id, name, created, last_seen, last_ip FROM devices WHERE user=? ORDER BY last_seen DESC').all(c.get('user'));
   return c.json({ lan: isLan(ip), trusted: list.some((d) => d.id === cur),
-    devices: list.map((d) => ({ id: d.id.slice(0, 16), name: d.name, created: d.created, lastSeen: d.last_seen, lastIp: d.last_ip, current: d.id === cur })) });
+    devices: list.map((d) => ({ id: d.id.slice(0, 16), name: d.name, created: d.created, lastSeen: d.last_seen, lastIp: d.last_ip, current: d.id === cur })),
+    apps: companionsOf(c.get('user')) }); // prompt 33: companion-tokens (Kalender), trekkes tilbake med DELETE /api/tokens/companion/:id
 });
 authed.put('/password', async (c) => {
   const { current, next } = await c.req.json().catch(() => ({}));
@@ -606,6 +610,13 @@ app.route('/api/integrasjoner', integrationsApi); // prompt 26: samme liste unde
 app.route('/api/kalender/describe', calendarDescribeApi); // prompt 32: «Beskriv med Glimt» (før /api/kalender)
 app.use('/api/kalender/search', calendarSearchAi); // prompt 32: ?ai=1 → Glimt-svar, ellers det vanlige søket
 app.route('/api/kalender/quick', calendarQuickApi); // prompt 29: før /api/kalender
+// Prompt 33 (SERVER33): Kalender-appen – kalendere (visning, farger, egne), vær 16 dager, appCalendar på hendelser, widgets.
+app.route('/api/kalender/calendars', kalCalendarsApi);
+app.route('/api/kalender/weather', kalWeatherApi);
+app.use('/api/kalender/events', kalEventsMw);
+app.use('/api/kalender/events/*', kalEventsMw);
+app.use('/api/widgets/calendar', kalWidgetMw);
+app.route('/api/tokens/companion', companionApi); // «Logg inn med Homelab-appen»: eget token for Kalender (økt eller token med finance:write)
 app.route('/api/calendar/quick', calendarQuickApi);
 app.route('/api/kalender', calendarApi);
 app.route('/api/widgets/calendar', calendarWidgetApi);

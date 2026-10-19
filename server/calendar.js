@@ -391,8 +391,12 @@ export async function eventsFor(user, fromDate, toDate) {
   } catch (e) { console.warn('[kalender] prøveperioder:', e.message); }
   events = applyRules(events).filter((e) => (e.allDay ? e.end > fromDate && e.date <= toDate : e.date >= fromDate && e.date <= toDate));
   for (const s of sources) if (s.ok) s.count = events.filter((e) => e.source === s.id).length; // antall i perioden, etter reglene
+  if (decorator) { try { decorator(user, events); } catch (e) { console.warn('[kalender] app-kalendere:', e.message); } }
   return { events, sources, ctx };
 }
+// Prompt 33 (SERVER33): Kalender-appen setter appCalendar/appColor på hver hendelse (server/kalender33.js registrerer seg her).
+let decorator = null;
+export const setEventDecorator = (fn) => { decorator = fn; };
 
 const minutes = (ms) => Math.max(0, Math.round(ms / 60_000));
 const durText = (m) => (m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} t ${m % 60} min` : `${m / 60} t`);

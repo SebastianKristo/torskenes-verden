@@ -46,6 +46,11 @@
 // Realtime «assist»: {jobId, state, steps[], fields[], progress, title, model, input, source, answer?, error?} (samme struktur
 // som «calendar-quick»).
 //
+// Prompt 33 (SERVER33): POST /api/assist {q, source:'calendar', context?:{eventId}} → Glimt i Kalender-appen (server/kalender33.js,
+//   calendarAnswer): {text, bold, steps:[etiketter], events[], slots[], created?, summary?, weather?, intent, tools[], source:'Kalender', …}.
+//   Jobbens steps[] bruker etikettene ({key:'s1', label, state}). Fikk klienten 202, sendes realtime «assist»
+//   {jobId, state:'running', partial, done:false} med teksten ord for ord før svaret. Varsel: deepLink 'kalender://liste'.
+//
 // Personvern: verktøyene leser bare brukerens egne data på serveren. Fritekst går til lokal Ollama (12 s). Gemini brukes bare
 // når brukeren har slått på sky (cloud) OG spørsmålet ikke ser ut til å inneholde brukerdata; da sendes bare spørsmålet,
 // og kallet logges i ai_audit.
@@ -67,6 +72,7 @@ import { parseQuick, osloTodayISO, quickLabel, senderOf } from '../public/js/qui
 import { aliasesOf, aliasPrompt, parseMemoryIntent, learnFromAssist, typeOfWord, eventHitsAlias, getContext, setContext } from './glimt-memory.js'; // prompt 33
 import { parseTrial, serviceOf, trialSentence, MONTHS, WEEKDAYS, addDaysISO, daysBetween } from '../public/js/trial-parse.js';
 import * as integrations from './integrations.js';
+import { calendarAnswer } from './kalender33.js'; // prompt 33: source:'calendar'
 
 const MOCK = process.env.MOCK_DATA === '1';
 const ext = MOCK ? await import('./mock.js') : integrations;
@@ -401,9 +407,9 @@ async function toolLlm(user, text) {
 
 /* ---------------- Svar ---------------- */
 
-const TITLES = { weather: 'Sjekker været', 'calendar.day': 'Ser i kalenderen', 'calendar.next': 'Leter i kalenderen', departures: 'Henter avganger', packages: 'Ser på pakkene',
+const TITLES = { 'calendar.free_slots': 'Finner ledig tid', 'calendar.search': 'Leter i kalenderen', 'calendar.summary': 'Oppsummerer', 'calendar.create': 'Legger til i kalenderen', 'weather.daily': 'Sjekker været', 'calendar.ask': 'Glimt tenker', weather: 'Sjekker været', 'calendar.day': 'Ser i kalenderen', 'calendar.next': 'Leter i kalenderen', departures: 'Henter avganger', packages: 'Ser på pakkene',
   'finance.spent': 'Regner på forbruket', tasks: 'Leser huskelisten', 'trial.create': 'Lager påminnelse', 'appointment.create': 'Legger til i kalenderen', 'memory.add': 'Glimt husker', nav: 'Åpner siden', llm: 'Glimt tenker' };
-const TOOL_OF = { weather: 'Vær', 'calendar.day': 'Kalender', 'calendar.next': 'Kalender', departures: 'Avganger', packages: 'Pakker', 'finance.spent': 'Finans', tasks: 'Huskeliste', 'trial.create': 'Abonnementer', 'appointment.create': 'Kalender', 'memory.add': 'Glimt husker', nav: 'Snarvei' };
+const TOOL_OF = { 'calendar.free_slots': 'Kalender', 'calendar.search': 'Kalender', 'calendar.summary': 'Kalender', 'calendar.create': 'Kalender', 'weather.daily': 'Vær', 'calendar.ask': 'Kalender', weather: 'Vær', 'calendar.day': 'Kalender', 'calendar.next': 'Kalender', departures: 'Avganger', packages: 'Pakker', 'finance.spent': 'Finans', tasks: 'Huskeliste', 'trial.create': 'Abonnementer', 'appointment.create': 'Kalender', 'memory.add': 'Glimt husker', nav: 'Snarvei' };
 
 /** Svarer på spørsmålet. onStep(at, intent) for fremdrift. → svarobjektet (se toppen). */
 export async function answer(user, text, { today = osloTodayISO(), onStep = () => {}, ctx = null } = {}) {
@@ -468,8 +474,10 @@ function saveToChat(user, chatId, text, a, { assistantOnly = false } = {}) {
 
 const parseJ = (s, d) => { try { return s ? JSON.parse(s) : d; } catch { return d; } };
 const STEP_LABELS = (intent) => [['read', 'Leser spørsmålet'], ['tool', intent === 'llm' ? 'Spør den lokale modellen' : `Henter fra ${TOOL_OF[intent] ?? 'verktøyet'}`], ['answer', 'Skriver svaret']];
-function stepsAt(intent, at, failed = false) {
-  return STEP_LABELS(intent ?? 'llm').map(([key, label], i) => ({ key, label, state: i < at ? 'done' : i === at ? (failed ? 'failed' : 'active') : 'pending' }));
+// Prompt 33: labels = egne tenker-steg (Kalender: «Leser i morgen i kalenderen», «Finner hull på minst 45 min», …).
+function stepsAt(intent, at, failed = false, labels = null) {
+  const L = Array.isArray(labels) && labels.length ? labels.map((l, i) => [`s${i + 1}`, String(l)]) : STEP_LABELS(intent ?? 'llm');
+  return L.map(([key, label], i) => ({ key, label, state: i < at ? 'done' : i === at ? (failed ? 'failed' : 'active') : 'pending' }));
 }
 export function jobOut(row) {
   const o = { jobId: row.id, state: row.state, q: row.q, source: row.source, chatId: row.chat_id ?? null, intent: row.intent ?? null, title: row.title ?? 'Glimt tenker', model: row.model ?? 'Glimt',
@@ -492,11 +500,12 @@ async function runJob(id) {
   setJob(id, { state: 'running', steps: JSON.stringify(stepsAt(null, 0)), progress: 10 });
   emit(getJob(id));
   let a;
+  const cal = row0.source === 'calendar';
   try {
-    a = await runAsUser(user, () => answer(user, row0.q, {
-      onStep: (at, intent) => {
+    a = await runAsUser(user, () => (cal ? calendarAnswer : answer)(user, row0.q, {
+      onStep: (at, intent, labels) => {
         if (getJob(id)?.state === 'cancelled') return;
-        setJob(id, { intent, title: TITLES[intent] ?? 'Glimt tenker', model: intent === 'llm' ? 'Glimt · lokal' : 'Glimt · verktøy', steps: JSON.stringify(stepsAt(intent, at)), progress: at === 1 ? 40 : 85,
+        setJob(id, { intent, title: TITLES[intent] ?? 'Glimt tenker', model: intent === 'llm' ? 'Glimt · lokal' : 'Glimt · verktøy', steps: JSON.stringify(stepsAt(intent, labels ? (at === 1 ? 0 : labels.length - 1) : at, false, labels)), progress: at === 1 ? 40 : 85,
           fields: JSON.stringify([{ k: 'Verktøy', v: TOOL_OF[intent] ?? 'Glimt' }]) });
         emit(getJob(id));
       },
@@ -505,21 +514,36 @@ async function runJob(id) {
     if (getJob(id)?.state !== 'cancelled') { setJob(id, { state: 'failed', error: String(e?.message ?? e).slice(0, 300), steps: JSON.stringify(stepsAt(getJob(id)?.intent, 1, true)) }); emit(getJob(id)); }
     return;
   }
-  const cur = getJob(id);
+  let cur = getJob(id);
   if (cur.state === 'cancelled') return;
+  // Prompt 33: klienten fikk 202 → strøm teksten ord for ord over realtime før svaret (Kalender-appen).
+  if (cal && !cur.direct) { await streamWords(id, user, a.text); cur = getJob(id); if (cur.state === 'cancelled') return; }
   if (cur.source === 'chat') a.chatId = saveToChat(user, cur.chat_id, cur.q, a, { assistantOnly: !!cur.handoff && !!cur.chat_id });
   setJob(id, { state: 'done', result: JSON.stringify(a), intent: a.intent, model: a.model, progress: 100, chat_id: a.chatId ?? cur.chat_id,
-    steps: JSON.stringify(stepsAt(a.intent, 3)), fields: JSON.stringify([{ k: 'Verktøy', v: a.tool ?? 'Glimt' }, { k: 'Kilde', v: a.source }, { k: 'Tid', v: `${(a.ms / 1000).toFixed(1).replace('.', ',')} s` }]) });
+    steps: JSON.stringify(stepsAt(a.intent, cal ? (a.steps?.length ?? 3) : 3, false, cal ? a.steps : null)), fields: JSON.stringify([{ k: 'Verktøy', v: a.tool ?? 'Glimt' }, { k: 'Kilde', v: a.source }, { k: 'Tid', v: `${(a.ms / 1000).toFixed(1).replace('.', ',')} s` }]) });
   const done = getJob(id);
   emit(done);
   // Svaret kom etter at klienten fikk 202: varsle (kø for appene + Web Push når ingen klient er synlig).
   if (!done.direct) {
     const chatId = done.chat_id;
-    notifyUser(user, { title: 'Glimt', body: plainText(a.text), url: done.source === 'chat' && chatId ? `/#/chat/${chatId}` : '/#/hjem', tag: `assist-${id}`, category: 'ai',
-      data: { kind: 'assist', jobId: id, q: done.q, source: done.source, chatId, deepLink: done.source === 'chat' && chatId ? `finanshub://chat/${chatId}` : 'finanshub://hjem' } }, { realtime: false })
+    notifyUser(user, { title: 'Glimt', body: plainText(a.text), url: done.source === 'chat' && chatId ? `/#/chat/${chatId}` : cal ? '/#/kalender' : '/#/hjem', tag: `assist-${id}`, category: 'ai',
+      data: { kind: 'assist', jobId: id, q: done.q, source: done.source, chatId, deepLink: done.source === 'chat' && chatId ? `finanshub://chat/${chatId}` : cal ? 'kalender://liste' : 'finanshub://hjem' } }, { realtime: false })
       .catch((e) => console.warn('[glimt] varsel:', e.message));
   }
 }
+/** Prompt 33: «assist» {jobId, state:'running', partial, done:false} i biter (ca. 1,5 s totalt) så klienten kan vise ord for ord. */
+async function streamWords(id, user, text) {
+  const words = String(text ?? '').split(' ');
+  const per = Math.max(2, Math.ceil(words.length / 30));
+  for (let n = per; n < words.length; n += per) {
+    if (getJob(id)?.state === 'cancelled') return;
+    broadcast('assist', { jobId: id, state: 'running', partial: words.slice(0, n).join(' '), done: false }, [user]);
+    await new Promise((r) => { const t = setTimeout(r, streamMs); t.unref?.(); });
+  }
+}
+let streamMs = 45;
+/** Bare for tester: pause mellom bitene. */
+export const _setStreamMs = (ms) => { streamMs = ms ?? 45; };
 function start(id) {
   const p = runJob(id).catch((e) => { console.error('[glimt]', e?.message ?? e); try { setJob(id, { state: 'failed', error: 'Noe gikk galt. Prøv igjen.' }); } catch { /* */ } });
   running.set(id, p);
@@ -555,7 +579,7 @@ api.post('/', async (c) => {
   const text = typeof b?.q === 'string' ? b.q.replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim() : '';
   if (!text) return c.json({ error: 'Skriv et spørsmål' }, 400);
   if (text.length > MAX_Q) return c.json({ error: `Spørsmålet er for langt (maks ${MAX_Q} tegn)` }, 400);
-  const source = b.source === 'chat' ? 'chat' : 'search';
+  const source = b.source === 'chat' ? 'chat' : b.source === 'calendar' ? 'calendar' : 'search';
   // Prompt 33: hendelsen brukeren ser på (for «det var frisør»).
   const ctxId = typeof b.context?.eventId === 'string' && b.context.eventId.length <= 120 ? b.context.eventId : null;
   if (ctxId) {

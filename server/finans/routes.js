@@ -1458,6 +1458,20 @@ api.post('/tokens', tokenAdmin, async (c) => {
   const row = q('INSERT INTO fh_tokens(id,name,scopes,created,user_id,expires) VALUES(?,?,?,?,?,?) RETURNING *').get(tokenKey(token), str(b.name, 60) || 'Token', scopes.join(' '), Date.now(), c.get('user'), days ? Date.now() + days * 86400_000 : null);
   return c.json({ token, ...tokenOut(row) }); // vises én gang
 });
+// Prompt 33 (SERVER33): companion-token for Kalender-appen (server/kalender33.js). Samme tabell, hash og tokenOut som over.
+/** Tilgangen for forespørselen (økt eller fh_-token), eller null. → {user, info, admin, scopes:Set, session, tokenId?} */
+export const tokenAccessOf = (c) => access(c);
+/** Lager et token for userId. scopes må allerede være kontrollert (aldri bredere enn den som ber om det). → {token, ...tokenOut} */
+export function issueToken(userId, { name, scopes, expires = null }) {
+  const token = newToken();
+  const row = q('INSERT INTO fh_tokens(id,name,scopes,created,user_id,expires) VALUES(?,?,?,?,?,?) RETURNING *').get(tokenKey(token), str(name, 60) || 'Token', scopes.join(' '), Date.now(), userId, expires);
+  return { token, fullId: row.id, ...tokenOut(row) };
+}
+/** Tokenradene (tokenOut-form + fullId) for userId med de fulle id-ene. */
+export const tokensById = (userId, fullIds) => (fullIds.length ? q(`SELECT * FROM fh_tokens WHERE COALESCE(user_id, ?)=? AND id IN (${fullIds.map(() => '?').join(',')})`).all(OWNER, userId, ...fullIds).map((t) => ({ fullId: t.id, ...tokenOut(t) })) : []);
+/** Trekker tilbake et token (full id) som tilhører userId. → antall slettet */
+export const revokeTokenOf = (userId, fullId) => q('DELETE FROM fh_tokens WHERE id=? AND COALESCE(user_id, ?)=?').run(fullId, OWNER, userId).changes;
+export { SCOPES as TOKEN_SCOPES };
 api.delete('/tokens/:id', tokenAdmin, (c) => { q('DELETE FROM fh_tokens WHERE substr(id,1,12)=? AND COALESCE(user_id, ?)=?').run(c.req.param('id'), OWNER, c.get('user')); return ok(c); });
 
 /* --- Subscription OS --- */
