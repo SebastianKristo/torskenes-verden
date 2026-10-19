@@ -17,6 +17,8 @@
 //   GET    /mydata                    → {finans, kalender, huske};  GET/PATCH /settings
 //   POST   /transcribe (multipart)    → {text} via Open WebUI; 501 uten
 //   GET    /shared/:token             → delt samtale (Markdown, uten innlogging; tokenet er tilfeldig)
+// Samtaleinnstillinger (chat.settings): persona, system, temperature, topP, numCtx, theme, skipCloudAsk og think (av som
+// standard; på → Ollama får think:true, av → think:false, se server/ollama-opts.js).
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { bodyLimit } from 'hono/body-limit';
@@ -35,6 +37,7 @@ import { CATALOG } from './finans/ollama-models.js';
 import { audit } from './finans/ai-audit.js';
 import { finansSummary } from './finans/summary.js';
 import { nextTasks } from './tasks.js';
+import { chatBody, ollamaPost, thinkFilter } from './ollama-opts.js';
 
 const q = (sql) => db.prepare(sql);
 const FILES = resolve(config.dataDir, 'chat', 'files');
@@ -163,6 +166,8 @@ export function cleanSettings(s = {}) {
     persona: PERSONAS[persona] ? persona : 'standard', system: String(o.system ?? '').slice(0, 4000),
     temperature: num(o.temperature, 0, 2, 0.7), topP: num(o.topP, 0, 1, 0.9), numCtx: Math.round(num(o.numCtx, 2048, 32768, 8192)),
     theme: /^n/i.test(String(o.theme ?? '')) ? 'noytral' : 'papir', skipCloudAsk: !!o.skipCloudAsk,
+    // La modellen tenke (Ollama think:true). Av som standard: tenkemodeller bruker ellers hundrevis av tokens før svaret.
+    think: o.think === true || /^(1|true|on|ja|yes)$/i.test(String(o.think ?? '')),
   };
 }
 const parse = (s, d) => { try { return JSON.parse(s) ?? d; } catch { return d; } };
@@ -312,12 +317,13 @@ async function openaiStream(name, url, headers, body, { onDelta, signal, idleMs 
 async function ollamaStream(model, sys, msgs, s, { onDelta, signal }) {
   const g = idleGuard(aiTimeoutsOf().ollama * 1000, signal);
   let tokens = null;
+  const tf = thinkFilter(); // <think>…</think> i selve teksten (eldre maler) vises aldri; message.thinking sendes ikke videre
   try {
     let res;
     try {
-      res = await F(`${ollamaBase()}/api/chat`, { method: 'POST', headers: { 'content-type': 'application/json' }, signal: g.signal, body: JSON.stringify({
+      res = await ollamaPost(F, `${ollamaBase()}/api/chat`, chatBody({
         model, stream: true, keep_alive: OLLAMA_KEEP_ALIVE, options: { temperature: s.temperature, top_p: s.topP, num_ctx: s.numCtx },
-        messages: [{ role: 'system', content: sys }, ...msgs.map((m) => ({ role: m.role, content: m.content, ...(m.images?.length ? { images: m.images } : {}) }))] }) });
+        messages: [{ role: 'system', content: sys }, ...msgs.map((m) => ({ role: m.role, content: m.content, ...(m.images?.length ? { images: m.images } : {}) }))] }, s.think), { signal: g.signal });
     } catch (e) { throw engineError('Ollama', e, g); }
     if (!res.ok) throw await httpError('Ollama', res);
     try {
@@ -325,9 +331,11 @@ async function ollamaStream(model, sys, msgs, s, { onDelta, signal }) {
         if (!line.trim()) continue;
         let j; try { j = JSON.parse(line); } catch { continue; }
         if (j.error) throw Object.assign(new Error(`Ollama: ${String(j.error).slice(0, 200)}`), { engine: true });
-        if (j.message?.content) await onDelta(j.message.content);
+        if (j.message?.content) { const d = tf.push(j.message.content); if (d) await onDelta(d); }
         if (j.done && j.eval_count) tokens = { count: j.eval_count, perSec: j.eval_duration ? j.eval_count / (j.eval_duration / 1e9) : null };
       }
+      const rest = tf.end();
+      if (rest) await onDelta(rest);
     } catch (e) { if (e.engine) throw e; throw engineError('Ollama', e, g); }
     return { tokens };
   } finally { g.done(); }

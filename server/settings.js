@@ -165,6 +165,10 @@ export const SCHEMA = [
     ['logo_gemini', 'Finn logo med Gemini', '1', false, 'bool'],
     ['logo_verify', 'Sjekk logoen før den lagres', '1', false, 'bool'],
   ]],
+  // Korte AI-oppgaver (Glimt, rask time, logo, kvitteringer, oppsummeringer …) sender think:false til Ollama (server/ollama-opts.js).
+  ['Lokal AI', { id: 'ailocal', scope: 'personal', domain: 'ollama.com', category: 'AI', help: 'Lokal AI (Ollama) i korte oppgaver som Glimt, rask time, logoer, kvitteringer og oppsummeringer. Tenkemodeller svarer mye raskere når de ikke tenker først.' }, [
+    ['ai_think', 'La modellen tenke før den svarer (tregere, men noen ganger smartere)', '0', false, 'bool'],
+  ]],
 ];
 
 // Gamle nøkkelnavn → nye (prompt 22). Lagrede verdier under det gamle navnet brukes til noe lagres under det nye,
@@ -196,7 +200,7 @@ export const PERSONAL_KEYS = new Set([...FIELDS.values()].filter((f) => f.person
 export const isPersonalKey = (k) => PERSONAL_KEYS.has(LEGACY[k] ?? k);
 // Ufarlige standarder for andre enn eieren (ingen adresser, nøkler eller e-post fra eierens miljø).
 const SAFE_DEF = { t212_env: 'live', sonarr_days: '14', radarr_days: '14', imapPort: '143', imapSecurity: 'starttls', imapFolder: 'Folders/Kvitteringer', imapDoneFolder: 'Folders/Kvitteringer/Lest',
-  chat_my_data: '0', chat_ask_cloud: '1', chat_theme: 'papir', logo_local_receipts: '1', logo_gemini: '1', logo_verify: '1' };
+  chat_my_data: '0', chat_ask_cloud: '1', chat_theme: 'papir', logo_local_receipts: '1', logo_gemini: '1', logo_verify: '1', ai_think: '0' };
 const defFor = (user, f) => (user === OWNER ? f.def ?? '' : SAFE_DEF[f.key] ?? '');
 
 // FinansHub krypterer sine hemmeligheter med «enc:» (finans/db.js). Kopierte verdier derfra åpnes her med samme nøkkel.

@@ -19,6 +19,7 @@ import { authOrToken } from './mobile.js';
 import { eventsFor, matchScore, normText } from './calendar.js';
 import { settings as fhSettings } from './finans/db.js';
 import { parseQuick, osloTodayISO } from '../public/js/quick-time.js';
+import { ollamaContent, ollamaPost, shortBody } from './ollama-opts.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const LLM_MS = 12_000;
@@ -52,10 +53,10 @@ async function ollama(prompt, user, json = false) {
   const st = fhSettings(user);
   const base = String(st.ollamaUrl ?? '').replace(/\/$/, '');
   if (!base) return null;
-  const r = await fetch(`${base}/api/generate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(LLM_MS),
-    body: JSON.stringify({ model: st.ollamaTextModel || st.ollamaModel, prompt, stream: false, ...(json ? { format: 'json' } : {}), options: { temperature: 0 }, keep_alive: '10m' }) });
+  const r = await ollamaPost((u, i) => fetch(u, i), `${base}/api/generate`,
+    shortBody({ model: st.ollamaTextModel || st.ollamaModel, prompt, stream: false, ...(json ? { format: 'json' } : {}), options: { temperature: 0 }, keep_alive: '10m' }, { user }), { signal: AbortSignal.timeout(LLM_MS) });
   if (!r.ok) throw new Error(`Ollama svarte ${r.status}`);
-  return String((await r.json())?.response ?? '').trim();
+  return ollamaContent(await r.json());
 }
 
 /* ---------------- Beskriv med Glimt ---------------- */

@@ -2,6 +2,23 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.27.0] – 19.10.2026 · prompt 33 – Kalender-appen
+- **Kalender er en egen app** for iPhone og Android, med eget ikon. Den bruker samme konto og data som Homelab, og du kan logge inn med Homelab-appen.
+  - Visninger: År, Måned, Uke, 3 dager, Dag, Liste og Søk, med ukenummer og vær. Sveip bytter periode.
+  - Sidemeny fra venstre med kalendere i farger, som kan slås av og på. Kalenderne er Personlig, Jobb, Studie, Familie, Helse, Bursdager og egne.
+  - **Glimt i ett felt nederst:** skriv «frisør 14.30 25.10», eller spør «finn ledig tid fredag» eller «oppsummer uka». Glimt-panelet viser tenkesteg, svar, hendelseskort og ledige tider, og du kan angre.
+  - Rød + for ny hendelse.
+  - Varsler med «Utsett 10 min» og «Vis vei». Bursdager varsles kl. 09:00, og frister 3 dager og 1 dag før.
+  - Mørkt tema: System, Lys eller Mørk.
+  - Widgets på iPhone: liten, medium, stor og låseskjerm. På Android og Samsung: 2×2, 2×2 mørk og 4×3.
+  - Alt som har med kalender å gjøre i Homelab-appen, åpner Kalender-appen på riktig dag eller hendelse.
+- **Prøveperiode-widgetene på Android** har fått forhåndsvisning i widget-galleriet. Samsung-variantene er på fra installasjonen.
+- **Raskere AI:** Glimt og andre korte AI-oppgaver svarer uten at modellen tenker først. Kontekst er 4096 tokens, så modellene får plass på et 8 GB skjermkort.
+  - I Chat er «Tenk før svar» en innstilling per samtale, av som standard.
+  - Innstillingen «La modellen tenke før den svarer» slår tenking på igjen for alt.
+- **Chat på web** åpnes alltid i fullskjerm.
+- **Innstillinger:** nye sider «Slik legger du til widget» og «Kalender-appen».
+
 ## [4.26.0] – 19.10.2026 · prompt 32
 - **Ny versjon uten Cmd+Shift+R:** nettleseren henter nye filer selv. Står en fane åpen når en ny versjon kommer, vises «Ny versjon av Nordlys er klar · Last inn på nytt». Fanen lastes automatisk på nytt når den har vært skjult og ingenting er ulagret.
 - **Domener:** Glimt oppsummerer domenene hvert døgn, og du kan be om en oppsummering når som helst. Nytt: statistikk fra **Google Search Console** (klikk, visninger, CTR, posisjon, søkeord og sider). Krever bare lesetilgang.

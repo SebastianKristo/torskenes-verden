@@ -12,6 +12,7 @@ import { _aiTest, logAi, aiTimeoutsOf, OLLAMA_KEEP_ALIVE } from './ai.js';
 import { hasGemini, geminiFetch } from './gemini-keys.js';
 import { audit } from './ai-audit.js';
 import { ocrTools } from '../ocr-fallback.js';
+import { ollamaPost, shortBody, stripThink } from '../ollama-opts.js';
 import { SUB_CATEGORIES, categoryFor } from './subs.js';
 import { domainFor } from './enrich.js';
 
@@ -221,7 +222,7 @@ export function decodeImageField(v) {
 /** Fjerner <think>…</think> og alt før første { og etter siste }, og parser. null hvis ugyldig. */
 export function parseModelJson(text) {
   if (text && typeof text === 'object') return text;
-  let t = String(text ?? '').replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/<\/?think>/gi, '');
+  let t = stripThink(text);
   const a = t.indexOf('{'), b = t.lastIndexOf('}');
   if (a < 0 || b <= a) return null;
   t = t.slice(a, b + 1);
@@ -278,9 +279,8 @@ async function readOllama(img) {
   const t0 = Date.now();
   let res;
   try {
-    res = await F(`${base()}/api/chat`, { method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(scaleMs(OLLAMA_TIMEOUT_S * 1000)),
-      body: JSON.stringify({ model, stream: false, format: 'json', keep_alive: OLLAMA_KEEP_ALIVE, options: { temperature: 0, num_ctx: 8192 },
-        messages: [{ role: 'user', content: PROMPT, images: [img.buf.toString('base64')] }] }) });
+    res = await ollamaPost(F, `${base()}/api/chat`, shortBody({ model, stream: false, format: 'json', keep_alive: OLLAMA_KEEP_ALIVE, options: { temperature: 0, num_ctx: 8192 },
+        messages: [{ role: 'user', content: PROMPT, images: [img.buf.toString('base64')] }] }), { signal: AbortSignal.timeout(scaleMs(OLLAMA_TIMEOUT_S * 1000)) });
   } catch (e) {
     const ms = Date.now() - t0;
     const timeout = e.name === 'TimeoutError' || e.name === 'AbortError';

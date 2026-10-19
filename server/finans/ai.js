@@ -3,6 +3,7 @@
 import { settings, secret, db, me, addUserCol } from './db.js';
 import { geminiFetch, hasGemini, usableKeys } from './gemini-keys.js';
 import { cleanBbox } from './bbox30.js';
+import { ollamaPost, shortBody, stripThink } from '../ollama-opts.js';
 import { ocrEnabled, ocrReceipt, cropImage, decodeBarcodes, ocrTools } from '../ocr-fallback.js';
 
 export const PROMPT = (cats) => `Du leser en norsk kvittering. Returner KUN JSON etter skjemaet.
@@ -280,10 +281,9 @@ async function ollamaChat(st, messages, schema, { timeout, temperature, model, s
   arm();
   try {
     let res;
-    try { res = await fetch(`${base}/api/chat`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctrl.signal,
-      body: JSON.stringify({ model: useModel, stream: true, keep_alive: OLLAMA_KEEP_ALIVE, format: forOllama(lowerTypes(schema)), options: { temperature }, messages }),
-    }); } catch (e) { ollamaProbe.at = 0; throw fail(netErr('Ollama', base, e)); }
+    try { res = await ollamaPost((u, i) => fetch(u, i), `${base}/api/chat`,
+      shortBody({ model: useModel, stream: true, keep_alive: OLLAMA_KEEP_ALIVE, format: forOllama(lowerTypes(schema)), options: { temperature }, messages }),
+      { signal: ctrl.signal }); } catch (e) { ollamaProbe.at = 0; throw fail(netErr('Ollama', base, e)); }
     if (!res.ok) throw await httpErr('Ollama', res);
     // NDJSON: én linje per bit, {"message":{"content":"…"},"done":false} … {"done":true}. Et vanlig JSON-svar (én linje) virker også.
     let content = '', buf = '', err = null;
@@ -309,7 +309,7 @@ async function ollamaChat(st, messages, schema, { timeout, temperature, model, s
     } catch (e) { throw fail(netErr('Ollama', base, e)); }
     take(buf + dec.decode());
     if (err) throw err;
-    return { model: useModel, data: parseJson('Ollama', content) };
+    return { model: useModel, data: parseJson('Ollama', stripThink(content)) };
   } finally { clearTimeout(idle); clearTimeout(total); signal?.removeEventListener('abort', onUser); }
 }
 

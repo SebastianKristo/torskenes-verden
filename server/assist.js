@@ -73,6 +73,7 @@ import { aliasesOf, aliasPrompt, parseMemoryIntent, learnFromAssist, typeOfWord,
 import { parseTrial, serviceOf, trialSentence, MONTHS, WEEKDAYS, addDaysISO, daysBetween } from '../public/js/trial-parse.js';
 import * as integrations from './integrations.js';
 import { calendarAnswer } from './kalender33.js'; // prompt 33: source:'calendar'
+import { ollamaContent, ollamaPost, shortBody } from './ollama-opts.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const ext = MOCK ? await import('./mock.js') : integrations;
@@ -361,12 +362,11 @@ async function ollamaText(qText, user) {
   const st = fhSettings(user);
   const base = String(st.ollamaUrl ?? '').replace(/\/$/, '');
   if (!base) throw new Error('Ollama er ikke satt opp');
-  const r = await fetch(`${base}/api/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(LOCAL_LLM_MS),
-    body: JSON.stringify({ model: st.ollamaTextModel || st.ollamaModel, stream: false, keep_alive: '10m', options: { temperature: 0.3, num_predict: 160 },
-      messages: [{ role: 'system', content: localSystem(user) }, { role: 'user', content: qText }] }) });
+  const r = await ollamaPost((u, i) => fetch(u, i), `${base}/api/chat`,
+    shortBody({ model: st.ollamaTextModel || st.ollamaModel, stream: false, keep_alive: '10m', options: { temperature: 0.3, num_predict: 160 },
+      messages: [{ role: 'system', content: localSystem(user) }, { role: 'user', content: qText }] }, { user }), { signal: AbortSignal.timeout(LOCAL_LLM_MS) });
   if (!r.ok) throw new Error(`Ollama svarte ${r.status}`);
-  const j = await r.json();
-  return String(j?.message?.content ?? j?.response ?? '').trim();
+  return ollamaContent(await r.json());
 }
 /** Prompt 33: systemprompten til LOKAL Ollama får brukerens egne alias (aldri Gemini/sky). */
 export function localSystem(user) {

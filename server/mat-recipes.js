@@ -21,6 +21,7 @@ import { settings, secret } from './finans/db.js';
 import { sniffMime } from './finans/scan.js';
 import { readJson, bad, str, MOCK, aiJson } from './homeos-common.js';
 import { geminiFetch, hasGemini } from './finans/gemini-keys.js';
+import { ollamaContent, ollamaPost, shortBody } from './ollama-opts.js';
 
 const ROOT = resolve(config.dataDir, 'mat');
 const rid = () => randomBytes(6).toString('hex');
@@ -334,12 +335,11 @@ async function visionJson(buf, mime, prompt, schema) {
         return { provider: 'Gemini', data: JSON.parse(text) };
       }
       const lowerSchema = (s) => (Array.isArray(s) ? s.map(lowerSchema) : s && typeof s === 'object' ? Object.fromEntries(Object.entries(s).filter(([, v]) => v !== undefined).map(([k, v]) => [k, k === 'type' ? String(v).toLowerCase() : lowerSchema(v)])) : s);
-      const res = await fetch(`${st.ollamaUrl.replace(/\/$/, '')}/api/chat`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(Number(process.env.OLLAMA_TIMEOUT ?? 120) * 1000),
-        body: JSON.stringify({ model: st.ollamaModel, stream: false, format: lowerSchema(schema), options: { temperature: 0.1 }, messages: [{ role: 'user', content: prompt, images: [buf.toString('base64')] }] }),
-      });
+      const res = await ollamaPost((u, i) => fetch(u, i), `${st.ollamaUrl.replace(/\/$/, '')}/api/chat`,
+        shortBody({ model: st.ollamaModel, stream: false, format: lowerSchema(schema), options: { temperature: 0.1 }, messages: [{ role: 'user', content: prompt, images: [buf.toString('base64')] }] }),
+        { signal: AbortSignal.timeout(Number(process.env.OLLAMA_TIMEOUT ?? 120) * 1000) });
       if (!res.ok) throw new Error(`Ollama svarte ${res.status}`);
-      return { provider: 'Ollama', data: JSON.parse((await res.json()).message?.content ?? '') };
+      return { provider: 'Ollama', data: JSON.parse(ollamaContent(await res.json())) };
     } catch (e) {
       errors.push(`${p === 'gemini' ? 'Gemini' : 'Ollama'}: ${e.name === 'TimeoutError' ? 'svarte ikke i tide' : e.cause?.code ? `kan ikke nås (${e.cause.code})` : e.message}`);
     }

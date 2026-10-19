@@ -1368,7 +1368,7 @@ api.put('/settings', W, async (c) => {
 });
 // Samme innstillinger som i /bootstrap (prompt 23: også for appene, som leser aiTimeouts her). Hemmeligheter sendes aldri ut.
 // Flatt som før (bakoverkompatibelt), pluss server:{…} (felles serveroppsett, bare admin kan endre) og user:{…} (brukerens egne).
-const P27_BOOL = ['chat_my_data', 'chat_ask_cloud', 'logo_local_receipts', 'logo_gemini', 'logo_verify'];
+const P27_BOOL = ['chat_my_data', 'chat_ask_cloud', 'logo_local_receipts', 'logo_gemini', 'logo_verify', 'ai_think'];
 const P27_TEXT = ['chat_default_model', 'chat_theme'];
 function p27Out(u) {
   const o = {};

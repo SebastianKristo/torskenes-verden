@@ -24,6 +24,7 @@ import { audit } from './ai-audit.js';
 import { validDomain } from './enrich.js';
 import { matchMerchant, filePath as libraryFile } from '../logos/match.js';
 import { ocrTools } from '../ocr-fallback.js';
+import { ollamaContent, ollamaPost, shortBody } from '../ollama-opts.js';
 
 const run = promisify(execFile);
 const q = (sql) => db.prepare(sql);
@@ -212,11 +213,12 @@ export async function brregDomain(name, orgnr) {
 async function ollamaLogoBox(image) {
   if (ollamaBox) return ollamaBox(image);
   const st = settings();
-  const r = await F(`${st.ollamaUrl.replace(/\/$/, '')}/api/chat`, { method: 'POST', headers: { 'content-type': 'application/json' }, timeout: aiTimeoutsOf().ollama * 1000,
-    body: JSON.stringify({ model: st.ollamaModel, stream: false, format: { type: 'object', properties: { funnet: { type: 'boolean' }, x1: { type: 'number' }, y1: { type: 'number' }, x2: { type: 'number' }, y2: { type: 'number' } }, required: ['funnet'] },
-      options: { temperature: 0 }, messages: [{ role: 'user', content: 'Finn butikkens logo øverst på kvitteringen. Svar KUN med JSON {"funnet":true,"x1":..,"y1":..,"x2":..,"y2":..} (piksler). Ingen logo: {"funnet":false}.', images: [image.toString('base64')] }] }) });
+  const r = await ollamaPost(F, `${st.ollamaUrl.replace(/\/$/, '')}/api/chat`,
+    shortBody({ model: st.ollamaModel, stream: false, format: { type: 'object', properties: { funnet: { type: 'boolean' }, x1: { type: 'number' }, y1: { type: 'number' }, x2: { type: 'number' }, y2: { type: 'number' } }, required: ['funnet'] },
+      options: { temperature: 0 }, messages: [{ role: 'user', content: 'Finn butikkens logo øverst på kvitteringen. Svar KUN med JSON {"funnet":true,"x1":..,"y1":..,"x2":..,"y2":..} (piksler). Ingen logo: {"funnet":false}.', images: [image.toString('base64')] }] }),
+    { timeout: aiTimeoutsOf().ollama * 1000 });
   if (!r.ok) return null;
-  try { return JSON.parse((await r.json()).message?.content ?? 'null'); } catch { return null; }
+  try { return JSON.parse(ollamaContent(await r.json()) || 'null'); } catch { return null; }
 }
 async function cropFromReceipt(receiptId, u, key) {
   const r = q('SELECT file, scan, mime FROM fh_receipts WHERE id=? AND user_id=?').get(String(receiptId), u);

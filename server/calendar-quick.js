@@ -24,6 +24,7 @@ import { settings } from './finans/db.js';
 import { aiTimeoutsOf, _aiTest, logAi } from './finans/ai.js';
 import { parseQuick, quickLabel, osloTodayISO, TYPES, DURATION, NO_DATE, memoryMatch, aliasTitle, isNoiseLine, senderOf } from '../public/js/quick-time.js';
 import { aliasesOf, aliasPrompt, setContext, touchMemory } from './glimt-memory.js'; // prompt 33: «Glimt husker»
+import { ollamaContent, ollamaPost, shortBody } from './ollama-opts.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const ORIGIN = 'AI · rask time';
@@ -83,11 +84,11 @@ async function ollamaDefault(prompt, user) {
   const ms = aiTimeoutsOf(st).ollama * 1000 * _aiTest.scale;
   const t0 = Date.now();
   try {
-    const r = await fetch(`${base}/api/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(ms),
-      body: JSON.stringify({ model, stream: false, format: 'json', options: { temperature: 0 }, messages: [{ role: 'user', content: prompt }] }) });
+    const r = await ollamaPost((u, i) => fetch(u, i), `${base}/api/chat`,
+      shortBody({ model, stream: false, format: 'json', options: { temperature: 0 }, messages: [{ role: 'user', content: prompt }] }, { user }), { signal: AbortSignal.timeout(ms) });
     if (!r.ok) throw new Error(`Ollama svarte ${r.status}`);
     const j = await r.json();
-    const content = String(j?.message?.content ?? j?.response ?? '').trim().replace(/^```(?:json)?\s*/i, '').replace(/```$/, '');
+    const content = ollamaContent(j).replace(/^```(?:json)?\s*/i, '').replace(/```$/, '');
     const data = JSON.parse(content);
     try { runAsUser(user, () => logAi({ task: 'calendar-quick', engine: 'ollama', model, promptLen: prompt.length, ms: Date.now() - t0 })); } catch { /* bare logg */ }
     return data;
