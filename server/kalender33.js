@@ -83,7 +83,8 @@ import { askCalendar } from './calendar-glimt.js';
 import { weatherFull, wmoText, iconOf, PLACES } from './weather-full.js';
 import { aliasesOf, typeOfWord, eventHitsAlias } from './glimt-memory.js';
 import { parseQuick, osloTodayISO } from '../public/js/quick-time.js';
-import { parseDay } from './parse-day35.js'; // prompt 35: felles dag-tolkning
+import { parseDay, normDayText } from './parse-day35.js'; // prompt 35: felles dag-tolkning
+import { attachGeo, parseIntent37, schoolTestAnswer } from './kal37.js'; // prompt 37
 import { extCalendarsOf, mountExt, patchExt, removeExt, isExtId, shades } from './kalender35.js'; // prompt 35: iCal og Home Assistant
 import { googleKalApi, googleCalendarsOf, isGoogleCalId, patchGoogleCal, removeGoogleCal } from './kalender36g.js'; // prompt 36b: Google-kalendere
 import { extractPlace, placeWeather } from './weather35.js'; // prompt 35: været for et sted
@@ -542,6 +543,13 @@ const REM_TEXT = { '15m': '15 min før', '1h': '1 t før', day: '1 dag før' };
 const evTime = (e) => (e.allDay ? osloAt(e.date) : Date.parse(e.start));
 const sortEv = (a, b) => evTime(a) - evTime(b) || String(a.title).localeCompare(String(b.title), 'nb');
 
+/** Prompt 37: «i morgen?», «og fredag?» – bare et dag-ord (med spørsmålstegn) betyr «hva skjer da». */
+export function bareDay37(text, today) {
+  const d = parseDay(text, today);
+  if (!d) return false;
+  const rest = normDayText(text).replace(` ${d.word} `, ' ').replace(/\b(og|da|enn|hva med|så|på|om)\b/g, ' ').trim();
+  return rest.length === 0;
+}
 /** Dagen spørsmålet gjelder (fasitens dayOf), eller null. Prompt 35: felles parseDay() (i morgen?/imorgen/tomorrow/…). */
 export function dayOfQuestion(text, today) {
   return parseDay(text, today)?.date ?? null;
@@ -604,6 +612,7 @@ export async function createFromText(user, text, today, nowMin = oslo(Date.now()
   const ev = await createEvent(user, { ...r.value, origin: 'Glimt · Kalender' });
   setEventCalendar(user, ev.id, appCal);
   decorate(user, [ev]);
+  await attachGeo(user, ev, { place: pq.place ?? null, text }); // prompt 37: adresse + kart når Glimt legger til
   changed(user, 'created', ev.id);
   return { event: ev, appCalendar: appCal };
 }
@@ -635,14 +644,20 @@ export async function calendarAnswer(user, text, { today = osloTodayISO(), now =
     const L = (await load(today, addDays(today, 365))).filter((e) => e.appCalendar === 'bursdager' || e.type === 'bursdag').sort(sortEv).slice(0, 3);
     r = { intent: 'calendar.search', tools: ['calendar.search'], steps: labels, events: L,
       text: L.length ? `De neste bursdagene: ${joinNo(L.map((e) => `**${e.title.replace(/ har bursdag$/, '')}** ${relDay(e.date, today)}`))}.` : 'Ingen bursdager de neste ukene.' };
-  } else if (/frist|eksamen|innlevering|oblig|prøve/.test(ql) && isQuestion(text)) {
+  } else if (parseIntent37(text).schoolTest && (isQuestion(text) || /^neste\b/.test(ql))) {
+    // Prompt 37: «Neste prøve på skolen» er en skoleprøve i Studie, aldri en prøveperiode (Viaplay-prøven slutter).
+    const labels = ['Ser i Studie', 'Finner prøver og eksamener'];
+    step(labels, 'calendar.search');
+    const a = schoolTestAnswer(await load(today, addDays(today, 180)), today, now);
+    r = { intent: 'calendar.search', tools: ['calendar.search'], steps: labels, events: a.events, text: a.text };
+  } else if (/frist|eksamen|innlevering|oblig|prøve/.test(ql) && isQuestion(text) && !parseIntent37(text).trial) {
     const labels = ['Ser i Studie', 'Sorterer frister'];
     step(labels, 'calendar.search');
     const L = (await load(today, addDays(today, 120))).filter((e) => e.type === 'prove' || e.type === 'innl').filter((e) => !(e.allDay && e.date < today)).sort(sortEv).slice(0, 4);
     const nm = (e) => e.title.replace(/^Frist:\s*/i, '');
     r = { intent: 'calendar.search', tools: ['calendar.search'], steps: labels, events: L,
       text: L.length ? `Neste frist er **${nm(L[0])}** ${relDay(L[0].date, today)}.${L.length > 1 ? ` Etter det: ${L.slice(1).map((e) => `${nm(e)} ${relDay(e.date, today)}`).join(', ')}.` : ''}` : 'Ingen frister fremover.' };
-  } else if (/(oppsummer|hva skjer|hva har jeg|program|plan(er|en)?\b|hvordan ser|hva står|dagen min|uka mi)/.test(ql)) {
+  } else if (/(oppsummer|hva skjer|hva har jeg|program|plan(er|en)?\b|hvordan ser|hva står|dagen min|uka mi|what'?s on|whats on)/.test(ql) || bareDay37(text, today)) {
     if (/uka|uke|denne uken|neste uke/.test(ql)) {
       const d0 = /neste uke/.test(ql) ? addDays(today, 7 - ((wdOf(today) + 6) % 7)) : today, d1 = addDays(d0, 6);
       const labels = ['Leser 7 dager', 'Finner travleste dag', 'Skriver oppsummering'];

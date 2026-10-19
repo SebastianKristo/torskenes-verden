@@ -67,6 +67,7 @@ export function trialOut(row, today = osloTodayISO()) {
   return { id: row.id, service: row.service, endsAt: row.ends_at, priceAfter: price, priceLabel: price != null ? `${Number.isInteger(price) ? price : String(price.toFixed(2)).replace('.', ',')} kr/mnd` : '',
     remindOffsetsDays: t.remindOffsetsDays, status: row.status, created: row.created, daysLeft: daysBetween(today, row.ends_at), badge: trialBadge(row.ends_at, today),
     cancelUrl: row.cancel_url || cancelUrlFor(row.service), snoozeUntil: row.snooze_until ?? null, subscriptionId: row.subscription_id ?? null,
+    res: row.status === 'kept' ? 'beholdt' : row.status === 'cancelled' ? 'avsluttet' : null, kind: 'trial', // prompt 37: historikk + kalender
     calendarEventId: `trial-${row.id}`, notifications: row.status === 'active' ? notificationsOf(row) : [] };
 }
 

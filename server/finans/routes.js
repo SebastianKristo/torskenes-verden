@@ -32,6 +32,7 @@ import * as backup from './backup.js';
 import * as subsOs from './subs.js';
 import { mountP27, mountP27Public } from './p27-routes.js';
 import { mountTrials, trialsFor } from './trials.js'; // prompt 31: gratis prøveperioder
+import { mountShared37, visibleSubs, decorateSub, asShare, editableSub } from './shared37.js'; // prompt 37: delte abonnementer
 import { subscriptionAnswer, mountSubsAsk } from './subs-ask32.js'; // prompt 32: AI-søk med abonnementer
 import { findLogo } from './logo-lookup.js';
 import { storeLines, receiptLines, matchLines, annotateSearch } from './highlight30.js';
@@ -492,6 +493,7 @@ const R = need('finance:read'), W = need('finance:write');
 mountSubsAsk(api, { R, W }); // prompt 32: /subscriptions/knowledge (før /subscriptions/:id)
 mountP27(api, { R, W }); // prompt 27: /forslag, /ai-audit, /merchants/logo, /receipts/:id/logo/ai, /subscriptions/from-screenshot
 // Prompt 31: /subscriptions/trials (før /subscriptions/:id). «Behold» gjør prøven om til et vanlig abonnement.
+mountShared37(api, { W, subOut }); // prompt 37: /subscriptions/:id/members og /leave
 mountTrials(api, { R, W, toSubscription: (u, t) => subOut(q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,domain,charge_day,category,created,user_id) VALUES(?,?,?,?,?,?,?,?,?,?,?) RETURNING *')
   .get(t.service.slice(0, 80), '', Math.round((t.price_after ?? 0) * 100), 'monthly', t.ends_at, 'Fra prøveperiode', domainFor(t.service), +t.ends_at.slice(8, 10), subsOs.categoryFor(t.service), Date.now(), u)) });
 // Original + JPEG-kopi + miniatyr i samme forespørsel; et 48 MP-bilde fra iPhone kan alene være over 15 MB.
@@ -1617,10 +1619,15 @@ function dateIn(v) {
 }
 
 api.get('/subscriptions', R, (c) => {
-  const raw = subsOs.priceCheck(q('SELECT * FROM fh_subscriptions WHERE user_id=? ORDER BY active DESC, COALESCE(next_date, \'9999\'), name').all(c.get('user')));
-  const rows = raw.map(subOut);
+  const uid = c.get('user');
+  const ownRows = subsOs.priceCheck(q('SELECT * FROM fh_subscriptions WHERE user_id=? ORDER BY active DESC, COALESCE(next_date, \'9999\'), name').all(uid));
+  // Prompt 37: også delte abonnementer brukeren er medlem av; totaler, graf og kalender bruker «din del».
+  const sharedRows = visibleSubs(uid).filter((x) => x.user_id !== uid);
+  const full = [...ownRows, ...sharedRows].sort((a, b) => (b.active - a.active) || String(a.next_date ?? '9999').localeCompare(String(b.next_date ?? '9999')) || String(a.name).localeCompare(String(b.name), 'nb'));
+  const rows = full.map((x) => decorateSub(subOut(x), x, uid));
+  const raw = full.map((x) => asShare(x, uid));
   const act = rows.filter((s) => s.active);
-  const monthly = act.reduce((a, s) => a + s.monthly, 0);
+  const monthly = act.reduce((a, s) => a + s.myShareMonthly, 0);
   const now = new Date(), year = +c.req.query('year') || now.getFullYear();
   const ym = (d) => d.toLocaleDateString('sv-SE').slice(0, 7);
   const month = /^\d{4}-\d{2}$/.test(c.req.query('month') ?? '') ? c.req.query('month') : ym(now);
@@ -1631,12 +1638,15 @@ api.get('/subscriptions', R, (c) => {
   const mStart = new Date(now.getFullYear(), now.getMonth(), 1), mIso = mStart.toLocaleDateString('sv-SE');
   const prevMonthly = raw.filter((s) => s.active && s.created < mStart.getTime())
     .reduce((a, s) => a + (s.prev_price && s.price_changed >= mIso ? s.prev_price : s.price) / (CYCLES[s.cycle] ?? 1), 0) / 100;
-  return c.json({ items: rows, monthly: Math.round(monthly * 100) / 100, yearly: Math.round(act.reduce((a, x) => a + x.yearly, 0) * 100) / 100,
-    lowUse: Math.round(act.filter((s) => s.lowUse).reduce((a, s) => a + s.monthly, 0) * 100) / 100,
+  const trials = trialsFor(uid);
+  const ifKept = trials.reduce((a, t) => a + (t.priceAfter ?? 0), 0);
+  return c.json({ items: rows, monthly: Math.round(monthly * 100) / 100, yearly: Math.round(act.reduce((a, x) => a + x.myShareMonthly * 12, 0) * 100) / 100,
+    lowUse: Math.round(act.filter((s) => s.lowUse).reduce((a, s) => a + s.myShareMonthly, 0) * 100) / 100,
+    trialsSummary: { count: trials.length, ifKept: Math.round(ifKept * 100) / 100, label: trials.length ? `+${Math.round(ifKept)} kr/mnd hvis du beholder` : null }, // prompt 37
     categories: subsOs.SUB_CATEGORIES, year, byMonth: subsOs.byMonth(raw, year), health: subsOs.health(raw), savings: subsOs.savings(raw),
     prevMonthly: Math.round(prevMonthly * 100) / 100, upcoming: subsOs.upcoming(raw, 7), month, thisMonth, monthTotal: sum(thisMonth), prevMonthTotal: sum(subsOs.chargesInMonth(raw, prevMonth)),
     today: now.toLocaleDateString('sv-SE'),
-    trials: trialsFor(c.get('user')) }); // prompt 31: aktive prøveperioder («Prøve · 12 dager igjen»)
+    trials }); // prompt 31: aktive prøveperioder («Prøve · 12 dager igjen»)
 });
 api.get('/subscriptions/candidates', R, (c) => c.json(subsOs.candidates(q('SELECT * FROM fh_subscriptions WHERE user_id=?').all(c.get('user')))
   .map((x) => ({ ...x, domain: x.domain || domainFor(x.merchant) }))));
@@ -1673,7 +1683,7 @@ api.post('/subscriptions', W, async (c) => {
 });
 api.post('/subscriptions/receipts', need('receipts:write'), upload, (c) => receiptUpload(c, 'sub'));
 api.patch('/subscriptions/:id', W, async (c) => {
-  const cur = own('fh_subscriptions', +c.req.param('id'));
+  const cur = editableSub(+c.req.param('id'), c.get('user')); // prompt 37: eier eller betaler av et delt abonnement
   if (!cur) return c.notFound();
   const b = await c.req.json();
   const n = { ...cur };
@@ -1698,7 +1708,7 @@ api.patch('/subscriptions/:id', W, async (c) => {
   if (b.domain !== undefined) { n.domain = validDomain(b.domain); if (n.domain) learnDomain(n.name, n.domain); }
   const s = q('UPDATE fh_subscriptions SET name=?, plan=?, price=?, cycle=?, next_date=?, usage_note=?, low_use=?, active=?, domain=?, charge_day=?, bill_month=?, category=?, prev_price=?, price_changed=?, logo_url=? WHERE id=? RETURNING *')
     .get(n.name, n.plan, n.price, n.cycle, n.next_date, n.usage_note, n.low_use, n.active, n.domain, n.charge_day, n.bill_month ?? null, n.category, n.prev_price, n.price_changed, n.logo_url ?? null, cur.id);
-  return c.json(subOut(s));
+  return c.json(decorateSub(subOut(s), s, c.get('user')));
 });
 api.delete('/subscriptions/:id', W, async (c) => {
   const id = +c.req.param('id');

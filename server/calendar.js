@@ -408,6 +408,7 @@ export async function eventsFor(user, fromDate, toDate) {
   events = applyRules(events).filter((e) => (e.allDay ? e.end > fromDate && e.date <= toDate : e.date >= fromDate && e.date <= toDate));
   for (const s of sources) if (s.ok) s.count = events.filter((e) => e.source === s.id).length; // antall i perioden, etter reglene
   if (decorator) { try { decorator(user, events); } catch (e) { console.warn('[kalender] app-kalendere:', e.message); } }
+  for (const fn of decorators37) { try { fn(user, events); } catch (e) { console.warn('[kalender] dekorasjon:', e.message); } } // prompt 37: fagfarger, kind, adresse/kart
   return { events, sources, ctx };
 }
 // Prompt 33 (SERVER33): Kalender-appen setter appCalendar/appColor på hver hendelse (server/kalender33.js registrerer seg her).
@@ -416,6 +417,9 @@ const extraSources = [];
 /** Prompt 35: fn(user, fromDate, toDate, fromMs, toMs) → {id, name, events:[hendelse]} | null */
 export const addEventSource = (fn) => { extraSources.push(fn); };
 export const setEventDecorator = (fn) => { decorator = fn; };
+const decorators37 = [];
+/** Prompt 37: flere dekoratører etter app-kalenderne (kal37.js). */
+export const addEventDecorator = (fn) => { decorators37.push(fn); };
 
 const minutes = (ms) => Math.max(0, Math.round(ms / 60_000));
 const durText = (m) => (m < 60 ? `${m} min` : m % 60 ? `${Math.floor(m / 60)} t ${m % 60} min` : `${m / 60} t`);

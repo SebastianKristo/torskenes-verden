@@ -211,7 +211,10 @@ async function runJob(id) {
   progressEvent(user, id, 3);
   try {
     const ev = await runAsUser(user, () => createEvent(user, { ...v.value, origin: ORIGIN }));
-    const result = { eventId: ev?.id ?? null, title: v.value.title, date: v.value.date, start: v.value.start, end: v.value.end, place: v.value.location || null, label: quickLabel({ date: v.value.date, start: v.value.start }) };
+    // Prompt 37: adresse og kart når Glimt legger til (fra Homelab-appen).
+    try { const { attachGeo } = await import('./kal37.js'); if (ev) await attachGeo(user, ev, { place: v.value.location || null, text }); } catch { /* geokoding er best effort */ }
+    const result = { eventId: ev?.id ?? null, title: v.value.title, date: v.value.date, start: v.value.start, end: v.value.end, place: v.value.location || null, label: quickLabel({ date: v.value.date, start: v.value.start }),
+      ...(ev?.address ? { address: ev.address, map: ev.map } : {}) };
     setJob(id, { state: 'done', result: JSON.stringify(result), error: null, found: null, engine });
     // Prompt 33: «det var frisør» i Glimt gjelder denne avtalen.
     setContext(user, { source: 'quick', jobId: id, eventId: result.eventId, title: result.title, text, business: r.business ?? senderOf(text) ?? null, type: r.type ?? 'annet' });

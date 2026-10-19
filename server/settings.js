@@ -25,6 +25,7 @@ function openSecret(v) {
   } catch { return ''; }
 }
 
+export { sealSecret, openSecret }; // prompt 37: tracking37.js (husstandens sporingsnøkler)
 const e = (k, d = '') => process.env[k] ?? d;
 
 const DEFAULT_ROUTES = 'Amagerveien (6354) > Majorstuen (58381)\nFrydenlund (6258) > Majorstuen (58381)\nMajorstuen (58381) > Amagerveien (6354)\nMajorstuen (58381) > Holbergs plass (63280)';

@@ -759,3 +759,13 @@ api.get('/photo/:userId', async (c) => {
 });
 
 export default api;
+
+/** Prompt 37 («Hvor er Ingrid?»): alle personer i Familie med siste posisjon etter personvernet (last=null når de ikke deler
+ *  med deg). Rå koordinater er med bare når seeren har lov å se dem (samme som GET /api/family). */
+export function familyPeople37(me) {
+  seedMock(me);
+  const out = listUsers().map((u) => ({ ...memberOut(u, me), visible: canSee(me, u.id) }));
+  if (MOCK) for (const m of MOCKS) out.push({ ...mockMember(m, me), visible: m.sharing === 'on' });
+  return out.map((m) => ({ userId: m.userId, name: m.name, username: m.username, color: m.color, self: !!m.self, sharing: m.sharing, visible: m.visible,
+    precision: m.precision, last: m.visible ? m.last : null, photoUrl: m.photoUrl ?? m.avatarUrl ?? null, mock: !!m.mock }));
+}

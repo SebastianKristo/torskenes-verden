@@ -46,6 +46,9 @@ import { notifyUser } from './notify.js';
 import { run as aiRun } from './ai-run.js';
 import { glimtSettingsOf, cleanGlimtPatch, saveGlimtSettings, hostOf, charName, proxied, engineReady, speak } from './glimt35.js'; // prompt 35
 import { trialCompact } from './trial-widgets.js'; // prompt 35: prøveperioder i briefen
+import { todosForBrief } from './tasks-glimt37.js'; // prompt 37: Gjøremål-kortet
+import { bibleForBrief } from './bible37.js'; // prompt 37: dagens bibelvers (bare med modulen)
+import { profileName } from './profiles37.js'; // prompt 37: profilnavnet i hilsenen
 
 const MOCK = process.env.MOCK_DATA === '1';
 const WX_EMOJI = { clear: '☀️', partly: '⛅', cloudy: '☁️', fog: '🌫️', drizzle: '🌦️', rain: '🌧️', sleet: '🌨️', snow: '❄️', thunder: '⛈️' };
@@ -92,7 +95,7 @@ export const _setBriefLlm = (fn) => { llmImpl = fn; };
 
 // Prompt 35: notify/guide ligger i Glimt-innstillingene (/api/glimt/settings); home bare her. /settings er alias med den gamle formen.
 const settingsOf = (u) => { const g = glimtSettingsOf(u), old = kv.get(u, 'brief_settings', {}) ?? {}; return { notify: g.notify, guide: g.guide, home: old.home !== false }; };
-const nameOf = (u) => { try { const r = db.prepare('SELECT name, username FROM users WHERE id=?').get(u); return (r?.name || r?.username || '').split(' ')[0] || null; } catch { return null; } };
+const nameOf = (u) => { try { const p = profileName(u); if (p) return p.split(' ')[0]; const r = db.prepare('SELECT name, username FROM users WHERE id=?').get(u); return (r?.name || r?.username || '').split(' ')[0] || null; } catch { return null; } };
 
 async function weatherPart(u, now) {
   const list = kv.get(u, 'wx_places', null);
@@ -235,6 +238,11 @@ export async function buildBrief(u, { kind = null, t = Date.now(), llm = false }
   const name = nameOf(u);
   const b = { kind: k, title: TITLES[k], kicker: `GLIMT · ${TITLES[k].toUpperCase()}`, greeting: `${GREET[k]}${name ? `, ${name}` : ''}.`, weather, ...ev, news, packages,
     trials: trialsPart(u, now.date), dinner: dinnerPart(u, now.date) };
+  // Prompt 37: Vær-kortet åpner Vær (popup over briefen), Gjøremål-kortet og bibelverset (bare med modulen).
+  if (b.weather) b.weather.open = { route: 'vaer', overlay: true };
+  b.todos = todosForBrief(u) ?? { count: 0, overdue: 0, items: [], text: 'Ingen gjøremål i dag.' };
+  b.bible = bibleForBrief(u, k, t);
+  b.showKicker = false; // etiketten «GLIMT · KVELDSBRIEF» er fjernet i klientene (kicker beholdes for eldre klienter)
   b.chips = [weather ? `${weather.now.temp}° ${lc(weather.cond)}` : null, b.next ? `${b.next.title} ${b.next.time}` : null, news.length ? `${news.length} nyheter` : null,
     b.trials[0] ? `${b.trials[0].service}-prøve ${b.trials[0].daysLabel}` : null].filter(Boolean);
   const cached = kv.get(u, cacheKey(k, now.date), null);

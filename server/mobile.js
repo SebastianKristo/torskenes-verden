@@ -172,6 +172,8 @@ const SCALAR = {
     && (v.n === undefined || (Number.isInteger(v.n) && v.n >= 1 && v.n <= 4)),
   kalReminders: (v) => !!v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length <= 1000
     && Object.entries(v).every(([k, r]) => k.length >= 1 && k.length <= 120 && !/[<>]/.test(k) && ['none', '15m', '1h', 'day'].includes(r)),
+  // Prompt 37: valg for Hjem-widgetene (størrelse/innstillinger per widget) fra appene, lagres som de er (maks 8 KB).
+  wopt: (v) => !!v && typeof v === 'object' && JSON.stringify(v).length <= 8192,
   subjectColors: (v) => !!v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length <= 60
     && Object.entries(v).every(([k, col]) => KAL_KEY.test(k) && typeof col === 'string' && /^#[0-9a-f]{6}$/i.test(col)),
 };

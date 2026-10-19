@@ -101,7 +101,7 @@ test('Huskeliste: egne lister, deling med navngitte personer, bare eieren deler 
   // Admin deler Handel med Ola.
   const sh = await A('/api/tasks/lists/handel/members', 'PUT', { userIds: [olaId] });
   assert.equal(sh.status, 200, sh.text);
-  assert.deepEqual(sh.body.list.members.map((m) => m.id), [olaId]);
+  assert.deepEqual(sh.body.list.members.filter((m) => m.role !== 'owner').map((m) => m.id), [olaId]); // prompt 37: eieren står først med role 'owner'
   const bl = (await B('/api/tasks/lists')).body.lists.find((l) => l.id === 'handel');
   assert.deepEqual([bl.mine, bl.owner, bl.ownerName, bl.shared], [false, adminId, 'Sebastian', true]);
   assert.ok((await B('/api/tasks')).body.items.some((x) => x.id === mine.id));

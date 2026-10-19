@@ -77,6 +77,9 @@ import { parseDay } from './parse-day35.js'; // prompt 35: felles dag-tolkning
 import { extractPlace, placeWeather, PlaceNotFound } from './weather35.js'; // prompt 35: været for et sted
 import { run as aiRun, routing as aiRouting, AiRunError, isCloud, providerOf, providerLabel } from './ai-run.js';
 import { isSunQuestion, daylight } from './sun36.js'; // prompt 36: dagslys lokalt
+import { whereIntent, whereAnswer } from './where37.js'; // prompt 37: «hvor er Ingrid?»
+import { parseIntent37, schoolTestAnswer } from './kal37.js'; // prompt 37: skoleprøve ≠ prøveperiode
+import { bareDay37 } from './kalender33.js'; // prompt 37: «i morgen?»
 
 const MOCK = process.env.MOCK_DATA === '1';
 const ext = MOCK ? await import('./mock.js') : integrations;
@@ -135,7 +138,7 @@ const RE = {
   next: /neste|når (er|skal|har)|når.*time/,
   nextWhat: /time|avtale|frisør|lege|tannlege|møte|trening|prøve|eksamen|hos\b/,
   weather: /v(æ|ae)r(et|meldingen)?\b|regn|paraply|grader|temperatur|snø|vind|sol(a|en)?\b|kaldt|varmt|jakke|ute i dag|i morgen.*(ute|tur)|\bweather\b|\bforecast\b/,
-  calDay: /hva (skjer|har jeg|står på)|kalender(en)?|planer|program(met)?\b|avtaler|opptatt|ledig/,
+  calDay: /hva (skjer|har jeg|står på)|kalender(en)?|planer|program(met)?\b|avtaler|opptatt|ledig|what'?s on/,
   departures: /når går|avgang(er|en)?|neste (buss|trikk|bane|t-bane|tog)|\bbuss(en)?\b|\btrikk(en)?\b|t-?bane(n)?\b|\btog(et)?\b/,
   packages: /pakke(n|r|ne)?\b|sending(en|er)?\b|sporing|levert|hentes/,
   finance: /(hva|hvor mye).*(brukt|bruke|bruker|brukte|kostet|handlet)|forbruk|utgifter/,
@@ -156,7 +159,7 @@ export const NAV = [
   [/domene/, 'domener', 'Domener', '/#/domener'],
   [/familie|posisjon|hvor er/, 'familie', 'Familie', '/#/familie'],
   [/middag|matplan|oppskrift|\bmat\b/, 'mat', 'Mat', '/#/matplan'],
-  [/huskeliste|handleliste|todo/, 'huskeliste', 'Huskeliste', '/#/huskeliste'],
+  [/huskeliste|handleliste|todo|to-do|gjøremål/, 'huskeliste', 'Gjøremål', '/#/huskeliste'], // prompt 37: «Gjøremål» (intern nøkkel huske)
   [/bursdag/, 'bursdager', 'Bursdager', '/#/bursdager'],
   [/\brom\b|satellitt|rombilde|mars-?rover/, 'rom', 'Rom', '/#/rom'],
   [/\bchat\b/, 'chat', 'Chat', '/#/chat'],
@@ -217,12 +220,17 @@ export async function classify(user, text, { today = osloTodayISO(), maxMs = 300
 /** Hvilket verktøy spørsmålet går til (uten å hente data). → intent */
 export function detectIntent(text, today = osloTodayISO()) {
   const n = String(text ?? '').toLowerCase();
+  if (whereIntent(text)) return 'family.where'; // prompt 37: før snarveien «hvor er → Familie»
   if (navTarget(text)) return 'nav';
   // Prompt 36: dagslys/soloppgang/solnedgang besvares lokalt (før avtaletolkning).
   if (isSunQuestion(text)) return 'sun.daylight';
   const asked = isQuestion(text);
   // Prøveperiode: «gratis», «trial», «prøveperiode», eller «prøve/avslutt/si opp» sammen med en tjeneste («Storytel prøve til 25.11»).
+  // Prompt 37: «Neste prøve på skolen» er en skoleprøve (Studie), ikke en prøveperiode.
+  const pi = parseIntent37(text);
+  if (pi.schoolTest && pi.schoolContext) return 'calendar.school';
   if (RE.trial.test(n) && (/gratis|trial|prøveperiode|prøvetid/.test(n) || serviceOf(text))) return 'trial.create';
+  if (bareDay37(text, today)) return 'calendar.day'; // «i morgen?»
   if (parseMemoryIntent(text)) return 'memory.add';
   if (RE.next.test(n) && RE.nextWhat.test(n)) return 'calendar.next';
   const pq = parseQuick(text, today);
@@ -339,7 +347,8 @@ async function toolCalendarNext(user, text, today) {
   const types = new Set(kw.map(typeOfWord).filter(Boolean));
   let aliases = [];
   try { aliases = types.size ? aliasesOf(user).filter((m) => types.has(m.type)) : []; } catch { /* */ }
-  const hits = events.filter((e) => (e.allDay ? e.date >= today : Date.parse(e.start) >= now - 5 * 60_000))
+  const schoolQ = parseIntent37(text).schoolTest; // prompt 37: «neste prøve» er aldri en prøveperiode
+  const hits = events.filter((e) => (e.allDay ? e.date >= today : Date.parse(e.start) >= now - 5 * 60_000)).filter((e) => !(schoolQ && (e.source === 'trials' || e.kind === 'trial')))
     .filter((e) => !kw.length || kw.some((w) => normText(`${e.title} ${e.room ?? ''}`).includes(normText(w))) || aliases.some((m) => eventHitsAlias(e, m)));
   const what = kw.length ? kw.join(' ') : '';
   if (!hits.length) return { text: `Fant ingen kommende ${what ? what + 'time' : 'time'} i kalenderen.`, source: 'Kalender', tool: 'Kalender', card: { k: 'calendar', date: today, wd: '', n: null, t: 'Neste', sub: 'Ingen treff', items: [] } };
@@ -399,6 +408,16 @@ function toolFinance(user, text, today) {
   const what = cat ? cat.toLowerCase() : 'alt';
   const t = rows.length ? `Du har brukt **${kr(total)}** på ${what} ${label}.${top[0] ? ` Mest hos ${top[0].name} (${kr(top[0].amount)}).` : ''}` : `Du har **ikke brukt noe** på ${what} ${label}.`;
   return { text: t, source: 'Finans', tool: 'Finans', card: { k: 'finance', total: Math.round(total * 100) / 100, currency: 'NOK', category: cat, period: { from, to, label }, count: rows.length, items: top } };
+}
+
+/** Prompt 37: neste skoleprøve/eksamen i Studie (aldri prøveperioder). */
+async function toolSchoolTest(user, today) {
+  const { events } = await runAsUser(user, () => eventsFor(user, today, addDaysISO(today, 180)));
+  const a = schoolTestAnswer(events, today);
+  const e = a.events[0];
+  const x = e ? new Date(e.date + 'T00:00:00Z') : null;
+  return { text: a.text, source: 'Kalender · Studie', tool: 'Kalender', events: a.events,
+    card: { k: 'calendar', date: e?.date ?? today, wd: x ? WEEKDAYS[x.getUTCDay()].slice(0, 3).toUpperCase() : '', n: x ? x.getUTCDate() : null, t: e ? dayWord(e.date, today) : 'Prøver', sub: e ? `${longDate(e.date)} · neste prøve` : 'Ingen prøver', items: a.events.map(calItem) } };
 }
 
 function toolTasks(user) {
@@ -514,8 +533,8 @@ function withDateContext(text, today) {
 }
 
 const TITLES = { 'sun.daylight': 'Regner på sola', 'calendar.free_slots': 'Finner ledig tid', 'calendar.search': 'Leter i kalenderen', 'calendar.summary': 'Oppsummerer', 'calendar.create': 'Legger til i kalenderen', 'weather.daily': 'Sjekker været', 'calendar.ask': 'Glimt tenker', weather: 'Sjekker været', 'calendar.day': 'Ser i kalenderen', 'calendar.next': 'Leter i kalenderen', departures: 'Henter avganger', packages: 'Ser på pakkene',
-  'finance.spent': 'Regner på forbruket', tasks: 'Leser huskelisten', 'trial.create': 'Lager påminnelse', 'appointment.create': 'Legger til i kalenderen', 'memory.add': 'Glimt husker', nav: 'Åpner siden', llm: 'Glimt tenker' };
-const TOOL_OF = { 'sun.daylight': 'Vær', 'calendar.free_slots': 'Kalender', 'calendar.search': 'Kalender', 'calendar.summary': 'Kalender', 'calendar.create': 'Kalender', 'weather.daily': 'Vær', 'calendar.ask': 'Kalender', weather: 'Vær', 'calendar.day': 'Kalender', 'calendar.next': 'Kalender', departures: 'Avganger', packages: 'Pakker', 'finance.spent': 'Finans', tasks: 'Huskeliste', 'trial.create': 'Abonnementer', 'appointment.create': 'Kalender', 'memory.add': 'Glimt husker', nav: 'Snarvei' };
+  'finance.spent': 'Regner på forbruket', tasks: 'Leser huskelisten', 'trial.create': 'Lager påminnelse', 'family.where': 'Ser i Familie', 'calendar.school': 'Ser i Studie', 'appointment.create': 'Legger til i kalenderen', 'memory.add': 'Glimt husker', nav: 'Åpner siden', llm: 'Glimt tenker' };
+const TOOL_OF = { 'sun.daylight': 'Vær', 'calendar.free_slots': 'Kalender', 'calendar.search': 'Kalender', 'calendar.summary': 'Kalender', 'calendar.create': 'Kalender', 'weather.daily': 'Vær', 'calendar.ask': 'Kalender', weather: 'Vær', 'calendar.day': 'Kalender', 'calendar.next': 'Kalender', departures: 'Avganger', packages: 'Pakker', 'finance.spent': 'Finans', tasks: 'Huskeliste', 'trial.create': 'Abonnementer', 'appointment.create': 'Kalender', 'memory.add': 'Glimt husker', nav: 'Snarvei', 'family.where': 'Familie', 'calendar.school': 'Kalender' };
 
 /** Svarer på spørsmålet. onStep(at, intent) for fremdrift. → svarobjektet (se toppen). */
 export async function answer(user, text, { today = osloTodayISO(), onStep = () => {}, ctx = null } = {}) {
@@ -525,7 +544,9 @@ export async function answer(user, text, { today = osloTodayISO(), onStep = () =
   let r;
   try {
     const nv = intent === 'nav' ? navTarget(text) : null;
-    r = nv ? { text: `Åpner **${nv.label}**.`, source: 'Snarvei', nav: { target: nv.target, label: nv.label, web: nv.web, deepLink: `finanshub://${nv.target}`, delayMs: 450 } }
+    r = intent === 'family.where' ? await whereAnswer(user, text)
+      : intent === 'calendar.school' ? await toolSchoolTest(user, today)
+      : nv ? { text: `Åpner **${nv.label}**.`, source: 'Snarvei', nav: { target: nv.target, label: nv.label, web: nv.web, deepLink: `finanshub://${nv.target}`, delayMs: 450 } }
       : intent === 'sun.daylight' ? await toolSun(user, text, today)
       : intent === 'weather' ? await toolWeather(user, text)
       : intent === 'calendar.day' ? await toolCalendarDay(user, text, today)
@@ -546,7 +567,7 @@ export async function answer(user, text, { today = osloTodayISO(), onStep = () =
   const kc = classifyLocal(text, intent);
   const out = { text: r.text, bold: boldOf(r.text), source: r.source, intent, kind: kc.kind, surface: kc.kind === 'action' ? 'pill' : 'inline', ...(r.tool ? { tool: r.tool } : {}), ...(r.card ? { card: r.card } : {}), ms: Date.now() - t0,
     model: r.model ?? 'Glimt · verktøy', engine: r.engine ?? (intent === 'llm' ? 'none' : 'tool') };
-  for (const k of ['followUp', 'trial', 'missing', 'quickJobId', 'memory', 'apply', 'error', 'fix', 'actions', 'warning', 'notice', 'modelId', 'aiJobId', 'place', 'open', 'suggest', 'notFound']) if (r[k] !== undefined) out[k] = r[k];
+  for (const k of ['followUp', 'trial', 'missing', 'quickJobId', 'memory', 'apply', 'error', 'fix', 'actions', 'warning', 'notice', 'modelId', 'aiJobId', 'place', 'open', 'suggest', 'notFound', 'person', 'events']) if (r[k] !== undefined) out[k] = r[k];
   if (r.nav) { out.target = r.nav.target; out.nav = r.nav; }
   out.chatContext = { q: text, intent, messages: [{ role: 'user', content: text }, { role: 'assistant', content: r.text, ...(r.card ? { card: r.card } : {}), ...(r.tool ? { tool: r.tool } : {}) }] };
   return out;

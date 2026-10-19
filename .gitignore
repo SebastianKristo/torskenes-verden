@@ -1,5 +1,9 @@
 node_modules
 data/
+# Prompt 37: bibelversene (Bibelen 1930) ligger i server/data/, resten av mappen er lokale data.
+!server/data/
+server/data/*
+!server/data/bible1930-*.json
 .env
 proton/
 apps/android/.gradle/

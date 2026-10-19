@@ -847,3 +847,9 @@ export function startMatScheduler() {
   };
   setInterval(tick, 10 * 60_000).unref();
 }
+
+/** Prompt 37: rettene og ingrediensene i ukas matplan (felles plan), for Glimt i Gjøremål («Legg ukas matplan i handlelisten»). */
+export function weekIngredients37(date = day(new Date())) {
+  const s = state(HOUSEHOLD);
+  return week(s, monday(date)).days.filter((d) => d.name).map((d) => ({ date: d.date, name: d.name, ingredients: d.ingredients ?? [] }));
+}

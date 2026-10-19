@@ -775,7 +775,12 @@ const dayKey = (ts) => new Date(ts).toLocaleDateString('sv-SE', { timeZone: 'Eur
  */
 export function usage(user, { days = 30, all = false } = {}) {
   const d = [1, 7, 30, 90].includes(+days) ? +days : 30;
-  const from = d === 1 ? new Date(new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' }) + 'T00:00:00').getTime() : Date.now() - d * 86400_000;
+  // Prompt 37: midnatt i Oslo uavhengig av serverens tidssone (før ble UTC-midnatt brukt, så «i dag» var tom rett etter midnatt i Oslo).
+  const osloMidnight = () => { const now = Date.now(), ds = new Date(now).toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' });
+    const off = (t) => { const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Oslo', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(new Date(t)).map((x) => [x.type, x.value]));
+      return Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute) - t; };
+    const utc = Date.parse(ds + 'T00:00:00Z'); return utc - off(utc); };
+  const from = d === 1 ? osloMidnight() : Date.now() - d * 86400_000;
   const rows = db.prepare(`SELECT ts, task, provider, model, status, ms, COALESCE(tok_in,0) AS tin, COALESCE(tok_out,0) AS tout, COALESCE(cost_kr,0) AS cost FROM ai_runs WHERE ts>=? ${all ? '' : 'AND user_id=?'} AND status IN ('ok','fail')`).all(...(all ? [from] : [from, user]));
   const tot = { tokIn: 0, tokOut: 0, costKr: 0, localTok: 0, ms: 0, count: rows.length, failed: 0 };
   const byDay = new Map(), byP = new Map(), byT = new Map();

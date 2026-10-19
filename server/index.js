@@ -44,6 +44,7 @@ import glimtMemoryApi from './glimt-memory.js'; // prompt 33: «Glimt husker» (
 import assistApi from './assist.js'; // prompt 31: Glimt – POST /api/assist (vær, kalender, … før LLM), serverjobb
 import aiApi, { glimtApi } from './ai-api.js';
 import api36 from './api36.js'; // prompt 36 (SERVER36)
+import { profilesApi, bibleApi, trackingKeysApi, kal37Api } from './api37.js'; // prompt 37 (SERVER37)
 import { settingsApi as glimtSettingsApi, ttsApi, imgApi } from './glimt35.js'; // prompt 35: /api/glimt/settings, /api/tts, /api/img
 import weather35Api from './weather35.js'; // prompt 35: /api/weather/place?q=
 import { haApi as kal35HaApi } from './kalender35.js'; // prompt 35: /api/kalender/ha/calendars
@@ -591,6 +592,7 @@ authed.get('/space/gallery/:key', proxy((c) => {
 }));
 
 app.route('/api/ui', uiApi);
+app.route('/api/tracking/keys', trackingKeysApi); // prompt 37: husstandens sporingsnøkler (før /api/tracking/:id)
 app.route('/api/tracking', trackingApi); // Sporing (prompt 11): pakker fra Finn, e-post og manuelt
 app.route('/api/matplan', matApi); // samme Matplan-API som /mat/api (prompt 10: Matplan hører til Homelab)
 // Profil, oppsett, søk, mobilforside og widgets: sesjon ELLER FinansHub-token (må stå før /api med requireAuth).
@@ -636,6 +638,7 @@ app.use('/api/kalender/search', calendarSearchAi); // prompt 32: ?ai=1 → Glimt
 app.route('/api/kalender/quick', calendarQuickApi); // prompt 29: før /api/kalender
 // Prompt 33 (SERVER33): Kalender-appen – kalendere (visning, farger, egne), vær 16 dager, appCalendar på hendelser, widgets.
 app.route('/api/kalender/ha', kal35HaApi); // prompt 35
+app.route('/api/kalender', kal37Api); // prompt 37: /subjects (fagfarger) og /geo (adresse + kart)
 app.route('/api/kalender/calendars', kalCalendarsApi);
 app.route('/api/kalender/weather', kalWeatherApi);
 app.use('/api/kalender/events', kalEventsMw);
@@ -675,6 +678,8 @@ app.get('/api/domener/sammendrag', authOrToken, domainPill);
 app.route('/api/domains', domainGlimtApi); // prompt 32: /:domain/summary (Glimt) og /:domain/gsc (Google Search Console), bare admin
 app.route('/api/gsc', gscApi); // prompt 32: Google Search Console-kobling per bruker (webmasters.readonly)
 app.route('/api', api36); // prompt 36: /dashboard/layout og /weather/places/summary (før mobileApi)
+app.route('/api/bible', bibleApi); // prompt 37: dagens bibelvers (bare med modulen)
+app.route('/api', profilesApi); // prompt 37: profiler og onboarding
 app.route('/api', mobileApi);
 app.route('/api', authed);
 app.route('/home/api', homeApi);

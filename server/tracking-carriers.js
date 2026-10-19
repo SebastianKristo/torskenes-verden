@@ -4,6 +4,9 @@
 // NB: endepunktene, headerne og lenkemønstrene under er satt opp etter transportørenes offentlige dokumentasjon,
 // men er ikke testet mot ekte kontoer herfra. Sjekk dem med «Test tilkobling» før du stoler på dem.
 import { cfg, activeUser } from './settings.js';
+import { householdValue, quotaBlock37, _setParcelsLimit } from './tracking37.js'; // prompt 37: nøklene deles i husstanden
+// Husstandens nøkkel først (prompt 37), ellers brukerens egen (eldre oppsett).
+const trkCfg = (k) => householdValue(k) || cfg(k);
 import { kv, OWNER } from './db.js';
 
 // [id, navn, initialer, farge, tekstfarge, formater, sporingslenke (nummeret legges til på slutten)]
@@ -112,7 +115,7 @@ export const MYBRING_STATUS = {
 };
 export const mybringStatus = (code, text) => MYBRING_STATUS[String(code ?? '').toUpperCase()] ?? normStatus(code ?? text);
 async function bring(no) {
-  const uid = cfg('mybringUid'), key = cfg('mybringKey');
+  const uid = trkCfg('mybringUid'), key = trkCfg('mybringKey');
   if (!uid || !key) throw new CarrierError('Mangler Mybring-bruker og API-nøkkel');
   const d = await getJson(`https://api.bring.com/tracking/api/v2/tracking.json?q=${encodeURIComponent(no)}&lang=no`, {
     headers: { 'X-Mybring-API-Uid': uid, 'X-Mybring-API-Key': key, 'X-Bring-Client-URL': 'https://github.com/SebastianKristo/torskenes-verden', Accept: 'application/json' } });
@@ -130,7 +133,7 @@ async function bring(no) {
 
 // PostNord Track & Trace (developer.postnord.com). API-nøkkel som query-parameter.
 async function postnord(no) {
-  const key = cfg('postnordKey');
+  const key = trkCfg('postnordKey');
   if (!key) throw new CarrierError('Mangler API-nøkkel fra PostNord');
   const d = await getJson(`https://api2.postnord.com/rest/shipment/v5/trackandtrace/findByIdentifier.json?apikey=${encodeURIComponent(key)}&id=${encodeURIComponent(no)}&locale=no`);
   const sh = d.TrackingInformationResponse?.shipments?.[0];
@@ -188,7 +191,7 @@ export async function postnordWeb(no) {
 
 // DHL Shipment Tracking – Unified (developer.dhl.com). Header DHL-API-Key.
 async function dhl(no) {
-  const key = cfg('trk_dhl_key');
+  const key = trkCfg('trk_dhl_key');
   if (!key) throw new CarrierError('Mangler API-nøkkel fra DHL');
   const d = await getJson(`https://api-eu.dhl.com/track/shipments?trackingNumber=${encodeURIComponent(no)}&language=no`, { headers: { 'DHL-API-Key': key, Accept: 'application/json' } });
   const sh = d.shipments?.[0];
@@ -200,7 +203,7 @@ async function dhl(no) {
 // UPS Tracking API med OAuth 2 (client credentials, developer.ups.com). Tokenet caches til det utløper.
 let upsToken = null;
 async function upsAuth() {
-  const id = cfg('trk_ups_id'), sec = cfg('trk_ups_secret');
+  const id = trkCfg('trk_ups_id'), sec = trkCfg('trk_ups_secret');
   if (!id || !sec) throw new CarrierError('Mangler OAuth-klient (Client ID og secret) fra UPS');
   if (upsToken && upsToken.exp > Date.now() + 60_000 && upsToken.id === `${id}:${sec}`) return upsToken.token;
   const res = await fetch('https://onlinetools.ups.com/security/v1/oauth/token', { method: 'POST', signal: AbortSignal.timeout(TIMEOUT),
@@ -224,7 +227,7 @@ async function ups(no) {
 // 17TRACK (api.17track.net v2.2) som reserve for FedEx, GLS, DB Schenker, Helthjem, Budbee, Instabox og ukjente.
 // Nummeret må registreres før sporingsdata kan hentes; det gjør vi automatisk.
 async function track17(no) {
-  const key = cfg('trk_17_key');
+  const key = trkCfg('trk_17_key');
   if (!key) throw new CarrierError('Mangler API-nøkkel fra 17TRACK (reserve for andre transportører)');
   const h = { '17token': key, 'Content-Type': 'application/json' };
   await fetch('https://api.17track.net/track/v2.2/register', { method: 'POST', headers: h, body: JSON.stringify([{ number: no }]), signal: AbortSignal.timeout(TIMEOUT) }).catch(() => {});
@@ -239,19 +242,21 @@ async function track17(no) {
 // i måneden, så serveren teller selv og stopper før kvoten er brukt opp. Brukes bare når noen ber om status
 // (ny sending eller «Oppdater»), aldri av den automatiske jobben, så kvoten ikke spises opp i bakgrunnen.
 export const PARCELSAPP_LIMIT = 3;
+_setParcelsLimit(() => PARCELSAPP_LIMIT);
 const monthKey = () => new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Oslo' }).slice(0, 7);
 export function parcelsappUsage() {
   const u = kv.get(activeUser() ?? OWNER, 'parcelsapp_usage', null); // per bruker (ISO2): hver bruker har sin egen nøkkel og kvote
-  return { used: u?.month === monthKey() ? u.used : 0, limit: PARCELSAPP_LIMIT, month: monthKey(), configured: !!cfg('trk_parcelsapp_key') };
+  return { used: u?.month === monthKey() ? u.used : 0, limit: PARCELSAPP_LIMIT, month: monthKey(), configured: !!trkCfg('trk_parcelsapp_key') };
 }
 const countParcelsapp = () => { const u = parcelsappUsage(); kv.set(activeUser() ?? OWNER, 'parcelsapp_usage', { month: u.month, used: u.used + 1 }); };
 const sleepMs = (ms) => new Promise((r) => setTimeout(r, ms));
 // carrier-hint (prompt 26): transportøren brukeren har valgt eller som er gjenkjent, som ParcelsApp-navn.
 const PARCELSAPP_CARRIER = { posten: 'Posten Norge', bring: 'Bring', postnord: 'PostNord', dhl: 'DHL', ups: 'UPS', fedex: 'FedEx', gls: 'GLS', schenker: 'DB Schenker', helthjem: 'Helthjem', budbee: 'Budbee', instabox: 'Instabox', porterbuddy: 'Porterbuddy' };
 async function parcelsapp(no, hint = null) {
-  const key = cfg('trk_parcelsapp_key');
+  const key = trkCfg('trk_parcelsapp_key');
   if (!key) throw new CarrierError('Mangler API-nøkkel for ParcelsApp');
   if (parcelsappUsage().used >= PARCELSAPP_LIMIT) throw new CarrierError(`ParcelsApp: månedskvoten (${PARCELSAPP_LIMIT} oppslag) er brukt opp`, 429);
+  { const blk = quotaBlock37(PARCELSAPP_LIMIT); if (blk) throw new CarrierError(blk, 429); } // prompt 37: felles kvote, maks 50 % per bruker
   const base = 'https://parcelsapp.com/api/v3/shipments/tracking';
   countParcelsapp(); // telles før kallet, så et kall som henger ikke gir gratis forsøk
   let d = await getJson(base, { method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -275,8 +280,8 @@ async function parcelsapp(no, hint = null) {
 
 const CLIENT = { posten: bring, bring, postnord, dhl, ups };
 export const configured = {
-  posten: () => !!(cfg('mybringUid') && cfg('mybringKey')), bring: () => !!(cfg('mybringUid') && cfg('mybringKey')),
-  postnord: () => !!cfg('postnordKey'), dhl: () => !!cfg('trk_dhl_key'), ups: () => !!(cfg('trk_ups_id') && cfg('trk_ups_secret')), other: () => !!cfg('trk_17_key'),
+  posten: () => !!(trkCfg('mybringUid') && trkCfg('mybringKey')), bring: () => !!(trkCfg('mybringUid') && trkCfg('mybringKey')),
+  postnord: () => !!trkCfg('postnordKey'), dhl: () => !!trkCfg('trk_dhl_key'), ups: () => !!(trkCfg('trk_ups_id') && trkCfg('trk_ups_secret')), other: () => !!trkCfg('trk_17_key'),
 };
 export const isConfigured = (carrier) => (configured[carrier] ?? configured.other)();
 // Tydelig melding når selskapets egen nøkkel mangler (vises i Sporing og under Integrasjoner → Sporing).
@@ -293,7 +298,7 @@ export function missingKeyText(carrier) {
 export async function fetchStatus(carrier, no, { allowParcelsapp = false, override = null, hint = null } = {}) {
   const n = normNo(no);
   if (override === 'parcelsapp') {
-    if (!cfg('trk_parcelsapp_key')) throw new CarrierError('Mangler API-nøkkel for ParcelsApp');
+    if (!trkCfg('trk_parcelsapp_key')) throw new CarrierError('Mangler API-nøkkel for ParcelsApp');
     return parcelsapp(n, hint ?? carrier);
   }
   if (override && override !== carrier) carrier = override;
@@ -301,14 +306,14 @@ export async function fetchStatus(carrier, no, { allowParcelsapp = false, overri
   let err = null;
   // Selskapets eget API først. Feiler det (ikke «fant ikke»), prøves reservene (prompt 22).
   if (own && isConfigured(carrier)) {
-    try { return await own(n); } catch (e) { if (e.status === 404 || !(isConfigured('other') || (allowParcelsapp && cfg('trk_parcelsapp_key')))) throw e; err = e; }
+    try { return await own(n); } catch (e) { if (e.status === 404 || !(isConfigured('other') || (allowParcelsapp && trkCfg('trk_parcelsapp_key')))) throw e; err = e; }
   }
   // PostNord uten nøkkel: den offentlige sporingssiden (uoffisielt). Feil logges stille, og reservene prøves.
   if (carrier === 'postnord' && !isConfigured('postnord')) {
     try { return await postnordWeb(n); } catch (e) { console.debug?.(`[sporing] postnord-web: ${e.message}`); err ??= e.status === 404 ? null : e; }
   }
   if (isConfigured('other')) { try { return await track17(n); } catch (e) { err ??= e; } }
-  if (allowParcelsapp && cfg('trk_parcelsapp_key') && parcelsappUsage().used < PARCELSAPP_LIMIT) return parcelsapp(n, override ? carrier : hint ?? carrier);
+  if (allowParcelsapp && trkCfg('trk_parcelsapp_key') && parcelsappUsage().used < PARCELSAPP_LIMIT) return parcelsapp(n, override ? carrier : hint ?? carrier);
   if (err) throw err;
   throw new CarrierError(own ? `Mangler nøkkel for ${CARRIER[carrier]?.name ?? carrier}` : 'Ingen nøkkel for 17TRACK eller ParcelsApp (reserve)');
 }
@@ -324,7 +329,7 @@ export async function testCarriers() {
     try { await fn(no); res.push(`${name}: OK`); }
     catch (e) { res.push(`${name}: ${e.status === 404 ? 'OK (nøkkelen godtatt)' : e.message}`); if (e.status && e.status !== 404) throw new Error(res.join(' · ')); }
   }
-  if (cfg('trk_parcelsapp_key')) { const u = parcelsappUsage(); res.push(`ParcelsApp: nøkkel lagret (${u.used} av ${u.limit} oppslag brukt denne måneden, testes ikke for å spare kvoten)`); }
+  if (trkCfg('trk_parcelsapp_key')) { const u = parcelsappUsage(); res.push(`ParcelsApp: nøkkel lagret (${u.used} av ${u.limit} oppslag brukt denne måneden, testes ikke for å spare kvoten)`); }
   if (!res.some((r) => /OK|ParcelsApp: nøkkel/.test(r))) throw new Error(res.join(' · ') + '. Legg inn minst én nøkkel.');
   return res.join(' · ');
 }
