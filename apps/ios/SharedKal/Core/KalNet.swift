@@ -13,8 +13,15 @@ struct KalNetError: LocalizedError {
 }
 
 enum KalNet {
+    /// Prompt 34: Mac-appen (KalenderMac) har tokenet i Nøkkelringen i stedet for App Group-en og setter denne.
+    /// nil (iOS-appen og widgetene) = App Group som før.
+    static var sessionProvider: (() -> ([String], String?))? = nil
+
     /// Adressene i rekkefølge (hoved, ekstern, lokal) og tokenet. Appen kan overstyre (innloggingsskjermen).
-    static func session() -> ([String], String?) { (KalGroup.bases, KalGroup.token) }
+    static func session() -> ([String], String?) {
+        if let p = sessionProvider { return p() }
+        return (KalGroup.bases, KalGroup.token)
+    }
 
     static func send(_ method: String, _ path: String, json: [String: Any]? = nil, timeout: TimeInterval = 20,
                      bases overrideBases: [String]? = nil, token overrideToken: String? = nil) async throws -> Data {

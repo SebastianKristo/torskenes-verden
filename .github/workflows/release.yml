@@ -111,6 +111,21 @@ jobs:
           [ -d "$APPX" ] && codesign -f -s - --entitlements KalenderWidgets/KalenderWidgets.entitlements "$APPX"
           codesign -f -s - --entitlements Kalender/Kalender.entitlements kal/Payload/Kalender.app
           (cd kal && zip -qry "../../../dist/Kalender-$V-unsigned.ipa" Payload)
+      - name: DMG for Kalender på Mac
+        # Ad hoc-signert (ikke notarisert): første gang åpnes appen med høyreklikk → Åpne.
+        continue-on-error: true
+        run: |
+          V="${TAG#v}"
+          xcodebuild -project FinansHub.xcodeproj -scheme KalenderMac -configuration Release \
+            -destination 'generic/platform=macOS' -derivedDataPath buildmac \
+            MARKETING_VERSION="$V" CURRENT_PROJECT_VERSION=${{ github.run_number }} \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build | tail -20
+          test ${PIPESTATUS[0]} -eq 0
+          APP=buildmac/Build/Products/Release/Kalender.app
+          codesign --force --deep --options runtime -s - --entitlements KalenderMac/KalenderMac.entitlements "$APP"
+          rm -rf dmg && mkdir -p dmg ../../dist
+          cp -R "$APP" dmg/ && ln -s /Applications dmg/Applications
+          hdiutil create -volname Kalender -srcfolder dmg -ov -format UDZO "../../dist/Kalender-$V.dmg"
       - name: Signert IPA (bare med sertifikat i secrets)
         # Widget-utvidelsen trenger egen profil (no.kristo.finanshub.widgets); uten den hoppes signert IPA over.
         continue-on-error: true
@@ -172,6 +187,8 @@ jobs:
             echo "> Fra 4.6.1 er APK-en signert med en fast nøkkel, så senere versjoner installeres rett over. Kommer du fra 4.6.0 eller eldre, må du avinstallere én siste gang."
             echo ""
             echo "**iPhone:** åpne \`FinansHub-*-unsigned.ipa\` i [AltStore](https://altstore.io), [SideStore](https://sidestore.io) eller [Sideloadly](https://sideloadly.io). En signert \`FinansHub-*.ipa\` (hvis den finnes) kan installeres direkte på registrerte enheter."
+            echo ""
+            echo "**Kalender for Mac:** åpne \`Kalender-*.dmg\` og dra Kalender til Programmer. Appen er ikke notarisert, så første gang åpner du den med høyreklikk → Åpne."
             echo ""
             echo "Sjekk filene mot \`SHA256SUMS.txt\`."
             echo ""

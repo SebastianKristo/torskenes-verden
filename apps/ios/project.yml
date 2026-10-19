@@ -3,6 +3,8 @@ options:
   bundleIdPrefix: no.kristo
   deploymentTarget:
     iOS: "17.0"
+    # Prompt 34: Kalender for Mac (KalenderMac).
+    macOS: "13.0"
 settings:
   base:
     SWIFT_VERSION: "5.10"
@@ -211,3 +213,65 @@ targets:
           - Manrope-SemiBold.ttf
           - Newsreader-Medium.ttf
           - Newsreader-Regular.ttf
+
+  # Prompt 34: Kalender for Mac – egen macOS-app (no.kristo.kalender.mac, Kalender.app) med samme konto og backend som web og iPhone.
+  # Gjenbruker SharedKal (modeller, nett, fonter) og den rene tolkeren KalQuick.swift fra iOS-appen. Universal (arm64 + x86_64), macOS 13+.
+  # Ingen widgets for macOS ennå (krever App Group med provisjoneringsprofil på macOS) og ingen Sparkle (ny avhengighet).
+  KalenderMac:
+    type: application
+    platform: macOS
+    deploymentTarget: "13.0"
+    sources:
+      - KalenderMac/Sources
+      - KalenderMac/Resources
+      - SharedKal/Core
+      - SharedKal/Group
+      # Fontene kopieres til Contents/Resources og lastes via ATSApplicationFontsPath.
+      - SharedKal/Fonts
+      # Ren Foundation-tolking av «frisør 14.30 25.10» (KalParsed, KalRx, KalQuick) – delt med iOS-appen uten kopi.
+      - path: Kalender/Sources/KalQuick.swift
+    entitlements:
+      path: KalenderMac/KalenderMac.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        # Arkiv → Importer .ics …
+        com.apple.security.files.user-selected.read-only: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: no.kristo.kalender.mac
+        PRODUCT_NAME: Kalender
+        PRODUCT_MODULE_NAME: KalenderMac
+        MACOSX_DEPLOYMENT_TARGET: "13.0"
+        ARCHS: "$(ARCHS_STANDARD)"
+        GENERATE_INFOPLIST_FILE: YES
+        ENABLE_HARDENED_RUNTIME: YES
+        COMBINE_HIDPI_IMAGES: YES
+        # Lokale bygg uten Apple-konto: «Sign to Run Locally». CI bygger med CODE_SIGNING_ALLOWED=NO og ad hoc-signerer etterpå.
+        CODE_SIGN_IDENTITY: "-"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        INFOPLIST_KEY_CFBundleDisplayName: Kalender
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+        INFOPLIST_KEY_NSHumanReadableCopyright: "Torskenes verden · Homelab"
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Kalender kobler til Homelab-serveren din på lokalt nett."
+      configs:
+        Debug:
+          ONLY_ACTIVE_ARCH: YES
+        Release:
+          ONLY_ACTIVE_ARCH: NO
+    info:
+      path: KalenderMac/Info.plist
+      properties:
+        # Norske systemmenyer (Arkiv, Rediger, Vis, Vindu, Hjelp, Avslutt Kalender …).
+        CFBundleDevelopmentRegion: nb
+        CFBundleLocalizations: [nb]
+        CFBundleAllowMixedLocalizations: true
+        LSMinimumSystemVersion: "13.0"
+        ATSApplicationFontsPath: "."
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        # kalender://dag/2026-10-21, kalender://hendelse?id=…, kalender://liste, kalender://ny?text=…, kalender://glimt?q=…
+        CFBundleURLTypes:
+          - CFBundleURLName: no.kristo.kalender.mac
+            CFBundleURLSchemes: [kalender]

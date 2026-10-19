@@ -62,6 +62,14 @@ jobs:
           grep -E ": error: |: fatal error: " kal.log | sort -u | head -80 || true
           tail -25 kal.log
           exit $s
+      - name: Bygg Kalender for Mac
+        run: |
+          xcodebuild -project FinansHub.xcodeproj -scheme KalenderMac -configuration Debug \
+            -destination 'generic/platform=macOS' \
+            CODE_SIGNING_ALLOWED=NO build > mac.log 2>&1 && s=0 || s=$?
+          grep -E ": error: |: fatal error: " mac.log | sort -u | head -80 || true
+          tail -25 mac.log
+          exit $s
       # Usignert .ipa for sideloading: AltStore/SideStore/Sideloadly signerer den med din egen Apple-ID ved installasjon.
       - name: Bygg usignert .ipa
         if: matrix.runner == 'macos-26'
