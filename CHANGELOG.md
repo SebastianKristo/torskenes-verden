@@ -2,6 +2,25 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.29.0] – 19.10.2026 · prompt 35 – Glimt-familien og Kalender
+- **13 Glimt-figurer:** Glimt, Halo, Boble, Antenne, Bane, Pastell, Natt, Sky, Dråpe, Ugle, Stjerne, Spire og Gris, med humørene rolig, glad, snakker og sover. Velg din egen Glimt i det nye **Innstillinger → Glimt**. Glimt blir Natt mellom 21 og 06.
+- **Glimt og vennene i briefen:** Sky eller Dråpe forteller om været, Ugle om kalenderen og Gris om prøveperioder, før Glimt tar over igjen.
+- **Glimt snakker:** briefen kan leses opp med nesten menneskelige stemmer (OpenAI, ElevenLabs eller Azure, nøkkel under AI-kontroll), på norsk eller engelsk, med stemmene Nora, Henrik og Lys. Velg hvilke briefer du vil ha gjennom dagen (morgen, dag, kveld, natt).
+- **Briefen:** nyheter med bilder (toppsak + 6), rosa kort for prøveperioder som snart slutter, og nattbrief. Briefen vises også på Dashboard på web.
+- **Flere widget-størrelser:** Android og Samsung 2×2, 4×1, 4×2 og 4×4. Widgetene viser Dråpe på regndager.
+- **Vær for hvilket som helst sted:** «været i New York» eller «weather in Paris» i AI-søket, med knapp som åpner Vær for stedet.
+- **Kalender-appen (iPhone, Android og Mac):**
+  - «I dag» er en egen knapp til venstre for pilene.
+  - Velg farge på kalenderne, skjul dem, og legg til iCal-lenker og Home Assistant-kalendere.
+  - Innstillinger nederst i sidemenyen (uken starter, åpne i, standard varighet, tidslinje, tema, varsler).
+  - Zoom: År → Måned → Uke → 3 dager → Dag, med trykk eller klyp.
+  - Tydeligere ukenummer, og «UKE 43» i widgetene.
+  - «Hva skjer i morgen?» svarer nå for i morgen.
+  - Skrivefeltet ligger over tastaturet og toppen under statuslinjen.
+- **Homelab:** velg flere kalendere for Bursdager.
+- **iPhone:** kart- og steder-knappene i Vær står nede i hjørnene. Chat-feltet i nettappen ligger over tastaturet.
+- **Mat:** kokkvelgeren kutter ikke lenger navnet.
+
 ## [4.28.0] – 19.10.2026 · prompt 34 – AI-kontroll og Glimt-brief
 - **Glimt virker igjen:** standardmodellen fantes ikke på Ollama-serveren, og feilen ble skjult. Nå sjekkes modellen mot det som er installert. Mangler den, brukes reserven eller en installert tekstmodell (aldri en bildemodell), og du får en advarsel. Feil vises som «Glimt fikk ikke svar fra {modell}: …» med «Prøv igjen». «Tilkoblet» betyr nå at modellen faktisk svarer.
 - **Full AI-kontroll** på web, i appene og i FinansHub: status, selvtest, modeller (last ned, last inn/ut, slett, standard), modell per oppgave med reserve, jobblogg, tokenforbruk og budsjett, API-nøkler og Glimt-API-nøkler. Bare admin endrer serveroppsettet. FinansHubs AI-innstillinger er ryddet inn i samme panel.
