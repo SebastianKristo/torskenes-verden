@@ -16,6 +16,7 @@ import { row, grp } from './mobile-p17.js';
 import { haSection } from './mobile-p22.js';
 import { p17SetMain, p17Modules, p17AiExtra, p17Varsler, aiLoad, notifyLoad, NT, canSrv, ADMIN_NOTE } from './mobile-p17.js';
 import * as P27 from './mobile-p27.js';
+import { updLoad, updPage, updSummary, updAdmin, updBind } from './mobile-upd.js';
 
 const T = { f: {}, ai: null, bk: null, srch: null, tokens: null, devices: null, newTok: '', nt: { name: '', scopes: ['receipts:write'], exp: '90' }, ping: '', lastSync: null, usage: null };
 const SCOPES = ['receipts:write', 'read:transactions', 'read:summary', 'read:budget', 'write:transactions', 'finance:read'];
@@ -29,6 +30,7 @@ export async function settingsLoad(sub) {
   if (sub === 'varsler' || (!sub && !NT.d)) jobs.push(notifyLoad().catch(() => {}));
   if (sub === 'fai') jobs.push(aiLoad().catch(() => {}), loadBoot().catch(() => {}));
   if (sub === 'data') jobs.push(navigator.storage?.estimate?.().then((x) => { T.usage = x.usage; }).catch(() => {}));
+  if (sub === 'oppd' || (!sub && updAdmin())) jobs.push(updLoad());
   if (sub === 'bk') jobs.push(api('/backup').then((x) => { T.bk = x; }).catch(() => { T.bk = null; }));
   if (sub === 'sokbar') jobs.push(hlApi('/search/history').then((x) => { T.srch = { suggest: x?.suggest !== false, save: x?.save !== false, n: (x?.items ?? []).length }; }).catch(() => { T.srch = null; }));
   if (['fai', 'kat', 'regel', 'bank', 't212'].includes(sub)) jobs.push(loadBoot().catch(() => {}));
@@ -44,8 +46,12 @@ const G = (title, rows, note = '') => `${title ? `<div class="sec">${title}</div
 const nav = (k, label, sub, ic, color) => { const c = iconColor(k, color); return `<a class="opt-row" href="#/set/${k}"><span class="set-ic fill" style="background:${c}">${icon(ic, 17, iconInk(c))}</span><span class="m-grow">${label}</span>${sub ? `<span class="sval">${esc(sub)}</span>` : ''}<span style="opacity:.5">›</span></a>`; };
 const tog = (id, label, sub, on) => `<button class="opt-row" data-stog="${id}" role="switch" aria-checked="${!!on}"><span class="m-grow"><b style="font-weight:500">${label}</b>${sub ? `<br><span style="font-size:13px;opacity:.65">${sub}</span>` : ''}</span><span class="sw" aria-hidden="true" aria-checked="${!!on}"></span></button>`;
 const chips = (id, label, opts, cur, multi = false) => `<div class="opt-row col"><span style="font-size:13px;opacity:.7">${label}</span><div class="schips">${opts.map(([k, n]) => { const on = multi ? cur.includes(k) : cur === k; return `<button class="chip" data-schip="${id}" data-v="${esc(k)}" aria-pressed="${on}">${on && !multi ? '✓ ' : ''}${esc(n)}</button>`; }).join('')}</div></div>`;
-const val = (label, v, color = '') => `<div class="opt-row"><span class="m-grow">${label}</span><span class="sval" style="${color ? `color:${color};opacity:1` : ''}">${v}</span></div>`;
-const btn = (label, act, color = 'var(--m-acc)') => `<button class="opt-row" data-sact="${act}"><span class="m-grow" style="color:${color};font-weight:500">${label}</span></button>`;
+// Prompt 28 (claude-code-konto-farger.md): faste mørk-tema-farger byttes til palett-tokens, så lyst tema får lab/pos fra
+// aktivt tema (#b23a2a/#2f7a4f i lyst Papir) og mørkt tema beholder laks/grønn.
+const TOK = { '#FF8A80': 'var(--pp-lab,#FF8A80)', '#f08a76': 'var(--pp-lab,#f08a76)', '#FFB08A': 'var(--pp-lab,#FFB08A)', '#FFB68A': 'var(--pp-lab,#FFB68A)', '#7BE3A0': 'var(--pp-pos,#7BE3A0)', '#F2B56B': 'var(--pp-warn,#F2B56B)' };
+const tok = (c) => TOK[c] ?? c;
+const val = (label, v, color = '') => `<div class="opt-row"><span class="m-grow">${label}</span><span class="sval" style="${color ? `color:${tok(color)};opacity:1` : ''}">${v}</span></div>`;
+const btn = (label, act, color = 'var(--m-acc)') => `<button class="opt-row" data-sact="${act}"><span class="m-grow" style="color:${tok(color)};font-weight:${TOK[color] ? 700 : 500}">${label}</span></button>`;
 const inp = (k, label, v, ph = '', type = 'text') => `<label class="opt-row col"><span style="font-size:13px;opacity:.7">${esc(label)}</span><input class="sinp" id="m-s-${k}" data-sinp="${k}" type="${type}" value="${esc(v ?? '')}" placeholder="${esc(ph)}" autocomplete="off" autocapitalize="off"></label>`;
 const link = (label, href, sub = '') => `<a class="opt-row" href="${href}"><span class="m-grow">${label}${sub ? `<br><span style="font-size:13px;opacity:.65">${sub}</span>` : ''}</span><span style="opacity:.5">›</span></a>`;
 
@@ -54,7 +60,7 @@ function profile(big = false) {
   const sz = big ? 58 : 44;
   return `<a class="opt-row" href="#/set/konto"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:${sz}px;height:${sz}px;font-size:${big ? 22 : 17}px">${avInner()}</span><span class="m-grow"><b style="font-size:${big ? 19 : 16}px;font-weight:600">${esc(meName())}</b><br><span style="font-size:13px;opacity:.65">${me.username ? `@${esc(me.username)}` : 'FinansHub'}${me.role ? ` · ${esc(me.role)}` : ''} · ${esc(me.serverName || location.host)}</span></span><span style="opacity:.5">›</span></a>`;
 }
-const PAGES = { integ: 'Integrasjoner', kal: 'Kalendere', varsler: 'Varsler og haptikk', mod: 'Moduler', profil: 'Profil', bakgrunn: 'Bakgrunn', fanelinje: 'Fanelinje', konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', nav: 'Navigasjonslinje', dom: 'Domener', scan: 'Skanning og AI', notif: 'Varsler', hap: 'Haptikk', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI og tolkning', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data' };
+const PAGES = { integ: 'Integrasjoner', kal: 'Kalendere', varsler: 'Varsler og haptikk', mod: 'Moduler', profil: 'Profil', bakgrunn: 'Bakgrunn', fanelinje: 'Fanelinje', konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', nav: 'Navigasjonslinje', dom: 'Domener', scan: 'Skanning og AI', notif: 'Varsler', hap: 'Haptikk', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI og tolkning', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data', oppd: 'Oppdatering' };
 const when = (t) => (t ? new Date(t).toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'aldri');
 const aiMode = () => { const st = S.boot?.settings ?? {}; return st.provider === 'gemini' ? 'gemini' : st.provider === 'groq' ? 'groq' : st.fallback ? 'both' : 'ollama'; };
 
@@ -89,14 +95,15 @@ function main() {
     ${G('Konto', [nav('konto', 'Kontoer og brukere', '1 på enheten', 'users', '#5E8BFF'), nav('sik', 'Sikkerhet', m.me?.totp ? '2FA på' : '', 'shield', '#34C759'), nav('tok', 'API-tokens', T.tokens ? `${T.tokens.length} aktive` : '', 'key', '#FF9F0A')])}
     ${G('App', [nav('look', 'Utseende', '', 'look', '#BF5AF2'), nav('scan', 'Skanning og AI', pref('scanTap') === 'cam' ? 'Kamera' : 'Vis valg', 'cam', '#FF7A3D'), nav('notif', 'Varsler', st.nRc ? 'På' : '', 'bell', '#FF453A'), nav('hap', 'Haptikk', hpref('hap') ? 'På' : 'Av', 'vib', '#FF2D55'), nav('sokbar', 'Søkebar', 'Google', 'search', '#0A84FF')])}
     ${G('Finans', [nav('fai', 'AI-motor', !canSrv() ? ADMIN_NOTE : st.provider === 'gemini' ? 'Gemini' : st.fallback ? 'Ollama + Gemini' : 'Ollama', 'ai', '#FF7A3D'), nav('kat', 'Kategorier', String((S.boot?.categories ?? []).length), 'cat', '#30D158'), nav('regel', 'Regler', String((S.boot?.rules ?? []).length), 'rule', '#5E5CE6'), nav('bank', 'Bank og import', st.csvProfile ?? '', 'bank', '#0A84FF'), nav('t212', 'Aksjer · Trading 212', st.t212Set ? (st.t212Env === 'demo' ? 'Demo' : 'Live') : 'Ikke koblet', 'aks', '#64D2FF'), nav('bk', 'Backup og data', '', 'backup', '#8E8E93')])}
-    ${G('System', [nav('srv', 'Server og synk', '', 'srv', '#64D2FF'), nav('data', 'Data og lagring', '', 'db', '#8E8E93'), nav('om', 'Om FinansHub', VERSION, 'info', '#8E8E93')])}
+    ${G('System', [nav('srv', 'Server og synk', '', 'srv', '#64D2FF'), updAdmin() ? nav('oppd', 'Oppdatering', updSummary(), 'backup', '#30D158') : '', nav('data', 'Data og lagring', '', 'db', '#8E8E93'), nav('om', 'Om FinansHub', VERSION, 'info', '#8E8E93')])}
     ${G('', [btn(`Logg ut ${esc(meName())}`, 'logout', '#FF8A80')])}`;
 }
 
 const PAGE = {
   // Prompt 26: gruppert liste som på web og egen side per integrasjon (#/set/integ/<id>). Eldre server: forrige side.
   integ: (th, sub) => P26.integPage26(P23.integPage(haSection()), sub),
-  kal: () => P26.kalSetPage(), // Prompt 26: Innstillinger → Kalendere (Skole-iCal, Canvas, Google Kalender og Home Assistant)
+  kal: () => P26.kalSetPage(),
+  oppd: () => updPage(G), // Prompt 28: oppdater hele systemet (bare admin) // Prompt 26: Innstillinger → Kalendere (Skole-iCal, Canvas, Google Kalender og Home Assistant)
   varsler: () => p17Varsler(trkPrefRows()),
   mod: () => p17Modules(),
   profil: () => {
@@ -264,6 +271,7 @@ async function askNotify() { if ('Notification' in window && Notification.permis
 
 export async function settingsBind(e, t) {
   if (m.screen !== 'set') return false;
+  if (await updBind(e, t)) return true;
   const d = (s) => t.closest?.(s);
   let x;
   if (e.type === 'change' || e.type === 'input') {

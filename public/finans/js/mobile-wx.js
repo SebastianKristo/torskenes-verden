@@ -72,13 +72,13 @@ const ico = (k, size = 26, col) => `<svg width="${size}" height="${size}" viewBo
 const nightOf = (k, isDay) => (!isDay && (k === 'clear' || k === 'partly') ? 'night' : k);
 // Himmel fra design/Vaer.dc.html (prompt 22): mørkere grå ved regn, lysere grå ved snø. Solen tegnes på canvas (dempet).
 const SKY = {
-  clear: ['linear-gradient(180deg,#3d6fa8 0%,#2f6fb8 40%,#4a8ad0 75%,#8ab6e4 100%)', 'none'],
-  partly: ['linear-gradient(180deg,#3d6fa8 0%,#2f6fb8 40%,#4a8ad0 75%,#8ab6e4 100%)', 'none'],
+  clear: ['linear-gradient(180deg,#1f5fc4 0%,#3a82d8 42%,#6aa8e8 78%,#9ccaf2 100%)', 'none'],
+  partly: ['linear-gradient(180deg,#1f5fc4 0%,#3a82d8 42%,#6aa8e8 78%,#9ccaf2 100%)', 'none'],
   cloudy: ['linear-gradient(180deg,#4f6d8f 0%,#6a87a6 55%,#9bb0c5 100%)', 'none'],
   rain: ['linear-gradient(180deg,#3b4658 0%,#323d4e 45%,#2a3342 100%)', 'none'],
   thunder: ['linear-gradient(180deg,#2c3443 0%,#262e3b 45%,#1f2632 100%)', 'none'],
   snow: ['linear-gradient(180deg,#5e6b7c 0%,#7d8a9a 55%,#a3aebb 100%)', 'none'],
-  fog: ['linear-gradient(180deg,#36485e 0%,#4f627a 55%,#74869b 100%)', 'none'],
+  fog: ['linear-gradient(180deg,#3f4d5e 0%,#556374 55%,#6f7d8d 100%)', 'none'], // prompt 28: tåke blir aldri hvit
   night: ['linear-gradient(180deg,#0b1730 0%,#1c2d52 55%,#2a3f6a 100%)', 'none'],
 };
 const WMO_NB = { 0: 'Klarvær', 1: 'Lettskyet', 2: 'Delvis skyet', 3: 'Skyet', 45: 'Tåke', 48: 'Rimtåke', 51: 'Lett yr', 53: 'Yr', 55: 'Kraftig yr', 61: 'Lett regn', 63: 'Regn', 65: 'Kraftig regn', 71: 'Lett snø', 73: 'Snø', 75: 'Kraftig snø', 80: 'Regnbyger', 81: 'Regnbyger', 82: 'Kraftige regnbyger', 85: 'Snøbyger', 86: 'Snøbyger', 95: 'Torden', 96: 'Torden med hagl', 99: 'Torden med hagl' };
@@ -181,7 +181,8 @@ export function wxView() {
   // Prompt 25: på Fold og nettbrett (≥ 700 px) to kolonner (5 : 7) med værkartet rett på siden. Under 700 er kolonnene
   // display:contents, så rekkefølgen er som før.
   const fold = P25.wxFold();
-  WX.fx = fxKind(kind0 === 'night' ? 'night' : kind0, c.isDay !== false && kind0 !== 'night', c.code);
+  const srT = +new Date(td.sunrise ?? days[0]?.sunrise ?? NaN), ssT = +new Date(td.sunset ?? days[0]?.sunset ?? NaN), sunF = ssT > srT ? Math.min(1, Math.max(0, (Date.now() - srT) / (ssT - srT))) : 0.5;
+  WX.fx = fxKind(kind0 === 'night' ? 'night' : kind0, c.isDay !== false && kind0 !== 'night', c.code, sunF); // prompt 28: sola følger soloppgang/-nedgang
   return `<div class="vx" style="background:${sky}"><div class="w22-fx" id="w22-fx" aria-hidden="true"></div><div class="vx-glow" style="background:${glow}"></div>
     <div class="vx-bar">${back}<div class="vx-compact"><b>${esc(city)}</b><span>${deg(c.temp)} | ${esc(desc)}</span></div><span class="vx-src">${D.mock ? 'Eksempeldata' : D.fallback || D.source === 'met' ? 'MET' : 'Open-Meteo'}</span></div>
     <div class="vx-in${fold ? ' p25-fold' : ''}"><div class="p25-c1">

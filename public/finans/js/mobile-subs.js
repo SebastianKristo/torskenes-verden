@@ -1,5 +1,6 @@
 // Subscription OS i mobilappen (prompt 11, design «Subscription OS», variant mobile).
-// Faner øverst: Hjem · Innsikt · Historikk. «+» åpner et ark med Skriv inn selv / Fra kvittering / Fra transaksjoner.
+// Faner øverst: Hjem · Innsikt · Historikk. «+» åpner arket «Legg til abonnement» (prompt 28, fasit Abonnement Legg til ark):
+// én grep-strek, liste med Skjermbilde ✦ AI · Kvittering ✦ AI · Fra transaksjon · Skriv inn selv, farger fra aktivt tema.
 // Data fra /finans/api/subscriptions. Feltene categories, byMonth, health, savings og upcoming kommer fra FINANS;
 // mangler de (eldre server), regnes et enklere bilde ut her fra abonnementene.
 import { api, hlApi, esc, n0, dd, today, icon, ICONS, logo, parseAmount, navName } from './core.js';
@@ -7,6 +8,7 @@ import { m, draw, flash, avatar, backBtn, theme } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { paper } from './mobile-paper.js';
 import * as P27 from './mobile-p27.js';
+import { toJpeg, readShot, errCardHtml, installVision, SLOW_MS } from './sub-shot.js';
 
 Object.assign(ICONS, { sins: 'M4 20V10M10 20V4M16 20v-7M22 20H2', shist: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2', shome: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z' });
 
@@ -122,27 +124,67 @@ function head() {
       <button class="sb-plus${SB.sheet ? ' on' : ''}" data-sb="sheet" aria-label="${SB.sheet ? 'Lukk' : 'Legg til abonnement'}" aria-expanded="${SB.sheet}">${SB.sheet ? '×' : '+'}</button></div>`;
 }
 
+/* ---------- «Legg til abonnement»-arket (prompt 28) ---------- */
+const A_IC = { sk: 'M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2M8 12h8', rc: 'M6 3h12v18l-3-2-3 2-3-2-3 2V3zM9 8h6M9 12h6', tx: 'M4 8h13l-3-3M20 16H7l3 3', man: 'M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4' };
+const aIco = (k, size = 22) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${A_IC[k]}"/></svg>`;
+const CHEV = '<svg class="s28-chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+const CYC3 = [['weekly', 'Uke'], ['monthly', 'Måned'], ['yearly', 'År']];
 function sheet() {
   if (!SB.sheet) return '';
-  const f = SB.f, opt = (k, ic, t, s, tm) => `<span class="sb-opt${SB.mode === k ? ' on' : ''}"><span class="sb-oic">${ic}</span><b>${tm}</b><small>${t}</small><small class="sb-dim">${s}</small></span>`;
-  return card(`<b class="sb-st">Legg til abonnement</b>
-    <div class="sb-opts">
-      <label>${opt('sk', '▣', 'Fra skjermbilde', '✦ Ollama finner tjeneste, plan, pris og trekkdato', 'Skjermbilde')}<input class="m-file" type="file" accept="image/*" data-p27shot></label>
-      <button type="button" data-sb="mode" data-v="man">${opt('man', '✎', 'Skriv inn selv', 'Tjeneste, beløp og trekkdag', 'Manuelt')}</button>
-      <label>${opt('rc', '⎙', 'Fra kvittering', '✦ AI leser bilde, PDF eller e-post', 'Kvittering')}<input class="m-file" type="file" multiple accept="image/*,application/pdf" data-sbfile></label>
-      <button type="button" data-sb="mode" data-v="tx">${opt('tx', '⇄', 'Fra transaksjoner', '✦ Finn faste trekk i banken', 'Transaksjon')}</button>
-    </div>
-    ${P27.shotView()}
-    ${SB.mode === 'man' ? `<form class="sb-form" data-sbform>
-      <input class="sinp" id="m-sb-name" value="${esc(f.name)}" placeholder="Tjeneste, f.eks. HBO Max" autocomplete="off" required>
-      <div class="sb-two"><input class="sinp m-mono" id="m-sb-price" value="${esc(f.price)}" placeholder="Beløp kr" inputmode="decimal" required><input class="sinp" id="m-sb-day" value="${esc(f.day)}" placeholder="Trekkdag (1–31)" inputmode="numeric"></div>
-      <div class="schips">${Object.entries(CYC).map(([k, [n]]) => `<button type="button" class="chip" data-sb="cyc" data-v="${k}" aria-pressed="${f.cycle === k}">${n}</button>`).join('')}</div>
-      <button class="pri-b" type="submit" ${SB.busy ? 'disabled' : ''}>${SB.busy ? 'Legger til …' : 'Legg til'}</button>
-      <div class="snote" style="padding:0">2-årige abonnementer regnes om: 1 200 kr hvert 2. år blir 50 kr/mnd.</div></form>` : ''}
-    ${SB.mode === 'tx' ? `<div class="sb-cand">${SB.cand === null ? (SB.candErr ? `<div class="sb-dim" style="padding:8px 0">${esc(SB.candErr)}</div>` : '<div class="m-spin"></div>') : SB.cand.length ? SB.cand.map((c, i) => {
+  const f = SB.f, sh = SB.sh, mode = SB.mode === 'sk' && !P27.SH.r && !sh?.busy && !sh?.err ? null : SB.mode;
+  const opt = (k, t, d, ai, inner = '') => `${inner ? '<label' : `<button type="button" data-sb="mode" data-v="${k}"`} class="s28-opt"><span class="s28-oic">${aIco(k)}</span><span class="s28-ot"><span class="s28-on"><b>${t}</b>${ai ? '<span class="s28-ai">✦ AI</span>' : ''}</span><span class="s28-od">${d}</span></span>${CHEV}${inner}${inner ? '</label>' : '</button>'}`;
+  const title = mode === 'man' ? 'Skriv inn selv' : mode === 'tx' ? 'Fra transaksjon' : mode === 'sk' ? 'Skjermbilde' : 'Legg til abonnement';
+  const sub = mode === 'man' ? 'Du kan endre alt senere.' : mode === 'tx' ? 'Velg et gjentakende trekk fra banken.' : mode === 'sk' ? 'Tjeneste, pris og trekkdato fylles ut.' : 'Velg hvordan du vil legge det inn.';
+  let body = '';
+  if (!mode) {
+    body = `<div class="s28-list">${opt('sk', 'Skjermbilde', 'Fra App Store, e-post eller kontoside. Tjeneste, pris og trekkdato fylles ut.', true, '<input class="m-file" type="file" accept="image/*,.heic,.heif" data-sbshot>')}
+      ${opt('rc', 'Kvittering', 'Ta bilde eller velg PDF. Ollama leser beløp og syklus.', true, '<input class="m-file" type="file" multiple accept="image/*,application/pdf" data-sbfile>')}
+      ${opt('tx', 'Fra transaksjon', 'Velg et gjentakende trekk fra banken.', false)}
+      ${opt('man', 'Skriv inn selv', 'Tjeneste, beløp, syklus og trekkdag.', false)}</div>
+      <p class="s28-foot">Bilder og kvitteringer leses lokalt av Ollama. Ingenting sendes ut av Homelab.</p>`;
+  } else if (mode === 'man') {
+    const fld = (l, id, v, ph, im, i) => `<label class="s28-fld${i ? ' bt' : ''}"><span>${l}</span><input id="${id}" value="${esc(v)}" placeholder="${ph}" inputmode="${im}" autocomplete="off"${id === 'm-sb-name' ? ' required' : ''}></label>`;
+    body = `<form class="s28-form" data-sbform><div class="s28-list">${fld('Tjeneste', 'm-sb-name', f.name, 'HBO Max', 'text', 0)}${fld('Beløp', 'm-sb-price', f.price, '129 kr', 'decimal', 1)}${fld('Trekkdag', 'm-sb-day', f.day, '15.', 'numeric', 2)}</div>
+      <div class="s28-cyc"><span class="s28-lab">SYKLUS</span><div class="s28-seg" role="radiogroup" aria-label="Syklus">${CYC3.map(([k, n]) => `<button type="button" role="radio" data-sb="cyc" data-v="${k}" aria-checked="${f.cycle === k}">${n}</button>`).join('')}</div></div>
+      <button class="s28-pri" type="submit" ${SB.busy ? 'disabled' : ''}>${SB.busy ? 'Legger til …' : 'Legg til abonnement'}</button></form>`;
+  } else if (mode === 'tx') {
+    body = `<div class="s28-list s28-cand">${SB.cand === null ? (SB.candErr ? `<div class="s28-pad">${esc(SB.candErr)}</div>` : '<div class="m-spin"></div>') : SB.cand.length ? SB.cand.map((c, i) => {
       const have = items().some((x) => x.name.toLowerCase() === String(c.merchant).toLowerCase());
-      return `<div class="sb-row">${lg({ name: c.merchant, domain: c.domain })}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(c.merchant)}</b><span class="sb-dim m-ell">${esc(`${CYC[c.cycle]?.[0] ?? 'Fast'} · ${n0(c.amount)} kr · sett ${c.count} ganger${c.lastDate ? ` · sist ${dd(c.lastDate)}` : ''}`)}</span></span><button class="sb-add${have ? ' have' : ''}" data-sb="cand" data-i="${i}" ${have ? 'disabled' : ''}>${have ? '✓ Lagt til' : '+ Legg til'}</button></div>`;
-    }).join('') : '<div class="sb-dim" style="padding:8px 0">Fant ingen nye faste trekk i transaksjonene.</div>'}</div>` : ''}`, 'sb-sheet');
+      return `<div class="sb-row">${lg({ name: c.merchant, domain: c.domain })}<span class="m-grow" style="min-width:0"><b class="m-ell">${esc(c.merchant)}</b><span class="s28-od m-ell">${esc(`${CYC[c.cycle]?.[0] ?? 'Fast'} · ${n0(c.amount)} kr · sett ${c.count} ganger${c.lastDate ? ` · sist ${dd(c.lastDate)}` : ''}`)}</span></span><button class="sb-add${have ? ' have' : ''}" data-sb="cand" data-i="${i}" ${have ? 'disabled' : ''}>${have ? '✓ Lagt til' : '+ Legg til'}</button></div>`;
+    }).join('') : '<div class="s28-pad">Fant ingen nye faste trekk i transaksjonene.</div>'}</div>`;
+  } else if (mode === 'sk') {
+    body = P27.SH.r ? P27.shotView() : `<div class="s28-shot">${sh?.thumb ? `<span class="s28-thumb" style="background-image:url('${sh.thumb}')"></span>` : ''}<div class="m-grow">${sh?.busy
+      ? `<b class="s28-st">${sh.slow ? 'Laster bildemodellen …' : `${sh.engine === 'gemini' ? 'Gemini' : 'Ollama'} leser skjermbildet …`}</b><span class="s28-od">${sh.slow ? 'Første gang tar det 30–60 sekunder.' : 'Finner tjeneste, plan, pris og trekkdato.'}</span><span class="s28-bar"><i></i></span>`
+      : sh?.err ? errCardHtml(sh.err, { admin: (m.me?.role ?? 'admin') === 'admin', install: sh.inst }) : ''}</div></div>`;
+  }
+  const back = mode ? '<button type="button" class="s28-lnk s28-back" data-sb="back28"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>Tilbake</button>' : '';
+  return `<div class="s28-scrim" data-sb="sheet" aria-hidden="true"></div><div class="s28-sh${paper() ? '' : ' s28-np'}${m.light ? ' s28-l' : ''}" role="dialog" aria-modal="true" aria-label="${title}">
+    <span class="s28-grip" aria-hidden="true"></span>
+    <div class="s28-hd">${back}<h2>${title}</h2><button type="button" class="s28-lnk" data-sb="sheet">Lukk</button></div>
+    <p class="s28-sub">${sub}</p>${body}</div>`;
+}
+
+/* Abonnement fra skjermbilde (prompt 28): JPEG ≤ 1600 px, konkrete feilkort, Gemini bare etter trykk. */
+async function shotRead(file, engine = 'ollama') {
+  const keep = SB.sh?.file === file ? SB.sh : null;
+  const sh = SB.sh = { busy: true, slow: false, err: null, file, img: keep?.img ?? null, thumb: keep?.thumb ?? null, engine, inst: null };
+  SB.mode = 'sk'; P27.SH.r = null; draw();
+  const slow = setTimeout(() => { if (SB.sh === sh && sh.busy && engine !== 'gemini') { sh.slow = true; draw(); } }, SLOW_MS);
+  try {
+    sh.img ??= await toJpeg(file);
+    if (!sh.thumb && sh.img.converted) sh.thumb = URL.createObjectURL(sh.img.blob);
+    const r = await readShot(sh.img, { engine });
+    if (SB.sh !== sh) return;
+    P27.SH.r = r; P27.SH.thumb = sh.thumb; haptic('ok');
+  } catch (e) { if (SB.sh === sh) { sh.err = e; haptic('err'); } }
+  clearTimeout(slow); sh.busy = false; if (SB.sh === sh) draw();
+}
+async function shotInstall() {
+  const sh = SB.sh; if (!sh) return;
+  sh.inst = { status: 'starter', pct: 0 }; draw();
+  try { await installVision((p) => { if (SB.sh === sh) { sh.inst = p; draw(); } }); }
+  catch (e) { sh.inst = { error: e.message, done: true }; draw(); return; }
+  if (SB.sh === sh && !sh.inst?.error) await shotRead(sh.file);
 }
 
 /* ---------- Faner ---------- */
@@ -315,6 +357,7 @@ export async function subsBind(e, t) {
   const fk = { 'm-sb-name': 'name', 'm-sb-price': 'price', 'm-sb-day': 'day' }[t.id];
   if (fk && (e.type === 'input' || e.type === 'change')) { SB.f[fk] = t.value; return true; }
   if (e.type === 'input') return false;
+  if (e.type === 'change' && t.matches?.('[data-sbshot]')) { const f = t.files?.[0]; t.value = ''; if (f) await shotRead(f); return true; }
   if (e.type === 'change' && t.matches?.('[data-sbfile]')) {
     const files = [...t.files]; t.value = '';
     if (!files.length) return true;
@@ -328,13 +371,15 @@ export async function subsBind(e, t) {
   }
   if (e.type === 'submit' && d('[data-sbform]')) {
     e.preventDefault();
-    const f = SB.f, price = parseAmount(f.price), day = Math.min(31, Math.max(1, parseInt(f.day, 10) || 0));
+    const f = SB.f, p0 = parseAmount(f.price), day = Math.min(31, Math.max(1, parseInt(f.day, 10) || 0));
+    // Serveren kjenner ikke ukentlige abonnementer: regnes om til månedlig (× 52 / 12) med «Ukentlig» som plan.
+    const wk = f.cycle === 'weekly', price = wk && p0 ? Math.round(((p0 * 52) / 12) * 100) / 100 : p0;
     if (!f.name.trim() || !price) { haptic('err'); flash('Skriv tjeneste og beløp'); return true; }
     let next = null;
     if (day) { const n = new Date(); let dt = new Date(n.getFullYear(), n.getMonth(), day); if (dt < new Date(n.toDateString())) dt = new Date(n.getFullYear(), n.getMonth() + 1, day); next = dt.toLocaleDateString('sv-SE'); }
     SB.busy = true; draw();
     try {
-      await api('/subscriptions', { method: 'POST', json: { name: f.name.trim(), price, cycle: f.cycle, nextDate: next, chargeDay: day || undefined } });
+      await api('/subscriptions', { method: 'POST', json: { name: f.name.trim(), price, cycle: wk ? 'monthly' : f.cycle, nextDate: next, chargeDay: day || undefined, ...(wk ? { plan: `Ukentlig · ${n0(p0)} kr/uke` } : {}) } });
       SB.f = { name: '', price: '', day: '', cycle: 'monthly' }; SB.sheet = false; SB.mode = null;
       await subsLoad(); flash(`${f.name.trim()} er lagt til`);
     } finally { SB.busy = false; draw(); }
@@ -349,12 +394,20 @@ export async function subsBind(e, t) {
     await subsLoad(); flash(it.active ? `${it.name} er sagt opp` : `${it.name} er aktiv igjen`); return true;
   }
   if ((x = d('[data-sbed]')) && !d('[data-sb]')) { const it = items().find((y) => String(y.id) === x.dataset.sbed); if (it) { openEditor(it); haptic('tap'); draw(); } return true; }
+  if ((x = d('.s28-sh [data-shot]'))) {
+    e.preventDefault(); const a = x.dataset.shot, sh = SB.sh;
+    if (a === 'manual') { SB.mode = 'man'; SB.sh = null; if (P27.SH.r) P27.SH.r = null; draw(); setTimeout(() => document.getElementById('m-sb-name')?.focus(), 60); return true; }
+    if (!sh) return true;
+    if (a === 'retry') await shotRead(sh.file); else if (a === 'gemini') await shotRead(sh.file, 'gemini'); else if (a === 'install') await shotInstall();
+    return true;
+  }
   if (!(x = d('[data-sb]'))) return false;
   e.preventDefault();
   const k = x.dataset.sb, v = x.dataset.v;
   if (k === 'tab') { SB.tab = v; SB.sheet = false; window.scrollTo(0, 0); }
-  else if (k === 'sheet') { SB.sheet = !SB.sheet; SB.mode = null; }
-  else if (k === 'mode') { if (v === 'man') { SB.sheet = false; SB.mode = null; openEditor(null); draw(); return true; } SB.mode = v; if (v === 'tx') { await loadCand(); return true; } }
+  else if (k === 'sheet') { SB.sheet = !SB.sheet; SB.mode = null; SB.sh = null; P27.SH.r = null; if (SB.sheet) haptic('tap'); }
+  else if (k === 'back28') { SB.mode = null; SB.sh = null; P27.SH.r = null; }
+  else if (k === 'mode') { SB.mode = v; if (v === 'tx') { await loadCand(); return true; } if (v === 'man') { draw(); setTimeout(() => document.getElementById('m-sb-name')?.focus(), 60); return true; } }
   else if (k === 'cyc') SB.f.cycle = v;
   else if (k === 'mon') SB.mon = +v;
   else if (k === 'task') { const dn = doneSet(); dn[v] = !dn[v]; try { localStorage.setItem('fh_sub_done', JSON.stringify(dn)); } catch {} if (dn[v]) haptic('ok'); }

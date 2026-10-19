@@ -191,7 +191,7 @@ function depRow(d, key, from) {
     <span class="m-grow p16-dt"><b>${esc(d.to ?? '')}</b><span class="${late ? 'pp-lab-c' : 'pp-mut'}">${esc(txt)}</span>
       ${d.situation ? `<span class="p16-sit">${esc(d.situation)}</span>` : ''}</span>
     <span class="p16-min p21-min"><b class="pp-serif">${mn == null ? '–' : mn <= 0 ? 'Nå' : `${mn} min`}</b>${clock ? `<small>${esc(clock)}</small>` : ''}</span></button>
-    ${open ? stopList(d, key, c, from) : ''}</div>`;
+    <div class="p28-col${open ? ' on' : ''}" data-depcol="${esc(key)}"><div>${stopList(d, key, c, from)}</div></div></div>`;
 }
 function stopCard(s, i, n) {
   const key = s.id ?? s.name, D = AV.deps[key] ?? {}, list = D.departures ?? [], more = AV.more[key];

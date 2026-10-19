@@ -9,6 +9,7 @@ import { iconColor, iconInk, FM, famLoad, BO, bolLoad, bolUpload } from './mobil
 import { listShareLine } from './mobile-p21.js';
 import { currentUser } from './mobile-upq.js';
 import * as P25 from './mobile-p25.js';
+import { updAdmin, updSummary } from './mobile-upd.js';
 
 const LS = 'fh_p17';
 const L = (() => { try { return JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch { return {}; } })();
@@ -140,6 +141,7 @@ export function p17SetMain(T = {}) {
       row('', 'Fanelinje-stil', P25.NAV_STYLES.find(([k]) => k === P25.navStyle())[2], P25.navStyleName(), 'list', 'navstil', 'data-p25="nscycle"'),
       row('#/set/fanelinje', 'Fanelinje i Hjem', 'Fjern, flytt, gi nytt navn og ikon · eller hold inne på fanelinjen', '', 'list', 'hjemnav'), row('#/set/mod', 'Moduler', domOk() ? 'Sporing, Domener, Mat, Nyheter' : 'Sporing, Mat, Nyheter', '', 'globe', 'mod'), row('#/nyheter', 'Nyhetsleser', 'Kilder og AI', '', 'look', 'rss')])}
     ${grp('APP', [row('#/set/look', 'Utseende og fanelinje', 'Papir · bakgrunn · ikonfarger', '', 'look', 'look'), row('#/set/varsler', 'Varsler og haptikk', NT.d ? (NT.d.on === false ? 'Av' : 'På') : '', '', 'bell', 'varsler'), row('#/set/kal', 'Kalendere', 'Google Kalender · Home Assistant', '', 'users', 'kal'), row('#/set/integ', 'Integrasjoner', 'Home Assistant, Kalendere, Entur, Bring og flere', '', 'home', 'integ')])}
+    ${updAdmin() ? grp('SYSTEM', [row('#/set/oppd', 'Oppdatering', 'Oppdater serveren til nyeste versjon', updSummary(), 'backup', 'oppd')]) : ''}
     ${grp('', [`<button class="opt-row p17-row" data-sact="logout"><span class="m-grow" style="color:var(--pp-lab);font-weight:700">Logg ut</span></button>`])}
     <span class="p17-ver">${esc(appName())} ${VERSION} · Papir</span>`;
 }

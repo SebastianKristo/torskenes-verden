@@ -3,9 +3,12 @@
 // legg til, hold inne og dra, sveip mot høyre for å slette).
 // Data: GET /api/weather/full?place=<id> (MET/yr via serveren). Nye felt (7 dager time for time, compare) brukes når de finnes,
 // ellers fylles det inn fra døgnverdiene. Pent: full.compare eller GET /api/weather/compare (eldre format).
-// Steder: GET/POST/DELETE /api/weather/places, PUT /api/weather/places/order, søk i /api/weather/search?q=.
+// Steder: GET/POST/DELETE /api/weather/places, PUT /api/weather/places/order. Prompt 28: søk i GET /api/weather/places?q=
+// (Open-Meteo + OpenStreetMap via serveren, {name, sub, lat, lon, country, source}); eldre server: /api/weather/search?q=.
+// Prompt 28: ny værbakgrunn (weather-fx.js, fasit WxFx) og kart · steder i en frostet bunnlinje.
 import { clearBtn } from '/assets/js/searchfield.js';
 import { api, esc } from './util.js';
+import { createWxFx, sunFrac } from './weather-fx.js';
 
 /* ---------------- Konstanter fra designet ---------------- */
 const IC = { sun: 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4', moon: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z', part: 'M8 4v1.5M3.5 9H5M4.8 5.8l1 1M11.2 5.8l-1 1M8 7a3 3 0 0 0-2.8 4M7 19h10a4 4 0 0 0 0-8 5.5 5.5 0 0 0-10.4 1.5A3.3 3.3 0 0 0 7 19z', cloud: 'M7 18h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 18z', rain: 'M7 14h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 14zM8 17l-1 3M12 17l-1 3M16 17l-1 3', snow: 'M7 14h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 14zM8 18h.01M12 20h.01M16 18h.01', fog: 'M4 10h16M6 14h12M4 18h16', storm: 'M7 13h10a4 4 0 0 0 0-8 6 6 0 0 0-11.5 1.5A3.5 3.5 0 0 0 7 13zM12 14l-2 4h3l-2 4' };
@@ -171,7 +174,7 @@ function nowIndex(H) { const nowMs = Date.now(); return Math.max(0, H.time.findI
 const kindOf = (code, night) => ((code >= 71 && code <= 77) || code === 85 || code === 86 ? 'snow' : (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95 ? 'rain' : code === 45 || code === 48 ? 'fog' : code === 3 ? 'clouds' : night ? (code === 2 ? 'partn' : 'stars') : code === 2 ? 'part' : 'sun');
 function skyOf(code, night) {
   if (night) return 'linear-gradient(180deg,#0b1730 0%,#1c2d52 55%,#2a3f6a 100%)';
-  if (code <= 2) return 'linear-gradient(180deg,#3d6fa8 0%,#2f6fb8 40%,#4a8ad0 75%,#8ab6e4 100%)';
+  if (code <= 2) return 'linear-gradient(180deg,#1f5fc4 0%,#3a82d8 42%,#6aa8e8 78%,#9ccaf2 100%)';
   if (code === 3) return 'linear-gradient(180deg,#4f6d8f 0%,#6a87a6 55%,#9bb0c5 100%)';
   if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95) return 'linear-gradient(180deg,#3b4658 0%,#323d4e 45%,#2a3342 100%)';
   if ((code >= 71 && code <= 77) || code >= 85) return 'linear-gradient(180deg,#5e6b7c 0%,#7d8a9a 55%,#a3aebb 100%)';
@@ -399,15 +402,15 @@ function cmpSheet(d) {
 
 function placesSheet() {
   const L = S.places ?? DEFP, res = S.plRes ?? [];
-  const resHtml = res.length ? `<div class="wxp-box wxp-res">${res.map((r, i) => { const have = L.find((x) => Math.abs(x.lat - r.lat) < 0.05 && Math.abs(x.lon - r.lon) < 0.05); return `<button data-wx-res="${i}"${i ? ' class="bt"' : ''}><span><b>${esc(r.name)}</b><span class="wxp-mut">${esc([r.region, r.country].filter(Boolean).join(', '))} · ${(+r.lat).toFixed(2)}, ${(+r.lon).toFixed(2)}</span></span><span class="${have ? 'wxp-mut' : 'wxp-blue2'}">${have ? 'Vis' : '+ Legg til'}</span></button>`; }).join('')}</div>` : '';
+  const resHtml = res.length ? `<div class="wxp-box wxp-res">${res.map((r, i) => { const have = L.find((x) => Math.abs(x.lat - r.lat) < 0.05 && Math.abs(x.lon - r.lon) < 0.05); return `<button data-wx-res="${i}"${i ? ' class="bt"' : ''}><span><b>${esc(r.name)}</b><span class="wxp-mut">${esc(r.sub || [r.region, r.country].filter(Boolean).join(', '))}</span></span><span class="${have ? 'wxp-mut' : 'wxp-blue2'}">${have ? 'Vis' : '+ Legg til'}</span></button>`; }).join('')}</div>` : '';
   const list = L.map((P) => `<div class="wxp-pl${S.drag === P.id ? ' drag' : ''}${S.swOpen === P.id ? ' sw' : ''}" data-pl="${esc(P.id)}"><button class="wxp-pldel" data-wx-del="${esc(P.id)}" tabindex="${S.swOpen === P.id ? 0 : -1}">Slett</button><div class="wxp-plrow${P.id === place().id ? ' cur' : ''}" style="transform:translateX(${S.swOpen === P.id ? 96 : 0}px)" role="button" tabindex="0" data-wx-pl="${esc(P.id)}"><span><b>${esc(P.name)}</b><span>${esc(P.region ?? '')}</span></span><span class="wxp-grip" aria-hidden="true">≡</span></div></div>`).join('');
   return sheet(`<div class="wxp-shh"><b class="wxp-h1">Steder</b>${doneBtn('pl')}</div>
     <form class="wxp-search${S.plQ ? ' has' : ''}" data-wx-search data-sf><span class="sf-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9aa3ae" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span>${clearBtn()}<input name="q" value="${esc(S.plQ)}" placeholder="Søk etter by eller sted" autocomplete="off" aria-label="Søk etter sted"></form>
-    <div data-wx-resbox>${S.plBusy ? '<span class="wxp-mut">Søker …</span>' : ''}${resHtml}${S.plRes && !res.length && !S.plBusy ? '<span class="wxp-mut">Fant ingen steder.</span>' : ''}</div>
+    <div data-wx-resbox>${S.plBusy ? '<span class="wxp-mut">Søker …</span>' : ''}${resHtml}${S.plRes && !res.length && !S.plBusy ? `<span class="wxp-mut">${S.plErr ? 'Får ikke søkt nå. Prøv igjen.' : `Fant ingen steder som heter «${esc(S.plQ.trim())}»`}</span>` : ''}</div>
     <span class="wxp-cap">MINE STEDER</span>
     <div class="wxp-pls" data-wx-pls>${list}</div>
     <span class="wxp-mut" style="font-size:12px;padding:0 4px">Hold inne for å flytte · sveip mot høyre for å slette</span>
-    <span class="wxp-mut" style="font-size:12px;line-height:1.45">Værdata fra Meteorologisk institutt (yr.no, api.met.no). Stedssøk via Kartverket og Open-Meteo.${S.placesOk ? '' : ' Stedene lagres i denne nettleseren.'}</span>`, 'pl');
+    <span class="wxp-mut" style="font-size:12px;line-height:1.45">Værdata fra Meteorologisk institutt (yr.no, api.met.no). Stedssøk via Open-Meteo og OpenStreetMap.${S.placesOk ? '' : ' Stedene lagres i denne nettleseren.'}</span>`, 'pl');
 }
 
 const LAYERS = [['rain', 'Nedbør'], ['temp', 'Temperatur'], ['wind', 'Vind'], ['clouds', 'Skyer']];
@@ -448,7 +451,8 @@ function paintMain() {
   const C = S.d?.current, night = C ? C.is_day === 0 : new Date().getHours() < 7 || new Date().getHours() >= 19;
   const code = C?.weather_code ?? 2;
   r.querySelector('.wxp-sky').style.background = skyOf(code, night);
-  fx?.set(kindOf(code, night), code === 65 || code === 82 || code >= 95, code >= 95, night);
+  const D = S.d?.daily, sunF = D ? sunFrac(D.sunrise?.[1], D.sunset?.[1]) : 0.5;
+  fx?.set({ kind: kindOf(code, night), heavy: code === 65 || code === 82 || code >= 95, thunder: code >= 95, day: !night, sunF });
   paintTop();
 }
 function paintLayer() {
@@ -465,80 +469,35 @@ function paintLayer() {
 const layerKey = () => (S.mpOpen ? 'mp' : S.plOpen ? 'pl' : S.cmpOpen ? 'cmp' : S.ms ? `ms:${S.ms}` : S.sh != null ? 'sh' : '');
 function paint() { paintMain(); paintLayer(); }
 
-/* ---------------- Animert bakgrunn ---------------- */
-// Etter værkode og dag/natt: stjerner, sol med dempet glorie (maks ~60 % i midten, skaleres etter korteste side, maks 560 px),
-// drivende skyer, regnstriper, snø, tåke og lyn. Maks 30 fps, stopper ved «Reduser bevegelse» og når fanen er skjult.
-function makeFx(cv) {
-  const ctx = cv.getContext('2d'), dpr = Math.min(2, window.devicePixelRatio || 1), mq = matchMedia('(prefers-reduced-motion: reduce)');
-  let W = 0, Hh = 0, raf = 0, last = 0, k = 'sun', heavy = false, thunder = false, night = false, stars = [], drops = [], flakes = [], clouds = [], t0 = performance.now(), alive = true;
-  const rnd = (a, b) => a + Math.random() * (b - a);
-  const seed = () => {
-    stars = Array.from({ length: Math.round((W * Hh) / 2600) }, () => ({ x: rnd(0, W), y: rnd(0, Hh * 0.75), r: rnd(0.4, 1.5), a: rnd(0.3, 1), s: rnd(0.5, 2), o: rnd(0, 6.28) }));
-    drops = Array.from({ length: heavy ? 220 : 120 }, () => ({ x: rnd(-40, W), y: rnd(-Hh, Hh), l: rnd(10, 22), v: rnd(9, 15), a: rnd(0.12, 0.32) }));
-    flakes = Array.from({ length: 110 }, () => ({ x: rnd(0, W), y: rnd(-Hh, Hh), r: rnd(1, 3.2), v: rnd(0.5, 1.5), d: rnd(0, 6.28) }));
-    const nC = k === 'clouds' || k === 'rain' || k === 'snow' || k === 'fog' ? 9 : k === 'part' || k === 'partn' ? 4 : 0;
-    clouds = Array.from({ length: nC }, (_, i) => ({ x: rnd(-0.2, 1.1) * W, y: rnd(0.02, k === 'part' || k === 'partn' ? 0.35 : 0.55) * Hh, w: rnd(0.45, 0.9) * W, h: rnd(0.08, 0.16) * Hh, v: rnd(0.04, 0.14) * (i % 2 ? 1 : -0.6) * 2, a: k === 'fog' ? rnd(0.18, 0.3) : k === 'rain' || k === 'snow' ? rnd(0.16, 0.3) : k === 'part' ? rnd(0.06, 0.12) : rnd(0.16, 0.28) }));
-  };
-  const size = () => { const r = cv.getBoundingClientRect(); W = r.width; Hh = r.height; cv.width = W * dpr; cv.height = Hh * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); seed(); };
-  const ro = new ResizeObserver(() => { size(); if (mq.matches) draw(performance.now(), true); });
-  ro.observe(cv);
-  function draw(now, once = false) {
-    if (!alive) return;
-    if (!cv.isConnected) { stop(); return; }
-    if (!once && now - last < 33) { raf = requestAnimationFrame(draw); return; } // maks 30 fps
-    last = now;
-    const t = (now - t0) / 1000;
-    ctx.clearRect(0, 0, W, Hh);
-    if (k === 'stars' || k === 'partn') { for (const s of stars) { const tw = 0.55 + 0.45 * Math.sin(t * s.s + s.o); ctx.globalAlpha = s.a * tw; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.283); ctx.fill(); } ctx.globalAlpha = 1; }
-    if (k === 'sun' || k === 'part') {
-      const m = Math.min(W, Hh), cx = W * 0.82, cy = -m * 0.04, R = Math.min(m * 0.95, 560);
-      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
-      g.addColorStop(0, 'rgba(255,255,255,.58)'); g.addColorStop(0.07, 'rgba(255,252,236,.36)'); g.addColorStop(0.22, 'rgba(255,245,220,.09)'); g.addColorStop(0.55, 'rgba(255,255,255,.018)'); g.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = g; ctx.fillRect(0, 0, W, Hh);
-      const hr = m * 0.5; ctx.lineWidth = m * 0.03;
-      [['rgba(255,120,120,.03)', 0], ['rgba(255,230,120,.03)', m * 0.03], ['rgba(120,220,255,.035)', m * 0.06]].forEach(([c, o]) => { ctx.strokeStyle = c; ctx.beginPath(); ctx.arc(cx, cy, hr + o, 0, 6.283); ctx.stroke(); });
-      const sh = Math.sin(t * 0.4) * 0.05;
-      [[0.48, 0.2, 0.06], [0.42, 0.3, 0.035], [0.36, 0.38, 0.05]].forEach(([, fy, fr]) => { const x = cx + (W * 0.5 - cx) * (fy * 2.2) + sh * W, y = cy + Hh * fy, rr = Math.min(W, 900) * fr; const gg = ctx.createRadialGradient(x, y, 0, x, y, rr); gg.addColorStop(0, 'rgba(255,255,255,.05)'); gg.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(x, y, rr, 0, 6.283); ctx.fill(); });
-    }
-    for (const c of clouds) {
-      c.x += c.v; if (c.x > W * 1.2) c.x = -c.w; if (c.x < -c.w * 1.1) c.x = W * 1.1;
-      for (let j = 0; j < 5; j++) { const x = c.x + c.w * (j / 4), y = c.y + Math.sin(j * 1.7) * c.h * 0.35, rr = c.h * (1.1 + ((j * 37) % 5) / 6); const g = ctx.createRadialGradient(x, y, 0, x, y, rr * 1.6); const col = k === 'rain' || k === 'snow' ? '200,210,225' : k === 'partn' || night ? '150,165,195' : '255,255,255'; g.addColorStop(0, `rgba(${col},${c.a})`); g.addColorStop(1, `rgba(${col},0)`); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, y, rr * 1.9, rr * 1.2, 0, 0, 6.283); ctx.fill(); }
-    }
-    if (k === 'rain') {
-      ctx.lineCap = 'round';
-      for (const d of drops) { d.y += d.v * 2; d.x += d.v * 0.24; if (d.y > Hh) { d.y = rnd(-60, -10); d.x = rnd(-40, W); } ctx.strokeStyle = `rgba(220,230,245,${d.a})`; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + d.l * 0.12, d.y + d.l); ctx.stroke(); }
-      if (thunder && Math.sin(t * 0.7) > 0.995) { ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.fillRect(0, 0, W, Hh); }
-    }
-    if (k === 'snow') for (const f of flakes) { f.y += f.v * 2; f.x += Math.sin(t + f.d) * 0.8; if (f.y > Hh) { f.y = -5; f.x = rnd(0, W); } ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 6.283); ctx.fill(); }
-    if (k === 'fog') { const g = ctx.createLinearGradient(0, Hh * 0.2, 0, Hh); g.addColorStop(0, 'rgba(220,225,232,0)'); g.addColorStop(1, 'rgba(220,225,232,.35)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, Hh); }
-    if (once || mq.matches) return;
-    raf = document.hidden ? setTimeout(() => { raf = requestAnimationFrame(draw); }, 500) : requestAnimationFrame(draw);
-  }
-  function stop() { alive = false; cancelAnimationFrame(raf); clearTimeout(raf); ro.disconnect(); }
-  const start = () => { cancelAnimationFrame(raf); clearTimeout(raf); if (mq.matches) draw(performance.now(), true); else raf = requestAnimationFrame(draw); };
-  mq.addEventListener?.('change', start);
-  return {
-    set(nk, nh, nt, nn = false) { if (nk === k && nh === heavy && nt === thunder && nn === night && W) return; k = nk; heavy = nh; thunder = nt; night = nn; if (W) seed(); start(); },
-    stop,
-  };
-}
+/* ---------------- Animert bakgrunn: se weather-fx.js (prompt 28) ---------------- */
 
 /* ---------------- Steder ---------------- */
 let sqT = null, sqId = 0;
 async function search(q) {
   q = (q || '').trim();
-  if (q.length < 2) { S.plRes = null; S.plBusy = false; return paintRes(); }
-  const id = ++sqId; S.plBusy = true; paintRes();
-  try { const r = await api(`/weather/search?q=${encodeURIComponent(q)}`); if (id !== sqId) return; S.plRes = Array.isArray(r) ? r : r?.results ?? []; }
-  catch { if (id === sqId) S.plRes = []; }
+  if (q.length < 2) { S.plRes = null; S.plBusy = false; S.plErr = false; return paintRes(); }
+  const id = ++sqId; S.plBusy = true; S.plErr = false; paintRes();
+  try { const r = await searchPlaces(q); if (id !== sqId) return; S.plRes = r; }
+  catch { if (id === sqId) { S.plRes = []; S.plErr = true; } }
   if (id === sqId) { S.plBusy = false; paintRes(); }
+}
+// Prompt 28: GET /api/weather/places?q= gir søketreff ({name, sub, …, source}). En eldre server svarer med de lagrede
+// stedene (uten source/sub) og ignorerer q; da brukes /api/weather/search?q= som før.
+export async function searchPlaces(q) {
+  const norm = (x) => ({ ...x, name: x.name, lat: +x.lat, lon: +x.lon, sub: x.sub ?? [x.region, x.country].filter(Boolean).join(', ') });
+  try {
+    const r = await api(`/weather/places?q=${encodeURIComponent(q)}`), L = Array.isArray(r) ? r : r?.results ?? r?.items ?? null;
+    if (Array.isArray(L) && L.every((x) => x && ('source' in x || 'sub' in x))) return L.slice(0, 10).map(norm);
+  } catch (e) { if (e.status && e.status !== 404 && e.status !== 405) throw e; }
+  const r = await api(`/weather/search?q=${encodeURIComponent(q)}`);
+  return (Array.isArray(r) ? r : r?.results ?? []).slice(0, 10).map(norm);
 }
 function paintRes() { const r = root()?.querySelector('[data-wx-resbox]'); if (!r) return; const tmp = document.createElement('div'); tmp.innerHTML = placesSheet(); r.replaceWith(tmp.querySelector('[data-wx-resbox]')); }
 function selectPlace(id) { S.cur = id; lsSet('wx_city', id); S.plOpen = false; S.plQ = ''; S.plRes = null; S.sh = null; S.ms = null; S.cmp = null; paintLayer(); load(); }
 async function addPlace(r) {
   const have = S.places.find((x) => Math.abs(x.lat - r.lat) < 0.05 && Math.abs(x.lon - r.lon) < 0.05);
   if (have) return selectPlace(have.id);
-  const body = { name: r.name, lat: +r.lat, lon: +r.lon, region: r.region ?? '' };
+  const body = { name: r.name, lat: +r.lat, lon: +r.lon, region: r.region ?? String(r.sub ?? '').split(',')[0].trim(), ...(r.country ? { country: r.country } : {}) };
   if (S.placesOk) {
     try { const l = await api('/weather/places', { method: 'POST', json: body }); if (Array.isArray(l)) S.places = l; const n = S.places.find((x) => Math.abs(x.lat - body.lat) < 0.01 && Math.abs(x.lon - body.lon) < 0.01); return selectPlace(n?.id ?? S.places.at(-1).id); }
     catch (e) { if (e.status !== 404) { alert(e.message); return; } S.placesOk = false; }
@@ -656,7 +615,7 @@ function bind(r) {
     }
     if ((e.key === 'Enter' || e.key === ' ') && e.target.matches?.('[role=button][data-wx-ms],[role=button][data-wx-pl]')) { e.preventDefault(); e.target.click(); }
   });
-  r.addEventListener('input', (e) => { if (e.target.name !== 'q') return; S.plQ = e.target.value; clearTimeout(sqT); sqT = setTimeout(() => search(S.plQ), 300); });
+  r.addEventListener('input', (e) => { if (e.target.name !== 'q') return; S.plQ = e.target.value; clearTimeout(sqT); sqT = setTimeout(() => search(S.plQ), 250); });
   r.addEventListener('submit', (e) => { if (!e.target.matches('[data-wx-search]')) return; e.preventDefault(); clearTimeout(sqT); search(S.plQ); });
 }
 
@@ -667,7 +626,7 @@ export function render() {
     if (!r || r.dataset.bound) return;
     r.dataset.bound = '1';
     fx?.stop();
-    fx = makeFx(r.querySelector('.wxp-fx'));
+    fx = createWxFx(r.querySelector('.wxp-fx'));
     bind(r);
     paint();
     await loadPlaces();
@@ -678,6 +637,6 @@ export function render() {
     <div class="wxp-sky"></div><canvas class="wxp-fx" aria-hidden="true"></canvas>
     <div class="wxp-top"><a class="wxp-glass wxp-back" href="#/dash">‹ Hjem</a><div class="wxp-tc" aria-hidden="true"></div><span class="wxp-src">${esc(S.src)}</span></div>
     <div class="wxp-scroll"><div class="wxp-inner"></div></div>
-    <div class="wxp-fab"><button class="wxp-round" data-wx="map" aria-label="Værkart" title="Værkart"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4L3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5zM9 4v13.5M15 6.5V20"/></svg></button><span></span><button class="wxp-round" data-wx="places" aria-label="Steder" title="Steder og søk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div>
+    <nav class="wxp-bnav" aria-label="Vær"><button class="wxp-bb" data-wx="map" aria-label="Værkart" title="Værkart"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5zM9 4v13.5M15 6.5V20"/></svg></button><span></span><button class="wxp-bb" data-wx="places" aria-label="Steder" title="Steder og søk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></nav>
     <div class="wxp-layer"></div></div>`;
 }

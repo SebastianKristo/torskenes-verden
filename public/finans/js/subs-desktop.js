@@ -2,6 +2,7 @@
 // med Skriv inn selv · Fra kvittering · Fra transaksjoner. Tallene kommer fra GET /subscriptions (byMonth, health,
 // savings, upcoming, thisMonth). Kvitteringer lastes opp med data-mrc="sub" (modules.js), resten håndteres her.
 import { S, api, esc, n0, render, toast, logo, parseAmount } from './core.js';
+import { toJpeg, readShot, errCardHtml, installVision, SLOW_MS } from './sub-shot.js';
 
 const u = S.ui;
 const kr = (v) => `${n0(v)} kr`;
@@ -60,26 +61,38 @@ function skPanel() {
   const nd = r?.neste_trekk ? `${+r.neste_trekk.slice(8, 10)}. ${MON_L[+r.neste_trekk.slice(5, 7) - 1]}` : '–';
   const price = r?.pris != null ? `${r.approx ? '≈ ' : ''}${n0(r.pris / 100)} kr${r.prisOriginal?.tekst ? ` (${r.prisOriginal.tekst})` : ''}` : '–';
   const ex = r?.existingId ? S.subs?.items?.find((y) => y.id === r.existingId) ?? r.existing : null;
-  const body = K.busy ? `<span class="so-sk-t">Finner tjeneste, plan, pris og trekkdato …</span><span class="so-sk-bar"><span style="width:${Math.round(K.pct)}%"></span></span><span class="note" style="font-size:12px">${esc(K.name)}</span>`
-    : K.err ? `<span class="so-sk-t neg">${esc(K.err)}</span>`
+  const body = K.busy ? `<span class="so-sk-t">${K.slow ? 'Laster bildemodellen … første gang tar det 30–60 sekunder.' : `Finner tjeneste, plan, pris og trekkdato${K.engine === 'gemini' ? ' med Gemini' : ''} …`}</span><span class="so-sk-bar"><span style="width:${Math.round(K.pct)}%"></span></span><span class="note" style="font-size:12px">${esc(K.name)}</span>`
+    : K.err ? errCardHtml(K.err, { admin: isAdmin(), install: K.inst })
       : [row('Tjeneste', r.tjeneste, 'tjeneste'), row('Plan', r.plan, 'plan'), row('Pris', price, 'pris'), row('Syklus', r.syklus === 'år' ? 'Årlig' : 'Månedlig', 'syklus'), row('Neste trekk', nd, 'neste_trekk'), row('Kategori', r.kategori, 'kategori')].join('');
   const btns = K.busy || K.err ? '' : `<div class="so-sk-b">${ex ? `<button class="btn pri" data-sact="sk-update">Oppdater ${esc(ex.name)}</button>` : `<button class="btn pri" data-sact="sk-add">+ Legg til ${esc(r.tjeneste ?? 'abonnement')}</button>`}<button class="btn" data-sact="sk-edit">Rediger først</button></div>
     ${ex ? `<span class="note" style="font-size:12.5px">${esc(ex.name)} finnes allerede${ex.plan ? ` (${esc(ex.plan)}` : ' ('}${ex.price != null ? `${ex.plan ? ', ' : ''}${n0(ex.price)} kr)` : ')'}. Oppdater plan og pris i stedet for å legge til et nytt.</span>` : ''}`;
-  return `<section class="card so-sk"><div class="card-h"><h2>✦ Ollama leser skjermbildet</h2><button class="x-btn sm" data-sact="sk-close" aria-label="Lukk">×</button></div>
+  return `<section class="card so-sk"><div class="card-h"><h2>✦ ${K.engine === 'gemini' ? 'Gemini' : 'Ollama'} leser skjermbildet</h2><button class="x-btn sm" data-sact="sk-close" aria-label="Lukk">×</button></div>
     <div class="so-sk-m"><span class="so-sk-img"${K.url ? ` style="background-image:url('${esc(K.url)}')"` : ''}></span><div class="so-sk-rows">${body}</div></div>
     ${btns}<span class="note" style="font-size:12px">Leses lokalt av bildemodellen på hjemmeserveren. Bildet slettes etter lesing. Felt merket «Sjekk» var utydelige.</span></section>`;
 }
-async function readSk(file) {
-  if (u.subSk?.url) URL.revokeObjectURL(u.subSk.url);
-  const K = u.subSk = { busy: true, pct: 4, name: file.name, url: URL.createObjectURL(file), r: null, err: '' };
+// Prompt 28: JPEG ≤ 1600 px fra canvas, konkrete feilkort (Prøv igjen · Les med Gemini · Installer qwen2.5vl · Skriv inn selv)
+// og «Laster bildemodellen …» etter 5 s. Gemini brukes bare når brukeren trykker «Les med Gemini».
+const isAdmin = () => (S.boot?.me?.role ?? 'admin') === 'admin'; // serveren avviser uansett ikke-admin (403)
+async function readSk(file, engine = 'ollama') {
+  const keep = u.subSk?.file === file ? u.subSk : null;
+  if (u.subSk?.url && !keep) URL.revokeObjectURL(u.subSk.url);
+  const K = u.subSk = { busy: true, pct: 4, name: file.name, url: keep?.url ?? URL.createObjectURL(file), r: null, err: null, file, img: keep?.img ?? null, engine, slow: false };
   u.subMenu = false; render();
   const t = setInterval(() => { if (u.subSk !== K || !K.busy) return clearInterval(t); K.pct = Math.min(92, K.pct + 3 + Math.random() * 6); const b = document.querySelector('.so-sk-bar span'); if (b) b.style.width = `${Math.round(K.pct)}%`; }, 300);
+  const slow = setTimeout(() => { if (u.subSk === K && K.busy && engine !== 'gemini') { K.slow = true; render(); } }, SLOW_MS);
   try {
-    const fd = new FormData(); fd.append('image', file);
-    K.r = await api('/subscriptions/from-screenshot', { method: 'POST', body: fd });
-  } catch (e) { K.err = e.status === 404 ? 'Serveren støtter ikke skjermbilder ennå.' : `Kunne ikke lese skjermbildet: ${e.message}`; }
-  clearInterval(t); K.busy = false; K.pct = 100;
+    K.img ??= await toJpeg(file);
+    K.r = await readShot(K.img, { engine });
+  } catch (e) { K.err = e; }
+  clearInterval(t); clearTimeout(slow); K.busy = false; K.pct = 100;
   if (u.subSk === K) render();
+}
+async function skInstall() {
+  const K = u.subSk; if (!K) return;
+  K.inst = { status: 'starter', pct: 0 }; render();
+  try { await installVision((p) => { if (u.subSk !== K) return; K.inst = p; render(); }); }
+  catch (e) { K.inst = { error: e.message, done: true }; render(); return; }
+  if (u.subSk === K && !K.inst?.error) { K.inst = null; await readSk(K.file); }
 }
 function skJson(r) {
   const nd = r.neste_trekk ?? '';
@@ -357,6 +370,13 @@ export function bindSubs(el) {
       x.disabled = true;
       const s = await api('/subscriptions', { method: 'POST', json: { fromCandidate: c } });
       toast(`${s.name} er lagt til`); return reload();
+    }
+    if ((x = d('.so-sk [data-shot]'))) {
+      const K = u.subSk, a = x.dataset.shot; if (!K) return;
+      if (a === 'retry') return readSk(K.file);
+      if (a === 'gemini') return readSk(K.file, 'gemini');
+      if (a === 'install') return skInstall();
+      if (a === 'manual') { if (K.url) URL.revokeObjectURL(K.url); u.subSk = null; openEd(null); render(); el.querySelector('.se [name=n]')?.focus(); return; }
     }
     if ((x = d('[data-sact]'))) {
       switch (x.dataset.sact) {

@@ -402,10 +402,15 @@ function sheets() {
       <button class="ch27-pb" data-c27="gsend">Send</button>${G.hasData ? '<button class="ch27-ob" data-c27="gnodata">Send uten mine data</button>' : ''}<button class="ch27-ob" data-c27="glocal">Bruk lokal modell (${esc(loc)})</button>`);
   }
   if (s === 'plus') {
-    return sheetWrap(`${shHead('Legg ved')}<div class="ch27-box">
-      <label class="ch27-lr ic"><input class="m-file" type="file" accept="image/*" multiple data-c27file="img"><span class="i">▣</span><span class="m-grow"><span>Bilde eller kamera</span><small>Leses av en bildemodell, f.eks. qwen2.5vl</small></span></label>
-      <label class="ch27-lr ic"><input class="m-file" type="file" multiple data-c27file="file"><span class="i">⎙</span><span class="m-grow"><span>Fil</span><small>PDF, Word, tekst eller CSV</small></span></label>
-      <button class="ch27-lr ic" data-c27="kb"><span class="i">#</span><span class="m-grow"><span>Fra kunnskapsbasen</span><small>${C.kb ? `${C.kb.length} dokumenter` : 'Velg dokumenter'}</small></span><span>›</span></button></div>`);
+    // Prompt 28 (claude-code-chat-legg-ved.md): grep-strek, tittel og ✕ på én linje, tre fliser (Kamera · Bilder · Filer),
+    // raden «Fra kunnskapsbasen» og fotnote. Høyde etter innhold.
+    const ic = (d) => `<span class="ch28-ib">${svg(d, 23, 1.8)}</span>`;
+    return sheetWrap(`<span class="ch28-grip" aria-hidden="true"></span><div class="ch28-hd"><b class="ch27-h">Legg ved</b><button class="ch28-x" data-c27="close" aria-label="Lukk">${svg('M6 6l12 12M18 6L6 18', 14, 2.6)}</button></div>
+      <div class="ch28-tiles"><label class="ch28-t"><input class="m-file" type="file" accept="image/*" capture="environment" data-c27file="img">${ic('M4 8h3l2-3h6l2 3h3v11H4zM12 16.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z')}<span>Kamera</span></label>
+        <label class="ch28-t"><input class="m-file" type="file" accept="image/*" multiple data-c27file="img">${ic('M4 5h16v14H4zM4 15l4-4 4 4 3-3 5 5M15.5 9h.01')}<span>Bilder</span></label>
+        <label class="ch28-t"><input class="m-file" type="file" multiple accept=".pdf,.doc,.docx,.txt,.md,.csv,application/pdf,text/plain,text/csv,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" data-c27file="file">${ic('M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6')}<span>Filer</span></label></div>
+      <button class="ch28-kb" data-c27="kb">${ic('M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5zM5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3M9 7.5h6')}<span class="m-grow"><b>Fra kunnskapsbasen</b><small>${C.kb ? `${C.kb.length} dokumenter` : 'Velg dokumenter'}</small></span>${svg('M9 6l6 6-6 6', 16, 2.2)}</button>
+      <span class="ch28-fn">Bilder leses av en bildemodell, f.eks. qwen2.5vl. Filer kan være PDF, Word, tekst eller CSV.</span>`, 'ch28-plus');
   }
   if (s === 'kb') {
     const sel = C.att.filter((a) => a.kind === 'doc').map((a) => a.id);
@@ -444,7 +449,7 @@ export function chatView() {
       ${C.rec ? `<div class="ch27-rec"><i></i><span class="m-grow">Lytter … snakk nå</span><span class="ch27-wave">${'<b></b>'.repeat(7)}</span></div>` : `<textarea id="ch27-in" rows="${rows}" placeholder="Spør ${esc(sky ? M.name : M.id)} …" enterkeyhint="send" aria-label="Melding">${esc(C.inp)}</textarea>`}
       <div class="ch27-tools"><button class="ch27-plus" data-c27="plus" aria-label="Legg ved">${svg(IC.plus, 18, 2.2)}</button><button class="ch27-tg${chip(C.web)}" data-c27="web" aria-pressed="${C.web}">${svg(IC.web, 15)}Nettsøk</button><button class="ch27-tg${chip(dOn)}" data-c27="data" aria-pressed="${dOn}">${svg(IC.db, 15)}Mine data</button><span class="m-grow"></span>
         <button class="ch27-mic${C.rec ? ' on' : ''}" data-c27="mic" aria-label="Snakk">${svg(IC.mic, 19)}</button>${C.busy ? '<button class="ch27-send" data-c27="stop" aria-label="Stopp"><i class="sq"></i></button>' : `<button class="ch27-send${C.inp.trim() ? '' : ' dim'}" data-c27="send" aria-label="Send" id="ch27-send">${svg(IC.up, 18, 2.6)}</button>`}</div></div>
-      <div class="ch27-foot">${sky ? `Sky-modell: meldingen sendes til ${M.provider === 'groq' || /groq/i.test(model) ? 'Groq' : 'Google'}.` : 'Kjører lokalt på hjemmeserveren. Ingenting sendes ut.'}</div></div></div>
+      ${sky ? `<div class="ch27-foot">Sky-modell: meldingen sendes til ${M.provider === 'groq' || /groq/i.test(model) ? 'Groq' : 'Google'}.</div>` : ''}</div></div>
     ${!w && C.drawer ? `<div class="ch27-dbg" data-c27="drawerx"></div>${side(true)}` : ''}
     ${sheets()}</div>`;
 }
@@ -457,6 +462,15 @@ export function chatAfterDraw() {
   if (sc) { if (C.bottom) { sc.scrollTop = sc.scrollHeight; C.bottom = false; } else sc.scrollTop = C.sc; }
   const h = document.getElementById('ch27-hist'); if (h && C.hs) h.scrollTop = C.hs;
 }
+// Prompt 28 (claude-code-chat-tastatur.md): trykk i meldingsområdet (ikke på knapper, lenker eller felt) skjuler tastaturet.
+const kbHide = (e) => {
+  const t = e.target;
+  if (m.screen !== 'chat' || !t?.closest?.('#ch27-sc') || t.closest('a,button,input,textarea,select,label,[role="button"],[contenteditable]')) return;
+  const ae = document.activeElement;
+  if (ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName)) ae.blur();
+};
+addEventListener('touchstart', kbHide, { capture: true, passive: true });
+addEventListener('mousedown', kbHide, { capture: true, passive: true });
 addEventListener('scroll', (e) => { const t = e.target; if (t?.id === 'ch27-sc') C.sc = t.scrollTop; else if (t?.id === 'ch27-hist') C.hs = t.scrollTop; }, { capture: true, passive: true });
 
 /** Åpne Chat (fra ✦ AI på Hjem, Mer eller fanelinja). Med tekst startes en ny samtale med den. */
@@ -544,7 +558,7 @@ export async function chatBind(e, t) {
   if (!x) { if (t.closest?.('[data-c27stop]')) return true; return !!t.closest?.('[data-c27root]') && !t.closest('a,label,input,textarea'); }
   const a = x.dataset.c27;
   // Arkene lukkes ved trykk på bakgrunnen, men ikke ved trykk inne i arket.
-  if (a === 'close' && x !== t && t.closest('[data-c27stop]') && !t.closest('[data-c27="close"].ch27-cx, .ch27-pb[data-c27="close"]')) return true;
+  if (a === 'close' && x !== t && t.closest('[data-c27stop]') && !t.closest('[data-c27="close"].ch27-cx, [data-c27="close"].ch28-x, .ch27-pb[data-c27="close"]')) return true;
   e.preventDefault();
   const c = C.list?.chats.find((y) => y.id === (x.dataset.id ?? C.mn));
   switch (a) {

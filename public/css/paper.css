@@ -662,3 +662,14 @@ html[data-hl="2c"] .p-pk-t b{white-space:nowrap;overflow:hidden;text-overflow:el
 html[data-hl="2c"] body[data-route="dash"] .pw.pw-planet{background:#000}
 html[data-hl="2c"] body[data-route="dash"] .pw.pw-planet .pw-img{background-color:#000;background-size:62% auto;background-position:center 38%}
 html[data-hl="2c"] body[data-route="dash"] .pw.pw-planet .pw-img::after{background:linear-gradient(180deg,rgba(0,0,0,.2),transparent 35%,rgba(0,0,0,.35))}
+
+/* Papir: Innstillinger → System → Oppdatering */
+html[data-hl="2c"] #settings{--upd-pos:var(--pos);--upd-acc:var(--acc);--upd-mute:var(--ink2);--upd-line:var(--rule);--upd-code:#fbf9f4;--upd-sheet:var(--pp)}
+html[data-hl="2c"] .upd-col>b{font:600 15px var(--sans)}
+html[data-hl="2c"] .upd-col>span,html[data-hl="2c"] .upd-chg ul{font-family:var(--sans)}
+html[data-hl="2c"] .upd-cmd code,html[data-hl="2c"] .upd-log{border-radius:0;color:var(--ink);font-family:var(--pmono)}
+html[data-hl="2c"] .upd-step{font:500 12px var(--pmono);letter-spacing:.06em;text-transform:uppercase}
+html[data-hl="2c"] .upd-sheet{border-radius:0;border:1px solid var(--ink);box-shadow:0 18px 50px rgba(27,26,23,.25);color:var(--ink)}
+html[data-hl="2c"] .upd-sheet h3{font:500 24px var(--serif)}
+html[data-hl="2c"] .upd-sheet-bg{background:rgba(27,26,23,.35)}
+@media (max-width:767px){html[data-hl="2c"] .upd-sheet{border-width:1px 0 0}}

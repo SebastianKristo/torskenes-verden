@@ -102,7 +102,9 @@ const go = (patch) => { Object.assign(st, patch); clearErr(); render(); };
 function done(user) {
   noteUser(user?.id);
   const next = new URLSearchParams(location.search).get('next');
-  location.href = next && /^\/[^/\\]/.test(next) ? next : '/';
+  // Lenker som «/#/innstillinger/system» (fra mobilappene) beholder #-delen gjennom innloggingen.
+  const hash = /^#\/innstillinger(\/[\w:-]+){0,2}\/?$/.test(location.hash) ? location.hash : '';
+  location.href = next && /^\/[^/\\]/.test(next) ? next : '/' + hash;
 }
 
 async function post(url, body) {

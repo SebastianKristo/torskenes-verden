@@ -371,7 +371,7 @@ export function ruterView() {
     const k = depKey(key, d, j), open = DEP.open === k, c = lineC(d), { txt, late } = depStatus(d), mn = minOf(d), clock = hm(d.expected || d.aimed || d.time);
     return `<div class="p24-dep${d.cancelled ? ' x' : ''}"${j ? '' : ' style="border-top:0"'}><button class="p24-dh" data-p21="dep" data-k="${esc(k)}" aria-expanded="${open}"><span class="p24-ln" style="background:${esc(c)};color:${esc(lineFg(d, c))}">${esc(d.line)}</span>
       <span class="m-grow" style="min-width:0"><b class="m-ell">${esc(d.to ?? '')}</b><span style="color:${late || delayOf(d) > 0 ? 'var(--pp-lab)' : 'var(--pp-mut)'}">${esc(txt)}</span></span>
-      <span class="p24-dm"><b>${mn == null ? '–' : mn <= 0 ? 'nå' : `${mn} min`}</b><small>${esc(clock)}</small></span></button>${open ? stopList(d, k, c, name) : ''}</div>`;
+      <span class="p24-dm"><b>${mn == null ? '–' : mn <= 0 ? 'nå' : `${mn} min`}</b><small>${esc(clock)}</small></span></button><div class="p28-col${open ? ' on' : ''}" data-depcol="${esc(k)}"><div>${stopList(d, k, c, name)}</div></div></div>`; // prompt 28: alltid i layout, høyden animeres
   }).join('');
   return `<div class="p24-rv"><div class="p24-rvh" style="${heroBg('avg')}">
       <div class="p24-rvt"><a class="p24-gp" href="#/hl" data-swipeback>‹ Hjem</a><span class="m-grow"></span><button class="p24-gp" data-p24="rvref" aria-label="Oppdater">↻ ${esc(hm(AV.t || Date.now()))}</button></div>

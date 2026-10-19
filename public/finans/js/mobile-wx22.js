@@ -1,6 +1,6 @@
 // Prompt 22 (mobil-PWA): værsiden etter design/Vaer.dc.html.
 // Kartknapp nede til venstre (Windy i fullskjerm med lagene Nedbør · Temperatur · Vind · Skyer), ☰ nede til høyre
-// (Steder: søk, legg til, hold inne og dra for å flytte, sveip mot høyre for å slette), animert værbakgrunn (canvas,
+// (Steder: søk, legg til, hold inne og dra for å flytte, sveip mot høyre for å slette), animert værbakgrunn (prompt 28: weather-fx.js,
 // maks 30 fps, stopper ved «Reduser bevegelse»), kortet «Yr og Pent» og detaljark for alle kortene.
 // Data: /api/weather/full (med compare og timeverdier når serveren har dem), ellers /api/weather/compare som reserve.
 import { esc, hlApi } from './core.js';
@@ -66,8 +66,9 @@ export function cmpCard(C, D, { IC, ICC, kindOf, busy, err }) {
 /* ---------- Knappene nederst og værkartet ---------- */
 
 const MAPIC = 'M9 4L3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5zM9 4v13.5M15 6.5V20';
-export const bottomBtns = () => `<div class="w22-bot"><button class="w22-rb" data-wx2="map" aria-label="Værkart" title="Værkart"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${MAPIC}"/></svg></button><span class="m-grow"></span>
-  <button class="w22-rb" data-wx2="pl" aria-label="Steder" title="Steder og søk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></div>`;
+// Prompt 28: kart- og steder-ikonet i en frostet bunnlinje helt nederst (full bredde, safe area), ikke flytende sirkler.
+export const bottomBtns = () => `<nav class="w22-bot w28-bot" aria-label="Vær"><button class="w28-bb" data-wx2="map" aria-label="Værkart" title="Værkart"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${MAPIC}"/></svg></button><span class="m-grow"></span>
+  <button class="w28-bb" data-wx2="pl" aria-label="Steder" title="Steder og søk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></nav>`;
 const LAYERS = [['rain', 'Nedbør'], ['temp', 'Temperatur'], ['wind', 'Vind'], ['clouds', 'Skyer']];
 export function mapView(P, city) {
   if (!WX2.map) return '';
@@ -84,7 +85,7 @@ export function placesSheet(WX, plist) {
   if (!WX2.pl) return '';
   const L = plist(), res = WX2.res ?? [];
   const have = (r) => L.find(([, n, o]) => o && Math.abs(+o.lat - r.lat) < 0.05 && Math.abs(+o.lon - r.lon) < 0.05) ?? L.find(([, n]) => n === r.name && !L.some(([, , o]) => o));
-  const resHtml = res.length ? `<div class="w22-res">${res.map((r, i) => { const h = have(r); return `<button data-wx2="pick" data-i="${i}"><span class="m-grow" style="min-width:0"><b>${esc(r.name)}</b><small>${esc([r.region, r.country].filter(Boolean).join(', '))}${r.lat != null ? ` · ${(+r.lat).toFixed(2)}, ${(+r.lon).toFixed(2)}` : ''}</small></span><span style="color:${h ? '#9aa3ae' : '#5ec8f2'}">${h ? 'Vis' : '+ Legg til'}</span></button>`; }).join('')}</div>` : '';
+  const resHtml = res.length ? `<div class="w22-res">${res.map((r, i) => { const h = have(r); return `<button data-wx2="pick" data-i="${i}"><span class="m-grow" style="min-width:0"><b>${esc(r.name)}</b><small>${esc(r.sub || [r.region, r.country].filter(Boolean).join(', '))}</small></span><span style="color:${h ? '#9aa3ae' : '#5ec8f2'}">${h ? 'Vis' : '+ Legg til'}</span></button>`; }).join('')}</div>` : '';
   const rows = L.map(([id, n, o]) => {
     const d = WX.d[id], open = WX2.open === id, sw = WX2.sw?.id === id ? WX2.sw.dx : null, dx = sw ?? (open ? 96 : 0);
     const sub = [o?.region, d?.current?.temp != null ? `${Math.round(d.current.temp)}°` : ''].filter(Boolean).join(' · ');
@@ -94,10 +95,10 @@ export function placesSheet(WX, plist) {
   return `<div class="vx-shbg w22-bg" data-wx2="plx"></div><div class="vx-sh w22-sh" role="dialog" aria-label="Steder">
     <div class="w22-shh"><b>Steder</b><button class="w22-done" data-wx2="plx">Ferdig</button></div>
     <form class="w22-q" data-wx2form><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9aa3ae" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="w22-q" data-wx2q value="${esc(WX2.q)}" placeholder="Søk etter by eller sted" autocomplete="off" enterkeyhint="search" aria-label="Søk etter sted"></form>
-    ${WX2.busy ? '<span class="w22-m">Søker …</span>' : ''}${WX2.err ? `<span class="w22-m">${esc(WX2.err)}</span>` : ''}${resHtml}${WX2.res && !res.length && !WX2.busy && !WX2.err ? '<span class="w22-m">Fant ingen steder.</span>' : ''}
+    ${WX2.busy ? '<span class="w22-m">Søker …</span>' : ''}${WX2.err ? `<span class="w22-m">${esc(WX2.err)}</span>` : ''}${resHtml}${WX2.res && !res.length && !WX2.busy && !WX2.err ? `<span class="w22-m">Fant ingen steder som heter «${esc(WX2.q.trim())}»</span>` : ''}
     <span class="w22-lab">MINE STEDER</span><div class="w22-pls">${rows}</div>
     <span class="w22-m" style="padding:0 4px">Hold inne for å flytte · sveip mot høyre for å slette</span>
-    <span class="w22-m" style="line-height:1.45">Værdata fra Meteorologisk institutt (yr.no, api.met.no). Stedssøk via Open-Meteo.</span></div>`;
+    <span class="w22-m" style="line-height:1.45">Værdata fra Meteorologisk institutt (yr.no, api.met.no). Stedssøk via Open-Meteo og OpenStreetMap.</span></div>`;
 }
 
 /* ---------- Detaljark for kortene ---------- */
@@ -197,72 +198,26 @@ export function metricSheet(D) {
 
 /* ---------- Animert værbakgrunn ---------- */
 
-const FX = { cv: null, k: null, heavy: false, thunder: false, raf: 0, t0: 0, last: 0, W: 0, H: 0, stars: [], drops: [], flakes: [], clouds: [], ro: null };
-export function fxKind(kind, isDay, code) {
+// Prompt 28: ny værbakgrunn (fasit Vaer.dc.html → WxFx) fra /assets/js/weather-fx.js, felles med web. Lastes dynamisk,
+// så resten av appen virker selv om filen ikke er i cachen (uten nett).
+const FX = { cv: null, eng: null, mod: null, loading: false, o: null };
+export function fxKind(kind, isDay, code, sunF = 0.5) {
   const n = Number(code), heavy = n === 65 || n === 82 || n >= 95 || /heavy/.test(String(code)), thunder = kind === 'thunder';
-  const k = kind === 'snow' ? 'snow' : kind === 'rain' || kind === 'thunder' ? 'rain' : kind === 'fog' ? 'fog' : kind === 'cloudy' ? 'clouds' : kind === 'night' ? 'stars' : kind === 'partly' ? (isDay ? 'part' : 'partn') : isDay ? 'sun' : 'stars';
-  return { k, heavy, thunder };
+  const k = kind === 'snow' || kind === 'sleet' ? 'snow' : kind === 'rain' || kind === 'drizzle' || kind === 'thunder' ? 'rain' : kind === 'fog' ? 'fog' : kind === 'cloudy' ? 'clouds' : kind === 'night' ? 'stars' : kind === 'partly' ? (isDay ? 'part' : 'partn') : isDay ? 'sun' : 'stars';
+  return { kind: k, heavy, thunder, day: !!isDay && kind !== 'night', sunF };
 }
-const rnd = (a, b) => a + Math.random() * (b - a);
-function fxSize() {
-  const cv = FX.cv, r = cv.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1), k = FX.k;
-  FX.W = r.width; FX.H = r.height; cv.width = FX.W * dpr; cv.height = FX.H * dpr;
-  const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const W = FX.W, H = FX.H;
-  FX.stars = Array.from({ length: Math.round((W * H) / 2600) }, () => ({ x: rnd(0, W), y: rnd(0, H * 0.75), r: rnd(0.4, 1.5), a: rnd(0.3, 1), s: rnd(0.5, 2), o: rnd(0, 6.28) }));
-  FX.drops = Array.from({ length: FX.heavy ? 220 : 120 }, () => ({ x: rnd(-40, W), y: rnd(-H, H), l: rnd(10, 22), v: rnd(9, 15), a: rnd(0.12, 0.32) }));
-  FX.flakes = Array.from({ length: 110 }, () => ({ x: rnd(0, W), y: rnd(-H, H), r: rnd(1, 3.2), v: rnd(0.5, 1.5), d: rnd(0, 6.28) }));
-  const nC = ['clouds', 'rain', 'snow', 'fog'].includes(k) ? 9 : k === 'part' || k === 'partn' ? 4 : 0;
-  // Delvis skyet: skyene er mer gjennomsiktige, så solen ikke vaskes ut.
-  FX.clouds = Array.from({ length: nC }, (_, i) => ({ x: rnd(-0.2, 1.1) * W, y: rnd(0.02, k === 'part' || k === 'partn' ? 0.35 : 0.55) * H, w: rnd(0.45, 0.9) * W, h: rnd(0.08, 0.16) * H, v: rnd(0.04, 0.14) * (i % 2 ? 1 : -0.6), a: k === 'fog' ? rnd(0.18, 0.3) : k === 'rain' || k === 'snow' ? rnd(0.16, 0.3) : k === 'part' ? rnd(0.08, 0.16) : rnd(0.2, 0.34) }));
-}
-const reduced = () => matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-function fxFrame(now) {
-  FX.raf = 0;
-  const cv = FX.cv;
-  if (!cv?.isConnected || m.screen !== 'vaer') return;
-  // Maks 30 fps, og pause når appen ikke er synlig.
-  if (document.hidden) { FX.raf = setTimeout(() => requestAnimationFrame(fxFrame), 500); return; }
-  if (now - FX.last < 33 && !reduced()) { FX.raf = requestAnimationFrame(fxFrame); return; }
-  FX.last = now;
-  const ctx = cv.getContext('2d'), W = FX.W, H = FX.H, k = FX.k, t = (now - FX.t0) / 1000;
-  ctx.clearRect(0, 0, W, H);
-  if (k === 'stars' || k === 'partn') { for (const s of FX.stars) { ctx.globalAlpha = s.a * (0.55 + 0.45 * Math.sin(t * s.s + s.o)); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.283); ctx.fill(); } ctx.globalAlpha = 1; }
-  if (k === 'sun' || k === 'part') {
-    // Dempet sol (prompt 22): glorien skaleres etter korteste side (maks 560 px), omtrent halvert lysstyrke, øvre høyre hjørne.
-    const mm = Math.min(W, H), cx = W * 0.72, cy = -mm * 0.02, R = Math.min(mm * 0.95, 560);
-    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
-    g.addColorStop(0, 'rgba(255,255,255,.55)'); g.addColorStop(0.07, 'rgba(255,252,236,.36)'); g.addColorStop(0.22, 'rgba(255,245,220,.1)'); g.addColorStop(0.55, 'rgba(255,255,255,.02)'); g.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-    const hr = mm * 0.5; ctx.lineWidth = mm * 0.03;
-    [['rgba(255,120,120,.035)', 0], ['rgba(255,230,120,.035)', mm * 0.03], ['rgba(120,220,255,.04)', mm * 0.06]].forEach(([c, o]) => { ctx.strokeStyle = c; ctx.beginPath(); ctx.arc(cx, cy, hr + o, 0, 6.283); ctx.stroke(); });
-    const sh = Math.sin(t * 0.4) * 0.05;
-    [[0.2, 0.06], [0.3, 0.035], [0.38, 0.05]].forEach(([fy, fr]) => { const x = cx + (W * 0.5 - cx) * (fy * 2.2) + sh * W, y = cy + H * fy, gg = ctx.createRadialGradient(x, y, 0, x, y, W * fr); gg.addColorStop(0, 'rgba(255,255,255,.06)'); gg.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = gg; ctx.beginPath(); ctx.arc(x, y, W * fr, 0, 6.283); ctx.fill(); });
-  }
-  const col = k === 'rain' || k === 'snow' ? '200,210,225' : k === 'partn' ? '150,165,195' : '255,255,255';
-  for (const c of FX.clouds) {
-    c.x += c.v; if (c.x > W * 1.2) c.x = -c.w; if (c.x < -c.w * 1.1) c.x = W * 1.1;
-    for (let j = 0; j < 5; j++) { const x = c.x + c.w * (j / 4), y = c.y + Math.sin(j * 1.7) * c.h * 0.35, rr = c.h * (1.1 + ((j * 37) % 5) / 6), g = ctx.createRadialGradient(x, y, 0, x, y, rr * 1.6); g.addColorStop(0, `rgba(${col},${c.a})`); g.addColorStop(1, `rgba(${col},0)`); ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(x, y, rr * 1.9, rr * 1.2, 0, 0, 6.283); ctx.fill(); }
-  }
-  if (k === 'rain') {
-    ctx.lineCap = 'round';
-    for (const d of FX.drops) { d.y += d.v * 2; d.x += d.v * 0.24; if (d.y > H) { d.y = rnd(-60, -10); d.x = rnd(-40, W); } ctx.strokeStyle = `rgba(220,230,245,${d.a})`; ctx.lineWidth = 1.1; ctx.beginPath(); ctx.moveTo(d.x, d.y); ctx.lineTo(d.x + d.l * 0.12, d.y + d.l); ctx.stroke(); }
-    if (FX.thunder && Math.sin(t * 0.7) > 0.995) { ctx.fillStyle = 'rgba(255,255,255,.25)'; ctx.fillRect(0, 0, W, H); }
-  }
-  if (k === 'snow') for (const f of FX.flakes) { f.y += f.v * 2; f.x += Math.sin(t + f.d) * 0.8; if (f.y > H) { f.y = -5; f.x = rnd(0, W); } ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, 6.283); ctx.fill(); }
-  if (k === 'fog') { const g = ctx.createLinearGradient(0, H * 0.2, 0, H); g.addColorStop(0, 'rgba(220,225,232,0)'); g.addColorStop(1, 'rgba(220,225,232,.35)'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
-  if (!reduced()) FX.raf = requestAnimationFrame(fxFrame);
-}
-/** Etter hver tegning: flytt det faste canvas-elementet inn på plassen sin og start animasjonen ved nytt værslag. */
+/** Etter hver tegning: flytt det faste canvas-elementet inn på plassen sin og oppdater animasjonen. */
 export function fxAfterDraw(fx) {
   const slot = document.getElementById('w22-fx');
-  if (!slot || !fx) { if (FX.raf) { cancelAnimationFrame(FX.raf); clearTimeout(FX.raf); FX.raf = 0; } return; }
-  if (!FX.cv) { FX.cv = document.createElement('canvas'); FX.cv.className = 'w22-cv'; FX.cv.setAttribute('aria-hidden', 'true'); FX.ro = new ResizeObserver(() => { if (FX.cv.isConnected) { fxSize(); if (reduced()) fxFrame(performance.now() + 1e5); } }); }
+  if (!slot || !fx) { if (FX.eng) { FX.eng.stop(); FX.eng = null; } return; }
+  FX.o = fx;
+  if (!FX.cv) { FX.cv = document.createElement('canvas'); FX.cv.className = 'w22-cv'; FX.cv.setAttribute('aria-hidden', 'true'); }
   if (FX.cv.parentNode !== slot) slot.appendChild(FX.cv);
-  FX.ro.observe(FX.cv);
-  const changed = fx.k !== FX.k || fx.heavy !== FX.heavy || fx.thunder !== FX.thunder;
-  if (changed) { FX.k = fx.k; FX.heavy = fx.heavy; FX.thunder = fx.thunder; FX.t0 = performance.now(); fxSize(); }
-  if (!FX.raf) { FX.last = 0; FX.raf = requestAnimationFrame(fxFrame); }
+  if (FX.eng?.alive) { FX.eng.set(fx); return; }
+  if (FX.mod) { FX.eng = FX.mod.createWxFx(FX.cv, fx); return; }
+  if (FX.loading) return;
+  FX.loading = true;
+  import('../../js/weather-fx.js').then((mod) => { FX.mod = mod; FX.loading = false; if (FX.cv.isConnected && m.screen === 'vaer' && FX.o) FX.eng = mod.createWxFx(FX.cv, FX.o); }).catch(() => { FX.loading = false; });
 }
 
 /* ---------- Hendelser ---------- */
@@ -271,11 +226,23 @@ let qT = null;
 async function search(q) {
   q = String(q ?? '').trim();
   if (q.length < 2) { WX2.res = null; WX2.err = ''; draw(); return; }
-  WX2.busy = true; draw();
-  try { const r = await hlApi(`/weather/search?q=${encodeURIComponent(q)}`); WX2.res = Array.isArray(r) ? r : r?.items ?? r?.results ?? []; WX2.err = ''; }
-  catch (e) { WX2.res = []; WX2.err = e.status === 404 ? 'Søk etter steder krever en nyere server.' : e.message; }
+  const id = ++sqId; WX2.busy = true; draw();
+  try { const r = await searchPlaces(q); if (id !== sqId) return; WX2.res = r; WX2.err = ''; }
+  catch { if (id !== sqId) return; WX2.res = []; WX2.err = 'Får ikke søkt nå. Prøv igjen.'; }
   WX2.busy = false; draw();
   const el = document.getElementById('w22-q'); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(el.value.length, el.value.length); } catch {} }
+}
+let sqId = 0;
+// Prompt 28: GET /api/weather/places?q= (Open-Meteo + OpenStreetMap via serveren) gir {name, sub, lat, lon, country, source}.
+// En eldre server svarer med de lagrede stedene (uten sub/source); da brukes /api/weather/search?q= som før.
+async function searchPlaces(q) {
+  const norm = (x) => ({ ...x, lat: +x.lat, lon: +x.lon, sub: x.sub ?? [x.region, x.country].filter(Boolean).join(', ') });
+  try {
+    const r = await hlApi(`/weather/places?q=${encodeURIComponent(q)}`), L = Array.isArray(r) ? r : r?.results ?? r?.items ?? null;
+    if (Array.isArray(L) && L.every((x) => x && ('source' in x || 'sub' in x))) return L.slice(0, 10).map(norm);
+  } catch (e) { if (e.status && e.status !== 404 && e.status !== 405) throw e; }
+  const r = await hlApi(`/weather/search?q=${encodeURIComponent(q)}`);
+  return (Array.isArray(r) ? r : r?.items ?? r?.results ?? []).slice(0, 10).map(norm);
 }
 async function saveOrder(WX, ids) {
   const by = new Map((WX.places ?? []).map((p) => [p[0], p]));
@@ -337,7 +304,7 @@ async function removePlace({ WX, plist, wxLoad }, id) {
 export async function wx22Bind(e, t, ctx) {
   if (m.screen !== 'vaer') return false;
   const { WX, plist, wxLoad, placesReload } = ctx;
-  if (e.type === 'input' && t.matches?.('[data-wx2q]')) { WX2.q = t.value; clearTimeout(qT); qT = setTimeout(() => search(WX2.q), 300); return true; }
+  if (e.type === 'input' && t.matches?.('[data-wx2q]')) { WX2.q = t.value; clearTimeout(qT); qT = setTimeout(() => search(WX2.q), 250); return true; }
   if (e.type === 'submit' && t.matches?.('[data-wx2form]')) { e.preventDefault(); clearTimeout(qT); await search(WX2.q); return true; }
   if (e.type !== 'click') return false;
   const x = t.closest?.('[data-wx2]');
@@ -363,7 +330,7 @@ export async function wx22Bind(e, t, ctx) {
       let id = have?.[0];
       if (!id) {
         try {
-          const p = await hlApi('/weather/places', { method: 'POST', json: { name: r.name, lat: r.lat, lon: r.lon, region: r.region } });
+          const p = await hlApi('/weather/places', { method: 'POST', json: { name: r.name, lat: r.lat, lon: r.lon, region: r.region ?? String(r.sub ?? '').split(',')[0].trim(), ...(r.country ? { country: r.country } : {}) } });
           await placesReload();
           const list = Array.isArray(p) ? p : null;
           id = String(list?.find((q) => Math.abs(q.lat - r.lat) < 0.01 && Math.abs(q.lon - r.lon) < 0.01)?.id ?? p?.id ?? p?.place?.id ?? plist().find(([, n]) => n === r.name)?.[0] ?? WX.place);

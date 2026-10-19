@@ -125,7 +125,8 @@ export function fmSort(T) {
   return T.map((t, i) => [t, i]).sort((a, b) => ix(a[0][0]) - ix(b[0][0]) || a[1] - b[1]).map(([t]) => t);
 }
 // Redigeringslinja (prompt 21): egen Papir-pille med kortbakgrunn og skygge, lesbar over toppbildet i lyst og mørkt.
-export const fmBar = () => (FO.edit ? '<div class="p21-fmbar" role="toolbar" aria-label="Flytt flisene"><span class="m-grow">Dra for å flytte</span><button class="p21-fmr" data-p20="fmreset">Tilbakestill</button><button class="p21-fmd" data-p20="fmdone">Ferdig</button></div>' : '');
+// Prompt 28: samme wiggle-design som Hjem: flytende piller (↺ Tilbakestill · ✓), ingen mørk instruksjonslinje.
+export const fmBar = () => (FO.edit ? '<div class="p28-pills" role="toolbar" aria-label="Flytt flisene"><button class="p28-pill plus" data-p20="fmreset">↺ Tilbakestill</button><button class="p28-pill ok" data-p20="fmdone" aria-label="Ferdig"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></div>' : '');
 function fmSave(order) {
   FO.order = order; ls.set(OKEY, order);
   hlApi('/me/layout', { method: 'PUT', json: { fmOrder: order } }).catch(() => {}); // eldre server: bare lokalt

@@ -20,6 +20,7 @@ import * as P25 from './mobile-p25.js';
 import * as P26 from './mobile-p26.js';
 import * as KAL from './mobile-kal.js';
 import * as P27 from './mobile-p27.js';
+import * as P28 from './mobile-p28.js';
 import { setTitle } from './mobile-set.js';
 import { appName, huskeWidget, bolWidget, scanCtx, homeUpload, FT } from './mobile-p17.js';
 import { posCard, ppTi } from './mobile-p20.js';
@@ -323,7 +324,9 @@ export function paperHome() {
 // Ruters egne linjefarger (fra Entur via serveren), med Ruters standardfarger per transportmiddel som reserve.
 const RUTER = { metro: '#EC700C', tram: '#0B91EF', bus: '#E60000', regionbus: '#75A300', water: '#682C88', ferry: '#682C88', rail: '#003087', train: '#003087' };
 export const lineBg = (d) => d.color || RUTER[d.mode] || (/^\d$/.test(String(d.line)) ? RUTER.metro : /^1[1-9]$/.test(String(d.line)) ? RUTER.tram : /^\d{2,3}[A-Z]?$/.test(String(d.line)) ? RUTER.bus : RUTER.metro);
-export const lineFg = (d) => d.textColor || '#ffffff';
+// Prompt 28: tekstfarge på linjemerket etter luminans (L > 0,4 → mørk tekst, ellers hvit).
+const relLum = (hex) => { const m = /^#?([0-9a-f]{6}|[0-9a-f]{3})$/i.exec(String(hex ?? '').trim()); if (!m) return 0; let h = m[1]; if (h.length === 3) h = [...h].map((c) => c + c).join(''); const f = (i) => { const v = parseInt(h.slice(i, i + 2), 16) / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(0) + 0.7152 * f(2) + 0.0722 * f(4); };
+export const lineFg = (d) => (relLum(lineBg(d)) > 0.4 ? '#1b1a17' : '#ffffff');
 
 function newsCard(list) {
   const items = (list ?? P.news?.items ?? []).slice(0, 5);
@@ -361,10 +364,11 @@ export function paperMer() {
   const n = onWay(), inBar = new Set(mainTabs('mer').map(([k]) => k));
   const mod = inBar.has('spor') ? (domOk() ? ['dom', 'Domener', 'Trafikk, besøk og oppetid'] : null) : ['spor', 'Sporing', n ? `${n} pakke${n === 1 ? '' : 'r'} på vei` : 'Pakker og sendinger'];
   const rows = [...(P24.profRoot() ? [['hl', 'Hjem', 'Pakker, avganger og widgets']] : []), ...(mod ? [mod] : []), ['kal', 'Kalender', 'Timeplan, prøver og frister'], ['bd', 'Bursdager', 'Hvem har bursdag snart'], ['huske', 'Huskeliste', 'Oppgaver og widgets'], ['fam', 'Familie og kart', 'Posisjon, soner og helse'],
-    ['chat', 'Chat', 'Ollama, Gemini og Groq · historikk'], ['media', 'Media', 'Spilles nå og historikk'], ['hjem', 'Finans', 'Oversikt, liste, Finn og mer'], ['nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag'], ['set', 'Innstillinger', 'Tema, bakgrunn og konto']]
+    ['chat', 'Chat', 'Ollama, Gemini og Groq · historikk'], ['media', 'Media', 'Spilles nå og historikk'], ['hjem', 'Finans', 'Oversikt, liste, Finn og mer'], ['sub', 'Subscription OS', 'Abonnementer og faste trekk'], ['nyheter', 'Nyhetsleser', 'RSS med AI-sammendrag'], ['set', 'Innstillinger', 'Tema, bakgrunn og konto']]
     .filter(([k]) => k === 'hl' || k === 'set' || !inBar.has(k));
   // Prompt 25: ikon til venstre (40-boks med strekikon i fargene fra ikonpaletten).
-  return `<div class="pp-card pp-list p24-mer p25-mer">${rows.map((r, i) => P25.merRow(r, i, !m.light)).join('')}</div>`;
+  // Prompt 28: hold inne for å flytte og skjule (lagres per konto), Subscription OS etter Finans.
+  return P28.merView(rows);
 }
 
 /* ---------- Media (Plex og Jellyfin) ---------- */

@@ -68,9 +68,9 @@ const PG = {
   mat: [['m1', 'Dagens middag'], ['m2', 'Ukeplan'], ['m3', 'Mapper'], ['m4', 'Skann og import']],
   spor: [['t1', 'Faner'], ['t2', 'Pakkelisten'], ['t3', 'Legg til']],
 };
-const ED = { page: null, vis: {} };
+const ED = { page: null, vis: {}, add: false };
 export const editing = (page) => ED.page === page;
-export const edReset = () => { ED.page = null; };
+export const edReset = () => { ED.page = null; ED.add = false; };
 function fixH2() {
   const cur = L.pages?.hl;
   if (!L.h2fix && cur && (cur.hidden ?? []).includes('h2')) {
@@ -90,15 +90,26 @@ function savePage(page, order, hidden) {
   hlApi('/me/layout', { method: 'PUT', json: { pages: { [page]: { order, hidden } } } }).catch(() => {});
 }
 /** Setter sammen kortene på en side i lagret rekkefølge, uten skjulte kort. full = kort som går over hele bredden på Fold. */
+// Prompt 28 (claude-code-hjem-wiggle.md): redigeringsmodus som iOS-hjemskjermen i alle wiggle-moduser (Hjem, Finans, Mat, Sporing).
+// Ingen mørk instruksjonslinje og ingen ▲ ▼ (bortsett fra Sporing, til dra er på plass): to flytende piller utenfor
+// scroll-innholdet (＋ antall skjulte → «Legg til widget», ✓ avslutter), minus-sirkel øverst til venstre på hvert kort,
+// «✎ Rediger widget» midt på kort med innstillinger (Ruter), og kortene vugger ±0,45°.
+const ED_SET = { h3: 'ruter' }; // kort med egne innstillinger
+const MINUS = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg>';
 export function edBlocks(page, blocks, { full = [] } = {}) {
   const { order, hidden } = pageCfg(page), on = ED.page === page, lab = Object.fromEntries(PG[page]);
   const vis = order.filter((k) => !hidden.includes(k) && blocks[k]);
   ED.vis[page] = vis;
-  const bar = on ? `<div class="pp-edbar" role="toolbar" aria-label="Tilpass siden"><div class="pp-row" style="align-items:center"><span>Dra for å flytte · ▲ ▼ · skjul med −</span><button class="pp-btn sm" data-ped="done">Ferdig</button></div>
-      ${hidden.length ? `<div class="pp-edhid"><span>Skjult:</span>${hidden.map((k) => `<button data-ped="show" data-k="${k}">+ ${esc(lab[k])}</button>`).join('')}</div>` : ''}</div>` : '';
-  const html = vis.map((k, i) => `<div class="pp-ed${on ? ' on' : ''}${full.includes(k) ? ' full' : ''}" data-edk="${k}" data-edp="${page}">${on ? `<div class="pp-edc">
-      <button data-ped="mv" data-k="${k}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Flytt ${esc(lab[k])} opp">▲</button><button data-ped="mv" data-k="${k}" data-d="1" ${i === vis.length - 1 ? 'disabled' : ''} aria-label="Flytt ${esc(lab[k])} ned">▼</button><button class="hide" data-ped="hide" data-k="${k}" aria-label="Skjul ${esc(lab[k])}">−</button></div>` : ''}${blocks[k]}</div>`).join('');
-  return bar + html + (on ? '' : '<span class="pp-edhint">Hold inne et kort for å flytte eller skjule det</span>');
+  const arrows = page === 'spor';
+  const pills = on ? `<div class="p28-pills" role="toolbar" aria-label="Rediger siden">${arrows ? '<span></span>' : `<button class="p28-pill plus" data-ped="add" aria-label="Legg til widget${hidden.length ? ` (${hidden.length} skjult)` : ''}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>${hidden.length ? `<b>${hidden.length}</b>` : ''}</button>`}
+      <button class="p28-pill ok" data-ped="done" aria-label="Ferdig"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button></div>` : '';
+  const html = vis.map((k, i) => `<div class="pp-ed${on ? ' on p28-wig' : ''}${i % 2 ? ' odd' : ''}${full.includes(k) ? ' full' : ''}" data-edk="${k}" data-edp="${page}">${on ? `<button class="p28-minus" data-ped="hide" data-k="${k}" aria-label="Skjul ${esc(lab[k])}">${MINUS}</button>${ED_SET[k] && page === 'hl' ? `<button class="p28-edw" data-ped="widget" data-k="${k}">✎ Rediger widget</button>` : ''}${arrows ? `<div class="p28-arr"><button data-ped="mv" data-k="${k}" data-d="-1" ${i === 0 ? 'disabled' : ''} aria-label="Flytt ${esc(lab[k])} opp">▲</button><button data-ped="mv" data-k="${k}" data-d="1" ${i === vis.length - 1 ? 'disabled' : ''} aria-label="Flytt ${esc(lab[k])} ned">▼</button></div>` : ''}` : ''}${blocks[k]}</div>`).join('');
+  return pills + html + (on ? '' : '<span class="pp-edhint">Hold inne et kort for å flytte eller skjule det</span>') + (on && ED.add ? addSheet(page, hidden, lab) : '');
+}
+function addSheet(page, hidden, lab) {
+  return `<div class="p28-scrim" data-ped="addx"></div><div class="p28-sheet" role="dialog" aria-modal="true" aria-label="Legg til widget"><span class="p28-grip" aria-hidden="true"></span>
+    <div class="p28-shh"><b>Legg til widget</b><button class="p28-x" data-ped="addx" aria-label="Lukk"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+    ${hidden.length ? `<div class="p28-wl">${hidden.map((k) => `<button data-ped="show" data-k="${k}"><span class="m-grow">${esc(lab[k])}</span><span class="p28-plus" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span></button>`).join('')}</div>` : '<p class="p28-empty">Alle widgets vises allerede. Trykk − på en widget for å skjule den.</p>'}</div>`;
 }
 // Prompt 21: hold inne 500 ms virker på hele kortet, også på lenker og knapper, og draget starter med en gang.
 // Flyttes fingeren mer enn 8 px før det, avbrytes trykket (vanlig scrolling). I redigeringsmodus drar man kortene
@@ -114,7 +125,7 @@ export function edDown(e) {
   lpFired = false;
   if ((e.button ?? 0) > 0) return;
   const b = e.target.closest?.('[data-edk]');
-  if (!b || e.target.closest('input,textarea,select,[data-ped],[data-ppplus]')) return;
+  if (!b || e.target.closest('input,textarea,select,[data-ped],[data-ppplus],.p28-pills')) return;
   // En pakke i Sporing har sitt eget lange trykk (velg flere).
   if (m.screen === 'spor' && e.target.closest('[data-pk]')) return;
   if (ED.page) { if (ED.page === b.dataset.edp) edDrag(e, b); return; }
@@ -136,9 +147,13 @@ export function edClick(e, t) {
     const page = ED.page, k = x.dataset.k;
     if (!page) return true;
     const { order, hidden } = pageCfg(page);
-    if (x.dataset.ped === 'done') { ED.page = null; haptic('ok'); }
+    if (x.dataset.ped === 'done') { ED.page = null; ED.add = false; haptic('ok'); }
+    else if (x.dataset.ped === 'add') { ED.add = true; haptic('tap'); }
+    else if (x.dataset.ped === 'addx') { ED.add = false; }
+    else if (x.dataset.ped === 'widget') { if (k === 'h3') { P27.hdEdit(); haptic('tap'); return true; } }
     else if (x.dataset.ped === 'hide') { savePage(page, order, [...new Set([...hidden, k])]); haptic('tap'); }
-    else if (x.dataset.ped === 'show') { savePage(page, order, hidden.filter((y) => y !== k)); haptic('tap'); }
+    // Vist igjen: legges sist.
+    else if (x.dataset.ped === 'show') { savePage(page, [...order.filter((y) => y !== k), k], hidden.filter((y) => y !== k)); haptic('ok'); if (hidden.length <= 1) ED.add = false; }
     else if (x.dataset.ped === 'mv') {
       const vis = ED.vis[page] ?? order, v = vis.indexOf(k), w = vis[v + +x.dataset.d];
       if (v < 0 || !w) return true;

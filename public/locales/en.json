@@ -961,7 +961,59 @@
   "Skriv inn en gyldig serveradresse.": "Enter a valid server address.",
   "Skriv inn navnet ditt.": "Enter your name.",
   "Logg inn · Homelab": "Sign in · Homelab",
-  "Admin": "Admin"
+  "Admin": "Admin",
+  "System": "System",
+  "Oppdater serveren til nyeste versjon.": "Update the server to the latest version.",
+  "Oppdatering": "Update",
+  "Installert versjon": "Installed version",
+  "Nyeste versjon": "Latest version",
+  "Ukjent": "Unknown",
+  "Ikke hentet fra GitHub ennå.": "Not fetched from GitHub yet.",
+  "Ny versjon er tilgjengelig.": "A new version is available.",
+  "Du har nyeste versjon.": "You have the latest version.",
+  "Se etter oppdatering": "Check for updates",
+  "Henter siste versjon fra GitHub.": "Fetches the latest version from GitHub.",
+  "Se etter": "Check",
+  "Ser etter …": "Checking …",
+  "Oppdatering fra appen": "Update from the app",
+  "Ikke tilgjengelig": "Not available",
+  "Oppdatering fra appen er ikke satt opp.": "Updating from the app is not set up.",
+  "Serveren har ikke oppdatering fra appen ennå.": "This server does not support updating from the app yet.",
+  "Kjør update.sh én gang fra Proxmox for å slå dette på. Da startes også den lille updater-containeren som gjør selve oppdateringen.": "Run update.sh once from Proxmox to turn this on. That also starts the small updater container that does the actual update.",
+  "Kopiert ✓": "Copied ✓",
+  "Laster ned": "Downloading",
+  "Bygger": "Building",
+  "Starter på nytt": "Restarting",
+  "Ny versjon svarer. Laster siden på nytt …": "The new version is responding. Reloading the page …",
+  "Venter på at serveren kommer tilbake …": "Waiting for the server to come back …",
+  "Det tar lengre tid enn vanlig. Sjekk loggen i Proxmox med «docker compose logs updater».": "This is taking longer than usual. Check the log in Proxmox with “docker compose logs updater”.",
+  "Oppdateringen feilet.": "The update failed.",
+  "Serveren starter på nytt når den nye versjonen er bygget.": "The server restarts once the new version has been built.",
+  "Vis logg": "Show log",
+  "Skjul logg": "Hide log",
+  "Endringer": "Changes",
+  "Fra CHANGELOG, nyere enn installert versjon.": "From the CHANGELOG, newer than the installed version.",
+  "Ditt passord": "Your password",
+  "Serveren starter på nytt. Det tar vanligvis 2–5 minutter. Det tas backup av databasen først.": "The server will restart. It usually takes 2–5 minutes. The database is backed up first.",
+  "Oppdater nå": "Update now",
+  "Starter …": "Starting …",
+  "Skriv inn passordet ditt.": "Enter your password.",
+  "Laster ned, bygger og starter serveren på nytt. Backup av databasen tas først.": "Downloads, builds and restarts the server. The database is backed up first.",
+  "Du har nyeste versjon, men kan installere den på nytt.": "You have the latest version, but you can reinstall it.",
+  "Kan ikke starte nå.": "Cannot start right now.",
+  "Oppdateringen gjøres av updater-containeren på serveren. .env, data/ og proton/ røres ikke.": "The update is done by the updater container on the server. .env, data/ and proton/ are never touched.",
+  "Bare for administrator": "Administrators only",
+  "Oppdatering av serveren gjøres av en administrator.": "Server updates are done by an administrator.",
+  "Bare administrator kan se og starte oppdateringer.": "Only administrators can view and start updates.",
+  "Feil passord": "Wrong password",
+  "En oppdatering pågår allerede": "An update is already running",
+  "En oppdatering pågår allerede.": "An update is already running.",
+  "Oppdatering må startes fra nettleseren": "Updates must be started from the browser",
+  "Oppdatering må startes fra nettleseren.": "Updates must be started from the browser.",
+  "Oppdatering fra appen er ikke satt opp. Kjør update.sh én gang fra Proxmox for å slå det på.": "Updating from the app is not set up. Run update.sh once from Proxmox to turn it on.",
+  "Bare administratorer kan oppdatere systemet": "Only administrators can update the system",
+  "Serveren har ikke oppdatering fra appen ennå": "This server does not support updating from the app yet",
+  "Oppdater serveren": "Update the server"
  },
  "short": {
   "MAN": "MON",
@@ -1053,6 +1105,36 @@
   ]
  ],
  "rules": [
+  [
+   "^Installert (\\d.*)$",
+   "",
+   "Installed $1"
+  ],
+  [
+   "^Kunne ikke hente fra GitHub: GitHub svarte (\\d+)$",
+   "",
+   "Could not fetch from GitHub: GitHub responded $1"
+  ],
+  [
+   "^Kunne ikke hente fra GitHub: GitHub svarte ikke$",
+   "",
+   "Could not fetch from GitHub: GitHub did not respond"
+  ],
+  [
+   "^Kunne ikke hente fra GitHub: (.*)$",
+   "",
+   "Could not fetch from GitHub: $1"
+  ],
+  [
+   "^Ny versjon er tilgjengelig · (.+)\\.$",
+   "",
+   "A new version is available · $1."
+  ],
+  [
+   "^Oppdater til (.+)$",
+   "",
+   "Update to $1"
+  ],
   [
    "· LOKALT PÅ HJEMMESERVEREN$",
    "",

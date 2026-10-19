@@ -193,19 +193,25 @@ export function ruterCard(old) {
   if (!HD.stops && !HD.miss) { if (!HD.busy && !HD.t) hdLoad().then(draw).catch(() => {}); return old; }
   if (HD.miss) return old;
   const st = shownStops(), n = homeSel().n;
-  if (!st.length) return `<div class="pp-card pp-ruter p27-ruter"><div class="pp-row"><span class="pp-lab">AVGANGER</span><button class="p27-vs" data-p27="hdopen">Velg stopp</button></div><span class="pp-mut">Ingen stopp ennå. <a href="#/avg" data-p27="hdmanage">Legg til stopp ›</a></span></div>`;
-  const title = st.length === 1 ? `AVGANGER · ${st[0].name.toUpperCase()}` : `AVGANGER · ${st.length} STOPP`;
-  const groups = st.map((s) => {
-    const D = HD.deps[s.id], rows = (D?.departures ?? []).slice(0, n);
-    return `${st.length > 1 ? `<span class="p27-hn">${esc(s.name)}</span>` : ''}${!D ? '<span class="pp-mut sm">Henter avganger …</span>' : D.error && !rows.length ? `<span class="pp-mut sm">${esc(D.error)}</span>` : rows.length ? rows.map((d) => { const mi = minOf(d); return `<div class="pp-dep"><span class="pp-line" style="background:${esc(lineBg(d))};color:${esc(lineFg(d))}">${esc(d.line)}</span><span class="m-grow m-ell">${esc(d.to ?? d.dest ?? d.destination ?? '')}</span><b class="pp-serif">${mi != null ? (mi <= 0 ? 'nå' : mi) : ''}</b><span class="pp-mut pp-min">${mi > 0 ? 'min' : ''}</span></div>`; }).join('') : '<span class="pp-mut sm">Ingen avganger nå</span>'}`;
-  }).join('');
-  return `<a class="pp-card pp-ruter p27-ruter" href="#/avg"><div class="pp-row"><span class="pp-lab m-ell">${esc(title)}</span><span class="p27-rr"><button class="p27-vs" data-p27="hdopen">Velg stopp</button><span class="pp-mut">sanntid ›</span></span></div>${groups}</a>`;
+  // Prompt 28 (claude-code-ruter-hjem.md): ingen «Velg stopp» på kortet (stopp velges med «✎ Rediger widget» i wiggle-modus),
+  // tittel AVGANGER · STOPP1 · STOPP2, én flat liste: flere stopp = neste avgang fra hvert stopp, ett stopp = de N neste.
+  if (!st.length) return `<a class="pp-card pp-ruter p27-ruter" href="#/avg"><div class="pp-row"><span class="pp-lab">AVGANGER</span><span class="pp-mut">sanntid ›</span></div><span class="pp-mut">Ingen stopp ennå. Legg til stopp i Ruter ›</span></a>`;
+  const title = `AVGANGER · ${st.map((s) => s.name.toUpperCase()).join(' · ')}`;
+  const depRow = (d) => { const mi = minOf(d); return `<div class="pp-dep p28-dep"><span class="pp-line" style="background:${esc(lineBg(d))};color:${esc(lineFg(d))}">${esc(d.line)}</span><span class="m-grow m-ell">${esc(d.to ?? d.dest ?? d.destination ?? '')}</span><b class="pp-serif">${mi != null ? (mi <= 0 ? 'nå' : mi) : ''}</b>${mi > 0 ? '<span class="pp-mut pp-min">min</span>' : ''}</div>`; };
+  const rows = st.length > 1
+    ? st.map((s) => { const D = HD.deps[s.id], d = D?.departures?.[0]; return d ? depRow(d) : ''; }).join('')
+    : (HD.deps[st[0].id]?.departures ?? []).slice(0, n).map(depRow).join('');
+  const D0 = st.map((s) => HD.deps[s.id]), wait = D0.some((D) => !D), err = D0.find((D) => D?.error)?.error;
+  const body = rows || (wait ? '<span class="pp-mut sm">Henter avganger …</span>' : err ? `<span class="pp-mut sm">${esc(err)}</span>` : '<span class="pp-mut sm">Ingen avganger nå</span>');
+  return `<a class="pp-card pp-ruter p27-ruter" href="#/avg"><div class="pp-row"><span class="pp-lab m-ell">${esc(title)}</span><span class="pp-mut p28-rt">sanntid ›</span></div>${body}</a>`;
 }
+/** Prompt 28: «✎ Rediger widget» på Ruter-kortet i wiggle-modus åpner arket «Hjem · Ruter-kortet». */
+export async function hdEdit() { HD.open = true; if (!HD.stops) await hdLoad(true); draw(); }
 function hdSheet() {
   if (!HD.open) return '';
   const all = HD.stops ?? [], sel = homeSel();
   return `<div class="sheet-bg" data-p27="hdclose"></div><div class="pp-sheet p27-hds" role="dialog" aria-label="Velg stopp">
-    <div class="pp-row"><div><div class="pp-lab">HJEM · RUTER-KORTET</div><div class="pp-sh">Velg stopp</div></div><button class="pp-btn ink sm" data-p27="hdclose">Ferdig</button></div>
+    <div class="pp-row"><div><div class="pp-lab">HJEM · RUTER-KORTET</div><div class="pp-sh">Rediger widget</div></div><button class="pp-btn ink sm" data-p27="hdclose">Ferdig</button></div>
     <span class="pp-mut">Velg opptil 3 stopp. Rekkefølgen følger Mine stopp.</span>
     <div class="pp-card pp-tight p27-hdl">${all.map((s) => { const on = sel.stops.includes(s.id); return `<button data-p27="hdtog" data-id="${esc(s.id)}" role="checkbox" aria-checked="${on}"><span class="p27-cb${on ? ' on' : ''}">✓</span><span class="m-grow"><b>${esc(s.name)}</b><span class="pp-mut">${esc([s.locality, s.lines?.length ? `${s.lines.length} linjer` : ''].filter(Boolean).join(' · ') || 'Sanntid fra Entur')}</span></span></button>`; }).join('') || '<span class="pp-mut" style="padding:12px">Ingen stopp ennå.</span>'}</div>
     <div class="pp-lab">AVGANGER PER STOPP</div><div class="p27-ns">${[1, 2, 3, 4].map((k) => `<button data-p27="hdn" data-n="${k}" aria-pressed="${sel.n === k}">${k}</button>`).join('')}</div>
@@ -220,7 +226,7 @@ function hdTick() {
 /* =====================================================================
    6. Nytt abonnement fra skjermbilde
    ===================================================================== */
-const SH = { busy: false, r: null, name: '', thumb: null, err: '' };
+export const SH = { busy: false, r: null, name: '', thumb: null, err: '' }; // prompt 28: delt med arket i mobile-subs.js
 const ROWS = [['tjeneste', 'Tjeneste'], ['plan', 'Plan'], ['pris', 'Pris'], ['syklus', 'Syklus'], ['neste_trekk', 'Neste trekk'], ['kategori', 'Kategori']];
 export function shotView() {
   if (!SH.busy && !SH.r && !SH.err) return '';

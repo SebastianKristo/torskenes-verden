@@ -19,6 +19,7 @@ import { mountHa } from './tasks-ha.js';
 import { kalView, kalClick, kalChange } from './settings-kal.js';
 import { loadAi, aiView, aiClick, aiChange, aiSubmit } from './settings-ai.js';
 import { clearBtn, glassIcon } from './searchfield.js';
+import { loadSystem, systemView, systemClick, systemInput, systemSubmit, systemEsc } from './settings-system.js';
 
 const modal = () => document.getElementById('settings');
 
@@ -31,6 +32,7 @@ const P = {
   lock: 'M6 11h12v9H6zM8 11V8a4 4 0 0 1 8 0v3', out: 'M9 4H5v16h4M14 8l4 4-4 4M18 12H9', search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5',
   back: 'M15 18l-6-6 6-6', cal: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4', ai: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z',
   bell: 'M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0', app: 'M5 4h14v16H5zM9 8h6M9 12h6M9 16h3',
+  sys: 'M4 5h16v10H4zM8 19h8M12 15v4M12 7.5v5M9.5 10l2.5 2.5 2.5-2.5',
 };
 export const svg = (d, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 
@@ -63,7 +65,7 @@ const box = (t, inner, n = '') => `<section class="sg">${t ? `<h3 class="sg-t">$
 
 /* ---------- Faner og tilstand ---------- */
 
-// [id, navn, undertekst, seksjon, ikon]
+// [id, navn, undertekst, seksjon, ikon, bare admin]
 const TABS = [
   ['konto', 'Konto', 'Personlig informasjon og innlogging.', 'Generelt', P.user],
   ['look', 'Utseende', 'Tema, bakgrunnsbilde, søkebar og kategorier.', 'Generelt', P.look],
@@ -75,9 +77,11 @@ const TABS = [
   ['kal', 'Kalendere', 'Skolens iCal, Canvas, Google Kalender og Home Assistant.', 'Tilkoblinger', P.cal],
   ['ai', 'AI', 'Chat, personvern og logoer.', 'Tilkoblinger', P.ai],
   ['users', 'Brukere', 'Hvem som har tilgang, og hvilken rolle de har.', 'Sikkerhet', P.users],
+  ['system', 'System', 'Oppdater serveren til nyeste versjon.', 'Server', P.sys, true],
 ];
+const tabsFor = () => TABS.filter((t) => !t[5] || isAdmin());
 // Gamle navn på faner (lenker og knapper fra før omleggingen) peker til nye.
-const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai' };
+const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai', sys: 'system', oppdatering: 'system', update: 'system' };
 // Hvilken fane en underside hører til, så «go('tfa')» virker uansett hvor den kalles fra.
 const SUB_TAB = { me: 'konto', tfa: 'konto', pw: 'konto', devices: 'konto', server: 'konto', add: 'users', bg: 'look', style: 'look', hist: 'look', cats: 'look',
   tabs: 'top', head: 'top', speed: 'top', dash: 'top', mob: 'top', sc: 'top', doms: 'dom', mail: 'int' };
@@ -518,11 +522,11 @@ async function saveGroup(name, changes) {
 /* ---------- Søk på tvers av sidene ---------- */
 
 const H = { group, row, note };
-const VIEWS = { konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => notifyView(H), app: () => appView(H), int: intView, kal: () => kalView({ ...H, cfg }), ai: () => aiView(H), users: usersView };
+const VIEWS = { konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => notifyView(H), app: () => appView(H), int: intView, kal: () => kalView({ ...H, cfg }), ai: () => aiView(H), users: usersView, system: () => systemView(H) };
 function searchView() {
   const words = q.toLowerCase().split(/\s+/).filter(Boolean), out = [];
   const saved = sub; sub = null;
-  for (const [k, name] of TABS) {
+  for (const [k, name] of tabsFor()) {
     let v;
     try { v = VIEWS[k](); } catch { continue; }
     for (const g of v.groups ?? v.search ?? []) {
@@ -540,13 +544,13 @@ function searchView() {
 
 function sideHtml() {
   const me = store.me.me ?? {}, name = me.name || me.username || '', warn = warnCount();
-  const secs = [...new Set(TABS.map((t) => t[3]))];
+  const tabs = tabsFor(), secs = [...new Set(tabs.map((t) => t[3]))];
   return `<aside class="set-side" aria-label="Innstillinger">
     <div class="set-side-in">
       <button type="button" class="set-me" data-tab="konto">${me.avatarUrl ? `<span class="set-me-av"><img src="${esc(me.avatarUrl)}" alt=""></span>` : `<span class="set-me-av">${esc(initials(name))}</span>`}
         <span class="set-me-t"><b>${esc(name)}</b><span>${esc(me.username ? `@${me.username} · ${roleName(me.role)}` : '')}</span></span></button>
       <div class="set-q${q ? ' has' : ''}" data-sf><span class="sf-ic">${svg(P.search, 18)}</span>${clearBtn()}<input name="setq" value="${esc(q)}" placeholder="Søk i innstillinger" autocomplete="off" spellcheck="false" aria-label="Søk i innstillinger" data-setq></div>
-      <nav class="set-nav">${secs.map((sec) => `<div class="set-sec"><div class="set-sec-t">${esc(sec)}</div>${TABS.filter((t) => t[3] === sec).map(([k, n, , , ic]) => {
+      <nav class="set-nav">${secs.map((sec) => `<div class="set-sec"><div class="set-sec-t">${esc(sec)}</div>${tabs.filter((t) => t[3] === sec).map(([k, n, , , ic]) => {
         const on = tab === k && !q.trim(), badge = k === 'int' && warn ? `<span class="set-badge" title="${warn} mangler oppsett">${warn}</span>` : '';
         return `<button type="button" class="set-tab" data-tab="${k}" aria-current="${on ? 'page' : 'false'}">${svg(ic)}<span>${esc(n)}</span>${badge}</button>`;
       }).join('')}</div>`).join('')}</nav>
@@ -572,7 +576,7 @@ function render() {
   let v;
   try { v = q.trim() && !sub ? searchView() : VIEWS[tab](); }
   catch (e) { console.error(e); v = { html: `<div class="err">Noe gikk galt på denne siden: ${esc(e.message)}. Prøv en annen side eller last inn på nytt.</div>` }; }
-  const content = v.groups ? v.groups.map(groupHtml).join('') : v.html;
+  const content = (v.groups ? v.groups.map(groupHtml).join('') : v.html) + (v.extra ?? '');
   // Fokus i et tekstfelt beholdes når siden tegnes på nytt (f.eks. etter automatisk lagring eller mens man søker).
   const act = document.activeElement, fk = modal().contains(act) && act.name ? [act.closest('form')?.dataset.group ?? '', act.name, act.selectionStart] : null;
   // Søkefeltet beholdes som samme element (ikke tegnet på nytt), så skriving, markør og tastaturforslag (IME) ikke avbrytes.
@@ -616,6 +620,7 @@ function enter() {
   if (tab === 'varsel' || q) loadNotify(reload);
   if (tab === 'app' || q) loadApp(reload);
   if (tab === 'ai' || q) loadAi(reload, tab === 'ai');
+  if (tab === 'system' || q) loadSystem(reload);
 }
 
 async function loadCfg() {
@@ -658,8 +663,18 @@ async function signOut(forget) {
   await logout();
 }
 
+// Lenker som «/#/innstillinger/system» (fra iOS- og Android-appen) eller «#/innstillinger/look/bg» åpner innstillingene.
+function openFromHash() {
+  const mm = location.hash.match(/^#\/innstillinger(?:\/([\w-]+))?(?:\/([\w:-]+))?\/?$/);
+  if (!mm) return;
+  history.replaceState(null, '', location.pathname + location.search + '#/');
+  openSettings(mm[1] || 'konto', mm[2] || null);
+}
+
 export function bindSettings() {
   const m = modal();
+  openFromHash();
+  window.addEventListener('hashchange', openFromHash);
   // «Flere valg …» i bakgrunnsmenyen i fotovinduet.
   document.addEventListener('hl:open-settings', (e) => { const [a, b] = String(e.detail ?? 'look/bg').split('/'); openSettings(a, b ?? null); });
   m.addEventListener('click', async (e) => {
@@ -678,6 +693,7 @@ export function bindSettings() {
     if (await domainsClick(e)) return;
     if (await notifyClick(e)) return;
     if (await appClick(e)) return;
+    if (await systemClick(e)) return;
 
     /* Integrasjoner, Kalendere og AI */
     if (await aiClick(e, render)) return;
@@ -787,6 +803,7 @@ export function bindSettings() {
   });
 
   m.addEventListener('submit', async (e) => {
+    if (await systemSubmit(e)) return;
     if (await aiSubmit(e, render)) return;
     if (await loginSubmit(e)) return;
     if (await domainsSubmit(e)) return;
@@ -807,7 +824,7 @@ export function bindSettings() {
 
   let qTimer = null;
   m.addEventListener('input', (e) => {
-    if (notifyInput(e) || appInput(e)) return;
+    if (notifyInput(e) || appInput(e) || systemInput(e)) return;
     if (e.target.matches('[data-setq]')) {
       const val = e.target.value;
       clearTimeout(qTimer);
@@ -905,6 +922,7 @@ export function bindSettings() {
   document.addEventListener('keydown', (e) => {
     if (m.hidden) return;
     if (e.key === 'Escape') {
+      if (systemEsc()) return;
       if (e.target.matches?.('[data-setq]') && q) { q = ''; render(); m.querySelector('[data-setq]')?.focus(); return; }
       if (sub && !e.target.closest?.('input,textarea,select')) { sub = null; render(); } else closeSettings();
     }

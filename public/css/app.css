@@ -955,3 +955,42 @@ html[data-hl="2c"] .dx{--dx-ink:#1b1a17;--dx-mut:#6b665c;--dx-lab:#b23a2a;--dx-c
 
 /* ISO2: «Sett opp under Integrasjoner» i tomme kort */
 .set-link { color: var(--blue, #4c8dff); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+
+/* Innstillinger → System → Oppdatering (settings-system.js) */
+#settings{--upd-pos:#8fe0b0;--upd-acc:#f59a8f;--upd-mute:#8a93a6;--upd-line:#1f2736;--upd-code:#0a0e16;--upd-sheet:#111723}
+.sg-row.upd-setup,.sg-row.upd-prog,.sg-row.upd-chg{align-items:flex-start}
+.upd-col{display:flex;flex-direction:column;gap:10px;min-width:0;flex:1}
+.upd-col>b{font-weight:600}
+.upd-col>span{color:var(--upd-mute);font-size:14px;line-height:1.5}
+.upd-col code,.upd-hint code{font-family:var(--mono);font-size:.92em}
+.upd-cmd{display:flex;align-items:center;gap:10px;min-width:0}
+.upd-cmd code{flex:1;min-width:0;padding:10px 12px;border-radius:10px;background:var(--upd-code);border:1px solid var(--upd-line);font:12.5px/1.5 var(--mono);white-space:pre-wrap;word-break:break-all;user-select:all}
+.upd-cmd .sg-btn{flex:none}
+.upd-steps{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px 18px}
+.upd-step{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--upd-mute)}
+.upd-dot{width:10px;height:10px;border-radius:50%;border:2px solid currentColor;box-sizing:border-box}
+.upd-step.on{color:inherit;font-weight:600}.upd-step.on .upd-dot{background:currentColor;animation:upd-pulse 1.2s ease-in-out infinite}
+.upd-step.ok{color:var(--upd-pos)}.upd-step.ok .upd-dot{background:currentColor}
+.upd-step.err{color:var(--upd-acc);font-weight:600}.upd-step.err .upd-dot{background:currentColor}
+@keyframes upd-pulse{50%{opacity:.35}}
+.upd-wait{display:flex;align-items:center;gap:10px;font-size:14px}
+.upd-spin{flex:none;width:16px;height:16px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:upd-spin .8s linear infinite}
+@keyframes upd-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.upd-spin,.upd-step.on .upd-dot{animation:none}}
+.upd-hint{font-size:13px;color:var(--upd-mute)}
+.upd-err{font-size:14px;color:var(--upd-acc);line-height:1.5;white-space:pre-wrap}
+.upd-prog .sg-link{align-self:flex-start;padding:4px 0}
+.upd-log{margin:0;max-height:260px;overflow:auto;padding:10px 12px;border-radius:10px;background:var(--upd-code);border:1px solid var(--upd-line);font:12px/1.5 var(--mono);white-space:pre-wrap;word-break:break-word}
+.upd-chg ul{margin:0;padding-left:18px;color:var(--upd-mute);font-size:14px;line-height:1.5}
+.upd-date{font-weight:400;color:var(--upd-mute);font-size:13px;margin-left:6px}
+.upd-sheet-bg{position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.45)}
+.upd-sheet{position:absolute;z-index:21;left:50%;top:50%;transform:translate(-50%,-50%);width:min(460px,calc(100% - 32px));box-sizing:border-box;padding:22px 22px 18px;border-radius:20px;background:var(--upd-sheet);border:1px solid var(--upd-line);box-shadow:0 20px 60px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:12px}
+.upd-sheet h3{margin:0;font-size:19px;font-weight:600}
+.upd-sheet p{margin:0;color:var(--upd-mute);font-size:14.5px;line-height:1.5}
+.upd-sheet .sg-field{padding:8px 0;border-top:1px solid var(--upd-line);border-bottom:1px solid var(--upd-line)}
+.upd-btns{display:flex;justify-content:flex-end;gap:10px;margin-top:4px}
+@media (max-width:767px){
+  .upd-sheet{top:auto;bottom:0;transform:translateX(-50%);width:100%;border-radius:22px 22px 0 0;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+  .upd-cmd{flex-direction:column;align-items:stretch}
+  .upd-btns .sg-btn{flex:1;justify-content:center}
+}

@@ -983,3 +983,14 @@ html[data-v3]{--accf-check:var(--card2);--accf-check-ink:var(--card2-ink)}
 .so-sk-bar span{display:block;height:100%;background:#FF7A3D;transition:width .3s}
 .so-sk-b{display:flex;gap:8px;flex-wrap:wrap}
 .so-sk-b .btn{flex:1;min-width:140px;height:44px;border-radius:22px;justify-content:center}
+
+/* Prompt 28: feilkort for abonnement fra skjermbilde (sub-shot.js) */
+.so-sk .s28-err{display:flex;flex-direction:column;gap:8px;padding:12px 14px;border-radius:12px;background:var(--inner,var(--card));border:1px solid var(--line)}
+.so-sk .s28-err b{font-weight:600;color:var(--text)}
+.so-sk .s28-sm{font-size:12.5px;color:var(--muted)}
+.so-sk .s28-btns{display:flex;flex-wrap:wrap;gap:8px}
+.so-sk .s28-btns button{min-height:36px;padding:0 14px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--text);font:inherit;font-weight:600;cursor:pointer}
+.so-sk .s28-btns button.pri{background:var(--acc,#FF7A3D);border-color:transparent;color:var(--acc-ink,#1A0C04)}
+.so-sk .s28-btns button:disabled{opacity:.5;cursor:default}
+.so-sk .s28-inst{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--muted)}
+.so-sk .s28-bar{height:6px;border-radius:3px;background:var(--line);overflow:hidden}.so-sk .s28-bar i{display:block;height:100%;background:var(--acc,#FF7A3D)}

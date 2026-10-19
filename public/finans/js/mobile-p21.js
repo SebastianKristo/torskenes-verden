@@ -231,7 +231,15 @@ export async function p21Bind(e, t, ctx = {}) {
   const x = t.closest?.('[data-p21]');
   if (!x) return false;
   const k = x.dataset.p21;
-  if (k === 'dep') { e.preventDefault(); DEP.open = DEP.open === x.dataset.k ? null : x.dataset.k; haptic('tab'); draw(); return true; }
+  // Prompt 28 (claude-code-ruter-hjem.md): stopplisten ligger alltid i layouten og animerer høyden (grid-template-rows
+  // 0fr ↔ 1fr). Bare én åpen om gangen; ingen ny tegning og ingen scrolling, så raden blir liggende der den er.
+  if (k === 'dep') {
+    e.preventDefault(); DEP.open = DEP.open === x.dataset.k ? null : x.dataset.k; haptic('tab');
+    const cols = document.querySelectorAll('[data-depcol]');
+    if (!cols.length) { draw(); return true; }
+    for (const c of cols) { const on = c.dataset.depcol === DEP.open; c.classList.toggle('on', on); c.parentElement?.classList.toggle('open', on); c.previousElementSibling?.setAttribute?.('aria-expanded', String(on)); }
+    return true;
+  }
   if (k === 'depall') { e.preventDefault(); DEP.all[x.dataset.k] = true; draw(); return true; }
   const HK = ctx.HK;
   if (k === 'lshare' && HK) { e.preventDefault(); const l = HK.d.lists.find((y) => String(y.id) === String(x.dataset.id)); SH.list = x.dataset.id; SH.sel = (l?.members ?? []).map((p) => String(typeof p === 'object' ? p.id ?? p.userId : p)); SH.err = ''; draw(); return true; }

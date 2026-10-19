@@ -9,6 +9,7 @@ import * as UPQ from './mobile-upq.js';
 import { accountInit, logout, p21Bind, p21Sheets, dragMove, dragEnd } from './mobile-p21.js';
 import { MODS, modView, modLoad, domNav, modBind, modAfterDraw } from './mobile-mods.js';
 import { settingsView, settingsLoad, settingsBind } from './mobile-set.js';
+import { updSheet } from './mobile-upd.js';
 import { hlView, hlLoad, hlBind, hlAfterDraw, LAY, loadLayout } from './mobile-hl.js';
 import { PAGES, pageView, pageLoad, pagesBind, pageAfterDraw } from './mobile-pages.js';
 import { txDetail, editForm, origOverlay, txBind } from './mobile-tx.js';
@@ -30,6 +31,7 @@ import * as P25 from './mobile-p25.js';
 import * as P26 from './mobile-p26.js';
 import * as KAL from './mobile-kal.js';
 import * as P27 from './mobile-p27.js';
+import * as P28 from './mobile-p28.js';
 import * as CHAT from './mobile-chat.js';
 import { takeApp, HK, p17Bind, p17Sheets, huskeView, tasksLoad, posWidget, bolWidgetLoad, appLoad, applyIcon, ptrBind, wsConnect, onRealtime } from './mobile-p17.js';
 import { trkDown, trkMove, trkUp } from './mobile-paper2.js';
@@ -422,9 +424,9 @@ export function draw() {
   const nav = scr === 'nyheter' || scr === 'vaer' || fad || rv || fsx ? '' : pp ? P25.nav25(scr === 'huske' ? P22.huskeNav(paperNav(scr)) + P22.huskeDock() : paperNav(scr), scr) : th === 'ios' ? iosNav(n) : andNav(n);
   // Bevar fokus og markør i et felt når skjermen tegnes på nytt (f.eks. søk mens forslag kommer inn).
   const ae = document.activeElement, keep = ae?.id && root().contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
-  root().innerHTML = `<div class="m ${th}${fad ? ' p23-fad' : ''}${rv ? ' p24-rvm' : ''}${fsx ? ' p27-fs' : ''}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}${fabStyle() === 'float' ? ' flyt' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${scr === 'vaer' ? ' vaer' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
+  root().innerHTML = `<div class="m ${th}${fad ? ' p23-fad' : ''}${rv ? ' p24-rvm' : ''}${fsx ? ' p27-fs' : ''}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}${fabStyle() === 'float' ? ' flyt' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${scr === 'vaer' ? ' vaer' : ''}${scr === 'mer' ? ' p28-mer' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
     ${pp ? '' : rail(n)}${hero ? paperHero(scr) : ''}<div class="m-scroll">${bt ? topRow(th) : ''}${main}</div><div class="m-detail">${twoPane ? detail(th) : ''}</div>${nav}
-    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() + P26.sheets26() + P27.sheets27() : ''}${avgSheet()}${pp ? "" : famSheet()}${p17Sheets()}${p21Sheets(HK)}${P22.p22Sheets()}${pp ? P24.sheets24() : ''}${origOverlay(th)}${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
+    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() + P26.sheets26() + P27.sheets27() : ''}${avgSheet()}${pp ? "" : famSheet()}${p17Sheets()}${updSheet()}${p21Sheets(HK)}${P22.p22Sheets()}${pp ? P24.sheets24() : ''}${origOverlay(th)}${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
     <input class="m-file" id="m-capture" type="file" accept="image/*" capture="environment" data-mupload data-confirm></div>`;
   if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', pp ? (m.light ? '#f3efe6' : '#14130f') : th === 'ios' ? '#07070A' : getComputedStyle(root().firstElementChild).backgroundColor || '#19120E');
@@ -432,7 +434,7 @@ export function draw() {
   if (fad) P23.finnAdAfterDraw();
   P23.arrive(vk, vkChanged);
   P25.afterDraw();
-  P27.afterDraw27();
+  P27.afterDraw27(); P28.afterDraw28();
   // Glassmarkøren glir med fjæring mellom fanene. Fanelinja tegnes på nytt ved hver oppdatering, så animasjonen
   // (Web Animations) gjenopptas med medgått tid hvis en ny tegning kommer midt i den.
   const mk = root().querySelector('.tabs .mark');
@@ -535,7 +537,7 @@ export function route() {
   if (!domOk() && (next === 'dom' || (next === 'set' && parts[1] === 'dom'))) { next = next === 'dom' ? 'hl' : 'set'; if (location.hash !== `#/${next}`) { history.replaceState(null, '', `#/${next}`); parts.length = 1; } }
   const sub = parts.slice(1).join('/');
   if (next !== m.screen || sub !== m.sub) {
-    if (next !== m.screen) { edReset(); P26.leave26(); P27.leave27(next); if (m.screen === 'chat') CHAT.chatLeave(); if (next === 'chat') CHAT.chatEnter(m.screen); if (next === 'kal') m.kalFrom = m.screen; if (next === 'vaer') WX.from = m.screen; m.edit = null; m.pdet = null; if (next === 'dom') m.domFrom = m.screen === 'dom' ? m.domFrom : m.screen; if (next === 'set') m.setFrom = m.screen === 'set' ? m.setFrom : m.screen; }
+    if (next !== m.screen) { edReset(); P26.leave26(); P27.leave27(next); P28.leave28(next); if (m.screen === 'chat') CHAT.chatLeave(); if (next === 'chat') CHAT.chatEnter(m.screen); if (next === 'kal') m.kalFrom = m.screen; if (next === 'vaer') WX.from = m.screen; m.edit = null; m.pdet = null; if (next === 'dom') m.domFrom = m.screen === 'dom' ? m.domFrom : m.screen; if (next === 'set') m.setFrom = m.screen === 'set' ? m.setFrom : m.screen; }
     p20Screen(next);
     m.screen = next; m.sub = sub; m.detail = false; m.menu = false; m.sheet = false; m.min = false; m.orig = null; paperState.scan = false; paperState.open = paperState.open && next === 'hl';
     if (next !== 'skann' && next !== 'opp') m.rc = null;
@@ -743,7 +745,7 @@ export function bind() {
   bindGlobal();
   // Prompt 17: navn og ikon på appen, dra for å oppdatere og sanntid (Huskeliste, Familie og Sporing).
   applyIcon(); appLoad().then(() => draw()).catch(() => {}); ptrBind(); wsConnect(onRealtime);
-  wxBindScroll(); P23.icBoot(); P25.boot(); P26.boot26(); P27.boot27();
+  wxBindScroll(); P23.icBoot(); P25.boot(); P26.boot26(); P27.boot27(); P28.boot28();
   addEventListener('fh-design', (e) => { const d = e.detail ?? {}; takeDesign(d); if (typeof d.lock === 'boolean') setPref('lock', d.lock); if (typeof d.hap === 'boolean') setPref('hap', d.hap); if (d.photo) photoLoad(d.photo).then(draw).catch(() => {}); draw(); });
   loadLayout().then((r) => {
     takeDesign(r); take15(r); take16(r); take20(r); P24.take24(r); P25.take25(r); P26.take26(r); P27.take27(r); takeApp(r);
@@ -754,6 +756,7 @@ export function bind() {
   // Skanneknappen: trykk = kamera (eller valg), hold inne ~480 ms = arket med Bilder/Filer.
   el.addEventListener('pointerdown', (e) => {
     swDown(e); // sveip tilbake fra kanten ser hendelsen først, men stopper ingen andre før den tar over
+    if (P28.down28(e)) return; // Prompt 28: Mer – hold inne og dra ≡
     P26.down26(e); // Prompt 26: hold inne på Finans-fanelinja og på kortene i Kalender, sveip i uke/måned
     if (soDown(e)) return;
     p20Down(e); edDown(e); // først: nullstiller også «klikket etter et langt trykk»
@@ -769,7 +772,7 @@ export function bind() {
   });
   const cancelLp = () => clearTimeout(lpTimer);
   el.addEventListener('pointerup', cancelLp); el.addEventListener('pointercancel', cancelLp);
-  el.addEventListener('pointerup', (e) => { P26.up26(e); P24.up24(e); soUp(e); dragEnd(e); wx22Up(e, wxPlaces()); P22.up(e); paperUp(e); edUp(e); p16Up(e); trkUp(e); p20Up(e); }); el.addEventListener('pointercancel', (e) => { P26.up26(e); P24.up24(e); soUp(e); dragEnd(e); wx22Up(e, wxPlaces()); P22.up(e); paperUp(e); edUp(e); p16Up(e); trkUp(e); p20Up(e); });
+  el.addEventListener('pointerup', (e) => { P28.up28(e); P26.up26(e); P24.up24(e); soUp(e); dragEnd(e); wx22Up(e, wxPlaces()); P22.up(e); paperUp(e); edUp(e); p16Up(e); trkUp(e); p20Up(e); }); el.addEventListener('pointercancel', (e) => { P28.up28(e); P26.up26(e); P24.up24(e); soUp(e); dragEnd(e); wx22Up(e, wxPlaces()); P22.up(e); paperUp(e); edUp(e); p16Up(e); trkUp(e); p20Up(e); });
   el.addEventListener('dragover', (e) => { if (e.target.closest('[data-p16drop]')) e.preventDefault(); });
   el.addEventListener('drop', safe(async (e) => { await p16Bind(e, e.target); }));
   el.addEventListener('contextmenu', (e) => { if (e.target.closest('[data-ppplus], [data-edk], [data-pk], [data-fmk], [data-sk], [data-p24bol], [data-p24lp]')) e.preventDefault(); });
@@ -779,6 +782,7 @@ export function bind() {
     let x;
     if (Date.now() - tsup < 400 && d('.tabs')) { e.preventDefault(); e.stopPropagation(); return; }
     if (P23.swGuard()) { e.preventDefault(); e.stopPropagation(); return; } // klikket etter et sveip tilbake
+    if (P28.bind28(e, t)) return; // Prompt 28: Mer – flytt/skjul
     if (await P27.bind27(e, t)) return; // Prompt 27: Chat, Kalender v2-ark, ✕ i søk, søkeforslag, Ruter-kortet, nyheter, abonnement fra skjermbilde
     if (await P26.bind26(e, t, { items: () => TR.data?.items ?? [], reload: () => trkLoad() })) return; // Prompt 26: Kalender, Integrasjoner, SPOR VIA, Finans-fanelinja og aktiv fane
     if (P25.bind25(e, t)) return;
@@ -896,7 +900,7 @@ export function bind() {
   el.addEventListener('keydown', (e) => { P27.key27(e); hlBind(e, e.target); });
   el.addEventListener('focusin', (e) => { hlBind(e, e.target); });
   el.addEventListener('focusout', (e) => { hlBind(e, e.target); });
-  el.addEventListener('pointermove', (e) => { if (swMove(e)) return; P26.move26(e); if (soMove(e)) return; if (dragMove(e)) return; if (wx22Move(e)) return; if (P22.move(e)) return; p20Move(e); paperMove(e); edMove(e); p16Move(e); P24.move24(e); trkMove(e); if (tabMove(e)) return; hlBind(e, e.target); }, { passive: false });
+  el.addEventListener('pointermove', (e) => { if (P28.move28(e)) return; if (swMove(e)) return; P26.move26(e); if (soMove(e)) return; if (dragMove(e)) return; if (wx22Move(e)) return; if (P22.move(e)) return; p20Move(e); paperMove(e); edMove(e); p16Move(e); P24.move24(e); trkMove(e); if (tabMove(e)) return; hlBind(e, e.target); }, { passive: false });
   el.addEventListener('pointerup', (e) => { if (swEnd(e)) return; if (tabUp(e)) return; hlBind(e, e.target); });
   el.addEventListener('pointercancel', (e) => { if (swEnd(e)) return; tabUp(e); });
   // Hindrer at nettleseren tar over berøringen (og sender pointercancel) mens man sveiper tilbake.

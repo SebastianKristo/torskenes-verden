@@ -2,6 +2,45 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.21.0] – 19.10.2026 · prompt 28 og oppdatering fra appen
+- **Oppdater fra appen eller nettsiden.** Finnes under Innstillinger → System → Oppdatering, bare for admin.
+  - Siden viser installert og nyeste versjon og hva som er nytt. Du oppdaterer med passord, og det tas backup av databasen først.
+  - En egen updater-container laster ned, bygger og starter på nytt. Den gamle versjonen fortsetter å kjøre hvis bygget feiler.
+  - Kjør `update.sh` fra Proxmox én gang til for å installere updateren.
+  - iPhone og Android viser status og åpner oppdateringen i nettleseren.
+- **Dokumentasjonsside** (MkDocs Material) med Oppsett, Bruk, Utvikling og Feilsøking. Den publiseres på GitHub Pages når Pages er slått på i repoet.
+- **Nye væranimasjoner i Apple-stil:**
+  - sola følger soloppgang og solnedgang
+  - skyer i dybdelag, og regn med dråper på glasset
+  - lyn med forgreininger, og snø med nærflak
+  - grå tåke som ikke gjør bakgrunnen hvit, og stjerneskudd om natten
+- **Vær:**
+  - stedssøket finner også mindre og utenlandske steder via OpenStreetMap, for eksempel Strømstad
+  - kart og steder ligger i en bunnlinje
+- **Abonnement fra skjermbilde virker:**
+  - HEIC og store skjermbilder gjøres om til JPEG, og en bildemodell velges automatisk
+  - lengre tidsgrense
+  - tydelige feilkort: Prøv igjen, Installer qwen2.5vl og Skriv inn selv. «Les med Gemini» vises bare når en Gemini-nøkkel er lagt inn, og bildet sendes først når du trykker.
+- **Nytt «Legg til abonnement»-ark** med én grep-strek, Papir-farger og forklaring på hvert valg.
+- **Mer:**
+  - hold inne for å flytte og skjule moduler. Rekkefølgen lagres per konto.
+  - ny lenke til Subscription OS, og ingen skann-knapp
+- **Redigering som på iOS-hjemskjermen:**
+  - kortene vugger
+  - ＋/✓-piller som ikke kuttes, minus øverst til venstre, og dra for å flytte
+  - «✎ Rediger widget» midt på Ruter-kortet
+  - gjelder Hjem, Finans → Mer, Mat og Sporing
+- **Ruter-kortet på Hjem:**
+  - ingen «Velg stopp» på kortet; stoppene velges via Rediger widget
+  - én flat liste, og «nå» når bussen går nå
+  - avganger åpnes og lukkes jevnt
+- **Chat:**
+  - teksten om lokal kjøring er fjernet
+  - trykk i chatten skjuler tastaturet
+  - nytt «Legg ved»-ark med Kamera, Bilder, Filer og Kunnskapsbase
+- **Fargefeil på Kontoer og brukere** er rettet. Mørk-tema-fargen brukes ikke lenger i lyst tema.
+- **Søk:** litt luft mellom tastaturet og fanelinjen.
+
 ## [4.20.0] – 19.10.2026 · prompt 27
 - **Kalenderen viser timene igjen.** Skolekalendere bruker samme ID på mange hendelser. Det gamle iCal-biblioteket beholdt bare den siste, ofte eksamen om to måneder. Serveren har nå sin egen iCal-leser:
   - alle hendelser beholdes
