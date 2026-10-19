@@ -240,7 +240,7 @@ struct SubShot27Panel: View {
             }
         }
         defer { ticker.cancel(); busy = false }
-        guard let jpg = img.scaled(max: 2000).jpegData(compressionQuality: 0.85) else { error = "Fikk ikke lest bildet."; return }
+        guard let jpg = img.scaled(max: 1600).jpegData(compressionQuality: 0.85) else { error = "Fikk ikke lest bildet."; return }
         do {
             let d: Data = try await store.api.upload("/subscriptions/from-screenshot", parts: [API.Part(name: "image", filename: "skjermbilde.jpg", mime: "image/jpeg", data: jpg)])
             let r: SubShotResult27 = SubShotResult27(JS.obj(d))

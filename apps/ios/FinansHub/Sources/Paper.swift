@@ -158,6 +158,10 @@ struct PaperShell: View {
         GeometryReader { g in
             let wide = g.size.width >= 600
             let bottom = Swift.max(12, g.safeAreaInsets.bottom - 8)
+            // Prompt 28: med tastaturet oppe (safe area-bunnen er da tastaturet) står fanelinja 8 pt over tastaturet,
+            // og FAB-en følger med (claude-code-sok-tastatur.md).
+            let kb28: Bool = g.safeAreaInsets.bottom > 120
+            let shift: CGFloat = kb28 ? -8 : g.safeAreaInsets.bottom - bottom
             // Prompt 24: Ruter-visningen er fullskjerm uten fanelinje og skann-knapp.
             let showBar = !store.newsOpen && store.dishSel == nil && !store.ruter24Full && !store.full27
             // Prompt 23: ingen skann-knapp på Aksjer.
@@ -170,7 +174,7 @@ struct PaperShell: View {
                     content(store.finPalette22(p)).environment(\.paper, store.finPalette22(p)).frame(maxWidth: .infinity, maxHeight: .infinity)
                         // Sidene fra den klassiske appen skal ikke ligge under skinnen på bred skjerm.
                         .padding(.leading, wide && showBar && (store.paperClassic != nil || store.paperFin != nil) ? 108 : 0)
-                    if showBar && !wide { Color.clear.frame(height: 62 + bottom - g.safeAreaInsets.bottom + 10) }
+                    if showBar && !wide { Color.clear.frame(height: 62 - shift + 10) }
                 }
                 if showBar && wide {
                     PaperTabBar(scan: scan, rail: true)
@@ -180,7 +184,7 @@ struct PaperShell: View {
                     // ZStack-en slutter ved safe area-bunnen, så linja flyttes ned dit den skal stå:
                     // max(12, inset − 8) pt over skjermkanten.
                     PaperTabBar(scan: scan, rail: false)
-                        .offset(y: g.safeAreaInsets.bottom - bottom)
+                        .offset(y: shift)
                 }
                 if let h = store.paperHint {
                     Text(h).font(PF.ui(12.5, .semibold)).foregroundStyle(p.bg)
@@ -188,7 +192,7 @@ struct PaperShell: View {
                         .background(p.ink, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                         .padding(.trailing, 16).padding(.bottom, fab ? (wide ? 96 : 158) : 72)
-                        .offset(y: g.safeAreaInsets.bottom - bottom)
+                        .offset(y: shift)
                         .transition(.opacity)
                 }
             }
@@ -198,7 +202,7 @@ struct PaperShell: View {
                     TaskDockField22(ownButton: !fab)
                         .padding(.leading, 16).padding(.trailing, fab ? 96 : 16)
                         .padding(.bottom, 62 + 14)
-                        .offset(y: g.safeAreaInsets.bottom - bottom)
+                        .offset(y: shift)
                 }
             }
             .overlay(alignment: .bottomTrailing) {
@@ -206,7 +210,7 @@ struct PaperShell: View {
                     PaperFab(tap: fabTap, hold: fabHold)
                         .padding(.trailing, wide ? 24 : 18)
                         .padding(.bottom, wide ? Swift.max(0, 24 - bottom) : 62 + 14)
-                        .offset(y: g.safeAreaInsets.bottom - bottom)
+                        .offset(y: shift)
                 }
             }
             .overlay(alignment: .topTrailing) {
@@ -781,6 +785,8 @@ struct PaperPage: View {
                 }
             )
             .padding(.top, -23)
+            // Prompt 28: pillene i redigeringsmodus ligger over listen, utenfor scroll-innholdet (Wiggle28.swift).
+            .edit28Layer(p)
             .refreshable { await refresh() }
             // Prompt 26: nytt trykk på aktiv fane på roten scroller til toppen (Nav26.swift).
             .onChange(of: Nav26.shared.topTick) { _, _ in
@@ -815,7 +821,7 @@ struct PaperPage: View {
         case "abo": PaperSubs()
         case "mat": MatView(pal: MatPal.paper(p), paperMode: true)
         case "sporing": PaperTracking()
-        case "mer": PaperMore24()
+        case "mer": PaperMore28()
         case "bursdag": BirthdaysPage24()
         case "kalender": Cal26Page()
         case "innst": PaperSettings17()
@@ -879,9 +885,15 @@ struct PaperHero: View {
             .padding(.bottom, home ? 36 : 34)
         }
         .frame(height: (home ? (wide ? 230 : 172) : 154) + topInset)
-        .overlay(alignment: .topTrailing) {
-            // Kreditering for bildet (NASA, fotografen på Unsplash/Pexels) under profilbildet.
-            BgCredit().padding(.top, topInset + 52).padding(.trailing, 22)
+        .overlay(alignment: .bottomTrailing) {
+            // Prompt 28: kreditering for bildet (NASA, Unsplash/Pexels) nederst til høyre, én linje, maks 60 % bredde,
+            // så den aldri overlapper undertittelen.
+            GeometryReader { g in
+                BgCredit()
+                    .frame(maxWidth: g.size.width * 0.6, alignment: .trailing)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+            }
+            .padding(.trailing, 14).padding(.bottom, 23)
         }
         .clipped()
     }
@@ -974,7 +986,7 @@ struct PaperHero: View {
             if store.prof24DomainPill { Dom24Pill() }
         }
         .foregroundStyle(store.heroInk)
-        .shadow(color: .black.opacity(store.heroInk == .white ? 0.35 : 0), radius: 7)
+        .shadow(color: .black.opacity(store.heroInk == .white ? 0.45 : 0), radius: 8, y: 1)
     }
 
     @ViewBuilder private var weather: some View {

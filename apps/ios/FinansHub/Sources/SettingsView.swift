@@ -90,7 +90,7 @@ struct SettingsView: View {
                 }
                 .glass(24)
             }
-            Button { store.logout() } label: { Text("Logg ut av \(store.displayName)").fontWeight(.semibold).foregroundStyle(Color(hex: "#FF8A6B")).frame(maxWidth: .infinity, minHeight: 52) }
+            Button { store.logout() } label: { Text("Logg ut av \(store.displayName)").fontWeight(.semibold).foregroundStyle(PaperSkin.palette?.lab ?? Color(hex: "#FF8A6B")).frame(maxWidth: .infinity, minHeight: 52) }
                 .buttonStyle(.plain).glass(26)
         }
     }
@@ -189,7 +189,8 @@ private struct AccountsPage: View {
     @State private var files = false
     var body: some View {
         VStack(spacing: 12) {
-            SectionLabel(text: "Profilbilde")
+            // Prompt 28: etiketten ligger i innholdet under toppbildet (24 pt luft), aldri oppå bildet.
+            SectionLabel(text: "Profilbilde").padding(.top, PaperSkin.palette == nil ? 0 : 16)
             VStack(spacing: 14) {
                 HStack(spacing: 16) {
                     AvatarImage(size: 72, tint: .accent)
@@ -206,7 +207,7 @@ private struct AccountsPage: View {
                 }
                 .buttonStyle(.plain)
                 if store.avatar != nil {
-                    Button { store.removeAvatar() } label: { Text("Fjern bildet").font(.subheadline.weight(.semibold)).foregroundStyle(Color.domRed).frame(maxWidth: .infinity, minHeight: 40) }
+                    Button { store.removeAvatar() } label: { Text("Fjern bildet").font(.subheadline.weight(.bold)).foregroundStyle(PaperSkin.palette?.lab ?? Color.domRed).frame(maxWidth: .infinity, minHeight: 40) }
                         .buttonStyle(.plain)
                 }
             }
@@ -230,8 +231,9 @@ private struct AccountsPage: View {
                     .onTapGesture { if !active { store.switchTo(a.id) } }
                 }
             }
-            Button { store.addingAccount = true } label: { Label("Legg til konto", systemImage: "person.badge.plus").fontWeight(.bold).foregroundStyle(Color.ink).frame(maxWidth: .infinity, minHeight: 50) }
-                .buttonStyle(.plain).glass(25, tint: .accent)
+            // Prompt 28: primærknapp i aksent (lab) med onLab-tekst i Papir – aldri hvit på lys rosa.
+            Button { store.addingAccount = true } label: { Label("Legg til konto", systemImage: "person.badge.plus").fontWeight(.bold).frame(maxWidth: .infinity, minHeight: 50) }
+                .buttonStyle(Primary28Style(radius: 25))
             if store.accounts.count > 1 {
                 Button { store.logoutOthers() } label: { Text("Logg ut andre kontoer").frame(maxWidth: .infinity, minHeight: 48) }.buttonStyle(.plain).glass(24)
             }
@@ -353,9 +355,9 @@ private struct TokensPage: View {
                     }
                     .pickerStyle(.segmented)
                     Button { store.createToken(name: name.isEmpty ? "Token" : name, scopes: Array(scopes), days: days); name = "" } label: {
-                        Text("Lag token").fontWeight(.bold).foregroundStyle(Color.ink).frame(maxWidth: .infinity, minHeight: 48)
+                        Text("Lag token").fontWeight(.bold).frame(maxWidth: .infinity, minHeight: 48)
                     }
-                    .buttonStyle(.plain).glass(24, tint: .accent).disabled(scopes.isEmpty)
+                    .buttonStyle(Primary28Style(radius: 24)).disabled(scopes.isEmpty)
                 }
                 .padding(16).glass(24)
             }
@@ -579,8 +581,8 @@ private struct ServerPage: View {
                 TextField("Ekstern adresse, f.eks. os.dittdomene.no", text: $external).keyboardType(.URL).textInputAutocapitalization(.never).autocorrectionDisabled()
                     .padding(.horizontal, 14).frame(height: 46).glass(16)
                 HStack(spacing: 10) {
-                    Button { store.updateAddresses(local: local, external: external) } label: { Text("Lagre").fontWeight(.bold).foregroundStyle(Color.ink).frame(maxWidth: .infinity, minHeight: 44) }
-                        .buttonStyle(.plain).glass(22, tint: .accent)
+                    Button { store.updateAddresses(local: local, external: external) } label: { Text("Lagre").fontWeight(.bold).frame(maxWidth: .infinity, minHeight: 44) }
+                        .buttonStyle(Primary28Style(radius: 22))
                     Button { store.testConnection(local.isEmpty ? external : local) } label: { Text("Test tilkobling").frame(maxWidth: .infinity, minHeight: 44) }
                         .buttonStyle(.plain).glass(22)
                 }

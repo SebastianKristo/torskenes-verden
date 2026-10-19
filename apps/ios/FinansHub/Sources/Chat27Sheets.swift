@@ -14,6 +14,15 @@ struct Chat27Sheet: View {
     let pickFile: (Bool) -> Void
 
     var body: some View {
+        if kind == "plus" {
+            // Prompt 28: nytt «Legg ved»-ark med høyde etter innhold (Chat28.swift).
+            Chat28PlusSheet(c: c, pickPhoto: pickPhoto, pickCamera: pickCamera, pickFile: { pickFile(false) })
+        } else {
+            scroll
+        }
+    }
+
+    private var scroll: some View {
         ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 12) {
                 switch kind {

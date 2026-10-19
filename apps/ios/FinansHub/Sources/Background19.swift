@@ -332,8 +332,8 @@ struct BgCredit: View {
             Button {
                 if let u = URL(string: store.bgInfo?.creditUrl ?? ""), u.scheme?.hasPrefix("http") == true { UIApplication.shared.open(u) }
             } label: {
-                Text(c).font(PF.ui(9.5)).foregroundStyle(.white.opacity(0.75)).lineLimit(1)
-                    .shadow(color: .black.opacity(0.5), radius: 3)
+                Text(c).font(PF.ui(10)).foregroundStyle(.white.opacity(0.7)).lineLimit(1).truncationMode(.tail)
+                    .shadow(color: .black.opacity(0.6), radius: 2, y: 1)
             }
             .buttonStyle(.plain)
         }

@@ -165,12 +165,14 @@ struct RuterView24: View {
                 if i > 0 { Rectangle().fill(p.line).frame(height: 1) }
                 Button { toggle(d) } label: { RuterRow24(d: d) }
                     .buttonStyle(.plain)
-                if openDep == d.openKey {
+                // Prompt 28: stopplisten ligger alltid i layouten og animerer høyden 0 ↔ innhold (ingen if + transition),
+                // så raden blir liggende og radene under glir jevnt.
+                Ruter28Expand(open: openDep == d.openKey) {
                     RuterStopList21(dep: d, color: RuterView24.lineColor(d), stopName: stopName)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
         }
+        .animation(.spring(response: 0.32, dampingFraction: 0.9), value: openDep)
         .background(p.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
         .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
     }
@@ -178,7 +180,8 @@ struct RuterView24: View {
     private func toggle(_ d: RuterDeparture) {
         Haptics.shared.select()
         let k: String = d.openKey
-        withAnimation(.easeOut(duration: 0.2)) { openDep = openDep == k ? nil : k }
+        // Bare én åpen om gangen; den forrige lukkes med samme animasjon.
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.9)) { openDep = openDep == k ? nil : k }
     }
 
     /* ---------- Linjefarger ---------- */
@@ -197,15 +200,20 @@ struct RuterView24: View {
 
     static func lineColor(_ d: RuterDeparture) -> Color { Color(hex: lineHex(d)) }
 
-    /// #1b1a17 på lyse linjefarger, hvit på mørke.
+    /// Prompt 28: tekstfarge etter relativ luminans på linjefargen: lys (L > 0,4) → #1b1a17, mørk → hvit.
     static func lineInk(_ d: RuterDeparture) -> Color {
         let h: String = lineHex(d).trimmingCharacters(in: CharacterSet(charactersIn: "#"))
         let v: UInt64 = UInt64(h, radix: 16) ?? 0xE60000
-        let r: Double = Double((v >> 16) & 0xFF) / 255
-        let g: Double = Double((v >> 8) & 0xFF) / 255
-        let b: Double = Double(v & 0xFF) / 255
+        let r: Double = lin(Double((v >> 16) & 0xFF) / 255)
+        let g: Double = lin(Double((v >> 8) & 0xFF) / 255)
+        let b: Double = lin(Double(v & 0xFF) / 255)
         let lum: Double = 0.2126 * r + 0.7152 * g + 0.0722 * b
-        return lum > 0.55 ? Color(hex: "#1b1a17") : Color.white
+        return lum > 0.4 ? Color(hex: "#1b1a17") : Color.white
+    }
+
+    /// sRGB → lineær kanal (WCAG).
+    private static func lin(_ c: Double) -> Double {
+        c <= 0.03928 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4)
     }
 }
 

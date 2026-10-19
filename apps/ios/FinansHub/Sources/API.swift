@@ -7,6 +7,9 @@ struct APIError: LocalizedError {
     let status: Int
     /// Innloggingen krever en 6-sifret kode (2FA).
     var needsTotp = false
+    /// Prompt 28: maskinlesbar feilkode fra serveren (f.eks. ollama_down, no_vision, timeout, not_found) og om Gemini kan brukes.
+    var code: String? = nil
+    var canGemini = false
     var errorDescription: String? { message }
 }
 
@@ -41,7 +44,8 @@ struct API {
         let code = (res as? HTTPURLResponse)?.statusCode ?? 0
         if code >= 400 {
             let obj = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
-            throw APIError(message: (obj?["error"] as? String) ?? "Feil \(code)", status: code, needsTotp: (obj?["needsTotp"] as? Bool) ?? false)
+            throw APIError(message: (obj?["error"] as? String) ?? "Feil \(code)", status: code, needsTotp: (obj?["needsTotp"] as? Bool) ?? false,
+                           code: obj?["code"] as? String, canGemini: (obj?["canGemini"] as? Bool) ?? false)
         }
         return data
     }
@@ -107,7 +111,7 @@ struct API {
     }
 
     /// Multipart: filer (f.eks. original + nedskalert JPEG + miniatyr) og tekstfelt.
-    func upload(_ path: String, parts: [Part], prefix: String = "/finans/api") async throws -> Data {
+    func upload(_ path: String, parts: [Part], prefix: String = "/finans/api", timeout: TimeInterval = 30) async throws -> Data {
         let boundary = "FinansHub-\(UUID().uuidString)"
         var body = Data()
         for p in parts {
@@ -124,7 +128,7 @@ struct API {
         r.httpMethod = "POST"
         r.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         r.httpBody = body
-        return try await send(r)
+        return try await send(r, timeout: timeout)
     }
 
     /// Bytter brukernavn + passord (+ 2FA-kode) mot et token med finans-tilgang.

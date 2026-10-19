@@ -14,6 +14,7 @@ struct Chat27Page: View {
     @Environment(\.paperWide) private var wide
     @MainActor private var s: ChatStore27 { ChatStore27.shared }
     @State private var photo: PhotosPickerItem? = nil
+    @State private var photos28: [PhotosPickerItem] = []
     @State private var photoOpen: Bool = false
     @State private var cameraOpen: Bool = false
     @State private var fileOpen: Bool = false
@@ -45,14 +46,16 @@ struct Chat27Page: View {
             Chat27Sheet(kind: sh.id, c: c, pickPhoto: { pick(photo: true) }, pickCamera: { pick(camera: true) },
                         pickFile: { kb in pick(file: true, kb: kb) })
                 .presentationDetents(detents(sh.id))
+                .presentationDragIndicator(sh.id == "plus" ? .visible : .automatic)
                 .presentationBackground(c.bg)
                 .environment(\.colorScheme, c.dark ? .dark : .light)
         }
         .sheet(item: Binding<ChatShare27?>(get: { s.share }, set: { s.share = $0 })) { it in
             ShareSheet(url: it.url).presentationDetents([.medium, .large])
         }
-        .photosPicker(isPresented: $photoOpen, selection: $photo, matching: .images)
-        .onChange(of: photo) { _, it in load(it) }
+        // Prompt 28: «Bilder» velger flere bilder fra biblioteket.
+        .photosPicker(isPresented: $photoOpen, selection: $photos28, maxSelectionCount: 6, matching: .images)
+        .onChange(of: photos28) { _, list in loadMany(list) }
         .fullScreenCover(isPresented: $cameraOpen) {
             CameraView { img in if let img { s.addImage(img) } }.ignoresSafeArea()
         }
@@ -62,7 +65,9 @@ struct Chat27Page: View {
     }
 
     private func detents(_ id: String) -> Set<PresentationDetent> {
-        if id == "guard" || id == "plus" { return [.medium] }
+        // Prompt 28: «Legg ved» får høyden etter innholdet (Chat28.swift måler den).
+        if id == "plus" { return [.height(Chat28.shared.plusHeight)] }
+        if id == "guard" { return [.medium] }
         return [.medium, .large]
     }
 
@@ -87,6 +92,16 @@ struct Chat27Page: View {
             if photo { photoOpen = true }
             if camera { cameraOpen = true }
             if file { fileToKb = kb; fileOpen = true }
+        }
+    }
+
+    private func loadMany(_ list: [PhotosPickerItem]) {
+        if list.isEmpty { return }
+        Task { @MainActor in
+            for it in list {
+                if let d = try? await it.loadTransferable(type: Data.self), let img = UIImage(data: d) { s.addImage(img) }
+            }
+            photos28 = []
         }
     }
 
@@ -208,8 +223,12 @@ struct Chat27Messages: View {
                 }
                 .frame(maxWidth: 760, alignment: .leading)
                 .padding(.horizontal, 18).padding(.top, 10).padding(.bottom, 24)
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, minHeight: 200, alignment: .top)
+                // Prompt 28: trykk i meldingsområdet (ikke på knapper) skjuler tastaturet.
+                .contentShape(Rectangle())
+                .onTapGesture { Chat28.hideKeyboard() }
             }
+            .background(Color.clear.contentShape(Rectangle()).onTapGesture { Chat28.hideKeyboard() })
             .scrollDismissesKeyboard(.interactively)
             .onChange(of: s.scrollTick) { _, _ in
                 withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("c27bottom", anchor: .bottom) }
@@ -329,9 +348,11 @@ struct Chat27Composer: View {
             .overlay(RoundedRectangle(cornerRadius: 26, style: .continuous).stroke(c.line, lineWidth: 1))
             .shadow(color: .black.opacity(0.18), radius: 14, y: 8)
             .frame(maxWidth: 760)
-            Text(sky ? "Sky-modell: meldingen sendes til " + (s.current.provider == "groq" ? "Groq" : "Google") + "."
-                     : "Kjører lokalt på hjemmeserveren. Ingenting sendes ut.")
-                .font(c.ui(11.5)).foregroundStyle(c.mut).multilineTextAlignment(.center)
+            // Prompt 28: ingen tekst for lokale modeller; bare én linje for sky-modeller.
+            if sky {
+                Text("Sky-modell: meldingen sendes til " + (s.current.provider == "groq" ? "Groq" : "Google") + ".")
+                    .font(c.ui(11.5)).foregroundStyle(c.mut).multilineTextAlignment(.center)
+            }
         }
         .padding(.horizontal, 12).padding(.top, 4).padding(.bottom, 8)
         .frame(maxWidth: .infinity)

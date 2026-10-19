@@ -156,7 +156,6 @@ struct RuterHomeCard27: View {
     @Environment(\.scenePhase) private var phase
     @MainActor private var h: RuterHome27 { RuterHome27.shared }
     @MainActor private var rm: RuterModel { RuterModel.shared }
-    @State private var picking: Bool = false
 
     var body: some View {
         let sel: [RuterStop] = h.selected(rm.stops)
@@ -165,7 +164,8 @@ struct RuterHomeCard27: View {
             if sel.isEmpty {
                 legacy
             } else {
-                ForEach(sel) { s in group(s, many: sel.count > 1) }
+                // Prompt 28: én flat liste uten gruppeoverskrifter.
+                flat(sel)
             }
         }
         .padding(.horizontal, 16).padding(.vertical, 14)
@@ -185,27 +185,37 @@ struct RuterHomeCard27: View {
                 await h.refresh(store)
             }
         }
-        .sheet(isPresented: $picking) {
-            RuterPick27Sheet(close: { picking = false }).environment(\.paper, p)
-                .presentationDetents([.medium, .large])
-                .presentationBackground(p.bg)
+    }
+
+    /// Prompt 28: «AVGANGER · STOPP1 · STOPP2 · …» og «sanntid ›». Stopp velges via «✎ Rediger widget» i redigeringsmodus.
+    private func header(_ sel: [RuterStop]) -> some View {
+        let names: [String] = sel.isEmpty ? [store.mobileHome?.ruter.first?.from ?? ""].filter { !$0.isEmpty } : sel.map(\.name)
+        let title: String = (["Avganger"] + names).joined(separator: " · ")
+        return HStack(alignment: .center, spacing: 8) {
+            Text(title.uppercased()).font(PF.mono(10.5)).tracking(1.2).foregroundStyle(p.lab).lineLimit(1).truncationMode(.tail)
+            Spacer(minLength: 4)
+            Text("sanntid ›").font(PF.ui(12)).foregroundStyle(p.mut).lineLimit(1).fixedSize()
         }
     }
 
-    private func header(_ sel: [RuterStop]) -> some View {
-        let title: String = sel.count > 1 ? "Avganger · \(sel.count) stopp" : "Avganger · \(sel.first?.name ?? store.mobileHome?.ruter.first?.from ?? "")"
-        return HStack(alignment: .center, spacing: 8) {
-            PLabel(text: title).lineLimit(1)
-            Spacer(minLength: 4)
-            Button { Haptics.shared.tap(); picking = true } label: {
-                Text("Velg stopp").font(PF.ui(12, .semibold)).foregroundStyle(p.ink).lineLimit(1).fixedSize()
-                    .padding(.horizontal, 12).frame(height: 30)
-                    .overlay(Capsule().stroke(p.line, lineWidth: 1))
-                    .contentShape(Capsule())
-            }
-            .buttonStyle(.plain)
-            Text("sanntid ›").font(PF.ui(12)).foregroundStyle(p.mut).lineLimit(1).fixedSize()
+    /// Flere stopp: neste avgang fra hvert stopp (én rad per stopp). Ett stopp: de neste N.
+    @ViewBuilder private func flat(_ sel: [RuterStop]) -> some View {
+        let rows: [RuterDeparture] = flatRows(sel)
+        if rows.isEmpty {
+            Text(h.updated == nil ? "Henter avganger …" : "Ingen avganger akkurat nå.").font(PF.ui(13)).foregroundStyle(p.mut)
         }
+        ForEach(rows) { d in RuterHomeRow27(d: d) }
+    }
+
+    private func flatRows(_ sel: [RuterStop]) -> [RuterDeparture] {
+        if sel.count == 1, let s = sel.first {
+            return Array((h.deps[s.id] ?? []).filter { !$0.cancelled }.prefix(h.n))
+        }
+        var out: [RuterDeparture] = []
+        for s in sel {
+            if let d = (h.deps[s.id] ?? []).first(where: { !$0.cancelled }), !out.contains(where: { $0.id == d.id }) { out.append(d) }
+        }
+        return out
     }
 
     @ViewBuilder private func group(_ s: RuterStop, many: Bool) -> some View {
@@ -221,7 +231,7 @@ struct RuterHomeCard27: View {
     @ViewBuilder private var legacy: some View {
         let lines: [RuterLine] = store.mobileHome?.ruter ?? []
         let list = Array(lines.flatMap { l in l.departures.map { (l.to, $0) } }.prefix(4))
-        if list.isEmpty { Text("Trykk «Velg stopp» for å legge til et stopp.").font(PF.ui(13)).foregroundStyle(p.mut) }
+        if list.isEmpty { Text("Hold inne Hjem og trykk «Rediger widget» for å velge stopp.").font(PF.ui(13)).foregroundStyle(p.mut) }
         ForEach(Array(list.enumerated()), id: \.offset) { _, d in
             PaperRuterRow(line: d.1.line, color: d.1.ruterColor, textColor: d.1.ruterTextColor, dest: d.1.to ?? d.0, minutes: d.1.min, time: d.1.time)
         }
@@ -245,7 +255,7 @@ struct RuterHomeRow27: View {
                 .padding(.horizontal, 4)
                 .frame(minWidth: 30).frame(height: 24)
                 .background(RuterView24.lineColor(d), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-            Text(d.to).font(PF.ui(14.5)).foregroundStyle(p.ink).lineLimit(1)
+            Text(d.to).font(PF.ui(14.5, .semibold)).foregroundStyle(p.ink).lineLimit(1)
             Spacer(minLength: 4)
             Text(minText).font(PF.serif(22, medium: true)).foregroundStyle(p.ink).lineLimit(1).fixedSize()
             Text(minutes <= 0 ? "" : "min").font(PF.ui(12)).foregroundStyle(p.mut).frame(width: 26, alignment: .leading)

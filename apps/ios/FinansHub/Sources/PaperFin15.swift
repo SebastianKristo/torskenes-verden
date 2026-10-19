@@ -487,7 +487,9 @@ struct PaperFinMoreGrid: View {
     @Environment(\.paper) private var p
     @Environment(\.paperWide) private var wide
     /// Prompt 20: hold inne ~0,45 s → flisene vugger og kan dras til ny plass.
-    @State private var editing: Bool = false
+    /// Prompt 28: redigeringsmodus er store.paperEditPage == "fmer", så pillene «↺ Tilbakestill» og ✓ kan ligge over listen
+    /// (Wiggle28.swift). Samme vugging som Hjem (±0,45°, 0,6 s, annenhver i motfase).
+    private var editing: Bool { store.paperEditPage == "fmer" }
     @State private var wiggle: Bool = false
     @State private var order: [String] = FinTileOrder20.load()
 
@@ -503,12 +505,15 @@ struct PaperFinMoreGrid: View {
     var body: some View {
         let cols = wide ? 4 : 2
         VStack(alignment: .leading, spacing: 10) {
-            if editing { FinTileEditBar20(done: { stopEditing() }, reset: { resetOrder() }) }
+            if editing { Color.clear.frame(height: 48) }
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: cols), spacing: 10) {
-                ForEach(sortedTiles) { t in cell(t) }
+                ForEach(Array(sortedTiles.enumerated()), id: \.element.id) { i, t in cell(t, i) }
             }
         }
         .onAppear { order = FinTileOrder20.load() }
+        .onChange(of: editing) { old, on in if old && !on { stopEditing() } }
+        .onChange(of: Edit28.shared.resetTick) { _, _ in resetOrder() }
+        .onDisappear { if editing { store.paperEditPage = nil } }
         .task {
             await store.loadPaperFinance()
             if store.subsX == nil { try? await store.loadSubs() }
@@ -556,11 +561,12 @@ struct PaperFinMoreGrid: View {
         return out
     }
 
-    @ViewBuilder private func cell(_ t: Tile) -> some View {
+    @ViewBuilder private func cell(_ t: Tile, _ i: Int) -> some View {
+        let sign: Double = i % 2 == 0 ? 1 : -1
         if editing {
             tile(t)
-                .rotationEffect(.degrees(wiggle ? 1.4 : -1.4))
-                .animation(.easeInOut(duration: 0.14).repeatForever(autoreverses: true), value: wiggle)
+                .rotationEffect(.degrees((wiggle ? Edit28.angle : -Edit28.angle) * sign))
+                .animation(.easeInOut(duration: Edit28.half).repeatForever(autoreverses: true), value: wiggle)
                 .draggable(t.id)
                 .dropDestination(for: String.self) { items, _ in
                     drop(items.first, on: t.id)
@@ -574,16 +580,14 @@ struct PaperFinMoreGrid: View {
 
     private func startEditing() {
         guard !editing else { return }
-        Haptics.shared.tick()
         order = sortedTiles.map(\.id)
-        editing = true
+        store.enterPaperEdit("fmer")
         DispatchQueue.main.async { wiggle = true }
     }
 
+    /// Kalles når redigeringen avsluttes (✓ i pillen, ny side eller tilbake).
     private func stopEditing() {
-        Haptics.shared.success()
         wiggle = false
-        editing = false
         FinTileOrder20.save(order, store)
     }
 

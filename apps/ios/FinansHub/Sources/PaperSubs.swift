@@ -23,9 +23,12 @@ struct PaperSubs: View {
         }
         .task { if store.subsX == nil { try? await store.loadSubs() } }
         .sheet(isPresented: Binding(get: { store.subAdding }, set: { store.subAdding = $0 })) {
-            SubAdd23Sheet().environment(\.paper, p)
+            // Prompt 28: nytt ark (Subs28Add.swift) med én grep-strek (systemets) og Papir-farger.
+            SubAdd28Sheet().environment(\.paper, p)
                 .presentationDetents([.medium, .large])
-                .presentationBackground(SubTok23.of(p).bg)
+                .presentationDragIndicator(.visible)
+                .presentationCornerRadius(28)
+                .presentationBackground(p.bg)
         }
         .sheet(isPresented: Binding(get: { store.subEdit != nil || store.subNew }, set: { if !$0 { store.subEdit = nil; store.subNew = false } })) {
             SubEdit23Sheet(item: store.subEdit).environment(\.paper, p)

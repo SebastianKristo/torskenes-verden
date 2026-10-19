@@ -269,7 +269,8 @@ struct PaperCardStack: View {
         let cur = store.pageCards(page, keys)
         let editing = store.paperEditPage == page
         VStack(spacing: 10) {
-            if editing { PaperEditBar(page: page, hidden: cur.hidden, cards: cards) }
+            // Prompt 28: ingen mørk instruksjonslinje; pillene ＋ / ✓ flyter over listen (Wiggle28.swift). Plass til dem her.
+            if editing { Color.clear.frame(height: 48) }
             if wide && twoColumns && !editing {
                 ForEach(segments(cur.visible)) { seg in
                     if seg.full {
@@ -291,6 +292,7 @@ struct PaperCardStack: View {
                 ForEach(cur.visible, id: \.self) { k in cardView(k, cur.visible, keys) }
             }
         }
+        .onAppear { Edit28.shared.labels[page] = cards.map { ($0.key, $0.label) } }
     }
 
     private func pairs(_ keys: [String]) -> [[String]] {
@@ -384,7 +386,7 @@ struct PaperEditableCard<C: View>: View {
                 content()
                     .frame(width: width)
                     .scaleEffect(1.03)
-                    .opacity(0.85)
+                    .opacity(0.6)
             }
             .dropDestination(for: String.self) { items, _ in
                 guard let src = items.first else { return false }
@@ -396,19 +398,34 @@ struct PaperEditableCard<C: View>: View {
     var body: some View {
         let editing = store.paperEditPage == page
         let sign: Double = index % 2 == 0 ? 1 : -1
+        let a: Double = Edit28.angle
         content()
             .disabled(editing)
             .allowsHitTesting(!editing)
             .background(GeometryReader { g in Color.clear.onAppear { width = g.size.width } })
             .overlay {
                 // Prompt 21: i redigeringsmodus fanger et usynlig lag alle trykk (ingen lenker åpnes),
-                // og kortet kan dras til en ny plass. ▲ ▼ − ligger over laget.
+                // og kortet kan dras til en ny plass. Kontrollene ligger over laget.
                 if editing { dragShield }
             }
-            .overlay(alignment: .topTrailing) {
-                if editing { controls.offset(x: 4, y: -8) }
+            .overlay {
+                // Prompt 28: «✎ Rediger widget» midt på kort med innstillinger.
+                if editing && Edit28.settingsCards.contains(key) && page == "hjem" {
+                    Edit28WidgetPill { Edit28.shared.editWidget(key, store) }
+                }
             }
-            .rotationEffect(.degrees(editing ? (wig ? 0.2 : -0.2) * sign : 0))
+            .overlay(alignment: .topLeading) {
+                // Prompt 28: minus-sirkel i Papir-stil øverst til venstre, 9 pt utenfor kanten (ikke på Sporing).
+                if editing && page != "sporing" {
+                    Edit28Minus(label: "Skjul kortet") { store.setPaperCardHidden(page, key, true, keys) }
+                        .offset(x: -9, y: -9)
+                }
+            }
+            .overlay(alignment: .topTrailing) {
+                // Sporing: midlertidig ▲ ▼ i Papir-stil til dra er på plass.
+                if editing && page == "sporing" { controls.offset(x: 4, y: -8) }
+            }
+            .rotationEffect(.degrees(editing ? (wig ? a : -a) * sign : 0))
             .simultaneousGesture(LongPressGesture(minimumDuration: 0.5, maximumDistance: 8).onEnded { _ in
                 if !editing { store.enterPaperEdit(page) }
             })
@@ -419,7 +436,7 @@ struct PaperEditableCard<C: View>: View {
     private func startWiggle(_ on: Bool) {
         if on {
             wig = false
-            withAnimation(.easeInOut(duration: 0.3).repeatForever(autoreverses: true)) { wig = true }
+            withAnimation(.easeInOut(duration: Edit28.half).repeatForever(autoreverses: true)) { wig = true }
         } else {
             withAnimation(.easeOut(duration: 0.15)) { wig = false }
         }
@@ -427,9 +444,8 @@ struct PaperEditableCard<C: View>: View {
 
     private var controls: some View {
         HStack(spacing: 4) {
-            if index > 0 { ctl("▲", "Flytt opp") { store.movePaperCard(page, key, -1, keys) } }
-            if index < count - 1 { ctl("▼", "Flytt ned") { store.movePaperCard(page, key, 1, keys) } }
-            ctl("−", "Skjul") { store.setPaperCardHidden(page, key, true, keys) }
+            if index > 0 { Edit28Arrow(up: true) { store.movePaperCard(page, key, -1, keys) } }
+            if index < count - 1 { Edit28Arrow(up: false) { store.movePaperCard(page, key, 1, keys) } }
         }
     }
 
