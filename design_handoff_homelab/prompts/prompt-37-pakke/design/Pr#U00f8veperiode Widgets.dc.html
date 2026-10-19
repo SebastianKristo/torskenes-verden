@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&amp;family=Manrope:wght@500;600;700;800&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap">
+<style>body{margin:0;background:#f3efe6}a{color:#b23a2a}a:hover{color:#8a2a1d}</style>
+</helmet>
+<div style="min-height:100vh;box-sizing:border-box;padding:40px clamp(16px,4vw,48px) 64px;display:flex;flex-direction:column;gap:44px;font-family:Manrope,system-ui,sans-serif;color:#1b1a17">
+<div style="display:flex;flex-direction:column;gap:6px;max-width:720px">
+<span style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.14em;color:#b23a2a">WIDGETS · PRØVEPERIODER</span>
+<h1 style="margin:0;font:500 48px/1.05 Newsreader,serif">Avslutt i tide</h1>
+<p style="margin:0;font-size:15px;line-height:1.5;color:#6b6558;text-wrap:pretty">Viser prøven som slutter først, hvor mange dager som er igjen og hva den koster etterpå. Trykk åpner Abonnement. «Avsluttet» fjerner påminnelsen.</p>
+</div>
+
+<section style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:baseline;gap:12px"><b style="font:500 28px Newsreader,serif">iPhone</b><span style="font-size:13px;color:#6b6558">Liten · Medium · Låseskjerm</span></div>
+<div style="border-radius:32px;padding:28px;background:linear-gradient(160deg,#5b7fa8 0%,#2d3e5c 55%,#1b2233 100%);display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',Manrope,sans-serif">
+<div style="display:flex;flex-direction:column;align-items:center;gap:8px"><div style="width:170px;height:170px;box-sizing:border-box;border-radius:24px;background:#fff;padding:14px;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 12px 30px -14px rgba(0,0,0,.5)">
+<div style="display:flex;justify-content:space-between;align-items:center"><span style="width:28px;height:28px;border-radius:8px;background-image:{{ t.lg }};background-size:cover;box-shadow:0 0 0 1px rgba(0,0,0,.06)"></span><span style="font-size:11px;font-weight:700;color:#b23a2a;letter-spacing:.02em">PRØVE</span></div>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:baseline;gap:5px"><b style="font-size:46px;font-weight:700;line-height:.95;letter-spacing:-.03em;color:{{ t.c }}">{{ t.dd }}</b><span style="font-size:13px;font-weight:600;color:{{ t.c }}">{{ t.unit }}</span></span><b style="font-size:15px;font-weight:700">{{ t.n }}</b><span style="font-size:11.5px;color:#8a8a8e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Avslutt før {{ t.endS }}</span></div></div><span style="font-size:12px;font-weight:600;color:#fff">Homelab</span></div>
+<div style="display:flex;flex-direction:column;align-items:center;gap:8px"><div style="width:364px;max-width:calc(100vw - 120px);height:170px;box-sizing:border-box;border-radius:24px;background:#fff;padding:14px 16px;display:flex;gap:14px;box-shadow:0 12px 30px -14px rgba(0,0,0,.5)">
+<div style="flex:none;width:118px;display:flex;flex-direction:column;justify-content:space-between"><span style="font-size:11px;font-weight:700;color:#b23a2a">PRØVEPERIODER</span><div style="position:relative;width:86px;height:86px;border-radius:50%;background:{{ t.ring }};display:grid;place-items:center"><span style="width:72px;height:72px;border-radius:50%;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1"><b style="font-size:28px;font-weight:700;color:{{ t.c }}">{{ t.dd }}</b><span style="font-size:10px;font-weight:600;color:#8a8a8e;margin-top:2px">{{ t.unitS }}</span></span></div><b style="font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.n }} · {{ t.p }}</b></div>
+<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px;justify-content:space-between"><div style="display:flex;flex-direction:column;gap:8px"><sc-for list="{{ rest }}" as="x"><div style="display:flex;align-items:center;gap:9px;min-width:0"><span style="flex:none;width:24px;height:24px;border-radius:6px;background-image:{{ x.lg }};background-size:cover;box-shadow:0 0 0 1px rgba(0,0,0,.06)"></span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><b style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ x.n }}</b><span style="font-size:11px;color:#8a8a8e">{{ x.endS }}</span></span><b style="flex:none;font-size:13px;font-weight:700;color:{{ x.c }}">{{ x.dd }} d</b></div></sc-for></div>
+<div style="display:flex;gap:6px"><span style="flex:1;height:32px;border-radius:16px;background:#1b1a17;color:#fff;display:grid;place-items:center;font-size:12.5px;font-weight:700">✓ Avsluttet</span><span style="flex:none;height:32px;padding:0 12px;border-radius:16px;background:#f2f2f7;color:#1b1a17;display:grid;place-items:center;font-size:12.5px;font-weight:700">Åpne</span></div></div></div><span style="font-size:12px;font-weight:600;color:#fff">Homelab</span></div>
+<div style="display:flex;flex-direction:column;gap:14px;padding:18px 20px;border-radius:24px;background:rgba(0,0,0,.18)"><span style="font-size:12px;font-weight:600;color:rgba(255,255,255,.75)">Låseskjerm</span><div style="display:flex;align-items:center;gap:14px;color:#fff">
+<div style="width:72px;height:72px;border-radius:50%;background:{{ t.ringL }};display:grid;place-items:center"><span style="width:62px;height:62px;border-radius:50%;background:rgba(40,52,74,.95);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1"><b style="font-size:22px;font-weight:700">{{ t.dd }}</b><span style="font-size:9px;font-weight:600;opacity:.8;margin-top:2px">{{ t.short }}</span></span></div>
+<div style="width:172px;display:flex;flex-direction:column;gap:2px;padding:8px 12px;border-radius:16px;background:rgba(255,255,255,.14);box-sizing:border-box"><b style="font-size:13px;font-weight:700">⏳ {{ t.n }}</b><span style="font-size:12px;opacity:.9">{{ t.dd }} {{ t.unit }} · {{ t.p }}</span><span style="font-size:11px;opacity:.75">Avslutt før {{ t.endS }}</span></div></div></div>
+</div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:baseline;gap:12px"><b style="font:500 28px Newsreader,serif">Samsung · One UI</b><span style="font-size:13px;color:#6b6558">2×2 · 4×2, gjennomsiktig bakgrunn</span></div>
+<div style="border-radius:32px;padding:28px;background:linear-gradient(200deg,#d98a6a 0%,#7d4a6e 50%,#2c2440 100%);display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start;font-family:'SamsungOne','Samsung Sans',system-ui,sans-serif">
+<div style="width:168px;height:168px;box-sizing:border-box;border-radius:28px;background:rgba(255,255,255,.78);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:16px;display:flex;flex-direction:column;justify-content:space-between;color:#111">
+<div style="display:flex;align-items:center;gap:8px"><span style="width:26px;height:26px;border-radius:50%;background-image:{{ t.lg }};background-size:cover;background-color:#fff"></span><b style="font-size:13px;font-weight:700">{{ t.n }}</b></div>
+<div style="display:flex;flex-direction:column;gap:4px"><b style="font-size:40px;font-weight:700;line-height:1;color:{{ t.c }}">{{ t.dd }}<span style="font-size:15px;font-weight:600"> d</span></b><span style="font-size:12px;color:#555">igjen av prøven</span><span style="display:block;height:6px;border-radius:3px;background:rgba(0,0,0,.1);overflow:hidden"><span style="display:block;height:100%;width:{{ t.pct }};background:{{ t.c }};border-radius:3px"></span></span></div></div>
+<div style="width:352px;max-width:calc(100vw - 120px);box-sizing:border-box;border-radius:28px;background:rgba(255,255,255,.78);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:16px 18px;display:flex;flex-direction:column;gap:12px;color:#111">
+<div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:15px;font-weight:700">Prøveperioder</b><span style="width:30px;height:30px;border-radius:50%;background:#fff;display:grid;place-items:center;font-size:17px;font-weight:600">+</span></div>
+<sc-for list="{{ all }}" as="x"><div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:10px"><span style="flex:none;width:26px;height:26px;border-radius:50%;background-image:{{ x.lg }};background-size:cover;background-color:#fff"></span><b style="flex:1;min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ x.n }}</b><span style="font-size:12px;color:#666">{{ x.p }}</span><b style="flex:none;min-width:44px;text-align:right;font-size:14px;font-weight:700;color:{{ x.c }}">{{ x.dd }} d</b></div><span style="display:block;height:5px;margin-left:36px;border-radius:3px;background:rgba(0,0,0,.08);overflow:hidden"><span style="display:block;height:100%;width:{{ x.pct }};background:{{ x.c }};border-radius:3px"></span></span></div></sc-for>
+<span style="align-self:flex-start;height:34px;padding:0 16px;border-radius:17px;background:#1259c3;color:#fff;display:grid;place-items:center;font-size:13px;font-weight:700">Avslutt {{ t.n }}</span></div>
+</div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:baseline;gap:12px"><b style="font:500 28px Newsreader,serif">Android · Material You</b><span style="font-size:13px;color:#6b6558">Følger bakgrunnsfargen (dynamiske farger)</span></div>
+<div style="border-radius:32px;padding:28px;background:linear-gradient(170deg,#9fb59a 0%,#4f6b54 55%,#24342a 100%);display:flex;flex-wrap:wrap;gap:22px;align-items:flex-start;font-family:'Google Sans',system-ui,sans-serif">
+<div style="width:170px;height:170px;box-sizing:border-box;border-radius:28px;background:#dcebd8;padding:16px;display:flex;flex-direction:column;justify-content:space-between;color:#173320">
+<span style="align-self:flex-start;display:flex;align-items:center;gap:6px;height:28px;padding:0 10px 0 4px;border-radius:14px;background:#b9d6b4"><span style="width:20px;height:20px;border-radius:50%;background-image:{{ t.lg }};background-size:cover;background-color:#fff"></span><b style="font-size:12px;font-weight:600">{{ t.n }}</b></span>
+<div style="display:flex;flex-direction:column;gap:2px"><b style="font-size:52px;font-weight:500;line-height:.95;letter-spacing:-.02em">{{ t.dd }}</b><span style="font-size:13px;font-weight:500">{{ t.unit }}</span><span style="font-size:11.5px;color:#3d5a44">før {{ t.p }}</span></div></div>
+<div style="width:356px;max-width:calc(100vw - 120px);box-sizing:border-box;border-radius:28px;background:#dcebd8;padding:16px;display:flex;flex-direction:column;gap:10px;color:#173320">
+<div style="display:flex;align-items:center;justify-content:space-between"><b style="font-size:15px;font-weight:600">Prøveperioder</b><span style="font-size:12px;color:#3d5a44">{{ cnt }}</span></div>
+<div style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:20px;background:#f2f8f0"><span style="flex:none;width:52px;height:52px;border-radius:26px;background:#b23a2a;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1"><b style="font-size:20px;font-weight:600">{{ t.dd }}</b><span style="font-size:9px;font-weight:600;margin-top:1px">{{ t.short }}</span></span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><b style="font-size:15px;font-weight:600">{{ t.n }}</b><span style="font-size:12px;color:#3d5a44;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Avslutt før {{ t.endS }} · {{ t.p }}</span></span><span style="flex:none;height:36px;padding:0 14px;border-radius:18px;background:#173320;color:#dcebd8;display:grid;place-items:center;font-size:13px;font-weight:600">Avsluttet</span></div>
+<div style="display:flex;gap:8px"><sc-for list="{{ rest }}" as="x"><span style="flex:1 1 0;min-width:0;display:flex;align-items:center;gap:8px;height:40px;padding:0 12px;border-radius:20px;background:#b9d6b4"><span style="flex:none;width:18px;height:18px;border-radius:50%;background-image:{{ x.lg }};background-size:cover;background-color:#fff"></span><b style="flex:1;min-width:0;font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ x.n }}</b><span style="flex:none;font-size:12.5px;font-weight:600">{{ x.dd }} d</span></span></sc-for></div></div>
+</div>
+</section>
+
+<section style="display:flex;flex-direction:column;gap:16px">
+<div style="display:flex;align-items:baseline;gap:12px"><b style="font:500 28px Newsreader,serif">I appen · Hjem</b><span style="font-size:13px;color:#6b6558">Widgeten «Prøveperioder», kan flyttes og skjules i redigeringsmodus</span></div>
+<div style="max-width:400px;border-radius:20px;background:#fff;padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+<div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:#b23a2a">PRØVEPERIODER · {{ cntU }}</span><span style="font-size:12px;color:#7a7468">alle ›</span></div>
+<div style="display:flex;align-items:center;gap:12px"><span style="flex:none;width:40px;height:40px;border-radius:12px;box-shadow:0 0 0 1px #d8d1c2 inset;display:grid;place-items:center"><span style="width:24px;height:24px;background-image:{{ t.lg }};background-size:cover"></span></span><span style="flex:1;min-width:0;display:flex;flex-direction:column"><b style="font:500 20px Newsreader,serif">{{ t.n }}</b><span style="font-size:12.5px;color:#7a7468;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Avslutt før {{ t.endS }} · deretter {{ t.p }}</span></span><span style="flex:none;display:flex;flex-direction:column;align-items:flex-end;line-height:1"><b style="font:500 28px Newsreader,serif;color:{{ t.c }}">{{ t.dd }}</b><span style="font-size:11.5px;font-weight:700;color:{{ t.c }};margin-top:3px">{{ t.unit }}</span></span></div>
+<span style="display:block;height:5px;border-radius:3px;background:#d8d1c2;overflow:hidden"><span style="display:block;height:100%;width:{{ t.pct }};background:{{ t.c }}"></span></span>
+<div style="display:flex;gap:8px"><span style="flex:1;height:38px;border-radius:19px;background:#1b1a17;color:#f3efe6;display:grid;place-items:center;font:700 13px Manrope">Jeg har avsluttet</span><span style="flex:none;height:38px;padding:0 14px;border-radius:19px;background:#f3efe6;display:grid;place-items:center;font:700 13px Manrope">Behold</span></div>
+</div>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    let T = null; try { T = JSON.parse(localStorage.getItem('papir_trials') || 'null') } catch (e) {}
+    const now = new Date(), t0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()), iso = n => new Date(t0.getTime() + n * 864e5).toISOString().slice(0, 10);
+    if (!T || !T.filter(x => !x.done).length) T = [{ n: 'Viaplay', end: iso(2), p: 149, start: iso(-12) }, { n: 'Storytel', end: iso(9), p: 179, start: iso(-5) }, { n: 'HBO Max', end: iso(23), p: 129, start: iso(-7) }];
+    const DOM = { viaplay: 'viaplay.no', netflix: 'netflix.com', 'hbo max': 'max.com', 'disney+': 'disneyplus.com', spotify: 'spotify.com', 'tv 2 play': 'tv2.no', storytel: 'storytel.com', bookbeat: 'bookbeat.com', 'youtube premium': 'youtube.com', audible: 'audible.com', strava: 'strava.com', tidal: 'tidal.com' };
+    const lg = n => 'url("https://www.google.com/s2/favicons?sz=64&domain=' + (DOM[n.toLowerCase()] || n.toLowerCase().replace(/\s+/g, '') + '.com') + '")';
+    const WD = ['søn', 'man', 'tir', 'ons', 'tor', 'fre', 'lør'], MS = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'des'];
+    const col = d => d <= 2 ? '#b23a2a' : d <= 7 ? '#a8661a' : '#1b1a17';
+    const A = T.filter(x => !x.done).map(x => { const e = new Date(x.end + 'T00:00'), dd = Math.max(0, Math.round((e - t0) / 864e5)), st = x.start ? new Date(x.start + 'T00:00') : new Date(e - 14 * 864e5), tot = Math.max(1, Math.round((e - st) / 864e5)), pc = Math.max(4, Math.min(100, Math.round((tot - dd) / tot * 100)));
+      return { n: x.n, lg: lg(x.n), dd: String(dd), unit: dd === 1 ? 'dag igjen' : 'dager igjen', unitS: dd === 1 ? 'dag' : 'dager', short: dd === 1 ? 'DAG' : 'DAGER', p: x.p ? x.p + ' kr/mnd' : 'gratis', endS: WD[e.getDay()] + ' ' + e.getDate() + '. ' + MS[e.getMonth()], c: col(dd), pct: pc + '%', ring: 'conic-gradient(' + col(dd) + ' ' + pc + '%,#ececf0 0)', ringL: 'conic-gradient(#fff ' + pc + '%,rgba(255,255,255,.25) 0)', _d: dd } }).sort((a, b) => a._d - b._d);
+    return { t: A[0], rest: A.slice(1, 3), all: A.slice(0, 3), cnt: A.length + ' aktive', cntU: A.length + ' AKTIVE' };
+  }
+}
+</script>
+</body>
+</html>

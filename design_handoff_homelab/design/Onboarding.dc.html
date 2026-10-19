@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&amp;family=Manrope:wght@400;500;600;700;800&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>html,body{margin:0;height:100%;background:#f3efe6;color:#1b1a17;font-family:Manrope,sans-serif}a{color:#b23a2a}a:hover{color:#8a2a1d}*{box-sizing:border-box}@keyframes obIn{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}@keyframes obPop{0%{transform:scale(.6);opacity:0}70%{transform:scale(1.08)}100%{transform:none;opacity:1}}</style>
+</helmet>
+<div style="min-height:100vh;display:flex;justify-content:center;padding:0 0 0;background:#f3efe6">
+<div style="width:100%;max-width:440px;min-height:100vh;display:flex;flex-direction:column;padding:calc(18px + env(safe-area-inset-top,0px)) 20px calc(22px + env(safe-area-inset-bottom,0px))">
+<div style="display:flex;align-items:center;gap:10px;height:44px"><sc-if value="{{ canBack }}"><button onClick="{{ back }}" aria-label="Tilbake" style="width:40px;height:40px;border-radius:20px;border:1px solid #ddd5c5;background:#fffdf8;color:#1b1a17;cursor:pointer;display:grid;place-items:center;padding:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"></path></svg></button></sc-if><div style="flex:1;display:flex;gap:5px;justify-content:center"><sc-for list="{{ dots }}" as="d" hint-placeholder-count="4"><span style="height:6px;width:{{ d.w }};border-radius:3px;background:{{ d.c }};transition:width .3s,background .3s"></span></sc-for></div><span style="width:40px"></span></div>
+
+<sc-if value="{{ s0 }}" hint-placeholder-val="{{ true }}"><div style="flex:1;display:flex;flex-direction:column;gap:18px;padding-top:28px;animation:obIn .35s cubic-bezier(.2,.8,.2,1) both">
+<span style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.16em;color:#b23a2a">NORDLYS OS · HOMELAB</span>
+<b style="font:500 44px/1.04 Newsreader,serif">Velkommen hjem.</b>
+<span style="font-size:16px;line-height:1.5;color:#3d3a33;text-wrap:pretty">Du er koblet til <b>home.kristo.no</b>. Logg inn, så kobler vi deg til riktig profil i husstanden.</span>
+<div style="display:flex;flex-direction:column;gap:10px;margin-top:8px"><input value="{{ user }}" onChange="{{ onUser }}" placeholder="Brukernavn" autocomplete="username" style="height:52px;border-radius:16px;border:1px solid #ddd5c5;background:#fffdf8;padding:0 16px;font:500 16px Manrope;color:#1b1a17;outline:none"><input type="password" value="{{ pw }}" onChange="{{ onPw }}" placeholder="Passord" autocomplete="current-password" style="height:52px;border-radius:16px;border:1px solid #ddd5c5;background:#fffdf8;padding:0 16px;font:500 16px Manrope;color:#1b1a17;outline:none"></div>
+<span style="font-size:12.5px;color:#6b665c">Prøv f.eks. «ingrid» eller «nybruker».</span>
+<div style="flex:1"></div>
+<button onClick="{{ login }}" style="height:54px;border-radius:27px;border:0;background:{{ loginBg }};color:#f3efe6;cursor:pointer;font:800 16px Manrope">Logg inn</button>
+</div></sc-if>
+
+<sc-if value="{{ s1 }}"><div style="flex:1;display:flex;flex-direction:column;gap:14px;padding-top:22px;animation:obIn .35s cubic-bezier(.2,.8,.2,1) both">
+<span style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.16em;color:#b23a2a">STEG 2 AV 3</span>
+<b style="font:500 36px/1.06 Newsreader,serif">Hvem er du?</b>
+<span style="font-size:15px;line-height:1.5;color:#3d3a33;text-wrap:pretty">Koble brukeren <b>@{{ userL }}</b> til en profil. Profilen har posisjon, gjøremål, delte abonnementer og kalendere som allerede finnes.</span>
+<sc-if value="{{ hasSug }}"><div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:#fffdf8;border:1px dashed #ddd5c5"><span style="font:800 14px Manrope;color:#b23a2a">✦</span><span style="flex:1;font-size:13px;color:#3d3a33">Glimt tror du er <b>{{ sugN }}</b> (samme navn som brukeren).</span></div></sc-if>
+<div style="display:flex;flex-direction:column;gap:8px"><sc-for list="{{ profiles }}" as="p" hint-placeholder-count="5"><button onClick="{{ p.go }}" style="display:flex;align-items:center;gap:12px;min-height:66px;padding:10px 14px;border-radius:18px;border:2px solid {{ p.bd }};background:#fffdf8;color:#1b1a17;cursor:{{ p.cur }};text-align:left;font-family:inherit;opacity:{{ p.op }}"><span style="flex:none;width:44px;height:44px;border-radius:22px;background:{{ p.c }};color:#fff;font:800 16px Manrope;display:grid;place-items:center">{{ p.i }}</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><b style="font-size:16px">{{ p.n }}</b><span style="font-size:12.5px;color:#6b665c">{{ p.sub }}</span></span><span style="flex:none;width:24px;height:24px;border-radius:12px;border:2px solid {{ p.rb }};background:{{ p.rf }};display:grid;place-items:center;color:#fff;font:800 12px Manrope">{{ p.chk }}</span></button></sc-for>
+<button onClick="{{ newP }}" style="display:flex;align-items:center;gap:12px;min-height:58px;padding:10px 14px;border-radius:18px;border:2px dashed {{ newBd }};background:transparent;color:#1b1a17;cursor:pointer;text-align:left;font-family:inherit"><span style="flex:none;width:44px;height:44px;border-radius:22px;background:#e9e2d3;color:#1b1a17;font:800 20px Manrope;display:grid;place-items:center">+</span><span style="flex:1;display:flex;flex-direction:column;gap:2px"><b style="font-size:15px">Jeg er ny i husstanden</b><span style="font-size:12.5px;color:#6b665c">Lag en ny profil for meg</span></span></button>
+<sc-if value="{{ isNew }}"><input value="{{ newN }}" onChange="{{ onNewN }}" placeholder="Navnet ditt" style="height:50px;border-radius:14px;border:1px solid #ddd5c5;background:#fffdf8;padding:0 14px;font:500 16px Manrope;color:#1b1a17;outline:none"></sc-if></div>
+<div style="flex:1"></div>
+<button onClick="{{ next1 }}" style="height:54px;border-radius:27px;border:0;background:{{ next1Bg }};color:#f3efe6;cursor:pointer;font:800 16px Manrope">{{ next1L }}</button>
+</div></sc-if>
+
+<sc-if value="{{ s2 }}"><div style="flex:1;display:flex;flex-direction:column;gap:14px;padding-top:22px;animation:obIn .35s cubic-bezier(.2,.8,.2,1) both">
+<span style="font:600 11px 'IBM Plex Mono',monospace;letter-spacing:.16em;color:#b23a2a">STEG 3 AV 3</span>
+<b style="font:500 36px/1.06 Newsreader,serif">Dette kobles til deg</b>
+<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:18px;background:#fffdf8"><span style="flex:none;width:44px;height:44px;border-radius:22px;background:{{ me.c }};color:#fff;font:800 16px Manrope;display:grid;place-items:center">{{ me.i }}</span><span style="flex:1;display:flex;flex-direction:column;gap:2px"><b style="font-size:16px">{{ me.n }}</b><span style="font:600 12px 'IBM Plex Mono',monospace;color:#6b665c">@{{ userL }} ⟷ profil</span></span></div>
+<div style="border-radius:18px;background:#fffdf8;padding:0 14px;display:flex;flex-direction:column"><sc-for list="{{ links }}" as="l"><button onClick="{{ l.go }}" style="display:flex;align-items:center;gap:12px;min-height:58px;border:0;border-top:{{ l.bt }};background:transparent;color:#1b1a17;cursor:pointer;text-align:left;font-family:inherit;padding:0"><span style="flex:none;width:32px;height:32px;border-radius:10px;background:{{ l.ib }};color:{{ l.ic }};display:grid;place-items:center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ l.p }}"></path></svg></span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><b style="font-size:14.5px">{{ l.n }}</b><span style="font-size:12px;color:#6b665c">{{ l.s }}</span></span><span style="flex:none;width:46px;height:28px;border-radius:14px;background:{{ l.tb }};position:relative;transition:background .2s"><span style="position:absolute;top:3px;left:{{ l.tl }};width:22px;height:22px;border-radius:11px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .2s"></span></span></button></sc-for></div>
+<span style="font-size:12.5px;color:#6b665c;text-wrap:pretty">Du kan endre koblingen senere i Innstillinger → Konto → Profil. Admin får beskjed om nye koblinger.</span>
+<div style="flex:1"></div>
+<button onClick="{{ finish }}" style="height:54px;border-radius:27px;border:0;background:#1b1a17;color:#f3efe6;cursor:pointer;font:800 16px Manrope">Koble og fortsett</button>
+</div></sc-if>
+
+<sc-if value="{{ s3 }}"><div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;animation:obIn .35s cubic-bezier(.2,.8,.2,1) both">
+<span style="width:96px;height:96px;border-radius:48px;background:{{ me.c }};color:#fff;font:800 34px Manrope;display:grid;place-items:center;animation:obPop .5s cubic-bezier(.3,1.5,.5,1) both;box-shadow:0 18px 40px -16px rgba(0,0,0,.4)">{{ me.i }}</span>
+<b style="font:500 38px/1.06 Newsreader,serif">Hei, {{ me.first }}!</b>
+<span style="font-size:15px;line-height:1.5;color:#3d3a33;max-width:320px;text-wrap:pretty">{{ doneT }}</span>
+<button onClick="{{ restart }}" style="margin-top:14px;height:50px;padding:0 26px;border-radius:25px;border:0;background:#1b1a17;color:#f3efe6;cursor:pointer;font:800 15px Manrope">Gå til Hjem</button>
+</div></sc-if>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const PROF=[['sebastian','Sebastian Kristo Jemtland','#2b5d8a','Admin · iPhone 15 Pro','sebastian'],['ingrid','Ingrid','#b23a2a','Posisjon · 2 delte lister · Starlink',null],['pal','Pål','#a8661a','Posisjon · Skole-kalender',null],['emma','Emma','#2f6b45','Gjøremål i Hjem',null],['kari','Kari (mormor)','#7a5ad6','Posisjon · Familie-sone «Mormor»',null]];
+const LNK=[['pos','Posisjon og Familie-kart','Del posisjonen din med husstanden','M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z','#2f6b45'],['todo','Gjøremål','Delte lister: Hjem, Handel','M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2','#b23a2a'],['abo','Delte abonnementer','Starlink · din del 400 kr/mnd','M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3','#a8661a'],['kal','Kalendere','Familie og felles kalender','M4 5h16v15H4zM4 10h16M9 3v4M15 3v4','#2b5d8a'],['health','Helse','Apple Health / Health Connect på denne enheten','M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z','#c2477a']];
+class Component extends DCLogic{
+  state={st:0,user:'',pw:'',sel:null,isNew:false,newN:'',ln:{pos:true,todo:true,abo:true,kal:true,health:false}};
+  renderVals(){const s=this.state,st=s.st,u=(s.user||'').trim().toLowerCase(),vib=()=>{try{navigator.vibrate&&navigator.vibrate(8)}catch(_){}};
+    const sug=PROF.find(p=>!p[4]&&(u===p[0]||u.startsWith(p[0])));
+    const profiles=PROF.map(([k,n,c,sub,linked])=>{const taken=!!linked&&linked!==u,on=s.sel===k&&!s.isNew;return{n,i:n[0],c,sub:taken?'Koblet til @'+linked:sub,bd:on?'#1b1a17':'transparent',op:taken?'.45':'1',cur:taken?'default':'pointer',rb:on?'#1b1a17':'#ddd5c5',rf:on?'#1b1a17':'transparent',chk:on?'✓':'',go:()=>{if(taken)return;vib();this.setState({sel:k,isNew:false})}}});
+    const P=s.isNew?['ny',(s.newN||'Ny bruker').trim()||'Ny bruker','#3d7f8a']:(PROF.find(p=>p[0]===s.sel)||PROF[1]);
+    const okSel=s.isNew?!!(s.newN||'').trim():!!s.sel;
+    const links=LNK.filter(l=>!s.isNew||l[0]!=='abo').map(([k,n,sub,p,c],i)=>{const on=!!s.ln[k];return{n,s:s.isNew&&k==='todo'?'Du blir lagt til i felles lister':sub,p,ib:c+'1f',ic:c,bt:i?'1px solid #e6dfd1':'0',tb:on?'#2f7a4f':'#ddd5c5',tl:on?'21px':'3px',go:()=>this.setState({ln:{...s.ln,[k]:!on}})}});
+    const onC=Object.entries(s.ln).filter(([k,v])=>v&&(!s.isNew||k!=='abo')).length;
+    return{s0:st===0,s1:st===1,s2:st===2,s3:st===3,canBack:st>0&&st<3,back:()=>this.setState({st:st-1}),
+      dots:[0,1,2,3].map(i=>({w:i===st?'26px':'6px',c:i<=st?'#1b1a17':'#ddd5c5'})),
+      user:s.user,pw:s.pw,onUser:e=>this.setState({user:e.target.value}),onPw:e=>this.setState({pw:e.target.value}),loginBg:u&&s.pw?'#1b1a17':'#a39d90',
+      login:()=>{if(!u||!s.pw)return;vib();this.setState({st:1,sel:sug?sug[0]:null,isNew:false})},
+      userL:u||'bruker',hasSug:!!sug,sugN:sug?sug[1]:'',profiles,newBd:s.isNew?'#1b1a17':'#ddd5c5',isNew:s.isNew,newP:()=>this.setState({isNew:true,sel:null}),newN:s.newN,onNewN:e=>this.setState({newN:e.target.value}),
+      next1Bg:okSel?'#1b1a17':'#a39d90',next1L:s.isNew?'Lag profil':'Dette er meg',next1:()=>{if(!okSel)return;vib();this.setState({st:2})},
+      me:{n:P[1],i:P[1][0],c:P[2],first:P[1].split(' ')[0]},links,
+      finish:()=>{try{navigator.vibrate&&navigator.vibrate([10,40,10])}catch(_){}this.setState({st:3})},
+      doneT:'@'+(u||'bruker')+' er nå koblet til '+P[1]+'. '+onC+' ting er satt opp for deg, og resten av husstanden ser deg som '+P[1].split(' ')[0]+'.',
+      restart:()=>this.setState({st:0,user:'',pw:'',sel:null,isNew:false,newN:''})}}
+}
+</script>
+</body>
+</html>
