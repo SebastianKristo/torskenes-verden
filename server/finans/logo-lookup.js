@@ -24,7 +24,7 @@ import { audit } from './ai-audit.js';
 import { validDomain } from './enrich.js';
 import { matchMerchant, filePath as libraryFile } from '../logos/match.js';
 import { ocrTools } from '../ocr-fallback.js';
-import { ollamaContent, ollamaPost, shortBody } from '../ollama-opts.js';
+import { run as aiRun } from '../ai-run.js';
 
 const run = promisify(execFile);
 const q = (sql) => db.prepare(sql);
@@ -212,13 +212,11 @@ export async function brregDomain(name, orgnr) {
 
 async function ollamaLogoBox(image) {
   if (ollamaBox) return ollamaBox(image);
-  const st = settings();
-  const r = await ollamaPost(F, `${st.ollamaUrl.replace(/\/$/, '')}/api/chat`,
-    shortBody({ model: st.ollamaModel, stream: false, format: { type: 'object', properties: { funnet: { type: 'boolean' }, x1: { type: 'number' }, y1: { type: 'number' }, x2: { type: 'number' }, y2: { type: 'number' } }, required: ['funnet'] },
-      options: { temperature: 0 }, messages: [{ role: 'user', content: 'Finn butikkens logo øverst på kvitteringen. Svar KUN med JSON {"funnet":true,"x1":..,"y1":..,"x2":..,"y2":..} (piksler). Ingen logo: {"funnet":false}.', images: [image.toString('base64')] }] }),
-    { timeout: aiTimeoutsOf().ollama * 1000 });
-  if (!r.ok) return null;
-  try { return JSON.parse(ollamaContent(await r.json()) || 'null'); } catch { return null; }
+  // Prompt 34: ruten «Kvitteringer (bilde)» via ai.run, bare lokale modeller (kvitteringsbildet forlater ikke huset).
+  const schema = { type: 'object', properties: { funnet: { type: 'boolean' }, x1: { type: 'number' }, y1: { type: 'number' }, x2: { type: 'number' }, y2: { type: 'number' } }, required: ['funnet'] };
+  const out = await aiRun('rc', { prompt: 'Finn butikkens logo øverst på kvitteringen. Svar KUN med JSON {"funnet":true,"x1":..,"y1":..,"x2":..,"y2":..} (piksler). Ingen logo: {"funnet":false}.',
+    images: [image], schema, temperature: 0, localOnly: true, title: 'Logo fra kvittering', background: true });
+  return out.data ?? null;
 }
 async function cropFromReceipt(receiptId, u, key) {
   const r = q('SELECT file, scan, mime FROM fh_receipts WHERE id=? AND user_id=?').get(String(receiptId), u);

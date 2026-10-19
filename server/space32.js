@@ -57,14 +57,34 @@ function mockApod(today) {
     return { date, title, explanation: `${title}. Eksempeltekst fra Rom (MOCK_DATA=1): med ekte NASA-nøkkel vises dagens forklaring fra Astronomy Picture of the Day her.`, copyright: c, mediaType: 'image',
       url: `/assets/bg/planets-${(i % 3) + 1}.jpg`, hdurl: null, thumb: `/assets/bg/planets-${(i % 3) + 1}.jpg` }; });
 }
+const LIB_Q = ['nebula', 'galaxy', 'hubble', 'webb telescope', 'aurora from space', 'planet'];
+/** Reserve for APOD: 7 bilder fra images-api.nasa.gov (søkeordet roteres per dag), nyeste først. */
+async function imageLibraryWeek(today) {
+  const y = +today.slice(0, 4), q = LIB_Q[Math.floor(Date.parse(today) / 864e5) % LIB_Q.length];
+  const r = await f(`https://images-api.nasa.gov/search?media_type=image&year_start=${y - 2}&q=${encodeURIComponent(q)}`);
+  if (!r.ok) throw new Error(`NASA Image Library svarte ${r.status}`);
+  const items = ((await r.json())?.collection?.items ?? []).map((it) => ({ d: it.data?.[0] ?? {}, img: it.links?.find((l) => l.render === 'image' || /\.(jpe?g|png)$/i.test(l.href))?.href ?? it.links?.[0]?.href }))
+    .filter((x) => x.img && x.d.nasa_id).sort((a, b) => String(b.d.date_created ?? '').localeCompare(String(a.d.date_created ?? ''))).slice(0, 7);
+  return items.map((x, i) => ({ date: addDays(today, -i), title: String(x.d.title ?? 'NASA'), explanation: String(x.d.description ?? '').replace(/<[^>]+>/g, '').slice(0, 900), copyright: null,
+    mediaType: 'image', url: x.img.replace('~thumb', '~medium'), hdurl: null, thumb: x.img, link: `https://images.nasa.gov/details/${encodeURIComponent(x.d.nasa_id)}`, source: 'NASA' }));
+}
 export async function apodWeek() {
   const today = isoDay();
   return cache(`apod:${today}`, 24 * 3600_000, async () => {
     if (useMock()) { const days = mockApod(today); return { source: 'NASA APOD', today: days[0], days, cachedAt: new Date().toISOString(), mock: true }; }
-    const r = await f(`https://api.nasa.gov/planetary/apod?api_key=${encodeURIComponent(nasaKey())}&start_date=${addDays(today, -6)}&thumbs=true`);
-    if (!r.ok) throw new Error(`NASA svarte ${r.status}`);
-    const list = (await r.json()).map(apodItem).sort((a, b) => (a.date < b.date ? 1 : -1));
-    return { source: 'NASA APOD', today: list[0] ?? null, days: list.slice(0, 7), cachedAt: new Date().toISOString() };
+    // Prompt 34 (WEB34, claude-code-rom-nasa-bilder-bla.md): DEMO_KEY er begrenset til 30 kall i timen og feilet ofte, og da
+    // viste nettsiden falske eksempelbilder. Feiler APOD, brukes NASA Image Library (ingen nøkkel).
+    try {
+      const r = await f(`https://api.nasa.gov/planetary/apod?api_key=${encodeURIComponent(nasaKey())}&start_date=${addDays(today, -6)}&thumbs=true`);
+      if (!r.ok) throw new Error(`NASA svarte ${r.status}`);
+      const list = (await r.json()).map(apodItem).filter((a) => a.url || a.thumb).sort((a, b) => (a.date < b.date ? 1 : -1));
+      if (!list.length) throw new Error('APOD uten bilder');
+      return { source: 'NASA APOD', today: list[0] ?? null, days: list.slice(0, 7), cachedAt: new Date().toISOString() };
+    } catch (e) {
+      const days = await imageLibraryWeek(today).catch(() => null);
+      if (!days?.length) throw e;
+      return { source: 'NASA', today: days[0], days, cachedAt: new Date().toISOString(), fallback: true };
+    }
   });
 }
 
@@ -283,7 +303,7 @@ spaceApi.get('/apod', async (c, next) => {
   try {
     const n = Math.min(7, Math.max(1, parseInt(c.req.query('days'), 10) || 7));
     const w = await apodWeek();
-    return c.json({ items: w.days.slice(0, n).map((d) => ({ title: d.title, date: d.date, url: d.url, media_type: d.mediaType, thumbnail_url: d.thumb, explanation: d.explanation, copyright: d.copyright })), ...(w.mock ? { mock: true } : {}) });
+    return c.json({ items: w.days.slice(0, n).map((d) => ({ title: d.title, date: d.date, url: d.url, media_type: d.mediaType, thumbnail_url: d.thumb, explanation: d.explanation, copyright: d.copyright, ...(d.link ? { link: d.link, source: d.source } : {}) })), source: w.source, ...(w.mock ? { mock: true } : {}) });
   } catch (e) { return fail(c, e); }
 });
 spaceApi.get('/mars', async (c) => {

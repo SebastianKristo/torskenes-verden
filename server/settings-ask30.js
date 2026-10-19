@@ -3,7 +3,9 @@
 //        En statisk indeks over innstillingssidene. route.web er hash-lenken på web (#/innstillinger/<fane>[/<underside>]),
 //        route.mobile er PWA-ruten (#/set/<side>), som iOS/Android oversetter til sine egne sider. Sider som bare admin
 //        kan åpne (System, Backup, Domener, Brukere → Ny bruker) tas ut for andre brukere.
-//   POST /api/settings/ask {q} → {answer, targetId, ids[], provider, mode:'ai'|'text'}
+//   POST /api/settings/ask {q} → {answer, targetId, ids[], provider, mode:'ai'|'text', quick?, anchor, goMs:1600,
+//        target:{id, route:{web, mobile}, anchor:'upd', tip?:'✦ Trykk her for å oppdatere', title, path}|null}   (prompt 34)
+//        Hver oppføring i /index har anchor (mål-id, data-hl på elementet) og eventuelt tip (boblen).
 //        Lokal modell først (Ollama, JSON-format, temperatur 0), ellers Gemini hvis en nøkkel finnes, ellers enkel nøkkelordmatch.
 //        Bare spørsmålet og indeksen (id, tittel, sti, nøkkelord) sendes – aldri brukerdata. Gemini-kall logges i ai_audit.
 // Sesjon eller app-token (finance:read holder, søket endrer ingenting).
@@ -53,6 +55,18 @@ const RAW = [
   ['brukere', 'Brukere', 'Brukere', 'bruker brukere rolle tilgang familie', 'Hvem som har tilgang, og hvilken rolle de har.', W('users'), M('konto')],
   ['brukere.ny', 'Ny bruker', 'Brukere → Ny bruker', 'ny bruker legg til opprett', 'Brukernavn, passord og rolle for en ny bruker.', W('users', 'add'), M('konto'), true],
   ['system', 'System', 'System', 'system oppdater oppdatering versjon programvare server', 'Oppdater serveren til nyeste versjon.', W('system'), M('oppd'), true],
+  // Prompt 34: egne oppføringer for kontrollene på System-siden (mål-id i ANCHOR under).
+  ['system.oppdater', 'Oppdater nå', 'System → Programvare', 'oppdater oppdatere oppdaterer oppdatering update nordlys oppgrader installer nyeste', 'Gå til System og trykk «Oppdater nå». Den tar backup først og bruker ca. 2 minutter.', W('system'), M('oppd'), true],
+  ['system.sjekk', 'Se etter oppdatering', 'System → Programvare', 'se etter sjekk oppdatering versjon ny', 'Sjekker om det finnes en ny versjon.', W('system'), M('oppd'), true],
+  ['system.passord', 'Krev passord for å oppdatere', 'System → Programvare', 'krev passord oppdater oppdatering bekreft', 'Ber om passordet før en oppdatering starter.', W('system'), M('oppd'), true],
+  ['backup.na', 'Ta backup nå', 'Backup → Status', 'ta backup nå sikkerhetskopi start manuell', 'Starter en backup av hele systemet med en gang.', W('backup'), M('sysbk'), true],
+  ['backup.auto', 'Automatisk backup', 'Backup → Automatisk', 'automatisk backup hver natt planlagt behold', 'Hvor ofte backup tas, og hvor mange som beholdes.', W('backup'), M('sysbk'), true],
+  ['varsler.push', 'Push-varsler', 'Varsler → Push', 'push varsel varsler slå på mobil nettleser', 'Slå på varsler i nettleseren og appen.', W('varsel'), M('varsler')],
+  ['varsler.stille', 'Stille timer', 'Varsler → Stille timer', 'stille timer natt ikke forstyrr', 'Når varsler skal være stille.', W('varsel'), M('varsler')],
+  ['utseende.tema', 'Tema', 'Utseende → Tema', 'tema mørk lys papir farger modus', 'Lyst, mørkt eller Papir-tema.', W('look'), M('look')],
+  ['ai.kontroll', 'AI-kontroll', 'AI', 'ai kontroll modeller jobber forbruk tokens nøkler selvtest glimt', 'Modeller, jobber, forbruk og nøkler.', W('ai'), M('ai')],
+  ['ai.modeller', 'Modeller', 'AI → Modeller', 'modell modeller last ned ollama installer slett vram', 'Installerte modeller, nedlasting og hvilken som brukes.', W('ai', 'mod'), M('ai/mod')],
+  ['ai.gemini', 'Gemini-nøkkel', 'AI → API og nøkler → Gemini', 'gemini nøkkel api key google', 'API-nøkkelen for Gemini.', W('ai', 'api'), M('ai/api'), true],
   ['system.oppdatering', 'Programvareoppdatering', 'System → Programvare', 'oppdater oppdatering ny versjon automatisk varsle rollback gjenopprett', 'Oppdater nå, automatiske oppdateringer og varsel om nye versjoner.', W('system'), M('oppd'), true],
   ['backup', 'Backup', 'Backup', 'backup sikkerhetskopi gjenopprett automatisk smb nas sky kryptering', 'Backup av hele systemet: automatisk, hva som tas med, hvor og gjenoppretting.', W('backup'), M('sysbk'), true],
   ['finans.regler', 'Regler', 'Finans → Regler', 'regel regler automatisk kategorisering', 'Regler for automatisk kategorisering.', W('look', 'cats'), M('regel')],
@@ -64,9 +78,21 @@ const ICON = { konto: ['user', '#2b5d8a'], utseende: ['look', '#7a5ad6'], starts
   integrasjoner: ['plug', '#4a5bbf'], kalendere: ['cal', '#2f7d4f'], ai: ['ai', '#7a3b6b'], brukere: ['users', '#a8661a'], system: ['sys', '#6b6558'], backup: ['backup', '#2f6b45'],
   finans: ['bank', '#2f7a4f'], nyheter: ['rss', '#c0562a'] };
 
+// Prompt 34: mål-id (anchor) per handling: klienten går til siden, scroller målet (data-hl="<anchor>") midt i innholdet og markerer det.
+// tip = boblen over målet. answer = fast svar (Glimt) for akkurat denne handlingen.
+export const ANCHOR = {
+  'system.oppdater': { anchor: 'upd', tip: '✦ Trykk her for å oppdatere', answer: 'Gå til System og trykk «Oppdater nå». Den tar backup først og bruker ca. 2 minutter. Jeg tar deg dit og viser knappen …' },
+  'system.sjekk': { anchor: 'chk', tip: '✦ Trykk her for å se etter oppdatering' }, 'system.passord': { anchor: 'pw' }, 'system.oppdatering': { anchor: 'upd' }, system: { anchor: 'upd' },
+  'utseende.bakgrunn': { anchor: 'bg' }, 'utseende.tema': { anchor: 'theme' }, utseende: { anchor: 'theme' }, 'varsler.push': { anchor: 'push' }, varsler: { anchor: 'push' }, 'varsler.stille': { anchor: 'quiet' },
+  'konto.2fa': { anchor: '2fa' }, 'konto.passord': { anchor: 'pw-change' }, 'backup.auto': { anchor: 'bk-auto' }, backup: { anchor: 'bk-auto' }, 'backup.na': { anchor: 'bk-now', tip: '✦ Trykk her for å ta backup nå' },
+  'domener.liste': { anchor: 'cf-token' }, 'integrasjoner.cloudflare': { anchor: 'cf-token' }, 'ai.motor': { anchor: 'ai-mod' }, 'ai.modeller': { anchor: 'ai-mod' }, 'ai.kontroll': { anchor: 'ai-mod' },
+  'ai.gemini': { anchor: 'ai-key-gemini' }, 'brukere.ny': { anchor: 'invite' }, brukere: { anchor: 'invite' }, 'varsler.haptikk': { anchor: 'haptic' }, 'konto.tokens': { anchor: 'tokens' },
+  'utseende.sokebar': { anchor: 'search-style' }, 'startside.faner': { anchor: 'tabs' }, kalendere: { anchor: 'cal-ical' }, 'app.navn': { anchor: 'app-name' }, 'app.ikon': { anchor: 'app-icon' },
+};
 export const SETTINGS_INDEX = RAW.map(([id, title, path, kw, description, web, mobile, admin]) => {
   const [icon, color] = ICON[id.split('.')[0]] ?? ['gear', '#6b6558'];
-  return { id, title, path, keywords: kw.split(/\s+/).filter(Boolean), description, route: { web, mobile }, icon, color, ...(admin ? { admin: true } : {}) };
+  const a = ANCHOR[id] ?? {};
+  return { id, title, path, keywords: kw.split(/\s+/).filter(Boolean), description, route: { web, mobile }, icon, color, anchor: a.anchor ?? null, ...(a.tip ? { tip: a.tip } : {}), ...(admin ? { admin: true } : {}) };
 });
 export const indexFor = (admin) => SETTINGS_INDEX.filter((x) => admin || !x.admin).map(({ admin: _a, ...x }) => x);
 
@@ -74,7 +100,7 @@ export const indexFor = (admin) => SETTINGS_INDEX.filter((x) => admin || !x.admi
 const fold = (s) => String(s ?? '').toLowerCase().replace(/ø/g, 'o').replace(/æ/g, 'ae').replace(/å/g, 'a').normalize('NFKD').replace(/[̀-ͯ]/g, '');
 const STOP = new Set(['hvor', 'hva', 'hvordan', 'jeg', 'kan', 'man', 'en', 'et', 'ei', 'det', 'den', 'de', 'pa', 'i', 'til', 'for', 'av', 'med', 'min', 'mitt', 'mine', 'bytter', 'endre', 'endrer', 'bytte',
   'finner', 'er', 'og', 'a', 'skal', 'vil', 'gjor', 'gjore', 'slar', 'sla', 'pa', 'der', 'som', 'meg', 'seg', 'ny', 'nye']);
-export function keywordMatch(q, items, limit = 8) {
+export function keywordMatch(q, items, limit = 8, withScore = false) {
   // Enkel stamme: passordet → passord, bakgrunnsbilde → bakgrunnsbild, varslene → varsl.
   const stem = (w) => { for (const suf of ['ene', 'ane', 'et', 'en', 'er', 'a', 'e']) if (w.endsWith(suf) && w.length - suf.length >= 4) return w.slice(0, -suf.length); return w; };
   const words = [...new Set(fold(q).split(/[^a-z0-9-]+/).filter((w) => w.length > 1 && !STOP.has(w)).map(stem))];
@@ -87,9 +113,9 @@ export function keywordMatch(q, items, limit = 8) {
       else if (p.includes(w)) s += 1; else if (d.includes(w)) s += 0.5;
     }
     return { it, s: s - it.id.split('.').length * 0.01 };
-  }).filter((x) => x.s > 0).sort((a, b) => b.s - a.s).slice(0, limit).map((x) => x.it);
+  }).filter((x) => x.s > 0).sort((a, b) => b.s - a.s).slice(0, limit).map((x) => (withScore ? { ...x.it, score: x.s } : x.it));
 }
-const answerFor = (it) => (it ? `Det finner du under ${it.path}${it.path.endsWith(it.title) ? '' : ` → ${it.title}`}. ${it.description}` : 'Fant ingen innstilling som passer. Prøv med andre ord.');
+const answerFor = (it) => (it && ANCHOR[it.id]?.answer ? ANCHOR[it.id].answer : it ? `Det finner du under ${it.path}${it.path.endsWith(it.title) ? '' : ` → ${it.title}`}. ${it.description}` : 'Fant ingen innstilling som passer. Prøv med andre ord.');
 
 /* ---------------- AI ---------------- */
 // Testkrok: (prompt, schema, {engine}) → {data, provider} eller kast. engine er 'ollama' eller 'gemini'.
@@ -121,7 +147,11 @@ api.post('/ask', readAuth, async (c) => {
   const q = String(b?.q ?? '').replace(/[\u0000-\u001f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300);
   if (!q) return c.json({ error: 'Skriv hva du leter etter' }, 400);
   const u = c.get('user'), items = indexFor(isAdmin(u)), known = new Set(items.map((x) => x.id));
-  const text = (extra = {}) => { const hits = keywordMatch(q, items); return { answer: answerFor(hits[0]), targetId: hits[0]?.id ?? null, ids: hits.map((x) => x.id), provider: null, mode: 'text', ...extra }; };
+  // Prompt 34: målet for klienten (gå til siden etter goMs og marker anchor).
+  const target = (id) => { const it = items.find((x) => x.id === id); return it ? { target: { id: it.id, route: it.route, anchor: it.anchor, ...(it.tip ? { tip: it.tip } : {}), title: it.title, path: it.path }, anchor: it.anchor, goMs: 1600 } : { target: null, anchor: null }; };
+  const text = (extra = {}) => { const hits = keywordMatch(q, items); return { answer: answerFor(hits[0]), targetId: hits[0]?.id ?? null, ids: hits.map((x) => x.id), provider: null, mode: 'text', ...target(hits[0]?.id), ...extra }; };
+  // Sterkt treff i indeksen (tittel + nøkkelord, f.eks. «hvordan oppdaterer jeg»): svar med en gang uten AI.
+  { const top = keywordMatch(q, items, 1, true)[0]; if (top && top.score >= 7 && ANCHOR[top.id]?.anchor) return c.json(text({ quick: true })); }
   const run = aiImpl ?? (MOCK ? null : realAi);
   if (!run) return c.json(text());
   // Bare spørsmålet og indeksen (uten ruter) går til modellen.
@@ -143,7 +173,7 @@ api.post('/ask', readAuth, async (c) => {
       const targetId = known.has(tid) ? tid : null;
       if (!answer && !targetId) throw new Error('Tomt svar');
       const rest = keywordMatch(q, items).map((x) => x.id).filter((x) => x !== targetId);
-      return c.json({ answer: answer || answerFor(items.find((x) => x.id === targetId)), targetId, ids: [...(targetId ? [targetId] : []), ...rest].slice(0, 8), provider: r?.provider ?? engine, mode: 'ai' });
+      return c.json({ answer: answer || answerFor(items.find((x) => x.id === targetId)), targetId, ids: [...(targetId ? [targetId] : []), ...rest].slice(0, 8), provider: r?.provider ?? engine, mode: 'ai', ...target(targetId) });
     } catch (e) { errors.push(`${engine}: ${e.message}`); }
   }
   return c.json(text({ fallback: true, reason: errors.join(' · ').slice(0, 300) }));

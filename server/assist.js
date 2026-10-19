@@ -73,7 +73,7 @@ import { aliasesOf, aliasPrompt, parseMemoryIntent, learnFromAssist, typeOfWord,
 import { parseTrial, serviceOf, trialSentence, MONTHS, WEEKDAYS, addDaysISO, daysBetween } from '../public/js/trial-parse.js';
 import * as integrations from './integrations.js';
 import { calendarAnswer } from './kalender33.js'; // prompt 33: source:'calendar'
-import { ollamaContent, ollamaPost, shortBody } from './ollama-opts.js';
+import { run as aiRun, routing as aiRouting, AiRunError, isCloud, providerOf, providerLabel } from './ai-run.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const ext = MOCK ? await import('./mock.js') : integrations;
@@ -358,42 +358,44 @@ async function toolMemory(user, text, ctx) {
 
 /* ---------------- LLM ---------------- */
 
-async function ollamaText(qText, user) {
-  const st = fhSettings(user);
-  const base = String(st.ollamaUrl ?? '').replace(/\/$/, '');
-  if (!base) throw new Error('Ollama er ikke satt opp');
-  const r = await ollamaPost((u, i) => fetch(u, i), `${base}/api/chat`,
-    shortBody({ model: st.ollamaTextModel || st.ollamaModel, stream: false, keep_alive: '10m', options: { temperature: 0.3, num_predict: 160 },
-      messages: [{ role: 'system', content: localSystem(user) }, { role: 'user', content: qText }] }, { user }), { signal: AbortSignal.timeout(LOCAL_LLM_MS) });
-  if (!r.ok) throw new Error(`Ollama svarte ${r.status}`);
-  return ollamaContent(await r.json());
-}
 /** Prompt 33: systemprompten til LOKAL Ollama får brukerens egne alias (aldri Gemini/sky). */
 export function localSystem(user) {
   let a = '';
   try { a = aliasPrompt(aliasesOf(user)); } catch { /* */ }
   return a ? `${SYSTEM}\n${a}` : SYSTEM;
 }
-async function geminiText(qText, user) {
-  const { geminiFetch, hasGemini } = await import('./finans/gemini-keys.js');
-  if (!hasGemini()) throw new Error('Ingen Gemini-nøkkel');
-  const model = fhSettings(user).geminiModel || 'gemini-flash-latest';
-  const r = await geminiFetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(LLM_MS),
-    body: JSON.stringify({ systemInstruction: { parts: [{ text: SYSTEM }] }, contents: [{ role: 'user', parts: [{ text: qText }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 200 } }) });
-  if (!r.ok) throw new Error(`Gemini svarte ${r.status}`);
-  const j = await r.json();
-  return String(j?.candidates?.[0]?.content?.parts?.map((p) => p.text).join('') ?? '').trim();
-}
 const short = (t) => { const s = String(t).replace(/\s+/g, ' ').trim(); const parts = s.match(/[^.!?]+[.!?]+/g); return (parts && parts.length > 2 ? parts.slice(0, 2).join('') : s).slice(0, 600).trim(); };
 const withTimeout = (p, ms = LLM_MS) => Promise.race([p, new Promise((_, rej) => { const t = setTimeout(() => rej(Object.assign(new Error('Svarte ikke i tide'), { timeout: true })), ms); t.unref?.(); })]);
 
 async function toolLlm(user, text) {
-  const run = llmImpl ? (engine) => llmImpl({ q: text, user, engine, system: engine === 'gemini' ? SYSTEM : localSystem(user) }) : MOCK && !process.env.OLLAMA_URL ? null : (engine) => (engine === 'gemini' ? geminiText(text, user) : ollamaText(text, user));
-  if (!run) return { text: `Dette er et eksempelsvar fra **Glimt** på «${text.slice(0, 80)}». Med Ollama svarer den lokale modellen her.`, source: 'Glimt', engine: 'mock', model: 'Glimt · lokal' };
+  if (llmImpl) return toolLlmTest(user, text);
+  if (MOCK && !process.env.OLLAMA_URL) return { text: `Dette er et eksempelsvar fra **Glimt** på «${text.slice(0, 80)}». Med Ollama svarer den lokale modellen her.`, source: 'Glimt', engine: 'mock', model: 'Glimt · lokal' };
+  // Prompt 34: alt går gjennom ai.run('sok') – ruting, validering mot /api/tags, 20 s → reserve, jobblogg. Feil vises i svaret.
+  const route = aiRouting(user).tasks.sok;
+  const explicitCloud = isCloud(providerOf(route.model).provider) || isCloud(providerOf(route.fallback).provider);
+  const localOnly = hasUserData(text) || (!assistSettings(user).cloud && !explicitCloud);
+  try {
+    const out = await aiRun('sok', { user, prompt: text, system: (p) => (p === 'ollama' ? localSystem(user) : SYSTEM), numPredict: 160, temperature: 0.3, localOnly, title: `AI-søk · «${text.slice(0, 60)}»` });
+    const t = short(out.text);
+    if (out.provider !== 'ollama') { try { const { audit } = await import('./finans/ai-audit.js'); audit(out.provider, 'assist', { spørsmål: text }, user); } catch { /* logg er best effort */ } }
+    const cloud = out.provider !== 'ollama';
+    return { text: t, source: cloud ? `Glimt · ${providerLabel(out.provider)}` : 'Glimt', engine: out.provider, model: cloud ? `Glimt · ${providerLabel(out.provider)} (sky)` : 'Glimt · lokal', modelId: out.model,
+      ...(out.warnings.length ? { warning: out.warnings.join(' · ') } : {}), ...(out.notice ? { notice: out.notice } : {}), aiJobId: out.jobId };
+  } catch (e) {
+    const msg = e instanceof AiRunError ? e.message : `Glimt fikk ikke svar: ${String(e?.message ?? e).slice(0, 200)}`;
+    console.warn('[glimt] llm', msg);
+    return { text: msg, source: 'Glimt', engine: 'none', model: 'Glimt · lokal', followUp: 'chat', error: msg, fix: e.fix ?? null, aiJobId: e.jobId ?? null,
+      actions: [{ k: 'retry', label: 'Prøv igjen' }, { k: 'ai', label: 'Åpne AI-kontroll', route: 'innstillinger/ai', tab: e.fix === 'api' ? 'api' : e.fix === 'model' || e.fix === 'valg' ? 'rt' : 'ov' }] };
+  }
+}
+// Testkroken (_setAssistLlm): samme oppførsel som før prompt 34 (lokal først, Gemini når «cloud» er på og spørsmålet ikke har egne data).
+async function toolLlmTest(user, text) {
+  const run = (engine) => llmImpl({ q: text, user, engine, system: engine === 'gemini' ? SYSTEM : localSystem(user) });
+  let lastErr = null;
   try {
     const t = short(await withTimeout(run('ollama'), LOCAL_LLM_MS));
     if (t) return { text: t, source: 'Glimt', engine: 'ollama', model: 'Glimt · lokal' };
-  } catch { /* lokal modell nede eller for treg */ }
+  } catch (e) { lastErr = e; }
   const cloud = assistSettings(user).cloud;
   if (cloud && !hasUserData(text)) {
     try {
@@ -402,7 +404,8 @@ async function toolLlm(user, text) {
       if (t) return { text: t, source: 'Glimt · Gemini', engine: 'gemini', model: 'Glimt · Gemini (sky)' };
     } catch { /* sky nede */ }
   }
-  return { text: 'Glimt fikk ikke svar fra den lokale modellen i tide. **Fortsett i Chat** for et lengre svar.', source: 'Glimt', engine: 'none', model: 'Glimt · lokal', followUp: 'chat' };
+  const why = lastErr ? `: ${String(lastErr.message ?? lastErr).slice(0, 160)}` : '';
+  return { text: `Glimt fikk ikke svar fra den lokale modellen${why}. **Fortsett i Chat** for et lengre svar.`, source: 'Glimt', engine: 'none', model: 'Glimt · lokal', followUp: 'chat', ...(lastErr ? { error: String(lastErr.message ?? lastErr).slice(0, 200) } : {}) };
 }
 
 /* ---------------- Svar ---------------- */
@@ -438,7 +441,7 @@ export async function answer(user, text, { today = osloTodayISO(), onStep = () =
   onStep(2, intent);
   const out = { text: r.text, bold: boldOf(r.text), source: r.source, intent, ...(r.tool ? { tool: r.tool } : {}), ...(r.card ? { card: r.card } : {}), ms: Date.now() - t0,
     model: r.model ?? 'Glimt · verktøy', engine: r.engine ?? (intent === 'llm' ? 'none' : 'tool') };
-  for (const k of ['followUp', 'trial', 'missing', 'quickJobId', 'memory', 'apply']) if (r[k] !== undefined) out[k] = r[k];
+  for (const k of ['followUp', 'trial', 'missing', 'quickJobId', 'memory', 'apply', 'error', 'fix', 'actions', 'warning', 'notice', 'modelId', 'aiJobId']) if (r[k] !== undefined) out[k] = r[k];
   if (r.nav) { out.target = r.nav.target; out.nav = r.nav; }
   out.chatContext = { q: text, intent, messages: [{ role: 'user', content: text }, { role: 'assistant', content: r.text, ...(r.card ? { card: r.card } : {}), ...(r.tool ? { tool: r.tool } : {}) }] };
   return out;

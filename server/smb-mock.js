@@ -12,13 +12,19 @@ function fresh() {
     backup: { comment: 'Sikkerhetskopier', ro: false, guest: false, root: tree({ homelab: {}, 'Time Machine': {}, finanshub: {}, 'Bilder fra mobil': { 2025: {}, 2026: {} } }) },
     media: { comment: 'Filmer, musikk og bilder', ro: true, guest: true, root: tree({ Filmer: {}, Musikk: {}, Bilder: { 2024: {}, 2025: {} } }) },
     home: { comment: 'Hjemmemapper', ro: false, guest: false, root: tree({ sebastian: { Dokumenter: {}, Nedlastinger: {} } }) },
+    // Prompt 34: share som etterligner feilen «backup-mappen vises ikke»: «backup» er et ZFS-datasett/junction (attributt «Dr»,
+    // som den gamle parseren forkastet), «Privat» gir ACCESS_DENIED, «Backup på NAS» er lagret i NFD (macOS), pluss systemmapper.
+    arkiv: { comment: 'Arkiv', host: 'tn', ro: false, guest: false, root: tree({ backup: { homelab: {} }, Privat: { hemmelig: {} }, ['Backup p\u0061\u030a NAS'.normalize('NFD')]: {}, '@eaDir': {}, '#recycle': {}, '.skjult': {}, Dokumenter: {} }),
+      attrs: { backup: 'Dr', '#recycle': 'DH', '.skjult': 'DH' }, deny: ['Privat'] },
+    'backup$': { comment: '', host: 'tn', ro: false, guest: false, hidden: true, root: tree({ homelab: {} }) },
   };
 }
 let SHARES = fresh();
 /** Bare for tester: start med et nytt filsystem. */
 export const resetMockSmb = () => { SHARES = fresh(); };
 export const mockSmbTree = () => SHARES;
-const HOSTS = { 'nas.local': 'nas', nas: 'nas', '192.168.1.20': 'nas', '192.168.1.30': 'old', 'gammel-nas.local': 'old' };
+// truenas.local / 192.168.1.40 (prompt 34): sharene arkiv og den skjulte backup$.
+const HOSTS = { 'nas.local': 'nas', nas: 'nas', '192.168.1.20': 'nas', '192.168.1.30': 'old', 'gammel-nas.local': 'old', 'truenas.local': 'tn', '192.168.1.40': 'tn' };
 export const MOCK_NAS = { host: 'nas.local', ip: '192.168.1.20', name: 'NAS' };
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -59,11 +65,11 @@ export async function mockSmbExec(args) {
   if (kind === 'old' && /^SMB3/.test(min)) return fail('protocol negotiation failed: NT_STATUS_CONNECTION_RESET');
   if (pass === 'feil') return fail('session setup failed: NT_STATUS_LOGON_FAILURE');
   if (listHost) {
-    const rows = Object.entries(SHARES).map(([n, s]) => `Disk|${n}|${s.comment}`);
+    const rows = Object.entries(SHARES).filter(([, s]) => !s.hidden && (s.host ?? 'nas') === (kind === 'tn' ? 'tn' : 'nas')).map(([n, s]) => `Disk|${n}|${s.comment}`);
     return { code: 0, stdout: [...rows, 'Disk|admin$|Fjernadministrasjon', 'IPC|IPC$|IPC Service (NAS)', 'Disk|print$|Printer Drivers', ''].join('\n'), stderr: 'SMB1 disabled -- no workgroup available\n' };
   }
   const sh = SHARES[m[2]];
-  if (!sh) return fail('tree connect failed: NT_STATUS_BAD_NETWORK_NAME');
+  if (!sh || (sh.host ?? 'nas') !== (kind === 'tn' ? 'tn' : 'nas')) return fail('tree connect failed: NT_STATUS_BAD_NETWORK_NAME');
   if (guest && !sh.guest) return fail('tree connect failed: NT_STATUS_ACCESS_DENIED');
   let cwd = [];
   const nodeAt = (p) => { let n = sh.root; for (const x of p) { n = n.d[x]; if (!n) return null; } return n; };
@@ -81,9 +87,17 @@ export async function mockSmbExec(args) {
     const here = nodeAt(cwd);
     code = 0;
     const err = (s) => { out.push(s); code = 1; };
-    if (cmd === 'ls' || cmd === 'dir') {
+    if ((cmd === 'ls' || cmd === 'dir') && a1 && /[\\/]\*$/.test(a1)) {
+      // ls "mappe/*" (tilgangssjekk): ACCESS_DENIED for mapper i deny-listen.
+      const sub = parts(a1.replace(/[\\/]\*$/, ''));
+      const node = nodeAt([...cwd, ...sub]);
+      if (!node) { err(`NT_STATUS_OBJECT_NAME_NOT_FOUND listing \\${[...cwd, ...sub].join('\\')}\\*`); continue; }
+      if ((sh.deny ?? []).includes(sub.at(-1)) && !cwd.length) { err(`NT_STATUS_ACCESS_DENIED listing \\${[...cwd, ...sub].join('\\')}\\*`); continue; }
       out.push(line('.', 'D', 0, T0), line('..', 'D', 0, T0));
-      for (const [n] of Object.entries(here.d).sort()) out.push(line(n, 'D', 0, T0));
+      for (const [n] of Object.entries(node.d).sort()) out.push(line(n, 'D', 0, T0));
+    } else if (cmd === 'ls' || cmd === 'dir') {
+      out.push(line('.', 'D', 0, T0), line('..', 'D', 0, T0));
+      for (const [n] of Object.entries(here.d).sort()) out.push(line(n, (!cwd.length && sh.attrs?.[n]) || 'D', 0, T0));
       for (const [n, f] of Object.entries(here.f).sort()) out.push(line(n, 'A', f.size, f.mtime));
       out.push('', '\t\t3906469376 blocks of size 1024. 2512048128 blocks available');
     } else if (cmd === 'cd') {
@@ -102,6 +116,12 @@ export async function mockSmbExec(args) {
       const f = here.f[a1];
       if (!f) { err(`NT_STATUS_OBJECT_NAME_NOT_FOUND opening remote file \\${[...cwd, a1].join('\\')}`); continue; }
       writeFileSync(a2, f.data ?? Buffer.alloc(0));
+    } else if (cmd === 'rename') {
+      if (sh.ro || guest) err(`NT_STATUS_ACCESS_DENIED renaming files \\${[...cwd, a1].join('\\')} -> \\${[...cwd, a2].join('\\')}`);
+      else if (!here.f[a1]) err(`NT_STATUS_OBJECT_NAME_NOT_FOUND renaming files \\${[...cwd, a1].join('\\')}`);
+      else { here.f[a2] = here.f[a1]; delete here.f[a1]; }
+    } else if (cmd === 'pwd') {
+      out.push(`Current directory is \\\\nas\\${m[2]}\\${cwd.join('\\')}`);
     } else if (cmd === 'del' || cmd === 'rm') {
       if (sh.ro || guest) err(`NT_STATUS_ACCESS_DENIED deleting remote file \\${[...cwd, a1].join('\\')}`);
       else if (!here.f[a1]) err(`NT_STATUS_NO_SUCH_FILE listing \\${[...cwd, a1].join('\\')}`);

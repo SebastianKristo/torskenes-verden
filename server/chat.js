@@ -38,6 +38,7 @@ import { audit } from './finans/ai-audit.js';
 import { finansSummary } from './finans/summary.js';
 import { nextTasks } from './tasks.js';
 import { chatBody, ollamaPost, thinkFilter } from './ollama-opts.js';
+import { ensureScanFolder, scanFolderInfo, isSysFolder, upsertScanChat } from './chat-scans.js';
 
 const q = (sql) => db.prepare(sql);
 const FILES = resolve(config.dataDir, 'chat', 'files');
@@ -173,13 +174,15 @@ export function cleanSettings(s = {}) {
 const parse = (s, d) => { try { return JSON.parse(s) ?? d; } catch { return d; } };
 const chatRow = (u, id) => q('SELECT * FROM hl_chats WHERE id=? AND user_id=?').get(String(id ?? ''), u);
 const iso = (t) => new Date(t).toISOString();
-const brief = (r) => ({ id: r.id, title: r.title, model: r.model, updatedAt: iso(r.updated), pinned: !!r.pinned, folderId: r.folder_id ?? null });
+const brief = (r) => ({ id: r.id, title: r.title, model: r.model, updatedAt: iso(r.updated), pinned: !!r.pinned, folderId: r.folder_id ?? null,
+  ...(r.kind ? { kind: r.kind, ref: parse(r.ref, {}), status: parse(r.messages, [])[1]?.meta?.status ?? null } : {}) }); // prompt 34: skann-samtaler
 const msgOut = (m) => ({ role: m.role, content: m.content, ...(m.images?.length ? { images: m.images } : {}), ...(m.files?.length ? { files: m.files } : {}), ...(m.ts ? { ts: m.ts } : {}), ...(m.meta ? { meta: m.meta } : {}),
   ...(m.card ? { card: m.card } : {}), ...(m.tool ? { tool: m.tool } : {}) }); // prompt 31: Glimt-kort (vær, kalender …) og verktøy-chip lagres i meldingen
 const full = (r) => ({ ...brief(r), createdAt: iso(r.created), settings: cleanSettings(parse(r.settings, {})), messages: parse(r.messages, []).map(msgOut), shared: !!r.share_token });
 const norm = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
 function chatList(u, text = '') {
+  ensureScanFolder(u); // prompt 34: «Kvitteringer og skanninger» (scanSeeded) for alle brukere
   let rows = q('SELECT * FROM hl_chats WHERE user_id=? ORDER BY updated DESC').all(u);
   const t = norm(text).trim();
   if (t) rows = rows.filter((r) => norm(r.title).includes(t) || parse(r.messages, []).some((m) => norm(m.content).includes(t)));
@@ -187,7 +190,7 @@ function chatList(u, text = '') {
   const fids = new Set(folders.map((f) => f.id));
   return {
     pinned: rows.filter((r) => r.pinned).map(brief),
-    folders: folders.map((f) => ({ id: f.id, name: f.name, open: !!f.open, chats: rows.filter((r) => !r.pinned && r.folder_id === f.id).map(brief) })),
+    folders: folders.sort((a, b) => (b.sys ?? 0) - (a.sys ?? 0)).map((f) => { const chats = rows.filter((r) => !r.pinned && r.folder_id === f.id).map(brief); return { id: f.id, name: f.name, open: !!f.open, ...(f.sys ? scanFolderInfo(u, chats) : {}), chats }; }),
     chats: rows.filter((r) => !r.pinned && (!r.folder_id || !fids.has(r.folder_id))).map(brief),
   };
 }
@@ -531,6 +534,7 @@ api.patch('/folders/:id', async (c) => {
   const u = c.get('user'), f = q('SELECT * FROM hl_chat_folders WHERE id=? AND user_id=?').get(c.req.param('id'), u);
   if (!f) return c.json({ error: 'Fant ikke mappen' }, 404);
   const b = await c.req.json().catch(() => ({}));
+  if (f.sys && typeof b.name === 'string' && b.name.trim() && b.name.trim() !== f.name) return c.json({ error: 'Systemmappen kan ikke få nytt navn' }, 403);
   const name = typeof b.name === 'string' && b.name.trim() ? b.name.trim().slice(0, 80) : f.name;
   const open = 'open' in b ? (b.open ? 1 : 0) : f.open;
   q('UPDATE hl_chat_folders SET name=?, open=? WHERE id=?').run(name, open, f.id);
@@ -538,8 +542,16 @@ api.patch('/folders/:id', async (c) => {
 });
 api.delete('/folders/:id', (c) => {
   const u = c.get('user'), id = c.req.param('id');
+  if (isSysFolder(id)) return c.json({ error: 'Systemmappen «Kvitteringer og skanninger» kan ikke slettes' }, 403);
   if (q('DELETE FROM hl_chat_folders WHERE id=? AND user_id=?').run(id, u).changes) q('UPDATE hl_chats SET folder_id=NULL WHERE folder_id=? AND user_id=?').run(id, u);
   return c.json({ ok: true });
+});
+
+// Prompt 34: skann-samtaler (se server/chat-scans.js). POST /system {kind, ref?, title, source?, attachment?, model?, text?, tools?, status?}
+api.post('/system', async (c) => {
+  const b = await c.req.json().catch(() => null);
+  if (!b || typeof b !== 'object') return bad(c, 'Forventet {kind, title}');
+  try { return c.json(upsertScanChat(c.get('user'), b)); } catch (e) { return c.json({ error: e.message }, e.status ?? 500); }
 });
 
 const settingsOut = (u) => ({ chat_my_data: userBool(u, 'chat_my_data'), chat_ask_cloud: userBool(u, 'chat_ask_cloud'), chat_default_model: userCfg(u, 'chat_default_model') || '',

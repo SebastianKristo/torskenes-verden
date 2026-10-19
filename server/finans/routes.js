@@ -37,6 +37,8 @@ import { findLogo } from './logo-lookup.js';
 import { storeLines, receiptLines, matchLines, annotateSearch } from './highlight30.js';
 import { shareableUsers, logEntryChange, entryHistory } from './boliger30.js';
 import { broadcast } from '../realtime.js';
+import { jobStart as aiJobStart, jobUpdate as aiJobUpdate, jobEnd as aiJobEnd } from '../ai-run.js'; // prompt 34: AI-kontroll → Jobber
+import { upsertScanChat, scanChatFor } from '../chat-scans.js'; // prompt 34: Chat-mappen «Kvitteringer og skanninger»
 import { bolApi, catTree, catOptions, entryCat, linkLegacy, assignCategory, catById as bolCat, catPair, colorOf, noticesFor, layoutFor, upcomingOf, backgroundOf, validBackground } from './boliger.js';
 
 const DIR = resolve(config.dataDir, 'receipts');
@@ -272,10 +274,49 @@ async function runQueue() {
   } } catch (e) { console.error('[skann] køen', e); } finally { running = false; }
   if (queue.length) setImmediate(runQueue);
 }
+// Prompt 34: «Analyseres av AI» – steg, delresultater og modell per kvittering mens AI-en leser (GET /receipts/analyzing),
+// samme jobb i AI-kontroll → Jobber (kind 'receipt', ref 'receipt:<id>') og en samtale i Chat-mappen «Kvitteringer og skanninger».
+export const RC_STEPS = [['upload', 'Lastet opp'], ['read', 'Leser bildet'], ['fields', 'Finner butikk, dato og sum'], ['lines', 'Leser varelinjer'], ['category', 'Foreslår kategori']];
+const rcLive = new Map(); // id → {at:'read'|…, partial, model, jobId, chatId, started, ctrl}
+const kr = (n) => `${Number(n).toLocaleString('nb-NO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} kr`;
+const SOURCE_TEXT = { upload: 'Kvittering lastet opp', camera: 'Kvittering skannet med kamera', email: 'Kvittering fra e-post' };
+function rcScanChat(r, id, patch) {
+  try {
+    const live = rcLive.get(id);
+    const res = upsertScanChat(r.user_id || OWNER, { kind: 'receipt', ref: { receiptId: id }, source: SOURCE_TEXT[r.source] ?? 'Kvittering lastet opp',
+      attachment: { name: r.name || 'kvittering', url: `/finans/api/receipts/${id}/file`, ...(r.thumb ? { thumb: `/finans/api/receipts/${id}/thumb` } : {}), mime: r.mime ?? null }, ...patch });
+    if (live) live.chatId = res.chatId;
+    return res.chatId;
+  } catch (e) { console.warn('[skann] chat', e.message); return null; }
+}
+const rcTools = (at, d, extra = []) => {
+  const i = RC_STEPS.findIndex(([k]) => k === at);
+  const lab = { fields: d?.merchant ? `Fant ${d.merchant}` : 'Finner butikk', lines: d?.lines ? `Fant ${d.lines.length} varelinjer` : 'Leser varelinjer', category: 'Kategoriserte' };
+  return [...RC_STEPS.slice(1).map(([k, l], j) => ({ label: k === 'read' ? 'Leste kvittering' : lab[k] ?? l, done: j + 1 < i || at === 'done' })), ...extra];
+};
+export function analyzingOut(r) {
+  const live = rcLive.get(r.id) ?? {};
+  const at = live.at ?? (r.status === 'pending' ? 'upload' : 'read');
+  const idx = RC_STEPS.findIndex(([k]) => k === at);
+  const est = r.status === 'processing' ? Math.min(92, Math.round(((Date.now() - (r.started ?? Date.now())) / 12000) * 90) + 5) : 0;
+  const p = live.partial ?? {};
+  return { id: r.id, receiptId: r.id, file: r.name ?? 'kvittering', thumb: r.thumb ? `/finans/api/receipts/${r.id}/thumb` : null, status: r.status === 'pending' ? 'queued' : 'analyzing',
+    model: live.model ?? null, progress: Math.max(est, idx >= 0 ? idx * 20 : 0), step: at, stepLabel: RC_STEPS[idx]?.[1] ?? 'Leser bildet',
+    steps: RC_STEPS.map(([k, label], i) => ({ k, label, done: i < idx || (k === 'upload') })),
+    partial: { store: p.store ?? null, sum: p.sum ?? null, lines: p.lines ?? null, category: p.category ?? null, confidence: p.confidence ?? null },
+    title: p.store ?? 'Leser kvittering …', statusText: r.ai_short ?? null, startedAt: r.started ? new Date(r.started).toISOString() : null,
+    jobId: live.jobId ?? null, chatId: live.chatId ?? scanChatFor(r.user_id || OWNER, 'receipt', { receiptId: r.id }), cancellable: true };
+}
 async function processReceipt(r, id, force) {
   {
     q("UPDATE fh_receipts SET status='processing', error=NULL, started=?, retry_at=NULL WHERE id=?").run(Date.now(), id);
-    const log = (step, detail) => scanLog(id, step, detail);
+    const live = { at: 'read', partial: {}, model: null, started: Date.now(), ctrl: new AbortController() };
+    rcLive.set(id, live);
+    const owner = r.user_id || OWNER;
+    live.jobId = aiJobStart({ user: owner, task: 'rc', kind: 'receipt', title: `Kvittering · ${r.name ?? 'bilde'}`, ref: `receipt:${id}`, ctrl: live.ctrl });
+    rcScanChat(r, id, { title: 'Leser kvittering …', text: 'Leser kvitteringen …', status: 'running', tools: rcTools('read', null) });
+    const step = (at, partial = {}) => { live.at = at; Object.assign(live.partial, partial); aiJobUpdate(live.jobId, { step: RC_STEPS.find(([k]) => k === at)?.[1] ?? at, progress: Math.max(5, RC_STEPS.findIndex(([k]) => k === at) * 20), partial: live.partial, ...(live.model ? { model: live.model } : {}) }); };
+    const log = (stepName, detail) => { scanLog(id, stepName, detail); if (stepName === 'ai') { const m = String(detail).match(/\(([^)]+)\)/); if (m) { live.model = m[1]; aiJobUpdate(live.jobId, { model: m[1] }); } } };
     // «✦ Gemini svarte ikke innen 20 s · prøver Groq …» vises i køen (aiShort/statusText i /receipts/jobs).
     const status = (text, info = {}) => q("UPDATE fh_receipts SET ai_short=?, timeout_engine=COALESCE(?, timeout_engine) WHERE id=? AND status='processing'").run(text, info.timeoutEngine ?? null, id);
     try {
@@ -291,6 +332,10 @@ async function processReceipt(r, id, force) {
       const onTimeout = (r.retry_n ?? 0) >= QUEUE_MAX ? 'next' : undefined;
       const res = r.mime === 'text/plain' ? await extractText(img.toString('utf8'), cats) : await extract(img, mime, cats, force, { log, status, onTimeout });
       const d = res.data;
+      if (live.ctrl.signal.aborted) throw Object.assign(new Error('Avbrutt av brukeren'), { cancelled: true });
+      live.model = res.model ?? live.model;
+      step('fields', { store: d.merchant ?? null, sum: d.total ?? null });
+      step('lines', { lines: d.lines?.length ?? 0 });
       if (res.timeoutEngine) q('UPDATE fh_receipts SET timeout_engine=? WHERE id=?').run(res.timeoutEngine, id);
       log('lest-ut', `${providerName(res.provider)} · ${d.merchant ?? 'ukjent butikk'} · ${d.total ?? '–'} kr · sikkerhet ${Math.round((d.confidence.total ?? 0) * 100)} % · ${res.seconds?.toFixed?.(1) ?? '?'} s`);
       const totalOre = d.total != null ? Math.round(d.total * 100) : null;
@@ -304,18 +349,29 @@ async function processReceipt(r, id, force) {
         .run(res.provider, res.model, res.seconds, JSON.stringify(d), d.merchant, d.date ?? r.date, totalOre, catId,
           acc ?? match?.account_id ?? null, Math.min(d.confidence.total, d.confidence.merchant || 1), match?.id ?? null, id);
       storeLines(id); // prompt 30: linjer med bbox
+      const catName = catById().get(catId)?.name ?? null;
+      const confPct = Math.round(Math.min(d.confidence.total, d.confidence.merchant || 1) * 100);
+      step('category', { category: catName, confidence: confPct });
       const sum = await summarizeReceipt(d, catById().get(catId)?.name);
       q('UPDATE fh_receipts SET ai_short=?, ai_long=?, domain=? WHERE id=?').run(sum.short, sum.long, sum.domain, id);
       routeTarget(id);
       log('lagret', 'klar til gjennomgang');
+      // Ferdig: jobben, og svaret i Chat («Butikk · beløp», varelinjer, kategori og sikkerhet, hva som ble gjort).
+      aiJobEnd(live.jobId, { model: res.model ?? live.model, provider: res.provider ?? null, ms: Date.now() - live.started, partial: live.partial });
+      const lines = (d.lines ?? []).slice(0, 12).map((l) => `- ${l.description} · ${kr(l.amount)}`).join('\n');
+      const title = `${d.merchant ?? 'Kvittering'}${d.total != null ? ` · ${kr(d.total)}` : ''}`;
+      rcScanChat(r, id, { title, model: res.model ?? live.model, status: 'done', tools: [...rcTools('done', d), { label: match ? 'Koblet til banktransaksjon' : 'Lagt i Til godkjenning', done: true }],
+        text: `**${d.merchant ?? 'Ukjent butikk'}**${d.date ? ` · ${d.date}` : ''}${d.total != null ? ` · **${kr(d.total)}**` : ''}\n${lines}${lines ? '\n' : ''}Kategori: ${catName ?? 'ukjent'} · ${confPct} % sikker.\nLagt i Til godkjenning${match ? ' og koblet til en banktransaksjon' : ''}.` });
     } catch (e) {
-      if (e.queue) { queueLater(id, e, r); return; }
+      if (e.queue) { aiJobUpdate(live.jobId, { status: 'queue', step: 'Lagt i kø', error: e.message }); queueLater(id, e, r); return; }
+      aiJobUpdate(live.jobId, { status: e.cancelled ? 'cancelled' : 'fail', error: e.message, ms: Date.now() - live.started });
+      rcScanChat(r, id, { title: `Kvittering · ${r.name ?? 'kunne ikke leses'}`, status: 'failed', text: `Kunne ikke lese kvitteringen: ${e.message}. Fyll ut manuelt under Til godkjenning.`, tools: rcTools(live.at, null) });
       if (e.timeoutEngine) q('UPDATE fh_receipts SET timeout_engine=? WHERE id=?').run(e.timeoutEngine, id);
       console.warn('[finans] Kvittering', id, e.message);
       log('feil', e.message);
       q("UPDATE fh_receipts SET status='needs_review', error=?, confidence=0 WHERE id=? AND status='processing'").run(`Kunne ikke leses automatisk: ${e.message}. Fyll ut manuelt.`, id);
       try { routeTarget(id); } catch { /* mappen kan være slettet */ }
-    }
+    } finally { rcLive.delete(id); }
   }
 }
 // Kvitteringer lastet opp fra Subscription OS eller en delt mappe havner også der når AI-en er ferdig.
@@ -881,8 +937,26 @@ api.get('/receipts/jobs', R, (c) => {
 });
 const origSelect = q('SELECT * FROM fh_receipts WHERE id=?');
 
+// Prompt 34: kvitteringer som analyseres av AI nå (og de som venter i køen). Mobilens «✦ ANALYSERES AV AI · N».
+// GET /receipts/analyzing (= /receipts?status=analyzing) → {count, items:[{id, receiptId, file, thumb, status:'queued'|'analyzing', model, progress,
+//   step:'upload'|'read'|'fields'|'lines'|'category', stepLabel, steps:[{k, label, done}], partial:{store, sum, lines, category, confidence},
+//   title, statusText, startedAt, jobId, chatId, cancellable}]}
+// POST /receipts/:id/cancel-ai → {ok} (Avbryt: kvitteringen går til Til godkjenning for manuell utfylling)
+const analyzing = (u) => { const items = q(`SELECT * FROM fh_receipts WHERE status IN ('pending','processing') AND ${RC_VISIBLE} ORDER BY created DESC LIMIT 50`).all(u).map(analyzingOut); return { count: items.length, items }; };
+api.get('/receipts/analyzing', R, (c) => c.json(analyzing(c.get('user')), 200, { 'Cache-Control': 'no-store' }));
+api.post('/receipts/:id/cancel-ai', W, (c) => {
+  const r = rcGet(c);
+  if (!r) return c.notFound();
+  if (!['pending', 'processing'].includes(r.status)) return bad(c, 'Kvitteringen analyseres ikke', 409);
+  const live = rcLive.get(r.id);
+  if (live) { live.ctrl.abort(); if (live.jobId) aiJobUpdate(live.jobId, { status: 'cancelled', error: 'Avbrutt av brukeren' }); }
+  const i = queue.findIndex((x) => x.id === r.id); if (i >= 0) queue.splice(i, 1);
+  q("UPDATE fh_receipts SET status='needs_review', error='Avbrutt av brukeren. Fyll ut manuelt.', confidence=0 WHERE id=?").run(r.id);
+  return ok(c);
+});
 api.get('/receipts', R, (c) => {
   const status = c.req.query('status');
+  if (status === 'analyzing' || (status === 'processing' && c.req.query('detail') === '1')) return c.json(analyzing(c.get('user')));
   // Banneret «N kvitteringer til gjennomgang»: bare tallet.
   if (c.req.query('count') === '1') {
     const st = status === 'queue' ? null : status || 'needs_review';

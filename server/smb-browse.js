@@ -13,9 +13,14 @@
 //   POST /discover {}                         → [{host, ip, name?}]   SMB-servere (port 445) på LAN
 //   POST /probe    {host}                      → {ok, host, ip?, message?}   svarer verten på port 445?
 //   POST /shares   {host, user, password, domain?}             → {shares:[{name, comment}], protocol:'SMB3'|'SMB2'}
-//   POST /browse   {host, share, path, user, password, domain?, protocol?} → [{name, type:'dir'}]
+//   POST /scan     {lanIp?, subnet?}           → prompt 34: {devices:[{host, ip, name?, model?, methods:['tcp445'|'mdns'|'netbios'|'known'], known?}],
+//                                                nets:['192.168.1.0/24'], ms, methods:{mdns, netbios, known, tcp445}, docker, suggestions:[{ip, name, source}],
+//                                                scanned, total, reason?, hint?}  (SSE med Accept: text/event-stream: progress/found/done)
+//   POST /browse   {host, share | manual, path, user, password, domain?, protocol?, showHidden?} → [{name, type:'dir', locked?, code?, reason?, display?, hidden?, link?}]
+//   POST /list     samme kropp → {path, share, folders:[…som over], filtered:[{name, attrs, why}], rawCount, protocol, hint?}
+//                  share kan være skjult (backup$); manual:'/backup/homelab' = «Skriv sti manuelt»
 //   POST /mkdir    {…, path, name}             → {ok, path}
-//   POST /test     {…, path}                   → {ok, writable, message, mbps?}
+//   POST /test     {…, path}                   → {ok, writable, readBack?, message:'✓ Kan skrive · 38 MB/s …'|'✗ Ingen skrivetilgang: STATUS_ACCESS_DENIED …', mbps?, code?}
 //   POST /save     {host, share, path, user, password, domain, protocol, use:['finans','system']}
 //                  → {ok, share, path, label, use, finans:{…smbConfig}, system:{enabled, share, path}}
 import { Hono } from 'hono';
@@ -24,13 +29,14 @@ import os from 'node:os';
 import dns from 'node:dns/promises';
 import { execFile } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
-import { writeFileSync, rmSync } from 'node:fs';
+import { writeFileSync, rmSync, existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { config } from './config.js';
 import { sessionUser, isAdmin, clientIp, isLan } from './auth.js';
 import { bearerOk } from './finans/routes.js';
-import { saveSettings, setSecret } from './finans/db.js';
-import { smbRun, smbCmdError, smbErrorText, smbConfig, parseSmbLs, localArg, SMB_SEG, SMB_HOST, normShare } from './finans/backup.js';
+import { saveSettings, setSecret, settings as fhSettings } from './finans/db.js';
+import { smbRun, smbCmdError, smbErrorText, smbConfig, parseSmbLs, localArg, SMB_SEG, SMB_SHARE, SMB_HOST, normShare } from './finans/backup.js';
+import { streamSSE } from 'hono/streaming';
 import { setSmbTarget, smbTarget } from './system-backup.js';
 import { MOCK_NAS } from './smb-mock.js';
 
@@ -75,7 +81,13 @@ export function cleanTarget(b, { share = false } = {}) {
   if (o.user && /["]/.test(o.user)) throw bad('Ugyldig brukernavn');
   o.protocol = b.protocol === 'SMB2' ? 'SMB2' : 'SMB3';
   if (share) {
-    if (typeof b.share !== 'string' || !SMB_SEG.test(b.share)) throw bad('Ugyldig navn på delt mappe');
+    // Prompt 34: «Skriv sti manuelt» – manual:'/backup/homelab' eller '//nas/backup$/homelab' (første ledd = share, også skjulte backup$).
+    if ((b.share === undefined || b.share === '') && typeof b.manual === 'string') {
+      const segs = b.manual.trim().replace(/\\/g, '/').replace(/^smb:/i, '').replace(/^\/\/[^/]+/, '').split('/').filter(Boolean);
+      if (!segs.length) throw bad('Skriv stien som /share/mappe, for eksempel /backup/homelab');
+      b = { ...b, share: segs[0], path: segs.slice(1).join('/') };
+    }
+    if (typeof b.share !== 'string' || !SMB_SHARE.test(b.share)) throw bad('Ugyldig navn på delt mappe');
     o.share = b.share;
     o.path = cleanPath(b.path);
   }
@@ -111,40 +123,141 @@ export const _setNet = (o) => { NET = o ? { ...NET, ...o } : { probe: realProbe,
 const withTimeout = (p, ms, v = null) => Promise.race([p, new Promise((r) => setTimeout(() => r(v), ms).unref?.())]);
 const SKIP_IF = /^(docker|br-|veth|virbr|lo$|cni|flannel|cali|vxlan|tun|tap|zt|tailscale|wg|podman|lxc|lxd)/;
 
-/** /24-nettene som skal skannes (prefiks 'a.b.c'): klientens LAN-adresse først, så serverens egne grensesnitt. Bare private nett. */
-export function scanNets(client) {
+// Prompt 34: i Docker (bridge) ser serveren bare 172.17.x.x, og klienten kommer ofte via tunnel/offentlig IP. Da fant skanningen
+// ingenting. Nå prøves i rekkefølge: klientens LAN-adresse (fra kroppen: lanIp/subnet, eller forespørselen), LAN_SUBNET (env,
+// komma-separert: «192.168.1.0/24,10.0.0»), kjente Homelab-adresser (tjenestene i Nettverk, SMB-sharen, Ollama), serverens egne
+// grensesnitt, og til slutt vanlige hjemmenett (192.168.0/1/50/86/10/100/178, 10.0.0/1, 172.16.0). Bare private nett.
+export const COMMON_NETS = ['192.168.1', '192.168.0', '192.168.50', '192.168.86', '192.168.10', '192.168.100', '192.168.178', '10.0.0', '10.0.1', '172.16.0'];
+const netOf = (ip) => { const v = String(ip ?? '').trim().replace(/^::ffff:/, '').replace(/\/\d+$/, ''); const m = v.match(/^(\d+\.\d+\.\d+)(?:\.\d+)?$/); return m && isPrivate4(`${m[1]}.1`) ? m[1] : null; };
+const hostOfUrl = (u) => { try { return new URL(String(u)).hostname; } catch { return null; } };
+const inDocker = () => { try { return existsSync('/.dockerenv') || /docker|containerd|kubepods/.test(readFileSync('/proc/1/cgroup', 'utf8')); } catch { return false; } };
+/** Kjente adresser fra Homelab (tjenester i Nettverk, SMB-sharen, Ollama). → [{ip, name, source}] (bare private IPv4) */
+export function knownHosts() {
   const out = [];
-  const add = (ip) => { const v = String(ip ?? '').replace(/^::ffff:/, ''); if (!isPrivate4(v)) return; const p = v.split('.').slice(0, 3).join('.'); if (!out.includes(p)) out.push(p); };
+  const add = (ip, name, source) => { if (isPrivate4(ip) && !out.some((x) => x.ip === ip)) out.push({ ip, name, source }); };
+  try { for (const [name, url] of config.services ?? []) add(hostOfUrl(url), name, 'nettverk'); } catch { /* */ }
+  try { const st = fhSettings(); const m = String(st.smbShare ?? '').match(/^\/\/([^/]+)/); if (m) add(m[1], 'Nettverksdisk', 'backup'); add(hostOfUrl(st.ollamaUrl), 'Ollama', 'ai'); } catch { /* */ }
+  for (const ip of String(process.env.SMB_HOSTS ?? '').split(',').map((x) => x.trim()).filter(Boolean)) add(ip, ip, 'env');
+  return out;
+}
+/** /24-nettene som skal skannes (prefiks 'a.b.c'), i prioritert rekkefølge. hints: {lanIp?, subnet?} fra klienten. */
+export function scanNets(client, hints = {}, { max = 8, common = false, known = false } = {}) {
+  const out = [];
+  const add = (ip) => { const p = netOf(ip); if (p && !out.includes(p)) out.push(p); };
+  add(hints.lanIp); add(hints.subnet);
   add(client);
+  for (const x of String(process.env.LAN_SUBNET ?? '').split(',')) add(x);
+  if (known) for (const h of knownHosts()) add(h.ip);
+  const docker = [];
   for (const [name, list] of Object.entries(NET.interfaces() ?? {})) {
     if (SKIP_IF.test(name)) continue;
-    for (const a of list ?? []) if ((a.family === 'IPv4' || a.family === 4) && !a.internal) add(a.address);
+    for (const a of list ?? []) if ((a.family === 'IPv4' || a.family === 4) && !a.internal) { if (/^172\.(1[6-9]|2\d|3[01])\./.test(a.address) && inDocker()) docker.push(a.address); else add(a.address); }
   }
-  return out.slice(0, 4);
+  if (common) for (const n of COMMON_NETS) add(`${n}.1`);
+  for (const d of docker) add(d); // Docker-bridge sist: der er det sjelden en NAS
+  return out.slice(0, max);
 }
 
-/** Finner SMB-servere: TCP 445 på hver vert, maks 64 samtidig, 300 ms per vert, ca. 6 s totalt. */
-export async function discover(client, { budget = 6000 } = {}) {
-  if (MOCK) { await new Promise((r) => setTimeout(r, process.env.NODE_ENV === 'test' ? 0 : 700)); return [{ ...MOCK_NAS }]; }
-  const t0 = Date.now(), scanEnd = t0 + budget - 1500;
-  const ips = scanNets(client).flatMap((p) => Array.from({ length: 254 }, (_, i) => `${p}.${i + 1}`));
-  const found = [];
-  let i = 0;
+// mDNS (Avahi) og NetBIOS-kringkasting når verktøyene finnes (virker bare med host-nettverk / Avahi-socket i containeren).
+const execOut = (cmd, args, timeout) => new Promise((res) => execFile(cmd, args, { timeout }, (e, out) => res(e?.code === 'ENOENT' ? null : String(out ?? ''))));
+export function parseAvahi(out) {
+  const r = [];
+  for (const l of String(out ?? '').split('\n')) {
+    const f = l.split(';');
+    if (f[0] !== '=' || f[2] !== 'IPv4' || !isPrivate4(f[7])) continue;
+    if (!r.some((x) => x.ip === f[7])) r.push({ ip: f[7], host: f[6] || f[7], name: f[3]?.replace(/\\032/g, ' ') || f[6], method: 'mdns', ...(/model=([^"]+)/.exec(f[9] ?? '') ? { model: /model=([^"]+)/.exec(f[9])[1] } : {}) });
+  }
+  return r;
+}
+export function parseNmbBroadcast(out) {
+  const r = [];
+  for (const l of String(out ?? '').split('\n')) { const m = l.match(/^(\d+\.\d+\.\d+\.\d+)\s+(\S+)<00>/); if (m && isPrivate4(m[1]) && !r.some((x) => x.ip === m[1])) r.push({ ip: m[1], name: m[2], method: 'netbios' }); }
+  return r;
+}
+let EXTRA = {
+  mdns: async () => parseAvahi(await execOut('avahi-browse', ['-rpt', '_smb._tcp'], 4000)),
+  netbios: async () => parseNmbBroadcast(await execOut('nmblookup', ['-S', '*'], 4000)),
+};
+/** Bare for tester. */
+export const _setDiscoverExtra = (o) => { EXTRA = o ?? { mdns: async () => [], netbios: async () => [] }; };
+
+/**
+ * Finner SMB-servere. Alle metodene parallelt (mDNS, NetBIOS, kjente adresser, TCP 445 på /24-nettene), slått sammen på IP.
+ * onEvent({type:'progress', net, pct, scanned, total} | {type:'found', device}) for fremdrift.
+ * → {devices:[{host, ip, name?, model?, methods:[...], known?}], nets:['192.168.1.0/24'], ms, methods:{mdns, netbios, known, tcp445},
+ *    docker, reason?, hint?, suggestions:[{ip, name, source}]}
+ */
+export async function scan(client, { hints = {}, budget = 8000, onEvent = () => {}, common = true, useKnown = true, extras = true, skip = [] } = {}) {
+  const t0 = Date.now();
+  const nets = scanNets(client, hints, { common, known: useKnown }).filter((n) => !skip.includes(n));
+  const known = useKnown ? knownHosts() : [];
+  if (MOCK) {
+    await new Promise((r) => setTimeout(r, process.env.NODE_ENV === 'test' ? 0 : 700));
+    const d = { ...MOCK_NAS, methods: ['tcp445', 'mdns'], model: 'TrueNAS (demo)' };
+    onEvent({ type: 'progress', net: `${nets[0] ?? '192.168.1'}.0/24`, pct: 100, scanned: 254, total: 254 }); onEvent({ type: 'found', device: d });
+    return { devices: [d], nets: nets.map((n) => `${n}.0/24`), ms: Date.now() - t0, methods: { mdns: 1, netbios: 0, known: 0, tcp445: 1 }, docker: false, suggestions: known };
+  }
+  const found = new Map();
+  const put = (x, method) => {
+    const cur = found.get(x.ip) ?? { host: x.host || x.ip, ip: x.ip, methods: [] };
+    if (!cur.methods.includes(method)) cur.methods.push(method);
+    if (x.name && !cur.name) cur.name = x.name;
+    if (x.model && !cur.model) cur.model = x.model;
+    if (x.host && cur.host === cur.ip && x.host !== x.ip) cur.host = x.host;
+    if (x.known) cur.known = x.known;
+    const isNew = !found.has(x.ip);
+    found.set(x.ip, cur);
+    if (isNew) onEvent({ type: 'found', device: cur });
+  };
+  const counts = { mdns: 0, netbios: 0, known: 0, tcp445: 0 };
+  const extra = !extras ? Promise.resolve() : Promise.all([
+    withTimeout(EXTRA.mdns().catch(() => []), 4500, []).then((l) => { for (const x of l ?? []) { put(x, 'mdns'); counts.mdns++; } }),
+    withTimeout(EXTRA.netbios().catch(() => []), 4500, []).then((l) => { for (const x of l ?? []) { put(x, 'netbios'); counts.netbios++; } }),
+    Promise.all(known.map(async (k) => { if (await NET.probe(k.ip, 445, 600)) { put({ ip: k.ip, name: k.name, known: k.source }, 'known'); counts.known++; } })),
+  ]);
+  const scanEnd = t0 + budget - 1500;
+  const ips = nets.flatMap((p) => Array.from({ length: 254 }, (_, i) => `${p}.${i + 1}`));
+  let i = 0, done = 0, lastPct = -1;
   const worker = async () => {
     while (i < ips.length && Date.now() < scanEnd) {
       const ip = ips[i++];
-      if (await NET.probe(ip, 445, 300)) found.push(ip);
+      if (await NET.probe(ip, 445, 300)) { put({ ip }, 'tcp445'); counts.tcp445++; }
+      done++;
+      const pct = Math.round((done / ips.length) * 100);
+      if (pct !== lastPct && (pct % 5 === 0 || done === ips.length)) { lastPct = pct; onEvent({ type: 'progress', net: `${ip.split('.').slice(0, 3).join('.')}.0/24`, pct, scanned: done, total: ips.length }); }
     }
   };
-  await Promise.all(Array.from({ length: Math.min(64, ips.length) }, worker));
+  await Promise.all([...Array.from({ length: Math.min(64, ips.length) }, worker), extra]);
   const left = Math.max(300, t0 + budget - Date.now());
-  const named = await Promise.all(found.slice(0, 40).map(async (ip) => {
-    const [nb, rev] = await withTimeout(Promise.all([NET.netbios(ip).catch(() => null), NET.reverse(ip).catch(() => null)]), left, [null, null]);
-    const r = { host: rev || ip, ip };
-    if (nb || rev) r.name = nb || rev;
-    return r;
+  const devices = await Promise.all([...found.values()].slice(0, 40).map(async (d) => {
+    if (d.name && d.host !== d.ip) return d;
+    const [nb, rev] = await withTimeout(Promise.all([d.name ? null : NET.netbios(d.ip).catch(() => null), d.host !== d.ip ? null : NET.reverse(d.ip).catch(() => null)]), left, [null, null]);
+    if (rev) d.host = rev;
+    if (!d.name && (nb || rev)) d.name = nb || rev;
+    return d;
   }));
-  return named.sort((a, b) => a.ip.split('.').map(Number).reduce((x, y, k) => x || y - b.ip.split('.').map(Number)[k], 0));
+  devices.sort((a, b) => (b.known ? 1 : 0) - (a.known ? 1 : 0) || a.ip.split('.').map(Number).reduce((x, y, k) => x || y - b.ip.split('.').map(Number)[k], 0));
+  const docker = inDocker();
+  const out = { devices, nets: nets.map((n) => `${n}.0/24`), ms: Date.now() - t0, methods: counts, docker, suggestions: known, scanned: done, total: ips.length };
+  if (!devices.length) {
+    out.reason = done < ips.length ? `Rakk bare å skanne ${done} av ${ips.length} adresser i ${out.nets.join(', ')}.` : `Ingen svarte på SMB (port 445) i ${out.nets.join(', ')}.`;
+    out.hint = `Fant ingen. Sjekk at NAS-en er på samme nett${docker ? ' (Homelab kjører i Docker, så sett LAN_SUBNET=192.168.1.0/24 eller bruk network_mode: host for oppdagelse)' : ''}, eller legg til manuelt: smb://${known[0]?.ip ?? '192.168.1.20'}`;
+  }
+  console.info(`[smb] skann nett=${out.nets.join(',')} metoder=mdns:${counts.mdns},netbios:${counts.netbios},kjente:${counts.known},445:${counts.tcp445} funn=${devices.length} ms=${out.ms}${docker ? ' docker' : ''}`);
+  return out;
+}
+
+/**
+ * Eldre form (prompt 30): bare listen [{host, ip, name?}]. Først klientens og serverens egne nett; finnes ingenting og det er tid
+ * igjen, prøves kjente Homelab-adresser, mDNS/NetBIOS og de vanlige hjemmenettene (prompt 34).
+ */
+export async function discover(client, { budget = 6000, hints = {} } = {}) {
+  const t0 = Date.now();
+  const first = scanNets(client, hints, { common: false, known: false });
+  let r = await scan(client, { budget, hints, common: false, useKnown: false, extras: false });
+  const left = budget - (Date.now() - t0);
+  if (!r.devices.length && left > 2000) r = await scan(client, { budget: left, hints, skip: first });
+  return r.devices.map(({ host, ip, name }) => ({ host, ip, ...(name ? { name } : {}) }));
 }
 
 /** Vertsnavnet må peke til hjemmenettet. Et navn som ikke slår opp (NetBIOS) får smbclient prøve selv. */
@@ -173,10 +286,34 @@ export function parseShares(out) {
   return rows.sort((a, b) => a.name.localeCompare(b.name, 'nb'));
 }
 export const parseLs = parseSmbLs;
-// Systemmapper på NAS-er (Synology/QNAP) som ikke er nyttige som backupmål.
-const HIDE_DIR = /^(@|#recycle$|\.|\$RECYCLE\.BIN$|System Volume Information$|lost\+found$)/i;
-export const foldersOf = (out) => parseLs(out).filter((r) => r.type === 'dir' && !HIDE_DIR.test(r.name) && SMB_SEG.test(r.name))
-  .map(({ name }) => ({ name, type: 'dir' })).sort((a, b) => a.name.localeCompare(b.name, 'nb', { numeric: true }));
+// Prompt 34: bare de eksakte systemnavnene filtreres (før: alt som startet med @ eller ., f.eks. «@backup»). Navn som «backup»,
+// «Backups» og «Time Machine» vises alltid. Mapper som starter med «.» vises med «Vis skjulte».
+export const SYSTEM_DIRS = ['@eaDir', '@tmp', '@sharebin', '@Recycle', '@Recently-Snapshot', '@SynoResource', '@SynoEAStream', '#recycle', '#snapshot', '$RECYCLE.BIN', 'System Volume Information', 'lost+found', '.TemporaryItems', '.Trashes', '.Spotlight-V100', '.fseventsd'];
+const SYS = new Set(SYSTEM_DIRS.map((x) => x.toLowerCase()));
+/**
+ * Mappene i en ls-utskrift, med årsak for alt som ble filtrert bort.
+ * → {folders:[{name, display?, type:'dir', hidden?, link?, unsupported?, reason?}], filtered:[{name, attrs, why}], raw:[{name, attrs, type}]}
+ */
+export function foldersDetail(out, { showHidden = false } = {}) {
+  const raw = parseLs(out), folders = [], filtered = [];
+  for (const r of raw) {
+    if (r.type !== 'dir') continue;
+    const nfc = r.name.normalize('NFC');
+    if (SYS.has(nfc.toLowerCase())) { filtered.push({ name: r.name, attrs: r.attrs, why: 'systemmappe' }); continue; }
+    const hidden = nfc.startsWith('.') || /H/.test(r.attrs ?? '');
+    if (hidden && !showHidden) { filtered.push({ name: r.name, attrs: r.attrs, why: 'skjult (Vis skjulte)' }); continue; }
+    const f = { name: r.name, type: 'dir' };
+    if (nfc !== r.name) f.display = nfc;
+    if (hidden) f.hidden = true;
+    if (r.link) f.link = true;
+    if (!SMB_SEG.test(r.name)) { f.unsupported = true; f.reason = 'Navnet har tegn Homelab ikke kan bruke i SMB-kommandoer (" \' ; ` $ * ? eller lignende). Gi mappen et nytt navn på NAS-en.'; }
+    folders.push(f);
+  }
+  folders.sort((x, y) => (x.display ?? x.name).localeCompare(y.display ?? y.name, 'nb', { numeric: true }));
+  return { folders, filtered, raw: raw.map((r) => ({ name: r.name, attrs: r.attrs, type: r.type })) };
+}
+// Prompt 30-formen: plain mapper er {name, type:'dir'}; skjulte systemmapper filtreres. «.»-mapper skjules (Vis skjulte i /list).
+export const foldersOf = (out, o = {}) => foldersDetail(out, o).folders;
 
 /** Lister shares: prøver SMB3 først, så SMB2. */
 export async function listShares(t) {
@@ -193,16 +330,47 @@ async function inShare(t, { dir = t.path, cmd, timeout = 30_000 }) {
   if (st) { const e = smbErrorText(st); throw Object.assign(new Error(e.message), { status: 502, kind: e.kind }); }
   return out;
 }
-export const browse = async (t) => foldersOf(await inShare(t, { cmd: 'ls' }));
+/**
+ * Mappene i t.path med tilgangssjekk: ett ekstra smbclient-kall (ls "mappe/*" per mappe, maks 40) markerer mapper uten
+ * List folder/Read-rett med locked:true og reason. Rå liste og filtrerte navn logges (feilsøking: kom «backup» fra serveren?).
+ * → {folders, filtered, rawCount, path, protocol}
+ */
+export async function list(t, { showHidden = false, checkAccess = true } = {}) {
+  const out = await inShare(t, { cmd: 'ls' });
+  const d = foldersDetail(out, { showHidden });
+  const where = `//${t.host}/${t.share}${t.path ? '/' + t.path : ''}`;
+  console.info(`[smb] ls ${where} dialekt≥${t.protocol} rå=${JSON.stringify(d.raw.map((r) => `${r.name}${r.attrs ? ` [${r.attrs}]` : ''}`))} filtrert=${JSON.stringify(d.filtered.map((f) => `${f.name}: ${f.why}`))}`);
+  const check = d.folders.filter((f) => !f.unsupported).slice(0, 40);
+  if (checkAccess && check.length) {
+    try {
+      const res = await smbRun({ share: `//${t.host}/${t.share}`, ...conn(t), proto: t.protocol, dir: t.path || undefined, cmd: [...check.map((f) => `ls "${f.name}/*"`), 'pwd'].join('; '), timeout: 30_000 });
+      for (const m of String(res).matchAll(/NT_STATUS_([A-Z_]+) listing \\?(?:.*\\)?([^\\\n]+)\\\*/g)) {
+        const f = check.find((x) => x.name === m[2] || x.name.normalize('NFC') === m[2].normalize('NFC'));
+        if (!f) continue;
+        if (/ACCESS_DENIED|NETWORK_ACCESS_DENIED/.test(m[1])) { f.locked = true; f.code = `STATUS_${m[1]}`; f.reason = `Ingen tilgang for ${t.user || 'gjest'}. Gi brukeren ${t.user || 'gjest'} lese- og skrivetilgang til mappen i NAS-ens innstillinger.`; }
+        else if (/NOT_A_DIRECTORY|OBJECT_PATH_NOT_FOUND|OBJECT_NAME_NOT_FOUND/.test(m[1]) && f.link) { f.broken = true; f.reason = 'Snarvei (junction/symlink) som ikke peker til en mappe'; }
+      }
+    } catch (e) { console.warn(`[smb] tilgangssjekk i ${where} feilet: ${e.message}`); }
+  }
+  return { path: t.path, share: t.share, folders: d.folders, filtered: d.filtered, rawCount: d.raw.length, protocol: t.protocol };
+}
+// Prompt 30-formen (array). Mapper uten tilgang er med (locked:true) i stedet for å forsvinne.
+export const browse = async (t, o = {}) => (await list(t, o)).folders;
 export async function mkdir(t, name) {
   await inShare(t, { cmd: `mkdir "${cleanName(name)}"` });
   return { ok: true, path: [t.path, name].filter(Boolean).join('/') };
 }
+const statusOf = (e) => { const m = String(e?.raw ?? e?.message ?? '').match(/NT_STATUS_([A-Z_]+)/); return m ? `STATUS_${m[1]}` : null; };
+/**
+ * Test skrivetilgang (prompt 34): skriver .homelab-test-{uuid} (1 MiB), leser den tilbake og sammenligner, sletter den.
+ * → {ok, writable, readBack, message:'✓ Kan skrive · 38 MB/s …' | '✗ Ingen skrivetilgang: STATUS_ACCESS_DENIED …', mbps?, code?}
+ */
 export async function writeTest(t) {
   const SIZE = 1024 * 1024;
-  const local = join(WORK, `.smbtest-${randomUUID()}`);
-  const remote = `.homelab-skrivetest-${randomBytes(4).toString('hex')}.tmp`;
-  writeFileSync(local, randomBytes(SIZE), { mode: 0o600 });
+  const local = join(WORK, `.smbtest-${randomUUID()}`), back = `${local}.back`;
+  const remote = `.homelab-test-${randomUUID()}`;
+  const data = randomBytes(SIZE);
+  writeFileSync(local, data, { mode: 0o600 });
   const label = `//${t.host}/${t.share}${t.path ? '/' + t.path : ''}`;
   try {
     // Tilkobling og lesing først, så skriving (feil i put skal gi «kan ikke skrive», ikke «finner ikke serveren»).
@@ -210,17 +378,20 @@ export async function writeTest(t) {
     const t0 = Date.now();
     try { await inShare(t, { cmd: `put "${localArg(local)}" "${remote}"`, timeout: 60_000 }); }
     catch (e) {
-      if (e.kind === 'access') return { ok: true, writable: false, message: `Koblet til ${label}, men brukeren har ikke skrivetilgang her. Gi brukeren skrivetilgang på NAS-en, eller velg en annen mappe.` };
-      if (e.kind === 'full') return { ok: true, writable: false, message: e.message };
+      const code = statusOf(e) ?? (e.kind === 'access' ? 'STATUS_ACCESS_DENIED' : null);
+      if (e.kind === 'access') return { ok: true, writable: false, code, message: `✗ Ingen skrivetilgang: ${code} · Koblet til ${label}, men brukeren har ikke skrivetilgang her. Gi brukeren ${t.user || 'gjest'} lese- og skrivetilgang til mappen i NAS-ens innstillinger, eller velg en annen mappe.` };
+      if (e.kind === 'full') return { ok: true, writable: false, code, message: `✗ ${e.message}${code ? ` (${code})` : ''}` };
       throw e;
     }
     const sec = Math.max(0.05, (Date.now() - t0) / 1000);
     const mbps = Math.round((SIZE / 1e6 / sec) * 10) / 10;
+    let readBack = null;
+    try { await inShare(t, { cmd: `get "${remote}" "${localArg(back)}"` }); readBack = readFileSync(back).equals(data); } catch { readBack = null; }
     let left = '';
     try { await inShare(t, { cmd: `del "${remote}"` }); } catch { left = ` Testfila ${remote} ble liggende igjen – slett den gjerne.`; }
-    return { ok: true, writable: true, mbps, message: `✓ Skrev og slettet en testfil i ${label} (ca. ${String(mbps).replace('.', ',')} MB/s).${left}` };
-  } catch (e) { return { ok: false, writable: false, message: e.message }; }
-  finally { rmSync(local, { force: true }); }
+    return { ok: true, writable: true, readBack, mbps, message: `✓ Kan skrive · ${String(mbps).replace('.', ',')} MB/s. Skrev og slettet en testfil i ${label}${readBack ? ' (lest tilbake og kontrollert)' : ''}.${readBack === false ? ' Obs: fila som ble lest tilbake var ikke lik.' : ''}${left}` };
+  } catch (e) { const code = statusOf(e); return { ok: false, writable: false, code, message: `✗ ${e.message}${code ? ` (${code})` : ''}` }; }
+  finally { rmSync(local, { force: true }); rmSync(back, { force: true }); }
 }
 
 /** Lagrer: FinansHub-backupens SMB-innstillinger (alltid, de er felles påloggingen) og systembackupens SMB-mål. */
@@ -256,16 +427,39 @@ const run = (fn) => async (c) => {
   catch (e) { return c.json({ error: String(e.message ?? e).slice(0, 400), ...(e.kind ? { kind: e.kind } : {}) }, e.status ?? 500); }
 };
 
-api.post('/discover', run(async (_b, c) => discover(clientIp(c))));
+const hintsOf = (b) => ({ lanIp: typeof b.lanIp === 'string' ? b.lanIp.slice(0, 45) : null, subnet: typeof b.subnet === 'string' ? b.subnet.slice(0, 45) : null });
+api.post('/discover', run(async (b, c) => discover(clientIp(c), { hints: hintsOf(b) })));
+// Prompt 34: POST /scan {lanIp?, subnet?} – med Accept: text/event-stream: SSE «progress» {net, pct, scanned, total}, «found» {device}
+// og «done» (samme som JSON-svaret). JSON: {devices, nets, ms, methods, docker, suggestions, reason?, hint?}.
+api.post('/scan', async (c) => {
+  const b = await body(c);
+  if (!/text\/event-stream/.test(c.req.header('accept') ?? '')) {
+    try { return c.json(await scan(clientIp(c), { hints: hintsOf(b) })); } catch (e) { return c.json({ error: String(e.message ?? e).slice(0, 300) }, 500); }
+  }
+  return streamSSE(c, async (st) => {
+    const r = await scan(clientIp(c), { hints: hintsOf(b), onEvent: (e) => { st.writeSSE({ event: e.type, data: JSON.stringify(e.type === 'found' ? e.device : e) }).catch(() => {}); } });
+    await st.writeSSE({ event: 'done', data: JSON.stringify(r) });
+  });
+});
 api.post('/probe', run(async (b) => {
   const host = cleanHost(b.host);
   const ip = await checkHost(host);
-  if (MOCK) return ['nas.local', 'nas', '192.168.1.20', '192.168.1.30', 'gammel-nas.local'].includes(host) ? { ok: true, host, ip: ip ?? host } : { ok: false, host, message: `Fant ikke ${host} på nettverket. Sjekk adressen, og at SMB er slått på på NAS-en.` };
+  if (MOCK) return ['nas.local', 'nas', '192.168.1.20', '192.168.1.30', 'gammel-nas.local', 'truenas.local', '192.168.1.40'].includes(host) ? { ok: true, host, ip: ip ?? host } : { ok: false, host, message: `Fant ikke ${host} på nettverket. Sjekk adressen, og at SMB er slått på på NAS-en.` };
   const ok = await NET.probe(ip ?? host, 445, 1500);
   return ok ? { ok: true, host, ip: ip ?? null } : { ok: false, host, ip: ip ?? null, message: `Fant ikke SMB på ${host} (port 445). Sjekk adressen, at NAS-en er på, og at SMB (fildeling for Windows) er slått på.` };
 }));
 api.post('/shares', run(async (b) => { const t = cleanTarget(b); await checkHost(t.host); return listShares(t); }));
-api.post('/browse', run(async (b) => { const t = cleanTarget(b, { share: true }); await checkHost(t.host); return browse(t); }));
+api.post('/browse', run(async (b) => { const t = cleanTarget(b, { share: true }); await checkHost(t.host); return browse(t, { showHidden: b.showHidden === true }); }));
+// Prompt 34: POST /list {…, share | manual, path, showHidden?} → {path, share, folders:[{name, display?, type:'dir', locked?, code?, reason?, hidden?, link?, unsupported?}],
+//   filtered:[{name, attrs, why}], rawCount, protocol, hint?}
+api.post('/list', run(async (b) => {
+  const t = cleanTarget(b, { share: true });
+  await checkHost(t.host);
+  const r = await list(t, { showHidden: b.showHidden === true });
+  if (r.folders.some((f) => f.locked)) r.hint = `Mapper med lås er synlige, men ${t.user || 'gjest'} har ikke tilgang. Gi brukeren lese- og skrivetilgang til mappen i NAS-ens innstillinger (Synology DSM: Kontrollpanel → Delt mappe → Rediger → Tillatelser; TrueNAS: Datasets → Edit Permissions).`;
+  else if (!r.folders.length) r.hint = 'Ingen mapper her. Ser du ikke mappen du venter? Den kan være skjult for brukeren (Access-Based Enumeration) eller være en egen share. Skriv stien manuelt, for eksempel /backup/homelab, og test den.';
+  return r;
+}));
 api.post('/mkdir', run(async (b) => { const t = cleanTarget(b, { share: true }); cleanName(b.name); await checkHost(t.host); return mkdir(t, b.name); }));
 api.post('/test', run(async (b) => { const t = cleanTarget(b, { share: true }); await checkHost(t.host); return writeTest(t); }));
 api.post('/save', run(async (b) => {

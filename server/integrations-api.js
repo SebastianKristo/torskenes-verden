@@ -401,7 +401,8 @@ api.delete('/:id/:key', (c) => {
 export default api;
 
 /* ---------------- ✦ AI-søk i innstillingene (prompt 24) ---------------- */
-// POST /api/settings/ai-search {q, items:[{id, title, path}]} → {answer, ids, provider, mode:'ai'|'text'}.
+// POST /api/settings/ai-search {q, items:[{id, title, path, anchor?}]} → {answer, ids, provider, mode:'ai'|'text', anchor, goMs:1600,
+//   target:{id, route, anchor, tip?, title, path}|null} (prompt 34: anchor fra klienten eller fra /api/settings/index).
 // Klienten sender sin egen indeks over innstillingene; AI-en velger id-er fra den (ukjente id-er fjernes). Uten AI-motor
 // (eller når den feiler) brukes enkel tekstmatch med noen vanlige synonymer.
 const fold = (s) => String(s ?? '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/ø/g, 'o').replace(/æ/g, 'ae').replace(/å/g, 'a');
@@ -438,9 +439,18 @@ settingsSearchApi.post('/ai-search', readAuth, async (c) => {
   const q = String(b.q ?? '').replace(/\s+/g, ' ').trim().slice(0, 300);
   if (!q) return c.json({ error: 'Skriv hva du leter etter' }, 400);
   if (!Array.isArray(b.items) || !b.items.length) return c.json({ error: 'Mangler items (listen over innstillinger)' }, 400);
-  const items = b.items.slice(0, 400).map((x) => ({ id: String(x?.id ?? '').slice(0, 80), title: String(x?.title ?? '').slice(0, 120), path: String(x?.path ?? '').slice(0, 200) })).filter((x) => x.id && x.title);
+  const items = b.items.slice(0, 400).map((x) => ({ id: String(x?.id ?? '').slice(0, 80), title: String(x?.title ?? '').slice(0, 120), path: String(x?.path ?? '').slice(0, 200), ...(typeof x?.anchor === 'string' ? { anchor: x.anchor.slice(0, 40) } : {}) })).filter((x) => x.id && x.title);
   const known = new Set(items.map((x) => x.id));
-  const text = () => { const hits = textSearch(q, items); return { mode: 'text', provider: null, answer: textAnswer(hits), ids: hits.map((x) => x.id) }; };
+  // Prompt 34: mål for markering. Klientens anchor, ellers serverindeksen (/api/settings/index) med samme id, ellers beste nøkkelordtreff der.
+  const { SETTINGS_INDEX, keywordMatch } = await import('./settings-ask30.js');
+  const idx = SETTINGS_INDEX.filter((x) => isAdmin(c.get('user')) || !x.admin);
+  const targetOf = (id) => {
+    const own = items.find((x) => x.id === id);
+    const srv = idx.find((x) => x.id === id) ?? (own?.anchor ? null : keywordMatch(q, idx, 1, true).find((x) => x.score >= 3.5));
+    const anchor = own?.anchor ?? srv?.anchor ?? null;
+    return { anchor, target: srv || anchor ? { id: srv?.id ?? id, route: srv?.route ?? null, anchor, ...(srv?.tip ? { tip: srv.tip } : {}), title: srv?.title ?? own?.title ?? null, path: srv?.path ?? own?.path ?? null } : null, goMs: 1600 };
+  };
+  const text = () => { const hits = textSearch(q, items); return { mode: 'text', provider: null, answer: textAnswer(hits), ids: hits.map((x) => x.id), ...targetOf(hits[0]?.id) }; };
   const ai = aiImpl ?? (MOCK ? null : (await import('./homeos-common.js')).aiJson);
   if (!ai) return c.json(text());
   const schema = { type: 'OBJECT', properties: { answer: { type: 'STRING' }, ids: { type: 'ARRAY', items: { type: 'STRING' } } }, required: ['answer', 'ids'] };
@@ -453,7 +463,7 @@ settingsSearchApi.post('/ai-search', readAuth, async (c) => {
     const ids = [...new Set((Array.isArray(r?.data?.ids) ? r.data.ids : []).map(String).filter((id) => known.has(id)))].slice(0, 8);
     const answer = String(r?.data?.answer ?? '').trim().slice(0, 600);
     if (!answer && !ids.length) throw new Error('Tomt svar');
-    return c.json({ mode: 'ai', provider: r.provider ?? null, answer: answer || textAnswer(items.filter((x) => ids.includes(x.id))), ids });
+    return c.json({ mode: 'ai', provider: r.provider ?? null, answer: answer || textAnswer(items.filter((x) => ids.includes(x.id))), ids, ...targetOf(ids[0]) });
   } catch (e) {
     return c.json({ ...text(), fallback: true, reason: e.message });
   }

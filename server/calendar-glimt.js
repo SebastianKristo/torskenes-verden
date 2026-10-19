@@ -8,7 +8,8 @@
 //           repeat:'none'|'daily'|'weekly'|'monthly', reminder:'none'|'15m'|'1h'|'day', reminderMinutes:null|-1|10|15|60|1440, note}}
 //   event kan sendes rett til POST /api/kalender/events (eventInput), eventuelt etter at brukeren har rettet feltene.
 // GET /api/kalender/search?q=…&ai=1 → {q, ai:true, answer, events, total}
-//   answer = {text, kind:'day'|'free'|'tests'|'next'|'last'|'month'|'llm'|'none', engine:'lokal'|'ollama'|'none',
+//   answer = {text, kind:'day'|'free'|'tests'|'next'|'last'|'month'|'llm'|'none'|'error', engine:'lokal'|'ollama'|'none',
+//             (prompt 34: kind 'error' → text = «Glimt fikk ikke svar fra {modell}: {feil}», error, fix:'model'|'api'|'valg'|'nett'|null)
 //             items:[hendelse ≤ 6 (samme form som /api/kalender)], free?:[{from:'12:00', to:'14:00'}], from?, to?}
 //   events/total = vanlige treff (tittel, sted, notat, fag) fra 30 dager bakover til 120 dager fremover (uten ai=1: gamle /search).
 //   Forstår: i dag/i morgen/i overmorgen/ukedag/neste uke/resten av uka · «ledig fredag ettermiddag» · «når er neste prøve» ·
@@ -19,7 +20,7 @@ import { authOrToken } from './mobile.js';
 import { eventsFor, matchScore, normText } from './calendar.js';
 import { settings as fhSettings } from './finans/db.js';
 import { parseQuick, osloTodayISO } from '../public/js/quick-time.js';
-import { ollamaContent, ollamaPost, shortBody } from './ollama-opts.js';
+import { run as aiRun } from './ai-run.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const LLM_MS = 12_000;
@@ -50,13 +51,9 @@ export const _setCalendarGlimtLlm = (fn) => { llmImpl = fn; };
 async function ollama(prompt, user, json = false) {
   if (llmImpl) return llmImpl(prompt, user);
   if (MOCK && !process.env.OLLAMA_URL) return null;
-  const st = fhSettings(user);
-  const base = String(st.ollamaUrl ?? '').replace(/\/$/, '');
-  if (!base) return null;
-  const r = await ollamaPost((u, i) => fetch(u, i), `${base}/api/generate`,
-    shortBody({ model: st.ollamaTextModel || st.ollamaModel, prompt, stream: false, ...(json ? { format: 'json' } : {}), options: { temperature: 0 }, keep_alive: '10m' }, { user }), { signal: AbortSignal.timeout(LLM_MS) });
-  if (!r.ok) throw new Error(`Ollama svarte ${r.status}`);
-  return ollamaContent(await r.json());
+  // Prompt 34: ruten «Glimt · kalender» (ai.run) – validert modell, reserve og tydelig feil (AiRunError) i stedet for stille null.
+  const out = await aiRun('glimt', { user, prompt, json, temperature: 0, numPredict: json ? 200 : 160, title: json ? 'Glimt · beskriv hendelse' : 'Glimt · kalenderspørsmål' });
+  return out.text;
 }
 
 /* ---------------- Beskriv med Glimt ---------------- */
@@ -117,6 +114,16 @@ export async function describe(user, text, today = osloTodayISO()) {
 /* ---------------- Spør Glimt i kalenderen ---------------- */
 
 const STOP = new Set(['når', 'er', 'neste', 'min', 'mitt', 'mi', 'mine', 'time', 'timen', 'har', 'hadde', 'jeg', 'skal', 'hva', 'hos', 'den', 'det', 'en', 'et', 'på', 'i', 'meg', 'til', 'sist', 'siste', 'gang', 'forrige', 'var', 'vært', 'alle', 'mine', 'skjer', 'av', 'med', 'om']);
+// Prompt 34: «frisørtime» → «frisør» (treffer «Nina frisør»). Suffikser fjernes, og delord matcher begge veier med minst 4 tegn felles prefiks.
+export const stemWord = (w) => { let x = normText(w); for (const suf of ['avtalen', 'avtale', 'timen', 'time', 'ene', 'en', 'et', 'er']) if (x.endsWith(suf) && x.length - suf.length >= 4) { x = x.slice(0, -suf.length); break; } return x; };
+const prefixLen = (a, b) => { let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++; return i; };
+export function kwHit(w, ...fields) {
+  if (matchScore(w, ...fields) > 0) return true;
+  const st = stemWord(w);
+  if (st !== normText(w) && matchScore(st, ...fields) > 0) return true;
+  const words = fields.map(normText).join(' ').split(/[\s,.;:()/–-]+/).filter((x) => x.length >= 4);
+  return words.some((x) => prefixLen(x, st) >= 4 && (x.startsWith(st) || st.startsWith(x)));
+}
 const dayList = (events, d) => events.filter((e) => e.date === d || (e.allDay && e.date <= d && e.end > d));
 const sortEv = (a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : (hmOf(a) ?? '00:00') < (hmOf(b) ?? '00:00') ? -1 : 1);
 const shortT = (e) => e.subject || e.title;
@@ -174,7 +181,7 @@ export function localAnswer(q, events, today = osloTodayISO(), nm = nowMin()) {
   if (/\bsist\b|forrige gang|hadde jeg|var jeg/.test(n)) {
     const kw = n.split(' ').filter((w) => w && !STOP.has(w));
     if (kw.length) {
-      const L = events.filter((e) => (e.date < today || (e.date === today && endHm(e) && mins(endHm(e)) <= nm)) && kw.every((w) => matchScore(w, e.title, e.subject ?? '', e.room ?? '', e.note ?? '') > 0)).sort(sortEv).reverse();
+      const L = events.filter((e) => (e.date < today || (e.date === today && endHm(e) && mins(endHm(e)) <= nm)) && kw.every((w) => kwHit(w, e.title, e.subject ?? '', e.room ?? '', e.note ?? ''))).sort(sortEv).reverse();
       if (!L.length) return out(`Fant ingen tidligere «${kw.join(' ')}» det siste året.`, 'last');
       const e = L[0];
       return out(`${cap(shortT(e))} var sist ${dLong(e.date)}${hmOf(e) ? ` kl. ${hmOf(e)}` : ''} (${rel(diff(today, e.date))}).`, 'last', L);
@@ -196,7 +203,7 @@ export function localAnswer(q, events, today = osloTodayISO(), nm = nowMin()) {
     const kw = n.split(' ').filter((w) => w && !STOP.has(w));
     if (kw.length) {
       const L = events.filter((e) => (e.date > today || (e.date === today && (!endHm(e) || mins(endHm(e)) > nm))) && e.date <= addDays(today, 120)
-        && kw.every((w) => matchScore(w, e.title, e.subject ?? '', e.room ?? '') > 0)).sort(sortEv);
+        && kw.every((w) => kwHit(w, e.title, e.subject ?? '', e.room ?? ''))).sort(sortEv);
       if (!L.length) return out(`Fant ingen kommende «${kw.join(' ')}» de neste fire månedene.`, 'next');
       const e = L[0];
       return out(`${cap(shortT(e))} er ${dLong(e.date)}${hmOf(e) ? ` kl. ${hmOf(e)}` : ''} (${rel(diff(today, e.date))}).`, 'next', L);
@@ -219,7 +226,10 @@ export async function askCalendar(user, q, today = osloTodayISO()) {
       const hit = events.filter((e) => e.date >= today && e.date <= addDays(today, 13) && text.toLowerCase().includes(String(e.title).toLowerCase().slice(0, 12))).sort(sortEv);
       return { text, kind: 'llm', engine: 'ollama', items: hit.slice(0, 6) };
     }
-  } catch { /* modellen svarte ikke */ }
+  } catch (e) {
+    // Prompt 34: vis feilen i stedet for «fant ikke noe svar».
+    if (e?.name === 'AiRunError') return { text: e.message, kind: 'error', engine: 'none', items: [], error: e.message, fix: e.fix ?? null };
+  }
   return { text: 'Glimt fant ikke noe svar i kalenderen. Prøv «hva skjer i morgen» eller «når er neste prøve».', kind: 'none', engine: 'none', items: [] };
 }
 

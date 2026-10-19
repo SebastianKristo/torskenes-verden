@@ -24,7 +24,7 @@ import { settings } from './finans/db.js';
 import { aiTimeoutsOf, _aiTest, logAi } from './finans/ai.js';
 import { parseQuick, quickLabel, osloTodayISO, TYPES, DURATION, NO_DATE, memoryMatch, aliasTitle, isNoiseLine, senderOf } from '../public/js/quick-time.js';
 import { aliasesOf, aliasPrompt, setContext, touchMemory } from './glimt-memory.js'; // prompt 33: «Glimt husker»
-import { ollamaContent, ollamaPost, shortBody } from './ollama-opts.js';
+import { run as aiRun } from './ai-run.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const ORIGIN = 'AI · rask time';
@@ -75,27 +75,10 @@ Treffer teksten et av navnene, bruk den typen og tittelen.` : ''}
 Tekst:
 ${text}`;
 
-/** Standard: Ollama direkte (format:"json", temperature 0) med brukerens modell og tidsgrense. Tester bytter den ut. */
+/** Standard (prompt 34): ruten «Glimt · kalender» via ai.run (JSON, temperature 0, validert modell og reserve). Tester bytter den ut. */
 async function ollamaDefault(prompt, user) {
-  const st = settings(user);
-  const base = String(st.ollamaUrl ?? '').replace(/\/$/, '');
-  if (!base) throw new Error('Ollama er ikke satt opp');
-  const model = st.ollamaTextModel || st.ollamaModel;
-  const ms = aiTimeoutsOf(st).ollama * 1000 * _aiTest.scale;
-  const t0 = Date.now();
-  try {
-    const r = await ollamaPost((u, i) => fetch(u, i), `${base}/api/chat`,
-      shortBody({ model, stream: false, format: 'json', options: { temperature: 0 }, messages: [{ role: 'user', content: prompt }] }, { user }), { signal: AbortSignal.timeout(ms) });
-    if (!r.ok) throw new Error(`Ollama svarte ${r.status}`);
-    const j = await r.json();
-    const content = ollamaContent(j).replace(/^```(?:json)?\s*/i, '').replace(/```$/, '');
-    const data = JSON.parse(content);
-    try { runAsUser(user, () => logAi({ task: 'calendar-quick', engine: 'ollama', model, promptLen: prompt.length, ms: Date.now() - t0 })); } catch { /* bare logg */ }
-    return data;
-  } catch (e) {
-    try { runAsUser(user, () => logAi({ task: 'calendar-quick', engine: 'ollama', model, promptLen: prompt.length, ms: Date.now() - t0, status: 'feil', error: String(e.message).slice(0, 200) })); } catch { /* bare logg */ }
-    throw e;
-  }
+  const out = await aiRun('glimt', { user, prompt, json: true, temperature: 0, numPredict: 200, title: 'Kalender · rask time' });
+  return out.data;
 }
 let ollamaImpl = null;
 /** Bare for tester: falsk Ollama (prompt, user) → objekt, eller null for standard. */

@@ -48,7 +48,7 @@ import { db, kv, OWNER } from './db.js';
 import { sessionUser, isAdmin, checkPassword, clientIp, loginBlocked, loginFailed, loginSucceeded } from './auth.js';
 import { bearerOk } from './finans/routes.js';
 import { seal, unseal } from './finans/db.js';
-import { tarHeader, untar, encryptStream, decryptFile, smbRun, cdDirOf, parseSmbLs, localArg, normShare, splitShare, SMB_SEG } from './finans/backup.js';
+import { tarHeader, untar, encryptStream, decryptFile, smbRun, cdDirOf, parseSmbLs, localArg, normShare, splitShare, SMB_SEG, smbPutError, smbErrorText } from './finans/backup.js';
 import { settings as fhSettings, secret as fhSecret } from './finans/db.js';
 import { broadcast } from './realtime.js';
 import { parseChangelog } from './system-update.js';
@@ -574,7 +574,9 @@ export async function smbUpload(id) {
   const { share, dir } = smbWhere(st.smb);
   const c = smbConn();
   try {
-    await smbRun({ share, ...c, cmd: `${cdDirOf(dir)}put "${localArg(join(BACKUP_DIR, r.file))}" "${r.file}"`, timeout: 6 * 3_600_000 });
+    // Prompt 34: til «.part» først, så rename når opplastingen er ferdig. NT_STATUS-feil i -c gir den ekte feilkoden.
+    const putOut = await smbRun({ share, ...c, cmd: `${cdDirOf(dir)}put "${localArg(join(BACKUP_DIR, r.file))}" "${r.file}.part"; rename "${r.file}.part" "${r.file}"`, timeout: 6 * 3_600_000 });
+    { const stc = smbPutError(putOut); if (stc) throw new Error(`${smbErrorText(stc).message} (${stc.replace(/^NT_/, '')})`); }
     let removed = 0;
     try {
       const names = parseSmbLs(await smbRun({ share, ...c, cmd: `${cdDirOf(dir)}ls`, timeout: 60_000 })).filter((x) => x.type === 'file').map((x) => x.name);

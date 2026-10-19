@@ -13,6 +13,8 @@ import { hasGemini, geminiFetch } from './gemini-keys.js';
 import { audit } from './ai-audit.js';
 import { ocrTools } from '../ocr-fallback.js';
 import { ollamaPost, shortBody, stripThink } from '../ollama-opts.js';
+import { routing as aiRouting, jobStart, jobEnd, jobUpdate } from '../ai-run.js';
+const OWNER_ID = 'owner';
 import { SUB_CATEGORIES, categoryFor } from './subs.js';
 import { domainFor } from './enrich.js';
 
@@ -255,7 +257,8 @@ export async function pickVisionModel({ fresh = false } = {}) {
   const tags = await ollamaJson('/api/tags');
   if (!tags.ok) throw shotError('ollama_down', `Ollama svarte ${tags.status}`);
   const names = (((await tags.json().catch(() => ({}))).models) ?? []).map((m) => m.name ?? m.model).filter(Boolean);
-  const pref = settings().ollamaModel;
+  let pref = settings().ollamaModel;
+  try { pref = aiRouting(OWNER_ID).tasks.rc.model || pref; } catch { /* ruting er valgfri */ } // prompt 34: ruten «Kvitteringer (bilde)» først
   // Spesifikasjonens rekkefølge først, så modellen valgt for kvitteringer, så resten. Embedding-modeller hoppes over.
   const cands = names.filter((n) => !/embed/i.test(n)).sort((x, y) => (rankOf(x) - rankOf(y)) || ((y === pref) - (x === pref)));
   for (const n of cands.slice(0, 12)) {
@@ -347,10 +350,17 @@ export async function readScreenshot(buf, { engine = 'ollama', u = me(), mock = 
   if (process.env.MOCK_DATA === '1' && !fx && mock && MESSAGES[mock]) throw shotError(mock);
   if (process.env.MOCK_DATA === '1' && !fx) return { ...normalizeSub({ ...MOCK_SUB }, { u }), engine: 'mock', model: 'mock' };
   const img = await prepareImage(buf);
+  // Prompt 34: jobben vises i AI-kontroll → Jobber.
+  const jobId = jobStart({ user: u, task: 'rc', kind: 'screenshot', title: 'Abonnement fra skjermbilde', provider: engine === 'gemini' ? 'gemini' : 'ollama' });
+  const t0 = Date.now();
   try {
     const { raw, model } = engine === 'gemini' ? await readGemini(img) : await readOllama(img);
     const n = raw ? normalizeSub(raw, { u }) : null;
     if (!isValidSub(n)) throw shotError('not_found');
+    jobEnd(jobId, { model, ms: Date.now() - t0 });
     return { ...n, engine, model, image: { w: img.w, h: img.h, bytes: img.buf.length, converted: img.converted } };
+  } catch (e) {
+    jobUpdate(jobId, { status: 'fail', error: e.message, ms: Date.now() - t0 });
+    throw e;
   } finally { if (img.buf !== buf) img.buf.fill(0); }
 }

@@ -313,14 +313,17 @@ export async function buildArchive(c, phrase) {
 // Høyeste versjon er alltid SMB3; innstillingen gir laveste versjon som godtas.
 const PROTO = { '3.1.1': 'SMB3_11', '3.0': 'SMB3_00', '2.1': 'SMB2_10', SMB3: 'SMB3_00', SMB2: 'SMB2_02' };
 /** Ett mappenavn (eller share-navn) som trygt kan stå i anførselstegn i smbclient -c. Avvis heller enn å escape. */
-export const SMB_SEG = /^(?![.]+$)(?! )(?!.* $)[\p{L}\p{N} ._\-()+,=@#~!]{1,120}$/u;
+// Prompt 34: \p{M} (kombinerende tegn) er med, så navn lagret i NFD (macOS: «å» = a + ◌̊) ikke avvises og forsvinner fra listen.
+export const SMB_SEG = /^(?![.]+$)(?! )(?!.* $)[\p{L}\p{M}\p{N} ._\-()+,=@#~!]{1,120}$/u;
+/** Navn på en share: som SMB_SEG, men skjulte shares (backup$) er lov (prompt 34). */
+export const SMB_SHARE = /^(?![.]+$)(?! )(?!.* $)[\p{L}\p{M}\p{N} ._\-()+,=@#~!]{1,80}\$?$/u;
 /** Vertsnavn eller IPv4-adresse. */
 export const SMB_HOST = /^(?=.{1,253}$)[A-Za-z0-9](?:[A-Za-z0-9-]{0,62})(?:\.[A-Za-z0-9-]{1,63})*$/;
 export const normShare = (s) => {
   const v = String(s ?? '').trim().replace(/\\/g, '/').replace(/^\/*/, '//').replace(/\/+$/, '');
   // Eldre oppsett kan ha en undermappe i selve sharen (//server/share/mappe); den legges foran smbDir.
   const m = v.match(/^\/\/([^/]+)\/([^/]+)((?:\/[^/]+)*)$/);
-  return m && SMB_HOST.test(m[1]) && SMB_SEG.test(m[2]) && m[3].split('/').filter(Boolean).every((x) => SMB_SEG.test(x)) ? v : null;
+  return m && SMB_HOST.test(m[1]) && SMB_SHARE.test(m[2]) && m[3].split('/').filter(Boolean).every((x) => SMB_SEG.test(x)) ? v : null;
 };
 /** '//host/share/a/b' → {share:'//host/share', sub:'a/b'} */
 export const splitShare = (v) => { const p = String(v ?? '').split('/'); return { share: p.slice(0, 4).join('/'), sub: p.slice(4).join('/') }; };
@@ -363,6 +366,8 @@ export function smbErrorText(out, { missing = false, killed = false } = {}) {
   return E('other', (line || 'smbclient feilet').trim().slice(0, 200));
 }
 /** NT_STATUS-feil fra en kommando i -c (smbclient avslutter ofte med 0 selv om en kommando feilet). */
+/** Prompt 34: første NT_STATUS-feil etter put/rename (mkdir på en mappe som finnes, gir OBJECT_NAME_COLLISION og ignoreres). */
+export const smbPutError = (out) => (String(out ?? '').match(/NT_STATUS_[A-Z_]+/g) ?? []).find((x) => !/^NT_STATUS_(OK|OBJECT_NAME_COLLISION)$/.test(x)) ?? null;
 export const smbCmdError = (out) => { const m = String(out ?? '').match(/NT_STATUS_[A-Z_]+/); return m && !/NT_STATUS_OK\b/.test(m[0]) ? m[0] : null; };
 
 /**
@@ -394,14 +399,25 @@ function smb(cmd, { timeout = 120_000 } = {}) {
   if (!share) return Promise.reject(new Error('Ugyldig share. Bruk formen //server/share eller \\\\server\\share'));
   return smbRun({ share: splitShare(share).share, user: st.smbUser, password: secret('smbPass'), domain: st.smbDomain, proto: st.smbVersion, cmd, timeout });
 }
-/** Parser «ls» fra smbclient. → [{name, type:'dir'|'file', size, when}] uten . og .. */
-const LS_RE = /^ {2}(.+?)\s+([ADHNRSV]*)\s+(\d+)\s+((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) \w{3}\s+\d+ \d\d:\d\d:\d\d \d{4})\s*$/;
+/**
+ * Parser «ls» fra smbclient. → [{name, type:'dir'|'file', size, when, attrs, link?}] uten . og ..
+ * Prompt 34: attributtene kan ha små bokstaver (Samba 4: r = reparse point/junction/ZFS-datasett, s = sparse, c, o, e, n …).
+ * Den gamle regexen ([ADHNRSV]*) forkastet hele linjen for slike mapper, så f.eks. «backup» forsvant fra listen.
+ * Reparse points (r/L) uten D regnes som mapper (Synology Hyper Backup-mål, Windows-junctions). name er slik serveren sendte
+ * den (brukes i kommandoer); display er NFC-normalisert.
+ */
+const LS_RE = /^ {2}(.+?)\s+([A-Za-z]{0,16})\s+(\d+)\s+((?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\w{3}\s+\d+\s+\d\d:\d\d:\d\d\s+\d{4})\s*$/;
 export function parseSmbLs(out) {
   const rows = [];
   for (const l of String(out ?? '').split('\n')) {
-    const m = l.match(LS_RE);
+    const m = l.replace(/\r$/, '').match(LS_RE);
     if (!m || m[1] === '.' || m[1] === '..') continue;
-    rows.push({ name: m[1], type: m[2].includes('D') ? 'dir' : 'file', size: +m[3], when: Date.parse(m[4].replace(/\s+/g, ' ')) || null });
+    const attrs = m[2];
+    const link = /[rL]/.test(attrs) && !attrs.includes('D');
+    const row = { name: m[1], type: attrs.includes('D') || link ? 'dir' : 'file', size: +m[3], when: Date.parse(m[4].replace(/\s+/g, ' ')) || null };
+    Object.defineProperty(row, 'attrs', { value: attrs, enumerable: false });
+    if (link) Object.defineProperty(row, 'link', { value: true, enumerable: false });
+    rows.push(row);
   }
   return rows;
 }
@@ -458,7 +474,9 @@ export async function runBackup(reason = 'manuell') {
       const a = await buildArchive({ smbDb: st.smbDb, smbReceipts: st.smbReceipts, smbSettings: st.smbSettings, smbEncrypt: st.smbEncrypt }, secret('backupPhrase'));
       file = a;
       q('UPDATE fh_backups SET file=?, size=? WHERE id=?').run(a.name, a.size, row.id);
-      await smb(`${cdDir()}put "${a.path}" "${a.name}"`, { timeout: 30 * 60_000 });
+      // Prompt 34: last opp til «navn.part» og gi nytt navn når den er ferdig, så en avbrutt backup ikke ligger igjen som en halv fil.
+      const outPut = await smb(`${cdDir()}put "${a.path}" "${a.name}.part"; rename "${a.name}.part" "${a.name}"`, { timeout: 30 * 60_000 });
+      { const stc = smbPutError(outPut); if (stc) throw Object.assign(new Error(`${smbErrorText(stc).message} (${stc.replace(/^NT_/, '')})`), { code: stc }); }
       await prune();
       q("UPDATE fh_backups SET status='ok' WHERE id=?").run(row.id);
       kv.set(OWNER, 'fh_backup_last', { at: Date.now(), sig: changeSig(), file: a.name });

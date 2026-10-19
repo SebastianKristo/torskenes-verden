@@ -38,6 +38,8 @@ async function fakeFetch(url, init = {}) {
       const lines = [{ message: { content: '<think>la meg ' } }, { message: { content: 'tenke</think>Hei' } }, { message: { content: ' der.' } }, { done: true, eval_count: 4, eval_duration: 1e9 }];
       return new Response(streamOf(lines.map((l) => JSON.stringify(l) + '\n')), { status: 200 });
     }
+    // Prompt 34: korte oppgaver går via ai.run → /api/chat (stream:false).
+    if (JSON.stringify(body.messages ?? []).includes('kalenderhendelse')) return Response.json({ message: { role: 'assistant', content: `<think>først tenker jeg</think>${generateReply}`, thinking: 'tenking' }, done: true });
     return Response.json({ message: { role: 'assistant', content: '<think>hmm</think>{"ok":true}', thinking: 'lang tenking' }, done: true });
   }
   if (u.endsWith('/api/generate')) {
@@ -108,14 +110,14 @@ test('ollamaPost: annen 400 prøves ikke på nytt, og teksten kan fortsatt leses
   assert.deepEqual(opts.modelsWithoutThink(), []);
 });
 
-/* ---------------- Korte oppgaver (Kalender · Beskriv med Glimt via /api/generate) ---------------- */
+/* ---------------- Korte oppgaver (Kalender · Beskriv med Glimt via ai.run → /api/chat, prompt 34) ---------------- */
 
 test('kort oppgave sender think:false og num_ctx, og fjerner <think> fra svaret', async () => {
   opts._resetThinkMemory();
   saveSettings({ ollamaModel: 'qwen3:8b', ollamaTextModel: 'qwen3:8b' });
   calls.length = 0;
   const r = await describe(OWNER, 'Tannlege med Ola');
-  const gen = calls.filter((c) => c.url.endsWith('/api/generate'));
+  const gen = calls.filter((c) => c.url.endsWith('/api/chat') && !c.body.stream);
   assert.equal(gen.length, 1);
   assert.equal(gen[0].body.think, false);
   assert.equal(gen[0].body.options.num_ctx, 4096);
@@ -129,7 +131,7 @@ test('kort oppgave: ai_think på → think sendes ikke', async () => {
   setUserCfg(OWNER, { ai_think: '1' });
   calls.length = 0;
   await describe(OWNER, 'Tannlege med Ola');
-  const gen = calls.find((c) => c.url.endsWith('/api/generate'));
+  const gen = calls.find((c) => c.url.endsWith('/api/chat') && !c.body.stream);
   assert.equal('think' in gen.body, false);
   assert.equal(gen.body.options.num_ctx, 4096);
   setUserCfg(OWNER, { ai_think: '0' });
@@ -140,7 +142,7 @@ test('kort oppgave med modell uten tenking: nytt forsøk uten think', async () =
   saveSettings({ ollamaTextModel: OLD });
   calls.length = 0;
   await describe(OWNER, 'Tannlege med Ola');
-  const gen = calls.filter((c) => c.url.endsWith('/api/generate'));
+  const gen = calls.filter((c) => c.url.endsWith('/api/chat') && !c.body.stream);
   assert.equal(gen.length, 2);
   assert.equal(gen[0].body.think, false);
   assert.equal('think' in gen[1].body, false);

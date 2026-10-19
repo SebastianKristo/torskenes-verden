@@ -36,7 +36,7 @@ import { bearerOk } from './finans/routes.js';
 import { settings as fhSettings } from './finans/db.js';
 import { notifyUser } from './notify.js';
 import { summaryFacts, domainNames } from './domains.js';
-import { ollamaContent, ollamaPost, shortBody } from './ollama-opts.js';
+import { run as aiRun } from './ai-run.js';
 
 const MOCK = process.env.MOCK_DATA === '1';
 const TZ = 'Europe/Oslo';
@@ -116,13 +116,8 @@ export const _setSummaryLlm = (fn) => { sumLlm = fn; };
 async function ollamaJson(prompt, user) {
   if (sumLlm) return sumLlm(prompt, user);
   if (MOCK && !process.env.OLLAMA_URL) return null;
-  const st = fhSettings(user);
-  const base = String(st.ollamaUrl ?? '').replace(/\/$/, '');
-  if (!base) return null;
-  const r = await ollamaPost((u, i) => fetch(u, i), `${base}/api/generate`,
-    shortBody({ model: st.ollamaTextModel || st.ollamaModel, prompt, stream: false, format: 'json', options: { temperature: 0.2 }, keep_alive: '10m' }, { user }), { signal: AbortSignal.timeout(20_000) });
-  if (!r.ok) throw new Error(`Ollama svarte ${r.status}`);
-  return ollamaContent(await r.json());
+  // Prompt 34: ruten «Domener · oppsummering» via ai.run (validert modell, reserve, jobblogg).
+  return (await aiRun('dom', { user, prompt, json: true, temperature: 0.2, title: 'Domener · oppsummering', background: true })).text;
 }
 
 const normDomain = (d) => { const s = String(d ?? '').toLowerCase(); return s === '*' || s === 'alle' || s === 'all' ? '*' : s; };

@@ -130,7 +130,8 @@ test('send med lokal modell: SSE meta → delta → done, lagres per bruker', as
   assert.equal(got.body.title, 'Hei, hva kan du?');
   // Kari ser ingenting av dette.
   assert.equal((await K(`/api/chat/chats/${chatId}`)).status, 404);
-  assert.deepEqual((await K('/api/chat/chats')).body, { pinned: [], folders: [], chats: [] });
+  // Prompt 34: systemmappen «Kvitteringer og skanninger» finnes alltid (tom her).
+  { const b = (await K('/api/chat/chats')).body; assert.deepEqual({ ...b, folders: b.folders.filter((f) => !f.sys) }, { pinned: [], folders: [], chats: [] }); assert.equal(b.folders[0].name, 'Kvitteringer og skanninger'); }
   assert.equal((await K('/api/chat/send', 'POST', { chatId, model: 'qwen3:8b', messages: [{ role: 'user', content: 'x' }] })).status, 404);
 });
 
@@ -214,6 +215,7 @@ test('mapper, festing, nytt navn, eksport og deling', async () => {
   assert.equal((await K(`/api/chat/chats/${chatId}`, 'PATCH', { folderId: f.body.id })).status, 404);
   assert.equal((await S(`/api/chat/chats/${chatId}`, 'PATCH', { title: 'Docker-hjelp', folderId: f.body.id })).body.folderId, f.body.id);
   let list = (await S('/api/chat/chats')).body;
+  list.folders = list.folders.filter((x) => !x.sys); // prompt 34: systemmappen står først
   assert.equal(list.folders[0].name, 'Økonomi');
   assert.equal(list.folders[0].chats[0].title, 'Docker-hjelp');
   assert.ok(!list.chats.some((c) => c.id === chatId));

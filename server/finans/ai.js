@@ -4,6 +4,9 @@ import { settings, secret, db, me, addUserCol } from './db.js';
 import { geminiFetch, hasGemini, usableKeys } from './gemini-keys.js';
 import { cleanBbox } from './bbox30.js';
 import { ollamaPost, shortBody, stripThink } from '../ollama-opts.js';
+import { modelFor, routing as aiRouting, budgetState } from '../ai-run.js';
+// Prompt 34: finans-oppgavene → oppgavene i AI-kontroll-rutingen.
+const AI_TASK_OF = { search: 'fsok', categorize: 'kat', receipts: 'rc', barcode: 'bar', text: 'sok', test: 'sok', summary: 'fsok', mat: 'sok', rss: 'sok', finn: 'fsok' };
 import { ocrEnabled, ocrReceipt, cropImage, decodeBarcodes, ocrTools } from '../ocr-fallback.js';
 
 export const PROMPT = (cats) => `Du leser en norsk kvittering. Returner KUN JSON etter skjemaet.
@@ -386,8 +389,9 @@ async function groqChat(content, schema, { timeout, temperature, model, signal =
 async function ollama(image, mime, cats, st, ms = engineMs('ollama', st)) {
   if (mime === 'application/pdf') throw Object.assign(new Error('Ollama kan ikke lese PDF'), { noRetry: true });
   if (mime === 'image/heic' || mime === 'image/heif') throw Object.assign(new Error('Ollama kan ikke lese HEIC-bilder (bruk Gemini, eller last opp som JPEG)'), { noRetry: true });
+  const model = await modelFor('rc', 'ollama', st.ollamaModel, { images: [1] }); // prompt 34: ruten «Kvitteringer (bilde)», validert
   return (await ollamaChat(st, [{ role: 'user', content: PROMPT(cats), images: [image.toString('base64')] }], SCHEMA,
-    { timeout: ms, temperature: 0 })).data;
+    { timeout: ms, temperature: 0, model })).data;
 }
 async function gemini(image, mime, cats, st, ms = engineMs('gemini', st), startKey = null) {
   return (await geminiGenerate([{ inline_data: { mime_type: mime, data: image.toString('base64') } }, { text: PROMPT(cats) }], { schema: SCHEMA, timeout: ms, temperature: 0, model: st.geminiModel, startKey })).data;
@@ -517,18 +521,31 @@ async function lowConfCheck(res, image, mime, st, log) {
 export async function textJson(prompt, schema, { temperature = 0.2, force = null, task = 'text', status = () => {}, signal = null, onEngine = () => {} } = {}) {
   const st = settings();
   const errors = [], timeouts = [];
-  const list = engineOrder(st, { force, task: TASKS[task] ? task : null });
+  let list = engineOrder(st, { force, task: TASKS[task] ? task : null });
+  // Prompt 34: «Finansdata forlater aldri huset» og sky-budsjettet (0 = ingen grense) gjelder også her.
+  if (!force) {
+    try {
+      const r = aiRouting(), t = AI_TASK_OF[task] ?? 'sok';
+      const local = (r.rules.finLocal && ['fsok', 'kat', 'rc'].includes(t)) || budgetState(r).blocked;
+      if (local) {
+        list = list.filter((p) => p === 'ollama');
+        if (!list.length) list = ['ollama'];
+        status(r.rules.finLocal ? '✦ Finansdata forlater aldri huset · bruker lokal modell' : '✦ Sky-budsjettet er brukt opp · bruker lokal modell', {});
+      }
+    } catch { /* ruting er valgfri */ }
+  }
   const limits = aiTimeoutsOf(st);
   for (let idx = 0; idx < list.length; idx++) {
     if (signal?.aborted) throw cancelled();
     const p = list[idx];
     const t0 = Date.now();
-    const model = p === 'groq' ? (st.groqModel || GROQ_DEFAULT) : p === 'gemini' ? (st.geminiModel || GEMINI_DEFAULT) : (st.ollamaTextModel || st.ollamaModel);
+    // Prompt 34: modellen fra AI-kontroll-rutingen (validert mot /api/tags for Ollama), ellers de gamle feltene.
+    const model = await modelFor(AI_TASK_OF[task] ?? 'sok', p, p === 'groq' ? (st.groqModel || GROQ_DEFAULT) : p === 'gemini' ? (st.geminiModel || GEMINI_DEFAULT) : (st.ollamaTextModel || st.ollamaModel));
     try { onEngine(p, limits[p]); } catch { /* bare visning */ }
     try {
-      const r = await runEngine(p, st, (ms, startKey) => (p === 'gemini' ? geminiGenerate([{ text: prompt }], { schema, timeout: ms, temperature, model: st.geminiModel, startKey, signal })
-        : p === 'groq' ? groqChat(prompt, schema, { timeout: ms, temperature, model: st.groqModel || GROQ_DEFAULT, signal })
-        : ollamaChat(st, [{ role: 'user', content: prompt }], schema, { timeout: ms, temperature, model: st.ollamaTextModel || st.ollamaModel, signal })), { status, task, onTimeout: 'next', signal });
+      const r = await runEngine(p, st, (ms, startKey) => (p === 'gemini' ? geminiGenerate([{ text: prompt }], { schema, timeout: ms, temperature, model, startKey, signal })
+        : p === 'groq' ? groqChat(prompt, schema, { timeout: ms, temperature, model, signal })
+        : ollamaChat(st, [{ role: 'user', content: prompt }], schema, { timeout: ms, temperature, model, signal })), { status, task, onTimeout: 'next', signal });
       logAi({ task, engine: p, model: r.model, promptLen: prompt.length, ms: Date.now() - t0, timeoutEngine: timeouts[0]?.engine ?? null, layer: null });
       return { provider: providerName(p), engine: p, model: r.model, data: r.data, timeouts };
     } catch (e) {

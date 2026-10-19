@@ -58,6 +58,7 @@
 //    events:[hendelser ≤ 6, samme form som /api/kalender + appCalendar/appColor],
 //    slots:[{date, start:'HH:MM', end:'HH:MM', gapStart, gapEnd, minutes, label:'12:00–13:00'}],
 //    created?:{event, undo:{method:'DELETE', url:'/api/kalender/events/<id>'}},
+//    error?, fix?, actions?:[{k:'retry'|'ai', label, route?}]  (prompt 34: «Glimt fikk ikke svar fra {modell}: {feil}» står da i text),
 //    summary?:{from, to, count, first?, last?, busiest?:{date, count}, deadlines:[…], birthdays:[…], weather:[…]},
 //    weather?:[dager], intent:'calendar.free_slots'|'calendar.search'|'calendar.summary'|'calendar.create'|'weather.daily'|'calendar.ask',
 //    tools:['calendar.free_slots', …], source:'Kalender', tool:'Kalender', model, engine:'tool'|'ollama'|'none', ms, deepLink:'kalender://liste',
@@ -719,13 +720,14 @@ export async function calendarAnswer(user, text, { today = osloTodayISO(), now =
     if (a.engine === 'ollama') labels.push('Spør den lokale modellen');
     const evs = (a.items ?? []).slice(0, 6);
     decorate(user, evs);
-    r = { intent: 'calendar.ask', tools: ['calendar.search'], steps: labels, events: evs, engine: a.engine === 'ollama' ? 'ollama' : a.kind === 'none' ? 'none' : 'tool',
+    r = { intent: 'calendar.ask', tools: ['calendar.search'], steps: labels, events: evs, engine: a.engine === 'ollama' ? 'ollama' : a.kind === 'none' || a.kind === 'error' ? 'none' : 'tool',
+      ...(a.kind === 'error' ? { error: a.error, fix: a.fix ?? null, actions: [{ k: 'retry', label: 'Prøv igjen' }, { k: 'ai', label: 'Åpne AI-kontroll', route: 'innstillinger/ai' }] } : {}),
       slots: (a.free ?? []).map((f) => ({ date: a.from ?? today, start: f.from, end: f.to, gapStart: f.from, gapEnd: f.to, minutes: null, label: `${f.from}–${f.to}` })),
       text: a.kind === 'none' ? 'Jeg kan svare på ting som «Hva skjer i morgen?», «Når er neste frisørtime?» og «Finn ledig tid fredag», eller legge inn hendelser du skriver eller limer inn.' : a.text };
   }
   onStep(2, r.intent, r.steps);
   const out = { text: r.text, bold: boldOf(r.text), steps: r.steps, events: r.events ?? [], slots: r.slots ?? [], ...(r.created ? { created: r.created } : {}), ...(r.summary ? { summary: r.summary } : {}),
-    ...(r.weather ? { weather: r.weather } : {}), ...(r.reconnect ? { reconnect: true } : {}), intent: r.intent, tools: r.tools, source: 'Kalender', tool: 'Kalender',
+    ...(r.weather ? { weather: r.weather } : {}), ...(r.reconnect ? { reconnect: true } : {}), ...(r.error ? { error: r.error, fix: r.fix, actions: r.actions } : {}), intent: r.intent, tools: r.tools, source: 'Kalender', tool: 'Kalender',
     model: r.engine === 'ollama' ? 'Glimt · lokal' : 'Glimt · kalender', engine: r.engine ?? 'tool', ms: Date.now() - t0, deepLink: 'kalender://liste' };
   out.chatContext = { q: text, intent: out.intent, messages: [{ role: 'user', content: text }, { role: 'assistant', content: out.text, tool: 'Kalender' }] };
   return out;
