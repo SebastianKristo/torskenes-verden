@@ -14,7 +14,8 @@ import java.util.UUID
 import javax.net.ssl.SSLException
 
 /** Feil fra serveren. needsTotp = innloggingen krever en 6-sifret kode (2FA). */
-class ApiException(message: String, val status: Int = 0, val needsTotp: Boolean = false) : Exception(message)
+/** Prompt 28: code og canGemini fra serverens feilsvar ({error, code, canGemini}), f.eks. «Fra skjermbilde». */
+class ApiException(message: String, val status: Int = 0, val needsTotp: Boolean = false, val code: String? = null, val canGemini: Boolean = false) : Exception(message)
 
 /** Resultat av innlogging: token og hvem som er logget inn. */
 data class LoginResult(val token: String, val username: String, val name: String, val role: String)
@@ -67,7 +68,7 @@ class Api(private val baseUrl: String, private val token: String?) {
             // så det skal verken logge ut eller vise «Ikke innlogget» (prompt 14). Appen viser ingen melding for dette.
             val path = conn.url.path
             if (code == 401 && !path.startsWith(FINANS) && o?.optBoolean("needsTotp") != true) throw ApiException("$TOKEN_REFUSED ($path)", 403)
-            throw ApiException(msg, code, o?.optBoolean("needsTotp") == true)
+            throw ApiException(msg, code, o?.optBoolean("needsTotp") == true, o?.optString("code")?.takeIf { it.isNotBlank() }, o?.optBoolean("canGemini") == true)
         }
         // En nettside (innloggingssiden, en proxy eller Cloudflare) i stedet for data: si det tydelig i stedet for en JSON-feil.
         if (body.trimStart().startsWith("<")) throw ApiException("Uventet svar fra serveren: fikk en nettside i stedet for data fra ${conn.url.path}. Oppdater homelab eller logg inn på nytt.", 502)
@@ -101,14 +102,14 @@ class Api(private val baseUrl: String, private val token: String?) {
     }
 
     /** Multipart-opplasting: filer (f.eks. original + nedskalert JPEG + miniatyr) og tekstfelt (Part uten filnavn). */
-    suspend fun upload(path: String, parts: List<Part>, prefix: String = FINANS): String = withContext(Dispatchers.IO) {
+    suspend fun upload(path: String, parts: List<Part>, prefix: String = FINANS, read: Int = 60_000): String = withContext(Dispatchers.IO) {
         val boundary = "----FinansHub" + UUID.randomUUID().toString().replace("-", "")
         val conn = url(path, prefix).openConnection() as HttpURLConnection
         try { net {
             conn.requestMethod = "POST"
             conn.doOutput = true
             conn.connectTimeout = 15_000
-            conn.readTimeout = 60_000
+            conn.readTimeout = read
             conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=$boundary")
             token?.let { conn.setRequestProperty("Authorization", "Bearer $it") }
             val out = ByteArrayOutputStream()

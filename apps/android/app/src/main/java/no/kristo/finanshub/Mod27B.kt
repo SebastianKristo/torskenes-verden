@@ -463,7 +463,7 @@ fun AppViewModel.manageStops27() {
 
 /* ---------- Abonnement fra skjermbilde ---------- */
 
-private fun parseShot27(raw: String): SubShot27 {
+internal fun parseShot27(raw: String): SubShot27 {
     val o = JSONObject(raw)
     val sik = o.optJSONObject("sikkerhet")
     val unsure = sik?.let { j -> j.keys().asSequence().filter { k -> j.optDouble(k, 1.0) < 0.8 }.toList() } ?: emptyList()
@@ -473,7 +473,7 @@ private fun parseShot27(raw: String): SubShot27 {
     val next = o.optStr("neste_trekk") ?: o.optStr("next")
     return SubShot27(
         o.optStr("tjeneste") ?: o.optStr("service") ?: "Abonnement", o.optStr("plan") ?: "", price, o.optStr("valuta") ?: "NOK",
-        o.optStr("prisOriginal"), cyc, next, o.optStr("kategori") ?: o.optStr("category") ?: "Annet", o.optStr("logoUrl"), o.optStr("domain"),
+        o.optJSONObject("prisOriginal")?.optStr("tekst") ?: o.optStr("prisOriginal"), cyc, next, o.optStr("kategori") ?: o.optStr("category") ?: "Annet", o.optStr("logoUrl"), o.optStr("domain"),
         check, o.optIntOrNull("existingId")?.takeIf { it > 0 },
     )
 }

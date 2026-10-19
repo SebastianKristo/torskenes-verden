@@ -121,11 +121,11 @@ data class PSec(val key: String, val label: String, val full: Boolean = false, v
 
 /** Dempet vugging: ±0,2° med periode 0,6 s (ease-in-out), annenhver i motsatt fase. */
 @Composable
-internal fun wobbleAngle(on: Boolean, index: Int): Float {
+internal fun wobbleAngle(on: Boolean, index: Int, amp: Float = 0.2f): Float {
     if (!on) return 0f
     val t = rememberInfiniteTransition(label = "vugge")
     val a by t.animateFloat(
-        initialValue = if (index % 2 == 0) -0.2f else 0.2f, targetValue = if (index % 2 == 0) 0.2f else -0.2f,
+        initialValue = if (index % 2 == 0) -amp else amp, targetValue = if (index % 2 == 0) amp else -amp,
         animationSpec = infiniteRepeatable(tween(300, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "vinkel",
     )
     return a
@@ -153,7 +153,8 @@ internal fun EditWrap(vm: AppViewModel, page: String, sec: PSec, keys: List<Stri
     val st = remember { DragTrack() }
     val idx by rememberUpdatedState(index)
     val cnt by rememberUpdatedState(count)
-    val angle = wobbleAngle(edit && !dragging, index)
+    // Prompt 28: samme vugging som iOS (±0,45°, 0,6 s, annenhver i motfase).
+    val angle = wobbleAngle(edit && !dragging, index, 0.45f)
     fun follow() {
         val outer = st.top() - st.applied
         if (st.startY.isNaN()) return
@@ -168,7 +169,7 @@ internal fun EditWrap(vm: AppViewModel, page: String, sec: PSec, keys: List<Stri
         Modifier.fillMaxWidth().zIndex(if (dragging) 5f else 0f)
             .graphicsLayer {
                 rotationZ = angle; translationY = if (dragging) ty else 0f; st.applied = translationY
-                val sc = if (dragging) 1.03f else 1f; scaleX = sc; scaleY = sc; alpha = if (dragging) .88f else 1f
+                val sc = if (dragging) 1.03f else 1f; scaleX = sc; scaleY = sc; alpha = if (dragging) .6f else 1f
                 transformOrigin = androidx.compose.ui.graphics.TransformOrigin(.5f, 0f)
             }
             .onGloballyPositioned { c ->
@@ -187,16 +188,14 @@ internal fun EditWrap(vm: AppViewModel, page: String, sec: PSec, keys: List<Stri
     ) {
         content()
         if (edit) {
-            Box(Modifier.matchParentSize().clip(RoundedCornerShape(20.dp)).border(1.5.dp, p.lab.copy(alpha = .55f), RoundedCornerShape(20.dp))
-                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {})
-            Box(Modifier.align(Alignment.TopStart).padding(8.dp).clip(CircleShape).background(p.lab).padding(10.dp, 3.dp)) {
-                Text(sec.label, color = p.onLab, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-            }
-            Row(Modifier.align(Alignment.TopEnd).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                EditDot("▲", index > 0) { vm.movePageItem(page, keys, sec.key, -1) }
-                EditDot("▼", index < count - 1) { vm.movePageItem(page, keys, sec.key, 1) }
-                EditDot("−", count > 1) { vm.hidePageItem(page, keys, sec.key) }
-            }
+            // Prompt 28 (wiggle som iOS): trykk inni kortet er av; minus-sirkel øverst til venstre, «✎ Rediger widget» midt på
+            // kort med innstillinger. Sporing har midlertidig ▲ ▼ i Papir-stil og ingen minus (der finnes ingen ＋).
+            Box(Modifier.matchParentSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {})
+            if (page == "sporing") Row(Modifier.align(Alignment.TopEnd).padding(6.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                UpDown28("▲", index > 0) { vm.movePageItem(page, keys, sec.key, -1) }
+                UpDown28("▼", index < count - 1) { vm.movePageItem(page, keys, sec.key, 1) }
+            } else if (count > 1) MinusDot28(sec.label, Modifier.align(Alignment.TopStart)) { vm.hidePageItem(page, keys, sec.key) }
+            editWidgetAction28(vm, page, sec.key)?.let { go -> EditWidgetPill28(Modifier.align(Alignment.Center), go) }
         }
     }
 }
@@ -252,7 +251,9 @@ internal fun EditHint() = Text(
 internal fun LazyListScope.pageSecs(vm: AppViewModel, page: String, secs: List<PSec>, body: @Composable (String) -> Unit) {
     val keys = secs.map { it.key }
     val edit = vm.editPage == page
-    if (edit) item(key = "edit-$page") { PageEditBar(vm, page, secs) }
+    // Prompt 28: ingen redigeringslinje; pillene (WigglePills28) ligger over listen, her bare luft til dem.
+    vm.b28.pageSecs[page] = secs.map { it.key to it.label }
+    if (edit) item(key = "edit-$page") { Spacer(Modifier.height(WIGGLE_SPACE28)) }
     val hid = vm.pageHidden(page)
     val vis = vm.pageOrder(page, keys).filter { it !in hid }
     vis.forEachIndexed { i, k ->
@@ -266,7 +267,8 @@ internal fun LazyListScope.pageSecs(vm: AppViewModel, page: String, secs: List<P
 internal fun LazyGridScope.pageGridSecs(vm: AppViewModel, page: String, secs: List<PSec>, wide: Boolean, body: @Composable (String) -> Unit) {
     val keys = secs.map { it.key }
     val edit = vm.editPage == page
-    if (edit) item(key = "edit-$page", span = { GridItemSpan(maxLineSpan) }) { PageEditBar(vm, page, secs) }
+    vm.b28.pageSecs[page] = secs.map { it.key to it.label }
+    if (edit) item(key = "edit-$page", span = { GridItemSpan(maxLineSpan) }) { Spacer(Modifier.height(WIGGLE_SPACE28)) }
     val hid = vm.pageHidden(page)
     val vis = vm.pageOrder(page, keys).filter { it !in hid }
     vis.forEachIndexed { i, k ->
@@ -482,7 +484,8 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
     val tiles = (if (vm.b24ProfileOn) listOf(FinTile("hjem", "Hjem", "Pakker, avganger og widgets", Icons.Filled.Home) { vm.paperTab("hjem") }) else emptyList()) +
         order.mapNotNull { byKey[it] }.filter { it.key !in vm.paperFinTabs }
     val grid = rememberLazyGridState()
-    val wobble = rememberInfiniteTransition(label = "wobble").animateFloat(-1f, 1f, infiniteRepeatable(tween(130, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "w")
+    // Prompt 28: samme vugging som Hjem (±0,45°, 0,6 s).
+    val wobble = rememberInfiniteTransition(label = "wobble").animateFloat(-1f, 1f, infiniteRepeatable(tween(300, easing = FastOutSlowInEasing), RepeatMode.Reverse), label = "w")
     val cols = if (wide) 4 else 2
     // Prompt 21: hold inne 500 ms på en flis og dra (redigering slås på av seg selv); i redigering drar man direkte.
     // Alt går i Initial-passet, så klikket etter et langt trykk ikke åpner flisen, og rutenettet ikke scroller under draget.
@@ -544,6 +547,7 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
             } finally { dragKey = null; dragOffset = Offset.Zero }
         }
     }
+    Box(Modifier.fillMaxSize()) {
     LazyVerticalGrid(
         GridCells.Fixed(cols), Modifier.fillMaxSize().then(dragMod), state = grid, contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 16.dp + navBottom),
         horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -554,20 +558,7 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
                     PLabel("Finans · Mer")
                     Text("Alt fra FinansHub på nettsiden · hold inne for å flytte", color = p.mut, fontSize = 13.sp)
                 }
-            } else {
-                // Prompt 21: redigeringslinja er en egen hvit pille med skygge (lesbar over toppbildet i lyst og mørkt tema).
-                Row(
-                    Modifier.fillMaxWidth().shadow(14.dp, CircleShape, ambientColor = Color.Black.copy(alpha = .3f), spotColor = Color.Black.copy(alpha = .3f))
-                        .clip(CircleShape).background(p.card).padding(start = 18.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Text("Dra for å flytte", color = p.ink, fontSize = 13.5.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1)
-                    Box(Modifier.height(36.dp).clip(CircleShape).background(p.bg).clickable(role = Role.Button) { order = FM_DEFAULT_ORDER; vm.resetFmOrder(); Haptics.select() }.padding(horizontal = 14.dp),
-                        contentAlignment = Alignment.Center) { Text("Tilbakestill", color = p.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1) }
-                    Box(Modifier.height(36.dp).clip(CircleShape).background(Color(0xFF1B1A17)).clickable(role = Role.Button) { editing = false; vm.saveFmOrder(order); Haptics.success() }.padding(horizontal = 16.dp),
-                        contentAlignment = Alignment.Center) { Text("Ferdig", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1) }
-                }
-            }
+            } else Spacer(Modifier.height(WIGGLE_SPACE28)) // Prompt 28: pillene ↺ Tilbakestill · ✓ ligger over rutenettet
         }
         items(tiles.size, key = { tiles[it].key }) { i ->
             val t = tiles[i]
@@ -575,7 +566,7 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
             val dragging = dragKey == t.key
             val tileMod = when {
                 dragging -> Modifier.zIndex(2f).graphicsLayer { translationX = dragOffset.x; translationY = dragOffset.y; scaleX = 1.05f; scaleY = 1.05f }
-                editing -> Modifier.graphicsLayer { rotationZ = wobble.value * (if (i % 2 == 0) 1.4f else -1.4f) }
+                editing -> Modifier.graphicsLayer { rotationZ = wobble.value * (if (i % 2 == 0) .45f else -.45f) }
                 else -> Modifier
             }
             Column(
@@ -600,6 +591,11 @@ internal fun PaperFinMoreGrid(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
                 Text(t.value, color = if (t.pos) p.pos else p.mut, fontSize = 12.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
+    }
+    // Prompt 28: flytende piller utenfor rutenettet (kuttes aldri når man scroller): ↺ Tilbakestill · ✓.
+    if (editing) WiggleBar28(Modifier.align(Alignment.TopCenter).padding(top = WIGGLE_TOP28), left = "reset",
+        onLeft = { order = FM_DEFAULT_ORDER; vm.resetFmOrder(); Haptics.select() },
+        onDone = { editing = false; vm.saveFmOrder(order); Haptics.success() })
     }
 }
 

@@ -65,7 +65,7 @@ import kotlin.math.roundToInt
 /*
  * Værsiden (prompt 22, fasit design/Vaer.dc.html): systemfont bare her, stor tynn temperatur, animert værbakgrunn,
  * timekort med Pent i oransje, 7 dager, «Yr og Pent», vind, måne og fliser. Alle kort åpner et detaljark med 7-dagersvelger.
- * Nede til venstre: værkart (Windy). Nede til høyre: ☰ Steder (søk, legg til, hold inne og dra, sveip mot høyre for å slette).
+ * Bunnlinje (prompt 28): værkart (Windy) til venstre, ☰ Steder til høyre (søk, legg til, hold inne og dra, sveip mot høyre for å slette).
  * Data fra GET /api/weather/full (MET), Pent fra compare i samme svar eller GET /api/weather/compare.
  */
 
@@ -168,11 +168,13 @@ internal fun wxDayHours(w: WeatherFull, date: String): Array<WxHour?> {
 private fun skyBrush(code: Int, night: Boolean): Brush = Brush.verticalGradient(
     *when {
         night -> arrayOf(0f to Color(0xFF0B1730), .55f to Color(0xFF1C2D52), 1f to Color(0xFF2A3F6A))
-        code <= 2 -> arrayOf(0f to Color(0xFF3D6FA8), .4f to Color(0xFF2F6FB8), .75f to Color(0xFF4A8AD0), 1f to Color(0xFF8AB6E4))
+        // Prompt 28: klar dag som i fasit (WxFx): #1f5fc4 → #3a82d8 → #6aa8e8 → #9ccaf2.
+        code <= 2 -> arrayOf(0f to Color(0xFF1F5FC4), .42f to Color(0xFF3A82D8), .78f to Color(0xFF6AA8E8), 1f to Color(0xFF9CCAF2))
         code == 3 -> arrayOf(0f to Color(0xFF4F6D8F), .55f to Color(0xFF6A87A6), 1f to Color(0xFF9BB0C5))
         code in 51..67 || code in 80..82 || code >= 95 -> arrayOf(0f to Color(0xFF3B4658), .45f to Color(0xFF323D4E), 1f to Color(0xFF2A3342))
         code in 71..77 || code >= 85 -> arrayOf(0f to Color(0xFF5E6B7C), .55f to Color(0xFF7D8A9A), 1f to Color(0xFFA3AEBB))
-        else -> arrayOf(0f to Color(0xFF36485E), .55f to Color(0xFF4F627A), 1f to Color(0xFF74869B))
+        // Tåke: mørk grå himmel, så tåkebåndene aldri gir hvit flate bak teksten.
+        else -> arrayOf(0f to Color(0xFF3F4D5E), .55f to Color(0xFF556374), 1f to Color(0xFF6F7D8D))
     },
 )
 
@@ -240,11 +242,12 @@ private fun WeatherBody(vm: AppViewModel, wide: Boolean) {
     // Systemfonten (Roboto) gjelder bare værsiden.
     CompositionLocalProvider(LocalTextStyle provides TextStyle(fontFamily = FontFamily.Default, color = Color.White), LocalWxWide25 provides wide) { Box(Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxSize().background(skyBrush(code, night))) {
-            WxFx(fxKind(code, night), heavy = code == 65 || code == 82 || code >= 95, thunder = code >= 95)
+            // Prompt 28: ny bakgrunn (Weather28.kt), sola følger dagens soloppgang og solnedgang.
+            WxFx28(fxKind(code, night), heavy = code == 65 || code == 82 || code >= 95, thunder = code >= 95, day = !night, sunF = wxSunF28(w))
             if (wide) WideWeather25(vm, w, wideScroll, top, bottom, { mapOpen = true }, { cmpOpen = true }, open)
             else LazyColumn(
                 state = state, modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp, top + 58.dp, 16.dp, bottom + 100.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(16.dp, top + 58.dp, 16.dp, bottom + WX_BAR28 + 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 if (w == null) item {
                     Box(Modifier.fillMaxWidth().padding(60.dp), contentAlignment = Alignment.Center) {
@@ -269,12 +272,8 @@ private fun WeatherBody(vm: AppViewModel, wide: Boolean) {
                 }
             }
             TopBar(vm, w, sc > 200f)
-            // Nede: værkart til venstre, ☰ Steder til høyre. Ingen stedspiller.
-            Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = bottom + 18.dp), verticalAlignment = Alignment.CenterVertically) {
-                RoundBtn("M9 4L3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5zM9 4v13.5M15 6.5V20", 2f) { Haptics.select(); mapOpen = true }
-                Spacer(Modifier.weight(1f))
-                RoundBtn("M4 7h16M4 12h16M4 17h16", 2.2f) { Haptics.select(); vm.wxPlacesSheet = true }
-            }
+            // Prompt 28: bunnlinje helt nederst (kart til venstre, ☰ Steder til høyre) i stedet for flytende sirkler.
+            WxBottomBar28(Modifier.align(Alignment.BottomCenter), onMap = { mapOpen = true }, onPlaces = { vm.wxPlacesSheet = true })
         }
         val d = vm.weatherSheetDay
         if (d != null && w != null) ForholdSheet(w, d, { vm.weatherSheetDay = it }) { vm.weatherSheetDay = null }
@@ -284,14 +283,6 @@ private fun WeatherBody(vm: AppViewModel, wide: Boolean) {
         if (vm.wxPlacesSheet) PlacesSheet(vm)
         if (mapOpen) WxMap(w) { mapOpen = false }
     } }
-}
-
-@Composable
-private fun RoundBtn(d: String, stroke: Float, onClick: () -> Unit) {
-    Box(
-        Modifier.size(52.dp).clip(CircleShape).background(Color(0x800A1423)).border(1.dp, Color.White.copy(alpha = .18f), CircleShape).clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) { WxIcon(d, Color.White, 24.dp, stroke = stroke) }
 }
 
 @Composable
@@ -810,7 +801,7 @@ private fun WideWeather25(
     openMap: () -> Unit, openCmp: () -> Unit, open: (String) -> Unit,
 ) {
     Column(
-        Modifier.fillMaxSize().verticalScroll(scroll).padding(top = top + 58.dp, bottom = bottom + 100.dp),
+        Modifier.fillMaxSize().verticalScroll(scroll).padding(top = top + 58.dp, bottom = bottom + WX_BAR28 + 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Column(Modifier.widthIn(max = 1280.dp).fillMaxWidth().padding(horizontal = 24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {

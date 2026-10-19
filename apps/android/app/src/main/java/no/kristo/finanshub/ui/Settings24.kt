@@ -202,7 +202,7 @@ private fun SearchBar24(vm: AppViewModel) {
             Modifier.height(46.dp).shadow(12.dp, CircleShape, ambientColor = Color.Black.copy(alpha = .3f), spotColor = Color.Black.copy(alpha = .3f)).clip(CircleShape)
                 .background(if (s.sqAi) p.lab else p.card).clickable(role = Role.Switch, onClickLabel = "AI-søk") { s.sqAi = !s.sqAi }.padding(horizontal = 16.dp),
             contentAlignment = Alignment.Center,
-        ) { Text("✦ AI", color = if (s.sqAi) Color.White else p.ink, fontWeight = FontWeight.Bold, fontSize = 13.5.sp) }
+        ) { Text("✦ AI", color = if (s.sqAi) p.onLab else p.ink, fontWeight = FontWeight.Bold, fontSize = 13.5.sp) } // Prompt 28: onLab, ikke hvit på mørk-aksenten
     }
 }
 

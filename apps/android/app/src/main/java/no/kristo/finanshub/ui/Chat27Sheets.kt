@@ -58,14 +58,15 @@ internal fun Ch27Sheets(vm: AppViewModel, v: ChatV27, wide: Boolean) {
             if (row == null) LaunchedEffect(Unit) { s.sheet = null } else Ch27Sheet(v, wide, close) { Ch27MenuSheet(vm, v, row) }
         }
         "guard" -> s.guard?.let { g -> Ch27Sheet(v, wide, close) { Ch27GuardSheet(vm, v, g) } }
-        "plus" -> Ch27Sheet(v, wide, close) {
-            Ch27Head(v, "Legg ved", null, close)
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(v.line), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Ch27PlusRow(v, "▣", "Bilde", "Leses av en bildemodell, f.eks. qwen2.5vl") { pickImg.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }
-                Ch27PlusRow(v, "◉", "Kamera", "Ta et bilde nå") { camera.launch(null) }
-                Ch27PlusRow(v, "⎙", "Fil", "PDF, Word, tekst eller CSV") { pickFile.launch(arrayOf("*/*")) }
-                Ch27PlusRow(v, "#", "Fra kunnskapsbasen", s.kb?.let { "${it.size} dokumenter" } ?: "Dokumenter på serveren", "›") { vm.loadKb27(); s.sheet = "kb" }
-            }
+        // Prompt 28: nytt «Legg ved»-ark (ui/Ui28B.kt): grep-strek, tre fliser og kunnskapsbase-rad, høyde etter innhold.
+        "plus" -> Ch27Sheet(v, wide, close, top = 8.dp, gap = 14.dp) {
+            ChatAttach28(
+                vm, v, close,
+                camera = { camera.launch(null) },
+                images = { pickImg.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+                files = { pickFile.launch(arrayOf("*/*")) },
+                kb = { vm.loadKb27(); s.sheet = "kb" },
+            )
         }
         "kb" -> Ch27Sheet(v, wide, close) {
             LaunchedEffect(Unit) { if (s.kb == null) vm.loadKb27() }
@@ -97,7 +98,7 @@ internal fun Ch27Sheets(vm: AppViewModel, v: ChatV27, wide: Boolean) {
 /* ---------------- Felles ---------------- */
 
 @Composable
-private fun Ch27Sheet(v: ChatV27, wide: Boolean, onClose: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+private fun Ch27Sheet(v: ChatV27, wide: Boolean, onClose: () -> Unit, top: Dp = 18.dp, gap: Dp = 12.dp, content: @Composable ColumnScope.() -> Unit) {
     val shape = if (wide) RoundedCornerShape(24.dp) else RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)
     Box(
         Modifier.fillMaxSize().background(Color.Black.copy(alpha = .42f)).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClose),
@@ -107,8 +108,8 @@ private fun Ch27Sheet(v: ChatV27, wide: Boolean, onClose: () -> Unit, content: @
             Modifier.then(if (wide) Modifier.widthIn(max = 460.dp).fillMaxWidth() else Modifier.fillMaxWidth()).fillMaxHeight(.9f)
                 .wrapContentHeight(if (wide) Alignment.CenterVertically else Alignment.Bottom).imePadding().clip(shape).background(v.bg)
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
-                .verticalScroll(rememberScrollState()).navigationBarsPadding().padding(start = 16.dp, top = 18.dp, end = 16.dp, bottom = 22.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .verticalScroll(rememberScrollState()).navigationBarsPadding().padding(start = 16.dp, top = top, end = 16.dp, bottom = 22.dp),
+            verticalArrangement = Arrangement.spacedBy(gap),
         ) { content() }
     }
 }

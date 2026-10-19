@@ -275,7 +275,9 @@ internal fun PaperApp(
     LaunchedEffect(vm.base, vm.account?.id) { vm.b24Start(); vm.b24PreloadNewsIcons() } // Prompt 24: profil/startside og ikonene i Nyhetsleser
     val navInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
     // Linja ligger 12 dp over bunnen, eller like over systemets navigasjonsfelt (max(12, inset − 8)).
-    val barBottom = maxOf(12.dp, navInset - 8.dp)
+    // Prompt 28: i Finans → Søk følger linja tastaturet med 8 dp luft (skanneknappen følger med).
+    val imeBottom = WindowInsets.ime.asPaddingValues().calculateBottomPadding()
+    val barBottom = if (vm.paperPage == "fsok" && imeBottom > navInset) imeBottom + 8.dp else maxOf(12.dp, navInset - 8.dp)
     val float = vm.fabStyle == "float"
     // Ekstra luft nederst i listene: plass til fanelinja (telefon) og den flytende skanneknappen.
     val navBottom = if (wide) 12.dp - PAPER_BAR + navInset + (if (float) 70.dp else 0.dp) else barBottom - 12.dp + (if (float) 70.dp else 0.dp)
@@ -348,6 +350,8 @@ internal fun PaperApp(
                         }
                     } } }
                     }
+                    // Prompt 28: wiggle-modus (Hjem, Finans, Mat, Sporing): ＋/✓-piller i eget lag over listen, aldri kuttet av scrolling.
+                    if (vm.editPage != null) WigglePills28(vm, Modifier.align(Alignment.TopCenter).padding(top = WIGGLE_TOP28).widthIn(max = if (wide) 720.dp else 10_000.dp))
                 }
             }
             if (wide) {

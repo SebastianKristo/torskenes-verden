@@ -104,25 +104,23 @@ internal fun PaperMore24(vm: AppViewModel, navBottom: Dp, barSpace: Dp) {
     val inBar = vm.tabBarItems().map { it.id }.toSet()
     val onWay = vm.packagesOnWay
     val sporingInBar = "sporing" in inBar || (vm.tabBar.isEmpty() && vm.tab4 == "sporing")
+    // Prompt 28: hold inne → redigeringsmodus (MerList28), rekkefølge og skjulte per konto; Subscription OS etter Finans.
+    var n = 0
     val rows = buildList {
-        if (vm.b24ProfileOn) add(MerItem24("hjem", "Hjem", "Pakker, avganger og widgets") { vm.paperTab("hjem") })
-        if (sporingInBar) { if ("domener" !in inBar) add(MerItem24("domener", "Domener", "Trafikk, besøk og oppetid") { vm.domSection = "oversikt"; vm.openFromMer(Screen.Domains) }) }
-        else add(MerItem24("sporing", "Sporing", if (onWay > 0) "$onWay pakker på vei" else "Pakker og sendinger") { vm.openFromMer(Screen.Tracking) })
-        add(MerItem24("bursdag", "Bursdager", "Hvem har bursdag snart") { vm.openBirthdays24() })
-        if ("chat" !in inBar) add(MerItem24("chat", "Chat", "Ollama lokalt, Gemini og Groq") { vm.openChat() })
-        add(MerItem24("kalender", "Kalender", "Timeplan, prøver og frister") { vm.openKal26() })
-        add(MerItem24("huske", "Huskeliste", "Oppgaver og widgets") { vm.openTasks() })
-        if ("familie" !in inBar) add(MerItem24("kart", "Familie og kart", "Posisjon, soner og helse") { vm.openFamily() })
-        if ("media" !in inBar) add(MerItem24("media", "Media", "Spilles nå og historikk") { vm.openPaperPage("media") })
-        if ("finans" !in inBar) add(MerItem24("finans", "Finans", "Oversikt, liste, Finn og mer") { vm.paperTab("fin") })
-        if ("nyheter" !in inBar) add(MerItem24("rss", "Nyhetsleser", "RSS med AI-sammendrag") { vm.openNews() })
-        add(MerItem24("innst", "Innstillinger", "Tema, bakgrunn og konto") { vm.openPaperPage("set") })
+        fun row(key: String, title: String, sub: String, go: () -> Unit) { add(MerItem28(key, title, sub, n++, go)) }
+        if (vm.b24ProfileOn) row("hjem", "Hjem", "Pakker, avganger og widgets") { vm.paperTab("hjem") }
+        if (sporingInBar) { if ("domener" !in inBar) row("domener", "Domener", "Trafikk, besøk og oppetid") { vm.domSection = "oversikt"; vm.openFromMer(Screen.Domains) } }
+        else row("sporing", "Sporing", if (onWay > 0) "$onWay pakker på vei" else "Pakker og sendinger") { vm.openFromMer(Screen.Tracking) }
+        row("bursdag", "Bursdager", "Hvem har bursdag snart") { vm.openBirthdays24() }
+        if ("chat" !in inBar) row("chat", "Chat", "Ollama lokalt, Gemini og Groq") { vm.openChat() }
+        row("kalender", "Kalender", "Timeplan, prøver og frister") { vm.openKal26() }
+        row("huske", "Huskeliste", "Oppgaver og widgets") { vm.openTasks() }
+        if ("familie" !in inBar) row("kart", "Familie og kart", "Posisjon, soner og helse") { vm.openFamily() }
+        if ("media" !in inBar) row("media", "Media", "Spilles nå og historikk") { vm.openPaperPage("media") }
+        if ("finans" !in inBar) row("finans", "Finans", "Oversikt, liste, Finn og mer") { vm.paperTab("fin") }
+        row("abo", "Subscription OS", "Abonnementer og faste trekk") { vm.openFromMer(Screen.Sub) }
+        if ("nyheter" !in inBar) row("rss", "Nyhetsleser", "RSS med AI-sammendrag") { vm.openNews() }
+        row("innst", "Innstillinger", "Tema, bakgrunn og konto") { vm.openPaperPage("set") }
     }
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, barSpace + 16.dp + navBottom), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item {
-            PCard(shadow = true) {
-                rows.forEachIndexed { i, r -> MerRow24(vm, i, r.icon, r.title, r.sub, top = i > 0, onClick = r.go) }
-            }
-        }
-    }
+    MerList28(vm, rows, navBottom, barSpace)
 }

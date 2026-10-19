@@ -110,9 +110,8 @@ internal fun PaperSubs23(vm: AppViewModel, navBottom: Dp, lift: Dp = 0.dp) {
         Modifier.fillMaxSize().offset(y = -lift), contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, PAPER_BAR + 30.dp + navBottom + lift),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        if (vm.subAdding) item { AddCard23(vm, t) }
-        // Prompt 27: «Fra skjermbilde» (Ollama leser tjeneste, plan, pris og trekkdato lokalt).
-        if (vm.b27.shotOpen) item { SubShotCard27(vm, t.card, t.fg, t.mut, t.bd, if (Tone.paperDark) Color(0xFFFFB08A) else ORANGE_DK, if (Tone.paperDark) Color(0xFF9FE3C6) else Color(0xFF2F7A4F)) }
+        // Prompt 28: «Legg til abonnement» er et ark (AddSubSheet28); «Fra skjermbilde» viser lesing og feilkort (SubShotCard28).
+        if (vm.b27.shotOpen) item { SubShotCard28(vm) }
         vm.moduleError?.let { e -> item { Text(e, color = t.neg, fontSize = 13.sp, fontFamily = sans) } }
         if (x == null) {
             if (vm.moduleError == null) item { Box(Modifier.fillMaxWidth().padding(30.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = t.fg) } }
@@ -150,6 +149,7 @@ internal fun PaperSubs23(vm: AppViewModel, navBottom: Dp, lift: Dp = 0.dp) {
     }
     vm.m23.subEditId?.let { id -> x?.item(id)?.let { s -> SubSheet23(vm, s) { vm.m23.subEditId = null } } ?: run { vm.m23.subEditId = null } }
     if (vm.m23.subEditNew) SubSheet23(vm, null) { vm.m23.subEditNew = false }
+    if (vm.subAdding) AddSubSheet28(vm)
 }
 
 @Composable

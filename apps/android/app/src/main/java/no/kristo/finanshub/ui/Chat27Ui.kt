@@ -34,6 +34,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
@@ -344,7 +346,10 @@ private fun Ch27Messages(vm: AppViewModel, v: ChatV27, m: ChatModel27?, modifier
     val n = s.msgs.size + (if (s.busy) 1 else 0)
     LaunchedEffect(s.curId, n, s.stream.length / 80) { if (n > 0) runCatching { list.scrollToItem(n - 1, Int.MAX_VALUE / 2) } }
     val lastA = s.msgs.indexOfLast { it.role == "assistant" }
-    LazyColumn(modifier, state = list, contentPadding = PaddingValues(start = 18.dp, top = 10.dp, end = 18.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
+    // Prompt 28: trykk hvor som helst i meldingsområdet skjuler tastaturet (knapper og lenker får trykket først).
+    val focus = androidx.compose.ui.platform.LocalFocusManager.current
+    val kb = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    LazyColumn(modifier.pointerInput(Unit) { detectTapGestures { focus.clearFocus(); kb?.hide() } }, state = list, contentPadding = PaddingValues(start = 18.dp, top = 10.dp, end = 18.dp, bottom = 24.dp), verticalArrangement = Arrangement.spacedBy(24.dp)) {
         if (s.msgs.isEmpty() && !s.busy) item(key = "empty") { Ch27Empty(vm, v, m) }
         itemsIndexed(s.msgs, key = { i, _ -> "${s.curId}:$i" }) { i, msg ->
             val key = "${s.curId}:$i"
@@ -516,8 +521,9 @@ private fun Ch27Composer(vm: AppViewModel, v: ChatV27, m: ChatModel27?) {
             }
             if (s.toast.isNotEmpty()) Box(Modifier.align(Alignment.CenterHorizontally).padding(top = 6.dp).clip(CircleShape).background(v.ink).padding(14.dp, 9.dp)) {
                 Text(s.toast, color = v.bg, fontFamily = v.sans, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 2)
-            } else Text(
-                if (m?.sky == true) "Sky-modell: meldingen sendes til ${if (m.provider == "groq") "Groq" else "Google"}." else "Kjører lokalt på hjemmeserveren. Ingenting sendes ut.",
+            } else if (m?.sky == true) Text(
+                // Prompt 28: ingen tekst for lokale modeller; bare sky-linjen.
+                "Sky-modell: meldingen sendes til ${if (m.provider == "groq") "Groq" else "Google"}.",
                 color = v.mut, fontFamily = v.sans, fontSize = 11.5.sp, modifier = Modifier.align(Alignment.CenterHorizontally).padding(top = 6.dp),
             )
         }

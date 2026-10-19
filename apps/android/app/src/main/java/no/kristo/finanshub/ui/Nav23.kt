@@ -217,7 +217,9 @@ internal fun Nav23Back(vm: AppViewModel, nav: Nav23, enabled: Boolean, bg: Color
 }
 
 /** Aksjer har ingen skanneknapp (verken flytende eller i linja), som i designet. */
-internal fun noScanHere(vm: AppViewModel): Boolean = vm.screen == Screen.Stocks && vm.paperPage == null && vm.selectedTx == null
+internal fun noScanHere(vm: AppViewModel): Boolean = (vm.screen == Screen.Stocks && vm.paperPage == null && vm.selectedTx == null) ||
+    vm.paperPage == "mer" || // Prompt 28 (B): ingen skanneknapp (FAB eller + i fanelinja) på Mer.
+    vm.weatherOpen // Prompt 28: ingen skanneknapp på Vær (siden har egen bunnlinje).
 
 /** Finans-undersider (klassiske skjermer i Papir) der første element er et kort som skal ligge 23 dp opp i toppbildet. */
 internal val PAPER_PULL_UP = setOf(Screen.Fast, Screen.Accounts)

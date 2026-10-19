@@ -1,7 +1,12 @@
 package no.kristo.finanshub.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
@@ -55,11 +60,8 @@ private fun modeFallback(m: String?, line: String): Long = when (modeKey(m)) {
     "bus" -> 0xFFE60000; "tram" -> 0xFF0B91EF; "metro" -> 0xFFEC700C; "rail" -> 0xFFE1EB00; else -> ruterModeColor(m, line)
 }
 /** Lys eller mørk tekst på linjefargen. */
-private fun onLine(c: Long, given: Long?): Color {
-    given?.let { return Color(it) }
-    val r = (c shr 16 and 0xFF) / 255.0; val g = (c shr 8 and 0xFF) / 255.0; val b = (c and 0xFF) / 255.0
-    return if (0.299 * r + 0.587 * g + 0.114 * b < 0.55) Color.White else Color(0xFF1B1A17)
-}
+@Suppress("UNUSED_PARAMETER")
+private fun onLine(c: Long, given: Long?): Color = lineInk28(c) // Prompt 28: alltid etter luminans (L > 0,4 → mørk tekst)
 
 /** Mørk pille over bildet (36 høy, rgba(27,26,23,.55)). */
 @Composable
@@ -245,7 +247,9 @@ private fun DepRow24(d: Dep, from: String?, open: Boolean, top: Boolean, onToggl
     val lineColor = Color(c)
     val status = depStatus(d)
     val late = (d.delayMin ?: 0) > 0 || status?.contains("forsinket") == true
-    Column(Modifier.fillMaxWidth().animateContentSize(tween(200, easing = FastOutSlowInEasing))) {
+    // Prompt 28: stopplisten ligger alltid i layouten og animerer høyden (ingen if/innsetting), så raden blir liggende og
+    // radene under glir jevnt. Bare én åpen om gangen (vm.depOpen); en ny lukker den forrige samtidig med samme animasjon.
+    Column(Modifier.fillMaxWidth()) {
         if (top) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
         Row(
             Modifier.fillMaxWidth().press24 { Haptics.select(); onToggle() }.padding(horizontal = 14.dp, vertical = 12.dp),
@@ -268,12 +272,16 @@ private fun DepRow24(d: Dep, from: String?, open: Boolean, top: Boolean, onToggl
                 depClock(d.expected ?: d.aimed).takeIf { it.isNotBlank() }?.let { Text(it, color = p.mut, fontSize = 11.5.sp) }
             }
         }
-        if (open) Column(Modifier.fillMaxWidth().padding(start = 60.dp, end = 14.dp, top = 2.dp, bottom = 14.dp)) {
+        AnimatedVisibility(
+            open,
+            enter = expandVertically(tween(320, easing = FastOutSlowInEasing), expandFrom = Alignment.Top) + fadeIn(tween(220)),
+            exit = shrinkVertically(tween(320, easing = FastOutSlowInEasing), shrinkTowards = Alignment.Top) + fadeOut(tween(180)),
+        ) { Column(Modifier.fillMaxWidth().padding(start = 60.dp, end = 14.dp, top = 2.dp, bottom = 14.dp)) {
             if (d.stops.isEmpty()) Text("Stoppene på turen kommer når serveren har dem.", color = p.mut, fontSize = 12.5.sp, modifier = Modifier.padding(vertical = 4.dp))
             else Stops24(d.stops, lineColor)
             Text("Åpne i Ruter ›", color = p.lab, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, textDecoration = TextDecoration.Underline,
                 modifier = Modifier.padding(top = 8.dp).clip(RoundedCornerShape(6.dp)).clickable { openLink(ctx, d.ruterUrl ?: ruterPlanner24(from, d.to)) }.padding(vertical = 4.dp))
-        }
+        } }
     }
 }
 

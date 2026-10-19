@@ -41,6 +41,8 @@ internal fun homeRuter27(vm: AppViewModel): Boolean {
     LaunchedEffect(vm.account?.id, vm.base) { vm.loadHomeDep27() }
     // Tilbake fra Avganger (stopp lagt til, fjernet eller flyttet): hent Mine stopp på nytt.
     LaunchedEffect(vm.ruterOpen) { if (!vm.ruterOpen && vm.b27.homeStops != null) runCatching { vm.refreshHomeDeps27(stops = true) } }
+    // Prompt 28: arket åpnes fra «✎ Rediger widget» i wiggle-modus, også når kortet ennå ikke har egne stopp.
+    if (vm.b27.homeSheet) VelgStopp27(vm)
     return !vm.b27.homeStops.isNullOrEmpty()
 }
 
@@ -58,29 +60,21 @@ internal fun RuterHome27(vm: AppViewModel, modifier: Modifier = Modifier) {
     }
     val shown = vm.homeShown27()
     val multi = shown.size > 1
-    val title = if (multi) "Avganger · ${shown.size} stopp" else "Avganger · " + (shown.firstOrNull()?.name ?: "")
+    // Prompt 28 (claude-code-ruter-hjem.md): tittel AVGANGER · STOPP1 · STOPP2, ingen «Velg stopp» (stopp velges via «✎ Rediger widget»),
+    // én flat liste: flere stopp → neste avgang fra hvert stopp; ett stopp → de neste N.
+    val title = (listOf("Avganger") + shown.map { it.name }).joinToString(" · ")
     PCard(modifier, onClick = { vm.openRuter() }) {
         Column(Modifier.padding(16.dp, 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PLabel(title, modifier = Modifier.weight(1f))
-                Box(
-                    Modifier.height(30.dp).clip(CircleShape).border(1.dp, p.line, CircleShape)
-                        .clickable(role = Role.Button, onClickLabel = "Velg stopp") { Haptics.select(); s.homeSheet = true }.padding(horizontal = 12.dp),
-                    contentAlignment = Alignment.Center,
-                ) { Text("Velg stopp", color = p.ink, fontWeight = FontWeight.SemiBold, fontSize = 12.sp, maxLines = 1) }
                 Text("sanntid ›", color = p.mut, fontSize = 12.sp)
             }
-            shown.forEachIndexed { gi, st ->
-                val n = if (multi) minOf(s.homeDep.n, 2) else s.homeDep.n
-                val deps = (s.homeDeps[st.id]?.departures ?: emptyList()).filter { !it.cancelled }.take(n)
-                if (multi) Text(st.name, color = p.mut, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = if (gi > 0) 4.dp else 0.dp))
-                if (deps.isEmpty()) Text(if (s.homeDeps.containsKey(st.id)) "Ingen avganger nå." else "Henter …", color = p.mut, fontSize = 13.sp)
-                deps.forEach { d -> DepRow27(d) }
-            }
+            val rows = if (multi) shown.mapNotNull { st -> (s.homeDeps[st.id]?.departures ?: emptyList()).firstOrNull { !it.cancelled } }
+                else shown.firstOrNull()?.let { st -> (s.homeDeps[st.id]?.departures ?: emptyList()).filter { !it.cancelled }.take(s.homeDep.n) } ?: emptyList()
+            if (rows.isEmpty()) Text(if (shown.any { s.homeDeps.containsKey(it.id) }) "Ingen avganger nå." else "Henter avganger …", color = p.mut, fontSize = 13.sp)
+            rows.forEach { d -> DepRow27(d) }
         }
     }
-    if (s.homeSheet) VelgStopp27(vm)
 }
 
 @Composable
@@ -89,9 +83,10 @@ private fun DepRow27(d: Dep) {
     val c = d.color ?: ruterModeColor(d.mode, d.line)
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(Modifier.widthIn(min = 30.dp).height(24.dp).clip(RoundedCornerShape(6.dp)).background(Color(c)).padding(horizontal = 5.dp), contentAlignment = Alignment.Center) {
-            Text(d.line, color = Color(d.textColor ?: 0xFFFFFFFF), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+            // Prompt 28: tekstfarge etter luminans på linjefargen (lys → mørk tekst, mørk → hvit).
+            Text(d.line, color = lineInk28(c), fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1)
         }
-        Text(d.to, color = p.ink, fontSize = 14.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Text(d.to, color = p.ink, fontSize = 14.5.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         val m = d.minutes
         PSerif(m?.let { if (it <= 0) "nå" else "$it" } ?: (d.expected ?: d.aimed)?.let(::hm27) ?: "–", 22.sp, maxLines = 1)
         Text(if (m != null && m > 0) "min" else "", color = p.mut, fontSize = 12.sp, modifier = Modifier.width(26.dp))

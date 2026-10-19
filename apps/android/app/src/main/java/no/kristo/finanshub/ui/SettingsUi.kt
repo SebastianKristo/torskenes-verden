@@ -174,6 +174,8 @@ internal fun AccountsPage(vm: AppViewModel) = Pages {
     val pickPhoto = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> uri?.let(vm::uploadAvatar) }
     val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(vm::uploadAvatar) }
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok -> if (ok) shot?.let(vm::uploadAvatar) }
+    // Prompt 28 (konto-farger): i Papir ligger innholdet 23 dp opp i toppbildet; etiketten PROFILBILDE skal stå under bildet.
+    if (Tone.paper) Spacer(Modifier.height(28.dp))
     Section("Profilbilde") {
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(C.surface1).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -192,7 +194,8 @@ internal fun AccountsPage(vm: AppViewModel) = Pages {
                     shot = u; camera.launch(u)
                 }, shape = RoundedCornerShape(18.dp)) { Text("Ta bilde") }
             }
-            if (vm.avatar != null) TextButton(onClick = { vm.removeAvatar() }) { Text("Fjern bildet", color = C.red) }
+            // Destruktiv tekstknapp i aksentfargen (lab), fet og uten opasitet.
+            if (vm.avatar != null) TextButton(onClick = { vm.removeAvatar() }) { Text("Fjern bildet", color = if (Tone.paper) PaperPal.current.lab else C.red, fontWeight = FontWeight.Bold) }
         }
     }
     Note("Hver konto har egne data, tokens og varsler. Bytt raskt ved å holde inne profilbildet.")
@@ -206,12 +209,14 @@ internal fun AccountsPage(vm: AppViewModel) = Pages {
                     Text(a.name.ifBlank { a.username.ifBlank { "Konto" } } + if (a.id == vm.activeId) " · aktiv" else "", fontWeight = FontWeight.Medium)
                     Text("${a.username.ifBlank { "–" }} · ${a.role} · ${host(a.server)}", color = C.text2, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                TextButton(onClick = { vm.logout(a.id) }) { Text("Logg ut", color = C.primary) }
+                TextButton(onClick = { vm.logout(a.id) }) { Text("Logg ut", color = if (Tone.paper) PaperPal.current.lab else C.primary, fontWeight = if (Tone.paper) FontWeight.Bold else null) }
             }
         }
     }
+    // Primærknapp: lab-bakgrunn med onLab-tekst i Papir (aldri hvit på lys rosa); ikonet følger tekstfargen.
     Button(onClick = { vm.addingAccount = true }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) { Icon(Icons.Filled.PersonAdd, null); Spacer(Modifier.width(8.dp)); Text("Legg til konto", fontWeight = FontWeight.Bold) }
+        colors = if (Tone.paper) ButtonDefaults.buttonColors(containerColor = PaperPal.current.lab, contentColor = PaperPal.current.onLab)
+            else ButtonDefaults.buttonColors(containerColor = C.primary, contentColor = C.onPrimary)) { Icon(Icons.Filled.PersonAdd, null); Spacer(Modifier.width(8.dp)); Text("Legg til konto", fontWeight = FontWeight.Bold) }
     if (vm.accounts.size > 1) OutlinedButton(onClick = { vm.logoutOthers() }, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(26.dp)) { Text("Logg ut andre kontoer") }
     Note("Nye brukere opprettes av admin i Homelab → Innstillinger → Innlogging.")
 }

@@ -58,9 +58,6 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import no.kristo.finanshub.*
 import java.time.Duration
 import java.time.LocalDateTime
@@ -71,11 +68,9 @@ import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
-import kotlin.math.sin
-import kotlin.random.Random
 
 /*
- * Værsiden, del 2 (prompt 22): animert bakgrunn, detaljarkene (Forhold og ett per kort), «Yr mot Pent», Steder og værkartet.
+ * Værsiden, del 2 (prompt 22): detaljarkene (Forhold og ett per kort), «Yr mot Pent», Steder og værkartet.
  */
 
 private val sheetBg = Color(0xFF17191E)
@@ -85,123 +80,7 @@ private val mut = Color(0xFF9AA0AA)
 private val mut2 = Color(0xFF9AA3AE)
 private val sky = Color(0xFF5EC8F2)
 
-/* ================= Animert værbakgrunn ================= */
-
-private class FxParts(seed: Int) {
-    private val r = Random(seed)
-    private fun rnd(a: Float, b: Float) = a + r.nextFloat() * (b - a)
-    // Stjerner, regn, snø og skyer i relative mål (x, y som andel av flaten). Fart i dp per bilde (60 fps), som i designet.
-    val stars = List(420) { floatArrayOf(rnd(0f, 1f), rnd(0f, .75f), rnd(.4f, 1.5f), rnd(.3f, 1f), rnd(.5f, 2f), rnd(0f, 6.28f)) }
-    val drops = List(220) { floatArrayOf(r.nextFloat(), rnd(-1f, 1f), rnd(10f, 22f), rnd(9f, 15f), rnd(.12f, .32f)) }
-    val flakes = List(110) { floatArrayOf(r.nextFloat(), rnd(-1f, 1f), rnd(1f, 3.2f), rnd(.5f, 1.5f), rnd(0f, 6.28f)) }
-    val clouds = List(9) { i -> floatArrayOf(rnd(-.2f, 1.1f), r.nextFloat(), rnd(.45f, .9f), rnd(.08f, .16f), rnd(.04f, .14f) * (if (i % 2 == 1) 1f else -.6f), r.nextFloat()) }
-}
-
-private fun wrap(v: Float, span: Float): Float = ((v % span) + span) % span
-
-/**
- * Værbakgrunn etter værkode og dag/natt (WxFx i designet): stjerner, dempet sol med glorie, drivende skyer, regnstriper,
- * lyn, snø og tåke. Maks 30 fps, står stille ved «Fjern animasjoner» og når appen ikke er synlig.
- */
-@Composable
-internal fun WxFx(kind: String, heavy: Boolean, thunder: Boolean) {
-    val ctx = LocalContext.current
-    val reduce = remember { runCatching { android.provider.Settings.Global.getFloat(ctx.contentResolver, android.provider.Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f }.getOrDefault(false) }
-    val parts = remember(kind) { FxParts(kind.hashCode()) }
-    var t by remember { mutableFloatStateOf(0f) }
-    var visible by remember { mutableStateOf(true) }
-    val owner = LocalLifecycleOwner.current
-    DisposableEffect(owner) {
-        val obs = LifecycleEventObserver { _: androidx.lifecycle.LifecycleOwner, e: Lifecycle.Event ->
-            if (e == Lifecycle.Event.ON_STOP) visible = false
-            if (e == Lifecycle.Event.ON_START) visible = true
-        }
-        owner.lifecycle.addObserver(obs)
-        onDispose { owner.lifecycle.removeObserver(obs) }
-    }
-    LaunchedEffect(kind, reduce, visible) {
-        if (reduce || !visible) return@LaunchedEffect
-        val t0 = withFrameNanos { it } - (t * 1e9f).toLong()
-        var last = 0L
-        while (true) withFrameNanos { n -> if (n - last >= 33_000_000L) { last = n; t = (n - t0) / 1e9f } }
-    }
-    val nC = when (kind) { "clouds", "rain", "snow", "fog" -> 9; "part", "partn" -> 4; else -> 0 }
-    Canvas(Modifier.fillMaxSize()) {
-        val d = density
-        val W = size.width
-        val H = size.height
-        val f = t * 60f // bilder ved 60 fps
-        if (kind == "stars" || kind == "partn") {
-            val n = min(parts.stars.size, ((W / d) * (H / d) / 2600f).roundToInt())
-            for (i in 0 until n) {
-                val s = parts.stars[i]
-                val tw = .55f + .45f * sin(t * s[4] + s[5])
-                drawCircle(Color.White.copy(alpha = (s[3] * tw).coerceIn(0f, 1f)), s[2] * d, Offset(s[0] * W, s[1] * H))
-            }
-        }
-        if (kind == "sun" || kind == "part") {
-            val m = min(W, H)
-            val cx = W * .72f
-            val cy = -m * .02f
-            val R = min(m * .95f, 560 * d)
-            drawRect(Brush.radialGradient(
-                0f to Color.White.copy(alpha = .9f), .07f to Color(255, 252, 236).copy(alpha = .6f), .22f to Color(255, 245, 220).copy(alpha = .14f),
-                .55f to Color.White.copy(alpha = .025f), 1f to Color.Transparent, center = Offset(cx, cy), radius = R,
-            ))
-            val hr = m * .5f
-            listOf(Color(255, 120, 120).copy(alpha = .045f) to 0f, Color(255, 230, 120).copy(alpha = .045f) to m * .03f, Color(120, 220, 255).copy(alpha = .05f) to m * .06f).forEach { (c, o) ->
-                drawCircle(c, hr + o, Offset(cx, cy), style = Stroke(m * .03f))
-            }
-            val sh = sin(t * .4f) * .05f
-            listOf(floatArrayOf(.2f, .06f), floatArrayOf(.3f, .035f), floatArrayOf(.38f, .05f)).forEach { (fy, fr) ->
-                val x = cx + (W * .5f - cx) * (fy * 2.2f) + sh * W
-                val y = cy + H * fy
-                drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = .08f), Color.Transparent), center = Offset(x, y), radius = W * fr), W * fr, Offset(x, y))
-            }
-        }
-        for (i in 0 until nC) {
-            val c = parts.clouds[i]
-            val cw = c[2] * W
-            val ch = c[3] * H
-            val y0 = (.02f + c[1] * ((if (kind == "part" || kind == "partn") .35f else .55f) - .02f)) * H
-            val a = when (kind) { "fog" -> .18f + c[5] * .12f; "rain", "snow" -> .16f + c[5] * .14f; "part" -> .08f + c[5] * .08f; else -> .2f + c[5] * .14f }
-            val span = W * 1.2f + cw * 1.1f
-            val x0 = wrap(c[0] * W + cw + c[4] * d * f, span) - cw
-            val col = when (kind) { "rain", "snow" -> Color(200, 210, 225); "partn" -> Color(150, 165, 195); else -> Color.White }
-            for (j in 0 until 5) {
-                val x = x0 + cw * (j / 4f)
-                val y = y0 + sin(j * 1.7f) * ch * .35f
-                val rr = ch * (1.1f + ((j * 37) % 5) / 6f)
-                drawOval(Brush.radialGradient(listOf(col.copy(alpha = a), col.copy(alpha = 0f)), center = Offset(x, y), radius = rr * 1.6f),
-                    Offset(x - rr * 1.9f, y - rr * 1.2f), Size(rr * 3.8f, rr * 2.4f))
-            }
-        }
-        if (kind == "rain") {
-            val n = if (heavy) 220 else 120
-            for (i in 0 until n) {
-                val p = parts.drops[i]
-                val span = H + 60 * d
-                val dist = p[1] * H + 60 * d + p[3] * d * f
-                val cyc = floor(dist / span)
-                val y = wrap(dist, span) - 60 * d
-                val x = wrap(p[0] * (W + 40 * d) + cyc * 137 * d, W + 40 * d) - 40 * d + .12f * (y + 60 * d)
-                val l = p[2] * d
-                drawLine(Color(220, 230, 245).copy(alpha = p[4]), Offset(x, y), Offset(x + l * .12f, y + l), 1.1f * d, StrokeCap.Round)
-            }
-            if (thunder && sin(t * .7f) > .995f) drawRect(Color.White.copy(alpha = .25f))
-        }
-        if (kind == "snow") {
-            for (p in parts.flakes) {
-                val span = H + 5 * d
-                val dist = p[1] * H + p[3] * d * f
-                val y = wrap(dist, span) - 5 * d
-                val x = wrap(p[0] * W + floor(dist / span) * 97 * d, W) + sin(t + p[4]) * 24 * d
-                drawCircle(Color.White.copy(alpha = .85f), p[2] * d, Offset(x, y))
-            }
-        }
-        if (kind == "fog") drawRect(Brush.verticalGradient(0f to Color(220, 225, 232).copy(alpha = 0f), 1f to Color(220, 225, 232).copy(alpha = .35f), startY = H * .2f, endY = H))
-    }
-}
+/* Animert værbakgrunn: WxFx28 i Weather28.kt (prompt 28). */
 
 /* ================= Arkene ================= */
 
@@ -700,7 +579,7 @@ internal fun PlacesSheet(vm: AppViewModel) {
         if (vm.wxSearchBusy) Text("Søker …", fontSize = 13.sp, color = mut2)
         val res = vm.wxSearch
         if (res.isNotEmpty()) Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(sheetCard).padding(horizontal = 14.dp, vertical = 2.dp)) {
-            res.take(8).forEachIndexed { i, r ->
+            res.take(10).forEachIndexed { i, r ->
                 val have = list.firstOrNull { it.name == r.name && abs(it.lat - r.lat) < .05 }
                 if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = .1f)))
                 Row(Modifier.fillMaxWidth().clickable {
@@ -715,7 +594,10 @@ internal fun PlacesSheet(vm: AppViewModel) {
                 }
             }
         }
-        if (q.trim().length >= 2 && !vm.wxSearchBusy && res.isEmpty()) Text("Fant ingen steder.", fontSize = 13.sp, color = mut2)
+        // Prompt 28: egne tekster for ingen treff og for nettfeil (claude-code-vaer-stedssok.md).
+        if (q.trim().length >= 2 && !vm.wxSearchBusy && res.isEmpty() && vm.wxSearchDoneQ == q.trim()) {
+            Text(if (vm.wxSearchFailed) "Får ikke søkt nå. Prøv igjen." else "Fant ingen steder som heter \"${q.trim()}\"", fontSize = 13.sp, color = mut2)
+        }
         Text("MINE STEDER", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, letterSpacing = .12.em, color = mut2)
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             list.forEach { p ->
@@ -741,7 +623,7 @@ internal fun PlacesSheet(vm: AppViewModel) {
             }
         }
         Text("Hold inne for å flytte · sveip mot høyre for å slette", fontSize = 12.sp, color = mut2, modifier = Modifier.padding(horizontal = 4.dp))
-        Text("Værdata fra Meteorologisk institutt (yr.no, api.met.no). Stedssøk via Open-Meteo.", fontSize = 12.sp, color = mut2, lineHeight = 17.sp)
+        Text("Værdata fra Meteorologisk institutt (yr.no, api.met.no). Stedssøk via Open-Meteo og OpenStreetMap.", fontSize = 12.sp, color = mut2, lineHeight = 17.sp)
     }
 }
 

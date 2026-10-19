@@ -2644,15 +2644,40 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         wxPlaces = runCatching { parseWxPlaces(api.hlGet("/weather/places")) }.getOrNull()
             ?: WX_PLACES.map { (id, n) -> WxPlace(id, n, 0.0, 0.0, "") }
     }
+    /** Prompt 28: søket feilet (nett/server), og søket svarene gjelder (så «Fant ingen» ikke vises før søket er ferdig). */
+    var wxSearchFailed by mutableStateOf(false)
+        private set
+    var wxSearchDoneQ by mutableStateOf("")
+        private set
     private var wxSearchJob: kotlinx.coroutines.Job? = null
+    /**
+     * Stedssøk (prompt 28): GET /api/weather/places?q= (Open-Meteo + foldet variant + Nominatim, slått sammen på serveren).
+     * Reserve: eldre server svarer 404, eller ignorerer q og gir lagrede steder – da brukes /weather/search som før.
+     * Debounce 250 ms, minst 2 tegn.
+     */
     fun searchWxPlaces(q: String) {
         wxSearchJob?.cancel()
-        if (q.trim().length < 2) { wxSearch = emptyList(); return }
+        val t = q.trim()
+        if (t.length < 2) { wxSearch = emptyList(); wxSearchFailed = false; wxSearchDoneQ = ""; wxSearchBusy = false; return }
         wxSearchJob = viewModelScope.launch {
             kotlinx.coroutines.delay(250)
             wxSearchBusy = true
-            try { wxSearch = runCatching { parseWxPlaces(api.hlGet("/weather/search?q=" + URLEncoder.encode(q.trim(), "UTF-8"))) }.getOrDefault(emptyList()) }
-            finally { wxSearchBusy = false }
+            val enc = URLEncoder.encode(t, "UTF-8")
+            try {
+                val res = try { parseWxSearch28(api.hlGet("/weather/places?q=$enc", timeout = 15_000)) }
+                    catch (e: ApiException) { if (e.status == 404) null else throw e }
+                wxSearch = res ?: parseWxPlaces(api.hlGet("/weather/search?q=$enc"))
+                wxSearchFailed = false
+                wxSearchDoneQ = t
+                wxSearchBusy = false
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                wxSearch = emptyList()
+                wxSearchFailed = true
+                wxSearchDoneQ = t
+                wxSearchBusy = false
+            }
         }
     }
     fun addWxPlace(p: WxPlace) = launch {
@@ -3529,6 +3554,20 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     internal fun launch27(block: suspend () -> Unit) = launch(block)
     /** Åpner Chat. Med tekst (✦ AI på Hjem, ANDROID-B) startes en ny samtale som sendes med en gang. */
     fun openChat(prompt: String = "") = openChat27(prompt)
+
+    /* ---------- Prompt 28 (ANDROID-B): Mer-rekkefølge, abonnement fra skjermbilde og «Legg til widget» (Mod28B.kt, ui/Ui28B.kt) ---------- */
+    val b28 = B28State()
+    internal suspend fun <T> api28b(f: suspend Api.() -> T): T = api.f()
+    internal fun launch28b(block: suspend () -> Unit) = launch(block)
+    /** «Legg til widget»: viser kortet igjen og legger det sist. */
+    fun showPageItemLast28(page: String, keys: List<String>, key: String) {
+        savePage(page, PageLay(pageOrder(page, keys).filter { it != key } + key, (pageHidden(page) - key).toList()))
+    }
+
+    /* ---------- Prompt 28: Innstillinger → System → Oppdatering (ui/Update28.kt) ---------- */
+    val upd28 = no.kristo.finanshub.ui.Upd28State()
+    internal suspend fun <T> apiUpd28(f: suspend Api.() -> T): T = api.f()
+    internal fun launchUpd28(block: suspend () -> Unit) = launch(block)
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.
