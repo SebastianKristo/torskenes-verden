@@ -70,6 +70,26 @@ jobs:
           grep -E ": error: |: fatal error: " mac.log | sort -u | head -80 || true
           tail -25 mac.log
           exit $s
+      - name: Start Kalender for Mac (røyktest)
+        # Bygger som i releasen (Release, ad hoc-signert med sandkasse), starter appen og viser krasjrapporten hvis den dør.
+        if: matrix.runner == 'macos-15'
+        continue-on-error: true
+        run: |
+          xcodebuild -project FinansHub.xcodeproj -scheme KalenderMac -configuration Release \
+            -destination 'generic/platform=macOS' -derivedDataPath buildsmoke \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build > smoke.log 2>&1 || { tail -30 smoke.log; exit 1; }
+          APP=buildsmoke/Build/Products/Release/Kalender.app
+          codesign --force --deep --options runtime -s - --entitlements KalenderMac/KalenderMac.entitlements "$APP"
+          codesign -d --entitlements - "$APP" || true
+          rm -f ~/Library/Logs/DiagnosticReports/Kalender* 2>/dev/null || true
+          "$APP/Contents/MacOS/Kalender" > run.log 2>&1 &
+          PID=$!
+          sleep 25
+          if kill -0 $PID 2>/dev/null; then echo "✓ Kalender kjører etter 25 s"; kill $PID; OK=0; else wait $PID; echo "✗ Kalender avsluttet med kode $?"; OK=1; fi
+          echo "--- stdout/stderr"; tail -60 run.log
+          for f in ~/Library/Logs/DiagnosticReports/Kalender*; do [ -f "$f" ] && { echo "--- $f"; head -c 12000 "$f"; }; done
+          log show --last 2m --style compact --predicate 'process == "Kalender" OR eventMessage CONTAINS "Kalender"' 2>/dev/null | grep -iE "crash|fatal|error|termin|sandbox|deny|signal" | tail -60 || true
+          exit $OK
       # Usignert .ipa for sideloading: AltStore/SideStore/Sideloadly signerer den med din egen Apple-ID ved installasjon.
       - name: Bygg usignert .ipa
         if: matrix.runner == 'macos-26'
