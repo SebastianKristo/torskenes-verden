@@ -961,3 +961,25 @@ html[data-v3]{--accf-check:var(--card2);--accf-check-ink:var(--card2-ink)}
 .bol2-bgo b{font-size:12px;font-weight:600}
 .bol2-sheet-b.col{grid-template-columns:1fr}
 .bol2-sheet-b .btn:disabled{opacity:.55;cursor:default}
+
+/* Prompt 27: ✕ til venstre i søkefeltene (searchfield.js). Boliger: ✕ inne i feltet. */
+.bol-qw{position:relative;display:inline-flex;align-items:center;flex:1 1 220px;min-width:0}
+.bol-qw .bol-q{width:100%}
+.bol-qw.has .bol-q{padding-left:40px}
+.bol-qw button.sf-x.sf-x{position:absolute;left:8px;margin:0}
+
+/* Prompt 27: «Fra skjermbilde» i Subscription OS (Ollama leser skjermbildet lokalt). */
+.so-sk{display:flex;flex-direction:column;gap:12px;border-color:color-mix(in srgb,#FF7A3D 35%,var(--line))}
+.so-sk-m{display:flex;gap:14px;align-items:flex-start}
+.so-sk-img{flex:none;width:76px;height:130px;border-radius:12px;background:var(--bg2,rgba(127,127,127,.15)) top center/cover no-repeat;border:1px solid var(--line)}
+.so-sk-rows{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.so-sk-r{display:flex;align-items:center;gap:10px;min-height:34px;border-bottom:1px solid var(--line)}
+.so-sk-r>span:first-child{flex:none;width:92px;font-size:12.5px;color:var(--muted)}
+.so-sk-r b{flex:1;min-width:0;font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.so-sk-r .ok{flex:none;font-size:11.5px;font-weight:700;color:#3A9F7B}
+.so-sk-r .chk{flex:none;font-size:11.5px;font-weight:700;color:#E07B3F}
+.so-sk-t{font-size:14px;line-height:1.45}
+.so-sk-bar{height:4px;border-radius:2px;background:var(--line);overflow:hidden;margin-top:8px}
+.so-sk-bar span{display:block;height:100%;background:#FF7A3D;transition:width .3s}
+.so-sk-b{display:flex;gap:8px;flex-wrap:wrap}
+.so-sk-b .btn{flex:1;min-width:140px;height:44px;border-radius:22px;justify-content:center}

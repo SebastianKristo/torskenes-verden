@@ -1,71 +1,83 @@
-// Kalender (prompt 26, Kalender.dc.html variant «web», claude-code-kalender.md).
-// Nå-kort, Prøver og frister, Kalendere-lenken, kalenderen (Uke · Måned · Agenda med filter og detaljkort) og
-// forhåndsvisning av telefon-widgetene. Hold inne et kort (0,55 s) for rediger-modus: ▲ ▼ flytter og − skjuler.
-// På web står kalenderen fast i høyre kolonne og Widgets går over hele bredden; på mobil ligger alt i én kolonne.
-// Data fra GET /api/kalender (skolens iCal, Canvas, Bursdager og Google, per bruker). Svarer serveren 404 (eldre
+// Kalender v2 (prompt 27, Kalender.dc.html variant «web», claude-code-kalender-v2.md).
+// Lav toppstripe (fotovinduet uten tittel), så én flate: måned + år, ‹ ›, Dag · 3 dager · Uke · Måned · Liste, søk,
+// I dag og «+ Ny hendelse». Under: NESTE / NÅ-stripen, sidepanel med minikalender og kalenderfilter, og visningen.
+// Dag/3 dager/Uke: 00–24-rutenett som ruller til nå, rød nålinje, HELE-rad, overlapp side om side, klikk på tom plass
+// = ny hendelse på halvtimen. Måned: 6 uker, timer samlet som «4 timer». Liste: 45 dager.
+// Ny/rediger skrives til Google Kalender (POST/PATCH/DELETE /api/kalender/events); skolens hendelser er skrivebeskyttet
+// og kan kopieres til Privat. Hurtigtaster: ← → · T · D · 3 · W · M · L · N · / · Esc.
+// Widget-forhåndsvisningene nederst er fjernet (prompt 27). Hjem-widgeten KALENDER (d_kal/p_kal) er uendret.
+// Data: GET /api/kalender (skolens iCal med RRULE ekspandert, Canvas, Bursdager, Google). Svarer serveren 404 (eldre
 // versjon), bygges kalenderen fra /api/school og Bursdager her i nettleseren.
-// Valg (rekkefølge, skjulte kort, filter, visning, påminnelser og fagfarger) lagres per bruker i /api/me/layout
-// (kalOrder, kalHidden, kalFilters, kalView, kalReminders, subjectColors) og i nettleseren som reserve.
+// Valg per bruker i /api/me/layout: kalView, kalFilters, kalReminders, subjectColors (og i nettleseren som reserve).
 import { api, esc, isMobile } from './util.js';
 import { store, widget, refresh, emit, on } from './store.js';
 import { openSettings } from './settings.js';
 import { loadBirthdays } from './birthdays.js';
+import { searchField } from './searchfield.js';
+import { t, locale, dayName, monthName, fmtDate } from './i18n.js';
 
 const MN = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
 const MS = MN.map((m) => m.slice(0, 3));
 const WD = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'];
-const WS = ['MAN', 'TIR', 'ONS', 'TOR', 'FRE', 'LØR', 'SØN'];
 const LAB = '#b23a2a';
-// type → [filter, farge]. Timer får fagfargen.
-const KC = { time: ['Timeplan', null], prove: ['Prøver og frister', LAB], innl: ['Prøver og frister', LAB], bursdag: ['Bursdager', '#2b5d8a'], skole: ['Skole', '#a8661a'], fri: ['Skole', '#a8661a'] };
-const TYPES = Object.keys(KC);
-const CH = [['Timeplan', 'var(--k-ink)', 'timeplan'], ['Prøver og frister', LAB, 'prover'], ['Bursdager', '#2b5d8a', 'bursdager'], ['Skole', '#a8661a', 'skole']];
+const TYPES = ['time', 'prove', 'innl', 'bursdag', 'skole', 'fri'];
+// Kalenderne (samme rekkefølge og farger som designet). Serveren kan sende sin egen liste (calendars).
+const CALS0 = [
+  { id: 'timeplan', name: 'Timeplan', color: '#2b5d8a', src: 'Skolens iCal', writable: false },
+  { id: 'prover', name: 'Prøver og frister', color: LAB, src: 'Skolens iCal', writable: false },
+  { id: 'skole', name: 'Skole', color: '#a8661a', src: 'Skolens iCal', writable: false },
+  { id: 'privat', name: 'Privat', color: '#6b4fa0', src: 'Google Kalender', writable: true },
+  { id: 'familie', name: 'Familie', color: '#d08a1e', src: 'Google · delt med familien', writable: true },
+  { id: 'bursdager', name: 'Bursdager', color: '#3f7a6e', src: 'Bursdager-modulen', writable: false },
+];
+const KIND_CAL = { time: 'timeplan', prove: 'prover', innl: 'prover', skole: 'skole', fri: 'skole', bursdag: 'bursdager' };
 // Fast fagpalett (samme som serveren bruker) når serveren ikke sender farge.
 const PALETTE = ['#2b5d8a', '#2e6f75', '#a8661a', '#7a3b6b', '#2f7a4f', '#6b5a3a', '#c0562a', '#3f7a6e', '#5b4b8a', '#8a5a2b'];
 const SHORT = { 'Matematikk R2': 'Matte R2', 'Matematikk R1': 'Matte R1', 'Matematikk S2': 'Matte S2', 'Matematikk S1': 'Matte S1', Kroppsøving: 'Gym' };
-// Kortene som kan flyttes og skjules. På web står «calendar» fast i høyre kolonne og «widgets» over hele bredden.
-const CARDS = ['now', 'exams', 'cals', 'calendar', 'widgets'];
-// På serveren (og i appene) heter kortene A–E som i designet.
-const CID = { now: 'A', exams: 'B', cals: 'C', calendar: 'D', widgets: 'E' }, CNAME = Object.fromEntries(Object.entries(CID).map(([a, b]) => [b, a]));
-const toNames = (v) => { const l = Array.isArray(v) ? v : v && typeof v === 'object' ? Object.keys(v).filter((k) => v[k]) : null; return l && l.map((x) => CNAME[x] ?? x).filter((x) => CARDS.includes(x)); };
-const toIds = (l) => (l ? l.map((x) => CID[x] ?? x) : null);
-const CN = { now: 'Nå-kort', exams: 'Prøver og frister', cals: 'Kalendere', calendar: 'Kalender', widgets: 'Widgets' };
 const REMS = [['none', 'Ingen'], ['15m', '15 min før'], ['1h', '1 time før'], ['day', 'Dagen før']];
-const VIEW_SRV = { uke: 'uke', mnd: 'maaned', agenda: 'agenda' }, VIEW_LOC = { uke: 'uke', maaned: 'mnd', mnd: 'mnd', agenda: 'agenda' };
+const REPS = [['none', 'Ingen'], ['daily', 'Hver dag'], ['weekly', 'Hver uke'], ['monthly', 'Hver måned']];
+// Visningene: [lokal id, navn, hurtigtast, serverens kalView]
+const VIEWS = [['dag', 'Dag', 'D', 'dag'], ['3d', '3 dager', '3', '3dager'], ['uke', 'Uke', 'W', 'uke'], ['mnd', 'Måned', 'M', 'maaned'], ['liste', 'Liste', 'L', 'liste']];
+const VIEW_LOC = { dag: 'dag', '3dager': '3d', '3d': '3d', uke: 'uke', maaned: 'mnd', mnd: 'mnd', liste: 'liste', agenda: 'liste' };
+const VIEW_SRV = Object.fromEntries(VIEWS.map((v) => [v[0], v[3]]));
 const LKEY = 'hl_kal_v1';
 const FONTS = 'https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap';
 
-const K = { data: null, err: '', loading: null, at: 0, fallback: false, prefs: false,
-  view: 'uke', off: 0, filt: {}, rem: {}, ord: null, hidC: [], subjC: {}, sel: null, day: null, ro: false, toast: '' };
-let lp = null, swallow = false, tickT = null, toastT = null;
+const K = { data: null, err: '', loading: null, at: 0, fallback: false, prefs: false, range: null,
+  view: 'uke', cur: null, filt: {}, rem: {}, subjC: {}, sel: null, form: null, srch: null, miniOff: 0, mini: false, delArm: false, toast: '', busy: false };
+let tickT = null, toastT = null, keyBound = false, gridKey = '';
 const host = () => document.getElementById('kal');
 
 /* ---------------- Datoer ---------------- */
 
 const pad = (n) => String(n).padStart(2, '0');
 const key = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-const mm = (s) => { const [a, b] = s.split(':'); return +a * 60 + +b; };
+const mm = (s) => { const [a, b] = String(s).split(':'); return +a * 60 + +b; };
 const add = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 const d0 = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const hm = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-const capf = (s) => s.replace(/^./, (c) => c.toUpperCase());
-const isoW = (d) => { const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const dn = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - dn); const y = new Date(Date.UTC(t.getUTCFullYear(), 0, 1)); return Math.ceil(((t - y) / 864e5 + 1) / 7); };
+const hmM = (x) => `${pad(Math.floor(x / 60) % 24)}:${pad(x % 60)}`;
+const capf = (s) => String(s).replace(/^./, (c) => c.toUpperCase());
+const isoW = (d) => { const t0 = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const dn = t0.getUTCDay() || 7; t0.setUTCDate(t0.getUTCDate() + 4 - dn); const y = new Date(Date.UTC(t0.getUTCFullYear(), 0, 1)); return Math.ceil(((t0 - y) / 864e5 + 1) / 7); };
 const parseD = (v) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? new Date(v + 'T00:00') : new Date(v));
 const dLong = (d) => `${WD[d.getDay()]} ${d.getDate()}. ${MN[d.getMonth()]}`;
 const dur = (x) => (x >= 60 ? `${Math.floor(x / 60)} t ${x % 60} min` : `${x} min`);
+const dur2 = (x) => (x < 60 ? `${x} min` : x < 1440 ? `${Math.floor(x / 60)} t${x % 60 ? ` ${x % 60} min` : ''}` : `${Math.round(x / 1440)} d`);
 const daysTo = (k, today) => Math.round((new Date(k + 'T12:00') - new Date(key(today) + 'T12:00')) / 864e5);
+const fromKey = (k) => new Date(k + 'T12:00');
+// Ukedag kort (MAN … SØN) og lang dato med Intl, så engelsk får «Monday 19 October».
+const wdShort = (d) => dayName(d.getDay(), 'short').replace('.', '').slice(0, 3).toUpperCase();
+const longDate = (d) => capf(fmtDate(d, { weekday: 'long', day: 'numeric', month: 'long' }));
 export const semester = (d = new Date()) => `Skole · ${d.getMonth() >= 6 ? 'høst' : 'vår'} ${d.getFullYear()}`;
 
 /* ---------------- Innstillinger per bruker ---------------- */
 
 function readLocal() { try { return JSON.parse(localStorage.getItem(LKEY) || 'null') ?? {}; } catch { return {}; } }
-function writeLocal() { try { localStorage.setItem(LKEY, JSON.stringify({ view: K.view, filt: K.filt, rem: K.rem, ord: K.ord, hidC: K.hidC, subjC: K.subjC })); } catch { /* privat modus */ } }
+function writeLocal() { try { localStorage.setItem(LKEY, JSON.stringify({ view: K.view, filt: K.filt, rem: K.rem, subjC: K.subjC })); } catch { /* privat modus */ } }
 function applyPrefs(p) {
   if (p.view && VIEW_LOC[p.view]) K.view = VIEW_LOC[p.view];
   if (p.filt && typeof p.filt === 'object') K.filt = p.filt;
   if (p.rem && typeof p.rem === 'object') K.rem = p.rem;
-  if (Array.isArray(p.ord)) K.ord = p.ord;
-  if (Array.isArray(p.hidC)) K.hidC = p.hidC;
   if (p.subjC && typeof p.subjC === 'object') K.subjC = p.subjC;
 }
 async function loadPrefs() {
@@ -74,7 +86,7 @@ async function loadPrefs() {
   applyPrefs(readLocal());
   try {
     const l = await api('/me/layout');
-    applyPrefs({ view: l.kalView, filt: l.kalFilters, rem: l.kalReminders, ord: toNames(l.kalOrder), hidC: toNames(l.kalHidden), subjC: l.subjectColors });
+    applyPrefs({ view: l.kalView, filt: l.kalFilters, rem: l.kalReminders, subjC: l.subjectColors });
     writeLocal();
   } catch { /* eldre server: bare nettleseren */ }
 }
@@ -95,12 +107,18 @@ export async function setSubjectColor(name, c) {
 
 const hash = (s) => [...String(s)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
 const palette = (s) => (/studietid|fritime/i.test(s) ? '#7a7468' : PALETTE[hash(s) % PALETTE.length]);
-function classify(t, x) {
-  if (/prøve|heldag|muntlig|eksamen|tentamen/i.test(t)) return 'prove';
-  if (/innlever|frist|deadline/i.test(t) || x.deadline) return 'innl';
-  if (x.allDay && /\bfri\b|fridag|planleggingsdag|ferie/i.test(t)) return 'fri';
+function classify(tt, x) {
+  if (/prøve|heldag|muntlig|eksamen|tentamen/i.test(tt)) return 'prove';
+  if (/innlever|frist|deadline/i.test(tt) || x.deadline) return 'innl';
+  if (x.allDay && /\bfri\b|fridag|planleggingsdag|ferie/i.test(tt)) return 'fri';
   if (x.allDay) return 'skole';
   return 'time';
+}
+function calOf(x, kind) {
+  if (x.calendar) return String(x.calendar);
+  if (x.source === 'google' || x.googleId) return /famil/i.test(x.googleCalendarId ?? x.calendarName ?? '') ? 'familie' : 'privat';
+  if (x.source === 'local') return 'privat';
+  return KIND_CAL[kind] ?? 'skole';
 }
 
 /** Gjør svaret fra /api/kalender (eller reserven) om til hendelser per dag. */
@@ -112,9 +130,13 @@ function normalize(r) {
     if (!x || !x.start) continue;
     const st = parseD(x.start), en = x.end ? parseD(x.end) : st;
     if (Number.isNaN(+st)) continue;
-    const kind = TYPES.includes(x.type) ? x.type : x.type === 'bd' ? 'bursdag' : 'time';
-    const base = { id: String(x.id ?? `${x.start}|${x.title}`), kind, t: String(x.title ?? ''), short: x.short || '', subj: x.subject || (kind === 'time' ? String(x.title ?? '') : ''),
-      r: x.room || x.location || '', teacher: x.teacher || '', n: x.note || '', c: x.color || '', src: x.source || '', url: x.url || '', map: x.mazemap || '' };
+    // Egne hendelser (Google / lokale i Privat og Familie) er «g», uansett hvilken type serveren gjetter.
+    const own = x.source === 'google' || x.source === 'local' || x.calendar === 'privat' || x.calendar === 'familie';
+    const kind = own ? 'g' : TYPES.includes(x.type) ? x.type : x.type === 'bd' ? 'bursdag' : 'time';
+    const cal = calOf(x, kind);
+    const base = { id: String(x.id ?? `${x.start}|${x.title}`), oid: String(x.id ?? ''), kind, cal, t: String(x.title ?? ''), short: x.short || '', subj: x.subject || (kind === 'time' ? String(x.title ?? '') : ''),
+      r: x.room || x.location || '', teacher: x.teacher || '', n: x.note || '', c: x.color || '', src: x.source || '', url: x.url || '', map: x.mazemap || '',
+      editable: !!x.editable, rep: x.repeat || (x.recurrence ? 'rec' : ''), recurrence: x.recurrence || null, srvRem: x.reminder || '', all: !!x.allDay, startRaw: x.start, endRaw: x.end };
     if (x.allDay) {
       // Heldagshendelser over flere dager: én oppføring per dag (slutt er eksklusiv).
       let d = d0(st), n = 0;
@@ -127,7 +149,7 @@ function normalize(r) {
   for (const [k, L] of byDay) {
     let out = L;
     if (L.some((e) => e.kind === 'fri')) out = out.filter((e) => e.kind !== 'time');
-    for (const x of L.filter((e) => e.s && (e.kind === 'prove' || e.kind === 'skole'))) {
+    for (const x of L.filter((e) => e.s && (e.kind === 'prove' || e.kind === 'skole') && e.cal !== 'privat' && e.cal !== 'familie')) {
       const a = mm(x.s), b = mm(x.e);
       out = out.filter((l) => l.kind !== 'time' || mm(l.e) <= a || mm(l.s) >= b);
     }
@@ -136,7 +158,10 @@ function normalize(r) {
   const byId = new Map();
   for (const L of byDay.values()) for (const e of L) byId.set(e.id, e);
   const src = Array.isArray(r.sources) ? r.sources.filter((x) => x && typeof x === 'object') : [], school = src.filter((x) => x.id === 'ical' || x.id === 'canvas');
-  return { byDay, byId, subjects, sources: src, configured: r.configured ?? (school.length ? school.some((x) => x.configured) : true), srvNow: r.now ?? null };
+  const cals = Array.isArray(r.calendars) && r.calendars.length
+    ? r.calendars.filter((c) => c && c.id).map((c) => ({ ...(CALS0.find((x) => x.id === c.id) ?? {}), ...c, src: c.source || c.src || CALS0.find((x) => x.id === c.id)?.src || '' }))
+    : CALS0;
+  return { byDay, byId, subjects, sources: src, cals, configured: r.configured ?? (school.length ? school.some((x) => x.configured) : true), srvNow: r.now ?? null };
 }
 
 async function fallbackData() {
@@ -155,13 +180,16 @@ async function fallbackData() {
   return normalize({ events: evs, configured: school ? school.configured !== false : false, sources: ['ical', 'birthdays'] });
 }
 
-async function fetchKal() {
-  const t = d0(new Date());
+/** Henter [from, to]. Ved bla utenfor det som er hentet, hentes et nytt vindu rundt visningen. */
+async function fetchKal(from, to) {
+  const tt = d0(new Date());
+  from ??= key(add(tt, -42)); to ??= key(add(tt, 120));
   try {
-    K.data = normalize(await api(`/kalender?from=${key(add(t, -42))}&to=${key(add(t, 120))}`));
+    K.data = normalize(await api(`/kalender?from=${from}&to=${to}`));
+    K.range = { from, to };
     K.fallback = false; K.err = '';
   } catch (e) {
-    if (e.status === 404) { K.data = await fallbackData(); K.fallback = true; K.err = ''; }
+    if (e.status === 404) { K.data = await fallbackData(); K.fallback = true; K.err = ''; K.range = { from: key(add(tt, -400)), to: key(add(tt, 400)) }; }
     else K.err = e.message;
   }
   K.at = Date.now();
@@ -173,53 +201,44 @@ export function ensureKal(force = false) {
   loadPrefs();
   if (K.loading) return K.loading;
   if (!force && K.data && Date.now() - K.at < 10 * 60_000) return Promise.resolve(K.data);
-  K.loading = fetchKal().finally(() => { K.loading = null; });
+  const r = K.range && K.view ? K.range : null;
+  K.loading = fetchKal(r?.from, r?.to).finally(() => { K.loading = null; });
   return K.loading;
 }
+/** Sørger for at perioden [a, b] (nøkler) er hentet. */
+function ensureRange(a, b) {
+  if (!K.range || K.fallback || K.loading) return;
+  if (a >= K.range.from && b <= K.range.to) return;
+  const c = fromKey(a);
+  K.loading = fetchKal(key(add(c, -60)), key(add(c, 150))).finally(() => { K.loading = null; });
+}
 
-/* ---------------- Hjelpere for visningen ---------------- */
+/* ---------------- Hjelpere ---------------- */
 
-const filtOf = (e) => KC[e.kind][0];
-const shown = (name) => K.filt[CH.find((c) => c[0] === name)?.[2]] !== false;
+const calList = () => K.data?.cals ?? CALS0;
+const calById = (id) => calList().find((c) => c.id === id) ?? CALS0.find((c) => c.id === id) ?? { id, name: id, color: '#7a7468', src: '' };
+const shownCal = (id) => K.filt[id] !== false && calList().find((c) => c.id === id)?.enabled !== false;
 function evOn(d, all = false) {
   const L = K.data?.byDay.get(key(d)) ?? [];
-  return all ? L : L.filter((e) => shown(filtOf(e)));
+  return all ? L : L.filter((e) => shownCal(e.cal));
 }
 const subjColor = (e) => K.subjC[e.subj] || K.data?.subjects?.[e.subj] || e.c || palette(e.subj || e.t);
-const col = (e) => (e.kind === 'time' ? subjColor(e) : KC[e.kind][1]);
+const col = (e) => (e.kind === 'time' ? subjColor(e) : e.kind === 'prove' || e.kind === 'innl' ? LAB : e.c && e.kind === 'g' ? e.c : calById(e.cal).color);
 const short = (e) => (e.kind === 'time' ? e.short || SHORT[e.subj] || e.subj || e.t : e.t);
 const tmOf = (e) => (e.kind === 'innl' ? (e.e ? `Frist ${e.e}` : 'Frist') : e.s ? `${e.s}–${e.e}` : 'Hele dagen');
 const sub2 = (...a) => a.filter(Boolean).join(' · ');
 const isLesson = (e) => e.s && (e.kind === 'time' || e.kind === 'prove');
-const reg = (e) => esc(e.id);
 const findEv = (id) => K.data?.byId.get(id) ?? null;
+const inTxt = (dd) => (dd === 0 ? 'I dag' : dd === 1 ? 'I morgen' : `${dd} dager`);
+const curD = () => (K.cur ? fromKey(K.cur) : d0(new Date()));
 
 function exams(today) {
   const tk = key(today), out = [];
-  for (const [k, L] of K.data?.byDay ?? []) if (k >= tk) for (const e of L) if ((e.kind === 'prove' || e.kind === 'innl') && shown('Prøver og frister')) out.push(e);
+  for (const [k, L] of K.data?.byDay ?? []) if (k >= tk) for (const e of L) if ((e.kind === 'prove' || e.kind === 'innl') && shownCal(e.cal)) out.push(e);
   return out.sort((a, b) => a.k.localeCompare(b.k) || (a.s || a.e || '').localeCompare(b.s || b.e || ''));
 }
-const inTxt = (dd) => (dd === 0 ? 'I dag' : dd === 1 ? 'I morgen' : `${dd} dager`);
 
-/** Nå-kortet: NÅ, NESTE TIME, NESTE SKOLEDAG eller FRI, pluss neste prøve. */
-function nowModel(now, today) {
-  const nm = now.getHours() * 60 + now.getMinutes(), tl = evOn(today).filter(isLesson);
-  const cur = tl.find((e) => nm >= mm(e.s) && nm < mm(e.e)), nx = tl.find((e) => mm(e.s) > nm);
-  let v;
-  if (cur) v = { k: 'NÅ', when: `${cur.s}–${cur.e}`, t: cur.t, sub: `${sub2(cur.r, cur.teacher)}${cur.r || cur.teacher ? ' · ' : ''}${mm(cur.e) - nm} min igjen`, c: col(cur), bar: Math.round((nm - mm(cur.s)) / (mm(cur.e) - mm(cur.s)) * 100), e: cur, next: nx ? `Deretter: ${nx.t} ${nx.s}${nx.r ? ` · ${nx.r}` : ''}` : 'Siste time i dag' };
-  else if (nx) v = { k: 'NESTE TIME', when: `om ${dur(mm(nx.s) - nm)}`, t: nx.t, sub: sub2(`${nx.s}–${nx.e}`, nx.r, nx.teacher), c: col(nx), bar: null, e: nx, next: '' };
-  else {
-    let d = add(today, 1), f = null;
-    for (let i = 0; i < 21 && !f; i++) { f = evOn(d).find(isLesson); if (!f) d = add(d, 1); }
-    v = f ? { k: 'NESTE SKOLEDAG', when: capf(dLong(d)), t: f.t, sub: `${sub2(`${f.s}–${f.e}`, f.r)} · første time`, c: col(f), bar: null, e: f, next: '' }
-      : { k: 'FRI', when: '', t: 'Ingen timer', sub: K.data && !K.data.configured ? 'Legg inn skolens iCal under Innstillinger → Kalendere' : 'Ingen timer de neste tre ukene', c: '#7a7468', bar: null, e: null, next: '' };
-  }
-  const ne = exams(today)[0];
-  if (ne) { const dd = daysTo(ne.k, today); v.next = `${v.next ? `${v.next} · ` : ''}${ne.t} ${dd === 0 ? 'i dag' : dd === 1 ? 'i morgen' : `om ${dd} dager`}`; }
-  return v;
-}
-
-/** Felles innhold for widgetene (telefon-forhåndsvisningene og Hjem-widgeten KALENDER). */
+/** Felles innhold for Hjem-widgeten KALENDER (uendret fra prompt 26). */
 function wgModel(now, today) {
   const nm = now.getHours() * 60 + now.getMinutes();
   let wd = today, wl = evOn(today).filter(isLesson), isT = true;
@@ -237,247 +256,437 @@ function wgModel(now, today) {
     when: !nx ? '' : cur ? `${dur(mm(cur.e) - nm)} igjen` : isT ? `om ${dur(mm(nx.s) - nm)}` : 'første time',
     dayT: `${isT ? 'I dag · ' : ''}${dS} ${wd.getDate()}. ${MS[wd.getMonth()]}`, dayL: `${isT ? 'I dag · ' : ''}${dS} ${wd.getDate()}. ${MN[wd.getMonth()]}`, cnt: `${wl.length} ${wl.length === 1 ? 'time' : 'timer'}`,
     n3: n3.map((e) => ({ s: e.s, t: short(e), r: e.r, c: col(e), e })),
-    all: wl.slice(0, 6).map((e) => ({ tm: `${e.s}–${e.e}`, t: e.t, r: sub2(e.r, e.teacher), c: col(e), past: isT && mm(e.e) <= nm })),
     ex,
   };
 }
 
-/* ---------------- Kortene ---------------- */
+/* ---------------- NESTE / NÅ ---------------- */
 
-function nowCard(now, today) {
-  const v = nowModel(now, today);
-  return `<button type="button" class="kal-now"${v.e ? ` data-k-sel="${reg(v.e)}"` : ''}>
-    <span class="kal-now-k"><span>${esc(v.k)}</span><span>${esc(v.when)}</span></span>
-    <span class="kal-now-m"><span class="kal-strip" style="background:${esc(v.c)}"></span><span class="kal-grow"><b>${esc(v.t)}</b><span>${esc(v.sub)}</span></span></span>
-    ${v.bar != null ? `<span class="kal-bar"><span style="width:${v.bar}%"></span></span>` : ''}
-    ${v.next ? `<span class="kal-now-n">${esc(v.next)}</span>` : ''}</button>`;
+/** Neste (eller pågående) hendelse med klokkeslett de neste tre ukene, uansett kalender – timer først ved lik start. */
+function nextModel(now, today) {
+  const nm = now.getHours() * 60 + now.getMinutes();
+  let nx = null;
+  for (let i = 0; i < 21 && !nx; i++) {
+    const d = add(today, i);
+    const L = evOn(d).filter((e) => e.s && e.e && e.kind !== 'innl').sort((a, b) => mm(a.s) - mm(b.s) || (a.kind === 'time' ? -1 : b.kind === 'time' ? 1 : 0));
+    for (const e of L) { const a = mm(e.s) + i * 1440, b = mm(e.e) + i * 1440; if (b > nm) { nx = { e, cur: a <= nm, a, b, i, d }; break; } }
+  }
+  if (!nx) return { k: '', t: 'Ingen kommende hendelser', c: '#7a7468', sub: K.data && !K.data.configured ? 'Legg inn skolens iCal under Innstillinger → Kalendere' : 'De neste tre ukene', when: '', id: '' };
+  const e = nx.e, day = nx.i === 0 ? 'I dag' : nx.i === 1 ? 'I morgen' : longDate(nx.d);
+  return { k: nx.cur ? 'NÅ' : 'NESTE', t: e.t, c: col(e), sub: sub2(day, `${e.s}–${e.e}`, e.r), id: e.id,
+    when: nx.cur ? `${dur2(nx.b - nm)} igjen` : nx.a - nm < 1440 ? `om ${dur2(nx.a - nm)}` : capf(dayName(nx.d.getDay(), 'short').replace('.', '')) };
 }
 
-function examsCard(today) {
-  const L = exams(today);
-  const rows = L.map((x, i) => {
-    const d = new Date(x.k + 'T12:00'), dd = daysTo(x.k, today);
-    return `<button type="button" class="kal-ex${i ? ' bt' : ''}" data-k-exam="${reg(x)}"><span class="kal-ex-d"><b>${d.getDate()}</b><span>${MS[d.getMonth()].toUpperCase()}</span></span>
-      <span class="kal-grow"><b class="kal-ell">${esc(x.t)}</b><span>${esc(sub2(capf(WD[d.getDay()]), x.kind === 'innl' ? `frist ${x.e || '23:59'}` : x.s ? `${x.s}–${x.e}` : 'hele dagen', x.r))}</span></span>
-      <span class="kal-pill${dd <= 7 ? ' soon' : ''}">${inTxt(dd)}</span></button>`;
-  }).join('');
-  return `<span class="kal-gt"><span>PRØVER OG FRISTER</span><span class="mut">${L.length}</span></span>
-    <div class="kal-card kal-list">${rows || '<div class="kal-none">Ingen kommende prøver eller frister.</div>'}</div>`;
+/* ---------------- Visningene ---------------- */
+
+/** Overlappende hendelser side om side: kolonne c av n i hver gruppe. */
+function lay(L) {
+  const T = L.filter((e) => e.s && e.e && e.kind !== 'innl').map((e) => ({ e, a: mm(e.s), b: Math.max(mm(e.e), mm(e.s) + 20) })).sort((x, y) => x.a - y.a || y.b - x.b);
+  const out = []; let grp = [], end = -1;
+  const flush = () => { const cols = []; grp.forEach((x) => { let c = cols.findIndex((tt) => tt <= x.a); if (c < 0) { c = cols.length; cols.push(0); } cols[c] = x.b; x.c = c; }); grp.forEach((x) => { x.n = cols.length; out.push(x); }); grp = []; };
+  T.forEach((x) => { if (grp.length && x.a >= end) { flush(); end = -1; } grp.push(x); end = Math.max(end, x.b); });
+  if (grp.length) flush();
+  return out;
 }
 
-function calsCard() {
-  const src = K.data?.sources ?? [], of = (id) => src.find((x) => x.id === id), on = (id) => of(id)?.configured;
-  const parts = src.length ? [on('ical') ? 'Skolens iCal' : 'Skolens iCal mangler', on('canvas') ? 'Canvas' : null, on('google') ? 'Google Kalender' : null, 'Bursdager'].filter(Boolean) : ['Skolens iCal', 'Google Kalender', 'Bursdager'];
-  const bad = src.filter((x) => x.ok === false || x.error).map((x) => x.name || x.id);
-  if (bad.length) parts.push(`feil: ${bad.join(', ')}`);
-  return `<button type="button" class="kal-card kal-link" data-k-set><span class="kal-grow"><b>Kalendere</b><span>${esc(parts.join(' · '))}</span></span><span class="kal-link-r">Innstillinger ›</span></button>`;
-}
-
-function weekView(today, now, web) {
-  const nm = now.getHours() * 60 + now.getMinutes(), tk = key(today), H = web ? 58 : 48, S0 = 8 * 60, S1 = 16 * 60, HH = (S1 - S0) / 60 * H;
-  let b = today; const wd = b.getDay();
-  if (K.off === 0 && (wd === 6 || wd === 0)) b = add(b, wd === 6 ? 2 : 1);
-  const ws = add(add(b, -((b.getDay() + 6) % 7)), K.off * 7), fri = add(ws, 4);
-  const nav = { t: `Uke ${isoW(ws)}`, s: `${ws.getDate()}.${ws.getMonth() !== fri.getMonth() ? ` ${MS[ws.getMonth()]}` : ''}–${fri.getDate()}. ${MN[fri.getMonth()]} ${fri.getFullYear()}`, today: K.off === 0 };
-  const hours = []; for (let h = 8; h <= 16; h++) hours.push({ t: pad(h), top: (h * 60 - S0) / 60 * H });
+const HH = () => (isMobile() ? 48 : 52);
+function gridView(now, today) {
+  const V = K.view, cur = curD(), nD = V === 'dag' ? 1 : V === '3d' ? 3 : 7, st0 = V === 'uke' ? add(cur, -((cur.getDay() + 6) % 7)) : cur;
+  const H = HH(), nm = now.getHours() * 60 + now.getMinutes(), tk = key(today), mob = isMobile();
   const days = [];
   let hasAll = false;
-  for (let i = 0; i < 5; i++) {
-    const d = add(ws, i), k = key(d), L = evOn(d), isT = k === tk;
-    const out = (e) => e.s && e.kind !== 'innl' && (mm(e.e) <= S0 || mm(e.s) >= S1);
-    const all = L.filter((e) => !e.s || e.kind === 'innl' || out(e));
+  for (let i = 0; i < nD; i++) {
+    const d = add(st0, i), k = key(d), L = evOn(d), all = L.filter((e) => !e.s || !e.e || e.kind === 'innl');
     if (all.length) hasAll = true;
-    days.push({ d, k, isT, all, ev: L.filter((e) => e.s && e.kind !== 'innl' && !out(e)), out });
+    days.push({ d, k, L, all, isT: k === tk, we: d.getDay() % 6 === 0 });
   }
-  const head = `<div class="kal-wk-row"><span></span>${days.map((x, i) => `<button type="button" class="kal-wk-h" data-k-wkday="${x.k}"><span>${WS[i]}</span><span class="kal-dn${x.isT ? ' on' : ''}">${x.d.getDate()}</span></button>`).join('')}</div>`;
-  const allRow = hasAll ? `<div class="kal-wk-row"><span class="kal-wk-all">HELE</span>${days.map((x) => `<div class="kal-wk-allc">${x.all.map((e) => `<button type="button" class="kal-wk-ae" style="background:${esc(col(e))}" data-k-sel="${reg(e)}">${esc(e.kind === 'innl' ? `⚑ ${e.t}` : x.out(e) ? `${e.s} ${e.t}` : e.t)}</button>`).join('')}</div>`).join('')}</div>` : '';
-  const lines = hours.map((h) => `<span class="kal-hl" style="top:${h.top}px"></span>`).join('');
-  const cols = days.map((x) => `<div class="kal-wk-col${x.isT ? ' today' : ''}" style="height:${HH}px">${lines}${x.ev.map((e) => {
-    const a = Math.max(S0, mm(e.s)), bb = Math.min(S1, mm(e.e)), pr = e.kind === 'prove', c = col(e), sl = K.sel === e.id;
-    return `<button type="button" class="kal-blk${pr ? ' pr' : ''}${sl ? ' sel' : ''}" style="top:${(a - S0) / 60 * H}px;height:${Math.max(22, (bb - a) / 60 * H - 2)}px;--c:${esc(c)}" data-k-sel="${reg(e)}"><b>${esc(short(e))}</b><span>${esc(pr ? sub2(e.r, 'PRØVE') : e.r)}</span></button>`;
-  }).join('')}${x.isT && nm >= S0 && nm <= S1 ? `<span class="kal-nowl" style="top:${(nm - S0) / 60 * H}px"></span>` : ''}</div>`).join('');
-  return { nav, html: `<div class="kal-card kal-wk">${head}${allRow}<div class="kal-wk-row"><div class="kal-wk-hrs" style="height:${HH}px">${hours.map((h) => `<span style="top:${h.top}px">${h.t}</span>`).join('')}</div>${cols}</div></div>` };
+  const gcols = `${mob ? 40 : 52}px repeat(${nD},minmax(0,1fr))`;
+  const wl = (d) => (nD === 7 && mob ? wdShort(d).slice(0, 1) : wdShort(d));
+  const head = `<div class="k2-dh" style="grid-template-columns:${gcols}"><span class="k2-wk">${t('U')}${isoW(st0)}</span>${days.map((x) => `<button type="button" class="k2-dhd${x.isT ? ' on' : x.we ? ' we' : ''}" data-k-day="${x.k}" title="${esc(longDate(x.d))}"><span>${esc(wl(x.d))}</span><b>${x.d.getDate()}</b></button>`).join('')}</div>`;
+  const allRow = hasAll ? `<div class="k2-all" style="grid-template-columns:${gcols}"><span class="k2-all-l">HELE</span>${days.map((x) => `<div class="k2-allc">${x.all.map((e) => `<button type="button" class="k2-ae" style="background:${esc(col(e))}" data-k-sel="${esc(e.id)}" data-no-i18n>${esc((e.kind === 'innl' ? '⚑ ' : '') + short(e))}</button>`).join('')}</div>`).join('')}</div>` : '';
+  const hours = []; for (let h = 1; h < 24; h++) hours.push(h);
+  const lines = hours.map((h) => `<span class="k2-hl" style="top:${h * H}px"></span>`).join('');
+  const cols = days.map((x) => `<div class="k2-col${x.isT ? ' today' : x.we ? ' we' : ''}" data-k-tap="${x.k}" style="height:${24 * H}px">${lines}${lay(x.L).map((p) => {
+    const e = p.e, c = col(e), solid = e.kind === 'prove', ht = (p.b - p.a) / 60 * H, tall = ht >= 40 && !(nD === 7 && mob && p.n > 1);
+    return `<button type="button" class="k2-ev${solid ? ' solid' : ''}${K.sel === e.id ? ' sel' : ''}" style="--c:${esc(c)};top:${p.a / 60 * H}px;height:${Math.max(18, ht - 2)}px;left:calc(${p.c / p.n * 100}% + 1px);width:calc(${100 / p.n}% - 3px)" data-k-sel="${esc(e.id)}"><b data-no-i18n>${esc(short(e))}</b>${tall ? `<span data-no-i18n>${esc(`${e.s}–${e.e}${e.r ? ` · ${e.r}` : ''}`)}</span>` : ''}</button>`;
+  }).join('')}${x.isT ? `<span class="k2-now" style="top:${nm / 60 * H}px"></span>` : ''}</div>`).join('');
+  const inRange = days.some((x) => x.isT);
+  return { st: st0, end: add(st0, nD - 1), inRange, html: `<div class="k2-grid">${head}${allRow}<div class="k2-scroll" data-k-scroll><div class="k2-body" style="grid-template-columns:${gcols}"><div class="k2-hrs" style="height:${24 * H}px">${hours.map((h) => `<span style="top:${h * H}px">${pad(h)}</span>`).join('')}</div>${cols}</div></div></div>` };
 }
 
-const itemRow = (e, i) => `<button type="button" class="kal-it${i ? ' bt' : ''}" data-k-sel="${reg(e)}"><span class="kal-it-tm">${esc(tmOf(e))}</span><span class="kal-it-c" style="background:${esc(col(e))}"></span>
-  <span class="kal-grow"><b class="kal-ell">${esc(e.t)}</b><span>${esc(sub2(e.r, e.kind === 'time' ? e.teacher : e.n))}</span></span>${e.kind === 'prove' || e.kind === 'innl' ? `<span class="kal-tag" style="background:${esc(col(e))}">${e.kind === 'prove' ? 'PRØVE' : 'FRIST'}</span>` : ''}</button>`;
-
-function monthView(today, web) {
-  const tk = key(today), m0 = new Date(today.getFullYear(), today.getMonth() + K.off, 1);
-  const nav = { t: `${capf(MN[m0.getMonth()])} ${m0.getFullYear()}`, s: `Uke ${isoW(m0)}–${isoW(new Date(m0.getFullYear(), m0.getMonth() + 1, 0))}` };
-  const st = add(m0, -((m0.getDay() + 6) % 7)), selK = K.day && K.day.slice(0, 7) === key(m0).slice(0, 7) ? K.day : K.off === 0 ? tk : key(m0);
+function monthView(today) {
+  const cur = curD(), m0 = new Date(cur.getFullYear(), cur.getMonth(), 1, 12), st = add(m0, -((m0.getDay() + 6) % 7)), tk = key(today), web = !isMobile();
   let cells = '';
   for (let i = 0; i < 42; i++) {
-    const d = add(st, i), k = key(d), inM = d.getMonth() === m0.getMonth(), L = evOn(d), isT = k === tk, sl = k === selK, wkd = d.getDay() % 6 !== 0;
-    const cs = [...new Set(L.filter((e) => e.kind !== 'time').map(col))].slice(0, 3);
-    if (L.some((e) => e.kind === 'time') && cs.length < 3) cs.push('var(--k-line)');
-    cells += `<button type="button" class="kal-mc${inM ? '' : ' out'}${sl ? ' sel' : ''}" data-k-day="${k}" style="height:${web ? 64 : 52}px"><span class="kal-dn${isT ? ' on' : ''}${wkd ? '' : ' we'}">${d.getDate()}</span><span class="kal-dots">${cs.map((c) => `<i style="background:${esc(c)}"></i>`).join('')}</span></button>`;
+    const d = add(st, i), k = key(d), L = evOn(d), inM = d.getMonth() === m0.getMonth(), les = L.filter((e) => e.kind === 'time').length, oth = L.filter((e) => e.kind !== 'time'), mx = web ? 4 : 3, sh = oth.slice(0, les ? mx - 1 : mx);
+    const chips = sh.map((e) => { const solid = e.kind === 'prove' || !e.s || e.kind === 'innl'; return `<span class="k2-mch${solid ? ' solid' : ''}" style="--c:${esc(col(e))}" data-no-i18n>${esc((e.s && e.kind !== 'innl' && web ? `${e.s} ` : '') + short(e))}</span>`; });
+    if (les) chips.push(`<span class="k2-mch les">${les} ${web ? (les === 1 ? 'time' : 'timer') : 't'}</span>`);
+    cells += `<button type="button" class="k2-mc${inM ? '' : ' out'}${k === tk ? ' today' : ''}" data-k-day="${k}" aria-label="${esc(longDate(d))}"><span class="k2-mn">${d.getDate()}</span>${chips.join('')}${oth.length > sh.length ? `<span class="k2-more">+${oth.length - sh.length}</span>` : ''}</button>`;
   }
-  const sd = new Date(selK + 'T12:00'), L = evOn(sd);
-  nav.today = K.off === 0 && selK === tk;
-  return { nav, html: `<div class="kal-card kal-mo"><div class="kal-mo-g">${WS.map((t) => `<span class="kal-mo-h">${t}</span>`).join('')}${cells}</div></div>
-    <div class="kal-sec"><span class="kal-gt"><span>${selK === tk ? 'I DAG · ' : ''}${esc(dLong(sd).toUpperCase())}</span></span><div class="kal-card kal-list">${L.map(itemRow).join('') || '<div class="kal-none">Ingenting denne dagen.</div>'}</div></div>` };
+  const head = [1, 2, 3, 4, 5, 6, 0].map((i) => `<span>${esc(web ? dayName(i, 'short').replace('.', '').slice(0, 3).toUpperCase() : dayName(i, 'narrow'))}</span>`).join('');
+  return { st: m0, end: m0, html: `<div class="k2-month"><div class="k2-mh">${head}</div><div class="k2-mg">${cells}</div></div>` };
 }
 
-function agendaView(today) {
-  const a0 = add(today, K.off * 7), a1 = add(a0, 20), tk = key(today), tm = key(add(today, 1));
-  const nav = { t: `${a0.getDate()}. ${MS[a0.getMonth()]} – ${a1.getDate()}. ${MS[a1.getMonth()]}`, s: 'Tre uker fremover', today: K.off === 0 };
+function listView(today) {
+  const cur = curD(), tk = key(today);
   let html = '';
-  for (let i = 0; i < 21; i++) {
-    const d = add(a0, i), k = key(d), L = evOn(d);
-    if (!L.length) continue;
-    html += `<div class="kal-sec"><span class="kal-gt${k === tk ? '' : ' ink'}"><span>${k === tk ? 'I DAG · ' : k === tm ? 'I MORGEN · ' : ''}${esc(dLong(d).toUpperCase())}</span><span class="mut">${L.length}</span></span><div class="kal-card kal-list">${L.map(itemRow).join('')}</div></div>`;
+  for (let i = 0; i < 45; i++) {
+    const d = add(cur, i), k = key(d), L = evOn(d), isT = k === tk;
+    if (!L.length && !isT) continue;
+    html += `<div class="k2-lg"><div class="k2-ld${isT ? ' on' : ''}"><span>${esc(wdShort(d))}</span><b>${d.getDate()}</b><span>${esc(monthName(d.getMonth(), 'short').replace('.', '').toUpperCase())}</span></div><div class="k2-li">${L.length ? L.map((e) => {
+      const c = col(e), solid = e.kind === 'prove' || e.kind === 'innl';
+      return `<button type="button" class="k2-it${solid ? ' solid' : ''}" style="--c:${esc(c)}" data-k-sel="${esc(e.id)}"><span class="k2-grow"><b data-no-i18n>${esc(e.t)}</b><span>${esc(tmOf(e))}<span data-no-i18n>${esc((e.r ? ` · ${e.r}` : '') + (e.kind === 'time' && e.teacher ? ` · ${e.teacher}` : ''))}</span></span></span>${solid ? `<span class="k2-tag">${e.kind === 'prove' ? 'PRØVE' : 'FRIST'}</span>` : ''}</button>`;
+    }).join('') : '<span class="k2-none">Ingen hendelser</span>'}</div></div>`;
   }
-  return { nav, html: `<div class="kal-ag">${html || '<div class="kal-card kal-none">Ingenting de neste tre ukene.</div>'}</div>` };
+  return { st: cur, end: add(cur, 44), html: `<div class="k2-list" data-k-list>${html}</div>` };
 }
 
-const remOf = (e) => K.rem[e.id] ?? (e.kind === 'prove' || e.kind === 'innl' ? 'day' : 'none');
-function detailCard() {
+function miniCal(today, vis) {
+  const cur = curD(), mB = new Date(cur.getFullYear(), cur.getMonth() + K.miniOff, 1, 12), mSt = add(mB, -((mB.getDay() + 6) % 7)), tk = key(today);
+  const inVis = (k) => vis && k >= key(vis.st) && k <= key(vis.end);
+  let cells = '';
+  for (let i = 0; i < 42; i++) {
+    const d = add(mSt, i), k = key(d), L = evOn(d).filter((e) => e.kind !== 'time');
+    cells += `<button type="button" class="k2-mini-c${d.getMonth() === mB.getMonth() ? '' : ' out'}${k === tk ? ' today' : inVis(k) ? ' vis' : ''}" data-k-go="${k}">${d.getDate()}<i style="background:${L.length ? esc(k === tk ? '#fff' : col(L[0])) : 'transparent'}"></i></button>`;
+  }
+  return `<div class="k2-mini"><div class="k2-mini-h"><b>${esc(capf(monthName(mB.getMonth())))} ${mB.getFullYear()}</b><button type="button" data-k-mini="-1" aria-label="Forrige måned">‹</button><button type="button" data-k-mini="1" aria-label="Neste måned">›</button></div>
+    <div class="k2-mini-g">${[1, 2, 3, 4, 5, 6, 0].map((i) => `<span>${esc(dayName(i, 'narrow'))}</span>`).join('')}${cells}</div></div>`;
+}
+function calFilters(chips = false) {
+  return calList().map((c) => {
+    const off = !shownCal(c.id);
+    return chips
+      ? `<button type="button" class="k2-cchip${off ? ' off' : ''}" data-k-cal="${esc(c.id)}" aria-pressed="${!off}"><i style="background:${esc(c.color)}"></i>${esc(c.name)}</button>`
+      : `<button type="button" class="k2-cal${off ? ' off' : ''}" data-k-cal="${esc(c.id)}" role="checkbox" aria-checked="${!off}"><span class="k2-cb" style="--c:${esc(c.color)}">✓</span><span class="k2-grow">${esc(c.name)}</span></button>`;
+  }).join('');
+}
+
+/* ---------------- Ark: detaljer, skjema, søk ---------------- */
+
+const remOf = (e) => K.rem[e.id] ?? K.rem[e.oid] ?? (e.srvRem && e.srvRem !== 'none' ? e.srvRem : e.kind === 'prove' || e.kind === 'innl' ? 'day' : 'none');
+function detailSheet() {
   const e = K.sel && findEv(K.sel);
   if (!e) return '';
-  const sd = new Date(e.k + 'T12:00'), c = col(e), R = remOf(e);
-  const kk = { time: 'TIME', prove: 'PRØVE', innl: 'INNLEVERING', bursdag: 'BURSDAG' }[e.kind] ?? 'SKOLE';
-  const rows = [e.r && ['Rom', e.r], e.teacher && ['Lærer', e.teacher], e.kind !== 'time' && e.subj && ['Fag', e.subj], e.n && ['Merknad', e.n]].filter(Boolean);
-  const map = e.map || (e.r && /^[A-Z]{1,2}-?\d|aula|hall|gym|bibl|rom|sal/i.test(e.r) && e.kind !== 'bursdag' ? 'https://use.mazemap.com/' : '');
-  return `<div class="kal-det" style="--c:${esc(c)}">
-    <div class="kal-det-h"><span class="kal-strip"></span><div class="kal-grow"><span class="kal-det-k">${kk}</span><b>${esc(e.t)}</b><span>${esc(`${capf(dLong(sd))} · ${tmOf(e)}`)}</span></div><button type="button" class="kal-x" data-k-close aria-label="Lukk">×</button></div>
-    ${rows.map(([a, b]) => `<div class="kal-det-r"><span>${esc(a)}</span><b>${esc(b)}</b></div>`).join('')}
-    <span class="kal-lbl">Påminnelse</span><div class="kal-chips">${REMS.map(([v, n]) => `<button type="button" class="kal-chip${R === v ? ' on' : ''}" data-k-rem="${v}" aria-pressed="${R === v}">${n}</button>`).join('')}</div>
-    <div class="kal-chips">${map ? `<a class="kal-btn" href="${esc(/^https:\/\//.test(map) ? map : 'https://use.mazemap.com/')}" target="_blank" rel="noopener">Finn rommet i MazeMap ↗</a>` : ''}${/^https:\/\//.test(e.url) ? `<a class="kal-btn" href="${esc(e.url)}" target="_blank" rel="noopener">Åpne ${e.src === 'canvas' ? 'i Canvas' : e.src === 'google' ? 'i Google Kalender' : 'kilden'} ↗</a>` : ''}</div>
-  </div>`;
+  const sd = fromKey(e.k), R = remOf(e), cal = calById(e.cal);
+  const rows = [e.r && ['Sted', e.r, 1], e.teacher && ['Lærer', e.teacher, 1], ['Kalender', cal.name], e.kind !== 'time' && e.subj && ['Fag', e.subj, 1], e.n && ['Merknad', e.n, 1],
+    e.rep && e.rep !== 'none' && ['Gjentas', { daily: 'Hver dag', weekly: 'Hver uke', monthly: 'Hver måned', rec: 'Ja' }[e.rep] ?? e.rep]].filter(Boolean);
+  const kk = cal.name.toUpperCase() + (e.kind === 'prove' ? ' · PRØVE' : e.kind === 'innl' ? ' · INNLEVERING' : '');
+  const map = e.map || (e.r && /^[A-Z]{1,2}-?\d|aula|hall|gym|bibl|rom\b|sal\b/i.test(e.r) && e.kind !== 'bursdag' ? `https://use.mazemap.com/#v=1&search=${encodeURIComponent(e.r)}` : '');
+  const src = e.editable ? `Lagret i Google Kalender (${cal.name}).` : cal.src ? `Fra ${cal.src}. Endres i kilden.` : '';
+  return `<div class="k2-sheet-bg" data-k-close><div class="k2-sheet" role="dialog" aria-modal="true" aria-label="${esc(e.t)}" style="--c:${esc(col(e))}">
+    <div class="k2-det-h"><span class="k2-strip"></span><div class="k2-grow"><span class="k2-lab">${esc(kk)}</span><b data-no-i18n>${esc(e.t)}</b><span>${esc(`${longDate(sd)} · `)}${esc(tmOf(e))}</span></div><button type="button" class="k2-x" data-k-close aria-label="Lukk">✕</button></div>
+    <div class="k2-rows">${rows.map(([a, b, u]) => `<div><span>${esc(a)}</span><b${u ? ' data-no-i18n' : ''}>${esc(b)}</b></div>`).join('')}</div>
+    <span class="k2-lab">VARSEL</span><div class="k2-chips">${REMS.map(([v, n]) => `<button type="button" class="k2-chip${R === v ? ' on' : ''}" data-k-rem="${v}" aria-pressed="${R === v}">${n}</button>`).join('')}</div>
+    ${src ? `<span class="k2-src">${esc(src)}</span>` : ''}
+    ${K.err2 ? `<span class="k2-err">${esc(K.err2)}</span>` : ''}
+    <div class="k2-btns">${e.editable ? `<button type="button" class="k2-b ink" data-k-edit>Rediger</button><button type="button" class="k2-b red" data-k-del>${K.delArm ? 'Trykk igjen for å slette' : 'Slett'}</button>` : ''}
+      ${map ? `<a class="k2-b line" href="${esc(map)}" target="_blank" rel="noopener">Vis rom på kart ↗</a>` : ''}
+      ${/^https:\/\//.test(e.url) ? `<a class="k2-b line" href="${esc(e.url)}" target="_blank" rel="noopener">Åpne ${e.src === 'canvas' ? 'i Canvas' : e.src === 'google' ? 'i Google Kalender' : 'kilden'} ↗</a>` : ''}
+      ${!e.editable ? `<button type="button" class="k2-b line" data-k-copy>Kopier til Privat</button>` : ''}</div>
+  </div></div>`;
 }
 
-function calendarCard(today, now, web) {
-  const V = K.view, v = V === 'mnd' ? monthView(today, web) : V === 'agenda' ? agendaView(today) : weekView(today, now, web);
-  return `<div class="kal-views" role="tablist">${[['uke', 'Uke'], ['mnd', 'Måned'], ['agenda', 'Agenda']].map(([k, n]) => `<button type="button" role="tab" aria-selected="${V === k}" class="${V === k ? 'on' : ''}" data-k-view="${k}">${n}</button>`).join('')}</div>
-    <div class="kal-nav"><button type="button" class="kal-arr" data-k-nav="prev" aria-label="Forrige">‹</button><div class="kal-nav-t"><b>${esc(v.nav.t)}</b><span>${esc(v.nav.s)}</span></div><button type="button" class="kal-arr" data-k-nav="next" aria-label="Neste">›</button><button type="button" class="kal-today${v.nav.today ? '' : ' go'}" data-k-nav="today">I dag</button></div>
-    <div class="kal-chips kal-filt">${CH.map(([n, c, k]) => `<button type="button" class="kal-fc${K.filt[k] === false ? ' off' : ''}" data-k-chip="${k}" aria-pressed="${K.filt[k] !== false}"><i style="background:${c}"></i>${n}</button>`).join('')}</div>
-    ${detailCard()}
-    <div class="kal-vw" data-k-swipe>${v.html}</div>
-    <span class="kal-note">Timeplanen hentes fra skolens iCal-lenke og oppdateres hver time. Trykk på en time for rom, lærer og påminnelse.</span>`;
+function formSheet() {
+  const F = K.form;
+  if (!F) return '';
+  const chip = (on, attr, n, c) => `<button type="button" class="k2-chip${on ? ' on' : ''}" ${attr} aria-pressed="${on}">${c ? `<i style="background:${esc(c)}"></i>` : ''}${esc(n)}</button>`;
+  const wcals = calList().filter((c) => c.writable !== false && (c.id === 'privat' || c.id === 'familie'));
+  return `<div class="k2-sheet-bg" data-k-fclose><div class="k2-sheet" role="dialog" aria-modal="true" aria-label="${F.id ? 'Rediger hendelse' : 'Ny hendelse'}">
+    <div class="k2-det-h"><b class="k2-grow k2-fh">${F.id ? 'Rediger hendelse' : 'Ny hendelse'}</b><button type="button" class="k2-x" data-k-fclose aria-label="Lukk">✕</button></div>
+    <form class="k2-form" data-k-form>
+      <input class="k2-in k2-big" name="title" value="${esc(F.t)}" placeholder="Tittel" autocomplete="off" required>
+      <div class="k2-box">
+        <button type="button" class="k2-sw" data-k-fall role="switch" aria-checked="${!!F.all}"><span>Hele dagen</span><i></i></button>
+        <label><span>Dato</span><input type="date" name="date" value="${esc(F.k)}" required></label>
+        ${F.all ? `<label><span>Til og med</span><input type="date" name="endDate" value="${esc(F.endDate || F.k)}"></label>`
+    : `<label><span>Fra</span><input type="time" name="start" step="300" value="${esc(F.s)}"></label><label><span>Til</span><input type="time" name="end" step="300" value="${esc(F.e)}"></label>`}
+      </div>
+      <input class="k2-in" name="location" value="${esc(F.r)}" placeholder="Sted" autocomplete="off">
+      <span class="k2-lab">KALENDER</span><div class="k2-chips">${wcals.map((c) => chip(F.cal === c.id, `data-k-fcal="${esc(c.id)}"`, c.name, c.color)).join('')}</div>
+      <span class="k2-lab">GJENTA</span><div class="k2-chips">${REPS.map(([v, n]) => chip(F.rep === v, `data-k-frep="${v}"`, n)).join('')}</div>
+      <span class="k2-lab">VARSEL</span><div class="k2-chips">${REMS.map(([v, n]) => chip(F.rem === v, `data-k-frem="${v}"`, n)).join('')}</div>
+      <textarea class="k2-in" name="note" rows="2" placeholder="Merknad">${esc(F.n)}</textarea>
+      ${F.err ? `<span class="k2-err">${esc(F.err)}${F.reconnect ? ' <button type="button" class="k2-link" data-k-reconnect>Koble til Google på nytt ›</button>' : ''}</span>` : ''}
+      <button type="submit" class="k2-b ink"${K.busy ? ' disabled' : ''}>${K.busy ? 'Lagrer …' : 'Lagre'}</button>
+      <span class="k2-src">Lagres i Google Kalender.</span>
+    </form>
+  </div></div>`;
 }
 
-const PLATS = [
-  ['iPhone · WidgetKit', 'ios', ['Liten', 'Medium', 'Stor']],
-  ['Android · Material You', 'and', ['2 × 2', '4 × 2', '4 × 4']],
-  ['Samsung One UI', 'sam', ['2 × 2', '4 × 2', '4 × 4']],
-];
-function widgetsCard(w) {
-  const pill = (x) => `<span class="kal-wp${x.soon ? ' soon' : ''}">${esc(x.in)}</span>`;
-  const small = `<div class="kal-w kal-w-s"><span class="kal-w-k">${esc(w.k)}</span><b class="kal-w-big">${esc(w.big)}</b><span class="kal-w-m"><span class="kal-w-st" style="background:${esc(w.c)}"></span><span class="kal-grow"><b>${esc(w.t)}</b><span>${esc(w.r)}</span></span></span><span class="kal-w-wh">${esc(w.when)}</span></div>`;
-  const med = `<div class="kal-w kal-w-m2"><div class="kal-w-l"><span class="kal-w-k">${esc(w.k)}</span><b class="kal-w-big">${esc(w.big)}</b><b class="kal-w-t">${esc(w.t)}</b><span class="kal-w-r">${esc(w.r)}</span><span class="kal-w-wh">${esc(w.when)}</span></div>
-    <div class="kal-w-rt"><span class="kal-w-day">${esc(w.dayT)}</span>${w.n3.map((e) => `<span class="kal-w-n"><b class="tn">${esc(e.s)}</b><span class="kal-w-st sm" style="background:${esc(e.c)}"></span><span class="kal-grow"><b>${esc(e.t)}</b><span>${esc(e.r)}</span></span></span>`).join('')}</div></div>`;
-  const big = `<div class="kal-w kal-w-l2"><span class="kal-w-lh"><b>${esc(w.dayL)}</b><span>${esc(w.cnt)}</span></span>${w.all.map((e) => `<span class="kal-w-a${e.past ? ' past' : ''}"><span class="tn">${esc(e.tm)}</span><span class="kal-w-st" style="background:${esc(e.c)}"></span><span class="kal-grow"><b>${esc(e.t)}</b><span>${esc(e.r)}</span></span></span>`).join('')}
-    <span class="kal-w-hr"></span><span class="kal-w-k">PRØVER OG FRISTER</span>${w.ex.map((x) => `<span class="kal-w-x"><b>${esc(x.t)}</b>${pill(x)}</span>`).join('') || '<span class="kal-w-r">Ingen kommende</span>'}</div>`;
-  return `<span class="kal-gt"><span>WIDGETS PÅ TELEFONEN</span></span>
-    ${PLATS.map(([n, cls, l]) => `<div class="kal-wplat ${cls}"><span class="kal-wplat-n">${n}</span><div class="kal-wrow">
-      <div class="kal-wcol">${small}<span>${l[0]}</span></div><div class="kal-wcol">${med}<span>${l[1]}</span></div><div class="kal-wcol">${big}<span>${l[2]}</span></div></div></div>`).join('')}
-    <span class="kal-note">Liten viser neste time, medium også de tre neste, og stor hele dagen og de neste prøvene. Trykk åpner Kalender.</span>`;
+function searchSheet() {
+  const S = K.srch;
+  if (!S) return '';
+  const res = S.res ?? [];
+  return `<div class="k2-sheet-bg" data-k-sclose><div class="k2-sheet" role="dialog" aria-modal="true" aria-label="Søk i kalenderen">
+    <div class="k2-srow">${searchField({ name: 'kq', value: S.q, placeholder: 'Søk etter timer, prøver, steder', cls: 'k2-sf', attrs: 'data-k-q autofocus' })}<button type="button" class="k2-x" data-k-sclose aria-label="Lukk">✕</button></div>
+    <div data-k-sres>${searchRes()}</div>
+  </div></div>`;
+}
+function searchRes() {
+  const S = K.srch;
+  if (!S) return '';
+  const res = S.res ?? [];
+  if (S.loading && !res.length) return '<span class="k2-src">Søker …</span>';
+  if (res.length) return `<span class="k2-src">${res.length}${res.length >= 40 ? '+' : ''} treff</span><div class="k2-sres">${res.map((e) => `<button type="button" class="k2-sr" data-k-hit="${esc(e.id)}" data-k-hitk="${esc(e.k)}"><span class="k2-strip" style="background:${esc(col(e))}"></span><span class="k2-grow"><b data-no-i18n>${esc(e.t)}</b><span>${esc(`${longDate(fromKey(e.k))} · `)}${esc(tmOf(e))}<span data-no-i18n>${esc(e.r ? ` · ${e.r}` : '')}</span></span></span></button>`).join('')}</div>`;
+  if ((S.q ?? '').trim().length >= 2 && !S.loading) return '<span class="k2-src">Ingen treff de neste fire månedene.</span>';
+  return '';
 }
 
 /* ---------------- Siden ---------------- */
 
-const order = () => { const o = (K.ord ?? []).filter((x) => CARDS.includes(x)); return [...new Set([...o, ...CARDS])]; };
-const hidden = () => new Set(K.hidC.filter((x) => CARDS.includes(x)));
+function titleOf(vis) {
+  const a = vis.st, b = vis.end;
+  if (K.view === 'mnd' || K.view === 'liste' || a.getMonth() === b.getMonth()) return { t: capf(monthName(a.getMonth())), y: String(a.getFullYear()) };
+  return { t: `${capf(monthName(a.getMonth(), 'short').replace('.', ''))}–${monthName(b.getMonth(), 'short').replace('.', '')}`, y: String(b.getFullYear()) };
+}
 
 function body() {
-  if (K.err && !K.data) return `<div class="kal-card kal-none">Kunne ikke hente kalenderen: ${esc(K.err)}<br><button type="button" class="kal-btn" data-k-retry>Prøv igjen</button></div>`;
-  if (!K.data) return '<div class="kal-card kal-none">Laster kalenderen …</div>';
-  const now = new Date(), today = d0(now), web = !isMobile(), RO = K.ro, ORD = order(), HID = hidden();
-  // Web: venstre kolonne (Nå, Prøver, Kalendere) kan flyttes; Kalender står fast til høyre og Widgets over hele bredden.
-  const movable = web ? ORD.filter((x) => x !== 'calendar' && x !== 'widgets') : ORD;
-  const leftN = Math.max(1, movable.filter((x) => !HID.has(x)).length);
-  const inner = { now: () => nowCard(now, today), exams: () => examsCard(today), cals: () => calsCard(), calendar: () => calendarCard(today, now, web), widgets: () => widgetsCard(wgModel(now, today)) };
-  const cards = ORD.map((x) => {
-    if (HID.has(x)) return '';
-    const mi = movable.indexOf(x), ctl = RO ? `<div class="kal-roc" data-roc>${mi >= 0 ? `<button type="button" data-roc data-k-mv="${x}:-1" aria-label="Flytt opp"${mi === 0 ? ' class="dim"' : ''}>▲</button><button type="button" data-roc data-k-mv="${x}:1" aria-label="Flytt ned"${mi === movable.length - 1 ? ' class="dim"' : ''}>▼</button>` : ''}<button type="button" data-roc class="hd" data-k-hide="${x}" aria-label="Skjul kortet">−</button></div>` : '';
-    const style = web ? (x === 'calendar' ? `grid-row:1 / span ${leftN + 1}` : x === 'widgets' ? 'order:99' : `order:${mi}`) : `order:${ORD.indexOf(x)}`;
-    return `<div class="kal-c kal-c-${x}${RO ? ' ro' : ''}" data-kc="${x}" style="${style}">${ctl}${inner[x]()}</div>`;
-  }).join('');
-  const hidL = ORD.filter((x) => HID.has(x));
-  const pill = RO ? `<div class="kal-pill-ro"><span>Flytt med ▲ ▼ · skjul med −</span><button type="button" data-k-reset>Tilbakestill</button><button type="button" class="done" data-k-done>Ferdig</button></div>
-    ${hidL.length ? `<div class="kal-hidl"><span>SKJULT</span>${hidL.map((x) => `<button type="button" data-k-unhide="${x}">+ ${CN[x]}</button>`).join('')}</div>` : ''}` : '';
-  return `${K.toast ? `<div class="kal-toast" role="status">${esc(K.toast)}</div>` : ''}${pill}<div class="kal-lay ${web ? 'web' : 'mob'}"${web ? ` style="grid-template-rows:repeat(${leftN},auto) 1fr"` : ''}>${cards}</div>`;
+  if (K.err && !K.data) return `<div class="k2-msg">Kunne ikke hente kalenderen: ${esc(K.err)}<br><button type="button" class="k2-b line" data-k-retry>Prøv igjen</button></div>`;
+  if (!K.data) return '<div class="k2-msg">Laster kalenderen …</div>';
+  const now = new Date(), today = d0(now), mob = isMobile(), V = K.view;
+  const vis = V === 'mnd' ? monthView(today) : V === 'liste' ? listView(today) : gridView(now, today);
+  ensureRange(key(add(vis.st, -7)), key(add(vis.end, 7)));
+  const nx = nextModel(now, today), tt = titleOf(vis);
+  const tabs = `<div class="k2-tabs" role="tablist">${VIEWS.map(([k, n, kk]) => `<button type="button" role="tab" aria-selected="${V === k}" class="${V === k ? 'on' : ''}" data-k-view="${k}" title="Hurtigtast ${kk}">${n}</button>`).join('')}</div>`;
+  const top = `<div class="k2-top">
+    <button type="button" class="k2-title" data-k-titl aria-expanded="${K.mini}"><span data-no-i18n>${esc(tt.t)}</span><span class="k2-year">${esc(tt.y)}</span>${mob ? `<span class="k2-arr">${K.mini ? '▲' : '▼'}</span>` : ''}</button>
+    <span class="k2-sp"></span>
+    ${mob ? '' : `<div class="k2-nav"><button type="button" class="k2-circ" data-k-nav="-1" aria-label="Forrige">‹</button><button type="button" class="k2-circ" data-k-nav="1" aria-label="Neste">›</button></div>${tabs}`}
+    <button type="button" class="k2-ic" data-k-search aria-label="Søk i kalenderen" title="Søk ( / )"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></button>
+    <button type="button" class="k2-ic k2-today" data-k-today aria-label="I dag" title="I dag (T)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 6h16v14H4zM4 10h16M8 3.5v4M16 3.5v4"/></svg><span>${today.getDate()}</span></button>
+    <button type="button" class="k2-new" data-k-new title="Ny hendelse (N)">${mob ? '+' : '+ Ny hendelse'}</button>
+  </div>${mob ? `<div class="k2-mtabs"><div class="k2-nav"><button type="button" class="k2-circ" data-k-nav="-1" aria-label="Forrige">‹</button><button type="button" class="k2-circ" data-k-nav="1" aria-label="Neste">›</button></div>${tabs}</div>` : ''}`;
+  const drop = mob && K.mini ? `<div class="k2-drop">${miniCal(today, vis)}<div class="k2-cchips">${calFilters(true)}</div></div>` : '';
+  const strip = `<button type="button" class="k2-next"${nx.id ? ` data-k-sel="${esc(nx.id)}"` : ''}><span class="k2-strip" style="background:${esc(nx.c)}"></span>${nx.k ? `<span class="k2-nk">${nx.k}</span>` : ''}<span class="k2-grow"><b data-no-i18n>${esc(nx.t)}</b><span>${esc(nx.sub)}</span></span><span class="k2-nw">${esc(nx.when)}</span></button>`;
+  const side = mob ? '' : `<aside class="k2-side">${miniCal(today, vis)}<div class="k2-cals"><span class="k2-lab">KALENDERE</span>${calFilters()}<button type="button" class="k2-b line sm" data-k-set>Administrer kalendere ›</button></div>
+    <span class="k2-keys">Hurtigtaster: ← → bla · T i dag · D dag · W uke · M måned · L liste · N ny · / søk</span>${K.fallback ? '<span class="k2-keys">Eldre server: bare skolens iCal og Bursdager.</span>' : ''}</aside>`;
+  return `${K.toast ? `<div class="k2-toast" role="status">${esc(K.toast)}</div>` : ''}${top}${drop}${strip}<div class="k2-main">${side}<div class="k2-view" data-k-swipe>${vis.html}</div></div>${detailSheet()}${formSheet()}${searchSheet()}`;
+}
+
+function scrollGrid(h) {
+  const sc = h.querySelector('[data-k-scroll]');
+  if (!sc) { gridKey = ''; return; }
+  const k = `${K.view}|${K.cur ?? ''}|${isMobile()}`;
+  if (gridKey === k) return;
+  gridKey = k;
+  const now = new Date(), nm = now.getHours() * 60 + now.getMinutes(), H = HH();
+  const inRange = !!h.querySelector('.k2-col.today');
+  sc.scrollTop = Math.max(0, (inRange ? nm / 60 : 7.75) * H - (inRange ? H * 1.5 : 0));
 }
 
 function paint() {
   const h = host();
   if (!h) return;
-  const y = scrollY;
+  const sc = h.querySelector('[data-k-scroll]'), y = sc?.scrollTop ?? 0, lst = h.querySelector('[data-k-list]')?.scrollTop ?? 0;
+  const ae = document.activeElement, focusQ = ae?.matches?.('[data-k-q]'), selS = focusQ ? ae.selectionStart : 0;
   h.innerHTML = body();
-  if (Math.abs(scrollY - y) > 2) scrollTo(0, y);
+  const sc2 = h.querySelector('[data-k-scroll]');
+  if (sc2 && gridKey === `${K.view}|${K.cur ?? ''}|${isMobile()}`) sc2.scrollTop = y; else scrollGrid(h);
+  const l2 = h.querySelector('[data-k-list]'); if (l2 && lst) l2.scrollTop = lst;
+  if (focusQ || (K.srch && K.srch.focus)) { const q = h.querySelector('[data-k-q]'); if (q) { q.focus(); try { q.setSelectionRange(selS || q.value.length, selS || q.value.length); } catch { /* */ } } if (K.srch) K.srch.focus = false; }
+  if (K.form?.focus) { K.form.focus = false; h.querySelector('[data-k-form] [name=title]')?.focus(); }
 }
-function flash(t) { K.toast = t; paint(); clearTimeout(toastT); toastT = setTimeout(() => { K.toast = ''; paint(); }, 2200); }
+function flash(tx) { K.toast = tx; paint(); clearTimeout(toastT); toastT = setTimeout(() => { K.toast = ''; paint(); }, 2600); }
 
-function move(x, dir) {
-  const web = !isMobile(), o = order(), list = web ? o.filter((k) => k !== 'calendar' && k !== 'widgets') : o;
-  const i = list.indexOf(x), j = i + dir;
-  if (i < 0 || j < 0 || j >= list.length) return;
-  const a = o.indexOf(list[i]), b = o.indexOf(list[j]);
-  [o[a], o[b]] = [o[b], o[a]];
-  K.ord = o; savePref('kalOrder', toIds(o));
-  try { navigator.vibrate?.(8); } catch { /* ingen vibrasjon */ }
+function shift(dir) {
+  const c = curD();
+  const n = K.view === 'mnd' ? new Date(c.getFullYear(), c.getMonth() + dir, 1, 12) : add(c, dir * ({ dag: 1, '3d': 3, uke: 7, liste: 14 }[K.view] ?? 1));
+  K.cur = key(n); K.sel = null; K.miniOff = 0; paint();
+}
+function setView(v, cur) {
+  if (!VIEW_SRV[v]) return;
+  K.view = v; K.sel = null; K.mini = false; K.miniOff = 0;
+  if (cur !== undefined) K.cur = cur;
+  savePref('kalView', VIEW_SRV[v]);
   paint();
 }
+function goToday() { K.cur = null; K.sel = null; K.mini = false; K.miniOff = 0; gridKey = ''; paint(); }
 
-function nav(dir) {
-  if (dir === 'today') { K.off = 0; K.day = null; K.sel = null; }
-  else { K.off += dir === 'prev' ? -1 : 1; K.sel = null; }
+/* ---------------- Ny / rediger ---------------- */
+
+function openForm(pre = {}) {
+  const c = curD(), now = new Date(), st = Math.ceil((now.getHours() * 60 + now.getMinutes()) / 30) * 30;
+  K.sel = null; K.delArm = false; K.err2 = '';
+  K.form = { id: null, t: '', k: key(c), s: hmM(Math.min(st, 22 * 60)), e: hmM(Math.min(st + 60, 23 * 60 + 30)), all: false, endDate: '', cal: 'privat', r: '', rep: 'none', rem: '15m', n: '', err: '', focus: true, ...pre };
   paint();
 }
+function formFromEvent(e) {
+  const allD = e.all || !e.s;
+  let endDate = '';
+  if (allD && e.endRaw && /^\d{4}-\d{2}-\d{2}$/.test(e.endRaw)) endDate = key(add(fromKey(e.endRaw), -1));
+  const k0 = e.startRaw && /^\d{4}-\d{2}-\d{2}/.test(e.startRaw) ? (allD ? String(e.startRaw).slice(0, 10) : key(new Date(e.startRaw))) : e.k;
+  return { id: e.oid || e.id, t: e.t, k: k0, s: e.s || '09:00', e: e.e && e.e !== '23:59' ? e.e : '10:00', all: allD, endDate, cal: e.cal === 'familie' ? 'familie' : 'privat', r: e.r, rep: ['daily', 'weekly', 'monthly'].includes(e.rep) ? e.rep : 'none', rem: remOf(e), n: e.n, err: '' };
+}
+function readForm(f) {
+  const F = K.form, fd = new FormData(f);
+  F.t = String(fd.get('title') ?? '').trim(); F.k = String(fd.get('date') ?? '');
+  if (F.all) F.endDate = String(fd.get('endDate') ?? F.k); else { F.s = String(fd.get('start') ?? F.s); F.e = String(fd.get('end') ?? F.e); }
+  F.r = String(fd.get('location') ?? '').trim(); F.n = String(fd.get('note') ?? '').trim();
+}
+/** Svar med feilkode og JSON-kropp (api() i util.js gir bare meldingen). */
+async function call(path, method, json) {
+  const r = await fetch('/api' + path, { method, headers: json ? { 'Content-Type': 'application/json' } : {}, body: json ? JSON.stringify(json) : undefined });
+  const d = r.headers.get('content-type')?.includes('json') ? await r.json().catch(() => ({})) : {};
+  if (r.status === 401) location.href = '/login';
+  return { ok: r.ok, status: r.status, d };
+}
+async function saveForm(f) {
+  readForm(f);
+  const F = K.form;
+  if (!F.t) { F.err = 'Skriv en tittel.'; return paint(); }
+  if (!F.k) { F.err = 'Velg dato.'; return paint(); }
+  if (!F.all && (!F.s || !F.e || mm(F.e) <= mm(F.s))) { F.err = 'Slutt må være etter start.'; return paint(); }
+  if (F.all && F.endDate && F.endDate < F.k) { F.err = 'Sluttdato må være samme dag eller senere.'; return paint(); }
+  const body2 = { title: F.t, allDay: !!F.all, date: F.k, start: F.all ? '' : F.s, end: F.all ? '' : F.e, ...(F.all && F.endDate && F.endDate !== F.k ? { endDate: F.endDate } : {}), location: F.r, calendar: F.cal, repeat: F.rep, reminder: F.rem, note: F.n };
+  K.busy = true; F.err = ''; F.reconnect = false; paint();
+  try {
+    const r = await call(F.id ? `/kalender/events/${encodeURIComponent(F.id)}` : '/kalender/events', F.id ? 'PATCH' : 'POST', body2);
+    if (!r.ok) {
+      F.err = r.status === 404 && !r.d?.error ? 'Serveren støtter ikke egne hendelser ennå.' : r.d?.error || `Kunne ikke lagre (feil ${r.status}).`;
+      F.reconnect = !!r.d?.reconnect || r.status === 409;
+      return;
+    }
+    const id = r.d?.id ?? r.d?.event?.id;
+    if (F.rem && id) { K.rem = { ...K.rem, [id]: F.rem }; savePref('kalReminders', { [id]: F.rem }); }
+    K.form = null; K.cur = F.k;
+    flash(F.id ? 'Hendelsen er oppdatert' : 'Hendelsen er lagret');
+    await ensureKal(true);
+  } catch (e) { if (K.form) K.form.err = e.message; } finally { K.busy = false; paint(); }
+}
+async function delEvent(e) {
+  if (!K.delArm) { K.delArm = true; return paint(); }
+  K.delArm = false;
+  const r = await call(`/kalender/events/${encodeURIComponent(e.oid || e.id)}`, 'DELETE').catch((x) => ({ ok: false, d: { error: x.message } }));
+  if (!r.ok) { K.err2 = r.d?.error || 'Kunne ikke slette hendelsen.'; return paint(); }
+  K.sel = null; K.err2 = '';
+  flash('Hendelsen er slettet');
+  ensureKal(true);
+}
+async function copyEvent(e) {
+  const r = await call(`/kalender/events/${encodeURIComponent(e.oid || e.id)}/copy`, 'POST', { calendar: 'privat' }).catch(() => ({ ok: false, status: 0, d: {} }));
+  if (r.ok) { K.sel = null; flash('Kopiert til Privat'); ensureKal(true); return; }
+  if (r.status === 409 || r.d?.reconnect) { K.err2 = r.d?.error || 'Google Kalender må kobles til på nytt for å kunne skrive.'; return paint(); }
+  // Eldre server: åpne skjemaet ferdig utfylt.
+  openForm({ t: e.t, k: e.k, s: e.s || '09:00', e: e.e && e.e !== '23:59' ? e.e : '10:00', all: !e.s, cal: 'privat', r: e.r, n: e.n });
+}
+
+/* ---------------- Søk ---------------- */
+
+let sTimer = 0, sCtl = null;
+function localSearch(q) {
+  const n = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/(?![̊̈])[̀-ͯ]/g, '').normalize('NFC');
+  const qq = n(q), today = d0(new Date()), res = [];
+  for (let i = -7; i < 120 && res.length < 40; i++) {
+    for (const e of evOn(add(today, i), true)) if (res.length < 40 && n(`${e.t} ${e.r} ${e.n} ${e.subj} ${e.teacher}`).includes(qq)) res.push(e);
+  }
+  return res;
+}
+function runSearch(q) {
+  const S = K.srch;
+  if (!S) return;
+  S.q = q;
+  clearTimeout(sTimer); sCtl?.abort();
+  if (q.trim().length < 2) { S.res = []; S.loading = false; return paintRes(); }
+  S.res = localSearch(q.trim()); S.loading = true; paintRes();
+  sTimer = setTimeout(async () => {
+    const ctl = sCtl = new AbortController();
+    try {
+      const r = await fetch(`/api/kalender/search?q=${encodeURIComponent(q.trim())}`, { signal: ctl.signal });
+      if (!r.ok) throw new Error(String(r.status));
+      const d = await r.json(), list = Array.isArray(d) ? d : d.events ?? d.items ?? [];
+      if (ctl.signal.aborted || K.srch !== S) return;
+      const nz = normalize({ events: list, subjects: K.data?.subjects });
+      for (const e of nz.byId.values()) if (!K.data.byId.has(e.id)) K.data.byId.set(e.id, e);
+      const found = [...nz.byId.values()].filter((e) => !/\|\d+$/.test(e.id)).sort((a, b) => a.k.localeCompare(b.k) || (a.s || '').localeCompare(b.s || '')).slice(0, 60);
+      S.res = found.length ? found : S.res;
+    } catch (e) { if (e.name === 'AbortError') return; /* serveren mangler søk: lokalt søk står */ }
+    S.loading = false; paintRes();
+  }, 160);
+}
+function paintRes() { const el = host()?.querySelector('[data-k-sres]'); if (el) el.innerHTML = searchRes(); }
+
+/* ---------------- Hendelser ---------------- */
 
 function bind(h) {
   if (h.dataset.kBound) return;
   h.dataset.kBound = '1';
-  // Hold inne et kort i 0,55 s for rediger-modus. Trykket som slipper holdet åpner ikke noe.
-  h.addEventListener('pointerdown', (e) => {
-    if (K.ro || e.button > 0 || !e.target.closest('.kal-c') || e.target.closest('input,select,a,[data-roc]')) return;
-    clearTimeout(lp?.t);
-    lp = { x: e.clientX, y: e.clientY, t: setTimeout(() => { swallow = true; lp = null; try { navigator.vibrate?.(18); } catch { /* */ } K.ro = true; K.sel = null; paint(); }, 550) };
-  });
-  h.addEventListener('pointermove', (e) => { if (lp && (Math.abs(e.clientX - lp.x) > 8 || Math.abs(e.clientY - lp.y) > 8)) { clearTimeout(lp.t); lp = null; } });
-  const up = () => { if (lp) { clearTimeout(lp.t); lp = null; } };
-  h.addEventListener('pointerup', up); h.addEventListener('pointercancel', up);
-  h.addEventListener('contextmenu', (e) => { if (e.target.closest('.kal-c') && (lp || K.ro)) e.preventDefault(); });
-  h.addEventListener('click', (e) => {
-    if (swallow) { swallow = false; if (!e.target.closest('[data-roc]')) { e.preventDefault(); e.stopPropagation(); return; } }
-    if (K.ro && e.target.closest('.kal-c') && !e.target.closest('[data-roc]')) { e.preventDefault(); e.stopPropagation(); }
-  }, true);
-  // Sveip bytter uke eller måned.
+  // Sveip bytter periode (mobil).
   let sw = null;
-  h.addEventListener('touchstart', (e) => { const el = e.target.closest('[data-k-swipe]'); sw = el && e.touches.length === 1 && !K.ro && K.view !== 'agenda' ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null; }, { passive: true });
+  h.addEventListener('touchstart', (e) => { sw = e.target.closest('[data-k-swipe]') && e.touches.length === 1 && K.view !== 'liste' ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null; }, { passive: true });
   h.addEventListener('touchend', (e) => {
     if (!sw) return;
     const dx = e.changedTouches[0].clientX - sw.x, dy = e.changedTouches[0].clientY - sw.y; sw = null;
-    if (Math.abs(dx) > 60 && Math.abs(dy) < 40) { swallow = false; nav(dx < 0 ? 'next' : 'prev'); }
+    if (Math.abs(dx) > 70 && Math.abs(dy) < 45) shift(dx < 0 ? 1 : -1);
   });
+  h.addEventListener('input', (e) => { if (e.target.matches('[data-k-q]')) runSearch(e.target.value); });
+  h.addEventListener('submit', (e) => { const f = e.target.closest('[data-k-form]'); if (f) { e.preventDefault(); saveForm(f); } });
   h.addEventListener('click', (e) => {
-    const t = e.target.closest('button');
-    if (!t || !h.contains(t)) return;
-    const d = t.dataset;
-    if (d.kMv) { const [x, dir] = d.kMv.split(':'); return move(x, +dir); }
-    if (d.kHide) {
-      const H = hidden();
-      if (CARDS.filter((x) => !H.has(x)).length <= 1) return flash('Minst ett kort må være synlig');
-      K.hidC = [...H, d.kHide]; savePref('kalHidden', toIds(K.hidC)); return paint();
-    }
-    if (d.kUnhide) { K.hidC = K.hidC.filter((x) => x !== d.kUnhide); savePref('kalHidden', toIds(K.hidC)); return paint(); }
-    if ('kDone' in d) { K.ro = false; return paint(); }
-    if ('kReset' in d) { K.ord = null; K.hidC = []; savePref('kalOrder', null); savePref('kalHidden', null); return paint(); }
+    const tg = e.target;
+    // Klikk på bakgrunnen lukker arkene (ikke klikk inne i arket).
+    const bg = tg.closest('.k2-sheet-bg');
+    if (bg && tg === bg) { closeSheets(); return; }
+    const b = tg.closest('button,[data-k-tap]');
+    if (!b || !h.contains(b)) return;
+    const d = b.dataset;
+    if ('kClose' in d || 'kSclose' in d || 'kFclose' in d) { closeSheets(); return; }
     if ('kRetry' in d) { ensureKal(true); return; }
-    if ('kSet' in d) return openSettings('kal');
-    if ('kClose' in d) { K.sel = null; return paint(); }
-    if (d.kView) { K.view = d.kView; K.off = 0; K.sel = null; savePref('kalView', VIEW_SRV[K.view]); return paint(); }
-    if (d.kNav) return nav(d.kNav);
-    if (d.kChip) { K.filt = { ...K.filt, [d.kChip]: K.filt[d.kChip] === false }; savePref('kalFilters', K.filt); return paint(); }
-    if (d.kRem) { const ev = findEv(K.sel); if (ev) { K.rem = { ...K.rem, [ev.id]: d.kRem }; savePref('kalReminders', { [ev.id]: d.kRem }); } return paint(); }
-    if (d.kExam) { K.sel = d.kExam; K.view = 'agenda'; K.off = 0; paint(); host()?.querySelector('.kal-det')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); return; }
-    if (d.kWkday) { const dd = new Date(d.kWkday + 'T12:00'), t0 = new Date(); K.view = 'mnd'; K.day = d.kWkday; K.off = (dd.getFullYear() - t0.getFullYear()) * 12 + dd.getMonth() - t0.getMonth(); K.sel = null; return paint(); }
-    if (d.kDay) { K.day = d.kDay; K.sel = null; return paint(); }
-    if (d.kSel) {
-      const open = K.sel !== d.kSel; K.sel = open ? d.kSel : null; paint();
-      if (open) host()?.querySelector('.kal-det')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    if ('kSet' in d) { openSettings('kal'); return; }
+    if ('kReconnect' in d) { K.form = null; paint(); openSettings('kal'); return; }
+    if (d.kView) return setView(d.kView);
+    if (d.kNav) return shift(+d.kNav);
+    if ('kToday' in d) return goToday();
+    if ('kNew' in d) return openForm();
+    if ('kSearch' in d) { K.srch = { q: '', res: [], focus: true }; K.mini = false; return paint(); }
+    if ('kTitl' in d) { if (isMobile()) { K.mini = !K.mini; K.miniOff = 0; paint(); } return; }
+    if (d.kMini) { K.miniOff += +d.kMini; return paint(); }
+    if (d.kGo) { K.cur = d.kGo; K.mini = false; K.miniOff = 0; if (K.view === 'mnd' || K.view === 'liste') K.view = K.view; return paint(); }
+    if (d.kCal) { K.filt = { ...K.filt, [d.kCal]: !shownCal(d.kCal) }; savePref('kalFilters', K.filt); return paint(); }
+    if (d.kDay) return setView('dag', d.kDay);
+    if (d.kSel) { K.sel = d.kSel; K.delArm = false; K.err2 = ''; return paint(); }
+    if (d.kHit) { const e = findEv(d.kHit); K.srch = null; K.cur = d.kHitk; if (K.view === 'mnd' || K.view === 'liste') K.view = 'dag'; K.sel = e ? e.id : null; gridKey = ''; return paint(); }
+    if (d.kRem) { const ev = findEv(K.sel); if (ev) { const id = ev.oid || ev.id; K.rem = { ...K.rem, [id]: d.kRem, [ev.id]: d.kRem }; savePref('kalReminders', { [id]: d.kRem }); } return paint(); }
+    if ('kEdit' in d) { const ev = findEv(K.sel); if (ev) { K.sel = null; K.form = { ...formFromEvent(ev), focus: true }; paint(); } return; }
+    if ('kDel' in d) { const ev = findEv(K.sel); if (ev) delEvent(ev); return; }
+    if ('kCopy' in d) { const ev = findEv(K.sel); if (ev) copyEvent(ev); return; }
+    if ('kFall' in d) { readFormSafe(); K.form.all = !K.form.all; return paint(); }
+    if (d.kFcal) { readFormSafe(); K.form.cal = d.kFcal; return paint(); }
+    if (d.kFrep) { readFormSafe(); K.form.rep = d.kFrep; return paint(); }
+    if (d.kFrem) { readFormSafe(); K.form.rem = d.kFrem; return paint(); }
+    // Klikk på tom plass i rutenettet: ny hendelse på den halvtimen.
+    if (d.kTap && tg === b) {
+      const r = b.getBoundingClientRect(), m = Math.max(0, Math.min(23 * 60, Math.floor((e.clientY - r.top) / HH() * 2) * 30));
+      openForm({ k: d.kTap, s: hmM(m), e: hmM(Math.min(m + 60, 23 * 60 + 59)) });
     }
+  });
+}
+function readFormSafe() { const f = host()?.querySelector('[data-k-form]'); if (f && K.form) readForm(f); }
+function closeSheets() {
+  if (!K.sel && !K.form && !K.srch && !K.mini) return false;
+  K.sel = null; K.form = null; K.srch = null; K.mini = false; K.delArm = false; K.err2 = '';
+  clearTimeout(sTimer); sCtl?.abort();
+  paint();
+  return true;
+}
+
+function bindKeys() {
+  if (keyBound) return;
+  keyBound = true;
+  window.addEventListener('keydown', (e) => {
+    if (!host() || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (document.getElementById('settings') && !document.getElementById('settings').hidden) return;
+    const tag = e.target?.tagName ?? '';
+    if (e.key === 'Escape') { if (/INPUT|TEXTAREA|SELECT/.test(tag) && e.target.value && e.target.closest('[data-sf]')) return; if (closeSheets()) e.preventDefault(); return; }
+    if (/INPUT|TEXTAREA|SELECT/.test(tag) || e.target?.isContentEditable) return;
+    if (K.form || K.srch || K.sel) return;
+    const k = e.key.toLowerCase(), V = { d: 'dag', 3: '3d', w: 'uke', m: 'mnd', l: 'liste' };
+    if (e.key === 'ArrowLeft') shift(-1);
+    else if (e.key === 'ArrowRight') shift(1);
+    else if (k === 't') goToday();
+    else if (V[k]) setView(V[k]);
+    else if (k === 'n') openForm();
+    else if (e.key === '/') { K.srch = { q: '', res: [], focus: true }; paint(); }
+    else return;
+    e.preventDefault();
   });
 }
 
@@ -488,19 +697,21 @@ function loadFonts() {
 
 function startTick() {
   if (tickT) return;
-  // Nå-kortet, nå-linjen og widgetene oppdateres hvert minutt; data hentes på nytt hvert 10. minutt (serveren cacher en time).
+  // NESTE-stripen og nålinjen oppdateres hvert halve minutt; data hentes på nytt hvert 10. minutt (serveren cacher en time).
   tickT = setInterval(() => {
     if (document.hidden) return;
     const h = host(), w = document.querySelector('[data-w="d_kal"],[data-w="p_kal"]');
     if (!h && !w) return;
     if (Date.now() - K.at > 10 * 60_000) ensureKal();
-    if (h && !K.ro) paint();
+    if (h && !K.form && !K.srch) paint();
     refresh('d_kal', 'p_kal');
   }, 30_000);
 }
 
 export function render() {
   loadFonts();
+  bindKeys();
+  gridKey = '';
   setTimeout(() => {
     const h = host();
     if (!h) return;
@@ -517,14 +728,15 @@ export function render() {
     ensureKal();
     startTick();
   });
-  return `<div class="kal-top"><div class="kal-kick">${esc(semester().toUpperCase())}</div><h1 class="kal-h1">Kalender</h1></div><div id="kal" class="kal">${body()}</div>`;
+  return `<div id="kal" class="kal k2">${body()}</div>`;
 }
 
 on('kalender', () => { paint(); refresh('d_kal', 'p_kal'); });
 // Ny iCal-adresse eller ny timeplan fra skolen: hent kalenderen på nytt.
 on('school', () => { if (K.data && !K.loading) ensureKal(true); });
+window.addEventListener('resize', () => { if (host()) { gridKey = ''; } });
 
-/* ---------------- Hjem-widget KALENDER ---------------- */
+/* ---------------- Hjem-widget KALENDER (uendret) ---------------- */
 
 function homeWidget() {
   ensureKal(); startTick();

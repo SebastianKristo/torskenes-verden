@@ -1,6 +1,7 @@
 // Søkebar, nyhetslinje og popup.
 import { esc, hm, api, backdropClick } from './util.js';
 import { store, on, emit } from './store.js';
+import { clearBtn, syncSearch, bindSearchFields } from './searchfield.js';
 
 /* ---------- Popup ---------- */
 
@@ -52,15 +53,18 @@ export function renderSearch() {
   const st = store.me.searchStyle, light = st === 'light' || st === 'wideLight';
   const ph = isGoogle() ? 'Søk på Google eller skriv inn en adresse' : 'Søk eller skriv inn en adresse';
   const ai = aiOn();
-  const form = (inner) => `<form class="sbar ${st}${ai ? ' ai' : ''}" data-search role="search">${inner}<input name="q" placeholder="${ai ? 'Spør ✦ AI om hva som helst' : ph}" autocomplete="off" aria-label="Søk" role="combobox" aria-autocomplete="list" aria-expanded="false" enterkeyhint="search"><button type="button" class="sq-ai-tog" data-sq-ai aria-pressed="${ai}" title="Svar fra AI-motoren (Ollama eller Gemini)">✦ AI</button><button type="submit">Søk</button><div class="sq-drop" role="listbox" hidden></div></form>`;
-  if (st === 'light' || st === 'dark') return `<div class="search-wrap">${isGoogle() ? GWORD : ''}${form(isGoogle() ? GICON : ICON(light ? '#5f6368' : '#8a93a6'))}</div>`;
-  return `<div>${form(isGoogle() ? `${GICON}<span class="sep"></span>` : ICON(light ? '#5f6368' : '#8a93a6'))}</div>`;
+  // Prompt 27: ✕ til venstre for feltet (etter Google-«G») når det står tekst i det (searchfield.js).
+  const form = (inner) => `<form class="sbar ${st}${ai ? ' ai' : ''}" data-search data-sf role="search">${inner}${clearBtn()}<input name="q" placeholder="${ai ? 'Spør ✦ AI om hva som helst' : ph}" autocomplete="off" aria-label="Søk" role="combobox" aria-autocomplete="list" aria-expanded="false" enterkeyhint="search"><button type="button" class="sq-ai-tog" data-sq-ai aria-label="Spør AI" title="Spør AI i Chat">✦ AI</button><button type="submit">Søk</button><div class="sq-drop" role="listbox" hidden></div></form>`;
+  bindSearchFields();
+  const glass = `<span class="sf-ic" style="opacity:1">${ICON(light ? '#5f6368' : '#8a93a6')}</span>`;
+  if (st === 'light' || st === 'dark') return `<div class="search-wrap">${isGoogle() ? GWORD : ''}${form(isGoogle() ? GICON : glass)}</div>`;
+  return `<div>${form(isGoogle() ? `${GICON}<span class="sep"></span>` : glass)}</div>`;
 }
 
 /* Forslag fra Google (via serveren) og søkehistorikk per bruker, delt med mobilappen. */
 const sq = { hist: null, suggest: true, save: true, sugg: [], suggErr: '', sel: -1, items: [], timer: 0, seq: 0, ai: null };
 // «✦ AI»-modus huskes per nettleser.
-const aiOn = () => { try { return localStorage.getItem('hl.searchAi') === '1'; } catch { return false; } };
+const aiOn = () => false; // prompt 27: ✦ AI åpner Chat i stedet for et svar i nedtrekket
 const setAi = (on) => { try { localStorage.setItem('hl.searchAi', on ? '1' : '0'); } catch { /* privat modus */ } };
 const HIC = 'M12 8v4l3 2M3.5 12a8.5 8.5 0 1 0 2.5-6M3 4v4h4', SIC = 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5';
 const isUrl = (q) => !/\s/.test(q) && /^(https?:\/\/\S+|[\w-]+(\.[\w-]+)*\.[a-z]{2,}(:\d+)?(\/\S*)?)$/i.test(q);
@@ -162,18 +166,22 @@ export function bindSearch() {
     const q = it ? it.t : e.target.q.value;
     if (aiOn()) askAi(e.target, q); else runSearch(q);
   });
+  // ✦ AI (prompt 27): åpner Chat og starter en ny samtale med teksten i feltet (tomt felt = bare åpne Chat).
   document.addEventListener('click', (e) => {
     const tog = e.target.closest?.('[data-sq-ai]');
     if (!tog) return;
-    const f = formOf(e), on = !aiOn();
-    setAi(on);
-    document.querySelectorAll('[data-search]').forEach((x) => {
-      x.classList.toggle('ai', on);
-      x.querySelector('[data-sq-ai]')?.setAttribute('aria-pressed', String(on));
-      x.q.placeholder = on ? 'Spør ✦ AI om hva som helst' : (isGoogle() ? 'Søk på Google eller skriv inn en adresse' : 'Søk eller skriv inn en adresse');
-    });
-    sq.ai = null;
-    f?.q.focus();
+    e.preventDefault();
+    const f = formOf(e), q = (f?.q.value ?? '').trim();
+    setAi(false);
+    if (f) { f.q.value = ''; syncSearch(f.q); f.q.blur(); }
+    import('./chat.js').then((m) => m.openChat(q)).catch(() => { location.hash = '#/chat'; });
+  });
+  document.addEventListener('sf:clear', (e) => {
+    const f = formOf(e);
+    if (!f) return;
+    clearTimeout(sq.timer); sq.seq++; sq.sugg = []; sq.ai = null; sq.sel = -1;
+    const d = f.querySelector('.sq-drop'); if (d) d.hidden = true;
+    f.q.setAttribute('aria-expanded', 'false');
   });
   document.addEventListener('focusin', async (e) => {
     const f = formOf(e);
@@ -236,7 +244,7 @@ export function renderTicker() {
   const items = store.data.news?.items ?? [];
   el.hidden = store.me.hideNews || !items.length;
   if (el.hidden) return;
-  const list = items.map((n) => `<a href="${esc(n.url)}" target="_blank" rel="noopener"><span class="ticker-src" style="background:${esc(n.color)}">${esc(n.src)}</span><span>${esc(n.title)}</span><span class="mono muted" style="font-size:12px">${hm(new Date(n.date))}</span></a>`).join('');
+  const list = items.map((n) => `<a href="${esc(n.url)}" target="_blank" rel="noopener"><span class="ticker-src" style="background:${esc(n.color)}">${esc(n.src)}</span><span data-no-i18n>${esc(n.title)}</span><span class="mono muted" style="font-size:12px">${hm(new Date(n.date))}</span></a>`).join('');
   // Listen dupliseres så rullingen går sømløst; kopien skjules for skjermlesere.
   el.innerHTML = `<div class="ticker-label">SISTE NYTT</div><div class="ticker-view"><div class="ticker-track">${list}<span style="display:contents" aria-hidden="true">${list.replace(/<a /g, '<a tabindex="-1" ')}</span></div></div>
     <button class="ticker-speed" data-act="news-speed" title="Hastighet på nyhetsbaren" aria-label="Hastighet på nyhetsbaren"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-4M3.3 19a10 10 0 1 1 17.4 0"/></svg><span class="mono">${store.me.ui?.newsSpeed ?? 5}</span></button>`;

@@ -3,6 +3,7 @@
 // Kilder og ✦ AI-valg lagres på serveren (/api/rss), så de er de samme i Papir-appen og PWA-en.
 import { api, esc, backdropClick } from './util.js';
 import { ICON_LIBS, iconHtml, searchIcons, suggestIcon, keywordFor, preloadIcons } from './icons.js';
+import { clearBtn, bindSearchFields } from './searchfield.js';
 
 const CSS_ID = 'news-css';
 const ensureCss = () => {
@@ -50,7 +51,9 @@ export function openNews(opts = {}) {
   const root = document.documentElement;
   const paper = root.dataset.hlTheme === '2c' || document.body.classList.contains('theme-2c');
   const theme = opts.theme ?? (paper ? (matchMedia('(prefers-color-scheme: dark)').matches && root.dataset.paperMode !== 'lys' ? 'paperDark' : 'paper') : 'web');
-  const st = { cat: opts.cat ?? 'siste', data: null, error: '', set: false, nf: '', busy: false, adding: false, addError: '', ip: null, icAll: false, icErr: '' };
+  const st = { cat: opts.cat ?? 'siste', data: null, error: '', set: false, nf: '', busy: false, adding: false, addError: '', ip: null, icAll: false, icErr: '', art: null };
+  const artCache = new Map();
+  bindSearchFields();
 
   const el = document.createElement('div');
   el.className = `nw nw-${theme}`;
@@ -68,7 +71,7 @@ export function openNews(opts = {}) {
     open = null;
     opts.onClose?.();
   };
-  const onKey = (e) => { if (e.key === 'Escape') { if (st.ip) { st.ip = null; render(); } else if (st.set) { st.set = false; render(); } else close(); } };
+  const onKey = (e) => { if (e.key === 'Escape') { if (e.defaultPrevented) return; if (st.ip) { st.ip = null; render(); } else if (st.set) { st.set = false; render(); } else if (st.art) { st.art = null; render(); } else close(); } };
   document.addEventListener('keydown', onKey);
 
   // Bare svaret på siste forespørsel brukes, så et tregt førstekall ikke overskriver en kategori som er valgt etterpå.
@@ -121,10 +124,52 @@ export function openNews(opts = {}) {
     return icon;
   }
 
-  const item = (x, showCat) => `<a class="nw-it" href="${esc(x.url ?? '#')}" target="_blank" rel="noopener noreferrer">
-      ${showCat ? `<span class="nw-cat">${esc((CAT_NAME[x.category] ?? x.category).toUpperCase())}</span>` : ''}
-      <span class="nw-tx"><span class="nw-t">${esc(x.title)}</span><span class="nw-m">${esc(x.feed)} · ${esc(when(x.published))}${x.ai ? ' · ✦ AI' : ''}</span></span>
-      <span class="nw-ch" aria-hidden="true">›</span></a>`;
+  // Prompt 27: bilde 76×76 ved hver sak (RSS-bilde eller og:image fra serveren; ellers kildefarge + initialer).
+  // Trykk åpner saken i leseren (artikkelvisning), ikke rett til nettsiden.
+  const ini = (x) => String(x.feed ?? '').replace(/[^\p{L}\p{N}]/gu, '').slice(0, 2).toUpperCase();
+  // Initialene ligger alltid under bildet, så en sak med et bilde som ikke lar seg laste viser kildefarge + initialer.
+  const imgTag = (u) => (u && /^(https?:\/\/|\/)/.test(u) ? `<img src="${esc(u)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-nw-img>` : '');
+  const thumb = (x, cls = 'nw-th') => `<span class="${cls}" style="background-color:${esc(x.color || '#5c5850')}" aria-hidden="true">${esc(ini(x))}${imgTag(x.image)}</span>`;
+  const findItem = (id) => (st.data?.items ?? []).find((x) => String(x.id) === String(id)) ?? st.art?.rel?.find((x) => String(x.id ?? x.url) === String(id));
+  const item = (x, showCat) => `<button type="button" class="nw-it" data-art="${esc(x.id ?? x.url)}">
+      <span class="nw-tx">${showCat ? `<span class="nw-cat">${esc((CAT_NAME[x.category] ?? x.category).toUpperCase())}</span>` : ''}<span class="nw-t" data-no-i18n>${esc(x.title)}</span><span class="nw-m"><span data-no-i18n>${esc(x.feed)}</span> · ${esc(when(x.published))}${x.ai ? ' · ✦ AI' : ''}</span></span>
+      ${thumb(x)}</button>`;
+
+  async function openArt(x) {
+    st.art = { x, d: artCache.get(x.url) ?? null, busy: !artCache.has(x.url), err: '', shared: false };
+    render();
+    el.querySelector('.nw-art-body')?.scrollTo(0, 0);
+    if (!st.art.busy) return;
+    const a = st.art;
+    try {
+      const d = await api(`/rss/article?url=${encodeURIComponent(x.url)}`);
+      artCache.set(x.url, d);
+      if (st.art === a) { a.d = d; a.busy = false; render(); }
+    } catch (e) { if (st.art === a) { a.busy = false; a.err = e.status === 404 ? 'Sammendrag er ikke tilgjengelig på denne serveren.' : 'Fikk ikke laget sammendrag nå. Åpne saken for å lese hele.'; render(); } }
+  }
+  const dayWord = (iso) => { if (!iso) return ''; const d = new Date(iso), t = new Date(); const y = new Date(t); y.setDate(t.getDate() - 1); return d.toDateString() === t.toDateString() ? `I dag ${hm(iso)}` : d.toDateString() === y.toDateString() ? `I går ${hm(iso)}` : when(iso); };
+  function artView() {
+    const a = st.art;
+    if (!a) return '';
+    const x = a.x, d = a.d ?? {}, img = d.image || x.image, src = d.source || x.feed || '', cat = (CAT_NAME[d.category ?? x.category] ?? d.category ?? x.category ?? '').toUpperCase();
+    const rm = d.readMin ?? x.readMin, pts = Array.isArray(d.points) ? d.points.filter(Boolean).slice(0, 3) : [];
+    const rel = (Array.isArray(d.related) && d.related.length ? d.related : (st.data?.items ?? []).filter((y) => y.category === x.category && y.url !== x.url)).slice(0, 5);
+    a.rel = rel;
+    return `<div class="nw-art" role="document">
+      <div class="nw-art-h"><button class="nw-back" data-act="art-close">‹ Siste nytt</button><span class="nw-sp"></span><button class="nw-back" data-act="art-share">${a.shared ? 'Lenke kopiert' : 'Del'}</button></div>
+      <div class="nw-art-body"><div class="nw-art-in">
+        <div class="nw-hero" style="background-color:${esc(x.color || '#5c5850')}">${esc(ini(x))}${imgTag(img)}</div>
+        <span class="nw-lab">${esc(cat)}${cat ? ' · ' : ''}<span data-no-i18n>${esc(src.toUpperCase())}</span></span>
+        <h1 class="nw-art-t" data-no-i18n>${esc(d.title || x.title)}</h1>
+        <span class="nw-m">${esc(dayWord(d.published || x.published))}${rm ? ` · ca. ${rm} min å lese` : ''}</span>
+        <div class="nw-sum"><span class="nw-lab">✦ AI-SAMMENDRAG</span>
+          ${a.busy ? '<span class="nw-m nw-busy">Leser saken …</span>' : a.err ? `<span class="nw-m">${esc(a.err)}</span>`
+    : `<span class="nw-sumt" data-no-i18n>${esc(d.summary || 'Ingen sammendrag for denne saken.')}</span>${pts.length ? `<div class="nw-pts">${pts.map((p, i) => `<div><b>${i + 1}</b><span data-no-i18n>${esc(p)}</span></div>`).join('')}</div>` : ''}`}
+          ${!a.busy && !a.err && d.summary ? `<span class="nw-hint">${esc(d.aiNote ? `✦ ${d.aiNote.replace(/^✦\s*/, '')}` : '✦ Laget av AI fra saken. Kan inneholde feil.')}</span>` : ''}</div>
+        <a class="nw-read" href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">Les hele saken hos <span data-no-i18n>${esc(src)}</span> ↗</a>
+        ${rel.length ? `<div class="nw-gh nw-more">MER OM ${esc(cat)}</div>${rel.map((y) => `<button type="button" class="nw-it" data-art="${esc(y.id ?? y.url)}"><span class="nw-tx"><span class="nw-t" data-no-i18n>${esc(y.title)}</span><span class="nw-m"><span data-no-i18n>${esc(y.feed ?? y.source ?? '')}</span> · ${esc(when(y.published))}</span></span>${thumb({ ...y, feed: y.feed ?? y.source }, 'nw-th sm')}</button>`).join('')}` : ''}
+      </div></div></div>`;
+  }
 
   function body() {
     const d = st.data;
@@ -183,7 +228,7 @@ export function openNews(opts = {}) {
     return `<div class="nw-scrim nw-ipscrim" data-act="ip-close"><div class="nw-ip" data-stop role="dialog" aria-label="Ikon for ${esc(CAT_NAME[ip.cat] ?? ip.cat)}">
       <div class="nw-iph">
         <div class="nw-ipt"><span></span><div><div class="nw-lab">IKON FOR</div><div class="nw-ipn">${esc(CAT_NAME[ip.cat] ?? ip.cat)}</div></div><button class="nw-ipx" data-act="ip-close" aria-label="Lukk">×</button></div>
-        <form class="nw-ipq" data-ip-form><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+        <form class="nw-ipq${ip.q ? ' has' : ''}" data-ip-form data-sf><span class="sf-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></span>${clearBtn()}
           <input name="ipq" value="${esc(ip.q)}" placeholder="Søk etter ikon (engelsk), f.eks. football" autocomplete="off" aria-label="Søk etter ikon"><button type="submit">Søk</button></form>
         <div class="nw-iplibs">${ICON_LIBS.map(([k, n]) => `<button data-ip-lib="${k}" class="${ip.lib === k ? 'on' : ''}" aria-pressed="${ip.lib === k}">${esc(n)}</button>`).join('')}</div>
         <div class="nw-ipa"><button class="nw-ipai" data-act="ip-ai" ${ip.ai ? 'disabled' : ''}>${ip.ai ? '✦ Velger …' : '✦ La AI velge'}</button><button class="nw-ipno" data-act="ip-none">Ingen ikon</button></div>
@@ -194,7 +239,7 @@ export function openNews(opts = {}) {
 
   function render() {
     const d = st.data;
-    const keepScroll = el.querySelector('.nw-body')?.scrollTop ?? 0, keepSheet = el.querySelector('.nw-sheet')?.scrollTop ?? 0, keepIp = el.querySelector('.nw-ipg')?.scrollTop ?? 0;
+    const keepArt = el.querySelector('.nw-art-body')?.scrollTop ?? 0, keepScroll = el.querySelector('.nw-body')?.scrollTop ?? 0, keepSheet = el.querySelector('.nw-sheet')?.scrollTop ?? 0, keepIp = el.querySelector('.nw-ipg')?.scrollTop ?? 0;
     const focus = document.activeElement?.name === 'ipq' ? document.activeElement.selectionStart : null;
     el.innerHTML = `<div class="nw-card">
       <div class="nw-head"><div class="nw-hl">
@@ -203,20 +248,29 @@ export function openNews(opts = {}) {
         <div class="nw-hr"><button class="nw-ic" data-act="refresh" aria-label="Oppdater" title="Oppdater" ${st.busy ? 'disabled' : ''}>↻</button><button class="nw-ic" data-act="set-open" aria-label="Kilder og AI" title="Kilder og AI">${gear}</button></div></div>
       <nav class="nw-tabs">${cats().map((c) => `<button data-cat="${c.id}" class="${c.id === st.cat ? 'on' : ''}">${icState().icOn ? iconHtml(icOf(c.id), 16) : ''}${esc(c.name)}</button>`).join('')}</nav>
       <div class="nw-body">${body()}</div>
-      ${st.set ? sheet() : ''}${picker()}</div>`;
+      ${artView()}${st.set ? sheet() : ''}${picker()}</div>`;
     const b = el.querySelector('.nw-body');
     if (b) b.scrollTop = keepScroll;
     const sh = el.querySelector('.nw-sheet'); if (sh) sh.scrollTop = keepSheet;
+    const ab = el.querySelector('.nw-art-body'); if (ab) ab.scrollTop = keepArt;
     const g = el.querySelector('.nw-ipg'); if (g) g.scrollTop = keepIp;
     if (focus != null) { const q = el.querySelector('[name=ipq]'); q?.focus(); q?.setSelectionRange(focus, focus); }
   }
 
   el.addEventListener('click', async (e) => {
-    const t = e.target.closest('[data-act],[data-cat],[data-tog],[data-cyc],[data-del],[data-ic-row],[data-ip-lib],[data-ip-pick]');
+    const t = e.target.closest('[data-act],[data-cat],[data-tog],[data-cyc],[data-del],[data-ic-row],[data-ip-lib],[data-ip-pick],[data-art]');
     if (!t) { if (backdropClick(e, el)) close(); return; }
     if (t.dataset.act === 'set-close' && e.target.closest('[data-stop]') && !e.target.closest('.nw-done')) return;
     if (t.dataset.act === 'ip-close' && e.target.closest('.nw-ip') && !e.target.closest('.nw-ipx')) return;
     const act = t.dataset.act;
+    if (t.dataset.art) { const x = findItem(t.dataset.art); if (x) openArt(x); return; }
+    if (act === 'art-close') { st.art = null; return render(); }
+    if (act === 'art-share') {
+      const x = st.art?.x; if (!x) return;
+      if (navigator.share) { navigator.share({ title: x.title, url: x.url }).catch(() => {}); return; }
+      try { await navigator.clipboard.writeText(x.url); } catch { /* ingen utklippstavle */ }
+      st.art.shared = true; render(); return;
+    }
     if (act === 'ip-close') { st.ip = null; return render(); }
     if (act === 'ic-tgl') return saveIcons({ icOn: !icState().icOn });
     if (act === 'ic-ai-all') {
@@ -256,6 +310,9 @@ export function openNews(opts = {}) {
     }
   });
   el.addEventListener('input', (e) => { if (e.target.name === 'url') st.nf = e.target.value; if (e.target.name === 'ipq' && st.ip) st.ip.q = e.target.value; });
+  // Bilder som ikke lar seg laste fjernes, så kildefarge og initialer vises.
+  el.addEventListener('error', (e) => { if (e.target?.matches?.('[data-nw-img]')) e.target.remove(); }, true);
+  el.addEventListener('sf:clear', () => { if (st.ip) { st.ip.seq = (st.ip.seq ?? 0) + 1; st.ip.res = null; st.ip.busy = false; render(); el.querySelector('[name=ipq]')?.focus(); } });
   el.addEventListener('submit', async (e) => {
     if (e.target.matches('[data-ip-form]')) { e.preventDefault(); return ipSearch(); }
     if (!e.target.matches('[data-add]')) return;

@@ -2,6 +2,7 @@
 // Design 2a: mørk varm grunn, limegrønt kort for i dag, Instrument Serif på retter og titler, Geist Mono på etiketter.
 // Selvstendig modul (egen fetch og egen CSS) slik at den kan importeres fra både /assets/js og /finans.
 //   import { mountMatplan } from '/assets/js/mat.js'; mountMatplan(el, { embedded: true });
+import { clearBtn } from '/assets/js/searchfield.js';
 
 const DAYS = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
 const AB = ['Ma', 'Ti', 'On', 'To', 'Fr', 'Lø', 'Sø'];
@@ -294,7 +295,7 @@ export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}
           ${S.ed === '__new' ? dishForm(null) : ''}
           <div class="mp-scan" data-scan>${scanCard()}</div>
           ${folderBar(w)}
-          <input class="mp-in mp-search" type="search" data-q value="${esc(S.q)}" placeholder="Søk i retter og ingredienser" aria-label="Søk i retter og ingredienser">
+          <span class="mp-qw${S.q ? ' has' : ''}" data-sf>${clearBtn()}<input class="mp-in mp-search" type="search" data-q value="${esc(S.q)}" placeholder="Søk i retter og ingredienser" aria-label="Søk i retter og ingredienser"></span>
           <div class="mp-row mp-wrap">${FILTERS.map((f) => `<button class="mp-filter${S.flt === f ? ' on' : ''}" data-a="flt" data-f="${f}" aria-pressed="${S.flt === f}">${f}</button>`).join('')}</div>
           <div class="mp-list" data-list>${dishList(w)}</div>
         </div>

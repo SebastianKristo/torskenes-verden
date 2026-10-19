@@ -111,3 +111,34 @@ body.nw-open { overflow: hidden; }
   .nw-sheet { width: 100%; height: auto; max-height: 86%; border-radius: 28px 28px 0 0; }
   .nw-ip { width: 100%; height: 86%; border-radius: 28px 28px 0 0; }
 }
+
+/* Prompt 27: bilde ved hver sak og artikkelvisning i leseren (Nyhetsleser.dc.html). */
+button.nw-it { width: 100%; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: inherit; cursor: pointer; text-align: left; font-family: inherit; align-items: center; padding: 12px 0; }
+.nw-it .nw-cat { width: auto; font-size: 10px; }
+.nw-th { flex: none; width: 76px; height: 76px; border-radius: 12px; background-size: cover; background-position: center; display: grid; place-items: center; color: #fff; font: 800 13px Manrope, system-ui, sans-serif; }
+.nw-th.sm { width: 64px; height: 64px; font-size: 12px; }
+.nw-art { position: absolute; inset: 0; z-index: 8; background: var(--bg); color: var(--ink); display: flex; flex-direction: column; }
+.nw-art-h { flex: none; display: flex; align-items: center; gap: 8px; padding: 22px 26px 14px; }
+.nw-art-h .nw-back { height: 40px; font-size: 13.5px; }
+.nw-sp { flex: 1; }
+.nw-art-body { flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: none; padding: 4px 26px 36px; }
+.nw-art-in { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.nw-hero { aspect-ratio: 16 / 9; border-radius: 18px; background-size: cover; background-position: center; display: grid; place-items: center; color: #fff; font: 800 28px Manrope, system-ui, sans-serif; }
+.nw-art-t { margin: 0; font: 500 38px/1.1 Newsreader, Georgia, serif; text-wrap: pretty; }
+.nw-sum { border-radius: 20px; background: var(--card); padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.nw-sumt { font: 400 19px/1.45 Newsreader, Georgia, serif; text-wrap: pretty; }
+.nw-busy { font-size: 15px; }
+.nw-pts { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
+.nw-pts > div { display: flex; gap: 10px; font-size: 14.5px; line-height: 1.45; }
+.nw-pts b { flex: none; color: var(--lab); font-weight: 800; }
+.nw-read { display: flex; align-items: center; justify-content: center; gap: 4px; height: 50px; border-radius: 25px; background: var(--ink); color: var(--bg); text-decoration: none; font: 700 15px Manrope, system-ui, sans-serif; }
+.nw-read:hover { color: var(--bg); opacity: .92; }
+.nw-more { padding-top: 12px; }
+.nw-ipq[data-sf] .sf-ic { opacity: .65; }
+@media (max-width: 767px) {
+  .nw-art-h { padding: 14px 16px 10px; }
+  .nw-art-body { padding: 4px 16px 28px; }
+  .nw-art-t { font-size: 29px; }
+}
+.nw-th, .nw-hero { position: relative; overflow: hidden; }
+.nw-th img, .nw-hero img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }

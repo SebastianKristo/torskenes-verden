@@ -2,6 +2,36 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.20.0] – 19.10.2026 · prompt 27
+- **Kalenderen viser timene igjen.** Skolekalendere bruker samme ID på mange hendelser. Det gamle iCal-biblioteket beholdt bare den siste, ofte eksamen om to måneder. Serveren har nå sin egen iCal-leser:
+  - alle hendelser beholdes
+  - gjentakelser utvides i norsk tid, med unntaksdatoer, ekstra datoer, flyttede og avlyste timer, og Windows- og Outlook-tidssoner
+- **Kalender v2:**
+  - I appene åpnes den i fullskjerm med egen fanelinje: Dag · 3 dager · Uke · Måned · Liste.
+  - NESTE/NÅ-stripe øverst.
+  - Rutenett for 00–24 med nålinje, og trykk på tom plass for å lage ny hendelse.
+  - Søk, kalenderfilter og sveip. På web finnes hurtigtaster.
+  - Lag, rediger og slett hendelser i Google Kalender (Privat og Familie), og kopier en skolehendelse til Privat.
+  - Widgetene nederst på siden er fjernet.
+- **Chat (ny):** egen side i appene og på web, med Ollama lokalt og Gemini/Groq i sky. Kan bruke Open WebUI som motor.
+  - Historikk, mapper og festing per bruker.
+  - Modellvelger LOKAL/SKY, persona og samtaleinnstillinger.
+  - Strømming med Stopp, Rediger, Nytt svar og Les høyt.
+  - Vedlegg, nettsøk, «Mine data», tale, og temaene Papir og Nøytral.
+  - Spør før data sendes til en sky-modell.
+  - ✦ AI i Google-søket på Hjem og på Dashboard.
+- **Finans-søkeforslag:** treff mens du skriver, som hos Google, for eksempel «bloms» → Blomsterlandet. Tåler skrivefeil.
+- **✕ til venstre i alle søkefelt.** Tømmer feltet uten at tastaturet lukkes.
+- **Logo-oppslag uten AI-gjetting:**
+  - Rekkefølge: eget bibliotek, så Brønnøysundregistrene, så Gemini (bare butikknavnet), så nettstedets egne ikoner, så utklipp fra kvitteringen.
+  - Ny gruppe «Personvern og logoer» med AI-logg over hva som er sendt.
+  - «Velg logo» når ingen logo finnes.
+- **Nyhetsleser:** bilde ved hver sak. Saken åpnes i appen med ✦ AI-sammendrag og hovedpunkter.
+- **Ruter på Hjem:** velg opptil 3 stopp og 1–4 avganger per stopp. Nye Ruter-widgets for iPhone (også låseskjerm), Android og Samsung.
+- **Nytt abonnement fra skjermbilde:** Ollama leser tjeneste, plan, pris og trekkdato lokalt.
+- **Web-dashboardet på norsk eller engelsk:** velges i oppstarten eller i profilmenyen.
+- **Planet-bakgrunnen** vises mindre, slik at hele kloden synes.
+
 ## [4.19.0] – 18.10.2026 · prompt 26
 - **Kalender (ny):** skoletimeplanen på web og i appene, under Mer → Kalender.
   - Nå-kort med time, rom og lærer, minutter igjen og fremdriftslinje.

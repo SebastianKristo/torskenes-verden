@@ -40,10 +40,50 @@ function head() {
   return `<div class="so-top"><div class="so-seg">${[['ov', 'Oversikt'], ['cal', 'Kalender']].map(([k, n]) => `<button data-stab="${k}" aria-pressed="${tab === k}">${n}</button>`).join('')}</div>
     <div class="so-addwrap"><button class="btn pri so-addbtn" data-sact="menu" aria-expanded="${!!u.subMenu}">+ Legg til abonnement ▾</button>
     ${u.subMenu ? `<div class="so-menu" role="menu">
+      <label role="menuitem"><span class="so-mi">▣</span><span><b>Fra skjermbilde</b><small>✦ Ollama finner tjeneste, plan, pris og trekkdato</small></span>
+        <input type="file" accept="image/*" data-ssk hidden></label>
       <button data-sact="manual" role="menuitem"><span class="so-mi">✎</span><span><b>Skriv inn selv</b><small>Tjeneste, beløp og trekkdag</small></span></button>
       <label role="menuitem"><span class="so-mi">⎙</span><span><b>Fra kvittering</b><small>✦ AI leser bilde, PDF eller e-post</small></span>
         <input type="file" multiple accept="image/*,application/pdf,.eml,message/rfc822,.txt,text/plain" data-mrc="sub" hidden></label>
       <button data-sact="cands" role="menuitem"><span class="so-mi">⇄</span><span><b>Fra transaksjoner</b><small>✦ Finn faste trekk i banken</small></span></button></div>` : ''}</div></div>`;
+}
+
+/* ---------- Fra skjermbilde (prompt 27, «Subscription OS» → Fra skjermbilde) ---------- */
+// POST /subscriptions/from-screenshot (multipart image) → {tjeneste, plan, pris (øre), valuta, prisOriginal?, approx, syklus,
+// neste_trekk, kategori, logoUrl?, sikkerhet, check[], existingId?}. Bildet leses lokalt (Ollama) og slettes etterpå.
+const SK_CYC = { mnd: 'monthly', år: 'yearly' };
+function skPanel() {
+  const K = u.subSk;
+  if (!K) return '';
+  const r = K.r, chk = (k) => (r?.check ?? []).includes(k) || (r?.sikkerhet?.[k] ?? 1) < 0.8;
+  const row = (k, v, key) => `<div class="so-sk-r"><span>${k}</span><b>${esc(v ?? '–')}</b><span class="${chk(key) ? 'chk' : 'ok'}">${chk(key) ? 'Sjekk' : '✓'}</span></div>`;
+  const nd = r?.neste_trekk ? `${+r.neste_trekk.slice(8, 10)}. ${MON_L[+r.neste_trekk.slice(5, 7) - 1]}` : '–';
+  const price = r?.pris != null ? `${r.approx ? '≈ ' : ''}${n0(r.pris / 100)} kr${r.prisOriginal?.tekst ? ` (${r.prisOriginal.tekst})` : ''}` : '–';
+  const ex = r?.existingId ? S.subs?.items?.find((y) => y.id === r.existingId) ?? r.existing : null;
+  const body = K.busy ? `<span class="so-sk-t">Finner tjeneste, plan, pris og trekkdato …</span><span class="so-sk-bar"><span style="width:${Math.round(K.pct)}%"></span></span><span class="note" style="font-size:12px">${esc(K.name)}</span>`
+    : K.err ? `<span class="so-sk-t neg">${esc(K.err)}</span>`
+      : [row('Tjeneste', r.tjeneste, 'tjeneste'), row('Plan', r.plan, 'plan'), row('Pris', price, 'pris'), row('Syklus', r.syklus === 'år' ? 'Årlig' : 'Månedlig', 'syklus'), row('Neste trekk', nd, 'neste_trekk'), row('Kategori', r.kategori, 'kategori')].join('');
+  const btns = K.busy || K.err ? '' : `<div class="so-sk-b">${ex ? `<button class="btn pri" data-sact="sk-update">Oppdater ${esc(ex.name)}</button>` : `<button class="btn pri" data-sact="sk-add">+ Legg til ${esc(r.tjeneste ?? 'abonnement')}</button>`}<button class="btn" data-sact="sk-edit">Rediger først</button></div>
+    ${ex ? `<span class="note" style="font-size:12.5px">${esc(ex.name)} finnes allerede${ex.plan ? ` (${esc(ex.plan)}` : ' ('}${ex.price != null ? `${ex.plan ? ', ' : ''}${n0(ex.price)} kr)` : ')'}. Oppdater plan og pris i stedet for å legge til et nytt.</span>` : ''}`;
+  return `<section class="card so-sk"><div class="card-h"><h2>✦ Ollama leser skjermbildet</h2><button class="x-btn sm" data-sact="sk-close" aria-label="Lukk">×</button></div>
+    <div class="so-sk-m"><span class="so-sk-img"${K.url ? ` style="background-image:url('${esc(K.url)}')"` : ''}></span><div class="so-sk-rows">${body}</div></div>
+    ${btns}<span class="note" style="font-size:12px">Leses lokalt av bildemodellen på hjemmeserveren. Bildet slettes etter lesing. Felt merket «Sjekk» var utydelige.</span></section>`;
+}
+async function readSk(file) {
+  if (u.subSk?.url) URL.revokeObjectURL(u.subSk.url);
+  const K = u.subSk = { busy: true, pct: 4, name: file.name, url: URL.createObjectURL(file), r: null, err: '' };
+  u.subMenu = false; render();
+  const t = setInterval(() => { if (u.subSk !== K || !K.busy) return clearInterval(t); K.pct = Math.min(92, K.pct + 3 + Math.random() * 6); const b = document.querySelector('.so-sk-bar span'); if (b) b.style.width = `${Math.round(K.pct)}%`; }, 300);
+  try {
+    const fd = new FormData(); fd.append('image', file);
+    K.r = await api('/subscriptions/from-screenshot', { method: 'POST', body: fd });
+  } catch (e) { K.err = e.status === 404 ? 'Serveren støtter ikke skjermbilder ennå.' : `Kunne ikke lese skjermbildet: ${e.message}`; }
+  clearInterval(t); K.busy = false; K.pct = 100;
+  if (u.subSk === K) render();
+}
+function skJson(r) {
+  const nd = r.neste_trekk ?? '';
+  return { name: r.tjeneste, plan: r.plan ?? '', price: (r.pris ?? 0) / 100, cycle: SK_CYC[r.syklus] ?? 'monthly', ...(nd ? { billDay: +nd.slice(8, 10), billMonth: +nd.slice(5, 7), nextDate: `${+nd.slice(8, 10)}.${+nd.slice(5, 7)}` } : {}), category: r.kategori, ...(r.logoUrl ? { logoUrl: r.logoUrl } : {}) };
 }
 
 function candPanel() {
@@ -249,7 +289,7 @@ export function subPage() {
   const d = S.subs;
   if (!d?.byMonth) return skel(400);
   const byId = new Map(d.items.map((s) => [s.id, s]));
-  return `<div class="so">${head()}${candPanel()}${(u.subTab ?? 'ov') === 'cal' ? calendar(d, byId) : overview(d, byId)}</div>${editSheet(d)}`;
+  return `<div class="so">${head()}${skPanel()}${candPanel()}${(u.subTab ?? 'ov') === 'cal' ? calendar(d, byId) : overview(d, byId)}</div>${editSheet(d)}`;
 }
 
 /* ---------- Hendelser ---------- */
@@ -325,6 +365,27 @@ export function bindSubs(el) {
         case 'add-close': u.subAdd = false; u.subF = null; return render();
         case 'cands': u.subMenu = false; u.subCand = true; S.subCands = null; render(); S.subCands = await api('/subscriptions/candidates'); return render();
         case 'cands-close': u.subCand = false; return render();
+        case 'sk-close': if (u.subSk?.url) URL.revokeObjectURL(u.subSk.url); u.subSk = null; return render();
+        case 'sk-add': {
+          const r = u.subSk?.r; if (!r?.tjeneste) return toast('Fant ingen tjeneste. Bruk «Rediger først».');
+          x.disabled = true;
+          const sub = await api('/subscriptions', { method: 'POST', json: skJson(r) });
+          u.subSk = null; toast(`${sub.name} er lagt til`); return reload();
+        }
+        case 'sk-update': {
+          const r = u.subSk?.r; if (!r?.existingId) return;
+          const { name, ...rest } = skJson(r); void name;
+          await api(`/subscriptions/${r.existingId}`, { method: 'PATCH', json: { plan: rest.plan, price: rest.price, cycle: rest.cycle, ...(rest.billDay ? { billDay: rest.billDay, billMonth: rest.billMonth, nextDate: rest.nextDate } : {}) } });
+          u.subSk = null; toast(`${r.existing?.name ?? r.tjeneste} er oppdatert`); return reload();
+        }
+        case 'sk-edit': {
+          const r = u.subSk?.r; if (!r) return;
+          const ex = r.existingId ? S.subs?.items?.find((y) => y.id === r.existingId) : null;
+          openEd(ex ?? null);
+          const j = skJson(r), e2 = u.subEd;
+          Object.assign(e2, { n: ex ? e2.n : r.tjeneste ?? '', plan: j.plan || e2.plan, v: String(j.price || '').replace('.', ','), cyc: j.cycle, ...(j.billDay ? { day: j.billDay, mon: j.billMonth } : {}), cat: r.kategori ?? e2.cat, logo: e2.logo || r.logoUrl || '' });
+          u.subSk = null; render(); el.querySelector('.se [name=n]')?.focus(); return;
+        }
         case 'review': u.subSort = { k: 'st', dir: 1 }; render(); el.querySelector('.so-table')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return;
       }
     }
@@ -332,6 +393,7 @@ export function bindSubs(el) {
   el.addEventListener('change', wrap(async (e) => {
     const t = e.target;
     if (t.matches('[data-mrc="sub"]')) { u.subMenu = false; return; } // opplastingen gjøres i modules.js
+    if (t.matches('[data-ssk]')) { const f = t.files?.[0]; t.value = ''; if (f) await readSk(f); return; }
     if (t.matches('[data-sed-file]') && u.subEd) {
       const f = t.files?.[0]; t.value = '';
       if (!f) return;

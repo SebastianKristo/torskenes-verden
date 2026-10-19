@@ -1,6 +1,7 @@
 // FinansHub v2-moduler i sidemenyen: Subscription OS, Delte mapper, Finn-handler og Import.
 // Samme mønster som desktop.js: sidene tegnes fra S, hendelser fanges med delegering (data-m*-attributter).
 import { S, api, esc, n0, n2, sgn, dd, today, render, toast, loadBoot, accs, logo, aiLine, ICONS, parseAmount, ini, smooth, icon } from './core.js';
+import { clearBtn } from '/assets/js/searchfield.js';
 import { finnPage as finnDesk, loadFinn as loadFinnDesk, bindFinn } from './finn-desktop.js'; // Finn-handler med detaljside
 import { subPage, loadSubs, bindSubs } from './subs-desktop.js'; // Subscription OS: Oversikt og Kalender
 
@@ -73,7 +74,7 @@ function timelineCard(cur) {
   const chips = [['', 'Alle'], ...cur.categories.map((c) => [c.name, c.name])].map(([v, n]) => `<button class="bol-chip${(u.dcat ?? '') === v ? ' on' : ''}" data-mbol-cat="${esc(v)}">${esc(n)}</button>`).join('');
   const body = [...groups].map(([m, list]) => { const [y, mo] = m.split('-');
     return `<div class="bol-tl-m"><div class="bol-tl-h"><b>${MONTHS_LONG[+mo - 1] ?? m} ${y ?? ''}</b><span class="mono">${kr0(list.reduce((a, e) => a + e.amount, 0))}</span></div>${list.map((e) => entryRow(cur, e)).join('')}</div>`; }).join('');
-  return card(`<div class="bol-tl-top"><h3>${esc(u.dcat || 'Alle utgifter')}</h3><span class="note" style="font-size:12.5px">${rows.length} poster · ${kr0(rows.reduce((a, e) => a + e.amount, 0))}</span><input class="inp bol-q" type="search" placeholder="Søk i butikk, kategori, prosjekt …" value="${esc(u.bolQ ?? '')}" data-mbol-q aria-label="Søk i utgifter"></div>
+  return card(`<div class="bol-tl-top"><h3>${esc(u.dcat || 'Alle utgifter')}</h3><span class="note" style="font-size:12.5px">${rows.length} poster · ${kr0(rows.reduce((a, e) => a + e.amount, 0))}</span><span class="bol-qw${u.bolQ ? ' has' : ''}" data-sf>${clearBtn()}<input class="inp bol-q" type="search" placeholder="Søk i butikk, kategori, prosjekt …" value="${esc(u.bolQ ?? '')}" data-mbol-q aria-label="Søk i utgifter"></span></div>
     <div class="bol-chips">${chips}</div>${body || `<div class="note" style="padding:18px 0;border-top:1px solid var(--sep)">${qv ? `Ingen treff på «${esc(u.bolQ)}».` : 'Ingen utgifter her ennå.'}</div>`}`, 'padding:16px 20px;gap:10px');
 }
 function entryRow(cur, e) {
@@ -292,7 +293,7 @@ function dirPage() {
     const rows = cur.entries.filter((e) => (!u.dcat || e.category === u.dcat) && (!qv || [e.description, e.categoryLabel, e.category, e.project, e.paidBy, e.aiShort].some((x) => String(x ?? '').toLowerCase().includes(qv))));
     const chips = [['', 'Alle'], ...(cur.categories ?? []).map((c) => [c.name, c.name])].map(([v, n]) => `<button class="bol2-fchip${(u.dcat ?? '') === v ? ' on' : ''}" data-mbol-cat="${esc(v)}">${esc(n)}</button>`).join('');
     const view = u.bolView === 'rc' ? 'rc' : 'list';
-    body = `<div class="bol2-search">${icon('search', 16, 'var(--muted)')}<input type="search" placeholder="Søk i utgifter og kvitteringer" value="${esc(u.bolQ ?? '')}" data-mbol-q aria-label="Søk i utgifter"></div>
+    body = `<div class="bol2-search${u.bolQ ? ' has' : ''}" data-sf><span class="sf-ic">${icon('search', 16, 'var(--muted)')}</span>${clearBtn()}<input type="search" placeholder="Søk i utgifter og kvitteringer" value="${esc(u.bolQ ?? '')}" data-mbol-q aria-label="Søk i utgifter"></div>
       <div class="bol2-fchips">${chips}</div>
       <div class="bol2-meta"><span class="note">${rows.length} utgift${rows.length === 1 ? '' : 'er'}</span><span class="bol2-view"><button class="${view === 'list' ? 'on' : ''}" data-bol2-view="list">Liste</button><button class="${view === 'rc' ? 'on' : ''}" data-bol2-view="rc">Kvitteringer</button></span><b class="mono">${kr0(rows.reduce((a, e) => a + e.amount, 0))}</b></div>
       ${view === 'rc' ? receiptsCard(cur) : `<div class="card bol2-card">${rows.map((e, i) => entryLine(cur, e, i, true)).join('') || `<div class="note" style="padding:12px 0">${qv ? `Ingen treff på «${esc(u.bolQ)}».` : 'Ingen utgifter her ennå.'}</div>`}</div>`}`;

@@ -20,13 +20,15 @@ import * as tasks from './tasks.js';
 import * as weatherPage from './weather-page.js';
 import * as birthdays from './birthdays.js';
 import * as kalender from './kalender.js';
+import * as chat from './chat.js';
+import { initI18n, setLang, lang } from './i18n.js';
 import './finpreload.js';
 import { logout, noteUser } from './usercache.js';
 import { loadAppIdentity, appName } from './appicon.js';
 import { scrollMemory } from './scrollmem.js';
 import { loadHlTheme, applyHlTheme, is2c, setHlTheme, pwHeader, paintPhoto, bindPhoto } from './hltheme.js';
 
-const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, vaer: weatherPage.render, bursdager: birthdays.render, kalender: kalender.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
+const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, vaer: weatherPage.render, bursdager: birthdays.render, kalender: kalender.render, chat: chat.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
 const view = document.getElementById('view');
 const scrollMem = scrollMemory();
 let route = null, wasMobile = isMobile();
@@ -58,7 +60,7 @@ function renderRoute() {
   mountAll(view);
   setupDnd(view);
   // Rom er en underside av «Mer» på mobil.
-  const navKey = isMobile() && ['rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'domener', 'bursdager', 'kalender'].includes(route) ? 'mer' : route;
+  const navKey = isMobile() && ['chat', 'rom', 'nettverk', 'hjem', 'matplan', 'sporing', 'familie', 'huskeliste', 'domener', 'bursdager', 'kalender'].includes(route) ? 'mer' : route;
   document.querySelectorAll('[data-r]').forEach((a) => { if (a.dataset.r === navKey) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
   setTitle();
   // Prompt 23: tilbake gir samme scrollposisjon som før, nye sider åpner øverst.
@@ -66,7 +68,7 @@ function renderRoute() {
 }
 
 // Fanetittelen: «Side · Appnavn» (appnavnet fra Innstillinger → App, standard «Homelab»).
-const TITLES = { vaer: 'Vær', studie: 'Studie', rom: 'Rom', hjem: 'Hjem', matplan: 'Mat', sporing: 'Sporing', familie: 'Familie', huskeliste: 'Huskeliste', bursdager: 'Bursdager', kalender: 'Kalender', domener: 'Domener', nettverk: 'Nettverk', mer: 'Mer' };
+const TITLES = { chat: 'Chat', vaer: 'Vær', studie: 'Studie', rom: 'Rom', hjem: 'Hjem', matplan: 'Mat', sporing: 'Sporing', familie: 'Familie', huskeliste: 'Huskeliste', bursdager: 'Bursdager', kalender: 'Kalender', domener: 'Domener', nettverk: 'Nettverk', mer: 'Mer' };
 function setTitle() { document.title = TITLES[route] ? `${TITLES[route]} · ${appName()}` : appName(); }
 
 // Nyhetsbaren ligger under topplinjen, men i Vindu og papir under søkefeltet på papiret.
@@ -88,6 +90,12 @@ function weatherPill() {
   el.innerHTML = isMobile() ? `<b>${w.temp}°</b>` : `<b>${w.temp}°C</b> ${esc(w.text)} <span class="muted">· ${w.wind} m/s</span>`;
 }
 
+// Profilmenyen: «Språk: Norsk → English» / «Language: English → Norsk».
+function langLabel() {
+  const b = document.getElementById('menu-lang');
+  if (b) b.textContent = lang() === 'en' ? 'Language: English → Norsk' : 'Språk: Norsk → English';
+}
+
 function bindShell() {
   const btn = document.getElementById('profile-btn'), menu = document.getElementById('menu');
   const close = () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
@@ -101,6 +109,7 @@ function bindShell() {
     if (act === 'settings') openSettings();
     if (act === 'integrations') { e.preventDefault(); openSettings('int'); }
     if (act === 'hl-theme') await setHlTheme(is2c() ? 'cur' : '2c');
+    if (act === 'lang') { await setLang(lang() === 'en' ? 'nb' : 'en'); langLabel(); }
     if (act === 'layout') openSettings('top');
     if (act === 'news-speed') openSettings('top', 'speed');
     if (act === 'reset-layout') await resetLayouts();
@@ -111,6 +120,8 @@ function bindShell() {
   });
   window.addEventListener('hashchange', renderRoute);
   document.addEventListener('hl:theme', () => { route = null; renderRoute(); weatherPill(); });
+  // Nytt språk: tegn visningen på nytt (tekster fra t() og Intl-datoer).
+  document.addEventListener('hl:lang', () => { route = null; renderRoute(); weatherPill(); langLabel(); renderTicker(); });
   document.addEventListener('hl:name', renderRoute); // nytt navn i hilsenen med en gang
   document.addEventListener('hl:app', () => { setTitle(); applyHlTheme(); }); // nytt appnavn eller ikon
   window.addEventListener('resize', () => { if (isMobile() !== wasMobile) { wasMobile = isMobile(); renderRoute(); weatherPill(); } });
@@ -121,6 +132,8 @@ async function main() {
   store.me = me;
   noteUser(me?.me?.id); // kontobytte: tøm den forrige brukerens cacher
   store.me.ui = { ...uiDefaults(), ...ui };
+  await initI18n(me?.me?.language ?? me?.language ?? me?.settings?.language);
+  langLabel();
   applyHlTheme();
   applyProfile();
   applyNav();

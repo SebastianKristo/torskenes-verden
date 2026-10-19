@@ -89,7 +89,8 @@ export async function paintPhoto(force) {
     el.style.backgroundImage = e.url ? `url("${e.url.replace(/"/g, '%22')}")` : grad;
     el.classList.add('on');
   });
-  document.querySelectorAll('.pw').forEach((el) => { el.classList.toggle('pw-light', !!light); particles(el, e.url || t === 'weather' ? e.r?.particles ?? null : null); });
+  // Prompt 27: «Planeter» vises som hele kloden (~62 % bredde) sentrert på svart på Dashboard, ikke beskåret med cover.
+  document.querySelectorAll('.pw').forEach((el) => { el.classList.toggle('pw-light', !!light); el.classList.toggle('pw-planet', t === 'planets' && !!e.url); particles(el, e.url || t === 'weather' ? e.r?.particles ?? null : null); });
   const cr = creditOf(e);
   document.querySelectorAll('.pw-credit').forEach((el) => {
     el.innerHTML = cr.url ? `<a href="${esc(cr.url)}" target="_blank" rel="noopener noreferrer">${esc(cr.text)}</a>` : esc(cr.text);
@@ -160,6 +161,7 @@ export function bindPhoto() {
 // Dashboardet har et høyt vindu med hilsen og vær; de andre sidene et lavt (240 px) med kicker og sidetittel.
 const weekNo = (d = new Date()) => { const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())); const n = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - n); return Math.ceil(((t - Date.UTC(t.getUTCFullYear(), 0, 1)) / 864e5 + 1) / 7); };
 const HEAD = {
+  chat: () => ['Ollama lokalt · Gemini · Groq', 'Chat'],
   studie: () => [`Uke ${weekNo()}`, 'Studie'],
   rom: () => ['NASA · dagens rombilde', 'Satellitt og teleskop'],
   hjem: () => ['Home Assistant', 'Hjem'],

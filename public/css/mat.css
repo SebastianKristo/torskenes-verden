@@ -224,3 +224,8 @@
   .mat .mp-scanbtns{grid-template-columns:1fr}
   .mat .mp-selwrap.mp-mini select{min-width:0}
 }
+
+/* Prompt 27: ✕ til venstre i søkefeltet (searchfield.js). */
+.mat .mp-qw{position:relative;display:block}
+.mat .mp-qw.has .mp-search{padding-left:48px}
+.mat .mp-qw button.sf-x.sf-x{position:absolute;left:12px;top:50%;transform:translateY(-50%);margin:0}

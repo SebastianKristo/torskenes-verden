@@ -1,0 +1,684 @@
+// Chat (prompt 27, «Homelab Papir Web.dc.html» fane Chat, claude-code-chat.md).
+// Fast sidepanel (søk med ✕, FESTET, MAPPER, I DAG / I GÅR / SISTE 7 DAGER / ELDRE, Modeller, Kunnskapsbase, Tema),
+// modellvelger LOKAL/SKY, ⚙ samtaleinnstillinger, strømming med Stopp, Rediger/Kopier/Nytt svar/Les høyt, vedlegg,
+// Nettsøk/Mine data, mikrofon (Web Speech API nb-NO, ellers /api/chat/transcribe), modeller-side og «Sende til sky?»-arket.
+// På mobil (smal skjerm) ligger historikken i en skuff (☰).
+// Alt går via vår server (/api/chat/*); serveren bruker Open WebUI når den er satt opp, ellers Ollama/Gemini/Groq direkte.
+// Mangler endepunktene (eldre server), vises en forklaring i stedet for feil.
+import { esc, isMobile } from './util.js';
+import { searchField } from './searchfield.js';
+import { lang, locale } from './i18n.js';
+
+const PERS = [['standard', 'Standard'], ['okonomi', 'Økonomi'], ['homelab', 'Homelab'], ['norsklarer', 'Norsklærer']];
+const CTXS = [4096, 8192, 16384, 32768];
+const SUGG = [['Hva har jeg brukt på mat i oktober?', 'Bruker Mine data', { data: 1 }], ['Hva står det om oppsigelse i husleiekontrakten?', 'Fra kunnskapsbasen', { kb: 1 }], ['Lag en handleliste til taco for fire', '', {}], ['Forklar Docker-volumer enkelt', '', {}]];
+const DEF = { persona: 'standard', system: '', temperature: 0.7, topP: 0.9, numCtx: 8192, theme: 'papir' };
+const LKEY = 'hl_chat_v1';
+const IC = {
+  newc: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z', menu: 'M4 7h16M4 12h16M4 17h16', gear: 'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4',
+  chip: 'M5 5h14v14H5zM9 9h6v6H9zM9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3', doc: 'M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h5', moon: 'M12 3a9 9 0 1 0 9 9 7 7 0 0 1-9-9z',
+  copy: 'M9 9h11v11H9zM5 15H4V4h11v1', regen: 'M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5', spk: 'M4 9v6h4l5 4V5L8 9zM16.5 8.5a5 5 0 0 1 0 7',
+  web: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18', db: 'M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6',
+  mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3', up: 'M12 19V5M5 12l7-7 7 7', plus: 'M12 5v14M5 12h14', folder: 'M3 6h6l2 2h10v11H3z',
+};
+const svg = (d, s = 18, w = 2) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+
+const C = {
+  booted: false, missing: false, err: '', models: null, def: '', owui: false, set: { chat_my_data: false, chat_ask_cloud: true, chat_default_model: '', chat_theme: 'papir' },
+  list: null, q: '', qList: null, cur: null, chat: null, draftModel: '', draftSet: { ...DEF }, open: {},
+  inp: '', att: [], web: false, data: false, busy: null, sheet: null, menuId: null, guard: null, rem: false, edit: null,
+  copied: '', speak: '', rec: false, toast: '', pulls: {}, mdel: '', kb: null, drawer: false, delArm: false, rn: '', nf: '', pn: '', theme: 'papir',
+};
+let toastT = 0, copyT = 0, qT = 0, qCtl = null, recog = null, mediaRec = null, pendingPrompt = null;
+const host = () => document.getElementById('chat');
+
+/* ---------------- Lagring og nett ---------------- */
+
+function readLocal() { try { return JSON.parse(localStorage.getItem(LKEY) || 'null') ?? {}; } catch { return {}; } }
+function writeLocal() { try { localStorage.setItem(LKEY, JSON.stringify({ cur: C.cur, model: C.draftModel, theme: C.theme, web: C.web, data: C.data, open: C.open, def: C.draftSet })); } catch { /* privat modus */ } }
+
+async function call(path, { method = 'GET', json, body, signal } = {}) {
+  const r = await fetch('/api/chat' + path, { method, signal, headers: json ? { 'Content-Type': 'application/json' } : {}, body: json ? JSON.stringify(json) : body });
+  if (r.status === 401) { location.href = '/login'; throw new Error('Ikke innlogget'); }
+  const ct = r.headers.get('content-type') ?? '';
+  const d = ct.includes('json') ? await r.json().catch(() => ({})) : await r.text();
+  if (!r.ok) throw Object.assign(new Error((d && d.error) || `Feil ${r.status}`), { status: r.status, data: d });
+  return d;
+}
+
+async function boot() {
+  if (C.booted) return;
+  C.booted = true;
+  const l = readLocal();
+  C.cur = l.cur ?? null; C.draftModel = l.model ?? ''; C.theme = l.theme === 'noytral' ? 'noytral' : 'papir'; C.web = !!l.web; C.data = !!l.data; C.open = l.open ?? {};
+  if (l.def) C.draftSet = { ...DEF, ...l.def };
+  const [m, s, list] = await Promise.allSettled([call('/models'), call('/settings'), call('/chats')]);
+  if (m.status === 'rejected' && m.reason?.status === 404) { C.missing = true; paint(); return; }
+  if (m.status === 'fulfilled') { C.models = m.value.models ?? []; C.def = m.value.default ?? ''; C.owui = !!m.value.openwebui; } else { C.models = []; C.err = m.reason?.message ?? ''; }
+  if (s.status === 'fulfilled') { C.set = { ...C.set, ...s.value }; if (!l.theme && s.value.chat_theme) C.theme = s.value.chat_theme === 'noytral' ? 'noytral' : 'papir'; }
+  if (list.status === 'fulfilled') C.list = list.value; else C.list = { pinned: [], folders: [], chats: [] };
+  if (!C.draftModel || !C.models.some((x) => x.id === C.draftModel && x.installed)) C.draftModel = C.set.chat_default_model || C.def || C.models.find((x) => x.installed)?.id || '';
+  if (!C.set.chat_my_data) C.data = false;
+  if (C.cur) await loadChat(C.cur, false);
+  paint();
+  if (pendingPrompt) { const p = pendingPrompt; pendingPrompt = null; newChat(); send(p); }
+}
+async function refreshList() {
+  try { C.list = await call('/chats'); } catch { /* beholder forrige liste */ }
+  if (C.q) searchChats(C.q, true);
+  paint();
+}
+async function loadChat(id, repaint = true) {
+  try { C.chat = await call(`/chats/${encodeURIComponent(id)}`); C.cur = id; } catch { C.chat = null; C.cur = null; }
+  writeLocal();
+  if (repaint) { paint(); toBottom(); }
+}
+function searchChats(q, now = false) {
+  C.q = q;
+  clearTimeout(qT); qCtl?.abort();
+  if (!q.trim()) { C.qList = null; paintSide(); return; }
+  qT = setTimeout(async () => {
+    const ctl = qCtl = new AbortController();
+    try { const r = await call(`/chats?q=${encodeURIComponent(q.trim())}`, { signal: ctl.signal }); if (!ctl.signal.aborted) { C.qList = [...r.pinned, ...r.folders.flatMap((f) => f.chats), ...r.chats]; paintSide(); } } catch { /* avbrutt */ }
+  }, now ? 0 : 150);
+}
+
+/* ---------------- Modeller ---------------- */
+
+const allModels = () => C.models ?? [];
+const modelOf = (id) => allModels().find((m) => m.id === id) ?? { id, name: id || 'Ingen modell', kind: /^(gemini|groq):/.test(id) ? 'sky' : 'lokal', installed: true };
+const curModelId = () => (C.chat ? C.chat.model || C.draftModel : C.draftModel);
+const isSky = (id) => modelOf(id).kind === 'sky';
+const mName = (id) => { const m = modelOf(id); return m.kind === 'sky' ? m.name : m.id; };
+const curSet = () => ({ ...DEF, ...(C.chat ? C.chat.settings : C.draftSet) });
+
+/* ---------------- Tekst ---------------- */
+
+/** Enkel Markdown: kodeblokker, punkter, nummerering, overskrifter, **fet** og `kode`. Alt escapes. */
+function md(t) {
+  const out = []; let code = null;
+  for (const l of String(t ?? '').split('\n')) {
+    if (/^```/.test(l)) { if (code) { out.push(`<pre class="ch-code">${esc(code.join('\n'))}</pre>`); code = null; } else code = []; continue; }
+    if (code) { code.push(l); continue; }
+    if (!l.trim()) continue;
+    const li = l.match(/^\s*[-*•]\s+(.*)/), nu = l.match(/^\s*(\d+)[.)]\s+(.*)/), hd = l.match(/^#+\s+(.*)/);
+    const txt = li ? li[1] : nu ? nu[2] : hd ? hd[1] : l;
+    const inl = esc(txt).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`([^`]+)`/g, '<code>$1</code>');
+    out.push(li || nu ? `<div class="ch-li"><span>${li ? '•' : `${nu[1]}.`}</span><span>${inl}</span></div>` : hd ? `<div class="ch-p"><b>${inl}</b></div>` : `<div class="ch-p">${inl}</div>`);
+  }
+  if (code) out.push(`<pre class="ch-code">${esc(code.join('\n'))}</pre>`);
+  return out.join('');
+}
+const pad = (n) => String(n).padStart(2, '0');
+function rel(iso) {
+  const t = new Date(iso).getTime(), sod = new Date(new Date().toDateString()).getTime(), d = new Date(t);
+  return t >= sod ? `${pad(d.getHours())}:${pad(d.getMinutes())}` : t >= sod - 864e5 ? 'i går' : `${pad(d.getDate())}.${pad(d.getMonth() + 1)}`;
+}
+
+/* ---------------- Visning ---------------- */
+
+function rowHtml(x) {
+  return `<div class="ch-row${x.id === C.cur ? ' on' : ''}" role="button" tabindex="0" data-ch-open="${esc(x.id)}"><span class="ch-grow"><b data-no-i18n>${esc(x.title)}</b><span>${esc(mName(x.model || ''))} · ${esc(rel(x.updatedAt))}</span></span><button type="button" class="ch-dots" data-ch-menu="${esc(x.id)}" aria-label="Valg for samtalen">⋯</button></div>`;
+}
+function groupsHtml() {
+  if (!C.list) return '<div class="ch-empty-s">Laster …</div>';
+  if (C.q.trim()) {
+    const L = C.qList ?? [];
+    return `<div class="ch-gh">TREFF · ${L.length}</div>${L.map(rowHtml).join('')}`;
+  }
+  const sod = new Date(new Date().toDateString()).getTime();
+  const { pinned, folders, chats } = C.list, at = (x) => new Date(x.updatedAt).getTime();
+  let h = pinned.length ? `<div class="ch-gh">FESTET</div>${pinned.map(rowHtml).join('')}` : '';
+  if (folders.length) {
+    h += '<div class="ch-gh">MAPPER</div>';
+    for (const f of folders) {
+      const open = C.open[f.id] ?? f.open !== false;
+      h += `<button type="button" class="ch-fold" data-ch-fold="${esc(f.id)}" aria-expanded="${open}"><span class="ch-arr">${open ? '▾' : '▸'}</span>${svg(IC.folder, 16)}<span class="ch-grow" data-no-i18n>${esc(f.name)}</span><span class="ch-n">${f.chats.length}</span></button>${open ? f.chats.map(rowHtml).join('') : ''}`;
+    }
+  }
+  for (const [t, L] of [['I DAG', chats.filter((x) => at(x) >= sod)], ['I GÅR', chats.filter((x) => at(x) < sod && at(x) >= sod - 864e5)], ['SISTE 7 DAGER', chats.filter((x) => at(x) < sod - 864e5 && at(x) >= sod - 7 * 864e5)], ['ELDRE', chats.filter((x) => at(x) < sod - 7 * 864e5)]]) {
+    if (L.length) h += `<div class="ch-gh">${t}</div>${L.map(rowHtml).join('')}`;
+  }
+  return h || '<div class="ch-empty-s">Ingen samtaler ennå.</div>';
+}
+function sideHtml(drawer) {
+  const loc = allModels().filter((m) => m.kind === 'lokal' && m.installed).length, sky = allModels().filter((m) => m.kind === 'sky').length;
+  return `<aside class="ch-side${drawer ? ' drawer' : ''}">
+    <div class="ch-side-h"><b>Chat</b><button type="button" class="ch-ib" data-ch-new aria-label="Ny chat" title="Ny chat">${svg(IC.newc, 20)}</button></div>
+    <div class="ch-sq">${searchField({ name: 'chq', value: C.q, placeholder: 'Søk i samtaler', cls: 'ch-sf', attrs: 'data-ch-q' })}</div>
+    <div class="ch-groups" data-ch-groups>${groupsHtml()}</div>
+    <div class="ch-side-f">
+      <button type="button" class="ch-sfb" data-ch-sheet="mods">${svg(IC.chip)}<span class="ch-grow">Modeller</span><small>${loc} lokale · ${sky} i skyen</small></button>
+      <button type="button" class="ch-sfb" data-ch-sheet="kb">${svg(IC.doc)}<span class="ch-grow">Kunnskapsbase</span><small>${C.kb ? `${C.kb.length} dokumenter` : '›'}</small></button>
+      <button type="button" class="ch-sfb" data-ch-theme>${svg(IC.moon)}<span class="ch-grow">Tema</span><small>${C.theme === 'noytral' ? 'Nøytral' : 'Papir'}</small></button>
+      <span class="ch-note">Historikken synkes mellom mobil og web.</span>
+    </div></aside>`;
+}
+
+function msgsHtml() {
+  const msgs = (C.chat?.messages ?? []).filter((m) => m.role !== 'system');
+  const busyHere = C.busy && (C.busy.chatId === C.cur || (!C.cur && !C.busy.chatId));
+  const lastA = msgs.map((m) => m.role).lastIndexOf('assistant');
+  return msgs.map((m, i) => {
+    const key = `${C.cur}:${i}`;
+    if (m.role === 'user') {
+      const att = [...(m.files ?? []).map((f) => (typeof f === 'string' ? f : f.name)), ...(m.images?.length ? [`${m.images.length === 1 ? 'Bilde' : `${m.images.length} bilder`}`] : [])];
+      if (C.edit && C.edit.i === i) {
+        return `<div class="ch-u"><div class="ch-edit"><textarea data-ch-edv rows="3">${esc(C.edit.v)}</textarea><div><button type="button" class="ch-pill line" data-ch-edcancel>Avbryt</button><button type="button" class="ch-pill ink" data-ch-edsave>Lagre og send</button></div></div></div>`;
+      }
+      return `<div class="ch-u">${att.length ? `<div class="ch-atts">${att.map((n) => `<span data-no-i18n>${esc(n)}</span>`).join('')}</div>` : ''}<div class="ch-ub" data-no-i18n>${esc(m.content)}</div>
+        <div class="ch-acts">${busyHere ? '' : `<button type="button" data-ch-edit="${i}">Rediger</button>`}<button type="button" data-ch-copy="${i}">${C.copied === key ? 'Kopiert' : 'Kopier'}</button></div></div>`;
+    }
+    const meta = m.meta ?? {}, used = meta.used ?? [];
+    const st = [meta.stopped ? 'Stoppet' : '', meta.tokensPerSec ? `${String(meta.tokensPerSec).replace('.', ',')} tok/s` : '', meta.ms ? `${(meta.ms / 1000).toFixed(1).replace('.', ',')} s` : ''].filter(Boolean).join(' · ');
+    return `<div class="ch-a"><div class="ch-ah"><span class="ch-lab">✦ ${esc(mName(meta.model || C.chat?.model || '').toUpperCase())}</span>${used.map((u) => `<span class="ch-used">Brukte <span data-no-i18n>${esc(u)}</span></span>`).join('')}</div>
+      <div class="ch-md" data-no-i18n>${md(m.content)}</div>${meta.error ? `<div class="ch-errl">${esc(meta.error)}</div>` : ''}
+      <div class="ch-acts a"><button type="button" data-ch-copy="${i}">${svg(IC.copy, 15)}${C.copied === key ? 'Kopiert' : 'Kopier'}</button>${i === lastA && !busyHere ? `<button type="button" data-ch-regen="${i}">${svg(IC.regen, 15)}Nytt svar</button>` : ''}<button type="button" data-ch-speak="${i}">${svg(IC.spk, 15)}${C.speak === key ? 'Stopp' : 'Les høyt'}</button>${st ? `<span class="ch-st">${esc(st)}</span>` : ''}</div></div>`;
+  }).join('') + (busyHere ? streamHtml() : '');
+}
+function streamHtml() {
+  const b = C.busy;
+  return `<div class="ch-a" data-ch-stream><div class="ch-ah"><span class="ch-lab">✦ ${esc(mName(b.model).toUpperCase())}</span>${(b.reading ?? []).map((u) => `<span class="ch-used">Leser <span data-no-i18n>${esc(u)}</span></span>`).join('')}</div>
+    ${b.error ? `<div class="ch-errl">${esc(b.error)}</div>` : b.text ? `<div class="ch-md" data-no-i18n>${md(b.text)}</div>` : '<span class="ch-think">Tenker …</span>'}</div>`;
+}
+function emptyHtml() {
+  const id = curModelId(), m = modelOf(id), P = curSet();
+  return `<div class="ch-empty"><div class="ch-eh"><span class="ch-lab">${esc((m.kind === 'sky' ? `${m.name} · ${m.provider === 'groq' ? 'Groq' : 'Google'} · sky` : `${m.id} · lokalt på hjemmeserveren`).toUpperCase())}</span><b>Hva kan jeg hjelpe med?</b></div>
+    <div class="ch-pers">${PERS.map(([k, n]) => `<button type="button" class="${P.persona === k ? 'on' : ''}" data-ch-per="${k}">${n}</button>`).join('')}</div>
+    <div class="ch-sugg">${SUGG.map(([t, s], i) => `<button type="button" data-ch-sugg="${i}"><b>${esc(t)}</b>${s ? `<span>${esc(s)}</span>` : ''}</button>`).join('')}</div></div>`;
+}
+function composerHtml() {
+  const id = curModelId(), sky = isSky(id), busy = !!C.busy, dataOK = !!C.set.chat_my_data, m = modelOf(id);
+  const attH = C.att.length ? `<div class="ch-catt">${C.att.map((a, i) => `<span><i>${a.kind === 'img' ? '▣' : a.kind === 'doc' ? '#' : '⎙'}</i><span data-no-i18n>${esc(a.name)}</span>${a.up ? '<small>…</small>' : ''}<button type="button" data-ch-rmatt="${i}" aria-label="Fjern vedlegg">✕</button></span>`).join('')}</div>` : '';
+  return `<div class="ch-comp">${C.toast ? `<div class="ch-toast" role="status">${esc(C.toast)}</div>` : ''}
+    <div class="ch-box">${attH}
+      ${C.rec ? `<div class="ch-rec"><i></i><span class="ch-grow">Lytter … snakk nå</span><span class="ch-wave">${'<span></span>'.repeat(7)}</span></div>` : `<textarea data-ch-in rows="${Math.min(6, Math.max(1, C.inp.split('\n').length))}" placeholder="Spør ${esc(sky ? m.name : m.id)} …" enterkeyhint="send" aria-label="Melding">${esc(C.inp)}</textarea>`}
+      <div class="ch-bar"><button type="button" class="ch-cb" data-ch-sheet="plus" aria-label="Legg ved">${svg(IC.plus, 18)}</button>
+        <button type="button" class="ch-chip${C.web ? ' on' : ''}" data-ch-web aria-pressed="${C.web}">${svg(IC.web, 15)}Nettsøk</button>
+        <button type="button" class="ch-chip${C.data && dataOK ? ' on' : ''}${dataOK ? '' : ' dim'}" data-ch-data aria-pressed="${C.data && dataOK}">${svg(IC.db, 15)}Mine data</button>
+        <span class="ch-grow"></span>
+        <button type="button" class="ch-mic${C.rec ? ' on' : ''}" data-ch-mic aria-label="${C.rec ? 'Stopp opptak' : 'Snakk'}">${svg(IC.mic, 19)}</button>
+        ${busy ? '<button type="button" class="ch-send" data-ch-stop aria-label="Stopp"><span class="ch-sq-ic"></span></button>' : `<button type="button" class="ch-send${C.inp.trim() ? '' : ' dim'}" data-ch-send aria-label="Send">${svg(IC.up, 18, 2.6)}</button>`}
+      </div></div>
+    <div class="ch-foot">${sky ? `Sky-modell: meldingen sendes til ${m.provider === 'groq' ? 'Groq' : 'Google'}.` : 'Kjører lokalt på hjemmeserveren. Ingenting sendes ut.'}</div></div>`;
+}
+
+/* ---------- Ark ---------- */
+
+const sheetWrap = (inner, t, cls = '') => `<div class="ch-sheet-bg" data-ch-close><div class="ch-sheet ${cls}" role="dialog" aria-modal="true" aria-label="${esc(t)}"><div class="ch-sh-h"><b>${esc(t)}</b><button type="button" class="ch-x" data-ch-close aria-label="Lukk">✕</button></div>${inner}</div></div>`;
+function modelSheet() {
+  const id = curModelId(), row = (m) => `<button type="button" class="ch-mrow" data-ch-model="${esc(m.id)}"><span class="ch-grow"><b data-no-i18n>${esc(m.kind === 'sky' ? m.name : m.id)}</b><span>${esc([m.kind === 'sky' ? (m.provider === 'groq' ? 'Groq · sky' : 'Google · sky') : m.name, m.size, m.vision ? 'Tekst og bilde' : 'Tekst'].filter(Boolean).join(' · '))}</span></span><span class="ch-badge ${m.kind === 'sky' ? 'sky' : ''}">${m.kind === 'sky' ? 'SKY' : 'LOKAL'}</span><span class="ch-chk">${m.id === id ? '✓' : ''}</span></button>`;
+  const loc = allModels().filter((m) => m.kind === 'lokal' && m.installed), sky = allModels().filter((m) => m.kind === 'sky');
+  return sheetWrap(`<div class="ch-gl">LOKALT · OLLAMA PÅ HJEMMESERVEREN</div><div class="ch-list">${loc.map(row).join('') || '<div class="ch-li-e">Ingen lokale modeller installert.</div>'}</div>
+    <div class="ch-gl">SKY</div><div class="ch-list">${sky.map(row).join('') || '<div class="ch-li-e">Ingen sky-modeller. Legg inn Gemini- eller Groq-nøkkel under Innstillinger → AI.</div>'}</div>
+    <span class="ch-hint">Sky-modeller merkes SKY. Før dine data eller vedlegg sendes dit, får du spørsmål om det.</span>
+    <button type="button" class="ch-btn line" data-ch-sheet="mods">Administrer modeller ›</button>`, 'Velg modell');
+}
+function paramsSheet() {
+  const P = curSet(), chip = (on, a, n) => `<button type="button" class="${on ? 'on' : ''}" ${a}>${n}</button>`;
+  return sheetWrap(`<span class="ch-hint">${C.chat ? 'Gjelder denne samtalen' : 'Gjelder nye samtaler'}</span>
+    <div class="ch-gl">PERSONA</div><div class="ch-seg wrap">${PERS.map(([k, n]) => chip(P.persona === k, `data-ch-per="${k}"`, n)).join('')}</div>
+    <div class="ch-gl">SYSTEMPROMPT</div><textarea class="ch-ta" data-ch-sys rows="3" placeholder="F.eks. «Svar alltid med maks tre setninger.»">${esc(P.system)}</textarea>
+    <label class="ch-rng"><span><b>Temperatur</b><i data-ch-tv>${String(P.temperature).replace('.', ',')}</i></span><input type="range" min="0" max="2" step="0.1" value="${P.temperature}" data-ch-temp></label>
+    <label class="ch-rng"><span><b>Top P</b><i data-ch-pv>${String(P.topP).replace('.', ',')}</i></span><input type="range" min="0.1" max="1" step="0.05" value="${P.topP}" data-ch-topp></label>
+    <div class="ch-gl">KONTEKSTLENGDE</div><div class="ch-seg">${CTXS.map((n) => chip(P.numCtx === n, `data-ch-ctx="${n}"`, `${n / 1024}k`)).join('')}</div>
+    <div class="ch-gl">TEMA</div><div class="ch-seg">${chip(C.theme === 'papir', 'data-ch-th="papir"', 'Papir')}${chip(C.theme === 'noytral', 'data-ch-th="noytral"', 'Nøytral')}</div>
+    <button type="button" class="ch-btn ink" data-ch-close>Ferdig</button>`, 'Samtaleinnstillinger');
+}
+function menuSheet() {
+  const all = C.list ? [...C.list.pinned, ...C.list.folders.flatMap((f) => f.chats), ...C.list.chats] : [];
+  const x = all.find((c) => c.id === C.menuId) ?? (C.chat?.id === C.menuId ? C.chat : null);
+  if (!x) return '';
+  const fl = [['', 'Ingen mappe'], ...(C.list?.folders ?? []).map((f) => [f.id, f.name])];
+  return sheetWrap(`<form class="ch-frow" data-ch-rename><input class="ch-inp" name="rn" value="${esc(C.rn || x.title)}" aria-label="Navn på samtalen" data-no-i18n><button type="submit" class="ch-pill ink">Gi nytt navn</button></form>
+    <div class="ch-list"><button type="button" class="ch-mi" data-ch-pin>${x.pinned ? 'Løsne' : 'Fest øverst'}</button><button type="button" class="ch-mi" data-ch-export>Eksporter Markdown</button><button type="button" class="ch-mi" data-ch-share>Del lenke</button></div>
+    <div class="ch-gl">FLYTT TIL MAPPE</div><div class="ch-seg wrap">${fl.map(([id, n]) => `<button type="button" class="${(x.folderId ?? '') === id ? 'on' : ''}" data-ch-mvf="${esc(id)}"${id ? ' data-no-i18n' : ''}>${esc(n)}</button>`).join('')}</div>
+    <form class="ch-frow" data-ch-newf><input class="ch-inp" name="nf" placeholder="Ny mappe" autocomplete="off"><button type="submit" class="ch-pill line">Lag og flytt</button></form>
+    <button type="button" class="ch-btn red" data-ch-del>${C.delArm ? 'Trykk igjen for å slette' : 'Slett samtalen'}</button>`, 'Samtale');
+}
+function guardSheet() {
+  const g = C.guard;
+  if (!g) return '';
+  const loc = allModels().find((m) => m.kind === 'lokal' && m.installed);
+  return sheetWrap(`<span class="ch-txt">Dette er en sky-modell. Dette forlater hjemmeserveren hvis du sender:</span>
+    <div class="ch-list">${['Meldingen din', ...(g.leaves ?? [])].map((n) => `<div class="ch-leave"><i>↗</i>${esc(n)}</div>`).join('')}</div>
+    <button type="button" class="ch-chk2" data-ch-rem role="checkbox" aria-checked="${C.rem}"><span>${C.rem ? '☑' : '☐'}</span>Ikke spør igjen i denne samtalen</button>
+    <button type="button" class="ch-btn ink" data-ch-g="send">Send</button>
+    ${g.hasData ? '<button type="button" class="ch-btn line" data-ch-g="nodata">Send uten mine data</button>' : ''}
+    ${loc ? `<button type="button" class="ch-btn line" data-ch-g="local">Bruk lokal modell (<span data-no-i18n>${esc(loc.id)}</span>)</button>` : ''}`, `Sende til ${g.model}?`);
+}
+function plusSheet() {
+  return sheetWrap(`<div class="ch-list">
+    <label class="ch-mi"><input type="file" accept="image/*" multiple data-ch-file="img" hidden><i>▣</i><span class="ch-grow"><b>Bilde eller kamera</b><small>For bildemodeller (Qwen 2.5 VL, Gemma 3, Gemini)</small></span></label>
+    <label class="ch-mi"><input type="file" multiple data-ch-file="file" hidden><i>⎙</i><span class="ch-grow"><b>Fil</b><small>PDF, Word, tekst – leses av serveren</small></span></label>
+    <button type="button" class="ch-mi" data-ch-sheet="kb"><i>#</i><span class="ch-grow"><b>Fra kunnskapsbasen</b><small>Dokumenter som er lastet opp før</small></span></button></div>`, 'Legg ved');
+}
+function kbSheet() {
+  if (!C.kb) { loadKb(); }
+  const rows = (C.kb ?? []).map((d) => { const on = C.att.some((a) => a.id === d.id); return `<button type="button" class="ch-kbr${on ? ' on' : ''}" data-ch-kbsel="${esc(d.id)}"><span class="ch-kbc">${on ? '✓' : ''}</span><span class="ch-grow"><b data-no-i18n>${esc(d.name)}</b><small>${esc([d.source === 'openwebui' ? 'Open WebUI' : 'Lastet opp', d.size ? `${Math.max(1, Math.round(d.size / 1024))} kB` : ''].filter(Boolean).join(' · '))}</small></span></button>`; }).join('');
+  return sheetWrap(`<span class="ch-hint">${C.att.filter((a) => a.kind === 'doc').length} valgt</span><div class="ch-list">${C.kb ? rows || '<div class="ch-li-e">Ingen dokumenter ennå.</div>' : '<div class="ch-li-e">Laster …</div>'}</div>
+    <label class="ch-btn dash"><input type="file" multiple data-ch-file="kbup" hidden>+ Last opp til kunnskapsbasen</label>
+    <button type="button" class="ch-btn ink" data-ch-close>Ferdig</button>`, 'Kunnskapsbase');
+}
+function modsSheet() {
+  const inst = allModels().filter((m) => m.kind === 'lokal' && m.installed), lib = allModels().filter((m) => m.kind === 'lokal' && !m.installed && C.pulls[m.id] == null);
+  const pulling = Object.entries(C.pulls);
+  return sheetWrap(`<div class="ch-gl">INSTALLERT</div><div class="ch-list">${inst.map((m) => `<div class="ch-mod"><span class="ch-grow"><b data-no-i18n>${esc(m.id)}</b><small>${esc([m.name, m.size, m.vision ? 'Tekst og bilde' : 'Tekst'].filter(Boolean).join(' · '))}</small></span><button type="button" class="ch-pill ${C.mdel === m.id ? 'red' : 'line'}" data-ch-mdel="${esc(m.id)}">${C.mdel === m.id ? 'Bekreft' : 'Slett'}</button></div>`).join('') || '<div class="ch-li-e">Ingen lokale modeller.</div>'}
+    ${pulling.map(([n, p]) => `<div class="ch-mod col"><div class="ch-pr"><b data-no-i18n>${esc(n)}</b><span>${p.err ? esc(p.err) : `${Math.round(p.pct)} %`}</span></div><span class="ch-bar2"><i style="width:${p.pct}%"></i></span></div>`).join('')}</div>
+    <div class="ch-gl">HENT FRA OLLAMA.COM</div><div class="ch-list">${lib.map((m) => `<div class="ch-mod"><span class="ch-grow"><b data-no-i18n>${esc(m.id)}</b><small>${esc([m.name, m.size].filter(Boolean).join(' · '))}</small></span><button type="button" class="ch-pill ink" data-ch-pull="${esc(m.id)}">Hent</button></div>`).join('') || '<div class="ch-li-e">Alle foreslåtte modeller er installert.</div>'}</div>
+    <form class="ch-frow" data-ch-pullf><input class="ch-inp mono" name="pn" placeholder="Modellnavn, f.eks. llama3.2:1b" autocomplete="off" spellcheck="false"><button type="submit" class="ch-pill ink">Hent</button></form>
+    <span class="ch-hint">Å hente og slette modeller krever administrator.${C.owui ? ' Går via Open WebUI.' : ''}</span>`, 'Modeller');
+}
+function sheetHtml() {
+  return { model: modelSheet, params: paramsSheet, menu: menuSheet, guard: guardSheet, plus: plusSheet, kb: kbSheet, mods: modsSheet }[C.sheet]?.() ?? '';
+}
+
+function body() {
+  if (C.missing) return `<div class="ch-miss"><b>Chat er ikke tilgjengelig ennå</b><span>Serveren mangler /api/chat. Oppdater Homelab-serveren for å bruke Chat med Ollama, Gemini og Groq.</span></div>`;
+  const wide = !isMobile(), id = curModelId(), m = modelOf(id), sky = m.kind === 'sky';
+  const hasMsgs = (C.chat?.messages ?? []).some((x) => x.role !== 'system') || C.busy;
+  return `${wide ? sideHtml(false) : ''}<div class="ch-main">
+    <div class="ch-top">${wide ? '' : `<button type="button" class="ch-ib" data-ch-drawer aria-label="Historikk">${svg(IC.menu, 22)}</button>`}
+      <button type="button" class="ch-msel" data-ch-sheet="model"><b data-no-i18n>${esc(sky ? m.name : m.id || 'Velg modell')}</b><span class="ch-badge ${sky ? 'sky' : ''}">${sky ? 'SKY' : 'LOKAL'}</span><span class="ch-arr">▼</span></button>
+      <span class="ch-grow"></span>
+      <button type="button" class="ch-ib" data-ch-sheet="params" aria-label="Samtaleinnstillinger" title="Samtaleinnstillinger">${svg(IC.gear, 20)}</button>
+      ${wide ? '' : `<button type="button" class="ch-ib" data-ch-new aria-label="Ny chat">${svg(IC.newc, 20)}</button>`}</div>
+    <div class="ch-sc" data-ch-sc><div class="ch-msgs">${C.err && !allModels().length ? `<div class="ch-errl">Fikk ikke hentet modellene: ${esc(C.err)}</div>` : ''}${hasMsgs ? msgsHtml() : emptyHtml()}</div></div>
+    ${composerHtml()}</div>
+  ${!wide && C.drawer ? `<div class="ch-dbg" data-ch-drawer-close></div>${sideHtml(true)}` : ''}${sheetHtml()}`;
+}
+
+function paint() {
+  const h = host();
+  if (!h) return;
+  const sc = h.querySelector('[data-ch-sc]'), atBottom = sc ? sc.scrollHeight - sc.scrollTop - sc.clientHeight < 40 : true, y = sc?.scrollTop ?? 0;
+  const gs = h.querySelector('[data-ch-groups]')?.scrollTop ?? 0;
+  const ae = document.activeElement, fk = ae && h.contains(ae) ? ['data-ch-in', 'data-ch-q', 'data-ch-edv', 'data-ch-sys'].find((a) => ae.hasAttribute(a)) : null;
+  const sel = fk ? [ae.selectionStart, ae.selectionEnd] : null;
+  h.className = `ch ${C.theme === 'noytral' ? 'noytral' : 'papir'}`;
+  h.innerHTML = body();
+  const sc2 = h.querySelector('[data-ch-sc]');
+  if (sc2) sc2.scrollTop = atBottom ? sc2.scrollHeight : y;
+  const g2 = h.querySelector('[data-ch-groups]'); if (g2) g2.scrollTop = gs;
+  if (fk) { const el = h.querySelector(`[${fk}]`); if (el) { el.focus(); try { el.setSelectionRange(sel[0], sel[1]); } catch { /* */ } } }
+}
+function paintSide() { const g = host()?.querySelector('[data-ch-groups]'); if (g) g.innerHTML = groupsHtml(); }
+function paintStream() {
+  const h = host(), el = h?.querySelector('[data-ch-stream]');
+  if (!C.busy) return;
+  if (!el) { paint(); return; }
+  const sc = h.querySelector('[data-ch-sc]'), atBottom = sc.scrollHeight - sc.scrollTop - sc.clientHeight < 60;
+  el.outerHTML = streamHtml();
+  if (atBottom) sc.scrollTop = sc.scrollHeight;
+}
+function toBottom() { setTimeout(() => { const sc = host()?.querySelector('[data-ch-sc]'); if (sc) sc.scrollTop = sc.scrollHeight; }, 30); }
+function toast(t) { C.toast = t; paint(); clearTimeout(toastT); toastT = setTimeout(() => { C.toast = ''; paint(); }, 1900); }
+
+/* ---------------- Sende ---------------- */
+
+const fileB64 = (f) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).replace(/^data:[^,]+,/, '')); r.onerror = rej; r.readAsDataURL(f); });
+function newChat() {
+  C.cur = null; C.chat = null; C.inp = ''; C.att = []; C.edit = null; C.drawer = false; C.sheet = null;
+  writeLocal(); paint();
+  host()?.querySelector('[data-ch-in]')?.focus();
+}
+
+/** Sender teksten som ny melding i samtalen (eller starter en ny). opt: {confirm, withoutData, remember, editFrom, history} */
+async function send(text, opt = {}) {
+  const t = String(text ?? '').trim();
+  if (C.busy) return;
+  if (!t && opt.editFrom == null) return;
+  if (C.att.some((a) => a.up)) { toast('Vent til vedleggene er lastet opp'); return; }
+  const model = curModelId();
+  if (!model) { toast('Ingen modell er tilgjengelig'); return; }
+  const prev = (C.chat?.messages ?? []).filter((m) => m.role !== 'system');
+  const imgs = C.att.filter((a) => a.kind === 'img').map((a) => a.b64);
+  const files = C.att.filter((a) => a.kind !== 'img' && a.id).map((a) => a.id);
+  const userMsg = { role: 'user', content: t, ...(imgs.length ? { images: imgs } : {}), ...(C.att.length ? { files: C.att.filter((a) => a.kind !== 'img').map((a) => a.name) } : {}) };
+  const history = opt.history ?? [...prev, userMsg];
+  const payload = { chatId: C.cur || undefined, model, messages: history.map((m) => ({ role: m.role, content: m.content, ...(m.images?.length ? { images: m.images } : {}) })),
+    settings: { ...curSet(), theme: C.theme, ...(opt.remember ? { skipCloudAsk: true } : {}) }, webSearch: C.web, myData: C.data && !!C.set.chat_my_data, files,
+    ...(opt.editFrom != null ? { editFrom: opt.editFrom } : {}), ...(opt.confirm ? { confirmCloud: true } : {}), ...(opt.withoutData ? { withoutMyData: true } : {}) };
+  // Optimistisk: vis meldingen med en gang.
+  const shown = { ...(C.chat ?? { id: null, title: t.slice(0, 60), model, settings: curSet() }), messages: history };
+  const before = { chat: C.chat, inp: C.inp, att: C.att };
+  C.chat = shown; C.inp = ''; C.att = []; C.edit = null; C.sheet = null; C.guard = null;
+  const ctl = new AbortController();
+  C.busy = { chatId: C.cur, model, text: '', ctl, reading: [...(payload.myData ? ['Finans', 'Kalender', 'Huskeliste'] : []), ...files.length ? before.att.filter((a) => a.kind !== 'img').map((a) => a.name) : []] };
+  paint(); toBottom();
+  let res;
+  try {
+    res = await fetch('/api/chat/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: ctl.signal });
+  } catch (e) {
+    C.busy = null;
+    if (e.name === 'AbortError') { C.chat = before.chat; paint(); return; }
+    C.chat = before.chat; C.inp = before.inp; C.att = before.att; toast(`Kunne ikke sende: ${e.message}`); return;
+  }
+  if (res.status === 401) { location.href = '/login'; return; }
+  if (!res.ok) {
+    const d = await res.json().catch(() => ({}));
+    C.busy = null; C.chat = before.chat; C.inp = t; C.att = before.att;
+    if (res.status === 409 && d.needsConfirm) { C.guard = { model: d.model || mName(model), leaves: d.leaves ?? [], hasData: !!payload.myData, text: t, opt }; C.rem = false; C.sheet = 'guard'; paint(); return; }
+    if (res.status === 404 && !d.error) { C.missing = true; paint(); return; }
+    toast(d.error || `Feil ${res.status}`); return;
+  }
+  await readSse(res, ctl);
+}
+
+async function readSse(res, ctl) {
+  const rd = res.body.getReader(), dec = new TextDecoder();
+  let buf = '', ev = 'message', chatId = C.cur, done = null, raf = 0;
+  const flush = () => { raf = 0; paintStream(); };
+  try {
+    for (;;) {
+      const { value, done: end } = await rd.read();
+      if (end) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, i).replace(/\r$/, ''); buf = buf.slice(i + 1);
+        if (line.startsWith('event:')) { ev = line.slice(6).trim(); continue; }
+        if (!line.startsWith('data:')) { if (!line) ev = 'message'; continue; }
+        let d; try { d = JSON.parse(line.slice(5).trim()); } catch { continue; }
+        if (ev === 'meta') { chatId = d.chatId ?? chatId; if (!C.cur) { C.cur = chatId; C.busy.chatId = chatId; if (C.chat) { C.chat.id = chatId; C.chat.title = d.title ?? C.chat.title; } writeLocal(); refreshList(); } }
+        else if (ev === 'delta') { C.busy.text += d.text ?? ''; if (!raf) raf = requestAnimationFrame(flush); }
+        else if (ev === 'done') done = d;
+        else if (ev === 'error') { C.busy.error = d.error || 'Ukjent feil'; paintStream(); }
+      }
+    }
+  } catch (e) { if (e.name !== 'AbortError') C.busy && (C.busy.error = e.message); }
+  const err = C.busy?.error;
+  C.busy = null;
+  if (chatId) { C.cur = chatId; await loadChat(chatId, false); }
+  if (err && C.chat && !(C.chat.messages ?? []).some((m) => m.role === 'assistant' && m === C.chat.messages.at(-1))) C.chat.messages = [...C.chat.messages, { role: 'assistant', content: '', meta: { error: err, model: curModelId() } }];
+  void done; void ctl;
+  paint(); toBottom(); refreshList();
+}
+function stop() { C.busy?.ctl.abort(); }
+
+/* ---------------- Vedlegg ---------------- */
+
+async function addFiles(kind, files) {
+  for (const f of files) {
+    if (kind === 'img') {
+      if (!/^image\//.test(f.type)) continue;
+      if (f.size > 10 * 1024 * 1024) { toast(`${f.name} er for stort (maks 10 MB)`); continue; }
+      C.att = [...C.att, { kind: 'img', name: f.name, b64: await fileB64(f) }];
+      continue;
+    }
+    const a = { kind: kind === 'kbup' ? 'doc' : 'file', name: f.name, up: true };
+    C.att = [...C.att, a]; paint();
+    try {
+      const fd = new FormData(); fd.append('file', f);
+      const r = await call('/files', { method: 'POST', body: fd });
+      a.id = r.id; a.up = false; C.att = [...C.att];
+      if (kind === 'kbup') C.kb = null;
+    } catch (e) { C.att = C.att.filter((x) => x !== a); toast(`Kunne ikke laste opp ${f.name}: ${e.message}`); }
+  }
+  if (kind === 'kbup') { await loadKb(); } else C.sheet = null;
+  paint();
+}
+async function loadKb() {
+  if (C.kbLoading) return;
+  C.kbLoading = true;
+  try { const r = await call('/knowledge'); C.kb = Array.isArray(r) ? r : r.items ?? []; } catch { C.kb = []; }
+  C.kbLoading = false;
+  paint();
+}
+
+/* ---------------- Tale ---------------- */
+
+function speak(i) {
+  const key = `${C.cur}:${i}`, S = window.speechSynthesis;
+  if (!S) { toast('Nettleseren kan ikke lese opp tekst'); return; }
+  if (C.speak === key) { S.cancel(); C.speak = ''; paint(); return; }
+  S.cancel();
+  const m = (C.chat?.messages ?? []).filter((x) => x.role !== 'system')[i];
+  const u = new SpeechSynthesisUtterance(String(m?.content ?? '').replace(/\*\*|`|#/g, ''));
+  u.lang = lang() === 'en' ? 'en-GB' : 'nb-NO';
+  u.onend = () => { if (C.speak === key) { C.speak = ''; paint(); } };
+  S.speak(u); C.speak = key; paint();
+}
+async function mic() {
+  if (C.rec) { try { recog?.stop(); } catch { /* */ } try { mediaRec?.stop(); } catch { /* */ } C.rec = false; paint(); return; }
+  const R = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (R) {
+    try {
+      const r = recog = new R();
+      r.lang = lang() === 'en' ? 'en-GB' : 'nb-NO'; r.interimResults = true;
+      const base = C.inp ? `${C.inp} ` : '';
+      r.onresult = (e) => { C.inp = base + [...e.results].map((x) => x[0].transcript).join(''); };
+      r.onend = () => { C.rec = false; paint(); host()?.querySelector('[data-ch-in]')?.focus(); };
+      r.onerror = (e) => { C.rec = false; if (e.error !== 'aborted' && e.error !== 'no-speech') toast(`Talegjenkjenning: ${e.error}`); paint(); };
+      r.start(); C.rec = true; paint(); return;
+    } catch { /* faller tilbake til opptak */ }
+  }
+  // Uten Web Speech API: ta opp og send til /api/chat/transcribe (Whisper i Open WebUI).
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) { toast('Nettleseren støtter ikke mikrofon'); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true }), chunks = [];
+    const mr = mediaRec = new MediaRecorder(stream);
+    mr.ondataavailable = (e) => chunks.push(e.data);
+    mr.onstop = async () => {
+      stream.getTracks().forEach((tk) => tk.stop());
+      C.rec = false; paint();
+      try {
+        const fd = new FormData(); fd.append('file', new Blob(chunks, { type: mr.mimeType || 'audio/webm' }), 'tale.webm');
+        const r = await call('/transcribe', { method: 'POST', body: fd });
+        if (r.text) { C.inp = `${C.inp ? `${C.inp} ` : ''}${r.text}`; paint(); }
+      } catch (e) { toast(e.status === 501 ? 'Tale til tekst krever Open WebUI (Whisper)' : `Tale til tekst: ${e.message}`); }
+    };
+    mr.start(); C.rec = true; paint();
+    setTimeout(() => { if (mr.state === 'recording') mr.stop(); }, 30_000);
+  } catch (e) { toast(`Mikrofon: ${e.message}`); }
+}
+
+/* ---------------- Samtaler og modeller ---------------- */
+
+async function patchChat(id, body2) {
+  try {
+    const r = await call(`/chats/${encodeURIComponent(id)}`, { method: 'PATCH', json: body2 });
+    if (C.chat?.id === id) C.chat = { ...C.chat, ...r, messages: C.chat.messages };
+  } catch (e) { toast(e.message); }
+  refreshList();
+}
+function setP(x) {
+  if (C.chat?.id) { C.chat.settings = { ...curSet(), ...x }; patchChat(C.chat.id, { settings: x }); } else { C.draftSet = { ...C.draftSet, ...x }; writeLocal(); }
+}
+function pickModel(id) {
+  C.draftModel = id; writeLocal();
+  if (C.chat?.id) { C.chat.model = id; patchChat(C.chat.id, { model: id }); }
+  C.sheet = null; paint();
+}
+async function pull(name) {
+  if (!name || C.pulls[name]) return;
+  C.pulls = { ...C.pulls, [name]: { pct: 0 } }; paint();
+  try {
+    const r = await fetch('/api/chat/models/pull', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
+    if (!r.ok) { const d = await r.json().catch(() => ({})); throw new Error(d.error || `Feil ${r.status}`); }
+    const rd = r.body.getReader(), dec = new TextDecoder();
+    let buf = '', ev = '', err = '';
+    for (;;) {
+      const { value, done } = await rd.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+        if (line.startsWith('event:')) { ev = line.slice(6).trim(); continue; }
+        if (!line.startsWith('data:')) continue;
+        let d; try { d = JSON.parse(line.slice(5)); } catch { continue; }
+        if (ev === 'progress' && d.total) { C.pulls[name] = { pct: Math.min(100, d.completed / d.total * 100) }; if (C.sheet === 'mods') paint(); }
+        if (ev === 'error') err = d.error;
+      }
+    }
+    if (err) throw new Error(err);
+    delete C.pulls[name];
+    const m = await call('/models'); C.models = m.models ?? C.models;
+    toast(`${name} er installert`);
+  } catch (e) { C.pulls[name] = { pct: 0, err: e.message }; setTimeout(() => { delete C.pulls[name]; paint(); }, 5000); }
+  paint();
+}
+async function delModel(name) {
+  if (C.mdel !== name) { C.mdel = name; paint(); return; }
+  C.mdel = '';
+  try { await call(`/models/${encodeURIComponent(name)}`, { method: 'DELETE' }); const m = await call('/models'); C.models = m.models ?? C.models; toast(`${name} er slettet`); } catch (e) { toast(e.message); }
+  if (C.draftModel === name) C.draftModel = allModels().find((x) => x.installed)?.id ?? '';
+  paint();
+}
+async function menuAct(act, arg) {
+  const id = C.menuId;
+  if (!id) return;
+  if (act === 'pin') { const all = [...C.list.pinned, ...C.list.folders.flatMap((f) => f.chats), ...C.list.chats], x = all.find((c) => c.id === id); C.sheet = null; await patchChat(id, { pinned: !x?.pinned }); return; }
+  if (act === 'export') {
+    try { const md2 = await call(`/chats/${encodeURIComponent(id)}/export`); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([md2], { type: 'text/markdown' })); a.download = 'samtale.md'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) { toast(e.message); }
+    C.sheet = null; paint(); return;
+  }
+  if (act === 'share') {
+    try {
+      const r = await call(`/chats/${encodeURIComponent(id)}/share`, { method: 'POST' });
+      if (navigator.share) { navigator.share({ url: r.url }).catch(() => {}); } else { await navigator.clipboard?.writeText(r.url).catch(() => {}); toast('Delingslenke kopiert'); }
+    } catch (e) { toast(e.message); }
+    C.sheet = null; paint(); return;
+  }
+  if (act === 'folder') { await patchChat(id, { folderId: arg || null }); paint(); return; }
+  if (act === 'del') {
+    if (!C.delArm) { C.delArm = true; paint(); return; }
+    C.delArm = false; C.sheet = null;
+    try { await call(`/chats/${encodeURIComponent(id)}`, { method: 'DELETE' }); } catch (e) { toast(e.message); }
+    if (C.cur === id) { C.cur = null; C.chat = null; writeLocal(); }
+    refreshList();
+  }
+}
+
+/* ---------------- Hendelser ---------------- */
+
+function bind(h) {
+  if (h.dataset.chBound) return;
+  h.dataset.chBound = '1';
+  h.addEventListener('input', (e) => {
+    const t = e.target;
+    if (t.matches('[data-ch-in]')) { C.inp = t.value; const rows = Math.min(6, Math.max(1, t.value.split('\n').length)); if (+t.rows !== rows) t.rows = rows; h.querySelector('[data-ch-send]')?.classList.toggle('dim', !t.value.trim()); return; }
+    if (t.matches('[data-ch-q]')) { searchChats(t.value); return; }
+    if (t.matches('[data-ch-edv]')) { C.edit.v = t.value; return; }
+    if (t.matches('[data-ch-temp]')) { h.querySelector('[data-ch-tv]').textContent = String(t.value).replace('.', ','); return; }
+    if (t.matches('[data-ch-topp]')) { h.querySelector('[data-ch-pv]').textContent = String(t.value).replace('.', ','); }
+  });
+  h.addEventListener('change', (e) => {
+    const t = e.target;
+    if (t.matches('[data-ch-temp]')) setP({ temperature: +t.value });
+    else if (t.matches('[data-ch-topp]')) setP({ topP: +t.value });
+    else if (t.matches('[data-ch-sys]')) setP({ system: t.value });
+    else if (t.matches('[data-ch-file]') && t.files?.length) { const fs = [...t.files]; t.value = ''; addFiles(t.dataset.chFile, fs); }
+  });
+  h.addEventListener('keydown', (e) => {
+    if (e.target.matches('[data-ch-in]') && e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(e.target.value); return; }
+    if (e.target.matches('[data-ch-open]') && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); e.target.click(); }
+  });
+  h.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const f = e.target, v = (n) => String(new FormData(f).get(n) ?? '').trim();
+    if (f.matches('[data-ch-rename]')) { const t = v('rn'); if (t && C.menuId) { patchChat(C.menuId, { title: t }); if (C.chat?.id === C.menuId) C.chat.title = t; } C.sheet = null; C.rn = ''; paint(); }
+    else if (f.matches('[data-ch-newf]')) {
+      const n = v('nf'); if (!n) return;
+      call('/folders', { method: 'POST', json: { name: n } }).then((r) => patchChat(C.menuId, { folderId: r.id })).catch((x) => toast(x.message));
+    } else if (f.matches('[data-ch-pullf]')) { const n = v('pn'); if (n) pull(n); f.reset(); }
+  });
+  h.addEventListener('click', (e) => {
+    const tg = e.target;
+    if (tg.matches('.ch-sheet-bg')) { C.sheet = null; C.guard = null; C.delArm = false; paint(); return; }
+    if (tg.closest('[data-ch-drawer-close]')) { C.drawer = false; paint(); return; }
+    const b = tg.closest('button,[data-ch-open]');
+    if (!b || !h.contains(b)) return;
+    const d = b.dataset;
+    if ('chClose' in d) { C.sheet = null; C.guard = null; C.delArm = false; paint(); return; }
+    if (d.chMenu) { e.stopPropagation(); C.menuId = d.chMenu; C.rn = ''; C.delArm = false; C.sheet = 'menu'; paint(); return; }
+    if (d.chOpen) { C.drawer = false; C.edit = null; loadChat(d.chOpen); return; }
+    if ('chNew' in d) return newChat();
+    if ('chDrawer' in d) { C.drawer = true; paint(); return; }
+    if (d.chFold) { const f = C.list.folders.find((x) => x.id === d.chFold), open = !(C.open[d.chFold] ?? f?.open !== false); C.open = { ...C.open, [d.chFold]: open }; writeLocal(); call(`/folders/${encodeURIComponent(d.chFold)}`, { method: 'PATCH', json: { open } }).catch(() => {}); paintSide(); return; }
+    if (d.chSheet) { C.sheet = d.chSheet; C.drawer = false; if (d.chSheet === 'kb') loadKb(); paint(); return; }
+    if ('chTheme' in d) { C.theme = C.theme === 'noytral' ? 'papir' : 'noytral'; writeLocal(); call('/settings', { method: 'PATCH', json: { chat_theme: C.theme } }).catch(() => {}); paint(); return; }
+    if (d.chTh) { C.theme = d.chTh; writeLocal(); call('/settings', { method: 'PATCH', json: { chat_theme: C.theme } }).catch(() => {}); paint(); return; }
+    if (d.chModel) return pickModel(d.chModel);
+    if (d.chPer) { setP({ persona: d.chPer }); paint(); return; }
+    if (d.chCtx) { setP({ numCtx: +d.chCtx }); paint(); return; }
+    if (d.chSugg) {
+      const [t, , x] = SUGG[+d.chSugg];
+      if (x.data && C.set.chat_my_data) C.data = true;
+      if (x.kb) { C.sheet = 'kb'; C.inp = t; loadKb(); paint(); return; }
+      send(t); return;
+    }
+    if ('chSend' in d) { send(C.inp); return; }
+    if ('chStop' in d) { stop(); return; }
+    if ('chWeb' in d) { C.web = !C.web; writeLocal(); paint(); return; }
+    if ('chData' in d) { if (!C.set.chat_my_data) { toast('Slått av i Innstillinger → AI → Chat'); return; } C.data = !C.data; writeLocal(); paint(); return; }
+    if ('chMic' in d) { mic(); return; }
+    if (d.chRmatt) { C.att = C.att.filter((_, i) => i !== +d.chRmatt); paint(); return; }
+    if (d.chKbsel) { const doc = C.kb?.find((x) => x.id === d.chKbsel); if (!doc) return; C.att = C.att.some((a) => a.id === doc.id) ? C.att.filter((a) => a.id !== doc.id) : [...C.att, { kind: 'doc', id: doc.id, name: doc.name }]; paint(); return; }
+    if (d.chCopy) {
+      const m = (C.chat?.messages ?? []).filter((x) => x.role !== 'system')[+d.chCopy];
+      navigator.clipboard?.writeText(m?.content ?? '').catch(() => {});
+      C.copied = `${C.cur}:${d.chCopy}`; paint(); clearTimeout(copyT); copyT = setTimeout(() => { C.copied = ''; paint(); }, 1400); return;
+    }
+    if (d.chSpeak) { speak(+d.chSpeak); return; }
+    if (d.chEdit) { const m = (C.chat?.messages ?? []).filter((x) => x.role !== 'system')[+d.chEdit]; C.edit = { i: +d.chEdit, v: m?.content ?? '' }; paint(); host()?.querySelector('[data-ch-edv]')?.focus(); return; }
+    if ('chEdcancel' in d) { C.edit = null; paint(); return; }
+    if ('chEdsave' in d) {
+      const { i, v } = C.edit, t = v.trim(); if (!t) return;
+      const msgs = (C.chat?.messages ?? []).filter((x) => x.role !== 'system'), hist = [...msgs.slice(0, i), { ...msgs[i], content: t }];
+      send(t, { editFrom: i, history: hist }); return;
+    }
+    if (d.chRegen) {
+      const i = +d.chRegen, msgs = (C.chat?.messages ?? []).filter((x) => x.role !== 'system'), hist = msgs.slice(0, i);
+      const lastU = hist.at(-1); if (!lastU || lastU.role !== 'user') return;
+      send(lastU.content, { editFrom: i - 1, history: hist }); return;
+    }
+    if ('chRem' in d) { C.rem = !C.rem; paint(); return; }
+    if (d.chG) {
+      const g = C.guard; if (!g) return;
+      C.inp = g.text;
+      if (d.chG === 'send') send(g.text, { ...g.opt, confirm: true, remember: C.rem });
+      else if (d.chG === 'nodata') send(g.text, { ...g.opt, confirm: true, withoutData: true, remember: C.rem });
+      else { const loc = allModels().find((m) => m.kind === 'lokal' && m.installed); if (loc) { pickModel(loc.id); C.guard = null; send(g.text, g.opt); } }
+      return;
+    }
+    if ('chPin' in d) return menuAct('pin');
+    if ('chExport' in d) return menuAct('export');
+    if ('chShare' in d) return menuAct('share');
+    if (d.chMvf !== undefined) return menuAct('folder', d.chMvf);
+    if ('chDel' in d) return menuAct('del');
+    if (d.chPull) return pull(d.chPull);
+    if (d.chMdel) return delModel(d.chMdel);
+  });
+}
+
+/** Åpner Chat og sender teksten som ny samtale (✦ AI i Google-søket på Dashboard). */
+export function openChat(prompt = '') {
+  const p = String(prompt ?? '').trim();
+  if (p) pendingPrompt = p;
+  if (location.hash !== '#/chat') location.hash = '#/chat';
+  else if (p && C.booted && C.models) { pendingPrompt = null; newChat(); send(p); }
+}
+
+export function render() {
+  setTimeout(() => {
+    const h = host();
+    if (!h) return;
+    bind(h);
+    if (!C.booted) boot();
+    else { paint(); refreshList(); if (pendingPrompt && C.models) { const p = pendingPrompt; pendingPrompt = null; newChat(); send(p); } }
+    void locale;
+  });
+  return `<div id="chat" class="ch ${C.theme === 'noytral' ? 'noytral' : 'papir'}">${C.booted ? body() : '<div class="ch-miss"><span>Laster Chat …</span></div>'}</div>`;
+}
+let wasMob = isMobile();
+window.addEventListener('resize', () => { if (host() && isMobile() !== wasMob) { wasMob = isMobile(); C.drawer = false; paint(); } });
+// Esc lukker ark og skuff (uansett hvor fokus er).
+window.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || !host() || !(C.sheet || C.drawer || C.edit)) return;
+  if (e.target?.closest?.('[data-sf]') && e.target.value) return; // søkefeltet tømmes først
+  e.preventDefault();
+  if (C.sheet || C.drawer) { C.sheet = null; C.drawer = false; C.guard = null; C.delArm = false; } else C.edit = null;
+  paint();
+});

@@ -4,6 +4,7 @@
 // Data: GET /api/weather/full?place=<id> (MET/yr via serveren). Nye felt (7 dager time for time, compare) brukes når de finnes,
 // ellers fylles det inn fra døgnverdiene. Pent: full.compare eller GET /api/weather/compare (eldre format).
 // Steder: GET/POST/DELETE /api/weather/places, PUT /api/weather/places/order, søk i /api/weather/search?q=.
+import { clearBtn } from '/assets/js/searchfield.js';
 import { api, esc } from './util.js';
 
 /* ---------------- Konstanter fra designet ---------------- */
@@ -401,7 +402,7 @@ function placesSheet() {
   const resHtml = res.length ? `<div class="wxp-box wxp-res">${res.map((r, i) => { const have = L.find((x) => Math.abs(x.lat - r.lat) < 0.05 && Math.abs(x.lon - r.lon) < 0.05); return `<button data-wx-res="${i}"${i ? ' class="bt"' : ''}><span><b>${esc(r.name)}</b><span class="wxp-mut">${esc([r.region, r.country].filter(Boolean).join(', '))} · ${(+r.lat).toFixed(2)}, ${(+r.lon).toFixed(2)}</span></span><span class="${have ? 'wxp-mut' : 'wxp-blue2'}">${have ? 'Vis' : '+ Legg til'}</span></button>`; }).join('')}</div>` : '';
   const list = L.map((P) => `<div class="wxp-pl${S.drag === P.id ? ' drag' : ''}${S.swOpen === P.id ? ' sw' : ''}" data-pl="${esc(P.id)}"><button class="wxp-pldel" data-wx-del="${esc(P.id)}" tabindex="${S.swOpen === P.id ? 0 : -1}">Slett</button><div class="wxp-plrow${P.id === place().id ? ' cur' : ''}" style="transform:translateX(${S.swOpen === P.id ? 96 : 0}px)" role="button" tabindex="0" data-wx-pl="${esc(P.id)}"><span><b>${esc(P.name)}</b><span>${esc(P.region ?? '')}</span></span><span class="wxp-grip" aria-hidden="true">≡</span></div></div>`).join('');
   return sheet(`<div class="wxp-shh"><b class="wxp-h1">Steder</b>${doneBtn('pl')}</div>
-    <form class="wxp-search" data-wx-search><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9aa3ae" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input name="q" value="${esc(S.plQ)}" placeholder="Søk etter by eller sted" autocomplete="off" aria-label="Søk etter sted"></form>
+    <form class="wxp-search${S.plQ ? ' has' : ''}" data-wx-search data-sf><span class="sf-ic"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#9aa3ae" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span>${clearBtn()}<input name="q" value="${esc(S.plQ)}" placeholder="Søk etter by eller sted" autocomplete="off" aria-label="Søk etter sted"></form>
     <div data-wx-resbox>${S.plBusy ? '<span class="wxp-mut">Søker …</span>' : ''}${resHtml}${S.plRes && !res.length && !S.plBusy ? '<span class="wxp-mut">Fant ingen steder.</span>' : ''}</div>
     <span class="wxp-cap">MINE STEDER</span>
     <div class="wxp-pls" data-wx-pls>${list}</div>

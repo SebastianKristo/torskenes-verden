@@ -3,6 +3,7 @@
 // av telefon-widgetene. Prompt 26: Google Kalender og Home Assistant ligger i Innstillinger → Kalendere (mountBdCalendars). Data fra /api/birthdays (per bruker). Google-innloggingen går gjennom serveren
 // (/api/birthdays/google/auth). Svarer serveren 404 (eldre versjon), lagres bursdagene bare i denne nettleseren.
 import { api, esc } from './util.js';
+import { clearBtn } from './searchfield.js';
 import { store, emit } from './store.js';
 
 export const MN = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
@@ -203,7 +204,7 @@ function body() {
   return `${S.toast ? `<div class="bd-toast" role="status">${esc(S.toast)}</div>` : ''}
     <div class="bd-grid"><div class="bd-col">
       ${hero(L)}
-      <div class="bd-bar"><label class="bd-q"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg><input name="bdq" value="${esc(S.q)}" placeholder="Søk etter navn" autocomplete="off" aria-label="Søk etter navn"></label><button type="button" class="bd-add" data-bd-act="add">${S.add ? 'Lukk' : '+ Legg til'}</button></div>
+      <div class="bd-bar"><label class="bd-q${S.q ? ' has' : ''}" data-sf><span class="sf-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></span>${clearBtn()}<input name="bdq" value="${esc(S.q)}" placeholder="Søk etter navn" autocomplete="off" aria-label="Søk etter navn"></label><button type="button" class="bd-add" data-bd-act="add">${S.add ? 'Lukk' : '+ Legg til'}</button></div>
       ${form()}
       <div class="bd-lists">${list(L)}</div>
       ${calLink()}

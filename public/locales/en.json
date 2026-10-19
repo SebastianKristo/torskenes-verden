@@ -1,0 +1,2042 @@
+{
+ "_comment": "Engelsk for web-dashboardet (prompt 27). strings: nøkler for t(). dict: norsk tekst → engelsk for eldre sider (oversettes i DOM-en). rules: [regex, flagg, erstatning]. Startet fra design/i18n.js.",
+ "locale": "en-GB",
+ "strings": {
+  "U": "W"
+ },
+ "dict": {
+  "Dashboard": "Dashboard",
+  "Studie": "Study",
+  "Rom": "Space",
+  "Økonomi": "Finance",
+  "Hjem": "Home",
+  "Mat": "Food",
+  "Sporing": "Tracking",
+  "Domener": "Domains",
+  "Nettverk": "Network",
+  "Kalender": "Calendar",
+  "Bursdager": "Birthdays",
+  "Familie": "Family",
+  "Huskeliste": "To-do",
+  "Chat": "Chat",
+  "Server": "Server",
+  "Brukernavn": "Username",
+  "Passord": "Password",
+  "Gjenta passord": "Repeat password",
+  "Kode fra autentiseringsappen": "Code from your authenticator app",
+  "Navn på hovedadmin": "Main admin name",
+  "Navn på serveren": "Server name",
+  "← Tilbake": "← Back",
+  "Tilbake": "Back",
+  "‹ Hjem": "‹ Home",
+  "STEG 1 AV 4": "STEP 1 OF 4",
+  "STEG 2 AV 4": "STEP 2 OF 4",
+  "STEG 3 AV 4": "STEP 3 OF 4",
+  "STEG 4 AV 4": "STEP 4 OF 4",
+  "Velkommen til din nye server": "Welcome to your new server",
+  "Gi deg selv og serveren et navn. Det kan endres senere.": "Give yourself and the server a name. You can change it later.",
+  "Neste": "Next",
+  "Innlogging": "Sign-in",
+  "Velg brukernavn og passord. Tofaktor kan slås på etterpå.": "Choose a username and password. Two-factor can be turned on later.",
+  "Velg bakgrunn": "Choose background",
+  "Bildet øverst på alle sider. Kan endres når som helst.": "The image at the top of every page. Change it any time.",
+  "Nesten ferdig": "Almost done",
+  "Sjekk at alt stemmer.": "Check that everything is right.",
+  "Start Homelab": "Start Homelab",
+  "TOTRINNSBEKREFTELSE": "TWO-STEP VERIFICATION",
+  "Skriv inn koden": "Enter the code",
+  "Åpne autentiseringsappen og skriv inn den sekssifrede koden.": "Open your authenticator app and enter the six-digit code.",
+  "Bekreft": "Confirm",
+  "LOGG INN": "SIGN IN",
+  "Logg inn på Homelab": "Sign in to Homelab",
+  "Bruk brukernavnet og passordet for serveren din.": "Use the username and password for your server.",
+  "Logg inn": "Sign in",
+  "Logg ut": "Sign out",
+  "Innstillinger": "Settings",
+  "Bytt til nåværende tema": "Switch to current theme",
+  "Språk": "Language",
+  "SPRÅK": "LANGUAGE",
+  "Profil": "Profile",
+  "Trygg\ninnlogging": "Secure\nsign-in",
+  "Gjør det\ntil ditt": "Make it\nyours",
+  "Velkommen\nhjem": "Welcome\nhome",
+  "Ett steg\ntil": "One more\nstep",
+  "God kveld,\nvelkommen hjem": "Good evening,\nwelcome home",
+  "Oslo": "Oslo",
+  "Bilde av Oslo": "Photo of Oslo",
+  "Vær nå": "Weather now",
+  "Følger været": "Follows the weather",
+  "Følger været i Oslo": "Follows the weather in Oslo",
+  "Planeter": "Planets",
+  "Ny planet hver dag": "A new planet every day",
+  "Ny planet hver dag (NASA)": "A new planet every day (NASA)",
+  "Ingen bilde": "No image",
+  "Dempet blå": "Muted blue",
+  "Fikk ikke lastet bildet": "Could not load the image",
+  "Søk på Google eller skriv inn en adresse": "Search Google or type an address",
+  "Søk": "Search",
+  "Spør AI": "Ask AI",
+  "SISTE NYTT ›": "LATEST NEWS ›",
+  "SISTE NYTT": "LATEST NEWS",
+  "I DAG PÅ SKOLEN": "TODAY AT SCHOOL",
+  "NÅ": "NOW",
+  "NESTE": "NEXT",
+  "PAKKER · HENT I DAG": "PARCELS · PICK UP TODAY",
+  "AVGANGER": "DEPARTURES",
+  "ENERGI": "ENERGY",
+  "kW nå": "kW now",
+  "130 kWh denne uken": "130 kWh this week",
+  "SPILLES NÅ": "NOW PLAYING",
+  "PENGER": "MONEY",
+  "Brukt i oktober": "Spent in October",
+  "av 8 000 kr": "of 8 000 kr",
+  "SNARVEIER": "SHORTCUTS",
+  "Sebastian lager middag · fast hver søndag": "Sebastian cooks dinner · every Sunday",
+  "Deigkalkulator ↗": "Dough calculator ↗",
+  "Åpne oppskrift": "Open recipe",
+  "Lås en rett til en ukedag med ★": "Lock a dish to a weekday with ★",
+  "Skann oppskrift": "Scan recipe",
+  "Importer fra nettside": "Import from website",
+  "Spor": "Track",
+  "Ingen pakker her.": "No parcels here.",
+  "Legg til sporingsnummer": "Add tracking number",
+  "Fast denne dagen": "Fixed on this day",
+  "over Norge geografisk": "over Norway geographically",
+  "HØYEST PÅ HIMMELEN NÅ": "HIGHEST IN THE SKY NOW",
+  "Synlige passeringer ↗": "Visible passes ↗",
+  "Kunne ikke hente banedata fra CelesTrak.": "Could not fetch orbit data from CelesTrak.",
+  "KART · SATELLITTER OVER NORDEN": "MAP · SATELLITES OVER THE NORDICS",
+  "By": "City",
+  "Oppdateres hvert 3. sekund": "Updates every 3 seconds",
+  "Dagens bilde er en video ↗": "Today’s picture is a video ↗",
+  "HENTER KONTOER, BUDSJETT OG KVITTERINGER": "LOADING ACCOUNTS, BUDGET AND RECEIPTS",
+  "Satellitt og teleskop": "Satellites and telescopes",
+  "NASA · dagens rombilde": "NASA · picture of the day",
+  "Fikk ikke hentet dagens bilde": "Could not fetch today’s picture",
+  "Timeplan · prøver · frister": "Timetable · tests · deadlines",
+  "Google Kalender · Home Assistant": "Google Calendar · Home Assistant",
+  "Uke 42 · 3 frister": "Week 42 · 3 deadlines",
+  "Oktober · 14 dager igjen": "October · 14 days left",
+  "Home Assistant · 21 enheter": "Home Assistant · 21 devices",
+  "Uke 42": "Week 42",
+  "UKE 42": "WEEK 42",
+  "Pakker og sendinger": "Parcels and shipments",
+  "Siste 24 timer": "Last 24 hours",
+  "UniFi · 34 klienter": "UniFi · 34 clients",
+  "Satellitter": "Satellites",
+  "Ollama lokalt · Gemini · Groq": "Local Ollama · Gemini · Groq",
+  "Ingen samtaler ennå.": "No conversations yet.",
+  "Modeller": "Models",
+  "Kunnskapsbase": "Knowledge base",
+  "Tema": "Theme",
+  "Historikken synkes mellom mobil og web.": "History syncs between mobile and web.",
+  "Hva kan jeg hjelpe med?": "What can I help with?",
+  "Rediger": "Edit",
+  "Avbryt": "Cancel",
+  "Lagre og send": "Save and send",
+  "Nytt svar": "Regenerate",
+  "Kopier": "Copy",
+  "Kopiert": "Copied",
+  "Les høyt": "Read aloud",
+  "Stopp": "Stop",
+  "Tenker …": "Thinking …",
+  "Lytter … snakk nå": "Listening … speak now",
+  "Nettsøk": "Web search",
+  "Mine data": "My data",
+  "Velg modell": "Choose model",
+  "LOKALT · OLLAMA PÅ HJEMMESERVEREN": "LOCAL · OLLAMA ON THE HOME SERVER",
+  "SKY": "CLOUD",
+  "LOKAL": "LOCAL",
+  "Sky-modeller merkes SKY. Før dine data eller vedlegg sendes dit, får du spørsmål om det.": "Cloud models are marked CLOUD. You are asked before your data or attachments are sent there.",
+  "Administrer modeller ›": "Manage models ›",
+  "Samtaleinnstillinger": "Conversation settings",
+  "Gjelder denne samtalen": "Applies to this conversation",
+  "Gjelder nye samtaler": "Applies to new conversations",
+  "PERSONA": "PERSONA",
+  "SYSTEMPROMPT": "SYSTEM PROMPT",
+  "Temperatur": "Temperature",
+  "Lav gir faste svar, høy gir mer variasjon.": "Low gives consistent answers, high gives more variety.",
+  "KONTEKSTLENGDE": "CONTEXT LENGTH",
+  "TEMA": "THEME",
+  "Ferdig": "Done",
+  "Gi nytt navn": "Rename",
+  "Fest øverst": "Pin to top",
+  "Løsne": "Unpin",
+  "Eksporter som Markdown": "Export as Markdown",
+  "Del lenke": "Share link",
+  "FLYTT TIL MAPPE": "MOVE TO FOLDER",
+  "Ingen mappe": "No folder",
+  "+ Lag og flytt": "+ Create and move",
+  "Slett samtalen": "Delete conversation",
+  "Trykk igjen for å slette": "Tap again to delete",
+  "Dette er en sky-modell. Dette forlater hjemmeserveren hvis du sender:": "This is a cloud model. This leaves the home server if you send:",
+  "Meldingen din": "Your message",
+  "Data fra Finans, Kalender og Huskeliste": "Data from Finance, Calendar and To-do",
+  "Ikke spør igjen i denne samtalen": "Don’t ask again in this conversation",
+  "Send": "Send",
+  "Send uten mine data": "Send without my data",
+  "Bruk lokal modell (llama3.1:8b)": "Use local model (llama3.1:8b)",
+  "Legg ved": "Attach",
+  "Bilde eller kamera": "Image or camera",
+  "Leses av en bildemodell, f.eks. qwen2.5vl": "Read by a vision model, e.g. qwen2.5vl",
+  "Fil": "File",
+  "PDF, Word, tekst eller CSV": "PDF, Word, text or CSV",
+  "Fra kunnskapsbasen": "From the knowledge base",
+  "+ Last opp til kunnskapsbasen": "+ Upload to the knowledge base",
+  "Ollama · 192.168.1.40:11434 · tilkoblet": "Ollama · 192.168.1.40:11434 · connected",
+  "INSTALLERT": "INSTALLED",
+  "HENT FRA OLLAMA.COM": "PULL FROM OLLAMA.COM",
+  "Last ned": "Download",
+  "Hent": "Pull",
+  "Slett": "Delete",
+  "Ny chat": "New chat",
+  "Tøm søket": "Clear search",
+  "Søk i samtaler": "Search conversations",
+  "Valg for samtalen": "Conversation options",
+  "Historikk": "History",
+  "Fjern vedlegg": "Remove attachment",
+  "Snakk": "Speak",
+  "Lukk": "Close",
+  "Ny mappe": "New folder",
+  "Navn på samtalen": "Conversation name",
+  "Modellnavn, f.eks. llama3.2:1b": "Model name, e.g. llama3.2:1b",
+  "F.eks. «Svar alltid med maks tre setninger.»": "E.g. “Always answer in at most three sentences.”",
+  "Kjører lokalt på hjemmeserveren. Ingenting sendes ut.": "Runs locally on the home server. Nothing leaves it.",
+  "FESTET": "PINNED",
+  "MAPPER": "FOLDERS",
+  "I DAG": "TODAY",
+  "I GÅR": "YESTERDAY",
+  "SISTE 7 DAGER": "LAST 7 DAYS",
+  "ELDRE": "OLDER",
+  "Standard": "Default",
+  "Økonomi ": "Finance",
+  "Norsklærer": "Norwegian teacher",
+  "Papir": "Paper",
+  "Nøytral": "Neutral",
+  "Dag": "Day",
+  "3 dager": "3 days",
+  "Uke": "Week",
+  "Måned": "Month",
+  "Liste": "List",
+  "+ Ny hendelse": "+ New event",
+  "Ny hendelse": "New event",
+  "Rediger hendelse": "Edit event",
+  "Hele dagen": "All day",
+  "HELE": "ALL DAY",
+  "Dato": "Date",
+  "Fra": "From",
+  "Til": "To",
+  "Sted": "Location",
+  "KALENDER": "CALENDAR",
+  "KALENDERE": "CALENDARS",
+  "GJENTA": "REPEAT",
+  "VARSEL": "REMINDER",
+  "Ingen": "None",
+  "Hver dag": "Every day",
+  "Hver uke": "Every week",
+  "Hver måned": "Every month",
+  "Dagen før": "The day before",
+  "1 time": "1 hour",
+  "Lagre": "Save",
+  "Tittel": "Title",
+  "Lærer": "Teacher",
+  "Merknad": "Note",
+  "Fag": "Subject",
+  "Gjentas": "Repeats",
+  "Vis rom på kart ↗": "Show room on map ↗",
+  "Kopier til Privat": "Copy to Private",
+  "Trykk igjen": "Tap again",
+  "Administrer kalendere ›": "Manage calendars ›",
+  "Søk i kalenderen": "Search the calendar",
+  "Søk etter timer, prøver, steder": "Search lessons, tests, places",
+  "Ingen hendelser": "No events",
+  "Ingen treff de neste fire månedene.": "No results in the next four months.",
+  "Timeplan": "Timetable",
+  "Prøver og frister": "Tests and deadlines",
+  "Skole": "School",
+  "Privat": "Private",
+  "Ingen kommende hendelser": "No upcoming events",
+  "De neste tre ukene": "The next three weeks",
+  "PRØVE": "TEST",
+  "FRIST": "DUE",
+  "I dag": "Today",
+  "I morgen": "Tomorrow",
+  "Forrige": "Previous",
+  "Hurtigtaster: ← → bla · T i dag · D dag · W uke · M måned · L liste · N ny · / søk": "Shortcuts: ← → browse · T today · D day · W week · M month · L list · N new · / search",
+  "Siste nytt": "Latest news",
+  "Les hele saken hos NRK ↗": "Read the full story at NRK ↗",
+  "✦ AI-SAMMENDRAG": "✦ AI SUMMARY",
+  "Leser saken …": "Reading the story …",
+  "Del": "Share",
+  "Lenke kopiert": "Link copied",
+  "‹ Siste nytt": "‹ Latest news",
+  "Kilder og AI": "Sources and AI",
+  "Til dashboard": "To dashboard",
+  "Hovedmeny": "Main menu",
+  "Åpne været": "Open the weather",
+  "Vær": "Weather",
+  "Følger været ute, dag og natt": "Follows the weather outside, day and night",
+  "Byen fra lufta": "The city from above",
+  "Bare fargeovergang": "Just a gradient",
+  "+ Eget bilde": "+ Own photo",
+  "Flere valg …": "More options …",
+  "Profilmeny": "Profile menu",
+  "Skjul søkebar": "Hide search bar",
+  "Vis søkebar": "Show search bar",
+  "Skjul nyhetslinje": "Hide news ticker",
+  "Vis nyhetslinje": "Show news ticker",
+  "✥ Flytt topplinje": "✥ Move top bar",
+  "▦ Tilpass forside og meny": "▦ Customise home and menu",
+  "↺ Tilbakestill layout": "↺ Reset layout",
+  "Bytt tema": "Switch theme",
+  "Lås": "Lock",
+  "Mobilmeny": "Mobile menu",
+  "Mer": "More",
+  "Hastighet på nyhetsbaren": "News ticker speed",
+  "Spør AI i Chat": "Ask AI in Chat",
+  "Søk eller skriv inn en adresse": "Search or type an address",
+  "Nylige søk": "Recent searches",
+  "Tøm historikk": "Clear history",
+  "Fjern fra historikk": "Remove from history",
+  "Ingen søkehistorikk ennå": "No search history yet",
+  "Vær utilgjengelig": "Weather unavailable",
+  "laster…": "loading…",
+  "MazeMap ↗": "MazeMap ↗",
+  "Skolekalender": "School calendar",
+  "Synkronisert via iCal · Canvas": "Synced via iCal · Canvas",
+  "iCal er ikke satt opp": "iCal is not set up",
+  "Kalender – åpne": "Calendar – open",
+  "NESTE PRØVE": "NEXT TEST",
+  "NESTE TIME": "NEXT LESSON",
+  "FRI": "OFF",
+  "Ingen timer": "No lessons",
+  "første time": "first lesson",
+  "alle ›": "all ›",
+  "kart ›": "map ›",
+  "POSISJON · FAMILIE": "LOCATION · FAMILY",
+  "Deler ikke posisjon": "Not sharing location",
+  "I bil": "In a car",
+  "BURSDAGER · I DAG": "BIRTHDAYS · TODAY",
+  "Kommer ut": "Coming out",
+  "TV-serier": "TV series",
+  "Filmer": "Films",
+  "overvåkes": "monitored",
+  "Dra for å endre størrelse · dobbeltklikk for å nullstille": "Drag to resize · double-click to reset",
+  "Media": "Media",
+  "Spilles nå · 2": "Now playing · 2",
+  "Spiller": "Playing",
+  "Pause": "Paused",
+  "Nylig lagt til": "Recently added",
+  "Mediehistorikk": "Media history",
+  "Portefølje": "Portfolio",
+  "Åpne ↗": "Open ↗",
+  "Bolig": "Housing",
+  "Mat og dagligvarer": "Food and groceries",
+  "Transport og lading": "Transport and charging",
+  "Fritid og hobby": "Leisure and hobbies",
+  "Kalender · NÅ": "Calendar · NOW",
+  "Agenda": "Agenda",
+  "Energi": "Energy",
+  "Snarveier": "Shortcuts",
+  "Posisjon · familie": "Location · family",
+  "Bursdager · neste": "Birthdays · next",
+  "Vær og pakker": "Weather and parcels",
+  "Trading 212": "Trading 212",
+  "Homelab": "Homelab",
+  "Hva har jeg brukt på mat i oktober?": "What have I spent on food in October?",
+  "Bruker Mine data": "Uses My data",
+  "Hva står det om oppsigelse i husleiekontrakten?": "What does the lease say about termination?",
+  "Lag en handleliste til taco for fire": "Make a shopping list for tacos for four",
+  "Forklar Docker-volumer enkelt": "Explain Docker volumes simply",
+  "Melding": "Message",
+  "Stopp opptak": "Stop recording",
+  "Sky-modell: meldingen sendes til Google.": "Cloud model: the message is sent to Google.",
+  "Sky-modell: meldingen sendes til Groq.": "Cloud model: the message is sent to Groq.",
+  "Samtale": "Conversation",
+  "Eksporter Markdown": "Export Markdown",
+  "Lag og flytt": "Create and move",
+  "Bruk lokal modell (": "Use local model (",
+  "For bildemodeller (Qwen 2.5 VL, Gemma 3, Gemini)": "For vision models (Qwen 2.5 VL, Gemma 3, Gemini)",
+  "PDF, Word, tekst – leses av serveren": "PDF, Word, text – read by the server",
+  "Dokumenter som er lastet opp før": "Documents uploaded earlier",
+  "Ingen dokumenter ennå.": "No documents yet.",
+  "Laster …": "Loading …",
+  "Å hente og slette modeller krever administrator.": "Pulling and deleting models requires an administrator.",
+  "Alle foreslåtte modeller er installert.": "All suggested models are installed.",
+  "Ingen lokale modeller.": "No local models.",
+  "Ingen lokale modeller installert.": "No local models installed.",
+  "Tekst og bilde": "Text and image",
+  "Tekst": "Text",
+  "Lastet opp": "Uploaded",
+  "Laster Chat …": "Loading Chat …",
+  "Chat er ikke tilgjengelig ennå": "Chat isn’t available yet",
+  "Slått av i Innstillinger → AI → Chat": "Turned off in Settings → AI → Chat",
+  "Vent til vedleggene er lastet opp": "Wait for the attachments to upload",
+  "Ingen modell er tilgjengelig": "No model is available",
+  "Delingslenke kopiert": "Share link copied",
+  "Stoppet": "Stopped",
+  "Fikk ikke hentet modellene: ": "Could not load the models: ",
+  "Forrige måned": "Previous month",
+  "Neste måned": "Next month",
+  "Skole (iCal)": "School (iCal)",
+  "Familie (Google)": "Family (Google)",
+  "INNLEVERING": "SUBMISSION",
+  "15 min før": "15 min before",
+  "1 time før": "1 hour before",
+  "Til og med": "Until",
+  "Lagrer …": "Saving …",
+  "Lagres i Google Kalender.": "Saved to Google Calendar.",
+  "Skriv en tittel.": "Enter a title.",
+  "Velg dato.": "Choose a date.",
+  "Slutt må være etter start.": "End must be after start.",
+  "Søker …": "Searching …",
+  "Laster kalenderen …": "Loading the calendar …",
+  "Prøv igjen": "Try again",
+  "Hendelsen er lagret": "The event is saved",
+  "Hendelsen er oppdatert": "The event is updated",
+  "Hendelsen er slettet": "The event is deleted",
+  "Kopiert til Privat": "Copied to Private",
+  "Serveren støtter ikke egne hendelser ennå.": "The server doesn’t support your own events yet.",
+  "Koble til Google på nytt ›": "Reconnect Google ›",
+  "Fra Skolens iCal. Endres i kilden.": "From the school iCal. Change it at the source.",
+  "Fra Bursdager-modulen. Endres i kilden.": "From the Birthdays module. Change it at the source.",
+  "Sjekk": "Check",
+  "Ja": "Yes",
+  "Skolens iCal": "School iCal",
+  "Bursdager-modulen": "Birthdays module",
+  "Google Kalender": "Google Calendar",
+  "Google · delt med familien": "Google · shared with the family",
+  "Eldre server: bare skolens iCal og Bursdager.": "Older server: school iCal and Birthdays only.",
+  "Nyhetsleser": "News reader",
+  "‹ Tilbake": "‹ Back",
+  "Siste": "Latest",
+  "Norge": "Norway",
+  "Verden": "World",
+  "Sport": "Sport",
+  "Teknologi": "Technology",
+  "Kultur": "Culture",
+  "Auto": "Auto",
+  "NORGE": "NORWAY",
+  "VERDEN": "WORLD",
+  "ØKONOMI": "BUSINESS",
+  "SPORT": "SPORT",
+  "TEKNOLOGI": "TECHNOLOGY",
+  "KULTUR": "CULTURE",
+  "SISTE": "LATEST",
+  "Oppdater": "Refresh",
+  "Les hele saken hos": "Read the full story at",
+  "✦ Laget av AI fra saken. Kan inneholde feil.": "✦ Made by AI from the story. May contain errors.",
+  "Ingen sammendrag for denne saken.": "No summary for this story.",
+  "Sammendrag er ikke tilgjengelig på denne serveren.": "Summaries aren’t available on this server.",
+  "Fikk ikke laget sammendrag nå. Åpne saken for å lese hele.": "Couldn’t make a summary now. Open the story to read all of it.",
+  "NYHETSLESER": "NEWS READER",
+  "✦ AI-sammendrag": "✦ AI summary",
+  "Lager en kort ingress over de viktigste sakene øverst.": "Writes a short intro on the top stories.",
+  "✦ AI-kategorisering": "✦ AI categorisation",
+  "Setter kategori per sak når kilden står på Auto.": "Sets a category per story when the source is on Auto.",
+  "IKONER PÅ FANENE": "ICONS ON THE TABS",
+  "✦ La AI velge alle": "✦ Let AI choose all",
+  "Vis ikoner": "Show icons",
+  "Ved siden av navnet på hver fane": "Next to the name of each tab",
+  "Trykk på kategorien for å endre": "Tap the category to change it",
+  "+ Legg til adresse": "+ Add address",
+  "✦ AI foreslår kategori for saker fra kilder på Auto.": "✦ AI suggests a category for stories from sources on Auto.",
+  "Kategorien settes til Auto.": "The category is set to Auto.",
+  "Henter nyheter …": "Fetching news …",
+  "Ingen saker i denne kategorien.": "No stories in this category.",
+  "Søk etter ikon (engelsk), f.eks. football": "Search icons (English), e.g. football",
+  "Søk etter ikon": "Search icons",
+  "IKON FOR": "ICON FOR",
+  "✦ La AI velge": "✦ Let AI choose",
+  "Ingen ikon": "No icon",
+  "Valgt": "Chosen",
+  "Søk i innstillinger": "Search settings",
+  "Generelt": "General",
+  "Konto": "Account",
+  "Utseende": "Appearance",
+  "Startside": "Home page",
+  "Varsler": "Notifications",
+  "App": "App",
+  "Tilkoblinger": "Connections",
+  "Integrasjoner": "Integrations",
+  "AI": "AI",
+  "Sikkerhet": "Security",
+  "Brukere": "Users",
+  "Lås skjermen": "Lock screen",
+  "Kalendere": "Calendars",
+  "Personlig informasjon og innlogging.": "Personal information and sign-in.",
+  "Tema, bakgrunnsbilde, søkebar og kategorier.": "Theme, background, search bar and categories.",
+  "Topplinje, faner, nyhetsbar og forsiden.": "Top bar, tabs, news ticker and the home page.",
+  "Domener, statistikkilder og verdenskart.": "Domains, statistics sources and world map.",
+  "Lyd, stille timer, grupper og test.": "Sound, quiet hours, groups and test.",
+  "Navn på appen og app-ikon.": "App name and app icon.",
+  "Adresser og API-nøkler for tjenestene.": "Addresses and API keys for the services.",
+  "Skolens iCal, Canvas, Google Kalender og Home Assistant.": "School iCal, Canvas, Google Calendar and Home Assistant.",
+  "Chat, personvern og logoer.": "Chat, privacy and logos.",
+  "Hvem som har tilgang, og hvilken rolle de har.": "Who has access, and which role they have.",
+  "Navn": "Name",
+  "Endre": "Change",
+  "Rolle": "Role",
+  "Admin · hovedadmin": "Admin · main admin",
+  "Profilbilde": "Profile photo",
+  "Vises i menyen, i hilsenen og i mobilappen.": "Shown in the menu, the greeting and the mobile app.",
+  "Totrinnsbekreftelse": "Two-step verification",
+  "Krev en kode fra autentiseringsappen når du logger inn.": "Require a code from the authenticator app when you sign in.",
+  "Administrer": "Manage",
+  "Pålitelig enhet": "Trusted device",
+  "Denne enheten slipper passord på lokalt nett.": "This device skips the password on the local network.",
+  "Pålitelige enheter": "Trusted devices",
+  "Du er på lokalt nett nå.": "You are on the local network now.",
+  "Gjelder nettsiden og mobilappene.": "Applies to the website and the mobile apps.",
+  "Vises i menyen og i mobilappen.": "Shown in the menu and the mobile app.",
+  "Økt": "Session",
+  "Krever passord neste gang.": "Requires the password next time.",
+  "Glemmer også denne enheten.": "Also forgets this device.",
+  "Nåværende": "Current",
+  "Mørkt glass over bakgrunnsbildet.": "Dark glass over the background image.",
+  "Vindu og papir": "Window and paper",
+  "Bildet som et bredt vindu øverst, resten på lyst papir i avisspalter.": "The photo as a wide window at the top, the rest on light paper in newspaper columns.",
+  "Byttet skjer med en gang og lagres på brukeren din. Alt virker likt i begge temaene.": "The switch is instant and saved to your user. Everything works the same in both themes.",
+  "Bakgrunn": "Background",
+  "Bakgrunnsbilde": "Background image",
+  "Vises i fotovinduet øverst på Dashboard.": "Shown in the photo window at the top of the Dashboard.",
+  "Søkebar": "Search bar",
+  "Kan dras mellom avgangene og klokka.": "Can be dragged between the departures and the clock.",
+  "Stil": "Style",
+  "Full bredde, mørk": "Full width, dark",
+  "Full bredde, lys": "Full width, light",
+  "Lys, sentrert": "Light, centred",
+  "Mørk, sentrert": "Dark, centred",
+  "Forslag fra Google": "Suggestions from Google",
+  "Vises mens du skriver.": "Shown while you type.",
+  "Lagre søkehistorikk": "Save search history",
+  "Vises når du klikker i søkefeltet, også i mobilappen.": "Shown when you click the search field, also in the mobile app.",
+  "Søkehistorikk": "Search history",
+  "Åpne": "Open",
+  "Kvitteringer": "Receipts",
+  "Kategorier": "Categories",
+  "Navn og farger på kvitteringene i Homelab.": "Names and colours of receipts in Homelab.",
+  "Topplinje": "Top bar",
+  "Faner": "Tabs",
+  "Vis, skjul, endre rekkefølge og gi nytt navn.": "Show, hide, reorder and rename.",
+  "Samle faner, vær og meny til høyre": "Group tabs, weather and menu on the right",
+  "Logoen står alene til venstre.": "The logo stands alone on the left.",
+  "Plassering": "Placement",
+  "Dra logo, faner, vær og meny dit du vil.": "Drag the logo, tabs, weather and menu wherever you like.",
+  "Flytt": "Move",
+  "Avstand": "Spacing",
+  "Samme høyde": "Same height",
+  "Elementene kan bare flyttes sideveis.": "The items can only be moved sideways.",
+  "Nullstill plassering": "Reset placement",
+  "Nullstill": "Reset",
+  "Nyhetsbar": "News ticker",
+  "Vis nyhetsbar": "Show news ticker",
+  "NRK og VG. Vises bare på Dashboard.": "NRK and VG. Shown only on the Dashboard.",
+  "Hastighet": "Speed",
+  "Pause når musepekeren er over": "Pause on hover",
+  "Forside": "Home page",
+  "Widgets på dashboardet": "Widgets on the dashboard",
+  "Skjul det du ikke bruker, for eksempel snarveier.": "Hide what you don’t use, for example shortcuts.",
+  "Widgets på mobil": "Widgets on mobile",
+  "Lenker på dashboardet og i mobilappen.": "Links on the dashboard and in the mobile app.",
+  "Rekkefølgen kan også endres ved å dra kortene på forsiden.": "The order can also be changed by dragging the cards on the home page.",
+  "Legg til, fjern og velg statistikkilde.": "Add, remove and choose the statistics source.",
+  "Verdenskart med besøk per land": "World map with visits per country",
+  "Vises på Domener-siden.": "Shown on the Domains page.",
+  "Cloudflare-domener uten eget token bruker standard-tokenet under Integrasjoner → Cloudflare.": "Cloudflare domains without their own token use the default token under Integrations → Cloudflare.",
+  "Homelab kan varsle deg": "Homelab can notify you",
+  "Stille timer": "Quiet hours",
+  "Fra og til": "From and to",
+  "Varsler kommer fortsatt, men stille": "Notifications still arrive, but silently",
+  "Stille fra": "Quiet from",
+  "Stille til": "Quiet until",
+  "Tillatelse på denne enheten": "Permission on this device",
+  "Nettleseren må tillate varsler fra Homelab": "The browser must allow notifications from Homelab",
+  "Blokkert": "Blocked",
+  "Spør": "Ask",
+  "Test varsel": "Test notification",
+  "Spiller lyden, vibrerer og viser et varsel": "Plays the sound, vibrates and shows a notification",
+  "Test": "Test",
+  "Varsellyd": "Notification sound",
+  "Volum": "Volume",
+  "Egen lyd": "Own sound",
+  "MP3, WAV eller M4A under 1 MB": "MP3, WAV or M4A under 1 MB",
+  "Last opp": "Upload",
+  "Grupper": "Groups",
+  "Pakker": "Parcels",
+  "Ny pakke, klar for henting, ute for levering og levert": "New parcel, ready for pickup, out for delivery and delivered",
+  "Finans og hjem": "Finance and home",
+  "Kvitteringer til gjennomgang, faste trekk og boliger": "Receipts to review, fixed charges and homes",
+  "Når noen kommer til eller forlater en sone": "When someone arrives at or leaves a zone",
+  "Reise og vær": "Travel and weather",
+  "Avvik på avganger og farevarsler": "Departure disruptions and weather warnings",
+  "Haptikk": "Haptics",
+  "Vibrasjon sammen med varslene (mobil)": "Vibration with the notifications (mobile)",
+  "Slår du av en gruppe, kommer ingen varsler fra den på noen av enhetene dine.": "If you turn off a group, no notifications from it arrive on any of your devices.",
+  "Ny pakke funnet": "New parcel found",
+  "Fra Finn eller e-post": "From Finn or e-mail",
+  "Med hentested og frist": "With pickup point and deadline",
+  "Forsinket": "Delayed",
+  "Når ETA passeres eller transportøren melder avvik": "When the ETA passes or the carrier reports a problem",
+  "Kilder (e-post, Finn og automatisk arkivering) velges på Sporing-siden.": "Sources (e-mail, Finn and automatic archiving) are chosen on the Tracking page.",
+  "Navn på appen": "App name",
+  "Vises på Hjem, i innloggingen, i varsler og i fanen i nettleseren. Gjelder alle brukerne på serveren.": "Shown on Home, at sign-in, in notifications and in the browser tab. Applies to every user on the server.",
+  "App-ikon": "App icon",
+  "Test alle tilkoblinger": "Test all connections",
+  "Sjekker adresse, nøkkel og svar fra hver tjeneste.": "Checks the address, key and response from each service.",
+  "Test alle": "Test all",
+  "Dine integrasjoner": "Your integrations",
+  "Kalender og timeplan": "Calendar and timetable",
+  "Ikke koblet": "Not connected",
+  "Oppsett": "Setup",
+  "Serier": "Series",
+  "Mediaserver": "Media server",
+  "Aksjer": "Stocks",
+  "Tilkoblet": "Connected",
+  "Personvern og logoer": "Privacy and logos",
+  "Kvitteringer fra e-post via Bridge": "Receipts from e-mail via Bridge",
+  "Ikke satt opp": "Not set up",
+  "Bank og import": "Bank and import",
+  "Finans": "Finance",
+  "Kvitteringer på e-post (IMAP)": "Receipts by e-mail (IMAP)",
+  "Server (administrator)": "Server (administrator)",
+  "Lokal server": "Local server",
+  "Standard-token for Domener": "Default token for Domains",
+  "Søkemotor": "Search engine",
+  "Søke-URL": "Search URL",
+  "Bakgrunner": "Backgrounds",
+  "Ikoner (Iconify)": "Icons (Iconify)",
+  "AI (Gemini, Groq og Ollama)": "AI (Gemini, Groq and Ollama)",
+  "Gjelder hele serveren. Tomme felt bruker verdien fra serverens miljøvariabler (.env).": "Applies to the whole server. Empty fields use the value from the server’s environment variables (.env).",
+  "Skole og Canvas": "School and Canvas",
+  "ikke satt": "not set",
+  "Timeplan og prøver. Visma InSchool, Outlook eller Teams → Abonner på kalender (.ics)": "Timetable and tests. Visma InSchool, Outlook or Teams → Subscribe to calendar (.ics)",
+  "Innleveringer og frister. Canvas → Kalender → Kalenderfeed": "Submissions and deadlines. Canvas → Calendar → Calendar feed",
+  "MazeMap campus-ID": "MazeMap campus ID",
+  "Valgfri. Gir lenken «Finn rommet i MazeMap».": "Optional. Adds the link “Find the room in MazeMap”.",
+  "Lim inn iCal-adressen fra skolens timeplan (Visma InSchool, Outlook → Publiser kalender) og eventuelt Canvas (Kalender → Kalenderfeed). Timeplanen hentes på nytt hver time.": "Paste the iCal address from the school timetable (Visma InSchool, Outlook → Publish calendar) and optionally Canvas (Calendar → Calendar feed). The timetable is refreshed every hour.",
+  "Google Kalender og Home Assistant": "Google Calendar and Home Assistant",
+  "Ikke koblet til": "Not connected",
+  "Logg inn med Google": "Sign in with Google",
+  "Velg kalender og importer": "Choose a calendar and import",
+  "Kalender i Home Assistant": "Calendar in Home Assistant",
+  "Importer fra Home Assistant": "Import from Home Assistant",
+  "Bursdager og hendelser fra Google Kalender vises i Kalender og Bursdager. Home Assistant kan importere og synke bursdager to veier.": "Birthdays and events from Google Calendar show in Calendar and Birthdays. Home Assistant can import and sync birthdays both ways.",
+  "Fagfarger": "Subject colours",
+  "Fargene brukes i uke, måned, agenda og widgetene. Prøver vises alltid i rødt.": "The colours are used in week, month, agenda and the widgets. Tests are always red.",
+  "Egen farge": "Own colour",
+  "Chat kan lese mine data": "Chat can read my data",
+  "Finans, Kalender og Huskeliste når «Mine data» er på": "Finance, Calendar and To-do when “My data” is on",
+  "Spør før sky-modeller får data": "Ask before cloud models get data",
+  "Gemini og Groq må godkjennes per samtale": "Gemini and Groq must be approved per conversation",
+  "Standardmodell": "Default model",
+  "Automatisk (siste brukte)": "Automatic (last used)",
+  "Åpne chat": "Open chat",
+  "Historikk, modeller og kunnskapsbase": "History, models and knowledge base",
+  "Lokale modeller kjører på hjemmeserveren. Sky-modeller (Gemini, Groq) merkes SKY i Chat.": "Local models run on the home server. Cloud models (Gemini, Groq) are marked CLOUD in Chat.",
+  "Open WebUI · serveroppsett": "Open WebUI · server setup",
+  "Adresse": "Address",
+  "API-nøkkel": "API key",
+  "Valgfritt. Med Open WebUI får Chat kunnskapsbase, nettsøk og tale (Whisper). Uten den brukes Ollama, Gemini og Groq direkte.": "Optional. With Open WebUI, Chat gets a knowledge base, web search and speech (Whisper). Without it, Ollama, Gemini and Groq are used directly.",
+  "Les kvitteringer lokalt": "Read receipts locally",
+  "Ollama på hjemmeserveren leser hele kvitteringen. Ingenting sendes ut": "Ollama on the home server reads the whole receipt. Nothing is sent out",
+  "Finn logo med Gemini": "Find logo with Gemini",
+  "Gemini får bare butikknavnet, f.eks. «Blomsterlandet»": "Gemini only gets the shop name, e.g. “Blomsterlandet”",
+  "Sjekk logoen før den lagres": "Check the logo before saving",
+  "Domenet må svare, og bildet må være et ekte bilde": "The domain must respond, and the image must be a real image",
+  "AI-logg": "AI log",
+  "Vis": "Show",
+  "Skjul": "Hide",
+  "Logoer finnes uten at AI gjetter: Brønnøysundregistrene, nettstedet selv og (valgfritt) Gemini med bare butikknavnet.": "Logos are found without AI guessing: the Brønnøysund Register, the website itself and (optionally) Gemini with only the shop name.",
+  "Ingenting er sendt til sky-motorer ennå.": "Nothing has been sent to cloud engines yet.",
+  "Ny bruker": "New user",
+  "Brukernavn, passord og rolle.": "Username, password and role.",
+  "Admin kan legge til og fjerne brukere. Bruker ser dashbordet og styrer egen totrinnsbekreftelse.": "Admins can add and remove users. Users see the dashboard and manage their own two-step verification.",
+  "Søkeresultater": "Search results",
+  "Lagret ✓": "Saved ✓",
+  "Mangler oppsett": "Needs setup",
+  "Lenker": "Links",
+  "Emner og innleveringer ↗": "Courses and submissions ↗",
+  "Notater ↗": "Notes ↗",
+  "Skolens nettside": "School website",
+  "Timeplan og info ↗": "Timetable and info ↗",
+  "Fravær og karakterer ↗": "Absence and grades ↗",
+  "Fagstoff ↗": "Course material ↗",
+  "Studielån og stipend ↗": "Student loans and grants ↗",
+  "Karakterer": "Grades",
+  "Snitt": "Average",
+  "Prøver:": "Tests:",
+  "Prøvekarakterer": "Test grades",
+  "Karakter": "Grade",
+  "Slett fag": "Delete subject",
+  "+ Legg til fag": "+ Add subject",
+  "Kommende prøver": "Upcoming tests",
+  "Ny prøve…": "New test…",
+  "Legg til": "Add",
+  "Studielån": "Student loan",
+  "Total gjeld": "Total debt",
+  "over horisonten (>10°) fra Oslo": "above the horizon (>10°) from Oslo",
+  "Kart over satellitter over Norden": "Map of satellites over the Nordics",
+  "James Webb-teleskopet": "The James Webb telescope",
+  "Hubble-teleskopet": "The Hubble telescope",
+  "Boligverdi (estimat)": "Home value (estimate)",
+  "Restgjeld": "Remaining debt",
+  "Faste boutgifter": "Fixed housing costs",
+  "Inventar": "Inventory",
+  "Alle": "All",
+  "Kjøkken": "Kitchen",
+  "Stue": "Living room",
+  "Kontor": "Office",
+  "Bod": "Storage",
+  "Rediger bolig": "Edit home",
+  "+ Ny gjenstand": "+ New item",
+  "PDF-kvittering": "PDF receipt",
+  "Foto-kvittering": "Photo receipt",
+  "Abonner i kalender": "Subscribe in calendar",
+  "✦ Ny ukeplan med AI": "✦ New weekly plan with AI",
+  "Denne uka": "This week",
+  "Forrige uke": "Previous week",
+  "Neste uke": "Next week",
+  "Lag ny for uka": "Make a new one for the week",
+  "Foreslå en annen rett": "Suggest another dish",
+  "Dra for å flytte, klikk for oppskrift": "Drag to move, click for the recipe",
+  "Samme rett denne dagen hver uke": "Same dish on this day every week",
+  "Fast": "Fixed",
+  "HelloFresh denne uka": "HelloFresh this week",
+  "Lim inn ukesmeny": "Paste weekly menu",
+  "Kokker": "Cooks",
+  "Hvem er best på hva? Kokken settes automatisk når en av rettene deres havner på planen.": "Who is best at what? The cook is set automatically when one of their dishes lands on the plan.",
+  "Fjern kokk": "Remove cook",
+  "Best på": "Best at",
+  "+ Best på …": "+ Best at …",
+  "+ Legg til kokk": "+ Add cook",
+  "Handleliste": "Shopping list",
+  "Ingrediensene fra rettene på planen havner her automatisk.": "Ingredients from the dishes on the plan land here automatically.",
+  "+ Legg til vare": "+ Add item",
+  "Retter": "Dishes",
+  "+ Ny rett": "+ New dish",
+  "✦ AI leser i bakgrunnen": "✦ AI reads in the background",
+  "Kamera": "Camera",
+  "Bilder eller PDF": "Images or PDF",
+  "Lenke til oppskrift": "Link to recipe",
+  "Importer": "Import",
+  "+ Ny mappe": "+ New folder",
+  "Middag": "Dinner",
+  "Supper": "Soups",
+  "Fisk": "Fish",
+  "Kylling": "Chicken",
+  "Vegetar": "Vegetarian",
+  "Bakst": "Baking",
+  "Frokost": "Breakfast",
+  "Favoritter": "Favourites",
+  "Søk i retter og ingredienser": "Search dishes and ingredients",
+  "På planen": "On the plan",
+  "Ikke brukt": "Not used",
+  "Dra til en dag for å legge den på planen": "Drag to a day to put it on the plan",
+  "Dra for å oppdatere": "Pull to refresh",
+  "Oppdater status": "Refresh status",
+  "↻ Oppdater": "↻ Refresh",
+  "Aktive": "Active",
+  "Klar for henting": "Ready for pickup",
+  "På vei": "On the way",
+  "Registrert": "Registered",
+  "Levert": "Delivered",
+  "Arkiv": "Archive",
+  "Sporingsnummer": "Tracking number",
+  "Velg for arkivering eller sletting": "Select for archiving or deleting",
+  "E-post": "E-mail",
+  "Hentet": "Picked up",
+  "I transport": "In transit",
+  "Hentested": "Pickup point",
+  "Funnet i e-post": "Found in e-mail",
+  "Utgående": "Outgoing",
+  "Levert inn": "Handed in",
+  "Ute for levering": "Out for delivery",
+  "Etikett laget i Finn": "Label made in Finn",
+  "KILDER": "SOURCES",
+  "Sjekk nå": "Check now",
+  "Kilde: e-post (Proton)": "Source: e-mail (Proton)",
+  "Kilde: Finn-handler": "Source: Finn deals",
+  "Arkiver leverte automatisk": "Archive delivered automatically",
+  "Leverte pakker flyttes til arkivet": "Delivered parcels move to the archive",
+  "Varsler for pakker": "Parcel notifications",
+  "Ny pakke, klar for henting, ute for levering, forsinket og levert": "New parcel, ready for pickup, out for delivery, delayed and delivered",
+  "Innstillinger ›": "Settings ›",
+  "TRANSPORTØRER": "CARRIERS",
+  "Nøkler i Innstillinger ›": "Keys in Settings ›",
+  "Posten og Bring": "Posten and Bring",
+  "Mangler nøkkel": "Missing key",
+  "Posisjon, soner og helse": "Location, zones and health",
+  "Posisjon, soner og helse fra dem som deler med deg. Deling er av som standard.": "Location, zones and health from those sharing with you. Sharing is off by default.",
+  "Kart": "Map",
+  "Soner": "Zones",
+  "Helse": "Health",
+  "Sanntid": "Live",
+  "+ Ny sone på kartet": "+ New zone on the map",
+  "Vis alle": "Show all",
+  "Oppdater posisjoner": "Refresh locations",
+  "Jobb": "Work",
+  "Zoom inn": "Zoom in",
+  "Zoom ut": "Zoom out",
+  "Bytt profilbilde": "Change profile photo",
+  "Batteri": "Battery",
+  "Bevegelse": "Movement",
+  "Kjører": "Driving",
+  "Fart": "Speed",
+  "Nøyaktighet": "Accuracy",
+  "Koordinater": "Coordinates",
+  "Veibeskrivelse": "Directions",
+  "Spill av lyd": "Play sound",
+  "Familien": "The family",
+  "(deg)": "(you)",
+  "Av": "Off",
+  "Sist sett": "Last seen",
+  "GPS-nøyaktighet": "GPS accuracy",
+  "nå": "now",
+  "Omtrentlig": "Approximate",
+  "Sykler": "Cycling",
+  "Hendelser": "Events",
+  "kom til": "arrived at",
+  "forlot": "left",
+  "Min deling": "My sharing",
+  "Av som standard. Ingen ser posisjonen eller helsen din": "Off by default. Nobody sees your location or health",
+  "Deler": "Sharing",
+  "Nøyaktig": "Precise",
+  "Omtrentlig (~1 km)": "Approximate (~1 km)",
+  "Del posisjon fra denne nettleseren mens siden er åpen": "Share location from this browser while the page is open",
+  "Helse jeg deler": "Health I share",
+  "Skritt": "Steps",
+  "Hvilepuls": "Resting heart rate",
+  "Puls": "Heart rate",
+  "Søvn": "Sleep",
+  "Aktive kalorier": "Active calories",
+  "Trafikk, oppetid og sikkerhet": "Traffic, uptime and security",
+  "Alle domener": "All domains",
+  "Legg til og fjern domener i Innstillinger": "Add and remove domains in Settings",
+  "Administrer domener": "Manage domains",
+  "Domene": "Domain",
+  "Status": "Status",
+  "Forespørsler": "Requests",
+  "Besøkende": "Visitors",
+  "Bufret": "Cached",
+  "Oppetid": "Uptime",
+  "SSL utløper": "SSL expires",
+  "Fornyes": "Renews",
+  "Aktiv": "Active",
+  "Forespørsler totalt": "Total requests",
+  "Besøkende totalt": "Total visitors",
+  "Neste utløp": "Next expiry",
+  "Nettverk og lenker": "Network and links",
+  "På lokalnettet": "On the local network",
+  "Delt med familien": "Shared with the family",
+  "Dine lister og lister som er delt med deg": "Your lists and lists shared with you",
+  "Handel": "Shopping",
+  "Ny oppgave": "New task",
+  "Uten dato": "No date",
+  "Meg": "Me",
+  "Fullfør": "Complete",
+  "SENERE": "LATER",
+  "FERDIG": "DONE",
+  "Marker som ikke gjort": "Mark as not done",
+  "SYNK MED HOME ASSISTANT": "SYNC WITH HOME ASSISTANT",
+  "Synkroniser lister": "Sync lists",
+  "Familie og venner": "Family and friends",
+  "Søk etter navn": "Search by name",
+  "+ Legg til": "+ Add",
+  "NESTE 30 DAGER": "NEXT 30 DAYS",
+  "Venn": "Friend",
+  "Google ikke koblet · Home Assistant ikke importert": "Google not connected · Home Assistant not imported",
+  "WIDGETS PÅ TELEFONEN": "WIDGETS ON THE PHONE",
+  "Eksempeldata": "Sample data",
+  "Overskyet": "Cloudy",
+  "Lett regn": "Light rain",
+  "Regn": "Rain",
+  "Klart": "Clear",
+  "Delvis skyet": "Partly cloudy",
+  "Forhold ›": "Conditions ›",
+  "Pent": "Pent",
+  "Nedbør": "Precipitation",
+  "Vind": "Wind",
+  "Yr og Pent er enige": "Yr and Pent agree",
+  "AVVIK": "DIFFERENCE",
+  "Time for time og hele uka": "Hour by hour and the whole week",
+  "VIND": "WIND",
+  "Kast": "Gusts",
+  "Retning": "Direction",
+  "FØRSTE KVARTER": "FIRST QUARTER",
+  "Belyst": "Illuminated",
+  "Neste fullmåne": "Next full moon",
+  "Neste nymåne": "Next new moon",
+  "SOLNEDGANG": "SUNSET",
+  "UV-INDEKS": "UV INDEX",
+  "Lav": "Low",
+  "Lave nivåer hele dagen.": "Low levels all day.",
+  "FØLES SOM": "FEELS LIKE",
+  "Føles kaldere enn faktisk, på grunn av vind.": "Feels colder than it is, because of wind.",
+  "MOT I GÅR": "VS YESTERDAY",
+  "I går": "Yesterday",
+  "NEDBØR": "PRECIPITATION",
+  "SIKT": "VISIBILITY",
+  "Helt klar sikt.": "Perfectly clear visibility.",
+  "LUFTFUKTIGHET": "HUMIDITY",
+  "LUFTTRYKK": "PRESSURE",
+  "Lavt": "Low",
+  "Høyt": "High",
+  "Værkart": "Weather map",
+  "Steder": "Places",
+  "Steder og søk": "Places and search",
+  "Søk etter by eller sted": "Search for a city or place",
+  "Søk etter sted": "Search for a place",
+  "God morgen": "Good morning",
+  "God formiddag": "Good morning",
+  "God ettermiddag": "Good afternoon",
+  "God kveld": "Good evening",
+  "God natt": "Good night",
+  "Nå": "Now",
+  "VÆR · OSLO": "WEATHER · OSLO",
+  "Posisjon delt nå": "Location shared now",
+  "Posisjon · familie – åpne kartet": "Location · family – open the map",
+  "Bursdager – åpne alle": "Birthdays – open all",
+  "Søk ( / )": "Search ( / )",
+  "Ny hendelse (N)": "New event (N)",
+  "I dag (T)": "Today (T)",
+  "Klokke": "Clock",
+  "♫ Klokke": "♫ Clock",
+  "♫ Papir": "♫ Paper",
+  "♫ Dobbel": "♫ Double",
+  "♫ Dyp": "♫ Deep",
+  "♪ Egen lyd": "♪ Own sound",
+  "🔕 Stille": "🔕 Silent",
+  "Huset med stativ": "House with stand",
+  "Papir-monogram": "Paper monogram",
+  "Fire rom": "Four rooms",
+  "Pålitelig enhet gjelder bare når siden åpnes fra en lokal adresse (192.168.x.x, 10.x.x.x, 172.16–31.x.x). Fra internett kreves alltid passord, og kode hvis totrinnsbekreftelse er på.": "Trusted device only applies when the page is opened from a local address (192.168.x.x, 10.x.x.x, 172.16–31.x.x). From the internet a password is always required, plus a code if two-step verification is on.",
+  "På iPhone finnes hvert ikon i standard, mørk og tonet variant, og på Android som tematisk (Material You) ikon. Velg ikonet i appens innstillinger på telefonen. Her settes ikonet for nettleseren og PWA-en.": "On iPhone each icon comes in default, dark and tinted variants, and on Android as a themed (Material You) icon. Choose the icon in the app’s settings on the phone. Here you set the icon for the browser and the PWA.",
+  "Skole-iCal": "School iCal",
+  "Widgetene viser neste bursdag og de tre neste. Et trykk åpner Bursdager, og på Android legger + til en ny.": "The widgets show the next birthday and the three after it. A tap opens Birthdays, and on Android + adds a new one.",
+  "iOS · liten": "iOS · small",
+  "Trykk på en liste for å velge hvilken HA-liste den skal kobles til. Endringer i appen og i Home Assistant (også fra Assist og stemmestyring) synkes begge veier.": "Tap a list to choose which HA list it connects to. Changes in the app and in Home Assistant (also from Assist and voice control) sync both ways.",
+  "● Sanntid · Listene er private til eieren deler dem. Widgets for iPhone og Android finnes i appen.": "● Live · Lists are private until the owner shares them. Widgets for iPhone and Android are in the app.",
+  "To veier · Home Assistant To-do (todo.*)": "Two-way · Home Assistant To-do (todo.*)",
+  "API-nøkkel fra Mybring (bruker-ID og nøkkel)": "API key from Mybring (user ID and key)",
+  "API-nøkkel fra PostNord Developer": "API key from PostNord Developer",
+  "OAuth-klient fra UPS Developer": "OAuth client from UPS Developer",
+  "Reserve for FedEx, GLS, DB Schenker, Helthjem, Budbee, Instabox og andre": "Fallback for FedEx, GLS, DB Schenker, Helthjem, Budbee, Instabox and others",
+  "HelloFresh har ikke åpent API. Lim inn ukesmenyen, én rett per linje, så havner rettene i listen.": "HelloFresh has no open API. Paste the weekly menu, one dish per line, and the dishes land in the list.",
+  "Lim inn lenke fra en nettside, f.eks. matprat.no eller tine.no": "Paste a link from a website, e.g. matprat.no or tine.no",
+  "Pent (StormGeo-modell)": "Pent (StormGeo model)",
+  "Yr og Pent": "Yr and Pent",
+  "i oransje": "in orange",
+  "Innlevering: Historie": "Submission: History",
+  "Ankommet terminal Oslo": "Arrived at the Oslo terminal",
+  "Mottatt av Posten i Oslo": "Received by Posten in Oslo",
+  "4 strekninger": "4 routes",
+  "Studietid": "Study time",
+  "✦ Auto ▾": "✦ Auto ▾",
+  "Økonomi ▾": "Business ▾",
+  "Teknologi ▾": "Technology ▾",
+  "Sport ▾": "Sport ▾",
+  "Norge ▾": "Norway ▾",
+  "Verden ▾": "World ▾",
+  "Kultur ▾": "Culture ▾",
+  "Auto ▾": "Auto ▾",
+  "(av)": "(off)",
+  "Alt kan endres senere i Innstillinger.": "Everything can be changed later in Settings.",
+  "Bruk koden fra autentiseringsappen": "Use the code from your authenticator app",
+  "Brukernavnet kan bare ha a–z, 0–9, punktum, bindestrek og understrek.": "The username can only contain a–z, 0–9, dots, hyphens and underscores.",
+  "Brukernavnet må ha minst 3 tegn.": "The username must be at least 3 characters.",
+  "Feil brukernavn eller passord.": "Wrong username or password.",
+  "Feil kode. Prøv igjen.": "Wrong code. Try again.",
+  "Fikk ikke kontakt med serveren.": "Could not reach the server.",
+  "Gjenopprettingskode": "Recovery code",
+  "Innloggingen tok for lang tid. Prøv igjen.": "Sign-in took too long. Try again.",
+  "Koden har seks sifre.": "The code has six digits.",
+  "Kunne ikke opprette brukeren.": "Could not create the user.",
+  "Mistet telefonen? Bruk en gjenopprettingskode": "Lost your phone? Use a recovery code",
+  "Papir · lys": "Paper · light",
+  "Passordene er ikke like.": "The passwords don’t match.",
+  "Passordet må ha minst 8 tegn.": "The password must be at least 8 characters.",
+  "Skriv inn brukernavn og passord.": "Enter username and password.",
+  "Skriv inn en gjenopprettingskode.": "Enter a recovery code.",
+  "Skriv inn en gyldig serveradresse.": "Enter a valid server address.",
+  "Skriv inn navnet ditt.": "Enter your name.",
+  "Logg inn · Homelab": "Sign in · Homelab",
+  "Admin": "Admin"
+ },
+ "short": {
+  "MAN": "MON",
+  "TIR": "TUE",
+  "ONS": "WED",
+  "TOR": "THU",
+  "FRE": "FRI",
+  "LØR": "SAT",
+  "SØN": "SUN"
+ },
+ "months": [
+  [
+   "januar",
+   "January"
+  ],
+  [
+   "februar",
+   "February"
+  ],
+  [
+   "mars",
+   "March"
+  ],
+  [
+   "april",
+   "April"
+  ],
+  [
+   "mai",
+   "May"
+  ],
+  [
+   "juni",
+   "June"
+  ],
+  [
+   "juli",
+   "July"
+  ],
+  [
+   "august",
+   "August"
+  ],
+  [
+   "september",
+   "September"
+  ],
+  [
+   "oktober",
+   "October"
+  ],
+  [
+   "november",
+   "November"
+  ],
+  [
+   "desember",
+   "December"
+  ]
+ ],
+ "days": [
+  [
+   "mandag",
+   "Monday"
+  ],
+  [
+   "tirsdag",
+   "Tuesday"
+  ],
+  [
+   "onsdag",
+   "Wednesday"
+  ],
+  [
+   "torsdag",
+   "Thursday"
+  ],
+  [
+   "fredag",
+   "Friday"
+  ],
+  [
+   "lørdag",
+   "Saturday"
+  ],
+  [
+   "søndag",
+   "Sunday"
+  ]
+ ],
+ "rules": [
+  [
+   "· LOKALT PÅ HJEMMESERVEREN$",
+   "",
+   "· LOCAL ON THE HOME SERVER"
+  ],
+  [
+   "· SKY$",
+   "",
+   "· CLOUD"
+  ],
+  [
+   "^(Man)(?=[: ]|$)",
+   "",
+   "Mon"
+  ],
+  [
+   "^(Tir)(?=[: ]|$)",
+   "",
+   "Tue"
+  ],
+  [
+   "^(Ons)(?=[: ]|$)",
+   "",
+   "Wed"
+  ],
+  [
+   "^(Tor)(?=[: ]|$)",
+   "",
+   "Thu"
+  ],
+  [
+   "^(Fre)(?=[: ]|$)",
+   "",
+   "Fri"
+  ],
+  [
+   "^(Lør)(?=[: ]|$)",
+   "",
+   "Sat"
+  ],
+  [
+   "^(Søn)(?=[: ]|$)",
+   "",
+   "Sun"
+  ],
+  [
+   "(^|\\s)man\\. ",
+   "g",
+   "$1Mon "
+  ],
+  [
+   "(^|\\s)tir\\. ",
+   "g",
+   "$1Tue "
+  ],
+  [
+   "(^|\\s)ons\\. ",
+   "g",
+   "$1Wed "
+  ],
+  [
+   "(^|\\s)tor\\. ",
+   "g",
+   "$1Thu "
+  ],
+  [
+   "(^|\\s)fre\\. ",
+   "g",
+   "$1Fri "
+  ],
+  [
+   "(^|\\s)lør\\. ",
+   "g",
+   "$1Sat "
+  ],
+  [
+   "(^|\\s)søn\\. ",
+   "g",
+   "$1Sun "
+  ],
+  [
+   "^PAKKER · (\\d+) PÅ VEI$",
+   "",
+   "PARCELS · $1 ON THE WAY"
+  ],
+  [
+   "\\bdenne uken\\b",
+   "g",
+   "this week"
+  ],
+  [
+   "\\bføles som\\b",
+   "g",
+   "feels like"
+  ],
+  [
+   "\\bvind (\\d)",
+   "g",
+   "wind $1"
+  ],
+  [
+   "^KALENDER · ",
+   "",
+   "CALENDAR · "
+  ],
+  [
+   "· NÅ$",
+   "",
+   "· NOW"
+  ],
+  [
+   "· NESTE TIME$",
+   "",
+   "· NEXT LESSON"
+  ],
+  [
+   "^\\+(\\d+) pakker · Åpne sporing ›$",
+   "",
+   "+$1 parcels · Open tracking ›"
+  ],
+  [
+   "^I transport · ",
+   "",
+   "In transit · "
+  ],
+  [
+   "^Klar for henting · ",
+   "",
+   "Ready for pickup · "
+  ],
+  [
+   "^Hentested · ",
+   "",
+   "Pickup point · "
+  ],
+  [
+   "^Registrert · ",
+   "",
+   "Registered · "
+  ],
+  [
+   "^Skole · høst (\\d+)$",
+   "",
+   "School · autumn $1"
+  ],
+  [
+   "^Skole · vår (\\d+)$",
+   "",
+   "School · spring $1"
+  ],
+  [
+   "^Spør (.+) …$",
+   "",
+   "Ask $1 …"
+  ],
+  [
+   "\\bTekst og bilde\\b",
+   "g",
+   "Text and image"
+  ],
+  [
+   "· Tekst$",
+   "",
+   "· Text"
+  ],
+  [
+   "^F\\.eks\\. ",
+   "",
+   "E.g. "
+  ],
+  [
+   "\\bf\\.eks\\. ",
+   "g",
+   "e.g. "
+  ],
+  [
+   "(\\d+) s per runde$",
+   "",
+   "$1 s per lap"
+  ],
+  [
+   ": ingen lyd eller vibrasjon$",
+   "",
+   ": no sound or vibration"
+  ],
+  [
+   "^Farge for ",
+   "",
+   "Colour for "
+  ],
+  [
+   "^(\\d+) NESTE (\\d+) D$",
+   "",
+   "$1 NEXT $2 D"
+  ],
+  [
+   "\\bkm/t\\b",
+   "g",
+   "km/h"
+  ],
+  [
+   "· nå ·",
+   "g",
+   "· now ·"
+  ],
+  [
+   "^◷ nå$",
+   "",
+   "◷ now"
+  ],
+  [
+   "^Kjører · ",
+   "",
+   "Driving · "
+  ],
+  [
+   " · hovedadmin$",
+   "",
+   " · main admin"
+  ],
+  [
+   "\\beksempeldata\\b",
+   "g",
+   "sample data"
+  ],
+  [
+   "\\b(\\d+) siste avspillinger\\b",
+   "g",
+   "last $1 plays"
+  ],
+  [
+   "· Plex og Jellyfin ·",
+   "g",
+   "· Plex and Jellyfin ·"
+  ],
+  [
+   "^Serie · ",
+   "",
+   "Series · "
+  ],
+  [
+   "\\btranskoder\\b",
+   "g",
+   "transcoding"
+  ],
+  [
+   "\\bdirekte\\b",
+   "g",
+   "direct"
+  ],
+  [
+   "^kino · ",
+   "",
+   "cinema · "
+  ],
+  [
+   "^Ingen treff på «(.+)»\\.$",
+   "",
+   "No results for “$1”."
+  ],
+  [
+   "^(\\d+)\\. – vis detaljer$",
+   "",
+   "$1 – show details"
+  ],
+  [
+   "^(\\d+) av (\\d+)$",
+   "",
+   "$1 of $2"
+  ],
+  [
+   "\\b(\\d+) av (\\d+) kr\\b",
+   "g",
+   "$1 of $2 kr"
+  ],
+  [
+   "^av (.+)$",
+   "",
+   "of $1"
+  ],
+  [
+   "^Fjern kokk (.+)$",
+   "",
+   "Remove cook $1"
+  ],
+  [
+   "^Fjern (.+)$",
+   "",
+   "Remove $1"
+  ],
+  [
+   "^Slett (.+)$",
+   "",
+   "Delete $1"
+  ],
+  [
+   "^Farge for (.+)$",
+   "",
+   "Colour for $1"
+  ],
+  [
+   "^Mangler (.+)$",
+   "",
+   "Missing $1"
+  ],
+  [
+   "^Rediger (.+)$",
+   "",
+   "Edit $1"
+  ],
+  [
+   "^Bytt profilbilde for (.+)$",
+   "",
+   "Change profile photo for $1"
+  ],
+  [
+   "\\bfyller (\\d+)",
+   "g",
+   "turns $1"
+  ],
+  [
+   "\\bFyller (\\d+)",
+   "g",
+   "Turns $1"
+  ],
+  [
+   "\\b(\\d+) år\\b",
+   "g",
+   "$1 years"
+  ],
+  [
+   "^Sesong (\\d+) · Episode (\\d+)$",
+   "",
+   "Season $1 · Episode $2"
+  ],
+  [
+   "\\bVentet (\\S+)",
+   "g",
+   "Expected $1"
+  ],
+  [
+   "^Forfalt (\\d+) d",
+   "",
+   "Overdue $1 d"
+  ],
+  [
+   "\\bkjøpt (\\S+) hos\\b",
+   "g",
+   "bought $1 at"
+  ],
+  [
+   "^Garanti til ",
+   "",
+   "Warranty until "
+  ],
+  [
+   "\\b(\\d+) ingredienser\\b",
+   "g",
+   "$1 ingredients"
+  ],
+  [
+   "^Hurtigtast (.)$",
+   "",
+   "Shortcut $1"
+  ],
+  [
+   "^Sist sjekket ",
+   "",
+   "Last checked "
+  ],
+  [
+   "^(\\d+) mangler oppsett$",
+   "",
+   "$1 need setup"
+  ],
+  [
+   "\\b(\\d+) oppføringer\\b",
+   "g",
+   "$1 entries"
+  ],
+  [
+   "\\b1 oppføring\\b",
+   "g",
+   "1 entry"
+  ],
+  [
+   "^(\\d+) valgt$",
+   "",
+   "$1 selected"
+  ],
+  [
+   "^(\\d+) domener$",
+   "",
+   "$1 domains"
+  ],
+  [
+   "^(\\d+) søk$",
+   "",
+   "$1 searches"
+  ],
+  [
+   "\\b(\\d+) kjøp\\b",
+   "g",
+   "$1 purchases"
+  ],
+  [
+   " KILDER\\b",
+   "g",
+   " SOURCES"
+  ],
+  [
+   "\\bOPPDATERT\\b",
+   "g",
+   "UPDATED"
+  ],
+  [
+   "^MER OM ",
+   "",
+   "MORE ON "
+  ],
+  [
+   "\\bNORGE\\b",
+   "g",
+   "NORWAY"
+  ],
+  [
+   "\\bVERDEN\\b",
+   "g",
+   "WORLD"
+  ],
+  [
+   "\\bØKONOMI\\b",
+   "g",
+   "BUSINESS"
+  ],
+  [
+   "\\bTEKNOLOGI\\b",
+   "g",
+   "TECHNOLOGY"
+  ],
+  [
+   "\\bKULTUR\\b",
+   "g",
+   "CULTURE"
+  ],
+  [
+   "^ADRESSER · ",
+   "",
+   "ADDRESSES · "
+  ],
+  [
+   "(^|\\s)(man|tir|ons|tor|fre|lør|søn)\\. (\\d)",
+   "gi",
+   "$1$2. $3"
+  ],
+  [
+   "\\b(\\d+)\\. (jan|feb|mar|apr|mai|jun|jul|aug|sep|okt|nov|des)\\.?(?![a-zæøå])",
+   "g",
+   "$1 $2"
+  ],
+  [
+   "(^|\\s)okt(?![a-zæøå])",
+   "g",
+   "$1Oct"
+  ],
+  [
+   "(^|\\s)mai(?![a-zæøå])",
+   "g",
+   "$1May"
+  ],
+  [
+   "(^|\\s)des(?![a-zæøå])",
+   "g",
+   "$1Dec"
+  ],
+  [
+   "\\b(\\d+) treff for «",
+   "g",
+   "$1 results for “"
+  ],
+  [
+   "^Sende til (.+)\\?$",
+   "",
+   "Send to $1?"
+  ],
+  [
+   "^Oppdater (.+)$",
+   "",
+   "Update $1"
+  ],
+  [
+   "^\\+ Legg til (.+)$",
+   "",
+   "+ Add $1"
+  ],
+  [
+   "^(.+) er lagt til$",
+   "",
+   "$1 has been added"
+  ],
+  [
+   "^(.+) er installert$",
+   "",
+   "$1 is installed"
+  ],
+  [
+   "^(.+) er slettet$",
+   "",
+   "$1 is deleted"
+  ],
+  [
+   "· sky\\b",
+   "g",
+   "· cloud"
+  ],
+  [
+   "^sky$",
+   "",
+   "cloud"
+  ],
+  [
+   " · lokal$",
+   "",
+   " · local"
+  ],
+  [
+   "^Lagret i Google Kalender \\((.+)\\)\\.$",
+   "",
+   "Saved to Google Calendar ($1)."
+  ],
+  [
+   "^Fra (.+)\\. Endres i kilden\\.$",
+   "",
+   "From $1. Change it at the source."
+  ],
+  [
+   "\\bca\\. (\\d+) min å lese\\b",
+   "g",
+   "about $1 min read"
+  ],
+  [
+   "^I går (\\d)",
+   "",
+   "Yesterday $1"
+  ],
+  [
+   "\\bPRØVE\\b",
+   "g",
+   "TEST"
+  ],
+  [
+   "\\bINNLEVERING\\b",
+   "g",
+   "SUBMISSION"
+  ],
+  [
+   "^TIMEPLAN$",
+   "",
+   "TIMETABLE"
+  ],
+  [
+   "^PRØVER OG FRISTER",
+   "",
+   "TESTS AND DEADLINES"
+  ],
+  [
+   "^BURSDAGER",
+   "",
+   "BIRTHDAYS"
+  ],
+  [
+   "^PRIVAT",
+   "",
+   "PRIVATE"
+  ],
+  [
+   "^FAMILIE",
+   "",
+   "FAMILY"
+  ],
+  [
+   "^SKOLE",
+   "",
+   "SCHOOL"
+  ],
+  [
+   "\\b(\\d+) lokale\\b",
+   "g",
+   "$1 local"
+  ],
+  [
+   "^NESTE (\\d+) D$",
+   "",
+   "NEXT $1 D"
+  ],
+  [
+   "^Deretter: ",
+   "",
+   "Then: "
+  ],
+  [
+   "\\bkr/mnd\\b",
+   "g",
+   "kr/month"
+  ],
+  [
+   "\\b(\\d+) til gjennomgang\\b",
+   "g",
+   "$1 to review"
+  ],
+  [
+   "\\bkvitteringer til gjennomgang\\b",
+   "g",
+   "receipts to review"
+  ],
+  [
+   "\\b(\\d+) gjenstander\\b",
+   "g",
+   "$1 items"
+  ],
+  [
+   "\\btil innboforsikring\\b",
+   "g",
+   "for contents insurance"
+  ],
+  [
+   "^Sanntid · oppdatert nå$",
+   "",
+   "Live · updated now"
+  ],
+  [
+   "\\boppdatert nå\\b",
+   "g",
+   "updated now"
+  ],
+  [
+   "\\b(\\d+) min siden\\b",
+   "g",
+   "$1 min ago"
+  ],
+  [
+   "\\bbrukes nå\\b",
+   "g",
+   "in use now"
+  ],
+  [
+   "\\b(\\d+) deler med deg\\b",
+   "g",
+   "$1 share with you"
+  ],
+  [
+   "^ENHETER · ",
+   "",
+   "DEVICES · "
+  ],
+  [
+   "\\bDeler ikke posisjon\\b",
+   "g",
+   "Not sharing location"
+  ],
+  [
+   "\\bOmtrentlig posisjon\\b",
+   "g",
+   "Approximate location"
+  ],
+  [
+   "\\b(\\d+) enheter\\b",
+   "g",
+   "$1 devices"
+  ],
+  [
+   "\\b(\\d+) via Cloudflare\\b",
+   "g",
+   "$1 via Cloudflare"
+  ],
+  [
+   "^(\\d+)/(\\d+) oppe$",
+   "",
+   "$1/$2 up"
+  ],
+  [
+   "^Oppe · ",
+   "",
+   "Up · "
+  ],
+  [
+   "^Nede · ",
+   "",
+   "Down · "
+  ],
+  [
+   "^Ny oppgave i (.+)$",
+   "",
+   "New task in $1"
+  ],
+  [
+   "\\b(\\d+) funnet i innboksen\\b",
+   "g",
+   "$1 found in the inbox"
+  ],
+  [
+   "\\b(\\d+) fra handler\\b",
+   "g",
+   "$1 from deals"
+  ],
+  [
+   "^Lever pakken innen ",
+   "",
+   "Hand in the parcel by "
+  ],
+  [
+   "\\bhent innen\\b",
+   "g",
+   "pick up by"
+  ],
+  [
+   "^Pakke fra ",
+   "",
+   "Parcel from "
+  ],
+  [
+   "^Neste ventet er ",
+   "",
+   "Next expected is "
+  ],
+  [
+   "^Duggpunktet er (.+) akkurat nå\\.$",
+   "",
+   "The dew point is $1 right now."
+  ],
+  [
+   "^Soloppgang: ",
+   "",
+   "Sunrise: "
+  ],
+  [
+   "^Temperatur \\(°C\\) · ",
+   "",
+   "Temperature (°C) · "
+  ],
+  [
+   "^Data: MET Norway · Se også yr.no ↗$",
+   "",
+   "Data: MET Norway · See also yr.no ↗"
+  ],
+  [
+   "\\b(\\d+) poster\\b",
+   "g",
+   "$1 entries"
+  ],
+  [
+   "^Vis alle (\\d+) varer$",
+   "",
+   "Show all $1 items"
+  ],
+  [
+   "^Stipend (.+) · Neste utbetaling (.+)$",
+   "",
+   "Grant $1 · Next payment $2"
+  ],
+  [
+   "^Totalt … Starlink-satellitter i bane\\.$",
+   "",
+   "Total … Starlink satellites in orbit."
+  ],
+  [
+   "^STARLINK OVER NORGE · OPPDATERT ",
+   "",
+   "STARLINK OVER NORWAY · UPDATED "
+  ],
+  [
+   "^NASA · DAGENS ROMBILDE · ",
+   "",
+   "NASA · PICTURE OF THE DAY · "
+  ],
+  [
+   "^Kunne ikke hente ",
+   "",
+   "Could not fetch "
+  ],
+  [
+   "^Kunne ikke ",
+   "",
+   "Could not "
+  ],
+  [
+   "^God morgen, ",
+   "",
+   "Good morning, "
+  ],
+  [
+   "^God formiddag, ",
+   "",
+   "Good morning, "
+  ],
+  [
+   "^God ettermiddag, ",
+   "",
+   "Good afternoon, "
+  ],
+  [
+   "^God kveld, ",
+   "",
+   "Good evening, "
+  ],
+  [
+   "^God natt, ",
+   "",
+   "Good night, "
+  ],
+  [
+   "^Oppsett · (\\d) av 4$",
+   "",
+   "Setup · $1 of 4"
+  ],
+  [
+   "^Hei,\\n",
+   "",
+   "Hi,\n"
+  ],
+  [
+   "^Hei$",
+   "",
+   "Hi"
+  ],
+  [
+   "\\bom (\\d)",
+   "g",
+   "in $1"
+  ],
+  [
+   " min igjen\\b",
+   "g",
+   " min left"
+  ],
+  [
+   " t (\\d+) min\\b",
+   "g",
+   " h $1 min"
+  ],
+  [
+   "(\\d) t\\b",
+   "g",
+   "$1 h"
+  ],
+  [
+   "\\bigjen\\b",
+   "g",
+   "left"
+  ],
+  [
+   "\\bI dag\\b",
+   "g",
+   "Today"
+  ],
+  [
+   "\\bI DAG\\b",
+   "g",
+   "TODAY"
+  ],
+  [
+   "\\bI morgen\\b",
+   "g",
+   "Tomorrow"
+  ],
+  [
+   "\\bI MORGEN\\b",
+   "g",
+   "TOMORROW"
+  ],
+  [
+   "\\bi dag\\b",
+   "g",
+   "today"
+  ],
+  [
+   "\\bi morgen\\b",
+   "g",
+   "tomorrow"
+  ],
+  [
+   "(^|\\s)i går\\b",
+   "g",
+   "$1yesterday"
+  ],
+  [
+   "\\b(\\d+) treff\\b",
+   "g",
+   "$1 results"
+  ],
+  [
+   "\\bTREFF\\b",
+   "g",
+   "RESULTS"
+  ],
+  [
+   "^Spør ",
+   "",
+   "Ask "
+  ],
+  [
+   "\\b(\\d+) dager\\b",
+   "g",
+   "$1 days"
+  ],
+  [
+   "\\b(\\d+) timer\\b",
+   "g",
+   "$1 lessons"
+  ],
+  [
+   "\\b1 time\\b",
+   "g",
+   "1 lesson"
+  ],
+  [
+   "\\bUke (\\d+)",
+   "g",
+   "Week $1"
+  ],
+  [
+   "\\bUKE (\\d+)",
+   "g",
+   "WEEK $1"
+  ],
+  [
+   "\\bkl\\. ",
+   "g",
+   "at "
+  ],
+  [
+   "\\bBrukte ",
+   "g",
+   "Used "
+  ],
+  [
+   "\\bLeser ",
+   "g",
+   "Reading "
+  ],
+  [
+   " lokale · ",
+   "g",
+   " local · "
+  ],
+  [
+   " i skyen\\b",
+   "g",
+   " in the cloud"
+  ],
+  [
+   " dokumenter\\b",
+   "g",
+   " documents"
+  ],
+  [
+   "\\bhar bursdag\\b",
+   "g",
+   "’s birthday"
+  ],
+  [
+   "\\bHent i dag\\b",
+   "g",
+   "Pick up today"
+  ],
+  [
+   " til på vei\\b",
+   "g",
+   " more on the way"
+  ],
+  [
+   "\\bpå vei\\b",
+   "g",
+   "on the way"
+  ],
+  [
+   "^Frist ",
+   "",
+   "Due "
+  ],
+  [
+   "Hele dagen",
+   "g",
+   "All day"
+  ]
+ ]
+}

@@ -6,6 +6,8 @@ import {
   smooth, spark, conic, icon, logo, aiLine, ICONS, loadLogoRegistry,
 } from './core.js';
 import { reanalyzeBtn, bindReanalyze } from './reanalyze.js';
+import { clearBtn, bindSearchFields } from '/assets/js/searchfield.js';
+import { bindSuggest } from './fsuggest.js';
 import { MODULE_PAGES, MODULE_SUB, MODULE_FN, MODULE_LOADERS, bolSettings, loadBolSettings, bindModules, backupTab, firstRunCard, loadBackup, impPage, finnImportBox, loadImpTpl, aksSettings, loadStocksSettings } from './modules.js';
 
 ICONS.ai = 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z';
@@ -154,7 +156,7 @@ function shell(content) {
     <header class="head">
       <div style="display:flex;gap:14px;align-items:flex-start"><button class="side-tog" data-act="compact-nav" aria-label="${compactNav() ? 'Vis hele sidemenyen' : 'Kompakt sidemeny'}" title="${compactNav() ? 'Vis hele sidemenyen' : 'Kompakt sidemeny'}" aria-pressed="${compactNav()}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 5h16v14H4zM9 5v14"/></svg></button><div><div class="crumb"><span>FinansHub</span><span>›</span><b>${esc(pageName(u.page))}</b></div><h1>${u.page === 'ov' ? `${greet()}, ${esc(String(me.name ?? '').split(/\s+/)[0] || '@' + (me.username ?? ''))}` : esc(pageName(u.page))}</h1>${MODULE_SUB[u.page] ? `<div class="note" style="font-size:14px;margin-top:4px">${MODULE_SUB[u.page]}</div>` : ''}</div></div>
       <div class="head-r">
-        ${`<form class="search${aiMode ? ' ai' : ''}" data-form="gsearch" role="search">${aiMode ? '<span class="ai-star">✦</span>' : icon('search', 17, 'var(--muted)')}<input name="q" value="${esc(aiMode ? (u.aiDraft ?? '') : u.q)}" placeholder="${aiMode ? 'Spør, f.eks. «strøm i september»' : 'Søk i transaksjoner …'}" aria-label="${aiMode ? 'Spør AI om transaksjoner og kvitteringer' : 'Søk i transaksjoner'}"><button type="button" class="ai-tog" data-act="ai-toggle" aria-pressed="${aiMode}" title="Søk med AI i transaksjoner og kvitteringer">✦ AI</button></form>
+        ${`<form class="search${aiMode ? ' ai' : ''}${(aiMode ? u.aiDraft : u.q) ? ' has' : ''}" data-form="gsearch" data-sf role="search">${aiMode ? '<span class="ai-star">✦</span>' : `<span class="sf-ic">${icon('search', 17, 'var(--muted)')}</span>`}${clearBtn()}<input name="q" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" value="${esc(aiMode ? (u.aiDraft ?? '') : u.q)}" placeholder="${aiMode ? 'Spør, f.eks. «strøm i september»' : 'Søk i transaksjoner …'}" aria-label="${aiMode ? 'Spør AI om transaksjoner og kvitteringer' : 'Søk i transaksjoner'}"><button type="button" class="ai-tog" data-act="ai-toggle" aria-pressed="${aiMode}" title="Søk med AI i transaksjoner og kvitteringer">✦ AI</button></form>
         <a class="icon-btn" href="#/kv" aria-label="Varsler: ${b.reviewCount} kvitteringer til gjennomgang">${icon('bell', 18)}${b.reviewCount ? '<span class="dot"></span>' : ''}</a>`}
         <a class="me" href="#/inn" title="${esc(me.name ?? '')}"><div class="av">${me.avatarUrl ? `<img src="${esc(me.avatarUrl)}" alt="">` : esc(ini(me.username ?? me.name))}</div><div class="me-n"><div>${esc(String(me.name ?? me.username ?? 'Meg').trim().split(/\s+/)[0])}</div><div>@${esc(me.username ?? 'meg')} · ${me.role === 'admin' ? 'Admin' : 'Bruker'}</div></div></a>
         <a class="close" href="/#/dash" aria-label="Tilbake til Hjem" title="Tilbake til Hjem">×</a>
@@ -318,7 +320,7 @@ function transactions() {
     ${u.msg.rule ? `<div class="ok-msg">${esc(u.msg.rule)}</div>` : ''}`, 'detail') : '';
   return `<div style="display:flex;flex-direction:column;gap:16px">
     <div class="filters">
-      <form class="search" data-form="txsearch" role="search">${icon('search', 17, 'var(--muted)')}<input name="q" value="${esc(u.q)}" placeholder="Søk etter butikk eller beskrivelse" aria-label="Søk"></form>
+      <form class="search${u.q ? ' has' : ''}" data-form="txsearch" data-sf role="search"><span class="sf-ic">${icon('search', 17, 'var(--muted)')}</span>${clearBtn()}<input name="q" value="${esc(u.q)}" placeholder="Søk etter butikk eller beskrivelse" aria-label="Søk" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"></form>
       <select class="sel" data-filter="acc" aria-label="Konto">${accOpts(u.acc, 'Alle kontoer')}</select>
       <select class="sel" data-filter="type" aria-label="Type">${opt('', 'Inn og ut', u.type)}${opt('inn', 'Kun inn', u.type)}${opt('ut', 'Kun ut', u.type)}</select>
       <a class="btn" href="/finans/api/transactions.csv?${qs}">Eksporter CSV</a>
@@ -1015,7 +1017,17 @@ const bankText = (b) => [`Dato: ${b.bookingDate ?? ''}`, b.valueDate ? `Rentedat
   b.account ? `Konto: ${b.account}${b.bank ? ' (' + b.bank + ')' : ''}` : null, b.archiveReference ? `Arkivref.: ${b.archiveReference}` : null].filter(Boolean).join('\n');
 
 export function bind() {
+  bindSearchFields(); bindSuggest();
   const el = root();
+  // ✕ i søkefeltet: tøm søket og vis alle transaksjoner igjen (prompt 27). Fokus beholdes.
+  el.addEventListener('sf:clear', async (e) => {
+    const f = e.target.closest('[data-form="gsearch"],[data-form="txsearch"]');
+    if (!f) return;
+    if (u.aiMode && f.dataset.form === 'gsearch') { u.aiDraft = ''; return; }
+    if (!u.q) return;
+    u.q = ''; u.sel = null;
+    if (u.page === 'tx') { await loadTx(); render(); el.querySelector(`[data-form="${f.dataset.form}"] input[name=q]`)?.focus(); }
+  });
   bindModules(el);
   loadLogoRegistry().then((changed) => { if (changed) render(); });
   bindReanalyze(el, (r) => { u.selRc = r.id; refreshAll().then(() => toast('Kvitteringen er oppdatert')); });

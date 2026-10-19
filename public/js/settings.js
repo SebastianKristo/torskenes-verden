@@ -17,6 +17,8 @@ import { loadInteg, integRows, integSub, integClick, integChange, integCount } f
 import { themeCards, setHlTheme, hlTheme, THEMES, uploadCustomPhoto } from './hltheme.js';
 import { mountHa } from './tasks-ha.js';
 import { kalView, kalClick, kalChange } from './settings-kal.js';
+import { loadAi, aiView, aiClick, aiChange, aiSubmit } from './settings-ai.js';
+import { clearBtn, glassIcon } from './searchfield.js';
 
 const modal = () => document.getElementById('settings');
 
@@ -27,7 +29,7 @@ const P = {
   top: 'M4 4h16v5H4zM4 13h7v7H4zM15 13h5v7h-5z', map: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z',
   plug: 'M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4', users: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21a7 7 0 0 1 14 0M16 3.1a4 4 0 0 1 0 7.8M22 21a7 7 0 0 0-5-6.7',
   lock: 'M6 11h12v9H6zM8 11V8a4 4 0 0 1 8 0v3', out: 'M9 4H5v16h4M14 8l4 4-4 4M18 12H9', search: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM20 20l-3.5-3.5',
-  back: 'M15 18l-6-6 6-6', cal: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
+  back: 'M15 18l-6-6 6-6', cal: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4', ai: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z',
   bell: 'M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20a2 2 0 0 0 4 0', app: 'M5 4h14v16H5zM9 8h6M9 12h6M9 16h3',
 };
 export const svg = (d, s = 20) => `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
@@ -71,10 +73,11 @@ const TABS = [
   ['app', 'App', 'Navn på appen og app-ikon.', 'Generelt', P.app],
   ['int', 'Integrasjoner', 'Adresser og API-nøkler for tjenestene.', 'Tilkoblinger', P.plug],
   ['kal', 'Kalendere', 'Skolens iCal, Canvas, Google Kalender og Home Assistant.', 'Tilkoblinger', P.cal],
+  ['ai', 'AI', 'Chat, personvern og logoer.', 'Tilkoblinger', P.ai],
   ['users', 'Brukere', 'Hvem som har tilgang, og hvilken rolle de har.', 'Sikkerhet', P.users],
 ];
 // Gamle navn på faner (lenker og knapper fra før omleggingen) peker til nye.
-const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal' };
+const ALIAS = { varsler: 'varsel', notify: 'varsel', ikon: 'app', appnavn: 'app', login: 'konto', layout: 'top', innlogging: 'konto', look: 'look', utseende: 'look', tema: 'look', startside: 'top', domener: 'dom', integrasjoner: 'int', brukere: 'users', kalender: 'kal', kalendere: 'kal', calendars: 'kal', chat: 'ai', personvern: 'ai', logo: 'ai' };
 // Hvilken fane en underside hører til, så «go('tfa')» virker uansett hvor den kalles fra.
 const SUB_TAB = { me: 'konto', tfa: 'konto', pw: 'konto', devices: 'konto', server: 'konto', add: 'users', bg: 'look', style: 'look', hist: 'look', cats: 'look',
   tabs: 'top', head: 'top', speed: 'top', dash: 'top', mob: 'top', sc: 'top', doms: 'dom', mail: 'int' };
@@ -515,7 +518,7 @@ async function saveGroup(name, changes) {
 /* ---------- Søk på tvers av sidene ---------- */
 
 const H = { group, row, note };
-const VIEWS = { konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => notifyView(H), app: () => appView(H), int: intView, kal: () => kalView({ ...H, cfg }), users: usersView };
+const VIEWS = { konto: kontoView, look: lookView, top: topView, dom: domView, varsel: () => notifyView(H), app: () => appView(H), int: intView, kal: () => kalView({ ...H, cfg }), ai: () => aiView(H), users: usersView };
 function searchView() {
   const words = q.toLowerCase().split(/\s+/).filter(Boolean), out = [];
   const saved = sub; sub = null;
@@ -542,7 +545,7 @@ function sideHtml() {
     <div class="set-side-in">
       <button type="button" class="set-me" data-tab="konto">${me.avatarUrl ? `<span class="set-me-av"><img src="${esc(me.avatarUrl)}" alt=""></span>` : `<span class="set-me-av">${esc(initials(name))}</span>`}
         <span class="set-me-t"><b>${esc(name)}</b><span>${esc(me.username ? `@${me.username} · ${roleName(me.role)}` : '')}</span></span></button>
-      <label class="set-q">${svg(P.search, 18)}<input name="setq" value="${esc(q)}" placeholder="Søk i innstillinger" autocomplete="off" spellcheck="false" aria-label="Søk i innstillinger" data-setq>${q ? '<button type="button" data-setq-clear aria-label="Tøm søk">×</button>' : ''}</label>
+      <div class="set-q${q ? ' has' : ''}" data-sf><span class="sf-ic">${svg(P.search, 18)}</span>${clearBtn()}<input name="setq" value="${esc(q)}" placeholder="Søk i innstillinger" autocomplete="off" spellcheck="false" aria-label="Søk i innstillinger" data-setq></div>
       <nav class="set-nav">${secs.map((sec) => `<div class="set-sec"><div class="set-sec-t">${esc(sec)}</div>${TABS.filter((t) => t[3] === sec).map(([k, n, , , ic]) => {
         const on = tab === k && !q.trim(), badge = k === 'int' && warn ? `<span class="set-badge" title="${warn} mangler oppsett">${warn}</span>` : '';
         return `<button type="button" class="set-tab" data-tab="${k}" aria-current="${on ? 'page' : 'false'}">${svg(ic)}<span>${esc(n)}</span>${badge}</button>`;
@@ -612,6 +615,7 @@ function enter() {
   if (tab === 'dom' || q) loadDomains(reload);
   if (tab === 'varsel' || q) loadNotify(reload);
   if (tab === 'app' || q) loadApp(reload);
+  if (tab === 'ai' || q) loadAi(reload, tab === 'ai');
 }
 
 async function loadCfg() {
@@ -675,7 +679,8 @@ export function bindSettings() {
     if (await notifyClick(e)) return;
     if (await appClick(e)) return;
 
-    /* Integrasjoner og Kalendere */
+    /* Integrasjoner, Kalendere og AI */
+    if (await aiClick(e, render)) return;
     if (kalClick(e, render)) return;
     if (await integClick(e, render)) return;
     const tb = e.target.closest('[data-test]');
@@ -782,6 +787,7 @@ export function bindSettings() {
   });
 
   m.addEventListener('submit', async (e) => {
+    if (await aiSubmit(e, render)) return;
     if (await loginSubmit(e)) return;
     if (await domainsSubmit(e)) return;
     const sf = e.target.closest('[data-sc-form]');
@@ -832,6 +838,7 @@ export function bindSettings() {
   m.addEventListener('change', async (e) => {
     const t = e.target;
     if (t.matches('[data-setq]')) return;
+    if (await aiChange(e, render)) return;
     if (await loginChange(e)) return;
     if (domainsChange(e)) return;
     if (await notifyChange(e)) return;

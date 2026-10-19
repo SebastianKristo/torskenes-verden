@@ -1,0 +1,7 @@
+{
+ "_comment": "Norsk (bokmål) for web-dashboardet (prompt 27). strings: nøkler for t(). Norsk er kildespråket i koden, så ordlisten trengs bare på engelsk.",
+ "locale": "nb-NO",
+ "strings": {
+  "U": "U"
+ }
+}

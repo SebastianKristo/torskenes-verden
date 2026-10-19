@@ -657,3 +657,8 @@ html[data-hl="2c"] .bg-range input[type=range]{accent-color:var(--ink)}
 html[data-hl="2c"] .p-pk.p-pk-l{flex-direction:row;align-items:center;gap:12px}
 html[data-hl="2c"] .p-pk-t{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
 html[data-hl="2c"] .p-pk-t b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Prompt 27: «Planeter» på Dashboard: hele kloden, ~62 % av bredden, sentrert på svart (ikke cover). Andre bakgrunner uendret. */
+html[data-hl="2c"] body[data-route="dash"] .pw.pw-planet{background:#000}
+html[data-hl="2c"] body[data-route="dash"] .pw.pw-planet .pw-img{background-color:#000;background-size:62% auto;background-position:center 38%}
+html[data-hl="2c"] body[data-route="dash"] .pw.pw-planet .pw-img::after{background:linear-gradient(180deg,rgba(0,0,0,.2),transparent 35%,rgba(0,0,0,.35))}

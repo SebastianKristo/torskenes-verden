@@ -5,6 +5,7 @@
 // 3) bakgrunn, 4) oppsummering og «Start Homelab» (POST /api/setup). Etterpå lagres Papir · lys og bakgrunnen
 // i /api/me/layout.
 import { loadAppIdentity } from './appicon.js';
+import { initI18n, setLang, lang } from './i18n.js';
 import { noteUser } from './usercache.js';
 
 const $ = (id) => document.getElementById(id);
@@ -72,6 +73,7 @@ function render(focus = true) {
     : st.mode === '2fa' ? 'Ett steg\ntil' : `${greet()},\nvelkommen hjem`;
   $('g-hero').style.backgroundImage = bgCss(st.bg, true);
 
+  if (show.s1) $('g-langs').querySelectorAll('[data-lang]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.lang === lang())));
   if (show.s3) $('g-bgs').innerHTML = BGO.map(([k, n, s]) => `<button type="button" class="gate-bg" data-bg="${k}" aria-pressed="${st.bg === k}"><i style="background-image:${bgCss(k)}"></i><b>${n}</b><span>${s}</span></button>`).join('');
   if (show.s4) {
     const rows = [['Admin', name || '–'], ['Server', form.serverName.value.trim() || 'Homelab'], ['Brukernavn', form.newUsername.value.trim().toLowerCase() || '–'], ['Bakgrunn', bgOf(st.bg)[1]], ['Tema', 'Papir · lys']];
@@ -167,6 +169,8 @@ async function onboard() {
   const photo = st.bg === 'none' ? 'cur' : st.bg;
   const put = (json) => fetch('/api/me/layout', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(json) }).then((r) => r.ok).catch(() => false);
   if (!(await put({ hlTheme: '2c', design: 'lys', mobileDesign: 'papir', bgType: st.bg, photo }))) await put({ hlTheme: '2c', design: 'lys', photo });
+  // Språket fra steg 1 lagres hos brukeren (prompt 27).
+  await fetch('/api/me', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ language: lang() }) }).catch(() => {});
   done(data.user);
 }
 
@@ -185,6 +189,12 @@ form.addEventListener('submit', async (e) => {
 $('g-back').addEventListener('click', () => {
   if (st.mode === '2fa') { form.password.value = ''; return go({ mode: 'login', ticket: null }); }
   go({ step: Math.max(0, st.step - 1) });
+});
+$('g-langs').addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-lang]');
+  if (!b) return;
+  await setLang(b.dataset.lang, { save: false });
+  render(false);
 });
 $('g-recovery').addEventListener('click', () => { form.code.value = ''; go({ recovery: !st.recovery }); });
 $('g-bgs').addEventListener('click', (e) => {
@@ -208,6 +218,7 @@ for (const el of form.querySelectorAll('input')) if (el !== form.adminName) el.a
 
 form.srv.value = location.origin;
 render();
+initI18n();
 fetch('/api/setup/status').then((r) => r.json()).then((s) => {
   if (s.needsSetup) go({ mode: 'onboarding', step: 0 });
 }).catch(() => {});
