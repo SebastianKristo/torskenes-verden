@@ -71,7 +71,38 @@ async function loadModels() {
 const nowMs = () => Date.now();
 const tsOf = (x) => { const v = x.updatedAt ?? x.up ?? x.updated_at; return typeof v === 'number' ? (v < 1e12 ? v * 1000 : v) : v ? Date.parse(v) || 0 : 0; };
 function normChat(x) {
-  return { id: x.id, title: x.title || 'Ny samtale', model: x.model || '', pinned: !!x.pinned, folderId: x.folderId ?? x.folder_id ?? null, up: tsOf(x), settings: { ...DEF, ...(x.settings ?? {}) }, messages: x.messages ? x.messages.map(normMsg) : null };
+  // Prompt 34: systemsamtaler fra skanninger (kind receipt|label|categorize|finn, ref {receiptId|trackingId|importId}).
+  const kind = x.kind ?? null, sys = !!(x.sys || SCAN_KINDS.includes(kind) || x.f === SCAN_F || x.folder === SCAN_F);
+  return { id: x.id, title: x.title || 'Ny samtale', model: x.model || '', pinned: !!x.pinned, folderId: x.folderId ?? x.folder_id ?? null, up: tsOf(x), settings: { ...DEF, ...(x.settings ?? {}) }, messages: x.messages ? x.messages.map(normMsg) : null,
+    sys, kind, ref: x.ref ?? null, rev: !!(x.review ?? x.needsReview ?? x.needs_review ?? /review|godkjenning/.test(String(x.status ?? ''))) };
+}
+/* ---------- Prompt 34: mappen «Kvitteringer og skanninger» (claude-code-chat-skanninger-mappe.md) ---------- */
+export const SCAN_F = 'Kvitteringer og skanninger';
+const SCAN_KINDS = ['receipt', 'label', 'categorize', 'finn'];
+const isScanF = (f) => !!f && (f.sys || f.kind === 'scan' || f.system === true || f.name === SCAN_F);
+/** Systemmappen finnes alltid øverst (serveren lager den; mangler den, vises en lokal mappe for skann-samtalene). */
+function scanFold(list) {
+  let f = list.folders.find(isScanF);
+  if (!f) { f = { id: '__scan', name: SCAN_F, open: false, sys: true, local: true }; list.folders = [f, ...list.folders]; }
+  else { f.sys = true; list.folders = [f, ...list.folders.filter((x) => x !== f)]; }
+  for (const c of list.chats) if (c.sys && !c.folderId) c.folderId = f.id;
+  return list;
+}
+const scanId = () => C.list?.folders.find(isScanF)?.id ?? null;
+/** Åpner samtalen for en kvittering (ref.receiptId) i mappen. Finnes den ikke ennå, åpnes mappen i historikken. */
+export function openScanChat(ref = {}) {
+  if (m.screen !== 'chat') C.from = m.screen;
+  C.sh = null; C.inp = '';
+  if (location.hash !== '#/chat') location.hash = '#/chat';
+  setTimeout(async () => {
+    await chatLoad(true).catch(() => {});
+    const id = String(ref.receiptId ?? ref.trackingId ?? ref.importId ?? ''), fid = scanId();
+    const hit = id ? C.list?.chats.find((x) => x.ref && String(x.ref.receiptId ?? x.ref.trackingId ?? x.ref.importId ?? '') === id) : null;
+    if (hit) { openConv(hit.id); return; }
+    if (fid) L.open[fid] = true; keep();
+    C.drawer = !wide(); draw();
+    if (id) toast('Samtalen lages når Glimt har lest kvitteringen');
+  }, 80);
 }
 function normMsg(x) {
   if (x.r) return x;
@@ -87,15 +118,15 @@ export async function chatLoad(force = false) {
     const r = await hlApi(`/chat/chats${C.q ? `?q=${encodeURIComponent(C.q)}` : ''}`);
     const all = [...(r?.pinned ?? []), ...(r?.chats ?? []), ...(r?.folders ?? []).flatMap((f) => (f.chats ?? []).map((c) => ({ ...c, folderId: c.folderId ?? f.id })))];
     const seen = new Set();
-    C.list = { chats: all.filter((c) => !seen.has(c.id) && seen.add(c.id)).map(normChat), folders: (r?.folders ?? []).map((f) => ({ id: f.id, name: f.name, open: f.open !== false })) };
+    C.list = scanFold({ chats: all.filter((c) => !seen.has(c.id) && seen.add(c.id)).map(normChat), folders: (r?.folders ?? []).map((f) => ({ id: f.id, name: f.name, open: f.open !== false, sys: !!(f.sys || f.system || f.kind === 'scan'), review: f.review ?? null })) });
     C.srv = true;
   } catch (e) {
     C.srv = false;
-    C.list = { chats: L.chats.map(normChat), folders: L.folders };
+    C.list = scanFold({ chats: L.chats.map(normChat), folders: L.folders.filter((f) => !f.local) });
   }
   await Promise.all(jobs.filter(Boolean));
 }
-const saveLocal = () => { if (C.srv) return; L.chats = C.list.chats.map((c) => ({ ...c, messages: c.messages ?? [] })); L.folders = C.list.folders; keep(); };
+const saveLocal = () => { if (C.srv) return; L.chats = C.list.chats.map((c) => ({ ...c, messages: c.messages ?? [] })); L.folders = C.list.folders.filter((f) => !f.local); keep(); };
 async function openConv(id) {
   const c = C.list?.chats.find((x) => x.id === id);
   if (!c) return;
@@ -128,7 +159,7 @@ async function addFolder(name) {
 function togFolder(id) {
   const f = C.list.folders.find((x) => x.id === id); if (!f) return;
   f.open = !f.open; L.open[id] = f.open; keep();
-  if (C.srv) hlApi(`/chat/folders/${encodeURIComponent(id)}`, { method: 'PATCH', json: { open: f.open } }).catch(() => {});
+  if (C.srv && !f.local) hlApi(`/chat/folders/${encodeURIComponent(id)}`, { method: 'PATCH', json: { open: f.open } }).catch(() => {});
 }
 function exportMd(c) {
   const msgs = c.messages ?? [];
@@ -350,8 +381,11 @@ function groups() {
   if (q) { const L0 = chats.filter((x) => `${x.title} ${(x.messages ?? []).map((y) => y.t).join(' ')}`.toLowerCase().includes(q)); return G(`TREFF · ${L0.length}`, L0); }
   const sod = new Date(new Date().toDateString()).getTime(), rest = chats.filter((x) => !x.pinned && !x.folderId);
   const fold = (C.list?.folders ?? []).map((f) => {
-    const L0 = chats.filter((x) => !x.pinned && x.folderId === f.id), open = (L.open[f.id] ?? f.open) !== false;
-    return `<button class="ch27-fold" data-c27="fold" data-id="${esc(f.id)}" aria-expanded="${open}"><span class="ar">${open ? '▾' : '▸'}</span>${svg(IC.folder, 16)}<span>${esc(f.name)} · ${L0.length}</span></button>${open ? L0.map(row).join('') : ''}`;
+    // Prompt 34: systemmappen for skanninger ligger øverst, har rødt kvitteringsikon og er lukket som standard.
+    const S0 = isScanF(f), L0 = chats.filter((x) => !x.pinned && x.folderId === f.id), open = S0 ? L.open[f.id] === true : (L.open[f.id] ?? f.open) !== false;
+    if (S0 && f.local && !L0.length) return '';
+    const rv = S0 ? f.review ?? L0.filter((x) => x.rev).length : 0;
+    return `<button class="ch27-fold${S0 ? ' p34-scanf' : ''}" data-c27="fold" data-id="${esc(f.id)}" aria-expanded="${open}"><span class="ar">${open ? '▾' : '▸'}</span>${S0 ? svg('M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6M9 11h6M9 15h4', 16) : svg(IC.folder, 16)}<span>${esc(f.name)} · ${L0.length}${rv ? ` · ${rv} til godkjenning` : ''}</span></button>${open ? L0.map(row).join('') : ''}`;
   }).join('');
   const pins = chats.filter((x) => x.pinned);
   return [pins.length ? G('FESTET', pins) : '', fold ? `<div class="ch27-gl">MAPPER</div>${fold}` : '',
@@ -398,13 +432,14 @@ function sheets() {
       <label class="ch27-rng"><span><b>Top P</b><em id="ch27-pv">${String(P.topP).replace('.', ',')}</em></span><input type="range" id="ch27-topp" min="0.1" max="1" step="0.05" value="${P.topP}"></label>
       <div class="ch27-gl">KONTEKSTLENGDE</div><div class="ch27-seg">${[4096, 8192, 16384, 32768].map((n) => `<button class="${(P.numCtx || 8192) === n ? 'on' : ''} mono" data-c27="ctx" data-n="${n}">${n / 1024}k</button>`).join('')}</div>
       <div class="ch27-gl">TEMA</div><div class="ch27-seg">${[['papir', 'Papir'], ['noytral', 'Nøytral']].map(([k, n]) => `<button class="${theme() === k ? 'on' : ''}" data-c27="th" data-k="${k}">${n}</button>`).join('')}</div>
+      <div class="ch27-box"><button class="ch27-lr p34-aictl" data-c27="aictl"><span class="m-grow"><b>Full AI-kontroll ›</b><span>Modeller, ruting, jobber, forbruk og nøkler</span></span></button></div>
       <button class="ch27-pb" data-c27="close">Ferdig</button>`);
   }
   if (s === 'menu') {
     const c = C.list?.chats.find((x) => x.id === C.mn); if (!c) return '';
     return sheetWrap(`${shHead(c.title)}<form class="ch27-fr" data-c27f="rn"><input id="ch27-rn" value="${esc(C.rn)}" aria-label="Navn på samtalen"><button type="submit" class="ink">Gi nytt navn</button></form>
       <div class="ch27-box"><button class="ch27-lr" data-c27="pin">${c.pinned ? 'Løsne' : 'Fest øverst'}</button><button class="ch27-lr" data-c27="exp">Eksporter som Markdown</button><button class="ch27-lr" data-c27="share">Del lenke</button></div>
-      <div class="ch27-gl">FLYTT TIL MAPPE</div><div class="ch27-chips">${[[null, 'Ingen mappe'], ...(C.list.folders ?? []).map((f) => [f.id, f.name])].map(([id, n]) => `<button class="ch27-pc${chip((c.folderId ?? null) === id)}" data-c27="mv" data-id="${esc(id ?? '')}">${esc(n)}</button>`).join('')}</div>
+      <div class="ch27-gl">FLYTT TIL MAPPE</div><div class="ch27-chips">${[[null, 'Ingen mappe'], ...(C.list.folders ?? []).filter((f) => !isScanF(f)).map((f) => [f.id, f.name])].map(([id, n]) => `<button class="ch27-pc${chip((c.folderId ?? null) === id)}" data-c27="mv" data-id="${esc(id ?? '')}">${esc(n)}</button>`).join('')}</div>
       <form class="ch27-fr" data-c27f="nf"><input id="ch27-nf" value="${esc(C.nf)}" placeholder="Ny mappe"><button type="submit">+ Lag og flytt</button></form>
       <button class="ch27-db" data-c27="del">${C.del ? 'Trykk igjen for å slette' : 'Slett samtalen'}</button>`);
   }
@@ -502,7 +537,7 @@ export function openChatId(id) {
   if (location.hash !== '#/chat') location.hash = '#/chat';
   setTimeout(async () => { await chatLoad(true).catch(() => {}); if (C.list?.chats.some((x) => x.id === id)) openConv(id); else { C.list?.chats.unshift(normChat({ id, title: 'Glimt' })); openConv(id); } }, 80);
 }
-export function chatEnter(prev) { if (prev && prev !== 'chat') C.from = prev; }
+export function chatEnter(prev) { if (prev && prev !== 'chat' && prev !== 'aictl') C.from = prev; } // prompt 34: Ferdig i AI-kontroll går tilbake til Chat
 export function chatLeave() { C.sh = null; C.drawer = false; try { window.speechSynthesis?.cancel(); } catch {} C.spk = null; }
 
 /* ---------- Hendelser ---------- */
@@ -592,7 +627,8 @@ export async function chatBind(e, t) {
     case 'fold': togFolder(x.dataset.id); break;
     case 'model': C.sh = 'model'; if (!C.models) loadModels().then(draw); break;
     case 'params': C.sh = 'params'; break;
-    case 'mods': C.sh = 'mods'; C.drawer = false; C.mdel = null; loadModels().then(draw); break;
+    case 'mods': C.sh = null; C.drawer = false; location.hash = '#/aictl/mod'; return true; // prompt 34: AI-kontroll på fanen Modeller
+    case 'aictl': C.sh = null; C.drawer = false; location.hash = '#/aictl/rt'; return true; // prompt 34: «Full AI-kontroll ›» → Valg
     case 'kb': C.sh = 'kb'; C.drawer = false; if (!C.kb) kbLoad(); break;
     case 'plus': C.sh = 'plus'; if (!C.kb) kbLoad(); break;
     case 'close': C.sh = null; C.del = false; C.mdel = null; break;

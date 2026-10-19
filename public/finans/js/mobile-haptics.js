@@ -13,10 +13,11 @@ export const HAP_DEF = { hap: true, hapStr: 'medium', hapTap: true, hapTab: true
 export const hpref = (k) => pref(k) ?? HAP_DEF[k];
 export const canVibrate = () => typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function';
 
-let last = 0;
+let last = 0, lastBack = 0;
 export function haptic(kind = 'tap', { force = false } = {}) {
   if (!force && (!hpref('hap') || !hpref(PREF_OF[kind] ?? 'hapTap'))) return;
   const now = Date.now();
+  if (!force && now - lastBack < 120) return; // prompt 34: tilbake-knappen har allerede gitt sin impuls
   if (!force && kind !== 'tick' && now - last < 35) return; // ett trykk gir ikke dobbel vibrasjon (pointerdown + klikk)
   last = now;
   const str = hpref('hapStr');
@@ -29,3 +30,17 @@ export function haptic(kind = 'tap', { force = false } = {}) {
 export const setHap = (k, v) => setPref(k, v);
 // Designprototypene kaller window.__fhHaptic(k); samme navn her, så koden kan deles.
 if (typeof window !== 'undefined') window.__fhHaptic = (k) => haptic(k);
+
+// Prompt 34 (claude-code-haptikk-tilbake.md): én lett impuls på alle tilbake-knapper, sveip tilbake og systemets tilbake.
+// Følger bare hovedbryteren Haptikk (Varsler og haptikk). Ett trykk = én impuls (120 ms), og vanlig trykk-haptikk
+// rett etter (samme klikk) hoppes over.
+export function hapBack() {
+  const now = Date.now();
+  if (now - lastBack < 120) return;
+  lastBack = now; last = now;
+  if (!hpref('hap')) return;
+  if (typeof window.__fhNativeHaptic === 'function') { try { window.__fhNativeHaptic('tap', 'light'); return; } catch {} }
+  if (!canVibrate()) return;
+  try { navigator.vibrate(10); } catch {}
+}
+if (typeof window !== 'undefined') window.__fhHapBack = hapBack;

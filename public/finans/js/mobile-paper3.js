@@ -64,7 +64,7 @@ export const fourth = () => { if (!domOk()) return 'spor'; const f = fourthPref(
 /* ---------- Tilpass hver side: hold inne → vugging, ▲ ▼ og − ---------- */
 
 const PG = {
-  hl: [['h1', 'Søk'], ['h2', 'Pakker'], ['h3', 'Avganger'], ['h11', 'Prøveperioder'], ['h10', 'Kalender'], ['h4', 'Snarveier'], ['h5', 'Siste nytt'], ['h6', 'Posisjon'], ['h7', 'Bolig'], ['h8', 'Huskeliste'], ['h9', 'Bursdager']],
+  hl: [['h12', 'Glimt-brief'], ['h1', 'Søk'], ['h2', 'Pakker'], ['h3', 'Avganger'], ['h11', 'Prøveperioder'], ['h10', 'Kalender'], ['h4', 'Snarveier'], ['h5', 'Siste nytt'], ['h6', 'Posisjon'], ['h7', 'Bolig'], ['h8', 'Huskeliste'], ['h9', 'Bursdager']],
   hjem: [['f1', 'Saldo'], ['f2', 'Kvitteringer'], ['f3', 'Siste transaksjoner'], ['f4', 'Budsjett']],
   mat: [['m1', 'Dagens middag'], ['m2', 'Ukeplan'], ['m3', 'Mapper'], ['m4', 'Skann og import']],
   spor: [['t1', 'Faner'], ['t2', 'Pakkelisten'], ['t3', 'Legg til']],
@@ -86,7 +86,7 @@ function pageCfg(page) {
   const saved = (cur.order ?? []).filter((k) => keys.includes(k));
   // Prompt 32: nye kort settes inn etter kortet de står etter i standardrekkefølgen (Prøveperioder under Avganger).
   const order = [...saved];
-  keys.forEach((k, i) => { if (order.includes(k)) return; const prev = keys.slice(0, i).reverse().find((x) => order.includes(x)); order.splice(prev ? order.indexOf(prev) + 1 : order.length, 0, k); });
+  keys.forEach((k, i) => { if (order.includes(k)) return; const prev = keys.slice(0, i).reverse().find((x) => order.includes(x)); order.splice(prev ? order.indexOf(prev) + 1 : i === 0 ? 0 : order.length, 0, k); }); // prompt 34: et nytt første kort (Glimt-brief) havner øverst
   return { order, hidden: (cur.hidden ?? []).filter((k) => keys.includes(k)) };
 }
 function savePage(page, order, hidden) {

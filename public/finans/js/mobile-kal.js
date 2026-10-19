@@ -169,6 +169,16 @@ function widgetData() {
     ex: ex.map((x) => ({ t: x.e.t, in: x.in, soon: x.soon })),
   };
 }
+/** Prompt 34 (Glimt-brief): de n neste hendelsene i dag og i morgen (med klokkeslett), med farge og sted. */
+export function upcoming(n = 3) {
+  const now = new Date(), t0 = d0(now), nm = now.getHours() * 60 + now.getMinutes(), out = [];
+  for (let i = 0; i < 2 && out.length < n; i++) {
+    const d = add(t0, i);
+    for (const e of evOn(d).filter((x) => x.s && x.kind !== 'innl')) { if (i === 0 && mm(x2e(e)) <= nm) continue; out.push({ t: short(e) || e.t, loc: e.r || '', c: col(e), s: e.s, e: e.e, i, k: key(d), min: mm(e.s) + i * 1440 - nm }); if (out.length >= n) break; }
+  }
+  return out;
+}
+const x2e = (e) => e.e || e.s;
 /** Hjem-widgeten KALENDER (mode="widget"), uendret fra prompt 26. */
 export function kalWidget() {
   if (!K.ev) { if (!K.busy) kalLoad().then(draw).catch(() => {}); return `<a class="k26-hw" href="#/kal"><span class="k26-hwh"><span class="k">KALENDER</span><span class="mut">›</span></span><span class="mut" style="font-size:13px">Henter timeplanen …</span></a>`; }

@@ -4,7 +4,8 @@
 import * as P24 from './mobile-p24.js';
 import { S, api, hlApi, esc, n0, n2, dd, today, parseAmount, loadReceipts, loadBoot } from './core.js';
 import { m, draw, flash, loadJobs, ACTIVE_JOBS, retryUpload } from './mobile.js';
-import { haptic } from './mobile-haptics.js';
+import { haptic, hapBack } from './mobile-haptics.js';
+import * as P34 from './mobile-p34.js'; // prompt 34: ✦ ANALYSERES AV AI i Kvitteringer
 import { logo } from './mobile-p20.js';
 import { canSrv } from './mobile-p17.js';
 
@@ -166,7 +167,7 @@ export function swEnd(e) {
   cur.style.transform = go ? `translate3d(${W}px,0,0)` : 'translate3d(0,0,0)';
   u.style.transform = go ? 'translate3d(0,0,0)' : `translate3d(${(-0.3 * W).toFixed(1)}px,0,0)`;
   u.style.setProperty('--dim', go ? '0' : '0.1');
-  if (go) haptic('tap');
+  if (go) hapBack(); // prompt 34: lett impuls når sveipet lukker siden
   setTimeout(() => {
     if (!go) { restore(cur, g.y); return; }
     SW.done = { cur, y: g.y };
@@ -216,7 +217,8 @@ const rcLogo = (r) => `<span class="p23-rlogo">${logo({ description: r.merchant 
 const conf = (r) => (r.confidence != null ? `${Math.round(r.confidence * (r.confidence <= 1 ? 100 : 1))} % sikker` : '');
 function qItems() {
   const off = (m.offline ?? []).map((x) => ({ k: 'off', id: x.id, n: x.name || 'Kvittering', st: x.error ? `Feilet: ${x.error}` : 'Venter på nett · sendes automatisk', c: 'var(--pp-mut)', w: 100 }));
-  const jobs = (m.jobs ?? []).filter((j) => ACTIVE_JOBS.includes(j.status) || j.status === 'error').map((j) => {
+  // Prompt 34: jobbene som leses av AI (pending/processing) vises i ✦ ANALYSERES AV AI; KØ har opplastinger og feil.
+  const jobs = (m.jobs ?? []).filter((j) => j.status === 'error').map((j) => {
     const run = ACTIVE_JOBS.includes(j.status), p = Math.max(3, Math.min(99, j.progress ?? 0));
     const txt = j.statusText || j.timeoutText || (j.status === 'error' ? `Feilet${j.error ? ` · ${j.error}` : ''}` : j.status === 'pending' ? '✦ I kø …' : `✦ Leser … ${p} %`);
     return { k: 'job', id: j.id, n: j.merchant || j.name || 'Kvittering', st: txt, c: run ? 'var(--pp-lab)' : 'var(--pp-lab)', w: run ? p : 100 };
@@ -241,6 +243,7 @@ export function kvView() {
     <div class="p23-two"><label class="p23-pick">${SVG('M3 5h18v14H3zM3 16l5-5 4 4 3-3 6 6M15.5 9.5h.01')}Bilder<input class="m-file" type="file" accept="image/*" multiple data-mupload data-stay></label><label class="p23-pick">${SVG('M6 3h8l4 4v14H6zM14 3v4h4')}Filer<input class="m-file" type="file" accept="application/pdf,image/*,.heic,.heif" multiple data-mupload data-stay></label></div>
     <input class="m-file" id="p23-cap" type="file" accept="image/*" capture="environment" data-mupload data-stay>
     ${m.uploading ? `<span class="pp-mut" style="font-size:13px;padding:0 4px">Laster opp ${m.uploading} fil${m.uploading > 1 ? 'er' : ''} …</span>` : ''}
+    ${P34.kvAi()}
     ${Q.length ? `${lab('KØ')}<div class="p23-box">${Q.map((x, i) => `<div class="p23-q" style="border-top:${i ? '1px solid var(--pp-line)' : '0'}"><span class="p23-qt"><b>${esc(x.n)}</b><span style="color:${x.c}">${esc(x.st)}</span><span class="p23-qbar"><i style="width:${x.w}%;background:${x.c}"></i></span></span>
       <button class="p23-qre" data-p23="${x.k === 'off' ? 'qretry' : 'qre'}" data-id="${esc(x.id)}">${x.k === 'off' ? '↻ Send nå' : '✦ Analyser på nytt'}</button></div>`).join('')}</div>` : ''}
     ${lab(`TIL GJENNOMGANG · ${rev.length}`)}

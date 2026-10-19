@@ -4,6 +4,7 @@
 import { api, esc, hlApi } from './core.js';
 import { m, draw, flash, startScr } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
+import * as P34 from './mobile-p34.js'; // prompt 34: mål-id, scrollTo og pulserende ring
 
 const LS = 'fh_p25';
 const L = (() => { try { return JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch { return {}; } })();
@@ -83,14 +84,15 @@ export function merRow([k, nm, sd], i, dark) {
    ===================================================================== */
 
 let HI = null; // { sel, until, done }
-const HI_MS = 3200;
+const HI_MS = 6000;
 /** x = { id, title, href } fra innstillingsindeksen. Åpner riktig side, scroller til raden og fremhever den. */
 export function goSet(x) {
   if (!x) return;
   haptic('tap');
   const id = String(x.id), href = String(x.href ?? '#/set');
   // Hvor raden ligger: integrasjoner har egen gruppe på undersiden, resten er rader på hovedsiden (eller en lenke dit).
-  const steps = id.startsWith('integ:') ? [[href, [`#ig-${CSS.escape(id.slice(6))}`, '.p26 .p26-r.top']]]
+  // Prompt 34: med mål-id går den rett til siden målet ligger på.
+  const steps = x.anchor ? [[href, [`[data-hl="${CSS.escape(x.anchor)}"]`, ...(href.startsWith('#/set/') ? ['.p17-list', '.list'] : [])]]] : id.startsWith('integ:') ? [[href, [`#ig-${CSS.escape(id.slice(6))}`, '.p26 .p26-r.top']]]
     : !href.startsWith('#/') ? [['#/set', [`[data-set="${CSS.escape(id)}"]`]]]
       : [['#/set', [`[data-set="${CSS.escape(id)}"]`, `a[href="${href}"]`]], ...(href.split('/').length > 3 ? [[href.split('/').slice(0, -1).join('/'), [`a[href="${href}"]`]]] : []), [href, href.startsWith('#/set/') ? [`[data-set="${CSS.escape(id)}"]`, '.p17-list', '.list'] : []]];
   HI = { steps, i: 0, sel: null, until: 0, t0: Date.now() };
@@ -106,23 +108,15 @@ function step() {
 function seek() {
   if (!HI || HI.sel) return;
   const [page, sels] = HI.steps[HI.i];
-  const el = location.hash === page ? sels.map((s) => document.querySelector(`#app .m-scroll ${s}`)).find(Boolean) : null;
-  if (el) { HI.sel = sels.find((s) => document.querySelector(`#app .m-scroll ${s}`) === el); HI.until = Date.now() + HI_MS; mark(true); return; }
+  const el = location.hash === page ? sels.map((s) => P34.findSel(s)).find(Boolean) : null;
+  if (el) { HI.sel = sels.find((s) => P34.findSel(s) === el); HI.until = Date.now() + HI_MS; mark(true); return; }
   if (Date.now() - HI.t0 < 1200) { setTimeout(seek, 150); return; } // venter på at siden er hentet
   if (HI.i < HI.steps.length - 1) { HI.i++; step(); } else HI = null;
 }
 function mark(scroll) {
   if (!HI?.sel) return;
-  const el = document.querySelector(`#app .m-scroll ${HI.sel}`);
-  if (!el) return;
-  const left = HI.until - Date.now();
-  if (left <= 0) { HI = null; return; }
-  // Rett på (uten overgang), også når siden tegnes på nytt; bare uttoningen til slutt animeres.
-  el.style.transition = 'none'; el.classList.add('p25-hi'); void el.offsetWidth; el.style.transition = '';
-  if (scroll) {
-    el.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-    clearTimeout(mark.t); mark.t = setTimeout(() => { document.querySelector(`#app .m-scroll ${HI?.sel}`)?.classList.remove('p25-hi'); HI = null; }, left);
-  }
+  // Prompt 34: rød pulserende ring (og boble for «Oppdater nå») i 6 s eller til første trykk – se mobile-p34.js ring().
+  if (scroll) { P34.ringSel(HI.sel); HI = null; }
 }
 
 /* =====================================================================

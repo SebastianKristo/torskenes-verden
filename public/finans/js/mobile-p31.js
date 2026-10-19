@@ -13,6 +13,7 @@ import { esc, hlApi, api } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { hsTimeout, NAV_T } from './mobile-p32.js'; // prompt 32: GLIMT I SØKEFELTET
+import * as P34 from './mobile-p34.js'; // prompt 34: tydelige AI-feil i boblen
 
 const lsGet = (k, d = null) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch { return d; } };
 const lsSet = (k, v) => { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch {} };
@@ -133,7 +134,7 @@ export function ansBubble() {
   const A = G.ans; if (!A) return '';
   if (A.busy) return `<div class="p31-ans" data-p31="ansx" role="status">${glimt(22, 'think')}<span class="p31-at busy">Tenker på «${esc(A.q)}» …</span></div>`;
   return `<div class="p31-ans ready" data-p31="ansx" role="status" aria-live="polite"><span class="p31-at">${bold(A.text)}</span>${A.card ? cardHtml(A.card, true) : ''}
-    <div class="p31-af"><span class="m-ell">✦ ${esc(A.src || 'Glimt')}</span>${A.apply?.count && !A.applied ? `<button type="button" data-p31="ansapply">Endre ${A.apply.count} ${A.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${A.src === 'Snarvei' ? '' : '<button type="button" data-p31="anschat">Fortsett i Chat ›</button>'}</div></div>`;
+    ${A.err ? P34.errButtons(A.q) : ''}<div class="p31-af"><span class="m-ell">✦ ${esc(A.src || 'Glimt')}</span>${A.apply?.count && !A.applied ? `<button type="button" data-p31="ansapply">Endre ${A.apply.count} ${A.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${A.src === 'Snarvei' ? '' : '<button type="button" data-p31="anschat">Fortsett i Chat ›</button>'}</div></div>`;
 }
 const ASSIST_MISSING = { v: false };
 async function assistCall(q, source, extra = {}) {
@@ -192,10 +193,13 @@ export async function ask(q) {
   } catch (e) {
     clearTimeout(timer); if (moved) return;
     if (e.status === 404 || e.status === 405) { set({ text: 'Jeg svarer best på dette i Chat. **Trykk «Fortsett i Chat».**', src: 'Glimt' }); return; }
+    // Prompt 34: en ekte feil fra modellen/serveren vises i boblen med Prøv igjen og Åpne AI-kontroll (ikke evig «tenker»).
+    if (e.soft || (e.status >= 400 && e.status !== 408 && e.status !== 504)) { haptic('err'); if (G.aid === id) { G.ans = { q, busy: false, text: P34.aiErrText(e, e.model), src: 'Glimt', err: true }; draw(); } return; }
     handoff(q, id, () => jobId, 'Fikk ikke svar her.'); return;
   }
   clearTimeout(timer); if (moved) return;
   const A = normAns(r);
+  if (!A.text && (r?.error || r?.ok === false)) { haptic('err'); if (G.aid === id) { G.ans = { q, busy: false, text: P34.aiErrText(r.error ?? 'tomt svar', r.model), src: 'Glimt', err: true }; draw(); } return; } // prompt 34
   if (/trial/.test(A.intent)) { G.trials = null; }
   // Serverens snarvei: {intent:'nav', target, text}.
   if (A.intent === 'nav' && (r?.target || r?.href)) { const href = r.href ?? NAV_T[r.target] ?? `#/${r.target}`; navAns(q, href, null, A.src || 'Snarvei', A.text, id); return; }

@@ -109,30 +109,51 @@ export const SS = { q: '', ai: false, ans: '', ids: null, busy: false };
 // Alle innstillinger og undersider: id, tittel, hvor den ligger og hvor trykket går.
 const IDX = [
   ['prof-std', 'Standard', 'Profil', '#/set', 'profil oppsett vanlig'], ['prof-fin', 'Finans + Boliger', 'Profil', '#/set', 'profil boliger finans start'], ['prof-bol', 'Boliger-profil', 'Profil', '#/set', 'profil boliger'],
-  ['konto', 'Kontoer og brukere', 'Konto', '#/set/konto', 'bruker logg inn konto'], ['sik', 'Sikkerhet', 'Konto', '#/set/sik', 'passord 2fa totrinn lås face id fingeravtrykk økter'], ['tok', 'API-tokens', 'Konto', '#/set/tok', 'token nøkkel langtidstoken'], ['sysbk', 'Backup', 'Konto', '#/set/sysbk', 'backup sikkerhetskopi gjenopprett automatisk hele systemet kryptering sky'],
+  ['konto', 'Kontoer og brukere', 'Konto', '#/set/konto', 'bruker logg inn konto'], ['sik', 'Sikkerhet', 'Konto', '#/set/sik', 'passord 2fa totrinn tofaktor lås face id fingeravtrykk økter', '2fa'], ['tok', 'API-tokens', 'Konto', '#/set/tok', 'token nøkkel langtidstoken'], ['sysbk', 'Backup', 'Konto', '#/set/sysbk', 'backup sikkerhetskopi gjenopprett hele systemet kryptering sky', 'bk-now'], ['bk-auto', 'Automatisk backup', 'Konto · Backup', '#/set/sysbk', 'automatisk backup tidsplan natt', 'bk-auto'],
   ['profil', 'Profilbilde og navn', 'Konto', '#/set/profil', 'avatar bilde profil'],
-  ['nordlys', 'Nordlys OS', 'Programvare', '#/nordlys', 'oppdatering oppdater versjon update build programvare system'], // prompt 32: eneste sted å oppdatere
-  ['fai', 'AI og tolkning', 'Finans', '#/set/fai', 'ai gemini groq ollama roboflow kvittering ocr'], ['kat', 'Kategorier og budsjett', 'Finans', '#/set/kat', 'kategori budsjett'], ['regel', 'Regler', 'Finans', '#/set/regel', 'regel automatisk'],
+  ['nordlys', 'Nordlys OS', 'Programvare', '#/nordlys', 'programvare system nordlys os'], // prompt 32: eneste sted å oppdatere
+  // Prompt 34: mål-id (6. felt) → siden åpnes, målet scrolles midt i bildet og får rød pulserende ring.
+  ['upd', 'Oppdater nå', 'System', '#/nordlys', 'oppdater oppdatere oppdaterer oppdatering update installer ny versjon nordlys', 'upd'], ['chk', 'Se etter oppdatering', 'System', '#/nordlys', 'oppdatering versjon sjekk se etter ny', 'chk'],
+  ['pw', 'Krev passord for å oppdatere', 'System', '#/nordlys', 'krev passord oppdater oppdatering', 'pw'],
+  ['aictl', 'AI og modeller', 'App', '#/aictl', 'ai modell modeller ollama gemini groq last ned nedlasting tokens jobber forbruk budsjett glimt selvtest', 'selftest'], ['ai-mod', 'Modeller', 'App · AI og modeller', '#/aictl/mod', 'modell modeller last ned slett vram ollama', 'ai-mod'],
+  ['ai-sel', 'Hvilken modell gjør hva', 'App · AI og modeller → Valg', '#/aictl/rt', 'ruting reserve modell valg temperatur kontekst keep alive', 'ai-sel'], ['ai-key-gemini', 'Gemini-nøkkel', 'App · AI og modeller → API og nøkler', '#/aictl/api', 'gemini nøkkel api key groq openrouter roboflow', 'ai-key-gemini'],
+  ['fai', 'AI og tolkning', 'Finans', '#/aictl/fin', 'ai gemini groq ollama roboflow kvittering ocr finans'], ['kat', 'Kategorier og budsjett', 'Finans', '#/set/kat', 'kategori budsjett'], ['regel', 'Regler', 'Finans', '#/set/regel', 'regel automatisk'],
   ['bank', 'Bankimport', 'Finans', '#/set/bank', 'bank dnb csv import'], ['t212', 'Aksjer · Trading 212', 'Finans', '#/set/t212', 'aksje trading212 t212 fond'], ['fanelinje', 'Fanelinje og Mer i Finans', 'Finans', '#/set/fanelinje', 'fane faner navigasjon'], ['sub', 'Subscription OS', 'Finans', '#/sub', 'abonnement'],
   ['appnavn', 'Navn på appen', 'Homelab', 'nm', 'navn app tittel'], ['appikon', 'App-ikon', 'Homelab', 'ic', 'ikon logo app'], ['hjemnav', 'Fanelinje i Hjem', 'Homelab', '#/set/fanelinje', 'fane faner hjem navigasjon'], ['navstil', 'Fanelinje-stil', 'Homelab', 'ns', 'fane fanelinje stil ikoner tekst navn navigasjon'],
   ['mod', 'Moduler', 'Homelab', '#/set/mod', 'modul widget sporing domener mat'], ['rss', 'Nyhetsleser', 'Homelab', '#/nyheter', 'rss nyheter kilder ikon'],
-  ['look', 'Utseende og fanelinje', 'App', '#/set/look', 'tema mørk lys farge papir utseende ikonfarger'], ['bakgrunn', 'Bakgrunn på Hjem', 'App · Utseende', '#/set/bakgrunn', 'bakgrunn bilde planeter vær oslo'],
-  ['varsler', 'Varsler og haptikk', 'App', '#/set/varsler', 'varsel push lyd vibrasjon haptikk bursdager'], ['kal', 'Kalendere', 'App', '#/set/kal', 'kalender google home assistant ha ical canvas skole timeplan synk'], ['integ', 'Integrasjoner', 'App', '#/set/integ', 'integrasjon nøkkel api'],
+  ['look', 'Utseende og fanelinje', 'App', '#/set/look', 'tema mørk lys farge papir utseende ikonfarger', 'theme'], ['bakgrunn', 'Bakgrunn på Hjem', 'App · Utseende', '#/set/bakgrunn', 'bakgrunn bilde planeter vær oslo', 'bg'],
+  ['haptic', 'Haptikk', 'App · Varsler og haptikk', '#/set/hap', 'haptikk vibrasjon vibrer', 'haptic'], ['varsler', 'Varsler og haptikk', 'App', '#/set/varsler', 'varsel push lyd bursdager', 'push'], ['quiet', 'Stille timer', 'App · Varsler', '#/set/varsler', 'stille timer natt lyd', 'quiet'], ['kal', 'Kalendere', 'App', '#/set/kal', 'kalender google home assistant ha ical canvas skole timeplan synk'], ['integ', 'Integrasjoner', 'App', '#/set/integ', 'integrasjon nøkkel api'],
   ['bd', 'Bursdager', 'Mer', '#/bd', 'bursdag'], ['kalside', 'Kalender', 'Mer', '#/kal', 'timeplan prøver frister skole uke måned agenda'],
 ];
 const INTEG_IDX = [['ha', 'Home Assistant', 'home ha assistant'], ['google', 'Google Kalender', 'kalender bursdag google oauth'], ['ai', 'AI (Gemini)', 'gemini groq ollama ai nøkkel'], ['t212', 'Trading 212', 'aksje'], ['bank', 'Bank', 'bank import'], ['imap', 'Kvitteringer på e-post (IMAP)', 'epost mail kvittering imap'],
   ['entur', 'Entur', 'ruter buss trikk avgang'], ['mybring', 'Mybring', 'posten bring pakke sporing'], ['postnord', 'PostNord', 'pakke sporing post'], ['parcelsapp', 'ParcelsApp', 'pakke sporing reserve'], ['cloudflare', 'Cloudflare', 'domene domener'], ['finn', 'Finn', 'finn annonse'],
   ['met', 'MET / Yr', 'vær yr'], ['map', 'Kart', 'kart maptiler stadia'], ['icons', 'Ikoner', 'ikon iconify'], ['photos', 'Unsplash / Pexels', 'bilde foto bakgrunn']];
 // ISO2: uten admin tas Domener (og Cloudflare) ut av søket.
-const index = () => [...IDX.map(([id, t, p, h, k]) => ({ id, title: t, path: p, href: h, kw: domOk() ? k : k.replace(/\s*domener/g, '') })),
+const index = () => [...IDX.map(([id, t, p, h, k, a]) => ({ id, title: t, path: p, href: h, anchor: a ?? null, kw: domOk() ? k : k.replace(/\s*domener/g, '') })),
   ...(IG.list ?? INTEG_IDX.filter(([id]) => id !== 'cloudflare' || domOk()).map(([id, name, kw]) => ({ id, name, kw }))).map((x) => ({ id: `integ:${x.id}`, title: x.name, path: `Integrasjoner · ${x.name}`, href: `#/set/integ/${x.id}`, kw: `${x.kw ?? ''} ${x.group ?? ''} ${(x.fields ?? []).map((f) => f.label).join(' ')}` }))];
 const norm = (s) => String(s ?? '').toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '');
+// Prompt 34 (claude-code-innst-ai-sok-highlight.md): poengsum per ord – helt ord = 3, prefiks = 2, treff i tittel = 1. Beste treff først.
+const STOP = new Set(['hvordan', 'hvor', 'hva', 'jeg', 'meg', 'min', 'mitt', 'mine', 'er', 'kan', 'for', 'til', 'en', 'et', 'ei', 'og', 'pa', 'i', 'av', 'med', 'den', 'det', 'som', 'vil', 'skal', 'ser', 'gjor', 'man', 'du', 'how', 'do', 'the', 'to']);
+const words = (s) => norm(s).split(/[^a-z0-9æøå]+/).filter(Boolean);
 function localHits(q) {
-  const w = norm(q).split(/\s+/).filter((x) => x.length > 1);
+  const w = words(q).filter((x) => x.length > 1 && !STOP.has(x));
   if (!w.length) return [];
-  return index().map((x) => { const hay = norm(`${x.title} ${x.path} ${x.kw}`); const s = w.reduce((a, t) => a + (norm(x.title).includes(t) ? 3 : hay.includes(t) ? 1 : hay.includes(t.slice(0, 4)) && t.length > 4 ? 0.5 : 0), 0); return [x, s]; })
-    .filter(([, s]) => s > 0).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([x]) => x);
+  return index().map((x) => {
+    const hay = words(`${x.title} ${x.path} ${x.kw}`), tw = words(x.title);
+    const s = w.reduce((a, t) => a + (hay.includes(t) ? 3 : hay.some((h) => (h.length >= 4 && (h.startsWith(t) || t.startsWith(h))) || (t.length >= 6 && h.slice(0, 6) === t.slice(0, 6))) ? 2 : 0) + (tw.some((h) => h.startsWith(t) || (h.length >= 4 && t.startsWith(h))) ? 1 : 0), 0);
+    return [x, s];
+  }).filter(([, s]) => s > 0).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([x]) => x);
 }
+/** Enter i søkefeltet: går rett til beste treff med markering (vanlig søk), eller spør Glimt med en gang (✦ AI). */
+export function key24(e) {
+  if (e.key !== 'Enter' || e.target?.id !== 'p24-sq') return false;
+  e.preventDefault();
+  if (SS.ai) { clearTimeout(sqT); aiSearch(); return true; }
+  const top = localHits(SS.q)[0];
+  if (top) { SS.q = ''; SS.ans = ''; SS.ids = null; P25.goSet(top); }
+  return true;
+}
+let goT = null;
 function searchBar() {
   return `<div class="p24-ss"><label class="p24-ssf"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg><input id="p24-sq" data-p24in="sq" type="search" value="${esc(SS.q)}" placeholder="${SS.ai ? 'Spør, f.eks. «hvor bytter jeg ikon?»' : 'Søk i innstillinger'}" enterkeyhint="search" autocomplete="off" aria-label="Søk i innstillinger">${SS.q ? '<button type="button" class="p24-ssx" data-p24="sqx" aria-label="Tøm">×</button>' : ''}</label>
     <button class="p24-ai${SS.ai ? ' on' : ''}" data-p24="sqai" aria-pressed="${SS.ai}">✦ AI</button></div>`;
@@ -142,7 +163,7 @@ function searchResults() {
   // Prompt 25: et trykk på et treff åpner riktig side, scroller til raden og fremhever den (som «Ta meg dit →»).
   const rows = hits.map((x) => `<a class="opt-row p17-row" href="${esc(x.href.startsWith('#') ? x.href : '#/set')}" data-p24="goset" data-id="${esc(x.id)}"><span class="m-grow p17-rt"><b>${esc(x.title)}</b><small>${esc(x.path)}</small></span><span class="p17-chev" aria-hidden="true">›</span></a>`).join('');
   const top = SS.ai && !SS.busy && hits[0];
-  return `${SS.ans ? `<div class="p24-ans"><span>✦</span><span class="p25-ansb"><span>${esc(SS.ans)}</span>${top ? `<button class="p25-go" data-p24="goset" data-id="${esc(top.id)}">Ta meg dit →</button>` : ''}</span></div>` : ''}${SS.busy ? '<div class="pp-mut" style="padding:0 4px">✦ Tenker …</div>' : ''}
+  return `${SS.ans ? `<div class="p24-ans"><span>✦</span><span class="p25-ansb"><span>${esc(SS.ans)}</span>${top ? `<button class="p25-go" data-p24="goset" data-id="${esc(top.id)}">Vis meg nå ›</button>` : ''}</span></div>` : ''}${SS.busy ? '<div class="pp-mut" style="padding:0 4px">✦ Tenker …</div>' : ''}
     ${rows ? `<span class="pp-lab p17-gl">TREFF · ${hits.length}</span><div class="list p17-list">${rows}</div>` : SS.busy ? '' : `<span class="pp-mut p24-none">Ingen treff.${SS.ai ? '' : ' Slå på ✦ AI for å spørre med vanlige ord.'}</span>`}`;
 }
 async function aiSearch() {
@@ -152,12 +173,17 @@ async function aiSearch() {
   const items = index().map(({ id, title, path }) => ({ id, title, path }));
   try {
     const r = await hlApi('/settings/ai-search', { method: 'POST', json: { q, items } });
-    SS.ans = r?.answer ?? ''; SS.ids = Array.isArray(r?.ids) ? r.ids : localHits(q).map((x) => x.id);
+    SS.ans = r?.answer ?? ''; SS.ids = Array.isArray(r?.ids) ? r.ids.filter((id) => index().some((x) => x.id === id)) : localHits(q).map((x) => x.id); // valideres mot indeksen
+    if (!SS.ids.length) SS.ids = localHits(q).map((x) => x.id);
   } catch {
     const h = localHits(q); SS.ids = h.map((x) => x.id);
     SS.ans = h.length ? `Det ligger under ${h[0].path}${h[0].path.includes(h[0].title) ? '' : ` → ${h[0].title}`}.` : 'Fant ingen innstilling som passer. Prøv andre ord.';
   }
   SS.busy = false; draw();
+  // Prompt 34: etter ca. 1,6 s går den av seg selv til siden og markerer målet («Vis meg nå ›» gjør det med en gang).
+  clearTimeout(goT);
+  const top = SS.ids?.[0] && index().find((x) => x.id === SS.ids[0]);
+  if (top && SS.q.trim() === q) goT = setTimeout(() => { if (SS.ai && SS.q.trim() === q && m.screen === 'set') { SS.q = ''; SS.ans = ''; SS.ids = null; SS.ai = false; P25.goSet(top); } }, 1600);
 }
 /** Toppen av Innstillinger i Papir: søk, ✦ AI og PROFIL. Ved søk vises bare treffene. */
 export function setTop(row, grp, rest) {
@@ -595,7 +621,7 @@ async function bindAsync(e, t) {
   switch (k) {
     case 'prof': await pickProfile(x.dataset.k); return true;
     case 'sqx': SS.q = ''; SS.ans = ''; SS.ids = null; draw(); document.getElementById('p24-sq')?.focus(); return true;
-    case 'goset': { e.preventDefault(); const it = index().find((y) => y.id === x.dataset.id); SS.q = ''; SS.ans = ''; SS.ids = null; SS.ai = false; P25.goSet(it); return true; }
+    case 'goset': { e.preventDefault(); clearTimeout(goT); const it = index().find((y) => y.id === x.dataset.id); SS.q = ''; SS.ans = ''; SS.ids = null; SS.ai = false; P25.goSet(it); return true; }
     case 'sqai': SS.ai = !SS.ai; SS.ans = ''; SS.ids = null; draw(); if (SS.ai && SS.q.trim()) aiSearch(); document.getElementById('p24-sq')?.focus(); return true;
     case 'igf': IG.open = IG.open === x.dataset.k ? null : x.dataset.k; draw(); setTimeout(() => document.querySelector('.p24-igf input')?.focus(), 30); return true;
     case 'igx': IG.open = null; draw(); return true;
