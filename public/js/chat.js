@@ -6,6 +6,7 @@
 // Alt går via vår server (/api/chat/*); serveren bruker Open WebUI når den er satt opp, ellers Ollama/Gemini/Groq direkte.
 // Mangler endepunktene (eldre server), vises en forklaring i stedet for feil.
 import { esc, isMobile } from './util.js';
+import { store } from './store.js';
 import { searchField } from './searchfield.js';
 import { lang, locale } from './i18n.js';
 import { glimt, glimtDots } from './glimt.js';
@@ -264,6 +265,12 @@ function composerHtml() {
     <div class="ch-foot">${sky ? `Sky-modell: meldingen sendes til ${m.provider === 'groq' ? 'Groq' : 'Google'}.` : 'Kjører lokalt på hjemmeserveren. Ingenting sendes ut.'}</div></div>`;
 }
 
+/* Prompt 34: AI-kontroll over Chat (Modeller → fanen Modeller, Samtaleinnstillinger → Full AI-kontroll → Valg). */
+function openAiCtl(tab) {
+  import('./ai-control.js').then((m) => m.openAiControl({ tab, scope: 'chat', theme: C.theme === 'noytral' ? 'mork' : 'papir', admin: store.me?.me?.role === 'admin',
+    onClose2: async () => { try { const r = await call('/models'); C.models = r.models ?? C.models; paint(); } catch { /* */ } } })).catch((e) => toast(e.message));
+}
+
 /* ---------- Ark ---------- */
 
 const sheetWrap = (inner, t, cls = '') => `<div class="ch-sheet-bg" data-ch-close><div class="ch-sheet ${cls}" role="dialog" aria-modal="true" aria-label="${esc(t)}"><div class="ch-sh-h"><b>${esc(t)}</b><button type="button" class="ch-x" data-ch-close aria-label="Lukk">✕</button></div>${inner}</div></div>`;
@@ -284,6 +291,7 @@ function paramsSheet() {
     <label class="ch-rng"><span><b>Top P</b><i data-ch-pv>${String(P.topP).replace('.', ',')}</i></span><input type="range" min="0.1" max="1" step="0.05" value="${P.topP}" data-ch-topp></label>
     <div class="ch-gl">KONTEKSTLENGDE</div><div class="ch-seg">${CTXS.map((n) => chip(P.numCtx === n, `data-ch-ctx="${n}"`, `${n / 1024}k`)).join('')}</div>
     <div class="ch-gl">TEMA</div><div class="ch-seg">${chip(C.theme === 'papir', 'data-ch-th="papir"', 'Papir')}${chip(C.theme === 'noytral', 'data-ch-th="noytral"', 'Nøytral')}</div>
+    <button type="button" class="ch-mi ch-aictl" data-ch-aictl><span class="ch-grow"><b>Full AI-kontroll</b><small>Modeller, ruting, jobber, forbruk og nøkler</small></span><span aria-hidden="true">›</span></button>
     <button type="button" class="ch-btn ink" data-ch-close>Ferdig</button>`, 'Samtaleinnstillinger');
 }
 function menuSheet() {
@@ -699,6 +707,8 @@ function bind(h) {
     if ('chFsclose' in d) return closeChat();
     if ('chDrawer' in d) { C.drawer = true; paint(); return; }
     if (d.chFold) { const f = C.list.folders.find((x) => x.id === d.chFold), open = !(C.open[d.chFold] ?? f?.open !== false); C.open = { ...C.open, [d.chFold]: open }; writeLocal(); call(`/folders/${encodeURIComponent(d.chFold)}`, { method: 'PATCH', json: { open } }).catch(() => {}); paintSide(); return; }
+    // Prompt 34: Modeller åpner AI-kontroll (fanen Modeller); det gamle Modeller-arket brukes ikke lenger.
+    if (d.chSheet === 'mods' || 'chAictl' in d) { C.sheet = null; C.drawer = false; paint(); openAiCtl(d.chSheet === 'mods' ? 'mod' : 'rt'); return; }
     if (d.chSheet) { C.sheet = d.chSheet; C.drawer = false; if (d.chSheet === 'kb') loadKb(); paint(); return; }
     if ('chTheme' in d) { C.theme = C.theme === 'noytral' ? 'papir' : 'noytral'; writeLocal(); call('/settings', { method: 'PATCH', json: { chat_theme: C.theme } }).catch(() => {}); paint(); return; }
     if (d.chTh) { C.theme = d.chTh; writeLocal(); call('/settings', { method: 'PATCH', json: { chat_theme: C.theme } }).catch(() => {}); paint(); return; }

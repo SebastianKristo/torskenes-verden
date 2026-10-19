@@ -289,7 +289,9 @@ function ansHtml() {
   if (!GL.q) return '';
   const body = GL.slow ? `<div class="gl-busy">${glimt(22, 'svarer', { dark: true })}<span>Dette tar litt tid. <b>Fortsetter i Chat</b> …</span></div>`
     : GL.busy ? `<div class="gl-busy">${glimt(22, 'tenker', { dark: true })}<span>Tenker på «<span data-no-i18n>${esc(GL.q)}</span>» …</span></div>`
-    : `<span class="gl-txt" data-no-i18n>${GL.err ? esc(GL.err) : boldHtml(GL.ans?.text || 'Glimt fant ikke noe svar.')}</span><div class="gl-foot"><span class="gl-src">✦ ${esc(GL.ans?.source || 'Glimt')}</span>${GL.ans?.apply?.count && !GL.applied ? `<button type="button" class="gl-chat" data-gl-apply>Endre ${GL.ans.apply.count} ${GL.ans.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${GL.ans?.nav ? '' : '<button type="button" class="gl-chat" data-gl-chat>Fortsett i Chat ›</button>'}</div>`;
+    // Prompt 34: feil vises tydelig («Glimt fikk ikke svar fra {modell}: {feil}») med Prøv igjen og Åpne AI-kontroll.
+    : GL.err || !GL.ans?.text ? `<span class="gl-txt gl-err" data-no-i18n>${esc(GL.err || 'Glimt fant ikke noe svar.')}</span><div class="gl-foot"><span class="gl-src">✦ ${esc(GL.ans?.model || GL.ans?.source || 'Glimt')}</span><button type="button" class="gl-chat" data-gl-retry>Prøv igjen</button><button type="button" class="gl-chat" data-gl-aictl>Åpne AI-kontroll ›</button></div>`
+    : `<span class="gl-txt" data-no-i18n>${boldHtml(GL.ans.text)}</span>${GL.ans.notice ? `<span class="gl-note" data-no-i18n>${esc(GL.ans.notice)}</span>` : ''}<div class="gl-foot"><span class="gl-src">✦ ${esc(GL.ans?.source || 'Glimt')}</span>${GL.ans?.apply?.count && !GL.applied ? `<button type="button" class="gl-chat" data-gl-apply>Endre ${GL.ans.apply.count} ${GL.ans.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${GL.ans?.nav ? '' : '<button type="button" class="gl-chat" data-gl-chat>Fortsett i Chat ›</button>'}</div>`;
   return `<div class="gl-ans" data-gl-ans role="status" aria-live="polite" title="Trykk for å lukke">${body}</div>`;
 }
 // Boblen ligger i et eget lag på <body> (over nyhetslinjen og kortene), plassert rett under søkefeltet som ble brukt.
@@ -358,7 +360,7 @@ async function askGlimt(q, form = null) {
 /* ✦ AI: korte søk går til vanlig søk; ellers vises svaret fra AI-motoren i nedtrekket, med årsak hvis det feiler. */
 function aiPanel(a) {
   if (a.loading) return `<div class="sq-ai"><div class="sq-ai-h">${glimt(16, 'tenker')} Glimt tenker …</div><div class="skeleton" style="min-height:54px;border-radius:12px"></div></div>`;
-  if (a.error) return `<div class="sq-ai err"><div class="sq-ai-h">✦ AI</div><p>${esc(a.error)}</p><div class="sq-ai-act"><button type="button" data-sq-google="${esc(a.q)}">Søk på Google i stedet</button></div></div>`;
+  if (a.error) return `<div class="sq-ai err"><div class="sq-ai-h">✦ AI</div><p>${esc(a.error)}</p><div class="sq-ai-act"><button type="button" data-sq-google="${esc(a.q)}">Søk på Google i stedet</button><button type="button" data-sq-aictl>Åpne AI-kontroll</button></div></div>`;
   const d = a.data;
   return `<div class="sq-ai"><div class="sq-ai-h">✦ AI · ${esc(d.provider ?? '')}</div><p>${esc(d.answer)}</p>
     ${d.followUps?.length ? `<div class="sq-ai-f">${d.followUps.map((f) => `<button type="button" data-sq-ask="${esc(f)}">${esc(f)}</button>`).join('')}</div>` : ''}
@@ -453,6 +455,8 @@ export function bindSearch() {
       return;
     }
     if (e.target.closest('[data-gl-chat]')) { const q = GL.q, jobId = GL.busy ? GL.jobId : null; closeAns(); handoff(q, jobId); return; }
+    if (e.target.closest('[data-gl-retry]')) { const q = GL.q, f = ansForm; askGlimt(q, f); return; }
+    if (e.target.closest('[data-gl-aictl]')) { closeAns(); import('./ai-control.js').then((m) => { m.openAiControl({ tab: 'ov', theme: document.documentElement.dataset.hlTheme === '2c' ? 'papir' : 'mork', admin: store.me?.me?.role === 'admin' }); m.runSelftest(); }).catch(() => {}); return; }
     closeAns();
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && GL.q && !document.getElementById('sq-eng-menu')) closeAns(); });
@@ -509,6 +513,7 @@ export function bindSearch() {
     const del = e.target.closest('[data-sq-del]');
     if (del) return removeHist(f, sq.items[+del.dataset.sqDel]);
     if (e.target.closest('[data-sq-clear]')) return clearHist(f);
+    if (e.target.closest('[data-sq-aictl]')) { e.preventDefault(); import('./ai-control.js').then((m) => { m.openAiControl({ tab: 'ov', theme: document.documentElement.dataset.hlTheme === '2c' ? 'papir' : 'mork', admin: store.me?.me?.role === 'admin' }); m.runSelftest(); }).catch(() => {}); return; }
     const g = e.target.closest('[data-sq-google]');
     if (g) { sq.ai = null; return runSearch(g.dataset.sqGoogle); }
     const ask = e.target.closest('[data-sq-ask]');

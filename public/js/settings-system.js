@@ -66,7 +66,7 @@ function heroHtml(ph, d) {
     prog = `<div class="ny-prog" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p.pct}"><span class="ny-bar"><span style="width:${p.pct}%"></span></span><span class="ny-ps"><span>${esc((STEP_TXT[p.key] ?? STEP_TXT.download).replace('{v}', lat.version || ''))}</span><span class="ny-pct">${p.pct} %</span></span></div>`;
   }
   return `<section class="ny-hero" data-ph="${ph}"><span class="ny-arc a" aria-hidden="true"></span><span class="ny-arc b" aria-hidden="true"></span>
-    <div class="ny-top"><span class="ny-big" data-no-i18n>${esc(big)}</span><button type="button" class="ny-chk" data-upd="check" ${ph === 'run' || U.checking ? 'disabled' : ''}>${U.checking ? 'Ser etter …' : '<span class="ny-chk-l">Se etter oppdatering</span><span class="ny-chk-s">Se etter</span>'}</button></div>
+    <div class="ny-top"><span class="ny-big" data-no-i18n>${esc(big)}</span><button type="button" class="ny-chk" data-hl="chk" data-upd="check" ${ph === 'run' || U.checking ? 'disabled' : ''}>${U.checking ? 'Ser etter …' : '<span class="ny-chk-l">Se etter oppdatering</span><span class="ny-chk-s">Se etter</span>'}</button></div>
     <div class="ny-bot"><span class="ny-st" role="status">${esc(stTxt)}</span><span class="ny-name">Nordlys<span>OS</span></span><span class="ny-host">${esc(store.me?.serverName || 'Homelab')} · <span data-no-i18n>${esc(host())}</span></span>${prog}</div></section>`;
 }
 
@@ -85,7 +85,7 @@ function btnHtml(ph, d) {
   }[ph];
   const dis = !B[3] || (B[3] === 'go' && d?.canStart === false && !running());
   const sub = B[3] === 'go' && d?.canStart === false && d?.reason ? d.reason : B[2];
-  return `<div class="ny-act"><button type="button" class="ny-btn ${B[1]}" ${B[3] ? `data-ny="${B[3]}"` : ''} ${dis ? 'disabled' : ''}>${esc(B[0])}</button><span class="ny-sub"${ph === 'fail' ? ' data-no-i18n' : ''}>${esc(sub)}</span></div>`;
+  return `<div class="ny-act"><button type="button" class="ny-btn ${B[1]}" data-hl="upd" ${B[3] ? `data-ny="${B[3]}"` : ''} ${dis ? 'disabled' : ''}>${esc(B[0])}</button><span class="ny-sub"${ph === 'fail' ? ' data-no-i18n' : ''}>${esc(sub)}</span></div>`;
 }
 function ago(t) {
   const m = Math.round((Date.now() - (ms(t) ?? Date.now())) / 60000);

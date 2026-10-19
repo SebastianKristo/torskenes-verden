@@ -2,6 +2,18 @@
 
 Alle merkbare endringer i Homelab OS, FinansHub og mobilappene. Nyeste øverst. Versjonene med APK og IPA ligger under [Releases](https://github.com/SebastianKristo/torskenes-verden/releases).
 
+## [4.28.0] – 19.10.2026 · prompt 34 – AI-kontroll og Glimt-brief
+- **Glimt virker igjen:** standardmodellen fantes ikke på Ollama-serveren, og feilen ble skjult. Nå sjekkes modellen mot det som er installert. Mangler den, brukes reserven eller en installert tekstmodell (aldri en bildemodell), og du får en advarsel. Feil vises som «Glimt fikk ikke svar fra {modell}: …» med «Prøv igjen». «Tilkoblet» betyr nå at modellen faktisk svarer.
+- **Full AI-kontroll** på web, i appene og i FinansHub: status, selvtest, modeller (last ned, last inn/ut, slett, standard), modell per oppgave med reserve, jobblogg, tokenforbruk og budsjett, API-nøkler og Glimt-API-nøkler. Bare admin endrer serveroppsettet. FinansHubs AI-innstillinger er ryddet inn i samme panel.
+- **Glimt-brief:** kort øverst på Hjem med animert Glimt-figur, egen brief-side med vær, kalender og nyheter, og widgets for iPhone (inkl. låseskjerm), Android og Samsung. «Morgenbrief er klar» kl. 06:30.
+- **Kalender for Mac:** ny app som DMG i releasen (åpnes første gang med høyreklikk → Åpne).
+- **Kvitteringer:** egen seksjon «Analyseres av AI» med steg og fremdrift, «Følg i Chat» og «Avbryt». Alle skanninger havner i Chat-mappen «Kvitteringer og skanninger».
+- **Innstillingssøk** tar deg til riktig side og markerer knappen, f.eks. «oppdater» → Oppdater nå.
+- **Kalender på web:** AI-søket virker («frisørtime» finner «Nina frisør») og søkemenyen flimrer ikke lenger.
+- **Backup til nettverksdisk:** mapper som «backup» vises igjen (Samba 4-attributter og æøå), mapper uten tilgang vises med lås, skjulte delinger og manuell sti, ekte skrivetest, og skanningen finner disker også når serveren kjører i Docker.
+- **Mobil:** innholdet går under navbaren, og tilbake-knapper gir haptikk.
+- **Mat** i Papir-tema med ny bryter. **Rom:** NASA-bilder vises igjen, blå side, og kartet kan zoomes med egen Norge-visning.
+
 ## [4.27.0] – 19.10.2026 · prompt 33 – Kalender-appen
 - **Kalender er en egen app** for iPhone og Android, med eget ikon. Den bruker samme konto og data som Homelab, og du kan logge inn med Homelab-appen.
   - Visninger: År, Måned, Uke, 3 dager, Dag, Liste og Søk, med ukenummer og vær. Sveip bytter periode.

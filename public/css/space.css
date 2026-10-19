@@ -1,12 +1,12 @@
 /* Rom (prompt 32, fasit Rom.dc.html variant a «Kontrollrom», 1a i fullskjerm). Papir i «Vindu og papir», mørkt i «Nåværende». */
-.rom{--r-bg:#f3efe6;--r-ink:#1b1a17;--r-ink2:#3d3a33;--r-mut:#6b6558;--r-faint:#8f897c;--r-lab:#b23a2a;--r-card:#fff;--r-ph:#d8cdb8;--r-line:#d8d1c2;
-  position:fixed;inset:0;z-index:60;overflow-y:auto;background:var(--r-bg);color:var(--r-ink);font-family:Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased;scrollbar-width:thin}
-html:not([data-hl="2c"]) .rom{--r-bg:#07080b;--r-ink:#eef0f4;--r-ink2:#c7ccd4;--r-mut:#9aa3ae;--r-faint:#7d838e;--r-lab:#f59a8f;--r-card:#11151d;--r-ph:#1b2230;--r-line:#232a36}
+/* Prompt 34: hele siden i samme blå (begge temaer), fasit Rom.dc.html variant a / claude-code-rom-nasa-bilder-bla.md */
+.rom{--r-bg:#0b1220;--r-ink:#e9eef7;--r-ink2:#c8d3e6;--r-mut:#93a3bd;--r-faint:#7f8fa8;--r-lab:#e8794a;--r-card:#121d33;--r-ph:#1b2740;--r-line:rgba(255,255,255,.07);
+  position:fixed;inset:0;z-index:60;overflow-y:auto;background:var(--r-bg);color:var(--r-ink);font-family:Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased;scrollbar-width:thin;color-scheme:dark}
 .rom *{box-sizing:border-box}
 .rom a{color:inherit}
-.rom-bar{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:12px;max-width:1600px;margin:0 auto;padding:14px 40px;background:var(--r-bg)}
+.rom-bar{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:12px;max-width:1600px;margin:0 auto;padding:14px 40px 22px;background:linear-gradient(#0b1220 55%,rgba(11,18,32,0))}
 .rom-bar>b{font:500 30px/1.1 Newsreader,Georgia,serif}
-.rom-x{flex:none;width:42px;height:42px;border-radius:21px;background:var(--r-ink);color:var(--r-bg)!important;display:grid;place-items:center;text-decoration:none}
+.rom-x{flex:none;width:42px;height:42px;border-radius:21px;background:#e9eef7;color:#0b1220!important;display:grid;place-items:center;text-decoration:none}
 .rom-x:hover{opacity:.85}
 .rom-x:focus-visible,.rom button:focus-visible,.rom a:focus-visible{outline:2px solid var(--r-lab);outline-offset:2px}
 .rom-c{max-width:1600px;margin:0 auto;padding:6px 40px 40px;display:flex;flex-direction:column;gap:28px;min-width:0}
@@ -16,7 +16,7 @@ html:not([data-hl="2c"]) .rom{--r-bg:#07080b;--r-ink:#eef0f4;--r-ink2:#c7ccd4;--
 .rom-lab.mut{color:var(--r-mut)}
 .rom-mut{font-size:13px;color:#93a3bd}
 /* Kontrollrommet */
-.rom-ctl{border-radius:28px;background:#0b1220;color:#e9eef7;padding:22px;display:flex;flex-direction:column;gap:18px;overflow:hidden}
+.rom-ctl{border-radius:28px;background:#0f1a2e;color:#e9eef7;padding:22px;display:flex;flex-direction:column;gap:18px;overflow:hidden}
 .rom-ctlh{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
 .rom-ctlt{display:flex;flex-direction:column;gap:4px}
 .rom-tot{font:500 40px/1 Newsreader,Georgia,serif}
@@ -81,3 +81,25 @@ html:not([data-hl="2c"]) .rom{--r-bg:#07080b;--r-ink:#eef0f4;--r-ink2:#c7ccd4;--
 }
 body[data-route=rom]{overflow:hidden}
 body[data-route=rom] .bottomnav{display:none}
+
+/* Prompt 34: ekte bilder som <img>, tom tilstand, zoom og visninger i kartet */
+.rom-apodimg img,.rom-wimg img,.rom-ph img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.rom-apodimg,.rom-wimg,.rom-ph>*{position:relative;overflow:hidden;background-color:var(--r-ph)}
+.rom img.gone{display:none}
+.rom-wimg{position:relative}
+.rom-wplay{position:absolute;left:8px;bottom:8px;width:24px;height:24px;border-radius:12px;background:rgba(0,0,0,.6);color:#fff;font:700 11px/24px Manrope;text-align:center;font-style:normal}
+.rom-wgrid button[aria-pressed=true] .rom-wimg{outline:2px solid #e8794a}
+.rom-empty{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:28px;border-radius:24px;background:var(--r-card);aspect-ratio:auto}
+.rom-empty b{font:500 22px/1.2 Newsreader,Georgia,serif}
+.rom-empty span{font-size:13.5px;color:var(--r-mut)}
+.rom-empty button,.rom-retry{height:36px;padding:0 16px;border-radius:18px;border:0;background:#e9eef7;color:#0b1220;font:700 13px Manrope,system-ui,sans-serif;cursor:pointer;align-self:flex-start}
+.rom-map{touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
+.rom-map.drag{cursor:grabbing}
+.rom-vws{position:absolute;left:10px;bottom:10px;display:flex;gap:2px;padding:3px;border-radius:999px;background:rgba(11,18,32,.72)}
+.rom-vws button{height:28px;padding:0 12px;border:0;border-radius:999px;background:transparent;color:#e9eef7;font:700 12px Manrope,system-ui,sans-serif;cursor:pointer}
+.rom-vws button[aria-pressed=true]{background:#e9eef7;color:#0b1220}
+.rom-zm{position:absolute;right:10px;bottom:10px;display:flex;flex-direction:column;align-items:center;gap:4px;padding:4px;border-radius:18px;background:rgba(11,18,32,.72)}
+.rom-zm button{width:30px;height:30px;border-radius:15px;border:0;background:transparent;color:#e9eef7;font:700 18px Manrope,system-ui,sans-serif;cursor:pointer}
+.rom-zm button:hover,.rom-vws button:not([aria-pressed=true]):hover{background:rgba(233,238,247,.12)}
+.rom-zl{font:600 10px 'IBM Plex Mono',monospace;color:#93a3bd}
+.rom-rover .rom-rh b,.rom-apt{color:var(--r-ink)}

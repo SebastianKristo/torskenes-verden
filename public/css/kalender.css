@@ -343,7 +343,15 @@ html[data-hl="2c"] .p-sec .kal.kal-hw{background:#fff}
 
 
 /* ---------- Prompt 32: Spotlight-søk med Glimt (claude-code-kalender-sok-glimt.md, fasit sr) ---------- */
-.k3-sr-bg{position:fixed;inset:0;z-index:120;background:rgba(20,18,14,.38);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:flex-start;justify-content:center;padding:10vh 24px 24px;box-sizing:border-box;animation:k3-fade .16s ease}
+.k3-sr-bg{position:fixed;inset:0;z-index:120;background:rgba(20,18,14,.46);transform:translateZ(0);display:flex;align-items:flex-start;justify-content:center;padding:10vh 24px 24px;box-sizing:border-box}
+/* Prompt 34: ingen blur (måtte tegnes om ved hver tast), og inn-animasjonen bare første gang arket vises */
+.k3-sr-bg.k3-anim{animation:k3-fade .16s ease}
+.k3-sr{transform:translateZ(0)}
+.k3-gm{display:inline-flex;flex:none}
+.k3-wait{color:var(--k-mut,#8a8478);font-size:.92em}
+.k3-err{display:block;margin-top:8px;color:#b23a2a;font-weight:700;font-size:13.5px}
+.k3-erra{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.k3-eb{height:32px;padding:0 14px;border-radius:16px;border:1px solid var(--k-line,#ddd5c5);background:transparent;color:inherit;font:700 12.5px Manrope,system-ui,sans-serif;cursor:pointer}
 .k3-sr{width:100%;max-width:640px;max-height:78vh;display:flex;flex-direction:column;background:var(--k-bg);color:var(--k-ink);border-radius:24px;box-shadow:0 30px 80px -24px rgba(0,0,0,.5);overflow:hidden;box-sizing:border-box;font-family:Manrope,system-ui,sans-serif}
 .k3-sr *{box-sizing:border-box}
 .k3-sr-f{flex:none;display:flex;align-items:center;gap:8px;padding:14px 14px 10px;margin:0}

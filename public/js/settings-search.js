@@ -30,8 +30,8 @@ export const icBox = (k, size = 30, icon = 16) => {
 
 // Innebygd indeks (brukes når serveren ikke har /api/settings/index). route.web = «fane/underside» i web-innstillingene.
 const LOCAL = [
-  ['bakgrunn', 'Bakgrunn på forsiden', 'Utseende → Bakgrunn', 'look/bg', 'bilde foto planeter oslo vær uskarphet mørklegging'],
-  ['tema', 'Mørkt og lyst tema', 'Utseende → Tema', 'look', 'tema papir vindu mørk lys farger'],
+  ['bakgrunn', 'Bakgrunn på forsiden', 'Utseende → Bakgrunn', 'look', 'bakgrunn bilde foto planeter oslo vær uskarphet mørklegging', 'bg'],
+  ['tema', 'Mørkt og lyst tema', 'Utseende → Tema', 'look', 'tema papir vindu mørk lys farger', 'theme'],
   ['sokebar', 'Søkebar', 'Utseende → Søkebar', 'look', 'søk google historikk stil'],
   ['kategorier', 'Kategorier for kvitteringer', 'Utseende → Kvitteringer', 'look/cats', 'kategori farge kvittering'],
   ['widgets', 'Widgets på forsiden', 'Startside → Forsiden', 'top/dash', 'widget kort rekkefølge forside dashboard'],
@@ -40,22 +40,34 @@ const LOCAL = [
   ['snarveier', 'Snarveier', 'Startside → Snarveier', 'top/sc', 'lenker snarvei'],
   ['domener', 'Legg til domene', 'Domener', 'dom', 'domene cloudflare token statistikk plausible umami'],
   ['cloudflare', 'Cloudflare API-token', 'Domener → Legg til domene', 'dom', 'token api cloudflare tillatelser'],
-  ['varsler', 'Push-varsler', 'Varsler', 'varsel', 'push varsel lyd'],
-  ['stille', 'Stille timer', 'Varsler → Stille timer', 'varsel', 'natt stille forstyrr'],
+  ['varsler', 'Push-varsler', 'Varsler → Push', 'varsel', 'push varsel varsler lyd', 'push'],
+  ['stille', 'Stille timer', 'Varsler → Stille timer', 'varsel', 'natt stille forstyrr', 'quiet'],
   ['appnavn', 'Navn og ikon på appen', 'App', 'app', 'app ikon navn'],
   ['sprak', 'Språk', 'Profilmenyen → Språk', 'app', 'språk engelsk english norsk'],
   ['integrasjoner', 'API-nøkler', 'Integrasjoner', 'int', 'nøkkel api token tjeneste sonarr radarr ruter home assistant'],
   ['kalendere', 'Google Kalender', 'Kalendere → Google', 'kal', 'google kalender ical canvas skole timeplan'],
-  ['ai', 'Lokal modell (Ollama) og Gemini', 'AI → Modeller', 'ai', 'ollama gemini groq modell chat personvern'],
-  ['brukere', 'Inviter bruker', 'Brukere → Legg til', 'users/add', 'bruker rolle tilgang ny'],
+  ['ai', 'Modeller (Ollama)', 'AI → Modeller', 'ai', 'ollama modell modeller laste ned lokal chat ai-kontroll vram', 'ai-mod'],
+  ['ai-gemini', 'Gemini-nøkkel', 'AI → API og nøkler → Gemini', 'ai', 'gemini groq nøkkel api-nøkkel openrouter roboflow nasa', 'ai-key-gemini'],
+  ['brukere', 'Inviter bruker', 'Brukere → Legg til', 'users', 'bruker rolle tilgang ny inviter', 'invite'],
   ['passord', 'Bytt passord', 'Konto → Passord', 'konto/pw', 'passord endre bytt'],
   ['profilbilde', 'Profilbilde og navn', 'Konto → Profil', 'konto/me', 'bilde avatar navn profil'],
-  ['2fa', 'Totrinnsbekreftelse', 'Konto → Innlogging → 2FA', 'konto/tfa', '2fa totp kode tofaktor sikkerhet'],
+  ['2fa', 'Totrinnsbekreftelse', 'Konto → Innlogging → 2FA', 'konto', '2fa totp kode tofaktor sikkerhet totrinn', '2fa'],
   ['enheter', 'Pålitelige enheter', 'Konto → Innlogging', 'konto/devices', 'enhet lokalt nett lan'],
-  // Prompt 32: «oppdatering», «versjon», «update» treffer Nordlys OS (den gamle Oppdatering-raden er borte).
-  ['oppdatering', 'Nordlys OS', 'System → Nordlys OS', 'system', 'oppdatering oppdater versjon update build installert ny programvare rollback gjenopprett nordlys'],
-  ['backup', 'Automatisk backup', 'Backup → Automatisk', 'backup', 'backup sikkerhetskopi gjenopprett nas smb'],
-].map(([id, title, path, web, kw]) => ({ id, title, path, keywords: kw.split(' '), description: '', route: { web } }));
+  // Prompt 34 (claude-code-innst-ai-sok-highlight.md): mål-id per handling, så søket tar deg til knappen og markerer den.
+  ['upd', 'Oppdater Homelab', 'System → Oppdater nå', 'system', 'oppdater oppdatere update nordlys installer', 'upd'],
+  ['chk', 'Se etter oppdatering', 'System → Se etter oppdatering', 'system', 'oppdatering versjon sjekk ny build programvare', 'chk'],
+  ['pw', 'Krev passord for å oppdatere', 'System → Krev passord', 'system', 'krev passord oppdater sikkerhet', 'pw'],
+  ['backup', 'Automatisk backup', 'Backup → Automatisk', 'backup', 'backup sikkerhetskopi automatisk gjenopprett nas smb', 'bk-auto'],
+  ['backup-now', 'Ta backup nå', 'Backup → Ta backup nå', 'backup', 'backup nå manuell kjør start', 'bk-now'],
+].map(([id, title, path, web, kw, anchor]) => ({ id, title, path, keywords: kw.split(' '), description: '', route: { web }, ...(anchor ? { anchor } : {}) }));
+
+/** Mål-id → velger når elementet ikke har data-hl selv (eller fanen i AI-kontroll som må åpnes først). */
+export const ANCHORS = {
+  upd: { sel: '[data-hl="upd"],.ny-act .ny-btn', tip: '✦ Trykk her for å oppdatere' }, chk: { sel: '[data-upd="check"]' }, pw: { sel: '[data-upd-set="require_password"]' },
+  theme: { sel: '.sg-theme .sg-box' }, bg: { title: /^Bakgrunnsbilde$/ }, push: { title: /^Varsler på denne enheten$/ }, quiet: { title: /^Stille timer$/ }, '2fa': { title: /^Totrinnsbekreftelse$/ },
+  'bk-auto': { title: /^(Backup|Automatisk backup)$/ }, 'bk-now': { title: /^Ta backup nå$/, sel: '[data-bk="run"]' }, invite: { title: /^Ny bruker$/ },
+  'cf-token': { sel: '.cfg-tokrow' }, 'ai-mod': { sel: '.set-aictl', acTab: 'mod' }, 'ai-key-gemini': { sel: '[data-ac-key="gemini"]', up: '.ac-card', acTab: 'api' },
+};
 
 const X = { index: null, loading: null, ai: false, askQ: '', busy: false, ans: null, ctl: null };
 export const SQ = X;
@@ -66,7 +78,11 @@ export function loadIndex(redraw) {
   if (X.index || X.loading) return;
   X.loading = api('/settings/index').then((r) => {
     const list = Array.isArray(r) ? r : Array.isArray(r?.items) ? r.items : null;
-    X.index = list?.length ? list : LOCAL;
+    if (list?.length) {
+      // Mål-id fra den innebygde indeksen når serveren ikke har dem, og mål som serveren mangler helt.
+      const loc = new Map(LOCAL.map((x) => [x.id, x])), has = new Set(list.map((x) => x.anchor).filter(Boolean));
+      X.index = [...list.map((x) => (x.anchor || !loc.get(x.id)?.anchor ? x : { ...x, anchor: loc.get(x.id).anchor })), ...LOCAL.filter((x) => x.anchor && !has.has(x.anchor) && !list.some((y) => y.id === x.id))];
+    } else X.index = LOCAL;
   }).catch(() => { X.index = LOCAL; }).finally(() => { X.loading = null; redraw?.(); });
 }
 const index = () => X.index ?? LOCAL;
@@ -81,40 +97,71 @@ export function routeOf(item) {
 
 /** Treff for vanlig søk: ord som matcher tittel, sti eller nøkkelord (uavhengig av aksenter). */
 const STOP = new Set(['hvor', 'hva', 'hvordan', 'jeg', 'kan', 'man', 'det', 'den', 'er', 'en', 'et', 'pa', 'til', 'for', 'med', 'og', 'av', 'min', 'mitt', 'mine', 'meg', 'vil', 'skal', 'finner', 'endre', 'bytte', 'bytter', 'the', 'how', 'where', 'do', 'can', 'my']);
-export function hits(q) {
+export function hits(q, list = index(), scores = false) {
   const words = norm(q).split(/[^a-z0-9]+/).filter((w) => w.length > 1 && !STOP.has(w));
   if (!words.length) return [];
-  const scored = index().map((it) => {
+  const scored = list.map((it) => {
     const t = norm(it.title), p = norm(it.path), kw = (it.keywords ?? []).map(norm), d = norm(it.description);
+    // Poengsum (prompt 34): helt ord = 3, prefiks (begge veier) = 2, treff i tittel/sti/beskrivelse = 1.
     let s = 0;
     for (const w of words) {
-      if (t.includes(w)) s += 3; if (p.includes(w)) s += 2;
-      if (kw.some((k) => k.startsWith(w) || (k.length > 2 && w.startsWith(k)))) s += 2;
-      if (d.includes(w)) s += 1;
+      if (kw.includes(w) || t.split(/[^a-z0-9]+/).includes(w)) s += 3;
+      else if (kw.some((k) => (k.length > 3 && w.startsWith(k)) || (w.length > 2 && k.startsWith(w)))) s += 2;
+      if (t.includes(w)) s += 1; if (p.includes(w)) s += 1; if (d.includes(w)) s += 1;
     }
     return [s, it];
   }).filter(([s]) => s > 0).sort((a, b) => b[0] - a[0]);
-  return scored.slice(0, 8).map(([, it]) => it);
+  return scored.slice(0, 8).map(([sc, it]) => (scores ? { s: sc, it } : it));
 }
 
 export const wantsAi = (q) => X.ai || /\s/.test(q.trim()) || /\?\s*$/.test(q);
 
 /** Spør serveren (lokal modell først). Reserve: beste nøkkelordtreff. */
-export async function ask(q, redraw) {
+const ANS = {
+  upd: 'Gå til System og trykk «Oppdater nå». Den tar backup først og bruker ca. 2 minutter. Jeg tar deg dit og viser knappen …',
+  chk: 'Trykk «Se etter oppdatering» i System, så sjekker serveren om det finnes en ny NordlysOS-versjon. Jeg viser deg knappen …',
+  pw: 'Bryteren «Krev passord for å oppdatere» ligger i System. Jeg tar deg dit …',
+};
+export const anchorOf = (it) => it?.anchor ?? null;
+/** Siden der målet ligger (den innebygde indeksen vet hvor knappen faktisk er, f.eks. Konto-listen for 2FA-raden). */
+export const routeForAnchor = (a) => { const it = LOCAL.find((x) => x.anchor === a); return it ? routeOf(it) : null; };
+/** Mål-id for et treff. Har ikke treffet (fra serveren) mål-id, brukes beste treff i den innebygde indeksen på samme side. */
+export function anchorFor(it, q) {
+  if (anchorOf(it)) return anchorOf(it);
+  const tab = routeOf(it).tab, best = hits(q, LOCAL.filter((x) => x.anchor)).find((x) => routeOf(x).tab === tab);
+  return best?.anchor ?? null;
+}
+/** Spør serveren (lokal modell først). Reserve: beste nøkkelordtreff. onDone(ans) får svaret (for automatisk navigering). */
+export async function ask(q, redraw, onDone) {
   X.askQ = q; X.busy = true; X.ans = null; redraw();
   X.ctl?.abort(); const ctl = new AbortController(); X.ctl = ctl;
   let ans = null;
+  // Indeksen først: et tydelig treff på en konkret knapp (helt ord + mer) svarer lokalt med en gang (prompt 34).
+  const la = hits(q, LOCAL.filter((x) => x.anchor), true)[0];
+  if (la && la.s >= 5) {
+    await new Promise((r) => setTimeout(r, 420));
+    if (X.ctl !== ctl || X.askQ !== q) return;
+    X.busy = false; X.ans = { answer: ANS[la.it.anchor] ?? `Det finner du under ${la.it.path}. Jeg tar deg dit og viser deg hvor …`, target: la.it }; redraw(); onDone?.(X.ans);
+    return;
+  }
   try {
     const r = await api('/settings/ask', { method: 'POST', json: { q }, signal: ctl.signal });
-    if (r && (r.answer || r.targetId)) ans = { answer: String(r.answer ?? ''), target: index().find((x) => x.id === r.targetId) ?? null };
+    // SERVER34: svaret kan ha anchor (element-id). Målet valideres mot indeksen før navigering.
+    if (r && (r.answer || r.targetId)) {
+      const tg = index().find((x) => x.id === r.targetId) ?? (r.anchor ? index().find((x) => anchorOf(x) === r.anchor) : null) ?? null;
+      const an = tg ? (r.anchor ?? anchorFor(tg, q)) : null;
+      ans = { answer: String(r.answer ?? ''), target: tg && an && !anchorOf(tg) ? { ...tg, anchor: an } : tg };
+      if (ans.target?.anchor && ANS[ans.target.anchor] && !r.anchor) ans.answer = ANS[ans.target.anchor];
+    }
   } catch (e) { if (e.name === 'AbortError') return; }
   if (!ans) {
     const top = hits(q)[0];
-    ans = top ? { answer: `Det finner du under ${top.path}.${routeOf(top).tab === 'dom' ? ' Trykk på ? ved API-token for en steg-for-steg-guide.' : ' Trykk under for å gå rett dit.'}`, target: top }
+    ans = top ? { answer: ANS[anchorOf(top)] ?? `Det finner du under ${top.path}.${anchorOf(top) ? ' Jeg tar deg dit og viser deg hvor …' : routeOf(top).tab === 'dom' ? ' Trykk på ? ved API-token for en steg-for-steg-guide.' : ' Trykk under for å gå rett dit.'}`, target: top }
       : { answer: `Jeg fant ikke en innstilling som passer «${q}». Prøv å beskrive hva du vil endre.`, target: null };
   }
   if (X.ctl !== ctl || X.askQ !== q) return;
   X.busy = false; X.ans = ans; redraw();
+  onDone?.(ans);
 }
 export function resetAsk() { X.ctl?.abort(); X.askQ = ''; X.busy = false; X.ans = null; }
 
@@ -126,7 +173,7 @@ export function sideResults(q, tabName) {
   const list = hits(qq);
   // Prompt 31: Glimt-merket (Tenker mens den leter, Ferdig med svaret).
   const ai = showAi ? `<div class="set-aians" role="status" aria-live="polite"><span class="set-cap">${glimt(18, X.busy ? 'tenker' : 'klar')}GLIMT · SVAR</span>${X.busy ? '<span class="set-aibusy">Leter i innstillingene …</span>'
-    : `<span class="set-aitxt">${esc(X.ans?.answer ?? '')}</span>${X.ans?.target ? `<button type="button" class="set-aigo" data-setgo="${esc(X.ans.target.id)}">Åpne ${esc(tabName(routeOf(X.ans.target).tab))} ›</button>` : ''}`}</div>` : '';
+    : `<span class="set-aitxt">${esc(X.ans?.answer ?? '')}</span>${X.ans?.target ? `<button type="button" class="set-aigo" data-setgo="${esc(X.ans.target.id)}"${X.ans.target.anchor ? ` data-setanchor="${esc(X.ans.target.anchor)}"` : ''}>${anchorOf(X.ans.target) ? 'Vis meg nå ›' : `Åpne ${esc(tabName(routeOf(X.ans.target).tab))} ›`}</button>` : ''}`}</div>` : '';
   const hl = list.length ? `<div class="set-hits"><span class="set-cap">TREFF</span>${list.map((h) => `<button type="button" class="set-hit" data-setgo="${esc(h.id)}">${icBox(routeOf(h).tab, 28, 15)}<span class="set-hit-t"><b>${esc(h.title)}</b><span>${esc(h.path)}</span></span></button>`).join('')}</div>`
     : showAi ? '' : '<span class="set-nohit">Ingen treff. Slå på ✦ AI og spør med egne ord.</span>';
   return ai + hl;

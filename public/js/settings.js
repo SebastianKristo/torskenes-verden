@@ -17,11 +17,11 @@ import { loadInteg, integRows, integSub, integClick, integChange, integCount } f
 import { themeCards, setHlTheme, hlTheme, THEMES, uploadCustomPhoto } from './hltheme.js';
 import { mountHa } from './tasks-ha.js';
 import { kalView, kalClick, kalChange } from './settings-kal.js';
-import { loadAi, aiView, aiClick, aiChange, aiSubmit } from './settings-ai.js';
+import { loadAi, aiView, aiClick, aiChange, aiSubmit, setAiTab } from './settings-ai.js';
 import { clearBtn, glassIcon } from './searchfield.js';
 import { loadSystem, systemView, systemClick, systemInput, systemSubmit, systemEsc } from './settings-system.js';
 import { loadBackup, backupView, backupClick, backupChange, backupInput, backupSubmit, backupEsc } from './settings-backup.js';
-import { icBox, loadIndex, sideResults, wantsAi, ask, resetAsk, byId, routeOf, topHit, SQ } from './settings-search.js';
+import { icBox, loadIndex, sideResults, wantsAi, ask, resetAsk, byId, routeOf, topHit, SQ, ANCHORS, anchorOf, anchorFor, routeForAnchor } from './settings-search.js';
 import { sheetBtn } from './util.js';
 
 const modal = () => document.getElementById('settings');
@@ -79,7 +79,7 @@ const TABS = [
   ['app', 'App', 'Navn på appen, app-ikon, widgets og Kalender-appen.', 'Generelt', P.app],
   ['int', 'Integrasjoner', 'Adresser og API-nøkler for tjenestene.', 'Tilkoblinger', P.plug],
   ['kal', 'Kalendere', 'Skolens iCal, Canvas, Google Kalender og Home Assistant.', 'Tilkoblinger', P.cal],
-  ['ai', 'AI', 'Chat, personvern og logoer.', 'Tilkoblinger', P.ai],
+  ['ai', 'AI', 'Modeller, jobber, forbruk og nøkler.', 'Tilkoblinger', P.ai],
   ['users', 'Brukere', 'Hvem som har tilgang, og hvilken rolle de har.', 'Sikkerhet', P.users],
   ['system', 'System', 'Oppdater serveren til nyeste versjon.', 'Server', P.sys, true],
   ['backup', 'Backup', 'Backup av hele systemet: automatisk, hva som tas med, hvor og gjenoppretting.', 'Server', P.backup, true],
@@ -583,7 +583,7 @@ function render() {
   let v;
   try { v = q.trim() && !sub ? searchView() : VIEWS[tab](); }
   catch (e) { console.error(e); v = { html: `<div class="err">Noe gikk galt på denne siden: ${esc(e.message)}. Prøv en annen side eller last inn på nytt.</div>` }; }
-  const content = (v.groups ? v.groups.map(groupHtml).join('') : v.html) + (v.extra ?? '');
+  const content = (v.pre ?? '') + (v.groups ? v.groups.map(groupHtml).join('') : v.html) + (v.extra ?? '');
   // Fokus i et tekstfelt beholdes når siden tegnes på nytt (f.eks. etter automatisk lagring eller mens man søker).
   const act = document.activeElement, fk = modal().contains(act) && act.name ? [act.closest('form')?.dataset.group ?? '', act.name, act.selectionStart] : null;
   // Søkefeltet beholdes som samme element (ikke tegnet på nytt), så skriving, markør og tastaturforslag (IME) ikke avbrytes.
@@ -600,10 +600,57 @@ function render() {
   if (keep) requestAnimationFrame(() => { const b = modal().querySelector('.set-body'); if (b && b.dataset.key === key && b.scrollTop < keep - 1) b.scrollTop = keep; });
   if (keepQ) { const nq = modal().querySelector('[data-setq]'); if (nq) { nq.replaceWith(keepQ); keepQ.focus({ preventScroll: true }); } }
   if (v.mount) { const slot = modal().querySelector('[data-mail-host],[data-mount-host]'); if (slot) v.mount(slot); }
+  applyHl();
   if (fk && !keepQ) {
     const el = [...modal().querySelectorAll(`[name="${CSS.escape(fk[1])}"]`)].find((e) => (e.closest('form')?.dataset.group ?? '') === fk[0]);
     if (el) { el.focus(); try { el.setSelectionRange(fk[2], fk[2]); } catch { /* range/select */ } }
   }
+}
+
+/* ---------- Prompt 34: AI-søket tar deg til siden og markerer elementet (fasit Innstillinger Web goK/hl, hlRing/hlTip) ---------- */
+let HL = null, hlT = 0, autoT = 0;
+function findHl(a) {
+  const m = modal(), A = ANCHORS[a] ?? {};
+  let el = m.querySelector(`.set-body [data-hl="${CSS.escape(a)}"]`) ?? (A.sel ? m.querySelector(`.set-body :is(${A.sel})`) : null);
+  if (!el && A.title) el = [...m.querySelectorAll('.set-body .sg-row')].find((r) => A.title.test(r.querySelector('.sg-txt b')?.textContent?.trim() ?? ''));
+  if (el && A.up) el = el.closest(A.up) ?? el;
+  return el;
+}
+function clearHl() {
+  clearTimeout(hlT); HL = null;
+  modal().querySelectorAll('.hl-ring').forEach((e) => e.classList.remove('hl-ring'));
+  modal().querySelectorAll('.hl-tip').forEach((e) => e.remove());
+}
+/** Legges på igjen etter hver tegning (sidene tegnes på nytt når data kommer). Scroller bare første gang målet finnes. */
+function applyHl() {
+  if (!HL) return;
+  const el = findHl(HL.a);
+  if (!el) { if (Date.now() - HL.t0 < 3000) setTimeout(applyHl, 150); return; }
+  el.classList.add('hl-ring');
+  const tip = ANCHORS[HL.a]?.tip;
+  if (tip && !el.parentElement.querySelector(':scope > .hl-tip')) { el.parentElement.classList.add('hl-host'); el.insertAdjacentHTML('beforebegin', `<span class="hl-tip" role="status">${esc(tip)}</span>`); }
+  if (!HL.scrolled) {
+    HL.scrolled = true;
+    const B = modal().querySelector('.set-body'), r1 = el.getBoundingClientRect(), r0 = B.getBoundingClientRect();
+    B.scrollTo({ top: B.scrollTop + r1.top - r0.top - r0.height / 2 + r1.height / 2, behavior: 'smooth' });
+    try { navigator.vibrate?.(8); } catch { /* */ }
+  }
+}
+/** Går til et treff i indeksen og markerer målet i 6 s (eller til første trykk). */
+function goItem(it, anchor = anchorOf(it)) {
+  clearTimeout(autoT);
+  const r = (anchor && routeForAnchor(anchor)) || routeOf(it);
+  clearHl();
+  if (anchor && ANCHORS[anchor]?.acTab) setAiTab(ANCHORS[anchor].acTab);
+  resetAsk();
+  if (anchor) { HL = { a: anchor, t0: Date.now() }; hlT = setTimeout(clearHl, 6000); }
+  const qi = modal().querySelector('[data-setq]'); if (qi) { qi.value = ''; qi.blur(); }
+  go(r.sub ? `${r.tab}|${r.sub}` : r.tab);
+}
+/** Etter AI-svaret: går automatisk dit etter ca. 1,6 s hvis svaret har et mål med mål-id. */
+function askGo(val) {
+  clearTimeout(autoT);
+  ask(val, render, (ans) => { const t = ans?.target; if (t && anchorOf(t)) autoT = setTimeout(() => { if (!modal().hidden && SQ.ans === ans) goItem(t); }, 1600); });
 }
 
 /** Åpner en side. «tab|sub», «tab» eller bare «sub» (fanen finnes da ut fra undersiden). Tom streng = listen. */
@@ -714,14 +761,17 @@ export function bindSettings() {
   window.addEventListener('hashchange', openFromHash);
   // «Flere valg …» i bakgrunnsmenyen i fotovinduet.
   document.addEventListener('hl:open-settings', (e) => { const [a, b] = String(e.detail ?? 'look/bg').split('/'); openSettings(a, b ?? null); });
+  // Prompt 34: markeringen forsvinner ved første trykk (etter at siden er scrollet dit).
+  document.addEventListener('hl:reapply', () => { if (HL && !modal().hidden) applyHl(); });
+  m.addEventListener('pointerdown', (e) => { if (HL?.scrolled && !e.target.closest('[data-setgo]')) clearHl(); });
   m.addEventListener('click', async (e) => {
     if (backdropClick(e, m) || e.target.closest('[data-close]')) return closeSettings();
     const t = e.target.closest('[data-tab]');
     if (t) { tab = t.dataset.tab; sub = null; q = ''; resetAsk(); enter(); render(); syncUrl(); return; }
     /* Prompt 30: AI-søk. ✦ AI slår spørsmodus av/på, treff og «Åpne … ›» går til siden. */
-    if (e.target.closest('[data-set-ai]')) { SQ.ai = !SQ.ai; resetAsk(); render(); m.querySelector('[data-setq]')?.focus(); if (SQ.ai && q.trim()) ask(q.trim(), render); return; }
+    if (e.target.closest('[data-set-ai]')) { SQ.ai = !SQ.ai; resetAsk(); render(); m.querySelector('[data-setq]')?.focus(); if (SQ.ai && q.trim()) askGo(q.trim()); return; }
     const sg = e.target.closest('[data-setgo]');
-    if (sg) { const it = byId(sg.dataset.setgo); if (it) { const r = routeOf(it); resetAsk(); go(r.sub ? `${r.tab}|${r.sub}` : r.tab); } return; }
+    if (sg) { const it = byId(sg.dataset.setgo) ?? SQ.ans?.target; if (it) goItem(it, sg.dataset.setanchor || anchorFor(it, q)); return; }
     if (e.target.closest('[data-back]')) { sub = null; render(); return; }
     if (e.target.closest('[data-setq-clear]')) { q = ''; render(); m.querySelector('[data-setq]')?.focus(); return; }
     if (e.target.closest('[data-set-lock]')) return signOut(false);
@@ -971,9 +1021,9 @@ export function bindSettings() {
       const val = e.target.value.trim();
       if (!val) return;
       clearTimeout(qTimer); q = e.target.value;
-      if (wantsAi(val)) { ask(val, render); return; }
+      if (wantsAi(val)) { askGo(val); return; }
       const top = topHit(val);
-      if (top) { const r = routeOf(top); go(r.sub ? `${r.tab}|${r.sub}` : r.tab); } else ask(val, render);
+      if (top) goItem(top, anchorFor(top, val)); else askGo(val);
     }
   });
   document.addEventListener('keydown', (e) => {

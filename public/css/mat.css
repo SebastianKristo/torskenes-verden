@@ -1,16 +1,27 @@
 /* Mat (tidligere Matplan) – felles komponent. Design 2a: mørk varm grunn, limegrønt kort for i dag,
    Instrument Serif på retter og titler, Geist Mono på etiketter, oransje aksent. Alt er avgrenset under .mat. */
 .mat{
-  --mp-bg:var(--mat-bg,#15140F);--mp-card:var(--mat-card,#1D1C16);--mp-in:var(--mat-in,#24231C);--mp-pop:#1D1C16;
-  --mp-line:var(--mat-line,#2E2C24);--mp-line2:#2E2C24;--mp-line3:#2E2C24;
-  --mp-t:var(--mat-t,#F2EEE4);--mp-2:#C9C4B6;--mp-mute:#9A9588;--mp-faint:#9A9588;--mp-dim:#7E7A6E;
-  --mp-acc:var(--mat-acc,#FF8A4C);--mp-acc-l:#FFB27F;--mp-acc-ll:#FFB27F;--mp-acc-bg:#2A1A10;--mp-acc-bd:#4A2614;--mp-chip:#3A2216;
-  --mp-ok:#7FD08A;--mp-ok-bg:#1E3321;--mp-err:#F59A8F;
-  --mp-today:#D4F25A;--mp-today-ink:#141A06;--mp-today-mut:#3D4A12;
-  --mp-serif:'Instrument Serif',Georgia,serif;--mp-mono:'Geist Mono',ui-monospace,SFMono-Regular,Menlo,monospace;--mp-grot:'Bricolage Grotesque',system-ui,sans-serif;
-  font-family:'Geist',system-ui,sans-serif;
+  /* Prompt 34: Papir-tema som resten av Homelab (fasit Matplan.dc.html, claude-code-mat-papir-tema.md). */
+  --mp-bg:var(--mat-bg,#f3efe6);--mp-card:var(--mat-card,#fffdf8);--mp-in:var(--mat-in,#f7f3ea);--mp-pop:#fffdf8;
+  --mp-line:var(--mat-line,#ddd5c5);--mp-line2:#ddd5c5;--mp-line3:#ddd5c5;--mp-hov:#c9c1b1;
+  --mp-t:var(--mat-t,#1b1a17);--mp-2:#3d3a33;--mp-mute:#6b665c;--mp-faint:#6b665c;--mp-dim:#8a8478;
+  --mp-acc:var(--mat-acc,#b23a2a);--mp-acc-ink:#ffffff;--mp-acc-l:#b23a2a;--mp-acc-ll:#b23a2a;--mp-acc-bg:#fbeee8;--mp-acc-bd:#e8c4b8;--mp-chip:#f6e3dc;
+  --mp-chip2:#ece6da;--mp-ok:#2f7a4f;--mp-ok-bg:#e3efe6;--mp-err:#b23a2a;
+  --mp-today:#1b1a17;--mp-today-ink:#f3efe6;--mp-today-mut:#c9c1b1;--mp-sw-off:#ddd5c5;--mp-shadow:0 20px 50px rgba(27,26,23,.18);
+  --mp-serif:Newsreader,Georgia,serif;--mp-mono:'IBM Plex Mono',ui-monospace,SFMono-Regular,Menlo,monospace;--mp-grot:Newsreader,Georgia,serif;
+  font-family:Manrope,system-ui,sans-serif;
   background:var(--mp-bg);color:var(--mp-t);border-radius:28px;padding:clamp(20px,3vw,36px);
-  display:flex;flex-direction:column;gap:30px;color-scheme:dark;min-width:0;box-sizing:border-box;text-align:left
+  display:flex;flex-direction:column;gap:30px;color-scheme:light;min-width:0;box-sizing:border-box;text-align:left
+}
+/* Mørkt tema (Nåværende): samme tokens som Kalender-appens THM.dark, ikke den gamle Mat-paletten. */
+html[data-hl-theme="cur"] .mat{
+  --mp-bg:var(--mat-bg,#161513);--mp-card:var(--mat-card,#211f1b);--mp-in:var(--mat-in,#1b1a17);--mp-pop:#211f1b;
+  --mp-line:var(--mat-line,#3b3731);--mp-line2:#3b3731;--mp-line3:#3b3731;--mp-hov:#4a453d;
+  --mp-t:var(--mat-t,#efe9de);--mp-2:#c9c1b1;--mp-mute:#a49d91;--mp-faint:#a49d91;--mp-dim:#8a8478;
+  --mp-acc:var(--mat-acc,#ec7a64);--mp-acc-ink:#1b1a17;--mp-acc-l:#ec7a64;--mp-acc-ll:#f19a88;--mp-acc-bg:#2e211c;--mp-acc-bd:#5a3328;--mp-chip:#3a2620;
+  --mp-chip2:#2b2824;--mp-ok:#6fc28f;--mp-ok-bg:#1f2e24;--mp-err:#ec7a64;
+  --mp-today:#efe9de;--mp-today-ink:#1b1a17;--mp-today-mut:#6b665c;--mp-sw-off:#3b3731;--mp-shadow:0 20px 50px rgba(0,0,0,.5);
+  color-scheme:dark
 }
 .mat *,.mat *::before,.mat *::after{box-sizing:border-box}
 /* embedded (web under fotovinduet): bare tittelen «Mat» skjules, kortet beholder grunn og radius (prompt 32). */
@@ -33,13 +44,13 @@
 /* Topp */
 .mat .mp-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:20px}
 .mat .mp-titles{display:flex;flex-direction:column;gap:6px}
-.mat .mp-kicker{font-family:var(--mp-mono);font-size:12.5px;font-weight:500;color:var(--mp-mute);letter-spacing:.14em;white-space:nowrap}
-.mat .mp-h1{margin:0;font-family:var(--mp-serif);font-size:clamp(52px,6vw,72px);font-weight:400;letter-spacing:0;line-height:.95}
+.mat .mp-kicker{font-family:var(--mp-mono);font-size:12.5px;font-weight:600;color:var(--mp-mute);letter-spacing:.14em;white-space:nowrap}
+.mat .mp-h1{margin:0;font-family:var(--mp-serif);font-size:clamp(52px,6vw,72px);font-weight:500;letter-spacing:0;line-height:.95}
 .mat .mp-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-.mat .mp-btn{height:42px;padding:0 16px;border-radius:12px;border:1px solid var(--mp-line2);background:var(--mp-bg);color:var(--mp-t);font-size:15.5px;font-weight:500;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:10px;flex:none}
-.mat .mp-btn:hover{border-color:#45423A}
+.mat .mp-btn{height:42px;padding:0 16px;border-radius:12px;border:1px solid var(--mp-line2);background:var(--mp-card);color:var(--mp-t);font-size:15.5px;font-weight:500;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;gap:10px;flex:none}
+.mat .mp-btn:hover{border-color:var(--mp-hov)}
 .mat .mp-actions .mp-btn{height:50px;padding:0 20px;border-radius:14px;font-size:16.5px}
-.mat .mp-acc{border:0!important;background:var(--mp-acc)!important;color:#1A0C04!important;font-weight:600!important}
+.mat .mp-acc{border:0!important;background:var(--mp-acc)!important;color:var(--mp-acc-ink)!important;font-weight:600!important}
 .mat .mp-light{border:0;background:var(--mp-t);color:var(--mp-bg);font-weight:600}
 .mat .mp-plain{border:0;background:transparent}
 .mat .mp-plain:hover{background:var(--mp-in)}
@@ -47,11 +58,13 @@
 .mat .mp-link{border:0;background:transparent;color:var(--mp-acc-l);padding:0 10px}
 .mat .mp-ghostline{background:transparent;border-color:var(--mp-line3);width:100%}
 .mat .mp-toggle{padding-left:14px!important;gap:12px}
-.mat .mp-sw{width:42px;height:26px;border-radius:13px;background:#3A382F;padding:3px;display:flex;justify-content:flex-start;transition:background .2s}
-.mat .mp-sw.on{background:var(--mp-acc);justify-content:flex-end}
-.mat .mp-sw i{width:20px;height:20px;border-radius:50%;background:#fff}
+/* Prompt 34: samme bryter som resten av appen (44 × 26, knott 20 px absolutt plassert, ingen padding som skyver knotten). */
+.mat .mp-sw{flex:none;position:relative;width:44px;height:26px;padding:0;border-radius:13px;background:var(--mp-sw-off);transition:background .2s;box-sizing:border-box}
+.mat .mp-sw.on{background:var(--mp-acc)}
+.mat .mp-sw i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .2s}
+.mat .mp-sw.on i{left:21px}
 .mat .mp-calwrap{position:relative}
-.mat .mp-pop{position:absolute;right:0;top:58px;z-index:30;width:min(380px,86vw);padding:18px;border-radius:18px;background:var(--mp-pop);border:1px solid var(--mp-line3);box-shadow:0 20px 50px rgba(0,0,0,.5);display:flex;flex-direction:column;gap:12px}
+.mat .mp-pop{position:absolute;right:0;top:58px;z-index:30;width:min(380px,86vw);padding:18px;border-radius:18px;background:var(--mp-pop);border:1px solid var(--mp-line3);box-shadow:var(--mp-shadow);display:flex;flex-direction:column;gap:12px}
 .mat .mp-pop b{font-size:16px;font-weight:600}
 .mat .mp-status{align-self:flex-start;padding:10px 16px;border-radius:12px;background:var(--mp-acc-bg);border:1px solid var(--mp-acc-bd);color:var(--mp-acc-ll);font-size:14.5px;margin-top:-12px}
 
@@ -76,25 +89,30 @@
 .mat .mp-left{flex:1 1 620px;min-width:0;display:flex;flex-direction:column;gap:18px}
 .mat .mp-right{flex:1 1 380px;max-width:560px;min-width:0;padding:24px;border-radius:24px;background:var(--mp-card);border:1px solid var(--mp-line);display:flex;flex-direction:column;gap:16px}
 .mat .mp-weekbar{gap:10px}
-.mat .mp-h2{margin:0 6px 0 0;font-family:inherit;font-size:27px;font-weight:600;letter-spacing:-.01em}
-.mat .mp-right>.mp-row .mp-h2{font-family:inherit;font-size:27px;font-weight:600;letter-spacing:-.01em}
-.mat .mp-count{font-size:19px;color:var(--mp-dim);font-weight:500}
+.mat .mp-h2{margin:0 6px 0 0;font-family:var(--mp-serif);font-size:36px;font-weight:500;letter-spacing:-.01em;line-height:1.05}
+.mat .mp-right>.mp-row .mp-h2{font-family:var(--mp-serif);font-size:34px;font-weight:500;letter-spacing:-.01em}
+.mat .mp-count{font-family:Manrope,system-ui,sans-serif;font-size:19px;color:var(--mp-dim);font-weight:500}
 .mat .mp-ib{width:40px;height:40px;border-radius:12px;border:1px solid var(--mp-line2);background:var(--mp-bg);font-size:18px;flex:none}
 .mat .mp-days{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
 .mat .mp-day{min-height:236px;padding:20px;border-radius:20px;background:var(--mp-card);border:1px solid var(--mp-line);display:flex;flex-direction:column;gap:6px;transition:border-color .15s,background .15s;min-width:0}
 .mat .mp-day.today{border-color:var(--mp-today);background:var(--mp-today);color:var(--mp-today-ink)}
 .mat .mp-day.today .mp-ddate,.mat .mp-day.today .mp-tag{color:var(--mp-today-mut)}
-.mat .mp-day.today .mp-regen:hover{background:rgba(20,26,6,.1)}
-.mat .mp-day.today .mp-dish{font-family:var(--mp-grot);font-size:30px;font-weight:800;letter-spacing:-.03em;color:var(--mp-today-ink)}
+.mat .mp-day.today .mp-regen{color:var(--mp-today-ink)}
+.mat .mp-day.today .mp-regen:hover{background:rgba(127,127,127,.18)}
+.mat .mp-day.today .mp-cook select{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.18);color:var(--mp-today-ink)}
+.mat .mp-day.today .mp-cook .mp-chev{color:var(--mp-today-ink)}
+.mat .mp-day.today .mp-fast{border-color:rgba(255,255,255,.22);color:var(--mp-today-mut)}
+.mat .mp-day.today .mp-tag{color:var(--mp-today-mut)}
+.mat .mp-day.today .mp-dish{font-family:var(--mp-serif);font-size:30px;font-weight:500;letter-spacing:-.01em;color:var(--mp-today-ink)}
 .mat .mp-day.today .mp-empty{color:var(--mp-today-mut)}
 .mat .mp-day.drop{border-color:var(--mp-acc);background:var(--mp-acc-bg)}
 .mat .mp-dtop{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
-.mat .mp-dname{font-family:var(--mp-mono);font-size:12.5px;font-weight:500;letter-spacing:.12em;color:var(--mp-2)}
+.mat .mp-dname{font-family:var(--mp-mono);font-size:12.5px;font-weight:600;letter-spacing:.12em;color:var(--mp-2)}
 .mat .mp-day.today .mp-dname{color:var(--mp-today-ink)}
 .mat .mp-ddate{font-size:14px;color:var(--mp-faint);margin-top:2px}
 .mat .mp-regen{width:32px;height:32px;margin:-4px -6px 0 0;border-radius:10px;border:0;background:transparent;color:var(--mp-acc);font-size:18px;flex:none}
 .mat .mp-regen:hover{background:var(--mp-acc-bg)}
-.mat .mp-dish{margin-top:12px;padding:0;border:0;background:transparent;text-align:left;font-family:var(--mp-serif);font-size:27px;font-weight:400;line-height:1.05;letter-spacing:0;cursor:grab;text-wrap:pretty;overflow-wrap:anywhere}
+.mat .mp-dish{margin-top:12px;padding:0;border:0;background:transparent;text-align:left;font-family:var(--mp-serif);font-size:27px;font-weight:500;line-height:1.05;letter-spacing:0;cursor:grab;text-wrap:pretty;overflow-wrap:anywhere}
 .mat .mp-dish.dragging,.mat .mp-dhead.dragging{opacity:.5}
 .mat .mp-empty{margin-top:12px;font-size:17px;color:var(--mp-dim);line-height:1.35}
 .mat .mp-tag{font-size:15px;color:var(--mp-acc-l)}
@@ -110,7 +128,7 @@
 /* Kort under uka */
 .mat .mp-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start;margin-top:12px}
 .mat .mp-card{padding:24px;border-radius:22px;background:var(--mp-card);border:1px solid var(--mp-line);display:flex;flex-direction:column;gap:14px;min-width:0}
-.mat .mp-ct{font-family:var(--mp-serif);font-size:24px;font-weight:400}
+.mat .mp-ct{font-family:var(--mp-serif);font-size:24px;font-weight:500}
 .mat .mp-form{padding:16px;border-radius:16px;background:var(--mp-in);display:flex;flex-direction:column;gap:10px}
 .mat .mp-form b{font-size:16px;font-weight:600}
 .mat .mp-form.mp-flat{padding:0;background:transparent}
@@ -128,7 +146,7 @@
 .mat .mp-sitem span:first-of-type{flex:1;min-width:0}
 .mat .mp-sitem i{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--mp-line3);flex:none;display:grid;place-items:center}
 .mat .mp-sitem.done i{background:var(--mp-acc);border-color:var(--mp-acc)}
-.mat .mp-sitem.done i::after{content:'';width:9px;height:5px;border:2px solid #1A0C04;border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-1px)}
+.mat .mp-sitem.done i::after{content:'';width:9px;height:5px;border:2px solid var(--mp-acc-ink);border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-1px)}
 .mat .mp-sitem.done span:first-of-type{color:var(--mp-dim);text-decoration:line-through}
 
 /* Retter */
@@ -146,7 +164,7 @@
 .mat .mp-chip{padding:3px 8px;border-radius:7px;background:var(--mp-chip);color:var(--mp-acc-l);font-size:13.5px;font-weight:600}
 .mat .mp-dbody{padding:0 4px 20px;display:flex;flex-direction:column;gap:18px}
 .mat .mp-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:20px}
-.mat .mp-lbl{font-family:var(--mp-mono);font-size:12px;font-weight:500;color:var(--mp-faint);letter-spacing:.12em;margin-bottom:8px}
+.mat .mp-lbl{font-family:var(--mp-mono);font-size:12px;font-weight:600;color:var(--mp-faint);letter-spacing:.12em;margin-bottom:8px}
 .mat .mp-dbody ul,.mat .mp-dbody ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:5px;font-size:16px;line-height:1.35}
 .mat .mp-none{padding:22px 4px;border-top:1px solid var(--mp-line);font-size:15.5px;color:var(--mp-faint)}
 
@@ -164,7 +182,7 @@
 
 /* «Alltid på» Ma–Sø (prompt 10) */
 .mat .mp-always{display:flex;flex-direction:column;gap:8px;margin:4px 0 6px}
-.mat .mp-wd{position:relative;min-width:44px;height:38px;padding:0 10px;border-radius:12px;border:1px solid var(--mp-line2);background:transparent;color:var(--mp-txt2, #A9A39B);font-size:14.5px;font-weight:600;cursor:pointer}
+.mat .mp-wd{position:relative;min-width:44px;height:38px;padding:0 10px;border-radius:12px;border:1px solid var(--mp-line2);background:transparent;color:var(--mp-2);font-size:14.5px;font-weight:600;cursor:pointer}
 .mat .mp-wd:hover{border-color:var(--mp-acc-bd)}
 .mat .mp-wd.on{border-color:var(--mp-acc-bd);background:var(--mp-acc-bd);color:var(--mp-acc-ll)}
 .mat .mp-wd i{position:absolute;top:5px;right:5px;width:6px;height:6px;border-radius:50%;background:var(--mp-acc-l)}
@@ -185,8 +203,8 @@
 .mat .mp-scanbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .mat .mp-big{height:52px!important;border-radius:14px;font-size:15.5px}
 .mat .mp-scan .mp-in{height:44px;background:var(--mp-bg)}
-.mat .mp-imp{display:flex;flex-direction:column;gap:12px;padding:14px;border-radius:14px;background:var(--mp-bg);border:1px solid #3A2216}
-.mat .mp-impimg{flex:none;width:84px;height:84px;border-radius:12px;object-fit:cover;background:linear-gradient(135deg,#3A2216,#24231C)}
+.mat .mp-imp{display:flex;flex-direction:column;gap:12px;padding:14px;border-radius:14px;background:var(--mp-bg);border:1px solid var(--mp-acc-bd)}
+.mat .mp-impimg{flex:none;width:84px;height:84px;border-radius:12px;object-fit:cover;background:linear-gradient(135deg,var(--mp-chip),var(--mp-in))}
 .mat .mp-impt{font-size:17px;font-weight:600}
 .mat .mp-job{display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:12px;background:var(--mp-bg);font-size:14.5px}
 .mat .mp-jst{flex:none}
@@ -195,10 +213,10 @@
 .mat .mp-folders{display:flex;flex-direction:column;gap:8px}
 .mat .mp-fchips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
 .mat .mp-fchips::-webkit-scrollbar{display:none}
-.mat .mp-fchip{flex:none;display:flex;align-items:center;gap:8px;height:44px;padding:0 14px;border-radius:14px;border:1px solid var(--mp-line2);background:transparent;color:var(--mp-2);font-size:15px;font-weight:500}
+.mat .mp-fchip{flex:none;display:flex;align-items:center;gap:8px;height:44px;padding:0 14px;border-radius:14px;border:1px solid var(--mp-line2);background:var(--mp-card);color:var(--mp-2);font-size:15px;font-weight:500}
 .mat .mp-fchip span{font-size:13px;opacity:.65}
 .mat .mp-fchip.on{background:var(--mp-t);border-color:var(--mp-t);color:var(--mp-bg)}
-.mat .mp-fold{padding:2px 8px;border-radius:6px;background:#2A2922;color:var(--mp-2);font-size:12.5px;font-weight:500}
+.mat .mp-fold{padding:2px 8px;border-radius:6px;background:var(--mp-chip2);color:var(--mp-2);font-size:12.5px;font-weight:500}
 .mat .mp-scanned{padding:2px 8px;border-radius:6px;background:var(--mp-chip);color:var(--mp-acc-l);font-size:12.5px;font-weight:500}
 .mat .mp-inline{display:flex;align-items:center;gap:10px;font-size:14.5px;color:var(--mp-2)}
 .mat .mp-selwrap.mp-mini select{height:38px;padding:0 34px 0 10px;border-radius:10px;background:var(--mp-bg);font-size:14.5px;min-width:150px}

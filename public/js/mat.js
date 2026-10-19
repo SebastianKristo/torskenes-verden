@@ -28,14 +28,14 @@ function loadCss() {
   if (!document.querySelector('link[data-mat-fonts]')) {
     const f = document.createElement('link');
     f.rel = 'stylesheet'; f.dataset.matFonts = '';
-    f.href = 'https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@500&family=Instrument+Serif&family=Bricolage+Grotesque:opsz,wght@12..96,500..800&display=swap';
+    f.href = 'https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap'; // prompt 34: Papir-fontene
     document.head.appendChild(f);
   }
 }
 
 const KIND = { sheet: ['XLS', '#1D6F42', 'Regneark'], pdf: ['PDF', '#C8352B', 'PDF'], video: ['▶', '#E62117', 'Video'], doc: ['DOC', '#2B579A', 'Dokument'], image: ['IMG', '#6B4FA0', 'Bilde'], link: ['↗', '#3A3A3E', 'Lenke'] };
 const host = (u) => { try { return new URL(u, location.href).hostname.replace(/^www\./, ''); } catch { return ''; } };
-const JOB = { queued: ['I kø', '#9A9588', '15%'], reading: [`${glimt(14, 'tenker')} Leser …`, '#FFB27F', '60%'], done: ['Ferdig', '#7FD08A', '100%'], error: ['Feilet', '#F59A8F', '100%'] };
+const JOB = { queued: ['I kø', 'var(--mp-dim)', '15%'], reading: [`${glimt(14, 'tenker')} Leser …`, 'var(--mp-acc)', '60%'], done: ['Ferdig', 'var(--mp-ok)', '100%'], error: ['Feilet', 'var(--mp-err)', '100%'] };
 
 export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}) {
   loadCss();

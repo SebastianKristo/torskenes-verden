@@ -63,7 +63,9 @@ export function normAnswer(d = {}, ms0 = 0) {
   if (!text && (r.pre || r.b || r.post)) text = `${r.pre ?? ''}${r.b ? `**${r.b}**` : ''}${r.post ?? ''}`;
   if (!text && r.bold) text = `**${r.bold}**`;
   return { text: String(text), source: r.source ?? r.src ?? '', intent: r.intent ?? '', card: r.card ?? null, tool: r.tool ?? null, ms: r.ms ?? (ms0 ? Date.now() - ms0 : 0),
-    chatId: r.chatId ?? r.chatContext?.chatId ?? null, chatContext: r.chatContext ?? null, question: r.question ?? null, jobId: r.jobId ?? null, error: r.error ?? null, memory: r.memory ?? null, apply: r.apply ?? null };
+    chatId: r.chatId ?? r.chatContext?.chatId ?? null, chatContext: r.chatContext ?? null, question: r.question ?? null, jobId: r.jobId ?? null, error: r.error ?? null, memory: r.memory ?? null, apply: r.apply ?? null,
+    // Prompt 34 (SERVER34 ai.run): modell, merknad («Sky-budsjettet er brukt opp …») og advarsler.
+    model: r.model ?? null, notice: r.notice ?? (Array.isArray(r.warnings) && r.warnings.length ? r.warnings.join(' · ') : null) };
 }
 
 /** Venter på en serverjobb: sanntid eller polling, maks 90 s. */

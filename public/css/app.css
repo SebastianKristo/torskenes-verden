@@ -854,7 +854,7 @@ button.sg-row:hover .sg-btn2{background:#1c2534}
 .sbar.light .sq-drop .sq-ai-act button,.sbar.wideLight .sq-drop .sq-ai-act button{color:#1a73e8}
 
 /* Mat (tidligere Matplan): varm mørk grunn som i design 2a. */
-html:not([data-hl="2c"]) body.not-dash[data-route="matplan"],html:not([data-hl="2c"]) body.not-dash[data-route="matplan"] .bg{background:#15140F}
+html:not([data-hl="2c"]) body.not-dash[data-route="matplan"],html:not([data-hl="2c"]) body.not-dash[data-route="matplan"] .bg{background:#161513}
 /* Innstillinger → Varsler og App (prompt 17) */
 .nf-times{display:flex;align-items:center;gap:8px;flex:none}
 .nf-times input{height:40px;padding:0 10px;border-radius:10px;border:1px solid #2c3548;background:#161d2a;color:inherit;font:inherit;color-scheme:dark}

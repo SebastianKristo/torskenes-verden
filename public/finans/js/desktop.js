@@ -685,7 +685,7 @@ async function gkeyAction(t) {
 const SET_ICONS = { gen: ['gear', 'var(--muted)'], look: ['look', 'var(--purple)'], meny: ['list', 'var(--blue)'], bol: ['dir', 'var(--gold)'],
   imp: ['imp', 'var(--blue)'], ai: ['ai', 'var(--acc-l)'], aks: ['aks', 'var(--pos)'], cat: ['cat', 'var(--purple)'], rule: ['rule', 'var(--gold)'],
   varsel: ['bell', 'var(--neg)'], mobil: ['key', 'var(--blue)'], data: ['backup', 'var(--pos)'] };
-const SET_TABS = [['gen', 'Generelt', 'Navn, valuta, måned'], ['look', 'Utseende', 'Tema og sidemeny'], ['meny', 'Sidemeny', 'Rekkefølge og synlighet'], ['bol', 'Boliger', 'Ny bolig, deling, oppsett og kategorier'], ['imp', 'Import', 'Bank, Excel, Finn-e-post og annonser'], ['ai', 'AI og tolkning', 'Motorer, hvem gjør hva, OCR og logg'], ['aks', 'Aksjer · Trading 212', 'Nøkkel, miljø og synk'], ['cat', 'Kategorier', 'Farger og typer'], ['rule', 'Regler', 'Auto-kategorisering'],
+const SET_TABS = [['gen', 'Generelt', 'Navn, valuta, måned'], ['look', 'Utseende', 'Tema og sidemeny'], ['meny', 'Sidemeny', 'Rekkefølge og synlighet'], ['bol', 'Boliger', 'Ny bolig, deling, oppsett og kategorier'], ['imp', 'Import', 'Bank, Excel, Finn-e-post og annonser'], ['ai', 'AI og tolkning', 'Modeller, ruting, jobber, forbruk og OCR'], ['aks', 'Aksjer · Trading 212', 'Nøkkel, miljø og synk'], ['cat', 'Kategorier', 'Farger og typer'], ['rule', 'Regler', 'Auto-kategorisering'],
   ['varsel', 'Varsler', 'Budsjett og kvitteringer'], ['mobil', 'Mobil og tilgang', 'App-tokens og snarveier'], ['data', 'Backup og data', 'Nedlasting, SMB-share og gjenoppretting']];
 
 // Innstillinger → Sidemeny: dra, ▲▼ og bryter for vis/skjul. Endringene lagres med en gang.
@@ -736,6 +736,15 @@ function settingsPage() {
     <label class="f">Valuta${sel('currency', [['NOK', 'NOK – norske kroner'], ['EUR', 'EUR – euro'], ['SEK', 'SEK – svenske kroner']])}</label>
     <label class="f">Måneden starter (lønningsdag)<select class="inp" data-set="monthStart">${Array.from({ length: 28 }, (_, i) => opt(i + 1, `${i + 1}. i måneden`, st.monthStart)).join('')}</select></label>
     <label class="f">Sparemål for året (kr)<input class="inp mono" data-set="yearGoal" inputmode="numeric" value="${st.yearGoal}"></label></div>`;
+  // Prompt 34: det gamle AI-oppsettet (4 motorkort, løse felt, «Hvem gjør hva», glidebryter, testknapper) er erstattet av
+  // AI-kontroll (scope finans: AI-valg · Tilkoblinger · Jobber · Forbruk). Lokal OCR-reserve blir værende under.
+  else if (t === 'ai' && !S.aiLegacy) {
+    const ai = S.ai;
+    body = `<div data-aictl-finans class="fh-aictl"></div>
+      <div class="box" style="flex-direction:column;align-items:stretch;gap:8px;padding:16px"><div><b style="font-weight:600">Lokal OCR-reserve</b><div class="note" style="font-size:12.5px">Tesseract leser kvitteringen i containeren når AI feiler. Resultatet havner alltid til gjennomgang. ${ai?.ocr ? (ai.ocr.tesseract ? `Installert: ${esc(ai.ocr.tesseract)}` : 'Tesseract er ikke installert på serveren (bruk Docker-imaget).') : ''}</div></div>
+        <button class="tog-row" data-act="ocr-toggle"${canSrv() ? '' : ' disabled'}><span class="grow"><b style="font-weight:500">Bruk lokal OCR når AI feiler</b></span><span class="toggle" role="switch" aria-checked="${!!(ai?.ocr?.enabled ?? st.ocrFallback ?? true)}"></span></button>
+        <button class="tog-row" data-tog="ocrLowConf"${canSrv() ? '' : ' disabled'}><span class="grow"><b style="font-weight:500">Bruk også ved lav AI-sikkerhet</b><br><span class="note" style="font-size:12.5px">Sammenligner AI-svaret med lokal OCR når sikkerheten er under ${st.minConf} %</span></span><span class="toggle" role="switch" aria-checked="${!!st.ocrLowConf}"></span></button></div>`;
+  }
   else if (t === 'ai' && !canSrv()) body = aiReadOnly(st);
   else if (t === 'ai') {
     const ai = S.ai;
@@ -884,7 +893,7 @@ function modalHtml() {
 
 const PAGE_FN = { ov: overview, tx: transactions, ai: aiPage, kv: receipts, bud: budget, fast: recurring, konto: accounts, rap: reports, inn: settingsPage, ...MODULE_FN };
 
-let mailPaneEl = null;
+let mailPaneEl = null, aiCtlEl = null, aiCtlTab;
 export function draw() {
   const el = root();
   const scroll = window.scrollY;
@@ -894,6 +903,13 @@ export function draw() {
   // E-postimporten (felles med Homelab-innstillingene) monteres i Innstillinger → Import.
   const mp = el.querySelector('[data-mailpane]');
   if (mp) { if (mailPaneEl) mp.replaceWith(mailPaneEl); else { mailPaneEl = mp; import('/assets/js/settings-mail.js').then((m) => m.mailPane(mp)).catch(() => { mp.innerHTML = '<div class="note">Kunne ikke laste e-postoppsettet.</div>'; }); } }
+  // Prompt 34: AI-kontroll i Innstillinger → AI (samme element mellom tegningene, så panelet ikke flimrer).
+  const ac = el.querySelector('[data-aictl-finans]');
+  if (ac) {
+    if (aiCtlEl) ac.replaceWith(aiCtlEl); else aiCtlEl = ac;
+    import('/assets/js/ai-control.js').then((m) => m.mountAiControl(aiCtlEl, { variant: 'web', scope: 'finans', theme: design() === 'lys' ? 'papir' : 'finans', admin: canSrv(), tab: aiCtlTab, onTab: (x) => { aiCtlTab = x; } }))
+      .catch(() => { S.aiLegacy = true; draw(); });
+  }
   window.scrollTo(0, scroll);
   window.fhLoaded?.(); // fjerner lasteskjermen fra index.html (loader.js)
   if (focus?.sel) { const f = el.querySelector(focus.sel); if (f) { f.focus(); try { f.setSelectionRange(focus.pos, focus.pos); } catch {} } }

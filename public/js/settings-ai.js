@@ -9,6 +9,8 @@ import { esc, api } from './util.js';
 import { store } from './store.js';
 import { LEARN_TYPES, memoryLine, loadMemory, addMemory, deleteMemory, applyMemory } from './glimt-memory.js';
 import { setHsTimeout } from './extras.js';
+import { mountAiControl } from './ai-control.js';
+import { is2c } from './hltheme.js';
 // Prompt 32 (claude-code-sok-fullfor-forst.md): GLIMT I SØKEFELTET → «Send til Chat etter» 5 / 8 / 15 / 30 s (hs_timeout_s i /api/me/layout).
 const HS = [5, 8, 15, 30];
 
@@ -42,8 +44,14 @@ function sent(f) {
   return Object.entries(f).filter(([, v]) => v !== false && v !== 0 && v != null && !(Array.isArray(v) && !v.length)).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v === true ? 'ja' : v}`).join(' · ');
 }
 
+// Prompt 34: AI-kontroll-panelet øverst (Oversikt · Modeller · Valg · Jobber · Forbruk · API og nøkler). Fanen huskes mens
+// innstillingene er åpne; settings-search kan be om en bestemt fane (ai-mod → Modeller, ai-key-* → API og nøkler).
+let acTab = null;
+export function setAiTab(t) { acTab = t; }
+const acMount = (el) => mountAiControl(el, { variant: matchMedia('(max-width: 767px)').matches ? 'mobile' : 'web', scope: 'alle', theme: (document.documentElement.dataset.hlTheme ? document.documentElement.dataset.hlTheme === '2c' : is2c()) ? 'papir' : 'mork', tab: acTab ?? undefined, admin: isAdmin(), embedded: true, hideTitle: true, onTab: (t) => { acTab = t; }, onPaint: () => document.dispatchEvent(new Event('hl:reapply')) });
 export function aiView({ group, row, note }) {
-  if (!A.loaded) return { groups: [group('', [row({ t: 'Laster …' })])] };
+  const pre = '<div class="set-aictl" data-mount-host data-hl="ai-mod"></div><h3 class="sg-t set-aimore">Chat, Glimt og personvern</h3>';
+  if (!A.loaded) return { pre, mount: acMount, groups: [group('', [row({ t: 'Laster …' })])] };
   const ch = A.chat, pv = A.priv, groups = [];
   if (ch) {
     const opts = (A.models ?? []).filter((m) => m.installed);
@@ -82,7 +90,7 @@ export function aiView({ group, row, note }) {
   groups.push(memoryGroup(group, row));
   if (A.msg) groups.push({ t: '', note: '', rows: [{ q: '', html: `<div class="sg-row"><span class="sg-txt"><span>${esc(A.msg)}</span></span></div>` }] });
   void note;
-  return { groups };
+  return { pre, mount: acMount, groups };
 }
 
 /* Prompt 33: GLIMT HUSKER */

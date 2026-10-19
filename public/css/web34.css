@@ -1,0 +1,15 @@
+/* Prompt 34 (WEB34): markering fra AI-søket i Innstillinger (fasit Innstillinger Web.dc.html hlRing/hlTip). */
+@keyframes hlRing{0%{box-shadow:0 0 0 0 rgba(178,58,42,.55),0 0 0 3px #b23a2a}70%{box-shadow:0 0 0 14px rgba(178,58,42,0),0 0 0 3px #b23a2a}100%{box-shadow:0 0 0 0 rgba(178,58,42,0),0 0 0 3px #b23a2a}}
+@keyframes hlTip{from{opacity:0;transform:translate(-50%,4px)}to{opacity:1;transform:translate(-50%,0)}}
+#settings .hl-ring{animation:hlRing 1.4s ease-out 4;box-shadow:0 0 0 3px #b23a2a;border-radius:14px;position:relative;z-index:2}
+#settings .sg-row.hl-ring{border-radius:12px}
+#settings .ny-btn.hl-ring{border-radius:27px}
+#settings .hl-host{position:relative}
+#settings .hl-tip{position:absolute;left:50%;top:-50px;transform:translateX(-50%);z-index:5;white-space:nowrap;padding:8px 12px;border-radius:12px;background:#1b1a17;color:#f3efe6;font:700 13px Manrope,system-ui,sans-serif;box-shadow:0 10px 24px rgba(0,0,0,.2);animation:hlTip .3s ease both;pointer-events:none}
+#settings .ny-act.hl-host{flex-wrap:wrap}
+#settings .ny-act .hl-tip{left:120px}
+@media (prefers-reduced-motion:reduce){#settings .hl-ring{animation:none}}
+/* Glimt-boblen: tydelig feil og merknad (f.eks. «Sky-budsjettet er brukt opp, bruker qwen3 lokalt»). */
+.gl-txt.gl-err{color:#ffc2b6;font-size:15.5px}
+.gl-note{display:block;margin-top:6px;font-size:12.5px;color:rgba(255,255,255,.7)}
+.gl-foot{flex-wrap:wrap}

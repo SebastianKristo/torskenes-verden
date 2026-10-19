@@ -4,7 +4,8 @@
 // dagens bilde fra NASA (APOD, siste 7 dager) og nytt fra Mars-roverne.
 // Data via serveren (SERVER32, cache og mock): GET /api/space/tle (TLE-tekst, alle aktive), /api/space/apod?days=7, /api/space/mars.
 // Posisjonene regnes ut i nettleseren med satellite.js (SGP4, /vendor/satellite) hvert 4. sekund. Svarer serveren ikke
-// (eldre server, ingen nett), vises eksempeldata merket «Eksempeldata», så siden alltid kan brukes.
+// (eldre server, ingen nett), vises eksempelbaner merket «Eksempeldata». Bilder vises aldri som eksempeldata (prompt 34):
+// feiler NASA, står «Fikk ikke hentet bilder fra NASA akkurat nå · Prøv igjen». Kartet kan zoomes (1×–14×) og har Verden/Europa/Norge.
 import { esc, api } from './util.js';
 import { store } from './store.js';
 
@@ -23,7 +24,6 @@ const MON = ['jan', 'feb', 'mar', 'apr', 'mai', 'jun', 'jul', 'aug', 'sep', 'okt
 const nb = (n) => Math.round(n).toLocaleString('nb-NO');
 const fd = (d) => { if (!d) return ''; const x = new Date(`${String(d).slice(0, 10)}T12:00`); return Number.isNaN(x.getTime()) ? '' : `${x.getDate()}. ${MON[x.getMonth()]}`; };
 const catOf = (n) => (CATS.find((c) => c[3].test(n)) ?? CATS[6])[0];
-const bg = (u) => (u ? `url(&quot;${esc(u)}&quot;)` : 'none');
 const R = 6371;
 
 const sp = {
@@ -61,20 +61,11 @@ function lookFrom(c, e) {
   const east = (-Math.sin(lo) * d.x + Math.cos(lo) * d.y) / n, north = (-Math.sin(la) * Math.cos(lo) * d.x - Math.sin(la) * Math.sin(lo) * d.y + Math.cos(la) * d.z) / n;
   return { el: Math.asin(up) * 180 / Math.PI, az: ((Math.atan2(east, north) * 180 / Math.PI) + 360) % 360 };
 }
-const grad = (h1, h2) => `radial-gradient(circle at 30% 35%,${h1},transparent 55%),radial-gradient(circle at 75% 70%,${h2},transparent 50%),#0b1220`;
-const MOCK_APOD = [
-  ['Ørnetåken i infrarødt', 'Søylene av gass og støv i Ørnetåken, M16, er stjernefødesteder omtrent 7000 lysår unna. I infrarødt lys ser teleskopet gjennom støvet og avslører unge stjerner som ennå er pakket inn i skyene de ble født i.', '#c9653a', '#3a5fc9'],
-  ['Nordlys over Lofoten', 'En kraftig solstorm ga grønt og fiolett nordlys langt sør i Norge. Bildet er satt sammen av 12 eksponeringer fra en fjelltopp over Reine.', '#3fbf9a', '#8a5fd6'],
-  ['Saturn med ringene på skrå', 'Ringene til Saturn står nesten på kant sett fra Jorda denne høsten, og skyggen deres faller som et mørkt bånd over skydekket.', '#e3c27a', '#6b4f2a'],
-  ['Andromedagalaksen', 'Vår nærmeste store nabogalakse, M31, er 2,5 millioner lysår unna og inneholder rundt en billion stjerner. De to små satellittgalaksene M32 og M110 ses også.', '#b7a6e8', '#3d4f8a'],
-  ['Månen over Oslofjorden', 'En voksende sigd står lavt over fjorden etter solnedgang. Det svake lyset på den mørke delen er jordskinn – sollys reflektert fra Jorda.', '#e9eef7', '#2a3a58'],
-  ['Komet med to haler', 'Støvhalen bøyer seg langs banen, mens den blå ionehalen peker rett vekk fra sola, drevet av solvinden.', '#5ab0ff', '#f2c14e'],
-  ['Hestehodetåken', 'Den mørke støvskyen formet som et hestehode ligger i Orion og avtegner seg mot rødt, lysende hydrogen bak.', '#e8794a', '#5a1f2a'],
-].map(([title, explanation, a, b], i) => ({ title, explanation, date: new Date(Date.now() - i * 864e5).toLocaleDateString('sv-SE'), media_type: 'mock', mockBg: grad(a, b), copyright: 'Eksempel' }));
-const MOCK_MARS = [
-  { n: 'Perseverance', st: 'active', sol: 1650, date: new Date(Date.now() - 864e5).toLocaleDateString('sv-SE'), count: 32, cams: ['NAVCAM_LEFT', 'MCZ_RIGHT', 'SHERLOC_WATSON', 'FRONT_HAZCAM'], ph: [['#c9653a', '#6b2f1a'], ['#d98a5a', '#4a2a1a'], ['#b8743f', '#7a4a2a'], ['#e0a070', '#5a3020'], ['#a85a30', '#3a1a10'], ['#c98a60', '#6a3a20']].map(([a, b], i) => ({ bgc: grad(a, b), cam: ['Navigasjonskamera', 'Mastcam-Z', 'WATSON', 'Hazcam'][i % 4], u: 'https://mars.nasa.gov/mars2020/multimedia/raw-images/' })), mock: true },
-  { n: 'Curiosity', st: 'active', sol: 4710, date: new Date(Date.now() - 2 * 864e5).toLocaleDateString('sv-SE'), count: 18, cams: ['MAST', 'NAVCAM', 'CHEMCAM'], ph: [['#b0703a', '#5a3a20'], ['#d0905a', '#6a4020'], ['#a0603a', '#4a2a18'], ['#c08050', '#603820'], ['#b87848', '#583018'], ['#d8a070', '#704828']].map(([a, b], i) => ({ bgc: grad(a, b), cam: ['Mastcam', 'Navcam', 'ChemCam'][i % 3], u: 'https://mars.nasa.gov/msl/multimedia/raw-images/' })), mock: true },
-];
+// Prompt 34: ingen eksempelbilder (gradienter / «© Eksempel») lenger – feiler NASA, vises en tom tilstand med «Prøv igjen».
+const NO_CITIES = { Oslo: [59.91, 10.75], Bergen: [60.39, 5.32], Trondheim: [63.43, 10.39], Tromsø: [69.65, 18.96], Bodø: [67.28, 14.4], Stavanger: [58.97, 5.73], Kristiansand: [58.15, 8.0], Alta: [69.97, 23.27] };
+const VIEWS = [['Verden', { lon: 0, lat: 0, z: 1 }], ['Europa', { lon: 12, lat: 54, z: 3.2 }], ['Norge', { lon: 15, lat: 65, z: 6 }]];
+const VKEY = 'rom_view';
+const mv = { v: (() => { try { const v = JSON.parse(localStorage.getItem(VKEY)); if (v && Number.isFinite(v.z)) return v; } catch { /* */ } return { lon: 0, lat: 0, z: 1 }; })(), anim: 0 };
 
 /* ---------------- Data ---------------- */
 async function loadSats() {
@@ -100,7 +91,9 @@ async function loadApod() {
     if (!list.length) throw new Error('tom');
     sp.apod = list.sort((x, y) => String(y.date).localeCompare(String(x.date))).slice(0, 7);
     sp.apodMock = list.some((x) => x.mock) || !!a?.mock;
-  } catch { sp.apod = MOCK_APOD; sp.apodMock = true; }
+    sp.apodSrc = a?.source ?? (list.some((x) => x.link) ? 'NASA' : 'NASA APOD');
+    sp.apodErr = false;
+  } catch { sp.apod = []; sp.apodErr = true; }
   paint();
 }
 const photoOf = (p) => ({ img: p.img ?? p.img_src ?? p.url ?? p.src, cam: p.cam ?? p.camera?.full_name ?? p.camera ?? '', u: p.u ?? p.link ?? p.page ?? p.img ?? p.img_src });
@@ -118,7 +111,8 @@ async function loadMars() {
   } catch {
     // Eldre server: NASA-arkivet (images.nasa.gov) via /api/space/gallery/mars for Perseverance, eksempel for Curiosity.
     const g = await api('/space/gallery/mars').catch(() => null);
-    sp.mars = g?.items?.length ? [{ n: 'Perseverance', st: 'active', sol: null, date: g.items[0].date, count: g.items.length, cams: [], arch: true, ph: g.items.slice(0, 6).map((i) => ({ img: i.img, cam: i.title, u: i.url })) }, MOCK_MARS[1]] : MOCK_MARS;
+    sp.mars = g?.items?.length ? [{ n: 'Perseverance', st: 'active', sol: null, date: g.items[0].date, count: g.items.length, cams: [], arch: true, ph: g.items.slice(0, 6).map((i) => ({ img: i.img, cam: i.title, u: i.url })) }]
+      : [{ n: 'Perseverance', err: true, ph: [] }, { n: 'Curiosity', err: true, ph: [] }];
   }
   paint();
 }
@@ -167,14 +161,18 @@ function tick() {
   }
   Object.assign(sp, { cnt, pts, up, iss, time: now });
   // Bare kontrollrommet tegnes på nytt hvert 4. sekund (bildene under står i ro).
+  // Prompt 34: kartet (canvas med zoom/panorering) blir stående; bare tekstdelene byttes.
   const el = root()?.querySelector('.rom-ctl');
-  if (el) { el.outerHTML = controlHtml(); draw(); } else paint();
+  if (el) { for (const [k, fn] of Object.entries(PARTS)) { const p = el.querySelector(`[data-rom-part="${k}"]`); if (p) p.innerHTML = fn(); } el.querySelector('.rom-load')?.remove(); draw(); } else paint();
 }
 
 function draw() {
   const cv = root()?.querySelector('.rom-map canvas');
   if (!cv || !cv.clientWidth) return;
-  const x = cv.getContext('2d'), W = (cv.width = cv.clientWidth * 2), H = (cv.height = cv.clientHeight * 2), px = (l) => ((l + 180) / 360) * W, py = (l) => ((90 - l) / 180) * H;
+  const V = mv.v, z = V.z, W = cv.clientWidth * 2, H = cv.clientHeight * 2;
+  if (cv.width !== W) cv.width = W; if (cv.height !== H) cv.height = H;
+  const x = cv.getContext('2d'), px = (l) => W / 2 + ((l - V.lon) / 360) * W * z, py = (l) => H / 2 - ((l - V.lat) / 180) * H * z;
+  syncMapUi();
   x.fillStyle = '#0f1a2e'; x.fillRect(0, 0, W, H);
   x.strokeStyle = 'rgba(255,255,255,.05)'; x.lineWidth = 1;
   for (let l = -60; l <= 60; l += 30) { x.beginPath(); x.moveTo(0, py(l)); x.lineTo(W, py(l)); x.stroke(); }
@@ -185,7 +183,8 @@ function draw() {
     if (f.no) { x.strokeStyle = '#7fa3d6'; x.lineWidth = 1.5; x.stroke(); }
   }
   const col = Object.fromEntries(CATS.map((c) => [c[0], c[2]]));
-  for (const [lo, la, cat] of sp.pts) { if (sp.off[cat] || cat === 'station') continue; x.fillStyle = col[cat]; x.globalAlpha = cat === 'starlink' ? 0.55 : 0.85; x.fillRect(px(lo) - 1.5, py(la) - 1.5, 3, 3); }
+  const ds = Math.min(7, 3 + Math.log2(z) * 1.2), dh = ds / 2;
+  for (const [lo, la, cat] of sp.pts) { if (sp.off[cat] || cat === 'station') continue; const X = px(lo), Y = py(la); if (X < -4 || X > W + 4 || Y < -4 || Y > H + 4) continue; x.fillStyle = col[cat]; x.globalAlpha = cat === 'starlink' ? 0.55 : 0.85; x.fillRect(X - dh, Y - dh, ds, ds); }
   x.globalAlpha = 1;
   const I = sp.iss;
   if (I && !sp.off.station) {
@@ -195,46 +194,118 @@ function draw() {
     x.fillStyle = '#fff'; x.beginPath(); x.arc(px(I.lon), py(I.lat), 9, 0, 7); x.fill();
     x.font = '700 24px Manrope, system-ui, sans-serif'; x.fillText('ISS', px(I.lon) + 14, py(I.lat) - 10);
   }
+  // Fra ×3: norske byer som prikker med navn.
+  if (z >= 3) {
+    x.font = '600 22px Manrope, system-ui, sans-serif';
+    for (const [n, [la, lo]] of Object.entries(NO_CITIES)) { const X = px(lo), Y = py(la); if (X < 0 || X > W || Y < 0 || Y > H) continue; x.fillStyle = '#e9eef7'; x.beginPath(); x.arc(X, Y, 5, 0, 7); x.fill(); x.fillStyle = 'rgba(233,238,247,.85)'; x.fillText(n, X + 10, Y + 7); }
+  }
   const c = CITIES[sp.city];
   x.strokeStyle = '#e8794a'; x.lineWidth = 3; x.beginPath(); x.arc(px(c[1]), py(c[0]), 10, 0, 7); x.stroke();
 }
 
+/* ---------------- Zoom og visninger (prompt 34, fasit Rom.dc.html vw/setVw/bindMap) ---------------- */
+function clampV(o) {
+  const z = Math.max(1, Math.min(14, o.z)), hl = 180 / z, hv = 90 / z;
+  return { z, lon: Math.max(-180 + hl, Math.min(180 - hl, o.lon)), lat: Math.max(-90 + hv, Math.min(90 - hv, o.lat)) };
+}
+function setVw(v, anim = false) {
+  const T = clampV(v);
+  cancelAnimationFrame(mv.anim);
+  const save = () => { try { localStorage.setItem(VKEY, JSON.stringify(T)); } catch { /* */ } };
+  if (!anim || matchMedia('(prefers-reduced-motion: reduce)').matches) { mv.v = T; draw(); save(); return; }
+  const F = { ...mv.v }, t0 = performance.now(), D = 420;
+  const st = () => { const k = Math.min(1, (performance.now() - t0) / D), e = 1 - (1 - k) ** 3; mv.v = { z: F.z + (T.z - F.z) * e, lon: F.lon + (T.lon - F.lon) * e, lat: F.lat + (T.lat - F.lat) * e }; draw(); if (k < 1) mv.anim = requestAnimationFrame(st); else { mv.v = T; save(); draw(); } };
+  st();
+}
+function syncMapUi() {
+  const m = root()?.querySelector('.rom-map');
+  if (!m) return;
+  const zl = m.querySelector('.rom-zl'); if (zl) zl.textContent = `×${(Math.round(mv.v.z * 10) / 10).toLocaleString('nb-NO')}`;
+  m.querySelectorAll('[data-rom-vw]').forEach((b) => { const v = VIEWS[+b.dataset.romVw][1]; b.setAttribute('aria-pressed', String(Math.abs(mv.v.z - v.z) < 0.05 && Math.abs(mv.v.lon - v.lon) < 1)); });
+}
+function bindMap(el) {
+  if (!el || el._bound) return;
+  el._bound = 1;
+  const pts = new Map(); let last = 0;
+  const frac = (e) => { const r = el.getBoundingClientRect(); return { fx: (e.clientX - r.left) / r.width - 0.5, fy: (e.clientY - r.top) / r.height - 0.5, r }; };
+  el.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const V = mv.v, { fx, fy } = frac(e), z = Math.max(1, Math.min(14, V.z * Math.exp(-e.deltaY * 0.0022)));
+    // Punktet under pekeren står stille.
+    const lon = V.lon + fx * 360 / V.z, lat = V.lat - fy * 180 / V.z;
+    setVw({ z, lon: lon - fx * 360 / z, lat: lat + fy * 180 / z });
+  }, { passive: false });
+  el.addEventListener('pointerdown', (e) => { if (e.target.closest('button')) return; el.setPointerCapture?.(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); el.classList.add('drag'); if (pts.size === 2) { const [a, b] = [...pts.values()]; last = Math.hypot(a.x - b.x, a.y - b.y); } });
+  el.addEventListener('pointermove', (e) => {
+    const pr = pts.get(e.pointerId);
+    if (!pr) return;
+    const V = mv.v, r = el.getBoundingClientRect();
+    if (pts.size === 2) { pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y); if (last) setVw({ ...V, z: V.z * d / last }); last = d; return; }
+    setVw({ ...V, lon: V.lon - (e.clientX - pr.x) / r.width * 360 / V.z, lat: V.lat + (e.clientY - pr.y) / r.height * 180 / V.z });
+    pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  });
+  const up = (e) => { pts.delete(e.pointerId); if (pts.size < 2) last = 0; if (!pts.size) el.classList.remove('drag'); };
+  el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+  el.addEventListener('dblclick', (e) => { if (e.target.closest('button')) return; const V = mv.v, { fx, fy } = frac(e); setVw({ z: V.z * 2, lon: V.lon + fx * 360 / V.z, lat: V.lat - fy * 180 / V.z }, true); });
+}
+
 /* ---------------- Visning ---------------- */
-function controlHtml() {
-  const cnt = sp.cnt ?? {}, tot = Object.values(cnt).reduce((a, b) => a + b, 0), I = sp.iss;
+function headHtml() {
+  const cnt = sp.cnt ?? {}, tot = Object.values(cnt).reduce((a, b) => a + b, 0);
   const time = sp.time ? sp.time.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'laster …';
+  return `<div class="rom-ctlt"><span class="rom-k">I BANE NÅ · ${esc(time)}</span><b class="rom-tot">${tot ? nb(tot) : '…'} satellitter</b><span class="rom-src">${esc(sp.src)}</span></div>
+      <div class="rom-cities" role="group" aria-label="By">${Object.keys(CITIES).map((n) => `<button type="button" data-rom-city="${esc(n)}" aria-pressed="${sp.city === n}">${esc(n)}</button>`).join('')}</div>`;
+}
+function catsHtml() {
+  const cnt = sp.cnt ?? {};
+  return CATS.map(([k, n, c]) => `<button type="button" data-rom-cat="${k}" aria-pressed="${!sp.off[k]}"><i style="background:${c}"></i>${esc(n)}<span>${cnt[k] ? nb(cnt[k]) : '–'}</span></button>`).join('');
+}
+function rightHtml() {
+  const I = sp.iss, up = (sp.up ?? []).slice(0, 8);
   const iss = I ? [['Posisjon', `${Math.abs(I.lat).toFixed(1)}° ${I.lat >= 0 ? 'N' : 'S'} · ${Math.abs(I.lon).toFixed(1)}° ${I.lon >= 0 ? 'Ø' : 'V'}`], ['Høyde', `${nb(I.alt)} km`], ['Fart', `${nb(I.spd)} km/t`], [`Fra ${sp.city}`, I.el > 0 ? `${I.el}° over horisonten` : 'Under horisonten']]
     : [['Posisjon', '…'], ['Høyde', '…'], ['Fart', '…'], [`Fra ${sp.city}`, '…']];
-  const up = (sp.up ?? []).slice(0, 8);
-  return `<section class="rom-ctl" aria-label="Satellitter i bane">
-    <div class="rom-ctlh"><div class="rom-ctlt"><span class="rom-k">I BANE NÅ · ${esc(time)}</span><b class="rom-tot">${tot ? nb(tot) : '…'} satellitter</b><span class="rom-src">${esc(sp.src)}</span></div>
-      <div class="rom-cities" role="group" aria-label="By">${Object.keys(CITIES).map((n) => `<button type="button" data-rom-city="${esc(n)}" aria-pressed="${sp.city === n}">${esc(n)}</button>`).join('')}</div></div>
-    <div class="rom-grid"><div class="rom-left"><div class="rom-map"><canvas aria-label="Verdenskart med alle satellitter"></canvas>${tot ? '' : '<span class="rom-load">Henter baner fra CelesTrak …</span>'}</div>
-        <div class="rom-cats">${CATS.map(([k, n, c]) => `<button type="button" data-rom-cat="${k}" aria-pressed="${!sp.off[k]}"><i style="background:${c}"></i>${esc(n)}<span>${cnt[k] ? nb(cnt[k]) : '–'}</span></button>`).join('')}</div></div>
-      <div class="rom-right"><div class="rom-box"><span class="rom-k">ISS · ROMSTASJONEN</span><div class="rom-iss">${iss.map(([l, v]) => `<div><span>${esc(l)}</span><b>${esc(v)}</b></div>`).join('')}</div></div>
+  return `<div class="rom-box"><span class="rom-k">ISS · ROMSTASJONEN</span><div class="rom-iss">${iss.map(([l, v]) => `<div><span>${esc(l)}</span><b>${esc(v)}</b></div>`).join('')}</div></div>
         <div class="rom-box"><span class="rom-k rom-kb"><span>OVER ${esc(sp.city.toUpperCase())} NÅ</span><span>${sp.up ? `${sp.up.length} over horisonten` : ''}</span></span>
           ${up.map((u) => `<div class="rom-up"><i style="background:${(CATS.find((c) => c[0] === u.cat) ?? CATS[6])[2]}"></i><span>${esc(u.n)}</span><b>${u.el}° · ${esc(u.az)}</b></div>`).join('')}
-          ${sp.up ? (up.length ? '' : '<span class="rom-mut">Ingen over 10° akkurat nå.</span>') : '<span class="rom-mut">Venter på data …</span>'}</div></div></div>
+          ${sp.up ? (up.length ? '' : '<span class="rom-mut">Ingen over 10° akkurat nå.</span>') : '<span class="rom-mut">Venter på data …</span>'}</div>`;
+}
+const PARTS = { head: headHtml, cats: catsHtml, right: rightHtml };
+function controlHtml() {
+  const tot = Object.values(sp.cnt ?? {}).reduce((a, b) => a + b, 0);
+  return `<section class="rom-ctl" aria-label="Satellitter i bane">
+    <div class="rom-ctlh" data-rom-part="head">${headHtml()}</div>
+    <div class="rom-grid"><div class="rom-left"><div class="rom-map"><canvas aria-label="Verdenskart med alle satellitter. Rull eller klyp for å zoome, dra for å flytte."></canvas>${tot ? '' : '<span class="rom-load">Henter baner fra CelesTrak …</span>'}
+          <div class="rom-vws" role="group" aria-label="Visning">${VIEWS.map(([n], i) => `<button type="button" data-rom-vw="${i}" aria-pressed="false">${esc(n)}</button>`).join('')}</div>
+          <div class="rom-zm"><button type="button" data-rom-z="1" aria-label="Zoom inn">+</button><span class="rom-zl">×1</span><button type="button" data-rom-z="-1" aria-label="Zoom ut">−</button></div></div>
+        <div class="rom-cats" data-rom-part="cats">${catsHtml()}</div></div>
+      <div class="rom-right" data-rom-part="right">${rightHtml()}</div></div>
   </section>`;
 }
-const apodImg = (a) => (a?.media_type === 'image' ? a.url : a?.thumbnail_url || (a?.media_type === 'mock' ? '' : a?.url) || '');
-const apodBg = (a) => (a?.mockBg ? a.mockBg : bg(apodImg(a)));
+const ytId = (u) => String(u ?? '').match(/(?:youtube\.com\/(?:embed\/|watch\?v=)|youtu\.be\/)([\w-]{11})/)?.[1] ?? '';
+/** Bilde-URL for et APOD-element. Video: thumbnail_url, ellers YouTube-miniatyren. */
+const apodImg = (a) => (a?.media_type === 'video' ? a.thumbnail_url || (ytId(a.url) ? `https://img.youtube.com/vi/${ytId(a.url)}/hqdefault.jpg` : '') : a?.url || a?.thumbnail_url || '');
+const apodThumb = (a) => a?.thumbnail_url || apodImg(a);
+/** <img> med lazy-lasting og reserve til miniatyren (data-fb) ved feil. */
+const img = (u, fb, alt = '') => (u ? `<img src="${esc(u)}"${fb && fb !== u ? ` data-fb="${esc(fb)}"` : ''} alt="${esc(alt)}" loading="lazy" decoding="async">` : '');
 function apodHtml() {
   const L = sp.apod, A = L?.[sp.sel] ?? null;
-  const page = A?.date && !A.mockBg ? `https://apod.nasa.gov/apod/ap${String(A.date).slice(2, 10).replace(/-/g, '')}.html` : 'https://apod.nasa.gov/';
-  const meta = A ? `${fd(A.date)}${A.copyright ? ` · © ${String(A.copyright).trim()}` : ' · NASA'}${sp.apodMock ? ' · eksempeldata' : ''}` : '';
+  if (L && !L.length) return `<section class="rom-two"><div class="rom-apod"><span class="rom-lab">DAGENS BILDE FRA VERDENSROMMET · NASA</span>
+      <div class="rom-empty"><b>Fikk ikke hentet bilder fra NASA akkurat nå</b><span>Legg gjerne inn en egen NASA-nøkkel (gratis på api.nasa.gov) i Innstillinger.</span><button type="button" data-rom-retry>Prøv igjen</button></div></div></section>`;
+  const page = A?.link || (A?.date ? `https://apod.nasa.gov/apod/ap${String(A.date).slice(2, 10).replace(/-/g, '')}.html` : 'https://apod.nasa.gov/');
+  const meta = A ? `${fd(A.date)}${A.copyright ? ` · © ${String(A.copyright).trim()}` : ` · ${A.source ?? 'NASA'}`}` : '';
   return `<section class="rom-two"><div class="rom-apod"><span class="rom-lab">DAGENS BILDE FRA VERDENSROMMET · NASA</span>
-      <a class="rom-apodimg" href="${esc(page)}" target="_blank" rel="noopener" style="background:${A ? apodBg(A) : '#0b1220'};background-size:cover;background-position:center" aria-label="${esc(A?.title ?? 'Dagens bilde')}">${A?.media_type === 'video' ? '<span class="rom-play">▶ Video</span>' : ''}</a>
-      <b class="rom-apt">${esc(A?.title ?? (L ? 'Fikk ikke hentet dagens bilde' : 'Henter dagens bilde …'))}</b><span class="rom-meta">${esc(meta)}</span><p class="rom-ex">${esc(A?.explanation ?? '')}</p></div>
-    <div class="rom-week"><span class="rom-lab mut">SISTE 7 DAGER</span><div class="rom-wgrid">${(L ?? []).map((a, i) => `<button type="button" data-rom-sel="${i}" aria-pressed="${i === sp.sel}"><span class="rom-wimg" style="background:${apodBg(a)};background-size:cover;background-position:center"></span><span class="rom-wd">${esc(fd(a.date))}</span><span class="rom-wt">${esc(a.title)}</span></button>`).join('')}</div></div></section>`;
+      <a class="rom-apodimg" href="${esc(page)}" target="_blank" rel="noopener" aria-label="${esc(A?.title ?? 'Dagens bilde')}">${A ? img(apodImg(A), apodThumb(A), A.title) : ''}${A?.media_type === 'video' ? '<span class="rom-play">▶ Video</span>' : ''}</a>
+      <b class="rom-apt">${esc(A?.title ?? 'Henter dagens bilde …')}</b><span class="rom-meta">${esc(meta)}</span><p class="rom-ex">${esc(A?.explanation ?? '')}</p></div>
+    <div class="rom-week"><span class="rom-lab">SISTE 7 DAGER</span><div class="rom-wgrid">${(L ?? []).map((a, i) => `<button type="button" data-rom-sel="${i}" aria-pressed="${i === sp.sel}"><span class="rom-wimg">${img(apodThumb(a), apodImg(a))}${a.media_type === 'video' ? '<i class="rom-wplay">▶</i>' : ''}</span><span class="rom-wd">${esc(fd(a.date))}</span><span class="rom-wt">${esc(a.title)}</span></button>`).join('')}</div></div></section>`;
 }
 function marsHtml() {
   const L = sp.mars ?? [{ n: 'Perseverance', ph: [] }, { n: 'Curiosity', ph: [] }];
   return `<section class="rom-mars"><span class="rom-lab">FRA MARS · ROVERNE</span><div class="rom-rgrid">${L.map((r) => {
-    const st = r.err ? 'Ingen data' : r.st === 'active' ? 'Aktiv' : r.st ? 'Avsluttet' : '', sc = r.err || r.st !== 'active' ? '#8f897c' : '#2f7a4f';
-    const sub = r.err ? 'Fikk ikke hentet bilder akkurat nå.' : r.sol != null ? `Sol ${r.sol} · ${fd(r.date)} · ${r.count} nye bilder${r.mock ? ' · eksempeldata' : ''}` : r.arch ? `Siste bilder fra NASA-arkivet · ${fd(r.date)}` : 'Henter …';
+    const st = r.err ? 'Ingen data' : r.st === 'active' ? 'Aktiv' : r.st ? 'Avsluttet' : '', sc = r.err || r.st !== 'active' ? '#7f8fa8' : '#3fbf9a';
+    const sub = r.err ? 'Fikk ikke hentet bilder fra NASA akkurat nå.' : r.sol != null ? `Sol ${r.sol} · ${fd(r.date)} · ${r.count} nye bilder` : r.arch ? `Siste bilder fra NASA-arkivet · ${fd(r.date)}` : 'Henter …';
     return `<div class="rom-rover"><div class="rom-rh"><b>${esc(r.n)}</b>${st ? `<span style="color:${sc}"><i style="background:${sc}"></i>${st}</span>` : ''}</div><span class="rom-rsub">${esc(sub)}</span>
-      <div class="rom-ph">${(r.ph?.length ? r.ph : Array.from({ length: 6 }, () => null)).map((p) => (p ? `<a href="${esc(p.u ?? '#')}" target="_blank" rel="noopener" title="${esc(p.cam ?? '')}" style="background:${p.bgc ?? bg(p.img)};background-size:cover;background-position:center"></a>` : '<span></span>')).join('')}</div>
+      <div class="rom-ph">${(r.ph?.length ? r.ph : Array.from({ length: 6 }, () => null)).map((p) => (p ? `<a href="${esc(p.u ?? '#')}" target="_blank" rel="noopener" title="${esc(p.cam ?? '')}">${img(p.img, '', p.cam ?? '')}</a>` : '<span></span>')).join('')}</div>
+      ${r.err ? '<button type="button" class="rom-retry" data-rom-retry>Prøv igjen</button>' : ''}
       <span class="rom-cams">${esc((r.cams ?? []).join(' · '))}</span></div>`;
   }).join('')}</div></section>`;
 }
@@ -244,6 +315,7 @@ function paint() {
   const c = r.querySelector('.rom-c'), sc = r.scrollTop;
   c.innerHTML = `${controlHtml()}${apodHtml()}${marsHtml()}<span class="rom-foot">Baner: CelesTrak (TLE, oppdateres hver 2. time) · Bilder: NASA APOD og Mars Rover Photos · Posisjoner regnes ut i nettleseren hvert 4. sekund.</span>`;
   r.scrollTop = sc;
+  bindMap(r.querySelector('.rom-map'));
   draw();
 }
 
@@ -267,12 +339,17 @@ loadCss();
 let resT = null;
 export function bind(view) {
   view.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-rom-city],[data-rom-cat],[data-rom-sel]');
+    const b = e.target.closest('[data-rom-city],[data-rom-cat],[data-rom-sel],[data-rom-vw],[data-rom-z],[data-rom-retry]');
     if (!b || !root()?.contains(b)) return;
-    if (b.dataset.romCity) { sp.city = b.dataset.romCity; store.me.city = sp.city; api('/settings/city', { method: 'PUT', json: { value: sp.city } }).catch(() => {}); return tick(); }
+    if (b.dataset.romVw != null) { try { navigator.vibrate?.(8); } catch { /* */ } return setVw(VIEWS[+b.dataset.romVw][1], true); }
+    if (b.dataset.romZ) { const V = mv.v; return setVw({ ...V, z: +b.dataset.romZ > 0 ? V.z * 1.6 : V.z / 1.6 }, true); }
+    if (b.dataset.romRetry != null) { sp.apod = null; sp.mars = null; paint(); loadApod(); loadMars(); return; }
+    if (b.dataset.romCity) { sp.city = b.dataset.romCity; if (NO_CITIES[sp.city] && mv.v.z < 3) setVw(VIEWS[2][1], true); store.me.city = sp.city; api('/settings/city', { method: 'PUT', json: { value: sp.city } }).catch(() => {}); return tick(); }
     if (b.dataset.romCat) { sp.off = { ...sp.off, [b.dataset.romCat]: !sp.off[b.dataset.romCat] }; return paint(); }
     if (b.dataset.romSel != null) { sp.sel = +b.dataset.romSel; return paint(); }
   });
   view.addEventListener('keydown', (e) => { if (e.key === 'Escape' && root() && !document.querySelector('[role=dialog]:not([hidden])')) location.hash = '#/dash'; });
   window.addEventListener('resize', () => { clearTimeout(resT); resT = setTimeout(draw, 120); });
+  // Bilder som ikke laster: prøv miniatyren (data-fb), ellers skjul bildet (plassholderfargen står).
+  view.addEventListener('error', (e) => { const t = e.target; if (t?.tagName !== 'IMG' || !t.closest('#rom')) return; if (t.dataset.fb) { const f = t.dataset.fb; delete t.dataset.fb; t.src = f; } else t.classList.add('gone'); }, true);
 }

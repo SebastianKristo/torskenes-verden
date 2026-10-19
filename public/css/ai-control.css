@@ -1,0 +1,175 @@
+/* Prompt 34: AI-kontroll (fasit design/AI Kontroll.dc.html). Fargene kommer som --bg/--card/--fld/--line/--ink/--mut/--acc/--ok/--warn/--bad/--hf på .ac. */
+.ac{background:var(--bg);color:var(--ink);font-family:Manrope,system-ui,sans-serif;position:relative;display:flex;flex-direction:column;box-sizing:border-box;min-width:0;border-radius:inherit;-webkit-font-smoothing:antialiased;text-align:left}
+.ac *,.ac *::before,.ac *::after{box-sizing:border-box}
+.ac button{font-family:inherit;cursor:pointer}
+.ac button:disabled{cursor:default;opacity:.55}
+.ac :focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.ac.th-papir{color-scheme:light}.ac.th-mork,.ac.th-finans{color-scheme:dark}
+@keyframes acSpin{to{transform:rotate(360deg)}}
+@keyframes acStripe{to{background-position:28px 0}}
+@keyframes acIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.ac-row{display:flex;align-items:center;gap:10px;min-width:0}
+.ac-sb{justify-content:space-between;align-items:baseline}
+.ac-wrap{flex-wrap:wrap}
+.ac-col{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ac-grow{flex:1;min-width:0}
+.ac-ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac-mut{font-size:12.5px;color:var(--mut)}
+.ac-small{font-size:12px;line-height:1.5}
+.ac-mono{font:600 11.5px 'IBM Plex Mono',ui-monospace,monospace}
+.ac-col>span{font-size:12px;color:var(--mut)}
+.ac-col>b{font-size:14px}
+.ac .bad{color:var(--bad)!important}
+.ac-h3{font-size:15px!important}
+.ac-lab{font:600 10.5px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;color:var(--mut)}
+.ac-hd{flex:none;display:flex;align-items:center;gap:12px;padding:28px 32px 18px}
+.ac-kick{font:600 10.5px 'IBM Plex Mono',ui-monospace,monospace!important;letter-spacing:.14em;color:var(--acc)!important}
+.ac .ac-title{font:500 40px/1.05 var(--hf);letter-spacing:-.01em}
+.ac-hd .ac-mut{font-size:13px}
+.ac-done{flex:none;height:38px;padding:0 18px;border-radius:19px;border:0;background:var(--ink);color:var(--bg);font:700 13.5px Manrope,system-ui,sans-serif}
+.ac-body{flex:1;min-height:0;display:flex;gap:28px;padding:0 32px}
+.ac-nav{flex:none;width:220px;display:flex;flex-direction:column;gap:2px;align-self:flex-start;position:sticky;top:0}
+.ac-nav button{display:flex;align-items:center;gap:10px;height:44px;padding:0 14px;border-radius:12px;border:0;background:transparent;color:var(--mut);font:700 14px Manrope,system-ui,sans-serif;text-align:left;white-space:nowrap}
+.ac-nav button span{flex:1}
+.ac-nav button.on{background:var(--card);color:var(--ink)}
+.ac-nav button:not(.on):hover{color:var(--ink)}
+.ac-badge{flex:none;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--acc);color:#fff;font:700 11px/20px Manrope,sans-serif;font-style:normal;text-align:center}
+.ac-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:18px;padding-bottom:32px}
+.ac-card{border-radius:20px;background:var(--card);padding:16px;display:flex;flex-direction:column}
+.ac-gap{gap:12px}
+.ac-list{padding:4px 16px}
+.ac-list>*+*{border-top:1px solid var(--line)}
+.ac-sec{display:flex;flex-direction:column;gap:8px}
+.ac-note{font-size:12.5px;color:var(--mut);padding:10px 14px;border-radius:14px;background:var(--fld);line-height:1.45}
+.ac-b{flex:none;height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--line);background:transparent;color:var(--ink);font:700 12.5px Manrope,system-ui,sans-serif;white-space:nowrap}
+.ac-b.ink{border:0;background:var(--ink);color:var(--bg);height:36px;padding:0 16px;border-radius:18px;font-size:13px}
+.ac-b.red{border:0;color:var(--bad)}
+.ac-tx{border:0;background:transparent;color:var(--ink);font:700 12.5px Manrope,system-ui,sans-serif;padding:0}
+.ac-tx.red{color:var(--bad)}
+.ac-dot{flex:none;width:9px;height:9px;border-radius:5px}
+.ac-sw{flex:none;position:relative;width:44px;height:26px;border-radius:13px;background:var(--line);transition:background .2s}
+.ac-sw i{position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);transition:left .2s}
+.ac-sw.on{background:var(--ok)}.ac-sw.on i{left:21px}
+.ac-li{width:100%;display:flex;align-items:center;gap:12px;padding:11px 0;border:0;background:transparent;color:var(--ink);text-align:left}
+.ac-li.tight{padding:10px 0 2px;border-top:1px solid var(--line)}
+.ac-li>.ac-mono{color:var(--mut)}
+.ac-track{display:block;height:8px;border-radius:4px;background:var(--fld);overflow:hidden}
+.ac-track.sm{height:6px}.ac-track.xs{height:5px}
+.ac-track i{display:block;height:100%;border-radius:inherit;transition:width .4s}
+.ac-bar{display:flex;flex-direction:column;gap:6px;font-size:13px}
+.ac-bar .ac-mono{font-size:12.5px}
+/* Selvtest */
+.ac-self{gap:10px;box-shadow:0 0 0 1px transparent inset}
+.ac-self.isbad{box-shadow:0 0 0 1px color-mix(in oklab,var(--bad) 40%,transparent) inset}
+.ac-strows{display:flex;flex-direction:column}
+.ac-st{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.ac-st .ac-col>b{font-size:13.5px}
+.ac-st .ac-col>span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ac-dot2{width:16px;height:16px;border-radius:8px;border:1.5px solid var(--line);display:grid;place-items:center;color:#fff;font:800 9px Manrope,sans-serif}
+.ac-dot2.busy{border:2px solid var(--line);border-top-color:var(--acc);animation:acSpin .8s linear infinite}
+.ac-dot2.ok{border:0;background:var(--ok)}.ac-dot2.bad{border:0;background:var(--bad)}
+.ac-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:12px}
+.ac-kpis.sm{grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr))}
+.ac-kpi{display:flex;flex-direction:column;gap:4px;padding:16px;border-radius:20px;border:0;background:var(--card);color:var(--ink);text-align:left;min-width:0}
+.ac .ac-kpi b{font:500 30px/1.05 var(--hf)}
+.ac-kpis.sm .ac-kpi b{font-size:28px}
+.ac-kpi>span:last-child{font-size:12.5px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Modeller */
+.ac-mrow{display:flex;flex-direction:column;gap:8px;padding:12px 0}
+.ac-mrow .ac-mono{font-size:14px}
+.ac-std{flex:none;padding:2px 8px;border-radius:999px;background:var(--ink);color:var(--bg);font:700 10px 'IBM Plex Mono',monospace;letter-spacing:.06em}
+.ac-tags{display:flex;flex-wrap:wrap;gap:5px}
+.ac-tags span{white-space:nowrap;padding:2px 8px;border-radius:999px;background:var(--fld);font:600 11px 'IBM Plex Mono',monospace;color:var(--mut)}
+.ac-acts{display:flex;flex-wrap:wrap;gap:6px}
+.ac-pull{gap:8px;padding:14px 16px;border-radius:18px;animation:acIn .25s ease both}
+.ac-pull .ac-mono{font-size:14px}
+.ac-stripe{background-color:var(--acc)!important;background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.25) 0 7px,transparent 7px 14px);background-size:28px 100%;animation:acStripe .8s linear infinite}
+.ac-search{display:flex;align-items:center;gap:8px;height:46px;padding:0 6px 0 14px;border-radius:23px;background:var(--card);border:1px solid var(--line);color:var(--mut)}
+.ac-search input{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;color:var(--ink);font:500 15px Manrope,system-ui,sans-serif}
+.ac-search .ac-b.ink{height:34px;padding:0 14px}
+.ac-chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.ac-chips button{flex:none;height:30px;padding:0 12px;border-radius:15px;border:1px solid var(--line);background:transparent;color:var(--ink);font:700 12px Manrope,system-ui,sans-serif;white-space:nowrap}
+.ac-chips button.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.ac-lrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 0}
+.ac-lrow .ac-col{gap:3px}
+.ac-lrow b.ac-mono{font-size:13.5px}
+.ac-fit{flex:none;white-space:nowrap;padding:1px 7px;border-radius:999px;font:700 10px 'IBM Plex Mono',monospace}
+.ac-fit.ok{background:color-mix(in oklab,var(--ok) 18%,transparent);color:var(--ok)}
+.ac-fit.warn{background:color-mix(in oklab,var(--warn) 18%,transparent);color:var(--warn)}
+.ac-fit.bad{background:color-mix(in oklab,var(--bad) 16%,transparent);color:var(--bad)}
+/* Valg */
+.ac-rt{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 12px;align-items:center;padding:12px 0}
+.ac-rt>.ac-col{grid-column:1/-1}
+.ac-rt.web{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr)}
+.ac-rt.web>.ac-col{grid-column:auto}
+.ac-sel{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ac-sel>span{font:600 9.5px 'IBM Plex Mono',monospace;letter-spacing:.1em;color:var(--mut)}
+.ac-sel select{width:100%;height:38px;padding:0 10px;border-radius:10px;border:1px solid var(--line);background:var(--fld);color:var(--ink);font:600 12.5px 'IBM Plex Mono',monospace}
+.ac-warn{grid-column:1/-1;font-size:12px;font-weight:700;color:var(--warn)}
+.ac-par{display:flex;flex-direction:column;gap:8px;padding:12px 0}
+.ac-par .ac-mono{font-size:13px}
+.ac-seg{display:flex;padding:3px;border-radius:999px;background:var(--fld);gap:2px}
+.ac-seg.auto{align-self:flex-start}
+.ac-seg button{flex:1;min-width:0;height:30px;border:0;border-radius:999px;background:transparent;color:var(--mut);font:700 12px Manrope,system-ui,sans-serif;white-space:nowrap;padding:0 10px}
+.ac-seg.auto button{flex:none;height:32px;padding:0 14px;font-size:12.5px}
+.ac-seg button.on{background:var(--card);color:var(--ink)}
+/* Jobber */
+.ac-job{display:flex;flex-direction:column;gap:7px;padding:12px 0}
+.ac-ring{flex:none;width:18px;height:18px;border-radius:9px;display:grid;place-items:center;color:#fff;font:800 10px Manrope,sans-serif}
+.ac-ring.run{border:2.5px solid var(--line);border-top-color:var(--acc);animation:acSpin .9s linear infinite}
+.ac-ring.queue{border:1.5px dashed var(--mut)}
+.ac-ring.ok{background:var(--ok)}.ac-ring.bad{background:var(--bad)}
+/* Forbruk */
+.ac-legend{gap:12px;font-size:12px}
+.ac-legend span{display:flex;align-items:center;gap:5px}
+.ac-legend i{width:9px;height:9px;border-radius:2px}
+.ac-chart{height:120px;display:flex;align-items:flex-end;gap:4px}
+.ac-chart>div{flex:1;min-width:0;height:100%;display:flex;flex-direction:column;justify-content:flex-end;gap:2px}
+.ac-chart>div span{display:block;border-radius:3px 3px 0 0;min-height:0}
+.ac-feat{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;padding:11px 0}
+.ac-feat .ac-track{grid-column:1/-1}
+.ac-feat b.ac-mono{font-size:13px;text-align:right}
+.ac-feat span.ac-mono{text-align:right}
+.ac input[type=range]{width:100%;accent-color:var(--acc)}
+/* API */
+.ac-pic{flex:none;width:38px;height:38px;border-radius:12px;background:var(--fld);display:grid;place-items:center;font:800 15px Manrope,sans-serif}
+.ac-stl{display:flex!important;align-items:center;gap:6px;font-size:12.5px!important}
+.ac-stl i{flex:none;width:7px;height:7px;border-radius:4px}
+.ac-fld{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--mut)}
+.ac-fld a{color:var(--acc);font-weight:700;text-decoration:none}
+.ac-in{display:flex;align-items:center;gap:6px;height:44px;padding:0 6px 0 12px;border-radius:12px;background:var(--fld);border:1px solid var(--line)}
+.ac-in input{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;color:var(--ink);font:500 13.5px 'IBM Plex Mono',monospace}
+.ac-in button{flex:none;height:32px;padding:0 10px;border-radius:9px;border:0;background:transparent;color:var(--mut);font:700 12px Manrope,sans-serif}
+.ac-fresh{padding:12px;border-radius:12px;background:var(--fld);display:flex;flex-direction:column;gap:6px;animation:acIn .25s ease both}
+.ac-fresh span{font-size:12.5px;color:var(--warn);font-weight:700}
+.ac-fresh b{font-size:13px;word-break:break-all}
+.ac-tok{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.ac-toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:300;max-width:calc(100% - 32px);padding:10px 16px;border-radius:999px;background:var(--ink);color:var(--bg);font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 12px 30px rgba(0,0,0,.25);animation:acIn .2s ease both}
+/* Mobil: fanepiller og én kolonne */
+.ac.mob .ac-hd{padding:8px 18px 12px}
+.ac.mob .ac-title{font-size:34px}
+.ac.mob .ac-body{flex-direction:column;gap:12px;padding:0 16px}
+.ac.mob .ac-nav{width:auto;flex-direction:row;gap:6px;overflow-x:auto;scrollbar-width:none;position:static;padding-bottom:2px;align-self:stretch}
+.ac.mob .ac-nav::-webkit-scrollbar{display:none}
+.ac.mob .ac-nav button{flex:none;height:36px;border-radius:18px;border:1px solid var(--line);font-size:13px}
+.ac.mob .ac-nav button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.ac.mob .ac-main{padding-bottom:28px}
+.ac.mob .ac-toast{bottom:34px}
+/* Innebygd i Innstillinger: ingen egen kant/luft rundt */
+.ac.emb{background:transparent}
+.ac.emb .ac-hd{padding:0 0 16px}
+.ac.emb .ac-body{padding:0}
+.ac.emb.mob .ac-hd{padding:0 0 12px}
+@media (max-width:900px){.ac.web .ac-body{flex-direction:column;gap:12px}.ac.web .ac-nav{width:auto;flex-direction:row;overflow-x:auto;position:static;scrollbar-width:none}.ac.web .ac-nav button{flex:none}.ac-rt.web{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.ac-rt.web>.ac-col{grid-column:1/-1}}
+/* Overlegg (Chat → Modeller, Glimt-feil → Åpne AI-kontroll) */
+.ac-ov{position:fixed;inset:0;z-index:250;background:rgba(20,18,14,.46);display:flex;align-items:center;justify-content:center;padding:clamp(12px,3vw,40px);animation:acIn .16s ease both}
+.ac-ovbox{width:min(1180px,100%);height:min(860px,100%);border-radius:24px;overflow:hidden;box-shadow:0 30px 80px -24px rgba(0,0,0,.5);display:flex}
+.ac-ovbox>.ac{flex:1;min-height:0;overflow:hidden}
+.ac-ovbox .ac-body{min-height:0;overflow:hidden}
+.ac-ovbox .ac-nav{position:static}
+.ac-ovbox .ac-main{overflow-y:auto;scrollbar-width:thin;min-height:0}
+@media (max-width:767px){.ac-ov{padding:0}.ac-ovbox{width:100%;height:100%;border-radius:0}.ac-ovbox>.ac .ac-hd{padding-top:max(12px,env(safe-area-inset-top))}}
+/* Innstillinger → AI (web) */
+.set-aictl{margin:0 0 26px;min-height:200px}
+.set-aimore{margin:6px 0 10px}
+.fh-aictl>.ac{border-radius:20px;overflow:hidden}

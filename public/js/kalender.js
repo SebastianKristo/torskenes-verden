@@ -633,6 +633,18 @@ function hlTitle(t, q) {
   return ix < 0 ? esc(t) : `${esc(t.slice(0, ix))}<mark class="k3-hit">${esc(t.slice(ix, ix + q.length))}</mark>${esc(t.slice(ix + q.length))}`;
 }
 const srRow = (x, inner, strip = true) => `<button type="button" class="k3-row" data-k-hit="${esc(x.e.id)}" data-k-hitk="${esc(key(x.d))}">${strip ? `<span class="k3-strip" style="background:${esc(col(x.e))}"></span>` : ''}${inner}</button>`;
+const SR_STOP = new Set(['når', 'er', 'neste', 'min', 'mitt', 'mi', 'mine', 'har', 'jeg', 'skal', 'hva', 'hos', 'den', 'det', 'en', 'et', 'ei', 'på', 'i', 'meg', 'til', 'om', 'av', 'for', 'med', 'og', 'kommer', 'blir', 'neste', 'gang', 'time', 'timen', 'timer', 'avtale', 'avtalen', 'avtaler']);
+const SR_SUF = /(timen|time|timer|avtalen|avtale|avtaler|ene|en|et|er|a)$/;
+/** Søkeord uten stoppord og endelser: «når er neste frisørtime» → ['frisør']. */
+function srWords(n) {
+  return srNorm(n).split(/[^\p{L}\p{N}]+/u).filter((w) => w && !SR_STOP.has(w)).map((w) => { const b = w.replace(SR_SUF, ''); return b.length >= 3 ? b : w; }).filter((w) => w.length >= 2);
+}
+/** Delord begge veier: et ord i teksten og søkeordet deler minst 4 tegn i starten, eller det ene inneholder det andre. */
+function srHas(text, w) {
+  const T = srNorm(text);
+  if (T.includes(w)) return true;
+  return T.split(/[^\p{L}\p{N}]+/u).some((t) => t.length >= 4 && w.length >= 4 && (t.startsWith(w.slice(0, Math.max(4, Math.min(w.length, t.length)))) || w.startsWith(t)));
+}
 /** Lokale svar (raskt, uten nett): dag/periode, ledig tid, prøver/frister, «neste X». null = la AI svare. */
 function srLocal(q) {
   const now = new Date(), today = d0(now), nm = now.getHours() * 60 + now.getMinutes(), n = q.toLowerCase().replace(/[?!.,]/g, ' ');
@@ -672,70 +684,118 @@ function srLocal(q) {
   // «når hadde jeg tannlege sist», «alle prøver i november», «hva skjer i desember»: serveren svarer (calendar-glimt.js).
   if (/\bsist\b|hadde jeg|\bi (januar|februar|mars|april|mai|juni|juli|august|september|oktober|november|desember)\b/.test(n)) return null;
   if (/neste|når/.test(n)) {
-    const stop = new Set(['når', 'er', 'neste', 'min', 'mitt', 'mi', 'time', 'timen', 'har', 'jeg', 'skal', 'hva', 'hos', 'den', 'det', 'en', 'et', 'på', 'i', 'meg', 'til']);
-    const kw = n.split(/\s+/).filter((w) => w && !stop.has(w));
+    // Prompt 34: stoppord og endelser bort («frisørtimen» → «frisør»), og delord begge veier med minst 4 tegn felles.
+    const kw = srWords(n);
     if (kw.length) {
       for (let i = 0; i < 120; i++) {
-        const d = add(today, i), e = evOn(d, true).find((x) => srFilt(x) && (i > 0 || !x.e || mm(x.e) > nm) && kw.every((w) => srNorm(`${x.t} ${x.subj ?? ''} ${x.r ?? ''}`).includes(srNorm(w))));
-        if (e) return { txt: `${short(e)} er ${dLong(d)}${e.s ? ` kl. ${e.s}` : ''} (${rel(d)}).`, items: [{ e, d }] };
+        const d = add(today, i), e = evOn(d, true).find((x) => srFilt(x) && (i > 0 || !x.e || mm(x.e) > nm) && kw.every((w) => srHas(`${x.t} ${x.subj ?? ''} ${x.r ?? ''}`, w)));
+        if (e) return { txt: `${short(e)} er ${dLong(d)}${e.s ? ` kl. ${e.s}` : ''} (${rel(d)})${e.r ? `, ${noUrl(e.r)}` : ''}.`, items: [{ e, d }] };
       }
-      return { txt: `Fant ingen kommende «${kw.join(' ')}» de neste fire månedene.`, items: [] };
     }
   }
   return null;
 }
-/** Spør Glimt: lokalt først, ellers serveren (GET /api/kalender/search?q=&ai=1). */
+/** Neste 5 hendelser (reservesvar når Glimt ikke forstår spørsmålet lokalt). */
+function nextFive() {
+  const now = new Date(), today = d0(now), nm = now.getHours() * 60 + now.getMinutes(), out = [];
+  for (let i = 0; i < 60 && out.length < 5; i++) { const d = add(today, i); evOn(d).filter((e) => srFilt(e) && (i > 0 || !e.e || mm(e.e) > nm)).forEach((e) => { if (out.length < 5) out.push({ e, d }); }); }
+  return out;
+}
+const withTimeout = (ms) => { const c = new AbortController(); const t = setTimeout(() => c.abort(), ms); return { signal: c.signal, done: () => clearTimeout(t) }; };
+/** Prompt 34: serveren svarer – POST /api/glimt {prompt, tool:'calendar'} → {text} og GET /api/kalender/search?ai=1 parallelt (12 s). */
+async function askServer(q) {
+  const T = withTimeout(12_000), clean = (t) => String(t ?? '').replace(/\*\*/g, '').replace(/\s*\[\d+\]/g, '').trim();
+  const viaGlimt = fetch('/api/glimt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt: q, tool: 'calendar' }), credentials: 'same-origin', signal: T.signal })
+    .then(async (r) => { const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || `Feil ${r.status}`); const txt = clean(j.text ?? j.answer ?? j.reply); if (!txt) throw new Error(j.error || 'tomt svar'); return { txt, items: [], model: j.model }; });
+  const viaSearch = fetch(`/api/kalender/search?q=${encodeURIComponent(q)}&ai=1`, { cache: 'no-store', credentials: 'same-origin', signal: T.signal })
+    .then(async (r) => {
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || `Feil ${r.status}`);
+      // SERVER32: {answer:{text, kind, items:[…]}, events, total}. Eldre/andre former tåles også.
+      const A = j.answer && typeof j.answer === 'object' ? j.answer : j.ai && typeof j.ai === 'object' ? j.ai : j;
+      const txt = clean(typeof A.text === 'string' ? A.text : typeof A.answer === 'string' ? A.answer : A.txt);
+      if (A.error && !txt) throw new Error(A.error);
+      const list = Array.isArray(A.items) ? A.items : Array.isArray(A.events) ? A.events : [];
+      const nz = list.length ? normalize({ events: list, subjects: K.data?.subjects }) : null;
+      const items = nz ? [...nz.byId.values()].filter((e) => !/\|\d+$/.test(e.id)).map((e) => { if (!K.data.byId.has(e.id)) K.data.byId.set(e.id, e); return { e, d: fromKey(e.k) }; }) : [];
+      if (!txt || A.kind === 'none') throw new Error('ingen forståelse');
+      return { txt, items };
+    });
+  try { return await Promise.any([viaSearch, viaGlimt]); }
+  catch (e) {
+    const errs = (e.errors ?? [e]).map((x) => (x.name === 'AbortError' ? 'tidsavbrudd etter 12 s' : x.message)).filter((m) => m && m !== 'ingen forståelse' && !/^Feil 404$/.test(m));
+    return errs.length ? { err: errs[0] } : null;
+  } finally { T.done(); }
+}
+/** Spør Glimt: lokalt først (420 ms «tenker»), ellers reservesvar med de neste hendelsene mens serveren svarer. */
 function askGlimt(t) {
   const S = K.srch, q = String(t ?? S?.q ?? '').trim();
   if (!S || !q) return;
-  S.q = q; S.hi = -1; S.ai = { q, busy: true }; S.res = localSearch(q); paint();
+  S.q = q; S.hi = -1; S.ai = { q, busy: true }; S.res = localSearch(q);
+  if (host()?.querySelector('[data-k-sai]')) paintAi(); else paint();
   const loc = srLocal(q);
   setTimeout(async () => {
     if (K.srch !== S || S.ai?.q !== q) return;
-    if (loc) { S.ai = { q, ...loc }; paint(); return; }
-    let ans = null;
-    try {
-      const r = await fetch(`/api/kalender/search?q=${encodeURIComponent(q)}&ai=1`, { cache: 'no-store', credentials: 'same-origin' });
-      if (r.ok) {
-        const j = await r.json();
-        // SERVER32: {answer:{text, kind, items:[…]}, events, total}. Eldre/andre former tåles også.
-        const A = j.answer && typeof j.answer === 'object' ? j.answer : j.ai && typeof j.ai === 'object' ? j.ai : j;
-        const txt = String((typeof A.text === 'string' ? A.text : typeof A.answer === 'string' ? A.answer : A.txt) ?? '').replace(/\*\*/g, '').replace(/\s*\[\d+\]/g, '').trim();
-        const list = Array.isArray(A.items) ? A.items : Array.isArray(A.events) ? A.events : [];
-        const nz = list.length ? normalize({ events: list, subjects: K.data?.subjects }) : null;
-        const items = nz ? [...nz.byId.values()].filter((e) => !/\|\d+$/.test(e.id)).map((e) => { if (!K.data.byId.has(e.id)) K.data.byId.set(e.id, e); return { e, d: fromKey(e.k) }; }) : [];
-        if (txt) ans = { txt, items };
-      }
-    } catch { /* uten nett eller eldre server */ }
+    if (loc) { S.ai = { q, ...loc }; paintAi(); return; }
+    S.ai = { q, txt: 'Jeg er ikke sikker på hva du mener, men her er det som skjer fremover …', items: nextFive(), wait: true }; paintAi();
+    const ans = await askServer(q);
     if (K.srch !== S || S.ai?.q !== q) return;
-    S.ai = { q, ...(ans ?? { txt: 'Jeg fant ikke noe konkret svar i kalenderen. Prøv «hva har jeg på fredag?» eller «når er neste prøve?».', items: [] }) };
-    paint();
-  }, loc ? 450 : 0);
+    if (ans?.txt) S.ai = { q, txt: ans.txt, items: ans.items?.length ? ans.items : S.ai.items };
+    else S.ai = { ...S.ai, wait: false, err: ans?.err ? `Glimt fikk ikke svar: ${ans.err}` : '' };
+    paintAi();
+  }, 420);
 }
 function searchSheet() {
   const S = K.srch;
   if (!S) return '';
   const q = S.q ?? '', has = !!q.trim();
   const fl = [['*', 'Alle', ''], ...calList().filter((c) => c.enabled !== false).map((c) => [c.id, c.name, c.color])];
-  return `<div class="k3-sr-bg" data-k-sclose><div class="k3-sr" role="dialog" aria-modal="true" aria-label="Søk i kalenderen">
+  const first = !S.shown; S.shown = true;
+  return `<div class="k3-sr-bg${first ? ' k3-anim' : ''}" data-k-sclose><div class="k3-sr" role="dialog" aria-modal="true" aria-label="Søk i kalenderen">
     <form class="k3-sr-f" data-k-srform><div class="k3-sr-in"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
       <input name="kq" value="${esc(q)}" placeholder="Søk, eller spør Glimt …" autocomplete="off" enterkeyhint="search" data-k-q aria-label="Søk i kalenderen">
       <button type="button" class="k3-clr" data-k-sclr aria-label="Tøm søket"${has ? '' : ' hidden'}>${IC_X()}</button>
-      <button type="submit" class="k3-ask${has ? ' on' : ''}"${has ? '' : ' disabled'}>✦ Spør</button></div>
+      <button type="button" class="k3-ask${has ? ' on' : ''}" data-k-askbtn${has ? '' : ' disabled'}>✦ Spør</button></div>
       <button type="button" class="k3-sx" data-k-sclose aria-label="Lukk">${IC_X(13, 2.8)}</button></form>
     <div class="k3-fl">${fl.map(([k, n, c]) => `<button type="button" class="${(S.f ?? '*') === k ? 'on' : ''}" data-k-sf="${esc(k)}">${c ? `<i style="background:${esc(c)}"></i>` : ''}${esc(n)}</button>`).join('')}</div>
-    <div class="k3-sb" data-k-sres>${searchRes()}</div></div></div>`;
+    <div class="k3-sb" data-k-sres><div data-k-sai>${aiCard()}</div><div data-k-slist>${searchRes()}</div></div></div></div>`;
+}
+/* Prompt 34 (flimring): Glimt-merket lages én gang per tilstand og flyttes inn igjen, så animasjonen ikke starter om. */
+const GM = {};
+function gmNode(st) {
+  if (!GM[st]) { const t = document.createElement('template'); t.innerHTML = glimt(30, st); GM[st] = t.content.firstElementChild; }
+  return GM[st];
+}
+function aiBody(A) {
+  if (A.busy) return '<span class="k3-busy">Leser kalenderen …</span>';
+  const rows = (A.items ?? []).slice(0, 6).map((x) => srRow(x, `<span class="k3-tm">${esc(x.e.s || 'Hele')}</span><span class="k2-grow k3-tx"><b data-no-i18n>${esc(short(x.e))}</b><span data-no-i18n>${esc(capf(dLong(x.d)) + (x.e.r ? ` · ${noUrl(x.e.r)}` : ''))}</span></span>`)).join('');
+  const err = A.err ? `<span class="k3-err" role="alert">${esc(A.err)}</span><span class="k3-erra"><button type="button" class="k3-eb" data-k-retry-ai>Prøv igjen</button><button type="button" class="k3-eb" data-k-aictl>Åpne AI-kontroll</button></span>` : '';
+  return `<span class="k3-ans" data-no-i18n>${esc(A.txt ?? '')}${A.wait ? ' <span class="k3-wait">Glimt tenker videre …</span>' : ''}</span>${err}${rows ? `<div class="k3-list in">${rows}</div>` : ''}`;
+}
+/** AI-kortet. Forrige svar blir stående mens man skriver et nytt spørsmål (byttes først ved Enter). */
+function aiCard() {
+  const A = K.srch?.ai;
+  if (!A) return '';
+  return `<div class="k3-ai"><div class="k3-ai-h"><span class="k3-gm" data-k-gm>${glimt(30, A.busy ? 'tenker' : 'ferdig')}</span><span class="k2-grow k3-ai-l"><span class="k3-lab">GLIMT</span><span class="k3-q" data-no-i18n>«${esc(A.q)}»</span></span></div><div data-k-abody>${aiBody(A)}</div></div>`;
+}
+/** Tegner bare AI-kortet på nytt (svaret kom). Merket byttes bare hvis tilstanden endret seg. */
+function paintAi() {
+  const h = host(), el = h?.querySelector('[data-k-sai]'), A = K.srch?.ai;
+  if (!el) return;
+  if (!A) { el.innerHTML = ''; paintRes(); return; }
+  if (!el.querySelector('.k3-ai')) { el.innerHTML = aiCard(); }
+  const st = A.busy ? 'tenker' : 'ferdig', slot = el.querySelector('[data-k-gm]');
+  if (slot && slot.firstElementChild?.dataset.st !== st) slot.replaceChildren(gmNode(st));
+  const q = el.querySelector('.k3-q'); if (q) q.textContent = `«${A.q}»`;
+  el.querySelector('[data-k-abody]').innerHTML = aiBody(A);
+  paintRes();
 }
 function searchRes() {
   const S = K.srch;
   if (!S) return '';
-  const now = new Date(), today = d0(now), nm = now.getHours() * 60 + now.getMinutes(), q0 = (S.q ?? '').trim(), A = S.ai && S.ai.q === q0 ? S.ai : null;
+  const now = new Date(), today = d0(now), nm = now.getHours() * 60 + now.getMinutes(), q0 = (S.q ?? '').trim(), A = S.ai;
   let h = '';
-  if (A) {
-    const rows = (A.items ?? []).slice(0, 6).map((x) => srRow(x, `<span class="k3-tm">${esc(x.e.s || 'Hele')}</span><span class="k2-grow k3-tx"><b data-no-i18n>${esc(short(x.e))}</b><span data-no-i18n>${esc(capf(dLong(x.d)) + (x.e.r ? ` · ${noUrl(x.e.r)}` : ''))}</span></span>`)).join('');
-    h += `<div class="k3-ai"><div class="k3-ai-h">${glimt(30, A.busy ? 'tenker' : 'ferdig')}<span class="k2-grow k3-ai-l"><span class="k3-lab">GLIMT</span><span class="k3-q" data-no-i18n>«${esc(A.q)}»</span></span></div>
-      ${A.busy ? '<span class="k3-busy">Leser kalenderen …</span>' : `<span class="k3-ans" data-no-i18n>${esc(A.txt)}</span>${rows ? `<div class="k3-list in">${rows}</div>` : ''}`}</div>`;
-  }
+  if (A && A.q === q0) return h; // svaret har egne rader
   if (!q0 && !A) {
     const soon = [];
     for (let i = 0; i < 14 && soon.length < 4; i++) { const d = add(today, i); evOn(d).filter((e) => e.s && (i > 0 || mm(e.e) > nm) && srFilt(e)).forEach((e) => { if (soon.length < 4) soon.push({ e, d }); }); }
@@ -756,9 +816,10 @@ function searchRes() {
 }
 /** Oppdaterer bare resultatene (og ✕ / ✦ Spør) mens man skriver, så fokus blir stående i feltet. */
 function paintRes() {
-  const h = host(), el = h?.querySelector('[data-k-sres]');
+  const h = host(), el = h?.querySelector('[data-k-slist]');
   if (!el) return;
-  el.innerHTML = searchRes();
+  const html = searchRes();
+  if (html !== el._h) { el.innerHTML = html; el._h = html; } // uendret liste tegnes ikke på nytt
   const has = !!(K.srch?.q ?? '').trim(), ask = h.querySelector('.k3-ask'), clr = h.querySelector('[data-k-sclr]');
   if (ask) { ask.classList.toggle('on', has); ask.disabled = !has; }
   if (clr) clr.hidden = !has;
@@ -978,7 +1039,7 @@ function runSearch(q) {
   const S = K.srch;
   if (!S) return;
   S.q = q; S.hi = -1;
-  if (S.ai && S.ai.q !== q.trim()) S.ai = null;
+  // Prompt 34: forrige AI-svar blir stående mens man skriver (byttes først ved Enter).
   clearTimeout(sTimer); sCtl?.abort();
   if (q.trim().length < 2) { S.res = []; S.loading = false; return paintRes(); }
   S.res = localSearch(q.trim()); S.loading = true; paintRes();
@@ -1024,6 +1085,16 @@ function bind(h) {
   h.addEventListener('keydown', (e) => {
     if (e.target.matches?.('[data-k-qtxt]') && e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submitQa(); }
     if (e.target.matches?.('[data-k-ai]') && e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); runFmAi(); }
+    // Prompt 34: Enter i søkefeltet spør Glimt (eller åpner markert rad), Esc lukker. Ikke via <form onsubmit>.
+    if (e.target.matches?.('[data-k-q]') && K.srch && (e.key === 'Enter' || e.key === 'Escape')) {
+      if (e.isComposing || e.keyCode === 229) return;
+      e.preventDefault(); e.stopPropagation();
+      if (e.key === 'Escape') { closeSheets(); return; }
+      K.srch.q = e.target.value;
+      const hi = K.srch.hi ?? -1, row = hi >= 0 ? host()?.querySelectorAll('.k3-sr [data-k-sres] .k3-row')[hi] : null;
+      if (row) row.click(); else askGlimt(e.target.value);
+      return;
+    }
     // Søket: ↑/↓ flytter markeringen, Enter åpner raden (eller spør Glimt når ingen rad er markert).
     if (e.target.matches?.('[data-k-q]') && K.srch && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
       const n = host()?.querySelectorAll('.k3-sr [data-k-sres] .k3-row').length ?? 0;
@@ -1075,6 +1146,9 @@ function bind(h) {
     if ('kToday' in d) return goToday();
     if ('kNew' in d) return openForm();
     if ('kSearch' in d) return openSearch();
+    if ('kAskbtn' in d) { const v = host()?.querySelector('[data-k-q]')?.value ?? K.srch?.q; if (K.srch) K.srch.focus = true; askGlimt(v); host()?.querySelector('[data-k-q]')?.focus(); return; }
+    if ('kRetryAi' in d) { const q = K.srch?.ai?.q; if (q) askGlimt(q); return; }
+    if ('kAictl' in d) { closeSheets(); openSettings('ai'); return; }
     if ('kSclr' in d) { if (K.srch) { K.srch.q = ''; K.srch.ai = null; K.srch.res = []; K.srch.hi = -1; K.srch.focus = true; } return paint(); }
     if (d.kSf) { if (K.srch) { K.srch.f = d.kSf; K.srch.focus = true; K.srch.res = (K.srch.q ?? '').trim().length >= 2 ? localSearch(K.srch.q.trim()) : []; if (K.srch.ai) { const q = K.srch.ai.q; K.srch.ai = null; paint(); askGlimt(q); return; } } return paint(); }
     if (d.kAsk) { if (K.srch) { K.srch.focus = true; askGlimt(SR_SUGG[+d.kAsk]); } return; }
