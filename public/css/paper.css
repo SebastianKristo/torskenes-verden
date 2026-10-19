@@ -447,7 +447,7 @@ html[data-hl="2c"] .menu [data-act="head-edit"],html[data-hl="2c"] .menu [data-a
 html[data-hl="2c"] .menu .danger{color:var(--acc)}
 
 /* Sidetitlene står i fotovinduet, så de vanlige titlene skjules. */
-html[data-hl="2c"] body.pw-low #view>.os-title,html[data-hl="2c"] body.pw-low .trk-top .os-title,html[data-hl="2c"] body.pw-low #view .page-title:first-child,html[data-hl="2c"] body.pw-low .mat .mp-titles{display:none}
+html[data-hl="2c"] body.pw-low #view>.os-title,html[data-hl="2c"] body.pw-low .trk-top .os-title,html[data-hl="2c"] body.pw-low #view .page-title:first-child{display:none}
 html[data-hl="2c"] .pw-low{margin-bottom:28px}
 html[data-hl="2c"] .trk-logo{padding:0}
 html[data-hl="2c"] .trk-ini:has(.trk-logo){background:#fff!important}
@@ -539,23 +539,8 @@ html[data-hl="2c"] .fx .fbtn.wht,html[data-hl="2c"] .fx .fbtn.pri{background:var
 html[data-hl="2c"] .fx .fin{background:#fff;border-color:var(--rule);color:var(--ink)}
 html[data-hl="2c"] .inv-row{border-bottom-color:var(--rule2)}
 
-/* ---------- Mat på papir: samme oppsett, med papirets farger og fonter ---------- */
-html[data-hl="2c"] .mat{
-  --mp-bg:transparent;--mp-card:#fff;--mp-in:#f3efe6;--mp-pop:#fff;--mp-line:#d8d1c2;--mp-line2:#d8d1c2;--mp-line3:#e3ddcf;
-  --mp-t:#1b1a17;--mp-2:#3a372f;--mp-mute:#6b665c;--mp-faint:#8f897c;--mp-dim:#8f897c;
-  --mp-acc:#b23a2a;--mp-acc-l:#b23a2a;--mp-acc-ll:#b23a2a;--mp-acc-bg:#f3e3d9;--mp-acc-bd:#e8c9bb;--mp-chip:#f3e3d9;
-  --mp-ok:#2f7a4f;--mp-ok-bg:#dfe9e1;--mp-err:#b23a2a;
-  --mp-serif:'Newsreader',Georgia,serif;--mp-mono:'IBM Plex Mono',ui-monospace,monospace;
-  font-family:var(--sans);color-scheme:light;padding:0;border-radius:0;background:transparent
-}
+/* ---------- Mat på papir (prompt 32): Matplan-modulen beholder sine egne farger (mørk varm grunn, radius 28) som et kort under fotovinduet. ---------- */
 html[data-hl="2c"] body[data-route="matplan"]{background:var(--pp)}
-html[data-hl="2c"] .mat .mp-btn{background:#fff}
-html[data-hl="2c"] .mat .mp-btn:hover{border-color:var(--ink)}
-html[data-hl="2c"] .mat .mp-light,html[data-hl="2c"] .mat .mp-filter.on,html[data-hl="2c"] .mat .mp-fchip.on{color:#f3efe6}
-html[data-hl="2c"] .mat .mp-acc{color:#fff!important}
-html[data-hl="2c"] .mat .mp-fold{background:#f3efe6;color:var(--ink2)}
-html[data-hl="2c"] .mat .mp-sw{background:#cfc8b9}
-html[data-hl="2c"] .mat .mp-wd{color:var(--ink2)}
 
 /* ---------- Sporing på papir ---------- */
 html[data-hl="2c"] .trk{--text:#1b1a17;--muted:#6b665c;--green:#2f7a4f;--yellow:#9a6a0c;color:var(--ink)}

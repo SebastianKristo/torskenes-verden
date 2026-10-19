@@ -60,11 +60,15 @@ export const onChange = (fn) => subs.add(fn);
 export const render = () => subs.forEach((fn) => fn());
 
 let toastTimer;
+// Prompt 32 (claude-code-boliger-toast-farge.md): faste farger, «ink»-bakgrunn og «card»-tekst. Aldri «bg», som er
+// gjennomsiktig inne i FinansHub på web (da ble toasten en tom svart boks). 11 × 18 px, radius 20, maks 90 vw, 2,2 s.
 export function toast(text) {
   let el = document.getElementById('toast');
   if (!el) { el = document.createElement('div'); el.id = 'toast'; el.className = 'toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
-  el.textContent = text; el.hidden = false;
-  clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 2400);
+  const h = document.documentElement, dark = h.dataset.theme === 'mork' || h.dataset.theme === 'glod' || (h.dataset.theme === 'v2' && !h.hasAttribute('data-v3'));
+  Object.assign(el.style, { background: dark ? '#ece8df' : '#1b1a17', color: dark ? '#121210' : '#ffffff', padding: '11px 18px', borderRadius: '20px', maxWidth: '90vw', boxSizing: 'border-box', textAlign: 'center' });
+  el.textContent = String(text ?? '') || 'Lagret'; el.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 2200);
 }
 
 // loader.js starter /bootstrap parallelt med at modulene lastes (prompt 21); svaret brukes én gang hvis det er gyldig.

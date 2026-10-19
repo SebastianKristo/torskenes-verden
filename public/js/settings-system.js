@@ -113,7 +113,15 @@ function notesHtml(ph, d) {
   items = items.slice(0, 16);
   return `<section class="ny-notes"><b class="ny-h">Dette er Nordlys ${esc(majMin(v) || '')}. ${esc(tag)}</b>
     ${v ? `<span class="ny-cap">NYTT I <span data-no-i18n>${esc(v)}</span>${date ? ` · <span data-no-i18n>${esc(date)}</span>` : ''}</span>` : ''}
-    ${items.length ? `<ul data-no-i18n>${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<span class="ny-note">Ingen endringsnotater for denne versjonen ennå.</span>'}</section>`;
+    ${items.length ? `<ul data-no-i18n>${items.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<span class="ny-note">Ingen endringsnotater for denne versjonen ennå.</span>'}${buildLine(d)}</section>`;
+}
+// Prompt 32 (claude-code-fjern-oppdatering-rad.md): «Installert 4.24.0 · build 8512626» med Kopier, flyttet hit fra den
+// gamle Oppdatering-raden. Nordlys OS er det eneste stedet å oppdatere.
+let copiedBuild = false;
+function buildTxt(d) { const i = d?.installed ?? {}; return [i.version ? `Installert ${i.version}` : '', i.sha ? `build ${shortSha(i.sha)}` : ''].filter(Boolean).join(' · '); }
+function buildLine(d) {
+  const t = buildTxt(d);
+  return t ? `<span class="ny-build"><span data-no-i18n>${esc(t)}</span><button type="button" class="ny-copy" data-upd="copybuild">${copiedBuild ? 'Kopiert ✓' : 'Kopier'}</button></span>` : '';
 }
 
 const setupHtml = (lead) => `<section class="ny-sec ny-setup"><b>${esc(lead)}</b>
@@ -211,6 +219,7 @@ export async function systemClick(e) {
   else if (a === 'close') openSheet(false);
   else if (a === 'log') toggleLog();
   else if (a === 'copy') await copyCmd();
+  else if (a === 'copybuild') { try { await navigator.clipboard.writeText(buildTxt(U.d)); } catch { /* */ } copiedBuild = true; rerender(); setTimeout(() => { copiedBuild = false; rerender(); }, 1800); }
   return true;
 }
 

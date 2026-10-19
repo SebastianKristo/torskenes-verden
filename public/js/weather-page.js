@@ -35,7 +35,7 @@ const pick = (o, ...ks) => { for (const k of ks) if (o?.[k] != null) return o[k]
 
 /* ---------------- Tilstand ---------------- */
 const S = {
-  places: null, placesOk: true, cur: lsGet('wx_city'), full: null, d: null, cmp: null, cmpBusy: false, cmpErr: false, src: 'Henter …', mode: 'temp',
+  places: null, placesOk: true, cur: lsGet('wx_city'), full: null, d: null, cmp: null, cmpBusy: false, cmpErr: false, src: 'Henter …', mode: (() => { try { return sessionStorage.getItem('wx_mode') || 'temp'; } catch { return 'temp'; } })(),
   sh: null, feel: false, ms: null, msD: 1, cmpOpen: false, plOpen: false, plQ: '', plRes: null, plBusy: false, mpOpen: false, mpL: 'rain', sc: 0,
   swOpen: null, drag: null,
 };
@@ -233,29 +233,80 @@ function cmpVals(d, nowI) {
     agS: `Snitt avvik i makstemperatur: ${f1(avg)}° over ${diffs.length} dager`, place: P.name };
 }
 
-function mainHtml() {
-  const d = S.d, P = place();
-  if (!d) return `<div class="wxp-hero"><span class="wxp-city">${esc(P.name)}</span><span class="wxp-desc">${esc(S.src === 'Henter …' ? 'Henter været …' : 'Fikk ikke hentet været')}</span>${S.src === 'Henter …' ? '' : '<button class="wxp-pill" data-wx="retry">Prøv igjen</button>'}</div>`;
-  const C = d.current, D = d.daily, H = d.hourly, code = C.weather_code, nowI = nowIndex(H);
-  const Sx = S.cmp, psi = {}; if (Sx) Sx.hourly.time.forEach((t, i) => { psi[tKey(t)] = i; });
+// Prompt 32: PC-oppsett (fasit Vaer.dc.html med desktop=true): sidepanel med steder til venstre, innhold i to kolonner 5:7
+// (topp, Forhold og 7 dager til venstre; værkart, Yr og Storm, vind, måne og fliser til høyre). Under 900 px: mobiloppsettet.
+const isDk = () => window.innerWidth >= 900;
+const MODE_SUB = { temp: 'Temperatur (°C)', rain: 'Nedbør (mm) · Sjanse', wind: 'Vind (m/s) · Kast' };
+const f1n = (v) => (v < 0.05 ? '0' : v < 10 ? String(Math.round(v * 10) / 10).replace('.', ',') : String(Math.round(v)));
+const DROP = '<svg width="12" height="14" viewBox="0 0 24 24" fill="#5ad1ff" aria-hidden="true"><path d="M12 2c3.5 4.6 7 8.6 7 12.6a7 7 0 0 1-14 0C5 10.6 8.5 6.6 12 2z"/></svg>';
+
+function heroHtml(d, P) {
+  const C = d.current, D = d.daily, dk = isDk();
+  return `<div class="wxp-hero${dk ? ' dk' : ''}" style="opacity:${dk ? 1 : Math.max(0, 1 - S.sc / 220).toFixed(2)}"><span class="wxp-k">${P.id === 'pos' || P.mine ? 'MIN POSISJON' : esc((P.region && P.region !== P.name ? P.region : P.country || 'Norge').toUpperCase())}</span><span class="wxp-city">${esc(P.name)}</span><span class="wxp-temp">${r0(C.temperature_2m)}</span><span class="wxp-desc">${esc(DESC(C.weather_code))}</span><span class="wxp-hl">H:${r0(D.temperature_2m_max[1])}  L:${r0(D.temperature_2m_min[1])}</span>${dk ? '' : `<span class="wxp-hsrc">${esc(S.src)}</span>`}</div>`;
+}
+
+// Forhold: bryteren ☁/💧/🌬 bytter både timeraden og dagslisten. Timecellene er alltid 142 px høye.
+function forholdHtml(d) {
+  const H = d.hourly, nowI = nowIndex(H), Sx = S.cmp, psi = {};
+  if (Sx) Sx.hourly.time.forEach((t, i) => { psi[tKey(t)] = i; });
+  const PR = H.precipitation, WS = H.wind_speed_10m, WG = H.wind_gusts_10m, gst = (i) => (WG[i] != null ? WG[i] : (WS[i] || 0) * 1.5);
+  const WMX = Math.max(4, ...H.time.slice(nowI, nowI + 24).map((_, k) => gst(nowI + k))), wy = (v) => (31 - Math.min(1, v / WMX) * 27).toFixed(1);
   const hrs = H.time.slice(nowI, nowI + 24).map((t, k) => {
-    const i = nowI + k, hh = +t.slice(11, 13), I = ic(H.weather_code[i], !H.is_day[i]), pp = Math.round(H.precipitation_probability[i] ?? 0), j = psi[t.slice(0, 13)];
-    const pt = Sx && S.mode === 'temp' && j != null && Sx.hourly.temperature_2m[j] != null ? `${Math.round(Sx.hourly.temperature_2m[j])}°` : '';
-    const v = S.mode === 'temp' ? r0(H.temperature_2m[i]) : S.mode === 'rain' ? `${pp} %` : String(Math.round(H.wind_speed_10m[i]));
-    return `<div class="wxp-h"><span style="font-weight:${k ? 700 : 800}">${k ? pad2(hh) : 'Nå'}</span>${svgIc(I.k, 28)}<span class="wxp-pp">${pp >= 20 ? `${pp} %` : ''}</span><b>${v}</b><span class="wxp-pt" title="${pt ? 'Storm (ECMWF-modell)' : ''}">${pt}</span></div>`;
+    const i = nowI + k, hh = +t.slice(11, 13), lab = `<span style="font-weight:${k ? 700 : 800}">${k ? pad2(hh) : 'Nå'}</span>`, pp = Math.round(H.precipitation_probability[i] ?? 0);
+    if (S.mode === 'rain') {
+      const mm = PR[i] || 0;
+      return `<div class="wxp-h">${lab}<span class="wxp-rb"><i style="top:33%"></i><i style="top:66%"></i><b style="height:${Math.min(100, (mm / 3) * 100).toFixed(0)}%;border-radius:${mm >= 3 ? '9px' : '0 0 9px 9px'}"></b></span><span class="wxp-mm">${mm >= 0.05 ? `${f1n(mm)} mm` : ''}</span><span class="wxp-ppa">${pp} %</span></div>`;
+    }
+    if (S.mode === 'wind') {
+      const a = WS[Math.max(nowI, i - 1)] || 0, b = WS[i] || 0, c2 = WS[i + 1] != null ? WS[i + 1] : b;
+      const ga = gst(Math.max(nowI, i - 1)), gb = gst(i), gc = WG[i + 1] != null || WS[i + 1] != null ? gst(i + 1) : gb;
+      return `<div class="wxp-h">${lab}<b class="wxp-ws">${Math.round(b)}</b><span class="wxp-wu">m/s</span><span class="wxp-wg">kast ${Math.round(gb)}</span><svg width="56" height="34" viewBox="0 0 56 34" preserveAspectRatio="none" aria-hidden="true"><path d="M0 34 L0 ${wy((ga + gb) / 2)} L28 ${wy(gb)} L56 ${wy((gb + gc) / 2)} L56 34 Z" fill="rgba(90,209,255,.28)"/><path d="M0 ${wy((a + b) / 2)} L28 ${wy(b)} L56 ${wy((b + c2) / 2)}" fill="none" stroke="#3fd0e0" stroke-width="3" stroke-linecap="round"/></svg></div>`;
+    }
+    const I = ic(H.weather_code[i], !H.is_day[i]), j = psi[t.slice(0, 13)];
+    const pt = Sx && j != null && Sx.hourly.temperature_2m[j] != null ? `${Math.round(Sx.hourly.temperature_2m[j])}°` : '';
+    return `<div class="wxp-h">${lab}${svgIc(I.k, 28)}<span class="wxp-pp">${pp >= 20 ? `${pp} %` : ''}</span><b>${r0(H.temperature_2m[i])}</b><span class="wxp-pt" title="${pt ? 'Storm (ECMWF-modell)' : ''}">${pt}</span></div>`;
   }).join('');
+  const MODES = [['temp', 'Temperatur', IC.part], ['rain', 'Nedbør', 'M12 3c3 4 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 3-7 6-11z'], ['wind', 'Vind', 'M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8']];
+  return card(`<div class="wxp-hrhead"><button class="wxp-link" data-wx-sh="1"><b>Forhold ›</b><span>${MODE_SUB[S.mode]}</span></button><div class="wxp-modes" role="tablist">${MODES.map(([k, n, p]) => `<button role="tab" aria-selected="${S.mode === k}" aria-label="${n}" title="${n}" data-wx-mode="${k}" class="${S.mode === k ? 'on' : ''}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="${p}"/></svg></button>`).join('')}</div></div>
+      <div class="wxp-hours m-${S.mode}">${hrs}</div>`, '', 'wxp-hcard');
+}
+
+function daysHtml(d) {
+  const C = d.current, D = d.daily, H = d.hourly, PR = H.precipitation, WS = H.wind_speed_10m, WG = H.wind_gusts_10m, gst = (i) => (WG[i] != null ? WG[i] : (WS[i] || 0) * 1.5);
   const di = [1, 2, 3, 4, 5, 6, 7].filter((i) => i < D.time.length), LO = Math.min(...di.map((i) => D.temperature_2m_min[i])), HI = Math.max(...di.map((i) => D.temperature_2m_max[i])), sp = Math.max(1, HI - LO);
-  const days = di.map((i, k) => {
-    const lo = D.temperature_2m_min[i], hi = D.temperature_2m_max[i], I = ic(D.weather_code[i], false), pp = D.precipitation_probability_max[i];
-    return `<button class="wxp-day" data-wx-sh="${i}"><span class="wxp-dn">${k ? WD[new Date(`${D.time[i]}T12:00`).getDay()] : 'I dag'}</span><span class="wxp-di">${svgIc(I.k, 24)}<span>${pp >= 30 ? `${Math.round(pp)} %` : ''}</span></span><span class="wxp-lo">${r0(lo)}</span>
+  const nowHr = new Date().getHours();
+  const rows = di.map((i, k) => {
+    const name = `<span class="wxp-dn">${k ? WD[new Date(`${D.time[i]}T12:00`).getDay()] : 'I dag'}</span>`, pp = Math.round(D.precipitation_probability_max[i] ?? 0);
+    const ix = Array.from({ length: 24 }, (_, h) => i * 24 + h).filter((j) => H.time[j]);
+    if (S.mode === 'rain') {
+      const two = Array.from({ length: 12 }, (_, q) => (PR[ix[q * 2]] || 0) + (PR[ix[q * 2 + 1]] || 0)), mmS = D.precipitation_sum[i] ?? two.reduce((a, v) => a + v, 0);
+      const bars = two.map((v, q) => `<span style="background:${q >= 3 && q < 9 ? 'rgba(255,255,255,.2)' : 'rgba(0,0,0,.16)'};outline:${k === 0 && Math.floor(nowHr / 2) === q ? '2px solid #fff' : 'none'}"><b style="height:${Math.min(100, (v / 4) * 100).toFixed(0)}%"></b></span>`).join('');
+      return `<button class="wxp-day r" data-wx-sh="${i}">${name}<span class="wxp-rbars">${bars}</span><span class="wxp-dmm" style="color:${mmS >= 0.05 ? '#fff' : '#9fe0ff'}">${f1n(mmS)} mm</span><span class="wxp-dpp" style="color:${pp >= 30 ? '#fff' : '#9fe0ff'}">${pp >= 30 ? DROP : ''}${pp}%</span></button>`;
+    }
+    if (S.mode === 'wind') {
+      const s2 = ix.map((j) => WS[j] || 0), g2 = ix.map((j) => gst(j)), dMx = Math.max(4, ...g2), yy = (v) => (26 - Math.min(1, v / dMx) * 22).toFixed(1), px = (q) => ((q / Math.max(1, ix.length - 1)) * 120).toFixed(1);
+      const sL = s2.length ? `M${s2.map((v, q) => `${px(q)} ${yy(v)}`).join(' L')}` : '', gA = g2.length ? `M0 28 L${g2.map((v, q) => `${px(q)} ${yy(v)}`).join(' L')} L120 28 Z` : '';
+      const nI = Math.min(ix.length - 1, nowHr), dot = k === 0 && s2.length ? `<i style="left:${((px(nI) / 120) * 100).toFixed(1)}%;top:${((yy(s2[nI]) / 28) * 100).toFixed(1)}%"></i>` : '';
+      return `<button class="wxp-day w" data-wx-sh="${i}">${name}<span class="wxp-wgr"><svg viewBox="0 0 120 28" preserveAspectRatio="none" aria-hidden="true"><rect x="30" y="0" width="60" height="28" fill="rgba(255,255,255,.08)"/><path d="${gA}" fill="rgba(90,209,255,.3)"/><path d="${sL}" fill="none" stroke="#3fd0e0" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="${k === 0 ? '5 4' : 'none'}" vector-effect="non-scaling-stroke"/></svg>${dot}</span><span class="wxp-wr">${s2.length ? `${Math.round(Math.min(...s2))}–${Math.round(Math.max(...g2))}` : '–'} <span>m/s</span></span></button>`;
+    }
+    const lo = D.temperature_2m_min[i], hi = D.temperature_2m_max[i], I = ic(D.weather_code[i], false);
+    return `<button class="wxp-day" data-wx-sh="${i}">${name}<span class="wxp-di">${svgIc(I.k, 24)}<span>${pp >= 30 ? `${pp} %` : ''}</span></span><span class="wxp-lo">${r0(lo)}</span>
       <span class="wxp-bar"><span style="left:${(((lo - LO) / sp) * 100).toFixed(1)}%;width:${Math.max(8, ((hi - lo) / sp) * 100).toFixed(1)}%"></span>${k === 0 ? `<i style="left:${Math.min(100, Math.max(0, ((C.temperature_2m - LO) / sp) * 100)).toFixed(1)}%"></i>` : ''}</span><span class="wxp-hi">${r0(hi)}</span></button>`;
   }).join('');
-  const cmp = cmpVals(d, nowI);
+  return card(rows, '', 'wxp-days');
+}
+
+function cmpCardHtml(d) {
+  const cmp = cmpVals(d, nowIndex(d.hourly));
   // Hele kortet åpner Yr mot Storm i fullskjerm.
-  const cmpCard = card(`<div class="wxp-cmph"><span class="wxp-yp">${LOGO('yr', 30)}${LOGO('storm', 30)}</span><span class="wxp-grow"><b>Yr og Storm</b><span class="wxp-ag"><i style="background:${cmp.agC}"></i>${esc(cmp.agT)}</span></span></div>
+  return card(`<div class="wxp-cmph"><span class="wxp-yp">${LOGO('yr', 30)}${LOGO('storm', 30)}</span><span class="wxp-grow"><b>Yr og Storm</b><span class="wxp-ag"><i style="background:${cmp.agC}"></i>${esc(cmp.agT)}</span></span></div>
     ${cmp.ready ? `<div class="wxp-cg wxp-cgh"><span></span><span style="color:#7fd6f5">YR</span><span style="color:#ffb27a">STORM</span><span style="text-align:right">AVVIK</span></div>${cmp.days4.map(cmpRow).join('')}` : `<span class="wxp-busy">${esc(S.cmpBusy ? 'Henter Storm …' : S.cmpErr ? 'Storm svarte ikke.' : '')}</span>`}
     <span class="wxp-more"><span>Time for time og hele uka</span><span>›</span></span>`, 'data-wx="cmp" role="button" tabindex="0" aria-label="Yr mot Storm, time for time og hele uka"', 'wxp-cmp');
-  // Vind, måne, sol, UV, føles som, mot i går, nedbør, sikt, luftfuktighet, lufttrykk.
+}
+
+// Vind, måne, sol, UV, føles som, mot i går, nedbør, sikt, luftfuktighet, lufttrykk.
+function restHtml(d) {
+  const C = d.current, D = d.daily, H = d.hourly, nowI = nowIndex(H), di = [1, 2, 3, 4, 5, 6, 7].filter((i) => i < D.time.length);
   const dir = C.wind_direction_10m ?? 0, dTxt = `${Math.round(dir)}° ${D16[Math.round(dir / 22.5) % 16]}`;
   const rows = (arr) => arr.map(([a, b], i) => `<div class="wxp-row${i ? ' bt' : ''}"><span>${esc(a)}</span><span>${esc(b)}</span></div>`).join('');
   const windCard = card(`<div>${lab(LSVG.wind, 'VIND')}${rows([['Vind', `${f1(C.wind_speed_10m)} m/s`], ['Kast', `${f1(C.wind_gusts_10m)} m/s`], ['Retning', dTxt]])}</div>
@@ -287,16 +338,41 @@ function mainHtml() {
     tile('hum', `${lab(LSVG.hum, 'LUFTFUKTIGHET')}<b class="wxp-big">${Math.round(C.relative_humidity_2m)} %</b><span class="wxp-small wxp-auto">Duggpunktet er ${Math.round(dew)}° akkurat nå.</span>`),
     tile('pres', `${lab(LSVG.pres, 'LUFTTRYKK')}<svg viewBox="0 0 100 86" class="wxp-pres"><circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,.35)" stroke-width="8" stroke-dasharray="0.9 2.4" transform="rotate(135 50 50)" pathLength="100"/><g transform="rotate(${(-135 + pf * 270).toFixed(0)} 50 50)"><line x1="50" y1="9" x2="50" y2="20" stroke="#fff" stroke-width="3" stroke-linecap="round"/></g><text x="50" y="40" fill="#fff" font-size="12" font-weight="800" text-anchor="middle">${arrow}</text><text x="50" y="56" fill="#fff" font-size="15" font-weight="800" text-anchor="middle">${Math.round(pr).toLocaleString('nb-NO')}</text><text x="50" y="66" fill="#fff" font-size="8" font-weight="700" text-anchor="middle">hPa</text><text x="26" y="84" fill="#fff" font-size="8" font-weight="700" text-anchor="middle">Lavt</text><text x="74" y="84" fill="#fff" font-size="8" font-weight="700" text-anchor="middle">Høyt</text></svg>`),
   ].join('');
-  const MODES = [['temp', 'Temperatur', IC.part], ['rain', 'Nedbør', 'M12 3c3 4 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 3-7 6-11z'], ['wind', 'Vind', 'M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8']];
-  return `<div class="wxp-hero" style="opacity:${Math.max(0, 1 - S.sc / 220).toFixed(2)}"><span class="wxp-k">${P.id === 'pos' ? 'MIN POSISJON' : esc((P.region && P.region !== P.name ? P.region : P.country || 'Norge').toUpperCase())}</span><span class="wxp-city">${esc(P.name)}</span><span class="wxp-temp">${r0(C.temperature_2m)}</span><span class="wxp-desc">${esc(DESC(code))}</span><span class="wxp-hl">H:${r0(D.temperature_2m_max[1])}  L:${r0(D.temperature_2m_min[1])}</span></div>
-    <div class="wxp-cols"><div class="wxp-col">
-    ${card(`<div class="wxp-hrhead"><button class="wxp-link" data-wx-sh="1"><b>Forhold ›</b><span>${S.mode === 'temp' ? 'Temperatur (°C)' : S.mode === 'rain' ? 'Sjanse for nedbør' : 'Vind (m/s)'}${S.mode === 'temp' && Sx ? ' · <em>Storm</em> i oransje' : ''}</span></button><div class="wxp-modes" role="tablist">${MODES.map(([k, n, p]) => `<button role="tab" aria-selected="${S.mode === k}" aria-label="${n}" title="${n}" data-wx-mode="${k}" class="${S.mode === k ? 'on' : ''}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="${p}"/></svg></button>`).join('')}</div></div>
-      <div class="wxp-hours">${hrs}</div>`, '', 'wxp-hcard')}
-    ${card(days, '', 'wxp-days')}
-    ${cmpCard}</div><div class="wxp-col">
-    ${windCard}${moonCard}
-    <div class="wxp-tiles">${tiles}</div></div></div>
-    <a class="wxp-credit" href="${esc(S.full?.yrUrl ?? 'https://www.yr.no/')}" target="_blank" rel="noopener">${esc(S.full?.credit ?? 'Data: MET Norway')} · Se også yr.no ↗</a>`;
+  return `${windCard}${moonCard}<div class="wxp-tiles">${tiles}</div>`;
+}
+
+const mapSrc = (P) => `https://embed.windy.com/embed2.html?lat=${P.lat}&lon=${P.lon}&detailLat=${P.lat}&detailLon=${P.lon}&zoom=7&level=surface&overlay=${S.mpL}&product=ecmwf&menu=&message=true&marker=true&calendar=now&type=map&location=coordinates&metricWind=m%2Fs&metricTemp=%C2%B0C`;
+// Værkartet på PC: eget kort øverst i høyre kolonne (lag og Fullskjerm). Iframen tegnes bare når sted eller lag endres.
+function mapCardHtml() {
+  return `<div class="wxp-mapcard"><div class="wxp-mapslot"></div><div class="wxp-mapbar"><span class="wxp-layers sm" role="tablist">${LAYERS.map(([k, n]) => `<button role="tab" aria-selected="${S.mpL === k}" class="${S.mpL === k ? 'on' : ''}" data-wx-layer="${k}">${n}</button>`).join('')}</span><button class="wxp-fsb" data-wx="map">⤢ Fullskjerm</button></div></div>`;
+}
+function paintMap(r) {
+  const slot = r.querySelector('.wxp-mapslot');
+  if (!slot) return;
+  const P = place(), src = mapSrc(P);
+  if (slot.dataset.src === src && slot.firstChild) return;
+  slot.dataset.src = src;
+  slot.innerHTML = `<iframe src="${esc(src)}" title="Værkart for ${esc(P.name)}" loading="lazy" referrerpolicy="no-referrer"></iframe>`;
+}
+
+// Sidepanelet på PC: «Vær» + «+», søkefelt, Mine steder som kort (valgt sted viser temperatur, beskrivelse og H/L), kilden nederst.
+function sideHtml() {
+  const L = S.places ?? DEFP, C = S.d?.current, D = S.d?.daily, cur = place();
+  const list = L.map((P) => {
+    const on = P.id === cur.id;
+    return `<button class="wxp-sc${on ? ' on' : ''}" data-wx-pl="${esc(P.id)}"${on ? ' aria-current="true"' : ''}><span class="wxp-sc1"><b>${esc(P.name)}</b><span>${on && C ? r0(C.temperature_2m) : ''}</span></span><span class="wxp-sc2"><span>${esc(on && C ? DESC(C.weather_code) : [P.region, P.country || 'Norge'].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).join(', '))}</span><span>${on && D ? `H:${r0(D.temperature_2m_max[1])} L:${r0(D.temperature_2m_min[1])}` : ''}</span></span></button>`;
+  }).join('');
+  return `<div class="wxp-sh1"><b>Vær</b><button class="wxp-plus" data-wx="places" aria-label="Legg til sted" title="Legg til sted">+</button></div>
+    <button class="wxp-sq" data-wx="places"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>Søk etter by eller sted</button>
+    <div class="wxp-scs">${list}</div><span class="wxp-grow"></span><span class="wxp-sidesrc">${esc(S.src)}</span>`;
+}
+
+function mainHtml() {
+  const d = S.d, P = place();
+  if (!d) return `<div class="wxp-hero"><span class="wxp-city">${esc(P.name)}</span><span class="wxp-desc">${esc(S.src === 'Henter …' ? 'Henter været …' : 'Fikk ikke hentet været')}</span>${S.src === 'Henter …' ? '' : '<button class="wxp-pill" data-wx="retry">Prøv igjen</button>'}</div>`;
+  const credit = `<a class="wxp-credit" href="${esc(S.full?.yrUrl ?? 'https://www.yr.no/')}" target="_blank" rel="noopener">${esc(S.full?.credit ?? 'Data: MET Norway')} · Se også yr.no ↗</a>`;
+  if (isDk()) return `<div class="wxp-cols dk"><div class="wxp-col">${heroHtml(d, P)}${forholdHtml(d)}${daysHtml(d)}</div><div class="wxp-col">${mapCardHtml()}${cmpCardHtml(d)}${restHtml(d)}</div></div>${credit}`;
+  return `${heroHtml(d, P)}<div class="wxp-cols"><div class="wxp-col">${forholdHtml(d)}${daysHtml(d)}${cmpCardHtml(d)}</div><div class="wxp-col">${restHtml(d)}</div></div>${credit}`;
 }
 const cmpRow = (x) => `<div class="wxp-cg wxp-cgr"><b>${esc(x.d)}</b><span class="wxp-cc">${svgIc(x.yk, 22)}<span><b>${esc(x.yt)}</b><span>${esc(x.yp)}</span></span></span><span class="wxp-cc">${x.sk ? svgIc(x.sk, 22) : '<span style="width:22px"></span>'}<span><b>${esc(x.stt)}</b><span>${esc(x.sp)}</span></span></span><span class="wxp-df" style="background:${x.dbg}">${esc(x.df)}</span></div>`;
 
@@ -423,8 +499,7 @@ function placesSheet() {
 
 const LAYERS = [['rain', 'Nedbør'], ['temp', 'Temperatur'], ['wind', 'Vind'], ['clouds', 'Skyer']];
 function mapOverlay() {
-  const P = place();
-  const src = `https://embed.windy.com/embed2.html?lat=${P.lat}&lon=${P.lon}&detailLat=${P.lat}&detailLon=${P.lon}&zoom=7&level=surface&overlay=${S.mpL}&product=ecmwf&menu=&message=true&marker=true&calendar=now&type=map&location=coordinates&metricWind=m%2Fs&metricTemp=%C2%B0C`;
+  const P = place(), src = mapSrc(P);
   return `<div class="wxp-map" role="dialog" aria-label="Værkart"><iframe src="${esc(src)}" title="Værkart for ${esc(P.name)}" loading="lazy" referrerpolicy="no-referrer"></iframe>
     <div class="wxp-maptop"><button class="wxp-glass" data-wx-close="mp">Ferdig</button><b>${esc(P.name)}</b><span style="width:72px"></span></div>
     <div class="wxp-mapbot"><div class="wxp-layers" role="tablist">${LAYERS.map(([k, n]) => `<button role="tab" aria-selected="${S.mpL === k}" class="${S.mpL === k ? 'on' : ''}" data-wx-layer="${k}">${n}</button>`).join('')}</div></div></div>`;
@@ -445,7 +520,7 @@ function paintTop() {
   const r = root();
   if (!r) return;
   const P = place(), C = S.d?.current;
-  r.querySelector('.wxp-src').textContent = S.src;
+  r.querySelectorAll('.wxp-hsrc,.wxp-sidesrc').forEach((x) => { x.textContent = S.src; });
   const c = r.querySelector('.wxp-tc');
   c.innerHTML = `<b>${esc(P.name)}</b><span>${C ? `${r0(C.temperature_2m)} | ${esc(DESC(C.weather_code))}` : ''}</span>`;
   c.style.opacity = S.sc > 200 ? 1 : 0;
@@ -454,8 +529,13 @@ function paintMain() {
   const r = root();
   if (!r) return;
   const sc = r.querySelector('.wxp-scroll'), top = sc.scrollTop;
+  const dk = isDk();
+  r.classList.toggle('dk', dk);
   sc.querySelector('.wxp-inner').innerHTML = mainHtml();
   sc.scrollTop = top;
+  const side = r.querySelector('.wxp-side');
+  if (side) side.innerHTML = dk ? sideHtml() : '';
+  paintMap(r);
   const C = S.d?.current, night = C ? C.is_day === 0 : new Date().getHours() < 7 || new Date().getHours() >= 19;
   const code = C?.weather_code ?? 2;
   r.querySelector('.wxp-sky').style.background = skyOf(code, night);
@@ -588,7 +668,7 @@ function bind(r) {
     const v = e.currentTarget.scrollTop;
     if (Math.abs(v - S.sc) < 8) return;
     S.sc = v;
-    const h = r.querySelector('.wxp-hero'); if (h) h.style.opacity = Math.max(0, 1 - v / 220).toFixed(2);
+    const h = r.querySelector('.wxp-hero:not(.dk)'); if (h) h.style.opacity = Math.max(0, 1 - v / 220).toFixed(2);
     r.querySelector('.wxp-tc').style.opacity = v > 200 ? 1 : 0;
   }, { passive: true });
   r.addEventListener('click', (e) => {
@@ -605,6 +685,7 @@ function bind(r) {
       return paintLayer();
     }
     if (ds.wx === 'retry') return load();
+    if (ds.wx === 'close') { haptic(10); location.hash = '#/dash'; return; }
     if (ds.wx === 'cmp') { S.cmpOpen = true; paintLayer(); if (!S.cmp && !S.cmpBusy) loadCmp(); return; }
     if (ds.wx === 'map') { S.mpOpen = true; return paintLayer(); }
     if (ds.wx === 'places') { S.plOpen = true; paintLayer(); r.querySelector('.wxp-search input')?.focus(); return; }
@@ -612,9 +693,9 @@ function bind(r) {
     if (ds.wxShd != null) { S.sh = +ds.wxShd; return paintLayer(); }
     if (ds.wxMs) { S.ms = ds.wxMs; S.msD = 1; return paintLayer(); }
     if (ds.wxMsd != null) { S.msD = +ds.wxMsd; return paintLayer(); }
-    if (ds.wxMode) { S.mode = ds.wxMode; return paintMain(); }
+    if (ds.wxMode) { S.mode = ds.wxMode; try { sessionStorage.setItem('wx_mode', S.mode); } catch { /* */ } return paintMain(); }
     if (ds.wxFeel != null) { S.feel = ds.wxFeel === '1'; return paintLayer(); }
-    if (ds.wxLayer) { S.mpL = ds.wxLayer; return paintLayer(); }
+    if (ds.wxLayer) { S.mpL = ds.wxLayer; paintLayer(); return paintMain(); }
     if (ds.wxDel) return removePlace(ds.wxDel);
     if (ds.wxPl) { if (S.swOpen) { S.swOpen = null; return paintLayer(); } return selectPlace(ds.wxPl); }
     if (ds.wxRes != null) { const x = S.plRes?.[+ds.wxRes]; if (x) addPlace(x); }
@@ -640,13 +721,18 @@ export function render() {
     fx = createWxFx(r.querySelector('.wxp-fx'));
     bind(r);
     paint();
+    // PC ↔ mobil når vinduet endrer bredde (app.js tegner bare på nytt ved mobilgrensen).
+    let rzT = null, was = isDk();
+    const onRz = () => { if (!root()) { window.removeEventListener('resize', onRz); return; } clearTimeout(rzT); rzT = setTimeout(() => { if (isDk() !== was) { was = isDk(); paint(); } }, 120); };
+    window.addEventListener('resize', onRz);
     await loadPlaces();
     if (!S.places.some((p) => p.id === S.cur)) S.cur = S.places[0]?.id;
     load();
   });
-  return `<div id="wxp" class="wxp sb-dark" aria-label="Vær">
+  return `<div id="wxp" class="wxp sb-dark${isDk() ? ' dk' : ''}" aria-label="Vær">
     <div class="wxp-sky"></div><canvas class="wxp-fx" aria-hidden="true"></canvas>
-    <div class="wxp-top"><a class="wxp-glass wxp-back" href="#/dash">‹ Hjem</a><div class="wxp-tc" aria-hidden="true"></div><span class="wxp-src">${esc(S.src)}</span></div>
+    <aside class="wxp-side" aria-label="Steder"></aside>
+    <div class="wxp-top"><span class="wxp-tsp"></span><div class="wxp-tc" aria-hidden="true"></div><button class="wxp-close" data-wx="close" aria-label="Lukk" title="Lukk"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     <div class="wxp-scroll"><div class="wxp-inner"></div></div>
     <nav class="wxp-bnav wxp-fab" aria-label="Vær"><button class="wxp-bb" data-wx="map" aria-label="Værkart" title="Værkart"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6.5v13.5l6-2.5 6 2.5 6-2.5V4l-6 2.5zM9 4v13.5M15 6.5V20"/></svg></button><span></span><button class="wxp-bb" data-wx="places" aria-label="Steder" title="Steder og søk"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button></nav>
     <div class="wxp-layer"></div></div>`;

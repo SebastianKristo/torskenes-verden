@@ -1,0 +1,99 @@
+/* Prompt 32 (web): Chat i fullskjerm, versjonsbanner, Domener (Glimt-oppsummering + Google Søk), Kalender (kontrast,
+   månedsbrikker, Spotlight-søk, Beskriv med Glimt), Innstillinger (AI-knapp, ingen scrollbar), Nylige søk og toast. */
+
+/* ---------- Chat i fullskjerm (claude-code-chat-web-fullskjerm.md, fasit chW) ---------- */
+/* Under Innstillinger (z 30), over toppmenyen – samme lag som Kalender i fullskjerm. */
+#chat.ch.ch-fs,html[data-hl] body[data-route] #chat.ch-fs{position:fixed;inset:0;z-index:26;height:auto!important;min-height:0;margin:0!important;border-radius:0;border:0;box-shadow:none}
+body.chat-fs{overflow:hidden}
+body.chat-fs .bottomnav{display:none}
+.ch-fsb{flex:none;width:40px;height:40px;margin-left:2px;border-radius:20px;border:1px solid var(--cl);background:var(--cc);color:var(--ci)!important;cursor:pointer;display:grid;place-items:center;padding:0}
+.ch-fsb.ink{margin-left:6px;border:0;background:var(--ci);color:var(--cb)!important}
+.ch-fsb:hover{filter:brightness(.97)}
+
+
+/* ---------- Innstillinger: ✦ AI inni søkefeltet (claude-code-innst-web-ai-knapp.md) ---------- */
+#settings .set-q{box-sizing:border-box;flex:none;height:44px;min-height:44px;padding:0 6px 0 14px;gap:8px;border-radius:22px;border:1px solid var(--w30-line,#232b3a);box-shadow:none}
+html[data-hl="2c"] #settings .set-q{background:#fff;border-color:#e3ddcf;box-shadow:none}
+#settings .set-q .set-aibtn{flex:none;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;gap:4px;height:32px;margin:0;padding:0 12px;border-radius:16px;border:0;background:var(--w30-chip,#1d2433);color:var(--w30-ink,#eef0f4);font:700 12.5px/1 Manrope,Outfit,system-ui,sans-serif}
+html[data-hl="2c"] #settings .set-q .set-aibtn{background:#f1ece2;color:#1b1a17}
+#settings .set-q .set-aibtn[aria-pressed=true],html[data-hl="2c"] #settings .set-q .set-aibtn[aria-pressed=true]{background:#b23a2a;color:#fff;border:0}
+#settings .set-q .set-aibtn .sai-s{font-size:11px;line-height:1;display:block}
+#settings .set-q .set-aibtn span{line-height:1}
+
+/* ---------- Ingen synlig scrollbar (claude-code-innst-web-skjul-scrollbar.md): Innstillinger, Chat, Kalender ---------- */
+#settings,#settings *,.ch,.ch *,.kal,.kal *,.k3-sr,.k3-sr *{scrollbar-width:none}
+#settings::-webkit-scrollbar,#settings *::-webkit-scrollbar,.ch::-webkit-scrollbar,.ch *::-webkit-scrollbar,.kal::-webkit-scrollbar,.kal *::-webkit-scrollbar,.k3-sr *::-webkit-scrollbar{display:none;width:0;height:0}
+
+/* ---------- Nordlys OS: installert versjon (claude-code-fjern-oppdatering-rad.md) ---------- */
+.ny-build{display:flex;align-items:center;gap:10px;margin-top:6px;font:500 12px 'IBM Plex Mono',ui-monospace,monospace;color:var(--w30-mut,#8a93a6)}
+.ny-copy{height:26px;padding:0 10px;border-radius:13px;border:1px solid var(--w30-line,#2a3142);background:transparent;color:inherit;cursor:pointer;font:600 11.5px Manrope,Outfit,system-ui,sans-serif}
+
+/* ---------- Nylige søk: «mobil»-etikett (claude-code-sokehistorikk-synk.md) ---------- */
+.sq-item:has(.sq-dev) .sq-t{flex:0 1 auto}
+.sq-item .sq-dev{flex:none;margin-right:auto;padding:0 6px;font:500 10px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.04em;color:var(--text-2,#8f897c);opacity:.85}
+html[data-hl="2c"] .sq-item .sq-dev{color:#8f897c}
+
+/* ---------- Domener: Glimt-oppsummering og Google Søk (Homelab Domener Papir.dc.html → sumVals, gscVals) ---------- */
+.dm{--dm-pos:#8fe0b0;--dm-neg:#f2b56b;--dm-warn:#f59a8f;--dm-info:#7fe0d0;--dm-neu:#8a93a6;--dm-mut:#8a93a6;--dm-ink:#eef0f4;--dm-line:rgba(255,255,255,.1);--dm-chip:rgba(255,255,255,.06);--dm-red:#f59a8f}
+html[data-hl="2c"] .dm{--dm-pos:#2f7a4f;--dm-neg:#9a5a10;--dm-warn:#b23a2a;--dm-info:#1f7a6e;--dm-neu:#8f897c;--dm-mut:#6b665c;--dm-ink:#1b1a17;--dm-line:#e3ddcf;--dm-chip:#f1ece2;--dm-red:#b23a2a}
+.dm-sum{gap:14px;padding:18px 20px 20px}
+.dm-sum-h{display:flex;align-items:center;gap:12px}
+.dm-sum-k{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.dm-sum-l{font:600 10.5px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.12em;color:var(--dm-red)}
+.dm-sum-m{font-size:12.5px;color:var(--dm-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dm-sum-b{flex:none;display:flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:18px;border:1px solid var(--dm-line);background:transparent;color:var(--dm-ink);cursor:pointer;font:700 13px Manrope,Outfit,system-ui,sans-serif}
+.dm-sum-b:disabled{opacity:.5;cursor:default}
+.dm-sum-t{font:600 18px/1.35 Manrope,Outfit,system-ui,sans-serif;text-wrap:pretty}
+.dm-sum-p{display:flex;flex-direction:column;gap:9px}
+.dm-sum-p>div{display:flex;gap:10px;font-size:14px;line-height:1.5;text-wrap:pretty;opacity:.92}
+.dm-sum-p i{flex:none;width:7px;height:7px;border-radius:4px;margin-top:7px}
+.dm-sum-sk{display:flex;flex-direction:column;gap:10px}
+.dm-sum-sk span{display:block;border-radius:7px;background:linear-gradient(90deg,rgba(255,255,255,.06) 0,rgba(255,255,255,.12) 50%,rgba(255,255,255,.06) 100%);background-size:400px 100%;animation:dm-shim 1.3s linear infinite}
+html[data-hl="2c"] .dm-sum-sk span{background-image:linear-gradient(90deg,#efe9dd 0,#f8f4ec 50%,#efe9dd 100%)}
+@keyframes dm-shim{from{background-position:-400px 0}to{background-position:400px 0}}
+[data-dm-gsc]{display:flex;flex-direction:column;gap:14px}
+.dm-gsc-h{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:6px}
+.dm-gsc-t{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:500}
+html[data-hl="2c"] .dm-gsc-t span{font:500 24px var(--serif,Newsreader,Georgia,serif)}
+.dm-gsc-per{display:flex;gap:4px;padding:4px;border-radius:12px;background:var(--dm-chip);border:1px solid var(--dm-line)}
+html[data-hl="2c"] .dm-gsc-per{background:#fff}
+.dm-gsc-per button{height:30px;padding:0 12px;border-radius:8px;border:0;background:transparent;color:var(--dm-ink);cursor:pointer;font:600 12.5px Manrope,Outfit,system-ui,sans-serif;white-space:nowrap}
+.dm-gsc-per button[aria-pressed=true]{background:var(--dm-ink);color:var(--bg,#0b0e15)}
+html[data-hl="2c"] .dm-gsc-per button[aria-pressed=true]{color:#f3efe6}
+.dm-gsc-off{gap:14px}
+.dm-gsc-intro{display:flex;flex-direction:column;gap:6px}
+.dm-gsc-bt{font-size:18px;font-weight:600}
+.dm-gsc-tx{font-size:14px;line-height:1.5;color:var(--dm-mut);max-width:560px;text-wrap:pretty}
+.dm-gsc-steps{display:flex;flex-direction:column;gap:8px}
+.dm-gsc-steps>div{display:flex;align-items:center;gap:10px;font-size:13.5px}
+.dm-gsc-steps>div>span:first-child{flex:none;width:22px;height:22px;border-radius:11px;background:var(--dm-chip);display:grid;place-items:center;font:600 11px 'IBM Plex Mono',ui-monospace,monospace;color:var(--dm-mut)}
+.dm-gsc-cta{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dm-gsc-cbtn{display:flex;align-items:center;gap:10px;height:44px;padding:0 18px 0 14px;border-radius:22px;border:1px solid var(--dm-line);background:var(--dm-chip);color:var(--dm-ink);cursor:pointer;font:700 14px Manrope,Outfit,system-ui,sans-serif}
+html[data-hl="2c"] .dm-gsc-cbtn{background:#fff;border-color:#d8d1c2}
+.dm-gsc-cbtn:disabled{opacity:.55;cursor:default}
+.dm-gsc-ro{font-size:12.5px;color:var(--dm-mut)}
+.dm-gsc-sites{display:flex;flex-wrap:wrap;gap:8px}
+.dm-gsc-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr));gap:14px}
+.dm-gsc-kpi{padding:16px 18px;gap:2px;border-radius:20px}
+.dm-gsc-kpi span{font-size:13px;color:var(--dm-mut)}
+.dm-gsc-kpi b{font:600 26px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:-.02em}
+.dm-gsc-kpi small{font-size:12.5px;font-weight:600}
+.dm-gsc-ch{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.dm-gsc-lg{display:flex;gap:14px;font-size:12.5px;color:var(--dm-mut)}
+.dm-gsc-lg span{display:flex;align-items:center;gap:6px}
+.dm-gsc-lg i{width:10px;height:3px;border-radius:2px}
+.dm-gsc-svg{width:100%;height:150px;display:block}
+.dm-gsc-x{display:flex;justify-content:space-between;font-size:11px;color:var(--dm-mut)}
+.dm-gsc-two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:14px}
+.dm-gsc-tbl{padding:22px 0 14px;gap:6px}
+.dm-gsc-th{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:0 22px 6px}
+.dm-gsc-th span{font-size:13px;color:var(--dm-mut)}
+.dm-gsc-r{display:grid;gap:8px;align-items:center;padding:9px 22px;border-top:1px solid var(--dm-line);font-size:14px}
+.dm-gsc-r.q{grid-template-columns:minmax(0,1fr) 52px 60px 44px}
+.dm-gsc-r.p{grid-template-columns:minmax(0,1fr) 52px 56px}
+.dm-gsc-r>span:not(:first-child){text-align:right}
+.dm-gsc-r .mut{color:var(--dm-mut)}
+.dm-gsc-r .ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dm-gsc-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--dm-mut)}
+.dm-gsc-foot button{height:30px;padding:0 12px;border-radius:15px;border:1px solid var(--dm-line);background:transparent;color:var(--dm-mut);cursor:pointer;font:600 12px Manrope,Outfit,system-ui,sans-serif}
+@media (max-width:520px){.dm-sum{padding:16px}.dm-sum-b{padding:0 12px}.dm-gsc-r{padding:9px 16px}.dm-gsc-th{padding:0 16px 6px}}

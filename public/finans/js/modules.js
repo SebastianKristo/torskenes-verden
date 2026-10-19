@@ -837,7 +837,7 @@ export function bindModules(el) {
       if (!confirm(leave ? `Forlate «${f.name}»? Du mister tilgangen til boligen.` : `Fjerne ${m?.name} fra «${f.name}»?`)) return;
       await api(`/folders/${fid}/members/${mid}`, { method: 'DELETE' });
       if (leave) { u.bolShare = null; if (u.dir === fid) u.dir = null; }
-      toast(leave ? `Du har forlatt ${f.name}` : `${m?.name} har ikke lenger tilgang`); return reloadBol();
+      toast(leave ? `Du har forlatt ${f.name}` : `Tilgang fjernet · ${m?.name ?? 'medlemmet'}`); return reloadBol();
     }
     if ((x = d('[data-blay-move]'))) {
       const [id, dir] = x.dataset.blayMove.split(':'), o = [...S.bolLayout.order], i = o.indexOf(id), j = i + +dir;
@@ -929,7 +929,7 @@ export function bindModules(el) {
     if (t.matches('[data-mfinn-folder]')) { S.finnImp.folder = t.value; return; }
     if (t.matches('[data-mfinn-role]')) { S.finnImp.role = t.value; return; }
     if (t.matches('[data-msub-cyc]')) { await api(`/subscriptions/${t.dataset.msubCyc}`, { method: 'PATCH', json: { cycle: t.value } }); return reload(); }
-    if (t.matches('[data-brole]')) { const [fid, mid] = t.dataset.brole.split(':'); await api(`/folders/${fid}/members/${mid}`, { method: 'PATCH', json: { role: t.value } }); toast('Tilgangen er endret'); return reloadBol(); }
+    if (t.matches('[data-brole]')) { const [fid, mid] = t.dataset.brole.split(':'); await api(`/folders/${fid}/members/${mid}`, { method: 'PATCH', json: { role: t.value } }); const mm = (S.folders ?? []).find((y) => y.id === +fid)?.members?.find((y) => y.id === +mid), rn = t.selectedOptions?.[0]?.textContent?.trim(); toast(mm?.name && rn ? `Rolle endret · ${mm.name} er nå ${rn}` : 'Rolle endret'); return reloadBol(); }
     if (t.matches('[data-bol2-paid]')) { S.folder = await api(`/folders/${u.dir}/entries/${t.dataset.bol2Paid}`, { method: 'PATCH', json: { paidBy: t.value } }); return render(); }
     if (t.matches('[data-bol2-meta]')) { await setBolMeta(S.folder, { [t.dataset.bol2Meta]: t.checked }); return render(); }
     if (t.matches('[data-bol2-field]')) {

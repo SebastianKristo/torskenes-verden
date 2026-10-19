@@ -4,6 +4,7 @@
 //   import { mountMatplan } from '/assets/js/mat.js'; mountMatplan(el, { embedded: true });
 import { clearBtn } from '/assets/js/searchfield.js';
 import { glimt } from './glimt.js';
+import { is2c } from './hltheme.js';
 
 const DAYS = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
 const AB = ['Ma', 'Ti', 'On', 'To', 'Fr', 'Lø', 'Sø'];
@@ -557,7 +558,7 @@ export function mountMatplan(el, { embedded = false, api = '/api/matplan' } = {}
 /* ---------- Homelab-fanen ---------- */
 
 export function render() {
-  queueMicrotask(() => { const host = document.getElementById('mat-host'); if (host && !host.dataset.mounted) { host.dataset.mounted = '1'; mountMatplan(host); } });
+  queueMicrotask(() => { const host = document.getElementById('mat-host'); if (host && !host.dataset.mounted) { host.dataset.mounted = '1'; mountMatplan(host, { embedded: is2c() }); } });
   return '<div id="mat-host" class="mat-host"></div>';
 }
 

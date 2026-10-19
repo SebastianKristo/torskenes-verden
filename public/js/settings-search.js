@@ -52,7 +52,8 @@ const LOCAL = [
   ['profilbilde', 'Profilbilde og navn', 'Konto → Profil', 'konto/me', 'bilde avatar navn profil'],
   ['2fa', 'Totrinnsbekreftelse', 'Konto → Innlogging → 2FA', 'konto/tfa', '2fa totp kode tofaktor sikkerhet'],
   ['enheter', 'Pålitelige enheter', 'Konto → Innlogging', 'konto/devices', 'enhet lokalt nett lan'],
-  ['oppdatering', 'Oppdater Homelab', 'System → Oppdateringer', 'system', 'oppdater versjon ny programvare rollback gjenopprett'],
+  // Prompt 32: «oppdatering», «versjon», «update» treffer Nordlys OS (den gamle Oppdatering-raden er borte).
+  ['oppdatering', 'Nordlys OS', 'System → Nordlys OS', 'system', 'oppdatering oppdater versjon update build installert ny programvare rollback gjenopprett nordlys'],
   ['backup', 'Automatisk backup', 'Backup → Automatisk', 'backup', 'backup sikkerhetskopi gjenopprett nas smb'],
 ].map(([id, title, path, web, kw]) => ({ id, title, path, keywords: kw.split(' '), description: '', route: { web } }));
 

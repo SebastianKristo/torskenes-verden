@@ -19,6 +19,7 @@ import { loadBirthdays } from './birthdays.js';
 import { searchField } from './searchfield.js';
 import { t, locale, dayName, monthName, fmtDate } from './i18n.js';
 import { addQuick, preview, quickLabel, setQuickHooks } from './kal-quick.js';
+import { glimt } from './glimt.js';
 import { LEARN_TYPES, typeName, addMemory, applyMemory, nameOfEvent, loadMemory, dinOf } from './glimt-memory.js'; // prompt 33
 /** Prompt 31 (Kalender.dc.html): «Pilestredet park 35 U2005 https://link.mazemap.com/…» → «Pilestredet park 35 U2005». */
 export const noUrl = (t) => String(t ?? '').replace(/\s*https?:\/\/\S+/g, '').trim();
@@ -336,7 +337,7 @@ function gridView(now, today) {
   const lines = hours.map((h) => `<span class="k2-hl" style="top:${h * H}px"></span>`).join('');
   const cols = days.map((x) => `<div class="k2-col${x.isT ? ' today' : x.we ? ' we' : ''}" data-k-tap="${x.k}" style="height:${24 * H}px">${lines}${lay(x.L).map((p) => {
     const e = p.e, c = col(e), solid = e.kind === 'prove', ht = (p.b - p.a) / 60 * H, tall = ht >= 40 && !(nD === 7 && mob && p.n > 1);
-    return `<button type="button" class="k2-ev${solid ? ' solid' : ''}${K.sel === e.id ? ' sel' : ''}" style="--c:${esc(c)};top:${p.a / 60 * H}px;height:${Math.max(18, ht - 2)}px;left:calc(${p.c / p.n * 100}% + 1px);width:calc(${100 / p.n}% - 3px)" data-k-sel="${esc(e.id)}"><b data-no-i18n>${esc(short(e))}</b>${tall ? `<span data-no-i18n>${esc(`${e.s}–${e.e}${e.r ? ` · ${e.r}` : ''}`)}</span>` : ''}</button>`;
+    return `<button type="button" class="k2-ev${solid ? ' solid' : ''}${K.sel === e.id ? ' sel' : ''}" style="--c:${esc(c)};top:${p.a / 60 * H}px;height:${Math.max(18, ht - 2)}px;left:calc(${p.c / p.n * 100}% + 1px);width:calc(${100 / p.n}% - 3px)" data-k-sel="${esc(e.id)}"><b data-no-i18n>${esc(short(e))}</b>${tall ? `<span data-no-i18n>${esc(`${e.s}–${e.e}${e.r ? ` · ${noUrl(e.r)}` : ''}`)}</span>` : ''}</button>`;
   }).join('')}${x.isT ? `<span class="k2-now" style="top:${nm / 60 * H}px"></span>` : ''}</div>`).join('');
   const inRange = days.some((x) => x.isT);
   return { st: st0, end: add(st0, nD - 1), inRange, html: `<div class="k2-grid">${head}${allRow}<div class="k2-scroll" data-k-scroll><div class="k2-body" style="grid-template-columns:${gcols}"><div class="k2-hrs" style="height:${24 * H}px">${hours.map((h) => `<span style="top:${h * H}px">${pad(h)}</span>`).join('')}</div>${cols}</div></div></div>` };
@@ -479,6 +480,7 @@ function formSheet() {
   const wcals = calList().filter((c) => c.writable !== false && (c.id === 'privat' || c.id === 'familie'));
   return `<div class="k2-sheet-bg" data-k-fclose><div class="k2-sheet" role="dialog" aria-modal="true" aria-label="${F.id ? 'Rediger hendelse' : 'Ny hendelse'}">
     <div class="k2-det-h"><b class="k2-grow k2-fh">${F.id ? 'Rediger hendelse' : 'Ny hendelse'}</b><button type="button" class="k2-x" data-k-fclose aria-label="Lukk">✕</button></div>
+    ${fmAiHtml(F)}
     <form class="k2-form" data-k-form>
       <input class="k2-in k2-big" name="title" value="${esc(F.t)}" placeholder="Tittel" autocomplete="off" required>
       <div class="k2-box">
@@ -497,6 +499,68 @@ function formSheet() {
       <span class="k2-src">Lagres i Google Kalender.</span>
     </form>
   </div></div>`;
+}
+
+/* ---------- Prompt 32: «✦ Beskriv med Glimt» øverst i Ny/Rediger hendelse (claude-code-kalender-ny-hendelse-glimt.md, fmAi) ---------- */
+function fmAiHtml(F) {
+  const A = F.aiS ?? {}, txt = F.ai ?? '', has = !!txt.trim(), busy = !!A.busy;
+  return `<div class="k3-fa"><div class="k3-fa-h"><span class="k3-fa-l">✦ BESKRIV MED GLIMT</span>${A.done ? `<span class="k3-fa-ok">✓ ${esc(A.note || 'Fylte ut')}</span>` : ''}</div>
+    <div class="k3-fa-r"><textarea class="k3-fa-in" rows="2" data-k-ai placeholder="F.eks. «Tannlege hos Dr. Berg tirsdag 10.30, Bogstadveien 12, minn meg dagen før» eller lim inn en melding" aria-label="Beskriv hendelsen">${esc(txt)}</textarea>
+    <button type="button" class="k3-fa-b${has ? ' on' : ''}" data-k-airun${!has || busy ? ' aria-disabled="true"' : ''}>${glimt(28, busy ? 'tenker' : 'klar')}<span>${busy ? 'Fyller ut …' : 'Fyll ut'}</span></button></div>
+    ${A.err ? `<span class="k3-fa-err" role="alert">${esc(A.err)}</span>` : ''}</div>`;
+}
+const hhmm = (v) => { const m = String(v ?? '').match(/^(\d{1,2}):(\d{2})/); return m ? `${m[1].padStart(2, '0')}:${m[2]}` : ''; };
+const remKey = (v) => (typeof v === 'number' ? (v < 0 || v === 0 ? 'none' : v >= 1440 ? 'day' : v >= 60 ? '1h' : '15m') : v);
+// Gateadresse i teksten («Bogstadveien 12», «Storgata 3B») når parseren ikke fant sted.
+const addrOf = (t) => (String(t).match(/\b[A-ZÆØÅ][a-zæøåé]+(?:veien|vegen|vei|veg|gata|gaten|gate|plass|plassen|allé|alle|torget|bakken|stien)\s+\d+\s?[A-Za-z]?\b/) ?? [''])[0].trim();
+const listJoin = (a) => (a.length > 2 ? `${a.slice(0, -1).join(', ')} og ${a[a.length - 1]}` : a.join(' og '));
+/** Fyller feltene i skjemaet ut fra teksten. Ingenting lagres før man trykker Lagre. */
+async function runFmAi() {
+  readFormSafe();
+  const F = K.form;
+  if (!F || F.aiS?.busy) return;
+  const txt = String(F.ai ?? '').trim();
+  if (!txt) return;
+  const t = txt.toLowerCase();
+  F.aiS = { busy: true }; paint();
+  const apply = (o, src = '') => {
+    if (K.form !== F) return;
+    const got = [];
+    if (o.t) { F.t = o.t; got.push('tittel'); }
+    if (o.k) { F.k = o.k; got.push('dato'); }
+    if (o.s) { F.all = false; F.s = o.s; F.e = o.e && mm(o.e) > mm(o.s) ? o.e : hmM(Math.min(mm(o.s) + 60, 23 * 60 + 59)); got.push('tid'); } else if (o.all && o.k) F.all = true;
+    if (o.r) { F.r = o.r; got.push('sted'); }
+    const rp = /hver dag|daglig/.test(t) ? 'daily' : /hver uke|ukentlig|hver (mandag|tirsdag|onsdag|torsdag|fredag|lørdag|søndag)/.test(t) ? 'weekly' : /hver måned|månedlig/.test(t) ? 'monthly' : o.rep && REPS.some(([v]) => v === o.rep) ? o.rep : null;
+    if (rp) { F.rep = rp; got.push('gjentakelse'); }
+    const rm = /dagen før/.test(t) ? 'day' : /(1|en) time før|times? før/.test(t) ? '1h' : /15 min|10 min/.test(t) ? '15m' : /ingen varsel|ikke varsle/.test(t) ? 'none' : o.rem && REMS.some(([v]) => v === o.rem) ? o.rem : null;
+    if (rm) { F.rem = rm; got.push('varsel'); }
+    if (/familie|famil|barna|mamma|pappa/.test(t)) { F.cal = 'familie'; got.push('kalender'); } else if (o.cal === 'familie' || o.cal === 'privat') F.cal = o.cal;
+    if (txt.length > 60 && !F.n) F.n = txt;
+    return got;
+  };
+  const p = preview(txt);
+  if (p.ok && p.date) {
+    await new Promise((r) => setTimeout(r, 350));
+    const got = apply({ t: p.title, k: p.date, s: p.start, e: p.end, all: p.allDay, r: p.place || addrOf(txt) });
+    if (K.form === F) { F.aiS = { done: true, note: `Fylte ut ${listJoin(got)}` }; paint(); }
+    return;
+  }
+  // Fant ikke dato lokalt: spør serveren (rask time-parseren + lokal modell).
+  let o = null, part = null, srvErr = '';
+  try {
+    const r = await fetch('/api/kalender/describe', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: txt }) });
+    if (r.ok) {
+      // SERVER32: {ok, filled, note, error?, event:{title, allDay, date, start, end, location, calendar, repeat, reminder, note}}
+      const j = await r.json(), x = j.event ?? j.fields ?? j;
+      const k = x.k ?? x.date ?? null, s0 = x.s ?? x.start ?? '', e0 = x.e ?? x.end ?? '';
+      const f = { t: x.t ?? x.title ?? '', k: k && /^\d{4}-\d{2}-\d{2}/.test(String(k)) ? String(k).slice(0, 10) : '', s: hhmm(s0), e: hhmm(e0), all: !!(x.all ?? x.allDay) || !s0, r: x.r ?? x.location ?? x.place ?? '', rep: x.rep ?? x.repeat, rem: remKey(x.rem ?? x.reminder), cal: x.cal ?? x.calendar, n: x.n ?? x.note ?? '' };
+      if (f.k && j.ok !== false) o = f; else { part = f; srvErr = j.error || ''; }
+    }
+  } catch { /* uten nett eller eldre server */ }
+  if (K.form !== F) return;
+  if (o) { const got = apply(o); if (o.n && !F.n) F.n = o.n; F.aiS = { done: true, note: `Fylte ut ${listJoin(got)}` }; }
+  else { apply(part ? { ...part, k: '' } : { t: p.title, s: p.start, e: p.end, r: p.place || addrOf(txt) }); F.aiS = { err: srvErr || 'Fant ikke dato. Velg dato under.' }; }
+  paint();
 }
 
 /** «Legg til time» (✦ AI · RASK TIME): tekstfelt, chips, live forhåndsvisning med parseQuick. */
@@ -544,23 +608,166 @@ function failForm({ found = {}, text = '', error = '' }) {
   if (host()) go(); else setTimeout(go, 80);
 }
 
+/* ---------------- Søk med Glimt (prompt 32, claude-code-kalender-sok-glimt.md, fasit sr/srLocal/srCloud) ---------------- */
+const SR_SUGG = ['Hva har jeg i morgen?', 'Når er neste prøve?', 'Er jeg ledig fredag ettermiddag?', 'Hva skjer neste uke?'];
+const IC_X = (n = 11, w = 3.2) => `<svg width="${n}" height="${n}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>`;
+const srNorm = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/(?![̊̈])[̀-ͯ]/g, '').normalize('NFC');
+const srFilt = (e) => { const F = K.srch?.f ?? '*'; return F === '*' || e.cal === F; };
+const relOf = (i) => (i === 0 ? 'i dag' : i === 1 ? 'i morgen' : i === -1 ? 'i går' : i > 0 ? `om ${i} dager` : `${Math.abs(i)} dager siden`);
+function openSearch(q = '') {
+  K.srch = { q, f: '*', res: [], ai: null, hi: -1, focus: true }; K.mini = false; K.sel = null; K.form = null; K.qa = null;
+  const td = d0(new Date()); ensureRange(key(add(td, -31)), key(add(td, 121)));
+  paint(); if (q) runSearch(q);
+}
+/** Hendelser som matcher q, fra 30 dager bakover til 120 dager fremover: [{e, d, i}]. */
+function localSearch(q) {
+  const qq = srNorm(q), today = d0(new Date()), res = [];
+  for (let i = -30; i < 120 && res.length < 60; i++) {
+    const d = add(today, i);
+    for (const e of evOn(d, true)) if (res.length < 60 && srFilt(e) && srNorm(`${e.t} ${e.r} ${e.n} ${e.subj} ${e.teacher}`).includes(qq)) res.push({ e, d, i });
+  }
+  return res;
+}
+function hlTitle(t, q) {
+  const ix = q ? srNorm(t).indexOf(srNorm(q)) : -1;
+  return ix < 0 ? esc(t) : `${esc(t.slice(0, ix))}<mark class="k3-hit">${esc(t.slice(ix, ix + q.length))}</mark>${esc(t.slice(ix + q.length))}`;
+}
+const srRow = (x, inner, strip = true) => `<button type="button" class="k3-row" data-k-hit="${esc(x.e.id)}" data-k-hitk="${esc(key(x.d))}">${strip ? `<span class="k3-strip" style="background:${esc(col(x.e))}"></span>` : ''}${inner}</button>`;
+/** Lokale svar (raskt, uten nett): dag/periode, ledig tid, prøver/frister, «neste X». null = la AI svare. */
+function srLocal(q) {
+  const now = new Date(), today = d0(now), nm = now.getHours() * 60 + now.getMinutes(), n = q.toLowerCase().replace(/[?!.,]/g, ' ');
+  let from = null, to = null, lbl = '';
+  if (/i overmorgen/.test(n)) { from = to = add(today, 2); lbl = 'i overmorgen'; }
+  else if (/i morgen/.test(n)) { from = to = add(today, 1); lbl = 'i morgen'; }
+  else if (/i dag|idag/.test(n)) { from = to = today; lbl = 'i dag'; }
+  else if (/neste uke/.test(n)) { const m = add(today, 7 - ((today.getDay() + 6) % 7)); from = m; to = add(m, 6); lbl = 'neste uke'; }
+  else if (/denne uk|resten av uk/.test(n)) { from = today; to = add(today, 6 - ((today.getDay() + 6) % 7)); lbl = 'resten av uka'; }
+  else { const w = WD.findIndex((x) => new RegExp(`(^|\\s)${x}`).test(n)); if (w >= 0) { from = to = add(today, (w - today.getDay() + 7) % 7); lbl = WD[w]; } }
+  const span = (a, b) => { const out = []; for (let d = a; d <= b; d = add(d, 1)) evOn(d).forEach((e) => { if (srFilt(e) && (d.getTime() !== today.getTime() || !e.e || mm(e.e) > nm || /ledig/.test(n))) out.push({ e, d }); }); return out; };
+  const rel = (d) => relOf(Math.round((d - today) / 864e5));
+  if (/ledig|fri tid|tid til|opptatt/.test(n)) {
+    const d = from || today, pm = /ettermiddag|kveld/.test(n), am = /formiddag|morgen\b/.test(n) && !/i morgen/.test(n);
+    const A0 = pm ? 12 * 60 : 8 * 60, B0 = pm ? 20 * 60 : am ? 12 * 60 : 20 * 60;
+    const L = evOn(d).filter((e) => e.s && e.e).map((e) => [mm(e.s), mm(e.e)]).sort((x, y) => x[0] - y[0]);
+    let tt = A0; if (d.getTime() === today.getTime()) tt = Math.max(tt, Math.ceil(nm / 15) * 15);
+    const fr = [];
+    L.forEach(([x, y]) => { if (x > tt && Math.min(x, B0) - tt >= 30) fr.push([tt, Math.min(x, B0)]); tt = Math.max(tt, y); });
+    if (B0 - tt >= 30) fr.push([tt, B0]);
+    const f = fr.filter(([x, y]) => y - x >= 30 && x < B0);
+    return { txt: capf(dLong(d)) + (f.length ? ` er du ledig ${f.map(([x, y]) => `${hmM(x)}–${hmM(y)}`).join(', ')}.` : ` er du opptatt hele ${pm ? 'ettermiddagen' : 'dagen'}.`), items: span(d, d).filter((x) => x.e.s) };
+  }
+  if (/prøve|prove|eksamen|frist|innlever|oblig/.test(n) && !from) {
+    const out = [];
+    for (let i = 0; i < 120 && out.length < 6; i++) { const d = add(today, i); evOn(d, true).filter((e) => (e.kind === 'prove' || e.kind === 'innl') && (i > 0 || !e.e || mm(e.e) > nm)).forEach((e) => out.push({ e, d })); }
+    if (!out.length) return { txt: 'Ingen prøver eller frister de neste fire månedene.', items: [] };
+    const x = out[0];
+    return { txt: `Neste er ${short(x.e)} ${dLong(x.d)} (${rel(x.d)})${out.length > 1 ? `. Deretter ${out.length - 1} til.` : '.'}`, items: out };
+  }
+  if (from) {
+    const L = span(from, to);
+    if (!L.length) return { txt: `Du har ingenting i kalenderen ${lbl}.`, items: [] };
+    const nT = L.filter((x) => x.e.kind === 'time').length;
+    return { txt: `${capf(lbl)} har du ${L.length} ting${nT ? `, ${nT} av dem i timeplanen` : ''}. Først ut: ${short(L[0].e)}${L[0].e.s ? ` kl. ${L[0].e.s}` : ''}.`, items: L };
+  }
+  // «når hadde jeg tannlege sist», «alle prøver i november», «hva skjer i desember»: serveren svarer (calendar-glimt.js).
+  if (/\bsist\b|hadde jeg|\bi (januar|februar|mars|april|mai|juni|juli|august|september|oktober|november|desember)\b/.test(n)) return null;
+  if (/neste|når/.test(n)) {
+    const stop = new Set(['når', 'er', 'neste', 'min', 'mitt', 'mi', 'time', 'timen', 'har', 'jeg', 'skal', 'hva', 'hos', 'den', 'det', 'en', 'et', 'på', 'i', 'meg', 'til']);
+    const kw = n.split(/\s+/).filter((w) => w && !stop.has(w));
+    if (kw.length) {
+      for (let i = 0; i < 120; i++) {
+        const d = add(today, i), e = evOn(d, true).find((x) => srFilt(x) && (i > 0 || !x.e || mm(x.e) > nm) && kw.every((w) => srNorm(`${x.t} ${x.subj ?? ''} ${x.r ?? ''}`).includes(srNorm(w))));
+        if (e) return { txt: `${short(e)} er ${dLong(d)}${e.s ? ` kl. ${e.s}` : ''} (${rel(d)}).`, items: [{ e, d }] };
+      }
+      return { txt: `Fant ingen kommende «${kw.join(' ')}» de neste fire månedene.`, items: [] };
+    }
+  }
+  return null;
+}
+/** Spør Glimt: lokalt først, ellers serveren (GET /api/kalender/search?q=&ai=1). */
+function askGlimt(t) {
+  const S = K.srch, q = String(t ?? S?.q ?? '').trim();
+  if (!S || !q) return;
+  S.q = q; S.hi = -1; S.ai = { q, busy: true }; S.res = localSearch(q); paint();
+  const loc = srLocal(q);
+  setTimeout(async () => {
+    if (K.srch !== S || S.ai?.q !== q) return;
+    if (loc) { S.ai = { q, ...loc }; paint(); return; }
+    let ans = null;
+    try {
+      const r = await fetch(`/api/kalender/search?q=${encodeURIComponent(q)}&ai=1`, { cache: 'no-store', credentials: 'same-origin' });
+      if (r.ok) {
+        const j = await r.json();
+        // SERVER32: {answer:{text, kind, items:[…]}, events, total}. Eldre/andre former tåles også.
+        const A = j.answer && typeof j.answer === 'object' ? j.answer : j.ai && typeof j.ai === 'object' ? j.ai : j;
+        const txt = String((typeof A.text === 'string' ? A.text : typeof A.answer === 'string' ? A.answer : A.txt) ?? '').replace(/\*\*/g, '').replace(/\s*\[\d+\]/g, '').trim();
+        const list = Array.isArray(A.items) ? A.items : Array.isArray(A.events) ? A.events : [];
+        const nz = list.length ? normalize({ events: list, subjects: K.data?.subjects }) : null;
+        const items = nz ? [...nz.byId.values()].filter((e) => !/\|\d+$/.test(e.id)).map((e) => { if (!K.data.byId.has(e.id)) K.data.byId.set(e.id, e); return { e, d: fromKey(e.k) }; }) : [];
+        if (txt) ans = { txt, items };
+      }
+    } catch { /* uten nett eller eldre server */ }
+    if (K.srch !== S || S.ai?.q !== q) return;
+    S.ai = { q, ...(ans ?? { txt: 'Jeg fant ikke noe konkret svar i kalenderen. Prøv «hva har jeg på fredag?» eller «når er neste prøve?».', items: [] }) };
+    paint();
+  }, loc ? 450 : 0);
+}
 function searchSheet() {
   const S = K.srch;
   if (!S) return '';
-  const res = S.res ?? [];
-  return `<div class="k2-sheet-bg" data-k-sclose><div class="k2-sheet" role="dialog" aria-modal="true" aria-label="Søk i kalenderen">
-    <div class="k2-srow">${searchField({ name: 'kq', value: S.q, placeholder: 'Søk etter timer, prøver, steder', cls: 'k2-sf', attrs: 'data-k-q autofocus' })}<button type="button" class="k2-x" data-k-sclose aria-label="Lukk">✕</button></div>
-    <div data-k-sres>${searchRes()}</div>
-  </div></div>`;
+  const q = S.q ?? '', has = !!q.trim();
+  const fl = [['*', 'Alle', ''], ...calList().filter((c) => c.enabled !== false).map((c) => [c.id, c.name, c.color])];
+  return `<div class="k3-sr-bg" data-k-sclose><div class="k3-sr" role="dialog" aria-modal="true" aria-label="Søk i kalenderen">
+    <form class="k3-sr-f" data-k-srform><div class="k3-sr-in"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+      <input name="kq" value="${esc(q)}" placeholder="Søk, eller spør Glimt …" autocomplete="off" enterkeyhint="search" data-k-q aria-label="Søk i kalenderen">
+      <button type="button" class="k3-clr" data-k-sclr aria-label="Tøm søket"${has ? '' : ' hidden'}>${IC_X()}</button>
+      <button type="submit" class="k3-ask${has ? ' on' : ''}"${has ? '' : ' disabled'}>✦ Spør</button></div>
+      <button type="button" class="k3-sx" data-k-sclose aria-label="Lukk">${IC_X(13, 2.8)}</button></form>
+    <div class="k3-fl">${fl.map(([k, n, c]) => `<button type="button" class="${(S.f ?? '*') === k ? 'on' : ''}" data-k-sf="${esc(k)}">${c ? `<i style="background:${esc(c)}"></i>` : ''}${esc(n)}</button>`).join('')}</div>
+    <div class="k3-sb" data-k-sres>${searchRes()}</div></div></div>`;
 }
 function searchRes() {
   const S = K.srch;
   if (!S) return '';
+  const now = new Date(), today = d0(now), nm = now.getHours() * 60 + now.getMinutes(), q0 = (S.q ?? '').trim(), A = S.ai && S.ai.q === q0 ? S.ai : null;
+  let h = '';
+  if (A) {
+    const rows = (A.items ?? []).slice(0, 6).map((x) => srRow(x, `<span class="k3-tm">${esc(x.e.s || 'Hele')}</span><span class="k2-grow k3-tx"><b data-no-i18n>${esc(short(x.e))}</b><span data-no-i18n>${esc(capf(dLong(x.d)) + (x.e.r ? ` · ${noUrl(x.e.r)}` : ''))}</span></span>`)).join('');
+    h += `<div class="k3-ai"><div class="k3-ai-h">${glimt(30, A.busy ? 'tenker' : 'ferdig')}<span class="k2-grow k3-ai-l"><span class="k3-lab">GLIMT</span><span class="k3-q" data-no-i18n>«${esc(A.q)}»</span></span></div>
+      ${A.busy ? '<span class="k3-busy">Leser kalenderen …</span>' : `<span class="k3-ans" data-no-i18n>${esc(A.txt)}</span>${rows ? `<div class="k3-list in">${rows}</div>` : ''}`}</div>`;
+  }
+  if (!q0 && !A) {
+    const soon = [];
+    for (let i = 0; i < 14 && soon.length < 4; i++) { const d = add(today, i); evOn(d).filter((e) => e.s && (i > 0 || mm(e.e) > nm) && srFilt(e)).forEach((e) => { if (soon.length < 4) soon.push({ e, d }); }); }
+    h += `<div class="k3-grp"><span class="k3-lab mut">SPØR GLIMT</span><div class="k3-list">${SR_SUGG.map((tx, i) => `<button type="button" class="k3-row k3-sug" data-k-ask="${i}"><span class="k3-sp">✦</span><span class="k2-grow">${esc(tx)}</span><span class="k3-arr">↗</span></button>`).join('')}</div></div>
+      <div class="k3-grp"><span class="k3-lab mut">SNART</span><div class="k3-list">${soon.map((x) => srRow(x, `<span class="k3-dd"><span>${esc(WD[x.d.getDay()].slice(0, 3).toUpperCase())}</span><b>${x.d.getDate()}</b></span><span class="k3-strip" style="background:${esc(col(x.e))}"></span><span class="k2-grow k3-tx"><b data-no-i18n>${esc(short(x.e))}</b><span data-no-i18n>${esc(tmOf(x.e) + (x.e.r ? ` · ${noUrl(x.e.r)}` : ''))}</span></span>`, false)).join('') || '<span class="k3-none">Ingenting de neste to ukene.</span>'}</div></div>`;
+    return h;
+  }
   const res = S.res ?? [];
-  if (S.loading && !res.length) return '<span class="k2-src">Søker …</span>';
-  if (res.length) return `<span class="k2-src">${res.length}${res.length >= 40 ? '+' : ''} treff</span><div class="k2-sres">${res.map((e) => `<button type="button" class="k2-sr" data-k-hit="${esc(e.id)}" data-k-hitk="${esc(e.k)}"><span class="k2-strip" style="background:${esc(col(e))}"></span><span class="k2-grow"><b data-no-i18n>${esc(e.t)}</b><span>${esc(`${longDate(fromKey(e.k))} · `)}${esc(tmOf(e))}<span data-no-i18n>${esc(e.r ? ` · ${e.r}` : '')}</span></span></span></button>`).join('')}</div>`;
-  if ((S.q ?? '').trim().length >= 2 && !S.loading) return '<span class="k2-src">Ingen treff de neste fire månedene.</span>';
-  return '';
+  if (res.length && q0.length >= 2) {
+    const up = res.filter((x) => x.i >= 0), past = res.filter((x) => x.i < 0).reverse(), G = [];
+    [...up, ...past].forEach((x) => { const k2 = key(x.d); let g = G.find((y) => y.k === k2); if (!g) { g = { k: k2, d: x.d, i: x.i, rows: [] }; G.push(g); } g.rows.push(x); });
+    const F = S.f ?? '*';
+    h += `<span class="k3-n">${res.length}${res.length >= 60 ? '+' : ''} treff${F !== '*' ? ` i ${esc(calById(F).name)}` : ''}</span>`;
+    h += G.slice(0, 24).map((g) => `<div class="k3-grp"><span class="k3-gh"><b>${esc(capf(dLong(g.d)))}</b><span>${esc(relOf(g.i))}</span></span><div class="k3-list">${g.rows.map((x) => srRow(x, `<span class="k3-tm">${esc(x.e.s || 'Hele')}</span><span class="k2-grow k3-tx"><span class="k3-t" data-no-i18n>${hlTitle(x.e.t, q0)}</span><span data-no-i18n>${esc([noUrl(x.e.r), x.e.n].filter(Boolean).join(' · ') || tmOf(x.e))}</span></span>`)).join('')}</div></div>`).join('');
+  } else if (q0.length >= 2 && !A && !S.loading) h += '<span class="k3-none">Ingen treff de neste fire månedene. Trykk «✦ Spør» for å spørre Glimt.</span>';
+  else if (S.loading && !A) h += '<span class="k3-none">Søker …</span>';
+  return h;
+}
+/** Oppdaterer bare resultatene (og ✕ / ✦ Spør) mens man skriver, så fokus blir stående i feltet. */
+function paintRes() {
+  const h = host(), el = h?.querySelector('[data-k-sres]');
+  if (!el) return;
+  el.innerHTML = searchRes();
+  const has = !!(K.srch?.q ?? '').trim(), ask = h.querySelector('.k3-ask'), clr = h.querySelector('[data-k-sclr]');
+  if (ask) { ask.classList.toggle('on', has); ask.disabled = !has; }
+  if (clr) clr.hidden = !has;
+  markHi();
+}
+function markHi() {
+  const rows = [...(host()?.querySelectorAll('.k3-sr [data-k-sres] .k3-row') ?? [])], i = K.srch?.hi ?? -1;
+  rows.forEach((r, j) => r.classList.toggle('hi', j === i));
+  if (rows[i]) rows[i].scrollIntoView({ block: 'nearest' });
 }
 
 /* ---------------- Siden ---------------- */
@@ -767,18 +974,11 @@ async function copyEvent(e) {
 /* ---------------- Søk ---------------- */
 
 let sTimer = 0, sCtl = null;
-function localSearch(q) {
-  const n = (s) => String(s ?? '').toLowerCase().normalize('NFD').replace(/(?![̊̈])[̀-ͯ]/g, '').normalize('NFC');
-  const qq = n(q), today = d0(new Date()), res = [];
-  for (let i = -7; i < 120 && res.length < 40; i++) {
-    for (const e of evOn(add(today, i), true)) if (res.length < 40 && n(`${e.t} ${e.r} ${e.n} ${e.subj} ${e.teacher}`).includes(qq)) res.push(e);
-  }
-  return res;
-}
 function runSearch(q) {
   const S = K.srch;
   if (!S) return;
-  S.q = q;
+  S.q = q; S.hi = -1;
+  if (S.ai && S.ai.q !== q.trim()) S.ai = null;
   clearTimeout(sTimer); sCtl?.abort();
   if (q.trim().length < 2) { S.res = []; S.loading = false; return paintRes(); }
   S.res = localSearch(q.trim()); S.loading = true; paintRes();
@@ -790,14 +990,18 @@ function runSearch(q) {
       const d = await r.json(), list = Array.isArray(d) ? d : d.events ?? d.items ?? [];
       if (ctl.signal.aborted || K.srch !== S) return;
       const nz = normalize({ events: list, subjects: K.data?.subjects });
-      for (const e of nz.byId.values()) if (!K.data.byId.has(e.id)) K.data.byId.set(e.id, e);
-      const found = [...nz.byId.values()].filter((e) => !/\|\d+$/.test(e.id)).sort((a, b) => a.k.localeCompare(b.k) || (a.s || '').localeCompare(b.s || '')).slice(0, 60);
-      S.res = found.length ? found : S.res;
+      const today = d0(new Date()), seen = new Set(S.res.map((x) => `${x.e.id}|${key(x.d)}`));
+      for (const e of nz.byId.values()) {
+        if (/\|\d+$/.test(e.id) || !srFilt(e)) continue;
+        if (!K.data.byId.has(e.id)) K.data.byId.set(e.id, e);
+        const d = fromKey(e.k), id = `${e.id}|${e.k}`, i = daysTo(e.k, today);
+        if (!seen.has(id) && i >= -30 && i < 120 && S.res.length < 60) { seen.add(id); S.res.push({ e, d: d0(d), i }); }
+      }
+      S.res.sort((a, b) => a.i - b.i || (a.e.s || '').localeCompare(b.e.s || ''));
     } catch (e) { if (e.name === 'AbortError') return; /* serveren mangler søk: lokalt søk står */ }
     S.loading = false; paintRes();
   }, 160);
 }
-function paintRes() { const el = host()?.querySelector('[data-k-sres]'); if (el) el.innerHTML = searchRes(); }
 
 /* ---------------- Hendelser ---------------- */
 
@@ -814,11 +1018,29 @@ function bind(h) {
   });
   h.addEventListener('input', (e) => {
     if (e.target.matches('[data-k-q]')) runSearch(e.target.value);
+    if (e.target.matches('[data-k-ai]') && K.form) { K.form.ai = e.target.value; if (K.form.aiS && !K.form.aiS.busy) K.form.aiS = {}; const b = host()?.querySelector('[data-k-airun]'); if (b) { const on = !!e.target.value.trim(); b.classList.toggle('on', on); if (on) b.removeAttribute('aria-disabled'); else b.setAttribute('aria-disabled', 'true'); } }
     if (e.target.matches('[data-k-qtxt]') && K.qa) { K.qa.txt = e.target.value; K.qa.err = ''; clearTimeout(qaT); qaT = setTimeout(paintQa, 120); }
   });
-  h.addEventListener('keydown', (e) => { if (e.target.matches?.('[data-k-qtxt]') && e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submitQa(); } });
+  h.addEventListener('keydown', (e) => {
+    if (e.target.matches?.('[data-k-qtxt]') && e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submitQa(); }
+    if (e.target.matches?.('[data-k-ai]') && e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); runFmAi(); }
+    // Søket: ↑/↓ flytter markeringen, Enter åpner raden (eller spør Glimt når ingen rad er markert).
+    if (e.target.matches?.('[data-k-q]') && K.srch && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      const n = host()?.querySelectorAll('.k3-sr [data-k-sres] .k3-row').length ?? 0;
+      if (!n) return;
+      e.preventDefault();
+      K.srch.hi = e.key === 'ArrowDown' ? Math.min(n - 1, (K.srch.hi ?? -1) + 1) : Math.max(-1, (K.srch.hi ?? -1) - 1);
+      markHi();
+    }
+  });
   h.addEventListener('submit', (e) => {
     if (e.target.closest('[data-k-qform]')) { e.preventDefault(); submitQa(); return; }
+    if (e.target.closest('[data-k-srform]')) {
+      e.preventDefault();
+      const hi = K.srch?.hi ?? -1, row = hi >= 0 ? host()?.querySelectorAll('.k3-sr [data-k-sres] .k3-row')[hi] : null;
+      if (row) row.click(); else askGlimt();
+      return;
+    }
     const lf = e.target.closest('[data-k-lform]'); if (lf) { e.preventDefault(); saveLearn(lf); return; }
     const f = e.target.closest('[data-k-form]'); if (f) { e.preventDefault(); saveForm(f); }
   });
@@ -827,6 +1049,7 @@ function bind(h) {
     // Klikk på bakgrunnen lukker arkene (ikke klikk inne i arket).
     const bg = tg.closest('.k2-sheet-bg');
     if (bg && tg === bg) { closeSheets(); return; }
+    if (tg.classList?.contains('k3-sr-bg')) { closeSheets(); return; }
     if (tg.closest('.k2-drw-bg')) { K.drawer = false; paint(); return; }
     const b = tg.closest('button,[data-k-tap]');
     if (!b || !h.contains(b)) return;
@@ -851,7 +1074,10 @@ function bind(h) {
     if (d.kNav) return shift(+d.kNav);
     if ('kToday' in d) return goToday();
     if ('kNew' in d) return openForm();
-    if ('kSearch' in d) { K.srch = { q: '', res: [], focus: true }; K.mini = false; return paint(); }
+    if ('kSearch' in d) return openSearch();
+    if ('kSclr' in d) { if (K.srch) { K.srch.q = ''; K.srch.ai = null; K.srch.res = []; K.srch.hi = -1; K.srch.focus = true; } return paint(); }
+    if (d.kSf) { if (K.srch) { K.srch.f = d.kSf; K.srch.focus = true; K.srch.res = (K.srch.q ?? '').trim().length >= 2 ? localSearch(K.srch.q.trim()) : []; if (K.srch.ai) { const q = K.srch.ai.q; K.srch.ai = null; paint(); askGlimt(q); return; } } return paint(); }
+    if (d.kAsk) { if (K.srch) { K.srch.focus = true; askGlimt(SR_SUGG[+d.kAsk]); } return; }
     if ('kTitl' in d) { if (isMobile()) { K.mini = !K.mini; K.miniOff = 0; paint(); } return; }
     if (d.kMini) { K.miniOff += +d.kMini; return paint(); }
     // Minikalender: på web → Dag. Mobil (nedtrekk): Dag/3 dager/Uke beholdes og hopper til datoen; fra Måned/Liste → Dag.
@@ -873,6 +1099,7 @@ function bind(h) {
     if ('kEdit' in d) { const ev = findEv(K.sel); if (ev) { K.sel = null; K.form = { ...formFromEvent(ev), focus: true }; paint(); } return; }
     if ('kDel' in d) { const ev = findEv(K.sel); if (ev) delEvent(ev); return; }
     if ('kCopy' in d) { const ev = findEv(K.sel); if (ev) copyEvent(ev); return; }
+    if ('kAirun' in d) { runFmAi(); return; }
     if ('kFall' in d) { readFormSafe(); K.form.all = !K.form.all; return paint(); }
     if (d.kFcal) { readFormSafe(); K.form.cal = d.kFcal; return paint(); }
     if (d.kFrep) { readFormSafe(); K.form.rep = d.kFrep; return paint(); }
@@ -897,7 +1124,10 @@ function bindKeys() {
   if (keyBound) return;
   keyBound = true;
   window.addEventListener('keydown', (e) => {
-    if (!host() || e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
+    if (!host() || e.defaultPrevented) return;
+    // Cmd/Ctrl+K åpner søket (også fra et felt).
+    if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 'k' && !(document.getElementById('settings') && !document.getElementById('settings').hidden)) { e.preventDefault(); if (!K.srch) openSearch(); else host()?.querySelector('[data-k-q]')?.focus(); return; }
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (document.getElementById('settings') && !document.getElementById('settings').hidden) return;
     const tag = e.target?.tagName ?? '';
     if (e.key === 'Escape') {
@@ -915,7 +1145,7 @@ function bindKeys() {
     else if (k === 't') goToday();
     else if (V[k]) setView(V[k]);
     else if (k === 'n') openForm();
-    else if (e.key === '/') { K.srch = { q: '', res: [], focus: true }; paint(); }
+    else if (e.key === '/') openSearch();
     else return;
     e.preventDefault();
   });

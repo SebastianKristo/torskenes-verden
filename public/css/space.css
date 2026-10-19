@@ -1,0 +1,83 @@
+/* Rom (prompt 32, fasit Rom.dc.html variant a «Kontrollrom», 1a i fullskjerm). Papir i «Vindu og papir», mørkt i «Nåværende». */
+.rom{--r-bg:#f3efe6;--r-ink:#1b1a17;--r-ink2:#3d3a33;--r-mut:#6b6558;--r-faint:#8f897c;--r-lab:#b23a2a;--r-card:#fff;--r-ph:#d8cdb8;--r-line:#d8d1c2;
+  position:fixed;inset:0;z-index:60;overflow-y:auto;background:var(--r-bg);color:var(--r-ink);font-family:Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased;scrollbar-width:thin}
+html:not([data-hl="2c"]) .rom{--r-bg:#07080b;--r-ink:#eef0f4;--r-ink2:#c7ccd4;--r-mut:#9aa3ae;--r-faint:#7d838e;--r-lab:#f59a8f;--r-card:#11151d;--r-ph:#1b2230;--r-line:#232a36}
+.rom *{box-sizing:border-box}
+.rom a{color:inherit}
+.rom-bar{position:sticky;top:0;z-index:5;display:flex;justify-content:space-between;align-items:center;gap:12px;max-width:1600px;margin:0 auto;padding:14px 40px;background:var(--r-bg)}
+.rom-bar>b{font:500 30px/1.1 Newsreader,Georgia,serif}
+.rom-x{flex:none;width:42px;height:42px;border-radius:21px;background:var(--r-ink);color:var(--r-bg)!important;display:grid;place-items:center;text-decoration:none}
+.rom-x:hover{opacity:.85}
+.rom-x:focus-visible,.rom button:focus-visible,.rom a:focus-visible{outline:2px solid var(--r-lab);outline-offset:2px}
+.rom-c{max-width:1600px;margin:0 auto;padding:6px 40px 40px;display:flex;flex-direction:column;gap:28px;min-width:0}
+.rom-k{font:600 11px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.14em;color:#7fa3d6}
+.rom-kb{display:flex;justify-content:space-between;gap:8px;letter-spacing:.12em}
+.rom-lab{font:600 11px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.14em;color:var(--r-lab)}
+.rom-lab.mut{color:var(--r-mut)}
+.rom-mut{font-size:13px;color:#93a3bd}
+/* Kontrollrommet */
+.rom-ctl{border-radius:28px;background:#0b1220;color:#e9eef7;padding:22px;display:flex;flex-direction:column;gap:18px;overflow:hidden}
+.rom-ctlh{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.rom-ctlt{display:flex;flex-direction:column;gap:4px}
+.rom-tot{font:500 40px/1 Newsreader,Georgia,serif}
+.rom-src{font-size:13px;color:#93a3bd}
+.rom-cities{display:flex;gap:6px;flex-wrap:wrap}
+.rom-cities button{height:34px;padding:0 14px;border-radius:17px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#e9eef7;cursor:pointer;font:700 13px Manrope,system-ui,sans-serif}
+.rom-cities button[aria-pressed=true]{background:#e9eef7;color:#0b1220;border-color:#e9eef7}
+.rom-grid{display:grid;grid-template-columns:minmax(0,2fr) minmax(300px,1fr);gap:16px;align-items:start}
+.rom-left{min-width:0;display:flex;flex-direction:column;gap:10px}
+.rom-map{position:relative;border-radius:20px;overflow:hidden;background:#0f1a2e;aspect-ratio:2/1}
+.rom-map canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.rom-load{position:absolute;left:14px;top:12px;font:600 12px 'IBM Plex Mono',monospace;color:#93a3bd}
+.rom-cats{display:flex;gap:6px;flex-wrap:wrap}
+.rom-cats button{display:flex;align-items:center;gap:8px;height:34px;padding:0 12px;border-radius:17px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#e9eef7;cursor:pointer;font:600 12.5px Manrope,system-ui,sans-serif}
+.rom-cats button[aria-pressed=false]{background:transparent;opacity:.4}
+.rom-cats i{width:9px;height:9px;border-radius:5px}
+.rom-cats span{font:600 11.5px 'IBM Plex Mono',monospace;color:#93a3bd}
+.rom-right{display:flex;flex-direction:column;gap:14px;min-width:0}
+.rom-box{border-radius:20px;background:#121d33;padding:16px;display:flex;flex-direction:column;gap:6px}
+.rom-iss{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px}
+.rom-iss div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.rom-iss span{font-size:11.5px;color:#93a3bd}
+.rom-iss b{font:600 16px 'IBM Plex Mono',monospace}
+.rom-up{display:flex;align-items:center;gap:10px;padding:7px 0;border-top:1px solid rgba(255,255,255,.07)}
+.rom-up i{flex:none;width:8px;height:8px;border-radius:4px}
+.rom-up span{flex:1;min-width:0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rom-up b{flex:none;font:600 12px 'IBM Plex Mono',monospace;color:#93a3bd}
+/* Dagens bilde */
+.rom-two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:24px;align-items:start}
+.rom-apod,.rom-week{display:flex;flex-direction:column;gap:12px;min-width:0}
+.rom-apodimg{position:relative;display:block;border-radius:24px;overflow:hidden;background-color:#0b1220;aspect-ratio:4/3;text-decoration:none}
+.rom-play{position:absolute;left:14px;bottom:14px;padding:6px 12px;border-radius:999px;background:rgba(0,0,0,.6);color:#fff;font:700 13px Manrope,sans-serif}
+.rom-apt{font:500 28px/1.15 Newsreader,Georgia,serif}
+.rom-meta{font:600 12px 'IBM Plex Mono',monospace;color:var(--r-mut)}
+.rom-ex{margin:0;font-size:14.5px;line-height:1.6;color:var(--r-ink2);text-wrap:pretty}
+.rom-wgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.rom-wgrid button{display:flex;flex-direction:column;gap:6px;padding:0;border:0;background:transparent;cursor:pointer;text-align:left;font-family:inherit;color:var(--r-ink)}
+.rom-wimg{display:block;width:100%;aspect-ratio:1/1;border-radius:14px;background-color:#0b1220;outline-offset:2px}
+.rom-wgrid button[aria-pressed=true] .rom-wimg{outline:2px solid var(--r-lab)}
+.rom-wd{font:600 11px 'IBM Plex Mono',monospace;color:var(--r-mut)}
+.rom-wt{font-size:12.5px;font-weight:600;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* Mars */
+.rom-mars{display:flex;flex-direction:column;gap:14px}
+.rom-rgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:18px}
+.rom-rover{border-radius:24px;background:var(--r-card);padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.rom-rh{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.rom-rh b{font:500 26px Newsreader,Georgia,serif}
+.rom-rh span{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700}
+.rom-rh i{width:8px;height:8px;border-radius:4px}
+.rom-rsub{font-size:13.5px;color:var(--r-mut)}
+.rom-ph{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rom-ph>*{display:block;aspect-ratio:1/1;border-radius:12px;background-color:var(--r-ph)}
+.rom-cams{font:600 11.5px 'IBM Plex Mono',monospace;color:var(--r-faint)}
+.rom-foot{font-size:12px;color:var(--r-faint)}
+@media (max-width:1000px){.rom-grid{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:640px){
+  .rom-bar{padding:12px 16px;padding-top:max(12px,env(safe-area-inset-top))}
+  .rom-c{padding:4px 16px 32px;gap:22px}
+  .rom-ctl{padding:16px;border-radius:24px}
+  .rom-tot{font-size:32px}
+  .rom-wgrid{gap:8px}
+}
+body[data-route=rom]{overflow:hidden}
+body[data-route=rom] .bottomnav{display:none}

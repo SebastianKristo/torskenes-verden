@@ -5,6 +5,7 @@ import { clearBtn, syncSearch, bindSearchFields } from './searchfield.js';
 import { addQuick, preview, quickLabel } from './kal-quick.js';
 import { glimt, setGlimt } from './glimt.js';
 import { assist, boldHtml } from './assist.js';
+import { toast } from './toast.js';
 
 /* ---------- Popup ---------- */
 
@@ -128,9 +129,25 @@ const HIC = 'M12 8v4l3 2M3.5 12a8.5 8.5 0 1 0 2.5-6M3 4v4h4', SIC = 'M11 4a7 7 0
 const isUrl = (q) => !/\s/.test(q) && /^(https?:\/\/\S+|[\w-]+(\.[\w-]+)*\.[a-z]{2,}(:\d+)?(\/\S*)?)$/i.test(q);
 
 export async function loadHistory(force = false) {
-  if (sq.hist && !force) return sq;
-  try { const r = await api('/search/history'); Object.assign(sq, { hist: r.items, suggest: r.suggest, save: r.save }); } catch { sq.hist ??= []; }
+  if (sq.hist && !force && Date.now() - (sq.at ?? 0) < 30_000) return sq;
+  sq.at = Date.now();
+  try { const r = await api('/search/history'); Object.assign(sq, { hist: r.items, suggest: r.suggest, save: r.save }); if (Array.isArray(r.entries)) sq.ent = r.entries; } catch { sq.hist ??= []; }
+  // Prompt 32 (claude-code-sokehistorikk-synk.md): «Nylige søk» fra serveren, både web og mobil, maks 8, uten duplikater.
+  try {
+    const r = await fetch('/api/search-history?limit=8', { credentials: 'same-origin', cache: 'no-store' });
+    if (r.ok) { const j = await r.json(); sq.ent = Array.isArray(j.items) ? j.items : []; sq.histOn = j.enabled !== false; }
+  } catch { /* eldre server: tekstlisten over */ }
   return sq;
+}
+/** Nylige søk (uten tekst i feltet): oppføringer med id og enhet, ellers tekstlisten. */
+function recent() {
+  if (sq.histOn === false || sq.save === false) return [];
+  if (Array.isArray(sq.ent)) {
+    const seen = new Set(), out = [];
+    for (const x of sq.ent) { const k = String(x.q ?? '').toLowerCase(); if (!k || seen.has(k)) continue; seen.add(k); out.push({ t: x.q, h: true, id: x.id, dev: x.device }); if (out.length >= 8) break; }
+    return out;
+  }
+  return (sq.hist ?? []).slice(0, 8).map((t) => ({ t, h: true }));
 }
 export const searchState = () => sq;
 export function setHistory(items) { sq.hist = items; }
@@ -138,10 +155,11 @@ export function setHistory(items) { sq.hist = items; }
 function drawDrop(form) {
   const drop = form.querySelector('.sq-drop'), input = form.q;
   if (!drop) return;
-  const v = input.value, lv = v.trim().toLowerCase(), hist = sq.hist ?? [];
-  const hm = lv ? hist.filter((x) => x.toLowerCase().includes(lv)).slice(0, 4) : hist.slice(0, 8);
+  const v = input.value, lv = v.trim().toLowerCase(), hist = sq.histOn === false || sq.save === false ? [] : sq.hist ?? [];
+  const rec = lv ? [] : recent();
+  const hm = lv ? hist.filter((x) => x.toLowerCase().includes(lv)).slice(0, 4) : [];
   const sg = lv ? sq.sugg.filter((x) => !hm.some((y) => y.toLowerCase() === x.toLowerCase())).slice(0, 6) : [];
-  sq.items = [...hm.map((t) => ({ t, h: true })), ...sg.map((t) => ({ t, h: false }))];
+  sq.items = lv ? [...hm.map((t) => ({ t, h: true })), ...sg.map((t) => ({ t, h: false }))] : rec;
   if (sq.sel >= sq.items.length) sq.sel = -1;
   const ai = sq.ai && sq.ai.q === v.trim() ? sq.ai : null;
   const err = lv && !sq.items.length && sq.suggErr ? sq.suggErr : '';
@@ -155,9 +173,11 @@ function drawDrop(form) {
   const apH = ap ? `<div class="sq-appt" role="option" data-sq-appt aria-label="Legg i kalender: ${esc(ap.title)}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v15H4zM4 10h16M9 3v4M15 3v4"/></svg><span class="sq-appt-t"><b data-no-i18n>${esc(ap.title)}</b><span>${esc(quickLabel(ap))}</span></span><span class="sq-appt-b">Legg i kalender</span></div>` : '';
   if (err) { drop.innerHTML = apH + (apH ? '' : `<div class="sq-empty">Forslag utilgjengelig: ${esc(err)}</div>`); return; }
   const split = (t) => { const i = lv ? t.toLowerCase().indexOf(lv) : -1; return i === 0 ? `<span>${esc(t.slice(0, lv.length))}</span><b>${esc(t.slice(lv.length))}</b>` : `<b>${esc(t)}</b>`; };
-  drop.innerHTML = apH + (!lv && hist.length ? '<div class="sq-head"><span>Nylige søk</span><button type="button" data-sq-clear>Tøm historikk</button></div>' : '')
-    + sq.items.map((x, i) => `<div class="sq-item" role="option" id="sq-${i}" aria-selected="${sq.sel === i}" data-sq-i="${i}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${x.h ? HIC : SIC}"/></svg><span class="sq-t">${split(x.t)}</span>${x.h ? `<button type="button" class="sq-del" data-sq-del="${i}" aria-label="Fjern fra historikk">×</button>` : ''}</div>`).join('')
-    + (!lv && !hist.length ? '<div class="sq-empty">Ingen søkehistorikk ennå</div>' : '');
+  const off = sq.histOn === false || sq.save === false;
+  drop.innerHTML = apH + (!lv && sq.items.length ? '<div class="sq-head"><span>Nylige søk</span><button type="button" data-sq-clear>Tøm historikk</button></div>' : '')
+    + sq.items.map((x, i) => `<div class="sq-item" role="option" id="sq-${i}" aria-selected="${sq.sel === i}" data-sq-i="${i}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${x.h ? HIC : SIC}"/></svg><span class="sq-t" data-no-i18n>${split(x.t)}</span>${x.dev === 'mobil' ? '<span class="sq-dev">mobil</span>' : ''}${x.h ? `<button type="button" class="sq-del" data-sq-del="${i}" aria-label="Fjern fra historikk">×</button>` : ''}</div>`).join('')
+    + (!lv && !sq.items.length && !off ? '<div class="sq-empty">Ingen søkehistorikk ennå</div>' : '');
+  if (!lv && !sq.items.length && off && !apH) { drop.hidden = true; input.setAttribute('aria-expanded', 'false'); return; }
   if (sq.sel >= 0) input.setAttribute('aria-activedescendant', `sq-${sq.sel}`); else input.removeAttribute('aria-activedescendant');
 }
 
@@ -175,19 +195,89 @@ function fetchSugg(form) {
   }, 145);
 }
 
+function logSearch(q, eng) {
+  if (!sq.save) return;
+  sq.hist = [q, ...(sq.hist ?? []).filter((x) => x.toLowerCase() !== q.toLowerCase())].slice(0, 500);
+  if (Array.isArray(sq.ent)) sq.ent = [{ id: null, q, engine: eng, device: 'web', createdAt: new Date().toISOString() }, ...sq.ent.filter((x) => String(x.q).toLowerCase() !== q.toLowerCase())].slice(0, 20);
+  sq.at = 0; // neste fokus henter listen (med id-er) fra serveren
+  // keepalive: lagringen fullføres selv om siden byttes ut med søkeresultatet. Den eldre ruten speiles i /api/search-history.
+  fetch('/api/search/history', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q, engine: eng, device: 'web' }), keepalive: true }).catch(() => {});
+}
 function runSearch(q) {
   q = q.trim();
   if (!q) return;
-  if (sq.save) {
-    sq.hist = [q, ...(sq.hist ?? []).filter((x) => x.toLowerCase() !== q.toLowerCase())].slice(0, 500);
-    // keepalive: lagringen fullføres selv om siden byttes ut med søkeresultatet.
-    fetch('/api/search/history', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q }), keepalive: true }).catch(() => {});
-  }
+  // Prompt 32: snarveier til sider («vis meg oppdatering», «kalender») åpnes lokalt med en gang (claude-code-sok-fullfor-forst.md).
+  const nv = navOf(q, engine === 'ai');
+  logSearch(q, nv ? 'snarvei' : isUrl(q) ? 'url' : engine === 'ai' ? 'glimt' : engine);
+  if (nv) { document.querySelectorAll('[data-search]').forEach((f) => { f.q.value = ''; syncSearch(f.q); f.q.blur(); const d = f.querySelector('.sq-drop'); if (d) d.hidden = true; }); openNav(q, nv, document.activeElement?.closest?.('[data-search]') ?? lastForm); return; }
   // Ser det ut som en adresse, gå rett dit. Ellers valgt søkemotor (Glimt → svarboble under feltet).
   if (isUrl(q)) { location.href = /^https?:\/\//i.test(q) ? q : `https://${q}`; return; }
   // Prompt 31: Glimt svarer i en boble rett under feltet (vær, kalender … via /api/assist). Hopper ikke til Chat.
   if (engine === 'ai') { document.querySelectorAll('[data-search]').forEach((f) => { f.q.value = ''; syncSearch(f.q); f.q.blur(); const d = f.querySelector('.sq-drop'); if (d) d.hidden = true; }); askGlimt(q, document.activeElement?.closest?.('[data-search]') ?? lastForm); return; }
   location.href = engine === 'ddg' ? `https://duckduckgo.com/?q=${encodeURIComponent(q)}` : (isGoogle() && store.me.searchUrl ? store.me.searchUrl : 'https://www.google.com/search?q=') + encodeURIComponent(q);
+}
+
+/* ---------- Snarveier og «fullfør først» (prompt 32, claude-code-sok-fullfor-forst.md, fasit hsAsk) ---------- */
+// Samme liste som serveren (server/assist.js NAV). Med Glimt: «vis meg / åpne / gå til / ta meg til / hvor finner jeg / finn …»
+// eller 1–2 ord. Med Google/DuckDuckGo bare med «åpne / gå til / ta meg til / vis meg» foran.
+const NAV = [
+  [/oppdater|nordlys|ny versjon|versjon/, 'Nordlys OS · oppdatering', 'set:system'],
+  [/kalender|timeplan/, 'Kalender', '#/kalender'],
+  [/v(æ|ae)ret? ?(side|app)|værside|vaerside|^(vis( meg)?|åpne|gå til) v(æ|ae)r(et)?$|^v(æ|ae)r(et)?$/, 'Vær', '#/vaer'],
+  [/innstilling/, 'Innstillinger', 'set:konto'],
+  [/pakke|sporing|sending/, 'Sporing', '#/sporing'],
+  [/budsjett/, 'Budsjett', '/finans/#/budsjett'],
+  [/kvittering/, 'Kvitteringer', '/finans/#/kv'],
+  [/finans|økonomi|saldo/, 'Finans', '/finans/'],
+  [/abonnement|prøveperiode/, 'Abonnement', '/finans/#/abonnement'],
+  [/domene/, 'Domener', '#/domener'],
+  [/familie|posisjon|hvor er/, 'Familie', '#/familie'],
+  [/middag|matplan|oppskrift|^mat$|\bmat\b/, 'Mat', '#/matplan'],
+  [/huskeliste|handleliste|todo/, 'Huskeliste', '#/huskeliste'],
+  [/bursdag/, 'Bursdager', '#/bursdager'],
+  [/\brom\b|satellitt|rombilde|mars-?rover/, 'Rom', '#/rom'],
+  [/\bchat\b/, 'Chat', '#/chat'],
+];
+const NAV_PRE = /^(vis( meg)?|åpne|gå til|ta meg til|hvor finner jeg|finn)\b/, NAV_PRE_STRICT = /^(vis meg|åpne|gå til|ta meg til)\b/;
+function navOf(q, glimtOn) {
+  const n = String(q ?? '').toLowerCase().replace(/[?!.]+$/, '').trim();
+  if (!n || isUrl(n) || apptOf(q)) return null;
+  if (!(glimtOn ? NAV_PRE.test(n) || n.split(/\s+/).length <= 2 : NAV_PRE_STRICT.test(n))) return null;
+  const hit = NAV.find(([re]) => re.test(n));
+  return hit ? { label: hit[1], to: hit[2] } : null;
+}
+function goNav(to) {
+  if (to.startsWith('set:')) { document.dispatchEvent(new CustomEvent('hl:open-settings', { detail: to.slice(4) })); return; }
+  if (to.startsWith('#')) { location.hash = to; return; }
+  location.href = to;
+}
+function openNav(q, nv, form) {
+  closeAns();
+  ansForm = form;
+  Object.assign(GL, { q, busy: false, ans: { text: `Åpner **${nv.label}**.`, source: 'Snarvei', nav: true }, err: '' });
+  paintAns();
+  const my = GL.seq;
+  setTimeout(() => { if (my !== GL.seq) return; closeAns(); goNav(nv.to); }, 450);
+}
+// «Send til Chat etter» 5 / 8 / 15 / 30 s (hs_timeout_s i /api/me/layout, standard 8).
+let hsT = null;
+async function hsTimeout() {
+  if (hsT == null) { hsT = 8; try { const l = await api('/me/layout'); const v = +(l?.hs_timeout_s ?? l?.hsTimeoutS); if ([5, 8, 15, 30].includes(v)) hsT = v; } catch { /* standard */ } }
+  return hsT;
+}
+export function setHsTimeout(v) { if ([5, 8, 15, 30].includes(+v)) hsT = +v; }
+/** Flytter jobben til Chat: POST /api/assist/:id/handoff → {chatId}. Uten jobb (eller eldre server): ny samtale med spørsmålet. */
+async function handoff(q, jobId) {
+  let chatId = null;
+  if (jobId) {
+    try {
+      const r = await fetch(`/api/assist/${encodeURIComponent(jobId)}/handoff`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      if (r.ok) chatId = (await r.json())?.chatId ?? null;
+    } catch { /* faller tilbake */ }
+  }
+  const m = await import('./chat.js').catch(() => null);
+  if (!m) { location.hash = '#/chat'; return; }
+  if (chatId && m.openChatId) m.openChatId(chatId); else m.openChat(q);
 }
 
 /* ---------- Glimt-svarboble (prompt 31, claude-code-sok-ai-svarboble.md) ---------- */
@@ -197,8 +287,9 @@ const GL = { q: '', busy: false, ans: null, err: '', ctl: null, seq: 0 };
 let lastForm = null;
 function ansHtml() {
   if (!GL.q) return '';
-  const body = GL.busy ? `<div class="gl-busy">${glimt(22, 'tenker', { dark: true })}<span>Tenker på «<span data-no-i18n>${esc(GL.q)}</span>» …</span></div>`
-    : `<span class="gl-txt" data-no-i18n>${GL.err ? esc(GL.err) : boldHtml(GL.ans?.text || 'Glimt fant ikke noe svar.')}</span><div class="gl-foot"><span class="gl-src">✦ ${esc(GL.ans?.source || 'Glimt')}</span>${GL.ans?.apply?.count && !GL.applied ? `<button type="button" class="gl-chat" data-gl-apply>Endre ${GL.ans.apply.count} ${GL.ans.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}<button type="button" class="gl-chat" data-gl-chat>Fortsett i Chat ›</button></div>`;
+  const body = GL.slow ? `<div class="gl-busy">${glimt(22, 'svarer', { dark: true })}<span>Dette tar litt tid. <b>Fortsetter i Chat</b> …</span></div>`
+    : GL.busy ? `<div class="gl-busy">${glimt(22, 'tenker', { dark: true })}<span>Tenker på «<span data-no-i18n>${esc(GL.q)}</span>» …</span></div>`
+    : `<span class="gl-txt" data-no-i18n>${GL.err ? esc(GL.err) : boldHtml(GL.ans?.text || 'Glimt fant ikke noe svar.')}</span><div class="gl-foot"><span class="gl-src">✦ ${esc(GL.ans?.source || 'Glimt')}</span>${GL.ans?.apply?.count && !GL.applied ? `<button type="button" class="gl-chat" data-gl-apply>Endre ${GL.ans.apply.count} ${GL.ans.apply.count === 1 ? 'avtale' : 'avtaler'} ›</button>` : ''}${GL.ans?.nav ? '' : '<button type="button" class="gl-chat" data-gl-chat>Fortsett i Chat ›</button>'}</div>`;
   return `<div class="gl-ans" data-gl-ans role="status" aria-live="polite" title="Trykk for å lukke">${body}</div>`;
 }
 // Boblen ligger i et eget lag på <body> (over nyhetslinjen og kortene), plassert rett under søkefeltet som ble brukt.
@@ -226,7 +317,7 @@ function paintAns() {
 window.addEventListener('resize', placeAns);
 let placeT = 0; // siden kan tegnes på nytt (data kommer inn), så posisjonen sjekkes jevnlig mens boblen vises
 
-export function closeAns() { GL.ctl?.abort(); GL.seq++; Object.assign(GL, { q: '', busy: false, ans: null, err: '', ctl: null, applied: false }); document.querySelectorAll('[data-search] [data-sq-eng]').forEach((b) => setGlimt(b, 'klar')); paintAns(); }
+export function closeAns() { GL.ctl?.abort(); GL.seq++; clearTimeout(GL.toT); Object.assign(GL, { q: '', busy: false, ans: null, err: '', ctl: null, applied: false, slow: false, jobId: null, toT: 0 }); document.querySelectorAll('[data-search] [data-sq-eng]').forEach((b) => setGlimt(b, 'klar')); paintAns(); }
 async function askGlimt(q, form = null) {
   closeAns();
   ansForm = form;
@@ -236,9 +327,27 @@ async function askGlimt(q, form = null) {
   // Motor-ikonet i feltet (Glimt) tenker også mens svaret lages.
   const engState = (st) => document.querySelectorAll('[data-search] [data-sq-eng]').forEach((b) => setGlimt(b, st));
   engState('tenker');
+  // Prompt 32: tar svaret lengre tid enn grensen, flyttes jobben til Chat (den avbrytes ikke på serveren).
+  hsTimeout().then((sec) => {
+    if (my !== GL.seq || !GL.busy) return;
+    GL.toT = setTimeout(() => {
+      if (my !== GL.seq || !GL.busy) return;
+      GL.slow = true; paintAns();
+      setTimeout(() => {
+        if (my !== GL.seq || !GL.slow) return;
+        const jobId = GL.jobId;
+        GL.ctl?.abort(); GL.ctl = null; closeAns(); engState('klar');
+        handoff(q, jobId);
+      }, 700);
+    }, sec * 1000);
+  });
   try {
-    const a = await assist(q, { source: 'search', signal: ctl.signal, hideToast: () => !!document.querySelector('[data-gl-ans]') && !document.hidden });
+    const a = await assist(q, { source: 'search', signal: ctl.signal, onJob: (id) => { if (my === GL.seq) GL.jobId = id; }, hideToast: () => !!document.querySelector('[data-gl-ans]') && !document.hidden });
     if (my !== GL.seq) return;
+    clearTimeout(GL.toT);
+    // Serveren svarte med en snarvei (intent nav): åpne siden etter 0,45 s.
+    const nv = a.intent === 'nav' && (a.nav?.web || a.target) ? a.nav?.web || null : null;
+    if (nv) { GL.busy = false; GL.ans = { ...a, source: a.source || 'Snarvei', nav: true }; engState('klar'); paintAns(); setTimeout(() => { if (my !== GL.seq) return; closeAns(); const to = nv.startsWith('/#/innstillinger/') ? `set:${nv.split('/').pop() || 'konto'}` : nv.startsWith('/#/') ? nv.slice(1) : nv; goNav(to); }, a.nav?.delayMs ?? 450); return; }
     GL.ans = a; GL.err = a.error || '';
   } catch (e) { if (e.name === 'AbortError' || my !== GL.seq) { if (my === GL.seq || !GL.busy) engState('klar'); return; } GL.err = e.message || 'Glimt fikk ikke svart akkurat nå.'; }
   GL.busy = false; GL.ctl = null;
@@ -271,10 +380,28 @@ async function askAi(form, q, force = false) {
   drawDrop(form);
 }
 
-async function removeHist(form, t) {
-  sq.hist = (sq.hist ?? []).filter((x) => x !== t);
+async function removeHist(form, it) {
+  const t = it?.t;
+  if (!t) return;
+  sq.hist = (sq.hist ?? []).filter((x) => x.toLowerCase() !== t.toLowerCase());
+  if (Array.isArray(sq.ent)) sq.ent = sq.ent.filter((x) => String(x.q).toLowerCase() !== t.toLowerCase());
   drawDrop(form);
+  // Sletter fra serveren (og dermed fra mobilloggen). Uten id (nettopp logget) eller eldre server: etter tekst.
+  if (it.id != null) { const r = await fetch(`/api/search-history/${encodeURIComponent(it.id)}`, { method: 'DELETE', credentials: 'same-origin' }).catch(() => null); if (r?.ok) return; }
   await api(`/search/history/${encodeURIComponent(t)}`, { method: 'DELETE' }).catch(() => {});
+}
+async function clearHist(form) {
+  const prevH = sq.hist, prevE = sq.ent;
+  sq.hist = []; if (Array.isArray(sq.ent)) sq.ent = [];
+  drawDrop(form);
+  let items = null;
+  try { const r = await fetch('/api/search-history', { method: 'DELETE', credentials: 'same-origin' }); if (r.ok) items = (await r.json())?.items ?? null; else await api('/search/history', { method: 'DELETE' }); } catch { await api('/search/history', { method: 'DELETE' }).catch(() => {}); }
+  toast('Historikken er tømt', { action: 'Angre', onAction: async () => {
+    if (items?.length) await fetch('/api/search-history/restore', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ items }) }).catch(() => {});
+    else for (const q of [...(prevH ?? [])].reverse().slice(-40)) await fetch('/api/search/history', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ q }) }).catch(() => {});
+    sq.hist = prevH; sq.ent = prevE; await loadHistory(true);
+    toast('Historikken er tilbake');
+  } });
 }
 
 export function bindSearch() {
@@ -325,7 +452,7 @@ export function bindSearch() {
       }
       return;
     }
-    if (e.target.closest('[data-gl-chat]')) { const q = GL.q; closeAns(); import('./chat.js').then((m) => m.openChat(q)).catch(() => { location.hash = '#/chat'; }); return; }
+    if (e.target.closest('[data-gl-chat]')) { const q = GL.q, jobId = GL.busy ? GL.jobId : null; closeAns(); handoff(q, jobId); return; }
     closeAns();
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && GL.q && !document.getElementById('sq-eng-menu')) closeAns(); });
@@ -380,8 +507,8 @@ export function bindSearch() {
     e.preventDefault();
     if (e.target.closest('[data-sq-appt]')) return addAppt(f, f.q.value.trim());
     const del = e.target.closest('[data-sq-del]');
-    if (del) return removeHist(f, sq.items[+del.dataset.sqDel]?.t);
-    if (e.target.closest('[data-sq-clear]')) { sq.hist = []; drawDrop(f); api('/search/history', { method: 'DELETE' }).catch(() => {}); return; }
+    if (del) return removeHist(f, sq.items[+del.dataset.sqDel]);
+    if (e.target.closest('[data-sq-clear]')) return clearHist(f);
     const g = e.target.closest('[data-sq-google]');
     if (g) { sq.ai = null; return runSearch(g.dataset.sqGoogle); }
     const ask = e.target.closest('[data-sq-ask]');

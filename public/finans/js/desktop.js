@@ -72,8 +72,47 @@ function aiPanel() {
     ${a.busy ? aiProgress(a) : ''}
     ${a.aiUnavailable ? `<div class="ai-note">${esc(a.notice ?? 'AI-motoren svarer ikke, så dette er vanlig søk.')}</div>` : ''}
     ${a.plainFirst ? `<div class="ai-note ai-plain">${esc(a.notice)} <button class="btn sm ghost" data-act="ai-force">✦ Spør AI likevel</button></div>` : ''}
-    ${a.answer ? `<div class="ai-a">${esc(a.answer)}</div>` : ''}${hits ? `<div class="ai-hits">${hits}</div>` : ''}
+    ${a.answer ? `<div class="ai-a">${aiText(a.answer)}</div>` : ''}${aiSubs(a)}${aiSources(a)}${hits ? `<div class="ai-hits">${hits}</div>` : ''}${a.noMoreSure && !a.busy ? `<div class="note ai-nomore">${esc(a.noMoreSureText || 'Ingen flere sikre treff')}</div>` : ''}
     ${aiChips(a.q ? 'Prøv også' : '', a.followUps)}${aiChips(a.q ? 'Flere forslag' : '', (a.suggestions ?? []).filter((g) => !(a.followUps ?? []).includes(g)))}</section>`;
+}
+// Prompt 32 (claude-code-ai-sok-abonnementer.md): ingen «[n]»/«[1]»-markører, **Ja.** fet, abonnement-kort og kilder som rader.
+const aiText = (t) => esc(String(t ?? '').replace(/\s*\[(?:n|\d+(?:\s*,\s*\d+)*)\]/gi, '').replace(/\s+([.,;:!?])/g, '$1').trim()).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+const subHref = (x) => { const m = String(x.url ?? '').match(/#\/abonnement\/?(\d+)?/); return m ? `#/sub${m[1] ? `/${m[1]}` : ''}` : x.url || '#/sub'; };
+function aiSubs(a) {
+  const L = a.subscriptions ?? [];
+  if (!L.length) return '';
+  const tot = a.monthlyTotal != null && L.length > 1 ? `<div class="ai-subtot"><span>Sum per måned</span><b class="mono">${n0(a.monthlyTotal)} kr</b></div>` : '';
+  return `<div class="ai-subs">${L.map((x) => {
+    const lg = logo({ name: x.name, domain: x.domain }, 40, 12);
+    const st = x.status && x.status !== 'aktiv' ? `<span class="ai-sub-st ${x.status === 'prøve' ? 'trial' : ''}">${esc(x.status === 'prøve' ? `Prøve${x.daysLeft != null ? ` · ${x.daysLeft} d igjen` : ''}` : x.status)}</span>` : '';
+    const inc = (x.includes ?? []).length ? `<span class="ai-sub-inc">Inkluderer ${esc(x.includes.join(', '))}</span>` : '';
+    return `<a class="ai-sub" href="${esc(subHref(x))}">${lg}<span class="grow"><span class="ai-sub-t"><b>${esc(x.name)}</b>${x.plan ? `<span class="note"> · ${esc(x.plan)}</span>` : ''}${st}</span>
+      <span class="note">${x.price != null ? `${esc(n0(x.price))} kr${x.perLabel ? `${String(x.perLabel).startsWith('/') ? '' : '/'}${esc(x.perLabel)}` : ''}` : ''}${x.nextLabel || x.nextDate ? ` · neste trekk ${esc(x.nextLabel || dd(x.nextDate))}` : ''}</span>${inc}</span><span class="ai-sub-open">${esc(x.openLabel || 'Åpne i Abonnement ›')}</span></a>`;
+  }).join('')}${tot}</div>`;
+}
+function aiSources(a) {
+  const L = (a.sources ?? []).filter((x) => x && x.title);
+  if (!L.length) return '';
+  const lab = { abonnement: 'Abonnement', 'prøve': 'Prøveperiode', tx: 'Transaksjon', kvittering: 'Kvittering', receipt: 'Kvittering', vare: 'Varelinje' };
+  return `<div class="ai-k" style="margin-top:2px">Kilder</div><div class="ai-srcs">${L.slice(0, 8).map((x) => `<${x.txId ? `button type="button" data-open-tx="${esc(x.txId)}"` : 'div'} class="ai-src"><span class="ai-src-k">${esc(lab[x.type] ?? x.type ?? '')}</span><span class="grow ell"><b>${esc(x.title)}</b>${x.sub ? `<span class="note"> · ${esc(x.sub)}</span>` : ''}</span>${x.amount != null ? `<span class="mono">${esc(n0(x.amount))} kr</span>` : ''}${x.date ? `<span class="note mono">${esc(dd(x.date))}</span>` : ''}</${x.txId ? 'button' : 'div'}>`).join('')}</div>`;
+}
+if (!document.getElementById('ai-sub32-css')) {
+  const st = document.createElement('style'); st.id = 'ai-sub32-css';
+  st.textContent = `.ai-a b{font-weight:700}.ai-subs{display:flex;flex-direction:column;gap:8px}
+.ai-sub{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;background:var(--inner);color:var(--text);text-decoration:none;border:1px solid var(--sep)}
+.ai-sub:hover{border-color:var(--warm-line,var(--sep))}.ai-sub .grow{display:flex;flex-direction:column;gap:2px;min-width:0}
+.ai-sub-t{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.ai-sub-t b{font-weight:600;font-size:15px}
+.ai-sub-lg{position:relative;flex:none;width:40px;height:40px;border-radius:12px;overflow:hidden;background:var(--card,#fff);display:grid;place-items:center;font-weight:700}
+.ai-sub-lg img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#fff}
+.ai-sub-st{font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--sep);color:var(--text)}.ai-sub-st.trial{background:#b23a2a;color:#fff}
+.ai-sub-inc{font-size:12.5px;color:var(--muted,var(--text-2))}.ai-sub-open{flex:none;font-size:13px;font-weight:600;color:var(--acc)}
+.ai-subtot{display:flex;justify-content:space-between;padding:4px 14px 0;font-size:13.5px}
+.ai-srcs{display:flex;flex-direction:column;border-radius:14px;border:1px solid var(--sep);overflow:hidden}
+.ai-src{display:flex;align-items:center;gap:12px;padding:9px 14px;border:0;border-bottom:1px solid var(--sep);background:transparent;color:var(--text);text-align:left;font:inherit;font-size:13.5px;width:100%}
+.ai-src:last-child{border-bottom:0}button.ai-src{cursor:pointer}button.ai-src:hover{background:var(--inner)}
+.ai-src-k{flex:none;width:96px;font:600 10.5px 'IBM Plex Mono',ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,var(--text-2))}
+.ai-src .grow{min-width:0}.ai-nomore{font-size:13px}`;
+  document.head.appendChild(st);
 }
 // Prompt 25: jobbmodus. «✦ Ollama tenker … 34 s av 60 s» med fremdriftslinje og Avbryt mens svaret lages.
 function aiProgress(a) {

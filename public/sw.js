@@ -1,13 +1,29 @@
-// Enkel service worker: gjør appen installerbar og holder skallet tilgjengelig offline.
-// API-kall går alltid til nettverket.
-const CACHE = 'os-v3';
-const SHELL = ['/assets/css/app.css', '/assets/icons/icon-192.png'];
-self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL))); self.skipWaiting(); });
-self.addEventListener('activate', (e) => e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())));
+// Service worker for Homelab (Nordlys). Prompt 32 (claude-code-web-cache-fiks.md):
+// - Navigasjon/HTML: alltid nettverket først (cache bare som reserve uten nett), så en ny versjon slår inn med en gang.
+// - Versjonerte filer (/assets/…?v=<build>, serveren skriver dem inn i HTML og importer): cache først (immutable).
+// - Uversjonerte /assets/: nettverket først med revalidering. API-kall går aldri via cachen.
+// - skipWaiting i install, clients.claim i activate, og alle gamle cacher (andre navn) slettes.
+const CACHE = 'os-v32';
+const SHELL = ['/assets/icons/icon-192.png'];
+self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).catch(() => {})); self.skipWaiting(); });
+self.addEventListener('activate', (e) => e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE && k.startsWith('os-')).map((k) => caches.delete(k)))).then(() => self.clients.claim())));
+self.addEventListener('message', (e) => { if (e.data === 'skipWaiting') self.skipWaiting(); });
+const put = (req, res) => { if (res && res.ok && res.type === 'basic' && !res.redirected) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {}); } return res; };
 self.addEventListener('fetch', (e) => {
-  const url = new URL(e.request.url);
-  if (e.request.method !== 'GET' || url.origin !== location.origin || !url.pathname.startsWith('/assets/')) return;
-  e.respondWith(fetch(e.request, { cache: 'no-cache' }).then((res) => { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(e.request, copy)); return res; }).catch(() => caches.match(e.request)));
+  const req = e.request, url = new URL(req.url);
+  if (req.method !== 'GET' || url.origin !== location.origin) return;
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/finans/') || url.pathname === '/version.json' || url.pathname === '/sw.js') return;
+  if (req.mode === 'navigate') {
+    // HTML: nettverket først, uten HTTP-cache. Uten nett: siste kopi.
+    e.respondWith(fetch(req, { cache: 'no-store' }).then((res) => put(new Request(url.pathname), res)).catch(() => caches.match(url.pathname).then((r) => r || Response.error())));
+    return;
+  }
+  if (!url.pathname.startsWith('/assets/')) return;
+  if (url.searchParams.has('v')) {
+    e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => put(req, res))));
+    return;
+  }
+  e.respondWith(fetch(req, { cache: 'no-cache' }).then((res) => put(req, res)).catch(() => caches.match(req).then((r) => r || Response.error())));
 });
 
 /* ---------- Prompt 31: Web Push (varsler når fanen er lukket) ---------- */

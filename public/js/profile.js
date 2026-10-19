@@ -49,7 +49,7 @@ export async function removeAvatar() {
 // Widgets på dashboardet som kan skjules (id → navn). Rekkefølgen styres av dra-og-slipp / ▲▼.
 export const DASH_WIDGETS = [['d_cal', 'Skolekalender'], ['d_agenda', 'Agenda'], ['d_trading', 'Trading 212'], ['d_energy', 'Energi'], ['d_eco', 'Økonomi'], ['d_links', 'Snarveier'], ['d_upcoming', 'Kommer ut'], ['d_media', 'Media'], ['d_media_hist', 'Mediehistorikk'], ['d_pos', 'Posisjon · familie'], ['d_bday', 'Bursdager · neste'], ['d_kal', 'Kalender']];
 export const MOBILE_WIDGETS = [['d_weather_m', 'Vær og pakker'], ['d_agenda', 'I dag'], ['d_trading', 'Trading 212'], ['d_energy', 'Energi'], ['d_eco', 'Økonomi'], ['d_upcoming', 'Kommer ut'], ['d_media', 'Media'], ['d_media_hist', 'Mediehistorikk'], ['d_pos', 'Posisjon · familie'], ['d_bday', 'Bursdager · neste'], ['d_kal', 'Kalender']];
-export const TABS = [['dash', 'Dashboard'], ['chat', 'Chat'], ['studie', 'Studie'], ['rom', 'Rom'], ['okonomi', 'Økonomi'], ['hjem', 'Hjem'], ['matplan', 'Mat'], ['sporing', 'Sporing'], ['familie', 'Familie'], ['domener', 'Domener'], ['nettverk', 'Nettverk'], ['huskeliste', 'Huskeliste'], ['bursdager', 'Bursdager'], ['kalender', 'Kalender']];
+export const TABS = [['dash', 'Dashboard'], ['vaer', 'Vær'], ['chat', 'Chat'], ['studie', 'Studie'], ['rom', 'Rom'], ['okonomi', 'Økonomi'], ['hjem', 'Hjem'], ['matplan', 'Mat'], ['sporing', 'Sporing'], ['familie', 'Familie'], ['domener', 'Domener'], ['nettverk', 'Nettverk'], ['huskeliste', 'Huskeliste'], ['bursdager', 'Bursdager'], ['kalender', 'Kalender']];
 // ISO2: Hjem, Mat og Sporing har egne data per bruker; bare Domener er for administratorer.
 const ADMIN_TABS = ['domener'];
 export const FIXED_TABS = ['dash'];
@@ -71,6 +71,11 @@ export const tabLabel = (id, def = DEF_NAME[id] ?? id) => layout().labels?.[id] 
 
 /** Skjuler og gir nytt navn til faner i topplinjen og bunnmenyen. Skjulte sider kan fortsatt åpnes med lenke. */
 export function applyNav() {
+  // Prompt 32: «Vær» ble satt inn rett etter Dashboard (indeks 1). En lagret rekkefølge fra før (uten indeks 14) flyttes ett hakk.
+  const lt = store.me?.layouts?.tabs;
+  if (Array.isArray(lt) && lt.length && Math.max(...lt) < TABS.length - 1 && !lt.includes(TABS.length - 1)) {
+    const m = lt.map((i) => (i >= 1 ? i + 1 : i)); m.splice(m.indexOf(0) + 1, 0, 1); store.me.layouts.tabs = m;
+  }
   const hid = hiddenTabs();
   document.querySelectorAll('.pillnav [data-r], .bottomnav [data-r]').forEach((a) => {
     a.hidden = hid.has(a.dataset.r);

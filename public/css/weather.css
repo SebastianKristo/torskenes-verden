@@ -14,7 +14,11 @@ body[data-route=vaer] .bottomnav{display:none}
 .wxp-tc{display:flex;flex-direction:column;align-items:center;opacity:0;transition:opacity .2s;min-width:0;pointer-events:none}
 .wxp-tc b{font-size:17px;font-weight:700}
 .wxp-tc span{font-size:13px;opacity:.9;white-space:nowrap}
-.wxp-src{width:120px;text-align:right;font-size:11.5px;opacity:.75;line-height:1.3}
+.wxp-tsp{width:42px;flex:none}
+/* Prompt 32: ✕ Lukk oppe til høyre (rund 42 px glass, kryss 17 px); kilden står under H/L i toppen. */
+.wxp-close{flex:none;width:42px;height:42px;padding:0;border-radius:21px;border:0;background:rgba(255,255,255,.22);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);color:#fff;cursor:pointer;display:grid;place-items:center}
+.wxp-close:hover{background:rgba(255,255,255,.3)}
+.wxp-hsrc{font-size:11.5px;font-weight:500;opacity:.7;margin-top:6px}
 .wxp-scroll{position:relative;height:100%;overflow-y:auto;scrollbar-width:none;padding:96px 16px calc(84px + env(safe-area-inset-bottom,0px));-webkit-mask-image:linear-gradient(to bottom,transparent 0,transparent 52px,#000 104px);mask-image:linear-gradient(to bottom,transparent 0,transparent 52px,#000 104px)}
 .wxp-scroll::-webkit-scrollbar{display:none}
 .wxp-inner{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
@@ -230,3 +234,71 @@ body[data-route=vaer] .bottomnav{display:none}
   .wxp-layers button{padding:0 11px;font-size:13px}
   .wxp-src{width:96px}
 }
+
+/* Prompt 32: Forhold – egne timer- og dagsvisninger for nedbør og vind. Lik plassering i alle visninger. */
+.wxp-link b{line-height:20px}
+.wxp-link span{display:block;line-height:17px;height:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wxp-link{flex:1;min-width:0}
+.wxp-h{height:142px}
+.wxp-rb{position:relative;width:30px;height:62px;border-radius:9px;background:rgba(0,0,0,.16);overflow:hidden;display:block;flex:none}
+.wxp-rb i{position:absolute;left:0;right:0;border-top:1px dashed rgba(255,255,255,.28)}
+.wxp-rb b{position:absolute;left:0;right:0;bottom:0;background:#5ad1ff}
+.wxp-mm{font-size:13px;font-weight:700;min-height:16px}
+.wxp-ppa{font-size:13px;font-weight:700;color:#9fe0ff}
+.wxp-h b.wxp-ws{font-size:20px;font-weight:700;margin-top:4px}
+.wxp-wu{font-size:11.5px;font-weight:700;color:#9fe0ff;margin-top:-6px}
+.wxp-wg{font-size:11px;font-weight:700;opacity:.7;min-height:13px}
+.wxp-h svg[preserveAspectRatio]{display:block}
+.wxp-day.r{grid-template-columns:52px minmax(0,1fr) 62px 58px;gap:10px}
+.wxp-day.w{grid-template-columns:52px minmax(0,1fr) 88px;gap:12px}
+.wxp-rbars{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:3px;height:26px}
+.wxp-rbars>span{position:relative;border-radius:4px;overflow:hidden;outline-offset:1px}
+.wxp-rbars b{position:absolute;left:0;right:0;bottom:0;background:#5ad1ff;border-radius:4px}
+.wxp-dmm{font-size:16px;font-weight:700;text-align:right}
+.wxp-dpp{display:flex;align-items:center;justify-content:flex-end;gap:3px;font-size:16px;font-weight:700}
+.wxp-wgr{position:relative;display:block;height:28px;min-width:0}
+.wxp-wgr svg{width:100%;height:28px;display:block;border-radius:5px;background:rgba(0,0,0,.12)}
+.wxp-wgr i{position:absolute;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px rgba(40,90,150,.5)}
+.wxp-wr{font-size:16px;font-weight:700;text-align:right;white-space:nowrap}
+.wxp-wr span{color:#9fe0ff}
+
+/* Prompt 32: PC-oppsett (Vaer.dc.html med desktop=true). */
+.wxp-side{display:none}
+.wxp.dk .wxp-side{position:absolute;left:16px;top:16px;bottom:16px;width:280px;z-index:7;border-radius:24px;background:rgba(10,20,35,.26);-webkit-backdrop-filter:blur(24px) saturate(1.3);backdrop-filter:blur(24px) saturate(1.3);border:1px solid rgba(255,255,255,.14);display:flex;flex-direction:column;gap:12px;padding:18px 12px 14px;overflow-y:auto;scrollbar-width:none}
+.wxp-side::-webkit-scrollbar{display:none}
+.wxp-sh1{display:flex;align-items:center;justify-content:space-between;padding:0 6px}
+.wxp-sh1 b{font-size:22px;font-weight:700}
+.wxp-plus{width:34px;height:34px;border-radius:17px;border:0;background:rgba(255,255,255,.18);color:#fff;cursor:pointer;font-size:19px;line-height:1}
+.wxp-plus:hover{background:rgba(255,255,255,.28)}
+.wxp-sq{display:flex;align-items:center;gap:8px;height:38px;padding:0 12px;border-radius:12px;border:0;background:rgba(0,0,0,.2);color:rgba(255,255,255,.75);cursor:pointer;font:500 14px var(--wf);text-align:left;flex:none}
+.wxp-scs{display:flex;flex-direction:column;gap:6px}
+.wxp-sc{display:flex;flex-direction:column;gap:4px;width:100%;padding:12px 14px;border-radius:16px;border:0;background:rgba(255,255,255,.08);color:#fff;cursor:pointer;text-align:left}
+.wxp-sc:hover{background:rgba(255,255,255,.14)}
+.wxp-sc.on{background:rgba(255,255,255,.24);cursor:default}
+.wxp-sc1,.wxp-sc2{display:flex;justify-content:space-between;align-items:baseline;gap:8px;width:100%}
+.wxp-sc1 b{font-size:16px;font-weight:700;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wxp-sc1 span{font-size:24px;font-weight:300}
+.wxp-sc2{font-size:12.5px;opacity:.8}
+.wxp-sc2 span:first-child{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wxp-sc2 span+span{flex:none}
+.wxp-side .wxp-grow{flex:1}
+.wxp-sidesrc{font-size:11.5px;opacity:.65;padding:0 6px;line-height:1.45}
+.wxp.dk .wxp-scroll{padding:76px 32px 48px 328px;-webkit-mask-image:none;mask-image:none}
+.wxp.dk .wxp-inner{max-width:1500px;margin:0 auto}
+.wxp-cols.dk{grid-template-columns:minmax(0,5fr) minmax(0,7fr);column-gap:20px;align-items:start}
+.wxp.dk .wxp-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
+.wxp-hero.dk{align-items:flex-start;padding:0 0 18px 4px}
+.wxp-hero.dk .wxp-temp{font-size:96px;margin:2px 0 0 -4px}
+.wxp.dk .wxp-bnav{display:none}
+.wxp.dk .wxp-top{left:312px}
+.wxp-mapcard{position:relative;flex:none;height:300px;border-radius:24px;overflow:hidden;border:1px solid rgba(255,255,255,.16);background:rgba(10,20,35,.5)}
+.wxp-mapslot,.wxp-mapslot iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+.wxp-mapbar{position:absolute;left:10px;right:10px;top:10px;display:flex;justify-content:space-between;align-items:center;gap:8px;pointer-events:none}
+.wxp-mapbar>*{pointer-events:auto}
+.wxp-layers.sm{padding:3px;border:0}
+.wxp-layers.sm button{height:30px;padding:0 12px;font:700 12px var(--wf)}
+.wxp-fsb{flex:none;height:36px;padding:0 14px;border-radius:999px;border:0;background:rgba(10,20,35,.75);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#fff;cursor:pointer;font:700 12.5px var(--wf);white-space:nowrap}
+/* Ark (Forhold, fliser, steder) som panel til høyre, ikke bunnark. */
+.wxp.dk .wxp-sheet{left:auto;right:16px;top:60px;bottom:16px;width:min(520px,46%);max-width:none;margin:0;border-radius:28px;box-shadow:0 30px 80px -20px rgba(0,0,0,.6);animation:wxp-fade .18s ease}
+/* Smalere PC (900–1180 px): sidepanelet beholdes, innholdet i én kolonne. */
+@media (max-width:1180px){.wxp-cols.dk{grid-template-columns:minmax(0,1fr)}.wxp.dk .wxp-inner{max-width:760px}}

@@ -64,6 +64,16 @@ const C = {
 };
 let toastT = 0, copyT = 0, qT = 0, qCtl = null, recog = null, mediaRec = null, pendingPrompt = null;
 const host = () => document.getElementById('chat');
+// Prompt 32: Chat i fullskjerm på web (claude-code-chat-web-fullskjerm.md, fasit chW). Standard på («hl_chat_full» = «1»).
+const chFull = () => { if (isMobile()) return false; try { return localStorage.getItem('hl_chat_full') !== '0'; } catch { return true; } };
+function setChFull(v) { try { localStorage.setItem('hl_chat_full', v ? '1' : '0'); } catch { /* privat modus */ } applyChFull(); paint(); }
+function applyChFull() { const h = host(), on = !!h && chFull(); h?.classList.toggle('ch-fs', on); document.body.classList.toggle('chat-fs', on); }
+const FS_IN = 'M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7', FS_OUT = 'M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7';
+function fsBtns() {
+  if (isMobile()) return '';
+  const f = chFull(), l = f ? 'Vis i siden' : 'Fullskjerm';
+  return `<button type="button" class="ch-fsb" data-ch-fs aria-label="${l}" title="${l}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="${f ? FS_IN : FS_OUT}"/></svg></button>${f ? '<button type="button" class="ch-fsb ink" data-ch-fsclose aria-label="Lukk chat" title="Lukk (Esc)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' : ''}`;
+}
 
 /* ---------------- Lagring og nett ---------------- */
 
@@ -92,6 +102,7 @@ async function boot() {
   if (list.status === 'fulfilled') C.list = list.value; else C.list = { pinned: [], folders: [], chats: [] };
   if (!C.draftModel || !C.models.some((x) => x.id === C.draftModel && x.installed)) C.draftModel = C.set.chat_default_model || C.def || C.models.find((x) => x.installed)?.id || '';
   if (!C.set.chat_my_data) C.data = false;
+  if (pendingChat) { C.cur = pendingChat; pendingChat = null; watchHandoff(C.cur); }
   if (C.cur) await loadChat(C.cur, false);
   paint();
   if (pendingPrompt) { const p = pendingPrompt; pendingPrompt = null; newChat(); send(p); }
@@ -327,7 +338,7 @@ function body() {
     <div class="ch-top">${wide ? '' : `<button type="button" class="ch-ib" data-ch-drawer aria-label="Historikk">${svg(IC.menu, 22)}</button>`}
       <button type="button" class="ch-msel" data-ch-sheet="model"><b data-no-i18n>${esc(sky ? m.name : m.id || 'Velg modell')}</b><span class="ch-badge ${sky ? 'sky' : ''}">${sky ? 'SKY' : 'LOKAL'}</span><span class="ch-arr">▼</span></button>
       <span class="ch-grow"></span>
-      <button type="button" class="ch-ib" data-ch-sheet="params" aria-label="Samtaleinnstillinger" title="Samtaleinnstillinger">${svg(IC.gear, 20)}</button>
+      <button type="button" class="ch-ib" data-ch-sheet="params" aria-label="Samtaleinnstillinger" title="Samtaleinnstillinger">${svg(IC.gear, 20)}</button>${fsBtns()}
       ${wide ? '' : `<button type="button" class="ch-ib" data-ch-new aria-label="Ny chat">${svg(IC.newc, 20)}</button>`}</div>
     <div class="ch-sc" data-ch-sc><div class="ch-msgs">${C.err && !allModels().length ? `<div class="ch-errl">Fikk ikke hentet modellene: ${esc(C.err)}</div>` : ''}${hasMsgs ? msgsHtml() : emptyHtml()}</div></div>
     ${composerHtml()}</div>
@@ -341,7 +352,7 @@ function paint() {
   const gs = h.querySelector('[data-ch-groups]')?.scrollTop ?? 0;
   const ae = document.activeElement, fk = ae && h.contains(ae) ? ['data-ch-in', 'data-ch-q', 'data-ch-edv', 'data-ch-sys'].find((a) => ae.hasAttribute(a)) : null;
   const sel = fk ? [ae.selectionStart, ae.selectionEnd] : null;
-  h.className = `ch ${C.theme === 'noytral' ? 'noytral' : 'papir'}`;
+  h.className = `ch ${C.theme === 'noytral' ? 'noytral' : 'papir'}${chFull() ? ' ch-fs' : ''}`;
   h.innerHTML = body();
   const sc2 = h.querySelector('[data-ch-sc]');
   if (sc2) sc2.scrollTop = atBottom ? sc2.scrollHeight : y;
@@ -681,6 +692,8 @@ function bind(h) {
     if (d.chMenu) { e.stopPropagation(); C.menuId = d.chMenu; C.rn = ''; C.delArm = false; C.sheet = 'menu'; paint(); return; }
     if (d.chOpen) { C.drawer = false; C.edit = null; loadChat(d.chOpen); return; }
     if ('chNew' in d) return newChat();
+    if ('chFs' in d) return setChFull(!chFull());
+    if ('chFsclose' in d) { document.body.classList.remove('chat-fs'); location.hash = '#/dash'; return; }
     if ('chDrawer' in d) { C.drawer = true; paint(); return; }
     if (d.chFold) { const f = C.list.folders.find((x) => x.id === d.chFold), open = !(C.open[d.chFold] ?? f?.open !== false); C.open = { ...C.open, [d.chFold]: open }; writeLocal(); call(`/folders/${encodeURIComponent(d.chFold)}`, { method: 'PATCH', json: { open } }).catch(() => {}); paintSide(); return; }
     if (d.chSheet) { C.sheet = d.chSheet; C.drawer = false; if (d.chSheet === 'kb') loadKb(); paint(); return; }
@@ -740,6 +753,28 @@ function bind(h) {
 }
 
 /** Åpner Chat og sender teksten som ny samtale (✦ AI i Google-søket på Dashboard). */
+// Prompt 32 (claude-code-sok-fullfor-forst.md): søkefeltet ga opp etter hs_timeout_s og flyttet jobben til en Chat-tråd
+// (POST /api/assist/:id/handoff → {chatId}). Tråden åpnes, og svaret hentes når serverjobben er ferdig.
+let pendingChat = null;
+export function openChatId(id) {
+  if (!id) return openChat('');
+  pendingChat = String(id);
+  if (location.hash !== '#/chat') location.hash = '#/chat';
+  else if (C.booted) usePendingChat();
+}
+function usePendingChat() { const id = pendingChat; pendingChat = null; if (!id) return; C.cur = id; C.edit = null; loadChat(id).then(() => watchHandoff(id)); }
+function watchHandoff(id, n = 0) {
+  if (n > 45 || C.cur !== id) return;
+  const last = (C.chat?.id === id ? C.chat.messages : null)?.filter((m) => m.role !== 'system').at(-1);
+  if (n > 0 && last && last.role === 'assistant') return;
+  setTimeout(async () => {
+    if (C.cur !== id || !host()) return;
+    const before = C.chat?.messages?.length ?? 0;
+    await loadChat(id, false);
+    if ((C.chat?.messages?.length ?? 0) !== before) paint();
+    watchHandoff(id, n + 1);
+  }, 2000);
+}
 export function openChat(prompt = '') {
   const p = String(prompt ?? '').trim();
   if (p) pendingPrompt = p;
@@ -752,16 +787,24 @@ export function render() {
     const h = host();
     if (!h) return;
     bind(h);
+    applyChFull();
     if (!C.booted) boot();
+    else if (pendingChat) { usePendingChat(); refreshList(); }
     else { paint(); refreshList(); if (pendingPrompt && C.models) { const p = pendingPrompt; pendingPrompt = null; newChat(); send(p); } }
     void locale;
   });
-  return `<div id="chat" class="ch ${C.theme === 'noytral' ? 'noytral' : 'papir'}">${C.booted ? body() : '<div class="ch-miss"><span>Laster Chat …</span></div>'}</div>`;
+  return `<div id="chat" class="ch ${C.theme === 'noytral' ? 'noytral' : 'papir'}${chFull() ? ' ch-fs' : ''}">${C.booted ? body() : '<div class="ch-miss"><span>Laster Chat …</span></div>'}</div>`;
 }
 let wasMob = isMobile();
-window.addEventListener('resize', () => { if (host() && isMobile() !== wasMob) { wasMob = isMobile(); C.drawer = false; paint(); } });
+window.addEventListener('resize', () => { if (host() && isMobile() !== wasMob) { wasMob = isMobile(); C.drawer = false; applyChFull(); paint(); } });
+// Fullskjerm-klassen på <body> hører bare til Chat-siden.
+window.addEventListener('hashchange', () => setTimeout(() => { if (!host()) document.body.classList.remove('chat-fs'); }));
 // Esc lukker ark og skuff (uansett hvor fokus er).
 window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && host() && chFull() && !(C.sheet || C.drawer || C.edit) && !document.querySelector('#settings:not([hidden])')) {
+    if (e.target?.matches?.('input,textarea') && e.target.value) return;
+    e.preventDefault(); document.body.classList.remove('chat-fs'); location.hash = '#/dash'; return;
+  }
   if (e.key !== 'Escape' || !host() || !(C.sheet || C.drawer || C.edit)) return;
   if (e.target?.closest?.('[data-sf]') && e.target.value) return; // søkefeltet tømmes først
   e.preventDefault();

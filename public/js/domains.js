@@ -5,6 +5,7 @@ import { openSettings } from './settings.js';
 import { drawMap } from './worldmap.js';
 import { SRC } from './settings-domains.js';
 import { is2c } from './hltheme.js';
+import { glimt } from './glimt.js';
 
 const D = (p, o) => api('/../domains/api' + p, o);
 const PERIODS = [['1h', '1t'], ['24h', '24t'], ['7d', '7d'], ['30d', '30d']];
@@ -44,6 +45,8 @@ async function loadAll(force) {
     const names = S.sel === '*' ? S.list.map((x) => x.name) : [S.sel];
     await Promise.all(names.map((n) => fetchOne(n, force)));
     S.err = null;
+    // Uten serverens oppsummering lages den lokalt når statistikken er hentet.
+    const st = SUM.get(S.sel); if (st && !st.busy && !st.data && (sumMissing || st.err)) setTimeout(() => sumLoad(S.sel));
   } catch (e) { S.err = e.message; }
   paint();
 }
@@ -58,6 +61,166 @@ function startLive() {
     if (!d) return;
     try { d.live = await D(`/${encodeURIComponent(S.sel)}/live`); paintLive(d); } catch { /* prøver igjen om 30 s */ }
   }, 30_000);
+}
+
+/* ---------- Prompt 32: Glimt-oppsummering (claude-code-domener-ai-oppsummering.md, fasit sumVals/sumLocal) ---------- */
+// Serveren (SERVER32, server/domains-glimt.js) lager oppsummeringen daglig kl. 07:00 og på forespørsel, lagret per domene/bruker:
+//   GET  /api/domains/:domain/summary  (:domain = navn eller «*») → lages nå hvis det ikke finnes en for i dag
+//   POST /api/domains/:domain/summary  «↻ Lag ny» → {domain, label, date, createdAt, manual, head, pts:[{t, tone, color}], meta, model}
+// Mangler endepunktet (404), lages samme format her ut fra statistikken (regelbasert, som sumLocal i designet).
+const sumUrl = (sel) => `/api/domains/${encodeURIComponent(sel)}/summary`;
+const SUM = new Map(); // domene|* → {busy, data, err, at}
+const TONE_C = { pos: 'var(--dm-pos)', neg: 'var(--dm-neg)', warn: 'var(--dm-warn)', info: 'var(--dm-info)', neutral: 'var(--dm-neu)' };
+let sumMissing = false;
+const todayKey = () => new Date().toLocaleDateString('sv-SE');
+function normSum(j) {
+  const x = j?.summary ?? j?.item ?? (j?.head ? j : null);
+  if (!x || !x.head) return null;
+  const pts = (x.points ?? x.pts ?? []).map((p) => (typeof p === 'string' ? { t: p, tone: 'info' } : { t: p.t ?? p.text ?? '', tone: p.tone ?? 'info' })).filter((p) => p.t).slice(0, 4);
+  return { head: String(x.head), pts, at: x.createdAt ?? x.created_at ?? x.at ?? null, date: x.date ?? null, manual: !!x.manual, model: x.model ?? '', local: !!x.local, meta: x.meta ?? '' };
+}
+function localSum(sel) {
+  const names = sel === '*' ? (S.list ?? []).map((x) => x.name) : [sel];
+  const F = names.map((n) => S.data.get(`${n}|24h`) ?? S.data.get(key(n))).filter((d) => d && d.requests != null).map((d) => ({
+    name: d.name, req: d.requests ?? 0, vis: d.visitors ?? 0, thr: d.threats?.total ?? 0, cache: d.cachedPct ?? 0, ms: d.ttfb?.p50 ?? null,
+    ch: d.prev?.requests ? Math.round(((d.requests - d.prev.requests) / d.prev.requests) * 1000) / 10 : 0, certD: days(d.sslExpires), expD: days(d.renews) }));
+  if (!F.length) return null;
+  const sg = (v) => `${v > 0 ? '+' : ''}${String(v).replace('.', ',')} %`, tn = (v) => (v >= 0 ? 'pos' : 'neg'), pts = [];
+  const tot = F.reduce((a, f) => a + f.req, 0), vis = F.reduce((a, f) => a + f.vis, 0), thr = F.reduce((a, f) => a + f.thr, 0);
+  const warn = F.filter((f) => (f.certD != null && f.certD < 30) || (f.expD != null && f.expD < 45)).sort((a, b) => Math.min(a.certD ?? 999, a.expD ?? 999) - Math.min(b.certD ?? 999, b.expD ?? 999));
+  const top = [...F].sort((a, b) => b.ch - a.ch)[0], all = sel === '*';
+  let head;
+  if (warn.length) { const w = warn[0]; head = w.certD != null && w.certD < 30 ? `Sertifikatet for ${w.name} går ut om ${w.certD} dager.` : `${w.name} må fornyes om ${w.expD} dager.`; }
+  else if (all) head = `Rolig døgn. Alle ${F.length} domener er oppe, med ${big(tot)} forespørsler totalt.`;
+  else head = `${F[0].ch >= 10 ? 'Mer trafikk enn vanlig på ' : F[0].ch < 0 ? 'Litt roligere døgn på ' : 'Rolig døgn på '}${F[0].name}.`;
+  if (all) { pts.push({ t: `${big(tot)} forespørsler og ${nb(vis)} unike besøkende siste døgn.`, tone: 'info' }); if (top && F.length > 1) pts.push({ t: `${top.name} økte mest, ${sg(top.ch)} fra døgnet før.`, tone: tn(top.ch) }); }
+  else { const f = F[0]; pts.push({ t: `${big(f.req)} forespørsler og ${nb(f.vis)} unike besøkende, ${sg(f.ch)} fra døgnet før.`, tone: tn(f.ch) }); pts.push({ t: `${pc(f.cache)} ble levert fra cache.${f.ms ? ` Median svartid ${f.ms} ms.` : ''}`, tone: 'info' }); }
+  pts.push({ t: `Cloudflare blokkerte ${nb(thr)} trusler, mest bot-trafikk.`, tone: 'warn' });
+  const nx = F.filter((f) => f.certD != null).sort((a, b) => a.certD - b.certD)[0];
+  if (nx) pts.push({ t: warn.length ? 'Forny i Cloudflare eller hos registraren før fristen.' : `Ingen frister snart. Neste sertifikat (${nx.name}) fornyes om ${nx.certD} dager.`, tone: warn.length ? 'warn' : 'neutral' });
+  return { head, pts: pts.slice(0, 4), at: new Date().toISOString(), manual: true, local: true };
+}
+async function sumLoad(sel, manual = false) {
+  const st = SUM.get(sel) ?? {};
+  if (st.busy) return;
+  SUM.set(sel, { ...st, busy: true, err: '' }); paintSum();
+  let data = null, err = '';
+  const t0 = Date.now();
+  if (!sumMissing) {
+    try {
+      let r = manual ? null : await fetch(sumUrl(sel), { credentials: 'same-origin', cache: 'no-store' });
+      if (r && r.status === 404 && !(await r.clone().json().catch(() => ({})))?.error) sumMissing = true;
+      else {
+        data = r?.ok ? normSum(await r.json()) : null;
+        if (r && !r.ok) err = (await r.json().catch(() => ({})))?.error ?? `Feil ${r.status}`;
+        // «Lag ny», eller ingen oppsummering for i dag: lag en nå.
+        if (manual || (!data && !err) || (data?.date && data.date !== todayKey())) {
+          r = await fetch(sumUrl(sel), { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ manual: true }) });
+          if (r.status === 404 && !manual) sumMissing = true; else if (r.ok) { data = normSum(await r.json()) ?? data; err = ''; } else err = (await r.json().catch(() => ({})))?.error ?? `Feil ${r.status}`;
+        }
+      }
+    } catch (e) { err = e.message; }
+  }
+  if (!data) { data = localSum(sel); if (data) err = ''; }
+  if (manual) await new Promise((r) => setTimeout(r, Math.max(0, 900 - (Date.now() - t0))));
+  SUM.set(sel, { busy: false, data, err, at: Date.now() });
+  paintSum();
+}
+function sumHtml() {
+  const sel = S.sel, st = SUM.get(sel);
+  if (!st) { setTimeout(() => sumLoad(sel)); }
+  const busy = !st || st.busy, c = st?.data, who = sel === '*' ? 'Alle domener' : sel;
+  const hm = (t) => new Date(t).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' });
+  const meta = busy ? 'Glimt leser statistikken …' : c?.meta ? c.meta : c ? `${c.manual ? `Laget nå kl. ${hm(c.at ?? Date.now())}` : `Daglig · i dag kl. ${hm(c.at ?? Date.now())}`} · ${who}` : st?.err ? `Fikk ikke laget oppsummeringen: ${st.err}` : `Ingen statistikk ennå · ${who}`;
+  return `<section class="dm-card dm-sum" data-dm-sum><div class="dm-sum-h">${glimt(30, busy ? 'tenker' : 'klar')}<span class="dm-sum-k"><span class="dm-sum-l">GLIMT · OPPSUMMERING</span><span class="dm-sum-m" data-no-i18n>${esc(meta)}</span></span>
+    <button type="button" class="dm-sum-b" data-dom-sumrun${busy ? ' disabled' : ''}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>${busy ? 'Lager …' : 'Lag ny'}</button></div>
+    ${busy ? `<div class="dm-sum-sk">${['82%', '96%', '88%', '70%'].map((w, i) => `<span style="width:${w};height:${i ? 12 : 18}px"></span>`).join('')}</div>`
+    : c ? `<b class="dm-sum-t" data-no-i18n>${esc(c.head)}</b><div class="dm-sum-p">${c.pts.map((p) => `<div><i style="background:${TONE_C[p.tone] ?? TONE_C.info}"></i><span data-no-i18n>${esc(p.t)}</span></div>`).join('')}</div>` : ''}</section>`;
+}
+function paintSum() {
+  const el = document.querySelector('#dom-os [data-dm-sum]');
+  if (!el) return;
+  const tmp = document.createElement('div'); tmp.innerHTML = sumHtml();
+  el.replaceWith(tmp.firstElementChild);
+}
+
+/* ---------- Prompt 32: Google Søk (claude-code-domener-search-console.md, fasit gscVals) ---------- */
+// SERVER32 (server/domains-glimt.js):
+//   GET    /api/domains/:domain/gsc?period=7|28|90 → ikke koblet {connected:false, configured, steps, connectUrl} · velg eiendom
+//          {connected:true, needsSite:true, candidates:[siteUrl]} · utløpt {connected:false, reconnect:true, error} · ok {connected, site,
+//          account, dataTo, fetchedAt, kpi:{clicks|impressions|ctr|position:{value, prev, changePct}}, series[], queries[], pages[], footer}
+//   GET    /api/gsc/auth?return=…                  → videre til Google (OAuth, webmasters.readonly)
+//   POST   /api/gsc/site {domain, siteUrl}         → velger eiendom når flere passer
+//   DELETE /api/gsc                                 → kobler fra
+const GSC = { per: 28, data: new Map(), busy: false };
+const G_LOGO = '<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.4h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.2-2.1 3.5-5.1 3.5-8.7z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 7.9-2.9l-3.9-3c-1.1.7-2.4 1.2-4 1.2-3.1 0-5.7-2.1-6.6-4.9h-4v3.1A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.4 14.4a7.2 7.2 0 0 1 0-4.7V6.6h-4a12 12 0 0 0 0 10.8z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.4 6.6l4 3.1C6.3 6.9 8.9 4.8 12 4.8z"/></svg>';
+const gKey = (n) => `${n}|${GSC.per}`;
+async function gscLoad(name, force = false) {
+  if (!force && GSC.data.has(gKey(name))) return;
+  GSC.data.set(gKey(name), { loading: true });
+  let d;
+  try {
+    const r = await fetch(`/api/domains/${encodeURIComponent(name)}/gsc?period=${GSC.per}`, { credentials: 'same-origin', cache: 'no-store' });
+    const j = await r.json().catch(() => ({}));
+    d = r.status === 404 && !j.connected ? { missing: !j.error || /not found/i.test(j.error), connected: false, error: j.error && !/not found/i.test(j.error) ? j.error : '' } : r.ok ? j : { connected: false, error: j.error || `Feil ${r.status}`, reconnect: r.status === 401 || r.status === 403 };
+  } catch (e) { d = { connected: false, error: e.message }; }
+  GSC.data.set(gKey(name), d);
+  if (S.sel === name) paintGsc();
+}
+const num = (v) => (v == null || Number.isNaN(+v) ? null : +v);
+const chg = (cur, prev, lowerBetter = false) => {
+  if (cur == null || !prev) return { d: '', c: 'var(--dm-mut)' };
+  const v = ((cur - prev) / prev) * 100, good = lowerBetter ? v <= 0 : v >= 0;
+  return { d: `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(1).replace('.', ',')} % mot forrige`, c: good ? 'var(--dm-pos)' : 'var(--dm-neg)' };
+};
+const dmShort = (s) => { const x = new Date(String(s).length === 10 ? `${s}T12:00` : s); return Number.isNaN(+x) ? '' : `${x.getDate()}.${x.getMonth() + 1}.`; };
+const pathOf = (u) => { try { const x = new URL(u); return x.pathname + (x.search || ''); } catch { return String(u ?? ''); } };
+function gscHtml(name) {
+  const d = GSC.data.get(gKey(name));
+  if (!d) setTimeout(() => gscLoad(name));
+  const head = (on) => `<div class="dm-gsc-h"><div class="dm-gsc-t">${G_LOGO}<span>Google Søk</span></div>${on ? `<div class="dm-gsc-per">${[[7, '7 dager'], [28, '28 dager'], [90, '3 mnd']].map(([k, n]) => `<button type="button" data-dom-gper="${k}" aria-pressed="${GSC.per === k}">${n}</button>`).join('')}</div>` : ''}</div>`;
+  if (!d || d.loading) return `<div data-dm-gsc>${head(false)}<div class="skeleton" style="min-height:160px;border-radius:24px"></div></div>`;
+  if (!d.connected) {
+    const sites = null;
+    if (sites) return `<div data-dm-gsc>${head(false)}<section class="dm-card dm-gsc-off"><b class="dm-gsc-bt">Velg eiendom</b><span class="dm-gsc-tx">Google-kontoen har flere eiendommer som passer ${esc(name)}.</span><div class="dm-gsc-sites">${sites.map((x) => `<button type="button" class="dm-gsc-cbtn" data-dom-gsite="${esc(x.siteUrl ?? x)}">${esc(x.siteUrl ?? x)}</button>`).join('')}</div></section></div>`;
+    const re = !!(d.reconnect || d.error);
+    return `<div data-dm-gsc>${head(false)}<section class="dm-card dm-gsc-off">
+      <div class="dm-gsc-intro"><b class="dm-gsc-bt">${re ? 'Koble til på nytt' : 'Koble til Google Search Console'}</b><span class="dm-gsc-tx">${re && d.error ? `${esc(d.error)} ` : ''}Se klikk, visninger, plassering og hvilke søk som gir trafikk til ${esc(name)}. Dataene hentes én gang i døgnet og er 2–3 dager forsinket fra Google.</span></div>
+      <div class="dm-gsc-steps">${['Logg inn med Google-kontoen som eier eiendommen', `Velg eiendom, f.eks. sc-domain:${name}`, 'Data for de siste 16 månedene hentes inn'].map((t, i) => `<div><span>${i + 1}</span><span>${esc(t)}</span></div>`).join('')}</div>
+      <div class="dm-gsc-cta"><button type="button" class="dm-gsc-cbtn" data-dom-gconnect${d.missing ? ' disabled title="Serveren har ikke Google Search Console ennå"' : ''}>${G_LOGO}${re ? 'Koble til på nytt' : 'Koble til med Google'}</button><span class="dm-gsc-ro">${d.missing ? 'Serveren har ikke Google Search Console ennå' : d.configured === false ? 'Kun lesetilgang · webmasters.readonly · Google-klienten settes opp under Innstillinger → Kalendere' : 'Kun lesetilgang · webmasters.readonly'}</span></div></section></div>`;
+  }
+  if (d.needsSite) {
+    const L = d.candidates ?? d.sites ?? [];
+    return `<div data-dm-gsc>${head(false)}<section class="dm-card dm-gsc-off"><b class="dm-gsc-bt">Velg eiendom</b><span class="dm-gsc-tx">Google-kontoen har flere eiendommer som kan passe ${esc(name)}. Velg den som skal brukes.</span><div class="dm-gsc-sites">${L.map((x) => { const u = x.siteUrl ?? x; return `<button type="button" class="dm-gsc-cbtn" data-dom-gsite="${esc(u)}">${G_LOGO}<span data-no-i18n>${esc(u)}</span></button>`; }).join('') || '<span class="dm-gsc-tx">Fant ingen eiendom. Legg til domenet i Search Console først.</span>'}</div></section></div>`;
+  }
+  // kpi:{clicks:{value, prev}} (SERVER32) eller flate tall (totals/prev).
+  const kv = (k) => { const v = d.kpi?.[k]; return v && typeof v === 'object' ? v : { value: d.totals?.[k] ?? d.kpi?.[k], prev: d.prev?.[k] }; };
+  const T = { clicks: kv('clicks').value, impressions: kv('impressions').value, ctr: kv('ctr').value, position: kv('position').value }, P = { clicks: kv('clicks').prev, impressions: kv('impressions').prev, ctr: kv('ctr').prev, position: kv('position').prev };
+  const daily = (d.series ?? d.daily ?? d.days ?? []).map((x) => ({ date: x.date ?? x.d, c: num(x.clicks ?? x.c) ?? 0, i: num(x.impressions ?? x.i) ?? 0 }));
+  const C = num(T.clicks) ?? daily.reduce((a, x) => a + x.c, 0), I = num(T.impressions) ?? daily.reduce((a, x) => a + x.i, 0);
+  const ctr = num(T.ctr) != null ? (T.ctr <= 1 ? T.ctr * 100 : T.ctr) : I ? (C / I) * 100 : null, pos = num(T.position);
+  const pctr = num(P.ctr) != null ? (P.ctr <= 1 ? P.ctr * 100 : P.ctr) : null;
+  const kpi = [['Klikk', nb(C), '#3b6fb5', chg(C, num(P.clicks))], ['Visninger', big(I), '#7a5ad6', chg(I, num(P.impressions))], ['CTR', pc(ctr), '#2f7a4f', chg(ctr, pctr)], ['Snittposisjon', pos == null ? '–' : pos.toFixed(1).replace('.', ','), '#9a5a10', { d: 'Lavere er bedre', c: 'var(--dm-mut)' }]];
+  const cl = daily.map((x) => x.c), im = daily.map((x) => x.i);
+  const xs = daily.length ? [daily[0].date, daily[Math.floor((daily.length - 1) / 2)].date, daily[daily.length - 1].date].map(dmShort) : [];
+  const q = (d.queries ?? []).slice(0, 8).map((x) => { const p = num(x.position); return `<div class="dm-gsc-r q"><span class="ell" data-no-i18n>${esc(x.query ?? x.q ?? x.keys?.[0] ?? '')}</span><span class="mono">${nb(x.clicks)}</span><span class="mono mut">${big(num(x.impressions))}</span><span class="mono" style="color:${p == null ? 'var(--dm-mut)' : p <= 3 ? 'var(--dm-pos)' : p <= 10 ? 'var(--dm-ink)' : 'var(--dm-neg)'}">${p == null ? '–' : p.toFixed(1).replace('.', ',')}</span></div>`; }).join('');
+  const pg = (d.pages ?? []).slice(0, 6).map((x) => { const c = num(x.ctr); return `<div class="dm-gsc-r p"><span class="mono ell" data-no-i18n>${esc(pathOf(x.page ?? x.path ?? x.keys?.[0] ?? '/'))}</span><span class="mono">${nb(x.clicks)}</span><span class="mono mut">${c == null ? '–' : pc(c <= 1 ? c * 100 : c)}</span></div>`; }).join('');
+  const fetched = d.fetchedAt ? new Date(d.fetchedAt) : null, isToday = fetched && fetched.toDateString() === new Date().toDateString();
+  const meta = d.footer || [`Koblet til som ${d.account ?? d.email ?? 'Google-konto'}`, d.site ?? `sc-domain:${name}`, fetched ? `sist hentet ${isToday ? 'i dag' : fetched.toLocaleDateString('nb-NO', { day: 'numeric', month: 'short' })} ${fetched.toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}` : '', d.dataTo ? `data til ${dmShort(d.dataTo)}` : ''].filter(Boolean).join(' · ');
+  return `<div data-dm-gsc>${head(true)}
+    ${d.error ? `<div class="dm-card dm-warn">${esc(d.error)}</div>` : ''}
+    <div class="dm-gsc-kpis">${kpi.map(([l, v, c, dl]) => `<div class="dm-card dm-gsc-kpi" style="border-top:3px solid ${c}"><span>${l}</span><b class="mono">${esc(v)}</b><small style="color:${dl.c}">${dl.d || '&nbsp;'}</small></div>`).join('')}</div>
+    <section class="dm-card"><div class="dm-gsc-ch"><b class="dm-h">Klikk og visninger</b><span class="dm-gsc-lg"><span><i style="background:#3b6fb5"></i>Klikk</span><span><i style="background:#7a5ad6"></i>Visninger</span></span></div>
+      ${daily.length > 1 ? `<svg viewBox="0 0 600 150" preserveAspectRatio="none" class="dm-gsc-svg"><path d="${path(im, 600, 150, Math.max(...im, 1) * 1.1)}" fill="none" stroke="#7a5ad6" stroke-width="2" vector-effect="non-scaling-stroke" opacity=".7"/><path d="${path(cl, 600, 150, Math.max(...cl, 1) * 1.1)}" fill="none" stroke="#3b6fb5" stroke-width="2.4" vector-effect="non-scaling-stroke"/></svg><div class="dm-gsc-x mono">${xs.map((t) => `<span>${t}</span>`).join('')}</div>` : '<div class="dm-empty">Ingen dagsdata ennå. Google har 2–3 dagers forsinkelse.</div>'}</section>
+    <div class="dm-gsc-two"><section class="dm-card dm-gsc-tbl"><div class="dm-gsc-th"><b class="dm-h">Søkeord</b><span>Klikk · Visn. · Pos.</span></div>${q || '<div class="dm-empty" style="padding:8px 22px">Ingen søkeord ennå</div>'}</section>
+      <section class="dm-card dm-gsc-tbl"><div class="dm-gsc-th"><b class="dm-h">Sider i søk</b><span>Klikk · CTR</span></div>${pg || '<div class="dm-empty" style="padding:8px 22px">Ingen sider ennå</div>'}</section></div>
+    <div class="dm-gsc-foot"><span data-no-i18n>${esc(meta)}</span><button type="button" data-dom-gdisc>Koble fra</button></div></div>`;
+}
+function paintGsc() {
+  const el = document.querySelector('#dom-os [data-dm-gsc]');
+  if (!el || S.sel === '*') return;
+  const tmp = document.createElement('div'); tmp.innerHTML = gscHtml(S.sel);
+  el.replaceWith(tmp.firstElementChild);
 }
 
 /* ---------- Visning ---------- */
@@ -179,6 +342,7 @@ function one() {
         <div>${dev.map((x, i) => `<div class="dm-kvr"><span><i class="sq" style="background:${DC[i % 4]}"></i>${esc(x.name)}</span><span class="mono muted">${pc(x.pct, 0)}</span></div>`).join('') || '<div class="dm-empty">Ingen data</div>'}</div>`)}
       ${card('', `${h('Nettlesere')}${(d.browsers ?? []).map((x) => `<div class="dm-kvr"><span>${esc(x.name)}</span><span class="mono muted">${pc(x.pct, 0)}</span></div>`).join('') || '<div class="dm-empty">Ingen data</div>'}`)}
     </div>
+    ${gscHtml(d.name ?? S.sel)}
 
     <div class="dm-sec">Ytelse og sikkerhet</div>
     <div class="dm-grid">
@@ -211,7 +375,7 @@ function one() {
 function body() {
   if (S.err && !S.list) return `<div class="dm-card dm-warn">${esc(S.err)}</div>`;
   if (!S.list) return `${pills()}<div class="skeleton" style="min-height:320px;border-radius:24px"></div>`;
-  return `${pills()}${S.sel === '*' ? overview() : one()}`;
+  return `${pills()}${sumHtml()}${S.sel === '*' ? overview() : one()}`;
 }
 
 function paint() {
@@ -242,7 +406,14 @@ export function bind(view) {
     if (s) return pick(s.dataset.domSel);
     const p = e.target.closest('[data-dom-per]');
     if (p) { S.per = p.dataset.domPer; return loadAll(); }
-    if (e.target.closest('[data-dom-refresh]')) { S.list = null; return loadAll(true); }
+    if (e.target.closest('[data-dom-sumrun]')) return sumLoad(S.sel, true);
+    const gp = e.target.closest('[data-dom-gper]');
+    if (gp) { GSC.per = +gp.dataset.domGper; paintGsc(); return gscLoad(S.sel); }
+    if (e.target.closest('[data-dom-gconnect]')) { const cu = GSC.data.get(gKey(S.sel))?.connectUrl || '/api/gsc/auth'; location.href = `${cu}${cu.includes('?') ? '&' : '?'}return=${encodeURIComponent('/#/domener')}`; return; }
+    const gs = e.target.closest('[data-dom-gsite]');
+    if (gs) { await fetch('/api/gsc/site', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ domain: S.sel, siteUrl: gs.dataset.domGsite }) }).catch(() => {}); [...GSC.data.keys()].filter((k) => k.startsWith(`${S.sel}|`)).forEach((k) => GSC.data.delete(k)); paintGsc(); return gscLoad(S.sel); }
+    if (e.target.closest('[data-dom-gdisc]')) { if (!confirm('Koble fra Google Search Console? Lagrede tall slettes ikke.')) return; await fetch('/api/gsc', { method: 'DELETE', credentials: 'same-origin' }).catch(() => {}); GSC.data.clear(); paintGsc(); return gscLoad(S.sel); }
+    if (e.target.closest('[data-dom-refresh]')) { S.list = null; GSC.data.clear(); return loadAll(true); }
     if (e.target.closest('[data-dom-manage]')) return openSettings('dom', 'doms');
     if (e.target.closest('[data-dom-settings]')) return openSettings('int');
   });

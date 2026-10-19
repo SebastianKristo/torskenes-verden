@@ -8,6 +8,9 @@
 import { esc, api } from './util.js';
 import { store } from './store.js';
 import { LEARN_TYPES, memoryLine, loadMemory, addMemory, deleteMemory, applyMemory } from './glimt-memory.js';
+import { setHsTimeout } from './extras.js';
+// Prompt 32 (claude-code-sok-fullfor-forst.md): GLIMT I SØKEFELTET → «Send til Chat etter» 5 / 8 / 15 / 30 s (hs_timeout_s i /api/me/layout).
+const HS = [5, 8, 15, 30];
 
 const A = { loaded: false, loading: false, chat: null, chatErr: '', models: null, priv: null, privErr: '', audit: null, auditErr: '', owui: null, msg: '', showLog: false, mem: null, memErr: '', memAdd: false, memMsg: '' };
 const isAdmin = () => store.me?.me?.role === 'admin';
@@ -21,7 +24,8 @@ const fin = async (path, opts = {}) => {
 export async function loadAi(reload, force = false) {
   if ((A.loaded && !force) || A.loading) return;
   A.loading = true;
-  const [c, m, p, a, o, g] = await Promise.allSettled([api('/chat/settings'), api('/chat/models'), fin('/ai-privacy'), fin('/ai-audit?limit=50'), isAdmin() ? api('/integrations/openwebui') : Promise.resolve(null), api('/glimt/memory')]);
+  const [c, m, p, a, o, g, l] = await Promise.allSettled([api('/chat/settings'), api('/chat/models'), fin('/ai-privacy'), fin('/ai-audit?limit=50'), isAdmin() ? api('/integrations/openwebui') : Promise.resolve(null), api('/glimt/memory'), api('/me/layout')]);
+  const hv = l.status === 'fulfilled' ? +(l.value?.hs_timeout_s ?? 8) : 8; A.hs = HS.includes(hv) ? hv : 8;
   A.mem = g.status === 'fulfilled' ? g.value.items ?? [] : null; A.memErr = g.status === 'rejected' ? g.reason.message : '';
   A.chat = c.status === 'fulfilled' ? c.value : null; A.chatErr = c.status === 'rejected' ? c.reason.message : '';
   A.models = m.status === 'fulfilled' ? m.value.models ?? [] : [];
@@ -51,6 +55,9 @@ export function aiView({ group, row, note }) {
       row({ t: 'Åpne chat', s: 'Historikk, modeller og kunnskapsbase', act: 'data-ai-open', btn: 'Åpne', k: 'chat' }),
     ], 'Lokale modeller kjører på hjemmeserveren. Sky-modeller (Gemini, Groq) merkes SKY i Chat.'));
   } else groups.push(group('Chat', [row({ t: 'Chat er ikke tilgjengelig', s: A.chatErr ? `Serveren svarte: ${A.chatErr}` : 'Oppdater serveren' })]));
+  groups.push(group('Glimt i søkefeltet', [
+    row({ t: 'Send til Chat etter', s: `${A.hs ?? 8} sekunder · trykk for å bytte`, act: 'data-ai-hs', btn: `${A.hs ?? 8} s`, k: 'glimt søkefelt søk chat tid timeout sekunder fullfør' }),
+  ], 'Enkle oppgaver fullføres i søkefeltet. Tar svaret lengre tid, fortsetter det i Chat.'));
   if (isAdmin() && A.owui) {
     const f = Object.fromEntries((A.owui.fields ?? []).map((x) => [x.key, x]));
     const url = f.openwebui_url?.value ?? '', keySaved = !!f.openwebui_key?.saved;
@@ -96,6 +103,13 @@ function memoryGroup(group, row) {
 }
 
 export async function aiClick(e, rerender) {
+  if (e.target.closest('[data-ai-hs]')) {
+    e.preventDefault();
+    const v = HS[(HS.indexOf(A.hs ?? 8) + 1) % HS.length];
+    A.hs = v; setHsTimeout(v); rerender();
+    api('/me/layout', { method: 'PUT', json: { hs_timeout_s: v } }).catch(() => {});
+    return true;
+  }
   const g = e.target.closest('[data-ai-mdel],[data-ai-madd],[data-ai-mapply]');
   if (g) {
     e.preventDefault();

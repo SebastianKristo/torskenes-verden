@@ -28,6 +28,7 @@ import './finpreload.js';
 import { logout, noteUser } from './usercache.js';
 import { loadAppIdentity, appName } from './appicon.js';
 import { scrollMemory } from './scrollmem.js';
+import { startVersionCheck } from './vercheck.js';
 import { loadHlTheme, applyHlTheme, is2c, setHlTheme, pwHeader, paintPhoto, bindPhoto } from './hltheme.js';
 
 const ROUTES = { dash: dash.render, studie: study.render, rom: space.render, hjem: home.render, matplan: mat.render, sporing: tracking.render, familie: family.render, huskeliste: tasks.render, vaer: weatherPage.render, bursdager: birthdays.render, kalender: kalender.render, chat: chat.render, domener: domains.render, nettverk: net.render, mer: net.renderMore };
@@ -57,7 +58,7 @@ function renderRoute() {
   const tk = document.getElementById('ticker');
   if (tk && view.contains(tk)) document.querySelector('header.top').after(tk);
   // Værsiden er en egen fullskjermside (systemfont, animert himmel) uten fotovindu.
-  view.innerHTML = (is2c() && route !== 'vaer' ? pwHeader(route) : '') + ROUTES[route]();
+  view.innerHTML = (is2c() && route !== 'vaer' && route !== 'rom' ? pwHeader(route) : '') + ROUTES[route](); // Vær og Rom er fullskjerm (prompt 32)
   placeTicker();
   paintPhoto();
   mountAll(view);
@@ -190,7 +191,8 @@ async function main() {
   // Prompt 24: ikonene i Nyhetsleser lastes på forhånd, så de vises med en gang leseren åpnes.
   setTimeout(() => import('./news.js').then((m) => m.preloadNewsIcons?.()).catch(() => {}), 1200);
 
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+  // Prompt 32: SW-oppdatering (oppstart, fokus, 10 min, controllerchange) og versjonssjekk mot /version.json (5 min, fokus).
+  startVersionCheck({ sw: '/sw.js' });
   // Prompt 31: presence-heartbeat mens fanen er synlig (serveren holder push tilbake da) og Web Push hvis slått på her.
   import('./webpush.js').then((m) => m.startPresence()).catch(() => {});
 }

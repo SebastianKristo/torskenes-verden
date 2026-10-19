@@ -177,12 +177,14 @@ export function bdCalSummary() {
   const g = S.d?.google ?? {}, ha = S.d?.ha ?? {};
   return { g: g.connected ? `Google: ${g.email || 'koblet til'}` : 'Google ikke koblet', ha: ha.entityId ? `HA: ${ha.entityId}` : 'Home Assistant ikke importert' };
 }
-function calLink() {
+export function calLink() {
   const s = bdCalSummary();
   return `<button type="button" class="bd-card bd-callink" data-bd-act="calset"><span class="bd-grow"><b>Kalendere</b><span>${esc(S.local ? 'Google Kalender og Home Assistant' : `${s.g} · ${s.ha}`)}</span></span><span class="bd-cl-r">Innstillinger ›</span></button>`;
 }
 
-function widgets(L) {
+// Prompt 32: «WIDGETS PÅ TELEFONEN» vises bare i mobilappen (Bursdager.dc.html: showWg = variant !== 'web'). På web står
+// Kalendere (Google og Home Assistant) i høyre kolonne i stedet (showCal for variant web). widgets() og calLink() brukes ikke her.
+export function widgets(L) {
   const h = L[0], same = h ? L.filter((x) => x.days === h.days) : [], t3 = L.slice(0, 3);
   const big = h ? (h.days === 0 ? 'I dag' : String(h.days)) : '–', unit = h && h.days > 0 ? (h.days === 1 ? 'dag' : 'dager') : '';
   const n = h ? same.map((x) => x.name).join(' og ') : 'Ingen', sub = h ? `${h.age != null ? `Fyller ${h.age} · ` : ''}${h.x.getDate()}. ${MS[h.x.getMonth()]}` : '';
@@ -207,9 +209,8 @@ function body() {
       <div class="bd-bar"><label class="bd-q${S.q ? ' has' : ''}" data-sf><span class="sf-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg></span>${clearBtn()}<input name="bdq" value="${esc(S.q)}" placeholder="Søk etter navn" autocomplete="off" aria-label="Søk etter navn"></label><button type="button" class="bd-add" data-bd-act="add">${S.add ? 'Lukk' : '+ Legg til'}</button></div>
       ${form()}
       <div class="bd-lists">${list(L)}</div>
-      ${calLink()}
     </div>
-    <div class="bd-col">${widgets(L)}
+    <div class="bd-col"><span class="bd-gt">KALENDERE</span>${calendars()}
     </div></div>`;
 }
 

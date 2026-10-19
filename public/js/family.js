@@ -286,12 +286,22 @@ function healthAll() {
     <div class="fam-note">Apple Health og Health Connect kan bare leses av appen på telefonen. Homelab-appen sender et sammendrag hit hvert 15. minutt, og bare det personen har valgt å dele.</div>`;
 }
 
+// Prompt 32 (Familie.dc.html, web): «FAMILIEN · N personer» over et kort med rader (bilde med statusprikk, navn, sted, batteri, sist oppdatert).
+function famRow(m) {
+  const l = m.last, sp = kmh(l?.speed), nDev = devCount(m);
+  const where = m.sharing !== 'on' ? (m.sharing === 'paused' ? 'Deling er satt på pause' : 'Deler ikke posisjon') : !l ? 'Ingen posisjon ennå'
+    : `${l.place ? `I ${l.place}` : l.approx ? 'Omtrentlig posisjon' : ACT[l.activity] ?? 'Ukjent sted'}${sp ? ` · ${sp} km/t` : ''}`;
+  const bat = l?.battery != null ? `${Math.round(l.battery)} %${l.charging ? ' ⚡' : ''}` : '';
+  return `<button type="button" class="fam-wrow${m.userId === S.sel ? ' on' : ''}" data-fam-sel="${esc(m.userId)}">${avatar(m, 'lg', true)}
+    <span class="fam-pmain"><b>${esc(m.name)}${m.self ? ' (deg)' : ''}</b><span class="fam-sub">${esc(where)}${nDev > 1 ? ` · ${nDev} enheter` : ''}</span></span>
+    <span class="fam-wbat"><b class="${l?.battery != null && l.battery < 20 && !l.charging ? 'low' : ''}">${esc(bat)}</b><span>${l && m.sharing === 'on' ? esc(ago(l.ts)) : '–'}</span></span></button>`;
+}
 function peopleCard() {
-  const all = S.d?.members ?? [], self = all.filter((m) => m.self), others = all.filter(sharesWithMe);
+  const all = S.d?.members ?? [], self = all.filter((m) => m.self), others = all.filter(sharesWithMe), list = [...self, ...others];
   const empty = others.length ? '' : `<div class="fam-empty fam-none"><b>Ingen deler posisjon med deg ennå</b>
     Deling er av som standard. Når noen i familien slår på deling, vises de her og på kartet.</div>`;
-  return `<section class="card fam-card"><div class="fam-h"><span class="fam-k">Familien</span><span class="fam-sub">${others.length ? `${others.length} deler med deg` : 'Ingen deler med deg'}</span></div>
-    <div class="fam-people">${[...self, ...others].map(memberRow).join('')}</div>${empty}</section>`;
+  return `<div class="fam-wblk"><span class="fam-wlab">FAMILIEN<span>${list.length} ${list.length === 1 ? 'person' : 'personer'}</span></span><section class="card fam-card fam-wlist">
+    <div class="fam-people">${list.map(famRow).join('')}</div>${empty}</section></div>`;
 }
 
 // Ikonrutenett og farger (10 forhåndsvalgte + fri fargevelger med hex), felles for «Ny sone» og redigering.
@@ -331,11 +341,21 @@ function zonesCard() {
     ${others.length && z.length ? '<div class="fam-note">Trykk «Kommer» eller «Forlater» for å få varsel når en person kommer til eller forlater sonen.</div>' : ''}`;
 }
 
+// Prompt 32: like hendelser på rad (samme person, type og sone) slås sammen med teller «×7». Siste tidspunkt vises. Maks 12.
+function groupEvents(ev) {
+  const out = [];
+  for (const e of ev) {
+    const l = out[out.length - 1], n = e.count ?? e.n ?? 1;
+    if (l && l.name === e.name && l.kind === e.kind && l.zone === e.zone) { l.n += n; continue; }
+    out.push({ ...e, n });
+  }
+  return out.slice(0, 12);
+}
 function eventsCard() {
-  const ev = S.d?.events ?? [];
-  return `<section class="card fam-card"><div class="fam-h"><span class="fam-k">Hendelser</span></div>
-    ${ev.length ? `<ul class="fam-ev">${ev.slice(0, 12).map((e) => `<li><span class="fam-dot ${e.kind}"></span><span><b>${esc(e.name)}</b> ${e.kind === 'enter' ? 'kom til' : 'forlot'} <b>${esc(e.zone)}</b></span><time>${hm(new Date(e.ts))}</time></li>`).join('')}</ul>` : '<div class="fam-empty">Ingen hendelser ennå.</div>'}
-  </section>`;
+  const ev = groupEvents(S.d?.events ?? []);
+  return `<div class="fam-wblk"><span class="fam-wlab">HENDELSER</span><section class="card fam-card fam-wlist">
+    ${ev.length ? `<ul class="fam-ev">${ev.map((e) => `<li><span class="fam-dot ${e.kind}" style="${person(e.userId) ? `background:${esc(colOf(person(e.userId)))}` : ''}"></span><span>${esc(e.name)} ${e.kind === 'enter' ? 'kom til' : 'forlot'} ${esc(e.zone)}${e.n > 1 ? `<em class="fam-evn">×${e.n}</em>` : ''}</span><time>${hm(new Date(e.ts))}</time></li>`).join('')}</ul>` : '<div class="fam-empty">Ingen hendelser ennå.</div>'}
+  </section></div>`;
 }
 
 function privacyCard() {
@@ -343,7 +363,7 @@ function privacyCard() {
   if (!p) return '';
   const seg = (k, opts) => `<div class="fam-seg">${opts.map(([v, t]) => `<button type="button" class="${p[k] === v ? 'on' : ''}" data-fam-pref="${k}" data-v="${v}">${t}</button>`).join('')}</div>`;
   const hs = [['steps', 'Skritt'], ['restingHr', 'Hvilepuls'], ['hr', 'Puls'], ['sleep', 'Søvn'], ['activeKcal', 'Aktive kalorier'], ['week', 'Siste 7 dager']];
-  return `<section class="card fam-card"><div class="fam-h"><span class="fam-k">Min deling</span><span class="fam-sub">${p.sharing === 'on' ? 'De andre ser deg' : p.sharing === 'paused' ? 'De andre ser at du har pauset' : 'Av som standard. Ingen ser posisjonen eller helsen din'}</span></div>
+  return `<section class="card fam-card"><div class="fam-h"><b class="fam-wt">Min deling</b><span class="fam-sub">${p.sharing === 'on' ? 'De andre ser deg' : p.sharing === 'paused' ? 'De andre ser at du har pauset' : 'Av som standard. Ingen ser posisjonen eller helsen din'}</span></div>
     ${seg('sharing', [['on', 'Deler'], ['paused', 'Pause'], ['off', 'Av']])}
     ${seg('precision', [['exact', 'Nøyaktig'], ['approx', 'Omtrentlig (~1 km)']])}
     <label class="fam-sw"><input type="checkbox" data-fam-here ${S.sharingHere ? 'checked' : ''} ${p.sharing !== 'on' ? 'disabled' : ''}><span>Del posisjon fra denne nettleseren mens siden er åpen</span></label>
@@ -368,8 +388,8 @@ function zoneSheet() {
 }
 
 function tabs() {
-  return `<div class="fam-tabs" role="tablist">${[['kart', 'Kart'], ['soner', 'Soner'], ['helse', 'Helse']].map(([k, n]) => `<button type="button" role="tab" aria-selected="${S.tab === k}" class="${S.tab === k ? 'on' : ''}" data-fam-tab="${k}">${n}</button>`).join('')}
-    <span class="fam-live"><i class="${liveOn() ? 'on' : ''}"></i>${liveOn() ? 'Sanntid' : 'Oppdateres hvert 20. sekund'}</span></div>`;
+  return `<div class="fam-tabs"><div class="fam-tpill" role="tablist">${[['kart', 'Kart'], ['soner', 'Soner'], ['helse', 'Helse']].map(([k, n]) => `<button type="button" role="tab" aria-selected="${S.tab === k}" class="${S.tab === k ? 'on' : ''}" data-fam-tab="${k}">${n}</button>`).join('')}</div>
+    <span class="fam-live"><i class="${liveOn() ? 'on' : ''}"></i>${liveOn() ? `Sanntid · ${S.sharingHere ? 'din posisjon deles herfra' : 'oppdatert nå'}` : 'Oppdateres hvert 20. sekund'}</span></div>`;
 }
 
 function body() {
@@ -384,12 +404,12 @@ function body() {
     <div class="fam-zoom"><button type="button" data-fam-act="zin" aria-label="Zoom inn">+</button><button type="button" data-fam-act="zout" aria-label="Zoom ut">−</button><button type="button" data-fam-act="fit" aria-label="Vis alle">◎</button></div>
     <div class="fam-livepill"><i class="${liveOn() ? 'on' : ''}"></i>${liveOn() ? 'Sanntid · oppdatert nå' : 'Hvert 20. sekund'}</div>
     ${zoneSheet()}</section></div>`;
+  // Prompt 32: to kolonner på web – kartet (blir stående) til venstre, sidepanelet (320–400 px) til høyre i rekkefølgen
+  // valgt person · Familien · Hendelser · Min deling. Under 900 px: én kolonne (kart øverst).
   const side = S.tab === 'soner'
     ? `<div class="fam-side">${zonesCard()}</div>`
-    : `<div class="fam-side">${personCard()}
-      ${peopleCard()}</div>`;
-  const row3 = S.tab === 'soner' ? '' : `<div class="fam-row3">${eventsCard()}${privacyCard()}</div>`;
-  return `${tabs()}<div class="fam-grid">${mapCard}${side}${row3}</div>`;
+    : `<div class="fam-side">${personCard()}${peopleCard()}${eventsCard()}${privacyCard()}</div>`;
+  return `${tabs()}<div class="fam-grid">${mapCard}${side}</div>`;
 }
 
 function paint() {
@@ -400,7 +420,7 @@ function paint() {
   if (mapEl && S.d) {
     const keep = mapEl;
     h.innerHTML = body();
-    document.getElementById('fam-map').replaceWith(keep);
+    document.getElementById('fam-map')?.replaceWith(keep); // Helse har ikke kart
     keep.classList.toggle('picking', S.picking);
     map?.invalidateSize();
   } else {
