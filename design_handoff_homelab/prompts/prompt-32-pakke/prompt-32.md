@@ -1,0 +1,83 @@
+# Prompt 32
+
+Startet: 2026-10-19
+
+## Ønsker
+- 2026-10-19: «lag en ai sumammary for domene, både i mobil og web, kansje en summary i døgnet og la meg manuelt be om en.»
+- 2026-10-19: «på web versjonen jeg må ta cmd shift r hver gang ny side siden den laster ikke inn nye versjonen av siden.»
+- 2026-10-19: «kan domener hente statestikk fra google search console»
+- 2026-10-19: «gi chat mer plass fi full størrelse» (vedlegg: uploads/Screenshot 2026-10-19 at 16.31.02.png – web Chat som kort under hero)
+- 2026-10-19: «i kalender den faget fargene matcher» (vedlegg: uploads/Screenshot 2026-10-19 at 16.32.06.png – MEK1300 smeltet sammen med dagens kolonne)
+- 2026-10-19: «gi en bedre søke meyn med ai søk» (vedlegg: uploads/Screenshot 2026-10-19 at 16.32.50.png – enkel søkeboks midt i kalenderen)
+- 2026-10-19: «la meg også gi mulighet til å lage ting med ai her, at jeg beskriver hva jeg vil» (vedlegg: uploads/Screenshot 2026-10-19 at 16.35.53.png – arket Ny hendelse)
+- 2026-10-19: «legg til logoer for integration i mobil app» (vedlegg: uploads/Screenshot 2026-10-19 at 16.44.28.png – Integrasjoner med bokstavmerker)
+- 2026-10-19: «den er fortsatt feil jeg tenkte de kunne ligge som denn» (vedlegg: uploads/Screenshot 2026-10-19 at 16.43.47.png, 16.44.49.png – + og ✓ over søkefeltet; 16.45.10.png – ønsket: egen rad med luft)
+- 2026-10-19: «ikke vis navbar og scan ikon her.» (vedlegg: uploads/Screenshot 2026-10-19 at 16.46.26.png – Innstillinger på mobil)
+- 2026-10-19: «legg inn denne menyen i alle sider med egen navbar» (vedlegg: uploads/Screenshot 2026-10-19 at 16.48.03.png – arket Rediger fanelinjen)
+- 2026-10-19: «for denne, lag widget for ios samsung og android og for hjem siden i appen, for denne funksjonen […] påmin meg om å avslutte den. send varsling.»
+- 2026-10-19: «legg til de sidene for det korette» (vedlegg: uploads/Screenshot 2026-10-19 at 16.52.24.png, 16.52.30.png – Apple Vær nedbør/vind; 16.52.57.png – vår Forhold)
+- 2026-10-19: «den linjen skal være i lik posisjon i alle kortene.» (vedlegg: uploads/Screenshot 2026-10-19 at 17.10.39.png – Forhold-hodet)
+- 2026-10-19: «vis kansje et x i høyere hjørne og fjern tilbake pilen og sett x der met norway og tid stpr» (vedlegg: uploads/Screenshot 2026-10-19 at 17.11.48.png)
+- 2026-10-19: «gjør krysset litt større»
+- 2026-10-19: «ordene ai knappen i innstligner på web» (vedlegg: uploads/Screenshot 2026-10-19 at 17.15.56.png – AI-knappen gikk ut over kanten)
+- 2026-10-19: «ikke vis den scrolle streken» (vedlegg: uploads/Screenshot 2026-10-19 at 17.16.12.png, 17.16.18.png – grå scrollbar i Innstillinger-menyen på web)
+- 2026-10-19: «jeg ser ikke det nye mat designet på web, pass på at nye webb får nøyaktig riktig og likt mat meny på web»
+- 2026-10-19: «lag også vær siden for web.»
+- 2026-10-19: «lag nytt design på familie tabb.» (vedlegg: uploads/Screenshot 2026-10-19 at 17.21.43.png – web Familie)
+- 2026-10-19: «lag den for pc, dette er et mobil oppset lag den for pc.» (vedlegg: uploads/Screenshot 2026-10-19 at 17.22.23.png – Vær på web)
+- 2026-10-19: «chat boksen ligger fortsatt skjult bak tastatuaret.» (vedlegg: uploads/Screenshot 2026-10-19 at 17.29.08.png – iPhone, skrivefeltet bak tastaturet)
+- 2026-10-19: «det er en fargefelt under navbaren det er feil» (vedlegg: uploads/Screenshot 2026-10-19 at 17.27.38.png, 17.29.39.png – Kalender på iPhone, stripe under fanelinjen)
+- 2026-10-19: «her avbryt og ferdig, her bruker de ios sine brk de egene papir» (vedlegg: uploads/Screenshot 2026-10-19 at 17.34.44.png – Rediger fanelinjen i Finans med iOS-knapper)
+- 2026-10-19: «oppdatering og nordlys er samme slett oppdatering siden nordlys gjør det» (vedlegg: uploads/Screenshot 2026-10-19 at 17.38.55.png – PROGRAMVARE og SYSTEM i Innstillinger)
+- 2026-10-19: «fortsatt med integrations ii innstligner på mobil viser ikke logoer til integrations.» (vedlegg: uploads/Screenshot 2026-10-19 at 17.39.36.png – ekte app, bokstavmerker; allerede i designet, se claude-code-integrasjoner-logoer.md)
+- 2026-10-19: «en sånn type oppgave ikke send til chat fullfør hvis heller tar lang tid hopp over til chat, hvis den bruker over satt tid» (vedlegg: uploads/Screenshot 2026-10-19 at 17.42.36.png – «Tenker på «Vis meg oppdatering» …»)
+- 2026-10-19: «i kalender frisør vis bakgrunn bak hendelsen» (vedlegg: uploads/Screenshot 2026-10-19 at 17.45.01.png – Måned, «14:45 Nina Frisør» uten bakgrunn)
+- 2026-10-19: «ikke vis nylig søk på mobil men det er på web, vis historikk på web fra mobil søk, så mobil logger søk. vis det for samme brukerere» (vedlegg: uploads/Screenshot 2026-10-19 at 17.45.37.png – «Nylige søk» på web)
+- 2026-10-19: «når jeg gjorde endringer fikk jeg den sorte boksen på bunnen, jeg antar at det er farge feil» (vedlegg: uploads/Screenshot 2026-10-19 at 17.46.55.png – Boliger → Tilgang på web, tom svart toast)
+- 2026-10-19: «den sa nei, men i subscription os har jeg youtume premium den burde ha skjønt at jeg hadde musikk suscription» (vedlegg: uploads/Screenshot 2026-10-19 at 17.48.51.png – AI-søk i FinansHub)
+- 2026-10-19: «lag et par nye design for rom, vis også alle andre sateliter, vis bilder fra verdensrommet hver dag. og oppdateringer fra rovers på mars» (vedlegg: uploads/Screenshot 2026-10-19 at 17.55.06.png – nåværende Rom på web)
+- 2026-10-19: «for rom velg 1a og gi den fullskjerm. ikke vis widgets i bursdag på web siden. for huskeliste, legg til arkivert o web og mobil» (vedlegg: uploads/Screenshot 2026-10-19 at 17.56.10.png – widgets i Bursdager på web)
+
+## Tilhørende filer
+- claude-code-rom-fullskjerm-bursdag-huskeliste.md
+- Huskeliste.dc.html
+- Bursdager.dc.html
+- claude-code-rom-ny.md
+- Rom.dc.html
+- Rom Varianter.dc.html
+- claude-code-ai-sok-abonnementer.md
+- claude-code-boliger-toast-farge.md
+- claude-code-sokehistorikk-synk.md
+- claude-code-kalender-maned-brikker.md
+- claude-code-sok-fullfor-forst.md
+- claude-code-fjern-oppdatering-rad.md
+- claude-code-fanelinje-ark-knapper.md
+- claude-code-felles-knapper-ark.md
+- claude-code-ios-bunnstripe.md
+- claude-code-chat-tastatur-ios.md
+- claude-code-familie-web.md
+- Familie.dc.html
+- claude-code-vaer-web.md
+- Vaer.dc.html
+- claude-code-mat-web-matplan.md
+- Matplan.dc.html
+- claude-code-innst-web-skjul-scrollbar.md
+- claude-code-innst-web-ai-knapp.md
+- claude-code-vaer-lukk-x.md
+- claude-code-vaer-forhold-moduser.md
+- claude-code-proveperiode-widgets.md
+- Prøveperiode Widgets.dc.html
+- claude-code-prove-paminnelse.md
+- claude-code-fanelinje-alle-sider.md
+- claude-code-innstillinger-uten-navbar.md
+- claude-code-rediger-knapper-plass.md
+- claude-code-integrasjoner-logoer.md
+- claude-code-kalender-ny-hendelse-glimt.md
+- claude-code-kalender-sok-glimt.md
+- Kalender.dc.html
+- claude-code-kalender-fargekontrast.md
+- claude-code-chat-web-fullskjerm.md
+- claude-code-domener-search-console.md
+- claude-code-web-cache-fiks.md
+- claude-code-domener-ai-oppsummering.md
+- Homelab Domener Papir.dc.html
