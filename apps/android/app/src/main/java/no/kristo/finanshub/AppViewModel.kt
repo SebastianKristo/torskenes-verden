@@ -2624,9 +2624,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         if (l.tabBar.isNotEmpty()) tabBar = l.tabBar
         l.iconTheme?.let { prefs.set(AppPrefs.ICON_THEME, it); prefTick++ }
         applyNavStyle25(raw)
+        applySearchEngine29(raw)
     }
     fun loadLocalLayout16() {
         loadNavStyle25()
+        loadSearchEngine29()
         prefs.str(AppPrefs.TAB_BAR + (account?.id ?: ""), "").takeIf { it.isNotBlank() }?.let { raw ->
             runCatching { tabBar = parseLayout16(JSONObject().put("tabBar", JSONObject().put("items", JSONArray(raw))).toString()).tabBar }
         }
@@ -3440,6 +3442,7 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
                 message = "${msg.optString("fromName").ifBlank { "Noen" }} ber telefonen spille av lyd"
             } else if (familyOpen || family != null) loadFamily()
             "tracking" -> viewModelScope.launch { pollTracking() }
+            "calendar-quick" -> onQuickEvent29(msg)
         }
     }
     fun startRealtime() { if (loggedIn && !locked) realtime.start(base.ifBlank { account?.server ?: "" }, account?.token) }
@@ -3568,6 +3571,15 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     val upd28 = no.kristo.finanshub.ui.Upd28State()
     internal suspend fun <T> apiUpd28(f: suspend Api.() -> T): T = api.f()
     internal fun launchUpd28(block: suspend () -> Unit) = launch(block)
+
+    /* ---------- Prompt 29 (ANDROID29): rask time, søkemotor på Hjem og systembackup (Calendar29.kt, Backup29.kt og ui-filene med 29) ---------- */
+    val q29 = Quick29State()
+    val bk29 = Bk29State()
+    internal suspend fun <T> api29(f: suspend Api.() -> T): T = api.f()
+    internal fun launch29(block: suspend () -> Unit) = launch(block)
+    internal val appCtx29: Context get() = appCtx
+    /** true mens appen er i bakgrunnen (varsel når en rask time eller backup blir ferdig). */
+    internal val inBackground29: Boolean get() = backgroundAt != null
 
     // Oppstart ligger nederst i klassen: Kotlin kjører init og feltinitialisering i rekkefølgen de står i filen.
     // Sto den øverst, ble felt lenger nede (f.eks. pendingUploads, fmOrder) brukt før de fantes, og appen krasjet ved oppstart.

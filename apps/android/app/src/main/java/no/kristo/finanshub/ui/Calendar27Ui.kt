@@ -106,7 +106,8 @@ internal fun KalenderScreen27(vm: AppViewModel) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             K27Top(vm, cur, today)
             if (s.mini) K27Mini(vm, cur, today)
-            K27NextStrip(vm, kalNext27(s, evs, now))
+            // Prompt 29: lyst Nå/Neste-kort (Calendar29Ui.kt) i stedet for den svarte stripa.
+            K29NowCard(vm, kalNow29(s, evs, now))
             s.error?.let { e -> Text(e, color = p.lab, fontSize = 12.5.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp)) }
             if (s.unavailable) Text("Serveren har ikke Kalender ennå. Oppdater Homelab-serveren for å se timeplanen.", color = p.mut, fontSize = 12.5.sp,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 2.dp))
@@ -199,8 +200,17 @@ private fun K27Mini(vm: AppViewModel, cur: LocalDate, today: LocalDate) {
             Box(Modifier.size(34.dp).clip(CircleShape).press24 { s.miniOff -= 1 }.k27Label("Forrige måned"), contentAlignment = Alignment.Center) { Text("‹", color = p.ink, fontSize = 17.sp) }
             Box(Modifier.size(34.dp).clip(CircleShape).press24 { s.miniOff += 1 }.k27Label("Neste måned"), contentAlignment = Alignment.Center) { Text("›", color = p.ink, fontSize = 17.sp) }
         }
-        Row(Modifier.fillMaxWidth()) { KAL_WS.forEach { Text(it.take(1), color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 9.5.sp, textAlign = TextAlign.Center, modifier = Modifier.weight(1f)) } }
+        // Prompt 29: ukenummer-kolonne (22 dp, «U»); trykk åpner uken i Uke-visning.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text("U", color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 9.5.sp, textAlign = TextAlign.Center, modifier = Modifier.width(22.dp))
+            KAL_WS.forEach { Text(it.take(1), color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 9.5.sp, textAlign = TextAlign.Center, modifier = Modifier.weight(1f)) }
+        }
         for (w in 0 until 6) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            val wk = mSt.plusDays((w * 7).toLong())
+            Box(Modifier.width(22.dp).height(34.dp).clip(RoundedCornerShape(8.dp)).press24 { s.cur = wk; s.mini = false; s.miniOff = 0; vm.setKalView27("uke") }.k27Label("Uke ${kalIsoWeek(wk)}"),
+                contentAlignment = Alignment.Center) {
+                Text("${kalIsoWeek(wk)}", color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 9.5.sp)
+            }
             for (i in 0 until 7) {
                 val d = mSt.plusDays((w * 7 + i).toLong())
                 val isT = d == today
@@ -415,11 +425,19 @@ private fun K27Month(vm: AppViewModel, evs: List<Kal26Ev>, today: LocalDate, cur
     val m0 = cur.withDayOfMonth(1)
     val stM = m0.minusDays((m0.dayOfWeek.value - 1).toLong())
     Column(Modifier.fillMaxSize().padding(start = 6.dp, end = 6.dp, bottom = pb)) {
+        // Prompt 29: smal ukenummer-kolonne (24 dp, «U») til venstre; trykk åpner uken.
         Row(Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 6.dp)) {
+            K27Mono("U", p.mut, 10.sp, Modifier.width(24.dp).wrapContentWidth(Alignment.CenterHorizontally), spacing = .8.sp)
             KAL_WS.forEach { K27Mono(it.take(1), p.mut, 10.sp, Modifier.weight(1f).wrapContentWidth(Alignment.CenterHorizontally), spacing = .8.sp) }
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
         for (w in 0 until 6) Row(Modifier.fillMaxWidth().weight(1f)) {
+            val wk = stM.plusDays((w * 7).toLong())
+            Box(
+                Modifier.width(24.dp).fillMaxHeight().drawBehind { drawLine(p.line, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) }
+                    .clickable { s.cur = wk; vm.setKalView27("uke") }.k27Label("Uke ${kalIsoWeek(wk)}").padding(top = 8.dp),
+                contentAlignment = Alignment.TopCenter,
+            ) { Text("${kalIsoWeek(wk)}", color = p.mut, fontFamily = PaperFonts.mono, fontWeight = FontWeight.SemiBold, fontSize = 10.sp) }
             for (i in 0 until 7) {
                 val d = stM.plusDays((w * 7 + i).toLong())
                 val l = kalDay27(evs, d, s.hiddenFilters)
@@ -532,7 +550,7 @@ private fun K27Bar(vm: AppViewModel, modifier: Modifier) {
                 }
             }
         }
-        Box(Modifier.size(62.dp).shadow(14.dp, CircleShape).clip(CircleShape).background(p.lab).press24 { vm.openKalForm27() }.k27Label("Ny hendelse"), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(62.dp).shadow(14.dp, CircleShape).clip(CircleShape).background(p.lab).press24 { vm.openQuick29() }.k27Label("Legg til time"), contentAlignment = Alignment.Center) {
             WxIcon(K27_PLUS, Color.White, 24.dp, stroke = 2.4f)
         }
     }

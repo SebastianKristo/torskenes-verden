@@ -59,7 +59,7 @@ internal val PAPER_SET_TITLES = mapOf(
     "cats" to "Kategorier og budsjett", "rules" to "Regler", "stocks" to "Aksjer · Trading 212", "fin" to "Fanelinje og Mer i Finans",
     "modules" to "Moduler", "look" to "Utseende og fanelinje", "notify" to "Varsler og haptikk", "haptics" to "Haptikk",
     "scan" to "Skanning", "server" to "Server og synk", "data" to "Data og lagring", "backup" to "Backup og data", "about" to "Om appen", "healthpos" to "Helse og posisjon", "integ" to "Integrasjoner", "kal" to "Kalendere",
-    "update" to "Oppdatering",
+    "update" to "Oppdatering", "sysbackup" to "Backup",
 )
 
 /**
@@ -71,7 +71,7 @@ internal val PAPER_SET_TITLES = mapOf(
 internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: () -> Unit) {
     val sub = vm.settingsPage
     LaunchedEffect(sub) {
-        when (sub) { "tokens" -> vm.loadTokens(); "notify" -> vm.loadNotify(); null -> { vm.loadAppInfo(); if (vm.userIsAdmin) vm.loadUpd28() } }
+        when (sub) { "tokens" -> vm.loadTokens(); "notify" -> vm.loadNotify(); null -> { vm.loadAppInfo(); if (vm.userIsAdmin) { vm.loadUpd28(); vm.loadBk29() } } }
     }
     // Utseende: tema, ikonfarger, bakgrunn og fanelinje (egen liste fra prompt 16).
     if (sub == "look") { PaperSettings16(vm, navBottom); return }
@@ -108,6 +108,7 @@ internal fun PaperSettings17(vm: AppViewModel, navBottom: Dp, onPrivacyChanged: 
             "about" -> item { AboutPage(vm) }
             "healthpos" -> item { HealthPosPage(vm) }
             "update" -> item { Update28Page(vm) }
+            "sysbackup" -> item { Backup29Page(vm) } // Prompt 29: backup av hele systemet (bare admin)
             else -> sub?.takeIf { it.startsWith("integ:") }?.let { ip -> item { IntegPage26(vm, ip.removePrefix("integ:")) } } ?: settingsMain(vm)
         }
     }
@@ -136,6 +137,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.settingsMain(vm: AppV
     group("Konto") { i ->
         SetRow(vm, i(), Icons.Filled.People, "Kontoer og brukere", "Bytt konto, legg til og logg ut") { vm.settingsPage = "accounts" }
         SetRow(vm, i(), Icons.Filled.Lock, "Sikkerhet", if (vm.me?.totp == true) "2FA på" else "2FA av", top = true) { vm.settingsPage = "security" }
+        // Prompt 29: Backup av hele systemet (bare admin) – «Hver natt 03:00 · Hele systemet» eller «Automatisk av».
+        if (vm.userIsAdmin) SetRow(vm, i(), Icons.Filled.Backup, "Backup", bkSummary29(vm.bk29), top = true) { vm.settingsPage = "sysbackup" }
         SetRow(vm, i(), Icons.Filled.Key, "API-tokens", vm.tokens?.let { "${it.size} aktive" } ?: "Snarveier og integrasjoner", top = true) { vm.settingsPage = "tokens" }
     }
     group("Finans") { i ->

@@ -9,6 +9,9 @@ services:
       TZ: Europe/Oslo
     volumes:
       - ./data:/data
+      # Systembackup (Innstillinger → Backup): egen disk på Proxmox-verten, og BACKUP_DIR=/srv/backup i .env.
+      # Uten dette havner backupene i data/system-backups.
+      # - /srv/backup:/srv/backup
     ports:
       - "${BIND_ADDR:-127.0.0.1}:${HOST_PORT:-3000}:3000"   # BIND_ADDR=0.0.0.0 for LAN-tilgang
 

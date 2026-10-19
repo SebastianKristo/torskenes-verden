@@ -2,6 +2,7 @@
 // gruppering som designet, navn og ikon på appen, varsler med lyd og test, Huskeliste med widget på Hjem, kortene
 // Posisjon og Bolig på Hjem, Familie med fanene Kart, Soner og Helse, Yr mot Storm, dra for å oppdatere og sanntid
 // via én felles WebSocket (/api/ws). Alt tåler en eldre server: data som mangler vises som en forklaring, ikke en feil.
+import * as P29 from './mobile-p29.js';
 import { S, api, esc, n0, ini, hlApi, icon } from './core.js';
 import { m, draw, flash, meName, avInner, avatarUrl, route, isIOS, domOk } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
@@ -132,7 +133,7 @@ export function p17SetMain(T = {}) {
   const prof = `<a class="pp-card p17-prof" href="#/set/konto"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:56px;height:56px;font-size:22px">${avInner()}</span><span class="m-grow p17-rt"><b class="pp-serif" style="font-size:21px">${esc(meName())}</b><small>${me.username ? `@${esc(me.username)}` : ''}${me.role ? ` · ${me.role === 'admin' ? 'Admin' : 'Bruker'}` : ''}</small><small>${esc(me.serverName || location.host)}</small></span><span class="p17-chev" aria-hidden="true">›</span></a>`;
   const t212 = st.t212Set ? 'Tilkoblet' : 'Ikke satt opp';
   return `${prof}
-    ${grp('KONTO', [row('#/set/konto', 'Kontoer og brukere', '', '', 'users', 'konto'), row('#/set/sik', 'Sikkerhet', me.totp ? '2FA på' : '2FA av', '', 'shield', 'sik'), row('#/set/tok', 'API-tokens', T.tokens ? `${T.tokens.length} aktive` : '', '', 'key', 'tok')])}
+    ${grp('KONTO', [row('#/set/konto', 'Kontoer og brukere', '', '', 'users', 'konto'), row('#/set/sik', 'Sikkerhet', me.totp ? '2FA på' : '2FA av', '', 'shield', 'sik'), row('#/set/tok', 'API-tokens', T.tokens ? `${T.tokens.length} aktive` : '', '', 'key', 'tok'), P29.isAdmin() ? row('#/set/sysbk', 'Backup', P29.bkSummary(), '', 'backup', 'sysbk') : ''])}
     ${grp('FINANS', [row('#/set/fai', 'AI og tolkning', canSrv() ? [ENG[st.provider] ?? 'Ollama', st.groqKeySet ? 'Groq' : '', st.roboflowKeySet ? 'Roboflow' : '', st.geminiKeySet && st.provider !== 'gemini' ? 'Gemini' : ''].filter(Boolean).join(' · ') : ADMIN_NOTE, '', 'ai', 'fai'),
       row('#/set/kat', 'Kategorier og budsjett', `${(S.boot?.categories ?? []).length} kategorier`, '', 'cat', 'kat'), row('#/set/regel', 'Regler', `${(S.boot?.rules ?? []).length} regler`, '', 'rule', 'regel'),
       row('#/set/bank', 'Bankimport', 'DNB · CSV · ✦ AI', '', 'bank', 'bank'), row('#/set/t212', 'Aksjer · Trading 212', t212, '', 'aks', 't212'), row('#/set/fanelinje', 'Fanelinje og Mer i Finans', `${fk} faner`, '', 'list', 'fanelinje'), row('#/sub', 'Subscription OS', 'Abonnementer og AI-sparing', '', 'sub', 'sub')])}
@@ -516,6 +517,7 @@ export function wsConnect(onMsg) {
 }
 let rtT = null;
 export function onRealtime(d) {
+  if (d.type === 'calendar-quick') { P29.onQuickRealtime(d); return; } // Prompt 29: rask time ferdig/feilet
   clearTimeout(rtT);
   rtT = setTimeout(async () => {
     if (d.type === 'tasks') { HK.t = 0; await tasksLoad(true); if (m.screen === 'huske' || m.screen === 'hl') draw(); }

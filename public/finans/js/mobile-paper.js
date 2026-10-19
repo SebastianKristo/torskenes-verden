@@ -15,6 +15,7 @@ import { mainTabs, heroBg, bolTitle } from './mobile-p16.js';
 import { SB } from './mobile-subs.js';
 import { aksTitle } from './mobile-aks.js';
 import * as P23 from './mobile-p23.js';
+import * as P29 from './mobile-p29.js';
 import * as P24 from './mobile-p24.js';
 import * as P25 from './mobile-p25.js';
 import * as P26 from './mobile-p26.js';
@@ -164,15 +165,27 @@ export function paperHero(scr) {
   // Bakgrunnsvelgeren ligger under Innstillinger → Bakgrunn. Profilbildet åpner Innstillinger → Profil.
   // I Finans vises profilbildet og @brukernavn, ikke fullt navn.
   const un = m.me?.username, fin = ctxOf(scr) === 'fin';
+  // Prompt 29: «Planeter ▾» på Hjem og øverst i Innstillinger (claude-code-innst-bakgrunn.md), samme meny begge steder.
+  const bgPill = home || (scr === 'set' && !m.sub);
   const own = heroBg(scr), bolK = scr === 'dir' && !m.sub ? P24.bolKicker() : null;
-  return `<header class="pp-hero${home ? ' home' : ''}${own ? ' own' : ''}${!own && heroHint(kind) === 'light' ? ' hint-light' : ''}" style="${own ?? ''}">${own ? '' : bgOf(kind)}${scr === 'dir' ? P24.bolFade() : ''}
+  return `<header class="pp-hero${home ? ' home' : ''}${bgPill && P.open ? ' p29-open' : ''}${own ? ' own' : ''}${!own && heroHint(kind) === 'light' ? ' hint-light' : ''}" style="${own ?? ''}">${own ? '' : bgOf(kind)}${scr === 'dir' ? P24.bolFade() : ''}
     <div class="pp-top">${backBtn}<span class="m-grow"></span>
-      <a class="pp-av${avatarUrl() ? ' img' : ''}${fin && un ? ' chip' : ''}" href="#/set/profil" aria-label="Profil">${fin && un ? `<span class="pp-avi">${avInner()}</span><span class="pp-un">@${esc(un)}</span>` : avInner()}</a></div>
-    ${failNote}
+      ${bgPill ? `<button class="p29-bgp" data-pp="photo" aria-haspopup="menu" aria-expanded="${P.open}">${esc(BG_N[kind] ?? 'Nåværende')} ▾</button>` : ''}<a class="pp-av${avatarUrl() ? ' img' : ''}${fin && un ? ' chip' : ''}" href="#/set/profil" aria-label="Profil">${fin && un ? `<span class="pp-avi">${avInner()}</span><span class="pp-un">@${esc(un)}</span>` : avInner()}</a></div>
+    ${failNote}${bgPill && P.open ? bgMenu(kind) : ''}
     <div class="pp-bottom"><div class="m-grow"><div class="pp-kick">${esc(bolK ?? kicker)}</div><h1 class="pp-title${home ? ' big' : ''}">${ttl}</h1></div>${scr === 'dir' ? P24.domPill() : ''}
       ${home && w ? `<a class="pp-temp" href="#/vaer" aria-label="Åpne værvisningen"><b>${w.temp != null ? Math.round(w.temp) + '°' : '–'}</b><span>${esc(w.text ?? '')}${w.updated ? ` · ${esc(new Date(w.updated).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' }))}` : ''} ›</span></a>` : ''}</div>
     ${P.photo[kind]?.credit && home && P.img[kind] ? (P.photo[kind].creditUrl ? `<a class="pp-credit" href="${esc(P.photo[kind].creditUrl)}" target="_blank" rel="noopener">${esc(P.photo[kind].credit)}</a>` : `<span class="pp-credit">${esc(P.photo[kind].credit)}</span>`) : ''}
   </header>`;
+}
+
+// Prompt 29: bakgrunnsmenyen fra pillen (fasit: Mobil Papir App → Hjem/Innstillinger, «Planeter ▾»).
+const BG_N = { cur: 'Nåværende', oslo: 'Oslo', weather: 'Vær nå', planets: 'Planeter', custom: 'Eget bilde' };
+const BG_S = { cur: 'Mørk gradient', oslo: 'Bilde av Oslo', weather: 'Følger været nå', planets: 'Ny planet hver dag (NASA)' };
+function bgMenu(kind) {
+  const th = (k) => (P.img[k] ? `background-image:url("${esc(P.img[k])}")` : `background-image:${P.photo[k]?.gradient || FALLBACK[k] || 'linear-gradient(170deg,#4a5a6a,#1d242c)'}`);
+  const opt = (k) => `<button class="p29-bo${kind === k ? ' on' : ''}" role="menuitemradio" aria-checked="${kind === k}" data-pp="setphoto" data-k="${k}"><span class="p29-bth" style='${th(k)}'></span><span class="m-grow"><b>${BG_N[k]}</b><small>${P.fail[k] ? 'Fikk ikke lastet bildet · trykk for å prøve igjen' : BG_S[k]}</small></span><span class="p29-bck">${kind === k ? '✓' : P.fail[k] ? '!' : ''}</span></button>`;
+  return `<div class="pp-menu p29-bgm open" role="menu" aria-label="Bakgrunn">${['cur', 'oslo', 'weather', 'planets'].map(opt).join('')}<i class="p29-bsep"></i>
+    <label class="p29-bo own"><span class="p29-bth plus">+</span><span class="m-grow"><b>Eget bilde</b>${kind === 'custom' ? '<small>Valgt · trykk for å bytte</small>' : ''}</span><span class="p29-bck">${kind === 'custom' ? '✓' : ''}</span><input class="m-file" type="file" accept="image/jpeg,image/png,image/webp" data-ppfile></label></div>`;
 }
 
 /** Innstillinger → Bakgrunn: valgene som en liste (samme bilder og feilmeldinger som før). */
@@ -313,7 +326,7 @@ export function paperHome() {
   // Prompt 24: Pakker vises alltid, også uten aktive pakker.
   const pkgCard = pkg || `<a class="pp-card pp-pkg p24-nopkg" href="#/spor"><span class="m-grow" style="min-width:0"><span class="pp-lab">PAKKER</span><b class="pp-serif m-ell" style="display:block">Ingen aktive pakker</b><span class="pp-mut m-ell">Legg til et sporingsnummer ›</span></span></a>`;
   return `<div class="pp-home">${edBlocks('hl', {
-    h1: '<form class="pp-search" data-ppsearch role="search"><svg class="pp-g" width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg><input class="m-input" id="pp-gq" name="q" type="search" enterkeyhint="search" placeholder="Søk på Google" aria-label="Søk på Google" autocomplete="off"><button type="button" class="p27-gai" data-p27="gai" aria-label="Spør AI">✦ AI</button></form>',
+    h1: P29.searchCard(), // Prompt 29: søkemotor-valg (System-AI / Google / DuckDuckGo) og timer som gjenkjennes
     h2: pkgCard, h3: P27.ruterCard(ruter),
     h4: `<div class="pp-minis">${minis.map(([k, v, sub, c, href, fs]) => `<a class="pp-card pp-mini" href="${href}"><span class="pp-lab mut">${k}</span><b class="pp-serif m-ell" style="font-size:${fs}">${esc(v)}</b><span class="${c === 'lab' ? 'pp-lab-c' : `pp-${c}`}" style="font-size:11px">${esc(sub)}</span></a>`).join('')}</div>`,
     h5: newsCard(H?.news),

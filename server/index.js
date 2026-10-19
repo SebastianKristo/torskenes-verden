@@ -33,6 +33,8 @@ import integrationsApi, { settingsSearchApi, testByIdOrName, integrationScope } 
 import calendarApi, { widgetApi as calendarWidgetApi } from './calendar.js';
 import chatApi from './chat.js'; // prompt 27 (SERVER-B): Chat
 import systemUpdateApi from './system-update.js'; // Oppdater fra appen: data/update/ ↔ updater-containeren
+import systemBackupApi, { startSystemBackupScheduler } from './system-backup.js'; // prompt 29: systembackup (bare admin)
+import calendarQuickApi from './calendar-quick.js'; // prompt 29: Kalender → rask time (AI-jobbkø)
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
 
 const api = process.env.MOCK_DATA === '1' ? await import('./mock.js') : integrations;
@@ -566,9 +568,12 @@ app.get('/api/widgets/birthdays', authOrToken, (c) => c.json(birthdaysWidget(c.g
 app.route('/api/integrations', integrationsApi);
 app.route('/api/integrasjoner', integrationsApi); // prompt 26: samme liste under norsk navn
 // Prompt 26: Kalender (skolens iCal, Canvas, Bursdager og Google) og kompakt widget-svar. Sesjon eller app-token, per bruker.
+app.route('/api/kalender/quick', calendarQuickApi); // prompt 29: før /api/kalender
+app.route('/api/calendar/quick', calendarQuickApi);
 app.route('/api/kalender', calendarApi);
 app.route('/api/widgets/calendar', calendarWidgetApi);
 app.route('/api/settings', settingsSearchApi);
+app.route('/api/backup', systemBackupApi); // prompt 29: bare admin; endringer krever økt eller admin-token, gjenoppretting passordet
 app.route('/api/system/update', systemUpdateApi); // bare admin; start krever økt i nettleseren og passordet
 app.route('/api/chat', chatApi); // prompt 27: Chat (Open WebUI eller Ollama/Gemini/Groq direkte), sesjon eller app-token
 const domainPill = async (c) => {
@@ -583,7 +588,7 @@ app.route('/home/api', homeApi);
 app.route('/mat/api', matApi);
 app.route('/domains/api', domainsApi);
 app.get('/mat/calendar.ics', matCalendar);
-if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); }
+if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); }
 
 app.onError((err, c) => {
   console.error(err);

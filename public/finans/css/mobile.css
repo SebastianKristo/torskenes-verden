@@ -3577,3 +3577,113 @@ html.p28-kb .m.papir{--pp-navb:calc(var(--p28-kb,0px) + 8px)}
 .m .p28-col:not(.on)>div{transition:opacity .32s cubic-bezier(.2,.8,.2,1),transform .32s cubic-bezier(.2,.8,.2,1),visibility 0s .32s}
 @media (prefers-reduced-motion:reduce){.m .p28-col,.m .p28-col>div{transition:none}}
 .m:has(.p28-pills) .pp-av{visibility:hidden}
+
+/* ===== Prompt 29 (PWA): søkemotor på Hjem, rask time, Nå-kort, ukenummer, bakgrunnspille, Backup ===== */
+/* Hjem-søket. Kortene lager ingen egne stabler (transform/scale) utenfor redigeringsmodus; menyen ligger i eget lag. */
+.m .pp-ed:not(.on):not(.p28-wig){transform:none;scale:none;animation:none}
+.m .p29-sw{display:flex;flex-direction:column;gap:6px;flex:none}
+.m .p29-sf{margin:0;display:flex;align-items:center;gap:8px;height:46px;padding:0 6px 0 8px;border-radius:999px;background:var(--pp-card);color:var(--pp-ink);box-shadow:0 10px 30px -14px rgba(0,0,0,.35);box-sizing:border-box}
+.m .p29-eng{flex:none;height:34px;padding:0 6px 0 8px;border:0;border-radius:17px;background:transparent;color:var(--pp-mut);cursor:pointer;display:flex;align-items:center;gap:3px}
+.m .p29-ei{flex:none;width:20px;height:20px;border-radius:10px;display:grid;place-items:center;font-size:11px;line-height:1}
+.m .p29-ei.big{width:22px;height:22px;border-radius:11px;font-size:13px}
+.m .p29-ei.ai{background:var(--pp-lab);color:#fff}
+.m .p29-ei.ddg{background:#de5833;color:#fff;font:800 11px Manrope,sans-serif}.m .p29-ei.ddg.big{font-size:13px}
+.m .p29-gl{flex:none}
+.m .p29-sf input{flex:1;min-width:0;height:40px;border:0;outline:none;background:transparent;color:var(--pp-ink);font:500 14.5px Manrope,system-ui,sans-serif;padding:0}
+.m .p29-sf input::placeholder{color:var(--pp-mut)}
+.m .p29-clr{flex:none;width:30px;height:30px;border-radius:15px;border:0;background:var(--pp-line);color:var(--pp-ink);cursor:pointer;display:grid;place-items:center;padding:0}
+.m .p29-clr.off{display:none}
+.m .p29-ai{flex:none;height:34px;padding:0 12px;border-radius:999px;border:0;background:var(--pp-bg);color:var(--pp-ink);cursor:pointer;font:700 12.5px Manrope,system-ui,sans-serif;white-space:nowrap}
+.m .p29-ap{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:6px 8px 6px 14px;border:0;border-radius:16px;background:var(--pp-ink);color:var(--pp-bg);cursor:pointer;text-align:left;font-family:inherit;box-sizing:border-box}
+.m .p29-ap .m-grow{min-width:0;display:flex;flex-direction:column}.m .p29-ap b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.m .p29-ap .m-grow span{font-size:12px;opacity:.8}
+.m .p29-apic{flex:none;display:grid}
+.m .p29-apb{flex:none;height:32px;padding:0 12px;border-radius:16px;background:var(--pp-bg);color:var(--pp-ink);display:grid;place-items:center;font:700 12.5px Manrope,sans-serif;white-space:nowrap}
+.m .p29-scrim{position:fixed;inset:0;z-index:290;background:transparent}
+.m .p29-menu{position:fixed;z-index:291;width:270px;max-width:calc(100vw - 32px);border-radius:18px;background:var(--pp-card);color:var(--pp-ink);box-shadow:0 18px 40px -12px rgba(0,0,0,.4);overflow:hidden;animation:p29in .14s ease-out}
+.m .p29-ml{display:block;padding:12px 14px 6px;font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--pp-lab)}
+.m .p29-menu button{display:flex;align-items:center;gap:12px;width:100%;min-height:54px;padding:8px 14px;border:0;border-top:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);cursor:pointer;text-align:left;font-family:inherit}
+.m .p29-menu button:first-of-type{border-top:0}
+.m .p29-menu .m-grow{min-width:0;display:flex;flex-direction:column}.m .p29-menu b{font-size:14.5px;font-weight:700}.m .p29-menu .m-grow span{font-size:12px;color:var(--pp-mut)}
+.m .p29-ck{flex:none;color:var(--pp-lab);display:grid}
+@keyframes p29in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.m .p29-menu{animation:none}}
+
+/* Pille og banner for timer som legges til i bakgrunnen (over alt, også fullskjerm-Kalender). */
+.m .p29-pill{position:fixed;z-index:300;left:50%;top:calc(env(safe-area-inset-top) + 14px);transform:translateX(-50%);display:flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:18px;background:var(--pp-ink,#1b1a17);color:var(--pp-bg,#f3efe6);font:600 13px Manrope,system-ui,sans-serif;white-space:nowrap;box-shadow:0 10px 24px -10px rgba(0,0,0,.45)}
+.m .p29-spark{color:#f08a76;animation:p29sp 1.2s ease-in-out infinite}
+@keyframes p29sp{50%{opacity:.35}}
+.m .p29-ban{position:fixed;z-index:300;left:12px;right:12px;top:calc(env(safe-area-inset-top) + 14px);max-width:440px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:10px 10px 10px 14px;border-radius:18px;background:var(--pp-ink,#1b1a17);color:var(--pp-bg,#f3efe6);box-shadow:0 14px 30px -10px rgba(0,0,0,.5);animation:p29in .18s ease-out}
+.m .p29-ban .m-grow{min-width:0;display:flex;flex-direction:column;gap:1px}.m .p29-ban b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.m .p29-ban .m-grow span{font-size:12.5px;opacity:.8}
+.m .p29-ban button{flex:none;height:34px;padding:0 12px;border-radius:17px;border:0;background:transparent;color:inherit;cursor:pointer;font:700 13px Manrope,sans-serif}
+.m .p29-ban button.pri{padding:0 14px;background:var(--pp-bg,#f3efe6);color:var(--pp-ink,#1b1a17)}
+
+/* Bakgrunnspillen «Planeter ▾» (Hjem og Innstillinger) og menyen. */
+.m .p29-bgp{flex:none;height:34px;padding:0 12px;border-radius:999px;border:0;background:rgba(27,26,23,.55);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);color:#fff;cursor:pointer;font:600 12.5px Manrope,sans-serif;white-space:nowrap;text-shadow:none}
+.m .pp-hero.p29-open{z-index:40}
+.m .p29-bgm{position:absolute;top:calc(env(safe-area-inset-top) + 58px);right:22px;z-index:20;width:236px;padding:6px;border-radius:18px;background:var(--p29-pop);color:var(--pp-ink);box-shadow:0 20px 40px -10px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:2px;text-shadow:none;animation:p29in .14s ease-out}
+.m.papir{--p29-pop:#f3efe6;--p29-popSel:#e6e0d2}.m.papir.pd{--p29-pop:#2a2821;--p29-popSel:#3a372e}
+.m .p29-bo{display:flex;align-items:center;gap:10px;min-height:50px;padding:0 10px;border-radius:12px;border:0;background:transparent;color:var(--pp-ink);cursor:pointer;text-align:left;font:600 14px Manrope,sans-serif;position:relative}
+.m .p29-bo.on{background:var(--p29-popSel)}
+.m .p29-bo .m-grow{min-width:0;display:flex;flex-direction:column;line-height:1.2}.m .p29-bo b{font-weight:600}.m .p29-bo small{font:500 11.5px Manrope,sans-serif;color:var(--pp-mut)}
+.m .p29-bth{flex:none;width:30px;height:30px;border-radius:8px;background-color:#2a3440;background-size:cover;background-position:center}
+.m .p29-bth.plus{background:transparent;border:1.5px dashed var(--pp-mut);display:grid;place-items:center;color:var(--pp-mut);box-sizing:border-box}
+.m .p29-bck{font-size:13px;font-weight:700}
+.m .p29-bsep{display:block;height:1px;background:var(--pp-line);margin:2px 8px}
+.m .p29-bo.own{min-height:44px}
+
+/* Kalender: Nå / Neste-kort (lyst papirkort i stedet for svart banner). */
+.m .k27 .k29-nx{flex:none;position:relative;overflow:hidden;margin:0 12px 10px;display:flex;align-items:center;gap:14px;min-height:60px;padding:10px 18px 12px 12px;border:1px solid var(--pp-line);border-radius:18px;background:var(--pp-card);color:var(--pp-ink);cursor:pointer;text-align:left;font-family:inherit;box-shadow:0 8px 22px -16px rgba(0,0,0,.35)}
+.m .k29-ic{flex:none;width:40px;height:40px;border-radius:12px;background:color-mix(in oklab,var(--c) 16%,var(--pp-card));color:var(--c);display:grid;place-items:center}
+.m .k29-nm{min-width:0;display:flex;flex-direction:column;gap:2px}
+.m .k29-k{display:flex;align-items:center;gap:8px;min-width:0;font:600 10.5px 'IBM Plex Mono',monospace;letter-spacing:.12em;color:var(--pp-lab);white-space:nowrap;overflow:hidden}
+.m .k29-mu{color:var(--pp-mut);letter-spacing:.04em;overflow:hidden;text-overflow:ellipsis}
+.m .k29-tr{display:flex;align-items:baseline;gap:10px;min-width:0}
+.m .k29-t{font:500 20px/1.15 Newsreader,Georgia,serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.m .k29-rm{flex:none;padding:2px 8px;border-radius:999px;background:var(--pp-bg);font:600 12px Manrope,sans-serif;color:var(--pp-ink)}
+.m .k29-w{flex:none;display:flex;flex-direction:column;align-items:flex-end;line-height:1}.m .k29-w b{font:500 24px Newsreader,Georgia,serif;white-space:nowrap}.m .k29-w span{font-size:11.5px;color:var(--pp-mut);margin-top:3px}
+.m .k29-pg{position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--pp-line)}.m .k29-pg i{display:block;height:100%;background:var(--c)}
+
+/* Kalender: ukenummer (ISO 8601) i Måned og minikalenderen. */
+.m .k29-mhd,.m .k29-mo{grid-template-columns:24px repeat(7,minmax(0,1fr))}
+.m .k29-mg{grid-template-columns:22px repeat(7,minmax(0,1fr))}
+.m .k27 .k29-wk{min-width:0;border:0;border-bottom:1px solid var(--pp-line);background:transparent;color:var(--pp-mut);cursor:pointer;padding:8px 0 0;display:flex;justify-content:center;align-items:flex-start;font:600 10px 'IBM Plex Mono',monospace}
+.m .k27 .k29-wk.mini{height:34px;padding:0;border:0;align-items:center;font-size:9.5px}
+
+/* Kalender: arket «Legg til time». */
+.m .k29-grip{align-self:center;width:36px;height:5px;border-radius:3px;background:var(--pp-line);margin-top:-8px}
+.m .k29-qh{display:flex;align-items:center;gap:10px}.m .k29-qh .m-grow{min-width:0;display:flex;flex-direction:column;gap:2px}.m .k29-qh b{font:500 24px/1.1 Newsreader,Georgia,serif}
+.m .k29-qh .k27-cx{display:grid;place-items:center;padding:0}
+.m .k29-qf{margin:0;display:flex;flex-direction:column;gap:10px}
+.m .k29-qf textarea{min-height:96px;padding:14px 16px;border-radius:16px;border:1px solid var(--pp-line);background:var(--pp-card);color:var(--pp-ink);font:500 16px/1.45 Manrope,system-ui,sans-serif;outline:none;resize:none;box-sizing:border-box;width:100%}
+.m .k29-chips{display:flex;gap:6px;flex-wrap:wrap}
+.m .k27 .k29-chips button{height:34px;padding:0 12px;border-radius:17px;border:1px solid var(--pp-line);background:transparent;color:var(--pp-ink);cursor:pointer;font:600 12.5px Manrope,sans-serif;display:flex;align-items:center;gap:6px}
+.m .k27 .k29-chips button.ink{border-color:var(--pp-ink);background:var(--pp-ink);color:var(--pp-bg);font-weight:700}
+.m .k29-pv{display:flex;gap:12px;align-items:stretch;padding:12px 14px;border-radius:16px;background:var(--pp-card)}
+.m .k29-pvb{flex:none;width:4px;border-radius:2px;background:#6b4fa0}
+.m .k29-pv .m-grow{min-width:0;display:flex;flex-direction:column;gap:2px}.m .k29-pv b{font-size:15px;font-weight:700}.m .k29-pv .m-grow>span{font-size:13px;color:var(--pp-mut)}.m .k29-pv small{font-size:12px;color:var(--pp-mut)}
+.m .k29-bad{font-size:13px;color:var(--pp-lab);padding:0 4px}
+.m .k27 .k29-go{min-height:52px;border:0;border-radius:16px;background:var(--pp-lab);color:#fff;cursor:pointer;font:700 16px Manrope,sans-serif}
+.m .k27 .k29-man{min-height:44px;border:0;background:transparent;color:var(--pp-ink);cursor:pointer;font:600 14px Manrope,sans-serif}
+.m .k29-fn{font-size:12px;line-height:1.45;color:var(--pp-mut);text-align:center}
+
+/* Innstillinger → Backup */
+.m .p29-bic{background:var(--pp-lab)!important;color:#fff}
+.m .p29-ok{color:var(--pp-pos);font-weight:700}.m .p29-bad{color:var(--pp-lab);font-weight:700}.m .p29-lab{color:var(--pp-lab);font-weight:700}
+.m .p29-bv{opacity:1!important}
+.m .p29-bar{display:block;height:4px;border-radius:2px;background:var(--pp-line);margin-top:8px;overflow:hidden}.m .p29-bar i{display:block;height:100%;background:var(--pp-lab);transition:width .4s}
+.m .p29-seg{display:flex;gap:4px;padding:4px;border-radius:999px;background:var(--pp-card);margin:0 0 8px}
+.m .p29-seg button{flex:1;min-width:0;height:36px;border:0;border-radius:999px;background:transparent;color:var(--pp-ink);cursor:pointer;font:600 13px Manrope,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 6px}
+.m .p29-seg button[aria-checked="true"]{background:var(--pp-ink);color:var(--pp-bg)}
+.m .p29-seg.sm{margin:0;background:var(--pp-bg)}
+.m .p29-cb{flex:none;width:22px;height:22px;border-radius:7px;border:1.5px solid var(--pp-line);display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;box-sizing:border-box}
+.m .p29-cb.on{background:var(--pp-lab);border-color:var(--pp-lab)}
+.m .p29-dim .p29-mod{opacity:.55;cursor:default}
+.m .p29-mod{gap:12px}
+.m .p29-cl{display:flex;flex-direction:column;align-items:stretch;gap:8px}
+.m .p29-in{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--pp-mut)}
+.m .p29-in input{height:42px;padding:0 12px;border-radius:12px;border:1px solid var(--pp-line);background:var(--pp-card);color:var(--pp-ink);font:500 15px Manrope,sans-serif;outline:none;box-sizing:border-box;width:100%}
+.m .p29-key{display:block;padding:14px;border-radius:14px;background:var(--pp-card);font:600 14px/1.5 'IBM Plex Mono',monospace;word-break:break-all;user-select:all;-webkit-user-select:all}
+.m .p29-warn{padding:12px 14px;border-radius:14px;background:color-mix(in oklab,var(--pp-lab) 12%,var(--pp-card));color:var(--pp-ink);font-size:13.5px;line-height:1.45}
+.m .p29-red{background:var(--pp-lab)!important;color:#fff!important}
+.m .p29-sh{display:flex;flex-direction:column;gap:12px}
+.m .p29-note{gap:6px}.m .p29-note b{font-size:15px}

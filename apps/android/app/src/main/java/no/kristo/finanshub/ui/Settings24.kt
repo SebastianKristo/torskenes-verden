@@ -48,6 +48,7 @@ private fun setIndex24(vm: AppViewModel): List<SetItem24> = buildList {
     vm.b24.profiles.forEach { add(SetItem24("profile:${it.key}", it.name, "Profil", it.sub, null)) }
     add(SetItem24("accounts", "Kontoer og brukere", "Konto", "Bytt konto, legg til og logg ut", "accounts", "bruker brukere"))
     add(SetItem24("security", "Sikkerhet", "Konto", "Totrinnsbekreftelse, passord, fingeravtrykk og aktive økter", "security", "2fa passord face logg"))
+    if (vm.userIsAdmin) add(SetItem24("sysbackup", "Backup", "Konto", "Backup av hele systemet: automatisk, hva som tas med, sky og gjenoppretting", "sysbackup", "backup sikkerhetskopi gjenopprett restore"))
     add(SetItem24("tokens", "API-tokens", "Konto", "Snarveier og integrasjoner", "tokens", "token nøkkel"))
     add(SetItem24("ai", "AI og tolkning", "Finans", "Gemini · Groq · Roboflow · Ollama · tidsgrenser", "ai", "gemini groq ollama roboflow ocr"))
     add(SetItem24("cats", "Kategorier og budsjett", "Finans", "Farger og typer", "cats", "budsjett kategori"))
@@ -123,7 +124,7 @@ private fun iconFor24(id: String): ImageVector = when {
         "fin", "tabedit" -> Icons.Filled.ViewWeek; "sub" -> Icons.Filled.Autorenew; "appname" -> Icons.Filled.Edit; "appicon" -> Icons.Filled.Image
         "modules" -> Icons.Filled.Dashboard; "news" -> Icons.Filled.Newspaper; "look" -> Icons.Filled.Palette; "notify" -> Icons.Filled.Notifications
         "integ" -> Icons.Filled.Home; "healthpos" -> Icons.Filled.MonitorHeart; "scan" -> Icons.Filled.DocumentScanner; "server" -> Icons.Filled.Dns
-        "backup" -> Icons.Filled.Backup; else -> Icons.Filled.Settings
+        "backup", "sysbackup" -> Icons.Filled.Backup; else -> Icons.Filled.Settings
     }
 }
 

@@ -258,7 +258,7 @@ test('calendars, kalFilters (privat/familie) og kalView (dag, 3dager, liste; age
   let r = await S('/api/kalender?from=2026-10-19&to=2026-10-19');
   assert.deepEqual(r.body.calendars.map((c) => c.id), ['timeplan', 'prover', 'skole', 'privat', 'familie', 'bursdager']);
   assert.ok(r.body.calendars.every((c) => c.enabled && c.name && /^#/.test(c.color)));
-  assert.equal(r.body.calendars.find((c) => c.id === 'privat').writable, false, 'ikke koblet til Google');
+  assert.equal(r.body.calendars.find((c) => c.id === 'privat').writable, true, 'uten Google lagres Privat lokalt (prompt 29)');
   assert.equal((await S('/api/me/layout', 'PUT', { kalFilters: { privat: false, familie: true, timeplan: true } })).status, 200);
   r = await S('/api/kalender?from=2026-10-19&to=2026-10-19');
   assert.equal(r.body.calendars.find((c) => c.id === 'privat').enabled, false);
@@ -306,10 +306,13 @@ bd._setGoogleFetch(async (url, init = {}) => {
   return gjson(ev);
 });
 
-test('Uten Google-kobling: POST gir 409 med reconnect', async () => {
+test('Uten Google-kobling: hendelsen lagres lokalt i Privat (prompt 29)', async () => {
   const r = await S('/api/kalender/events', 'POST', { title: 'Tannlege', allDay: false, date: '2026-10-20', start: '15:00', end: '16:00', calendar: 'privat' });
-  assert.equal(r.status, 409);
-  assert.equal(r.body.reconnect, true);
+  assert.equal(r.status, 201, r.text);
+  const id = r.body.event?.id ?? r.body.id;
+  assert.ok(id);
+  assert.equal((await S(`/api/kalender/events/${encodeURIComponent(id)}`, 'DELETE')).status < 300, true);
+  kv.set(OWNER, 'kal_local_events', []);
 });
 
 test('Ny, endre, flytte til Familie, slette og kopiere til Privat – via Google Calendar API', async () => {

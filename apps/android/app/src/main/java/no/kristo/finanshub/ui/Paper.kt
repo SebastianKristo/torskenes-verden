@@ -366,12 +366,13 @@ internal fun PaperApp(
                     Text(h, color = p.bg, fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
-            if (vm.photoMenu && home) {
+            val bgMenuHere = home || bgPillHere29(vm)
+            if (vm.photoMenu && bgMenuHere) {
                 // Trykk utenfor menyen lukker den.
                 Box(Modifier.fillMaxSize().clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { vm.photoMenu = false })
             }
             AnimatedVisibility(
-                visible = vm.photoMenu && home,
+                visible = vm.photoMenu && bgMenuHere,
                 enter = fadeIn(tween(160)) + scaleIn(tween(160), initialScale = 0.96f),
                 exit = fadeOut(tween(120)) + scaleOut(tween(120), targetScale = 0.96f),
                 modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 52.dp, end = 16.dp),
@@ -392,6 +393,8 @@ internal fun PaperApp(
             if (vm.compareOpen) CompareScreen(vm)
             // Prompt 23 (MOD): Finn-annonsen i fullskjerm (egen BackHandler, så tilbake lukker den uten forhåndsvisning).
             if (vm.m23.finnAdFor != null) FinnAdScreen23(vm)
+            // Prompt 29: «Legg til time»-arket, pillen og banneret over alt (Kalender og Hjem).
+            Quick29Overlay(vm)
         }
       }
     }
@@ -449,7 +452,12 @@ private fun Hero(vm: AppViewModel, home: Boolean, wide: Boolean, toggleMenu: () 
                     ) { Text("‹ ${backLabel(vm)}", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp, maxLines = 1) }
                     Spacer(Modifier.weight(1f))
                 }
-                // Bakgrunnsvelgeren ligger nå i Innstillinger → Bakgrunn på Hjem; profilbildet åpner Innstillinger → Profil.
+                // Prompt 29: pillen «<bakgrunn> ▾» på Hjem og øverst i Innstillinger, rett til venstre for profilbildet (samme meny).
+                if (home || bgPillHere29(vm)) Box(
+                    Modifier.height(34.dp).clip(CircleShape).background(Color(0x8C1B1A17)).clickable(onClickLabel = "Velg bakgrunn") { toggleMenu() }.padding(horizontal = 12.dp),
+                    contentAlignment = Alignment.Center,
+                ) { Text("${photoName(vm.photoKind)} ▾", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 12.5.sp, maxLines = 1) }
+                // Profilbildet åpner Innstillinger → Profil.
                 Box(
                     Modifier.size(38.dp).clip(CircleShape).background(Color(0xFFF3EFE6)).clickable(onClickLabel = "Innstillinger") { vm.openPaperPage("set") }
                         .semantics { contentDescription = "Innstillinger" },
@@ -479,6 +487,10 @@ private fun Hero(vm: AppViewModel, home: Boolean, wide: Boolean, toggleMenu: () 
         }
     }
 }
+
+/** Prompt 29: bakgrunnspillen vises også på hovedsiden i Innstillinger. */
+private fun bgPillHere29(vm: AppViewModel): Boolean =
+    (vm.paperPage == "set" || vm.screen == Screen.Settings) && vm.settingsPage == null && vm.original == null && vm.editing == null && vm.detail == null
 
 private fun photoName(k: String) = when (k) { "cur" -> "Nåværende"; "none" -> "Ingen"; "weather" -> "Vær nå"; "planets" -> "Planeter"; "custom" -> "Eget bilde"; else -> "Oslo" }
 
@@ -632,7 +644,7 @@ private fun PaperHome(vm: AppViewModel, navBottom: Dp, wide: Boolean) {
         vm.homeError?.let { e -> item(span = { GridItemSpan(maxLineSpan) }) { Text(e, color = p.lab, fontSize = 13.sp, modifier = Modifier.padding(4.dp)) } }
         pageGridSecs(vm, "hjem", HOME_SECS, wide) { k ->
             when (k) {
-                "h1" -> PaperSearch(vm)
+                "h1" -> PaperSearch29(vm) // Prompt 29: søkemotor-meny (System-AI / Google / DuckDuckGo) og timer (ui/Home29Ui.kt)
                 // Viktigste pakke (klar for henting først).
                 "h2" -> {
                     val pk = (vm.homePackages ?: emptyList()).sortedByDescending { it.ready }.firstOrNull()

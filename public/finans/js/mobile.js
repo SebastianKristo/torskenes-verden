@@ -32,6 +32,7 @@ import * as P26 from './mobile-p26.js';
 import * as KAL from './mobile-kal.js';
 import * as P27 from './mobile-p27.js';
 import * as P28 from './mobile-p28.js';
+import * as P29 from './mobile-p29.js';
 import * as CHAT from './mobile-chat.js';
 import { takeApp, HK, p17Bind, p17Sheets, huskeView, tasksLoad, posWidget, bolWidgetLoad, appLoad, applyIcon, ptrBind, wsConnect, onRealtime } from './mobile-p17.js';
 import { trkDown, trkMove, trkUp } from './mobile-paper2.js';
@@ -426,7 +427,7 @@ export function draw() {
   const ae = document.activeElement, keep = ae?.id && root().contains(ae) ? { id: ae.id, s: ae.selectionStart, e: ae.selectionEnd } : null;
   root().innerHTML = `<div class="m ${th}${fad ? ' p23-fad' : ''}${rv ? ' p24-rvm' : ''}${fsx ? ' p27-fs' : ''}${pp ? ` papir ${m.light ? 'pl' : 'pd'}${hero ? ' ph' : ''}${fabStyle() === 'float' ? ' flyt' : ''}` : ''}${scr === 'nyheter' ? ' news' : ''}${scr === 'vaer' ? ' vaer' : ''}${scr === 'mer' ? ' p28-mer' : ''}${wide ? ' two' : ''}${twoPane ? '' : ' full'}${dom ? ' dom' : ''}${scr === 'mat' ? ` matp ${matDark() ? 'mdark' : 'mlight'}` : ''}${th === 'and' && pref('pageColors') !== 'per' ? ' same' : ''}${scr === 'hl' ? ' hlp' : ''}${bt ? ' backtop' : ''}${n.none && !pp ? ' nobar' : ''}${m.light ? ' light' : ''}${th === 'ios' && !iosBg() ? ' nobg' : ''}${m.blur ? ' blurred' : ''}">${th === 'ios' && iosBg() ? '<div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>' : ''}
     ${pp ? '' : rail(n)}${hero ? paperHero(scr) : ''}<div class="m-scroll">${bt ? topRow(th) : ''}${main}</div><div class="m-detail">${twoPane ? detail(th) : ''}</div>${nav}
-    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() + P26.sheets26() + P27.sheets27() : ''}${avgSheet()}${pp ? "" : famSheet()}${p17Sheets()}${updSheet()}${p21Sheets(HK)}${P22.p22Sheets()}${pp ? P24.sheets24() : ''}${origOverlay(th)}${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
+    ${menuSheet(th)}${scanSheet(th)}${pp ? paperScanSheet() + paperFinnSheet() + paperTrkSheet() + newShipSheet() + tabSheet() + P26.sheets26() + P27.sheets27() : ''}${avgSheet()}${pp ? "" : famSheet()}${p17Sheets()}${updSheet()}${p21Sheets(HK)}${P22.p22Sheets()}${pp ? P24.sheets24() : ''}${origOverlay(th)}${pp ? P29.searchLayer() : ''}${P29.sheets29()}${P29.quickLayer()}${m.toast ? `<div class="m-toast" role="status">${esc(m.toast)}</div>` : ''}
     <input class="m-file" id="m-capture" type="file" accept="image/*" capture="environment" data-mupload data-confirm></div>`;
   if (keep) { const el = document.getElementById(keep.id); if (el) { el.focus({ preventScroll: true }); try { el.setSelectionRange(keep.s, keep.e); } catch {} } }
   document.querySelector('meta[name=theme-color]')?.setAttribute('content', pp ? (m.light ? '#f3efe6' : '#14130f') : th === 'ios' ? '#07070A' : getComputedStyle(root().firstElementChild).backgroundColor || '#19120E');
@@ -537,7 +538,7 @@ export function route() {
   if (!domOk() && (next === 'dom' || (next === 'set' && parts[1] === 'dom'))) { next = next === 'dom' ? 'hl' : 'set'; if (location.hash !== `#/${next}`) { history.replaceState(null, '', `#/${next}`); parts.length = 1; } }
   const sub = parts.slice(1).join('/');
   if (next !== m.screen || sub !== m.sub) {
-    if (next !== m.screen) { edReset(); P26.leave26(); P27.leave27(next); P28.leave28(next); if (m.screen === 'chat') CHAT.chatLeave(); if (next === 'chat') CHAT.chatEnter(m.screen); if (next === 'kal') m.kalFrom = m.screen; if (next === 'vaer') WX.from = m.screen; m.edit = null; m.pdet = null; if (next === 'dom') m.domFrom = m.screen === 'dom' ? m.domFrom : m.screen; if (next === 'set') m.setFrom = m.screen === 'set' ? m.setFrom : m.screen; }
+    if (next !== m.screen) { edReset(); P26.leave26(); P27.leave27(next); P28.leave28(next); P29.leave29(); if (m.screen === 'chat') CHAT.chatLeave(); if (next === 'chat') CHAT.chatEnter(m.screen); if (next === 'kal') m.kalFrom = m.screen; if (next === 'vaer') WX.from = m.screen; m.edit = null; m.pdet = null; if (next === 'dom') m.domFrom = m.screen === 'dom' ? m.domFrom : m.screen; if (next === 'set') m.setFrom = m.screen === 'set' ? m.setFrom : m.screen; }
     p20Screen(next);
     m.screen = next; m.sub = sub; m.detail = false; m.menu = false; m.sheet = false; m.min = false; m.orig = null; paperState.scan = false; paperState.open = paperState.open && next === 'hl';
     if (next !== 'skann' && next !== 'opp') m.rc = null;
@@ -748,7 +749,7 @@ export function bind() {
   wxBindScroll(); P23.icBoot(); P25.boot(); P26.boot26(); P27.boot27(); P28.boot28();
   addEventListener('fh-design', (e) => { const d = e.detail ?? {}; takeDesign(d); if (typeof d.lock === 'boolean') setPref('lock', d.lock); if (typeof d.hap === 'boolean') setPref('hap', d.hap); if (d.photo) photoLoad(d.photo).then(draw).catch(() => {}); draw(); });
   loadLayout().then((r) => {
-    takeDesign(r); take15(r); take16(r); take20(r); P24.take24(r); P25.take25(r); P26.take26(r); P27.take27(r); takeApp(r);
+    takeDesign(r); take15(r); take16(r); take20(r); P24.take24(r); P25.take25(r); P26.take26(r); P27.take27(r); P29.take29(r); takeApp(r);
     // Første gang etter innlogging (nye installasjoner): onboarding i tre steg.
     if (r && r.onboarded === false) import('./mobile-gate.js').then((g) => g.showOnboarding(r)).catch(() => {});
     if (document.documentElement.dataset.ui === 'mobile') draw();
@@ -791,6 +792,7 @@ export function bind() {
     if (paper() && m.screen === 'spor' && await paperTrkBind(e, t)) return; // velg flere pakker går foran tilpass siden
     if (paper() && p20Click(e, t)) return; // Finans-flisene (flytt) og Posisjon-kortet
     if (paper() && edClick(e, t)) return; // tilpass siden: ▲ ▼ −, Ferdig, og klikket etter et langt trykk
+    if (await P29.bind29(e, t)) return; // Prompt 29: søkemotor, rask time, Backup
     if (await P22.bind(e, t)) return;
     if (await p21Bind(e, t, { HK, reload: () => import('./mobile-p17.js').then((x) => x.tasksLoad(true)) })) return;
     if (await p17Bind(e, t)) return;
@@ -852,7 +854,7 @@ export function bind() {
     }
     if (act === 'logout') { await logout(); }
   }));
-  el.addEventListener('input', (e) => { if (P27.input27(e, e.target)) return; if (P26.input26(e, e.target)) return; if (P24.bind24(e, e.target) === true) return; P23.bind(e, e.target); P22.bind(e, e.target); p17Bind(e, e.target); p16Bind(e, e.target); wxBind(e, e.target); if (paper()) { paperFinnBind(e, e.target); paperTrkBind(e, e.target); nsBind(e, e.target); fsBind(e, e.target); } paperBind(e, e.target); matBind(e, e.target); if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
+  el.addEventListener('input', (e) => { if (P29.input29(e, e.target)) return; if (P27.input27(e, e.target)) return; if (P26.input26(e, e.target)) return; if (P24.bind24(e, e.target) === true) return; P23.bind(e, e.target); P22.bind(e, e.target); p17Bind(e, e.target); p16Bind(e, e.target); wxBind(e, e.target); if (paper()) { paperFinnBind(e, e.target); paperTrkBind(e, e.target); nsBind(e, e.target); fsBind(e, e.target); } paperBind(e, e.target); matBind(e, e.target); if (m.screen === 'finn') finnBind(e, e.target); hlBind(e, e.target); trkBind(e, e.target); if (m.screen === 'sub') subsBind(e, e.target); txBind(e, e.target); pagesBind(e, e.target); settingsBind(e, e.target); });
   el.addEventListener('change', safe(async (e) => {
     const t = e.target;
     if (await P27.change27(e, t)) return;
@@ -877,6 +879,7 @@ export function bind() {
     await settingsBind(e, t);
   }));
   el.addEventListener('submit', safe(async (e) => {
+    if (await P29.submit29(e, e.target)) return;
     if (await P27.submit27(e, e.target)) return;
     if (e.target.matches('[data-msearch]')) { e.preventDefault(); u.q = e.target.q.value; await loadTx(); return draw(); }
     if (await P24.bind24(e, e.target)) return;

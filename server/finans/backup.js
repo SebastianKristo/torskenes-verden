@@ -199,9 +199,10 @@ export function restoreTables(tables, settingsPatch, u = me()) {
 }
 
 /* ---------------- Arkiv: tar + gzip + AES-256-GCM ---------------- */
+// tarHeader, untar, encryptStream og decryptFile brukes også av systembackupen (server/system-backup.js, prompt 29).
 
 const MAGIC = Buffer.from('FHBK1\n');
-function tarHeader(name, size, mtime) {
+export function tarHeader(name, size, mtime) {
   const h = Buffer.alloc(512);
   let prefix = '';
   if (Buffer.byteLength(name) > 100) { const i = name.lastIndexOf('/', 154); prefix = name.slice(0, i); name = name.slice(i + 1); }
@@ -223,7 +224,7 @@ async function* tarEntries(entries) {
   yield Buffer.alloc(1024);
 }
 // Tar-leser som skriver filene til en mappe. Avviser stier som prøver å gå ut av mappen.
-function untar(dest) {
+export function untar(dest) {
   let buf = Buffer.alloc(0), file = null, left = 0, pad = 0;
   return new Writable({
     async write(chunk, _enc, cb) {
@@ -254,13 +255,13 @@ function untar(dest) {
   });
 }
 const keyOf = (phrase, salt) => scryptSync(String(phrase), salt, 32, { N: 1 << 15, r: 8, p: 1, maxmem: 64 * 1024 * 1024 });
-function encryptStream(phrase, out) {
+export function encryptStream(phrase, out) {
   const salt = randomBytes(16), iv = randomBytes(12);
   const c = createCipheriv('aes-256-gcm', keyOf(phrase, salt), iv);
   out.write(Buffer.concat([MAGIC, salt, iv]));
   return new Transform({ transform(ch, _e, cb) { cb(null, c.update(ch)); }, flush(cb) { this.push(c.final()); this.push(c.getAuthTag()); cb(); } });
 }
-async function decryptFile(path, phrase, outPath) {
+export async function decryptFile(path, phrase, outPath) {
   const st = await stat(path);
   // Hode (magic, salt, iv) og haletag leses direkte; selve dataene strømmes.
   const head = Buffer.alloc(MAGIC.length + 28);

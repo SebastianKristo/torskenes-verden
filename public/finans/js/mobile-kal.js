@@ -10,6 +10,8 @@ import { esc, hlApi } from './core.js';
 import { m, draw, flash } from './mobile.js';
 import { haptic } from './mobile-haptics.js';
 import { BD, bdLoad } from './mobile-p24.js';
+import { parseQuick } from '/assets/js/quick-time.js';
+import * as P29 from './mobile-p29.js';
 
 const MN = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'], MS = MN.map((x) => x.slice(0, 3));
 const WD = ['søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag'], WS = ['MAN', 'TIR', 'ONS', 'TOR', 'FRE', 'LØR', 'SØN'];
@@ -178,23 +180,30 @@ const evAttr = (e) => `data-k27="ev" data-id="${esc(e.id)}" data-k="${e.k}"`;
 let EVMAP = new Map(); // id → hendelse (for detaljer), fylles ved tegning
 const reg = (e) => { EVMAP.set(e.id, e); return e; };
 
+// Prompt 29: lyst «Nå / Neste»-kort (claude-code-kalender-na-kort.md) i stedet for den svarte stripen.
 function nextStrip() {
   const now = new Date(), today = d0(now), nm = now.getHours() * 60 + now.getMinutes();
   let nx = null;
   for (let i = 0; i < 21 && !nx; i++) { const d = add(today, i); for (const e of evOn(d).filter((x) => x.s && x.e && x.kind !== 'innl')) { const a = mm(e.s) + i * 1440, b = mm(e.e) + i * 1440; if (b > nm) { nx = { e: reg(e), cur: a <= nm, a, b, i, d }; break; } } }
-  if (!nx) return `<button class="k27-nx" data-k27="none"><span class="k27-nxs" style="background:#7a7468"></span><span class="m-grow"><b>Ingen kommende hendelser</b><span>De neste tre ukene</span></span></button>`;
-  const e = nx.e, w = nx.cur ? `${dur2(nx.b - nm)} igjen` : nx.a - nm < 1440 ? `om ${dur2(nx.a - nm)}` : cap(WD[nx.d.getDay()]).slice(0, 3);
-  return `<button class="k27-nx" ${evAttr(e)}><span class="k27-nxs" style="background:${col(e)}"></span><span class="k27-nxk">${nx.cur ? 'NÅ' : 'NESTE'}</span><span class="m-grow"><b>${esc(e.t)}</b><span>${esc(`${nx.i === 0 ? 'I dag' : nx.i === 1 ? 'I morgen' : cap(dLong(nx.d))} · ${e.s}–${e.e}${e.r ? ` · ${e.r}` : ''}`)}</span></span><span class="k27-nxw">${esc(w)}</span></button>`;
+  const clock = svgP('M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7.5V12l3 2', 20, 2);
+  if (!nx) return `<button class="k29-nx" data-k27="none" style="--c:#7a7468"><span class="k29-ic">${clock}</span><span class="m-grow k29-nm"><b class="k29-t">Ingen kommende hendelser</b><span class="k29-k"><span class="k29-mu">De neste tre ukene</span></span></span></button>`;
+  const e = nx.e, c = col(e);
+  const big = nx.cur ? dur2(nx.b - nm) : nx.a - nm < 1440 ? dur2(nx.a - nm) : cap(WD[nx.d.getDay()]).slice(0, 3);
+  const small = nx.cur ? 'igjen' : nx.a - nm < 1440 ? 'til start' : e.s;
+  const day = nx.i === 0 ? 'i dag' : nx.i === 1 ? 'i morgen' : dLong(nx.d);
+  const pct = nx.cur ? Math.round(((nm - nx.a) / Math.max(1, nx.b - nx.a)) * 100) : 0;
+  return `<button class="k29-nx" ${evAttr(e)} style="--c:${c}"><span class="k29-ic">${clock}</span><span class="m-grow k29-nm"><span class="k29-k"><span>${nx.cur ? 'NÅ' : 'NESTE'}</span><span class="k29-mu">${esc(`${e.s}–${e.e} · ${day}`)}</span></span><span class="k29-tr"><b class="k29-t">${esc(e.t)}</b>${e.r ? `<span class="k29-rm">${esc(e.r)}</span>` : ''}</span></span><span class="k29-w"><b>${esc(big)}</b><span>${esc(small)}</span></span>${nx.cur ? `<span class="k29-pg"><i style="width:${pct}%"></i></span>` : ''}</button>`;
 }
 function miniCal() {
   const V = view(), cur = curD(), tk = key(new Date()), base = new Date(cur.getFullYear(), cur.getMonth() + K.miniOff, 1, 12), st = add(base, -((base.getDay() + 6) % 7));
   const [a, b] = range();
   const cells = Array.from({ length: 42 }, (_, i) => {
     const d = add(st, i), k = key(d), isT = k === tk, inW = V !== 'maaned' && V !== 'liste' ? k >= a && k <= b : k === key(cur), L0 = evOn(d).filter((e) => e.kind !== 'time');
-    return `<button class="k27-mc${isT ? ' t' : inW ? ' w' : ''}${d.getMonth() === base.getMonth() ? '' : ' o'}" data-k27="mday" data-k="${k}">${d.getDate()}<i style="background:${L0.length ? (isT ? '#fff' : col(L0[0])) : 'transparent'}"></i></button>`;
+    const wk = i % 7 === 0 ? `<button class="k29-wk mini" data-k27="wk" data-k="${k}" aria-label="Uke ${isoW(d)}">${isoW(d)}</button>` : '';
+    return `${wk}<button class="k27-mc${isT ? ' t' : inW ? ' w' : ''}${d.getMonth() === base.getMonth() ? '' : ' o'}" data-k27="mday" data-k="${k}">${d.getDate()}<i style="background:${L0.length ? (isT ? '#fff' : col(L0[0])) : 'transparent'}"></i></button>`;
   }).join('');
   return `<div class="k27-mini"><div class="k27-mh"><b>${cap(MN[base.getMonth()])} ${base.getFullYear()}</b><button data-k27="mprev" aria-label="Forrige måned">‹</button><button data-k27="mnext" aria-label="Neste måned">›</button></div>
-    <div class="k27-mg">${WS.map((t) => `<span>${t[0]}</span>`).join('')}${cells}</div></div>`;
+    <div class="k27-mg k29-mg"><span>U</span>${WS.map((t) => `<span>${t[0]}</span>`).join('')}${cells}</div></div>`;
 }
 const calChips = () => `<div class="k27-cals">${cals().map((c) => { const off = !!hidCal()[c.id]; return `<button class="k27-cc${off ? ' off' : ''}" data-k27="cal" data-id="${c.id}" aria-pressed="${!off}"><i style="background:${c.color}"></i>${esc(c.name)}</button>`; }).join('')}</div>`;
 const calList = () => `<div class="k27-cl"><span class="k27-lab">KALENDERE</span>${cals().map((c) => { const off = !!hidCal()[c.id]; return `<button data-k27="cal" data-id="${c.id}" aria-pressed="${!off}"><span class="k27-cb" style="border-color:${c.color};background:${off ? 'transparent' : c.color}">✓</span><span class="m-grow m-ell">${esc(c.name)}</span></button>`; }).join('')}<button class="k27-adm" data-k27="cset">Administrer kalendere ›</button></div>`;
@@ -238,9 +247,10 @@ function monthView() {
     const d = add(st, i), k = key(d), L0 = evOn(d), isT = k === tk, inM = d.getMonth() === cur.getMonth(), les = L0.filter((e) => e.kind === 'time').length, oth = L0.filter((e) => e.kind !== 'time'), mx = w ? 4 : 3, sh = oth.slice(0, les ? mx - 1 : mx);
     const chips = sh.map((e) => { reg(e); const solid = e.kind === 'prove' || !e.s || e.kind === 'innl'; return `<span style="background:${solid ? col(e) : 'transparent'};color:${solid ? '#fff' : col(e)}">${esc(`${e.s && e.kind !== 'innl' && w ? `${e.s} ` : ''}${short(e)}`)}</span>`; });
     if (les) chips.push(`<span class="les">${les}${w ? ' timer' : ' t'}</span>`);
-    return `<button class="k27-md${isT ? ' t' : ''}${inM ? '' : ' o'}" data-k27="dday" data-k="${k}"><b>${d.getDate()}</b>${chips.join('')}${oth.length > sh.length ? `<em>+${oth.length - sh.length}</em>` : ''}</button>`;
+    const wk = i % 7 === 0 ? `<button class="k29-wk" data-k27="wk" data-k="${k}" aria-label="Uke ${isoW(d)}">${isoW(d)}</button>` : '';
+    return `${wk}<button class="k27-md${isT ? ' t' : ''}${inM ? '' : ' o'}" data-k27="dday" data-k="${k}"><b>${d.getDate()}</b>${chips.join('')}${oth.length > sh.length ? `<em>+${oth.length - sh.length}</em>` : ''}</button>`;
   }).join('');
-  return `<div class="k27-mhd">${WS.map((t) => `<span>${w ? t : t[0]}</span>`).join('')}</div><div class="k27-mo">${cells}</div>`;
+  return `<div class="k27-mhd k29-mhd"><span>U</span>${WS.map((t) => `<span>${w ? t : t[0]}</span>`).join('')}</div><div class="k27-mo k29-mo">${cells}</div>`;
 }
 function listView() {
   const cur = curD(), tk = key(new Date()), [a, b] = range();
@@ -287,6 +297,45 @@ function formSheet() {
       ${F.err ? `<span class="k27-err">${esc(F.err)}</span>` : ''}
       <button type="submit" class="k27-save" ${F.busy ? 'disabled' : ''}>${F.busy ? 'Lagrer …' : 'Lagre'}</button><span class="k27-mut sm">${K.miss || F.local ? 'Lagres på denne enheten til serveren støtter Google Kalender.' : 'Skrives til Google Kalender.'}</span></form>`);
 }
+/* ---------- Prompt 29: «Legg til time» (rask time med AI, claude-code-kalender-rask-time.md) ---------- */
+const QCHIPS = ['Frisør', 'Lege', 'Tannlege', 'Fysio'];
+function qaPreview(txt) {
+  const t = String(txt ?? '').trim();
+  if (t.length <= 3) return '';
+  const r = parseQuick(t, key(new Date()));
+  if (!r.ok) return `<span class="k29-bad">${esc(r.why || 'Fant ikke dato. Skriv f.eks. «25.09» eller «tirsdag».')}</span>`;
+  const d = ofKey(r.date), when = `${WD[d.getDay()]} ${d.getDate()}. ${MN[d.getMonth()]}${r.start ? ` · ${r.start}–${r.end}` : ' · hele dagen'}`;
+  return `<div class="k29-pv"><span class="k29-pvb"></span><span class="m-grow"><b>${esc(r.title)}</b><span>${esc(when)}</span>${r.place ? `<span>${esc(r.place)}</span>` : ''}<small>Privat · varsel 1 time før</small></span></div>`;
+}
+function qaSheet() {
+  const Q = K.qa; if (!Q) return '';
+  const has = !!Q.txt.trim();
+  return sheetWrap(`<span class="k29-grip" aria-hidden="true"></span><div class="k29-qh"><span class="m-grow"><span class="k27-lab">✦ AI · RASK TIME</span><b>Legg til time</b></span><button class="k27-cx" data-k27="shx" aria-label="Lukk">${svgP('M6 6l12 12M18 6L6 18', 14, 2.6)}</button></div>
+    <form class="k29-qf" data-k27f="qa"><textarea id="k29-qt" rows="3" data-k27i="qa" placeholder="F.eks. «time hos Nina frisør 14.30 25.09» eller lim inn meldingen fra legekontoret">${esc(Q.txt)}</textarea>
+      <div class="k29-chips"><button type="button" class="ink" data-k27="qpaste">${svgP('M9 4h6v3H9zM7 5H5v16h14V5h-2', 13, 2.2)}Lim inn melding</button>${QCHIPS.map((n) => `<button type="button" data-k27="qchip" data-v="${n}">${n}</button>`).join('')}</div>
+      <div id="k29-pvw">${qaPreview(Q.txt)}</div>
+      <button type="submit" class="k29-go" id="k29-go" style="opacity:${has ? 1 : 0.45}">Legg til i kalenderen</button>
+      <button type="button" class="k29-man" data-k27="qman">Fyll ut selv</button>
+      <span class="k29-fn">Du kan lukke appen. Timen legges til i bakgrunnen.</span></form>`);
+}
+function qaOpen(txt = '') { K.qa = { txt }; K.sel = null; K.mini = false; draw(); setTimeout(() => { const t = document.getElementById('k29-qt'); if (t) { t.focus({ preventScroll: true }); t.setSelectionRange(t.value.length, t.value.length); } }, 40); }
+function qaSet(txt) {
+  if (!K.qa) return; K.qa.txt = txt;
+  const t = document.getElementById('k29-qt'); if (t && t.value !== txt) t.value = txt;
+  const w = document.getElementById('k29-pvw'); if (w) w.innerHTML = qaPreview(txt);
+  const g = document.getElementById('k29-go'); if (g) g.style.opacity = txt.trim() ? '1' : '0.45';
+}
+/** Åpner «Legg til time» (også fra del-mål/andre sider). */
+export function kalQuick(txt = '') { if (m.screen !== 'kal') { location.hash = '#/kal'; setTimeout(() => qaOpen(txt), 120); } else qaOpen(txt); }
+/** Åpner vanlig skjema ferdig utfylt (når tolkningen feiler). */
+export function kalFormPrefill(pre) { const go = () => openForm(pre); if (m.screen !== 'kal') { location.hash = '#/kal'; setTimeout(go, 160); } else go(); }
+/** «Vis»: hopp til dagen. */
+export function kalShowDay(k) { K.cur = k; K.sel = null; if (view() !== 'dag' && view() !== '3dager' && view() !== 'uke') save({ kalView: 'dag' }, { view: 'dag' }); if (m.screen !== 'kal') location.hash = '#/kal'; else draw(); }
+/** Lagrer en hendelse lokalt (server uten skrive-endepunkt). Returnerer id. */
+export function kalAddLocal(body) { const id = `u${Date.now()}`; L.ue = [...ue(), { id, ...body }]; keep(); return id; }
+export function kalDelLocal(id) { const n = ue().length; L.ue = ue().filter((x) => x.id !== id); keep(); return ue().length < n; }
+export const kalMissing = () => K.miss;
+
 function searchSheet() {
   if (!K.srch) return '';
   const q = K.q.trim(), R = K.res;
@@ -327,7 +376,7 @@ export function kalView() {
     ${K.err ? `<span class="k27-note err">${esc(K.err)}</span>` : K.miss ? '<span class="k27-note">Skolens timeplan og Google Kalender krever nyere server. Bursdagene hentes fra Bursdager.</span>' : ''}
     <div class="k27-body">${w ? `<aside class="k27-side">${miniCal()}${calList()}</aside>` : ''}<div class="k27-main" data-k27sw>${body}</div></div>
     <nav class="k27-bar2" aria-label="Kalendervisning">${VIEWS.map(([k, n, ic]) => `<button data-k27="view" data-v="${k}" aria-pressed="${V === k}">${svgP(ic)}<span>${n}</span></button>`).join('')}</nav><button class="k27-fab" data-k27="new" aria-label="Ny hendelse">${svgP('M12 5v14M5 12h14', 24, 2.4)}</button>
-    ${detSheet()}${formSheet()}${searchSheet()}</div>`;
+    ${detSheet()}${formSheet()}${searchSheet()}${qaSheet()}</div>`;
 }
 /** Etter tegning: rutenettet ruller til nå ved ny visning/periode, ellers beholdes posisjonen. */
 export function kalAfterDraw() {
@@ -367,11 +416,11 @@ export function kalBoot() {
     checkReminders();
     if (Date.now() - K.t > 3600e3 && K.ev) kalLoad(true).then(draw).catch(() => {});
     const ae = document.activeElement;
-    if ((m.screen === 'kal' || m.screen === 'hl') && K.ev && !K.form && !K.srch && !(ae && /INPUT|TEXTAREA|SELECT/.test(ae.tagName))) draw();
+    if ((m.screen === 'kal' || m.screen === 'hl') && K.ev && !K.form && !K.srch && !K.qa && !(ae && /INPUT|TEXTAREA|SELECT/.test(ae.tagName))) draw();
   }, 60000);
   addEventListener('keydown', (e) => {
     if (m.screen !== 'kal' || /INPUT|TEXTAREA|SELECT/.test(e.target?.tagName ?? '') || e.metaKey || e.ctrlKey || e.altKey) return;
-    if (K.form || K.srch || K.sel) { if (e.key === 'Escape') { K.form = null; K.srch = false; K.sel = null; draw(); } return; }
+    if (K.form || K.srch || K.sel || K.qa) { if (e.key === 'Escape') { K.form = null; K.srch = false; K.sel = null; K.qa = null; draw(); } return; }
     const V = { d: 'dag', 3: '3dager', w: 'uke', m: 'maaned', l: 'liste' }[e.key.toLowerCase()];
     if (e.key === 'ArrowLeft') shift(-1); else if (e.key === 'ArrowRight') shift(1); else if (e.key.toLowerCase() === 't') { K.cur = null; draw(); } else if (V) setView(V); else if (e.key.toLowerCase() === 'n') openForm({}); else if (e.key === '/') { e.preventDefault(); openSearch(); }
   });
@@ -445,6 +494,7 @@ export function kalUp(e) {
 export function kalInput(e, t) {
   if (m.screen !== 'kal') return false;
   if (t.id === 'k27-q') { K.q = t.value; runSearch(); return true; }
+  if (t.id === 'k29-qt') { qaSet(t.value); return true; }
   const f = t.dataset?.k27i;
   if (f && K.form) {
     if (f === 'start') { const d = mm(K.form.end) - mm(K.form.start); K.form.start = t.value; if (t.value && d > 0) K.form.end = hm(Math.min(mm(t.value) + d, 23 * 60 + 59)); const en = document.querySelector('[data-k27i="end"]'); if (en) en.value = K.form.end; }
@@ -455,7 +505,11 @@ export function kalInput(e, t) {
 }
 export async function kalBind(e, t) {
   if (m.screen !== 'kal') return false;
-  if (e.type === 'submit') { if (!t.matches?.('[data-k27f]')) return false; e.preventDefault(); await saveForm(); return true; }
+  if (e.type === 'submit') {
+    if (!t.matches?.('[data-k27f]')) return false; e.preventDefault();
+    if (t.dataset.k27f === 'qa') { const v = (K.qa?.txt ?? '').trim(); if (!v) return true; K.qa = null; document.activeElement?.blur?.(); draw(); P29.quickRun(v); return true; }
+    await saveForm(); return true;
+  }
   if (e.type !== 'click') return false;
   if (Date.now() - K.swiped < 350) { K.swiped = 0; e.preventDefault(); e.stopPropagation(); return true; }
   if (t.closest?.('[data-p27clr]') && t.closest('.k27-sf')) { K.q = ''; K.res = null; const i = document.getElementById('k27-q'); if (i) { i.value = ''; i.focus(); i.parentElement.classList.remove('has'); } draw(); return true; }
@@ -476,6 +530,7 @@ export async function kalBind(e, t) {
     case 'mnext': K.miniOff++; break;
     case 'mday': K.cur = x.dataset.k; K.mini = false; K.miniOff = 0; K.sel = null; break;
     case 'dday': K.cur = x.dataset.k; K.sel = null; setView('dag'); return true;
+    case 'wk': K.cur = x.dataset.k; K.sel = null; K.mini = false; K.miniOff = 0; setView('uke'); return true; // Prompt 29: ukenummer → Uke
     case 'cal': { const id = x.dataset.id; L.hidCal = { ...hidCal(), [id]: !hidCal()[id] }; keep(); saveFilters(); haptic('tab'); break; }
     case 'cset': location.hash = '#/set/kal'; return true;
     case 'prev': shift(-1); return true;
@@ -483,14 +538,17 @@ export async function kalBind(e, t) {
     case 'today': K.cur = null; K.sel = null; K.mini = false; K.gk = ''; haptic('tap'); break;
     case 'search': openSearch(); return true;
     case 'view': setView(x.dataset.v); return true;
-    case 'new': openForm({}); return true;
+    case 'new': qaOpen(''); return true; // Prompt 29: + åpner «Legg til time»
+    case 'qchip': qaSet(`Time hos ${x.dataset.v.toLowerCase()} `); document.getElementById('k29-qt')?.focus(); return true;
+    case 'qpaste': { try { const v = await navigator.clipboard.readText(); if (v) qaSet(v); else flash('Utklippstavlen er tom'); } catch { flash('Fikk ikke lese utklippstavlen. Lim inn med hold inne.'); document.getElementById('k29-qt')?.focus(); } return true; }
+    case 'qman': { const v = (K.qa?.txt ?? '').trim(), r = v ? parseQuick(v, key(new Date())) : null; K.qa = null; openForm(r ? { title: r.title || '', ...(r.date ? { date: r.date } : {}), ...(r.start ? { start: r.start, end: r.end } : {}), location: r.place || '', reminder: '1h', note: v.length > 60 ? v : '' } : {}); return true; }
     case 'none': return true;
     case 'ev': {
       const id = x.dataset.id, ev = EVMAP.get(id);
       if (x.dataset.go && ev) { K.srch = false; K.cur = ev.k; if (view() === 'maaned' || view() === 'liste') save({ kalView: 'dag' }, { view: 'dag' }); }
       K.sel = id; K.delArm = false; haptic('tap'); break;
     }
-    case 'shx': K.sel = null; K.form = null; K.srch = false; K.delArm = false; break;
+    case 'shx': K.sel = null; K.form = null; K.srch = false; K.qa = null; K.delArm = false; break;
     case 'rem': { const ev = EVMAP.get(K.sel); if (!ev) return true; const k2 = ev.base ?? ev.id, v = { ...rems(), [k2]: x.dataset.v }; save({ kalReminders: v }, { rem: v }); haptic('tab'); if (x.dataset.v !== 'none' && 'Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {}); break; }
     case 'edit': { const ev = EVMAP.get(K.sel); if (ev) editForm(ev); return true; }
     case 'del': { const ev = EVMAP.get(K.sel); if (!ev) return true; if (!K.delArm) { K.delArm = true; break; } await delEvent(ev); return true; }
@@ -504,4 +562,4 @@ export async function kalBind(e, t) {
   draw(); return true;
 }
 /** Ny side: lukk ark og gå tilbake til i dag. */
-export function kalLeave() { K.sel = null; K.form = null; K.srch = false; K.mini = false; K.cur = null; K.gk = ''; }
+export function kalLeave() { K.qa = null; K.sel = null; K.form = null; K.srch = false; K.mini = false; K.cur = null; K.gk = ''; }

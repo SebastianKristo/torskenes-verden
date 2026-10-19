@@ -76,3 +76,21 @@ Alt ligger i `data/` (`/opt/homelab-os/data` på Proxmox). Stopp containeren og 
 ```bash
 pct snapshot <ctid> for-oppdatering
 ```
+
+## Systembackup (Innstillinger → Backup)
+
+Hele serveren (eller utvalgte moduler) som ett arkiv, kjørt etter tidsplan eller med **Ta backup nå**. Bare administratorer
+ser og endrer dette. API: `/api/backup` (se `server/system-backup.js`).
+
+- **Innhold:** `db/homelab.db` (konsistent øyeblikksbilde med `db.backup()`; ved modul-utvalg bare modulenes tabeller og
+  innstillinger), filmappene til modulene under `files/` og `manifest.json` (versjon, moduler, tabeller, sha256 per fil).
+  Øktene tas aldri med.
+- **Format:** `.tar.zst` når `zstd` finnes på serveren, ellers `.tar.gz`. Kryptert: `.enc` (AES-256-GCM).
+- **Lagring:** `BACKUP_DIR` (standard `data/system-backups`). I Docker/Proxmox: bind-mount `/srv/backup:/srv/backup` og sett
+  `BACKUP_DIR=/srv/backup` i `.env` (se `docker-compose.yml`). Eldre backuper slettes etter «Behold».
+- **Tidsplan (Europe/Oslo):** hver natt 03:00, hver 6. time, søndag 03:00 eller den 1. kl. 03:00.
+- **Kryptering:** gjenopprettingsnøkkelen vises én gang. Ta vare på den: serveren har en kryptert kopi (for automatisk
+  backup), men mister du `SESSION_SECRET`/`SECRET_KEY` eller datamappen, er nøkkelen eneste vei tilbake.
+- **Sky:** Backblaze B2 (S3-API, signert med AWS SigV4). Bare krypterte backuper lastes opp. Google Drive kommer senere.
+- **Gjenoppretting:** krever passordet, tar alltid en full sikkerhetskopi først, og erstatter de valgte modulenes tabeller i én
+  transaksjon og filmappene med rename. Databasefilen byttes ikke, så serveren trenger ingen omstart; last appen på nytt etterpå.

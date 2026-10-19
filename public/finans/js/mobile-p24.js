@@ -108,7 +108,7 @@ export const SS = { q: '', ai: false, ans: '', ids: null, busy: false };
 // Alle innstillinger og undersider: id, tittel, hvor den ligger og hvor trykket går.
 const IDX = [
   ['prof-std', 'Standard', 'Profil', '#/set', 'profil oppsett vanlig'], ['prof-fin', 'Finans + Boliger', 'Profil', '#/set', 'profil boliger finans start'], ['prof-bol', 'Boliger-profil', 'Profil', '#/set', 'profil boliger'],
-  ['konto', 'Kontoer og brukere', 'Konto', '#/set/konto', 'bruker logg inn konto'], ['sik', 'Sikkerhet', 'Konto', '#/set/sik', 'passord 2fa totrinn lås face id fingeravtrykk økter'], ['tok', 'API-tokens', 'Konto', '#/set/tok', 'token nøkkel langtidstoken'],
+  ['konto', 'Kontoer og brukere', 'Konto', '#/set/konto', 'bruker logg inn konto'], ['sik', 'Sikkerhet', 'Konto', '#/set/sik', 'passord 2fa totrinn lås face id fingeravtrykk økter'], ['tok', 'API-tokens', 'Konto', '#/set/tok', 'token nøkkel langtidstoken'], ['sysbk', 'Backup', 'Konto', '#/set/sysbk', 'backup sikkerhetskopi gjenopprett automatisk hele systemet kryptering sky'],
   ['profil', 'Profilbilde og navn', 'Konto', '#/set/profil', 'avatar bilde profil'],
   ['fai', 'AI og tolkning', 'Finans', '#/set/fai', 'ai gemini groq ollama roboflow kvittering ocr'], ['kat', 'Kategorier og budsjett', 'Finans', '#/set/kat', 'kategori budsjett'], ['regel', 'Regler', 'Finans', '#/set/regel', 'regel automatisk'],
   ['bank', 'Bankimport', 'Finans', '#/set/bank', 'bank dnb csv import'], ['t212', 'Aksjer · Trading 212', 'Finans', '#/set/t212', 'aksje trading212 t212 fond'], ['fanelinje', 'Fanelinje og Mer i Finans', 'Finans', '#/set/fanelinje', 'fane faner navigasjon'], ['sub', 'Subscription OS', 'Finans', '#/sub', 'abonnement'],

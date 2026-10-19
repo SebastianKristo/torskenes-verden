@@ -149,6 +149,9 @@ const SCALAR = {
     : !!v && typeof v === 'object' && Object.entries(v).every(([k, b]) => KAL_FILTERS.includes(k) && typeof b === 'boolean'),
   // Prompt 27 (Kalender v2): dag, 3dager, uke, maaned, liste. Gamle verdier: agenda → liste, mnd → maaned.
   kalView: (v) => KAL_VIEWS.includes(v),
+  // Prompt 29 (SERVER29): søkemotor på Hjem/Dashboard og Kalender på web (med toppmeny eller fullskjerm).
+  search_engine: (v) => ['ai', 'google', 'ddg'].includes(v),
+  calendar_web_layout: (v) => ['menu', 'full'].includes(v),
   // Prompt 27: språk (nb | en) for web-dashboardet og AI-svar. Også i /api/me og PATCH /api/me.
   language: (v) => LANGUAGES.includes(v),
   // Prompt 27: Ruter-kortet på Hjem: opptil 3 av Mine stopp og 1–4 avganger per stopp.
@@ -390,7 +393,7 @@ api.delete('/me/avatar', authOrToken, async (c) => {
 api.get('/users/:id/avatar', authOrToken, (c) => sendAvatar(c, c.req.param('id')));
 
 // Lagret oppsett med standardverdiene for utseendet fylt inn (de avhenger av om installasjonen er ny, se designOf).
-api.get('/me/layout', authOrToken, (c) => { const id = c.get('user'); const { finNavList: _l, finNavMeta: _m, ...l } = layoutOf(id); if (l.kalView === 'agenda') l.kalView = 'liste'; return c.json({ ...l, language: languageOf(id), ...designOf(id), ...profileOf(id) }); });
+api.get('/me/layout', authOrToken, (c) => { const id = c.get('user'); const { finNavList: _l, finNavMeta: _m, ...l } = layoutOf(id); if (l.kalView === 'agenda') l.kalView = 'liste'; return c.json({ search_engine: 'ai', calendar_web_layout: 'menu', ...l, language: languageOf(id), ...designOf(id), ...profileOf(id) }); });
 api.put('/me/layout', authOrToken, async (c) => {
   const b = await json(c);
   if (!b || typeof b !== 'object' || Array.isArray(b)) return c.json({ error: 'Forventet et objekt' }, 400);
@@ -446,7 +449,7 @@ api.put('/me/layout', authOrToken, async (c) => {
   }
   kv.set(c.get('user'), 'layout', next);
   const { finNavList: _l, finNavMeta: _m, finNav: _side, ...rest } = next;
-  return c.json({ ...rest, ...profileOf(c.get('user')) });
+  return c.json({ search_engine: 'ai', calendar_web_layout: 'menu', ...rest, ...profileOf(c.get('user')) });
 });
 // Ferdige profiler (Innstillinger → PROFIL): Standard, Finans + Boliger og Boliger-profil.
 api.get('/me/profiles', authOrToken, (c) => c.json({ ...PROFILES, current: profileOf(c.get('user')).profile,

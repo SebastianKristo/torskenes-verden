@@ -1,5 +1,6 @@
 // Innstillinger i mobilappen: hovedside med gruppene Konto, App og System, og én underside per gruppe.
 // Valg som bare gjelder denne enheten lagres i localStorage (fh_mprefs); AI og varsler for kvitteringer/budsjett på serveren.
+import * as P29 from './mobile-p29.js';
 import { S, api, esc, n0, ini, icon, loadBoot, loadSummary, hlApi } from './core.js';
 import { m, draw, flash, pref, setPref, theme, iosBg, isIOS, meName, avInner, avatarUrl, loadMe, startScr, domOk, HLTABS, FINTABS, FIXED_HL, FIXED_FIN, tabName } from './mobile.js';
 import { LAY, saveLayout } from './mobile-hl.js';
@@ -31,6 +32,7 @@ export async function settingsLoad(sub) {
   if (sub === 'fai') jobs.push(aiLoad().catch(() => {}), loadBoot().catch(() => {}));
   if (sub === 'data') jobs.push(navigator.storage?.estimate?.().then((x) => { T.usage = x.usage; }).catch(() => {}));
   if (sub === 'oppd' || (!sub && updAdmin())) jobs.push(updLoad());
+  if (String(sub ?? '').startsWith('sysbk') || (!sub && P29.isAdmin())) jobs.push(P29.bkLoad());
   if (sub === 'bk') jobs.push(api('/backup').then((x) => { T.bk = x; }).catch(() => { T.bk = null; }));
   if (sub === 'sokbar') jobs.push(hlApi('/search/history').then((x) => { T.srch = { suggest: x?.suggest !== false, save: x?.save !== false, n: (x?.items ?? []).length }; }).catch(() => { T.srch = null; }));
   if (['fai', 'kat', 'regel', 'bank', 't212'].includes(sub)) jobs.push(loadBoot().catch(() => {}));
@@ -60,7 +62,7 @@ function profile(big = false) {
   const sz = big ? 58 : 44;
   return `<a class="opt-row" href="#/set/konto"><span class="m-av${avatarUrl() ? ' img' : ''}" style="width:${sz}px;height:${sz}px;font-size:${big ? 22 : 17}px">${avInner()}</span><span class="m-grow"><b style="font-size:${big ? 19 : 16}px;font-weight:600">${esc(meName())}</b><br><span style="font-size:13px;opacity:.65">${me.username ? `@${esc(me.username)}` : 'FinansHub'}${me.role ? ` · ${esc(me.role)}` : ''} · ${esc(me.serverName || location.host)}</span></span><span style="opacity:.5">›</span></a>`;
 }
-const PAGES = { integ: 'Integrasjoner', kal: 'Kalendere', varsler: 'Varsler og haptikk', mod: 'Moduler', profil: 'Profil', bakgrunn: 'Bakgrunn', fanelinje: 'Fanelinje', konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', nav: 'Navigasjonslinje', dom: 'Domener', scan: 'Skanning og AI', notif: 'Varsler', hap: 'Haptikk', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI og tolkning', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data', oppd: 'Oppdatering' };
+const PAGES = { integ: 'Integrasjoner', kal: 'Kalendere', varsler: 'Varsler og haptikk', mod: 'Moduler', profil: 'Profil', bakgrunn: 'Bakgrunn', fanelinje: 'Fanelinje', konto: 'Kontoer', sik: 'Sikkerhet', tok: 'API-tokens', look: 'Utseende', nav: 'Navigasjonslinje', dom: 'Domener', scan: 'Skanning og AI', notif: 'Varsler', hap: 'Haptikk', sokbar: 'Søkebar', srv: 'Server og synk', data: 'Data og lagring', om: 'Om FinansHub', fai: 'AI og tolkning', kat: 'Kategorier', regel: 'Regler', bank: 'Bank og import', t212: 'Aksjer · Trading 212', bk: 'Backup og data', oppd: 'Oppdatering', sysbk: 'Backup' };
 const when = (t) => (t ? new Date(t).toLocaleDateString('nb-NO', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'aldri');
 const aiMode = () => { const st = S.boot?.settings ?? {}; return st.provider === 'gemini' ? 'gemini' : st.provider === 'groq' ? 'groq' : st.fallback ? 'both' : 'ollama'; };
 
@@ -103,6 +105,7 @@ const PAGE = {
   // Prompt 26: gruppert liste som på web og egen side per integrasjon (#/set/integ/<id>). Eldre server: forrige side.
   integ: (th, sub) => P26.integPage26(P23.integPage(haSection()), sub),
   kal: () => P26.kalSetPage(),
+  sysbk: () => P29.backupPage(), // Prompt 29: backup av hele systemet (bare admin)
   oppd: () => updPage(G), // Prompt 28: oppdater hele systemet (bare admin) // Prompt 26: Innstillinger → Kalendere (Skole-iCal, Canvas, Google Kalender og Home Assistant)
   varsler: () => p17Varsler(trkPrefRows()),
   mod: () => p17Modules(),

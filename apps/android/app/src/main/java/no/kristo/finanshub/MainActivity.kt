@@ -102,7 +102,12 @@ class MainActivity : FragmentActivity() {
     private fun handleShare(intent: Intent?) {
         if (!vm.loggedIn) return
         when (intent?.action) {
-            Intent.ACTION_SEND -> {
+            // Prompt 29: tekst (SMS, e-post) → «Legg til time» i Kalender.
+            Intent.ACTION_SEND -> if (intent.type?.startsWith("text/") == true && intent.getStringExtra(Intent.EXTRA_TEXT) != null) {
+                val sub = intent.getStringExtra(Intent.EXTRA_SUBJECT)?.takeIf { it.isNotBlank() }
+                val txt = intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
+                vm.shareText29(if (sub != null && !txt.contains(sub)) "$sub\n$txt" else txt)
+            } else {
                 val uri: Uri? = if (Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java)
                 else @Suppress("DEPRECATION") intent.getParcelableExtra(Intent.EXTRA_STREAM)
                 uri?.let { vm.uploadUri(it) }
