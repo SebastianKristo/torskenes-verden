@@ -1,6 +1,7 @@
 // Værappen i mobilappene (design/Vaer.dc.html). Kilde: MET/yr (api.met.no Locationforecast 2.0 «complete», med
 // User-Agent fra config). Open-Meteo fyller inn det MET ikke har: i går, passerte timer, sikt og UV. Cachet i 10 minutter.
 // Uten nett eller med MOCK_DATA=1 gis realistiske eksempeldata. Månefasen regnes lokalt.
+// Prompt 32: days[] har også blocks2h (12×2 t: mm, wind, gust, day), gustMin og gustMax for Forhold → 💧 Nedbør og 🌬 Vind. hours[] har precip, precipProb, wind, gust.
 import { cached, fetchJson } from './cache.js';
 import { config } from './config.js';
 import { sunTime, feelsLike } from './weather.js';
@@ -49,6 +50,24 @@ const osloParts = (d) => Object.fromEntries(new Intl.DateTimeFormat('sv-SE', { t
 const osloNowLocal = () => { const p = osloParts(new Date()); return `${p.year}-${p.month}-${p.day}T${p.hour === '24' ? '00' : p.hour}:00`; };
 const r1 = (v) => (v == null ? null : Math.round(v * 10) / 10);
 
+/** Prompt 32 (Vær · Forhold-moduser): per døgn 12 blokker à 2 timer {h:0|2|…|22, mm (sum), wind (snitt m/s), gust (maks m/s), day (06–18)},
+ *  pluss gustMin/gustMax (m/s) og windMaxH. Tomme blokker (utenfor prognosen) har null-verdier. */
+function forhold(H, times, date) {
+  const blocks = Array.from({ length: 12 }, (_, b) => ({ h: b * 2, mm: null, wind: null, gust: null, day: b * 2 >= 6 && b * 2 < 18 }));
+  const acc = blocks.map(() => ({ mm: 0, w: 0, n: 0, g: null }));
+  for (let i = 0; i < times.length; i++) {
+    if (times[i].slice(0, 10) !== date) continue;
+    const b = Math.floor(Number(times[i].slice(11, 13)) / 2), a = acc[b];
+    a.mm += H.precipitation?.[i] ?? 0; a.n++;
+    if (H.wind_speed_10m?.[i] != null) a.w += H.wind_speed_10m[i];
+    const g = H.wind_gusts_10m?.[i];
+    if (g != null) a.g = Math.max(a.g ?? 0, g);
+  }
+  acc.forEach((a, b) => { if (a.n) Object.assign(blocks[b], { mm: r1(a.mm), wind: r1(a.w / a.n), gust: r1(a.g) }); });
+  const gs = blocks.map((x) => x.gust).filter((v) => v != null);
+  return { blocks2h: blocks, gustMin: gs.length ? r1(Math.min(...gs)) : null, gustMax: gs.length ? r1(Math.max(...gs)) : null };
+}
+
 /** Bygger svaret fra Open-Meteo-rådata (også brukt av mockdata og testene). */
 export function buildFull(raw, place, now = osloNowLocal()) {
   const H = raw.hourly ?? {}, D = raw.daily ?? {}, C = raw.current ?? {};
@@ -65,7 +84,7 @@ export function buildFull(raw, place, now = osloNowLocal()) {
   const days = [];
   for (let i = todayIdx; i < Math.min(dt.length, todayIdx + 7); i++) {
     days.push({ date: dt[i], hi: r1(D.temperature_2m_max?.[i]), lo: r1(D.temperature_2m_min?.[i]), code: D.weather_code?.[i] ?? 0, precipProb: D.precipitation_probability_max?.[i] ?? 0,
-      precipSum: r1(D.precipitation_sum?.[i] ?? 0), sunrise: D.sunrise?.[i] ?? null, sunset: D.sunset?.[i] ?? null, uvMax: r1(D.uv_index_max?.[i]), windMax: r1(D.wind_speed_10m_max?.[i]) });
+      precipSum: r1(D.precipitation_sum?.[i] ?? 0), sunrise: D.sunrise?.[i] ?? null, sunset: D.sunset?.[i] ?? null, uvMax: r1(D.uv_index_max?.[i]), windMax: r1(D.wind_speed_10m_max?.[i]), ...forhold(H, times, dt[i]) });
   }
   const today = days[0] ?? {};
   const y = todayIdx > 0 ? todayIdx - 1 : null;

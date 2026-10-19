@@ -2,6 +2,7 @@
 // Google-søk (forslag og historikk), mobilforsiden og widgetene «Serverstatus» og «Ruter-avganger».
 // Rutene godtar en innlogget sesjon ELLER et FinansHub-token (Bearer), så de native appene kan bruke dem.
 import { Hono } from 'hono';
+import { logSearch, recentSearches, clearSearches, forgetSearch, looksSensitive, deviceOfReq } from './search-history.js'; // prompt 32
 import { bodyLimit } from 'hono/body-limit';
 import { readFile, writeFile, unlink, mkdir, readdir } from 'node:fs/promises';
 import { statfsSync, readFileSync } from 'node:fs';
@@ -152,6 +153,11 @@ const SCALAR = {
   // Prompt 29 (SERVER29): søkemotor på Hjem/Dashboard og Kalender på web (med toppmeny eller fullskjerm).
   search_engine: (v) => ['ai', 'google', 'ddg'].includes(v),
   calendar_web_layout: (v) => ['menu', 'full'].includes(v),
+  // Prompt 32 (SERVER32): Glimt i søkefeltet – send til Chat etter N s (5/8/15/30, standard 8). (Lagre søkehistorikk = PUT /api/search/settings {save}.)
+  hs_timeout_s: (v) => [5, 8, 15, 30].includes(v),
+  // Prompt 32: egne fanelinjer for Domener, Abonnement og Familie ({dom, abo, kart}: liste med fane-nøkler, 1–6, uten duplikater).
+  secNav: (v) => !!v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length <= 3 && Object.entries(v).every(([k, l]) => ['dom', 'abo', 'kart'].includes(k)
+    && (l === null || (Array.isArray(l) && l.length >= 1 && l.length <= 6 && new Set(l).size === l.length && l.every((x) => typeof x === 'string' && /^[a-z0-9_-]{1,30}$/.test(x))))),
   // Prompt 30 (SERVER30): profilmenyen på web/app ({order[], hidden[]} med kjente nøkler; Logg ut ligger alltid nederst
   // og er ikke en nøkkel) og skjulte kort i Finans → Mer (nøklene fra MER_KEYS.fin; Innstillinger kan ikke skjules).
   profile_menu: (v) => !!v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).every((k) => k === 'order' || k === 'hidden')
@@ -172,7 +178,7 @@ const SCALAR = {
 const KAL_CARDS = ['A', 'B', 'C', 'D', 'E'];
 export const PROFILE_MENU_KEYS = ['innstillinger', 'tema', 'sprak', 'sokebar', 'nyhetslinje', 'tilpass', 'cv', 'las'];
 // Standard: alle i fast rekkefølge, søkebar, nyhetslinje og lås skjermen skjult.
-const layoutDefaults30 = () => ({ profile_menu: { order: [...PROFILE_MENU_KEYS], hidden: ['sokebar', 'nyhetslinje', 'las'] }, finance_more_hidden: [] });
+const layoutDefaults30 = () => ({ profile_menu: { order: [...PROFILE_MENU_KEYS], hidden: ['sokebar', 'nyhetslinje', 'las'] }, finance_more_hidden: [], hs_timeout_s: 8 });
 const KAL_FILTERS = ['timeplan', 'prover', 'bursdager', 'skole', 'privat', 'familie'];
 const KAL_VIEWS = ['dag', '3dager', 'uke', 'maaned', 'liste'];
 export const LANGUAGES = ['nb', 'en'];
@@ -181,7 +187,7 @@ const stopIdOf = (v) => { const m = String(v ?? '').trim().match(/^(?:NSR:StopPl
 export const languageOf = (id) => (LANGUAGES.includes(layoutOf(id).language) ? layoutOf(id).language : 'nb');
 const KAL_KEY = /^[\p{L}\p{N} ._&+()\/-]{1,40}$/u;
 // Felt som flettes per nøkkel (en klient kan lagre én påminnelse eller én fagfarge uten å sende resten; null fjerner nøkkelen).
-const MERGE_MAP = ['kalReminders', 'subjectColors'];
+const MERGE_MAP = ['kalReminders', 'subjectColors', 'secNav']; // secNav: prompt 32 (flettes per seksjon, null fjerner)
 // finNav som liste (prompt 24): fanene i Finans i profilen. Lagres som finNavList, så sidemenyen på desktop (finNav-objektet
 // {order, hidden, labels}) beholdes uendret. GET /api/me/layout svarer med finNav = listen og finSideNav = objektet.
 const FIN_NAV_IDS = ['oversikt', 'liste', 'finn', 'sok', 'budsjett', 'kvitteringer', 'aksjer', 'abonnementer', 'kontoer', 'boliger', 'chat', 'mer'];
@@ -288,8 +294,8 @@ Hvis navnet er en generell enhet eller noe du ikke kjenner sikkert (f.eks. "Rute
 /* ---------------- Søkehistorikk ---------------- */
 
 const HIST_MAX = 500;
-const histOf = (id) => kv.get(id, 'search_history', []);
-const setHist = (id, list) => kv.set(id, 'search_history', list.slice(0, HIST_MAX));
+export const histOf = (id) => kv.get(id, 'search_history', []);
+export const setHist = (id, list) => kv.set(id, 'search_history', list.slice(0, HIST_MAX));
 const cleanQ = (q) => String(q ?? '').replace(/\s+/g, ' ').trim().slice(0, 200);
 function addHist(id, qs, { front = true } = {}) {
   const cur = histOf(id), seen = new Set(), out = [];
@@ -304,7 +310,7 @@ export function parseTakeout(data) {
   return arr.map((x) => (typeof x === 'string' ? `Searched for ${x}` : String(x?.title ?? '')))
     .map((t) => t.match(/^(?:Searched for|Søkte etter|Søkt etter|Har søkt etter)\s+(.+)$/i)?.[1]).filter(Boolean).map(cleanQ).filter(Boolean);
 }
-const searchSettings = (id) => { const u = uiPrefs(id); return { suggest: u.searchSuggest !== false, save: u.searchSave !== false }; };
+export const searchSettings = (id) => { const u = uiPrefs(id); return { suggest: u.searchSuggest !== false, save: u.searchSave !== false }; };
 
 /* ---------------- Serverstatus ---------------- */
 
@@ -605,17 +611,24 @@ api.post('/search/ask', authOrToken, async (c) => {
     return c.json({ error: `✦ AI svarte ikke: ${why}. Sjekk AI-motor under FinansHub → Innstillinger → AI-motor.`, reason: why }, 502);
   }
 });
-api.get('/search/history', authOrToken, (c) => c.json({ items: histOf(c.get('user')), ...searchSettings(c.get('user')) }));
+// Prompt 32: samme historikk speiles i tabellen search_history (server/search-history.js, /api/search-history) med enhet,
+// så web viser mobilens søk. GET gir også entries:[{id, q, engine, device, createdAt}] (maks 8, nyeste først).
+api.get('/search/history', authOrToken, (c) => c.json({ items: histOf(c.get('user')), ...searchSettings(c.get('user')), entries: searchSettings(c.get('user')).save ? recentSearches(c.get('user'), 8) : [] }));
 api.post('/search/history', authOrToken, async (c) => {
-  const q = cleanQ((await json(c))?.q);
+  const b = await json(c);
+  const q = cleanQ(b?.q);
   if (!q) return c.json({ error: 'Tomt søk' }, 400);
-  if (searchSettings(c.get('user')).save) addHist(c.get('user'), [q]);
+  if (searchSettings(c.get('user')).save && !looksSensitive(q)) {
+    addHist(c.get('user'), [q]);
+    logSearch(c.get('user'), { qText: q, engine: typeof b?.engine === 'string' && /^[\w.-]{1,20}$/.test(b.engine) ? b.engine.toLowerCase() : 'glimt', device: deviceOfReq(c, b?.device) });
+  }
   return c.json({ items: histOf(c.get('user')) });
 });
-api.delete('/search/history', authOrToken, (c) => { setHist(c.get('user'), []); return c.json({ items: [] }); });
+api.delete('/search/history', authOrToken, (c) => { setHist(c.get('user'), []); clearSearches(c.get('user')); return c.json({ items: [] }); });
 api.delete('/search/history/:q', authOrToken, (c) => {
   const q = cleanQ(decodeURIComponent(c.req.param('q'))).toLowerCase();
   setHist(c.get('user'), histOf(c.get('user')).filter((x) => x.toLowerCase() !== q));
+  forgetSearch(c.get('user'), q);
   return c.json({ items: histOf(c.get('user')) });
 });
 // Takeout-filen kan være stor; nettleseren sender gjerne bare søkene ({queries:[…]}), men rå JSON godtas også.

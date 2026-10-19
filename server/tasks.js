@@ -64,6 +64,16 @@ if (process.env.MOCK_DATA === '1' && !q('SELECT 1 FROM hl_tasks LIMIT 1').get())
   }
 }
 
+// Prompt 32 (SERVER32): arkiv. archived_at settes ved arkivering (manuelt, «Arkiver alle», eller automatisk 7 dager etter fullført).
+//   GET   /api/tasks?archived=1           → {items:[arkiverte, nyeste først], archivedCount, lists, members, today}
+//   GET   /api/tasks                      → som før, uten arkiverte (+ archivedCount)
+//   PATCH /api/tasks/:id {archived:true|false[, done:false]} → {item} (item.archived, item.archivedAt)
+//   POST  /api/tasks/archive-done {list?} → {ok, archived:n}   («Arkiver alle» i FERDIG)
+//   DELETE /api/tasks/archived?list=…     → {ok, removed:n}    («Tøm arkivet»)
+//   Home Assistant: arkivering = todo.remove_item, gjenoppretting legger den inn igjen. Arkiverte telles ikke i lister, widgets eller Hjem.
+if (!hasCol('hl_tasks', 'archived_at')) db.exec('ALTER TABLE hl_tasks ADD COLUMN archived_at INTEGER');
+const ARCHIVE_AFTER_MS = 7 * 86_400_000;
+
 const COLOR = /^#[0-9a-f]{6}$/i;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 const str = (v, n) => String(v ?? '').trim().replace(/[\u0000-\u001f]/g, ' ').slice(0, n);
@@ -118,7 +128,7 @@ const listOut = (r, uid) => {
     members: mem.map(person) };
 };
 const itemOut = (r) => ({ id: r.id, title: r.title, list: r.list || null, due: r.due ?? null, assignee: r.assignee ?? null, note: r.note, done: !!r.done,
-  doneAt: r.done_at ?? null, createdBy: r.created_by ?? null, createdAt: r.created_at, updatedAt: r.updated_at, ...haInfo(r) });
+  doneAt: r.done_at ?? null, archived: !!r.archived_at, archivedAt: r.archived_at ?? null, createdBy: r.created_by ?? null, createdAt: r.created_at, updatedAt: r.updated_at, ...haInfo(r) });
 const lists = (uid) => listsOf(uid).map((l) => listOut(l, uid));
 // Personer man kan dele med og tildele til: id, navn og profilbilde (brukernavn bare for administratorer).
 const members = (uid) => { const admin = isAdmin(uid); return listUsers().map((u) => ({ id: u.id, name: u.displayName, avatarUrl: u.avatarUrl, ...(admin ? { username: u.username } : {}) })); };
@@ -135,7 +145,7 @@ function sortItems(items) {
 export function nextTasks(uid, n = 3) {
   if (typeof uid === 'number') { n = uid; uid = null; } // eldre kall: nextTasks(3) gir ingenting i stedet for alles oppgaver
   if (!uid) return [];
-  const rows = q(`SELECT * FROM hl_tasks WHERE done=0 AND ${VISIBLE}`).all({ u: uid }).map(itemOut);
+  const rows = q(`SELECT * FROM hl_tasks WHERE done=0 AND archived_at IS NULL AND ${VISIBLE}`).all({ u: uid }).map(itemOut);
   const t = today();
   return sortItems(rows).slice(0, n).map((x) => ({ ...x, overdue: !!(x.due && x.due < t), today: x.due === t }));
 }
@@ -154,6 +164,7 @@ function cleanTask(b, partial, uid, listId) {
   }
   if ('note' in b) out.note = str(b.note, 1000);
   if ('done' in b) out.done = b.done ? 1 : 0;
+  if ('archived' in b) out.archived_at = b.archived ? Date.now() : null;
   return out;
 }
 
@@ -176,19 +187,53 @@ api.use('*', async (c, next) => {
 const bad = (c, msg, status = 400) => c.json({ error: msg }, status);
 const body = (c) => c.req.json().catch(() => ({}));
 
+/** Fullførte oppgaver arkiveres automatisk etter 7 dager (fjernes fra Home Assistant). */
+function autoArchive(now = Date.now()) {
+  const rows = q('SELECT * FROM hl_tasks WHERE done=1 AND archived_at IS NULL AND done_at IS NOT NULL AND done_at<?').all(now - ARCHIVE_AFTER_MS);
+  for (const r of rows) archiveRow(r, true, now);
+}
+function archiveRow(cur, on, now = Date.now()) {
+  q('UPDATE hl_tasks SET archived_at=?, updated_at=? WHERE id=?').run(on ? now : null, now, cur.id);
+  if (on) { haLocal('deleted', cur); q('UPDATE hl_tasks SET ha_uid=NULL, ha_synced_at=NULL WHERE id=?').run(cur.id); }
+  else haLocal('created', null, byId(cur.id));
+  const row = byId(cur.id);
+  send(audienceOfTask(row), 'updated', { item: itemOut(row) });
+  return row;
+}
+const archivedCount = (u) => q(`SELECT COUNT(*) n FROM hl_tasks WHERE archived_at IS NOT NULL AND ${VISIBLE}`).get({ u }).n;
 api.get('/', (c) => {
-  const u = c.get('user'), list = c.req.query('list');
+  const u = c.get('user'), list = c.req.query('list'), arch = c.req.query('archived') === '1';
+  try { autoArchive(); } catch (e) { console.warn('[huskeliste] arkiv:', e.message); }
   let rows;
   if (list && list !== 'alle') {
     const l = listRow(list);
     rows = canSeeList(l, u) ? q('SELECT * FROM hl_tasks WHERE list=?').all(l.id) : [];
   } else rows = q(`SELECT * FROM hl_tasks WHERE ${VISIBLE}`).all({ u });
-  return c.json({ lists: lists(u), items: sortItems(rows.map(itemOut)), members: members(u), today: today() });
+  rows = rows.filter((r) => (arch ? r.archived_at != null : r.archived_at == null));
+  const items = arch ? rows.map(itemOut).sort((a, b) => b.archivedAt - a.archivedAt) : sortItems(rows.map(itemOut));
+  return c.json({ lists: lists(u), items, archivedCount: archivedCount(u), members: members(u), today: today() });
+});
+api.post('/archive-done', async (c) => {
+  const u = c.get('user'), b = await body(c);
+  if (b.list) { const l = listRow(b.list); if (!canSeeList(l, u)) return bad(c, 'Fant ikke listen', 404); }
+  const rows = q(`SELECT * FROM hl_tasks WHERE done=1 AND archived_at IS NULL AND ${VISIBLE}${b.list ? ' AND list=@l' : ''}`).all({ u, ...(b.list ? { l: String(b.list) } : {}) });
+  const now = Date.now();
+  for (const r of rows) archiveRow(r, true, now);
+  return c.json({ ok: true, archived: rows.length });
+});
+api.delete('/archived', (c) => {
+  const u = c.get('user'), list = c.req.query('list');
+  const rows = q(`SELECT * FROM hl_tasks WHERE archived_at IS NOT NULL AND ${VISIBLE}${list ? ' AND list=@l' : ''}`).all({ u, ...(list ? { l: String(list) } : {}) })
+    .filter((t) => { const l = t.list ? listRow(t.list) : null; return !l || l.owner === u || t.created_by === u; });
+  const aud = new Set([u]);
+  db.transaction(() => { for (const t of rows) { audienceOfTask(t).forEach((x) => aud.add(x)); q('DELETE FROM hl_tasks WHERE id=?').run(t.id); } })();
+  send([...aud], 'cleared', { list: list ?? null, ids: rows.map((t) => t.id), archived: true });
+  return c.json({ ok: true, removed: rows.length });
 });
 
 api.get('/next', (c) => {
   const u = c.get('user'), n = Math.min(10, Math.max(1, Number(c.req.query('n')) || 3));
-  return c.json({ items: nextTasks(u, n), open: q(`SELECT COUNT(*) n FROM hl_tasks WHERE done=0 AND ${VISIBLE}`).get({ u }).n, lists: lists(u) });
+  return c.json({ items: nextTasks(u, n), open: q(`SELECT COUNT(*) n FROM hl_tasks WHERE done=0 AND archived_at IS NULL AND ${VISIBLE}`).get({ u }).n, lists: lists(u) });
 });
 
 api.post('/', async (c) => {
@@ -210,6 +255,8 @@ api.patch('/:id{[0-9]+}', async (c) => {
   let t;
   try { t = cleanTask(await body(c), true, u, cur.list); } catch (e) { return bad(c, e.message); }
   const before = audienceOfTask(cur);
+  const arch = 'archived_at' in t ? t.archived_at : undefined;
+  delete t.archived_at;
   const keys = Object.keys(t);
   if ('done' in t) { keys.push('done_at'); t.done_at = t.done ? (cur.done ? cur.done_at : Date.now()) : null; }
   if (keys.length) q(`UPDATE hl_tasks SET ${keys.map((k) => `${k}=?`).join(', ')}, updated_at=? WHERE id=?`).run(...keys.map((k) => t[k]), Date.now(), cur.id);
@@ -217,7 +264,9 @@ api.patch('/:id{[0-9]+}', async (c) => {
   send(after, 'updated', { item });
   // Flyttet til en annen liste: de som ikke ser den lenger, får bare beskjed om at den er borte.
   send(before.filter((x) => !after.includes(x)), 'deleted', { id: cur.id });
-  if (keys.length) haLocal('updated', cur, row);
+  if (keys.length && !row.archived_at) haLocal('updated', cur, row);
+  // Prompt 32: arkivering/gjenoppretting (etter de andre feltene, så {archived:false, done:false} gir en åpen oppgave).
+  if (arch !== undefined && (arch != null) !== (row.archived_at != null)) return c.json({ item: itemOut(archiveRow(row, arch != null)) });
   return c.json({ item });
 });
 
@@ -237,7 +286,7 @@ api.delete('/:id{[0-9]+}', (c) => {
 api.post('/clear-done', async (c) => {
   const u = c.get('user'), b = await body(c);
   if (b.list) { const l = listRow(b.list); if (!canSeeList(l, u)) return bad(c, 'Fant ikke listen', 404); }
-  const rows = q(`SELECT * FROM hl_tasks WHERE done=1 AND ${VISIBLE}${b.list ? ' AND list=@l' : ''}`).all({ u, ...(b.list ? { l: String(b.list) } : {}) })
+  const rows = q(`SELECT * FROM hl_tasks WHERE done=1 AND archived_at IS NULL AND ${VISIBLE}${b.list ? ' AND list=@l' : ''}`).all({ u, ...(b.list ? { l: String(b.list) } : {}) })
     .filter((t) => { const l = t.list ? listRow(t.list) : null; return !l || l.owner === u || t.created_by === u; });
   const aud = new Set();
   db.transaction(() => { for (const t of rows) { audienceOfTask(t).forEach((x) => aud.add(x)); q('DELETE FROM hl_tasks WHERE id=?').run(t.id); } })();

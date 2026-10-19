@@ -110,7 +110,7 @@ test('Ollama = 60 s og et svar som tar 45 s: søket fullføres (stream: true, ke
   assert.equal(r.status, 200);
   assert.equal(r.body.mode, 'ai', JSON.stringify(r.body).slice(0, 300));
   assert.equal(r.body.engine, 'Ollama');
-  assert.equal(r.body.answer, 'Fant noe [1].');
+  assert.equal(r.body.answer, 'Fant noe.'); // prompt 32: «[n]»-markører fjernes
   const chat = mock.bodies.at(-1);
   assert.equal(chat.stream, true);
   assert.equal(chat.keep_alive, '10m');
@@ -121,7 +121,7 @@ test('grensen gjelder tid uten nye tokens: 20 s-grense, tokens hvert 10. s i 60 
   Object.assign(mock, { delayMs: 50, gapMs: 100, parts: ['{"ans', 'wer":', '"Fant ', 'noe ', '[1]."', '}'] });
   const r = await A('/finans/api/search/ai', 'POST', Q);
   assert.equal(r.body.engine, 'Ollama', JSON.stringify(r.body).slice(0, 300));
-  assert.equal(r.body.answer, 'Fant noe [1].');
+  assert.equal(r.body.answer, 'Fant noe.'); // prompt 32: «[n]»-markører fjernes
   mock.parts = ['{"answer":', '"Fant noe [1]."}'];
 });
 
@@ -181,7 +181,7 @@ test('jobbmodus: raskt svar kommer direkte, tregt gir 202 {jobId}; poll og SSE; 
   assert.ok(msgs.length >= 1);
   const last = msgs.at(-1);
   assert.equal(last.status, 'done');
-  assert.equal(last.result.answer, 'Fant noe [1].');
+  assert.equal(last.result.answer, 'Fant noe.'); // prompt 32: «[n]»-markører fjernes
   const poll = await A(`/finans/api/jobs/${id}`);
   assert.equal(poll.body.status, 'done');
   assert.equal(poll.body.result.engine, 'Ollama');
@@ -213,7 +213,7 @@ test('eldre klienter uten jobbmodus får det vanlige svaret, også når det tar 
   Object.assign(mock, { delayMs: 300 });
   const r = await A('/finans/api/search/ai', 'POST', Q);
   assert.equal(r.status, 200);
-  assert.equal(r.body.answer, 'Fant noe [1].');
+  assert.equal(r.body.answer, 'Fant noe.'); // prompt 32: «[n]»-markører fjernes
 });
 
 test('layout: navStyle text | icons | icons_active_label (standard text)', async () => {

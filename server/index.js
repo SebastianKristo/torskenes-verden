@@ -42,6 +42,12 @@ import { reauthHandler } from './reauth.js'; // prompt 31: POST /api/auth/reauth
 import glimtMemoryApi from './glimt-memory.js'; // prompt 33: «Glimt husker» (alias per bruker)
 import assistApi from './assist.js'; // prompt 31: Glimt – POST /api/assist (vær, kalender, … før LLM), serverjobb
 import { startTrialScheduler } from './trials-notify.js'; // prompt 31: varsler for gratis prøveperioder
+import { installCacheBust } from './cache-bust.js'; // prompt 32 (SERVER32)
+import searchHistoryApi from './search-history.js'; // prompt 32: søkehistorikk per bruker
+import trialWidgetsApi from './trial-widgets.js'; // prompt 32
+import romApi, { startSpaceScheduler, spaceApi } from './space32.js'; // prompt 32
+import { domainGlimtApi, gscApi, startDomainGlimtScheduler } from './domains-glimt.js'; // prompt 32
+import { describeApi as calendarDescribeApi, searchAiMiddleware as calendarSearchAi } from './calendar-glimt.js'; // prompt 32
 if (process.env.MOCK_DATA === '1' && !fhDb.prepare('SELECT 1 FROM fh_transactions LIMIT 1').get()) (await import('./finans/demo.js')).loadDemo();
 
 const api = process.env.MOCK_DATA === '1' ? await import('./mock.js') : integrations;
@@ -70,6 +76,9 @@ app.use('*', secureHeaders({
   },
   crossOriginEmbedderPolicy: false,
 }));
+
+// Prompt 32: cache-fiks (HTML/sw.js/manifest no-cache, /api no-store, ?v=<build> på JS/CSS, GET /version.json).
+installCacheBust(app);
 
 /* ---------------- Sider ---------------- */
 
@@ -588,9 +597,14 @@ app.route('/api/background', backgroundApi); // Bakgrunner (prompt 19): Vær, Pl
 // ✦ AI-søk i innstillingene og domene-pillen på Boliger (bare admin, cache 5 min). Sesjon eller app-token.
 app.route('/api/birthdays', birthdaysApi);
 app.get('/api/widgets/birthdays', authOrToken, (c) => c.json(birthdaysWidget(c.get('user'))));
+app.route('/api/space', spaceApi); // prompt 32: /tle?group=, /apod?days=7, /mars (før authed sine /space-ruter)
+app.route('/api/rom', romApi); // prompt 32: Rom – APOD (7 dager), Mars-rovere, satellitter (SGP4), NASA-nøkkel på serveren
+app.route('/api/widgets/trials', trialWidgetsApi); // prompt 32: prøveperiode-widgets (GET kompakt, POST /:id «Avsluttet»)
 app.route('/api/integrations', integrationsApi);
 app.route('/api/integrasjoner', integrationsApi); // prompt 26: samme liste under norsk navn
 // Prompt 26: Kalender (skolens iCal, Canvas, Bursdager og Google) og kompakt widget-svar. Sesjon eller app-token, per bruker.
+app.route('/api/kalender/describe', calendarDescribeApi); // prompt 32: «Beskriv med Glimt» (før /api/kalender)
+app.use('/api/kalender/search', calendarSearchAi); // prompt 32: ?ai=1 → Glimt-svar, ellers det vanlige søket
 app.route('/api/kalender/quick', calendarQuickApi); // prompt 29: før /api/kalender
 app.route('/api/calendar/quick', calendarQuickApi);
 app.route('/api/kalender', calendarApi);
@@ -603,6 +617,7 @@ app.route('/api/system/update', systemUpdateApi); // bare admin; start/rollback 
 // Prompt 30: kort versjonssvar for oppdateringsbanneret (samme tilgang som /api/system/update).
 app.get('/api/system/version', (c) => { const u = new URL(c.req.url); u.pathname = '/api/system/update/version'; return app.fetch(new Request(u, { headers: c.req.raw.headers }), c.env); });
 app.route('/api/glimt/memory', glimtMemoryApi); // prompt 33: GET/POST/DELETE, POST /:id/apply (sesjon eller app-token, per bruker)
+app.route('/api/search-history', searchHistoryApi); // prompt 32: søkehistorikk per bruker (mobil logger, web viser)
 app.route('/api/assist', assistApi); // prompt 31: Glimt-ruteren (sesjon eller app-token, per bruker)
 app.route('/api/chat', chatApi); // prompt 27: Chat (Open WebUI eller Ollama/Gemini/Groq direkte), sesjon eller app-token
 const domainPill = async (c) => {
@@ -613,13 +628,15 @@ app.get('/api/domains/summary', authOrToken, domainPill);
 // Prompt 30: Test token i Innstillinger → Domener (samme tilgang som /domains/api: bare admin).
 app.post('/api/domains/token/verify', async (c) => { const u = new URL(c.req.url); u.pathname = '/domains/api/token/verify'; return app.fetch(new Request(u, { method: 'POST', headers: c.req.raw.headers, body: await c.req.arrayBuffer() }), c.env); });
 app.get('/api/domener/sammendrag', authOrToken, domainPill);
+app.route('/api/domains', domainGlimtApi); // prompt 32: /:domain/summary (Glimt) og /:domain/gsc (Google Search Console), bare admin
+app.route('/api/gsc', gscApi); // prompt 32: Google Search Console-kobling per bruker (webmasters.readonly)
 app.route('/api', mobileApi);
 app.route('/api', authed);
 app.route('/home/api', homeApi);
 app.route('/mat/api', matApi);
 app.route('/domains/api', domainsApi);
 app.get('/mat/calendar.ics', matCalendar);
-if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); }
+if (process.env.NODE_ENV !== 'test') { startMatScheduler(); startTrackingWorker(); startRssWorker(); startBirthdayWorker(); startSystemBackupScheduler(); startUpdateScheduler(); startTrialScheduler(); startDomainGlimtScheduler(); startSpaceScheduler(); }
 
 app.onError((err, c) => {
   console.error(err);

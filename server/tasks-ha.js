@@ -257,7 +257,7 @@ async function reconcile(entity, items = null, haTs = null) {
   items = items.filter((h) => h?.uid && !removedUids.has(h.uid));
 
   const seen = new Map(q('SELECT * FROM huske_ha_seen WHERE entity_id=?').all(entity).map((s) => [s.uid, s]));
-  const locals = q('SELECT * FROM hl_tasks WHERE list=? ORDER BY created_at, id').all(list.id);
+  const locals = q('SELECT * FROM hl_tasks WHERE list=? AND archived_at IS NULL ORDER BY created_at, id').all(list.id);
   const haUids = new Set(items.map((h) => h.uid));
   const byUid = new Map(locals.filter((t) => t.ha_uid && haUids.has(t.ha_uid)).map((t) => [t.ha_uid, t]));
   const out = { created: 0, updated: 0, deleted: 0, pushed: 0, removed: removes.length };

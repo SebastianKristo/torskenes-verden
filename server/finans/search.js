@@ -5,6 +5,7 @@
 import { db, settings, secret, me, addUserCol } from './db.js';
 import { geminiFetch, hasGemini } from './gemini-keys.js';
 import { textJson, aiTimeoutsOf, AiCancelled, OLLAMA_KEEP_ALIVE } from './ai.js';
+import { stripMarkers } from './subs-ask32.js';
 
 const q = (sql) => db.prepare(sql);
 db.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS fh_fts USING fts5(kind UNINDEXED, ref UNINDEXED, text, tokenize = 'unicode61 remove_diacritics 2');
@@ -107,7 +108,7 @@ async function vectorHits(text, limit = 30, signal = null) {
       const v = fromBlob(r.vec); let dot = 0, n = 0;
       for (let i = 0; i < v.length; i++) { dot += v[i] * qv[i]; n += v[i] * v[i]; }
       return { kind: r.kind, ref: r.ref, score: dot / (Math.sqrt(n) * qn || 1) };
-    }).filter((r) => r.score > 0.35).sort((a, b) => b.score - a.score).slice(0, limit);
+    }).filter((r) => r.score >= 0.70).sort((a, b) => b.score - a.score).slice(0, limit);
   } catch { return []; }
 }
 
@@ -236,7 +237,7 @@ export async function answer(text, { force = false, signal = null, onEngine, sta
   if (!r.all) return { answer: fallback, hits: r.hits, engine: 'Uten AI', facts: r.facts, empty: true };
   const ctx = r.hits.map((h, i) => `[${i + 1}] ${h.source}: ${h.description} · ${dd(h.date)} · ${h.amount != null ? kr(h.amount) + ' kr' : 'ukjent beløp'}${h.category ? ' · ' + h.category : ''}`).join('\n');
   const prompt = `Du er en presis norsk økonomiassistent. Svar på spørsmålet KUN ut fra grunnlaget under. Skriv 1–3 korte setninger på norsk bokmål.
-Bruk bare tall som står i grunnlaget eller i fasiten. Finn aldri på beløp. Vis til treff med [n]. Hvis grunnlaget ikke holder, si det.
+Bruk bare grunnlaget. Bruk bare tall som står i grunnlaget eller i fasiten. Finn aldri på beløp. Svar Ja/Nei først når spørsmålet er et ja/nei-spørsmål. Ikke skriv kildemarkører som [1] eller [n]. Hvis grunnlaget ikke holder, si det.
 
 Spørsmål: ${text}
 Fasit (regnet ut av systemet): periode=${r.facts.period ?? 'alle'}; antall transaksjoner=${r.facts.count}; sum ut=${kr(r.facts.outSum)} kr; sum inn=${kr(r.facts.inSum)} kr.
@@ -246,7 +247,7 @@ ${ctx}`;
     const out = await textJson(prompt, { type: 'object', properties: { answer: { type: 'string' } }, required: ['answer'] }, { task: 'search', signal, onEngine, status });
     engine = out.provider;
     const res = out.data;
-    const a = String(res?.answer ?? '').trim().slice(0, 800);
+    const a = stripMarkers(String(res?.answer ?? '').trim()).slice(0, 800); // prompt 32: ingen «[n]» i svaret
     const allowed = [r.facts.outSum, r.facts.inSum, r.facts.count, r.hits.length, ...r.hits.flatMap((h, i) => [Math.abs(h.amount ?? 0), i + 1, +h.date?.slice(0, 4), +h.date?.slice(5, 7), +h.date?.slice(8, 10)]), ...[...String(text).matchAll(/\d+/g)].map((m) => +m[0])].filter(Number.isFinite);
     // Svarte en motor etter at en annen ikke svarte i tide, følger tidsavbruddet med («Ollama svarte ikke innen 60 s»).
     const to = out.timeouts?.length ? { timeouts: out.timeouts, timeoutNotice: out.timeouts.map((x) => x.text).join(' · ') } : {};

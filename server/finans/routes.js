@@ -32,6 +32,7 @@ import * as backup from './backup.js';
 import * as subsOs from './subs.js';
 import { mountP27, mountP27Public } from './p27-routes.js';
 import { mountTrials, trialsFor } from './trials.js'; // prompt 31: gratis prøveperioder
+import { subscriptionAnswer, mountSubsAsk } from './subs-ask32.js'; // prompt 32: AI-søk med abonnementer
 import { findLogo } from './logo-lookup.js';
 import { storeLines, receiptLines, matchLines, annotateSearch } from './highlight30.js';
 import { shareableUsers, logEntryChange, entryHistory } from './boliger30.js';
@@ -432,6 +433,7 @@ function mockDemo(u) {
   try { loadDemo(u); } catch (e) { console.warn('[finans] demo', e.message); }
 }
 const R = need('finance:read'), W = need('finance:write');
+mountSubsAsk(api, { R, W }); // prompt 32: /subscriptions/knowledge (før /subscriptions/:id)
 mountP27(api, { R, W }); // prompt 27: /forslag, /ai-audit, /merchants/logo, /receipts/:id/logo/ai, /subscriptions/from-screenshot
 // Prompt 31: /subscriptions/trials (før /subscriptions/:id). «Behold» gjør prøven om til et vanlig abonnement.
 mountTrials(api, { R, W, toSubscription: (u, t) => subOut(q('INSERT INTO fh_subscriptions(name,plan,price,cycle,next_date,usage_note,domain,charge_day,category,created,user_id) VALUES(?,?,?,?,?,?,?,?,?,?,?) RETURNING *')
@@ -2336,6 +2338,9 @@ async function aiSearch0(uid, b, { signal = null, onEngine, status } = {}) {
   const plain = plainSearch(text);
   const extra = { q: text, followUps: plain.followUps, suggestions: plain.suggestions, history: aiHistory(uid) };
   if (b.mode === 'plain') return { ...plain, ...extra };
+  // Prompt 32: spørsmål om abonnementer/tjenester/kategorier besvares fra Subscription OS (+ prøver) med Ja/Nei først.
+  const subs = subscriptionAnswer(text, uid);
+  if (subs) return { ...subs, ...extra, interpreted: plain.interpreted };
   // ✦ AI-bryteren på: force (eller ai:true / mode:'ai') kjører AI med en gang, også rett etter en feil.
   const force = b.force === true || b.ai === true || b.mode === 'ai';
   // Enkle ord: vanlig søk først. Gir det treff, brukes ikke AI (sparer kall og tid). force:true tvinger AI.

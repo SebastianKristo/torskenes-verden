@@ -671,3 +671,20 @@ export function domainSummary() {
     return { visitsToday, domains: rows.length, status, up: o.up, down: o.down, expiringSoon: o.expiringSoon.length, failed, updatedAt: new Date().toISOString(), ...(MOCK ? { mock: true } : {}) };
   });
 }
+
+/**
+ * Prompt 32: tallene siste 24 t per domene til Glimt-oppsummeringen (domains-glimt.js). sel = domenenavn eller '*' (alle).
+ * → [{name, req, vis, ch (endring % forespørsler mot døgnet før), thr, cache (%), ms (median), certD, expD, up, error?}]
+ */
+export async function summaryFacts(sel) {
+  const rows = sel === '*' ? listRows() : [byName(sel)].filter(Boolean);
+  const days = (d) => (d ? Math.round((Date.parse(String(d).length === 10 ? `${d}T12:00:00Z` : d) - Date.now()) / 864e5) : null);
+  return Promise.all(rows.map(async (r) => {
+    const a = await cached(`dom:${r.id}:${r.source}:24h`, 5 * 60_000, () => analytics(r, '24h')).catch((e) => ({ error: e.message }));
+    const req = Number(a.requests) || 0, prev = Number(a.prev?.requests) || 0;
+    const p = lastProbe.get(r.name);
+    return { name: r.name, req, vis: Number(a.visitors) || 0, ch: prev ? Math.round(((req - prev) / prev) * 1000) / 10 : 0, thr: Number(a.threats?.total) || 0,
+      cache: Number(a.cachedPct) || 0, ms: Number(a.ttfb?.p50) || null, certD: days(a.sslExpires ?? a.security?.certExpires), expD: days(a.renews), up: MOCK ? true : p ? p.ok : null, ...(a.error ? { error: a.error } : {}) };
+  }));
+}
+export const domainNames = () => listRows().map((r) => r.name);

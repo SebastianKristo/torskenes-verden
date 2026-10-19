@@ -31,6 +31,13 @@
 //     memory?   (memory.add, prompt 33) aliaset som ble lagret {id, kind, match, type, title}
 //     apply?    {memoryId, count, title, url} – «Endre tittel på N avtaler?» → POST url
 //   }
+// Prompt 32 (SERVER32):
+//   intent 'nav' (side-snarvei, før alle verktøy): «vis meg / åpne / gå til / ta meg til / hvor finner jeg / finn …» eller 1–2 ord →
+//     {intent:'nav', target:'nordlys'|'kalender'|'vaer'|'innstillinger'|'sporing'|'budsjett'|'kvitteringer'|'finans'|'abonnement'|
+//      'domener'|'familie'|'mat'|'huskeliste'|'bursdager'|'rom'|'chat', text:'Åpner **Kalender**.', source:'Snarvei',
+//      nav:{target, label, web:'/#/kalender', deepLink:'finanshub://kalender', delayMs:450}, …}
+//   POST /api/assist/:id/handoff {chatId?} → {chatId, jobId, state}: søkefeltet ga opp etter layout.hs_timeout_s (5/8/15/30, standard 8)
+//     → jobben fortsetter og svaret lagres i Chat-tråden (spørsmålet legges inn med en gang). Lokal modell har nå 60 s.
 // Prompt 33: POST /api/assist tar også context:{eventId} (hendelsen brukeren ser på) for «det var frisør».
 // GET  /api/assist/:id → {jobId, state:'queued'|'running'|'done'|'failed'|'cancelled', q, source, chatId, title, model, input,
 //                         steps:[{key, label, state}], fields:[{k, v}], progress, created, updated, answer?, error?}
@@ -66,6 +73,8 @@ const ext = MOCK ? await import('./mock.js') : integrations;
 const MAX_Q = 500;
 const DIRECT_MS = 1200;
 const LLM_MS = 12_000;
+// Prompt 32: den lokale modellen får lengre tid. Søkefeltet flytter jobben til Chat etter hs_timeout_s (POST /:id/handoff), jobben avbrytes ikke.
+const LOCAL_LLM_MS = 60_000;
 const SYSTEM = 'Svar på norsk i maks to korte setninger. Marker det viktigste med **…**';
 const ID = /^a[0-9a-f]{12}$/;
 
@@ -89,6 +98,7 @@ db.exec(`CREATE TABLE IF NOT EXISTS assist_jobs (
   updated INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS assist_jobs_user ON assist_jobs(user_id, created);`);
+try { db.exec('ALTER TABLE assist_jobs ADD COLUMN handoff INTEGER NOT NULL DEFAULT 0'); } catch { /* finnes */ } // prompt 32
 const q = (sql) => db.prepare(sql);
 
 /* ---------------- Tekst ---------------- */
@@ -122,9 +132,38 @@ const RE = {
   tasks: /huskeliste(n)?|gjøremål|oppgave(r|ne)?\b|å gjøre|to-?do/,
 };
 
+// Prompt 32: side-snarveier (samme liste som hsAsk() i designet). target = sidenøkkelen i appene, web = rute på web.
+export const NAV = [
+  [/oppdater|nordlys|ny versjon|versjon/, 'nordlys', 'Nordlys OS · oppdatering', '/#/innstillinger/system'],
+  [/kalender|timeplan/, 'kalender', 'Kalender', '/#/kalender'],
+  [/v(æ|ae)ret? (side|app)|værside|vaerside|åpne vær/, 'vaer', 'Vær', '/#/vaer'],
+  [/innstilling/, 'innstillinger', 'Innstillinger', '/#/innstillinger'],
+  [/pakke|sporing|sending/, 'sporing', 'Sporing', '/#/sporing'],
+  [/budsjett/, 'budsjett', 'Budsjett', '/finans/#/budsjett'],
+  [/kvittering/, 'kvitteringer', 'Kvitteringer', '/finans/#/kv'],
+  [/finans|økonomi|saldo|konto/, 'finans', 'Finans', '/finans/'],
+  [/abonnement|prøveperiode/, 'abonnement', 'Abonnement', '/finans/#/abonnement'],
+  [/domene/, 'domener', 'Domener', '/#/domener'],
+  [/familie|posisjon|hvor er/, 'familie', 'Familie', '/#/familie'],
+  [/middag|matplan|oppskrift|\bmat\b/, 'mat', 'Mat', '/#/matplan'],
+  [/huskeliste|handleliste|todo/, 'huskeliste', 'Huskeliste', '/#/huskeliste'],
+  [/bursdag/, 'bursdager', 'Bursdager', '/#/bursdager'],
+  [/\brom\b|satellitt|rombilde|mars-?rover/, 'rom', 'Rom', '/#/rom'],
+  [/\bchat\b/, 'chat', 'Chat', '/#/chat'],
+];
+const NAV_PREFIX = /^(vis( meg)?|åpne|gå til|ta meg til|hvor finner jeg|finn)\b/;
+/** Snarvei til en side, eller null. → {target, label, web} */
+export function navTarget(text) {
+  const n = String(text ?? '').toLowerCase().replace(/[?!.]+$/, '').trim();
+  if (!n || !(NAV_PREFIX.test(n) || n.split(/\s+/).length <= 2)) return null;
+  const hit = NAV.find(([re]) => re.test(n));
+  return hit ? { target: hit[1], label: hit[2], web: hit[3] } : null;
+}
+
 /** Hvilket verktøy spørsmålet går til (uten å hente data). → intent */
 export function detectIntent(text, today = osloTodayISO()) {
   const n = String(text ?? '').toLowerCase();
+  if (navTarget(text)) return 'nav';
   // Prøveperiode: «gratis», «trial», «prøveperiode», eller «prøve/avslutt/si opp» sammen med en tjeneste («Storytel prøve til 25.11»).
   if (RE.trial.test(n) && (/gratis|trial|prøveperiode|prøvetid/.test(n) || serviceOf(text))) return 'trial.create';
   if (parseMemoryIntent(text)) return 'memory.add';
@@ -316,7 +355,7 @@ async function ollamaText(qText, user) {
   const st = fhSettings(user);
   const base = String(st.ollamaUrl ?? '').replace(/\/$/, '');
   if (!base) throw new Error('Ollama er ikke satt opp');
-  const r = await fetch(`${base}/api/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(LLM_MS),
+  const r = await fetch(`${base}/api/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(LOCAL_LLM_MS),
     body: JSON.stringify({ model: st.ollamaTextModel || st.ollamaModel, stream: false, keep_alive: '10m', options: { temperature: 0.3, num_predict: 160 },
       messages: [{ role: 'system', content: localSystem(user) }, { role: 'user', content: qText }] }) });
   if (!r.ok) throw new Error(`Ollama svarte ${r.status}`);
@@ -340,13 +379,13 @@ async function geminiText(qText, user) {
   return String(j?.candidates?.[0]?.content?.parts?.map((p) => p.text).join('') ?? '').trim();
 }
 const short = (t) => { const s = String(t).replace(/\s+/g, ' ').trim(); const parts = s.match(/[^.!?]+[.!?]+/g); return (parts && parts.length > 2 ? parts.slice(0, 2).join('') : s).slice(0, 600).trim(); };
-const withTimeout = (p) => Promise.race([p, new Promise((_, rej) => { const t = setTimeout(() => rej(Object.assign(new Error('Svarte ikke i tide'), { timeout: true })), LLM_MS); t.unref?.(); })]);
+const withTimeout = (p, ms = LLM_MS) => Promise.race([p, new Promise((_, rej) => { const t = setTimeout(() => rej(Object.assign(new Error('Svarte ikke i tide'), { timeout: true })), ms); t.unref?.(); })]);
 
 async function toolLlm(user, text) {
   const run = llmImpl ? (engine) => llmImpl({ q: text, user, engine, system: engine === 'gemini' ? SYSTEM : localSystem(user) }) : MOCK && !process.env.OLLAMA_URL ? null : (engine) => (engine === 'gemini' ? geminiText(text, user) : ollamaText(text, user));
   if (!run) return { text: `Dette er et eksempelsvar fra **Glimt** på «${text.slice(0, 80)}». Med Ollama svarer den lokale modellen her.`, source: 'Glimt', engine: 'mock', model: 'Glimt · lokal' };
   try {
-    const t = short(await withTimeout(run('ollama')));
+    const t = short(await withTimeout(run('ollama'), LOCAL_LLM_MS));
     if (t) return { text: t, source: 'Glimt', engine: 'ollama', model: 'Glimt · lokal' };
   } catch { /* lokal modell nede eller for treg */ }
   const cloud = assistSettings(user).cloud;
@@ -363,8 +402,8 @@ async function toolLlm(user, text) {
 /* ---------------- Svar ---------------- */
 
 const TITLES = { weather: 'Sjekker været', 'calendar.day': 'Ser i kalenderen', 'calendar.next': 'Leter i kalenderen', departures: 'Henter avganger', packages: 'Ser på pakkene',
-  'finance.spent': 'Regner på forbruket', tasks: 'Leser huskelisten', 'trial.create': 'Lager påminnelse', 'appointment.create': 'Legger til i kalenderen', 'memory.add': 'Glimt husker', llm: 'Glimt tenker' };
-const TOOL_OF = { weather: 'Vær', 'calendar.day': 'Kalender', 'calendar.next': 'Kalender', departures: 'Avganger', packages: 'Pakker', 'finance.spent': 'Finans', tasks: 'Huskeliste', 'trial.create': 'Abonnementer', 'appointment.create': 'Kalender', 'memory.add': 'Glimt husker' };
+  'finance.spent': 'Regner på forbruket', tasks: 'Leser huskelisten', 'trial.create': 'Lager påminnelse', 'appointment.create': 'Legger til i kalenderen', 'memory.add': 'Glimt husker', nav: 'Åpner siden', llm: 'Glimt tenker' };
+const TOOL_OF = { weather: 'Vær', 'calendar.day': 'Kalender', 'calendar.next': 'Kalender', departures: 'Avganger', packages: 'Pakker', 'finance.spent': 'Finans', tasks: 'Huskeliste', 'trial.create': 'Abonnementer', 'appointment.create': 'Kalender', 'memory.add': 'Glimt husker', nav: 'Snarvei' };
 
 /** Svarer på spørsmålet. onStep(at, intent) for fremdrift. → svarobjektet (se toppen). */
 export async function answer(user, text, { today = osloTodayISO(), onStep = () => {}, ctx = null } = {}) {
@@ -373,7 +412,9 @@ export async function answer(user, text, { today = osloTodayISO(), onStep = () =
   onStep(1, intent);
   let r;
   try {
-    r = intent === 'weather' ? await toolWeather(user, text)
+    const nv = intent === 'nav' ? navTarget(text) : null;
+    r = nv ? { text: `Åpner **${nv.label}**.`, source: 'Snarvei', nav: { target: nv.target, label: nv.label, web: nv.web, deepLink: `finanshub://${nv.target}`, delayMs: 450 } }
+      : intent === 'weather' ? await toolWeather(user, text)
       : intent === 'calendar.day' ? await toolCalendarDay(user, text, today)
         : intent === 'calendar.next' ? await toolCalendarNext(user, text, today)
           : intent === 'departures' ? await toolDepartures(user, text)
@@ -392,6 +433,7 @@ export async function answer(user, text, { today = osloTodayISO(), onStep = () =
   const out = { text: r.text, bold: boldOf(r.text), source: r.source, intent, ...(r.tool ? { tool: r.tool } : {}), ...(r.card ? { card: r.card } : {}), ms: Date.now() - t0,
     model: r.model ?? 'Glimt · verktøy', engine: r.engine ?? (intent === 'llm' ? 'none' : 'tool') };
   for (const k of ['followUp', 'trial', 'missing', 'quickJobId', 'memory', 'apply']) if (r[k] !== undefined) out[k] = r[k];
+  if (r.nav) { out.target = r.nav.target; out.nav = r.nav; }
   out.chatContext = { q: text, intent, messages: [{ role: 'user', content: text }, { role: 'assistant', content: r.text, ...(r.card ? { card: r.card } : {}), ...(r.tool ? { tool: r.tool } : {}) }] };
   return out;
 }
@@ -406,9 +448,9 @@ export function assistSettings(user) {
 
 /* ---------------- Chat ---------------- */
 
-function saveToChat(user, chatId, text, a) {
+function saveToChat(user, chatId, text, a, { assistantOnly = false } = {}) {
   const now = Date.now();
-  const msgs = [{ role: 'user', content: text, ts: now }, { role: 'assistant', content: a.text, ts: now + 1, card: a.card, tool: a.tool, meta: { glimt: true, intent: a.intent, source: a.source, tool: a.tool, card: a.card, ms: a.ms } }];
+  const msgs = [...(assistantOnly ? [] : [{ role: 'user', content: text, ts: now }]), { role: 'assistant', content: a.text, ts: now + 1, card: a.card, tool: a.tool, meta: { glimt: true, intent: a.intent, source: a.source, tool: a.tool, card: a.card, ms: a.ms } }];
   const row = chatId ? q('SELECT * FROM hl_chats WHERE id=? AND user_id=?').get(String(chatId), user) : null;
   try {
     if (row) {
@@ -465,7 +507,7 @@ async function runJob(id) {
   }
   const cur = getJob(id);
   if (cur.state === 'cancelled') return;
-  if (cur.source === 'chat') a.chatId = saveToChat(user, cur.chat_id, cur.q, a);
+  if (cur.source === 'chat') a.chatId = saveToChat(user, cur.chat_id, cur.q, a, { assistantOnly: !!cur.handoff && !!cur.chat_id });
   setJob(id, { state: 'done', result: JSON.stringify(a), intent: a.intent, model: a.model, progress: 100, chat_id: a.chatId ?? cur.chat_id,
     steps: JSON.stringify(stepsAt(a.intent, 3)), fields: JSON.stringify([{ k: 'Verktøy', v: a.tool ?? 'Glimt' }, { k: 'Kilde', v: a.source }, { k: 'Tid', v: `${(a.ms / 1000).toFixed(1).replace('.', ',')} s` }]) });
   const done = getJob(id);
@@ -548,6 +590,39 @@ api.get('/:id', (c) => {
   const row = getJob(id);
   if (!row || row.user_id !== c.get('user')) return c.json({ error: 'Fant ikke jobben' }, 404);
   return c.json(jobOut(row), 200, { 'Cache-Control': 'no-store' });
+});
+// Prompt 32: søkefeltet ga opp etter hs_timeout_s → jobben flyttes til en Chat-tråd (samme jobb-id) og fortsetter der.
+// POST /api/assist/:id/handoff {chatId?} → {chatId, jobId, state}. Ferdig jobb: spørsmål + svar lagres i tråden med en gang.
+api.post('/:id/handoff', async (c) => {
+  const id = c.req.param('id'), user = c.get('user');
+  if (!ID.test(id)) return c.json({ error: 'Ugyldig id' }, 400);
+  const row = getJob(id);
+  if (!row || row.user_id !== user) return c.json({ error: 'Fant ikke jobben' }, 404);
+  if (row.source === 'chat' && row.chat_id) return c.json({ chatId: row.chat_id, jobId: id, state: row.state });
+  const b = await c.req.json().catch(() => ({}));
+  const want = typeof b?.chatId === 'string' && b.chatId.length <= 80 ? b.chatId : null;
+  if (row.state === 'done') {
+    const chatId = saveToChat(user, want, row.q, parseJ(row.result, { text: '' }));
+    if (!chatId) return c.json({ error: 'Kunne ikke lage samtalen' }, 500);
+    setJob(id, { source: 'chat', chat_id: chatId, handoff: 1 });
+    return c.json({ chatId, jobId: id, state: 'done' });
+  }
+  if (row.state === 'failed' || row.state === 'cancelled') return c.json({ error: 'Jobben er avsluttet', state: row.state }, 409);
+  // Tråden får spørsmålet nå; svaret legges til når jobben er ferdig (og varsles hvis appen er lukket).
+  const now = Date.now();
+  let chatId = want && q('SELECT id FROM hl_chats WHERE id=? AND user_id=?').pluck().get(want, user);
+  try {
+    if (chatId) {
+      const cur = q('SELECT messages FROM hl_chats WHERE id=?').pluck().get(chatId);
+      q('UPDATE hl_chats SET messages=?, updated=? WHERE id=?').run(JSON.stringify([...parseJ(cur, []), { role: 'user', content: row.q, ts: now }]), now, chatId);
+    } else {
+      chatId = randomUUID();
+      q('INSERT INTO hl_chats(id,user_id,title,model,settings,messages,created,updated) VALUES(?,?,?,?,?,?,?,?)').run(chatId, user, row.q.slice(0, 60) || 'Ny samtale', 'glimt', '{}', JSON.stringify([{ role: 'user', content: row.q, ts: now }]), now, now);
+    }
+  } catch (e) { return c.json({ error: 'Kunne ikke lage samtalen' }, 500); }
+  setJob(id, { source: 'chat', chat_id: chatId, handoff: 1, direct: 0 });
+  emit(getJob(id));
+  return c.json({ chatId, jobId: id, state: getJob(id).state });
 });
 api.post('/:id/cancel', (c) => {
   const id = c.req.param('id');
